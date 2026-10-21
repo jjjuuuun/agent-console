@@ -1,0 +1,32 @@
+# {{dist_name}}
+
+{{description}}
+
+## 설치
+
+```bash
+pip install {{dist_name}}
+# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> {{dist_name}}
+```
+
+## 최소 사용
+
+```python
+>>> from {{import_name}} import greet
+>>> greet("pkgkit")
+'hello, pkgkit'
+
+```
+
+<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+
+## 개발·재사용
+
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+
+```bash
+uv sync                # 개발 의존(dev 그룹) 포함
+uv run ruff check .
+uv run mypy
+uv run pytest          # README.md의 doctest 포함
+```

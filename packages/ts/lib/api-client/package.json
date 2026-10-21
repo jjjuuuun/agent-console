@@ -1,0 +1,131 @@
+{
+  "name": "@agent-console/api-client",
+  "version": "0.1.0",
+  "description": "서버 REST·WebSocket 계약을 감싼 순수 TypeScript 클라이언트",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "development": "./src/clients/core.ts",
+      "types": "./dist/clients/core.d.ts",
+      "default": "./dist/clients/core.js"
+    },
+    "./catalog": {
+      "development": "./src/clients/catalog.ts",
+      "types": "./dist/clients/catalog.d.ts",
+      "default": "./dist/clients/catalog.js"
+    },
+    "./agents": {
+      "development": "./src/clients/agents.ts",
+      "types": "./dist/clients/agents.d.ts",
+      "default": "./dist/clients/agents.js"
+    },
+    "./graphs": {
+      "development": "./src/clients/graphs.ts",
+      "types": "./dist/clients/graphs.d.ts",
+      "default": "./dist/clients/graphs.js"
+    },
+    "./runs": {
+      "development": "./src/clients/runs.ts",
+      "types": "./dist/clients/runs.d.ts",
+      "default": "./dist/clients/runs.js"
+    },
+    "./chat": {
+      "development": "./src/clients/chat.ts",
+      "types": "./dist/clients/chat.d.ts",
+      "default": "./dist/clients/chat.js"
+    },
+    "./interactions": {
+      "development": "./src/clients/interactions.ts",
+      "types": "./dist/clients/interactions.d.ts",
+      "default": "./dist/clients/interactions.js"
+    },
+    "./usage": {
+      "development": "./src/clients/usage.ts",
+      "types": "./dist/clients/usage.d.ts",
+      "default": "./dist/clients/usage.js"
+    },
+    "./presets": {
+      "development": "./src/clients/presets.ts",
+      "types": "./dist/clients/presets.d.ts",
+      "default": "./dist/clients/presets.js"
+    },
+    "./resources": {
+      "development": "./src/clients/resources.ts",
+      "types": "./dist/clients/resources.d.ts",
+      "default": "./dist/clients/resources.js"
+    },
+    "./imports": {
+      "development": "./src/clients/imports.ts",
+      "types": "./dist/clients/imports.d.ts",
+      "default": "./dist/clients/imports.js"
+    },
+    "./exports": {
+      "development": "./src/clients/exports.ts",
+      "types": "./dist/clients/exports.d.ts",
+      "default": "./dist/clients/exports.js"
+    },
+    "./logs": {
+      "development": "./src/clients/logs.ts",
+      "types": "./dist/clients/logs.d.ts",
+      "default": "./dist/clients/logs.js"
+    },
+    "./settings": {
+      "development": "./src/clients/settings.ts",
+      "types": "./dist/clients/settings.d.ts",
+      "default": "./dist/clients/settings.js"
+    },
+    "./versions": {
+      "development": "./src/clients/versions.ts",
+      "types": "./dist/clients/versions.d.ts",
+      "default": "./dist/clients/versions.js"
+    },
+    "./io": {
+      "development": "./src/io.ts",
+      "types": "./dist/io.d.ts",
+      "default": "./dist/io.js"
+    },
+    "./transport": {
+      "development": "./src/transport.ts",
+      "types": "./dist/transport.d.ts",
+      "default": "./dist/transport.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agent-console/contracts": "^0.8.0"
+  },
+  "devDependencies": {
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@types/node": "^26.6.5",
+    "eslint": "^10.12.0",
+    "happy-dom": "^21.0.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

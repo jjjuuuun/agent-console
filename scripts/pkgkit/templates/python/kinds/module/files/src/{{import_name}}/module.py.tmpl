@@ -1,0 +1,21 @@
+"""서버 모듈 정의(entry point ``{{modules_group}}``의 ``{{module_id}}``)."""
+
+from __future__ import annotations
+
+from {{import_prefix}}modkit import ModuleContext, ModuleDescriptor, ModuleParts
+
+
+class _Module:
+    descriptor = ModuleDescriptor(
+        id="{{module_id}}",
+        version="{{version}}",
+        kind="feature",
+        title="{{module_id}}",
+        description="{{description}}",
+    )
+
+    def build(self, ctx: ModuleContext) -> ModuleParts:
+        return ModuleParts()
+
+
+module = _Module()

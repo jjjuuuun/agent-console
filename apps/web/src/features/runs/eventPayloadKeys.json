@@ -1,0 +1,6 @@
+{
+  "summaryKeys": ["text", "message", "name", "tool", "server", "event", "status", "reason", "output_preview", "task_preview", "result_preview", "edge_id"],
+  "primaryTextKeys": ["text", "message", "output_preview"],
+  "toolCallArgsKey": "input",
+  "observeKindKeys": ["event", "matcher", "hook_name", "server", "tool", "tool_name"]
+}

@@ -1,0 +1,60 @@
+# 예제 확장: 위임 방식 플러그인 하나(X12). uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-delegation"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 대상을 차례로 불러 결과를 이어 붙이는 위임 방식(example.round_robin)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-runtime>=0.1,<0.2",
+    "pydantic>=2.9",
+]
+
+# 엔진 등록은 이 표 하나로 끝난다. 그룹 이름 = agent_console_runtime.DELEGATION_STRATEGIES_GROUP,
+# entry point 이름 = 레지스트리 key = 디스크립터 id(= 위임 연결 config `strategy` 값).
+[project.entry-points."agent_console.delegation_strategies"]
+"example.round_robin" = "agent_console_example_delegation:RoundRobinDelegation"
+
+# 개발 의존: 테스트가 기본 노드(에이전트 노드·위임 연결)·fake 백엔드·팀 검증으로 끝까지 돌려 본다.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "agent-console-backend-fake>=0.1,<0.2",
+    "agent-console-nodes-core>=0.1,<0.2",
+    "agent-console-teams>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

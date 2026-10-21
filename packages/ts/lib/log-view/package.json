@@ -1,0 +1,62 @@
+{
+  "name": "@agent-console/log-view",
+  "version": "0.1.0",
+  "description": "로그 분석 표현 컴포넌트(이벤트 표·필터·상세·세션 목록·재생 막대·대시보드 격자)와 위젯 레지스트리",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agent-console/contracts": "^0.8.0",
+    "@tanstack/react-virtual": "^3.14.21",
+    "recharts": "^3.10.1",
+    "react-is": "^19.3.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "happy-dom": "^21.0.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "description": "사용자에게 보이는 문구에 넣지 않는 패턴(설계 문서 번호·내부 노드 id). Python·TS 린트 테스트가 이 파일 하나를 읽는다. 패턴은 Python re와 JavaScript RegExp가 같게 읽는 문법만 쓴다.",
+  "scopes": {
+    "description": "계약 모델·필드 설명과 플러그인 디스크립터 문자열(설명·제목·config 스키마 설명)",
+    "messages": "서버가 만드는 사용자 문구(검증 이슈·실행 실패 요약·문제 응답·해결 버튼)와 웹 메시지 표"
+  },
+  "patterns": [
+    {
+      "id": "design-ref",
+      "pattern": "design §",
+      "scopes": ["description", "messages"],
+      "reason": "설계 문서 인용은 개발자용이다. 사용자 문구에는 무엇을 하는지만 적는다."
+    },
+    {
+      "id": "section-number",
+      "pattern": "§\\d",
+      "scopes": ["description", "messages"],
+      "reason": "문서 절 번호는 사용자에게 뜻이 없다."
+    },
+    {
+      "id": "requirement-id",
+      "pattern": "R\\d+\\.\\d",
+      "scopes": ["description", "messages"],
+      "reason": "요구사항 번호는 사용자에게 뜻이 없다."
+    },
+    {
+      "id": "node-id",
+      "pattern": "'n\\d+'",
+      "scopes": ["messages"],
+      "reason": "내부 노드 id 대신 노드 이름(label)으로 부른다. id는 details에만 둔다."
+    }
+  ]
+}

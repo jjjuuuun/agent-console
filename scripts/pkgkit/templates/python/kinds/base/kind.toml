@@ -1,0 +1,7 @@
+# 기반(L0): 계약·레지스트리처럼 거의 모든 패키지가 쓰는 얇은 층. 다른 사내 패키지에 되도록 의존하지 않는다.
+folder = "base"
+description = "{{product_name}} 기반 패키지"
+dependencies = []
+dev_dependencies = []
+required_files = []
+runnable = false

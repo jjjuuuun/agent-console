@@ -1,0 +1,191 @@
+{
+  "_comment": "로그 화면의 이름 데이터. 필터 이름은 서버 LogFilter 이름(GET /logs/schema의 filters)이고, 열 id는 log-view 열 사전의 키다. 서버에 이름이 늘면 한 줄만 더한다. 코드(.ts)에는 이 이름들을 따옴표 문자열로 쓰지 않는다.",
+  "filterFields": [
+    {
+      "name": "q",
+      "input": "text"
+    },
+    {
+      "name": "category",
+      "input": "multiselect",
+      "optionsFrom": "categories"
+    },
+    {
+      "name": "source",
+      "input": "multiselect",
+      "optionsFrom": "sources"
+    },
+    {
+      "name": "project",
+      "input": "select",
+      "optionsFrom": "projects"
+    },
+    {
+      "name": "model",
+      "input": "text"
+    },
+    {
+      "name": "via",
+      "input": "text"
+    },
+    {
+      "name": "session",
+      "input": "text"
+    },
+    {
+      "name": "cwd",
+      "input": "text"
+    },
+    {
+      "name": "agent",
+      "input": "text"
+    },
+    {
+      "name": "from",
+      "input": "text"
+    },
+    {
+      "name": "to",
+      "input": "text"
+    },
+    {
+      "name": "tool",
+      "input": "text"
+    },
+    {
+      "name": "call_id",
+      "input": "text"
+    },
+    {
+      "name": "run_id",
+      "input": "text"
+    },
+    {
+      "name": "stage",
+      "input": "text"
+    },
+    {
+      "name": "status",
+      "input": "text"
+    },
+    {
+      "name": "since",
+      "input": "time-range"
+    },
+    {
+      "name": "until",
+      "input": "time-range"
+    }
+  ],
+  "searchField": "q",
+  "filterKeys": {
+    "category": "category",
+    "source": "source",
+    "session": "session",
+    "project": "project",
+    "from": "from",
+    "to": "to",
+    "via": "via",
+    "callId": "call_id",
+    "runId": "run_id",
+    "since": "since",
+    "until": "until",
+    "order": "order",
+    "limit": "limit",
+    "cursor": "cursor",
+    "cwd": "cwd",
+    "model": "model"
+  },
+  "sessionColumns": {
+    "all": [
+      "start",
+      "session",
+      "project",
+      "threads",
+      "events",
+      "errors",
+      "models",
+      "tokens",
+      "length",
+      "source"
+    ],
+    "default": [
+      "start",
+      "session",
+      "project",
+      "threads",
+      "events",
+      "errors",
+      "models",
+      "tokens",
+      "length"
+    ]
+  },
+  "eventColumns": {
+    "all": [
+      "time",
+      "lane",
+      "category",
+      "title",
+      "stage",
+      "status",
+      "tool",
+      "duration",
+      "summary",
+      "model",
+      "run_id",
+      "session",
+      "source"
+    ],
+    "session": [
+      "time",
+      "lane",
+      "category",
+      "title",
+      "duration",
+      "summary"
+    ],
+    "search": [
+      "time",
+      "session",
+      "lane",
+      "category",
+      "title",
+      "duration",
+      "summary"
+    ],
+    "runTab": [
+      "time",
+      "lane",
+      "category",
+      "title",
+      "duration"
+    ]
+  },
+  "cellIds": {
+    "time": "time",
+    "lane": "lane",
+    "category": "category",
+    "title": "title",
+    "session": "session",
+    "duration": "duration"
+  },
+  "suggestFrom": {
+    "session": "session",
+    "cwd": "cwd",
+    "agent": "actor",
+    "from": "from",
+    "to": "to",
+    "via": "via",
+    "tool": "tool",
+    "call_id": "call_id",
+    "model": "model",
+    "run_id": "run_id",
+    "stage": "stage",
+    "status": "status"
+  },
+  "searchViews": [
+    "events",
+    "handoff"
+  ]
+}

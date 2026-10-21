@@ -1,0 +1,8 @@
+{
+  "extends": "{{tsconfigName}}/library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": { "{{name}}": ["./src/index.ts"] }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

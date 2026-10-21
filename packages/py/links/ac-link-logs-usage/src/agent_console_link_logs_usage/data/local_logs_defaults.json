@@ -1,0 +1,10 @@
+{
+  "windows": [
+    {"id": "local_five_hour", "kind": "block", "hours": 5, "title": "5시간(로그 추정)", "short_title": "5h"},
+    {"id": "local_seven_day", "kind": "rolling", "days": 7, "title": "7일(로그 추정)", "short_title": "7d"}
+  ],
+  "budgets": {},
+  "filter": {"source": ["claude-code-jsonl"]},
+  "count": ["input", "output", "cache_creation", "cache_read"],
+  "lookback_hours": 168
+}

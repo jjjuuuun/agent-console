@@ -1,0 +1,46 @@
+[project]
+name = "agent-console-settings"
+version = "0.1.0"
+description = "Agent Console — 설정 층 병합(교체·병합·이어 붙이기 등 이름 붙은 전략)과 값별 출처 추적"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "jsonpatch>=1.33",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

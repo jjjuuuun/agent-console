@@ -1,0 +1,54 @@
+[project]
+name = "agent-console-store"
+version = "0.1.0"
+description = "Agent Console — 저장소 인터페이스와 구현: 정의(YAML), 버전·실행·이벤트·라우팅 기록(SQLite), 인메모리"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "alembic>=1.13",
+    "ruamel-yaml>=0.18",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.9",
+]
+
+# 호스트 DB 공장(modkit `HOST_DATABASE_GROUP`, 3R.16): 호스트가 기능 이름 없이 DB 핸들을 연다.
+[project.entry-points."agent_console.host_database"]
+sqlite = "agent_console_store.database:SqliteDatabase.open"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

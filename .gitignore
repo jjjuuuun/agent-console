@@ -1,0 +1,93 @@
+# 환경·의존
+.venv/
+node_modules/
+
+# 빌드 산출물
+dist/
+build/
+*.egg-info/
+*.tsbuildinfo
+.vite/
+
+# 캐시
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.import_linter_cache/
+
+# 테스트 산출물
+coverage/
+htmlcov/
+.coverage
+playwright-report/
+test-results/
+blob-report/
+
+# 실행 데이터(로컬 workspace·.state·DB)
+.agent-console/
+agent-console.yaml
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 비밀·개인 설정
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+*.pem
+*.key
+
+# 기타
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/scheduled_tasks.lock
+
+# ---------------------------------------------------------------- 공개 저장소 추가 규칙
+# 테스트·실행 데이터(녹화 로그·세션 로그·픽스처·스냅숏)는 커밋하지 않는다
+*.jsonl
+**/tests/data/*
+!**/tests/data/.gitkeep
+!scripts/pkgkit/templates/**
+**/tests/fixtures/
+**/src/fixtures/
+**/e2e/support/logs-fixture/
+*-baseline.json
+.state/
+hook-probe/
+statusline.json
+agent-console.local.yaml
+*.local.yaml
+
+# 스크린샷·녹화
+screenshots/
+*.screenshot.png
+*.webm
+*.mp4
+*.har
+*.trace.zip
+
+# 개인 작업 문서(공개 대상 아님). docs/는 DEVELOPMENT.md만, .claude/는 agents/만 공개
+/specs/
+/docs/*
+!/docs/DEVELOPMENT.md
+/KICKOFF.md
+/.claude/*
+!/.claude/agents/
+CLAUDE.local.md
+
+# 산출물
+dist/
+dist-ssr/
+*.tgz
+*.whl
+.env.local
+
+# 로컬 프리셋 데이터(공개본에는 넣지 않는다)
+/presets/

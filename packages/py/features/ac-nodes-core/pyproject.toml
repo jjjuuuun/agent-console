@@ -1,0 +1,87 @@
+[project]
+name = "agent-console-nodes-core"
+version = "0.1.0"
+description = "Agent Console — 기본 노드(agent, user, resource, team)·연결 종류(subagent, delegate, handoff, uses, message, reply, ask_user, when, on_error, loop)·상호작용 종류(question, tool_permission, review)·위임 방식(sdk-subagents) 플러그인"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-registry>=0.1,<0.2",
+    "agent-console-runtime>=0.1,<0.2",
+    "agent-console-resources>=0.1,<0.2",
+    "agent-console-teams>=0.1,<0.2",
+    "agent-console-conditions>=0.1,<0.2",
+    "pydantic>=2.9",
+]
+
+# 엔진 등록은 entry point로만 한다. 이름 = 레지스트리 key = 디스크립터 id.
+[project.entry-points."agent_console.node_types"]
+agent = "agent_console_nodes_core.agent:AgentNode"
+user = "agent_console_nodes_core.user:UserNode"
+resource = "agent_console_nodes_core.places:ResourceNode"
+team = "agent_console_nodes_core.team:TeamNode"
+
+[project.entry-points."agent_console.edge_types"]
+subagent = "agent_console_nodes_core.edges:SubagentEdge"
+delegate = "agent_console_nodes_core.edges:DelegateEdge"
+handoff = "agent_console_nodes_core.edges:HandoffEdge"
+data = "agent_console_nodes_core.edges:DataEdge"
+uses = "agent_console_nodes_core.edges:UsesEdge"
+message = "agent_console_nodes_core.edges:MessageEdge"
+reply = "agent_console_nodes_core.edges:ReplyEdge"
+ask_user = "agent_console_nodes_core.edges:AskUserEdge"
+loop = "agent_console_nodes_core.loops:LoopEdge"
+when = "agent_console_nodes_core.conditional:WhenEdge"
+on_error = "agent_console_nodes_core.conditional:OnErrorEdge"
+
+# 디스크립터 객체를 바로 가리킨다(엔진 `as_interaction_kind`가 감싼다).
+[project.entry-points."agent_console.interaction_kinds"]
+question = "agent_console_nodes_core.interactions:QUESTION"
+tool_permission = "agent_console_nodes_core.interactions:TOOL_PERMISSION"
+review = "agent_console_nodes_core.interactions:REVIEW"
+
+[project.entry-points."agent_console.delegation_strategies"]
+sdk-subagents = "agent_console_nodes_core.delegation:SdkSubagentsStrategy"
+
+# 테스트 전용: fake 백엔드로 그래프를 끝까지 실행하고 기본 리소스 종류로 묶음을 만든다(패키지 코드는 import하지 않음).
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "agent-console-backend-fake>=0.1,<0.2",
+    "agent-console-delegation-host>=0.1,<0.2",
+    "agent-console-resources-core>=0.1,<0.2",
+    "jsonschema>=4.23",
+    "types-jsonschema>=4.26.0.20261006",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

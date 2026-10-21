@@ -1,0 +1,51 @@
+{
+  "_comment": "기본 출처의 표시·연결 안내 데이터(디스크립터 auto_enable·needs_setup·test_only·windows·setup_help·setup_snippets). README의 연결 조각도 이 파일에서 나온다(doctest). 자리표시자 {output_path}·{agent_console_cmd}는 서버가 절대 경로로 채운다.",
+  "sources": {
+    "run-events": {
+      "auto_enable": true,
+      "windows": [
+        {"id": "five_hour", "title": "5시간", "short_title": "5h"},
+        {"id": "seven_day", "title": "7일", "short_title": "7d"},
+        {"id": "seven_day_opus", "title": "7일(Opus)", "short_title": "7d Opus"},
+        {"id": "seven_day_sonnet", "title": "7일(Sonnet)", "short_title": "7d Sonnet"},
+        {"id": "overage", "title": "추가 사용", "short_title": "추가"}
+      ]
+    },
+    "statusline-file": {
+      "auto_enable": true,
+      "needs_setup": true,
+      "windows": [
+        {"id": "five_hour", "title": "5시간", "short_title": "5h"},
+        {"id": "seven_day", "title": "7일", "short_title": "7d"},
+        {"id": "spend_limit", "title": "지출 한도", "short_title": "지출"}
+      ],
+      "setup_help": "이 프로그램은 `~/.claude` 설정을 고치지 않습니다. 아래 조각 중 하나를 직접 붙여 넣으세요. 값은 Pro/Max 구독에서 세션 첫 응답 뒤에 생기고, 창마다 따로 빠질 수 있습니다. 상태 줄 입력을 이미 파일로 남기고 있다면(예: `echo \"$input\" > 파일`) 이 출처 설정 `path`에 그 파일의 절대 경로를 적어도 됩니다.",
+      "setup_snippets": [
+        {
+          "id": "settings-json",
+          "title": "상태 줄이 아직 없어요",
+          "shell": "",
+          "language": "json",
+          "text": "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"{agent_console_cmd} statusline --output {output_path}\"\n  }\n}"
+        },
+        {
+          "id": "append-bash",
+          "title": "이미 다른 상태 줄 스크립트를 써요",
+          "shell": "bash",
+          "language": "bash",
+          "text": "# 기존 스크립트에서 입력을 변수에 담은 줄(예: input=$(cat)) 바로 아래에 붙입니다.\n# 입력을 변수에 담지 않는 스크립트라면 맨 위에 input=$(cat)을 넣고, 아래 명령들이 \"$input\"을 읽게 바꿉니다.\nprintf '%s' \"$input\" | {agent_console_cmd} statusline --output {output_path} >/dev/null 2>&1 || true"
+        },
+        {
+          "id": "append-powershell",
+          "title": "이미 다른 상태 줄 스크립트를 써요",
+          "shell": "powershell",
+          "language": "powershell",
+          "text": "# 기존 스크립트에서 입력을 변수에 담은 줄(예: $raw = $input | Out-String) 바로 아래에 붙입니다.\n$raw | & {agent_console_cmd} statusline --output {output_path} | Out-Null"
+        }
+      ]
+    },
+    "fake": {
+      "test_only": true
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "@agent-console/contracts",
+  "version": "0.8.0",
+  "description": "Agent Console 계약 타입·상수·JSON Schema (Pydantic에서 생성)",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "schema",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./common": {
+      "development": "./src/generated/common.ts",
+      "types": "./dist/src/generated/common.d.ts",
+      "default": "./dist/src/generated/common.js"
+    },
+    "./resources": {
+      "development": "./src/generated/resources.ts",
+      "types": "./dist/src/generated/resources.d.ts",
+      "default": "./dist/src/generated/resources.js"
+    },
+    "./definitions": {
+      "development": "./src/generated/definitions.ts",
+      "types": "./dist/src/generated/definitions.d.ts",
+      "default": "./dist/src/generated/definitions.js"
+    },
+    "./runs": {
+      "development": "./src/generated/runs.ts",
+      "types": "./dist/src/generated/runs.d.ts",
+      "default": "./dist/src/generated/runs.js"
+    },
+    "./usage": {
+      "development": "./src/generated/usage.ts",
+      "types": "./dist/src/generated/usage.d.ts",
+      "default": "./dist/src/generated/usage.js"
+    },
+    "./projects": {
+      "development": "./src/generated/projects.ts",
+      "types": "./dist/src/generated/projects.d.ts",
+      "default": "./dist/src/generated/projects.js"
+    },
+    "./chat": {
+      "development": "./src/generated/chat.ts",
+      "types": "./dist/src/generated/chat.d.ts",
+      "default": "./dist/src/generated/chat.js"
+    },
+    "./exports": {
+      "development": "./src/generated/exports.ts",
+      "types": "./dist/src/generated/exports.d.ts",
+      "default": "./dist/src/generated/exports.js"
+    },
+    "./imports": {
+      "development": "./src/generated/imports.ts",
+      "types": "./dist/src/generated/imports.d.ts",
+      "default": "./dist/src/generated/imports.js"
+    },
+    "./logs": {
+      "development": "./src/generated/logs.ts",
+      "types": "./dist/src/generated/logs.d.ts",
+      "default": "./dist/src/generated/logs.js"
+    },
+    "./modules": {
+      "development": "./src/generated/modules.ts",
+      "types": "./dist/src/generated/modules.d.ts",
+      "default": "./dist/src/generated/modules.js"
+    },
+    "./constants": {
+      "development": "./src/generated/constants.ts",
+      "types": "./dist/src/generated/constants.d.ts",
+      "default": "./dist/src/generated/constants.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "generate": "node scripts/generate.js",
+    "generate:check": "node scripts/generate.js --check"
+  },
+  "devDependencies": {
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@types/node": "^26.6.5",
+    "eslint": "^10.12.0",
+    "happy-dom": "^21.0.1",
+    "json-schema-to-typescript": "16.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

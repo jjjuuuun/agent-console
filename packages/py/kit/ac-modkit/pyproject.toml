@@ -1,0 +1,61 @@
+[project]
+name = "agent-console-modkit"
+version = "0.1.0"
+description = "Agent Console — 서버 모듈 키트: Module·포트·모듈 이벤트·조립·보고, 호스트(보안·토큰·/health·WS 다중화, extra [host]), 단독 실행"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-registry>=0.1,<0.2",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+# 호스트(보안 미들웨어·토큰·/health·WS 다중화·create_host_app)와 standalone 단독 실행
+host = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "websockets>=13",
+    "ruamel-yaml>=0.18",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "httpx>=0.27",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "websockets>=13",
+    "ruamel-yaml>=0.18",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

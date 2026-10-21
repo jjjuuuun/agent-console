@@ -1,0 +1,5 @@
+{
+  "extends": "@agent-console/tsconfig/base.json",
+  "compilerOptions": { "types": ["vite/client"], "customConditions": ["development"] },
+  "include": ["src", "vite.config.ts", "pwa-workbox.ts"]
+}

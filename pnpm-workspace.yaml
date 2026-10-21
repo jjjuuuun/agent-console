@@ -1,0 +1,8 @@
+packages:
+  - "packages/ts/config/*"
+  - "packages/ts/lib/*"
+  - "apps/web"
+
+# 사내 패키지 의존은 일반 버전 범위(^x.y.z)로 적고, 범위에 맞는 워크스페이스 패키지가 있으면 연결한다.
+# (패키지를 저장소 밖으로 복사해도 package.json을 고치지 않고 tarball/레지스트리로 설치된다 - design 3R.2)
+linkWorkspacePackages: true

@@ -1,0 +1,19 @@
+# 모든 Python 패키지에 공통인 필수 파일(pkg-lint `required-files`). `{{import_name}}` 자리표시자 가능.
+# 종류별 추가 파일은 kinds/<kind>/kind.toml의 required_files.
+required_files = [
+    "pyproject.toml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "src/{{import_name}}/__init__.py",
+    "src/{{import_name}}/py.typed",
+    "tests",
+]
+
+# 모든 패키지 dev 그룹에 들어가는 개발 도구(루트 dev 그룹과 같은 하한)
+dev_dependencies = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]

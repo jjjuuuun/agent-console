@@ -1,0 +1,382 @@
+"""agent-console-runtime: 그래프 실행 엔진과 확장 인터페이스.
+
+엔진은 특정 노드·엣지 타입·백엔드를 모른다. 모든 능력은 `Registries`에 등록된 구현으로 들어온다.
+
+공개 API:
+    - 엔진: ``GraphRuntime``, ``RunHandle``, ``GraphValidationError``, ``NoEntryError``,
+      ``RuntimeErrorCodes``, ``RuntimeIssueCodes``, ``validate_graph_with``,
+      ``recover_unfinished_runs``, ``SkipReasons``,
+    - 끊긴 실행 이어 가기(§2R.10): ``GraphRuntime.start(seed=, resumed_from=)``,
+      ``ResumeService``(``ResumeStart``·``ResumeStarter``), 순수 함수 ``resume_options``·
+      ``resume_issues``·``resume_seed``·``interrupted_status``, 오류 ``ResumeError``·
+      ``ResumeRunNotFoundError``·``RunNotResumableError``
+      ``RecorderError``
+    - 실행 중 상호작용(design §R14.5): ``InteractionRequest``·``InteractionOutcome``,
+      ``InteractivePort``(``NodeContext.request_input``), ``GraphRuntime.respond``/``pending``,
+      오류 ``UnknownInteractionError``·``InteractionClosedError``·``ResponseValidationError``,
+      X15 ``InteractionKind``(``as_interaction_kind``, ``StaticInteractionKind``),
+      ``INTERACTION_KINDS_EXTENSION``·``INTERACTION_KINDS_GROUP``, 값 상수
+      ``InteractionCloseReasons``·``InteractionAnsweredBy``
+    - 자식 Run(design §5R.7): ``NodeContext.run_child`` → ``ChildRunResult``, 준비자 확장 지점
+      ``ChildRunPreparer``(``GraphRuntime(child_preparer=)``, ``ChildRunRequest`` →
+      ``ChildRunPreparation``)
+    - 호출 NodeRun: ``NodeContext.invoke_node``(대상을 자기 NodeRun으로 실행),
+      ``GraphRuntime(delegation_settings=)``/``start(delegation_settings=)``(실행 중 깊이 한도)
+    - 확장 인터페이스: ``NodeType``(X1) + ``NodeResult``·``NodeContext``·``Incoming``·
+      ``ValidationContext``·
+      선택 훅 ``NODE_ACTOR_HOOK``(``node_actor``)·``NODE_NAME_HOOK``(``node_display_name``,
+      사용자 문구의 노드 이름), ``EdgeType``(X2) + ``Activation``·``Blocked``·
+      ``Reply``·``NodeRunView``·선택 능력 ``EdgeValidator``(``EdgeValidationContext``),
+      ``ExecutionBackend``(X3) + ``AgentRequest``·``SubagentSpec``·``AgentResult``·
+      ``SessionRef``(계약 변환 ``session_refs``)·``BackendEventSink``·
+      선택 sink 능력 ``SubagentResultListener``,
+      ``DelegationStrategy``(X12) + ``DelegationPlan``·
+      ``DelegationMember``, 혼합 위임 선택 프로토콜 ``ComposableDelegation``
+      (``contribute``) + ``DelegationContribution``·``merge_contributions``·``apply_contribution``·
+      ``DelegationIssueCodes``·``SinkWrapper``, 저장 시점 정적 검사 선택 프로토콜
+      ``StaticDelegationChecks``(``static_issues``)·``DelegationNameDeclarer``(``declared_names``) +
+      ``DelegationMemberView``·``DelegationNameGroups``·``duplicate_names_code``(5.2R.37),
+      ``SecretProvider``(X10)
+    - 플랫폼 도구(design §5R.6, 런타임 전용): ``HostTool``·``HostToolResult``·``HostToolHandler``
+      (`AgentRequest.host_tools`), 백엔드 공용 ``call_host_tool``·``duplicate_host_tool_names``·
+      ``object_input_schema``
+    - 주입 인터페이스: ``RunRecorder``(``RunWriter``·``EventWriter``·
+      ``InteractionWriter``),
+      ``EventSink``, ``Clock``, ``IdFactory``
+    - 레지스트리 묶음: ``Registries``(``extension(name, validator=)``·``all()``),
+      ``load_registries``, ``load_registry_plugins``, ``as_node_type`` 등, 그룹 이름 상수
+    - 백엔드 준비 상태·연결 테스트(ux-overhaul §15.8): 선택 능력 ``StatusCapableBackend``
+      (``status``)·``ProbeCapableBackend``(``probe``) + ``BackendCheckContext``,
+      ``BackendReadinessService``(시간 상한·동시 probe 합치기·가림), ``supports_status``·
+      ``supports_probe``, 오류 ``UnknownBackendError``·``ProbeUnsupportedError``
+    - 서비스·비밀·취소: ``Services``·``ServiceKey``, ``SecretResolver``·``EnvSecretProvider``,
+      ``CancelToken``
+    - 프로세스: ``process_group_kwargs``, ``terminate_process_group``, ``aterminate_process_group``
+    - 이벤트 버스: ``InMemoryEventBus``, ``Subscription``
+    - 테스트 도우미: ``agent_console_runtime.testing``
+"""
+
+from agent_console_runtime._bus import EventFilter, InMemoryEventBus, Subscription
+from agent_console_runtime._cancel import CancelToken, OperationCancelledError
+from agent_console_runtime._children import (
+    ChildRunPreparation,
+    ChildRunPreparer,
+    ChildRunRequest,
+    ChildRunResult,
+)
+from agent_console_runtime._context import RESERVED_EVENT_PREFIXES, NodeContext
+from agent_console_runtime._delegation import (
+    DELEGATION_STRATEGIES_EXTENSION,
+    DELEGATION_STRATEGIES_GROUP,
+    DUPLICATE_NAMES_CODE_TEMPLATE,
+    ComposableDelegation,
+    DelegationContribution,
+    DelegationIssueCodes,
+    DelegationMember,
+    DelegationMemberView,
+    DelegationNameDeclarer,
+    DelegationNameGroups,
+    DelegationPlan,
+    DelegationStrategy,
+    SinkWrapper,
+    StaticDelegationChecks,
+    apply_contribution,
+    duplicate_names_code,
+    merge_contributions,
+)
+from agent_console_runtime._host_tools import (
+    DEFAULT_HOST_TOOL_CANCELLED_TEXT,
+    DEFAULT_HOST_TOOL_ERROR_TEMPLATE,
+    HostTool,
+    HostToolHandler,
+    HostToolResult,
+    call_host_tool,
+    duplicate_host_tool_names,
+    object_input_schema,
+)
+from agent_console_runtime._interactions import (
+    INTERACTION_CLOSED_CODE,
+    INTERACTION_KINDS_EXTENSION,
+    INTERACTION_KINDS_GROUP,
+    InteractionAnsweredBy,
+    InteractionClosedError,
+    InteractionCloseReasons,
+    InteractionKind,
+    InteractionOutcome,
+    InteractionRequest,
+    InteractionWriter,
+    InteractivePort,
+    ResponseValidationError,
+    StaticInteractionKind,
+    UnknownInteractionError,
+    as_interaction_kind,
+)
+from agent_console_runtime._interfaces import (
+    BACKEND_OPTIONS_HOOK,
+    NODE_ACTOR_HOOK,
+    NODE_NAME_HOOK,
+    Activation,
+    AgentRequest,
+    AgentResult,
+    BackendEventSink,
+    Blocked,
+    Clock,
+    ConfigurableBackend,
+    EdgeType,
+    EdgeValidationContext,
+    EdgeValidator,
+    EventSink,
+    EventWriter,
+    ExecutionBackend,
+    IdFactory,
+    Incoming,
+    NodeResult,
+    NodeRunView,
+    NodeType,
+    Reply,
+    RunRecorder,
+    RunWriter,
+    SecretProvider,
+    SessionRef,
+    SubagentResultListener,
+    SubagentSpec,
+    ValidationContext,
+    node_actor,
+    node_display_name,
+)
+from agent_console_runtime._journal import RecorderError
+from agent_console_runtime._process import (
+    DEFAULT_GRACE_SECONDS,
+    aterminate_process_group,
+    process_group_kwargs,
+    terminate_process_group,
+)
+from agent_console_runtime._readiness import (
+    DEFAULT_PROBE_TIMEOUT_MAX_S,
+    DEFAULT_STATUS_TIMEOUT_S,
+    UNKNOWN_STATE,
+    BackendCheckContext,
+    BackendReadinessService,
+    ProbeCapableBackend,
+    ProbeReasons,
+    ProbeUnsupportedError,
+    ReadinessTexts,
+    StatusCapableBackend,
+    UnknownBackendError,
+    supports_probe,
+    supports_status,
+)
+from agent_console_runtime._recovery import recover_unfinished_runs
+from agent_console_runtime._registries import (
+    BACKENDS_GROUP,
+    EDGE_TYPES_GROUP,
+    NODE_TYPES_GROUP,
+    SECRET_PROVIDERS_GROUP,
+    Registries,
+    as_backend,
+    as_delegation_strategy,
+    as_edge_type,
+    as_node_type,
+    as_secret_provider,
+    descriptor_version,
+    load_registries,
+    load_registry_plugins,
+)
+from agent_console_runtime._resume import (
+    INTERRUPTED_RUN_STATUS,
+    ResumeError,
+    ResumeEventSource,
+    ResumeIssueCodes,
+    ResumeRunNotFoundError,
+    ResumeRunSource,
+    ResumeService,
+    ResumeStart,
+    ResumeStarter,
+    RunNotResumableError,
+    interrupted_status,
+    resume_issues,
+    resume_options,
+    resume_seed,
+)
+from agent_console_runtime._runtime import (
+    GraphRuntime,
+    NoEntryError,
+    RunHandle,
+    RuntimeErrorCodes,
+    RuntimeIssueCodes,
+    SkipReasons,
+)
+from agent_console_runtime._secrets import (
+    DEFAULT_MIN_REDACT_CHARS,
+    REDACTED,
+    SECRET_REF_PREFIX,
+    EnvSecretProvider,
+    SecretNotFoundError,
+    SecretResolver,
+    is_secret_ref,
+)
+from agent_console_runtime._services import MissingServiceError, ServiceKey, Services
+from agent_console_runtime._sessions import session_refs
+from agent_console_runtime._usage import preview, sum_usage
+from agent_console_runtime._validation import (
+    GraphValidationError,
+    edge_type_descriptors,
+    node_type_descriptors,
+    port_resolver,
+    validate_graph_with,
+)
+
+__all__ = [
+    "BACKENDS_GROUP",
+    "BACKEND_OPTIONS_HOOK",
+    "DEFAULT_GRACE_SECONDS",
+    "DEFAULT_HOST_TOOL_CANCELLED_TEXT",
+    "DEFAULT_HOST_TOOL_ERROR_TEMPLATE",
+    "DEFAULT_MIN_REDACT_CHARS",
+    "DEFAULT_PROBE_TIMEOUT_MAX_S",
+    "DEFAULT_STATUS_TIMEOUT_S",
+    "DELEGATION_STRATEGIES_EXTENSION",
+    "DELEGATION_STRATEGIES_GROUP",
+    "DUPLICATE_NAMES_CODE_TEMPLATE",
+    "EDGE_TYPES_GROUP",
+    "INTERACTION_CLOSED_CODE",
+    "INTERACTION_KINDS_EXTENSION",
+    "INTERACTION_KINDS_GROUP",
+    "INTERRUPTED_RUN_STATUS",
+    "NODE_ACTOR_HOOK",
+    "NODE_NAME_HOOK",
+    "NODE_TYPES_GROUP",
+    "REDACTED",
+    "RESERVED_EVENT_PREFIXES",
+    "SECRET_PROVIDERS_GROUP",
+    "SECRET_REF_PREFIX",
+    "UNKNOWN_STATE",
+    "Activation",
+    "AgentRequest",
+    "AgentResult",
+    "BackendCheckContext",
+    "BackendEventSink",
+    "BackendReadinessService",
+    "Blocked",
+    "CancelToken",
+    "ChildRunPreparation",
+    "ChildRunPreparer",
+    "ChildRunRequest",
+    "ChildRunResult",
+    "Clock",
+    "ComposableDelegation",
+    "ConfigurableBackend",
+    "DelegationContribution",
+    "DelegationIssueCodes",
+    "DelegationMember",
+    "DelegationMemberView",
+    "DelegationNameDeclarer",
+    "DelegationNameGroups",
+    "DelegationPlan",
+    "DelegationStrategy",
+    "EdgeType",
+    "EdgeValidationContext",
+    "EdgeValidator",
+    "EnvSecretProvider",
+    "EventFilter",
+    "EventSink",
+    "EventWriter",
+    "ExecutionBackend",
+    "GraphRuntime",
+    "GraphValidationError",
+    "HostTool",
+    "HostToolHandler",
+    "HostToolResult",
+    "IdFactory",
+    "InMemoryEventBus",
+    "Incoming",
+    "InteractionAnsweredBy",
+    "InteractionCloseReasons",
+    "InteractionClosedError",
+    "InteractionKind",
+    "InteractionOutcome",
+    "InteractionRequest",
+    "InteractionWriter",
+    "InteractivePort",
+    "MissingServiceError",
+    "NoEntryError",
+    "NodeContext",
+    "NodeResult",
+    "NodeRunView",
+    "NodeType",
+    "OperationCancelledError",
+    "ProbeCapableBackend",
+    "ProbeReasons",
+    "ProbeUnsupportedError",
+    "ReadinessTexts",
+    "RecorderError",
+    "Registries",
+    "Reply",
+    "ResponseValidationError",
+    "ResumeError",
+    "ResumeEventSource",
+    "ResumeIssueCodes",
+    "ResumeRunNotFoundError",
+    "ResumeRunSource",
+    "ResumeService",
+    "ResumeStart",
+    "ResumeStarter",
+    "RunHandle",
+    "RunNotResumableError",
+    "RunRecorder",
+    "RunWriter",
+    "RuntimeErrorCodes",
+    "RuntimeIssueCodes",
+    "SecretNotFoundError",
+    "SecretProvider",
+    "SecretResolver",
+    "ServiceKey",
+    "Services",
+    "SessionRef",
+    "SinkWrapper",
+    "SkipReasons",
+    "StaticDelegationChecks",
+    "StaticInteractionKind",
+    "StatusCapableBackend",
+    "SubagentResultListener",
+    "SubagentSpec",
+    "Subscription",
+    "UnknownBackendError",
+    "UnknownInteractionError",
+    "ValidationContext",
+    "apply_contribution",
+    "as_backend",
+    "as_delegation_strategy",
+    "as_edge_type",
+    "as_interaction_kind",
+    "as_node_type",
+    "as_secret_provider",
+    "aterminate_process_group",
+    "call_host_tool",
+    "descriptor_version",
+    "duplicate_host_tool_names",
+    "duplicate_names_code",
+    "edge_type_descriptors",
+    "interrupted_status",
+    "is_secret_ref",
+    "load_registries",
+    "load_registry_plugins",
+    "merge_contributions",
+    "node_actor",
+    "node_display_name",
+    "node_type_descriptors",
+    "object_input_schema",
+    "port_resolver",
+    "preview",
+    "process_group_kwargs",
+    "recover_unfinished_runs",
+    "resume_issues",
+    "resume_options",
+    "resume_seed",
+    "session_refs",
+    "sum_usage",
+    "supports_probe",
+    "supports_status",
+    "terminate_process_group",
+    "validate_graph_with",
+]

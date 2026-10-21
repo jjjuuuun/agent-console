@@ -1,0 +1,7 @@
+# 기능 라이브러리(L1): FastAPI·modkit·mod-*·link-*를 모른다(modularity §3.7 규칙 1).
+folder = "features"
+description = "{{product_name}} 기능 라이브러리"
+dependencies = ["{{dist_prefix}}contracts"]
+dev_dependencies = []
+required_files = []
+runnable = false

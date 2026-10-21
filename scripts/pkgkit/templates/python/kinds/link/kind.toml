@@ -1,0 +1,12 @@
+# 연동 모듈(L4): 두 기능 모듈의 공개 포트를 잇는다. 단독 실행은 `--with`로 두 모듈과 함께(modularity §3.9.4).
+folder = "links"
+description = "{{product_name}} 연동 모듈"
+dependencies = ["{{dist_prefix}}contracts", "{{dist_prefix}}modkit[host]"]
+dev_dependencies = []
+required_files = ["src/{{import_name}}/__main__.py", "src/{{import_name}}/module.py"]
+runnable = true
+# 모듈 id = 폴더 이름에서 폴더 접두사(ac-)와 이 접두사를 뗀 것(`ac-link-chat` → `chat`). --id로 바꿀 수 있다.
+id_prefix = "link-"
+
+[entry_points."{{modules_group}}"]
+"{{module_id}}" = "{{import_name}}.module:module"

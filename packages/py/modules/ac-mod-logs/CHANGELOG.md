@@ -1,0 +1,19 @@
+# 변경 기록
+
+## 미출시
+
+- 5.2R.27: 선택 multi 포트 `logs.source_defaults`(설정에 `enabled`가 없는 출처의 기본값, 설정 파일 무변경), `apply_source_defaults`·`collect_source_defaults`.
+
+## 0.1.0
+
+- 처음 만듦(scripts/pkgkit 템플릿 `module`).
+- 4R.5: 저장 계층(`storage`: 계보 `logs`, `open_log_storage`).
+- 4R.10: 모듈 서술자(제공 `logs.query`·`logs.ingest`·`server.warnings`, 선택 `logs.sources`·
+  `workspace.settings`·`secrets.rules`, web_roles `logs`, 계보 `logs`)와 entry point
+  (`agent_console.server_modules` `mod-logs`, `agent_console.host_plugin_loaders` `logs`) 등록.
+  `LogsService`(배경·수동 수집, 수집 예약, 보존 정리, 질의), REST `/logs…` 12개 경로, WS `logs`·토픽
+  `logs.ingested`, 비밀 의심 가리기 주입, 출처 실패 경고, 대시보드 템플릿(패키지 데이터 2개),
+  설치자 옵션(`LogsModuleSettings`), 단독 실행(`standalone.main`, `--with` 없이 `local-settings`).
+- 4R.14: `GET /logs/archive?<LogFilter>&format=json|html&tz=`(첨부, `Content-Disposition`), `LogsService.archive`,
+  설치자 옵션 `archive_max_events`·`archive_max_bytes`·`archive_file_prefix`·`archive_title`.
+- 5R.19: 설치자 옵션 `session_title_rules`(null = ac-logs 기본 데이터).

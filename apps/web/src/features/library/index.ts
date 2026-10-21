@@ -1,0 +1,23 @@
+/** 정의 라이브러리 공용 부품의 공개 API(에이전트·리소스·팀 화면이 함께 쓰는 목록·삭제·생성 대화상자, 경로, 데이터 훅). 다른 기능 폴더는 이 파일로만 import한다(5R.20). */
+import "./library.css";
+export { ActionMenu, type ActionMenuHandle } from "./ActionMenu";
+export { ATTACHMENT_MODES, AgentSettingsForm } from "./AgentSettingsForm";
+export { Avatar } from "./Avatar";
+export { AVATAR_COLOR_TOKENS, nodeAvatarsOf, readAvatarUi, resolveAvatar, resolveAvatarColor, withAvatarUi, type AvatarSpec } from "./avatarSpec";
+export { DefinitionIdField, useDefinitionId, type DefinitionId } from "./DefinitionIdField";
+export { DeleteDialog } from "./DeleteDialog";
+export { DescriptorIcon } from "./DescriptorIcon";
+export { Field } from "./Field";
+export { LayeredAttachments } from "./LayeredAttachments";
+export { LazyTextEditor } from "./LazyTextEditor";
+export { NewDefinitionDialog, type NewDefinitionValues } from "./NewDefinitionDialog";
+export { ResourcePicker } from "./ResourcePicker";
+export { useAgentList, useGraphList, useImportSources, useInteractionKinds, useInvalidateLists, useNodeTypes } from "./data";
+export { editLayerOf, inheritedProvenance, inheritedValue, toFormLayers, toUiLayers } from "./effective";
+export { DEFINITION_KINDS, definitionKey, kindOfModel } from "./kinds";
+export { libraryMessages, modeLabel } from "./messages";
+export { ROUTE_ROLES, definitionPath, layerSourcePath, routePath, useRouteOn, useRoutesOn } from "./paths";
+export { type DetailRequest } from "./types";
+export { FolderMoveDialog, type FolderMoveDialogProps, type FolderMoveMessages } from "./FolderMoveDialog";
+export { LabelEditDialog, type LabelEditDialogProps, type LabelEditMessages } from "./LabelEditDialog";
+export { useListShortcuts } from "./useListShortcuts";

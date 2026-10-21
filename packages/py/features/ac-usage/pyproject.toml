@@ -1,0 +1,56 @@
+[project]
+name = "agent-console-usage"
+version = "0.1.0"
+description = "Agent Console — 사용량 출처(X13) 인터페이스·로더·수집 서비스, statusLine 브리지, 토큰 집계"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-registry>=0.1,<0.2",
+    "pydantic>=2.9",
+    "jsonschema>=4.23",
+]
+
+# 등록은 entry point로만 한다. 이름 = 레지스트리 key = 스냅샷의 `source`.
+[project.entry-points."agent_console.usage_sources"]
+run-events = "agent_console_usage.sources.run_events:RunEventUsageSource"
+statusline-file = "agent_console_usage.sources.statusline_file:StatuslineFileSource"
+fake = "agent_console_usage.sources.fake:FakeUsageSource"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "types-jsonschema>=4.26.0.20261006",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

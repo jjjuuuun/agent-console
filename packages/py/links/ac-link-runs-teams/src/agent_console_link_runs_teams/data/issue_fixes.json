@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "description": "검증 이슈·노드 실패 코드 → 해결 버튼(Fix.actions). 자리표시자: {team_kind}(팀 구성 정의 종류), {graph_id}, {node_id}, {edge_id}, {item_id}(노드 id, 없으면 엣지 id). 채운 값이 비면 그 칸은 null이다. role은 웹 라우트 역할 이름이다.",
+  "rules": [
+    {
+      "codes": ["team.no_entry"],
+      "actions": [
+        {"label": "팀 구성에서 입구 연결하기", "target": {"role": "definition:{team_kind}", "id": "{graph_id}"}}
+      ]
+    },
+    {
+      "codes": ["team.no_reply"],
+      "actions": [
+        {"label": "팀 구성에서 답변 연결하기", "target": {"role": "definition:{team_kind}", "id": "{graph_id}"}}
+      ]
+    },
+    {
+      "codes": ["agent.no_backend", "agent.unknown_backend"],
+      "actions": [
+        {"label": "노드에서 지정", "target": {"role": "definition:{team_kind}", "id": "{graph_id}", "section": "{node_id}"}, "focus": "/backend"},
+        {"label": "기본값으로 지정", "target": {"role": "settings", "section": "common"}, "focus": "/backend"}
+      ]
+    },
+    {
+      "codes": ["unknown_node_type", "unknown_edge_type", "team.unknown_strategy", "agent.unknown_strategy"],
+      "actions": [
+        {"label": "팀 구성에서 보기", "target": {"role": "definition:{team_kind}", "id": "{graph_id}", "section": "{item_id}"}},
+        {"label": "설치된 확장 보기", "target": {"role": "settings", "section": "server"}}
+      ]
+    },
+    {
+      "codes": ["delegation.depth_exceeded"],
+      "actions": [
+        {"label": "위임 깊이 한도 바꾸기", "target": {"role": "settings", "section": "delegation"}, "focus": "/max_depth"},
+        {"label": "팀 구성에서 보기", "target": {"role": "definition:{team_kind}", "id": "{graph_id}", "section": "{item_id}"}}
+      ]
+    }
+  ]
+}

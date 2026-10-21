@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": [],
+    "paths": {},
+    "customConditions": [],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src",
+    "schema/*.json"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
+  ]
+}

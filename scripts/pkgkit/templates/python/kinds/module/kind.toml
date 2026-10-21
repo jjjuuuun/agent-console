@@ -1,0 +1,13 @@
+# 기능 모듈(L3): 기능 라이브러리 하나를 서버에 꽂는다. 단독 실행 `python -m <import> --check`(modularity §3.9.4).
+# module.py·__main__.py는 modkit 공개 API(3R.8)를 따른다. 단독 실행에 호스트가 필요해 modkit[host]에 의존한다.
+folder = "modules"
+description = "{{product_name}} 기능 모듈"
+dependencies = ["{{dist_prefix}}contracts", "{{dist_prefix}}modkit[host]"]
+dev_dependencies = []
+required_files = ["src/{{import_name}}/__main__.py", "src/{{import_name}}/module.py"]
+runnable = true
+# 모듈 id = 폴더 이름에서 폴더 접두사(ac-)와 이 접두사를 뗀 것(`ac-mod-chat` → `chat`). --id로 바꿀 수 있다.
+id_prefix = "mod-"
+
+[entry_points."{{modules_group}}"]
+"{{module_id}}" = "{{import_name}}.module:module"

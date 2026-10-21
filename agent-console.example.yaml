@@ -1,0 +1,113 @@
+# Agent Console 서버 설정 예시 (1R)
+#
+# 사용: 이 파일을 agent-console.yaml로 복사해 고친다(서버는 현재 폴더의 agent-console.yaml을 읽는다).
+#   cp agent-console.example.yaml agent-console.yaml
+#   uv run agent-console serve            # 또는 --config <경로>, 환경변수 AGENT_CONSOLE_CONFIG
+# 우선순위: 명령행 > AGENT_CONSOLE_* 환경변수 > 이 파일 > 기본값.
+# 상대 경로는 이 파일이 있는 폴더 기준이다(환경변수로 준 상대 경로도 같다 — 예: AGENT_CONSOLE_WEB_DIR).
+# 설정 파일 없이 띄우면 서버를 띄운 현재 폴더 기준. 헷갈리면 절대 경로를 쓴다.
+# 전체 키 설명: apps/server/README.md "설정 파일".
+#
+# 비밀 값(API 키·토큰)은 이 파일에 쓰지 않는다. 환경변수나 로컬 비밀 저장소에 두고 secret://이름 으로 참조한다.
+# 삭제된 키(console, default_manual_route_pattern, presets.set_default_entry)가 있으면 서버가 시작하지 않는다.
+
+host: 127.0.0.1                # 루프백만. 다른 주소는 security.allow_remote: true가 있어야 한다
+port: 8765
+workspace: .agent-console      # 에이전트·팀 구성·리소스·공통 설정(settings.yaml) YAML 폴더, 기록은 <workspace>/.state
+
+security:
+  # 웹(정적 앱)이 서버와 다른 출처에서 뜰 때 허용할 출처. 명시한 출처만 CORS·GET /bootstrap이 허용된다.
+  # `pnpm app`은 웹 미리보기 출처를 실행 중에 덧붙이므로(--allow-origin) 여기 없어도 된다.
+  allowed_origins:
+    - http://127.0.0.1:4173      # pnpm --filter @agent-console/web preview (빌드본 미리보기)
+    - http://localhost:4173
+    - http://localhost:5173      # pnpm --filter @agent-console/web dev (개발 서버)
+  allow_remote: false
+  token: null                  # 비우면 시작마다 무작위. 고정하려면 환경변수 AGENT_CONSOLE_TOKEN
+
+secrets:
+  env_prefix: ""               # secret://anthropic_api_key → 환경변수 anthropic_api_key, 없으면 ANTHROPIC_API_KEY
+
+modules:
+  # 서버 모듈 켜고 끄기(웹에서는 읽기 전용). 모듈 id·상태는 GET /api/v1/modules.
+  # 명령행 serve --enable-module ID / --disable-module ID가 이 값보다 우선한다.
+  enabled: null                # null = 설치된 모듈 전부
+  disabled: []                 # 예: [mod-exports] — 그 모듈의 경로는 404, 화면에서도 빠진다
+  options:
+    # 모듈 id → 그 모듈 설정(각 모듈 README). 옛 최상위 키(presets·usage·imports·exports·versions·resources·
+    # runtime·backends·working_directory)는 4R부터 읽지 않는다 — 새 위치를 알려 주는 오류(settings.removed_key).
+    mod-presets:
+      directories: []          # 프리셋 폴더 목록. 비우면 프리셋 없이 동작. 예: [my-presets]
+      apply_on_start: []       # 예: [my-preset] — 시작 때 workspace에 복사(같은 id가 있으면 건너뜀)
+      on_conflict: skip        # skip | overwrite | rename
+    mod-usage:
+      retention_seconds: 2592000   # 사용량 관측값 보존(초)
+      agent_console_command: agent-console  # 상태 줄 연결 조각에 넣을 명령(이름이면 PATH에서 찾은 절대 경로)
+    mod-versions:
+      max_per_definition: null     # 정의마다 남길 버전 수(null = 모두). 예: 50
+    mod-definitions:
+      max_content_bytes: 10485760  # 정의 하나(리소스 등)의 본문 총량 한도(바이트, null = 무제한)
+    mod-imports:                   # 가져오기(~/.claude·프로젝트 .claude/ 복사, 원본은 읽기만)
+      home: null                   # 사용자 홈(~/.claude의 부모). 비우면 HOME·USERPROFILE
+      project_dir: null            # 프로젝트 폴더(.claude/·.mcp.json). 비우면 이 파일 폴더(작업 폴더를 따라가지 않는다)
+    mod-runs:                      # 실행 엔진·기록
+      working_directory: null      # 에이전트 작업 폴더(비우면 이 파일 폴더). 환경변수 AGENT_CONSOLE_WORKING_DIRECTORY
+      runtime:
+        max_concurrency: null      # 동시 실행 노드 수 한도. 환경변수 AGENT_CONSOLE_MAX_CONCURRENCY
+        shutdown_timeout: 10       # 종료 때 실행 중 Run 정리를 기다리는 최대 초
+      backends:
+        # 백엔드 id → 그 백엔드의 설치자 설정(키 의미는 각 백엔드 README).
+        fake:                      # 모델 호출 없는 결정적 백엔드(프리셋 기본값). 화면 확인·E2E용
+          models:
+            - {id: fake-small, title: "fake (작은 모델 흉내)"}
+          rate_limits:             # 실행마다 낼 usage.rate_limit 예시(사용량 카드 확인용, 값은 지어낸 예시)
+            - {window: five_hour, status: allowed, utilization: 0.42, resets_in_seconds: 3600}
+            - {window: seven_day, status: allowed_warning, utilization: 0.81, resets_in_seconds: 259200}
+        claude-agent-sdk:          # 실제 Claude 실행. 인증은 에이전트 설정의 backend_options.auth
+                                   # (기본은 구독 = Claude Code 로그인, 본인 책임. API 키도 선택 가능: {mode: api_key, api_key: secret://anthropic_api_key})
+          models: []               # 화면 모델 목록. 예: - {id: <모델 id>, title: <표시 이름>}
+          allow_subscription_auth: true   # 본인 구독 자격 실행 허용(기본 켜짐 = 구독 기본, 본인 책임 — 실행마다 경고). false면 구독 거부
+          # readiness:                     # 상태 카드가 점검할 인증 방식(기본 구독). API 키로 점검하려면:
+          #   auth: {mode: api_key, api_key: secret://anthropic_api_key}
+          # hook 관측(에이전트 설정 observe.hook_probe가 켜진 노드만): hook 명령을 probe로 감싸 실행 기록을 남긴다.
+          hook_probe_command: null   # probe 실행 인자 목록. null = [현재 파이썬, -m, agent_console_hook_probe]
+          hook_probe_folder: hook-probe  # 노드 실행 폴더 아래 기록 폴더 이름(경로 구분자 없는 이름)
+    mod-logs:                      # 로그 수집·색인(읽을 출처 켜기는 사용자 설정 logs.sources — 설정 화면 "로그 출처")
+      scan_interval_seconds: 30    # 배경 수집 주기(초). 0 = 반복 수집 없음([지금 수집]만)
+      startup_scan: true           # 시작 직후 한 번 수집
+      scan_budget_bytes: 8000000   # 출처 하나를 한 번 수집할 때 읽는 최대 바이트(남은 것은 다음 수집)
+      retention_days: null         # 색인 보존 일수(null = 영구, 원본 파일은 건드리지 않음)
+      index_path: null             # 별도 SQLite 파일(null = 서버 DB). 예: .agent-console/logs.sqlite3
+      dashboard_templates_dir: null  # 대시보드 템플릿 폴더(null = 패키지 기본)
+      archive_max_events: 5000     # 보관본(/logs/archive) 최대 이벤트 수(넘으면 앞부분만, truncated)
+      archive_max_bytes: 20000000  # 보관본 이벤트 JSON 바이트 합 상한
+      archive_file_prefix: agent-console-logs  # 보관본 파일 이름 앞부분(<앞부분>-<UTC 시각>.json|html)
+      archive_title: Agent Console 로그 보관본  # 보관본 HTML 제목
+      session_title_rules: null    # 세션 제목 순위(null = ac-logs 기본 데이터 default_session_title_rules.yaml).
+                                   # 위에서부터 보고 후보가 있는 첫 규칙이 이긴다. pick: first|last. 바꾸려면 예:
+      # session_title_rules:
+      #   - {tag: session_title.renamed, pick: last}    # 사용자가 붙인 이름(/rename) — 마지막 것
+      #   - {tag: session_title.generated, pick: last}  # 자동 생성 제목(ai-title) — 마지막 것
+      #   - {tag: session_title, pick: first}           # 그 밖의 후보(첫 사용자 입력 등) — 처음 것
+    # 로그 연동 모듈(설치돼 있고 mod-logs와 상대 모듈이 켜져 있을 때만 동작, 키는 각 연동 README)
+    link-logs-runs:                # 플랫폼 실행 기록 → 로그(실행 상세 "세션 로그" 탭)
+      debounce_seconds: 1.0        # 실행 이벤트가 오면 이만큼 모아 수집(0 = 바로)
+    link-logs-usage:               # 로컬 로그 → 사용량 출처
+      source_id: local-logs        # 사용량 출처 id(다른 출처와 겹치면 빠지고 usage.source_conflict 경고)
+      defaults_file: null          # 창·예산 기본값 JSON(null = 패키지 기본). 상대 경로면 이 파일 폴더 기준
+      auto_enable_log_sources: true  # 이 PC에 로그 폴더(예: ~/.claude/projects)가 있으면 그 로그 출처를 읽기 전용 기본으로 켠다
+      auto_log_sources_file: null  # 자동 켜기 규칙 JSON(null = 패키지 기본). 설정 logs.sources[].enabled가 항상 이긴다
+      first_scan_wait_seconds: 5   # 첫 사용량 조회가 로그 수집을 기다리는 최대 시간(초)
+    link-logs-trace:               # 로그 → 흐름 그림
+      link_keys: [tool_use_id]     # 부모를 찾을 correlation 이름
+      max_events: 20000            # 세션 하나에서 읽을 이벤트 상한
+
+web:
+  # 단일 실행(선택): 서버가 웹 빌드까지 서빙한다. 같은 출처라 allowed_origins가 필요 없다(apps/server/README.md "단일 실행").
+  serve_static: false          # true로 바꾸고 먼저 pnpm --filter @agent-console/web build
+  static_dir: apps/web/dist    # 웹 빌드 폴더. 상대 경로면 이 파일 폴더 기준(저장소 루트에 둔 이 파일이면 맞다).
+                               # 다른 곳에 복사했으면 절대 경로로 바꾼다. 환경변수 AGENT_CONSOLE_WEB_DIR가 덮어쓴다
+  open:
+    enabled: false             # 준비되면 웹 화면을 연다. 명령행 serve --open/--no-open이 덮어쓴다
+    url: null                  # 비우면 serve_static일 때 서버 주소. {host}·{port} 자리 사용 가능
+    command: null              # 예: [msedge, "--app={url}"](설치한 PWA 창), WSL [explorer.exe, "{url}"]

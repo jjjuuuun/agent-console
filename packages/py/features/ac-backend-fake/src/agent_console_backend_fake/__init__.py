@@ -1,0 +1,95 @@
+"""agent-console-backend-fake: 모델 없이 결정적 응답을 주는 실행 백엔드(테스트·데모·오프라인).
+
+응답·지연·실패·도구 호출은 `Agent.backend_options`(형식 `FakeBackendOptions`)의
+규칙 데이터로 정한다.
+
+공개 API:
+    - ``FakeBackend``: X3 `ExecutionBackend` 구현(entry point `agent_console.backends:fake`)
+    - 설정 모델: ``FakeBackendOptions``, ``FakeRule``, ``FakeToolCall``, ``FakeFailure``,
+      ``FakeDelegation``, ``FakeAsk``, ``FakeObserve``, ``FakeTaskUsage``, ``fake_config_schema``,
+      ``DEFAULT_OBSERVE_SWITCHES``, ``DEFAULT_OBSERVE_COLLECTORS``·``observe_switch_on``
+      (관측 스위치:
+      `observe.collectors[id].enabled`가 옛 키를 이긴다), ``FakeHookProbe``(hook probe 기록 흉내,
+      `observe.hook_probe`), ``DEFAULT_PROBE_FORMAT``·``HOOK_PROBE_SWITCH``
+    - 플랫폼 도구(5R.10, design §5R.6, `capabilities.host_tools = true`): 규칙 `host_tool_calls`
+      (``FakeHostToolCall``·``FakeHostToolWhen``)로 `AgentRequest.host_tools`를 부르고 결과를
+      `$host_N`·`$host_N_status`(``HostCallStatus``)와 응답 끝에 붙인다. 없는 도구는
+      ``UNKNOWN_HOST_TOOL_TEXT`` 오류 결과
+    - 준비 상태·연결 테스트(선택 능력, ux-overhaul §15.8): ``FakeBackend.status``(늘
+      ``FAKE_READY_STATE``, 톤 ok)·``FakeBackend.probe``(지연 없는 성공)
+    - 묶음 미리보기 훅 ``FakeBackend.preview_notes``(info ``HOOK_PROBE_NOTE_CODE``),
+      ``DEFAULT_HOOK_PROBE_FOLDER``
+    - ``FakeInstallOptions``·``FakeRateLimit``: 설치자 설정 형식(``FakeBackend.from_options`` 훅)
+    - ``bundle_summary``·``mask_secret_refs``: 실행 묶음 요약
+      (응답에 넣는 옵션 `echo_bundle`·템플릿 변수 `$bundle`)
+    - 상수: ``FAKE_BACKEND_ID``, ``DEFAULT_DELEGATE_TOOL``, ``DEFAULT_RESOURCE_SLOTS``,
+      ``EMPTY_BUNDLE``
+"""
+
+from agent_console_backend_fake._backend import (
+    DEFAULT_DELEGATE_TOOL,
+    DEFAULT_HOOK_PROBE_FOLDER,
+    DEFAULT_RESOURCE_SLOTS,
+    FAKE_BACKEND_ID,
+    FAKE_READY_STATE,
+    HOOK_PROBE_NOTE_CODE,
+    UNKNOWN_HOST_TOOL_TEXT,
+    FakeBackend,
+    FakeInstallOptions,
+    HostCallStatus,
+)
+from agent_console_backend_fake._bundle import EMPTY_BUNDLE, bundle_summary, mask_secret_refs
+from agent_console_backend_fake._config import (
+    DEFAULT_OBSERVE_COLLECTORS,
+    DEFAULT_OBSERVE_SWITCHES,
+    DEFAULT_PROBE_FORMAT,
+    HOOK_PROBE_SWITCH,
+    FakeAsk,
+    FakeBackendOptions,
+    FakeDelegation,
+    FakeFailure,
+    FakeHookProbe,
+    FakeHostToolCall,
+    FakeHostToolWhen,
+    FakeObserve,
+    FakeRateLimit,
+    FakeRule,
+    FakeTaskUsage,
+    FakeToolCall,
+    fake_config_schema,
+    observe_switch_on,
+)
+
+__all__ = [
+    "DEFAULT_DELEGATE_TOOL",
+    "DEFAULT_HOOK_PROBE_FOLDER",
+    "DEFAULT_OBSERVE_COLLECTORS",
+    "DEFAULT_OBSERVE_SWITCHES",
+    "DEFAULT_PROBE_FORMAT",
+    "DEFAULT_RESOURCE_SLOTS",
+    "EMPTY_BUNDLE",
+    "FAKE_BACKEND_ID",
+    "FAKE_READY_STATE",
+    "HOOK_PROBE_NOTE_CODE",
+    "HOOK_PROBE_SWITCH",
+    "UNKNOWN_HOST_TOOL_TEXT",
+    "FakeAsk",
+    "FakeBackend",
+    "FakeBackendOptions",
+    "FakeDelegation",
+    "FakeFailure",
+    "FakeHookProbe",
+    "FakeHostToolCall",
+    "FakeHostToolWhen",
+    "FakeInstallOptions",
+    "FakeObserve",
+    "FakeRateLimit",
+    "FakeRule",
+    "FakeTaskUsage",
+    "FakeToolCall",
+    "HostCallStatus",
+    "bundle_summary",
+    "fake_config_schema",
+    "mask_secret_refs",
+    "observe_switch_on",
+]

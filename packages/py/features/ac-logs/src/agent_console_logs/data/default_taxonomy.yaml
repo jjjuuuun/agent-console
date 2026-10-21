@@ -1,0 +1,29 @@
+# 기본 분류 체계(프리셋 데이터, design §4R.2). 설정 `logs.taxonomy`가 범주별로 덮어쓴다.
+# 이 파일을 비우거나 지워도 로그 분석은 동작한다(분류 체계에 없는 범주는 이름 = id로 보인다).
+# tone: danger 인 범주의 이벤트만 오류로 표시·집계한다(F-25). 알려진 tone 값은 danger·warning·success·info·neutral.
+# visible: false 인 범주는 세션 타임라인에서 숨긴다(이벤트 목록·검색·집계에는 남는다, 5R.19).
+categories:
+  input: {label: 사용자·역할 입력}
+  context: {label: 맥락 구성}
+  llm: {label: 모델 응답}
+  tool: {label: 도구}
+  tool_call: {label: 도구 호출}
+  tool_result: {label: 도구 결과}
+  mcp: {label: MCP}
+  hook: {label: hook}
+  external: {label: 외부 도구}
+  agent: {label: 에이전트}
+  handoff: {label: 에이전트 전달}
+  merge: {label: 결과 통합}
+  skill: {label: Skill}
+  spec: {label: SPEC}
+  agents_md: {label: AGENTS.md}
+  document: {label: 문서}
+  workspace: {label: 파일 변경}
+  usage: {label: 사용량}
+  control: {label: 에이전트 제어}
+  system: {label: 실행·검사}
+  error: {label: 오류, tone: danger}
+  other: {label: 기타, tone: neutral}
+  meta: {label: 메타 기록, tone: neutral, visible: false}  # 형식 내부 기록(자동 제목 반복·대기열·파일 기록 등) — 타임라인 소음
+order: [input, llm, tool_call, tool_result, mcp, hook, handoff, agent, document, workspace, error]

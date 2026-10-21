@@ -1,0 +1,59 @@
+# 예제 확장: claude-sdk 관측 수집기(X7) 플러그인 하나. uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-collector"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 도구 호출 수 관측 수집기(example.tool_count)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-backend-claude-sdk>=0.1,<0.2",
+    "claude-agent-sdk>=0.2.166",
+    "pydantic>=2.9",
+]
+
+# 그룹 이름 = agent_console_backend_claude_sdk.collectors.COLLECTORS_GROUP, entry point 이름 = 수집기 id
+# (설정 `observe.collectors`의 키). 백엔드는 `descriptor.backend`가 자기 id인 수집기만 쓴다.
+[project.entry-points."agent_console.collectors"]
+"example.tool_count" = "agent_console_example_collector:ToolCountCollector"
+
+# 개발 의존: 테스트가 공개 계약(AgentSettings 등)과 실행 요청(agent_console_runtime)을 직접 만든다.
+[dependency-groups]
+dev = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-runtime>=0.1,<0.2",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

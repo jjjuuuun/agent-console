@@ -1,0 +1,291 @@
+/* @agent-console/trace-view 보조 스타일. 토큰은 @agent-console/ui/tokens.css 를 먼저 불러온다.
+   행 레이아웃 규칙: docs/design/ux-overhaul.md §4.4 (행은 grid 한 벌, 요소는 자기 칸 밖으로 나가지 않고, 호버로 크기가 변하지 않는다). */
+.ac-trace-scroller {
+  overflow-x: auto;
+  container-type: inline-size;
+  container-name: ac-trace;
+}
+.ac-trace-tree {
+  position: relative;
+  width: max-content;
+  --trace-label-col: clamp(240px, 22cqw, 320px);
+  --trace-indent: var(--ac-trace-indent, 16px);
+  --trace-gap: 4px;
+  --trace-bar-min: 160px;
+}
+/* 좁은 패널(트리 < 560): 라벨 칸 200, 수치 열 72, 들여쓰기 8px */
+.ac-trace-grid {
+  display: grid;
+  grid-template-columns: var(--trace-label-col) minmax(var(--trace-bar-min), 1fr) var(--ac-trace-tail-w, 88px);
+  min-width: calc(var(--trace-label-col) + var(--trace-bar-min) + var(--ac-trace-tail-w, 88px));
+}
+.ac-trace-row {
+  height: var(--ac-trace-row-h, 32px);
+  background: linear-gradient(var(--trace-row-bg, transparent), var(--trace-row-bg, transparent)), var(--ac-surface-1);
+  box-sizing: border-box;
+}
+.ac-trace-row:hover:not([data-selected]):not([data-highlighted]) {
+  --trace-row-bg: var(--ac-surface-2, var(--ac-surface-3));
+}
+.ac-trace-row:focus-visible {
+  outline: 2px solid var(--ac-focus-ring, var(--ac-accent));
+  outline-offset: -2px;
+}
+.ac-trace-row[data-selected] > .ac-trace-labelcell {
+  background: var(--ac-accent-bg-strong, var(--ac-accent-bg));
+}
+.ac-trace-cell {
+  min-width: 0;
+  height: var(--ac-trace-row-h, 32px);
+  box-sizing: border-box;
+}
+.ac-trace-head .ac-trace-cell {
+  height: 18px;
+}
+/* 라벨 칸·수치 열은 줌으로 가로 스크롤해도 고정 */
+.ac-trace-labelcell,
+.ac-trace-tailcell {
+  position: sticky;
+  z-index: 2;
+  overflow: hidden;
+  background: linear-gradient(var(--trace-row-bg, transparent), var(--trace-row-bg, transparent)), var(--ac-surface-1);
+}
+.ac-trace-labelcell {
+  left: 0;
+  display: grid;
+  grid-template-columns: calc(var(--trace-steps, 0) * var(--trace-indent)) 20px 20px minmax(116px, 1fr);
+  column-gap: var(--trace-gap);
+  align-items: center;
+  padding: 0 4px;
+}
+.ac-trace-labelcell[data-open="true"] {
+  grid-template-columns: calc(var(--trace-steps, 0) * var(--trace-indent)) 20px 20px minmax(116px, 1fr) 20px;
+}
+.ac-trace-indent {
+  align-self: stretch;
+}
+.ac-trace-indent[data-guide] {
+  border-right: 1px solid var(--ac-border-soft);
+}
+.ac-trace-slot {
+  width: 20px;
+  height: 20px;
+}
+.ac-trace-iconbtn {
+  width: 20px;
+  height: 20px;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ac-text-xs, 12px);
+  line-height: 1;
+}
+.ac-trace-order {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ac-edge-active);
+  border-radius: 9999px;
+  background: var(--ac-surface-1);
+  font-size: var(--ac-text-xs, 12px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.ac-trace-order[data-wide] {
+  font-size: 9px;
+  letter-spacing: -0.5px;
+}
+.ac-trace-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.ac-trace-title {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  height: 16px;
+  font-size: var(--ac-text-sm, 13px);
+  line-height: 16px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+.ac-trace-title > .ac-ellipsis {
+  flex: 0 1 auto;
+}
+.ac-trace-suffix {
+  flex: none;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-xs, 12px);
+}
+.ac-trace-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 14px;
+  font-size: var(--ac-text-xs, 12px);
+  line-height: 14px;
+  color: var(--ac-text-muted);
+  overflow: hidden;
+}
+.ac-trace-sub > span:has(> .ac-trace-icon) {
+  display: inline-flex;
+  flex: none;
+}
+.ac-trace-icon {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ac-text-muted);
+}
+/* 세션: 색이 아니라 모양으로 구분. 같은 세션 = 점선 원, 별도 세션 = 실선 원 */
+.ac-trace-session {
+  border: 1.5px solid var(--ac-text-muted);
+  border-radius: 9999px;
+}
+.ac-trace-session[data-session-badge="same"] {
+  border-style: dashed;
+}
+.ac-trace-subtext {
+  flex: 1 1 0;
+}
+/* 막대 칸: 막대·화살표·연결 칩만. 칸 밖으로 나가지 않는다 */
+.ac-trace-barcell {
+  position: relative;
+  overflow: hidden;
+  contain: paint;
+}
+.ac-trace-lane {
+  position: absolute;
+  inset: 0 6px;
+}
+.ac-trace-tick {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-xs, 12px);
+  line-height: 18px;
+}
+.ac-trace-bar {
+  position: absolute;
+  top: calc((var(--ac-trace-row-h, 32px) - var(--ac-trace-bar-h, 16px)) / 2);
+  height: var(--ac-trace-bar-h, 16px);
+  border-radius: var(--ac-radius-sm);
+  overflow: hidden;
+  box-sizing: border-box;
+  container-type: inline-size;
+}
+@container (max-width: 47px) {
+  .ac-trace-task {
+    display: none;
+  }
+}
+.ac-trace-chip {
+  position: absolute;
+  top: calc((var(--ac-trace-row-h, 32px) - 18px) / 2);
+  box-sizing: border-box;
+  height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 5px;
+  line-height: 16px;
+  font-size: var(--ac-text-xs, 12px);
+  background: var(--ac-surface-1);
+  border: 1px solid var(--ac-edge-active);
+  border-radius: 9999px;
+}
+.ac-trace-chip[data-dashed] {
+  border-style: dashed;
+}
+/* 수치 열: 막대 위치와 무관한 오른쪽 고정 열 */
+.ac-trace-tailcell {
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-right: 8px;
+  text-align: right;
+}
+.ac-trace-head .ac-trace-tailcell,
+.ac-trace-head .ac-trace-labelcell {
+  display: block;
+}
+.ac-trace-dur,
+.ac-trace-tok {
+  display: block;
+  max-width: 100%;
+  height: 16px;
+  line-height: 16px;
+  font-size: var(--ac-text-xs, 12px);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ac-trace-dur {
+  color: var(--ac-text);
+}
+.ac-trace-tok {
+  color: var(--ac-text-muted);
+}
+.ac-trace-wait {
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--ac-status-waiting) 4px 5px);
+}
+.ac-trace-bar[data-running="true"] {
+  border-style: dashed;
+}
+.ac-trace-task {
+  display: block;
+  padding: 0 4px;
+  font-size: var(--ac-text-xs, 12px);
+  line-height: var(--ac-trace-bar-h, 16px);
+  color: var(--ac-text);
+}
+
+/* 도구줄 체크박스: 글자와 세로 가운데 정렬 */
+.ac-trace-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ac-trace-opt > input {
+  margin: 0;
+}
+
+/* 컨테이너 규칙은 위 일반 규칙을 이기도록 맨 끝에 둔다 */
+@container ac-trace (max-width: 559px) {
+  .ac-trace-tree {
+    --trace-label-col: 200px;
+    --ac-trace-tail-w: 72px;
+    --trace-indent: 8px;
+    --trace-gap: 2px;
+    --trace-bar-min: 96px;
+  }
+  /* 사용자가 켠 "방식 글자"(data-trace-method-text)는 좁아도 숨기지 않는다 */
+  .ac-trace-subtext:not([data-trace-method-text]),
+  .ac-trace-tok,
+  .ac-trace-chip {
+    display: none;
+  }
+}
+@container ac-trace (max-width: 639px) {
+  .ac-trace-tok {
+    display: none;
+  }
+}

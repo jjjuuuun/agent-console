@@ -1,0 +1,17 @@
+"""{{description}}"""
+
+from __future__ import annotations
+
+__all__ = ["greet"]
+
+
+def greet(name: str) -> str:
+    """템플릿 예시 함수. 실제 공개 API로 바꾼다(README 최소 사용 doctest도 함께).
+
+    Args:
+        name: 인사할 대상.
+
+    Returns:
+        ``"hello, <name>"``.
+    """
+    return f"hello, {name}"

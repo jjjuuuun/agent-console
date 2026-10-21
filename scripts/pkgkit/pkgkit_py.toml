@@ -1,0 +1,75 @@
+# pkgkit(Python) 설정 — 도구가 아는 값은 전부 여기에 있다(코드에 고정하지 않는다).
+# 경로는 저장소 루트 기준. 설계: specs/agent-console/design.md §3R.2, modularity-design.md §3.9.
+
+[python]
+# 사내 패키지를 알아보는 배포 이름·import 이름 접두사
+dist_prefix = "agent-console-"
+import_prefix = "agent_console_"
+# 새 패키지 폴더 이름 접두사(`ac-chat` → 배포 `agent-console-chat`)
+folder_prefix = "ac-"
+# 라이브러리 패키지 뿌리. 종류(kind) 폴더는 이 아래에 있다(`packages/py/<종류 폴더>/<패키지>`).
+package_root = "packages/py"
+# 조립 앱 뿌리(import-linter 목록에는 들어가지만 pkg-lint 대상은 아니다)
+app_root = "apps"
+# 종류별 템플릿 폴더(`<kinds>/<kind>/kind.toml` + `files/`)와 공통 템플릿 폴더
+templates = "scripts/pkgkit/templates/python"
+# 휠 모음 폴더(`poe wheels` 출력, `poe portability` 입력)
+wheelhouse = "dist/wheelhouse"
+# 새 패키지 버전
+initial_version = "0.1.0"
+# 라이선스(MIT). uv_build가 받는 SPDX 표기 + LICENSE 파일(license-files)
+license = "MIT"
+
+# 템플릿 자리표시자로 쓰는 값. 템플릿(kind.toml 포함)의 `{{키}}`로 들어간다.
+# dist_prefix·import_prefix·license도 같은 이름으로 쓸 수 있다.
+[python.template_values]
+product_name = "Agent Console"
+copyright_holder = "jjjuuuun"
+# 서버 모듈 entry point 그룹(module·link 종류)
+modules_group = "agent_console.server_modules"
+
+# 사내 의존 버전 범위(E-7). 이름이 없으면 default를 쓴다.
+# "from-package" = 워크스페이스에 있는 그 패키지의 지금 버전에서 만든다(0.5.0 → >=0.5,<0.6).
+# 계약 버전을 올려도 이 값이 낡지 않는다(3R.12).
+[python.internal_ranges]
+default = ">=0.1,<0.2"
+agent-console-contracts = "from-package"
+
+# import-linter 생성 규칙(importlinter_sync)
+[importlinter]
+rules = "importlinter.rules.toml"
+target = "pyproject.toml"
+
+[pkg_lint]
+# readme-doctest가 세는 README 절 제목(이 제목 절 안의 `>>>`만 센다, 4R.18).
+readme_doctest_heading = "최소 사용"
+
+# pkg-lint 규칙 켜고 끄기. 규칙 이름은 `pkg_lint.py --list-rules`로 본다.
+[pkg_lint.rules]
+layout = true
+workspace-source = true
+outside-path = true
+root-lookup = true
+foreign-tests-import = true
+required-files = true
+tool-config = true
+template-root-drift = true
+# 루트 [tool.uv.sources]가 사내 워크스페이스 프로젝트를 빠짐없이 workspace로 잇는지(3R.3)
+root-source = true
+internal-dep-range = true
+importlinter-drift = true
+# README "최소 사용" 절 안의 doctest(>>>)가 0건이면 위반(3R.6, 4R.18부터 그 절만 센다, design §3R.2.7).
+# 실행은 패키지 pytest가 한다.
+readme-doctest = true
+
+# 도구 설정 비교 방식: exact = 템플릿과 같아야 함, superset = 템플릿 키는 같은 값이어야 하고 추가 키는 허용
+[pkg_lint.tool_sections]
+"tool.mypy" = "exact"
+"tool.ruff" = "exact"
+"tool.pytest.ini_options" = "superset"
+
+# template-root-drift: 템플릿 도구 설정과 루트 도구 설정을 비교할 때 무시하는 키(점 경로, 집계 실행 전용 값)
+[pkg_lint.drift_ignore_keys]
+"tool.ruff" = ["extend-exclude", "exclude"]
+"tool.mypy" = ["files", "mypy_path", "explicit_package_bases", "exclude"]
+"tool.pytest.ini_options" = ["testpaths", "pythonpath", "addopts"]

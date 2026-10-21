@@ -1,0 +1,11 @@
+"""단독 실행(개발·재사용).
+
+``python -m {{import_name}} [--with ID] [--config PATH] [--port 0] [--check]``
+"""
+
+import sys
+
+from {{import_name}}.module import module
+from {{import_prefix}}modkit.standalone import run
+
+raise SystemExit(run(module, argv=sys.argv[1:]))

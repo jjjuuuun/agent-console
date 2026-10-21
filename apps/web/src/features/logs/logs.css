@@ -1,0 +1,111 @@
+/* 로그 화면(앱 층) 스타일. 표·칩·재생 막대 같은 표현 부품은 @agent-console/log-view/styles.css가 맡는다.
+   토큰만 쓴다(새 hex 없음). 한글 줄바꿈 keep-all, 글자 12px 이상. */
+.logs-frame, .logs-runtab, .logs-settings { word-break: keep-all; overflow-wrap: break-word; }
+.logs-frame { min-height: 0; }
+.logs-tabs { display: flex; gap: var(--ac-space-1); height: 32px; padding: 0 var(--ac-space-4); border-bottom: 1px solid var(--ac-border); background: var(--ac-surface-1); position: sticky; top: 0; z-index: var(--ac-z-header, 10); }
+.logs-tabs .ac-tab { text-decoration: none; display: inline-flex; align-items: center; font-size: 13px; }
+.logs-body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-3) var(--ac-space-4); overflow: auto; }
+.logs-toolbar { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.logs-subhead { display: flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; font-size: 13px; }
+.logs-spacer { flex: 1 1 auto; }
+.logs-tablewrap { flex: 1 1 0; min-height: 200px; position: relative; }
+.logs-tablewrap[data-dim="true"] { opacity: .6; }
+.logs-mono { font-family: var(--ac-font-mono, monospace); font-size: 12.5px; }
+.logs-linkbtn { background: none; border: 0; padding: 0; color: var(--ac-accent); cursor: pointer; font: inherit; text-decoration: underline; }
+.logs-linkbtn:focus-visible, .logs-menu-item:focus-visible, .logs-split:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.logs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 20px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); font-size: 12px; background: var(--ac-surface-2); }
+.logs-chipx { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; }
+.logs-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.logs-sessiondot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.logs-badge { display: inline-flex; min-width: 20px; justify-content: center; font-size: 12px; border: 1px solid var(--ac-border); border-radius: 10px; }
+.logs-warn { color: var(--ac-warning); font-size: 12px; }
+.logs-note { font-size: 12px; margin: 0; }
+.logs-input { height: 28px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: inherit; font: inherit; font-size: 13px; min-width: 0; }
+.logs-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.logs-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.logs-range { display: inline-flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; }
+.logs-range-label { display: inline-flex; gap: var(--ac-space-1); align-items: center; font-size: 12px; }
+.logs-range-label select, .logs-range-label input { height: 28px; font-size: 13px; }
+
+/* 빈 상태 */
+.logs-first, .logs-empty { max-width: 640px; margin: var(--ac-space-6) auto; display: flex; flex-direction: column; gap: var(--ac-space-3); }
+.logs-empty-actions { display: flex; gap: var(--ac-space-2); align-items: center; }
+.logs-empty-sources { padding-left: var(--ac-space-4); font-size: 13px; text-align: start; }
+.logs-source-cards, .logs-source-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.logs-source-card, .logs-source { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); background: var(--ac-surface-1); }
+.logs-source-card-head, .logs-source-head { display: flex; gap: var(--ac-space-2); align-items: center; min-height: 32px; flex-wrap: wrap; }
+.logs-source-status { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; font-size: 13px; }
+.logs-setup-help { padding: var(--ac-space-2); border: 1px solid var(--ac-info, var(--ac-border)); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); font-size: 13px; white-space: pre-wrap; }
+.logs-source-body { display: flex; flex-direction: column; gap: var(--ac-space-2); margin-top: var(--ac-space-2); }
+
+/* 세션 상세 */
+.logs-session { display: flex; flex: 1 1 0; min-height: 0; gap: 0; }
+.logs-session-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.logs-session-head { display: flex; flex-direction: column; gap: 2px; }
+.logs-session-line { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; font-size: 13px; }
+.logs-summary { font-size: 13px; }
+.logs-skel-inline { width: 240px; display: inline-block; }
+.logs-flow { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); }
+.logs-flow-head { display: flex; gap: var(--ac-space-2); padding: var(--ac-space-1) var(--ac-space-2); align-items: center; }
+.logs-flow-body { overflow: auto; }
+.logs-segments { display: inline-flex; gap: 2px; }
+.logs-filterrow { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.logs-toggles { display: flex; gap: var(--ac-space-3); align-items: center; flex-wrap: wrap; font-size: 13px; }
+.logs-split { width: 6px; cursor: col-resize; background: var(--ac-border); flex: 0 0 auto; }
+.logs-split:hover { background: var(--ac-accent); }
+.logs-split-h { width: auto; height: 6px; cursor: row-resize; }
+.logs-detail-col, .logs-detail-aside { flex: 0 0 auto; min-width: 0; overflow: auto; border-left: 1px solid var(--ac-border); background: var(--ac-surface-1); }
+.logs-detail { min-width: 0; }
+.logs-search-main { display: flex; flex: 1 1 0; min-height: 0; }
+.logs-search-main > .logs-tablewrap { flex: 1 1 0; min-width: 0; }
+.logs-nextfail { font-size: 13px; padding: var(--ac-space-2); }
+
+/* 메뉴·팝오버·드로어 */
+.logs-menu { position: fixed; z-index: var(--ac-z-popover, 50); min-width: 200px; background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-2, 0 4px 16px rgba(0,0,0,.3)); padding: var(--ac-space-1); }
+.logs-menu-item { display: block; width: 100%; text-align: start; background: none; border: 0; padding: var(--ac-space-1) var(--ac-space-2); color: inherit; font: inherit; font-size: 13px; cursor: pointer; border-radius: var(--ac-radius-sm); }
+.logs-menu-item:hover:not(:disabled), .logs-menu-item:focus-visible { background: var(--ac-surface-2); }
+.logs-menu-item:disabled { opacity: .5; cursor: default; }
+.logs-menu-sep { height: 1px; background: var(--ac-border); margin: 2px 0; }
+.logs-menu-note { font-size: 12px; margin: var(--ac-space-1) var(--ac-space-2) 0; }
+.logs-popover { position: absolute; z-index: var(--ac-z-popover, 50); margin-top: 4px; padding: var(--ac-space-2); background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.logs-colmenu { position: relative; display: inline-block; }
+.logs-drawer-layer { position: fixed; inset: 0; z-index: var(--ac-z-popover, 50); display: flex; justify-content: flex-end; pointer-events: none; }
+.logs-drawer-layer[data-modal="true"] { background: rgba(0,0,0,.35); pointer-events: auto; }
+.logs-drawer { pointer-events: auto; max-width: 100vw; height: 100%; display: flex; flex-direction: column; background: var(--ac-surface-1); border-left: 1px solid var(--ac-border); }
+.logs-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: var(--ac-space-3); border-bottom: 1px solid var(--ac-border); }
+.logs-drawer-body { flex: 1 1 0; overflow: auto; padding: var(--ac-space-3); }
+.logs-json { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); overflow: hidden; }
+.logs-jsonedit { width: 100%; min-height: 260px; font-family: var(--ac-font-mono, monospace); font-size: 12.5px; background: var(--ac-surface-2); color: inherit; border: 1px solid var(--ac-border); }
+
+/* 대시보드 */
+.logs-dashtools { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; min-height: 40px; }
+.logs-dash-body { flex: 1 1 0; min-height: 0; overflow: auto; }
+.logs-addwidget { grid-column: span 3; grid-row: span 2; border: 2px dashed var(--ac-border); background: none; color: var(--ac-text-muted); border-radius: var(--ac-radius-md); cursor: pointer; font-size: 13px; min-height: 80px; }
+.logs-addwidget:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.logs-widgets-empty { font-size: 13px; }
+.logs-preview { min-height: 200px; }
+
+/* 설정 */
+.logs-settings { display: flex; flex-direction: column; gap: var(--ac-space-3); }
+.logs-settings-top { display: flex; justify-content: space-between; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
+.logs-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.logs-table th, .logs-table td { padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); text-align: start; vertical-align: middle; }
+.logs-taxonomy-scroll { overflow-x: auto; }
+.logs-taxonomy-add { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; }
+.logs-grouplist { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.logs-group { display: flex; gap: var(--ac-space-2); align-items: flex-start; flex-wrap: wrap; }
+.logs-glob { height: auto; min-width: 220px; }
+.logs-choice { display: flex; gap: var(--ac-space-2); align-items: baseline; padding: var(--ac-space-1) 0; }
+.logs-chiplist { list-style: none; padding: 0; display: flex; gap: var(--ac-space-2); flex-wrap: wrap; }
+
+/* 실행 상세 세션 로그 탭 */
+.logs-runtab { display: flex; flex-direction: column; gap: var(--ac-space-2); height: 100%; min-height: 0; padding: var(--ac-space-2); }
+.logs-runtab-sessions, .logs-runtab-filters { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; font-size: 13px; }
+.logs-runtab-table { min-height: 120px; }
+.logs-runtab-drawer { flex: 0 0 40%; min-height: 0; overflow: auto; border-top: 1px solid var(--ac-border); }
+.logs-runtab-drawer-head { display: flex; gap: var(--ac-space-2); align-items: center; padding: var(--ac-space-1) var(--ac-space-2); }
+.logs-runtab-explain { font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .logs-frame *, .logs-drawer, .logs-menu { transition: none !important; animation: none !important; }
+}

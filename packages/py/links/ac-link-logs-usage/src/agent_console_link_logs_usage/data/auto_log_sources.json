@@ -1,0 +1,6 @@
+{
+  "_comment": "link-logs-usage가 '이 PC에 그 로그가 있으면' 기본으로 켜는 로그 출처(설정 파일은 고치지 않는다, 사용자가 logs.sources[].enabled를 적으면 그 값이 이긴다). path의 ~는 HOME. env가 있고 그 환경 변수가 있으면 그 아래 env_subpath를 본다(출처의 기본 루트 규칙과 같다).",
+  "log_sources": [
+    {"id": "claude-code-jsonl", "path": "~/.claude/projects", "env": "CLAUDE_CONFIG_DIR", "env_subpath": "projects"}
+  ]
+}

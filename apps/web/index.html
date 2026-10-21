@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Console</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
+    <script>
+      /* 렌더 전: 직접 고른 값(light|dark)만 data-theme로 먼저 적용해 깜박임을 막는다. system/없음이면 속성을 두지 않는다. */
+      (function () {
+        try {
+          var v = localStorage.getItem("agent-console.theme");
+          if (v === "light" || v === "dark") {
+            document.documentElement.setAttribute("data-theme", v);
+            var c = v === "light" ? "#f5f4f0" : "#14161d";
+            var m = document.querySelectorAll('meta[name="theme-color"]');
+            for (var i = 0; i < m.length; i++) m[i].setAttribute("content", c);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

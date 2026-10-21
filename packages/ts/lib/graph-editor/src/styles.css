@@ -1,0 +1,449 @@
+/*
+ * @agent-console/graph-editor 레이아웃 스타일.
+ * 색·글꼴·간격은 전부 tokens.css의 --ac-* 변수만 쓴다(hex 직접 사용 금지).
+ * 상태 표현은 tokens.css의 [data-status] 규칙이 맡는다. 유틸 클래스(.ac-ellipsis 등)도 tokens.css 것을 쓴다.
+ * 앱이 tokens.css와 이 파일을 각각 한 번 로드한다.
+ */
+@import "@xyflow/react/dist/style.css";
+
+.ac-ge-root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--ac-bg);
+  color: var(--ac-text);
+  font-family: var(--ac-font-sans);
+  font-size: var(--ac-text-sm);
+}
+.ac-ge-canvas { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.ac-ge-flow { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.ac-ge-defs { position: absolute; width: 0; height: 0; }
+.ac-ge-sr-only {
+  position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* 팔레트 */
+/* 오버레이: 좁은 화면에서는 캔버스 폭을 차지하지 않고 위에 뜬다 */
+.ac-ge-palette-wrap[data-overlay="true"] { position: absolute; left: 0; top: 0; bottom: 0; z-index: 25; box-shadow: var(--ac-shadow-1); }
+/* 좌상단 도구줄 슬롯(앱 단추)과 미니맵 토글 */
+.ac-ge-actions { display: flex; align-items: center; gap: var(--ac-space-2); }
+/* 앱 단추 줄이 있으면 선택 도구줄은 그 아래 줄에 둔다(같은 모서리 겹침 방지) */
+.ac-ge-actions ~ .ac-ge-toolbar { margin-top: 44px; }
+.ac-ge-minimap-toggle-wrap { margin: var(--ac-space-2); }
+.ac-ge-minimap-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; }
+.ac-ge-root .react-flow__minimap.ac-ge-minimap--lifted { margin-bottom: 44px; }
+.ac-ge-palette-wrap { width: var(--ac-palette-w); flex: none; background: var(--ac-surface-1); border-right: 1px solid var(--ac-border); z-index: 10; min-height: 0; }
+.ac-ge-palette { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: var(--ac-space-2); padding: var(--ac-space-2); }
+.ac-ge-palette-body { flex: 1; min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; }
+.ac-ge-palette-note { padding: var(--ac-space-3); color: var(--ac-text-muted); }
+.ac-ge-palette-group-title { display: flex; align-items: center; gap: var(--ac-space-2); margin: var(--ac-space-2) 0 var(--ac-space-1); font-size: var(--ac-text-xs); font-weight: var(--ac-fw-strong); color: var(--ac-text-muted); min-width: 0; }
+.ac-ge-dot { width: 8px; height: 8px; border-radius: var(--ac-radius-full); flex: none; }
+.ac-ge-palette-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ac-space-1); min-width: 0; }
+.ac-ge-palette-list > li { min-width: 0; }
+.ac-ge-palette-item {
+  display: flex; align-items: flex-start; gap: var(--ac-space-2); width: 100%; min-width: 0;
+  padding: var(--ac-space-2); text-align: left; cursor: grab;
+  background: var(--ac-surface-2); color: var(--ac-text); font: inherit;
+  border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md);
+}
+.ac-ge-palette-item:hover { background: var(--ac-surface-3); }
+.ac-ge-palette-texts { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ac-ge-palette-title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.ac-ge-palette-desc { font-size: var(--ac-text-xs); color: var(--ac-text-muted); min-width: 0; overflow-wrap: anywhere; }
+
+/* 공용 요소 */
+.ac-ge-input { width: 100%; box-sizing: border-box; height: var(--ac-control-md); padding: 0 var(--ac-space-2); font: inherit; color: var(--ac-text); background: var(--ac-surface-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ac-ge-btn { height: var(--ac-control-sm); padding: 0 var(--ac-space-3); font: inherit; color: var(--ac-text); background: var(--ac-surface-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); cursor: pointer; }
+.ac-ge-btn:hover { background: var(--ac-surface-3); }
+.ac-ge-btn--primary { background: var(--ac-accent); color: var(--ac-text-on-accent); border-color: var(--ac-accent); }
+.ac-ge-btn--primary:hover { background: var(--ac-accent-hover); }
+.ac-ge-btn--danger { color: var(--ac-danger); border-color: var(--ac-danger); }
+.ac-ge-root :is(button, input, [tabindex]):focus-visible,
+.ac-ge-root .react-flow__node:focus-visible,
+.ac-ge-root .react-flow__edge:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+
+/* 노드 */
+.ac-ge-node {
+  position: relative; box-sizing: border-box;
+  background: var(--ac-surface-2); color: var(--ac-text);
+  border: 1.5px solid var(--ac-border-strong); border-radius: 10px;
+  font-size: var(--ac-text-sm);
+}
+.ac-ge-node[data-selected="true"] { border-color: var(--ac-accent); box-shadow: var(--ac-shadow-node); }
+.ac-ge-node[data-unknown-type="true"] { border: 1.5px dashed var(--ac-danger); }
+.ac-ge-node-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; border-radius: 10px 0 0 10px; background: var(--ac-ge-accent, var(--ac-cat-neutral)); }
+.ac-ge-node-header { display: flex; align-items: flex-start; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); min-width: 0; border-radius: 10px 10px 0 0; }
+.ac-ge-avatar {
+  flex: none; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--ac-radius-full); background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral)));
+  color: var(--ac-text-on-accent); font-size: var(--ac-text-xs); font-weight: 600; line-height: 1; overflow: hidden;
+}
+.ac-ge-node-header .ac-ge-avatar { background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral))); }
+.ac-ge-node-titles { flex: 1; min-width: 0; }
+.ac-ge-node-label { font-weight: 600; line-height: 18px; }
+.ac-ge-node-type { font-size: var(--ac-text-xs); line-height: 16px; color: var(--ac-text-muted); }
+.ac-ge-status { flex: none; display: inline-flex; align-items: center; gap: var(--ac-space-1); max-width: 96px; min-width: 0; font-size: var(--ac-text-xs); color: var(--ac-text); }
+.ac-ge-status-label { min-width: 0; }
+.ac-ge-issues { flex: none; display: inline-flex; gap: var(--ac-space-1); font-size: var(--ac-text-xs); font-variant-numeric: tabular-nums; }
+.ac-ge-issue { display: inline-flex; gap: 2px; align-items: center; padding: 0 var(--ac-space-1); border-radius: var(--ac-radius-sm); border: 1px solid var(--ac-border-strong); }
+.ac-ge-attempt { flex: none; font-size: var(--ac-text-xs); padding: 0 var(--ac-space-1); border-radius: var(--ac-radius-sm); border: 1px solid var(--ac-border-strong); font-variant-numeric: tabular-nums; }
+.ac-ge-issue[data-severity="error"] { color: var(--ac-danger); border-color: var(--ac-danger); }
+.ac-ge-issue[data-severity="warning"] { color: var(--ac-warning); border-color: var(--ac-warning); }
+.ac-ge-port-note { padding: 0 var(--ac-space-3) var(--ac-space-1); font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-port-note[data-failed="true"] { color: var(--ac-warning); }
+.ac-ge-ports { padding: var(--ac-space-1) 0; border-top: 1px solid var(--ac-border); }
+.ac-ge-port-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: 24px; align-items: center; column-gap: var(--ac-space-3); }
+.ac-ge-port { position: relative; display: flex; align-items: center; min-width: 0; height: 24px; padding: 0 var(--ac-space-3); font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-port--out { justify-content: flex-end; text-align: right; }
+.ac-ge-port[data-missing="true"] { color: var(--ac-danger); text-decoration: line-through; }
+.ac-ge-port-label { min-width: 0; }
+.ac-ge-summary { padding: var(--ac-space-1) var(--ac-space-3) var(--ac-space-2); font-size: var(--ac-text-xs); color: var(--ac-text-muted); font-variant-numeric: tabular-nums; border-top: 1px solid var(--ac-border); }
+
+/* 핸들: 입력은 왼쪽 경계, 출력은 오른쪽 경계에 중심이 오게 */
+.ac-ge-root .ac-ge-handle { width: 10px; height: 10px; min-width: 0; background: var(--ac-handle-fill); border: 1.5px solid var(--ac-handle-border); border-radius: var(--ac-radius-full); }
+.ac-ge-root .ac-ge-handle::after { content: ""; position: absolute; inset: -4px; }
+.ac-ge-root .ac-ge-handle.react-flow__handle-left { left: -6px; }
+.ac-ge-root .ac-ge-handle.react-flow__handle-right { right: -6px; }
+.ac-ge-root .ac-ge-handle.react-flow__handle-top { top: -6px; }
+.ac-ge-root .ac-ge-handle.react-flow__handle-bottom { bottom: -6px; }
+.ac-ge-root .ac-ge-handle.connectingto, .ac-ge-root .ac-ge-handle:hover { border-color: var(--ac-accent); }
+/* 노드 어디서나 연결(UX-P11): 선택한 노드의 가장자리 8px 띠에서 끌면 연결이 시작된다. 포트 핸들(z 2)이 띠(z 1) 위에 있다. */
+.ac-ge-root .ac-ge-handle { z-index: 2; }
+.ac-ge-root { --ac-ge-drop-label: ""; --ac-ge-zoom: 1; --ac-ge-band: clamp(8px, calc(10px / var(--ac-ge-zoom)), 20px); }
+.ac-ge-root .ac-ge-band { position: absolute; z-index: 1; width: auto; height: auto; min-width: 0; min-height: 0; transform: none; border: 0; border-radius: 0; background: transparent; cursor: crosshair; }
+.ac-ge-root .ac-ge-band.react-flow__handle-left { left: 0; right: auto; top: 8px; bottom: 8px; width: var(--ac-ge-band, 8px); transform: none; }
+.ac-ge-root .ac-ge-band.react-flow__handle-right { right: 0; left: auto; top: 8px; bottom: 8px; width: var(--ac-ge-band, 8px); transform: none; }
+.ac-ge-root .ac-ge-band.react-flow__handle-top { top: 0; bottom: auto; left: 8px; right: 8px; height: var(--ac-ge-band, 8px); transform: none; }
+.ac-ge-root .ac-ge-band.react-flow__handle-bottom { bottom: 0; top: auto; left: 8px; right: 8px; height: var(--ac-ge-band, 8px); transform: none; }
+.ac-ge-root .ac-ge-band:hover { background: color-mix(in srgb, var(--ac-accent) 28%, transparent); }
+/* 몸체 드롭: 연결을 끄는 동안 마우스가 올라간 노드에 링과 라벨을 보인다 */
+.ac-ge-root[data-connecting="true"] .react-flow__node:hover > .ac-ge-node { outline: 2px dashed var(--ac-accent); outline-offset: 2px; }
+.ac-ge-root[data-connecting="true"] .react-flow__node:hover > .ac-ge-node::after { content: var(--ac-ge-drop-label, ""); position: absolute; left: 50%; top: -12px; transform: translateX(-50%); padding: 1px var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-accent); color: var(--ac-text-on-accent); font-size: 12px; line-height: 1.4; white-space: nowrap; pointer-events: none; z-index: 3; }
+.ac-ge-choice-ports { margin-left: auto; padding-left: var(--ac-space-2); font-size: 12px; color: var(--ac-text-muted); max-width: 40%; }
+
+/* 엣지: 화살표는 노드보다 위 레이어(캔버스 라이브러리가 엣지 SVG를 노드 위에 둔다) */
+.ac-ge-root .react-flow__edge-path { stroke: var(--ac-ge-edge-color, var(--ac-edge)); stroke-width: 1.5; fill: none; }
+.ac-ge-root .react-flow__edge.selected .react-flow__edge-path { stroke: var(--ac-edge-selected); stroke-width: 2.5; }
+.ac-ge-root .ac-ge-edge--dashed .react-flow__edge-path { stroke-dasharray: 6 4; }
+/* 연결 종류 속성 기반 패턴(토큰 `--ac-edge-pattern-N`). 상태 규칙(통과·건너뜀)이 패턴을 바꾸지 않도록 상태 규칙보다 앞에 둔다 */
+.ac-ge-root .ac-ge-edge--patterned .react-flow__edge-path { stroke-dasharray: var(--ac-ge-edge-dash); }
+.ac-ge-root .ac-ge-edge--traversed .react-flow__edge-path { stroke: var(--ac-edge-active); stroke-width: 2; }
+.ac-ge-root .ac-ge-edge--dead .react-flow__edge-path { stroke: var(--ac-edge-dead); opacity: 0.5; }
+.ac-ge-root .ac-ge-edge--dead:not(.ac-ge-edge--patterned) .react-flow__edge-path { stroke-dasharray: 6 4; }
+.ac-ge-root .ac-ge-edge--invalid .react-flow__edge-path { stroke: var(--ac-edge-invalid); stroke-dasharray: 6 4; }
+.ac-ge-root .react-flow__edges { z-index: 3; }
+/* 연결 칩 단추(`onActivate`)가 연결선 SVG에 가려 클릭을 못 받지 않게 라벨 층을 연결선 위로 둔다. 라벨 상자만 포인터를 받는다(`pointer-events: all`) */
+.ac-ge-root .react-flow__edgelabel-renderer { z-index: 4; }
+.ac-ge-edge-chip {
+  position: absolute; max-width: 120px; box-sizing: border-box; padding: 0 var(--ac-space-2); pointer-events: all;
+  font-size: var(--ac-text-xs); line-height: 18px; color: var(--ac-text);
+  background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm);
+}
+.ac-ge-edge-chip[data-invalid="true"] { color: var(--ac-danger); border-color: var(--ac-danger); }
+.ac-ge-edge-chip[data-selected="true"] { border-color: var(--ac-accent); }
+/* 노드 간격이 좁을 때 라벨끼리 겹치므로, 선택했거나 무효인 엣지의 라벨만 보인다(그 외에는 접근성용으로 DOM에만 남음) */
+.ac-ge-edge-chip:not([data-selected="true"], [data-invalid="true"], [data-badged="true"]) { opacity: 0; pointer-events: none; }
+
+.ac-ge-root .react-flow { background: var(--ac-bg); }
+.ac-ge-root .react-flow__controls-button { background: var(--ac-surface-2); color: var(--ac-text); border-bottom: 1px solid var(--ac-border); }
+.ac-ge-root .react-flow__minimap { background: var(--ac-surface-1); border: 1px solid var(--ac-border); }
+.ac-ge-root .react-flow__minimap-mask { fill: var(--ac-overlay); }
+.ac-ge-root .react-flow__minimap-node { fill: var(--ac-surface-3); stroke: var(--ac-border-strong); }
+.ac-ge-toolbar { display: flex; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-toolbar-count { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+
+/* 설정 패널 슬롯 */
+.ac-ge-panel { width: var(--ac-sidepanel-w); flex: none; overflow: auto; background: var(--ac-surface-1); border-left: 1px solid var(--ac-border); z-index: 10; }
+
+/* 토스트·다이얼로그 */
+.ac-ge-toast {
+  position: absolute; left: 50%; bottom: var(--ac-space-5); transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: var(--ac-space-3); max-width: 90%; padding: var(--ac-space-2) var(--ac-space-3);
+  background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-left: 3px solid var(--ac-info); border-radius: var(--ac-radius-lg);
+  box-shadow: var(--ac-shadow-1);
+}
+.ac-ge-toast-text { min-width: 0; }
+.ac-ge-dialog-backdrop { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: var(--ac-overlay); }
+.ac-ge-dialog { width: min(360px, 90%); box-sizing: border-box; padding: var(--ac-space-4); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); }
+.ac-ge-dialog-title { margin: 0 0 var(--ac-space-3); font-size: var(--ac-text-lg); }
+.ac-ge-dialog-choices { display: grid; gap: var(--ac-space-2); max-height: 240px; overflow: auto; }
+.ac-ge-choice { display: flex; align-items: flex-start; gap: var(--ac-space-2); min-width: 0; }
+.ac-ge-choice-texts { display: flex; flex-direction: column; min-width: 0; }
+.ac-ge-dialog-actions { display: flex; justify-content: flex-end; gap: var(--ac-space-2); margin-top: var(--ac-space-4); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-ge-root * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+.ac-ge-port--in { padding-left: calc(var(--ac-space-3) + 6px); }
+
+/* ---- 팀 구성 모드 ---- */
+.ac-ge-palette-section { margin-bottom: var(--ac-space-3); min-width: 0; }
+.ac-ge-palette-section > * { min-width: 0; }
+.ac-ge-palette-section-title { margin: var(--ac-space-2) 0 var(--ac-space-1); font-size: var(--ac-text-sm); font-weight: 600; color: var(--ac-text); min-width: 0; }
+.ac-ge-palette-meta { flex: none; font-size: var(--ac-text-xs); color: var(--ac-text-muted); font-variant-numeric: tabular-nums; }
+
+/* 상황 배지: 상태색과 혼동하지 않도록 muted 테두리 */
+.ac-ge-badges { flex: none; display: inline-flex; gap: var(--ac-space-1); }
+.ac-ge-badge { display: inline-flex; align-items: center; height: var(--ac-badge-h, 18px); padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-text-muted); border-radius: var(--ac-radius-sm); white-space: nowrap; }
+.ac-ge-waiting { padding: 0 var(--ac-space-3) var(--ac-space-1) calc(var(--ac-space-3) + 6px); font-size: var(--ac-text-xs); color: var(--ac-status-waiting); font-variant-numeric: tabular-nums; }
+
+/* 칩 카드(executable=false 또는 shape=chip) */
+.ac-ge-node[data-compact="true"] { background: var(--ac-surface-3); border-color: var(--ac-border-strong); }
+.ac-ge-node[data-compact="true"] .ac-ge-node-header { align-items: center; padding-top: var(--ac-space-1); padding-bottom: var(--ac-space-1); }
+.ac-ge-node[data-compact="true"] .ac-ge-node-titles { display: flex; align-items: baseline; gap: var(--ac-space-2); }
+.ac-ge-node[data-compact="true"] .ac-ge-node-label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.ac-ge-node[data-compact="true"] .ac-ge-node-type { flex: none; max-width: 40%; }
+.ac-ge-node[data-dashed="true"] { border-style: dashed; }
+.ac-ge-chip-handles { position: absolute; top: 50%; width: 0; height: 0; }
+.ac-ge-chip-handles--in { left: 0; }
+.ac-ge-chip-handles--out { right: 0; }
+
+/* 포트 라벨 자동 표시: 접근성 이름은 유지(시각적으로만 숨김) */
+.ac-ge-node[data-labels="auto"] .ac-ge-port:not([data-connected="true"]) .ac-ge-port-label {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.ac-ge-node[data-labels="auto"]:is(:hover, :focus-within, [data-selected="true"]) .ac-ge-port .ac-ge-port-label {
+  position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
+}
+
+/* 리소스 칩 줄 */
+.ac-ge-rchips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); min-height: 20px; padding: var(--ac-space-1) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); border: 0; border-top: 1px solid var(--ac-border); background: transparent; font: inherit; color: inherit; text-align: left; width: 100%; box-sizing: border-box; }
+.ac-ge-rchips--button { cursor: pointer; }
+.ac-ge-rchips--button:hover { background: var(--ac-surface-3); }
+.ac-ge-rchip { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ac-ge-rchip-count { font-variant-numeric: tabular-nums; }
+
+/* 엣지 칩의 순번·횟수 배지 */
+.ac-ge-order, .ac-ge-count { display: inline-block; min-width: 14px; padding: 0 3px; margin: 0 2px; font-size: var(--ac-text-xs); font-variant-numeric: tabular-nums; text-align: center; border-radius: var(--ac-radius-full); }
+.ac-ge-order { color: var(--ac-text-on-accent); background: var(--ac-edge-active); }
+.ac-ge-count { color: var(--ac-text-muted); }
+
+/* 팀 공용 띠 */
+.ac-ge-shared { flex: none; display: flex; align-items: center; gap: var(--ac-space-2); min-height: 28px; padding: 0 var(--ac-space-3); overflow-x: auto; background: var(--ac-surface-1); border-bottom: 1px solid var(--ac-border); font-size: var(--ac-text-xs); }
+.ac-ge-shared-title { color: var(--ac-text-muted); white-space: nowrap; }
+.ac-ge-shared-empty { color: var(--ac-text-muted); }
+.ac-ge-shared-chip { display: inline-flex; align-items: center; max-width: 200px; min-width: 0; border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); }
+.ac-ge-shared-chip-main, .ac-ge-shared-remove, .ac-ge-shared-inherited { font: inherit; color: var(--ac-text); background: transparent; border: 0; cursor: pointer; padding: 0 var(--ac-space-2); height: 22px; display: inline-flex; align-items: center; min-width: 0; }
+.ac-ge-shared-remove { padding: 0 var(--ac-space-1); color: var(--ac-text-muted); }
+.ac-ge-shared-inherited { margin-left: auto; color: var(--ac-text-muted); white-space: nowrap; }
+.ac-ge-shared-mode { color: var(--ac-text-muted); white-space: nowrap; }
+
+/* 보기 도구·토글 */
+.ac-ge-view-toolbar { white-space: nowrap; max-width: calc(100% - 120px); overflow-x: auto; scrollbar-width: none; display: flex; align-items: center; gap: var(--ac-space-2); background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-2); }
+.ac-ge-check { white-space: nowrap; flex: none; display: inline-flex; align-items: center; gap: var(--ac-space-1); height: var(--ac-control-sm); font-size: var(--ac-text-xs); color: var(--ac-text); }
+.ac-ge-toggle-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-toggle-label { display: inline-flex; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-toggle-count { font-size: var(--ac-text-xs); color: var(--ac-text-muted); font-variant-numeric: tabular-nums; }
+.ac-ge-toggle-why { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-select { height: var(--ac-control-sm); font: inherit; color: var(--ac-text); background: var(--ac-surface-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ac-ge-toolbar .ac-ge-btn[aria-pressed="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg, var(--ac-surface-3)); }
+
+/* 이슈 제안 버튼 */
+.ac-ge-suggestions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); }
+.ac-ge-suggestions-more { position: relative; }
+/* 서버 라벨이 길 수 있다: 높이를 늘려 줄바꿈한다(고정 높이로 둘째 줄이 가려지지 않게). */
+.ac-ge-suggestions .ac-ge-btn { height: auto; min-height: var(--ac-control-sm); padding-block: var(--ac-space-1); white-space: normal; overflow-wrap: anywhere; text-align: left; max-width: 100%; }
+.ac-ge-menu { position: absolute; z-index: 40; top: 100%; right: 0; margin: var(--ac-space-1) 0 0; padding: var(--ac-space-1); list-style: none; display: grid; gap: var(--ac-space-1); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-1); }
+
+/* 연결 종류 선택 */
+.ac-ge-choice { align-items: center; }
+.ac-ge-choice-line { flex: none; }
+.ac-ge-choice-texts { flex: 1; }
+.ac-ge-kbd { flex: none; font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); }
+.ac-ge-dialog-hint { margin: var(--ac-space-2) 0 0; font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-choice-row { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.ac-ge-choice-row .ac-ge-choice { flex: 1; }
+
+/* 선언형 칩 */
+.ac-ge-hint-chips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); padding: var(--ac-space-1) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); }
+.ac-ge-hint-chip { display: inline-block; margin-left: var(--ac-space-1); padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px dashed var(--ac-border-strong); border-radius: var(--ac-radius-sm); white-space: nowrap; }
+.ac-ge-hint-chips .ac-ge-hint-chip { margin-left: 0; }
+/* 연결 드래그 중에는 포트 라벨을 모두 보인다 */
+.ac-ge-root[data-connecting="true"] .ac-ge-node[data-labels="auto"] .ac-ge-port .ac-ge-port-label {
+  position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
+}
+.ac-ge-choice-menu { display: grid; gap: var(--ac-space-1); padding: var(--ac-space-1); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); }
+
+/* ---- 핸들 배치(graph-edges §3.3): 기본 배치가 아닌 핸들은 층 안의 0 크기 자리(slot)에 둔다 ---- */
+.ac-ge-ports { position: relative; }
+/* 포트 영역 층: 행 영역(위아래 패딩 안쪽)과 같은 크기. 자리의 top이 행 중앙 기준 세로 위치 */
+.ac-ge-handle-layer { position: absolute; pointer-events: none; }
+.ac-ge-handle-layer--ports { inset: var(--ac-space-1) 0; }
+.ac-ge-handle-layer--edges { inset: 0; }
+.ac-ge-handle-slot { position: absolute; width: 0; height: 0; pointer-events: none; }
+.ac-ge-handle-slot > .ac-ge-handle { pointer-events: all; }
+.ac-ge-handle-slot--left { left: 0; }
+.ac-ge-handle-slot--right { right: 0; }
+.ac-ge-handle-slot--top { top: 0; }
+.ac-ge-handle-slot--bottom { bottom: 0; }
+/* 면 글리프: 핸들이 행 옆이 아닐 때 행 끝에 표시 */
+.ac-ge-port-glyph { flex: none; margin: 0 var(--ac-space-1); font-size: 10px; line-height: 1; color: var(--ac-text-muted); opacity: 0.7; }
+.ac-ge-port--out .ac-ge-port-glyph { order: -1; }
+.ac-ge-port[data-hot="true"] { background: var(--ac-accent-bg, var(--ac-surface-3)); }
+.ac-ge-handle-slot[data-hot="true"] > .ac-ge-handle { border-color: var(--ac-accent); box-shadow: 0 0 0 2px var(--ac-accent); }
+/* 위·아래 면 핸들 라벨 칩: 핸들 바깥쪽 8px. 표시 조건은 포트 행 라벨과 같다 */
+.ac-ge-port-chip {
+  position: absolute; left: 0; transform: translateX(-50%); max-width: 96px; padding: 0 var(--ac-space-1); box-sizing: border-box;
+  font-size: 12px; line-height: 16px; color: var(--ac-text-muted); background: var(--ac-surface-1);
+  border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); white-space: nowrap; pointer-events: none; display: none;
+}
+.ac-ge-handle-slot--top > .ac-ge-port-chip { bottom: calc(100% + 14px); }
+.ac-ge-handle-slot--bottom > .ac-ge-port-chip { top: calc(100% + 14px); }
+.ac-ge-node[data-labels="always"] .ac-ge-port-chip,
+.ac-ge-node[data-labels="auto"] .ac-ge-handle-slot[data-connected="true"] > .ac-ge-port-chip,
+.ac-ge-node[data-labels="auto"]:is(:hover, :focus-within, [data-selected="true"]) .ac-ge-port-chip,
+.ac-ge-root[data-connecting="true"] .ac-ge-node[data-labels="auto"] .ac-ge-port-chip { display: block; }
+
+/* 연결선 경유점 조작 점(graph-edges §2.2). 줌 보정은 인라인 scale(1/zoom)로 화면 기준 크기를 유지한다 */
+.ac-ge-wp-layer { position: absolute; top: 0; left: 0; width: 0; height: 0; pointer-events: none; }
+.ac-ge-wp, .ac-ge-wp-mid {
+  position: absolute; box-sizing: border-box; width: var(--ac-edge-handle-hit, 18px); height: var(--ac-edge-handle-hit, 18px);
+  display: flex; align-items: center; justify-content: center; pointer-events: all; cursor: grab; outline: none;
+}
+.ac-ge-wp::before, .ac-ge-wp-mid::before {
+  content: ""; box-sizing: border-box; width: var(--ac-edge-handle-size, 10px); height: var(--ac-edge-handle-size, 10px);
+}
+.ac-ge-wp::before { background: var(--ac-surface-1); border: 2px solid var(--ac-accent); border-radius: 2px; }
+.ac-ge-wp-mid { opacity: 0.6; }
+.ac-ge-wp-mid::before { border: 1px dashed var(--ac-accent); border-radius: 50%; background: transparent; }
+.ac-ge-wp:focus-visible::before, .ac-ge-wp-mid:focus-visible::before { outline: 2px solid var(--ac-accent); outline-offset: 3px; }
+.ac-ge-wp-mid:focus-visible { opacity: 1; }
+.ac-ge-wp[data-dimmed="true"] { opacity: 0.4; }
+.ac-ge-coord-chip {
+  position: absolute; padding: 0 var(--ac-space-2); font-family: var(--ac-font-mono, monospace); font-size: var(--ac-text-xs); line-height: 18px;
+  color: var(--ac-text); background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); pointer-events: none; white-space: nowrap;
+}
+.ac-ge-edge-leader { stroke: var(--ac-border); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+.ac-ge-edge-chip[role="slider"]:focus-visible { outline: 2px solid var(--ac-accent); outline-offset: 2px; }
+
+/* 연결 패널 "모양·경로" 섹션 */
+.ac-ge-lp { border-top: 1px solid var(--ac-border); padding: var(--ac-space-2) 0; font-size: var(--ac-text-sm); }
+.ac-ge-lp-head { margin: 0; font-size: inherit; }
+.ac-ge-lp-toggle { all: unset; cursor: pointer; font-weight: 600; color: var(--ac-text); }
+.ac-ge-lp-toggle:focus-visible { outline: 2px solid var(--ac-accent); outline-offset: 2px; }
+.ac-ge-lp-body { display: flex; flex-direction: column; gap: var(--ac-space-2); padding-top: var(--ac-space-2); }
+.ac-ge-lp-row { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; }
+.ac-ge-lp-field { display: inline-flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
+.ac-ge-lp-input { min-width: 0; max-width: 100%; width: 7em; background: var(--ac-surface-2); color: var(--ac-text); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 2px var(--ac-space-1); }
+select.ac-ge-lp-input { width: 12em; }
+.ac-ge-lp-badge { font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); }
+.ac-ge-lp-preview { color: var(--ac-text-muted); flex: none; }
+.ac-ge-lp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.ac-ge-lp-wp { display: flex; align-items: center; gap: var(--ac-space-1); flex-wrap: wrap; }
+.ac-ge-lp-wp .ac-ge-lp-input { width: 5em; }
+.ac-ge-lp-wp-index { width: 1.5em; color: var(--ac-text-muted); }
+.ac-ge-lp-note { margin: 0; color: var(--ac-text-muted); font-size: var(--ac-text-xs); overflow-wrap: anywhere; word-break: keep-all; }
+
+/* 노드 [배치] 탭·포트 핸들 이동(graph-edges §3.4) */
+.ac-ge-dir-group { flex-wrap: wrap; }
+.ac-ge-dir-group .ac-ge-btn[aria-pressed="true"] { background: var(--ac-accent); color: var(--ac-text-on-accent); border-color: var(--ac-accent); }
+.ac-ge-lp-subhead { font-weight: 600; }
+.ac-ge-lp-dot { color: var(--ac-accent); font-size: var(--ac-text-xs); }
+.ac-ge-handle[data-moving="true"] { cursor: grab; transform: scale(1.8); z-index: 5; }
+.ac-ge-node[data-port-move="true"] { outline: 1px dashed var(--ac-accent); outline-offset: 4px; }
+.ac-ge-node[data-port-move-side="left"] { box-shadow: -4px 0 0 0 var(--ac-accent); }
+.ac-ge-node[data-port-move-side="right"] { box-shadow: 4px 0 0 0 var(--ac-accent); }
+.ac-ge-node[data-port-move-side="top"] { box-shadow: 0 -4px 0 0 var(--ac-accent); }
+.ac-ge-node[data-port-move-side="bottom"] { box-shadow: 0 4px 0 0 var(--ac-accent); }
+@media (prefers-reduced-motion: reduce) { .ac-ge-handle[data-moving="true"] { transition: none; } }
+
+/* ---- 정리 팝오버·미리보기·엉킨 연결 힌트(graph-edges §4.1, §10) ---- */
+.ac-ge-tidy-anchor { position: relative; display: inline-flex; }
+.ac-ge-tidy {
+  position: absolute; left: 0; bottom: calc(100% + var(--ac-space-2)); z-index: 40; width: 320px; max-width: 90vw; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: var(--ac-space-2); max-height: min(70vh, 640px); overflow: auto; padding: var(--ac-space-3);
+  background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1);
+  font-size: var(--ac-text-sm);
+}
+.ac-ge-tidy-head { display: flex; align-items: center; justify-content: space-between; }
+.ac-ge-tidy-group { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; margin: 0; padding: 0; border: 0; }
+.ac-ge-tidy-legend { padding: 0; font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-tidy-dirs { display: flex; gap: var(--ac-space-1); }
+.ac-ge-tidy-dirs .ac-ge-btn[aria-checked="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg, var(--ac-surface-3)); }
+.ac-ge-tidy-row { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.ac-ge-tidy-row .ac-ge-select, .ac-ge-tidy-row .ac-ge-tidy-number { margin-left: auto; width: 140px; min-width: 0; }
+.ac-ge-tidy-label { color: var(--ac-text-muted); font-size: var(--ac-text-xs); }
+.ac-ge-tidy-kind { flex: 1 1 auto; min-width: 0; font-size: var(--ac-text-xs); }
+.ac-ge-tidy-kinds { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.ac-ge-tidy-checks { display: flex; flex-wrap: wrap; gap: var(--ac-space-1) var(--ac-space-3); }
+.ac-ge-tidy-sep { padding-top: var(--ac-space-1); border-top: 1px solid var(--ac-border); font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-tidy-reset, .ac-ge-tidy-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-tidy-error { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); padding: var(--ac-space-2); color: var(--ac-text); border: 1px solid var(--ac-danger); border-left-width: 3px; border-radius: var(--ac-radius-sm); }
+.ac-ge-tidy-hint { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-tidy-actions { display: flex; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-tidy-spacer { flex: 1; }
+.ac-ge-btn[aria-busy="true"] { cursor: progress; }
+.ac-ge-tidy-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 55; overflow: hidden; pointer-events: none; }
+.ac-ge-tidy-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 30%; background: var(--ac-accent); animation: ac-ge-tidy-bar 1.1s ease-in-out infinite; }
+@keyframes ac-ge-tidy-bar { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+.ac-ge-ghost-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; overflow: visible; }
+.ac-ge-ghost { position: absolute; box-sizing: border-box; opacity: 0.5; border: 2px dashed var(--ac-accent); border-radius: 10px; background: var(--ac-surface-2); display: flex; align-items: center; justify-content: center; padding: 0 var(--ac-space-2); font-size: var(--ac-text-xs); color: var(--ac-text); }
+.ac-ge-ghost-lines { position: absolute; left: 0; top: 0; overflow: visible; }
+.ac-ge-ghost-line { stroke: var(--ac-accent); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.5; fill: none; }
+.ac-ge-trouble { box-sizing: border-box; position: absolute; top: var(--ac-space-3); left: var(--ac-space-3); z-index: 45; display: flex; align-items: center; gap: var(--ac-space-2); max-width: calc(100% - 2 * var(--ac-space-3)); white-space: nowrap; padding: var(--ac-space-1) var(--ac-space-3); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-left: 3px solid var(--ac-warning); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); font-size: var(--ac-text-sm); }
+.ac-ge-view-chip ~ .ac-ge-trouble { top: calc(var(--ac-space-3) + 40px); }
+.ac-ge-trouble-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ac-ge-trouble .ac-ge-btn { flex: none; white-space: nowrap; }
+.ac-ge-view-chip { position: absolute; top: var(--ac-space-3); left: 50%; transform: translateX(-50%); z-index: 45; display: flex; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-1) var(--ac-space-3); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-left: 3px solid var(--ac-accent); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); font-size: var(--ac-text-sm); }
+.ac-ge-view-select { display: inline-flex; align-items: center; gap: var(--ac-space-1); font-size: var(--ac-text-sm); }
+.ac-ge-view-select select { font: inherit; color: inherit; background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: var(--ac-space-1); }
+
+/* 연결선 우클릭 메뉴(4R.20) */
+.ac-ge-menu { position: absolute; z-index: 20; min-width: 12em; max-width: 20em; display: flex; flex-direction: column; padding: var(--ac-space-1); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-node); font-size: var(--ac-text-sm); }
+.ac-ge-menu-head, .ac-ge-menu-sub { padding: 2px var(--ac-space-2); color: var(--ac-text-muted); font-size: var(--ac-text-xs); }
+.ac-ge-menu-item { all: unset; display: block; box-sizing: border-box; cursor: pointer; padding: var(--ac-space-1) var(--ac-space-2); border-radius: var(--ac-radius-sm); color: var(--ac-text); }
+.ac-ge-menu-item[aria-checked="true"]::before { content: "\2713\00a0"; }
+.ac-ge-menu-item:hover:not(:disabled), .ac-ge-menu-item:focus-visible { background: var(--ac-surface-3); outline: 2px solid var(--ac-accent); outline-offset: -2px; }
+.ac-ge-menu-item:disabled { opacity: .5; cursor: default; }
+.ac-ge-menu-item--danger { color: var(--ac-danger); }
+.ac-ge-menu-sep { border: 0; border-top: 1px solid var(--ac-border); margin: var(--ac-space-1) 0; }
+
+/* ---- 독립 위임·반복·조건·중첩 팀 (screen-delegation.md, tokens.md 5.10) ---- */
+.ac-ge-edge-chip[data-wide="true"] { max-width: var(--ac-edge-chip-max-w, 280px); }
+.ac-ge-edge-icon { display: inline-flex; align-items: center; justify-content: center; min-width: 14px; margin-right: 2px; font-size: var(--ac-text-xs); vertical-align: middle; }
+.ac-ge-edge-icon > svg { width: 14px; height: 14px; }
+.ac-ge-chip-text { min-width: 0; }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-edge-chip .ac-ge-edge-icon + .ac-ge-chip-text { display: none; }
+.ac-ge-hint-chip[data-tone="info"] { border-color: var(--ac-info); background: var(--ac-info-bg); }
+.ac-ge-hint-chip[data-tone="warning"] { border-color: var(--ac-warning); background: var(--ac-warning-bg); }
+.ac-ge-hint-chip[data-tone="danger"] { border-color: var(--ac-danger); background: var(--ac-danger-bg); color: var(--ac-danger); }
+.ac-ge-hint-chip[data-dashed="true"] { border-style: dashed; }
+.ac-ge-chip-icon { margin-right: 2px; }
+/* 회차·호출 배지(노드 헤더)와 연결 배지: 높이 18, 12px/600, 숫자 정렬 */
+.ac-ge-run-badge {
+  flex: none; display: inline-flex; align-items: center; box-sizing: border-box; height: var(--ac-run-badge-h, 18px); padding: 0 var(--ac-space-1);
+  font: inherit; font-size: var(--ac-text-xs); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--ac-text); background: var(--ac-surface-3); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm);
+}
+button.ac-ge-run-badge { cursor: pointer; }
+button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.ac-ge-run-badge[data-picked="true"] { border: var(--ac-run-badge-picked, 2px solid var(--ac-accent)); }
+.ac-ge-run-badge[data-tone="warning"] { border-color: var(--ac-warning); background: var(--ac-warning-bg); }
+.ac-ge-run-badge[data-tone="info"] { border-color: var(--ac-info); background: var(--ac-info-bg); }
+.ac-ge-run-badge[data-tone="danger"] { border-color: var(--ac-danger); background: var(--ac-danger-bg); }
+/* 겹친 카드: 뒤에 같은 크기 사각형 두 장이 (4px, 4px)·(8px, 8px) 오른쪽 아래로 어긋난다. 선택·포커스 링은 앞 카드에만 */
+.ac-ge-node[data-stacked="true"] {
+  box-shadow:
+    var(--ac-stack-offset, 4px) var(--ac-stack-offset, 4px) 0 0 var(--ac-surface-2),
+    var(--ac-stack-offset, 4px) var(--ac-stack-offset, 4px) 0 1px var(--ac-border-strong),
+    calc(2 * var(--ac-stack-offset, 4px)) calc(2 * var(--ac-stack-offset, 4px)) 0 0 var(--ac-surface-2),
+    calc(2 * var(--ac-stack-offset, 4px)) calc(2 * var(--ac-stack-offset, 4px)) 0 1px var(--ac-border-strong);
+}
+/* 반복 영역 윤곽(연결 선택·포커스 중에만, 정적) */
+.ac-ge-node[data-loop-region="true"] { outline: var(--ac-loop-region, 2px dashed var(--ac-edge-loop)); outline-offset: var(--ac-loop-region-offset, 3px); }
+/* 정의 바인딩 카드 */
+.ac-ge-bind { padding: 0 var(--ac-space-3) var(--ac-space-1) calc(var(--ac-space-3) + 6px); min-width: 0; }
+.ac-ge-bind-meta { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.ac-ge-bind-badges { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); margin-top: 2px; }
+.ac-ge-bind-actions { display: flex; justify-content: flex-end; padding: 0 var(--ac-space-3) var(--ac-space-2); }
+.ac-ge-bind-open { height: 24px; }
+.ac-ge-bind-open[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.ac-ge-node[data-missing="true"] { border-color: var(--ac-danger); border-style: dashed; }
+/* 팔레트 항목: 비활성 사유가 있는 항목 */
+.ac-ge-palette-item[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.ac-ge-palette-meta-line { display: block; font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+/* 연결 종류 선택: 비활성 행과 사유, 보조 배지 */
+.ac-ge-choice-row[aria-disabled="true"] { opacity: 0.6; }
+.ac-ge-choice-reason { display: block; font-size: var(--ac-text-xs); color: var(--ac-text-muted); }

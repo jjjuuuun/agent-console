@@ -1,0 +1,58 @@
+# 예제 확장: 조건 연산자 플러그인 하나(X22). uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-condition"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 텍스트 단어 수 비교 조건 연산자(example.word_count_at_least)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+]
+
+# 등록은 이 표 하나로 끝난다. 그룹 이름 = agent_console_conditions.CONDITION_OPERATORS_GROUP,
+# entry point 이름 = 레지스트리 key = 디스크립터 id(= 조건 항목의 `op` 값).
+[project.entry-points."agent_console.condition_operators"]
+"example.word_count_at_least" = "agent_console_example_condition:WordCountAtLeast"
+
+# 개발 의존: 테스트가 조건 평가기·저장 전 검사(ac-conditions)와 조건 연결(ac-nodes-core `when`)로 확인한다.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "agent-console-conditions>=0.1,<0.2",
+    "agent-console-nodes-core>=0.1,<0.2",
+    "agent-console-runtime>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

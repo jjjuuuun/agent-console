@@ -1,0 +1,26 @@
+{
+  "name": "{{name}}",
+  "version": "{{version}}",
+  "description": "{{description}}",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": { "kind": "{{kind}}" },
+  "files": ["index.js", "*.json", "README.md", "CHANGELOG.md", "LICENSE"],
+  "exports": {
+    ".": "./index.js",
+    "./*.json": "./*.json",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "{{eslintConfigName}}": "{{inhouseRange}}",
+    "@types/node": "{{dev.types_node}}",
+    "eslint": "{{dev.eslint}}",
+    "typescript": "{{dev.typescript}}",
+    "vitest": "{{dev.vitest}}"
+  }
+}

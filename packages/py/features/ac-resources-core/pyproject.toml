@@ -1,0 +1,60 @@
+[project]
+name = "agent-console-resources-core"
+version = "0.1.0"
+description = "Agent Console — 기본 리소스 종류 플러그인(instruction, file, mcp-server, tool-permission, skill, rule, hook)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-resources>=0.1,<0.2",
+    "agent-console-secret-rules>=0.1,<0.2",
+    "agent-console-claude-format>=0.1,<0.2",
+]
+
+# 등록은 entry point로만 한다. 이름 = 레지스트리 key = 디스크립터 id.
+[project.entry-points."agent_console.resource_types"]
+instruction = "agent_console_resources_core.instruction:InstructionType"
+file = "agent_console_resources_core.file:FileType"
+mcp-server = "agent_console_resources_core.mcp_server:McpServerType"
+tool-permission = "agent_console_resources_core.tool_permission:ToolPermissionType"
+skill = "agent_console_resources_core.skill:SkillType"
+rule = "agent_console_resources_core.rule:RuleType"
+hook = "agent_console_resources_core.hook:HookType"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "agent-console-registry>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

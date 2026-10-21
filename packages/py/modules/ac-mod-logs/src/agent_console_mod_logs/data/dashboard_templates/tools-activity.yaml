@@ -1,0 +1,24 @@
+# 대시보드 템플릿(프리셋 데이터). 규칙은 tokens-overview.yaml 머리말과 같다.
+id: tools-activity
+title: 도구·오류 활동
+widgets:
+  - id: tool-calls-by-tool
+    kind: bar
+    title: 도구별 호출 수
+    query: {group_by: [tool], metric: tool_calls}
+    options: {w: 6, h: 4}
+  - id: tool-duration-p95
+    kind: table
+    title: 도구별 소요 시간 p95(ms)
+    query: {group_by: [tool], metric: duration_ms.p95}
+    options: {w: 6, h: 4}
+  - id: events-by-category
+    kind: bar
+    title: 범주별 이벤트 수
+    query: {group_by: [category], metric: events}
+    options: {w: 6, h: 4}
+  - id: errors-by-day
+    kind: line
+    title: 날짜별 오류 수
+    query: {group_by: [day], metric: errors}
+    options: {w: 6, h: 4}

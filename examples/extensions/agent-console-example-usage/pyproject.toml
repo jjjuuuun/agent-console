@@ -1,0 +1,55 @@
+# 예제 확장: 사용량 출처 플러그인 하나(X13). uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-usage"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 직접 적는 사용량 출처(example.manual_count)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.8,<0.9",
+    "agent-console-usage>=0.1,<0.2",
+]
+
+# 그룹 이름 = agent_console_usage.USAGE_SOURCES_GROUP, entry point 이름 = 출처 id
+# (설정 `usage.sources[].id`가 이 이름으로 출처를 고른다).
+[project.entry-points."agent_console.usage_sources"]
+"example.manual_count" = "agent_console_example_usage:ManualCountSource"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

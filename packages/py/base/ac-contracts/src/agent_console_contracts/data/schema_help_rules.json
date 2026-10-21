@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "description": "설정 폼 도움말 린트(schema-help-lint) 규칙. 계약 모델·플러그인 config 스키마의 각 필드가 설명·분류(x-ui.tier)·예시를 갖는지, 설명에 개발자용 표현이 없는지 본다. 설계 문서 번호 같은 공통 금지 패턴은 user_text_rules.json(범위 description)을 함께 쓴다.",
+  "max_description_length": 100,
+  "jargon": [
+    {
+      "id": "descriptor",
+      "pattern": "디스크립터",
+      "reason": "내부 구조 이름이다. 무엇을 고르는지(예: 실행 방식, 연결 종류)로 쓴다."
+    },
+    {
+      "id": "registry",
+      "pattern": "레지스트리",
+      "reason": "내부 구조 이름이다. '등록된 종류' 같은 사용자 말로 쓴다."
+    },
+    {
+      "id": "schema-key",
+      "pattern": "config_schema|ui_schema|json_schema_extra",
+      "reason": "개발자용 키 이름이다. '이 종류가 정한 설정'처럼 쓴다."
+    },
+    {
+      "id": "json-pointer",
+      "pattern": "JSON Pointer",
+      "reason": "표준 이름 대신 예시 경로(예: /limits)로 보여 준다."
+    },
+    {
+      "id": "phase",
+      "pattern": "Phase \\d",
+      "reason": "개발 단계 이름은 사용자에게 뜻이 없다."
+    },
+    {
+      "id": "extension-point",
+      "pattern": "\\bX\\d{1,2}\\b",
+      "reason": "확장 지점 번호는 개발자용이다."
+    },
+    {
+      "id": "code-identifier",
+      "pattern": "`[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_\\[\\]]+)*`",
+      "reason": "역따옴표로 감싼 코드 이름(필드·클래스)이다. 폼은 역따옴표를 그대로 보이므로 화면에 보이는 이름(라벨)으로 쓴다."
+    },
+    {
+      "id": "class-field-path",
+      "pattern": "(?<![A-Za-z0-9_])[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\\.[a-z_]",
+      "reason": "내부 클래스·필드 경로(예: WorkspaceSettings.agent_defaults)다. 화면 이름(예: 공통 설정의 에이전트 기본값)으로 쓴다."
+    },
+    {
+      "id": "model-name",
+      "pattern": "(?<![A-Za-z0-9_])[A-Z][A-Za-z0-9]*(?:Settings|Spec|Defaults|Preferences|Layout|Options|Descriptor|Request|Response|Model)(?![A-Za-z0-9_])",
+      "reason": "내부 모델(클래스) 이름이다. 화면 이름(예: 에이전트 설정)으로 쓴다."
+    },
+    {
+      "id": "field-path",
+      "pattern": "(?<![A-Za-z0-9_])[a-z][a-z0-9]*(?:_[a-z0-9]+)+\\.[a-z_]|\\.[a-z][a-z0-9]*_[a-z0-9_]+(?![A-Za-z0-9_])",
+      "reason": "설정 파일 키 경로(예: agent_defaults.backend)다. 화면에 보이는 항목 이름으로 쓴다."
+    },
+    {
+      "id": "task-id",
+      "pattern": "(?<![0-9.])\\d+(?:\\.\\d+)?R\\.\\d+",
+      "reason": "개발 작업 번호(예: 5.2R.23)는 사용자에게 뜻이 없다."
+    },
+    {
+      "id": "contract-version",
+      "pattern": "\\(\\d+\\.\\d+\\.\\d+\\)",
+      "reason": "계약 버전 표시는 변경 기록에 둔다."
+    }
+  ],
+  "severity": {
+    "default": "error",
+    "by_rule": {
+      "hard-term": "warning"
+    }
+  },
+  "when_required_tiers": [
+    "basic"
+  ],
+  "hard_terms": [
+    {
+      "id": "layer",
+      "pattern": "위 층|아래 층|층 단위|이 층",
+      "reason": "설정 층 개념은 낯설다. '공통 설정', '팀 설정', '에이전트 설정'처럼 실제 이름으로 쓴다."
+    },
+    {
+      "id": "sdk",
+      "pattern": "\\bSDK\\b",
+      "reason": "개발 도구 이름이다. 'Claude Agent SDK(에이전트 실행 도구)'처럼 풀어 쓰거나 빼고 쓴다.",
+      "explained": "SDK\\("
+    },
+    {
+      "id": "hook",
+      "pattern": "\\bhook\\b",
+      "explained": "hook\\(|훅\\(|hook은 ",
+      "reason": "도구 실행 전후에 도는 명령이라는 풀이를 함께 쓴다(예: hook(도구 실행 전후에 도는 명령))."
+    },
+    {
+      "id": "mcp",
+      "pattern": "\\bMCP\\b",
+      "explained": "MCP\\(|MCP 서버\\(|외부 도구 서버",
+      "reason": "외부 도구 서버라는 풀이를 함께 쓴다(예: MCP(외부 도구 서버))."
+    },
+    {
+      "id": "stdin",
+      "pattern": "stdin|stdout|표준 입력",
+      "reason": "개발자 용어다. '명령이 받는 입력'처럼 쓴다."
+    },
+    {
+      "id": "glob",
+      "pattern": "글롭|\\bglob\\b",
+      "explained": "글롭\\(|\\*\\*",
+      "reason": "경로 패턴(예: src/**)이라는 풀이나 예시를 함께 쓴다."
+    }
+  ]
+}

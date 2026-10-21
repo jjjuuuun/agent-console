@@ -1,0 +1,78 @@
+{
+  "$comment": "claude-code-jsonl 출처 설정 스키마. 기본값은 데이터이고 설정 logs.sources[id=claude-code-jsonl].config가 덮어쓴다. 원본은 읽기만 한다.",
+  "type": "object",
+  "properties": {
+    "roots": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": [],
+      "title": "루트 폴더",
+      "description": "Claude Code projects 폴더 목록. 비우면 config_dir_env 환경 변수 아래 config_dir_subpath, 없으면 default_root. `~`는 홈 폴더."
+    },
+    "include": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": ["*/*.jsonl", "*/*/subagents/**/agent-*.jsonl"],
+      "title": "포함 패턴",
+      "description": "루트 기준 상대 경로 글롭. 기본은 세션 파일과 서브에이전트 파일."
+    },
+    "exclude": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": [],
+      "title": "제외 패턴",
+      "description": "예: 서브에이전트를 빼려면 `*/*/subagents/**`."
+    },
+    "default_root": {
+      "type": "string",
+      "minLength": 1,
+      "default": "~/.claude/projects",
+      "title": "기본 루트",
+      "description": "roots가 비고 config_dir_env 환경 변수도 없을 때 읽을 폴더."
+    },
+    "config_dir_env": {
+      "type": "string",
+      "default": "CLAUDE_CONFIG_DIR",
+      "title": "설정 폴더 환경 변수",
+      "description": "이 환경 변수(주입된 환경)가 있으면 그 아래 config_dir_subpath를 기본 루트로 쓴다. 빈 문자열이면 보지 않는다."
+    },
+    "config_dir_subpath": {
+      "type": "string",
+      "default": "projects",
+      "title": "설정 폴더 안 하위 경로"
+    },
+    "subagents_dir": {
+      "type": "string",
+      "minLength": 1,
+      "default": "subagents",
+      "title": "서브에이전트 폴더 이름",
+      "description": "<프로젝트>/<세션>/<이 폴더>/**/agent-*.jsonl 을 서브에이전트 기록으로 본다."
+    },
+    "meta_suffix": {
+      "type": "string",
+      "minLength": 1,
+      "default": ".meta.json",
+      "title": "서브에이전트 메타 파일 접미사",
+      "description": "agent-<id>.jsonl 옆의 agent-<id><접미사>를 읽어 역할·위임 호출 id를 얻는다."
+    },
+    "meta_fields": {
+      "type": "object",
+      "title": "메타 파일 필드",
+      "description": "메타 JSON에서 꺼낼 값(JSON 포인터).",
+      "properties": {
+        "role": {"type": "string", "default": "/agentType"},
+        "description": {"type": "string", "default": "/description"},
+        "tool_use_id": {"type": "string", "default": "/toolUseId"}
+      },
+      "additionalProperties": {"type": "string"},
+      "default": {"role": "/agentType", "description": "/description", "tool_use_id": "/toolUseId"}
+    },
+    "max_meta_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 65536,
+      "title": "메타 파일 최대 크기(바이트)",
+      "description": "이보다 큰 메타 파일은 읽지 않는다."
+    }
+  }
+}

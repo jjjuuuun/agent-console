@@ -1,0 +1,7 @@
+# 모듈 키트(L2): 기반(L0)만 안다. 기능·모듈·연동 이름을 모른다(modularity §3.7 규칙 2).
+folder = "kit"
+description = "{{product_name}} 모듈 키트"
+dependencies = ["{{dist_prefix}}contracts"]
+dev_dependencies = []
+required_files = []
+runnable = false

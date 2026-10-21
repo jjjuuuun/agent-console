@@ -1,0 +1,39 @@
+{
+  "name": "agent-console-ts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --workspace-concurrency=1 typecheck",
+    "test": "vitest run",
+    "deps": "depcruise packages/ts apps/web/src --config .dependency-cruiser.cjs --ignore-known",
+    "pkg-lint": "node scripts/pkgkit/pkg-lint.mjs",
+    "pack:all": "node scripts/pkgkit/pack-all.mjs",
+    "portability": "node scripts/pkgkit/portability.mjs",
+    "new-package": "node scripts/pkgkit/new-package.mjs",
+    "app": "node scripts/app.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.5",
+    "@vitejs/plugin-react": "^6.1.2",
+    "dependency-cruiser": "^18.6.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "happy-dom": "^21.0.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4",
+    "yaml": "^2.9.1"
+  }
+}

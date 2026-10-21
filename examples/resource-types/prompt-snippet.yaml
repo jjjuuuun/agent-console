@@ -1,0 +1,18 @@
+# 선언형 리소스 종류 예제(X14, 코드 없음). `<workspace>/resource-types/`에 복사하면 서버 시작 시 등록된다.
+# 형식: agent_console_resources._declarative 모듈 문서(DeclarativeTypeSpec).
+id: prompt-snippet
+title: 프롬프트 조각
+description: 마크다운 본문 하나를 지침 칸에 제목과 함께 넣는다. 말투를 고를 수 있다.
+config_schema:
+  type: object
+  properties:
+    tone:
+      type: string
+      title: 말투
+      enum: [formal, casual]
+  additionalProperties: false
+content: {media_types: [text/markdown], editor: markdown}
+contributes:
+  - slot: instructions
+    template: "## {title}\n{content}"
+ui_hints: {icon: "¶"}

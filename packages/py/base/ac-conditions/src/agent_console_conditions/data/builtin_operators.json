@@ -1,0 +1,71 @@
+{
+  "_comment": "기본 조건 연산자 디스크립터(데이터). 비교 동작은 같은 id의 코드(_builtin.py)가 맡는다. 문구·값 스키마는 여기서 바꾼다.",
+  "operators": [
+    {
+      "id": "eq",
+      "title": "같음",
+      "description": "실제 값이 기대 값과 같다(JSON 값 비교, 숫자는 값으로 비교하고 참거짓은 숫자와 다르다).",
+      "value_schema": {}
+    },
+    {
+      "id": "ne",
+      "title": "같지 않음",
+      "description": "실제 값이 기대 값과 다르다. 경로에 값이 없으면 거짓이다.",
+      "value_schema": {}
+    },
+    {
+      "id": "in",
+      "title": "다음 중 하나",
+      "description": "실제 값이 목록의 값 중 하나와 같다.",
+      "value_schema": {"type": "array"}
+    },
+    {
+      "id": "contains",
+      "title": "포함",
+      "description": "텍스트면 기대 텍스트를 포함하고, 목록이면 기대 값과 같은 항목이 있다.",
+      "value_schema": {},
+      "applies_to": ["string", "array"]
+    },
+    {
+      "id": "matches",
+      "title": "정규식 일치",
+      "description": "텍스트가 정규식과 일치한다(입력 길이·시간 상한이 있는 안전한 정규식).",
+      "value_schema": {"type": "string", "minLength": 1},
+      "applies_to": ["string"]
+    },
+    {
+      "id": "exists",
+      "title": "값 있음",
+      "description": "경로에 값이 있다(null도 있는 것으로 본다). 값은 필요 없다.",
+      "value_schema": {"not": {}}
+    },
+    {
+      "id": "gt",
+      "title": "보다 큼",
+      "description": "실제 숫자가 기대 숫자보다 크다.",
+      "value_schema": {"type": "number"},
+      "applies_to": ["number", "integer"]
+    },
+    {
+      "id": "gte",
+      "title": "이상",
+      "description": "실제 숫자가 기대 숫자보다 크거나 같다.",
+      "value_schema": {"type": "number"},
+      "applies_to": ["number", "integer"]
+    },
+    {
+      "id": "lt",
+      "title": "보다 작음",
+      "description": "실제 숫자가 기대 숫자보다 작다.",
+      "value_schema": {"type": "number"},
+      "applies_to": ["number", "integer"]
+    },
+    {
+      "id": "lte",
+      "title": "이하",
+      "description": "실제 숫자가 기대 숫자보다 작거나 같다.",
+      "value_schema": {"type": "number"},
+      "applies_to": ["number", "integer"]
+    }
+  ]
+}

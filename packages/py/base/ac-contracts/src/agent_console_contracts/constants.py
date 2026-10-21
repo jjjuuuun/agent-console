@@ -1,0 +1,281 @@
+"""계약 수준 상수. 프로토콜 어휘이며 사용자 데이터(노드 타입·카테고리 등)가 아니다."""
+
+from typing import Final
+
+CONTRACTS_VERSION: Final = "0.8.0"
+"""계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
+하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
+
+CONTRACT_SUBMODULES: Final = (
+    "common",
+    "resources",
+    "logs",
+    "definitions",
+    "runs",
+    "usage",
+    "projects",
+    "chat",
+    "exports",
+    "imports",
+    "modules",
+)
+"""기능별 계약 하위 모듈(아래 층 → 위 층 순). 모든 모델은 이 중 하나에 정의된다.
+
+import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층만 아래 층을 import한다.
+`resources`·`logs`는 서로 모르고(둘 다 `common`만 쓴다, `definitions`가 둘을 쓴다),
+`runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
+`chat`·`exports`·`imports`도 서로 모른다. `modules`는 맨 위다.
+TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름>`)로 나뉜다.
+"""
+
+CONTRACT_VERSIONS: Final[dict[str, str]] = {
+    "common": "1.3.0",
+    "resources": "1.1.0",
+    "logs": "1.0.0",
+    "definitions": "1.3.0",
+    "runs": "1.3.0",
+    "usage": "1.1.0",
+    "projects": "1.0.0",
+    "chat": "1.1.0",
+    "exports": "1.0.0",
+    "imports": "1.1.0",
+    "modules": "1.2.0",
+}
+"""계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
+모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
+(`logs`는 0.6.0, `projects`는 0.8.0에서 1.0.0으로 시작)."""
+
+USAGE_REPORT_PARTS: Final = ("windows", "tokens")
+"""`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
+tokens = 토큰 집계(`UsageReport.rollups`). 생략 = 전부, 모르는 이름은 무시한다."""
+
+
+LOG_EVENT_ORDERS: Final = ("asc", "desc")
+"""로그 목록 필터 `order`의 값(design §4R.9). seq 기준 오름·내림차순, 기본 asc."""
+
+LOG_PROJECT_UNGROUPED: Final = "~ungrouped"
+"""로그 필터 `project`의 예약 값: 묶기 규칙에 맞지 않은 로그(design §4R.9). `~` 접두로 그룹 id와
+겹치지 않는다."""
+
+
+class ErrorCodes:
+    """`ErrorInfo.code`의 알려진 값. 플러그인은 다른 코드를 쓸 수 있다."""
+
+    BAD_REQUEST: Final = "bad_request"
+    VALIDATION_FAILED: Final = "validation_failed"
+    UNAUTHORIZED: Final = "unauthorized"
+    FORBIDDEN: Final = "forbidden"
+    NOT_FOUND: Final = "not_found"
+    ALREADY_EXISTS: Final = "already_exists"
+    VERSION_CONFLICT: Final = "version_conflict"
+    VERSION_REQUIRED: Final = "version_required"
+    PAYLOAD_TOO_LARGE: Final = "payload_too_large"
+    INTERNAL: Final = "internal"
+    CONVERSATION_BUSY: Final = "conversation_busy"
+    INTERACTION_CLOSED: Final = "interaction_closed"
+    RUN_NOT_RESUMABLE: Final = "run_not_resumable"
+    """끊긴 실행을 이어 갈 수 없다(끊긴 Run이 아님·이미 이어 감·대화의 마지막 턴이 아님, §2R.10)."""
+    FEATURE_UNAVAILABLE: Final = "feature_unavailable"
+    """켜진 모듈 안에서 선택 포트가 없어 그 동작이 꺼져 있다.
+    `details` = `FeatureUnavailableDetails{module, port}`."""
+    NOT_READY: Final = "not_ready"
+    """서버가 아직 준비되지 않았다(모듈 시작 훅이 끝나기 전·종료 중, `GET /health` 503, 3R.16).
+    준비 신호 계약은 그대로다: `/health` 200 = 준비."""
+    BACKEND_UNRESOLVED: Final = "backend.unresolved"
+    """실행 백엔드가 정해지지 않은 노드가 있어 실행을 만들지 않았다(사전 점검, 0.8.0, HTTP 422).
+    `details` = `BackendUnresolvedDetails{nodes, options}`, 해결 버튼은 `ErrorInfo.fix`."""
+    BACKEND_PROBE_UNSUPPORTED: Final = "backend.probe_unsupported"
+    """실행 백엔드가 연결 테스트를 지원하지 않는다(`capabilities.probe=false`, 0.8.0, HTTP 409,
+    ux-overhaul §15.8). `details.backend` = 백엔드 id."""
+
+
+HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
+    ErrorCodes.BAD_REQUEST: 400,
+    ErrorCodes.VALIDATION_FAILED: 422,
+    ErrorCodes.UNAUTHORIZED: 401,
+    ErrorCodes.FORBIDDEN: 403,
+    ErrorCodes.NOT_FOUND: 404,
+    ErrorCodes.ALREADY_EXISTS: 409,
+    ErrorCodes.VERSION_CONFLICT: 412,
+    ErrorCodes.VERSION_REQUIRED: 428,
+    ErrorCodes.PAYLOAD_TOO_LARGE: 413,
+    ErrorCodes.INTERNAL: 500,
+    ErrorCodes.CONVERSATION_BUSY: 409,
+    ErrorCodes.INTERACTION_CLOSED: 409,
+    ErrorCodes.RUN_NOT_RESUMABLE: 409,
+    ErrorCodes.FEATURE_UNAVAILABLE: 409,
+    ErrorCodes.NOT_READY: 503,
+    ErrorCodes.BACKEND_UNRESOLVED: 422,
+    ErrorCodes.BACKEND_PROBE_UNSUPPORTED: 409,
+}
+"""알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
+
+RUN_ORIGINS: Final = ("chat", "web", "api", "task", "resume")
+"""`Run.origin`의 알려진 값. chat=채팅 대화의 한 턴,
+web=웹 [실행] 버튼, api=외부 REST 호출(기본), task=작업 관리(Phase 6),
+resume=끊긴 실행의 노드부터 다시 실행(`Run.resumed_from`, design §2R.10). 다른 값도 허용."""
+
+WS_CLOSE_UNAUTHORIZED: Final = 4401
+"""WS close 코드: 토큰 없음·불일치. 클라이언트는 재접속하지 않는다."""
+
+WS_CLOSE_FORBIDDEN: Final = 4403
+"""WS close 코드: Host·Origin 검사 실패. 클라이언트는 재접속하지 않는다."""
+
+WS_AUTH_CLOSE_CODES: Final = (WS_CLOSE_UNAUTHORIZED, WS_CLOSE_FORBIDDEN)
+"""인증·접근 거부로 닫은 close 코드 묶음. 다시 붙어도 같은 결과라 재접속하지 않는다."""
+
+
+class KnownResourceSlots:
+    """실행 묶음(`ResourceBundle.slots`)의 알려진 칸 이름. **문서 상수**다.
+
+    목록·enum이 아니다. 플러그인은 다른 칸을 만들 수 있고, 백엔드는 받을 칸을
+    `BackendCapabilities.resource_slots`로 선언한다. 스키마·TS 상수로 내보내지 않는다.
+
+    값 형식(관례, 스키마로 강제하지 않음): 각 칸 값은 항목 목록이고 기본 combine은 `append`다.
+    항목 모양은 기본 종류 플러그인(`ac-resources-core`) README를 참고한다.
+    """
+
+    INSTRUCTIONS: Final = "instructions"
+    FILES: Final = "files"
+    MCP_SERVERS: Final = "mcp_servers"
+    TOOLS: Final = "tools"
+    SKILLS: Final = "skills"
+    HOOKS: Final = "hooks"
+    RULES: Final = "rules"
+    """경로 조건 지침. 항목은 경로 조건(glob 목록)과 본문을 담는다."""
+
+
+class KnownIssueCodes:
+    """알려진 검증 이슈 코드(`Issue.code`) 일부(design §2R.2 #14). **문서 상수**다.
+
+    목록·enum이 아니다. 이슈를 내는 쪽(패키지·플러그인)은 다른 코드를 쓸 수 있고,
+    화면은 코드가 아니라 `severity`·`message`·`path`·`suggestions`로 그린다.
+    값을 손으로 복사하지 않도록 이름 → 코드 표를 스키마 `x-constants.KNOWN_ISSUE_CODES`(TS 상수
+    `KNOWN_ISSUE_CODES`)로 내보낸다(5.2R.3 후속). 표에 없는 코드도 그대로 유효하다.
+    """
+
+    LIMITS_NOT_ENFORCED: Final = "limits.not_enforced"
+    """`limits`에 값이 있는데 노드의 실행 백엔드가 그 항목을 강제하지 못한다.
+    path = `/limits/<필드>`. 필드와 `EnforceCapabilities` 항목은 같은 키 이름으로 대응한다."""
+    RESOURCE_SLOT_UNSUPPORTED: Final = "resource.slot_unsupported"
+    """붙인 리소스가 채우는 실행 묶음 칸을 백엔드가 받지 않는다(또는 설정으로 꺼져 있다)."""
+    RESOURCE_SLOT_SESSION_SHARED: Final = "resource.slot_session_shared"
+    """위임받는 노드(서브에이전트 자리)의 묶음 칸이 대상별로 나뉘지 않고 위임자 세션에 합쳐진다
+    (`BackendCapabilities.subagent_slots`에 없는 칸). `details.slot` = 칸 이름."""
+    SECRET_PLAIN_FOUND: Final = "secret.plain_found"
+    """정의에 평문 비밀로 의심되는 값이 있다(`ServerInfo.warnings`). 값은 담지 않는다.
+    `details.kind` = 정의 종류 이름, `details.id` = 정의 id, `Issue.path` = 정의 문서 기준
+    JSON Pointer."""
+    LOGS_SOURCE_FAILED: Final = "logs.source_failed"
+    """로그 출처 하나의 발견·읽기가 실패했다(다른 출처는 계속 수집). `details.source` = 출처 id,
+    `details.error_code` = 출처 상태의 오류 코드(design §4R.4)."""
+    LOGS_REDACTION_UNAVAILABLE: Final = "logs.redaction_unavailable"
+    """비밀 의심 가림을 줄 수 없어 로그 색인을 가리지 않고 저장한다(가림 규칙 포트 없음)."""
+    LOGS_STORAGE_MEMORY: Final = "logs.storage_memory"
+    """로그 색인을 둘 DB가 없어 메모리에 둔다(재시작하면 사라짐, design §4R.5)."""
+    LOGS_UNKNOWN_CLASSIFIER: Final = "logs.unknown_classifier"
+    """출처 설정이 고른 분류기 id가 등록돼 있지 않다. `details.source`·`details.classifier`."""
+
+    # ---- 5R(design §5R.8, 0.7.0): 반복·조건·혼합 위임·중첩 팀
+    FLOW_MAX_ITERATIONS_INVALID: Final = "flow.max_iterations_invalid"
+    """사이클 연결의 유효 최대 반복(엣지 config → `flow.max_iterations` → 디스크립터 `cycle`)이
+    없거나 1 미만이다. 엣지 이슈, path = `/max_iterations`."""
+    FLOW_MAX_NODE_RUNS_EXCEEDED: Final = "flow.max_node_runs_exceeded"
+    """실행 하나의 노드 실행 수가 `flow.max_node_runs`를 넘어 Run이 실패했다(`ErrorInfo.code`로도
+    쓴다). `details.limit`. 화면은 서버 `message`를 그대로 보인다(설정 경로 필드는 없다)."""
+    CONDITION_UNKNOWN_OPERATOR: Final = "condition.unknown_operator"
+    """조건 항목의 연산자가 등록돼 있지 않다(warning, 실행 시 그 항목은 거짓). `details.op`."""
+    CONDITION_INVALID_VALUE: Final = "condition.invalid_value"
+    """조건 항목의 값이 연산자 `value_schema`에 맞지 않다(error). `details.op`."""
+    TEAM_MIXED_STRATEGIES: Final = "team.mixed_strategies"
+    """한 위임자의 대상이 서로 다른 위임 방식이고 그중 composable이 아닌 방식이 있다."""
+    TEAM_RECURSIVE: Final = "team.recursive"
+    """중첩 팀이 자기 자신 또는 순환으로 자기를 다시 넣는다. `details.path` = 팀 구성 id 경로."""
+    TEAM_NESTING_EXCEEDED: Final = "team.nesting_exceeded"
+    """중첩 팀 깊이가 `delegation.max_nesting`을 넘는다. `details.limit`."""
+    TEAM_TEAM_NOT_FOUND: Final = "team.team_not_found"
+    """중첩 팀 노드가 가리키는 팀 구성(또는 고정한 버전)이 없다."""
+    TEAM_CHILD_NO_ENTRY: Final = "team.child_no_entry"
+    """중첩 팀의 자식 팀 구성에 입구가 없다(자식 검증 결과 요약)."""
+    DELEGATION_DEPTH_EXCEEDED: Final = "delegation.depth_exceeded"
+    """위임 깊이가 위임 방식 `max_depth`·설정 `delegation.max_depth` 중 작은 값을 넘는다
+    (검증·실행 둘 다)."""
+
+    # ---- 5.2R(design §5.2R.3 #4, 0.8.0): 백엔드 사전 점검·프로젝트 범위
+    BACKEND_UNRESOLVED: Final = "backend.unresolved"
+    """백엔드를 쓰는 노드의 실행 백엔드가 층 어디에도 정해지지 않았다(노드 이슈로도, 실행 거부 오류
+    코드 `ErrorCodes.BACKEND_UNRESOLVED`로도 쓴다). `fix`로 [노드에서 지정]·[기본값으로 지정]."""
+    PROJECT_SHARED_USES_PROJECT: Final = "project.shared_uses_project"
+    """공용 정의가 프로젝트 전용 정의를 쓴다(warning, 저장·실행은 막지 않음). `details.project`·
+    `details.kind`·`details.id` = 참조된 정의."""
+    PROJECT_CROSS_PROJECT: Final = "project.cross_project"
+    """프로젝트 P 전용 정의가 다른 프로젝트 Q 전용 정의를 쓴다(warning)."""
+    PROJECT_UNKNOWN: Final = "project.unknown"
+    """정의·실행이 없는 프로젝트 id를 가리킨다(info, 공용·프로젝트 층 없음으로 취급)."""
+    PROJECT_REFERENCES_UNAVAILABLE: Final = "project.references_unavailable"
+    """참조 추출이 없어(예: 정의 모듈이 꺼짐) 참조 규칙(`project.shared_uses_project`·
+    `project.cross_project`)을 보지 못했다(info)."""
+    PROJECT_DEFINITIONS_UNAVAILABLE: Final = "project.definitions_unavailable"
+    """정의 읽기가 없어(예: 정의 모듈이 꺼짐) 프로젝트 범위 검사·옮기기 계획을 하지 못했다(info)."""
+
+
+class KnownSuggestionIds:
+    """알려진 이슈 제안 id(`IssueSuggestion.id`) 일부. **문서 상수**다.
+
+    목록·enum이 아니다. 제안을 내는 쪽은 다른 id(예: 그래프 자동 고침의 생성 id)를 쓸 수 있다.
+    화면이 특정 제안을 알아보고 동작을 붙여야 하는 id만 둔다. 이름 → id 표를 스키마
+    `x-constants.KNOWN_SUGGESTION_IDS`(TS 상수 `KNOWN_SUGGESTION_IDS`)로 내보낸다.
+    """
+
+    PROJECT_MOVE_TO_SHARED: Final = "project.move_to_shared"
+    """[공용으로 옮기기]. 빈 patch이고, 옮길 정의는 이슈 `details`의 `kind`·`id`(`details.move`에도
+    같음). 범위 경고 `project.shared_uses_project`·`project.cross_project`에 붙는다."""
+
+
+class KnownInteractionKinds:
+    """기본 플러그인이 등록하는 상호작용 종류 id(design §R14.3). **문서 상수**다.
+
+    목록·enum이 아니다. 특정 종류를 여는 코드(예: 백엔드 어댑터)만 이 값을 쓴다.
+    엔진·서버·웹은 종류 이름을 모른다. 스키마·TS 상수로 내보내지 않는다.
+    """
+
+    QUESTION: Final = "question"
+    TOOL_PERMISSION: Final = "tool_permission"
+    REVIEW: Final = "review"
+
+
+class KnownUsageTrust:
+    """사용량 출처 신뢰 등급(`UsageSourceDescriptor.trust`)의 알려진 값.
+
+    **문서 상수**다.
+
+    목록·enum이 아니다. 서드파티 출처 플러그인은 다른 등급 문자열을 선언할 수 있고, 화면은 모르는
+    값을 기본 배지로 보인다. 스키마·TS 상수로 내보내지 않는다.
+    """
+
+    OFFICIAL: Final = "official"
+    """공식 SDK 타입·공식 문서가 보장하는 값."""
+    OBSERVED: Final = "observed"
+    """공식 경로에서 관측했지만 갱신 조건이 제한적인 값."""
+    ESTIMATED: Final = "estimated"
+    """로컬 집계 등으로 추정한 값(분모 없음 등)."""
+    UNOFFICIAL: Final = "unofficial"
+    """비공개 엔드포인트 등 공식 보장이 없는 값."""
+
+
+class KnownModuleStatus:
+    """`ModuleInfo.status`의 알려진 값. **문서 상수**다.
+
+    목록·enum이 아니다. 호스트 구현이 다른 상태를 낼 수 있고 화면은 모르는 값을 그대로 보인다.
+    스키마·TS 상수로 내보내지 않는다.
+    """
+
+    ACTIVE: Final = "active"
+    DISABLED: Final = "disabled"
+    """설정·명령행으로 끔."""
+    UNSATISFIED: Final = "unsatisfied"
+    """필수 포트를 줄 모듈이 없음(`reason`에 빠진 포트)."""
+    FAILED: Final = "failed"
+    """로드·시작 실패(`reason`은 비밀을 가린 메시지)."""
+    CONFLICT: Final = "conflict"
+    """같은 단일 포트를 둘 이상이 제공(`modules.bindings`로 고른다)."""

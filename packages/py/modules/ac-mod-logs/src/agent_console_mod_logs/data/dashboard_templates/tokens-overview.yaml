@@ -1,0 +1,37 @@
+# 대시보드 템플릿(프리셋 데이터, design §4R.2·§4R.9). 파일 하나 = 대시보드 하나(`LogDashboard` 모양).
+# 이 폴더를 비우거나 지워도 로그 화면은 동작한다(템플릿 목록이 빌 뿐).
+# - 위젯 `kind`는 웹 위젯 레지스트리 id(열린 문자열), `options.w`·`h`는 격자 칸 수(좌표 없음, 순서대로 흐름 배치).
+# - `query.filter`에 기간(since·until)을 넣지 않는다. 기간은 대시보드 도구 줄의 기간 덮어쓰기로 정한다(F-23).
+id: tokens-overview
+title: 토큰 개요
+widgets:
+  - id: total-tokens
+    kind: metric
+    title: 전체 토큰
+    query: {group_by: [], metric: tokens.total}
+    options: {w: 3, h: 2}
+  - id: output-tokens
+    kind: metric
+    title: 출력 토큰
+    query: {group_by: [], metric: tokens.output}
+    options: {w: 3, h: 2}
+  - id: sessions-events
+    kind: metric
+    title: 이벤트 수
+    query: {group_by: [], metric: events}
+    options: {w: 3, h: 2}
+  - id: errors
+    kind: metric
+    title: 오류 수
+    query: {group_by: [], metric: errors}
+    options: {w: 3, h: 2}
+  - id: project-model-tokens
+    kind: bar
+    title: 프로젝트 × 모델 토큰
+    query: {group_by: [project, model], metric: tokens.total}
+    options: {w: 6, h: 4}
+  - id: daily-tokens
+    kind: line
+    title: 날짜별 토큰
+    query: {group_by: [day], metric: tokens.total}
+    options: {w: 6, h: 4}
