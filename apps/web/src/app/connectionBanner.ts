@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ConnectionStatus, WsClient } from "@agent-console/api-client";
 import { useConnectionStatus } from "./useConnectionStatus";
 
@@ -46,40 +46,46 @@ export function useConnectionBanner(ws: WsClient, options: ConnectionBannerOptio
   const [recovered, setRecovered] = useState(false);
   const [closedCount, setClosedCount] = useState(0);
   const [retrying, setRetrying] = useState(false);
-  const everOpen = useRef(false);
-  const shown = useRef(false);
-  const prev = useRef<ConnectionStatus>(status);
+  const [everOpen, setEverOpen] = useState(status === "open");
+  const [shown, setShown] = useState(false); // 문제 띠를 보여 준 적이 있다(복구 문구 조건)
+  const [prevStatus, setPrevStatus] = useState<ConnectionStatus>(status);
+  const trouble = status === "connecting" || status === "reconnecting";
 
-  // 상태 전환 기록: closed 횟수, open 복구, 재시도 표시
-  useEffect(() => {
-    const before = prev.current;
-    prev.current = status;
-    if (status === "closed" && before !== "closed") setClosedCount((n) => n + 1);
-    if (status === "closed") setRetrying(false);
+  // 상태 전환 기록: closed 횟수, open 복구, 재시도 표시. 렌더 중 이전 값과 비교해 조정한다(effect 안 setState 대신).
+  if (status !== prevStatus) {
+    setPrevStatus(status);
+    if (status === "closed") {
+      setClosedCount((n) => n + 1);
+      setRetrying(false);
+    }
+    if (!trouble) setWaited(false);
     if (status !== "open") {
       setRecovered(false);
-      return undefined;
+    } else {
+      setEverOpen(true);
+      setClosedCount(0);
+      setRetrying(false);
+      if (shown) {
+        setShown(false);
+        setRecovered(true);
+      }
     }
-    everOpen.current = true;
-    setClosedCount(0);
-    setRetrying(false);
-    if (!shown.current) return undefined;
-    shown.current = false;
-    setRecovered(true);
+  }
+
+  // 복구 문구는 잠시 뒤 숨긴다
+  useEffect(() => {
+    if (!recovered) return undefined;
     const t = setTimeout(() => setRecovered(false), timing.recoveredMs);
     return () => clearTimeout(t);
-  }, [status, timing.recoveredMs]);
+  }, [recovered, timing.recoveredMs]);
 
   // 유예 타이머: open이 아닌 상태가 이어지는 동안 하나(connecting<->reconnecting 전환으로 다시 시작하지 않는다)
-  const trouble = status === "connecting" || status === "reconnecting";
+  const graceDelay = everOpen ? timing.graceMs : timing.firstMs;
   useEffect(() => {
-    if (!trouble) {
-      setWaited(false);
-      return undefined;
-    }
-    const t = setTimeout(() => setWaited(true), everOpen.current ? timing.graceMs : timing.firstMs);
+    if (!trouble) return undefined;
+    const t = setTimeout(() => setWaited(true), graceDelay);
     return () => clearTimeout(t);
-  }, [trouble, timing.graceMs, timing.firstMs]);
+  }, [trouble, graceDelay]);
 
   const retry = useCallback(() => {
     setRetrying(true);
@@ -97,6 +103,6 @@ export function useConnectionBanner(ws: WsClient, options: ConnectionBannerOptio
     if (retrying) view = { kind: "retrying", tone: "danger", canRetry: true, canReload: closedCount >= timing.reloadAfterClosed, retryBusy: true };
     else if (waited) view = { kind: status, tone: "warning", canRetry: false, canReload: false, retryBusy: false };
   }
-  if (view !== null && view.kind !== "recovered") shown.current = true;
+  if (view !== null && view.kind !== "recovered" && !shown) setShown(true);
   return { view, retry, reload };
 }

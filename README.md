@@ -1,5 +1,7 @@
 # Agent Console
 
+[![CI](https://github.com/jjjuuuun/agent-console/actions/workflows/ci.yml/badge.svg)](https://github.com/jjjuuuun/agent-console/actions/workflows/ci.yml)
+
 에이전트 팀을 원하는 대로 구성해서 채팅으로 일을 맡기는 로컬 웹 플랫폼입니다.
 화면에서 에이전트를 만들고 그래프로 이어 팀을 구성한 뒤, 채팅으로 일을 맡기고 실행 과정·사용량·로그를 같은 화면에서 봅니다.
 

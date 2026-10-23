@@ -1,0 +1,81 @@
+# Python·웹 검사(CLAUDE.md "명령어"의 poe check·contracts-check·pnpm check·웹 빌드).
+# 비밀 값을 쓰지 않으며 실제 모델 호출이 없다(테스트는 fake 백엔드, 실제 호출 테스트는 opt-in 환경변수로만 켜진다).
+# e2e·portability·wheels는 여기서 돌리지 않는다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 소스 받기
+        uses: actions/checkout@v7
+
+      - name: uv·Python 설치
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      # contracts-check의 TS 생성물 비교(json-schema-to-typescript)에 Node 의존성이 필요하다
+      - name: pnpm 설치
+        uses: pnpm/action-setup@v6
+
+      - name: Node 설치
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Python 의존성 설치
+        run: uv sync --all-packages --locked
+
+      - name: Node 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: Python 전체 검사(poe check)
+        run: uv run poe check
+
+      - name: 계약 드리프트 검사
+        run: uv run poe contracts-check
+
+  web:
+    name: 웹 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 소스 받기
+        uses: actions/checkout@v7
+
+      - name: pnpm 설치
+        uses: pnpm/action-setup@v6
+
+      - name: Node 설치
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Node 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: TS 전체 검사(pnpm check)
+        run: pnpm check
+
+      - name: 웹 빌드
+        run: pnpm --filter @agent-console/web build

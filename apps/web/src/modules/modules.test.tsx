@@ -64,8 +64,11 @@ describe("모듈 목록으로 화면 조립", () => {
 
   it("목록을 받기 전에는 안내 화면을 먼저 그리지 않고, 받은 뒤에 결정한다", async () => {
     let resolve: (v: ModuleInfo[]) => void = () => {};
-    const { clients } = createFakeClients({ listModules: vi.fn(() => new Promise<ModuleInfo[]>((r) => (resolve = r))) });
+    const listModules = vi.fn(() => new Promise<ModuleInfo[]>((r) => (resolve = r)));
+    const { clients } = createFakeClients({ listModules });
     mountApp(clients, "/b", { routes: ROUTES });
+    // 고정 대기 대신 요청이 실제로 나간 것을 기다린다(부하가 크면 50ms 안에 요청이 안 나가 resolve가 빈 함수로 남는다)
+    await waitFor(() => expect(listModules).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByRole("heading", { name: /기능/ })).toBeNull();
     expect(screen.getByRole("status", { name: "메뉴를 불러오는 중" })).toBeTruthy();

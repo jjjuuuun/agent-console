@@ -17,7 +17,7 @@ export default defineConfig({
     maxWorkers,
     projects: [
       "packages/ts/*/*/vitest.config.ts",
-      { test: { name: "web", include: ["apps/web/src/**/*.test.{ts,tsx}"], environment: "happy-dom" } },
+      { test: { name: "web", include: ["apps/web/src/**/*.test.{ts,tsx}"], environment: "happy-dom", setupFiles: ["apps/web/src/testing/setup.ts"] } },
       { test: { name: "scripts", include: ["scripts/**/*.test.mjs"], environment: "happy-dom" } },
     ],
   },

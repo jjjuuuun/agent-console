@@ -70,7 +70,8 @@ describe("Sidebar", () => {
     const btn = screen.getByRole("button", { name: "사이드바 접기/펴기" });
     expect(btn.getAttribute("aria-expanded")).toBe("true");
     expect(btn.tabIndex).toBe(0);
-    expect(btn.getAttribute("title")).toBe("사이드바 (Ctrl+Shift+B)");
+    // 단축키 안내는 네이티브 title 대신 Tooltip(aria-hidden 장식)으로 보인다
+    expect(btn.closest(".ac-tip-host")?.querySelector(".ac-tip")?.textContent).toBe("사이드바 (Ctrl+Shift+B)");
     fireEvent.click(btn);
     expect(onCollapsedChange).toHaveBeenCalledWith(true);
     rerender(<Sidebar items={items} onNavigate={() => {}} collapsed onCollapsedChange={onCollapsedChange} messages={{ ...messages, toggle: "사이드바 접기/펴기" }} />);

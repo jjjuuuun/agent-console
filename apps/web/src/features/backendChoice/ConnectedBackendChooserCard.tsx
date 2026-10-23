@@ -1,7 +1,5 @@
 import { useNow } from "../../app/useNow";
-import { BackendProbeButton } from "../backendReadiness/BackendProbeButton";
-import { useBackendProbe, useBackendReadiness } from "../backendReadiness/hooks";
-import { ProbeResultBlock } from "../backendReadiness/ProbeResultBlock";
+import { BackendProbeButton, ProbeResultBlock, useBackendProbe, useBackendReadiness } from "../backendReadiness";
 import { BackendChooserCard, type BackendChooserCardProps } from "./BackendChooserCard";
 import type { BackendDescriptor } from "@agent-console/contracts";
 

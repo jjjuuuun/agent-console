@@ -3,8 +3,7 @@ import type { BackendDescriptor, BackendReadiness } from "@agent-console/contrac
 import { Badge, Banner, Button } from "@agent-console/ui";
 import { messages as m } from "../../app/messages";
 import { FixButtons } from "../../app/fix";
-import { BackendStatusChip } from "../backendReadiness/BackendStatusChip";
-import { resolveTone } from "../backendReadiness/tones";
+import { BackendStatusChip, resolveTone } from "../backendReadiness";
 
 export interface BackendChooserCardProps {
   /** 고를 수 있는 백엔드(서버 디스크립터). 항목·설명·비용 문구·배지는 전부 이 데이터다 */
