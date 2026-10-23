@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -23,20 +24,40 @@ from agent_console_cli._server import (
 
 # ---------------------------------------------------------------- 명령
 
+_ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _plain_help_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """도움말 출력을 환경(CI 색 강제·좁은 터미널)과 무관하게 고정한다.
+
+    typer는 `GITHUB_ACTIONS`·`FORCE_COLOR`를 import 시점에 읽어 색을 강제하므로
+    환경변수만으로는 부족하다. 출력 쪽에서도 `_strip_ansi`로 색 코드를 지운다.
+    """
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("TERM", "dumb")
+    monkeypatch.setenv("COLUMNS", "200")
+    for name in ("FORCE_COLOR", "GITHUB_ACTIONS", "PY_COLORS"):
+        monkeypatch.delenv(name, raising=False)
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI.sub("", text)
+
 
 def test_only_serve_and_statusline_are_exposed(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    _plain_help_env(monkeypatch)
     monkeypatch.setenv("AGENT_CONSOLE_TOKEN", "sekret-token-should-not-show")
     assert main(["--help"]) == 0
-    top = capsys.readouterr().out
+    top = _strip_ansi(capsys.readouterr().out)
     assert "serve" in top
     assert "statusline" in top
     commands: dict[str, object] = getattr(typer.main.get_command(cli_app.app), "commands", {})
     assert sorted(commands) == ["serve", "statusline"]
     assert "sekret-token-should-not-show" not in top
     assert main(["serve", "--help"]) == 0
-    serve_help = capsys.readouterr().out
+    serve_help = _strip_ansi(capsys.readouterr().out)
     assert "--apply-preset" in serve_help
     assert "--allow-origin" in serve_help
     assert "--open" in serve_help
