@@ -49,7 +49,9 @@ class SessionTitleRuleOption(BaseModel):
         default="first",
         title="고르는 쪽",
         description="후보가 여럿이면 시각순 처음(first) 또는 마지막(last).",
-        json_schema_extra=x_ui(tier="advanced"),
+        json_schema_extra=x_ui(
+            enum_labels={"first": "처음 것", "last": "마지막 것"}, tier="advanced"
+        ),
     )
 
 

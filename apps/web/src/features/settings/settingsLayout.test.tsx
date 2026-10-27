@@ -42,7 +42,7 @@ describe("설정 화면: 섹션 하나씩", () => {
   it("값을 바꾸면 섹션 머리에 변경 수가 보이고 목록 항목에 점이 붙는다", async () => {
     mountApp(createFakeClients().clients, "/settings#chat");
     const chat = await screen.findByRole("region", { name: "채팅" });
-    fireEvent.click(await within(chat).findByRole("radio", { name: /reject/ }));
+    fireEvent.click(await within(chat).findByRole("radio", { name: /거절/ }));
     expect(await within(chat).findByText("저장되지 않은 변경 1")).toBeTruthy();
     const nav = screen.getByRole("navigation", { name: "설정 섹션" });
     expect(within(within(nav).getByRole("link", { name: /채팅/ })).getByRole("img", { name: "저장되지 않은 변경 있음" })).toBeTruthy();

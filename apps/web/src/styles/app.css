@@ -62,7 +62,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-field-error { color: var(--ac-danger); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); margin: 0; min-height: 0; }
 .app-form { display: flex; flex-direction: column; }
 /* 읽기 폭: 설정 화면 본문은 720px 넘게 늘어나지 않고 왼쪽에 붙는다(ux-overhaul §16.2.4). */
-[data-screen="settings"] .app-screen-body > * { max-width: var(--ac-readable-w); }
+[data-screen="settings"] .app-screen-body > *, [data-screen="settings"] .app-settings-body > * { max-width: var(--ac-readable-w); }
 @media (max-width: 1023px) { :root { --ac-page-pad: 16px; } }
 .app-search input { width: 240px; }
 .app-back { white-space: nowrap; }
@@ -108,7 +108,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-nav a:hover { background: var(--ac-hover-bg); }
 .app-settings-nav a[aria-current="location"] { background: var(--ac-accent-bg-strong); }
 .app-settings-body { overflow: auto; padding: var(--ac-space-4) var(--ac-space-6); display: flex; flex-direction: column; gap: var(--ac-space-4); }
-.app-settings-section { max-width: 960px; width: 100%; display: flex; flex-direction: column; gap: var(--ac-space-3); scroll-margin-top: var(--ac-space-4); }
+.app-settings-section { max-width: var(--ac-readable-w); width: 100%; display: flex; flex-direction: column; gap: var(--ac-space-3); scroll-margin-top: var(--ac-space-4); }
 .app-settings-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--ac-space-3); }
 .app-settings-title { font-size: var(--ac-text-lg); font-weight: 600; margin: 0; }
 .app-settings-status { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-warning); }
@@ -121,7 +121,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-radio-card[data-checked="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg); }
 .app-radio-card input { min-height: 0; margin-top: 3px; }
 .app-radio-card-body { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
-.app-radio-card-title { font-weight: 600; font-family: var(--ac-font-mono); font-size: var(--ac-text-code); }
+.app-radio-card-title { font-weight: 600; }
 .app-radio-card-desc { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .app-radio-card-preview { display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .app-wire { display: flex; flex-direction: column; gap: 3px; }
@@ -260,3 +260,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
   .app-main { background: none; }
 }.app-readiness p, .app-readiness .ac-banner p { margin: 0; }
 .app-readiness .app-fix-actions, .app-backend-warn .app-fix-actions { justify-content: flex-start; }
+
+/* 로그인 확인 대화상자: 경고 상자와 "바뀌는 것" 목록 사이 간격 */
+.app-login-writes { margin-top: var(--ac-space-3); }
+.app-login-writes > .app-block-title { margin-bottom: var(--ac-space-2); }

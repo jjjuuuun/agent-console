@@ -124,7 +124,9 @@ class ReviewConfig(BaseModel):
         default=None,
         title="한도 초과 시",
         description="답이 없을 때 요청만 닫을지(expire) 실행을 취소할지(cancel_run) 정합니다.",
-        json_schema_extra=x_ui(tier="advanced"),
+        json_schema_extra=x_ui(
+            enum_labels={"expire": "요청만 닫기", "cancel_run": "실행 취소"}, tier="advanced"
+        ),
     )
 
     @model_validator(mode="after")

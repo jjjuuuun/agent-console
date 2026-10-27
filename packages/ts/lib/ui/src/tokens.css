@@ -773,6 +773,7 @@ button.ac-prov:focus-visible { outline: 2px solid var(--ac-accent); outline-offs
 /* ===== 1R.32 보강: PageHeader, TrustBadge, Disclosure, ListPane, AttachmentList, CommandPalette, Icon ===== */
 .ac-input { font-weight: var(--ac-fw-regular); box-sizing: border-box; height: var(--ac-control-md); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; font-size: var(--ac-text-sm); min-width: 0; }
 .ac-input:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
+textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); padding: var(--ac-space-2) var(--ac-space-3); resize: vertical; line-height: var(--ac-lh-sm); }
 
 .ac-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; color: inherit; }
 .ac-icon-avatar { border-radius: var(--ac-radius-sm); background: var(--ac-surface-3); border: 1px solid var(--ac-border); color: var(--ac-text); font-weight: 600; line-height: 1; box-sizing: border-box; }

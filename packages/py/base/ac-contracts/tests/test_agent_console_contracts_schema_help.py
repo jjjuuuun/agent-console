@@ -128,7 +128,12 @@ def test_example_rule_accepts_default_examples_null_marker_required_and_choices(
         "with_examples": {**base, "type": "number", "examples": [0.8]},
         # 예시 없음을 명시(null): 목록에서 고르는 값
         "explicit_null": {**base, "type": "string", X_UI: {"tier": "advanced", "example": None}},
-        "enum": {**base, "anyOf": [{"enum": ["a", "b"]}, {"type": "null"}], "default": None},
+        "enum": {
+            **base,
+            X_UI: {"tier": "advanced", "enum_labels": {"a": "가", "b": "나"}},
+            "anyOf": [{"enum": ["a", "b"]}, {"type": "null"}],
+            "default": None,
+        },
         "ref": {**base, "anyOf": [{"$ref": "#/$defs/Mode"}, {"type": "null"}], "default": None},
         "required": {**base, "type": "string"},
         "boolean": {**base, "type": "boolean"},
@@ -137,6 +142,32 @@ def test_example_rule_accepts_default_examples_null_marker_required_and_choices(
     assert lint_schema_help(_obj(cases, required=["required"])) == []
     null_default = {**base, "anyOf": [{"type": "string"}, {"type": "null"}], "default": None}
     assert _rules(lint_schema_help(_obj({"n": null_default}))) == ["missing-example"]
+
+
+def test_enum_values_need_labels() -> None:
+    base = {"title": "값", "description": "고를 값입니다.", "default": "a"}
+    defs = {"Mode": {"enum": ["a", "b"], "type": "string"}}
+
+    def check(prop: dict[str, Any]) -> list[str]:
+        schema = {**_obj({"m": prop}), "$defs": defs}
+        return [i.rule for i in lint_schema_help(schema) if i.rule == "missing-enum-labels"]
+
+    plain = {**base, "enum": ["a", "b"], X_UI: {"tier": "advanced"}}
+    assert check(plain) == ["missing-enum-labels"]
+    via_ref = {**base, "$ref": "#/$defs/Mode", X_UI: {"tier": "advanced"}}
+    assert check(via_ref) == ["missing-enum-labels"]
+    half = {**plain, X_UI: {"tier": "advanced", "enum_labels": {"a": "가"}}}
+    assert check(half) == ["missing-enum-labels"]
+    full = {**plain, X_UI: {"tier": "advanced", "enum_labels": {"a": "가", "b": "나"}}}
+    assert check(full) == []
+    titled = {**base, "oneOf": [{"const": "a", "title": "가"}, {"const": "b", "title": "나"}]}
+    assert check({**titled, X_UI: {"tier": "advanced"}}) == []
+
+
+def test_x_ui_helper_carries_enum_labels() -> None:
+    from agent_console_contracts import x_ui
+
+    assert x_ui(enum_labels={"a": "가"})[X_UI] == {"enum_labels": {"a": "가"}}
 
 
 def test_when_is_required_only_for_basic_tier() -> None:

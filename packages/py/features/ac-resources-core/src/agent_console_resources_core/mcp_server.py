@@ -61,7 +61,11 @@ _CONFIG_SCHEMA: dict[str, Any] = {
             "default": "stdio",
             "title": "연결 방식",
             "description": "명령을 실행해 잇는지(stdio) 주소로 잇는지(http·sse) 고릅니다.",
-            **x_ui(tier="basic", when="서버가 주소(URL)로 열려 있으면 http나 sse로 바꾸세요."),
+            **x_ui(
+                enum_labels={"stdio": "명령 실행", "http": "HTTP 주소", "sse": "SSE 주소"},
+                tier="basic",
+                when="서버가 주소(URL)로 열려 있으면 http나 sse로 바꾸세요.",
+            ),
         },
         "command": {
             "type": "string",

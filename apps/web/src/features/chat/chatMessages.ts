@@ -108,7 +108,7 @@ export const chatMessages = {
     deleted: "이 대화가 삭제되었습니다.",
   },
   composer: {
-    backendBadgeNote: (badge: string) => `${badge} 백엔드로 동작 중입니다. 실제 모델을 쓰려면`,
+    backendBadgeNote: (badge: string) => `${badge} 백엔드로 동작 중입니다. 실제 모델을 쓰려면 백엔드를 바꾸세요.`,
     backendChange: "백엔드 바꾸기",
     backendChanged: "기본 백엔드를 바꿨습니다.",
     dismissNote: "안내 닫기",

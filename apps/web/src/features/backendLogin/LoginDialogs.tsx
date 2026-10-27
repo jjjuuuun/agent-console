@@ -46,7 +46,7 @@ export function LoginConfirmDialog({ open, title, method, starting, error, onCan
         </Banner>
       ) : null}
       {writes.length > 0 ? (
-        <section aria-label={t.writesHeading}>
+        <section className="app-login-writes" aria-label={t.writesHeading}>
           <h3 className="app-block-title">{t.writesHeading}</h3>
           <ul data-testid="login-writes">
             {writes.map((w) => (

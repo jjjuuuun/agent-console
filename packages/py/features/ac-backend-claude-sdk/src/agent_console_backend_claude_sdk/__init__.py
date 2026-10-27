@@ -57,7 +57,7 @@
       ``FixLink``), 상태 이름 ``ReadinessStates``, 실패 사유 ``ProbeReasonCodes``·분류
       ``PROBE_CATEGORIES``. 부품(단독 사용): ``assess_readiness``·``ReadinessAssessment``·
       ``classify_probe_messages``·``classify_probe_error``·``ProbeOutcome``·``find_claude_cli``·
-      ``expand_path``
+      ``expand_path``·``login_file``
     - 구독 로그인(5.2R.82, ux-overhaul §15.9): ``ClaudeSdkBackend.start_login``·``logout``
       (선택 능력, ``capabilities.login/logout``, 방법 ``CLI_LOGIN_METHOD_ID`` = ``cli-login``).
       `claude auth login`을 PTY로 중계하고 `claude auth status` 종료 코드로 판정한다.
@@ -197,6 +197,7 @@ from agent_console_backend_claude_sdk._readiness import (
     classify_probe_messages,
     expand_path,
     find_claude_cli,
+    login_file,
 )
 from agent_console_backend_claude_sdk._redact import (
     DEFAULT_MAX_RAW_CHARS,
@@ -319,6 +320,7 @@ __all__ = [
     "hook_settings_json",
     "host_tool_rule",
     "login_env",
+    "login_file",
     "map_bundle",
     "parse_auth_method",
     "parse_hooks",

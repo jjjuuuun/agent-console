@@ -615,12 +615,15 @@ class ClaudeSdkBackend:
 
     def _assess(self, ctx: BackendCheckContext) -> tuple[ReadinessAssessment, str | None]:
         cli = self._cli_locator(self._readiness.cli_path)
+        parent = self._environ if self._environ is not None else os.environ
+        # CLI가 실제로 받을 환경(정책으로 가린 키 = 빈 값)으로 로그인 파일 위치를 푼다.
+        child = {**parent, **apply_env_policy(parent, self._env_policy, {})}
         assessment = assess_readiness(
             self._readiness,
             allow_subscription_auth=self._allow_subscription_auth,
             has_secret=ctx.has_secret,
             cli_found=cli is not None,
-            environ=self._environ if self._environ is not None else os.environ,
+            environ=child,
             path_exists=self._path_exists,
         )
         return assessment, cli

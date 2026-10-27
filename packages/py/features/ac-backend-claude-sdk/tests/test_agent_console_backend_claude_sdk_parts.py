@@ -205,3 +205,5 @@ def test_apply_env_policy() -> None:
     env = apply_env_policy({"PATH": "/b", "lc_ctype": "C", "SECRET": "s"}, policy, {"K": "v"})
     assert env == {"SECRET": "", "K": "v"}
     assert apply_env_policy({"X": "1"}, EnvPolicy(inherit="all"), {}) == {}
+    # 설정 폴더 경로는 기본으로 물려준다(로그인·준비 점검·실행이 같은 폴더를 보게, QA 5.2R.68)
+    assert apply_env_policy({"CLAUDE_CONFIG_DIR": "/c"}, policy, {}) == {}

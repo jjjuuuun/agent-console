@@ -467,7 +467,7 @@ export function ChatPane(props: ChatPaneProps) {
             </>
           }
         >
-          <span data-testid="backend-badge-note">{t.composer.backendBadgeNote(teamBadge)}</span>
+          <span data-testid="backend-badge-note" title={t.composer.backendBadgeNote(teamBadge)}>{t.composer.backendBadgeNote(teamBadge)}</span>
         </Banner>
       ) : null}
       {feed.error && turns.length === 0 ? (

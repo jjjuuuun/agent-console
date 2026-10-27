@@ -26,6 +26,15 @@ export interface UserSettingsOptions {
 
 type Obj = Record<string, unknown>;
 
+/** 스키마 노드의 `x-ui.enum_labels`(값 → 라벨). 없거나 문자열 라벨이 하나도 없으면 undefined. */
+function xUiEnumLabels(node: SchemaNode): Record<string, string> | undefined {
+  const xui = node["x-ui"];
+  const raw = typeof xui === "object" && xui !== null ? (xui as Obj)["enum_labels"] : undefined;
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const entries = Object.entries(raw as Obj).filter((e): e is [string, string] => typeof e[1] === "string" && e[1].trim() !== "");
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 function put(ui: Obj, pointer: string, spec: Obj): Obj {
   return setAt(ui, pointer, spec) as Obj;
 }
@@ -53,7 +62,8 @@ export function buildUserSettingsUi(root: SchemaNode, options: UserSettingsOptio
       const resolved = resolveRef(raw, root);
       if (values.length > 0) {
         const descriptions = parseEnumDescriptions(typeof resolved["description"] === "string" ? resolved["description"] : undefined, values);
-        ui = put(ui, child, { "ui:widget": RADIO_CARDS_WIDGET, "ui:options": { descriptions, previews: ENUM_PREVIEWS[child] ?? {} } });
+        const labels = xUiEnumLabels(raw) ?? xUiEnumLabels(resolved);
+        ui = put(ui, child, { "ui:widget": RADIO_CARDS_WIDGET, "ui:options": { descriptions, previews: ENUM_PREVIEWS[child] ?? {}, ...(labels ? { labels } : {}) } });
       } else if (isNullableNumber(raw, root)) {
         ui = put(ui, child, { "ui:widget": NULLABLE_NUMBER_WIDGET });
       } else {

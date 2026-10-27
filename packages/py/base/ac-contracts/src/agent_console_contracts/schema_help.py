@@ -14,6 +14,8 @@
 - ``unknown-x-ui-key``: ``x-ui`` 안에 모르는 키가 있다(오타 방지).
 - ``missing-example``: 비워 둘 수 있는 문자열·숫자 필드에 예시(``x-ui.example``·``examples``)도
   null 아닌 기본값도 없다.
+- ``missing-enum-labels``: 고르는 값(``enum``, 또는 enum을 가진 ``$ref``)에 사람이 읽는 라벨이 없다.
+  ``x-ui.enum_labels``(값 → 라벨)가 모든 값을 덮거나, 선택지가 ``oneOf``의 ``title``을 가져야 한다.
 - ``forbidden-text``·``jargon``: 설명·``x-ui.when``에 설계 문서 번호(공통 금지 패턴) 또는 개발자용
   표현이 있다.
 - ``missing-when``: 규칙 데이터 ``when_required_tiers``(기본 ``basic``) 필드에
@@ -187,8 +189,70 @@ def _check_text(text: str, where: str, issues: list[HelpIssue], context: str | N
     _check_hard_terms(text, where, issues, text if context is None else f"{context}\n{text}")
 
 
+def _enum_values(
+    prop: Mapping[str, Any], defs: Mapping[str, Any], seen: frozenset[str] = frozenset()
+) -> tuple[list[str], bool]:
+    """속성이 고르게 하는 문자열 값 목록과, 선택지마다 ``title``이 이미 있는지."""
+    values: list[str] = []
+    titled = True
+    raw = prop.get("enum")
+    if isinstance(raw, list):
+        values += [v for v in raw if isinstance(v, str)]
+        titled = False
+    ref = prop.get("$ref")
+    if isinstance(ref, str):
+        name = ref.rsplit("/", 1)[-1]
+        target = defs.get(name)
+        if name not in seen and isinstance(target, Mapping):
+            sub, sub_titled = _enum_values(target, defs, seen | {name})
+            values += sub
+            titled = titled and sub_titled
+    for key in _SCHEMA_KIDS:
+        for sub_node in prop.get(key, ()) or ():
+            if not isinstance(sub_node, Mapping):
+                continue
+            const = sub_node.get("const")
+            if isinstance(const, str):
+                values.append(const)
+                titled = titled and isinstance(sub_node.get("title"), str)
+                continue
+            sub, sub_titled = _enum_values(sub_node, defs, seen)
+            values += sub
+            titled = titled and sub_titled
+    return values, titled
+
+
+def _check_enum_labels(
+    name: str, prop: Mapping[str, Any], defs: Mapping[str, Any], where: str, issues: list[HelpIssue]
+) -> None:
+    values, titled = _enum_values(prop, defs)
+    if len(values) < 2 or titled:
+        return
+    x_ui = prop.get(X_UI)
+    labels = x_ui.get(XUiKeys.ENUM_LABELS) if isinstance(x_ui, Mapping) else None
+    have = (
+        {k for k, v in labels.items() if isinstance(v, str) and v.strip()}
+        if isinstance(labels, Mapping)
+        else set()
+    )
+    missing = [v for v in dict.fromkeys(values) if v not in have]
+    if missing:
+        issues.append(
+            _issue(
+                "missing-enum-labels",
+                where,
+                f"{name}: 선택지 {missing}의 라벨(x-ui.enum_labels)이 없습니다",
+            )
+        )
+
+
 def _check_property(
-    name: str, prop: Mapping[str, Any], required: bool, where: str, issues: list[HelpIssue]
+    name: str,
+    prop: Mapping[str, Any],
+    required: bool,
+    where: str,
+    issues: list[HelpIssue],
+    defs: Mapping[str, Any] | None = None,
 ) -> None:
     if "const" in prop:
         return
@@ -231,6 +295,7 @@ def _check_property(
         if isinstance(when, str):
             context = description if isinstance(description, str) else None
             _check_text(when, f"{where}/{X_UI}/{XUiKeys.WHEN}", issues, context)
+    _check_enum_labels(name, prop, defs or {}, where, issues)
     types, choice = _types(prop)
     if not required and not choice and types & _SCALAR_TYPES and not _has_example(prop):
         issues.append(
@@ -239,7 +304,13 @@ def _check_property(
 
 
 def _walk(
-    node: Any, at: str, issues: list[HelpIssue], *, into_defs: bool, objects: bool = False
+    node: Any,
+    at: str,
+    issues: list[HelpIssue],
+    *,
+    into_defs: bool,
+    objects: bool = False,
+    defs: Mapping[str, Any] | None = None,
 ) -> None:
     """스키마 노드 하나를 훑는다. ``properties``의 각 속성을 검사하고 하위 스키마로 내려간다.
 
@@ -257,21 +328,28 @@ def _walk(
         for name, prop in props.items():
             where = f"{at}/properties/{name}"
             if isinstance(prop, Mapping):
-                _check_property(str(name), prop, name in required, where, issues)
-                _walk(prop, where, issues, into_defs=False, objects=objects)
+                _check_property(str(name), prop, name in required, where, issues, defs)
+                _walk(prop, where, issues, into_defs=False, objects=objects, defs=defs)
     for key in ("items", "additionalProperties", "not"):
         sub = node.get(key)
         if isinstance(sub, Mapping):
-            _walk(sub, f"{at}/{key}", issues, into_defs=False, objects=objects)
+            _walk(sub, f"{at}/{key}", issues, into_defs=False, objects=objects, defs=defs)
     for key in _SCHEMA_KIDS:
         for i, sub in enumerate(node.get(key, ()) or ()):
-            _walk(sub, f"{at}/{key}/{i}", issues, into_defs=False, objects=objects)
+            _walk(sub, f"{at}/{key}/{i}", issues, into_defs=False, objects=objects, defs=defs)
     if into_defs:
         for key in ("$defs", "definitions"):
             defs = node.get(key)
             if isinstance(defs, Mapping):
                 for name, sub in defs.items():
-                    _walk(sub, f"{at}/{key}/{name}", issues, into_defs=False, objects=objects)
+                    _walk(
+                        sub,
+                        f"{at}/{key}/{name}",
+                        issues,
+                        into_defs=False,
+                        objects=objects,
+                        defs=defs,
+                    )
 
 
 def _refs(node: Any, out: set[str]) -> None:
@@ -320,14 +398,18 @@ def lint_schema_help(
         규칙 위반 목록(없으면 빈 목록). 심각도(오류·경고)는 호출자가 정한다.
     """
     issues: list[HelpIssue] = []
+    raw_defs = schema.get("$defs", schema.get("definitions", {}))
+    all_defs: Mapping[str, Any] = raw_defs if isinstance(raw_defs, Mapping) else {}
     if roots is None:
-        _walk(schema, path, issues, into_defs=True, objects=objects)
+        _walk(schema, path, issues, into_defs=True, objects=objects, defs=all_defs)
         return issues
     defs = schema.get("$defs", {})
     if not isinstance(defs, Mapping):
         return issues
     for name in _closure(defs, roots):
-        _walk(defs[name], f"{path}/$defs/{name}", issues, into_defs=False, objects=objects)
+        _walk(
+            defs[name], f"{path}/$defs/{name}", issues, into_defs=False, objects=objects, defs=defs
+        )
     return issues
 
 

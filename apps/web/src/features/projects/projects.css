@@ -2,6 +2,8 @@
 
 /* 사이드바 전환기 */
 .prj-switcher { display: block; min-width: 0; margin-bottom: var(--ac-space-1); }
+.prj-switcher[data-empty="true"] { margin-top: var(--ac-space-2); margin-bottom: var(--ac-space-2); }
+.prj-switcher[data-empty="true"] .ac-btn { height: var(--ac-control-md); }
 .prj-pop { display: block; width: 100%; }
 .prj-trigger { display: flex; align-items: center; gap: var(--ac-space-1); width: 100%; min-width: 0; box-sizing: border-box; min-height: var(--ac-control-md, 32px); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); color: var(--ac-text); font: inherit; font-size: var(--ac-text-sm); text-align: left; cursor: pointer; }
 .prj-trigger:hover { background: var(--ac-surface-3); }

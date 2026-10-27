@@ -453,7 +453,10 @@ class FakeObserve(BaseModel):
         default="start",
         title="낼 자리",
         description="시작 직후(start), 도구 호출 뒤(tool), 끝(end) 중 언제 낼지입니다.",
-        json_schema_extra=x_ui(tier="advanced"),
+        json_schema_extra=x_ui(
+            enum_labels={"start": "시작 직후", "tool": "도구 호출 뒤", "end": "끝날 때"},
+            tier="advanced",
+        ),
     )
     when: str | None = Field(
         default=None,
@@ -592,7 +595,10 @@ class FakeHookProbe(BaseModel):
         default="start",
         title="쓸 자리",
         description="시작 직후(start), 도구 호출 뒤(tool), 끝(end) 중 언제 쓸지입니다.",
-        json_schema_extra=x_ui(tier="advanced"),
+        json_schema_extra=x_ui(
+            enum_labels={"start": "시작 직후", "tool": "도구 호출 뒤", "end": "끝날 때"},
+            tier="advanced",
+        ),
     )
     format: str = Field(
         default=DEFAULT_PROBE_FORMAT,

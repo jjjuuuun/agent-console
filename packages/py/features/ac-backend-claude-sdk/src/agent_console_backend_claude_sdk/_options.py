@@ -97,6 +97,7 @@ class ClaudeSdkAuth(BaseModel):
         description="기본은 구독 로그인(Claude Code 로그인, 본인 책임)이고 API 키도 고를 수 "
         "있습니다. 구독은 설치자 설정에서 허용돼 있어야 합니다(기본 허용).",
         json_schema_extra=x_ui(
+            enum_labels={"api_key": "API 키", "subscription": "구독 로그인"},
             tier="basic",
             when="구독 대신 API 키로 실행하고 싶을 때 api_key로 바꾸세요.",
         ),
@@ -144,6 +145,14 @@ class ClaudeSdkBackendOptions(BaseModel):
         title="권한 모드",
         description="도구 사용 권한 모드입니다. 기본 dontAsk는 미리 허용한 것 밖을 거부합니다.",
         json_schema_extra=x_ui(
+            enum_labels={
+                "default": "기본(매번 묻기)",
+                "acceptEdits": "파일 수정은 허용",
+                "plan": "계획만 세우기",
+                "bypassPermissions": "모두 허용",
+                "dontAsk": "미리 허용한 것만",
+                "auto": "자동 판단",
+            },
             tier="basic",
             when=(
                 "에이전트가 파일 수정 등을 묻지 않고 하게 하거나(acceptEdits) 매번 묻게 하고 "
@@ -249,6 +258,7 @@ class ClaudeSdkBackendOptions(BaseModel):
             "권한을 물어야 하는데 답할 연결이 없을 때 거부(deny)할지 허용(allow)할지입니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={"deny": "거부", "allow": "허용"},
             tier="advanced",
             when="승인 연결 없이도 권한 요청을 허용해야 할 때만 allow로 바꾸세요(위험할 수 있음).",
             group="permission",
@@ -275,6 +285,10 @@ class ClaudeSdkBackendOptions(BaseModel):
             "붙일지(claude_code_append)입니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={
+                "custom": "직접 쓴 글만",
+                "claude_code_append": "Claude Code 기본에 덧붙이기",
+            },
             tier="basic",
             when=(
                 "Claude Code의 기본 도구 사용 요령을 함께 쓰고 싶을 때 claude_code_append로 "
@@ -452,7 +466,12 @@ class ClaudeSdkBackendOptions(BaseModel):
         default="instructions",
         title="규칙 전달 방식",
         description="경로 조건 규칙을 지침에 붙일지(instructions) 규칙 파일로 둘지(files)입니다.",
-        json_schema_extra=x_ui(tier="advanced", group="files", group_title="설정·파일"),
+        json_schema_extra=x_ui(
+            enum_labels={"instructions": "지침 글로 전달", "files": "파일로 전달"},
+            tier="advanced",
+            group="files",
+            group_title="설정·파일",
+        ),
     )
     rule_files_env: dict[str, str] = Field(
         default_factory=lambda: {"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD": "1"},
@@ -466,7 +485,12 @@ class ClaudeSdkBackendOptions(BaseModel):
         description=(
             "명령형 hook을 실행 범위 검사 뒤 돌릴지(callback) CLI가 직접 돌릴지(settings)입니다."
         ),
-        json_schema_extra=x_ui(tier="advanced", group="hooks", group_title="hook"),
+        json_schema_extra=x_ui(
+            enum_labels={"callback": "검사 뒤 직접 실행", "settings": "CLI가 실행"},
+            tier="advanced",
+            group="hooks",
+            group_title="hook",
+        ),
     )
     hook_timeout_seconds: float = Field(
         default=60.0,

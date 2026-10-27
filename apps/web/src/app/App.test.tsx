@@ -233,7 +233,7 @@ describe("설정 화면", () => {
     expect(radios.length).toBeGreaterThan(0);
     expect(within(chat).getAllByText(/^기본값:/).length).toBeGreaterThan(0);
     // 실행 중 새 메시지: queue(기본) → reject
-    const reject = within(chat).getByRole("radio", { name: /reject/ });
+    const reject = within(chat).getByRole("radio", { name: /거절/ });
     expect(screen.getAllByText("저장됨").length).toBeGreaterThan(0);
     // 상속 상태에서도 바로 편집된다(건드리면 이 층에서 지정)
     fireEvent.click(reject);

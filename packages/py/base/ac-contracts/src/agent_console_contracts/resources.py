@@ -148,6 +148,7 @@ class ResourceAttachment(DefinitionModel):
             "더하기(add), 공통·팀 설정에서 붙인 같은 자리 바꾸기(replace), 빼기(remove)입니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={"add": "더하기", "replace": "바꾸기", "remove": "빼기"},
             tier="advanced",
             when="공통·팀 설정에서 붙인 리소스를 여기서만 빼거나 바꾸고 싶을 때 바꾸세요.",
         ),

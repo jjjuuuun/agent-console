@@ -90,6 +90,7 @@ class Limits(DefinitionModel):
         json_schema_extra={
             _X_WIDEN: {"kind": "order", "order": ["deny", "allow"]},
             **x_ui(
+                enum_labels={"allow": "허용", "deny": "막기"},
                 tier="basic",
                 when="에이전트가 웹 검색·다운로드를 해야 하거나 외부 접속을 막고 싶을 때 바꾸세요.",
             ),
@@ -414,7 +415,9 @@ class AgentSettings(DefinitionModel):
             "이어 씁니다."
         ),
         json_schema_extra=x_ui(
-            tier="advanced", when="턴마다 앞 내용을 잊고 새로 답하게 하고 싶을 때 fresh로 바꾸세요."
+            enum_labels={"continue": "이어서 쓰기", "fresh": "새로 시작"},
+            tier="advanced",
+            when="턴마다 앞 내용을 잊고 새로 답하게 하고 싶을 때 fresh로 바꾸세요.",
         ),
     )
     backend_options: JsonObject | None = Field(
@@ -691,6 +694,7 @@ class NodeSpec(DefinitionModel):
         title="시작 조건",
         description="들어오는 값이 하나만 와도 시작할지(any) 모두 기다릴지(all) 정합니다.",
         json_schema_extra=x_ui(
+            enum_labels={"any": "하나라도 도착하면", "all": "모두 도착하면"},
             tier="advanced",
             when=("여러 앞 단계 결과를 모두 모아 한 번에 처리하고 싶을 때 all로 바꾸세요."),
         ),
@@ -773,6 +777,7 @@ class ChatSettings(DefinitionModel):
             "앞 턴이 도는 중 온 메시지를 기다렸다 실행할지(queue) 거절할지(reject) 정합니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={"queue": "기다렸다 실행", "reject": "거절"},
             tier="advanced",
             when="실행 중 보낸 메시지를 쌓아 두지 않고 바로 거절하고 싶을 때 바꾸세요.",
         ),
@@ -784,6 +789,11 @@ class ChatSettings(DefinitionModel):
             "답변이 여러 개일 때 따로(separate), 하나로(merged), 마지막만(final_only) 보입니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={
+                "separate": "따로 보이기",
+                "merged": "하나로 합치기",
+                "final_only": "마지막 답변만",
+            },
             tier="basic",
             when="팀 답변이 여러 개라 채팅이 길어질 때 merged나 final_only로 바꾸세요.",
         ),
@@ -795,7 +805,9 @@ class ChatSettings(DefinitionModel):
             "제목을 첫 메시지로 자동으로 정할지(first_message) 직접 적을지(manual) 고릅니다."
         ),
         json_schema_extra=x_ui(
-            tier="basic", when="대화 제목을 직접 정하고 싶을 때 manual로 바꾸세요."
+            enum_labels={"first_message": "첫 메시지로 정하기", "manual": "직접 정하기"},
+            tier="basic",
+            when="대화 제목을 직접 정하고 싶을 때 manual로 바꾸세요.",
         ),
     )
     send_key: SendKey = Field(
@@ -803,7 +815,9 @@ class ChatSettings(DefinitionModel):
         title="전송 키",
         description="enter: Enter 전송·Shift+Enter 줄바꿈, mod_enter: Ctrl/Cmd+Enter 전송.",
         json_schema_extra=x_ui(
-            tier="basic", when="Enter로 줄을 자주 바꾸다 실수로 보낼 때 mod_enter로 바꾸세요."
+            enum_labels={"enter": "Enter로 전송", "mod_enter": "Ctrl/Cmd+Enter로 전송"},
+            tier="basic",
+            when="Enter로 줄을 자주 바꾸다 실수로 보낼 때 mod_enter로 바꾸세요.",
         ),
     )
     list_sort: str | None = Field(
@@ -833,6 +847,7 @@ class ChatSettings(DefinitionModel):
             "지울지(drop) 정합니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={"ask": "물어보기", "run": "실행하기", "drop": "지우기"},
             tier="advanced",
             when="서버를 다시 켤 때마다 남은 메시지를 묻지 않고 처리하고 싶을 때 바꾸세요.",
         ),
@@ -1000,7 +1015,9 @@ class InteractionSettings(DefinitionModel):
             "답이 없을 때 요청만 닫고 계속할지(expire) 실행을 취소할지(cancel_run) 정합니다."
         ),
         json_schema_extra=x_ui(
-            tier="advanced", when="답이 없으면 실행을 아예 멈추고 싶을 때 cancel_run으로 바꾸세요."
+            enum_labels={"expire": "요청만 닫기", "cancel_run": "실행 취소"},
+            tier="advanced",
+            when="답이 없으면 실행을 아예 멈추고 싶을 때 cancel_run으로 바꾸세요.",
         ),
     )
 
@@ -1244,7 +1261,9 @@ class UsageIndicatorSettings(DefinitionModel):
             "숫자와 게이지를 사용한 양/남은 양 중 무엇으로 보일지. 남은 양으로 보려면 remaining."
         ),
         json_schema_extra=x_ui(
-            tier="basic", when="쓴 양 대신 남은 양으로 보고 싶을 때 remaining으로 바꾸세요."
+            enum_labels={"remaining": "남은 양", "used": "쓴 양"},
+            tier="basic",
+            when="쓴 양 대신 남은 양으로 보고 싶을 때 remaining으로 바꾸세요.",
         ),
     )
     color_rules: list[UsageIndicatorColorRule] = Field(
@@ -1412,7 +1431,9 @@ class ProjectPreferences(DefinitionModel):
         default="project",
         title="기본 범위",
         description="종류별 범위에 없는 종류를 새로 만들 때의 범위입니다.",
-        json_schema_extra=x_ui(tier="advanced"),
+        json_schema_extra=x_ui(
+            enum_labels={"project": "프로젝트 것", "shared": "공용 것"}, tier="advanced"
+        ),
     )
 
 

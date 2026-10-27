@@ -40,6 +40,7 @@ from agent_console_backend_claude_sdk import (
     classify_probe_messages,
     expand_path,
     find_claude_cli,
+    login_file,
 )
 from agent_console_backend_claude_sdk.testing import FakeSdkClient
 from agent_console_contracts import BackendProbeResult, BackendReadiness
@@ -221,6 +222,82 @@ async def test_subscription_login_file_missing_or_token_missing() -> None:
         Factory(), env={"claude_oauth": OAUTH}, readiness=token, allow_subscription_auth=True
     )
     assert (await backend.status(_ctx(secrets))).state == ReadinessStates.SUBSCRIPTION_READY
+
+
+async def test_empty_claude_config_dir_is_unverified_even_if_home_login_exists() -> None:
+    """QA 결함(5.2R.68·79): CLI는 CLAUDE_CONFIG_DIR가 있으면 그 폴더만 본다. 홈 파일로 ready 금지.
+
+    실제 ~/.claude를 읽지 않도록 `path_exists`를 주입한다(가짜 경로만 "있음").
+    """
+    seen: list[str] = []
+
+    def exists(path: str) -> bool:
+        seen.append(path)
+        return path == LOGIN_FILE
+
+    backend = ClaudeSdkBackend(
+        client_factory=Factory(),
+        secrets=_resolver({}),
+        environ={"HOME": "/home/u", "CLAUDE_CONFIG_DIR": "/empty/cfg"},
+        readiness=SUBSCRIPTION,
+        allow_subscription_auth=True,
+        cli_locator=_found,
+        path_exists=exists,
+    )
+    status = await backend.status(_ctx(_resolver({})))
+    assert status.state == ReadinessStates.SUBSCRIPTION_UNVERIFIED
+    assert seen == ["/empty/cfg/.credentials.json"]  # 홈 후보는 보지 않는다
+
+
+async def test_claude_config_dir_login_is_ready_and_unset_falls_back_to_home() -> None:
+    cfg_file = "/cfg/.credentials.json"
+    backend, secrets = _backend(
+        Factory(),
+        env={"CLAUDE_CONFIG_DIR": "/cfg"},
+        readiness=SUBSCRIPTION,
+        allow_subscription_auth=True,
+        files=frozenset({cfg_file}),
+    )
+    assert (await backend.status(_ctx(secrets))).state == ReadinessStates.SUBSCRIPTION_READY
+    # 빈 값 = 없음 → 홈의 .claude
+    backend, secrets = _backend(
+        Factory(),
+        env={"CLAUDE_CONFIG_DIR": ""},
+        readiness=SUBSCRIPTION,
+        allow_subscription_auth=True,
+        files=frozenset({LOGIN_FILE}),
+    )
+    assert (await backend.status(_ctx(secrets))).state == ReadinessStates.SUBSCRIPTION_READY
+
+
+async def test_readiness_uses_env_policy_of_child_process() -> None:
+    """환경 정책이 CLAUDE_CONFIG_DIR를 가리면 CLI는 홈을 본다 → 점검도 홈을 본다."""
+    seen: list[str] = []
+
+    def exists(path: str) -> bool:
+        seen.append(path)
+        return path == LOGIN_FILE
+
+    backend = ClaudeSdkBackend(
+        client_factory=Factory(),
+        secrets=_resolver({}),
+        environ={"HOME": "/home/u", "CLAUDE_CONFIG_DIR": "/cfg"},
+        readiness=SUBSCRIPTION,
+        allow_subscription_auth=True,
+        cli_locator=_found,
+        env_policy={"allow": ["PATH", "HOME"]},
+        path_exists=exists,
+    )
+    status = await backend.status(_ctx(_resolver({})))
+    assert status.state == ReadinessStates.SUBSCRIPTION_READY
+    assert seen == [LOGIN_FILE]
+
+
+def test_login_file_takes_first_resolvable_candidate() -> None:
+    files = ["${CLAUDE_CONFIG_DIR}/.credentials.json", "~/.claude/.credentials.json"]
+    assert login_file(files, {"HOME": "/h", "CLAUDE_CONFIG_DIR": "/c"}) == "/c/.credentials.json"
+    assert login_file(files, {"HOME": "/h"}) == "/h/.claude/.credentials.json"
+    assert login_file(files, {}) is None
 
 
 async def test_cli_missing_is_error_and_probe_is_refused() -> None:

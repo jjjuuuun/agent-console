@@ -183,6 +183,7 @@ class UsesEdgeConfig(BaseModel):
         json_schema_extra={
             "enum": ["add", "replace", "remove"],
             **x_ui(
+                enum_labels={"add": "더하기", "replace": "바꾸기", "remove": "빼기"},
                 tier="basic",
                 when="에이전트·팀에서 붙인 리소스를 이 연결로 바꾸거나 빼고 싶을 때 바꾸세요.",
             ),
@@ -236,6 +237,7 @@ class DelegateEdgeConfig(BaseModel):
             "맡은 에이전트의 결과 글 전체(text, 기본)나 답변 연결로 고른 답변(reply)을 돌려줍니다."
         ),
         json_schema_extra=x_ui(
+            enum_labels={"text": "결과 글 전체", "reply": "고른 답변"},
             tier="basic",
             when="맡은 에이전트의 긴 결과 대신 정리된 답변만 받고 싶을 때 reply로 바꾸세요.",
         ),
@@ -465,7 +467,12 @@ class AskUserEdgeConfig(BaseModel):
         description=(
             "답이 없을 때 요청만 닫을지(expire) 실행을 취소할지(cancel_run)입니다. 비우면 설정값."
         ),
-        json_schema_extra={"enum": ["expire", "cancel_run"], **x_ui(tier="advanced")},
+        json_schema_extra={
+            "enum": ["expire", "cancel_run"],
+            **x_ui(
+                enum_labels={"expire": "요청만 닫기", "cancel_run": "실행 취소"}, tier="advanced"
+            ),
+        },
     )
     label: str | None = Field(
         default=None,

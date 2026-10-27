@@ -49,6 +49,7 @@ _CONFIG_SCHEMA: dict[str, Any] = {
             "title": "위치",
             "description": "먼저 붙은 지침의 뒤(append)에 붙일지 앞(prepend)에 붙일지 정합니다.",
             **x_ui(
+                enum_labels={"append": "뒤에 붙이기", "prepend": "앞에 붙이기"},
                 tier="advanced",
                 when="이 지침을 다른 지침보다 먼저 읽히게 하고 싶을 때 prepend로 바꾸세요.",
             ),

@@ -40,7 +40,8 @@ DEFAULT_SUBSCRIPTION_FILES: tuple[str, ...] = (
     "~/.claude/.credentials.json",
 )
 """구독 로그인 확인 파일 후보(있는지만 본다, 읽지 않음). ``~`` = HOME(없으면 USERPROFILE),
-``${이름}`` = 환경 변수. 풀 수 없는 항목은 건너뛴다."""
+``${이름}`` = 환경 변수(비어 있으면 풀 수 없음). **처음 풀리는 하나만** 본다: Claude Code CLI는
+``CLAUDE_CONFIG_DIR``가 있으면 그 폴더만 보고 없을 때만 ``~/.claude``를 보기 때문이다."""
 
 DEFAULT_PROBE_PROMPT = "Reply with the single word OK."
 """연결 테스트 프롬프트(가장 짧은 응답을 바라는 한 줄)."""
@@ -195,7 +196,8 @@ class ClaudeSdkReadinessOptions(BaseModel):
     )
     subscription_files: list[str] = Field(
         default_factory=lambda: list(DEFAULT_SUBSCRIPTION_FILES),
-        description="구독 로그인 확인 파일 후보(있는지만 본다). ~ = 홈, ${이름} = 환경 변수.",
+        description="구독 로그인 확인 파일 후보(있는지만 본다). ~ = 홈, ${이름} = 환경 변수. "
+        "위에서부터 처음 풀리는 하나만 본다(CLI처럼 CLAUDE_CONFIG_DIR가 있으면 그 폴더만).",
     )
     probe_prompt: str = Field(
         default=DEFAULT_PROBE_PROMPT, min_length=1, description="연결 테스트 프롬프트 한 줄."
@@ -321,7 +323,8 @@ def assess_readiness(
         allow_subscription_auth: 설치자 설정(구독 방식 허용).
         has_secret: 비밀 이름이 있는지만 묻는 함수.
         cli_found: Claude Code 실행 파일을 찾았는지.
-        environ: 로그인 확인 파일 경로를 풀 환경.
+        environ: 로그인 확인 파일 경로를 풀 환경. CLI 하위 프로세스가 **실제로 받을** 환경을
+            넘긴다(환경 정책으로 가려진 키는 빈 값 = 없음).
         path_exists: 파일 존재 확인(주입).
     """
     t = options.texts
@@ -441,7 +444,8 @@ def _assess_subscription(
             probe_block=ProbeReasonCodes.AUTH_MISSING,
             probe_block_message=t.probe_auth_missing,
         )
-    paths = _resolved(options.subscription_files, environ)
+    path = login_file(options.subscription_files, environ)
+    paths = [path] if path else []
     found = sum(1 for p in paths if path_exists(p))
     checks.append(
         ReadinessCheck(
@@ -462,13 +466,22 @@ def _assess_subscription(
     )
 
 
-def _resolved(templates: Iterable[str], environ: Mapping[str, str]) -> list[str]:
-    out: list[str] = []
+def login_file(templates: Iterable[str], environ: Mapping[str, str]) -> str | None:
+    """구독 로그인 확인 파일: 후보 중 처음 풀리는 경로(없으면 None). 파일은 보지 않는다.
+
+    CLI 규칙과 같다. ``CLAUDE_CONFIG_DIR``가 비어 있지 않으면 그 폴더만, 아니면 ``~/.claude``.
+
+    >>> files = ["${CLAUDE_CONFIG_DIR}/.credentials.json", "~/.claude/.credentials.json"]
+    >>> login_file(files, {"HOME": "/h", "CLAUDE_CONFIG_DIR": "/cfg"})
+    '/cfg/.credentials.json'
+    >>> login_file(files, {"HOME": "/h", "CLAUDE_CONFIG_DIR": ""})
+    '/h/.claude/.credentials.json'
+    """
     for template in templates:
         path = expand_path(template, environ)
-        if path and path not in out:
-            out.append(path)
-    return out
+        if path:
+            return path
+    return None
 
 
 # ---------------------------------------------------------------- 연결 테스트 결과 분류
@@ -587,6 +600,7 @@ __all__ = [
     "classify_probe_messages",
     "expand_path",
     "find_claude_cli",
+    "login_file",
     "probe_fixes",
     "probe_message",
     "secret_name",

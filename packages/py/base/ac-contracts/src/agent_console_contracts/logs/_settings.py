@@ -185,7 +185,13 @@ class LogProjectSettings(DefinitionModel):
             "맞는 묶음이 없으면 자기 경로(cwd), 저장소(repo_root), 기타 한 묶음(none)으로 둡니다."
         ),
         json_schema_extra=x_ui(
-            tier="advanced", when="묶음에 들지 않은 로그를 한곳에 모으고 싶을 때 none으로 바꾸세요."
+            enum_labels={
+                "cwd": "작업 폴더로 묶기",
+                "repo_root": "저장소 루트로 묶기",
+                "none": "묶지 않기",
+            },
+            tier="advanced",
+            when="묶음에 들지 않은 로그를 한곳에 모으고 싶을 때 none으로 바꾸세요.",
         ),
     )
     git_worktrees: bool | None = Field(

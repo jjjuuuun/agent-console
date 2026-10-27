@@ -29,6 +29,8 @@ DEFAULT_ENV_ALLOW: tuple[str, ...] = (
     "TEMP",
     "TMP",
     "PWD",
+    # Claude Code 설정 폴더(값은 경로, 비밀 아님). 로그인·준비 점검·실행이 같은 폴더를 보게 한다.
+    "CLAUDE_CONFIG_DIR",
     # Windows
     "SYSTEMROOT",
     "SYSTEMDRIVE",

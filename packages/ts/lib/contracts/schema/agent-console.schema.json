@@ -892,6 +892,10 @@
           "description": "다음 턴에 대화를 이어 쓸지(continue) 매번 새로 시작할지(fresh) 정합니다. 비우면 이어 씁니다.",
           "title": "세션 이어 쓰기",
           "x-ui": {
+            "enum_labels": {
+              "continue": "이어서 쓰기",
+              "fresh": "새로 시작"
+            },
             "tier": "advanced",
             "when": "턴마다 앞 내용을 잊고 새로 답하게 하고 싶을 때 fresh로 바꾸세요."
           }
@@ -1192,6 +1196,10 @@
           "description": "다음 턴에 대화를 이어 쓸지(continue) 매번 새로 시작할지(fresh) 정합니다. 비우면 이어 씁니다.",
           "title": "세션 이어 쓰기",
           "x-ui": {
+            "enum_labels": {
+              "continue": "이어서 쓰기",
+              "fresh": "새로 시작"
+            },
             "tier": "advanced",
             "when": "턴마다 앞 내용을 잊고 새로 답하게 하고 싶을 때 fresh로 바꾸세요."
           }
@@ -1716,6 +1724,10 @@
           "description": "다음 턴에 대화를 이어 쓸지(continue) 매번 새로 시작할지(fresh) 정합니다. 비우면 이어 씁니다.",
           "title": "세션 이어 쓰기",
           "x-ui": {
+            "enum_labels": {
+              "continue": "이어서 쓰기",
+              "fresh": "새로 시작"
+            },
             "tier": "advanced",
             "when": "턴마다 앞 내용을 잊고 새로 답하게 하고 싶을 때 fresh로 바꾸세요."
           }
@@ -3360,6 +3372,10 @@
           "description": "앞 턴이 도는 중 온 메시지를 기다렸다 실행할지(queue) 거절할지(reject) 정합니다.",
           "title": "실행 중 새 메시지",
           "x-ui": {
+            "enum_labels": {
+              "queue": "기다렸다 실행",
+              "reject": "거절"
+            },
             "tier": "advanced",
             "when": "실행 중 보낸 메시지를 쌓아 두지 않고 바로 거절하고 싶을 때 바꾸세요."
           }
@@ -3370,6 +3386,11 @@
           "description": "답변이 여러 개일 때 따로(separate), 하나로(merged), 마지막만(final_only) 보입니다.",
           "title": "답변 여러 개 표시",
           "x-ui": {
+            "enum_labels": {
+              "final_only": "마지막 답변만",
+              "merged": "하나로 합치기",
+              "separate": "따로 보이기"
+            },
             "tier": "basic",
             "when": "팀 답변이 여러 개라 채팅이 길어질 때 merged나 final_only로 바꾸세요."
           }
@@ -3380,6 +3401,10 @@
           "description": "제목을 첫 메시지로 자동으로 정할지(first_message) 직접 적을지(manual) 고릅니다.",
           "title": "대화 제목",
           "x-ui": {
+            "enum_labels": {
+              "first_message": "첫 메시지로 정하기",
+              "manual": "직접 정하기"
+            },
             "tier": "basic",
             "when": "대화 제목을 직접 정하고 싶을 때 manual로 바꾸세요."
           }
@@ -3390,6 +3415,10 @@
           "description": "enter: Enter 전송·Shift+Enter 줄바꿈, mod_enter: Ctrl/Cmd+Enter 전송.",
           "title": "전송 키",
           "x-ui": {
+            "enum_labels": {
+              "enter": "Enter로 전송",
+              "mod_enter": "Ctrl/Cmd+Enter로 전송"
+            },
             "tier": "basic",
             "when": "Enter로 줄을 자주 바꾸다 실수로 보낼 때 mod_enter로 바꾸세요."
           }
@@ -3428,6 +3457,11 @@
           "description": "서버가 다시 시작됐을 때 남은 대기 메시지를 물어볼지(ask), 실행할지(run), 지울지(drop) 정합니다.",
           "title": "재시작 뒤 대기 메시지",
           "x-ui": {
+            "enum_labels": {
+              "ask": "물어보기",
+              "drop": "지우기",
+              "run": "실행하기"
+            },
             "tier": "advanced",
             "when": "서버를 다시 켤 때마다 남은 메시지를 묻지 않고 처리하고 싶을 때 바꾸세요."
           }
@@ -6645,6 +6679,10 @@
           "description": "다음 턴에 대화를 이어 쓸지(continue) 매번 새로 시작할지(fresh) 정합니다. 비우면 이어 씁니다.",
           "title": "세션 이어 쓰기",
           "x-ui": {
+            "enum_labels": {
+              "continue": "이어서 쓰기",
+              "fresh": "새로 시작"
+            },
             "group": "agent",
             "group_title": "에이전트 기본값",
             "tier": "advanced",
@@ -8046,6 +8084,10 @@
           "description": "답이 없을 때 요청만 닫고 계속할지(expire) 실행을 취소할지(cancel_run) 정합니다.",
           "title": "한도 초과 시",
           "x-ui": {
+            "enum_labels": {
+              "cancel_run": "실행 취소",
+              "expire": "요청만 닫기"
+            },
             "tier": "advanced",
             "when": "답이 없으면 실행을 아예 멈추고 싶을 때 cancel_run으로 바꾸세요."
           }
@@ -8314,6 +8356,10 @@
           "description": "외부 네트워크 접근을 허용(allow)할지 막을지(deny) 정합니다.",
           "title": "네트워크",
           "x-ui": {
+            "enum_labels": {
+              "allow": "허용",
+              "deny": "막기"
+            },
             "tier": "basic",
             "when": "에이전트가 웹 검색·다운로드를 해야 하거나 외부 접속을 막고 싶을 때 바꾸세요."
           },
@@ -9270,6 +9316,11 @@
           "description": "맞는 묶음이 없으면 자기 경로(cwd), 저장소(repo_root), 기타 한 묶음(none)으로 둡니다.",
           "title": "묶음 밖 경로",
           "x-ui": {
+            "enum_labels": {
+              "cwd": "작업 폴더로 묶기",
+              "none": "묶지 않기",
+              "repo_root": "저장소 루트로 묶기"
+            },
             "tier": "advanced",
             "when": "묶음에 들지 않은 로그를 한곳에 모으고 싶을 때 none으로 바꾸세요."
           }
@@ -11112,6 +11163,10 @@
           "description": "들어오는 값이 하나만 와도 시작할지(any) 모두 기다릴지(all) 정합니다.",
           "title": "시작 조건",
           "x-ui": {
+            "enum_labels": {
+              "all": "모두 도착하면",
+              "any": "하나라도 도착하면"
+            },
             "tier": "advanced",
             "when": "여러 앞 단계 결과를 모두 모아 한 번에 처리하고 싶을 때 all로 바꾸세요."
           }
@@ -12098,6 +12153,10 @@
           "description": "종류별 범위에 없는 종류를 새로 만들 때의 범위입니다.",
           "title": "기본 범위",
           "x-ui": {
+            "enum_labels": {
+              "project": "프로젝트 것",
+              "shared": "공용 것"
+            },
             "tier": "advanced"
           }
         }
@@ -12571,6 +12630,11 @@
           "description": "더하기(add), 공통·팀 설정에서 붙인 같은 자리 바꾸기(replace), 빼기(remove)입니다.",
           "title": "방식",
           "x-ui": {
+            "enum_labels": {
+              "add": "더하기",
+              "remove": "빼기",
+              "replace": "바꾸기"
+            },
             "tier": "advanced",
             "when": "공통·팀 설정에서 붙인 리소스를 여기서만 빼거나 바꾸고 싶을 때 바꾸세요."
           }
@@ -15135,6 +15199,10 @@
           "title": "값 방향",
           "type": "string",
           "x-ui": {
+            "enum_labels": {
+              "remaining": "남은 양",
+              "used": "쓴 양"
+            },
             "tier": "basic",
             "when": "쓴 양 대신 남은 양으로 보고 싶을 때 remaining으로 바꾸세요."
           }

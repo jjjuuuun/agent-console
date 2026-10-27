@@ -129,6 +129,10 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
   | `subscription_disabled` | warn | 구독 방식인데 `allow_subscription_auth`가 꺼짐(해결 버튼 "설치자 설정 보기") |
   | `subscription_ready` | warn | 구독 방식이 켜져 있고 토큰 비밀 또는 로그인 파일이 있음("본인 책임" 문구를 `detail`에) |
   | `subscription_unverified` | warn | 구독 방식이 켜져 있으나 로그인 파일(`readiness.subscription_files`)을 찾지 못함 |
+
+  로그인 파일은 후보 중 **처음 풀리는 하나만** 본다(`login_file`). CLI처럼 하위 프로세스가 받을
+  `CLAUDE_CONFIG_DIR`(환경 정책 적용 후, 빈 값 = 없음)가 있으면 그 폴더만, 없으면 `~/.claude`를 본다.
+  `CLAUDE_CONFIG_DIR`가 빈 폴더면 홈에 로그인 파일이 있어도 `subscription_unverified`다.
   | `subscription_token_missing` | error | `oauth_token` 참조가 가리키는 비밀이 없음 |
   | `cli_missing` | error | Claude Code 실행 파일을 찾지 못함(`readiness.cli_path` → SDK 번들 → PATH 순) |
 
@@ -313,7 +317,7 @@ duration_ms, result_preview}`(TaskNotification, 끝난 TaskUpdated) → 위임�
 Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 시작·종료 쌍을 만든다. 등록하지 않은 이름의 위임은
 위임자에게 귀속한다. 서브에이전트 메시지의 사용량은 위임자 `agent.usage`에 더하지 않는다.
 
-**결과 알림**: sink가 `SubagentResultListener`(ac-runtime 정의, 이 패키지는 하위 호환으로 다시 내보냄;
+**결과 알림**: sink가 `SubagentResultListener`(`agent_console_runtime`에서 가져온다;
 `on_subagent_result(name, *, text, status, actor, tool_use_id)`)면
 위임 도구 결과마다(끝의 `agentId:` 줄 제거) 알린다. 위임 방식이 이것으로 대상 노드의 답변(`ctx.emit_replies`)을
 낸다. 백엔드는 노드 포트 이름을 모르므로 답변을 직접 내지 않는다.
@@ -520,7 +524,7 @@ prompt-count = "my_pkg.collectors:PromptCount"
 
 - **환경 상속**: SDK(0.2.166)는 서버의 `os.environ` 전체를 CLI 하위 프로세스에 물려주며 끄는 옵션이 없다.
   이 백엔드는 생성 인자 `env_policy`(`EnvPolicy`, 기본 `inherit="allowlist"`)로 허용 목록(`DEFAULT_ENV_ALLOW`:
-  PATH·HOME·LANG·LC_*·TMPDIR/TEMP/TMP·SystemRoot 등 OS 필수 키, 설정 데이터로 교체 가능) 밖의 키를
+  PATH·HOME·LANG·LC_*·TMPDIR/TEMP/TMP·SystemRoot 등 OS 필수 키와 `CLAUDE_CONFIG_DIR`, 설정 데이터로 교체 가능) 밖의 키를
   **빈 값으로 덮어쓴다**. 값은 넘어가지 않지만 키 이름은 남는다. `inherit="all"`은 실행마다 `log.warning`을 낸다.
   API 키는 서버 환경에서 물려받지 말고 `backend_options.env`(`secret://…`)로 명시한다.
 - **운영 지침**: `limits.commands`에 `env`, `printenv`, `set`, `cat`, `python`, `node`, `sh` 등 환경·파일을 읽거나
