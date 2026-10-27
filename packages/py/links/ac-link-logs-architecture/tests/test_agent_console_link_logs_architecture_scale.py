@@ -5,8 +5,13 @@
 연결 21개 합성 프로필이다(기본 프로필 크기와 같은 판정 수).
 
 기본 실행은 이벤트 5,000개로 작업량(읽은 이벤트·판정 수·투영 수)만 단언한다. 50,000개 측정은
-`AGENT_CONSOLE_PERF=measure`(수치만 출력) 또는 `strict`(벽시계도 단언 — 캐시 적중 0.1초,
-`arch` 첫 쪽 0.5초)로 켠다. 수치는 `-s`로 본다.
+`AGENT_CONSOLE_PERF=measure`(수치만 출력) 또는 `strict`(벽시계도 단언 — 첫 호출 2.5초, 증분 0.5초,
+캐시 적중 0.1초, `arch` 첫 쪽 0.5초)로 켠다. 수치는 `-s`로 본다.
+
+첫 호출 목표는 1초다(design §5.5R.10). 5.5R.35에서 조건 판정을 빠른 경로로 바꿔 판정은 50,000건에
+약 0.5~0.6초가 되었고, 남은 비용은 색인 읽기(이벤트 모델 생성, 약 1~1.5초)와 투영(약 0.3초)이라
+strict 상한은 2.5초로 둔다. 증분의 남은 비용은 새 판정이 아니라 범위 전체 재투영이다.
+수치는 design §5.5R.10 `[5.5R.35 구현·측정]`.
 """
 
 from __future__ import annotations
@@ -33,6 +38,8 @@ from agent_console_logs.testing import (
 MEASURE = os.environ.get("AGENT_CONSOLE_PERF", "") in ("measure", "strict")
 MAIN = 50_000 if MEASURE else 5_000
 NEW = 500
+FIRST_SECONDS = 2.5
+INCREMENT_SECONDS = 0.5
 HIT_SECONDS = 0.1
 FIRST_PAGE_SECONDS = 0.5
 CTX = QueryContext(error_categories=frozenset({"error"}))
@@ -170,5 +177,7 @@ def test_first_call_cache_hit_and_increment(big: tuple[SqliteLogIndex, ScaleLayo
     )
 
     if perf_strict():
+        assert cold < FIRST_SECONDS, cold
+        assert inc < INCREMENT_SECONDS, inc
         assert hit < HIT_SECONDS, hit
         assert first_page < FIRST_PAGE_SECONDS, first_page

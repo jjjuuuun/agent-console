@@ -33,7 +33,7 @@ export { definitionBase, encodePath, filenameFromDisposition, ISSUES_HEADER, par
 export type { BlobResponse, RestIo } from "./io";
 export { createRestIo } from "./transport";
 export type { ExportArchive } from "./clients/exports";
-export { logQuery } from "./clients/logs";
+export { LOG_EMPTY_VALUE, logQuery } from "./clients/logs";
 export type { ResourceFileContent } from "./clients/resources";
 export type { VersionFileContent } from "./clients/versions";
 export {

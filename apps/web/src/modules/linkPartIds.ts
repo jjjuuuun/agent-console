@@ -13,6 +13,7 @@ export const LINK_PART_IDS = {
   logsTraceFlow: "logs.trace-flow",
   logsRunLink: "logs.run-link",
   logsRunsTab: "logs.runs-tab",
+  logsArchitectureFlow: "logs.architecture-flow",
   logsUsageLink: "logs.usage-link",
   teamsValidationColumn: "teams.validation-column",
   agentsUsagesPanel: "agents.usages-panel",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRestClient, createWsClient, logQuery, type FetchLike, type WebSocketLike } from "./index";
+import { LOG_EMPTY_VALUE, createRestClient, createWsClient, logQuery, type FetchLike, type WebSocketLike } from "./index";
 import { createLogsClient } from "./clients/logs";
 import { createRestIo } from "./transport";
 
@@ -23,6 +23,7 @@ function server(reply: (c: Call) => { status?: number; body?: unknown; headers?:
 describe("logQuery", () => {
   it("반복 키 = 다중 값, 빈 값·undefined·null은 보내지 않고 값은 인코딩한다", () => {
     expect(logQuery({ a: ["x", "y z"], b: "1", c: "", d: undefined, e: null, n: 3, ok: false })).toBe("?a=x&a=y%20z&b=1&n=3&ok=false");
+    expect(logQuery({ g: LOG_EMPTY_VALUE, h: [LOG_EMPTY_VALUE, "x"] })).toBe("?g=&h=&h=x");
     expect(logQuery(undefined)).toBe("");
     expect(logQuery({})).toBe("");
   });
@@ -67,6 +68,20 @@ describe("로그 REST", () => {
     await rest.getLogTimeline("s 1", { lane: "x" });
     await rest.getLogSessionTrace("s/1");
     expect(calls.map((c) => c.path)).toEqual(["/logs/events/a%2Fb%20c", "/logs/sessions/s%201/timeline?lane=x", "/logs/sessions/s%2F1/trace"]);
+  });
+
+  it("구조도: 로그 필터 + profile 쿼리, 이벤트 멤버십 경로는 uid를 인코딩하고 profile은 선택", async () => {
+    const { rest, calls } = server(() => ({ body: {} }));
+    await rest.getLogArchitecture({ session: "s1", thread: ["t1", "t2"], profile: "p x", max_seq: 7 });
+    await rest.getLogEventArchitecture("u/1", "p x");
+    await rest.getLogEventArchitecture("u2");
+    await rest.listArchitectureProfiles();
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+      "GET /logs/architecture?session=s1&thread=t1&thread=t2&profile=p%20x&max_seq=7",
+      "GET /logs/events/u%2F1/architecture?profile=p%20x",
+      "GET /logs/events/u2/architecture",
+      "GET /architecture/profiles",
+    ]);
   });
 
   it("보관본: 필터 + format + tz를 쿼리로, 파일 이름은 Content-Disposition에서", async () => {

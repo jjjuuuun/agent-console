@@ -207,6 +207,17 @@ class _Module:
 module = _Module()
 ```
 
+### 선택 포트를 읽는 시점(관례)
+
+- **선택 포트는 부를 때 읽는다.** `build`에서 값을 꺼내 저장하지 말고, `ctx`를 붙잡은 함수에서 요청을 처리할 때
+  `ctx.port(KEY)`·`ctx.ports(KEY)`를 부른다(예: `lambda: ctx.port(SETTINGS)`).
+- 조립 순서는 "필수 간선 전부 + 순환을 만들지 않는 선택 간선"이다. 선택 포트로 순환이 생기면 여러 제공자 포트
+  (`PortKey(multi=True)`) 간선을 먼저 빼므로, **multi 선택 포트는 제공 모듈이 소비자보다 늦게 build될 수 있다**.
+  그래서 `build` 때 `ctx.ports(...)`는 빈 목록이거나 일부만 담길 수 있다.
+- `build` 때 읽어도 되는 것은 필수 포트와 단일 선택 포트뿐이다. 단일 선택 포트도 단일 포트끼리만으로 순환이
+  생기면 빠질 수 있고(빠진 선택 간선은 보고·경고에 따로 나오지 않는다), 그런 조합이 없다고 확신할 수 없으면 부를
+  때 읽는다.
+
 설치는 entry point 그룹 `agent_console.server_modules`(`MODULES_GROUP`)로 한다.
 `poe new-package --kind module|link`가 `module.py`·`__main__.py`를 만들어 준다.
 

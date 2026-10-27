@@ -28,6 +28,8 @@ from agent_console_contracts.logs import LogEvent, TokenSample
 from agent_console_logs import LogFilter
 from agent_console_logs.query import strip_body
 
+from .settings import DEFAULT_CACHE_PROFILES
+
 VIEW_CACHE_PER_SCOPE = 16
 """범위 하나에 기억할 투영 결과 수(프로필·``max_seq``가 다른 결과)."""
 
@@ -76,18 +78,21 @@ class ScopeEvents:
         events: 읽은 이벤트(목록용 — ``detail``·``raw`` 없음).
         seqs: ``events``의 ``seq``(이분 탐색용).
         tokens: 범위 토큰 표본(이벤트가 바뀔 때만 다시 읽는다). None = 아직 안 읽음.
-        judged: 프로필 키 → 판정 결과.
+        judged: 프로필 키 → 판정 결과(최근 쓴 것이 뒤, ``max_profiles``개까지).
         views: (프로필 키, 출처 종류, 요청 프로필, ``max_seq``) → 투영 결과.
         lock: 같은 범위를 동시에 읽고 고치지 않게 한다.
+        max_profiles: 기억할 판정 결과(프로필 키) 수. 프로필을 고칠 때마다 새 키가 생기므로
+            오래 쓰지 않은 것부터 버린다(버린 키의 투영 결과도 함께 버린다).
     """
 
     key: LogFilter
     events: list[LogEvent] = field(default_factory=list)
     seqs: list[int] = field(default_factory=list)
     tokens: list[TokenSample] | None = None
-    judged: dict[str, Judged] = field(default_factory=dict)
+    judged: OrderedDict[str, Judged] = field(default_factory=OrderedDict)
     views: OrderedDict[Hashable, ArchitectureView] = field(default_factory=OrderedDict)
     lock: threading.Lock = field(default_factory=threading.Lock)
+    max_profiles: int = DEFAULT_CACHE_PROFILES
 
     @property
     def last_seq(self) -> int | None:
@@ -100,7 +105,7 @@ class ScopeEvents:
         self.events = []
         self.seqs = []
         self.tokens = None
-        self.judged = {}
+        self.judged = OrderedDict()
         self.views = OrderedDict()
 
     def extend(self, new: Sequence[LogEvent]) -> None:
@@ -126,6 +131,11 @@ class ScopeEvents:
         found = self.judged.get(key)
         if found is None:
             found = self.judged[key] = Judged(make())
+        self.judged.move_to_end(key)
+        while len(self.judged) > max(1, self.max_profiles):
+            dropped, _ = self.judged.popitem(last=False)
+            for view_key in [k for k in self.views if _profile_of(k) == dropped]:
+                del self.views[view_key]
         start = len(found.matches)
         if start < len(self.events):
             matcher = found.matcher
@@ -160,17 +170,26 @@ class ScopeEvents:
         return view
 
 
+def _profile_of(view_key: Hashable) -> Hashable:
+    # 투영 결과 키는 (프로필 키, 출처 종류, 요청 프로필, max_seq)다(views.py)
+    return view_key[0] if isinstance(view_key, tuple) and view_key else None
+
+
 class ScopeCache:
     """범위 캐시(오래 쓰지 않은 범위부터 버림).
 
     Args:
         max_scopes: 기억할 범위 수(0 = 기억하지 않음 — 부를 때마다 새로 읽는다).
         max_events: 기억한 범위들의 이벤트 수 합 상한.
+        max_profiles: 범위 하나에 기억할 판정 결과(프로필 키) 수.
     """
 
-    def __init__(self, *, max_scopes: int, max_events: int) -> None:
+    def __init__(
+        self, *, max_scopes: int, max_events: int, max_profiles: int = DEFAULT_CACHE_PROFILES
+    ) -> None:
         self._max_scopes = max_scopes
         self._max_events = max_events
+        self._max_profiles = max_profiles
         self._scopes: OrderedDict[LogFilter, ScopeEvents] = OrderedDict()
         self._lock = threading.Lock()
 
@@ -181,7 +200,7 @@ class ScopeCache:
             if found is not None:
                 self._scopes.move_to_end(key)
                 return found
-            scope = ScopeEvents(key)
+            scope = ScopeEvents(key, max_profiles=self._max_profiles)
             if self._max_scopes > 0:
                 self._scopes[key] = scope
             return scope

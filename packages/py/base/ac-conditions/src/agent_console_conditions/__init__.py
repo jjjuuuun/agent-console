@@ -9,9 +9,13 @@
 공개 API:
     - 평가: ``evaluate_conditions(spec, subject, operators, *, redact, max_actual_chars)``,
       ``shorten_actual``, ``DEFAULT_MAX_ACTUAL_CHARS``, ``ConditionReasons``
+    - 빠른 판정(근거 없음, 참·거짓만): ``compile_conditions(spec, operators)`` →
+      ``CompiledConditions``(``compiled(subject) -> bool``), ``compile_condition_item``,
+      ``conditions_hold(spec, subject, operators)``, ``compile_pointer``
     - 저장 전 검사: ``condition_issues(spec, operators, *, base_path, edge_id, node_id)``,
       ``ConditionIssueCodes``
     - 확장 지점: ``ConditionOperator``(프로토콜), ``ValueChecker``(선택 능력),
+      ``CompilableOperator``·``ActualPredicate``(빠른 판정용 선택 능력),
       ``OperatorConsumer``·``OperatorProvider``(연산자를 쓰는 확장이 앱 레지스트리를 받는 선택
       능력), ``RedactorConsumer``·``Redactor``(판정 근거를 자르기 전에 앱 가림 함수를 거는 선택
       능력),
@@ -19,11 +23,19 @@
       ``load_condition_operators``, ``operator_map``, ``operator_descriptors``,
       ``default_operators``
     - 기본 연산자: ``builtin_operators()``(모듈 ``agent_console_conditions.builtin``)
-    - JSON 도구: ``resolve_pointer``, ``MISSING``, ``json_equal``, ``json_type``
+    - JSON 도구: ``resolve_pointer``, ``compile_pointer``, ``MISSING``, ``json_equal``,
+      ``json_type``
 """
 
 from __future__ import annotations
 
+from ._compile import (
+    CompiledConditions,
+    SubjectPredicate,
+    compile_condition_item,
+    compile_conditions,
+    conditions_hold,
+)
 from ._evaluate import (
     DEFAULT_MAX_ACTUAL_CHARS,
     ConditionIssueCodes,
@@ -43,6 +55,8 @@ from ._loading import (
     operator_map,
 )
 from ._protocol import (
+    ActualPredicate,
+    CompilableOperator,
     ConditionOperator,
     OperatorConsumer,
     OperatorProvider,
@@ -50,7 +64,13 @@ from ._protocol import (
     RedactorConsumer,
     ValueChecker,
 )
-from ._values import MISSING, json_equal, json_type, resolve_pointer
+from ._values import (
+    MISSING,
+    compile_pointer,
+    json_equal,
+    json_type,
+    resolve_pointer,
+)
 from .builtin import builtin_operators
 
 __all__ = [
@@ -58,6 +78,9 @@ __all__ = [
     "CONDITION_OPERATORS_GROUP",
     "DEFAULT_MAX_ACTUAL_CHARS",
     "MISSING",
+    "ActualPredicate",
+    "CompilableOperator",
+    "CompiledConditions",
     "ConditionIssueCodes",
     "ConditionOperator",
     "ConditionReasons",
@@ -65,10 +88,15 @@ __all__ = [
     "OperatorProvider",
     "Redactor",
     "RedactorConsumer",
+    "SubjectPredicate",
     "ValueChecker",
     "as_condition_operator",
     "builtin_operators",
+    "compile_condition_item",
+    "compile_conditions",
+    "compile_pointer",
     "condition_issues",
+    "conditions_hold",
     "default_operators",
     "evaluate_conditions",
     "json_equal",

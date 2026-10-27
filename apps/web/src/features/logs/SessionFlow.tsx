@@ -13,10 +13,12 @@ export function laneOfSpan(spanId: string, laneIds: readonly string[]): string |
   return laneIds.find((l) => spanId === l) ?? laneIds.find((l) => spanId.endsWith(`:${l}`));
 }
 
-export type FlowView = "lane" | "trace";
+/** 흐름 패널 세그먼트: 레인 · 위임 흐름(`logs:trace`) · 구조도(`logs:architecture`). 앞의 둘은 `SessionFlow`가, 구조도는 `features/architecture`가 그린다. */
+export type FlowView = "lane" | "trace" | "arch";
+const FLOW_LABELS: Readonly<Record<FlowView, string>> = { lane: t.detail.flowLanes, trace: t.detail.flowTrace, arch: t.detail.flowArch };
 
 export interface SessionFlowProps {
-  view: FlowView;
+  view: Exclude<FlowView, "arch">;
   lanes: readonly LogLane[];
   laneLabelFor(id: string): string;
   events: readonly LaneEvent[];
@@ -93,12 +95,14 @@ export function SessionFlow(p: SessionFlowProps) {
   );
 }
 
-/** 세그먼트 컨트롤([레인 | 위임 흐름]). 위임 흐름 연동이 없으면 호출하는 쪽이 그리지 않는다. */
-export function FlowSegments({ view, onChange }: { view: FlowView; onChange(v: FlowView): void }) {
+/** 세그먼트 컨트롤. `views`는 지금 쓸 수 있는 보기들(연동이 없는 보기는 호출하는 쪽이 뺀다). 하나뿐이면 그리지 않는다. */
+export function FlowSegments({ view, views, onChange }: { view: FlowView; views: readonly FlowView[]; onChange(v: FlowView): void }) {
+  if (views.length < 2) return null;
   return (
     <div role="group" aria-label={t.detail.flowView} className="logs-segments">
-      <Button size="sm" aria-pressed={view === "lane"} onClick={() => onChange("lane")}>{t.detail.flowLanes}</Button>
-      <Button size="sm" aria-pressed={view === "trace"} onClick={() => onChange("trace")}>{t.detail.flowTrace}</Button>
+      {views.map((v) => (
+        <Button key={v} size="sm" aria-pressed={view === v} onClick={() => onChange(v)}>{FLOW_LABELS[v]}</Button>
+      ))}
     </div>
   );
 }

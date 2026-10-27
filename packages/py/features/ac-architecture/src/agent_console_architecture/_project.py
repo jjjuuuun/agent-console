@@ -38,7 +38,7 @@ from agent_console_contracts.architecture import (
 )
 from agent_console_contracts.logs import LogEvent, TokenSample
 
-from ._match import EventMatch, ProfileMatcher, event_subject, is_observed_kind
+from ._match import EventMatch, ProfileMatcher, is_observed_kind
 from ._selector import format_arch
 
 DEFAULT_CELL_SIZE: Final = (180.0, 68.0)
@@ -355,7 +355,7 @@ def project_architecture(
     if matches is None:
         scoped = [e for e in events if max_seq is None or e.seq <= max_seq]
         matcher = ProfileMatcher(profile, operators, error_categories=error_categories)
-        found = [matcher.match_subject(event_subject(e)) for e in scoped]
+        found = [matcher.match(e) for e in scoped]
     else:
         given = list(events)
         if len(given) != len(matches):

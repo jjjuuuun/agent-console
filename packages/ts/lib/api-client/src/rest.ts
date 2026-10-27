@@ -3,6 +3,7 @@
  * 기능 하나만 쓰려면 하위 경로(`@agent-console/api-client/chat` 등)와 `createRestIo`를 쓴다.
  * 기능 클라이언트끼리는 서로 import하지 않는다(dependency-cruiser로 강제).
  */
+import { createArchitectureClient, type ArchitectureClient } from "./clients/architecture";
 import { createAgentsClient, type AgentsClient } from "./clients/agents";
 import { createCatalogClient, type CatalogClient } from "./clients/catalog";
 import { createChatClient, type ChatClient } from "./clients/chat";
@@ -45,7 +46,8 @@ export interface RestClient
     ExportsClient,
     VersionsClient,
     LoginClient,
-    LogsClient {}
+    LogsClient,
+    ArchitectureClient {}
 
 /**
  * REST 클라이언트를 만든다.
@@ -69,5 +71,6 @@ export function createRestClient(options: RestClientOptions): RestClient {
     ...createVersionsClient(io),
     ...createLoginClient(io),
     ...createLogsClient(io),
+    ...createArchitectureClient(io),
   };
 }

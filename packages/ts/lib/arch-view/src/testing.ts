@@ -63,7 +63,7 @@ type EdgeRow = [id: string, from: string, to: string, label: string, kind: "obse
 const EDGES: EdgeRow[] = [
   ["task_submit", "input", "sdk", "과제 전달", "observed", "request", [[226, 130], [374, 130]], [300, 130], null, ["count"]],
   ["control_request", "sdk", "api", "제어 요청", "observed", "request", [[566, 112], [714, 112]], [640, 112], null, ["count", "errors"]],
-  ["control_response", "api", "sdk", "ID / 응답", "observed", "return", [[714, 148], [566, 148]], [640, 148], null, ["count", "errors"]],
+  ["control_response", "api", "sdk", "ID / 응답", "structural", "inferred", [[714, 148], [566, 148]], [640, 148], null, []],
   ["context_prepare", "api", "context", "문맥 준비", "structural", "inferred", [[810, 170], [810, 240]], [810, 191], null, []],
   ["instructions_apply", "instructions", "context", "지침 반영", "structural", "inferred", [[566, 280], [714, 280]], [640, 280], null, []],
   ["model_request", "context", "llm", "모델 요청", "structural", "inferred", [[906, 280], [1304, 280]], [1105, 280], null, []],

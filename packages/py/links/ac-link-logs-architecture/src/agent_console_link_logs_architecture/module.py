@@ -68,6 +68,7 @@ class LogsArchitectureLink:
             source_kinds=cfg.source_kinds,
             cache_scopes=cfg.cache_scopes,
             cache_events=cfg.cache_events,
+            cache_profiles=cfg.cache_profiles,
             page_size=cfg.page_size,
         )
         ctx.provide(LOG_FILTER_PREDICATES, ArchitectureFilter(catalog, views.cache))

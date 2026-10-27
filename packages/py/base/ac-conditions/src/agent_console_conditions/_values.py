@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Final, final
 
 
@@ -28,6 +28,46 @@ MISSING: Final = _Missing()
 """경로에 값이 없을 때 연산자가 받는 실제 값. 존재를 묻는 연산자가 아니면 거짓으로 다룬다."""
 
 
+type _Token = tuple[str, int | None]
+"""경로 토큰 하나: (`~` 풀어 쓴 키, 목록 위치로 쓸 수 있으면 그 정수 아니면 None)."""
+
+
+def _parse_pointer(pointer: str) -> tuple[_Token, ...] | None:
+    """`"/a/0"` → 토큰들. `""`(문서 전체) = 빈 튜플, `/`로 시작하지 않으면 None(항상 `MISSING`)."""
+    if pointer == "":
+        return ()
+    if not pointer.startswith("/"):
+        return None
+    tokens: list[_Token] = []
+    for raw in pointer[1:].split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        index = None
+        if token.isdigit() and not (len(token) > 1 and token.startswith("0")):
+            try:
+                index = int(token)
+            except ValueError:  # isdigit()가 참인 위첨자 숫자 등("²") — 목록 위치가 아니다
+                index = None
+        tokens.append((token, index))
+    return tuple(tokens)
+
+
+def _walk(document: Any, tokens: tuple[_Token, ...]) -> Any:
+    current = document
+    for token, index in tokens:
+        # 흔한 경우(JSON 객체 dict)는 ABC 검사(isinstance Mapping) 없이 먼저 본다
+        if type(current) is dict or isinstance(current, Mapping):
+            if token not in current:
+                return MISSING
+            current = current[token]
+        elif isinstance(current, Sequence) and not isinstance(current, str | bytes):
+            if index is None or index >= len(current):
+                return MISSING
+            current = current[index]
+        else:
+            return MISSING
+    return current
+
+
 def resolve_pointer(document: Any, pointer: str) -> Any:
     """JSON Pointer(RFC 6901)로 값을 꺼낸다. 없으면 `MISSING`.
 
@@ -38,27 +78,37 @@ def resolve_pointer(document: Any, pointer: str) -> Any:
     Returns:
         찾은 값 또는 `MISSING`(경로 형식이 틀렸거나 중간에 값이 없음).
     """
-    if pointer == "":
-        return document
-    if not pointer.startswith("/"):
-        return MISSING
-    current = document
-    for raw in pointer[1:].split("/"):
-        token = raw.replace("~1", "/").replace("~0", "~")
-        if isinstance(current, Mapping):
-            if token not in current:
-                return MISSING
-            current = current[token]
-        elif isinstance(current, Sequence) and not isinstance(current, str | bytes):
-            if not token.isdigit() or (len(token) > 1 and token.startswith("0")):
-                return MISSING
-            index = int(token)
-            if index >= len(current):
-                return MISSING
-            current = current[index]
-        else:
-            return MISSING
-    return current
+    tokens = _parse_pointer(pointer)
+    return MISSING if tokens is None else _walk(document, tokens)
+
+
+def compile_pointer(pointer: str) -> Callable[[Any], Any]:
+    """경로를 한 번만 해석해 `document → 값 또는 MISSING` 함수를 만든다(`resolve_pointer`와 같음).
+
+    같은 경로로 많은 문서를 볼 때 쓴다(경로 나누기·`~` 풀기를 문서마다 하지 않는다).
+
+    Args:
+        pointer: `resolve_pointer`와 같은 형식.
+
+    Returns:
+        문서를 받아 값(없으면 `MISSING`)을 돌려주는 함수.
+    """
+    tokens = _parse_pointer(pointer)
+    if tokens is None:
+        return lambda _document: MISSING
+    if not tokens:
+        return lambda document: document
+    if len(tokens) == 1:
+        ((token, _index),) = tokens
+        whole = tokens
+
+        def one(document: Any) -> Any:
+            if type(document) is dict:
+                return document.get(token, MISSING)
+            return _walk(document, whole)
+
+        return one
+    return lambda document: _walk(document, tokens)
 
 
 def json_type(value: Any) -> str | None:

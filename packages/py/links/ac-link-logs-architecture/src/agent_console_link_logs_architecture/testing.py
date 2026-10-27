@@ -50,6 +50,7 @@ from agent_console_modkit.testing import fake_module
 
 from .filters import ArchitectureFilter
 from .ports import ARCHITECTURE_CATALOG, LOG_FILTER_PREDICATES, LOGS_QUERY
+from .settings import DEFAULT_CACHE_PROFILES
 from .views import LogArchitectureViews
 
 LOCAL_LOGS_ID = "local-logs"
@@ -301,7 +302,7 @@ class LogArchitectureHarness:
         ctx: 질의 맥락(없으면 ``DEMO_CONTEXT``).
         scope_kinds: 범위 종류(X27).
         source_kinds: 출처 종류 대응(없으면 ``DEMO_SOURCE_KINDS``).
-        cache_scopes·cache_events: 범위 캐시 크기.
+        cache_scopes·cache_events·cache_profiles: 범위 캐시 크기.
         max_scope_events: 범위 상한.
     """
 
@@ -315,6 +316,7 @@ class LogArchitectureHarness:
         source_kinds: Mapping[str, str] | None = None,
         cache_scopes: int = 8,
         cache_events: int = 100_000,
+        cache_profiles: int = DEFAULT_CACHE_PROFILES,
         max_scope_events: int = DEFAULT_MAX_SCOPE_EVENTS,
     ) -> None:
         kinds = tuple(scope_kinds)
@@ -336,6 +338,7 @@ class LogArchitectureHarness:
             source_kinds=DEMO_SOURCE_KINDS if source_kinds is None else source_kinds,
             cache_scopes=cache_scopes,
             cache_events=cache_events,
+            cache_profiles=cache_profiles,
         )
         self.arch_filter = ArchitectureFilter(self.catalog, self.views.cache)
         self.filters.append(self.arch_filter)

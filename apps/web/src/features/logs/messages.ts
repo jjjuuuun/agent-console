@@ -146,6 +146,7 @@ export const logsMessages = {
     flowPanel: "흐름 패널",
     flowLanes: "레인",
     flowTrace: "위임 흐름",
+    flowArch: "구조도",
     flowToggleHide: "흐름 접기",
     flowToggleShow: "흐름 펴기",
     flowView: "흐름 보기",

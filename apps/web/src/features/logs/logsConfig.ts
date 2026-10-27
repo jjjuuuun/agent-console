@@ -31,6 +31,8 @@ export const LOGS_STORAGE = {
   flowHeight: "ac.logs.flow.height",
   detailWidth: "ac.logs.detailW",
   openedSession: "ac.logs.openedSession",
+  /** 흐름 패널 높이: 구조도 세그먼트는 그림이 커서 따로 저장한다 */
+  archFlowHeight: "ac.logs.flow.archHeight",
   colsSessions: "ac.logs.cols.sessions",
   colsSession: "ac.logs.cols.session",
   savedFilters: "ac.logs.savedFilters",
@@ -71,6 +73,12 @@ export const LOGS_LIMITS = {
   flowHeightMin: 96,
   flowHeightMax: 480,
   flowHeightDefault: 240,
+  /** 구조도 세그먼트의 흐름 패널 높이(screen-architecture.md 5.2) */
+  archFlowHeightMin: 200,
+  archFlowHeightMax: 600,
+  archFlowHeightDefault: 400,
+  /** `logs.ingested` 뒤 구조도를 다시 질의하기까지(screen-architecture.md 5.3) */
+  archDebounceMs: 1000,
 } as const;
 
 export interface RangeOption {

@@ -47,8 +47,6 @@ export const ALLOWED_VARIANT_LITERALS: readonly { file: string; literal: string;
   { file: "features/chat/lib/liveRun.ts", literal: "subagent_id", reason: "계약 이벤트 payload 필드 이름" },
   { file: "features/runs/ObserveTab.tsx", literal: "tool_use_id", reason: "계약 이벤트 payload 필드 이름" },
   { file: "features/runs/messages.ts", literal: "tool_use_id", reason: "payload 필드 이름을 보이는 문구" },
-  { file: "features/runs/runsConfig.ts", literal: "hook.", reason: "부채: 관측 탭 이벤트 type 접두 표(서버 데이터화 후보, 5R.21 보고)" },
-  { file: "features/runs/runsConfig.ts", literal: "mcp.", reason: "부채: 관측 탭 이벤트 type 접두 표(서버 데이터화 후보, 5R.21 보고)" },
 ];
 
 /** 리터럴 변형 검사에서 허용된 항목인지. */

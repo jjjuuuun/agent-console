@@ -4,6 +4,8 @@
  * 어떤 이름이 유효한지는 서버(`GET /logs/schema`의 `filters`)가 정한다.
  */
 import type {
+  ArchitectureMembership,
+  ArchitectureView,
   HandoffMatrix,
   LogAggregateRequest,
   LogAggregateRow,
@@ -35,6 +37,12 @@ export interface LogArchiveParams {
   tz?: string;
 }
 
+/**
+ * 값이 "빈 문자열"인 필터를 보내는 표시(`name=`). 일반 빈 값(`""`)은 "필터 없음"이라 보내지 않지만,
+ * 이름 없는 묶음을 고르는 `arch_group=`처럼 빈 값 자체가 의미인 필터에 쓴다.
+ */
+export const LOG_EMPTY_VALUE = "\u0000empty";
+
 /** 필터 객체를 쿼리 문자열로(`?a=1&a=2&b=x`, 없으면 빈 문자열). 반복 키는 다중 값이다. */
 export function logQuery(params: LogQueryParams | undefined): string {
   if (params === undefined) return "";
@@ -42,7 +50,10 @@ export function logQuery(params: LogQueryParams | undefined): string {
   for (const [name, value] of Object.entries(params)) {
     if (value === undefined || value === null) continue;
     const list = Array.isArray(value) ? (value as readonly string[]) : [String(value)];
-    for (const item of list) if (item !== "") parts.push(`${enc(name)}=${enc(item)}`);
+    for (const item of list) {
+      if (item === LOG_EMPTY_VALUE) parts.push(`${enc(name)}=`);
+      else if (item !== "") parts.push(`${enc(name)}=${enc(item)}`);
+    }
   }
   return parts.length === 0 ? "" : `?${parts.join("&")}`;
 }
@@ -68,6 +79,13 @@ export interface LogsClient {
   getLogSchema(): Promise<LogQuerySchema>;
   /** 오프라인 보관본(첨부). 파일 이름은 `Content-Disposition`. */
   downloadLogArchive(params?: LogArchiveParams): Promise<BlobResponse>;
+  /**
+   * 로그 범위 구조도(`logs:architecture` 연동이 있을 때만 경로가 있다). 쿼리 = 로그 필터 + `profile`(없으면 서버 기본 프로필).
+   * 404 `architecture.profile_not_found`(프로필 없음), 422 `architecture.scope_too_large`(범위 상한 초과).
+   */
+  getLogArchitecture(params?: LogQueryParams): Promise<ArchitectureView>;
+  /** 이벤트 하나가 맞은 칸·연결·묶음(표에서 고른 이벤트 강조). `profile`을 생략하면 서버 기본 프로필. */
+  getLogEventArchitecture(uid: string, profile?: string): Promise<ArchitectureMembership>;
   /** 실행에 연결된 세션 로그(`logs:runs` 연동이 있을 때만 경로가 있다). 응답 `total`은 항상 채워진다. */
   listRunLogs(runId: string, params?: LogQueryParams): Promise<LogEventPage>;
 }
@@ -89,6 +107,8 @@ export function createLogsClient(io: RestIo): LogsClient {
     getLogSchema: () => io.request("GET", "/logs/schema"),
     downloadLogArchive: (params) =>
       io.requestBlob("GET", `/logs/archive${logQuery({ ...params?.filter, ...(params?.format === undefined ? {} : { format: params.format }), ...(params?.tz === undefined ? {} : { tz: params.tz }) })}`),
+    getLogArchitecture: (params) => io.request("GET", `/logs/architecture${logQuery(params)}`),
+    getLogEventArchitecture: (uid, profile) => io.request("GET", `/logs/events/${enc(uid)}/architecture${logQuery(profile === undefined ? undefined : { profile })}`),
     listRunLogs: (runId, params) => io.request("GET", `/runs/${enc(runId)}/logs${logQuery(params)}`),
   };
 }

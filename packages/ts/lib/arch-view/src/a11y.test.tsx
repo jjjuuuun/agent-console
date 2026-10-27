@@ -48,6 +48,11 @@ describe("접근성 (axe 0건, 수용 §13-25)", () => {
     );
     expect(await violations(container)).toEqual([]);
   });
+  it("구조 연결의 접근 이름에는 횟수가 없고 '구조 연결'이 붙는다", () => {
+    const { container } = render(<ArchitectureCellList view={defaultProfileView()} />);
+    const labels = Array.from(container.querySelectorAll("[aria-label]")).map((b) => b.getAttribute("aria-label") ?? "");
+    expect(labels.filter((l) => l.startsWith("ID / 응답"))).toEqual(["ID / 응답, 에이전트 제어에서 SDK / CLI로, 구조 연결"]);
+  });
   it("이름 없는 button 0, 칸 이름이 비어 있지 않다", () => {
     const { container } = render(<ArchitectureDiagram view={defaultProfileView()} containerSize={SIZE} />);
     for (const b of container.querySelectorAll("button")) expect((b.getAttribute("aria-label") ?? b.textContent ?? "").trim(), b.outerHTML.slice(0, 100)).not.toBe("");

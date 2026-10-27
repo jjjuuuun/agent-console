@@ -84,6 +84,11 @@
       "types": "./dist/clients/logs.d.ts",
       "default": "./dist/clients/logs.js"
     },
+    "./architecture": {
+      "development": "./src/clients/architecture.ts",
+      "types": "./dist/clients/architecture.d.ts",
+      "default": "./dist/clients/architecture.js"
+    },
     "./settings": {
       "development": "./src/clients/settings.ts",
       "types": "./dist/clients/settings.d.ts",

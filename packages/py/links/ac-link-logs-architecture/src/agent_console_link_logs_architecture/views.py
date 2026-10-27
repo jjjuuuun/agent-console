@@ -43,7 +43,12 @@ from .errors import (
 )
 from .ports import ArchitectureCatalogReader, LogQueryReader
 from .scopes import ScopeCache, ScopeEvents, profile_key, scope_key
-from .settings import DEFAULT_CACHE_EVENTS, DEFAULT_CACHE_SCOPES, DEFAULT_PAGE_SIZE
+from .settings import (
+    DEFAULT_CACHE_EVENTS,
+    DEFAULT_CACHE_PROFILES,
+    DEFAULT_CACHE_SCOPES,
+    DEFAULT_PAGE_SIZE,
+)
 
 PROFILE_PARAM = "profile"
 """프로필을 고르는 쿼리 이름(나머지 쿼리는 로그 필터)."""
@@ -82,6 +87,7 @@ class LogArchitectureViews:
         cache: 범위 캐시(없으면 ``cache_scopes``·``cache_events``로 만든다).
         cache_scopes: 기억할 범위 수.
         cache_events: 기억한 범위들의 이벤트 수 합 상한.
+        cache_profiles: 범위 하나에 기억할 판정 결과(프로필 키) 수.
         page_size: 색인 쪽 크기.
     """
 
@@ -94,6 +100,7 @@ class LogArchitectureViews:
         cache: ScopeCache | None = None,
         cache_scopes: int = DEFAULT_CACHE_SCOPES,
         cache_events: int = DEFAULT_CACHE_EVENTS,
+        cache_profiles: int = DEFAULT_CACHE_PROFILES,
         page_size: int = DEFAULT_PAGE_SIZE,
     ) -> None:
         self._query = query
@@ -102,7 +109,9 @@ class LogArchitectureViews:
         self.cache = (
             cache
             if cache is not None
-            else ScopeCache(max_scopes=cache_scopes, max_events=cache_events)
+            else ScopeCache(
+                max_scopes=cache_scopes, max_events=cache_events, max_profiles=cache_profiles
+            )
         )
         self._page = page_size
         self.stats = ViewStats()

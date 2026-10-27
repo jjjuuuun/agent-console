@@ -32,6 +32,24 @@ class ValueChecker(Protocol):
         ...
 
 
+type ActualPredicate = Callable[[Any], bool]
+"""기대 값을 묶어 둔 판정 함수: 실제 값(또는 `MISSING`) → 참·거짓."""
+
+
+@runtime_checkable
+class CompilableOperator(Protocol):
+    """선택 능력: 기대 값을 미리 묶은 빠른 판정 함수를 만든다(`compile_conditions`가 쓴다).
+
+    돌려준 함수는 같은 기대 값의 `evaluate(actual, expected)`와 **같은 결과**여야 한다(`MISSING`
+    포함). 예외를 던지면 평가기가 그 항목을 거짓으로 둔다(`evaluate`와 같음). 이 능력이 없거나
+    None을 돌려주거나 만들다가 예외가 나면 평가기는 `evaluate`를 부르는 기존 경로로 판정한다.
+    """
+
+    def compile_expected(self, expected: Any) -> ActualPredicate | None:
+        """`expected`를 묶은 판정 함수(만들 수 없으면 None)."""
+        ...
+
+
 type OperatorProvider = Callable[[], Mapping[str, ConditionOperator]]
 """지금 쓸 연산자(id → 연산자)를 돌려주는 함수. 부를 때마다 최신 등록 상태를 읽는다."""
 

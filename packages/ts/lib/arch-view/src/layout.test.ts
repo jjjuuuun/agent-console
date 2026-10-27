@@ -63,7 +63,7 @@ describe("checkLayout (기본 프로필 §9 좌표)", () => {
   it("칸 16개·연결 21개가 명세 표대로 들어 있다", () => {
     expect(view.cells).toHaveLength(16);
     expect(view.edges).toHaveLength(21);
-    expect((view.edges ?? []).filter((e) => e.kind === "structural")).toHaveLength(7);
+    expect((view.edges ?? []).filter((e) => e.kind === "structural")).toHaveLength(8);
   });
   it("칸–칸, 연결–칸, 연결–연결, 칩–칩, 칩–칸, 칩–다른 연결 겹침·교차가 0", () => {
     expect(checkLayout(view)).toEqual([]);

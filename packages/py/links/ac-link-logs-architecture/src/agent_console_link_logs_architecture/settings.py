@@ -8,6 +8,7 @@ from agent_console_contracts import x_ui
 
 DEFAULT_CACHE_SCOPES = 8
 DEFAULT_CACHE_EVENTS = 100_000
+DEFAULT_CACHE_PROFILES = 4
 DEFAULT_PAGE_SIZE = 200
 
 
@@ -46,6 +47,16 @@ class LogsArchitectureSettings(BaseModel):
         ge=0,
         description="기억한 범위들의 이벤트 수 합의 상한(넘으면 오래 쓰지 않은 범위부터 버린다).",
     )
+    cache_profiles: int = Field(
+        title="범위마다 기억할 판정 수",
+        json_schema_extra=x_ui(tier="advanced", unit="개"),
+        default=DEFAULT_CACHE_PROFILES,
+        ge=1,
+        description=(
+            "범위 하나에 프로필(내용·연산자·오류 범주가 같은 것)별 판정 결과를 몇 개까지 "
+            "기억할지. 판정 결과는 이벤트 수만큼 커서, 넘으면 오래 쓰지 않은 것부터 버린다."
+        ),
+    )
     page_size: int = Field(
         title="한 번에 읽을 이벤트 수",
         json_schema_extra=x_ui(tier="advanced", unit="개"),
@@ -58,6 +69,7 @@ class LogsArchitectureSettings(BaseModel):
 
 __all__ = [
     "DEFAULT_CACHE_EVENTS",
+    "DEFAULT_CACHE_PROFILES",
     "DEFAULT_CACHE_SCOPES",
     "DEFAULT_PAGE_SIZE",
     "LogsArchitectureSettings",

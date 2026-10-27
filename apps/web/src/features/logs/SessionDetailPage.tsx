@@ -7,6 +7,7 @@ import {
   LogEventTable,
   PlaybackBar,
   focusLogControl,
+  hasActiveFilter,
   eventColumns,
   indexOfSeq,
   isErrorEvent,
@@ -24,12 +25,15 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
+import { ArchitectureChips, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
 import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
 import { useDetailLink } from "./useDetailLink";
 import { LogsPageFrame } from "./LogsPageFrame";
+import { settingsLogsHref } from "./LogsEmpty";
+import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { useLogsIngested } from "./LogsLive";
 import { FlowSegments, SessionFlow, type FlowView } from "./SessionFlow";
 import { SplitHandle } from "./SplitHandle";
@@ -42,7 +46,7 @@ import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
 import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState, useSelectedUid } from "./useLogFilterState";
-import { logKeys, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
+import { logKeys, useLogSchema, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
 
 const FIELDS = buildFilterFields();
 const NO_PARAMS = {} as const;
@@ -72,6 +76,7 @@ export function SessionDetailPage() {
   const isHidden = useCallback((e: Pick<LogEvent, "category">) => isHiddenEvent(e, taxonomy), [taxonomy]);
   const download = useArchiveDownload();
   const traceVisible = useLinkPart(LINK_PART_IDS.logsTraceFlow).visible;
+  const archVisible = useLinkPart(LINK_PART_IDS.logsArchitectureFlow).visible;
 
   // ---- 데이터
   const tl = useLogTimeline(session, NO_PARAMS);
@@ -132,16 +137,32 @@ export function SessionDetailPage() {
   const [follow, setFollow] = useState(true);
   const [timeMode, setTimeMode] = useState<"relative" | "absolute">(() => (storage.get(LOGS_STORAGE.timeMode) === "absolute" ? "absolute" : "relative"));
   const laneFilter = url.screen[SCREEN_PARAMS.lane] ?? NO_STRINGS;
-  const visible = useMemo(() => all.slice(0, index + 1), [all, index]);
+
+  // ---- 구조도 세그먼트(역할 `logs:architecture`가 없으면 질의도 세그먼트도 없다). 레인 필터는 서버 `thread` 필터로 보낸다.
+  const [archOpened, setArchOpened] = useState(false);
+  const archEnabled = archVisible && archOpened;
+  const archScope = useMemo(() => ({ [FILTER_KEYS.session]: session, [FILTER_KEYS.thread]: laneFilter }), [session, laneFilter]);
+  const schema = useLogSchema(archEnabled);
+  const filterTitle = useCallback((name: string) => schema.data?.filters?.find((f) => f.id === name)?.title || name, [schema.data]);
+  const arch = useArchitectureController({ scope: archScope, enabled: archEnabled, highlightUid: selectedUid, filterTitle });
+  useLogsIngested((info) => arch.ingested(info.count), LOGS_LIMITS.archDebounceMs, archEnabled);
+  const archActive = archEnabled && arch.rowsParams !== null;
+  // 구조도로 걸러졌을 때 표는 서버가 센 이벤트를 그대로 쓴다(숨김 범주 포함 — 표의 수가 칸의 횟수와 같아야 한다).
+  const archEvents = useMemo(() => (archActive ? sortEvents([...arch.rows.events]) : null), [archActive, arch.rows.events]);
+  const rank = useMemo(() => new Map(all.map((e, i) => [e.uid, i] as const)), [all]);
+  const visible = useMemo(() => {
+    if (archEvents === null) return all.slice(0, index + 1);
+    return atEnd ? archEvents : archEvents.filter((e) => (rank.get(e.uid) ?? Number.POSITIVE_INFINITY) <= index);
+  }, [all, index, archEvents, atEnd, rank]);
   const rows = useMemo(
     () =>
       filterSessionEvents(
         visible,
-        { filter: url.filter, names: { search: SEARCH_FIELD, category: FILTER_KEYS.category, since: FILTER_KEYS.since, until: FILTER_KEYS.until, source: FILTER_KEYS.source, suggestFrom: SUGGEST_FROM }, errorsOnly, lanes: laneFilter, includeHidden },
+        { filter: url.filter, names: { search: SEARCH_FIELD, category: FILTER_KEYS.category, since: FILTER_KEYS.since, until: FILTER_KEYS.until, source: FILTER_KEYS.source, suggestFrom: SUGGEST_FROM }, errorsOnly, lanes: laneFilter, includeHidden: includeHidden || archActive },
         isError,
         isHidden,
       ),
-    [visible, url.filter, errorsOnly, laneFilter, includeHidden, isError, isHidden],
+    [visible, url.filter, errorsOnly, laneFilter, includeHidden, archActive, isError, isHidden],
   );
   const chipItems = useMemo(() => orderCategories(categoryItems(all, visible), taxonomy), [all, visible, taxonomy]);
   const seenCategories = useMemo(() => chipItems.map((c) => c.id), [chipItems]);
@@ -156,7 +177,12 @@ export function SessionDetailPage() {
   const cursorTime = atEnd ? null : (all[index]?.time ?? null);
 
   // ---- 선택
-  const byUid = useMemo(() => new Map(all.map((e, i) => [e.uid, { e, i }] as const)), [all]);
+  const byUid = useMemo(() => {
+    const map = new Map(all.map((e, i) => [e.uid, { e, i }] as const));
+    // 구조도로 걸러진 이벤트 중 타임라인에 없는 것(숨김 범주 등)은 끝 위치로 본다.
+    for (const e of archEvents ?? []) if (!map.has(e.uid)) map.set(e.uid, { e, i: Math.max(0, all.length - 1) });
+    return map;
+  }, [all, archEvents]);
   const selected = selectedUid === null ? undefined : byUid.get(selectedUid);
   useEffect(() => {
     if (selectedUid !== null && selected !== undefined && selected.i > index) setSelectedUid(null);
@@ -170,7 +196,10 @@ export function SessionDetailPage() {
   const [flowUserOpened, setFlowUserOpened] = useState(false);
   const flowCollapsed = flowSaved || flowAuto;
   const [flowView, setFlowView] = useState<FlowView>("lane");
-  const effectiveFlowView: FlowView = traceVisible ? flowView : "lane";
+  // 쓸 수 있는 보기: 레인은 늘 있고, 위임 흐름·구조도는 연동 역할이 있을 때만 있다.
+  const flowViews = useMemo<FlowView[]>(() => ["lane", ...(traceVisible ? (["trace"] as const) : []), ...(archVisible ? (["arch"] as const) : [])], [traceVisible, archVisible]);
+  const effectiveFlowView: FlowView = flowViews.includes(flowView) ? flowView : "lane";
+  if (effectiveFlowView === "arch" && !flowCollapsed && !archOpened) setArchOpened(true); // 구조도는 처음 열 때까지 질의하지 않는다
   const trace = useLogTrace(session, traceVisible && !flowCollapsed && effectiveFlowView === "trace");
   const toggleFlow = () => {
     if (flowCollapsed) {
@@ -187,6 +216,11 @@ export function SessionDetailPage() {
   const setFlowHeight = (n: number) => {
     setFlowH(n);
     storage.set(LOGS_STORAGE.flowHeight, String(n));
+  };
+  const [archH, setArchH] = useState(() => clampOr(readNumber(storage.get(LOGS_STORAGE.archFlowHeight), LOGS_LIMITS.archFlowHeightDefault), LOGS_LIMITS.archFlowHeightMin, LOGS_LIMITS.archFlowHeightMax, LOGS_LIMITS.archFlowHeightDefault));
+  const setArchHeight = (n: number) => {
+    setArchH(n);
+    storage.set(LOGS_STORAGE.archFlowHeight, String(n));
   };
 
   // ---- 상세 패널 폭
@@ -251,7 +285,7 @@ export function SessionDetailPage() {
     { id: "logs.s.faster", scope: LOGS_SCOPES.session, keys: "]", titleKey: "shortcuts.logsSpeedUp", run: () => changeSpeed(nextSpeed(speeds, playback.speed, 1)) },
     { id: "logs.s.errors", scope: LOGS_SCOPES.session, keys: "e", titleKey: "shortcuts.logsErrorsOnly", run: () => setErrorsOnly((v) => !v) },
     { id: "logs.s.flow", scope: LOGS_SCOPES.session, keys: "t", titleKey: "shortcuts.logsToggleFlow", run: toggleFlow },
-    { id: "logs.s.view", scope: LOGS_SCOPES.session, keys: "v", titleKey: "shortcuts.logsFlowView", run: () => traceVisible && setFlowView((v) => (v === "lane" ? "trace" : "lane")) },
+    { id: "logs.s.view", scope: LOGS_SCOPES.session, keys: "v", titleKey: "shortcuts.logsFlowView", run: () => flowViews.length > 1 && setFlowView((v) => flowViews[(Math.max(0, flowViews.indexOf(v)) + 1) % flowViews.length] ?? "lane") },
     { id: "logs.s.detail", scope: LOGS_SCOPES.session, keys: "d", titleKey: "shortcuts.logsToggleDetail", run: () => selectedUid !== null && setSelectedUid(null) },
     { id: "logs.s.search", scope: LOGS_SCOPES.session, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
     { id: "logs.s.chips", scope: LOGS_SCOPES.session, keys: "f", titleKey: "shortcuts.logsCategoryFocus", run: () => focusLogControl("categoryChips") },
@@ -282,12 +316,16 @@ export function SessionDetailPage() {
     );
   }
 
+  // 구조도 칩만 걸려 있으면 표의 수 = 칸의 횟수(R8.8). 다른 필터가 같이 걸리면 "n건 중 k건"으로 바꾼다.
+  const archCount = observedValue(arch.target?.count);
+  const archOthers = hasActiveFilter(url.filter) || errorsOnly || !atEnd;
   const hasHiddenCategories = hiddenIds.length > 0;
   const emptyRows = rows.length === 0;
   const detailOpen = selectedUid !== null;
   const durationMs = summary?.first_time != null && summary?.last_time != null ? Math.max(0, (summary.last_time - summary.first_time) * 1000) : null;
   const clearFilters = () => {
     setErrorsOnly(false);
+    arch.clearAll();
     url.setFilter({});
     url.setScreen({ [SCREEN_PARAMS.lane]: null });
   };
@@ -380,10 +418,25 @@ export function SessionDetailPage() {
           <section className="logs-flow" data-collapsed={flowCollapsed ? "true" : undefined} aria-label={t.detail.flowPanel}>
             <div className="logs-flow-head">
               <Button size="sm" aria-expanded={!flowCollapsed} onClick={toggleFlow}>{flowCollapsed ? t.detail.flowToggleShow : t.detail.flowToggleHide}</Button>
-              {traceVisible && !flowCollapsed ? <FlowSegments view={effectiveFlowView} onChange={setFlowView} /> : null}
+              {!flowCollapsed ? <FlowSegments view={effectiveFlowView} views={flowViews} onChange={(v) => { setFlowView(v); setFlowUserOpened(true); }} /> : null}
             </div>
             {flowCollapsed ? null : (
               <>
+              {effectiveFlowView === "arch" ? (
+                <div className="logs-flow-body logs-flow-body--arch" style={{ height: archH }}>
+                  <ArchitecturePanel
+                    controller={arch}
+                    laneNames={laneFilter.map((id) => labels.get(id) ?? id)}
+                    wholeRange={!atEnd}
+                    hasFilters={hasActiveFilter(url.filter) || errorsOnly || laneFilter.length > 0}
+                    onClearFilters={clearFilters}
+                    onFocusFilters={() => searchRef.current?.focus()}
+                    onOpenSettings={() => void navigate(`${pathForRole(LINK_ROLES.settings)}#architecture`)}
+                    onOpenSources={() => void navigate(settingsLogsHref())}
+                    onSkip={() => eventTableRef.current?.focus()}
+                  />
+                </div>
+              ) : (
               <div className="logs-flow-body" style={{ maxHeight: flowH }}>
                 <SessionFlow
                   view={effectiveFlowView}
@@ -401,7 +454,12 @@ export function SessionDetailPage() {
                   lastTime={all.length > 0 ? (all[all.length - 1]?.time ?? null) : null}
                 />
               </div>
-              <SplitHandle orientation="horizontal" size={flowH} min={LOGS_LIMITS.flowHeightMin} max={LOGS_LIMITS.flowHeightMax} onChange={setFlowHeight} label={t.detail.flowSplitLabel} />
+              )}
+              {effectiveFlowView === "arch" ? (
+                <SplitHandle orientation="horizontal" size={archH} min={LOGS_LIMITS.archFlowHeightMin} max={LOGS_LIMITS.archFlowHeightMax} onChange={setArchHeight} label={t.detail.flowSplitLabel} />
+              ) : (
+                <SplitHandle orientation="horizontal" size={flowH} min={LOGS_LIMITS.flowHeightMin} max={LOGS_LIMITS.flowHeightMax} onChange={setFlowHeight} label={t.detail.flowSplitLabel} />
+              )}
               </>
             )}
           </section>
@@ -438,10 +496,17 @@ export function SessionDetailPage() {
                   <button type="button" className="logs-chipx" aria-label={t.detail.removeLane(labels.get(id) ?? id)} onClick={() => setLane(id)}>×</button>
                 </span>
               ))}
+              <ArchitectureChips chips={arch.chips} />
               <Button size="sm" onClick={() => { const next = timeMode === "relative" ? "absolute" : "relative"; setTimeMode(next); storage.set(LOGS_STORAGE.timeMode, next); }} aria-label={t.filters.timeMode} aria-pressed={timeMode === "absolute"}>⏱ {timeMode === "relative" ? t.filters.timeRelative : t.filters.timeAbsolute}</Button>
               <ColumnsMenu all={EVENT_COLUMN_IDS} selected={cols} labelOf={(id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
             </div>
           </div>
+
+          {archCount === undefined ? null : (
+            <p className="arch-table-note" role="status">
+              {archOthers ? archMessages.table.partial(arch.targetTitle, archCount, rows.length) : archMessages.table.only(arch.targetTitle, archCount)}
+            </p>
+          )}
 
           <div ref={tableWrapRef} className="logs-tablewrap" data-dim={tl.isError ? "true" : undefined}>
             {tl.isPending ? (

@@ -1,0 +1,41 @@
+/* 구조도 패널(앱 층). 그림 자체의 모양은 @agent-console/arch-view/styles.css가 정한다. 색·간격은 토큰만 쓴다. */
+.arch-panel { display: flex; flex-direction: column; gap: var(--ac-space-2); height: 100%; min-height: 0; min-width: 0; }
+.arch-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2) var(--ac-space-3); flex: none; min-height: var(--ac-control-md); }
+.arch-profile { display: inline-flex; align-items: center; gap: var(--ac-space-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
+.arch-profile select { max-width: var(--ac-chip-max-w, 240px); height: var(--ac-control-md); }
+.arch-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--ac-space-3); flex: none; min-height: 24px; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.arch-status > span + span::before { content: "·"; margin-right: var(--ac-space-3); color: var(--ac-text-subtle); }
+.arch-basis { display: inline-flex; align-items: center; height: 20px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.arch-status > .arch-basis::before { content: none; margin: 0; }
+.arch-link { background: none; border: 0; padding: 0; color: var(--ac-accent); font: inherit; cursor: pointer; text-decoration: underline; }
+.arch-link:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.arch-unavailable { flex: none; margin: 0; padding: 0 0 0 var(--ac-space-4); max-height: 5.5em; overflow: auto; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.arch-banner { flex: none; }
+.arch-diagram { position: relative; flex: 1 1 auto; min-height: 160px; min-width: 0; }
+.arch-panel[data-refreshing="true"] .arch-diagram .ac-arch-root { opacity: .6; }
+.arch-progress { position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 2; background: var(--ac-accent); }
+.arch-skeleton { display: flex; align-items: center; justify-content: center; flex: 1; min-height: 160px; border: 1px dashed var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); color: var(--ac-text-muted); }
+.arch-empty { display: flex; align-items: center; justify-content: center; flex: 1; min-height: 160px; color: var(--ac-text-subtle); }
+.arch-empty .ac-empty-title { font-size: var(--ac-text-lg); font-weight: 600; }
+.arch-empty .ac-text { max-width: var(--ac-readable-w); color: var(--ac-text-muted); }
+
+/* 빵 부스러기 */
+.arch-crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); margin: 0; padding: 0; list-style: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-crumbs li { display: inline-flex; align-items: center; gap: var(--ac-space-1); position: relative; min-width: 0; }
+.arch-crumb-current, .arch-crumb-link { max-width: var(--ac-chip-max-w, 240px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; }
+.arch-crumb-current { color: var(--ac-text); font-weight: 600; }
+.arch-crumb-link { background: none; border: 0; padding: 2px 4px; border-radius: var(--ac-radius-sm); color: var(--ac-accent); cursor: pointer; }
+.arch-crumb-link:hover { background: var(--ac-hover-bg); }
+.arch-crumb-link:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
+.arch-crumb-menu { position: absolute; top: 100%; left: 0; z-index: var(--ac-z-popover, 40); display: block; min-width: 160px; margin: 2px 0 0; padding: var(--ac-space-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); box-shadow: var(--ac-shadow-1); }
+
+/* 필터 줄 칩(구조도 선택·하위 구조도 단계) */
+.arch-chip { display: inline-flex; align-items: center; gap: 4px; max-width: var(--ac-chip-max-w, 240px); min-height: 20px; padding: 0 8px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); font-size: 12px; }
+.arch-chip-icon { flex: none; width: 14px; height: 14px; background-color: currentColor; -webkit-mask: var(--ac-icon-architecture) center / contain no-repeat; mask: var(--ac-icon-architecture) center / contain no-repeat; }
+.arch-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arch-chip-x { flex: none; background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; }
+.arch-chip-x:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
+.arch-table-note { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+
+/* 건너뛰기 링크는 포커스를 받을 때만 보인다(패널 밖으로 밀려 나온 채 보이지 않게 가린다). */
+.arch-panel .ac-arch-skip:not(:focus) { clip-path: inset(50%); width: 1px; height: 1px; padding: 0; overflow: hidden; border: 0; }

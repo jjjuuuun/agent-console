@@ -124,6 +124,7 @@ export const defaultIcons: Readonly<Record<string, IconComponent>> = {
   play: svgIcon(<path d="M4.5 2.8v10.4L13 8z" />),
   pencil: svgIcon(<path d="M2.5 13.5l.7-3L10.5 3.2a1.4 1.4 0 0 1 2 2L5.2 12.8zM9.3 4.4l2.3 2.3" />),
   pin: svgIcon(<path d="M9.5 2.5l4 4-2 .8-2.2 2.2.4 2.3-1 1-2.2-2.2-3.7 3.7M6.6 5.2l-.8 2.2" />),
+  architecture: svgIcon(<path d="M2.75 2.75h2.5v2.5h-2.5zM6.75 2.75h2.5v2.5h-2.5zM10.75 2.75h2.5v2.5h-2.5zM2.75 6.75h2.5v2.5h-2.5zM6.75 6.75h2.5v2.5h-2.5zM10.75 6.75h2.5v2.5h-2.5zM2.75 10.75h2.5v2.5h-2.5zM6.75 10.75h2.5v2.5h-2.5zM10.75 10.75h2.5v2.5h-2.5z" />),
   "eye-off": svgIcon(<path d="M2 2l12 12M6.4 4a6.6 6.6 0 0 1 1.6-.5c4 0 6.5 4.5 6.5 4.5a11 11 0 0 1-2 2.5M9.6 12a6.6 6.6 0 0 1-1.6.5C4 12.5 1.5 8 1.5 8a11 11 0 0 1 2.6-3" />),
 };
 

@@ -99,6 +99,7 @@ pip install agent-console-link-logs-architecture
 | `source_kinds` | `{}` | 출처 id → 프로필 출처 종류. 적지 않은 출처는 id 그대로 |
 | `cache_scopes` | `8` | 기억할 범위 수(0 = 캐시 없음, 매번 처음부터) |
 | `cache_events` | `100000` | 기억한 범위들의 이벤트 수 합 상한(넘으면 오래 쓰지 않은 범위부터 버림) |
+| `cache_profiles` | `4` | 범위 하나에 기억할 판정 결과(프로필 키) 수. 프로필을 고치면 새 키가 생기므로 넘으면 오래 쓰지 않은 것부터 버림 |
 | `page_size` | `200` | 색인에서 범위 이벤트를 읽는 쪽 크기 |
 
 ## 단독 실행

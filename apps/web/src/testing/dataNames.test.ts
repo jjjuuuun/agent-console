@@ -21,9 +21,12 @@ describe("findDataNameLiterals / isAllowedVariant", () => {
     expect(findDataNameLiterals(`const a = ["hook.", 'Hook:pre', "ok"];`, "hook")).toEqual(["hook.", "Hook:pre"]);
   });
   it("허용 목록은 파일과 리터럴이 모두 맞을 때만", () => {
-    expect(isAllowedVariant("features/runs/runsConfig.ts", "hook.")).toBe(true);
-    expect(isAllowedVariant("features\\runs\\runsConfig.ts", "hook.")).toBe(true);
-    expect(isAllowedVariant("features/other/x.ts", "hook.")).toBe(false);
-    expect(isAllowedVariant("features/runs/runsConfig.ts", "hook:x")).toBe(false);
+    expect(isAllowedVariant("features/runs/ObserveTab.tsx", "tool_use_id")).toBe(true);
+    expect(isAllowedVariant("features\\runs\\ObserveTab.tsx", "tool_use_id")).toBe(true);
+    expect(isAllowedVariant("features/other/x.ts", "tool_use_id")).toBe(false);
+    expect(isAllowedVariant("features/runs/ObserveTab.tsx", "other_id")).toBe(false);
+    // 코드에서 사라진 부채 항목은 더 이상 허용되지 않는다
+    expect(isAllowedVariant("features/runs/runsConfig.ts", "hook.")).toBe(false);
+    expect(isAllowedVariant("features/runs/runsConfig.ts", "mcp.")).toBe(false);
   });
 });

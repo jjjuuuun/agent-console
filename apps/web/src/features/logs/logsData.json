@@ -87,6 +87,7 @@
     "to": "to",
     "via": "via",
     "callId": "call_id",
+    "thread": "thread",
     "runId": "run_id",
     "since": "since",
     "until": "until",

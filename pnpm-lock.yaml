@@ -47,6 +47,9 @@ importers:
       '@agent-console/api-client':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/api-client
+      '@agent-console/arch-view':
+        specifier: ^0.1.0
+        version: link:../../packages/ts/lib/arch-view
       '@agent-console/chat':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/chat

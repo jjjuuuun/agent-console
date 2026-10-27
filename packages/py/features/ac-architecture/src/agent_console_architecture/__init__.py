@@ -16,7 +16,8 @@
     - 투영: ``project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens,
       error_categories, max_seq, notes, cell_size) -> ArchitectureView``, ``DEFAULT_CELL_SIZE``,
       ``DEFAULT_METRICS``, ``KNOWN_METRICS``
-    - 판정: ``ProfileMatcher``(순수 판정기, 캐시 가능), ``EventMatch``, ``event_subject``,
+    - 판정: ``ProfileMatcher``(순수 판정기, 캐시 가능 — 조건은 만들 때 한 번 컴파일하고 참·거짓만
+      낸다), ``EventMatch``, ``event_subject``,
       ``event_membership(event, profile, *, profile_id, operators)``,
       ``selector_predicate(profile, selector, *, profile_id, operators)``, ``format_arch``,
       ``parse_arch``, ``ArchTarget``, ``ArchitectureSelectorError``, ``EventPredicate``

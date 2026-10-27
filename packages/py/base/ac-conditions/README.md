@@ -65,6 +65,24 @@ pip install agent-console-conditions
 
 ```
 
+근거가 필요 없고 같은 조건으로 대상을 많이 판정할 때는 미리 컴파일한 빠른 경로를 쓴다. 경로 해석·연산자 찾기·
+기대 값 묶기를 한 번만 하고 참·거짓만 낸다(`all`은 첫 거짓, `any`는 첫 참에서 멈춤). 결과는 같은 연산자로 부른
+`evaluate_conditions(...).result`와 같다(차등 테스트).
+
+```python
+>>> from agent_console_conditions import compile_conditions, conditions_hold
+>>> holds = compile_conditions(spec, operators)
+>>> holds({"output": "all tests PASS", "iteration": 1}), holds({"output": "FAIL", "iteration": 1})
+(True, False)
+>>> conditions_hold(spec, {"output": "PASS", "iteration": 5}, operators)  # 한 번만 쓸 때
+False
+
+```
+
+연산자는 선택 능력 `CompilableOperator.compile_expected(expected)`로 기대 값을 묶은 판정 함수(`actual → bool`,
+`MISSING`도 받음)를 낼 수 있다. 기본 10개는 모두 가진다. 능력이 없거나 None을 돌려주거나 만들다 예외가 나면
+빠른 경로도 그 항목만 `evaluate(actual, expected)`로 판정한다(결과가 같아야 한다).
+
 새 연산자는 `descriptor`(`ConditionOperatorDescriptor`)와 `evaluate(actual, expected) -> bool`을 가진 객체다.
 entry point 이름은 디스크립터 id와 같게 둔다.
 
