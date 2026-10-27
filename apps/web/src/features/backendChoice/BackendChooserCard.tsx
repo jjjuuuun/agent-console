@@ -3,6 +3,7 @@ import type { BackendDescriptor, BackendReadiness } from "@agent-console/contrac
 import { Badge, Banner, Button } from "@agent-console/ui";
 import { messages as m } from "../../app/messages";
 import { FixButtons } from "../../app/fix";
+import { visibleBackends } from "../../app/backendVisibility";
 import { BackendStatusChip, resolveTone } from "../backendReadiness";
 
 export interface BackendChooserCardProps {
@@ -35,8 +36,9 @@ export interface BackendChooserCardProps {
  * 실행 백엔드 해결 카드. 처음 선택은 없다(비용이 걸린 선택을 실수로 하지 않게). 디스크립터가 하나뿐이면 그것을 미리 고른다.
  * 서버·화면을 모르는 표현 컴포넌트다(데이터와 콜백만 받는다).
  */
-export function BackendChooserCard({ options, nodeLabels = [], mode = "resolve", initialId, onConfirm, busy = false, error, className, explain, busyLabel, readiness, renderSelectedExtra }: BackendChooserCardProps) {
+export function BackendChooserCard({ options: allOptions, nodeLabels = [], mode = "resolve", initialId, onConfirm, busy = false, error, className, explain, busyLabel, readiness, renderSelectedExtra }: BackendChooserCardProps) {
   const t = m.backendChooser;
+  const options = visibleBackends(allOptions);
   const name = useId();
   const [picked, setPicked] = useState<string | null>(options.some((o) => o.id === initialId) ? (initialId ?? null) : options.length === 1 ? (options[0]?.id ?? null) : null);
   return (

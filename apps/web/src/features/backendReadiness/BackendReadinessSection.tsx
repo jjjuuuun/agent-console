@@ -1,5 +1,6 @@
 import type { BackendDescriptor } from "@agent-console/contracts";
 import { Banner, Button } from "@agent-console/ui";
+import { visibleBackends } from "../../app/backendVisibility";
 import { messages as m } from "../../app/messages";
 import { describeError } from "../../app/errors";
 import { useNow } from "../../app/useNow";
@@ -25,7 +26,7 @@ export function BackendReadinessSection({ backends }: BackendReadinessSectionPro
   const { readiness, error, refetch, recheck, rechecking, isPending } = useBackendReadiness();
   const nowMs = useNow(true, 30_000);
   const login = useBackendLogin({ backends, onSettled: (id) => void recheck(id) });
-  const shown = backends.filter((b) => b.capabilities?.status === true || b.capabilities?.probe === true || readiness[b.id] !== undefined);
+  const shown = visibleBackends(backends).filter((b) => b.capabilities?.status === true || b.capabilities?.probe === true || readiness[b.id] !== undefined);
   if (shown.length === 0 && error === null) return null;
   if (error !== null) {
     return (

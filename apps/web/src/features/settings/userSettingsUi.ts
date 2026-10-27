@@ -1,5 +1,6 @@
 import type { UiSchema } from "@agent-console/schema-form";
 import type { BackendDescriptor, MergeStrategyInfo, ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
+import { visibleBackends } from "../../app/backendVisibility";
 import { messages as m, lookupMessage } from "../../app/messages";
 import { CHAT_SORT_MODES } from "../../lib/chatSort";
 import { formatPointer, parsePointer, setAt } from "../../lib/jsonPointer";
@@ -172,7 +173,7 @@ export function buildAgentDefaultsUi(root: SchemaNode, options: AgentDefaultsOpt
   if ("backend" in props) {
     ui = put(ui, "/backend", {
       "ui:widget": CHOICE_SELECT_WIDGET,
-      "ui:options": { choices: (options.backends ?? []).map((b) => ({ value: b.id, label: b.title })), emptyLabel: options.backendEmptyLabel ?? m.settings.unset },
+      "ui:options": { choices: visibleBackends(options.backends ?? []).map((b) => ({ value: b.id, label: b.title })), emptyLabel: options.backendEmptyLabel ?? m.settings.unset },
     });
   }
   if ("resources" in props) {

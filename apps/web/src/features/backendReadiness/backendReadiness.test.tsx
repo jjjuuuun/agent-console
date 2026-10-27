@@ -62,6 +62,13 @@ describe("BackendReadinessSection", () => {
     expect(rest.probeBackend).not.toHaveBeenCalled();
   });
 
+  it("ui_hints.hidden인 백엔드는 상태가 있어도 카드를 그리지 않는다", async () => {
+    const hidden = { ...supported, ui_hints: { hidden: true } } as BackendDescriptor;
+    setup(() => <BackendReadinessSection backends={[hidden, plain]} />);
+    expect(await screen.findByText("백엔드 비")).toBeTruthy();
+    expect(screen.queryByText("백엔드 에이")).toBeNull();
+    expect(screen.queryByText("서버가 준 문구 A")).toBeNull();
+  });
   it("[연결 테스트]는 확인 다이얼로그 전에 호출하지 않고, 비용 안내를 보인다", async () => {
     const { rest } = setup((b) => <BackendReadinessSection backends={b} />);
     fireEvent.click(await screen.findByRole("button", { name: "연결 테스트" }));

@@ -7,7 +7,7 @@ afterEach(cleanup);
 
 const options = [
   { id: "real", title: "실제" },
-  { id: "fake", title: "체험", ui_hints: { badge: "체험" } },
+  { id: "fake-agent", title: "가짜 에이전트(테스트용)", ui_hints: { badge: "테스트용" } },
 ] as BackendDescriptor[];
 
 describe("BackendChooserCard", () => {
@@ -17,14 +17,20 @@ describe("BackendChooserCard", () => {
   });
   it("initialId가 목록에 있으면 미리 고른다(백엔드 바꾸기)", () => {
     const onConfirm = vi.fn();
-    render(<BackendChooserCard options={options} initialId="fake" onConfirm={onConfirm} />);
-    expect((screen.getByRole("radio", { name: /체험/ }) as HTMLInputElement).checked).toBe(true);
+    render(<BackendChooserCard options={options} initialId="fake-agent" onConfirm={onConfirm} />);
+    expect((screen.getByRole("radio", { name: /가짜 에이전트/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: /선택하고 계속/ }));
-    expect(onConfirm).toHaveBeenCalledWith("fake");
+    expect(onConfirm).toHaveBeenCalledWith("fake-agent");
   });
   it("목록에 없는 initialId는 무시한다", () => {
     render(<BackendChooserCard options={options} initialId="gone" onConfirm={() => {}} />);
     expect(screen.getAllByRole("radio").every((r) => !(r as HTMLInputElement).checked)).toBe(true);
+  });
+  it("ui_hints.hidden인 백엔드는 선택지에서 뺀다", () => {
+    const withHidden = [...options, { id: "secret", title: "숨김", ui_hints: { hidden: true } }] as BackendDescriptor[];
+    render(<BackendChooserCard options={withHidden} onConfirm={() => {}} />);
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.queryByRole("radio", { name: /숨김/ })).toBeNull();
   });
   it("문구의 조사가 받침에 맞다", () => {
     render(<BackendChooserCard options={options} nodeLabels={["도우미"]} onConfirm={() => {}} />);
@@ -41,10 +47,10 @@ describe("BackendChooserCard", () => {
     const onConfirm = vi.fn();
     render(<BackendChooserCard options={options} onConfirm={onConfirm} />);
     fireEvent.click(screen.getByRole("radio", { name: /실제/ }));
-    fireEvent.click(screen.getByRole("radio", { name: /체험/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /가짜 에이전트/ }));
     fireEvent.click(screen.getByRole("button", { name: /선택하고 계속/ }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onConfirm).toHaveBeenCalledWith("fake");
+    expect(onConfirm).toHaveBeenCalledWith("fake-agent");
   });
   it("백엔드가 0개면 안내만 보이고 선택·확인이 없다", () => {
     render(<BackendChooserCard options={[]} onConfirm={() => {}} />);
@@ -58,7 +64,7 @@ describe("BackendChooserCard", () => {
     for (const t of ["엑스", "설명문", "비용문", "배지문"]) expect(screen.getByText(t)).toBeTruthy();
   });
   it("busy면 선택과 확인이 막히고 진행 문구를 보인다", () => {
-    render(<BackendChooserCard options={options} initialId="fake" busy onConfirm={() => {}} />);
+    render(<BackendChooserCard options={options} initialId="fake-agent" busy onConfirm={() => {}} />);
     expect(screen.getByRole("button", { name: /저장하고 다시 보내는 중/ }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("group", { name: "실행 백엔드" }).hasAttribute("disabled")).toBe(true);
   });
@@ -67,7 +73,7 @@ describe("BackendChooserCard", () => {
     expect(screen.getByText("저장 실패 사유")).toBeTruthy();
   });
   it("mode=change는 값이 있는 상태의 문구로 바꾼다", () => {
-    render(<BackendChooserCard options={options} mode="change" initialId="fake" onConfirm={() => {}} />);
+    render(<BackendChooserCard options={options} mode="change" initialId="fake-agent" onConfirm={() => {}} />);
     expect(screen.getByText("지금 쓰는 실행 백엔드를 바꿉니다.")).toBeTruthy();
     expect(screen.queryByText(/정해지지 않았습니다/)).toBeNull();
   });

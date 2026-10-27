@@ -140,7 +140,7 @@ describe("REST", () => {
     await rest.resolvePorts("agent", { a: 1 });
     await rest.listEdgeTypes();
     await rest.listBackends();
-    await rest.listBackendModels("fake");
+    await rest.listBackendModels("fake-agent");
     await rest.createGraph(graph);
     await rest.validateGraph("g1");
     await rest.validateGraph("g1", graph);
@@ -161,7 +161,7 @@ describe("REST", () => {
       "POST /node-types/agent/ports",
       "GET /edge-types",
       "GET /backends",
-      "GET /backends/fake/models",
+      "GET /backends/fake-agent/models",
       "POST /graphs",
       "POST /graphs/g1/validate",
       "POST /graphs/g1/validate",

@@ -14,8 +14,8 @@ describe("effectiveBackendId", () => {
     expect(effectiveBackendId(undefined, node(), null)).toBeUndefined();
   });
   it("팀 층에만 백엔드가 있으면 그 백엔드의 칩이 붙는다", () => {
-    const backends = new Map<string, BackendDescriptor>([["fake", { id: "fake", title: "체험", ui_hints: { badge: "체험" } } as BackendDescriptor]]);
-    const id = effectiveBackendId({ id: "a" } as Agent, node(), undefined, "fake");
-    expect(badgeOfBackend(backends, id)).toBe("체험");
+    const backends = new Map<string, BackendDescriptor>([["fake-agent", { id: "fake-agent", title: "가짜 에이전트(테스트용)", ui_hints: { badge: "테스트용" } } as BackendDescriptor]]);
+    const id = effectiveBackendId({ id: "a" } as Agent, node(), undefined, "fake-agent");
+    expect(badgeOfBackend(backends, id)).toBe("테스트용");
   });
 });
