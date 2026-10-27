@@ -24,7 +24,7 @@ from agent_console_contracts import (
     SessionRef,
 )
 
-REF = SessionRef(backend="fake", session_id="s")
+REF = SessionRef(backend="fake-agent", session_id="s")
 
 
 class SpyRules:

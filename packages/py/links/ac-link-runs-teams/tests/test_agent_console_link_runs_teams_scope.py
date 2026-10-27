@@ -38,7 +38,9 @@ GRAPH = {
         },
     ],
 }
-SCOPE = Layer("project", "프로젝트", {"working_directory": "/proj", "backend": "fake"}, "project:p")
+SCOPE = Layer(
+    "project", "프로젝트", {"working_directory": "/proj", "backend": "fake-agent"}, "project:p"
+)
 
 
 class _Lookup:

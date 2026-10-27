@@ -39,7 +39,7 @@ def test_local_modules_serve_run_logs(tmp_path: Path) -> None:
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
     with TestClient(create_host_app(assembly, policy=policy)) as client:
         client.headers["X-Console-Token"] = TOKEN
-        first = run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake"})
+        first = run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake-agent"})
         records.events.append(first)
         bus.publish(RUNS_EVENT, first)  # 루프 밖 발행 → 바로 수집 예약 → LocalLogs는 바로 수집
         body = client.get("/api/v1/runs/r1/logs", params={"source": "platform-runs"}).json()

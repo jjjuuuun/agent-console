@@ -67,7 +67,8 @@ def backend_unresolved_error(
     Args:
         plan: 팀 구성 해석 결과(팀 구성 id·정의 종류 이름).
         unresolved: ``unresolved_backends`` 결과(그래프 순서).
-        options: 지금 고를 수 있는 백엔드 디스크립터(등록 순서 그대로).
+        options: 등록된 백엔드 디스크립터(등록 순서 그대로). 숨김 표시(``ui_hints.hidden``,
+            개발·테스트용)는 선택지에서 뺀다.
         texts: 문구·해결 버튼 데이터.
     """
     if not unresolved:
@@ -80,7 +81,7 @@ def backend_unresolved_error(
     )
     details = BackendUnresolvedDetails(
         nodes=[UnresolvedBackendNode(id=u.node_id, label=u.label) for u in unresolved],
-        options=list(options),
+        options=[o for o in options if o.ui_hints is None or o.ui_hints.hidden is not True],
     )
     fix = Fix(
         actions=[

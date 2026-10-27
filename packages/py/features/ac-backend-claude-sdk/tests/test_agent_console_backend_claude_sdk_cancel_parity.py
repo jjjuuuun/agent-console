@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 from agent_console_backend_claude_sdk.testing import ListeningSink
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import Agent
 from agent_console_runtime import AgentRequest, CancelToken, SubagentSpec
 

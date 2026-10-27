@@ -8,13 +8,13 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from agent_console_backend_fake import (
+from agent_console_backend_fake_agent import (
     DEFAULT_OBSERVE_SWITCHES,
     FakeBackend,
     FakeBackendOptions,
     FakeObserve,
 )
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent
 from agent_console_runtime import AgentRequest, CancelToken
 
@@ -47,7 +47,7 @@ def _agent(**rule: Any) -> Agent:
     return Agent(
         id="a",
         name="A",
-        backend="fake",
+        backend="fake-agent",
         backend_options={
             "default": {
                 "response": "ok",

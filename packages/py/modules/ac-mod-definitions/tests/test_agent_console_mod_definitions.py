@@ -48,7 +48,7 @@ from agent_console_store import ContentTooLarge, DefinitionStore, SqliteDatabase
 
 TOKEN = "t" * 32
 API = "/api/v1"
-AGENT = {"id": "rev", "name": "리뷰어", "backend": "fake"}
+AGENT = {"id": "rev", "name": "리뷰어", "backend": "fake-agent"}
 GRAPH = {"id": "g1", "name": "팀", "nodes": [], "edges": []}
 PLAIN = "ghp_PlainToken123456"
 
@@ -195,9 +195,9 @@ def test_checks_reject_and_settings_rule_check(tmp_path: Path) -> None:
             ("secret.invalid_rule", "/secrets/extra_value_patterns/1")
         ]
         assert client.get(f"{API}/settings").json() == {}
-        ok = client.put(f"{API}/settings", json={"default_backend": "fake"})
+        ok = client.put(f"{API}/settings", json={"default_backend": "fake-agent"})
         assert ok.status_code == 200
-        assert client.get(f"{API}/settings").json() == {"default_backend": "fake"}
+        assert client.get(f"{API}/settings").json() == {"default_backend": "fake-agent"}
 
 
 def test_saved_topic_and_ports(tmp_path: Path) -> None:

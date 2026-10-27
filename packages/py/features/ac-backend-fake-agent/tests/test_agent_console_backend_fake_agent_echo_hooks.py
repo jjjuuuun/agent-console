@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_console_backend_fake import FakeBackend
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent import FakeBackend
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent, ResourceBundle
 from agent_console_runtime import AgentRequest, CancelToken, SecretResolver
 
@@ -18,7 +18,9 @@ HOOKS: list[Any] = [
 
 async def _run(backend: FakeBackend) -> ValidatingSink:
     sink = ValidatingSink()
-    agent = Agent(id="a", name="A", backend="fake", backend_options={"default": {"response": "ok"}})
+    agent = Agent(
+        id="a", name="A", backend="fake-agent", backend_options={"default": {"response": "ok"}}
+    )
     req = AgentRequest(agent=agent, prompt="p", bundle=ResourceBundle(slots={"hooks": HOOKS}))
     result = await backend.run(req, sink, CancelToken())
     assert result.status == "succeeded"

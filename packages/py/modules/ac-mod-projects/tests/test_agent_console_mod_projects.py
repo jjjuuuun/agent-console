@@ -75,7 +75,7 @@ def _store(assembly: Assembly) -> Any:
 
 
 def _agent(agent_id: str, project: str | None = None, **extra: Any) -> dict[str, Any]:
-    doc: dict[str, Any] = {"id": agent_id, "name": agent_id, "backend": "fake", **extra}
+    doc: dict[str, Any] = {"id": agent_id, "name": agent_id, "backend": "fake-agent", **extra}
     if project is not None:
         doc["project"] = project
     return doc

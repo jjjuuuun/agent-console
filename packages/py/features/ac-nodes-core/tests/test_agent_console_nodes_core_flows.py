@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     BackendDescriptor,
@@ -141,12 +141,12 @@ def make_stack(*agents: Agent, workspace: WorkspaceSettings | None = None) -> St
     reports = load_registries(regs, entry_points=plugin_entry_points())
     assert all(r.ok for r in reports), reports
     backend = Recording(FakeBackend(ids=SequentialIds("s"), clock=StepClock()))
-    regs.backends.register("fake", backend)
+    regs.backends.register("fake-agent", backend)
     found = {a.id: a for a in agents}
     services: dict[Any, Any] = {
         AGENT_LOOKUP: found.get,
         WORKSPACE_SETTINGS: workspace
-        or WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake"}}),
+        or WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake-agent"}}),
     }
     return Stack(regs, InMemoryRecorder(), backend, found, services)
 
@@ -401,7 +401,7 @@ async def test_message_input_key_and_template() -> None:
 
 async def test_effective_settings_layers_and_prompt_template() -> None:
     workspace = WorkspaceSettings.model_validate(
-        {"agent_defaults": {"backend": "fake", "model": "m-common", "system_prompt": "공통"}}
+        {"agent_defaults": {"backend": "fake-agent", "model": "m-common", "system_prompt": "공통"}}
     )
     stack = make_stack(agent("a", model="m-agent"), agent("b"), workspace=workspace)
     graph = team(
@@ -425,15 +425,15 @@ async def test_effective_settings_layers_and_prompt_template() -> None:
     a_req, b_req = stack.request_of("a"), stack.request_of("b")
     assert (a_req.agent.model, a_req.agent.system_prompt) == ("m-agent", "공통")
     assert (b_req.agent.model, b_req.agent.system_prompt) == ("m-team", "노드")
-    assert b_req.agent.backend == "fake"
+    assert b_req.agent.backend == "fake-agent"
     assert b_req.prompt == "[b] a:hi / 원문 hi"
 
 
 async def test_session_continue_and_fresh() -> None:
     stack = make_stack(agent("a"), agent("b", session="fresh"))
     stack.services[SESSIONS] = {
-        "a": SessionRef(backend="fake", session_id="old-a"),
-        "b": SessionRef(backend="fake", session_id="old-b"),
+        "a": SessionRef(backend="fake-agent", session_id="old-a"),
+        "b": SessionRef(backend="fake-agent", session_id="old-b"),
     }
     graph = team(
         [you(), n("a", "a"), n("b", "b")],
@@ -668,7 +668,12 @@ async def test_parallel_join_all_delivers_every_value() -> None:
 async def test_parallel_join_all_format_from_settings_layers() -> None:
     """값별 형식·구분자를 공통 층·노드 층 설정(데이터)으로 바꾸면 프롬프트가 달라진다."""
     workspace = WorkspaceSettings.model_validate(
-        {"agent_defaults": {"backend": "fake", "prompt_input_template": "- {source} => {value}"}}
+        {
+            "agent_defaults": {
+                "backend": "fake-agent",
+                "prompt_input_template": "- {source} => {value}",
+            }
+        }
     )
     stack = make_stack(agent("a"), agent("b"), agent("c"), agent("d"), workspace=workspace)
     graph = _join_all_graph()

@@ -1,5 +1,5 @@
 [project]
-name = "agent-console-backend-fake"
+name = "agent-console-backend-fake-agent"
 version = "0.1.0"
 description = "Agent Console — 모델 없이 결정적 응답을 주는 실행 백엔드(테스트·데모·오프라인)"
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.entry-points."agent_console.backends"]
-fake = "agent_console_backend_fake:FakeBackend"
+fake-agent = "agent_console_backend_fake_agent:FakeBackend"
 
 [dependency-groups]
 dev = [

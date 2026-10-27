@@ -38,7 +38,7 @@ agent-console-graph = { workspace = true }
 agent-console-store = { workspace = true }
 agent-console-runtime = { workspace = true }
 agent-console-nodes-core = { workspace = true }
-agent-console-backend-fake = { workspace = true }
+agent-console-backend-fake-agent = { workspace = true }
 agent-console-backend-claude-sdk = { workspace = true }
 agent-console-teams = { workspace = true }
 agent-console-resources = { workspace = true }
@@ -190,7 +190,7 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.importlinter]
 root_packages = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -248,7 +248,7 @@ name = "패키지는 앱(server, cli)을 import하지 않는다"
 type = "forbidden"
 source_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_conditions",
@@ -304,7 +304,7 @@ name = "safe-regex 사용처는 secret-rules와 conditions(`matches` 연산자)�
 type = "forbidden"
 source_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -361,7 +361,7 @@ type = "forbidden"
 source_modules = ["agent_console_secret_rules"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -418,7 +418,7 @@ type = "forbidden"
 source_modules = ["agent_console_imports"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_cli",
     "agent_console_conditions",
@@ -472,7 +472,7 @@ type = "forbidden"
 source_modules = ["agent_console_claude_format"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_cli",
     "agent_console_conditions",
@@ -529,7 +529,7 @@ type = "forbidden"
 source_modules = ["agent_console_pty_session"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -586,7 +586,7 @@ type = "forbidden"
 source_modules = ["agent_console_exports"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_cli",
     "agent_console_conditions",
@@ -640,7 +640,7 @@ type = "forbidden"
 source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -709,7 +709,7 @@ type = "forbidden"
 source_modules = ["agent_console_conditions"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -763,7 +763,7 @@ type = "forbidden"
 source_modules = ["agent_console_projects"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -819,7 +819,7 @@ type = "forbidden"
 source_modules = ["agent_console_safe_regex"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -876,7 +876,7 @@ type = "forbidden"
 source_modules = ["agent_console_settings"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -933,7 +933,7 @@ type = "forbidden"
 source_modules = ["agent_console_resources"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -987,7 +987,7 @@ type = "forbidden"
 source_modules = ["agent_console_resources_core"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_cli",
     "agent_console_conditions",
@@ -1041,7 +1041,7 @@ type = "forbidden"
 source_modules = ["agent_console_teams"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1093,7 +1093,7 @@ type = "forbidden"
 source_modules = ["agent_console_chat", "agent_console_trace"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_claude_format",
     "agent_console_cli",
     "agent_console_conditions",
@@ -1154,7 +1154,7 @@ type = "forbidden"
 source_modules = ["agent_console_usage"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1215,7 +1215,7 @@ type = "forbidden"
 source_modules = ["agent_console_graph"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1272,7 +1272,7 @@ type = "forbidden"
 source_modules = ["agent_console_runtime"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1324,7 +1324,7 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "플러그인(nodes-core, backend-*)은 store를 모른다"
 type = "forbidden"
-source_modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+source_modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 forbidden_modules = ["agent_console_store"]
 
 [[tool.importlinter.contracts]]
@@ -1333,7 +1333,7 @@ type = "forbidden"
 source_modules = ["agent_console_nodes_core"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1383,7 +1383,7 @@ type = "forbidden"
 source_modules = ["agent_console_delegation_host"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1441,20 +1441,20 @@ modules = ["agent_console_nodes_core", "agent_console_delegation_host"]
 [[tool.importlinter.contracts]]
 name = "backend-*는 nodes-core를 모른다"
 type = "forbidden"
-source_modules = ["agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+source_modules = ["agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 forbidden_modules = ["agent_console_nodes_core"]
 
 [[tool.importlinter.contracts]]
 name = "nodes-core와 backend-* 플러그인은 서로 독립"
 type = "independence"
-modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 
 [[tool.importlinter.contracts]]
 name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, pty-session(선택 login), hook-probe(선택)에만 의존 (구독 로그인 PTY, ux-overhaul §15.9)"
 type = "forbidden"
 source_modules = ["agent_console_backend_claude_sdk"]
 forbidden_modules = [
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1502,9 +1502,9 @@ forbidden_modules = [
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "backend-fake는 contracts, runtime에만 의존 (대본 로그인도 PTY·네트워크 없음, ux-overhaul §15.9)"
+name = "backend-fake-agent는 contracts, runtime에만 의존 (대본 로그인도 PTY·네트워크 없음, ux-overhaul §15.9)"
 type = "forbidden"
-source_modules = ["agent_console_backend_fake"]
+source_modules = ["agent_console_backend_fake_agent"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
     "agent_console_chat",
@@ -1563,7 +1563,7 @@ type = "forbidden"
 source_modules = ["agent_console_store"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -1620,7 +1620,7 @@ type = "forbidden"
 source_modules = ["agent_console_server"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -1667,7 +1667,7 @@ type = "forbidden"
 source_modules = ["agent_console_cli"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_conditions",
@@ -1725,7 +1725,7 @@ type = "forbidden"
 source_modules = ["agent_console_modkit"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -1762,7 +1762,7 @@ name = "기능 라이브러리는 modkit을 모른다 (서버 계층과 분리, 
 type = "forbidden"
 source_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -1804,7 +1804,7 @@ name = "기능 라이브러리는 기능 모듈을 모른다 (L1은 서버 계�
 type = "forbidden"
 source_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -1906,7 +1906,7 @@ source_modules = [
     "agent_console_cli",
     "agent_console_server",
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -1944,7 +1944,7 @@ name = "기능 라이브러리는 웹 프레임워크(fastapi·starlette)를 모
 type = "forbidden"
 source_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_delegation_host",
     "agent_console_exports",
@@ -2224,7 +2224,7 @@ type = "forbidden"
 source_modules = ["agent_console_logs"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -2279,7 +2279,7 @@ type = "forbidden"
 source_modules = ["agent_console_logs_claude"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",
@@ -2333,7 +2333,7 @@ type = "forbidden"
 source_modules = ["agent_console_hook_probe"]
 forbidden_modules = [
     "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
+    "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
     "agent_console_cli",

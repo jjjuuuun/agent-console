@@ -48,12 +48,13 @@ modules:
       project_dir: null            # 프로젝트 폴더(.claude/·.mcp.json). 비우면 이 파일 폴더(작업 폴더를 따라가지 않는다)
     mod-runs:                      # 실행 엔진·기록
       working_directory: null      # 에이전트 작업 폴더(비우면 이 파일 폴더). 환경변수 AGENT_CONSOLE_WORKING_DIRECTORY
+      show_hidden_backends: false  # 개발·테스트용으로 숨긴 백엔드(fake-agent 등)를 선택지·설정 카드에 보이기. 환경변수 AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS
       runtime:
         max_concurrency: null      # 동시 실행 노드 수 한도. 환경변수 AGENT_CONSOLE_MAX_CONCURRENCY
         shutdown_timeout: 10       # 종료 때 실행 중 Run 정리를 기다리는 최대 초
       backends:
         # 백엔드 id → 그 백엔드의 설치자 설정(키 의미는 각 백엔드 README).
-        fake:                      # 모델 호출 없는 결정적 백엔드. 화면 확인·테스트·개발용
+        fake-agent:                # 가짜 에이전트(모델 호출 없음). 개발·테스트용, 화면에서는 show_hidden_backends로 보인다
           models:
             - {id: fake-small, title: "fake (작은 모델 흉내)"}
           rate_limits:             # 실행마다 낼 usage.rate_limit 예시(사용량 카드 확인용, 값은 지어낸 예시)

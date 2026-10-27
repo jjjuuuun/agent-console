@@ -31,7 +31,7 @@ dev = [
     "agent-console-mod-definitions>=0.1,<0.2",
     "agent-console-link-runs-teams>=0.1,<0.2",
     "agent-console-link-definitions-teams>=0.1,<0.2",
-    "agent-console-backend-fake>=0.1,<0.2",
+    "agent-console-backend-fake-agent>=0.1,<0.2",
 ]
 
 [build-system]

@@ -77,7 +77,7 @@ def test_session_from_announcing_event_children_and_node_run_fallback() -> None:
     )
     rig.records.events.append(
         run_event(1, "run.started", {"status": "running"}, path=()),
-        run_event(2, "agent.session_started", {"session_id": "sa", "backend": "fake"}),
+        run_event(2, "agent.session_started", {"session_id": "sa", "backend": "fake-agent"}),
         run_event(3, "agent.subagent_started", {"subagent_id": "t1", "name": "c"}, ("a", "c")),
         run_event(4, "node.started", {"status": "running"}, ("b",)),
     )
@@ -96,7 +96,7 @@ def test_session_survives_incremental_reads() -> None:
     rig = PlatformRunsRig()
     rig.records.runs.save(run_record(status="running"))
     rig.records.events.append(
-        run_event(1, "agent.session_started", {"session_id": "sa", "backend": "fake"})
+        run_event(1, "agent.session_started", {"session_id": "sa", "backend": "fake-agent"})
     )
     rig.scan()
     rig.records.events.append(run_event(2, "agent.message", {"role": "assistant", "text": "hi"}))

@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend, FakeBackendOptions
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent import FakeBackend, FakeBackendOptions
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent, ModelInfo
 from agent_console_runtime import (
     BACKENDS_GROUP,
@@ -23,7 +23,9 @@ from agent_console_runtime import (
 
 
 def _agent(**options: Any) -> Agent:
-    return Agent(id="a1", name="에이전트", model="m-test", backend="fake", backend_options=options)
+    return Agent(
+        id="a1", name="에이전트", model="m-test", backend="fake-agent", backend_options=options
+    )
 
 
 def _backend() -> FakeBackend:
@@ -50,7 +52,7 @@ async def test_default_rule_echoes_prompt_as_streamed_deltas() -> None:
     assert "".join(p["text"] for p in sink.of("agent.text_delta")) == "hello world"
     assert sink.of("agent.session_started")[0] == {
         "session_id": "s1",
-        "backend": "fake",
+        "backend": "fake-agent",
         "model": "m-test",
     }
     assert sink.of("agent.usage")[0]["usage"]["input_tokens"] == 2
@@ -152,7 +154,7 @@ async def test_cancel_during_delay_returns_cancelled() -> None:
 async def test_resume_reuses_session_id() -> None:
     sink = ValidatingSink()
     req = AgentRequest(
-        agent=_agent(), prompt="p", session=SessionRef(backend="fake", session_id="prev")
+        agent=_agent(), prompt="p", session=SessionRef(backend="fake-agent", session_id="prev")
     )
     result = await _backend().run(req, sink, CancelToken())
     assert result.session is not None
@@ -167,19 +169,28 @@ async def test_list_models_comes_from_injected_data() -> None:
 
 def test_descriptor_schema_and_capabilities() -> None:
     descriptor = FakeBackend().descriptor
-    assert descriptor.id == "fake"
+    assert descriptor.id == "fake-agent"
     assert descriptor.config_schema == FakeBackendOptions.model_json_schema()
     assert descriptor.capabilities.streaming
     assert not descriptor.capabilities.enforce.directories
     assert isinstance(FakeBackend(), ExecutionBackend)
 
 
+def test_descriptor_is_test_only_and_hidden() -> None:
+    """5.2R.105: 이름은 "가짜 에이전트(테스트용)", 사용자 화면에서는 기본 숨김(ui_hints.hidden)."""
+    descriptor = FakeBackend().descriptor
+    assert descriptor.title == "가짜 에이전트(테스트용)"
+    assert descriptor.ui_hints is not None
+    assert descriptor.ui_hints.hidden is True
+    assert not [ep for ep in entry_points(group=BACKENDS_GROUP) if ep.name == "fake"]
+
+
 def test_registered_as_entry_point() -> None:
-    eps = [ep for ep in entry_points(group=BACKENDS_GROUP) if ep.name == "fake"]
+    eps = [ep for ep in entry_points(group=BACKENDS_GROUP) if ep.name == "fake-agent"]
     assert len(eps) == 1
     regs = Registries()
-    load_registries(regs, enabled={"fake"}, entry_points=eps)
-    assert isinstance(regs.backends.get("fake"), FakeBackend)
+    load_registries(regs, enabled={"fake-agent"}, entry_points=eps)
+    assert isinstance(regs.backends.get("fake-agent"), FakeBackend)
 
 
 @pytest.mark.parametrize(

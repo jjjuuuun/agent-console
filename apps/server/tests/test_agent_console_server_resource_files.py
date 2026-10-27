@@ -60,7 +60,7 @@ def _agent(agent_id: str, refs: list[str]) -> dict[str, Any]:
     return {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": "ok"}, "echo_bundle": True},
         "resources": [{"ref": r} for r in refs],
     }
@@ -183,7 +183,8 @@ def test_run_writes_skill_and_rule_trees_only_under_run_folder(tmp_path: Path) -
 
 def test_unsupported_hooks_slot_is_a_validation_warning(tmp_path: Path) -> None:
     settings = make_settings(
-        tmp_path, options={"mod-runs": {"backends": {"fake": {"resource_slots": ["instructions"]}}}}
+        tmp_path,
+        options={"mod-runs": {"backends": {"fake-agent": {"resource_slots": ["instructions"]}}}},
     )
     with server(settings) as client:
         assert client.post(f"{API}/resources", json=HOOK).status_code == 201
@@ -201,7 +202,7 @@ def test_unsupported_hooks_slot_is_a_validation_warning(tmp_path: Path) -> None:
 
 def test_fake_echo_hooks_events_are_queryable(tmp_path: Path) -> None:
     settings = make_settings(
-        tmp_path, options={"mod-runs": {"backends": {"fake": {"echo_hooks": True}}}}
+        tmp_path, options={"mod-runs": {"backends": {"fake-agent": {"echo_hooks": True}}}}
     )
     with server(settings) as client:
         assert client.post(f"{API}/resources", json=HOOK).status_code == 201

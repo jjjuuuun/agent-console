@@ -62,7 +62,7 @@ class FakeLoginTexts(BaseModel):
 
 
 class FakeLoginScript(BaseModel):
-    """설치자 설정 ``login``(``backends.fake.login``): 대본 로그인. 없으면(null) 능력 없음."""
+    """설치자 설정 ``login``(``backends.fake-agent.login``): 대본 로그인. 없으면(null) 능력 없음."""
 
     model_config = ConfigDict(extra="forbid")
 

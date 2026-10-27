@@ -85,7 +85,7 @@ def test_default_map_has_no_usage_pointers_so_tokens_are_not_double_counted() ->
     rig.records.runs.save(run_record())
     rig.records.events.append(
         run_event(1, "agent.usage", {"usage": {"input_tokens": 100, "output_tokens": 50}}),
-        run_event(2, "agent.session_started", {"session_id": "s1", "backend": "fake"}),
+        run_event(2, "agent.session_started", {"session_id": "s1", "backend": "fake-agent"}),
         run_event(3, "agent.usage", {"usage": {"input_tokens": 100, "output_tokens": 50}}),
     )
     rig.scan()

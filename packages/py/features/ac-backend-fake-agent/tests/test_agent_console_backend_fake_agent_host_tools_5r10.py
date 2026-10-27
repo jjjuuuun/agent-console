@@ -5,14 +5,14 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from agent_console_backend_fake import FakeBackend, FakeBackendOptions, HostCallStatus
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent import FakeBackend, FakeBackendOptions, HostCallStatus
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent
 from agent_console_runtime import AgentRequest, CancelToken, HostTool, HostToolResult
 
 
 def _agent(**options: Any) -> Agent:
-    return Agent(id="lead", name="Lead", backend="fake", backend_options=options)
+    return Agent(id="lead", name="Lead", backend="fake-agent", backend_options=options)
 
 
 def _host(name: str, replies: dict[str, HostToolResult], calls: list[Any]) -> HostTool:

@@ -15,14 +15,14 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import (
+from agent_console_backend_fake_agent import (
     DEFAULT_OBSERVE_COLLECTORS,
     HOOK_PROBE_NOTE_CODE,
     FakeBackend,
     FakeBackendOptions,
     observe_switch_on,
 )
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent, AgentSettings, ObserveSettings, ResourceBundle
 from agent_console_runtime import AgentRequest, CancelToken, SecretResolver
 
@@ -45,7 +45,7 @@ def _agent(**rule: Any) -> Agent:
     return Agent(
         id="a",
         name="A",
-        backend="fake",
+        backend="fake-agent",
         backend_options={
             "default": {
                 "response": "ok",
@@ -157,7 +157,7 @@ async def test_probe_records_follow_rule_data(tmp_path: Path) -> None:
         "duration_ms": 25,
         "exit_code": 0,
         "error": None,
-        "decision": {"value": "allow", "source": "fake", "reason": None},
+        "decision": {"value": "allow", "source": "fake-agent", "reason": None},
         "input": {"tool_input": {"command": "ls"}, "prompt": "go"},
         "agent_id": None,
         "agent_type": None,

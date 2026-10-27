@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     BackendDescriptor,
@@ -149,7 +149,7 @@ class Stack:
         return [i.code for i in found if i.severity == "error"]
 
 
-WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake"}})
+WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake-agent"}})
 
 
 def make_stack(*agents: Agent) -> Stack:
@@ -157,7 +157,9 @@ def make_stack(*agents: Agent) -> Stack:
     reports = load_registries(regs, entry_points=_entry_points())
     assert all(r.ok for r in reports), reports
     backends = {
-        "fake": Recording(FakeBackend(ids=SequentialIds("s"), clock=StepClock()), "fake"),
+        "fake-agent": Recording(
+            FakeBackend(ids=SequentialIds("s"), clock=StepClock()), "fake-agent"
+        ),
         "fake2": Recording(FakeBackend(ids=SequentialIds("t"), clock=StepClock()), "fake2"),
         "plain": Recording(
             FakeBackend(ids=SequentialIds("p"), clock=StepClock()), "plain", host_tools=False
@@ -278,7 +280,7 @@ async def test_two_targets_with_different_settings_run_in_own_sessions() -> None
     # 대상마다 자기 백엔드·모델·세션
     (be_req,) = stack.requests_of("backend")
     (fe_req,) = stack.requests_of("frontend")
-    assert (be_req.agent.backend, be_req.agent.model) == ("fake", "m-big")
+    assert (be_req.agent.backend, be_req.agent.model) == ("fake-agent", "m-big")
     assert (fe_req.agent.backend, fe_req.agent.model) == ("fake2", "m-small")
     assert be.backend_session_id != fe.backend_session_id
     # 위임자 요청에는 위임 도구 하나(대상 enum), 하위 에이전트 없음

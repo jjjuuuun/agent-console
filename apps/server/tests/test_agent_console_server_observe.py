@@ -50,7 +50,7 @@ def _run(client: Any, agent_id: str, observe: dict[str, Any] | None) -> str:
     agent: dict[str, Any] = {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": "ok", "observe": OBSERVE_RULES}},
     }
     if observe is not None:

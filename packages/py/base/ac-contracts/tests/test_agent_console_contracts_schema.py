@@ -58,7 +58,7 @@ EXAMPLE_EXTENSION_NAMES = {
     "condition",
     "escalate",
     "loop_back",
-    "fake",
+    "fake-agent",
     "claude-agent-sdk",
     "rule",
     "model",

@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import (
+from agent_console_backend_fake_agent import (
     FAKE_LOGIN_METHOD_ID,
     FAKE_LOGIN_REQUIRED_STATE,
     FAKE_READY_STATE,
@@ -32,7 +32,7 @@ SECRET = "CODE-SECRET-12345"
 
 
 def _service(backend: FakeBackend, **kwargs: Any) -> BackendLoginService:
-    return BackendLoginService(lambda: {"fake": backend}, tick_s=0.02, **kwargs)
+    return BackendLoginService(lambda: {"fake-agent": backend}, tick_s=0.02, **kwargs)
 
 
 async def _until(
@@ -59,7 +59,7 @@ def _logged_in(backend: FakeBackend) -> bool:
 
 
 def _ctx() -> BackendCheckContext:
-    return BackendCheckContext("fake", clock=lambda: 1.0)
+    return BackendCheckContext("fake-agent", clock=lambda: 1.0)
 
 
 def test_no_login_by_default() -> None:
@@ -88,7 +88,7 @@ async def test_declares_and_status_follows_memory_state() -> None:
 async def test_code_ok_succeeds_then_logout() -> None:
     backend = FakeBackend(login={})
     service = _service(backend)
-    view = await service.start("fake")
+    view = await service.start("fake-agent")
     view = await _until(service, view.session_id, lambda v: v.needs_code)
     assert view.phase == "waiting_user"
     assert view.open_url == "https://login.example.com/oauth/authorize?fake=1"
@@ -97,7 +97,7 @@ async def test_code_ok_succeeds_then_logout() -> None:
     final = await _until(service, view.session_id, _done)
     assert final.phase == "succeeded"
     assert _logged_in(backend) is True
-    result = await service.logout("fake")
+    result = await service.logout("fake-agent")
     assert result.ok is True
     assert _logged_in(backend) is False
     await service.aclose()
@@ -107,7 +107,7 @@ async def test_wrong_code_fails_and_is_masked(caplog: pytest.LogCaptureFixture) 
     caplog.set_level(logging.DEBUG)
     backend = FakeBackend(login={"verify_delay_s": 0.05})
     service = _service(backend)
-    sid = (await service.start("fake")).session_id
+    sid = (await service.start("fake-agent")).session_id
     await _until(service, sid, lambda v: v.needs_code)
     await service.send_input(sid, text=SECRET)
     mid = service.get(sid)
@@ -124,7 +124,7 @@ async def test_wrong_code_fails_and_is_masked(caplog: pytest.LogCaptureFixture) 
 async def test_cancel_while_waiting() -> None:
     backend = FakeBackend(login={})
     service = _service(backend)
-    sid = (await service.start("fake")).session_id
+    sid = (await service.start("fake-agent")).session_id
     await _until(service, sid, lambda v: v.needs_code)
     final = await service.cancel(sid)
     assert final.phase == "cancelled"
@@ -135,7 +135,7 @@ async def test_cancel_while_waiting() -> None:
 async def test_timeout_expires() -> None:
     backend = FakeBackend(login={})
     service = _service(backend, timeout_default_s=0.2, timeout_max_s=0.2)
-    sid = (await service.start("fake")).session_id
+    sid = (await service.start("fake-agent")).session_id
     final = await _until(service, sid, _done)
     assert final.phase == "expired"
     assert final.reason == "timeout"
@@ -147,7 +147,7 @@ async def test_callback_path_and_delays() -> None:
         login={"needs_code": False, "callback_after_s": 0.05, "start_delay_s": 0.05}
     )
     service = _service(backend)
-    view = await service.start("fake")
+    view = await service.start("fake-agent")
     assert view.phase == "starting"
     final = await _until(service, view.session_id, _done)
     assert final.phase == "succeeded"
@@ -169,13 +169,13 @@ async def test_custom_script_data() -> None:
     assert backend.descriptor.login_methods[0].needs_browser is False
     assert _logged_in(backend) is True
     service = _service(backend)
-    sid = (await service.start("fake")).session_id
+    sid = (await service.start("fake-agent")).session_id
     await _until(service, sid, lambda v: v.needs_code)
     assert service.get(sid).open_url is None
     await service.send_input(sid, text="ok")
     final = await _until(service, sid, _done)
     assert final.reason == "bad_code"
-    result = await service.logout("fake")
+    result = await service.logout("fake-agent")
     assert (result.ok, result.reason) == (False, "logout_failed")
     await service.aclose()
 
@@ -183,7 +183,7 @@ async def test_custom_script_data() -> None:
 async def test_unknown_method_refused() -> None:
     backend = FakeBackend(login={})
     with pytest.raises(LoginRefusedError):
-        await backend.start_login(BackendLoginContext("fake"), "other")
+        await backend.start_login(BackendLoginContext("fake-agent"), "other")
 
 
 def test_from_options_reads_login() -> None:

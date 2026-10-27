@@ -38,7 +38,7 @@ MCP = {
 AGENT = {
     "id": "a",
     "name": "a",
-    "backend": "fake",
+    "backend": "fake-agent",
     "resources": [{"ref": "gh", "config_override": {"env": {"API_KEY": PLAIN}}}],
 }
 

@@ -33,9 +33,9 @@ pip install agent-console-mod-versions
 >>> config = ModulesConfig(options={"mod-versions": {"max_per_definition": 2}})
 >>> assembly = assemble([module, local_definitions_module(workspace=workspace)], config)
 >>> store = assembly.port(DEFINITIONS_STORE)
->>> saved = store.create("agent", {"id": "a", "name": "0", "backend": "fake"})
+>>> saved = store.create("agent", {"id": "a", "name": "0", "backend": "fake-agent"})
 >>> for name in ("1", "2", "3"):
-...     saved = store.save("agent", {"id": "a", "name": name, "backend": "fake"},
+...     saved = store.save("agent", {"id": "a", "name": name, "backend": "fake-agent"},
 ...                        expected_version=saved.version_hash)
 >>> len(store.list_versions("agent", "a"))
 2

@@ -163,7 +163,7 @@ allow_indirect_imports = true
 [[contracts]]
 name = "플러그인(nodes-core, backend-*)은 store를 모른다"
 type = "forbidden"
-source_modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+source_modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 forbidden_modules = ["agent_console_store"]
 
 [[contracts]]
@@ -188,13 +188,13 @@ modules = ["agent_console_nodes_core", "agent_console_delegation_host"]
 [[contracts]]
 name = "backend-*는 nodes-core를 모른다"
 type = "forbidden"
-source_modules = ["agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+source_modules = ["agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 forbidden_modules = ["agent_console_nodes_core"]
 
 [[contracts]]
 name = "nodes-core와 backend-* 플러그인은 서로 독립"
 type = "independence"
-modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake"]
+modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 
 [[contracts]]
 name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, pty-session(선택 login), hook-probe(선택)에만 의존 (구독 로그인 PTY, ux-overhaul §15.9)"
@@ -204,10 +204,10 @@ forbidden_modules = ["@all", "!agent_console_backend_claude_sdk", "!agent_consol
 allow_indirect_imports = true
 
 [[contracts]]
-name = "backend-fake는 contracts, runtime에만 의존 (대본 로그인도 PTY·네트워크 없음, ux-overhaul §15.9)"
+name = "backend-fake-agent는 contracts, runtime에만 의존 (대본 로그인도 PTY·네트워크 없음, ux-overhaul §15.9)"
 type = "forbidden"
-source_modules = ["agent_console_backend_fake"]
-forbidden_modules = ["@all", "!agent_console_backend_fake", "!agent_console_contracts", "!agent_console_runtime"]
+source_modules = ["agent_console_backend_fake_agent"]
+forbidden_modules = ["@all", "!agent_console_backend_fake_agent", "!agent_console_contracts", "!agent_console_runtime"]
 allow_indirect_imports = true
 
 [[contracts]]

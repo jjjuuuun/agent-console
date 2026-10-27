@@ -225,7 +225,7 @@ def test_graph_duplicate_effective_bundle_and_summaries(tmp_path: Path) -> None:
         assert summaries["flow"]["entry_labels"] == ["빠른"]
 
         eff = client.get(f"{API}/graphs/flow/nodes/a/effective-settings").json()
-        assert eff["value"]["backend"] == "fake"
+        assert eff["value"]["backend"] == "fake-agent"
         assert [layer["id"] for layer in eff["layers"]] == ["common", "team", "agent", "node"]
         assert client.get(f"{API}/graphs/flow/nodes/nope/effective-settings").status_code == 404
 

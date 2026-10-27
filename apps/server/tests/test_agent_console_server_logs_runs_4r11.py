@@ -68,7 +68,7 @@ def _run(client: Any) -> dict[str, Any]:
     agent = {
         "id": "watcher",
         "name": "watcher",
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {
             "default": {
                 "response": "ok",

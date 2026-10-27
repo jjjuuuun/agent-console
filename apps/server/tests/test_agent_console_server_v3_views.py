@@ -21,7 +21,7 @@ from agent_console_server.testing import API, SECRET_VALUE, make_settings, seed,
 GRAPH_VALIDATION: PortKey[Any] = PortKey("graphs.validation")
 
 _PLUGIN = """
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import EnforceCapabilities, ReplyFields
 from agent_console_nodes_core import ReplyEdge
 
@@ -348,7 +348,7 @@ def test_draft_effective_settings_and_preview_mask_secrets(client: TestClient) -
 @pytest.mark.parametrize(
     ("backend", "expected"),
     [
-        ("fake", ["/limits/commands", "/limits/network"]),
+        ("fake-agent", ["/limits/commands", "/limits/network"]),
         ("t-cmd", ["/limits/network"]),
         ("t-all", []),
     ],
@@ -397,7 +397,7 @@ def test_server_info_plugin_status(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         tmp_path,
         plugins={
             "modules": ["ac_server_test_v3_status:register", "ac_server_test_missing_zz:register"],
-            "enabled": ["fake", "t-cmd", "agent", "user", "reply", "message"],
+            "enabled": ["fake-agent", "t-cmd", "agent", "user", "reply", "message"],
         },
     )
     with server(settings) as client:

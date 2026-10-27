@@ -101,7 +101,7 @@ def test_extra_dependencies_rendered() -> None:
         members=["packages/py/*/*"],
         year="2026",
         dependencies=["agent-console-registry", "pyyaml>=6"],
-        dev_dependencies=["agent-console-backend-fake"],
+        dev_dependencies=["agent-console-backend-fake-agent"],
         description='say "hi"',
     )
     data = tomllib.loads(plan.files["pyproject.toml"])
@@ -110,7 +110,7 @@ def test_extra_dependencies_rendered() -> None:
         "agent-console-registry>=0.1,<0.2",
         "pyyaml>=6",
     ]
-    assert "agent-console-backend-fake>=0.1,<0.2" in data["dependency-groups"]["dev"]
+    assert "agent-console-backend-fake-agent>=0.1,<0.2" in data["dependency-groups"]["dev"]
     assert data["project"]["description"] == "say 'hi'"
     assert plan.add_member is None
 

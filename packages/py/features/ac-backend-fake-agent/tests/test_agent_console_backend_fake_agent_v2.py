@@ -9,14 +9,14 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agent_console_backend_fake import (
+from agent_console_backend_fake_agent import (
     DEFAULT_RESOURCE_SLOTS,
     EMPTY_BUNDLE,
     FakeBackend,
     bundle_summary,
     mask_secret_refs,
 )
-from agent_console_backend_fake.testing import InteractiveSink, ListeningSink, ValidatingSink
+from agent_console_backend_fake_agent.testing import InteractiveSink, ListeningSink, ValidatingSink
 from agent_console_contracts import (
     Agent,
     AgentSubagentPayload,
@@ -35,7 +35,7 @@ from agent_console_runtime import (
 
 
 def _agent(**options: Any) -> Agent:
-    return Agent(id="pl", name="PL", model="m-test", backend="fake", backend_options=options)
+    return Agent(id="pl", name="PL", model="m-test", backend="fake-agent", backend_options=options)
 
 
 class _Clock:

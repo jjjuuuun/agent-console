@@ -154,8 +154,8 @@ def test_status_all_and_one(tmp_path: Path) -> None:
         assert res.status_code == 200
         assert res.headers["cache-control"] == "no-store"
         by_id = {r["backend_id"]: r for r in res.json()}
-        assert by_id["fake"]["tone"] == "ok"
-        assert by_id["fake"]["state"] == "always_ready"
+        assert by_id["fake-agent"]["tone"] == "ok"
+        assert by_id["fake-agent"]["state"] == "always_ready"
         assert by_id["fake-sdk"]["tone"] == "ok"
         assert (by_id["plain"]["state"], by_id["plain"]["tone"]) == ("unknown", "unknown")
         one = client.get(f"{API}/backends/plain/status")
@@ -175,7 +175,7 @@ def test_status_reports_missing_key(tmp_path: Path) -> None:
 
 def test_probe_fake_succeeds_and_unsupported_is_409(tmp_path: Path) -> None:
     with _client(tmp_path) as (client, _):
-        ok = client.post(f"{API}/backends/fake/probe")
+        ok = client.post(f"{API}/backends/fake-agent/probe")
         assert ok.status_code == 200
         assert ok.headers["cache-control"] == "no-store"
         assert ok.json()["ok"] is True
@@ -185,7 +185,7 @@ def test_probe_fake_succeeds_and_unsupported_is_409(tmp_path: Path) -> None:
         assert error["code"] == "backend.probe_unsupported"
         assert error["details"] == {"backend": "plain"}
         assert client.post(f"{API}/backends/nope/probe").status_code == 404
-        bad = client.post(f"{API}/backends/fake/probe", json={"timeout_s": -1})
+        bad = client.post(f"{API}/backends/fake-agent/probe", json={"timeout_s": -1})
         assert bad.status_code == 422
 
 
@@ -262,5 +262,5 @@ def test_routes_absent_when_module_disabled(tmp_path: Path) -> None:
     config = ModulesConfig(disabled=["mod-runs"])
     with _client(tmp_path, config=config) as (client, _):
         assert client.get(f"{API}/backends/status").status_code == 404
-        assert client.get(f"{API}/backends/fake/status").status_code == 404
-        assert client.post(f"{API}/backends/fake/probe").status_code == 404
+        assert client.get(f"{API}/backends/fake-agent/status").status_code == 404
+        assert client.post(f"{API}/backends/fake-agent/probe").status_code == 404

@@ -15,7 +15,8 @@
       요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34)·``RunServiceProvider``
       (+ ``RunEnvironment``)·``ResumeHandler``.
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
-      ``configure_backends``·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
+      ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
+      백엔드 숨김 풀기)·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
     - ``build_router``·``topic_handlers``·``ERROR_MAP``, 설정 ``RunsModuleSettings``.
     - 관측 탭 이벤트 접두어 데이터(5.5R.13): ``DEFAULT_OBSERVE_EVENT_PREFIXES``·
       ``load_observe_event_prefixes``·``observe_event_prefixes_of``.
@@ -28,6 +29,7 @@ from .backends import (
     LookupSecretProvider,
     build_secret_resolver,
     configure_backends,
+    reveal_hidden_backends,
 )
 from .errors import (
     ERROR_MAP,
@@ -140,6 +142,7 @@ __all__ = [
     "module",
     "observe_event_prefixes_of",
     "open_recorder",
+    "reveal_hidden_backends",
     "team_rules_warning",
     "topic_handlers",
 ]

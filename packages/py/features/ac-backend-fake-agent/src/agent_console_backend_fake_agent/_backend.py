@@ -81,8 +81,11 @@ from ._login import (
     FakeScriptedLoginDriver,
 )
 
-FAKE_BACKEND_ID = "fake"
+FAKE_BACKEND_ID = "fake-agent"
 """기본 디스크립터 id(entry point 이름과 같다)."""
+
+FAKE_BACKEND_TITLE = "가짜 에이전트(테스트용)"
+"""기본 디스크립터 표시 이름."""
 
 DEFAULT_DELEGATE_TOOL = "Agent"
 """기본 위임 도구 이름(claude-sdk가 쓰는 SDK 위임 도구 이름과 맞춘 기본값, 설정으로 바꾼다)."""
@@ -128,7 +131,10 @@ def _default_ids() -> str:
 
 
 class FakeInstallOptions(BaseModel):
-    """설치자 설정(앱 설정 `backends.fake`) 형식. `FakeBackend.from_options`가 읽는다."""
+    """설치자 설정(`modules.options.mod-runs.backends.fake-agent`) 형식.
+
+    `FakeBackend.from_options`가 읽는다.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -247,13 +253,17 @@ class FakeBackend:
         slots = list(DEFAULT_RESOURCE_SLOTS if resource_slots is None else resource_slots)
         self.descriptor = BackendDescriptor(
             id=backend_id,
-            title="Fake (결정적 응답)",
+            title=FAKE_BACKEND_TITLE,
             description=(
-                "체험용: 모델을 부르지 않고 설정한 규칙대로 응답합니다(테스트·데모·오프라인)."
+                "개발·테스트용: 모델을 부르지 않고 설정한 규칙대로 에이전트 실행(응답·도구·위임·"
+                "되묻기·훅·실패·지연)을 흉내 냅니다."
             ),
             cost_note="모델을 부르지 않아 사용량이 들지 않습니다.",
             probe_cost_note="모델을 부르지 않아 비용이 들지 않습니다.",
-            ui_hints=UiHints(badge="체험"),
+            # 개발·테스트용이라 사용자 선택지·설정 카드에서 기본으로 숨긴다(5.2R.105). 설치자가
+            # `modules.options.mod-runs.show_hidden_backends`(환경변수
+            # `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS`)로 보이게 한다.
+            ui_hints=UiHints(badge="테스트용", hidden=True),
             config_schema=fake_config_schema(),
             capabilities=BackendCapabilities(
                 streaming=True,

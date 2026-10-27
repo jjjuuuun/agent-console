@@ -92,7 +92,7 @@ def agent_doc(agent_id: str, response: str, **extra: Any) -> dict[str, Any]:
     return {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": response}},
         **extra,
     }

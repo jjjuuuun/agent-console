@@ -1,13 +1,20 @@
-# agent-console-backend-fake
+# agent-console-backend-fake-agent
 
-모델 없이 **설정 데이터대로** 결정적 응답을 주는 실행 백엔드(X3). 테스트·E2E·데모·오프라인용.
-entry point `agent_console.backends:fake`로 등록된다.
+모델 없이 **설정 데이터대로** 에이전트 실행(응답·도구·위임·되묻기·훅·실패·지연)을 흉내 내는 실행 백엔드(X3).
+개발·테스트·E2E용. entry point `agent_console.backends:fake-agent`로 등록되고 표시 이름은 "가짜 에이전트(테스트용)"
+(`FAKE_BACKEND_TITLE`)다.
+
+**화면에서 기본 숨김(5.2R.105)**: 디스크립터가 `ui_hints.hidden: true`를 선언한다. 웹은 숨김 표시가 있는 백엔드를
+실행 방식 선택지·설정 카드에서 빼고, 이미 이 백엔드를 지정한 정의는 그대로 실행한다. 설치자가 `mod-runs` 설정
+`show_hidden_backends: true`(환경변수 `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS=1`)를 켜면 서버가 숨김을 푼 디스크립터를
+낸다. 테스트·e2e·CI·`pnpm app`은 이 설정으로 켠다. 옛 id `fake`는 별칭 없이 없앴다(저장 데이터에 남아 있으면
+"등록되지 않은 실행 백엔드" 오류).
 
 ## 설치
 
 ```bash
 uv sync --all-packages                         # 워크스페이스 안
-uv pip install ./packages/py/features/ac-backend-fake   # 단독
+uv pip install ./packages/py/features/ac-backend-fake-agent   # 단독
 ```
 
 의존: `agent-console-runtime`, `agent-console-contracts`, `pydantic`.
@@ -159,7 +166,7 @@ default:
 - 관측 설정 `observe.hook_probe`가 켜졌고(수집기가 아니라 별도 키다 — claude-sdk와 같음) 요청에 실행 폴더
   (`AgentRequest.run_folder`)가 있을 때만 `<run_folder>/<hook_probe_folder>/<세션>.jsonl`에 실제 probe 형식(`format`
   기본 `hook-probe/1`) 한 줄씩 덧붙인다. 키: `format, probe_id(<세션>:probeN), event, session_id, tool_use_id, tool,
-  matcher, context(= run_context), started_at, ended_at, duration_ms, exit_code, error, decision{value, source: fake,
+  matcher, context(= run_context), started_at, ended_at, duration_ms, exit_code, error, decision{value, source: fake-agent,
   reason}, input, agent_id, agent_type, cwd, simulated: true` + `fields`(덧붙이거나 덮어쓸 키, 형식이 바뀌면 데이터로).
   로그 출처 `hook-probe-jsonl`·분류기 `hook-probe`가 그대로 읽는다(테스트로 확인). 명령은 실행하지 않는다.
 - 실행 폴더가 없으면 `log.warning` 하나. 꺼져 있으면(기본) 아무것도 쓰지 않는다.
@@ -177,8 +184,8 @@ default:
 
 ```python
 >>> import asyncio
->>> from agent_console_backend_fake import FakeBackend
->>> from agent_console_backend_fake.testing import ValidatingSink  # 공용(ac-runtime.testing_sink) 다시 내보냄
+>>> from agent_console_backend_fake_agent import FakeBackend
+>>> from agent_console_backend_fake_agent.testing import ValidatingSink  # 공용(ac-runtime.testing_sink) 다시 내보냄
 >>> from agent_console_contracts import Agent
 >>> from agent_console_runtime import AgentRequest, CancelToken
 
@@ -217,11 +224,11 @@ default:
 ### 대본 로그인 (선택 능력, 5.2R.83, ux-overhaul §15.9)
 
 e2e·웹 개발에서 Claude 구독 로그인 대화상자의 흐름 전체를 **PTY·네트워크·파일 없이** 재현한다. 설치자 설정
-`backends.fake.login`(`FakeLoginScript`)을 주면 켜진다(기본 `null` = 능력 없음, 체험용 카드에 로그인 버튼이 생기지 않게).
+`backends.fake-agent.login`(`FakeLoginScript`)을 주면 켜진다(기본 `null` = 능력 없음, 기본 카드에 로그인 버튼이 생기지 않게).
 
 ```yaml
 backends:
-  fake:
+  fake-agent:
     login: {}                     # 기본 대본: 코드 ok = 성공, 그 밖 = verify_failed
     # login: {needs_code: false, callback_after_s: 1}   # 콜백 경로(코드 없이 1초 뒤 성공)
     # login: {start_delay_s: 0.5, verify_delay_s: 0.5, start_logged_in: true, logout_ok: false}
@@ -242,12 +249,12 @@ backends:
 
 ```python
 >>> import asyncio
->>> from agent_console_backend_fake import FakeBackend
+>>> from agent_console_backend_fake_agent import FakeBackend
 >>> from agent_console_runtime import BackendLoginService
 >>> async def login(code: str) -> tuple[str, bool]:
 ...     backend = FakeBackend(login={})
-...     service = BackendLoginService(lambda: {"fake": backend}, tick_s=0.01)
-...     sid = (await service.start("fake")).session_id
+...     service = BackendLoginService(lambda: {"fake-agent": backend}, tick_s=0.01)
+...     sid = (await service.start("fake-agent")).session_id
 ...     await service.send_input(sid, text=code)
 ...     while service.get(sid).phase not in {"succeeded", "failed"}:
 ...         await asyncio.sleep(0.01)
@@ -262,7 +269,7 @@ backends:
 ### 설치자 설정 (`ConfigurableBackend` 훅)
 
 `FakeBackend.from_options(options, *, secrets, environ)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
-`backends.fake`를 이 훅에 넘겨 entry point로 만든 인스턴스를 교체한다(키의 의미는 이 패키지만 안다).
+`backends.fake-agent`를 이 훅에 넘겨 entry point로 만든 인스턴스를 교체한다(키의 의미는 이 패키지만 안다).
 
 | 키 | 기본 | 의미 |
 | --- | --- | --- |
@@ -279,14 +286,14 @@ backends:
 
 ## 테스트 도우미
 
-`agent_console_backend_fake.testing`은 `agent_console_runtime.testing_sink`의 `ValidatingSink`·`ListeningSink`
+`agent_console_backend_fake_agent.testing`은 `agent_console_runtime.testing_sink`의 `ValidatingSink`·`ListeningSink`
 (서브에이전트 결과 알림 기록)·`InteractiveSink`(상호작용 응답 흉내)를 다시 내보낸다. 구현은 ac-runtime 한 곳뿐이다.
 
 ## 개발·재사용(단독)
 
 이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-fake`.
+찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-fake-agent`.
 
 ```bash
 uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
@@ -296,5 +303,5 @@ uv run ruff check . && uv run mypy && uv run pytest
 ## 테스트
 
 ```bash
-uv run pytest packages/py/features/ac-backend-fake/tests
+uv run pytest packages/py/features/ac-backend-fake-agent/tests
 ```

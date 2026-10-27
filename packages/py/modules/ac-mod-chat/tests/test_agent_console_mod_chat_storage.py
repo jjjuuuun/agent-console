@@ -56,7 +56,9 @@ def _q(storage: Any, item_id: str, conv: str = "c1", text: str = "t", **kw: Any)
 
 # ---- 대화 -----------------------------------------------------------------
 def test_conversation_save_get_roundtrip_with_sessions(storage: Any) -> None:
-    conv = make_conv(sessions={"pl": SessionRef(backend="fake", session_id="s1", data={"k": 1})})
+    conv = make_conv(
+        sessions={"pl": SessionRef(backend="fake-agent", session_id="s1", data={"k": 1})}
+    )
     storage.conversations.save(conv)
     got = storage.conversations.get("c1")
     assert got == conv

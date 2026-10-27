@@ -2,7 +2,7 @@
 유효 설정 ``?project=``, 단독 실행(design §UX-P.5·§5.2R.6, 5.2R.34).
 
 정의·실행·프로젝트 모듈과 다른 연동은 dev 의존이다(이 패키지는 import하지 않는다). 노드·백엔드는
-설치된 entry point(``ac-nodes-core``·``ac-backend-fake``)에서 읽는다. fake 응답 틀 ``$cwd``·
+설치된 entry point(``ac-nodes-core``·``ac-backend-fake-agent``)에서 읽는다. fake 응답 틀 ``$cwd``·
 ``$model``로 실제 요청(``AgentRequest.cwd``·모델)에 들어간 값을 본다.
 """
 
@@ -58,7 +58,7 @@ def _workspace(tmp_path: Path) -> Path:
         {
             "id": "a1",
             "name": "응답자",
-            "backend": "fake",
+            "backend": "fake-agent",
             "backend_options": {"default": {"response": RESPONSE}},
         },
     )

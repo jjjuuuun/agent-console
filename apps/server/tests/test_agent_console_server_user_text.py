@@ -179,7 +179,7 @@ def test_run_failure_summary_names_node(client: Any) -> None:
     agent = {
         "id": "boom",
         "name": "터지는 도우미",
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": "x", "fail": {"message": "고장"}}},
     }
     assert client.post(f"{API}/agents", json=agent).status_code == 201

@@ -17,10 +17,10 @@ def test_record_calls_back_after_each_saved_version() -> None:
     inner = InMemoryVersionRepository()
     versions = ObservedVersionRepository(inner, lambda *args: seen.append(args))
     store = InMemoryDefinitionStore(DEFAULT_KINDS, versions=versions)
-    first = store.create(AGENT_KIND.name, {"id": "a", "name": "A", "backend": "fake"})
+    first = store.create(AGENT_KIND.name, {"id": "a", "name": "A", "backend": "fake-agent"})
     second = store.save(
         AGENT_KIND.name,
-        {"id": "a", "name": "B", "backend": "fake"},
+        {"id": "a", "name": "B", "backend": "fake-agent"},
         expected_version=first.version_hash,
     )
     assert seen == [("agent", "a", first.version_hash), ("agent", "a", second.version_hash)]

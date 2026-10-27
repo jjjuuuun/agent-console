@@ -123,7 +123,7 @@ def test_runs_options_new_location(tmp_path: Path) -> None:
         modules={
             "options": {
                 "mod-runs": {
-                    "backends": {"fake": {"models": [{"id": "fake-new"}]}},
+                    "backends": {"fake-agent": {"models": [{"id": "fake-new"}]}},
                     "working_directory": str(project),
                     "runtime": {"shutdown_timeout": 1},
                 }
@@ -131,5 +131,5 @@ def test_runs_options_new_location(tmp_path: Path) -> None:
         },
     )
     with server(settings) as client:
-        models = client.get(f"{API}/backends/fake/models").json()
+        models = client.get(f"{API}/backends/fake-agent/models").json()
         assert [m["id"] for m in models] == ["fake-new"]

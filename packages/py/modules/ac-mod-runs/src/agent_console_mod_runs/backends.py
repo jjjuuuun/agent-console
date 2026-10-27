@@ -1,4 +1,5 @@
-"""실행 백엔드 설정 적용과 비밀 해석기 조립(설치자 설정 ``backends``·``min_redact_chars``).
+"""실행 백엔드 설정 적용과 비밀 해석기 조립(설치자 설정 ``backends``·``show_hidden_backends``·
+``min_redact_chars``).
 
 모듈은 백엔드 이름·키의 의미를 모른다(R0). 설정 값은 백엔드의 ``from_options`` 훅에 그대로 넘긴다.
 """
@@ -72,6 +73,35 @@ def configure_backends(
     return replaced
 
 
+def reveal_hidden_backends(registries: Registries) -> list[str]:
+    """숨김 표시(``descriptor.ui_hints.hidden``)가 있는 백엔드의 디스크립터를 숨김 없는 사본으로
+    바꾼다.
+
+    설치자 설정 ``show_hidden_backends``(개발·테스트용 백엔드를 화면에 보이기)가 켜졌을 때
+    ``configure_backends`` 뒤에 부른다. 모듈은 어느 백엔드가 숨김인지 모른다 — 백엔드가 자기
+    디스크립터에 선언한다(R0). 디스크립터를 바꿀 수 없는 백엔드(읽기 전용 속성)는 경고만 남긴다.
+
+    Returns:
+        숨김을 푼 백엔드 id 목록.
+    """
+    revealed: list[str] = []
+    for entry in registries.backends.list():
+        descriptor = entry.item.descriptor
+        hints = descriptor.ui_hints
+        if hints is None or hints.hidden is not True:
+            continue
+        shown = descriptor.model_copy(
+            update={"ui_hints": hints.model_copy(update={"hidden": False})}
+        )
+        try:
+            entry.item.descriptor = shown
+        except (AttributeError, TypeError):
+            _log.warning("백엔드 %s의 디스크립터를 바꿀 수 없어 숨김을 풀지 못했습니다", entry.key)
+            continue
+        revealed.append(entry.key)
+    return revealed
+
+
 class LookupSecretProvider:
     """``이름 → 값`` 함수(호스트 기본 서비스 ``secret_resolver``)를 엔진 비밀 공급자로 감싼다."""
 
@@ -115,4 +145,5 @@ __all__ = [
     "LookupSecretProvider",
     "build_secret_resolver",
     "configure_backends",
+    "reveal_hidden_backends",
 ]

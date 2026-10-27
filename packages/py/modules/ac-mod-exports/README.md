@@ -39,7 +39,7 @@ pip install agent-console-mod-exports
 >>> from agent_console_store import DEFAULT_KINDS, FileDefinitionStore
 >>> from agent_console_mod_exports import LookupExportCatalog
 >>> store = FileDefinitionStore(tempfile.mkdtemp(), DEFAULT_KINDS)
->>> _ = store.create("agent", {"id": "a", "name": "A", "backend": "fake"})
+>>> _ = store.create("agent", {"id": "a", "name": "A", "backend": "fake-agent"})
 >>> catalog = LookupExportCatalog(store)
 >>> catalog.document("agent", "a")["name"], catalog.document("agent", "ghost")
 ('A', None)

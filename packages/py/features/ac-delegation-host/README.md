@@ -62,7 +62,7 @@ pip install agent-console-delegation-host
 >>> plan = DelegationPlan(
 ...     strategy="host",
 ...     delegator_node_id="lead",
-...     backend="fake",
+...     backend="fake-agent",
 ...     request=AgentRequest(agent=Agent(id="lead", name="Lead"), prompt="로그인 구현"),
 ...     members=[
 ...         DelegationMember(node_id="be", edge_id="lead->be", role="백엔드", delegate_when="서버 작업"),

@@ -51,7 +51,7 @@ def test_run_and_chat_turn_without_backend_are_422_and_leave_no_records(tmp_path
         # 기본값으로 고르면 같은 메시지가 실행된다(자동 선택은 없다)
         got = client.get(f"{API}/settings")
         etag = got.headers.get("etag")
-        body = {**got.json(), "default_backend": "fake"}
+        body = {**got.json(), "default_backend": "fake-agent"}
         put = client.put(f"{API}/settings", json=body, headers={"If-Match": etag} if etag else {})
         assert put.status_code == 200, put.text
         again = client.post(f"{API}/conversations/{conv['id']}/messages", json={"text": "안녕"})

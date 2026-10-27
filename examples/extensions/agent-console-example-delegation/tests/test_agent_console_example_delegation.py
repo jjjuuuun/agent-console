@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     EdgeSpec,
@@ -48,7 +48,7 @@ from agent_console_runtime.testing import InMemoryRecorder, SequentialIds, StepC
 from agent_console_teams import TeamIssueCodes, validate_team
 
 PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
-WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake"}})
+WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake-agent"}})
 GROUPS = (NODE_TYPES_GROUP, EDGE_TYPES_GROUP, DELEGATION_STRATEGIES_GROUP)
 
 
@@ -103,7 +103,7 @@ def make_stack(*, installed: bool = True) -> Stack:
         if ep.group in GROUPS
     ]
     assert all(r.ok for r in load_registries(regs, entry_points=eps))
-    regs.backends.register("fake", FakeBackend(ids=SequentialIds("s"), clock=StepClock()))
+    regs.backends.register("fake-agent", FakeBackend(ids=SequentialIds("s"), clock=StepClock()))
     if installed:
         regs.delegation_strategies.register(STRATEGY_ID, RoundRobinDelegation())
     agents = [

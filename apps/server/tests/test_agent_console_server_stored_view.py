@@ -19,7 +19,7 @@ def test_agent_round_trip_keeps_explicit_defaults_and_omits_unset(tmp_path: Path
     doc: dict[str, Any] = {
         "id": "a1",
         "name": "에이전트",
-        "backend": "fake",
+        "backend": "fake-agent",
         "description": "",  # 기본값과 같은 값을 일부러 지정
         "model": None,  # 명시 null
         "tools": [],  # 명시 빈 목록
@@ -78,7 +78,7 @@ def test_settings_get_put_does_not_grow_file(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     with server(settings) as client:
         assert client.get(f"{API}/settings").json() == {}
-        first = {"default_backend": "fake", "chat": {"busy_policy": "queue"}}
+        first = {"default_backend": "fake-agent", "chat": {"busy_policy": "queue"}}
         assert client.put(f"{API}/settings", json=first).status_code == 200
         [path] = list(settings.workspace_path.rglob("settings*.yaml"))
         before = path.read_text(encoding="utf-8")

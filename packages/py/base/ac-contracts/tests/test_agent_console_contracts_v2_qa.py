@@ -12,7 +12,7 @@ PHASE1_AGENT: dict[str, Any] = {
     "description": "d",
     "labels": ["example"],
     "attributes": {"role": "answer"},
-    "backend": "fake",
+    "backend": "fake-agent",
     "model": None,
     "tools": [],
     "system_prompt": "짧게",

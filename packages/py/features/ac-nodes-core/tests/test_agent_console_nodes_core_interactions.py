@@ -14,7 +14,7 @@ from typing import Any
 import jsonschema
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     EdgeSpec,
@@ -116,13 +116,13 @@ def make_stack(*agents: Agent, clock: ManualClock | None = None) -> Stack:
     reports = load_registries(regs, entry_points=_entry_points())
     assert all(r.ok for r in reports), reports
     backend = _Recording()
-    regs.backends.register("fake", backend)
+    regs.backends.register("fake-agent", backend)
     found = {a.id: a for a in agents}
     services = Services(
         {
             AGENT_LOOKUP: found.get,
             WORKSPACE_SETTINGS: WorkspaceSettings.model_validate(
-                {"agent_defaults": {"backend": "fake"}}
+                {"agent_defaults": {"backend": "fake-agent"}}
             ),
         }
     )

@@ -641,7 +641,7 @@ class FakeHookProbe(BaseModel):
             "error": self.error,
             "decision": {
                 "value": self.decision,
-                "source": "fake",
+                "source": "fake-agent",
                 "reason": fill_template(self.reason, variables),
             },
             "input": fill_template(self.input, variables),

@@ -65,7 +65,7 @@ def _records() -> MemoryRunRecords:
         NodeRun(run_id="r1", node_id="b", status="succeeded", backend_session_id="s2")
     )
     records.events.append(
-        run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake"}),
+        run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake-agent"}),
         run_event(2, "agent.message", {"role": "assistant", "text": "안녕"}),
         run_event(1, "node.started", {"status": "running"}, ("x",), run_id="r2"),
     )

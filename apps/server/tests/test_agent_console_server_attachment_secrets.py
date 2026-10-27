@@ -39,7 +39,12 @@ def _seed(client: TestClient) -> None:
 def test_agent_override_plain_secret_rejected(tmp_path: Path) -> None:
     with server(make_settings(tmp_path)) as client:
         _seed(client)
-        doc = {"id": "a", "name": "a", "backend": "fake", "resources": [{"ref": "gh"}, _att()]}
+        doc = {
+            "id": "a",
+            "name": "a",
+            "backend": "fake-agent",
+            "resources": [{"ref": "gh"}, _att()],
+        }
         assert _paths(client.post(f"{API}/agents", json=doc)) == [
             "/resources/1/config_override/env/API_KEY"
         ]

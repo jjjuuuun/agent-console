@@ -19,7 +19,10 @@
   빈 목록 = 끔) → ``GET /observe-event-prefixes``. 실행·저장은 이 값을 쓰지 않는다.
 - 자식 Run(design §5R.7): 엔진 자식 Run 준비자 = ``RunService.prepare_child``(같은 검사·준비).
 - 시작: legacy 계보 올리기(멱등) → **이전 프로세스의 미종료 Run 정리**(``recover_unfinished_runs``,
-  다른 시작 동작보다 먼저, design §R14.5) → 백엔드 설정 적용(``backends``, 거부되면 시작 실패).
+  다른 시작 동작보다 먼저, design §R14.5) → 백엔드 설정 적용(``backends``, 거부되면 시작 실패)
+  → ``show_hidden_backends``(환경변수 ``<접두어>SHOW_HIDDEN_BACKENDS``)면 개발·테스트용으로 숨긴
+  백엔드(디스크립터 ``ui_hints.hidden``)의 숨김을 푼다(5.2R.105). 꺼져 있으면 화면이 선택지·설정
+  카드에서 뺀다(실행·조회 경로는 그대로).
 - 종료: 실행 중 Run을 "끊김"으로 정리(``shutdown_timeout``). ``runs.starter.shutdown``을 먼저 부른
   모듈이 있으면 그 결과를 기다린다(한 번만 정리).
 """
@@ -43,7 +46,7 @@ from agent_console_runtime import (
     recover_unfinished_runs,
 )
 
-from .backends import build_secret_resolver, configure_backends
+from .backends import build_secret_resolver, configure_backends, reveal_hidden_backends
 from .errors import ERROR_MAP
 from .interactions import InteractionService
 from .observe import observe_event_prefixes_of
@@ -278,6 +281,7 @@ class RunsModule:
         ctx.provide(SERVER_ATTRIBUTES, lambda: {"recovered_runs": len(service.recovered)})
         database = ctx.database
         backend_options = cfg.backends
+        show_hidden_backends = cfg.show_hidden_backends
 
         async def start() -> None:
             if database is not None:
@@ -285,6 +289,8 @@ class RunsModule:
             # 1) 이전 프로세스의 Run·대기 상호작용 정리를 가장 먼저(design §R14.5)
             service.recovered = recover_unfinished_runs(recorder, sink=bus)
             configure_backends(registries, backend_options, secrets=secrets, environ=ctx.environ)
+            if show_hidden_backends:  # 개발·테스트용 백엔드도 선택지·설정 카드에 보인다
+                reveal_hidden_backends(registries)
             redaction.refresh()
             if not service.has_preparers:
                 _log.warning("%s", team_rules_warning().message)

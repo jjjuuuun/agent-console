@@ -10,7 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "agent-console-backend-claude-sdk",
-    "agent-console-backend-fake",
+    "agent-console-backend-fake-agent",
     "agent-console-chat",
     "agent-console-claude-format",
     "agent-console-cli",
@@ -86,7 +86,7 @@ login = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-hook-probe" },
     { name = "agent-console-pty-session" },
     { name = "agent-console-trace" },
@@ -113,7 +113,7 @@ provides-extras = ["hook-probe", "login"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-hook-probe", editable = "packages/py/features/ac-hook-probe" },
     { name = "agent-console-pty-session", editable = "packages/py/features/ac-pty-session" },
     { name = "agent-console-trace", editable = "packages/py/features/ac-trace" },
@@ -126,9 +126,9 @@ dev = [
 ]
 
 [[package]]
-name = "agent-console-backend-fake"
+name = "agent-console-backend-fake-agent"
 version = "0.1.0"
-source = { editable = "packages/py/features/ac-backend-fake" }
+source = { editable = "packages/py/features/ac-backend-fake-agent" }
 dependencies = [
     { name = "agent-console-contracts" },
     { name = "agent-console-runtime" },
@@ -336,7 +336,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "agent-console-backend-claude-sdk" },
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -353,7 +353,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "agent-console-backend-claude-sdk", editable = "packages/py/features/ac-backend-claude-sdk" },
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
@@ -518,7 +518,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-mod-chat" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-mod-runs" },
@@ -540,7 +540,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-mod-chat", editable = "packages/py/modules/ac-mod-chat" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
@@ -711,7 +711,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-link-runs-teams" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-mod-logs" },
@@ -737,7 +737,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-logs", editable = "packages/py/modules/ac-mod-logs" },
@@ -861,7 +861,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-link-definitions-teams" },
     { name = "agent-console-link-runs-teams" },
     { name = "agent-console-mod-definitions" },
@@ -887,7 +887,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-link-definitions-teams", editable = "packages/py/links/ac-link-definitions-teams" },
     { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
@@ -919,7 +919,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-mod-resources" },
     { name = "agent-console-mod-runs" },
@@ -946,7 +946,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-resources", editable = "packages/py/modules/ac-mod-resources" },
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
@@ -1455,7 +1455,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-nodes-core" },
     { name = "httpx" },
@@ -1483,7 +1483,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-nodes-core", editable = "packages/py/features/ac-nodes-core" },
     { name = "httpx", specifier = ">=0.27" },
@@ -1651,7 +1651,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-delegation-host" },
     { name = "agent-console-resources-core" },
     { name = "jsonschema" },
@@ -1675,7 +1675,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-delegation-host", editable = "packages/py/features/ac-delegation-host" },
     { name = "agent-console-resources-core", editable = "packages/py/features/ac-resources-core" },
     { name = "jsonschema", specifier = ">=4.23" },
@@ -1951,7 +1951,7 @@ version = "0.1.0"
 source = { editable = "apps/server" }
 dependencies = [
     { name = "agent-console-backend-claude-sdk", extra = ["login"] },
-    { name = "agent-console-backend-fake" },
+    { name = "agent-console-backend-fake-agent" },
     { name = "agent-console-contracts" },
     { name = "agent-console-delegation-host" },
     { name = "agent-console-hook-probe" },
@@ -2002,7 +2002,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-console-backend-claude-sdk", extras = ["login"], editable = "packages/py/features/ac-backend-claude-sdk" },
-    { name = "agent-console-backend-fake", editable = "packages/py/features/ac-backend-fake" },
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-delegation-host", editable = "packages/py/features/ac-delegation-host" },
     { name = "agent-console-hook-probe", editable = "packages/py/features/ac-hook-probe" },

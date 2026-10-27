@@ -28,7 +28,7 @@ TOKEN = "t" * 32
 
 
 def _agent(name: str, **extra: Any) -> dict[str, Any]:
-    return {"id": "a", "name": name, "backend": "fake", **extra}
+    return {"id": "a", "name": name, "backend": "fake-agent", **extra}
 
 
 def _assembly(tmp_path: Path, *extra: Any, **options: Any) -> Assembly:

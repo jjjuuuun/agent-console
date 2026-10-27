@@ -301,9 +301,10 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
       working_directory: null  # 에이전트 작업 폴더(WORKING_DIRECTORY 서비스). 기본 base_dir
       run_files_dir: runs      # 실행 묶음 파일 폴더(상태 폴더 기준)
       runtime: {max_concurrency: null, cancel_grace: 2.0, event_queue_size: 10000, shutdown_timeout: 10.0}
+      show_hidden_backends: false  # 개발·테스트용 백엔드(디스크립터 ui_hints.hidden, 예: fake-agent)의 숨김 풀기. 환경변수 AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS
       backends:                # 백엔드 id → 그 백엔드의 from_options 훅에 넘길 값(키는 각 백엔드 README)
         claude-agent-sdk: {models: [], allow_command_hooks: false, allow_subscription_auth: true}  # 구독 기본(본인 책임)
-        fake: {models: [], echo_hooks: false}
+        fake-agent: {models: [], echo_hooks: false}
       backend_login: {enabled: true, timeout_s: 300}  # 앱 화면 백엔드 로그인(아래 "백엔드 로그인")
 ```
 

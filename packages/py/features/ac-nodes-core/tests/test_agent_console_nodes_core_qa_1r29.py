@@ -36,13 +36,13 @@ def _stack_with_secret(*agents: Any) -> Stack:
     regs = Registries()
     load_registries(regs, entry_points=_entry_points())
     backend = _Recording()
-    regs.backends.register("fake", backend)
+    regs.backends.register("fake-agent", backend)
     found = {a.id: a for a in agents}
     services = Services(
         {
             AGENT_LOOKUP: found.get,
             WORKSPACE_SETTINGS: WorkspaceSettings.model_validate(
-                {"agent_defaults": {"backend": "fake"}}
+                {"agent_defaults": {"backend": "fake-agent"}}
             ),
         }
     )

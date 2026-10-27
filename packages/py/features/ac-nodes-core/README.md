@@ -13,7 +13,7 @@ uv pip install ./packages/py/features/ac-nodes-core    # 단독
 ```
 
 의존: `agent-console-contracts`, `-registry`, `-runtime`, `-resources`, `-teams`, `pydantic`.
-저장소·라우팅·백엔드 패키지는 모른다. 테스트만 `agent-console-backend-fake`·`-resources-core`를 쓴다.
+저장소·라우팅·백엔드 패키지는 모른다. 테스트만 `agent-console-backend-fake-agent`·`-resources-core`를 쓴다.
 
 ## 등록 (entry point, 이름 = 레지스트리 key = 디스크립터 id)
 
@@ -214,7 +214,7 @@ files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 
 True
 
 >>> agents = {  # 보통은 정의 저장소에서 찾는다
-...     "pl": Agent(id="pl", name="PL", backend="fake", backend_options={"default": {"response": "PL: $prompt"}})
+...     "pl": Agent(id="pl", name="PL", backend="fake-agent", backend_options={"default": {"response": "PL: $prompt"}})
 ... }
 >>> services = Services(
 ...     {

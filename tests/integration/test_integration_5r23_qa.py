@@ -345,7 +345,7 @@ def test_widened_limits_warn_on_effective_settings(tmp_path: Path) -> None:
     with server(make_settings(tmp_path)) as client:
         put = client.put(
             f"{API}/settings",
-            json={"agent_defaults": {"backend": "fake", "limits": {"directories": ["/w"]}}},
+            json={"agent_defaults": {"backend": "fake-agent", "limits": {"directories": ["/w"]}}},
         )
         assert put.status_code == 200, put.text
         seed(client, "wide0")

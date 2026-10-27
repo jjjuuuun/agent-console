@@ -20,7 +20,7 @@ MCP = {
 def test_probe_hand_edited(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     with server(settings) as client:
-        client.post(f"{API}/agents", json={"id": "ok", "name": "ok", "backend": "fake"})
+        client.post(f"{API}/agents", json={"id": "ok", "name": "ok", "backend": "fake-agent"})
         client.post(f"{API}/resources", json={"id": "r1", "type": "instruction", "name": "x"})
         files = list(settings.workspace_path.rglob("ok.yaml")) + list(
             settings.workspace_path.rglob("r1.yaml")

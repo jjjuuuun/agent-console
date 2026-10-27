@@ -31,7 +31,7 @@ pip install agent-console-link-logs-runs
 >>> records = MemoryRunRecords()                 # runs.reader·runs.events 모양
 >>> records.runs.save(run_record("r1"))
 >>> records.events.append(
-...     run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake"}),
+...     run_event(1, "agent.session_started", {"session_id": "s1", "backend": "fake-agent"}),
 ...     run_event(2, "mcp.call_started", {"server": "docs", "tool": "find", "tool_use_id": "t1"}),
 ...     run_event(3, "mcp.call_completed", {"server": "docs", "tool": "find", "tool_use_id": "t1"}),
 ... )

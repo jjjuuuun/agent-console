@@ -60,7 +60,7 @@ class _Events:
             .node(path, "running", call=call, iteration=iteration)
             .add(
                 "agent.session_started",
-                {"session_id": f"s-{tag}-{call}", "backend": "fake"},
+                {"session_id": f"s-{tag}-{call}", "backend": "fake-agent"},
                 path=path,
             )
             .node(path, "succeeded", call=call, iteration=iteration, outputs_preview=f"{tag}끝")
@@ -99,7 +99,7 @@ def test_call_node_runs_are_separate_session_children_per_call() -> None:
     ev = (
         _Events("r")
         .node(["pl"], "running", iteration=0)
-        .add("agent.session_started", {"session_id": "s-pl", "backend": "fake"}, path=["pl"])
+        .add("agent.session_started", {"session_id": "s-pl", "backend": "fake-agent"}, path=["pl"])
         .add(
             "agent.tool_call",
             {"tool_use_id": "t1", "name": "delegate", "input": {"target": "be"}},
@@ -186,7 +186,11 @@ def test_call_counterexamples_use_explicit_ids_only() -> None:
             },
             path=["pl", "be"],
         )
-        .add("agent.session_started", {"session_id": "late", "backend": "fake"}, path=["pl", "be"])
+        .add(
+            "agent.session_started",
+            {"session_id": "late", "backend": "fake-agent"},
+            path=["pl", "be"],
+        )
         # 깊이 초과·순환 거부는 NodeRun 없이 경고만
         .add(
             "log.warning",
@@ -217,9 +221,13 @@ def test_subagent_inside_call_shares_the_call_session() -> None:
     ev = (
         _Events("r")
         .node(["pl"], "running")
-        .add("agent.session_started", {"session_id": "s-pl", "backend": "fake"}, path=["pl"])
+        .add("agent.session_started", {"session_id": "s-pl", "backend": "fake-agent"}, path=["pl"])
         .node(["pl", "be"], "running", call=0)
-        .add("agent.session_started", {"session_id": "s-be", "backend": "fake"}, path=["pl", "be"])
+        .add(
+            "agent.session_started",
+            {"session_id": "s-be", "backend": "fake-agent"},
+            path=["pl", "be"],
+        )
         .add("agent.tool_call", {"tool_use_id": "tu", "name": "Agent"}, path=["pl", "be"])
         .add(
             "agent.subagent_started",
@@ -240,7 +248,7 @@ def test_iterations_are_separate_spans_and_cycle_edge_is_a_link() -> None:
     ev = (
         _Events("r")
         .node(["w"], "running", iteration=0)
-        .add("agent.session_started", {"session_id": "s0", "backend": "fake"}, path=["w"])
+        .add("agent.session_started", {"session_id": "s0", "backend": "fake-agent"}, path=["w"])
         .node(["w"], "succeeded", iteration=0)
         .edge("h1", "w", "rv", "handoff")
         .node(["rv"], "running", iteration=0)
@@ -248,7 +256,7 @@ def test_iterations_are_separate_spans_and_cycle_edge_is_a_link() -> None:
         .edge("back", "rv", "w", "loop")
         .add("loop.iteration", {"edge_id": "back", "iteration": 1, "nodes": ["w", "rv"]})
         .node(["w"], "running", iteration=1)
-        .add("agent.session_started", {"session_id": "s1", "backend": "fake"}, path=["w"])
+        .add("agent.session_started", {"session_id": "s1", "backend": "fake-agent"}, path=["w"])
         .add("agent.usage", {"usage": {"input_tokens": 5}}, path=["w"])
         .node(["w"], "succeeded", iteration=1)
         .edge("h1", "w", "rv", "handoff")

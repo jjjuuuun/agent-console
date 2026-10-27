@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_console_backend_fake import FAKE_READY_STATE, FakeBackend
+from agent_console_backend_fake_agent import FAKE_READY_STATE, FakeBackend
 from agent_console_runtime import (
     BackendCheckContext,
     BackendReadinessService,
@@ -35,6 +35,6 @@ async def test_fake_status_always_ready_and_probe_succeeds() -> None:
 
 async def test_fake_through_service() -> None:
     backend = FakeBackend()
-    svc = BackendReadinessService(lambda: {"fake": backend})
-    assert (await svc.status("fake")).tone == "ok"
-    assert (await svc.probe("fake")).ok is True
+    svc = BackendReadinessService(lambda: {"fake-agent": backend})
+    assert (await svc.status("fake-agent")).tone == "ok"
+    assert (await svc.probe("fake-agent")).ok is True

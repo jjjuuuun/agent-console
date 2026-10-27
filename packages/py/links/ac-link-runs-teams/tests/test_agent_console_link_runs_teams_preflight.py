@@ -16,7 +16,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     HTTP_STATUS_BY_ERROR_CODE,
     BackendUnresolvedDetails,
@@ -27,7 +27,7 @@ from agent_console_contracts import (
 from agent_console_link_runs_teams import BackendFixTexts, TeamRules, module
 from agent_console_mod_definitions import module as definitions
 from agent_console_mod_runs import module as runs
-from agent_console_modkit import BaseServices, Paths, assemble
+from agent_console_modkit import BaseServices, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_runtime import Registries, Services, load_registries
 from agent_console_store import NotFound
@@ -73,14 +73,15 @@ def _graph(graph_id: str, agent_ref: str, *, label: str | None = "응답자") ->
 
 
 @contextmanager
-def _client(tmp_path: Path) -> Iterator[TestClient]:
+def _client(tmp_path: Path, *, show_hidden: bool = True) -> Iterator[TestClient]:
     registries = Registries()
     load_registries(registries)
     base = BaseServices(
         paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
         registries=registries,
     )
-    assembly = assemble([definitions, runs, module], base=base)
+    config = ModulesConfig(options={"mod-runs": {"show_hidden_backends": show_hidden}})
+    assembly = assemble([definitions, runs, module], config, base=base)
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
     app = create_host_app(assembly, policy=policy, error_status=HTTP_STATUS_BY_ERROR_CODE)
     with TestClient(app) as client:
@@ -114,10 +115,11 @@ def test_post_runs_without_backend_is_422_and_records_nothing(tmp_path: Path) ->
         assert "n1" not in error["message"]
         details = BackendUnresolvedDetails.model_validate(error["details"])
         assert [(n.id, n.label) for n in details.nodes] == [("n1", "응답자")]
-        assert "fake" in {o.id for o in details.options}
-        fake = next(o for o in details.options if o.id == "fake")
+        assert "fake-agent" in {o.id for o in details.options}
+        fake = next(o for o in details.options if o.id == "fake-agent")
         assert fake.ui_hints is not None
-        assert fake.ui_hints.badge  # 번들 데이터(체험 배지)
+        assert fake.ui_hints.badge  # 번들 데이터(테스트용 배지)
+        assert fake.ui_hints.hidden is False  # show_hidden_backends로 숨김을 풀었다
         assert fake.cost_note
         actions = error["fix"]["actions"]
         assert [a["target"] for a in actions] == [
@@ -131,13 +133,23 @@ def test_post_runs_without_backend_is_422_and_records_nothing(tmp_path: Path) ->
 
         # 기본값(옛 default_backend도 공통 층으로 읽힌다)을 정하면 실행된다
         got = client.get(f"{API}/settings")
-        body = {**got.json(), "default_backend": "fake"}
+        body = {**got.json(), "default_backend": "fake-agent"}
         etag = got.headers.get("etag")  # 설정 파일이 아직 없으면 ETag 없음
         put = client.put(f"{API}/settings", json=body, headers={"If-Match": etag} if etag else {})
         assert put.status_code == 200, put.text
         run = client.post(f"{API}/runs", json={"graph_id": "solo", "input": {"text": "hi"}})
         assert run.status_code == 202, run.text
         assert _wait(client, run.json()["id"])["run"]["status"] == "completed"
+
+
+def test_hidden_backend_is_not_offered_by_default(tmp_path: Path) -> None:
+    """개발·테스트용 백엔드(``ui_hints.hidden``)는 설치자가 켜지 않으면 선택지에 없다(5.2R.105)."""
+    with _client(tmp_path, show_hidden=False) as client:
+        client.post(f"{API}/agents", json=_agent("helper"))
+        client.post(f"{API}/graphs", json=_graph("solo", "helper"))
+        error = client.post(f"{API}/runs", json={"graph_id": "solo"}).json()["error"]
+        details = BackendUnresolvedDetails.model_validate(error["details"])
+        assert "fake-agent" not in {o.id for o in details.options}
 
 
 def test_label_falls_back_to_agent_name(tmp_path: Path) -> None:
@@ -168,6 +180,12 @@ def test_preflight_with_renamed_backend_and_custom_texts() -> None:
     registries = Registries()
     load_registries(registries)
     registries.backends.register("zz-engine", FakeBackend(backend_id="zz-engine"), replace=True)
+    shown = FakeBackend(backend_id="zz-shown")
+    assert shown.descriptor.ui_hints is not None
+    shown.descriptor = shown.descriptor.model_copy(
+        update={"ui_hints": shown.descriptor.ui_hints.model_copy(update={"hidden": False})}
+    )
+    registries.backends.register("zz-shown", shown, replace=True)
     workspace: dict[str, WorkspaceSettings | None] = {"value": None}
     texts = BackendFixTexts(message_one="[{label}] 백엔드 없음", default_role="prefs")
     rules = TeamRules(
@@ -183,7 +201,9 @@ def test_preflight_with_renamed_backend_and_custom_texts() -> None:
     assert error.message == "[응답자] 백엔드 없음"
     assert error.fix is not None
     assert error.fix.actions[1].target.role == "prefs"
-    assert "zz-engine" in {o["id"] for o in error.details["options"]}
+    offered = {o["id"] for o in error.details["options"]}
+    assert "zz-shown" in offered
+    assert "zz-engine" not in offered  # 숨김 표시(개발·테스트용)는 선택지에서 뺀다
 
     workspace["value"] = WorkspaceSettings.model_validate(
         {"agent_defaults": {"backend": "zz-engine"}}

@@ -1,6 +1,6 @@
 """mod-runs: 실행 경로·WS·재시작 복구·이어 가기 위임·준비자·노드 서비스·경고·꺼짐 404.
 
-노드·백엔드는 설치된 entry point(``ac-nodes-core``·``ac-backend-fake``, dev 의존)에서 읽는다.
+노드·백엔드는 설치된 entry point(``ac-nodes-core``·``ac-backend-fake-agent``, dev 의존)에서 읽는다.
 에이전트 조회 같은 노드 서비스는 테스트용 공급 모듈이 ``runs.services``로 준다(통합 서버에서는
 ``link-runs-teams``).
 """
@@ -114,7 +114,7 @@ def _agent(agent_id: str = "fast") -> dict[str, Any]:
     return {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": "답: $prompt"}},
     }
 
@@ -253,7 +253,7 @@ def test_run_starts_with_injected_services_and_lists(tmp_path: Path) -> None:
         assert client.get(f"{API}/agents/fast/activity").json()
         node_types = {d["id"] for d in client.get(f"{API}/node-types").json()}
         assert {"user", "agent"} <= node_types
-        assert client.get(f"{API}/backends/fake/models").status_code == 200
+        assert client.get(f"{API}/backends/fake-agent/models").status_code == 200
         assert client.get(f"{API}/backends/nope/models").status_code == 404
         assert client.get(f"{API}/runs/missing").status_code == 404
         assert client.get(f"{API}/runs/missing/events").status_code == 404

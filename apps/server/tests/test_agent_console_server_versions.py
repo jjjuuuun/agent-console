@@ -176,7 +176,9 @@ def test_plain_secret_masked_in_diff_and_restore_rejected(tmp_path: Path) -> Non
 
 def test_deleted_agent_is_restored_without_if_match(tmp_path: Path) -> None:
     with server(make_settings(tmp_path)) as client:
-        made = client.post(f"{API}/agents", json={"id": "a1", "name": "에이", "backend": "fake"})
+        made = client.post(
+            f"{API}/agents", json={"id": "a1", "name": "에이", "backend": "fake-agent"}
+        )
         assert made.status_code == 201
         first = _etag(made).strip('"')
         assert client.delete(f"{API}/agents/a1").status_code == 204

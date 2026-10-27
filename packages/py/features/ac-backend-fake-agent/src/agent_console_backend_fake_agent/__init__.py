@@ -1,10 +1,12 @@
-"""agent-console-backend-fake: 모델 없이 결정적 응답을 주는 실행 백엔드(테스트·데모·오프라인).
+"""agent-console-backend-fake-agent: 모델 없이 에이전트 실행을 흉내 내는 개발·테스트용 실행 백엔드.
 
 응답·지연·실패·도구 호출은 `Agent.backend_options`(형식 `FakeBackendOptions`)의
 규칙 데이터로 정한다.
 
 공개 API:
-    - ``FakeBackend``: X3 `ExecutionBackend` 구현(entry point `agent_console.backends:fake`)
+    - ``FakeBackend``: X3 `ExecutionBackend` 구현(entry point
+      `agent_console.backends:fake-agent`, 표시 이름 ``FAKE_BACKEND_TITLE``, 디스크립터
+      `ui_hints.hidden = true`로 사용자 화면에서 기본 숨김)
     - 설정 모델: ``FakeBackendOptions``, ``FakeRule``, ``FakeToolCall``, ``FakeFailure``,
       ``FakeDelegation``, ``FakeAsk``, ``FakeObserve``, ``FakeTaskUsage``, ``fake_config_schema``,
       ``DEFAULT_OBSERVE_SWITCHES``, ``DEFAULT_OBSERVE_COLLECTORS``·``observe_switch_on``
@@ -27,15 +29,17 @@
     - ``FakeInstallOptions``·``FakeRateLimit``: 설치자 설정 형식(``FakeBackend.from_options`` 훅)
     - ``bundle_summary``·``mask_secret_refs``: 실행 묶음 요약
       (응답에 넣는 옵션 `echo_bundle`·템플릿 변수 `$bundle`)
-    - 상수: ``FAKE_BACKEND_ID``, ``DEFAULT_DELEGATE_TOOL``, ``DEFAULT_RESOURCE_SLOTS``,
+    - 상수: ``FAKE_BACKEND_ID``(`fake-agent`), ``FAKE_BACKEND_TITLE``,
+      ``DEFAULT_DELEGATE_TOOL``, ``DEFAULT_RESOURCE_SLOTS``,
       ``EMPTY_BUNDLE``
 """
 
-from agent_console_backend_fake._backend import (
+from agent_console_backend_fake_agent._backend import (
     DEFAULT_DELEGATE_TOOL,
     DEFAULT_HOOK_PROBE_FOLDER,
     DEFAULT_RESOURCE_SLOTS,
     FAKE_BACKEND_ID,
+    FAKE_BACKEND_TITLE,
     FAKE_READY_STATE,
     HOOK_PROBE_NOTE_CODE,
     UNKNOWN_HOST_TOOL_TEXT,
@@ -43,8 +47,8 @@ from agent_console_backend_fake._backend import (
     FakeInstallOptions,
     HostCallStatus,
 )
-from agent_console_backend_fake._bundle import EMPTY_BUNDLE, bundle_summary, mask_secret_refs
-from agent_console_backend_fake._config import (
+from agent_console_backend_fake_agent._bundle import EMPTY_BUNDLE, bundle_summary, mask_secret_refs
+from agent_console_backend_fake_agent._config import (
     DEFAULT_OBSERVE_COLLECTORS,
     DEFAULT_OBSERVE_SWITCHES,
     DEFAULT_PROBE_FORMAT,
@@ -64,7 +68,7 @@ from agent_console_backend_fake._config import (
     fake_config_schema,
     observe_switch_on,
 )
-from agent_console_backend_fake._login import (
+from agent_console_backend_fake_agent._login import (
     FAKE_LOGIN_METHOD_ID,
     FAKE_LOGIN_REQUIRED_STATE,
     FakeLoginScript,
@@ -82,6 +86,7 @@ __all__ = [
     "DEFAULT_RESOURCE_SLOTS",
     "EMPTY_BUNDLE",
     "FAKE_BACKEND_ID",
+    "FAKE_BACKEND_TITLE",
     "FAKE_LOGIN_METHOD_ID",
     "FAKE_LOGIN_REQUIRED_STATE",
     "FAKE_READY_STATE",

@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_conditions import (
     CONDITION_OPERATORS_GROUP,
     ConditionIssueCodes,
@@ -299,12 +299,12 @@ def make_stack(*agents: Agent) -> Stack:
     regs = Registries()
     eps = [ep for ep in importlib.metadata.distribution(DIST).entry_points if ep.group in GROUPS]
     assert all(r.ok for r in load_registries(regs, entry_points=eps))
-    regs.backends.register("fake", FakeBackend(ids=SequentialIds("s"), clock=StepClock()))
+    regs.backends.register("fake-agent", FakeBackend(ids=SequentialIds("s"), clock=StepClock()))
     found = {a.id: a for a in agents}
     services: dict[Any, Any] = {
         AGENT_LOOKUP: found.get,
         WORKSPACE_SETTINGS: WorkspaceSettings.model_validate(
-            {"agent_defaults": {"backend": "fake"}}
+            {"agent_defaults": {"backend": "fake-agent"}}
         ),
     }
     return Stack(regs, InMemoryRecorder(), services)

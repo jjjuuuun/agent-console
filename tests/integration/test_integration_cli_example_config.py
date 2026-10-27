@@ -21,10 +21,10 @@ def test_example_config_boots_server(tmp_path: Path) -> None:
         EXAMPLE_CONFIG, environ={}, overrides={"workspace": str(tmp_path / "ws")}
     )
     assert "http://127.0.0.1:4173" in settings.security.allowed_origins
-    assert settings.modules.options["mod-runs"]["backends"]["fake"]["rate_limits"]
+    assert settings.modules.options["mod-runs"]["backends"]["fake-agent"]["rate_limits"]
     app = create_app(settings, environ={}, token="t")
     with TestClient(app, base_url=f"http://127.0.0.1:{settings.port}") as client:
-        models = client.get("/api/v1/backends/fake/models").json()
+        models = client.get("/api/v1/backends/fake-agent/models").json()
         assert [m["id"] for m in models] == ["fake-small"]
         statuses = {m["id"]: m["status"] for m in client.get("/api/v1/modules").json()}
         assert all(state == "active" for state in statuses.values()), statuses

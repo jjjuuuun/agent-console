@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     DelegationSettings,
@@ -72,7 +72,7 @@ from agent_console_teams import TeamIssueCodes, team_plan, validate_team
 
 DIST = "agent-console-nodes-core"
 GROUPS = (NODE_TYPES_GROUP, EDGE_TYPES_GROUP, DELEGATION_STRATEGIES_GROUP, INTERACTION_KINDS_GROUP)
-WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake"}})
+WORKSPACE = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake-agent"}})
 
 
 class Recording(FakeBackend):
@@ -222,7 +222,7 @@ def make_stack(*agents: Agent) -> Stack:
     assert all(r.ok for r in load_registries(regs, entry_points=eps))
     regs.node_types.register("t.park", ParkNode())
     backend = Recording()
-    regs.backends.register("fake", backend)
+    regs.backends.register("fake-agent", backend)
     return Stack(regs, InMemoryRecorder(), backend, Shelf(), {a.id: a for a in agents})
 
 
@@ -295,7 +295,7 @@ def test_team_descriptor_is_data() -> None:
 
 
 def test_session_path_keys_and_reply_picking() -> None:
-    ref = SessionRef(backend="fake", session_id="s1")
+    ref = SessionRef(backend="fake-agent", session_id="s1")
     sessions = {"lead": ref, "T/a": ref, "T/U/b": ref, "TX/c": ref, "T/": ref}
     assert child_sessions(sessions, "T") == {"a": ref, "U/b": ref}
     assert child_sessions(child_sessions(sessions, "T"), "U") == {"b": ref}
@@ -470,7 +470,7 @@ async def test_nesting_limit_is_enforced_at_run_time() -> None:
     assert t_run.error.details["child_run_id"] == child.id
     # 정적 검사도 같은 코드
     ws = WorkspaceSettings.model_validate(
-        {"agent_defaults": {"backend": "fake"}, "delegation": {"max_nesting": 1}}
+        {"agent_defaults": {"backend": "fake-agent"}, "delegation": {"max_nesting": 1}}
     )
     codes = [i.code for i in stack.issues(parent) if i.severity == "error"]
     assert codes == []
@@ -648,9 +648,9 @@ async def test_team_node_inside_loop_runs_child_each_iteration() -> None:
 async def test_sessions_use_path_keys() -> None:
     stack = make_stack(agent("lead"), agent("c1"))
     stack.shelf.add(chain("child", n("c1")))
-    ref = SessionRef(backend="fake", session_id="sess-c1")
+    ref = SessionRef(backend="fake-agent", session_id="sess-c1")
     stack.extra[SESSIONS] = {
-        "lead": SessionRef(backend="fake", session_id="sess-lead"),
+        "lead": SessionRef(backend="fake-agent", session_id="sess-lead"),
         "T/c1": ref,
     }
     run = await stack.run(chain("parent", n("lead"), team_node("T", "child")), "x")

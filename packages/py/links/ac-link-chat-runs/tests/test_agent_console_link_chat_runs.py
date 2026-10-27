@@ -73,7 +73,7 @@ def _assembly(
 async def test_turn_launcher_passes_sessions_as_node_service() -> None:
     starter = LocalRunStarter()
     launcher = RuntimeTurnLauncher(starter)
-    sessions = {"pl": SessionRef(backend="fake", session_id="s1", data={"k": 1})}
+    sessions = {"pl": SessionRef(backend="fake-agent", session_id="s1", data={"k": 1})}
     handle = await launcher.start_turn(
         TurnStart(
             conversation_id="c1",

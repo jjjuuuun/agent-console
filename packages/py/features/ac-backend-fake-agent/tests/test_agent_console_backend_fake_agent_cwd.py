@@ -3,15 +3,15 @@
 
 from __future__ import annotations
 
-from agent_console_backend_fake import FakeBackend
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent import FakeBackend
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent
 from agent_console_runtime import AgentRequest, CancelToken
 
 
 def _agent() -> Agent:
     options = {"default": {"response": "cwd=[$cwd]"}}
-    return Agent(id="a1", name="에이전트", backend="fake", backend_options=options)
+    return Agent(id="a1", name="에이전트", backend="fake-agent", backend_options=options)
 
 
 async def test_cwd_template_variable() -> None:

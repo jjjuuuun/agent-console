@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     EdgeSpec,
@@ -76,7 +76,7 @@ def make_runtime(
     for key, edge_type in (extra or {}).items():
         regs.edge_types.register(key, edge_type)
     backend = _Recording()
-    regs.backends.register("fake", backend)
+    regs.backends.register("fake-agent", backend)
     agents = {
         a.id: a
         for a in (
@@ -94,7 +94,7 @@ def make_runtime(
         {
             AGENT_LOOKUP: agents.get,
             WORKSPACE_SETTINGS: WorkspaceSettings.model_validate(
-                {"agent_defaults": {"backend": "fake"}}
+                {"agent_defaults": {"backend": "fake-agent"}}
             ),
         }
     )

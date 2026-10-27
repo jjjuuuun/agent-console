@@ -28,7 +28,7 @@ from agent_console_modkit.testing import fake_module
 from agent_console_store import DEFAULT_KINDS, FileDefinitionStore
 
 TOKEN = "t" * 32
-AGENT = {"id": "rev", "name": "리뷰어", "backend": "fake", "system_prompt": "너는 리뷰어다."}
+AGENT = {"id": "rev", "name": "리뷰어", "backend": "fake-agent", "system_prompt": "너는 리뷰어다."}
 REQUEST = {"exporter": "claude-dir", "items": [{"kind": "agent", "id": "rev"}]}
 
 

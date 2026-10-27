@@ -1,7 +1,7 @@
 """link-runs-teams: 팀 규칙 검사·실행 준비·노드 서비스·목록 검증 요약·검증 경로, 포트 계약.
 
 정의 모듈(``mod-definitions``)·실행 모듈(``mod-runs``)은 dev 의존이다(이 패키지는 import하지
-않는다). 노드·백엔드는 설치된 entry point(``ac-nodes-core``·``ac-backend-fake``)에서 읽는다.
+않는다). 노드·백엔드는 설치된 entry point(``ac-nodes-core``·``ac-backend-fake-agent``)에서 읽는다.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def _agent(agent_id: str) -> dict[str, Any]:
     return {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake",
+        "backend": "fake-agent",
         "backend_options": {"default": {"response": "답: $prompt"}},
     }
 

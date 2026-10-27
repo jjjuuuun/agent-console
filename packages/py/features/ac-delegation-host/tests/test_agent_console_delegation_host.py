@@ -27,7 +27,7 @@ from claude_agent_sdk import (
 
 from agent_console_backend_claude_sdk import ClaudeSdkBackend, host_tool_rule
 from agent_console_backend_claude_sdk.testing import FakeSdkClient, SdkToolCall, ValidatingSink
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import (
     Agent,
     AgentSettings,
@@ -131,7 +131,7 @@ class HostLead:
 
     async def execute(self, ctx: NodeContext, inputs: Mapping[str, Any]) -> NodeResult:
         agent = Agent.model_validate(ctx.config["agent"])
-        backend_id = str(ctx.config.get("backend", "fake"))
+        backend_id = str(ctx.config.get("backend", "fake-agent"))
         request = AgentRequest(agent=agent, prompt=str(inputs.get("in", "")))
         members: list[DelegationMember] = []
         strategy_id: str | None = None
@@ -221,7 +221,7 @@ def make_stack() -> Stack:
     regs.edge_types.register(HOST_EDGE, HostEdge())
     regs.delegation_strategies.register(HOST, HostDelegation())
     fake = FakeBackend(ids=SequentialIds("s"), clock=StepClock())
-    regs.backends.register("fake", fake)
+    regs.backends.register("fake-agent", fake)
     regs.backends.register("plain", NoHostTools(fake))
     return Stack(regs, InMemoryRecorder())
 
@@ -319,7 +319,7 @@ def _plan(config: Mapping[str, Any] | None = None, **members: str) -> Delegation
     return DelegationPlan(
         strategy=HOST,
         delegator_node_id="lead",
-        backend="fake",
+        backend="fake-agent",
         request=AgentRequest(agent=Agent(id="lead", name="lead"), prompt="p"),
         members=[
             DelegationMember(node_id=k, edge_id=f"lead->{k}", role=k.upper(), delegate_when=v)

@@ -21,7 +21,7 @@ from agent_console_contracts import (
     UpdateConversationRequest,
 )
 
-REF = SessionRef(backend="fake", session_id="s")
+REF = SessionRef(backend="fake-agent", session_id="s")
 
 
 def _graph(graph_id: str, *nodes: str) -> Graph:
@@ -117,7 +117,7 @@ def test_root_run_sessions_default_reads_own_events() -> None:
                 ts=1.0,
                 node_path=["pl"],
                 type="agent.session_started",
-                payload={"session_id": "s", "backend": "fake"},
+                payload={"session_id": "s", "backend": "fake-agent"},
             )
         ]
     )

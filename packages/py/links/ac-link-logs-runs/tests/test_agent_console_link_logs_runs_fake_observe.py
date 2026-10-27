@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_console_backend_fake import FakeBackend
-from agent_console_backend_fake.testing import ValidatingSink
+from agent_console_backend_fake_agent import FakeBackend
+from agent_console_backend_fake_agent.testing import ValidatingSink
 from agent_console_contracts import Agent
 from agent_console_link_logs_runs.testing import PlatformRunsRig, run_record
 from agent_console_logs import query_context
@@ -44,7 +44,7 @@ async def _fake_events(observe: dict[str, Any]) -> ValidatingSink:
     agent = Agent(
         id="a",
         name="A",
-        backend="fake",
+        backend="fake-agent",
         backend_options={
             "default": {
                 "response": "ok",

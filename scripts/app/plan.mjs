@@ -9,6 +9,8 @@ export const DEFAULT_SERVER_PORT = 8765;
 export const DEFAULT_WEB_HOST = "127.0.0.1";
 export const DEFAULT_WEB_PORT = 4173;
 export const WEB_PACKAGE = "@agent-console/web";
+/** 개발·테스트용으로 숨긴 백엔드(가짜 에이전트 등)를 화면에 보이게 하는 서버 환경변수(mod-runs `show_hidden_backends`). */
+export const SHOW_HIDDEN_BACKENDS_ENV = "AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS";
 
 export const USAGE = `사용: pnpm app [옵션] [-- serve 추가 인자]
 
@@ -21,6 +23,9 @@ export const USAGE = `사용: pnpm app [옵션] [-- serve 추가 인자]
   --web-port N    웹 미리보기 포트   (환경 AGENT_CONSOLE_WEB_PORT, 기본 ${DEFAULT_WEB_PORT})
   --config PATH   서버 설정 파일     (없으면 AGENT_CONSOLE_CONFIG → ./agent-console.yaml)
   --build         웹을 다시 빌드한다(apps/web/dist가 없으면 항상 빌드)
+
+개발 실행이므로 개발·테스트용 백엔드(가짜 에이전트 fake-agent)를 화면에 보인다(서버 환경 ${SHOW_HIDDEN_BACKENDS_ENV}=1).
+숨기려면 ${SHOW_HIDDEN_BACKENDS_ENV}=0으로 실행한다.
   -h, --help      이 도움말
 
 예: pnpm app -- --disable-module mod-exports`;
@@ -131,7 +136,8 @@ export function buildPlan(opts, { env, webDistExists }) {
   serveArgs.push(...opts.serveArgs);
   return {
     build: opts.build || !webDistExists ? { command: "pnpm", args: ["--filter", WEB_PACKAGE, "build"] } : null,
-    server: { command: "uv", args: serveArgs, env: {} },
+    // 개발 실행: 숨긴 개발·테스트용 백엔드를 보인다(이미 정한 값이 있으면 그대로).
+    server: { command: "uv", args: serveArgs, env: { [SHOW_HIDDEN_BACKENDS_ENV]: env[SHOW_HIDDEN_BACKENDS_ENV] ?? "1" } },
     web: {
       command: "pnpm",
       args: ["--filter", WEB_PACKAGE, "preview", "--host", opts.webHost, "--port", String(opts.webPort), "--strictPort"],

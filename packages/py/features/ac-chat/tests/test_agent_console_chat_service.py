@@ -382,14 +382,14 @@ async def test_sessions_saved_and_passed_to_next_turn() -> None:
                 run.id,
                 1,
                 "agent.session_started",
-                {"session_id": "s-old", "backend": "fake"},
+                {"session_id": "s-old", "backend": "fake-agent"},
                 node_path=["pl"],
             ),
             _event(
                 run.id,
                 2,
                 "agent.session_started",
-                {"session_id": "s-pl", "backend": "fake"},
+                {"session_id": "s-pl", "backend": "fake-agent"},
                 node_path=["pl"],
             ),
             # 서브에이전트(위임자 세션 안)는 따로 저장하지 않는다
@@ -397,7 +397,7 @@ async def test_sessions_saved_and_passed_to_next_turn() -> None:
                 run.id,
                 3,
                 "agent.session_started",
-                {"session_id": "s-sub", "backend": "fake"},
+                {"session_id": "s-sub", "backend": "fake-agent"},
                 node_path=["pl", "be"],
             ),
             _event(run.id, 4, "agent.session_started", {"bad": True}, node_path=["qa"]),
@@ -405,11 +405,13 @@ async def test_sessions_saved_and_passed_to_next_turn() -> None:
     )
     await env.service.wait_idle()
     assert env.service.get(conv.id).sessions == {
-        "pl": SessionRef(backend="fake", session_id="s-pl")
+        "pl": SessionRef(backend="fake-agent", session_id="s-pl")
     }
     run2 = await _post(env, conv.id, "둘")
     assert isinstance(run2, Run)
-    assert env.launcher.started[1].sessions == {"pl": SessionRef(backend="fake", session_id="s-pl")}
+    assert env.launcher.started[1].sessions == {
+        "pl": SessionRef(backend="fake-agent", session_id="s-pl")
+    }
     # 이번 턴에 돌지 않은 노드의 세션은 유지하고 돈 노드는 갱신
     env.launcher.finish(
         run2.id,
@@ -418,15 +420,15 @@ async def test_sessions_saved_and_passed_to_next_turn() -> None:
                 run2.id,
                 1,
                 "agent.session_started",
-                {"session_id": "s-qa", "backend": "fake"},
+                {"session_id": "s-qa", "backend": "fake-agent"},
                 node_path=["qa"],
             ),
         ],
     )
     await env.service.wait_idle()
     assert env.service.get(conv.id).sessions == {
-        "pl": SessionRef(backend="fake", session_id="s-pl"),
-        "qa": SessionRef(backend="fake", session_id="s-qa"),
+        "pl": SessionRef(backend="fake-agent", session_id="s-pl"),
+        "qa": SessionRef(backend="fake-agent", session_id="s-qa"),
     }
 
 
@@ -437,8 +439,8 @@ async def test_switch_graph_drops_sessions_of_missing_nodes() -> None:
         conv.model_copy(
             update={
                 "sessions": {
-                    "pl": SessionRef(backend="fake", session_id="1"),
-                    "qa": SessionRef(backend="fake", session_id="2"),
+                    "pl": SessionRef(backend="fake-agent", session_id="1"),
+                    "qa": SessionRef(backend="fake-agent", session_id="2"),
                 }
             }
         )

@@ -130,6 +130,18 @@ class RunsModuleSettings(BaseModel):
         description="실행 방식 id → 그 실행 방식이 받는 설치 옵션(키는 실행 방식이 정한다).",
         json_schema_extra=x_ui(tier="advanced"),
     )
+    show_hidden_backends: bool = Field(
+        default=False,
+        title="숨긴 실행 방식 보이기",
+        description=(
+            "개발·테스트용으로 숨겨 둔 실행 방식(예: 가짜 에이전트)을 선택지와 설정 카드에 "
+            "보이게 한다. 꺼 두어도 이미 지정한 정의는 그대로 실행된다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            when="테스트·e2e·화면 개발에서 모델을 부르지 않는 실행 방식을 고를 때 켭니다.",
+        ),
+    )
     working_directory: Path | None = Field(
         default=None,
         title="작업 폴더",
@@ -220,12 +232,14 @@ SETTINGS_COMPAT = SettingsCompat(
     env=(
         EnvSetting("WORKING_DIRECTORY", ("working_directory",)),
         EnvSetting("MAX_CONCURRENCY", ("runtime", "max_concurrency")),
+        EnvSetting("SHOW_HIDDEN_BACKENDS", ("show_hidden_backends",)),
     ),
     seeds=(SeedSetting("min_redact_chars", "secrets.min_redact_chars"),),
 )
 """호스트 설정 호환: 옛 최상위 ``runtime``·``backends``·``working_directory``는 4R.18에서 읽기
 호환을 끝냈다(``settings.removed_key`` 오류로 새 위치 안내). 환경변수
-``<접두어>WORKING_DIRECTORY``·``MAX_CONCURRENCY``는 이 모듈 설정으로 들어간다. 호스트
+``<접두어>WORKING_DIRECTORY``·``MAX_CONCURRENCY``·``SHOW_HIDDEN_BACKENDS``는 이 모듈 설정으로
+들어간다. 호스트
 ``secrets.min_redact_chars``는
 기록 가리기 최소 길이의 기본값이다."""
 

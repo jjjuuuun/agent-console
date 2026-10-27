@@ -8,7 +8,7 @@ from claude_agent_sdk import RateLimitEvent, RateLimitInfo
 
 from agent_console_backend_claude_sdk import ClaudeSdkBackend
 from agent_console_backend_claude_sdk.testing import FakeSdkClient, ListeningSink, ValidatingSink
-from agent_console_backend_fake import FakeBackend
+from agent_console_backend_fake_agent import FakeBackend
 from agent_console_contracts import Agent, Limits, ResourceBundle
 from agent_console_runtime import AgentRequest, CancelToken, SubagentSpec
 from agent_console_trace import build_trace

@@ -45,7 +45,7 @@ OTHER = Graph(id="other", name="다른", nodes=[NodeSpec(id="T", type="nest")])
 
 
 def _ref(sid: str) -> SessionRef:
-    return SessionRef(backend="fake", session_id=sid)
+    return SessionRef(backend="fake-agent", session_id=sid)
 
 
 def _run(rid: str, created: float, **lineage: Any) -> Run:
@@ -69,7 +69,7 @@ def _session(run_id: str, seq: int, node_path: list[str], sid: str) -> RunEvent:
         ts=float(seq),
         node_path=node_path,
         type="agent.session_started",
-        payload={"session_id": sid, "backend": "fake"},
+        payload={"session_id": sid, "backend": "fake-agent"},
     )
 
 

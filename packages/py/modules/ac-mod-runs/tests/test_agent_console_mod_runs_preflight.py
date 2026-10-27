@@ -132,7 +132,7 @@ def _client(tmp_path: Path, *preparers: Any) -> Iterator[tuple[TestClient, RunSe
         {
             "id": "fast",
             "name": "fast",
-            "backend": "fake",
+            "backend": "fake-agent",
             "backend_options": {"default": {"response": "ok"}},
         },
     )

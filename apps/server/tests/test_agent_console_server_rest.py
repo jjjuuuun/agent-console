@@ -42,8 +42,8 @@ def test_agent_console_server_descriptors(client: TestClient) -> None:
     edge_types = {d["id"] for d in client.get(f"{API}/edge-types").json()}
     assert {"subagent", "handoff", "data", "uses", "message", "reply"} <= edge_types
     backends = {d["id"] for d in client.get(f"{API}/backends").json()}
-    assert {"fake", "claude-agent-sdk"} <= backends
-    assert client.get(f"{API}/backends/fake/models").json() == []
+    assert {"fake-agent", "claude-agent-sdk"} <= backends
+    assert client.get(f"{API}/backends/fake-agent/models").json() == []
     missing = client.get(f"{API}/backends/nope/models")
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "not_found"
@@ -216,10 +216,12 @@ def test_agent_console_server_settings(client: TestClient) -> None:
     assert default.status_code == 200
     assert default.json() == {}  # 파일 없음 → 원문 없음(기본값은 유효 설정 API가)
     assert "etag" not in default.headers
-    saved = client.put(f"{API}/settings", json={"default_entry": "flow", "default_backend": "fake"})
+    saved = client.put(
+        f"{API}/settings", json={"default_entry": "flow", "default_backend": "fake-agent"}
+    )
     assert saved.status_code == 200
     etag = saved.headers["etag"]
-    assert client.get(f"{API}/settings").json()["default_backend"] == "fake"
+    assert client.get(f"{API}/settings").json()["default_backend"] == "fake-agent"
     stale = client.put(f"{API}/settings", json={}, headers={"If-Match": "nope"})
     assert stale.status_code == 412
     assert client.put(f"{API}/settings", json={}, headers={"If-Match": etag}).status_code == 200
@@ -237,7 +239,7 @@ def test_agent_console_server_default_backend_from_settings(client: TestClient) 
     assert blocked.status_code == 422
     assert blocked.json()["error"]["code"] == "backend.unresolved"
     assert client.get(f"{API}/runs").json() == []
-    client.put(f"{API}/settings", json={"default_backend": "fake"})
+    client.put(f"{API}/settings", json={"default_backend": "fake-agent"})
     run = client.post(f"{API}/runs", json={"graph_id": "flow", "input": {"request": "?"}}).json()
     assert wait_run(client, run["id"])["run"]["status"] == "completed"
 

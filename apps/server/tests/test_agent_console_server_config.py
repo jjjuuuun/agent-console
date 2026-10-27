@@ -143,7 +143,7 @@ def test_removed_preset_keys_are_rejected(tmp_path: Path) -> None:
     # 같은 이름이 다른 모듈 설정 아래에 있는 것은 상관없다(경로 단위 검사, 모듈 스키마가 검증).
     other = tmp_path / "other.yaml"
     other.write_text(
-        "modules:\n  options:\n    mod-runs: {backends: {fake: {presets: true}}}\n",
+        "modules:\n  options:\n    mod-runs: {backends: {fake-agent: {presets: true}}}\n",
         encoding="utf-8",
     )
     load_settings(other, environ={})

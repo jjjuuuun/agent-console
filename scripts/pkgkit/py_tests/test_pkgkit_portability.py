@@ -15,7 +15,9 @@ from pkgkit_testkit import kinds as kinds_of
 def _plans(tmp_path: Path, **kw: object) -> dict[str, pt.PackagePlan]:
     cfg = make_workspace(tmp_path / "repo")
     root = tmp_path / "repo"
-    add_package(root, cfg, "feature", "ac-notes", dev_dependencies=["agent-console-backend-fake"])
+    add_package(
+        root, cfg, "feature", "ac-notes", dev_dependencies=["agent-console-backend-fake-agent"]
+    )
     add_package(root, cfg, "module", "ac-mod-notes", dependencies=["agent-console-notes"])
     kinds = kinds_of()
     kw.setdefault("wheelhouse", root / "dist/wheelhouse")
@@ -48,7 +50,7 @@ def test_plan_steps_and_wheelhouse_index(tmp_path: Path) -> None:
     assert index["format"] == "flat"
     assert index["url"].startswith("file://")
     assert "explicit" not in index, "명시 인덱스면 사내 간접 의존을 못 찾는다"
-    assert lib.missing_wheels == ("agent-console-backend-fake",)
+    assert lib.missing_wheels == ("agent-console-backend-fake-agent",)
     assert mod.missing_wheels == ("agent-console-modkit", "agent-console-notes")
 
 

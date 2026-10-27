@@ -54,6 +54,7 @@ describe("buildPlan", () => {
     ]);
     expect(plan.web.args).toEqual(["--filter", "@agent-console/web", "preview", "--host", "127.0.0.1", "--port", "4173", "--strictPort"]);
     expect(plan.web.env).toEqual({ AGENT_CONSOLE_SERVER_URL: "http://127.0.0.1:9100" });
+    expect(plan.server.env).toEqual({ AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS: "1" });
     expect(plan.urls).toEqual({ server: "http://127.0.0.1:9100", web: "http://127.0.0.1:4173" });
   });
 
@@ -66,6 +67,10 @@ describe("buildPlan", () => {
     const plan = buildPlan(parseAppArgs(["--config", "my.yaml"], {}), { env: { AGENT_CONSOLE_SERVER_URL: "http://x:1" }, webDistExists: true });
     expect(plan.server.args).toContain("--config");
     expect(plan.web.env.AGENT_CONSOLE_SERVER_URL).toBe("http://x:1");
+  });
+
+  it("개발 실행은 숨긴 백엔드를 보이되, 이미 정한 환경값은 따른다(5.2R.105)", () => {
+    expect(buildPlan(parseAppArgs([], {}), { env: { AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS: "0" }, webDistExists: true }).server.env).toEqual({ AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS: "0" });
   });
 });
 

@@ -75,7 +75,7 @@ def team_issues(regs: Registries, graph: Graph) -> list[Any]:
         node_types=catalog.node_types,
         edge_types=catalog.edge_types,
         strategies=catalog.strategies.values(),
-        workspace=WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake"}}),
+        workspace=WorkspaceSettings.model_validate({"agent_defaults": {"backend": "fake-agent"}}),
         resolve_ports=port_resolver(regs),
     )
 
