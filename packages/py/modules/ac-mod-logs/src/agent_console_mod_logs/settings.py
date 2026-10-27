@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_console_contracts import x_ui
 from agent_console_logs import (
@@ -165,6 +165,27 @@ class LogsModuleSettings(BaseModel):
         ),
         json_schema_extra=x_ui(tier="advanced"),
     )
+
+    base_taxonomy_file: Path | Literal[False] | None = Field(
+        default=None,
+        title="기본 분류 체계 파일",
+        description=(
+            "기본 로그 분류로 쓸 YAML 파일. 비우면 패키지 기본, false나 빈 문자열이면 "
+            "기본 분류 없음. 상대 경로는 설정 파일 폴더 기준."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example="logs-taxonomy.yaml",
+            when="패키지 기본 분류를 통째로 바꾸거나 끌 때.",
+        ),
+    )
+
+    @field_validator("base_taxonomy_file", mode="before")
+    @classmethod
+    def _blank_is_off(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return False
+        return value
 
     def title_rules(self) -> tuple[SessionTitleRule, ...] | None:
         """``session_title_rules`` → 질의 규칙(None = 패키지 기본 데이터)."""

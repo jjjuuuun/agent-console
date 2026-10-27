@@ -50,6 +50,14 @@ True
 `annotate_issues`), 노드 서비스 `ERROR_FIXES`로 노드 실패(자식 Run의 `agent.no_backend` 등)에도 붙인다.
 다른 표는 `load_issue_fixes(텍스트)`로 만들어 `TeamRules(issue_fixes=)`에 넘긴다.
 
+서버에서는 설치자 옵션(`modules.options.link-runs-teams`, `RunsTeamsLinkSettings`)으로 바꾸거나 끈다.
+
+| 키 | 기본 | 뜻 |
+| --- | --- | --- |
+| `issue_fixes_file` | null | 해결 버튼 표 JSON 파일. null·빈 문자열 = 패키지 기본(`DEFAULT_ISSUE_FIXES`), 경로 = 그 파일(상대 경로는 설정 파일 폴더 기준, 없으면 경고 후 빈 표), `{"rules": []}` 파일 = 버튼 없음 |
+
+`issue_fixes_of(경로, 기준 폴더)`가 옵션 값을 표로 바꾼다(모듈 밖에서도 쓴다).
+
 ```python
 >>> from agent_console_link_runs_teams import DEFAULT_ISSUE_FIXES
 >>> fix = DEFAULT_ISSUE_FIXES.fix_for("team.no_entry", team_kind="graph", graph_id="g1")

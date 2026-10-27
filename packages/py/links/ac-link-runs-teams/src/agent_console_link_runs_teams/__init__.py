@@ -11,7 +11,8 @@
       ``TeamRunPreparation``(+ Run 맥락 ``run_context`` — 유효 작업 폴더 ``RUN_CONTEXT_CWD``),
       사전 점검 오류 ``backend_unresolved_error``(문구·해결 버튼 데이터 ``BackendFixTexts``),
       검증 이슈·노드 실패 해결 버튼 표 ``IssueFixes``(기본 데이터 ``DEFAULT_ISSUE_FIXES``,
-      ``load_issue_fixes``),
+      ``load_issue_fixes``, 설치자 옵션 ``RunsTeamsLinkSettings.issue_fixes_file``·
+      ``issue_fixes_of``),
       ``ValidationSummaries``(목록 검증 요약), ``GraphValidationCache``·``workspace_revision``.
     - ``build_router``: ``POST /graphs/{id}/validate``(엔진 + 팀 규칙 + 저장 전 정의 검사의
       경고·정보 — ``definition_check_issues``·``with_definition_checks``).
@@ -45,6 +46,7 @@ from .ports import (
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
 from .routes import build_router
 from .rules import RUN_CONTEXT_CWD, TeamRules, TeamRunPreparation, ValidationSummaries
+from .settings import RunsTeamsLinkSettings, issue_fixes_of
 
 __all__ = [
     "DEFAULT_BACKEND_FIX_TEXTS",
@@ -70,12 +72,14 @@ __all__ = [
     "IssueFixes",
     "RunChecker",
     "RunsTeamsLink",
+    "RunsTeamsLinkSettings",
     "TeamRules",
     "TeamRunPreparation",
     "ValidationSummaries",
     "backend_unresolved_error",
     "build_router",
     "definition_check_issues",
+    "issue_fixes_of",
     "load_issue_fixes",
     "module",
     "with_definition_checks",

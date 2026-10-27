@@ -56,6 +56,7 @@
 | `archive_file_prefix` | `agent-console-logs` | 보관본 파일 이름 앞부분(`<앞부분>-<UTC 시각>.json\|html`) |
 | `archive_title` | `Agent Console 로그 보관본` | 보관본 HTML 제목 |
 | `session_title_rules` | null | 세션 제목 순위 규칙 `[{tag, pick: first\|last}]`(위에서부터, 후보가 있는 첫 규칙). null = `agent-console-logs` 기본 데이터, `[]` = 제목 없음 |
+| `base_taxonomy_file` | null | 기본 분류 체계 YAML 파일. null = `agent-console-logs` 기본 데이터(`default_taxonomy.yaml`), 경로 = 그 파일(없으면 경고 후 빈 분류), `false`·빈 문자열 = 기본 분류 없음(워크스페이스 설정 `logs.taxonomy`만 얹힌다) |
 
 보관본(`/logs/archive`)은 필터 범위의 이벤트(본문은 `max_detail_bytes`까지)·세션·줄·근거 연결·유효 분류 체계를
 담는다(`limit`·`cursor`는 쓰지 않는다). `format=json`(기본)은 `LogArchive` v1, `format=html`은 스크립트 없는 HTML
@@ -167,6 +168,7 @@ open_log_storage(None).kind  # DB도 경로도 없으면 "memory"
 | 이름 | 설명 |
 | --- | --- |
 | `module` / `LogsModule` / `MODULE_ID` / `WEB_ROLES` | 서버 모듈(entry point `agent_console.server_modules`) |
+| `base_taxonomy_of` | 옵션 `base_taxonomy_file` → 기본 분류 체계(`LogsService(base_taxonomy=)`에 넘길 값) |
 | `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`events`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
 | `LogsModuleSettings` | 설치자 옵션 |
 | `LogRedaction` | 저장 직전 비밀 의심 가리기(포트 값으로) |

@@ -11,7 +11,14 @@
 from __future__ import annotations
 
 from .errors import INVALID_QUERY, LogNotFoundError
-from .module import MODULE_ID, WEB_ROLES, LogsModule, log_registries_of, module
+from .module import (
+    MODULE_ID,
+    WEB_ROLES,
+    LogsModule,
+    base_taxonomy_of,
+    log_registries_of,
+    module,
+)
 from .ports import (
     LOG_SOURCES,
     LOGS_INGEST,
@@ -58,6 +65,7 @@ __all__ = [
     "RuntimeLogSource",
     "SourceDefaults",
     "apply_source_defaults",
+    "base_taxonomy_of",
     "collect_source_defaults",
     "load_dashboard_templates",
     "log_registries_of",

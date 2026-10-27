@@ -21,12 +21,12 @@ import logging
 from collections.abc import Awaitable, Callable
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from agent_console_contracts import CONTRACT_VERSIONS, Issue, KnownIssueCodes
-from agent_console_contracts.logs import LogSettings
+from agent_console_contracts.logs import LogSettings, LogTaxonomy
 from agent_console_contracts.modules import LogsIngestedPayload
-from agent_console_logs import LogRegistries
+from agent_console_logs import LogRegistries, load_default_taxonomy
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .errors import ERROR_MAP
@@ -86,6 +86,30 @@ def _resolve(path: Path | None, base: Path | None) -> Path | None:
     if path.is_absolute() or base is None:
         return path
     return base / path
+
+
+def base_taxonomy_of(option: Path | Literal[False] | None, base: Path | None) -> LogTaxonomy | None:
+    """설치자 옵션 ``base_taxonomy_file`` → 기본 분류 체계.
+
+    Args:
+        option: None = 패키지 기본(None을 돌려 ``LogsService``가 읽게 한다), False = 빈 분류,
+            경로 = 그 파일(상대 경로는 ``base`` 기준).
+        base: 설정 파일 폴더.
+
+    Returns:
+        분류 체계 또는 None(패키지 기본). 파일이 없으면 경고를 남기고 빈 분류 체계.
+
+    Raises:
+        ValueError·pydantic.ValidationError: 파일 내용이 분류 체계 형식이 아닐 때.
+    """
+    if option is None:
+        return None
+    if option is False:
+        return LogTaxonomy()
+    path = option if option.is_absolute() or base is None else base / option
+    if not path.is_file():
+        _log.warning("기본 분류 체계 파일이 없어 빈 분류를 씁니다: %s", path)
+    return load_default_taxonomy(path)
 
 
 def storage_memory_warning() -> Issue:
@@ -176,6 +200,7 @@ class LogsModule:
             archive_max_events=cfg.archive_max_events,
             archive_max_bytes=cfg.archive_max_bytes,
             session_title_rules=cfg.title_rules(),
+            base_taxonomy=base_taxonomy_of(cfg.base_taxonomy_file, base),
         )
         runtime_problems: list[Issue] = []
 
@@ -250,6 +275,7 @@ __all__ = [
     "MODULE_ID",
     "WEB_ROLES",
     "LogsModule",
+    "base_taxonomy_of",
     "log_registries_of",
     "module",
     "redaction_unavailable_warning",
