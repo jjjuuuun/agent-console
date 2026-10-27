@@ -50,10 +50,10 @@ function mount(roles: string[], status: Run["status"], children: Run[] = [], arc
     getLogArchitecture: async () => archView(archCount()),
     listLogEvents: async () => ({ items: [] }),
   };
-  const { clients, rest } = createFakeClients(Object.fromEntries(Object.entries(base).map(([k, f]) => [k, vi.fn(f)])));
+  const { clients, rest, ws } = createFakeClients(Object.fromEntries(Object.entries(base).map(([k, f]) => [k, vi.fn(f)])));
   const router = createMemoryRouter(buildAppRoutes({ platform: "other" }), { initialEntries: ["/runs/r1?tab=architecture"] });
   render(<AppRoot createClients={async () => clients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} />);
-  return { rest, router };
+  return { rest, router, ws };
 }
 
 describe("실행 상세 [구조도] 탭", () => {
@@ -95,5 +95,15 @@ describe("실행 상세 [구조도] 탭", () => {
   it("실행 중이면 '실행 중 · 갱신 시각'을 보인다", async () => {
     mount(["logs:runs", "logs:architecture"], "running");
     expect(await screen.findByText(/^실행 중 · 갱신 /, {}, LONG)).toBeTruthy();
+  });
+
+  it("실행이 끝난 뒤에 수집 알림이 와도 다시 질의한다(마지막 수집분 반영, arch-stale-after-end)", async () => {
+    let n = 3;
+    const { rest, ws } = mount(["logs:runs", "logs:architecture"], "completed", [], () => n);
+    await screen.findByRole("region", { name: "구조도" }, LONG);
+    const before = rest["getLogArchitecture"]!.mock.calls.length;
+    n = 7;
+    ws.emitLogs(4);
+    await waitFor(() => expect(rest["getLogArchitecture"]!.mock.calls.length).toBeGreaterThan(before), { timeout: 8000 });
   });
 });

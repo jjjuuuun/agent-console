@@ -76,7 +76,8 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
     },
     [arch, qc],
   );
-  useLogsIngested((info) => refresh(info.count), LOGS_LIMITS.archDebounceMs, running);
+  // 구독은 실행 상태와 상관없이 유지한다. 실행이 끝난 직후 들어오는 마지막 수집분도 받아야 숫자가 서버와 같다(arch-stale-after-end).
+  useLogsIngested((info) => refresh(info.count), LOGS_LIMITS.archDebounceMs);
   const refreshRef = useRef(refresh);
   useEffect(() => {
     refreshRef.current = refresh;

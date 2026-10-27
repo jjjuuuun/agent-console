@@ -13,9 +13,12 @@
 키 값으로 칸·연결을 미리 거르며, 칸·연결별 누적 집계(`ArchitectureTally`)에 새 이벤트만 더하게
 바꿨다. 같은 프로세스에서 데워진 첫 호출은 약 0.7초(같은 조건 5.5R.35 1.5초)지만 이 테스트처럼
 색인을 막 만든 프로세스의 첫 호출은 1.35~1.55초라 strict 상한은 1.5초로 둔다(목표 1초, 남은
-원인은 design 기록). 맞는 행이 범위 끝에만 있는 `arch` 첫 쪽(범위를 거의 다
-읽음)은 기록만 한다(design §5.5R.10 `[5.5R.6]` "기록만"). 수치는 design §5.5R.10
-`[5.5R.36 구현·측정]`.
+원인은 design 기록). 첫 호출은 다른 작업의 부하에 크게 흔들려(QA 부하 평균 3~4에서 벽시계
+0.99~2.49초, 몇 초짜리 부하 구간이면 연달아 잰 세 번이 모두 느림) 측정 모드에서는 새 화면
+묶음(빈 범위 캐시)으로 ``COLD_RUNS``번 재고, 이 프로세스의 CPU 시간(``time.process_time``) 최솟값을
+상한과 비교한다(벽시계도 함께 출력). 작업량 단언은 첫 번째 묶음에만 건다.
+맞는 행이 범위 끝에만 있는 `arch` 첫 쪽(범위를 거의 다 읽음)은 기록만 한다(design §5.5R.10
+`[5.5R.6]` "기록만"). 수치는 design §5.5R.10 `[5.5R.36 구현·측정]`.
 """
 
 from __future__ import annotations
@@ -44,6 +47,8 @@ MEASURE = os.environ.get("AGENT_CONSOLE_PERF", "") in ("measure", "strict")
 MAIN = 50_000 if MEASURE else 5_000
 NEW = 500
 FIRST_SECONDS = 1.5
+# 첫 호출 측정 횟수(최솟값을 쓴다). 한 번에 50,000건 약 1초라 3번이면 테스트가 2~3초 늘어난다.
+COLD_RUNS = 3 if MEASURE else 1
 INCREMENT_SECONDS = 0.1
 HIT_SECONDS = 0.1
 FIRST_PAGE_SECONDS = 0.5
@@ -111,21 +116,49 @@ def _timed(fn: Any) -> tuple[Any, float]:
     return out, time.perf_counter() - t0
 
 
+def _timed_cpu(fn: Any) -> tuple[Any, float, float]:
+    """(결과, 벽시계 초, 이 프로세스의 CPU 초). CPU 시간은 다른 프로세스의 부하에 덜 흔들린다."""
+    c0, t0 = time.process_time(), time.perf_counter()
+    out = fn()
+    return out, time.perf_counter() - t0, time.process_time() - c0
+
+
 def _report(name: str, seconds: float, **work: object) -> None:
     print(f"\n[scale {MAIN}] {name}: {seconds * 1000:.0f} ms {work}")
 
 
 def test_first_call_cache_hit_and_increment(big: tuple[SqliteLogIndex, ScaleLayout]) -> None:
     index, layout = big
-    h = LogArchitectureHarness(index, profiles={"p": _profile()}, ctx=CTX, cache_events=MAIN * 2)
-    s = h.views.stats
     params = {"session": layout.main_session}
 
-    first, cold = _timed(lambda: h.project(**params))
+    def harness() -> LogArchitectureHarness:
+        return LogArchitectureHarness(
+            index, profiles={"p": _profile()}, ctx=CTX, cache_events=MAIN * 2
+        )
+
+    h = harness()
+    s = h.views.stats
+    first, wall, cpu = _timed_cpu(lambda: h.project(**params))
     assert first.event_total == layout.main_events
     assert (s.events_read, s.judged, s.projections) == (MAIN, MAIN, 1)
     assert s.pages == -(-MAIN // DEFAULT_PAGE_SIZE)
-    _report("첫 호출(읽기 + 판정 + 투영)", cold, pages=s.pages, judged=s.judged)
+    walls, cpus = [wall], [cpu]
+    for _ in range(COLD_RUNS - 1):
+        again = harness()  # 빈 범위 캐시 — 같은 첫 호출을 다시 잰다
+        view, wall, cpu = _timed_cpu(lambda again=again: again.project(**params))
+        assert view.event_total == layout.main_events
+        assert again.views.stats.judged == MAIN
+        walls.append(wall)
+        cpus.append(cpu)
+    cold = min(cpus)
+    _report(
+        "첫 호출(읽기 + 판정 + 투영, CPU 최솟값)",
+        cold,
+        pages=s.pages,
+        judged=s.judged,
+        wall_ms=[round(t * 1000) for t in walls],
+        cpu_ms=[round(t * 1000) for t in cpus],
+    )
 
     pages = s.pages
     second, hit = _timed(lambda: h.project(**params))
