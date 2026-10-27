@@ -43,7 +43,7 @@ describe("테마", () => {
     for (const m of css.matchAll(/--ac-text-(xs|sm|md|lg|xl|code):\s*([\d.]+)px/g)) expect(Number(m[2])).toBeGreaterThanOrEqual(12);
   });
   it("간격·반경·컨트롤 토큰", () => {
-    for (const n of ["space-0", "space-1", "space-2", "space-3", "space-4", "space-5", "space-6", "space-7", "radius-sm", "radius-md", "radius-lg", "radius-full", "control-sm", "control-md", "control-lg", "dur-fast", "dur-base", "ease"]) {
+    for (const n of ["space-1", "space-2", "space-3", "space-4", "space-5", "space-6", "space-7", "radius-sm", "radius-md", "radius-lg", "radius-full", "control-sm", "control-md", "control-lg", "dur-fast", "dur-base", "ease"]) {
       expect(allDefined.has(`--ac-${n}`), n).toBe(true);
     }
   });
@@ -286,7 +286,6 @@ describe("리듬·줄 높이(5.2R.74)", () => {
     expect(css).toMatch(/--ac-page-pad:\s*24px/);
     expect(css).toMatch(/--ac-section-gap:\s*24px/);
     expect(css).toMatch(/--ac-field-gap:\s*16px/);
-    expect(css).toMatch(/--ac-card-pad:\s*16px/);
     expect(css).toMatch(/--ac-readable-w:\s*720px/);
     expect(css).toMatch(/--ac-lh-xs:\s*18px/);
   });

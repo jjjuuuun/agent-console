@@ -8,7 +8,7 @@ export { ProjectField, ProjectTag, ScopeFilter, useNewScope, type NewScope } fro
 export { useScopedList, type ScopedList, type ScopedListOptions } from "./useScopedList";
 export { MoveToProjectDialog, type MoveItem } from "./MoveToProjectDialog";
 export { SelectMark, SelectionToolbar, useListSelection, useProjectMove } from "./useProjectMove";
-export { PROJECT_SHORTCUT_DEFS, PROJECT_SWITCH_SHORTCUT_ID } from "./shortcuts";
+export { PROJECT_SHORTCUT_DEFS } from "./shortcuts";
 export { PROJECTS_SECTION_ID, SETTINGS_PROJECTS_HASH } from "./sectionId";
 export { projectMessages } from "./messages";
 export { ScopeIssuesList, useMoveIssueToShared, type MoveIssueToShared } from "./ScopeIssues";

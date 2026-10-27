@@ -1,7 +1,7 @@
 import { byNumber, byText, folderOf, usableUnlessAllDistinct, type GroupByDef, type SortDef } from "@agent-console/list-arrange";
 import type { Agent } from "@agent-console/contracts";
 
-export { GROUP_ATTRIBUTE, GROUP_NONE } from "../library";
+export { GROUP_ATTRIBUTE } from "../library";
 import { GROUP_ATTRIBUTE, folderPathsOf } from "../library";
 
 const text = (v: unknown): string[] => (typeof v === "string" && v.trim() !== "" ? [v] : []);

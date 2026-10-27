@@ -1,0 +1,5 @@
+{
+  "_설명": "tokenConsumers.test.ts의 '정의했는데 아무도 안 씀' 검사에서 예외로 둘 토큰. prefixes는 var(--ac-${이름})처럼 조립해 쓰는 접두, names는 코드 밖(문서·외부 소비자)이 읽는 토큰의 정확한 이름이다.",
+  "prefixes": ["--ac-cat-", "--ac-status-", "--ac-icon-", "--ac-layer-"],
+  "names": []
+}

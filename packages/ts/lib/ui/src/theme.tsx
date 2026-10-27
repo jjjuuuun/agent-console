@@ -60,11 +60,3 @@ export function ThemeProvider({ theme, onThemeChange, target, children }: ThemeP
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext);
 }
-
-/** 해석된 CSS 변수 값(xterm 테마처럼 var()를 못 읽는 곳에 넘길 때). 이름은 `--ac-bg` 형태. */
-export function getResolvedTokens(names: string[], element: Element = document.documentElement): Record<string, string> {
-  const style = getComputedStyle(element);
-  const out: Record<string, string> = {};
-  for (const n of names) out[n] = style.getPropertyValue(n).trim();
-  return out;
-}

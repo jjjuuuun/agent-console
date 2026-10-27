@@ -23,11 +23,6 @@ export function modulesFor(item: string, modules: readonly ModuleInfo[]): Module
   return modules.filter((m) => m.id === item || (m.web_roles ?? []).includes(item));
 }
 
-/** 항목 하나가 만족하는가: 일치하는 모듈 중 `active`가 하나라도 있다. */
-export function itemSatisfied(item: string, modules: readonly ModuleInfo[]): boolean {
-  return modulesFor(item, modules).some((m) => m.status === MODULE_STATUS.active);
-}
-
 /** 만족하지 못한 항목 하나. */
 export interface UnmetItem {
   /** 라우트·부분의 `requires` 항목 그대로 */

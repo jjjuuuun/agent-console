@@ -16,6 +16,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from agent_console_contracts import (
     Agent,
@@ -29,6 +30,7 @@ from agent_console_contracts import (
     RunEvent,
 )
 from agent_console_mod_runs import (
+    DEFAULT_OBSERVE_EVENT_PREFIXES,
     INTERACTIONS_UPDATED,
     RESUME_HANDLERS,
     RUN_PREPARERS,
@@ -43,7 +45,10 @@ from agent_console_mod_runs import (
     RunEnvironment,
     RunPreparation,
     RunService,
+    RunsModuleSettings,
+    load_observe_event_prefixes,
     module,
+    observe_event_prefixes_of,
 )
 from agent_console_mod_runs.testing import local_definitions_module
 from agent_console_modkit import (
@@ -528,3 +533,67 @@ def test_recovery_precedes_dependent_module_startup(tmp_path: Path) -> None:
         pass
     assert seen == ["interrupted"]
     database.close()
+
+
+# ---------------------------------------------------------------- 관측 탭 이벤트 접두어(5.5R.13)
+
+
+def test_observe_event_prefixes_default_comes_from_package_data(tmp_path: Path) -> None:
+    """옵션이 없으면 패키지 기본 데이터(``data/observe_event_prefixes.json``)를 낸다."""
+    with _client(tmp_path) as (client, _assembly):
+        response = client.get(f"{API}/observe-event-prefixes")
+        assert response.status_code == 200
+        assert response.json() == list(DEFAULT_OBSERVE_EVENT_PREFIXES) == ["hook.", "mcp."]
+
+
+def test_observe_event_prefixes_option_replaces_response(tmp_path: Path) -> None:
+    """옵션을 바꾸면 응답이 바뀐다(공백·빈 값·중복은 정리)."""
+    config = ModulesConfig(
+        options={"mod-runs": {"observe_event_prefixes": ["otel.", " hook. ", "", "otel."]}}
+    )
+    with _client(tmp_path, config=config) as (client, _assembly):
+        assert client.get(f"{API}/observe-event-prefixes").json() == ["otel.", "hook."]
+
+
+def test_observe_event_prefixes_off_keeps_runs_working(tmp_path: Path) -> None:
+    """빈 목록 = 끔: 응답은 빈 목록이고 실행·이벤트·디스크립터는 그대로 동작한다."""
+    _seed(tmp_path / "ws")
+    config = ModulesConfig(options={"mod-runs": {"observe_event_prefixes": []}})
+    with _client(tmp_path, _providers(tmp_path / "ws"), config=config) as (client, _assembly):
+        assert client.get(f"{API}/observe-event-prefixes").json() == []
+        response = client.post(f"{API}/runs", json={"graph_id": "flow", "input": {"text": "안녕"}})
+        assert response.status_code == 202, response.text
+        run_id = response.json()["id"]
+        assert _wait(client, run_id)["run"]["status"] == "completed"
+        events = client.get(f"{API}/runs/{run_id}/events").json()
+        assert events[0]["type"] == "run.created"
+        assert client.get(f"{API}/node-types").status_code == 200
+
+
+def test_observe_event_prefixes_settings_schema() -> None:
+    """설정: None = 기본, 목록은 정리, 문자열 아닌 값은 거부, 스키마에 라벨·설명·x-ui."""
+    assert RunsModuleSettings().observe_event_prefixes is None
+    assert RunsModuleSettings(observe_event_prefixes=[" a.", "a.", " "]).observe_event_prefixes == [
+        "a."
+    ]
+    with pytest.raises(ValidationError):
+        RunsModuleSettings.model_validate({"observe_event_prefixes": [1]})
+    field = RunsModuleSettings.model_json_schema()["properties"]["observe_event_prefixes"]
+    assert field["title"]
+    assert field["description"]
+    assert "x-ui" in field
+
+
+def test_observe_event_prefix_data_helpers(tmp_path: Path) -> None:
+    """표 파일 읽기(교체용)와 옵션 해석은 서버 없이 쓸 수 있다."""
+    assert load_observe_event_prefixes('{"prefixes": ["x.", " ", "x.", "y."]}') == ("x.", "y.")
+    assert load_observe_event_prefixes("{}") == ()
+    with pytest.raises(ValueError, match="목록"):
+        load_observe_event_prefixes('{"prefixes": "hook."}')
+    with pytest.raises(ValueError, match="객체"):
+        load_observe_event_prefixes("[]")
+    with pytest.raises(ValueError, match="문자열"):
+        load_observe_event_prefixes('{"prefixes": [1]}')
+    assert observe_event_prefixes_of(None) == DEFAULT_OBSERVE_EVENT_PREFIXES
+    assert observe_event_prefixes_of([]) == ()
+    assert observe_event_prefixes_of(["z."]) == ("z.",)

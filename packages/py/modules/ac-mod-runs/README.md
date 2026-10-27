@@ -2,7 +2,7 @@
 
 실행 기능 모듈(design §3R.1.3). 실행 엔진(`ac-runtime`)과 실행 기록(`ac-store`의 legacy 테이블)을 서버에 꽂는다.
 
-- 경로: `POST/GET /runs`(`?root=` = 그 루트 아래 모든 자식 Run), `GET /runs/{id}`(`children` = 직접 자식, 만든 순), `POST /runs/{id}/cancel`(자식 Run에도 전파), `GET /runs/{id}/events`, 상호작용(`/runs/{id}/interactions…`, `GET /interactions`(`?root=` = 루트와 자식 Run의 것)), 이어 가기(`/runs/{id}/resume-options`, `POST /runs/{id}/resume` — 자식 Run은 409, 루트를 이어 간다), 디스크립터(`/node-types`·`/edge-types`·`/backends`·`/delegation-strategies`·`/interaction-kinds`·`/condition-operators`), `GET /agents/{id}/activity`.
+- 경로: `POST/GET /runs`(`?root=` = 그 루트 아래 모든 자식 Run), `GET /runs/{id}`(`children` = 직접 자식, 만든 순), `POST /runs/{id}/cancel`(자식 Run에도 전파), `GET /runs/{id}/events`, 상호작용(`/runs/{id}/interactions…`, `GET /interactions`(`?root=` = 루트와 자식 Run의 것)), 이어 가기(`/runs/{id}/resume-options`, `POST /runs/{id}/resume` — 자식 Run은 409, 루트를 이어 간다), 디스크립터(`/node-types`·`/edge-types`·`/backends`·`/delegation-strategies`·`/interaction-kinds`·`/condition-operators`), 관측 탭 이벤트 접두어(`GET /observe-event-prefixes`), `GET /agents/{id}/activity`.
 - 자식 Run(중첩 팀, `ctx.run_child`): 엔진 자식 Run 준비자(`GraphRuntime.child_preparer`)에 `RunService.prepare_child`를 꽂아 일반 Run과 같은 준비자(`runs.preparers`) 검사·준비를 거친다. 서비스는 부모 Run 것(+ 노드가 더한 것)을 쓴다.
 - 조건 연산자(X22): 호스트 플러그인 로더가 `agent_console.condition_operators`를 묶음의 이름 붙은 레지스트리 `condition_operators`에 읽고(보고 그룹 같은 이름), 모듈이 연산자를 쓰는 노드·엣지 종류(`ac-conditions.OperatorConsumer`)에 그 레지스트리를 준다. 그래서 `plugins.enabled`로 끈 연산자는 목록·저장 전 검사·실행 판정에서 함께 빠진다.
 - 판정 근거 가림: 비밀 해석기를 만든 뒤 판정 근거를 만드는 노드·엣지 종류(`ac-conditions.RedactorConsumer`)에
@@ -143,6 +143,22 @@ ac-runtime `BackendLoginService`(선택 능력 `login`·`logout`)에 레지스�
 | `backend_login.screen_max_lines` | 40 | 응답 `screen` 최대 줄 수 |
 | `resume_origin` | `resume` | 처리기가 맡지 않은 이어 가기 Run의 `origin` |
 | `activity_limit` | 100 | 에이전트 활동 기본 개수 |
+| `observe_event_prefixes` | null | 실행 상세 [관측] 탭이 모을 이벤트 type 접두어(`GET /observe-event-prefixes`). null = 패키지 기본 데이터(`data/observe_event_prefixes.json`, `hook.`·`mcp.`), 목록 = 그 목록(공백·빈 값·중복 정리), `[]` = 관측 탭 끔(실행·이벤트 저장은 이 값을 쓰지 않아 그대로 동작) |
+
+관측 탭 접두어 표는 서버 없이도 쓴다(교체용 파일은 같은 JSON 모양 `{"prefixes": [...]}`).
+
+```python
+>>> from agent_console_mod_runs import (
+...     DEFAULT_OBSERVE_EVENT_PREFIXES, load_observe_event_prefixes, observe_event_prefixes_of,
+... )
+>>> DEFAULT_OBSERVE_EVENT_PREFIXES
+('hook.', 'mcp.')
+>>> load_observe_event_prefixes('{"prefixes": ["otel.", "otel.", " "]}')
+('otel.',)
+>>> observe_event_prefixes_of([])
+()
+
+```
 
 통합 서버는 옛 최상위 `runtime`·`backends`·`working_directory`를 4R.18부터 읽지 않고 새 위치를 알려 주는 오류(`settings.removed_key`)로 거부한다.
 

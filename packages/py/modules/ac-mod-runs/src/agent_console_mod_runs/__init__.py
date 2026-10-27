@@ -17,6 +17,8 @@
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
       ``configure_backends``·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
     - ``build_router``·``topic_handlers``·``ERROR_MAP``, 설정 ``RunsModuleSettings``.
+    - 관측 탭 이벤트 접두어 데이터(5.5R.13): ``DEFAULT_OBSERVE_EVENT_PREFIXES``·
+      ``load_observe_event_prefixes``·``observe_event_prefixes_of``.
 """
 
 from __future__ import annotations
@@ -38,6 +40,11 @@ from .errors import (
 )
 from .interactions import INTERACTIONS_TOPIC, InteractionService
 from .module import MODULE_ID, WEB_ROLES, PublishingSink, RunsModule, module
+from .observe import (
+    DEFAULT_OBSERVE_EVENT_PREFIXES,
+    load_observe_event_prefixes,
+    observe_event_prefixes_of,
+)
 from .ports import (
     DEFINITIONS_LOOKUP,
     INTERACTIONS_PORT,
@@ -75,6 +82,7 @@ from .storage import STORAGE_MEMORY, open_recorder
 from .ws import RUN_TOPIC, topic_handlers
 
 __all__ = [
+    "DEFAULT_OBSERVE_EVENT_PREFIXES",
     "DEFINITIONS_LOOKUP",
     "ERROR_MAP",
     "INTERACTIONS_PORT",
@@ -128,7 +136,9 @@ __all__ = [
     "build_router",
     "build_secret_resolver",
     "configure_backends",
+    "load_observe_event_prefixes",
     "module",
+    "observe_event_prefixes_of",
     "open_recorder",
     "team_rules_warning",
     "topic_handlers",

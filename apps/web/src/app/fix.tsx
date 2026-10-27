@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { Fix, FixAction } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
@@ -104,13 +103,4 @@ export function flashElement(el: HTMLElement, ms = 2000): () => void {
     window.clearTimeout(t);
     el.removeAttribute("data-fix-flash");
   };
-}
-
-/** `focus`가 바뀌면 폼이 포커스를 옮긴 직후 강조한다. */
-export function useFlashOnFocus(focus: string | null | undefined, delayMs = 120): void {
-  useEffect(() => {
-    if (focus == null || focus === "") return;
-    const t = window.setTimeout(() => flashFocused(), delayMs);
-    return () => window.clearTimeout(t);
-  }, [focus, delayMs]);
 }

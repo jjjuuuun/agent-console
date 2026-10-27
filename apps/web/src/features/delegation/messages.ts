@@ -212,6 +212,3 @@ export const delegationMessages = {
     stopNested: "진행 중인 중첩 팀 실행도 함께 중지됩니다.",
   },
 };
-
-/** `{n}` 같은 자리표시자가 필요 없는 단순 문구 모음에서 쓰는 타입. */
-export type DelegationMessages = typeof delegationMessages;

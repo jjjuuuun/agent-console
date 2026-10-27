@@ -15,6 +15,8 @@
   (``enabled`` 기본 켬, 시간·하트비트·보관·화면 줄 수). 종료 훅에서 진행 중인 세션을 취소한다.
 - 조건 연산자(X22): 호스트 묶음의 ``condition_operators`` 레지스트리를 연산자를 쓰는 노드·엣지
   종류에 준다(``bind_condition_operators``), ``GET /condition-operators``가 같은 목록을 낸다.
+- 관측 탭 이벤트 접두어(5.5R.13): 설정 ``observe_event_prefixes``(None = 패키지 기본 데이터,
+  빈 목록 = 끔) → ``GET /observe-event-prefixes``. 실행·저장은 이 값을 쓰지 않는다.
 - 자식 Run(design §5R.7): 엔진 자식 Run 준비자 = ``RunService.prepare_child``(같은 검사·준비).
 - 시작: legacy 계보 올리기(멱등) → **이전 프로세스의 미종료 Run 정리**(``recover_unfinished_runs``,
   다른 시작 동작보다 먼저, design §R14.5) → 백엔드 설정 적용(``backends``, 거부되면 시작 실패).
@@ -44,6 +46,7 @@ from agent_console_runtime import (
 from .backends import build_secret_resolver, configure_backends
 from .errors import ERROR_MAP
 from .interactions import InteractionService
+from .observe import observe_event_prefixes_of
 from .plugins import (
     CONDITION_OPERATORS_EXTENSION,
     bind_condition_operators,
@@ -307,6 +310,7 @@ class RunsModule:
                     activity_limit=cfg.activity_limit,
                     readiness=lambda: readiness,
                     login=(lambda: login) if login is not None else None,
+                    observe_event_prefixes=observe_event_prefixes_of(cfg.observe_event_prefixes),
                 )
             ],
             ws_topics=topic_handlers(

@@ -4,7 +4,7 @@
  */
 import type { LogQueryParams } from "@agent-console/api-client";
 import type { LogDashboard, LogEvent, LogLane, LogSettings, LogSourceInfo, LogWidget, WorkspaceSettings } from "@agent-console/contracts";
-import { preserveUnknownDashboards, type CategoryChipItem, type LaneEvent, type LogFilterValue, type LogTaxonomyView } from "@agent-console/log-view";
+import { preserveUnknownDashboards, type CategoryChipItem, type LaneEvent, type LogFilterValue } from "@agent-console/log-view";
 import { CUSTOM_RANGE_SEP, FILTER_KEYS, RANGE_OPTIONS } from "./logsConfig";
 
 // ---------------------------------------------------------------- 기간
@@ -291,11 +291,6 @@ export function overrideWindow(filter: Record<string, unknown> | undefined, wind
 /** 대시보드 위젯에 쓰지 않는 입력(IME·단축키 제외)에서 키 이벤트를 무시할지. */
 export function isTypingTarget(target: EventTarget | null): boolean {
   return typeof Element !== "undefined" && target instanceof Element && target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [data-ac-editable]") !== null;
-}
-
-/** 분류 체계 순서 기반으로 칩 id 목록 정렬 도우미(테스트용 노출). */
-export function categoryOrder(taxonomy: LogTaxonomyView): readonly string[] {
-  return taxonomy.order;
 }
 
 /**

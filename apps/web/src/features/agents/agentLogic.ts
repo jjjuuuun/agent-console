@@ -43,11 +43,6 @@ export function filterAgents(agents: readonly Agent[], query: string, used: "all
   });
 }
 
-/** 이름 오름차순(한국어 로케일). */
-export function sortByName<T extends { name: string }>(items: readonly T[]): T[] {
-  return [...items].sort((a, b) => a.name.localeCompare(b.name, "ko"));
-}
-
 export interface ActivityGroup {
   runId: string;
   firstTs: number;

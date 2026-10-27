@@ -133,8 +133,6 @@ export const UNGROUPED_OPTIONS: readonly { value: string; label: string; descrip
 
 /** 분류 체계 `tone`의 알려진 어휘(계약 문서 상수). 모르는 값은 원문 그대로 보존한다. */
 export const TONE_VOCABULARY: readonly string[] = ["danger", "warning", "success", "info", "neutral"];
-/** 오류 행으로 보는 tone(판정은 log-view `isErrorEvent` 한 곳. 여기는 편집 화면 라벨용). */
-export const ERROR_TONE = "danger";
 
 /** 프로젝트 필터의 "묶이지 않음" 값(계약 상수). */
 export const UNGROUPED_PROJECT_VALUE = LOG_PROJECT_UNGROUPED;
@@ -147,6 +145,3 @@ export const WARNING_CODES = { redactionUnavailable: "logs.redaction_unavailable
 
 /** 단축키 범위(라우트의 `shortcutScopes`와 같은 값). */
 export const LOGS_SCOPES = { common: "logs", session: "logs-session", search: "logs-search", dashboard: "logs-dashboard" } as const;
-
-/** 보관본 형식 목록. */
-export const ARCHIVE_FORMATS = ["html", "json"] as const;

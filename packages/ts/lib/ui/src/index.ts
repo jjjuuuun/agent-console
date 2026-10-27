@@ -71,5 +71,5 @@ export type { ShortcutDef, EffectiveShortcut, ShortcutProviderProps } from "./co
 export type { KeyComboEvent, KeyPlatform, UseKeyComboOptions } from "./components/keyCombo";
 export { Icon, IconRegistryProvider, createIconRegistry, defaultIcons, iconRegistry, registerIcons, useIconRegistry } from "./components/Icon";
 export type { IconComponent, IconProps, IconRegistry, IconRegistryProviderProps } from "./components/Icon";
-export { THEME_CYCLE, ThemeProvider, getResolvedTokens, nextTheme, useTheme } from "./theme";
+export { THEME_CYCLE, ThemeProvider, nextTheme, useTheme } from "./theme";
 export type { ResolvedTheme, ThemeChoice, ThemeContextValue, ThemeProviderProps } from "./theme";

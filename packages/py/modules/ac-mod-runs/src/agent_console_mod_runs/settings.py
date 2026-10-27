@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_console_contracts import x_ui
 from agent_console_modkit import EnvSetting, RemovedSetting, SeedSetting, SettingsCompat
@@ -189,6 +189,26 @@ class RunsModuleSettings(BaseModel):
         description="에이전트 최근 활동 목록에 기본으로 보이는 개수.",
         json_schema_extra=x_ui(tier="advanced", unit="개"),
     )
+    observe_event_prefixes: list[str] | None = Field(
+        default=None,
+        title="관측 탭 이벤트 접두어",
+        description=(
+            "실행 상세 [관측] 탭이 모을 실행 이벤트 type 접두어(예: mcp.). "
+            "비우면 패키지 기본, 빈 목록이면 관측 탭에 아무 이벤트도 모으지 않는다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example=["hook.", "mcp."],
+            when="새 관측 수집기가 다른 접두어로 이벤트를 낼 때 더하거나, 관측 탭을 끌 때.",
+        ),
+    )
+
+    @field_validator("observe_event_prefixes")
+    @classmethod
+    def _clean_prefixes(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return list(dict.fromkeys(v.strip() for v in value if v.strip()))
 
 
 SETTINGS_COMPAT = SettingsCompat(

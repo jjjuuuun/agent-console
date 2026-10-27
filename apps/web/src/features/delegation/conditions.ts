@@ -42,12 +42,6 @@ export function withItems(spec: ConditionSpec | null | undefined, mode: Conditio
   return { ...rest, [mode]: [...items] };
 }
 
-/** 키 하나 없이 비어 있는 묶음인가. */
-export function isEmptySpec(spec: ConditionSpec | null | undefined): boolean {
-  if (spec === null || spec === undefined) return true;
-  return Object.keys(spec).length === 0;
-}
-
 /** 모드를 바꾼 새 묶음: 항목은 그대로 두고 키만 `all` ↔ `any`로 옮긴다. */
 export function switchMode(spec: ConditionSpec | null | undefined, mode: ConditionMode): ConditionSpec {
   const items = itemsOf(spec);

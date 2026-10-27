@@ -492,11 +492,6 @@ export function isInterruptedInteraction(i: Interaction): boolean {
 
 // ---------------------------------------------------------------- trace
 
-/** 사용자 대기 구간을 뺀 span 목록이 아니라, 선택·강조용으로 노드의 span id를 찾는다. */
-export function spanIdsOfNode(spans: readonly TraceSpan[], nodeId: string): string[] {
-  return spans.filter((s) => s.node_id === nodeId).map((s) => s.id);
-}
-
 /** "실패만" 보기: 실패 상태 span과 그 조상 span만 남긴다(트리가 끊기지 않게). 상태 문자열은 서버 값 그대로 비교. */
 export function filterFailedSpans(trace: Trace, failedStatus: string): Trace {
   const spans = trace.spans ?? [];

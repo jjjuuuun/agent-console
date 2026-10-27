@@ -16,6 +16,8 @@
   거짓) 이 경로가 없고 ``/backends``·``/backends/status``에서 로그인 능력·동작을 뺀다.
 - 디스크립터: ``/node-types``(+ ``POST …/ports``)·``/edge-types``·``/backends``(+ ``/models``)·
   ``/delegation-strategies``·``/interaction-kinds``·``/condition-operators``
+- 관측 탭 이벤트 접두어(5.5R.13): ``GET /observe-event-prefixes``(설치자 옵션
+  ``observe_event_prefixes``, 기본 = 패키지 데이터 ``data/observe_event_prefixes.json``)
 - 자식 Run(design §5R.7·§5R.11): ``GET /runs?root=<id>``(그 루트 아래 모든 자손),
   ``GET /runs/{id}``의 ``children``(직접 자식, 만든 순). 취소는 엔진이 자식에 전파한다.
 - 에이전트 활동: ``GET /agents/{id}/activity``
@@ -26,7 +28,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
@@ -74,6 +76,7 @@ from .errors import (
 )
 from .interactions import InteractionService
 from .login_gate import descriptor_without_login, readiness_without_login
+from .observe import DEFAULT_OBSERVE_EVENT_PREFIXES
 from .service import RunService
 
 DEFAULT_RUN_LIST_LIMIT = 200
@@ -101,6 +104,7 @@ def build_router(
     activity_limit: int = 100,
     readiness: Callable[[], BackendReadinessService] | None = None,
     login: Callable[[], BackendLoginService] | None = None,
+    observe_event_prefixes: Sequence[str] = DEFAULT_OBSERVE_EVENT_PREFIXES,
 ) -> APIRouter:
     """실행 모듈 라우터.
 
@@ -112,7 +116,10 @@ def build_router(
         activity_limit: 에이전트 활동 기본 개수.
         readiness: 백엔드 준비 상태·연결 테스트 서비스. None이면 그 세 경로를 붙이지 않는다.
         login: 백엔드 로그인 서비스. None이면 로그인·로그아웃 경로 6개를 붙이지 않는다.
+        observe_event_prefixes: ``GET /observe-event-prefixes``가 내는 관측 탭 이벤트 type 접두어
+            (기본 = 패키지 기본 데이터, 빈 목록 = 관측 탭 끔).
     """
+    prefixes = list(observe_event_prefixes)
     router = APIRouter()
 
     def require_run(run_id: str) -> Run:
@@ -324,6 +331,12 @@ def build_router(
         return service().condition_operators()
 
     # ------------------------------------------------------------ 에이전트 활동
+
+    @router.get("/observe-event-prefixes", response_model=list[str], responses=errors())
+    async def list_observe_event_prefixes() -> list[str]:
+        """실행 상세 [관측] 탭이 모을 실행 이벤트 type 접두어(설치자 옵션
+        ``observe_event_prefixes``, 빈 목록 = 관측 탭 끔)."""
+        return list(prefixes)
 
     @router.get("/agents/{agent_id}/activity", response_model=list[RunEvent], responses=errors())
     async def agent_activity(

@@ -1,7 +1,7 @@
 # @agent-console/ui
 
 디자인 토큰(`tokens.css`)과 도메인을 모르는 기본 컴포넌트. 노드 타입·그래프·API를 모른다.
-다른 TS 패키지를 import하지 않는다(react는 peer). graph-editor·schema-form·terminal은 이 패키지에 의존하지 않고
+다른 TS 패키지를 import하지 않는다(react는 peer). graph-editor·schema-form은 이 패키지에 의존하지 않고
 **`--ac-*` CSS 변수, 유틸 클래스 이름, `data-status` 규칙**만 약속으로 쓴다.
 
 ## 최소 사용
@@ -58,7 +58,7 @@ import { Button, IconButton, StatusChip, StatusIcon, Banner, ThemeProvider } fro
 ```
 
 ## 공개 API
-- 기본: `Button`, `IconButton`, `Spinner`, `StatusIcon`, `StatusChip`, `Badge`, `Tag`, `Banner`, `ThemeProvider`/`useTheme`, `getResolvedTokens(names, el?)`(xterm 테마용 해석된 값).
+- 기본: `Button`, `IconButton`, `Spinner`, `StatusIcon`, `StatusChip`, `Badge`, `Tag`, `Banner`, `ThemeProvider`/`useTheme`.
 - v2(1R.18, 모두 제어형·문구는 props): `Sidebar`(`items`·`activeId`·`onNavigate`·`collapsed`·`messages`, 방향키 roving, 배지 `99+`; `groups` + 항목 `group`으로 묶음 제목·접힘 구분선, 항목이 없는 묶음은 안 그림(`groupSidebarItems`); `position:'bottom'` 항목과 `tools` 슬롯은 하단 도구줄에 아이콘으로, 접기 버튼은 도구줄 오른쪽 끝(`messages.toggle` = 고정 이름 + `aria-expanded`)), `Dialog`/`ConfirmDialog`(포커스 가둠·Esc·배경 inert·포커스 복귀, `danger`는 취소 기본 포커스), `ToastProvider`/`useToast`(오류 assertive, 액션 버튼 1개, `regionLabel`), `Tabs`(`←→ Home End`, `lazy`, 제어/비제어), `ProvenanceBadge`(색 슬롯 = `layer.index mod 6`, 텍스트 라벨 필수), `Gauge`(값 없음 상태, `role=meter`는 값이 있을 때만), `EmptyState`(`steps`, `secondaryAction`).
 - `Drawer({open,title,onClose,closeLabel,description?,actions?,width?=560,initialFocus?,testId?})`(5.2R.20): 오른쪽 모달 서랍. 머리(제목·닫기) / 스크롤 본문 / 하단 고정 `actions` 3행, Esc·Tab 순환·배경 inert·포커스 복귀(`Dialog`와 같은 모달 훅). 제어형이라 닫아도 호출자의 편집 상태는 그대로다. 문구는 모두 props.
 - 모달 훅(5R.21): `useModalBackdrop(open, backdropRef, { inert? })`(배경 inert + 포커스 복귀, `inert:false`는 비모달 패널), `trapTabKey(event, root)`(`Tab` 순환), `FOCUSABLE_SELECTOR`. `Dialog`와 앱의 드로어가 같이 쓴다.

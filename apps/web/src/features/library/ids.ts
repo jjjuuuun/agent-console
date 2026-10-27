@@ -26,11 +26,3 @@ export function idProblem(id: string, existing: ReadonlySet<string>): "empty" | 
   if (existing.has(id)) return "duplicate";
   return undefined;
 }
-
-/** 이름이 겹치지 않는 "{이름} 2" 형태(노드 label 기본값 등). */
-export function uniqueName(name: string, existing: Iterable<string>): string {
-  const used = new Set(existing);
-  if (!used.has(name)) return name;
-  for (let n = 2; n < 10_000; n += 1) if (!used.has(`${name} ${n}`)) return `${name} ${n}`;
-  return `${name} ${used.size + 1}`;
-}

@@ -65,7 +65,6 @@
   --ac-accent-2: #c39bff;
   --ac-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
   --ac-check-mark: #10131f;
-  --ac-chevron: #b9c0d0;
 }
 
 /* ===== 1. 색: 라이트 (명시 선택) ===== */
@@ -124,7 +123,6 @@
   --ac-accent-2: #8e44d6;
   --ac-shadow-card: 0 1px 2px rgba(41, 37, 28, 0.07), 0 1px 1px rgba(41, 37, 28, 0.04);
   --ac-check-mark: #ffffff;
-  --ac-chevron: #444b5c;
 }
 
 /* ===== 1. 색: 시스템 모드 (data-theme 속성 없음 + 라이트 선호) ===== */
@@ -184,7 +182,6 @@
     --ac-accent-2: #8e44d6;
     --ac-shadow-card: 0 1px 2px rgba(41, 37, 28, 0.07), 0 1px 1px rgba(41, 37, 28, 0.04);
     --ac-check-mark: #ffffff;
-    --ac-chevron: #444b5c;
   }
 }
 
@@ -218,8 +215,6 @@
   --ac-edge-stub: 16px;
   --ac-edge-handle-size: 10px;
   --ac-edge-handle-hit: 18px;
-  --ac-edge-route-pad: 16px;
-  --ac-edge-selected-width: 2.5px;
   --ac-handle-fill: var(--ac-surface-2);
   --ac-handle-border: var(--ac-border-strong);
 }
@@ -241,14 +236,12 @@
   --ac-lh-xs: 18px;
   --ac-lh-sm: 20px;
   --ac-lh-md: 22px;
-  --ac-lh-lg: 24px;
   --ac-lh-xl: 28px;
   --ac-lh-code: 18px;
 }
 
 /* ===== 4. 간격·반경·크기·모션·z-index ===== */
 :root {
-  --ac-space-0: 0;
   --ac-space-1: 4px;
   --ac-space-2: 8px;
   --ac-space-3: 12px;
@@ -260,37 +253,27 @@
   --ac-page-pad: 24px;
   --ac-section-gap: 24px;
   --ac-field-gap: 16px;
-  --ac-card-pad: 16px;
   --ac-readable-w: 720px;
   --ac-radius-sm: 6px;
   --ac-radius-md: 8px;
   --ac-radius-lg: 14px;
-  --ac-radius-xl: 20px;
   --ac-radius-full: 999px;
   --ac-control-sm: 24px;
   --ac-control-md: 32px;
   --ac-control-lg: 36px;
-  --ac-topbar-h: 44px;
   --ac-palette-w: 240px;
   --ac-sidepanel-w: 360px;
   /* 편집기 캔버스 알림 위치: 줌 컨트롤 오른쪽, 미니맵·툴바 위(미니맵 높이 + 여백) */
   --ac-canvas-toast-left: 56px;
   --ac-canvas-toast-bottom: 176px;
-  --ac-issues-h: 160px;
-  --ac-dock-h: 280px;
   --ac-row-h: 40px;
   --ac-row-h-dense: 32px;
   /* 로그 분석(tokens.md 5.9, 4R.17): 크기 토큰. 색은 기존 토큰의 별칭이라 여기서 새로 정의하지 않는다 */
   --ac-log-row-h: var(--ac-row-h-dense);
-  --ac-log-row-h-compact: 40px;
-  --ac-log-detail-w: 440px;
   --ac-playbar-h: 48px;
   --ac-scrub-track-h: 8px;
   --ac-scrub-thumb: 14px;
   --ac-lane-row-h: 24px;
-  --ac-lane-label-w: 160px;
-  --ac-dash-row-h: 80px;
-  --ac-dash-gap: var(--ac-space-3);
   --ac-widget-head-h: 32px;
   --ac-widget-pad: 12px;
   --ac-chart-min-h: 160px;
@@ -311,7 +294,6 @@
   --ac-chat-col-w: 820px;
   --ac-composer-min-h: 44px;
   --ac-composer-max-h: 200px;
-  --ac-trace-label-w: 220px;
   --ac-trace-tail-w: 88px; /* 수치 고정 열 폭(소요·토큰). 막대 위치와 무관 */
   --ac-trace-row-h: 32px;
   --ac-trace-indent: 16px;
@@ -347,10 +329,8 @@
   --ac-tip-delay: 150ms;
   --ac-gauge-h: 8px;
   --ac-z-sidebar: 15;
-  --ac-z-canvas: 0;
   --ac-z-panel: 10;
   --ac-z-header: 20;
-  --ac-z-dock: 30;
   --ac-z-float: 35;
   --ac-z-popover: 40;
   --ac-usage-ind-gauge-h: 6px;
@@ -702,7 +682,7 @@ code, kbd, pre, samp { font-family: var(--ac-font-mono); font-size: var(--ac-tex
 .ac-choice > input { margin: 6px 0 0; width: 16px; height: 16px; min-height: 0; padding: 0; }
 .ac-choice > :last-child { min-width: 0; font-size: 13px; line-height: 20px; padding: 4px 0; overflow-wrap: anywhere; word-break: keep-all; }
 
-.ac-toasts { position: fixed; right: var(--ac-space-4); bottom: calc(var(--ac-dock-h, 0px) + var(--ac-space-4)); display: flex; flex-direction: column; gap: var(--ac-space-2); z-index: var(--ac-z-toast); max-width: min(420px, 90vw); }
+.ac-toasts { position: fixed; right: var(--ac-space-4); bottom: var(--ac-space-4); display: flex; flex-direction: column; gap: var(--ac-space-2); z-index: var(--ac-z-toast); max-width: min(420px, 90vw); }
 .ac-toast { box-shadow: var(--ac-shadow-1); background: var(--ac-surface-2); animation: ac-toast-in var(--ac-dur-base) var(--ac-ease); }
 
 .ac-tabs-bar { display: flex; align-items: stretch; gap: var(--ac-space-1); min-width: 0; border-bottom: 1px solid var(--ac-border); }
@@ -989,7 +969,7 @@ button.ac-chip:focus-visible { outline: 2px solid var(--ac-accent); outline-offs
 :where(input[type="checkbox"]:checked) { background-image: var(--ac-check-img); }
 :where(input[type="checkbox"]:indeterminate) { background-image: var(--ac-indeterminate-img); }
 :where(input[type="radio"]:checked) { border-color: var(--ac-accent); background-image: radial-gradient(circle, var(--ac-accent) 0 4px, transparent 5px); }
-/* 데이터 URI는 변수를 못 읽으므로 체크·쉐브론 SVG의 색은 --ac-check-mark·--ac-chevron과 같은 값을 테마별로 둔다. 체크 SVG는 stroke 색을 --ac-check-mark 값과 같게 둔 두 벌(다크/라이트) */
+/* 데이터 URI는 변수를 못 읽으므로 체크·쉐브론 SVG의 색은 --ac-check-mark 값(쉐브론은 본문 보조색)과 같게 테마별로 둔다. 체크 SVG는 stroke 색을 --ac-check-mark 값과 같게 둔 두 벌(다크/라이트) */
 :root { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23b9c0d0' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310131f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310131f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); }
 :root[data-theme="light"] { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23444b5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23444b5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); } }

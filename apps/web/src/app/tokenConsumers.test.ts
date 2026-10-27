@@ -1,11 +1,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import allowlistData from "./tokenAllowlist.json";
 
 /**
  * 저장소 수준 검사: 다른 TS 패키지가 쓰는 `--ac-*` 변수·유틸 클래스가 ui 패키지의 tokens.css에 정의돼 있는지.
  * (ui 패키지는 형제 패키지를 읽지 않아야 저장소 밖에서도 테스트가 돈다. 그래서 이 검사는 조립 앱에 둔다.)
  */
+const allowlist: { prefixes: string[]; names: string[] } = allowlistData;
 const tsRoot = resolve(import.meta.dirname, "../../../../packages/ts/lib");
 const css = readFileSync(join(tsRoot, "ui", "src", "tokens.css"), "utf-8");
 const allDefined = new Set([...css.matchAll(/(--ac-[a-z0-9-]+)\s*:/g)].map((m) => m[1]!));
@@ -58,4 +60,23 @@ describe("줄 높이 짝짓기(5.2R.74)", () => {
     }
     expect(missing).toEqual([]);
   }, 60_000);
+});
+
+describe("정의했는데 아무도 쓰지 않는 토큰(5.2R.98)", () => {
+  it("tokens.css의 --ac-* 정의는 모두 어딘가의 CSS·TS 소스에서 읽힌다(허용 목록: tokenAllowlist.json)", () => {
+    const webSrc = resolve(import.meta.dirname, "..");
+    const files = [...sourceFiles(webSrc), ...sourceFiles(tsRoot)].filter((f) => !/\.test\.(ts|tsx)$/.test(f));
+    const used = new Set<string>();
+    for (const f of files) {
+      for (const m of readFileSync(f, "utf-8").matchAll(/(--ac-[a-z0-9]+(?:-[a-z0-9]+)*)(?![a-z0-9-])(\s*:)?/g)) {
+        // 정의(`--ac-x:`)는 사용이 아니다. tokens.css 안의 var() 읽기와 다른 파일의 읽기만 센다.
+        if (m[2] === undefined) used.add(m[1]!);
+      }
+    }
+    const unused = [...allDefined].filter((n) => !used.has(n) && !allowlist.names.includes(n) && !allowlist.prefixes.some((p) => n.startsWith(p)));
+    expect(unused).toEqual([]);
+  }, 60_000);
+  it("허용 목록의 이름은 모두 정의돼 있다(낡은 항목 방지)", () => {
+    for (const n of allowlist.names) expect(allDefined.has(n), n).toBe(true);
+  });
 });

@@ -1,4 +1,4 @@
-import { splitKeySequence, type ShortcutDef } from "@agent-console/ui";
+import type { ShortcutDef } from "@agent-console/ui";
 
 /**
  * 라우트 설정 한 항목(`docs/design/screens.md` 2.2). 사이드바·빠른 이동·도움말의 `g` 단축키 표·문서 제목이
@@ -123,11 +123,6 @@ export function gotoShortcuts(routes: readonly RouteDef[], go: (route: RouteDef)
       titleKey: r.titleKey,
       run: () => go(r),
     }));
-}
-
-/** 표시용: 키 문자열의 토큰 수(1 = 한 번에, 2 = 시퀀스). */
-export function keyTokenCount(keys: string): number {
-  return splitKeySequence(keys).length;
 }
 
 /** 이전 경로 → 새 경로 접두 치환. 해당 없으면 undefined. */

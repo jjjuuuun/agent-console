@@ -41,7 +41,6 @@ describe("@agent-console/contracts", () => {
     // 모델 title은 설정 폼에 보이는 표시명이다(타입 이름은 $defs 키).
     expect(schema["title"]).toBe("워크스페이스 설정");
     expect(schema["$defs"]).toHaveProperty("AgentSettings");
-    expect(schema["$defs"]).not.toHaveProperty("ConsoleSettings"); // 2R.20에서 삭제
     expect(() => getContractSchema("NoSuchModel")).toThrow();
   });
 

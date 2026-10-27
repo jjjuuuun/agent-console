@@ -43,13 +43,26 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 ## 의존성 (무엇을 / 왜 / 대안)
 | 의존 | 왜 | 대안 |
 | --- | --- | --- |
+| `react` 19 · `react-dom` | 화면 | — |
 | `react-router` ^7 | 라우팅·이탈 보호(`useBlocker`)·메모리 라우터 테스트 | TanStack Router |
 | `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신(결정 §R13-11) | 직접 만든 `useAsync`(1R.22 전 방식) |
+| `pretendard` ^1.3.9 | 기본 글꼴 자체 호스팅(`src/styles/fonts.css`가 woff2를 가리킨다, 5.2R.53). CDN 없이 오프라인에서도 같은 글꼴 | 시스템 글꼴만 사용 |
 | `vite-plugin-pwa` ^2 + `workbox-window` (dev) | manifest·서비스 워커(워크박스) 생성, 설치 가능한 앱 | 수작업 manifest + 서비스 워커 |
-| 워크스페이스 패키지 | contracts, api-client, ui, schema-form, graph-editor(1R.23 대비) | — |
+| `@agent-console/contracts` | 서버 계약 타입·JSON Schema(Pydantic에서 생성) | — |
+| `@agent-console/api-client` | REST·WebSocket 클라이언트 | — |
+| `@agent-console/ui` | 토큰·기본 컴포넌트(대화상자·탭·팝오버 등) | — |
+| `@agent-console/schema-form` | JSON Schema 설정 폼(`x-ui` 힌트) | — |
+| `@agent-console/graph-editor` | 팀 그래프 편집·표시 | — |
+| `@agent-console/chat` | 대화 메시지 목록·입력창·상호작용 카드 | — |
+| `@agent-console/log-view` | 로그 분석 표·필터·세션 목록·대시보드 | — |
+| `@agent-console/trace-view` | 실행 추적 타임라인 | — |
+| `@agent-console/text-editor` | 텍스트·마크다운·JSON 편집기와 diff | — |
+| `@agent-console/list-arrange` | 목록 정렬·그룹·접기 | — |
+| `@agent-console/projects` | 프로젝트 범위 규칙·REST 클라이언트 | — |
 
-터미널 도크·콘솔·Phase 1 그래프/편집기/실행 화면은 제거했다(`@agent-console/terminal` 패키지도 삭제했다).
+패키지 의존은 `^x.y.z` 범위 + pnpm `linkWorkspacePackages`로 연결한다(`workspace:` 프로토콜 없음).
 
 ## 테스트
-`npx vitest run apps/web --maxWorkers=1` (루트). 가짜 클라이언트로 부팅 실패·인증 거부·셸·단축키 덮어쓰기·빠른 이동·응답 대기 배지·설정 저장/충돌/사용량 출처/서버 정보를 검사한다.
-E2E(Playwright)는 1R.26에서 다시 쓴다(`apps/web/e2e`의 기존 시나리오는 Phase 1 화면 기준이라 지금은 맞지 않는다).
+- 단위·화면 테스트(Vitest, happy-dom): 저장소 루트에서 `npx vitest run --project web [경로] --maxWorkers=2`. 전체 TS 검사는 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser). 부하가 큰 환경에서는 `pnpm check -- --testTimeout=60000`.
+- 정적 검사: `src/app/noHardcoding.test.ts`·`moduleIdsNoHardcoding.test.ts`(하드코딩 점검), `src/app/tokenConsumers.test.ts`(토큰 정의·사용 일치, 허용 목록은 `tokenAllowlist.json`).
+- E2E(Playwright, fake 백엔드): 루트에서 `pnpm e2e [파일 이름 일부 | -g 제목]`. 웹을 빌드해 서버와 함께 띄운다. 시나리오는 `apps/web/e2e/*.spec.ts`다.

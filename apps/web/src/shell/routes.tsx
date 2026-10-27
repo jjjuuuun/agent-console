@@ -11,7 +11,7 @@ import { PlaceholderScreen } from "./PlaceholderScreen";
 import { DEFAULT_ROUTES, homeRoute, redirectTarget, routeServing, type RouteDef, type RouteGroupDef } from "./routeConfig";
 import { Shell } from "./Shell";
 
-// 화면은 모두 처음 열 때 불러온다(그래프·마크다운·타임라인·터미널 등 무거운 패키지가 첫 번들에 들어가지 않게).
+// 화면은 모두 처음 열 때 불러온다(그래프·마크다운·타임라인 등 무거운 패키지가 첫 번들에 들어가지 않게).
 const ChatScreen = lazyScreen(() => import("../features/chat/ChatScreen"), "ChatScreen");
 const AgentsScreen = lazyScreen(() => import("../features/agents/AgentsScreen"), "AgentsScreen");
 const ResourcesScreen = lazyScreen(() => import("../features/resources/ResourcesScreen"), "ResourcesScreen");
@@ -44,6 +44,11 @@ function placeholderPages(detailParam: string): (route: RouteDef) => RouteObject
   ];
 }
 
+/** 설정 화면에서 본문을 다른 기능이 그리는 섹션(프로젝트 관리). 해당 섹션은 서버에서 그 기능이 꺼지면 목록에서 사라진다. */
+const SETTINGS_SECTION_RENDERERS: Readonly<Record<string, () => ReactNode>> = {
+  [PROJECTS_SECTION_ID]: () => <ProjectsSection />,
+};
+
 /**
  * 기본 페이지 표.
  * - 1R.23: `teams`(목록 `/teams`, 편집기 `/teams/:id`), `agents`, `resources`
@@ -51,11 +56,6 @@ function placeholderPages(detailParam: string): (route: RouteDef) => RouteObject
  * - 1R.25: `runs`(`/runs`, `/runs/:id`), `usage`
  * - 4R.17: `logs`(`/logs/sessions[/:session]`, `/logs/search`, `/logs/dashboards[/:id]`; `/logs`는 마지막에 본 탭으로 이동)
  */
-/** 설정 화면에서 본문을 다른 기능이 그리는 섹션(프로젝트 관리). 해당 섹션은 서버에서 그 기능이 꺼지면 목록에서 사라진다. */
-const SETTINGS_SECTION_RENDERERS: Readonly<Record<string, () => ReactNode>> = {
-  [PROJECTS_SECTION_ID]: () => <ProjectsSection />,
-};
-
 export const DEFAULT_PAGES: PageTable = {
   // 목록과 상세가 한 화면이라 하나의 선택적 경로로 둔다(이동해도 목록 상태가 유지된다)
   chat: () => [{ path: ":conversationId?", element: <ChatScreen /> }],

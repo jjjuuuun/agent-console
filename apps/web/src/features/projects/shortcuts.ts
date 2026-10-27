@@ -7,5 +7,3 @@ import type { ShortcutDef } from "@agent-console/ui";
 export const PROJECT_SHORTCUT_DEFS = [
   { id: "project.switch", keys: "Alt+Shift+P", titleKey: "shortcuts.projectSwitch" },
 ] as const satisfies readonly Pick<ShortcutDef, "id" | "keys" | "titleKey">[];
-
-export const PROJECT_SWITCH_SHORTCUT_ID = PROJECT_SHORTCUT_DEFS[0].id;

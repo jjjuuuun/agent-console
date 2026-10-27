@@ -1,9 +1,6 @@
 /** 팀 구성·에이전트·리소스 화면 테스트용 임의 이름 디스크립터와 응답 픽스처. */
 import type { Agent, EdgeTypeDescriptor, Graph, NodeTypeDescriptor, ResourceTypeDescriptor } from "@agent-console/contracts";
 
-export const KIND_DEF = "k-def";
-export const KIND_ASSET = "k-asset";
-
 export const nodeTypes = [
   { id: "t-actor", version: 1, title: "행위자", role: "r-actor", executable: true, binds: { kind: "agent", field: "ref" }, config_schema: { type: "object", properties: { ref: { type: "string" }, role: { anyOf: [{ type: "string" }, { type: "null" }], default: null }, delegate_when: { anyOf: [{ type: "string" }, { type: "null" }], default: null }, settings: { anyOf: [{ type: "object" }, { type: "null" }], default: null } } }, static_ports: { inputs: [{ name: "i1", label: "받음" }, { name: "i2", label: "자료" }], outputs: [{ name: "o1", label: "냄" }] } },
   { id: "t-asset", version: 1, title: "자산", role: "r-asset", executable: false, binds: { kind: "resource", field: "asset_ref" }, config_schema: { type: "object", properties: { asset_ref: { type: "string" } } }, static_ports: { inputs: [], outputs: [{ name: "provide" }] }, ui_hints: { shape: "chip" } },

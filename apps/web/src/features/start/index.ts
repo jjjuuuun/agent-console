@@ -3,4 +3,4 @@ export { StartGuide, type StartGuideProps } from "./StartGuide";
 export { StartGuideDialog, type StartGuideDialogProps } from "./StartGuideDialog";
 export { startMessages } from "./messages";
 export { START_STEP_DEFS, buildStartSteps, type StartCounts, type StartStepDef } from "./startSteps";
-export { useStartGuide, type StartGuide as StartGuideState } from "./useStartGuide";
+export { useStartGuide } from "./useStartGuide";

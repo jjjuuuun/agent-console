@@ -17,14 +17,6 @@ export function patchLogs(logs: LogSettings | null | undefined, patch: Record<st
   return next as LogSettings;
 }
 
-/** 빈 객체/문자열이 되면 `undefined`로 접는다(비어 있음 = 기본값). */
-export function emptyToUndefined<T>(v: T): T | undefined {
-  if (v === null || v === undefined) return undefined;
-  if (typeof v === "string" && v === "") return undefined;
-  if (typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length === 0) return undefined;
-  return v;
-}
-
 /** http/https만 링크로 쓴다(그 밖의 스킴은 텍스트). */
 export function isHttpUrl(url: string | null | undefined): url is string {
   return typeof url === "string" && /^https?:\/\//i.test(url);

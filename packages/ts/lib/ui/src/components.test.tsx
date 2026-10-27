@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Badge, Banner, Button, IconButton, StatusChip, StatusIcon, Tag, ThemeProvider, getResolvedTokens } from "./index";
+import { Badge, Banner, Button, IconButton, StatusChip, StatusIcon, Tag, ThemeProvider } from "./index";
 
 afterEach(cleanup);
 
@@ -80,19 +80,12 @@ describe("Banner / Badge / Tag", () => {
   });
 });
 
-describe("ThemeProvider / getResolvedTokens", () => {
+describe("ThemeProvider", () => {
   it("data-theme를 적용하고 system이면 제거한다", () => {
     const target = document.createElement("div");
     const { rerender } = render(<ThemeProvider theme="light" onThemeChange={() => {}} target={target} />);
     expect(target.getAttribute("data-theme")).toBe("light");
     rerender(<ThemeProvider theme="system" onThemeChange={() => {}} target={target} />);
     expect(target.hasAttribute("data-theme")).toBe(false);
-  });
-  it("getResolvedTokens는 인라인 변수 값을 trim해 돌려준다", () => {
-    const el = document.createElement("div");
-    el.style.setProperty("--ac-test", " #fff ");
-    document.body.append(el);
-    expect(getResolvedTokens(["--ac-test"], el)).toEqual({ "--ac-test": "#fff" });
-    el.remove();
   });
 });

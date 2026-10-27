@@ -5,7 +5,7 @@
  * 아이콘 버튼은 `IconButton`/`ActionButton`(`label` 필수)을 쓴다.
  * @type {import("eslint").Rule.RuleModule}
  */
-export const buttonName = {
+const buttonName = {
   meta: {
     type: "problem",
     docs: { description: "이름 없는 <button>(아이콘만) 금지: IconButton·ActionButton을 쓰거나 aria-label을 단다" },
