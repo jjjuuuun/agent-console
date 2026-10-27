@@ -12,7 +12,7 @@ import { defaultEdgeStyles, defaultMetricKinds, defaultTones } from "./defaults"
 import { EdgeLayer } from "./EdgeLayer";
 import { useControllable, useElementSize } from "./hooks";
 import {
-  CONTAIN_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, VIEW_MARGIN, canvasSize, ensureVisible, fitViewport, gridLayout, nearestInDirection, zoomAround,
+  CONTAIN_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, MORE_BELOW_SCROLL, VIEW_MARGIN, autoFit, canvasSize, ensureVisible, fitViewport, gridLayout, nearestInDirection, zoomAround,
 } from "./layout";
 import type { Direction, Size, Viewport } from "./layout";
 import { formatMessage, resolveMessages } from "./messages";
@@ -52,6 +52,8 @@ export interface ArchitectureDiagramProps {
   onFitModeChange?: (mode: ArchFitMode) => void;
   /** 이 배율 미만이면 요약 표시(칸마다 숫자만). */
   fullScaleMin?: number;
+  /** `auto` 맞춤이 높이가 모자랄 때 전체 맞춤으로 바꾸는 최소 배율(기본 0.55). 이 미만이면 폭 맞춤 + 잘림 표시. */
+  autoContainMin?: number;
   /** 컨테이너 크기를 레이아웃으로 알 수 없을 때의 값(테스트·고정 크기). */
   containerSize?: Size;
 
@@ -94,18 +96,18 @@ const ALL_PARTS: Required<ToolbarParts> = { zoom: true, fit: true, view: true, l
 export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   const {
     view, selection = null, highlight = null, onSelect, onBlocked, onDrill, onBack, onSkip,
-    scale: scaleProp, onScaleChange, fullScaleMin = 0.6, containerSize,
+    scale: scaleProp, onScaleChange, fullScaleMin = 0.6, autoContainMin, containerSize,
     mode = "live", tones = defaultTones, edgeStyles = defaultEdgeStyles, cellRenderers, metricKinds = defaultMetricKinds,
     edgeLegend, toolbar = true, toolbarLead, toolbarExtra, afterToolbar, infoBar = true, className,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
-  const [fitMode, setFitMode] = useControllable<ArchFitMode>(props.fitMode, props.defaultFitMode ?? "width", props.onFitModeChange);
+  const [fitMode, setFitMode] = useControllable<ArchFitMode>(props.fitMode, props.defaultFitMode ?? "auto", props.onFitModeChange);
   const [viewMode, setViewMode] = useControllable<ArchViewMode>(props.viewMode, props.defaultViewMode ?? "diagram", props.onViewModeChange);
   const [userScale, setUserScale] = useState(1);
   const [pan, setPan] = useState<{ key: string; x: number; y: number } | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
   const [focusTarget, setFocusTarget] = useState<ArchSelection | null>(null);
-  const lastFit = useRef<Exclude<ArchFitMode, "none">>("width");
+  const lastFit = useRef<Exclude<ArchFitMode, "none">>("auto");
   const canvasRef = useRef<HTMLDivElement>(null);
   const legendBtn = useRef<HTMLButtonElement>(null);
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -123,12 +125,29 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   if (fitMode !== "none") lastFit.current = fitMode;
 
   // ---- 배율·위치: 맞춤 모드가 정한 값 위에 사용자가 끈 위치를 얹는다. 맞춤 키가 바뀌면 위치는 버린다.
-  const fitKey = fitMode === "none" ? "none" : `${fitMode}:${Math.round(container.width)}x${Math.round(container.height)}`;
-  const fit = fitMode === "none" ? null : fitViewport(fitMode, size, container);
+  const fitOptions = useMemo(() => (autoContainMin === undefined ? {} : { containMin: autoContainMin }), [autoContainMin]);
+  const auto = fitMode === "auto" ? autoFit(size, container, fitOptions) : null;
+  const fit = fitMode === "none" ? null : (auto?.viewport ?? fitViewport(fitMode, size, container, fitOptions));
+  // 맞춤 키: 폭과 맞춤 결과(배율)가 같으면 같은 키다. 높이만 조금 바뀌는 경우(선택 정보 줄이 늘어남)에는 사용자가 옮긴 위치를 지키고,
+  // 배율이 바뀌면(창 크기·분리선으로 맞춤이 다시 계산됨) 위치를 버린다.
+  const fitKey = fit === null ? "none" : `${fitMode}:${Math.round(container.width)}:${fit.zoom.toFixed(3)}:${auto?.resolved ?? ""}`;
   const zoom = scaleProp ?? fit?.zoom ?? userScale;
   const userPan = pan && pan.key === fitKey ? pan : null;
-  const vp: Viewport = { zoom, x: userPan?.x ?? fit?.x ?? VIEW_MARGIN, y: userPan?.y ?? fit?.y ?? VIEW_MARGIN };
+  // 그림이 캔버스보다 클 때, 맞춤 위치에서 세로로 옮긴 값은 캔버스가 커져도 그림 끝을 넘지 않게 한다.
+  const taller = size.height * zoom + 2 * VIEW_MARGIN > container.height;
+  const panY = userPan === null ? undefined : fit === null || !taller ? userPan.y : Math.min(VIEW_MARGIN, Math.max(userPan.y, container.height - size.height * zoom - VIEW_MARGIN));
+  const vp: Viewport = { zoom, x: userPan?.x ?? fit?.x ?? VIEW_MARGIN, y: panY ?? fit?.y ?? VIEW_MARGIN };
   const level = zoom < fullScaleMin ? "summary" : "full";
+  // 자동 맞춤이 폭 맞춤을 유지해 아래가 잘리는 상태: 잘림 표시(그라데이션·칩·스크롤 표시)를 켠다. 화면 밖 칸 수는 지금 위치로 센다.
+  const clipped = auto?.clipped === true && container.height > 0;
+  const cellsBelow = clipped ? cells.filter((c) => rects[c.id] && ((rects[c.id] as Rect).y + (rects[c.id] as Rect).h) * zoom + vp.y > container.height + 1).length : 0;
+  const scrollMore = () => {
+    const minY = Math.min(vp.y, container.height - size.height * zoom - VIEW_MARGIN);
+    setPan({ key: fitKey, x: vp.x, y: Math.max(minY, vp.y - container.height * MORE_BELOW_SCROLL) });
+  };
+  const contentH = size.height * zoom + 2 * VIEW_MARGIN;
+  const thumbH = clipped ? Math.min(container.height, Math.max(24, (container.height * container.height) / contentH)) : 0;
+  const scrollRatio = clipped && contentH > container.height ? Math.min(1, Math.max(0, (VIEW_MARGIN - vp.y) / (contentH - container.height))) : 0;
 
   const applyViewport = useCallback(
     (next: Viewport, opts: { zoomed?: boolean } = {}) => {
@@ -334,7 +353,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
       {viewMode === "list" ? (
         <ArchitectureCellList view={view} selection={selection} highlight={highlight} onSelect={onSelect} onBlocked={onBlocked} tones={tones} metricKinds={metricKinds} messages={messages} />
       ) : (
-        <div className="ac-arch-canvas" ref={canvasRef} data-arch-canvas="" data-fit={fitMode}>
+        <div className="ac-arch-canvas" ref={canvasRef} data-arch-canvas="" data-fit={fitMode} data-fit-resolved={auto?.resolved} data-clipped={clipped ? "" : undefined} data-cells-below={clipped ? cellsBelow : undefined}>
           <DiagramContext.Provider value={ctx}>
             <ReactFlow
               nodes={nodes}
@@ -352,6 +371,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
               elementsSelectable={false}
               selectNodesOnDrag={false}
               disableKeyboardA11y
+              autoPanOnNodeFocus={false}
               panOnDrag
               panOnScroll
               zoomOnScroll={false}
@@ -363,6 +383,21 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
               <EdgeLayer models={models} width={size.width} height={size.height} />
             </ReactFlow>
           </DiagramContext.Provider>
+          {clipped ? (
+            <>
+              <div className="ac-arch-scrollbar" aria-hidden="true">
+                <div className="ac-arch-scrollbar-thumb" style={{ height: thumbH, transform: `translateY(${scrollRatio * (container.height - thumbH)}px)` }} />
+              </div>
+              {cellsBelow > 0 ? (
+                <>
+                  <div className="ac-arch-more-fade" aria-hidden="true" />
+                  <button type="button" className="ac-arch-more" title={messages.fitMoreBelowHelp} onClick={scrollMore}>
+                    {formatMessage(messages.fitMoreBelow, { n: cellsBelow })}
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : null}
         </div>
       )}
       <p id={descId} className="ac-arch-sr">{zoneTitles}</p>

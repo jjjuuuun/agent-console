@@ -97,9 +97,13 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
 
   // ---- 그림: 범위 + 하위 구조도 필터 + 프로필
   const sceneParams = useMemo<LogQueryParams>(() => mergeQuery(scope, drillQuery(drill), profile === undefined ? undefined : { [ARCH_QUERY.profile]: profile }), [scope, drill, profile]);
-  const viewQ = useArchitectureView(sceneParams, enabled);
-  const view = viewQ.data;
+  // 규칙(프로필)이 하나도 없으면 서버가 404를 내 콘솔 오류가 남는다(5.5R.20). 프로필 목록을 먼저 보고, 0개면 그림을 요청하지 않는다.
+  // 목록을 못 읽었으면(오류) 예전처럼 그림을 요청해 서버의 판단을 따른다.
   const profilesQ = useArchitectureProfiles(enabled);
+  const noRules = profilesQ.isSuccess && (profilesQ.data.profiles ?? []).every((x) => x.disabled === true);
+  const viewReady = profilesQ.isSuccess ? !noRules : profilesQ.isError;
+  const viewQ = useArchitectureView(sceneParams, enabled && viewReady);
+  const view = viewQ.data;
 
   // ---- 선택 → 표 질의
   const target = useMemo(() => (view === undefined || picked === null ? undefined : resolveTarget(view, picked, t.noName)), [view, picked]);
@@ -200,14 +204,14 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
     return out;
   }, [drill, selection, target, filterTitle, goTo]);
 
-  const error = viewQ.isError && view === undefined ? classifyArchError(viewQ.error) : null;
+  const error: ArchErrorInfo | null = enabled && noRules ? { kind: "rules", message: "" } : viewQ.isError && view === undefined ? classifyArchError(viewQ.error) : null;
   return {
     enabled,
     profile,
     setProfile,
     profiles: profilesQ.data,
     view,
-    loading: enabled && viewQ.isPending,
+    loading: enabled && !noRules && viewQ.isPending,
     refreshing: viewQ.isFetching && view !== undefined,
     error,
     refetch: () => void refetch(),

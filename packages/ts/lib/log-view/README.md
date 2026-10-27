@@ -43,6 +43,7 @@ import "@agent-console/log-view/styles.css";
 | 영역 | 이름 |
 | --- | --- |
 | 컴포넌트 | `LogEventTable` `LogFilterBar` `CategoryChips` `LogEventDetail` `SessionList` `PlaybackBar` `LaneRibbon` `HandoffMatrixView` `DashboardGrid` `WidgetEditor` `TemplatePicker` `ColorSlotPicker` `UnknownWidget` `AggregateTable` |
+| 빈 표(5.5R.20) | `LogEventTable`의 `emptyBelowHeader`를 켜면 행이 0개여도 표 머리를 그리고 `renderEmpty` 안내를 머리 아래에 놓는다 |
 | 명령형 API(5R.21) | `LogEventTable`·`LogEventDetail`는 `ref`로 `LogEventTableHandle`(`scrollToUid`·`focus`)·`LogEventDetailHandle`(`selectTabAt`·`focusTab`·`visibleTabs`)를 낸다. `onActivate`(표 Enter)·`activeTab`/`onActiveTabChange`(상세)·`onActiveChange`(`SessionList`)로 앱이 DOM을 읽거나 클릭하지 않는다 |
 | 위젯 레지스트리(X21) | `WidgetDescriptor` `createWidgetRegistry` `builtinWidgets`(metric·bar·line·table) `validateQuery` |
 | 재생 | `sortEvents` `visibleThrough` `indexOfSeq` `seqAtIndex` `usePlayback`(가짜 `clock` 주입) `playbackDelay` `nextSpeed` `clipTraceAt` |

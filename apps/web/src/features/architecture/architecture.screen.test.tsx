@@ -187,6 +187,15 @@ describe("세션 상세 [구조도] 세그먼트", () => {
     expect(screen.getByText(/90,000건으로 구조도 상한\(50,000\)/)).toBeTruthy();
   });
 
+  it("규칙(프로필)이 하나도 없으면 구조도를 요청하지 않고(404 콘솔 오류 없음) 규칙 없음 안내를 보인다", async () => {
+    const { mocks } = mount("/logs/sessions/ses-1", ["logs", "logs:architecture"], {
+      listArchitectureProfiles: async () => ({ profiles: [], default_profile: null }),
+    });
+    await openArch();
+    await screen.findByText("구조도 규칙이 없습니다", {}, LONG);
+    expect(mocks["getLogArchitecture"]).not.toHaveBeenCalled();
+  });
+
   it("빈 상태: 이벤트 0건(B)은 칸을 그대로 그리고 모든 칸 수집 안 됨(C)은 출처 종류를 알린다", async () => {
     mount("/logs/sessions/ses-1", ["logs", "logs:architecture"], { getLogArchitecture: async () => archView({ event_total: 0 }) });
     await openArch();

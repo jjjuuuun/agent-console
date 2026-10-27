@@ -65,6 +65,7 @@ import { ArchitectureDiagram } from "@agent-console/arch-view";
 | `edgePath(points, from, to)` | `points`가 있으면 그대로, 없으면 두 칸 경계 사이 직선(6px 바깥) |
 | `formatMetric(metric, messages, opts)` | 지표 → 칸 글자·접근 이름·풀어 쓴 글자. 수집 안 됨은 "–" |
 | `checkLayout(view)` | 칸–칸, 연결–칸, 연결–연결, 칩–칩 겹침·교차 목록(순수 함수, 설정 미리보기에도 쓸 수 있음) |
+| 맞춤 `auto`(5.5R.20, 기본) | `autoFit`·`AUTO_CONTAIN_MIN`·prop `autoContainMin`: 폭 맞춤이 들어가면 폭, 아니면 전체 맞춤 배율이 기준(0.55) 이상일 때 전체, 미만이면 폭 맞춤 + 잘림 표시(하단 그라데이션·"아래 칸 n개 ↓" 칩·스크롤 표시). 캔버스 크기가 바뀔 때마다 다시 계산한다 |
 | `fitViewport`·`zoomAround`·`ensureVisible`·`nearestInDirection` | 맞춤·확대·최소 스크롤·방향키 이동 순수 함수 |
 | `@agent-console/arch-view/testing` | 예제 `ArchitectureView`(기본 프로필 좌표, 지표는 임시 값) |
 

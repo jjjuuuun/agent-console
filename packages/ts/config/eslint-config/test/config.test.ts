@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import defaults, { DEFAULT_IGNORES, createConfig } from "@agent-console/eslint-config";
 
 test("기본 설정은 dist·node_modules를 제외한다", () => {
+  expect(DEFAULT_IGNORES).toContain("**/dist-*/**");
   expect(defaults[0]?.ignores).toEqual(DEFAULT_IGNORES);
 });
 

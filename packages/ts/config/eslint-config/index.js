@@ -3,7 +3,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 /** 어느 패키지에서나 린트하지 않는 경로. */
-export const DEFAULT_IGNORES = ["**/dist/**", "**/node_modules/**", "**/coverage/**", "**/*.generated.*"];
+export const DEFAULT_IGNORES = ["**/dist/**", "**/dist-*/**", "**/node_modules/**", "**/coverage/**", "**/*.generated.*"];
 
 /**
  * ESLint flat config(배열)를 만든다.

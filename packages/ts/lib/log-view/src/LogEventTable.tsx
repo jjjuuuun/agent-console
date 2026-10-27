@@ -25,6 +25,8 @@ export interface LogEventTableHandle {
 }
 
 export interface LogEventTableProps extends ListSlots {
+  /** true면 행이 0개일 때도 표 머리를 그리고, 비었다는 안내(`renderEmpty`)는 그 아래 본문 자리에 놓는다(기본: 안내가 표를 대신한다). */
+  emptyBelowHeader?: boolean;
   /** 표의 명령형 API. */
   ref?: Ref<LogEventTableHandle>;
   rows: readonly LogEventRow[];
@@ -84,7 +86,7 @@ function colWidth(w: number | string): string {
  * `→/←` 응답 묶음 펼침/접기, `Shift+F10` 행 메뉴.
  */
 export function LogEventTable({ ref, ...props }: LogEventTableProps) {
-  const { rows, columns, selectedUid, onSelect, onActivate, onRowMenu, taxonomy, isError, slotFor, timeMode = "relative", originTime, followLast, onFollowChange, density = "dense", onNearEnd, nearEndThreshold = 20, loadingMore, hasMore, currentUid, highlight, renderCell, laneLabelFor, height = 480, ariaLabel, messages, formatters: formatterOverrides, groupByMessage: groupMessages, loading, error, onRetry, renderLoading, renderEmpty, renderError } = props;
+  const { rows, columns, selectedUid, onSelect, onActivate, onRowMenu, taxonomy, isError, slotFor, timeMode = "relative", originTime, followLast, onFollowChange, density = "dense", onNearEnd, nearEndThreshold = 20, loadingMore, hasMore, currentUid, highlight, renderCell, laneLabelFor, height = 480, ariaLabel, messages, formatters: formatterOverrides, groupByMessage: groupMessages, loading, error, onRetry, renderLoading, renderEmpty, renderError, emptyBelowHeader } = props;
   const m = useMemo(() => mergeMessages(messages), [messages]);
   const formatters = useMemo(() => mergeFormatters(formatterOverrides), [formatterOverrides]);
   const rowH = ROW_H[density];
@@ -228,9 +230,10 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
     return defaultEventCell(col.id, row, { m, formatters, taxonomy, slotFor, timeMode, originTime, isError, laneLabelFor, item });
   };
 
+  const keepHeader = emptyBelowHeader === true && state !== null && rows.length === 0 && !loading && !error;
   return (
     <div className="ac-lv-table" data-density={density}>
-      {state && rows.length === 0 ? (
+      {state && rows.length === 0 && !keepHeader ? (
         state
       ) : (
         <div
@@ -250,7 +253,8 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
               </div>
             ))}
           </div>
-          <div ref={scrollRef} className="ac-lv-scroll" style={{ height }} onScroll={onScroll}>
+          {keepHeader ? <div className="ac-lv-empty-body" style={{ height }}>{state}</div> : null}
+          <div ref={scrollRef} className="ac-lv-scroll" style={keepHeader ? { height: 0, overflow: "hidden" } : { height }} onScroll={onScroll}>
             <div style={{ height: virt.getTotalSize(), position: "relative" }}>
               {vItems.map((v) => {
                 const item = items[v.index];

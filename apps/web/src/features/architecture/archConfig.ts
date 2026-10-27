@@ -17,6 +17,25 @@ export const ARCH_STORAGE = {
   runDialogView: "ac.arch.run.dialog.view",
 } as const;
 
+/** 맞춤(화면 명세 §4.2, 5.5R.20). 값은 전부 여기서만 바꾼다. */
+export const ARCH_FIT = {
+  /** 저장된 선택이 없을 때의 맞춤 */
+  default: "auto",
+  /** 자동 맞춤이 높이가 모자랄 때 전체 맞춤으로 바꾸는 최소 배율(미만이면 폭 맞춤 + 잘림 표시) */
+  autoContainMin: 0.55,
+  /** 이 배율 미만이면 요약 표시(명세 §4.2 `auto` 규칙의 0.45) */
+  fullScaleMin: 0.45,
+  /**
+   * [크게 보기] 대화상자에서 그림과 이벤트 표의 높이 비(약 78% : 22%). 명세는 75 : 25이지만 1440×900에서 75%면 캔버스가 466(전체 맞춤 배율 0.53 < 0.55)이라
+   * 칸이 잘려서, 전체 맞춤 기준(0.55)을 넘는 최소 비율로 잡았다(캔버스 약 489, 배율 0.56).
+   */
+  dialogSplit: { diagram: 7, table: 2 },
+  /** 1280px 미만 폭에서의 비(55% : 45%, 명세 §6.4) */
+  dialogSplitNarrow: { diagram: 11, table: 9 },
+  /** 대화상자 이벤트 표 최소 높이(px) */
+  dialogTableMin: 120,
+} as const;
+
 /** 서버 쿼리 이름(로그 필터 확장 X28과 구조도 요청). 값은 `ArchitectureSelector`가 준다. */
 export const ARCH_QUERY = {
   profile: "profile",

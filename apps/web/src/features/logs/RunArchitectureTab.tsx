@@ -5,7 +5,7 @@ import { Button, Switch } from "@agent-console/ui";
 import { isErrorEvent } from "@agent-console/log-view";
 import type { LogEvent } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
-import { ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_STORAGE, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
+import { ARCH_FIT, ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_STORAGE, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
 import { RunArchitectureEvents, NO_RUN_EVENT_FILTERS, type RunEventFilters } from "./RunArchitectureEvents";
 import { settingsLogsHref } from "./LogsEmpty";
 import { useLogsIngested, LogsLiveProvider } from "./LogsLive";
@@ -138,7 +138,7 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
   );
 
   return (
-    <div className="arch-run">
+    <div className="arch-run" data-fill-height="">
       <p className="arch-table-note arch-run-explain">{archMessages.runTab.explain}</p>
       <div className="arch-run-diagram">
         {expanded ? null : <ArchitecturePanel controller={arch} toolbarExtra={toolbarExtra} diagramHeight={canvasH + ARCH_RUN_HEIGHT.chrome} {...panelProps} />}
@@ -154,7 +154,7 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
           requestAnimationFrame(() => expandRef.current?.focus());
         }}
         controller={arch}
-        panelProps={{ ...panelProps, toolbar: true, defaultFit: "width", defaultView: "diagram", storageKeys: { fit: ARCH_STORAGE.runDialogFit, view: ARCH_STORAGE.runDialogView }, toolbarExtra: includeSwitch }}
+        panelProps={{ ...panelProps, toolbar: true, defaultFit: ARCH_FIT.default, defaultView: "diagram", storageKeys: { fit: ARCH_STORAGE.runDialogFit, view: ARCH_STORAGE.runDialogView }, toolbarExtra: includeSwitch }}
         table={expanded ? pane("arch-run-dialog-q") : undefined}
       />
     </div>

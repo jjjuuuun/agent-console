@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkLayout, chipWidthCap, distanceToRect, edgePath, ensureVisible, fitChip, fitViewport, gridLayout, nearestInDirection,
+  AUTO_CONTAIN_MIN, autoFit, checkLayout, chipWidthCap, distanceToRect, edgePath, ensureVisible, fitChip, fitViewport, gridLayout, nearestInDirection,
   pathData, polylineMidpoint, rectsOverlap, segmentsIntersect, zoomAround, EDGE_GAP,
 } from "./layout";
 import { defaultProfileView, sampleCell, sampleEdge } from "./testing";
@@ -99,6 +99,17 @@ describe("확대·이동", () => {
     expect(fitViewport("contain", canvas, { width: 388, height: 240 }).zoom).toBeCloseTo((388 - 32) / 1520);
     expect(fitViewport("contain", canvas, { width: 100, height: 100 }).zoom).toBe(0.05);
     expect(fitViewport("width", canvas, { width: 0, height: 0 }).zoom).toBe(1);
+  });
+  it("autoFit: 폭 맞춤이 들어가면 폭, 아니면 0.55 이상일 때만 전체, 그 미만이면 폭 + clipped", () => {
+    expect(AUTO_CONTAIN_MIN).toBe(0.55);
+    expect(autoFit(canvas, { width: 1200, height: 700 })).toMatchObject({ resolved: "width", clipped: false });
+    expect(autoFit(canvas, { width: 1172, height: 500 })).toMatchObject({ resolved: "contain", clipped: false });
+    const small = autoFit(canvas, { width: 1172, height: 256 });
+    expect(small).toMatchObject({ resolved: "width", clipped: true });
+    expect(small.viewport.zoom).toBeCloseTo((1172 - 32) / 1520);
+    expect(autoFit(canvas, { width: 1172, height: 256 }, { containMin: 0.2 }).resolved).toBe("contain");
+    expect(autoFit(canvas, { width: 0, height: 0 })).toMatchObject({ clipped: false });
+    expect(fitViewport("auto", canvas, { width: 1172, height: 500 }).zoom).toBeCloseTo((500 - 32) / 812);
   });
   it("zoomAround는 기준 점을 고정", () => {
     const v = zoomAround({ x: 16, y: 16, zoom: 1 }, 2, { x: 216, y: 116 });

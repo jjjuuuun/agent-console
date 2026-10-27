@@ -22,10 +22,10 @@ export {
 } from "./format";
 export type { FormatMetricOptions, MetricText } from "./format";
 export {
-  EDGE_GAP, canvasSize, checkLayout, chipCenter, chipWidthCap, distanceToRect, edgePath, ensureVisible, fitChip, fitViewport,
+  AUTO_CONTAIN_MIN, EDGE_GAP, MORE_BELOW_SCROLL, autoFit, canvasSize, checkLayout, chipCenter, chipWidthCap, distanceToRect, edgePath, ensureVisible, fitChip, fitViewport,
   gridLayout, nearestInDirection, pathData, polylineMidpoint, zoomAround,
 } from "./layout";
-export type { ChipContent, ChipFit, Direction, LayoutIssue, LayoutIssueKind, Size, Viewport } from "./layout";
+export type { AutoFit, ChipContent, ChipFit, FitOptions, Direction, LayoutIssue, LayoutIssueKind, Size, Viewport } from "./layout";
 export { cellAriaLabel, cellBlockedReason, edgeAriaLabel, edgeBlockedReason, sameSelection } from "./model";
 export type {
   ArchFitMode, ArchLevel, ArchSelection, ArchSelectionKind, ArchViewMode, BlockedReason, CellRenderProps, CellRenderer,

@@ -46,6 +46,7 @@ export function Toolbar(p: ToolbarProps) {
       {p.parts.fit && diagram ? (
         <select className="ac-arch-select" aria-label={m.fit} value={p.fitMode === "none" ? "" : p.fitMode} onChange={(e) => (e.target.value === "100" ? p.onResetScale() : e.target.value ? p.onFitMode(e.target.value as ArchFitMode) : undefined)}>
           {p.fitMode === "none" ? <option value="" disabled>{m.fit}</option> : null}
+          <option value="auto">{m.fitAuto}</option>
           <option value="width">{m.fitWidth}</option>
           <option value="contain">{m.fitContain}</option>
           <option value="100">{m.fit100}</option>

@@ -26,7 +26,8 @@ export type ArchSelection =
   | { kind: "unassigned"; id: string; group?: undefined };
 
 export type ArchSelectionKind = ArchSelection["kind"];
-export type ArchFitMode = "width" | "contain" | "none";
+/** `auto` = 폭 맞춤이 기본이고 높이가 모자라면 전체 맞춤 또는 잘림 표시(`autoFit`). */
+export type ArchFitMode = "auto" | "width" | "contain" | "none";
 export type ArchViewMode = "diagram" | "list";
 /** `full` = 전체 표시, `summary` = 요약 표시(숫자만). */
 export type ArchLevel = "full" | "summary";

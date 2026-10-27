@@ -135,6 +135,11 @@ export const EVENT_COLUMN_IDS: readonly string[] = data.eventColumns.all;
 export const SESSION_EVENT_COLUMNS_DEFAULT: readonly string[] = data.eventColumns.session;
 export const SEARCH_EVENT_COLUMNS_DEFAULT: readonly string[] = data.eventColumns.search;
 export const RUN_TAB_COLUMNS: readonly string[] = data.eventColumns.runTab;
+
+/** 실행 상세 탭 이벤트 표에서 스크롤 영역 밖이 차지하는 높이(px): 표 머리 32 + 아래 "더 없음" 줄 22 + 여백. 표가 감싸는 칸에 정확히 맞도록 뺀다. */
+export const RUN_TABLE_CHROME = 80;
+/** 표 본문 최소 높이(px): 압축 행(40) 4줄. 칸이 이보다 작으면 탭이 스크롤된다. */
+export const RUN_TABLE_MIN_BODY = 160;
 /** 열 id 중 화면 코드가 특별히 다루는 것(시각 표기 전환·레인 필터 등). */
 export const CELL_IDS = data.cellIds;
 

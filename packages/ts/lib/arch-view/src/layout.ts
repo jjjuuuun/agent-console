@@ -371,6 +371,8 @@ export interface FitOptions {
   maxZoom?: number;
   /** `width` 맞춤의 배율 하한(§4.2: 0.6). */
   widthFloor?: number;
+  /** `auto` 맞춤이 전체 맞춤으로 바꾸는 최소 배율(기본 `AUTO_CONTAIN_MIN`). */
+  containMin?: number;
 }
 export const MIN_ZOOM = 0.25;
 /** 전체 맞춤(`contain`)은 하한이 없다(명세 §4.1). 0이 되지 않게만 막는다. */
@@ -385,6 +387,7 @@ export const clampZoom = (z: number, min = MIN_ZOOM, max = MAX_ZOOM): number => 
  * `contain`은 전체가 보이게 하고 하한이 없다. 컨테이너 크기를 모르면(0) 배율 1.
  */
 export function fitViewport(mode: Exclude<ArchFitMode, "none">, canvas: Size, container: Size, options: FitOptions = {}): Viewport {
+  if (mode === "auto") return autoFit(canvas, container, options).viewport;
   const m = options.margin ?? VIEW_MARGIN;
   const min = options.minZoom ?? MIN_ZOOM;
   const max = options.maxZoom ?? MAX_ZOOM;
@@ -394,6 +397,34 @@ export function fitViewport(mode: Exclude<ArchFitMode, "none">, canvas: Size, co
   const zh = (container.height - 2 * m) / canvas.height;
   const zoom = clampZoom(Math.min(zw, zh), Math.min(min, CONTAIN_MIN_ZOOM), max);
   return { x: Math.max(m, (container.width - canvas.width * zoom) / 2), y: Math.max(m, (container.height - canvas.height * zoom) / 2), zoom };
+}
+
+/** `auto` 맞춤이 높이가 모자랄 때 전체 맞춤으로 바꾸는 최소 배율(§4.2: 0.55). 이 미만이면 폭 맞춤을 유지하고 잘림 표시를 켠다. */
+export const AUTO_CONTAIN_MIN = 0.55;
+
+/** [아래 칸 n개 ↓] 칩을 누르면 캔버스 높이의 이 비율만큼 스크롤한다(§4.2). */
+export const MORE_BELOW_SCROLL = 0.8;
+
+export interface AutoFit {
+  viewport: Viewport;
+  /** 실제로 쓴 맞춤: 폭 맞춤인가 전체 맞춤인가 */
+  resolved: "width" | "contain";
+  /** 폭 맞춤이라 아래가 잘리는 상태(잘림 표시를 켜야 한다) */
+  clipped: boolean;
+}
+
+/**
+ * `auto` 맞춤(§4.2). ① 폭 맞춤으로 높이까지 들어가면 폭 맞춤 ② 안 들어가도 전체 맞춤 배율이 `containMin`(기본 0.55) 이상이면 전체 맞춤
+ * ③ 아니면 폭 맞춤을 유지하고 `clipped`를 켠다. 컨테이너 크기를 모르면 배율 1이고 잘림이 아니다.
+ */
+export function autoFit(canvas: Size, container: Size, options: FitOptions = {}): AutoFit {
+  const m = options.margin ?? VIEW_MARGIN;
+  const width = fitViewport("width", canvas, container, options);
+  if (container.width <= 0 || container.height <= 0 || canvas.width <= 0 || canvas.height <= 0) return { viewport: width, resolved: "width", clipped: false };
+  if (canvas.height * width.zoom + 2 * m <= container.height + 0.5) return { viewport: width, resolved: "width", clipped: false };
+  const contain = fitViewport("contain", canvas, container, options);
+  if (contain.zoom >= (options.containMin ?? AUTO_CONTAIN_MIN)) return { viewport: contain, resolved: "contain", clipped: false };
+  return { viewport: width, resolved: "width", clipped: true };
 }
 
 /** `focus`(화면 좌표)를 고정한 채 배율을 바꾼다. */

@@ -295,6 +295,14 @@ describe("요약 표시 (수용 §13-8)", () => {
   });
 });
 
+describe("칸 설명 툴팁 (§2.1·§9.3)", () => {
+  it("설명이 칸 줄에서 잘려도 title에 칸 이름과 전체 설명이 들어 있다", () => {
+    const long = "아주 긴 설명이 한 줄에 다 들어가지 않아서 말줄임으로 잘리는 칸의 전체 설명입니다";
+    const { container } = renderDiagram({ profile: "p", event_total: 0, cells: [sampleCell("t1", { label: "임의 칸", description: long, x: 100, y: 100 })], edges: [] });
+    expect(cell(container, "t1").getAttribute("title")).toBe(`임의 칸 — ${long}`);
+  });
+});
+
 describe("맞춤·배율 (수용 §13-9)", () => {
   const v = defaultProfileView();
   it("폭 맞춤은 하한 0.6, 전체 맞춤은 하한 없음, 확대하면 none이 된다", () => {
@@ -311,6 +319,30 @@ describe("맞춤·배율 (수용 §13-9)", () => {
   it("전체 맞춤(contain)은 작은 칸에서도 요약 표시로 내려간다", () => {
     const { container } = renderDiagram(v, { containerSize: { width: 420, height: 240 }, defaultFitMode: "contain" });
     expect(container.querySelector(".ac-arch-root")!.getAttribute("data-level")).toBe("summary");
+  });
+  it("자동 맞춤: 높이가 들어가면 폭 맞춤, 모자라도 0.55 이상이면 전체 맞춤, 미만이면 폭 맞춤 + 잘림 표시", () => {
+    const canvasOf = (c: HTMLElement) => c.querySelector<HTMLElement>("[data-arch-canvas]")!;
+    const a = renderDiagram(v, { containerSize: { width: 1200, height: 700 } });
+    expect(canvasOf(a.container).dataset.fitResolved).toBe("width");
+    expect(canvasOf(a.container).dataset.clipped).toBeUndefined();
+    a.unmount();
+    const b = renderDiagram(v, { containerSize: { width: 1172, height: 500 } });
+    expect(canvasOf(b.container).dataset.fitResolved).toBe("contain");
+    expect(canvasOf(b.container).dataset.clipped).toBeUndefined();
+    expect(screen.queryByRole("button", { name: /아래 칸/ })).toBeNull();
+    b.unmount();
+    const c = renderDiagram(v, { containerSize: { width: 1172, height: 256 } });
+    expect(canvasOf(c.container).dataset.fitResolved).toBe("width");
+    expect(canvasOf(c.container).dataset.clipped).toBe("");
+    const more = screen.getByRole("button", { name: /아래 칸 \d+개/ });
+    const before = c.container.querySelector<HTMLElement>(".react-flow__viewport")!.style.transform;
+    fireEvent.click(more);
+    expect(c.container.querySelector<HTMLElement>(".react-flow__viewport")!.style.transform).not.toBe(before);
+    expect(c.container.querySelector(".ac-arch-scrollbar")).not.toBeNull();
+  });
+  it("자동 맞춤 기준(autoContainMin)을 바꿀 수 있다", () => {
+    const { container } = renderDiagram(v, { containerSize: { width: 1172, height: 256 }, autoContainMin: 0.2 });
+    expect(container.querySelector<HTMLElement>("[data-arch-canvas]")!.dataset.fitResolved).toBe("contain");
   });
   it("[맞춤] 메뉴의 100%는 배율을 1로", () => {
     const onScale = vi.fn();
@@ -418,7 +450,7 @@ describe("선택·키보드 (수용 §13-11·24)", () => {
     expect(onFit).toHaveBeenLastCalledWith("none");
     expect(onScale.mock.calls[0]![0]).toBeGreaterThan(0.768);
     fireEvent.keyDown(cell(container, "input"), { key: "0" });
-    expect(onFit).toHaveBeenLastCalledWith("width");
+    expect(onFit).toHaveBeenLastCalledWith("auto");
   });
   it("건너뛰기 링크는 onSkip이 있을 때만", () => {
     const onSkip = vi.fn();

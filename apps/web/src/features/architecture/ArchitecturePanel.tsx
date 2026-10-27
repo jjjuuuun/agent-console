@@ -4,7 +4,7 @@ import "./architecture.css";
 import { ArchitectureDiagram, type ArchFitMode, type ArchViewMode, type ToolbarParts } from "@agent-console/arch-view";
 import { Banner, Button } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
-import { ARCH_LIMITS, ARCH_STORAGE } from "./archConfig";
+import { ARCH_FIT, ARCH_LIMITS, ARCH_STORAGE } from "./archConfig";
 import { allNotCollected, observedValue, sourceKinds } from "./archLib";
 import { ArchitectureBreadcrumb } from "./ArchitectureBreadcrumb";
 import { ArchitectureEmpty } from "./ArchitectureEmpty";
@@ -37,7 +37,7 @@ export interface ArchitecturePanelProps {
   toolbar?: boolean | ToolbarParts;
   /** 프로필이 하나이고 하위 구조도·레인 기준이 없으면 머리 줄(프로필·빵 부스러기)을 그리지 않는다 */
   hideEmptyHead?: boolean;
-  /** 저장된 맞춤 선택이 없을 때의 맞춤(기본 폭 맞춤) */
+  /** 저장된 맞춤 선택이 없을 때의 맞춤(기본 `ARCH_FIT.default` = 자동 맞춤) */
   defaultFit?: ArchFitMode;
   /** 저장된 보기 선택이 없을 때의 보기(생략하면 뷰포트 폭으로 정한다) */
   defaultView?: ArchViewMode;
@@ -50,7 +50,7 @@ export interface ArchitecturePanelProps {
   className?: string;
 }
 
-const readFit = (v: string | null, fallback: ArchFitMode): ArchFitMode => (v === "contain" || v === "width" || v === "none" ? v : fallback);
+const readFit = (v: string | null, fallback: ArchFitMode): ArchFitMode => (v === "auto" || v === "contain" || v === "width" || v === "none" ? v : fallback);
 
 /**
  * 구조도 패널(화면 명세 §5): 프로필·빵 부스러기·상태 줄·그림/목록·빈 상태. 데이터와 동작은 `useArchitectureController`가 준다.
@@ -61,7 +61,7 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
   const storage = useStorage();
   const fitKey = p.storageKeys?.fit ?? ARCH_STORAGE.fit;
   const viewKey = p.storageKeys?.view ?? ARCH_STORAGE.view;
-  const [fit, setFit] = useState<ArchFitMode>(() => readFit(storage.get(fitKey), p.defaultFit ?? "width"));
+  const [fit, setFit] = useState<ArchFitMode>(() => readFit(storage.get(fitKey), p.defaultFit ?? ARCH_FIT.default));
   const [viewMode, setViewMode] = useState<ArchViewMode>(() => {
     const saved = storage.get(viewKey);
     if (saved === "diagram" || saved === "list") return saved;
@@ -186,6 +186,8 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
           afterToolbar={afterToolbar}
           {...(p.toolbarExtra === undefined ? {} : { toolbarExtra: p.toolbarExtra })}
           fitMode={fit}
+          fullScaleMin={ARCH_FIT.fullScaleMin}
+          autoContainMin={ARCH_FIT.autoContainMin}
           onFitModeChange={(m) => { setFit(m); if (m !== "none") storage.set(fitKey, m); }}
           viewMode={viewMode}
           onViewModeChange={(m) => { setViewMode(m); storage.set(viewKey, m); }}

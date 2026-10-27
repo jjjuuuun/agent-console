@@ -52,6 +52,7 @@
 .ac-lv-warn, .ac-lv-info { margin: 4px 0; padding: 4px 8px; border-radius: var(--lv-radius); font-size: var(--ac-text-xs, 12px); }
 .ac-lv-warn { background: var(--ac-warning-bg, transparent); border: 1px solid var(--ac-warning, #d9a441); }
 .ac-lv-info { background: var(--ac-info-bg, transparent); border: 1px solid var(--ac-info, #5b8def); }
+.ac-lv-empty-body { overflow: auto; }
 .ac-lv-empty { padding: var(--ac-space-4, 16px); color: var(--lv-muted); text-align: center; }
 .ac-lv-error { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 8px; border: 1px solid var(--lv-danger); border-radius: var(--lv-radius); background: var(--ac-danger-bg, transparent); }
 .ac-lv-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 8px; }

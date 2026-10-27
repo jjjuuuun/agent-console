@@ -5,7 +5,7 @@ import { CategoryChips, LogEventTable, eventColumns, orderCategories, type LogTa
 import type { LogEvent } from "@agent-console/contracts";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { useDetailLink } from "./useDetailLink";
-import { RUN_TAB_COLUMNS, LOGS_LIMITS } from "./logsConfig";
+import { RUN_TAB_COLUMNS, RUN_TABLE_CHROME, RUN_TABLE_MIN_BODY, LOGS_LIMITS } from "./logsConfig";
 import { categoryItems, originOf } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { slotFor } from "./slots";
@@ -98,34 +98,34 @@ export function RunArchitectureEvents(p: RunArchitectureEventsProps) {
       </div>
       {p.note === undefined ? null : <p className="arch-table-note" role="status">{p.note}</p>}
       <div ref={wrapRef} className="logs-tablewrap logs-runtab-table" style={{ flex: "1 1 0" }}>
-        {!p.loading && rows.length === 0 ? (
-          <div className="logs-empty">
-            <p>{filtered ? t.runTab.emptyFilter : t.runTab.archEmpty}</p>
-            {filtered ? <Button size="sm" onClick={() => p.onFilters(NO_RUN_EVENT_FILTERS)}>{t.clearFilters}</Button> : null}
-          </div>
-        ) : (
-          <LogEventTable
-            ref={tableRef}
-            onActivate={onActivate}
-            rows={rows}
-            columns={columns}
-            density="compact"
-            selectedUid={selectedUid}
-            onSelect={p.onSelect}
-            taxonomy={p.taxonomy}
-            isError={p.isError}
-            slotFor={slotFor}
-            originTime={origin}
-            loading={p.loading}
-            hasMore={p.hasMore}
-            loadingMore={p.loadingMore}
-            onNearEnd={p.onNearEnd}
-            followLast={p.running ? f.follow : undefined}
-            onFollowChange={(follow) => p.onFilters({ ...f, follow })}
-            height={Math.max(80, height - 8)}
-            ariaLabel={t.runTab.archTableLabel}
-          />
-        )}
+        <LogEventTable
+          ref={tableRef}
+          onActivate={onActivate}
+          rows={rows}
+          columns={columns}
+          density="compact"
+          selectedUid={selectedUid}
+          onSelect={p.onSelect}
+          taxonomy={p.taxonomy}
+          isError={p.isError}
+          slotFor={slotFor}
+          originTime={origin}
+          loading={p.loading}
+          hasMore={p.hasMore}
+          loadingMore={p.loadingMore}
+          onNearEnd={p.onNearEnd}
+          followLast={p.running ? f.follow : undefined}
+          onFollowChange={(follow) => p.onFilters({ ...f, follow })}
+          height={Math.max(RUN_TABLE_MIN_BODY, height - RUN_TABLE_CHROME)}
+          ariaLabel={t.runTab.archTableLabel}
+          emptyBelowHeader
+          renderEmpty={() => (
+            <div className="logs-runtab-empty">
+              <p>{filtered ? t.runTab.emptyFilter : t.runTab.archEmpty}</p>
+              {filtered ? <Button size="sm" onClick={() => p.onFilters(NO_RUN_EVENT_FILTERS)}>{t.clearFilters}</Button> : null}
+            </div>
+          )}
+        />
       </div>
       {selectedUid !== null ? (
         <section className="logs-runtab-drawer" aria-label={t.runTab.drawerTitle}>
