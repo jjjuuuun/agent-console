@@ -1,3 +1,4 @@
+import { InlineMarkdown, stripInlineMarkdown } from "./InlineMarkdown";
 import { getDefaultRegistry } from "@rjsf/core";
 import type { FieldTemplateProps, ObjectFieldTemplateProps } from "@rjsf/utils";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
@@ -42,8 +43,8 @@ export function RequiredChip({ messages }: { messages: SchemaFormMessages }) {
 export function FieldDescription({ text, id }: { text: string | undefined; id?: string }) {
   if (!text) return null;
   return (
-    <p className="ac-sf-desc" id={id} title={text}>
-      {text}
+    <p className="ac-sf-desc" id={id} title={stripInlineMarkdown(text)}>
+      <InlineMarkdown text={text} />
     </p>
   );
 }

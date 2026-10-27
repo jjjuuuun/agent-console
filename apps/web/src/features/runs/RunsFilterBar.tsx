@@ -37,7 +37,7 @@ export interface RunsFilterBarProps {
 
 function Select({ label, value, onChange, options, selectRef }: { label: string; value: string; onChange(v: string): void; options: readonly FilterOption[]; selectRef?: React.Ref<HTMLSelectElement> }) {
   return (
-    <label className="runs-filter">
+    <label className="runs-filter runs-filter-inline">
       <span className="app-muted">{label}</span>
       <select ref={selectRef} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{t.list.filters.all}</option>
@@ -49,50 +49,57 @@ function Select({ label, value, onChange, options, selectRef }: { label: string;
   );
 }
 
-/** 실행 목록 필터 줄. 값과 변경은 모두 props(URL 쿼리와의 연결은 컨테이너가). */
+/**
+ * 실행 목록 필터 줄. 값과 변경은 모두 props(URL 쿼리와의 연결은 컨테이너가).
+ * 1줄: 검색 + 범위 선택(팀 구성·에이전트·대화·시작). 2줄: 상태 칩(여러 개 선택) + 단축/포함 토글. 컨트롤 높이는 모두 한 가지다.
+ */
 export function RunsFilterBar({ value, onChange, statuses, waitingStatus, searchRef, firstRef, graphs, agents, conversations }: RunsFilterBarProps) {
   const set = (patch: Partial<RunsFilters>) => onChange({ ...value, ...patch });
   const toggleStatus = (s: string) => set({ statuses: value.statuses.includes(s) ? value.statuses.filter((x) => x !== s) : [...value.statuses, s] });
   const waitingOnly = value.statuses.length === 1 && value.statuses[0] === waitingStatus;
   return (
     <div className="runs-filters" role="search" aria-label={t.list.filters.label}>
-      <Select label={t.list.filters.graph} value={value.graph} onChange={(v) => set({ graph: v })} options={graphs} selectRef={firstRef} />
-      <Select label={t.list.filters.agent} value={value.agent} onChange={(v) => set({ agent: v })} options={agents} />
-      <Select label={t.list.filters.conversation} value={value.conversation} onChange={(v) => set({ conversation: v })} options={conversations} />
-      <label className="runs-filter">
-        <span className="app-muted">{t.list.filters.period}</span>
-        <select value={value.period} onChange={(e) => set({ period: e.target.value })}>
-          {PERIOD_OPTIONS.map((p) => (
-            <option key={p.id} value={p.id}>{t.list.periods[p.id] ?? p.id}</option>
+      <div className="runs-filters-row">
+        <label className="runs-filter runs-filter-search">
+          <span className="ac-sr-only">{t.list.filters.search}</span>
+          <input ref={searchRef} type="search" value={value.query} placeholder={t.list.filters.searchPlaceholder} onChange={(e) => set({ query: e.target.value })} />
+        </label>
+        <Select label={t.list.filters.graph} value={value.graph} onChange={(v) => set({ graph: v })} options={graphs} selectRef={firstRef} />
+        <Select label={t.list.filters.agent} value={value.agent} onChange={(v) => set({ agent: v })} options={agents} />
+        <Select label={t.list.filters.conversation} value={value.conversation} onChange={(v) => set({ conversation: v })} options={conversations} />
+        <label className="runs-filter runs-filter-inline">
+          <span className="app-muted">{t.list.filters.period}</span>
+          <select value={value.period} onChange={(e) => set({ period: e.target.value })}>
+            {PERIOD_OPTIONS.map((p) => (
+              <option key={p.id} value={p.id}>{t.list.periods[p.id] ?? p.id}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="runs-filters-row">
+        <div role="group" aria-label={t.list.filters.status} className="runs-status-chips">
+          <span className="app-muted" aria-hidden="true">{t.list.filters.status}</span>
+          {statuses.map((s) => (
+            <button key={s} type="button" className="runs-chip" aria-pressed={value.statuses.includes(s)} onClick={() => toggleStatus(s)}>
+              {runStatusLabels[s] ?? s}
+            </button>
           ))}
-        </select>
-      </label>
-      <fieldset className="runs-filter runs-status-filter">
-        <legend className="app-muted">{t.list.filters.status}</legend>
-        {statuses.map((s) => (
-          <label key={s} className="app-check">
-            <input type="checkbox" checked={value.statuses.includes(s)} onChange={() => toggleStatus(s)} />
-            {runStatusLabels[s] ?? s}
-          </label>
-        ))}
-      </fieldset>
-      <Button size="sm" variant={waitingOnly ? "primary" : "secondary"} aria-pressed={waitingOnly} onClick={() => set({ statuses: waitingOnly ? [] : [waitingStatus] })}>
-        {t.list.filters.waitingOnly}
-      </Button>
-      <label className="app-check">
-        <input type="checkbox" checked={value.children} onChange={(e) => set({ children: e.target.checked })} />
-        {t.list.filters.children}
-      </label>
-      {value.root !== "" ? (
-        <span className="runs-filter">
-          <span className="app-muted">{t.list.filters.rootOnly(value.root.slice(0, 6))}</span>
-          <button type="button" className="app-link-btn" onClick={() => set({ root: "" })}>{t.list.filters.rootClear}</button>
-        </span>
-      ) : null}
-      <label className="runs-filter">
-        <span className="app-muted">{t.list.filters.search}</span>
-        <input ref={searchRef} type="search" value={value.query} placeholder={t.list.filters.searchPlaceholder} onChange={(e) => set({ query: e.target.value })} />
-      </label>
+        </div>
+        <span className="runs-filters-spacer" />
+        <Button variant={waitingOnly ? "primary" : "secondary"} aria-pressed={waitingOnly} onClick={() => set({ statuses: waitingOnly ? [] : [waitingStatus] })}>
+          {t.list.filters.waitingOnly}
+        </Button>
+        <label className="app-check">
+          <input type="checkbox" checked={value.children} onChange={(e) => set({ children: e.target.checked })} />
+          {t.list.filters.children}
+        </label>
+        {value.root !== "" ? (
+          <span className="runs-filter runs-filter-inline">
+            <span className="app-muted">{t.list.filters.rootOnly(value.root.slice(0, 6))}</span>
+            <button type="button" className="app-link-btn" onClick={() => set({ root: "" })}>{t.list.filters.rootClear}</button>
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -123,3 +123,33 @@ describe("사용량 게이지 meter (§13-11)", () => {
     expect(screen.queryByRole("meter")).toBeNull();
   });
 });
+
+describe("다이얼로그 본문·사이드바 구분선 (§13 #5·#7)", () => {
+  it("다이얼로그 본문은 키보드로 스크롤할 수 있고(tabIndex=0) 제목으로 이름이 붙는다", () => {
+    render(<Dialog open title="긴 내용" onClose={() => undefined} actions={<button>확인</button>}><p>본문</p></Dialog>);
+    const dialog = screen.getByRole("dialog");
+    const body = dialog.querySelector<HTMLElement>(".ac-dialog-body")!;
+    expect(body.tabIndex).toBe(0);
+    expect(screen.getByRole("region", { name: "긴 내용" })).toBe(body);
+  });
+  it("첫 포커스는 본문 스크롤 영역이 아니라 안의 첫 조작 요소다", () => {
+    render(<Dialog open title="폼" onClose={() => undefined}><input aria-label="이름" /></Dialog>);
+    expect(document.activeElement).toBe(screen.getByLabelText("이름"));
+  });
+  const sidebar = (collapsed: boolean) => (
+    <Sidebar
+      items={[{ id: "a", label: "하나", group: "g1" }, { id: "b", label: "둘", group: "g2" }, { id: "c", label: "셋", group: "g3" }]}
+      groups={[{ id: "g1", label: "묶음1" }, { id: "g2", label: "묶음2" }, { id: "g3", label: "묶음3" }]}
+      onNavigate={() => undefined}
+      collapsed={collapsed}
+      onCollapsedChange={() => undefined}
+      messages={{ navLabel: "주 메뉴", collapse: "접기", expand: "펼치기" }}
+    />
+  );
+  it.each([true, false])("묶음 사이에 role=separator가 있다(접힘=%s): 첫 묶음 앞에는 없다", (collapsed) => {
+    render(sidebar(collapsed));
+    const seps = screen.getAllByRole("separator");
+    expect(seps).toHaveLength(2);
+    expect(seps.every((s) => s.getAttribute("aria-orientation") === "horizontal")).toBe(true);
+  });
+});

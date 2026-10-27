@@ -62,7 +62,8 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
       <div className="lib-split">
         <AgentList
           agents={scoped.items}
-          scopeBar={scoped.bar}
+          scopeBar={scoped.parts.filter}
+          selectTool={scoped.parts.select}
           rowExtra={scoped.rowExtra}
           loading={agents.isLoading}
           error={agents.isError ? agents.error : null}

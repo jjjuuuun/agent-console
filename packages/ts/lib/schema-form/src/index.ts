@@ -13,3 +13,4 @@ export type {
   UiSchema,
 } from "./types";
 export { toPointer } from "./provenance";
+export { InlineMarkdown, parseInlineMarkdown, stripInlineMarkdown } from "./InlineMarkdown";

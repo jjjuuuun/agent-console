@@ -39,7 +39,9 @@ export function Dialog({ open, title, onClose, children, actions, initialFocus, 
   useEffect(() => {
     if (!open) return;
     const root = ref.current;
-    const target = initialFocus?.current ?? root?.querySelector<HTMLElement>(FOCUSABLE) ?? root;
+    // 본문 스크롤 영역(tabIndex=0)은 첫 포커스 대상에서 뺀다. 안에 포커스 요소가 없을 때만 본문이 받는다.
+    const items = Array.from(root?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+    const target = initialFocus?.current ?? items.find((el) => !el.classList.contains("ac-dialog-body")) ?? items[0] ?? root;
     target?.focus();
   }, [open, initialFocus]);
 
@@ -70,7 +72,7 @@ export function Dialog({ open, title, onClose, children, actions, initialFocus, 
         <h2 id={titleId} className="ac-dialog-title">
           {title}
         </h2>
-        <div className="ac-dialog-body">{children}</div>
+        <div className="ac-dialog-body" tabIndex={0} role="region" aria-labelledby={titleId}>{children}</div>
         {actions === undefined ? null : <div className="ac-dialog-actions">{actions}</div>}
       </div>
     </div>,

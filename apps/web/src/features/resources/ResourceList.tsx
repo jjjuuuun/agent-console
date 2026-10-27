@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
-import { Button, EmptyState, ListPane } from "@agent-console/ui";
+import { Button, ChipRow, EmptyState, ListPane, type ChipItem } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { Skeleton } from "../settings";
@@ -28,13 +28,15 @@ export interface ResourceListProps {
   onClearOnlyIds: () => void;
   /** 목록 머리에 끼울 줄(프로젝트 범위 필터 등, 없으면 생략) */
   scopeBar?: ReactNode;
+  /** 보기 줄 끝에 끼울 선택 도구(없으면 생략) */
+  selectTool?: ReactNode;
   /** 이름 줄에 붙일 요소(범위 태그·선택 표시 등) */
   rowExtra?: (resource: ResourceSummary) => ReactNode;
 }
 
 /** 리소스 목록 패널: 종류 칩(디스크립터), 검색, 이름순. 종류 이름은 코드에 없고 디스크립터에서 온다. */
 export function ResourceList(props: ResourceListProps) {
-  const { resources, types, typesFailed, loading, error, onRetry, selectedId, onSelect, onNew, onImport, onRename, onDelete, onlyIds, onClearOnlyIds, scopeBar, rowExtra } = props;
+  const { resources, types, typesFailed, loading, error, onRetry, selectedId, onSelect, onNew, onImport, onRename, onDelete, onlyIds, onClearOnlyIds, scopeBar, selectTool, rowExtra } = props;
   const [query, setQuery] = useState("");
   const [typeId, setTypeId] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -42,6 +44,15 @@ export function ResourceList(props: ResourceListProps) {
   const counts = useMemo(() => countByType(resources ?? []), [resources]);
   // 디스크립터가 없어도(플러그인 제거·로딩 실패) 목록에 있는 종류 id는 칩으로 보인다
   const chipIds = useMemo(() => [...new Set([...(types ?? []).map((x) => x.id), ...counts.keys()])], [types, counts]);
+  // 종류 칩 한 줄: 내용이 있는 종류를 앞에 두고(0건은 뒤), 넘치면 `+N`으로 접는다.
+  const typeChips = useMemo((): ChipItem[] => {
+    const ordered = [...chipIds].sort((a, b) => Number((counts.get(b) ?? 0) > 0) - Number((counts.get(a) ?? 0) > 0));
+    return [
+      { id: "", label: `${t.list.all} ${resources === undefined ? "" : resources.length}`.trim(), active: typeId === null && onlyIds === null, onSelect: () => { setTypeId(null); onClearOnlyIds(); } },
+      ...(onlyIds === null ? [] : [{ id: "\u0000imported", label: `${t.list.justImported} ×`, active: true, onSelect: () => onClearOnlyIds() }]),
+      ...ordered.map((id): ChipItem => ({ id: `t:${id}`, label: `${typeById.get(id)?.title ?? id} ${counts.get(id) ?? 0}`, active: typeId === id, onSelect: () => setTypeId(typeId === id ? null : id) })),
+    ];
+  }, [chipIds, counts, resources, typeId, onlyIds, onClearOnlyIds, typeById]);
   const filtered = useMemo(() => filterResources(resources ?? [], { typeId, query, onlyIds }), [resources, typeId, query, onlyIds]);
   // 묶는 기준·정렬은 데이터다. 종류별이 기본이고, 종류 칩은 빠른 거르기로 남는다.
   const groupDefs = useMemo(() => resourceGroupDefs((id) => typeById.get(id)?.title ?? id, t.arrange.noProjects), [typeById]);
@@ -68,6 +79,12 @@ export function ResourceList(props: ResourceListProps) {
     selectedId,
     idOf: (r) => r.id,
     showMenu: !(loading || (resources ?? []).length === 0),
+    extra: (
+      <>
+        <Button size="sm" onClick={onImport}>{t.list.import}</Button>
+        {selectTool}
+      </>
+    ),
   });
   const rows = view.arranged.sorted;
 
@@ -90,8 +107,7 @@ export function ResourceList(props: ResourceListProps) {
       icon={routeIconNode(ROUTE_ROLES.resource)}
       title={t.list.empty}
       description={t.list.emptyBody}
-      action={<Button variant="primary" onClick={() => onNew()}>{t.list.new}</Button>}
-      secondaryAction={<Button onClick={onImport}>{t.list.emptyImport}</Button>}
+      action={<Button onClick={onImport}>{t.list.emptyImport}</Button>}
     />
   ) : typeId !== null && query === "" ? (
     <EmptyState title={t.list.noneOfType} action={<Button onClick={() => onNew(typeId)}>{t.list.createOfType}</Button>} />
@@ -102,25 +118,8 @@ export function ResourceList(props: ResourceListProps) {
   return (
     <div ref={root} className="lib-split-list">
       {scopeBar}
-      <div className="lib-list-toolbar">
-        <Button size="sm" onClick={onImport}>{t.list.import}</Button>
-      </div>
       {typesFailed ? <p className="app-muted lib-field-note app-pad" role="status">{t.list.typesFailed}</p> : null}
-      <div className="lib-chips app-pad" role="group" aria-label={t.list.typeFilter}>
-        <button type="button" className="lib-chip" aria-pressed={typeId === null && onlyIds === null} onClick={() => { setTypeId(null); onClearOnlyIds(); }}>
-          {t.list.all} {resources === undefined ? "" : resources.length}
-        </button>
-        {onlyIds === null ? null : (
-          <button type="button" className="lib-chip" aria-pressed onClick={onClearOnlyIds}>
-            {t.list.justImported} ×
-          </button>
-        )}
-        {chipIds.map((id) => (
-          <button key={id} type="button" className="lib-chip" aria-pressed={typeId === id} onClick={() => setTypeId(typeId === id ? null : id)}>
-            {typeById.get(id)?.title ?? id} {counts.get(id) ?? 0}
-          </button>
-        ))}
-      </div>
+      <ChipRow className="lib-typechips" ariaLabel={t.list.typeFilter} chips={typeChips} />
       <ListPane<ResourceSummary>
         items={rows}
         {...(view.paneGroups === undefined ? {} : { groups: view.paneGroups, onToggleGroup: view.arranged.toggle })}

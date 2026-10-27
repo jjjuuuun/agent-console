@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { contractsSchema, getContractSchema, type UsageSourceInfo, type UsageSourceSetting, type UsageWindowSnapshot, type WorkspaceSettings } from "@agent-console/contracts";
-import { SchemaForm } from "@agent-console/schema-form";
+import { InlineMarkdown, SchemaForm } from "@agent-console/schema-form";
 import { Button, ConfirmDialog, Disclosure, TrustBadge } from "@agent-console/ui";
 import { messages as m } from "../../../app/messages";
 import { formatDateTime } from "../../../lib/format";
@@ -79,10 +79,10 @@ export function UsageSourcesEditor({ sources, settings, onChange, disabled, erro
                 <TrustBadge trust={d.trust} />
                 {info.last_observed_at == null ? null : <span className="app-muted">{t.lastObserved(formatDateTime(info.last_observed_at))}</span>}
               </div>
-              {d.description ? <p className="app-muted app-source-desc">{d.description}</p> : null}
+              {d.description ? <p className="app-muted app-source-desc"><InlineMarkdown text={d.description} /></p> : null}
               {info.error ? <p className="app-field-error" role="alert">{t.sourceError}: {info.error.message}</p> : null}
               {ownErrors.map((msg, i) => <p key={i} className="app-field-error" role="alert">{msg}</p>)}
-              {d.setup_help ? <p className="app-muted app-source-desc app-wrap">{d.setup_help}</p> : null}
+              {d.setup_help ? <p className="app-muted app-source-desc app-wrap"><InlineMarkdown text={d.setup_help} /></p> : null}
               {d.docs_url && /^https?:\/\//.test(d.docs_url) ? (
                 <a href={d.docs_url} target="_blank" rel="noreferrer noopener">{t.docs}</a>
               ) : null}
@@ -205,6 +205,7 @@ export function UsageSection({ value, onChange, errors, disabled }: SectionEditP
         editLayerId={COMMON_LAYER_ID}
         options={options}
         idPrefix="usage-form"
+        flat
         {...(errors ? { errors } : {})}
         {...(disabled === undefined ? {} : { disabled })}
       />

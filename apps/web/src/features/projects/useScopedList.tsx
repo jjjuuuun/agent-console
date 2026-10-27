@@ -21,6 +21,8 @@ export interface ScopedList<T> {
   hiddenCount: number;
   /** 목록 머리에 끼울 줄(범위 필터 + 선택 도구). 필요 없으면 null */
   bar: ReactNode;
+  /** `bar`를 둘로 나눈 것: 범위 필터 줄(필요 없으면 null)과 선택 도구(옮길 수 없는 목록이면 null). 선택 도구를 보기 줄에 합치는 목록이 쓴다. */
+  parts: { filter: ReactNode; select: ReactNode };
   /** 행에 붙일 범위 태그와 (선택 모드의) 선택 표시 */
   rowExtra: (item: T) => ReactNode;
   selection: ListSelection;
@@ -44,6 +46,24 @@ export function useScopedList<T>(source: readonly T[] | undefined, options: Scop
   const movable = kind !== undefined && move.available;
   const visibleIds = useMemo(() => (items ?? []).map(idOf), [items, idOf]);
 
+  const selectTool = !p.enabled || !movable ? null : (
+    <SelectionToolbar
+      selection={selection}
+      visibleIds={visibleIds}
+      onMove={() => {
+        const picked = (items ?? []).filter((x) => selection.selected.has(idOf(x)));
+        move.request(picked.map((x) => ({ kind: kind as string, id: idOf(x), name: nameOf(x) })));
+      }}
+    />
+  );
+  const filterBar =
+    !p.enabled || p.current === null ? null : (
+      <div className="prj-listbar">
+        <ScopeFilter />
+        {hiddenCount > 0 ? <span className="app-muted prj-hidden">{t.filter.hiddenCount(hiddenCount)}</span> : null}
+      </div>
+    );
+
   const bar =
     !p.enabled || (p.current === null && !movable) ? null : (
       <div className="prj-listbar">
@@ -66,6 +86,7 @@ export function useScopedList<T>(source: readonly T[] | undefined, options: Scop
     items,
     hiddenCount,
     bar,
+    parts: { filter: filterBar, select: selectTool },
     rowExtra: (item) => (
       <>
         {selection.selecting ? <SelectMark checked={selection.selected.has(idOf(item))} /> : null}

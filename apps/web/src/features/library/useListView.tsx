@@ -36,6 +36,8 @@ export interface ListViewOptions<T> {
   attributeKeys?: readonly string[];
   /** 묶음 머리에 보일 이름을 바꾼다(예: 종류 id → 종류 제목). 없으면 묶음 값 그대로. */
   groupLabel?: (groupId: string, key: string, name: string) => string;
+  /** 보기 줄 오른쪽 끝에 끼울 도구(선택 모드·가져오기 등). 보기 단추가 그려질 때만 보인다. */
+  extra?: ReactNode;
 }
 
 export interface ListView<T> {
@@ -58,7 +60,7 @@ export interface ListView<T> {
  * 기준·정렬 이름은 `messages`의 표에서 `titleKey`로 찾으므로 화면 코드에 필드명 분기가 없다.
  */
 export function useListView<T>(o: ListViewOptions<T>): ListView<T> {
-  const { listId, items, sortDefs, defaultView, messages: m, searching, selectedId, idOf, showMenu, attributeKeys, groupLabel } = o;
+  const { listId, items, sortDefs, defaultView, messages: m, searching, selectedId, idOf, showMenu, attributeKeys, groupLabel, extra } = o;
   const storage = useMemo(() => browserStorage(), []);
   const [open, setOpen] = useState(false);
   const [attr, setAttr] = useState(() => loadViewState(storage, listId).attrKey ?? "");
@@ -103,6 +105,7 @@ export function useListView<T>(o: ListViewOptions<T>): ListView<T> {
         onOpenChange={setOpen}
         messages={{ menuLabel: m.viewLabel, groupTitle: m.groupTitle, sortTitle: m.sortTitle, collapseAll: m.collapseAll, expandAll: m.expandAll }}
       />
+      {extra === undefined || extra === null ? null : <div className="lib-list-view-extra">{extra}</div>}
     </div>
   );
   const paneGroups = arranged.groups?.map((g) => ({ key: g.key, label: g.none ? noneLabel : (groupLabel?.(arranged.groupDef?.id ?? GROUP_NONE, g.key, g.name) ?? g.name), ...(g.none ? {} : { title: g.key }), count: g.count, depth: g.depth, collapsed: g.collapsed, items: g.items }));

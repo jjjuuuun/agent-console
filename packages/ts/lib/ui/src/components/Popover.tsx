@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { FOCUSABLE_SELECTOR } from "./modal";
 import { Icon } from "./Icon";
 import { joinClass } from "./Status";
@@ -40,6 +40,23 @@ export function Popover({ open, onOpenChange, renderTrigger, panelRole = "dialog
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  const [place, setPlace] = useState<{ up: boolean; maxHeight: number } | undefined>(undefined);
+
+  // 뷰포트의 남은 공간 기준으로 최대 높이를 정한다. 아래가 모자라고 위가 더 넓으면 위로 펼친다.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const wrap = wrapRef.current;
+    const panel = panelRef.current;
+    if (wrap === null || panel === null || typeof window === "undefined") return;
+    const rect = wrap.getBoundingClientRect();
+    const margin = 8;
+    const below = window.innerHeight - rect.bottom - margin - 4;
+    const above = rect.top - margin - 4;
+    const need = panel.scrollHeight;
+    const up = need > below && above > below;
+    const room = up ? above : below;
+    setPlace({ up, maxHeight: Math.max(120, Math.floor(room)) });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -86,7 +103,7 @@ export function Popover({ open, onOpenChange, renderTrigger, panelRole = "dialog
     <span {...rest} ref={wrapRef} className={joinClass("ac-pop-wrap", className)} onKeyDown={onKeyDown}>
       {renderTrigger(triggerProps)}
       {open ? (
-        <div ref={panelRef} id={id} role={panelRole} aria-label={panelLabel} tabIndex={-1} className={joinClass("ac-popover", panelClassName)} data-align={align}>
+        <div ref={panelRef} id={id} role={panelRole} aria-label={panelLabel} tabIndex={-1} className={joinClass("ac-popover", panelClassName)} data-align={align} data-side={place?.up ? "top" : undefined} style={place === undefined ? undefined : { maxHeight: place.maxHeight }}>
           {typeof children === "function" ? children({ close }) : children}
         </div>
       ) : null}

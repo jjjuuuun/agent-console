@@ -1,6 +1,6 @@
 /* 사용량 화면. 게이지 채움 색은 사용률에 따라 바꾸지 않는다(--ac-gauge-fill 고정). */
 .usage-body { display: flex; flex-direction: column; gap: var(--ac-space-5); }
-.usage-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--ac-space-3); }
+.usage-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ac-space-3); }
 .usage-card { background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
 .usage-card[data-old="true"] .usage-value { opacity: 0.6; }
 .usage-card-head { display: flex; align-items: center; gap: var(--ac-space-2); }
@@ -14,7 +14,9 @@
 .usage-warn { color: var(--ac-warning); }
 .usage-others-list { margin: var(--ac-space-1) 0 0; padding-left: var(--ac-space-4); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); display: flex; flex-direction: column; gap: var(--ac-space-1); }
 .usage-rollup { display: flex; flex-direction: column; gap: var(--ac-space-2); }
-.usage-rollup-head { display: flex; align-items: flex-end; gap: var(--ac-space-3); flex-wrap: wrap; }
+.usage-rollup-head { display: flex; align-items: center; gap: var(--ac-space-3); flex-wrap: wrap; }
+.usage-rollup-head > .app-block-title { margin: 0; margin-right: auto; }
+.usage-rollup-head > .runs-filter { flex-direction: row; align-items: center; gap: var(--ac-space-2); }
 .usage-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .usage-bar-row { display: grid; grid-template-columns: 160px minmax(120px, 1fr) 80px minmax(160px, auto) auto; gap: var(--ac-space-2); align-items: center; min-height: 32px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .usage-bar-track { background: var(--ac-surface-3); height: 12px; border-radius: var(--ac-radius-full); overflow: hidden; display: block; }
@@ -46,3 +48,4 @@
 .usage-snippet-shell { display: inline-flex; align-items: center; gap: var(--ac-space-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .usage-snippet-code { margin: 0; padding: var(--ac-space-3); background: var(--ac-surface-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); overflow-x: auto; white-space: pre; max-width: 100%; }
 .usage-dev-sources { margin-top: var(--ac-space-2); }
+.usage-rollup .ac-tab { min-width: 0; }

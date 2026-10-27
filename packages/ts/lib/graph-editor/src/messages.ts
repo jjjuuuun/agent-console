@@ -108,6 +108,8 @@ export interface GraphEditorMessages {
   showResources: string;
   minimapShow: string;
   minimapHide: string;
+  offscreenNodes: string; // {count}
+  offscreenHint: string;
   resourceChipsLabel: string;
   resourceChipTitle: string; // {title} {count} {names}
   moreResourceChips: string; // {n}
@@ -364,6 +366,8 @@ export const defaultMessages: GraphEditorMessages = {
   showResources: "리소스 보기",
   minimapShow: "미니맵 보기",
   minimapHide: "미니맵 숨기기",
+  offscreenNodes: "화면 밖 노드 {count}개",
+  offscreenHint: "눌러서 전체 보기",
   resourceChipsLabel: "리소스",
   resourceChipTitle: "{title} {count}개: {names}",
   moreResourceChips: "+{n}",

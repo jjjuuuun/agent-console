@@ -134,6 +134,34 @@ describe("표시기: 항목 만들기", () => {
   });
 });
 
+describe("표시기: 값 없는 창이 값 있는 창을 밀어내지 않는다 (5.2R D1 회귀)", () => {
+  // 실서버 재현: 공식 run-events 창(사용률)이 뒤에 오고, 로컬 로그 창(사용률 없음)이 앞에 온다.
+  const snaps: UsageWindowSnapshot[] = [
+    { source: "src-local", window: "w-local-5", observed_at: 100, used_ratio: null, used_tokens: 0, status: "idle" },
+    { source: "src-local", window: "w-local-7", observed_at: 100, used_ratio: null, used_tokens: 576 },
+    { source: "src-off", window: "w-5", observed_at: 200, used_ratio: 0.42, status: "allowed" },
+    { source: "src-off", window: "w-7", observed_at: 200, used_ratio: 0.81, status: "allowed_warning" },
+  ];
+  const args = { labels: {}, nowSec: 300, staleAfterSeconds: null, colorRules: [], windows: [] as string[], maxItems: 2 };
+  it("windows가 비면 공식 값이 있는 창이 먼저 뽑힌다(사이드바 5h 42% / 7d 81%)", () => {
+    const groups = buildWindowGroups(snaps, [], (id) => id === "src-off");
+    const items = buildIndicatorItems({ ...args, groups });
+    expect(items.map((i) => [i.window, i.kind, i.used])).toEqual([["w-5", "ratio", 42], ["w-7", "ratio", 81]]);
+  });
+  it("공식 값 > 그 밖의 값 > 값 없음, 같은 순위는 묶음 순서", () => {
+    const g = buildWindowGroups([{ source: "s", window: "w-none", observed_at: 1 }, snaps[1]!, snaps[0]!, snaps[2]!], [], (id) => id === "src-off");
+    expect(buildIndicatorItems({ ...args, groups: g, maxItems: 4 }).map((i) => i.window)).toEqual(["w-5", "w-local-7", "w-local-5", "w-none"]);
+    const empty = buildWindowGroups([{ source: "s", window: "w-x", observed_at: 1 }, { source: "s", window: "w-y", observed_at: 1 }], [], () => false);
+    expect(buildIndicatorItems({ ...args, groups: empty }).map((i) => i.window)).toEqual(["w-x", "w-y"]);
+  });
+  it("같은 창을 여러 출처가 주면 사용량 화면 카드와 같은 대표 출처의 값을 쓴다", () => {
+    const both = [...snaps, { source: "src-obs", window: "w-5", observed_at: 250, used_ratio: 0.1 }];
+    const groups = buildWindowGroups(both, [], (id) => id === "src-off");
+    const item = buildIndicatorItems({ ...args, groups }).find((i) => i.window === "w-5");
+    expect(item).toMatchObject({ source: "src-off", used: 42 });
+  });
+});
+
 describe("수동 새로 고침 연타 방지", () => {
   it("마지막 시각이 없거나 간격이 지났으면 허용, 간격 안이면 막는다", () => {
     expect(canRefreshNow(10_000, 0, 5_000)).toBe(true);

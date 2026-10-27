@@ -24,6 +24,10 @@
   background: linear-gradient(var(--trace-row-bg, transparent), var(--trace-row-bg, transparent)), var(--ac-surface-1);
   box-sizing: border-box;
 }
+/* 행 사이를 옅은 선으로 갈라 2줄 라벨이 붙어 보이지 않게 한다(높이는 그대로 32) */
+.ac-trace-row > .ac-trace-cell {
+  box-shadow: inset 0 -1px 0 var(--ac-border-soft);
+}
 .ac-trace-row:hover:not([data-selected]):not([data-highlighted]) {
   --trace-row-bg: var(--ac-surface-2, var(--ac-surface-3));
 }
@@ -41,6 +45,10 @@
 }
 .ac-trace-head .ac-trace-cell {
   height: 18px;
+}
+/* 눈금 머리 줄도 행과 같은 면 위에 둔다(없으면 눈금 칸만 어두운 띠로 보인다) */
+.ac-trace-head {
+  background: var(--ac-surface-1);
 }
 /* 라벨 칸·수치 열은 줌으로 가로 스크롤해도 고정 */
 .ac-trace-labelcell,
@@ -111,9 +119,9 @@
   display: flex;
   align-items: baseline;
   min-width: 0;
-  height: 16px;
+  height: 15px;
   font-size: var(--ac-text-sm, 13px);
-  line-height: 16px;
+  line-height: 15px;
   white-space: nowrap;
   word-break: keep-all;
 }
@@ -130,9 +138,10 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
-  height: 14px;
+  height: 13px;
+  margin-top: 2px;
   font-size: var(--ac-text-xs, 12px);
-  line-height: 14px;
+  line-height: 13px;
   color: var(--ac-text-muted);
   overflow: hidden;
 }
@@ -143,8 +152,8 @@
 .ac-trace-icon {
   flex: none;
   box-sizing: border-box;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -289,3 +298,5 @@
     display: none;
   }
 }
+/* 아이콘만 있는 부제 줄은 이름과 같은 줄에 둔다 */
+.ac-trace-sub--inline { flex: none; height: 15px; margin: 0 0 0 4px; line-height: 15px; overflow: visible; align-self: center; }

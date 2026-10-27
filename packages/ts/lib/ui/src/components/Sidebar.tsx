@@ -193,11 +193,12 @@ export function Sidebar({ items, activeId, onNavigate, collapsed, onCollapsedCha
       {header === undefined ? null : <div className="ac-sidebar-header">{header}</div>}
       <nav aria-label={messages.navLabel} className="ac-sidebar-nav">
         <ul className="ac-sidebar-list" data-position="main">
-          {sections.map((section) =>
+          {sections.map((section, index) =>
             section.label === undefined ? (
               section.items.map(renderItem)
             ) : (
               <li key={section.id} className="ac-sidebar-group" data-group={section.id}>
+                {index > 0 ? <div role="separator" aria-orientation="horizontal" className="ac-sidebar-sep" /> : null}
                 <span id={`${titleId}-${section.id}`} className="ac-sidebar-group-title">{section.label}</span>
                 <ul className="ac-sidebar-group-list" aria-labelledby={`${titleId}-${section.id}`}>{section.items.map(renderItem)}</ul>
               </li>

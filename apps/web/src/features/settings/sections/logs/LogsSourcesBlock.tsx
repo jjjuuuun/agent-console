@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SchemaForm, type UiSchema } from "@agent-console/schema-form";
+import { InlineMarkdown, SchemaForm, type UiSchema } from "@agent-console/schema-form";
 import { Button, ConfirmDialog, Disclosure, StatusChip, useToast } from "@agent-console/ui";
 import type { LogSourceInfo, LogSourceSetting, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
@@ -160,7 +160,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                       {t.settings.sources.switchLabel}
                     </label>
                   </div>
-                  {d.description ? <p className={`app-muted app-wrap ${expanded ? "" : "logs-clamp-2"}`}>{d.description}</p> : null}
+                  {d.description ? <p className={`app-muted app-wrap ${expanded ? "" : "logs-clamp-2"}`}><InlineMarkdown text={d.description} /></p> : null}
                   <div className="logs-source-status" data-kind={view.kind}>
                     <span className="app-muted">{view.kind === "off" ? null : "상태"}</span>
                     {view.chip ? <StatusChip status={view.kind === "error" ? "failed" : view.kind === "ok" ? "succeeded" : "pending"} label={view.chip} /> : null}
@@ -179,7 +179,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                     <div className="logs-source-body">
                       {d.setup_help ? (
                         <>
-                          <div className="logs-setup-help app-wrap" role="note">{d.setup_help}</div>
+                          <div className="logs-setup-help app-wrap" role="note"><InlineMarkdown text={d.setup_help} /></div>
                           <p className="app-muted logs-note">{t.settings.sources.setupHelpNote}</p>
                         </>
                       ) : null}

@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  CategoryChips, ColorSlotPicker, eventColumns, HandoffMatrixView, isErrorEvent, LaneRibbon, LogEventDetail, LogEventTable, LogFilterBar, PlaybackBar, SessionList, sessionColumns, TemplatePicker,
+  CategoryChips, ColorSlotPicker, eventColumns, fitColumns, HandoffMatrixView, isErrorEvent, LaneRibbon, LogEventDetail, LogEventTable, LogFilterBar, PlaybackBar, SessionList, sessionColumns, TemplatePicker,
   toTaxonomyView, type FilterFieldSpec, type LogFilterValue,
 } from "../src";
 import { ev, events, slotFor, taxonomy } from "./fixtures";
@@ -321,6 +321,25 @@ describe("SessionList", () => {
     fireEvent.click(screen.getByText("ffff"));
     expect(onOpen).toHaveBeenCalledWith("ffff");
     expect(screen.getByText(/상위 200개만 표시/)).toBeTruthy();
+  });
+});
+
+describe("fitColumns(좁은 폭 열 우선순위)", () => {
+  const cols = sessionColumns(["start", "session", "project", "threads", "events", "errors", "models", "tokens", "length"]);
+  it("1024 폭(콘텐츠 약 940)에서는 모든 열이 들어가 길이 열이 남는다", () => {
+    expect(fitColumns(cols, 940).map((c) => c.id)).toContain("length");
+    expect(fitColumns(cols, 940)).toHaveLength(cols.length);
+  });
+  it("모자라면 우선순위가 낮은 열(에이전트 수·모델·프로젝트)부터 빠지고 길이는 끝까지 남는다", () => {
+    const ids = fitColumns(cols, 560).map((c) => c.id);
+    expect(ids).toContain("length");
+    expect(ids).toContain("start");
+    expect(ids).not.toContain("threads");
+    expect(ids.indexOf("start")).toBeLessThan(ids.indexOf("length"));
+  });
+  it("폭을 모르면(0·null) 그대로 둔다", () => {
+    expect(fitColumns(cols, null)).toBe(cols);
+    expect(fitColumns(cols, 0)).toBe(cols);
   });
 });
 

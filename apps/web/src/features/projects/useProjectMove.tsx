@@ -97,7 +97,7 @@ export function SelectionToolbar({ selection, visibleIds, onMove, className }: S
   const { selecting, setSelecting, selected, setAll } = selection;
   return (
     <div className={["prj-selectbar", className].filter(Boolean).join(" ")}>
-      <Button size="sm" variant={selecting ? "secondary" : "ghost"} aria-pressed={selecting} onClick={() => setSelecting(!selecting)}>
+      <Button size="sm" variant={selecting ? "primary" : "secondary"} aria-pressed={selecting} onClick={() => setSelecting(!selecting)}>
         {selecting ? t.move.selectModeOff : t.move.selectMode}
       </Button>
       {selecting ? (

@@ -47,7 +47,8 @@
   width: 100%;
   min-height: var(--ac-control-md, 32px);
   padding: 0 var(--ac-space-3, 12px);
-  background: var(--ac-surface-2, transparent);
+  /* shorthand 금지: ui tokens.css의 select 쉐브론(background-image)을 지우지 않는다 */
+  background-color: var(--ac-surface-2, transparent);
   color: var(--ac-text, inherit);
   border: 1px solid var(--ac-border-strong, #9aa3b2);
   border-radius: var(--ac-radius-md, 8px);
@@ -59,7 +60,7 @@
 .ac-sf-raw-input { font-family: var(--ac-font-mono, ui-monospace, monospace); font-size: var(--ac-text-code, 12.5px); }
 .ac-schema-form input[type='checkbox'],
 .ac-schema-form input[type='radio'] { accent-color: var(--ac-accent, #1f5fd1); margin-right: var(--ac-space-2, 8px); /* 모양은 ui tokens.css 10b(appearance:none)가 정한다 */ }
-.ac-schema-form select { text-overflow: ellipsis; }
+.ac-schema-form select { text-overflow: ellipsis; padding-inline-end: var(--ac-space-6, 24px); }
 .ac-schema-form :is(input, select, textarea, button):focus-visible,
 .ac-sf-raw-input:focus-visible {
   outline: 2px solid var(--ac-focus-ring, #1f5fd1);
@@ -193,7 +194,7 @@
 p.ac-sf-example { font-family: var(--ac-font-mono, ui-monospace, monospace); }
 .ac-schema-form button.ac-sf-example:hover:not(:disabled) { background: transparent; color: var(--ac-text, inherit); }
 .ac-schema-form button.ac-sf-action-icon {
-  min-width: 20px; min-height: 20px; width: 20px; height: 20px; padding: 0; border-radius: 50%;
+  min-width: 24px; min-height: 24px; width: 24px; height: 24px; padding: 0; border-radius: 50%;
   font-size: 12px; line-height: 1; color: var(--ac-text-muted, inherit);
 }
 /* ? 도움말: 테두리·배경 없이 옅게. 라벨 줄 호버·포커스(또는 열림) 때만 진해진다. */

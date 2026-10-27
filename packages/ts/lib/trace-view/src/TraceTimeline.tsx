@@ -330,6 +330,40 @@ export function TraceTimeline(props: TraceTimelineProps) {
             const rowBg = isSelected ? "var(--ac-accent-bg)" : isHighlighted ? "var(--ac-surface-3)" : undefined;
             if (rowBg) rowStyle["--trace-row-bg"] = rowBg;
             const openLabel = `${m.openChildRun}: ${lab.title}`;
+            const subText = showMethodText ? Boolean(methodText) : Boolean(lab.sub && !wait);
+            // 부제 글자가 없고 아이콘만 있으면 이름과 같은 줄에 둔다(좁은 칸에서 아이콘이 이름 아래로 떨어지지 않게).
+            const subInline = !subText && (Boolean(badge) || Boolean(sessionText));
+            const subNode = (
+                    <div className={subInline ? "ac-trace-sub ac-trace-sub--inline" : "ac-trace-sub"} data-trace-icons="true">
+                      {badge ? (
+                        <>
+                          {renderTooltip(
+                            badge.text,
+                            <span className="ac-trace-icon" role="img" aria-label={badge.text} data-trace-method="true">
+                              {renderIcon(badge.iconName ?? "link", 12)}
+                            </span>,
+                          )}
+                        </>
+                      ) : null}
+                      {sessionText
+                        ? renderTooltip(
+                            sessionText,
+                            <span className="ac-trace-icon ac-trace-session" role="img" aria-label={sessionText} data-session-badge={same ? "same" : "separate"} />,
+                          )
+                        : null}
+                      {showMethodText ? (
+                        methodText ? (
+                          <span className="ac-ellipsis ac-trace-subtext" data-trace-method-text="true" title={methodText}>
+                            {methodText}
+                          </span>
+                        ) : null
+                      ) : lab.sub && !wait ? (
+                        <span className="ac-ellipsis ac-trace-subtext" title={lab.sub}>
+                          {lab.sub}
+                        </span>
+                      ) : null}
+                    </div>
+            );
             return (
               <div
                 key={span.id}
@@ -390,36 +424,9 @@ export function TraceTimeline(props: TraceTimelineProps) {
                         {titleText}
                       </span>
                       {showSuffix ? <span className="ac-trace-suffix">{suffix}</span> : null}
+                      {subInline ? subNode : null}
                     </div>
-                    <div className="ac-trace-sub" data-trace-icons="true">
-                      {badge ? (
-                        <>
-                          {renderTooltip(
-                            badge.text,
-                            <span className="ac-trace-icon" role="img" aria-label={badge.text} data-trace-method="true">
-                              {renderIcon(badge.iconName ?? "link", 14)}
-                            </span>,
-                          )}
-                        </>
-                      ) : null}
-                      {sessionText
-                        ? renderTooltip(
-                            sessionText,
-                            <span className="ac-trace-icon ac-trace-session" role="img" aria-label={sessionText} data-session-badge={same ? "same" : "separate"} />,
-                          )
-                        : null}
-                      {showMethodText ? (
-                        methodText ? (
-                          <span className="ac-ellipsis ac-trace-subtext" data-trace-method-text="true" title={methodText}>
-                            {methodText}
-                          </span>
-                        ) : null
-                      ) : lab.sub && !wait ? (
-                        <span className="ac-ellipsis ac-trace-subtext" title={lab.sub}>
-                          {lab.sub}
-                        </span>
-                      ) : null}
-                    </div>
+                    {subInline ? null : subNode}
                   </div>
                   {grp && props.onOpenChildRun ? (
                     <button

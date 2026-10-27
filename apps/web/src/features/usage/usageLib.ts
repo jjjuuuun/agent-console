@@ -219,10 +219,29 @@ export function groupSetupSnippets(snippets: readonly UsageSetupSnippet[]): { ti
   return out;
 }
 
+/**
+ * 순위(작을수록 먼저): 0 = 값이 있고 대표가 사용자 순서·공식 규칙으로 정해진 창, 1 = 값은 있으나 공식 값이 없어 최근 값으로 대신한 창, 2 = 값 없음.
+ * 사용량 화면 카드의 대표값 규칙(`buildWindowGroups`)을 그대로 따른다.
+ */
+function windowRank(g: WindowGroup): number {
+  if (!hasValue(g.primary)) return 2;
+  return g.rule === "recent" ? 1 : 0;
+}
+
+/**
+ * `windows` 설정이 비었을 때 보일 창: 값 있는 창을 먼저(공식/지정 출처 > 그 밖의 값, 같은 순위는 묶음 순서) 고른 뒤 앞 `maxItems`개.
+ * 값이 약하거나 없는 창이 앞자리를 차지해 공식 값이 있는 창을 밀어내지 않게 한다. 같은 창을 여러 출처가 주면 `groups`의 대표가 이미 하나로 정했다.
+ */
+function pickDefaultWindows(groups: readonly WindowGroup[], maxItems: number): string[] {
+  const ranked = groups.map((g, i) => ({ g, i, r: windowRank(g) }));
+  ranked.sort((x, y) => x.r - y.r || x.i - y.i);
+  return ranked.slice(0, Math.max(0, maxItems)).map((x) => x.g.window);
+}
+
 /** 표시기가 그릴 항목 목록. 대표값 규칙은 `buildWindowGroups`의 결과를 그대로 쓴다(카드와 같은 숫자). */
 export function buildIndicatorItems(a: BuildIndicatorArgs): IndicatorItem[] {
   const byWindow = new Map(a.groups.map((g) => [g.window, g]));
-  const ids = a.windows.length > 0 ? [...a.windows] : a.groups.slice(0, Math.max(0, a.maxItems)).map((g) => g.window);
+  const ids = a.windows.length > 0 ? [...a.windows] : pickDefaultWindows(a.groups, a.maxItems);
   return ids.map((id): IndicatorItem => {
     const info = a.windowInfo?.[id];
     const g = byWindow.get(id);

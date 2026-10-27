@@ -32,6 +32,7 @@
 /* 앱 단추 줄이 있으면 선택 도구줄은 그 아래 줄에 둔다(같은 모서리 겹침 방지) */
 .ac-ge-actions ~ .ac-ge-toolbar { margin-top: 44px; }
 .ac-ge-minimap-toggle-wrap { margin: var(--ac-space-2); }
+.ac-ge-minimap-toggle > svg { flex: none; width: 16px; height: 16px; }
 .ac-ge-minimap-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; }
 .ac-ge-root .react-flow__minimap.ac-ge-minimap--lifted { margin-bottom: 44px; }
 .ac-ge-palette-wrap { width: var(--ac-palette-w); flex: none; background: var(--ac-surface-1); border-right: 1px solid var(--ac-border); z-index: 10; min-height: 0; }
@@ -74,15 +75,15 @@
 .ac-ge-node[data-selected="true"] { border-color: var(--ac-accent); box-shadow: var(--ac-shadow-node); }
 .ac-ge-node[data-unknown-type="true"] { border: 1.5px dashed var(--ac-danger); }
 .ac-ge-node-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; border-radius: 10px 0 0 10px; background: var(--ac-ge-accent, var(--ac-cat-neutral)); }
-.ac-ge-node-header { display: flex; align-items: flex-start; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); min-width: 0; border-radius: 10px 10px 0 0; }
+.ac-ge-node-header { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3) var(--ac-space-2) calc(var(--ac-space-3) + 6px); min-width: 0; border-radius: 10px 10px 0 0; }
 .ac-ge-avatar {
   flex: none; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--ac-radius-full); background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral)));
   color: var(--ac-text-on-accent); font-size: var(--ac-text-xs); font-weight: 600; line-height: 1; overflow: hidden;
 }
 .ac-ge-node-header .ac-ge-avatar { background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral))); }
-.ac-ge-node-titles { flex: 1; min-width: 0; }
-.ac-ge-node-label { font-weight: 600; line-height: 18px; }
+.ac-ge-node-titles { flex: 1 1 4em; min-width: 3.5em; }
+.ac-ge-node-label { font-weight: 600; line-height: 18px; word-break: keep-all; overflow-wrap: break-word; }
 .ac-ge-node-type { font-size: var(--ac-text-xs); line-height: 16px; color: var(--ac-text-muted); }
 .ac-ge-status { flex: none; display: inline-flex; align-items: center; gap: var(--ac-space-1); max-width: 96px; min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text); }
 .ac-ge-status-label { min-width: 0; }
@@ -150,7 +151,9 @@
 .ac-ge-root .react-flow__controls-button { background: var(--ac-surface-2); color: var(--ac-text); border-bottom: 1px solid var(--ac-border); }
 .ac-ge-root .react-flow__minimap { background: var(--ac-surface-1); border: 1px solid var(--ac-border); }
 .ac-ge-root .react-flow__minimap-mask { fill: var(--ac-overlay); }
-.ac-ge-root .react-flow__minimap-node { fill: var(--ac-surface-3); stroke: var(--ac-border-strong); }
+/* 미니맵: 노드는 배경보다 뚜렷한 면, 지금 보는 영역(mask 안)은 accent 테두리 */
+.ac-ge-root .react-flow__minimap-node { fill: color-mix(in srgb, var(--ac-accent) 45%, var(--ac-surface-1)); stroke: var(--ac-accent); stroke-width: 1; }
+.ac-ge-root .react-flow__minimap-mask { stroke: var(--ac-accent); stroke-width: 2; stroke-linejoin: round; }
 .ac-ge-toolbar { display: flex; align-items: center; gap: var(--ac-space-2); }
 .ac-ge-toolbar-count { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 
@@ -237,7 +240,7 @@
 .ac-ge-toggle-label { display: inline-flex; align-items: center; gap: var(--ac-space-2); }
 .ac-ge-toggle-count { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); font-variant-numeric: tabular-nums; }
 .ac-ge-toggle-why { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
-.ac-ge-select { height: var(--ac-control-sm); font: inherit; color: var(--ac-text); background: var(--ac-surface-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ac-ge-select { height: var(--ac-control-sm); font: inherit; color: var(--ac-text); background-color: var(--ac-surface-2); padding: 0 var(--ac-space-6) 0 var(--ac-space-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
 .ac-ge-toolbar .ac-ge-btn[aria-pressed="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg, var(--ac-surface-3)); }
 
 /* 이슈 제안 버튼 */
@@ -388,7 +391,8 @@ select.ac-ge-lp-input { width: 12em; }
 .ac-ge-trouble .ac-ge-btn { flex: none; white-space: nowrap; }
 .ac-ge-view-chip { position: absolute; top: var(--ac-space-3); left: 50%; transform: translateX(-50%); z-index: 45; display: flex; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-1) var(--ac-space-3); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-left: 3px solid var(--ac-accent); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .ac-ge-view-select { display: inline-flex; align-items: center; gap: var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
-.ac-ge-view-select select { font: inherit; color: inherit; background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: var(--ac-space-1); }
+/* background 단축 속성 금지: ui tokens.css의 select 쉐브론(background-image)을 지우지 않는다 */
+.ac-ge-view-select select { font: inherit; color: inherit; background-color: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); min-height: var(--ac-control-sm, 24px); padding: 0 var(--ac-space-6) 0 var(--ac-space-2); min-width: 9em; }
 
 /* 연결선 우클릭 메뉴(4R.20) */
 .ac-ge-menu { position: absolute; z-index: 20; min-width: 12em; max-width: 20em; display: flex; flex-direction: column; padding: var(--ac-space-1); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-node); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
@@ -447,3 +451,4 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 /* 연결 종류 선택: 비활성 행과 사유, 보조 배지 */
 .ac-ge-choice-row[aria-disabled="true"] { opacity: 0.6; }
 .ac-ge-choice-reason { display: block; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.ac-ge-offscreen .ac-ge-btn { white-space: nowrap; }

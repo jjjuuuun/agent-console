@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getContractSchema, type UsageIndicatorColorRule, type UsageIndicatorSettings, type UsageSourceInfo, type UsageWindowSnapshot } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
+import { InlineMarkdown } from "@agent-console/schema-form";
 import {
   INDICATOR_FIELDS,
   INDICATOR_PLACEMENTS,
@@ -70,7 +71,7 @@ export function UsageIndicatorEditor(p: UsageIndicatorEditorProps) {
         <input type="checkbox" checked={eff.enabled} disabled={p.disabled} onChange={(e) => set({ enabled: e.target.checked })} />
         <strong>{schema["enabled"]?.title}</strong>
       </label>
-      <p className="app-muted">{schema["enabled"]?.description}</p>
+      <p className="app-muted">{schema["enabled"]?.description ? <InlineMarkdown text={schema["enabled"].description} /> : null}</p>
       <p className="app-muted">{t.pollNotice}</p>
       {eff.enabled ? null : <p className="app-muted">{t.enabledOffNote}</p>}
       <div className="usage-ind-editor-body">
@@ -99,7 +100,7 @@ export function UsageIndicatorEditor(p: UsageIndicatorEditorProps) {
               {addable.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}
             </select>
           </div>
-          <p className="app-muted">{eff.windows.length === 0 ? t.windowsEmpty : schema["windows"]?.description}</p>
+          <p className="app-muted">{eff.windows.length === 0 ? t.windowsEmpty : (schema["windows"]?.description ? <InlineMarkdown text={schema["windows"].description} /> : null)}</p>
           <label className="app-check">
             {schema["max_items"]?.title}
             <input
@@ -181,17 +182,19 @@ export function UsageIndicatorEditor(p: UsageIndicatorEditorProps) {
           <div>
             <Button size="sm" onClick={() => set({ color_rules: [...rules, { at: 0.8, tone: Object.keys(INDICATOR_TONES)[0] ?? "" }] })}>{t.ruleAdd}</Button>
           </div>
-          <p className="app-muted usage-ind-pop-line">{rules.length === 0 ? schema["color_rules"]?.description : t.ruleNote}</p>
+          <p className="app-muted usage-ind-pop-line">{rules.length === 0 ? (schema["color_rules"]?.description ? <InlineMarkdown text={schema["color_rules"].description} /> : null) : t.ruleNote}</p>
         </fieldset>
 
-        <label className="app-check">
-          <input type="checkbox" checked={eff.hide_when_empty} disabled={off} onChange={(e) => set({ hide_when_empty: e.target.checked })} />
-          {schema["hide_when_empty"]?.title}
-        </label>
-        <label className="app-check">
-          <input type="checkbox" checked={eff.also_in_title} disabled={off} onChange={(e) => set({ also_in_title: e.target.checked })} />
-          {schema["also_in_title"]?.title}
-        </label>
+        <div className="usage-ind-toggles">
+          <label className="app-check">
+            <input type="checkbox" checked={eff.hide_when_empty} disabled={off} onChange={(e) => set({ hide_when_empty: e.target.checked })} />
+            {schema["hide_when_empty"]?.title}
+          </label>
+          <label className="app-check">
+            <input type="checkbox" checked={eff.also_in_title} disabled={off} onChange={(e) => set({ also_in_title: e.target.checked })} />
+            {schema["also_in_title"]?.title}
+          </label>
+        </div>
       </div>
       <h4 className="app-block-subtitle">{t.preview}</h4>
       <UsageIndicatorPreview

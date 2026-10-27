@@ -193,4 +193,30 @@ describe("ListViewMenu", () => {
     render(<MenuHarness />);
     expect(screen.queryByRole("button", { name: "모두 접기" })).toBeNull();
   });
+
+  describe("뷰포트 기준 높이(1280×800)", () => {
+    const setup = (bottom: number, top: number) => {
+      Object.defineProperty(window, "innerHeight", { value: 800, configurable: true });
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ top, bottom, left: 0, right: 100, width: 100, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+      vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(420);
+    };
+    afterEach(() => vi.restoreAllMocks());
+    it("남은 공간이 충분하면 아래로 펼치고 고정 360px보다 높게 허용해 마지막 항목(모두 펼치기)까지 보인다", () => {
+      setup(150, 118);
+      render(<MenuHarness onCollapseAll={() => {}} onExpandAll={() => {}} />);
+      fireEvent.click(screen.getByRole("button", { name: /폴더별/ }));
+      const panel = screen.getByRole("menu", { name: "보기" });
+      expect(panel.getAttribute("data-side")).toBeNull();
+      expect(parseInt(panel.style.maxHeight, 10)).toBeGreaterThanOrEqual(420);
+      expect(screen.getAllByRole("menuitem").map((e) => e.textContent)).toEqual(["모두 접기", "모두 펼치기"]);
+    });
+    it("아래가 모자라고 위가 넓으면 위로 펼친다", () => {
+      setup(700, 668);
+      render(<MenuHarness />);
+      fireEvent.click(screen.getByRole("button", { name: /폴더별/ }));
+      const panel = screen.getByRole("menu", { name: "보기" });
+      expect(panel.getAttribute("data-side")).toBe("top");
+      expect(parseInt(panel.style.maxHeight, 10)).toBeGreaterThan(500);
+    });
+  });
 });

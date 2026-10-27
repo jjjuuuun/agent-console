@@ -17,7 +17,7 @@ export { LogEventTable, eventColumns, type LogEventTableProps, type LogEventTabl
 export { LogFilterBar, type LogFilterBarProps } from "./LogFilterBar";
 export { CategoryChips, type CategoryChipsProps, type CategoryChipItem } from "./CategoryChips";
 export { LogEventDetail, type LogEventDetailProps, type LogEventDetailHandle, type DetailTab } from "./LogEventDetail";
-export { SessionList, sessionColumns, type SessionListProps } from "./SessionList";
+export { SessionList, fitColumns, sessionColumns, type SessionListProps } from "./SessionList";
 export { PlaybackBar, type PlaybackBarProps } from "./PlaybackBar";
 export { LaneRibbon, flattenLanes, type LaneRibbonProps, type LaneEvent } from "./LaneRibbon";
 export { HandoffMatrixView, type HandoffMatrixViewProps, type HandoffCell } from "./HandoffMatrixView";

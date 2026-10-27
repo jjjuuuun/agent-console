@@ -289,4 +289,8 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-section .usage-ind-editor { gap: var(--ac-field-gap); }
 .app-settings-section .usage-ind-editor p, .app-settings-section .usage-ind-editor h3 { margin: 0; }
 .app-settings-section .usage-ind-editor fieldset > p { margin: 0; }
-.app-settings-section .usage-ind-editor fieldset { gap: var(--ac-space-2); }
+.app-settings-section .usage-ind-editor fieldset { gap: var(--ac-space-2); margin: 0; }
+/* 구역(위치·보일 창·항목·값 방향·색 규칙·미리보기) 사이는 24px */
+.app-settings-section .usage-ind-editor-body { display: flex; flex-direction: column; gap: var(--ac-section-gap); }
+.app-settings-section .usage-ind-editor > h4 { margin-top: var(--ac-space-2); }
+.app-settings-section .usage-ind-toggles { display: flex; flex-direction: column; gap: var(--ac-space-2); }

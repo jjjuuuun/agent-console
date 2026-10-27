@@ -25,6 +25,8 @@ export interface AgentListProps {
   onDelete: (id: string) => void;
   /** 목록 머리에 끼울 줄(프로젝트 범위 필터 등, 없으면 생략) */
   scopeBar?: ReactNode;
+  /** 보기 줄 끝에 끼울 선택 도구(없으면 생략) */
+  selectTool?: ReactNode;
   /** 이름 줄 끝에 붙일 요소(범위 태그·선택 표시 등) */
   rowExtra?: (agent: Agent) => ReactNode;
 }
@@ -47,7 +49,7 @@ export function useAgentUsageCounts(agents: readonly Agent[], enabled = true): (
 }
 
 /** 에이전트 목록 패널: 검색·사용 여부 필터·정렬(이름순)·키보드 이동. 데이터와 콜백은 props. */
-export function AgentList({ agents, loading, error, onRetry, selectedId, onSelect, onNew, onRename, onDelete, scopeBar, rowExtra }: AgentListProps) {
+export function AgentList({ agents, loading, error, onRetry, selectedId, onSelect, onNew, onRename, onDelete, scopeBar, selectTool, rowExtra }: AgentListProps) {
   const [query, setQuery] = useState("");
   const [used, setUsed] = useState<UsedFilter>("all");
   const root = useRef<HTMLDivElement>(null);
@@ -73,6 +75,7 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
     idOf: (a) => a.id,
     showMenu: !(all.length === 0 || loading),
     attributeKeys: attributeKeys(all),
+    extra: selectTool,
   });
   const { arranged } = view;
   const rows = arranged.sorted;
@@ -95,7 +98,6 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
       icon={routeIconNode(ROUTE_ROLES.agent)}
       title={t.list.empty}
       description={t.list.emptyBody}
-      action={<Button variant="primary" onClick={onNew}>{t.list.new}</Button>}
     />
   ) : (
     <p className="app-muted app-pad">{t.list.noMatch}</p>

@@ -82,7 +82,8 @@ export function ResourcesScreen({ basePath }: ResourcesScreenProps) {
       <div className="lib-split">
         <ResourceList
           resources={scoped.items}
-          scopeBar={scoped.bar}
+          scopeBar={scoped.parts.filter}
+          selectTool={scoped.parts.select}
           rowExtra={scoped.rowExtra}
           types={types.data}
           typesFailed={types.isError}

@@ -132,6 +132,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     selectedId: activeId,
     idOf: idOfGraph,
     showMenu: !(graphs.isLoading || graphs.isError || (graphs.data ?? []).length === 0),
+    extra: scoped.parts.select,
   });
   const { arranged } = view;
   const rows = arranged.sorted;
@@ -209,7 +210,6 @@ export function TeamListPage({ basePath }: { basePath: string }) {
         icon={<Icon name="teams" size={24} />}
         title={t.list.empty}
         description={t.list.emptyBody}
-        action={<Button variant="primary" size="lg" onClick={() => setDialog({ kind: "new" })}>{t.list.new}</Button>}
         secondaryAction={<StartGuide actionOverrides={{ create: () => setDialog({ kind: "new" }) }} />}
       />
     );
@@ -323,14 +323,16 @@ export function TeamListPage({ basePath }: { basePath: string }) {
       <PageHeader
         title={m.nav.teams}
         actions={
+          !graphs.isLoading && !graphs.isError && list.length === 0 ? undefined : (
           <>
             <input ref={searchRef} type="search" className="ac-input team-search" aria-label={t.list.search} placeholder={t.list.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} />
             <Button variant="primary" onClick={() => setDialog({ kind: "new" })} title="N">+ {t.list.new}</Button>
           </>
+          )
         }
       />
       <div className="app-screen-body">
-        {scoped.bar}
+        {scoped.parts.filter}
         {chat.error ? <p className="app-sev" data-severity="error" role="alert">{chat.error}</p> : null}
         {body}
       </div>

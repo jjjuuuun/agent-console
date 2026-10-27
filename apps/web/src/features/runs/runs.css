@@ -1,8 +1,18 @@
 /* 실행 기록·실행 상세. 색·간격은 @agent-console/ui 토큰만 쓴다. */
 .runs-body { display: flex; flex-direction: column; gap: var(--ac-space-3); }
-.runs-filters { display: flex; flex-wrap: wrap; gap: var(--ac-space-3); align-items: flex-end; }
+.runs-filters { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.runs-filters-row { display: flex; flex-wrap: wrap; gap: var(--ac-space-2) var(--ac-space-3); align-items: center; min-width: 0; }
+.runs-filters-spacer { flex: 1 1 0; }
+.runs-filter.runs-filter-inline { flex-direction: row; align-items: center; gap: var(--ac-space-2); white-space: nowrap; }
+.runs-filter-inline > select { max-width: 200px; }
+.runs-filter-search { flex: 1 1 220px; max-width: 360px; }
+.runs-filter-search > input { width: 100%; }
+.runs-status-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); min-width: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.runs-status-chips > .app-muted { margin-right: var(--ac-space-1); }
+.runs-chip { background: var(--ac-surface-2); color: var(--ac-text); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); padding: 0 var(--ac-space-3); min-height: var(--ac-control-sm, 24px); font: inherit; font-size: var(--ac-text-xs); cursor: pointer; white-space: nowrap; }
+.runs-chip[aria-pressed="true"] { background: var(--ac-accent-bg); border-color: var(--ac-accent); }
+.runs-chip:focus-visible { outline: 2px solid var(--ac-accent); outline-offset: 1px; }
 .runs-filter { display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); border: 0; padding: 0; margin: 0; min-width: 0; }
-.runs-status-filter { flex-direction: row; flex-wrap: wrap; gap: var(--ac-space-2); align-items: center; }
 .runs-table { table-layout: auto; }
 .runs-row { cursor: pointer; }
 .runs-row:hover { background: var(--ac-surface-2); }

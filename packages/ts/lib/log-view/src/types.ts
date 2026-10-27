@@ -15,6 +15,10 @@ export interface ColumnSpec<Row> {
   width: number | string;
   align?: "start" | "end";
   render?: (row: Row) => ReactNode;
+  /** 이 열이 읽히는 최소 폭(px). 폭이 모자라면 `priority`가 낮은 열부터 숨기는 표가 합산에 쓴다. */
+  minWidth?: number;
+  /** 좁은 폭에서 남길 우선순위(클수록 끝까지 남는다). 없으면 숨기지 않는다. */
+  priority?: number;
 }
 
 /** 분류 체계의 화면용 항목. 계약 `LogTaxonomy`를 `toTaxonomyView`로 바꾼 것. */

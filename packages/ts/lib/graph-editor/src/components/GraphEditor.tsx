@@ -153,6 +153,58 @@ function isTextField(target: EventTarget | null): boolean {
  */
 /** 자동 첫 맞춤 재시도 간격(ms). 노드 측정이 끝나면(`useNodesInitialized`) 효과가 다시 돌아 한 번 더 맞춘다. */
 const FIRST_FIT_RETRY_MS = [0, 120, 400, 1000] as const;
+/**
+ * 화면 맞춤 옵션. 작은 그래프는 확대하지 않고(최대 1.0) 가운데에 두며, 큰 그래프도 노드 글자가 읽히는 줌(0.4) 아래로는 줄이지 않는다
+ * (넘치는 부분은 끌어서 보고, 전체는 미니맵으로 본다). 실제 캔버스 크기(옆 패널·팔레트가 자리 잡은 뒤)로 계산한다.
+ */
+export const FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 1, minZoom: 0.6 } as const;
+/** 입구(가장 왼쪽) 노드 기준 맞춤에서 입구 노드를 캔버스 왼쪽에서 띄우는 거리(px) */
+const ENTRY_FIT_MARGIN = 24;
+
+/** 화면 밖에 완전히 나가 있는 노드 수를 알리는 단서. 눌러서 전체가 보이게 줄인다(큰 그래프에서 입구 기준 첫 맞춤 뒤 이동 단서). */
+function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string; hint: string; onShowAll: () => void }) {
+  const count = useStore((st) => {
+    const [tx, ty, z] = st.transform;
+    if (st.width <= 0 || st.height <= 0) return 0;
+    let n = 0;
+    for (const node of st.nodeLookup.values()) {
+      if (node.hidden) continue;
+      const w = node.measured.width ?? 0;
+      const h = node.measured.height ?? 0;
+      if (w === 0 || h === 0) continue;
+      const x = node.internals.positionAbsolute.x * z + tx;
+      const y = node.internals.positionAbsolute.y * z + ty;
+      if (x + w * z <= 0 || y + h * z <= 0 || x >= st.width || y >= st.height) n += 1;
+    }
+    return n;
+  });
+  if (count === 0) return null;
+  return (
+    <Panel position="top-right" className="ac-ge-offscreen">
+      <button type="button" className="ac-ge-btn" title={hint} aria-label={`${label(count)}. ${hint}`} onClick={onShowAll}>
+        {label(count)}
+      </button>
+    </Panel>
+  );
+}
+
+/**
+ * 첫 맞춤. 그래프 전체가 최소 읽기 줌(`FIT_VIEW_OPTIONS.minZoom`) 이상에서 들어가면 전체를 맞추고,
+ * 그렇지 않으면 입구(가장 왼쪽) 노드를 캔버스 왼쪽에 두고 그 줌으로 시작한다(글자가 읽히는 크기 우선, 나머지는 끌어서 본다).
+ */
+async function fitReadable(flow: ReturnType<typeof useReactFlow>, size: { width: number; height: number }, duration: number): Promise<void> {
+  await flow.fitView({ ...FIT_VIEW_OPTIONS, duration });
+  const v = flow.getViewport();
+  if (v.zoom > FIT_VIEW_OPTIONS.minZoom + 0.001) return;
+  const nodes = flow.getNodes().filter((n) => !n.hidden);
+  if (nodes.length === 0 || size.width <= 0) return;
+  const b = flow.getNodesBounds(nodes);
+  const zoom = FIT_VIEW_OPTIONS.minZoom;
+  await flow.setViewport({ x: ENTRY_FIT_MARGIN - b.x * zoom, y: size.height / 2 - (b.y + b.height / 2) * zoom, zoom }, { duration });
+}
+
+/** 첫 맞춤 뒤 캔버스 크기가 바뀌어도(옆 패널이 자리 잡는 동안) 다시 맞추는 시간(ms). 이후 크기 변화는 사용자 시점을 건드리지 않는다. */
+const REFIT_WINDOW_MS = 3000;
 
 /** 줌이 이 값보다 낮으면 연결 칩은 아이콘만 보인다(글자는 연결의 접근성 이름에 남는다). */
 const LOW_ZOOM = 0.6;
@@ -160,7 +212,7 @@ const LOW_ZOOM = 0.6;
 const CARD_HALF_W = 110;
 const CARD_HALF_H = 40;
 /** 미니맵은 캔버스를 덮지 않게 작게 그린다 */
-const MINIMAP_STYLE = { width: 140, height: 96 } as const;
+const MINIMAP_STYLE = { width: 168, height: 112 } as const;
 
 export function GraphEditor({ ref, ...props }: GraphEditorProps) {
   return (
@@ -548,9 +600,9 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     if (pendingFit.current === null || pendingFit.current === graph) return;
     pendingFit.current = null;
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-    const h = requestAnimationFrame(() => void flow.fitView({ padding: 0.12, duration: reduce ? 0 : 250 }));
+    const h = requestAnimationFrame(() => void fitReadable(flow, flowStore.getState(), reduce ? 0 : 250));
     return () => cancelAnimationFrame(h);
-  }, [graph, flow]);
+  }, [graph, flow, flowStore]);
   const troubleOn = !readOnly && props.troubleHint !== false;
   const troubleIds = useEdgeTrouble({ enabled: troubleOn, ready: model.nodes.length > 1, nodes: model.nodes, edges: viewEdges, size: measured, routes });
   const [troubleHidden, setTroubleHidden] = useState<ReadonlySet<string>>(new Set());
@@ -924,23 +976,33 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   // 그러면 보이는 영역 밖 노드가 그려지지(=측정되지) 않은 채 멈춘다. 크기가 확정된 뒤 짧은 간격으로 몇 번 다시 맞추되,
   // 뷰가 "처음 상태"이거나 "우리가 마지막으로 맞춘 그대로"(= 사용자가 움직이지 않음)일 때만, 그리고 노드가 모두 측정되면 멈춘다.
   const sized = useStore((st) => st.width > 0 && st.height > 0);
+  // 캔버스 크기(10px 단위). 옆 패널·팔레트가 열리거나 닫혀 크기가 바뀌면 처음 몇 초 동안은 다시 맞춘다.
+  const canvasSize = useStore((st) => `${Math.round(st.width / 10)}x${Math.round(st.height / 10)}`);
+  const mountedAt = useRef<number | null>(null);
+  const firstSize = useRef<string | null>(null);
   const nodesMeasured = useNodesInitialized();
   const lastFit = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const hasNodes = gNodes.length > 0;
   useEffect(() => {
     if (!sized || !hasNodes) return;
+    mountedAt.current ??= Date.now();
+    firstSize.current ??= canvasSize;
+    if (lastFit.current !== null && Date.now() - mountedAt.current > REFIT_WINDOW_MS) return;
     const same = (a: { x: number; y: number; zoom: number }, b: { x: number; y: number; zoom: number }) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
     const attempt = () => {
       const v = flow.getViewport();
-      const untouched = (v.x === 0 && v.y === 0 && v.zoom === 1) || (lastFit.current !== null && same(v, lastFit.current));
+      // React Flow 자체 첫 맞춤은 옆 패널이 자리 잡기 전의 작은 캔버스로 끝날 수 있다. 처음 크기에서 바뀌었고 우리가 아직 맞추지 않았다면 처음 3초 안에는 다시 맞춘다.
+      const resized = firstSize.current !== canvasSize;
+      const untouched = (v.x === 0 && v.y === 0 && v.zoom === 1) || (lastFit.current !== null ? same(v, lastFit.current) : resized);
       if (!untouched) return;
-      void flow.fitView();
-      lastFit.current = flow.getViewport();
+      void fitReadable(flow, flowStore.getState(), 0).then(() => {
+        lastFit.current = flow.getViewport();
+      });
     };
     const timers = FIRST_FIT_RETRY_MS.map((ms) => setTimeout(attempt, ms));
     return () => timers.forEach(clearTimeout);
-    // 크기가 처음 확정되는 때(sized)와 노드가 처음 생기는 때, 측정이 끝나는 때만
-  }, [sized, hasNodes, nodesMeasured, flow]);
+    // 크기가 처음 확정되는 때(sized)와 노드가 처음 생기는 때, 측정이 끝나는 때, 캔버스 크기가 바뀔 때만
+  }, [sized, hasNodes, nodesMeasured, canvasSize, flow, flowStore]);
 
   // ---- 외부 포커스 요청(이슈 행 클릭 등) ----
   const focusReq = props.focusRequest;
@@ -1500,6 +1562,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
           minZoom={0.25}
           maxZoom={2}
           fitView
+          fitViewOptions={FIT_VIEW_OPTIONS}
           proOptions={{ hideAttribution: true }}
           ariaLabelConfig={m.flowLabels}
         >
@@ -1523,6 +1586,11 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
               </button>
             </Panel>
           )}
+          <OffscreenCue
+            label={(n) => format(m.offscreenNodes, { count: n })}
+            hint={m.offscreenHint}
+            onShowAll={() => void flow.fitView({ padding: FIT_VIEW_OPTIONS.padding, maxZoom: 1, minZoom: 0.25, duration: 200 })}
+          />
           {tidy.ghost}
           {(hasResourceTypes || tidy.available || viewable) && (
             <Panel position="bottom-center" className="ac-ge-view-toolbar">
