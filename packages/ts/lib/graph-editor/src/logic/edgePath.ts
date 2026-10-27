@@ -8,9 +8,9 @@ import type { EdgeEndpoint, EdgePathInput, EdgePathResult, EdgeSegment, EdgeShap
 
 /** 선은 핸들 경계에서 면의 바깥 법선 방향으로 이만큼 떨어져 시작/끝난다(tokens 4.4). */
 export const ARROW_GAP = 6;
-/** 핸들에서 면 바깥쪽으로 먼저 내는 스텁 길이(`--ac-edge-stub`). */
+/** 핸들에서 면 바깥쪽으로 먼저 내는 스텁 길이(16px). */
 export const EDGE_STUB = 16;
-/** 모서리 반경 기본값(`--ac-edge-radius`)과 상한. */
+/** 모서리 반경 기본값(8px)과 상한. */
 export const DEFAULT_EDGE_RADIUS = 8;
 export const MAX_EDGE_RADIUS = 24;
 /** 연결 하나의 경유점 상한. */

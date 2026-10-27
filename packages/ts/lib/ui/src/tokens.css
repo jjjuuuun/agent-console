@@ -64,7 +64,6 @@
   --ac-bg-glow: radial-gradient(900px 320px at 50% -80px, color-mix(in srgb, var(--ac-accent) 9%, transparent), transparent);
   --ac-accent-2: #c39bff;
   --ac-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --ac-check-mark: #10131f;
 }
 
 /* ===== 1. 색: 라이트 (명시 선택) ===== */
@@ -122,7 +121,6 @@
   --ac-bg-glow: radial-gradient(900px 320px at 50% -80px, color-mix(in srgb, var(--ac-accent) 6%, transparent), transparent);
   --ac-accent-2: #8e44d6;
   --ac-shadow-card: 0 1px 2px rgba(41, 37, 28, 0.07), 0 1px 1px rgba(41, 37, 28, 0.04);
-  --ac-check-mark: #ffffff;
 }
 
 /* ===== 1. 색: 시스템 모드 (data-theme 속성 없음 + 라이트 선호) ===== */
@@ -181,7 +179,6 @@
     --ac-bg-glow: radial-gradient(900px 320px at 50% -80px, color-mix(in srgb, var(--ac-accent) 6%, transparent), transparent);
     --ac-accent-2: #8e44d6;
     --ac-shadow-card: 0 1px 2px rgba(41, 37, 28, 0.07), 0 1px 1px rgba(41, 37, 28, 0.04);
-    --ac-check-mark: #ffffff;
   }
 }
 
@@ -211,8 +208,6 @@
   --ac-status-cancelled-bg: color-mix(in srgb, var(--ac-status-cancelled) 14%, var(--ac-surface-2));
   --ac-edge-selected: var(--ac-accent);
   --ac-edge-invalid: var(--ac-danger);
-  --ac-edge-radius: 8px;
-  --ac-edge-stub: 16px;
   --ac-edge-handle-size: 10px;
   --ac-edge-handle-hit: 18px;
   --ac-handle-fill: var(--ac-surface-2);
@@ -313,7 +308,6 @@
   --ac-run-badge-picked: 2px solid var(--ac-accent);
   --ac-condition-row-h: 40px;
   --ac-condition-row-h-wrap: 76px;
-  --ac-condition-wide-w: 560px;
   --ac-run-list-row-h: var(--ac-row-h-dense);
   --ac-progress-indent: 16px;
   /* 넘침 방지 (tokens.md 3.1, ux-overhaul 4.1) */
@@ -969,7 +963,7 @@ button.ac-chip:focus-visible { outline: 2px solid var(--ac-accent); outline-offs
 :where(input[type="checkbox"]:checked) { background-image: var(--ac-check-img); }
 :where(input[type="checkbox"]:indeterminate) { background-image: var(--ac-indeterminate-img); }
 :where(input[type="radio"]:checked) { border-color: var(--ac-accent); background-image: radial-gradient(circle, var(--ac-accent) 0 4px, transparent 5px); }
-/* 데이터 URI는 변수를 못 읽으므로 체크·쉐브론 SVG의 색은 --ac-check-mark 값(쉐브론은 본문 보조색)과 같게 테마별로 둔다. 체크 SVG는 stroke 색을 --ac-check-mark 값과 같게 둔 두 벌(다크/라이트) */
+/* 데이터 URI는 변수를 못 읽으므로 체크·쉐브론 SVG의 색은 값으로 직접 둔다(체크는 다크/라이트 두 벌, 쉐브론은 본문 보조색) */
 :root { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23b9c0d0' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310131f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310131f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); }
 :root[data-theme="light"] { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23444b5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --ac-chevron-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23444b5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); --ac-check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E"); --ac-indeterminate-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E"); } }

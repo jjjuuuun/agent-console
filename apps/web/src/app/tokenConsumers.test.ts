@@ -67,11 +67,13 @@ describe("정의했는데 아무도 쓰지 않는 토큰(5.2R.98)", () => {
     const webSrc = resolve(import.meta.dirname, "..");
     const files = [...sourceFiles(webSrc), ...sourceFiles(tsRoot)].filter((f) => !/\.test\.(ts|tsx)$/.test(f));
     const used = new Set<string>();
+    // 주석은 사용이 아니다. CSS는 `var(--ac-x)`로 읽는 경우만, TS·TSX는 주석을 뺀 코드에서 참조하는 경우(정의 `--ac-x:` 제외)만 센다.
+    const stripComments = (t: string, ts: boolean) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(ts ? /(^|[^:"'`])\/\/.*$/gm : /$^/g, "$1");
     for (const f of files) {
-      for (const m of readFileSync(f, "utf-8").matchAll(/(--ac-[a-z0-9]+(?:-[a-z0-9]+)*)(?![a-z0-9-])(\s*:)?/g)) {
-        // 정의(`--ac-x:`)는 사용이 아니다. tokens.css 안의 var() 읽기와 다른 파일의 읽기만 센다.
-        if (m[2] === undefined) used.add(m[1]!);
-      }
+      const isTs = /\.tsx?$/.test(f);
+      const text = stripComments(readFileSync(f, "utf-8"), isTs);
+      const re = isTs ? /(--ac-[a-z0-9]+(?:-[a-z0-9]+)*)(?![a-z0-9-])(\s*:)?/g : /var\(\s*(--ac-[a-z0-9]+(?:-[a-z0-9]+)*)(?![a-z0-9-])()/g;
+      for (const m of text.matchAll(re)) if (m[2] === undefined || m[2] === "") used.add(m[1]!);
     }
     const unused = [...allDefined].filter((n) => !used.has(n) && !allowlist.names.includes(n) && !allowlist.prefixes.some((p) => n.startsWith(p)));
     expect(unused).toEqual([]);

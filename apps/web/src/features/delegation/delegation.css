@@ -1,6 +1,6 @@
 /* 독립 위임·반복·조건·중첩 팀 화면 조각 스타일. 색·간격은 --ac-* 토큰만 쓴다(tokens.md 5.10). */
 
-/* 조건 목록 위젯: 행 높이는 컨테이너 폭이 --ac-condition-wide-w 이상이면 한 줄, 아니면 두 줄 */
+/* 조건 목록 위젯: 행 높이는 컨테이너 폭이 560px 이상이면 한 줄, 아니면 두 줄 */
 .dlg-cond { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; container-type: inline-size; }
 .dlg-cond-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-3); }
 .dlg-cond-mode { display: flex; gap: var(--ac-space-3); border: 0; margin: 0; padding: 0; }

@@ -22,7 +22,7 @@ uv pip install ./apps/server    # 단독
 | `ruamel-yaml` | `agent-console.yaml` 읽기(safe 로더) | store와 같은 라이브러리 | PyYAML |
 | `pydantic`·`starlette` | 설정 모델·미들웨어 | 서버가 직접 import하므로 직접 의존으로 선언한다 | — |
 | 직접 쓰는 Agent Console 패키지 | `agent-console-contracts`·`registry`·`secret-rules`·`modkit[host]` | 계약 모델, 레지스트리, 비밀 규칙, 모듈 조립·보안 미들웨어·호스트 확장 지점 | — |
-| 설치만 하는 플러그인 | `agent-console-resources-core`·`nodes-core`·`delegation-host`·`backend-claude-sdk[login]`·`backend-fake`, 로그 출처 `logs-claude`·`hook-probe` | 기본 리소스 종류·노드·위임 방식·실행 백엔드(구독 로그인 PTY 포함)·로그 출처. 서버는 import하지 않고 entry point로만 들어온다 | — |
+| 설치만 하는 플러그인 | `agent-console-resources-core`·`nodes-core`·`delegation-host`·`backend-claude-sdk[login]`·`backend-fake-agent`, 로그 출처 `logs-claude`·`hook-probe` | 기본 리소스 종류·노드·위임 방식·실행 백엔드(구독 로그인 PTY 포함)·로그 출처. 서버는 import하지 않고 entry point로만 들어온다 | — |
 | 기능·연동 모듈 | `agent-console-mod-{definitions,resources,runs,chat,usage,imports,exports,versions,logs,projects}`, `agent-console-link-{definitions-resources,definitions-teams,exports-teams,runs-teams,runs-trace,runs-usage,chat-runs,logs-runs,logs-trace,logs-usage,projects-runs}` | 설치 의존으로만 둔다. 서버는 import하지 않고 entry point `agent_console.server_modules`로 조립한다(import-linter). 필요 없는 모듈은 설치에서 빼거나 설정으로 끈다 | — |
 | `httpx`(dev) | `TestClient` | FastAPI 테스트 클라이언트 요구 | — |
 
