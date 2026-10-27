@@ -1,4 +1,7 @@
-"""agent-console-cli 단위 테스트: 노출 명령·serve 위임(서버 `main`)·시작 시 import 범위."""
+"""agent-console-cli 단위 테스트: 노출 명령·serve 위임(서버 `main`)·시작 시 import 범위.
+
+`logs purge`는 `test_agent_console_cli_logs_purge.py`.
+"""
 
 from __future__ import annotations
 
@@ -42,7 +45,7 @@ def _strip_ansi(text: str) -> str:
     return _ANSI.sub("", text)
 
 
-def test_only_serve_and_statusline_are_exposed(
+def test_only_serve_statusline_and_logs_are_exposed(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _plain_help_env(monkeypatch)
@@ -52,7 +55,8 @@ def test_only_serve_and_statusline_are_exposed(
     assert "serve" in top
     assert "statusline" in top
     commands: dict[str, object] = getattr(typer.main.get_command(cli_app.app), "commands", {})
-    assert sorted(commands) == ["serve", "statusline"]
+    assert sorted(commands) == ["logs", "serve", "statusline"]
+    assert "logs" in top
     assert "sekret-token-should-not-show" not in top
     assert main(["serve", "--help"]) == 0
     serve_help = _strip_ansi(capsys.readouterr().out)

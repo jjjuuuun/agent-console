@@ -54,7 +54,7 @@ importers:
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/chat
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../../packages/ts/lib/contracts
       '@agent-console/graph-editor':
         specifier: ^0.1.0
@@ -166,7 +166,7 @@ importers:
   packages/ts/lib/api-client:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -194,7 +194,7 @@ importers:
   packages/ts/lib/arch-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
       '@xyflow/react':
         specifier: ^12.12.0
@@ -246,7 +246,7 @@ importers:
   packages/ts/lib/chat:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
       react-markdown:
         specifier: ^10.1.0
@@ -325,7 +325,7 @@ importers:
   packages/ts/lib/graph-editor:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
       '@xyflow/react':
         specifier: ^12.12.0
@@ -398,7 +398,7 @@ importers:
   packages/ts/lib/log-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
       '@tanstack/react-virtual':
         specifier: ^3.14.21
@@ -450,10 +450,65 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4(@types/node@26.6.5)(happy-dom@21.0.1)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.5)(terser@5.51.2)(yaml@2.9.1))
 
+  packages/ts/lib/memory-view:
+    dependencies:
+      '@agent-console/contracts':
+        specifier: ^0.10.0
+        version: link:../contracts
+      '@agent-console/text-editor':
+        specifier: ^0.1.0
+        version: link:../text-editor
+      '@tanstack/react-virtual':
+        specifier: ^3.14.21
+        version: 3.14.21(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+    devDependencies:
+      '@agent-console/eslint-config':
+        specifier: ^0.1.0
+        version: link:../../config/eslint-config
+      '@agent-console/tsconfig':
+        specifier: ^0.1.0
+        version: link:../../config/tsconfig
+      '@testing-library/react':
+        specifier: ^16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      axe-core:
+        specifier: ^4.11.0
+        version: 4.14.0
+      eslint:
+        specifier: ^10.12.0
+        version: 10.12.0
+      eslint-plugin-react-hooks:
+        specifier: ^7.1.1
+        version: 7.1.1(eslint@10.12.0)
+      happy-dom:
+        specifier: ^21.0.1
+        version: 21.0.1
+      react:
+        specifier: ^19.3.0
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.3.0
+        version: 19.3.0(react@19.3.0)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.4
+        version: 5.0.4(@types/node@26.6.5)(happy-dom@21.0.1)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.5)(terser@5.51.2)(yaml@2.9.1))
+
   packages/ts/lib/projects:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -488,7 +543,7 @@ importers:
         version: 6.11.0(@rjsf/utils@6.11.0(react@19.3.0))
     devDependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
       '@agent-console/eslint-config':
         specifier: ^0.1.0
@@ -603,7 +658,7 @@ importers:
   packages/ts/lib/trace-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':

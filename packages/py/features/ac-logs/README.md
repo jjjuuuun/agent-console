@@ -86,13 +86,14 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 | 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
 | 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
 | 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
+| 색인 비우기(M-3) | `purge_index(index, *, sources=None, categories=None, before=None, rescan=True, dry_run=False) -> PurgeResult`, `reset_index(index, *, dry_run=False)`, 범위 `PurgeScope`, 선택 능력 `PurgeableLogIndex`(`purge(scope, dry_run=)`, 메모리·SQLite 색인이 가진다) |
 | 행 읽기(5.5R.36) | `query_event_rows(index, flt, ctx) -> LogEventRowPage`(`rows`·`next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)`(끝까지, 쪽마다 `on_page(행 수)`), `page_rows(read, flt, on_page=)`(쪽 읽기 함수 → 행), 선택 능력 `LogEventRowReader`(`query_event_rows`·`iter_event_rows` 메서드, 메모리·SQLite 색인이 가진다), `event_row(event)`, `complete_event_row(data, seq=)`, 형식 `LogEventRow`·`PageCallback` |
-| SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
+| SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `open_existing_log_index(path)`(있는 색인만, 파일·테이블을 만들지 않음), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
 | 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
 | 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`) |
 | 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `group_projects`·`resolve_project`·`git_worktree_root`, `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
 | 보관본 | `build_archive`(`LogArchive` v1: 필터 범위·`max_events`·`max_bytes`·`redact`, `ARCHIVE_VERSION`·`DEFAULT_ARCHIVE_MAX_EVENTS`·`DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive`(스크립트 없는 HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
-| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(X27·X28 예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
+| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(X27·X28 예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.PurgeContractTests`(비우기 의미), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
 
 ## SQLite 색인
 
@@ -123,6 +124,31 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
   섞이지 않는다. seq는 `AUTOINCREMENT`라 지운 뒤에도 다시 쓰이지 않는다(키셋 커서 안전).
 - 토큰은 `log_usage`의 (source, thread, message_id) 한 행이며, 같은 키가 다시 오면 output이 크거나 같을 때만 바꾼다.
 - 한계: 검색어 `q`는 `log_search`를 훑는다(10만 건에서 수백 ms). 세션 목록은 질의마다 집계한다.
+
+### 색인 비우기(M-3)
+
+색인은 같은 uid를 다시 쓰지 않는다. 그래서 분류 기본값이 바뀌어도(예: 요청 본문 원문 제외) 이미 넣은 이벤트는
+그대로다. `purge_index`는 범위(출처·범주·시각, 모두 AND)의 이벤트와 딸린 행을 지우고, `rescan=True`(기본)면
+범위 출처(없으면 전부)의 커서도 지워 다음 수집이 원본을 처음부터 다시 읽게 한다. 남은 이벤트는 같은 uid라 다시
+들어가지 않고, 지운 것만 지금 규칙으로 다시 들어간다. 원본 파일은 건드리지 않는다.
+
+```python
+>>> from agent_console_logs import purge_index, reset_index
+>>> index = open_log_index(":memory:")
+>>> _ = index.write(IndexBatch(records=[make_record("llm"), make_record("blob", source="s")]))
+>>> purge_index(index, categories=["blob"], dry_run=True)       # 세기만
+PurgeResult(dry_run=True, events=1, usage=0, cursors=0, agents=0)
+>>> purge_index(index, sources=["s"], categories=["blob"]).events
+1
+>>> reset_index(index).events                                     # 전부(커서·에이전트 포함)
+1
+
+```
+
+- 토큰 표본은 지울 이벤트와 키(출처·thread·message_id)가 같고 남는 이벤트와는 같지 않을 때 지운다. 범주 조건이
+  없으면 출처·시각 조건에 맞는 표본도 지운다. 에이전트 표시 행은 범주·시각 조건이 없을 때(출처 전체) 지운다.
+- 빈 목록은 거부한다(`ValueError`, "조건 없음"은 None). seq는 이어진다(웹의 seq 기준 새로 고침이 거꾸로 가지 않는다).
+- 서버에서는 `POST /api/v1/logs/index/purge`(`ac-mod-logs`, dry_run 기본), 명령행은 `agent-console logs purge`.
 
 ### 행 읽기(모델 없이)
 

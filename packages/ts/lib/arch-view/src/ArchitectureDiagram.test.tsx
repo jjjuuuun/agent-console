@@ -262,13 +262,13 @@ describe("연결 상태 (수용 §13-6)", () => {
 
 describe("요약 표시 (수용 §13-8)", () => {
   const v = defaultProfileView();
-  it("배율 0.6 이상은 전체, 미만은 숫자만이며 이름·접근 이름·클릭은 같다", () => {
+  it("배율 0.45 이상은 전체, 미만은 숫자만이며 이름·접근 이름·클릭은 같다", () => {
     const onSelect = vi.fn();
-    const { container, rerender } = renderDiagram(v, { scale: 0.6, fitMode: "none", onSelect });
+    const { container, rerender } = renderDiagram(v, { scale: 0.45, fitMode: "none", onSelect });
     expect(container.querySelector(".ac-arch-root")!.getAttribute("data-level")).toBe("full");
     const full = cell(container, "llm").getAttribute("aria-label");
     expect(cell(container, "llm").querySelector(".ac-arch-cell-name")).not.toBeNull();
-    rerender(<ArchitectureDiagram view={v} containerSize={SIZE} scale={0.59} fitMode="none" onSelect={onSelect} />);
+    rerender(<ArchitectureDiagram view={v} containerSize={SIZE} scale={0.44} fitMode="none" onSelect={onSelect} />);
     expect(container.querySelector(".ac-arch-root")!.getAttribute("data-level")).toBe("summary");
     const llm = cell(container, "llm");
     expect(llm.getAttribute("data-level")).toBe("summary");
@@ -288,6 +288,10 @@ describe("요약 표시 (수용 §13-8)", () => {
   it("요약 표시의 숫자 크기는 배율의 역수(--arch-inv)로 상쇄한다", () => {
     const { container } = renderDiagram(v, { scale: 0.4, fitMode: "none" });
     expect(parseFloat((container.querySelector(".ac-arch-root") as HTMLElement).style.getPropertyValue("--arch-inv"))).toBeCloseTo(2.5);
+  });
+  it("fullScaleMin 라이브러리 기본은 0.45(0.5 전체, 0.44 요약)", () => {
+    expect(renderDiagram(v, { scale: 0.5, fitMode: "none" }).container.querySelector(".ac-arch-root")!.getAttribute("data-level")).toBe("full");
+    expect(renderDiagram(v, { scale: 0.44, fitMode: "none" }).container.querySelector(".ac-arch-root")!.getAttribute("data-level")).toBe("summary");
   });
   it("fullScaleMin을 바꿀 수 있다", () => {
     const { container } = renderDiagram(v, { scale: 0.7, fitMode: "none", fullScaleMin: 0.8 });
@@ -551,6 +555,22 @@ describe("범례", () => {
     fireEvent.keyDown(items[0]!, { key: "Escape" });
     expect(container.querySelector(".ac-arch-legend")).toBeNull();
     expect(document.activeElement).toBe(btn);
+  });
+  it("영역 견본은 데이터(zoneLegend)에서 나오고 기본은 runtime 한 줄, []면 없다", () => {
+    const v = defaultProfileView();
+    const a = renderDiagram(v, {});
+    fireEvent.click(screen.getByRole("button", { name: "범례" }));
+    expect(a.container.querySelector('[data-legend="zone:runtime"] [data-zone-style="runtime"]')).not.toBeNull();
+    a.unmount();
+    const b = renderDiagram(v, { zoneLegend: [{ style: "service", label: "서비스" }, { style: null }] });
+    fireEvent.click(screen.getByRole("button", { name: "범례" }));
+    expect(b.container.querySelector('[data-legend="zone:service"]')!.textContent).toBe("서비스");
+    expect(b.container.querySelector('[data-legend="zone:runtime"]')).toBeNull();
+    expect(b.container.querySelectorAll('[data-legend^="zone:"]').length).toBe(2);
+    b.unmount();
+    const c = renderDiagram(v, { zoneLegend: [] });
+    fireEvent.click(screen.getByRole("button", { name: "범례" }));
+    expect(c.container.querySelector('[data-legend^="zone:"]')).toBeNull();
   });
   it("새 연결 style 견본은 edgeLegend로 글자를 준다", () => {
     const { container } = renderDiagram(defaultProfileView(), { edgeStyles: { mine: { stroke: "--ac-cat-2" } }, edgeLegend: { mine: "내 연결" } });

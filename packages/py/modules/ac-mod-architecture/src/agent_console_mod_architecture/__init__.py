@@ -10,7 +10,7 @@
       ``profile_list``·``profile_detail``·``check``·``project``·``project_request``·
       ``ensure_within``·``warnings``), ``CatalogState``, ``parse_user_settings``, ``section_of``
     - 포트: ``ARCHITECTURE_CATALOG``·``WORKSPACE_SETTINGS``·``SERVER_WARNINGS``,
-      ``ArchitectureCatalog``(포트 모양)
+      ``PROFILE_CHECKS``(선택 여러 제공자, X32), ``ArchitectureCatalog``·``ProfileCheck``(포트 모양)
     - 오류: ``ProfileNotFoundError``(404 ``architecture.profile_not_found``),
       ``ScopeTooLargeError``(422 ``architecture.scope_too_large``), ``ERROR_MAP``
     - 설정: ``ArchitectureModuleSettings``(``modules.options.mod-architecture``)
@@ -35,9 +35,11 @@ from .errors import ERROR_MAP, ProfileNotFoundError, ScopeTooLargeError
 from .module import MODULE_ID, WEB_ROLES, ArchitectureModule, module
 from .ports import (
     ARCHITECTURE_CATALOG,
+    PROFILE_CHECKS,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
     ArchitectureCatalog,
+    ProfileCheck,
 )
 from .routes import build_router
 from .settings import ArchitectureModuleSettings
@@ -47,6 +49,7 @@ __all__ = [
     "ERROR_MAP",
     "INLINE_PROFILE_ID",
     "MODULE_ID",
+    "PROFILE_CHECKS",
     "SECTION_KEY",
     "SERVER_WARNINGS",
     "SETTINGS_INVALID",
@@ -57,6 +60,7 @@ __all__ = [
     "ArchitectureModule",
     "ArchitectureModuleSettings",
     "CatalogState",
+    "ProfileCheck",
     "ProfileNotFoundError",
     "ScopeTooLargeError",
     "build_router",

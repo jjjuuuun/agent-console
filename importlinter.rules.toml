@@ -65,12 +65,12 @@ source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
     "modules",
-    "chat | exports | imports | architecture",
+    "chat | exports | imports | architecture | memory",
     "runs | usage | projects",
     "definitions",
     "resources | logs",
@@ -139,6 +139,13 @@ name = "architecture는 contracts, conditions, registry에만 의존 (ac-logs·�
 type = "forbidden"
 source_modules = ["agent_console_architecture"]
 forbidden_modules = ["@all", "!agent_console_architecture", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_registry"]
+allow_indirect_imports = true
+
+[[contracts]]
+name = "memory는 contracts, conditions, secret-rules, registry에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
+type = "forbidden"
+source_modules = ["agent_console_memory"]
+forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -235,10 +242,10 @@ forbidden_modules = ["@feature", "@module", "@link"]
 ignore_imports = ["agent_console_server.testing -> agent_console_backend_fake_agent"]
 
 [[contracts]]
-name = "cli는 usage에만 의존 (서버 앱은 `_server` 모듈 한 곳에서 serve·설정 읽기로만, 1R.15)"
+name = "cli는 usage·logs에만 의존 (서버 앱은 `_server` 모듈 한 곳에서 serve·설정 읽기로만, 1R.15, logs는 5.7R.6 색인 비우기)"
 type = "forbidden"
 source_modules = ["agent_console_cli"]
-forbidden_modules = ["@all", "!agent_console_usage"]
+forbidden_modules = ["@all", "!agent_console_usage", "!agent_console_logs"]
 allow_indirect_imports = true
 # 예외 사유: `_server`는 serve·설정 읽기를 서버 앱에 넘기는 유일한 접점(1R.15).
 # 직접 import만 보므로(allow_indirect_imports) usage → registry 같은 usage 내부 의존은 예외가 필요 없다.

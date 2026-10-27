@@ -37,7 +37,8 @@ const timeText = (ms: number) => {
 export function ProfileEditor({ id, title, initialText, readOnly, check, onSave, onClose, onDirtyChange, delayMs }: ProfileEditorProps) {
   const [text, setText] = useState(initialText);
   const dirty = text !== initialText;
-  const result = useProfileCheck(text, id, check, !readOnly, delayMs);
+  const [composing, setComposing] = useState(false);
+  const result = useProfileCheck(text, id, check, !readOnly, delayMs, undefined, composing);
   const parsed = useMemo(() => parseProfileYaml(text), [text]);
   const errors = result.issues.filter((i) => i.severity === "error").length;
   const parseMessage = result.parseError === null ? null : result.parseError.message === "" ? t.editor.notMap : result.parseError.message;
@@ -79,6 +80,7 @@ export function ProfileEditor({ id, title, initialText, readOnly, check, onSave,
               onDirtyChange?.(v !== initialText);
             }}
             onSave={save}
+            onCompositionChange={setComposing}
           />
         </div>
         <div className="arch-settings-results" role="region" aria-label={t.editor.results} aria-live="polite">

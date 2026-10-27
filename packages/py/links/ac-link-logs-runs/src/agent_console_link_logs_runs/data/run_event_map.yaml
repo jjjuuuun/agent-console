@@ -9,8 +9,14 @@
 #     또는 `{pointer: /a/b, map: {원래 값: 바꿀 값}, default: 값}`(값은 문자열로 비교: true·false·null·숫자,
 #     바꿀 값·default도 틀)
 #   from·to: 위와 같은 틀 또는 조건부 값(비면 없음)
-#   tags: 태그 목록(`tool` = 도구 호출 약속 태그 — 같은 호출이 한 번만 색인된다)
-#   correlation: 근거 이름 → 문자열 틀(session·call_id 근거는 값이 있으면 자동으로 붙는다)
+#   tags: 태그 목록(`tool` = 도구 호출 약속 태그 — 같은 호출이 한 번만 색인된다). 글자 그대로의 태그 또는
+#     목록 값 `{each: /목록 포인터, value: 항목 값}`(아래)
+#   correlation: 근거 이름 → 문자열 틀 또는 목록 값 `{each, value}`(값 여러 개)
+#     (session·call_id 근거는 값이 있으면 자동으로 붙는다)
+#   documents: 로그가 가리키는 문서 틀 `{path, kind, action}`(값은 틀 또는 조건부 값) 하나 또는 목록.
+#     틀에 `each: /목록 포인터`를 주면 원소마다 문서 하나. path가 빈 문서는 뺀다(조건부 값으로 거르기)
+#   목록 값의 항목 틀 안에서 `{./키}`·`{.}`(원소 자체)와 조건부 값의 `pointer: ./키`는 목록 원소 기준이다.
+#     빈 항목은 빼고 같은 항목은 한 번만 남는다. 목록이 아니거나 없으면 항목 0개
 #   duration_ms: 포인터. 값이 있으면 끝난 구간으로 보고 시작(시각 = ts − 소요, 근거 inferred)·끝 두 이벤트를 낸다
 #   session_from: 포인터. 이 이벤트가 그 노드의 세션 id를 알린다(그 뒤 그 노드·하위 노드 이벤트의 session)
 #   cwd_from: 포인터. 이 이벤트가 Run의 작업 폴더를 알린다(이 이벤트와 그 뒤 같은 Run 이벤트의 cwd → 로그 프로젝트 묶기)
@@ -92,9 +98,22 @@ types:
     role: "{/payload/role}"
     message_id: "{/payload/message_id}"
   # 맥락 구성(C1): 붙은 리소스 표지·조각 수만(본문 없음). 리소스 목록은 detail(payload)에 있다.
+  # 붙은 리소스(payload resources[])를 목록 본문의 문서(documents)로 옮긴다(M-2) — 구조도 칸 조건은
+  # 목록 본문만 본다. 리소스 종류 id → 문서 종류 대응은 아래 map(데이터)이다: 종류 `rule` → `rules`.
+  # 첫 블록이 규칙 리소스를, 둘째 블록이 나머지를 낸다(규칙이 있으면 첫 문서가 규칙 — 기본 구조도
+  # Rules 칸 조건 `/documents/0/kind`와 묶음 `/documents/0/path`가 그것을 본다).
   agent.context_prepared:
     category: context
     title: "맥락 구성"
+    documents:
+      - each: /payload/resources        # 규칙 리소스만(다른 종류는 path가 비어 빠진다)
+        kind: rules
+        path: {pointer: ./kind, map: {rule: "{./id}"}, default: ""}
+        action: read
+      - each: /payload/resources        # 나머지 리소스(문서 종류 = 리소스 종류 id 그대로)
+        kind: "{./kind}"
+        path: {pointer: ./kind, map: {rule: ""}, default: "{./id}"}
+        action: read
   agent.tool_call:
     category: tool_call
     stage: start

@@ -25,6 +25,8 @@ from agent_console_resources import ResourceLookup
 from agent_console_runtime import ServiceKey, SessionRef
 from agent_console_teams import Layer, TeamLookup
 
+from .tools import ToolProvider
+
 type AgentLookup = Callable[[str], Agent | None]
 """에이전트 id → 정의. 없으면 None을 돌려준다(`LookupError`를 던져도 "없음"으로 본다)."""
 
@@ -78,3 +80,10 @@ ERROR_FIXES: Final = ServiceKey[ErrorFixer]("nodes_core.error_fixes")
 """노드 실패(`ErrorInfo`)에 붙일 해결 버튼(`fix`) 계산. 버튼이 데려갈 화면(웹 라우트 역할)은 앱 쪽
 데이터라 이 플러그인은 모른다(통합 서버에서는 link-runs-teams가 넣는다).
 없으면 실패에 버튼이 없다."""
+
+TOOL_PROVIDERS: Final = ServiceKey[Sequence[ToolProvider]]("nodes_core.tool_providers")
+"""에이전트 도구 공급자(X30, design §5.7R.3, `tools.ToolProvider`). agent 노드가 실행마다 순서대로
+불러 공급 도구를 백엔드 요청 `host_tools`에 붙이고 소비한 칸을 묶음에서 뺀다. 이 플러그인은 도구의
+뜻을 모른다. Run마다 `start(services=...)`로 넣으며(통합 서버에서는 실행 범위 공급자 X26
+`runs.scopes` 항목), 자식 Run은 부모 서비스를 물려받아 같은 공급자를 쓴다.
+없거나 비면 도구를 더하지 않는다(기존 실행과 같다)."""

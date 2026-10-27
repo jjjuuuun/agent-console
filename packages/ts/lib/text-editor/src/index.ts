@@ -2,7 +2,7 @@
 export const PACKAGE_NAME = "@agent-console/text-editor" as const;
 
 export { TextEditor } from "./TextEditor";
-export type { TextEditorMessages, TextEditorProps, TextEditorStatus } from "./TextEditor";
+export type { TextEditorHandle, TextEditorMessages, TextEditorProps, TextEditorStatus } from "./TextEditor";
 export { jsonParseError, resolveLanguage } from "./languages";
 export type { EditorLanguage } from "./languages";
 export { TextDiff } from "./TextDiff";

@@ -18,3 +18,4 @@
 - 4R.14: `GET /logs/archive?<LogFilter>&format=json|html&tz=`(첨부, `Content-Disposition`), `LogsService.archive`,
   설치자 옵션 `archive_max_events`·`archive_max_bytes`·`archive_file_prefix`·`archive_title`.
 - 5R.19: 설치자 옵션 `session_title_rules`(null = ac-logs 기본 데이터).
+- 5.7R.6(M-3): `POST /logs/index/purge`(본문 `LogPurgeRequest`, 응답 `LogPurgeResponse` — 모듈 안 모델, dry_run 기본 true), `LogsService.purge`(수집 잠금 안에서 `purge_index`).

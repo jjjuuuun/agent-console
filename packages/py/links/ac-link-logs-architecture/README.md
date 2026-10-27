@@ -98,6 +98,7 @@ pip install agent-console-link-logs-architecture
 | 필수 | `logs.query` | `query_context`·`parse_filter`·`events`(키셋 쪽, `with_total`)·`event`·`token_samples`, 있으면 `iter_event_rows`(선택 능력 `LogRowReader`) |
 | 필수 | `architecture.catalog` | `catalog() -> ProfileCatalog`·`operators()`·`max_scope_events` |
 | 제공 | `logs.filter_predicates`(X28) | `ArchitectureFilter`(`arch`·`arch_group`·`arch_sources`) |
+| 제공 | `architecture.profile_checks`(X32) | `UnlistedPathCheck` — 프로필 조건 경로가 `unlisted_paths` 접두 아래면 warning `architecture.condition_path_unlisted`(M-4). 받는 쪽 `mod-architecture`가 목록 `issues`·상세 `problems`·`POST /architecture/profiles/check`에 더한다 |
 
 설정 `modules.options.link-logs-architecture`:
 
@@ -108,6 +109,7 @@ pip install agent-console-link-logs-architecture
 | `cache_events` | `100000` | 기억한 범위들의 이벤트 수 합 상한(넘으면 오래 쓰지 않은 범위부터 버림) |
 | `cache_profiles` | `4` | 범위 하나에 기억할 판정 결과(프로필 키) 수. 프로필을 고치면 새 키가 생기므로 넘으면 오래 쓰지 않은 것부터 버림 |
 | `page_size` | `1000` | 색인에서 범위 이벤트를 읽는 쪽 크기(1~10000, 5.5R.36에서 200 → 1000) |
+| `unlisted_paths` | `["/detail", "/raw"]` | 목록 본문에 없는 이벤트 경로 접두. 구조도는 목록용 이벤트만 보므로 이 아래를 보는 조건을 프로필 검사가 경고한다(빈 목록 = 경고 없음) |
 
 ## 단독 실행
 

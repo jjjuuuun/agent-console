@@ -41,6 +41,10 @@
       ``WORKING_DIRECTORY``, ``SCOPE_LAYERS``, ``RESOURCE_LOOKUP``, ``RUN_FILES_ROOT``,
       ``SESSIONS``, ``TEAM_LOOKUP``(중첩 팀 조회), 레지스트리 이름 ``RESOURCE_TYPES_EXTENSION``,
       어댑터 ``FunctionResources``
+    - 에이전트 도구 공급자(X30, design §5.7R.3): 서비스 키 ``TOOL_PROVIDERS``, 프로토콜
+      ``ToolProvider``, 맥락 ``ToolProvisionContext``(``ToolEmit``), 결과 ``ToolProvision``,
+      ``provide_tools``·``drop_taken``, 경고 코드 ``ToolProviderCodes``(``tools.*``).
+      테스트 공급자 ``agent_console_nodes_core.testing.EchoToolProvider``
     - 상수: ``DEFAULT_MESSAGE_KEY``, ``SDK_SUBAGENTS``, 오류 코드 ``NodesCoreErrorCodes``, 포트 이름
 """
 
@@ -131,6 +135,7 @@ from agent_console_nodes_core.services import (
     SCOPE_LAYERS,
     SESSIONS,
     TEAM_LOOKUP,
+    TOOL_PROVIDERS,
     WORKING_DIRECTORY,
     WORKSPACE_SETTINGS,
     AgentLookup,
@@ -144,6 +149,15 @@ from agent_console_nodes_core.team import (
     child_sessions,
     pick_replies,
     session_path_key,
+)
+from agent_console_nodes_core.tools import (
+    ToolEmit,
+    ToolProvider,
+    ToolProviderCodes,
+    ToolProvision,
+    ToolProvisionContext,
+    drop_taken,
+    provide_tools,
 )
 from agent_console_nodes_core.user import ReviewConfig, UserNode, UserNodeConfig
 
@@ -186,6 +200,7 @@ __all__ = [
     "TEAM_ROLE",
     "TOOL_PERMISSION",
     "TOOL_PERMISSION_DECISIONS",
+    "TOOL_PROVIDERS",
     "USER_ROLE",
     "WORKING_DIRECTORY",
     "WORKSPACE_SETTINGS",
@@ -218,6 +233,11 @@ __all__ = [
     "SubagentEdgeConfig",
     "TeamNode",
     "TeamNodeConfig",
+    "ToolEmit",
+    "ToolProvider",
+    "ToolProviderCodes",
+    "ToolProvision",
+    "ToolProvisionContext",
     "UserNode",
     "UserNodeConfig",
     "UsesEdge",
@@ -230,7 +250,9 @@ __all__ = [
     "condition_subject",
     "content_digest",
     "context_prepared_payload",
+    "drop_taken",
     "pick_replies",
+    "provide_tools",
     "review_response_schema",
     "run_folder",
     "safe_part",

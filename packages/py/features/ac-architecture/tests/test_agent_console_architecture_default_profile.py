@@ -236,7 +236,10 @@ GOLDEN_RUN_WITH_SESSION_LOG: dict[str, Any] = {
         "input": {"status": "observed", "count": 2.0},
         "sdk": {"status": "observed", "count": 3.0, "errors": 0.0},
         "api": {"status": "observed", "count": 0.0, "errors": 0.0},
-        "rules": {"status": "partial", "count": 0.0, "groups": []},
+        # 5.7R.7(M-2): 플랫폼 맥락 구성의 규칙 리소스가 첫 문서(kind rules)가 되어 Rules를 채운다.
+        # 이전 값 {"status": "partial", "count": 0.0, "groups": []}: 세션 로그(부분)만 Rules를
+        # 채울 수 있었다.
+        "rules": {"status": "observed", "count": 1.0, "groups": [("house-rules", 1.0)]},
         "instructions": {"status": "observed", "count": 0.0, "groups": []},
         "context": {"status": "observed", "count": 1.0},
         "llm": {
@@ -436,9 +439,16 @@ def test_platform_record_alone_fills_platform_cells(
     )
     cells = {c.id: c for c in view.cells}
     # 플랫폼 기록이 채우지 못하는 칸은 0이 아니라 "수집 안 됨"
-    for cid in ("input", "rules", "instructions", "workspace"):
+    for cid in ("input", "instructions", "workspace"):
         assert cells[cid].status == "not_collected", cid
         assert cells[cid].metrics["count"].value is None
+    # Rules(5.7R.7, M-2): 맥락 구성의 규칙 리소스 → 관측, 클릭 필터 수 = 칸 수
+    rules = cells["rules"]
+    assert rules.status == "observed"
+    assert rules.metrics["count"].value == 1
+    assert [(g.key, g.metrics["count"].value) for g in rules.groups or []] == [("house-rules", 1)]
+    keep = selector_predicate(profile, rules.selector, profile_id=PROFILE_ID, operators=operators)
+    assert len([e for e in platform if keep(e)]) == rules.metrics["count"].value
     # 플랫폼 실행 출처는 모델 호출 소요(C2)와 hook 소요를 안다
     assert cells["llm"].metrics["duration"].value == pytest.approx(1200.0)
     assert cells["hook"].metrics["duration"].value == pytest.approx(25.0, abs=0.01)

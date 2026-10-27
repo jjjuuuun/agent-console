@@ -2,7 +2,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { indentUnit } from "@codemirror/language";
 import { Annotation, Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, type Ref } from "react";
 import { byteLength, jsonParseError, resolveLanguage } from "./languages";
 import { editorHighlight, editorTheme } from "./theme";
 
@@ -14,6 +14,12 @@ export interface TextEditorStatus {
   chars: number;
   /** language가 json일 때만. 편집을 막지 않는다. */
   parseError?: string;
+}
+
+/** `handleRef`로 받는 명령형 핸들. */
+export interface TextEditorHandle {
+  /** IME 조합 중인지(compositionstart~compositionend). */
+  isComposing: () => boolean;
 }
 
 export interface TextEditorMessages {
@@ -38,6 +44,10 @@ export interface TextEditorProps {
   maxBytes?: number;
   onTooLarge?: (bytes: number) => void;
   onStatus?: (status: TextEditorStatus) => void;
+  /** IME 조합이 시작되면 true, 끝나면 false로 알린다(상태가 바뀔 때만). 조합 중 검사·저장을 미루는 데 쓴다. */
+  onCompositionChange?: (composing: boolean) => void;
+  /** 명령형 핸들(`isComposing()`). */
+  handleRef?: Ref<TextEditorHandle>;
   /** px 또는 'fill'(부모 높이를 채움). 기본 'fill' */
   height?: number | "fill";
   messages?: Partial<TextEditorMessages>;
@@ -73,6 +83,8 @@ export function TextEditor({
   maxBytes,
   onTooLarge,
   onStatus,
+  onCompositionChange,
+  handleRef,
   height = "fill",
   messages,
   className,
@@ -86,10 +98,17 @@ export function TextEditor({
     label: new Compartment(),
   });
   // 콜백은 ref로 들고 있어 편집기를 다시 만들지 않는다.
-  const handlers = useRef({ onChange, onSave, onStatus, onTooLarge, language });
+  const handlers = useRef({ onChange, onSave, onStatus, onTooLarge, onCompositionChange, language });
   useEffect(() => {
-    handlers.current = { onChange, onSave, onStatus, onTooLarge, language };
+    handlers.current = { onChange, onSave, onStatus, onTooLarge, onCompositionChange, language };
   });
+  const composing = useRef(false);
+  const setComposing = (next: boolean) => {
+    if (composing.current === next) return;
+    composing.current = next;
+    handlers.current.onCompositionChange?.(next);
+  };
+  useImperativeHandle(handleRef, () => ({ isComposing: () => composing.current }), []);
 
   const text = { ...DEFAULT_MESSAGES, ...messages };
   const tooLarge = maxBytes !== undefined && byteLength(value) > maxBytes;
@@ -119,6 +138,14 @@ export function TextEditor({
         EditorState.tabSize.of(2),
         indentUnit.of("  "),
         EditorView.domEventHandlers({
+          compositionstart: () => {
+            setComposing(true);
+            return false;
+          },
+          compositionend: () => {
+            setComposing(false);
+            return false;
+          },
           keydown: (event, v) => {
             if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") return false;
             // IME 조합 중에는 단축키 처리를 하지 않는다.
@@ -155,6 +182,7 @@ export function TextEditor({
     view.current = v;
     handlers.current.onStatus?.(computeStatus(v.state, language === "json"));
     return () => {
+      composing.current = false;
       v.destroy();
       view.current = null;
     };

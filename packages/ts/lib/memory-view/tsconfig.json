@@ -1,0 +1,9 @@
+{
+  "extends": "@agent-console/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "customConditions": ["development"],
+    "paths": { "@agent-console/memory-view": ["./src/index.ts"], "@agent-console/memory-view/testing": ["./src/testing.ts"] }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

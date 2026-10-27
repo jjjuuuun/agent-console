@@ -1,7 +1,8 @@
 import { EditorView } from "@codemirror/view";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TextEditor, jsonParseError, resolveLanguage, type TextEditorStatus } from "./index";
+import { TextEditor, jsonParseError, resolveLanguage, type TextEditorHandle, type TextEditorStatus } from "./index";
 
 afterEach(cleanup);
 
@@ -68,6 +69,21 @@ describe("TextEditor", () => {
     v.dispatch({ changes: { from: 0, to: 1, insert: "한" }, userEvent: "input.type.compose" });
     expect(onChange).toHaveBeenLastCalledWith("한");
     fireEvent.compositionEnd(content);
+  });
+
+  it("조합 상태 API: compositionstart/end에서 상태가 바뀔 때만 onCompositionChange를 부르고 isComposing()이 따라간다", () => {
+    const onCompositionChange = vi.fn();
+    const handleRef = createRef<TextEditorHandle>();
+    render(<TextEditor value="" ariaLabel="x" onCompositionChange={onCompositionChange} handleRef={handleRef} />);
+    const content = screen.getByRole("textbox");
+    expect(handleRef.current?.isComposing()).toBe(false);
+    fireEvent.compositionStart(content);
+    fireEvent.compositionStart(content);
+    expect(onCompositionChange.mock.calls).toEqual([[true]]);
+    expect(handleRef.current?.isComposing()).toBe(true);
+    fireEvent.compositionEnd(content);
+    expect(onCompositionChange.mock.calls).toEqual([[true], [false]]);
+    expect(handleRef.current?.isComposing()).toBe(false);
   });
 
   it("자동 완성·자동 괄호를 켜지 않는다(여는 괄호 입력이 짝을 만들지 않음)", () => {

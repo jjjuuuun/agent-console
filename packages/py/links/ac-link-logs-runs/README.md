@@ -76,6 +76,43 @@ types:
     to: {pointer: /payload/call, map: {"null": ""}, default: "{node}"}
 ```
 
+### 목록 값(`each`, 5.7R.7)
+
+`tags`·`correlation` 값·`documents`는 이벤트 안 목록의 원소마다 항목을 만들 수 있다. 형식은
+`{each: <목록 포인터>, ...항목 틀}`이고, 항목 틀 안의 `{./키}`·`{.}`(원소 자체)와 조건부 값의
+`pointer: ./키`는 그 원소 기준이다(`/…`는 이벤트 기준 그대로).
+
+- `tags`: 글자 그대로의 태그 목록에 `{each, value}` 항목을 섞을 수 있다(또는 `{each, value}` 하나).
+- `correlation`: 근거 이름 → 틀 문자열(값 하나, 전과 같음) 또는 `{each, value}`(값 여러 개).
+- `documents`(새 키): 문서 틀 `{path, kind?, action?}`(값은 틀 또는 조건부 값) 하나 또는 목록. 틀에
+  `each`를 주면 원소마다 문서 하나. 계약 `LogDocumentRef` 모양으로 목록 본문에 실린다.
+- 결과가 빈 항목(문서는 `path`가 빈 항목)은 빼고 같은 항목은 한 번만 남긴다. 그래서 조건부 값의
+  `default: ""`로 원소를 거를 수 있다. 목록이 비었거나 목록이 아니거나 원소가 객체가 아니면 항목 0개.
+- 기존 값 형식(글자 그대로의 태그, 틀 문자열 근거)은 같은 뜻이다.
+
+기본 대응표는 맥락 구성(`agent.context_prepared`)의 붙은 리소스를 문서로 옮긴다. 구조도 칸 조건은
+목록 본문만 보므로(payload는 `detail`), 이렇게 옮겨야 기본 구조도 Rules 칸이 플랫폼 실행을 센다.
+리소스 종류 id → 문서 종류 대응은 데이터다(종류 `rule` → `rules`, 규칙 리소스가 첫 문서).
+
+```yaml
+  agent.context_prepared:
+    category: context
+    documents:
+      - each: /payload/resources        # 규칙 리소스만(다른 종류는 path가 비어 빠진다)
+        kind: rules
+        path: {pointer: ./kind, map: {rule: "{./id}"}, default: ""}
+        action: read
+      - each: /payload/resources        # 나머지(문서 종류 = 리소스 종류 id)
+        kind: "{./kind}"
+        path: {pointer: ./kind, map: {rule: ""}, default: "{./id}"}
+        action: read
+  x.done:
+    tags: [done, {each: /payload/labels, value: "label:{.}"}]
+    correlation: {resource: {each: /payload/resources, value: "{./id}"}}
+```
+
+순수 함수 `resolve_strings`·`resolve_documents`(모듈 `event_map`)로 서버 없이 같은 규칙을 쓸 수 있다.
+
 규칙 키 전체와 JSON Schema는 `RULE_SCHEMA`(설정 폼은 출처 디스크립터 `config_schema`의 `event_map`)에 있다. 파일을 비우거나 지워도 동작한다(모든 형식이 `other`).
 
 ## 실행 단위 토큰(C3)

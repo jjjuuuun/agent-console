@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -43,6 +44,9 @@ from agent_console_contracts.architecture import (
 from agent_console_contracts.logs import LogEvent, TokenSample
 
 from .errors import ProfileNotFoundError, ScopeTooLargeError
+from .ports import ProfileCheck
+
+_log = logging.getLogger(__name__)
 
 SECTION_KEY: Final = "architecture"
 """워크스페이스 설정에서 이 모듈이 소유하는 섹션 이름(설정 문서의 최상위 키)."""
@@ -177,6 +181,19 @@ def _fingerprint(value: Any) -> str:
         return repr(value)
 
 
+def _extra_issues(
+    checks: Sequence[ProfileCheck], profile: ArchitectureProfile, profile_id: str | None
+) -> list[Issue]:
+    """검사 보탬(X32) 결과를 모은다. 예외를 낸 검사는 건너뛴다(다른 검사·기본 검사는 그대로)."""
+    issues: list[Issue] = []
+    for check in checks:
+        try:
+            issues.extend(check.check(profile, profile_id))
+        except Exception:
+            _log.warning("구조도 프로필 검사 보탬이 실패해 건너뜁니다: %r", check, exc_info=True)
+    return issues
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogState:
     """한 시점의 병합 결과(불변).
@@ -220,6 +237,8 @@ class ArchitectureCatalogService:
         max_request_events: 단독 투영 이벤트 상한.
         max_scope_events: 로그 범위 투영 상한(연동 모듈이 쓴다).
         filters: 하위 구조도가 쓸 수 있는 필터 이름(검사용). None이면 보지 않는다.
+        checks: 검사 보탬(X32 ``architecture.profile_checks``)을 돌려주는 함수(부를 때마다 읽는다).
+            결과는 기본 검사 뒤에 붙는다. 예외를 낸 검사는 건너뛴다(로그에만 남긴다).
     """
 
     def __init__(
@@ -232,8 +251,10 @@ class ArchitectureCatalogService:
         max_request_events: int = 20_000,
         max_scope_events: int = 100_000,
         filters: Collection[str] | None = None,
+        checks: Callable[[], Sequence[ProfileCheck]] = tuple,
     ) -> None:
         self._defaults = defaults
+        self._checks = checks
         self._plugins = plugins
         self._settings = settings
         self._operators = operators
@@ -256,10 +277,12 @@ class ArchitectureCatalogService:
         raw = self._read_settings()
         sources = list(self._plugins())
         operators = dict(self._operators())
+        checks = tuple(self._checks())
         key = (
             _fingerprint(raw),
             tuple((s.origin, id(s), tuple(s.profiles)) for s in sources),
             tuple(sorted((name, id(op)) for name, op in operators.items())),
+            tuple(id(c) for c in checks),
         )
         with self._lock:
             if self._state is not None and key == self._key:
@@ -270,13 +293,14 @@ class ArchitectureCatalogService:
             catalog = merge_profiles(self._default_profiles, sources, settings)
             problems: dict[str, tuple[Issue, ...]] = {}
             for entry in [*catalog.entries.values(), *catalog.disabled]:
-                problems[entry.id] = tuple(
-                    profile_issues(
+                problems[entry.id] = (
+                    *profile_issues(
                         entry.profile,
                         operators=operators,
                         filters=self._filters,
                         profile_id=entry.id,
-                    )
+                    ),
+                    *_extra_issues(checks, entry.profile, entry.id),
                 )
             state = CatalogState(
                 catalog=catalog,
@@ -352,6 +376,14 @@ class ArchitectureCatalogService:
             filters=self._filters,
             profile_id=request.id,
         )
+        checks = tuple(self._checks())
+        if checks:
+            try:
+                profile = ArchitectureProfile.model_validate(request.profile)
+            except ValidationError:
+                pass  # 형식 오류는 위 검사가 ``architecture.invalid``로 알렸다
+            else:
+                issues.extend(_extra_issues(checks, profile, request.id))
         return ArchitectureProfileCheckResult(issues=issues)
 
     # ------------------------------------------------------------------ 투영

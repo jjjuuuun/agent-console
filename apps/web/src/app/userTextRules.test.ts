@@ -29,8 +29,9 @@ function sources(dir: string): string[] {
   });
 }
 
+// 부모 포인터(setParentNodes)가 필요 없어 끈다: 수백 파일을 한 테스트에서 파싱하므로 느린 파일시스템·부하에서 5초 기본 시간을 넘기던 원인(공개본 CI).
 function literals(file: string): string[] {
-  const sf = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const sf = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, false, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: string[] = [];
   const visit = (n: ts.Node) => {
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n) || ts.isJsxText(n)) out.push(n.text);

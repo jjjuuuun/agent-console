@@ -6,6 +6,10 @@
   모아 ``project``·``pick``·``operators``를 부르고, 상한은 ``max_scope_events``를 읽는다.
 - 제공 ``server.warnings``(여러 제공자): 저장된 ``architecture`` 섹션의 형식 문제
   (``architecture.settings_invalid``).
+- 선택 ``architecture.profile_checks``(여러 제공자, X32): 프로필 검사 보탬
+  (``ProfileCheck.check(profile, profile_id) -> list[Issue]``). 결과는 프로필 목록 ``issues``
+  수·상세 ``problems``·``POST /architecture/profiles/check``에 더해진다. 부를 때 읽는다(제공
+  연동은 이 모듈보다 늦게 만들어진다). 예외를 낸 검사는 건너뛴다. 없으면 기본 검사만.
 - 선택 ``workspace.settings``: 지금 워크스페이스 설정(``() -> WorkspaceSettings``). ``architecture``
   섹션을 여기서 읽는다. 없으면 사용자 설정 없이(기본 + 플러그인 프로필만) 동작한다.
 
@@ -28,6 +32,19 @@ from agent_console_contracts.architecture import (
 )
 from agent_console_contracts.logs import LogEvent, TokenSample
 from agent_console_modkit import PortKey
+
+
+@runtime_checkable
+class ProfileCheck(Protocol):
+    """``architecture.profile_checks`` 포트 모양(X32): 프로필 검사 보탬.
+
+    예: 로그 연동이 목록 본문에 없는 조건 경로를 경고한다(M-4). 순수 함수여야 한다(같은
+    프로필이면 같은 결과 — 카탈로그가 입력이 바뀔 때만 다시 부른다).
+    """
+
+    def check(self, profile: ArchitectureProfile, profile_id: str | None) -> list[Issue]:
+        """프로필(``profile_id`` = 저장된 id, 편집 중 검사면 요청 id 또는 None)의 문제 목록."""
+        ...
 
 
 @runtime_checkable
@@ -85,12 +102,17 @@ WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
     "workspace.settings", "지금 워크스페이스 설정"
 )
 SERVER_WARNINGS: PortKey[WarningSource] = PortKey("server.warnings", "서버 정보 경고", multi=True)
+PROFILE_CHECKS: PortKey[ProfileCheck] = PortKey(
+    "architecture.profile_checks", "구조도 프로필 검사 보탬(X32)", multi=True
+)
 
 __all__ = [
     "ARCHITECTURE_CATALOG",
+    "PROFILE_CHECKS",
     "SERVER_WARNINGS",
     "WORKSPACE_SETTINGS",
     "ArchitectureCatalog",
+    "ProfileCheck",
     "WarningSource",
     "WorkspaceSettingsReader",
 ]

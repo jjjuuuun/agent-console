@@ -10,9 +10,9 @@ from sqlalchemy import Engine
 from sqlalchemy.pool import StaticPool
 
 from ._index import SqliteLogIndex
-from .schema import OBSOLETE_INDEXES, log_metadata
+from .schema import OBSOLETE_INDEXES, TABLE_NAMES, log_metadata
 
-__all__ = ["create_log_engine", "open_log_index"]
+__all__ = ["create_log_engine", "open_existing_log_index", "open_log_index"]
 
 
 def create_log_engine(target: str | Path, *, journal_mode: str = "WAL") -> Engine:
@@ -56,6 +56,32 @@ def open_log_index(target: str | Path, *, journal_mode: str = "WAL") -> SqliteLo
     engine = create_log_engine(target, journal_mode=journal_mode)
     log_metadata.create_all(engine)
     _sync_indexes(engine)
+    return SqliteLogIndex(engine, owns_engine=True)
+
+
+def open_existing_log_index(path: str | Path) -> SqliteLogIndex:
+    """이미 있는 색인 파일(별도 색인 파일 또는 서버 DB)을 연다. 파일·테이블을 만들지 않는다.
+
+    도구(예: `agent-console logs purge`)가 서버 밖에서 색인을 고칠 때 쓴다. 반환한 색인의
+    `close()`가 엔진을 닫는다.
+
+    Raises:
+        FileNotFoundError: 파일이 없다.
+        LookupError: 로그 색인 테이블이 없다(모듈이 한 번도 켜지지 않은 DB 등).
+    """
+    target = Path(path)
+    if not target.is_file():
+        raise FileNotFoundError(f"색인 파일이 없습니다: {target}")
+    engine = create_log_engine(target)
+    try:
+        have = set(sa.inspect(engine).get_table_names())
+    except Exception:
+        engine.dispose()
+        raise
+    missing = [name for name in TABLE_NAMES if name not in have]
+    if missing:
+        engine.dispose()
+        raise LookupError(f"로그 색인 테이블이 없습니다: {', '.join(missing)}")
     return SqliteLogIndex(engine, owns_engine=True)
 
 

@@ -11,6 +11,10 @@
   바꿔 ``map``에서 찾고, 없으면 ``default``(없으면 그 문자열 그대로). 찾은 ``map`` 값과
   ``default``도 틀이다(예: ``default: "{node}"``). ``from``·``to``도 이 조건부 값을 쓸 수 있다
   (design §5.5R.1 C7: ``node.started``의 ``to``는 위임 호출일 때만).
+- 목록 값(design §5.7R.9, M-2): ``tags``·``correlation`` 값·``documents``에 ``{each: <목록 포인터>,
+  ...항목 틀}``을 쓰면 이벤트 안 목록의 원소마다 항목 하나를 만든다. 항목 틀 안에서 ``{./키}``·
+  ``{.}``(원소 자체)와 조건부 값의 ``pointer: ./키``는 그 원소 기준이다. 결과가 빈 항목(문서는
+  ``path``가 빈 항목)은 빼고, 같은 항목은 한 번만 남긴다. 목록이 아니거나 없으면 항목 0개.
 """
 
 from __future__ import annotations
@@ -33,6 +37,8 @@ from agent_console_logs import JsonValue, effective_config, json_pointer, text
 __all__ = [
     "DEFAULT_EVENT_MAP_RESOURCE",
     "DEFAULT_FALLBACK_CATEGORY",
+    "DOCUMENT_FIELDS",
+    "EACH_KEY",
     "EVENT_MAP_SCHEMA",
     "RULE_SCHEMA",
     "TEMPLATE_NAMES",
@@ -46,6 +52,8 @@ __all__ = [
     "overrides_of",
     "render",
     "resolve",
+    "resolve_documents",
+    "resolve_strings",
 ]
 
 DEFAULT_EVENT_MAP_RESOURCE = "data/run_event_map.yaml"
@@ -95,7 +103,23 @@ VALUE_FIELD_TITLES: dict[str, str] = {
 }
 """``VALUE_FIELDS``의 설정 폼 라벨."""
 
+EACH_KEY = "each"
+"""목록 값 규칙에서 원소를 꺼낼 목록 포인터 키(design §5.7R.9)."""
+
+ITEM_POINTER = "."
+"""항목 틀 안에서 목록 원소를 가리키는 포인터 접두(``{./kind}``, ``{.}`` = 원소 자체)."""
+
+DOCUMENT_FIELDS: dict[str, str] = {
+    "path": "문서 경로",
+    "kind": "문서 종류",
+    "action": "관계",
+}
+"""``documents`` 항목 틀의 필드(계약 ``LogDocumentRef``) → 설정 폼 라벨.
+
+``path``가 비면 그 항목을 뺀다."""
+
 _POINTER: dict[str, Any] = {"type": "string", "pattern": "^(/.*)?$"}
+_ITEM_POINTER_SCHEMA: dict[str, Any] = {"type": "string", "pattern": "^(/.*|\\.(/.*)?)?$"}
 _TEMPLATE: dict[str, Any] = {"type": "string"}
 
 
@@ -152,6 +176,85 @@ def _value_schema(
     }
 
 
+def _item_value_schema(title: str, description: str, example: str) -> dict[str, Any]:
+    """목록 항목 틀 값: 틀 문자열 또는 조건부 값(포인터는 ``./키``로 원소 기준도 된다)."""
+    return {
+        "title": title,
+        "description": description,
+        **x_ui(tier="advanced", example=example),
+        "oneOf": [
+            {**_TEMPLATE, "title": "틀"},
+            {
+                "type": "object",
+                "title": "값 읽어 바꾸기",
+                "properties": {
+                    "pointer": {
+                        **_ITEM_POINTER_SCHEMA,
+                        "title": "읽을 위치",
+                        "description": "값을 읽을 위치. ./키는 목록 원소 기준, /키는 이벤트 기준.",
+                        **x_ui(tier="advanced", example="./kind"),
+                    },
+                    "map": {
+                        "type": "object",
+                        "title": "값 바꾸기",
+                        "description": "읽은 값 → 보일 값(틀). 없는 값은 없을 때 값을 쓴다.",
+                        **x_ui(tier="advanced"),
+                        "additionalProperties": {"type": "string"},
+                    },
+                    "default": {
+                        "type": "string",
+                        "title": "없을 때 값",
+                        "description": "바꾸기 표에 없을 때 쓸 값(틀). 빈 값이면 그 항목을 뺀다.",
+                        **x_ui(tier="advanced", example="{./kind}"),
+                    },
+                },
+                "required": ["pointer"],
+                "additionalProperties": False,
+            },
+        ],
+    }
+
+
+def _each_pointer(description: str) -> dict[str, Any]:
+    return _pointer_field("목록 위치", description, "/payload/resources")
+
+
+_EACH_STRING_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "title": "목록에서 만들기",
+    "description": "이벤트 안 목록의 원소마다 값 하나를 만든다(빈 값은 뺀다).",
+    **x_ui(tier="advanced"),
+    "properties": {
+        EACH_KEY: _each_pointer("원소를 꺼낼 이벤트 안 목록 위치."),
+        "value": _item_value_schema(
+            "항목 값", "원소마다 만들 값(틀, 예: {./kind}) 또는 읽어 바꾸는 규칙.", "{./id}"
+        ),
+    },
+    "required": [EACH_KEY, "value"],
+    "additionalProperties": False,
+}
+
+_DOCUMENT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "title": "문서 틀",
+    "description": "로그가 가리키는 문서 하나의 틀. 목록 위치를 주면 원소마다 문서 하나를 만든다.",
+    **x_ui(tier="advanced"),
+    "properties": {
+        EACH_KEY: _each_pointer("주면 이 목록의 원소마다 문서를 만든다(틀 안 ./키 = 원소 기준)."),
+        **{
+            name: _item_value_schema(
+                label,
+                f"문서의 {label}(틀 또는 읽어 바꾸는 규칙)."
+                + (" 비면 그 문서를 뺀다." if name == "path" else " 비면 기본값."),
+                {"path": "{./id}", "kind": "{./kind}", "action": "read"}[name],
+            )
+            for name, label in DOCUMENT_FIELDS.items()
+        },
+    },
+    "required": ["path"],
+    "additionalProperties": False,
+}
+
 RULE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "title": "대응 규칙",
@@ -168,18 +271,39 @@ RULE_SCHEMA: dict[str, Any] = {
             example="{parent_node}",
         ),
         "tags": {
-            "type": "array",
             "title": "태그",
-            "description": "이 형식의 로그에 붙일 태그 목록.",
+            "description": (
+                "이 형식의 로그에 붙일 태그 목록. 항목은 글자 그대로의 태그 또는 목록에서 만들기."
+            ),
             **x_ui(tier="advanced"),
-            "items": {"type": "string"},
+            "oneOf": [
+                {
+                    "type": "array",
+                    "title": "태그 목록",
+                    "items": {"oneOf": [{"type": "string", "title": "태그"}, _EACH_STRING_SCHEMA]},
+                },
+                _EACH_STRING_SCHEMA,
+            ],
         },
         "correlation": {
             "type": "object",
             "title": "연결 근거",
-            "description": "근거 이름 → 틀(session·call_id는 자동).",
+            "description": (
+                "근거 이름 → 틀 또는 목록에서 만들기(값 여러 개, session·call_id는 자동)."
+            ),
             **x_ui(tier="advanced"),
-            "additionalProperties": _TEMPLATE,
+            "additionalProperties": {"oneOf": [{**_TEMPLATE, "title": "틀"}, _EACH_STRING_SCHEMA]},
+        },
+        "documents": {
+            "title": "문서",
+            "description": (
+                "로그가 가리키는 문서(틀 하나 또는 목록). 목록 위치를 주면 원소마다 만든다."
+            ),
+            **x_ui(tier="advanced"),
+            "oneOf": [
+                _DOCUMENT_SCHEMA,
+                {"type": "array", "title": "문서 틀 목록", "items": _DOCUMENT_SCHEMA},
+            ],
         },
         "duration_ms": _pointer_field(
             "소요 시간 위치",
@@ -254,38 +378,150 @@ def _string_form(value: JsonValue) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
-def render(template: str, document: JsonValue, names: Mapping[str, str]) -> str:
-    """틀을 채운다(``{/포인터}``·``{이름}``). 모르는 이름·없는 값은 빈 문자열."""
+class _NoItem:
+    """항목 틀 밖(목록 원소 없음)을 나타내는 표지."""
+
+
+_NO_ITEM: Any = _NoItem()
+
+
+def _lookup(pointer: str, document: JsonValue, item: Any) -> JsonValue:
+    """포인터 값. ``/…`` = 이벤트 기준, ``.``·``./…`` = 목록 원소 기준(원소 없으면 None)."""
+    if pointer.startswith("/") or pointer == "":
+        return json_pointer(document, pointer)
+    if item is _NO_ITEM or not pointer.startswith(ITEM_POINTER):
+        return None
+    rest = pointer[len(ITEM_POINTER) :]
+    if rest == "":
+        return item
+    return json_pointer(item, rest) if rest.startswith("/") else None
+
+
+def render(
+    template: str, document: JsonValue, names: Mapping[str, str], item: Any = _NO_ITEM
+) -> str:
+    """틀을 채운다(``{/포인터}``·``{이름}``, 항목 틀이면 ``{./키}``·``{.}``).
+
+    모르는 이름·없는 값은 빈 문자열.
+    """
 
     def one(match: re.Match[str]) -> str:
         key = match.group(1)
-        if key.startswith("/"):
-            value = json_pointer(document, key)
+        if key.startswith("/") or key.startswith(ITEM_POINTER):
+            value = _lookup(key, document, item)
             return "" if value is None else text(value)
         return names.get(key, "")
 
     return _PLACEHOLDER.sub(one, template).strip()
 
 
-def resolve(spec: Any, document: JsonValue, names: Mapping[str, str]) -> str:
+def resolve(spec: Any, document: JsonValue, names: Mapping[str, str], item: Any = _NO_ITEM) -> str:
     """규칙 값(틀 또는 ``{pointer, map, default}``) → 문자열. 값이 없으면 빈 문자열.
 
-    ``map``에서 찾은 값과 ``default``도 틀로 채운다(``{node}``·``{/포인터}`` 등).
+    ``map``에서 찾은 값과 ``default``도 틀로 채운다(``{node}``·``{/포인터}`` 등). ``item``을 주면
+    (목록 항목 틀) ``./키`` 포인터가 그 원소 기준이다.
     """
     if isinstance(spec, str):
-        return render(spec, document, names)
+        return render(spec, document, names, item)
     if isinstance(spec, Mapping):
         pointer = spec.get("pointer")
-        raw = json_pointer(document, pointer) if isinstance(pointer, str) else None
+        raw = _lookup(pointer, document, item) if isinstance(pointer, str) else None
         key = _string_form(raw)
         table = spec.get("map")
         if isinstance(table, Mapping) and key in table:
-            return render(str(table[key]), document, names)
+            return render(str(table[key]), document, names, item)
         default = spec.get("default")
         if isinstance(default, str):
-            return render(default, document, names)
+            return render(default, document, names, item)
         return "" if raw is None else key
     return ""
+
+
+def _each_items(spec: Mapping[str, Any], document: JsonValue) -> list[Any]:
+    """``{each: 포인터}``의 원소들(목록이 아니거나 없으면 빈 목록)."""
+    pointer = spec.get(EACH_KEY)
+    found = json_pointer(document, pointer) if isinstance(pointer, str) else None
+    return list(found) if isinstance(found, list) else []
+
+
+def _unique(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(v for v in values if v))
+
+
+def resolve_strings(
+    spec: Any, document: JsonValue, names: Mapping[str, str], *, literal: bool = False
+) -> list[str]:
+    """목록 값 규칙 → 문자열 목록(빈 값은 빼고 같은 값은 한 번, 순서 유지).
+
+    Args:
+        spec: 문자열, ``{each: 포인터, value: 항목 값}``, 조건부 값, 또는 이들의 목록.
+        document: 이벤트 JSON.
+        names: 틀 이름 값.
+        literal: 참이면 문자열 항목을 틀로 채우지 않고 그대로 쓴다(``tags``의 기존 뜻).
+
+    Returns:
+        만든 값들. 규칙 모양이 아니면 빈 목록.
+    """
+    if isinstance(spec, list):
+        out: list[str] = []
+        for one in spec:
+            out.extend(resolve_strings(one, document, names, literal=literal))
+        return _unique(out)
+    if isinstance(spec, str):
+        return _unique([spec.strip() if literal else render(spec, document, names)])
+    if isinstance(spec, Mapping):
+        if EACH_KEY in spec:
+            value = spec.get("value")
+            return _unique(
+                [resolve(value, document, names, el) for el in _each_items(spec, document)]
+            )
+        return _unique([resolve(spec, document, names)])
+    return []
+
+
+def resolve_documents(
+    spec: Any, document: JsonValue, names: Mapping[str, str]
+) -> list[dict[str, str]]:
+    """``documents`` 규칙 → 문서 표지 목록(``DOCUMENT_FIELDS`` 키, 빈 필드는 뺀다).
+
+    Args:
+        spec: 문서 틀(``{path, kind?, action?}``, ``each``가 있으면 원소마다) 또는 그 목록.
+        document: 이벤트 JSON.
+        names: 틀 이름 값.
+
+    Returns:
+        ``path``가 있는 문서들(같은 문서는 한 번, 순서 유지). 계약 ``LogDocumentRef`` 모양이며
+        빈 ``kind``·``action``은 계약 기본값을 쓰도록 키를 뺀다.
+    """
+    if isinstance(spec, list):
+        out: list[dict[str, str]] = []
+        for one in spec:
+            out.extend(resolve_documents(one, document, names))
+        return _unique_documents(out)
+    if not isinstance(spec, Mapping):
+        return []
+    items = _each_items(spec, document) if EACH_KEY in spec else [_NO_ITEM]
+    built: list[dict[str, str]] = []
+    for el in items:
+        doc = {
+            name: found
+            for name in DOCUMENT_FIELDS
+            if (found := resolve(spec.get(name), document, names, el))
+        }
+        if doc.get("path"):
+            built.append(doc)
+    return _unique_documents(built)
+
+
+def _unique_documents(docs: list[dict[str, str]]) -> list[dict[str, str]]:
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    out: list[dict[str, str]] = []
+    for doc in docs:
+        key = tuple(sorted(doc.items()))
+        if key not in seen:
+            seen.add(key)
+            out.append(doc)
+    return out
 
 
 def _is_glob(key: str) -> bool:

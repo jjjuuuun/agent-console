@@ -11,3 +11,4 @@
 - 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.
 - `serve --enable-module ID --disable-module ID`(여러 번, 설정 `modules`보다 우선, 3R.9).
 - 3R.10: `serve --apply-preset`가 `modules.options.mod-presets.apply_on_start`로 들어간다(옛 `presets.*` 대신).
+- 5.7R.6(M-3): `agent-console logs purge`(로그 색인 비우기, dry-run 기본·`--yes`로 지움·범위 없으면 `--all` 필요). 의존 `agent-console-logs` 추가(명령 안 지연 import), 위치는 `--index` 또는 서버 설정(`_server.server_log_index_path`).

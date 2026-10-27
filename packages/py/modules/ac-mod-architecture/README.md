@@ -9,7 +9,7 @@
 | REST | `GET /architecture/profiles`(`ArchitectureProfileList`, 끈 프로필은 뒤에 `disabled: true`), `GET /architecture/profiles/{id}`(`ArchitectureProfileDetail`), `POST /architecture/profiles/check`(`ArchitectureProfileCheckRequest` → `ArchitectureProfileCheckResult`), `POST /architecture/project`(`ArchitectureProjectRequest` → `ArchitectureView`) |
 | 오류 | `architecture.profile_not_found`(404, 없는 id 조회·프로필이 하나도 없는데 투영), `architecture.scope_too_large`(422, 본문 이벤트가 `max_request_events` 초과) |
 | 제공 포트 | `architecture.catalog`(병합된 프로필·연산자·검사·투영, 모양 `ArchitectureCatalog`), `server.warnings`(저장된 `architecture` 섹션 형식 문제 `architecture.settings_invalid`) |
-| 선택 포트 | `workspace.settings`(사용자 설정 섹션을 읽는다. 없으면 기본 + 플러그인 프로필만) |
+| 선택 포트 | `workspace.settings`(사용자 설정 섹션을 읽는다. 없으면 기본 + 플러그인 프로필만), `architecture.profile_checks`(여러 제공자, X32 — `check(profile, profile_id) -> list[Issue]` 결과를 목록 `issues` 수·상세 `problems`·검사 응답에 더한다. 예: `link-logs-architecture`의 목록 본문 밖 조건 경로 경고) |
 | 설치자 옵션 | `modules.options.mod-architecture.{max_request_events, max_scope_events}` |
 | 사용자 설정 | 워크스페이스 설정 `architecture`(계약 `ArchitectureSettings`: `include_defaults`, `default_profile`, `profiles`). 설정이 바뀌면 다음 요청에서 다시 합친다 |
 | 플러그인(X23) | entry point `agent_console.architecture_profiles`. 호스트 플러그인 로더(`agent_console.host_plugin_loaders`의 `architecture`)가 호스트 묶음의 `architecture_profiles` 확장에 읽는다 |

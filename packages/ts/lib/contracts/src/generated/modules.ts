@@ -16,6 +16,7 @@ export type {
   InteractionUpdatedPayload,
   LogsIngestedMessage,
   LogsIngestedPayload,
+  MemoryChangedMessage,
   ModuleInfo,
   ModuleOptionsView,
   ModuleStatus,
@@ -31,4 +32,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "modules" as const;
-export const CONTRACT_VERSION = "1.2.0" as const;
+export const CONTRACT_VERSION = "1.3.0" as const;

@@ -45,3 +45,33 @@ def server_state_dir(config: Path | None, environ: Mapping[str, str] | None = No
     except ConfigError as exc:
         raise ServerConfigError(str(exc)) from None
     return settings.state_path
+
+
+def server_log_index_path(
+    config: Path | None, environ: Mapping[str, str] | None = None, *, module_id: str
+) -> Path:
+    """서버 설정(파일 + 환경변수)에서 로그 색인이 있는 SQLite 파일 경로.
+
+    로그 모듈 설정(``modules.options.<module_id>.index_path``, 상대 경로는 설정 파일 폴더 기준)이
+    있으면 그 파일, 없으면 호스트 DB(``database``, 기본 ``<workspace>/.state/console.sqlite3``).
+    로그 모듈이 색인을 여는 규칙(별도 파일 > 호스트 DB)과 같다.
+
+    Args:
+        config: 설정 파일(None이면 서버와 같은 규칙으로 찾는다).
+        environ: 환경변수(None이면 ``os.environ``).
+        module_id: 로그 모듈 id(설정 ``modules.options`` 키).
+
+    Raises:
+        ServerConfigError: 설정 오류.
+    """
+    from agent_console_server import ConfigError, load_settings
+
+    try:
+        settings = load_settings(config, environ=environ)
+    except ConfigError as exc:
+        raise ServerConfigError(str(exc)) from None
+    options = settings.modules.options.get(module_id) or {}
+    index_path = options.get("index_path")
+    if index_path:
+        return settings.resolve(Path(str(index_path)))
+    return settings.database_path

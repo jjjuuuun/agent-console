@@ -1,7 +1,7 @@
-import { defaultEdgeLegendKeys, defaultEdgeStyles, resolveEdgeStyle } from "./defaults";
+import { defaultEdgeLegendKeys, defaultEdgeStyles, defaultZoneLegend, resolveEdgeStyle } from "./defaults";
 import { resolveMessages } from "./messages";
 import type { ArchViewMessages } from "./messages";
-import type { EdgeStyleSpec } from "./types";
+import type { EdgeStyleSpec, ZoneLegendItem } from "./types";
 
 export interface ArchitectureLegendProps {
   messages?: Partial<ArchViewMessages>;
@@ -11,6 +11,8 @@ export interface ArchitectureLegendProps {
   edgeStyleNames?: readonly string[];
   /** 연결 style 이름 → 범례 글자. 없으면 기본 문구 표, 그것도 없으면 이름 그대로. */
   edgeLegend?: Readonly<Record<string, string>>;
+  /** 영역 견본 줄들(영역 style + 글자). 기본은 `defaultZoneLegend`. `[]`면 영역 줄 없음. */
+  zoneLegend?: readonly ZoneLegendItem[];
   id?: string;
   className?: string;
 }
@@ -29,7 +31,7 @@ function Line({ spec, state }: { spec: EdgeStyleSpec; state?: "dead" | "error" }
 /**
  * 범례(§2.6). 견본은 실제 칸·연결과 같은 CSS 클래스·데이터 속성으로 그리므로 모양이 바뀌면 함께 바뀐다.
  */
-export function ArchitectureLegend({ messages: partial, edgeStyles = defaultEdgeStyles, edgeStyleNames, edgeLegend, id, className }: ArchitectureLegendProps) {
+export function ArchitectureLegend({ messages: partial, edgeStyles = defaultEdgeStyles, edgeStyleNames, edgeLegend, zoneLegend = defaultZoneLegend, id, className }: ArchitectureLegendProps) {
   const m = resolveMessages(partial);
   const names = edgeStyleNames ?? Object.keys(edgeStyles);
   return (
@@ -46,7 +48,12 @@ export function ArchitectureLegend({ messages: partial, edgeStyles = defaultEdge
       <li data-legend="error"><span className="ac-arch-cell ac-arch-swatch" data-errors="" aria-hidden="true" /><span>{m.legendError}</span></li>
       <li data-legend="selected"><span className="ac-arch-cell ac-arch-swatch" data-selected="" aria-hidden="true" /><span>{m.legendSelected}</span></li>
       <li data-legend="highlighted"><span className="ac-arch-cell ac-arch-swatch" data-highlighted="" aria-hidden="true" /><span>{m.legendHighlighted}</span></li>
-      <li data-legend="zone"><span className="ac-arch-zone ac-arch-swatch-zone" data-zone-style="runtime" aria-hidden="true" /><span>{m.legendZone}</span></li>
+      {zoneLegend.map((z, i) => (
+        <li key={`${z.style ?? ""}:${i}`} data-legend={`zone:${z.style ?? ""}`}>
+          <span className="ac-arch-zone ac-arch-swatch-zone" data-zone-style={z.style ?? undefined} aria-hidden="true" />
+          <span>{z.label ?? m.legendZone}</span>
+        </li>
+      ))}
     </ul>
   );
 }

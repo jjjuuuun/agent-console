@@ -11,6 +11,7 @@ from pydantic import Field, RootModel
 from agent_console_contracts._base import ContractModel, NonEmptyStr
 from agent_console_contracts.chat import ConversationSummary
 from agent_console_contracts.common import ErrorInfo
+from agent_console_contracts.memory import MemoryChanged
 from agent_console_contracts.runs import Interaction, RunEvent
 
 
@@ -109,6 +110,13 @@ class LogsIngestedMessage(WsMessageBase):
     payload: LogsIngestedPayload
 
 
+class MemoryChangedMessage(WsMessageBase):
+    """메모리 모듈 토픽: 항목 하나가 바뀜(본문 없음, 1.3.0). 토픽 이름은 메모리 모듈이 정한다."""
+
+    type: Literal["memory.changed"]
+    payload: MemoryChanged
+
+
 class WsServerMessage(
     RootModel[
         Annotated[
@@ -116,6 +124,7 @@ class WsServerMessage(
             | ConversationUpdatedMessage
             | InteractionUpdatedMessage
             | LogsIngestedMessage
+            | MemoryChangedMessage
             | ErrorMessage,
             Field(discriminator="type"),
         ]

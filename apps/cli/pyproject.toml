@@ -1,12 +1,13 @@
 [project]
 name = "agent-console-cli"
 version = "0.1.0"
-description = "Agent Console — 실행 명령: `agent-console` (서버 실행·statusLine 사용량 브리지)"
+description = "Agent Console — 실행 명령: `agent-console` (서버 실행·statusLine 사용량 브리지·로그 색인 비우기)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
+    "agent-console-logs>=0.1,<0.2",
     "agent-console-server>=0.1,<0.2",
     "agent-console-usage>=0.1,<0.2",
     "typer>=0.12",

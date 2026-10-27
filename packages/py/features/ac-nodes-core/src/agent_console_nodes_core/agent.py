@@ -19,6 +19,12 @@
        때 각 방식의 `contribute`를 합쳐(`merge_contributions`) 백엔드를 한 번 부른다(혼합 위임,
        design §5R.6). 위임 대상이 없으면 `backend.run`.
     7. 결과 텍스트 → `out`, usage·`backend_session_id`.
+
+에이전트 도구 공급자(X30, `tools`): 서비스 `TOOL_PROVIDERS`가 있으면 4의 묶음 계산 뒤 공급자마다
+`provide`를 부르고, 공급 도구를 위임 기여 도구 뒤에 붙이며(이름이 겹치면 공급 도구를 뺀다), 소비한
+칸을 백엔드 요청 묶음에서 뺀다. 백엔드에 `host_tools` 능력이 없으면 공급 도구를 빼고 경고한다.
+위임 대상(`sdk-subagents`)은 위임자 세션 안이라 따로 공급받지 않고, 자기 NodeRun으로 실행되는
+대상(`host`)은 자기 묶음으로 공급받는다.
 """
 
 from __future__ import annotations
@@ -47,13 +53,22 @@ from agent_console_contracts import (
     x_ui,
 )
 from agent_console_registry import Registry
-from agent_console_resources import ResourceLookup, ResourceType, render_template
+from agent_console_resources import (
+    SLOT_UNSUPPORTED,
+    ComposedBundle,
+    ResourceLookup,
+    ResourceType,
+    render_template,
+)
 from agent_console_runtime import (
     AgentRequest,
     AgentResult,
     ComposableDelegation,
     DelegationMember,
+    DelegationNameDeclarer,
+    DelegationNameGroups,
     DelegationPlan,
+    HostTool,
     NodeContext,
     NodeResult,
     SecretNotFoundError,
@@ -110,9 +125,17 @@ from .services import (
     RUN_FILES_ROOT,
     SCOPE_LAYERS,
     SESSIONS,
+    TOOL_PROVIDERS,
     WORKING_DIRECTORY,
     WORKSPACE_SETTINGS,
     AgentLookup,
+)
+from .tools import (
+    ToolProviderCodes,
+    ToolProvision,
+    ToolProvisionContext,
+    drop_taken,
+    provide_tools,
 )
 
 _log = logging.getLogger("agent_console_nodes_core.agent")
@@ -489,7 +512,10 @@ class AgentNode:
             node=plan.label_of(ctx.node.id),
             fmt=PromptFormat.of(settings),
         )
-        bundle = await run.bundle_of(ctx.node.id, ns, caps)
+        composed = await run.compose(ctx.node.id, ns, caps)
+        provision = await _provision(ctx, cfg.agent_ref, composed, caps)
+        bundle = await run.finish(ctx.node.id, composed, provision.consumed_slots)
+        provided = list(provision.host_tools)
         request = AgentRequest(
             agent=resolved,
             prompt=prompt,
@@ -503,6 +529,8 @@ class AgentNode:
             else {},
             **_run_location(ctx),
         )
+        if provided and not links:
+            request = request.model_copy(update={"host_tools": provided})
         # C1(design §5.5R.1): 붙은 리소스 표지·조각 수만(본문 없음). 본문 읽기는 스레드에서.
         await ctx.emit(
             CONTEXT_PREPARED_EVENT,
@@ -516,13 +544,91 @@ class AgentNode:
         )
 
         if links:
-            outcome = await run.delegate(links, request, backend_id, caps, cfg.delegation or {})
+            outcome = await run.delegate(
+                links, request, backend_id, caps, cfg.delegation or {}, provided=provided
+            )
             if isinstance(outcome, NodeResult):
                 return outcome
             result = outcome
         else:
             result = await backend.run(request, ctx, ctx.cancel)
         return _node_result(result, backend_id)
+
+
+async def _provision(
+    ctx: NodeContext, agent_id: str, composed: ComposedBundle | None, caps: BackendCapabilities
+) -> ToolProvision:
+    """서비스 `TOOL_PROVIDERS`의 공급자를 불러 이 노드에 줄 도구를 모은다(X30). 경고는 여기서 낸다.
+
+    공급자가 없으면 빈 결과(기존 실행과 같다). 백엔드에 `host_tools` 능력이 없으면 도구를 빼고
+    `tools.backend_capability_missing` 경고를 낸다(소비한 칸은 그대로 뺀다).
+    """
+    providers = ctx.services.get(TOOL_PROVIDERS)
+    if not providers:
+        return ToolProvision()
+
+    async def emit(type: str, payload: Mapping[str, Any]) -> None:
+        await ctx.emit(type, payload)
+
+    tctx = ToolProvisionContext(
+        run_id=ctx.run.id,
+        root_run_id=ctx.run.root_run_id or ctx.run.id,
+        graph_id=ctx.graph.id,
+        node_id=ctx.node.id,
+        node_path=tuple(ctx.node_path),
+        agent_id=ctx.actor or agent_id,
+        call=ctx.call,
+        iteration=ctx.iteration,
+        bundle=composed.bundle if composed is not None else ResourceBundle(),
+        backend_capabilities=caps,
+        emit=emit,
+        cancel=ctx.cancel,
+    )
+    provision = provide_tools(providers, tctx)
+    issues = list(provision.warnings)
+    tools = provision.host_tools
+    if tools and not caps.host_tools:
+        names = [t.name for t in tools]
+        issues.append(
+            Issue(
+                severity="warning",
+                code=ToolProviderCodes.BACKEND_CAPABILITY_MISSING,
+                message="실행 백엔드가 플랫폼 도구를 지원하지 않아 공급 도구를 주지 않습니다",
+                details={"tools": names},
+            )
+        )
+        tools = ()
+    await warn(ctx, issues, node=ctx.node.id)
+    return ToolProvision(host_tools=tools, consumed_slots=provision.consumed_slots)
+
+
+def _delegation_tool_names(strategy: Any, plan: DelegationPlan, ctx: NodeContext) -> list[str]:
+    """방식 하나로 위임할 때 그 방식이 더할 플랫폼 도구 이름(공급 도구 이름 충돌 검사용).
+
+    선택 프로토콜 `declared_names`(묶음 `host_tool`)를 먼저 보고, 없으면 `contribute` 결과에서
+    읽는다. 둘 다 없거나 실패하면 모른다(빈 목록).
+    """
+    try:
+        if isinstance(strategy, DelegationNameDeclarer):
+            names = strategy.declared_names(plan.config, plan.members)
+            return list(names.get(DelegationNameGroups.HOST_TOOL, []))
+        if isinstance(strategy, ComposableDelegation):
+            return [t.name for t in strategy.contribute(plan, ctx).host_tools]
+    except Exception:  # 이름을 몰라도 실행은 계속(방식의 run이 자기 오류를 낸다)
+        _log.debug("위임 도구 이름을 읽지 못했습니다: %s", plan.strategy, exc_info=True)
+    return []
+
+
+def _strip_slots(bundle: ResourceBundle, consumed: frozenset[str]) -> ResourceBundle:
+    """소비된 칸(값·출처)을 뺀 묶음 사본."""
+    if not consumed or not (consumed & (bundle.slots.keys() | bundle.sources.keys())):
+        return bundle
+    return bundle.model_copy(
+        update={
+            "slots": {k: v for k, v in bundle.slots.items() if k not in consumed},
+            "sources": {k: v for k, v in bundle.sources.items() if k not in consumed},
+        }
+    )
 
 
 def _static_delegation_issues(ctx: ValidationContext, lookup: AgentLookup | None) -> list[Issue]:
@@ -643,6 +749,12 @@ class _Runner:
         self, node_id: str, ns: NodeSettings, caps: BackendCapabilities
     ) -> ResourceBundle | None:
         """첨부 → 실행 묶음(파일 칸은 실행 폴더에 써서 경로로). 첨부가 없으면 None."""
+        return await self.finish(node_id, await self.compose(node_id, ns, caps), frozenset())
+
+    async def compose(
+        self, node_id: str, ns: NodeSettings, caps: BackendCapabilities
+    ) -> ComposedBundle | None:
+        """첨부 → 묶음 계산(경고는 아직 내지 않는다). 첨부가 없거나 리소스 조회가 없으면 None."""
         ctx = self.ctx
         if not ns.attachments:
             return None
@@ -659,15 +771,35 @@ class _Runner:
                 node=node_id,
             )
             return None
-        composed = node_bundle(
+        return node_bundle(
             ns,
             resource_types=self.resource_types,
             resources=self.resources,
             accepted_slots=caps.resource_slots,
             slot_notes=caps.slot_notes,
         )
-        await warn(ctx, [i for i in composed.issues if i.severity != "info"], node=node_id)
-        bundle = composed.bundle
+
+    async def finish(
+        self, node_id: str, composed: ComposedBundle | None, consumed: frozenset[str]
+    ) -> ResourceBundle | None:
+        """묶음 경고를 내고, 소비된 칸(X30)을 빼고, 파일 칸을 실행 폴더에 써서 경로로 바꾼다.
+
+        소비된 칸의 "백엔드가 받지 않는 칸" 경고(`resource.slot_unsupported`)는 내지 않는다.
+        """
+        ctx = self.ctx
+        if composed is None:
+            return None
+        await warn(
+            ctx,
+            [
+                i
+                for i in composed.issues
+                if i.severity != "info"
+                and not (i.code == SLOT_UNSUPPORTED and i.details.get("slot") in consumed)
+            ],
+            node=node_id,
+        )
+        bundle = _strip_slots(composed.bundle, consumed)
         has_files = bool(bundle.slots.get(DEFAULT_FILES_SLOT))
         has_trees = any(
             slot != DEFAULT_FILES_SLOT
@@ -741,8 +873,12 @@ class _Runner:
         backend_id: str,
         caps: BackendCapabilities,
         configs: Mapping[str, Mapping[str, Any]],
+        *,
+        provided: Sequence[HostTool] = (),
     ) -> AgentResult | NodeResult:
         """위임 대상을 방식별로 묶어 실행한다. 계획 단계 문제는 `NodeResult`(실패).
+
+        `provided`(X30 공급 도구)는 위임 도구와 이름이 겹치는 것을 빼고 위임자 요청에 붙인다.
 
         - 방식 하나: 그 방식의 `run`.
         - 방식 여럿: 모두 디스크립터 `composable`이고 `contribute`가 있어야 한다. 각 방식의 필요
@@ -795,8 +931,22 @@ class _Runner:
                 )
             plans.append(plan)
         if len(plans) == 1:
-            return await strategies[ids[0]].run(plans[0], ctx)
-        return await self._run_composed(plans, strategies, request, backend_id, caps)
+            plan = plans[0]
+            if provided:
+                taken = [
+                    *(t.name for t in request.host_tools),
+                    *_delegation_tool_names(strategies[ids[0]], plan, ctx),
+                ]
+                kept, issues = drop_taken(provided, taken)
+                await warn(ctx, issues, node=ctx.node.id)
+                tools = [*request.host_tools, *kept]
+                plan = plan.model_copy(
+                    update={"request": request.model_copy(update={"host_tools": tools})}
+                )
+            return await strategies[ids[0]].run(plan, ctx)
+        return await self._run_composed(
+            plans, strategies, request, backend_id, caps, provided=provided
+        )
 
     async def _run_composed(
         self,
@@ -805,8 +955,10 @@ class _Runner:
         request: AgentRequest,
         backend_id: str,
         caps: BackendCapabilities,
+        *,
+        provided: Sequence[HostTool] = (),
     ) -> AgentResult | NodeResult:
-        """혼합 위임: 방식마다 `contribute` → 합치기 → 백엔드 한 번."""
+        """혼합 위임: 방식마다 `contribute` → 합치기 → 백엔드 한 번(공급 도구는 위임 도구 뒤)."""
         ctx = self.ctx
         for plan in plans:
             need = strategies[plan.strategy].descriptor.requires_backend_capability
@@ -830,7 +982,12 @@ class _Runner:
             )
         backend = ctx.backends.get(backend_id)
         sink = merged.wrap_sink(ctx) if merged.wrap_sink is not None else ctx
-        return await backend.run(apply_contribution(request, merged), sink, ctx.cancel)
+        final = apply_contribution(request, merged)
+        if provided:
+            kept, dropped = drop_taken(provided, [t.name for t in final.host_tools])
+            await warn(ctx, dropped, node=ctx.node.id)
+            final = final.model_copy(update={"host_tools": [*final.host_tools, *kept]})
+        return await backend.run(final, sink, ctx.cancel)
 
 
 def _without_tree_files(value: Any) -> Any:

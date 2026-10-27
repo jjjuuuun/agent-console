@@ -23,6 +23,7 @@ from typing import Any, ClassVar
 from agent_console_contracts import NodeRun, RunEvent, x_ui
 from agent_console_contracts.logs import (
     LogClassifierDescriptor,
+    LogDocumentRef,
     LogLane,
     LogSourceDescriptor,
     TokenSample,
@@ -47,8 +48,9 @@ from .event_map import (
     load_default_event_map,
     names_for,
     overrides_of,
-    render,
     resolve,
+    resolve_documents,
+    resolve_strings,
 )
 from .ports import EventReader, RunReader
 
@@ -363,10 +365,12 @@ class PlatformRunsClassifier:
         extra = rule.get("correlation")
         if isinstance(extra, Mapping):
             for basis, spec in extra.items():
-                found = render(spec, data, names) if isinstance(spec, str) else ""
-                if found:
+                found = resolve_strings(spec, data, names)
+                if isinstance(spec, str):
+                    if found:
+                        correlation[str(basis)] = found[0]
+                elif found:  # 목록 값(each): 값이 여러 개일 수 있다
                     correlation[str(basis)] = found
-        tags = rule.get("tags")
         title = value("title") or event.type
         if len(title) > self._title_chars:
             title = title[: self._title_chars - 1] + "…"
@@ -390,7 +394,11 @@ class PlatformRunsClassifier:
             node_path=path,
             time=event.ts,
             evidence=event.evidence,
-            tags=tuple(str(t) for t in tags) if isinstance(tags, list) else (),
+            tags=tuple(resolve_strings(rule.get("tags"), data, names, literal=True)),
+            documents=tuple(
+                LogDocumentRef.model_validate(d)
+                for d in resolve_documents(rule.get("documents"), data, names)
+            ),
             correlation=correlation,
             detail=dict(event.payload),
             raw=event.raw,

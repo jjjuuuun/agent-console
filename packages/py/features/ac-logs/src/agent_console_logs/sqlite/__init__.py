@@ -1,6 +1,7 @@
 """SQLite 로그 색인(design §4R.5).
 
-`SqliteLogIndex`, 테이블 정의 `log_metadata`, 단독 열기 `open_log_index`.
+`SqliteLogIndex`, 테이블 정의 `log_metadata`, 단독 열기 `open_log_index`, 있는 색인만 열기
+`open_existing_log_index`(파일·테이블을 만들지 않는다, 도구용).
 
 ```python
 >>> from agent_console_logs.sqlite import open_log_index
@@ -15,7 +16,7 @@ True
 """
 
 from ._index import SqliteLogIndex
-from ._open import create_log_engine, open_log_index
+from ._open import create_log_engine, open_existing_log_index, open_log_index
 from .schema import (
     OBSOLETE_INDEXES,
     TABLE_NAMES,
@@ -46,5 +47,6 @@ __all__ = [
     "log_search",
     "log_tags",
     "log_usage",
+    "open_existing_log_index",
     "open_log_index",
 ]

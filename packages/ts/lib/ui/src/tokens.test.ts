@@ -220,6 +220,22 @@ describe("대비 쌍 전체 (5.2R.44, ux-overhaul §13: 다크·라이트 모두
   }
 });
 
+describe("구조도 tone 대비 쌍 (5.7R.4, M-13, screen-architecture §2.1·§13)", () => {
+  const tones = ["1", "2", "3", "4", "5", "6", "7", "8", "neutral"].map((n) => `--ac-cat-${n}`);
+  for (const [theme, block] of [["다크", darkBlock], ["라이트", lightBlock]] as const) {
+    it(`${theme}: 연결 라벨 칩 글자(--ac-text·--ac-text-muted·오류 --ac-danger)가 칩 바탕(--ac-surface-1)에서 4.5 이상`, () => {
+      for (const t of ["--ac-text", "--ac-text-muted", "--ac-danger"]) {
+        expect(contrast(val(block, t), val(block, "--ac-surface-1")), `${t} on chip`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+    it(`${theme}: tone 색 선(--ac-cat-1~8·neutral)과 기본 선(--ac-edge)이 --ac-bg 에서 3 이상`, () => {
+      for (const t of [...tones, "--ac-edge"]) {
+        expect(contrast(val(block, t), val(block, "--ac-bg")), `${t} on --ac-bg`).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+});
+
 describe("글자 위계 (5.2R.52, ux-overhaul §15.5; 숫자 기대값은 5.2R.71에서 재기준)", () => {
   const cases = [
     ["다크", darkBlock, { text: 14.6, muted: 9.1, subtle: 6.4, s3muted: 7.0, border: 1.63 }],

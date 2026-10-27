@@ -10,6 +10,8 @@ DEFAULT_CACHE_SCOPES = 8
 DEFAULT_CACHE_EVENTS = 100_000
 DEFAULT_CACHE_PROFILES = 4
 DEFAULT_PAGE_SIZE = 1000
+DEFAULT_UNLISTED_PATHS: tuple[str, ...] = ("/detail", "/raw")
+"""목록 본문에 없는 이벤트 경로 접두 기본값(목록 이벤트는 ``detail``·``raw``가 비어 있다, M-4)."""
 
 
 class LogsArchitectureSettings(BaseModel):
@@ -68,6 +70,15 @@ class LogsArchitectureSettings(BaseModel):
             "메모리에 올리는 이벤트가 는다."
         ),
     )
+    unlisted_paths: list[str] = Field(
+        title="목록에 없는 경로",
+        json_schema_extra=x_ui(tier="advanced", example=["/detail", "/raw"]),
+        default_factory=lambda: list(DEFAULT_UNLISTED_PATHS),
+        description=(
+            "구조도는 목록용 이벤트만 보므로 이 경로(예: /detail) 아래 값을 보는 프로필 "
+            "조건은 맞지 않는다. 프로필 검사가 이런 조건을 경고한다. 비우면 경고하지 않는다."
+        ),
+    )
 
 
 __all__ = [
@@ -75,5 +86,6 @@ __all__ = [
     "DEFAULT_CACHE_PROFILES",
     "DEFAULT_CACHE_SCOPES",
     "DEFAULT_PAGE_SIZE",
+    "DEFAULT_UNLISTED_PATHS",
     "LogsArchitectureSettings",
 ]

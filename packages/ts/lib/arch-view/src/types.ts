@@ -61,3 +61,9 @@ export type { ArchitectureSelector, ArchitectureMetric, ArchitectureMembership, 
 
 /** 이벤트 표를 걸러낼 수 없어 선택하지 못한 이유. */
 export type BlockedReason = "not_collected" | "structural";
+
+/** 범례의 영역 견본 한 줄. `style`은 데이터의 영역 style 이름(모르면 기본 영역 모양), `label`이 없으면 `messages.legendZone`. */
+export interface ZoneLegendItem {
+  style: string | null;
+  label?: string;
+}

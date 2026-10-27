@@ -1,3 +1,5 @@
+import { withJosa } from "./josa";
+
 /** 구조도 표현 컴포넌트가 쓰는 문구. 값은 `{n}` 같은 자리표시자를 가진 틀이다(docs/design/screen-architecture.md §12). */
 export const defaultMessages = {
   // 지표 (formatMetric)
@@ -27,7 +29,7 @@ export const defaultMessages = {
   // 접근 이름
   ariaDiagram: "구조도: {title}",
   ariaSkip: "구조도를 건너뛰고 이벤트 표로 가기",
-  ariaEdgeFlow: "{from}에서 {to}로",
+  ariaEdgeFlow: "{from}에서 {to|으로/로}",
   ariaPartial: "부분: {reason}",
   ariaHighlighted: "선택한 이벤트가 지나감",
   ariaZones: "영역",
@@ -79,9 +81,16 @@ export const defaultMessages = {
 
 export type ArchViewMessages = { [K in keyof typeof defaultMessages]: string };
 
-/** 틀의 `{이름}` 자리를 값으로 바꾼다. 없는 이름은 그대로 둔다. */
+/**
+ * 틀의 `{이름}` 자리를 값으로 바꾼다. 없는 이름은 그대로 둔다.
+ * `{이름|으로/로}`는 값 뒤에 받침에 맞는 조사(받침 있을 때/없을 때)를 붙인다(`josa`).
+ */
 export function formatMessage(template: string, vars: Record<string, string | number> = {}): string {
-  return template.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+  return template.replace(/\{(\w+)(?:\|([^{}|]+))?\}/g, (m, k: string, pair?: string) => {
+    if (!(k in vars)) return m;
+    const v = String(vars[k]);
+    return pair ? withJosa(v, pair) : v;
+  });
 }
 
 /** 부분 문구 표를 기본 문구와 합친다. */

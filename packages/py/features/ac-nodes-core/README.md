@@ -193,6 +193,55 @@ files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 
 **주의:** 서브에이전트(대상 노드)의 답변은 `on_subagent_result` 알림을 주는 백엔드(claude-sdk·fake)에서만 나온다.
 알림을 주지 않는 백엔드에서는 대상 노드에서 나가는 `reply` 연결이 있어도 답변이 없다(위임자 답변은 정상).
 
+## 에이전트 도구 공급자 (X30, design §5.7R.3)
+
+다른 기능이 agent 노드의 모델에게 도구를 주는 일반 확장 지점이다. agent 노드는 도구의 뜻을 모른다.
+공급자(`ToolProvider`: `id` + `provide(ctx) -> ToolProvision`)를 서비스 `TOOL_PROVIDERS`(목록)로 넣는다.
+Run마다 `start(services=...)`로 넣으며(통합 서버에서는 실행 범위 포트 X26 `runs.scopes` 항목이 넣는다),
+자식 Run(중첩 팀)은 부모 서비스를 물려받는다. 서비스가 없거나 비면 지금 실행과 같다.
+
+agent 노드 순서: 묶음 계산 → 공급자마다 `provide`(맥락 `ToolProvisionContext`: run·루트 run·팀 구성·노드·
+`node_path`·에이전트·회차·유효 묶음·백엔드 능력·`emit`·취소 토큰) → 공급 도구를 위임 도구 뒤에 붙임 →
+소비한 칸(`consumed_slots`)을 백엔드 요청 묶음에서 뺌(그 칸의 `resource.slot_unsupported` 경고도 뺌).
+경고(`log.warning`, details `code`)는 `ToolProviderCodes`다.
+
+| 코드 | 언제 | 결과 |
+| --- | --- | --- |
+| `tools.provider_failed` | `provide` 예외(형식 이름만 싣는다)·잘못된 결과 | 그 공급자만 건너뜀 |
+| `tools.duplicate_name` | 위임 도구·앞선 공급 도구와 이름이 겹침 | 공급 도구를 뺌 |
+| `tools.backend_capability_missing` | 백엔드 `capabilities.host_tools`가 거짓 | 공급 도구를 모두 뺌, 실행은 계속 |
+
+위임 대상 중 `sdk-subagents`는 위임자 세션 안이라 따로 공급받지 않고, `host` 대상은 자기 NodeRun이라 자기
+묶음으로 공급받는다. 방식 하나로 위임하면 공급 도구가 위임 방식의 `run`이 붙이는 위임 도구보다 앞에 놓인다
+(이름 충돌 검사는 방식의 `declared_names`, 없으면 `contribute`로 위임 도구 이름을 미리 읽어 한다).
+
+테스트·본보기 공급자 `agent_console_nodes_core.testing.EchoToolProvider`(입력 `text`를 돌려주는 도구 하나,
+호출마다 이벤트 하나, `slot`을 주면 그 칸이 있을 때만 도구를 주고 칸을 소비):
+
+```python
+>>> import asyncio
+>>> from agent_console_contracts import BackendCapabilities, ResourceBundle
+>>> from agent_console_nodes_core import ToolProvisionContext, provide_tools
+>>> from agent_console_nodes_core.testing import EchoToolProvider
+>>> from agent_console_runtime import CancelToken
+
+>>> async def emit(type, payload):
+...     print(type, payload["chars"])
+>>> ctx = ToolProvisionContext(
+...     run_id="r1", root_run_id="r1", graph_id="team", node_id="pl", node_path=("pl",),
+...     agent_id="pl", call=0, iteration=0, bundle=ResourceBundle(),
+...     backend_capabilities=BackendCapabilities(host_tools=True), emit=emit, cancel=CancelToken(),
+... )
+>>> provision = provide_tools([EchoToolProvider("echo", tool_name="echo", prefix="> ")], ctx)
+>>> [tool.name for tool in provision.host_tools]
+['echo']
+>>> result = asyncio.run(provision.host_tools[0].handler({"text": "hi"}))
+echo.called 2
+>>> result.text
+'> hi'
+
+```
+
 ## 최소 사용 예 (앱 조립)
 
 ```python
@@ -272,6 +321,7 @@ True
 | `RUN_FILES_ROOT` | `ServiceKey[str]` | 파일 칸 미전달 + 경고(`files.unavailable`) |
 | `SESSIONS` | `ServiceKey[Mapping[str, SessionRef]]` | 새 세션 |
 | `TEAM_LOOKUP` | `ServiceKey[TeamLookup]` (`(id, 버전 \| None) -> Graph \| None`) | `team` 노드 실패(`team.lookup_unavailable`) |
+| `TOOL_PROVIDERS` | `ServiceKey[Sequence[ToolProvider]]` (Run마다) | 공급 도구 없음(지금 실행과 같다) |
 | `RESOURCE_TYPES_EXTENSION` (`"resource_types"`) | `registries.extension(...)` | 첨부가 "모르는 종류"로 빠짐 |
 
 오류 코드: `NodesCoreErrorCodes`(`agent.*`, `files.*`, `delegation.*`, `resource.*`, `user.not_reviewable`, `team.*`).

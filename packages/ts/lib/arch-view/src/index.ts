@@ -12,10 +12,11 @@ export type { ArchitectureInfoBarProps } from "./ArchitectureInfoBar";
 export { ArchitectureLegend } from "./ArchitectureLegend";
 export type { ArchitectureLegendProps } from "./ArchitectureLegend";
 
+export { hasBatchim, josa, withJosa } from "./josa";
 export { defaultMessages, formatMessage, resolveMessages } from "./messages";
 export type { ArchViewMessages } from "./messages";
 export {
-  defaultEdgeStyles, defaultMetricKinds, defaultTones, isTokenVar, resolveEdgeStyle, resolveTone,
+  defaultEdgeStyles, defaultMetricKinds, defaultTones, defaultZoneLegend, isTokenVar, resolveEdgeStyle, resolveTone,
 } from "./defaults";
 export {
   abbreviateNumber, compareMetricValue, formatDurationMs, formatMetric, groupDigits, metricPieces, sumMetrics,
@@ -29,5 +30,5 @@ export type { AutoFit, ChipContent, ChipFit, FitOptions, Direction, LayoutIssue,
 export { cellAriaLabel, cellBlockedReason, edgeAriaLabel, edgeBlockedReason, sameSelection } from "./model";
 export type {
   ArchFitMode, ArchLevel, ArchSelection, ArchSelectionKind, ArchViewMode, BlockedReason, CellRenderProps, CellRenderer,
-  EdgeStyleSpec, MetricKindSpec, Pt, Rect,
+  EdgeStyleSpec, MetricKindSpec, Pt, Rect, ZoneLegendItem,
 } from "./types";

@@ -205,6 +205,30 @@ def test_fake_run_new_fields_are_recorded_and_indexed(tmp_path: Path) -> None:
         assert SECRET_VALUE not in dumped
         assert "house-rules" in dumped
 
+        # 5.7R.7(M-2): 규칙 리소스 → 목록 본문 문서(대응표 each) → 기본 구조도 Rules 칸이 관측이고
+        # 칸을 눌렀을 때 이벤트 표 수 = 칸 수
+        assert context_log["documents"] == [
+            {"path": "house-rules", "kind": "rules", "action": "read"}
+        ]
+        scope = {"source": "platform-runs", "run_id": run_id}
+        view = client.get(f"{API}/logs/architecture", params=scope)
+        assert view.status_code == 200, view.text
+        rules = next(c for c in view.json()["cells"] if c["id"] == "rules")
+        assert rules["status"] == "observed"
+        assert rules["metrics"]["count"]["value"] == 1
+        selector = rules["selector"]
+        click: dict[str, Any] = {
+            **scope,
+            "arch": selector["arch"],
+            "max_seq": view.json()["max_seq"],
+            "limit": 500,
+        }
+        if selector.get("arch_sources") is not None:
+            click["arch_sources"] = ",".join(selector["arch_sources"])
+        picked = client.get(f"{API}/logs/events", params=click)
+        assert picked.status_code == 200, picked.text
+        assert [e["uid"] for e in picked.json()["items"]] == [context_log["uid"]]
+
         usage = [
             e
             for e in logs

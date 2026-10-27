@@ -244,6 +244,7 @@ export type WsServerMessage =
   | ConversationUpdatedMessage
   | InteractionUpdatedMessage
   | LogsIngestedMessage
+  | MemoryChangedMessage
   | ErrorMessage;
 
 /**
@@ -6073,6 +6074,783 @@ export interface LogsIngestedPayload {
   max_seq?: number | null;
 }
 /**
+ * 에이전트에게 공유 메모리를 줍니다. 범위마다 읽기·검색·쓰기·지우기 권한을 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryAccessConfig".
+ */
+export interface MemoryAccessConfig {
+  /**
+   * 에이전트가 쓸 범위와 그 범위에서 허용할 일입니다. 없는 범위는 쓸 수 없습니다.
+   */
+  scopes?: MemoryScopeAccess[];
+  /**
+   * 도구를 부를 때 범위를 적지 않으면 쓰는 범위입니다. 비우면 첫 범위입니다.
+   */
+  default_scope?: string | null;
+  /**
+   * 읽은 기록 앞에 붙는 줄입니다. {scope_label}, {key}, {version}, {author}, {updated_at}를 쓸 수 있습니다.
+   */
+  result_header?: string;
+  /**
+   * 도구 결과 하나에 담을 최대 글자 수입니다. 넘으면 잘라서 줍니다.
+   */
+  max_result_chars?: number;
+  tools?: MemoryTools;
+  [k: string]: unknown;
+}
+/**
+ * 에이전트가 이 범위에서 할 수 있는 일입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeAccess".
+ */
+export interface MemoryScopeAccess {
+  /**
+   * 권한을 줄 범위 종류입니다. 메모리 설정의 범위 종류 목록에서 고릅니다.
+   */
+  kind: string;
+  /**
+   * 읽기·검색·쓰기·지우기 중 허용할 것을 고릅니다. 고른 일의 도구만 줍니다.
+   */
+  access?: ("read" | "search" | "write" | "delete")[];
+  [k: string]: unknown;
+}
+/**
+ * 동작마다 에이전트에게 보이는 도구 이름과 설명입니다. 비우면 기본값을 씁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryTools".
+ */
+export interface MemoryTools {
+  search?: MemoryToolText;
+  read?: MemoryToolText;
+  write?: MemoryToolText;
+  delete?: MemoryToolText;
+  [k: string]: unknown;
+}
+/**
+ * 에이전트에게 보이는 도구 이름과 설명입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryToolText".
+ */
+export interface MemoryToolText {
+  /**
+   * 에이전트가 부르는 이름입니다. 영문·숫자·밑줄·빼기만 씁니다.
+   */
+  name: string;
+  /**
+   * 에이전트가 언제 이 도구를 쓸지 판단하는 설명입니다.
+   */
+  description: string;
+  [k: string]: unknown;
+}
+/**
+ * 항목·버전을 쓴 주체. 에이전트면 실행·노드·팀 구성·프로젝트가 함께 남는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryAuthor".
+ */
+export interface MemoryAuthor {
+  kind: string;
+  /**
+   * 에이전트 정의 id(에이전트일 때).
+   */
+  agent_id?: string | null;
+  /**
+   * 쓴 노드 id.
+   */
+  node_id?: string | null;
+  /**
+   * 중첩 팀 노드 경로(바깥 → 안). 없으면 빈 목록.
+   */
+  node_path?: string[];
+  /**
+   * 쓴 실행(Run) id.
+   */
+  run_id?: string | null;
+  /**
+   * 루트 실행 id(중첩 팀이면 바깥).
+   */
+  root_run_id?: string | null;
+  /**
+   * 그 노드를 실행한 팀 구성 id.
+   */
+  graph_id?: string | null;
+  /**
+   * 루트 실행의 프로젝트 id.
+   */
+  project_id?: string | null;
+  /**
+   * 사람이 읽는 표시(system이면 정리 규칙 id 등, 사람이면 사용자 이름). 없으면 null.
+   */
+  label?: string | null;
+}
+/**
+ * WS 메시지 `memory.changed`의 payload: 항목 하나가 바뀜(본문 없음, 웹 목록 갱신용).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryChanged".
+ */
+export interface MemoryChanged {
+  scope: MemoryScopeRef;
+  key: string;
+  entry_id: string;
+  /**
+   * 바뀐 뒤 버전(완전 삭제면 마지막 버전).
+   */
+  version: number;
+  op: "create" | "update" | "delete" | "restore" | "archive" | "unarchive" | "move" | "purge";
+  author_kind: string;
+}
+/**
+ * 메모리 범위 하나: 범위 종류 id + 범위 id.
+ *
+ * 범위 id는 범위 종류의 id 틀을 접근 맥락으로 푼 값이다(예: 팀 구성 id). 공용처럼 id가 없는
+ * 종류는 빈 문자열이다. 문자열 표기는 `to_text()`·`parse()`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeRef".
+ */
+export interface MemoryScopeRef {
+  /**
+   * 범위 종류 id(사용자·플러그인 데이터, 고정 목록 아님).
+   */
+  kind: string;
+  /**
+   * 범위 id. 빈 문자열 = id가 없는 범위(예: 공용).
+   */
+  id?: string;
+}
+/**
+ * 메모리 모듈 토픽: 항목 하나가 바뀜(본문 없음, 1.3.0). 토픽 이름은 메모리 모듈이 정한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryChangedMessage".
+ */
+export interface MemoryChangedMessage {
+  /**
+   * 요청 상관 id(선택).
+   */
+  id?: string | null;
+  type: "memory.changed";
+  payload: MemoryChanged;
+}
+/**
+ * 메모리 항목 하나(본문 포함). `GET /memory/entries/{id}` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryEntry".
+ */
+export interface MemoryEntry {
+  /**
+   * 항목 id(UUID). 키·범위를 옮겨도 그대로.
+   */
+  id: string;
+  scope: MemoryScopeRef;
+  /**
+   * 범위 안에서 유일한 키. `/`로 나눈 경로 모양. 글자 규칙(빈 마디·`.`·`..`·앞뒤 `/`·제어 문자 금지, 최대 256자)은 저장소가 검사한다(`memory.invalid_key`).
+   */
+  key: string;
+  /**
+   * 본문 형식(열린 문자열).
+   */
+  content_type?: string;
+  /**
+   * 자유 태그.
+   */
+  tags?: string[];
+  /**
+   * 고정(정리 규칙이 판단하지 않는다).
+   */
+  pinned?: boolean;
+  /**
+   * 보관(에이전트 도구 결과에서 빠지고 화면에는 보관됨으로).
+   */
+  archived?: boolean;
+  /**
+   * 쓸 때마다 1 오른다. 낙관적 동시성 키(If-Match).
+   */
+  version: number;
+  /**
+   * 본문 UTF-8 바이트 수.
+   */
+  bytes: number;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256: string;
+  /**
+   * 만든 시각(Unix epoch 초).
+   */
+  created_at: number;
+  created_by: MemoryAuthor;
+  /**
+   * 마지막으로 쓴 시각(Unix epoch 초).
+   */
+  updated_at: number;
+  updated_by: MemoryAuthor;
+  /**
+   * 에이전트 도구가 마지막으로 읽은 시각. 화면 읽기는 세지 않는다.
+   */
+  last_read_at?: number | null;
+  /**
+   * 지운 시각(표시 삭제). 지우지 않았으면 null.
+   */
+  deleted_at?: number | null;
+  /**
+   * 본문(UTF-8).
+   */
+  content: string;
+}
+/**
+ * `GET /memory/entries` 응답(목록·검색).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryEntryPage".
+ */
+export interface MemoryEntryPage {
+  items?: MemoryEntrySummary[];
+  /**
+   * 다음 쪽 커서(불투명 문자열). 마지막 쪽이면 null.
+   */
+  next_cursor?: string | null;
+  /**
+   * 전체 수. 세지 않았으면 null.
+   */
+  total?: number | null;
+}
+/**
+ * 목록 항목. 본문 대신 앞부분 미리보기(비밀 가림 뒤)를 싣는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryEntrySummary".
+ */
+export interface MemoryEntrySummary {
+  /**
+   * 항목 id(UUID). 키·범위를 옮겨도 그대로.
+   */
+  id: string;
+  scope: MemoryScopeRef;
+  /**
+   * 범위 안에서 유일한 키. `/`로 나눈 경로 모양. 글자 규칙(빈 마디·`.`·`..`·앞뒤 `/`·제어 문자 금지, 최대 256자)은 저장소가 검사한다(`memory.invalid_key`).
+   */
+  key: string;
+  /**
+   * 본문 형식(열린 문자열).
+   */
+  content_type?: string;
+  /**
+   * 자유 태그.
+   */
+  tags?: string[];
+  /**
+   * 고정(정리 규칙이 판단하지 않는다).
+   */
+  pinned?: boolean;
+  /**
+   * 보관(에이전트 도구 결과에서 빠지고 화면에는 보관됨으로).
+   */
+  archived?: boolean;
+  /**
+   * 쓸 때마다 1 오른다. 낙관적 동시성 키(If-Match).
+   */
+  version: number;
+  /**
+   * 본문 UTF-8 바이트 수.
+   */
+  bytes: number;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256: string;
+  /**
+   * 만든 시각(Unix epoch 초).
+   */
+  created_at: number;
+  created_by: MemoryAuthor;
+  /**
+   * 마지막으로 쓴 시각(Unix epoch 초).
+   */
+  updated_at: number;
+  updated_by: MemoryAuthor;
+  /**
+   * 에이전트 도구가 마지막으로 읽은 시각. 화면 읽기는 세지 않는다.
+   */
+  last_read_at?: number | null;
+  /**
+   * 지운 시각(표시 삭제). 지우지 않았으면 null.
+   */
+  deleted_at?: number | null;
+  /**
+   * 본문 앞 200자(비밀 의심 값은 가린 뒤).
+   */
+  preview?: string;
+}
+/**
+ * RunEvent `memory.<op>`의 payload: 에이전트 메모리 도구 호출 하나.
+ *
+ * **본문·검색어 원문 없음**: 크기(`bytes`·`query_chars`)와 해시(`sha256`·`query_sha256`)만 싣는다.
+ * 로그 대응표는 이 값으로 문서 표지 `{kind: memory, path: <범위 종류>/<범위 id>/<키>}`를 만든다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryEventPayload".
+ */
+export interface MemoryEventPayload {
+  op: "read" | "search" | "write" | "delete";
+  status:
+    | "ok"
+    | "denied"
+    | "not_found"
+    | "conflict"
+    | "too_large"
+    | "secret_rejected"
+    | "rate_limited"
+    | "scope_unavailable"
+    | "error";
+  /**
+   * 쓴·읽은 범위(모르면 null).
+   */
+  scope?: MemoryScopeRef | null;
+  key?: string | null;
+  entry_id?: string | null;
+  /**
+   * 쓴·읽은 버전(충돌이면 현재 버전).
+   */
+  version?: number | null;
+  /**
+   * 본문 바이트 수.
+   */
+  bytes?: number | null;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256?: string | null;
+  /**
+   * 검색 결과 수.
+   */
+  results?: number | null;
+  /**
+   * 검색어 글자 수.
+   */
+  query_chars?: number | null;
+  /**
+   * 검색어 sha256(16진수).
+   */
+  query_sha256?: string | null;
+  /**
+   * 사용자가 정한 도구 이름.
+   */
+  tool?: string | null;
+  /**
+   * 모델의 도구 호출 id.
+   */
+  tool_use_id?: string | null;
+  /**
+   * 처리 시간(ms).
+   */
+  duration_ms?: number | null;
+}
+/**
+ * 가져오기에서 받지 못한 파일 하나(본문·찾은 비밀 값은 싣지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryImportProblem".
+ */
+export interface MemoryImportProblem {
+  /**
+   * zip 안 경로.
+   */
+  path: string;
+  /**
+   * 사유 코드(예: `memory.invalid_key`).
+   */
+  code: string;
+  message?: string;
+}
+/**
+ * `POST /memory/import` 결과. `dry_run=true`로 부르면 쓰지 않고 같은 수를 센다(미리보기).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryImportResult".
+ */
+export interface MemoryImportResult {
+  /**
+   * 미리보기였는지(true면 아무것도 쓰지 않음).
+   */
+  dry_run?: boolean;
+  created?: number;
+  overwritten?: number;
+  renamed?: number;
+  skipped?: number;
+  errors?: MemoryImportProblem[];
+}
+/**
+ * `POST /memory/entries/{id}/move` 본문: 키·범위 바꾸기(둘 중 하나 이상).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryMoveRequest".
+ */
+export interface MemoryMoveRequest {
+  to_scope?: MemoryScopeRef | null;
+  to_key?: string | null;
+}
+/**
+ * 정리 미리보기(dry run) 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionPlan".
+ */
+export interface MemoryRetentionPlan {
+  items?: MemoryRetentionPlanItem[];
+  /**
+   * 맞은 항목 전체 수(`items`가 잘렸어도 전체).
+   */
+  count: number;
+  /**
+   * `items`를 `limit`에서 잘랐는지.
+   */
+  truncated?: boolean;
+  /**
+   * 규칙 검사 문제.
+   */
+  issues?: Issue[];
+}
+/**
+ * 정리 계획의 항목 하나: 어느 규칙이 무엇을 할지.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionPlanItem".
+ */
+export interface MemoryRetentionPlanItem {
+  entry_id: string;
+  scope: MemoryScopeRef;
+  key: string;
+  /**
+   * 판단한 때의 버전(적용 때 바뀌었으면 건너뜀).
+   */
+  version: number;
+  /**
+   * 맞은 규칙 id(선언 순서의 첫 규칙).
+   */
+  rule: string;
+  action: "archive" | "delete";
+}
+/**
+ * `POST /memory/retention/plan`·`/apply` 본문. 규칙을 주면 저장 전 규칙으로 시험한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionPlanRequest".
+ */
+export interface MemoryRetentionPlanRequest {
+  /**
+   * 시험할 정리 규칙(`MemoryRetentionRule` 모양, 형식 오류도 이슈로 알림). 생략 = 저장된 설정의 규칙.
+   */
+  rules?:
+    | {
+        [k: string]: unknown;
+      }[]
+    | null;
+  /**
+   * 계획 항목 최대 수(응답 크기).
+   */
+  limit?: number | null;
+}
+/**
+ * 정리 적용 결과. 적용은 버전(쓴 주체 system, 표시 = 규칙 id)으로 남아 되돌릴 수 있다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionResult".
+ */
+export interface MemoryRetentionResult {
+  archived?: number;
+  deleted?: number;
+  /**
+   * 계획 뒤 바뀌어(버전 다름·고정됨) 건너뛴 항목 수.
+   */
+  skipped?: number;
+  issues?: Issue[];
+}
+/**
+ * 조건에 맞는 오래된 기록을 보관하거나 지우는 규칙입니다. 고정한 기록은 건드리지 않습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionRule".
+ */
+export interface MemoryRetentionRule {
+  /**
+   * 규칙을 가리키는 고유 이름입니다. 정리 기록에 남습니다.
+   */
+  id: string;
+  when: ConditionSpec;
+  /**
+   * 맞는 기록을 보관할지 지울지 고릅니다. 둘 다 화면에서 되돌릴 수 있습니다.
+   */
+  action?: "archive" | "delete";
+  /**
+   * 규칙을 만든 까닭을 적습니다. 화면에만 보입니다.
+   */
+  description?: string;
+  [k: string]: unknown;
+}
+/**
+ * 오래된 기록을 정리하는 규칙 묶음입니다. 비어 있으면 아무것도 자동으로 정리하지 않습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionSettings".
+ */
+export interface MemoryRetentionSettings {
+  /**
+   * 위에서부터 처음 맞는 규칙 하나를 씁니다.
+   */
+  rules?: MemoryRetentionRule[];
+  [k: string]: unknown;
+}
+/**
+ * 범위 종류 목록 항목(병합 결과 하나). `GET /memory/scope-kinds`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeKindInfo".
+ */
+export interface MemoryScopeKindInfo {
+  /**
+   * 범위 종류 id(사용자 설정·플러그인의 키).
+   */
+  kind: string;
+  /**
+   * 표시 이름(데이터).
+   */
+  label: string;
+  description?: string;
+  /**
+   * 범위 id 틀(접근 맥락의 JSON 포인터 틀, 예 `{/project_id}`). 빈 문자열 = 범위 하나. 계산 범위(플러그인)는 틀이 없어 null.
+   */
+  id?: string | null;
+  /**
+   * 출처(열린 문자열): `default`(패키지 기본), `plugin:<배포 이름>`, `user`.
+   */
+  origin: string;
+  /**
+   * 같은 id의 기본·플러그인 종류를 덮어썼으면 그 출처. 아니면 null.
+   */
+  overrides?: string | null;
+  /**
+   * 사용자 설정에서 null로 끈 종류(목록에 함께 실을 때만 true).
+   */
+  disabled?: boolean;
+  /**
+   * 틀이 읽는 접근 맥락 필드 이름(`MEMORY_CONTEXT_FIELDS` 중). 웹이 프로젝트·팀 범위를 이름이 아니라 이 값으로 판단한다. 계산 범위는 빈 목록(모든 프로젝트에서만 보임).
+   */
+  context_fields?: string[];
+}
+/**
+ * `GET /memory/scope-kinds` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeKindList".
+ */
+export interface MemoryScopeKindList {
+  /**
+   * 병합 순서(기본 → 플러그인 → 사용자).
+   */
+  kinds?: MemoryScopeKindInfo[];
+  /**
+   * 설정의 기본 범위 종류 사용 값.
+   */
+  include_defaults?: boolean;
+}
+/**
+ * 메모리를 나누는 범위 한 종류입니다(예: 팀, 프로젝트, 공용). 이름과 나누는 규칙을 둡니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeKindSpec".
+ */
+export interface MemoryScopeKindSpec {
+  /**
+   * 화면과 에이전트 도구 결과에 보이는 범위 이름입니다.
+   */
+  label: string;
+  /**
+   * 이 범위에 어떤 기록을 두는지 적습니다. 화면에 함께 보입니다.
+   */
+  description?: string;
+  /**
+   * 실행 정보에서 범위를 나눌 값을 고릅니다. 비우면 모두가 같은 범위 하나를 씁니다.
+   */
+  id?: string;
+  [k: string]: unknown;
+}
+/**
+ * `GET /memory/scopes` 항목: 범위 하나의 요약.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeSummary".
+ */
+export interface MemoryScopeSummary {
+  scope: MemoryScopeRef;
+  /**
+   * 지우지 않은 항목 수(보관 포함).
+   */
+  entries: number;
+  /**
+   * 그중 보관 항목 수.
+   */
+  archived?: number;
+  /**
+   * 본문 바이트 합.
+   */
+  bytes?: number;
+  /**
+   * 최근 쓴 시각. 항목이 없으면 null.
+   */
+  updated_at?: number | null;
+  /**
+   * 범위 종류가 지금 목록에 있는지. false = 알 수 없는 범위 종류(에이전트는 못 씀).
+   */
+  kind_known?: boolean;
+}
+/**
+ * 오류 `memory.secret_rejected`의 `details`. **찾은 값·본문 조각은 싣지 않는다**.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemorySecretRejectedDetails".
+ */
+export interface MemorySecretRejectedDetails {
+  /**
+   * 비밀 의심 값이 나온 필드. 모르면 null(화면은 일반 문구).
+   */
+  field?: ("content" | "key" | "tags") | null;
+  /**
+   * 맞은 비밀 규칙 id.
+   */
+  rules?: string[];
+}
+/**
+ * 공유 메모리의 범위 종류, 비밀 처리, 버전 보관, 정리 규칙을 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemorySettings".
+ */
+export interface MemorySettings {
+  /**
+   * 패키지가 주는 기본 범위 종류를 목록에 넣습니다. 꺼도 직접 만든 범위는 남습니다.
+   */
+  include_default_scope_kinds?: boolean;
+  /**
+   * 범위 종류 id마다 이름과 나누는 값을 둡니다. 같은 id면 바꾸고, 비우면 끕니다.
+   */
+  scope_kinds?: {
+    [k: string]: MemoryScopeKindSpec | null;
+  };
+  /**
+   * 기록에 비밀로 보이는 값이 있을 때 쓰기를 거부할지, 가리고 저장할지 고릅니다.
+   */
+  secrets?: "reject" | "redact";
+  /**
+   * 한 기록의 옛 버전을 몇 개까지 남길지 정합니다. 넘으면 오래된 것부터 지웁니다.
+   */
+  max_versions_per_entry?: number;
+  retention?: MemoryRetentionSettings;
+  [k: string]: unknown;
+}
+/**
+ * 태그 하나와 그 태그가 붙은 항목 수.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryTagCount".
+ */
+export interface MemoryTagCount {
+  tag: string;
+  entries: number;
+}
+/**
+ * `GET /memory/tags?scope=&include_archived=` 응답(필터 선택지). 항목 수 내림차순.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryTagList".
+ */
+export interface MemoryTagList {
+  tags?: MemoryTagCount[];
+  /**
+   * 상한에서 잘랐는지.
+   */
+  truncated?: boolean;
+}
+/**
+ * `PUT /memory/entries/{id}` 본문(고치기, `If-Match: <version>`). 생략한 필드는 그대로.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryUpdateRequest".
+ */
+export interface MemoryUpdateRequest {
+  content?: string | null;
+  content_type?: string | null;
+  tags?: string[] | null;
+  pinned?: boolean | null;
+}
+/**
+ * 버전 하나(본문 포함). `GET /memory/entries/{id}/versions/{v}` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryVersion".
+ */
+export interface MemoryVersion {
+  entry_id: string;
+  version: number;
+  op: "create" | "update" | "delete" | "restore" | "archive" | "unarchive" | "move";
+  scope: MemoryScopeRef;
+  key: string;
+  bytes: number;
+  sha256: string;
+  author: MemoryAuthor;
+  /**
+   * 쓴 시각(Unix epoch 초).
+   */
+  at: number;
+  /**
+   * 그 버전의 본문.
+   */
+  content: string;
+}
+/**
+ * 버전 목록 항목(본문 없음). 그 버전을 쓴 때의 키·범위를 함께 남긴다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryVersionSummary".
+ */
+export interface MemoryVersionSummary {
+  entry_id: string;
+  version: number;
+  op: "create" | "update" | "delete" | "restore" | "archive" | "unarchive" | "move";
+  scope: MemoryScopeRef;
+  key: string;
+  bytes: number;
+  sha256: string;
+  author: MemoryAuthor;
+  /**
+   * 쓴 시각(Unix epoch 초).
+   */
+  at: number;
+}
+/**
+ * `POST /memory/entries` 본문(만들기). 같은 범위·키가 있으면 409.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryWriteRequest".
+ */
+export interface MemoryWriteRequest {
+  scope: MemoryScopeRef;
+  key: string;
+  content: string;
+  /**
+   * 생략 = 기본 형식.
+   */
+  content_type?: string | null;
+  tags?: string[] | null;
+  pinned?: boolean | null;
+}
+/**
  * `GET /merge-strategies` 항목: 설정 `settings_merge`에 쓸 수 있는 병합 전략 이름 하나.
  *
  * 목록은 서버의 전략 표(기본 + 플러그인)에서 온다. 계약에 고정 목록은 없다.
@@ -7543,7 +8321,7 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.9.0" as const;
+export const CONTRACTS_VERSION = "0.10.0" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.4.0",
@@ -7557,7 +8335,8 @@ export const CONTRACT_VERSIONS = {
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
-  "modules": "1.2.0"
+  "memory": "1.0.0",
+  "modules": "1.3.0"
 } as const;
 
 export const USAGE_REPORT_PARTS = [
@@ -7606,6 +8385,46 @@ export const KNOWN_RUN_EVENT_TYPES = [
   "agent.context_prepared"
 ] as const;
 
+export const KNOWN_MEMORY_EVENT_TYPES = [
+  "memory.read",
+  "memory.search",
+  "memory.write",
+  "memory.delete"
+] as const;
+
+export const MEMORY_ACCESS_OPS = [
+  "read",
+  "search",
+  "write",
+  "delete"
+] as const;
+
+export const MEMORY_CONTEXT_FIELDS = [
+  "run_id",
+  "root_run_id",
+  "graph_id",
+  "root_graph_id",
+  "project_id",
+  "agent_id",
+  "node_id",
+  "node_path"
+] as const;
+
+export const KNOWN_MEMORY_CONTEXT_FIELDS = {
+  "PROJECT_ID": "project_id",
+  "GRAPH_ID": "graph_id"
+} as const;
+
+export const MEMORY_SCOPE_SEPARATOR = ":" as const;
+
+export const MEMORY_ENTRY_SORTS = [
+  "updated_at",
+  "created_at",
+  "key",
+  "bytes",
+  "version"
+] as const;
+
 export const RUN_ORIGINS = [
   "chat",
   "web",
@@ -7645,7 +8464,10 @@ export const ERROR_CODES = {
   "BACKEND_SUBSCRIPTION_AUTH_DISABLED": "backend.subscription_auth_disabled",
   "BACKEND_LOGIN_SESSION_NOT_FOUND": "backend.login_session_not_found",
   "ARCHITECTURE_PROFILE_NOT_FOUND": "architecture.profile_not_found",
-  "ARCHITECTURE_SCOPE_TOO_LARGE": "architecture.scope_too_large"
+  "ARCHITECTURE_SCOPE_TOO_LARGE": "architecture.scope_too_large",
+  "MEMORY_INVALID_KEY": "memory.invalid_key",
+  "MEMORY_TOO_LARGE": "memory.too_large",
+  "MEMORY_SECRET_REJECTED": "memory.secret_rejected"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -7672,7 +8494,10 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "backend.subscription_auth_disabled": 409,
   "backend.login_session_not_found": 404,
   "architecture.profile_not_found": 404,
-  "architecture.scope_too_large": 422
+  "architecture.scope_too_large": 422,
+  "memory.invalid_key": 422,
+  "memory.too_large": 422,
+  "memory.secret_rejected": 422
 } as const;
 
 export const KNOWN_ISSUE_CODES = {
@@ -7699,7 +8524,23 @@ export const KNOWN_ISSUE_CODES = {
   "PROJECT_CROSS_PROJECT": "project.cross_project",
   "PROJECT_UNKNOWN": "project.unknown",
   "PROJECT_REFERENCES_UNAVAILABLE": "project.references_unavailable",
-  "PROJECT_DEFINITIONS_UNAVAILABLE": "project.definitions_unavailable"
+  "PROJECT_DEFINITIONS_UNAVAILABLE": "project.definitions_unavailable",
+  "MEMORY_DENIED": "memory.denied",
+  "MEMORY_NOT_FOUND": "memory.not_found",
+  "MEMORY_CONFLICT": "memory.conflict",
+  "MEMORY_TOO_LARGE": "memory.too_large",
+  "MEMORY_SECRET_REJECTED": "memory.secret_rejected",
+  "MEMORY_RATE_LIMITED": "memory.rate_limited",
+  "MEMORY_SCOPE_UNAVAILABLE": "memory.scope_unavailable",
+  "MEMORY_INVALID_KEY": "memory.invalid_key",
+  "MEMORY_UNKNOWN_SCOPE_KIND": "memory.unknown_scope_kind",
+  "MEMORY_SETTINGS_INVALID": "memory.settings_invalid",
+  "MEMORY_STORAGE_MEMORY": "memory.storage_memory",
+  "MEMORY_SEARCH_FALLBACK": "memory.search_fallback",
+  "TOOLS_PROVIDER_FAILED": "tools.provider_failed",
+  "TOOLS_DUPLICATE_NAME": "tools.duplicate_name",
+  "TOOLS_BACKEND_CAPABILITY_MISSING": "tools.backend_capability_missing",
+  "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {

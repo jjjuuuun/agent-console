@@ -5,7 +5,7 @@ API·저장소·`ui`·`log-view`·`api-client`를 모른다. 데이터와 콜백
 
 - 칸 종류·연결 종류·색은 코드에 없다. 모든 이름은 데이터이고, 모르는 `tone`·`style`은 중립 모양으로 그린다.
 - `value: null`은 어디서나 "–"/"수집 안 됨"이다. 합계·정렬·접근 이름에서도 0이 되지 않는다.
-- 배율 0.6 미만이면 요약 표시(칸마다 숫자만)로 바뀐다. [그림|목록] 전환, 범례, 선택 정보 줄, 키보드 이동을 포함한다.
+- 배율 0.45 미만이면 요약 표시(칸마다 숫자만)로 바뀐다. [그림|목록] 전환, 범례, 선택 정보 줄, 키보드 이동을 포함한다.
 
 ## 설치
 저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
@@ -60,7 +60,8 @@ import { ArchitectureDiagram } from "@agent-console/arch-view";
 | `ArchitectureDiagram` | 도구줄(확대·맞춤·그림/목록·범례) + 캔버스 + 선택 정보 줄. `scale`·`fitMode`·`viewMode`는 제어/비제어 겸용 |
 | `ArchitectureCellList` | 칸·연결 목록(그림과 같은 선택 상태·같은 콜백) |
 | `ArchitectureInfoBar` | 선택·포커스 대상을 풀어 쓴 줄(지표 전체 값, 묶음 칩, 하위 구조도 단추) |
-| `ArchitectureLegend` | 범례 견본(실제 칸·연결과 같은 클래스) |
+| `ArchitectureLegend` | 범례 견본(실제 칸·연결과 같은 클래스). 영역 견본은 prop `zoneLegend`(기본 `defaultZoneLegend`, `[]`면 없음) |
+| `hasBatchim`·`josa`·`withJosa` | 한국어 조사 받침 맞춤 순수 함수. 문구 틀에서는 `{to\|으로/로}`(받침 있을 때/없을 때)로 쓴다. 연결 접근 이름 기본 틀이 이를 쓰고, `messages.ariaEdgeFlow`로 덮어쓴다 |
 | `gridLayout(view)` | 좌표 없는 칸을 선언 순서대로 격자에 배치한 칸 사각형 표 |
 | `edgePath(points, from, to)` | `points`가 있으면 그대로, 없으면 두 칸 경계 사이 직선(6px 바깥) |
 | `formatMetric(metric, messages, opts)` | 지표 → 칸 글자·접근 이름·풀어 쓴 글자. 수집 안 됨은 "–" |

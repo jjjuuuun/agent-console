@@ -35,7 +35,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.9.0",
+    "@agent-console/contracts": "^0.10.0",
     "@tanstack/react-virtual": "^3.14.21",
     "recharts": "^3.10.1",
     "react-is": "^19.3.0"

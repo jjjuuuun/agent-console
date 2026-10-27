@@ -430,5 +430,7 @@ profiles:
           rules: 도구로 연 문서만 보임(자동 로드는 기록 없음)
           hook: hook 소요는 세션 로그에 없음
           mcp: MCP 결과·오류는 Tool result 칸에 함께 보임
+      # Rules: 맥락 구성(agent.context_prepared)의 규칙 리소스를 대응표가 첫 문서(kind rules)로 옮긴다(5.7R.7).
       platform-runs:
-        cells: [sdk, api, context, llm, dispatch, hook, tools, mcp, result, delegation, subagents, response]
+        cells: [sdk, api, rules, context, llm, dispatch, hook, tools, mcp, result, delegation, subagents,
+                response]

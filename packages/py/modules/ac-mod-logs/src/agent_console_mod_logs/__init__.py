@@ -4,6 +4,8 @@
 - ``LogsService``: 수집 스케줄 + 질의(HTTP 없이도 쓴다, ``logs.query``·``logs.ingest`` 포트 구현).
 - ``plugins.load_plugins``: 호스트 플러그인 로더(X5·X6 entry point → 묶음의 ``log_sources``·
   ``log_classifiers``).
+- ``POST /logs/index/purge``(M-3): 색인 비우기(``LogPurgeRequest``·``LogPurgeResponse``,
+  모듈 안 모델).
 - ``storage``: 마이그레이션 계보 ``logs``와 색인 열기(``open_log_storage``).
 - ``load_dashboard_templates``: 대시보드 템플릿(패키지 데이터 또는 설치자 폴더).
 """
@@ -34,6 +36,7 @@ from .ports import (
     LogQueryPort,
     RuntimeLogSource,
 )
+from .purge import LogPurgeRequest, LogPurgeResponse
 from .redaction import LogRedaction
 from .service import LogsService
 from .settings import LogsModuleSettings
@@ -60,6 +63,8 @@ __all__ = [
     "WORKSPACE_SETTINGS",
     "LogIngestPort",
     "LogNotFoundError",
+    "LogPurgeRequest",
+    "LogPurgeResponse",
     "LogQueryPort",
     "LogRedaction",
     "LogStorage",

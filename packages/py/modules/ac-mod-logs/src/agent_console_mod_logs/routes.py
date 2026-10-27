@@ -13,6 +13,8 @@ from datetime import UTC, datetime, tzinfo
 from typing import Any
 
 from fastapi import APIRouter, Request, Response, status
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from agent_console_contracts import ErrorResponse, HandoffMatrix
 from agent_console_contracts.logs import (
@@ -40,6 +42,7 @@ from agent_console_logs import (
 )
 
 from .errors import LogNotFoundError
+from .purge import LogPurgeRequest, LogPurgeResponse
 from .service import LogsService
 from .settings import DEFAULT_ARCHIVE_FILE_PREFIX
 
@@ -87,6 +90,38 @@ async def read_scan_ids(request: Request) -> list[str] | None:
     if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
         raise LogQueryError("source_ids: 문자열 목록이어야 합니다", "source_ids")
     return list(ids)
+
+
+PURGE_BODY_SCHEMA: dict[str, Any] = LogPurgeRequest.model_json_schema()
+"""``POST /logs/index/purge`` 본문 모양(계약 밖 컴포넌트를 만들지 않으려고 인라인 스키마)."""
+PURGE_RESPONSE_SCHEMA: dict[str, Any] = LogPurgeResponse.model_json_schema()
+"""``POST /logs/index/purge`` 응답 모양(인라인)."""
+
+
+async def read_purge_request(request: Request) -> LogPurgeRequest:
+    """``POST /logs/index/purge`` 본문 → ``LogPurgeRequest``(본문 없음·``null`` = 기본값, dry_run).
+
+    Raises:
+        LogQueryError: JSON이 아니거나 모양이 틀림(모르는 키·빈 목록 등). 입력 값은 메시지에
+            싣지 않는다.
+    """
+    raw = await request.body()
+    if not raw.strip():
+        return LogPurgeRequest()
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        raise LogQueryError("본문이 JSON이 아닙니다", "body") from None
+    if data is None:
+        return LogPurgeRequest()
+    if not isinstance(data, dict):
+        raise LogQueryError("본문은 객체여야 합니다", "body")
+    try:
+        return LogPurgeRequest.model_validate(data)
+    except ValidationError as exc:
+        first = exc.errors(include_input=False, include_url=False)[0]
+        path = ".".join(str(p) for p in first.get("loc", ())) or "body"
+        raise LogQueryError(f"{path}: {first.get('msg', '')}", path) from None
 
 
 def filter_params(request: Request) -> dict[str, Any]:
@@ -196,6 +231,38 @@ def build_router(
         요청을 덮으면 그 결과를 기다린다."""
         return await service().scan(await read_scan_ids(request))
 
+    @router.post(
+        "/logs/index/purge",
+        responses={
+            **_ERRORS,
+            200: {
+                "description": "지운(dry_run이면 지울) 행 수",
+                "content": {"application/json": {"schema": PURGE_RESPONSE_SCHEMA}},
+            },
+        },
+        openapi_extra={
+            "requestBody": {
+                "required": False,
+                "content": {"application/json": {"schema": PURGE_BODY_SCHEMA}},
+            }
+        },
+    )
+    async def log_index_purge(request: Request) -> Response:
+        """색인 비우기(M-3): 출처·범주·시각 범위의 색인 행을 지운다. 원본 파일은 그대로다.
+
+        ``dry_run``은 기본 true(지울 행 수만 센다). ``rescan``(기본 true)이면 범위 출처의 커서도
+        지워 다음 수집이 지금 분류 규칙으로 다시 색인한다. 수집 중이면 끝난 뒤 돈다.
+        """
+        req = await read_purge_request(request)
+        result = await service().purge(
+            sources=req.sources,
+            categories=req.categories,
+            before=req.before,
+            rescan=req.rescan,
+            dry_run=req.dry_run,
+        )
+        return JSONResponse(LogPurgeResponse.of(result).model_dump(mode="json"))
+
     @router.get("/logs/events", response_model=LogEventPage, responses=_ERRORS)
     def log_events(request: Request) -> LogEventPage:
         """필터 목록(키셋 페이지, detail·raw 없음). 쿼리 이름은 ``GET /logs/schema``의 filters."""
@@ -294,11 +361,14 @@ def build_router(
 __all__ = [
     "ARCHIVE_FORMATS",
     "ARCHIVE_PARAMS",
+    "PURGE_BODY_SCHEMA",
+    "PURGE_RESPONSE_SCHEMA",
     "SCAN_BODY_SCHEMA",
     "archive_filename",
     "archive_options",
     "build_router",
     "filter_params",
     "read_filter",
+    "read_purge_request",
     "read_scan_ids",
 ]

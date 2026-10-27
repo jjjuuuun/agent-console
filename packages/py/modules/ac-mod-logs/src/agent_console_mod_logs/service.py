@@ -6,6 +6,8 @@
 - 수집 예약(``request_scan``): 어느 스레드에서든 부른다. 쌓인 요청은 하나의 배수 작업이 합쳐서
   처리한다. 시작 전에 온 요청은 시작 때 처리한다.
 - 보존: ``retention_days``가 있으면 수집 뒤 그보다 오래된 이벤트를 지운다(색인만, 원본은 그대로).
+- 비우기(M-3): ``purge``는 수집과 같은 잠금 안에서 ``purge_index``를 부른다(수집 중인 커서 쓰기와
+  섞이지 않게).
 - 알림: 새 이벤트가 있으면 ``on_ingested(LogsIngestedPayload)``를 부른다(모듈이 토픽·WS로 보낸다).
 - 질의: 지금 설정(``logs.taxonomy``·``logs.projects``)으로 질의 맥락을 만들어 색인에 묻는다.
   필터의 ``scope``·확장 필터는 등록된 범위 종류(X27)·필터 확장(X28)으로 풀어 맥락에 싣는다
@@ -60,6 +62,7 @@ from agent_console_logs import (
     LogScopeKind,
     LogSource,
     PageCallback,
+    PurgeResult,
     QueryContext,
     SessionTitleRule,
     build_archive,
@@ -68,6 +71,7 @@ from agent_console_logs import (
     load_default_taxonomy,
     merge_taxonomy,
     parse_tz,
+    purge_index,
     query_context,
     read_only_open,
 )
@@ -434,6 +438,39 @@ class LogsService:
             raise
         except Exception:
             _log.exception("배경 로그 수집 실패")
+
+    async def purge(
+        self,
+        *,
+        sources: Collection[str] | None = None,
+        categories: Collection[str] | None = None,
+        before: float | None = None,
+        rescan: bool = True,
+        dry_run: bool = True,
+    ) -> PurgeResult:
+        """색인에서 범위의 행을 지운다(``dry_run``이 기본, 의미는 ``purge_index``).
+
+        진행 중인 수집이 끝난 뒤 수집 잠금 안에서 돈다. 원본 파일은 건드리지 않는다.
+
+        Raises:
+            ValueError: 빈 목록·빈 이름.
+            TypeError: 색인이 비우기를 지원하지 않는다.
+        """
+        if self._scan_lock is None:
+            self._scan_lock = asyncio.Lock()
+        async with self._scan_lock:
+            result = await asyncio.to_thread(
+                purge_index,
+                self._index,
+                sources=sources,
+                categories=categories,
+                before=before,
+                rescan=rescan,
+                dry_run=dry_run,
+            )
+        if not dry_run and result.events:
+            _log.info("로그 색인에서 이벤트 %d개를 지웠습니다(비우기)", result.events)
+        return result
 
     # ---------------------------------------------------------------- 질의(막히는 호출)
 

@@ -26,6 +26,7 @@ from agent_console_logs._index import (
     IndexBatch,
     StoredCursor,
 )
+from agent_console_logs._purge import PurgeResult, PurgeScope
 from agent_console_logs._rows import (
     LogEventRow,
     LogEventRowPage,
@@ -50,6 +51,7 @@ class MemoryLogIndex:
         self._seq = 0
         self._usage: dict[tuple[str, str, str], q.UsageRow] = {}
         self._agents: dict[str, LogLane] = {}
+        self._agent_sources: dict[str, str] = {}
         self._cursors: dict[tuple[str, str], StoredCursor] = {}
 
     # ---------------------------------------------------------------- 쓰기
@@ -77,6 +79,7 @@ class MemoryLogIndex:
                         self._usage[row.key] = row
                 if record.agent is not None:
                     self._merge_agent(record.agent)
+                    self._agent_sources.setdefault(record.agent.id, ev.source)
             for cursor in batch.cursors:
                 self._cursors[(cursor.source, cursor.ref)] = cursor
             return BatchResult(inserted=inserted, max_seq=self._seq or None)
@@ -118,6 +121,73 @@ class MemoryLogIndex:
             ]:
                 del self._usage[key]
             return len(old)
+
+    def purge(self, scope: PurgeScope, *, dry_run: bool) -> PurgeResult:
+        """범위의 행을 지운다(규칙은 `agent_console_logs.PurgeableLogIndex`)."""
+        with self._lock:
+
+            def hit(e: LogEvent) -> bool:
+                return (
+                    (scope.sources is None or e.source in scope.sources)
+                    and (scope.categories is None or e.category in scope.categories)
+                    and (scope.before is None or q.effective_time(e) < scope.before)
+                )
+
+            gone = [uid for uid, e in self._events.items() if hit(e)]
+            gone_keys = {
+                (e.source, e.thread, e.message_id)
+                for e in (self._events[uid] for uid in gone)
+                if e.message_id
+            }
+            kept_keys = {
+                (e.source, e.thread, e.message_id)
+                for e in self._events.values()
+                if e.message_id and not hit(e)
+            }
+
+            def usage_hit(row: q.UsageRow) -> bool:
+                if row.key in gone_keys and row.key not in kept_keys:
+                    return True
+                if scope.categories is not None:
+                    return False
+                if scope.sources is not None and row.source not in scope.sources:
+                    return False
+                if scope.before is None:
+                    return True
+                return row.sample.time is not None and row.sample.time < scope.before
+
+            usage = [k for k, r in self._usage.items() if usage_hit(r)]
+            cursors = (
+                [k for k in self._cursors if scope.sources is None or k[0] in scope.sources]
+                if scope.rescan
+                else []
+            )
+            agents = (
+                [
+                    a
+                    for a in self._agents
+                    if scope.sources is None or self._agent_sources.get(a, "") in scope.sources
+                ]
+                if scope.whole_sources
+                else []
+            )
+            if not dry_run:
+                for uid in gone:
+                    del self._events[uid]
+                for key in usage:
+                    del self._usage[key]
+                for ckey in cursors:
+                    del self._cursors[ckey]
+                for a in agents:
+                    del self._agents[a]
+                    self._agent_sources.pop(a, None)
+            return PurgeResult(
+                dry_run=dry_run,
+                events=len(gone),
+                usage=len(usage),
+                cursors=len(cursors),
+                agents=len(agents),
+            )
 
     # ---------------------------------------------------------------- 읽기
 

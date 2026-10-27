@@ -12,6 +12,8 @@ import * as constants from "@agent-console/contracts/constants";
 import type { Conversation as ChatConversation } from "@agent-console/contracts/chat";
 import type { EdgeLayout, NodeLayout, ObserveSettings, WorkspaceSettings } from "@agent-console/contracts/definitions";
 import * as logs from "@agent-console/contracts/logs";
+import * as memory from "@agent-console/contracts/memory";
+import type { MemoryEventPayload, MemoryScopeRef } from "@agent-console/contracts/memory";
 import type { LogEvent, LogLane, LogSettings, LogTimeline, LogWidget } from "@agent-console/contracts/logs";
 import * as modules from "@agent-console/contracts/modules";
 import type { LogsIngestedMessage, ModuleInfo } from "@agent-console/contracts/modules";
@@ -123,6 +125,22 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<ArchitectureView["max_seq"]>().toEqualTypeOf<number | null | undefined>();
     expect(ERROR_CODES.ARCHITECTURE_SCOPE_TOO_LARGE).toBe("architecture.scope_too_large");
     expect(HTTP_STATUS_BY_ERROR_CODE["architecture.profile_not_found"]).toBe(404);
+  });
+
+  it("memory 하위 경로(0.10.0): 이벤트 payload에 본문·검색어 원문이 없다", () => {
+    expect(memory.CONTRACT_MODULE).toBe("memory");
+    expect(memory.CONTRACT_VERSION).toBe("1.0.0");
+    expect(modulesOf["memory"]).toEqual(
+      expect.arrayContaining(["MemorySettings", "MemoryAccessConfig", "MemoryEntry", "MemoryEventPayload", "MemoryChanged"]),
+    );
+    expectTypeOf<MemoryScopeRef["kind"]>().toEqualTypeOf<string>();
+    // 본문·검색어 원문 필드가 없다(크기·해시만)
+    expectTypeOf<Extract<keyof MemoryEventPayload, "content" | "query" | "text">>().toBeNever();
+    expectTypeOf<MemoryEventPayload["query_sha256"]>().toEqualTypeOf<string | null | undefined>();
+    expect(constants.KNOWN_MEMORY_EVENT_TYPES).toEqual(["memory.read", "memory.search", "memory.write", "memory.delete"]);
+    expect(constants.KNOWN_RUN_EVENT_TYPES).not.toContain("memory.write");
+    expect(HTTP_STATUS_BY_ERROR_CODE["memory.secret_rejected"]).toBe(422);
+    expect(KNOWN_ISSUE_CODES.TOOLS_DUPLICATE_NAME).toBe("tools.duplicate_name");
   });
 
   it("constants 하위 경로: x-constants 값만 다시 내보낸다(루트와 같은 객체)", () => {

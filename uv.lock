@@ -36,6 +36,7 @@ members = [
     "agent-console-link-runs-usage",
     "agent-console-logs",
     "agent-console-logs-claude",
+    "agent-console-memory",
     "agent-console-mod-architecture",
     "agent-console-mod-chat",
     "agent-console-mod-definitions",
@@ -265,6 +266,7 @@ name = "agent-console-cli"
 version = "0.1.0"
 source = { editable = "apps/cli" }
 dependencies = [
+    { name = "agent-console-logs" },
     { name = "agent-console-server" },
     { name = "agent-console-usage" },
     { name = "typer" },
@@ -282,6 +284,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agent-console-logs", editable = "packages/py/features/ac-logs" },
     { name = "agent-console-server", editable = "apps/server" },
     { name = "agent-console-usage", editable = "packages/py/features/ac-usage" },
     { name = "typer", specifier = ">=0.12" },
@@ -338,7 +341,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.9.0"
+version = "0.10.0"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -1192,6 +1195,43 @@ dev = [
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-logs", editable = "packages/py/features/ac-logs" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-memory"
+version = "0.1.0"
+source = { editable = "packages/py/features/ac-memory" }
+dependencies = [
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-registry" },
+    { name = "agent-console-secret-rules" },
+    { name = "ruamel-yaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
 ]
 
 [package.metadata.requires-dev]

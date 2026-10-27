@@ -59,6 +59,8 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
     "imports": _BELOW_DEFINITIONS | {"definitions", "runs", "usage"},
     # 0.9.0(design §5.5R.2.4): architecture는 chat·exports·imports와 같은 층
     "architecture": _BELOW_DEFINITIONS | {"definitions", "runs"},
+    # 0.10.0(design §5.7R.5): memory도 같은 층(runs의 조건·definitions의 이슈만 쓴다)
+    "memory": _BELOW_DEFINITIONS | {"definitions", "runs"},
     "modules": {
         "common",
         "resources",
@@ -70,6 +72,8 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
         "chat",
         "exports",
         "imports",
+        # 0.10.0: WS 메시지 `memory.changed`의 payload
+        "memory",
     },
 }
 
@@ -100,6 +104,7 @@ def test_contract_versions_cover_every_submodule() -> None:
         "modules",
         "projects",
         "architecture",
+        "memory",
     }
     for version in CONTRACT_VERSIONS.values():
         major, minor, patch = version.split(".")

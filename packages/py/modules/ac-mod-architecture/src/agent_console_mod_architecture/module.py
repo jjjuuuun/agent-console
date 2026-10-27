@@ -4,6 +4,7 @@ design §5.5R.3).
 - 제공: ``architecture.catalog``(병합된 프로필·연산자·검사·투영), ``server.warnings``(저장된
   ``architecture`` 섹션 형식 문제). 필수 포트 없음(혼자 켜진다).
 - 선택: ``workspace.settings``(사용자 설정 ``architecture`` 섹션). 없으면 기본 + 플러그인 프로필만.
+  ``architecture.profile_checks``(여러 제공자, X32 — 프로필 검사 보탬). 없으면 기본 검사만.
 - 경로: ``GET /architecture/profiles``, ``GET /architecture/profiles/{id}``,
   ``POST /architecture/profiles/check``, ``POST /architecture/project``.
 - 프로필 플러그인(X23): 호스트 묶음의 ``architecture_profiles`` 확장(``plugins.load_plugins``가
@@ -36,7 +37,7 @@ from agent_console_registry import Registry
 from .catalog import ArchitectureCatalogService, section_of
 from .errors import ERROR_MAP
 from .plugins import profile_registry
-from .ports import ARCHITECTURE_CATALOG, SERVER_WARNINGS, WORKSPACE_SETTINGS
+from .ports import ARCHITECTURE_CATALOG, PROFILE_CHECKS, SERVER_WARNINGS, WORKSPACE_SETTINGS
 from .routes import build_router
 from .settings import ArchitectureModuleSettings
 
@@ -82,7 +83,7 @@ class ArchitectureModule:
         title="구조도",
         description="구조도 프로필 목록·검사·단독 투영(/architecture/*)",
         provides=(ARCHITECTURE_CATALOG, SERVER_WARNINGS),
-        optional=(WORKSPACE_SETTINGS,),
+        optional=(WORKSPACE_SETTINGS, PROFILE_CHECKS),
         settings_schema=ArchitectureModuleSettings,
         contracts={"architecture": CONTRACT_VERSIONS["architecture"]},
         web_roles=WEB_ROLES,
@@ -107,6 +108,9 @@ class ArchitectureModule:
             operators=operators_of(ctx.registries),
             max_request_events=cfg.max_request_events,
             max_scope_events=cfg.max_scope_events,
+            # 부를 때 읽는다: 제공 연동(link-logs-architecture)은 이 모듈의 포트를 요구하므로
+            # 이 모듈보다 늦게 만들어진다.
+            checks=lambda: ctx.ports(PROFILE_CHECKS),
         )
         ctx.provide(ARCHITECTURE_CATALOG, service)
         ctx.provide(SERVER_WARNINGS, service.warnings)

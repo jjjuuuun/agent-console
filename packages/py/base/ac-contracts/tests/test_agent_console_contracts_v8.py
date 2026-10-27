@@ -112,12 +112,17 @@ def _null_paths(doc: Any, at: str = "") -> set[str]:
 # ---------------------------------------------------------------- 버전·하위 모듈
 
 
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
 def test_contracts_version_is_v8() -> None:
-    assert CONTRACTS_VERSION == "0.9.0"
+    """0.9.0에서 정한 버전 이상이다(정확한 지금 값은 v9 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 9, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.9.0"
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
     assert constants["CONTRACT_VERSIONS"] == CONTRACT_VERSIONS
-    assert CONTRACT_VERSIONS == {
+    v8 = {
         "common": "1.4.0",
         "resources": "1.1.0",
         "logs": "1.0.0",
@@ -131,6 +136,8 @@ def test_contracts_version_is_v8() -> None:
         "architecture": "1.0.0",
         "modules": "1.2.0",
     }
+    for sub, version in v8.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 def test_architecture_submodule_sits_with_chat_exports_imports() -> None:

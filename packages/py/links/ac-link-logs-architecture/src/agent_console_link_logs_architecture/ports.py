@@ -15,6 +15,8 @@
 
 - ``logs.filter_predicates``(여러 제공자, X28): 필터 ``arch``·``arch_group``·``arch_sources``
   (``ArchitectureFilter``). 이벤트 표가 구조도 칸·연결·묶음으로 걸러진다.
+- ``architecture.profile_checks``(여러 제공자, X32): 목록 본문에 없는 조건 경로 경고
+  (``UnlistedPathCheck``, M-4). 받는 쪽은 ``mod-architecture``(선택 포트).
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ from typing import Protocol, runtime_checkable
 
 from agent_console_architecture import ProfileCatalog
 from agent_console_conditions import ConditionOperator
+from agent_console_contracts import Issue
+from agent_console_contracts.architecture import ArchitectureProfile
 from agent_console_contracts.logs import LogEventDetail, LogEventPage, TokenSample
 from agent_console_logs import (
     JsonValue,
@@ -76,6 +80,13 @@ class ArchitectureCatalogReader(Protocol):
     def operators(self) -> Mapping[str, ConditionOperator]: ...
 
 
+@runtime_checkable
+class ProfileCheck(Protocol):
+    """``architecture.profile_checks`` 포트 모양(X32, 받는 쪽과 같은 이름·모양)."""
+
+    def check(self, profile: ArchitectureProfile, profile_id: str | None) -> list[Issue]: ...
+
+
 LOGS_QUERY: PortKey[LogQueryReader] = PortKey("logs.query", "로그 색인 읽기")
 ARCHITECTURE_CATALOG: PortKey[ArchitectureCatalogReader] = PortKey(
     "architecture.catalog", "구조도 프로필 카탈로그(병합된 프로필·연산자·검사·투영)"
@@ -83,12 +94,17 @@ ARCHITECTURE_CATALOG: PortKey[ArchitectureCatalogReader] = PortKey(
 LOG_FILTER_PREDICATES: PortKey[LogFilterExtension] = PortKey(
     "logs.filter_predicates", "로그 필터 확장(X28, 이름 묶음 → 이벤트 판정)", multi=True
 )
+PROFILE_CHECKS: PortKey[ProfileCheck] = PortKey(
+    "architecture.profile_checks", "구조도 프로필 검사 보탬(X32)", multi=True
+)
 
 __all__ = [
     "ARCHITECTURE_CATALOG",
     "LOGS_QUERY",
     "LOG_FILTER_PREDICATES",
+    "PROFILE_CHECKS",
     "ArchitectureCatalogReader",
     "LogQueryReader",
     "LogRowReader",
+    "ProfileCheck",
 ]

@@ -1,0 +1,18 @@
+# ac-memory 패키지 기본 범위 종류(design §5.7R.1.2).
+# 사용자는 설정 memory.include_default_scope_kinds: false로 끄고, memory.scope_kinds로 고치거나 더한다
+# (같은 id면 통째로 바꾸고 null이면 지운다). 코드는 이 이름들을 모른다.
+# id는 접근 맥락(MemoryAccessContext)의 JSON 포인터 틀이다. 푼 값이 비면 그 범위는 그 실행에서 쓸 수 없다.
+version: 1
+scope_kinds:
+  shared:
+    label: 공용
+    description: 모든 팀·프로젝트가 함께 보는 기록
+    id: ""
+  project:
+    label: 프로젝트
+    description: 실행한 프로젝트의 기록
+    id: "{/project_id}"
+  team:
+    label: 팀
+    description: 실행한 팀 구성의 기록
+    id: "{/graph_id}"

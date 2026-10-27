@@ -21,7 +21,7 @@ import { buildEdgeModels, cellBlockedReason, edgeBlockedReason, highlightSets, s
 import { CellNode, ZoneNode } from "./Nodes";
 import { Toolbar } from "./Toolbar";
 import type { ToolbarParts } from "./Toolbar";
-import type { ArchFitMode, ArchSelection, ArchViewMode, BlockedReason, CellRenderer, EdgeStyleSpec, MetricKindSpec, Rect } from "./types";
+import type { ArchFitMode, ArchSelection, ArchViewMode, BlockedReason, CellRenderer, EdgeStyleSpec, MetricKindSpec, Rect, ZoneLegendItem } from "./types";
 
 const nodeTypes: NodeTypes = { cell: CellNode, zone: ZoneNode };
 const ARROWS: Record<string, Direction> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
@@ -70,6 +70,8 @@ export interface ArchitectureDiagramProps {
   metricKinds?: Readonly<Record<string, MetricKindSpec>>;
   /** 범례 글자(연결 style 이름 → 글자). */
   edgeLegend?: Readonly<Record<string, string>>;
+  /** 범례의 영역 견본 줄. 기본은 `defaultZoneLegend`. */
+  zoneLegend?: readonly ZoneLegendItem[];
   messages?: Partial<ArchViewMessages>;
 
   /** 도구줄 구성. `false`면 도구줄이 없다. */
@@ -96,9 +98,9 @@ const ALL_PARTS: Required<ToolbarParts> = { zoom: true, fit: true, view: true, l
 export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   const {
     view, selection = null, highlight = null, onSelect, onBlocked, onDrill, onBack, onSkip,
-    scale: scaleProp, onScaleChange, fullScaleMin = 0.6, autoContainMin, containerSize,
+    scale: scaleProp, onScaleChange, fullScaleMin = 0.45, autoContainMin, containerSize,
     mode = "live", tones = defaultTones, edgeStyles = defaultEdgeStyles, cellRenderers, metricKinds = defaultMetricKinds,
-    edgeLegend, toolbar = true, toolbarLead, toolbarExtra, afterToolbar, infoBar = true, className,
+    edgeLegend, zoneLegend, toolbar = true, toolbarLead, toolbarExtra, afterToolbar, infoBar = true, className,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
   const [fitMode, setFitMode] = useControllable<ArchFitMode>(props.fitMode, props.defaultFitMode ?? "auto", props.onFitModeChange);
@@ -343,7 +345,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
           />
           {legendOpen ? (
             <div id={legendId} className="ac-arch-popover" role="group" aria-label={messages.legend}>
-              <ArchitectureLegend messages={messages} edgeStyles={edgeStyles} edgeLegend={edgeLegend} />
+              <ArchitectureLegend messages={messages} edgeStyles={edgeStyles} edgeLegend={edgeLegend} zoneLegend={zoneLegend} />
             </div>
           ) : null}
         </div>

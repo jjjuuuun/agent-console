@@ -55,6 +55,7 @@ from agent_console_logs._index import (
     IndexBatch,
     StoredCursor,
 )
+from agent_console_logs._purge import PurgeResult, PurgeScope
 from agent_console_logs._rows import (
     LogEventRow,
     LogEventRowPage,
@@ -416,6 +417,84 @@ class SqliteLogIndex:
                 sa.delete(log_usage).where(log_usage.c.time.is_not(None), log_usage.c.time < before)
             )
             return result.rowcount
+
+    def purge(self, scope: PurgeScope, *, dry_run: bool) -> PurgeResult:
+        """범위의 행을 지운다(규칙은 `agent_console_logs.PurgeableLogIndex`, 한 트랜잭션)."""
+
+        def hit(e: FromClause) -> ColumnElement[bool]:
+            parts: list[ColumnElement[bool]] = []
+            if scope.sources is not None:
+                parts.append(e.c.source.in_(scope.sources))
+            if scope.categories is not None:
+                parts.append(e.c.category.in_(scope.categories))
+            if scope.before is not None:
+                parts.append(e.c.etime < scope.before)
+            return sa.and_(sa.true(), *parts)
+
+        u = log_usage
+        gone_e = log_events.alias("gone_e")
+        kept_e = log_events.alias("kept_e")
+
+        def same_key(e: FromClause) -> ColumnElement[bool]:
+            return sa.and_(
+                e.c.message_id != "",
+                e.c.source == u.c.source,
+                e.c.thread == u.c.thread,
+                e.c.message_id == u.c.message_id,
+            )
+
+        usage_cond: ColumnElement[bool] = sa.and_(
+            sa.exists().where(same_key(gone_e), hit(gone_e)),
+            ~sa.exists().where(same_key(kept_e), ~hit(kept_e)),
+        )
+        if scope.categories is None:
+            own: list[ColumnElement[bool]] = []
+            if scope.sources is not None:
+                own.append(u.c.source.in_(scope.sources))
+            if scope.before is not None:
+                own.append(sa.and_(u.c.time.is_not(None), u.c.time < scope.before))
+            usage_cond = sa.or_(usage_cond, sa.and_(sa.true(), *own))
+        cursor_cond: ColumnElement[bool] | None = None
+        if scope.rescan:
+            cursor_cond = (
+                log_cursors.c.source.in_(scope.sources) if scope.sources is not None else sa.true()
+            )
+        agent_cond: ColumnElement[bool] | None = None
+        if scope.whole_sources:
+            agent_cond = (
+                log_agents.c.source.in_(scope.sources) if scope.sources is not None else sa.true()
+            )
+
+        def count(conn: Connection, table: Any, cond: ColumnElement[bool] | None) -> int:
+            if cond is None:
+                return 0
+            return int(conn.scalar(sa.select(sa.func.count()).select_from(table).where(cond)) or 0)
+
+        with self._lock, self._engine.begin() as conn:
+            if not dry_run and conn.dialect.name == "sqlite":
+                conn.exec_driver_sql("BEGIN IMMEDIATE")
+            result = PurgeResult(
+                dry_run=dry_run,
+                events=count(conn, log_events, hit(log_events)),
+                usage=count(conn, u, usage_cond),
+                cursors=count(conn, log_cursors, cursor_cond),
+                agents=count(conn, log_agents, agent_cond),
+            )
+            if dry_run:
+                return result
+            # 표본 조건이 이벤트를 보므로 표본부터 지운다.
+            if result.usage:
+                conn.execute(sa.delete(u).where(usage_cond))
+            if result.events:
+                old = sa.select(log_events.c.seq).where(hit(log_events))
+                for table in (log_tags, log_links, log_corr, log_bodies, log_search):
+                    conn.execute(sa.delete(table).where(table.c.seq.in_(old)))
+                conn.execute(sa.delete(log_events).where(hit(log_events)))
+            if cursor_cond is not None and result.cursors:
+                conn.execute(sa.delete(log_cursors).where(cursor_cond))
+            if agent_cond is not None and result.agents:
+                conn.execute(sa.delete(log_agents).where(agent_cond))
+            return result
 
     # ---------------------------------------------------------------- 목록·상세
 

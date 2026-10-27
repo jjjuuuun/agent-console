@@ -6,14 +6,16 @@
     - HTTP 없이 쓰는 부품: ``LogArchitectureViews``(로그 범위 → ``ArchitectureView``·멤버십, 결과
       캐시·증분 읽기), ``ArchitectureFilter``(X28 필터 ``arch``·``arch_group``·``arch_sources``),
       ``ScopeCache``·``MemoMatcher``(범위 캐시·판정 결과 재사용).
+    - ``UnlistedPathCheck``: 프로필 검사 보탬(X32) — 목록 본문에 없는 조건 경로 경고(M-4).
     - 포트(``ports``): 받음 ``LOGS_QUERY``·``ARCHITECTURE_CATALOG``(필수), 제공
-      ``LOG_FILTER_PREDICATES``.
+      ``LOG_FILTER_PREDICATES``·``PROFILE_CHECKS``.
     - ``build_router``: ``/logs/architecture``, ``/logs/events/{uid}/architecture``.
     - 테스트·단독 실행: 모듈 ``agent_console_link_logs_architecture.testing``.
 """
 
 from __future__ import annotations
 
+from .checks import UnlistedPathCheck
 from .errors import (
     ERROR_MAP,
     ArchitectureQueryError,
@@ -27,8 +29,10 @@ from .ports import (
     ARCHITECTURE_CATALOG,
     LOG_FILTER_PREDICATES,
     LOGS_QUERY,
+    PROFILE_CHECKS,
     ArchitectureCatalogReader,
     LogQueryReader,
+    ProfileCheck,
 )
 from .routes import build_router
 from .scopes import MemoMatcher, ScopeCache, ScopeEvents, profile_key, scope_key
@@ -41,6 +45,7 @@ __all__ = [
     "LOGS_QUERY",
     "LOG_FILTER_PREDICATES",
     "MODULE_ID",
+    "PROFILE_CHECKS",
     "PROFILE_PARAM",
     "WEB_ROLES",
     "ArchitectureCatalogReader",
@@ -52,10 +57,12 @@ __all__ = [
     "LogsArchitectureLink",
     "LogsArchitectureSettings",
     "MemoMatcher",
+    "ProfileCheck",
     "ProfileNotFoundError",
     "ScopeCache",
     "ScopeEvents",
     "ScopeTooLargeError",
+    "UnlistedPathCheck",
     "ViewStats",
     "build_router",
     "module",

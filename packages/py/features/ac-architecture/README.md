@@ -16,7 +16,7 @@
 | --- | --- |
 | 프로필 읽기 | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
 | 병합 | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)`는 없거나 0개여도 예외 없음) |
-| 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None)`, `check_profile_data(data, ...)` |
+| 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None, unlisted_paths=())`, `check_profile_data(data, ...)`, `unlisted_path_issues(profile, unlisted_paths)`(조건 경로가 주어진 접두 아래면 warning `architecture.condition_path_unlisted` — 접두는 호출자가 데이터로 준다, M-4) |
 | 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`events` = `LogEvent` 또는 그 JSON 행, `matches` = 미리 판정한 결과, 반복 투영 캐시용) |
 | 증분 투영 | `ArchitectureTally(profile, *, profile_id)`: `add_event(event, match)`·`add_row(row, match)`로 새 이벤트만 더하고 `view(source_kinds=, tokens=, notes=)`로 그린다(같은 이벤트를 한 번에 투영한 결과와 같다. 출처 종류는 `view` 인자라 바뀌어도 다시 세지 않는다. 소요 합은 `math.fsum`) |
 | 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`·`parse_arch` |

@@ -6,6 +6,8 @@
   (entry point `agent_console.log_sources`·`agent_console.log_classifiers`).
 - 증분 jsonl 출처 기반 클래스 `JsonlFileSource`(agent_bench `_ingest` 규칙).
 - 수집기 `LogIngestor`, 색인 프로토콜 `LogIndex`(메모리 구현은 `testing.MemoryLogIndex`).
+- 색인 비우기(M-3): `purge_index`(출처·범주·시각 범위, `dry_run`)·`reset_index`, 선택 능력
+  `PurgeableLogIndex`(메모리·SQLite 색인이 가진다).
 - 행 읽기(5.5R.36): `query_event_rows`·`iter_event_rows` — 목록 쪽을 모델 없이 JSON 행(dict)으로
   (선택 능력 `LogEventRowReader`, 메모리·SQLite 색인이 가진다).
 - 순수 함수: `bounded`·`event_uid`·`link_events`·`merge_taxonomy`·`group_projects`·`block_windows`,
@@ -69,6 +71,7 @@ from ._projects import (
     group_projects,
     resolve_project,
 )
+from ._purge import PurgeableLogIndex, PurgeResult, PurgeScope, purge_index, reset_index
 from ._registries import (
     LOG_CLASSIFIERS_EXTENSION,
     LOG_CLASSIFIERS_GROUP,
@@ -181,6 +184,9 @@ __all__ = [
     "LogSource",
     "LogSourceContext",
     "PageCallback",
+    "PurgeResult",
+    "PurgeScope",
+    "PurgeableLogIndex",
     "QueryContext",
     "RawRecord",
     "ReadResult",
@@ -223,12 +229,14 @@ __all__ = [
     "parse_session_title_rules",
     "parse_tz",
     "pick_session_title",
+    "purge_index",
     "query_context",
     "query_event_rows",
     "query_schema",
     "read_only_open",
     "render_archive",
     "require_refined",
+    "reset_index",
     "resolve_project",
     "rolling_totals",
     "scrub_surrogates",

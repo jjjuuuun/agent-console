@@ -11,8 +11,10 @@
       ``profiles_from_mapping(data)``, ``ProfileDocumentError``, ``DEFAULT_PROFILES_RESOURCE``
     - 병합: ``merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog``,
       ``ProfileCatalog``(``pick``·``get``·``ids``), ``ProfileEntry``(``info``), ``ProfileSource``
-    - 검사: ``profile_issues(profile, *, operators, filters=None, profile_id=None)``,
-      ``check_profile_data(data, ...)``, ``ID_PATTERN``
+    - 검사: ``profile_issues(profile, *, operators, filters=None, profile_id=None,
+      unlisted_paths=())``, ``check_profile_data(data, ...)``, ``ID_PATTERN``,
+      ``unlisted_path_issues(profile, unlisted_paths)``(목록 본문에 없는 조건 경로 경고 — 접두는
+      호출자가 데이터로 준다, M-4)
     - 투영: ``project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens,
       error_categories, max_seq, notes, cell_size, matches) -> ArchitectureView``(이벤트·JSON 행),
       증분 투영 ``ArchitectureTally``(``add_event``·``add_row``·``view``), ``DEFAULT_CELL_SIZE``,
@@ -38,7 +40,7 @@ from ._document import (
     parse_profiles_document,
     profiles_from_mapping,
 )
-from ._issues import ID_PATTERN, check_profile_data, profile_issues
+from ._issues import ID_PATTERN, check_profile_data, profile_issues, unlisted_path_issues
 from ._match import EventMatch, ProfileMatcher, event_membership, event_subject
 from ._plugins import (
     ARCHITECTURE_PROFILES_EXTENSION,
@@ -93,4 +95,5 @@ __all__ = [
     "profiles_from_mapping",
     "project_architecture",
     "selector_predicate",
+    "unlisted_path_issues",
 ]

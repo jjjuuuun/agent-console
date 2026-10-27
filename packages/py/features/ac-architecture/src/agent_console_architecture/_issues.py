@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Iterable, Iterator, Mapping
 from typing import Any, Final
 
 from pydantic import ValidationError
 
 from agent_console_conditions import ConditionOperator, condition_issues
-from agent_console_contracts import Issue, IssueSeverity
+from agent_console_contracts import Issue, IssueSeverity, KnownIssueCodes
 from agent_console_contracts.architecture import (
     ArchitectureProfile,
     KnownArchitectureEdgeKinds,
     KnownArchitectureIssueCodes,
 )
+from agent_console_contracts.runs import ConditionSpec
 
 from ._project import KNOWN_METRICS
 
@@ -61,12 +62,74 @@ def _metric_issues(names: list[str] | None, base: str) -> list[Issue]:
     ]
 
 
+def _condition_specs(profile: ArchitectureProfile) -> Iterator[tuple[str, ConditionSpec]]:
+    """프로필의 조건 묶음과 그 위치(JSON Pointer): 칸 ``when``, 연결 ``when``, ``error_when``."""
+    for cid, cell in profile.cells.items():
+        if cell.when is not None:
+            yield f"/cells/{_escape(cid)}/when", cell.when
+    for index, edge in enumerate(profile.edges):
+        if edge.when is not None:
+            yield f"/edges/{index}/when", edge.when
+    if profile.error_when is not None:
+        yield "/error_when", profile.error_when
+
+
+def _matching_prefix(path: str, prefixes: tuple[str, ...]) -> str | None:
+    for prefix in prefixes:
+        if path == prefix or path.startswith(f"{prefix}/"):
+            return prefix
+    return None
+
+
+def unlisted_path_issues(
+    profile: ArchitectureProfile, unlisted_paths: Iterable[str]
+) -> list[Issue]:
+    """조건이 목록 본문에 없는 경로를 보면 경고한다(M-4, ``architecture.condition_path_unlisted``).
+
+    구조도 판정은 목록용 이벤트로만 하므로, 목록에서 빠지는 경로(무엇이 빠지는지는 호출자가
+    데이터로 준다 — 이 함수는 경로 이름을 모른다)를 보는 조건은 늘 값이 없어 맞지 않는다.
+
+    Args:
+        profile: 프로필.
+        unlisted_paths: 목록 본문에 없는 경로 접두(JSON Pointer, 예: 로그 연동이 주는 값).
+            조건 경로가 접두와 같거나 ``접두/``로 시작하면 걸린다. 빈 값·``/``는 무시한다
+            (문서 전체를 뜻하므로).
+
+    Returns:
+        warning 이슈 목록(``path`` = 조건 항목의 ``path`` 위치, ``details.prefix`` = 걸린 접두,
+        ``details.condition_path`` = 조건 경로). 접두가 없으면 빈 목록.
+    """
+    prefixes = tuple(dict.fromkeys(p.rstrip("/") for p in unlisted_paths if p.rstrip("/")))
+    if not prefixes:
+        return []
+    issues: list[Issue] = []
+    for base, spec in _condition_specs(profile):
+        for mode, items in (("all", spec.all), ("any", spec.any)):
+            for index, item in enumerate(items or ()):
+                prefix = _matching_prefix(item.path, prefixes)
+                if prefix is None:
+                    continue
+                issues.append(
+                    _issue(
+                        "warning",
+                        KnownIssueCodes.ARCHITECTURE_CONDITION_PATH_UNLISTED,
+                        f"조건 경로 {item.path!r}은(는) 목록 본문에 없어 맞지 않습니다"
+                        f"(구조도는 목록 본문만 봅니다. 걸린 경로: {prefix!r})",
+                        f"{base}/{mode}/{index}/path",
+                        prefix=prefix,
+                        condition_path=item.path,
+                    )
+                )
+    return issues
+
+
 def profile_issues(
     profile: ArchitectureProfile,
     *,
     operators: Mapping[str, ConditionOperator],
     filters: Collection[str] | None = None,
     profile_id: str | None = None,
+    unlisted_paths: Iterable[str] = (),
 ) -> list[Issue]:
     """프로필을 검사한다.
 
@@ -79,6 +142,8 @@ def profile_issues(
         operators: 조건 연산자(등록된 것).
         filters: 하위 구조도가 쓸 수 있는 필터 이름(로그 질의가 아는 이름). None이면 보지 않는다.
         profile_id: 주면 프로필 id 글자 규칙도 본다.
+        unlisted_paths: 목록 본문에 없는 경로 접두(``unlisted_path_issues``). 비우면(기본) 보지
+            않는다.
 
     Returns:
         이슈 목록(`path` = 프로필 기준 JSON Pointer). 오류(error)·경고(warning) 모두 저장은
@@ -201,6 +266,7 @@ def profile_issues(
 
     if profile.error_when is not None:
         issues.extend(condition_issues(profile.error_when, operators, base_path="/error_when"))
+    issues.extend(unlisted_path_issues(profile, unlisted_paths))
     return issues
 
 
@@ -214,6 +280,7 @@ def check_profile_data(
     operators: Mapping[str, ConditionOperator],
     filters: Collection[str] | None = None,
     profile_id: str | None = None,
+    unlisted_paths: Iterable[str] = (),
 ) -> list[Issue]:
     """편집 중인 프로필 본문(읽은 YAML 객체)을 검사한다. 형식 오류도 예외가 아니라 이슈로 낸다.
 
@@ -240,4 +307,10 @@ def check_profile_data(
         if profile_id is not None and (bad := _bad_id(profile_id, "프로필", "")):
             issues.insert(0, bad)
         return issues
-    return profile_issues(profile, operators=operators, filters=filters, profile_id=profile_id)
+    return profile_issues(
+        profile,
+        operators=operators,
+        filters=filters,
+        profile_id=profile_id,
+        unlisted_paths=unlisted_paths,
+    )

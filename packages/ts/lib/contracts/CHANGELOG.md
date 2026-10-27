@@ -2,6 +2,11 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.10.0]
+- 계약 v9(5.7R.3, design §5.7R.5). 사내 의존 범위를 `^0.10.0`으로 올린다. 새 하위 경로 `@agent-console/contracts/memory`(1.0.0), `modules` 1.3.0(`WsServerMessage`에 `memory.changed`).
+- 새 타입(memory): `MemorySettings`·`MemoryScopeKindSpec`·`MemoryRetentionSettings`·`MemoryRetentionRule`·`MemoryAccessConfig`·`MemoryScopeAccess`·`MemoryTools`·`MemoryToolText`, `MemoryScopeRef`·`MemoryAuthor`·`MemoryEntry`·`MemoryEntrySummary`·`MemoryEntryPage`·`MemoryVersion`·`MemoryVersionSummary`·`MemoryScopeSummary`·`MemoryScopeKindInfo`·`MemoryScopeKindList`, REST `MemoryWriteRequest`·`MemoryUpdateRequest`·`MemoryMoveRequest`·`MemoryRetentionPlanRequest`·`MemoryRetentionPlan`·`MemoryRetentionPlanItem`·`MemoryRetentionResult`·`MemoryImportResult`·`MemoryImportProblem`·`MemoryTagList`·`MemoryTagCount`·`MemorySecretRejectedDetails`, 이벤트 `MemoryEventPayload`(본문·검색어 원문 없음), WS `MemoryChanged`·`MemoryChangedMessage`.
+- 새 상수: `KNOWN_MEMORY_EVENT_TYPES`·`MEMORY_ACCESS_OPS`·`MEMORY_CONTEXT_FIELDS`·`KNOWN_MEMORY_CONTEXT_FIELDS`·`MEMORY_SCOPE_SEPARATOR`·`MEMORY_ENTRY_SORTS`, `ERROR_CODES.MEMORY_*`(422), `KNOWN_ISSUE_CODES`의 `MEMORY_*`·`TOOLS_*`·`ARCHITECTURE_CONDITION_PATH_UNLISTED`.
+
 ## [0.9.0]
 - 계약 v8(5.5R.3, design §5.5R.2.4). 사내 의존 범위를 `^0.9.0`으로 올린다. 하위 계약 버전 `runs`·`common` 1.4.0, 새 하위 경로 `@agent-console/contracts/architecture`(1.0.0).
 - 새 타입(architecture): `ArchitectureSettings`·`ArchitectureProfile`·`ArchitectureCanvas`·`ArchitectureZone`·`ArchitectureCell`·`ArchitectureEdge`(`from` 키, `points: [number, number][]`)·`ArchitectureDrill`·`ArchitectureUnavailable`·`ArchitectureCoverage`·`ArchitectureOptions`, 투영 결과 `ArchitectureView`·`ArchitectureCellView`·`ArchitectureEdgeView`·`ArchitectureGroupView`·`ArchitectureGroupRest`·`ArchitectureUnassignedView`·`ArchitectureUnavailableView`·`ArchitectureSourceCount`·`ArchitectureNote`·`ArchitectureMetric`(`value: number | null` — null은 "수집 안 됨", 0으로 바꾸지 않는다)·`ArchitectureMetricDetail`·`ArchitectureSelector`·`ArchitectureDrillTarget`·`ArchitectureMembership`·`ArchitectureGroupRef`, REST `ArchitectureProfileInfo`·`ArchitectureProfileList`·`ArchitectureProfileDetail`·`ArchitectureProfileCheckRequest`·`ArchitectureProfileCheckResult`·`ArchitectureProjectRequest`·`ArchitectureScopeTooLargeDetails`.

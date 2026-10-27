@@ -204,8 +204,20 @@ logs:
 설정 변경과 이미 색인된 이벤트: 분류기 설정(`document_kinds`·`row_rules`·`store_raw` 등)은 **바꾼 뒤 수집하는 행부터**
 적용된다. 색인은 같은 이벤트(같은 identity)를 다시 쓰지 않으므로, 이미 색인된 행은 다시 스캔해도 그대로다. 예를 들어
 문서 종류 기본값(`CLAUDE.md` → `rules`, 5.5R.7)이나 `api-request-blob` 원문 제외(5.5R.34)를 옛 이벤트에도 반영하려면
-로그 색인을 새로 만들고(별도 색인 파일 `mod-logs.index_path`를 쓰면 그 파일을 지우고, 호스트 DB를 쓰면 로그 표를
-비우고) 다시 스캔해야 한다. 그 전까지 옛 색인의 원문은 남는다(보존 기간 `mod-logs.retention_days`가 지나면 지워진다).
+그 범위의 색인을 비우고(purge) 다시 스캔한다. 그 전까지 옛 색인의 원문은 남는다(보존 기간
+`mod-logs.retention_days`가 지나면 지워진다). 분류 기본값이 바뀌면 purge 후 재스캔한다(5.7R.6, M-3):
+
+```bash
+# 서버에서(dry_run이 기본이라 먼저 지울 행 수만 본다). 요청 본문 행의 기본 범주는 meta다.
+POST /api/v1/logs/index/purge  {"sources": ["claude-code-jsonl"], "categories": ["meta"]}
+POST /api/v1/logs/index/purge  {"sources": ["claude-code-jsonl"], "categories": ["meta"], "dry_run": false}
+POST /api/v1/logs/scan         {"source_ids": ["claude-code-jsonl"]}
+# 서버 없이 색인 파일에(설정의 index_path → 서버 DB). --yes가 있어야 지운다.
+agent-console logs purge --config agent-console.yaml --source claude-code-jsonl --category meta --yes
+```
+
+범주·출처 이름은 지금 설정의 값이다(`row_rules`로 범주를 바꿨다면 그 범주를 준다). 커서를 지우므로 다음 스캔이 그
+출처의 파일을 처음부터 다시 읽는다. 지우지 않은 이벤트는 같은 identity라 다시 들어가지 않는다.
 
 알려진 한계(행 단위 무상태 F-7의 결과):
 

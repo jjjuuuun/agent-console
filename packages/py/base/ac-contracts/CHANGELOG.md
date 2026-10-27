@@ -1,5 +1,29 @@
 # 변경 기록
 
+## 0.10.0
+
+- 계약 v9(5.7R.3, design §5.7R.5 공유 메모리). 사내 의존 범위는 `>=0.10,<0.11`(TS `^0.10.0`). 하위 계약 버전:
+  새 `memory` 1.0.0, `modules` 1.2.0 → 1.3.0(WS `memory.changed`). `runs`·`logs`·`definitions` 모델은 그대로이고
+  `KNOWN_RUN_EVENT_TYPES`도 그대로다.
+- 새 하위 모듈 `memory`(`chat`·`exports`·`imports`·`architecture`와 같은 층, `common`·`runs`(`ConditionSpec`)·`definitions`(`Issue`)를 씀).
+  - 사용자 데이터(`DefinitionModel`, 모르는 키 보존, 설정 폼 도움말 전부): `MemorySettings`(워크스페이스 설정 `memory` 섹션, 메모리
+    모듈 소유, 공통 설정 모델에 필드 없음), `MemoryScopeKindSpec`(범위 종류: 이름·설명·id 틀), `MemoryRetentionSettings`·
+    `MemoryRetentionRule`(`when: ConditionSpec`, `action: archive|delete`), 리소스 종류 `memory`의 config `MemoryAccessConfig`
+    (`scopes: MemoryScopeAccess[]`·`default_scope`·`result_header`·`max_result_chars`·`tools: MemoryTools`). 도구 기본 이름·설명·
+    결과 머리 줄은 패키지 데이터 `data/memory_access_defaults.json`(`memory_access_defaults()`)에서 온다. 범위 종류 이름은 계약에 없다.
+  - 항목·버전·범위: `MemoryScopeRef{kind, id}`(`to_text`·`parse`, `<kind>:<id>`), `MemoryAuthor`(`kind` 열린 문자열,
+    `KnownMemoryAuthorKinds`), `MemoryEntry`·`MemoryEntrySummary`(`preview`)·`MemoryEntryPage`, `MemoryVersion`·`MemoryVersionSummary`,
+    `MemoryScopeSummary`, `MemoryAccessContext`(범위 id 틀이 읽는 맥락, `MEMORY_CONTEXT_FIELDS`).
+  - REST DTO: `MemoryScopeKindInfo`·`MemoryScopeKindList`, `MemoryWriteRequest`·`MemoryUpdateRequest`·`MemoryMoveRequest`,
+    `MemoryRetentionPlanRequest`·`MemoryRetentionPlan`·`MemoryRetentionPlanItem`·`MemoryRetentionResult`, `MemoryImportResult`(`dry_run`)·
+    `MemoryImportProblem`, `MemoryTagList`·`MemoryTagCount`, `MemorySecretRejectedDetails{field, rules}`(값 없음), 정렬 값 `MEMORY_ENTRY_SORTS`.
+  - 이벤트: `MemoryEventPayload`(RunEvent `memory.<op>`, **본문·검색어 원문 없음** — 크기·해시만), 문서 상수 `KNOWN_MEMORY_EVENT_TYPES`
+    (`runs`의 알려진 이벤트 목록에 넣지 않음), WS payload `MemoryChanged`(+ `modules.MemoryChangedMessage`).
+- 상수: `ErrorCodes.MEMORY_INVALID_KEY`·`MEMORY_TOO_LARGE`·`MEMORY_SECRET_REJECTED`(422), `KnownIssueCodes`에 `MEMORY_*`(도구 사유 코드,
+  `memory.unknown_scope_kind`·`settings_invalid`·`storage_memory`·`search_fallback`), `TOOLS_*`(`tools.provider_failed`·`duplicate_name`·
+  `backend_capability_missing`), `ARCHITECTURE_CONDITION_PATH_UNLISTED`. `x-constants`에 `KNOWN_MEMORY_EVENT_TYPES`·`MEMORY_ACCESS_OPS`·
+  `MEMORY_CONTEXT_FIELDS`·`KNOWN_MEMORY_CONTEXT_FIELDS`·`MEMORY_SCOPE_SEPARATOR`·`MEMORY_ENTRY_SORTS`.
+
 ## 0.9.0
 
 - 계약 v8(5.5R.3, design §5.5R.2.4 관측 구조도). 사내 의존 범위는 `>=0.9,<0.10`(TS `^0.9.0`). 하위 계약 버전:

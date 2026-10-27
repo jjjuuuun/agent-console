@@ -1,0 +1,67 @@
+{
+  "name": "@agent-console/memory-view",
+  "version": "0.1.0",
+  "description": "공유 메모리 표현 컴포넌트(범위 나무·항목 표·편집기·기록 비교·정리 미리보기)",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "development": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "axe-core": "^4.11.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "happy-dom": "^21.0.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  },
+  "dependencies": {
+    "@agent-console/contracts": "^0.10.0",
+    "@agent-console/text-editor": "^0.1.0",
+    "@tanstack/react-virtual": "^3.14.21"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

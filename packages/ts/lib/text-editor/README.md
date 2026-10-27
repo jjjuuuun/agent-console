@@ -28,6 +28,10 @@ import { TextEditor } from "@agent-console/text-editor";
   maxBytes={1_000_000}
   onTooLarge={(bytes) => warn(bytes)}   // 초과 시 읽기 전용
   onStatus={({ line, col, chars, parseError }) => setStatus(...)}   // json이면 parseError(편집은 막지 않음)
+  onCompositionChange={(composing) => setBusy(composing)} // IME 조합 시작 true / 끝 false
+  handleRef={ref}               // ref.current.isComposing()
+  onCompositionChange={(composing) => setBusy(composing)} // IME 조합 시작 true / 끝 false
+  handleRef={ref}               // ref.current.isComposing()
   height="fill"                 // px 숫자 또는 부모를 채움
   messages={{ tooLarge: "크기 제한을 넘어 읽기 전용입니다" }}
 />
@@ -35,9 +39,10 @@ import { TextEditor } from "@agent-console/text-editor";
 
 ## 동작 규칙
 - 한글 IME: 자동 완성·자동 괄호를 켜지 않고, 조합 중에는 저장 단축키를 처리하지 않는다. `value`가 현재 문서와 같으면 건드리지 않아 커서·조합이 유지된다.
+- 조합 상태 API: `onCompositionChange(composing)`는 compositionstart/end에서 상태가 바뀔 때만 부른다. `handleRef`로 받은 `TextEditorHandle.isComposing()`은 같은 값을 돌려준다. 조합 중 검사·저장 같은 부수 작업을 미루려는 소비처(설정 › 구조도, 메모리 편집기)가 쓴다. `onChange`는 조합 중에도 호출된다.
 - 탭 키 = 공백 2칸 들여쓰기(`Esc` 후 `Tab`으로 편집기를 빠져나갈 수 있다). 줄 번호, 줄바꿈 기본 켬(`lineWrap`).
 - 편집기 요소에 `data-ac-editable`을 달아, 앱 전역 단일 키 단축키 처리기가 무시할 수 있게 한다.
-- 공개 API: `TextEditor`, `resolveLanguage(name)`, `jsonParseError(text)`, 타입 `TextEditorProps`/`TextEditorStatus`/`TextEditorMessages`/`EditorLanguage`.
+- 공개 API: `TextEditor`, `resolveLanguage(name)`, `jsonParseError(text)`, 타입 `TextEditorHandle`/`TextEditorProps`/`TextEditorStatus`/`TextEditorMessages`/`EditorLanguage`.
 
 ## `<TextDiff>` — 읽기 전용 텍스트 비교
 

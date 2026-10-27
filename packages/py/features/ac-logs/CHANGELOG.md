@@ -26,3 +26,4 @@
 - 5.5R.6: 색인 `(session, seq)`·`(thread, seq)`·`(run_id, seq)`(옛 `run_id` 단독 색인 대체; `open_log_index`가 기존 파일의
   색인을 맞춘다, 서버는 `mod-logs` 리비전 `logs_0002`), 짝 없는 이벤트는 `duration_ms` 복사를 건너뜀,
   규모 측정 도구 `testing.build_scale_index`·`CountingPredicate`·`read_all_pages`·`time_best`·`perf_strict`.
+- 5.7R.6(M-3): 색인 비우기 `purge_index`·`reset_index`(범위 `PurgeScope`, 결과 `PurgeResult`, 선택 능력 `PurgeableLogIndex` — `LogIndex` 프로토콜은 그대로), `MemoryLogIndex.purge`·`SqliteLogIndex.purge`, 있는 색인만 여는 `sqlite.open_existing_log_index`, 계약 묶음 `testing.PurgeContractTests`.

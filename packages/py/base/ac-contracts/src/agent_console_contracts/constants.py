@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.9.0"
+CONTRACTS_VERSION: Final = "0.10.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -18,6 +18,7 @@ CONTRACT_SUBMODULES: Final = (
     "exports",
     "imports",
     "architecture",
+    "memory",
     "modules",
 )
 """기능별 계약 하위 모듈(아래 층 → 위 층 순). 모든 모델은 이 중 하나에 정의된다.
@@ -26,7 +27,8 @@ import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층�
 `resources`·`logs`는 서로 모르고(둘 다 `common`만 쓴다, `definitions`가 둘을 쓴다),
 `runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
 `chat`·`exports`·`imports`·`architecture`도 서로 모른다(0.9.0: `architecture`는 `runs`의 조건·
-`logs`의 이벤트·`definitions`의 이슈를 쓴다). `modules`는 맨 위다.
+`logs`의 이벤트·`definitions`의 이슈를 쓴다. 0.10.0: `memory`도 같은 층이고 `runs`의 조건·
+`definitions`의 이슈만 쓴다). `modules`는 맨 위다.
 TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름>`)로 나뉜다.
 """
 
@@ -42,11 +44,13 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
-    "modules": "1.2.0",
+    "memory": "1.0.0",
+    "modules": "1.3.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
-(`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0에서 1.0.0으로 시작)."""
+(`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0, `memory`는 0.10.0에서
+1.0.0으로 시작)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -111,6 +115,14 @@ class ErrorCodes:
     ARCHITECTURE_SCOPE_TOO_LARGE: Final = "architecture.scope_too_large"
     """구조도 범위(또는 단독 투영 본문)의 이벤트 수가 설치자 상한을 넘어 투영하지 않았다(0.9.0,
     HTTP 422). `details` = `ArchitectureScopeTooLargeDetails{events, limit}`."""
+    MEMORY_INVALID_KEY: Final = "memory.invalid_key"
+    """메모리 키가 글자 규칙(빈 마디·`.`·`..`·앞뒤 `/`·제어 문자 금지, 최대 길이)에 맞지
+    않다(0.10.0, HTTP 422)."""
+    MEMORY_TOO_LARGE: Final = "memory.too_large"
+    """메모리 본문·가져오기 묶음이 설치자 한도를 넘었다(0.10.0, HTTP 422). `details.limit`."""
+    MEMORY_SECRET_REJECTED: Final = "memory.secret_rejected"
+    """메모리 본문에 비밀 의심 값이 있어 쓰기를 거부했다(설정 비밀 처리 = 거부, 0.10.0, HTTP 422).
+    본문·찾은 값은 응답에 싣지 않는다. `details` = `MemorySecretRejectedDetails{field, rules}`."""
 
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
@@ -138,6 +150,9 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.BACKEND_LOGIN_SESSION_NOT_FOUND: 404,
     ErrorCodes.ARCHITECTURE_PROFILE_NOT_FOUND: 404,
     ErrorCodes.ARCHITECTURE_SCOPE_TOO_LARGE: 422,
+    ErrorCodes.MEMORY_INVALID_KEY: 422,
+    ErrorCodes.MEMORY_TOO_LARGE: 422,
+    ErrorCodes.MEMORY_SECRET_REJECTED: 422,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
@@ -248,6 +263,47 @@ class KnownIssueCodes:
     `project.cross_project`)을 보지 못했다(info)."""
     PROJECT_DEFINITIONS_UNAVAILABLE: Final = "project.definitions_unavailable"
     """정의 읽기가 없어(예: 정의 모듈이 꺼짐) 프로젝트 범위 검사·옮기기 계획을 하지 못했다(info)."""
+
+    # ---- 5.7R(design §5.7R.5, 0.10.0): 공유 메모리·에이전트 도구 공급자(X30)·구조도 검사(M-4)
+    # 메모리 도구 실패 사유 코드(`memory.<MemoryEventPayload.status>`, 도구 결과 `is_error`).
+    MEMORY_DENIED: Final = "memory.denied"
+    """접근 설정이 그 범위·동작을 허용하지 않는다."""
+    MEMORY_NOT_FOUND: Final = "memory.not_found"
+    """그 범위에 그 키가 없다."""
+    MEMORY_CONFLICT: Final = "memory.conflict"
+    """`if_version`이 현재 버전과 다르다(도구 결과에 현재 버전을 알린다)."""
+    MEMORY_TOO_LARGE: Final = "memory.too_large"
+    """본문이 크기 한도를 넘는다(REST 오류 `ErrorCodes.MEMORY_TOO_LARGE`와 같은 값)."""
+    MEMORY_SECRET_REJECTED: Final = "memory.secret_rejected"
+    """본문에 비밀 의심 값이 있어 거부했다(REST 오류와 같은 값)."""
+    MEMORY_RATE_LIMITED: Final = "memory.rate_limited"
+    """실행당 쓰기 한도·속도 한도를 넘었다."""
+    MEMORY_SCOPE_UNAVAILABLE: Final = "memory.scope_unavailable"
+    """범위 id 틀이 이 실행에서 빈 값이라 그 범위를 쓸 수 없다(예: 프로젝트 없이 실행)."""
+    MEMORY_INVALID_KEY: Final = "memory.invalid_key"
+    """키가 글자 규칙에 맞지 않다(REST 오류와 같은 값)."""
+    MEMORY_UNKNOWN_SCOPE_KIND: Final = "memory.unknown_scope_kind"
+    """메모리 접근 설정·항목이 목록에 없는 범위 종류를 가리킨다(warning). `details.kind`."""
+    MEMORY_SETTINGS_INVALID: Final = "memory.settings_invalid"
+    """설정 섹션 memory의 일부가 형식에 맞지 않아 그 부분을 빼고 읽었다(`ServerInfo.warnings`).
+    `Issue.path` = 섹션 기준 경로."""
+    MEMORY_STORAGE_MEMORY: Final = "memory.storage_memory"
+    """메모리 항목을 둘 DB가 없어 프로세스 메모리에 둔다(재시작하면 사라짐,
+    `ServerInfo.warnings`)."""
+    MEMORY_SEARCH_FALLBACK: Final = "memory.search_fallback"
+    """전문 검색(SQLite FTS5 trigram)을 쓸 수 없어 단순 포함 검색으로 찾는다
+    (`ServerInfo.warnings`)."""
+    TOOLS_PROVIDER_FAILED: Final = "tools.provider_failed"
+    """에이전트 도구 공급자가 예외를 내어 그 공급자를 건너뛰었다. `details.provider`."""
+    TOOLS_DUPLICATE_NAME: Final = "tools.duplicate_name"
+    """공급한 도구 이름이 이미 있는 도구와 겹쳐 뒤의 것(공급자 도구)을 뺐다. `details.name`·
+    `details.provider`."""
+    TOOLS_BACKEND_CAPABILITY_MISSING: Final = "tools.backend_capability_missing"
+    """실행 백엔드가 플랫폼 도구(host tools)를 받지 못해 공급 도구를 뺐다(실행은 계속).
+    `details.backend`·`details.provider`."""
+    ARCHITECTURE_CONDITION_PATH_UNLISTED: Final = "architecture.condition_path_unlisted"
+    """구조도 프로필 조건이 목록 본문에 없는 경로(예: 상세 전용 경로)를 봐서 맞지 않는다(warning,
+    M-4). `details.prefix` = 걸린 경로 접두."""
 
 
 class KnownSuggestionIds:

@@ -3,7 +3,7 @@
  * 데이터에 들어 있는 `tone`·`style`·`view`·지표 이름은 열린 문자열이고, 여기 없으면 중립 모양으로 그린다.
  * 이 표는 prop(`tones`·`edgeStyles`·`metricKinds`)으로 더하거나 바꿀 수 있다. 값은 CSS 색이 아니라 토큰 변수 이름이다.
  */
-import type { EdgeStyleSpec, MetricKindSpec } from "./types";
+import type { EdgeStyleSpec, MetricKindSpec, ZoneLegendItem } from "./types";
 
 /** tone → 토큰 변수 이름. */
 export const defaultTones: Readonly<Record<string, string>> = {
@@ -71,3 +71,6 @@ export const defaultEdgeLegendKeys: Readonly<Record<string, string>> = {
   return: "legendReturn",
   inferred: "legendStructural",
 };
+
+/** 범례의 영역 견본 기본 데이터. prop `zoneLegend`로 바꾸거나 `[]`로 끈다. */
+export const defaultZoneLegend: readonly ZoneLegendItem[] = [{ style: "runtime" }];
