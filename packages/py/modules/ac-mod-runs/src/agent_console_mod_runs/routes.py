@@ -12,7 +12,8 @@
   ``GET /backends/login/current``·``GET /backends/login/{sid}``·
   ``POST /backends/login/{sid}/input``·``DELETE /backends/login/{sid}``·
   ``POST /backends/{id}/logout``. 응답은 ``no-store``,
-  입력값은 응답·로그·오류에 나오지 않는다.
+  입력값은 응답·로그·오류에 나오지 않는다. 로그인 서비스가 꺼져 있으면(``backend_login.enabled``
+  거짓) 이 경로가 없고 ``/backends``·``/backends/status``에서 로그인 능력·동작을 뺀다.
 - 디스크립터: ``/node-types``(+ ``POST …/ports``)·``/edge-types``·``/backends``(+ ``/models``)·
   ``/delegation-strategies``·``/interaction-kinds``·``/condition-operators``
 - 자식 Run(design §5R.7·§5R.11): ``GET /runs?root=<id>``(그 루트 아래 모든 자손),
@@ -72,6 +73,7 @@ from .errors import (
     issues_from_errors,
 )
 from .interactions import InteractionService
+from .login_gate import descriptor_without_login, readiness_without_login
 from .service import RunService
 
 DEFAULT_RUN_LIST_LIMIT = 200
@@ -282,10 +284,12 @@ def build_router(
 
     @router.get("/backends", response_model=list[BackendDescriptor], responses=errors())
     async def list_backends() -> list[BackendDescriptor]:
-        return service().backends()
+        """등록된 실행 백엔드 디스크립터. 로그인 서비스가 꺼져 있으면 로그인 능력·방법을 뺀다."""
+        found = service().backends()
+        return found if login is not None else [descriptor_without_login(d) for d in found]
 
     if readiness is not None:
-        _backend_readiness_routes(router, readiness)
+        _backend_readiness_routes(router, readiness, login_enabled=login is not None)
 
     @router.get("/backends/{backend_id}/models", response_model=list[ModelInfo], responses=errors())
     async def list_models(backend_id: str) -> list[ModelInfo]:
@@ -342,9 +346,18 @@ NO_STORE = "no-store"
 
 
 def _backend_readiness_routes(
-    router: APIRouter, readiness: Callable[[], BackendReadinessService]
+    router: APIRouter,
+    readiness: Callable[[], BackendReadinessService],
+    *,
+    login_enabled: bool = True,
 ) -> None:
-    """``/backends/status``·``/backends/{id}/status``·``POST /backends/{id}/probe``."""
+    """``/backends/status``·``/backends/{id}/status``·``POST /backends/{id}/probe``.
+
+    ``login_enabled``가 거짓이면(로그인 경로 없음) 상태의 ``login``·``logout`` 동작을 뺀다.
+    """
+
+    def gate(found: BackendReadiness) -> BackendReadiness:
+        return found if login_enabled else readiness_without_login(found)
 
     @router.get(
         "/backends/status",
@@ -359,7 +372,7 @@ def _backend_readiness_routes(
         응답에 비밀 값은 없다(있음/없음과 출처 이름만, 글자 필드는 가림을 거친다).
         """
         response.headers["Cache-Control"] = NO_STORE
-        return await readiness().status_all()
+        return [gate(item) for item in await readiness().status_all()]
 
     @router.get(
         "/backends/{backend_id}/status",
@@ -373,7 +386,7 @@ def _backend_readiness_routes(
         등록되지 않은 id는 404 `not_found`.
         """
         response.headers["Cache-Control"] = NO_STORE
-        return await readiness().status(backend_id)
+        return gate(await readiness().status(backend_id))
 
     @router.post(
         "/backends/{backend_id}/probe",

@@ -282,6 +282,7 @@ def test_no_install_option_or_public_api_accepts_tokens() -> None:
         "login_env",
         "verify_login",
         "start_login",
+        "login_refusal",  # 5.2R.85: 능력이 꺼진 이유(오류 코드·문장)만 돌려준다
     }
     names = set(pkg.__all__) | backend_methods
     assert {n for n in names if "login" in n.lower()} <= login_api

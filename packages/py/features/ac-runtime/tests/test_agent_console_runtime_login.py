@@ -29,11 +29,13 @@ from agent_console_runtime import (
     LoginInputError,
     LoginProgress,
     LoginReasons,
+    LoginRefusalAware,
     LoginRefusedError,
     LoginSessionNotFoundError,
     LoginUnsupportedError,
     LogoutUnsupportedError,
     UnknownBackendError,
+    login_refusal_of,
     mask_values,
     supports_login,
     supports_logout,
@@ -102,6 +104,47 @@ async def test_unknown_and_unsupported() -> None:
         await service.logout("a")
     assert service.login_supported("a") is False
     assert service.logout_supported("a") is False
+
+
+class _Refusing(LoginBackendStub):
+    """능력은 꺼졌고 그 이유를 알리는 백엔드(``LoginRefusalAware``)."""
+
+    def __init__(self, backend_id: str, reason: LoginRefusedError | None) -> None:
+        super().__init__(backend_id, login=False, logout=False)
+        self.reason = reason
+
+    def login_refusal(self) -> LoginRefusedError | None:
+        return self.reason
+
+
+class _BrokenRefusal(LoginBackendStub):
+    def __init__(self) -> None:
+        super().__init__("b", login=False, logout=False)
+
+    def login_refusal(self) -> LoginRefusedError | None:
+        raise RuntimeError("boom")
+
+
+async def test_refusal_reason_replaces_unsupported() -> None:
+    refused = LoginRefusedError("backend.subscription_auth_disabled", "꺼짐")
+    backend = _Refusing("a", refused)
+    assert isinstance(backend, LoginRefusalAware)
+    assert login_refusal_of(backend) is refused
+    service, _ = make_service(backend, _Refusing("n", None), _BrokenRefusal())
+    with pytest.raises(LoginRefusedError) as info:
+        await service.start("a")
+    assert info.value.code == "backend.subscription_auth_disabled"
+    with pytest.raises(LoginRefusedError):
+        await service.logout("a")
+    assert backend.drivers == []
+    assert backend.logout_calls == 0
+    assert service.current() is None
+    # 이유가 없거나 조회가 실패하면 일반 "지원 안 함"
+    with pytest.raises(LoginUnsupportedError):
+        await service.start("n")
+    with pytest.raises(LoginUnsupportedError):
+        await service.start("b")
+    assert login_refusal_of(object()) is None
 
 
 async def test_unknown_method_rejected() -> None:

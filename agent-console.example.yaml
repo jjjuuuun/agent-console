@@ -53,7 +53,7 @@ modules:
         shutdown_timeout: 10       # 종료 때 실행 중 Run 정리를 기다리는 최대 초
       backends:
         # 백엔드 id → 그 백엔드의 설치자 설정(키 의미는 각 백엔드 README).
-        fake:                      # 모델 호출 없는 결정적 백엔드. 화면 확인·E2E용
+        fake:                      # 모델 호출 없는 결정적 백엔드. 화면 확인·테스트·개발용
           models:
             - {id: fake-small, title: "fake (작은 모델 흉내)"}
           rate_limits:             # 실행마다 낼 usage.rate_limit 예시(사용량 카드 확인용, 값은 지어낸 예시)

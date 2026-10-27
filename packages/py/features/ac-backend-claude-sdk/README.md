@@ -187,7 +187,9 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 - 디스크립터: `capabilities.login = true`·`capabilities.logout = true`, `login_methods = [cli-login]`(문구·본인 책임
   안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`(5.2R.80)다.
 - **능력이 없는 경우**: 설치자 설정 `login.enabled = false`, `allow_subscription_auth = false`, PTY를 쓸 수 없음(`[login]`
-  미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다.
+  미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다. `allow_subscription_auth =
+  false`이면 `login_refusal()`(`LoginRefusalAware`)이 이유를 알려 로그인·로그아웃 요청이 `backend.login_unsupported`가
+  아니라 409 `backend.subscription_auth_disabled`로 거절된다.
 - `status()`의 `actions`: 구독 방식이고 로그인 파일이 없으면(`subscription_unverified`) 주 버튼 `login`, 있으면
   (`subscription_ready`) 메뉴의 `login`(다시 로그인)·`logout`. 토큰 비밀(`oauth_token`) 방식이면 버튼이 없다.
   상태 점검은 계속 **파일 존재만** 본다(`claude auth status`는 Node 프로세스를 띄워 폴링마다 쓰기엔 비싸다 —
@@ -264,7 +266,7 @@ uv run agent-console serve --open       # 127.0.0.1:8765
    않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
 3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서 같은 `CLAUDE_CONFIG_DIR`로 `claude auth status; echo $?`
    → JSON의 `authMethod`가 `claude.ai`이고 종료 코드 0이다.
-4. 대화상자의 [연결 테스트](또는 카드의 연결 테스트)가 통과한다(짧은 요청 한 번, 구독 사용량이 조금 든다).
+4. 대화상자를 [닫기]로 닫고 카드의 [연결 테스트]를 누르면 통과한다(짧은 요청 한 번, 구독 사용량이 조금 든다).
 5. 다시 [구독으로 로그인] → 진행 중에 [취소]를 누르면 "취소했습니다"이고 `ps`에 `auth login`이 남지 않는다. 시간
    초과는 설정 `modules.options.mod-runs.backend_login.timeout_s: 30`으로 줄여 두고 30초 기다려 확인한다(프로세스가
    남지 않는다).

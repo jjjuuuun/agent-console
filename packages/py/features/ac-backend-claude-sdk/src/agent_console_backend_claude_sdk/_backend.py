@@ -49,6 +49,7 @@ from agent_console_runtime import (
     CancelToken,
     InteractivePort,
     LoginDriver,
+    LoginRefusedError,
     SecretNotFoundError,
     SecretResolver,
     SessionRef,
@@ -666,6 +667,11 @@ class ClaudeSdkBackend:
     async def logout(self, ctx: BackendLoginContext, method_id: str | None) -> BackendLogoutResult:
         """선택 능력(앱 화면 로그아웃): `claude auth logout`(`login.logout_command`)."""
         return await self._login.logout(ctx)
+
+    def login_refusal(self) -> LoginRefusedError | None:
+        """능력이 꺼진 이유(`LoginRefusalAware`): `allow_subscription_auth`가 꺼졌으면
+        `backend.subscription_auth_disabled`. 서비스가 `login_unsupported` 대신 이 거절을 낸다."""
+        return self._login.refusal()
 
     async def probe(self, ctx: BackendCheckContext, timeout_s: float) -> BackendProbeResult:
         """선택 능력(연결 테스트): 도구 없는 한 턴짜리 짧은 호출 한 번.

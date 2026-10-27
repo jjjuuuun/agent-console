@@ -38,6 +38,7 @@ from agent_console_runtime import (
     BackendLoginContext,
     BackendLoginService,
     LoginRefusedError,
+    LoginUnsupportedError,
     SecretResolver,
     supports_login,
     supports_logout,
@@ -229,6 +230,28 @@ async def test_start_refused_when_subscription_disabled(config_dir: Path) -> Non
     with pytest.raises(LoginRefusedError) as info:
         await b.start_login(BackendLoginContext("claude-agent-sdk"), CLI_LOGIN_METHOD_ID)
     assert info.value.code == ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED
+
+
+async def test_service_reports_subscription_disabled_not_unsupported(config_dir: Path) -> None:
+    """N1: 구독 방식이 꺼지면 능력은 없지만 거절 코드는 이유(subscription_auth_disabled)다."""
+    b = _backend(config_dir, allow=False, pty_support=PtySupport(True))
+    assert not supports_login(b)
+    assert b.descriptor.capabilities.login is False
+    service = _service(b)
+    with pytest.raises(LoginRefusedError) as info:
+        await service.start("claude-agent-sdk")
+    assert info.value.code == ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED
+    with pytest.raises(LoginRefusedError) as out:
+        await service.logout("claude-agent-sdk")
+    assert out.value.code == ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED
+    assert service.current() is None
+
+
+async def test_login_disabled_setting_stays_unsupported(config_dir: Path) -> None:
+    b = _backend(config_dir, login={"enabled": False}, pty_support=PtySupport(True))
+    assert b.login_refusal() is None
+    with pytest.raises(LoginUnsupportedError):
+        await _service(b).start("claude-agent-sdk")
 
 
 def test_from_options_reads_login(config_dir: Path) -> None:

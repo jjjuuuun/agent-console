@@ -54,7 +54,8 @@
       ``BackendLoginContext``·``LoginProgress``, ``BackendLoginService``(세션 하나·시간 상한·
       하트비트·취소·가림·로그 규칙), ``mask_values``, ``supports_login``·``supports_logout``, 오류
       ``LoginUnsupportedError``·``LogoutUnsupportedError``·``LoginBusyError``·``LoginRefusedError``·
-      ``LoginSessionNotFoundError``·``LoginInputError``.
+      ``LoginSessionNotFoundError``·``LoginInputError``. 능력이 꺼진 이유 알림(선택)
+      ``LoginRefusalAware``·``login_refusal_of``.
       테스트용 ``agent_console_runtime.testing_login``
     - 서비스·비밀·취소: ``Services``·``ServiceKey``, ``SecretResolver``·``EnvSecretProvider``,
       ``CancelToken``
@@ -169,12 +170,14 @@ from agent_console_runtime._login import (
     LoginInputError,
     LoginProgress,
     LoginReasons,
+    LoginRefusalAware,
     LoginRefusedError,
     LoginSessionNotFoundError,
     LoginTexts,
     LoginUnsupportedError,
     LogoutCapableBackend,
     LogoutUnsupportedError,
+    login_refusal_of,
     mask_values,
     supports_login,
     supports_logout,
@@ -348,6 +351,7 @@ __all__ = [
     "LoginInputError",
     "LoginProgress",
     "LoginReasons",
+    "LoginRefusalAware",
     "LoginRefusedError",
     "LoginSessionNotFoundError",
     "LoginTexts",
@@ -417,6 +421,7 @@ __all__ = [
     "is_secret_ref",
     "load_registries",
     "load_registry_plugins",
+    "login_refusal_of",
     "mask_values",
     "merge_contributions",
     "node_actor",

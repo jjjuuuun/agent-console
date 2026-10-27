@@ -21,14 +21,23 @@ from agent_console_contracts import (
     HTTP_STATUS_BY_ERROR_CODE,
     BackendCapabilities,
     BackendDescriptor,
+    BackendReadiness,
     ModelInfo,
+    ReadinessAction,
     build_schema,
 )
 from agent_console_mod_runs import module
 from agent_console_mod_runs.testing import local_definitions_module
 from agent_console_modkit import BaseServices, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
-from agent_console_runtime import BackendLoginContext, LoginProgress, Registries, load_registries
+from agent_console_runtime import (
+    BackendCheckContext,
+    BackendLoginContext,
+    LoginProgress,
+    LoginRefusedError,
+    Registries,
+    load_registries,
+)
 from agent_console_runtime.testing_login import LoginBackendStub, ManualLoginDriver
 
 API = "/api/v1"
@@ -50,6 +59,35 @@ class _Plain:
 
     async def run(self, req: Any, sink: Any, cancel: Any) -> Any:  # pragma: no cover
         raise NotImplementedError
+
+
+class _StatusLogin(LoginBackendStub):
+    """상태 점검 + 로그인 능력, 상태가 로그인·로그아웃·기타 동작을 내는 백엔드."""
+
+    def __init__(self, backend_id: str) -> None:
+        super().__init__(backend_id)
+        caps = self.descriptor.capabilities.model_copy(update={"status": True})
+        self.descriptor = self.descriptor.model_copy(update={"capabilities": caps})
+
+    async def status(self, ctx: BackendCheckContext) -> BackendReadiness:
+        return BackendReadiness(
+            backend_id=ctx.backend_id,
+            state="login_required",
+            tone="warn",
+            checked_at=ctx.clock(),
+            actions=[
+                ReadinessAction(kind="login", method_id="m1", label="로그인", primary=True),
+                ReadinessAction(kind="logout", method_id="m1", label="로그아웃"),
+                ReadinessAction(kind="other", label="기타"),
+            ],
+        )
+
+
+class _Refusing(_Plain):
+    """능력은 없지만 그 이유(설치자 설정)를 알리는 백엔드(``LoginRefusalAware``)."""
+
+    def login_refusal(self) -> LoginRefusedError | None:
+        return LoginRefusedError("backend.subscription_auth_disabled", "구독 방식이 꺼져 있습니다")
 
 
 def _script(ctx: BackendLoginContext, method: str) -> ManualLoginDriver:
@@ -92,6 +130,8 @@ def _client(
     stub = LoginBackendStub("stub-login", make_driver=_script)
     registries.backends.register("stub-login", stub, source="test")
     registries.backends.register("plain", _Plain("plain"), source="test")
+    registries.backends.register("status-login", _StatusLogin("status-login"), source="test")
+    registries.backends.register("refusing", _Refusing("refusing"), source="test")
     base = BaseServices(
         paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
         registries=registries,
@@ -272,11 +312,52 @@ def test_disabled_by_setting(tmp_path: Path) -> None:
         assert client.get(f"{API}/backends/status").status_code == 200  # 나머지는 그대로
 
 
+def _kinds(body: dict[str, Any]) -> list[str]:
+    return [a["kind"] for a in body["actions"]]
+
+
+def test_login_affordances_shown_when_enabled(tmp_path: Path) -> None:
+    with _client(tmp_path) as (client, _):
+        descriptors = {d["id"]: d for d in client.get(f"{API}/backends").json()}
+        assert descriptors["status-login"]["capabilities"]["login"] is True
+        assert descriptors["status-login"]["login_methods"][0]["id"] == "m1"
+        one = client.get(f"{API}/backends/status-login/status").json()
+        assert _kinds(one) == ["login", "logout", "other"]
+
+
+def test_login_affordances_hidden_when_service_disabled(tmp_path: Path) -> None:
+    """D1: 로그인 경로가 없으면 상태 동작·디스크립터 능력에서도 로그인이 빠진다(수용 1)."""
+    config = ModulesConfig(options={"mod-runs": {"backend_login": {"enabled": False}}})
+    with _client(tmp_path, config=config) as (client, _):
+        for d in client.get(f"{API}/backends").json():
+            assert d["capabilities"]["login"] is False, d["id"]
+            assert d["capabilities"]["logout"] is False, d["id"]
+            assert d["login_methods"] == [], d["id"]
+        one = client.get(f"{API}/backends/status-login/status")
+        assert one.status_code == 200
+        assert _kinds(one.json()) == ["other"]  # 로그인 서비스가 처리하는 종류만 뺀다
+        every = {r["backend_id"]: r for r in client.get(f"{API}/backends/status").json()}
+        assert _kinds(every["status-login"]) == ["other"]
+        assert client.post(f"{API}/backends/status-login/login").status_code == 404
+
+
+def test_refusal_reason_replaces_unsupported(tmp_path: Path) -> None:
+    """N1: 능력이 없을 때 백엔드가 이유를 알리면 그 코드(409)로 거절한다."""
+    with _client(tmp_path) as (client, _):
+        for path in ("login", "logout"):
+            res = client.post(f"{API}/backends/refusing/{path}")
+            assert res.status_code == 409
+            assert res.json()["error"]["code"] == "backend.subscription_auth_disabled"
+
+
 def test_routes_absent_when_module_disabled(tmp_path: Path) -> None:
     config = ModulesConfig(disabled=["mod-runs"])
     with _client(tmp_path, config=config) as (client, _):
         assert client.post(f"{API}/backends/stub-login/login").status_code == 404
         assert client.get(f"{API}/backends/login/current").status_code == 404
+        # 모듈이 꺼지면 상태·디스크립터 경로도 없다(화면은 버튼을 그릴 근거가 없다)
+        assert client.get(f"{API}/backends/status").status_code == 404
+        assert client.get(f"{API}/backends").status_code == 404
 
 
 def test_shutdown_cancels_active_session(tmp_path: Path) -> None:

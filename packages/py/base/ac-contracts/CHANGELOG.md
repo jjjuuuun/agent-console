@@ -10,6 +10,7 @@
   오류 코드 `backend.login_unsupported`·`backend.login_busy`·`backend.logout_unsupported`·
   `backend.subscription_auth_disabled`(409), `backend.login_session_not_found`(404). 새 필드는 전부 선택이라 하위 호환이다.
 
+- 5.2R.85 N1 후속: `BackendCapabilities.login`·`logout` 설명에 "백엔드가 거절 이유를 알리면 그 코드(예: `backend.subscription_auth_disabled`)" 를 덧붙였다(`ac-runtime` `LoginRefusalAware`). 문구만 바뀌고 형식은 그대로다.
 - 5.2R.104(프리셋 기능 삭제, 사용자 지시): `PresetSummary`·`ApplyPresetRequest`·`ApplyPresetResult`와 경로 `GET /presets`·`POST /presets/{id}/apply`를 지웠다. 생성 TS 타입·JSON Schema에서도 빠진다. `AppliedItemInfo`·`ConflictPolicy`는 가져오기가 계속 쓴다. 0.8.0은 아직 배포 전이라 하위 계약 버전(`definitions` 1.3.0)은 그대로 둔다. phase-5r 기준 파일에서 두 모델의 사례를 뺐다(나머지 사례는 그대로).
 - 5.2R.94(잔해 정리): README의 "삭제(2R.20, 0.4.0)" 절을 이 기록의 0.4.0 항목으로 옮기고, README에는 옛 데이터 읽기 설명만 남겼다. 코드 변경 없음.
 - 5.2R.64: 목록 요약 `GraphSummary.attributes`·`ResourceSummary.attributes`(`JsonObject`, 기본 `{}`, 선택). 원문 `attributes` 그대로이며 웹 목록 폴더(`ui.folder`)·임의 키 묶기에 쓴다. 수정 시각은 기존 `saved_at`(초 단위 epoch, 선택)을 그대로 쓴다. 새 필드는 선택이라 하위 호환이다.

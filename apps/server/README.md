@@ -16,7 +16,7 @@ uv pip install ./apps/server    # 단독
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
-| `fastapi` | REST·WS 라우팅, OpenAPI | 확정 스택(design §7), Pydantic 계약 모델을 그대로 요청·응답 모델로 쓴다 | Starlette 단독 — OpenAPI·본문 검증을 직접 써야 한다 |
+| `fastapi` | REST·WS 라우팅, OpenAPI | Pydantic 계약 모델을 그대로 요청·응답 모델로 쓴다 | Starlette 단독 — OpenAPI·본문 검증을 직접 써야 한다 |
 | `uvicorn` | ASGI 서버 | FastAPI 표준 실행기, WS 지원 | hypercorn |
 | `websockets` | uvicorn WS 구현 | uvicorn 기본 WS 백엔드 | wsproto |
 | `ruamel-yaml` | `agent-console.yaml` 읽기(safe 로더) | store와 같은 라이브러리 | PyYAML |
@@ -170,24 +170,24 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
 | 디스크립터(`mod-runs`, 리소스 종류·병합은 `mod-resources`) | `GET /node-types`, `POST /node-types/{id}/ports`, `GET /edge-types`, `GET /backends`, `GET /backends/{id}/models`, `GET /delegation-strategies`, `GET /interaction-kinds`, `GET /resource-types`, `GET /merge-strategies` |
 | 에이전트 | `GET/POST /agents`, `GET/PUT/DELETE /agents/{id}`, `GET /agents/{id}/usages`, `GET /agents/{id}/effective-settings`, `GET /agents/{id}/activity?limit=`(RunEvent[], 최신순) |
 | 팀 구성 | `GET /graphs?validate=`(요약마다 `validation{blocks_run, error_count, warning_count, codes}`, 워크스페이스 개정별 캐시, `validate=false`면 null), `POST /graphs`, `GET/PUT/DELETE /graphs/{id}`, `POST /graphs/{id}/duplicate {id,name}`(201 VersionedGraph, 409), `POST /graphs/{id}/validate`(`link-runs-teams`), `GET /graphs/{id}/plan`(TeamPlanSummary), `GET /graphs/{id}/nodes/{node}/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview`(BundlePreview{bundle, warnings}) |
-| 팀 구성 초안(저장 안 함, 2R.7) | `POST /graphs/plan {graph}`(TeamPlanSummary), `POST /graphs/effective-settings {graph, node_id}`(EffectiveSettings), `POST /graphs/bundle-preview {graph, node_id}`(BundlePreview). 비밀 가림은 저장본 경로와 같다 |
+| 팀 구성 초안(저장 안 함) | `POST /graphs/plan {graph}`(TeamPlanSummary), `POST /graphs/effective-settings {graph, node_id}`(EffectiveSettings), `POST /graphs/bundle-preview {graph, node_id}`(BundlePreview). 비밀 가림은 저장본 경로와 같다 |
 | 실행(`mod-runs`, 흐름·넘김은 `link-runs-trace`) | `POST /runs`, `GET /runs?graph_id=&conversation_id=&agent_id=&status=&limit=`, `GET /runs/handoffs`(같은 필터), `GET /runs/{id}`, `POST /runs/{id}/cancel`, `GET /runs/{id}/events?actor=&type_prefix=&since_seq=`, `GET /runs/{id}/trace`, `GET /runs/{id}/resume-options`, `POST /runs/{id}/resume` |
 | 상호작용(`mod-runs`) | `GET /interactions?status=&conversation_id=&limit=`(최신순), `GET /runs/{id}/interactions`, `POST /runs/{run}/interactions/{id}/respond {response}`(200·404·409 `interaction_closed`·422) |
 | 채팅 | `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/{id}`, `GET /conversations/{id}/turns?before=<run_id>&limit=`, `POST /conversations/{id}/messages`(202 Run 또는 `{queued: true, id, position, text}`, 409 `conversation_busy`), `GET /conversations/{id}/queue`, `DELETE /conversations/{id}/queue/{queued_id}`(204) |
 | 리소스 | `GET /resources?type=`, `POST /resources`, `GET/PUT/DELETE /resources/{id}`(ETag, PUT은 If-Match 필수), `GET /resources/{id}/usages`, `GET/PUT /resources/{id}/content`(텍스트 본문 + ETag, If-Match, 412면 현재 ETag) |
-| 리소스 여러 파일(2R.12) | `GET /resources/{id}/files`(ResourceFile[] 경로 순), `GET /resources/{id}/files/{path}`(내용 + ETag, 텍스트 형식이면 `text/plain` 그 밖 `application/octet-stream`), `PUT …/files/{path}`(본문 = 바이트)·`DELETE …/files/{path}` — If-Match = 리소스 `version_hash`(없음 428·다름 412), 응답 = 정의 원문 + 새 ETag. 쓰기는 종류 디스크립터 `content.multi_file`일 때만(아니면 422 `resource.not_multi_file`). 경로 규칙 위반 400, 총량 한도(`modules.options.mod-definitions.max_content_bytes`) 초과 413 |
+| 리소스 여러 파일 | `GET /resources/{id}/files`(ResourceFile[] 경로 순), `GET /resources/{id}/files/{path}`(내용 + ETag, 텍스트 형식이면 `text/plain` 그 밖 `application/octet-stream`), `PUT …/files/{path}`(본문 = 바이트)·`DELETE …/files/{path}` — If-Match = 리소스 `version_hash`(없음 428·다름 412), 응답 = 정의 원문 + 새 ETag. 쓰기는 종류 디스크립터 `content.multi_file`일 때만(아니면 422 `resource.not_multi_file`). 경로 규칙 위반 400, 총량 한도(`modules.options.mod-definitions.max_content_bytes`) 초과 413 |
 | 가져오기(`mod-imports`) | `GET /resources/import/sources`, `POST /resources/import/preview {source}`(후보 + `warnings`: 링크라서 건너뜀 `import.skipped_link` 등), `POST /resources/import {source, items}` — 원본 읽기만 |
-| 내보내기(2R.11, X8, `mod-exports`) | `GET /exporters`(ExporterDescriptor[]), `POST /exports/plan`(ExportRequest → ExportPlan, 쓰기 없음, `root`·`subdir`를 주면 그 폴더 기준 create·skip·conflict), `POST /exports/archive`(zip 응답 `application/zip` + `Content-Disposition`, 디스크에 쓰지 않음), `GET /exports/roots`(**토큰 필수**, ExportRootInfo[], 비면 폴더 쓰기 꺼짐, `modules.options.mod-exports.expose_paths=false`(생략하면 `security.expose_paths` 값)면 path 빈 문자열), `POST /exports/write`(ExportWriteRequest → ExportResult, `on_conflict` 기본 fail → 409 `already_exists` `details.paths`). 형식 없음·루트 없음·정의 없음 404, 종류·옵션·경로 잘못 422(`details.issues`, path = 요청 기준 `/items/0/kind`·`/options/…`·`/subdir`), 형식이 error 경고를 내면 archive·write 422 |
+| 내보내기(`mod-exports`) | `GET /exporters`(ExporterDescriptor[]), `POST /exports/plan`(ExportRequest → ExportPlan, 쓰기 없음, `root`·`subdir`를 주면 그 폴더 기준 create·skip·conflict), `POST /exports/archive`(zip 응답 `application/zip` + `Content-Disposition`, 디스크에 쓰지 않음), `GET /exports/roots`(**토큰 필수**, ExportRootInfo[], 비면 폴더 쓰기 꺼짐, `modules.options.mod-exports.expose_paths=false`(생략하면 `security.expose_paths` 값)면 path 빈 문자열), `POST /exports/write`(ExportWriteRequest → ExportResult, `on_conflict` 기본 fail → 409 `already_exists` `details.paths`). 형식 없음·루트 없음·정의 없음 404, 종류·옵션·경로 잘못 422(`details.issues`, path = 요청 기준 `/items/0/kind`·`/options/…`·`/subdir`), 형식이 error 경고를 내면 archive·write 422 |
 | 사용량(`mod-usage`) | `GET /usage?parts=windows,tokens`(생략 = 전부, 요청하지 않은 부분은 null, `windows`만이면 실행 기록을 읽지 않음), `GET /usage/sources` |
 | 설정 | `GET/PUT /settings` |
-| 버전(2R.13, 종류 공통, `mod-versions`) | `{컬렉션}` = `/agents/{id}`·`/graphs/{id}`·`/resources/{id}`·`/settings`(표는 설정 데이터 `modules.options.mod-versions.collections`): `GET {컬렉션}/versions`, `GET …/versions/{hash}`(content = 원문), `GET …/versions/{a}/diff[/{b}]`(DefinitionDiff, b 생략 = 현재, 비밀 위치 `secret:true`·값 `***`, 본문은 sha256만 `content_changes`), `GET …/versions/{hash}/files[/{path}]`(본문 스냅샷 없으면 404, 내용은 텍스트면 `text/plain` 그 밖 `application/octet-stream`), `POST …/versions/{hash}/restore {message?}`(새 버전 저장, 정의가 있으면 If-Match 필수 428/412, 지운 정의는 없이 되살림, 저장 전 검사 동일 → 422, 응답 DefinitionVersion + ETag, 기본 메시지 `restored from <hash>`) |
+| 버전(종류 공통, `mod-versions`) | `{컬렉션}` = `/agents/{id}`·`/graphs/{id}`·`/resources/{id}`·`/settings`(표는 설정 데이터 `modules.options.mod-versions.collections`): `GET {컬렉션}/versions`, `GET …/versions/{hash}`(content = 원문), `GET …/versions/{a}/diff[/{b}]`(DefinitionDiff, b 생략 = 현재, 비밀 위치 `secret:true`·값 `***`, 본문은 sha256만 `content_changes`), `GET …/versions/{hash}/files[/{path}]`(본문 스냅샷 없으면 404, 내용은 텍스트면 `text/plain` 그 밖 `application/octet-stream`), `POST …/versions/{hash}/restore {message?}`(새 버전 저장, 정의가 있으면 If-Match 필수 428/412, 지운 정의는 없이 되살림, 저장 전 검사 동일 → 422, 응답 DefinitionVersion + ETag, 기본 메시지 `restored from <hash>`) |
 
 - 고정 경로(`/runs/handoffs`, 연동 모듈)는 `{id}` 경로(기능 모듈)보다 먼저 맞는다: 호스트가 연동 모듈 라우터를 먼저
   붙인다(`agent_console_modkit.host.include_routers`). `/resources/import/*`(모듈 라우터)는
   리소스 `{id}` 경로와 메서드·깊이가 겹치지 않는다.
 - 4xx는 모두 `ErrorResponse{error{code, message, details}}`. 422는 `details.issues`. 412는 `ETag` 헤더에 현재 버전.
 - **정의 응답은 저장 원문**이다(에이전트·팀 구성·리소스·설정의 GET·POST·PUT, 에이전트 목록, `VersionedGraph.graph`).
-  생략한 키는 응답에도 없고, 명시한 null·빈 목록·기본값과 같은 값은 그대로 있다("생략 = 상속", design §R2).
+  생략한 키는 응답에도 없고, 명시한 null·빈 목록·기본값과 같은 값은 그대로 있다("생략 = 상속").
   기본값·출처를 채운 값은 `.../effective-settings`가 준다. `GET /settings`는 파일이 없으면 `{}`(ETag 없음).
   GET 결과를 그대로 PUT해도 파일이 불어나지 않는다. `response_model`은 OpenAPI 문서용으로만 남는다.
 - **리소스 저장 전 검사**: `POST /resources`·`PUT /resources/{id}`는 종류 검사(`agent_console_resources.validate_resource`)에
@@ -203,7 +203,7 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
   (`link-definitions-resources`의 `DefinitionChecker` 하나가 REST·버전 되돌리기 공통).
 - **표시용 가리기**: `GET .../effective-settings`(에이전트·노드)와 `GET .../bundle-preview`는 리소스 종류 config 스키마의
   `x-secret` 위치에서 `secret://`가 아닌 값을 `***`로 바꿔 보낸다(검사 전에 저장된 데이터의 안전망).
-- **비밀 규칙(2R.4)**: `mod-definitions`(`WorkspaceState`·`SecretRuleCheck`·`PlainSecretScan`)가 조립한다(로직은 `ac-secret-rules`).
+- **비밀 규칙**: `mod-definitions`(`WorkspaceState`·`SecretRuleCheck`·`PlainSecretScan`)가 조립한다(로직은 `ac-secret-rules`).
   - 공통 설정 `secrets.extra_key_names`·`extra_value_patterns`는 기본 규칙에 **더하기만** 한다. 패턴은 `ac-safe-regex`
     검사 — 위험·잘못된 정규식이면 `PUT /settings` 422(`secret.invalid_rule`, path `/secrets/extra_value_patterns/<i>`).
   - `secrets.redact_suspected_in_logs`(기본 true): 런타임 `SecretResolver(extra_redact=)`로 실행 기록(이벤트·Run·NodeRun)·
@@ -211,7 +211,7 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
   - 평문 점검: 시작 시와 `GET /server-info`(캐시)에서 리소스·에이전트·팀 구성·설정을 훑어 `warnings`에
     `secret.plain_found`(warning, `details{kind, id}`, path = 정의 문서 기준, 값 없음)를 낸다. 저장 검사의 평문 이슈
     (`resource.plain_secret`·`resource.override_secret_suspected`)와 문서 전체 의심 판정을 합친다. 캐시는 정의가
-    새 버전으로 저장될 때(토픽 `definitions.saved` — 모든 모듈의 쓰기 포함)와 삭제될 때 버린다(3R.12).
+    새 버전으로 저장될 때(토픽 `definitions.saved` — 모든 모듈의 쓰기 포함)와 삭제될 때 버린다.
     원문 GET은 가리지 않는다.
   - 선언형 리소스 종류는 스키마 `x-secret: true` 위치의 평문이 일반 규칙으로 거부된다(`resource.plain_secret`).
 - 채팅 대기열은 `mod-chat`이 서버 DB(표 `chat_queue`)에 저장한다. 서버를 다시 시작하면 `link-chat-runs`가 워크스페이스 설정
@@ -239,7 +239,7 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
 | `RemovedKey`, `SETTINGS_REMOVED_KEY`, `ConfigError.code`·`ConfigError.removed` | 지운 옛 키가 남아 있으면 `load_settings`가 `ConfigError(code="settings.removed_key", removed=[RemovedKey{old, new, message}])`를 낸다. 메시지에 이유·새 위치를 적는다. 지운 키는 모듈 선언(`SettingsCompat.removed`)에서만 온다 |
 | `build_openapi(app)` | OpenAPI 문서(컴포넌트 = 계약 JSON Schema `$defs`) |
 | `QueryRedactingFilter`, `install_log_redaction` | 로그의 비밀성 쿼리 값 가리기 |
-| `SecurityPolicy`, `TOKEN_HEADER`, `TOKEN_QUERY`, `WS_CLOSE_UNAUTHORIZED`(4401), `WS_CLOSE_FORBIDDEN`(4403), `API_PREFIX`, `WS_PATH` | 보안·경로 상수(보안 미들웨어·토큰·`/health`·WS 다중화·로그 가림은 `agent-console-modkit[host]`에서 온다, 3R.8) |
+| `SecurityPolicy`, `TOKEN_HEADER`, `TOKEN_QUERY`, `WS_CLOSE_UNAUTHORIZED`(4401), `WS_CLOSE_FORBIDDEN`(4403), `API_PREFIX`, `WS_PATH` | 보안·경로 상수(보안 미들웨어·토큰·`/health`·WS 다중화·로그 가림은 `agent-console-modkit[host]`에서 온다) |
 
 ## 설정 파일 `agent-console.yaml`
 

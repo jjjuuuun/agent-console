@@ -2013,11 +2013,11 @@ export interface BackendCapabilities {
    */
   probe?: boolean;
   /**
-   * 앱 화면에서 백엔드 계정 로그인을 시작할 수 있다(방법은 `login_methods`). false면 `POST /backends/{id}/login`이 409 `backend.login_unsupported`.
+   * 앱 화면에서 백엔드 계정 로그인을 시작할 수 있다(방법은 `login_methods`). false면 `POST /backends/{id}/login`이 409 `backend.login_unsupported`(백엔드가 이유를 알리면 그 코드, 예: `backend.subscription_auth_disabled`).
    */
   login?: boolean;
   /**
-   * 앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`.
+   * 앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`(백엔드가 이유를 알리면 그 코드, 예: `backend.subscription_auth_disabled`).
    */
   logout?: boolean;
 }

@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-server"
 version = "0.1.0"
-description = "Agent Console — 조립 앱: 설정 로드 → 호스트 기본 서비스(확장 지점) → 모듈 조립(기능·연동 모듈 entry point) → FastAPI REST/WS(웹은 별도 프로세스)"
+description = "Agent Console 서버 — 설치된 기능 모듈을 모아 HTTP·WebSocket으로 제공"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -210,6 +210,31 @@ class LogoutCapableBackend(Protocol):
         ...
 
 
+@runtime_checkable
+class LoginRefusalAware(Protocol):
+    """선택: 능력이 없을 때 그 이유(설치자 설정 등)를 알린다.
+
+    ``capabilities.login/logout``이 거짓인 백엔드가 구현하면, 서비스는 일반
+    ``LoginUnsupportedError``·``LogoutUnsupportedError`` 대신 돌려준 거절을 낸다(사용자가 이유를
+    알 수 있게, 예: ``backend.subscription_auth_disabled``). 이유가 없으면 None.
+    """
+
+    def login_refusal(self) -> LoginRefusedError | None:
+        """능력이 꺼진 이유(없으면 None). 부작용이 없어야 한다."""
+        ...
+
+
+def login_refusal_of(backend: object) -> LoginRefusedError | None:
+    """``LoginRefusalAware`` 백엔드가 알리는 거절(구현이 없거나 예외면 None)."""
+    if not isinstance(backend, LoginRefusalAware):
+        return None
+    try:
+        found = backend.login_refusal()
+    except Exception:  # 이유 조회가 실패하면 일반 "지원 안 함"으로
+        return None
+    return found if isinstance(found, LoginRefusedError) else None
+
+
 def supports_login(backend: object) -> bool:
     """디스크립터가 ``login`` 능력을 선언하고 메서드도 있으면 참."""
     return _declares(backend, "login") and isinstance(backend, LoginCapableBackend)
@@ -625,11 +650,12 @@ class BackendLoginService:
             UnknownBackendError: 등록되지 않은 id.
             LoginUnsupportedError: 능력이 없거나 모르는 방법.
             LoginBusyError: 다른 세션이 진행 중.
-            LoginRefusedError: 백엔드가 시작을 거절.
+            LoginRefusedError: 백엔드가 시작을 거절했거나, 능력이 없고 백엔드가 그 이유를
+                알렸다(``LoginRefusalAware``).
         """
         backend = self._get_backend(backend_id)
         if not supports_login(backend):
-            raise LoginUnsupportedError(backend_id, method_id)
+            raise login_refusal_of(backend) or LoginUnsupportedError(backend_id, method_id)
         assert isinstance(backend, LoginCapableBackend)
         method = self._method(backend_id, backend, method_id)
         async with self._lock:
@@ -856,11 +882,12 @@ class BackendLoginService:
         Raises:
             UnknownBackendError: 등록되지 않은 id.
             LogoutUnsupportedError: 능력이 없다.
+            LoginRefusedError: 능력이 없고 백엔드가 그 이유를 알렸다(``LoginRefusalAware``).
             LoginBusyError: 같은 백엔드의 로그인 세션이 진행 중.
         """
         backend = self._get_backend(backend_id)
         if not supports_logout(backend):
-            raise LogoutUnsupportedError(backend_id)
+            raise login_refusal_of(backend) or LogoutUnsupportedError(backend_id)
         assert isinstance(backend, LogoutCapableBackend)
         active = self._active
         if active is not None and not active.finished:
@@ -937,12 +964,14 @@ __all__ = [
     "LoginInputError",
     "LoginProgress",
     "LoginReasons",
+    "LoginRefusalAware",
     "LoginRefusedError",
     "LoginSessionNotFoundError",
     "LoginTexts",
     "LoginUnsupportedError",
     "LogoutCapableBackend",
     "LogoutUnsupportedError",
+    "login_refusal_of",
     "mask_values",
     "supports_login",
     "supports_logout",

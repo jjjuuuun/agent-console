@@ -159,13 +159,20 @@ class ClaudeLoginSupport:
         cli = self._locate(self._readiness.cli_path)
         return [cli, "auth", verb] if cli else None
 
-    def _refuse_if_disabled(self) -> None:
+    def refusal(self) -> LoginRefusedError | None:
+        """능력이 꺼진 이유 중 사용자가 알아야 할 것(구독 방식 꺼짐). 없으면 None."""
         if not self._allow:
-            raise LoginRefusedError(
+            return LoginRefusedError(
                 ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED,
                 "구독 방식이 설치자 설정(allow_subscription_auth)으로 꺼져 있어 로그인할 수 "
                 "없습니다.",
             )
+        return None
+
+    def _refuse_if_disabled(self) -> None:
+        refused = self.refusal()
+        if refused is not None:
+            raise refused
         if not self.enabled:
             raise LoginRefusedError(
                 ErrorCodes.BACKEND_LOGIN_UNSUPPORTED, "이 백엔드의 앱 화면 로그인이 꺼져 있습니다."
