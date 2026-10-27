@@ -535,6 +535,7 @@ export const messages = {
       capturing: "새 키 조합을 누르세요(Esc 취소)",
       capture: (title: string) => `${title}: 새 키 조합 입력`,
       plain: "단일 문자 키는 입력창 안에서 동작하지 않습니다",
+      plainMark: "입력창 밖 전용",
       empty: "등록된 단축키가 없습니다",
       issues: {
         invalid: "읽을 수 없는 키 조합입니다",

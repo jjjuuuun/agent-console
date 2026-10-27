@@ -6,3 +6,11 @@
 .app-login-open > p { flex-basis: 100%; margin: 0; }
 .app-login-screen { max-height: 12rem; overflow: auto; margin: var(--ac-space-1) 0; padding: var(--ac-space-2); background: var(--ac-surface-2, var(--ac-surface-1)); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .app-readiness-actions { display: inline-flex; align-items: center; gap: var(--ac-space-1); }
+.app-login-step-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
+.app-login-step-label { min-width: 0; overflow-wrap: anywhere; }
+.app-login-step-chip { flex: none; }
+.app-login-open .ac-btn { height: var(--ac-control-md); }
+.app-login-success-extra { display: flex; flex-direction: column; gap: var(--ac-space-2); align-items: flex-start; }
+.app-login-probe-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
+.app-login-probe-row > span { flex: 1 1 14rem; min-width: 0; }
+.app-login-probe-result { align-self: stretch; }

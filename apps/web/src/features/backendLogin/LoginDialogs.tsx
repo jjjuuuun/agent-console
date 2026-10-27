@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { BackendLoginSession, BackendLogoutResult, LoginMethodInfo } from "@agent-console/contracts";
-import { Banner, Button, Dialog, Spinner } from "@agent-console/ui";
+import { Banner, Button, Dialog, Spinner, StatusChip } from "@agent-console/ui";
 import { FixButtons } from "../../app/fix";
 import "./backendLogin.css";
 import { loginMessages as t } from "./messages";
@@ -125,6 +125,8 @@ export interface LoginSessionDialogProps {
   /** 마지막 보내기 실패 문장(값은 포함하지 않는다) */
   sendError?: string | undefined;
   method?: Pick<LoginMethodInfo, "notice"> | undefined;
+  /** 성공 화면의 보조 영역(예: [연결 테스트]와 비용 안내). 호출 연결은 바깥이 한다 */
+  successExtra?: ReactNode;
   onSendText: (text: string) => void;
   onSendKey: (key: string) => void;
   /** 진행 중에는 취소, 끝났으면 닫기 */
@@ -132,6 +134,9 @@ export interface LoginSessionDialogProps {
   onClose: () => void;
   onRetry: () => void;
 }
+
+/** 단계 상태 → 상태 칩 종류(토큰의 상태 아이콘·색을 그대로 쓴다) */
+const STEP_CHIP_STATUS = { done: "succeeded", active: "running", todo: "queued" } as const;
 
 function stepStates(session: BackendLoginSession): ("done" | "active" | "todo")[] {
   if (session.phase === "succeeded") return ["done", "done", "done"];
@@ -141,7 +146,7 @@ function stepStates(session: BackendLoginSession): ("done" | "active" | "todo")[
 }
 
 /** ② 진행·결과 대화상자. 단계 3개, 열기/복사, 코드 칸, 접힌 CLI 화면, 취소, 성공·실패·시간 초과. */
-export function LoginSessionDialog({ open, title, session, nowMs, sending, sendError, method, onSendText, onSendKey, onCancel, onClose, onRetry }: LoginSessionDialogProps) {
+export function LoginSessionDialog({ open, title, session, nowMs, sending, sendError, method, successExtra, onSendText, onSendKey, onCancel, onClose, onRetry }: LoginSessionDialogProps) {
   const terminal = isTerminalPhase(session.phase);
   const states = stepStates(session);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -185,13 +190,28 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
         </Banner>
       ) : null}
       <div aria-live="polite" data-testid="login-message">
-        {session.phase === "cancelled" ? <p className="ac-text">{t.cancelled}</p> : session.message ? <p className="ac-text"><strong>{session.message}</strong></p> : null}
+        {session.phase === "cancelled" ? (
+          <p className="ac-text">{t.cancelled}</p>
+        ) : session.phase === "succeeded" ? (
+          <Banner tone="success" data-testid="login-result">
+            <strong>{session.message || t.succeeded}</strong>
+          </Banner>
+        ) : failed ? (
+          <Banner tone="danger" data-testid="login-result">
+            <strong>{session.message || (session.phase === "expired" ? t.expiredTitle : t.failedTitle)}</strong>
+          </Banner>
+        ) : session.message ? (
+          <p className="ac-text"><strong>{session.message}</strong></p>
+        ) : null}
       </div>
       {session.phase !== "cancelled" && !failed ? (
         <ol className="app-login-steps" aria-label={t.stepsLabel}>
           {t.steps.map((label, i) => (
             <li key={label} data-state={states[i]}>
-              <span>{label}</span> <span className="app-muted">{states[i] === undefined ? "" : t.stepState[states[i]]}</span>
+              <span className="app-login-step-head">
+                <span className="app-login-step-label">{label}</span>
+                {states[i] === undefined ? null : <StatusChip className="app-login-step-chip" status={STEP_CHIP_STATUS[states[i]]} label={t.stepState[states[i]]} />}
+              </span>
               {i === 0 && !terminal && url ? (
                 <div className="app-login-open">
                   <p className="app-muted">{t.browserHint}</p>
@@ -207,6 +227,7 @@ export function LoginSessionDialog({ open, title, session, nowMs, sending, sendE
           ))}
         </ol>
       ) : null}
+      {session.phase === "succeeded" && successExtra ? <div className="app-login-success-extra" data-testid="login-success-extra">{successExtra}</div> : null}
       <div role="alert">{sendError ? <Banner tone="danger">{sendError}</Banner> : null}</div>
       {failed ? <FixButtons fix={{ actions: session.fixes ?? [] }} /> : null}
       {(failed && (session.reason || detailRows.length > 0)) || screen.length > 0 || !terminal ? (

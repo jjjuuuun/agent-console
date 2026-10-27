@@ -54,14 +54,15 @@
 .lib-tag { display: inline-flex; align-items: center; gap: 2px; background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); max-width: 100%; }
 .lib-tag button { background: none; border: 0; color: var(--ac-text-muted); cursor: pointer; padding: 0 2px; font: inherit; }
 .lib-tags-input { flex: 1 1 140px; min-width: 120px; }
-.lib-model { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
+.lib-model { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); width: 100%; min-width: 0; }
+.lib-model > select, .lib-model > input { flex: 1 1 200px; min-width: 0; }
 
 /* 표 공용 */
 .lib-table-wrap { overflow: auto; min-height: 0; }
 .lib-grid { border-collapse: collapse; width: 100%; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .lib-grid th, .lib-grid td { text-align: left; padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); vertical-align: middle; }
 .lib-grid th { color: var(--ac-text-muted); font-weight: 600; white-space: nowrap; }
-.lib-grid th button { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.lib-grid th button { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0 var(--ac-space-1); min-height: var(--ac-control-sm); min-width: var(--ac-control-sm); }
 .lib-grid tbody tr { height: 40px; }
 .lib-grid tbody tr:hover { background: var(--ac-surface-2); }
 .lib-grid tbody tr:focus-within, .lib-grid tbody tr[data-active="true"] { background: var(--ac-accent-bg); }
@@ -109,7 +110,8 @@
 @media (max-width: 900px) { .res-files { grid-template-columns: minmax(0, 1fr); } }
 
 /* 목록 보기 줄(검색창 아래)·폴더 이동·라벨 편집(5.2R.62) */
-.lib-list-view { display: flex; align-items: center; padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); }
+.lib-list-view { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ac-space-1); padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); min-width: 0; }
+.lib-list-view-extra { margin-left: auto; display: inline-flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
 .lib-row[draggable="true"] { cursor: grab; }
 .lib-folder-list { display: flex; flex-direction: column; gap: 2px; margin-top: var(--ac-space-2); max-height: 260px; overflow-y: auto; }
 .lib-folder-item { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; padding: var(--ac-space-1) var(--ac-space-2); border: 0; border-radius: var(--ac-radius-sm); background: transparent; color: var(--ac-text); font: inherit; font-size: var(--ac-text-sm); text-align: left; cursor: pointer; }
@@ -122,3 +124,6 @@
 /* 표 형태 목록의 묶음 머리 줄(5.2R.63): 머리 단추가 줄 전체를 차지한다 */
 .lib-grid tbody tr.lib-grouprow { height: 28px; }
 .lib-grid tbody tr.lib-grouprow > td { padding: 0; }
+
+/* 리소스 종류 칩 한 줄(넘치면 +N) */
+.lib-typechips { padding: var(--ac-space-2); }

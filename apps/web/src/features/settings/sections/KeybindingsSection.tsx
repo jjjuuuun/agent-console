@@ -88,7 +88,10 @@ export function KeybindingsSection({ value, onChange, disabled }: SectionEditPro
   };
 
   if (rows.length === 0) return <p className="app-muted">{t.empty}</p>;
+  const anyPlain = rows.some((row) => row.keys !== "" && isPlainKeys(row.keys, platform));
   return (
+    <>
+    {anyPlain ? <p className="app-muted app-overridable">{t.plain}</p> : null}
     <table className="app-table" aria-label={t.table}>
       <thead>
         <tr>
@@ -119,7 +122,7 @@ export function KeybindingsSection({ value, onChange, disabled }: SectionEditPro
                 ) : (
                   <>
                     <kbd>{shortcutKeysText(row.keys, platform)}</kbd>
-                    {row.keys !== "" && isPlainKeys(row.keys, platform) ? <div className="app-muted">{t.plain}</div> : null}
+                    {row.keys !== "" && isPlainKeys(row.keys, platform) ? <span className="app-muted app-plainkey" title={t.plain}>{t.plainMark}</span> : null}
                     {issues.map((issue) => (
                       <div key={issue} className="app-sev" data-severity="warning" role="note">
                         ▲ {t.issues[issue]}
@@ -141,5 +144,6 @@ export function KeybindingsSection({ value, onChange, disabled }: SectionEditPro
         })}
       </tbody>
     </table>
+    </>
   );
 }

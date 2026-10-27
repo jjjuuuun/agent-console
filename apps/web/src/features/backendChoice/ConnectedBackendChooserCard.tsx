@@ -1,6 +1,6 @@
 import { useNow } from "../../app/useNow";
 import { ReadinessActionButtons, useBackendLogin } from "../backendLogin";
-import { BackendProbeButton, ProbeResultBlock, useBackendProbe, useBackendReadiness } from "../backendReadiness";
+import { BackendProbeButton, LoginSuccessProbe, ProbeResultBlock, useBackendProbe, useBackendReadiness } from "../backendReadiness";
 import { BackendChooserCard, type BackendChooserCardProps } from "./BackendChooserCard";
 import type { BackendDescriptor } from "@agent-console/contracts";
 
@@ -24,7 +24,7 @@ function SelectedProbe({ backend }: { backend: BackendDescriptor }) {
  */
 export function ConnectedBackendChooserCard(props: Omit<BackendChooserCardProps, "readiness" | "renderSelectedExtra">) {
   const { readiness, recheck } = useBackendReadiness();
-  const login = useBackendLogin({ backends: props.options, onSettled: (id) => void recheck(id) });
+  const login = useBackendLogin({ backends: props.options, onSettled: (id) => void recheck(id), renderSuccessExtra: (b) => <LoginSuccessProbe backend={b} /> });
   return (
     <>
       <BackendChooserCard

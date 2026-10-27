@@ -37,7 +37,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-skip { position: absolute; left: var(--ac-space-2); top: -48px; z-index: var(--ac-z-toast); padding: var(--ac-space-2) var(--ac-space-3); background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); }
 .app-skip:focus { top: var(--ac-space-2); }
 .app-brand-row { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-1); height: calc(var(--ac-pageheader-h) - 2 * var(--ac-space-2)); }
-.app-brand { display: inline-flex; align-items: center; gap: var(--ac-space-2); background: none; border: 0; color: var(--ac-text); font: inherit; font-weight: 600; cursor: pointer; padding: 0 var(--ac-space-1); min-width: 0; }
+.app-brand { display: inline-flex; align-items: center; min-height: var(--ac-control-sm); min-width: var(--ac-control-sm); gap: var(--ac-space-2); background: none; border: 0; color: var(--ac-text); font: inherit; font-weight: 600; cursor: pointer; padding: 0 var(--ac-space-1); min-width: 0; }
 .app-brand-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: var(--ac-radius-sm); background: var(--ac-brand-grad); color: var(--ac-on-accent, #fff); }
 .app-brand-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ac-sidebar[data-collapsed="true"] .app-brand-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -108,7 +108,13 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-nav a:hover { background: var(--ac-hover-bg); }
 .app-settings-nav a[aria-current="location"] { background: var(--ac-accent-bg-strong); }
 .app-settings-body { overflow: auto; padding: var(--ac-space-4) var(--ac-space-6); display: flex; flex-direction: column; gap: var(--ac-space-4); }
-.app-settings-section { max-width: var(--ac-readable-w); width: 100%; display: flex; flex-direction: column; gap: var(--ac-space-3); scroll-margin-top: var(--ac-space-4); }
+.app-settings-section { max-width: var(--ac-readable-w); width: 100%; display: flex; flex-direction: column; gap: var(--ac-field-gap); scroll-margin-top: var(--ac-space-4); }
+/* 구역 간격은 리듬 토큰: 설명문·안내문의 기본 문단 여백을 없애고 구역 사이는 gap(필드 16)·소제목 위 여백(섹션 24)으로만 띄운다 */
+.app-settings-section > p, .app-settings-section > .ac-schema-form > p { margin: 0; }
+.app-settings-section > .app-block-subtitle { margin: var(--ac-space-2) 0 calc(-1 * var(--ac-space-2)); }
+.app-settings-section > .app-block-title, .app-settings-section > .app-readiness-section { margin-top: var(--ac-space-2); }
+.app-settings-section code { overflow-wrap: anywhere; word-break: break-word; }
+.app-settings-section .app-plainkey { margin-left: var(--ac-space-2); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }
 .app-settings-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--ac-space-3); }
 .app-settings-title { font-size: var(--ac-text-lg); font-weight: 600; margin: 0; }
 .app-settings-status { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-warning); }
@@ -127,7 +133,9 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-wire { display: flex; flex-direction: column; gap: 3px; }
 .app-wire-row { height: 6px; border-radius: var(--ac-radius-full); background: var(--ac-surface-3); }
 .app-wire-row[data-filled="true"] { background: var(--ac-accent); opacity: 0.6; }
-.app-nullable { display: inline-flex; align-items: center; gap: var(--ac-space-3); }
+.app-nullable { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2) var(--ac-space-3); min-width: 0; }
+.app-nullable > input[type="number"] { flex: 0 1 12rem; min-width: 6rem; }
+.app-nullable .app-check { flex: none; white-space: nowrap; }
 .app-kv { display: flex; flex-direction: column; gap: var(--ac-space-2); align-items: flex-start; }
 .app-kv-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto; gap: var(--ac-space-2); align-items: center; width: 100%; }
 .app-kv-note { grid-column: 1 / -1; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
@@ -197,8 +205,9 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-mod-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .app-mod-id { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-mod-reason { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.app-mod-roles { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
-.app-mod-version { font-size: 12px; }
+.app-mod-roles { flex: none; width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.app-mod-version { flex: none; width: 64px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-mod-row > .app-module-chip { flex: none; width: 96px; box-sizing: border-box; justify-content: flex-start; }
 .app-mod-item[data-status="unsatisfied"], .app-mod-item[data-status="conflict"] { background: var(--ac-warning-bg); }
 .app-mod-item[data-status="failed"] { background: var(--ac-danger-bg); }
 .app-mod-item[data-status="disabled"] .app-mod-id { color: var(--ac-text-muted); }
@@ -264,3 +273,20 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 /* 로그인 확인 대화상자: 경고 상자와 "바뀌는 것" 목록 사이 간격 */
 .app-login-writes { margin-top: var(--ac-space-3); }
 .app-login-writes > .app-block-title { margin-bottom: var(--ac-space-2); }
+
+/* 안내 배너 안 항목 목록: 기본 ul 들여쓰기를 없애 아이콘·제목·본문이 같은 줄에서 시작하게 한다 */
+.ac-banner .lib-issue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+
+/* 섹션 하나짜리 설정 폼: 화면 머리가 이미 제목·설명을 보이므로 폼 안 같은 제목 접기 단추·설명·"모두 고급" 안내는 숨긴다 */
+.app-flat-sections .ac-sf-adv-allhint, .app-flat-sections .ac-sf-prov-summary > .ac-sf-fold, .app-flat-sections .ac-sf-prov-group > fieldset > .field-description { display: none; }
+.app-flat-sections .ac-sf-prov-summary:not(:has(> :not(.ac-sf-fold))) { display: none; }
+/* 숫자 + "정하지 않음" 행: 단위는 입력 바로 뒤, 체크 라벨은 한 줄 */
+.ac-sf-unit-wrap > .app-nullable { display: contents; }
+.ac-sf-unit-wrap > .app-nullable > .app-check { order: 2; }
+.ac-sf-unit-wrap:has(> .app-nullable) { flex-wrap: wrap; }
+.app-settings-head + .app-settings-desc { margin-top: calc(-1 * var(--ac-space-2)); }
+/* 설정 > 사용량 표시기 편집: 문단 기본 여백을 없애고 구역 간격은 gap(필드 16)으로만 둔다 */
+.app-settings-section .usage-ind-editor { gap: var(--ac-field-gap); }
+.app-settings-section .usage-ind-editor p, .app-settings-section .usage-ind-editor h3 { margin: 0; }
+.app-settings-section .usage-ind-editor fieldset > p { margin: 0; }
+.app-settings-section .usage-ind-editor fieldset { gap: var(--ac-space-2); }

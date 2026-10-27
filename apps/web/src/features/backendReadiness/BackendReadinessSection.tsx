@@ -7,6 +7,7 @@ import { useNow } from "../../app/useNow";
 import { useBackendLogin } from "../backendLogin";
 import { BackendReadinessCard } from "./BackendReadinessCard";
 import { useBackendProbe, useBackendReadiness } from "./hooks";
+import { LoginSuccessProbe } from "./LoginSuccessProbe";
 
 function ConnectedCard({ descriptor, ...rest }: { descriptor: BackendDescriptor } & Omit<React.ComponentProps<typeof BackendReadinessCard>, "descriptor" | "probe">) {
   const probe = useBackendProbe(descriptor);
@@ -25,7 +26,7 @@ export function BackendReadinessSection({ backends }: BackendReadinessSectionPro
   const t = m.backendReadiness;
   const { readiness, error, refetch, recheck, rechecking, isPending } = useBackendReadiness();
   const nowMs = useNow(true, 30_000);
-  const login = useBackendLogin({ backends, onSettled: (id) => void recheck(id) });
+  const login = useBackendLogin({ backends, onSettled: (id) => void recheck(id), renderSuccessExtra: (b) => <LoginSuccessProbe backend={b} /> });
   const shown = visibleBackends(backends).filter((b) => b.capabilities?.status === true || b.capabilities?.probe === true || readiness[b.id] !== undefined);
   if (shown.length === 0 && error === null) return null;
   if (error !== null) {

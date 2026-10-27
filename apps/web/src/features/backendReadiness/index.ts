@@ -7,3 +7,4 @@ export { ProbeResultBlock } from "./ProbeResultBlock";
 export { useBackendProbe, useBackendReadiness } from "./hooks";
 export type { ProbeView } from "./hooks";
 export { READINESS_TONES, resolveTone } from "./tones";
+export { LoginSuccessProbe } from "./LoginSuccessProbe";

@@ -98,6 +98,7 @@ export function UserSection({ sections, value, onChange, errors, disabled }: Sec
       {failed ? <QueryNote error={failed} onRetry={() => void Promise.all([edgeTypes.refetch(), strategies.refetch()])} /> : null}
       <UserSettingsForm
         sections={sections}
+        flat={sections.length === 1}
         value={value as Record<string, unknown>}
         onChange={(next) => onChange(next as WorkspaceSettings)}
         layers={layers}

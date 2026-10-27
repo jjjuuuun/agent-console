@@ -11,7 +11,7 @@
 .logs-tablewrap { flex: 1 1 0; min-height: 200px; position: relative; }
 .logs-tablewrap[data-dim="true"] { opacity: .6; }
 .logs-mono { font-family: var(--ac-font-mono, monospace); font-size: 12.5px; }
-.logs-linkbtn { background: none; border: 0; padding: 0; color: var(--ac-accent); cursor: pointer; font: inherit; text-decoration: underline; }
+.logs-linkbtn { min-height: var(--ac-control-sm); background: none; border: 0; padding: 0; color: var(--ac-accent); cursor: pointer; font: inherit; text-decoration: underline; }
 .logs-linkbtn:focus-visible, .logs-menu-item:focus-visible, .logs-split:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
 .logs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 20px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); font-size: 12px; background: var(--ac-surface-2); }
 .logs-chipx { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; }
@@ -91,6 +91,29 @@
 .logs-table { border-collapse: collapse; width: 100%; font-size: 13px; }
 .logs-table th, .logs-table td { padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); text-align: start; vertical-align: middle; }
 .logs-taxonomy-scroll { overflow-x: auto; }
+/* 설정 범주 표: 설정 카드 폭(720) 안에서 가로 스크롤 없이 읽히게 행을 카드형 격자로 편다. 머리 행은 화면 읽기용으로만 남긴다. */
+.logs-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.logs-table--cards, .logs-table--cards tbody { display: block; width: 100%; }
+.logs-table--cards tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ac-space-2) var(--ac-space-3); align-items: end; padding: var(--ac-space-3) 0; border-bottom: 1px solid var(--ac-border-soft); }
+.logs-table--cards th, .logs-table--cards td { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ac-space-1); min-width: 0; padding: 0; border: 0; }
+.logs-table--cards td[data-label]::before { content: attr(data-label); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.logs-table--cards td[data-cell="description"] { grid-column: 1 / -1; grid-row: 2; }
+.logs-table--cards th[data-cell="id"] { grid-row: 1; grid-column: 1; align-self: center; overflow-wrap: anywhere; }
+.logs-table--cards td[data-cell="name"] { grid-row: 1; grid-column: 2 / 4; }
+.logs-table--cards td[data-cell="state"] { grid-row: 1; grid-column: 4; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; align-self: center; }
+.logs-table--cards td[data-cell="state"]::before { display: none; }
+.logs-table--cards td[data-cell="name"] .logs-chip { display: none; }
+.logs-table--cards td[data-cell="visible"], .logs-table--cards td[data-cell="tone"], .logs-table--cards td[data-cell="preview"] { grid-row: 3; }
+.logs-table--cards td[data-cell="visible"] { grid-column: 1; }
+.logs-table--cards td[data-cell="tone"] { grid-column: 2 / 4; }
+.logs-table--cards td[data-cell="preview"] { grid-column: 4; }
+.logs-table--cards td[data-cell="color"] { grid-row: 4; grid-column: 1 / -1; }
+.logs-table--cards .logs-input, .logs-table--cards select { width: 100%; min-width: 0; box-sizing: border-box; }
+@media (max-width: 560px) {
+  .logs-table--cards tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .logs-table--cards th[data-cell="id"], .logs-table--cards td { grid-row: auto; grid-column: auto; }
+  .logs-table--cards td[data-cell="name"], .logs-table--cards td[data-cell="description"], .logs-table--cards td[data-cell="color"] { grid-column: 1 / -1; }
+}
 .logs-taxonomy-add { display: flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; }
 .logs-grouplist { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .logs-group { display: flex; gap: var(--ac-space-2); align-items: flex-start; flex-wrap: wrap; }

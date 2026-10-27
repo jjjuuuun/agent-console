@@ -20,6 +20,8 @@ export interface UseBackendLoginOptions {
   backends: readonly BackendDescriptor[];
   /** 로그인·로그아웃이 끝났을 때(성공·실패 모두) 그 백엔드의 상태를 다시 읽는다 */
   onSettled: (backendId: string) => void;
+  /** 성공 화면에 둘 보조 영역(예: [연결 테스트]). 연동 대상이 없으면 생략 */
+  renderSuccessExtra?: (backend: BackendDescriptor) => ReactNode;
 }
 
 export interface BackendLoginController {
@@ -40,7 +42,7 @@ function findMethod(backends: readonly BackendDescriptor[], backendId: string, m
  * 로그인·로그아웃 흐름의 데이터 연결(서버 전체에서 세션 하나).
  * 폴링은 세션 대화상자가 열린 동안만 1초 간격(하트비트 겸용). 붙여 넣은 코드는 상태·캐시·로그에 남기지 않는다.
  */
-export function useBackendLogin({ backends, onSettled }: UseBackendLoginOptions): BackendLoginController {
+export function useBackendLogin({ backends, onSettled, renderSuccessExtra }: UseBackendLoginOptions): BackendLoginController {
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const [flow, setFlow] = useState<Flow>({ kind: "idle" });
@@ -220,6 +222,10 @@ export function useBackendLogin({ backends, onSettled }: UseBackendLoginOptions)
           sending={sending}
           sendError={sendError}
           method={findMethod(backends, session.backend_id, session.method_id)}
+          successExtra={(() => {
+            const b = backends.find((x) => x.id === session.backend_id);
+            return b && renderSuccessExtra ? renderSuccessExtra(b) : undefined;
+          })()}
           onSendText={(text) => void sendText(text)}
           onSendKey={(key) => void sendKey(key)}
           onCancel={() => void cancel()}

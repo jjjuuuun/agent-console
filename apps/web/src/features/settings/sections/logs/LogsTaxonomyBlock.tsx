@@ -77,8 +77,8 @@ export function LogsTaxonomyBlock({ value, onChange, disabled, errors }: Section
       {effective.isError && Object.keys(eff.categories ?? {}).length === 0 ? <ErrorBlock title={text.loadFailed} retryLabel={m.common.retry} onRetry={() => void effective.refetch()} /> : null}
       {ids.length === 0 ? <p className="app-muted">{text.empty}</p> : (
         <div className="logs-taxonomy-scroll">
-          <table className="logs-table" role="grid" aria-label={text.grid}>
-            <thead>
+          <table className="logs-table logs-table--cards" role="grid" aria-label={text.grid}>
+            <thead className="logs-sr-only">
               <tr>
                 {(["id", "name", "description", "visible", "color", "tone", "preview", "state"] as const).map((c) => <th key={c} scope="col">{text.columns[c]}</th>)}
               </tr>
@@ -94,24 +94,24 @@ export function LogsTaxonomyBlock({ value, onChange, disabled, errors }: Section
                 const rowErrors = (errors ?? []).filter((x) => x.path.startsWith(`/logs/taxonomy/categories/${id}`)).map((x) => x.message);
                 return (
                   <tr key={id}>
-                    <th scope="row"><code className="logs-mono">{id}</code></th>
-                    <td>
+                    <th scope="row" data-cell="id"><code className="logs-mono">{id}</code></th>
+                    <td data-cell="name" data-label={text.columns.name}>
                       <input className="logs-input" aria-label={`${id} ${text.columns.name}`} value={o?.label ?? ""} placeholder={e?.label ?? id} disabled={disabled} onChange={(ev) => setCat(id, { label: ev.target.value })} />
                       {o?.label === undefined && !custom ? <span className="logs-chip">{text.defaultBadge}</span> : null}
                     </td>
-                    <td><input className="logs-input" aria-label={`${id} ${text.columns.description}`} title={o?.description ?? e?.description ?? ""} value={o?.description ?? ""} placeholder={e?.description ?? ""} disabled={disabled} onChange={(ev) => setCat(id, { description: ev.target.value })} /></td>
-                    <td>
+                    <td data-cell="description" data-label={text.columns.description}><input className="logs-input" aria-label={`${id} ${text.columns.description}`} title={o?.description ?? e?.description ?? ""} value={o?.description ?? ""} placeholder={e?.description ?? ""} disabled={disabled} onChange={(ev) => setCat(id, { description: ev.target.value })} /></td>
+                    <td data-cell="visible" data-label={text.columns.visible}>
                       <label className="app-check"><input type="checkbox" checked={visible} disabled={disabled} aria-label={`${id} ${text.columns.visible}`} onChange={(ev) => setCat(id, { visible: ev.target.checked === (e?.visible ?? true) && !custom ? undefined : ev.target.checked })} />{visible ? "" : text.hidden}</label>
                     </td>
-                    <td><ColorSlotPicker value={o?.color ?? e?.color ?? undefined} ariaLabel={`${id} ${text.colorLabel}`} onChange={(c) => setCat(id, { color: c })} /></td>
-                    <td>
+                    <td data-cell="color" data-label={text.columns.color}><ColorSlotPicker value={o?.color ?? e?.color ?? undefined} ariaLabel={`${id} ${text.colorLabel}`} onChange={(c) => setCat(id, { color: c })} /></td>
+                    <td data-cell="tone" data-label={text.columns.tone}>
                       <select aria-label={`${id} ${text.toneLabel}`} value={tone ?? ""} disabled={disabled} onChange={(ev) => setCat(id, { tone: ev.target.value })}>
                         <option value="">{e?.tone ? `${text.toneDefault} (${text.toneNames[e.tone] ?? e.tone})` : text.toneDefault}</option>
                         {toneChoices(tone).map((tn) => <option key={tn} value={tn}>{text.toneNames[tn] ?? `${tn} — ${text.toneUnknown}`}</option>)}
                       </select>
                     </td>
-                    <td><span className="logs-chip"><span className="logs-dot" aria-hidden="true" style={{ background: mergedColor(id, o?.color ?? e?.color) }} />{label}</span></td>
-                    <td>
+                    <td data-cell="preview" data-label={text.columns.preview}><span className="logs-chip"><span className="logs-dot" aria-hidden="true" style={{ background: mergedColor(id, o?.color ?? e?.color) }} />{label}</span></td>
+                    <td data-cell="state" data-label={text.columns.state}>
                       {custom ? (
                         <Button size="sm" disabled={disabled} onClick={() => setCat(id, { label: null, description: null, visible: null, color: null, tone: null })}>{text.deleteRow}</Button>
                       ) : o !== undefined ? (

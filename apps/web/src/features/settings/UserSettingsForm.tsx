@@ -22,6 +22,8 @@ export interface UserSettingsFormProps {
   idPrefix?: string;
   /** 사용자 설정 묶음의 JSON Schema(기본: 계약 `WorkspaceSettings`). 다른 스키마로 검사·테스트할 때 주입 */
   rootSchema?: SchemaNode;
+  /** 섹션이 하나뿐이고 화면이 이미 그 제목·설명을 보일 때: 폼 안의 같은 제목 접기 단추·설명·"모두 고급" 안내를 숨긴다 */
+  flat?: boolean;
 }
 
 /**
@@ -29,11 +31,11 @@ export interface UserSettingsFormProps {
  * 설정 화면(층 = 공통)과 팀 구성 패널(층 = 팀 구성, 공통 값이 상속으로 보임)이 함께 쓴다.
  * 필드는 스키마에서 그려지고, 위젯 이름만 `userSettingsUi`가 정한다.
  */
-export function UserSettingsForm({ sections, value, onChange, layers, editLayerId, baseValue, provenance, options, errors, disabled, idPrefix, rootSchema }: UserSettingsFormProps) {
+export function UserSettingsForm({ sections, value, onChange, layers, editLayerId, baseValue, provenance, options, errors, disabled, idPrefix, rootSchema, flat }: UserSettingsFormProps) {
   const schema = useMemo(() => pickProperties(rootSchema ?? (getContractSchema("WorkspaceSettings") as SchemaNode), sections), [rootSchema, sections]);
   const uiSchema = useMemo(() => buildUserSettingsUi(schema, options), [schema, options]);
   const picked = useMemo(() => Object.fromEntries(sections.filter((k) => value[k] !== undefined).map((k) => [k, value[k]])), [sections, value]);
-  return (
+  const form = (
     <LayerForm
       schema={schema}
       uiSchema={uiSchema}
@@ -56,4 +58,5 @@ export function UserSettingsForm({ sections, value, onChange, layers, editLayerI
       idPrefix={idPrefix ?? `us-${sections.join("-")}`}
     />
   );
+  return flat === true ? <div className="app-flat-sections">{form}</div> : form;
 }
