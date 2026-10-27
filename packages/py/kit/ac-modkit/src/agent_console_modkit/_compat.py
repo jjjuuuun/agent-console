@@ -1,18 +1,16 @@
-"""모듈이 선언하는 호스트 설정 호환(design §3R.1.6, 3R.16): 옛 키·환경변수·명령행 별칭.
+"""모듈이 선언하는 호스트 설정 호환(design §3R.1.6): 지운 키·환경변수·명령행 별칭·기본값.
 
-호스트는 모듈 이름을 모른다. 옛 최상위 설정 키(예: 3R 전 ``usage:``)를 어느 모듈 설정
-(``modules.options.<id>``)으로 옮길지, 어떤 환경변수·명령행 옵션이 그 모듈 설정의 어느 위치로
-들어갈지는 **모듈이** ``ModuleDescriptor.settings_compat``으로 선언한다. 호스트는 설치된 모듈의
-선언을 모아(``compat_of``) 설정을 읽을 때 적용한다.
+호스트는 모듈 이름을 모른다. 어떤 옛 설정 키(예: 3R 전 최상위 ``usage:``)를 거부하고 어디로
+옮기라고 안내할지, 어떤 환경변수·명령행 옵션이 그 모듈 설정(``modules.options.<id>``)의 어느
+위치로 들어갈지는 **모듈이** ``ModuleDescriptor.settings_compat``으로 선언한다. 호스트는 설치된
+모듈의 선언을 모아(``compat_of``) 설정을 읽을 때 적용한다. 옛 키를 읽어 옮기는 장치는 없다.
 
-- ``MovedSetting``: 옛 최상위 키 → 이 모듈 설정(통째로 병합 또는 한 키 아래). 새 위치 값이 이기고,
-  옮긴 키는 경고(``SettingsMove``)로 보고한다. 읽기 호환은 한 단계 동안만 둔다.
 - ``EnvSetting``: ``<호스트 접두어><name>`` 환경변수 → 이 모듈 설정 위치(경고 없음).
 - ``FlagSetting``: 명령행 ``--<flag>`` → 이 모듈 설정 위치.
 - ``SeedSetting``: 다른 설정 값을 이 모듈 설정의 기본값으로(새 위치에 값이 없을 때만, 경고 없음).
 - ``RemovedSetting``: 지운 옛 키(점 경로). 남아 있으면 호스트가 이유·새 위치와 함께 거부한다
-  (서버 오류 코드 ``settings.removed_key``). 읽기 호환 기간(``MovedSetting``)이 끝난 옛 키는
-  ``RemovedSetting(old, new=...)``로 바꿔 새 위치를 알린다.
+  (서버 오류 코드 ``settings.removed_key``). 키 이름이나 위치를 바꾼 모듈은
+  ``RemovedSetting(old, new=...)``로 새 위치를 알린다.
 """
 
 from __future__ import annotations
@@ -25,20 +23,6 @@ from typing import Any, Protocol
 
 PATHSEP = "<pathsep>"
 """``EnvSetting.split`` 값: 운영체제 경로 구분자(``os.pathsep``)로 나눈다."""
-
-
-@dataclass(frozen=True)
-class MovedSetting:
-    """옛 최상위 설정 키 하나.
-
-    Args:
-        old: 옛 최상위 키(예: ``"usage"``).
-        into: None이면 옛 값(객체)을 이 모듈 설정에 하위 키 단위로 병합한다. 문자열이면 옛 값을
-            통째로 그 키 아래에 둔다(예: ``"runtime"``).
-    """
-
-    old: str
-    into: str | None = None
 
 
 @dataclass(frozen=True)
@@ -61,7 +45,7 @@ class FlagSetting:
     """명령행 옵션 하나(``--<flag>``).
 
     Args:
-        flag: 옵션 이름(앞의 ``--`` 없이, 예: ``"apply-preset"``).
+        flag: 옵션 이름(앞의 ``--`` 없이, 예: ``"echo-tag"``).
         path: 이 모듈 설정 안 위치.
         help: 도움말.
         metavar: 값 이름.
@@ -82,20 +66,18 @@ class SeedSetting:
     Args:
         key: 이 모듈 설정의 키.
         source: 설정 전체 기준 점 경로(예: ``"security.expose_paths"``).
-        before_moves: 참이면 옛 키를 옮기기 전 설정에서 읽는다(옛 키에만 있던 값).
     """
 
     key: str
     source: str
-    before_moves: bool = False
 
 
 @dataclass(frozen=True)
 class RemovedSetting:
-    """지운 옛 설정 키(옮기기 전 설정 기준 점 경로).
+    """지운 옛 설정 키(설정 전체 기준 점 경로).
 
     Args:
-        path: 옛 키(점 경로, 예: ``"usage"``·``"presets.set_default_entry"``).
+        path: 옛 키(설정 전체 기준 점 경로, 예: ``"usage"``·``"modules.options.mod-old"``).
         reason: 거부 이유. 비우면 ``new``로 안내 문구를 만든다.
         new: 새 위치(점 경로, 예: ``"modules.options.mod-usage"``). 옮긴 키면 준다. None이면
             대신할 키가 없다(지우기만 하면 된다).
@@ -125,26 +107,10 @@ class RemovedSetting:
 class SettingsCompat:
     """모듈 하나의 호스트 설정 호환 선언."""
 
-    moved: tuple[MovedSetting, ...] = ()
     env: tuple[EnvSetting, ...] = ()
     flags: tuple[FlagSetting, ...] = ()
     seeds: tuple[SeedSetting, ...] = ()
     removed: tuple[RemovedSetting, ...] = ()
-
-
-@dataclass(frozen=True)
-class SettingsMove:
-    """옮긴 옛 키 하나(경고용)."""
-
-    old: str
-    new: str
-    overridden: tuple[str, ...] = ()
-
-    def message(self) -> str:
-        text = f"설정 키 {self.old}는 {self.new}로 옮겼습니다(읽기 호환). 옮겨 쓰세요"
-        if self.overridden:
-            text += f". 새 위치 값이 이긴 키: {', '.join(self.overridden)}"
-        return text
 
 
 @dataclass(frozen=True)
@@ -207,70 +173,27 @@ def _put(target: dict[str, Any], path: Sequence[str], value: Any) -> None:
     node[path[-1]] = value
 
 
-def migrate_settings(
-    data: Mapping[str, Any], compats: Mapping[str, SettingsCompat]
-) -> tuple[dict[str, Any], list[SettingsMove]]:
-    """옛 키를 ``modules.options.<모듈 id>``로 옮기고 기본값을 채운 사본.
+def seed_settings(data: Mapping[str, Any], compats: Mapping[str, SettingsCompat]) -> dict[str, Any]:
+    """``SeedSetting`` 기본값을 ``modules.options.<모듈 id>``에 채운 사본(모듈 id 순).
 
-    순서: 통째 병합(``into`` 없음) → 키 아래 두기(``into``) → 기본값(``SeedSetting``). 모듈은 id 순.
-    형식이 틀린 옛 값(통째 병합인데 객체가 아님 등)은 그대로 두어 호스트 모델 검증이 거부하게 한다.
-
-    Returns:
-        (옮긴 설정, 옮긴 키 목록).
+    새 위치에 값이 이미 있으면 건드리지 않는다. 원본 ``data``는 바꾸지 않는다.
     """
-    original = dict(data)
-    out = copy.deepcopy(original)
-    moved: list[SettingsMove] = []
-    ordered = sorted(compats.items())
-    for module_id, compat in ordered:
-        for item in compat.moved:
-            if item.into is not None or item.old not in out:
-                continue
-            value = out.pop(item.old)
-            target = _options(out, module_id)
-            if target is None or not isinstance(value, dict):
-                out[item.old] = value
-                continue
-            overridden = tuple(sorted(k for k in value if k in target))
-            merged = {**value, **target}
-            target.clear()
-            target.update(merged)
-            moved.append(SettingsMove(item.old, f"modules.options.{module_id}", overridden))
-    for module_id, compat in ordered:
-        for item in compat.moved:
-            if item.into is None or item.old not in out:
-                continue
-            value = out.pop(item.old)
-            target = _options(out, module_id)
-            if target is None:
-                out[item.old] = value
-                continue
-            key = item.into
-            lost: tuple[str, ...] = ()
-            current = target.get(key)
-            if key not in target:
-                target[key] = value
-            elif isinstance(value, dict) and isinstance(current, dict):
-                lost = tuple(sorted(f"{key}.{k}" for k in value if k in current))
-                target[key] = {**value, **current}
-            else:
-                lost = (key,)
-            moved.append(SettingsMove(item.old, f"modules.options.{module_id}.{key}", lost))
-    for module_id, compat in ordered:
+    out = copy.deepcopy(dict(data))
+    for module_id, compat in sorted(compats.items()):
         for seed in compat.seeds:
-            value = _get(original if seed.before_moves else out, seed.source)
+            value = _get(out, seed.source)
             if value is None:
                 continue
             target = _options(out, module_id)
             if target is not None and seed.key not in target:
                 target[seed.key] = copy.deepcopy(value)
-    return out, moved
+    return out
 
 
 def removed_settings(
     data: Mapping[str, Any], compats: Mapping[str, SettingsCompat]
 ) -> list[RemovedSetting]:
-    """``data``(옮기기 전 설정)에 남아 있는 지운 키(모듈 id 순)."""
+    """``data``(호스트가 읽은 설정 원문)에 남아 있는 지운 키(모듈 id 순)."""
     found: list[RemovedSetting] = []
     for _, compat in sorted(compats.items()):
         for item in compat.removed:
@@ -344,15 +267,13 @@ __all__ = [
     "CompatFlag",
     "EnvSetting",
     "FlagSetting",
-    "MovedSetting",
     "RemovedSetting",
     "SeedSetting",
     "SettingsCompat",
-    "SettingsMove",
     "compat_flags",
     "compat_of",
     "env_settings",
     "flag_settings",
-    "migrate_settings",
     "removed_settings",
+    "seed_settings",
 ]

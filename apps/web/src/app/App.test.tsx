@@ -292,35 +292,6 @@ describe("설정 화면", () => {
     expect(rest.putSettingsVersioned.mock.calls[1]?.[1]).toBe("s7");
   });
 
-  it("프리셋이 없으면 안내 문구만, 있으면 카드에서 적용 결과를 요약한다", async () => {
-    const empty = createFakeClients({ getSettingsVersioned: vi.fn(async () => ({ value: {}, version_hash: undefined })) });
-    const first = mount(empty.clients, "/settings#presets");
-    expect(await screen.findByText(/아직 설정을 저장하지 않았습니다/)).toBeTruthy();
-    expect(await screen.findByText(/사용 가능한 프리셋이 없습니다/)).toBeTruthy();
-    first.unmount();
-
-    const { clients, rest } = createFakeClients({ listPresets: vi.fn(async () => [{ id: "pre-1", name: "프리셋 하나", description: "설명", item_count: 1, items: [{ kind: "k", id: "i1", name: "항목 하나" }] }]) });
-    mount(clients, "/settings#presets");
-    fireEvent.click(await screen.findByRole("button", { name: "적용…" }));
-    const dialog = await screen.findByRole("dialog", { name: "프리셋 하나 적용" });
-    expect(within(dialog).getByText(/되돌릴 수 없습니다/)).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
-    await waitFor(() => expect(rest.applyPreset).toHaveBeenCalledWith("pre-1", { on_conflict: "skip" }));
-    expect(await screen.findByText(/만들거나 바꾼 항목 1/)).toBeTruthy();
-  });
-
-  it("프리셋 적용 결과의 failed 항목은 오류(validation_failed: 코드(경로))와 함께 보인다", async () => {
-    const { clients } = createFakeClients({
-      listPresets: vi.fn(async () => [{ id: "pre-1", name: "프리셋 하나", description: "설명", item_count: 2, items: [{ kind: "k", id: "i1", name: "항목 하나" }] }]),
-      applyPreset: vi.fn(async () => ({ items: [{ kind: "resource", id: "bad", action: "failed", error: "validation_failed: secret.plain(/config/env/KEY)" }, { kind: "agent", id: "ok", action: "created" }], warnings: [] })),
-    });
-    mount(clients, "/settings#presets");
-    fireEvent.click(await screen.findByRole("button", { name: "적용…" }));
-    const dialog = await screen.findByRole("dialog", { name: "프리셋 하나 적용" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
-    expect(await screen.findByText(/validation_failed: secret\.plain\(\/config\/env\/KEY\)/)).toBeTruthy();
-  });
-
   it("사용량 출처: 비공식 출처를 켜기 전에 확인하고, 그 설정이 초안에 들어간다", async () => {
     const { clients } = createFakeClients();
     mount(clients, "/settings#usage");

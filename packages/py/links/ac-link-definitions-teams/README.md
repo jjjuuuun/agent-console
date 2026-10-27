@@ -8,7 +8,8 @@ Agent Console 정의 ↔ 팀 의미 연동 모듈(design §3R.1.4 L9, R2·R13.5)
   `x-secret` 평문과 해석한 비밀 값은 가린다.
 - 제공 포트: `graphs.entry_labels`(팀 구성 목록 입구 이름), `definitions.usages`(리소스 목록 `usage_count`),
   `definitions.dependencies`(문서가 쓰는 정의 `TeamDocumentDependencies` — 팀 구성 → 에이전트·리소스·자식 팀 구성,
-  에이전트 → 리소스. `mod-presets`가 프리셋 항목을 쓰는 정의부터 적용하는 데 쓴다),
+  에이전트 → 리소스. 여러 정의를 한꺼번에 쓸 때 쓰는 정의부터 쓰는 순서를 정하는 데 쓴다. 지금 기본 모듈 중
+  소비자는 없다),
   `definitions.references`(X25, 여러 제공자 — 같은 계산의 참조 추출 함수 `(kind, doc) -> [(kind, id)]`,
   `TeamDocumentDependencies.references`. 프로젝트 범위 검사·옮기기 계획이 주입받는다).
 - 필수 포트: `definitions.lookup`. 선택: `workspace.settings`, `resources.lookup`·`resources.types`(없으면 빈 것),

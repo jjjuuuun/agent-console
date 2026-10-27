@@ -13,17 +13,17 @@ dependencies = [
     "agent-console-resources-core>=0.1,<0.2",
     "agent-console-nodes-core>=0.1,<0.2",
     "agent-console-delegation-host>=0.1,<0.2",
-    "agent-console-backend-claude-sdk>=0.1,<0.2",
+    "agent-console-backend-claude-sdk[login]>=0.1,<0.2",
     "agent-console-backend-fake>=0.1,<0.2",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-mod-usage>=0.1,<0.2",
     "agent-console-mod-imports>=0.1,<0.2",
     "agent-console-mod-exports>=0.1,<0.2",
-    "agent-console-mod-presets>=0.1,<0.2",
     "agent-console-mod-versions>=0.1,<0.2",
     "agent-console-mod-definitions>=0.1,<0.2",
     "agent-console-mod-resources>=0.1,<0.2",
     "agent-console-mod-projects>=0.1,<0.2",
+    "agent-console-link-projects-runs>=0.1,<0.2",
     "agent-console-link-definitions-resources>=0.1,<0.2",
     "agent-console-link-definitions-teams>=0.1,<0.2",
     "agent-console-link-exports-teams>=0.1,<0.2",
@@ -43,6 +43,8 @@ dependencies = [
     "uvicorn>=0.30",
     "websockets>=13",
     "ruamel-yaml>=0.18",
+    "pydantic>=2.9",
+    "starlette>=0.37",
 ]
 
 [build-system]

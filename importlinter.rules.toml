@@ -3,6 +3,9 @@
 # 그룹: @all @packages @app @<kind>, 빼기: !이름 / !@그룹.
 # 자세한 문법은 importlinter_sync.py 머리말. `poe importlinter-sync`로 pyproject.toml에 반영, `poe pkg-lint`가 차이를 검사.
 # 그룹을 쓴 계약은 새 패키지가 생기면 자동으로 넓어진다(예: "패키지는 앱을 모른다", "X는 다른 사내 패키지에 의존하지 않는다").
+# "X는 A·B에만 의존" 계약은 금지 목록을 손으로 적지 않고 `["@all", "!A", "!B"]`(허용만 빼기)로 쓴다.
+# 새 패키지는 자동으로 금지 쪽에 들어간다. 이 계약들은 직접 import만 본다(allow_indirect_imports = true).
+# A·B도 각자 자기 계약을 가지므로 간접 경로는 계약끼리 이어서 막힌다. 허용 패키지의 의존이 늘어도 X 계약이 깨지지 않는다.
 root_packages = ["@all"]
 
 [options]
@@ -26,49 +29,15 @@ allow_indirect_imports = true
 name = "secret-rules는 safe-regex에만 의존 (design §2R.4)"
 type = "forbidden"
 source_modules = ["agent_console_secret_rules"]
-forbidden_modules = [
-    "agent_console_contracts",
-    "agent_console_registry",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_teams",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_usage",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-    "agent_console_imports",
-    "agent_console_server",
-    "agent_console_cli",
-]
+forbidden_modules = ["@all", "!agent_console_safe_regex"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "imports는 contracts, registry, secret-rules, claude-format에만 의존 (출처 이름·저장소를 모른다, store는 프로토콜로만)"
 type = "forbidden"
 source_modules = ["agent_console_imports"]
-forbidden_modules = [
-    "agent_console_exports",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_teams",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_usage",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_secret_rules", "!agent_console_claude_format"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "claude-format은 다른 agent_console 패키지에 의존하지 않는다 (순수 .claude 형식 변환, design §2R.7)"
@@ -77,26 +46,17 @@ source_modules = ["agent_console_claude_format"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
+name = "pty-session은 다른 agent_console 패키지에 의존하지 않는다 (PTY·터미널 글자 해석만, ux-overhaul §15.9)"
+type = "forbidden"
+source_modules = ["agent_console_pty_session"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
 name = "exports는 contracts, registry, claude-format, secret-rules에만 의존 (형식 이름·저장소·팀 의미를 모른다, 카탈로그는 프로토콜로만, design §2R.7)"
 type = "forbidden"
 source_modules = ["agent_console_exports"]
-forbidden_modules = [
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_teams",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_usage",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-    "agent_console_imports",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_claude_format", "!agent_console_secret_rules"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "contracts, registry는 다른 agent_console 패키지에 의존하지 않는다"
@@ -145,75 +105,29 @@ forbidden_modules = ["@all"]
 name = "resources는 contracts, registry, settings, secret-rules에만 의존 (리소스 종류 이름을 모른다, design §R9.4·§2R.4)"
 type = "forbidden"
 source_modules = ["agent_console_resources"]
-forbidden_modules = [
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_nodes_core",
-    "agent_console_resources_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_settings", "!agent_console_secret_rules"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "resources-core는 contracts, resources, secret-rules, claude-format에만 의존 (design §R9.4·§2R.8·§2R.7)"
 type = "forbidden"
 source_modules = ["agent_console_resources_core"]
-forbidden_modules = [
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_nodes_core",
-    "agent_console_teams",
-    "agent_console_exports",
-    "agent_console_imports",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_resources", "!agent_console_secret_rules", "!agent_console_claude_format"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "teams는 contracts, registry, graph, settings, resources, secret-rules에만 의존 (순수 의미 계산, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_teams"]
-forbidden_modules = [
-    "agent_console_runtime",
-    "agent_console_resources_core",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_usage",
-    "agent_console_exports",
-    "agent_console_imports",
-    "agent_console_claude_format",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_graph", "!agent_console_settings", "!agent_console_resources", "!agent_console_secret_rules"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "chat·trace는 contracts에만 의존 (runtime·store는 프로토콜로만, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_chat", "agent_console_trace"]
-forbidden_modules = [
-    "agent_console_registry",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_safe_regex",
-    "agent_console_secret_rules",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-    "agent_console_server",
-    "agent_console_cli",
-]
+forbidden_modules = ["@all", "!agent_console_contracts"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "chat과 trace는 서로 독립"
@@ -224,22 +138,8 @@ modules = ["agent_console_chat", "agent_console_trace"]
 name = "usage는 contracts, registry에만 의존 (출처·창 이름을 모른다, store는 프로토콜로만, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_usage"]
-forbidden_modules = [
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_safe_regex",
-    "agent_console_secret_rules",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "contracts와 registry는 서로 독립"
@@ -247,29 +147,18 @@ type = "independence"
 modules = ["agent_console_contracts", "agent_console_registry"]
 
 [[contracts]]
-name = "graph는 contracts, registry에만 의존"
+name = "graph는 contracts에만 의존"
 type = "forbidden"
 source_modules = ["agent_console_graph"]
-forbidden_modules = [
-    "agent_console_runtime",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-]
+forbidden_modules = ["@all", "!agent_console_contracts"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "runtime은 contracts, registry, graph에만 의존 (store·플러그인·의심 규칙을 모른다)"
 type = "forbidden"
 source_modules = ["agent_console_runtime"]
-forbidden_modules = [
-    "agent_console_safe_regex",
-    "agent_console_secret_rules",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_graph"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "플러그인(nodes-core, backend-*)은 store를 모른다"
@@ -281,13 +170,8 @@ forbidden_modules = ["agent_console_store"]
 name = "nodes-core는 contracts, registry, graph, runtime, settings, resources, teams, conditions에만 의존 (design §R9.4·§5R.5)"
 type = "forbidden"
 source_modules = ["agent_console_nodes_core"]
-forbidden_modules = [
-    "agent_console_resources_core",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_usage",
-    "agent_console_presets",
-]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_graph", "!agent_console_runtime", "!agent_console_settings", "!agent_console_resources", "!agent_console_teams", "!agent_console_conditions"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "delegation-host는 contracts, runtime에만 직접 의존 (대상 실행은 엔진 invoke_node, 노드·팀·백엔드를 모른다, design §5R.6)"
@@ -313,33 +197,25 @@ type = "independence"
 modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake"]
 
 [[contracts]]
+name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, pty-session(선택 login), hook-probe(선택)에만 의존 (구독 로그인 PTY, ux-overhaul §15.9)"
+type = "forbidden"
+source_modules = ["agent_console_backend_claude_sdk"]
+forbidden_modules = ["@all", "!agent_console_backend_claude_sdk", "!agent_console_contracts", "!agent_console_registry", "!agent_console_runtime", "!agent_console_secret_rules", "!agent_console_pty_session", "!agent_console_hook_probe"]
+allow_indirect_imports = true
+
+[[contracts]]
+name = "backend-fake는 contracts, runtime에만 의존 (대본 로그인도 PTY·네트워크 없음, ux-overhaul §15.9)"
+type = "forbidden"
+source_modules = ["agent_console_backend_fake"]
+forbidden_modules = ["@all", "!agent_console_backend_fake", "!agent_console_contracts", "!agent_console_runtime"]
+allow_indirect_imports = true
+
+[[contracts]]
 name = "store는 contracts에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
 type = "forbidden"
 source_modules = ["agent_console_store"]
-forbidden_modules = [
-    "agent_console_safe_regex",
-    "agent_console_secret_rules",
-    "agent_console_registry",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_presets",
-]
-
-[[contracts]]
-name = "presets는 contracts, store에만 의존 (실행 엔진·노드 타입·백엔드를 모른다)"
-type = "forbidden"
-source_modules = ["agent_console_presets"]
-forbidden_modules = [
-    "agent_console_registry",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-]
+forbidden_modules = ["@all", "!agent_console_contracts"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "서버 앱은 modkit과 기반(L0)만 안다 (기능 라이브러리·모듈·연동은 entry point로만, modularity §3.7 규칙 5·3R.16)"
@@ -351,29 +227,11 @@ forbidden_modules = ["@feature", "@module", "@link"]
 name = "cli는 usage에만 의존 (서버 앱은 `_server` 모듈 한 곳에서 serve·설정 읽기로만, 1R.15)"
 type = "forbidden"
 source_modules = ["agent_console_cli"]
-forbidden_modules = [
-    "agent_console_registry",
-    "agent_console_graph",
-    "agent_console_runtime",
-    "agent_console_safe_regex",
-    "agent_console_secret_rules",
-    "agent_console_nodes_core",
-    "agent_console_backend_claude_sdk",
-    "agent_console_backend_fake",
-    "agent_console_store",
-    "agent_console_presets",
-    "agent_console_settings",
-    "agent_console_resources",
-    "agent_console_resources_core",
-    "agent_console_teams",
-    "agent_console_chat",
-    "agent_console_trace",
-    "agent_console_imports",
-    "agent_console_server",
-]
-# 예외 사유: `_server`는 serve·설정 읽기를 서버 앱에 넘기는 유일한 접점(1R.15). usage → registry는 cli가 import한
-# usage 패키지의 내부 의존(간접 import 경로로 잡히지 않게 끊는다).
-ignore_imports = ["agent_console_cli._server -> agent_console_server", "agent_console_usage.* -> agent_console_registry"]
+forbidden_modules = ["@all", "!agent_console_usage"]
+allow_indirect_imports = true
+# 예외 사유: `_server`는 serve·설정 읽기를 서버 앱에 넘기는 유일한 접점(1R.15).
+# 직접 import만 보므로(allow_indirect_imports) usage → registry 같은 usage 내부 의존은 예외가 필요 없다.
+ignore_imports = ["agent_console_cli._server -> agent_console_server"]
 
 [[contracts]]
 name = "modkit은 기반(L0)만 안다 (기능 라이브러리·모듈·앱을 모른다, modularity §3.7 규칙 2)"

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { GraphSummary } from "@agent-console/contracts";
-import { Button, EmptyState, Icon, PageHeader, StatusChip } from "@agent-console/ui";
+import { Button, EmptyState, GroupHeader, Icon, PageHeader, StatusChip } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
@@ -11,7 +11,7 @@ import { useApiQuery } from "../../app/queries";
 import { formatDateTime, formatDuration, formatRelative } from "../../lib/format";
 import { useNow } from "../../app/useNow";
 import { Skeleton, useEdgeTypes } from "../settings";
-import { ActionMenu, type ActionMenuHandle, useGraphList, useInvalidateLists, useNodeTypes, DeleteDialog, DEFINITION_KINDS, definitionKey, libraryMessages as lm, routePath, ROUTE_ROLES, useListShortcuts } from "../library";
+import { ActionMenu, type ActionMenuHandle, useGraphList, useInvalidateLists, useNodeTypes, DeleteDialog, useListView, useDefinitionEdits, ListEditDialogs, DEFINITION_KINDS, definitionKey, libraryMessages as lm, routePath, ROUTE_ROLES, useListShortcuts } from "../library";
 import { useRegisterCommands } from "../../shell/commands";
 import { StartGuide } from "../start";
 import { useScopedList } from "../projects";
@@ -19,6 +19,7 @@ import { ExportDialog, exportMessages } from "../exports";
 import { DuplicateTeamDialog, NewTeamDialog, RenameTeamDialog, useStartChat } from "./TeamDialogs";
 import { teamMessages as t } from "./messages";
 import { summarizeEntries } from "./teamsLogic";
+import { DEFAULT_DIRECTION, teamGroupDefs, teamSortDefs, type SortDirection } from "./arrange";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { blocksRun, ValidationChip } from "./ValidationChip";
 import "./teams.css";
@@ -28,6 +29,8 @@ const idOfGraph = (g: GraphSummary) => g.id;
 const nameOfGraph = (g: GraphSummary) => g.name;
 
 type SortKey = "name" | "modified";
+/** 보기·접힘 기억 키(`ac.list.view.<listId>`) */
+const LIST_ID = "teams";
 type Dialog = { kind: "new" } | { kind: "rename" | "duplicate" | "export" | "delete"; graph: GraphSummary } | null;
 
 /** 행의 "최근 사용" 칸: 이 팀 구성의 가장 최근 실행(행이 보일 때 지연 조회, 실패해도 행은 유지). */
@@ -86,7 +89,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   const edgeTypes = useEdgeTypes();
   const now = useNow(true, 30_000);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "modified", dir: "desc" });
+  const [dirs, setDirs] = useState<Record<string, SortDirection>>({ ...DEFAULT_DIRECTION });
   // 편집기 팔레트의 [팀 구성 만들기]가 `?new=1`로 들어오면 새 팀 구성 다이얼로그를 바로 연다
   const [params] = useSearchParams();
   const [dialog, setDialog] = useState<Dialog>(() => (params.get("new") === "1" ? { kind: "new" } : null));
@@ -94,14 +97,60 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const menus = useRef(new Map<string, ActionMenuHandle>());
   const scoped = useScopedList(graphs.data, { scopeOf: scopeOfGraph, kind: DEFINITION_KINDS.graph, idOf: idOfGraph, nameOf: nameOfGraph });
+  const [moving, setMoving] = useState<GraphSummary | undefined>(undefined);
+  const [labeling, setLabeling] = useState<GraphSummary | undefined>(undefined);
+  // 폴더 이동·라벨은 최신 원문을 읽어 해당 필드만 바꿔 `If-Match`로 저장한다(5.2R.63).
+  const { rest } = useApi();
+  const store = useMemo(
+    () => ({
+      load: async (id: string) => {
+        const got = await rest.getGraph(id);
+        return { value: got.graph, version_hash: got.version_hash };
+      },
+      save: (graph: Parameters<typeof rest.updateGraph>[1], hash: string | undefined) => rest.updateGraph(graph.id, graph, hash ?? ""),
+    }),
+    [rest],
+  );
+  const edits = useDefinitionEdits(store, t.arrange);
   const chat = useStartChat((id) => void navigate(`${routePath(ROUTE_ROLES.conversations)}/${encodeURIComponent(id)}`));
 
-  const rows = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = (scoped.items ?? []).filter((g) => q === "" || `${g.name} ${g.description ?? ""} ${g.id}`.toLowerCase().includes(q));
-    const sign = sort.dir === "asc" ? 1 : -1;
-    return [...list].sort((a, b) => (sort.key === "name" ? a.name.localeCompare(b.name, "ko") : (a.saved_at ?? 0) - (b.saved_at ?? 0)) * sign);
-  }, [scoped.items, query, sort]);
+    return (scoped.items ?? []).filter((g) => q === "" || `${g.name} ${g.description ?? ""} ${g.id}`.toLowerCase().includes(q));
+  }, [scoped.items, query]);
+  // 묶는 기준·정렬은 데이터다. 열 머리의 정렬 단추와 "보기" 메뉴가 같은 정렬 상태를 쓴다.
+  const sortDefs = useMemo(() => teamSortDefs(dirs), [dirs]);
+  const groupDefs = useMemo(() => teamGroupDefs(t.arrange.noProjects), []);
+  const view = useListView<GraphSummary>({
+    listId: LIST_ID,
+    items: filtered,
+    groupDefs,
+    sortDefs,
+    defaultView: { groupBy: "folder", sort: "modified" },
+    messages: t.arrange,
+    searching: query.trim() !== "",
+    selectedId: activeId,
+    idOf: idOfGraph,
+    showMenu: !(graphs.isLoading || graphs.isError || (graphs.data ?? []).length === 0),
+  });
+  const { arranged } = view;
+  const rows = arranged.sorted;
+  const sortKey = (arranged.sortDef?.id ?? "name") as SortKey;
+  // 화면에 그릴 순서: 묶음이면 머리 줄 + (접히지 않은) 항목, 아니면 평면. 방향키 이동용 번호는 항목 줄만 센다.
+  const display = useMemo(() => {
+    const out: ({ kind: "head"; group: NonNullable<typeof view.paneGroups>[number] } | { kind: "row"; graph: GraphSummary; index: number; group?: string })[] = [];
+    let index = 0;
+    if (view.paneGroups === undefined) {
+      for (const graph of rows) out.push({ kind: "row", graph, index: index++ });
+    } else {
+      for (const group of view.paneGroups) {
+        out.push({ kind: "head", group });
+        if (!group.collapsed) for (const graph of group.items) out.push({ kind: "row", graph, index: index++, group: group.key });
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 타입 참조만 `view`를 쓴다
+  }, [view.paneGroups, rows]);
 
   const open = (id: string) => void navigate(`${basePath}/${encodeURIComponent(id)}`);
   // 선택 모드에서는 행을 열지 않고 선택을 토글한다
@@ -118,7 +167,9 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   useListShortcuts({
     scope: "teams",
     onNew: () => setDialog({ kind: "new" }),
+    onView: view.openMenu,
     onSearch: () => searchRef.current?.focus(),
+    ...(active === undefined ? {} : { onMove: () => setMoving(active), onLabels: () => setLabeling(active) }),
     ...(active === undefined ? {} : { onRename: () => setDialog({ kind: "rename", graph: active }), onDelete: () => setDialog({ kind: "delete", graph: active }), onStartChat: () => startChat(active) }),
   });
 
@@ -139,8 +190,12 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     }
   };
 
-  const toggleSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" ? "asc" : "desc" }));
-  const ariaSort = (key: SortKey) => (sort.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none");
+  const toggleSort = (key: SortKey) => {
+    setDirs((d) => ({ ...d, [key]: sortKey === key ? (d[key] === "asc" ? "desc" : "asc") : (DEFAULT_DIRECTION[key] ?? "asc") }));
+    if (sortKey !== key) arranged.setView({ sort: key });
+  };
+  const ariaSort = (key: SortKey) => (sortKey === key ? (dirs[key] === "asc" ? "ascending" : "descending") : "none");
+  const arrow = (key: SortKey) => (sortKey === key ? (dirs[key] === "asc" ? "▲" : "▼") : "");
   const list = graphs.data ?? [];
 
   let body;
@@ -165,12 +220,13 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   } else {
     body = (
       <div className="lib-table-wrap">
+        {view.menu}
         <table className="lib-grid" role="grid" aria-label={t.list.tableLabel}>
           <thead>
             <tr>
               <th scope="col" aria-sort={ariaSort("name")}>
                 <button type="button" onClick={() => toggleSort("name")} aria-label={t.list.sortBy(t.list.colName)}>
-                  {t.list.colName} {sort.key === "name" ? (sort.dir === "asc" ? "▲" : "▼") : ""}
+                  {t.list.colName} {arrow("name")}
                 </button>
               </th>
               <th scope="col">{t.list.colDescription}</th>
@@ -178,7 +234,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
               <th scope="col">{t.list.colEntry}</th>
               <th scope="col" aria-sort={ariaSort("modified")}>
                 <button type="button" onClick={() => toggleSort("modified")} aria-label={t.list.sortBy(t.list.colModified)}>
-                  {t.list.colModified} {sort.key === "modified" ? (sort.dir === "asc" ? "▲" : "▼") : ""}
+                  {t.list.colModified} {arrow("modified")}
                 </button>
               </th>
               <th scope="col">{t.list.colLastRun}</th>
@@ -186,11 +242,23 @@ export function TeamListPage({ basePath }: { basePath: string }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((g, i) => {
+            {display.map((d) => {
+              if (d.kind === "head") {
+                const gr = d.group;
+                return (
+                  <tr key={`head:${gr.key}`} role="row" className="lib-grouprow">
+                    <td role="gridcell" colSpan={7}>
+                      <GroupHeader label={gr.label} {...(gr.title === undefined ? {} : { title: gr.title })} count={gr.count} depth={gr.depth} collapsed={gr.collapsed} onToggle={() => arranged.toggle(gr.key, !gr.collapsed)} />
+                    </td>
+                  </tr>
+                );
+              }
+              const g = d.graph;
+              const i = d.index;
               const entry = summarizeEntries(g.entry_labels, t.list.entryMore);
               return (
                 <tr
-                  key={g.id}
+                  key={`${d.group ?? ""}:${g.id}`}
                   role="row"
                   data-row-id={g.id}
                   data-active={activeId === g.id ? "true" : undefined}
@@ -231,6 +299,8 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                         { id: "open", label: t.list.open, onSelect: () => open(g.id) },
                         { id: "chat", label: t.list.startChat, disabled: !hasEntry(g), ...(hasEntry(g) ? {} : { title: t.list.startChatNoEntry }), onSelect: () => startChat(g) },
                         { id: "rename", label: t.list.rename, onSelect: () => setDialog({ kind: "rename", graph: g }) },
+                        { id: "move", label: t.arrange.move.title, onSelect: () => setMoving(g) },
+                        { id: "labels", label: t.arrange.labels.title, onSelect: () => setLabeling(g) },
                         { id: "duplicate", label: t.list.duplicate, onSelect: () => setDialog({ kind: "duplicate", graph: g }) },
                         { id: "export", label: exportMessages.menu, onSelect: () => setDialog({ kind: "export", graph: g }) },
                         { id: "versions", label: t.list.versions, onSelect: () => void navigate(`${basePath}/${encodeURIComponent(g.id)}?tab=versions`) },
@@ -243,7 +313,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
             })}
           </tbody>
         </table>
-        <p className="app-muted lib-field-note team-total">{t.list.total(rows.length)}</p>
+        <p className="app-muted lib-field-note team-total">{t.list.total(arranged.total)}</p>
       </div>
     );
   }
@@ -273,6 +343,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
         <DuplicateTeamDialog sourceId={dialog.graph.id} sourceName={dialog.graph.name} existingIds={new Set(list.map((g) => g.id))} onClose={() => setDialog(null)} onCreated={(id) => { setDialog(null); open(id); }} />
       ) : null}
       {dialog?.kind === "export" && DEFINITION_KINDS.graph !== undefined ? <ExportDialog initialItems={[{ kind: DEFINITION_KINDS.graph, id: dialog.graph.id }]} onClose={() => setDialog(null)} /> : null}
+      <ListEditDialogs<GraphSummary> moving={moving} labeling={labeling} onCloseMove={() => setMoving(undefined)} onCloseLabels={() => setLabeling(undefined)} items={list} edits={edits} messages={t.arrange} />
       {dialog?.kind === "delete" ? <DeleteTeam graph={dialog.graph} onClose={() => setDialog(null)} onDone={() => setDialog(null)} /> : null}
     </div>
   );

@@ -1,8 +1,7 @@
 # agent-console-backend-claude-sdk
 
 Claude Agent SDK(`claude-agent-sdk`, `ClaudeSDKClient`) 실행 백엔드 어댑터(X3).
-entry point `agent_console.backends:claude-agent-sdk`. 설계: `specs/agent-console/design.md` §3.3, §4.7, §7.4, §8.3,
-§R3.3·§R3.1d·§R3.4(서브에이전트), §R12.5(실행 묶음), §R4.3(사용량 한도), §R13-10(인증).
+entry point `agent_console.backends:claude-agent-sdk`.
 
 ## 설치
 
@@ -11,7 +10,8 @@ uv sync --all-packages                               # 워크스페이스 안
 uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 ```
 
-의존: `agent-console-runtime`, `agent-console-contracts`, `agent-console-registry`, `pydantic`, `claude-agent-sdk`.
+의존: `agent-console-runtime`, `agent-console-contracts`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
+`claude-agent-sdk`. 선택: `[hook-probe]`, `[login]`.
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
@@ -19,8 +19,11 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 | `agent-console-registry` (사내) | 관측 수집기(X7) entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식(4R.8) | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
 | `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다(4R.9). 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
 
+| `agent-console-secret-rules` (사내) | 구독 로그인 화면 글자 규칙(사용자가 고치는 정규식)의 안전 검사(`ac-safe-regex`를 거침) | 사용자 정규식은 한 곳의 검사기를 거친다는 규칙(design §2R.4) | `re.compile` 그대로(위험한 정규식을 막지 못함) |
+| `agent-console-pty-session` (사내, **선택** 추가 기능 `login`) | `claude auth login`을 PTY로 띄워 화면 글자를 읽고 입력을 보냄(구독 로그인) | CLI 로그인 화면이 TTY를 요구한다. PTY·터미널 글자 해석을 한 패키지에 둔다(5.2R.81) | 사용자가 터미널에서 직접 `claude auth login`(앱 화면 로그인 없음) |
+
 `pip install "agent-console-backend-claude-sdk[hook-probe]"`로 함께 설치한다. 없으면 `observe.hook_probe`가 켜져도
-감싸지 않고 `log.warning`을 낸다(나머지는 그대로 동작).
+감싸지 않고 `log.warning`을 낸다(나머지는 그대로 동작). 서버 앱은 `[login]`을 함께 설치한다(구독 로그인 기본 켜짐).
 
 ## 최소 사용 예
 
@@ -174,6 +177,103 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 테스트(`tests/…_readiness_52r68.py`)는 가짜 SDK 클라이언트만 쓰고, 상태 점검·거부된 연결 테스트에서 실제
 `ClaudeSDKClient` 생성 수가 0인지, 키 값(과 그 일부)이 응답·로그·예외 어디에도 없는지 확인한다.
 
+### 구독 로그인 (5.2R.82, ux-overhaul §15.9)
+
+앱 화면에서 Claude 구독 로그인을 시작하고 끝낸다(터미널을 열지 않는다). 서버가 `claude auth login`을 PTY 하위
+프로세스로 띄우고 화면 글자를 읽어 로그인 주소·코드 요청을 웹 대화상자로 중계한다. **로그인 자격은 Claude Code CLI가
+자기 위치(`CLAUDE_CONFIG_DIR` 또는 `~/.claude/.credentials.json`)에 쓴다. 앱은 토큰을 받거나 저장하지 않는다.** 한 번
+로그인하면 상태 점검·실행·터미널의 Claude Code가 같은 로그인을 그대로 쓴다.
+
+- 디스크립터: `capabilities.login = true`·`capabilities.logout = true`, `login_methods = [cli-login]`(문구·본인 책임
+  안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`(5.2R.80)다.
+- **능력이 없는 경우**: 설치자 설정 `login.enabled = false`, `allow_subscription_auth = false`, PTY를 쓸 수 없음(`[login]`
+  미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다.
+- `status()`의 `actions`: 구독 방식이고 로그인 파일이 없으면(`subscription_unverified`) 주 버튼 `login`, 있으면
+  (`subscription_ready`) 메뉴의 `login`(다시 로그인)·`logout`. 토큰 비밀(`oauth_token`) 방식이면 버튼이 없다.
+  상태 점검은 계속 **파일 존재만** 본다(`claude auth status`는 Node 프로세스를 띄워 폴링마다 쓰기엔 비싸다 —
+  로그인 성공 판정에만 쓴다).
+- 흐름(`ClaudeCliLoginDriver`): `starting` → 규칙 `open_url`·`needs_code`가 맞으면 `waiting_user`(주소는 https +
+  `allowed_url_hosts`만 넘긴다, OSC 8 링크 대상도 본다) → 붙여 넣은 코드 + `submit_keys`(기본 Enter) → 규칙 `success`가
+  맞으면 `on_success_keys`(기본 Enter)를 보냄 → CLI가 끝나면(또는 성공 문구 뒤 `exit_wait_s`) 하위 프로세스를 정리하고
+  `status_command`로 확인(`verifying`) → `succeeded`·`failed`.
+- **판정은 늘 `status_command`**: 종료 코드 0이어야 하고, 출력 JSON의 `authMethod`를 읽었으면 `success_auth_methods`
+  (기본 `["claude.ai"]`)에 있어야 한다. 성공 문구가 없어도 status 0이면 성공, 성공 문구가 있어도 status 1이면
+  `verify_failed`. 출력이 JSON이 아니면 종료 코드만 본다.
+- 실패 사유(`LoginReasonCodes`, 열린 어휘): `cli_missing`, `pty_unavailable`, `exited`(성공 문구 없이 0이 아닌 코드로
+  끝남), `verify_failed`, `start_failed`. 로그아웃: `logout_failed`, `timeout`.
+- 보안: 실행 인자는 설치자 설정에서만 온다. 하위 프로세스 환경은 실행과 같은 환경 정책 + `env_inherit`
+  (`CLAUDE_CONFIG_DIR`·브라우저 열기 변수)만 물려주고 `env_clear`(`ANTHROPIC_API_KEY`·`ANTHROPIC_AUTH_TOKEN`·
+  `CLAUDE_CODE_OAUTH_TOKEN`)는 늘 빈 값이다. 붙여 넣은 코드는 PTY가 에코하므로 드라이버가 `secrets_to_mask`로
+  알리고 서비스가 화면 줄·문구·상세에서 가린다. 원시 출력은 세션 메모리에만 있고 로그에 남기지 않는다.
+- 로그아웃: `logout_command`(기본 `claude auth logout`)를 PTY로 실행한다. 이 PC의 터미널 Claude Code도 로그아웃된다.
+
+설치자 설정 `login`(`ClaudeSdkLoginOptions`, 전부 데이터 — **화면 글자 규칙의 위치는 `login.rules`**):
+
+| 키 | 기본 | 의미 |
+| --- | --- | --- |
+| `enabled` | `true` | 끄면 능력을 선언하지 않는다(버튼 없음) |
+| `command` · `status_command` · `logout_command` | `null` = [`find_claude_cli()`, `auth`, `login`·`status`·`logout`] | 실행 인자(요청으로 바꿀 수 없다). 실행 파일은 `readiness.cli_path` → SDK 번들 → PATH |
+| `success_auth_methods` | `["claude.ai"]` | 성공으로 볼 `authMethod`(비우면 종료 코드만) |
+| `rules` | `open_url: https://\S+/oauth/authorize\S*`, `needs_code: (?i)paste code`, `success: (?i)login successful`, `failure: (?i)(error\|failed)` | 신호마다 정규식 목록. `ac-safe-regex` 검사(위험하면 설정 오류) |
+| `allowed_url_hosts` | `claude.ai`, `claude.com`, `console.anthropic.com`, `platform.claude.com` | `open_url`로 넘길 호스트(https, 하위 도메인 포함) |
+| `on_success_keys` · `submit_keys` | `["enter"]` · `["enter"]` | 성공 문구 뒤·코드 뒤에 보낼 키 |
+| `pty_size` | `{cols: 400, rows: 40}` | 긴 URL이 줄바꿈되지 않게 넓게 |
+| `cwd` | `null` | 작업 폴더 |
+| `env` · `env_inherit` · `env_clear` | `{TERM: xterm-256color}` · `CLAUDE_CONFIG_DIR`·`BROWSER`·`DISPLAY`·`WAYLAND_DISPLAY`·`XDG_*`·`WSL_*` · 키·토큰 변수 3개 | 하위 프로세스 환경 |
+| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | 시작 확인 창에 보일 쓰기 경로(처음 풀리는 하나) |
+| `status_timeout_s` · `logout_timeout_s` · `exit_wait_s` · `terminate_grace_s` | `20` · `20` · `10` · `2` | 시간(초) |
+| `screen_lines` | `40` | 진행에 싣는 화면 줄 수 |
+| `texts` | `ClaudeSdkLoginTexts` | 버튼·단계·사유·본인 책임 안내 문구 |
+
+```python
+>>> from agent_console_backend_claude_sdk import ClaudeSdkLoginOptions, allowed_open_url
+>>> opts = ClaudeSdkLoginOptions()
+>>> allowed_open_url("https://claude.ai/oauth/authorize?x=1", opts.allowed_url_hosts) is not None
+True
+>>> allowed_open_url("https://evil.example/oauth/authorize", opts.allowed_url_hosts) is None
+True
+>>> ClaudeSdkLoginOptions.model_validate({"rules": {"success": ["(a+)+$"]}})  # doctest: +IGNORE_EXCEPTION_DETAIL
+Traceback (most recent call last):
+pydantic_core.ValidationError: 위험한 정규식(rules.success)
+
+```
+
+테스트(`tests/…_login_52r82.py`)는 실제 CLI를 부르지 않는다. 스텁 `tests/claude_cli_stub.py`를
+`[sys.executable, stub, 시나리오, auth, login|status|logout]`로 주입하고 임시 `CLAUDE_CONFIG_DIR`에만 쓴다. 시나리오:
+코드 붙여 넣기 성공 / 콜백 성공(코드 없이) / 코드 거부 / URL 없이 멈춤(취소·시간 초과) / 성공 문구 없이 종료 + status 0
+/ 성공 문구 + status 1 / 취소 때 SIGTERM 무시(강제 종료). 하위 프로세스가 남지 않는지(`/proc/<pid>`), 키·토큰 변수가
+빈 값인지, 코드 문자열(과 앞 5자)이 응답·로그에 없는지 확인한다.
+
+#### 구독 로그인 수동 스모크(사람이 실제로 로그인해 보는 순서)
+
+자동 테스트는 실제 로그인을 하지 않는다. 아래는 사람이 자기 계정으로 확인하는 순서다. **실제 `~/.claude` 로그인이
+바뀐다**(터미널의 Claude Code도 같은 로그인을 쓴다). 실제 로그인을 건드리기 싫으면 빈 폴더를 `CLAUDE_CONFIG_DIR`로
+주고 같은 셸에서 서버를 띄운다(그 폴더에만 쓴다).
+
+```bash
+export CLAUDE_CONFIG_DIR=$HOME/.cache/agent-console-login-smoke   # 선택: 실제 ~/.claude 대신
+mkdir -p "$CLAUDE_CONFIG_DIR"
+claude auth logout || true              # 시작 상태: 로그아웃(위 폴더를 쓰면 이미 비어 있다)
+uv run agent-console serve --open       # 127.0.0.1:8765
+```
+
+1. 로그아웃 상태에서 설정 › 실행 백엔드의 Claude Agent SDK 카드가 "구독 로그인 정보를 찾지 못함"이고 **[구독으로
+   로그인]**이 보인다 → 누르면 시작 확인 창(본인 책임 안내, 쓰기 경로 = `$CLAUDE_CONFIG_DIR/.credentials.json` 또는
+   `~/.claude/.credentials.json`)이 뜬다. 이때 `ps -ef | grep "auth login"`에 하위 프로세스가 없다.
+2. [로그인 시작] → 브라우저 창이 열리거나 [로그인 페이지 열기]로 연다 → 브라우저에서 로그인한다. WSL처럼 콜백이 닿지
+   않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
+3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서 같은 `CLAUDE_CONFIG_DIR`로 `claude auth status; echo $?`
+   → JSON의 `authMethod`가 `claude.ai`이고 종료 코드 0이다.
+4. 대화상자의 [연결 테스트](또는 카드의 연결 테스트)가 통과한다(짧은 요청 한 번, 구독 사용량이 조금 든다).
+5. 다시 [구독으로 로그인] → 진행 중에 [취소]를 누르면 "취소했습니다"이고 `ps`에 `auth login`이 남지 않는다. 시간
+   초과는 설정 `modules.options.mod-runs.backend_login.timeout_s: 30`으로 줄여 두고 30초 기다려 확인한다(프로세스가
+   남지 않는다).
+6. 카드의 `…` › 로그아웃(연결 해제) → 확인 → 카드가 다시 "구독 로그인 정보를 찾지 못함"(`subscription_unverified`)
+   이고 `claude auth status` 종료 코드가 1이다.
+
+화면 문구가 맞지 않으면(CLI 버전 변화) 대화상자의 "CLI 화면 보기"로 화면을 보고 `login.rules`를 고친다. 판정은
+`claude auth status`라 규칙이 틀려도 거짓 성공은 없다.
+
 ## 서브에이전트 (`AgentRequest.subagents`, X12 `sdk-subagents`)
 
 `capabilities.subagents = true`. 위임 방식(nodes-core `sdk-subagents`)이 채운 `SubagentSpec` 목록을
@@ -318,6 +418,7 @@ overage_status}`. 값을 지어내지 않는다(없으면 null).
 | `allow_subscription_auth` | `true` | 본인 구독 로그인 자격(`auth.mode=subscription`) 허용(기본 구독, 본인 책임 — API 키도 선택 가능). `false`로 끄면 검증 error `backend.subscription_auth_disabled`·실행 거부, 켜져 있으면 강화된 경고(§인증) |
 | `hook_probe_command` | `null`(= `[현재 파이썬, -m, agent_console_hook_probe]`) | `observe.hook_probe`일 때 hook 명령을 감쌀 probe 실행 인자(아래 "hook probe 감싸기") |
 | `hook_probe_folder` | `hook-probe` | 노드 실행 폴더 아래 기록 폴더 이름(경로 구분자 없는 이름) |
+| `login` | `ClaudeSdkLoginOptions()`(켜짐) | 앱 화면 구독 로그인·로그아웃(§인증 "구독 로그인") |
 | `readiness` | `ClaudeSdkReadinessOptions()` | 상태 점검·연결 테스트가 볼 인증 방식(`auth`), `cli_path`, `subscription_files`, `probe_prompt`·`probe_model`·`probe_extra_args`, 문구 `texts`(§인증 "상태 점검과 연결 테스트") |
 
 `secrets`는 남은 `secret://` 해석과 raw 가리기에, `environ`은 환경 정책을 적용할 부모 환경으로 쓴다.

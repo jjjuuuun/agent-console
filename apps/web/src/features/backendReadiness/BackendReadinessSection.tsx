@@ -3,6 +3,7 @@ import { Banner, Button } from "@agent-console/ui";
 import { messages as m } from "../../app/messages";
 import { describeError } from "../../app/errors";
 import { useNow } from "../../app/useNow";
+import { useBackendLogin } from "../backendLogin";
 import { BackendReadinessCard } from "./BackendReadinessCard";
 import { useBackendProbe, useBackendReadiness } from "./hooks";
 
@@ -23,6 +24,7 @@ export function BackendReadinessSection({ backends }: BackendReadinessSectionPro
   const t = m.backendReadiness;
   const { readiness, error, refetch, recheck, rechecking, isPending } = useBackendReadiness();
   const nowMs = useNow(true, 30_000);
+  const login = useBackendLogin({ backends, onSettled: (id) => void recheck(id) });
   const shown = backends.filter((b) => b.capabilities?.status === true || b.capabilities?.probe === true || readiness[b.id] !== undefined);
   if (shown.length === 0 && error === null) return null;
   if (error !== null) {
@@ -38,8 +40,9 @@ export function BackendReadinessSection({ backends }: BackendReadinessSectionPro
       <h3 className="app-block-title">{t.sectionTitle}</h3>
       <p className="app-muted">{t.sectionLead}</p>
       {shown.map((b) => (
-        <ConnectedCard key={b.id} descriptor={b} readiness={readiness[b.id]} nowMs={nowMs} rechecking={rechecking === b.id} onRecheck={() => void recheck(b.id)} />
+        <ConnectedCard key={b.id} descriptor={b} readiness={readiness[b.id]} nowMs={nowMs} rechecking={rechecking === b.id} onRecheck={() => void recheck(b.id)} onAction={(action) => login.run(b.id, action)} />
       ))}
+      {login.dialogs}
     </section>
   );
 }

@@ -2,7 +2,6 @@
 
 그래프 정의 순수 로직: 구조 검증, 포트 해석, 위상 정렬·사이클 검사, 버전 해시.
 특정 노드·엣지 타입을 모른다. 타입 목록(디스크립터)과 동적 포트 해석기는 **인자로 받는다**.
-설계: `specs/agent-console/design.md` §4.1, §4.3, §6.2.
 
 ## 설치
 
@@ -18,7 +17,7 @@ uv sync --all-packages
 uv pip install ./packages/py/base/ac-graph
 ```
 
-의존: `agent-console-contracts`, `agent-console-registry`, `jsonschema`
+의존: `agent-console-contracts`, `jsonschema`, `referencing`
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |

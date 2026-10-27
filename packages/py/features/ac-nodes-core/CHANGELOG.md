@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.2R.94(잔해 정리): `__init__` docstring·README의 2R.20 노드 삭제 이력 문장을 이 기록으로 옮겼다. 코드 변경 없음.
 - 5.2R.43: `WhenEdge(redact=)`·`use_redactor(redact)`(`ac-conditions.RedactorConsumer`) — 판정 근거를 자르기 전에 가린다. `sdk-subagents` 디스크립터 `shares_session=True` 명시.
 - 5.2R.34: 서비스 키 `SCOPE_LAYERS`(`nodes_core.scope_layers`) — agent 노드 유효 설정에 공통 바로 아래 범위 층(예: 프로젝트
   층)을 끼운다.
@@ -29,4 +30,5 @@
 
 ## 0.1.0
 
+- 2R.20(이전 이력): 1R에서 보류했던 `input`·`output`·`router` 노드를 지웠다.
 - 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.

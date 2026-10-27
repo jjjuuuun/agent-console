@@ -1,9 +1,10 @@
 import { useId } from "react";
-import type { BackendDescriptor, BackendReadiness } from "@agent-console/contracts";
+import type { BackendDescriptor, BackendReadiness, ReadinessAction } from "@agent-console/contracts";
 import { IconButton, Spinner, StatusIcon } from "@agent-console/ui";
 import { messages as m } from "../../app/messages";
 import { FixButtons } from "../../app/fix";
 import { formatRelative } from "../../lib/format";
+import { ReadinessActionButtons } from "../backendLogin";
 import { BackendProbeButton } from "./BackendProbeButton";
 import type { ProbeView } from "./hooks";
 import { ProbeResultBlock } from "./ProbeResultBlock";
@@ -17,13 +18,15 @@ export interface BackendReadinessCardProps {
   onRecheck: () => void;
   rechecking?: boolean;
   nowMs: number;
+  /** 서버가 준 동작(`readiness.actions`)을 눌렀을 때. 없으면 동작 버튼을 그리지 않는다 */
+  onAction?: ((action: ReadinessAction) => void) | undefined;
 }
 
 /**
  * 실행 백엔드 한 줄 카드(설정). 상태 줄·해결 버튼·[연결 테스트]·결과 블록.
  * 표현 컴포넌트다: 상태 이름은 비교하지 않고 톤 표와 서버가 준 문구만 쓴다.
  */
-export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, rechecking = false, nowMs }: BackendReadinessCardProps) {
+export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, rechecking = false, nowMs, onAction }: BackendReadinessCardProps) {
   const t = m.backendReadiness;
   const titleId = useId();
   const tone = resolveTone(readiness?.tone);
@@ -37,7 +40,10 @@ export function BackendReadinessCard({ descriptor, readiness, probe, onRecheck, 
     <section className="app-readiness" data-tone={tone} aria-labelledby={titleId} data-testid={`backend-readiness-${descriptor.id}`}>
       <header className="app-readiness-head">
         <h3 id={titleId} className="app-block-title">{descriptor.title}</h3>
-        {canProbe ? <BackendProbeButton descriptor={descriptor} probe={probe} /> : null}
+        <span className="app-readiness-actions">
+          {onAction ? <ReadinessActionButtons actions={readiness?.actions} onAction={onAction} /> : null}
+          {canProbe ? <BackendProbeButton descriptor={descriptor} probe={probe} /> : null}
+        </span>
       </header>
       <p className="app-readiness-line" data-testid="readiness-line">
         {probe.running ? (

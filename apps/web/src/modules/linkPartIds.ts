@@ -7,7 +7,6 @@ export const LINK_PART_IDS = {
   chatInteractionCard: "chat.interaction-card",
   chatSend: "chat.send",
   chatResumeTurn: "chat.resume-turn",
-  chatStartPresets: "chat.start-presets",
   runsFlowTab: "runs.flow-tab",
   runsHandoffView: "runs.handoff-view",
   usageTokenRollup: "usage.token-rollup",

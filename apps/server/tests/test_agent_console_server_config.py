@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -26,9 +25,8 @@ security:
   allowed_origins: ["http://localhost:5173"]
 modules:
   options:
-    mod-presets:
-      directories: [presets, /abs/presets]
-      apply_on_start: [dev-team]
+    mod-imports:
+      project_dir: proj
     mod-runs:
       backends:
         claude-agent-sdk:
@@ -43,7 +41,6 @@ def test_agent_console_server_settings_defaults(tmp_path: Path) -> None:
     assert settings.workspace_path == tmp_path / ".agent-console"
     assert settings.database_path == tmp_path / ".agent-console" / ".state" / "console.sqlite3"
     assert settings.modules.options == {}
-    assert settings.moved_keys == []
     assert settings.plugins.enabled is None
     assert settings.security.token is None
 
@@ -56,10 +53,8 @@ def test_agent_console_server_settings_file_and_env(tmp_path: Path) -> None:
     assert settings.port == 9000
     assert settings.workspace_path == tmp_path / "data" / "ws"  # 설정 파일 폴더 기준
     # 모듈 설정은 modules.options 아래. 상대 경로는 모듈이 base_dir(설정 파일 폴더) 기준으로 푼다.
-    presets = settings.modules.options["mod-presets"]
-    assert presets == {"directories": ["presets", "/abs/presets"], "apply_on_start": ["dev-team"]}
+    assert settings.modules.options["mod-imports"] == {"project_dir": "proj"}
     assert settings.base_dir == tmp_path
-    assert settings.moved_keys == []
     assert settings.plugins.enabled == ["input", "output"]
     runs = settings.modules.options["mod-runs"]
     assert runs["backends"]["claude-agent-sdk"]["models"] == [{"id": "m1"}]
@@ -70,7 +65,7 @@ def test_agent_console_server_settings_file_and_env(tmp_path: Path) -> None:
         "AGENT_CONSOLE_CONFIG": str(tmp_path / CONFIG_FILENAME),
         "AGENT_CONSOLE_PORT": "9100",
         "AGENT_CONSOLE_PLUGINS_ENABLED": "input, router",
-        "AGENT_CONSOLE_PRESET_DIRS": os.pathsep.join(["p1", "p2"]),
+        "AGENT_CONSOLE_WORKING_DIRECTORY": "from-env",
         "AGENT_CONSOLE_ALLOW_REMOTE": "true",
         "AGENT_CONSOLE_HOST": "",  # 빈 값은 무시
     }
@@ -78,7 +73,8 @@ def test_agent_console_server_settings_file_and_env(tmp_path: Path) -> None:
     assert from_env.port == 9100
     assert from_env.host == "127.0.0.1"
     assert from_env.plugins.enabled == ["input", "router"]
-    assert from_env.modules.options["mod-presets"]["directories"] == ["p1", "p2"]  # 환경변수가 이김
+    assert from_env.modules.options["mod-runs"]["working_directory"] == "from-env"  # 모듈 환경변수
+    assert from_env.modules.options["mod-imports"] == {"project_dir": "proj"}  # 파일 값 유지
     assert from_env.security.allow_remote is True
     assert from_env.security.allowed_origins == ["http://localhost:5173"]  # 파일 값 유지
 
@@ -118,35 +114,36 @@ def test_agent_console_server_loopback(host: str, expected: bool) -> None:
     assert is_loopback_host(host) is expected
 
 
-def test_removed_keys_are_rejected_with_reason(tmp_path: Path) -> None:
-    """1R에서 삭제한 키(console, default_manual_route_pattern)는 이유가 담긴 오류로 거부한다."""
-    for key, value in (("console", {"buffer_size": 1}), ("default_manual_route_pattern", "x")):
-        config = tmp_path / f"{key}.yaml"
-        config.write_text(
-            f"{key}: {value!r}\n" if isinstance(value, str) else f"{key}: {{buffer_size: 1}}\n",
-            encoding="utf-8",
-        )
-        with pytest.raises(ConfigError, match="1R에서 삭제") as exc:
-            load_settings(config, environ={})
-        assert key in str(exc.value)
-        # 지운 키는 코드 settings.removed_key로 나오고, pydantic 접두어·빈 위치가 없다(1R.26).
-        assert exc.value.code == SETTINGS_REMOVED_KEY
-        assert str(exc.value).startswith(f"설정 값 오류({SETTINGS_REMOVED_KEY}): {key}: ")
-        assert "Value error" not in str(exc.value)
-        assert ": :" not in str(exc.value)
-
-
-def test_old_presets_with_set_default_entry_points_to_new_location(tmp_path: Path) -> None:
-    """2R.20에서 지운 `presets.set_default_entry`도 4R.18부터는 옛 최상위 `presets`로 안내한다."""
+def test_unknown_top_level_key_is_a_plain_config_error(tmp_path: Path) -> None:
+    """선언된 지운 키가 아닌 옛 키(예: `console`)는 일반 설정 오류로 시작을 거부한다."""
     config = tmp_path / "agent-console.yaml"
-    config.write_text("presets:\n  set_default_entry: false\n", encoding="utf-8")
-    with pytest.raises(ConfigError, match=r"modules\.options\.mod-presets") as exc:
+    config.write_text("console: {buffer_size: 1}\n", encoding="utf-8")
+    with pytest.raises(ConfigError) as exc:
         load_settings(config, environ={})
-    assert [k.old for k in exc.value.removed] == ["presets"]
-    # 같은 이름이 모듈 설정 아래에 있는 것은 상관없다(경로 단위 검사, 모듈 스키마가 검증).
+    assert exc.value.code is None
+    assert exc.value.removed == []
+    assert "console" in str(exc.value)
+
+
+def test_removed_preset_keys_are_rejected(tmp_path: Path) -> None:
+    """삭제된 프리셋 기능의 설정(`presets`, `modules.options.mod-presets`)은 이유가 담긴 오류다."""
+    for name, body in (
+        ("top", "presets:\n  directories: [p]\n"),
+        ("module", "modules:\n  options:\n    mod-presets: {apply_on_start: [x]}\n"),
+    ):
+        config = tmp_path / f"{name}.yaml"
+        config.write_text(body, encoding="utf-8")
+        with pytest.raises(ConfigError, match="프리셋 기능은 삭제되었습니다") as exc:
+            load_settings(config, environ={})
+        assert exc.value.code == SETTINGS_REMOVED_KEY
+        [key] = exc.value.removed
+        assert key.new is None
+        assert str(exc.value).startswith(f"설정 값 오류({SETTINGS_REMOVED_KEY}): {key.old}: ")
+        assert "Value error" not in str(exc.value)
+    # 같은 이름이 다른 모듈 설정 아래에 있는 것은 상관없다(경로 단위 검사, 모듈 스키마가 검증).
     other = tmp_path / "other.yaml"
     other.write_text(
-        "modules:\n  options:\n    mod-runs: {backends: {fake: {set_default_entry: true}}}\n",
+        "modules:\n  options:\n    mod-runs: {backends: {fake: {presets: true}}}\n",
         encoding="utf-8",
     )
     load_settings(other, environ={})
@@ -182,5 +179,4 @@ def test_runs_keys_are_rejected_and_env_goes_to_mod_runs(tmp_path: Path) -> None
     runs = from_env.modules.options["mod-runs"]
     assert runs["working_directory"] == "from-env"
     assert runs["runtime"] == {"max_concurrency": "3"}
-    assert from_env.moved_keys == []
     assert "project_dir" not in from_env.modules.options.get("mod-imports", {})

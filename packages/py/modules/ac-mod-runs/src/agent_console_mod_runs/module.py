@@ -10,6 +10,9 @@
 - 백엔드 준비 상태·연결 테스트(ux-overhaul §15.8): ``GET /backends/status``·
   ``GET /backends/{id}/status``·``POST /backends/{id}/probe``. 백엔드 선택 능력
   (``status``·``probe``)만 쓰고 id를 모른다. 시간 상한은 설정 ``backend_probe_timeout_max_s``.
+- 백엔드 계정 로그인(ux-overhaul §15.9, F14): ``POST /backends/{id}/login``·``…/logout``·
+  ``/backends/login/…``. 선택 능력(``login``·``logout``)만 쓰고 id를 모른다. 설정 ``backend_login``
+  (``enabled`` 기본 켬, 시간·하트비트·보관·화면 줄 수). 종료 훅에서 진행 중인 세션을 취소한다.
 - 조건 연산자(X22): 호스트 묶음의 ``condition_operators`` 레지스트리를 연산자를 쓰는 노드·엣지
   종류에 준다(``bind_condition_operators``), ``GET /condition-operators``가 같은 목록을 낸다.
 - 자식 Run(design §5R.7): 엔진 자식 Run 준비자 = ``RunService.prepare_child``(같은 검사·준비).
@@ -66,7 +69,7 @@ from .ports import (
     WORKSPACE_SETTINGS,
     RunEnvironment,
 )
-from .readiness import build_readiness_service
+from .readiness import build_login_service, build_readiness_service
 from .redaction import SuspectedRedaction
 from .routes import build_router
 from .service import RunService, team_rules_warning
@@ -199,6 +202,23 @@ class RunsModule:
             probe_timeout_max_s=cfg.backend_probe_timeout_max_s,
             min_chars=cfg.min_redact_chars,
         )
+        login_cfg = cfg.backend_login
+        login = (
+            build_login_service(
+                registries,
+                secrets,
+                ctx.environ,
+                rules=lambda: ctx.port(SECRET_RULES),
+                timeout_s=login_cfg.timeout_s,
+                timeout_max_s=login_cfg.timeout_max_s,
+                heartbeat_s=login_cfg.heartbeat_s,
+                retain_s=login_cfg.retain_s,
+                screen_max_lines=login_cfg.screen_max_lines,
+                min_chars=cfg.min_redact_chars,
+            )
+            if login_cfg.enabled
+            else None
+        )
         # 조건 판정 근거는 자르기 전에 엔진 가림을 건다(잘린 비밀 조각이 기록에 남지 않게)
         bind_redactor(registries, secrets.redact)
         holder: list[InteractionService] = []
@@ -273,6 +293,8 @@ class RunsModule:
             )
 
         async def stop() -> None:
+            if login is not None:  # 진행 중인 로그인 하위 과정을 남기지 않는다
+                await login.aclose()
             await service.shutdown()
 
         return ModuleParts(
@@ -284,6 +306,7 @@ class RunsModule:
                     events=lambda: recorder.events,
                     activity_limit=cfg.activity_limit,
                     readiness=lambda: readiness,
+                    login=(lambda: login) if login is not None else None,
                 )
             ],
             ws_topics=topic_handlers(

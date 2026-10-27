@@ -12,6 +12,8 @@ export interface RouteDef {
   titleKey: string;
   /** 아이콘 레지스트리 이름 */
   icon: string;
+  /** 빈 상태 스팟에 쓸 아이콘 이름(없으면 `icon`) */
+  emptyIcon?: string;
   /** 배지 값을 주는 소스 이름 또는 null. 소스 이름 → 숫자는 `useBadgeSources`가 안다 */
   badgeSource: string | null;
   /** `g` 다음에 누를 한 글자(기본값. 설정 `ui.keybindings`가 덮어쓴다) */

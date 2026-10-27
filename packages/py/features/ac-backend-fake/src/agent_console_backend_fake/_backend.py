@@ -26,6 +26,7 @@ from agent_console_contracts import (
     AgentUsagePayload,
     BackendCapabilities,
     BackendDescriptor,
+    BackendLogoutResult,
     BackendProbeResult,
     BackendReadiness,
     ErrorCodes,
@@ -44,10 +45,13 @@ from agent_console_runtime import (
     AgentResult,
     BackendCheckContext,
     BackendEventSink,
+    BackendLoginContext,
     CancelToken,
     HostTool,
     InteractionRequest,
     InteractivePort,
+    LoginDriver,
+    LoginRefusedError,
     SecretResolver,
     SessionRef,
     SubagentResultListener,
@@ -69,6 +73,12 @@ from ._config import (
     FakeToolCall,
     fake_config_schema,
     fill_template,
+)
+from ._login import (
+    FAKE_LOGIN_REQUIRED_STATE,
+    FakeLoginScript,
+    FakeLoginState,
+    FakeScriptedLoginDriver,
 )
 
 FAKE_BACKEND_ID = "fake"
@@ -147,6 +157,11 @@ class FakeInstallOptions(BaseModel):
         pattern=r"^[A-Za-z0-9_-][A-Za-z0-9._-]*$",
         description="실행 폴더 아래 hook probe 기록 흉내 폴더 이름.",
     )
+    login: FakeLoginScript | None = Field(
+        default=None,
+        description="대본 로그인(e2e·웹 개발용, PTY·네트워크 없음). null = 로그인 능력 없음. {}만 "
+        "주면 기본 대본(코드 ok = 성공, 그 밖 = verify_failed).",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -194,6 +209,8 @@ class FakeBackend:
         observe_collectors: 옛 관측 키 → 수집기 id(`DEFAULT_OBSERVE_COLLECTORS`). 관측 규칙의
             스위치는 `observe.collectors[id].enabled`가 옛 키를 이긴다.
         hook_probe_folder: `observe.hook_probe` 기록 흉내 폴더(`run_folder` 아래).
+        login: 대본 로그인(`FakeLoginScript`, ux-overhaul §15.9). 주면 `capabilities.login/logout`
+            을 선언하고 상태 점검이 로그인 여부(메모리)를 보인다. None이면 능력 없음.
     """
 
     def __init__(
@@ -209,7 +226,14 @@ class FakeBackend:
         echo_hooks: bool = False,
         observe_collectors: Mapping[str, str] | None = None,
         hook_probe_folder: str = DEFAULT_HOOK_PROBE_FOLDER,
+        login: FakeLoginScript | Mapping[str, Any] | None = None,
     ) -> None:
+        script = FakeLoginScript.model_validate(login) if login is not None else None
+        self._login = script if script is not None and script.enabled else None
+        self.login_state = FakeLoginState(
+            logged_in=bool(self._login is not None and self._login.start_logged_in)
+        )
+        """대본 로그인 상태(메모리)."""
         self._echo_hooks = echo_hooks
         self._collectors = dict(
             DEFAULT_OBSERVE_COLLECTORS if observe_collectors is None else observe_collectors
@@ -242,7 +266,10 @@ class FakeBackend:
                 interactions=None,
                 status=True,
                 probe=True,
+                login=self._login is not None,
+                logout=self._login is not None,
             ),
+            login_methods=[self._login.method()] if self._login is not None else [],
         )
 
     @classmethod
@@ -272,6 +299,7 @@ class FakeBackend:
             echo_hooks=parsed.echo_hooks,
             observe_collectors=parsed.observe_collectors,
             hook_probe_folder=parsed.hook_probe_folder,
+            login=parsed.login,
         )
 
     def preview_notes(self, effective: AgentSettings, bundle: ResourceBundle) -> list[Issue]:
@@ -296,7 +324,25 @@ class FakeBackend:
         return list(self._models)
 
     async def status(self, ctx: BackendCheckContext) -> BackendReadiness:
-        """선택 능력(정적 점검): 인증이 필요 없어 늘 준비됨(``always_ready``, 톤 ok)."""
+        """선택 능력(정적 점검): 인증이 필요 없어 늘 준비됨(``always_ready``, 톤 ok).
+
+        대본 로그인(``login``)이 켜져 있으면 메모리 로그인 상태를 보인다: 로그인 전
+        ``login_required``(warn, 주 버튼 [로그인]), 로그인 뒤 ``always_ready``
+        (메뉴의 다시 로그인·로그아웃).
+        """
+        script = self._login
+        if script is not None:
+            t = script.texts
+            logged_in = self.login_state.logged_in
+            return BackendReadiness(
+                backend_id=ctx.backend_id,
+                state=FAKE_READY_STATE if logged_in else FAKE_LOGIN_REQUIRED_STATE,
+                tone="ok" if logged_in else "warn",
+                summary=t.status_ready_summary if logged_in else t.status_required_summary,
+                short_summary=t.status_ready_short if logged_in else t.status_required_short,
+                checked_at=ctx.clock(),
+                actions=script.actions(logged_in),
+            )
         return BackendReadiness(
             backend_id=ctx.backend_id,
             state=FAKE_READY_STATE,
@@ -304,6 +350,45 @@ class FakeBackend:
             summary="준비됨 (인증 필요 없음)",
             short_summary="준비됨",
             checked_at=ctx.clock(),
+        )
+
+    async def start_login(self, ctx: BackendLoginContext, method_id: str) -> LoginDriver:
+        """선택 능력(대본 로그인): ``FakeScriptedLoginDriver``를 시작한다.
+
+        Raises:
+            LoginRefusedError: 대본이 없거나 모르는 방법(``backend.login_unsupported``).
+        """
+        script = self._login
+        if script is None or method_id != script.method_id:
+            raise LoginRefusedError(ErrorCodes.BACKEND_LOGIN_UNSUPPORTED, "대본 로그인이 없습니다")
+        state = self.login_state
+
+        def on_success() -> None:
+            state.logged_in = True
+
+        driver = FakeScriptedLoginDriver(script, on_success=on_success)
+        driver.begin()
+        return driver
+
+    async def logout(self, ctx: BackendLoginContext, method_id: str | None) -> BackendLogoutResult:
+        """선택 능력(대본 로그아웃): 메모리 로그인 상태를 지운다(``logout_ok=false``면 실패)."""
+        script = self._login
+        if script is None:
+            raise LoginRefusedError(ErrorCodes.BACKEND_LOGIN_UNSUPPORTED, "대본 로그인이 없습니다")
+        if not script.logout_ok:
+            return BackendLogoutResult(
+                backend_id=ctx.backend_id,
+                ok=False,
+                reason="logout_failed",
+                message=script.texts.logout_failed,
+                finished_at=ctx.clock(),
+            )
+        self.login_state.logged_in = False
+        return BackendLogoutResult(
+            backend_id=ctx.backend_id,
+            ok=True,
+            message=script.texts.logout_ok,
+            finished_at=ctx.clock(),
         )
 
     async def probe(self, ctx: BackendCheckContext, timeout_s: float) -> BackendProbeResult:

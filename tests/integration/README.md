@@ -9,6 +9,5 @@
 
 | 파일 | 검사 |
 | --- | --- |
-| `test_integration_presets_empty.py` | 프리셋 없이 동작: 빈 프리셋 경로 + 빈 workspace에서 정의 생성·검증·실행(서버 없이) |
 | `test_integration_contracts_schema.py` | 커밋된 TS 계약 생성물이 지금 계약과 같은지 |
 | `test_integration_cli_example_config.py` | 루트 `agent-console.example.yaml`로 서버가 뜨는지 |

@@ -19,16 +19,16 @@ describe("화면 전용 URL 파라미터", () => {
 });
 
 describe("기간", () => {
-  it("프리셋은 지금 기준 since, all은 기간 없음, 모르는 값은 기본 프리셋, 사용자 지정은 그대로", () => {
+  it("선택지는 지금 기준 since, all은 기간 없음, 모르는 값은 기본 선택지, 사용자 지정은 그대로", () => {
     expect(rangeToWindow(parseRange("7d", "24h"), 1_000_000_000)).toEqual({ since: String(1_000_000 - 7 * 86400) });
     expect(rangeToWindow(parseRange("all", "7d"), 1000)).toEqual({});
-    expect(parseRange("zzz", "24h")).toMatchObject({ kind: "preset", id: "24h" });
+    expect(parseRange("zzz", "24h")).toMatchObject({ kind: "option", id: "24h" });
     expect(rangeToWindow(parseRange("A..B", "7d"), 0)).toEqual({ since: "A", until: "B" });
   });
 });
 
 describe("요청 파라미터", () => {
-  it("칩의 since가 기간 프리셋보다 우선하고, 빈 값은 보내지 않으며, 키는 이름 순으로 안정적이다", () => {
+  it("칩의 since가 기간 선택지보다 우선하고, 빈 값은 보내지 않으며, 키는 이름 순으로 안정적이다", () => {
     const p = toRequestParams({ [FILTER_KEYS.since]: "5", z: ["a", "b"], e: "" }, { limit: 10 }, { since: "1" });
     expect(p).toEqual({ [FILTER_KEYS.since]: "5", z: ["a", "b"], limit: "10" });
     expect(paramsKey(p)).toBe(paramsKey({ limit: "10", z: ["a", "b"], [FILTER_KEYS.since]: "5" }));

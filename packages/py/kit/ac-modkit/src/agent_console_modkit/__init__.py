@@ -21,8 +21,9 @@
     - 호스트 기본 서비스 확장 지점(3R.16): ``load_host_plugins``(레지스트리 묶음 공장·플러그인 로더
       entry point + ``register(registries)`` 플러그인), ``open_host_database``(DB 공장 entry point),
       ``env_secret_lookup``·``secret_lookup``(비밀 해석 사슬), ``PluginLoadContext``.
-    - 설정 호환 선언(3R.16): ``SettingsCompat``(``MovedSetting``·``EnvSetting``·``FlagSetting``·
-      ``SeedSetting``)과 적용 함수 ``migrate_settings``·``env_settings``·``flag_settings``.
+    - 설정 호환 선언: ``SettingsCompat``(``RemovedSetting``·``EnvSetting``·``FlagSetting``·
+      ``SeedSetting``)과 적용 함수 ``removed_settings``·``env_settings``·``flag_settings``·
+      ``seed_settings``.
     - ``NOT_READY``: 호스트 준비 전 ``/health`` 오류 코드(503), ``Assembly.running``.
     - 모듈 옵션 읽기 전용 보기(5.2R.29): ``read_module_options``·``Assembly.module_options`` →
       ``ModuleOptions``(스키마·가린 값), ``mask_values``·``OPTIONS_MASK``·``SECRET_SCHEMA_KEY``.
@@ -49,17 +50,15 @@ from ._compat import (
     CompatFlag,
     EnvSetting,
     FlagSetting,
-    MovedSetting,
     RemovedSetting,
     SeedSetting,
     SettingsCompat,
-    SettingsMove,
     compat_flags,
     compat_of,
     env_settings,
     flag_settings,
-    migrate_settings,
     removed_settings,
+    seed_settings,
 )
 from ._database import DatabaseHandle, MigrationBranch
 from ._errors import (
@@ -153,7 +152,6 @@ __all__ = [
     "ModuleReport",
     "ModuleState",
     "ModulesConfig",
-    "MovedSetting",
     "Paths",
     "PluginLoadContext",
     "PluginLoader",
@@ -163,7 +161,6 @@ __all__ = [
     "SecretPathFinder",
     "SeedSetting",
     "SettingsCompat",
-    "SettingsMove",
     "Topic",
     "UndeclaredPortError",
     "WsForward",
@@ -183,11 +180,11 @@ __all__ = [
     "load_host_plugins",
     "load_installed_modules",
     "mask_values",
-    "migrate_settings",
     "open_host_database",
     "read_module_options",
     "removed_settings",
     "secret_lookup",
     "secret_providers_of",
+    "seed_settings",
     "utc_now",
 ]

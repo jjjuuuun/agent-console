@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 5.2R.104: 프리셋 기능 삭제로 `serve --apply-preset`이 없어졌다(옵션을 선언하던 모듈 `mod-presets`가 없음). 도움말·테스트에서 뺐다.
+- 5.2R.92: `serve`는 인자를 서버 `agent_console_server.main`에 그대로 넘긴다(옵션 정의는 서버 한 곳). 모듈이 `SettingsCompat.flags`로 선언한 옵션이 `agent-console serve`에도 나온다(전에는 `--apply-preset`만 하드코딩). 옵션·의미·종료 코드는 그대로다. 내부 함수 `_server.serve_overrides`·`run_server`·`merge_origins`(→ 서버 `merge_origins`)와 상수 `APPLY_PRESET_FLAG`를 지웠다. 설명을 "실행 명령"으로 고쳤다. 테스트 dev 의존에 `agent-console-modkit`(예제 모듈 선언용).
 - 5.2R.27: `statusline`이 `--label`이 없으면 데이터의 짧은 창 이름(`5h`·`7d`, `agent_console_usage.default_window_labels`)을 쓴다.
 
 ## 0.1.0

@@ -2,6 +2,11 @@
 
 ## 미출시
 
+- 5.2R.80(F14): 백엔드 계정 로그인 확장 지점 — 선택 능력 `LoginCapableBackend`·`LogoutCapableBackend`,
+  `LoginDriver`·`LoginProgress`·`BackendLoginContext`, 세션 서비스 `BackendLoginService`(세션 하나·시간 상한·하트비트·
+  취소·종료 정리·가림·로그 규칙), `mask_values`, 오류 `LoginUnsupportedError`·`LogoutUnsupportedError`·`LoginBusyError`·
+  `LoginRefusedError`·`LoginSessionNotFoundError`·`LoginInputError`. 테스트 도우미 모듈 `testing_login`.
+
 - 5.2R.34: `GraphRuntime.start(run_context=, start_warnings=)` — `run.started` payload에 더할 Run 맥락(상태
   필드는 덮지 않음)과 `run.started` 뒤 `log.warning`으로 낼 경고. 자식 Run은 `ChildRunPreparation.run_context`가 없으면
   부모 맥락을 물려받는다.

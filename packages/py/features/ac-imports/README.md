@@ -2,7 +2,7 @@
 
 외부 설정에서 정의(에이전트·리소스)를 **복사해** 가져오기. 원본은 읽기만 한다(쓰기·지우기·이름 바꾸기 없음).
 흐름: 출처 목록 → 후보 스캔(미리보기, 아무것도 쓰지 않음) → 고른 항목 가져오기(워크스페이스에 복사).
-설계: `specs/agent-console/design.md` §R11, §R9.5, 계약 `agent_console_contracts.imports`.
+계약: `agent_console_contracts.imports`.
 
 - **출처는 확장 지점이다.** 출처 = `ImportSource{descriptor, scan()}`. 출처를 만드는 공장을 entry point
   `agent_console.import_sources`로 등록한다. 서버는 출처 이름을 모른다.
@@ -32,7 +32,6 @@ uv pip install ./packages/py/features/ac-imports     # 단독(contracts·registr
 | `agent-console-registry` | 출처 공장 entry point 로딩(다른 확장 지점과 같은 방식) | 직접 `importlib.metadata` |
 | `agent-console-secret-rules` | 인자·URL 비밀 의심 판정(서버 저장 검사와 같은 규칙, 사용자 규칙 포함) | 계약 패키지 안 모듈(1R) |
 | `agent-console-claude-format` | `.claude` 형식 변환(내보내기 `claude-dir`과 공용, `ClaudeMapping`·`ClaudeLayout`) | 이 패키지 안 변환(1R) |
-| `ruamel.yaml` | (claude-format이 쓰는) frontmatter(YAML) 읽기 | PyYAML |
 
 저장소(`agent-console-store`)는 import하지 않는다. 쓰기는 구조적 프로토콜 `DefinitionWriter`
 (`list_ids`·`get`·`create`·`save`·`write_content`·`list_files`·`write_files`)로 받는다. 메모리 구현은

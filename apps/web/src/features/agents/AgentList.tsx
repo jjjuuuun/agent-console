@@ -2,18 +2,16 @@ import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueries } from "@tanstack/react-query";
 import type { Agent } from "@agent-console/contracts";
-import { NONE_KEY, checkUsable, folderOf, loadViewState, type KeyValueStorage } from "@agent-console/list-arrange";
-import { Button, EmptyState, ListPane, ListViewMenu, type ListViewOption } from "@agent-console/ui";
+import { NONE_KEY, folderOf } from "@agent-console/list-arrange";
+import { Button, EmptyState, ListPane } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApi } from "../../app/ApiContext";
 import { Skeleton } from "../settings";
-import { useListShortcuts, routePath, ROUTE_ROLES, libraryMessages, FolderMoveDialog, LabelEditDialog } from "../library";
+import { useListShortcuts, useListView, routeIconNode, ROUTE_ROLES, libraryMessages, ListEditDialogs } from "../library";
 import { filterAgents } from "./agentLogic";
-import { GROUP_ATTRIBUTE, GROUP_NONE, agentGroupDefs, agentSortDefs, attributeKeys, folderPaths } from "./arrange";
-import { useArrange } from "./useAgentArrange";
+import { agentGroupDefs, agentSortDefs, attributeKeys } from "./arrange";
 import { useAgentEdits } from "./useAgentEdits";
 import { agentMessages as t } from "./messages";
-import { Link } from "react-router";
 
 export interface AgentListProps {
   agents: readonly Agent[] | undefined;
@@ -37,13 +35,6 @@ type UsedFilter = "all" | "used" | "unused";
 const LIST_ID = "agents";
 /** 행을 묶음 머리로 끌 때 쓰는 dataTransfer 형식 */
 const DRAG_TYPE = "application/x-agent-console-item";
-const browserStorage = (): KeyValueStorage | undefined => {
-  try {
-    return typeof localStorage === "undefined" ? undefined : localStorage;
-  } catch {
-    return undefined;
-  }
-};
 
 /** 에이전트별 사용 팀 수(`GET /agents/{id}/usages`)를 행마다 조회한다. 목록 키(`list`) 아래라 쓰기 뒤 같이 갱신된다. */
 export function useAgentUsageCounts(agents: readonly Agent[], enabled = true): (id: string) => number | undefined {
@@ -61,8 +52,6 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
   const [used, setUsed] = useState<UsedFilter>("all");
   const root = useRef<HTMLDivElement>(null);
   const all = useMemo(() => agents ?? [], [agents]);
-  const storage = useMemo(() => browserStorage(), []);
-  const [viewOpen, setViewOpen] = useState(false);
   const [moving, setMoving] = useState<Agent | undefined>(undefined);
   const [labeling, setLabeling] = useState<Agent | undefined>(undefined);
   const edits = useAgentEdits();
@@ -71,20 +60,21 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
   const usage = useAgentUsageCounts(all, usagePart.visible);
   const filtered = filterAgents(all, query, usagePart.visible ? used : "all", usage);
   // 묶는 기준·정렬은 데이터다. 속성 키는 보기 상태가 쥔다.
-  const [attr, setAttr] = useState(() => loadViewState(storage, LIST_ID).attrKey ?? "");
-  const groupDefs = useMemo(() => agentGroupDefs({ attrKey: attr, roleReason: t.arrange.roleDistinct }), [attr]);
-  const sortDefs = agentSortDefs(usagePart.visible ? usage : undefined);
-  const arranged = useArrange<Agent>({
+  const sortDefs = useMemo(() => agentSortDefs(usagePart.visible ? usage : undefined), [usagePart.visible, usage]);
+  const view = useListView<Agent>({
     listId: LIST_ID,
     items: filtered,
-    groupDefs,
+    groupDefs: (attrKey) => agentGroupDefs({ attrKey, roleReason: t.arrange.roleDistinct }),
     sortDefs,
-    storage,
     defaultView: { groupBy: "folder", sort: "name" },
+    messages: t.arrange,
     searching: query.trim() !== "",
     selectedId,
     idOf: (a) => a.id,
+    showMenu: !(all.length === 0 || loading),
+    attributeKeys: attributeKeys(all),
   });
+  const { arranged } = view;
   const rows = arranged.sorted;
   const folderGrouping = arranged.groupDef?.id === "folder" && arranged.groups !== undefined;
   const targetId = (): string | undefined => document.activeElement?.closest<HTMLElement>("[data-row-id]")?.dataset["rowId"] ?? selectedId;
@@ -94,39 +84,18 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
     scope: "agents",
     onNew,
     onSearch: () => root.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
-    onView: () => setViewOpen(true),
+    onView: view.openMenu,
     onMove: () => setMoving(targetAgent()),
     onLabels: () => setLabeling(targetAgent()),
     ...(selectedId === undefined ? {} : { onRename: () => onRename(selectedId), onDelete: () => onDelete(selectedId) }),
   });
 
-  const groupName = (titleKey: string) => t.arrange.groupNames[titleKey] ?? titleKey;
-  const sortName = (titleKey: string) => t.arrange.sortNames[titleKey] ?? titleKey;
-  const groupOptions: ListViewOption[] = [
-    { id: GROUP_NONE, label: t.arrange.none },
-    ...groupDefs.map((d): ListViewOption => {
-      const u = checkUsable(d, filtered);
-      return {
-        id: d.id,
-        label: groupName(d.titleKey),
-        ...(u.ok ? {} : { disabled: true, ...(u.reason === undefined ? {} : { reason: u.reason }) }),
-        ...(d.id === GROUP_ATTRIBUTE
-          ? { input: { label: t.arrange.attrKey, placeholder: t.arrange.attrKeyPlaceholder, value: attr, suggestions: attributeKeys(all), onChange: (v: string) => { setAttr(v); arranged.setView({ attrKey: v }); } } }
-          : {}),
-      };
-    }),
-  ];
-  const sortOptions: ListViewOption[] = sortDefs.map((d) => ({ id: d.id, label: sortName(d.titleKey) }));
-  const groupSummary = arranged.groupDef === undefined ? t.arrange.none : t.arrange.summaryGroup(arranged.groupDef.id === GROUP_ATTRIBUTE && attr.trim() !== "" ? attr.trim() : groupName(arranged.groupDef.titleKey));
-  const summary = `${groupSummary} · ${arranged.sortDef === undefined ? "" : (t.arrange.sortSummaries[arranged.sortDef.titleKey] ?? sortName(arranged.sortDef.titleKey))}`;
-  const noneLabel = t.arrange.noneLabels[arranged.groupDef?.titleKey ?? ""] ?? "";
-
   const empty = (agents ?? []).length === 0 ? (
     <EmptyState
+      icon={routeIconNode(ROUTE_ROLES.agent)}
       title={t.list.empty}
       description={t.list.emptyBody}
       action={<Button variant="primary" onClick={onNew}>{t.list.new}</Button>}
-      secondaryAction={<Link to={routePath(ROUTE_ROLES.settings)}>{t.list.startFromPreset}</Link>}
     />
   ) : (
     <p className="app-muted app-pad">{t.list.noMatch}</p>
@@ -146,12 +115,7 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
       ) : null}
       <ListPane<Agent>
         items={rows}
-        {...(arranged.groups === undefined
-          ? {}
-          : {
-              groups: arranged.groups.map((g) => ({ key: g.key, label: g.none ? noneLabel : g.name, ...(g.none ? {} : { title: g.key }), count: g.count, depth: g.depth, collapsed: g.collapsed, items: g.items })),
-              onToggleGroup: arranged.toggle,
-            })}
+        {...(view.paneGroups === undefined ? {} : { groups: view.paneGroups, onToggleGroup: arranged.toggle })}
         {...(folderGrouping
           ? {
               onGroupDrop: (key: string, data: DataTransfer) => {
@@ -161,26 +125,7 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
               },
             }
           : {})}
-        belowTop={
-          all.length === 0 || loading ? undefined : (
-            <div className="lib-list-view">
-              <ListViewMenu
-                summary={summary}
-                groupOptions={groupOptions}
-                groupBy={arranged.groupDef?.id ?? GROUP_NONE}
-                onGroupByChange={(id) => arranged.setView({ groupBy: id })}
-                sortOptions={sortOptions}
-                sort={arranged.sortDef?.id ?? ""}
-                onSortChange={(id) => arranged.setView({ sort: id })}
-                {...(arranged.groups === undefined ? {} : { onCollapseAll: arranged.collapseAll, onExpandAll: arranged.expandAll })}
-                anyCollapsed={arranged.collapsed.size > 0}
-                open={viewOpen}
-                onOpenChange={setViewOpen}
-                messages={{ menuLabel: t.arrange.viewLabel, groupTitle: t.arrange.groupTitle, sortTitle: t.arrange.sortTitle, collapseAll: t.arrange.collapseAll, expandAll: t.arrange.expandAll }}
-              />
-            </div>
-          )
-        }
+        belowTop={view.menu ?? undefined}
         selectedId={selectedId}
         onSelect={(id) => onSelect(id)}
         rowHeight={56}
@@ -210,35 +155,7 @@ export function AgentList({ agents, loading, error, onRetry, selectedId, onSelec
           );
         }}
       />
-      {moving === undefined ? null : (
-        <FolderMoveDialog
-          open
-          itemName={moving.name}
-          current={folderOf(moving.attributes)}
-          folders={folderPaths(all)}
-          messages={t.arrange.move}
-          onClose={() => setMoving(undefined)}
-          onPick={(folder) => {
-            const m = moving;
-            setMoving(undefined);
-            void edits.moveToFolder(m.id, m.name, folder);
-          }}
-        />
-      )}
-      {labeling === undefined ? null : (
-        <LabelEditDialog
-          open
-          itemName={labeling.name}
-          labels={labeling.labels ?? []}
-          messages={t.arrange.labels}
-          onClose={() => setLabeling(undefined)}
-          onSave={(labels) => {
-            const a = labeling;
-            setLabeling(undefined);
-            void edits.saveLabels(a.id, a.name, labels);
-          }}
-        />
-      )}
+      <ListEditDialogs<Agent> moving={moving} labeling={labeling} onCloseMove={() => setMoving(undefined)} onCloseLabels={() => setLabeling(undefined)} items={all} edits={edits} messages={t.arrange} />
     </div>
   );
 }

@@ -95,10 +95,9 @@ def build_host_router(
             """서버 버전·계약 버전·플러그인 로딩 보고·속성·경고(읽기 전용, 비밀 값 없음).
 
             `warnings`: 모듈이 기여한 경고(`server.warnings` — 저장된 정의의 평문 비밀 의심
-            `secret.plain_found`, 팀 규칙 없음 `team.rules_unavailable` 등)와 옛 위치에서 옮긴
-            설정 키(`settings.moved_key`). `attributes`: 바인딩·출처 + 모듈 기여
-            (`server.attributes` — 복구한 Run 수 `recovered_runs` 등). `security.expose_paths`가
-            false면 workspace 경로를 뺀다.
+            `secret.plain_found`, 팀 규칙 없음 `team.rules_unavailable` 등). `attributes`: 바인딩·
+            출처 + 모듈 기여(`server.attributes` — 복구한 Run 수 `recovered_runs` 등).
+            `security.expose_paths`가 false면 workspace 경로를 뺀다.
             """
             return server_info()
 

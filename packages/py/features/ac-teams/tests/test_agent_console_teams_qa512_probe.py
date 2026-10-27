@@ -94,7 +94,7 @@ def test_edge_checks_not_duplicated_with_graph_checks(k: Kit) -> None:
 
 
 @pytest.mark.parametrize("k", KITS, ids=IDS)
-def test_no_presets_needed_cycle_edge_keeps_config(k: Kit) -> None:
+def test_cycle_edge_keeps_config_without_extra_data(k: Kit) -> None:
     nodes, edges = _tri(k, "loop")
     edges[3] = k.edge("f3", "loop", "c", "a", max_iterations=2)
     assert _run(k, k.graph(nodes, edges)) == []

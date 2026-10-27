@@ -89,7 +89,6 @@ export function createHarness(overrides: Record<string, unknown> = {}): Harness 
     listTurns: vi.fn(async () => [turn()]),
     listQueue: vi.fn(async () => []),
     listRunEvents: vi.fn(async () => []),
-    listPresets: vi.fn(async () => []),
     listResources: vi.fn(async () => []),
     respondInteraction: vi.fn(async (_run: string, id: string) => pending({ id, status: "answered", closed_at: 1005 })),
     postMessage: vi.fn(async () => ({ run: { id: "r2", status: "running" } })),

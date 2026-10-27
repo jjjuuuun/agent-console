@@ -27,6 +27,7 @@ from agent_console_contracts import (
     AgentSettings,
     BackendCapabilities,
     BackendDescriptor,
+    BackendLogoutResult,
     BackendProbeResult,
     BackendReadiness,
     EnforceCapabilities,
@@ -44,8 +45,10 @@ from agent_console_runtime import (
     AgentResult,
     BackendCheckContext,
     BackendEventSink,
+    BackendLoginContext,
     CancelToken,
     InteractivePort,
+    LoginDriver,
     SecretNotFoundError,
     SecretResolver,
     SessionRef,
@@ -83,6 +86,8 @@ from ._host_tools import (
     sdk_tool_server,
 )
 from ._interact import InteractionKindMap, PermissionBridge
+from ._login import ClaudeSdkLoginOptions
+from ._login_support import ClaudeLoginSupport, PtySupport
 from ._options import (
     CLAUDE_SDK_BACKEND_ID,
     MANAGED_SDK_FIELDS,
@@ -103,6 +108,7 @@ from ._readiness import (
     ProbeOutcome,
     ProbeReasonCodes,
     ReadinessAssessment,
+    ReadinessStates,
     api_key_ref,
     assess_readiness,
     classify_probe_error,
@@ -177,6 +183,12 @@ class ClaudeSdkInstallOptions(BaseModel):
         default_factory=ClaudeSdkReadinessOptions,
         description="상태 점검·연결 테스트가 볼 인증 방식(기본 구독 로그인, API 키도 선택 가능), "
         "실행 파일 경로, 테스트 프롬프트·모델·CLI 인자, 문구.",
+    )
+    login: ClaudeSdkLoginOptions = Field(
+        default_factory=ClaudeSdkLoginOptions,
+        description="앱 화면 구독 로그인(claude auth login을 PTY로 중계, 기본 켜짐)·로그아웃. 실행 "
+        "인자·화면 글자 규칙·허용 URL 호스트·하위 프로세스 환경·문구. allow_subscription_auth가 "
+        "꺼졌거나 선택 기능 login(agent-console-pty-session)이 없으면 제공하지 않는다.",
     )
 
 
@@ -325,6 +337,11 @@ class ClaudeSdkBackend:
             `readiness`). 점검할 인증 방식·실행 파일 경로·테스트 프롬프트·문구.
         cli_locator: Claude Code 실행 파일 찾기(기본 `find_claude_cli`, 테스트에서 주입).
         path_exists: 구독 로그인 파일 존재 확인(기본 `os.path.exists`, 테스트에서 주입).
+        login: 앱 화면 구독 로그인 설정(`ClaudeSdkLoginOptions`, 설치자 설정 `login`, 기본 켜짐).
+            켜져 있고 `allow_subscription_auth`가 참이고 PTY(선택 추가 기능 `login`)가 있으면
+            `capabilities.login/logout = true`·`login_methods = [cli-login]`.
+        pty_spawner: 로그인용 PTY 어댑터(`agent_console_pty_session.PtySpawner`, 테스트 주입).
+        pty_support: PTY 사용 가능 여부(None = 감지, 테스트 주입).
     """
 
     def __init__(
@@ -350,6 +367,9 @@ class ClaudeSdkBackend:
         readiness: ClaudeSdkReadinessOptions | Mapping[str, Any] | None = None,
         cli_locator: CliLocator = find_claude_cli,
         path_exists: Callable[[str], bool] = os.path.exists,
+        login: ClaudeSdkLoginOptions | Mapping[str, Any] | None = None,
+        pty_spawner: Any | None = None,
+        pty_support: PtySupport | None = None,
     ) -> None:
         self._client_factory = client_factory
         self._readiness = ClaudeSdkReadinessOptions.model_validate(readiness or {})
@@ -375,6 +395,16 @@ class ClaudeSdkBackend:
         self._collectors = select_collectors(
             default_collectors(backend_id) if collectors is None else collectors, backend_id
         )
+        self._login = ClaudeLoginSupport(
+            ClaudeSdkLoginOptions.model_validate(login or {}),
+            allow_subscription_auth=allow_subscription_auth,
+            readiness=self._readiness,
+            cli_locator=cli_locator,
+            env_policy=self._env_policy,
+            environ=environ,
+            spawner=pty_spawner,
+            pty=pty_support,
+        )
         self.collector_reports: list[Any] = []
         """`from_options`가 entry point를 읽은 보고서(`agent_console_registry.LoadReport`)."""
         self.descriptor = BackendDescriptor(
@@ -395,6 +425,8 @@ class ClaudeSdkBackend:
                 host_tools=True,
                 status=True,
                 probe=True,
+                login=self._login.enabled,
+                logout=self._login.enabled,
                 resource_slots=list(self._slots),
                 subagent_slots=list(SUBAGENT_SLOTS),
                 slot_notes=(
@@ -406,6 +438,7 @@ class ClaudeSdkBackend:
                 enforce=EnforceCapabilities(directories=False, commands=True, network=False),
             ),
             collectors=[c.descriptor for c in self._collectors],
+            login_methods=self._login.methods(),
         )
 
     @classmethod
@@ -448,6 +481,7 @@ class ClaudeSdkBackend:
             hook_probe_command=parsed.hook_probe_command,
             hook_probe_folder=parsed.hook_probe_folder,
             readiness=parsed.readiness,
+            login=parsed.login,
         )
         backend.collector_reports = list(reports)
         return backend
@@ -599,17 +633,39 @@ class ClaudeSdkBackend:
         정한다. 실행 파일이 없으면 `cli_missing`. 상태 이름은 `ReadinessStates`.
         """
         a, _cli = self._assess(ctx)
+        detail = a.detail
+        note = self._login.unavailable_note
+        if note and a.state == ReadinessStates.SUBSCRIPTION_UNVERIFIED:
+            detail = f"{detail} {note}".strip()
         return BackendReadiness(
             backend_id=ctx.backend_id,
             state=a.state,
             tone=a.tone,
             summary=a.summary,
             short_summary=a.short_summary,
-            detail=a.detail,
+            detail=detail,
             fixes=a.fixes,
             checked_at=ctx.clock(),
             checks=a.checks,
+            actions=self._login.actions(a.state, token_auth=bool(self._readiness.auth.oauth_token)),
         )
+
+    async def start_login(self, ctx: BackendLoginContext, method_id: str) -> LoginDriver:
+        """선택 능력(앱 화면 로그인, ux-overhaul §15.9): `claude auth login`을 PTY로 띄운다.
+
+        성공 판정은 `status_command`(기본 `claude auth status`) 종료 코드 + `authMethod`다. 앱은
+        로그인 자격(토큰)을 읽거나 저장하지 않는다 — CLI가 자기 위치에 쓴다.
+
+        Raises:
+            LoginRefusedError: `allow_subscription_auth`가 꺼졌거나
+                (`backend.subscription_auth_disabled`)
+                능력이 없다(`backend.login_unsupported`).
+        """
+        return await self._login.start(ctx, method_id)
+
+    async def logout(self, ctx: BackendLoginContext, method_id: str | None) -> BackendLogoutResult:
+        """선택 능력(앱 화면 로그아웃): `claude auth logout`(`login.logout_command`)."""
+        return await self._login.logout(ctx)
 
     async def probe(self, ctx: BackendCheckContext, timeout_s: float) -> BackendProbeResult:
         """선택 능력(연결 테스트): 도구 없는 한 턴짜리 짧은 호출 한 번.

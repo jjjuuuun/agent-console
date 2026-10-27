@@ -1,12 +1,12 @@
 /* 정의 목록·상세(팀 구성·에이전트·리소스) 공용 스타일. 색·간격은 --ac-* 토큰만 쓴다. */
 .lib-form { display: flex; flex-direction: column; gap: var(--ac-space-3); min-width: 0; }
-.lib-field { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; font-size: var(--ac-text-sm); }
+.lib-field { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .lib-field > span:first-child, .lib-field > label:first-child { font-weight: 600; }
-.lib-field-error { color: var(--ac-danger); font-size: var(--ac-text-xs); }
-.lib-field-note { font-size: var(--ac-text-xs); }
+.lib-field-error { color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.lib-field-note { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .ac-mono, .lib-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-code); }
-.lib-ref-list { margin: 0; padding-left: var(--ac-space-4); font-size: var(--ac-text-sm); max-height: 160px; overflow: auto; }
-.lib-footnote { font-size: var(--ac-text-xs); margin: var(--ac-space-1) 0 0; }
+.lib-ref-list { margin: 0; padding-left: var(--ac-space-4); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); max-height: 160px; overflow: auto; }
+.lib-footnote { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); margin: var(--ac-space-1) 0 0; }
 .lib-attachments { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
 
 .lib-avatar { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: var(--ac-radius-sm); color: var(--ac-text-on-accent); font-weight: 700; line-height: 1; }
@@ -19,13 +19,13 @@
 .lib-detail-inner[data-wide="true"] { max-width: none; margin: 0; flex: 1 1 0; min-height: 0; }
 .lib-detail-head { display: flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; min-width: 0; }
 .lib-detail-title { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
-.lib-detail-sub { font-size: var(--ac-text-xs); }
+.lib-detail-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .lib-row { display: flex; flex-direction: column; gap: 2px; min-width: 0; width: 100%; }
 .lib-row-main { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
 .lib-row-name { font-size: var(--ac-text-md); font-weight: var(--ac-fw-strong); color: var(--ac-text); flex: 0 1 auto; min-width: 0; }
 .lib-row-main > .ac-badge { flex: none; }
 /* 이름이 먼저 자리를 차지하고 id(muted)가 먼저 줄어든다(A15) */
-.lib-row-id { flex: 0 20 auto; min-width: 0; margin-left: auto; font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.lib-row-id { flex: 0 20 auto; min-width: 0; margin-left: auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 .lib-row-sub { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: var(--ac-fw-regular); color: var(--ac-text-muted); min-width: 0; }
 .lib-list-toolbar { display: flex; gap: var(--ac-space-1); padding: var(--ac-space-2); flex-wrap: wrap; }
 
@@ -39,7 +39,7 @@
 .lib-pick-item { display: flex; align-items: center; gap: var(--ac-space-2); width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: var(--ac-radius-sm); padding: var(--ac-space-1) var(--ac-space-2); color: var(--ac-text); font: inherit; cursor: pointer; }
 .lib-pick-item:hover { background: var(--ac-surface-2); }
 .lib-pick-main { display: flex; flex-direction: column; min-width: 0; }
-.lib-pick-sub { font-size: var(--ac-text-xs); }
+.lib-pick-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 
 /* 메뉴 */
 .lib-menu { position: relative; display: inline-flex; }
@@ -51,14 +51,14 @@
 
 /* 태그·모델 */
 .lib-tags { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); align-items: center; }
-.lib-tag { display: inline-flex; align-items: center; gap: 2px; background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); font-size: var(--ac-text-sm); max-width: 100%; }
+.lib-tag { display: inline-flex; align-items: center; gap: 2px; background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); max-width: 100%; }
 .lib-tag button { background: none; border: 0; color: var(--ac-text-muted); cursor: pointer; padding: 0 2px; font: inherit; }
 .lib-tags-input { flex: 1 1 140px; min-width: 120px; }
 .lib-model { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
 
 /* 표 공용 */
 .lib-table-wrap { overflow: auto; min-height: 0; }
-.lib-grid { border-collapse: collapse; width: 100%; font-size: var(--ac-text-sm); }
+.lib-grid { border-collapse: collapse; width: 100%; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .lib-grid th, .lib-grid td { text-align: left; padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border); vertical-align: middle; }
 .lib-grid th { color: var(--ac-text-muted); font-weight: 600; white-space: nowrap; }
 .lib-grid th button { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
@@ -73,8 +73,8 @@
   .lib-split-list { border-right: 0; border-bottom: 1px solid var(--ac-border); max-height: 40vh; }
 }
 .lib-fieldset { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-3); margin: 0; min-width: 0; }
-.lib-fieldset legend { font-weight: 600; font-size: var(--ac-text-sm); padding: 0 var(--ac-space-1); }
-.lib-field-label { flex: 0 0 100%; font-size: var(--ac-text-sm); font-weight: 600; }
+.lib-fieldset legend { font-weight: 600; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); padding: 0 var(--ac-space-1); }
+.lib-field-label { flex: 0 0 100%; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
 
 /* 리소스 본문 편집 */
 .res-content { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 420px; flex: 1 1 0; min-width: 0; }
@@ -84,13 +84,13 @@
 .res-editor { min-height: 360px; min-width: 0; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); overflow: hidden; display: flex; flex-direction: column; }
 .res-editor > * { flex: 1 1 0; min-height: 0; }
 .res-preview { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); overflow: auto; min-width: 0; max-height: 640px; }
-.res-statusline { font-size: var(--ac-text-xs); }
+.res-statusline { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .res-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ac-space-2); min-width: 0; }
 .res-card { min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); text-align: left; background: var(--ac-surface-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); color: var(--ac-text); font: inherit; cursor: pointer; }
 .res-card:hover, .res-card[aria-checked="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg); }
 .res-card-title { display: flex; align-items: center; gap: var(--ac-space-2); font-weight: 600; min-width: 0; }
 .res-card-title > :last-child { min-width: 0; }
-.res-import-steps { display: flex; gap: var(--ac-space-3); list-style: none; margin: 0; padding: 0; font-size: var(--ac-text-sm); }
+.res-import-steps { display: flex; gap: var(--ac-space-3); list-style: none; margin: 0; padding: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .res-import-steps li[aria-current="step"] { font-weight: 700; color: var(--ac-accent); }
 .res-import-body:focus { outline: none; }
 
@@ -105,7 +105,7 @@
 .res-files-name-actions { display: flex; gap: var(--ac-space-1); }
 .res-files-main { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
 .res-files-empty, .res-files-binary { padding: var(--ac-space-4); }
-.res-file-error { color: var(--ac-danger); font-size: var(--ac-text-xs); }
+.res-file-error { color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 @media (max-width: 900px) { .res-files { grid-template-columns: minmax(0, 1fr); } }
 
 /* 목록 보기 줄(검색창 아래)·폴더 이동·라벨 편집(5.2R.62) */
@@ -117,5 +117,8 @@
 .lib-folder-item:focus-visible { outline: 2px solid var(--ac-accent); outline-offset: -2px; }
 .lib-folder-item[data-create="true"] { color: var(--ac-accent); }
 .lib-chip-list { list-style: none; margin: 0 0 var(--ac-space-2); padding: 0; display: flex; flex-wrap: wrap; gap: var(--ac-space-1); }
-.lib-chip-item { display: inline-flex; align-items: center; gap: var(--ac-space-1); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: 999px; font-size: var(--ac-text-xs); }
+.lib-chip-item { display: inline-flex; align-items: center; gap: var(--ac-space-1); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: 999px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .lib-chip-item button { border: 0; background: transparent; color: var(--ac-text-muted); cursor: pointer; padding: 0 2px; font: inherit; }
+/* 표 형태 목록의 묶음 머리 줄(5.2R.63): 머리 단추가 줄 전체를 차지한다 */
+.lib-grid tbody tr.lib-grouprow { height: 28px; }
+.lib-grid tbody tr.lib-grouprow > td { padding: 0; }

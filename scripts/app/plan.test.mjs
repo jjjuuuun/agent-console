@@ -18,11 +18,11 @@ describe("parseAppArgs", () => {
   });
 
   it("인자 > 환경변수, -- 뒤는 serve로 넘김", () => {
-    const o = parseAppArgs(["--port=9001", "--web-port", "5000", "--config", "a.yaml", "--build", "--", "--apply-preset", "x"], {
+    const o = parseAppArgs(["--port=9001", "--web-port", "5000", "--config", "a.yaml", "--build", "--", "--disable-module", "x"], {
       AGENT_CONSOLE_PORT: "9999",
       AGENT_CONSOLE_WEB_HOST: "localhost",
     });
-    expect(o).toMatchObject({ port: 9001, webPort: 5000, webHost: "localhost", config: "a.yaml", build: true, serveArgs: ["--apply-preset", "x"] });
+    expect(o).toMatchObject({ port: 9001, webPort: 5000, webHost: "localhost", config: "a.yaml", build: true, serveArgs: ["--disable-module", "x"] });
   });
 
   it("잘못된 입력은 AppArgsError", () => {
@@ -44,13 +44,13 @@ describe("출처·주소", () => {
 
 describe("buildPlan", () => {
   it("서버에 웹 출처를 덧붙이고, 웹 프록시 대상을 서버 주소로", () => {
-    const plan = buildPlan(parseAppArgs(["--port", "9100", "--", "--apply-preset", "dev-team"], {}), { env: {}, webDistExists: true });
+    const plan = buildPlan(parseAppArgs(["--port", "9100", "--", "--disable-module", "mod-exports"], {}), { env: {}, webDistExists: true });
     expect(plan.build).toBeNull();
     expect(plan.server.command).toBe("uv");
     expect(plan.server.args).toEqual([
       "run", "agent-console", "serve", "--host", "127.0.0.1", "--port", "9100",
       "--allow-origin", "http://127.0.0.1:4173", "--allow-origin", "http://localhost:4173",
-      "--apply-preset", "dev-team",
+      "--disable-module", "mod-exports",
     ]);
     expect(plan.web.args).toEqual(["--filter", "@agent-console/web", "preview", "--host", "127.0.0.1", "--port", "4173", "--strictPort"]);
     expect(plan.web.env).toEqual({ AGENT_CONSOLE_SERVER_URL: "http://127.0.0.1:9100" });

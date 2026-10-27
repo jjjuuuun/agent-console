@@ -6,15 +6,6 @@ export const startMessages = {
   stepsLabel: "시작 순서",
   go: "바로가기",
   done: "완료",
-  quick: {
-    title: "바로 시작",
-    start: "시작",
-    items: (n: number) => `항목 ${n}개`,
-    starting: "시작하는 중",
-    failed: "프리셋을 시작하지 못했습니다",
-    noStartTeam: "프리셋은 적용했지만 열 팀 구성을 찾지 못했습니다. 팀 구성 목록에서 확인하세요.",
-    toTeams: "팀 구성 목록",
-  },
   /** 단계 문구. 키는 `startSteps.ts`의 단계 id */
   steps: {
     create: { label: "팀 만들기", hint: "에이전트를 놓으면 입구·답변이 자동으로 연결됩니다", action: "새 팀 구성" },

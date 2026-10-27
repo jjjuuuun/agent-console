@@ -40,8 +40,6 @@ export function createFakeRest(overrides: Partial<Record<keyof RestClient, unkno
     ]),
     getUsage: vi.fn(async () => ({ windows: [{ source: "src-1", window: "win-q", observed_at: 1 }], rollups: [], generated_at: 1 })),
     getServerInfo: vi.fn(async () => ({ server_version: "9.9.9", contracts_version: CONTRACTS_VERSION, plugins: [{ name: "plug-a", group: "grp", loaded: true }], attributes: { host: "127.0.0.1", port: 8765, workspace: "/ws", allow_remote: false, allowed_origins: ["http://localhost:5173"] } })),
-    listPresets: vi.fn(async () => []),
-    applyPreset: vi.fn(async (id: string) => ({ preset_id: id, items: [{ source: "s", kind: "k", id: "i1", action: "created" }] })),
     listAgents: vi.fn(async () => []),
     listGraphs: vi.fn(async () => []),
     listConversations: vi.fn(async () => []),

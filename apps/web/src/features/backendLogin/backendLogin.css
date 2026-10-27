@@ -1,0 +1,8 @@
+.app-login-steps { margin: var(--ac-space-2) 0; padding-left: var(--ac-space-4); display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.app-login-steps > li[data-state="active"] > span:first-child { font-weight: 600; }
+.app-login-steps > li[data-state="done"] > span:first-child { color: var(--ac-text-muted); }
+.app-login-open, .app-login-code { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ac-space-2); margin-top: var(--ac-space-1); }
+.app-login-code label { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 12rem; }
+.app-login-open > p { flex-basis: 100%; margin: 0; }
+.app-login-screen { max-height: 12rem; overflow: auto; margin: var(--ac-space-1) 0; padding: var(--ac-space-2); background: var(--ac-surface-2, var(--ac-surface-1)); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.app-readiness-actions { display: inline-flex; align-items: center; gap: var(--ac-space-1); }

@@ -2,6 +2,15 @@
 
 ## 미출시
 
+- 5.2R.82(F14 구독 로그인): 선택 능력 `start_login`·`logout`(`capabilities.login/logout`, `login_methods = [cli-login]`).
+  `claude auth login`을 PTY로 중계하고 `claude auth status` 종료 코드 + `authMethod`로 판정한다. 앱은 토큰을 받거나
+  저장하지 않는다. 설치자 설정 `login`(`ClaudeSdkLoginOptions`, 기본 켜짐, 화면 글자 규칙 `login.rules`), 상태 점검
+  `actions`(로그인 파일 없음 = 주 버튼 login, 있음 = 다시 로그인·로그아웃). 새 의존 `agent-console-secret-rules`(규칙
+  안전 검사), 선택 추가 기능 `login` = `agent-console-pty-session`(없으면 능력 없음 + 상태 `detail` 안내).
+- 5.2R.94(잔해 정리): **공개 API 삭제** — `SubagentResultListener` 재내보내기를 뺐다. 정의가 있는
+  `agent_console_runtime`에서 import한다(`from agent_console_runtime import SubagentResultListener`). 동작은 같다.
+- 5.2R.94b(잔해 정리 S-04): **공개 API 삭제** — 참조가 없던 `CollectorRun.active_ids` 프로퍼티를 뺐다.
+  켜진 수집기 목록은 `collector_reports`·`BackendDescriptor.collectors`로 본다.
 - 5.2R.79(F13, 사용자 지시 "기본값은 구독형"): **기본은 구독(본인 책임), API 키도 선택 가능.** **동작 변경**:
   설치자 옵션 `allow_subscription_auth` 기본값 `false` → `true`, `ClaudeSdkAuth.mode` 기본값 `api_key` → `subscription`
   (`auth: {}`는 구독), 상태 점검 `readiness.auth` 기본값 `{mode: api_key, api_key: secret://anthropic_api_key}` →

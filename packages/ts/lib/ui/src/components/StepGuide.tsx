@@ -79,6 +79,8 @@ export interface QuickStartItem {
   id: string;
   title: string;
   description?: string;
+  /** 왼쪽 36px 아이콘 타일에 넣을 노드(예: `<Icon name=.../>`). 없으면 타일을 그리지 않는다. */
+  icon?: ReactNode;
   /** 배지 글자들(예: "체험") */
   badges?: readonly string[];
   /** 이 항목이 진행 중 */
@@ -96,7 +98,7 @@ export interface QuickStartRowProps {
   className?: string;
 }
 
-/** 프리셋 같은 "한 번에 시작" 카드 줄(표현 전용). 항목이 0개면 아무것도 그리지 않는다. */
+/** "한 번에 시작" 카드 줄(표현 전용). 항목이 0개면 아무것도 그리지 않는다. */
 export function QuickStartRow({ items, title, startLabel, onStart, disabled, className }: QuickStartRowProps) {
   if (items.length === 0) return null;
   return (
@@ -105,6 +107,7 @@ export function QuickStartRow({ items, title, startLabel, onStart, disabled, cla
       <ul className="ac-quickstart-list">
         {items.map((it) => (
           <li key={it.id} className="ac-quickstart-card" data-quick-start={it.id}>
+            {it.icon === undefined ? null : <span className="ac-quickstart-icon" aria-hidden="true">{it.icon}</span>}
             <div className="ac-quickstart-body">
               <strong className="ac-quickstart-name">{it.title}</strong>
               {(it.badges ?? []).map((b) => <span key={b} className="ac-quickstart-badge">{b}</span>)}

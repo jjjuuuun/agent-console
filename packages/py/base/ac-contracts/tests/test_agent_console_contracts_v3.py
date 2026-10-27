@@ -463,14 +463,11 @@ def test_export_request_plan_and_write() -> None:
     assert result.files[0].action == "skip"
 
 
-# ------------------------------------------------ #13 보류 설정 deprecated → 2R.20 삭제
+# ------------------------------------------------ #13 옛 설정 키 읽기
 
 
-def test_removed_console_settings_kept_as_unknown_keys() -> None:
+def test_old_console_settings_kept_as_unknown_keys() -> None:
     props = build_schema()["$defs"]["WorkspaceSettings"]["properties"]
-    assert "default_entry" not in props  # 2R.20에서 삭제
-    assert "console" not in props
-    assert "ConsoleSettings" not in build_schema()["$defs"]
     assert props["default_backend"]["deprecated"] is True
     assert "deprecated" not in props["secrets"]
     # 사용자 파일의 값은 모르는 키로 그대로 읽고 쓴다.

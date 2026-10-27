@@ -13,9 +13,6 @@ from agent_console_store import branch_version_table, upgrade
 
 __all__ = ["LogStorage", "open_log_storage"]
 
-LINEAGE = "logs"
-"""계보 이름(`BRANCH.name`과 같다)."""
-
 
 @dataclass(frozen=True)
 class LogStorage:

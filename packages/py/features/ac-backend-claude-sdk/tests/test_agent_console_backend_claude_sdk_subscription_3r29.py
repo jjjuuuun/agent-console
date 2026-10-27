@@ -262,10 +262,31 @@ def test_no_install_option_or_public_api_accepts_tokens() -> None:
         "api_key_env",
         "oauth_token_env",
     }
-    suspicious = ("login", "store", "save", "persist", "credential", "oauth", "token")
+    suspicious = ("store", "save", "persist", "credential", "oauth", "token")
     assert not [n for n in pkg.__all__ if any(w in n.lower() for w in suspicious)]
     backend_methods = {n for n in dir(ClaudeSdkBackend) if not n.startswith("_")}
     assert not [n for n in backend_methods if any(w in n.lower() for w in suspicious)]
+    # 5.2R.82: 앱 화면 구독 로그인은 `claude auth login`을 중계만 한다(자격은 CLI가 자기 위치에 쓰고
+    # 앱은 토큰을 받지 않는다). 로그인 이름은 이 목록뿐이고 토큰을 담는 설정 칸은 없다.
+    login_api = {
+        "CLI_LOGIN_METHOD_ID",
+        "DEFAULT_LOGIN_ENV_CLEAR",
+        "DEFAULT_LOGIN_ENV_INHERIT",
+        "DEFAULT_LOGIN_RULES",
+        "DEFAULT_LOGIN_WRITES",
+        "ClaudeLoginSupport",
+        "ClaudeSdkLoginOptions",
+        "ClaudeSdkLoginRules",
+        "ClaudeSdkLoginTexts",
+        "LoginReasonCodes",
+        "login_env",
+        "verify_login",
+        "start_login",
+    }
+    names = set(pkg.__all__) | backend_methods
+    assert {n for n in names if "login" in n.lower()} <= login_api
+    login_fields = set(pkg.ClaudeSdkLoginOptions.model_fields)
+    assert not {f for f in login_fields if any(w in f for w in ("token", "credential", "oauth"))}
 
 
 async def test_enabled_token_is_only_read_and_handed_to_cli_env(tmp_path: Path) -> None:

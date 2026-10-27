@@ -234,7 +234,7 @@ def build_router(
 
     @router.get("/logs/dashboard-templates", response_model=list[LogDashboard], responses=_ERRORS)
     def log_dashboard_templates() -> list[LogDashboard]:
-        """대시보드 템플릿(프리셋 데이터, 기간 필터 없음)."""
+        """대시보드 템플릿(패키지 기본 데이터, 기간 필터 없음)."""
         return service().dashboard_templates()
 
     @router.get("/logs/schema", response_model=LogQuerySchema, responses=_ERRORS)

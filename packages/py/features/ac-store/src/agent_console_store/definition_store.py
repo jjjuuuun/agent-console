@@ -724,6 +724,7 @@ class BaseDefinitionStore(ABC):
         name = doc.get("name")
         description = doc.get("description")
         labels = doc.get("labels")
+        attributes = doc.get("attributes")
         return DefinitionSummary(
             kind=kind.name,
             id=stored.id,
@@ -735,6 +736,7 @@ class BaseDefinitionStore(ABC):
             counts=self._counts(kind, doc),
             has_content=kind.content_field is not None and doc.get(kind.content_field) is not None,
             extra={f: doc[f] for f in kind.summary_fields if isinstance(doc.get(f), str)},
+            attributes=copy.deepcopy(attributes) if isinstance(attributes, dict) else {},
         )
 
     def _conflict_details(

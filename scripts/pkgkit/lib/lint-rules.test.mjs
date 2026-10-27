@@ -7,19 +7,17 @@ import { escapesPackage, extractSpecifiers, formatViolations, lintTsPackage, pac
 import { buildPackageFiles, loadLayers, makeVars } from "./scaffold.mjs";
 
 const TEMPLATES = join(dirname(fileURLToPath(import.meta.url)), "..", "templates", "ts");
-const make = (kind, name, draft, dom = false) =>
-  buildPackageFiles(loadLayers(TEMPLATES, kind, draft), makeVars({ name, scope: "@agent-console", kind, year: 2026, dom }), { dom });
+const make = (kind, name, dom = false) =>
+  buildPackageFiles(loadLayers(TEMPLATES, kind), makeVars({ name, scope: "@agent-console", kind, year: 2026, dom }), { dom });
 const rules = (violations) => [...new Set(violations.map((v) => v.rule))].sort();
 
 describe("템플릿 산출물은 pkg-lint를 통과한다", () => {
   it.each([
-    ["lib", "@agent-console/demo", undefined],
-    ["lib", "@agent-console/demo-dom", undefined, true],
-    ["config", "@agent-console/demo-config", undefined],
-    ["config", "@agent-console/tsconfig", "tsconfig"],
-    ["config", "@agent-console/eslint-config", "eslint-config"],
-  ])("%s %s", (kind, name, draft, dom) => {
-    expect(lintTsPackage({ kind, files: make(kind, name, draft, dom) })).toEqual([]);
+    ["lib", "@agent-console/demo"],
+    ["lib", "@agent-console/demo-dom", true],
+    ["config", "@agent-console/demo-config"],
+  ])("%s %s", (kind, name, dom) => {
+    expect(lintTsPackage({ kind, files: make(kind, name, dom) })).toEqual([]);
   });
 });
 

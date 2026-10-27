@@ -11,6 +11,12 @@
   ``not_found``.
 - ``ProbeUnsupportedError``(백엔드가 연결 테스트 능력이 없음) → 409 ``backend.probe_unsupported``
   (``details.backend``).
+- 로그인(F14, ux-overhaul §15.9): ``LoginUnsupportedError`` → 409 ``backend.login_unsupported``,
+  ``LogoutUnsupportedError`` → 409 ``backend.logout_unsupported``, ``LoginBusyError`` → 409
+  ``backend.login_busy``(``details.session_id``·``details.backend``), ``LoginRefusedError`` → 그
+  ``code``(HTTP 상태는 호스트 표, 표에 없는 코드는 호스트 기본 400)·``details``·``fix``,
+  ``LoginSessionNotFoundError`` → 404 ``backend.login_session_not_found``, ``LoginInputError`` →
+  422 ``validation_failed``(``details.reason``, 입력값 없음), ``LoginPayloadTooLargeError`` → 413.
 - ``PortConfigError``(노드 config로 포트를 계산할 수 없음) → ``validation_failed``.
 - ``RunPreflightError``(준비자 사전 점검이 실행을 만들기 전에 막음, 예: ``backend.unresolved``) →
   그 ``ErrorInfo``의 ``code``·``message``·``details``·``fix`` 그대로.
@@ -28,6 +34,12 @@ from agent_console_modkit import ErrorMapping, ErrorReply
 from agent_console_runtime import (
     GraphValidationError,
     InteractionClosedError,
+    LoginBusyError,
+    LoginInputError,
+    LoginRefusedError,
+    LoginSessionNotFoundError,
+    LoginUnsupportedError,
+    LogoutUnsupportedError,
     ProbeUnsupportedError,
     ResponseValidationError,
     ResumeError,
@@ -231,6 +243,75 @@ def _probe_unsupported(exc: Exception) -> ErrorReply:
     )
 
 
+class LoginPayloadTooLargeError(ValueError):
+    """로그인 입력 본문이 한도를 넘었다(413). 값은 담지 않는다."""
+
+    def __init__(self, limit: int) -> None:
+        super().__init__(f"입력이 너무 깁니다({limit}바이트 한도)")
+        self.limit = limit
+
+
+def _login_unsupported(exc: Exception) -> ErrorReply:
+    backend = exc.backend_id if isinstance(exc, LoginUnsupportedError) else None
+    method = exc.method_id if isinstance(exc, LoginUnsupportedError) else None
+    details: dict[str, Any] = {"backend": backend} if backend else {}
+    if method:
+        details["method"] = method
+    return ErrorReply(
+        code=ErrorCodes.BACKEND_LOGIN_UNSUPPORTED,
+        message="이 실행 백엔드는 앱 화면 로그인을 지원하지 않습니다",
+        details=details,
+    )
+
+
+def _logout_unsupported(exc: Exception) -> ErrorReply:
+    backend = exc.backend_id if isinstance(exc, LogoutUnsupportedError) else None
+    return ErrorReply(
+        code=ErrorCodes.BACKEND_LOGOUT_UNSUPPORTED,
+        message="이 실행 백엔드는 앱 화면 로그아웃을 지원하지 않습니다",
+        details={"backend": backend} if backend else {},
+    )
+
+
+def _login_busy(exc: Exception) -> ErrorReply:
+    if not isinstance(exc, LoginBusyError):  # pragma: no cover
+        return ErrorReply(code=ErrorCodes.BACKEND_LOGIN_BUSY)
+    return ErrorReply(
+        code=ErrorCodes.BACKEND_LOGIN_BUSY,
+        message="다른 창에서 로그인이 진행 중입니다",
+        details={"session_id": exc.session_id, "backend": exc.backend_id},
+    )
+
+
+def _login_refused(exc: Exception) -> ErrorReply:
+    if not isinstance(exc, LoginRefusedError):  # pragma: no cover
+        return ErrorReply(code=ErrorCodes.BAD_REQUEST)
+    fix = (
+        Fix(actions=list(exc.fixes)).model_dump(mode="json", exclude_none=True)
+        if exc.fixes
+        else None
+    )
+    return ErrorReply(code=exc.code, message=exc.message, details=dict(exc.details), fix=fix)
+
+
+def _login_input(exc: Exception) -> ErrorReply:
+    reason = exc.reason if isinstance(exc, LoginInputError) else "invalid"
+    return ErrorReply(
+        code=ErrorCodes.VALIDATION_FAILED,
+        message="이 입력을 받을 수 없습니다",
+        details={"reason": reason},
+    )
+
+
+def _login_too_large(exc: Exception) -> ErrorReply:
+    limit = exc.limit if isinstance(exc, LoginPayloadTooLargeError) else None
+    return ErrorReply(
+        code=ErrorCodes.PAYLOAD_TOO_LARGE,
+        message="입력이 너무 깁니다",
+        details={"limit_bytes": limit} if limit else {},
+    )
+
+
 ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     GraphValidationError: _graph_reply,
     ResponseValidationError: _response_reply,
@@ -242,6 +323,13 @@ ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     BackendNotFoundError: ErrorCodes.NOT_FOUND,
     UnknownBackendError: ErrorCodes.NOT_FOUND,
     ProbeUnsupportedError: _probe_unsupported,
+    LoginUnsupportedError: _login_unsupported,
+    LogoutUnsupportedError: _logout_unsupported,
+    LoginBusyError: _login_busy,
+    LoginRefusedError: _login_refused,
+    LoginSessionNotFoundError: ErrorCodes.BACKEND_LOGIN_SESSION_NOT_FOUND,
+    LoginInputError: _login_input,
+    LoginPayloadTooLargeError: _login_too_large,
     PortConfigError: _ports,
     DefinitionReadError: _definition,
     RunPreflightError: _preflight,
@@ -252,6 +340,7 @@ __all__ = [
     "ERROR_MAP",
     "BackendNotFoundError",
     "DefinitionReadError",
+    "LoginPayloadTooLargeError",
     "NodeTypeNotFoundError",
     "PortConfigError",
     "RunNotFoundError",

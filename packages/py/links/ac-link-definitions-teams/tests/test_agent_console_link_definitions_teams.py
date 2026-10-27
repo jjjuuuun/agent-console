@@ -278,12 +278,9 @@ def test_bundle_preview_includes_backend_preview_notes(tmp_path: Path) -> None:
 
 def test_document_dependencies_port(tmp_path: Path) -> None:
     """``definitions.dependencies``: 저장 전 문서에서 쓰는 정의(자식 팀 구성 포함, 5R.15)."""
-    from agent_console_mod_presets import DocumentDependencies as PresetsConsumer
-
     assembly = _assembly(tmp_path)
     deps = assembly.port(DEFINITION_DEPENDENCIES)
     assert isinstance(deps, DocumentDependencies)
-    assert isinstance(deps, PresetsConsumer)
     graph = KIT.graph(
         [KIT.person(), KIT.worker("a", "alice"), KIT.nest("t", "crew")],
         [KIT.edge("e1", "entry", "me", "a")],

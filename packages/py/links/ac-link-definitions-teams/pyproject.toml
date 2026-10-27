@@ -14,6 +14,8 @@ dependencies = [
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-store>=0.1,<0.2",
     "agent-console-teams>=0.1,<0.2",
+    "pydantic>=2.9",
+    "fastapi>=0.115",
 ]
 
 [project.entry-points."agent_console.server_modules"]
@@ -27,7 +29,6 @@ dev = [
     "ruff>=0.6",
     "httpx>=0.27",
     "agent-console-mod-definitions>=0.1,<0.2",
-    "agent-console-mod-presets>=0.1,<0.2",
     "agent-console-mod-resources>=0.1,<0.2",
 ]
 

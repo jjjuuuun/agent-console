@@ -1,5 +1,5 @@
 // 새 TS 패키지 만들기(순수 함수 + 템플릿 읽기). `new-package.mjs` CLI가 이 모듈을 쓴다.
-// 템플릿은 층으로 쌓는다: common -> 종류(lib|config) -> 초안(drafts/<이름>, 선택). 뒤 층이 같은 경로를 덮어쓴다.
+// 템플릿은 층으로 쌓는다: common -> 종류(lib|config). 뒤 층이 같은 경로를 덮어쓴다.
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -50,7 +50,6 @@ NAME은 \`@scope/이름\` 또는 이름만(--scope 기본 @agent-console).
   --scope S           NAME에 scope가 없을 때 붙일 scope (기본 @agent-console)
   --description TEXT  package.json·README 설명
   --dom               테스트 환경을 happy-dom으로(기본 node)
-  --draft NAME        초안 얹기(drafts/ 아래: tsconfig, eslint-config)
   --dir PATH          만들 폴더 (기본 packages/ts/<kind>/<이름>)
   --root DIR          저장소 루트 (기본 현재 폴더)
   --dry-run           파일을 쓰지 않고 목록만 보인다
@@ -59,12 +58,12 @@ NAME은 \`@scope/이름\` 또는 이름만(--scope 기본 @agent-console).
 /**
  * 명령행 인자를 읽는다.
  * @param {string[]} argv
- * @returns {{help: boolean, kind: string, name: string, scope: string, description: string, dom: boolean, draft: string | undefined, dir: string | undefined, root: string, dryRun: boolean}}
+ * @returns {{help: boolean, kind: string, name: string, scope: string, description: string, dom: boolean, dir: string | undefined, root: string, dryRun: boolean}}
  * @throws {NewPackageArgsError}
  */
 export function parseNewPackageArgs(argv) {
-  const o = { help: false, kind: "", name: "", scope: "@agent-console", description: "", dom: false, draft: undefined, dir: undefined, root: ".", dryRun: false };
-  const valued = { "--kind": "kind", "--scope": "scope", "--description": "description", "--draft": "draft", "--dir": "dir", "--root": "root" };
+  const o = { help: false, kind: "", name: "", scope: "@agent-console", description: "", dom: false, dir: undefined, root: ".", dryRun: false };
+  const valued = { "--kind": "kind", "--scope": "scope", "--description": "description", "--dir": "dir", "--root": "root" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "-h" || arg === "--help") o.help = true;
@@ -147,21 +146,10 @@ function readTree(dir) {
  * 템플릿 층을 디스크에서 읽는다.
  * @param {string} templatesDir `scripts/pkgkit/templates/ts`
  * @param {"lib" | "config"} kind
- * @param {string | undefined} draft
  * @returns {Record<string, string>[]} 앞 층부터
- * @throws {NewPackageArgsError} 없는 초안
  */
-export function loadLayers(templatesDir, kind, draft) {
-  const layers = [readTree(join(templatesDir, "common")), readTree(join(templatesDir, kind))];
-  if (draft) {
-    if (!/^[\w-]+$/.test(draft)) throw new NewPackageArgsError(`초안 이름이 올바르지 않다: ${draft}`);
-    try {
-      layers.push(readTree(join(templatesDir, "drafts", draft)));
-    } catch {
-      throw new NewPackageArgsError(`없는 초안: ${draft}`);
-    }
-  }
-  return layers;
+export function loadLayers(templatesDir, kind) {
+  return [readTree(join(templatesDir, "common")), readTree(join(templatesDir, kind))];
 }
 
 /**

@@ -15,6 +15,10 @@ dependencies = [
     "agent-console-runtime>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-store>=0.1,<0.2",
+    "pydantic>=2.9",
+    "fastapi>=0.115",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
 ]
 
 [project.entry-points."agent_console.server_modules"]

@@ -38,15 +38,27 @@ class DefinitionModuleSettings(BaseModel):
     )
 
 
+PRESETS_REMOVED_REASON = "프리셋 기능은 삭제되었습니다. 설정 파일에서 이 키를 지우세요"
+"""삭제된 프리셋 기능의 설정 키가 남아 있을 때의 거부 이유(정의를 직접 만들거나 가져오기를 쓴다)."""
+
 SETTINGS_COMPAT = SettingsCompat(
-    removed=(RemovedSetting("resources", new="modules.options.mod-definitions"),)
+    removed=(
+        RemovedSetting("resources", new="modules.options.mod-definitions"),
+        RemovedSetting("presets", PRESETS_REMOVED_REASON),
+        RemovedSetting("modules.options.mod-presets", PRESETS_REMOVED_REASON),
+    )
 )
-"""호스트 설정 호환: 옛 최상위 ``resources``(``max_content_bytes``)는 4R.18에서 읽기 호환을 끝냈다
-(``settings.removed_key`` 오류로 새 위치 안내, 본문 한도는 정의 저장소가 건다, 3R.12)."""
+"""호스트 설정 호환(``settings.removed_key`` 오류로 시작 거부):
+
+- 옛 최상위 ``resources``(``max_content_bytes``): 새 위치 ``modules.options.mod-definitions`` 안내.
+- 삭제된 프리셋 기능의 설정(최상위 ``presets``, ``modules.options.mod-presets``): 지우라고 안내.
+  프리셋은 정의를 쓰던 기능이라 정의 모듈이 거부 선언을 맡는다.
+"""
 
 
 __all__ = [
     "DEFAULT_PLAIN_SECRET_ISSUE_CODES",
+    "PRESETS_REMOVED_REASON",
     "SETTINGS_COMPAT",
     "DefinitionModuleSettings",
 ]

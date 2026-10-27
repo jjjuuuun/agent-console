@@ -283,3 +283,21 @@ def test_summary_carries_project_scope(tmp_path: Path) -> None:
         assert client.post(f"{API}/resources", json=shared).status_code == 201
         rows = {r["id"]: r["project"] for r in client.get(f"{API}/resources").json()}
         assert rows == {"review": "app", "shared": None}
+
+
+def test_summary_carries_attributes_and_saved_at(tmp_path: Path) -> None:
+    """목록 요약 ``attributes``(원문 그대로)·``saved_at``(5.2R.64). 폴더 저장은 기존 PUT."""
+    with _client(_assembly(tmp_path)) as client:
+        assert client.post(f"{API}/resources", json=SKILL).status_code == 201
+        row = client.get(f"{API}/resources").json()[0]
+        assert row["attributes"] == {}
+        assert isinstance(row["saved_at"], float)
+
+        got = client.get(f"{API}/resources/review")
+        body = {**got.json(), "attributes": {"ui": {"folder": "개발팀"}, "keep": 1}}
+        put = client.put(
+            f"{API}/resources/review", json=body, headers={"If-Match": got.headers["ETag"]}
+        )
+        assert put.status_code == 200, put.text
+        row = client.get(f"{API}/resources").json()[0]
+        assert row["attributes"] == {"ui": {"folder": "개발팀"}, "keep": 1}

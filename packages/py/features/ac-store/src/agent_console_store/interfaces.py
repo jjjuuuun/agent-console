@@ -58,6 +58,8 @@ class DefinitionSummary:
     """종류가 본문 파일을 쓰고 문서가 본문을 가리키면 True."""
     extra: dict[str, str] = field(default_factory=dict)
     """종류의 `summary_fields`에서 복사한 문자열 필드(예: 리소스의 `type`)."""
+    attributes: dict[str, Any] = field(default_factory=dict)
+    """문서의 최상위 `attributes`(객체일 때만, 복사본). 없거나 객체가 아니면 빈 dict."""
 
 
 class VersionRepository(Protocol):
@@ -288,7 +290,7 @@ class DefinitionStore(Protocol):
     ) -> StoredDefinition:
         """그 버전의 문서와 본문을 현재로 되돌리는 **새 버전**을 만든다(본문 파일은 스냅샷과
         정확히 같아진다: 없던 파일은 지움). 비밀·검증 검사는 하지 않는다 -- 호출자가
-        `get_version`으로 먼저 본다(2R.13). 본문 스냅샷이 없는 버전은 문서만 되돌리고 본문은
+        `get_version`으로 먼저 본다. 본문 스냅샷이 없는 버전은 문서만 되돌리고 본문은
         그대로 둔다. 버전이 없으면 `NotFound`."""
         ...
 
@@ -333,7 +335,7 @@ class RunRepository(Protocol):
         `parent_run_id`는 직접 자식, `root_run_id`는 그 루트 아래 모든 자손(자식·손자…, 루트 자신은
         제외)이다. 루트 Run의 `root_run_id`는 null이다(design §5R.10).
 
-        `project_id`는 `Run.project_id`가 같은 Run만(불투명 문자열, 5.2R.32), `root_only`가 참이면
+        `project_id`는 `Run.project_id`가 같은 Run만(불투명 문자열), `root_only`가 참이면
         루트 Run(`root_run_id`가 null)만이다. `limit`은 이 두 조건을 건 뒤에 적용된다
         (자식 Run이 limit을 먹지 않는다).
 

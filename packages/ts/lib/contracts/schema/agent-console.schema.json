@@ -92,7 +92,12 @@
       "FEATURE_UNAVAILABLE": "feature_unavailable",
       "NOT_READY": "not_ready",
       "BACKEND_UNRESOLVED": "backend.unresolved",
-      "BACKEND_PROBE_UNSUPPORTED": "backend.probe_unsupported"
+      "BACKEND_PROBE_UNSUPPORTED": "backend.probe_unsupported",
+      "BACKEND_LOGIN_UNSUPPORTED": "backend.login_unsupported",
+      "BACKEND_LOGIN_BUSY": "backend.login_busy",
+      "BACKEND_LOGOUT_UNSUPPORTED": "backend.logout_unsupported",
+      "BACKEND_SUBSCRIPTION_AUTH_DISABLED": "backend.subscription_auth_disabled",
+      "BACKEND_LOGIN_SESSION_NOT_FOUND": "backend.login_session_not_found"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
       "bad_request": 400,
@@ -111,7 +116,12 @@
       "feature_unavailable": 409,
       "not_ready": 503,
       "backend.unresolved": 422,
-      "backend.probe_unsupported": 409
+      "backend.probe_unsupported": 409,
+      "backend.login_unsupported": 409,
+      "backend.login_busy": 409,
+      "backend.logout_unsupported": 409,
+      "backend.subscription_auth_disabled": 409,
+      "backend.login_session_not_found": 404
     },
     "KNOWN_ISSUE_CODES": {
       "LIMITS_NOT_ENFORCED": "limits.not_enforced",
@@ -266,8 +276,6 @@
       "AgentDefaults",
       "AgentSettings",
       "AppliedItemInfo",
-      "ApplyPresetRequest",
-      "ApplyPresetResult",
       "BundlePreview",
       "BusyPolicy",
       "ChatSettings",
@@ -310,7 +318,6 @@
       "NotificationSettings",
       "ObserveSettings",
       "OnTimeout",
-      "PresetSummary",
       "ProjectPreferences",
       "QueueAfterRestart",
       "ReplyDisplay",
@@ -348,6 +355,11 @@
       "AnyKnownRunEvent",
       "BackendCapabilities",
       "BackendDescriptor",
+      "BackendLoginInput",
+      "BackendLoginPhase",
+      "BackendLoginSession",
+      "BackendLoginStartRequest",
+      "BackendLogoutResult",
       "BackendProbeRequest",
       "BackendProbeResult",
       "BackendReadiness",
@@ -390,6 +402,7 @@
       "KnownRunEvent",
       "LogWarningEvent",
       "LogWarningPayload",
+      "LoginMethodInfo",
       "LoopExhaustedEvent",
       "LoopExhaustedPayload",
       "LoopIterationEvent",
@@ -400,6 +413,7 @@
       "NodeStatusEvent",
       "NodeStatusPayload",
       "NodeTypeDescriptor",
+      "ReadinessAction",
       "ReadinessCheck",
       "ReadinessTone",
       "ReplyFields",
@@ -2525,7 +2539,7 @@
       ]
     },
     "AppliedItemInfo": {
-      "description": "정의 하나를 쓴 결과(프리셋 적용·가져오기 공통).",
+      "description": "정의 하나를 쓴 결과(가져오기).",
       "properties": {
         "source": {
           "description": "출처 안 경로·키.",
@@ -2574,56 +2588,6 @@
         "action"
       ],
       "title": "AppliedItemInfo",
-      "type": "object"
-    },
-    "ApplyPresetRequest": {
-      "description": "`POST /presets/{id}/apply` 요청.",
-      "properties": {
-        "on_conflict": {
-          "$ref": "#/$defs/ConflictPolicy",
-          "default": "skip"
-        },
-        "project": {
-          "anyOf": [
-            {
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "만든 정의에 찍을 프로젝트 id(0.8.0). 생략 = 공용(지금과 같음)."
-        }
-      },
-      "title": "ApplyPresetRequest",
-      "type": "object"
-    },
-    "ApplyPresetResult": {
-      "description": "`POST /presets/{id}/apply` 응답.",
-      "properties": {
-        "preset_id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "items": {
-          "items": {
-            "$ref": "#/$defs/AppliedItemInfo"
-          },
-          "type": "array"
-        },
-        "warnings": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "preset_id"
-      ],
-      "title": "ApplyPresetResult",
       "type": "object"
     },
     "AttachmentMode": {
@@ -2735,6 +2699,16 @@
           "default": false,
           "description": "연결 테스트(가장 짧은 실제 호출 한 번)를 지원한다. false면 `POST /backends/{id}/probe`가 409 `backend.probe_unsupported`.",
           "type": "boolean"
+        },
+        "login": {
+          "default": false,
+          "description": "앱 화면에서 백엔드 계정 로그인을 시작할 수 있다(방법은 `login_methods`). false면 `POST /backends/{id}/login`이 409 `backend.login_unsupported`.",
+          "type": "boolean"
+        },
+        "logout": {
+          "default": false,
+          "description": "앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`.",
+          "type": "boolean"
         }
       },
       "title": "BackendCapabilities",
@@ -2790,6 +2764,13 @@
             }
           ],
           "default": null
+        },
+        "login_methods": {
+          "description": "앱 화면에서 시작할 수 있는 로그인 방법(`capabilities.login`과 함께). 비면 로그인 버튼 없음.",
+          "items": {
+            "$ref": "#/$defs/LoginMethodInfo"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -2797,6 +2778,253 @@
         "title"
       ],
       "title": "BackendDescriptor",
+      "type": "object"
+    },
+    "BackendLoginInput": {
+      "description": "``POST /backends/login/{session_id}/input``: 글자 또는 키 하나(둘 중 하나만).",
+      "properties": {
+        "text": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "붙여 넣은 글자(예: 브라우저에 나온 코드). 앞뒤 공백은 서버가 자른다. 인쇄 가능 문자만. 응답·로그에 다시 나오지 않는다.",
+          "writeOnly": true,
+          "x-secret": true
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "보낼 키 이름(세션의 `accepts_keys` 안, 예: enter)."
+        }
+      },
+      "title": "BackendLoginInput",
+      "type": "object"
+    },
+    "BackendLoginPhase": {
+      "enum": [
+        "starting",
+        "waiting_user",
+        "verifying",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "expired"
+      ],
+      "type": "string"
+    },
+    "BackendLoginSession": {
+      "description": "진행 중이거나 끝난 로그인 세션 하나(서버 전체에서 진행 중인 세션은 하나뿐).",
+      "properties": {
+        "session_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "backend_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "method_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/$defs/BackendLoginPhase"
+        },
+        "message": {
+          "default": "",
+          "description": "지금 단계 안내 또는 결과 문장(사용자 언어).",
+          "type": "string"
+        },
+        "open_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "브라우저에서 열 로그인 페이지(https, 백엔드가 허용한 호스트만). null = 아직 없음."
+        },
+        "needs_code": {
+          "default": false,
+          "description": "브라우저에 나온 코드를 붙여 넣어야 하는 단계다.",
+          "type": "boolean"
+        },
+        "code_label": {
+          "default": "",
+          "description": "코드 칸 라벨(사용자 언어).",
+          "type": "string"
+        },
+        "accepts_keys": {
+          "description": "`input`으로 보낼 수 있는 키 이름(예: enter). 밖의 키는 422.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "screen": {
+          "description": "하위 과정 화면의 마지막 줄들(가림 적용, 문제 해결용). 비면 없음.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "description": "주의 문장(예: API 키 환경변수가 우선함).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "실패 사유 코드(열린 어휘, 예: cli_missing, pty_unavailable, exited, verify_failed, start_failed, timeout, heartbeat, error). 성공·진행 중이면 null."
+        },
+        "details": {
+          "additionalProperties": true,
+          "description": "접힌 상세(종료 코드 등). 비밀 값 없음.",
+          "type": "object"
+        },
+        "fixes": {
+          "description": "해결 버튼. 비면 없음.",
+          "items": {
+            "$ref": "#/$defs/FixAction"
+          },
+          "type": "array"
+        },
+        "started_at": {
+          "description": "시작 시각(epoch 초).",
+          "type": "number"
+        },
+        "expires_at": {
+          "description": "시간 상한에 닿는 시각(epoch 초).",
+          "type": "number"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "끝난 시각. 진행 중이면 null."
+        }
+      },
+      "required": [
+        "session_id",
+        "backend_id",
+        "method_id",
+        "phase",
+        "started_at",
+        "expires_at"
+      ],
+      "title": "BackendLoginSession",
+      "type": "object"
+    },
+    "BackendLoginStartRequest": {
+      "description": "``POST /backends/{id}/login`` 요청(본문 생략 가능). 실행 명령은 요청으로 바꿀 수 없다.",
+      "properties": {
+        "method_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "로그인 방법 id(`BackendDescriptor.login_methods[].id`). null = 첫 방법."
+        },
+        "timeout_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "최대 진행 시간(초). null = 서버 기본. 서버 상한을 넘으면 상한으로 잘린다."
+        }
+      },
+      "title": "BackendLoginStartRequest",
+      "type": "object"
+    },
+    "BackendLogoutResult": {
+      "description": "``POST /backends/{id}/logout`` 결과. 실행 기록·이벤트에 남지 않는다.",
+      "properties": {
+        "backend_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "실패 사유 코드(열린 어휘). 성공이면 null."
+        },
+        "message": {
+          "default": "",
+          "description": "결과 문장(사용자 언어).",
+          "type": "string"
+        },
+        "fixes": {
+          "description": "해결 버튼. 비면 없음.",
+          "items": {
+            "$ref": "#/$defs/FixAction"
+          },
+          "type": "array"
+        },
+        "finished_at": {
+          "description": "끝난 시각(epoch 초).",
+          "type": "number"
+        }
+      },
+      "required": [
+        "backend_id",
+        "ok",
+        "finished_at"
+      ],
+      "title": "BackendLogoutResult",
       "type": "object"
     },
     "BackendProbeRequest": {
@@ -2930,6 +3158,13 @@
           "description": "항목별 점검 결과(접힌 상세에 보임). 값 없음.",
           "items": {
             "$ref": "#/$defs/ReadinessCheck"
+          },
+          "type": "array"
+        },
+        "actions": {
+          "description": "상태에 맞는 동작 버튼(로그인·로그아웃 등). 비면 없음.",
+          "items": {
+            "$ref": "#/$defs/ReadinessAction"
           },
           "type": "array"
         }
@@ -6641,6 +6876,11 @@
           ],
           "default": null,
           "description": "정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다."
+        },
+        "attributes": {
+          "additionalProperties": true,
+          "description": "팀 구성 원문의 자유 속성(`Graph.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음.",
+          "type": "object"
         }
       },
       "required": [
@@ -9965,6 +10205,49 @@
       "title": "위젯 질의",
       "type": "object"
     },
+    "LoginMethodInfo": {
+      "description": "백엔드가 제공하는 로그인 방법 하나(데이터). 화면은 문구를 그대로 보인다.",
+      "properties": {
+        "id": {
+          "description": "방법 id(백엔드가 정함, 열린 문자열).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "description": "버튼 문구(사용자 언어, 예: 구독으로 로그인).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "description": "방법 설명 한 줄.",
+          "type": "string"
+        },
+        "notice": {
+          "default": "",
+          "description": "시작 확인 창에 늘 보이는 안내(예: 본인 구독·본인 책임 문구). 숨기기 없음.",
+          "type": "string"
+        },
+        "writes": {
+          "description": "이 로그인이 이 PC에서 바꾸는 것(서버가 실제 경로로 풀어 준 줄, 사용자 언어).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "needs_browser": {
+          "default": true,
+          "description": "브라우저에서 로그인하는 단계가 있다(화면 안내용).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "LoginMethodInfo",
+      "type": "object"
+    },
     "LogsIngestedMessage": {
       "properties": {
         "id": {
@@ -11541,78 +11824,6 @@
       "title": "PostMessageRequest",
       "type": "object"
     },
-    "PresetSummary": {
-      "description": "`GET /presets` 목록 항목. 프리셋은 데이터이며 지워도 시스템이 동작한다.",
-      "properties": {
-        "id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "default": "",
-          "type": "string"
-        },
-        "labels": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "item_count": {
-          "default": 0,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "items": {
-          "description": "항목 요약(종류·id 등). 형식은 프리셋 패키지가 정한다.",
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "badges": {
-          "description": "카드에 보일 짧은 배지 글자(예: 체험, 추천).",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "featured": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "'바로 시작' 순서(작을수록 앞). null = 바로 시작에 없음, 목록 순서대로."
-        },
-        "start_graph": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "적용한 뒤 바로 열 팀 구성 id(프리셋 안 id). null = 열지 않음."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ],
-      "title": "PresetSummary",
-      "type": "object"
-    },
     "Project": {
       "additionalProperties": true,
       "description": "프로젝트입니다. 작업 폴더와 연결한 로그, 그 프로젝트에서 쓸 설정을 묶습니다.",
@@ -12041,6 +12252,44 @@
         "position"
       ],
       "title": "QueuedMessage",
+      "type": "object"
+    },
+    "ReadinessAction": {
+      "description": "상태 카드에 그릴 동작 버튼 하나(서버가 상태에 맞춰 고른다, 0.8.0 F14).\n\n화면은 ``kind``만 해석한다(알려진 값 ``login``·``logout``, 모르는 값은 그리지 않는다).\n백엔드 id·상태 이름·문구는 화면 코드에 없다.",
+      "properties": {
+        "kind": {
+          "description": "동작 종류(열린 어휘, 화면이 아는 값: login·logout). 모르는 값은 무시한다.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "method_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "로그인 방법 id(`BackendDescriptor.login_methods[].id`). null = 기본."
+        },
+        "label": {
+          "description": "버튼 문구(사용자 언어).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "primary": {
+          "default": false,
+          "description": "참이면 상태 줄의 주 버튼, 거짓이면 `…` 메뉴 항목.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "label"
+      ],
+      "title": "ReadinessAction",
       "type": "object"
     },
     "ReadinessCheck": {
@@ -12538,6 +12787,11 @@
           ],
           "default": null,
           "description": "정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다."
+        },
+        "attributes": {
+          "additionalProperties": true,
+          "description": "리소스 원문의 자유 속성(`Resource.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음.",
+          "type": "object"
         }
       },
       "required": [

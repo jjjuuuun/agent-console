@@ -67,9 +67,6 @@ files·hooks는 대상별로 나눌 수 없어 위임자 세션에 합친다(des
 DEFAULT_SKILL_NAME_TEMPLATE = "{plugin}:{skill}"
 """플러그인 안 skill의 이름 형식(SDK 문서: `plugin:skill`). `{plugin}` = 플러그인 폴더 이름."""
 
-DEFAULT_RULE_FILES_ENV: dict[str, str] = {"CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD": "1"}
-"""규칙을 파일로 내릴 때 넣는 환경변수(Claude Code 문서: 추가 폴더의 `.claude/rules` 읽기)."""
-
 SKILLS_DIR = "skills"
 """플러그인 폴더 안 skill 폴더 이름(Claude Code 플러그인 표준 위치). 노드가 칸 이름으로 만든
 트리 폴더(`<tree_root>/skills/<name>`)와 같아야 플러그인으로 넘길 수 있다."""

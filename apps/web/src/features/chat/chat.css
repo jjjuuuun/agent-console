@@ -21,11 +21,11 @@
 .chat-row-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .chat-row-line { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
 .chat-row-icon { flex: none; width: 14px; display: inline-flex; }
-.chat-row-title { flex: 1 1 auto; font-size: var(--ac-text-sm); }
+.chat-row-title { flex: 1 1 auto; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .chat-row[data-waiting="true"] .chat-row-title { font-weight: 600; }
 .chat-row[data-archived="true"] .chat-row-title { color: var(--ac-text-muted); }
-.chat-row-time { flex: none; font-size: var(--ac-text-xs); }
-.chat-row-sub { font-size: var(--ac-text-xs); padding-left: calc(14px + var(--ac-space-1)); }
+.chat-row-time { flex: none; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.chat-row-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); padding-left: calc(14px + var(--ac-space-1)); }
 .chat-row-sub > .ac-ellipsis { flex: 0 1 auto; }
 .chat-chip { display: inline-flex; align-items: center; flex: none; gap: 2px; padding: 0 6px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); font-size: var(--ac-text-xs); line-height: 18px; white-space: nowrap; color: var(--ac-text); text-decoration: none; }
 .chat-chip[data-tone="waiting"] { color: var(--ac-status-waiting); border-color: var(--ac-status-waiting); }
@@ -39,8 +39,8 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 .chat-menu-item:hover:not(:disabled), .chat-menu-item:focus-visible { background: var(--ac-surface-3); }
 .chat-menu-item:disabled { color: var(--ac-text-muted); cursor: not-allowed; }
 .chat-menu-item[data-danger="true"] { color: var(--ac-danger); }
-.chat-menu-hint { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
-.chat-menu-footer { border-top: 1px solid var(--ac-border); margin-top: var(--ac-space-1); padding: var(--ac-space-2); font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.chat-menu-hint { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.chat-menu-footer { border-top: 1px solid var(--ac-border); margin-top: var(--ac-space-1); padding: var(--ac-space-2); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 
 /* 채팅 영역 */
 .chat-pane { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; position: relative; }
@@ -69,7 +69,6 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 .chat-empty-line dt { color: var(--ac-text-muted); }
 .chat-empty-line dd { margin: 0; }
 .chat-start-head { display: flex; align-items: center; justify-content: space-between; }
-.chat-start-presets { display: flex; flex-direction: column; gap: var(--ac-space-2); }
 
 /* 팀 구성 고르기 */
 .chat-picker { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
@@ -82,14 +81,11 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 .chat-picker-item[data-disabled="true"] { border-style: dashed; }
 .chat-picker-item[data-disabled="true"] .chat-picker-row { cursor: not-allowed; opacity: 0.8; }
 .chat-picker-name { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
-.chat-picker-meta { display: flex; gap: var(--ac-space-3); font-size: var(--ac-text-xs); }
-.chat-picker-reason { display: flex; gap: var(--ac-space-2); align-items: center; color: var(--ac-warning); font-size: var(--ac-text-sm); }
+.chat-picker-meta { display: flex; gap: var(--ac-space-3); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.chat-picker-reason { display: flex; gap: var(--ac-space-2); align-items: center; color: var(--ac-warning); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .chat-picker-reason a { color: var(--ac-accent); }
 
 /* 폴백 카드 */
 .chat-fallback { display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .chat-fallback-actions { display: flex; justify-content: flex-end; }
-.chat-start .app-preset-card { align-items: center; }
-.chat-start .app-preset-card > div { flex: 1 1 auto; min-width: 0; }
-.chat-start .app-preset-card .ac-btn { flex: none; min-width: max-content; }
 .start-guide { display: flex; flex-direction: column; gap: var(--ac-space-3); width: 100%; }

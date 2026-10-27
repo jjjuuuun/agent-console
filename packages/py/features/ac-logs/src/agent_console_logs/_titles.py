@@ -33,7 +33,7 @@ __all__ = [
 TitlePick = Literal["first", "last"]
 
 DEFAULT_SESSION_TITLE_RULES_RESOURCE = "data/default_session_title_rules.yaml"
-"""패키지 안 기본 세션 제목 규칙 파일(프리셋 데이터)."""
+"""패키지 안 기본 세션 제목 규칙 파일(코드가 아닌 데이터)."""
 
 
 @dataclass(frozen=True, slots=True)

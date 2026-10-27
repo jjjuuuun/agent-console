@@ -1,4 +1,4 @@
-# 기본 분류 체계(프리셋 데이터, design §4R.2). 설정 `logs.taxonomy`가 범주별로 덮어쓴다.
+# 기본 분류 체계(데이터, design §4R.2). 설정 `logs.taxonomy`가 범주별로 덮어쓴다.
 # 이 파일을 비우거나 지워도 로그 분석은 동작한다(분류 체계에 없는 범주는 이름 = id로 보인다).
 # tone: danger 인 범주의 이벤트만 오류로 표시·집계한다(F-25). 알려진 tone 값은 danger·warning·success·info·neutral.
 # visible: false 인 범주는 세션 타임라인에서 숨긴다(이벤트 목록·검색·집계에는 남는다, 5R.19).

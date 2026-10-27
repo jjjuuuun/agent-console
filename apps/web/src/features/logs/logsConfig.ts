@@ -1,5 +1,5 @@
 /**
- * 로그 화면의 데이터 표(`docs/design/screen-logs.md`). 탭·필터 필드·기간 프리셋·열·시간 상수·저장소 키가 전부 여기 있고,
+ * 로그 화면의 데이터 표(`docs/design/screen-logs.md`). 탭·필터 필드·기간 선택지·열·시간 상수·저장소 키가 전부 여기 있고,
  * 화면 코드는 이 표만 읽는다. 범주·출처·위젯·차원·지표 이름은 이 파일에도 없다(서버 데이터).
  * 필터 필드 이름은 서버 `LogFilter` 이름(`GET /logs/schema`의 `filters`)이며, 서버에 이름이 늘면 한 줄만 더한다.
  */
@@ -73,7 +73,7 @@ export const LOGS_LIMITS = {
   flowHeightDefault: 240,
 } as const;
 
-export interface RangePreset {
+export interface RangeOption {
   id: string;
   /** 지금부터 거슬러 올라갈 초. null = 전체(기간 제한 없음) */
   seconds: number | null;
@@ -81,8 +81,8 @@ export interface RangePreset {
 /** 화면 전용 URL 파라미터 이름(서버 필터가 아니다 — `log-view`의 `reservedParams`와 같은 목록, 충돌 테스트가 확인한다). */
 export const SCREEN_PARAMS = { through: "through", lane: "lane", view: "view", range: "range", tab: "tab" } as const;
 
-/** 기간 프리셋. 화면 전용 URL 파라미터 `range`의 값이 이 id다(`all`은 기간 없음). */
-export const RANGE_PRESETS: readonly RangePreset[] = [
+/** 기간 선택지. 화면 전용 URL 파라미터 `range`의 값이 이 id다(`all`은 기간 없음). */
+export const RANGE_OPTIONS: readonly RangeOption[] = [
   { id: "1h", seconds: 3600 },
   { id: "24h", seconds: 86_400 },
   { id: "7d", seconds: 7 * 86_400 },

@@ -58,7 +58,7 @@ def test_list_paths_follow_original_documents() -> None:
     assert get_at({"nodes": after}, added.path) == added.after
 
 
-def test_moved_key_becomes_remove_and_add() -> None:
+def test_relocated_key_becomes_remove_and_add() -> None:
     changes = diff_documents({"a": {"x": 1}}, {"b": {"x": 1}})
     assert _ops(changes) == [("remove", "/a"), ("add", "/b")]
 

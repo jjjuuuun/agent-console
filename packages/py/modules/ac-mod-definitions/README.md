@@ -14,6 +14,8 @@ Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페�
 - 평문 점검 캐시는 `definitions.saved`·삭제 때 버린다(계산 잠금과 짧은 상태 잠금을 나눠 교착·낡은 캐시를 막는다).
 - 설정 `modules.options.mod-definitions`: `max_content_bytes`(정의 본문 총량 한도, 옛 `resources.max_content_bytes`),
   `plain_secret_issue_codes`(평문 점검으로 옮길 검사 이슈 코드).
+- 지운 설정 키(호스트가 `settings.removed_key` 오류로 시작을 거부): 옛 최상위 `resources`(새 위치 안내),
+  삭제된 프리셋 기능의 `presets`·`modules.options.mod-presets`(지우라고 안내).
 - 웹 역할: `definitions:agent`·`definitions:graph`·`settings`.
 
 ## 설치

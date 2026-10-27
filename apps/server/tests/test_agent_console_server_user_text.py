@@ -29,7 +29,6 @@ DESCRIPTOR_PATHS = (
     "/merge-strategies",
     "/exporters",
     "/resources/import/sources",
-    "/presets",
     "/modules",
     "/usage/sources",
     "/logs/sources",
@@ -201,8 +200,8 @@ def test_run_failure_summary_names_node(client: Any) -> None:
     assert started.status_code == 202, started.text
     snap = wait_run(client, started.json()["id"])
     error = snap["run"]["error"]
-    if snap["run"]["status"] != "failed" or error is None:
-        pytest.skip("fake 백엔드 응답 규칙이 실패를 만들지 않음")
+    assert snap["run"]["status"] == "failed", snap["run"]
+    assert error is not None
     assert "터지는 도우미" in error["message"], error
     assert error["details"]["node_id"] == "n1"
     assert _scan({"message": error["message"]}, "messages", "/run") == []

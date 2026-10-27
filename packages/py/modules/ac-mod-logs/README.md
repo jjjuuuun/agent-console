@@ -1,8 +1,7 @@
 # agent-console-mod-logs
 
 로그 기능 모듈(`mod-logs`). 로그 출처(X5)·분류기(X6) 플러그인으로 로그를 모아 색인하고(배경·수동 수집),
-`/logs…` REST와 WS 토픽 `logs`로 질의·알림을 낸다. 설계: `specs/agent-console/design.md` §4R.4·§4R.8·§4R.10,
-§4R.5(색인 계보), §3R.1.7(계보 규칙).
+`/logs…` REST와 WS 토픽 `logs`로 질의·알림을 낸다.
 
 - **기능 이름·출처 이름을 모른다.** 출처·분류기는 호스트 레지스트리 묶음(`log_sources`·`log_classifiers`)에서
   오고, 그 묶음은 이 패키지의 호스트 플러그인 로더(entry point `agent_console.host_plugin_loaders` = `logs`)가
@@ -63,7 +62,7 @@
 (`agent_console_logs.render_archive`, 시각은 `tz` 또는 서버 로컬)이고 둘 다 첨부로 내려준다. 가림 규칙이 있으면
 내보낼 때 지금 규칙으로 한 번 더 가린다(수집 뒤 규칙이 바뀐 경우). 모르는 `format`·`tz`·필터 이름은 422다.
 
-상대 경로는 호스트 `base_dir`(설정 파일 폴더) 기준이다. 대시보드 템플릿은 프리셋 데이터다. 파일 하나가
+상대 경로는 호스트 `base_dir`(설정 파일 폴더) 기준이다. 대시보드 템플릿은 기본 데이터다. 파일 하나가
 `LogDashboard` 하나이고 위젯마다 `options.w`·`h`가 있으며 질의 필터에 기간이 없다. 폴더를 비우거나 지워도 동작한다.
 
 ## 설치

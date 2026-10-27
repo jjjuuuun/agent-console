@@ -10,6 +10,7 @@ import { queryKeys, useApiQuery, useWorkspaceSettings } from "../../app/queries"
 import { useNow } from "../../app/useNow";
 import { formatRelative } from "../../lib/format";
 import { AccountWideNote } from "../projects";
+import { ROUTE_ROLES, routeIconNode } from "../library";
 import { RollupPanel, buildLinesByView } from "./RollupPanel";
 import { SourcesPanel } from "./SourcesPanel";
 import { UsageSetupGuide, type SetupGuideState } from "./UsageSetupGuide";
@@ -125,6 +126,7 @@ export function UsageScreen() {
     const rows = (sources.data ?? []).filter((x) => x.enabled !== false && x.descriptor.test_only !== true);
     cards = (
       <EmptyState
+        icon={routeIconNode(ROUTE_ROLES.usage)}
         title={t.cards.empty}
         description={t.cards.emptyBody}
         action={

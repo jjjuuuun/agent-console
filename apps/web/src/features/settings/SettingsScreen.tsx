@@ -12,13 +12,12 @@ import { countModules } from "./modulesView";
 import { countSectionChanges, groupSections, sectionIdFromHash } from "./sectionState";
 import { describeError } from "../../app/errors";
 import { messages as m } from "../../app/messages";
-import { queryKeys, useApiQuery } from "../../app/queries";
+import { queryKeys } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard, useHasUnsaved } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
 import { usePwaUpdate } from "../../pwa/PwaContext";
-import { ROUTE_ROLES, routePath } from "../library";
 import { DefinitionVersionsTab } from "../versions";
 import { SettingsSection } from "./SettingsSection";
 import { CommonSection, DelegationTable, UserSection, type SectionEditProps } from "./sections/FormSections";
@@ -27,7 +26,6 @@ import { InstallSection } from "./sections/InstallSection";
 import { KeybindingsSection } from "./sections/KeybindingsSection";
 import { NotificationsSection } from "./sections/NotificationsSection";
 import { VersionsUiSection } from "./sections/VersionsUiSection";
-import { PresetsSection } from "./sections/PresetsSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { ServerSection } from "./sections/ServerSection";
 import { UsageSection } from "./sections/UsageSection";
@@ -62,7 +60,6 @@ export const SETTINGS_SECTIONS: readonly SectionDef[] = [
   { id: "logs", titleKey: "logs", descriptionKey: "logs", keys: ["logs"], group: "data", requires: [...DOCUMENT_REQUIRES, "logs"] },
   // 프로젝트 관리는 프로젝트 기능이 꺼져 있으면 섹션째 사라진다. 새 정의의 기본 범위(`projects` 설정)도 여기서 고친다.
   { id: "projects", titleKey: "projects", descriptionKey: "projects", keys: ["projects"], group: "data", requires: [...DOCUMENT_REQUIRES, ...PROJECT_REQUIRES] },
-  { id: "presets", titleKey: "presets", descriptionKey: "presets", keys: [], group: "data", requires: ["presets"] },
   { id: "versions-ui", titleKey: "versionsUi", descriptionKey: "versionsUi", keys: ["ui/versions"], group: "data", requires: [...DOCUMENT_REQUIRES, "versions"] },
   { id: "versions", titleKey: "versions", descriptionKey: "versions", keys: [], group: "data", requires: [...DOCUMENT_REQUIRES, "versions"] },
   { id: "install", titleKey: "install", descriptionKey: "install", keys: [], group: "system", requires: [] },
@@ -134,22 +131,6 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
   const hasUnsaved = useHasUnsaved();
   const [confirmUpdate, setConfirmUpdate] = useState(false);
 
-  // 프리셋 적용 때 이미 있는 id를 알려 주려는 목록이라 프리셋 섹션이 있을 때만 읽는다.
-  const presetsShown = shownSections.some((x) => x.id === "presets");
-  const agents = useApiQuery(["list", "agents"], (rest) => rest.listAgents(), { enabled: presetsShown });
-  const graphs = useApiQuery(["list", "graphs"], (rest) => rest.listGraphs(), { enabled: presetsShown });
-  const resources = useApiQuery(["list", "resources"], (rest) => rest.listResources(), { enabled: presetsShown });
-  const existingIds = useMemo(
-    () => new Set<string>([...(agents.data ?? []).map((a) => a.id), ...(graphs.data ?? []).map((g) => g.id), ...(resources.data ?? []).map((r) => r.id)]),
-    [agents.data, graphs.data, resources.data],
-  );
-  const links = useMemo(
-    () => [
-      { to: routePath(ROUTE_ROLES.graph), label: m.settings.presets.toTeams },
-      { to: routePath(ROUTE_ROLES.agent), label: m.settings.presets.toAgents },
-    ],
-    [],
-  );
 
   const onSave = () => {
     void editor.save().then((ok) => {
@@ -175,8 +156,6 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
   const editProps: SectionEditProps | null = ready ? { value, onChange: editor.setDraft, disabled: editor.savePhase === "saving" } : null;
   const render = (def: SectionDef) => {
     switch (def.id) {
-      case "presets":
-        return <PresetsSection existingIds={existingIds} links={links} />;
       case "appearance":
         return <AppearanceSection />;
       case "install":
@@ -231,8 +210,8 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
         return <UserSection {...props} sections={def.keys} />;
     }
   };
-  // 서버 정보·프리셋·앱 설치는 설정 문서와 무관해 설정 로딩 중에도 보인다.
-  const independent = new Set(["appearance", "presets", "install", "modules", "server", "versions"]);
+  // 서버 정보·앱 설치는 설정 문서와 무관해 설정 로딩 중에도 보인다.
+  const independent = new Set(["appearance", "install", "modules", "server", "versions"]);
 
   const goTo = (id: string) => {
     window.history.replaceState(null, "", `#${id}`);

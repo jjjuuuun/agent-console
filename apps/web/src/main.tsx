@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter } from "react-router";
+import "./styles/fonts.css";
 import "@agent-console/ui/tokens.css";
 import "@agent-console/graph-editor/styles.css";
 import "@agent-console/schema-form/styles.css";

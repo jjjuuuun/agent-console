@@ -1,6 +1,6 @@
 """계약 v7(design §5.2R.3 표 1~11, 0.8.0).
 
-프로젝트, 오류 해결 데이터, 백엔드 사전 점검, 사용량 출처, 프리셋 요약, 위임 방식 같은 세션 여부,
+프로젝트, 오류 해결 데이터, 백엔드 사전 점검, 사용량 출처, 위임 방식 같은 세션 여부,
 모듈 옵션 보기, `x-ui` 도우미.
 
 - 새 필드는 모두 선택이다. `UsageIndicatorSettings.value_mode` 기본값만 `used`로 바뀌었다
@@ -26,7 +26,6 @@ from agent_console_contracts import (
     X_UI,
     X_UI_TIERS,
     Agent,
-    ApplyPresetRequest,
     BackendDescriptor,
     BackendUnresolvedDetails,
     Conversation,
@@ -50,7 +49,6 @@ from agent_console_contracts import (
     KnownSuggestionIds,
     ModuleOptionsView,
     MovePlan,
-    PresetSummary,
     Project,
     ProjectCreate,
     ProjectPreferences,
@@ -266,13 +264,11 @@ def test_workspace_projects_section_is_optional() -> None:
     assert WorkspaceSettings.model_validate(layer).model_dump(exclude_unset=True) == layer
 
 
-def test_apply_and_import_requests_take_project() -> None:
-    assert ApplyPresetRequest().project is None
-    assert ApplyPresetRequest.model_validate({"project": "p"}).project == "p"
+def test_import_request_takes_project() -> None:
     assert ImportRequest.model_validate({"source": "s"}).project is None
     assert ImportRequest.model_validate({"source": "s", "project": "p"}).project == "p"
     with pytest.raises(ValidationError):
-        ApplyPresetRequest.model_validate({"project": "bad id"})
+        ImportRequest.model_validate({"source": "s", "project": "bad id"})
 
 
 # ---------------------------------------------------------------- 표 3: 실행·대화 project_id
@@ -419,15 +415,6 @@ def test_usage_source_descriptor_new_fields() -> None:
 
 
 # ---------------------------------------------------------------- 표 8·9·10
-
-
-def test_preset_summary_start_fields() -> None:
-    summary = PresetSummary.model_validate({"id": "p", "name": "n"})
-    assert summary.badges == []
-    assert summary.featured is None
-    assert summary.start_graph is None
-    doc = {"id": "p", "name": "n", "badges": ["추천"], "featured": 1, "start_graph": "team"}
-    assert PresetSummary.model_validate(doc).model_dump(exclude_unset=True) == doc
 
 
 def test_delegation_shares_session_defaults_true() -> None:

@@ -40,8 +40,6 @@
       ``SESSIONS``, ``TEAM_LOOKUP``(중첩 팀 조회), 레지스트리 이름 ``RESOURCE_TYPES_EXTENSION``,
       어댑터 ``FunctionResources``
     - 상수: ``DEFAULT_MESSAGE_KEY``, ``SDK_SUBAGENTS``, 오류 코드 ``NodesCoreErrorCodes``, 포트 이름
-
-1R 보류 노드(``input``·``output``·``router``)는 2R.20에서 삭제했다(design §R9.2).
 """
 
 from agent_console_nodes_core._common import (

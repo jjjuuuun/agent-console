@@ -11,9 +11,9 @@
       (``ClaudeSdkCollector`` 프로토콜, ``CollectorContext``, 기본 수집기 `sdk-hooks`·`mcp-calls`,
       entry point `agent_console.collectors` 로딩, ``resolve_collector_settings``). 이슈 코드
       ``COLLECTOR_ISSUES``
-    - 선택 sink 능력(구조적 프로토콜): ``SubagentResultListener``(`on_subagent_result`,
-      위임 방식이 대상 답변을 내는 데 쓴다). 정의는 ``agent_console_runtime``으로 옮겼고
-      하위 호환을 위해 여기서 다시 내보낸다. 하위 node_path는 `BackendEventSink.child_path`
+    - sink가 ``agent_console_runtime.SubagentResultListener``(`on_subagent_result`)를 만족하면
+      서브에이전트 결과를 알린다(위임 방식이 대상 답변을 내는 데 쓴다). 하위 node_path는
+      `BackendEventSink.child_path`
     - 부품(단독 사용 가능): ``MessageTranslator``·``Emission``·``SubagentOutcome``·
       ``delegation_result_text``·``usage_from_sdk``·``split_mcp_name`` (SDK 메시지 → 이벤트),
       ``map_bundle``·``BundleMapping``·``BundleError``(실행 묶음 칸 → SDK 재료),
@@ -58,6 +58,17 @@
       ``PROBE_CATEGORIES``. 부품(단독 사용): ``assess_readiness``·``ReadinessAssessment``·
       ``classify_probe_messages``·``classify_probe_error``·``ProbeOutcome``·``find_claude_cli``·
       ``expand_path``
+    - 구독 로그인(5.2R.82, ux-overhaul §15.9): ``ClaudeSdkBackend.start_login``·``logout``
+      (선택 능력, ``capabilities.login/logout``, 방법 ``CLI_LOGIN_METHOD_ID`` = ``cli-login``).
+      `claude auth login`을 PTY로 중계하고 `claude auth status` 종료 코드로 판정한다.
+      설치자 설정 ``login``
+      (``ClaudeSdkLoginOptions``·규칙 ``ClaudeSdkLoginRules``·문구 ``ClaudeSdkLoginTexts``·
+      ``PtySize``), 사유 ``LoginReasonCodes``. PTY는 선택 추가 기능 ``login``
+      (`agent-console-pty-session`), 없으면 능력 없음. 부품: ``login_env``·``allowed_open_url``·
+      ``safe_rule_compile``·``verify_login``·``parse_auth_method``·``run_command``·
+      ``resolve_writes``·``writes_lines``·``env_warnings``, ``ClaudeLoginSupport``·``PtySupport``·
+      ``detect_pty``. 드라이버 ``ClaudeCliLoginDriver``는 하위 모듈
+      ``agent_console_backend_claude_sdk.login_driver``(PTY 필요)
 """
 
 from agent_console_backend_claude_sdk._backend import (
@@ -122,6 +133,35 @@ from agent_console_backend_claude_sdk._interact import (
     InteractionKindMap,
     PermissionBridge,
 )
+from agent_console_backend_claude_sdk._login import (
+    CLI_LOGIN_METHOD_ID,
+    DEFAULT_ALLOWED_URL_HOSTS,
+    DEFAULT_LOGIN_ENV_CLEAR,
+    DEFAULT_LOGIN_ENV_INHERIT,
+    DEFAULT_LOGIN_RULES,
+    DEFAULT_LOGIN_WRITES,
+    ClaudeSdkLoginOptions,
+    ClaudeSdkLoginRules,
+    ClaudeSdkLoginTexts,
+    CommandResult,
+    LoginReasonCodes,
+    PtySize,
+    VerifyOutcome,
+    allowed_open_url,
+    env_warnings,
+    login_env,
+    parse_auth_method,
+    resolve_writes,
+    run_command,
+    safe_rule_compile,
+    verify_login,
+    writes_lines,
+)
+from agent_console_backend_claude_sdk._login_support import (
+    ClaudeLoginSupport,
+    PtySupport,
+    detect_pty,
+)
 from agent_console_backend_claude_sdk._options import (
     CLAUDE_SDK_BACKEND_ID,
     DEFAULT_DELEGATION_TOOL,
@@ -175,15 +215,16 @@ from agent_console_backend_claude_sdk._translate import (
     split_mcp_name,
     usage_from_sdk,
 )
-from agent_console_runtime import SubagentResultListener
 
 __all__ = [
     "ALLOW_ALL",
     "AUTH_ISSUES",
     "BLOCK_EXIT_CODE",
     "CLAUDE_SDK_BACKEND_ID",
+    "CLI_LOGIN_METHOD_ID",
     "COLLECTOR_ISSUES",
     "COMMAND_HOOK_SLOTS",
+    "DEFAULT_ALLOWED_URL_HOSTS",
     "DEFAULT_CANCEL_GRACE_SECONDS",
     "DEFAULT_DELEGATION_TOOL",
     "DEFAULT_DELEGATION_TOOL_NAMES",
@@ -192,6 +233,10 @@ __all__ = [
     "DEFAULT_HOOK_PROBE_FOLDER",
     "DEFAULT_HOOK_TIMEOUT_SECONDS",
     "DEFAULT_HOST_TOOL_SERVER",
+    "DEFAULT_LOGIN_ENV_CLEAR",
+    "DEFAULT_LOGIN_ENV_INHERIT",
+    "DEFAULT_LOGIN_RULES",
+    "DEFAULT_LOGIN_WRITES",
     "DEFAULT_MAX_RAW_CHARS",
     "DEFAULT_OBSERVED_HOOK_EVENTS",
     "DEFAULT_PROMPTING_PERMISSION_MODES",
@@ -212,14 +257,19 @@ __all__ = [
     "BundleError",
     "BundleMapping",
     "BundleOptions",
+    "ClaudeLoginSupport",
     "ClaudeSdkAuth",
     "ClaudeSdkBackend",
     "ClaudeSdkBackendOptions",
     "ClaudeSdkErrorCodes",
     "ClaudeSdkInstallOptions",
+    "ClaudeSdkLoginOptions",
+    "ClaudeSdkLoginRules",
+    "ClaudeSdkLoginTexts",
     "ClaudeSdkReadinessOptions",
     "ClaudeSdkReadinessTexts",
     "ClientFactory",
+    "CommandResult",
     "Emission",
     "EnvPolicy",
     "FixLink",
@@ -229,20 +279,24 @@ __all__ = [
     "HookSpec",
     "HostToolMapping",
     "InteractionKindMap",
+    "LoginReasonCodes",
     "MessageTranslator",
     "ObserveOptions",
     "PermissionBridge",
     "ProbeOutcome",
     "ProbeReasonCodes",
+    "PtySize",
+    "PtySupport",
     "RawSanitizer",
     "ReadinessAssessment",
     "ReadinessStates",
     "SdkClient",
     "SubagentMapping",
     "SubagentOutcome",
-    "SubagentResultListener",
     "ToolGuard",
     "ToolServerFactory",
+    "VerifyOutcome",
+    "allowed_open_url",
     "apply_env_policy",
     "assess_readiness",
     "build_agent_definitions",
@@ -253,6 +307,8 @@ __all__ = [
     "claude_sdk_config_schema",
     "command_hook",
     "delegation_result_text",
+    "detect_pty",
+    "env_warnings",
     "expand_path",
     "find_claude_cli",
     "guard_from_limits",
@@ -262,14 +318,21 @@ __all__ = [
     "hook_probe_note",
     "hook_settings_json",
     "host_tool_rule",
+    "login_env",
     "map_bundle",
+    "parse_auth_method",
     "parse_hooks",
     "plan_hook_probe",
+    "resolve_writes",
     "risky_option_warnings",
+    "run_command",
+    "safe_rule_compile",
     "sdk_tool_handler",
     "sdk_tool_server",
     "split_mcp_name",
     "subprocess_runner",
     "to_jsonable",
     "usage_from_sdk",
+    "verify_login",
+    "writes_lines",
 ]

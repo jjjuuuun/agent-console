@@ -59,4 +59,4 @@
 uv pip install -e examples/extensions/agent-console-example-nodes
 ```
 
-프리셋도 데이터일 뿐이라 `mod-presets.directories`에 폴더를 등록하거나 빼도 시스템은 그대로 동작합니다(저장소에는 프리셋이 없습니다).
+서버는 빈 작업 공간으로 시작합니다. 에이전트·팀 구성은 사용자가 화면에서 만들거나 기존 `.claude/` 설정을 가져와 씁니다.

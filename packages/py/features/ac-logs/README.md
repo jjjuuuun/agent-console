@@ -1,7 +1,6 @@
 # agent-console-logs
 
 로그 분석 코어. 여러 도구의 로그를 같은 구조(정규화 이벤트)로 모으고 질의한다.
-설계: `specs/agent-console/design.md` §4R.1~§4R.6, §4R.13(agent_bench 대비 변경점).
 
 - **출처·분류기는 확장 지점이다.** 로그 출처(X5, entry point `agent_console.log_sources`)와
   분류기(X6, `agent_console.log_classifiers`)를 등록해 쓴다. 기본 제공 `normalized-v1`·`mapped-jsonl`도

@@ -33,8 +33,6 @@
   `ConversationBusyError`, 대화의 마지막 턴이 아니면 `TurnNotResumableError`(409 `run_not_resumable`).
   어떤 노드를 다시 실행해도 되는지는 호출자(`ac-runtime.ResumeService`)가 검사한다. `ChatTurn.resumed_from`.
 
-설계 근거: `specs/agent-console/design.md` §R1.4, §R5.1, §R14.4, §R14.7.
-
 ## 주입 프로토콜
 
 `ChatService(conversations, graphs, *, launcher=None, runs=None, events=None, interactions=None, settings=, listener=, clock=, ids=, options=, queue=)`.

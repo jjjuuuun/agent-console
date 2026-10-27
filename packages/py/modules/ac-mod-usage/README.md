@@ -9,7 +9,7 @@ Agent Console 사용량 기능 모듈(design §3R.1.3·§3R.5). 사용량 라이
   `definitions.checks`(multi — `UsageSettingsCheck`). 필수 포트 없음(혼자 켜진다).
 - 저장 전 검사(`definitions.checks`, 4R.13 후속): 공통 설정(`settings` 종류)을 저장할 때 `usage.sources[i].config`를
   지금 쓸 수 있는 출처(플러그인 + 런타임)의 `config_schema`로 본다. 틀리면 error 이슈 → 저장 쪽(`mod-definitions`
-  `PUT /settings`, `mod-versions` 되돌리기, `mod-presets` 적용)이 422 `validation_failed`
+  `PUT /settings`, `mod-versions` 되돌리기)가 422 `validation_failed`
   (`details.issues[].path`, 예 `/usage/sources/0/config/budgets/local_five_hour`)로 거부한다. 값·스키마 원문은
   싣지 않는다. 저장 시점에 없는 출처(연동 꺼짐·미설치)는 검증할 수 없어 통과하고, 그 출처가 나타나면
   `server.warnings`와 `GET /usage/sources`의 `error`로 드러난다.

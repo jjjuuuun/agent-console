@@ -1,7 +1,6 @@
 # agent-console-resources
 
 리소스 종류(X14) 등록과 **실행 묶음(ResourceBundle) 조립**. 종류 이름·칸 이름은 이 패키지에 없다.
-설계: `specs/agent-console/design.md` §R12.1~§R12.4, §R2(층 병합), §R9.3(`x-merge: keyed_attachments`).
 
 - **종류 등록**: entry point `agent_console.resource_types`, 명시 모듈 목록, 또는 **선언형 데이터**
   (`<workspace>/resource-types/*.yaml`, 코드 없음). 등록 key = 리소스 정의의 `type`.
@@ -194,7 +193,7 @@ contributes:
 
 ## 종류 검사(`validate`·`extra_issues`) 계약
 
-리소스 종류를 만드는 쪽(플러그인·선언형)이 지켜야 한다. 서버는 저장(REST `POST/PUT /resources`, 프리셋 적용)
+리소스 종류를 만드는 쪽(플러그인·선언형)이 지켜야 한다. 서버는 저장(REST `POST/PUT /resources`, 버전 되돌리기)
 전에 `validate_resource`로 이 검사를 부르고 error 이슈가 있으면 저장하지 않는다.
 
 - **메시지에 입력값을 넣지 않는다.** 무엇이 잘못됐는지(규칙)만 쓰고, 값은 쓰지 않는다.

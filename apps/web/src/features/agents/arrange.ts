@@ -1,10 +1,8 @@
 import { byNumber, byText, folderOf, usableUnlessAllDistinct, type GroupByDef, type SortDef } from "@agent-console/list-arrange";
 import type { Agent } from "@agent-console/contracts";
 
-/** 묶음 "묶지 않음"을 뜻하는 저장 id. */
-export const GROUP_NONE = "none";
-/** 속성 키로 묶는 기준 id(키는 보기 상태의 `attrKey`). */
-export const GROUP_ATTRIBUTE = "attribute";
+export { GROUP_ATTRIBUTE, GROUP_NONE } from "../library";
+import { GROUP_ATTRIBUTE, folderPathsOf } from "../library";
 
 const text = (v: unknown): string[] => (typeof v === "string" && v.trim() !== "" ? [v] : []);
 /** 스칼라 값(문자열·숫자·불리언)을 문자열로. 객체·배열·null은 값 없음. */
@@ -49,13 +47,4 @@ export function attributeKeys(agents: readonly Agent[]): string[] {
 }
 
 /** 이미 있는 폴더 경로들(중복 없음, 이름순; 이동 후보). */
-export function folderPaths(agents: readonly Agent[]): string[] {
-  const set = new Set<string>();
-  for (const a of agents) {
-    const f = folderOf(a.attributes);
-    if (f === undefined) continue;
-    const parts = f.split("/");
-    for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join("/"));
-  }
-  return [...set].sort((x, y) => x.localeCompare(y, "ko"));
-}
+export const folderPaths = (agents: readonly Agent[]): string[] => folderPathsOf(agents);

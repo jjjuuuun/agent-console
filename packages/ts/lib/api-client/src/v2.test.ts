@@ -91,8 +91,6 @@ describe("REST v2: 새 경로", () => {
     await rest.getUsage();
     await rest.getUsage(["windows"]);
     await rest.listUsageSources();
-    await rest.listPresets();
-    await rest.applyPreset("p", { on_conflict: "rename" });
     await rest.listResources({ type: "instruction" });
     await rest.listResourceUsages("res");
     await rest.listImportSources();
@@ -133,8 +131,6 @@ describe("REST v2: 새 경로", () => {
       "GET /usage",
       "GET /usage?parts=windows",
       "GET /usage/sources",
-      "GET /presets",
-      "POST /presets/p/apply",
       "GET /resources?type=instruction",
       "GET /resources/res/usages",
       "GET /resources/import/sources",
@@ -147,7 +143,6 @@ describe("REST v2: 새 경로", () => {
     expect(body(13)).toEqual({ graph: { id: "g", name: "g" }, node_id: "n" });
     expect(body(14)).toEqual({ graph: { id: "g", name: "g" }, node_id: "n" });
     expect(body(30)).toEqual({ response: { answer: "예" } });
-    expect(body(35)).toEqual({ on_conflict: "rename" });
     expect(calls.every((c) => c.headers["X-Console-Token"] === "T")).toBe(true);
   });
 

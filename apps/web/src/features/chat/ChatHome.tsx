@@ -1,6 +1,6 @@
 import { Button, EmptyState } from "@agent-console/ui";
 import { useHint } from "../../app/hints";
-import { useRouteOn } from "../library";
+import { routeIconNode, useRouteOn } from "../library";
 import { chatMessages } from "./chatMessages";
 import { useConversationList, useGraphList } from "./chatData";
 import { StartCard } from "./EmptyViews";
@@ -26,6 +26,7 @@ export function ChatHome({ onNew }: { onNew: () => void }) {
         <StartCard onNew={onNew} onDismiss={hint.dismiss} />
       ) : (
         <EmptyState
+          icon={routeIconNode(ROUTE_ROLES.conversations)}
           title={te.selectOrStart}
           description={te.selectOrStartBody}
           action={<Button variant="primary" onClick={onNew}>{te.startNew}</Button>}

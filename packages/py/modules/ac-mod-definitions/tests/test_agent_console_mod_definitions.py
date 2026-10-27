@@ -131,6 +131,23 @@ def test_graph_crud_duplicate_and_list_without_providers(tmp_path: Path) -> None
         assert all(g["validation"] is None and g["entry_labels"] is None for g in listed)
 
 
+def test_graph_list_carries_attributes_and_saved_at(tmp_path: Path) -> None:
+    """목록 요약 ``attributes``·``saved_at``(5.2R.64). 폴더 저장은 기존 ``PUT /graphs/{id}``."""
+    with _client(_assembly(tmp_path)) as client:
+        etag = client.post(f"{API}/graphs", json=GRAPH).headers["etag"]
+        row = client.get(f"{API}/graphs").json()[0]
+        assert row["attributes"] == {}
+        assert isinstance(row["saved_at"], float)
+        attrs = {"ui": {"folder": "개발팀/백엔드"}, "team_tag": "a"}
+        saved = client.put(
+            f"{API}/graphs/g1", json={**GRAPH, "attributes": attrs}, headers={"If-Match": etag}
+        )
+        assert saved.status_code == 200, saved.text
+        row = client.get(f"{API}/graphs").json()[0]
+        assert row["attributes"] == attrs
+        assert row["saved_at"] >= saved.json()["saved_at"] - 1e-6
+
+
 class _Validation:
     def summaries(self, graph_ids: Sequence[str]) -> Mapping[str, GraphValidationSummary | None]:
         return {gid: GraphValidationSummary(blocks_run=True, error_count=1) for gid in graph_ids}
@@ -292,3 +309,23 @@ def test_disabled_is_404(tmp_path: Path) -> None:
     assembly = assemble([module], config, base=_base(tmp_path))
     with _client(assembly) as client:
         assert client.get(f"{API}/agents").status_code == 404
+
+
+def test_settings_compat_rejects_removed_preset_keys() -> None:
+    """삭제된 프리셋 기능의 설정 키는 지우라는 이유로 거부한다(옛 ``resources``는 새 위치 안내)."""
+    from agent_console_mod_definitions.settings import PRESETS_REMOVED_REASON, SETTINGS_COMPAT
+    from agent_console_modkit import removed_settings
+
+    assert module.descriptor.settings_compat is SETTINGS_COMPAT
+    compat = {"mod-definitions": SETTINGS_COMPAT}
+    data = {
+        "presets": {"directories": ["p"]},
+        "modules": {"options": {"mod-presets": {"apply_on_start": ["x"]}}},
+        "resources": {},
+    }
+    found = {r.path: r for r in removed_settings(data, compat)}
+    assert set(found) == {"presets", "modules.options.mod-presets", "resources"}
+    assert found["presets"].message() == PRESETS_REMOVED_REASON
+    assert found["modules.options.mod-presets"].new is None
+    assert found["resources"].new == "modules.options.mod-definitions"
+    assert removed_settings({"modules": {"options": {"mod-definitions": {}}}}, compat) == []

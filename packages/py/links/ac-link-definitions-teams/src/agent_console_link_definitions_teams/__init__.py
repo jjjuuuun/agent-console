@@ -2,7 +2,7 @@
 
 정의 저장소(``definitions.lookup``)와 팀 의미 계산(``ac-teams``)을 이어 사용처·유효 설정·실행
 계획·묶음 미리보기 경로를 붙이고, 목록이 쓰는 입구 이름(``graphs.entry_labels``)과 사용 수
-(``definitions.usages``), 문서가 쓰는 정의(``definitions.dependencies``, 프리셋 적용 순서), 참조
+(``definitions.usages``), 문서가 쓰는 정의(``definitions.dependencies``, 쓰는 정의 먼저 쓰기), 참조
 추출(``definitions.references``, X25 — 여러 제공자 포트)을 제공한다.
 
 공개 API:

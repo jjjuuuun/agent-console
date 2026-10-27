@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -129,50 +128,3 @@ def test_resource_of_unknown_type_is_still_saved(tmp_path: Path) -> None:
     doc = {"id": "later", "type": "not-installed-yet", "name": "나중", "config": {"k": PLAIN}}
     with server(make_settings(tmp_path)) as client:
         assert client.post(f"{API}/resources", json=doc).status_code == 201
-
-
-def _leaky_preset(root: Path) -> Path:
-    folder = root / "presets" / "leaky"
-    (folder / "resources").mkdir(parents=True)
-    (folder / "preset.yaml").write_text(
-        "kind: preset\nid: leaky\nschema_version: 1\nname: leaky\n"
-        "items:\n  - resources/gh.yaml\n  - resources/ok.yaml\n",
-        encoding="utf-8",
-    )
-    (folder / "resources" / "gh.yaml").write_text(json.dumps(_mcp(PLAIN)), encoding="utf-8")
-    ok = {**_mcp("secret://GH_TOKEN"), "id": "ok"}
-    (folder / "resources" / "ok.yaml").write_text(json.dumps(ok), encoding="utf-8")
-    return root / "presets"
-
-
-def test_preset_apply_rejects_plain_secret_item(tmp_path: Path) -> None:
-    """프리셋 적용도 REST 저장과 같은 종류 검사를 거친다(평문 항목만 failed, 나머지는 저장)."""
-    settings = make_settings(
-        tmp_path, options={"mod-presets": {"directories": [str(_leaky_preset(tmp_path))]}}
-    )
-    with server(settings) as client:
-        applied = client.post(f"{API}/presets/leaky/apply", json={})
-        assert applied.status_code == 200
-        items = {i["id"]: i for i in applied.json()["items"]}
-        assert items["gh"]["action"] == "failed"
-        assert "resource.plain_secret(/config/env/API_KEY)" in items["gh"]["error"]
-        assert items["ok"]["action"] == "created"
-        assert PLAIN not in applied.text
-        assert client.get(f"{API}/resources/gh").status_code == 404
-        assert client.get(f"{API}/resources/ok").status_code == 200
-
-
-def test_preset_apply_on_start_rejects_plain_secret_item(tmp_path: Path) -> None:
-    settings = make_settings(
-        tmp_path,
-        options={
-            "mod-presets": {
-                "directories": [str(_leaky_preset(tmp_path))],
-                "apply_on_start": ["leaky"],
-            }
-        },
-    )
-    with server(settings) as client:
-        assert client.get(f"{API}/resources/gh").status_code == 404
-        assert client.get(f"{API}/resources/ok").status_code == 200
-    assert not any(PLAIN in p.read_text(encoding="utf-8") for p in tmp_path.rglob("ws/**/*.yaml"))

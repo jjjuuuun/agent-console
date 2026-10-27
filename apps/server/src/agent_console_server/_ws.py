@@ -2,11 +2,8 @@
 
 연결 인증·메시지 크기·구독 수 한도·토픽 다중화는 `agent_console_modkit.host`가 맡는다(3R.8).
 이 파일은 계약 메시지 코덱만 둔다. 토픽은 켜진 모듈이 `ModuleParts.ws_topics`로 알린다(호스트는
-토픽 이름을 모른다). 모르는 토픽 구독은 호스트가 거절한다(`error`).
-
-- 3R.16: 보낼 메시지가 없던 `graph:<id>` 토픽은 계약에서 뺐다(받던 통짜 모듈도 지웠다).
-- 콘솔 메시지(`console.*`)는 2R.20에서 계약에서 삭제했다.
-  모르는 메시지처럼 `error {code: bad_request}`.
+토픽 이름을 모른다). 모르는 토픽 구독은 호스트가 거절한다(`error`). 계약에 없는 메시지 종류는
+`error {code: bad_request}`로 답한다.
 """
 
 from __future__ import annotations

@@ -16,23 +16,23 @@
 .usage-ind-bar { flex: 1 1 0; min-width: 24px; }
 .usage-ind-row > .usage-ind-value { flex: none; min-width: 4ch; text-align: right; }
 .usage-ind-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
-.usage-ind-label { flex: 1 1 auto; font-size: var(--ac-text-sm); font-weight: var(--ac-fw-strong); color: var(--ac-text-muted); }
-.usage-ind-value { flex: none; font-size: var(--ac-text-sm); font-weight: 600; color: var(--ac-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.usage-ind-label { flex: 1 1 auto; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: var(--ac-fw-strong); color: var(--ac-text-muted); }
+.usage-ind-value { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; color: var(--ac-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .usage-ind-value[data-empty="true"] { color: var(--ac-text-muted); font-weight: 400; }
-.usage-ind-tone { margin-left: 2px; font-size: var(--ac-text-xs); color: var(--usage-ind-tone, var(--ac-text)); }
-.usage-ind-sub { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.usage-ind-tone { margin-left: 2px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--usage-ind-tone, var(--ac-text)); }
+.usage-ind-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 .usage-ind .ac-gauge { height: var(--ac-usage-ind-gauge-h); }
 .usage-ind .ac-gauge[data-no-value="true"] { min-height: var(--ac-usage-ind-gauge-h); height: var(--ac-usage-ind-gauge-h); padding: 0; background: transparent; border: 1px dashed var(--ac-border-strong); }
 /* 추정 값: 채움 색은 그대로, 막대 끝에 점선 테두리 */
 .usage-ind-bar[data-approx="true"] .ac-gauge { border-style: dotted; border-color: var(--ac-border-strong); }
 .usage-ind-setup { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
-.usage-ind-setup-link { flex: none; font-size: var(--ac-text-sm); color: var(--ac-accent); white-space: nowrap; }
+.usage-ind-setup-link { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-accent); white-space: nowrap; }
 .usage-ind-item[data-stale="true"] .ac-gauge { opacity: 0.6; }
-.usage-ind-msg { font-size: var(--ac-text-sm); color: var(--ac-text-muted); }
+.usage-ind-msg { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
 .usage-ind-skeleton { height: 30px; }
-.usage-ind-err { position: absolute; top: 2px; right: 6px; font-size: var(--ac-text-xs); font-weight: 700; color: var(--ac-danger); }
+.usage-ind-err { position: absolute; top: 2px; right: 6px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 700; color: var(--ac-danger); }
 .usage-ind[data-error="true"] .usage-ind-item { opacity: 0.8; }
-.usage-ind-example { font-size: var(--ac-text-xs); color: var(--ac-text-muted); }
+.usage-ind-example { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 @media (prefers-reduced-motion: no-preference) { .usage-ind .ac-gauge-fill { transition: width 200ms ease; } }
 @media (forced-colors: active) { .usage-ind .ac-gauge-fill { background: Highlight; } .usage-ind .ac-gauge { background: Canvas; } }
 
@@ -50,21 +50,21 @@
 .app-shell[data-collapsed="true"] .usage-ind[data-host="float"][data-corner$="left"] { left: calc(var(--ac-sidebar-w-collapsed) + var(--ac-usage-ind-float-offset)); }
 .usage-ind[data-host="float"][data-corner^="bottom"] { bottom: var(--ac-usage-ind-float-offset); }
 .usage-ind[data-host="float"][data-corner^="top"] { top: var(--ac-usage-ind-float-offset); }
-.usage-ind[data-layout="chip"] .usage-ind-link { flex-direction: row; align-items: center; height: 28px; padding: 0 10px; gap: 0; background: var(--ac-surface-2); border-color: var(--ac-border-soft); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); overflow: hidden; }
+.usage-ind[data-layout="chip"] .usage-ind-link { flex-direction: row; align-items: center; height: var(--ac-control-md); padding: 0 10px; gap: 0; background: var(--ac-surface-2); border-color: var(--ac-border-soft); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); overflow: hidden; }
 .usage-ind-chip-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 0 8px; }
 .usage-ind-chip-item + .usage-ind-chip-item { border-left: 1px solid var(--ac-border); }
 .usage-ind-chip-gauge { width: 36px; }
 
 /* 요약 팝오버(읽기 전용) */
-.usage-ind-pop { position: absolute; z-index: var(--ac-z-popover); width: var(--ac-usage-ind-pop-w); max-height: 360px; overflow-y: auto; box-sizing: border-box; padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-1); font-size: var(--ac-text-sm); word-break: keep-all; overflow-wrap: break-word; pointer-events: none; }
+.usage-ind-pop { position: absolute; z-index: var(--ac-z-popover); width: var(--ac-usage-ind-pop-w); max-height: 360px; overflow-y: auto; box-sizing: border-box; padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); word-break: keep-all; overflow-wrap: break-word; pointer-events: none; }
 .usage-ind-pop[data-side="right"] { left: calc(100% + var(--ac-space-2)); bottom: 0; }
 .usage-ind-pop[data-side="up"] { right: 0; bottom: calc(100% + var(--ac-space-2)); }
 .usage-ind-pop-head, .usage-ind-pop-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
 .usage-ind-pop-item { display: flex; flex-direction: column; gap: 4px; padding-bottom: var(--ac-space-2); border-bottom: 1px solid var(--ac-border); }
-.usage-ind-pop-line { margin: 0; font-size: var(--ac-text-xs); }
+.usage-ind-pop-line { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .usage-ind-pop-flag { color: var(--ac-warning); }
 .usage-ind-pop-foot { padding-top: var(--ac-space-1); }
-.usage-ind-source { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: var(--ac-text-xs); }
+.usage-ind-source { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 
 /* 설정 화면 미리보기·편집기 */
 .usage-ind-preview { display: flex; gap: var(--ac-space-4); align-items: flex-start; flex-wrap: wrap; }
@@ -74,7 +74,7 @@
 .usage-ind-preview .usage-ind { margin: 0; }
 .usage-ind-editor { display: flex; flex-direction: column; gap: var(--ac-space-3); }
 .usage-ind-editor fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
-.usage-ind-editor legend { padding: 0; font-weight: 600; font-size: var(--ac-text-sm); margin-bottom: var(--ac-space-1); }
+.usage-ind-editor legend { padding: 0; font-weight: 600; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); margin-bottom: var(--ac-space-1); }
 .usage-ind-editor[data-disabled="true"] .usage-ind-editor-body { opacity: 0.55; }
 .usage-ind-chips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); align-items: center; }
 .usage-ind-rule-row { display: flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
@@ -88,5 +88,5 @@
 
 /* 플로팅 칩: 항목은 줄바꿈 없이 한 줄, 넘치는 항목은 +N */
 .usage-ind[data-layout="chip"] .usage-ind-chip-item { flex: none; white-space: nowrap; }
-.usage-ind-chip-more { flex: none; padding: 0 8px; border-left: 1px solid var(--ac-border); font-size: var(--ac-text-xs); font-weight: 600; color: var(--ac-text-muted); white-space: nowrap; }
+.usage-ind-chip-more { flex: none; padding: 0 8px; border-left: 1px solid var(--ac-border); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); white-space: nowrap; }
 @media (max-width: 639px) { .usage-ind[data-host="float"] { max-width: calc(100vw - 2 * var(--ac-usage-ind-float-offset)); } }

@@ -14,7 +14,8 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 ## 최우선 원칙: 아무것도 하드코딩하지 않는다
 - 에이전트, 팀, 역할, 라우팅 분류, 그래프 노드 종류, 모델, 도구, 로그 소스, 위키 규칙은
   **전부 사용자가 만들고 고치고 지우는 데이터**다. 코드에 고정된 목록을 두지 않는다.
-- 구체적인 예(PL·디자이너·백엔드 팀 등)는 **기본 프리셋**일 뿐이다. 프리셋은 데이터로 제공하고, 삭제해도 시스템이 동작해야 한다.
+- 구체적인 예(PL·디자이너·백엔드 팀 등)는 예시일 뿐이다. 서버는 빈 workspace로 시작하고, 사용자가 화면에서 직접 만들거나
+  기존 `.claude/` 설정을 가져와서 쓴다. 미리 깔린 정의 없이도 모든 기능이 동작해야 한다.
 - 새 종류(노드 타입, 로그 소스, 실행 백엔드)는 코드 수정 없이 또는 플러그인 하나 추가로 확장 가능해야 한다.
   확장 지점은 설계 문서와 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)에 적는다.
 - 판단 기준: "사용자가 이걸 다르게 원하면 코드를 고쳐야 하나?" → 그렇다면 데이터나 확장 지점으로 뺀다.
@@ -55,8 +56,8 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 | 저장 | 정의 = workspace YAML(ruamel.yaml), 버전·실행·이벤트 = SQLite(SQLAlchemy 2 Core + Alembic) |
 | 플러그인 | Python entry points + 명시 모듈 목록 + 선언형 데이터 |
 | 에이전트 실행 | claude-agent-sdk(Python) + 테스트용 가짜 백엔드 |
-| 웹 라이브러리 | @xyflow/react, @rjsf/core v6, TanStack Query, Zustand, recharts(지연 로드), @tanstack/react-virtual |
-| CLI | Typer |
+| 웹 라이브러리 | @xyflow/react, @rjsf/core v6, TanStack Query, recharts(지연 로드), @tanstack/react-virtual, react-router v7, CodeMirror 6(text-editor), react-markdown(chat), elkjs(graph-editor 자동 배치) |
+| CLI | Typer — `agent-console` 실행 명령(`serve`는 서버 `main`에 위임해 모듈이 선언한 옵션이 자동으로 보임, `statusline`은 서버를 import하지 않음) |
 | 품질 | ruff, mypy, pytest(+pytest-asyncio), import-linter / ESLint, tsc, Vitest, Playwright, dependency-cruiser |
 | 이름 | Python import `agent_console_*`, 배포 `agent-console-*`, TS `@agent-console/*` |
 
@@ -68,14 +69,14 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 - TS 패키지는 `exports`의 `development` 조건으로 소스를, `types`·`default`로 `dist`를 가리킨다(번들러 소비자 전제). 앱은 `resolve.conditions`에 `development`를 넣는다. 공용 tsconfig·ESLint 설정은 `@agent-console/tsconfig`·`@agent-console/eslint-config` 패키지다.
 - 사내 TS 의존은 `^x.y.z` 범위 + pnpm `linkWorkspacePackages`로 연결한다. `workspace:` 프로토콜은 쓰지 않는다. 새 TS 패키지는 `pnpm new-package`로 만든다.
 - 서버 기능 설정은 `modules.options.mod-*` 아래에 둔다(예: `mod-runs.backends`, `mod-logs.scan_interval_seconds`). 없어진 옛 최상위 키가 남아 있으면 서버가 시작을 거부하고 `settings.removed_key` 오류로 새 위치를 안내한다.
-- 서버 앱은 기능 이름을 모른다. 기본 서비스(레지스트리·DB·플러그인 로더)는 entry point `agent_console.host_registries`·`host_plugin_loaders`·`host_database`로, 모듈 명령행 옵션(`--apply-preset` 등)은 모듈 `settings_compat`으로 들어온다. `/api/v1/health`는 모듈 시작 훅이 끝난 뒤에만 200(이전·종료 후 503 `not_ready`).
+- 서버 앱은 기능 이름을 모른다. 기본 서비스(레지스트리·DB·플러그인 로더)는 entry point `agent_console.host_registries`·`host_plugin_loaders`·`host_database`로, 모듈이 선언한 명령행 옵션은 모듈 `settings_compat`으로 들어온다(선언한 모듈이 없는 옵션은 설정 오류). `/api/v1/health`는 모듈 시작 훅이 끝난 뒤에만 200(이전·종료 후 503 `not_ready`).
 - 각 모듈은 자기 DB 계보(Alembic 버전 테이블)를 소유한다. 모듈을 끄면 그 계보를 올리지 않는다.
 
 ## 명령어
 | 용도 | 명령 |
 | --- | --- |
 | 설치 | `uv sync --all-packages` · `pnpm install` |
-| 서버 실행 | `uv run agent-console serve [--allow-origin ORIGIN] [--apply-preset ID] [--open\|--no-open] [--enable-module ID] [--disable-module ID]` (기본 127.0.0.1:8765, 모듈 상태는 `GET /api/v1/modules`) |
+| 서버 실행 | `uv run agent-console serve [--allow-origin ORIGIN] [--open\|--no-open] [--enable-module ID] [--disable-module ID]` (기본 127.0.0.1:8765, 모듈 상태는 `GET /api/v1/modules`) |
 | 서버 하나로 웹까지 | 웹 빌드 후 `AGENT_CONSOLE_SERVE_STATIC=1 AGENT_CONSOLE_WEB_DIR=apps/web/dist uv run agent-console serve [--open]` (또는 설정 `web.serve_static`·`web.static_dir`·`web.open`) |
 | 준비 신호 | `GET /api/v1/health` (200이면 준비) |
 | 서버 + 웹 미리보기 | `pnpm app` (`--port`·`--web-port`·`--config`·`--build`, `--` 뒤는 serve 인자) |
@@ -83,7 +84,7 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 | 웹 개발 서버 / 빌드 / 미리보기 | `pnpm --filter @agent-console/web dev` / `build` / `preview` |
 | Python 전체 검사 | `uv run poe check` (= ruff check·format --check, mypy, lint-imports, `pkg-lint` 패키지 이식성 정적 검사, `schema-help-lint` 설정 스키마 라벨·설명 검사, pytest, `examples` 확장 예제 검사) |
 | Python 휠·이식성 | `uv run poe wheels` (→ `dist/wheelhouse`) · `uv run poe portability [--package NAME] [--wheels]` (저장소 밖 복사 설치·검사) |
-| Python 새 패키지 | `uv run poe new-package --kind {base,feature,kit,module,link} NAME` (서버 모듈은 `--kind module ac-mod-<이름> --id mod-<이름>`) |
+| Python 새 패키지 | `uv run poe new-package --kind {base,feature,kit,module,link} NAME` (서버 모듈은 `--kind module ac-mod-<이름> --id mod-<이름>`, 연동 모듈은 `--kind link ac-link-<a>-<b> --id link-<a>-<b>`, 배치 `packages/py/{base,features,kit,modules,links}/`) |
 | import-linter 목록 생성 | `uv run poe importlinter-sync` (`--check`) |
 | TS 전체 검사 | `pnpm check` (= ESLint, `pkg-lint`, tsc, Vitest, dependency-cruiser). `pnpm check -- <vitest 인자>`는 test 단계에만 전달 |
 | TS tarball·이식성 | `pnpm pack:all` (→ `dist/npm`) · `pnpm portability [--package NAME]` |

@@ -14,7 +14,7 @@ import { usePendingInteractions } from "../../shell/pending";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { HandoffMatrixView } from "./HandoffMatrixView";
 import { useScopedList } from "../projects";
-import { ROUTE_ROLES, routePath } from "../library";
+import { ROUTE_ROLES, routeIconNode, routePath } from "../library";
 import { RunsFilterBar, type RunsFilters } from "./RunsFilterBar";
 import { RunsTable } from "./RunsTable";
 import { useRunLookups } from "./useRunLookups";
@@ -183,7 +183,7 @@ export function RunsListScreen() {
     const e = describeError(runsQ.error, t.list.loadFailed);
     body = <ErrorBlock title={t.list.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={() => void runsQ.refetch()} />;
   } else if ((runs ?? []).length === 0 && !hasFilter) {
-    body = <EmptyState title={t.list.empty} description={t.list.emptyBody} action={<Button variant="primary" onClick={() => void navigate(routePath(ROUTE_ROLES.conversations))}>{t.list.toChat}</Button>} />;
+    body = <EmptyState icon={routeIconNode(ROUTE_ROLES.runs)} title={t.list.empty} description={t.list.emptyBody} action={<Button variant="primary" onClick={() => void navigate(routePath(ROUTE_ROLES.conversations))}>{t.list.toChat}</Button>} />;
   } else if (onlyChildren) {
     body = <EmptyState title={t.list.childrenOnly} action={<Button onClick={() => setFilters({ ...filters, children: true })}>{t.list.includeChildren}</Button>} />;
   } else if (shown.length === 0) {

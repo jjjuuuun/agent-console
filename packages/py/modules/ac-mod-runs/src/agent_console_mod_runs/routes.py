@@ -8,6 +8,11 @@
 - 백엔드 준비 상태(ux-overhaul §15.8): ``GET /backends/status``·``GET /backends/{id}/status``·
   ``POST /backends/{id}/probe``(능력 없으면 409 ``backend.probe_unsupported``), 응답은
   ``Cache-Control: no-store``. 실행 기록·이벤트에 남기지 않는다.
+- 백엔드 계정 로그인(ux-overhaul §15.9, F14): ``POST /backends/{id}/login``·
+  ``GET /backends/login/current``·``GET /backends/login/{sid}``·
+  ``POST /backends/login/{sid}/input``·``DELETE /backends/login/{sid}``·
+  ``POST /backends/{id}/logout``. 응답은 ``no-store``,
+  입력값은 응답·로그·오류에 나오지 않는다.
 - 디스크립터: ``/node-types``(+ ``POST …/ports``)·``/edge-types``·``/backends``(+ ``/models``)·
   ``/delegation-strategies``·``/interaction-kinds``·``/condition-operators``
 - 자식 Run(design §5R.7·§5R.11): ``GET /runs?root=<id>``(그 루트 아래 모든 자손),
@@ -23,11 +28,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import ValidationError
 
 from agent_console_contracts import (
     BackendDescriptor,
+    BackendLoginInput,
+    BackendLoginSession,
+    BackendLoginStartRequest,
+    BackendLogoutResult,
     BackendProbeRequest,
     BackendProbeResult,
     BackendReadiness,
@@ -52,10 +61,11 @@ from agent_console_contracts import (
     RunStatus,
 )
 from agent_console_registry import UnknownExtensionError
-from agent_console_runtime import BackendReadinessService
+from agent_console_runtime import BackendLoginService, BackendReadinessService, LoginInputError
 
 from .errors import (
     BackendNotFoundError,
+    LoginPayloadTooLargeError,
     NodeTypeNotFoundError,
     PortConfigError,
     RunNotFoundError,
@@ -88,6 +98,7 @@ def build_router(
     events: Callable[[], Any],
     activity_limit: int = 100,
     readiness: Callable[[], BackendReadinessService] | None = None,
+    login: Callable[[], BackendLoginService] | None = None,
 ) -> APIRouter:
     """실행 모듈 라우터.
 
@@ -98,6 +109,7 @@ def build_router(
         events: 이벤트 조회(저장소 이벤트 리포지토리).
         activity_limit: 에이전트 활동 기본 개수.
         readiness: 백엔드 준비 상태·연결 테스트 서비스. None이면 그 세 경로를 붙이지 않는다.
+        login: 백엔드 로그인 서비스. None이면 로그인·로그아웃 경로 6개를 붙이지 않는다.
     """
     router = APIRouter()
 
@@ -319,6 +331,9 @@ def build_router(
         found: list[RunEvent] = events().list_by_actor(agent_id, limit=limit)
         return found
 
+    if login is not None:  # /backends/{id}/… 뒤에 붙인다(경로 겹침 없음)
+        _backend_login_routes(router, login)
+
     return router
 
 
@@ -384,4 +399,132 @@ def _backend_readiness_routes(
         return await readiness().probe(backend_id, timeout)
 
 
-__all__ = ["DEFAULT_RUN_LIST_LIMIT", "MAX_RUN_LIST_LIMIT", "NO_STORE", "build_router", "errors"]
+LOGIN_INPUT_MAX_BYTES = 4096
+"""``POST /backends/login/{sid}/input`` 본문 최대 바이트."""
+
+_LOGIN_INPUT_SCHEMA = BackendLoginInput.model_json_schema()
+
+
+def _backend_login_routes(router: APIRouter, login: Callable[[], BackendLoginService]) -> None:
+    """백엔드 계정 로그인·로그아웃 경로 6개(ux-overhaul §15.9)."""
+
+    @router.post(
+        "/backends/{backend_id}/login",
+        response_model=BackendLoginSession,
+        status_code=201,
+        responses=errors(409),
+        summary="실행 백엔드 계정 로그인 시작",
+    )
+    async def start_backend_login(
+        backend_id: str, response: Response, body: BackendLoginStartRequest | None = None
+    ) -> BackendLoginSession:
+        """로그인 과정을 시작하고 세션을 돌려준다(서버 전체에서 진행 중인 세션은 하나).
+
+        - 실행 명령·인자는 서버 설정에서만 온다(요청으로 바꿀 수 없다).
+        - 지원하지 않으면(`capabilities.login=false`, 모르는 `method_id`) 409
+          `backend.login_unsupported`.
+        - 다른 세션이 진행 중이면 409 `backend.login_busy`(`details.session_id`).
+        - 백엔드가 거절하면 그 코드(예: 409 `backend.subscription_auth_disabled`).
+        - 시작 중 오류는 `phase: failed`, `reason: start_failed` 세션(201)으로 돌려준다.
+        - `timeout_s`는 서버 상한(`mod-runs.backend_login.timeout_max_s`)으로 잘린다.
+        """
+        response.headers["Cache-Control"] = NO_STORE
+        method = body.method_id if body is not None else None
+        timeout = body.timeout_s if body is not None else None
+        return await login().start(backend_id, method, timeout)
+
+    @router.get(
+        "/backends/login/current",
+        response_model=BackendLoginSession,
+        responses={**errors(), 204: {"description": "진행 중인 로그인이 없다"}},
+        summary="진행 중인 로그인 세션",
+    )
+    async def current_backend_login(response: Response) -> Any:
+        """진행 중인 로그인 세션. 없으면 204. 조회는 하트비트로 친다."""
+        found = login().current()
+        if found is None:
+            return Response(status_code=204, headers={"Cache-Control": NO_STORE})
+        response.headers["Cache-Control"] = NO_STORE
+        return found
+
+    @router.get(
+        "/backends/login/{session_id}",
+        response_model=BackendLoginSession,
+        responses=errors(),
+        summary="로그인 세션 상태(폴링)",
+    )
+    async def get_backend_login(session_id: str, response: Response) -> BackendLoginSession:
+        """세션 상태. 화면은 1초마다 부른다(하트비트). `heartbeat_s` 넘게 부르지 않으면 서버가
+        취소한다. 끝난 세션은 `retain_s` 동안만 보이고 그 뒤 404 `backend.login_session_not_found`.
+        """
+        response.headers["Cache-Control"] = NO_STORE
+        return login().get(session_id)
+
+    @router.post(
+        "/backends/login/{session_id}/input",
+        status_code=202,
+        responses=errors(409),
+        summary="로그인 세션에 글자·키 보내기",
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "content": {"application/json": {"schema": _LOGIN_INPUT_SCHEMA}},
+            }
+        },
+    )
+    async def send_backend_login_input(session_id: str, request: Request) -> Response:
+        """붙여 넣은 코드(`text`) 또는 키(`key`) 하나를 보낸다(202, 본문 없음). 본문은
+        `BackendLoginInput`.
+
+        - 본문은 4KB 이하(넘으면 413). 글자는 앞뒤 공백을 자르고 인쇄 가능 문자만 받는다.
+        - 키는 세션의 `accepts_keys` 안만. 형식이 틀리거나 받을 수 없으면 422 `validation_failed`
+          (`details.reason`). 오류 본문에 보낸 값은 들어가지 않는다(서버가 본문을 직접 검사한다).
+        - 보낸 값은 응답·서버 로그·오류에 나오지 않고 세션 응답에서 가려진다.
+        """
+        raw = await request.body()
+        if len(raw) > LOGIN_INPUT_MAX_BYTES:
+            raise LoginPayloadTooLargeError(LOGIN_INPUT_MAX_BYTES)
+        try:
+            body = BackendLoginInput.model_validate_json(raw or b"{}")
+        except ValidationError:  # 기본 검증 오류는 입력값을 되돌려 보내므로 쓰지 않는다
+            raise LoginInputError(LoginInputError.TEXT_INVALID) from None
+        await login().send_input(session_id, text=body.text, key=body.key)
+        return Response(status_code=202, headers={"Cache-Control": NO_STORE})
+
+    @router.delete(
+        "/backends/login/{session_id}",
+        response_model=BackendLoginSession,
+        responses=errors(),
+        summary="로그인 취소",
+    )
+    async def cancel_backend_login(session_id: str, response: Response) -> BackendLoginSession:
+        """진행 중이면 하위 과정을 멈추고 `phase: cancelled`. 끝난 세션은 그대로 돌려준다.
+        로그인 정보는 바뀌지 않는다."""
+        response.headers["Cache-Control"] = NO_STORE
+        return await login().cancel(session_id)
+
+    @router.post(
+        "/backends/{backend_id}/logout",
+        response_model=BackendLogoutResult,
+        responses=errors(409),
+        summary="실행 백엔드 계정 로그아웃(연결 해제)",
+    )
+    async def logout_backend(backend_id: str, response: Response) -> BackendLogoutResult:
+        """이 PC의 백엔드 로그인을 지운다(확인 창은 화면 몫).
+
+        - 지원하지 않으면(`capabilities.logout=false`) 409 `backend.logout_unsupported`.
+        - 같은 백엔드의 로그인이 진행 중이면 409 `backend.login_busy`.
+        - 실패는 `ok: false` + `reason`. 실행 기록·이벤트에 남지 않는다.
+        """
+        response.headers["Cache-Control"] = NO_STORE
+        return await login().logout(backend_id)
+
+
+__all__ = [
+    "DEFAULT_RUN_LIST_LIMIT",
+    "LOGIN_INPUT_MAX_BYTES",
+    "MAX_RUN_LIST_LIMIT",
+    "NO_STORE",
+    "build_router",
+    "errors",
+]

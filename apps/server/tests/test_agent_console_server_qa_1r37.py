@@ -17,27 +17,6 @@ MCP = {
 }
 
 
-def _preset(root: Path) -> Path:
-    p = root / "presets" / "leaky"
-    (p / "resources").mkdir(parents=True)
-    (p / "preset.yaml").write_text(
-        "kind: preset\nid: leaky\nschema_version: 1\nname: leaky\nitems:\n  - resources/gh.yaml\n",
-        encoding="utf-8",
-    )
-    (p / "resources" / "gh.yaml").write_text(json.dumps(MCP), encoding="utf-8")
-    return root / "presets"
-
-
-def test_probe_preset_apply_with_plain_secret(tmp_path: Path) -> None:
-    settings = make_settings(
-        tmp_path, options={"mod-presets": {"directories": [str(_preset(tmp_path))]}}
-    )
-    with server(settings) as client:
-        client.post(f"{API}/presets/leaky/apply", json={})
-        got = client.get(f"{API}/resources/gh")
-        assert not (got.status_code == 200 and PLAIN in got.text), "프리셋 우회로 평문 저장됨"
-
-
 def test_probe_hand_edited(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     with server(settings) as client:

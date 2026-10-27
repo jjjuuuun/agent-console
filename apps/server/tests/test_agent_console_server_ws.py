@@ -88,17 +88,6 @@ def test_agent_console_server_ws_errors_echo_request_id(client: TestClient) -> N
         assert bad["payload"]["code"] == "bad_request"
         ws.send_text("{not json")
         assert ws.receive_json()["payload"]["code"] == "bad_request"
-        ws.send_json(
-            {"type": "console.input", "id": "r4", "payload": {"session_id": "gone", "text": "x"}}
-        )
-        missing = ws.receive_json()
-        assert missing["id"] == "r4"
-        assert missing["payload"]["code"] == "bad_request"  # 콘솔 메시지는 삭제됨(2R.20)
-        # 3R.16: graph:<id> 토픽은 없다(통짜 모듈과 함께 지웠다) — 모르는 토픽처럼 거절한다
-        ws.send_json({"type": "subscribe", "id": "g", "payload": {"topic": "graph:flow"}})
-        gone = ws.receive_json()
-        assert gone["id"] == "g"
-        assert gone["payload"]["details"]["reason"] == "unknown_topic"
 
 
 def test_agent_console_server_ws_message_size_limit(tmp_path: Path) -> None:

@@ -8,7 +8,7 @@
 
 제공:
 - ``definitions.checks``(여러 제공자): 리소스 종류 검사, 첨부 덮어쓰기 검사(``x-secret`` 평문 거부).
-  저장 전 검사(정의 경로·프리셋·버전 되돌리기)와 평문 점검(``/server-info``)이 이것을 쓴다.
+  저장 전 검사(정의 경로·버전 되돌리기)와 평문 점검(``/server-info``)이 이것을 쓴다.
 """
 
 from __future__ import annotations

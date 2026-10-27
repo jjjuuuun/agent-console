@@ -20,7 +20,6 @@ from pydantic import (
     ConfigDict,
     Field,
     ModelWrapValidatorHandler,
-    PrivateAttr,
     SecretStr,
     ValidationError,
     ValidationInfo,
@@ -31,13 +30,12 @@ from ruamel.yaml import YAML
 from agent_console_modkit import (
     Module,
     ModulesConfig,
-    RemovedSetting,
     SettingsCompat,
     compat_of,
     env_settings,
     load_installed_modules,
-    migrate_settings,
     removed_settings,
+    seed_settings,
 )
 from agent_console_modkit.host import is_loopback_host as is_loopback_host
 
@@ -139,51 +137,16 @@ class WebSettings(_Section):
     open: WebOpenSettings = Field(default_factory=WebOpenSettings)
 
 
-REMOVED_KEYS: dict[str, str] = {  # 호스트 자신이 지운 키(모듈 것은 모듈이 선언)
-    "console": (
-        "콘솔 섹션은 1R에서 삭제되었습니다(콘솔 보류, 채팅으로 대체). 설정 파일에서 지우세요"
-    ),
-    "default_manual_route_pattern": (
-        "default_manual_route_pattern은 1R에서 삭제되었습니다(라우터 보류). 설정 파일에서 지우세요"
-    ),
-}
-"""호스트가 지운 키(점으로 이은 경로) → 이유(그 키가 남아 있으면 이 문구로 거부한다).
-모듈 설정에서 지운 키는 모듈이 ``SettingsCompat.removed``로 알린다."""
-
-
-SETTINGS_MOVED_KEY = "settings.moved_key"
-"""경고 코드: 옛 위치의 설정 키를 읽어 새 위치로 옮겼다(모듈이 `MovedSetting`을 선언한 동안만).
-
-4R.18부터 기본 모듈은 옮기기 선언이 없다(옛 키는 `SETTINGS_REMOVED_KEY` 오류). 다음에 키를
-옮기는 모듈이 한 단계 동안 쓰는 장치로 남긴다."""
-
 SETTINGS_REMOVED_KEY = "settings.removed_key"
 """설정 오류 코드: 지운 옛 키가 남아 있다(`ConfigError.code`, 메시지에 새 위치 안내, 4R.18)."""
 
 SETTINGS_COMPAT_CONTEXT = "agent_console.settings_compat"
 """`ServerSettings.model_validate(..., context={이 키: {모듈 id: SettingsCompat}})`.
 
-호스트는 모듈 이름을 모른다. 옛 최상위 키를 어느 모듈 설정으로 옮길지는 설치된 모듈이
-`ModuleDescriptor.settings_compat`으로 알린다(`settings_compat()`이 모은다, design §3R.1.6).
-문맥이 없으면 옮기지 않는다(옛 키는 모르는 키로 거부된다)."""
-
-
-class MovedKey(BaseModel):
-    """옛 위치에서 옮긴 설정 키 하나(`settings.moved_key`)."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    old: str = Field(description="옛 키(점 경로).")
-    new: str = Field(description="새 키(점 경로).")
-    overridden: list[str] = Field(
-        default_factory=list, description="새 위치에도 있어 새 값이 이긴 하위 키."
-    )
-
-    def message(self) -> str:
-        text = f"설정 키 {self.old}는 {self.new}로 옮겼습니다(읽기 호환). 옮겨 쓰세요"
-        if self.overridden:
-            text += f". 새 위치 값이 이긴 키: {', '.join(self.overridden)}"
-        return text
+호스트는 모듈 이름을 모른다. 어떤 옛 키를 거부하고 어디로 안내할지, 다른 설정 값을 어느 모듈
+설정의 기본값으로 채울지는 설치된 모듈이 `ModuleDescriptor.settings_compat`으로 알린다
+(`settings_compat()`이 모은다, design §3R.1.6). 문맥이 없으면 둘 다 하지 않는다(옛 키는 모르는
+키로 거부된다)."""
 
 
 class RemovedKey(BaseModel):
@@ -208,11 +171,11 @@ class RemovedKeyError(ValueError):
 
 
 def removed_keys(data: Mapping[str, Any], compat: Mapping[str, SettingsCompat]) -> list[RemovedKey]:
-    """`data`(옮기기 전 설정)에 남아 있는 지운 키 — 호스트 것(`REMOVED_KEYS`) 다음 모듈 선언 순."""
-    host = [RemovedSetting(path, reason) for path, reason in REMOVED_KEYS.items()]
-    found = removed_settings(data, {"": SettingsCompat(removed=tuple(host))})
-    found += removed_settings(data, compat)
-    return [RemovedKey(old=r.path, new=r.new, message=r.message()) for r in found]
+    """`data`(설정 원문)에 남아 있는 지운 키(모듈 선언 `SettingsCompat.removed`, 모듈 id 순)."""
+    return [
+        RemovedKey(old=r.path, new=r.new, message=r.message())
+        for r in removed_settings(data, compat)
+    ]
 
 
 def settings_compat(modules: Iterable[Module] | None = None) -> dict[str, SettingsCompat]:
@@ -220,17 +183,6 @@ def settings_compat(modules: Iterable[Module] | None = None) -> dict[str, Settin
     if modules is None:
         modules, _ = load_installed_modules()
     return compat_of(modules)
-
-
-def migrate_moved_keys(
-    data: Mapping[str, Any], compat: Mapping[str, SettingsCompat]
-) -> tuple[dict[str, Any], list[MovedKey]]:
-    """옛 키를 `modules.options.<모듈 id>`로 옮긴 사본과 옮긴 키 목록(새 키가 이긴다).
-
-    무엇을 어디로 옮길지는 `compat`(모듈 선언)이 정한다(`agent_console_modkit.migrate_settings`).
-    """
-    out, moves = migrate_settings(data, compat)
-    return out, [MovedKey(old=m.old, new=m.new, overridden=list(m.overridden)) for m in moves]
 
 
 def _compat_from(info: ValidationInfo) -> Mapping[str, SettingsCompat]:
@@ -247,22 +199,16 @@ class ServerSettings(_Section):
 
     @model_validator(mode="wrap")
     @classmethod
-    def _reject_removed_and_migrate(
+    def _reject_removed_and_seed(
         cls, data: Any, handler: ModelWrapValidatorHandler[ServerSettings], info: ValidationInfo
     ) -> ServerSettings:
-        moved: list[MovedKey] = []
         if isinstance(data, dict):
             compat = _compat_from(info)
             removed = removed_keys(data, compat)
             if removed:
                 raise RemovedKeyError(removed)
-            data, moved = migrate_moved_keys(data, compat)
-        settings = handler(data)
-        if moved:
-            settings._moved_keys = moved
-        return settings
-
-    _moved_keys: list[MovedKey] = PrivateAttr(default_factory=list)
+            data = seed_settings(data, compat)
+        return handler(data)
 
     host: str = "127.0.0.1"
     port: int = Field(default=8765, ge=0, le=65535)
@@ -287,11 +233,6 @@ class ServerSettings(_Section):
             "이 값보다 우선한다."
         ),
     )
-
-    @property
-    def moved_keys(self) -> list[MovedKey]:
-        """읽는 중 옛 위치에서 옮긴 키(`settings.moved_key` 경고). 새로 읽을 때만 채워진다."""
-        return list(self._moved_keys)
 
     # ------------------------------------------------------------ 해석된 경로
 

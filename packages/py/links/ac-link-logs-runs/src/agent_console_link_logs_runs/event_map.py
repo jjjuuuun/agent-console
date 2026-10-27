@@ -46,7 +46,7 @@ __all__ = [
 ]
 
 DEFAULT_EVENT_MAP_RESOURCE = "data/run_event_map.yaml"
-"""패키지 안 기본 대응표(프리셋 데이터)."""
+"""패키지 안 기본 대응표(코드가 아닌 데이터)."""
 
 DEFAULT_FALLBACK_CATEGORY = "other"
 """대응표에 맞는 규칙이 없는 형식의 범주(design §4R.2 "대응표에 없는 형식 = other")."""

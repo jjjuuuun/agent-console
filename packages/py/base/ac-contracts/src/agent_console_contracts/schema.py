@@ -132,6 +132,13 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     runs.ReadinessCheck,
     runs.BackendProbeRequest,
     runs.BackendProbeResult,
+    # 실행 백엔드 로그인·로그아웃(0.8.0, ux-overhaul §15.9 F14)
+    runs.LoginMethodInfo,
+    runs.ReadinessAction,
+    runs.BackendLoginStartRequest,
+    runs.BackendLoginSession,
+    runs.BackendLoginInput,
+    runs.BackendLogoutResult,
     # 런타임
     runs.Run,
     runs.NodeRun,
@@ -208,9 +215,6 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     definitions.DefinitionVersion,
     definitions.VersionConflictDetails,
     definitions.EffectiveSettings,
-    definitions.PresetSummary,
-    definitions.ApplyPresetRequest,
-    definitions.ApplyPresetResult,
     definitions.DefinitionReference,
     modules.ServerInfo,
     definitions.DuplicateGraphRequest,

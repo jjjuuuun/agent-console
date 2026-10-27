@@ -189,6 +189,37 @@ describe("채팅 턴 대비 쌍 (5.2R.21, ux-overhaul §13-1)", () => {
   }
 });
 
+describe("대비 쌍 전체 (5.2R.44, ux-overhaul §13: 다크·라이트 모두, 5.2R.71·72·74·75 이후 값 기준)", () => {
+  for (const [theme, block] of [["다크", darkBlock], ["라이트", lightBlock]] as const) {
+    const plain = ["--ac-bg", "--ac-surface-1", "--ac-surface-2"];
+    it(`${theme}: 강조색·의미색 글자(accent·danger·warning·success·info)는 배경·카드 표면에서 4.5 이상`, () => {
+      for (const t of ["--ac-accent", "--ac-danger", "--ac-warning", "--ac-success", "--ac-info"]) {
+        for (const s of plain) expect(contrast(val(block, t), val(block, s)), `${t} on ${s}`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+    it(`${theme}: 색 배너·칩 위 글자 — 본문 글자와 같은 색 글자 모두 -bg(14% 혼합) 위에서 4.5 이상`, () => {
+      for (const k of ["danger", "warning", "success", "info"]) {
+        const bg = mix(val(block, `--ac-${k}`), val(block, "--ac-surface-1"), 14);
+        expect(contrast(val(block, "--ac-text"), bg), `text on ${k}-bg`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(val(block, `--ac-${k}`), bg), `${k} on ${k}-bg`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+    it(`${theme}: 기본 버튼(글자 --ac-text-on-accent on --ac-accent·hover)과 강한 강조 배경 위 본문 4.5 이상`, () => {
+      expect(contrast(val(block, "--ac-text-on-accent"), val(block, "--ac-accent"))).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(val(block, "--ac-text-on-accent"), val(block, "--ac-accent-hover"))).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(val(block, "--ac-text"), mix(val(block, "--ac-accent"), val(block, "--ac-surface-1"), 26))).toBeGreaterThanOrEqual(4.5);
+    });
+    it(`${theme}: 포커스 링(--ac-focus-ring = accent)과 연결선·출처 층 색은 표면에서 3 이상`, () => {
+      expect(css).toMatch(/--ac-focus-ring:\s*var\(--ac-accent\)/);
+      for (const s of plain) {
+        expect(contrast(val(block, "--ac-accent"), val(block, s)), `focus on ${s}`).toBeGreaterThanOrEqual(3);
+        expect(contrast(val(block, "--ac-edge"), val(block, s)), `edge on ${s}`).toBeGreaterThanOrEqual(3);
+        for (let i = 1; i <= 6; i++) expect(contrast(val(block, `--ac-layer-${i}`), val(block, s)), `layer-${i} on ${s}`).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+});
+
 describe("글자 위계 (5.2R.52, ux-overhaul §15.5; 숫자 기대값은 5.2R.71에서 재기준)", () => {
   const cases = [
     ["다크", darkBlock, { text: 14.6, muted: 9.1, subtle: 6.4, s3muted: 7.0, border: 1.63 }],
@@ -247,5 +278,16 @@ describe("외부 파일 의존 없음", () => {
   it("컴포넌트 CSS에 hex 색을 직접 쓰지 않는다(토큰 정의 블록 밖)", () => {
     const afterTokens = css.slice(css.indexOf("/* ===== 5."));
     expect(afterTokens).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+});
+
+describe("리듬·줄 높이(5.2R.74)", () => {
+  it("리듬 토큰과 12px 줄 높이 18", () => {
+    expect(css).toMatch(/--ac-page-pad:\s*24px/);
+    expect(css).toMatch(/--ac-section-gap:\s*24px/);
+    expect(css).toMatch(/--ac-field-gap:\s*16px/);
+    expect(css).toMatch(/--ac-card-pad:\s*16px/);
+    expect(css).toMatch(/--ac-readable-w:\s*720px/);
+    expect(css).toMatch(/--ac-lh-xs:\s*18px/);
   });
 });

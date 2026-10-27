@@ -64,11 +64,6 @@
       "types": "./dist/clients/usage.d.ts",
       "default": "./dist/clients/usage.js"
     },
-    "./presets": {
-      "development": "./src/clients/presets.ts",
-      "types": "./dist/clients/presets.d.ts",
-      "default": "./dist/clients/presets.js"
-    },
     "./resources": {
       "development": "./src/clients/resources.ts",
       "types": "./dist/clients/resources.d.ts",

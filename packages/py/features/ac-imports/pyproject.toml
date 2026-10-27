@@ -11,7 +11,6 @@ dependencies = [
     "agent-console-registry>=0.1,<0.2",
     "agent-console-claude-format>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
-    "ruamel-yaml>=0.18",
 ]
 
 [project.entry-points."agent_console.import_sources"]

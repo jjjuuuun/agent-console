@@ -3,7 +3,6 @@ export { LayerForm, SETTINGS_FIELDS, SETTINGS_WIDGETS } from "./LayerForm";
 export { Skeleton } from "./Skeleton";
 export { UserSettingsForm } from "./UserSettingsForm";
 export { NotificationsEditor, changedKeysOnly } from "./sections/NotificationsSection";
-export { PresetDialog } from "./sections/PresetsSection";
 export { useBackends, useDelegationStrategies, useEdgeTypes, useMergeStrategies, useResourceList, useResourceTypes } from "./settingsData";
 export { agentSchemaForBackend, buildAgentDefaultsUi, buildUserSettingsUi } from "./userSettingsUi";
 export { CHOICE_SELECT_WIDGET } from "./widgets/ChoiceSelectWidget";

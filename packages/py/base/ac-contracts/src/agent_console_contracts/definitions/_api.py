@@ -1,4 +1,4 @@
-"""정의(에이전트·팀 구성·설정·버전·프리셋) REST DTO(design §5.2, `/api/v1`)."""
+"""정의(에이전트·팀 구성·설정·버전) REST DTO(design §5.2, `/api/v1`)."""
 
 from typing import Any, Literal
 
@@ -11,7 +11,7 @@ from ._issues import Issue
 from ._models import AgentSettings, Graph
 
 type ConflictPolicy = Literal["skip", "overwrite", "rename"]
-"""같은 id가 이미 있을 때(프리셋 적용·가져오기). skip = 기존 정의를 건드리지 않음."""
+"""같은 id가 이미 있을 때(가져오기). skip = 기존 정의를 건드리지 않음."""
 
 type ItemAction = Literal["created", "overwritten", "renamed", "skipped", "failed"]
 
@@ -67,6 +67,12 @@ class GraphSummary(ContractModel):
         default=None,
         description="정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다.",
     )
+    attributes: JsonObject = Field(
+        default_factory=dict,
+        description=(
+            "팀 구성 원문의 자유 속성(`Graph.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음."
+        ),
+    )
 
 
 class DefinitionVersion(ContractModel):
@@ -115,42 +121,8 @@ class EffectiveSettings(ContractModel):
     )
 
 
-class PresetSummary(ContractModel):
-    """`GET /presets` 목록 항목. 프리셋은 데이터이며 지워도 시스템이 동작한다."""
-
-    id: NonEmptyStr
-    name: str
-    description: str = ""
-    labels: list[str] = Field(default_factory=list)
-    item_count: int = Field(default=0, ge=0)
-    items: list[JsonObject] = Field(
-        default_factory=list, description="항목 요약(종류·id 등). 형식은 프리셋 패키지가 정한다."
-    )
-    # 0.8.0(design §5.2R.3 #8). 값은 프리셋 매니페스트(데이터)에서 온다.
-    badges: list[str] = Field(
-        default_factory=list, description="카드에 보일 짧은 배지 글자(예: 체험, 추천)."
-    )
-    featured: int | None = Field(
-        default=None,
-        description="'바로 시작' 순서(작을수록 앞). null = 바로 시작에 없음, 목록 순서대로.",
-    )
-    start_graph: str | None = Field(
-        default=None, description="적용한 뒤 바로 열 팀 구성 id(프리셋 안 id). null = 열지 않음."
-    )
-
-
-class ApplyPresetRequest(ContractModel):
-    """`POST /presets/{id}/apply` 요청."""
-
-    on_conflict: ConflictPolicy = "skip"
-    project: Slug | None = Field(
-        default=None,
-        description="만든 정의에 찍을 프로젝트 id(0.8.0). 생략 = 공용(지금과 같음).",
-    )
-
-
 class AppliedItemInfo(ContractModel):
-    """정의 하나를 쓴 결과(프리셋 적용·가져오기 공통)."""
+    """정의 하나를 쓴 결과(가져오기)."""
 
     source: str = Field(description="출처 안 경로·키.")
     kind: NonEmptyStr = Field(description="정의 종류 이름.")
@@ -158,14 +130,6 @@ class AppliedItemInfo(ContractModel):
     target_id: str | None = Field(default=None, description="워크스페이스에 쓴 id.")
     action: ItemAction
     error: str | None = None
-
-
-class ApplyPresetResult(ContractModel):
-    """`POST /presets/{id}/apply` 응답."""
-
-    preset_id: NonEmptyStr
-    items: list[AppliedItemInfo] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
 
 
 class DefinitionReference(ContractModel):

@@ -11,7 +11,6 @@ const loaders = {
   usageSources: (rest: RestClient) => rest.listUsageSources(),
   usageReport: (rest: RestClient) => rest.getUsage(),
   serverInfo: (rest: RestClient) => rest.getServerInfo(),
-  presets: (rest: RestClient) => rest.listPresets(),
   resources: (rest: RestClient) => rest.listResources(),
 };
 
@@ -23,5 +22,4 @@ export const useResourceTypes = () => useApiQuery(queryKeys.descriptors("resourc
 export const useUsageSources = () => useApiQuery(queryKeys.descriptors("usage-sources"), loaders.usageSources);
 export const useUsageReport = () => useApiQuery(queryKeys.list("usage"), loaders.usageReport);
 export const useServerInfo = () => useApiQuery(queryKeys.descriptors("server-info"), loaders.serverInfo);
-export const usePresets = () => useApiQuery(queryKeys.list("presets"), loaders.presets);
 export const useResourceList = () => useApiQuery(queryKeys.list("resources"), loaders.resources);

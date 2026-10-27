@@ -1,7 +1,7 @@
 # agent-console-backend-fake
 
 모델 없이 **설정 데이터대로** 결정적 응답을 주는 실행 백엔드(X3). 테스트·E2E·데모·오프라인용.
-entry point `agent_console.backends:fake`로 등록된다. 설계: `specs/agent-console/design.md` §3.3, §6.2.
+entry point `agent_console.backends:fake`로 등록된다.
 
 ## 설치
 
@@ -212,7 +212,52 @@ default:
 
 `capabilities.status`·`probe` = true. `status(ctx)`는 늘 `state: always_ready`(`FAKE_READY_STATE`), 톤 ok,
 `probe(ctx, timeout_s)`는 지연 없이 `ok: true, latency_ms: 0, details: {models: n}`(네트워크·키 없음).
-`probe_cost_note`는 "비용이 들지 않습니다".
+`probe_cost_note`는 "비용이 들지 않습니다". 대본 로그인(아래)을 켜면 상태는 메모리 로그인 여부를 따른다.
+
+### 대본 로그인 (선택 능력, 5.2R.83, ux-overhaul §15.9)
+
+e2e·웹 개발에서 Claude 구독 로그인 대화상자의 흐름 전체를 **PTY·네트워크·파일 없이** 재현한다. 설치자 설정
+`backends.fake.login`(`FakeLoginScript`)을 주면 켜진다(기본 `null` = 능력 없음, 체험용 카드에 로그인 버튼이 생기지 않게).
+
+```yaml
+backends:
+  fake:
+    login: {}                     # 기본 대본: 코드 ok = 성공, 그 밖 = verify_failed
+    # login: {needs_code: false, callback_after_s: 1}   # 콜백 경로(코드 없이 1초 뒤 성공)
+    # login: {start_delay_s: 0.5, verify_delay_s: 0.5, start_logged_in: true, logout_ok: false}
+```
+
+- 켜지면 `capabilities.login/logout = true`, `login_methods = [{id: script, label: 구독으로 로그인, notice, writes}]`.
+- 흐름: `starting` →(`start_delay_s`) `waiting_user`(`open_url` 기본 `https://login.example.com/oauth/authorize?fake=1`,
+  `needs_code`, `screen` 줄) → 코드 입력 → `verifying` →(`verify_delay_s`) 코드가 `success_code`(기본 `ok`)면
+  `succeeded`, 아니면 `failed`(`reason` = `fail_reason`, 기본 `verify_failed`). `needs_code: false` +
+  `callback_after_s`면 코드 없이 성공. 취소(`DELETE`)·하트비트 만료·시간 초과(`timeout_s`)는 서비스가 처리한다 —
+  대본은 기다리기만 한다.
+- 상태 점검: 로그인 전 `state: login_required`(`FAKE_LOGIN_REQUIRED_STATE`, warn, 주 버튼 `login`), 로그인 뒤
+  `always_ready`(ok, 메뉴 `login`(다시 로그인)·`logout`). 상태는 인스턴스 메모리(`FakeBackend.login_state`)라 서버를
+  다시 띄우면 `start_logged_in`으로 돌아간다.
+- 로그아웃: 메모리 상태를 지운다. `logout_ok: false`면 `ok: false, reason: logout_failed`.
+- 받는 키: `accepts_keys`(비면 서비스 기본 enter·up·down·escape). 키는 기록만 한다.
+- 문구는 `texts`(`FakeLoginTexts`)로 바꾼다. 받은 코드는 `secrets_to_mask`로 알려 서비스가 응답에서 가린다.
+
+```python
+>>> import asyncio
+>>> from agent_console_backend_fake import FakeBackend
+>>> from agent_console_runtime import BackendLoginService
+>>> async def login(code: str) -> tuple[str, bool]:
+...     backend = FakeBackend(login={})
+...     service = BackendLoginService(lambda: {"fake": backend}, tick_s=0.01)
+...     sid = (await service.start("fake")).session_id
+...     await service.send_input(sid, text=code)
+...     while service.get(sid).phase not in {"succeeded", "failed"}:
+...         await asyncio.sleep(0.01)
+...     phase = service.get(sid).phase
+...     await service.aclose()
+...     return phase, backend.login_state.logged_in
+>>> asyncio.run(login("ok")), asyncio.run(login("nope"))
+(('succeeded', True), ('failed', False))
+
+```
 
 ### 설치자 설정 (`ConfigurableBackend` 훅)
 
@@ -227,9 +272,10 @@ default:
 | `delegate_tool` | `Agent` | 위임 도구 호출 이벤트의 도구 이름 |
 | `observe_collectors` | `{hooks: sdk-hooks, mcp: mcp-calls}` | 옛 관측 키 → 수집기 id(`observe.collectors`가 옛 키를 이긴다) |
 | `hook_probe_folder` | `hook-probe` | 실행 폴더 아래 hook probe 기록 흉내 폴더 이름 |
+| `login` | `null` | 대본 로그인(`FakeLoginScript`, 위 "대본 로그인"). `{}`면 기본 대본 |
 | `echo_hooks` | `false` | 실행 묶음 `hooks` 칸 항목마다 `hook.started`·`hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}`를 낸다(명령은 실행하지 않음, `observe` 규칙 없이도, 2R.12). `hooks`를 받지 않게 설정했으면 내지 않는다 |
 
-모르는 키·잘못된 값은 `ValueError`(위치와 사유만, 값은 넣지 않는다). 형식 모델: `FakeInstallOptions`, `FakeRateLimit`.
+모르는 키·잘못된 값은 `ValueError`(위치와 사유만, 값은 넣지 않는다). 형식 모델: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
 
 ## 테스트 도우미
 

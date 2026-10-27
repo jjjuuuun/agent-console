@@ -23,7 +23,7 @@ export const USAGE = `사용: pnpm app [옵션] [-- serve 추가 인자]
   --build         웹을 다시 빌드한다(apps/web/dist가 없으면 항상 빌드)
   -h, --help      이 도움말
 
-예: pnpm app -- --apply-preset solo-assistant`;
+예: pnpm app -- --disable-module mod-exports`;
 
 export class AppArgsError extends Error {}
 

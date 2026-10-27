@@ -29,7 +29,6 @@ from agent_console_backend_claude_sdk import (
     DEFAULT_SUBAGENT_ENV,
     RESOURCE_SLOTS,
     ClaudeSdkBackend,
-    SubagentResultListener,
 )
 from agent_console_backend_claude_sdk.testing import (
     FakeSdkClient,
@@ -42,6 +41,7 @@ from agent_console_runtime import (
     CancelToken,
     EnvSecretProvider,
     SecretResolver,
+    SubagentResultListener,
     SubagentSpec,
 )
 

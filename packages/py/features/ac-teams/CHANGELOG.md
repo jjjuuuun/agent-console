@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 5.2R.94(잔해 정리): **공개 API 삭제** — `TeamIssueCodes.DELEGATION_TOO_DEEP`(옛 별칭)을 뺐다.
+  `TeamIssueCodes.DELEGATION_DEPTH_EXCEEDED`를 쓴다(값 `delegation.depth_exceeded`는 같다).
 - 5.2R.43: 위임 방식 디스크립터 `shares_session` 반영. `session_grant`는 false 방식(예: `host`) 대상의 상호작용 종류·대기 한도를 위임자 세션에 더하지 않는다. 새 공개 함수 `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`, `session_owner(plan, node_id, strategies=None)`(자기 세션 대상에서 멈춤), `prepare_run(..., strategies=None)`(주면 엔진 대기 grant = 세션 grant). 백엔드 `validate_settings` 훅은 자기 세션 대상도 자기 grant로 검사한다. 테스트 키트 `s_far`는 `shares_session=False`.
 - 5.2R.34: `team_settings(graph, workspace, *, scope_layers=())`(팀 구성 수준 유효 값),
   `resolve_backends(scope_layers=)`, `Layer` 다시 내보내기.

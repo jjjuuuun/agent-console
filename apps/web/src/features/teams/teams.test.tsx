@@ -334,7 +334,7 @@ describe("묶음 미리보기·초안 미리보기(계약 v3)", () => {
 
   it("초안 미리보기 연동 부분이 꺼져 있으면 초안을 묻지 않고 저장 후 미리보기 안내로 폴백한다(모듈 전역 기억 없음)", async () => {
     const draftPreview = vi.fn(async () => preview);
-    const roles = ["conversations", "runs", "settings", "definitions:agent", "definitions:graph", "definitions:resource", "presets", "versions", "exports", "imports"];
+    const roles = ["conversations", "runs", "settings", "definitions:agent", "definitions:graph", "definitions:resource", "versions", "exports", "imports"];
     const { clients } = editorClients(
       { previewDraftBundle: draftPreview, previewDraftEffectiveSettings: vi.fn(async () => ({})), listModules: vi.fn(async () => [{ id: "base-mod", kind: "k", version: "1", status: "active", web_roles: roles }]) },
       [],

@@ -1,7 +1,7 @@
 # agent-console-store
 
 저장소 인터페이스와 구현. 정의는 YAML 파일(진실의 원천), 버전 이력·Run·이벤트 기록은 SQLite, 테스트용 인메모리.
-`agent-console-contracts`에만 의존한다(런타임·서버를 모른다). 설계: `specs/agent-console/design.md` §2.1, §2.3(저장 스키마), §6.2.
+`agent-console-contracts`에만 의존한다(런타임·서버를 모른다).
 
 ## 설치
 
@@ -86,8 +86,8 @@ True
 
 테스트·임시 실행은 `InMemoryDefinitionStore()`와 `InMemoryStorage()`(같은 인터페이스·같은 규칙).
 
-라우팅 결정 저장소(`RoutingRepository`, `storage.routing`)는 2R.20에서 라우터와 함께 삭제했다. SQLite
-`routing_decisions` 테이블은 legacy로 남는다(마이그레이션 동결, 쓰는 코드 없음). Run 삭제 때 남은 행은 함께 지운다.
+SQLite `routing_decisions` 표는 기존 DB 호환용이다. 쓰는 코드는 없고 마이그레이션이 동결이라 정의만 남겼으며,
+Run을 지울 때 남은 행만 함께 지운다.
 
 ## 새 정의 종류 추가
 
@@ -96,8 +96,8 @@ True
 ```python
 from agent_console_store import DEFAULT_KINDS, DefinitionKind, FileDefinitionStore
 
-preset = DefinitionKind("preset", directory="presets", model=PresetModel)
-defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, preset])  # 또는 defs.register_kind(preset)
+note = DefinitionKind("note", directory="notes", model=NoteModel)
+defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.register_kind(note)
 ```
 
 버전 해시는 주입한다: `DefinitionKind(..., hash_fn=...)` 또는 `FileDefinitionStore(..., hash_fn=...)`.
@@ -114,11 +114,12 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, preset])  # 또는 defs
   (모듈 패키지의 `migrations/versions`, 버전 테이블 `alembic_version_<이름>`)는 서로 독립이다. `SqliteDatabase`
   (`open(path)`·`engine`·`upgrade(branches)`·`downgrade_branch`·`revision(name)`)가 legacy를 먼저 올린 뒤
   넘겨받은(켜진 모듈의) 계보만 올린다. 계보는 `name`·`versions` 속성만 있으면 된다(`MigrationBranchLike`).
-  `usage_observations`·`conversations`·`chat_queue`처럼 legacy가 만들었지만 모듈이 소유한 테이블은 `schema.MODULE_OWNED_TABLES`이다.
+  `usage_observations`·`conversations`·`chat_queue`·`runs` 계열처럼 legacy가 만들었지만 모듈 계보가 소유하는 표는
+  `schema.MODULE_OWNED_TABLES`이다(마이그레이션 비교에서 제외).
   **legacy는 다운그레이드하지 않는다**(동결). 되돌릴 때는 모듈 계보만 되돌린다(`downgrade_branch`).
   이유: legacy를 0002 이하로 내리면 모듈 소유 테이블(`usage_observations` 등)은 사라지지만 모듈 버전 테이블
   (`alembic_version_usage` 등)은 남아, 다음 시작 때 모듈 계보가 "이미 올라감"으로 보고 테이블을 다시 만들지 않는다.
-- 실행 기록 계보(design §5R.10): `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
+- 실행 기록 계보(design §5R.10): `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 표 정의와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다. 계보 없이 이 패키지만 쓰는 경로와 기존 DB의 행이 같은 정의를 쓰기 때문이다. 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
 - 마이그레이션: `upgrade(engine)`, `downgrade(engine, "base")`, `current_revision(engine)`. 기존 마이그레이션 파일은 고치지 않고 새로 추가한다.
 
 ## 개발·재사용(단독)
@@ -138,11 +139,11 @@ uv run ruff check . && uv run mypy && uv run pytest
 uv run pytest packages/py/features/ac-store/tests
 ```
 
-## v2: 생략 = 상속, 리소스 본문, 대화·상호작용·사용량 (1R.4)
+## 생략 = 상속, 리소스 본문, 상호작용
 
 - **생략 = 상속**: 정의는 사용자가 쓴 그대로 저장한다. 모델 인스턴스는 `exclude_unset`으로, dict는 원본 그대로
-  저장하고 모델은 검증에만 쓴다. 생략, `null`, `[]`가 저장 후에도 구분된다. Phase 1이 null로 채운 파일은 자동으로
-  고치지 않는다(초기화 대상).
+  저장하고 모델은 검증에만 쓴다. 생략, `null`, `[]`가 저장 후에도 구분된다. null로 채워진 옛 파일은 자동으로
+  고치지 않는다.
 - **리소스 본문**: `RESOURCE_KIND`(기본 포함)는 `resources/<id>.yaml` 옆 `resources/<id>/<content.file>`에 본문을 둔다.
 
 ```python
@@ -163,11 +164,11 @@ True
 ```
 
   `content.file`이 정의 폴더 밖(`..`, 절대 경로, 밖을 가리키는 링크)이면 `InvalidContentPath`.
-- **기록 저장소**: `db.interactions`(인메모리 `InMemoryStorage`도 같은 이름). 대화·채팅 대기열 저장소는 3R.15에서 `agent_console_mod_chat.storage`로 옮겼다.
+- **기록 저장소**: `db.interactions`(인메모리 `InMemoryStorage`도 같은 이름). 대화·채팅 대기열 저장소는 `agent_console_mod_chat.storage`가 소유한다.
   `db.interactions.close(id, status="answered", ...)`는 동시에 불러도 하나만 성공하고 나머지는 `InteractionClosed`.
   `db.events.list(run_id, actor=, type_prefix=)`, `latest_by_type`, `list_by_actor`, `db.runs.list(conversation_id=, agent=)`.
 
-## v3: 본문 스냅샷, 여러 파일 본문, 이어 가기 (2R.3, 마이그레이션 0003)
+## 본문 스냅샷, 여러 파일 본문, 이어 가기 (마이그레이션 0003)
 
 > 경계: 저장소는 리소스 *유형*(`ContentSpec.multi_file`)을 모른다. 유형이 여러 파일을 허용하는지는 호출하는 쪽(서버)이 파일을 쓰기 전에 검사한다. `prune_orphan_bodies`는 정의 YAML이 없는 id 형식 폴더를 통째로 지우므로, 앱에서 부를 때는 사용자 확인을 거친다.
 

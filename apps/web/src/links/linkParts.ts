@@ -16,7 +16,6 @@ export const DEFAULT_LINK_PARTS: readonly LinkPartDef[] = [
   { id: P.chatInteractionCard, requires: ["conversations:runs"], onMissing: "hide" },
   { id: P.chatSend, requires: ["conversations:runs"], onMissing: "disable", noteKey: "sendUnavailable" },
   { id: P.chatResumeTurn, requires: ["conversations:runs"], onMissing: "hide" },
-  { id: P.chatStartPresets, requires: ["presets"], onMissing: "hide" },
   // 실행 (screen-runs-usage.md 1.3, 2.4)
   { id: P.runsFlowTab, requires: ["runs:trace"], onMissing: "hide" },
   { id: P.runsHandoffView, requires: ["runs:trace"], onMissing: "hide" },

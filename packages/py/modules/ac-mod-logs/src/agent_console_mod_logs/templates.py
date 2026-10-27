@@ -1,6 +1,6 @@
 """대시보드 템플릿 읽기(``GET /logs/dashboard-templates``, design §4R.2·§4R.9).
 
-템플릿은 프리셋 데이터다. 기본은 패키지 데이터 ``data/dashboard_templates``이고 설치자 옵션
+템플릿은 기본 데이터다. 기본은 패키지 데이터 ``data/dashboard_templates``이고 설치자 옵션
 ``dashboard_templates_dir``로 다른 폴더를 쓴다. 파일 하나(``*.yaml``·``*.yml``·``*.json``)가
 ``LogDashboard`` 하나다. 폴더가 없거나 비어도 동작한다(빈 목록). 형식이 틀린 파일은 건너뛰고
 경고 로그를 남긴다(다른 템플릿은 그대로).

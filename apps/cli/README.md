@@ -1,10 +1,7 @@
 # agent-console-cli
 
-조립 앱: `agent-console` 명령. 서버 실행(`serve`)과 Claude Code statusLine 사용량 브리지(`statusline`)만 노출한다.
-로직은 패키지에 있다 — 서버는 `agent-console-server`, 사용량 상태 줄은 `agent-console-usage`. 이 앱은 Typer 명령만 조립한다.
-설계: `specs/agent-console/design.md` §R5.2·§R7(1R), §6.3(Phase 1).
-
-터미널 콘솔(`console`)은 2R.20에서 삭제했다(design §R5.2, 채팅이 대신한다). 되돌리려면 태그 `phase-2r`를 본다.
+실행 명령: `agent-console`. 서버 실행(`serve`)과 Claude Code statusLine 사용량 브리지(`statusline`) 두 명령만 있다.
+로직은 패키지에 있다 — 서버는 `agent-console-server`, 사용량 상태 줄은 `agent-console-usage`. 이 패키지는 명령 이름만 잇는다.
 
 ## 설치
 
@@ -16,34 +13,26 @@ uv pip install ./apps/cli     # 단독(서버·사용량 패키지도 함께 설
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `typer` | 명령·옵션·도움말 | 확정 스택(CLAUDE.md). 타입 힌트로 옵션 선언, 환경변수 기본값 지원 | click 단독, argparse |
-| `agent-console-server` | `serve`, 서버 설정에서 workspace 경로 읽기 | 한 번 설치로 `serve`까지(`uv tool install`, R10.1). `_server` 모듈에서만 지연 import(import-linter 예외 1개) | 하위 프로세스로 `python -m agent_console_server` 실행 |
+| `agent-console-server` | `serve`(서버 `main`에 위임), 서버 설정에서 workspace 경로 읽기 | 한 번 설치로 `serve`까지(`uv tool install`, R10.1). `_server` 모듈에서만 지연 import(import-linter 예외 1개) | 하위 프로세스로 `python -m agent_console_server` 실행 |
 | `agent-console-usage` | `statusline` 파싱·파일 합치기·원자적 쓰기·상태 줄 | 서버 사용량 출처와 같은 파일 형식을 한 곳에서 | — |
-
-1R.15에서 `agent-console-client`·`agent-console-contracts`·`rich`·`prompt-toolkit`·`platformdirs` 의존을 뺐다(콘솔 보류, 2R.20에서 삭제).
 
 ## 명령
 
 ```bash
-uv run agent-console serve [--config PATH] [--host H] [--port N] [--workspace DIR]
-                           [--apply-preset ID ...] [--allow-origin ORIGIN ...] [--open | --no-open]
-                           [--enable-module ID ...] [--disable-module ID ...]
+uv run agent-console serve [서버 옵션…]          # 옵션 목록: uv run agent-console serve --help
 uv run agent-console statusline (--output PATH | --config PATH) [--label WINDOW=TEXT ...]
                                 [--template TEXT] [--separator TEXT] [--empty TEXT]
 ```
 
 ### `serve`
-`agent_console_server.load_settings(config, overrides=…)` → `serve(settings)`만 부른다. 옵션 의미는
-`python -m agent_console_server`와 같다(우선순위: 명령행 > `AGENT_CONSOLE_*` 환경변수 > 설정 파일 > 기본값).
-토큰은 출력하지 않는다 — 클라이언트는 `GET /api/v1/bootstrap`으로 받는다. 설정 오류(1R에서 삭제된 키 포함)는 종료 코드 2.
+`serve` 뒤의 인자를 서버 `agent_console_server.main(argv, prog="agent-console serve")`에 그대로 넘긴다. 옵션 정의는
+서버 한 곳에 있어서 `python -m agent_console_server`와 같고(`apps/server/README.md`), 설치된 모듈이
+`SettingsCompat.flags`로 선언한 옵션도 자동으로 나온다.
 
-- `--allow-origin ORIGIN`(여러 번): 설정 파일·환경변수의 `security.allowed_origins` **뒤에 덧붙인다**(목록을 바꾸지 않는다,
-  중복·끝의 `/` 무시). 루트 `pnpm app`이 웹 미리보기 출처를 넣을 때 쓴다. 환경변수 `AGENT_CONSOLE_ALLOWED_ORIGINS`는
-  예전처럼 목록 전체를 바꾼다.
-- `--open`/`--no-open`: 서버 설정 `web.open.enabled`를 덮어쓴다(없으면 설정값, 기본 꺼짐). 준비되면(`GET /api/v1/health`) 웹 화면을 연다.
-  열 주소·명령은 설정 `web.open.url`·`command`, 주소가 없으면 `web.serve_static`이 켜졌을 때 서버 주소. 서버 하나로 웹까지
-  띄우는 방법은 `apps/server/README.md` "단일 실행".
-- `--enable-module ID`·`--disable-module ID`(여러 번): 서버 모듈을 켜고 끈다. 설정 `modules`(`enabled`·`disabled`)보다
-  우선하고, 같은 id가 둘 다에 있으면 끄기가 이긴다. 모듈 id·상태는 `GET /api/v1/modules`(예: `mod-chat`·`link-chat-runs`).
+- 공통 옵션: `--config/-c`·`--host`·`--port`·`--workspace`·`--allow-origin ORIGIN`(여러 번, 설정 목록 뒤에 덧붙임)·
+  `--open/--no-open`·`--enable-module ID`·`--disable-module ID`(여러 번, 설정 `modules`보다 우선, 같은 id면 끄기가 이김).
+- 우선순위: 명령행 > `AGENT_CONSOLE_*` 환경변수 > 설정 파일 > 기본값. 토큰은 출력하지 않는다 —
+  클라이언트는 `GET /api/v1/bootstrap`으로 받는다. 설정 오류는 종료 코드 2.
 
 ### `statusline`
 Claude Code가 statusLine 명령에 넘기는 stdin JSON을 받아 사용량 상태 줄 한 줄을 출력하고, `rate_limits`만
@@ -71,15 +60,14 @@ Claude Code가 statusLine 명령에 넘기는 stdin JSON을 받아 사용량 상
 | --- | --- |
 | `main(argv=None) -> int`, `app`(Typer) | 진입점 |
 
-명령 내부 함수(`_server.run_server`·`merge_origins`·`server_state_dir`, `_statusline.run_statusline`)는 앱 전용이다.
+명령 내부 함수(`_server.run_serve`·`server_state_dir`, `_statusline.run_statusline`)는 이 명령 전용이다.
 재사용할 로직은 `agent-console-usage`(`agent_console_usage.statusline`)와 `agent-console-server`에 있다.
 
 ## 시작 시간
 
 `statusline`은 Claude Code가 상태 줄을 그릴 때마다 실행된다. 그래서 모듈 상단에서 서버·클라이언트·계약(pydantic)을
 import하지 않고, `agent_console_usage.statusline`(표준 라이브러리만 사용)만 읽는다. `agent-console-usage`의 `__init__`은
-이름을 처음 쓸 때 import한다(PEP 562). 단위 테스트가 `import agent_console_cli` 뒤 `sys.modules`를 검사한다.
-측정(WSL `/mnt/c`, 1R.15): 콘솔 엔트리포인트 직접 실행 약 1.5초 → 약 0.45초, `uv run` 경유 약 1.9초 → 약 0.8초.
+이름을 처음 쓸 때 import한다(PEP 562). 단위 테스트가 `import agent_console_cli` 뒤와 `statusline` 실행 뒤의 `sys.modules`를 검사한다.
 상태 줄에는 `uv run` 대신 설치된 `agent-console` 실행 파일 경로를 쓰는 편이 빠르다.
 
 ## 테스트
@@ -88,6 +76,6 @@ import하지 않고, `agent_console_usage.statusline`(표준 라이브러리만 
 uv run pytest apps/cli/tests
 ```
 
-- 단위: 노출 명령(`serve`·`statusline`만), `serve` 옵션 전달·설정 오류·1R 삭제 키 거부, 허용 출처 덧붙이기,
-  시작 시 무거운 패키지를 import하지 않음.
+- 단위: 노출 명령(`serve`·`statusline`만), `serve` 옵션이 서버 `main`으로 가서 설정에 반영됨(허용 출처·모듈 켜고 끄기·
+  모듈 선언 옵션 포함), 설정 오류, `statusline`이 서버를 import하지 않음.
 - statusline: 파일 쓰기·상태 줄·잘못된 입력·옵션 오류·서버 설정 workspace 사용, `~/.claude`를 건드리지 않음.

@@ -13,7 +13,7 @@
 | `portability.mjs` | 패키지를 임시 폴더로 복사 → 사내 의존을 `dist/npm` tarball(`file:` + `overrides`)로 바꿈 → `npm install` → build·typecheck·test → 결과 표 |
 | `new-package.mjs` | 템플릿으로 새 패키지 생성. 루트 파일은 고치지 않는다 |
 | `lib/*.mjs` | 순수 함수: `lint-rules`·`readme-sync`·`plans`·`scaffold`·`template`·`workspace` (`fsutil`만 파일을 읽는다) |
-| `templates/ts/` | `common/` + `lib/` 또는 `config/` 층 + 선택 `drafts/<이름>/`(tsconfig, eslint-config). 파일은 `.tmpl`, 자리표시자는 `{{키}}`, `package.patch.json`은 package.json에 합쳐진다 |
+| `templates/ts/` | `common/` + `lib/` 또는 `config/` 층. 파일은 `.tmpl`, 자리표시자는 `{{키}}`, `package.patch.json`은 package.json에 합쳐진다 |
 
 사용(저장소 루트에서; 루트 `package.json`에 `pnpm pkg-lint`·`pnpm pack:all`·`pnpm portability`·`pnpm new-package`로 등록돼 있다. `pkg-lint`는 `pnpm check`에 포함, `pack:all`은 `./packages/**`만 빌드·pack하고 루트·앱은 제외한다):
 
@@ -21,7 +21,7 @@
 node scripts/pkgkit/pkg-lint.mjs [--package NAME] [--json]
 node scripts/pkgkit/pack-all.mjs [--dry-run]
 node scripts/pkgkit/portability.mjs [--package NAME] [--keep]     # 먼저 pack-all
-node scripts/pkgkit/new-package.mjs --kind lib|config [--dom] [--draft tsconfig|eslint-config] [--scope @scope] NAME
+node scripts/pkgkit/new-package.mjs --kind lib|config [--dom] [--scope @scope] NAME
 ```
 
 `portability`는 복사본에서 단계를 돌릴 때 `AGENT_CONSOLE_SKIP_PERF=1`을 설정한다(`lib/plans.mjs`의 `PORTABILITY_ENV`). 시간 단언이 있는 테스트는 이 값이면 시간 비교만 건너뛰고 정확성 단언은 유지한다. 직접 돌릴 때도 같은 변수를 쓸 수 있다.
@@ -61,7 +61,7 @@ README 규칙: README의 ` ```ts readme ` 코드 블록은 `test/readme.test.ts`
 | `importlinter_sync.py` | `importlinter.rules.toml`(그룹 `@all`·`@packages`·`@app`·`@<kind>`, 빼기 `!이름`·`!@그룹`, 사용자 `[groups]`) → 루트 `pyproject.toml`의 `[tool.importlinter]` 영역(표식 줄 사이). `--check`는 의미 차이만 보고, `--init`은 지금 계약을 규칙 파일로 옮긴다 |
 | `wheels.py` | `uv build --all-packages --wheel -o dist/wheelhouse`(얇은 래퍼, `--clean`·`--package`·`--dry-run`) |
 | `mypy_conftests.py` | `poe typecheck` 둘째 단계. 패키지 `tests/`에는 `__init__.py`가 없어 모든 `conftest.py`가 같은 모듈 이름이 되므로 루트 `[tool.mypy] exclude`가 집계 실행에서 빼고, 이 스크립트가 `[tool.mypy] files` 아래 `conftest.py`를 파일마다 루트 설정으로 검사한다(4R.22). 패키지 단독 mypy에는 영향 없음 |
-| `portability.py` | 패키지 폴더를 `$TMPDIR`로 복사 → `uv venv` → `uv sync`(복사본에만 휠 모음 flat 인덱스를 덧붙여 사내 패키지는 휠 모음에서) → `ruff check`·`ruff format --check`·`mypy`·`pytest`(README doctest 포함) → `module`·`link` 종류면 `python -m <import> --check` → 결과 표. `UV_PROJECT_ENVIRONMENT`·`VIRTUAL_ENV`·`PYTHONPATH`는 넘기지 않는다. `--wheels`는 휠 모음을 다시 만들고 기본으로 세션 임시 `UV_CACHE_DIR`을 쓴다(같은 버전으로 다시 만든 사내 휠을 uv 캐시가 옛 내용으로 재사용하지 않게, `--reuse-uv-cache`로 끔, `--uv-cache-dir`로 위치 지정). `--wheels` 없이 돌릴 때 휠이 패키지 소스(`pyproject.toml`·`README.md`·`src/`)보다 오래되었으면 경고한다(4R.18) |
+| `portability.py` | 패키지 폴더를 `$TMPDIR`로 복사 → `uv venv` → `uv sync`(복사본에만 휠 모음 flat 인덱스를 덧붙여 사내 패키지는 휠 모음에서) → `ruff check`·`ruff format --check`·`mypy`·`pytest`(README doctest 포함) → `module`·`link` 종류면 `python -m <import> --check` → 결과 표. `UV_PROJECT_ENVIRONMENT`·`VIRTUAL_ENV`·`PYTHONPATH`·`MYPY_CACHE_DIR`는 넘기지 않는다(mypy 캐시는 임시 복사본 안에 생기고 세션과 함께 지워진다, 5.2R.94b). `--wheels`는 휠 모음을 다시 만들고 기본으로 세션 임시 `UV_CACHE_DIR`을 쓴다(같은 버전으로 다시 만든 사내 휠을 uv 캐시가 옛 내용으로 재사용하지 않게, `--reuse-uv-cache`로 끔, `--uv-cache-dir`로 위치 지정). `--wheels` 없이 돌릴 때 휠이 패키지 소스(`pyproject.toml`·`README.md`·`src/`)보다 오래되었으면 경고한다(4R.18) |
 | `new_package.py` | `--kind {base,feature,kit,module,link} NAME`으로 `packages/py/<종류 폴더>/NAME` 생성, workspace `members`에 없으면 추가, 루트 `[tool.uv.sources]`에 `<배포 이름> = { workspace = true }` 추가, 규칙 파일이 있으면 import-linter 갱신 |
 | `pkgkit_common.py`·`pkgkit_template.py` | 순수 함수: 설정·패키지 찾기·이름 규칙·TOML 쓰기 / 템플릿 렌더링. `with_range`는 범위 없는 사내 의존에 설정 범위를 붙이고 extra(예: `agent-console-modkit[host]`)는 유지한다 |
 | `templates/python/` | `common.toml`(공통 필수 파일·dev 도구) + `common/**.tmpl` + `kinds/<kind>/kind.toml`(폴더·의존·필수 파일·단독 실행·entry point) + `kinds/<kind>/files/**.tmpl` |

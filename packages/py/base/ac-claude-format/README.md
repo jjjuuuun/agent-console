@@ -5,7 +5,7 @@ Claude Code `.claude` 산출물(에이전트 파일, skill 폴더, 규칙 파일
 그 반대로 만든다. 사내 의존이 없어(ruamel.yaml만) 다른 프로젝트에 그대로 가져갈 수 있다.
 
 쓰는 곳(Agent Console): `ac-imports`(가져오기 출처 `claude`), `ac-exports`(기본 내보내기 형식 `claude-dir`),
-`ac-resources-core`(`rule` 종류의 규칙 파일 렌더링). 설계: `specs/agent-console/design.md` §2R.7.
+`ac-resources-core`(`rule` 종류의 규칙 파일 렌더링).
 
 ## 설치
 

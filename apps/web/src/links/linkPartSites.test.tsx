@@ -11,7 +11,7 @@ afterEach(cleanup);
 
 // 임의의 가짜 모듈·역할: 화면이 켜지는 데 필요한 역할(기본 라우트 데이터)은 모두 active로 두고,
 // 연동 부분이 요구하는 역할(테스트가 정한 임의 문자열)만 켜거나 끈다.
-const ALL_ROLES = ["conversations", "runs", "usage", "settings", "definitions:agent", "definitions:graph", "definitions:resource", "presets", "versions", "exports", "imports", "conversations:runs", "usage:tokens", "runs:trace", "runs:team-rules", "definitions:teams"];
+const ALL_ROLES = ["conversations", "runs", "usage", "settings", "definitions:agent", "definitions:graph", "definitions:resource", "versions", "exports", "imports", "conversations:runs", "usage:tokens", "runs:trace", "runs:team-rules", "definitions:teams"];
 const base = (status = "active"): ModuleInfo => ({ id: "base-mod", kind: "k-any", version: "1", status, web_roles: ALL_ROLES });
 const link = (status: string): ModuleInfo => ({ id: "link-mod", kind: "k-link", version: "1", status, web_roles: ["role-link"] });
 const only = (...ids: string[]): LinkPartDef[] => DEFAULT_LINK_PARTS.filter((p) => ids.includes(p.id)).map((p) => ({ ...p, requires: ["role-link"] }));

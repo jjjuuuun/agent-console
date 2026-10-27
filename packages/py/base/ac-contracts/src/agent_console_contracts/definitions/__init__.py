@@ -1,14 +1,12 @@
 """계약 하위 모듈 `definitions`: 사용자 정의 데이터와 그 REST DTO.
 
-에이전트·팀 구성(그래프·노드·엣지·화면 배치)·워크스페이스 설정 층·검증 이슈·버전·프리셋.
+에이전트·팀 구성(그래프·노드·엣지·화면 배치)·워크스페이스 설정 층·검증 이슈·버전.
 의존: `common`, `resources`(설정 층의 리소스 첨부), `logs`(워크스페이스 로그 설정).
 설계: design §2.2, §R1, §R2, §3R.3.
 """
 
 from ._api import (
     AppliedItemInfo,
-    ApplyPresetRequest,
-    ApplyPresetResult,
     BundlePreview,
     ConflictPolicy,
     ContentChange,
@@ -25,7 +23,6 @@ from ._api import (
     GraphValidationSummary,
     ItemAction,
     MergeStrategyInfo,
-    PresetSummary,
     RestoreVersionRequest,
     SettingsLayerInfo,
     VersionConflictDetails,
@@ -91,8 +88,6 @@ __all__ = [
     "AgentDefaults",
     "AgentSettings",
     "AppliedItemInfo",
-    "ApplyPresetRequest",
-    "ApplyPresetResult",
     "BundlePreview",
     "BusyPolicy",
     "ChatSettings",
@@ -135,7 +130,6 @@ __all__ = [
     "NotificationSettings",
     "ObserveSettings",
     "OnTimeout",
-    "PresetSummary",
     "ProjectPreferences",
     "QueueAfterRestart",
     "ReplyDisplay",

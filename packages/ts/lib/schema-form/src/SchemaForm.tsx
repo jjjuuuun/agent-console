@@ -315,6 +315,11 @@ export function SchemaForm(props: SchemaFormProps) {
       if (!el) return;
       if (doc.activeElement === el) {
         held += 1;
+        // 다른 곳이 먼저 포커스를 옮겨 둔 경우에도 도착은 한 번 알린다(강조 표시 등)
+        if (!reached) {
+          reached = true;
+          onFocusReachedRef.current?.(el);
+        }
         return;
       }
       const active = doc.activeElement;

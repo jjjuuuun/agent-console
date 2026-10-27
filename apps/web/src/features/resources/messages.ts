@@ -1,5 +1,7 @@
+import { arrangeMessages } from "../library";
 /** 리소스 화면 문구. 리소스 종류 이름·아이콘은 서버 디스크립터가 준다. */
 export const resourceMessages = {
+  arrange: arrangeMessages,
   title: "리소스",
   list: {
     label: "리소스 목록",

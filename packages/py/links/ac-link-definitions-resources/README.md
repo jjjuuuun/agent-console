@@ -5,7 +5,7 @@ Agent Console 정의 ↔ 리소스 연동 모듈(design §3R.1.4 L8, R13.1). 저
 - 리소스 정의: 그 종류의 검사(`ac-resources.validate_resource`, 이슈 path는 문서 기준 `/config/...`).
 - 에이전트·팀 구성·공통 설정: 리소스 첨부 `config_override`를 덮은 결과의 종류 검사(`x-secret` 평문 거부,
   리소스가 없으면 비밀 의심 규칙). 팀 구성의 리소스 연결은 디스크립터(호스트 `registries`)로 해석한다.
-- 이 검사는 정의 저장 경로·프리셋 적용·버전 되돌리기의 저장 전 검사와 `/server-info` 평문 점검(정의 모듈이
+- 이 검사는 정의 저장 경로·버전 되돌리기의 저장 전 검사와 `/server-info` 평문 점검(정의 모듈이
   검사의 평문 이슈를 모은다)에 쓰인다.
 - 필수 포트: `definitions.lookup`·`resources.types`. 선택: `resources.lookup`(없으면 `definitions.lookup`으로 찾음),
   `secrets.rules`. 경로 없음.

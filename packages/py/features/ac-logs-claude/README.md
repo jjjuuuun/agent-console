@@ -1,7 +1,6 @@
 # agent-console-logs-claude
 
 Claude Code 세션 기록(서브에이전트 포함)을 `agent-console-logs`의 정규화 이벤트로 읽는 플러그인.
-설계: `specs/agent-console/design.md` §4R.1·§4R.7·§4R.13.
 
 - X5 출처 `claude-code-jsonl`(`ClaudeCodeJsonlSource`): Claude Code `projects` 폴더에서 세션 파일,
   `<세션>/subagents/**/agent-*.jsonl`, 그 옆 메타 파일(`.meta.json`)을 찾아 증분으로 읽는다.

@@ -104,6 +104,25 @@ pip install agent-console-mod-runs
 (`secrets.rules` 포트 규칙, 없으면 ac-secret-rules 기본 규칙)·해석한 `secret://` 값·의심 값 패턴을 가린 뒤 낸다
 (`readiness.build_check_redactor`). 서버 로그에는 백엔드 id·ok·reason·소요 시간만 남는다.
 
+## 백엔드 계정 로그인 (ux-overhaul §15.9, F14)
+
+앱 화면에서 실행 백엔드 계정(예: Claude 구독) 로그인을 시작·완료한다. 모듈은 백엔드 id·로그인 방식을 모르고
+ac-runtime `BackendLoginService`(선택 능력 `login`·`logout`)에 레지스트리를 넘길 뿐이다. 설정
+`backend_login.enabled`(기본 켬)를 끄면 아래 경로가 없다.
+
+| 경로 | 응답 | 비고 |
+| --- | --- | --- |
+| `POST /backends/{id}/login` | 201 `BackendLoginSession` | 본문 `BackendLoginStartRequest{method_id?, timeout_s?}`(생략 가능). 409 `backend.login_unsupported`·`backend.login_busy`(`details.session_id`)·백엔드 거절 코드(예: `backend.subscription_auth_disabled`). 시작 중 오류는 `phase: failed` 세션 |
+| `GET /backends/login/current` | `BackendLoginSession` 또는 204 | 진행 중인 세션(서버 전체 하나) |
+| `GET /backends/login/{sid}` | `BackendLoginSession` | 폴링 = 하트비트. 끝난 세션은 `retain_s` 뒤 404 `backend.login_session_not_found` |
+| `POST /backends/login/{sid}/input` | 202 | 본문 `BackendLoginInput{text}` 또는 `{key}`. 4KB 초과 413, 받을 수 없으면 422(`details.reason`). 값은 응답·로그·오류에 없다 |
+| `DELETE /backends/login/{sid}` | `BackendLoginSession` | 취소(하위 과정 종료), 끝난 세션은 그대로 |
+| `POST /backends/{id}/logout` | `BackendLogoutResult` | 409 `backend.logout_unsupported`, 같은 백엔드 로그인 중이면 409 `backend.login_busy` |
+
+모두 `Cache-Control: no-store`, 로컬 토큰·Origin·Host 검사 뒤에 있다. 실행 기록·이벤트·WS에 남지 않는다. 응답
+글자는 준비 상태와 같은 가림에 더해 세션에 들어온 입력값(과 그 5자 이상 조각)을 가린다. 서버 로그는 세션 id·
+백엔드 id·방법 id·phase·reason·소요 시간만. 종료 훅이 진행 중인 세션을 취소한다.
+
 ## 설정(`modules.options.mod-runs`)
 
 | 키 | 기본 | 설명 |
@@ -117,6 +136,11 @@ pip install agent-console-mod-runs
 | `run_files_dir` | `runs` | 실행 묶음 파일 폴더(상태 폴더 기준) |
 | `min_redact_chars` | 4 | 이보다 짧은 비밀 값은 기록에서 가리지 않는다 |
 | `backend_probe_timeout_max_s` | 20 | 백엔드 [연결 테스트] 최대 대기 초(요청 `timeout_s`는 이 값으로 잘린다) |
+| `backend_login.enabled` | true | 앱 화면 백엔드 로그인·로그아웃 경로(끄면 없음) |
+| `backend_login.timeout_s` / `timeout_max_s` | 300 / 900 | 로그인 기본 시간 / 요청 상한(초) |
+| `backend_login.heartbeat_s` | 30 | 폴링이 이만큼 끊기면 취소(초) |
+| `backend_login.retain_s` | 60 | 끝난 세션 조회 가능 시간(초) |
+| `backend_login.screen_max_lines` | 40 | 응답 `screen` 최대 줄 수 |
 | `resume_origin` | `resume` | 처리기가 맡지 않은 이어 가기 Run의 `origin` |
 | `activity_limit` | 100 | 에이전트 활동 기본 개수 |
 

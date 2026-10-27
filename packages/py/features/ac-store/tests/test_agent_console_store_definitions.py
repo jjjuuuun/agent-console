@@ -193,7 +193,7 @@ def test_custom_hash_function_is_injected(make_graph: Callable[..., dict[str, An
     assert InMemoryDefinitionStore([kind]).create("graph", make_graph()).version_hash == "fixed"
 
 
-class Preset(DefinitionModel):
+class Note(DefinitionModel):
     """테스트용 새 종류. 저장소 코드는 이 종류를 모른다."""
 
     id: str
@@ -201,10 +201,10 @@ class Preset(DefinitionModel):
 
 
 def test_new_kind_registers_without_code_change(definitions: DefinitionStore) -> None:
-    kind = DefinitionKind("preset", "presets", Preset)
+    kind = DefinitionKind("note", "notes", Note)
     definitions.register_kind(kind)
-    definitions.create("preset", {"id": "p1", "name": "기본", "extra": True})
-    stored = definitions.get("preset", "p1")
+    definitions.create("note", {"id": "p1", "name": "기본", "extra": True})
+    stored = definitions.get("note", "p1")
     assert stored.document["extra"] is True
-    assert definitions.list_ids("preset") == ["p1"]
-    assert "preset" in definitions.kinds()
+    assert definitions.list_ids("note") == ["p1"]
+    assert "note" in definitions.kinds()

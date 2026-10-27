@@ -22,6 +22,7 @@
     "@agent-console/trace-view": "^0.1.0",
     "@agent-console/ui": "^0.1.0",
     "@tanstack/react-query": "^5.104.3",
+    "pretendard": "^1.3.9",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^7.9.0"

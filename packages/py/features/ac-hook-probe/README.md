@@ -1,7 +1,7 @@
 # agent-console-hook-probe
 
 hook 명령을 감싸 **그대로 실행**하면서 입출력·결정·소요 시간을 jsonl로 남기는 실행 파일과, 그 기록을 읽는
-로그 출처·분류기. 설계: `specs/agent-console/design.md` §4R.7(hook probe 규칙), 결정 F-16.
+로그 출처·분류기.
 
 - **결과를 바꾸지 않는다.** stdin은 받은 그대로 원래 명령에 넘기고, stdout·stderr·종료 코드는 바이트 그대로
   돌려준다. 기록 실패·디스크 오류는 결과에 영향이 없다(경고 줄도 stderr에 섞지 않는다).

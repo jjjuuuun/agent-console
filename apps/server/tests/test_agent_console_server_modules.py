@@ -70,10 +70,9 @@ def _modules(client: TestClient) -> list[ModuleInfo]:
 def test_modules_lists_installed_modules_active(tmp_path: Path) -> None:
     with server(make_settings(tmp_path)) as client:
         infos = _modules(client)
-        # 3R.16: 통짜 모듈은 없다 — entry point로 설치된 모듈(mod-*·link-*)만, 모두 active
+        # entry point로 설치된 모듈(mod-*·link-*)만, 모두 active
         ids = {m.id for m in infos}
         assert ids == {m.descriptor.id for m in installed_modules()}
-        assert "server-monolith" not in ids
         assert all(m.status == "active" for m in infos), [(m.id, m.status) for m in infos]
         assert all(m.reason is None for m in infos)
         for info in infos:
@@ -211,3 +210,20 @@ def test_openapi_documents_modules(tmp_path: Path) -> None:
     assert body["application/json"]["schema"]["items"]["$ref"].endswith("/ModuleInfo")
     assert "/api/v1/bootstrap" in schema["paths"]
     assert "/api/v1/health" in schema["paths"]
+
+
+def test_project_run_link_is_a_server_dependency(tmp_path: Path) -> None:
+    """B-12: 서버만 설치해도(휠·`uv tool install`) 프로젝트·실행 연동이 켜진다.
+
+    워크스페이스에서는 모든 패키지가 깔려 있어 드러나지 않으므로 설치 메타데이터도 확인한다.
+    """
+    import re
+    from importlib.metadata import requires
+
+    names = {
+        re.split(r"[\s<>=!~;\[(]", r, maxsplit=1)[0] for r in requires("agent-console-server") or []
+    }
+    assert "agent-console-link-projects-runs" in names
+    with server(make_settings(tmp_path)) as client:
+        infos = {m.id: m for m in _modules(client)}
+        assert infos["link-projects-runs"].status == "active"

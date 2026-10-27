@@ -16,8 +16,8 @@ def to_versioned_graph(stored: StoredDefinition) -> VersionedGraph:
 
 
 def list_graph_summaries(store: DefinitionStore) -> list[GraphSummary]:
-    """`GET /graphs` 응답. 그래프 본문은 담지 않고 node_count·edge_count·saved_at·project를
-    채운다."""
+    """`GET /graphs` 응답. 그래프 본문은 담지 않고 node_count·edge_count·saved_at·project·
+    attributes를 채운다."""
     return [
         GraphSummary(
             id=s.id,
@@ -29,6 +29,7 @@ def list_graph_summaries(store: DefinitionStore) -> list[GraphSummary]:
             node_count=s.counts.get("nodes", 0),
             edge_count=s.counts.get("edges", 0),
             project=s.extra.get(SCOPE_FIELD),
+            attributes=s.attributes,
         )
         for s in store.summaries(GRAPH)
     ]

@@ -1,7 +1,7 @@
 # agent-console-contracts
 
 Agent Console의 공용 타입·이벤트·DTO(Pydantic v2)와 JSON Schema 생성. 서버·엔진·CLI가 이 모델을 쓰고,
-웹은 여기서 생성된 TS 타입(`@agent-console/contracts`)을 쓴다. 설계: `specs/agent-console/design.md` §2.2, §2.3, §3.3, §5.2~§5.7, §R(특히 §R9.3·§R14.4).
+웹은 여기서 생성된 TS 타입(`@agent-console/contracts`)을 쓴다.
 
 - 계약은 특정 노드 타입·엣지 타입·백엔드·모델 이름을 모른다. 노드 `config`, `attributes`, `backend_options`는 `dict[str, Any]`.
 - 정의 모델(`Agent`, `Graph`, `NodeSpec`, `EdgeSpec`, `WorkspaceSettings` 등)은 모르는 필드를 보존하고, 그 밖의 모델은 무시한다.
@@ -43,7 +43,7 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 | 로그(`logs`, 0.6.0) | 이벤트 `LogEvent`(`from` 별칭)·`LogDocumentRef`·`LogEventPage`·`LogEventDetail`·`LogEvidenceLink`, 출처·분류기 `LogSourceDescriptor`·`LogClassifierDescriptor`·`LogSourceInfo`·`LogSourceStatus`, 수집 `LogScanReport`·`LogSourceScanResult`, 세션 `LogSessionSummary`(`tokens: LogTokenTotals`·`project: LogProjectRef`·`thread_count`)·`LogTimeline`(`lanes: LogLane[]`), 토큰 표본 `TokenSample`(`LogEventDetail.usage`), 집계 `LogAggregateRequest`·`LogAggregateRow`·`LogQuerySchema`(`LogDimensionInfo`·`LogMetricInfo`·`LogFilterFieldInfo`), 보관본 `LogArchive`(v1), 설정 `LogSettings`(`WorkspaceSettings.logs`: `LogSourceSetting`·`LogTaxonomy`·`LogCategory`·`LogProjectSettings`·`LogProjectGroup`·`LogDashboard`·`LogWidget`·`LogWidgetQuery`) |
 | 이벤트 | `RunEvent`(일반형, 머리 `actor`), `KnownRunEvent`/`AnyKnownRunEvent`(판별 유니온), 타입별 `*Event`·`*Payload`(`run.reply`, `run.waiting`, `node.resumed`, `usage.rate_limit`, `interaction.requested·answered·closed`, 0.7.0 `edge.skipped`·`loop.iteration`·`loop.exhausted`·`run.child_started`·`run.child_finished` 포함, `edge.traversed`·`edge.skipped`의 `condition`), `parse_run_event()`, `KNOWN_RUN_EVENT_TYPES` |
 | WS | `WsClientMessage`, `WsServerMessage`(run.event·conversation.updated·interaction.updated·logs.ingested·error), 토픽은 서버 모듈이 정한다(기본: `run:`·`conversation:`·`interactions`·`logs`) |
-| REST | `ErrorResponse`, `BootstrapResponse`, `ResolvePortsRequest`, `CreateRunRequest`, `VersionedGraph`, `GraphSummary`, `DefinitionVersion`, `VersionConflictDetails`, `PresetSummary`, `ApplyPresetRequest`, `ApplyPresetResult`, `AppliedItemInfo`, `DefinitionReference`, `ServerInfo`, `PluginInfo`, `DuplicateGraphRequest`, `MergeStrategyInfo`(1R.14), v3: `GraphSummary.validation: GraphValidationSummary`, `ServerInfo.warnings`, `BundlePreview`, `TeamPlanSummary`·`EntrySlot`·`AnswerSlot`, `DraftGraphRequest`·`DraftNodeRequest`, `ResumeOptions`·`ResumeNodeOption`·`ResumeRunRequest`, `DefinitionDiff`·`DiffChange`·`ContentChange`·`RestoreVersionRequest` |
+| REST | `ErrorResponse`, `BootstrapResponse`, `ResolvePortsRequest`, `CreateRunRequest`, `VersionedGraph`, `GraphSummary`, `DefinitionVersion`, `VersionConflictDetails`, `AppliedItemInfo`, `DefinitionReference`, `ServerInfo`, `PluginInfo`, `DuplicateGraphRequest`, `MergeStrategyInfo`(1R.14), v3: `GraphSummary.validation: GraphValidationSummary`, `ServerInfo.warnings`, `BundlePreview`, `TeamPlanSummary`·`EntrySlot`·`AnswerSlot`, `DraftGraphRequest`·`DraftNodeRequest`, `ResumeOptions`·`ResumeNodeOption`·`ResumeRunRequest`, `DefinitionDiff`·`DiffChange`·`ContentChange`·`RestoreVersionRequest` |
 | 내보내기(X8) | `ExporterDescriptor`, `ExportSelection`, `ExportRequest`, `ExportFile`, `ExportPlan`, `ExportRootInfo`, `ExportWriteRequest`, `ExportResult` |
 | 가져오기 | `ImportSourceDescriptor`, `ImportPreviewRequest`, `ImportPreview`, `ImportCandidate`, `ImportWarning`, `ImportRequest`, `ImportSelection`, `ImportResult` |
 | 상수 | `CONTRACTS_VERSION`, `LOG_EVENT_ORDERS`(asc·desc), `LOG_PROJECT_UNGROUPED`(`~ungrouped`), `ErrorCodes`(+ `conversation_busy`·`interaction_closed` = 409), `HTTP_STATUS_BY_ERROR_CODE`, `RUN_ORIGINS`(+ `chat`, `resume`) |
@@ -74,12 +74,10 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 답변 연결이 config의 어디에 답변 속성을 두는지(`EdgeTypeDescriptor.reply_fields`), 다시 실행 가능 여부(`rerunnable`),
 내보내기 형식(`ExporterDescriptor`)은 플러그인이 선언하며 계약에 키 이름·형식 이름 기본값이 없다.
 
-### 삭제(2R.20, 0.4.0)
+### 옛 데이터 읽기
 
-라우터(`RoutingDecision`, `RouteVerdict`, `route.decided` 이벤트), 콘솔(`ConsoleSettings`, `console.*` WS 메시지·
-`ConsoleStyle`·`CONSOLE_STYLES`, `WorkspaceSettings.default_entry`·`console`, `RUN_ORIGINS`의 `console`)은 0.4.0에서 지웠다
-(design §R9.2). 기존 `settings.yaml`에 남은 `console`·`default_entry`는 모르는 키로 보존된다(`DefinitionModel`은
-모르는 필드를 지우지 않는다). 저장된 `route.decided` 이벤트는 일반형 `RunEvent`로 읽힌다.
+`DefinitionModel`은 모르는 필드를 지우지 않으므로 기존 `settings.yaml`에 남은 `console`·`default_entry` 같은 키는
+그대로 보존된다. 저장된 `route.decided` 이벤트는 일반형 `RunEvent`로 읽힌다.
 `WorkspaceSettings.default_backend`는 읽기 호환용이며 `agent_defaults.backend`를 쓴다. `Graph.limits`는 Phase 1 형식이며
 새 데이터는 `settings.limits`를 쓴다.
 

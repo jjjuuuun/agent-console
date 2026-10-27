@@ -87,7 +87,7 @@ class InteractionClosed(StoreError):
 
 @dataclass(frozen=True)
 class StoreErrorBody:
-    """저장소 예외 → 계약 오류 응답 재료(전송 계층과 무관, 3R.16 공용화).
+    """저장소 예외 → 계약 오류 응답 재료(전송 계층과 무관, 공용).
 
     Attributes:
         code: 계약 오류 코드(`StoreError.code`).

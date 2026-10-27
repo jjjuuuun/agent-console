@@ -20,7 +20,6 @@ from agent_console_contracts import (
     Agent,
     AgentSettings,
     AgentSubagentEvent,
-    ApplyPresetRequest,
     BackendCapabilities,
     BundleSource,
     ChatTurn,
@@ -601,7 +600,6 @@ def test_import_preview_and_request() -> None:
         ImportRequest.model_validate(
             {"source": "s", "items": [{"candidate_id": "c1", "on_conflict": "merge"}]}
         )
-    assert ApplyPresetRequest().on_conflict == "skip"
 
 
 def test_qa_round_additions() -> None:

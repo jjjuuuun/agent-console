@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 DEFAULT_TAXONOMY_RESOURCE = "data/default_taxonomy.yaml"
-"""패키지 안 기본 분류 체계 파일(프리셋 데이터)."""
+"""패키지 안 기본 분류 체계 파일(코드가 아닌 데이터)."""
 
 DANGER_TONE = "danger"
 

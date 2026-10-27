@@ -49,6 +49,13 @@
       (``status``)·``ProbeCapableBackend``(``probe``) + ``BackendCheckContext``,
       ``BackendReadinessService``(시간 상한·동시 probe 합치기·가림), ``supports_status``·
       ``supports_probe``, 오류 ``UnknownBackendError``·``ProbeUnsupportedError``
+    - 백엔드 계정 로그인·로그아웃(ux-overhaul §15.9, F14): 선택 능력 ``LoginCapableBackend``
+      (``start_login`` → ``LoginDriver``)·``LogoutCapableBackend``(``logout``) +
+      ``BackendLoginContext``·``LoginProgress``, ``BackendLoginService``(세션 하나·시간 상한·
+      하트비트·취소·가림·로그 규칙), ``mask_values``, ``supports_login``·``supports_logout``, 오류
+      ``LoginUnsupportedError``·``LogoutUnsupportedError``·``LoginBusyError``·``LoginRefusedError``·
+      ``LoginSessionNotFoundError``·``LoginInputError``.
+      테스트용 ``agent_console_runtime.testing_login``
     - 서비스·비밀·취소: ``Services``·``ServiceKey``, ``SecretResolver``·``EnvSecretProvider``,
       ``CancelToken``
     - 프로세스: ``process_group_kwargs``, ``terminate_process_group``, ``aterminate_process_group``
@@ -145,6 +152,33 @@ from agent_console_runtime._interfaces import (
     node_display_name,
 )
 from agent_console_runtime._journal import RecorderError
+from agent_console_runtime._login import (
+    DEFAULT_ACCEPTS_KEYS,
+    DEFAULT_LOGIN_HEARTBEAT_S,
+    DEFAULT_LOGIN_RETAIN_S,
+    DEFAULT_LOGIN_SCREEN_MAX_LINES,
+    DEFAULT_LOGIN_TIMEOUT_MAX_S,
+    DEFAULT_LOGIN_TIMEOUT_S,
+    DEFAULT_LOGOUT_TIMEOUT_S,
+    TERMINAL_PHASES,
+    BackendLoginContext,
+    BackendLoginService,
+    LoginBusyError,
+    LoginCapableBackend,
+    LoginDriver,
+    LoginInputError,
+    LoginProgress,
+    LoginReasons,
+    LoginRefusedError,
+    LoginSessionNotFoundError,
+    LoginTexts,
+    LoginUnsupportedError,
+    LogoutCapableBackend,
+    LogoutUnsupportedError,
+    mask_values,
+    supports_login,
+    supports_logout,
+)
 from agent_console_runtime._process import (
     DEFAULT_GRACE_SECONDS,
     aterminate_process_group,
@@ -229,9 +263,16 @@ from agent_console_runtime._validation import (
 __all__ = [
     "BACKENDS_GROUP",
     "BACKEND_OPTIONS_HOOK",
+    "DEFAULT_ACCEPTS_KEYS",
     "DEFAULT_GRACE_SECONDS",
     "DEFAULT_HOST_TOOL_CANCELLED_TEXT",
     "DEFAULT_HOST_TOOL_ERROR_TEMPLATE",
+    "DEFAULT_LOGIN_HEARTBEAT_S",
+    "DEFAULT_LOGIN_RETAIN_S",
+    "DEFAULT_LOGIN_SCREEN_MAX_LINES",
+    "DEFAULT_LOGIN_TIMEOUT_MAX_S",
+    "DEFAULT_LOGIN_TIMEOUT_S",
+    "DEFAULT_LOGOUT_TIMEOUT_S",
     "DEFAULT_MIN_REDACT_CHARS",
     "DEFAULT_PROBE_TIMEOUT_MAX_S",
     "DEFAULT_STATUS_TIMEOUT_S",
@@ -250,12 +291,15 @@ __all__ = [
     "RESERVED_EVENT_PREFIXES",
     "SECRET_PROVIDERS_GROUP",
     "SECRET_REF_PREFIX",
+    "TERMINAL_PHASES",
     "UNKNOWN_STATE",
     "Activation",
     "AgentRequest",
     "AgentResult",
     "BackendCheckContext",
     "BackendEventSink",
+    "BackendLoginContext",
+    "BackendLoginService",
     "BackendReadinessService",
     "Blocked",
     "CancelToken",
@@ -298,6 +342,18 @@ __all__ = [
     "InteractionRequest",
     "InteractionWriter",
     "InteractivePort",
+    "LoginBusyError",
+    "LoginCapableBackend",
+    "LoginDriver",
+    "LoginInputError",
+    "LoginProgress",
+    "LoginReasons",
+    "LoginRefusedError",
+    "LoginSessionNotFoundError",
+    "LoginTexts",
+    "LoginUnsupportedError",
+    "LogoutCapableBackend",
+    "LogoutUnsupportedError",
     "MissingServiceError",
     "NoEntryError",
     "NodeContext",
@@ -361,6 +417,7 @@ __all__ = [
     "is_secret_ref",
     "load_registries",
     "load_registry_plugins",
+    "mask_values",
     "merge_contributions",
     "node_actor",
     "node_display_name",
@@ -375,6 +432,8 @@ __all__ = [
     "resume_seed",
     "session_refs",
     "sum_usage",
+    "supports_login",
+    "supports_logout",
     "supports_probe",
     "supports_status",
     "terminate_process_group",

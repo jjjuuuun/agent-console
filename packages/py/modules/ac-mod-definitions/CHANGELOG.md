@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.2R.104: 프리셋 기능을 지웠다. 남은 설정 키 `presets`·`modules.options.mod-presets`를 `RemovedSetting`으로 선언해 호스트가 "프리셋 기능은 삭제되었습니다" 오류로 시작을 거부한다(`PRESETS_REMOVED_REASON`). 개발 의존 `agent-console-mod-presets`를 뺐다.
 - 5.2R.33: `LazyVersionRepository`·`versions_for`를 `ac-store`로 옮겼다(이 모듈 `store`는 다시 내보낸다, 동작 같음).
 - 4R.18: 옛 최상위 `resources` 읽기 호환 제거(`settings.removed_key` 오류로 새 위치 안내).
 

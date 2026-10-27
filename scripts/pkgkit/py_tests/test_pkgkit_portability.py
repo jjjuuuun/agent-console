@@ -65,6 +65,7 @@ def test_portability_env_drops_shared_venv() -> None:
             "UV_PROJECT_ENVIRONMENT": "/x",
             "VIRTUAL_ENV": "/y",
             "PYTHONPATH": "z",
+            "MYPY_CACHE_DIR": "/repo/.mypy_cache",
             "UV_LINK_MODE": "copy",
             "HOME": "/h",
         }

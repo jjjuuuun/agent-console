@@ -10,6 +10,7 @@ dependencies = [
     "agent-console-contracts>=0.8,<0.9",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-runtime>=0.1,<0.2",
+    "agent-console-secret-rules>=0.1,<0.2",
     "claude-agent-sdk>=0.2.166",
     "pydantic>=2.9",
 ]
@@ -17,6 +18,8 @@ dependencies = [
 [project.optional-dependencies]
 # observe.hook_probe 감싸기(wrap_command). 없으면 감싸지 않고 경고한다.
 hook-probe = ["agent-console-hook-probe>=0.1,<0.2"]
+# 앱 화면 구독 로그인(claude auth login을 PTY로 중계, ux-overhaul §15.9). 없으면 로그인 능력을 선언하지 않는다.
+login = ["agent-console-pty-session>=0.1,<0.2"]
 
 [project.entry-points."agent_console.backends"]
 claude-agent-sdk = "agent_console_backend_claude_sdk:ClaudeSdkBackend"
@@ -33,6 +36,7 @@ dev = [
     "ruff>=0.6",
     "agent-console-backend-fake>=0.1,<0.2",
     "agent-console-hook-probe>=0.1,<0.2",
+    "agent-console-pty-session>=0.1,<0.2",
     "agent-console-trace>=0.1,<0.2",
     "jsonschema>=4.23",
     "types-jsonschema>=4.26.0.20261006",

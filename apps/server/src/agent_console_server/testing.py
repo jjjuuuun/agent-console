@@ -122,7 +122,7 @@ def team_graph(graph_id: str = "flow") -> dict[str, Any]:
     return {
         "id": graph_id,
         "name": "테스트 흐름",
-        "inputs": [{"name": "request"}],  # 콘솔(보류)의 기본 입력 키
+        "inputs": [{"name": "request"}],  # Run 입력 키(`input.request`)
         "nodes": [
             {"id": "you", "type": "user", "label": "나"},
             {"id": "a", "type": "agent", "label": "빠른", "config": {"agent_ref": "fast"}},

@@ -17,6 +17,11 @@
       ``UNKNOWN_HOST_TOOL_TEXT`` 오류 결과
     - 준비 상태·연결 테스트(선택 능력, ux-overhaul §15.8): ``FakeBackend.status``(늘
       ``FAKE_READY_STATE``, 톤 ok)·``FakeBackend.probe``(지연 없는 성공)
+    - 대본 로그인(5.2R.83, ux-overhaul §15.9, e2e·웹 개발용): 설치자 설정 ``login``
+      (``FakeLoginScript``·``FakeLoginTexts``)을 주면 ``capabilities.login/logout``·
+      ``login_methods``를 선언하고 ``FakeBackend.start_login``(``FakeScriptedLoginDriver``: 코드
+      ``success_code``면 성공, 그 밖 ``fail_reason``)·``logout``을 제공한다. 로그인 상태는 메모리
+      (``FakeLoginState``), 상태 점검은 로그인 전 ``FAKE_LOGIN_REQUIRED_STATE``. PTY·네트워크 없음
     - 묶음 미리보기 훅 ``FakeBackend.preview_notes``(info ``HOOK_PROBE_NOTE_CODE``),
       ``DEFAULT_HOOK_PROBE_FOLDER``
     - ``FakeInstallOptions``·``FakeRateLimit``: 설치자 설정 형식(``FakeBackend.from_options`` 훅)
@@ -59,6 +64,14 @@ from agent_console_backend_fake._config import (
     fake_config_schema,
     observe_switch_on,
 )
+from agent_console_backend_fake._login import (
+    FAKE_LOGIN_METHOD_ID,
+    FAKE_LOGIN_REQUIRED_STATE,
+    FakeLoginScript,
+    FakeLoginState,
+    FakeLoginTexts,
+    FakeScriptedLoginDriver,
+)
 
 __all__ = [
     "DEFAULT_DELEGATE_TOOL",
@@ -69,6 +82,8 @@ __all__ = [
     "DEFAULT_RESOURCE_SLOTS",
     "EMPTY_BUNDLE",
     "FAKE_BACKEND_ID",
+    "FAKE_LOGIN_METHOD_ID",
+    "FAKE_LOGIN_REQUIRED_STATE",
     "FAKE_READY_STATE",
     "HOOK_PROBE_NOTE_CODE",
     "HOOK_PROBE_SWITCH",
@@ -82,9 +97,13 @@ __all__ = [
     "FakeHostToolCall",
     "FakeHostToolWhen",
     "FakeInstallOptions",
+    "FakeLoginScript",
+    "FakeLoginState",
+    "FakeLoginTexts",
     "FakeObserve",
     "FakeRateLimit",
     "FakeRule",
+    "FakeScriptedLoginDriver",
     "FakeTaskUsage",
     "FakeToolCall",
     "HostCallStatus",

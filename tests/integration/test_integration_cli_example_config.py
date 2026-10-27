@@ -21,8 +21,6 @@ def test_example_config_boots_server(tmp_path: Path) -> None:
         EXAMPLE_CONFIG, environ={}, overrides={"workspace": str(tmp_path / "ws")}
     )
     assert "http://127.0.0.1:4173" in settings.security.allowed_origins
-    assert settings.modules.options["mod-presets"]["directories"] == []
-    assert settings.moved_keys == []  # 예시는 새 위치만 쓴다(settings.moved_key 경고 없음)
     assert settings.modules.options["mod-runs"]["backends"]["fake"]["rate_limits"]
     app = create_app(settings, environ={}, token="t")
     with TestClient(app, base_url=f"http://127.0.0.1:{settings.port}") as client:
@@ -30,7 +28,8 @@ def test_example_config_boots_server(tmp_path: Path) -> None:
         assert [m["id"] for m in models] == ["fake-small"]
         statuses = {m["id"]: m["status"] for m in client.get("/api/v1/modules").json()}
         assert all(state == "active" for state in statuses.values()), statuses
-        assert client.get("/api/v1/presets").json() == []  # 공개본에는 프리셋 데이터가 없다
+        warnings = client.get("/api/v1/server-info").json()["warnings"]
+        assert not [w for w in warnings if w["code"].startswith("settings.")]
         allowed = client.options(
             "/api/v1/agents",
             headers={

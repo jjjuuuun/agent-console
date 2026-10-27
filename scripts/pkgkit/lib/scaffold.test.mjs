@@ -59,20 +59,4 @@ describe("buildPackageFiles", () => {
     expect(files["vitest.config.ts"]).toContain('"happy-dom"');
     expect(JSON.parse(files["package.json"]).devDependencies["happy-dom"]).toBeTruthy();
   });
-  it("eslint-config 초안은 자기 자신을 개발 의존으로 갖지 않는다", () => {
-    const files = buildPackageFiles(loadLayers(TEMPLATES, "config", "eslint-config"), vars("config", "@agent-console/eslint-config"));
-    const pkg = JSON.parse(files["package.json"]);
-    expect(pkg.devDependencies).not.toHaveProperty("@agent-console/eslint-config");
-    expect(pkg.exports).toHaveProperty("./react");
-    expect(files["eslint.config.js"]).toContain('"./index.js"');
-  });
-  it("tsconfig 초안은 base·library를 싣는다", () => {
-    const files = buildPackageFiles(loadLayers(TEMPLATES, "config", "tsconfig"), vars("config", "@agent-console/tsconfig"));
-    expect(Object.keys(files)).toEqual(expect.arrayContaining(["base.json", "library.json"]));
-    expect(JSON.parse(files["package.json"]).description).toContain("tsconfig");
-  });
-  it("없는 초안은 오류", () => {
-    expect(() => loadLayers(TEMPLATES, "lib", "nope")).toThrow(NewPackageArgsError);
-    expect(() => loadLayers(TEMPLATES, "lib", "../x")).toThrow(NewPackageArgsError);
-  });
 });

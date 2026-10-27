@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -254,11 +254,6 @@ class PermissionBridge:
         return PermissionResultDeny(
             message="사전 승인되지 않은 도구입니다(unmatched_permission=deny)"
         )
-
-
-type CanUseTool = Callable[
-    [str, dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]
-]
 
 
 def _question_to_payload(question: Any) -> dict[str, Any]:

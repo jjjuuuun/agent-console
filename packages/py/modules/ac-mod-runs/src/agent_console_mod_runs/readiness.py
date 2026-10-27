@@ -1,4 +1,4 @@
-"""실행 백엔드 준비 상태·연결 테스트 조립(ux-overhaul §15.8).
+"""실행 백엔드 준비 상태·연결 테스트·로그인 조립(ux-overhaul §15.8·§15.9).
 
 모듈은 백엔드 id·상태 이름을 모른다. 엔진 패키지의 ``BackendReadinessService``에 레지스트리·비밀
 존재 확인·가림 함수를 넣을 뿐이다.
@@ -15,7 +15,13 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol, runtime_checkable
 
-from agent_console_runtime import REDACTED, BackendReadinessService, Registries, SecretResolver
+from agent_console_runtime import (
+    REDACTED,
+    BackendLoginService,
+    BackendReadinessService,
+    Registries,
+    SecretResolver,
+)
 from agent_console_secret_rules import default_rules
 
 from .ports import SecretRulesReader
@@ -93,4 +99,35 @@ def build_readiness_service(
     )
 
 
-__all__ = ["build_check_redactor", "build_readiness_service"]
+def build_login_service(
+    registries: Registries,
+    secrets: SecretResolver,
+    environ: Mapping[str, str],
+    *,
+    rules: Callable[[], SecretRulesReader | None] = lambda: None,
+    timeout_s: float,
+    timeout_max_s: float,
+    heartbeat_s: float,
+    retain_s: float,
+    screen_max_lines: int,
+    min_chars: int = 4,
+) -> BackendLoginService:
+    """레지스트리의 백엔드(호출마다 다시 읽음)로 로그인 서비스를 만든다(ux-overhaul §15.9).
+
+    가림은 준비 상태와 같은 함수(환경 비밀 값·비밀 해석기·의심 규칙)에
+    서비스의 입력값 가림을 더한다.
+    """
+    return BackendLoginService(
+        lambda: {entry.key: entry.item for entry in registries.backends.list()},
+        redact=build_check_redactor(secrets, environ, rules, min_chars=min_chars),
+        has_secret=secrets.has,
+        environ=lambda: environ,
+        timeout_default_s=min(timeout_s, timeout_max_s),
+        timeout_max_s=timeout_max_s,
+        heartbeat_s=heartbeat_s,
+        retain_s=retain_s,
+        screen_max_lines=screen_max_lines,
+    )
+
+
+__all__ = ["build_check_redactor", "build_login_service", "build_readiness_service"]

@@ -20,8 +20,6 @@ from agent_console_mod_definitions import (
 from agent_console_mod_exports import DefinitionLookup as ExportsLookup
 from agent_console_mod_exports import module as exports
 from agent_console_mod_imports import module as imports
-from agent_console_mod_presets import DefinitionCheck as PresetsCheck
-from agent_console_mod_presets import module as presets
 from agent_console_mod_usage import WorkspaceSettingsReader
 from agent_console_mod_usage import module as usage
 from agent_console_mod_versions import DefinitionCheck as VersionsCheck
@@ -39,12 +37,12 @@ def test_provided_ports_match_consumer_protocols(tmp_path: Path) -> None:
     store = assembly.port(DEFINITIONS_STORE)
     assert store is not None
     as_versions: VersionStore = store
-    as_presets: DefinitionStore = store
+    as_store: DefinitionStore = store
     as_imports: DefinitionWriter = store
     as_exports: ExportsLookup = store
     assert isinstance(store, ExportsLookup)
     saved = as_imports.create("agent", {"id": "a", "name": "a"})
-    assert as_presets.get("agent", "a").version_hash == saved.version_hash
+    assert as_store.get("agent", "a").version_hash == saved.version_hash
     assert as_versions.versions.list("agent", "a")
     assert as_exports.get("agent", "a").document["id"] == "a"
 
@@ -59,7 +57,6 @@ def test_provided_ports_match_consumer_protocols(tmp_path: Path) -> None:
 
     for check in assembly.ports(DEFINITION_CHECKS):
         assert isinstance(check, VersionsCheck)
-        assert isinstance(check, PresetsCheck)
 
 
 def test_consumers_assemble_on_provided_ports(tmp_path: Path) -> None:
@@ -67,6 +64,6 @@ def test_consumers_assemble_on_provided_ports(tmp_path: Path) -> None:
         environ={"HOME": str(tmp_path / "home")},
         paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
     )
-    assembly = assemble([module, versions, presets, imports, exports, usage], base=base)
+    assembly = assemble([module, versions, imports, exports, usage], base=base)
     states = {r.id: r.state.value for r in assembly.report}
     assert set(states.values()) == {"active"}, states

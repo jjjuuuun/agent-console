@@ -236,6 +236,21 @@ class BackendCapabilities(ContractModel):
             "`POST /backends/{id}/probe`가 409 `backend.probe_unsupported`."
         ),
     )
+    # 0.8.0(ux-overhaul §15.9, F14): 선택 능력. ``start_login``·``logout`` 구현 선언.
+    login: bool = Field(
+        default=False,
+        description=(
+            "앱 화면에서 백엔드 계정 로그인을 시작할 수 있다(방법은 `login_methods`). "
+            "false면 `POST /backends/{id}/login`이 409 `backend.login_unsupported`."
+        ),
+    )
+    logout: bool = Field(
+        default=False,
+        description=(
+            "앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 "
+            "`POST /backends/{id}/logout`이 409 `backend.logout_unsupported`."
+        ),
+    )
 
 
 class CollectorDescriptor(ContractModel):
@@ -252,6 +267,27 @@ class CollectorDescriptor(ContractModel):
     config_schema: JsonObject = Field(default_factory=dict)
     emits: list[str] = Field(
         default_factory=list, description="내는 실행 이벤트 type 또는 접두사(예: hook.*, mcp.*)."
+    )
+
+
+class LoginMethodInfo(ContractModel):
+    """백엔드가 제공하는 로그인 방법 하나(데이터). 화면은 문구를 그대로 보인다."""
+
+    id: NonEmptyStr = Field(description="방법 id(백엔드가 정함, 열린 문자열).")
+    label: NonEmptyStr = Field(description="버튼 문구(사용자 언어, 예: 구독으로 로그인).")
+    description: str = Field(default="", description="방법 설명 한 줄.")
+    notice: str = Field(
+        default="",
+        description="시작 확인 창에 늘 보이는 안내(예: 본인 구독·본인 책임 문구). 숨기기 없음.",
+    )
+    writes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "이 로그인이 이 PC에서 바꾸는 것(서버가 실제 경로로 풀어 준 줄, 사용자 언어)."
+        ),
+    )
+    needs_browser: bool = Field(
+        default=True, description="브라우저에서 로그인하는 단계가 있다(화면 안내용)."
     )
 
 
@@ -280,6 +316,13 @@ class BackendDescriptor(ContractModel):
         ),
     )
     ui_hints: UiHints | None = None
+    login_methods: list[LoginMethodInfo] = Field(
+        default_factory=list,
+        description=(
+            "앱 화면에서 시작할 수 있는 로그인 방법(`capabilities.login`과 함께). "
+            "비면 로그인 버튼 없음."
+        ),
+    )
 
 
 class ModelInfo(ContractModel):

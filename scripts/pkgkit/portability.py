@@ -67,7 +67,16 @@ COPY_IGNORE = (
     "*.egg-info",
 )
 # 임시 환경에 넘기지 않는 환경변수(공유 venv·워크스페이스를 가리키면 복사본 검사가 아니게 된다)
-DROP_ENV = ("UV_PROJECT_ENVIRONMENT", "VIRTUAL_ENV", "UV_PROJECT", "PYTHONPATH", "MYPYPATH")
+# MYPY_CACHE_DIR: 루트 poe 작업이 저장소 `.mypy_cache`를 가리키게 두므로(5.2R.94b) 복사본 검사에는
+# 넘기지 않는다. mypy 캐시는 임시 복사본의 `.mypy_cache`에 생기고 세션과 함께 지워진다.
+DROP_ENV = (
+    "UV_PROJECT_ENVIRONMENT",
+    "VIRTUAL_ENV",
+    "UV_PROJECT",
+    "PYTHONPATH",
+    "MYPYPATH",
+    "MYPY_CACHE_DIR",
+)
 SETUP_STEPS = frozenset({"venv", "sync"})
 # 휠에 들어가는 소스(낡은 휠 모음 판단 기준). 폴더는 재귀로 본다.
 WHEEL_SOURCES = ("pyproject.toml", "README.md", "src")

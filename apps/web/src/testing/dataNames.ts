@@ -16,7 +16,7 @@ export const DATA_NAMES: readonly string[] = [
   // 로그 출처·수집기·지표(서버 데이터. 4R.17: 로그 화면은 이 이름을 코드에 두지 않는다)
   "claude-code-jsonl", "platform-runs", "hook-probe-jsonl", "normalized-v1", "mapped-jsonl", "local-logs",
   "tokens.total", "tokens.input", "tokens.output", "tokens.cache_read", "tokens.cache_creation",
-  // 로그 범주·이벤트 종류(분류 체계 기본 프리셋의 예. 범주는 사용자가 정하는 데이터다)
+  // 로그 범주·이벤트 종류(분류 체계 기본 선택지의 예. 범주는 사용자가 정하는 데이터다)
   "hook", "mcp", "tool_use", "tool_result", "prompt", "assistant", "thinking", "pretooluse", "posttooluse", "userpromptsubmit", "sessionstart", "sessionend",
 ];
 

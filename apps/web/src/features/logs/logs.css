@@ -17,15 +17,15 @@
 .logs-chipx { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 2px; }
 .logs-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .logs-sessiondot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-.logs-badge { display: inline-flex; min-width: 20px; justify-content: center; font-size: 12px; border: 1px solid var(--ac-border); border-radius: 10px; }
+.logs-badge { display: inline-flex; min-width: 20px; justify-content: center; font-size: 12px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); }
 .logs-warn { color: var(--ac-warning); font-size: 12px; }
 .logs-note { font-size: 12px; margin: 0; }
-.logs-input { height: 28px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: inherit; font: inherit; font-size: 13px; min-width: 0; }
+.logs-input { height: var(--ac-control-md); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: inherit; font: inherit; font-size: 13px; min-width: 0; }
 .logs-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .logs-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .logs-range { display: inline-flex; gap: var(--ac-space-2); align-items: center; flex-wrap: wrap; }
 .logs-range-label { display: inline-flex; gap: var(--ac-space-1); align-items: center; font-size: 12px; }
-.logs-range-label select, .logs-range-label input { height: 28px; font-size: 13px; }
+.logs-range-label select, .logs-range-label input { height: var(--ac-control-md); font-size: 13px; }
 
 /* 빈 상태 */
 .logs-first, .logs-empty { max-width: 640px; margin: var(--ac-space-6) auto; display: flex; flex-direction: column; gap: var(--ac-space-3); }

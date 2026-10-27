@@ -2,7 +2,7 @@
 
 정의(에이전트·리소스·팀 구성)를 다른 도구의 형식으로 **내보내는** 확장 지점(X8). 흐름:
 형식 목록 → 미리보기(파일 목록·충돌·경고, 쓰기 없음) → 보관 파일(zip, 메모리) 또는 허용한 폴더에 쓰기.
-설계: `specs/agent-console/design.md` §2R.7, 계약 `agent_console_contracts.exports`.
+계약: `agent_console_contracts.exports`.
 
 - **형식은 플러그인이다.** 형식 = `Exporter{descriptor, plan(items, catalog, options) -> ExportOutput}`.
   `plan`은 순수하다(카탈로그를 읽기만, 파일 내용을 만들어 돌려줌). 형식 공장(설치자 옵션 → 형식)을

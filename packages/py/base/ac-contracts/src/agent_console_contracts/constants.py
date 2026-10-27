@@ -87,6 +87,20 @@ class ErrorCodes:
     BACKEND_PROBE_UNSUPPORTED: Final = "backend.probe_unsupported"
     """실행 백엔드가 연결 테스트를 지원하지 않는다(`capabilities.probe=false`, 0.8.0, HTTP 409,
     ux-overhaul §15.8). `details.backend` = 백엔드 id."""
+    BACKEND_LOGIN_UNSUPPORTED: Final = "backend.login_unsupported"
+    """실행 백엔드가 앱 화면 로그인을 지원하지 않는다(`capabilities.login=false`, 0.8.0, HTTP 409,
+    F14). `details.backend` = 백엔드 id."""
+    BACKEND_LOGIN_BUSY: Final = "backend.login_busy"
+    """다른 로그인 세션이 진행 중이다(서버 전체 하나, 0.8.0, HTTP 409, F14).
+    `details.session_id` = 진행 중인 세션 id, `details.backend` = 그 세션의 백엔드 id."""
+    BACKEND_LOGOUT_UNSUPPORTED: Final = "backend.logout_unsupported"
+    """실행 백엔드가 앱 화면 로그아웃을 지원하지 않는다(`capabilities.logout=false`, 0.8.0,
+    HTTP 409, F14). `details.backend` = 백엔드 id."""
+    BACKEND_SUBSCRIPTION_AUTH_DISABLED: Final = "backend.subscription_auth_disabled"
+    """설치자 설정이 구독 인증을 꺼서 로그인을 시작하지 않았다(백엔드가 거절, 0.8.0, HTTP 409, F14).
+    백엔드는 다른 거절 코드도 쓸 수 있다(열린 어휘, 이 표에 없으면 HTTP 400)."""
+    BACKEND_LOGIN_SESSION_NOT_FOUND: Final = "backend.login_session_not_found"
+    """로그인 세션이 없거나 보관 시간이 지났다(0.8.0, HTTP 404, F14)."""
 
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
@@ -107,6 +121,11 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.NOT_READY: 503,
     ErrorCodes.BACKEND_UNRESOLVED: 422,
     ErrorCodes.BACKEND_PROBE_UNSUPPORTED: 409,
+    ErrorCodes.BACKEND_LOGIN_UNSUPPORTED: 409,
+    ErrorCodes.BACKEND_LOGIN_BUSY: 409,
+    ErrorCodes.BACKEND_LOGOUT_UNSUPPORTED: 409,
+    ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED: 409,
+    ErrorCodes.BACKEND_LOGIN_SESSION_NOT_FOUND: 404,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 

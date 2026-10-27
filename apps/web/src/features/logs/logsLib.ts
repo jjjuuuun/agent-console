@@ -5,23 +5,23 @@
 import type { LogQueryParams } from "@agent-console/api-client";
 import type { LogDashboard, LogEvent, LogLane, LogSettings, LogSourceInfo, LogWidget, WorkspaceSettings } from "@agent-console/contracts";
 import { preserveUnknownDashboards, type CategoryChipItem, type LaneEvent, type LogFilterValue, type LogTaxonomyView } from "@agent-console/log-view";
-import { CUSTOM_RANGE_SEP, FILTER_KEYS, RANGE_PRESETS } from "./logsConfig";
+import { CUSTOM_RANGE_SEP, FILTER_KEYS, RANGE_OPTIONS } from "./logsConfig";
 
 // ---------------------------------------------------------------- 기간
 
-export type ParsedRange = { kind: "preset"; id: string; seconds: number | null } | { kind: "custom"; since: string | undefined; until: string | undefined };
+export type ParsedRange = { kind: "option"; id: string; seconds: number | null } | { kind: "custom"; since: string | undefined; until: string | undefined };
 
-/** `range` URL 값 → 프리셋 또는 사용자 지정. 모르는 값은 `fallbackId` 프리셋. */
+/** `range` URL 값 → 선택지 또는 사용자 지정. 모르는 값은 `fallbackId` 선택지. */
 export function parseRange(value: string | undefined, fallbackId: string): ParsedRange {
   const raw = value ?? fallbackId;
-  const preset = RANGE_PRESETS.find((p) => p.id === raw);
-  if (preset !== undefined) return { kind: "preset", id: preset.id, seconds: preset.seconds };
+  const option = RANGE_OPTIONS.find((p) => p.id === raw);
+  if (option !== undefined) return { kind: "option", id: option.id, seconds: option.seconds };
   if (raw.includes(CUSTOM_RANGE_SEP)) {
     const [since, until] = raw.split(CUSTOM_RANGE_SEP);
     return { kind: "custom", since: since || undefined, until: until || undefined };
   }
-  const fallback = RANGE_PRESETS.find((p) => p.id === fallbackId);
-  return { kind: "preset", id: fallbackId, seconds: fallback?.seconds ?? null };
+  const fallback = RANGE_OPTIONS.find((p) => p.id === fallbackId);
+  return { kind: "option", id: fallbackId, seconds: fallback?.seconds ?? null };
 }
 
 /** 사용자 지정 기간의 `range` 값. */
@@ -38,7 +38,7 @@ export function rangeToWindow(range: ParsedRange, anchorMs: number): { since?: s
 
 // ---------------------------------------------------------------- 필터 → 요청
 
-/** 필터 값(+ 기간 + 추가 항목)을 서버 쿼리로. 이미 `since`/`until` 칩이 있으면 기간 프리셋보다 우선한다. 빈 값은 보내지 않는다. */
+/** 필터 값(+ 기간 + 추가 항목)을 서버 쿼리로. 이미 `since`/`until` 칩이 있으면 기간 선택지보다 우선한다. 빈 값은 보내지 않는다. */
 export function toRequestParams(filter: LogFilterValue, extra: LogQueryParams = {}, window: { since?: string; until?: string } = {}): LogQueryParams {
   const sinceKey = FILTER_KEYS.since;
   const untilKey = FILTER_KEYS.until;

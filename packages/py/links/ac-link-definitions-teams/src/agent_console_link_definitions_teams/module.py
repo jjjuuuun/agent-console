@@ -6,7 +6,7 @@
   ``resources.types``·``secrets.redact``·``secrets.rules``·``settings.scope_layers``(유효 설정
   ``?project=``의 범위 층, 5.2R.34).
 - 제공: ``graphs.entry_labels``(팀 구성 목록 입구 이름), ``definitions.usages``(리소스 목록
-  ``usage_count``), ``definitions.dependencies``(문서가 쓰는 정의 — 프리셋 적용 순서),
+  ``usage_count``), ``definitions.dependencies``(문서가 쓰는 정의 — 쓰는 정의 먼저 쓰기),
   ``definitions.references``(같은 계산의 참조 추출 함수, 여러 제공자 포트 X25 — 프로젝트 범위 검사).
   경로: 사용처·유효 설정·실행 계획·묶음 미리보기(저장본·초안).
 - 디스크립터: 호스트 기본 서비스 ``registries``(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다.

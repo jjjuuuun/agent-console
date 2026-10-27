@@ -37,8 +37,6 @@ ALLOWED_INTERNAL = frozenset(
 )
 """서버가 import해도 되는 사내 패키지(modkit + 기반)."""
 
-REMOVED_FILES = ("_context.py", "_monolith.py", "_plugins.py")
-
 TEST_SUPPORT = frozenset({"testing.py"})
 """테스트 지원 하위 모듈(design §3R.2.2): 기능 API로 시험 데이터를 만든다.
 앱이 import하지 않는다."""
@@ -96,11 +94,6 @@ def _string_constants(tree: ast.AST) -> tuple[list[str], list[str]]:
 def _comments(text: str) -> list[str]:
     tokens = tokenize.generate_tokens(io.StringIO(text).readline)
     return [t.string for t in tokens if t.type == tokenize.COMMENT]
-
-
-def test_removed_files_are_gone() -> None:
-    for name in REMOVED_FILES:
-        assert not (SERVER_SRC / name).exists(), name
 
 
 def test_server_imports_only_modkit_and_base_packages() -> None:

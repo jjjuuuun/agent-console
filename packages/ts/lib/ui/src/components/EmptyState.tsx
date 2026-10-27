@@ -24,7 +24,13 @@ export interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, secondaryAction, steps, doneLabel, className }: EmptyStateProps) {
   return (
     <div className={joinClass("ac-empty", className)}>
-      {icon === undefined ? null : <div aria-hidden="true">{icon}</div>}
+      {icon === undefined || icon === null ? null : (
+        <div className="ac-empty-spot" aria-hidden="true">
+          {icon}
+          <span className="ac-empty-dot ac-empty-dot-a" />
+          <span className="ac-empty-dot ac-empty-dot-b" />
+        </div>
+      )}
       <h3 className="ac-empty-title">{title}</h3>
       {description === undefined ? null : <div className="ac-text">{description}</div>}
       {steps === undefined || steps.length === 0 ? null : (

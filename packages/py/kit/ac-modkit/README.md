@@ -126,23 +126,16 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 
 ```
 
-옛 설정 키·환경변수·명령행 별칭은 모듈이 `ModuleDescriptor.settings_compat`(`SettingsCompat`)으로 알린다.
+지운 설정 키·환경변수·명령행 별칭·기본값은 모듈이 `ModuleDescriptor.settings_compat`(`SettingsCompat`)으로
+알린다. 옛 키를 읽어 옮기지는 않는다. 키를 옮기거나 지운 모듈은 `RemovedSetting(old, new=..., reason=...)`을
+선언하고, 호스트는 그 키가 남아 있으면 이유·새 위치를 알려 주는 오류(서버 코드 `settings.removed_key`)로
+거부한다.
 
 ```python
->>> from agent_console_modkit import migrate_settings
+>>> from agent_console_modkit import removed_settings, seed_settings
 >>> from agent_console_modkit.testing import ECHO_SETTINGS_COMPAT
->>> out, moves = migrate_settings({"echo": {"a": 1}}, {"mod-echo": ECHO_SETTINGS_COMPAT})
->>> out["modules"]["options"]["mod-echo"], moves[0].new
-({'a': 1}, 'modules.options.mod-echo')
-
-```
-
-읽기 호환 기간이 끝난 옛 키는 `RemovedSetting(old, new=...)`로 바꾼다. 호스트는 그 키가 남아 있으면
-새 위치를 알려 주는 오류(서버 코드 `settings.removed_key`)로 거부한다. 옮기기(`MovedSetting`)는
-키를 옮긴 단계 동안만 두는 장치다(4R.18부터 기본 모듈은 모두 `removed`만 선언한다).
-
-```python
->>> from agent_console_modkit import removed_settings
+>>> seed_settings({"host": "127.0.0.1"}, {"mod-echo": ECHO_SETTINGS_COMPAT})["modules"]
+{'options': {'mod-echo': {'host': '127.0.0.1'}}}
 >>> [r.message() for r in removed_settings({"echo_old": {}}, {"mod-echo": ECHO_SETTINGS_COMPAT})]
 ['설정 키 echo_old는 더 이상 읽지 않습니다. modules.options.mod-echo로 옮기세요']
 
@@ -256,7 +249,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `load_host_plugins(*, enabled, paths, modules, options, entry_points)` → `HostPlugins` / `PluginLoadContext` / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` | 호스트 플러그인 레지스트리: 묶음 공장(`HOST_REGISTRIES_GROUP`, 이름 순 첫 번째, 없으면 `ExtensionRegistries`) → 로더(`HOST_PLUGIN_LOADERS_GROUP`, 이름 순) → `register(registries)` 플러그인. 실패는 보고 |
 | `open_host_database(path)` | DB 공장(`HOST_DATABASE_GROUP`) → `DatabaseHandle`(없으면 None) |
 | `env_secret_lookup`·`secret_lookup`·`secret_providers_of`·`SECRET_PROVIDERS_REGISTRY` | 비밀 해석 사슬(환경변수 → 묶음의 비밀 공급자) |
-| `SettingsCompat`(`MovedSetting`·`EnvSetting`·`FlagSetting`·`SeedSetting`·`RemovedSetting`) / `compat_of`·`migrate_settings`·`env_settings`·`compat_flags`·`flag_settings`·`removed_settings` | 모듈이 선언하는 호스트 설정 호환(옛 키·환경변수·명령행 → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()`는 거부 문구(새 위치 안내) |
+| `SettingsCompat`(`RemovedSetting`·`EnvSetting`·`FlagSetting`·`SeedSetting`) / `compat_of`·`removed_settings`·`env_settings`·`compat_flags`·`flag_settings`·`seed_settings` | 모듈이 선언하는 호스트 설정 호환(지운 키 거부, 환경변수·명령행·다른 설정 값 → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()`는 거부 문구(새 위치 안내) |
 | `NOT_READY` / `Assembly.running` | 준비 전 `/health` 503 코드, 시작 완료 여부 |
 | `Assembly.module_options(id, *, secret_paths=None, hide_paths=False, mask=OPTIONS_MASK)` / `read_module_options` / `ModuleOptions` / `mask_values` / `OPTIONS_MASK` / `SECRET_SCHEMA_KEY` / `SecretPathFinder` | 모듈 옵션 읽기 전용 보기(스키마·가린 지금 값, 꺼진 모듈 포함, 모르는 id면 None). 스키마 비밀 필드는 늘 가리고 평문 비밀 판정은 주입, `hide_paths`면 경로 필드도 가림 |
 | `WsSubscribeRequest`·`WsReject`·`WsForward`·`WsTopicHandler` | WS 토픽 처리기 형식 |

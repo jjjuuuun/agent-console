@@ -1,7 +1,7 @@
 """공통 설정 저장 전 검사: 사용량 출처 설정을 그 출처 ``config_schema``로 본다(4R.13 QA 후속).
 
 ``definitions.checks`` 하나로 제공된다. 정의 저장 쪽(``mod-definitions``의 ``PUT /settings``,
-``mod-versions`` 되돌리기, ``mod-presets`` 적용)이 error 이슈를 보면 422(``validation_failed``,
+``mod-versions`` 되돌리기)가 error 이슈를 보면 422(``validation_failed``,
 ``details.issues[].path`` = 문서 기준 위치)로 거부한다. 메시지에 값·스키마 원문은 없다.
 """
 

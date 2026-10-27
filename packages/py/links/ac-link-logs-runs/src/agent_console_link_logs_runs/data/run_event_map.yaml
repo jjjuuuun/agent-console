@@ -1,4 +1,4 @@
-# 플랫폼 실행 이벤트(RunEvent.type) → 로그 이벤트 대응표(프리셋 데이터, design §4R.2).
+# 플랫폼 실행 이벤트(RunEvent.type) → 로그 이벤트 대응표(기본 데이터, design §4R.2).
 # 설정 `logs.sources[id=platform-runs].config.event_map`이 키(형식)별로 통째로 덮어쓴다.
 # 이 파일을 비우거나 지워도 동작한다(모든 형식이 범주 other).
 #

@@ -14,7 +14,7 @@
 제공:
 - ``graphs.entry_labels``: 팀 구성 입구 노드 표시 이름(``mod-definitions`` 목록).
 - ``definitions.usages``: 정의가 붙은 곳(``mod-resources`` 목록 ``usage_count``).
-- ``definitions.dependencies``: 정의 문서가 쓰는 정의(``mod-presets`` 적용 순서, 5R.15).
+- ``definitions.dependencies``: 정의 문서가 쓰는 정의(여러 정의를 쓸 때 쓰는 정의 먼저, 5R.15).
 - ``definitions.references``(여러 제공자, X25): 참조 추출 함수 ``(kind, document) -> [(kind, id)]``
   (``mod-projects`` 범위 검사·옮기기 계획, design §UX-P.6, 5.2R.31).
 """

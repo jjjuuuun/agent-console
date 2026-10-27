@@ -15,23 +15,10 @@ from agent_console_contracts import CONTRACTS_VERSION, ErrorInfo, Issue, PluginI
 from agent_console_modkit import Assembly
 from agent_console_registry import LoadReport
 
-from ._config import SETTINGS_MOVED_KEY, ServerSettings
+from ._config import ServerSettings
 from ._ports import SECRET_REDACT, SERVER_ATTRIBUTES, SERVER_WARNINGS
 
 _log = logging.getLogger("agent_console_server")
-
-
-def moved_key_issues(settings: ServerSettings) -> list[Issue]:
-    """옛 위치에서 옮긴 설정 키 → 경고 이슈(`settings.moved_key`, details `{old, new}`)."""
-    return [
-        Issue(
-            severity="warning",
-            code=SETTINGS_MOVED_KEY,
-            message=m.message(),
-            details={"old": m.old, "new": m.new, "overridden": list(m.overridden)},
-        )
-        for m in settings.moved_keys
-    ]
 
 
 def plugin_infos(
@@ -102,8 +89,8 @@ def server_info(
         contracts_version=CONTRACTS_VERSION,
         plugins=plugin_infos(reports, redactor(assembly)),
         attributes=attributes,
-        warnings=[*warnings, *moved_key_issues(settings)],
+        warnings=warnings,
     )
 
 
-__all__ = ["moved_key_issues", "plugin_infos", "redactor", "server_info"]
+__all__ = ["plugin_infos", "redactor", "server_info"]

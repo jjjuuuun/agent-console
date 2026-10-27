@@ -20,16 +20,17 @@ MODULE_OWNED_TABLES: frozenset[str] = frozenset(
         "interactions",
     }
 )
-"""legacy 마이그레이션(0001~0003)이 만들지만 코드·테이블 정의는 모듈 패키지가 소유한 테이블.
+"""legacy 마이그레이션(0001~0003)이 만들었지만 현재는 모듈 계보가 소유하는 표 이름.
 
-테이블 정의(`sa.Table`)는 소유 모듈 패키지에 있으므로 이 `metadata`에는 없다. 그래서 마이그레이션
-결과와 `metadata`를 비교하는 곳은 이 이름들을 비교에서 뺀다(design §3R.1.7).
-- `usage_observations`: `agent_console_mod_usage.storage`(3R.11).
-- `conversations`·`chat_queue`: `agent_console_mod_chat.storage`(3R.15).
-- `runs`·`node_runs`·`run_events`·`interactions`: 계보 `runs`(`agent_console_mod_runs`,
-  5R.4)가 소유권을 넘겨받는다. 코드(저장소 구현)와 아래 legacy 정의는 여기에 그대로 있다.
-  이 표들은 legacy 모양(`metadata`)과 계보 적용 뒤 모양(`runs_lineage_metadata`) 둘이라
-  비교는 호출자가 정한다.
+이 `metadata`로 마이그레이션 결과를 비교할 때(`include_object`) 이 이름들은 뺀다(design §3R.1.7).
+legacy 마이그레이션은 동결이라 표 생성은 그대로 두고,
+소유권(이후 열·색인 변경)만 모듈 계보로 넘어갔다.
+- `usage_observations`: `agent_console_mod_usage.storage`가 표 정의와 저장소 코드를 가진다.
+- `conversations`·`chat_queue`: `agent_console_mod_chat.storage`가 가진다.
+- `runs`·`node_runs`·`run_events`·`interactions`: 계보 `runs`(`agent_console_mod_runs`)가 소유한다.
+  표 정의(legacy 모양, `metadata`)와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다.
+  계보 없이 이 패키지만 쓰는 경로가 같은 정의를 쓰고, 기존 DB의 행이 이 표에 있기 때문이다.
+  계보 적용 뒤 모양은 `runs_lineage_metadata`이며, 어느 모양과 비교할지는 호출자가 정한다.
 """
 
 
@@ -115,8 +116,9 @@ run_events = sa.Table(
     sa.Index("ix_run_events_type_ts", "type", "ts"),
 )
 
-# legacy(2R.20): 라우터를 삭제해 이 테이블에 쓰는 코드는 없다. 마이그레이션 0001~0003 동결(파괴적
-# 마이그레이션 금지)이라 테이블은 남긴다. Run 삭제 때 남은 행을 지우는 코드만 있다(sqlite.py).
+# 기존 DB 호환용. 이 표를 쓰는 코드는 없고, 마이그레이션 0001~0003이 동결
+# (파괴적 마이그레이션 금지)이라 정의만 남겼다.
+# 기존 DB에 남은 행은 Run 삭제 때 함께 지운다(`SqliteRunRepository.delete`).
 routing_decisions = sa.Table(
     "routing_decisions",
     metadata,
@@ -167,17 +169,18 @@ content_blobs = sa.Table(
 가리킨다. 같은 내용은 한 행을 여러 버전이 공유하고, 어떤 버전도 안 쓰면 `prune_blobs`가 지운다."""
 
 
-# --- 계보 `runs`(5R.4, `agent_console_mod_runs`의 `runs_0002`)가 바꾸는 모양 ---------
+# --- 계보 `runs`(`agent_console_mod_runs`의 `runs_0002`)가 바꾸는 모양 ---------
 # legacy 표(위)는 동결이다. 계보가 열을 더한 뒤의 모양은 따로 정의하고, 저장소 구현은 DB에 그 열이
-# 있을 때만 이 정의로 쓴다(`runs_lineage_active`). 마이그레이션 `runs_0002`와 같은 내용이어야 하며
-# `agent_console_mod_runs` 테스트가 `compare_metadata`로 맞춘다.
+# 있을 때만 이 정의로 쓴다(`runs_lineage_active`). 계보를 올리지 않은 DB는 legacy 모양으로 동작한다.
+# 마이그레이션 `runs_0002`와 같은 내용이어야 하며 `agent_console_mod_runs` 테스트가
+# `compare_metadata`로 맞춘다.
 runs_lineage_metadata = sa.MetaData()
 
 runs_v2 = runs.to_metadata(runs_lineage_metadata)
 runs_v2.append_column(sa.Column("parent_node_id", sa.Text))
 runs_v2.append_column(sa.Column("root_run_id", sa.Text))
 sa.Index("ix_runs_root", runs_v2.c.root_run_id)
-# `runs_0003`(5.2R.32): 프로젝트 열 + (project_id, created_at) 색인. `runs_lineage_active`는 이 열을
+# `runs_0003`: 프로젝트 열 + (project_id, created_at) 색인. `runs_lineage_active`는 이 열을
 # 요구하지 않는다(0002까지만 올린 DB도 계보로 읽는다). 저장소는 `runs_project_active`로 따로 본다.
 runs_v2.append_column(sa.Column("project_id", sa.Text))
 sa.Index("ix_runs_project_created", runs_v2.c.project_id, runs_v2.c.created_at)

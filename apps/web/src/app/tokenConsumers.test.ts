@@ -45,3 +45,17 @@ describe("유틸 클래스 사용처", () => {
     for (const c of used) expect(css, c).toContain(`.${c}`);
   });
 });
+
+describe("줄 높이 짝짓기(5.2R.74)", () => {
+  it("font-size: var(--ac-text-xs|sm) 규칙에는 line-height가 함께 있다(body 상속에 기대지 않음)", () => {
+    const webSrc = resolve(import.meta.dirname, "..");
+    const missing: string[] = [];
+    for (const p of [...sourceFiles(webSrc), ...sourceFiles(tsRoot)].filter((f) => f.endsWith(".css") && !f.endsWith("fonts.css"))) {
+      for (const m of readFileSync(p, "utf-8").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const body = m[2]!;
+        if (/font-size:\s*var\(--ac-text-(xs|sm)\)/.test(body) && !/line-height/.test(body) && !/(^|[;\s])font:/.test(body)) missing.push(`${p}: ${m[1]!.trim().slice(0, 60)}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  }, 60_000);
+});

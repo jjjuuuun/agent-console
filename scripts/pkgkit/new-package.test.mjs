@@ -30,11 +30,10 @@ describe("createPackage", () => {
     expect(lintTsPackage({ kind: "lib", files: readPackageFiles(r.dir) })).toEqual([]);
   });
 
-  it("초안으로 tsconfig·eslint-config 패키지를 만든다", () => {
-    for (const draft of ["tsconfig", "eslint-config"]) {
-      const r = createPackage(args("--kind", "config", "--draft", draft, draft));
-      expect(lintTsPackage({ kind: "config", files: readPackageFiles(r.dir) })).toEqual([]);
-    }
+  it("config 종류로 만들고 pkg-lint를 통과한다", () => {
+    const r = createPackage(args("--kind", "config", "demo-config"));
+    expect(r.relDir).toBe("packages/ts/config/demo-config");
+    expect(lintTsPackage({ kind: "config", files: readPackageFiles(r.dir) })).toEqual([]);
   });
 
   it("--dry-run은 쓰지 않는다", () => {

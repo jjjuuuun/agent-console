@@ -1,4 +1,4 @@
-# 기본 세션 제목 순위 규칙(프리셋 데이터, 5R.19). 위에서부터 보고, 후보가 있는 첫 규칙이 이긴다.
+# 기본 세션 제목 순위 규칙(데이터, 5R.19). 위에서부터 보고, 후보가 있는 첫 규칙이 이긴다.
 # pick: first = 시각순 처음 후보, last = 마지막 후보. 태그는 분류기(형식 플러그인)가 이벤트에 붙인다.
 # 이 파일을 비우거나 지우면 `session_title` 태그의 첫 후보를 쓴다(DEFAULT_SESSION_TITLE_RULES).
 # 모듈에서는 설치자 옵션 `modules.options.mod-logs.session_title_rules`로 통째로 바꾼다.

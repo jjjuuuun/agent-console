@@ -39,6 +39,7 @@ from ._descriptors import (
     EdgeTypeDescriptor,
     EnforceCapabilities,
     InteractionKindDescriptor,
+    LoginMethodInfo,
     ModelInfo,
     NodeTypeDescriptor,
     ReplyFields,
@@ -102,6 +103,14 @@ from ._interactions import (
     RespondInteractionRequest,
     ReviewDecision,
 )
+from ._login import (
+    BACKEND_LOGIN_TEXT_MAX_CHARS,
+    BackendLoginInput,
+    BackendLoginPhase,
+    BackendLoginSession,
+    BackendLoginStartRequest,
+    BackendLogoutResult,
+)
 from ._models import (
     NodeRun,
     NodeRunStatus,
@@ -114,6 +123,7 @@ from ._readiness import (
     BackendProbeRequest,
     BackendProbeResult,
     BackendReadiness,
+    ReadinessAction,
     ReadinessCheck,
     ReadinessTone,
 )
@@ -126,6 +136,7 @@ from ._trace import (
 )
 
 __all__ = [
+    "BACKEND_LOGIN_TEXT_MAX_CHARS",
     "INTERACTION_CLOSED_STATUSES",
     "KNOWN_RUN_EVENT_TYPES",
     "RUN_EVENT_SCHEMA_VERSION",
@@ -147,6 +158,11 @@ __all__ = [
     "AnyKnownRunEvent",
     "BackendCapabilities",
     "BackendDescriptor",
+    "BackendLoginInput",
+    "BackendLoginPhase",
+    "BackendLoginSession",
+    "BackendLoginStartRequest",
+    "BackendLogoutResult",
     "BackendProbeRequest",
     "BackendProbeResult",
     "BackendReadiness",
@@ -189,6 +205,7 @@ __all__ = [
     "KnownRunEvent",
     "LogWarningEvent",
     "LogWarningPayload",
+    "LoginMethodInfo",
     "LoopExhaustedEvent",
     "LoopExhaustedPayload",
     "LoopIterationEvent",
@@ -199,6 +216,7 @@ __all__ = [
     "NodeStatusEvent",
     "NodeStatusPayload",
     "NodeTypeDescriptor",
+    "ReadinessAction",
     "ReadinessCheck",
     "ReadinessTone",
     "ReplyFields",

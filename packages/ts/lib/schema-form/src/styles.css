@@ -45,26 +45,28 @@
 .ac-sf-raw-input {
   box-sizing: border-box;
   width: 100%;
-  min-height: var(--ac-control-md, 28px);
-  padding: 0 var(--ac-space-2, 8px);
+  min-height: var(--ac-control-md, 32px);
+  padding: 0 var(--ac-space-3, 12px);
   background: var(--ac-surface-2, transparent);
   color: var(--ac-text, inherit);
   border: 1px solid var(--ac-border-strong, #9aa3b2);
-  border-radius: var(--ac-radius-sm, 4px);
+  border-radius: var(--ac-radius-md, 8px);
   font: inherit;
   font-weight: var(--ac-fw-regular, 400);
 }
 .ac-schema-form textarea,
-.ac-sf-raw-input { padding: var(--ac-space-1, 4px) var(--ac-space-2, 8px); resize: vertical; min-height: 4.5em; }
+.ac-sf-raw-input { padding: var(--ac-space-2, 8px) var(--ac-space-3, 12px); resize: vertical; min-height: 4.5em; }
 .ac-sf-raw-input { font-family: var(--ac-font-mono, ui-monospace, monospace); font-size: var(--ac-text-code, 12.5px); }
 .ac-schema-form input[type='checkbox'],
-.ac-schema-form input[type='radio'] { accent-color: var(--ac-accent, #1f5fd1); margin-right: var(--ac-space-2, 8px); }
+.ac-schema-form input[type='radio'] { accent-color: var(--ac-accent, #1f5fd1); margin-right: var(--ac-space-2, 8px); /* 모양은 ui tokens.css 10b(appearance:none)가 정한다 */ }
 .ac-schema-form select { text-overflow: ellipsis; }
 .ac-schema-form :is(input, select, textarea, button):focus-visible,
 .ac-sf-raw-input:focus-visible {
   outline: 2px solid var(--ac-focus-ring, #1f5fd1);
   outline-offset: 2px;
 }
+.ac-schema-form :is(input:not([type='checkbox'], [type='radio']), select, textarea):focus-visible,
+.ac-sf-raw-input:focus-visible { border-color: var(--ac-accent, #1f5fd1); box-shadow: var(--ac-ring-focus, none); outline-color: transparent; }
 .ac-schema-form :is(input, select, textarea):disabled { opacity: 0.6; }
 .ac-schema-form :is(input, select, textarea)[aria-invalid='true'],
 .ac-schema-form .has-error :is(input, select, textarea) { border-color: var(--ac-danger, #c4302b); }

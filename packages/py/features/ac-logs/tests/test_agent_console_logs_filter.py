@@ -70,7 +70,7 @@ def test_query_schema_lists_known_names() -> None:
 
 def test_query_context_from_settings() -> None:
     ctx = query_context(None)
-    assert ctx.error_categories == frozenset({"error"})  # 기본 프리셋의 tone: danger
+    assert ctx.error_categories == frozenset({"error"})  # 기본 분류 체계의 tone: danger
     empty = query_context(None, base_taxonomy=LogTaxonomy())
     assert empty.error_categories == frozenset()
     custom = query_context(

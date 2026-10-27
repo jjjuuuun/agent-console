@@ -79,7 +79,9 @@ export function AppSidebar({ routes, groups = [], shortcutHint, activeId, badges
         <>
         <div className="app-brand-row">
           <button type="button" className="app-brand" aria-label={m.sidebar.brandLink} title={m.sidebar.brandLink} onClick={() => home && onNavigate(home)}>
-            <span className="app-brand-mark" aria-hidden="true">◆</span>
+            <span className="app-brand-mark" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round"><path d="M6 1.5 10.5 6 6 10.5 1.5 6z" /></svg>
+            </span>
             <span className="app-brand-text">{m.sidebar.brand}</span>
           </button>
           <IconButton label={withHint(m.sidebar.quickNav, "palette.open")} icon={<Icon name="search" />} size="sm" onClick={onOpenQuickNav} />

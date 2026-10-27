@@ -8,7 +8,6 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-contracts>=0.8,<0.9",
-    "agent-console-registry>=0.1,<0.2",
     "jsonschema>=4.23",
     "referencing>=0.28",
 ]

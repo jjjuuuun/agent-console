@@ -16,8 +16,15 @@ export { useAgentList, useGraphList, useImportSources, useInteractionKinds, useI
 export { editLayerOf, inheritedProvenance, inheritedValue, toFormLayers, toUiLayers } from "./effective";
 export { DEFINITION_KINDS, definitionKey, kindOfModel } from "./kinds";
 export { libraryMessages, modeLabel } from "./messages";
+export { routeIconNode } from "./routeIcon";
 export { ROUTE_ROLES, definitionPath, layerSourcePath, routePath, useRouteOn, useRoutesOn } from "./paths";
 export { type DetailRequest } from "./types";
 export { FolderMoveDialog, type FolderMoveDialogProps, type FolderMoveMessages } from "./FolderMoveDialog";
 export { LabelEditDialog, type LabelEditDialogProps, type LabelEditMessages } from "./LabelEditDialog";
 export { useListShortcuts } from "./useListShortcuts";
+export { arrangeMessages, type ArrangeMessages } from "./arrangeMessages";
+export { GROUP_ATTRIBUTE, GROUP_NONE, browserStorage, useListView, type ListView, type ListViewOptions } from "./useListView";
+export { useArrange, type Arranged, type ArrangeOptions } from "./useArrange";
+export { folderGroupDef, labelsGroupDef, modifiedSortDef, nameSortDef, projectGroupDef, folderPathsOf, type ArrangeableDefinition } from "./arrangeDefs";
+export { useDefinitionEdits, type DefinitionEdits, type DefinitionStore } from "./useDefinitionEdits";
+export { ListEditDialogs, type ListEditDialogsProps } from "./ListEditDialogs";

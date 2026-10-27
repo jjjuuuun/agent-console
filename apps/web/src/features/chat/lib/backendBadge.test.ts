@@ -13,7 +13,7 @@ describe("effectiveBackendId", () => {
     expect(effectiveBackendId(undefined, node(), "common-b", undefined)).toBe("common-b");
     expect(effectiveBackendId(undefined, node(), null)).toBeUndefined();
   });
-  it("프리셋 시나리오: 팀 층에만 백엔드가 있으면 그 백엔드의 칩이 붙는다", () => {
+  it("팀 층에만 백엔드가 있으면 그 백엔드의 칩이 붙는다", () => {
     const backends = new Map<string, BackendDescriptor>([["fake", { id: "fake", title: "체험", ui_hints: { badge: "체험" } } as BackendDescriptor]]);
     const id = effectiveBackendId({ id: "a" } as Agent, node(), undefined, "fake");
     expect(badgeOfBackend(backends, id)).toBe("체험");

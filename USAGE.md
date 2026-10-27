@@ -17,7 +17,6 @@
    - [프로젝트](#프로젝트)
    - [설정과 기능 모듈](#설정과-기능-모듈)
    - [가져오기·내보내기](#가져오기내보내기)
-   - [내 프리셋 만들기(선택)](#내-프리셋-만들기선택)
 3. [서버 운용](#3-서버-운용)
 4. [개발자용](#4-개발자용)
 
@@ -28,12 +27,14 @@
 
 ### 구독 로그인(기본)
 
-이 PC에서 Claude Code에 한 번 로그인해 두면 별도 설정 없이 그 로그인 정보로 실행합니다.
+이 PC의 Claude Code 로그인 정보로 실행하므로 별도 설정이 필요 없습니다. 아직 로그인하지 않았다면 둘 중 하나로 로그인합니다.
 
-```bash
-claude            # Claude Code를 실행해 /login으로 로그인(이미 로그인했다면 건너뜀)
-AGENT_CONSOLE_SERVE_STATIC=1 AGENT_CONSOLE_WEB_DIR=apps/web/dist uv run agent-console serve --open
-```
+- **앱 화면에서(기본 켜짐)**: **설정 › 에이전트 기본값**의 **백엔드 인증·실행 준비** 카드에서 **[구독으로 로그인]**을 누릅니다.
+  서버가 `claude auth login`을 띄워 로그인 주소와 코드 입력을 화면으로 중계합니다. 로그인 정보는 Claude Code가 자기 위치
+  (`CLAUDE_CONFIG_DIR` 또는 `~/.claude/`)에 저장하며, **앱은 토큰을 받거나 저장하지 않습니다.**
+- **터미널에서**: `claude auth login`(또는 `claude` 실행 후 `/login`).
+
+이 버튼을 쓰지 않으려면 `agent-console.yaml`에서 `modules.options.mod-runs.backend_login.enabled: false`로 끕니다.
 
 구독 자격으로 Agent SDK를 쓰는 것이 이용 약관상 허용되는지는 확인되지 않았습니다(Anthropic 문서는 Agent SDK 기반 앱에
 API 키 사용을 안내합니다). **약관을 직접 확인하고 본인 책임으로 쓰세요.** 구독 방식으로 실행할 때마다 경고 로그가 남고,
@@ -117,7 +118,6 @@ modules:
                                                                     ▼
  [가져오기] ── 복사 ─▶ 에이전트·리소스                         [실행 기록]
  [내보내기] ◀── 에이전트·리소스·팀 구성                         위임 흐름·hook·MCP
- [프리셋(선택)] ── 적용 ─▶ 에이전트·리소스·팀 구성
                                                                     │
                                                 [로그] ── 로컬 로그 ─▶ [사용량]
 
@@ -247,7 +247,6 @@ uv run agent-console serve --disable-module mod-logs
 | `mod-usage` | 사용량 |
 | `mod-logs` | 로그 수집·색인 |
 | `mod-projects` | 프로젝트 |
-| `mod-presets` | 프리셋 |
 | `mod-imports` · `mod-exports` | 가져오기·내보내기 |
 | `mod-versions` | 정의·설정 버전 |
 | `link-*` | 두 기능을 잇는 연동(예: `link-logs-usage`) |
@@ -269,49 +268,6 @@ uv run agent-console serve --disable-module mod-logs
 3. 기본은 zip 내려받기입니다. 폴더에 바로 쓰는 것은 서버 설정에서 허용한 폴더에서만 되고, `~/.claude` 같은 보호 위치에는 쓰지 않습니다.
 
 팀 구성을 내보내면 그 팀이 쓰는 에이전트·리소스·자식 팀 구성도 함께 묶입니다.
-
-### 내 프리셋 만들기(선택)
-
-프리셋은 에이전트·팀 구성·리소스 정의를 묶은 폴더입니다. 저장소에는 프리셋이 들어 있지 않으며, 없어도 모든 기능이 동작합니다.
-적용하면 정의가 작업 공간에 복사되고, 복사본은 마음대로 고치거나 지워도 됩니다.
-
-폴더 하나가 프리셋 하나입니다. 폴더에 매니페스트 `preset.yaml`과 정의 YAML 파일을 둡니다.
-
-```text
-my-presets/
-  my-team/
-    preset.yaml
-    agents/helper.yaml       # 첫 폴더 이름이 정의 종류(agents·graphs·resources)
-    graphs/my-team.yaml
-```
-
-```yaml
-# my-presets/my-team/preset.yaml
-kind: preset
-id: my-team                  # 영문 소문자·숫자·하이픈
-schema_version: 1
-name: 내 팀
-items:                       # 프리셋 폴더 기준 상대 경로(폴더 밖은 가리킬 수 없음)
-  - agents/helper.yaml
-  - graphs/my-team.yaml
-default_entry: my-team       # 선택. 대표 팀 구성 id
-featured: 1                  # 선택. 채팅 시작하기의 "바로 시작"에 보일 순서
-```
-
-리소스처럼 본문이 있는 정의는 항목 파일 옆 `<id>/` 폴더에 본문을 둡니다(예: `resources/guide.yaml` + `resources/guide/guide.md`).
-자세한 형식은 `packages/py/features/ac-presets/README.md`에 있습니다.
-
-폴더를 만든 뒤 설정 파일에 등록합니다. 상대 경로는 설정 파일이 있는 폴더 기준입니다.
-
-```yaml
-modules:
-  options:
-    mod-presets:
-      directories: [my-presets]
-```
-
-서버를 다시 띄우면 **설정 › 프리셋**에서 적용할 수 있고, `featured`를 준 프리셋은 채팅 화면 **시작하기 › 바로 시작**에도 나옵니다.
-서버를 띄울 때 `--apply-preset <id>`를 붙여 바로 적용할 수도 있습니다.
 
 ## 3. 서버 운용
 

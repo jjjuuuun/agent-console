@@ -18,6 +18,10 @@ export { FOCUSABLE_SELECTOR, trapTabKey, useModalBackdrop } from "./components/m
 export type { UseModalBackdropOptions } from "./components/modal";
 export { ToastProvider, useToast } from "./components/Toast";
 export type { ToastInput, ToastProviderProps } from "./components/Toast";
+export { Switch } from "./components/Switch";
+export type { SwitchProps } from "./components/Switch";
+export { Choice } from "./components/Choice";
+export type { ChoiceProps } from "./components/Choice";
 export { Tabs } from "./components/Tabs";
 export type { TabItem, TabsProps } from "./components/Tabs";
 export { Sidebar, formatBadgeCount, groupSidebarItems } from "./components/Sidebar";

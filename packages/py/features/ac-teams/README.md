@@ -2,7 +2,6 @@
 
 팀 구성 그래프의 **의미**를 계산하는 순수 라이브러리. 입구·답변, 위임 대상, 리소스 첨부, 노드별 허용 상호작용(grant)을
 해석하고, 섞인 그래프 규칙을 검증하며, 노드의 유효 설정(4층 + 리소스 첨부, 출처)을 만든다.
-설계: `specs/agent-console/design.md` §R1.2·§R1.2a, §R2, §R3.1·§R3.1a·§R3.1b, §R3.2, §R12.1, §R14.2.
 
 - **이름을 모른다.** 연결 종류·노드 타입·위임 방식·상호작용 종류 id는 이 패키지에 없다. 판단 근거는
   - 엣지 디스크립터 `scheduling`(`entry`·`exit`·`flow`·`none`)·`invocation`·`interaction`·`connects`·`default_ports`
@@ -279,7 +278,7 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
 | `team.mixed_invocation` | error | 흐름·입구로 받으면서 위임으로도 불림(반복을 닫는 사이클 연결은 세지 않음 — `flow.loop_invoked_only`) |
 | `team.mixed_strategies` | error | 한 노드의 위임 대상이 서로 다른 위임 방식이고 그중 디스크립터 `composable`이 거짓인(또는 모르는) 방식이 있음. 모두 `composable`이면 허용(혼합 위임, design §5R.6). `details.not_composable`. 제안: 그 연결을 합칠 수 있는 방식의 위임 연결 종류로 바꾸기(이미 쓰는 방식 우선, 엣지 config의 방식 덮어쓰기 키는 옮기지 않음) |
 | `team.unknown_strategy` | warning | 등록되지 않은 위임 방식 |
-| `delegation.depth_exceeded` | error | 위임 깊이 > min(디스크립터 `max_depth`, 설정 `delegation.max_depth`). 방식 `max_depth: null`이면 설정만. `details.path` = 위임 경로. 상수 `DELEGATION_DEPTH_EXCEEDED`(옛 이름 `DELEGATION_TOO_DEEP`, 4R까지 값 `team.delegation_too_deep`) |
+| `delegation.depth_exceeded` | error | 위임 깊이 > min(디스크립터 `max_depth`, 설정 `delegation.max_depth`). 방식 `max_depth: null`이면 설정만. `details.path` = 위임 경로. 상수 `DELEGATION_DEPTH_EXCEEDED` |
 | `team.delegation_cycle` | error | 위임 연결 순환 |
 | `team.flow_from_delegate` | error | 위임받는 노드의 흐름 엣지(디스크립터 `allows_outgoing_flow=false`). `exit`(답변)은 허용 |
 | `team.backend_capability_missing` | error | 위임자 백엔드에 `requires_backend_capability` 능력이 없음 |

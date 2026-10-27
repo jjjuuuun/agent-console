@@ -24,7 +24,6 @@ FEATURE_ROLES: dict[str, list[str]] = {
     "mod-usage": ["usage"],
     "mod-imports": ["imports"],
     "mod-exports": ["exports"],
-    "mod-presets": ["presets"],
     "mod-versions": ["versions"],
     "mod-definitions": ["definitions:agent", "definitions:graph", "settings"],
     "mod-resources": ["definitions:resource"],
@@ -43,7 +42,6 @@ PROBES: dict[str, tuple[str, str]] = {
     "mod-usage": ("GET", "/usage"),
     "mod-imports": ("GET", "/resources/import/sources"),
     "mod-exports": ("GET", "/exporters"),
-    "mod-presets": ("GET", "/presets"),
     "mod-versions": ("GET", "/settings/versions"),
     "mod-resources": ("GET", "/resources"),
     "mod-runs": ("GET", "/runs"),
@@ -63,7 +61,6 @@ def test_feature_modules_are_active_with_their_web_roles(tmp_path: Path) -> None
         for link_id, roles in DEFINITION_LINK_ROLES.items():
             assert infos[link_id]["status"] == "active", infos[link_id]
             assert infos[link_id]["web_roles"] == roles
-        assert "server-monolith" not in infos  # 3R.16: 통짜 모듈을 지웠다
         assert "definitions.lookup" in infos["mod-definitions"]["provides"]
         for method, path in PROBES.values():
             assert client.request(method, f"{API}{path}").status_code == 200, path
@@ -89,7 +86,6 @@ def test_disabling_definitions_leaves_dependent_modules_unsatisfied(tmp_path: Pa
         dependents = (
             "mod-imports",
             "mod-exports",
-            "mod-presets",
             "mod-versions",
             "mod-resources",
             "mod-runs",
@@ -110,7 +106,6 @@ def test_disabling_definitions_leaves_dependent_modules_unsatisfied(tmp_path: Pa
         assert client.get(f"{API}/projects").json() == []
         body = client.get(f"{API}/usage").json()
         assert body["rollups"] == []  # 토큰 집계 포트(link-runs-usage) 없음 → 빈 목록
-        assert client.get(f"{API}/presets").status_code == 404
         assert client.get(f"{API}/agents").status_code == 404
 
 
@@ -119,7 +114,6 @@ OLD_TOP_LEVEL_KEYS = {
     "exports": "modules.options.mod-exports",
     "versions": "modules.options.mod-versions",
     "imports": "modules.options.mod-imports",
-    "presets": "modules.options.mod-presets",
     "resources": "modules.options.mod-definitions",
     "runtime": "modules.options.mod-runs.runtime",
     "backends": "modules.options.mod-runs.backends",
@@ -143,16 +137,17 @@ def test_old_keys_are_rejected_with_new_location(tmp_path: Path, old: str, new: 
 
 def test_all_old_keys_reported_together(tmp_path: Path) -> None:
     config = tmp_path / CONFIG_FILENAME
-    config.write_text("usage: {}\nruntime: {}\nconsole: {}\n", encoding="utf-8")
+    config.write_text("usage: {}\nruntime: {}\npresets: {}\n", encoding="utf-8")
     with pytest.raises(ConfigError) as exc:
         load_settings(config, environ={})
-    assert [k.old for k in exc.value.removed] == ["console", "runtime", "usage"]
-    console = exc.value.removed[0]
-    assert console.new is None
-    assert "1R에서 삭제" in console.message
+    # 모듈 id 순(mod-definitions → mod-runs → mod-usage)으로 한 번에 보고한다
+    assert [k.old for k in exc.value.removed] == ["presets", "runtime", "usage"]
+    presets = exc.value.removed[0]
+    assert presets.new is None
+    assert "프리셋 기능은 삭제되었습니다" in presets.message
 
 
-def test_new_locations_have_no_moved_warning(tmp_path: Path) -> None:
+def test_new_locations_start_without_settings_warnings(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     settings = make_settings(
@@ -163,10 +158,9 @@ def test_new_locations_have_no_moved_warning(tmp_path: Path) -> None:
             "mod-versions": {"max_per_definition": 2},
         },
     )
-    assert settings.moved_keys == []
     with server(settings) as client:
         warnings = client.get(f"{API}/server-info").json()["warnings"]
-        assert not [w for w in warnings if w["code"] == "settings.moved_key"]
+        assert not [w for w in warnings if w["code"].startswith("settings.")]
         assert [r["id"] for r in client.get(f"{API}/exports/roots").json()] == ["o"]
 
 

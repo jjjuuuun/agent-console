@@ -1,12 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter } from "react-router";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppRoot } from "../../app/AppRoot";
 import { createAppQueryClient } from "../../app/queries";
 import { createSafeStorage } from "../../app/storage";
 import { buildAppRoutes, preloadScreens } from "../../shell/routes";
 import { startMessages } from "../start";
-import { conversation, createHarness, type Harness } from "./testing/chatFakes";
+import { createHarness, type Harness } from "./testing/chatFakes";
 
 beforeAll(preloadScreens, 120_000);
 afterEach(cleanup);
@@ -18,11 +18,6 @@ function mount(h: Harness, path: string) {
 }
 
 const empty = { listConversations: async () => [], listGraphs: async () => [], listAgents: async () => [], listRuns: async () => [] };
-const presets = [
-  { id: "p-b", name: "둘째", featured: 2, start_graph: "g-b", items: [{ kind: "graph", id: "g-b", name: "B" }], badges: ["체험"] },
-  { id: "p-a", name: "첫째", featured: 1, start_graph: "g-a", items: [{ kind: "graph", id: "g-a", name: "A" }], badges: ["체험"] },
-  { id: "p-x", name: "목록 밖", items: [] },
-];
 
 describe("첫 단계 안내 통일 (5.2R.10)", () => {
   it("시작하기 카드: 단계 3개(팀 만들기·대화 시작·결과 보기), 에이전트·리소스 단계 없음", async () => {
@@ -60,31 +55,5 @@ describe("첫 단계 안내 통일 (5.2R.10)", () => {
     expect(within(steps).getByText(startMessages.steps["create"]!.label)).toBeTruthy();
     expect(within(steps).getByText(startMessages.steps["talk"]!.hint)).toBeTruthy();
     expect(screen.queryByText("먼저 에이전트가 필요합니다")).toBeNull();
-  });
-
-  it("바로 시작: featured 순서, 목록 밖 프리셋은 숨김, 체험 배지", async () => {
-    mount(createHarness({ ...empty, listPresets: async () => presets }), "/chat");
-    const row = await screen.findByRole("region", { name: startMessages.quick.title });
-    const cards = within(row).getAllByRole("listitem");
-    expect(cards.map((c) => c.getAttribute("data-quick-start"))).toEqual(["p-a", "p-b"]);
-    expect(cards[0]!.textContent).toContain("체험");
-  });
-
-  it("[시작] = 적용 -> start_graph의 target_id(이름 바뀜)로 대화 생성 -> 대화 화면", async () => {
-    const applyPreset = vi.fn(async () => ({ preset_id: "p-a", items: [{ source: "s", kind: "graph", id: "g-a", target_id: "g-a-2", action: "created" }] }));
-    const createConversation = vi.fn(async (req: { graph_id: string }) => conversation({ id: "c-new", graph_id: req.graph_id }));
-    const router = mount(createHarness({ ...empty, listPresets: async () => presets, applyPreset, createConversation }), "/chat");
-    const row = await screen.findByRole("region", { name: startMessages.quick.title });
-    fireEvent.click(within(row).getByRole("button", { name: `첫째 ${startMessages.quick.start}` }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/chat/c-new"));
-    expect(applyPreset).toHaveBeenCalledWith("p-a", {});
-    expect(createConversation).toHaveBeenCalledWith({ graph_id: "g-a-2" });
-  });
-
-  it("프리셋 0개여도 단계 안내는 동작한다", async () => {
-    mount(createHarness({ ...empty, listPresets: async () => [] }), "/chat");
-    const card = await screen.findByRole("region", { name: startMessages.title });
-    expect(within(card).queryByRole("region", { name: startMessages.quick.title })).toBeNull();
-    expect(within(card).getAllByRole("listitem").length).toBe(3);
   });
 });

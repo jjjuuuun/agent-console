@@ -82,21 +82,18 @@ def test_edge_kind_has_no_default() -> None:
         )
 
 
-def test_settings_defaults_work_without_presets() -> None:
+def test_settings_defaults_work_without_any_data() -> None:
     settings = WorkspaceSettings()
     assert settings.agent_defaults is not None
 
 
 def test_removed_console_keys_are_kept_as_unknown() -> None:
-    """2R.20: `console`·`default_entry`는 계약에서 지웠지만 파일 값은 모르는 키로 보존한다."""
+    """계약에 없는 옛 키(`console`·`default_entry`)도 파일 값은 모르는 키로 보존한다."""
     doc = {"default_entry": "g1", "console": {"command_prefix": ":"}}
     settings = WorkspaceSettings.model_validate(doc)
     dumped = settings.model_dump(exclude_unset=True)
     assert dumped["default_entry"] == "g1"
     assert dumped["console"] == {"command_prefix": ":"}
-    props = WorkspaceSettings.model_json_schema()["properties"]
-    assert "default_entry" not in props
-    assert "console" not in props
 
 
 def test_issue_path_is_json_pointer() -> None:
@@ -145,9 +142,6 @@ def test_ws_unions_discriminate_by_type() -> None:
     assert server.root.type == "error"
     with pytest.raises(ValidationError):
         WsClientMessage.model_validate({"type": "shell.exec", "payload": {}})
-    for removed in ("console.open", "console.input"):  # 2R.20에서 삭제
-        with pytest.raises(ValidationError):
-            WsClientMessage.model_validate({"type": removed, "payload": {}})
 
 
 def test_error_response_and_conflict_status() -> None:

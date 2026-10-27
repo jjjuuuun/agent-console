@@ -2,6 +2,17 @@
 
 ## 0.8.0
 
+- 5.2R.80(F14 구독 로그인, ux-overhaul §15.9): `BackendCapabilities.login`·`logout`(기본 false),
+  `BackendDescriptor.login_methods: LoginMethodInfo[]`(`id`·`label`·`description`·`notice`·`writes`·`needs_browser`),
+  `BackendReadiness.actions: ReadinessAction[]`(`kind` 열린 어휘 login·logout, `method_id`·`label`·`primary`), 새 모델
+  `BackendLoginStartRequest`·`BackendLoginSession`(`phase` 닫힌 목록 `BackendLoginPhase`)·`BackendLoginInput`(`text`는
+  `writeOnly`·`x-secret`, 최대 2048자, `text`·`key` 중 하나)·`BackendLogoutResult`, 상수 `BACKEND_LOGIN_TEXT_MAX_CHARS`.
+  오류 코드 `backend.login_unsupported`·`backend.login_busy`·`backend.logout_unsupported`·
+  `backend.subscription_auth_disabled`(409), `backend.login_session_not_found`(404). 새 필드는 전부 선택이라 하위 호환이다.
+
+- 5.2R.104(프리셋 기능 삭제, 사용자 지시): `PresetSummary`·`ApplyPresetRequest`·`ApplyPresetResult`와 경로 `GET /presets`·`POST /presets/{id}/apply`를 지웠다. 생성 TS 타입·JSON Schema에서도 빠진다. `AppliedItemInfo`·`ConflictPolicy`는 가져오기가 계속 쓴다. 0.8.0은 아직 배포 전이라 하위 계약 버전(`definitions` 1.3.0)은 그대로 둔다. phase-5r 기준 파일에서 두 모델의 사례를 뺐다(나머지 사례는 그대로).
+- 5.2R.94(잔해 정리): README의 "삭제(2R.20, 0.4.0)" 절을 이 기록의 0.4.0 항목으로 옮기고, README에는 옛 데이터 읽기 설명만 남겼다. 코드 변경 없음.
+- 5.2R.64: 목록 요약 `GraphSummary.attributes`·`ResourceSummary.attributes`(`JsonObject`, 기본 `{}`, 선택). 원문 `attributes` 그대로이며 웹 목록 폴더(`ui.folder`)·임의 키 묶기에 쓴다. 수정 시각은 기존 `saved_at`(초 단위 epoch, 선택)을 그대로 쓴다. 새 필드는 선택이라 하위 호환이다.
 - 5.2R.3 후속(5.2R.35 QA): 이슈 코드 문서 상수 `KnownIssueCodes.PROJECT_REFERENCES_UNAVAILABLE`(`project.references_unavailable`)·`PROJECT_DEFINITIONS_UNAVAILABLE`(`project.definitions_unavailable`), 새 문서 상수 `KnownSuggestionIds.PROJECT_MOVE_TO_SHARED`(`project.move_to_shared`). 둘 다 이름 → 값 표로 `x-constants`(`KNOWN_ISSUE_CODES`·`KNOWN_SUGGESTION_IDS`)에 내보낸다. 이슈 코드·제안 id는 여전히 열린 문자열이다(형식 불변).
 - 5.2R.5: 사용자 문구 금지 패턴 데이터 `data/user_text_rules.json`과 `agent_console_contracts.user_text`(`find_forbidden_text`·`scan_forbidden_text`), 생성 상수 `USER_TEXT_RULES`. 계약 설명에서 설계 문서 번호를 뺐다(형식 불변).
 - 계약 v7(5.2R.3, design §5.2R.3 표 1~11·§UX-P.4). 사내 의존 범위는 `>=0.8,<0.9`(TS `^0.8.0`). 하위 계약 버전:
@@ -121,4 +132,6 @@
 
 ## 0.4.0
 
+- 2R.20: 라우터(`RoutingDecision`, `RouteVerdict`, `route.decided` 이벤트)와 콘솔(`ConsoleSettings`, `console.*` WS 메시지·
+  `ConsoleStyle`·`CONSOLE_STYLES`, `WorkspaceSettings.default_entry`·`console`, `RUN_ORIGINS`의 `console`)을 지웠다.
 - 독립 프로젝트로 정리(3R.3): 사내 의존을 이름 + 버전 범위로 선언, 패키지별 pytest·mypy·ruff 설정과 `dev` 의존 그룹, LICENSE·CHANGELOG 추가. 동작 변경 없음.

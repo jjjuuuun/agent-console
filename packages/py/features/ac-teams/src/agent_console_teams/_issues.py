@@ -33,8 +33,6 @@ class TeamIssueCodes:
     UNKNOWN_STRATEGY: Final = "team.unknown_strategy"  # warning
     DELEGATION_DEPTH_EXCEEDED: Final = KnownIssueCodes.DELEGATION_DEPTH_EXCEEDED
     """error: 위임 깊이가 한도를 넘는다. `details.path` = 위임 경로 노드 id(5R.12부터 이 값)."""
-    DELEGATION_TOO_DEEP: Final = DELEGATION_DEPTH_EXCEEDED
-    """`DELEGATION_DEPTH_EXCEEDED`의 옛 이름(4R까지 값은 `team.delegation_too_deep`)."""
     DELEGATION_CYCLE: Final = "team.delegation_cycle"  # error
     FLOW_FROM_DELEGATE: Final = "team.flow_from_delegate"  # error
     BACKEND_CAPABILITY_MISSING: Final = "team.backend_capability_missing"  # error

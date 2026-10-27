@@ -36,7 +36,7 @@
 .ac-lv-btn[data-primary] { background: var(--ac-accent, #5b8def); border-color: var(--ac-accent, #5b8def); color: var(--ac-on-accent, #fff); }
 .ac-lv-btn:disabled { opacity: .5; cursor: not-allowed; }
 .ac-lv-linkbtn { font: inherit; color: var(--ac-accent, #5b8def); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
-.ac-lv-input { font: inherit; color: inherit; background: var(--lv-surface, transparent); border: 1px solid var(--lv-border, #2a313c); border-radius: var(--lv-radius, 4px); padding: 2px 8px; min-height: 28px; box-sizing: border-box; }
+.ac-lv-input { font: inherit; color: inherit; background: var(--lv-surface, transparent); border: 1px solid var(--lv-border, #2a313c); border-radius: var(--lv-radius, 4px); padding: 2px 8px; min-height: var(--ac-control-md, 28px); box-sizing: border-box; }
 .ac-lv-btn:focus-visible, .ac-lv-iconbtn:focus-visible, .ac-lv-linkbtn:focus-visible, .ac-lv-input:focus-visible, .ac-lv-togglechip:focus-visible,
 .ac-lv-grid-table:focus-visible, .ac-lv-scrub:focus-visible, .ac-lv-card:focus-visible, .ac-lv-lane:focus-visible, .ac-lv-chipmain:focus-visible, .ac-lv-chipx:focus-visible, .ac-lv-tabs [role="tab"]:focus-visible {
   outline: 2px solid var(--ac-focus-ring, var(--ac-accent, #5b8def)); outline-offset: 1px;

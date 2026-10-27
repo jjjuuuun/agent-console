@@ -4,7 +4,6 @@
 `message`, `reply`), 위임 방식 `sdk-subagents`(X12) 플러그인. 엔진(`agent-console-runtime`)과
 팀 구성 의미(`agent-console-teams`)는 이 이름들을 모른다. 이 패키지가 entry point로 등록할 뿐이고
 판단은 디스크립터 속성(`role`·`executable`·`binds`·`scheduling`·`invocation`·`connects`)으로 한다.
-설계: `specs/agent-console/design.md` §R1.2a, §R3.1~§R3.8, §R12.4.
 
 ## 설치
 
@@ -27,8 +26,6 @@ uv pip install ./packages/py/features/ac-nodes-core    # 단독
 | `agent_console.edge_types` | `when`, `on_error` | `conditional:WhenEdge`, `conditional:OnErrorEdge` |
 | `agent_console.interaction_kinds` | `question`, `tool_permission`, `review` | `interactions:QUESTION` 등(디스크립터 객체) |
 | `agent_console.delegation_strategies` | `sdk-subagents` | `delegation:SdkSubagentsStrategy` |
-
-1R에서 보류했던 `input`·`output`·`router` 노드는 2R.20에서 삭제했다(design §R9.2).
 
 ## 노드 타입
 

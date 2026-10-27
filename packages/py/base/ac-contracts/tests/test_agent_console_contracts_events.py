@@ -43,8 +43,8 @@ def test_agent_usage_payload_uses_usage_model() -> None:
     assert ev.payload.usage.input_tokens == 10
 
 
-def test_removed_route_decided_reads_as_generic() -> None:
-    """2R.20에서 라우팅 계약을 지웠다. 저장된 옛 `route.decided` 이벤트는 일반형으로 읽힌다."""
+def test_old_route_decided_reads_as_generic() -> None:
+    """저장된 옛 `route.decided` 이벤트는 일반형으로 읽힌다."""
     ev = parse_run_event(_event("route.decided", {"chosen_port": "p"}))
     assert type(ev) is RunEvent
     assert "route.decided" not in KNOWN_RUN_EVENT_TYPES

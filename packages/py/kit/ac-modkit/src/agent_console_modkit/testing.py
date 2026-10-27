@@ -22,7 +22,6 @@ from agent_console_modkit._assemble import ModuleContext
 from agent_console_modkit._compat import (
     EnvSetting,
     FlagSetting,
-    MovedSetting,
     RemovedSetting,
     SeedSetting,
     SettingsCompat,
@@ -253,7 +252,6 @@ def open_recording_database(path: Path) -> RecordingDatabase:
 
 
 ECHO_SETTINGS_COMPAT = SettingsCompat(
-    moved=(MovedSetting("echo"), MovedSetting("echo_prefix", into="prefix")),
     env=(EnvSetting("ECHO_TAGS", ("tags",), split=","),),
     flags=(FlagSetting("echo-tag", ("tags",), metavar="TAG", repeat=True),),
     seeds=(SeedSetting("host", "host"),),
@@ -262,9 +260,8 @@ ECHO_SETTINGS_COMPAT = SettingsCompat(
         RemovedSetting("echo_old", new="modules.options.mod-echo"),
     ),
 )
-"""설정 호환 선언 예: 옛 최상위 ``echo``(통째)·``echo_prefix``(→ ``prefix``), 환경변수
-``<접두어>ECHO_TAGS``, 명령행 ``--echo-tag``, 호스트 ``host`` 값을 기본값으로,
-지운 키 ``echo.legacy``(이유만)·``echo_old``(읽기 호환이 끝난 옛 위치 → 새 위치 안내)."""
+"""설정 호환 선언 예: 환경변수 ``<접두어>ECHO_TAGS``, 명령행 ``--echo-tag``, 호스트 ``host`` 값을
+기본값으로, 지운 키 ``echo.legacy``(이유만)·``echo_old``(옛 위치 → 새 위치 안내)."""
 
 
 __all__ = [

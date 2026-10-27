@@ -13,6 +13,7 @@ import argparse
 import contextlib
 import logging
 import os
+import sys
 import threading
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -55,7 +56,6 @@ from agent_console_modkit.host import (
 
 from ._config import (
     DEFAULT_STATE_DIR,
-    SETTINGS_MOVED_KEY,
     ConfigError,
     ServerSettings,
     load_settings,
@@ -137,8 +137,6 @@ def create_app(
     policy = SecurityPolicy.from_settings(cfg, api_token)
     srv_version = server_version()
 
-    for moved in cfg.moved_keys:
-        _log.warning("%s: %s", SETTINGS_MOVED_KEY, moved.message())
     paths = default_paths(
         cfg.base_dir, workspace=cfg.workspace, state=cfg.workspace / DEFAULT_STATE_DIR
     )
@@ -246,7 +244,7 @@ def _base_services(
 def flag_overrides(
     values: Mapping[str, Any], compat: Mapping[str, SettingsCompat] | None = None
 ) -> dict[str, Any]:
-    """모듈이 선언한 명령행 옵션 값(`{옵션 이름: 값}`, 예: 프리셋 모듈의 `apply-preset`) →
+    """모듈이 선언한 명령행 옵션 값(`{옵션 이름: 값}`, 예: 예제 모듈의 `echo-tag`) →
     `load_settings(overrides=…)`용 dict. 서버·CLI가 같은 규칙을 쓴다.
 
     Args:
@@ -275,8 +273,11 @@ def serve(
     environ: Mapping[str, str] | None = None,
     token: str | None = None,
     opener: Opener | None = None,
+    modules: Iterable[Module] | None = None,
 ) -> None:
     """uvicorn으로 실행한다(막힘).
+
+    `modules`는 `create_app(modules=)`에 그대로 넘긴다(None이면 설치된 모듈).
 
     준비되면(요청을 받기 시작하면) 준비 줄을 로그에 남기고, `web.open.enabled`면 URL을 연다
     (`opener` 주입, 없으면 `build_opener(web.open)` — 기본 브라우저 또는 `web.open.command`).
@@ -287,7 +288,7 @@ def serve(
     import uvicorn
 
     cfg = settings or load_settings(environ=environ)
-    app = create_app(cfg, environ=environ, token=token)
+    app = create_app(cfg, environ=environ, token=token, modules=modules)
     logging.basicConfig(level=cfg.log_level.upper(), format="%(levelname)s %(name)s: %(message)s")
     config = uvicorn.Config(
         app,
@@ -321,22 +322,111 @@ def serve(
         stop.set()
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """`python -m agent_console_server [--config PATH] [--host H] [--port N] [--workspace DIR]
-    [--open | --no-open] [--enable-module ID] [--disable-module ID] [모듈 옵션…]`.
+def merge_origins(configured: Iterable[str], extra: Iterable[str]) -> list[str]:
+    """설정의 허용 출처 뒤에 `extra`를 덧붙인다(순서 유지, 중복·빈 값 제거, 끝의 `/` 무시).
 
-    모듈 옵션(예: 프리셋 모듈의 `--apply-preset ID`)은 설치된 모듈이 `SettingsCompat.flags`로
-    알린 것이다(서버는 이름을 모른다). 1.13의 `agent-console serve`가 같은 `load_settings`·`serve`를
-    쓴다.
+    Args:
+        configured: 설정 파일·환경변수에서 읽은 `security.allowed_origins`.
+        extra: 명령행 `--allow-origin` 값.
+
+    Returns:
+        합친 목록. 비교는 끝의 `/`를 뗀 문자열로 한다(출처에는 경로가 없다).
     """
-    compat = settings_compat()
-    parser = argparse.ArgumentParser(prog="agent-console-server")
-    parser.add_argument("--config", type=Path, default=None)
-    parser.add_argument("--host", default=None)
-    parser.add_argument("--port", type=int, default=None)
-    parser.add_argument("--workspace", default=None)
+    merged: list[str] = []
+    seen: set[str] = set()
+    for origin in (*configured, *extra):
+        value = origin.strip().rstrip("/")
+        if value and value not in seen:
+            seen.add(value)
+            merged.append(value)
+    return merged
+
+
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    prog: str = "agent-console-server",
+    modules: Iterable[Module] | None = None,
+) -> int:
+    """서버 명령행 진입점: 옵션을 해석해 설정을 읽고 서버를 실행한다(막힘).
+
+    `python -m agent_console_server`와 `agent-console serve`가 이 함수 하나를 쓴다. 옵션:
+    `[--config PATH] [--host H] [--port N] [--workspace DIR] [--allow-origin ORIGIN …]
+    [--open | --no-open] [--enable-module ID …] [--disable-module ID …] [모듈 옵션…]`.
+    모듈 옵션(예: 예제 모듈의 `--echo-tag TAG`)은 모듈이 `SettingsCompat.flags`로 알린 것이다
+    (서버는 이름을 모른다).
+
+    Args:
+        argv: 인자(None이면 `sys.argv[1:]`).
+        prog: 도움말·오류 줄에 쓸 명령 이름.
+        modules: 옵션을 읽고 조립할 모듈. None이면 설치된 모듈(`installed_modules`).
+
+    Returns:
+        종료 코드(0 정상, 2 설정 오류). 옵션 오류·`--help`는 argparse가 `SystemExit`를 낸다.
+    """
+    mods = installed_modules() if modules is None else list(modules)
+    compat = settings_compat(mods)
+    parser = _parser(prog, compat)
     module_flags = compat_flags(compat)
-    for flag in module_flags:
+    args = parser.parse_args(list(argv) if argv is not None else None)
+    overrides: dict[str, Any] = {}
+    for key in ("host", "port", "workspace"):
+        if getattr(args, key) is not None:
+            overrides[key] = getattr(args, key)
+    if args.open is not None:
+        overrides["web"] = {"open": {"enabled": args.open}}
+    try:
+        flagged = {f.setting.flag: getattr(args, _flag_dest(f.setting.flag)) for f in module_flags}
+        overrides.update(flag_overrides(flagged, compat))
+        settings = load_settings(args.config, overrides=overrides, compat=compat)
+        if args.allow_origin:
+            origins = merge_origins(settings.security.allowed_origins, args.allow_origin)
+            overrides["security"] = {"allowed_origins": origins}
+            settings = load_settings(args.config, overrides=overrides, compat=compat)
+        settings = apply_module_flags(
+            settings, enable=args.enable_module, disable=args.disable_module
+        )
+        if modules is None:
+            serve(settings)
+        else:
+            serve(settings, modules=mods)
+    except ConfigError as exc:
+        print(f"{prog}: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
+def _parser(prog: str, compat: Mapping[str, SettingsCompat]) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description=(
+            "Agent Console 서버를 실행한다(Ctrl-C로 종료). 토큰은 출력하지 않는다 — "
+            "클라이언트는 GET /api/v1/bootstrap으로 받는다. "
+            "우선순위: 명령행 > AGENT_CONSOLE_* 환경변수 > 설정 파일 > 기본값."
+        ),
+    )
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="서버 설정 파일(agent-console.yaml). 없으면 AGENT_CONSOLE_CONFIG → 현재 폴더",
+    )
+    parser.add_argument("--host", default=None, help="바인딩 주소(기본 설정값 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=None, help="포트(기본 설정값)")
+    parser.add_argument("--workspace", default=None, metavar="DIR", help="정의 YAML 폴더")
+    parser.add_argument(
+        "--allow-origin",
+        action="append",
+        default=[],
+        metavar="ORIGIN",
+        help=(
+            "설정의 security.allowed_origins 뒤에 더할 웹 출처(여러 번 가능, 예: "
+            "http://127.0.0.1:4173). 설정 파일·환경변수 목록을 지우지 않고 덧붙인다"
+        ),
+    )
+    for flag in compat_flags(compat):
         parser.add_argument(
             f"--{flag.setting.flag}",
             dest=_flag_dest(flag.setting.flag),
@@ -349,14 +439,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--open",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="준비되면 웹 화면을 연다(설정 web.open.enabled를 덮어씀)",
+        help=(
+            "준비되면 웹 화면을 연다(설정 web.open.enabled를 덮어씀). 열 주소·명령은 설정 "
+            "web.open.url·command, 주소가 없으면 web.serve_static이 켜졌을 때 서버 주소"
+        ),
     )
     parser.add_argument(
         "--enable-module",
         action="append",
         default=[],
         metavar="ID",
-        help="켤 서버 모듈 id(여러 번 가능, 설정 modules보다 우선)",
+        help="켤 서버 모듈 id(여러 번 가능, 설정 modules보다 우선). 목록은 GET /api/v1/modules",
     )
     parser.add_argument(
         "--disable-module",
@@ -365,22 +458,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         metavar="ID",
         help="끌 서버 모듈 id(여러 번 가능, 설정 modules보다 우선, 같은 id면 끄기가 이김)",
     )
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    overrides: dict[str, Any] = {}
-    for key in ("host", "port", "workspace"):
-        if getattr(args, key) is not None:
-            overrides[key] = getattr(args, key)
-    if args.open is not None:
-        overrides["web"] = {"open": {"enabled": args.open}}
-    try:
-        flagged = {f.setting.flag: getattr(args, _flag_dest(f.setting.flag)) for f in module_flags}
-        overrides.update(flag_overrides(flagged, compat))
-        settings = load_settings(args.config, overrides=overrides, compat=compat)
-        serve(apply_module_flags(settings, enable=args.enable_module, disable=args.disable_module))
-    except ConfigError as exc:
-        print(f"agent-console-server: {exc}")
-        return 2
-    return 0
+    return parser
 
 
 def _flag_dest(flag: str) -> str:
@@ -393,6 +471,7 @@ __all__ = [
     "flag_overrides",
     "installed_modules",
     "main",
+    "merge_origins",
     "serve",
     "server_version",
 ]

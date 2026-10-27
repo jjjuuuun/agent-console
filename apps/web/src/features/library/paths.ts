@@ -11,6 +11,7 @@ export const ROUTE_ROLES = {
   runs: "runs",
   settings: "settings",
   usage: "usage",
+  logs: "logs",
   graph: `definition:${DEFINITION_KINDS.graph}`,
   agent: `definition:${DEFINITION_KINDS.agent}`,
   resource: `definition:${DEFINITION_KINDS.resource}`,

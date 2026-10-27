@@ -2,6 +2,11 @@
 
 ## 미출시
 
+- 5.2R.100(README 현행화, 코드 변경 없음): README의 이력 문장을 여기로 옮기고 현재 동작 설명만 남겼다. 옮긴 이력: 라우터(`ac-routing`)·터미널 콘솔(`ac-console`)·`ac-client` 패키지와 WS `console.*` 메시지는 2R.20에서 삭제했다(되돌리기 기준점: 태그 `phase-2r`). WS `graph:` 토픽과 통짜 모듈은 3R.16에서 삭제했다. 채팅 대기열은 3R.15부터 서버 DB(`chat_queue`)에 저장한다(그 전에는 서버 메모리). `mod-imports.project_dir` 기본값은 4R.18부터 설정 파일 폴더다. claude-agent-sdk `allow_subscription_auth` 기본값은 5.2R.79부터 `true`다. README 모듈 표를 설치된 entry point 기준(기능 10개·연동 11개)으로 다시 만들고, 백엔드 로그인(`backend_login`) 절을 더했다.
+- 5.2R.104(프리셋 기능 삭제): 의존 `agent-console-mod-presets`를 뺐다. 경로 `/presets`·`serve --apply-preset`·환경변수 `AGENT_CONSOLE_PRESET_DIRS`·`AGENT_CONSOLE_APPLY_PRESETS`가 없어졌다. 설정에 `presets` 또는 `modules.options.mod-presets`가 남아 있으면 "프리셋 기능은 삭제되었습니다" 설정 오류(`settings.removed_key`, `mod-definitions` 선언)로 시작을 거부한다.
+- 5.2R.93(설정 호환 정리): 호스트 지운 키 표 `REMOVED_KEYS`(1R의 `console`·`default_manual_route_pattern`)를 지웠다. 남은 `console:` 등은 일반 설정 오류다(`extra="forbid"`). 읽기 호환 장치 `MovedKey`·`SETTINGS_MOVED_KEY`·`ServerSettings.moved_keys`·`migrate_moved_keys`와 `/server-info`의 `settings.moved_key` 경고를 지웠다. 지운 키 거부(`RemovedKey`·`SETTINGS_REMOVED_KEY`)와 기본값 채우기(`SeedSetting`, modkit `seed_settings`)는 그대로다. `_ws.py`·`testing.py` 이력 주석을 고쳤다.
+- 5.2R.92: 명령행 옵션 해석을 `main` 하나로 합쳤다(`agent-console serve`도 이것을 부른다). `--allow-origin ORIGIN`(여러 번)과 공개 함수 `merge_origins`를 apps/cli에서 옮겨 왔고, `--config`에 `-c`를 더했다. `main(argv, *, prog="agent-console-server", modules=None)` — `prog`는 도움말·오류 줄의 명령 이름, `modules`는 옵션을 읽고 조립할 모듈(None이면 설치된 모듈). `serve(..., modules=None)`는 `create_app(modules=)`로 넘긴다. 설정 오류 줄은 표준 출력 대신 표준 오류에 쓴다(종료 코드 2는 그대로).
+- 5.2R.91: 설치 의존에 `agent-console-link-projects-runs`를 더했다(누락 결함: 서버만 설치하면 프로젝트 실행 범위 연동이 빠졌다).
 - 4R.18: 옛 최상위 설정 키 읽기 호환을 없앴다. 남아 있으면 `ConfigError(code="settings.removed_key", removed=[RemovedKey])`로 새 위치를 안내한다(`SETTINGS_REMOVED_KEY`·`RemovedKey` 공개). 지운 키는 한 번에 모두 보고한다. `testing.make_settings(options=)` 추가, `testing`의 httpx 요구를 문서화.
 - 4R.10: 설치 의존에 `agent-console-mod-logs`·`agent-console-logs-claude`·`agent-console-hook-probe`를 더했다(로그 기능 모듈과 기본 로그 출처 플러그인, entry point로 들어온다). 서버 코드는 바뀌지 않았다.
 

@@ -179,7 +179,7 @@ def test_member_with_its_own_delegation_exceeds_descriptor_depth(k: Kit) -> None
     nodes, edges = _base(k)
     nodes.append(k.worker("c"))
     edges.append(k.edge("d2", "invoke", "mate", "c"))
-    issue = _one(_validate(k, k.graph(nodes, edges)), C.DELEGATION_TOO_DEEP)
+    issue = _one(_validate(k, k.graph(nodes, edges)), C.DELEGATION_DEPTH_EXCEEDED)
     assert issue.edge_id == "d2"
     assert issue.details["depth"] == 2
     assert issue.details["max_depth"] == 1
@@ -194,17 +194,17 @@ def test_depth_from_settings_when_descriptor_has_none(k: Kit) -> None:
         k.edge("d1", "invoke2", "lead", "mate"),
         k.edge("d2", "invoke2", "mate", "c"),
     ]
-    assert C.DELEGATION_TOO_DEEP not in _codes(_validate(k, k.graph(nodes, edges)))
+    assert C.DELEGATION_DEPTH_EXCEEDED not in _codes(_validate(k, k.graph(nodes, edges)))
     limited = k.graph(nodes, edges, settings={"delegation": {"max_depth": 1}})
-    issue = _one(_validate(k, limited), C.DELEGATION_TOO_DEEP)
+    issue = _one(_validate(k, limited), C.DELEGATION_DEPTH_EXCEEDED)
     assert issue.edge_id == "d2"
     # 공통 설정에서도 같은 값을 쓴다(팀 구성이 덮어씀)
     ws = WorkspaceSettings.model_validate(
         {"agent_defaults": {"backend": "bk"}, "delegation": {"max_depth": 1}}
     )
-    assert C.DELEGATION_TOO_DEEP in _codes(_validate(k, k.graph(nodes, edges), workspace=ws))
+    assert C.DELEGATION_DEPTH_EXCEEDED in _codes(_validate(k, k.graph(nodes, edges), workspace=ws))
     relaxed = k.graph(nodes, edges, settings={"delegation": {"max_depth": 3}})
-    assert C.DELEGATION_TOO_DEEP not in _codes(_validate(k, relaxed, workspace=ws))
+    assert C.DELEGATION_DEPTH_EXCEEDED not in _codes(_validate(k, relaxed, workspace=ws))
 
 
 @pytest.mark.parametrize("k", KITS, ids=IDS)

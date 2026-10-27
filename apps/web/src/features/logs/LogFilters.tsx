@@ -2,7 +2,7 @@ import { useMemo, useReducer, type ReactNode, type Ref } from "react";
 import { LogFilterBar, createLocalStorageSavedFilters, type FilterFieldSpec, type LogFilterValue, type SavedFilter, type SavedFilterStore } from "@agent-console/log-view";
 import type { LogSourceInfo } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
-import { CUSTOM_RANGE_SEP, FILTER_FIELDS, LOGS_LIMITS, LOGS_STORAGE, RANGE_PRESETS, SEARCH_FIELD, UNGROUPED_PROJECT_VALUE } from "./logsConfig";
+import { CUSTOM_RANGE_SEP, FILTER_FIELDS, LOGS_LIMITS, LOGS_STORAGE, RANGE_OPTIONS, SEARCH_FIELD, UNGROUPED_PROJECT_VALUE } from "./logsConfig";
 import { customRangeValue, parseRange } from "./logsLib";
 import { logsMessages as t } from "./messages";
 
@@ -109,7 +109,7 @@ export interface RangeControlProps {
   label?: string;
 }
 
-/** 기간 선택(프리셋 + 사용자 지정). 값은 URL `range`이고 서버에는 `since`/`until`로 바뀌어 간다. */
+/** 기간 선택(선택지 + 사용자 지정). 값은 URL `range`이고 서버에는 `since`/`until`로 바뀌어 간다. */
 export function RangeControl({ value, fallbackId, onChange, settingsOption, label = t.filters.range }: RangeControlProps) {
   const parsed = parseRange(value === undefined && settingsOption !== undefined ? undefined : value, fallbackId);
   const custom = parsed.kind === "custom";
@@ -136,7 +136,7 @@ export function RangeControl({ value, fallbackId, onChange, settingsOption, labe
           }}
         >
           {settingsOption === undefined ? null : <option value="">{settingsOption}</option>}
-          {RANGE_PRESETS.filter((p) => settingsOption === undefined || p.seconds !== null).map((p) => (
+          {RANGE_OPTIONS.filter((p) => settingsOption === undefined || p.seconds !== null).map((p) => (
             <option key={p.id} value={p.id}>{t.filters.rangeNames[p.id] ?? p.id}</option>
           ))}
           <option value="custom">{t.filters.rangeNames["custom"]}</option>

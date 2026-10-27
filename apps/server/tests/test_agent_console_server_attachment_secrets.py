@@ -1,4 +1,4 @@
-"""1R.37 후속: 리소스 첨부 `config_override` 평문 비밀 거부(에이전트·팀 구성·공통 설정·프리셋)와
+"""1R.37 후속: 리소스 첨부 `config_override` 평문 비밀 거부(에이전트·팀 구성·공통 설정)와
 유효 설정·묶음 미리보기의 `x-secret` 평문 가리기(이전 데이터 안전망)."""
 
 from __future__ import annotations
@@ -136,31 +136,6 @@ def test_settings_agent_defaults_override_rejected(tmp_path: Path) -> None:
             "/agent_defaults/resources/0/config_override/env/API_KEY"
         ]
         assert client.get(f"{API}/settings").json() == {}
-
-
-def test_preset_agent_with_plain_override_fails_item(tmp_path: Path) -> None:
-    folder = tmp_path / "presets" / "p"
-    (folder / "resources").mkdir(parents=True)
-    (folder / "agents").mkdir()
-    (folder / "preset.yaml").write_text(
-        "kind: preset\nid: p\nschema_version: 1\nname: p\n"
-        "items:\n  - resources/gh.yaml\n  - agents/a.yaml\n",
-        encoding="utf-8",
-    )
-    (folder / "resources" / "gh.yaml").write_text(json.dumps(MCP), encoding="utf-8")
-    agent = {"id": "a", "name": "a", "resources": [_att()]}
-    (folder / "agents" / "a.yaml").write_text(json.dumps(agent), encoding="utf-8")
-    settings = make_settings(
-        tmp_path, options={"mod-presets": {"directories": [str(tmp_path / "presets")]}}
-    )
-    with server(settings) as client:
-        applied = client.post(f"{API}/presets/p/apply", json={})
-        items = {i["id"]: i for i in applied.json()["items"]}
-        assert items["gh"]["action"] == "created"
-        assert items["a"]["action"] == "failed"
-        assert "/resources/0/config_override/env/API_KEY" in items["a"]["error"]
-        assert PLAIN not in applied.text
-        assert client.get(f"{API}/agents/a").status_code == 404
 
 
 def test_effective_settings_and_bundle_preview_mask_legacy_plain(tmp_path: Path) -> None:

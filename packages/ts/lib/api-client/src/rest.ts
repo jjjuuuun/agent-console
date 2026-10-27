@@ -11,8 +11,8 @@ import { createExportsClient, type ExportsClient } from "./clients/exports";
 import { createGraphsClient, type GraphsClient } from "./clients/graphs";
 import { createImportsClient, type ImportsClient } from "./clients/imports";
 import { createInteractionsClient, type InteractionsClient } from "./clients/interactions";
+import { createLoginClient, type LoginClient } from "./clients/login";
 import { createLogsClient, type LogsClient } from "./clients/logs";
-import { createPresetsClient, type PresetsClient } from "./clients/presets";
 import { createResourcesClient, type ResourcesClient } from "./clients/resources";
 import { createRunsClient, type RunsClient } from "./clients/runs";
 import { createSettingsClient, type SettingsClient } from "./clients/settings";
@@ -39,12 +39,12 @@ export interface RestClient
     ChatClient,
     InteractionsClient,
     UsageClient,
-    PresetsClient,
     ResourcesClient,
     ImportsClient,
     SettingsClient,
     ExportsClient,
     VersionsClient,
+    LoginClient,
     LogsClient {}
 
 /**
@@ -62,12 +62,12 @@ export function createRestClient(options: RestClientOptions): RestClient {
     ...createChatClient(io),
     ...createInteractionsClient(io),
     ...createUsageClient(io),
-    ...createPresetsClient(io),
     ...createResourcesClient(io),
     ...createImportsClient(io),
     ...createSettingsClient(io),
     ...createExportsClient(io),
     ...createVersionsClient(io),
+    ...createLoginClient(io),
     ...createLogsClient(io),
   };
 }

@@ -5,6 +5,7 @@ import type { LogSourceInfo } from "@agent-console/contracts";
 import { HintBanner } from "../../app/hints";
 import { useNow } from "../../app/useNow";
 import { useStorage } from "../../app/StorageContext";
+import { ROUTE_ROLES, routeIconNode } from "../library";
 import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { LOGS_STORAGE } from "./logsConfig";
 import { firstUseSources, offReadingSources } from "./logsLib";
@@ -28,10 +29,11 @@ export function FirstUseCard({ sources }: { sources: readonly LogSourceInfo[] })
   const opened = storage.get(LOGS_STORAGE.openedSession) !== null;
   const scanned = sources.some((s) => s.status?.last_scan_at != null);
   const f = t.first;
-  if (sources.length === 0) return <div className="logs-first"><EmptyState title={f.title} description={f.noSources} /></div>;
+  if (sources.length === 0) return <div className="logs-first"><EmptyState icon={routeIconNode(ROUTE_ROLES.logs)} title={f.title} description={f.noSources} /></div>;
   return (
     <div className="logs-first" data-testid="logs-first-use">
       <EmptyState
+        icon={routeIconNode(ROUTE_ROLES.logs)}
         title={f.title}
         description={f.body}
         steps={f.steps.map((s, i) => ({ label: `${s.title} — ${s.body}`, done: i === 0 ? sources.some((x) => x.enabled) : i === 1 ? scanned : opened }))}
@@ -91,6 +93,7 @@ export function EmptyNoLogs({ sources, scanning, onScan }: EmptyBProps) {
   return (
     <div className="logs-empty" data-testid="logs-empty-b">
       <EmptyState
+        icon={routeIconNode(ROUTE_ROLES.logs)}
         title={t.empty.bTitle}
         description={
           <>
@@ -121,6 +124,7 @@ export function EmptyNoMatch({ onClearFilters, onAllRange }: EmptyCProps) {
   return (
     <div className="logs-empty" data-testid="logs-empty-c">
       <EmptyState
+        icon={routeIconNode(ROUTE_ROLES.logs)}
         title={t.empty.cTitle}
         action={onClearFilters ? <Button onClick={onClearFilters}>{t.clearFilters}</Button> : undefined}
         secondaryAction={onAllRange ? <Button onClick={onAllRange}>{t.filters.rangeAll}</Button> : undefined}

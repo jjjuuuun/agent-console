@@ -1,5 +1,7 @@
+import { arrangeMessages } from "../library";
 /** 팀 구성 화면 문구. 노드 타입·연결 종류·에이전트 이름은 서버 데이터라 여기에 없다. */
 export const teamMessages = {
+  arrange: arrangeMessages,
   title: "팀 구성",
   validation: {
     blocked: (n: number) => `실행을 막는 문제 ${n}건`,

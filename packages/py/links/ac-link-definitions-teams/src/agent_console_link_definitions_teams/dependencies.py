@@ -1,7 +1,7 @@
 """정의 문서가 쓰는 정의(``definitions.dependencies``): 팀 구성 → 에이전트·리소스·자식 팀 구성,
 에이전트 → 리소스. 같은 계산을 참조 추출 함수 모양(``definitions.references``, X25)으로도 낸다.
 
-저장되기 전 문서(예: 프리셋 항목)에서 바로 계산한다. 계산은 ``ac-teams``(``graph_dependencies``·
+저장되기 전 문서(예: 가져올 항목)에서 바로 계산한다. 계산은 ``ac-teams``(``graph_dependencies``·
 ``agent_dependencies``), 팀 구성은 지금 디스크립터(``TeamCatalog``)로 해석한다. 정의 종류 이름은
 ``TeamConventions``(데이터)에서 읽는다. 다른 종류는 의존이 없다(빈 목록).
 """

@@ -209,6 +209,13 @@ class ResourceSummary(ContractModel):
         default=None,
         description="정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다.",
     )
+    attributes: JsonObject = Field(
+        default_factory=dict,
+        description=(
+            "리소스 원문의 자유 속성(`Resource.attributes` 그대로, 폴더 `ui.folder` 등). "
+            "생략 = 없음."
+        ),
+    )
 
 
 # ---------------------------------------------------------------- 리소스 종류 디스크립터(X14)

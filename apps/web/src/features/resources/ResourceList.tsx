@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { ResourceSummary, ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Button, EmptyState, ListPane } from "@agent-console/ui";
+import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { Skeleton } from "../settings";
-import { DescriptorIcon, libraryMessages as lm, useListShortcuts } from "../library";
+import { DescriptorIcon, libraryMessages as lm, ROUTE_ROLES, routeIconNode, useListShortcuts, useListView, useDefinitionEdits, ListEditDialogs } from "../library";
 import { resourceMessages as t } from "./messages";
 import { countByType, filterResources } from "./resourceLogic";
+import { resourceGroupDefs, resourceSortDefs } from "./arrange";
 
 export interface ResourceListProps {
   resources: readonly ResourceSummary[] | undefined;
@@ -40,14 +42,44 @@ export function ResourceList(props: ResourceListProps) {
   const counts = useMemo(() => countByType(resources ?? []), [resources]);
   // 디스크립터가 없어도(플러그인 제거·로딩 실패) 목록에 있는 종류 id는 칩으로 보인다
   const chipIds = useMemo(() => [...new Set([...(types ?? []).map((x) => x.id), ...counts.keys()])], [types, counts]);
-  const rows = useMemo(
-    () => filterResources([...(resources ?? [])].sort((a, b) => a.name.localeCompare(b.name, "ko")), { typeId, query, onlyIds }),
-    [resources, typeId, query, onlyIds],
+  const filtered = useMemo(() => filterResources(resources ?? [], { typeId, query, onlyIds }), [resources, typeId, query, onlyIds]);
+  // 묶는 기준·정렬은 데이터다. 종류별이 기본이고, 종류 칩은 빠른 거르기로 남는다.
+  const groupDefs = useMemo(() => resourceGroupDefs((id) => typeById.get(id)?.title ?? id, t.arrange.noProjects), [typeById]);
+  const [moving, setMoving] = useState<ResourceSummary | undefined>(undefined);
+  const [labeling, setLabeling] = useState<ResourceSummary | undefined>(undefined);
+  // 폴더 이동·라벨은 최신 원문을 읽어 해당 필드만 바꿔 `If-Match`로 저장한다(5.2R.63).
+  const { rest } = useApi();
+  const store = useMemo(
+    () => ({
+      load: async (id: string) => rest.getResource(id),
+      save: (resource: Parameters<typeof rest.updateResource>[1], hash: string | undefined) => rest.updateResource(resource.id, resource, hash),
+    }),
+    [rest],
   );
+  const edits = useDefinitionEdits(store, t.arrange);
+  const view = useListView<ResourceSummary>({
+    listId: "resources",
+    items: filtered,
+    groupDefs,
+    sortDefs: resourceSortDefs,
+    defaultView: { groupBy: "type", sort: "name" },
+    messages: t.arrange,
+    searching: query.trim() !== "",
+    selectedId,
+    idOf: (r) => r.id,
+    showMenu: !(loading || (resources ?? []).length === 0),
+  });
+  const rows = view.arranged.sorted;
+
+  const targetId = (): string | undefined => document.activeElement?.closest<HTMLElement>("[data-row-id]")?.dataset["rowId"] ?? selectedId;
+  const target = (): ResourceSummary | undefined => (resources ?? []).find((r) => r.id === targetId());
 
   useListShortcuts({
     scope: "resources",
+    onMove: () => setMoving(target()),
+    onLabels: () => setLabeling(target()),
     onNew: () => onNew(typeId ?? undefined),
+    onView: view.openMenu,
     onSearch: () => root.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     ...(selectedId === undefined ? {} : { onRename: () => onRename(selectedId), onDelete: () => onDelete(selectedId) }),
   });
@@ -55,6 +87,7 @@ export function ResourceList(props: ResourceListProps) {
   const totallyEmpty = (resources ?? []).length === 0;
   const empty = totallyEmpty ? (
     <EmptyState
+      icon={routeIconNode(ROUTE_ROLES.resource)}
       title={t.list.empty}
       description={t.list.emptyBody}
       action={<Button variant="primary" onClick={() => onNew()}>{t.list.new}</Button>}
@@ -90,6 +123,8 @@ export function ResourceList(props: ResourceListProps) {
       </div>
       <ListPane<ResourceSummary>
         items={rows}
+        {...(view.paneGroups === undefined ? {} : { groups: view.paneGroups, onToggleGroup: view.arranged.toggle })}
+        belowTop={view.menu ?? undefined}
         selectedId={selectedId}
         onSelect={(id) => onSelect(id)}
         rowHeight={48}
@@ -114,6 +149,7 @@ export function ResourceList(props: ResourceListProps) {
           );
         }}
       />
+      <ListEditDialogs<ResourceSummary> moving={moving} labeling={labeling} onCloseMove={() => setMoving(undefined)} onCloseLabels={() => setLabeling(undefined)} items={resources ?? []} edits={edits} messages={t.arrange} />
     </div>
   );
 }

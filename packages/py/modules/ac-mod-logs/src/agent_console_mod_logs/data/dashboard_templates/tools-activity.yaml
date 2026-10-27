@@ -1,4 +1,4 @@
-# 대시보드 템플릿(프리셋 데이터). 규칙은 tokens-overview.yaml 머리말과 같다.
+# 대시보드 템플릿(기본 데이터). 규칙은 tokens-overview.yaml 머리말과 같다.
 id: tools-activity
 title: 도구·오류 활동
 widgets:

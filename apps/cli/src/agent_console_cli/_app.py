@@ -1,12 +1,10 @@
 """`agent-console` 명령(Typer).
 
-- `serve`: 서버 실행. 서버는 `agent_console_server`(`_server`에서 지연 import).
+- `serve`: 서버 실행. 인자를 서버 `main`에 그대로 넘긴다(`_server`에서 지연 import).
 - `statusline`: Claude Code statusLine 사용량 브리지. 로직은 `agent_console_usage`.
-- `console`은 2R.20에서 삭제했다(design §R5.2).
 
 시작 시간: `statusline`은 Claude Code가 상태 줄을 그릴 때마다 실행되므로 모듈 상단에서
-무거운 패키지(서버, 클라이언트, prompt_toolkit 등)를 import하지 않는다
-(`tests/test_agent_console_cli_unit.py`가 검사).
+서버 패키지를 import하지 않는다(`tests/test_agent_console_cli_unit.py`가 검사).
 """
 
 from __future__ import annotations
@@ -26,7 +24,7 @@ from agent_console_usage.statusline import (
     default_window_labels,
 )
 
-from ._server import ServerConfigError, run_server, serve_overrides, server_state_dir
+from ._server import ServerConfigError, run_serve, server_state_dir
 from ._statusline import StatuslineOptions, parse_labels, run_statusline
 
 PROG_NAME = "agent-console"
@@ -53,94 +51,16 @@ ConfigOption = Annotated[
 ]
 
 
-@app.command()
-def serve(
-    config: ConfigOption = None,
-    host: Annotated[
-        str | None, typer.Option(help="바인딩 주소(기본 설정값 127.0.0.1).", show_default=False)
-    ] = None,
-    port: Annotated[int | None, typer.Option(help="포트(기본 설정값).", show_default=False)] = None,
-    workspace: Annotated[
-        str | None, typer.Option(help="정의 YAML 폴더(기본 설정값).", show_default=False)
-    ] = None,
-    apply_preset: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--apply-preset",
-            metavar="ID",
-            help="시작할 때 workspace에 적용할 프리셋 id(여러 번 가능, 충돌 시 건너뜀).",
-            show_default=False,
-        ),
-    ] = None,
-    allow_origin: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--allow-origin",
-            metavar="ORIGIN",
-            help=(
-                "설정의 security.allowed_origins에 더할 웹 출처(여러 번 가능, 예: "
-                "http://127.0.0.1:4173). 설정 파일·환경변수 목록을 지우지 않고 덧붙인다."
-            ),
-            show_default=False,
-        ),
-    ] = None,
-    open_browser: Annotated[
-        bool | None,
-        typer.Option(
-            "--open/--no-open",
-            help=(
-                "준비되면 웹 화면을 연다(설정 web.open.enabled를 덮어씀). 열 주소·명령은 설정 "
-                "web.open.url·command, 주소가 없으면 web.serve_static이 켜졌을 때 서버 주소."
-            ),
-            show_default=False,
-        ),
-    ] = None,
-    enable_module: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--enable-module",
-            metavar="ID",
-            help=(
-                "켤 서버 모듈 id(여러 번 가능). 설정 modules보다 우선한다. "
-                "목록은 GET /api/v1/modules."
-            ),
-            show_default=False,
-        ),
-    ] = None,
-    disable_module: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--disable-module",
-            metavar="ID",
-            help=(
-                "끌 서버 모듈 id(여러 번 가능). 설정 modules보다 우선하고, 같은 id면 끄기가 이긴다."
-            ),
-            show_default=False,
-        ),
-    ] = None,
-) -> None:
-    """서버를 실행한다(Ctrl-C로 종료).
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    add_help_option=False,
+)
+def serve(ctx: typer.Context) -> None:
+    """서버를 실행한다(Ctrl-C로 종료). 옵션은 `agent-console serve --help`.
 
-    토큰은 출력하지 않는다 — 클라이언트는 GET /bootstrap으로 받는다.
+    인자는 서버 명령행(`agent_console_server.main`)이 해석한다. 토큰은 출력하지 않는다.
     """
-    try:
-        overrides = serve_overrides(
-            host=host,
-            port=port,
-            workspace=workspace,
-            apply_presets=apply_preset,
-            open_browser=open_browser,
-        )
-        run_server(
-            config,
-            overrides,
-            extra_origins=allow_origin or (),
-            enable_modules=enable_module or (),
-            disable_modules=disable_module or (),
-        )
-    except ServerConfigError as exc:
-        typer.echo(f"{PROG_NAME}: {exc}", err=True)
-        raise typer.Exit(2) from None
+    raise typer.Exit(run_serve(ctx.args, prog=f"{PROG_NAME} serve"))
 
 
 @app.command()

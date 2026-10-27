@@ -1,4 +1,5 @@
 import { useNow } from "../../app/useNow";
+import { ReadinessActionButtons, useBackendLogin } from "../backendLogin";
 import { BackendProbeButton, ProbeResultBlock, useBackendProbe, useBackendReadiness } from "../backendReadiness";
 import { BackendChooserCard, type BackendChooserCardProps } from "./BackendChooserCard";
 import type { BackendDescriptor } from "@agent-console/contracts";
@@ -22,6 +23,21 @@ function SelectedProbe({ backend }: { backend: BackendDescriptor }) {
  * 상태를 읽지 못하면(모듈 꺼짐·오류) 칩 없이 기본 카드로 동작한다.
  */
 export function ConnectedBackendChooserCard(props: Omit<BackendChooserCardProps, "readiness" | "renderSelectedExtra">) {
-  const { readiness } = useBackendReadiness();
-  return <BackendChooserCard {...props} readiness={readiness} renderSelectedExtra={(b) => <SelectedProbe backend={b} />} />;
+  const { readiness, recheck } = useBackendReadiness();
+  const login = useBackendLogin({ backends: props.options, onSettled: (id) => void recheck(id) });
+  return (
+    <>
+      <BackendChooserCard
+        {...props}
+        readiness={readiness}
+        renderSelectedExtra={(b) => (
+          <>
+            <ReadinessActionButtons actions={readiness[b.id]?.actions?.filter((a) => a.kind === "login")} onAction={(a) => login.run(b.id, a)} />
+            <SelectedProbe backend={b} />
+          </>
+        )}
+      />
+      {login.dialogs}
+    </>
+  );
 }

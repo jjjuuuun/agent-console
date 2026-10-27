@@ -53,7 +53,7 @@ def test_phase1_explicit_null_and_empty_are_layer_values_in_v2() -> None:
     """Phase 1 파일의 `model: null`·`tools: []`는 v2에서 '이 층이 정함'이다(상속 아님).
 
     1R.4/1R.3은 이 데이터를 그대로 병합하지 말고 마이그레이션(null 키 삭제 등)하거나
-    프리셋·작업 공간 파일을 다시 써야 한다.
+    작업 공간 파일을 다시 써야 한다.
     """
     agent = Agent.model_validate(PHASE1_AGENT)
     assert {"model", "tools", "limits"} <= agent.model_fields_set

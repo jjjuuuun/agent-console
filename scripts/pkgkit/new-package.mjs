@@ -24,7 +24,7 @@ export function createPackage(opts) {
   const rootPkgFile = join(root, "package.json");
   const rootPkg = existsSync(rootPkgFile) ? JSON.parse(readFileSync(rootPkgFile, "utf8")) : null;
   const vars = makeVars({ name: full, scope, description: opts.description, dom: opts.dom, kind: opts.kind, devVersions: devVersionsFromRoot(rootPkg) });
-  const files = buildPackageFiles(loadLayers(TEMPLATES, opts.kind, opts.draft), vars, { dom: opts.dom });
+  const files = buildPackageFiles(loadLayers(TEMPLATES, opts.kind), vars, { dom: opts.dom });
 
   if (!opts.dryRun) {
     for (const [rel, content] of Object.entries(files)) {

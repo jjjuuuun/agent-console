@@ -61,7 +61,7 @@
       (`node_settings`·`resolve_settings`에 ``backends``를 주면 자동으로 더함).
     - 사용처: ``definition_references(kind, id, *, graphs, agents, workspace, node_types)``
       (노드 `binds`·설정 층 리소스 첨부로 찾는다). 반대 방향(쓰는 정의 — 에이전트·리소스·
-      자식 팀 구성, 내보내기·프리셋 적용 순서용):
+      자식 팀 구성, 내보내기·쓰는 정의 먼저 쓰기용):
       ``graph_dependencies(plan, *, workspace)``·``agent_dependencies(agent, *, workspace)``
       -> ``DefinitionDependency[]``.
     - 첨부 검사: ``agent_attachments``·``graph_attachments(graph, *, plan)``·

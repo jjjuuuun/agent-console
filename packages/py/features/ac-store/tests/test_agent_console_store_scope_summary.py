@@ -62,3 +62,25 @@ def test_graph_summary_model_has_project(definitions: DefinitionStore) -> None:
     assert by_id["g2"].project is None
     # 공용은 직렬화에서도 빠지지 않고 null로 내려간다(목록 계약 필드)
     assert by_id["g2"].model_dump(mode="json")["project"] is None
+
+
+def test_summaries_carry_attributes_copy(definitions: DefinitionStore) -> None:
+    """목록 요약에 원문 `attributes`를 싣는다(5.2R.64, 폴더 `ui.folder`·라벨 묶기용)."""
+    attrs = {"ui": {"folder": "개발팀/백엔드", "icon": "bot"}, "team_tag": "x"}
+    definitions.create("graph", _graph("g1", attributes=attrs))
+    definitions.create("graph", _graph("g2"))
+    definitions.create("resource", _resource("r1", attributes=attrs))
+    definitions.create("agent", {"id": "a1", "name": "A1"})
+
+    raw = {s.id: s for s in definitions.summaries("graph")}
+    assert raw["g1"].attributes == attrs
+    assert raw["g2"].attributes == {}
+    raw["g1"].attributes["ui"]["folder"] = "바뀜"  # 복사본이라 저장소에 새지 않는다
+    assert definitions.summaries("graph")[0].attributes == attrs
+    assert definitions.summaries("resource")[0].attributes == attrs
+    assert definitions.summaries("agent")[0].attributes == {}  # 없으면 빈 dict
+
+    by_id = {s.id: s for s in list_graph_summaries(definitions)}
+    assert by_id["g1"].attributes == attrs
+    assert by_id["g1"].saved_at is not None
+    assert by_id["g2"].model_dump(mode="json")["attributes"] == {}

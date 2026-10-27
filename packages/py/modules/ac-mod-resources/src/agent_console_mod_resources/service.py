@@ -173,6 +173,7 @@ class ResourceService:
                     has_content=s.has_content,
                     usage_count=count,
                     project=s.extra.get(SCOPE_FIELD),
+                    attributes=s.attributes,
                 )
             )
         return out

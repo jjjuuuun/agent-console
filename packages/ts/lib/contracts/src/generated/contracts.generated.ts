@@ -82,9 +82,10 @@ export type InteractionStatus = "pending" | "answered" | "expired" | "cancelled"
 export type ItemAction = "created" | "overwritten" | "renamed" | "skipped" | "failed";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ConflictPolicy".
+ * via the `definition` "BackendLoginPhase".
  */
-export type ConflictPolicy = "skip" | "overwrite" | "rename";
+export type BackendLoginPhase =
+  "starting" | "waiting_user" | "verifying" | "succeeded" | "failed" | "cancelled" | "expired";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ReadinessTone".
@@ -125,6 +126,11 @@ export type SendKey = "enter" | "mod_enter";
  * via the `definition` "QueueAfterRestart".
  */
 export type QueueAfterRestart = "ask" | "run" | "drop";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConflictPolicy".
+ */
+export type ConflictPolicy = "skip" | "overwrite" | "rename";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "DiffOp".
@@ -1933,7 +1939,7 @@ export interface RunChildFinishedPayload {
   status: RunStatus;
 }
 /**
- * 정의 하나를 쓴 결과(프리셋 적용·가져오기 공통).
+ * 정의 하나를 쓴 결과(가져오기).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "AppliedItemInfo".
@@ -1957,30 +1963,6 @@ export interface AppliedItemInfo {
   target_id?: string | null;
   action: ItemAction;
   error?: string | null;
-}
-/**
- * `POST /presets/{id}/apply` 요청.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ApplyPresetRequest".
- */
-export interface ApplyPresetRequest {
-  on_conflict?: ConflictPolicy;
-  /**
-   * 만든 정의에 찍을 프로젝트 id(0.8.0). 생략 = 공용(지금과 같음).
-   */
-  project?: string | null;
-}
-/**
- * `POST /presets/{id}/apply` 응답.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ApplyPresetResult".
- */
-export interface ApplyPresetResult {
-  preset_id: string;
-  items?: AppliedItemInfo[];
-  warnings?: string[];
 }
 /**
  * 실행 백엔드 능력.
@@ -2030,6 +2012,14 @@ export interface BackendCapabilities {
    * 연결 테스트(가장 짧은 실제 호출 한 번)를 지원한다. false면 `POST /backends/{id}/probe`가 409 `backend.probe_unsupported`.
    */
   probe?: boolean;
+  /**
+   * 앱 화면에서 백엔드 계정 로그인을 시작할 수 있다(방법은 `login_methods`). false면 `POST /backends/{id}/login`이 409 `backend.login_unsupported`.
+   */
+  login?: boolean;
+  /**
+   * 앱 화면에서 백엔드 계정 로그아웃(연결 해제)을 할 수 있다. false면 `POST /backends/{id}/logout`이 409 `backend.logout_unsupported`.
+   */
+  logout?: boolean;
 }
 /**
  * 백엔드가 실제로 강제할 수 있는 실행 범위 항목. false면 화면이 경고한다.
@@ -2072,6 +2062,10 @@ export interface BackendDescriptor {
    */
   probe_cost_note?: string;
   ui_hints?: UiHints | null;
+  /**
+   * 앱 화면에서 시작할 수 있는 로그인 방법(`capabilities.login`과 함께). 비면 로그인 버튼 없음.
+   */
+  login_methods?: LoginMethodInfo[];
 }
 /**
  * 관측 수집기 디스크립터. 실행 중 SDK 콜백·메시지에서 이벤트를 모은다.
@@ -2144,6 +2138,162 @@ export interface UiHints {
    */
   badge?: string | null;
   [k: string]: unknown;
+}
+/**
+ * 백엔드가 제공하는 로그인 방법 하나(데이터). 화면은 문구를 그대로 보인다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "LoginMethodInfo".
+ */
+export interface LoginMethodInfo {
+  /**
+   * 방법 id(백엔드가 정함, 열린 문자열).
+   */
+  id: string;
+  /**
+   * 버튼 문구(사용자 언어, 예: 구독으로 로그인).
+   */
+  label: string;
+  /**
+   * 방법 설명 한 줄.
+   */
+  description?: string;
+  /**
+   * 시작 확인 창에 늘 보이는 안내(예: 본인 구독·본인 책임 문구). 숨기기 없음.
+   */
+  notice?: string;
+  /**
+   * 이 로그인이 이 PC에서 바꾸는 것(서버가 실제 경로로 풀어 준 줄, 사용자 언어).
+   */
+  writes?: string[];
+  /**
+   * 브라우저에서 로그인하는 단계가 있다(화면 안내용).
+   */
+  needs_browser?: boolean;
+}
+/**
+ * ``POST /backends/login/{session_id}/input``: 글자 또는 키 하나(둘 중 하나만).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendLoginInput".
+ */
+export interface BackendLoginInput {
+  /**
+   * 붙여 넣은 글자(예: 브라우저에 나온 코드). 앞뒤 공백은 서버가 자른다. 인쇄 가능 문자만. 응답·로그에 다시 나오지 않는다.
+   */
+  text?: string | null;
+  /**
+   * 보낼 키 이름(세션의 `accepts_keys` 안, 예: enter).
+   */
+  key?: string | null;
+}
+/**
+ * 진행 중이거나 끝난 로그인 세션 하나(서버 전체에서 진행 중인 세션은 하나뿐).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendLoginSession".
+ */
+export interface BackendLoginSession {
+  session_id: string;
+  backend_id: string;
+  method_id: string;
+  phase: BackendLoginPhase;
+  /**
+   * 지금 단계 안내 또는 결과 문장(사용자 언어).
+   */
+  message?: string;
+  /**
+   * 브라우저에서 열 로그인 페이지(https, 백엔드가 허용한 호스트만). null = 아직 없음.
+   */
+  open_url?: string | null;
+  /**
+   * 브라우저에 나온 코드를 붙여 넣어야 하는 단계다.
+   */
+  needs_code?: boolean;
+  /**
+   * 코드 칸 라벨(사용자 언어).
+   */
+  code_label?: string;
+  /**
+   * `input`으로 보낼 수 있는 키 이름(예: enter). 밖의 키는 422.
+   */
+  accepts_keys?: string[];
+  /**
+   * 하위 과정 화면의 마지막 줄들(가림 적용, 문제 해결용). 비면 없음.
+   */
+  screen?: string[];
+  /**
+   * 주의 문장(예: API 키 환경변수가 우선함).
+   */
+  warnings?: string[];
+  /**
+   * 실패 사유 코드(열린 어휘, 예: cli_missing, pty_unavailable, exited, verify_failed, start_failed, timeout, heartbeat, error). 성공·진행 중이면 null.
+   */
+  reason?: string | null;
+  /**
+   * 접힌 상세(종료 코드 등). 비밀 값 없음.
+   */
+  details?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 해결 버튼. 비면 없음.
+   */
+  fixes?: FixAction[];
+  /**
+   * 시작 시각(epoch 초).
+   */
+  started_at: number;
+  /**
+   * 시간 상한에 닿는 시각(epoch 초).
+   */
+  expires_at: number;
+  /**
+   * 끝난 시각. 진행 중이면 null.
+   */
+  finished_at?: number | null;
+}
+/**
+ * ``POST /backends/{id}/login`` 요청(본문 생략 가능). 실행 명령은 요청으로 바꿀 수 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendLoginStartRequest".
+ */
+export interface BackendLoginStartRequest {
+  /**
+   * 로그인 방법 id(`BackendDescriptor.login_methods[].id`). null = 첫 방법.
+   */
+  method_id?: string | null;
+  /**
+   * 최대 진행 시간(초). null = 서버 기본. 서버 상한을 넘으면 상한으로 잘린다.
+   */
+  timeout_s?: number | null;
+}
+/**
+ * ``POST /backends/{id}/logout`` 결과. 실행 기록·이벤트에 남지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendLogoutResult".
+ */
+export interface BackendLogoutResult {
+  backend_id: string;
+  ok: boolean;
+  /**
+   * 실패 사유 코드(열린 어휘). 성공이면 null.
+   */
+  reason?: string | null;
+  /**
+   * 결과 문장(사용자 언어).
+   */
+  message?: string;
+  /**
+   * 해결 버튼. 비면 없음.
+   */
+  fixes?: FixAction[];
+  /**
+   * 끝난 시각(epoch 초).
+   */
+  finished_at: number;
 }
 /**
  * ``POST /backends/{id}/probe`` 요청(본문 생략 가능).
@@ -2230,6 +2380,10 @@ export interface BackendReadiness {
    * 항목별 점검 결과(접힌 상세에 보임). 값 없음.
    */
   checks?: ReadinessCheck[];
+  /**
+   * 상태에 맞는 동작 버튼(로그인·로그아웃 등). 비면 없음.
+   */
+  actions?: ReadinessAction[];
 }
 /**
  * 정적 점검 항목 하나(예: "API 키 환경변수: 있음"). 값은 담지 않는다.
@@ -2254,6 +2408,33 @@ export interface ReadinessCheck {
    * 보충 한 줄(출처 이름 등, 비밀 값 없음). null = 없음.
    */
   note?: string | null;
+}
+/**
+ * 상태 카드에 그릴 동작 버튼 하나(서버가 상태에 맞춰 고른다, 0.8.0 F14).
+ *
+ * 화면은 ``kind``만 해석한다(알려진 값 ``login``·``logout``, 모르는 값은 그리지 않는다).
+ * 백엔드 id·상태 이름·문구는 화면 코드에 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ReadinessAction".
+ */
+export interface ReadinessAction {
+  /**
+   * 동작 종류(열린 어휘, 화면이 아는 값: login·logout). 모르는 값은 무시한다.
+   */
+  kind: string;
+  /**
+   * 로그인 방법 id(`BackendDescriptor.login_methods[].id`). null = 기본.
+   */
+  method_id?: string | null;
+  /**
+   * 버튼 문구(사용자 언어).
+   */
+  label: string;
+  /**
+   * 참이면 상태 줄의 주 버튼, 거짓이면 `…` 메뉴 항목.
+   */
+  primary?: boolean;
 }
 /**
  * `backend.unresolved`(HTTP 422) 오류의 `error.details`(0.8.0).
@@ -3753,6 +3934,12 @@ export interface GraphSummary {
    * 정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다.
    */
   project?: string | null;
+  /**
+   * 팀 구성 원문의 자유 속성(`Graph.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
 }
 /**
  * 팀 구성 검증 결과 요약(엔진 검증 + 팀 검증을 합친 것).
@@ -5179,37 +5366,6 @@ export interface PostMessageRequest {
   text: string;
 }
 /**
- * `GET /presets` 목록 항목. 프리셋은 데이터이며 지워도 시스템이 동작한다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "PresetSummary".
- */
-export interface PresetSummary {
-  id: string;
-  name: string;
-  description?: string;
-  labels?: string[];
-  item_count?: number;
-  /**
-   * 항목 요약(종류·id 등). 형식은 프리셋 패키지가 정한다.
-   */
-  items?: {
-    [k: string]: unknown;
-  }[];
-  /**
-   * 카드에 보일 짧은 배지 글자(예: 체험, 추천).
-   */
-  badges?: string[];
-  /**
-   * '바로 시작' 순서(작을수록 앞). null = 바로 시작에 없음, 목록 순서대로.
-   */
-  featured?: number | null;
-  /**
-   * 적용한 뒤 바로 열 팀 구성 id(프리셋 안 id). null = 열지 않음.
-   */
-  start_graph?: string | null;
-}
-/**
  * 프로젝트입니다. 작업 폴더와 연결한 로그, 그 프로젝트에서 쓸 설정을 묶습니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -5507,6 +5663,12 @@ export interface ResourceSummary {
    * 정의의 프로젝트 id(0.8.0). null = 공용. 웹이 이 값으로 목록을 거른다.
    */
   project?: string | null;
+  /**
+   * 리소스 원문의 자유 속성(`Resource.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
 }
 /**
  * 리소스 종류 디스크립터. 플러그인 또는 선언형 데이터로 들어온다.
@@ -6471,7 +6633,12 @@ export const ERROR_CODES = {
   "FEATURE_UNAVAILABLE": "feature_unavailable",
   "NOT_READY": "not_ready",
   "BACKEND_UNRESOLVED": "backend.unresolved",
-  "BACKEND_PROBE_UNSUPPORTED": "backend.probe_unsupported"
+  "BACKEND_PROBE_UNSUPPORTED": "backend.probe_unsupported",
+  "BACKEND_LOGIN_UNSUPPORTED": "backend.login_unsupported",
+  "BACKEND_LOGIN_BUSY": "backend.login_busy",
+  "BACKEND_LOGOUT_UNSUPPORTED": "backend.logout_unsupported",
+  "BACKEND_SUBSCRIPTION_AUTH_DISABLED": "backend.subscription_auth_disabled",
+  "BACKEND_LOGIN_SESSION_NOT_FOUND": "backend.login_session_not_found"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -6491,7 +6658,12 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "feature_unavailable": 409,
   "not_ready": 503,
   "backend.unresolved": 422,
-  "backend.probe_unsupported": 409
+  "backend.probe_unsupported": 409,
+  "backend.login_unsupported": 409,
+  "backend.login_busy": 409,
+  "backend.logout_unsupported": 409,
+  "backend.subscription_auth_disabled": 409,
+  "backend.login_session_not_found": 404
 } as const;
 
 export const KNOWN_ISSUE_CODES = {

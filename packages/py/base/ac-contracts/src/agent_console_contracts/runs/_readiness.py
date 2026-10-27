@@ -32,6 +32,27 @@ class ReadinessCheck(ContractModel):
     )
 
 
+class ReadinessAction(ContractModel):
+    """상태 카드에 그릴 동작 버튼 하나(서버가 상태에 맞춰 고른다, 0.8.0 F14).
+
+    화면은 ``kind``만 해석한다(알려진 값 ``login``·``logout``, 모르는 값은 그리지 않는다).
+    백엔드 id·상태 이름·문구는 화면 코드에 없다.
+    """
+
+    kind: NonEmptyStr = Field(
+        description="동작 종류(열린 어휘, 화면이 아는 값: login·logout). 모르는 값은 무시한다."
+    )
+    method_id: str | None = Field(
+        default=None,
+        description="로그인 방법 id(`BackendDescriptor.login_methods[].id`). null = 기본.",
+    )
+    label: NonEmptyStr = Field(description="버튼 문구(사용자 언어).")
+    primary: bool = Field(
+        default=False,
+        description="참이면 상태 줄의 주 버튼, 거짓이면 `…` 메뉴 항목.",
+    )
+
+
 class BackendReadiness(ContractModel):
     """실행 백엔드의 정적 점검 상태(모델·네트워크 호출 없음)."""
 
@@ -54,6 +75,10 @@ class BackendReadiness(ContractModel):
     checked_at: float = Field(description="점검 시각(epoch 초).")
     checks: list[ReadinessCheck] = Field(
         default_factory=list, description="항목별 점검 결과(접힌 상세에 보임). 값 없음."
+    )
+    actions: list[ReadinessAction] = Field(
+        default_factory=list,
+        description="상태에 맞는 동작 버튼(로그인·로그아웃 등). 비면 없음.",
     )
 
 
@@ -95,6 +120,7 @@ __all__ = [
     "BackendProbeRequest",
     "BackendProbeResult",
     "BackendReadiness",
+    "ReadinessAction",
     "ReadinessCheck",
     "ReadinessTone",
 ]

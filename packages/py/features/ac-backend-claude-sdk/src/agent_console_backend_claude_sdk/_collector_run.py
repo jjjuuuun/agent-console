@@ -78,11 +78,6 @@ class CollectorRun:
                 self._events.setdefault(event, []).append((collector, ctx))
 
     @property
-    def active_ids(self) -> list[str]:
-        """켜진 수집기 id(등록 순서)."""
-        return [ctx.collector_id for _, ctx in self._active]
-
-    @property
     def include_hook_events(self) -> bool:
         """켜진 수집기 중 하나라도 CLI 설정 hook 실행 메시지를 원하는지."""
         return self._include_hook_events

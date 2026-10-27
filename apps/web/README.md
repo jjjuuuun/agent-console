@@ -51,5 +51,5 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 터미널 도크·콘솔·Phase 1 그래프/편집기/실행 화면은 제거했다(`@agent-console/terminal` 패키지도 삭제했다).
 
 ## 테스트
-`npx vitest run apps/web --maxWorkers=1` (루트). 가짜 클라이언트로 부팅 실패·인증 거부·셸·단축키 덮어쓰기·빠른 이동·응답 대기 배지·설정 저장/충돌/프리셋/사용량 출처/서버 정보를 검사한다.
+`npx vitest run apps/web --maxWorkers=1` (루트). 가짜 클라이언트로 부팅 실패·인증 거부·셸·단축키 덮어쓰기·빠른 이동·응답 대기 배지·설정 저장/충돌/사용량 출처/서버 정보를 검사한다.
 E2E(Playwright)는 1R.26에서 다시 쓴다(`apps/web/e2e`의 기존 시나리오는 Phase 1 화면 기준이라 지금은 맞지 않는다).

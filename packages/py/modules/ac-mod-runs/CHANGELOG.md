@@ -2,6 +2,12 @@
 
 ## 미출시
 
+- 5.2R.80(F14): 백엔드 계정 로그인 경로 6개(`POST /backends/{id}/login`·`GET /backends/login/current`·
+  `GET|DELETE /backends/login/{sid}`·`POST /backends/login/{sid}/input`·`POST /backends/{id}/logout`), 설정
+  `backend_login`(`enabled` 기본 켬·`timeout_s`·`timeout_max_s`·`heartbeat_s`·`retain_s`·`screen_max_lines`),
+  `readiness.build_login_service`, 오류 맵(로그인 409·404·422·413), 종료 훅에서 진행 중 세션 취소. 입력 본문은 직접
+  검사해 기본 검증 오류가 값을 되돌려 보내지 않게 했다.
+
 - 5.2R.43: `plugins.bind_redactor(registries, redact)` — 비밀 해석기를 만든 뒤 판정 근거를 만드는 노드·엣지 종류(`RedactorConsumer`)에 `secrets.redact`를 준다.
 - 5.2R.34: 선택 포트 `runs.scopes`(`RunScoper`·`RunScope`) — 시작마다 요청 `project_id`로 이 Run의 노드 서비스·경고를
   정한다(검사·준비 전). 준비 결과 선택 속성 `run_context`(키별 덮어쓰기) → `run.started` payload, 자식 Run 준비에도 전달.

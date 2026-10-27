@@ -23,7 +23,6 @@ const loaders = {
   edgeTypes: (rest: RestClient) => rest.listEdgeTypes(),
   nodeTypes: (rest: RestClient) => rest.listNodeTypes(),
   interactionKinds: (rest: RestClient) => rest.listInteractionKinds(),
-  presets: (rest: RestClient) => rest.listPresets(),
   backends: (rest: RestClient) => rest.listBackends(),
 };
 
@@ -36,7 +35,6 @@ export const useNodeTypeList = () => useApiQuery(queryKeys.descriptors("node-typ
 export const useInteractionKindList = () => useApiQuery(queryKeys.descriptors("interaction-kinds"), loaders.interactionKinds, { staleTime: 60_000 });
 /** 실행 백엔드 디스크립터(칩 문구·바꾸기 카드의 데이터). 설정 화면과 같은 질의 키를 쓴다. */
 export const useBackendList = () => useApiQuery(queryKeys.descriptors("backends"), loaders.backends, { staleTime: 60_000 });
-export const usePresetList = (enabled = true) => useApiQuery(queryKeys.list("presets"), loaders.presets, { enabled });
 
 /** 대화 하나의 팀 구성 그래프. id가 없으면 질의하지 않는다. */
 export function useChatGraph(graphId: string | undefined) {

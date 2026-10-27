@@ -12,6 +12,8 @@ dependencies = [
     "agent-console-registry>=0.1,<0.2",
     "agent-console-resources>=0.1,<0.2",
     "agent-console-store>=0.1,<0.2",
+    "pydantic>=2.9",
+    "fastapi>=0.115",
 ]
 
 [project.entry-points."agent_console.server_modules"]

@@ -1,16 +1,16 @@
-"""모듈이 선언하는 호스트 설정 호환(3R.16): 옛 키 옮기기·환경변수·명령행·기본값·지운 키."""
+"""모듈이 선언하는 호스트 설정 호환: 환경변수·명령행·기본값·지운 키."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
 from agent_console_modkit import (
     PATHSEP,
     EnvSetting,
-    MovedSetting,
     RemovedSetting,
     SeedSetting,
     SettingsCompat,
@@ -18,8 +18,8 @@ from agent_console_modkit import (
     compat_of,
     env_settings,
     flag_settings,
-    migrate_settings,
     removed_settings,
+    seed_settings,
 )
 from agent_console_modkit.testing import ECHO_SETTINGS_COMPAT, fake_module
 
@@ -33,44 +33,28 @@ def test_compat_of_reads_descriptors() -> None:
     assert compat_of([plain, echo]) == COMPAT
 
 
-def test_migrate_whole_into_and_seed() -> None:
-    data = {
-        "host": "127.0.0.1",
-        "echo": {"a": 1, "b": 2},
-        "echo_prefix": ">",
-        "modules": {"options": {"mod-echo": {"b": 3}}},
+def test_seed_fills_module_options_from_other_setting() -> None:
+    data: dict[str, Any] = {"host": "127.0.0.1", "modules": {"options": {"mod-echo": {"b": 3}}}}
+    out = seed_settings(data, COMPAT)
+    assert out["modules"]["options"]["mod-echo"] == {"b": 3, "host": "127.0.0.1"}
+    assert data["modules"]["options"]["mod-echo"] == {"b": 3}  # 원본은 그대로
+
+
+def test_seed_keeps_explicit_value_and_skips_missing_source() -> None:
+    explicit = {"host": "a", "modules": {"options": {"mod-echo": {"host": "b"}}}}
+    assert seed_settings(explicit, COMPAT)["modules"]["options"]["mod-echo"] == {"host": "b"}
+    nested = {"mod-y": SettingsCompat(seeds=(SeedSetting("home", "paths.home"),))}
+    assert seed_settings({"paths": {"home": "/h"}}, nested)["modules"]["options"] == {
+        "mod-y": {"home": "/h"}
     }
-    out, moves = migrate_settings(data, COMPAT)
-    assert "echo" not in out
-    assert "echo_prefix" not in out
-    expected = {"a": 1, "b": 3, "prefix": ">", "host": "127.0.0.1"}
-    assert out["modules"]["options"]["mod-echo"] == expected
-    assert [(m.old, m.new, m.overridden) for m in moves] == [
-        ("echo", "modules.options.mod-echo", ("b",)),
-        ("echo_prefix", "modules.options.mod-echo.prefix", ()),
-    ]
-    assert "새 위치 값이 이긴 키: b" in moves[0].message()
-    assert data["echo"] == {"a": 1, "b": 2}  # 원본은 그대로
+    assert seed_settings({}, nested) == {}
 
 
-def test_wrong_shape_is_left_for_validation() -> None:
-    out, moves = migrate_settings({"echo": "not-a-dict"}, COMPAT)
-    assert out["echo"] == "not-a-dict"
-    assert moves == []
-
-
-def test_seed_before_moves_reads_original() -> None:
-    compat = {
-        "mod-x": SettingsCompat(
-            moved=(MovedSetting("old"),),
-        ),
-        "mod-y": SettingsCompat(
-            seeds=(SeedSetting("home", "old.home", before_moves=True),),
-        ),
-    }
-    out, _ = migrate_settings({"old": {"home": "/h"}}, compat)
-    assert out["modules"]["options"]["mod-y"] == {"home": "/h"}
-    assert out["modules"]["options"]["mod-x"] == {"home": "/h"}
+def test_old_top_level_key_is_not_read() -> None:
+    """옛 위치 값은 옮기지 않는다(지운 키 선언이 있으면 호스트가 거부한다)."""
+    out = seed_settings({"echo_old": {"a": 1}}, COMPAT)
+    assert out == {"echo_old": {"a": 1}}
+    assert [r.path for r in removed_settings(out, COMPAT)] == ["echo_old"]
 
 
 def test_env_settings_split() -> None:
