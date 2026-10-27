@@ -18,6 +18,9 @@ dependencies = [
 [project.entry-points."agent_console.server_modules"]
 link-logs-runs = "agent_console_link_logs_runs.module:module"
 
+[project.entry-points."agent_console.config_schemas"]
+log-source-platform-runs = "agent_console_link_logs_runs.source:SOURCE_SCHEMA"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

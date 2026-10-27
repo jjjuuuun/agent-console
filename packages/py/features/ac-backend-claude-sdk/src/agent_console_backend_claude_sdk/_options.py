@@ -171,6 +171,11 @@ class ClaudeSdkBackendOptions(BaseModel):
             when="내 Claude Code 개인 설정(user)도 함께 쓰고 싶을 때 바꾸세요.",
             group="files",
             group_title="설정·파일",
+            enum_labels={
+                "user": "개인 설정(user)",
+                "project": "프로젝트 설정(project)",
+                "local": "프로젝트 개인 설정(local)",
+            },
         ),
     )
     strict_mcp_config: bool = Field(

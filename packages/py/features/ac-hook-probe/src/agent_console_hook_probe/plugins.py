@@ -13,6 +13,7 @@ from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar
 
+from agent_console_contracts import x_ui
 from agent_console_contracts.logs import LogClassifierDescriptor, LogSourceDescriptor
 from agent_console_logs import (
     JSONL_CONFIG_SCHEMA,
@@ -50,8 +51,8 @@ _SOURCE_SCHEMA: dict[str, Any] = {
         "roots": {
             **JSONL_CONFIG_SCHEMA["properties"]["roots"],
             "description": (
-                "읽을 폴더 목록. 비우면 호스트 상태 폴더의 `runs`(Run 파일 폴더). "
-                "사용자가 직접 감싼 hook의 `--out` 폴더를 더할 수 있다."
+                "읽을 폴더 목록. 비우면 Run 파일 폴더. "
+                "직접 감싼 hook(도구 실행 전후에 도는 명령)의 기록 폴더를 더할 수 있다."
             ),
         },
         "include": {**JSONL_CONFIG_SCHEMA["properties"]["include"], "default": DEFAULT_INCLUDE},
@@ -63,6 +64,7 @@ _SOURCE_SCHEMA: dict[str, Any] = {
                 "경로를 `<run>/<노드…>/hook-probe/<파일>`로 보고 run_id·node_path를 채운다"
                 "(기록의 context가 있으면 그쪽이 우선)."
             ),
+            **x_ui(tier="advanced"),
         },
     },
 }

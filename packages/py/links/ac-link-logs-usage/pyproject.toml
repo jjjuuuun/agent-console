@@ -17,6 +17,9 @@ dependencies = [
 [project.entry-points."agent_console.server_modules"]
 link-logs-usage = "agent_console_link_logs_usage.module:module"
 
+[project.entry-points."agent_console.config_schemas"]
+usage-source-local-logs = "agent_console_link_logs_usage.estimate:CONFIG_SCHEMA"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

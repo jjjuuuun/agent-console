@@ -164,6 +164,50 @@ def test_enum_values_need_labels() -> None:
     assert check({**titled, X_UI: {"tier": "advanced"}}) == []
 
 
+def test_enum_labels_cover_nested_choices() -> None:
+    """배열 ``items``(다중 선택)·``anyOf``·``oneOf``·``$ref`` 안의 enum도 라벨을 본다."""
+    base = {"title": "값", "description": "고를 값입니다.", X_UI: {"tier": "advanced"}}
+    defs = {"Mode": {"enum": ["a", "b"], "type": "string"}}
+    labels = {"a": "가", "b": "나"}
+
+    def check(prop: dict[str, Any]) -> list[str]:
+        schema = {**_obj({"m": prop}, required=["m"]), "$defs": defs}
+        return [i.rule for i in lint_schema_help(schema) if i.rule == "missing-enum-labels"]
+
+    cases: dict[str, dict[str, Any]] = {
+        "items": {"type": "array", "items": {"type": "string", "enum": ["a", "b"]}},
+        "items-ref": {"type": "array", "items": {"$ref": "#/$defs/Mode"}},
+        "nullable-items": {
+            "anyOf": [{"type": "array", "items": {"enum": ["a", "b"]}}, {"type": "null"}]
+        },
+        "oneOf-ref": {"oneOf": [{"$ref": "#/$defs/Mode"}, {"type": "null"}]},
+        "anyOf-enum": {"anyOf": [{"enum": ["a"]}, {"enum": ["b"]}]},
+    }
+    for name, shape in cases.items():
+        assert check({**base, **shape}) == ["missing-enum-labels"], name
+        labelled = {**base, **shape, X_UI: {"tier": "advanced", "enum_labels": labels}}
+        assert check(labelled) == [], name
+    # 라벨은 배열 필드에 둔다(다중 선택 위젯이 배열 스키마를 읽는다). items 쪽 라벨은 덮지 못한다.
+    on_items = {
+        **base,
+        "type": "array",
+        "items": {"enum": ["a", "b"], X_UI: {"enum_labels": labels}},
+    }
+    assert check(on_items) == ["missing-enum-labels"]
+    # 배열 안 객체의 enum 필드는 그 필드 자리에서 따로 본다(배열 필드에는 걸지 않는다).
+    objects = {
+        **base,
+        "type": "array",
+        "items": {"type": "object", "properties": {"k": {**base, "enum": ["a", "b"]}}},
+    }
+    found = [
+        i.path
+        for i in lint_schema_help(_obj({"m": objects}, required=["m"]))
+        if i.rule == "missing-enum-labels"
+    ]
+    assert found == ["#/properties/m/items/properties/k"]
+
+
 def test_x_ui_helper_carries_enum_labels() -> None:
     from agent_console_contracts import x_ui
 

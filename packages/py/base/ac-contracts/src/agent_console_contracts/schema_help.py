@@ -14,8 +14,10 @@
 - ``unknown-x-ui-key``: ``x-ui`` 안에 모르는 키가 있다(오타 방지).
 - ``missing-example``: 비워 둘 수 있는 문자열·숫자 필드에 예시(``x-ui.example``·``examples``)도
   null 아닌 기본값도 없다.
-- ``missing-enum-labels``: 고르는 값(``enum``, 또는 enum을 가진 ``$ref``)에 사람이 읽는 라벨이 없다.
-  ``x-ui.enum_labels``(값 → 라벨)가 모든 값을 덮거나, 선택지가 ``oneOf``의 ``title``을 가져야 한다.
+- ``missing-enum-labels``: 고르는 값(``enum``, 또는 enum을 가진 ``$ref``·``anyOf``·``oneOf``, 배열
+  ``items``의 enum = 다중 선택)에 사람이 읽는 라벨이 없다. 필드의 ``x-ui.enum_labels``(값 → 라벨)가
+  모든 값을 덮거나, 선택지가 ``oneOf``의 ``title``을 가져야 한다. 배열이면 라벨은 ``items``가 아니라
+  배열 필드의 ``x-ui``에 둔다(다중 선택 위젯이 배열 스키마를 받는다).
 - ``forbidden-text``·``jargon``: 설명·``x-ui.when``에 설계 문서 번호(공통 금지 패턴) 또는 개발자용
   표현이 있다.
 - ``missing-when``: 규칙 데이터 ``when_required_tiers``(기본 ``basic``) 필드에
@@ -192,7 +194,11 @@ def _check_text(text: str, where: str, issues: list[HelpIssue], context: str | N
 def _enum_values(
     prop: Mapping[str, Any], defs: Mapping[str, Any], seen: frozenset[str] = frozenset()
 ) -> tuple[list[str], bool]:
-    """속성이 고르게 하는 문자열 값 목록과, 선택지마다 ``title``이 이미 있는지."""
+    """속성이 고르게 하는 문자열 값 목록과, 선택지마다 ``title``이 이미 있는지.
+
+    ``enum``·``$ref``·``anyOf``·``oneOf``·``allOf``와 배열 ``items``(다중 선택) 안까지 본다.
+    배열의 선택지 라벨은 폼의 다중 선택 위젯이 읽는 **배열 필드** ``x-ui.enum_labels``에 둔다.
+    """
     values: list[str] = []
     titled = True
     raw = prop.get("enum")
@@ -219,6 +225,11 @@ def _enum_values(
             sub, sub_titled = _enum_values(sub_node, defs, seen)
             values += sub
             titled = titled and sub_titled
+    items = prop.get("items")
+    if isinstance(items, Mapping):
+        sub, sub_titled = _enum_values(items, defs, seen)
+        values += sub
+        titled = titled and sub_titled
     return values, titled
 
 

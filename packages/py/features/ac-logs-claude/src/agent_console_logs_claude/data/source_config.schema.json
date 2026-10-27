@@ -7,62 +7,72 @@
       "items": {"type": "string", "minLength": 1},
       "default": [],
       "title": "루트 폴더",
-      "description": "Claude Code projects 폴더 목록. 비우면 config_dir_env 환경 변수 아래 config_dir_subpath, 없으면 default_root. `~`는 홈 폴더."
+      "description": "Claude Code projects 폴더 목록. 비우면 설정 폴더 환경 변수 아래 하위 경로, 없으면 기본 루트. `~`는 홈 폴더.",
+      "x-ui": {"tier": "advanced"}
     },
     "include": {
       "type": "array",
       "items": {"type": "string"},
       "default": ["*/*.jsonl", "*/*/subagents/**/agent-*.jsonl"],
       "title": "포함 패턴",
-      "description": "루트 기준 상대 경로 글롭. 기본은 세션 파일과 서브에이전트 파일."
+      "description": "루트 기준 상대 경로 글롭(예: */*.jsonl). 기본은 세션 파일과 서브에이전트 파일.",
+      "x-ui": {"tier": "advanced"}
     },
     "exclude": {
       "type": "array",
       "items": {"type": "string"},
       "default": [],
       "title": "제외 패턴",
-      "description": "예: 서브에이전트를 빼려면 `*/*/subagents/**`."
+      "description": "예: 서브에이전트를 빼려면 `*/*/subagents/**`.",
+      "x-ui": {"tier": "advanced"}
     },
     "default_root": {
       "type": "string",
       "minLength": 1,
       "default": "~/.claude/projects",
       "title": "기본 루트",
-      "description": "roots가 비고 config_dir_env 환경 변수도 없을 때 읽을 폴더."
+      "description": "루트 폴더가 비고 설정 폴더 환경 변수도 없을 때 읽을 폴더.",
+      "x-ui": {"tier": "advanced"}
     },
     "config_dir_env": {
       "type": "string",
       "default": "CLAUDE_CONFIG_DIR",
       "title": "설정 폴더 환경 변수",
-      "description": "이 환경 변수(주입된 환경)가 있으면 그 아래 config_dir_subpath를 기본 루트로 쓴다. 빈 문자열이면 보지 않는다."
+      "description": "이 환경 변수가 있으면 그 아래 하위 경로를 기본 루트로 쓴다. 빈 문자열이면 보지 않는다.",
+      "x-ui": {"tier": "advanced"}
     },
     "config_dir_subpath": {
       "type": "string",
       "default": "projects",
-      "title": "설정 폴더 안 하위 경로"
+      "title": "설정 폴더 안 하위 경로",
+      "description": "설정 폴더 환경 변수가 가리키는 폴더 안에서 세션 로그가 있는 하위 폴더.",
+      "x-ui": {"tier": "advanced"}
     },
     "subagents_dir": {
       "type": "string",
       "minLength": 1,
       "default": "subagents",
       "title": "서브에이전트 폴더 이름",
-      "description": "<프로젝트>/<세션>/<이 폴더>/**/agent-*.jsonl 을 서브에이전트 기록으로 본다."
+      "description": "<프로젝트>/<세션>/<이 폴더>/**/agent-*.jsonl 을 서브에이전트 기록으로 본다.",
+      "x-ui": {"tier": "advanced"}
     },
     "meta_suffix": {
       "type": "string",
       "minLength": 1,
       "default": ".meta.json",
       "title": "서브에이전트 메타 파일 접미사",
-      "description": "agent-<id>.jsonl 옆의 agent-<id><접미사>를 읽어 역할·위임 호출 id를 얻는다."
+      "description": "agent-<id>.jsonl 옆의 agent-<id><접미사>를 읽어 역할·위임 호출 id를 얻는다.",
+      "x-ui": {"tier": "advanced"}
     },
     "meta_fields": {
       "type": "object",
       "title": "메타 파일 필드",
       "description": "메타 JSON에서 꺼낼 값(JSON 포인터).",
+      "x-ui": {"tier": "advanced"},
       "properties": {
-        "role": {"type": "string", "default": "/agentType"},
-        "description": {"type": "string", "default": "/description"},
-        "tool_use_id": {"type": "string", "default": "/toolUseId"}
+        "role": {"type": "string", "default": "/agentType", "title": "역할", "description": "서브에이전트 역할(에이전트 종류)을 읽을 위치.", "x-ui": {"tier": "advanced"}},
+        "description": {"type": "string", "default": "/description", "title": "작업 설명", "description": "위임할 때 적은 작업 설명을 읽을 위치.", "x-ui": {"tier": "advanced"}},
+        "tool_use_id": {"type": "string", "default": "/toolUseId", "title": "위임 호출 id", "description": "이 서브에이전트를 부른 도구 호출 id를 읽을 위치.", "x-ui": {"tier": "advanced"}}
       },
       "additionalProperties": {"type": "string"},
       "default": {"role": "/agentType", "description": "/description", "tool_use_id": "/toolUseId"}
@@ -72,7 +82,8 @@
       "minimum": 1,
       "default": 65536,
       "title": "메타 파일 최대 크기(바이트)",
-      "description": "이보다 큰 메타 파일은 읽지 않는다."
+      "description": "이보다 큰 메타 파일은 읽지 않는다.",
+      "x-ui": {"tier": "advanced"}
     }
   }
 }

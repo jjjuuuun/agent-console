@@ -20,7 +20,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
-from agent_console_contracts import NodeRun, RunEvent
+from agent_console_contracts import NodeRun, RunEvent, x_ui
 from agent_console_contracts.logs import (
     LogClassifierDescriptor,
     LogLane,
@@ -102,8 +102,9 @@ SOURCE_SCHEMA: dict[str, Any] = {
             "default": DEFAULT_MAX_RUNS,
             "title": "최근 실행 수",
             "description": "수집 때 살펴볼 최근 Run 수(오래된 Run은 이미 색인된 것만 남는다).",
+            **x_ui(tier="advanced"),
         },
-        "event_map": {**EVENT_MAP_SCHEMA, "default": {}},
+        "event_map": {**EVENT_MAP_SCHEMA, "default": {}, **x_ui(tier="advanced")},
     },
     "additionalProperties": False,
 }

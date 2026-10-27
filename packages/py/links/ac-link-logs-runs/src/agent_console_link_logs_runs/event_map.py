@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import copy
 import fnmatch
 import json
 import re
@@ -26,6 +25,7 @@ from typing import Any
 
 from ruamel.yaml import YAML
 
+from agent_console_contracts import x_ui
 from agent_console_logs import JsonValue, effective_config, json_pointer, text
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "RULE_SCHEMA",
     "TEMPLATE_NAMES",
     "TOKEN_KEYS",
+    "VALUE_FIELD_TITLES",
     "EventMap",
     "EventRule",
     "load_default_event_map",
@@ -76,59 +77,130 @@ VALUE_FIELDS: tuple[str, ...] = (
 )
 """틀 또는 ``{pointer, map, default}``로 채우는 초안 필드."""
 
+VALUE_FIELD_TITLES: dict[str, str] = {
+    "category": "범주",
+    "title": "제목",
+    "stage": "단계",
+    "status": "상태",
+    "tool": "도구",
+    "call_id": "호출 id",
+    "via": "경유",
+    "model": "모델",
+    "message_id": "메시지 id",
+    "role": "역할",
+}
+"""``VALUE_FIELDS``의 설정 폼 라벨."""
+
 _POINTER: dict[str, Any] = {"type": "string", "pattern": "^(/.*)?$"}
 _TEMPLATE: dict[str, Any] = {"type": "string"}
-_VALUE: dict[str, Any] = {
-    "oneOf": [
-        _TEMPLATE,
-        {
-            "type": "object",
-            "properties": {
-                "pointer": _POINTER,
-                "map": {"type": "object", "additionalProperties": {"type": "string"}},
-                "default": {"type": "string"},
+
+
+def _pointer_field(title: str, description: str, example: str) -> dict[str, Any]:
+    return {
+        **_POINTER,
+        "title": title,
+        "description": description,
+        **x_ui(tier="advanced", example=example),
+    }
+
+
+def _value_schema(name: str) -> dict[str, Any]:
+    """틀 문자열 또는 ``{pointer, map, default}`` 규칙 하나(필드 ``name``)."""
+    label = VALUE_FIELD_TITLES.get(name, name)
+    return {
+        "title": label,
+        "description": f"로그의 {label} 값. 틀(예: {{type}}) 또는 이벤트에서 읽어 바꾸는 규칙.",
+        **x_ui(tier="advanced", example="{type}"),
+        "oneOf": [
+            {**_TEMPLATE, "title": "틀"},
+            {
+                "type": "object",
+                "title": "이벤트에서 읽기",
+                "properties": {
+                    "pointer": _pointer_field(
+                        "읽을 위치",
+                        "값을 읽을 이벤트 안 위치(예: /data/status).",
+                        "/data/status",
+                    ),
+                    "map": {
+                        "type": "object",
+                        "title": "값 바꾸기",
+                        "description": "읽은 값 → 보일 값. 없는 값은 없을 때 값을 쓴다.",
+                        **x_ui(tier="advanced"),
+                        "additionalProperties": {"type": "string"},
+                    },
+                    "default": {
+                        "type": "string",
+                        "title": "없을 때 값",
+                        "description": "바꾸기 표에 없을 때 쓸 값. 비우면 읽은 값 그대로.",
+                        **x_ui(tier="advanced", example="other"),
+                    },
+                },
+                "required": ["pointer"],
+                "additionalProperties": False,
             },
-            "required": ["pointer"],
-            "additionalProperties": False,
-        },
-    ]
-}
+        ],
+    }
+
 
 RULE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "title": "대응 규칙",
     "properties": {
-        **{name: copy.deepcopy(_VALUE) for name in VALUE_FIELDS},
-        "from": {**_TEMPLATE, "description": "보낸 쪽(틀, 비면 없음)."},
-        "to": {**_TEMPLATE, "description": "받는 쪽(틀, 비면 없음)."},
-        "tags": {"type": "array", "items": {"type": "string"}},
+        **{name: _value_schema(name) for name in VALUE_FIELDS},
+        "from": {
+            **_TEMPLATE,
+            "title": "보낸 쪽",
+            "description": "보낸 쪽(틀, 비면 없음).",
+            **x_ui(tier="advanced", example="{node}"),
+        },
+        "to": {
+            **_TEMPLATE,
+            "title": "받는 쪽",
+            "description": "받는 쪽(틀, 비면 없음).",
+            **x_ui(tier="advanced", example="{parent_node}"),
+        },
+        "tags": {
+            "type": "array",
+            "title": "태그",
+            "description": "이 형식의 로그에 붙일 태그 목록.",
+            **x_ui(tier="advanced"),
+            "items": {"type": "string"},
+        },
         "correlation": {
             "type": "object",
+            "title": "연결 근거",
             "description": "근거 이름 → 틀(session·call_id는 자동).",
+            **x_ui(tier="advanced"),
             "additionalProperties": _TEMPLATE,
         },
-        "duration_ms": {
-            **_POINTER,
-            "description": "끝난 구간의 소요 시간(ms) 포인터. 있으면 시작·끝 두 이벤트를 낸다.",
-        },
-        "session_from": {
-            **_POINTER,
-            "description": "이 이벤트가 알리는 노드 세션 id 포인터.",
-        },
-        "cwd_from": {
-            **_POINTER,
-            "description": (
-                "이 이벤트가 알리는 Run 작업 폴더 포인터. 이 이벤트와 그 뒤 같은 Run 이벤트의 "
-                "작업 폴더(로그 프로젝트 묶기 기준)가 된다."
-            ),
-        },
+        "duration_ms": _pointer_field(
+            "소요 시간 위치",
+            "끝난 구간의 소요 시간(ms) 위치. 있으면 시작·끝 두 이벤트를 낸다.",
+            "/data/duration_ms",
+        ),
+        "session_from": _pointer_field(
+            "세션 id 위치", "이 이벤트가 알리는 노드 세션 id의 위치.", "/data/session_id"
+        ),
+        "cwd_from": _pointer_field(
+            "작업 폴더 위치",
+            "이 이벤트가 알리는 Run 작업 폴더의 위치. 그 뒤 같은 Run 로그의 프로젝트 기준이 된다.",
+            "/data/cwd",
+        ),
         "usage": {
             "type": "object",
-            "description": "토큰 항목 → 포인터.",
+            "title": "토큰 위치",
+            "description": "토큰 항목 → 읽을 위치.",
+            **x_ui(tier="advanced"),
             "propertyNames": {"enum": list(TOKEN_KEYS)},
             "additionalProperties": _POINTER,
         },
-        "skip": {"type": "boolean", "description": "참이면 색인하지 않는다."},
+        "skip": {
+            "type": "boolean",
+            "title": "색인 안 함",
+            "description": "참이면 이 형식의 이벤트를 색인하지 않는다.",
+            **x_ui(tier="advanced"),
+        },
     },
     "additionalProperties": False,
 }
@@ -138,7 +210,7 @@ EVENT_MAP_SCHEMA: dict[str, Any] = {
     "type": "object",
     "title": "이벤트 대응표",
     "description": (
-        "실행 이벤트 형식(또는 글롭) → 대응 규칙. 기본 대응표 위에 키별로 통째로 덮어쓴다."
+        "실행 이벤트 형식(또는 글롭, 예: run.*) → 대응 규칙. 기본 대응표 위에 키별로 덮어쓴다."
     ),
     "additionalProperties": RULE_SCHEMA,
 }

@@ -1,8 +1,15 @@
 """설정 폼 도움말 린트(``uv run poe schema-help-lint``).
 
-계약 폼 모델과 설치된 플러그인 디스크립터의 설정 스키마(노드·연결 종류, 리소스 종류, 사용량 출처,
-실행 백엔드 옵션·관측 수집기, 위임 방식), 설치된 서버 모듈의 옵션 스키마(``modules.options.<id>``,
-설정 화면이 읽기 전용으로 보인다)를 ``agent_console_contracts.schema_help``로 검사한다.
+계약 폼 모델과 설치된 플러그인 디스크립터의 설정 스키마(노드·연결 종류, 리소스 종류, 사용량
+출처, 로그 출처, 실행 백엔드 옵션·관측 수집기, 위임 방식), 설치된 서버 모듈의 옵션 스키마
+(``modules.options.<id>``, 설정 화면이 읽기 전용으로 보인다), 모듈·연동 모듈이 조립 때 내놓는
+하위 설정 스키마(entry point ``agent_console.config_schemas``)를
+``agent_console_contracts.schema_help``로 검사한다.
+
+``agent_console.config_schemas``: 레지스트리 entry point가 아니라 모듈 ``build``가 포트로 내놓는
+출처(예: 연동 모듈의 사용량·로그 출처)의 설정 스키마를 이 검사에 알리는 선언이다. 값은 JSON
+Schema 객체 또는 그것을 돌려주는 인자 없는 함수다. 이름이 보고 위치(``config-schemas/<이름>``)가
+된다.
 
 - 계약과 **번들 플러그인**(이 저장소 워크스페이스 패키지가 등록한 것) 위반 = 규칙 심각도대로
   (오류면 exit 1, 어려운 용어 같은 경고 규칙은 경고).
@@ -30,6 +37,9 @@ from typing import Any
 from agent_console_contracts.schema_help import HelpIssue, lint_contract_help, lint_schema_help
 
 _DIST = re.compile(r"\[([A-Za-z0-9_.\-]+) [^\]]*\]\s*$")
+
+CONFIG_SCHEMAS_GROUP = "agent_console.config_schemas"
+"""모듈이 조립 때 내놓는 하위 설정 스키마를 선언하는 entry point 그룹(값 = 스키마 또는 함수)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +120,41 @@ def module_option_targets() -> list[Target]:
     return out
 
 
+def declared_schema_targets(entry_points: Iterable[Any] | None = None) -> list[Target]:
+    """entry point ``agent_console.config_schemas``가 선언한 스키마.
+
+    Args:
+        entry_points: 테스트용 주입(주면 설치된 패키지를 훑지 않는다).
+
+    Raises:
+        TypeError: 값이 JSON Schema 객체(또는 그것을 돌려주는 함수)가 아닐 때.
+    """
+    from importlib.metadata import entry_points as installed
+
+    eps = installed(group=CONFIG_SCHEMAS_GROUP) if entry_points is None else entry_points
+    out: list[Target] = []
+    for ep in sorted(eps, key=lambda e: str(e.name)):
+        value = ep.load()
+        schema = value() if callable(value) else value
+        if not isinstance(schema, Mapping):
+            raise TypeError(f"{CONFIG_SCHEMAS_GROUP}:{ep.name}: JSON Schema 객체가 아닙니다")
+        dist = getattr(getattr(ep, "dist", None), "name", None)
+        out.append(Target(f"config-schemas/{ep.name}/config_schema", schema, dist))
+    return out
+
+
+def log_source_targets() -> list[Target]:
+    """로그 출처 레지스트리(entry point)의 설정 스키마(설정 > 로그의 출처 카드 폼).
+
+    분류기 설정 스키마는 보지 않는다: 폼으로 그리지 않고 규칙 데이터 파일로만 고친다.
+    """
+    from agent_console_logs import LogRegistries
+
+    regs = LogRegistries()
+    regs.load()
+    return _descriptor_targets("log-sources", regs.sources)
+
+
 def collect_targets() -> list[Target]:
     """설치된 플러그인의 설정 스키마를 모은다(실행 엔진·리소스·사용량 레지스트리를 새로 로드)."""
     from agent_console_registry import Registry
@@ -130,7 +175,9 @@ def collect_targets() -> list[Target]:
     targets += _descriptor_targets("delegation-strategies", regs.delegation_strategies)
     targets += _descriptor_targets("resource-types", resource_types)
     targets += _descriptor_targets("usage-sources", usage_sources)
+    targets += log_source_targets()
     targets += module_option_targets()
+    targets += declared_schema_targets()
     return targets
 
 

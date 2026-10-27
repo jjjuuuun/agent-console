@@ -27,6 +27,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, BinaryIO, ClassVar
 
+from agent_console_contracts import x_ui
 from agent_console_contracts.logs import LogSourceDescriptor
 
 from ._glob import glob_match
@@ -61,6 +62,7 @@ JSONL_CONFIG_SCHEMA: dict[str, Any] = {
             "default": [],
             "title": "루트 폴더",
             "description": "읽을 폴더 목록. `~`는 홈 폴더. 원본은 읽기만 한다.",
+            **x_ui(tier="advanced"),
         },
         "include": {
             "type": "array",
@@ -68,12 +70,15 @@ JSONL_CONFIG_SCHEMA: dict[str, Any] = {
             "default": ["**/*.jsonl"],
             "title": "포함 패턴",
             "description": "루트 기준 상대 경로 글롭(`**` = 여러 폴더).",
+            **x_ui(tier="advanced"),
         },
         "exclude": {
             "type": "array",
             "items": {"type": "string"},
             "default": [],
             "title": "제외 패턴",
+            "description": "포함 패턴에 맞아도 읽지 않을 경로 글롭(예: `archive/**`).",
+            **x_ui(tier="advanced"),
         },
     },
 }

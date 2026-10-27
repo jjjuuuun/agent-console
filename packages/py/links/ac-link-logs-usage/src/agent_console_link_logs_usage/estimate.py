@@ -20,14 +20,16 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any, Literal
 
-from agent_console_contracts import UsageWindowInfo, UsageWindowSnapshot
+from agent_console_contracts import UsageWindowInfo, UsageWindowSnapshot, x_ui
 from agent_console_contracts.logs import LogTokenTotals, TokenSample
 from agent_console_logs import block_windows, rolling_totals
 
 __all__ = [
     "CONFIG_SCHEMA",
     "TOKEN_KINDS",
+    "TOKEN_KIND_LABELS",
     "WINDOW_KINDS",
+    "WINDOW_KIND_LABELS",
     "LocalLogsConfig",
     "WindowSpec",
     "estimate_windows",
@@ -47,6 +49,20 @@ TOKEN_KINDS: tuple[str, ...] = ("input", "output", "cache_creation", "cache_read
 
 _DEFAULTS_RESOURCE = "local_logs_defaults.json"
 
+WINDOW_KIND_LABELS: dict[str, str] = {
+    "block": "블록(첫 메시지부터 정한 길이)",
+    "rolling": "이동 창(지금부터 거꾸로)",
+}
+"""설정 폼에 보일 계산 방식 라벨(``x-ui.enum_labels``)."""
+
+TOKEN_KIND_LABELS: dict[str, str] = {
+    "input": "입력 토큰",
+    "output": "출력 토큰",
+    "cache_creation": "캐시 쓰기 토큰",
+    "cache_read": "캐시 읽기 토큰",
+}
+"""설정 폼에 보일 토큰 종류 라벨(``x-ui.enum_labels``, 다중 선택이라 배열 필드에 둔다)."""
+
 CONFIG_SCHEMA: dict[str, Any] = {
     "type": "object",
     "title": "로컬 로그 추정",
@@ -55,15 +71,54 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "type": "array",
             "title": "창",
             "description": "생략하면 기본 창(데이터). 같은 id가 여럿이면 처음 것만 쓴다.",
+            **x_ui(tier="advanced"),
             "items": {
                 "type": "object",
                 "properties": {
-                    "id": {"type": "string", "minLength": 1, "title": "창 id"},
-                    "kind": {"type": "string", "enum": list(WINDOW_KINDS), "title": "계산 방식"},
-                    "hours": {"type": "number", "exclusiveMinimum": 0, "title": "길이(시간)"},
-                    "days": {"type": "number", "exclusiveMinimum": 0, "title": "길이(일)"},
-                    "title": {"type": "string", "minLength": 1, "title": "표시 이름"},
-                    "short_title": {"type": "string", "minLength": 1, "title": "짧은 이름"},
+                    "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "창 id",
+                        "description": "예산·화면이 이 창을 가리킬 때 쓰는 이름입니다.",
+                        **x_ui(tier="advanced", example="my_window"),
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": list(WINDOW_KINDS),
+                        "title": "계산 방식",
+                        "description": (
+                            "블록은 첫 메시지부터 길이만큼, 이동 창은 지금부터 거꾸로 셉니다."
+                        ),
+                        **x_ui(tier="advanced", enum_labels=WINDOW_KIND_LABELS),
+                    },
+                    "hours": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "title": "길이(시간)",
+                        "description": "창 길이(시간). 길이(일)와 함께 적으면 더한다.",
+                        **x_ui(tier="advanced", example=5, unit="시간"),
+                    },
+                    "days": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "title": "길이(일)",
+                        "description": "창 길이(일). 길이(시간)와 함께 적으면 더한다.",
+                        **x_ui(tier="advanced", example=7, unit="일"),
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "표시 이름",
+                        "description": "사용량 화면에 보일 창 이름입니다.",
+                        **x_ui(tier="advanced", example="내 창"),
+                    },
+                    "short_title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "짧은 이름",
+                        "description": "좁은 자리(상태 줄 등)에 보일 짧은 이름.",
+                        **x_ui(tier="advanced", example="5h"),
+                    },
                 },
                 "required": ["id", "kind"],
                 "anyOf": [{"required": ["hours"]}, {"required": ["days"]}],
@@ -74,6 +129,10 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "type": "object",
             "title": "예산(토큰)",
             "description": "창 id → 토큰 수. 있으면 사용률 = 사용 토큰 / 예산. 없으면 사용률 없음.",
+            **x_ui(
+                tier="basic",
+                when="로그 추정 창에 사용률(%)을 보고 싶을 때 창마다 토큰 예산을 적습니다.",
+            ),
             "additionalProperties": {"type": "integer", "exclusiveMinimum": 0},
         },
         "filter": {
@@ -82,6 +141,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "description": (
                 "로그 질의 필터(예: source, project, model). 시각·쪽수 키는 쓰지 않는다."
             ),
+            **x_ui(tier="advanced"),
             "propertyNames": {"not": {"enum": ["since", "until", "limit", "cursor", "order"]}},
             "additionalProperties": {
                 "anyOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]
@@ -90,6 +150,8 @@ CONFIG_SCHEMA: dict[str, Any] = {
         "count": {
             "type": "array",
             "title": "셀 토큰 종류",
+            "description": "사용 토큰에 더할 종류. 비우면 네 종류를 모두 더한다.",
+            **x_ui(tier="advanced", enum_labels=TOKEN_KIND_LABELS),
             "items": {"type": "string", "enum": list(TOKEN_KINDS)},
             "uniqueItems": True,
         },
@@ -100,6 +162,7 @@ CONFIG_SCHEMA: dict[str, Any] = {
             "description": (
                 "블록 경계를 정하려고 읽는 과거 범위. 창 길이보다 짧으면 창 길이를 쓴다."
             ),
+            **x_ui(tier="advanced", example=168, unit="시간"),
         },
     },
     "additionalProperties": False,
