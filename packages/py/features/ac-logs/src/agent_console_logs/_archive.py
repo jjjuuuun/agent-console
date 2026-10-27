@@ -55,7 +55,10 @@ _PAGING_FIELDS = frozenset({"limit", "cursor"})
 
 
 def filter_to_params(flt: LogFilter) -> dict[str, JsonValue]:
-    """`LogFilter` → 쿼리 이름별 값(기본값·페이지 필드 제외). `parse_log_filter`로 되돌린다."""
+    """`LogFilter` → 쿼리 이름별 값(기본값·페이지 필드 제외). `parse_log_filter`로 되돌린다.
+
+    확장 필터(`extra`)는 이름별 값으로 펼친다(되돌릴 때 `extra=` 이름 목록을 준다).
+    """
     default = LogFilter()
     out: dict[str, JsonValue] = {}
     for f in fields(LogFilter):
@@ -63,6 +66,10 @@ def filter_to_params(flt: LogFilter) -> dict[str, JsonValue]:
             continue
         value = getattr(flt, f.name)
         if value == getattr(default, f.name):
+            continue
+        if f.name == "extra":
+            for ext_name, ext_values in value:
+                out[ext_name] = list(ext_values)
             continue
         name = f.name.rstrip("_")
         out[name] = list(value) if isinstance(value, tuple) else value

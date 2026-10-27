@@ -79,6 +79,8 @@ agent-console-projects = { workspace = true }
 agent-console-mod-projects = { workspace = true }
 agent-console-link-projects-runs = { workspace = true }
 agent-console-pty-session = { workspace = true }
+agent-console-architecture = { workspace = true }
+agent-console-mod-architecture = { workspace = true }
 
 # ---------------------------------------------------------------- poe (CLAUDE.md "명령어")
 # mypy 캐시는 저장소 루트 `.mypy_cache` 한곳에만 쌓는다(5.2R.94b). `poe examples`·`poe mypy-package`처럼
@@ -189,6 +191,7 @@ asyncio_default_fixture_loop_scope = "function"
 # 이 영역은 scripts/pkgkit/importlinter_sync.py가 importlinter.rules.toml에서 생성한다. 직접 고치지 않는다.
 [tool.importlinter]
 root_packages = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -214,6 +217,7 @@ root_packages = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -247,6 +251,7 @@ include_external_packages = true
 name = "패키지는 앱(server, cli)을 import하지 않는다"
 type = "forbidden"
 source_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -271,6 +276,7 @@ source_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -303,6 +309,7 @@ forbidden_modules = ["agent_console_cli", "agent_console_server"]
 name = "safe-regex 사용처는 secret-rules와 conditions(`matches` 연산자)뿐 (다른 패키지는 이 둘을 거친다, design §2R.4·§5R.5)"
 type = "forbidden"
 source_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -327,6 +334,7 @@ source_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -360,6 +368,7 @@ name = "secret-rules는 safe-regex에만 의존 (design §2R.4)"
 type = "forbidden"
 source_modules = ["agent_console_secret_rules"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -385,6 +394,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -417,6 +427,7 @@ name = "imports는 contracts, registry, secret-rules, claude-format에만 의존
 type = "forbidden"
 source_modules = ["agent_console_imports"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -439,6 +450,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -471,6 +483,7 @@ name = "claude-format은 다른 agent_console 패키지에 의존하지 않는�
 type = "forbidden"
 source_modules = ["agent_console_claude_format"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -495,6 +508,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -528,6 +542,7 @@ name = "pty-session은 다른 agent_console 패키지에 의존하지 않는다 
 type = "forbidden"
 source_modules = ["agent_console_pty_session"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -553,6 +568,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -585,6 +601,7 @@ name = "exports는 contracts, registry, claude-format, secret-rules에만 의존
 type = "forbidden"
 source_modules = ["agent_console_exports"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -607,6 +624,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -639,6 +657,7 @@ name = "contracts, registry는 다른 agent_console 패키지에 의존하지 �
 type = "forbidden"
 source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -663,6 +682,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -691,12 +711,12 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
     "modules",
-    "chat | exports | imports",
+    "chat | exports | imports | architecture",
     "runs | usage | projects",
     "definitions",
     "resources | logs",
@@ -708,6 +728,7 @@ name = "conditions는 contracts, registry, safe-regex에만 의존 (순수 조�
 type = "forbidden"
 source_modules = ["agent_console_conditions"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -731,6 +752,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -762,6 +784,7 @@ name = "projects는 contracts에만 의존 (순수 범위 규칙, 참조 추출�
 type = "forbidden"
 source_modules = ["agent_console_projects"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -786,6 +809,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -818,6 +842,7 @@ name = "safe-regex는 다른 agent_console 패키지에 의존하지 않는다"
 type = "forbidden"
 source_modules = ["agent_console_safe_regex"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -843,6 +868,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -875,6 +901,7 @@ name = "settings는 다른 agent_console 패키지에 의존하지 않는다 (�
 type = "forbidden"
 source_modules = ["agent_console_settings"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -900,6 +927,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -932,6 +960,7 @@ name = "resources는 contracts, registry, settings, secret-rules에만 의존 (�
 type = "forbidden"
 source_modules = ["agent_console_resources"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -956,6 +985,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -986,6 +1016,7 @@ name = "resources-core는 contracts, resources, secret-rules, claude-format에�
 type = "forbidden"
 source_modules = ["agent_console_resources_core"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1009,6 +1040,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1040,6 +1072,7 @@ name = "teams는 contracts, registry, graph, settings, resources, secret-rules�
 type = "forbidden"
 source_modules = ["agent_console_teams"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1063,6 +1096,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1092,6 +1126,7 @@ name = "chat·trace는 contracts에만 의존 (runtime·store는 프로토콜로
 type = "forbidden"
 source_modules = ["agent_console_chat", "agent_console_trace"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_claude_format",
@@ -1115,6 +1150,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1149,10 +1185,68 @@ type = "independence"
 modules = ["agent_console_chat", "agent_console_trace"]
 
 [[tool.importlinter.contracts]]
+name = "architecture는 contracts, conditions, registry에만 의존 (ac-logs·로그 색인을 모른다 — 이벤트는 계약 LogEvent로 받고 오류 범주는 인자, design §5.5R.3 K-1)"
+type = "forbidden"
+source_modules = ["agent_console_architecture"]
+forbidden_modules = [
+    "agent_console_backend_claude_sdk",
+    "agent_console_backend_fake_agent",
+    "agent_console_chat",
+    "agent_console_claude_format",
+    "agent_console_cli",
+    "agent_console_delegation_host",
+    "agent_console_exports",
+    "agent_console_graph",
+    "agent_console_hook_probe",
+    "agent_console_imports",
+    "agent_console_link_chat_runs",
+    "agent_console_link_definitions_resources",
+    "agent_console_link_definitions_teams",
+    "agent_console_link_exports_teams",
+    "agent_console_link_logs_runs",
+    "agent_console_link_logs_trace",
+    "agent_console_link_logs_usage",
+    "agent_console_link_projects_runs",
+    "agent_console_link_runs_teams",
+    "agent_console_link_runs_trace",
+    "agent_console_link_runs_usage",
+    "agent_console_logs",
+    "agent_console_logs_claude",
+    "agent_console_mod_architecture",
+    "agent_console_mod_chat",
+    "agent_console_mod_definitions",
+    "agent_console_mod_exports",
+    "agent_console_mod_imports",
+    "agent_console_mod_logs",
+    "agent_console_mod_projects",
+    "agent_console_mod_resources",
+    "agent_console_mod_runs",
+    "agent_console_mod_usage",
+    "agent_console_mod_versions",
+    "agent_console_modkit",
+    "agent_console_nodes_core",
+    "agent_console_projects",
+    "agent_console_pty_session",
+    "agent_console_resources",
+    "agent_console_resources_core",
+    "agent_console_runtime",
+    "agent_console_safe_regex",
+    "agent_console_secret_rules",
+    "agent_console_server",
+    "agent_console_settings",
+    "agent_console_store",
+    "agent_console_teams",
+    "agent_console_trace",
+    "agent_console_usage",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
 name = "usage는 contracts, registry에만 의존 (출처·창 이름을 모른다, store는 프로토콜로만, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_usage"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1177,6 +1271,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1214,6 +1309,7 @@ name = "graph는 contracts에만 의존"
 type = "forbidden"
 source_modules = ["agent_console_graph"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1237,6 +1333,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1271,6 +1368,7 @@ name = "runtime은 contracts, registry, graph에만 의존 (store·플러그인�
 type = "forbidden"
 source_modules = ["agent_console_runtime"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1294,6 +1392,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1332,6 +1431,7 @@ name = "nodes-core는 contracts, registry, graph, runtime, settings, resources, 
 type = "forbidden"
 source_modules = ["agent_console_nodes_core"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1354,6 +1454,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1382,6 +1483,7 @@ name = "delegation-host는 contracts, runtime에만 직접 의존 (대상 실행
 type = "forbidden"
 source_modules = ["agent_console_delegation_host"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1405,6 +1507,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1454,6 +1557,7 @@ name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, pty-se
 type = "forbidden"
 source_modules = ["agent_console_backend_claude_sdk"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
     "agent_console_claude_format",
@@ -1476,6 +1580,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1506,6 +1611,7 @@ name = "backend-fake-agent는 contracts, runtime에만 의존 (대본 로그인�
 type = "forbidden"
 source_modules = ["agent_console_backend_fake_agent"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_chat",
     "agent_console_claude_format",
@@ -1529,6 +1635,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1562,6 +1669,7 @@ name = "store는 contracts에만 의존 (runtime 프로토콜은 구조적 타�
 type = "forbidden"
 source_modules = ["agent_console_store"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1586,6 +1694,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1619,6 +1728,7 @@ name = "서버 앱은 modkit과 기반(L0)만 안다 (기능 라이브러리·�
 type = "forbidden"
 source_modules = ["agent_console_server"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1638,6 +1748,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1660,12 +1771,14 @@ forbidden_modules = [
     "agent_console_link_runs_trace",
     "agent_console_link_runs_usage",
 ]
+ignore_imports = ["agent_console_server.testing -> agent_console_backend_fake_agent"]
 
 [[tool.importlinter.contracts]]
 name = "cli는 usage에만 의존 (서버 앱은 `_server` 모듈 한 곳에서 serve·설정 읽기로만, 1R.15)"
 type = "forbidden"
 source_modules = ["agent_console_cli"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1690,6 +1803,7 @@ forbidden_modules = [
     "agent_console_link_runs_usage",
     "agent_console_logs",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1724,6 +1838,7 @@ name = "modkit은 기반(L0)만 안다 (기능 라이브러리·모듈·앱을 �
 type = "forbidden"
 source_modules = ["agent_console_modkit"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1743,6 +1858,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1761,6 +1877,7 @@ forbidden_modules = [
 name = "기능 라이브러리는 modkit을 모른다 (서버 계층과 분리, modularity §3.7 규칙 1)"
 type = "forbidden"
 source_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1787,6 +1904,7 @@ forbidden_modules = ["agent_console_modkit"]
 name = "기능 모듈은 서로 모른다 (포트는 이름으로만 맞춘다, modularity §3.7 규칙 3·design §3R.1.2)"
 type = "independence"
 modules = [
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1803,6 +1921,7 @@ modules = [
 name = "기능 라이브러리는 기능 모듈을 모른다 (L1은 서버 계층과 분리, modularity §3.7 규칙 1)"
 type = "forbidden"
 source_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1824,6 +1943,7 @@ source_modules = [
     "agent_console_usage",
 ]
 forbidden_modules = [
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1841,6 +1961,7 @@ name = "앱은 기능 모듈을 import하지 않는다 (entry point `agent_conso
 type = "forbidden"
 source_modules = ["agent_console_cli", "agent_console_server"]
 forbidden_modules = [
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1874,6 +1995,7 @@ modules = [
 name = "기능 모듈은 연동 모듈을 모른다 (modularity §3.7 규칙 3, 3R.12)"
 type = "forbidden"
 source_modules = [
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1905,6 +2027,7 @@ type = "forbidden"
 source_modules = [
     "agent_console_cli",
     "agent_console_server",
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1943,6 +2066,7 @@ forbidden_modules = [
 name = "기능 라이브러리는 웹 프레임워크(fastapi·starlette)를 모른다 (modularity §3.7 규칙 1, 3R.16)"
 type = "forbidden"
 source_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -1982,6 +2106,7 @@ source_modules = [
     "agent_console_link_runs_usage",
 ]
 forbidden_modules = [
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -1994,6 +2119,7 @@ forbidden_modules = [
     "agent_console_mod_versions",
 ]
 ignore_imports = [
+    "agent_console_link_chat_runs -> agent_console_mod_architecture.ports",
     "agent_console_link_chat_runs -> agent_console_mod_chat.ports",
     "agent_console_link_chat_runs -> agent_console_mod_definitions.ports",
     "agent_console_link_chat_runs -> agent_console_mod_exports.ports",
@@ -2004,6 +2130,7 @@ ignore_imports = [
     "agent_console_link_chat_runs -> agent_console_mod_runs.ports",
     "agent_console_link_chat_runs -> agent_console_mod_usage.ports",
     "agent_console_link_chat_runs -> agent_console_mod_versions.ports",
+    "agent_console_link_definitions_resources -> agent_console_mod_architecture.ports",
     "agent_console_link_definitions_resources -> agent_console_mod_chat.ports",
     "agent_console_link_definitions_resources -> agent_console_mod_definitions.ports",
     "agent_console_link_definitions_resources -> agent_console_mod_exports.ports",
@@ -2014,6 +2141,7 @@ ignore_imports = [
     "agent_console_link_definitions_resources -> agent_console_mod_runs.ports",
     "agent_console_link_definitions_resources -> agent_console_mod_usage.ports",
     "agent_console_link_definitions_resources -> agent_console_mod_versions.ports",
+    "agent_console_link_definitions_teams -> agent_console_mod_architecture.ports",
     "agent_console_link_definitions_teams -> agent_console_mod_chat.ports",
     "agent_console_link_definitions_teams -> agent_console_mod_definitions.ports",
     "agent_console_link_definitions_teams -> agent_console_mod_exports.ports",
@@ -2024,6 +2152,7 @@ ignore_imports = [
     "agent_console_link_definitions_teams -> agent_console_mod_runs.ports",
     "agent_console_link_definitions_teams -> agent_console_mod_usage.ports",
     "agent_console_link_definitions_teams -> agent_console_mod_versions.ports",
+    "agent_console_link_exports_teams -> agent_console_mod_architecture.ports",
     "agent_console_link_exports_teams -> agent_console_mod_chat.ports",
     "agent_console_link_exports_teams -> agent_console_mod_definitions.ports",
     "agent_console_link_exports_teams -> agent_console_mod_exports.ports",
@@ -2034,6 +2163,7 @@ ignore_imports = [
     "agent_console_link_exports_teams -> agent_console_mod_runs.ports",
     "agent_console_link_exports_teams -> agent_console_mod_usage.ports",
     "agent_console_link_exports_teams -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_runs -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_runs -> agent_console_mod_chat.ports",
     "agent_console_link_logs_runs -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_runs -> agent_console_mod_exports.ports",
@@ -2044,6 +2174,7 @@ ignore_imports = [
     "agent_console_link_logs_runs -> agent_console_mod_runs.ports",
     "agent_console_link_logs_runs -> agent_console_mod_usage.ports",
     "agent_console_link_logs_runs -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_trace -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_trace -> agent_console_mod_chat.ports",
     "agent_console_link_logs_trace -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_trace -> agent_console_mod_exports.ports",
@@ -2054,6 +2185,7 @@ ignore_imports = [
     "agent_console_link_logs_trace -> agent_console_mod_runs.ports",
     "agent_console_link_logs_trace -> agent_console_mod_usage.ports",
     "agent_console_link_logs_trace -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_usage -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_usage -> agent_console_mod_chat.ports",
     "agent_console_link_logs_usage -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_usage -> agent_console_mod_exports.ports",
@@ -2064,6 +2196,7 @@ ignore_imports = [
     "agent_console_link_logs_usage -> agent_console_mod_runs.ports",
     "agent_console_link_logs_usage -> agent_console_mod_usage.ports",
     "agent_console_link_logs_usage -> agent_console_mod_versions.ports",
+    "agent_console_link_projects_runs -> agent_console_mod_architecture.ports",
     "agent_console_link_projects_runs -> agent_console_mod_chat.ports",
     "agent_console_link_projects_runs -> agent_console_mod_definitions.ports",
     "agent_console_link_projects_runs -> agent_console_mod_exports.ports",
@@ -2074,6 +2207,7 @@ ignore_imports = [
     "agent_console_link_projects_runs -> agent_console_mod_runs.ports",
     "agent_console_link_projects_runs -> agent_console_mod_usage.ports",
     "agent_console_link_projects_runs -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_teams -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_teams -> agent_console_mod_chat.ports",
     "agent_console_link_runs_teams -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_teams -> agent_console_mod_exports.ports",
@@ -2084,6 +2218,7 @@ ignore_imports = [
     "agent_console_link_runs_teams -> agent_console_mod_runs.ports",
     "agent_console_link_runs_teams -> agent_console_mod_usage.ports",
     "agent_console_link_runs_teams -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_trace -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_trace -> agent_console_mod_chat.ports",
     "agent_console_link_runs_trace -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_trace -> agent_console_mod_exports.ports",
@@ -2094,6 +2229,7 @@ ignore_imports = [
     "agent_console_link_runs_trace -> agent_console_mod_runs.ports",
     "agent_console_link_runs_trace -> agent_console_mod_usage.ports",
     "agent_console_link_runs_trace -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_usage -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_usage -> agent_console_mod_chat.ports",
     "agent_console_link_runs_usage -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_usage -> agent_console_mod_exports.ports",
@@ -2104,6 +2240,7 @@ ignore_imports = [
     "agent_console_link_runs_usage -> agent_console_mod_runs.ports",
     "agent_console_link_runs_usage -> agent_console_mod_usage.ports",
     "agent_console_link_runs_usage -> agent_console_mod_versions.ports",
+    "agent_console_link_chat_runs.** -> agent_console_mod_architecture.ports",
     "agent_console_link_chat_runs.** -> agent_console_mod_chat.ports",
     "agent_console_link_chat_runs.** -> agent_console_mod_definitions.ports",
     "agent_console_link_chat_runs.** -> agent_console_mod_exports.ports",
@@ -2114,6 +2251,7 @@ ignore_imports = [
     "agent_console_link_chat_runs.** -> agent_console_mod_runs.ports",
     "agent_console_link_chat_runs.** -> agent_console_mod_usage.ports",
     "agent_console_link_chat_runs.** -> agent_console_mod_versions.ports",
+    "agent_console_link_definitions_resources.** -> agent_console_mod_architecture.ports",
     "agent_console_link_definitions_resources.** -> agent_console_mod_chat.ports",
     "agent_console_link_definitions_resources.** -> agent_console_mod_definitions.ports",
     "agent_console_link_definitions_resources.** -> agent_console_mod_exports.ports",
@@ -2124,6 +2262,7 @@ ignore_imports = [
     "agent_console_link_definitions_resources.** -> agent_console_mod_runs.ports",
     "agent_console_link_definitions_resources.** -> agent_console_mod_usage.ports",
     "agent_console_link_definitions_resources.** -> agent_console_mod_versions.ports",
+    "agent_console_link_definitions_teams.** -> agent_console_mod_architecture.ports",
     "agent_console_link_definitions_teams.** -> agent_console_mod_chat.ports",
     "agent_console_link_definitions_teams.** -> agent_console_mod_definitions.ports",
     "agent_console_link_definitions_teams.** -> agent_console_mod_exports.ports",
@@ -2134,6 +2273,7 @@ ignore_imports = [
     "agent_console_link_definitions_teams.** -> agent_console_mod_runs.ports",
     "agent_console_link_definitions_teams.** -> agent_console_mod_usage.ports",
     "agent_console_link_definitions_teams.** -> agent_console_mod_versions.ports",
+    "agent_console_link_exports_teams.** -> agent_console_mod_architecture.ports",
     "agent_console_link_exports_teams.** -> agent_console_mod_chat.ports",
     "agent_console_link_exports_teams.** -> agent_console_mod_definitions.ports",
     "agent_console_link_exports_teams.** -> agent_console_mod_exports.ports",
@@ -2144,6 +2284,7 @@ ignore_imports = [
     "agent_console_link_exports_teams.** -> agent_console_mod_runs.ports",
     "agent_console_link_exports_teams.** -> agent_console_mod_usage.ports",
     "agent_console_link_exports_teams.** -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_runs.** -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_runs.** -> agent_console_mod_chat.ports",
     "agent_console_link_logs_runs.** -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_runs.** -> agent_console_mod_exports.ports",
@@ -2154,6 +2295,7 @@ ignore_imports = [
     "agent_console_link_logs_runs.** -> agent_console_mod_runs.ports",
     "agent_console_link_logs_runs.** -> agent_console_mod_usage.ports",
     "agent_console_link_logs_runs.** -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_trace.** -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_trace.** -> agent_console_mod_chat.ports",
     "agent_console_link_logs_trace.** -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_trace.** -> agent_console_mod_exports.ports",
@@ -2164,6 +2306,7 @@ ignore_imports = [
     "agent_console_link_logs_trace.** -> agent_console_mod_runs.ports",
     "agent_console_link_logs_trace.** -> agent_console_mod_usage.ports",
     "agent_console_link_logs_trace.** -> agent_console_mod_versions.ports",
+    "agent_console_link_logs_usage.** -> agent_console_mod_architecture.ports",
     "agent_console_link_logs_usage.** -> agent_console_mod_chat.ports",
     "agent_console_link_logs_usage.** -> agent_console_mod_definitions.ports",
     "agent_console_link_logs_usage.** -> agent_console_mod_exports.ports",
@@ -2174,6 +2317,7 @@ ignore_imports = [
     "agent_console_link_logs_usage.** -> agent_console_mod_runs.ports",
     "agent_console_link_logs_usage.** -> agent_console_mod_usage.ports",
     "agent_console_link_logs_usage.** -> agent_console_mod_versions.ports",
+    "agent_console_link_projects_runs.** -> agent_console_mod_architecture.ports",
     "agent_console_link_projects_runs.** -> agent_console_mod_chat.ports",
     "agent_console_link_projects_runs.** -> agent_console_mod_definitions.ports",
     "agent_console_link_projects_runs.** -> agent_console_mod_exports.ports",
@@ -2184,6 +2328,7 @@ ignore_imports = [
     "agent_console_link_projects_runs.** -> agent_console_mod_runs.ports",
     "agent_console_link_projects_runs.** -> agent_console_mod_usage.ports",
     "agent_console_link_projects_runs.** -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_teams.** -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_teams.** -> agent_console_mod_chat.ports",
     "agent_console_link_runs_teams.** -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_teams.** -> agent_console_mod_exports.ports",
@@ -2194,6 +2339,7 @@ ignore_imports = [
     "agent_console_link_runs_teams.** -> agent_console_mod_runs.ports",
     "agent_console_link_runs_teams.** -> agent_console_mod_usage.ports",
     "agent_console_link_runs_teams.** -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_trace.** -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_trace.** -> agent_console_mod_chat.ports",
     "agent_console_link_runs_trace.** -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_trace.** -> agent_console_mod_exports.ports",
@@ -2204,6 +2350,7 @@ ignore_imports = [
     "agent_console_link_runs_trace.** -> agent_console_mod_runs.ports",
     "agent_console_link_runs_trace.** -> agent_console_mod_usage.ports",
     "agent_console_link_runs_trace.** -> agent_console_mod_versions.ports",
+    "agent_console_link_runs_usage.** -> agent_console_mod_architecture.ports",
     "agent_console_link_runs_usage.** -> agent_console_mod_chat.ports",
     "agent_console_link_runs_usage.** -> agent_console_mod_definitions.ports",
     "agent_console_link_runs_usage.** -> agent_console_mod_exports.ports",
@@ -2223,6 +2370,7 @@ name = "logs는 contracts, registry에만 의존 (도구 형식·저장소·서�
 type = "forbidden"
 source_modules = ["agent_console_logs"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -2246,6 +2394,7 @@ forbidden_modules = [
     "agent_console_link_runs_trace",
     "agent_console_link_runs_usage",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -2278,6 +2427,7 @@ name = "logs-claude는 logs, contracts에만 의존 (포맷 플러그인, 서버
 type = "forbidden"
 source_modules = ["agent_console_logs_claude"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -2300,6 +2450,7 @@ forbidden_modules = [
     "agent_console_link_runs_teams",
     "agent_console_link_runs_trace",
     "agent_console_link_runs_usage",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",
@@ -2332,6 +2483,7 @@ name = "hook-probe는 logs, contracts, registry, secret-rules에만 의존 (desi
 type = "forbidden"
 source_modules = ["agent_console_hook_probe"]
 forbidden_modules = [
+    "agent_console_architecture",
     "agent_console_backend_claude_sdk",
     "agent_console_backend_fake_agent",
     "agent_console_chat",
@@ -2354,6 +2506,7 @@ forbidden_modules = [
     "agent_console_link_runs_trace",
     "agent_console_link_runs_usage",
     "agent_console_logs_claude",
+    "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
     "agent_console_mod_exports",

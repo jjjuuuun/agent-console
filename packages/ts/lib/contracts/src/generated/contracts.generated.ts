@@ -45,7 +45,8 @@ export type AnyKnownRunEvent =
   | LoopIterationEvent
   | LoopExhaustedEvent
   | RunChildStartedEvent
-  | RunChildFinishedEvent;
+  | RunChildFinishedEvent
+  | AgentContextPreparedEvent;
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "RunStatus".
@@ -82,15 +83,19 @@ export type InteractionStatus = "pending" | "answered" | "expired" | "cancelled"
 export type ItemAction = "created" | "overwritten" | "renamed" | "skipped" | "failed";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "BackendLoginPhase".
+ * via the `definition` "ArchitectureItemStatus".
  */
-export type BackendLoginPhase =
-  "starting" | "waiting_user" | "verifying" | "succeeded" | "failed" | "cancelled" | "expired";
+export type ArchitectureItemStatus = "observed" | "partial" | "not_collected";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ReadinessTone".
+ * via the `definition` "ArchitectureMetricStatus".
  */
-export type ReadinessTone = "ok" | "warn" | "error" | "unknown";
+export type ArchitectureMetricStatus = "observed" | "inferred" | "not_collected";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureEdgeKind".
+ */
+export type ArchitectureEdgeKind = "observed" | "structural";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "IssueSeverity".
@@ -101,6 +106,17 @@ export type IssueSeverity = "error" | "warning" | "info";
  * via the `definition` "JoinRule".
  */
 export type JoinRule = "any" | "all";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BackendLoginPhase".
+ */
+export type BackendLoginPhase =
+  "starting" | "waiting_user" | "verifying" | "succeeded" | "failed" | "cancelled" | "expired";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ReadinessTone".
+ */
+export type ReadinessTone = "ok" | "warn" | "error" | "unknown";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "BusyPolicy".
@@ -193,7 +209,8 @@ export type KnownRunEvent =
   | LoopIterationEvent
   | LoopExhaustedEvent
   | RunChildStartedEvent
-  | RunChildFinishedEvent;
+  | RunChildFinishedEvent
+  | AgentContextPreparedEvent;
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogUngroupedPolicy".
@@ -435,6 +452,85 @@ export interface ResourceAttachment {
   [k: string]: unknown;
 }
 /**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AgentContextPreparedEvent".
+ */
+export interface AgentContextPreparedEvent {
+  schema_version?: number;
+  event_id: string;
+  run_id: string;
+  seq: number;
+  /**
+   * Unix epoch 초.
+   */
+  ts: number;
+  /**
+   * 이벤트가 속한 노드 경로. Run 수준은 [], 하위 그래프는 [부모노드, 자식노드].
+   */
+  node_path: string[];
+  /**
+   * 노드 이벤트의 시도 번호.
+   */
+  attempt?: number | null;
+  /**
+   * 이벤트를 낸 에이전트 정의 id. 위임받은 대상이면 대상 에이전트.
+   */
+  actor?: string | null;
+  /**
+   * observed | inferred 등(확장 가능).
+   */
+  evidence?: string;
+  /**
+   * 공급자 원시 메시지(크기 제한·비밀 제거 후).
+   */
+  raw?: unknown;
+  type: "agent.context_prepared";
+  payload: AgentContextPreparedPayload;
+}
+/**
+ * `agent.context_prepared` payload: 에이전트 노드가 백엔드 요청의 맥락을 만들었다(1.4.0).
+ *
+ * 붙은 리소스의 id·종류·크기·해시만 싣는다. **본문(프롬프트·리소스 내용)은 싣지 않는다**
+ * (비밀·크기). 시스템 프롬프트·요청 본문은 수집 대상이 아니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AgentContextPreparedPayload".
+ */
+export interface AgentContextPreparedPayload {
+  /**
+   * 맥락에 붙은 리소스(붙인 순서).
+   */
+  resources?: ContextResourceRef[];
+  /**
+   * 프롬프트를 이룬 조각 수. 모르면 null.
+   */
+  fragments?: number | null;
+}
+/**
+ * 맥락 구성에 붙은 리소스 하나의 표지(본문 없음, 1.4.0).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ContextResourceRef".
+ */
+export interface ContextResourceRef {
+  /**
+   * 리소스(또는 지침 문서) id.
+   */
+  id: string;
+  /**
+   * 리소스 종류(열린 문자열, 예: 리소스 종류 id·rules·skill).
+   */
+  kind: string;
+  /**
+   * 본문 바이트 수. 모르면 null.
+   */
+  bytes?: number | null;
+  /**
+   * 본문 sha256(16진수). 모르면 null.
+   */
+  sha256?: string | null;
+}
+/**
  * 모든 에이전트가 함께 쓰는 기본 설정입니다.
  *
  * 팀이나 에이전트에서 따로 정하지 않은 항목은 여기 값을 씁니다. 처음 쓸 때 실행 백엔드를
@@ -555,6 +651,10 @@ export interface AgentMessagePayload {
   text: string;
   message_id?: string | null;
   structured?: unknown;
+  /**
+   * 모델 호출 소요(ms, 1.4.0). 백엔드가 응답 끝에 알 때만 싣는다. 모르면 null(추정하지 않음).
+   */
+  duration_ms?: number | null;
 }
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -943,6 +1043,10 @@ export interface AgentUsageEvent {
 export interface AgentUsagePayload {
   usage: Usage;
   model?: string | null;
+  /**
+   * 모델 호출 소요(ms, 1.4.0). 백엔드가 응답 끝에 알 때만 싣는다. 모르면 null(추정하지 않음).
+   */
+  duration_ms?: number | null;
 }
 /**
  * 팀 구성의 답변 자리 하나(답변 연결). 속성은 엣지 타입 `reply_fields`로 config에서 읽는다.
@@ -1155,6 +1259,10 @@ export interface NodeStatusPayload {
    * node.resumed: 대기한 시간(ms).
    */
   waited_ms?: number | null;
+  /**
+   * 위임 도구 호출 id(위임자가 도구로 부른 NodeRun이면, 1.4.0). 호출 이벤트와 이 NodeRun을 명시 id로 잇는다. 위임 호출이 아니면 null.
+   */
+  tool_use_id?: string | null;
   /**
    * node.skipped 등의 사유(열린 문자열, 예: 이어 가기의 상류 `resumed`).
    */
@@ -1965,6 +2073,1313 @@ export interface AppliedItemInfo {
   error?: string | null;
 }
 /**
+ * 구조도를 그릴 바탕의 크기입니다. 칸과 연결의 좌표는 이 크기 안의 숫자입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureCanvas".
+ */
+export interface ArchitectureCanvas {
+  /**
+   * 바탕의 가로 크기입니다. 칸과 영역이 이 안에 들어가야 합니다.
+   */
+  width: number;
+  /**
+   * 바탕의 세로 크기입니다.
+   */
+  height: number;
+  [k: string]: unknown;
+}
+/**
+ * 구조도의 칸 하나입니다. 조건에 맞는 로그 이벤트를 모아 횟수·오류·토큰을 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureCell".
+ */
+export interface ArchitectureCell {
+  /**
+   * 칸에 보일 이름입니다. 비우면 칸 id를 씁니다.
+   */
+  label?: string | null;
+  /**
+   * 이름 아래 한 줄 설명입니다. 길면 말줄임으로 잘리고 전체는 툴팁에 보입니다.
+   */
+  description?: string | null;
+  /**
+   * 칸 가운데의 가로 좌표입니다. 비우면 화면이 순서대로 자리를 잡습니다.
+   */
+  x?: number | null;
+  /**
+   * 칸 가운데의 세로 좌표입니다. 비우면 화면이 순서대로 자리를 잡습니다.
+   */
+  y?: number | null;
+  /**
+   * 칸의 가로 크기입니다. 비우면 180입니다.
+   */
+  w?: number | null;
+  /**
+   * 칸의 세로 크기입니다. 비우면 68입니다.
+   */
+  h?: number | null;
+  /**
+   * 이 칸이 들어가는 가장 안쪽 영역의 id입니다.
+   */
+  zone?: string | null;
+  /**
+   * 칸 왼쪽 띠의 색 이름입니다(예: blue, teal, gold). 모르는 이름은 중립 색입니다.
+   */
+  tone?: string | null;
+  /**
+   * 칸을 그리는 방식 이름입니다(예: grouped). 비우면 기본 칸입니다.
+   */
+  view?: string | null;
+  /**
+   * 이 칸에 셀 로그 이벤트의 조건입니다. 비우면 이벤트를 모으지 않습니다.
+   */
+  when?: ConditionSpec | null;
+  /**
+   * 모은 이벤트를 이 값별로 나눠 보입니다(예: /thread, /correlation/mcp_server).
+   */
+  group_by?: string | null;
+  /**
+   * 묶음을 눌렀을 때 그 묶음만 다시 그리는 방법입니다. 비우면 들어갈 수 없습니다.
+   */
+  drill?: ArchitectureDrill | null;
+  /**
+   * 칸에 보일 숫자입니다(count, errors, tokens, duration). 비우면 횟수와 오류입니다.
+   */
+  metrics?: string[] | null;
+  /**
+   * 이 칸에서 로그로 볼 수 없는 내용과 그 이유입니다.
+   */
+  unavailable?: ArchitectureUnavailable[];
+  [k: string]: unknown;
+}
+/**
+ * 연결을 지나갈 조건입니다.
+ *
+ * '모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 하고, 조건이 하나도 없으면 항상 지나갑니다.
+ * '결과 뒤집기'를 켜면 결과를 반대로 씁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConditionSpec".
+ */
+export interface ConditionSpec {
+  /**
+   * 여기 적은 조건이 모두 맞아야 지나갑니다.
+   */
+  all?: ConditionItem[] | null;
+  /**
+   * 여기 적은 조건 중 하나만 맞아도 지나갑니다.
+   */
+  any?: ConditionItem[] | null;
+  /**
+   * 켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.
+   */
+  negate?: boolean | null;
+  [k: string]: unknown;
+}
+/**
+ * 조건 하나입니다. 결과의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConditionItem".
+ */
+export interface ConditionItem {
+  /**
+   * 결과에서 비교할 값의 위치입니다(예: /output, /structured/verdict, /iteration).
+   */
+  path: string;
+  /**
+   * 값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.
+   */
+  op: string;
+  /**
+   * 볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).
+   */
+  value?: unknown;
+  [k: string]: unknown;
+}
+/**
+ * 칸을 눌러 하위 구조도로 들어갈 때 더할 걸러내기입니다. "
+ * "묶음 값으로 같은 그림을 다시 그립니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureDrill".
+ */
+export interface ArchitectureDrill {
+  /**
+   * 하위 구조도에서 더할 걸러내기 이름입니다(예: thread, scope).
+   */
+  filter: string;
+  /**
+   * 걸러낼 값입니다. {group}은 누른 묶음의 값으로 바뀝니다.
+   */
+  value?: string;
+  [k: string]: unknown;
+}
+/**
+ * 로그에 남지 않아 볼 수 없는 항목입니다. 칸에 늘 '수집 안 됨: 항목 — 이유'로 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureUnavailable".
+ */
+export interface ArchitectureUnavailable {
+  /**
+   * 볼 수 없는 내용의 이름입니다.
+   */
+  item: string;
+  /**
+   * 왜 볼 수 없는지 짧게 적습니다.
+   */
+  reason?: string;
+  [k: string]: unknown;
+}
+/**
+ * 그릴 칸 하나(좌표·표시 정보·상태·지표·필터).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureCellView".
+ */
+export interface ArchitectureCellView {
+  id: string;
+  /**
+   * 표시 이름(프로필에 없으면 칸 id).
+   */
+  label: string;
+  description?: string | null;
+  /**
+   * 칸 중심 가로 좌표. null이면 화면이 선언 순서대로 놓는다.
+   */
+  x?: number | null;
+  /**
+   * 칸 중심 세로 좌표.
+   */
+  y?: number | null;
+  /**
+   * 폭(프로필에 없으면 기본값).
+   */
+  w: number;
+  /**
+   * 높이(프로필에 없으면 기본값).
+   */
+  h: number;
+  zone?: string | null;
+  /**
+   * 색 이름(열린 문자열).
+   */
+  tone?: string | null;
+  /**
+   * 그리는 방식 이름(열린 문자열).
+   */
+  view?: string | null;
+  status: ArchitectureItemStatus;
+  /**
+   * status가 partial일 때 이유.
+   */
+  partial_reason?: string | null;
+  /**
+   * 지표 이름 → 값(프로필이 고른 지표만, 선언 순서).
+   */
+  metrics?: {
+    [k: string]: ArchitectureMetric;
+  };
+  selector: ArchitectureSelector;
+  /**
+   * 묶음(프로필에 묶을 값이 있을 때). 횟수 내림차순, 표시 개수까지. null = 묶지 않음.
+   */
+  groups?: ArchitectureGroupView[] | null;
+  /**
+   * 표시 개수를 넘은 묶음의 합. null = 넘지 않음.
+   */
+  groups_rest?: ArchitectureGroupRest | null;
+  /**
+   * 하위 구조도로 들어갈 수 있는 칸(묶음마다 `drill`이 있다).
+   */
+  drillable?: boolean;
+  /**
+   * 이 칸의 수집 불가 항목.
+   */
+  unavailable?: ArchitectureUnavailableView[];
+}
+/**
+ * 지표 하나의 값과 상태. `value`가 null이면 "수집 안 됨"이고 0이 아니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureMetric".
+ */
+export interface ArchitectureMetric {
+  status: ArchitectureMetricStatus;
+  /**
+   * 값(횟수·오류 수·토큰 수·소요 ms). status가 not_collected면 null. observed의 0은 0이다(센 결과가 0).
+   */
+  value?: number | null;
+  /**
+   * 소요 지표의 표본 요약(그 밖의 지표는 null).
+   */
+  detail?: ArchitectureMetricDetail | null;
+}
+/**
+ * 소요 지표의 표본 요약. 모든 값은 표본이 있을 때만 채운다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureMetricDetail".
+ */
+export interface ArchitectureMetricDetail {
+  /**
+   * `duration_ms`가 있는 이벤트 수.
+   */
+  samples: number;
+  /**
+   * 합(ms).
+   */
+  total_ms?: number | null;
+  /**
+   * 평균(ms).
+   */
+  avg_ms?: number | null;
+  /**
+   * 최대(ms).
+   */
+  max_ms?: number | null;
+}
+/**
+ * 칸·연결·묶음을 눌렀을 때 이벤트 표 질의에 더할 인자 묶음.
+ *
+ * 표 질의에는 이 인자와 함께 같은 결과의 `ArchitectureView.max_seq`를 넘긴다. 그러면 표의 전체
+ * 수가 그 대상의 `count` 지표와 같다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureSelector".
+ */
+export interface ArchitectureSelector {
+  /**
+   * 대상: `<프로필 id>:cell:<칸 id>`, `<프로필 id>:edge:<연결 id>`, `<프로필 id>:unassigned`(분류 안 됨).
+   */
+  arch: string;
+  /**
+   * 칸 안 묶음 값(묶음을 눌렀을 때). 값이 없는 묶음은 빈 문자열.
+   */
+  arch_group?: string | null;
+  /**
+   * 셀 때 쓴 로그 출처 id(출처 우선순위 적용 결과). null = 출처를 거르지 않음.
+   */
+  arch_sources?: string[] | null;
+}
+/**
+ * 칸 안 묶음 하나(예: MCP 서버 하나, 서브에이전트 thread 하나).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureGroupView".
+ */
+export interface ArchitectureGroupView {
+  /**
+   * 묶음 값. null = 값이 없는 이벤트 묶음 "(이름 없음)".
+   */
+  key: string | null;
+  /**
+   * 표시 이름(없으면 화면이 key를 쓴다).
+   */
+  label?: string | null;
+  status?: ArchitectureItemStatus;
+  /**
+   * 지표 이름 → 값(칸이 고른 지표만).
+   */
+  metrics?: {
+    [k: string]: ArchitectureMetric;
+  };
+  selector: ArchitectureSelector;
+  /**
+   * 하위 구조도로 들어갈 필터. null = 들어갈 수 없음.
+   */
+  drill?: ArchitectureDrillTarget | null;
+}
+/**
+ * 하위 구조도로 들어갈 때 지금 필터에 더할 값(묶음 값으로 치환된 결과).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureDrillTarget".
+ */
+export interface ArchitectureDrillTarget {
+  /**
+   * 로그 질의 필터 이름(예: thread, scope).
+   */
+  filter: string;
+  /**
+   * 필터 값(예: 서브에이전트 thread id, `run:<id>`).
+   */
+  value: string;
+}
+/**
+ * 묶음 표시 개수를 넘어 하나로 합친 나머지("그 밖 n").
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureGroupRest".
+ */
+export interface ArchitectureGroupRest {
+  /**
+   * 합친 묶음 수.
+   */
+  groups: number;
+  metrics?: {
+    [k: string]: ArchitectureMetric;
+  };
+}
+/**
+ * 수집 불가 항목 하나("수집 안 됨: 항목 — 이유").
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureUnavailableView".
+ */
+export interface ArchitectureUnavailableView {
+  /**
+   * 이 항목을 둔 칸 id(전체 목록에서).
+   */
+  cell?: string | null;
+  item: string;
+  reason?: string;
+}
+/**
+ * 로그 출처 한 종류가 채울 수 있는 칸입니다. 여기 없는 칸은 '수집 안 됨'으로 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureCoverage".
+ */
+export interface ArchitectureCoverage {
+  /**
+   * 이 출처의 로그로 셀 수 있는 칸의 id입니다.
+   */
+  cells?: string[];
+  /**
+   * 칸 id마다 일부만 보이는 이유입니다. 칸에 '부분' 표시와 이유가 붙습니다.
+   */
+  partial?: {
+    [k: string]: string;
+  };
+  [k: string]: unknown;
+}
+/**
+ * 칸과 칸을 잇는 연결입니다. 기록된 전달만 세고, 순서로만 아는 연결은 점선으로 그립니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureEdge".
+ */
+export interface ArchitectureEdge {
+  /**
+   * 연결을 가리키는 고유 이름입니다.
+   */
+  id: string;
+  /**
+   * 연결이 시작하는 칸의 id입니다.
+   */
+  from: string;
+  /**
+   * 연결이 끝나는 칸의 id입니다.
+   */
+  to: string;
+  /**
+   * 연결 위 칩에 보일 글자입니다. 비우면 라벨 없이 숫자만 보입니다.
+   */
+  label?: string | null;
+  /**
+   * observed는 기록된 전달을 세고, structural은 순서로만 아는 연결이라 세지 않습니다.
+   */
+  kind?: string;
+  /**
+   * 선을 그리는 모양 이름입니다(예: request, return, inferred). 모르면 점선입니다.
+   */
+  style?: string | null;
+  /**
+   * 이 연결에 셀 로그 이벤트의 조건입니다. 순서로만 아는 연결은 비워 둡니다.
+   */
+  when?: ConditionSpec | null;
+  /**
+   * 시작부터 끝까지 선이 지나는 점입니다(예: [[10, 20], [10, 80]]). 비우면 직선입니다.
+   */
+  points?: [number, number][] | null;
+  /**
+   * 라벨 칩 가운데의 좌표입니다. 비우면 선의 가운데입니다.
+   */
+  label_at?: [number, number] | null;
+  /**
+   * 라벨 칩이 넓어질 수 있는 한도입니다. 비우면 화면 규칙을 따릅니다.
+   */
+  label_max_w?: number | null;
+  /**
+   * 연결에 보일 숫자입니다(count, errors, duration). 비우면 횟수와 오류입니다.
+   */
+  metrics?: string[] | null;
+  [k: string]: unknown;
+}
+/**
+ * 그릴 연결 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureEdgeView".
+ */
+export interface ArchitectureEdgeView {
+  id: string;
+  /**
+   * 출발 칸 id.
+   */
+  from: string;
+  /**
+   * 도착 칸 id.
+   */
+  to: string;
+  label?: string | null;
+  kind: ArchitectureEdgeKind;
+  /**
+   * 선 모양 이름(열린 문자열).
+   */
+  style?: string | null;
+  /**
+   * 꺾은선 꼭짓점(시작·끝 포함). null = 두 칸 경계 사이 직선.
+   */
+  points?: [number, number][] | null;
+  /**
+   * 라벨 칩 중심.
+   */
+  label_at?: [number, number] | null;
+  /**
+   * 라벨 칩 폭 상한 힌트.
+   */
+  label_max_w?: number | null;
+  status: ArchitectureItemStatus;
+  partial_reason?: string | null;
+  /**
+   * 지표 이름 → 값. structural 연결은 빈 객체.
+   */
+  metrics?: {
+    [k: string]: ArchitectureMetric;
+  };
+  /**
+   * 클릭 필터. structural 연결은 null(걸러낼 이벤트 없음).
+   */
+  selector?: ArchitectureSelector | null;
+}
+/**
+ * 이벤트가 속한 칸 안 묶음 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureGroupRef".
+ */
+export interface ArchitectureGroupRef {
+  cell: string;
+  /**
+   * 묶음 값. null = 값 없음.
+   */
+  key: string | null;
+}
+/**
+ * 이벤트 하나가 맞은 칸·연결·묶음(표에서 고른 이벤트 강조용).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureMembership".
+ */
+export interface ArchitectureMembership {
+  profile: string;
+  /**
+   * 로그 이벤트 uid(질의 대상).
+   */
+  uid?: string | null;
+  /**
+   * 맞은 칸 id(선언 순서).
+   */
+  cells?: string[];
+  /**
+   * 맞은 연결 id(선언 순서).
+   */
+  edges?: string[];
+  groups?: ArchitectureGroupRef[];
+  /**
+   * 어느 칸에도 맞지 않음.
+   */
+  unassigned?: boolean;
+}
+/**
+ * 투영 결과에 붙는 안내 한 줄(예: 고른 프로필이 없어 다른 프로필로 그림).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureNote".
+ */
+export interface ArchitectureNote {
+  /**
+   * 안내 종류(열린 문자열, 알려진 값은 `KnownArchitectureNoteCodes`).
+   */
+  code: string;
+  /**
+   * 사용자에게 보일 문구(서버가 만든다).
+   */
+  message: string;
+  details?: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * 구조도의 추가 선택입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureOptions".
+ */
+export interface ArchitectureOptions {
+  /**
+   * 켜면 앞 이벤트부터 응답까지의 간격을 모델 소요로 '추정' 표시와 함께 보입니다.
+   */
+  inferred_llm_duration?: boolean;
+  [k: string]: unknown;
+}
+/**
+ * 구조도 규칙(프로필)입니다. 어떤 칸과 연결을 어디에 그리고 무엇을 셀지 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfile".
+ */
+export interface ArchitectureProfile {
+  /**
+   * 목록과 고르기에 보일 이름입니다. 비우면 프로필 id를 씁니다.
+   */
+  title?: string | null;
+  /**
+   * 이 프로필이 무엇을 그리는지 적습니다.
+   */
+  description?: string | null;
+  /**
+   * 그림 바탕의 크기입니다. 비우면 칸 위치에 맞춰 정합니다.
+   */
+  canvas?: ArchitectureCanvas | null;
+  /**
+   * 칸 뒤에 깔 영역입니다. 앞에 적은 영역이 먼저(아래에) 그려집니다.
+   */
+  zones?: ArchitectureZone[];
+  /**
+   * 칸 id마다 이름·위치·모을 이벤트를 정합니다. 적은 순서가 Tab 이동 순서입니다.
+   */
+  cells?: {
+    [k: string]: ArchitectureCell;
+  };
+  /**
+   * 칸과 칸을 잇는 선입니다. 적은 순서가 Tab 이동 순서입니다.
+   */
+  edges?: ArchitectureEdge[];
+  /**
+   * 로그 출처 종류마다 채울 수 있는 칸입니다. 어느 출처도 채우지 못하는 칸은 '수집 안 됨'입니다.
+   */
+  coverage?: {
+    [k: string]: ArchitectureCoverage;
+  };
+  /**
+   * 같은 호출을 두 출처가 함께 기록할 때 앞에 적은 출처만 셉니다.
+   */
+  source_priority?: string[];
+  /**
+   * 이 조건에 맞는 이벤트를 오류로 셉니다. 로그 범주에서 오류로 표시한 범주도 셉니다.
+   */
+  error_when?: ConditionSpec | null;
+  /**
+   * 칸 안 묶음을 몇 개까지 따로 보일지입니다. 나머지는 '그 밖'으로 합칩니다.
+   */
+  group_limit?: number;
+  /**
+   * 어느 칸에도 맞지 않은 이벤트를 '분류 안 됨'으로 따로 셉니다.
+   */
+  unassigned?: boolean;
+  /**
+   * 모델 소요 추정 같은 추가 선택입니다. 비우면 모두 꺼짐입니다.
+   */
+  options?: ArchitectureOptions | null;
+  [k: string]: unknown;
+}
+/**
+ * 칸 뒤에 깔리는 영역입니다. 그리기만 하고 누를 수 없습니다(예: 내 PC, 모델 서버).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureZone".
+ */
+export interface ArchitectureZone {
+  /**
+   * 영역을 가리키는 고유 이름입니다. 칸의 영역 칸에 이 이름을 적습니다.
+   */
+  id: string;
+  /**
+   * 영역 왼쪽 위에 보일 제목입니다. 비우면 제목이 없습니다.
+   */
+  label?: string | null;
+  /**
+   * 제목 아래 한 줄 설명입니다. 길면 말줄임으로 잘립니다.
+   */
+  description?: string | null;
+  /**
+   * 영역 왼쪽 위 모서리의 가로 좌표입니다.
+   */
+  x: number;
+  /**
+   * 영역 왼쪽 위 모서리의 세로 좌표입니다.
+   */
+  y: number;
+  /**
+   * 영역의 가로 크기입니다.
+   */
+  w: number;
+  /**
+   * 영역의 세로 크기입니다.
+   */
+  h: number;
+  /**
+   * 영역을 그리는 모양 이름입니다(예: boundary, service, runtime). 모르면 기본 모양.
+   */
+  style?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * `POST /architecture/profiles/check` 본문. 형식이 틀린 프로필도 받아 문제로 알린다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfileCheckRequest".
+ */
+export interface ArchitectureProfileCheckRequest {
+  /**
+   * 검사할 프로필 id(id 글자 규칙도 본다).
+   */
+  id?: string | null;
+  /**
+   * 프로필 본문(편집 중인 YAML을 읽은 객체). 형식 오류도 문제로 알린다.
+   */
+  profile: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * 프로필 검사 결과. 문제가 있어도 저장은 막지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfileCheckResult".
+ */
+export interface ArchitectureProfileCheckResult {
+  issues?: Issue[];
+}
+/**
+ * 검증 이슈(그래프·정의 검증 결과).
+ *
+ * 대상: `node_id`가 있으면 그 노드, `edge_id`가 있으면 그 엣지, 둘 다 없으면 그래프 전체.
+ * `path`는 RFC 6901 JSON Pointer이며 기준은 대상에 따라 다르다:
+ * 노드 → 노드의 `config`, 엣지 → 엣지의 `config`, 그래프 → 그래프 문서.
+ * 빈 문자열은 기준 객체 자체.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "Issue".
+ */
+export interface Issue {
+  severity: IssueSeverity;
+  code: string;
+  message: string;
+  node_id?: string | null;
+  edge_id?: string | null;
+  path?: string | null;
+  details?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 서버가 계산한 수정 제안(없으면 제안 버튼 없음).
+   */
+  suggestions?: IssueSuggestion[];
+  /**
+   * 이 이슈가 있으면 실행이 거부되는지. 검증한 쪽이 정한다. null = 정하지 않음(이 경우 severity가 error인 것만 실행을 막는다).
+   */
+  blocks_run?: boolean | null;
+  /**
+   * 해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음.
+   */
+  fix?: Fix | null;
+}
+/**
+ * 검증 이슈의 수정 제안 하나. 화면은 이슈 코드가 아니라 이 데이터로 제안 버튼을 그린다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "IssueSuggestion".
+ */
+export interface IssueSuggestion {
+  id: string;
+  /**
+   * 버튼 문구.
+   */
+  label: string;
+  patch?: GraphPatch;
+}
+/**
+ * 그래프 초안에 적용할 변경(노드·엣지 추가, 엣지 삭제). 적용은 클라이언트가 초안에 한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "GraphPatch".
+ */
+export interface GraphPatch {
+  add_nodes?: NodeSpec[];
+  add_edges?: EdgeSpec[];
+  remove_edge_ids?: string[];
+}
+/**
+ * 팀 안의 노드 하나입니다. 노드 종류에 따라 하는 일과 설정 항목이 다릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "NodeSpec".
+ */
+export interface NodeSpec {
+  /**
+   * 팀 안에서 노드를 가리키는 고유 이름입니다. 자동으로 만들어집니다.
+   */
+  id: string;
+  /**
+   * 노드가 하는 일의 종류입니다. 종류마다 설정 항목이 다릅니다.
+   */
+  type: string;
+  /**
+   * 노드 종류의 버전입니다. 비우면 최신 버전을 씁니다.
+   */
+  type_version?: number | null;
+  /**
+   * 팀 안에서 이 노드를 부르는 이름입니다. 비우면 연결된 정의의 이름을 씁니다.
+   */
+  label?: string | null;
+  /**
+   * 노드 종류가 정한 설정입니다. 에이전트 노드는 에이전트 설정을 덮어씁니다.
+   */
+  config?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 캔버스 위 노드 위치입니다. 끌어서 옮기면 바뀝니다.
+   */
+  position?: Position | null;
+  /**
+   * 노드를 묶어 보이는 그룹 이름입니다.
+   */
+  group?: string | null;
+  /**
+   * 들어오는 값이 하나만 와도 시작할지(any) 모두 기다릴지(all) 정합니다.
+   */
+  join?: JoinRule | null;
+  /**
+   * 화면 배치(방향·포트 위치)입니다. 실행 결과에는 영향이 없습니다.
+   */
+  layout?: NodeLayout | null;
+  [k: string]: unknown;
+}
+/**
+ * 캔버스 좌표.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "Position".
+ */
+export interface Position {
+  /**
+   * 캔버스 가로 좌표입니다.
+   */
+  x: number;
+  /**
+   * 캔버스 세로 좌표입니다.
+   */
+  y: number;
+}
+/**
+ * 노드 하나의 화면 배치입니다.
+ *
+ * 비우면 팀 배치, 편집기 설정, 노드 종류 기본값 순으로 따릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "NodeLayout".
+ */
+export interface NodeLayout {
+  /**
+   * 노드의 입력→출력 방향입니다(lr, tb, rl, bt, auto). 비우면 팀 설정을 따릅니다.
+   */
+  direction?: string | null;
+  /**
+   * 포트를 노드의 어느 면에 둘지입니다(키 in:이름·out:이름, 값 left·right·top·bottom·auto).
+   */
+  ports?: {
+    [k: string]: string;
+  } | null;
+  [k: string]: unknown;
+}
+/**
+ * 두 노드를 잇는 연결 하나입니다. 출발 노드의 포트에서 도착 노드의 포트로 이어집니다.
+ *
+ * 연결 종류에 따라 일이 넘어가는 방식이 다릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "EdgeSpec".
+ */
+export interface EdgeSpec {
+  /**
+   * 팀 안에서 연결을 가리키는 고유 이름입니다. 자동으로 만들어집니다.
+   */
+  id: string;
+  source: Endpoint;
+  target: Endpoint;
+  /**
+   * 연결이 하는 일의 종류입니다. 종류마다 설정 항목이 다릅니다.
+   */
+  kind: string;
+  /**
+   * 연결선 위에 보일 짧은 이름입니다.
+   */
+  label?: string | null;
+  /**
+   * 연결 종류가 정한 설정입니다(예: 지나갈 조건, 답변 이름).
+   */
+  config?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 연결선 모양·경유점·라벨 위치입니다. 실행 결과에는 영향이 없습니다.
+   */
+  layout?: EdgeLayout | null;
+  [k: string]: unknown;
+}
+/**
+ * 연결선 하나의 화면 배치입니다. 비우면 팀 배치와 편집기 설정을 따릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "EdgeLayout".
+ */
+export interface EdgeLayout {
+  /**
+   * 연결선 모양 이름입니다(예: bezier, smoothstep). 비우면 팀 설정을 따릅니다.
+   */
+  shape?: string | null;
+  /**
+   * 꺾이는 모서리를 얼마나 둥글게 할지입니다(0~24).
+   */
+  radius?: number | null;
+  /**
+   * 경유점이 없을 때 선이 꺾이는 위치를 비율로 정합니다(0~1).
+   */
+  bend?: number | null;
+  /**
+   * 연결선이 지나갈 캔버스 위 점입니다(최대 16개).
+   */
+  waypoints?: Position[] | null;
+  /**
+   * 라벨을 선의 어느 지점에 둘지 비율로 정합니다(0.1~0.9).
+   */
+  label_t?: number | null;
+  /**
+   * 선에서 떨어뜨린 라벨의 가로·세로 거리입니다.
+   */
+  label_offset?: Position | null;
+  [k: string]: unknown;
+}
+/**
+ * `GET /architecture/profiles/{id}` 응답: 목록 항목 + 프로필 본문 + 검사 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfileDetail".
+ */
+export interface ArchitectureProfileDetail {
+  id: string;
+  /**
+   * 제목(없으면 id).
+   */
+  title?: string;
+  /**
+   * 출처(열린 문자열): `default`(패키지 기본), `plugin:<배포 이름>`, `user`(사용자 설정).
+   */
+  origin: string;
+  /**
+   * 같은 id의 기본·플러그인 프로필을 덮어썼으면 그 출처(origin 값). 아니면 null.
+   */
+  overrides?: string | null;
+  /**
+   * 사용자 설정에서 null로 끈 프로필(목록에 함께 실을 때만 true).
+   */
+  disabled?: boolean;
+  /**
+   * 프로필 검사 문제 수.
+   */
+  issues?: number;
+  /**
+   * 칸 수.
+   */
+  cells?: number;
+  /**
+   * 연결 수.
+   */
+  edges?: number;
+  profile: ArchitectureProfile;
+  /**
+   * 프로필 검사 결과(`issues`는 이 목록의 길이).
+   */
+  problems?: Issue[];
+}
+/**
+ * 프로필 목록 항목(병합 결과 하나).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfileInfo".
+ */
+export interface ArchitectureProfileInfo {
+  id: string;
+  /**
+   * 제목(없으면 id).
+   */
+  title?: string;
+  /**
+   * 출처(열린 문자열): `default`(패키지 기본), `plugin:<배포 이름>`, `user`(사용자 설정).
+   */
+  origin: string;
+  /**
+   * 같은 id의 기본·플러그인 프로필을 덮어썼으면 그 출처(origin 값). 아니면 null.
+   */
+  overrides?: string | null;
+  /**
+   * 사용자 설정에서 null로 끈 프로필(목록에 함께 실을 때만 true).
+   */
+  disabled?: boolean;
+  /**
+   * 프로필 검사 문제 수.
+   */
+  issues?: number;
+  /**
+   * 칸 수.
+   */
+  cells?: number;
+  /**
+   * 연결 수.
+   */
+  edges?: number;
+}
+/**
+ * `GET /architecture/profiles` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProfileList".
+ */
+export interface ArchitectureProfileList {
+  /**
+   * 병합 순서(기본 → 플러그인 → 사용자).
+   */
+  profiles?: ArchitectureProfileInfo[];
+  /**
+   * 실제로 먼저 열 프로필 id(설정 값이 없거나 지워졌으면 첫 프로필). 프로필이 없으면 null.
+   */
+  default_profile?: string | null;
+  /**
+   * 설정의 기본 프로필 사용 값.
+   */
+  include_defaults?: boolean;
+}
+/**
+ * `POST /architecture/project` 본문(로그 모듈 없이 이벤트를 직접 넘겨 투영).
+ *
+ * `profile`(id)와 `inline`(본문) 중 하나를 준다. 둘 다 없으면 기본으로 열 프로필이다.
+ * 이벤트 수는 서버 설치자 상한을 넘을 수 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureProjectRequest".
+ */
+export interface ArchitectureProjectRequest {
+  /**
+   * 프로필 id.
+   */
+  profile?: string | null;
+  /**
+   * 저장하지 않은 프로필 본문(설정 미리보기).
+   */
+  inline?: ArchitectureProfile | null;
+  /**
+   * 인라인 프로필에 붙일 id(선택 필터 문자열에 쓰인다).
+   */
+  inline_id?: string | null;
+  events?: LogEvent[];
+  tokens?: TokenSample[];
+  /**
+   * 로그 출처 id → 출처 종류(수집 범위·우선순위 판정). 없는 출처는 종류를 모름.
+   */
+  source_kinds?: {
+    [k: string]: string;
+  };
+  /**
+   * 오류로 볼 범주 id(분류 체계에서 오류로 표시한 범주).
+   */
+  error_categories?: string[];
+}
+/**
+ * 정규화 로그 이벤트 하나(색인 사본, 비밀 가림 후).
+ *
+ * 목록(`LogEventPage`·`LogTimeline`)에서는 `detail`·`raw`가 null이고 `summary`만 있다.
+ * 본문은 상세(`LogEventDetail.event`)에서만 싣는다.
+ * 원본 경로는 출처 기준 상대 경로(`ref`)만 싣는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "LogEvent".
+ */
+export interface LogEvent {
+  /**
+   * 안정 식별자(identity의 sha256 앞 24자).
+   */
+  uid: string;
+  /**
+   * 색인 순번(키셋 페이지 커서의 기준).
+   */
+  seq: number;
+  /**
+   * 로그 출처 id(진단 이벤트는 `diagnostic`).
+   */
+  source: string;
+  /**
+   * 출처 안 단위(루트 기준 상대 경로, run id 등).
+   */
+  ref?: string;
+  /**
+   * 색인에 들어온 시각(Unix epoch 초).
+   */
+  observed_at: number;
+  /**
+   * 범주 id(열린 문자열, 분류 체계로 표시).
+   */
+  category: string;
+  title?: string;
+  /**
+   * 목록용 짧은 본문(최대 수백 자).
+   */
+  summary?: string;
+  /**
+   * 단계(예: info, start, complete).
+   */
+  stage?: string;
+  /**
+   * 출처가 준 상태(열린 문자열, 예: ok, failed). 오류 판정에 쓰지 않는다.
+   */
+  status?: string;
+  /**
+   * 에이전트 줄 id(메인·서브에이전트 세션 등).
+   */
+  thread?: string;
+  role?: string;
+  actor?: string;
+  /**
+   * 보낸 쪽.
+   */
+  from?: string[];
+  /**
+   * 받는 쪽.
+   */
+  to?: string[];
+  /**
+   * 전달 수단(예: 위임 도구 이름).
+   */
+  via?: string;
+  tool?: string;
+  /**
+   * 도구 호출 id(start·complete 짝의 키).
+   */
+  call_id?: string;
+  turn_id?: string;
+  /**
+   * 모델 응답 id(여러 행으로 나뉜 응답을 묶음).
+   */
+  message_id?: string;
+  session?: string;
+  cwd?: string;
+  /**
+   * worktree면 본 저장소 경로(수집 때 계산).
+   */
+  repo_root?: string;
+  model?: string;
+  /**
+   * 플랫폼 실행 id(플랫폼 실행 출처·상관).
+   */
+  run_id?: string;
+  node_path?: string[];
+  /**
+   * 원본 시각(Unix epoch 초). 모르면 null.
+   */
+  time?: number | null;
+  /**
+   * 명시 id 짝(같은 thread+call_id의 start/complete)으로 계산한 소요 시간.
+   */
+  duration_ms?: number | null;
+  /**
+   * 근거(observed·inferred 등).
+   */
+  evidence?: string;
+  /**
+   * 범주 + 분류기 태그.
+   */
+  tags?: string[];
+  documents?: LogDocumentRef[];
+  /**
+   * 상관 근거 이름 → 값(명시 id만, 시간상 이웃은 잇지 않음).
+   */
+  correlation?: {
+    [k: string]: string | string[];
+  };
+  /**
+   * 표시용 본문(상세에서만, 크기 제한 적용).
+   */
+  detail?: unknown;
+  /**
+   * 원문(상세에서만, 크기 제한·비밀 가림 적용).
+   */
+  raw?: unknown;
+}
+/**
+ * 이벤트가 가리키는 문서(SKILL.md·SPEC.md 등). 이름만 언급된 것은 읽음으로 보지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "LogDocumentRef".
+ */
+export interface LogDocumentRef {
+  /**
+   * 문서 경로(출처가 준 그대로, 원본 기준 상대 경로 권장).
+   */
+  path: string;
+  /**
+   * 문서 종류(예: skill, spec, document).
+   */
+  kind?: string;
+  /**
+   * 이벤트와의 관계(예: mentioned, read, written).
+   */
+  action?: string;
+}
+/**
+ * 응답(thread, message_id) 하나의 토큰 표본(F-8: 같은 응답이 여러 행이어도 한 번만 센다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TokenSample".
+ */
+export interface TokenSample {
+  thread?: string;
+  message_id?: string;
+  model?: string;
+  time?: number | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+}
+/**
+ * 오류 `architecture.scope_too_large`의 `details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureScopeTooLargeDetails".
+ */
+export interface ArchitectureScopeTooLargeDetails {
+  /**
+   * 범위의 이벤트 수.
+   */
+  events: number;
+  /**
+   * 설치자 상한.
+   */
+  limit: number;
+}
+/**
+ * 구조도 규칙(프로필)을 고르고 고칩니다. 기본 프로필을 끄거나 내 프로필을 더할 수 있습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureSettings".
+ */
+export interface ArchitectureSettings {
+  /**
+   * 패키지가 주는 기본 프로필을 목록에 넣습니다. 꺼도 직접 만든 프로필은 남습니다.
+   */
+  include_defaults?: boolean;
+  /**
+   * 구조도를 열 때 먼저 보일 프로필입니다. 비우거나 없는 프로필이면 목록의 첫 프로필입니다.
+   */
+  default_profile?: string | null;
+  /**
+   * 프로필 id마다 규칙을 둡니다. 같은 id면 기본 프로필을 바꾸고, 비우면 그 프로필을 끕니다.
+   */
+  profiles?: {
+    [k: string]: ArchitectureProfile | null;
+  };
+  [k: string]: unknown;
+}
+/**
+ * 이 범위에 들어온 로그 출처 하나와 이벤트 수.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureSourceCount".
+ */
+export interface ArchitectureSourceCount {
+  /**
+   * 로그 출처 id.
+   */
+  id: string;
+  /**
+   * 출처 종류(등록 이름). 모르면 null.
+   */
+  kind?: string | null;
+  events: number;
+}
+/**
+ * 어느 칸에도 맞지 않은 이벤트("분류 안 됨").
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureUnassignedView".
+ */
+export interface ArchitectureUnassignedView {
+  metrics?: {
+    [k: string]: ArchitectureMetric;
+  };
+  selector: ArchitectureSelector;
+}
+/**
+ * 구조도 투영 결과. 그리기에 필요한 것을 모두 싣는다(웹은 프로필을 몰라도 그린다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ArchitectureView".
+ */
+export interface ArchitectureView {
+  /**
+   * 그린 프로필 id.
+   */
+  profile: string;
+  /**
+   * 그린 프로필 제목(없으면 id).
+   */
+  title?: string;
+  /**
+   * 캔버스 크기. null = 화면이 칸 위치로 정한다.
+   */
+  canvas?: ArchitectureCanvas | null;
+  zones?: ArchitectureZone[];
+  /**
+   * 칸(프로필 선언 순서 = Tab 순서).
+   */
+  cells?: ArchitectureCellView[];
+  /**
+   * 연결(프로필 선언 순서).
+   */
+  edges?: ArchitectureEdgeView[];
+  /**
+   * 분류 안 됨. null = 프로필이 세지 않음.
+   */
+  unassigned?: ArchitectureUnassignedView | null;
+  /**
+   * 모든 칸의 수집 불가 항목(머리 줄 목록).
+   */
+  unavailable?: ArchitectureUnavailableView[];
+  /**
+   * 이 범위에 들어온 로그 출처와 이벤트 수.
+   */
+  sources?: ArchitectureSourceCount[];
+  /**
+   * 이 범위의 이벤트 수(칸 판정 전).
+   */
+  event_total: number;
+  /**
+   * 센 이벤트의 최대 색인 순번. 클릭 필터 질의에 같이 넘기면 수집이 이어져도 수가 같다. null = 이벤트 없음 또는 순번을 모름.
+   */
+  max_seq?: number | null;
+  /**
+   * 안내(배너).
+   */
+  notes?: ArchitectureNote[];
+}
+/**
  * 실행 백엔드 능력.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -2531,217 +3946,6 @@ export interface BundleSource {
   resource_type?: string | null;
 }
 /**
- * 검증 이슈(그래프·정의 검증 결과).
- *
- * 대상: `node_id`가 있으면 그 노드, `edge_id`가 있으면 그 엣지, 둘 다 없으면 그래프 전체.
- * `path`는 RFC 6901 JSON Pointer이며 기준은 대상에 따라 다르다:
- * 노드 → 노드의 `config`, 엣지 → 엣지의 `config`, 그래프 → 그래프 문서.
- * 빈 문자열은 기준 객체 자체.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "Issue".
- */
-export interface Issue {
-  severity: IssueSeverity;
-  code: string;
-  message: string;
-  node_id?: string | null;
-  edge_id?: string | null;
-  path?: string | null;
-  details?: {
-    [k: string]: unknown;
-  };
-  /**
-   * 서버가 계산한 수정 제안(없으면 제안 버튼 없음).
-   */
-  suggestions?: IssueSuggestion[];
-  /**
-   * 이 이슈가 있으면 실행이 거부되는지. 검증한 쪽이 정한다. null = 정하지 않음(이 경우 severity가 error인 것만 실행을 막는다).
-   */
-  blocks_run?: boolean | null;
-  /**
-   * 해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음.
-   */
-  fix?: Fix | null;
-}
-/**
- * 검증 이슈의 수정 제안 하나. 화면은 이슈 코드가 아니라 이 데이터로 제안 버튼을 그린다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "IssueSuggestion".
- */
-export interface IssueSuggestion {
-  id: string;
-  /**
-   * 버튼 문구.
-   */
-  label: string;
-  patch?: GraphPatch;
-}
-/**
- * 그래프 초안에 적용할 변경(노드·엣지 추가, 엣지 삭제). 적용은 클라이언트가 초안에 한다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "GraphPatch".
- */
-export interface GraphPatch {
-  add_nodes?: NodeSpec[];
-  add_edges?: EdgeSpec[];
-  remove_edge_ids?: string[];
-}
-/**
- * 팀 안의 노드 하나입니다. 노드 종류에 따라 하는 일과 설정 항목이 다릅니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "NodeSpec".
- */
-export interface NodeSpec {
-  /**
-   * 팀 안에서 노드를 가리키는 고유 이름입니다. 자동으로 만들어집니다.
-   */
-  id: string;
-  /**
-   * 노드가 하는 일의 종류입니다. 종류마다 설정 항목이 다릅니다.
-   */
-  type: string;
-  /**
-   * 노드 종류의 버전입니다. 비우면 최신 버전을 씁니다.
-   */
-  type_version?: number | null;
-  /**
-   * 팀 안에서 이 노드를 부르는 이름입니다. 비우면 연결된 정의의 이름을 씁니다.
-   */
-  label?: string | null;
-  /**
-   * 노드 종류가 정한 설정입니다. 에이전트 노드는 에이전트 설정을 덮어씁니다.
-   */
-  config?: {
-    [k: string]: unknown;
-  };
-  /**
-   * 캔버스 위 노드 위치입니다. 끌어서 옮기면 바뀝니다.
-   */
-  position?: Position | null;
-  /**
-   * 노드를 묶어 보이는 그룹 이름입니다.
-   */
-  group?: string | null;
-  /**
-   * 들어오는 값이 하나만 와도 시작할지(any) 모두 기다릴지(all) 정합니다.
-   */
-  join?: JoinRule | null;
-  /**
-   * 화면 배치(방향·포트 위치)입니다. 실행 결과에는 영향이 없습니다.
-   */
-  layout?: NodeLayout | null;
-  [k: string]: unknown;
-}
-/**
- * 캔버스 좌표.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "Position".
- */
-export interface Position {
-  /**
-   * 캔버스 가로 좌표입니다.
-   */
-  x: number;
-  /**
-   * 캔버스 세로 좌표입니다.
-   */
-  y: number;
-}
-/**
- * 노드 하나의 화면 배치입니다.
- *
- * 비우면 팀 배치, 편집기 설정, 노드 종류 기본값 순으로 따릅니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "NodeLayout".
- */
-export interface NodeLayout {
-  /**
-   * 노드의 입력→출력 방향입니다(lr, tb, rl, bt, auto). 비우면 팀 설정을 따릅니다.
-   */
-  direction?: string | null;
-  /**
-   * 포트를 노드의 어느 면에 둘지입니다(키 in:이름·out:이름, 값 left·right·top·bottom·auto).
-   */
-  ports?: {
-    [k: string]: string;
-  } | null;
-  [k: string]: unknown;
-}
-/**
- * 두 노드를 잇는 연결 하나입니다. 출발 노드의 포트에서 도착 노드의 포트로 이어집니다.
- *
- * 연결 종류에 따라 일이 넘어가는 방식이 다릅니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "EdgeSpec".
- */
-export interface EdgeSpec {
-  /**
-   * 팀 안에서 연결을 가리키는 고유 이름입니다. 자동으로 만들어집니다.
-   */
-  id: string;
-  source: Endpoint;
-  target: Endpoint;
-  /**
-   * 연결이 하는 일의 종류입니다. 종류마다 설정 항목이 다릅니다.
-   */
-  kind: string;
-  /**
-   * 연결선 위에 보일 짧은 이름입니다.
-   */
-  label?: string | null;
-  /**
-   * 연결 종류가 정한 설정입니다(예: 지나갈 조건, 답변 이름).
-   */
-  config?: {
-    [k: string]: unknown;
-  };
-  /**
-   * 연결선 모양·경유점·라벨 위치입니다. 실행 결과에는 영향이 없습니다.
-   */
-  layout?: EdgeLayout | null;
-  [k: string]: unknown;
-}
-/**
- * 연결선 하나의 화면 배치입니다. 비우면 팀 배치와 편집기 설정을 따릅니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "EdgeLayout".
- */
-export interface EdgeLayout {
-  /**
-   * 연결선 모양 이름입니다(예: bezier, smoothstep). 비우면 팀 설정을 따릅니다.
-   */
-  shape?: string | null;
-  /**
-   * 꺾이는 모서리를 얼마나 둥글게 할지입니다(0~24).
-   */
-  radius?: number | null;
-  /**
-   * 경유점이 없을 때 선이 꺾이는 위치를 비율로 정합니다(0~1).
-   */
-  bend?: number | null;
-  /**
-   * 연결선이 지나갈 캔버스 위 점입니다(최대 16개).
-   */
-  waypoints?: Position[] | null;
-  /**
-   * 라벨을 선의 어느 지점에 둘지 비율로 정합니다(0.1~0.9).
-   */
-  label_t?: number | null;
-  /**
-   * 선에서 떨어뜨린 라벨의 가로·세로 거리입니다.
-   */
-  label_offset?: Position | null;
-  [k: string]: unknown;
-}
-/**
  * 턴의 답변 하나(`run.reply` 이벤트에서 만든다).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -2806,27 +4010,6 @@ export interface ChatTurn {
   resumed_from?: string | null;
 }
 /**
- * 조건 하나입니다. 결과의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ConditionItem".
- */
-export interface ConditionItem {
-  /**
-   * 결과에서 비교할 값의 위치입니다(예: /output, /structured/verdict, /iteration).
-   */
-  path: string;
-  /**
-   * 값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.
-   */
-  op: string;
-  /**
-   * 볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).
-   */
-  value?: unknown;
-  [k: string]: unknown;
-}
-/**
  * 조건 연산자 디스크립터(X22, `GET /condition-operators`). 조건 편집 화면이 이것으로 그린다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -2847,30 +4030,6 @@ export interface ConditionOperatorDescriptor {
    */
   applies_to?: string[] | null;
   ui_hints?: UiHints | null;
-}
-/**
- * 연결을 지나갈 조건입니다.
- *
- * '모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 하고, 조건이 하나도 없으면 항상 지나갑니다.
- * '결과 뒤집기'를 켜면 결과를 반대로 씁니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ConditionSpec".
- */
-export interface ConditionSpec {
-  /**
-   * 여기 적은 조건이 모두 맞아야 지나갑니다.
-   */
-  all?: ConditionItem[] | null;
-  /**
-   * 여기 적은 조건 중 하나만 맞아도 지나갑니다.
-   */
-  any?: ConditionItem[] | null;
-  /**
-   * 켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.
-   */
-  negate?: boolean | null;
-  [k: string]: unknown;
 }
 /**
  * 본문 파일 변경 하나(해시만 비교). 한쪽 해시가 없으면 추가·삭제.
@@ -4440,146 +5599,6 @@ export interface LogTokenTotals {
   total?: number | null;
 }
 /**
- * 정규화 로그 이벤트 하나(색인 사본, 비밀 가림 후).
- *
- * 목록(`LogEventPage`·`LogTimeline`)에서는 `detail`·`raw`가 null이고 `summary`만 있다.
- * 본문은 상세(`LogEventDetail.event`)에서만 싣는다.
- * 원본 경로는 출처 기준 상대 경로(`ref`)만 싣는다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogEvent".
- */
-export interface LogEvent {
-  /**
-   * 안정 식별자(identity의 sha256 앞 24자).
-   */
-  uid: string;
-  /**
-   * 색인 순번(키셋 페이지 커서의 기준).
-   */
-  seq: number;
-  /**
-   * 로그 출처 id(진단 이벤트는 `diagnostic`).
-   */
-  source: string;
-  /**
-   * 출처 안 단위(루트 기준 상대 경로, run id 등).
-   */
-  ref?: string;
-  /**
-   * 색인에 들어온 시각(Unix epoch 초).
-   */
-  observed_at: number;
-  /**
-   * 범주 id(열린 문자열, 분류 체계로 표시).
-   */
-  category: string;
-  title?: string;
-  /**
-   * 목록용 짧은 본문(최대 수백 자).
-   */
-  summary?: string;
-  /**
-   * 단계(예: info, start, complete).
-   */
-  stage?: string;
-  /**
-   * 출처가 준 상태(열린 문자열, 예: ok, failed). 오류 판정에 쓰지 않는다.
-   */
-  status?: string;
-  /**
-   * 에이전트 줄 id(메인·서브에이전트 세션 등).
-   */
-  thread?: string;
-  role?: string;
-  actor?: string;
-  /**
-   * 보낸 쪽.
-   */
-  from?: string[];
-  /**
-   * 받는 쪽.
-   */
-  to?: string[];
-  /**
-   * 전달 수단(예: 위임 도구 이름).
-   */
-  via?: string;
-  tool?: string;
-  /**
-   * 도구 호출 id(start·complete 짝의 키).
-   */
-  call_id?: string;
-  turn_id?: string;
-  /**
-   * 모델 응답 id(여러 행으로 나뉜 응답을 묶음).
-   */
-  message_id?: string;
-  session?: string;
-  cwd?: string;
-  /**
-   * worktree면 본 저장소 경로(수집 때 계산).
-   */
-  repo_root?: string;
-  model?: string;
-  /**
-   * 플랫폼 실행 id(플랫폼 실행 출처·상관).
-   */
-  run_id?: string;
-  node_path?: string[];
-  /**
-   * 원본 시각(Unix epoch 초). 모르면 null.
-   */
-  time?: number | null;
-  /**
-   * 명시 id 짝(같은 thread+call_id의 start/complete)으로 계산한 소요 시간.
-   */
-  duration_ms?: number | null;
-  /**
-   * 근거(observed·inferred 등).
-   */
-  evidence?: string;
-  /**
-   * 범주 + 분류기 태그.
-   */
-  tags?: string[];
-  documents?: LogDocumentRef[];
-  /**
-   * 상관 근거 이름 → 값(명시 id만, 시간상 이웃은 잇지 않음).
-   */
-  correlation?: {
-    [k: string]: string | string[];
-  };
-  /**
-   * 표시용 본문(상세에서만, 크기 제한 적용).
-   */
-  detail?: unknown;
-  /**
-   * 원문(상세에서만, 크기 제한·비밀 가림 적용).
-   */
-  raw?: unknown;
-}
-/**
- * 이벤트가 가리키는 문서(SKILL.md·SPEC.md 등). 이름만 언급된 것은 읽음으로 보지 않는다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogDocumentRef".
- */
-export interface LogDocumentRef {
-  /**
-   * 문서 경로(출처가 준 그대로, 원본 기준 상대 경로 권장).
-   */
-  path: string;
-  /**
-   * 문서 종류(예: skill, spec, document).
-   */
-  kind?: string;
-  /**
-   * 이벤트와의 관계(예: mentioned, read, written).
-   */
-  action?: string;
-}
-/**
  * 같은 명시 id를 공유하는 다른 이벤트(agent_bench `link_events`).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -4724,22 +5743,6 @@ export interface LogEventDetail {
    * 이 이벤트의 토큰 표본(있으면).
    */
   usage?: TokenSample | null;
-}
-/**
- * 응답(thread, message_id) 하나의 토큰 표본(F-8: 같은 응답이 여러 행이어도 한 번만 센다).
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "TokenSample".
- */
-export interface TokenSample {
-  thread?: string;
-  message_id?: string;
-  model?: string;
-  time?: number | null;
-  input_tokens?: number | null;
-  output_tokens?: number | null;
-  cache_read_input_tokens?: number | null;
-  cache_creation_input_tokens?: number | null;
 }
 /**
  * `GET /logs/events` 응답(키셋 페이지).
@@ -6540,19 +7543,20 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.8.0" as const;
+export const CONTRACTS_VERSION = "0.9.0" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.3.0",
+  "common": "1.4.0",
   "resources": "1.1.0",
   "logs": "1.0.0",
   "definitions": "1.3.0",
-  "runs": "1.3.0",
+  "runs": "1.4.0",
   "usage": "1.1.0",
   "projects": "1.0.0",
   "chat": "1.1.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
+  "architecture": "1.0.0",
   "modules": "1.2.0"
 } as const;
 
@@ -6598,7 +7602,8 @@ export const KNOWN_RUN_EVENT_TYPES = [
   "loop.iteration",
   "loop.exhausted",
   "run.child_started",
-  "run.child_finished"
+  "run.child_finished",
+  "agent.context_prepared"
 ] as const;
 
 export const RUN_ORIGINS = [
@@ -6638,7 +7643,9 @@ export const ERROR_CODES = {
   "BACKEND_LOGIN_BUSY": "backend.login_busy",
   "BACKEND_LOGOUT_UNSUPPORTED": "backend.logout_unsupported",
   "BACKEND_SUBSCRIPTION_AUTH_DISABLED": "backend.subscription_auth_disabled",
-  "BACKEND_LOGIN_SESSION_NOT_FOUND": "backend.login_session_not_found"
+  "BACKEND_LOGIN_SESSION_NOT_FOUND": "backend.login_session_not_found",
+  "ARCHITECTURE_PROFILE_NOT_FOUND": "architecture.profile_not_found",
+  "ARCHITECTURE_SCOPE_TOO_LARGE": "architecture.scope_too_large"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -6663,7 +7670,9 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "backend.login_busy": 409,
   "backend.logout_unsupported": 409,
   "backend.subscription_auth_disabled": 409,
-  "backend.login_session_not_found": 404
+  "backend.login_session_not_found": 404,
+  "architecture.profile_not_found": 404,
+  "architecture.scope_too_large": 422
 } as const;
 
 export const KNOWN_ISSUE_CODES = {

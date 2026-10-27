@@ -65,12 +65,12 @@ source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
     "modules",
-    "chat | exports | imports",
+    "chat | exports | imports | architecture",
     "runs | usage | projects",
     "definitions",
     "resources | logs",
@@ -133,6 +133,13 @@ allow_indirect_imports = true
 name = "chat과 trace는 서로 독립"
 type = "independence"
 modules = ["agent_console_chat", "agent_console_trace"]
+
+[[contracts]]
+name = "architecture는 contracts, conditions, registry에만 의존 (ac-logs·로그 색인을 모른다 — 이벤트는 계약 LogEvent로 받고 오류 범주는 인자, design §5.5R.3 K-1)"
+type = "forbidden"
+source_modules = ["agent_console_architecture"]
+forbidden_modules = ["@all", "!agent_console_architecture", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_registry"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "usage는 contracts, registry에만 의존 (출처·창 이름을 모른다, store는 프로토콜로만, design §R9.4)"
@@ -222,6 +229,10 @@ name = "서버 앱은 modkit과 기반(L0)만 안다 (기능 라이브러리·�
 type = "forbidden"
 source_modules = ["agent_console_server"]
 forbidden_modules = ["@feature", "@module", "@link"]
+# 예외 사유(5.5R.32): 테스트 지원 하위 모듈 `testing`(앱이 import하지 않음 — `test_app_does_not_import_test_support`)이
+# 시험용 에이전트 정의의 기본 백엔드 id를 백엔드 패키지 상수(`FAKE_BACKEND_ID`)에서 읽는다(서버 소스에 백엔드 이름을 두지 않으려고).
+# 서버 패키지는 이 백엔드를 이미 런타임 의존으로 선언한다.
+ignore_imports = ["agent_console_server.testing -> agent_console_backend_fake_agent"]
 
 [[contracts]]
 name = "cli는 usage에만 의존 (서버 앱은 `_server` 모듈 한 곳에서 serve·설정 읽기로만, 1R.15)"

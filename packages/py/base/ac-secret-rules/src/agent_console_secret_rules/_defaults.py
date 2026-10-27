@@ -77,10 +77,27 @@ DEFAULT_NAME_EXCEPTIONS: tuple[str, ...] = (
 
 _TOKEN_CHARS = r"[A-Za-z0-9_\-]"
 
+_TOKEN_PREFIXES = (
+    r"(?:ghp_|gho_|ghs_|ghu_|ghr_|github_pat_|glpat-|sk-|xox[abprs]-|AKIA|ASIA|AIza|hf_|npm_)"
+)
+"""알려진 접두 토큰(GitHub, GitLab, OpenAI·Anthropic, Slack, AWS, Google, Hugging Face, npm)."""
+
+_TOKEN_BOUNDARY = r"(?<![A-Za-z0-9_\-])"
+"""접두 앞이 토큰 글자가 아님(단어 경계). 이 경계가 있으면 몸통은 6자 이상이면 된다."""
+
+_GLUED_TOKEN_BODY = (
+    r"(?=" + _TOKEN_CHARS + r"*[0-9])(?=" + _TOKEN_CHARS + r"*[A-Z])"
+    r"(?=" + _TOKEN_CHARS + r"*?[A-Za-z0-9]{16})" + _TOKEN_CHARS + r"{16,}"
+)
+"""앞에 글자가 붙은 접두 토큰(`xxxsk-…`, 5.5R.32)의 몸통 조건: 숫자와 대문자가 있고, 구분자
+(`-`·`_`) 없이 이어진 글자·숫자가 16자 이상인 구간이 있다(무작위 키 모양). 경계가 없으면
+`disk-usage`·`risk-assessment-Q4-2024`의 `sk-`처럼 낱말 안 접두가 흔하므로 키처럼 보일 때만 친다."""
+
 DEFAULT_VALUE_PATTERNS: tuple[str, ...] = (
-    # 알려진 접두 토큰(GitHub, GitLab, OpenAI·Anthropic, Slack, AWS, Google, Hugging Face, npm)
-    r"(?<![A-Za-z0-9_\-])(?:ghp_|gho_|ghs_|ghu_|ghr_|github_pat_|glpat-|sk-|xox[abprs]-"
-    r"|AKIA|ASIA|AIza|hf_|npm_)" + _TOKEN_CHARS + r"{6,}",
+    # 알려진 접두 토큰: 앞이 단어 경계면 몸통 6자 이상
+    _TOKEN_BOUNDARY + _TOKEN_PREFIXES + _TOKEN_CHARS + r"{6,}",
+    # 알려진 접두 토큰: 앞에 글자가 붙어 있으면(`xxxsk-…`·`keyAKIA…`) 키 모양 몸통일 때만
+    _TOKEN_PREFIXES + _GLUED_TOKEN_BODY,
     # JWT(헤더·내용 모두 `{"`의 base64인 `eyJ`로 시작)
     r"(?<![A-Za-z0-9_\-])eyJ"
     + _TOKEN_CHARS

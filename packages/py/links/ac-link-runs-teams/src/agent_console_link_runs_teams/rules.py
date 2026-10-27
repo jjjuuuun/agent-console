@@ -253,7 +253,9 @@ class TeamRules:
         ``backend.unresolved`` 오류 본문, 없으면 None.
 
         해결 순서는 설정 층 그대로(노드 → 에이전트 → 팀 구성 → 공통 → ``default_backend``)다.
-        백엔드를 자동으로 고르지 않는다. 해석할 수 없는 그래프면 None(엔진 검증이 맡는다).
+        백엔드를 자동으로 고르지 않는다. 위임 방식 디스크립터를 넘겨 자기 세션을 여는 방식
+        (``shares_session`` false)의 대상도 세션 주인으로 점검한다. 해석할 수 없는 그래프면
+        None(엔진 검증이 맡는다).
         """
         catalog = self._catalog()
         plan = catalog.try_plan(graph)
@@ -271,7 +273,7 @@ class TeamRules:
         )
         return backend_unresolved_error(
             plan,
-            unresolved_backends(plan, resolved, agents=agents),
+            unresolved_backends(plan, resolved, agents=agents, strategies=catalog.strategies),
             catalog.backend_descriptors,
             texts=self._fix_texts,
         )

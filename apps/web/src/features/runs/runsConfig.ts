@@ -37,9 +37,6 @@ export const RUN_LIST_POLL_MS = 5000;
 /** 이벤트가 오고 나서 trace·스냅샷을 다시 읽기까지의 디바운스(ms). */
 export const RUN_REFETCH_DEBOUNCE_MS = 500;
 
-/** 관측(hook·MCP) 탭이 모으는 이벤트 type 접두. 설정 `observe`가 수집 범위를 정한다. */
-export const OBSERVE_PREFIXES: readonly string[] = ["hook.", "mcp."];
-
 /** 연속 텍스트 조각 이벤트(한 행으로 합친다). */
 export const TEXT_DELTA_EVENT = "agent.text_delta";
 export const SUBAGENT_START_EVENT = "agent.subagent_started";

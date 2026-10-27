@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { DragEvent, KeyboardEvent } from "react";
 import {
   Background,
@@ -154,14 +154,17 @@ function isTextField(target: EventTarget | null): boolean {
 /** 자동 첫 맞춤 재시도 간격(ms). 노드 측정이 끝나면(`useNodesInitialized`) 효과가 다시 돌아 한 번 더 맞춘다. */
 const FIRST_FIT_RETRY_MS = [0, 120, 400, 1000] as const;
 /**
- * 화면 맞춤 옵션. 작은 그래프는 확대하지 않고(최대 1.0) 가운데에 두며, 큰 그래프도 노드 글자가 읽히는 줌(0.4) 아래로는 줄이지 않는다
+ * 화면 맞춤 옵션. 작은 그래프는 확대하지 않고(최대 1.0) 가운데에 두며, 큰 그래프도 노드 글자가 읽히는 줌(0.45) 아래로는 줄이지 않는다
  * (넘치는 부분은 끌어서 보고, 전체는 미니맵으로 본다). 실제 캔버스 크기(옆 패널·팔레트가 자리 잡은 뒤)로 계산한다.
  */
-export const FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 1, minZoom: 0.6 } as const;
+export const FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 1, minZoom: 0.45 } as const;
 /** 입구(가장 왼쪽) 노드 기준 맞춤에서 입구 노드를 캔버스 왼쪽에서 띄우는 거리(px) */
 const ENTRY_FIT_MARGIN = 24;
 
-/** 화면 밖에 완전히 나가 있는 노드 수를 알리는 단서. 눌러서 전체가 보이게 줄인다(큰 그래프에서 입구 기준 첫 맞춤 뒤 이동 단서). */
+/** 가장자리에 걸친 것으로 치지 않는 오차(px) */
+const OFFSCREEN_TOLERANCE = 2;
+
+/** 화면 밖에 있거나 가장자리에 걸쳐 잘린 노드 수를 알리는 단서. 눌러서 전체가 보이게 줄인다(큰 그래프에서 입구 기준 첫 맞춤 뒤 이동 단서). */
 function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string; hint: string; onShowAll: () => void }) {
   const count = useStore((st) => {
     const [tx, ty, z] = st.transform;
@@ -174,7 +177,8 @@ function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string
       if (w === 0 || h === 0) continue;
       const x = node.internals.positionAbsolute.x * z + tx;
       const y = node.internals.positionAbsolute.y * z + ty;
-      if (x + w * z <= 0 || y + h * z <= 0 || x >= st.width || y >= st.height) n += 1;
+      // 완전히 나간 노드뿐 아니라 가장자리에 걸쳐 잘린 노드도 센다(패널 옆에서 반쯤 잘린 노드를 놓치지 않게)
+      if (x < -OFFSCREEN_TOLERANCE || y < -OFFSCREEN_TOLERANCE || x + w * z > st.width + OFFSCREEN_TOLERANCE || y + h * z > st.height + OFFSCREEN_TOLERANCE) n += 1;
     }
     return n;
   });
@@ -192,16 +196,24 @@ function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string
  * 첫 맞춤. 그래프 전체가 최소 읽기 줌(`FIT_VIEW_OPTIONS.minZoom`) 이상에서 들어가면 전체를 맞추고,
  * 그렇지 않으면 입구(가장 왼쪽) 노드를 캔버스 왼쪽에 두고 그 줌으로 시작한다(글자가 읽히는 크기 우선, 나머지는 끌어서 본다).
  */
-async function fitReadable(flow: ReturnType<typeof useReactFlow>, size: { width: number; height: number }, duration: number): Promise<void> {
-  await flow.fitView({ ...FIT_VIEW_OPTIONS, duration });
+async function fitReadable(flow: ReturnType<typeof useReactFlow>, size: { width: number; height: number }, duration: number, bottomInset = 0): Promise<void> {
+  // 캔버스 아래 가운데의 보기 도구줄이 노드를 덮지 않도록 그 높이만큼 아래 여백을 더 둔다
+  const px = (ratio: number, of: number): `${number}px` => `${Math.round(ratio * of)}px`;
+  const padding = bottomInset > 0 && size.width > 0 && size.height > 0
+    ? { top: px(FIT_VIEW_OPTIONS.padding, size.height), left: px(FIT_VIEW_OPTIONS.padding, size.width), right: px(FIT_VIEW_OPTIONS.padding, size.width), bottom: px(Math.max(bottomInset / size.height, FIT_VIEW_OPTIONS.padding), size.height) }
+    : FIT_VIEW_OPTIONS.padding;
+  await flow.fitView({ ...FIT_VIEW_OPTIONS, padding, duration });
   const v = flow.getViewport();
   if (v.zoom > FIT_VIEW_OPTIONS.minZoom + 0.001) return;
   const nodes = flow.getNodes().filter((n) => !n.hidden);
   if (nodes.length === 0 || size.width <= 0) return;
   const b = flow.getNodesBounds(nodes);
   const zoom = FIT_VIEW_OPTIONS.minZoom;
-  await flow.setViewport({ x: ENTRY_FIT_MARGIN - b.x * zoom, y: size.height / 2 - (b.y + b.height / 2) * zoom, zoom }, { duration });
+  await flow.setViewport({ x: ENTRY_FIT_MARGIN - b.x * zoom, y: (size.height - bottomInset) / 2 - (b.y + b.height / 2) * zoom, zoom }, { duration });
 }
+
+/** 보기 도구줄(아래 가운데)이 차지하는 높이(px). 첫 맞춤이 이만큼 아래를 비워 둔다. */
+const VIEW_TOOLBAR_INSET = 44;
 
 /** 첫 맞춤 뒤 캔버스 크기가 바뀌어도(옆 패널이 자리 잡는 동안) 다시 맞추는 시간(ms). 이후 크기 변화는 사용자 시점을 건드리지 않는다. */
 const REFIT_WINDOW_MS = 3000;
@@ -595,12 +607,18 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
       pendingFit.current = graph;
     },
   });
+  const insetRef = useRef(0);
+  const toolbarInset = hasResourceTypes || tidy.available || viewable ? VIEW_TOOLBAR_INSET : 0;
+  // 렌더 중에는 ref를 쓰지 않는다. 맞춤 효과(아래)보다 먼저 도는 레이아웃 효과에서 갱신한다.
+  useLayoutEffect(() => {
+    insetRef.current = toolbarInset;
+  }, [toolbarInset]);
   useEffect(() => {
     // 정리를 적용한 새 그래프가 들어온 뒤 화면에 맞춘다(움직임 줄이기 설정이면 애니메이션 없음)
     if (pendingFit.current === null || pendingFit.current === graph) return;
     pendingFit.current = null;
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-    const h = requestAnimationFrame(() => void fitReadable(flow, flowStore.getState(), reduce ? 0 : 250));
+    const h = requestAnimationFrame(() => void fitReadable(flow, flowStore.getState(), reduce ? 0 : 250, insetRef.current));
     return () => cancelAnimationFrame(h);
   }, [graph, flow, flowStore]);
   const troubleOn = !readOnly && props.troubleHint !== false;
@@ -982,12 +1000,14 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   const firstSize = useRef<string | null>(null);
   const nodesMeasured = useNodesInitialized();
   const lastFit = useRef<{ x: number; y: number; zoom: number } | null>(null);
+  const lastFitSize = useRef<string | null>(null);
   const hasNodes = gNodes.length > 0;
   useEffect(() => {
     if (!sized || !hasNodes) return;
     mountedAt.current ??= Date.now();
     firstSize.current ??= canvasSize;
-    if (lastFit.current !== null && Date.now() - mountedAt.current > REFIT_WINDOW_MS) return;
+    // 첫 몇 초가 지난 뒤에는 캔버스 크기가 바뀐 경우(옆 패널 열고 닫기)만 다시 맞춘다. 사용자가 움직였으면 attempt가 건드리지 않는다.
+    if (lastFit.current !== null && Date.now() - mountedAt.current > REFIT_WINDOW_MS && lastFitSize.current === canvasSize) return;
     const same = (a: { x: number; y: number; zoom: number }, b: { x: number; y: number; zoom: number }) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
     const attempt = () => {
       const v = flow.getViewport();
@@ -995,8 +1015,9 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
       const resized = firstSize.current !== canvasSize;
       const untouched = (v.x === 0 && v.y === 0 && v.zoom === 1) || (lastFit.current !== null ? same(v, lastFit.current) : resized);
       if (!untouched) return;
-      void fitReadable(flow, flowStore.getState(), 0).then(() => {
+      void fitReadable(flow, flowStore.getState(), 0, insetRef.current).then(() => {
         lastFit.current = flow.getViewport();
+        lastFitSize.current = canvasSize;
       });
     };
     const timers = FIRST_FIT_RETRY_MS.map((ms) => setTimeout(attempt, ms));

@@ -23,6 +23,11 @@
   가리지 않고 ``logs.redaction_unavailable`` 경고를 낸다.
 - ``logs.source_defaults``(여러 제공자): 출처 기본 켜기(``() -> {출처 id: bool}``). 설정에
   ``enabled``가 없는 출처에만 적용한다(``source_defaults``). 없으면 디스크립터 ``default_enabled``.
+- ``logs.scope_kinds``(여러 제공자, X27): 범위 종류(``LogScopeKind`` — ``id``·``resolve(value)``).
+  필터 ``scope=<id>:<값>``을 세션·run_id 합집합으로 푼다. 없으면 ``scope``는 모두 422.
+- ``logs.filter_predicates``(여러 제공자, X28): 필터 확장(``LogFilterExtension`` — ``fields``·
+  ``build(values, context)``). 이름이 ``GET /logs/schema`` filters에 실리고 질의 때 이벤트를
+  판정한다. 없거나 끄면 그 이름은 422.
 """
 
 from __future__ import annotations
@@ -43,7 +48,15 @@ from agent_console_contracts.logs import (
     TokenSample,
 )
 from agent_console_contracts.modules import LogsIngestedPayload
-from agent_console_logs import LogClassifier, LogFilter, LogSource, QueryContext
+from agent_console_logs import (
+    JsonValue,
+    LogClassifier,
+    LogFilter,
+    LogFilterExtension,
+    LogScopeKind,
+    LogSource,
+    QueryContext,
+)
 from agent_console_modkit import PortKey, Topic
 
 
@@ -64,6 +77,14 @@ class LogQueryPort(Protocol):
 
     def query_context(self, *, tz: str | None = None) -> QueryContext:
         """지금 설정(분류 체계·프로젝트 묶기)으로 만든 질의 맥락."""
+        ...
+
+    def parse_filter(self, params: Mapping[str, JsonValue], *, path: str = "") -> LogFilter:
+        """쿼리 이름별 값 → ``LogFilter``(등록된 확장 필터 이름도 받는다).
+
+        Raises:
+            LogQueryError: 모르는 이름·틀린 값.
+        """
         ...
 
     def events(self, flt: LogFilter, *, with_total: bool = False) -> LogEventPage: ...
@@ -132,6 +153,13 @@ SOURCE_DEFAULTS: PortKey[Callable[[], Mapping[str, bool]]] = PortKey(
     "logs.source_defaults", "로그 출처 기본 켜기(출처 id → bool)", multi=True
 )
 
+LOG_SCOPE_KINDS: PortKey[LogScopeKind] = PortKey(
+    "logs.scope_kinds", "로그 범위 종류(X27, scope=<종류>:<값>)", multi=True
+)
+LOG_FILTER_PREDICATES: PortKey[LogFilterExtension] = PortKey(
+    "logs.filter_predicates", "로그 필터 확장(X28, 이름 묶음 → 이벤트 판정)", multi=True
+)
+
 LOGS_INGESTED: Topic[LogsIngestedPayload] = Topic("logs.ingested")
 """수집으로 새 이벤트가 색인됐을 때(``source_ids``·``count``·``max_seq``)."""
 
@@ -139,6 +167,8 @@ __all__ = [
     "LOGS_INGEST",
     "LOGS_INGESTED",
     "LOGS_QUERY",
+    "LOG_FILTER_PREDICATES",
+    "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
     "SECRET_RULES",
     "SERVER_WARNINGS",

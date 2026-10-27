@@ -32,4 +32,14 @@ describe("SplitHandle", () => {
     fireEvent.pointerMove(sep, { clientY: -1000, pointerId: 1 });
     expect(onChange).toHaveBeenLastCalledWith(96);
   });
+
+  it("포인터가 취소되면(pointercancel) 끌기를 멈춘다", () => {
+    const onChange = vi.fn();
+    render(<SplitHandle size={300} min={100} max={500} onChange={onChange} label="폭" />);
+    const sep = screen.getByRole("separator", { name: "폭" });
+    fireEvent.pointerDown(sep, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerCancel(sep, { pointerId: 1 });
+    fireEvent.pointerMove(sep, { clientX: 150, pointerId: 1 });
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

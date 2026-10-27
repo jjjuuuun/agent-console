@@ -6,7 +6,7 @@ Python `agent_console_contracts`(Pydantic)에서 **생성된** TS 타입·상수
 - `schema/agent-console.schema.json` — 생성된 JSON Schema(2020-12, 모든 모델이 `$defs`에).
 - `src/generated/contracts.generated.ts` — 위 스키마에서 생성한 타입·상수. **직접 수정 금지.**
 - `src/index.ts` — 공개 API: 생성 타입 전부, 상수(`CONTRACTS_VERSION`, `CONTRACT_VERSIONS`, `KNOWN_RUN_EVENT_TYPES`, `RUN_ORIGINS`, `USAGE_REPORT_PARTS`, `ERROR_CODES`, `HTTP_STATUS_BY_ERROR_CODE`, `X_UI`·`X_UI_TIERS`(스키마 확장 키, 0.8.0)), `contractsSchema`, `getContractSchema(name)`, `isKnownRunEvent()`, `RunEventOf<T>`.
-- `src/generated/<하위 모듈>.ts` — 기능별 하위 경로 `@agent-console/contracts/<하위 모듈>`(common·resources·logs·definitions·runs·usage·projects·chat·exports·imports·modules). 그 하위 모듈에 정의된 타입과 `CONTRACT_MODULE`·`CONTRACT_VERSION`만 내보낸다. 한 기능만 쓰는 패키지는 하위 경로를 쓴다(예: `import type { Conversation } from "@agent-console/contracts/chat"`). **생성물, 직접 수정 금지.**
+- `src/generated/<하위 모듈>.ts` — 기능별 하위 경로 `@agent-console/contracts/<하위 모듈>`(common·resources·logs·definitions·runs·usage·projects·chat·exports·imports·architecture·modules). 그 하위 모듈에 정의된 타입과 `CONTRACT_MODULE`·`CONTRACT_VERSION`만 내보낸다. 한 기능만 쓰는 패키지는 하위 경로를 쓴다(예: `import type { Conversation } from "@agent-console/contracts/chat"`). **생성물, 직접 수정 금지.**
 - `src/generated/constants.ts` — 상수 전용 하위 경로 `@agent-console/contracts/constants`. 스키마 `x-constants`의 값(`ERROR_CODES`·`KNOWN_ISSUE_CODES`·`KNOWN_SUGGESTION_IDS` 등)만 다시 내보낸다. 루트 진입점은 스키마 JSON 전체를 싣으므로, 값 상수만 필요한 패키지는 이 경로를 쓴다. **생성물, 직접 수정 금지.**
 
 ## 최소 사용

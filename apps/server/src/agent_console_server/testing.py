@@ -19,6 +19,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from starlette.testclient import WebSocketTestSession
 
+from agent_console_backend_fake_agent import FAKE_BACKEND_ID
 from agent_console_server import (
     SETTINGS_COMPAT_CONTEXT,
     ServerSettings,
@@ -88,11 +89,22 @@ def server(
         yield client
 
 
-def agent_doc(agent_id: str, response: str, **extra: Any) -> dict[str, Any]:
+def agent_doc(
+    agent_id: str, response: str, *, backend: str = FAKE_BACKEND_ID, **extra: Any
+) -> dict[str, Any]:
+    """시험용 에이전트 정의 문서(고정 응답 `response`).
+
+    Args:
+        agent_id: 정의 id(이름도 같다).
+        response: 백엔드 옵션 `default.response` 값.
+        backend: 백엔드 id. 기본은 fake 백엔드 패키지 상수(`FAKE_BACKEND_ID`) — 이 모듈에 백엔드
+            이름을 두지 않는다. 이름을 바꿔 등록한 백엔드로 시험하려면 넘긴다.
+        extra: 정의의 다른 필드(같은 키면 덮어쓴다).
+    """
     return {
         "id": agent_id,
         "name": agent_id,
-        "backend": "fake-agent",
+        "backend": backend,
         "backend_options": {"default": {"response": response}},
         **extra,
     }
@@ -199,30 +211,25 @@ QUESTION_PAYLOAD: dict[str, Any] = {
 
 def asker_agent(agent_id: str = "asker", **options: Any) -> dict[str, Any]:
     """fake 백엔드: 메시지에 `묻기`가 있으면 되묻기(`question`)를 열고 답을 응답에 넣는다."""
-    return agent_doc(
-        agent_id,
-        "에코: $prompt",
-        **{
-            "backend_options": {
-                "rules": [
+    backend_options: dict[str, Any] = {
+        "rules": [
+            {
+                "contains": "묻기",
+                "ask": [
                     {
-                        "contains": "묻기",
-                        "ask": [
-                            {
-                                "kind": "question",
-                                "title": "확인",
-                                "payload": QUESTION_PAYLOAD,
-                                "answer_path": "/response",
-                            }
-                        ],
-                        "response": "답: $answer_1 ($answer_1_status)",
+                        "kind": "question",
+                        "title": "확인",
+                        "payload": QUESTION_PAYLOAD,
+                        "answer_path": "/response",
                     }
                 ],
-                "default": {"response": "에코: $prompt"},
-                **options,
+                "response": "답: $answer_1 ($answer_1_status)",
             }
-        },
-    )
+        ],
+        "default": {"response": "에코: $prompt"},
+        **options,
+    }
+    return agent_doc(agent_id, "에코: $prompt", backend_options=backend_options)
 
 
 def chat_graph(

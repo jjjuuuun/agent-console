@@ -101,13 +101,19 @@ def filter_params(request: Request) -> dict[str, Any]:
     return out
 
 
-def read_filter(request: Request) -> LogFilter:
+def read_filter(
+    request: Request,
+    parse: Callable[[dict[str, Any]], LogFilter] = parse_log_filter,
+) -> LogFilter:
     """쿼리 문자열 → ``LogFilter``.
+
+    Args:
+        parse: 이름별 값 → 필터(기본 = 기본 이름만, 모듈은 확장 이름을 받는 서비스 함수를 준다).
 
     Raises:
         LogQueryError: 모르는 이름·틀린 값(422로 바뀐다).
     """
-    return parse_log_filter(filter_params(request))
+    return parse(filter_params(request))
 
 
 ARCHIVE_FORMATS: dict[str, str] = {
@@ -193,7 +199,8 @@ def build_router(
     @router.get("/logs/events", response_model=LogEventPage, responses=_ERRORS)
     def log_events(request: Request) -> LogEventPage:
         """필터 목록(키셋 페이지, detail·raw 없음). 쿼리 이름은 ``GET /logs/schema``의 filters."""
-        return service().events(read_filter(request))
+        svc = service()
+        return svc.events(read_filter(request, svc.parse_filter))
 
     @router.get("/logs/events/{uid}", response_model=LogEventDetail, responses=_ERRORS)
     def log_event(uid: str) -> LogEventDetail:
@@ -206,13 +213,14 @@ def build_router(
     @router.get("/logs/sessions", response_model=list[LogSessionSummary], responses=_ERRORS)
     def log_sessions(request: Request) -> list[LogSessionSummary]:
         """세션 요약(마지막 시각 내림차순, ``limit``개)."""
-        return service().sessions(read_filter(request))
+        svc = service()
+        return svc.sessions(read_filter(request, svc.parse_filter))
 
     @router.get("/logs/sessions/{session}/timeline", response_model=LogTimeline, responses=_ERRORS)
     def log_timeline(session: str, request: Request) -> LogTimeline:
         """세션 하나의 보이는 이벤트(시각 → seq), 줄 = thread, 짝 이벤트 소요 시간."""
-        flt = read_filter(request)
-        found = service().timeline(session, flt)
+        svc = service()
+        found = svc.timeline(session, read_filter(request, svc.parse_filter))
         if found is None:
             raise LogNotFoundError("세션", session)
         return found
@@ -225,7 +233,8 @@ def build_router(
     @router.get("/logs/handoffs", response_model=HandoffMatrix, responses=_ERRORS)
     def log_handoffs(request: Request) -> HandoffMatrix:
         """from·to가 있는 이벤트의 (from, to, via) 횟수(많은 순)."""
-        return service().handoffs(read_filter(request))
+        svc = service()
+        return svc.handoffs(read_filter(request, svc.parse_filter))
 
     @router.get("/logs/taxonomy", response_model=LogTaxonomy, responses=_ERRORS)
     def log_taxonomy() -> LogTaxonomy:
@@ -239,7 +248,7 @@ def build_router(
 
     @router.get("/logs/schema", response_model=LogQuerySchema, responses=_ERRORS)
     def log_schema() -> LogQuerySchema:
-        """집계 차원(``kind``)·지표(``unit``)·필터 이름 목록."""
+        """집계 차원(``kind``)·지표(``unit``)·필터 이름 목록(등록된 확장 필터 포함)."""
         return service().schema()
 
     @router.get(
@@ -261,7 +270,8 @@ def build_router(
         ``archive_max_bytes``)까지 담는다(넘으면 ``truncated``).
         """
         fmt, tz, params = archive_options(filter_params(request))
-        archive = service().archive(parse_log_filter(params))
+        svc = service()
+        archive = svc.archive(svc.parse_filter(params))
         if fmt == "html":
             shown = tz or datetime.fromtimestamp(archive.exported_at).astimezone().tzinfo
             body = render_archive(archive, tz=shown, title=archive_title).encode("utf-8")

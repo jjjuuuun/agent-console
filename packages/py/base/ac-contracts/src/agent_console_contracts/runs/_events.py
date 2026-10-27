@@ -73,6 +73,14 @@ class NodeStatusPayload(ContractModel):
     error: ErrorInfo | None = None
     wait: WaitInfo | None = None
     waited_ms: int | None = Field(default=None, description="node.resumed: 대기한 시간(ms).")
+    tool_use_id: str | None = Field(
+        default=None,
+        description=(
+            "위임 도구 호출 id(위임자가 도구로 부른 NodeRun이면, "
+            "1.4.0). 호출 이벤트와 이 NodeRun을 "
+            "명시 id로 잇는다. 위임 호출이 아니면 null."
+        ),
+    )
     reason: str | None = Field(
         default=None,
         description="node.skipped 등의 사유(열린 문자열, 예: 이어 가기의 상류 `resumed`).",
@@ -164,6 +172,14 @@ class AgentMessagePayload(ContractModel):
     text: str
     message_id: str | None = None
     structured: Any = None
+    duration_ms: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "모델 호출 소요(ms, 1.4.0). 백엔드가 응답 끝에 "
+            "알 때만 싣는다. 모르면 null(추정하지 않음)."
+        ),
+    )
 
 
 class AgentToolCallPayload(ContractModel):
@@ -205,6 +221,40 @@ class AgentUsagePayload(ContractModel):
 
     usage: Usage
     model: str | None = None
+    duration_ms: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "모델 호출 소요(ms, 1.4.0). 백엔드가 응답 끝에 "
+            "알 때만 싣는다. 모르면 null(추정하지 않음)."
+        ),
+    )
+
+
+class ContextResourceRef(ContractModel):
+    """맥락 구성에 붙은 리소스 하나의 표지(본문 없음, 1.4.0)."""
+
+    id: NonEmptyStr = Field(description="리소스(또는 지침 문서) id.")
+    kind: NonEmptyStr = Field(
+        description="리소스 종류(열린 문자열, 예: 리소스 종류 id·rules·skill)."
+    )
+    bytes: int | None = Field(default=None, ge=0, description="본문 바이트 수. 모르면 null.")
+    sha256: str | None = Field(default=None, description="본문 sha256(16진수). 모르면 null.")
+
+
+class AgentContextPreparedPayload(ContractModel):
+    """`agent.context_prepared` payload: 에이전트 노드가 백엔드 요청의 맥락을 만들었다(1.4.0).
+
+    붙은 리소스의 id·종류·크기·해시만 싣는다. **본문(프롬프트·리소스 내용)은 싣지 않는다**
+    (비밀·크기). 시스템 프롬프트·요청 본문은 수집 대상이 아니다.
+    """
+
+    resources: list[ContextResourceRef] = Field(
+        default_factory=list, description="맥락에 붙은 리소스(붙인 순서)."
+    )
+    fragments: int | None = Field(
+        default=None, ge=0, description="프롬프트를 이룬 조각 수. 모르면 null."
+    )
 
 
 class RunReplyPayload(ContractModel):
@@ -356,6 +406,11 @@ class AgentUsageEvent(RunEventBase):
     payload: AgentUsagePayload
 
 
+class AgentContextPreparedEvent(RunEventBase):
+    type: Literal["agent.context_prepared"]
+    payload: AgentContextPreparedPayload
+
+
 class LogWarningEvent(RunEventBase):
     type: Literal["log.warning"]
     payload: LogWarningPayload
@@ -408,6 +463,7 @@ _KNOWN_EVENT_CLASSES: tuple[type[RunEventBase], ...] = (
     LoopExhaustedEvent,
     RunChildStartedEvent,
     RunChildFinishedEvent,
+    AgentContextPreparedEvent,
 )
 
 type AnyKnownRunEvent = Annotated[
@@ -431,7 +487,8 @@ type AnyKnownRunEvent = Annotated[
     | LoopIterationEvent
     | LoopExhaustedEvent
     | RunChildStartedEvent
-    | RunChildFinishedEvent,
+    | RunChildFinishedEvent
+    | AgentContextPreparedEvent,
     Field(discriminator="type"),
 ]
 

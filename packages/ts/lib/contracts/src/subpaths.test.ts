@@ -1,5 +1,12 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import * as architecture from "@agent-console/contracts/architecture";
+import type {
+  ArchitectureEdge,
+  ArchitectureEdgeView,
+  ArchitectureMetric,
+  ArchitectureView,
+} from "@agent-console/contracts/architecture";
 import * as chat from "@agent-console/contracts/chat";
 import * as constants from "@agent-console/contracts/constants";
 import type { Conversation as ChatConversation } from "@agent-console/contracts/chat";
@@ -100,6 +107,22 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(HTTP_STATUS_BY_ERROR_CODE["backend.unresolved"]).toBe(422);
     expect(X_UI).toBe("x-ui");
     expect(X_UI_TIERS).toEqual(["basic", "advanced"]);
+  });
+
+  it("architecture 하위 경로(0.9.0): 구조도 프로필·투영 결과, 지표 null은 0이 아니다", () => {
+    expect(architecture.CONTRACT_MODULE).toBe("architecture");
+    expect(architecture.CONTRACT_VERSION).toBe("1.0.0");
+    expect(modulesOf["architecture"]).toEqual(
+      expect.arrayContaining(["ArchitectureSettings", "ArchitectureProfile", "ArchitectureView", "ArchitectureMembership"]),
+    );
+    // `from`은 JSON 키 그대로, 좌표는 두 수, 지표 값은 null 가능
+    expectTypeOf<ArchitectureEdge["from"]>().toEqualTypeOf<string>();
+    expectTypeOf<ArchitectureEdgeView["label_at"]>().toEqualTypeOf<[number, number] | null | undefined>();
+    expectTypeOf<ArchitectureMetric["value"]>().toEqualTypeOf<number | null | undefined>();
+    expectTypeOf<ArchitectureMetric["status"]>().toEqualTypeOf<"observed" | "inferred" | "not_collected">();
+    expectTypeOf<ArchitectureView["max_seq"]>().toEqualTypeOf<number | null | undefined>();
+    expect(ERROR_CODES.ARCHITECTURE_SCOPE_TOO_LARGE).toBe("architecture.scope_too_large");
+    expect(HTTP_STATUS_BY_ERROR_CODE["architecture.profile_not_found"]).toBe(404);
   });
 
   it("constants 하위 경로: x-constants 값만 다시 내보낸다(루트와 같은 객체)", () => {

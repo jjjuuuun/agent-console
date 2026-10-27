@@ -6,7 +6,8 @@
 - ``UnknownInteractionError`` → ``not_found``. ``InteractionClosedError`` → ``interaction_closed``
   (``details.interaction``).
 - ``ResumeError`` → 그 ``code``(``not_found``·``run_not_resumable`` 등)와 ``details``. 자식 Run
-  거절(``details.root_run_id``)이면 ``fix`` = [맨 위 실행 열기](역할 ``runs``, id = 루트 Run).
+  거절(``details.root_run_id``)이면 ``fix`` = [맨 위 실행 열기](역할 ``runs``, id = 루트 Run) —
+  문구·역할은 ``ChildResumeFix`` 데이터(``error_map(child_resume=)``).
 - ``RunNotFoundError``·``NodeTypeNotFoundError``·``BackendNotFoundError``·``UnknownBackendError`` →
   ``not_found``.
 - ``ProbeUnsupportedError``(백엔드가 연결 테스트 능력이 없음) → 409 ``backend.probe_unsupported``
@@ -27,6 +28,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from agent_console_contracts import ErrorCodes, ErrorInfo, Fix, FixAction, FixTarget, Issue
@@ -139,10 +141,24 @@ def issues_body(issues: Iterable[Issue]) -> dict[str, Any]:
 GRAPH_INVALID_MESSAGE = "팀 구성에 실행을 막는 문제가 있습니다"
 """차단 이슈 응답 문구의 머리(뒤에 첫 이슈 문구가 붙는다)."""
 
-CHILD_RESUME_ACTION_LABEL = "맨 위 실행 열기"
-CHILD_RESUME_ROLE = "runs"
-"""자식 Run 이어 가기 거절(409)의 해결 버튼: 문구와 웹 라우트 역할(실행 화면, ``FixTarget.id`` =
-루트 Run id)."""
+
+@dataclass(frozen=True, slots=True)
+class ChildResumeFix:
+    """자식 Run 이어 가기 거절(409)의 해결 버튼 데이터.
+
+    Attributes:
+        label: 버튼 문구.
+        role: 데려갈 웹 라우트 역할(``FixTarget.role``, ``FixTarget.id`` = 루트 Run id). 기본은 이
+            모듈이 선언한 실행 화면 역할(``module.WEB_ROLES``의 첫 값과 같다 — 테스트로 맞춘다).
+    """
+
+    label: str = "맨 위 실행 열기"
+    role: str = "runs"
+
+
+DEFAULT_CHILD_RESUME_FIX = ChildResumeFix()
+"""기본 해결 버튼 데이터. 바꾸려면 ``error_map(child_resume=)``·
+``RunsModule(child_resume_fix=)``."""
 
 
 def _first_fix(issues: Iterable[Issue]) -> dict[str, Any] | None:
@@ -190,19 +206,14 @@ def _closed(exc: Exception) -> ErrorReply:
     )
 
 
-def _resume(exc: Exception) -> ErrorReply:
+def _resume_reply(exc: Exception, data: ChildResumeFix) -> ErrorReply:
     if not isinstance(exc, ResumeError):  # pragma: no cover - 표가 형식을 보장한다
         return ErrorReply(code=ErrorCodes.BAD_REQUEST)
     details = dict(exc.details)
     root = details.get("root_run_id")
     fix = (
         Fix(
-            actions=[
-                FixAction(
-                    label=CHILD_RESUME_ACTION_LABEL,
-                    target=FixTarget(role=CHILD_RESUME_ROLE, id=str(root)),
-                )
-            ]
+            actions=[FixAction(label=data.label, target=FixTarget(role=data.role, id=str(root)))]
         ).model_dump(mode="json", exclude_none=True)
         if isinstance(root, str) and root
         else None
@@ -312,12 +323,24 @@ def _login_too_large(exc: Exception) -> ErrorReply:
     )
 
 
-ERROR_MAP: dict[type[Exception], ErrorMapping] = {
+def error_map(
+    *, child_resume: ChildResumeFix = DEFAULT_CHILD_RESUME_FIX
+) -> dict[type[Exception], ErrorMapping]:
+    """모듈 ``error_map``(새 사전).
+
+    Args:
+        child_resume: 자식 Run 이어 가기 거절의 해결 버튼 데이터.
+    """
+    table = dict(_BASE_ERROR_MAP)
+    table[ResumeError] = lambda exc: _resume_reply(exc, child_resume)
+    return table
+
+
+_BASE_ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     GraphValidationError: _graph_reply,
     ResponseValidationError: _response_reply,
     UnknownInteractionError: _unknown_interaction,
     InteractionClosedError: _closed,
-    ResumeError: _resume,
     RunNotFoundError: ErrorCodes.NOT_FOUND,
     NodeTypeNotFoundError: ErrorCodes.NOT_FOUND,
     BackendNotFoundError: ErrorCodes.NOT_FOUND,
@@ -334,17 +357,22 @@ ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     DefinitionReadError: _definition,
     RunPreflightError: _preflight,
 }
-"""모듈 ``error_map``."""
+
+ERROR_MAP: dict[type[Exception], ErrorMapping] = error_map()
+"""기본 데이터로 만든 모듈 ``error_map``."""
 
 __all__ = [
+    "DEFAULT_CHILD_RESUME_FIX",
     "ERROR_MAP",
     "BackendNotFoundError",
+    "ChildResumeFix",
     "DefinitionReadError",
     "LoginPayloadTooLargeError",
     "NodeTypeNotFoundError",
     "PortConfigError",
     "RunNotFoundError",
     "RunPreflightError",
+    "error_map",
     "issues_body",
     "issues_from_errors",
 ]

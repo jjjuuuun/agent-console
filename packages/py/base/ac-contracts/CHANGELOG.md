@@ -1,5 +1,37 @@
 # 변경 기록
 
+## 0.9.0
+
+- 계약 v8(5.5R.3, design §5.5R.2.4 관측 구조도). 사내 의존 범위는 `>=0.9,<0.10`(TS `^0.9.0`). 하위 계약 버전:
+  새 `architecture` 1.0.0, `runs` 1.3.0 → 1.4.0, `common` 1.3.0 → 1.4.0. 새 필드는 전부 선택이라 옛 데이터가 그대로 읽힌다.
+- 새 하위 모듈 `architecture`(`chat`·`exports`·`imports`와 같은 층, `common`·`logs`·`definitions`·`runs`를 씀).
+  - 사용자 데이터(`DefinitionModel`, 모든 층에서 모르는 키 보존): `ArchitectureSettings`(워크스페이스 설정 `architecture`
+    섹션, 구조도 모듈이 소유. 공통 설정 모델에는 필드를 두지 않고 모르는 키로 왕복된다), `ArchitectureProfile`·`ArchitectureCanvas`·
+    `ArchitectureZone`·`ArchitectureCell`·`ArchitectureEdge`(`from` 별칭)·`ArchitectureDrill`·`ArchitectureUnavailable`·
+    `ArchitectureCoverage`·`ArchitectureOptions`. 칸·연결 종류·지표·색·모양 이름은 열린 문자열이고 값 검사는 프로필 검사가 한다.
+    설정 폼 도움말(라벨·설명·`x-ui`) 전부.
+  - 화면 명세(screen-architecture §9)의 영역 `description`과 연결 `label_max_w`는 **정식 필드**다(투영 결과에도 실린다).
+  - 투영 결과(그리기 완결형): `ArchitectureView`·`ArchitectureCellView`·`ArchitectureEdgeView`·`ArchitectureGroupView`·
+    `ArchitectureGroupRest`·`ArchitectureUnassignedView`·`ArchitectureUnavailableView`·`ArchitectureSourceCount`·
+    `ArchitectureNote`, 지표 `ArchitectureMetric{status: observed|inferred|not_collected, value: number|null, detail?}`·
+    `ArchitectureMetricDetail`(null은 0이 아니다), 칸·연결 상태 `observed|partial|not_collected`, 클릭 필터
+    `ArchitectureSelector{arch, arch_group?, arch_sources?}`, `ArchitectureDrillTarget`, 이벤트 멤버십
+    `ArchitectureMembership`·`ArchitectureGroupRef`.
+  - REST: `ArchitectureProfileInfo`(`origin`·`overrides`·`disabled`·`issues`·`cells`·`edges` 수)·`ArchitectureProfileList`·
+    `ArchitectureProfileDetail`·`ArchitectureProfileCheckRequest`(형식이 틀린 본문도 받음)·`ArchitectureProfileCheckResult`·
+    `ArchitectureProjectRequest`·`ArchitectureScopeTooLargeDetails`.
+  - 문서 상수: `KnownArchitectureMetrics`·`KnownArchitectureEdgeKinds`·`KnownArchitectureOrigins`·`KnownArchitectureTargets`·
+    `KnownArchitectureNoteCodes`·`KnownArchitectureIssueCodes`.
+- 오류 코드: `architecture.profile_not_found`(404), `architecture.scope_too_large`(422, `details` = `{events, limit}`).
+- `runs` 1.4.0(C1·C2·C7): 새 알려진 이벤트 `agent.context_prepared`(`AgentContextPreparedPayload{resources:
+  ContextResourceRef{id, kind, bytes?, sha256?}[], fragments?}`, **본문 없음**), `NodeStatusPayload.tool_use_id`(위임 도구
+  호출 id), `AgentMessagePayload.duration_ms`·`AgentUsagePayload.duration_ms`(ms, 모르면 null).
+- `common` 1.4.0: `x-ui` 키 `widget`(`XUiKeys.WIDGET`, `x_ui(widget=)`) — 화면이 등록한 위젯 이름, 모르면 기본 폼.
+- 하위 호환: phase-4r·phase-5r 기준 파일의 이벤트를 다시 읽으면 `tool_use_id`·`duration_ms`가 null로 더해질 뿐이다
+  (기준 비교 테스트의 "새 키" 목록에 넣었다). v7 버전 테스트는 "0.8.0 이상"으로 바꾸고 정확한 값은 v8 테스트가 고정한다.
+- 테스트 전용 의존 `ruamel-yaml`(dev 그룹): 구조도 프로필 YAML 예시 왕복 테스트용. 대안 PyYAML은 저장소 다른 패키지가
+  쓰지 않아 기존 의존을 재사용했다. 런타임 의존은 그대로 `pydantic`뿐이다.
+
 ## 0.8.0
 
 - 5.2R.80(F14 구독 로그인, ux-overhaul §15.9): `BackendCapabilities.login`·`logout`(기본 false),

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema, models_json_schema
 
 from . import (
+    architecture,
     chat,
     common,
     definitions,
@@ -57,6 +58,7 @@ _SUBMODULES: dict[str, ModuleType] = {
     "chat": chat,
     "exports": exports,
     "imports": imports,
+    "architecture": architecture,
     "modules": modules,
 }
 
@@ -195,6 +197,18 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     logs.LogAggregateRow,
     logs.LogQuerySchema,
     logs.LogArchive,
+    # 구조도(design §5.5R.2.4, 0.9.0)
+    architecture.ArchitectureSettings,
+    architecture.ArchitectureProfile,
+    architecture.ArchitectureProfileInfo,
+    architecture.ArchitectureProfileList,
+    architecture.ArchitectureProfileDetail,
+    architecture.ArchitectureProfileCheckRequest,
+    architecture.ArchitectureProfileCheckResult,
+    architecture.ArchitectureProjectRequest,
+    architecture.ArchitectureView,
+    architecture.ArchitectureMembership,
+    architecture.ArchitectureScopeTooLargeDetails,
     # 이벤트
     runs.RunEvent,
     runs.KnownRunEvent,

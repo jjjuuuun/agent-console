@@ -65,7 +65,9 @@ def test_query_schema_lists_known_names() -> None:
     assert "tokens.total" in {m.id for m in schema.metrics}
     names = {f.id for f in schema.filters}
     assert {"from", "project", "q", "cursor"} <= names
-    parse_log_filter({n: "1" for n in names if n not in ("order",)})  # 목록 이름은 모두 받는다
+    values = {n: "1" for n in names if n not in ("order",)}
+    values["scope"] = "kind:1"  # 범위는 `<종류>:<값>` 형식
+    parse_log_filter(values)  # 목록 이름은 모두 받는다
 
 
 def test_query_context_from_settings() -> None:

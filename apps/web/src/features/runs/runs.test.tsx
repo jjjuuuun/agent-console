@@ -111,6 +111,7 @@ const pendingI: Interaction = { id: "i1", run_id: "r1", node_id: "n-wait", actor
 const answeredI: Interaction = { id: "i0", run_id: "r1", node_id: "n-lead", actor: "pl", kind: "k-free", status: "answered", answered_by: "user", created_at: now - 60, closed_at: now - 40, response: { reply: "ok" } };
 
 const detailOverrides = (extra: Record<string, unknown> = {}) => ({
+  listObserveEventPrefixes: async () => ["hook.", "mcp."],
   getRun: async () => ({ run: run("r1", "waiting", { conversation_id: "c1", totals: { input_tokens: 1204, output_tokens: 340 } }), node_runs: [{ run_id: "r1", node_id: "n-lead", status: "succeeded", started_at: now - 90 }, { run_id: "r1", node_id: "n-wait", status: "waiting", started_at: now - 50 }], last_seq: 6 }),
   getGraphVersion: async () => ({
     kind: "graph",
@@ -210,6 +211,12 @@ describe("실행 상세", () => {
     mount("/runs/r1?tab=observe", detailOverrides({ listRunEvents: async () => [ev(1, "run.started")] }));
     expect(await screen.findByText(/꺼져 있을 수 있습니다/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "공통 설정 열기" }).getAttribute("href")).toBe("/settings");
+  });
+
+  it("관측 접두어를 서버가 비우면 관측 탭이 없다", async () => {
+    mount("/runs/r1", detailOverrides({ listObserveEventPrefixes: async () => [] }));
+    await screen.findByRole("tab", { name: /상호작용/ });
+    await waitFor(() => expect(screen.queryByRole("tab", { name: /hook/ })).toBeNull());
   });
 
   it("상호작용 탭: 요약, 대기 요청은 같은 카드로 여기서 답하고(스키마 폼), 닫힌 요청은 대기 시간·응답자를 보인다", async () => {

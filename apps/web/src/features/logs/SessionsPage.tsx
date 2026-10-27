@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, useShortcuts, useToast } from "@agent-console/ui";
-import { SessionList, hasActiveFilter, sessionColumns } from "@agent-console/log-view";
+import { SessionList, focusLogControl, hasActiveFilter, sessionColumns } from "@agent-console/log-view";
 import { LinkPart, LINK_PART_IDS } from "../../modules";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
@@ -82,7 +82,7 @@ export function SessionsPage() {
   };
   useShortcuts([
     { id: "logs.search", scope: LOGS_SCOPES.common, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
-    { id: "logs.filter", scope: LOGS_SCOPES.common, keys: "f", titleKey: "shortcuts.logsFocusFilter", run: () => document.querySelector<HTMLElement>(".ac-lv-filterbar button")?.focus() },
+    { id: "logs.filter", scope: LOGS_SCOPES.common, keys: "f", titleKey: "shortcuts.logsFocusFilter", run: () => focusLogControl("filterBar") },
     { id: "logs.refresh", scope: LOGS_SCOPES.common, keys: "r", titleKey: "shortcuts.logsRefresh", run: refresh },
     { id: "logs.scan", scope: LOGS_SCOPES.common, keys: "Shift+R", titleKey: "shortcuts.logsScan", run: () => void scan.run() },
     {

@@ -1,5 +1,7 @@
 """agent-console-logs: 로그 분석 코어(design §4R.1~§4R.6).
 
+- 질의 확장 지점(X27 범위 종류·X28 필터 확장): `LogScopeKind`·`LogFilterExtension` 프로토콜,
+  등록 묶음 `LogQueryExtensions`(필터 읽기·`scope`/확장 필터 풀기·스키마).
 - 출처·분류기 확장 지점(X5·X6): `LogSource`·`LogClassifier` 프로토콜, `LogRegistries`
   (entry point `agent_console.log_sources`·`agent_console.log_classifiers`).
 - 증분 jsonl 출처 기반 클래스 `JsonlFileSource`(agent_bench `_ingest` 규칙).
@@ -30,17 +32,21 @@ from ._build import build_record, event_uid, identity_for
 from ._config import ConfigError, effective_config
 from ._correlate import correlation_keys, link_events, pair_durations
 from ._draft import TAG_DIAGNOSTIC, TAG_SESSION_TITLE, TAG_TOOL, AgentInfo, LogEventDraft
+from ._extend import LogFilterContext, LogFilterExtension, LogQueryExtensions, LogScopeKind
 from ._filter import (
     DIMENSIONS,
     FILTER_FIELDS,
     METRICS,
+    EventPredicate,
     LogFilter,
     LogQueryError,
+    LogScope,
     QueryContext,
     parse_log_filter,
     parse_tz,
     query_context,
     query_schema,
+    require_refined,
 )
 from ._glob import glob_match
 from ._index import BatchResult, IndexBatch, IndexRecord, LogIndex, StoredCursor
@@ -138,6 +144,7 @@ __all__ = [
     "ClassifyContext",
     "ConfigError",
     "Cursor",
+    "EventPredicate",
     "IndexBatch",
     "IndexRecord",
     "JsonValue",
@@ -146,10 +153,15 @@ __all__ = [
     "LogClassifier",
     "LogEventDraft",
     "LogFilter",
+    "LogFilterContext",
+    "LogFilterExtension",
     "LogIndex",
     "LogIngestor",
     "LogQueryError",
+    "LogQueryExtensions",
     "LogRegistries",
+    "LogScope",
+    "LogScopeKind",
     "LogSource",
     "LogSourceContext",
     "QueryContext",
@@ -194,6 +206,7 @@ __all__ = [
     "query_schema",
     "read_only_open",
     "render_archive",
+    "require_refined",
     "resolve_project",
     "rolling_totals",
     "scrub_surrogates",

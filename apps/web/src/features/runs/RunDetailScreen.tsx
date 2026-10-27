@@ -38,7 +38,8 @@ import { RunHeader } from "./RunHeader";
 import { TraceTab } from "./TraceTab";
 import { runHrefs } from "./RunsListScreen";
 import { runStatusLabels, runsMessages as t } from "./messages";
-import { EDGE_SKIPPED_EVENT, EDGE_TRAVERSED_EVENT, OBSERVE_PREFIXES } from "./runsConfig";
+import { EDGE_SKIPPED_EVENT, EDGE_TRAVERSED_EVENT } from "./runsConfig";
+import { useObservePrefixes } from "./useObservePrefixes";
 import { delegationEdgeFor, deriveRunOverlay, isActiveRun, latestNodeRuns, runDurationMs, summarizeEvent, waitSeconds, formatTokensShort, totalTokens } from "./runsLib";
 import { useInteractionRespond } from "../interactions";
 import { useRunLookups } from "./useRunLookups";
@@ -55,6 +56,8 @@ type InspectorTab = (typeof INSPECTOR_TABS)[number];
 const TRACE_TAB: InspectorTab = INSPECTOR_TABS[0];
 /** 로그 연동이 만드는 탭(마지막). 이 탭만 로그-실행 연동 부분 규칙을 따른다. */
 const LOGS_TAB: InspectorTab = INSPECTOR_TABS[5];
+/** 관측 탭(`INSPECTOR_TABS`의 세 번째). 서버가 접두어 목록을 비우면 탭이 없다(5.5R.13). */
+const OBSERVE_TAB: InspectorTab = INSPECTOR_TABS[2];
 
 const TERMINAL_NODE_STATUSES = ["succeeded", "failed", "skipped", "cancelled"];
 
@@ -74,7 +77,11 @@ export function RunDetailScreen() {
   const flowPart = useLinkPart(LINK_PART_IDS.runsFlowTab);
   const logsPart = useLinkPart(LINK_PART_IDS.logsRunsTab);
   const view = useRunView(id, { trace: flowPart.visible });
-  const tabIds = useMemo(() => INSPECTOR_TABS.filter((tabId) => (tabId !== TRACE_TAB || flowPart.visible) && (tabId !== LOGS_TAB || logsPart.visible)), [flowPart.visible, logsPart.visible]);
+  const observe = useObservePrefixes();
+  const tabIds = useMemo(
+    () => INSPECTOR_TABS.filter((tabId) => (tabId !== TRACE_TAB || flowPart.visible) && (tabId !== LOGS_TAB || logsPart.visible) && (tabId !== OBSERVE_TAB || observe.enabled)),
+    [flowPart.visible, logsPart.visible, observe.enabled],
+  );
   const defaultTab: InspectorTab = tabIds[0] ?? TRACE_TAB;
   const connection = useConnectionStatus(ws);
 
@@ -642,7 +649,7 @@ export function RunDetailScreen() {
         events={view.events}
         status={view.eventsStatus}
         onRetry={view.reloadEvents}
-        prefixes={OBSERVE_PREFIXES}
+        prefixes={observe.prefixes}
         agentName={lookups.agentName}
         startedAt={firstTs}
         settingsHref="/settings"
@@ -791,7 +798,7 @@ export function RunDetailScreen() {
             tabs={[
               ...(flowPart.visible ? [{ ...tabItem(TRACE_TAB, t.tabs.trace), content: content.trace }] : []),
               { ...tabItem("agents", t.tabs.agents), content: content.agents },
-              { ...tabItem("observe", t.tabs.observe), content: content.observe },
+              ...(observe.enabled ? [{ ...tabItem(OBSERVE_TAB, t.tabs.observe), content: content.observe }] : []),
               { ...tabItem("interactions", t.tabs.interactions, pendingList.length), content: content.interactions },
               { ...tabItem("node", t.tabs.node), content: content.node },
               ...(logsPart.visible ? [{ ...tabItem(LOGS_TAB, t.tabs.logs), content: content.logs }] : []),

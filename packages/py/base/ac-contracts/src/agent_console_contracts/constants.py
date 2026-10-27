@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.8.0"
+CONTRACTS_VERSION: Final = "0.9.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -17,6 +17,7 @@ CONTRACT_SUBMODULES: Final = (
     "chat",
     "exports",
     "imports",
+    "architecture",
     "modules",
 )
 """기능별 계약 하위 모듈(아래 층 → 위 층 순). 모든 모델은 이 중 하나에 정의된다.
@@ -24,26 +25,28 @@ CONTRACT_SUBMODULES: Final = (
 import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층만 아래 층을 import한다.
 `resources`·`logs`는 서로 모르고(둘 다 `common`만 쓴다, `definitions`가 둘을 쓴다),
 `runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
-`chat`·`exports`·`imports`도 서로 모른다. `modules`는 맨 위다.
+`chat`·`exports`·`imports`·`architecture`도 서로 모른다(0.9.0: `architecture`는 `runs`의 조건·
+`logs`의 이벤트·`definitions`의 이슈를 쓴다). `modules`는 맨 위다.
 TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름>`)로 나뉜다.
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.3.0",
+    "common": "1.4.0",
     "resources": "1.1.0",
     "logs": "1.0.0",
     "definitions": "1.3.0",
-    "runs": "1.3.0",
+    "runs": "1.4.0",
     "usage": "1.1.0",
     "projects": "1.0.0",
     "chat": "1.1.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
+    "architecture": "1.0.0",
     "modules": "1.2.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
-(`logs`는 0.6.0, `projects`는 0.8.0에서 1.0.0으로 시작)."""
+(`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0에서 1.0.0으로 시작)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -101,6 +104,13 @@ class ErrorCodes:
     백엔드는 다른 거절 코드도 쓸 수 있다(열린 어휘, 이 표에 없으면 HTTP 400)."""
     BACKEND_LOGIN_SESSION_NOT_FOUND: Final = "backend.login_session_not_found"
     """로그인 세션이 없거나 보관 시간이 지났다(0.8.0, HTTP 404, F14)."""
+    ARCHITECTURE_PROFILE_NOT_FOUND: Final = "architecture.profile_not_found"
+    """구조도 프로필이 없다(id로 조회·투영, 0.9.0, HTTP 404). `details.profile` = 요청한 id.
+    투영에서 다른 프로필로 대신 그릴 수 있으면 오류 대신
+    안내(`architecture.profile_fallback`)를 단다."""
+    ARCHITECTURE_SCOPE_TOO_LARGE: Final = "architecture.scope_too_large"
+    """구조도 범위(또는 단독 투영 본문)의 이벤트 수가 설치자 상한을 넘어 투영하지 않았다(0.9.0,
+    HTTP 422). `details` = `ArchitectureScopeTooLargeDetails{events, limit}`."""
 
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
@@ -126,6 +136,8 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.BACKEND_LOGOUT_UNSUPPORTED: 409,
     ErrorCodes.BACKEND_SUBSCRIPTION_AUTH_DISABLED: 409,
     ErrorCodes.BACKEND_LOGIN_SESSION_NOT_FOUND: 404,
+    ErrorCodes.ARCHITECTURE_PROFILE_NOT_FOUND: 404,
+    ErrorCodes.ARCHITECTURE_SCOPE_TOO_LARGE: 422,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 

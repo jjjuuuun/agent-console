@@ -35,7 +35,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.8.0",
+    "@agent-console/contracts": "^0.9.0",
     "@xyflow/react": "^12.12.0",
     "elkjs": "~0.12.0"
   },

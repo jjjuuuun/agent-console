@@ -51,7 +51,7 @@ importers:
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/chat
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../../packages/ts/lib/contracts
       '@agent-console/graph-editor':
         specifier: ^0.1.0
@@ -160,7 +160,7 @@ importers:
   packages/ts/lib/api-client:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -188,7 +188,7 @@ importers:
   packages/ts/lib/chat:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
       react-markdown:
         specifier: ^10.1.0
@@ -267,7 +267,7 @@ importers:
   packages/ts/lib/graph-editor:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
       '@xyflow/react':
         specifier: ^12.12.0
@@ -340,7 +340,7 @@ importers:
   packages/ts/lib/log-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
       '@tanstack/react-virtual':
         specifier: ^3.14.21
@@ -395,7 +395,7 @@ importers:
   packages/ts/lib/projects:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -430,7 +430,7 @@ importers:
         version: 6.11.0(@rjsf/utils@6.11.0(react@19.3.0))
     devDependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
       '@agent-console/eslint-config':
         specifier: ^0.1.0
@@ -545,7 +545,7 @@ importers:
   packages/ts/lib/trace-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.9.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':

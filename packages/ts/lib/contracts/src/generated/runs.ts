@@ -6,6 +6,8 @@
 
 // 계약 하위 모듈 `runs`: @agent-console/contracts/runs
 export type {
+  AgentContextPreparedEvent,
+  AgentContextPreparedPayload,
   AgentMessageEvent,
   AgentMessagePayload,
   AgentSessionStartedEvent,
@@ -40,6 +42,7 @@ export type {
   ConditionOperatorDescriptor,
   ConditionOutcome,
   ConditionSpec,
+  ContextResourceRef,
   CreateRunRequest,
   CyclePolicy,
   DefinitionBinding,
@@ -115,4 +118,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "runs" as const;
-export const CONTRACT_VERSION = "1.3.0" as const;
+export const CONTRACT_VERSION = "1.4.0" as const;

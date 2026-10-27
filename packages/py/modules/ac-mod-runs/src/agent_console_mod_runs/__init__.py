@@ -17,7 +17,8 @@
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
       ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
       백엔드 숨김 풀기)·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
-    - ``build_router``·``topic_handlers``·``ERROR_MAP``, 설정 ``RunsModuleSettings``.
+    - ``build_router``·``topic_handlers``·``ERROR_MAP``(``error_map(child_resume=)``, 자식 Run
+      이어 가기 거절 버튼 데이터 ``ChildResumeFix``), 설정 ``RunsModuleSettings``.
     - 관측 탭 이벤트 접두어 데이터(5.5R.13): ``DEFAULT_OBSERVE_EVENT_PREFIXES``·
       ``load_observe_event_prefixes``·``observe_event_prefixes_of``.
 """
@@ -32,13 +33,16 @@ from .backends import (
     reveal_hidden_backends,
 )
 from .errors import (
+    DEFAULT_CHILD_RESUME_FIX,
     ERROR_MAP,
     BackendNotFoundError,
+    ChildResumeFix,
     DefinitionReadError,
     NodeTypeNotFoundError,
     PortConfigError,
     RunNotFoundError,
     RunPreflightError,
+    error_map,
 )
 from .interactions import INTERACTIONS_TOPIC, InteractionService
 from .module import MODULE_ID, WEB_ROLES, PublishingSink, RunsModule, module
@@ -84,6 +88,7 @@ from .storage import STORAGE_MEMORY, open_recorder
 from .ws import RUN_TOPIC, topic_handlers
 
 __all__ = [
+    "DEFAULT_CHILD_RESUME_FIX",
     "DEFAULT_OBSERVE_EVENT_PREFIXES",
     "DEFINITIONS_LOOKUP",
     "ERROR_MAP",
@@ -110,6 +115,7 @@ __all__ = [
     "WORKSPACE_SETTINGS",
     "BackendNotFoundError",
     "BackendOptionsError",
+    "ChildResumeFix",
     "DefinitionLookup",
     "DefinitionReadError",
     "InteractionService",
@@ -138,6 +144,7 @@ __all__ = [
     "build_router",
     "build_secret_resolver",
     "configure_backends",
+    "error_map",
     "load_observe_event_prefixes",
     "module",
     "observe_event_prefixes_of",

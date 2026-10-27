@@ -31,7 +31,8 @@ from agent_console_modkit import BaseServices, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_runtime import Registries, Services, load_registries
 from agent_console_store import NotFound
-from agent_console_teams import catalog_from_registries
+from agent_console_teams import TeamCatalog, catalog_from_registries
+from agent_console_teams.testing import KITS
 
 API = "/api/v1"
 TOKEN = "t" * 32
@@ -321,3 +322,40 @@ def test_issue_fixes_table_is_data() -> None:
     assert fix.actions[0].target.section is None  # 빈 자리 = null
     assert custom.fix_for("team.no_reply", team_kind="graph", graph_id="g") is None
     assert IssueFixes().attach([], team_kind="graph", graph_id="g") == []
+
+
+def test_preflight_blocks_own_session_member_without_backend() -> None:
+    """자기 세션을 여는 위임 방식(``shares_session`` false)의 대상은 위임자의 백엔드를 쓰지 않는다:
+    사전 점검이 방식 디스크립터를 넘겨 실행 전에 막는다(실행 중 실패 대신). 노드·연결·방식·백엔드
+    이름은 모두 임의 이름(``Kit`` renamed)이다."""
+    kit = KITS[-1]
+    catalog = TeamCatalog(
+        node_types=tuple(kit.node_types),
+        edge_types=tuple(kit.edge_types),
+        strategies=kit.strategy_map,
+    )
+    agents = {"pl": {"id": "pl", "name": "기획자"}}
+    rules = TeamRules(
+        _Lookup(agents),
+        catalog=lambda: catalog,
+        registries=lambda: None,
+        workspace=lambda: None,
+    )
+    nodes = [
+        kit.person(),
+        kit.worker("lead", who="pl", settings={"backend": "zz-engine"}),
+        kit.worker("far", who="pl"),
+    ]
+    edges = [
+        kit.edge("m1", "entry", "me", "lead"),
+        kit.edge("a1", "exit", "lead", "me"),
+        kit.edge("d1", "invoke3", "lead", "far"),
+    ]
+    error = rules.preflight(kit.graph(nodes, edges), Services({}))
+    assert error is not None
+    assert error.code == ErrorCodes.BACKEND_UNRESOLVED
+    assert [n["id"] for n in error.details["nodes"]] == ["far"]
+
+    # 같은 세션 방식으로 부르면 위임자 세션에서 돌므로 막지 않는다
+    edges[2] = kit.edge("d1", "invoke", "lead", "far")
+    assert rules.preflight(kit.graph(nodes, edges), Services({})) is None

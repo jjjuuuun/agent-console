@@ -30,6 +30,7 @@ FEATURE_ROLES: dict[str, list[str]] = {
     "mod-runs": ["runs"],
     "mod-chat": ["conversations"],
     "mod-projects": ["projects"],
+    "mod-architecture": ["architecture"],
 }
 """design §3R.1.3 표의 web_roles(3R.18 웹 조립과 맞춘다)."""
 
@@ -47,6 +48,7 @@ PROBES: dict[str, tuple[str, str]] = {
     "mod-runs": ("GET", "/runs"),
     "mod-chat": ("GET", "/conversations"),
     "mod-projects": ("GET", "/projects"),
+    "mod-architecture": ("GET", "/architecture/profiles"),
 }
 """모듈마다 켜져 있으면 200인 대표 경로."""
 
@@ -239,3 +241,22 @@ def test_versions_max_per_definition_keeps_latest(tmp_path: Path) -> None:
         for name in ("x", "y", "z"):
             client.put(f"{API}/settings", json={"default_backend": name})
         assert len(client.get(f"{API}/settings/versions").json()) == 2
+
+
+def test_architecture_reads_saved_settings_section(tmp_path: Path) -> None:
+    """5.5R.9: 공통 설정에 저장한 `architecture` 섹션(모르는 키로 보존)이 다음 요청부터
+    목록에 보인다."""
+    profile = {"title": "내 구조도", "cells": {"c": {"label": "칸"}}}
+    with server(make_settings(tmp_path)) as client:
+        before = client.get(f"{API}/architecture/profiles").json()
+        assert all(p["origin"] != "user" for p in before["profiles"])
+        body = client.get(f"{API}/settings").json()
+        body["architecture"] = {"profiles": {"mine": profile}, "default_profile": "mine"}
+        assert client.put(f"{API}/settings", json=body).status_code == 200
+        assert client.get(f"{API}/settings").json()["architecture"]["default_profile"] == "mine"
+        after = client.get(f"{API}/architecture/profiles").json()
+        assert ("mine", "user") in [(p["id"], p["origin"]) for p in after["profiles"]]
+        assert after["default_profile"] == "mine"
+        missing = client.get(f"{API}/architecture/profiles/nope")
+        assert missing.status_code == 404
+        assert missing.json()["error"]["code"] == "architecture.profile_not_found"

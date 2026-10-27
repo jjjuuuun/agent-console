@@ -47,7 +47,7 @@ from agent_console_runtime import (
 )
 
 from .backends import build_secret_resolver, configure_backends, reveal_hidden_backends
-from .errors import ERROR_MAP
+from .errors import DEFAULT_CHILD_RESUME_FIX, ChildResumeFix, error_map
 from .interactions import InteractionService
 from .observe import observe_event_prefixes_of
 from .plugins import (
@@ -139,7 +139,11 @@ class PublishingSink:
 
 
 class RunsModule:
-    """실행 기능 모듈."""
+    """실행 기능 모듈.
+
+    Args:
+        child_resume_fix: 자식 Run 이어 가기 거절(409)의 해결 버튼 문구·웹 역할 데이터.
+    """
 
     descriptor = ModuleDescriptor(
         id=MODULE_ID,
@@ -173,6 +177,9 @@ class RunsModule:
         web_roles=WEB_ROLES,
         migrations=(BRANCH,),
     )
+
+    def __init__(self, *, child_resume_fix: ChildResumeFix = DEFAULT_CHILD_RESUME_FIX) -> None:
+        self._child_resume_fix = child_resume_fix
 
     def build(self, ctx: ModuleContext) -> ModuleParts:
         cfg = ctx.settings
@@ -322,7 +329,7 @@ class RunsModule:
             ws_topics=topic_handlers(
                 service, bus=bus, events=recorder.events, interactions=interactions, hub=ctx.ws_hub
             ),
-            error_map=dict(ERROR_MAP),
+            error_map=error_map(child_resume=self._child_resume_fix),
             startup=[start],
             shutdown=[stop],
         )

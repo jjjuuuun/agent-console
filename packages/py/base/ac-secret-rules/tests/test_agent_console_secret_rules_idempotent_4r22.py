@@ -27,7 +27,7 @@ SAMPLES = [
     "use AIzaSyA1234567890abcdef here",
     "gh ghp_ABCDEFGHIJKLMNOP and sk-ant-0123456789abcdef",
     "aws AKIAABCDEFGHIJKLMNOP x",
-    "slack xoxb-123456-abcdef",
+    "slack " + "xox" + "b-123456-abcdef",  # 비밀 검사 오인 방지로 나눠 씀
     "hf hf_abcdefghijk npm npm_abcdefghijk",
 ]
 

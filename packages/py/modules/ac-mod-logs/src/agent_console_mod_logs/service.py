@@ -8,6 +8,8 @@
 - 보존: ``retention_days``가 있으면 수집 뒤 그보다 오래된 이벤트를 지운다(색인만, 원본은 그대로).
 - 알림: 새 이벤트가 있으면 ``on_ingested(LogsIngestedPayload)``를 부른다(모듈이 토픽·WS로 보낸다).
 - 질의: 지금 설정(``logs.taxonomy``·``logs.projects``)으로 질의 맥락을 만들어 색인에 묻는다.
+  필터의 ``scope``·확장 필터는 등록된 범위 종류(X27)·필터 확장(X28)으로 풀어 맥락에 싣는다
+  (``LogQueryExtensions``). 등록이 없으면 맥락은 그대로이고, 그 이름은 422다.
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ import asyncio
 import contextlib
 import logging
 import threading
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -49,9 +51,12 @@ from agent_console_logs import (
     JsonValue,
     LogClassifier,
     LogFilter,
+    LogFilterExtension,
     LogIndex,
     LogIngestor,
+    LogQueryExtensions,
     LogRegistries,
+    LogScopeKind,
     LogSource,
     QueryContext,
     SessionTitleRule,
@@ -61,7 +66,6 @@ from agent_console_logs import (
     merge_taxonomy,
     parse_tz,
     query_context,
-    query_schema,
     read_only_open,
 )
 
@@ -106,6 +110,8 @@ class LogsService:
         on_ingested: 새 이벤트가 생긴 수집 뒤 부를 함수(이벤트 루프 스레드에서).
         open_read: 원본 읽기 전용 열기(테스트에서 쓰기 감시).
         archive_max_events·archive_max_bytes: 보관본 이벤트 수·바이트 합 상한.
+        scope_kinds: 지금 등록된 범위 종류(X27)를 돌려주는 함수(질의마다 부른다).
+        filter_predicates: 지금 등록된 필터 확장(X28)을 돌려주는 함수(질의마다 부른다).
     """
 
     def __init__(
@@ -130,6 +136,8 @@ class LogsService:
         open_read: Callable[[Path], BinaryIO] = read_only_open,
         archive_max_events: int = DEFAULT_ARCHIVE_MAX_EVENTS,
         archive_max_bytes: int = DEFAULT_ARCHIVE_MAX_BYTES,
+        scope_kinds: Callable[[], Iterable[LogScopeKind]] = tuple,
+        filter_predicates: Callable[[], Iterable[LogFilterExtension]] = tuple,
     ) -> None:
         self._index = index
         self._registries = registries
@@ -164,6 +172,9 @@ class LogsService:
         self._last_report: LogScanReport | None = None
         self._archive_max_events = archive_max_events
         self._archive_max_bytes = archive_max_bytes
+        self._scope_kinds = scope_kinds
+        self._filter_predicates = filter_predicates
+        self._extensions: tuple[tuple[int, ...], LogQueryExtensions] | None = None
 
     # ---------------------------------------------------------------- 설정·맥락
 
@@ -209,9 +220,42 @@ class LogsService:
         settings = self._settings()
         return merge_taxonomy(self._base(), settings.taxonomy if settings else None)
 
+    def extensions(self) -> LogQueryExtensions:
+        """지금 등록된 범위 종류·필터 확장 묶음(등록이 같으면 다시 만들지 않는다).
+
+        겹치는 이름은 먼저 온 것만 남기고 경고 로그를 남긴다.
+        """
+        kinds = tuple(self._scope_kinds())
+        filters = tuple(self._filter_predicates())
+        key = tuple(id(x) for x in (*kinds, None, *filters))
+        cached = self._extensions
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        ext = LogQueryExtensions.collect(kinds, filters)
+        for reason in ext.skipped:
+            _log.warning("로그 질의 확장을 건너뜁니다: %s", reason)
+        self._extensions = (key, ext)
+        return ext
+
+    def parse_filter(self, params: Mapping[str, JsonValue], *, path: str = "") -> LogFilter:
+        """쿼리 이름별 값 → ``LogFilter``(등록된 확장 필터 이름도 받는다).
+
+        Raises:
+            LogQueryError: 모르는 이름·틀린 값.
+        """
+        return self.extensions().parse(params, path=path)
+
+    def _context_for(self, flt: LogFilter | None, *, path: str = "") -> QueryContext:
+        """지금 설정 맥락 + ``flt``의 ``scope``·확장 필터 풀이.
+
+        Raises:
+            LogQueryError: 모르는 범위 종류·필터 이름, 틀린 값.
+        """
+        return self.extensions().refine(flt or LogFilter(), self.query_context(), path=path)
+
     def schema(self) -> LogQuerySchema:
-        """집계 차원·지표·필터 이름(``GET /logs/schema``)."""
-        return query_schema()
+        """집계 차원·지표·필터 이름(``GET /logs/schema``, 등록된 확장 필터 포함)."""
+        return self.extensions().schema()
 
     def dashboard_templates(self) -> list[LogDashboard]:
         return self._templates()
@@ -391,17 +435,17 @@ class LogsService:
     # ---------------------------------------------------------------- 질의(막히는 호출)
 
     def events(self, flt: LogFilter, *, with_total: bool = False) -> LogEventPage:
-        return self._index.query_events(flt, self.query_context(), with_total=with_total)
+        return self._index.query_events(flt, self._context_for(flt), with_total=with_total)
 
     def event(self, uid: str) -> LogEventDetail | None:
         return self._index.get_event(uid, self.query_context(), max_detail_bytes=self._max_detail)
 
     def sessions(self, flt: LogFilter) -> list[LogSessionSummary]:
-        return self._index.list_sessions(flt, self.query_context())
+        return self._index.list_sessions(flt, self._context_for(flt))
 
     def timeline(self, session: str, flt: LogFilter | None = None) -> LogTimeline | None:
         return self._index.timeline(
-            session, self.query_context(), flt=flt, limit=self._timeline_limit
+            session, self._context_for(flt), flt=flt, limit=self._timeline_limit
         )
 
     def aggregate(self, request: LogAggregateRequest) -> list[LogAggregateRow]:
@@ -410,13 +454,14 @@ class LogsService:
         Raises:
             LogQueryError: 모르는 차원·지표·필터·시간대.
         """
-        return self._index.aggregate(request, self.query_context())
+        flt = self.parse_filter(request.filter, path="filter")
+        return self._index.aggregate(request, self._context_for(flt, path="filter"))
 
     def handoffs(self, flt: LogFilter) -> HandoffMatrix:
-        return self._index.handoffs(flt, self.query_context())
+        return self._index.handoffs(flt, self._context_for(flt))
 
     def token_samples(self, flt: LogFilter) -> list[TokenSample]:
-        return self._index.token_samples(flt, self.query_context())
+        return self._index.token_samples(flt, self._context_for(flt))
 
     def archive(self, flt: LogFilter) -> LogArchive:
         """필터 범위의 오프라인 보관본(``LogArchive`` v1, 본문 포함, 크기 한도 적용).
@@ -430,7 +475,7 @@ class LogsService:
         return build_archive(
             self._index,
             flt,
-            self.query_context(),
+            self._context_for(flt),
             exported_at=self._clock(),
             taxonomy=self.taxonomy(),
             max_events=self._archive_max_events,

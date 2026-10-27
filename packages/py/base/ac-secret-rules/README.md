@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | `key_names` | `DEFAULT_KEY_NAMES` | 비밀 이름 단어. 이름을 단어로 나눠(구분자·camelCase) 이어지는 단어를 붙인 것이 같으면 의심(`api_key`·`apiKey`·`x-api-key`·`APIKEY`). `author`·`max_tokens`는 단어가 달라 안 걸린다 |
 | `name_exceptions` | `DEFAULT_NAME_EXCEPTIONS` | 비밀 단어 **뒤에** 오면 비밀이 아닌 이름(`--key-file`, `auth_mode`, `token_url`) |
-| `value_patterns` | `DEFAULT_VALUE_PATTERNS` | 텍스트 안 비밀 모양(알려진 접두 토큰, JWT, PEM 개인 키, `Bearer x`, `--token x`, `API_KEY=x`·`?token=x`·`"password": "x"`, `user:pw@`). 이름 그룹 `secret` = 가릴 부분, `name` = 비밀 이름이어야 매치 |
+| `value_patterns` | `DEFAULT_VALUE_PATTERNS` | 텍스트 안 비밀 모양(알려진 접두 토큰 — 앞이 단어 경계면 몸통 6자 이상, 앞에 글자가 붙었으면(`xxxsk-…`) 숫자·대문자가 있고 구분자 없는 16자 구간이 있는 키 모양 몸통만, JWT, PEM 개인 키, `Bearer x`, `--token x`, `API_KEY=x`·`?token=x`·`"password": "x"`, `user:pw@`). 이름 그룹 `secret` = 가릴 부분, `name` = 비밀 이름이어야 매치 |
 | `is_reference` | `secret://…` | 참조(값이 아니라 이름)는 의심·가림에서 뺀다 |
 
 사용자 규칙은 `with_extra(key_names=, value_patterns=)`로 **더하기만** 한다. 기본 규칙을 줄이는 공개 방법은

@@ -42,6 +42,9 @@ class XUiKeys:
     """단위 문자열(예: 초, 개, MB). 입력 오른쪽 접미사."""
     ENUM_LABELS: Final = "enum_labels"
     """선택지 값 → 사람이 읽는 라벨. 선택지 필드는 모든 값의 라벨을 둔다."""
+    WIDGET: Final = "widget"
+    """이 필드를 그릴 화면 위젯 이름(열린 문자열, 1.4.0). 화면이 그 이름의 위젯을 등록했으면 쓰고,
+    모르면 기본 폼으로 그린다."""
 
 
 type XUiTier = Literal["basic", "advanced"]
@@ -63,10 +66,12 @@ def x_ui(
     order: float | None = None,
     unit: str | None = None,
     enum_labels: Mapping[str, str] | None = None,
+    widget: str | None = None,
 ) -> dict[str, Any]:
     """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-ui": {...}}`를 만든다.
 
-    인자: 넘긴 것만 담는다(`enum_labels` = 선택지 값별 라벨, `example`은 None도 값으로 담는다).
+    인자: 넘긴 것만 담는다(`enum_labels` = 선택지 값별 라벨, `widget` = 화면 위젯 이름,
+    `example`은 None도 값으로 담는다).
     다른 확장 키(`x-merge` 등)와 함께
     쓰려면 `{**x_ui(tier="advanced"), "x-merge": "replace"}`처럼 합친다.
     반환: 새 dict(호출마다 새 객체).
@@ -86,6 +91,7 @@ def x_ui(
         (XUiKeys.ORDER, order),
         (XUiKeys.UNIT, unit),
         (XUiKeys.ENUM_LABELS, None if enum_labels is None else dict(enum_labels)),
+        (XUiKeys.WIDGET, widget),
     ):
         if value is not None:
             body[key] = value

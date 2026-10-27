@@ -10,6 +10,10 @@
 - 토큰 지표는 `log_usage` 행(응답당 1회)으로 센다. 이벤트 전용 필터(범주·도구 등)가 있으면 그 필터에
   맞는 이벤트와 (출처, thread, message_id)가 같은 표본만 센다.
 - 값이 없는 지표는 None이다(0으로 채우지 않음).
+- 범위(`ctx.scope`, X27): 이벤트의 세션 또는 run_id가 합집합에 들어야 한다. 토큰 표본은 세션이
+  범위에 들거나, run_id 범위에 드는 이벤트와 응답 키가 같아야 한다.
+- 확장 판정(`ctx.predicates`, X28)·`max_seq`는 이벤트 전용 필터다(표본은 맞는 이벤트의 응답 키로).
+  `scope`·확장 필터는 질의 전에 풀어야 한다(`require_refined`).
 """
 
 from __future__ import annotations
@@ -46,6 +50,7 @@ from ._filter import (
     QueryContext,
     parse_log_filter,
     parse_tz,
+    require_refined,
 )
 from ._projects import UNGROUPED_PROJECT, resolve_project
 from ._titles import pick_session_title
@@ -63,6 +68,7 @@ __all__ = [
     "event_matches",
     "evidence_candidates",
     "handoff_matrix",
+    "has_event_only",
     "is_error",
     "page_durations",
     "page_events",
@@ -157,7 +163,16 @@ def _time_ok(t: float | None, flt: LogFilter) -> bool:
 
 
 def event_matches(event: LogEvent, flt: LogFilter, ctx: QueryContext) -> bool:
-    """이벤트가 필터에 맞는지(커서·개수·정렬은 보지 않는다)."""
+    """이벤트가 필터에 맞는지(커서·개수·정렬은 보지 않는다).
+
+    Raises:
+        LogQueryError: `scope`·확장 필터를 풀지 않은 맥락(`require_refined`).
+    """
+    require_refined(flt, ctx)
+    if flt.max_seq is not None and event.seq > flt.max_seq:
+        return False
+    if ctx.scope is not None and not ctx.scope.contains(event.session, event.run_id):
+        return False
     checks: list[tuple[tuple[str, ...], Iterable[str]]] = [
         (flt.source, (event.source,)),
         (flt.session, (event.session,)),
@@ -171,6 +186,7 @@ def event_matches(event: LogEvent, flt: LogFilter, ctx: QueryContext) -> bool:
         (flt.status, (event.status,)),
         (flt.category, (*event.tags, event.category)),
         (flt.agent, (event.actor, *event.from_, *event.to)),
+        (flt.thread, (event.thread,)),
         (flt.from_, event.from_),
         (flt.to, event.to),
     ]
@@ -181,20 +197,32 @@ def event_matches(event: LogEvent, flt: LogFilter, ctx: QueryContext) -> bool:
         return False
     if not _time_ok(effective_time(event), flt):
         return False
-    return not (flt.q and flt.q.lower() not in search_text(event).lower())
+    if flt.q and flt.q.lower() not in search_text(event).lower():
+        return False
+    return all(p(event) for p in ctx.predicates)
 
 
-def _has_event_only(flt: LogFilter) -> bool:
-    return any(getattr(flt, name) for name in EVENT_ONLY_FILTERS)
+def has_event_only(flt: LogFilter, ctx: QueryContext) -> bool:
+    """토큰 표본을 맞는 이벤트의 응답 키로 한 번 더 걸러야 하는지(이벤트 전용 필터가 있는지)."""
+    return (
+        any(getattr(flt, name) for name in EVENT_ONLY_FILTERS)
+        or flt.max_seq is not None
+        or bool(ctx.predicates)
+    )
 
 
 def usage_matches(row: UsageRow, flt: LogFilter, ctx: QueryContext) -> bool:
-    """표본 행이 표본에 있는 필터(출처·세션·프로젝트·cwd·에이전트=thread·모델·기간)에 맞는지."""
+    """표본 행이 표본에 있는 필터(출처·세션·프로젝트·cwd·에이전트=thread·모델·기간)에 맞는지.
+
+    범위(`ctx.scope`)는 세션만 본다(run_id 범위는 `usage_samples`가 이벤트로 본다).
+    """
+    require_refined(flt, ctx)
     checks: list[tuple[tuple[str, ...], str]] = [
         (flt.source, row.source),
         (flt.session, row.session),
         (flt.cwd, row.cwd),
         (flt.agent, row.sample.thread),
+        (flt.thread, row.sample.thread),
         (flt.model, row.sample.model),
     ]
     for wanted, have in checks:
@@ -208,12 +236,32 @@ def usage_matches(row: UsageRow, flt: LogFilter, ctx: QueryContext) -> bool:
 def usage_samples(
     rows: Iterable[UsageRow], events: Iterable[LogEvent], flt: LogFilter, ctx: QueryContext
 ) -> list[UsageRow]:
-    """필터에 맞는 표본 행(이벤트 전용 필터가 있으면 맞는 이벤트의 응답 키로 한 번 더 거른다)."""
+    """필터에 맞는 표본 행(이벤트 전용 필터가 있으면 맞는 이벤트의 응답 키로 한 번 더 거른다).
+
+    범위가 있으면 세션이 범위에 들거나 run_id 범위에 드는 이벤트와 응답 키가 같은 표본만 남긴다.
+    """
+    require_refined(flt, ctx)
+    all_events: list[LogEvent] | None = None
     picked = [r for r in rows if usage_matches(r, flt, ctx)]
-    if _has_event_only(flt):
+    scope = ctx.scope
+    if scope is not None:
+        run_keys: set[tuple[str, str, str]] = set()
+        if scope.run_ids:
+            all_events = list(events)
+            run_keys = {
+                (e.source, e.thread, e.message_id)
+                for e in all_events
+                if e.message_id and e.run_id and e.run_id in scope.run_ids
+            }
+        picked = [
+            r for r in picked if (r.session and r.session in scope.sessions) or r.key in run_keys
+        ]
+    if has_event_only(flt, ctx):
+        if all_events is None:
+            all_events = list(events)
         keys = {
             (e.source, e.thread, e.message_id)
-            for e in events
+            for e in all_events
             if e.message_id and event_matches(e, flt, ctx)
         }
         picked = [r for r in picked if r.key in keys]
@@ -261,6 +309,7 @@ def page_events(
     짝 이벤트(같은 세션·thread·`call_id`의 시작·끝 단계)에는 `duration_ms`를 채운다. 짝은 목록
     필터와 상관없이 같은 세션의 모든 이벤트에서 찾는다(끝 단계만 거른 목록에도 소요 시간이 보인다).
     """
+    require_refined(flt, ctx)
     all_events = list(events)
     matched = sorted((e for e in all_events if event_matches(e, flt, ctx)), key=lambda e: e.seq)
     if flt.order == "desc":
@@ -384,6 +433,7 @@ def summarize_sessions(
     필터는 어느 세션이 보일지와 집계(개수·시각·토큰)만 정한다. 제목·첫 cwd는 필터와 상관없이
     세션의 모든 이벤트에서 고른다(제목 행에는 cwd·actor가 없다, 5.2R.38).
     """
+    require_refined(flt, ctx)
     all_events = list(events)
     groups: dict[str, list[LogEvent]] = {}
     for e in all_events:
@@ -463,6 +513,7 @@ def build_timeline(
         세션 이벤트가 없으면 None.
     """
     base = (flt or LogFilter()).with_(session=(session,), limit=1)
+    require_refined(base, ctx)
     all_events = list(events)
     mine = [e for e in all_events if e.session == session and event_matches(e, base, ctx)]
     if not mine:
@@ -593,7 +644,8 @@ def aggregate_rows(
             raise LogQueryError(f"모르는 차원: {dim}", f"group_by.{i}")
     if request.metric not in _METRIC_IDS:
         raise LogQueryError(f"모르는 지표: {request.metric}", "metric")
-    flt = parse_log_filter(request.filter, path="filter")
+    flt = parse_log_filter(request.filter, path="filter", extra=ctx.extra_names)
+    require_refined(flt, ctx)
     if request.tz:
         ctx = replace(ctx, tz=parse_tz(request.tz))
     dims = list(request.group_by)
@@ -658,6 +710,7 @@ def handoff_matrix(
     범주 이름을 보지 않는다. 전달을 나타내는 이벤트에 from·to를 채우는 것은 분류기의 몫이다.
     `runs`는 이 집계에 쓰인 서로 다른 세션 수다.
     """
+    require_refined(flt, ctx)
     counts: dict[tuple[str, str, str], int] = {}
     sessions: set[str] = set()
     for e in events:

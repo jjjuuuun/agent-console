@@ -58,6 +58,7 @@ from agent_console_logs._index import (
 from agent_console_logs._windows import sum_samples
 
 from ._clauses import Clause, error_expr, event_clauses, usage_clauses
+from ._clauses import load_event as _load_event
 from .schema import (
     log_agents,
     log_bodies,
@@ -151,16 +152,6 @@ def _out(sample: TokenSample) -> int:
 
 def _dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
-
-
-def _load_event(seq: int, body: str, heavy: str | None = None) -> LogEvent:
-    data = json.loads(body)
-    data["seq"] = seq
-    if heavy:
-        extra = json.loads(heavy)
-        data["detail"] = extra.get("detail")
-        data["raw"] = extra.get("raw")
-    return LogEvent.model_validate(data)
 
 
 def _local(t: float, tz: Any) -> datetime:
@@ -706,7 +697,7 @@ class SqliteLogIndex:
                 raise LogQueryError(f"모르는 차원: {dim}", f"group_by.{i}")
         if request.metric not in _METRIC_IDS:
             raise LogQueryError(f"모르는 지표: {request.metric}", "metric")
-        flt = parse_log_filter(request.filter, path="filter")
+        flt = parse_log_filter(request.filter, path="filter", extra=ctx.extra_names)
         if request.tz:
             ctx = replace(ctx, tz=parse_tz(request.tz))
         dims = list(request.group_by)

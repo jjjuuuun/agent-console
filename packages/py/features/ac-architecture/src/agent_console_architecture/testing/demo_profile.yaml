@@ -1,0 +1,75 @@
+# 테스트 전용 프로필(기본 프로필 데이터가 아니다). id·범주·출처 종류는 테스트가 정한 임의 값이다.
+version: 1
+profiles:
+  demo:
+    title: 데모
+    canvas: {width: 800, height: 400}
+    zones:
+      - {id: local, label: 로컬, x: 0, y: 0, w: 600, h: 400, style: boundary}
+      - {id: remote, x: 600, y: 0, w: 200, h: 400}
+    error_when: {any: [{path: /status, op: in, value: [failed, error]}]}
+    source_priority: [kind-a, kind-b]
+    group_limit: 2
+    unassigned: true
+    options: {inferred_llm_duration: true}
+    cells:
+      input:
+        label: 입력
+        x: 100
+        y: 50
+        zone: local
+        tone: blue
+        when: {all: [{path: /category, op: eq, value: input}]}
+      model:
+        label: 모델
+        description: 원격 모델
+        x: 700
+        y: 50
+        zone: remote
+        when: {all: [{path: /category, op: eq, value: llm}]}
+        metrics: [count, errors, tokens, inferred_duration]
+        group_by: /model
+        unavailable: [{item: 요청 본문, reason: 로그에 남지 않음}]
+      tools:
+        label: 도구
+        x: 300
+        y: 200
+        when: {all: [{path: /category, op: eq, value: tool}]}
+        metrics: [count, errors, duration]
+        group_by: /tool
+      workers:
+        label: 작업자
+        x: 100
+        y: 300
+        view: grouped
+        when: {all: [{path: /thread, op: ne, value: main}]}
+        metrics: [count, errors, tokens]
+        group_by: /thread
+        drill: {filter: thread, value: "{group}"}
+      memo:
+        label: 메모
+        x: 500
+        y: 300
+        w: 120
+    edges:
+      - {id: ask, from: input, to: model, kind: structural, style: inferred}
+      - id: call
+        from: model
+        to: tools
+        label: 호출
+        style: request
+        when: {all: [{path: /tags, op: contains, value: tool_call}]}
+        metrics: [count, errors, duration]
+      - id: back
+        from: tools
+        to: model
+        label: 결과
+        style: return
+        points: [[300, 200], [700, 200], [700, 50]]
+        label_at: [500, 200]
+        label_max_w: 92
+        when: {all: [{path: /tags, op: contains, value: tool_result}]}
+        metrics: [count, errors, duration]
+    coverage:
+      kind-a: {cells: [input, model, tools, workers], partial: {workers: 일부만 보임}}
+      kind-b: {cells: [tools]}

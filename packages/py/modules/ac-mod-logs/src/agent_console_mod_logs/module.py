@@ -3,7 +3,8 @@
 - 제공: ``logs.query``·``logs.ingest``(``LogsService``)·``server.warnings``. 토픽 ``logs.ingested``,
   WS ``logs``. 경로 ``/logs…``(§4R.10). 필수 포트 없음(혼자 켜진다).
 - 선택: ``logs.sources``(런타임 출처, multi)·``workspace.settings``(``logs.*``)·``secrets.rules``
-  (가리기)·``logs.source_defaults``(출처 기본 켜기, multi — 설정에 ``enabled``가 없는 출처만)
+  (가리기)·``logs.source_defaults``(출처 기본 켜기, multi — 설정에 ``enabled``가 없는 출처만)·
+  ``logs.scope_kinds``(범위 종류 X27, multi)·``logs.filter_predicates``(필터 확장 X28, multi)
   — ``ports.py``.
 - 출처·분류기: 호스트 레지스트리 묶음의 ``log_sources``·``log_classifiers`` 확장(플러그인 로더
   ``plugins.load_plugins``가 entry point X5·X6을 로드). 묶음이 없으면(단독 실행) entry point에서
@@ -32,6 +33,8 @@ from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from .errors import ERROR_MAP
 from .plugins import bundle_registries
 from .ports import (
+    LOG_FILTER_PREDICATES,
+    LOG_SCOPE_KINDS,
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_INGESTED,
@@ -141,7 +144,14 @@ class LogsModule:
             "런타임 출처·설정·가림 규칙은 포트로 받는다"
         ),
         provides=(LOGS_QUERY, LOGS_INGEST, SERVER_WARNINGS),
-        optional=(LOG_SOURCES, WORKSPACE_SETTINGS, SECRET_RULES, SOURCE_DEFAULTS),
+        optional=(
+            LOG_SOURCES,
+            WORKSPACE_SETTINGS,
+            SECRET_RULES,
+            SOURCE_DEFAULTS,
+            LOG_SCOPE_KINDS,
+            LOG_FILTER_PREDICATES,
+        ),
         settings_schema=LogsModuleSettings,
         contracts={"logs": CONTRACT_VERSIONS["logs"]},
         web_roles=WEB_ROLES,
@@ -201,6 +211,8 @@ class LogsModule:
             archive_max_bytes=cfg.archive_max_bytes,
             session_title_rules=cfg.title_rules(),
             base_taxonomy=base_taxonomy_of(cfg.base_taxonomy_file, base),
+            scope_kinds=lambda: ctx.ports(LOG_SCOPE_KINDS),
+            filter_predicates=lambda: ctx.ports(LOG_FILTER_PREDICATES),
         )
         runtime_problems: list[Issue] = []
 

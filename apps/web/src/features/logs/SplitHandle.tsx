@@ -55,6 +55,7 @@ export function SplitHandle({ size, min, max, onChange, label, step = 16, orient
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={() => (start.current = null)}
+      onPointerCancel={() => (start.current = null)}
       onKeyDown={key}
     />
   );

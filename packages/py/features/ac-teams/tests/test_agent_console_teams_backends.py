@@ -158,3 +158,53 @@ def test_backend_nodes_by_descriptor(k: Kit) -> None:
     resolved = resolve_backends(plan, default_backend=BACKEND)
     assert resolved == {"lead": BACKEND, "tool": BACKEND}
     assert unresolved_backends(plan, resolved) == []
+
+
+@pytest.mark.parametrize("k", KITS, ids=IDS)
+def test_own_session_member_is_checked_with_strategies(k: Kit) -> None:
+    """자기 세션을 여는 방식(`shares_session` false)의 대상은 스스로 세션 주인이다: 방식
+    디스크립터를 넘기면 위임자의 백엔드가 정해져 있어도 대상의 빈 백엔드를 실행 전에 막는다.
+    방식 id는 Kit 이름표를 따르므로(`renamed`) 코드에 방식 이름이 없다."""
+    nodes = [
+        k.person(),
+        k.worker("lead", who="pl", settings={"backend": BACKEND}),
+        k.worker("far", who="pl"),
+    ]
+    edges = [
+        k.edge("m1", "entry", "me", "lead"),
+        k.edge("a1", "exit", "lead", "me"),
+        k.edge("d1", "invoke3", "lead", "far"),
+    ]
+    plan = _plan(k, k.graph(nodes, edges))
+    strategies = k.strategy_map
+    assert strategies[k["s_far"]].shares_session is False
+    resolved = resolve_backends(plan, agents=_agent(), strategies=strategies)
+    assert resolved == {"lead": BACKEND, "far": None}
+    # 방식을 주지 않으면 옛 동작(모든 위임을 같은 세션으로 본다)
+    assert unresolved_backends(plan, resolved) == []
+    got = unresolved_backends(plan, resolved, agents=_agent(), strategies=strategies)
+    assert got == [UnresolvedBackend("far", "FAR")]
+    # 대상에 백엔드를 정하면 막지 않는다
+    nodes[2] = k.worker("far", who="pl", settings={"backend": BACKEND})
+    plan = _plan(k, k.graph(nodes, edges))
+    resolved = resolve_backends(plan, agents=_agent(), strategies=strategies)
+    assert unresolved_backends(plan, resolved, strategies=strategies) == []
+
+
+@pytest.mark.parametrize("k", KITS, ids=IDS)
+def test_same_session_member_still_skipped_with_strategies(k: Kit) -> None:
+    """같은 세션 방식(`shares_session` true)의 대상은 방식을 넘겨도 위임자 세션에서 돈다."""
+    nodes = [
+        k.person(),
+        k.worker("lead", who="pl", settings={"backend": BACKEND}),
+        k.worker("helper", who="pl"),
+    ]
+    edges = [
+        k.edge("m1", "entry", "me", "lead"),
+        k.edge("a1", "exit", "lead", "me"),
+        k.edge("d1", "invoke", "lead", "helper"),
+    ]
+    plan = _plan(k, k.graph(nodes, edges))
+    strategies = k.strategy_map
+    resolved = resolve_backends(plan, agents=_agent(), strategies=strategies)
+    assert unresolved_backends(plan, resolved, strategies=strategies) == []

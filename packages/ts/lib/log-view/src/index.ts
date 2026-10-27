@@ -3,6 +3,7 @@ export { defaultLogViewMessages, mergeMessages, fmt, type LogViewMessages, type 
 export { defaultFormatters, mergeFormatters, formatRelativeTime, formatAbsoluteTime, formatDurationMs, formatTokensShort, formatNumber, shortId, shortPath, fullTimeTitle } from "./format";
 export { toTaxonomyView, isErrorEvent, isHiddenEvent, colorFor, slotColor, countCategories, orderCategories, type CategoryItem } from "./taxonomy";
 export { sortEvents, visibleThrough, indexOfSeq, seqAtIndex, playbackDelay, usePlayback, nextSpeed, DEFAULT_SPEEDS, DEFAULT_GAP_CAP_MS, SKIP_GAP_CAP_MS, MIN_DELAY_MS, type TimedEvent, type UsePlaybackOptions, type PlaybackState } from "./playback";
+export { focusLogControl, type LogFocusTarget, type FocusLogControlOptions } from "./focus";
 export { clipTraceAt } from "./clipTrace";
 export { groupByMessage, type MessageGroup, type GroupedItem } from "./group";
 export { reservedParams, splitSearchParams, buildFilterQuery, buildScreenSearch, findReservedConflicts, hasActiveFilter, type SplitParams } from "./filterQuery";

@@ -9,8 +9,9 @@
 - 실행 가능(`executable`)하고 에이전트 정의에 묶인 노드(`binds.kind == conventions.agent_kind`),
 - 또는 노드 타입 디스크립터 `capabilities`에 `conventions.backend_capability`가 있는 노드.
 
-위임받는 노드(엔진이 스케줄하지 않음)는 위임자 세션에서 돌므로(`session_owner`) 사전 점검은 세션
-주인 노드만 본다. 백엔드 이름은 이 모듈에 없다.
+같은 세션 방식으로 위임받는 노드(엔진이 스케줄하지 않음)는 위임자 세션에서 돌므로
+(`session_owner`) 사전 점검은 세션 주인 노드만 본다. 자기 세션을 여는 방식의 대상은
+스스로 주인이다. 백엔드 이름은 이 모듈에 없다.
 """
 
 from __future__ import annotations
@@ -120,15 +121,20 @@ def unresolved_backends(
     resolved: Mapping[str, str | None],
     *,
     agents: Mapping[str, Agent] | None = None,
+    strategies: Mapping[str, DelegationStrategyDescriptor] | None = None,
 ) -> list[UnresolvedBackend]:
     """실행 전에 막아야 할 노드: 백엔드를 실제로 여는 세션 주인 노드 중 백엔드가 빈 것.
 
-    위임받는 노드는 위임자(세션 주인)의 백엔드로 돌므로 자기 값이 비어도 막지 않는다.
+    같은 세션 방식으로 위임받는 노드는 위임자(세션 주인)의 백엔드로 돌므로 자기 값이 비어도 막지
+    않는다. `strategies`를 주면 같은 세션이 아닌 방식(디스크립터 `shares_session` false)으로
+    불리는 노드는 자기 세션의 주인이라 자기 백엔드가 비면 막는다(실행 중 실패 대신 실행 전에).
 
     Args:
         plan: `team_plan` 결과.
         resolved: `resolve_backends` 결과.
         agents: 이름 표시용 에이전트 정의.
+        strategies: 위임 방식 id → 디스크립터(`session_owner`와 같다). 주지 않으면 모든 위임을
+            같은 세션으로 본다(옛 동작).
 
     Returns:
         그래프 순서의 목록(없으면 빈 목록 = 실행해도 된다).
@@ -136,7 +142,7 @@ def unresolved_backends(
     out: list[UnresolvedBackend] = []
     seen: set[str] = set()
     for nid in resolved:
-        owner = session_owner(plan, nid)
+        owner = session_owner(plan, nid, strategies)
         if owner in seen or owner not in resolved:
             continue
         seen.add(owner)

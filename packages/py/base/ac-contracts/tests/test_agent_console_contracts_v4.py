@@ -57,6 +57,8 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
     "chat": _BELOW_DEFINITIONS | {"definitions", "runs", "usage"},
     "exports": _BELOW_DEFINITIONS | {"definitions", "runs", "usage"},
     "imports": _BELOW_DEFINITIONS | {"definitions", "runs", "usage"},
+    # 0.9.0(design §5.5R.2.4): architecture는 chat·exports·imports와 같은 층
+    "architecture": _BELOW_DEFINITIONS | {"definitions", "runs"},
     "modules": {
         "common",
         "resources",
@@ -97,6 +99,7 @@ def test_contract_versions_cover_every_submodule() -> None:
         "logs",
         "modules",
         "projects",
+        "architecture",
     }
     for version in CONTRACT_VERSIONS.values():
         major, minor, patch = version.split(".")

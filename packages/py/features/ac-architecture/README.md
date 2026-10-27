@@ -1,0 +1,103 @@
+# agent-console-architecture
+
+관측 구조도 순수 라이브러리. 로그 이벤트(계약 `LogEvent`)와 구조도 프로필(계약 `ArchitectureProfile`)을 받아
+칸·연결마다 횟수·오류·토큰·소요를 센 **그리기 완결형** `ArchitectureView`를 만든다(design §5.5R).
+
+- 칸·연결·범주·도구·출처 이름은 코드에 없다. 무엇을 셀지(`when`, 조건 데이터), 어디에 그릴지(좌표), 어떤 출처가
+  어떤 칸을 채우는지(`coverage`)는 전부 프로필 데이터다. 조건은 `agent-console-conditions`의 `ConditionSpec`.
+- 연결은 그 전달을 기록한 이벤트 하나가 조건에 맞을 때만 센다. 시간상 이웃은 잇지 않는다(R8.6).
+  순서로만 아는 연결(`kind: structural`)은 지표가 없다.
+- 지표 상태는 `observed`(0 포함)·`inferred`(추정)·`not_collected`(값 null)다. **null을 0으로 채우지 않는다**.
+- 서버·웹·로그 색인 없이 단독으로 쓴다. `agent-console-logs`를 모른다: 오류 범주·출처 종류·토큰 표본은 인자다.
+
+공개 API(요지):
+
+| 무엇 | 함수 |
+| --- | --- |
+| 프로필 읽기 | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
+| 병합 | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)`는 없거나 0개여도 예외 없음) |
+| 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None)`, `check_profile_data(data, ...)` |
+| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes)` |
+| 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators)`, `format_arch`·`parse_arch` |
+| 플러그인(X23) | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
+| 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML) |
+
+패키지 기본 프로필 데이터는 `src/agent_console_architecture/data/default_architecture.yaml`이다(지금은 자리만 있고
+내용은 작업 5.5R.8에서 채운다). 사용자는 설정 `architecture`로 고치거나 끈다(`include_defaults: false`).
+
+## 의존성: 무엇을 / 왜 / 대안
+
+- **ruamel.yaml**: 프로필 문서(YAML) 읽기. 저장소 표준 YAML 도구(확정 스택)라 새 의존이 아니다. 대안: PyYAML.
+- 사내: `agent-console-contracts`(모델), `agent-console-conditions`(조건 평가·검사, X22 연산자),
+  `agent-console-registry`(X23 플러그인 로딩).
+
+## 설치
+
+```bash
+pip install agent-console-architecture
+# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-architecture
+```
+
+## 최소 사용: jsonl 이벤트 → 구조도
+
+```python
+>>> import json
+>>> from agent_console_architecture import parse_profiles_document, project_architecture, selector_predicate
+>>> from agent_console_conditions import default_operators
+>>> from agent_console_contracts.logs import LogEvent
+
+>>> profiles = parse_profiles_document('''
+... profiles:
+...   flow:
+...     cells:
+...       ask:   {label: 질문, x: 100, y: 60, when: {all: [{path: /category, op: eq, value: input}]}}
+...       work:  {label: 작업, x: 400, y: 60, when: {all: [{path: /category, op: eq, value: tool}]},
+...               metrics: [count, errors, duration], group_by: /tool}
+...     edges:
+...       - {id: hand, from: ask, to: work, kind: structural}
+...       - {id: run, from: ask, to: work, label: 실행, when: {all: [{path: /tags, op: contains, value: call}]}}
+...     error_when: {all: [{path: /status, op: eq, value: failed}]}
+... ''')
+>>> lines = [
+...     '{"uid": "u1", "seq": 1, "source": "s", "observed_at": 0, "category": "input"}',
+...     '{"uid": "u2", "seq": 2, "source": "s", "observed_at": 0, "category": "tool", "tool": "Read", "tags": ["call"], "duration_ms": 40}',
+...     '{"uid": "u3", "seq": 3, "source": "s", "observed_at": 0, "category": "tool", "tool": "Read", "status": "failed"}',
+...     '{"uid": "u4", "seq": 4, "source": "s", "observed_at": 0, "category": "note"}',
+... ]
+>>> events = [LogEvent.model_validate(json.loads(line)) for line in lines]
+>>> operators, _ = default_operators()
+>>> view = project_architecture(events, profiles["flow"], profile_id="flow", operators=operators)
+
+>>> work = view.cells[1]
+>>> {name: m.value for name, m in work.metrics.items()}
+{'count': 2.0, 'errors': 1.0, 'duration': 40.0}
+>>> [(g.key, g.metrics["count"].value) for g in work.groups]
+[('Read', 2.0)]
+>>> [(e.id, e.kind, {n: m.value for n, m in e.metrics.items()}) for e in view.edges]
+[('hand', 'structural', {}), ('run', 'observed', {'count': 1.0, 'errors': 0.0})]
+>>> view.unassigned.metrics["count"].value, view.max_seq
+(1.0, 4)
+
+```
+
+칸을 누르면 이벤트 표를 거를 판정 함수가 같은 수를 고른다(R8.8).
+
+```python
+>>> keep = selector_predicate(profiles["flow"], work.selector, profile_id="flow", operators=operators)
+>>> work.selector.arch, [e.uid for e in events if keep(e)]
+('flow:cell:work', ['u2', 'u3'])
+
+```
+
+<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+
+## 개발·재사용
+
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+
+```bash
+uv sync                # 개발 의존(dev 그룹) 포함
+uv run ruff check .
+uv run mypy
+uv run pytest          # README.md의 doctest 포함
+```

@@ -9,6 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "agent-console-architecture",
     "agent-console-backend-claude-sdk",
     "agent-console-backend-fake-agent",
     "agent-console-chat",
@@ -34,6 +35,7 @@ members = [
     "agent-console-link-runs-usage",
     "agent-console-logs",
     "agent-console-logs-claude",
+    "agent-console-mod-architecture",
     "agent-console-mod-chat",
     "agent-console-mod-definitions",
     "agent-console-mod-exports",
@@ -61,6 +63,43 @@ members = [
     "agent-console-trace",
     "agent-console-usage",
     "agent-console-workspace",
+]
+
+[[package]]
+name = "agent-console-architecture"
+version = "0.1.0"
+source = { editable = "packages/py/features/ac-architecture" }
+dependencies = [
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-registry" },
+    { name = "pydantic" },
+    { name = "ruamel-yaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
 ]
 
 [[package]]
@@ -298,7 +337,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.8.0"
+version = "0.9.0"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -309,6 +348,7 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "ruamel-yaml" },
     { name = "ruff" },
 ]
 
@@ -320,6 +360,7 @@ dev = [
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "ruff", specifier = ">=0.6" },
 ]
 
@@ -1105,6 +1146,51 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-mod-architecture"
+version = "0.1.0"
+source = { editable = "packages/py/modules/ac-mod-architecture" }
+dependencies = [
+    { name = "agent-console-architecture" },
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-registry" },
+    { name = "agent-console-store" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-architecture", editable = "packages/py/features/ac-architecture" },
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
@@ -1967,6 +2053,7 @@ dependencies = [
     { name = "agent-console-link-runs-trace" },
     { name = "agent-console-link-runs-usage" },
     { name = "agent-console-logs-claude" },
+    { name = "agent-console-mod-architecture" },
     { name = "agent-console-mod-chat" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-mod-exports" },
@@ -2018,6 +2105,7 @@ requires-dist = [
     { name = "agent-console-link-runs-trace", editable = "packages/py/links/ac-link-runs-trace" },
     { name = "agent-console-link-runs-usage", editable = "packages/py/links/ac-link-runs-usage" },
     { name = "agent-console-logs-claude", editable = "packages/py/features/ac-logs-claude" },
+    { name = "agent-console-mod-architecture", editable = "packages/py/modules/ac-mod-architecture" },
     { name = "agent-console-mod-chat", editable = "packages/py/modules/ac-mod-chat" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-exports", editable = "packages/py/modules/ac-mod-exports" },

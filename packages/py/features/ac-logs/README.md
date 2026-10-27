@@ -87,10 +87,11 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 | 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
 | 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
 | SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
-| 질의 | `LogFilter`·`parse_log_filter`·`LogQueryError(path)`, `QueryContext`·`query_context`, `query_schema`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
+| 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
+| 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`) |
 | 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `group_projects`·`resolve_project`·`git_worktree_root`, `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
 | 보관본 | `build_archive`(`LogArchive` v1: 필터 범위·`max_events`·`max_bytes`·`redact`, `ARCHIVE_VERSION`·`DEFAULT_ARCHIVE_MAX_EVENTS`·`DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive`(스크립트 없는 HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
-| 테스트 지원 | `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
+| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(X27·X28 예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
 
 ## SQLite 색인
 
@@ -121,6 +122,41 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
   섞이지 않는다. seq는 `AUTOINCREMENT`라 지운 뒤에도 다시 쓰이지 않는다(키셋 커서 안전).
 - 토큰은 `log_usage`의 (source, thread, message_id) 한 행이며, 같은 키가 다시 오면 output이 크거나 같을 때만 바꾼다.
 - 한계: 검색어 `q`는 `log_search`를 훑는다(10만 건에서 수백 ms). 세션 목록은 질의마다 집계한다.
+
+## 질의 확장: 범위 종류(X27)·필터 확장(X28)
+
+필터 `scope=<종류>:<값>`과 확장 필터 이름은 등록으로 들어온다. `LogQueryExtensions`가 필터를 읽고
+(`parse`), 질의 전에 풀어(`refine`) 질의 맥락에 세션·run_id 합집합(`QueryContext.scope`)과 이벤트 판정
+함수(`QueryContext.predicates`)를 싣는다. 색인 구현은 풀린 맥락만 본다(메모리·SQLite 결과가 같음을
+차등 테스트로 확인). 등록이 없으면 맥락은 그대로이고, 풀지 않은 `scope`·확장 필터를 색인에 넘기면
+`LogQueryError`다.
+
+- 범위: 이벤트의 세션 또는 run_id가 합집합에 들어야 한다. 토큰 표본은 세션이 들거나, run_id 범위
+  이벤트와 응답 키가 같아야 한다.
+- 확장 판정·`max_seq`는 이벤트 전용 필터다(표본은 맞는 이벤트의 응답 키로 거른다). SQLite는 판정을
+  연결 전용 SQL 함수로 부르므로 페이지·커서·집계가 그대로지만, 후보 행마다 본문 JSON을 읽는다.
+
+```python
+>>> from agent_console_logs import IndexBatch, LogQueryExtensions, QueryContext
+>>> from agent_console_logs.testing import FieldFilter, MemoryLogIndex, TableScopeKind, make_record
+>>> index = MemoryLogIndex()
+>>> _ = index.write(IndexBatch(records=[
+...     make_record("tool_call", tool="Bash", session="S1"),
+...     make_record("tool_call", tool="Read", session="S1"),
+...     make_record("llm", session="S2", run_id="r1"),
+... ]))
+>>> ext = LogQueryExtensions.collect(
+...     [TableScopeKind("run", {"r1": ([], ["r1"])})],     # 범위 종류(X27)
+...     [FieldFilter("only_tool", "tool")],                # 필터 확장(X28)
+... )
+>>> flt = ext.parse({"only_tool": "Bash"})
+>>> [e.tool for e in index.query_events(flt, ext.refine(flt, QueryContext())).items]
+['Bash']
+>>> flt = ext.parse({"scope": "run:r1"})
+>>> [e.session for e in index.query_events(flt, ext.refine(flt, QueryContext())).items]
+['S2']
+
+```
 
 ## 수집 규칙(agent_bench `_ingest`와 같음)
 

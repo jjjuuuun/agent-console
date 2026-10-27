@@ -35,6 +35,8 @@ export interface CatalogClient {
   listResourceTypes(): Promise<ResourceTypeDescriptor[]>;
   /** `settings_merge`에 쓸 수 있는 병합 전략 이름(서버 표: 기본 + 플러그인). */
   listMergeStrategies(): Promise<MergeStrategyInfo[]>;
+  /** 실행 상세 [관측] 탭이 모을 이벤트 type 접두어(`GET /observe-event-prefixes`). 빈 목록 = 관측 탭 끔. */
+  listObserveEventPrefixes(): Promise<string[]>;
 }
 
 export function createCatalogClient(io: RestIo): CatalogClient {
@@ -52,5 +54,6 @@ export function createCatalogClient(io: RestIo): CatalogClient {
     listInteractionKinds: () => io.request("GET", "/interaction-kinds"),
     listResourceTypes: () => io.request("GET", "/resource-types"),
     listMergeStrategies: () => io.request("GET", "/merge-strategies"),
+    listObserveEventPrefixes: () => io.request("GET", "/observe-event-prefixes"),
   };
 }

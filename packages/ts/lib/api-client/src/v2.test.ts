@@ -261,6 +261,12 @@ describe("REST v2: 새 경로", () => {
     expect(calls[1]?.headers["If-Match"]).toBe("a7");
   });
 
+  it("관측 탭 이벤트 접두어 목록", async () => {
+    const { rest, calls } = fakeServer(() => ({ body: ["hook.", "mcp."] }));
+    expect(await rest.listObserveEventPrefixes()).toEqual(["hook.", "mcp."]);
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(["GET /observe-event-prefixes"]);
+  });
+
   it("병합 전략 목록과 ETag를 함께 주는 설정 읽기·쓰기", async () => {
     const { rest, calls } = fakeServer((c) =>
       c.path === "/merge-strategies" ? { body: [{ id: "union" }] } : { body: { chat: {} }, headers: { ETag: '"s7"' } },

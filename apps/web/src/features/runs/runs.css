@@ -41,9 +41,9 @@
 .runs-graph-canvas { flex: 1 1 0; min-height: 280px; position: relative; }
 .runs-inspector { min-width: 0; min-height: 0; overflow: auto; padding: var(--ac-space-2); }
 @media (max-width: 1279px) {
-  .runs-detail-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: 40% minmax(0, 1fr); }
+  .runs-detail-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(360px, 54%) minmax(0, 1fr); }
   .runs-detail-graph { border-right: 0; border-bottom: 1px solid var(--ac-border); min-height: 0; overflow: hidden; }
-  .runs-graph-canvas { min-height: 0; }
+  .runs-graph-canvas { min-height: 320px; }
 }
 .runs-note { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); margin: var(--ac-space-1) 0; }
 .runs-result-error { color: var(--ac-danger); }

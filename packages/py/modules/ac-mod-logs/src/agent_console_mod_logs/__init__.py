@@ -20,6 +20,8 @@ from .module import (
     module,
 )
 from .ports import (
+    LOG_FILTER_PREDICATES,
+    LOG_SCOPE_KINDS,
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_INGESTED,
@@ -47,6 +49,8 @@ __all__ = [
     "LOGS_INGESTED",
     "LOGS_QUERY",
     "LOGS_TOPIC",
+    "LOG_FILTER_PREDICATES",
+    "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
     "MODULE_ID",
     "SECRET_RULES",

@@ -2,6 +2,12 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.9.0]
+- 계약 v8(5.5R.3, design §5.5R.2.4). 사내 의존 범위를 `^0.9.0`으로 올린다. 하위 계약 버전 `runs`·`common` 1.4.0, 새 하위 경로 `@agent-console/contracts/architecture`(1.0.0).
+- 새 타입(architecture): `ArchitectureSettings`·`ArchitectureProfile`·`ArchitectureCanvas`·`ArchitectureZone`·`ArchitectureCell`·`ArchitectureEdge`(`from` 키, `points: [number, number][]`)·`ArchitectureDrill`·`ArchitectureUnavailable`·`ArchitectureCoverage`·`ArchitectureOptions`, 투영 결과 `ArchitectureView`·`ArchitectureCellView`·`ArchitectureEdgeView`·`ArchitectureGroupView`·`ArchitectureGroupRest`·`ArchitectureUnassignedView`·`ArchitectureUnavailableView`·`ArchitectureSourceCount`·`ArchitectureNote`·`ArchitectureMetric`(`value: number | null` — null은 "수집 안 됨", 0으로 바꾸지 않는다)·`ArchitectureMetricDetail`·`ArchitectureSelector`·`ArchitectureDrillTarget`·`ArchitectureMembership`·`ArchitectureGroupRef`, REST `ArchitectureProfileInfo`·`ArchitectureProfileList`·`ArchitectureProfileDetail`·`ArchitectureProfileCheckRequest`·`ArchitectureProfileCheckResult`·`ArchitectureProjectRequest`·`ArchitectureScopeTooLargeDetails`.
+- 새 타입(runs): `AgentContextPreparedEvent`·`AgentContextPreparedPayload`·`ContextResourceRef`. 새 필드(선택): `NodeStatusPayload.tool_use_id`, `AgentMessagePayload.duration_ms`, `AgentUsagePayload.duration_ms`. `KNOWN_RUN_EVENT_TYPES`에 `agent.context_prepared`.
+- 새 상수: `ERROR_CODES.ARCHITECTURE_PROFILE_NOT_FOUND`(404)·`ARCHITECTURE_SCOPE_TOO_LARGE`(422). 스키마 `x-ui.widget` 키(화면 위젯 이름).
+
 ## [0.8.0]
 - 계약 v7(5.2R.3, design §5.2R.3). 사내 의존 범위를 `^0.8.0`으로 올린다. 하위 계약 버전 `common`·`definitions`·`runs` 1.3.0, `resources`·`usage`·`chat`·`imports` 1.1.0, `modules` 1.2.0, 새 하위 경로 `@agent-console/contracts/projects`(1.0.0).
 - 새 타입: `Project`·`ProjectCreate`·`ProjectUpdate`·`DefinitionKey`·`DefinitionMove`(`from` 키)·`MovePlan`·`MovePlanRequest`·`DeletePlan`·`ProjectDeleteMode`(projects), `ProjectPreferences`·`DefinitionScope`(definitions), `Fix`·`FixAction`·`FixTarget`(common), `BackendUnresolvedDetails`·`UnresolvedBackendNode`(runs), `UsageSetupSnippet`·`UsageWindowInfo`(usage), `ModuleOptionsView`(modules).

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, useShortcuts, useToast } from "@agent-console/ui";
-import { HandoffMatrixView, LogEventTable, eventColumns, hasActiveFilter, isErrorEvent, type HandoffCell, type RowMenuAnchor } from "@agent-console/log-view";
+import { HandoffMatrixView, LogEventTable, focusLogControl, eventColumns, hasActiveFilter, isErrorEvent, type HandoffCell, type RowMenuAnchor } from "@agent-console/log-view";
 import type { LogEvent } from "@agent-console/contracts";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
@@ -88,7 +88,7 @@ export function SearchPage() {
   const setView = (v: View) => url.setScreen({ [SCREEN_PARAMS.view]: v === EVENTS_VIEW ? null : v });
   useShortcuts([
     { id: "logs.x.search", scope: LOGS_SCOPES.search, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
-    { id: "logs.x.filter", scope: LOGS_SCOPES.search, keys: "f", titleKey: "shortcuts.logsFocusFilter", run: () => document.querySelector<HTMLElement>(".ac-lv-addwrap button")?.click() },
+    { id: "logs.x.filter", scope: LOGS_SCOPES.search, keys: "f", titleKey: "shortcuts.logsFocusFilter", run: () => focusLogControl("addFilter", { activate: true }) },
     { id: "logs.x.view", scope: LOGS_SCOPES.search, keys: "h", titleKey: "shortcuts.logsHandoffToggle", run: () => setView(view === EVENTS_VIEW ? MATRIX_VIEW : EVENTS_VIEW) },
     { id: "logs.x.refresh", scope: LOGS_SCOPES.search, keys: "r", titleKey: "shortcuts.logsRefresh", run: refresh },
   ]);

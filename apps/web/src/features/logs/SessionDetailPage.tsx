@@ -6,6 +6,7 @@ import {
   CategoryChips,
   LogEventTable,
   PlaybackBar,
+  focusLogControl,
   eventColumns,
   indexOfSeq,
   isErrorEvent,
@@ -25,9 +26,9 @@ import { useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
 import { LogDetailPanel } from "./LogDetailPanel";
-import { useDetailLink } from "./useDetailLink";
 import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
+import { useDetailLink } from "./useDetailLink";
 import { LogsPageFrame } from "./LogsPageFrame";
 import { useLogsIngested } from "./LogsLive";
 import { FlowSegments, SessionFlow, type FlowView } from "./SessionFlow";
@@ -253,7 +254,7 @@ export function SessionDetailPage() {
     { id: "logs.s.view", scope: LOGS_SCOPES.session, keys: "v", titleKey: "shortcuts.logsFlowView", run: () => traceVisible && setFlowView((v) => (v === "lane" ? "trace" : "lane")) },
     { id: "logs.s.detail", scope: LOGS_SCOPES.session, keys: "d", titleKey: "shortcuts.logsToggleDetail", run: () => selectedUid !== null && setSelectedUid(null) },
     { id: "logs.s.search", scope: LOGS_SCOPES.session, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
-    { id: "logs.s.chips", scope: LOGS_SCOPES.session, keys: "f", titleKey: "shortcuts.logsCategoryFocus", run: () => document.querySelector<HTMLElement>(".ac-lv-catchips button")?.focus() },
+    { id: "logs.s.chips", scope: LOGS_SCOPES.session, keys: "f", titleKey: "shortcuts.logsCategoryFocus", run: () => focusLogControl("categoryChips") },
   ]);
 
   const summary = timeline?.session;

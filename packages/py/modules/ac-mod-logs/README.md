@@ -24,6 +24,8 @@
 | 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`logs.*`, `secrets.redact_suspected_in_logs`) |
 | 선택 | `secrets.rules` | `() -> SecretRules`(`redact_value`) |
 | 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(5.2R.27, 예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
+| 선택(multi) | `logs.scope_kinds` | X27 `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
+| 선택(multi) | `logs.filter_predicates` | X28 `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
 | 토픽 | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
 | WS | `logs` | `logs.ingested` 메시지 |
 | 웹 역할 | `logs` | 로그 화면 |
@@ -35,7 +37,8 @@
 `GET /logs/sessions/{session}/timeline?<LogFilter>`, `POST /logs/aggregate`, `GET /logs/handoffs?<LogFilter>`,
 `GET /logs/taxonomy`, `GET /logs/dashboard-templates`, `GET /logs/schema`,
 `GET /logs/archive?<LogFilter>&format=json|html&tz=<IANA>`(첨부).
-모르는 필터·차원·지표·시간대는 422 `validation_failed`(`details.path`, `details.issues[].code = logs.invalid_query`).
+기본 필터에는 `thread`(여러 값)·`scope`(`<종류>:<값>`)·`max_seq`(이 seq 이하)가 있다.
+모르는 필터·차원·지표·시간대·범위 종류는 422 `validation_failed`(`details.path`, `details.issues[].code = logs.invalid_query`).
 프로젝트 필터 `project=~ungrouped`는 묶기 규칙에 맞지 않는 로그다.
 
 ## 설치자 옵션(`modules.options.mod-logs`)
@@ -169,16 +172,16 @@ open_log_storage(None).kind  # DB도 경로도 없으면 "memory"
 | --- | --- |
 | `module` / `LogsModule` / `MODULE_ID` / `WEB_ROLES` | 서버 모듈(entry point `agent_console.server_modules`) |
 | `base_taxonomy_of` | 옵션 `base_taxonomy_file` → 기본 분류 체계(`LogsService(base_taxonomy=)`에 넘길 값) |
-| `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`events`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
+| `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`parse_filter`·`extensions`·`events`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
 | `LogsModuleSettings` | 설치자 옵션 |
 | `LogRedaction` | 저장 직전 비밀 의심 가리기(포트 값으로) |
-| `LOGS_QUERY`·`LOGS_INGEST`·`SERVER_WARNINGS`·`LOG_SOURCES`·`WORKSPACE_SETTINGS`·`SECRET_RULES`·`LOGS_INGESTED`·`LOGS_TOPIC` | 포트·토픽·WS 토픽 |
+| `LOGS_QUERY`·`LOGS_INGEST`·`SERVER_WARNINGS`·`LOG_SOURCES`·`LOG_SCOPE_KINDS`·`LOG_FILTER_PREDICATES`·`WORKSPACE_SETTINGS`·`SECRET_RULES`·`LOGS_INGESTED`·`LOGS_TOPIC` | 포트·토픽·WS 토픽 |
 | `LogQueryPort`·`LogIngestPort`·`RuntimeLogSource` | 포트 프로토콜(구조 타입) |
 | `load_dashboard_templates`·`parse_dashboard` | 대시보드 템플릿 읽기 |
 | `plugins.load_plugins`·`plugins.bundle_registries` | 호스트 플러그인 로더 |
 | `standalone.main` | 단독 실행 진입점 |
 | `storage.BRANCH`·`open_log_storage`·`LogStorage` | 계보·색인 열기 |
-| `testing.local_settings_module`·`static_settings_module`·`runtime_sources_module`·`RuntimeSource` | 단독 실행·테스트용 모듈 |
+| `testing.local_settings_module`·`static_settings_module`·`runtime_sources_module`·`RuntimeSource`·`query_extensions_module`(X27·X28 등록 흉내) | 단독 실행·테스트용 모듈 |
 
 ## 개발·재사용
 
