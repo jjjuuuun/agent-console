@@ -329,7 +329,8 @@ export function SchemaForm(props: SchemaFormProps) {
       }
       el.focus();
       held = 0;
-      if (!reached) {
+      // 요소가 아직 포커스를 받을 수 없으면(접힌 영역·비활성) 도착으로 치지 않고 다음 시도에서 다시 한다
+      if (!reached && doc.activeElement === el) {
         reached = true;
         onFocusReachedRef.current?.(el);
       }
