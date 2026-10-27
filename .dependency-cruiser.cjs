@@ -29,6 +29,17 @@ module.exports = {
       to: { path: "^packages/ts/lib/contracts/", dependencyTypesNot: ["type-only"] },
     },
     {
+      name: "arch-view-contracts-types-only",
+      comment: "arch-view(구조도 표현)는 사내 패키지 중 contracts의 타입만 import한다(`import type`). ui·log-view·api-client를 import하지 않고 문구·확장은 props로 받는다(design §5.5R.3, 5.5R.14). 위 no-cross-package-deps가 형제 패키지를 막고, 이 규칙은 contracts 값 import까지 막는다.",
+      severity: "error",
+      from: { path: "^packages/ts/lib/arch-view/src/" },
+      to: {
+        path: "^packages/ts/(lib|config)/",
+        pathNot: "^packages/ts/lib/arch-view/",
+        dependencyTypesNot: ["type-only"],
+      },
+    },
+    {
       name: "projects-contracts-types-only",
       comment: "projects는 사내 패키지 중 contracts의 타입만 import한다(`import type`). 전송(api-client)은 props로 주입한다(5.2R.35). 값은 상수 전용 진입점 `@agent-console/contracts/constants`(생성 상수만, 스키마 JSON 없음)에서만 가져온다(5.2R.3 후속: 이슈 코드를 손으로 복사하지 않기 위해).",
       severity: "error",

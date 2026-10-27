@@ -48,6 +48,8 @@
         },
         "tags": {"type": "array", "items": {"type": "string"}, "default": []},
         "detail": {"$ref": "#/$defs/pointer", "default": "", "description": "detail로 쓸 부분(빈 문자열 = 행 전체)."},
+        "store_raw": {"type": "boolean", "default": true, "title": "원문 저장", "description": "false면 이 행의 원문을 색인에 넣지 않는다. detail·raw에는 keep 값과 omitted(bytes = 키 정렬 JSON의 UTF-8 바이트 수, sha256 = 그 해시)만 남아 검색에도 원문이 걸리지 않는다. 제목·필드·근거·요약은 원문에서 읽는다(틀에 본문 포인터를 넣지 않는다)."},
+        "keep": {"type": "array", "items": {"$ref": "#/$defs/pointer"}, "default": [], "title": "남길 값", "description": "store_raw가 false일 때 원문에서 남길 JSON 포인터(같은 위치에 둔다). 요약 summary는 이 값과 omitted를 기준으로 쓴다."},
         "summary": {"$ref": "#/$defs/summary_pointers", "description": "목록 요약으로 쓸 평문(detail 기준 포인터 또는 `{/포인터}` 틀, 앞쪽부터 처음 글이 나오는 것). 비면 detail 전체를 문자열로."}
       }
     },
@@ -165,11 +167,18 @@
     "document_kinds": {
       "type": "object",
       "title": "문서 종류",
-      "description": "파일 이름 → 문서 종류. 없으면 default_document_kind.",
+      "description": "파일 이름 또는 경로 글롭(`*`·`?`, `*`는 `/`도 넘음, 예: */.claude/rules/*.md) → 문서 종류. 파일 이름이 먼저, 그다음 긴 글롭부터. 없으면 default_document_kind.",
       "additionalProperties": {"type": "string"},
-      "default": {"SPEC.md": "spec", "CLAUDE.md": "agents_md", "AGENTS.md": "agents_md", "SKILL.md": "skill"}
+      "default": {"SPEC.md": "spec", "CLAUDE.md": "rules", "CLAUDE.local.md": "rules", "*/.claude/rules/*.md": "rules", "AGENTS.md": "agents_md", "SKILL.md": "skill"}
     },
     "default_document_kind": {"type": "string", "default": "document"},
+    "row_correlation": {
+      "type": "object",
+      "title": "행 공통 상관 근거",
+      "description": "근거 이름 → JSON 포인터. 행에 값이 있으면 그 행에서 나온 모든 이벤트에 근거를 더한다(이벤트가 이미 가진 같은 근거는 그대로). 기본: 응답 행의 requestRef(같은 행의 api-request 기록 id) → request_id.",
+      "additionalProperties": {"$ref": "#/$defs/pointer"},
+      "default": {"request_id": "/requestRef"}
+    },
     "mcp_tool_pattern": {
       "type": "string",
       "title": "MCP 도구 이름 틀",
@@ -286,6 +295,12 @@
         {"name": "mode", "match": {"/type": "mode"}, "category": "control", "title": "모드 · {/mode}", "summary": ["/mode"]},
         {"name": "queue-operation", "match": {"/type": "queue-operation"}, "category": "meta", "title": "입력 대기열 · {/operation}", "summary": ["{/operation} · {/content}", "/operation"]},
         {"name": "cost-state", "match": {"/type": "cost-state"}, "category": "meta", "title": "비용 상태"},
+        {"name": "api-request-meta", "match": {"/type": "api-request", "/params/model": "*"}, "category": "meta", "title": "API 요청 · {/params/model}",
+         "fields": {"model": "/params/model"}, "correlation": {"request_id": "/id"}, "detail": "/params",
+         "summary": ["{/model} · 최대 {/max_tokens} 토큰", "/model"]},
+        {"name": "api-request-blob", "match": {"/type": "api-request-blob"}, "category": "meta", "title": "API 요청 기록 · {/type}",
+         "store_raw": false, "keep": ["/type", "/id", "/uuid", "/timestamp", "/sessionId", "/message/role"],
+         "summary": ["요청 본문 저장 안 함 · {/omitted/bytes}바이트"]},
         {"name": "api-request", "match": {"/type": "api-request*"}, "category": "meta", "title": "API 요청 기록 · {/type}"},
         {"name": "last-prompt", "match": {"/type": "last-prompt"}, "category": "other", "title": "마지막 입력", "summary": ["/lastPrompt"]},
         {"name": "file-history", "match": {"/type": "file-history-*"}, "category": "meta", "title": "파일 기록 · {/type}",

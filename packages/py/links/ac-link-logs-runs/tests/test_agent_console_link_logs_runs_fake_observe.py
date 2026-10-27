@@ -88,7 +88,8 @@ async def test_hook_and_mcp_events_show_as_categories_with_durations() -> None:
     # 같은 tool_use_id의 도구 호출 시작부터 MCP 완료까지(명시 id 짝, 1초 간격)
     assert completed.duration_ms is not None
     assert completed.duration_ms > 0
-    assert completed.correlation == {"session": "s1", "call_id": "s1:tool0"}
+    # 5.5R.7(C4): MCP 서버 이름이 근거 mcp_server로 실린다.
+    assert completed.correlation == {"session": "s1", "call_id": "s1:tool0", "mcp_server": "docs"}
     assert {e.session for e in timeline.events} == {"s1"}
 
 

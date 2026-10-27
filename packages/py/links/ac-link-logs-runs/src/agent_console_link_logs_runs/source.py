@@ -354,10 +354,6 @@ class PlatformRunsClassifier:
         def value(name: str) -> str:
             return resolve(rule.get(name), data, names)
 
-        def template(name: str) -> str:
-            spec = rule.get(name)
-            return render(spec, data, names) if isinstance(spec, str) else ""
-
         call_id = value("call_id")
         correlation: dict[str, str | list[str]] = {}
         if session:
@@ -382,8 +378,8 @@ class PlatformRunsClassifier:
             thread=thread,
             role=value("role"),
             actor=event.actor or "",
-            from_=_string_tuple(template("from")),
-            to=_string_tuple(template("to")),
+            from_=_string_tuple(value("from")),
+            to=_string_tuple(value("to")),
             via=value("via"),
             tool=value("tool"),
             call_id=call_id,

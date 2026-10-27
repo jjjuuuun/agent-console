@@ -33,7 +33,8 @@ uv pip install ./packages/py/features/ac-backend-fake-agent   # 단독
 `response`(`string.Template`: `$prompt`·`$agent_id`·`$agent_name`·`$model`·`$session_id`·`$bundle`·
 `$delegate_1`…), `structured`, `tool_calls`(`[{name, input, output, is_error}]`), `delegate`(아래),
 `ask`(아래), `observe`(아래), `fail`(`{code, message, after_chunks}`), `delay_ms`·`chunk_chars`(규칙별 덮어쓰기),
-`usage`(없으면 단어 수로 계산).
+`usage`(없으면 단어 수로 계산), `llm_duration_ms`(마지막 `agent.usage`의 `duration_ms`, 비우면 null — 5.5R.7 C2).
+플랫폼 도구 호출(`host_tool_calls`)은 만든 호출 id를 `call_host_tool(tool_use_id=)`로 넘긴다.
 
 이벤트 순서: `agent.session_started` → `usage.rate_limit`*(설치자 설정) → 관측(start)* → (`agent.tool_call` →
 `agent.tool_result`)* → 관측(tool)* → 위임* → `agent.text_delta`* → `agent.message` → 관측(end)* → `agent.usage`.

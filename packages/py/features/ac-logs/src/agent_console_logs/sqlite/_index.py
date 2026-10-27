@@ -429,7 +429,12 @@ class SqliteLogIndex:
             durations = self._pair_durations(conn, items, [], ctx)
         more = len(rows) > flt.limit
         return LogEventPage(
-            items=[ev.model_copy(update={"duration_ms": durations.get(ev.uid)}) for ev in items],
+            items=[
+                ev.model_copy(update={"duration_ms": durations[ev.uid]})
+                if ev.uid in durations  # 짝이 없는 이벤트는 복사하지 않는다(큰 범위 읽기 비용)
+                else ev
+                for ev in items
+            ],
             total=total,
             next_cursor=str(items[-1].seq) if more and items else None,
         )

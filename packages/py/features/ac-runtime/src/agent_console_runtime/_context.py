@@ -48,6 +48,7 @@ class NodeInvoker(Protocol):
         *,
         by_edge: str,
         max_depth: int | None,
+        tool_use_id: str | None = None,
     ) -> Awaitable[NodeRunView]: ...
 
 
@@ -288,6 +289,7 @@ class NodeContext:
         *,
         by_edge: str,
         max_depth: int | None = None,
+        tool_use_id: str | None = None,
     ) -> NodeRunView:
         """호출 대상 노드를 **자기 NodeRun**으로 실행하고 결과를 기다린다.
 
@@ -311,6 +313,9 @@ class NodeContext:
             inputs: 대상 입력(포트 이름 → 값).
             by_edge: 이 노드 → 대상 연결 id. 디스크립터에 `invocation`이 있는 연결이어야 한다.
             max_depth: 위임 방식이 정한 깊이 한도(디스크립터 `max_depth`, None = 제한 없음).
+            tool_use_id: 선택. 이 호출을 일으킨 위임 도구 호출 id(백엔드가 알려 준 값). 주면 대상
+                NodeRun의 `node.*` 이벤트 payload `tool_use_id`에 실려, 위임자의 도구 호출 이벤트와
+                대상 실행이 명시 id로 이어진다(design §5.5R.1 C7). 모르면 None.
 
         Returns:
             대상 NodeRun 결과(메모리 원본). 상태는 `succeeded`·`failed`·`skipped`·`waiting`·
@@ -323,7 +328,9 @@ class NodeContext:
         """
         if self._invoke is None:
             raise RuntimeError("이 맥락은 노드를 부를 수 없습니다(엔진이 만든 맥락이 아님)")
-        return await self._invoke(self, node_id, inputs, by_edge=by_edge, max_depth=max_depth)
+        return await self._invoke(
+            self, node_id, inputs, by_edge=by_edge, max_depth=max_depth, tool_use_id=tool_use_id
+        )
 
     async def run_child(
         self,

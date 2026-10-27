@@ -344,3 +344,82 @@ def test_tool_result_and_call_fallback_summaries() -> None:
 
     assert call("CronDelete", {"id": "job-1"}).summary == "CronDelete · job-1"
     assert call("TodoWrite", {"todos": []}).summary == "TodoWrite"
+
+
+# ---------------------------------------------------------------- 5.5R.7 C6·C7
+
+
+@pytest.mark.parametrize(
+    ("path", "kind"),
+    [
+        ("/work/demo/CLAUDE.md", "rules"),
+        ("/work/demo/CLAUDE.local.md", "rules"),
+        ("/work/demo/.claude/rules/api.md", "rules"),
+        ("C:\\work\\demo\\.claude\\rules\\db.md", "rules"),
+        ("/work/demo/AGENTS.md", "agents_md"),
+        ("/work/demo/docs/rules/x.md", "document"),
+    ],
+)
+def test_document_kinds_rules_by_name_and_path_glob(path: str, kind: str) -> None:
+    """C7: rules 종류는 데이터(파일 이름·경로 글롭)다."""
+    row = {
+        "type": "assistant",
+        "message": {
+            "id": "m",
+            "content": [
+                {"type": "tool_use", "id": "t", "name": "Read", "input": {"file_path": path}}
+            ],
+        },
+    }
+    [call] = _classify(row)
+    assert [d.kind for d in call.documents] == [kind]
+
+
+def test_document_kinds_glob_is_user_data() -> None:
+    row = {
+        "type": "assistant",
+        "message": {
+            "id": "m",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "t",
+                    "name": "Read",
+                    "input": {"file_path": "/p/x.rules.md"},
+                }
+            ],
+        },
+    }
+    [call] = _classify(row, {"document_kinds": {"*.rules.md": "house"}})
+    assert [d.kind for d in call.documents] == ["house"]
+
+
+def test_api_request_meta_row_and_request_ref_link() -> None:
+    """C6: api-request 행은 요청 설정(모델·한도)만 detail로, 응답 행은 requestRef로 같은 근거."""
+    request = {
+        "type": "api-request",
+        "id": "req-1",
+        "sessionId": "S",
+        "params": {"model": "claude-x", "max_tokens": 32000, "betas": ["b"]},
+    }
+    event = _one(request)
+    assert (event.category, event.title, event.model) == ("meta", "API 요청 · claude-x", "claude-x")
+    assert event.correlation["request_id"] == "req-1"
+    assert event.detail == request["params"]
+    assert event.summary == "claude-x · 최대 32000 토큰"
+    reply = {
+        "type": "assistant",
+        "requestRef": "req-1",
+        "message": {
+            "id": "m",
+            "content": [
+                {"type": "text", "text": "답"},
+                {"type": "tool_use", "id": "t", "name": "Bash", "input": {}},
+            ],
+        },
+    }
+    events = _classify(reply)
+    assert [e.correlation.get("request_id") for e in events] == ["req-1", "req-1"]
+    # 끄면 근거를 더하지 않는다(데이터)
+    events = _classify(reply, {"row_correlation": {}})
+    assert [e.correlation.get("request_id") for e in events] == [None, None]

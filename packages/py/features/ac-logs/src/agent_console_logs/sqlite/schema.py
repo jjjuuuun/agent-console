@@ -10,6 +10,9 @@
   목록·집계·세션 요약이 좁은 행만 읽고, 검색(`q`)만 `log_search`를, 상세만 `heavy`를 읽는다.
   `body`는 기본값과 같은 필드를 뺀 JSON이다(읽을 때 모델이 기본값을 채운다).
 - `log_corr(seq, basis, value)`: 근거 연결 후보를 인덱스로 찾는다(`body.correlation` 스캔 방지).
+- `thread`·`session`·`run_id`는 `(값, seq)` 색인이다(5.5R.6): `thread`·`scope`
+  필터가 `seq` 순서 쪽 넘김을
+  임시 정렬 없이 하고, 확장 판정이 있어도 `LIMIT`만큼 맞는 행을 찾으면 읽기가 멈춘다.
 - `log_usage.repo_root`: 프로젝트 묶기 기준(이벤트 조인 없이 표본만으로 묶는다).
 """
 
@@ -18,6 +21,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 
 __all__ = [
+    "OBSOLETE_INDEXES",
     "TABLE_NAMES",
     "log_agents",
     "log_bodies",
@@ -64,7 +68,9 @@ log_events = sa.Table(
     sa.Index("ix_log_events_thread_message", "thread", "message_id"),
     sa.Index("ix_log_events_category_seq", "category", "seq"),
     sa.Index("ix_log_events_cwd", "cwd", "repo_root"),
-    sa.Index("ix_log_events_run", "run_id"),
+    sa.Index("ix_log_events_session_seq", "session", "seq"),
+    sa.Index("ix_log_events_thread_seq", "thread", "seq"),
+    sa.Index("ix_log_events_run_seq", "run_id", "seq"),
     sa.Index("ix_log_events_time", "etime"),
     sa.Index("ix_log_events_source", "source", "seq"),
     sqlite_autoincrement=True,
@@ -159,3 +165,6 @@ log_usage = sa.Table(
 
 TABLE_NAMES: tuple[str, ...] = tuple(sorted(log_metadata.tables))
 """이 색인이 소유한 테이블 이름."""
+
+OBSOLETE_INDEXES: tuple[str, ...] = ("ix_log_events_run",)
+"""옛 스키마에만 있던 색인 이름(`logs_0002`가 지운다). 단독 열기(`open_log_index`)도 지운다."""

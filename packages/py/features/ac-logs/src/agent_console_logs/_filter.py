@@ -243,6 +243,12 @@ def _values(name: str, value: JsonValue) -> tuple[str, ...]:
     return tuple(dict.fromkeys(out))
 
 
+def _blank(value: JsonValue) -> bool:
+    """빈 문자열(또는 빈 문자열만 든 목록)인지. None·빈 목록은 아니다."""
+    items = value if isinstance(value, list | tuple) else [value]
+    return bool(items) and all(isinstance(item, str) and not item.strip() for item in items)
+
+
 def _single(value: JsonValue) -> JsonValue:
     if isinstance(value, list | tuple):
         return value[-1] if value else None
@@ -301,6 +307,7 @@ def parse_log_filter(
         params: 이름 → 값.
         path: 오류 위치 접두(예: `filter`).
         extra: 받을 확장 필터 이름(X28, 기본 이름과 겹치면 기본이 이긴다). 값은 여러 값(쉼표).
+            빈 값(`name=`)은 버리지 않고 값 하나 `""`로 남긴다.
 
     Raises:
         LogQueryError: 모르는 이름, 형식이 틀린 값(`path`에 위치).
@@ -343,6 +350,10 @@ def parse_log_filter(
             values = _values(name, value)
             if values:
                 extras[name] = values
+            elif _blank(value):
+                # 확장 필터의 빈 값(`name=`)은 "빈 값과 같음"이라는 값이다(예: 이름 없는 묶음
+                # `arch_group=`). 기본 필드와 달리 버리지 않는다.
+                extras[name] = ("",)
         else:
             raise LogQueryError(f"모르는 필터 이름: {name}", where)
     if extras:

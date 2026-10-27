@@ -224,6 +224,8 @@ class _NodeState:
     """호출 회차. 스케줄 실행은 0."""
     invoked_by: tuple[str, ...] | None = None
     """호출 실행이면 위임자 노드 경로."""
+    tool_use_id: str | None = None
+    """호출 실행이면 위임 도구 호출 id(알 때만, `node.*` payload `tool_use_id`)."""
     inflight: list[str] = field(default_factory=list)
     """이 실행이 지금 `invoke_node`로 부르고 있는(또는 차례를 기다리는) 대상 노드 id."""
     closed: bool = False
@@ -578,6 +580,7 @@ class _Execution:
                 node_type=state.spec.type,
                 iteration=state.iteration,
                 call=state.call if invoked else None,
+                tool_use_id=state.tool_use_id if invoked else None,
                 outputs_preview=preview(outputs, self.s.preview_chars) if outputs else None,
                 usage=usage,
                 duration_ms=duration_ms,
@@ -707,8 +710,16 @@ class _Execution:
             *,
             by_edge: str,
             max_depth: int | None,
+            tool_use_id: str | None = None,
         ) -> NodeRunView:
-            return await self._invoke(state, node_id, inputs, by_edge=by_edge, max_depth=max_depth)
+            return await self._invoke(
+                state,
+                node_id,
+                inputs,
+                by_edge=by_edge,
+                max_depth=max_depth,
+                tool_use_id=tool_use_id,
+            )
 
         return invoke
 
@@ -1270,6 +1281,7 @@ class _Execution:
         *,
         by_edge: str,
         max_depth: int | None,
+        tool_use_id: str | None = None,
     ) -> NodeRunView:
         """`ctx.invoke_node`: 대상을 자기 NodeRun으로 실행한다(같은 대상은 직렬)."""
         spec, impl = self._invocation_target(caller, node_id, by_edge)
@@ -1284,7 +1296,9 @@ class _Execution:
         try:
             lock = self.call_locks.setdefault(node_id, asyncio.Lock())
             async with lock:
-                return await self._run_call(caller, spec, impl, path, by_edge, inputs)
+                return await self._run_call(
+                    caller, spec, impl, path, by_edge, inputs, tool_use_id=tool_use_id
+                )
         finally:
             caller.inflight.remove(node_id)
             self._sync_run_status()
@@ -1423,6 +1437,8 @@ class _Execution:
         path: tuple[str, ...],
         by_edge: str,
         inputs: Mapping[str, Any],
+        *,
+        tool_use_id: str | None = None,
     ) -> NodeRunView:
         """차례가 온 호출 하나: NodeRun을 만들고 실행한다(직렬 잠금 안)."""
         node_id = spec.id
@@ -1453,6 +1469,7 @@ class _Execution:
             key=key,
             call=call,
             invoked_by=_path_tuple(caller),
+            tool_use_id=tool_use_id or None,
         )
         state.inputs = dict(inputs)
         state.received = tuple(

@@ -235,12 +235,12 @@ describe("QA 1회 수정", () => {
     const names = within(screen.getByRole("menu")).getAllByRole("menuitem").map((e) => e.textContent);
     expect(names).toEqual(["이름 c", "이름 d"]);
   });
-  it("Dialog actions 세로 쌓기 기준은 md(content 478px)보다 작다", () => {
+  it("Dialog actions 세로 쌓기 기준은 md(content 478px)보다 작다(5.5R.30: 359)", () => {
     const css = readFileSync(join(import.meta.dirname, "tokens.css"), "utf-8");
     const m = /@container \(max-width: (\d+)px\)\s*\{\s*\.ac-dialog-actions/.exec(css);
     expect(m).not.toBeNull();
     const md = Number(/--ac-dialog-w-md:\s*(\d+)px/.exec(css)![1]) - 2;
     expect(Number(m![1])).toBeLessThan(md);
-    expect(Number(m![1])).toBeGreaterThanOrEqual(398);
+    expect(Number(m![1])).toBeGreaterThanOrEqual(359);
   });
 });

@@ -18,3 +18,4 @@
   도구 결과·호출 요약 대체 항목(블록 수·결과 없음·도구 이름). 요약 틀 `{/포인터|count}` 추가.
 - 5R.19: 순위 태그 `session_title.renamed`(custom-title)·`session_title.generated`(ai-title), 타임라인 소음 행
   (`ai-title`·`queue-operation`·`atis-latch`·`file-history-*`·`cost-state`·`api-request*`)을 숨김 범주 `meta`로(규칙 데이터).
+- 5.5R.34: 행 규칙 `store_raw`(기본 `true`)·`keep` — `false`면 detail·raw에 원문 대신 `keep` 값 + `omitted`(크기·sha256). 기본 규칙 `api-request-blob`(요청 본문)은 원문을 저장하지 않는다(사용자 `extra_row_rules`로 다시 켬). `omitted_row`·`OMITTED_KEY` 공개. README: 설정 변경은 바꾼 뒤 수집하는 행부터, 옛 색인은 색인을 새로 만들어야 바뀐다.

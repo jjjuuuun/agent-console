@@ -45,6 +45,10 @@ class HostToolResult:
 type HostToolHandler = Callable[[dict[str, Any]], Awaitable[HostToolResult]]
 """모델이 준 입력(JSON 객체) → 결과. 백엔드가 호출마다 부른다(동시에 여러 번 불릴 수 있다)."""
 
+type HostToolCallHandler = Callable[[dict[str, Any], str | None], Awaitable[HostToolResult]]
+"""(모델이 준 입력, 백엔드가 아는 도구 호출 id 또는 None) → 결과. 호출 id가 필요한 도구(예: 위임
+도구가 대상 실행과 호출을 잇는 경우, design §5.5R.1 C7)가 `HostTool.call_handler`로 준다."""
+
 
 @dataclass(frozen=True, slots=True)
 class HostTool:
@@ -55,12 +59,16 @@ class HostTool:
         description: 모델에게 보이는 설명.
         input_schema: 입력 JSON Schema(최상위 object).
         handler: 호출마다 불리는 비동기 함수(`HostToolHandler`).
+        call_handler: 선택. 호출 id까지 받는 핸들러(`HostToolCallHandler`). 있으면
+            `call_host_tool`이 `handler` 대신 이것을 부르고 백엔드가 준 `tool_use_id`(모르면 None)를
+            넘긴다.
     """
 
     name: str
     description: str
     input_schema: Mapping[str, Any]
     handler: HostToolHandler
+    call_handler: HostToolCallHandler | None = None
 
 
 def duplicate_host_tool_names(tools: Iterable[HostTool]) -> list[str]:
@@ -92,6 +100,7 @@ async def call_host_tool(
     arguments: Mapping[str, Any],
     *,
     cancel: CancelToken | None = None,
+    tool_use_id: str | None = None,
     error_template: str = DEFAULT_HOST_TOOL_ERROR_TEMPLATE,
     cancelled_text: str = DEFAULT_HOST_TOOL_CANCELLED_TEXT,
 ) -> HostToolResult:
@@ -104,13 +113,19 @@ async def call_host_tool(
     - 이 코루틴 자체가 취소되면(예: 도구 서버가 요청을 취소) 핸들러도 취소되고 `CancelledError`가
       그대로 올라간다.
     - 핸들러가 `HostToolResult`가 아닌 값을 돌려주면 오류 결과다.
+    - `tool_use_id`: 백엔드가 아는 이 호출의 도구 호출 id. 도구에 `call_handler`가 있으면 그것을
+      이 id와 함께 부른다(없으면 `handler`, id는 쓰지 않는다).
 
     Returns:
         모델에게 돌려줄 결과(예외 없음, 취소 전파 제외).
     """
     if cancel is not None and cancel.cancelled:
         return HostToolResult(text=cancelled_text.format(tool=tool.name), is_error=True)
-    work = asyncio.ensure_future(tool.handler(dict(arguments)))
+    work = asyncio.ensure_future(
+        tool.call_handler(dict(arguments), tool_use_id or None)
+        if tool.call_handler is not None
+        else tool.handler(dict(arguments))
+    )
     stop = asyncio.ensure_future(cancel.wait()) if cancel is not None else None
     try:
         if stop is not None:

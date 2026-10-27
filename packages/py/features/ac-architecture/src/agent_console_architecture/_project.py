@@ -318,6 +318,7 @@ def project_architecture(
     max_seq: int | None = None,
     notes: Iterable[ArchitectureNote] = (),
     cell_size: tuple[float, float] = DEFAULT_CELL_SIZE,
+    matches: Sequence[EventMatch] | None = None,
 ) -> ArchitectureView:
     """이벤트 목록을 프로필로 투영한다(순수 함수: 서버·색인·시계 없음).
 
@@ -340,20 +341,49 @@ def project_architecture(
         max_seq: 셀 이벤트 순번 상한.
         notes: 결과에 그대로 실을 안내(예: `ProfileCatalog.pick`의 대체 안내).
         cell_size: 칸 크기를 비운 칸의 기본 (폭, 높이).
+        matches: 이미 판정한 결과(`events`와 같은 순서·길이). 같은 프로필·연산자·`error_categories`
+            로 만든 `ProfileMatcher`의 결과여야 한다. 반복 투영에서 판정을 다시 하지 않으려고
+            쓴다(연동 모듈의 결과 캐시·증분 읽기). 없으면 여기서 판정한다.
 
     Returns:
         그리기 완결형 `ArchitectureView`. 이벤트·칸이 없어도 예외 없이 빈 결과다.
+
+    Raises:
+        ValueError: `matches`의 길이가 `events`와 다를 때.
     """
     kinds = dict(source_kinds or {})
-    scoped = [e for e in events if max_seq is None or e.seq <= max_seq]
-    matcher = ProfileMatcher(profile, operators, error_categories=error_categories)
-    matches = [matcher.match_subject(event_subject(e)) for e in scoped]
+    if matches is None:
+        scoped = [e for e in events if max_seq is None or e.seq <= max_seq]
+        matcher = ProfileMatcher(profile, operators, error_categories=error_categories)
+        found = [matcher.match_subject(event_subject(e)) for e in scoped]
+    else:
+        given = list(events)
+        if len(given) != len(matches):
+            raise ValueError(f"판정 결과 수({len(matches)})가 이벤트 수({len(given)})와 다릅니다")
+        pairs = [
+            (e, m)
+            for e, m in zip(given, matches, strict=True)
+            if max_seq is None or e.seq <= max_seq
+        ]
+        scoped = [e for e, _m in pairs]
+        found = [m for _e, m in pairs]
+    # 칸·연결·분류 안 됨별 이벤트 위치를 한 번에 모은다(칸마다 전체를 다시 훑지 않는다).
+    by_cell: dict[str, list[int]] = {}
+    by_edge: dict[str, list[int]] = {}
+    lonely: list[int] = []
+    for i, m in enumerate(found):
+        for cid in m.cells:
+            by_cell.setdefault(cid, []).append(i)
+        for eid in m.edges:
+            by_edge.setdefault(eid, []).append(i)
+        if m.unassigned:
+            lonely.append(i)
     priority: dict[str, int] = {}
     for kind in profile.source_priority:
         priority.setdefault(kind, len(priority))
     scope = _Scope(
         events=scoped,
-        matches=matches,
+        matches=found,
         source_kinds=kinds,
         priority=priority,
         tokens=_token_index(tokens),
@@ -370,7 +400,7 @@ def project_architecture(
     unavailable: list[ArchitectureUnavailableView] = []
     statuses: dict[str, tuple[ArchitectureItemStatus, str | None]] = {}
     for cid, cell in profile.cells.items():
-        matched = [i for i, m in enumerate(matches) if cid in m.cells]
+        matched = by_cell.get(cid, [])
         kept, sources = scope.prioritize(matched)
         status, reason = _cell_status(profile, cid, present, len(matched))
         statuses[cid] = (status, reason)
@@ -418,7 +448,7 @@ def project_architecture(
             continue
         seen.add(edge.id)
         observed = is_observed_kind(edge.kind)
-        matched = [i for i, m in enumerate(matches) if edge.id in m.edges] if observed else []
+        matched = by_edge.get(edge.id, []) if observed else []
         kept, sources = scope.prioritize(matched)
         status, reason = _edge_status(edge, len(matched), statuses)
         edge_views.append(
@@ -454,7 +484,7 @@ def project_architecture(
 
     unassigned_view = None
     if profile.unassigned:
-        kept, sources = scope.prioritize([i for i, m in enumerate(matches) if m.unassigned])
+        kept, sources = scope.prioritize(lonely)
         unassigned_view = ArchitectureUnassignedView(
             metrics=_metrics(None, kept, scope, _OBSERVED),
             selector=ArchitectureSelector(

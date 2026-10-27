@@ -45,10 +45,10 @@ const w = (n: number | string) => (typeof n === "number" ? `${n}px` : n);
 export function sessionColumns(ids: readonly string[], messages?: DeepPartial<LogViewMessages>, widths: Readonly<Record<string, number | string>> = {}): ColumnSpec<LogSessionSummary>[] {
   const m = mergeMessages(messages);
   // 고정 열은 px, 프로젝트·모델은 남는 폭을 나눠 가진다(최소 폭 아래로는 줄지 않는다).
-  const base: Record<string, number | string> = { start: 104, session: 84, project: "minmax(80px,1.4fr)", threads: 64, events: 64, errors: 56, models: "minmax(72px,1fr)", tokens: 72, length: 72, source: 120 };
-  const min: Record<string, number> = { start: 104, session: 84, project: 80, threads: 64, events: 64, errors: 56, models: 72, tokens: 72, length: 72, source: 120 };
+  const base: Record<string, number | string> = { start: 104, session: 84, title: "minmax(120px,2fr)", project: "minmax(80px,1.4fr)", threads: 64, events: 64, errors: 56, models: "minmax(128px,1fr)", tokens: 72, length: 72, source: 120 };
+  const min: Record<string, number> = { start: 104, session: 84, title: 120, project: 80, threads: 64, events: 64, errors: 56, models: 128, tokens: 72, length: 72, source: 120 };
   // 좁은 폭에서 남길 순서(큰 수가 끝까지 남는다): 시작·세션·길이·이벤트·오류·토큰 > 프로젝트·모델 > 에이전트 수·출처.
-  const priority: Record<string, number> = { start: 10, session: 9, length: 8, events: 7, errors: 6, tokens: 5, project: 4, models: 3, threads: 2, source: 1 };
+  const priority: Record<string, number> = { start: 10, session: 9, title: 6.5, length: 8, events: 7, errors: 6, tokens: 5, project: 4, models: 3, threads: 2, source: 1 };
   const endAligned = new Set(["events", "errors", "tokens", "length", "threads"]);
   return ids.map((id) => {
     const width = widths[id] ?? base[id] ?? "minmax(0,1fr)";
@@ -151,6 +151,8 @@ export function SessionList(props: SessionListProps) {
       }
       case "session":
         return <span className="ac-lv-mono" title={s.session}>{shortId(s.session)}</span>;
+      case "title":
+        return s.title ? <span className="ac-lv-ellipsis" title={s.title}>{s.title}</span> : m.none;
       case "project":
         return s.project ? <span className="ac-lv-ellipsis" title={s.project.id}>{s.project.label || s.project.id}</span> : m.none;
       case "threads":

@@ -309,6 +309,15 @@ describe("SessionList", () => {
     expect(screen.getByText(/⚠/)).toBeTruthy();
     expect(screen.getByText("2분 05초")).toBeTruthy();
   });
+  it("제목 열: 제목을 말줄임 셀로 보이고 없으면 –, 머리글은 메시지 표", () => {
+    const cols = sessionColumns(["session", "title"]);
+    expect(cols[1]?.header).toBe("제목");
+    render(<SessionList sessions={[{ session: "s1", title: "로그인 버그 고치기" }, { session: "s2", title: "" }]} columns={cols} order="desc" onOpen={() => undefined} />);
+    const t = screen.getByText("로그인 버그 고치기");
+    expect(t.getAttribute("title")).toBe("로그인 버그 고치기");
+    expect(t.className).toContain("ac-lv-ellipsis");
+    expect(screen.getAllByText("–").length).toBe(1);
+  });
   it("시작 열 머리만 정렬 토글, Enter·클릭으로 열기, 상한 안내", () => {
     const onOrder = vi.fn();
     const onOpen = vi.fn();

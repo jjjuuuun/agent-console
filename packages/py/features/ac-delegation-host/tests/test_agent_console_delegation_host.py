@@ -466,6 +466,15 @@ async def test_two_targets_run_as_their_own_node_runs() -> None:
         assert nr.call == 0
     calls = stack.events(run, "agent.tool_call")
     assert [c.payload["name"] for c in calls] == ["delegate", "delegate"]
+    # 5.5R.7 C7: 대상 NodeRun의 node.started·node.completed에 위임 도구 호출 id가 실린다
+    ids = {c.payload["tool_use_id"] for c in calls}
+    for nid, call_event in zip(("a", "b"), calls, strict=True):
+        started = [e for e in stack.events(run, "node.started") if e.node_path == ["lead", nid]]
+        completed = [e for e in stack.events(run, "node.completed") if e.node_path == ["lead", nid]]
+        assert [e.payload["tool_use_id"] for e in started + completed] == [
+            call_event.payload["tool_use_id"]
+        ] * 2
+    assert len(ids) == 2
 
 
 async def test_failed_target_is_error_result_and_run_completes() -> None:
@@ -701,6 +710,9 @@ async def test_claude_sdk_tool_call_invokes_target_node() -> None:
     assert call.results == [{"content": [{"type": "text", "text": "설계안"}], "isError": False}]
     (target,) = [nr for nr in stack.node_runs(run) if nr.node_id == "a"]
     assert target.invoked_by == ["lead"]
+    # SDK 도구 핸들러는 호출 id를 받지 않는다(입력만) → 대상 node.started의 tool_use_id는 null
+    (started,) = [e for e in stack.events(run, "node.started") if e.node_path == ["lead", "a"]]
+    assert started.payload["tool_use_id"] is None
 
 
 async def test_mixed_contributions_reach_claude_sdk_in_one_request() -> None:

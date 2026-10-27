@@ -14,11 +14,11 @@ from agent_console_contracts.logs import LogAggregateRequest, LogEventPage
 from agent_console_logs import LogFilter
 
 from .ports import LogQueryLike, RunReader
+from .scopes import run_sessions
 from .source import SOURCE_ID
 
 __all__ = ["RunLogs", "RunNotFoundError"]
 
-SESSION_DIMENSION = "session"
 SOURCE_DIMENSION = "source"
 COUNT_METRIC = "events"
 """``ac-logs`` 질의 엔진의 차원·지표 이름(``agent_console_logs.DIMENSIONS``·``METRICS``)."""
@@ -50,20 +50,7 @@ class RunLogs:
         """Run의 세션 id(정렬). Run이 없으면 ``RunNotFoundError``."""
         if self._runs.get(run_id) is None:
             raise RunNotFoundError(run_id)
-        found = {
-            n.backend_session_id for n in self._runs.list_node_runs(run_id) if n.backend_session_id
-        }
-        rows = self._logs.aggregate(
-            LogAggregateRequest(
-                group_by=[SESSION_DIMENSION],
-                metric=COUNT_METRIC,
-                filter={"run_id": [run_id], "source": [self._source]},
-            )
-        )
-        for row in rows:
-            value = row.keys.get(SESSION_DIMENSION)
-            if value:
-                found.add(value)
+        found = run_sessions(self._runs, self._logs, [run_id], source_id=self._source)
         return sorted(found)
 
     def _other_sources(self, sessions: Collection[str]) -> list[str]:

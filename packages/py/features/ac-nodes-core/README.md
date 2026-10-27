@@ -66,7 +66,9 @@ capabilities.resource_slots)`, 파일 칸은 `<RUN_FILES_ROOT>/<run>/<node>/`에
 `<RUN_FILES_ROOT>/<run>/<node>/_bundle/<node>/<칸>/<항목 name>/`에 같은 규칙으로 쓰고 항목을
 `{…, root, tree_root, files: [{name, path, media_type?}]}`로 바꾼다(칸 이름은 모르고 모양만 본다. 트리 폴더 이름이
 노드 id라 백엔드가 이 폴더를 플러그인 폴더로 넘겨도 노드마다 이름이 다르다) → 5. 정의(식별) + 유효 설정, 비밀 참조 해석,
-프롬프트 = `assemble_prompt(in 값, prompt_template)`(변수 `{inputs}`·`{message}`·`{node}`), 세션 = `SESSIONS[node]`
+프롬프트 = `assemble_prompt(in 값, prompt_template)`(변수 `{inputs}`·`{message}`·`{node}`). 요청을 만든 뒤 백엔드를 부르기 전에
+`agent.context_prepared`(`context_prepared_payload`: 묶음 출처의 리소스 id·종류·바이트 수·sha256과 조각 수 = 프롬프트
+입력 수, **본문 없음**, design §5.5R.1 C1)를 낸다, 세션 = `SESSIONS[node]`
 (유효 `session`이 `fresh`면 없음, 백엔드가 다르면 없음), `interactions` = `session_grant(plan, node, 위임 방식)`
 → 6. 위임 대상(`invocation` 연결)이 있으면 대상을 위임 방식별로 묶고, 묶음마다 유효 설정·묶음·`describe_member`·
 방식 config(`delegation[방식 id]`)로 `DelegationPlan`을 만들어 `validate` → 방식이 하나면

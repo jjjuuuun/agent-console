@@ -7,7 +7,9 @@
       구독 ``RUNS_EVENT``, 제공 ``LOG_SOURCES``.
     - HTTP 없이 쓰는 부품: ``PlatformRunsSource``·``PlatformRunsClassifier``(``platform_runs``로
       한 쌍), 대응표 ``EventMap``(``load_default_event_map`` — 패키지 데이터
-      ``run_event_map.yaml``), ``ScanDebouncer``, ``RunLogs``(``/runs/{id}/logs`` 계산).
+      ``run_event_map.yaml``), ``ScanDebouncer``, ``RunLogs``(``/runs/{id}/logs`` 계산),
+      범위 종류 ``RunScopeKind``(``run_scope_kinds`` — X27 ``run``·``run-tree``)·``run_sessions``·
+      ``run_tree_ids``.
     - ``build_router``: ``/runs/{id}/logs``.
 """
 
@@ -32,6 +34,7 @@ from .module import (
     module,
 )
 from .ports import (
+    LOG_SCOPE_KINDS,
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_QUERY,
@@ -46,6 +49,14 @@ from .ports import (
 )
 from .routes import build_router
 from .scheduler import ScanDebouncer
+from .scopes import (
+    RUN_SCOPE_KIND,
+    RUN_TREE_SCOPE_KIND,
+    RunScopeKind,
+    run_scope_kinds,
+    run_sessions,
+    run_tree_ids,
+)
 from .source import (
     CLASSIFIER_ID,
     SOURCE_ID,
@@ -66,12 +77,15 @@ __all__ = [
     "INVALID_QUERY",
     "LOGS_INGEST",
     "LOGS_QUERY",
+    "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
     "MODULE_ID",
     "RULE_SCHEMA",
     "RUNS_EVENT",
     "RUNS_EVENTS",
     "RUNS_READER",
+    "RUN_SCOPE_KIND",
+    "RUN_TREE_SCOPE_KIND",
     "SOURCE_ID",
     "SOURCE_SCHEMA",
     "WEB_ROLES",
@@ -88,6 +102,7 @@ __all__ = [
     "RunLogs",
     "RunNotFoundError",
     "RunReader",
+    "RunScopeKind",
     "RuntimeLogSource",
     "ScanDebouncer",
     "build_router",
@@ -95,4 +110,7 @@ __all__ = [
     "load_event_map",
     "module",
     "platform_runs",
+    "run_scope_kinds",
+    "run_sessions",
+    "run_tree_ids",
 ]

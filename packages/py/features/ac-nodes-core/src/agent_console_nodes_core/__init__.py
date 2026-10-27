@@ -32,6 +32,8 @@
       ``SubagentEdgeConfig``, ``UsesEdgeConfig``, ``MessageEdgeConfig``, ``ReplyEdgeConfig``
     - 프롬프트 합치기: ``assemble_prompt``, ``PromptInput``,
       ``PromptFormat``(유효 설정 ``prompt_input_*``)
+    - 맥락 구성 표지(design §5.5R.1 C1): ``context_prepared_payload``(실행 묶음 → 리소스 id·종류·
+      바이트 수·sha256과 조각 수, 본문 없음), ``content_digest``, ``CONTEXT_PREPARED_EVENT``
     - 실행 폴더 파일: ``write_files``, ``write_item_trees``(항목 `files` 트리), ``run_folder``,
       ``safe_relative_name``, ``safe_part``, ``ITEM_FILES_KEY``, ``ITEM_TREES_DIR``
     - 앱이 주입하는 서비스 키: ``AGENT_LOOKUP``(``AgentLookup``), ``WORKSPACE_SETTINGS``,
@@ -75,6 +77,11 @@ from agent_console_nodes_core.conditional import (
     WhenEdge,
     WhenEdgeConfig,
     condition_subject,
+)
+from agent_console_nodes_core.context import (
+    CONTEXT_PREPARED_EVENT,
+    content_digest,
+    context_prepared_payload,
 )
 from agent_console_nodes_core.delegation import SDK_SUBAGENTS, SdkSubagentsStrategy, subagent_specs
 from agent_console_nodes_core.edges import (
@@ -146,6 +153,7 @@ __all__ = [
     "AGENT_ROLE",
     "ASKS_PORT",
     "CONDITION_FALSE",
+    "CONTEXT_PREPARED_EVENT",
     "DEFAULT_BACKEND",
     "DEFAULT_LOOP_MAX_ITERATIONS",
     "DEFAULT_MESSAGE_KEY",
@@ -220,6 +228,8 @@ __all__ = [
     "assemble_prompt",
     "child_sessions",
     "condition_subject",
+    "content_digest",
+    "context_prepared_payload",
     "pick_replies",
     "review_response_schema",
     "run_folder",

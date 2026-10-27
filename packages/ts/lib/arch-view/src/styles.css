@@ -1,0 +1,252 @@
+/*
+ * @agent-console/arch-view 스타일. 색·글꼴·간격은 tokens.css의 --ac-* 변수만 쓴다(hex 직접 사용 금지).
+ * 앱이 tokens.css와 이 파일을 각각 한 번 로드한다.
+ * 모양 규칙: docs/design/screen-architecture.md §2. 칸 id·연결 id·종류 이름은 이 파일에 없다(데이터 속성 값으로만 구분).
+ */
+@import "@xyflow/react/dist/style.css";
+
+.ac-arch-root {
+  --arch-line: 1.75px;
+  --arch-line-hover: 2.25px;
+  --arch-line-selected: var(--ac-edge-selected-width, 2.5px);
+  --arch-inv: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--ac-bg);
+  color: var(--ac-text);
+  font-family: var(--ac-font-sans);
+  font-size: var(--ac-text-xs);
+  line-height: var(--ac-lh-xs);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.ac-arch-root[data-loading] { align-items: center; justify-content: center; color: var(--ac-text-muted); }
+.ac-arch-sr {
+  position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.ac-arch-skip {
+  position: absolute; left: 8px; top: 8px; z-index: var(--ac-z-popover, 40);
+  height: var(--ac-control-md); padding: 0 12px; border-radius: var(--ac-radius-md);
+  border: 1px solid var(--ac-border-strong); background: var(--ac-surface-1); color: var(--ac-text); font: inherit;
+  transform: translateY(-200%);
+}
+.ac-arch-skip:focus-visible { transform: none; outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+
+/* ---- 도구줄·범례 팝오버 */
+.ac-arch-head { position: relative; flex: none; }
+.ac-arch-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2, 8px); padding: 4px 0; min-height: 40px; }
+.ac-arch-btn, .ac-arch-select {
+  box-sizing: border-box; height: var(--ac-control-md); min-width: var(--ac-control-md); padding: 0 10px;
+  border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md);
+  background: var(--ac-btn-bg, var(--ac-surface-2)); color: var(--ac-text); font: inherit; cursor: pointer;
+  white-space: nowrap;
+}
+.ac-arch-btn:hover, .ac-arch-select:hover { background-image: linear-gradient(var(--ac-hover-bg), var(--ac-hover-bg)); }
+.ac-arch-btn[aria-pressed="true"], .ac-arch-btn[aria-expanded="true"] { background: var(--ac-accent-bg); border-color: var(--ac-accent); }
+.ac-arch-btn:focus-visible, .ac-arch-select:focus-visible, .ac-arch-group-chip:focus-visible, .ac-arch-info-drill:focus-visible {
+  outline: 2px solid var(--ac-focus-ring); outline-offset: 2px;
+}
+.ac-arch-scale { font-variant-numeric: tabular-nums; min-width: 56px; }
+.ac-arch-seg { display: inline-flex; }
+.ac-arch-seg > .ac-arch-btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ac-arch-seg > .ac-arch-btn:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+.ac-arch-legend-btn { margin-left: auto; }
+.ac-arch-popover {
+  position: absolute; right: 0; top: 100%; z-index: var(--ac-z-popover, 40); box-sizing: border-box;
+  width: 320px; max-width: 100%; padding: 12px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md);
+  background: var(--ac-surface-1); box-shadow: var(--ac-shadow-1);
+}
+.ac-arch-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ac-arch-legend > li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ac-arch-legend > li > span:last-child { min-width: 0; color: var(--ac-text-muted); }
+.ac-arch-swatch-line { flex: none; }
+.ac-arch-note { margin: 0; padding: 4px 0; color: var(--ac-text-subtle); }
+
+/* ---- 캔버스 */
+.ac-arch-canvas {
+  position: relative; flex: 1 1 auto; min-height: 160px; min-width: 0; overflow: hidden;
+  border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md);
+  background-color: var(--ac-bg);
+  background-image: radial-gradient(var(--ac-canvas-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.ac-arch-canvas .react-flow { background: transparent; }
+.ac-arch-canvas .react-flow__pane { cursor: grab; }
+.ac-arch-canvas .react-flow__pane.dragging { cursor: grabbing; }
+.ac-arch-canvas .react-flow__node { background: none; border: 0; padding: 0; }
+.ac-arch-layer { position: absolute; left: 0; top: 0; z-index: 10; pointer-events: none; }
+.ac-arch-edges { position: absolute; left: 0; top: 0; overflow: visible; }
+
+/* ---- 영역 (칸 뒤, 그리기 전용) */
+/* 모르는 영역 style은 boundary와 같게 그린다(기본 규칙). 알아보는 style 이름은 CSS 선택자에만 있다. */
+.ac-arch-zone {
+  position: relative; box-sizing: border-box; width: 100%; height: 100%; pointer-events: none;
+  background: var(--ac-surface-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-lg);
+}
+.ac-arch-zone[data-zone-style="service"] {
+  background: color-mix(in srgb, var(--ac-cat-6) 6%, var(--ac-surface-2));
+  border: 1px solid color-mix(in srgb, var(--ac-cat-6) 40%, var(--ac-border)); border-radius: var(--ac-radius-lg);
+}
+.ac-arch-zone[data-zone-style="runtime"] {
+  background: color-mix(in srgb, var(--ac-text) 3%, transparent);
+  border: 1px dashed var(--ac-border); border-radius: var(--ac-radius-md);
+}
+.ac-arch-zone-title, .ac-arch-zone-desc { position: absolute; left: 22px; right: 22px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ac-arch-zone-title { top: 14px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-xs); font-weight: var(--ac-fw-strong); color: var(--ac-text); }
+.ac-arch-zone-desc { top: 34px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-subtle); }
+.ac-arch-zone[data-zone-style="runtime"] > .ac-arch-zone-title { left: 12px; right: 12px; top: 6px; }
+.ac-arch-zone[data-zone-style="runtime"] > .ac-arch-zone-desc { display: none; }
+.ac-arch-zone.ac-arch-swatch-zone { flex: none; display: inline-block; width: 40px; height: 22px; border-radius: var(--ac-radius-sm); }
+
+/* ---- 칸 */
+.ac-arch-cell, .ac-arch-row {
+  --cell-tone: var(--ac-cat-neutral);
+}
+.ac-arch-cell {
+  position: relative; box-sizing: border-box; width: 100%; height: 100%; margin: 0;
+  display: grid; grid-template-rows: repeat(3, var(--ac-lh-xs)); align-content: center;
+  padding: 7px 10px 7px 14px; overflow: hidden; text-align: left; font: inherit; color: var(--ac-text);
+  border: 1px solid color-mix(in srgb, var(--cell-tone) 50%, var(--ac-border)); border-radius: var(--ac-radius-md);
+  background-color: color-mix(in srgb, var(--cell-tone) 8%, var(--ac-surface-1));
+  box-shadow: var(--ac-shadow-node); cursor: pointer; pointer-events: auto;
+}
+.ac-arch-cell:hover { box-shadow: inset 0 0 0 999px var(--ac-hover-bg), var(--ac-shadow-node); border-color: color-mix(in srgb, var(--cell-tone) 70%, var(--ac-border)); }
+.ac-arch-cell:focus-visible, .ac-arch-chip:focus-visible, .ac-arch-row:focus-visible {
+  outline: 2px solid var(--ac-focus-ring); outline-offset: 2px;
+}
+.ac-arch-cell-band { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cell-tone); }
+.ac-arch-cell-title { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: var(--ac-fw-strong); }
+.ac-arch-cell-name, .ac-arch-cell-desc, .ac-arch-cell-metrics { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ac-arch-cell-name { flex: 1 1 auto; }
+.ac-arch-cell-desc { color: var(--ac-text-subtle); }
+.ac-arch-cell-metrics { color: var(--ac-text-muted); }
+.ac-arch-badges { display: inline-flex; flex: none; gap: 4px; }
+.ac-arch-badge {
+  display: inline-flex; align-items: center; box-sizing: border-box; height: var(--ac-badge-h); padding: 0 6px; flex: none;
+  border-radius: var(--ac-radius-sm); font-size: var(--ac-text-xs); font-weight: var(--ac-fw-strong); line-height: var(--ac-badge-h); white-space: nowrap;
+}
+.ac-arch-badge[data-kind="partial"] { background: var(--ac-warning-bg); color: var(--ac-warning); }
+.ac-arch-badge[data-kind="event"] { background: var(--ac-accent-bg); color: var(--ac-text); }
+
+.ac-arch-metric { font-variant-numeric: tabular-nums; }
+.ac-arch-metric + .ac-arch-metric::before { content: " · "; font-weight: normal; color: var(--ac-text-subtle); }
+.ac-arch-metric[data-status="observed"] { color: var(--ac-text); font-weight: var(--ac-fw-strong); }
+.ac-arch-metric[data-status="inferred"], .ac-arch-metric[data-inferred] {
+  text-decoration: underline dotted; text-decoration-color: var(--ac-text-subtle); text-underline-offset: 3px;
+}
+.ac-arch-metric[data-status="not_collected"] { color: var(--ac-text-subtle); font-weight: normal; }
+.ac-arch-metric[data-error] { color: var(--ac-danger); }
+
+.ac-arch-icon {
+  display: inline-block; flex: none; width: 14px; height: 14px; margin-right: 3px; vertical-align: -2px;
+  background-color: currentColor; -webkit-mask: var(--arch-icon) center / contain no-repeat; mask: var(--arch-icon) center / contain no-repeat;
+}
+.ac-arch-icon[data-icon="unknown"] { --arch-icon: var(--ac-icon-unknown); }
+.ac-arch-icon[data-icon="failed"] { --arch-icon: var(--ac-icon-failed); }
+
+/* 상태: 수집 안 됨 = 빗금 + 점선 테두리 + 문구 */
+.ac-arch-cell[data-status="not_collected"] {
+  background-color: var(--ac-surface-1);
+  background-image: repeating-linear-gradient(45deg, var(--ac-border-soft) 0 2px, var(--ac-surface-1) 2px 8px);
+  border-style: dashed; border-color: var(--ac-border-strong);
+}
+.ac-arch-cell[data-errors]::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: var(--ac-log-error-bar); background: var(--ac-danger); }
+.ac-arch-cell[data-highlighted] { border: 2px dashed var(--ac-edge-active); padding: 6px 9px 6px 13px; }
+.ac-arch-cell[data-selected] { border: 2px solid var(--ac-accent); background-color: var(--ac-accent-bg); padding: 6px 9px 6px 13px; }
+.ac-arch-cell.ac-arch-swatch { flex: none; display: inline-block; width: 40px; height: 22px; padding: 0; pointer-events: none; }
+
+/* 요약 표시(배율 < 기준): 칸마다 숫자만. 숫자는 배율을 상쇄해 화면 12px */
+.ac-arch-cell[data-level="summary"] {
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  background-color: color-mix(in srgb, var(--cell-tone) 24%, var(--ac-surface-1));
+}
+.ac-arch-cell[data-level="summary"][data-errors] { box-shadow: 0 0 0 calc(var(--ac-log-error-bar) * var(--arch-inv)) var(--ac-danger); }
+.ac-arch-cell[data-level="summary"][data-errors]::before { display: none; }
+.ac-arch-cell[data-level="summary"] .ac-arch-cell-band { width: calc(4px * var(--arch-inv)); }
+/* 요약 표시에서 영역 글자는 배율을 곱해 12px 아래로 내려가므로 숨긴다(영역 제목은 aria-describedby 목록에 남는다) */
+.ac-arch-root[data-level="summary"] .ac-arch-zone-title, .ac-arch-root[data-level="summary"] .ac-arch-zone-desc { display: none; }
+.ac-arch-cell-sum {
+  font-size: calc(var(--ac-text-xs) * var(--arch-inv)); line-height: 1; font-weight: var(--ac-fw-strong);
+  font-variant-numeric: tabular-nums; color: var(--ac-text);
+}
+
+/* ---- 연결과 칩 */
+.ac-arch-edge-line { fill: none; stroke-width: var(--arch-line); stroke-linejoin: miter; }
+.ac-arch-edge:hover .ac-arch-edge-line { stroke-width: var(--arch-line-hover); }
+.ac-arch-edge[data-selected] .ac-arch-edge-line, .ac-arch-edge[data-highlighted] .ac-arch-edge-line { stroke-width: var(--arch-line-selected); }
+.ac-arch-edge-hit { fill: none; stroke: transparent; stroke-width: var(--ac-arch-hit); pointer-events: stroke; cursor: pointer; }
+.ac-arch-root[data-level="summary"] .ac-arch-edge-line { stroke-width: calc(var(--arch-line) * var(--arch-inv)); }
+.ac-arch-chip {
+  position: absolute; transform: translate(-50%, -50%); box-sizing: border-box; margin: 0;
+  display: inline-flex; align-items: center; gap: 4px; height: var(--ac-arch-chip-h); padding: 0 8px;
+  border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm);
+  background: var(--ac-surface-1); color: var(--ac-text-muted);
+  font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; cursor: pointer; pointer-events: auto;
+}
+.ac-arch-chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ac-arch-chip-count { flex: none; color: var(--ac-text); font-weight: var(--ac-fw-strong); font-variant-numeric: tabular-nums; }
+.ac-arch-chip-err { flex: none; display: inline-flex; align-items: center; color: var(--ac-danger); font-variant-numeric: tabular-nums; }
+.ac-arch-chip-err .ac-arch-icon { width: 12px; height: 12px; margin-right: 2px; }
+.ac-arch-chip-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ac-edge-active); }
+.ac-arch-chip[data-state="error"] { border-color: var(--ac-danger); }
+.ac-arch-chip[data-state="dead"] { border-style: dashed; border-color: var(--ac-border-strong); }
+.ac-arch-chip[data-highlighted] { border: 2px solid var(--ac-edge-active); padding: 0 7px; }
+.ac-arch-chip[data-selected] { border: 2px solid var(--ac-accent); padding: 0 7px; }
+.ac-arch-chip[data-level="summary"] {
+  width: calc(10px * var(--arch-inv)); height: calc(10px * var(--arch-inv)); min-width: 0; padding: 0; border-radius: 50%;
+  background: var(--arch-stroke); border-color: var(--ac-surface-1);
+}
+.ac-arch-chip[data-level="summary"][data-selected], .ac-arch-chip[data-level="summary"][data-highlighted] { border-color: var(--ac-accent); padding: 0; }
+
+/* ---- 선택 정보 줄 */
+.ac-arch-info {
+  flex: none; box-sizing: border-box; min-height: var(--ac-arch-info-h); max-height: 88px; overflow: auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px;
+  border-top: 1px solid var(--ac-border-soft); color: var(--ac-text-muted);
+}
+.ac-arch-info-hint { color: var(--ac-text-muted); }
+.ac-arch-info-name { color: var(--ac-text); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.ac-arch-info-preview { color: var(--ac-text-subtle); }
+.ac-arch-info-metrics { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
+.ac-arch-info-metric { font-variant-numeric: tabular-nums; color: var(--ac-text); }
+.ac-arch-info-metric[data-status="not_collected"] { color: var(--ac-text-subtle); }
+.ac-arch-info-metric[data-status="inferred"] { text-decoration: underline dotted; text-underline-offset: 3px; }
+.ac-arch-info-detail { color: var(--ac-text-muted); }
+.ac-arch-info-unavail { list-style: none; margin: 0; padding: 0; width: 100%; color: var(--ac-text-subtle); }
+.ac-arch-info-groups { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.ac-arch-group-chip, .ac-arch-info-drill {
+  box-sizing: border-box; height: var(--ac-control-md); padding: 0 12px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-full);
+  background: var(--ac-btn-bg, var(--ac-surface-2)); color: var(--ac-text); font: inherit; cursor: pointer; white-space: nowrap;
+}
+.ac-arch-group-chip[aria-pressed="true"] { background: var(--ac-accent-bg); border-color: var(--ac-accent); }
+
+/* ---- 칸 목록 */
+.ac-arch-list { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 0 8px; }
+.ac-arch-list-head { margin: 8px 0 4px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: var(--ac-fw-strong); color: var(--ac-text); }
+.ac-arch-list-rows { list-style: none; margin: 0; padding: 0; }
+.ac-arch-row {
+  position: relative; box-sizing: border-box; width: 100%; min-height: var(--ac-row-h-dense, 32px); display: flex; align-items: center; gap: 12px;
+  margin: 0; padding: 4px 12px 4px 16px; border: 0; border-bottom: 1px solid var(--ac-border-soft); background: transparent;
+  color: var(--ac-text); font: inherit; text-align: left; cursor: pointer;
+}
+.ac-arch-row:hover { background: var(--ac-hover-bg); }
+.ac-arch-row[data-static] { cursor: default; color: var(--ac-text-subtle); }
+.ac-arch-row[data-static]:hover { background: transparent; }
+.ac-arch-row[data-selected] { background: var(--ac-accent-bg); }
+.ac-arch-row[data-highlighted] { outline: 2px dashed var(--ac-edge-active); outline-offset: -2px; }
+.ac-arch-row[data-status="not_collected"] .ac-arch-row-name { color: var(--ac-text-subtle); }
+.ac-arch-row-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--ac-fw-strong); }
+.ac-arch-row-flow, .ac-arch-row-metrics { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ac-text-muted); }
+.ac-arch-row-metrics { margin-left: auto; }
+.ac-arch-row[data-state="dead"], .ac-arch-row[data-state="structural"] { color: var(--ac-text-muted); }
+
+@media (forced-colors: active) {
+  .ac-arch-cell, .ac-arch-chip, .ac-arch-btn, .ac-arch-select { border-color: ButtonText; }
+  .ac-arch-cell[data-selected], .ac-arch-chip[data-selected], .ac-arch-btn[aria-pressed="true"] { border-color: Highlight; }
+  .ac-arch-cell[data-status="not_collected"] { background-image: none; }
+}

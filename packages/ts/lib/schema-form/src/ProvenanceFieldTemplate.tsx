@@ -6,7 +6,7 @@ import { disabledMatch, fieldProvenance, getIn, previewValue, toPointer } from "
 import { parsePointer } from "./errors";
 import { FieldHelpButton, FieldHelpPopover, FieldHelpTip, hasFieldHelp, isHelpKey, needsOwnLabel } from "./FieldHelp";
 import { FieldDescription, ReadOnlyValue, RequiredChip, UnitWrap, XUiContext } from "./XUiParts";
-import { readXUi } from "./xui";
+import { humanizeEnumText, readXUi } from "./xui";
 import type { ProvenanceBadgeInfo, ProvenanceLayer, SchemaFormMessages, SchemaFormProps } from "./types";
 
 /** 출처 표시 모드에서 필드 템플릿이 읽는 값. SchemaForm이 Provider로 내려 준다(템플릿 컴포넌트 정체성을 안정시키려고 context 사용). */
@@ -306,7 +306,8 @@ function Row(p: FieldTemplateProps & { ctx: ProvenanceContextValue; path: (strin
       </div>
     );
   }
-  const descNode = xctx && objectValued ? null : xctx ? <FieldDescription text={p.rawDescription ?? (typeof (p.schema as Record<string, unknown>)["description"] === "string" ? ((p.schema as Record<string, unknown>)["description"] as string) : undefined)} /> : null;
+  const rawDesc = p.rawDescription ?? (typeof (p.schema as Record<string, unknown>)["description"] === "string" ? ((p.schema as Record<string, unknown>)["description"] as string) : undefined);
+  const descNode = xctx && objectValued ? null : xctx ? <FieldDescription text={rawDesc === undefined ? undefined : humanizeEnumText(rawDesc, readXUi(p.schema).enumLabels)} /> : null;
   return (
     <div {...common} data-readonly={readOnlyLeaf || undefined} data-own-label={ownLabel || undefined}>
       {header}

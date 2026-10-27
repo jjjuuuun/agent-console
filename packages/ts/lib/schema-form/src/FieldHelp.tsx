@@ -1,12 +1,13 @@
 import type { KeyboardEvent, ReactNode } from "react";
-import { readXUi } from "./xui";
+import { humanizeEnumText, readXUi } from "./xui";
 import type { SchemaFormMessages } from "./types";
 
 const fill = (t: string, vars: Record<string, string | number>) => t.replace(/\{(\w+)\}/g, (_, k: string) => (k in vars ? String(vars[k]) : `{${k}}`));
 
-function show(v: unknown, m: SchemaFormMessages): string {
+function show(v: unknown, m: SchemaFormMessages, labels?: Readonly<Record<string, string>>): string {
   if (typeof v === "boolean") return v ? m.yes : m.no;
-  return typeof v === "string" ? v : JSON.stringify(v);
+  if (typeof v === "string") return labels?.[v] ?? v;
+  return JSON.stringify(v);
 }
 const isEmpty = (v: unknown) => v === undefined || v === null || v === "";
 /** 값이 한 줄로 보일 만한 기본값인지(객체·배열·빈 문자열은 제외). */
@@ -46,9 +47,9 @@ export function FieldHelpTip(p: { schema: Record<string, unknown>; readonly: boo
   const def = schema["default"];
   return (
     <span className="ac-sf-tip" aria-hidden="true" data-ac-sf-tip>
-      {xui.example !== undefined ? <span className="ac-sf-tip-line">{fill(m.exampleHint, { value: show(xui.example, m) })}</span> : null}
-      {hintableDefault(def) && !p.readonly ? <span className="ac-sf-tip-line">{fill(m.defaultHint, { value: show(def, m) })}</span> : null}
-      {xui.when ? <span className="ac-sf-tip-line">{fill(m.whenHint, { when: xui.when })}</span> : null}
+      {xui.example !== undefined ? <span className="ac-sf-tip-line">{fill(m.exampleHint, { value: show(xui.example, m, xui.enumLabels) })}</span> : null}
+      {hintableDefault(def) && !p.readonly ? <span className="ac-sf-tip-line">{fill(m.defaultHint, { value: show(def, m, xui.enumLabels) })}</span> : null}
+      {xui.when ? <span className="ac-sf-tip-line">{fill(m.whenHint, { when: humanizeEnumText(xui.when, xui.enumLabels) })}</span> : null}
       <span className="ac-sf-tip-key">{m.helpToggle}</span>
     </span>
   );
@@ -81,7 +82,7 @@ export function FieldHelpPopover(p: PopoverProps) {
     const numeric = t === "number" || t === "integer" || (Array.isArray(t) && (t.includes("number") || t.includes("integer")));
     p.onFill(numeric && typeof ex === "string" && ex.trim() !== "" && !Number.isNaN(Number(ex)) ? Number(ex) : ex);
   };
-  const exampleText = xui.example === undefined ? undefined : fill(m.exampleHint, { value: show(xui.example, m) });
+  const exampleText = xui.example === undefined ? undefined : fill(m.exampleHint, { value: show(xui.example, m, xui.enumLabels) });
   return (
     <div id={p.id} className="ac-sf-popover ac-sf-help" role="group" aria-label={m.helpTitle}>
       {exampleText ? (
@@ -93,8 +94,8 @@ export function FieldHelpPopover(p: PopoverProps) {
           <p className="ac-sf-hintline ac-sf-example">{exampleText}</p>
         )
       ) : null}
-      {hintableDefault(def) && !p.readonly ? <p className="ac-sf-hintline ac-sf-default">{fill(m.defaultHint, { value: show(def, m) })}</p> : null}
-      {xui.when ? <p className="ac-sf-hintline ac-sf-when">{fill(m.whenHint, { when: xui.when })}</p> : null}
+      {hintableDefault(def) && !p.readonly ? <p className="ac-sf-hintline ac-sf-default">{fill(m.defaultHint, { value: show(def, m, xui.enumLabels) })}</p> : null}
+      {xui.when ? <p className="ac-sf-hintline ac-sf-when">{fill(m.whenHint, { when: humanizeEnumText(xui.when, xui.enumLabels) })}</p> : null}
       {p.children}
     </div>
   );

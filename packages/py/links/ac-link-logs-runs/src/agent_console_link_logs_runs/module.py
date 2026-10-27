@@ -3,11 +3,12 @@
 실행 기록(``mod-runs``)과 로그(``mod-logs``)를 잇는다.
 
 - 필수: ``logs.ingest``·``logs.query``·``runs.reader``·``runs.events``.
-- 제공: ``logs.sources``에 런타임 출처 ``platform-runs``(분류기 ``platform-run-event``).
+- 제공: ``logs.sources``에 런타임 출처 ``platform-runs``(분류기 ``platform-run-event``),
+  ``logs.scope_kinds``에 범위 종류 ``run``·``run-tree``(X27, ``scope=run:<id>``·``run-tree:<id>``).
 - 구독: ``runs.event`` → 그 Run의 수집을 예약한다(디바운스, 옵션 ``debounce_seconds``).
 - 경로: ``GET /runs/{id}/logs``(그 Run 세션 id들의 외부 세션 이벤트, ``total`` 채움).
 - 이 연동이 꺼지면 로그 화면에 플랫폼 실행이 없고, 실행 상세의 "세션 로그" 탭이 숨는다
-  (웹 역할 ``logs:runs``).
+  (웹 역할 ``logs:runs``). ``scope=run:``·``run-tree:``는 모르는 범위 종류(422)가 된다.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .errors import ERROR_MAP
 from .ports import (
+    LOG_SCOPE_KINDS,
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_QUERY,
@@ -32,6 +34,7 @@ from .ports import (
 )
 from .routes import build_router
 from .scheduler import ScanDebouncer
+from .scopes import run_scope_kinds
 from .source import platform_runs
 from .views import RunLogs
 
@@ -78,7 +81,7 @@ class LogsRunsLink:
         description=(
             "플랫폼 실행 이벤트 → 로그(런타임 출처 platform-runs)·실행 세션 로그(/runs/{id}/logs)"
         ),
-        provides=(LOG_SOURCES,),
+        provides=(LOG_SOURCES, LOG_SCOPE_KINDS),
         requires=(LOGS_INGEST, LOGS_QUERY, RUNS_READER, RUNS_EVENTS),
         settings_schema=LogsRunsSettings,
         contracts={"logs": CONTRACT_VERSIONS["logs"], "runs": CONTRACT_VERSIONS["runs"]},
@@ -109,6 +112,8 @@ class LogsRunsLink:
 
         ctx.subscribe(RUNS_EVENT, on_event)
         views = RunLogs(runs, query, source_id=source_id)
+        for kind in run_scope_kinds(runs, query, source_id=source_id):
+            ctx.provide(LOG_SCOPE_KINDS, kind)
 
         async def stop() -> None:
             debouncer.close()

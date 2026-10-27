@@ -152,7 +152,7 @@ python -m agent_console_mod_logs [--with ID] [--config PATH] [--port 0] [--check
 
 ## 저장 계층
 
-- **계보 `logs`**: 패키지 데이터 `storage/migrations/versions/logs_0001_index.py`, 버전 테이블 `alembic_version_logs`.
+- **계보 `logs`**: 패키지 데이터 `storage/migrations/versions/logs_0001_index.py`(테이블)·`logs_0002_scope_indexes.py`(`thread`·`run_id`·`session` + `seq` 색인, 5.5R.6), 버전 테이블 `alembic_version_logs`.
   모듈이 켜질 때만 올라가고, 되돌리기(`downgrade`)는 이 계보 단위로만 한다.
   `ac-store.MODULE_OWNED_TABLES`에는 넣지 않는다(F-2) — legacy 이관 전용 목록이다.
 - **색인 위치**: 기본은 호스트 DB(F-9). `index_path`를 주면 그 SQLite 파일에 같은 계보를 직접 올려 쓴다.

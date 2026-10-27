@@ -1,13 +1,19 @@
 """테스트 도구: 이벤트 만들기, 칸·연결 id 바꾸기(R0 판정: id를 모두 바꿔도 같은 수),
-테스트 전용 합성 프로필 문서(`demo_profile`).
+테스트 전용 합성 프로필 문서(`demo_profile`), 수집 결과 표본(`load_sample`).
 
 `demo_profile`은 이 폴더의 `demo_profile.yaml`을 읽는다. 기본 프로필 데이터가 아니다.
 id·범주·출처 종류는 테스트가 정한 임의 값이다.
+
+`load_sample`은 이 폴더 `samples/`의 이벤트 사본을 읽는다(기본 프로필 골든 테스트 재료,
+design §5.5R.10). 사본은 실제 수집 파이프라인(`ac-logs` 수집기 + 기본 분류 데이터)이 합성 기록에서
+만든 목록 질의 결과다(`detail`·`raw`는 목록에 없으므로 빠져 있다). 실제 `~/.claude` 기록이 아니다.
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from importlib import resources
 from typing import Any
 
@@ -16,9 +22,17 @@ from agent_console_contracts.architecture import (
     ArchitectureEdge,
     ArchitectureProfile,
 )
-from agent_console_contracts.logs import LogEvent
+from agent_console_contracts.logs import LogEvent, TokenSample
 
-__all__ = ["demo_profile", "make_event", "make_events", "rename_profile_ids"]
+__all__ = [
+    "SAMPLES",
+    "Sample",
+    "demo_profile",
+    "load_sample",
+    "make_event",
+    "make_events",
+    "rename_profile_ids",
+]
 
 _PACKAGE = "agent_console_architecture.testing"
 _DEMO_PROFILE = "demo_profile.yaml"
@@ -100,4 +114,49 @@ def demo_profile() -> str:
     """
     return (
         resources.files(__package__ or _PACKAGE).joinpath(_DEMO_PROFILE).read_text(encoding="utf-8")
+    )
+
+
+SAMPLES: tuple[str, ...] = ("claude_code_session", "run_with_session_log")
+"""`load_sample` 이름.
+
+- ``claude_code_session``: Claude Code 세션 로그 하나(메인 + 서브에이전트 1, hook·MCP·위임·
+  문서 읽기·파일 쓰기·압축·해석 실패 행 포함). `ac-logs-claude` 합성 픽스처를 `claude-code-jsonl`
+  출처로 수집한 것.
+- ``run_with_session_log``: 같은 실행을 두 출처로 읽은 것. `fake-agent` 실행 기록(hook·MCP·위임·
+  맥락 구성·모델 소요 포함)을 `platform-runs` 출처로, 같은 세션의 Claude Code 세션 로그(같은 도구
+  호출 id)를 `claude-code-jsonl` 출처로 수집했다. 같은 도구 호출이 두 출처에 한 번씩 있다.
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class Sample:
+    """수집 결과 표본: 이벤트(목록 질의 결과, 순번 순), 토큰 표본, 출처 id → 출처 종류."""
+
+    events: list[LogEvent]
+    tokens: list[TokenSample]
+    source_kinds: dict[str, str]
+
+
+def load_sample(name: str) -> Sample:
+    """수집 결과 표본을 읽는다(부를 때마다 새로 읽는다).
+
+    Args:
+        name: `SAMPLES`의 이름.
+
+    Raises:
+        KeyError: 모르는 이름.
+    """
+    if name not in SAMPLES:
+        raise KeyError(name)
+    text = (
+        resources.files(__package__ or _PACKAGE)
+        .joinpath("samples", f"{name}.json")
+        .read_text(encoding="utf-8")
+    )
+    data = json.loads(text)
+    return Sample(
+        events=[LogEvent.model_validate({"observed_at": 0.0, **row}) for row in data["events"]],
+        tokens=[TokenSample.model_validate(row) for row in data["tokens"]],
+        source_kinds={str(k): str(v) for k, v in data["source_kinds"].items()},
     )

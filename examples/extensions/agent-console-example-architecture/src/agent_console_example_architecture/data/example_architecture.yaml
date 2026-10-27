@@ -1,0 +1,23 @@
+# 예제 구조도 프로필(X23 예제 데이터). 사용자 프리셋이 아니다 — 플러그인이 프로필을 내는 모양만 보인다.
+# 칸 id·범주 값은 예제가 정한 임의 값이다. 같은 id를 워크스페이스 설정 `architecture.profiles`에 적으면
+# 사용자 프로필이 이기고, null로 적으면 꺼진다.
+version: 1
+profiles:
+  example-minimal:
+    title: 예제 — 최소 구조도
+    description: 플러그인(X23)이 낸 칸 2개·연결 1개 예제 프로필
+    error_when: {all: [{path: /status, op: eq, value: failed}]}
+    cells:
+      inbound:
+        label: 받은 이벤트
+        x: 100
+        y: 60
+        when: {all: [{path: /category, op: eq, value: input}]}
+      handled:
+        label: 처리한 이벤트
+        x: 400
+        y: 60
+        when: {all: [{path: /category, op: eq, value: tool}]}
+        metrics: [count, errors]
+    edges:
+      - {id: inbound-handled, from: inbound, to: handled, kind: structural}

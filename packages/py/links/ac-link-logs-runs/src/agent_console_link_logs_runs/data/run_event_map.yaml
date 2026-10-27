@@ -6,8 +6,9 @@
 # 값(모두 선택):
 #   category·title·stage·status·tool·call_id·via·model·message_id·role:
 #     문자열 틀(`{/JSON 포인터}`(이벤트 기준)·`{type}`·`{node}`·`{parent_node}`·`{thread}`·`{actor}`·`{run_id}`)
-#     또는 `{pointer: /a/b, map: {원래 값: 바꿀 값}, default: 값}`(값은 문자열로 비교: true·false·null·숫자)
-#   from·to: 문자열 틀(비면 없음)
+#     또는 `{pointer: /a/b, map: {원래 값: 바꿀 값}, default: 값}`(값은 문자열로 비교: true·false·null·숫자,
+#     바꿀 값·default도 틀)
+#   from·to: 위와 같은 틀 또는 조건부 값(비면 없음)
 #   tags: 태그 목록(`tool` = 도구 호출 약속 태그 — 같은 호출이 한 번만 색인된다)
 #   correlation: 근거 이름 → 문자열 틀(session·call_id 근거는 값이 있으면 자동으로 붙는다)
 #   duration_ms: 포인터. 값이 있으면 끝난 구간으로 보고 시작(시각 = ts − 소요, 근거 inferred)·끝 두 이벤트를 낸다
@@ -15,6 +16,8 @@
 #   cwd_from: 포인터. 이 이벤트가 Run의 작업 폴더를 알린다(이 이벤트와 그 뒤 같은 Run 이벤트의 cwd → 로그 프로젝트 묶기)
 #   usage: 토큰 항목(input_tokens·output_tokens·cache_read_input_tokens·cache_creation_input_tokens) → 포인터
 #     기본 대응표는 쓰지 않는다 — 같은 세션을 Claude Code 세션 로그 출처로도 읽으면 토큰이 두 번 세어진다.
+#     실행 단위 토큰을 켜려면(C3, README "실행 단위 토큰") 설정 event_map에서 agent.usage 규칙을 통째로 바꿔
+#     usage: {input_tokens: /payload/usage/input_tokens, output_tokens: /payload/usage/output_tokens, ...}를 넣는다.
 #   skip: true면 색인하지 않는다
 types:
   "*": {category: other, title: "{type}"}
@@ -40,16 +43,26 @@ types:
     status: {pointer: /payload/status, map: {completed: ok, failed: error, interrupted: error}}
     correlation: {child_run: "{/payload/child_run_id}"}
 
-  "node.*": {category: agent, title: "{node} {/payload/status}"}
-  node.failed: {category: error, status: error, title: "{node} 실패 {/payload/error/message}"}
+  # 호출 NodeRun의 node.* payload `tool_use_id`(위임 도구 호출 id, C7)를 근거로 옮긴다 —
+  # 위임자의 도구 호출(agent.tool_call의 call_id)과 대상 실행이 명시 id로 이어진다.
+  "node.*":
+    category: agent
+    title: "{node} {/payload/status}"
+    correlation: {tool_use_id: "{/payload/tool_use_id}"}
+  node.failed:
+    category: error
+    status: error
+    title: "{node} 실패 {/payload/error/message}"
+    correlation: {tool_use_id: "{/payload/tool_use_id}"}
   # 위임자가 부른 호출 NodeRun(payload `call`, 경로 = 위임자 경로 + 대상)은 시작이 넘김이다.
-  # 스케줄 실행(`call` 없음)은 위 노드가 없어 from이 비므로 넘김으로 세지 않는다.
+  # 스케줄 실행(`call` 없음)은 from·to·via를 모두 비워 넘김으로 세지 않는다(C7: to도 호출일 때만).
   node.started:
     category: agent
     title: "{node} {/payload/status}"
-    from: "{parent_node}"
-    to: "{node}"
+    from: {pointer: /payload/call, map: {"null": ""}, default: "{parent_node}"}
+    to: {pointer: /payload/call, map: {"null": ""}, default: "{node}"}
     via: {pointer: /payload/call, map: {"null": ""}, default: delegate}
+    correlation: {tool_use_id: "{/payload/tool_use_id}"}
   edge.traversed:
     category: handoff
     title: "{/payload/source/node} → {/payload/target/node}"
@@ -78,6 +91,10 @@ types:
     title: "{/payload/text}"
     role: "{/payload/role}"
     message_id: "{/payload/message_id}"
+  # 맥락 구성(C1): 붙은 리소스 표지·조각 수만(본문 없음). 리소스 목록은 detail(payload)에 있다.
+  agent.context_prepared:
+    category: context
+    title: "맥락 구성"
   agent.tool_call:
     category: tool_call
     stage: start
@@ -108,7 +125,12 @@ types:
     call_id: "{/payload/subagent_id}"
     status: "{/payload/status}"
     correlation: {tool_use_id: "{/payload/tool_use_id}"}
-  agent.usage: {category: usage, title: "사용량", model: "{/payload/model}"}
+  # 모델 호출 소요(C2): 백엔드가 아는 값(payload duration_ms)이 있을 때만 시작(inferred)·끝 두 이벤트.
+  agent.usage:
+    category: usage
+    title: "사용량"
+    model: "{/payload/model}"
+    duration_ms: /payload/duration_ms
   usage.rate_limit: {category: usage, title: "사용 한도 {/payload/window} {/payload/status}"}
 
   "interaction.*": {category: control, title: "{type}"}
@@ -127,12 +149,14 @@ types:
 
   "mcp.*": {category: mcp, title: "MCP {type}"}
   mcp.server_status: {category: mcp, title: "MCP 서버 상태"}
+  # 서버 이름(C4)을 근거 mcp_server로 — Claude Code 출처(mcp_tool_pattern)와 같은 키.
   mcp.call_started:
     category: mcp
     stage: start
     title: "MCP {/payload/server}/{/payload/tool}"
     tool: "mcp__{/payload/server}__{/payload/tool}"
     call_id: "{/payload/tool_use_id}"
+    correlation: {mcp_server: "{/payload/server}"}
   mcp.call_completed:
     category: mcp
     stage: complete
@@ -140,3 +164,4 @@ types:
     tool: "mcp__{/payload/server}__{/payload/tool}"
     call_id: "{/payload/tool_use_id}"
     status: {pointer: /payload/is_error, map: {"true": error}, default: ok}
+    correlation: {mcp_server: "{/payload/server}"}

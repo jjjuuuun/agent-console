@@ -124,7 +124,9 @@ def test_module_alone_lists_checks_and_projects(
 
 def test_errors_use_contract_codes(flow: dict[str, Any], event_rows: list[dict[str, Any]]) -> None:
     config = ModulesConfig(options={"mod-architecture": {"max_request_events": 3}})
-    with _client(_settings({"profiles": {"flow": flow}}), config=config) as client:
+    # 패키지 기본 프로필(5.5R.8)이 먼저 오므로 대체 대상은 default_profile로 정한다
+    section = {"profiles": {"flow": flow}, "default_profile": "flow"}
+    with _client(_settings(section), config=config) as client:
         missing = client.get(f"{API}/architecture/profiles/nope")
         assert missing.status_code == 404
         assert missing.json()["error"]["code"] == "architecture.profile_not_found"

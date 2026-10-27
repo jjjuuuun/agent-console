@@ -192,7 +192,9 @@ class FakeBackend:
     `agent.tool_result`)* → 관측(tool)* → 위임* → 플랫폼 도구 호출* → `agent.text_delta`* →
     `agent.message` →
     관측(end)* → `agent.usage`. 관측(`hook.*`·`mcp.*` 등, 규칙 `observe`)은 요청의 관측 설정
-    (`AgentRequest.observe`)에서 그 스위치가 켜졌을 때만 낸다.
+    (`AgentRequest.observe`)에서 그 스위치가 켜졌을 때만 낸다. 마지막 `agent.usage`의
+    `duration_ms`는 규칙 `llm_duration_ms`(비우면 null)다. 플랫폼 도구 호출은 만든 호출 id를
+    `call_host_tool(tool_use_id=)`로 넘긴다(위임 도구가 대상 NodeRun과 호출을 잇는다).
 
     위임 하나(규칙 `delegate`): `agent.tool_call`(위임 도구) → `agent.subagent_started` →
     (`agent.tool_call` → `agent.tool_result`)* → `agent.message` → `agent.subagent_stopped` →
@@ -521,7 +523,12 @@ class FakeBackend:
         usage = _usage(rule, req.prompt, "".join(sent))
         if rule.fail is not None:
             await _observe(run, rule, "end")
-            await sink.emit("agent.usage", AgentUsagePayload(usage=usage, model=req.agent.model))
+            await sink.emit(
+                "agent.usage",
+                AgentUsagePayload(
+                    usage=usage, model=req.agent.model, duration_ms=rule.llm_duration_ms
+                ),
+            )
             return AgentResult(
                 status="failed",
                 text="".join(sent),
@@ -536,7 +543,10 @@ class FakeBackend:
             ),
         )
         await _observe(run, rule, "end")
-        await sink.emit("agent.usage", AgentUsagePayload(usage=usage, model=req.agent.model))
+        await sink.emit(
+            "agent.usage",
+            AgentUsagePayload(usage=usage, model=req.agent.model, duration_ms=rule.llm_duration_ms),
+        )
         return AgentResult(
             status="succeeded",
             text=text,
@@ -717,7 +727,10 @@ async def _host_tool_calls(
             text, is_error = UNKNOWN_HOST_TOOL_TEXT.format(tool=call.tool), True
         else:
             outcome = await call_host_tool(
-                tool, arguments if isinstance(arguments, dict) else {}, cancel=run.cancel
+                tool,
+                arguments if isinstance(arguments, dict) else {},
+                cancel=run.cancel,
+                tool_use_id=tool_use_id,
             )
             text, is_error = outcome.text, outcome.is_error
         if _is_cancelled(run.cancel):  # 핸들러를 기다리는 사이 취소됐을 수 있다

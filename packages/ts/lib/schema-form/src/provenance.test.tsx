@@ -42,6 +42,15 @@ function row(label: string): HTMLElement {
   return screen.getAllByText(label)[0]!.closest(".ac-sf-prov-row") as HTMLElement;
 }
 
+describe("출처 표시 모드: enum 설명의 원시 값(F11)", () => {
+  it("설명 안의 값 이름은 x-ui.enum_labels 라벨로 읽힌다", () => {
+    const s: JsonSchema = { type: "object", properties: { mode: { type: "string", title: "방식", enum: ["keep", "drop"], description: "남길지(keep) 버릴지(drop) 정합니다.", "x-ui": { tier: "basic", enum_labels: { keep: "남기기", drop: "버리기" } } } } };
+    render(<SchemaForm schema={s} value={{}} {...base} provenance={{}} effectiveValue={{}} />);
+    expect(screen.getByText("남길지 버릴지 정합니다.")).toBeTruthy();
+    expect(screen.queryByText(/\(keep\)/)).toBeNull();
+  });
+});
+
 describe("출처 표시 모드", () => {
   it("prop이 없으면 출처 UI가 없다(기존 동작)", () => {
     const { container } = render(<SchemaForm schema={schema} value={layerValue} />);

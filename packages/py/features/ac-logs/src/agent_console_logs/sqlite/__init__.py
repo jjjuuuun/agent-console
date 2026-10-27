@@ -17,6 +17,7 @@ True
 from ._index import SqliteLogIndex
 from ._open import create_log_engine, open_log_index
 from .schema import (
+    OBSOLETE_INDEXES,
     TABLE_NAMES,
     log_agents,
     log_bodies,
@@ -31,6 +32,7 @@ from .schema import (
 )
 
 __all__ = [
+    "OBSOLETE_INDEXES",
     "TABLE_NAMES",
     "SqliteLogIndex",
     "create_log_engine",

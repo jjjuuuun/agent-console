@@ -37,9 +37,9 @@
       ``StaticDelegationChecks``(``static_issues``)·``DelegationNameDeclarer``(``declared_names``) +
       ``DelegationMemberView``·``DelegationNameGroups``·``duplicate_names_code``(5.2R.37),
       ``SecretProvider``(X10)
-    - 플랫폼 도구(design §5R.6, 런타임 전용): ``HostTool``·``HostToolResult``·``HostToolHandler``
-      (`AgentRequest.host_tools`), 백엔드 공용 ``call_host_tool``·``duplicate_host_tool_names``·
-      ``object_input_schema``
+    - 플랫폼 도구(design §5R.6, 런타임 전용): ``HostTool``·``HostToolResult``·``HostToolHandler``·
+      ``HostToolCallHandler``(`AgentRequest.host_tools`), 백엔드 공용 ``call_host_tool``·
+      ``duplicate_host_tool_names``·``object_input_schema``
     - 주입 인터페이스: ``RunRecorder``(``RunWriter``·``EventWriter``·
       ``InteractionWriter``),
       ``EventSink``, ``Clock``, ``IdFactory``
@@ -96,6 +96,7 @@ from agent_console_runtime._host_tools import (
     DEFAULT_HOST_TOOL_CANCELLED_TEXT,
     DEFAULT_HOST_TOOL_ERROR_TEMPLATE,
     HostTool,
+    HostToolCallHandler,
     HostToolHandler,
     HostToolResult,
     call_host_tool,
@@ -332,6 +333,7 @@ __all__ = [
     "GraphRuntime",
     "GraphValidationError",
     "HostTool",
+    "HostToolCallHandler",
     "HostToolHandler",
     "HostToolResult",
     "IdFactory",

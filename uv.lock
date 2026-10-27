@@ -26,6 +26,7 @@ members = [
     "agent-console-link-definitions-resources",
     "agent-console-link-definitions-teams",
     "agent-console-link-exports-teams",
+    "agent-console-link-logs-architecture",
     "agent-console-link-logs-runs",
     "agent-console-link-logs-trace",
     "agent-console-link-logs-usage",
@@ -730,6 +731,55 @@ dev = [
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-exports", editable = "packages/py/modules/ac-mod-exports" },
     { name = "agent-console-resources-core", editable = "packages/py/features/ac-resources-core" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-link-logs-architecture"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-logs-architecture" }
+dependencies = [
+    { name = "agent-console-architecture" },
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-logs" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-mod-architecture" },
+    { name = "agent-console-mod-logs" },
+    { name = "agent-console-store" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-architecture", editable = "packages/py/features/ac-architecture" },
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-logs", editable = "packages/py/features/ac-logs" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-mod-architecture", editable = "packages/py/modules/ac-mod-architecture" },
+    { name = "agent-console-mod-logs", editable = "packages/py/modules/ac-mod-logs" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
@@ -2045,6 +2095,7 @@ dependencies = [
     { name = "agent-console-link-definitions-resources" },
     { name = "agent-console-link-definitions-teams" },
     { name = "agent-console-link-exports-teams" },
+    { name = "agent-console-link-logs-architecture" },
     { name = "agent-console-link-logs-runs" },
     { name = "agent-console-link-logs-trace" },
     { name = "agent-console-link-logs-usage" },
@@ -2097,6 +2148,7 @@ requires-dist = [
     { name = "agent-console-link-definitions-resources", editable = "packages/py/links/ac-link-definitions-resources" },
     { name = "agent-console-link-definitions-teams", editable = "packages/py/links/ac-link-definitions-teams" },
     { name = "agent-console-link-exports-teams", editable = "packages/py/links/ac-link-exports-teams" },
+    { name = "agent-console-link-logs-architecture", editable = "packages/py/links/ac-link-logs-architecture" },
     { name = "agent-console-link-logs-runs", editable = "packages/py/links/ac-link-logs-runs" },
     { name = "agent-console-link-logs-trace", editable = "packages/py/links/ac-link-logs-trace" },
     { name = "agent-console-link-logs-usage", editable = "packages/py/links/ac-link-logs-usage" },

@@ -84,6 +84,8 @@
 .ac-ge-node-header .ac-ge-avatar { background: var(--ac-ge-avatar, var(--ac-ge-accent, var(--ac-cat-neutral))); }
 .ac-ge-node-titles { flex: 1 1 4em; min-width: 3.5em; }
 .ac-ge-node-label { font-weight: 600; line-height: 18px; word-break: keep-all; overflow-wrap: break-word; }
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-node-label { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(1em, calc(12px / var(--ac-ge-zoom))); line-height: max(18px, calc(16px / var(--ac-ge-zoom))); }
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-node-header .ac-ge-badges { display: none; }
 .ac-ge-node-type { font-size: var(--ac-text-xs); line-height: 16px; color: var(--ac-text-muted); }
 .ac-ge-status { flex: none; display: inline-flex; align-items: center; gap: var(--ac-space-1); max-width: 96px; min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text); }
 .ac-ge-status-label { min-width: 0; }

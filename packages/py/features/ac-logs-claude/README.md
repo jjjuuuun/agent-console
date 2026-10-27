@@ -96,7 +96,8 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | `subagent_thread_template` | `agent-{value}` | 서브에이전트 id → thread |
 | `file_change_tools` | `Write`(created)·`Edit`·`MultiEdit`(modified)·`NotebookEdit` | 호출 이벤트에 문서(경로·action)를 붙인다 |
 | `document_read_tools` | `Read`(`read_requested`) | 읽기 요청 문서 |
-| `document_kinds`·`default_document_kind` | `SPEC.md`→spec, `CLAUDE.md`·`AGENTS.md`→agents_md, `SKILL.md`→skill / document | 파일 이름 → 문서 종류 |
+| `document_kinds`·`default_document_kind` | `SPEC.md`→spec, `CLAUDE.md`·`CLAUDE.local.md`·`*/.claude/rules/*.md`→rules, `AGENTS.md`→agents_md, `SKILL.md`→skill / document | 파일 이름 또는 경로 글롭(`*`는 `/`도 넘음) → 문서 종류. 파일 이름이 먼저, 그다음 긴 글롭부터. 자동으로 읽힌 지침은 세션 기록에 남지 않으므로 도구로 연 문서만 보인다 |
+| `row_correlation` | `request_id` ← `/requestRef` | 행에 값이 있으면 그 행의 모든 이벤트에 붙일 상관 근거(이벤트가 가진 같은 근거가 우선). 응답 행과 같은 요청의 `api-request` 기록(`request_id` ← `/id`)이 명시 id로 이어진다 |
 | `mcp_tool_pattern` | `mcp__{server}__{tool}` | 이름 틀(정규식 아님): 자리 표시 `{server}`·`{tool}` 각 한 번 + `*`. 이름 전체가 맞으면 MCP 호출. 빈 문자열이면 MCP를 따로 보지 않음 |
 | `session_title_skip_prefixes` | `<command-`·`<local-command-`·`Caveat:` | 세션 제목 후보에서 뺄 입력 |
 | `session_title_from_input` | `true` | 끄면 사용자 입력을 세션 제목 후보로 보지 않는다(행 규칙의 `custom-title`·`ai-title` 후보만 남음) |
@@ -107,7 +108,10 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 행 규칙 하나: `match`(JSON 포인터 → 글롭, 목록이면 하나라도, 참·거짓·숫자는 `true`·`1`로 비교), `category`,
 `title`(`{/포인터}` 틀), `stage`, `status`, `fields`(category·stage·status·tool·via·model·message_id·turn_id·role
 → 포인터), `value_maps`(필드 → {원래 값: 바꿀 값}, category는 대응표에 있을 때만 바뀜), `correlation`(근거
-→ 포인터), `tags`, `detail`(포인터, 빈 문자열 = 행 전체), `summary`(목록 요약 항목 목록, detail 기준).
+→ 포인터), `tags`, `detail`(포인터, 빈 문자열 = 행 전체), `summary`(목록 요약 항목 목록, detail 기준),
+`store_raw`(기본 `true`. `false`면 원문을 색인에 넣지 않고 detail·raw를 `keep` 포인터 값 + `omitted`{`bytes`, `sha256`}로
+바꾼다 — 크기·해시는 키 정렬·공백 없는 JSON의 UTF-8 기준, 검색에도 원문이 걸리지 않는다. 제목·필드·근거는 원문에서
+읽으므로 틀에 본문 포인터를 넣지 않는다), `keep`(남길 값의 포인터, 같은 위치).
 
 요약 항목(`summaries`·행 규칙 `summary`): `/`로 시작하고 `{/`가 없으면 JSON 포인터(문자열 그대로, 내용 블록
 목록은 text 블록을 잇는다. 숫자·객체는 평문이 아니라 건너뜀). 그 밖은 틀이다. `{/포인터}`는 그 값(평문·숫자·
@@ -151,6 +155,8 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | `last-prompt` | 규칙 | `other` "마지막 입력", 요약 `lastPrompt` |
 | `file-history-*` | 규칙 | `meta` "파일 기록 · {type}", 요약 = `trackingPath` 또는 스냅샷의 추적 파일 경로 목록(없으면 "추적 파일 없음") |
 | `cost-state`·`api-request*` | 규칙 | `meta` "비용 상태"·"API 요청 기록 · {type}" |
+| `api-request-blob`(요청 본문) | 규칙 | `meta` "API 요청 기록 · api-request-blob". **원문을 저장하지 않는다**(`store_raw: false`): detail·raw = `type`·`id`·`uuid`·`timestamp`·`sessionId`·`message.role` + `omitted`(크기·sha256), 요약 "요청 본문 저장 안 함 · N바이트". 다시 저장하려면 아래 "요청 본문 저장" |
+| `api-request`(요청 메타, Claude Code 2.1.30+) | 규칙 | `meta` "API 요청 · {모델}", `model` ← `/params/model`, 근거 `request_id` ← `/id`, detail = `/params`(모델·`max_tokens`·`thinking` 등 요청 설정, 본문 없음). 같은 요청의 응답 행은 `requestRef`로 같은 `request_id`를 가진다 |
 | 모르는 행 | 코드 | `other`(제목 = 행 `type`), 원문 보존 |
 | JSON이 아닌 줄 | 코어 | 진단 이벤트(`source = diagnostic`) |
 
@@ -178,6 +184,29 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 `trackingPath`·`snapshot.trackedFileBackups`)은 커뮤니티 형식 정리(2026-10-18 확인, 공식 문서 없음)를 따랐고,
 `mode` 행의 필드 이름은 확인하지 못했다. 그래서 전부 기본 규칙 데이터이며 형식이 바뀌면 데이터만 고친다.
 
+요청 본문 저장(5.5R.34): Claude Code `api-request-blob` 행에는 모델에 보낸 요청 본문 전체(대화·도구 결과·지침)가
+들어 있다. 로그 색인에 같은 내용이 한 번 더 쌓이지 않도록 기본 규칙은 크기·해시만 남긴다. 원문을 다시 색인하려면
+같은 행에 맞는 규칙을 `extra_row_rules`에 넣는다(먼저 맞는 규칙이 이긴다, `store_raw` 기본값 `true`):
+
+```yaml
+logs:
+  sources:
+    - id: claude-code-jsonl
+      config:
+        classifier:
+          config:
+            extra_row_rules:
+              - {match: {/type: api-request-blob}, category: meta, title: "API 요청 본문"}
+```
+
+반대로 다른 행의 원문을 끄려면 그 행 규칙에 `store_raw: false`(필요하면 `keep`)를 준다.
+
+설정 변경과 이미 색인된 이벤트: 분류기 설정(`document_kinds`·`row_rules`·`store_raw` 등)은 **바꾼 뒤 수집하는 행부터**
+적용된다. 색인은 같은 이벤트(같은 identity)를 다시 쓰지 않으므로, 이미 색인된 행은 다시 스캔해도 그대로다. 예를 들어
+문서 종류 기본값(`CLAUDE.md` → `rules`, 5.5R.7)이나 `api-request-blob` 원문 제외(5.5R.34)를 옛 이벤트에도 반영하려면
+로그 색인을 새로 만들고(별도 색인 파일 `mod-logs.index_path`를 쓰면 그 파일을 지우고, 호스트 DB를 쓰면 로그 표를
+비우고) 다시 스캔해야 한다. 그 전까지 옛 색인의 원문은 남는다(보존 기간 `mod-logs.retention_days`가 지나면 지워진다).
+
 알려진 한계(행 단위 무상태 F-7의 결과):
 
 - 도구 결과 행에는 도구 이름이 없다. MCP 결과는 범주 `tool`이고, MCP 호출(`start`)과 같은 `call_id`로 짝지어진다.
@@ -195,6 +224,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | `source_config_schema()`·`classifier_config_schema()` | 설정 스키마(기본값 포함, 사본) |
 | `compile_mcp_pattern(pattern)`·`McpPatternError` | MCP 이름 틀 → 매처(자리 표시 검사) |
 | `summary_text(detail, items)` | 요약 평문 뽑기(설정 `summaries`와 같은 규칙: 포인터 또는 틀) |
+| `omitted_row(row, keep)`·`OMITTED_KEY` | 원문 대신 저장할 값(행 규칙 `store_raw: false`와 같은 규칙: `keep` 값 + `omitted`{`bytes`, `sha256`}) |
 | `CLAUDE_CODE_SOURCE_ID`·`CLAUDE_CODE_FORMAT`·`META_KIND_*`·`MCP_PATTERN_GROUPS` | 상수 |
 
 ## 개발·재사용

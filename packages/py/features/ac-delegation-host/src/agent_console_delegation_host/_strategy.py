@@ -311,8 +311,17 @@ class HostDelegation:
         async def handler(arguments: dict[str, Any]) -> HostToolResult:
             return await self._call(ctx, members, cfg, arguments)
 
+        async def call_handler(
+            arguments: dict[str, Any], tool_use_id: str | None
+        ) -> HostToolResult:
+            return await self._call(ctx, members, cfg, arguments, tool_use_id=tool_use_id)
+
         return HostTool(
-            name=cfg.tool_name, description=description, input_schema=schema, handler=handler
+            name=cfg.tool_name,
+            description=description,
+            input_schema=schema,
+            handler=handler,
+            call_handler=call_handler,
         )
 
     async def _call(
@@ -321,8 +330,13 @@ class HostDelegation:
         members: Mapping[str, DelegationMember],
         cfg: HostDelegationConfig,
         arguments: Mapping[str, Any],
+        *,
+        tool_use_id: str | None = None,
     ) -> HostToolResult:
-        """도구 호출 하나: 대상 확인 → `invoke_node` → 결과 텍스트(실패면 `is_error`)."""
+        """도구 호출 하나: 대상 확인 → `invoke_node` → 결과 텍스트(실패면 `is_error`).
+
+        `tool_use_id`(백엔드가 알려 준 도구 호출 id)는 대상 NodeRun의 `node.*` 이벤트에 실린다(C7).
+        """
         target = arguments.get(cfg.target_param)
         task = arguments.get(cfg.task_param)
         member = members.get(target) if isinstance(target, str) else None
@@ -342,6 +356,7 @@ class HostDelegation:
                 {port: task},
                 by_edge=member.edge_id,
                 max_depth=self.descriptor.max_depth,
+                tool_use_id=tool_use_id,
             )
         except ValueError:
             return HostToolResult(

@@ -83,6 +83,45 @@ def test_optional_cycle_is_broken_definitions_reads_checks_after() -> None:
     assert chat.contexts[0].port(LAUNCHER) == "zlink/chat.turn_launcher"
 
 
+def test_optional_cycle_keeps_single_port_order_outside_the_closing_edge() -> None:
+    """5.5R.10: 큰 선택 순환(모듈 여럿이 한 강연결 요소)이어도 순환을 닫는 선택 간선만 뺀다.
+    단일 포트(설정) 간선은 지키고 여러 제공자 포트(등록 목록) 간선을 먼저 빼므로, 설정 제공자가
+    소비자보다 먼저 build된다(id 순이면 a-arch가 맨 먼저였을 것)."""
+    settings = PortKey[str]("workspace.settings")
+    checks = PortKey[str]("defs.checks", multi=True)
+    catalog = PortKey[str]("architecture.catalog")
+    query = PortKey[str]("logs.query")
+    preds = PortKey[str]("logs.filter_predicates", multi=True)
+    seen: list[str | None] = []
+    seen_preds: list[list[str]] = []
+
+    def arch_build(ctx: ModuleContext) -> ModuleParts:
+        seen.append(ctx.port(settings))
+        ctx.provide(catalog, "catalog")
+        return ModuleParts()
+
+    def logs_build(ctx: ModuleContext) -> ModuleParts:
+        seen_preds.append(ctx.ports(preds))
+        ctx.provide(query, "query")
+        return ModuleParts()
+
+    # 순환: a-arch →(설정) z-defs →(checks) c-link →(query) m-logs →(preds) b-link →(catalog) a-arch
+    arch = fake_module("a-arch", provides=[catalog], optional=[settings], on_build=arch_build)
+    defs = fake_module("z-defs", provides=[settings], optional=[checks])
+    clink = fake_module("c-link", kind="link", provides=[checks], requires=[query])
+    logs = fake_module("m-logs", provides=[query], optional=[preds], on_build=logs_build)
+    blink = fake_module("b-link", kind="link", provides=[preds], requires=[query, catalog])
+    assembly = assemble([arch, defs, clink, logs, blink])
+    assert all(r.active for r in assembly.report)
+    order = assembly.order
+    assert order.index("z-defs") < order.index("a-arch") < order.index("b-link")
+    assert seen == ["z-defs/workspace.settings"]
+    # 빠진 간선은 여러 제공자 포트 하나(z-defs → c-link 또는 m-logs → b-link)뿐이다
+    assert order.index("m-logs") < order.index("b-link")
+    assert seen_preds == [[]]
+    assert assembly.ports(preds) == ["b-link/logs.filter_predicates"]
+
+
 def test_disabled_makes_dependents_unsatisfied_with_missing_port() -> None:
     definitions, chat, link = three()
     assembly = assemble([definitions, chat, link], ModulesConfig(disabled=["mod-definitions"]))

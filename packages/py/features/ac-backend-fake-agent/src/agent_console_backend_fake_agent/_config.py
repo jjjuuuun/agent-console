@@ -773,6 +773,20 @@ class FakeRule(BaseModel):
         description="보고할 사용량입니다. 비우면 단어 수로 셉니다.",
         json_schema_extra=x_ui(tier="advanced"),
     )
+    llm_duration_ms: int | None = Field(
+        default=None,
+        ge=0,
+        title="모델 호출 소요",
+        description=(
+            "마지막 사용량 기록에 실을 모델 호출 소요 시간입니다. 비우면 싣지 않습니다(모름)."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            when="관측 화면의 모델 호출 소요 표시를 확인하고 싶을 때 넣으세요.",
+            example=1200,
+            unit="ms",
+        ),
+    )
 
     def matches(self, prompt: str) -> bool:
         """이 규칙의 조건이 프롬프트에 맞으면 참."""

@@ -13,9 +13,11 @@ from __future__ import annotations
 
 from ._classifier import (
     MCP_PATTERN_GROUPS,
+    OMITTED_KEY,
     ClaudeCodeClassifier,
     McpPatternError,
     compile_mcp_pattern,
+    omitted_row,
     summary_text,
 )
 from ._schemas import classifier_config_schema, source_config_schema
@@ -33,11 +35,13 @@ __all__ = [
     "MCP_PATTERN_GROUPS",
     "META_KIND_SESSION",
     "META_KIND_SUBAGENT",
+    "OMITTED_KEY",
     "ClaudeCodeClassifier",
     "ClaudeCodeJsonlSource",
     "McpPatternError",
     "classifier_config_schema",
     "compile_mcp_pattern",
+    "omitted_row",
     "source_config_schema",
     "summary_text",
 ]

@@ -156,3 +156,35 @@ async def test_cancel_during_tool_call() -> None:
     result, sink = await asyncio.wait_for(run, 5)
     assert result.status == "cancelled"
     assert not [e for e in sink.events if e.type == "agent.tool_result"]
+
+
+async def test_host_call_passes_tool_use_id_and_llm_duration() -> None:
+    """5.5R.7: 만든 호출 id를 `call_handler`에 넘기고(C7), 규칙 `llm_duration_ms`를 마지막
+    `agent.usage`에 싣는다(C2)."""
+    seen: list[str | None] = []
+
+    async def plain(args: dict[str, Any]) -> HostToolResult:
+        raise AssertionError("call_handler가 있으면 handler를 부르지 않는다")
+
+    async def with_id(args: dict[str, Any], tool_use_id: str | None) -> HostToolResult:
+        seen.append(tool_use_id)
+        return HostToolResult(text="ok")
+
+    tool = HostTool("delegate", "위임", {}, plain, call_handler=with_id)
+    options = {
+        "default": {
+            "response": "끝",
+            "llm_duration_ms": 750,
+            "host_tool_calls": [{"tool": "delegate", "input": {"target": "w"}}],
+        }
+    }
+    result, sink = await _run(options, [tool])
+    assert result.status == "succeeded"
+    [call] = [e for e in sink.events if e.type == "agent.tool_call"]
+    assert seen == [dict(call.payload)["tool_use_id"]]
+    [usage] = [e for e in sink.events if e.type == "agent.usage"]
+    assert dict(usage.payload)["duration_ms"] == 750
+    # 설정하지 않으면 null(모름)
+    _, quiet = await _run({"default": {"response": "끝"}}, [])
+    [usage] = [e for e in quiet.events if e.type == "agent.usage"]
+    assert dict(usage.payload)["duration_ms"] is None

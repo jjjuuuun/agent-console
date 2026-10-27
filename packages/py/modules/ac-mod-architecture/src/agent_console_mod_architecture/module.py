@@ -93,9 +93,11 @@ class ArchitectureModule:
         if not isinstance(cfg, ArchitectureModuleSettings):
             cfg = ArchitectureModuleSettings()
         registry = profile_registry(ctx.registries)
-        reader = ctx.port(WORKSPACE_SETTINGS)
 
         def user_section() -> Any:
+            # 부를 때 포트를 찾는다(조립 순서상 설정 제공 모듈이 이 모듈보다 늦게 만들어질 수 있다 —
+            # 예: 로그 연동이 이 모듈의 포트를 요구하고 로그 모듈이 그 연동의 필터를 받을 때).
+            reader = ctx.port(WORKSPACE_SETTINGS)
             return section_of(reader()) if reader is not None else None
 
         service = ArchitectureCatalogService(

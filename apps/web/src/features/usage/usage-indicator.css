@@ -38,9 +38,9 @@
 
 /* 접힘 레일(폭 48) */
 .usage-ind[data-layout="rail"] .usage-ind-link { padding: 4px 0; gap: 6px; align-items: center; }
-.usage-ind-rail-item { width: min(32px, 100%); align-items: stretch; gap: 2px; text-align: center; }
-.usage-ind-rail-value { position: relative; font-size: var(--ac-text-xs); font-weight: 600; line-height: 14px; color: var(--ac-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.usage-ind-rail-mark { position: absolute; top: -2px; right: 0; font-size: 10px; color: var(--usage-ind-tone, var(--ac-warning)); }
+.usage-ind-rail-item { width: min(40px, 100%); align-items: stretch; gap: 2px; text-align: center; }
+.usage-ind-rail-value { display: inline-flex; align-items: baseline; justify-content: center; gap: 1px; font-size: var(--ac-text-xs); font-weight: 600; line-height: 14px; color: var(--ac-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.usage-ind-rail-mark { flex: none; font-size: 9px; line-height: 1; color: var(--usage-ind-tone, var(--ac-warning)); }
 .usage-ind[data-layout="rail"] .ac-gauge { height: 4px; }
 
 /* 플로팅 칩(opt-in) */

@@ -41,7 +41,7 @@ export function LoginConfirmDialog({ open, title, method, starting, error, onCan
     >
       {method?.description ? <p className="ac-text">{method.description}</p> : null}
       {method?.notice ? (
-        <Banner tone="warning" title={t.noticeHeading}>
+        <Banner tone="warning">
           <span data-testid="login-notice">{method.notice}</span>
         </Banner>
       ) : null}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatResetsPhrase, isFarReset } from "./resetDisplay";
 import { RESET_DATE_AFTER_SECONDS } from "./usageConfig";
@@ -17,5 +19,15 @@ describe("먼 미래 resets_at 표시", () => {
   });
   it("기준을 인자로 바꿀 수 있다", () => {
     expect(formatResetsPhrase(now + 2 * 86400, now, rel, on, 86400).far).toBe(true);
+  });
+});
+
+describe("5.5R.30 레일 글리프 자리", () => {
+  const css = readFileSync(join(import.meta.dirname, "usage-indicator.css"), "utf-8");
+  it("레일 값의 글리프는 숫자 위에 겹치지 않고(absolute 아님) 옆 자리를 갖는다", () => {
+    const mark = /\.usage-ind-rail-mark \{([^}]*)\}/.exec(css)![1]!;
+    expect(mark).not.toContain("position: absolute");
+    expect(/\.usage-ind-rail-value \{([^}]*)\}/.exec(css)![1]!).toContain("inline-flex");
+    expect(/\.usage-ind-rail-item \{ width: min\((\d+)px/.exec(css)![1]).toBe("40");
   });
 });

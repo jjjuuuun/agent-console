@@ -717,6 +717,58 @@ async def test_qa_file_content_and_secret_do_not_leak_into_events(tmp_path: Path
     assert "# 스펙 본문" not in blob
 
 
+async def test_agent_node_emits_context_prepared_without_bodies(tmp_path: Path) -> None:
+    """5.5R.7 C1: 백엔드 요청마다 `agent.context_prepared`(리소스 표지·조각 수, 본문 없음)."""
+    import hashlib
+
+    stack = make_stack(agent("lead"))
+    load_resource_types(stack.registries.extension(RESOURCE_TYPES_EXTENSION))
+    stack.services[RESOURCE_LOOKUP] = _resources(tmp_path)
+    stack.services[RUN_FILES_ROOT] = str(tmp_path / "runs")
+    graph = team(
+        [
+            you(),
+            n("lead", "lead"),
+            NodeSpec.model_validate(
+                {"id": "doc", "type": "resource", "config": {"resource_ref": "spec"}}
+            ),
+            NodeSpec.model_validate(
+                {"id": "guide", "type": "resource", "config": {"resource_ref": "team-guide"}}
+            ),
+        ],
+        [
+            msg("m", "lead"),
+            ans("r", "lead"),
+            e("u1", "doc", "provides", "lead", "resources", "uses"),
+            e("u2", "guide", "provides", "lead", "resources", "uses"),
+        ],
+    )
+    run = await stack.run(graph, "q")
+    assert run.status == "completed", run.error
+    [event] = stack.events(run, "agent.context_prepared")
+    assert event.node_path == ["lead"]
+    body = "# 스펙 본문".encode()
+    by_id = {r["id"]: r for r in event.payload["resources"]}
+    assert by_id["spec"] == {
+        "id": "spec",
+        "kind": "file",
+        "bytes": len(body),
+        "sha256": hashlib.sha256(body).hexdigest(),
+    }
+    # 본문 파일이 없는 리소스(설정 text만)는 크기·해시를 모른다
+    assert by_id["team-guide"] == {
+        "id": "team-guide",
+        "kind": "instruction",
+        "bytes": None,
+        "sha256": None,
+    }
+    assert event.payload["fragments"] == 1
+    # 백엔드 요청보다 먼저 낸다
+    types = [ev.type for ev in stack.events(run) if ev.node_path == ["lead"]]
+    assert types.index("agent.context_prepared") < types.index("agent.session_started")
+    assert "팀 규칙" not in event.model_dump_json()
+
+
 # ---------------------------------------------------------------- 2R.12 항목 파일 트리(skill·rule)
 
 

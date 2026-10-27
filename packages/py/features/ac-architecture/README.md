@@ -17,13 +17,39 @@
 | 프로필 읽기 | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
 | 병합 | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)`는 없거나 0개여도 예외 없음) |
 | 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None)`, `check_profile_data(data, ...)` |
-| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes)` |
-| 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators)`, `format_arch`·`parse_arch` |
+| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`matches` = 미리 판정한 결과, 반복 투영 캐시용) |
+| 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`·`parse_arch` |
 | 플러그인(X23) | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
-| 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML) |
+| 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML), `load_sample(name)`(수집 결과 표본: 이벤트·토큰·출처 종류, `SAMPLES`) |
 
-패키지 기본 프로필 데이터는 `src/agent_console_architecture/data/default_architecture.yaml`이다(지금은 자리만 있고
-내용은 작업 5.5R.8에서 채운다). 사용자는 설정 `architecture`로 고치거나 끈다(`include_defaults: false`).
+## 기본 프로필
+
+패키지 기본 프로필 데이터는 `src/agent_console_architecture/data/default_architecture.yaml`의 프로필 하나
+`agent-architecture`다(칸 16·연결 21·영역 3, 좌표는 화면 명세 `docs/design/screen-architecture.md` §9).
+기능이 동작하는 데 필요한 기본값일 뿐이고 사용자 데이터다:
+
+- 끄기: 설정 `architecture.include_defaults: false`(전부) 또는 `architecture.profiles.agent-architecture: null`(이 프로필만)
+- 바꾸기: 같은 id로 프로필 전체를 다시 적는다(id 단위로 통째로 바뀐다). `load_default_profiles(path)`로 다른 파일을 기본으로 쓸 수도 있다.
+- 조건은 목록 질의가 주는 이벤트 본문만 본다(`detail`·`raw`는 쓰지 않는다). 범주·태그·도구 이름 틀은 기본 분류 데이터
+  (`ac-logs-claude` 분류기 설정, `ac-link-logs-runs` `run_event_map.yaml`)에 맞춘 값이라 분류 데이터를 바꾸면 함께 바꾼다.
+- 출처 종류별 수집 범위(`coverage`)와 출처 우선순위(`source_priority: [claude-code-jsonl, platform-runs]`)가 있다.
+  같은 실행을 플랫폼 기록과 세션 로그로 함께 읽어도 칸·연결마다 한 출처만 세므로 같은 도구 호출이 한 번만 세진다.
+
+```python
+>>> from agent_console_architecture import load_default_profiles, project_architecture
+>>> from agent_console_architecture.testing import load_sample
+>>> from agent_console_conditions import default_operators
+>>> default = load_default_profiles()["agent-architecture"]
+>>> sample = load_sample("run_with_session_log")
+>>> view = project_architecture(
+...     sample.events, default, profile_id="agent-architecture", operators=default_operators()[0],
+...     source_kinds=sample.source_kinds, tokens=sample.tokens,
+... )
+>>> dispatch = next(c for c in view.cells if c.id == "dispatch")
+>>> dispatch.metrics["count"].value, dispatch.selector.arch_sources
+(4.0, ['claude-code-jsonl'])
+
+```
 
 ## 의존성: 무엇을 / 왜 / 대안
 

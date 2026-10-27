@@ -10,7 +10,9 @@
        (skill 등)는 `<…>/<node>/_bundle/<node>/<칸>/<name>/`에 쓰고 경로로 바꾼다. 문제는
        `log.warning`으로 남긴다.
     5. 요청: 정의(식별) + 유효 설정, 비밀 참조 해석, 프롬프트(`in` 값, `prompt_template`), 세션
-       (`session` continue/fresh, `SESSIONS` 서비스), 허용 상호작용(`session_grant`).
+       (`session` continue/fresh, `SESSIONS` 서비스), 허용 상호작용(`session_grant`). 요청을 만든 뒤
+       `agent.context_prepared`(붙은 리소스 id·종류·바이트 수·해시와 프롬프트 조각 수, 본문 없음,
+       `context.context_prepared_payload`)를 낸다.
     6. 위임 대상(디스크립터 `invocation` 연결)이 있으면 대상을 위임 방식별로 묶고, 묶음마다 유효
        설정·묶음·역할·언제 맡길지와 방식 config(노드 config `delegation[방식 id]`)로
        `DelegationPlan`을 만든다. 방식이 하나면 그 방식(X12)의 `run`, 여럿이면 모두 composable일
@@ -90,6 +92,7 @@ from ._common import (
     validation_errors,
     warn,
 )
+from .context import CONTEXT_PREPARED_EVENT, context_prepared_payload
 from .files import (
     DEFAULT_FILES_SLOT,
     ITEM_FILES_KEY,
@@ -478,25 +481,38 @@ class AgentNode:
 
         session = _session(ctx, settings, backend_id)
         continuing = session is not None and session.session_id == ctx.previous_session_id
+        items = _prompt_inputs(ctx, plan, inputs.get(IN_PORT), fresh_only=continuing)
         prompt = assemble_prompt(
-            _prompt_inputs(ctx, plan, inputs.get(IN_PORT), fresh_only=continuing),
+            items,
             settings.prompt_template,
             message=_message_of(ctx.run.input),
             node=plan.label_of(ctx.node.id),
             fmt=PromptFormat.of(settings),
         )
+        bundle = await run.bundle_of(ctx.node.id, ns, caps)
         request = AgentRequest(
             agent=resolved,
             prompt=prompt,
             cwd=settings.working_directory or ctx.services.get(WORKING_DIRECTORY),
             limits=resolved.limits,
             session=session,
-            bundle=await run.bundle_of(ctx.node.id, ns, caps),
+            bundle=bundle,
             interactions=session_grant(plan, ctx.node.id, run.strategies) or ctx.interaction_grant,
             observe=settings.observe.model_dump(mode="json", exclude_none=True)
             if settings.observe is not None
             else {},
             **_run_location(ctx),
+        )
+        # C1(design §5.5R.1): 붙은 리소스 표지·조각 수만(본문 없음). 본문 읽기는 스레드에서.
+        await ctx.emit(
+            CONTEXT_PREPARED_EVENT,
+            await asyncio.to_thread(
+                context_prepared_payload,
+                bundle,
+                run.resources,
+                resource_types=run.resource_types,
+                fragments=len(items),
+            ),
         )
 
         if links:

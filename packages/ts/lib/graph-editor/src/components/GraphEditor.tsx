@@ -220,6 +220,8 @@ const REFIT_WINDOW_MS = 3000;
 
 /** 줌이 이 값보다 낮으면 연결 칩은 아이콘만 보인다(글자는 연결의 접근성 이름에 남는다). */
 const LOW_ZOOM = 0.6;
+/** 이 줌 미만이면 노드 제목을 화면 12px 상당으로 키운다(한 줄 말줄임, 전체 이름은 title 툴팁). 14px 기준 12/14 */
+const TITLE_BOOST_ZOOM = 0.85;
 /** 노드 카드 대략 크기의 절반: 보이는 영역 중앙에 놓을 때 카드 중심을 맞추는 값 */
 const CARD_HALF_W = 110;
 const CARD_HALF_H = 40;
@@ -248,6 +250,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   const rootRef = useRef<HTMLDivElement>(null);
   // 낮은 줌: 경계를 넘을 때만 다시 그린다(연결마다 구독하지 않는다)
   const lowZoom = useStore((st) => st.transform[2] < LOW_ZOOM);
+  const titleBoost = useStore((st) => st.transform[2] < TITLE_BOOST_ZOOM);
   // 줌을 CSS 변수로 내보낸다(가장자리 띠가 줌아웃에서도 화면에서 일정한 굵기를 갖게). 노드를 다시 그리지 않고 루트 요소에만 쓴다.
   const flowStore = useStoreApi();
   // 연결을 끄는 동안 노드 위에 보이는 "여기에 연결" 라벨(CSS `content`가 읽는다)
@@ -1493,7 +1496,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   const undoAvailable = toast?.undo !== undefined && sameGraph(graph, toast.undo.after);
 
   return (
-    <div ref={rootRef} className={["ac-ge-root", props.className].filter(Boolean).join(" ")} style={props.style} data-readonly={readOnly ? "true" : undefined} data-connecting={connecting ? "true" : undefined} data-zoom-lod={lowZoom ? "icon" : undefined}>
+    <div ref={rootRef} className={["ac-ge-root", props.className].filter(Boolean).join(" ")} style={props.style} data-readonly={readOnly ? "true" : undefined} data-connecting={connecting ? "true" : undefined} data-zoom-lod={lowZoom ? "icon" : undefined} data-zoom-title={titleBoost ? "boost" : undefined}>
       {showPalette && (
         <aside
           className="ac-ge-palette-wrap"

@@ -282,7 +282,7 @@
   --ac-lane-cursor: 2px;
   --ac-handoff-cell-min: 56px;
   --ac-sidebar-w: 220px;
-  --ac-sidebar-w-collapsed: 48px;
+  --ac-sidebar-w-collapsed: 54px;
   --ac-nav-item-h: 32px;
   --ac-pageheader-h: 48px;
   --ac-badge-h: 18px;
@@ -293,6 +293,11 @@
   --ac-trace-row-h: 32px;
   --ac-trace-indent: 16px;
   --ac-trace-bar-h: 16px;
+  /* 관측 구조도 (tokens.md 5.11, screen-architecture.md §2.5) */
+  --ac-arch-chip-h: 20px; /* 연결 라벨 칩 높이 */
+  --ac-arch-hit: 14px; /* 연결 클릭 영역 */
+  --ac-arch-info-h: 40px; /* 선택 정보 줄 최소 높이 */
+  --ac-edge-selected-width: 2.5px;
   /* 독립 위임·반복·조건·중첩 팀 (tokens.md 5.10). 새 hex 없음: 별칭 또는 파생 */
   --ac-edge-loop: var(--ac-cat-6);
   --ac-edge-failure: var(--ac-danger);
@@ -394,6 +399,7 @@ code, kbd, pre, samp { font-family: var(--ac-font-mono); font-size: var(--ac-tex
   --ac-icon-waiting: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5v9M10 3.5v9'/%3E%3C/svg%3E");
   --ac-icon-cancelled: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Crect x='5.6' y='5.6' width='4.8' height='4.8' rx='.6' fill='black' stroke='none'/%3E%3C/svg%3E");
   --ac-icon-unknown: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='M6.3 6.4a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.9.7-.9 1.3M8 11.4h.01'/%3E%3C/svg%3E");
+  --ac-icon-warning: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2.2 14.4 13.4H1.6z'/%3E%3Cpath d='M8 6.6v3M8 11.5h.01'/%3E%3C/svg%3E");
   --ac-icon-interrupted: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.2 1.8L3.8 9h4l-1 5.2L12.2 7h-4z'/%3E%3C/svg%3E");
   --ac-status-icon-size: 16px;
 }
@@ -590,7 +596,7 @@ code, kbd, pre, samp { font-family: var(--ac-font-mono); font-size: var(--ac-tex
 .ac-banner[data-tone="success"] { background: var(--ac-success-bg); border-left-color: var(--ac-success); }
 .ac-banner-mark { flex: none; width: 16px; height: 16px; margin-top: 2px; background-color: var(--ac-info); -webkit-mask: var(--ac-banner-icon) center / contain no-repeat; mask: var(--ac-banner-icon) center / contain no-repeat; }
 .ac-banner[data-tone="info"] { --ac-banner-icon: var(--ac-icon-queued); }
-.ac-banner[data-tone="warning"] { --ac-banner-icon: var(--ac-icon-unknown); }
+.ac-banner[data-tone="warning"] { --ac-banner-icon: var(--ac-icon-warning); }
 .ac-banner[data-tone="danger"] { --ac-banner-icon: var(--ac-icon-failed); }
 .ac-banner[data-tone="success"] { --ac-banner-icon: var(--ac-icon-succeeded); }
 .ac-banner[data-tone="warning"] .ac-banner-mark { background-color: var(--ac-warning); }
@@ -668,7 +674,8 @@ code, kbd, pre, samp { font-family: var(--ac-font-mono); font-size: var(--ac-tex
 .ac-dialog-body fieldset { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
 .ac-dialog-body legend { padding: 0; }
 .ac-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ac-space-2); padding: 12px 16px; border-top: 1px solid var(--ac-border-soft); min-width: 0; }
-@container (max-width: 477px) {
+/* 버튼 세로 쌓임은 정말 좁은 대화상자(작은 뷰포트)만. sm(400)도 md와 같은 우측 정렬 가로 배치(5.5R.30). */
+@container (max-width: 359px) {
   .ac-dialog-actions { flex-direction: column; align-items: stretch; }
   .ac-dialog-actions > * { width: 100%; }
 }

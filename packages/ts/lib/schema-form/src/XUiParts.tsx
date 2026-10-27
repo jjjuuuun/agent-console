@@ -7,7 +7,7 @@ import { deepEquals } from "@rjsf/utils";
 import { parsePointer } from "./errors";
 import type { SchemaFormMessages } from "./types";
 import { FieldHelpPopover, FieldHelpTip, hasFieldHelp, isHelpKey, needsOwnLabel } from "./FieldHelp";
-import { hasErrorNode, readXUi, resolveNode, resolveTier, splitByTier } from "./xui";
+import { hasErrorNode, humanizeEnumText, readXUi, resolveNode, resolveTier, splitByTier } from "./xui";
 import type { SplitEntry } from "./xui";
 
 /** SchemaForm이 내려 주는 `x-ui` 렌더 설정. 없으면(Provider 밖) 템플릿은 기본 동작으로 돌아간다. */
@@ -99,7 +99,8 @@ export function XUiFieldTemplate(p: FieldTemplateProps) {
   const schema = p.schema as Record<string, unknown>;
   const root = p.registry.rootSchema;
   const xui = readXUi(schema);
-  const descriptionText = p.rawDescription ?? (typeof schema["description"] === "string" ? schema["description"] : undefined);
+  const rawText = p.rawDescription ?? (typeof schema["description"] === "string" ? schema["description"] : undefined);
+  const descriptionText = rawText === undefined ? undefined : humanizeEnumText(rawText, xui.enumLabels);
   const readOnlyValue = schema["readOnly"] === true;
   const helpable = hasFieldHelp(schema, p.readonly);
   const ownLabel = !(p.displayLabel && p.label) && needsOwnLabel(p);

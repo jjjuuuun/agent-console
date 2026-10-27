@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- 5.5R.10: `parse_log_filter`가 확장 필터(X28)의 빈 값(`name=`)을 값 `""` 하나로 남긴다(이름 없는 묶음 `arch_group=`). 기본 필드의 빈 값은 그대로 버린다.
 - 처음 만듦(4R.4): X5·X6 프로토콜·레지스트리, `JsonlFileSource`, `LogIngestor`, `LogIndex` 프로토콜,
   질의 의미(`query`), `testing.MemoryLogIndex`·계약 테스트 묶음, 기본 플러그인 `normalized-v1`·`mapped-jsonl`,
   기본 분류 체계 `default_taxonomy.yaml`.
@@ -22,3 +23,6 @@
   `build_archive`·`render_archive`(`escape_html`)도 같은 방어를 둔다. 공개 함수 `scrub_surrogates`.
 - 5R.19: 세션 제목 순위 규칙 데이터(`SessionTitleRule`·`QueryContext.session_title_rules`·`data/default_session_title_rules.yaml`,
   `query_context(session_title_rules=)`, `pick_session_title`), 기본 분류 체계 숨김 범주 `meta`, 짝 질의 색인 사용 실행 계획 테스트.
+- 5.5R.6: 색인 `(session, seq)`·`(thread, seq)`·`(run_id, seq)`(옛 `run_id` 단독 색인 대체; `open_log_index`가 기존 파일의
+  색인을 맞춘다, 서버는 `mod-logs` 리비전 `logs_0002`), 짝 없는 이벤트는 `duration_ms` 복사를 건너뜀,
+  규모 측정 도구 `testing.build_scale_index`·`CountingPredicate`·`read_all_pages`·`time_best`·`perf_strict`.

@@ -5,6 +5,11 @@
 `mcp__<서버>__<도구>`이고, 이 이름을 `allowed_tools`(사전 승인)에 넣는다. 서버 이름은 백엔드 옵션
 `host_tool_server`(스키마 기본값)다. 호출은 `agent_console_runtime.call_host_tool`로 실행한다(예외 →
 오류 결과, 실행 취소 → 핸들러 취소). I/O 없음 — 서버 객체만 만든다.
+
+도구 호출 id: SDK in-process 도구 핸들러는 입력만 받는다(claude-agent-sdk 0.2.166
+`run_tool(name, arguments)`, MCP 요청의 `_meta`를 넘기지 않음). 그래서 `call_host_tool`에
+`tool_use_id`를 주지 못하고, 위임 도구(`HostTool.call_handler`)가 부른 대상 NodeRun의
+`tool_use_id`는 이 백엔드에서 null이다(design §5.5R.1 C7).
 """
 
 from __future__ import annotations

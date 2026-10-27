@@ -23,7 +23,8 @@ def _layout(tmp_path: Path, flow: dict[str, Any]) -> Path:
     workspace = tmp_path / "ws"
     workspace.mkdir()
     # JSON은 YAML이기도 하다(설정 파일 형식 그대로 읽힌다)
-    document = {"architecture": {"profiles": {"flow": flow}}}
+    # 패키지 기본 프로필(5.5R.8)도 함께 보이므로 먼저 열 프로필을 정한다
+    document = {"architecture": {"profiles": {"flow": flow}, "default_profile": "flow"}}
     (workspace / "settings.yaml").write_text(
         json.dumps(document, ensure_ascii=False), encoding="utf-8"
     )
@@ -64,5 +65,8 @@ def test_standalone_without_with_reads_workspace_settings(
     assert ("mod-architecture", "active") in seen["modules"]
     assert ("local-settings", "active") in seen["modules"]
     assert [p["id"] for p in seen["list"]["profiles"] if p["origin"] == "user"] == ["flow"]
+    assert [p["id"] for p in seen["list"]["profiles"] if p["origin"] == "default"] == [
+        "agent-architecture"
+    ]
     assert seen["view"]["profile"] == "flow"
     assert seen["view"]["event_total"] == 4

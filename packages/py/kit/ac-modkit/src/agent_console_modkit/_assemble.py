@@ -8,9 +8,10 @@
   ``unsatisfied``가 된다. 사용자가 ``modules.bindings: {포트: 모듈 id}``로 고르면 고른 모듈만
   그 포트를 제공하고 나머지 제공자는 그 포트 없이 켜진다.
 - ``PortKey(multi=True)`` 포트는 충돌이 아니다. 소비자는 제공 모듈 id 순 목록으로 받는다.
-- 순서: 제공자 → 소비자(필수·선택 포트 모두). 선택 포트로 순환이 생기면 순환에 걸린 모듈 사이의
-  선택 간선만 빼고 다시 정렬하고(그 선택 포트는 아직 없을 수 있다), 필수 포트끼리 순환이면
-  그 모듈들(과 그것에 기대는 모듈)은 ``unsatisfied``(이유 ``cycle``)다.
+- 순서: 제공자 → 소비자(필수·선택 포트 모두). 선택 포트로 순환이 생기면 순환을 만드는 선택
+  간선만 뺀다(단일 포트 간선을 먼저 지키고 여러 제공자 포트 간선을 먼저 뺀다 — 빠진 선택 포트는
+  build 때 아직 없을 수 있다). 필수 포트끼리 순환이면 그 모듈들(과 그것에 기대는 모듈)은
+  ``unsatisfied``(이유 ``cycle``)다.
 """
 
 from __future__ import annotations
@@ -512,23 +513,18 @@ def _topo_order(ids: Iterable[str], deps: Mapping[str, set[str]]) -> tuple[list[
     return order, cyclic
 
 
-def _cycle_members(nodes: Iterable[str], deps: Mapping[str, set[str]]) -> set[str]:
-    """``nodes`` 중 자기 자신에게 돌아오는(순환에 속한) 것."""
-    pool = set(nodes)
-    members: set[str] = set()
-    for start in pool:
-        stack = [d for d in deps.get(start, ()) if d in pool]
-        seen: set[str] = set()
-        while stack:
-            current = stack.pop()
-            if current == start:
-                members.add(start)
-                break
-            if current in seen:
-                continue
-            seen.add(current)
-            stack.extend(d for d in deps.get(current, ()) if d in pool)
-    return members
+def _reaches(start: str, goal: str, deps: Mapping[str, set[str]]) -> bool:
+    """``start``에서 ``deps`` 간선을 따라 ``goal``에 닿는지."""
+    stack, seen = [start], {start}
+    while stack:
+        current = stack.pop()
+        if current == goal:
+            return True
+        for nxt in deps.get(current, ()):
+            if nxt not in seen:
+                seen.add(nxt)
+                stack.append(nxt)
+    return False
 
 
 def _settings_of(module: Module, raw: Mapping[str, Any] | None) -> BaseModel | None:
@@ -639,24 +635,28 @@ def assemble(
         return {mid for mid, _ in declared_providers.get(port, ()) if mid in live}
 
     required: dict[str, set[str]] = {}
-    optional: dict[str, set[str]] = {}
     for mid, m in live.items():
         required[mid] = {p for k in m.descriptor.requires for p in providers_of(k.name)} - {mid}
-        optional[mid] = {p for k in m.descriptor.optional for p in providers_of(k.name)} - {mid}
 
-    # 4) 순서: 순환에 걸린 모듈 사이의 선택 간선만 빼며 다시 정렬한다(필수 순환만 남을 때까지)
-    in_cycle: set[str] = set()
-    while True:
-        edges = {
-            mid: required[mid]
-            | {p for p in optional[mid] if not (mid in in_cycle and p in in_cycle)}
-            for mid in live
-        }
-        order, stuck = _topo_order(live, edges)
-        members = _cycle_members(stuck, edges)
-        if not members or members <= in_cycle:
-            break
-        in_cycle |= members
+    # 4) 순서: 필수 간선은 모두, 선택 간선은 순환을 만들지 않는 것만 넣고 정렬한다.
+    #    선택 간선은 단일 포트(설정·저장소처럼 build 때 읽는 값)를 먼저, 여러 제공자 포트(등록
+    #    목록 — 보통 부를 때 읽는다)를 나중에 넣는다. 순환을 만드는 선택 간선만 빠지므로 순환과
+    #    상관없는 모듈은 선택 포트 순서(제공자 먼저)를 잃지 않는다. 필수 간선끼리 순환이면
+    #    그 모듈들은 정렬되지 않는다(아래에서 ``cycle``).
+    edges: dict[str, set[str]] = {mid: set(required[mid]) for mid in live}
+    optional_edges: list[tuple[bool, str, str]] = sorted(
+        (bool(k.multi), consumer, provider)
+        for consumer, m in live.items()
+        for k in m.descriptor.optional
+        for provider in providers_of(k.name)
+        if provider != consumer
+    )
+    for _multi, consumer, provider in optional_edges:
+        if provider in edges[consumer]:
+            continue
+        if not _reaches(provider, consumer, edges):  # 이미 소비자에 기대면 순환을 만든다
+            edges[consumer].add(provider)
+    order, stuck = _topo_order(live, edges)
     cyclic = stuck
     for mid in cyclic:
         reports[index_of[mid]] = _base_report(

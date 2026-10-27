@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.5R.10: 조립 순서. 선택 포트 순환을 끊을 때 "순환 구성원 사이 선택 간선 모두 빼기" 대신 "필수 간선 전부 + 순환을 만들지 않는 선택 간선만(단일 포트 먼저, 여러 제공자 포트 나중)"으로 정렬한다. 큰 선택 순환(강연결 요소)에 묶여도 설정 제공자 → 소비자 순서를 잃지 않는다.
 - 5.2R.93(설정 호환 정리): 옛 키를 읽어 옮기는 장치 `MovedSetting`·`SettingsMove`·`migrate_settings`와 `SettingsCompat.moved`·`SeedSetting.before_moves`를 지웠다(4R.18부터 선언 0개, 정책은 "옛 키는 읽지 않고 `RemovedSetting`으로 거부"). 기본값 채우기는 새 함수 `seed_settings(data, compats)`가 한다. 예제 `ECHO_SETTINGS_COMPAT`에서 옮기기 선언을 뺐다. 0.1.0 미출시 범위 안의 변경이라 버전은 그대로다.
 - 5.2R.29: 모듈 옵션 읽기 전용 보기. 코어 `read_module_options`·`ModuleOptions`·`mask_values`·`OPTIONS_MASK`·`SECRET_SCHEMA_KEY`·`SecretPathFinder`, `Assembly.module_options(id)`(`Assembly.descriptors`·`Assembly.options` 필드 추가). 호스트 `GET /modules/{id}/options`(`build_module_options_router`·`default_module_options_payload`, `create_host_app(options_payload=)`)와 YAML 조각 `options_yaml_snippet`(가린 줄은 주석 `MASKED_LINE_NOTE`, 비게 된 객체·목록은 `{}`·`[]`). 가림 문자열은 `OPTIONS_MASK` 하나(`host.REDACTED`가 같은 값), `mask=` 인자로 호스트가 맞춘다. 쓰기 없음.
 - 4R.18: `RemovedSetting`에 `new`(새 위치)·`reason` 기본값·`message()`를 더했다. 읽기 호환이 끝난 옛 키를 새 위치 안내 오류로 바꿀 때 쓴다.

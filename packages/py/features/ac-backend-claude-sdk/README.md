@@ -408,6 +408,9 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 `RateLimitEvent` → `usage.rate_limit{window(rate_limit_type, 없으면 "unspecified"), status, utilization, resets_at,
 overage_status}`. 값을 지어내지 않는다(없으면 null).
 
+모델 호출 소요(design §5.5R.1 C2): `ResultMessage.duration_api_ms`(실행 전체의 모델 API 대기 합)를 마지막
+`agent.usage`의 `duration_ms`로 싣는다. 값이 없거나 음수면 null이다.
+
 ## 설치자 설정 (`ConfigurableBackend` 훅)
 
 `ClaudeSdkBackend.from_options(options, *, secrets, environ)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
@@ -565,6 +568,9 @@ in-process SDK MCP 서버 하나로 묶어 모델에게 준다. 백엔드는 도
 `test_installed_sdk_has_in_process_mcp_api`가 이 존재를 확인한다. 테스트 도우미 `testing.SdkToolCall`·`call_sdk_mcp_tool`은 CLI처럼
 JSON-RPC(`initialize` → `tools/call`)로 in-process 서버를 부른다(SDK 내부 `claude_agent_sdk._internal.sdk_mcp_bridge` 사용 — SDK가
 바뀌면 이 도우미만 고친다). 실호출 확인 항목은 아래 21~26.
+
+SDK 핸들러는 입력만 받아(MCP 요청의 `_meta`도 넘기지 않음) 도구 호출 id를 모른다. 그래서 위임 도구가 부른 대상
+NodeRun의 `tool_use_id`(design §5.5R.1 C7)는 이 백엔드에서 null이다.
 
 ## 미확인 SDK 동작 (실호출 스모크로 확인할 항목)
 

@@ -92,7 +92,8 @@ def test_call_node_run_start_is_a_handoff_scheduled_is_not() -> None:
     )
     rig.scan()
     lead, m1, old = _events(rig)
-    assert (lead.from_, lead.to, lead.via) == ([], ["lead"], "")
+    # 5.5R.7(C7): 받는 쪽도 호출 NodeRun일 때만 채운다(대응표 조건부 값).
+    assert (lead.from_, lead.to, lead.via) == ([], [], "")
     assert (m1.from_, m1.to, m1.via, m1.title) == (["lead"], ["m1"], "delegate", "m1 running")
     assert old.via == ""
     matrix = rig.index.handoffs(LogFilter(), query_context(None))

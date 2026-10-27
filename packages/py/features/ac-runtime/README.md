@@ -113,7 +113,7 @@ services = services.with_(SESSIONS, session_refs(conversation_sessions))
 `cancel`, `clock`/`now()`, `node_path`, `child_path(node_id)`, `await emit(type, payload, raw=, evidence=, actor=, node_path=)`,
 `await emit_replies(node_id, outputs, status=, actor=)`,
 `await request_input(InteractionRequest) -> InteractionOutcome`, `interaction_grant`, `incoming(port=None) -> list[Incoming]`,
-`previous_session_id`, `await invoke_node(node_id, inputs, by_edge=, max_depth=None) -> NodeRunView`, `call`, `invoked_by`,
+`previous_session_id`, `await invoke_node(node_id, inputs, by_edge=, max_depth=None, tool_use_id=None) -> NodeRunView`, `call`, `invoked_by`,
 `await run_child(graph, input=None, graph_version=None, services=None) -> ChildRunResult`.
 
 - `incoming`: 이 노드로 들어온 값(통과한 엣지마다 `Incoming{port, edge_id, source_node, source_port, value}`, 들어오는 엣지 순서).
@@ -135,10 +135,14 @@ services = services.with_(SESSIONS, session_refs(conversation_sessions))
 위임 방식이 모델에게 줄 도구를 만들어 `AgentRequest.host_tools`에 넣고, `capabilities.host_tools`를 선언한 백엔드가
 모델의 호출마다 `handler`를 부른다. 계약 타입이 아니며 `AgentRequest.model_dump()`에 나오지 않는다.
 
-- `HostTool(name, description, input_schema, handler)`, `HostToolResult(text, is_error=False)`,
-  `HostToolHandler = Callable[[dict], Awaitable[HostToolResult]]`
-- 백엔드 공용: `await call_host_tool(tool, args, cancel=)`(예외 → 오류 결과(형식 이름만), 실행 취소 → 핸들러 취소 후
-  오류 결과, 바깥 취소는 그대로 전파), `duplicate_host_tool_names(tools)`, `object_input_schema(schema)`
+- `HostTool(name, description, input_schema, handler, call_handler=None)`, `HostToolResult(text, is_error=False)`,
+  `HostToolHandler = Callable[[dict], Awaitable[HostToolResult]]`,
+  `HostToolCallHandler = Callable[[dict, str | None], Awaitable[HostToolResult]]`(호출 id까지 받는 핸들러, 5.5R.7)
+- 백엔드 공용: `await call_host_tool(tool, args, cancel=, tool_use_id=None)`(예외 → 오류 결과(형식 이름만), 실행 취소 →
+  핸들러 취소 후 오류 결과, 바깥 취소는 그대로 전파. 도구에 `call_handler`가 있으면 그것을 백엔드가 아는 호출 id와 함께
+  부른다), `duplicate_host_tool_names(tools)`, `object_input_schema(schema)`
+- 위임 도구 호출 id(design §5.5R.1 C7): `invoke_node(tool_use_id=)`로 넘기면 대상 NodeRun의 `node.*` payload
+  `tool_use_id`에 실려, 위임자의 도구 호출 이벤트와 대상 실행이 명시 id로 이어진다(모르면 null).
 
 ```python
 >>> import asyncio

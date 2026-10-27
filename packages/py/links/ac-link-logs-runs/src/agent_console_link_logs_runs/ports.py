@@ -12,6 +12,8 @@
 
 - ``logs.sources``(여러 제공자): 런타임 출처 ``platform-runs``(``RuntimeLogSource`` 모양 —
   ``source``·``classifier`` 속성).
+- ``logs.scope_kinds``(여러 제공자, X27): 범위 종류 ``run``·``run-tree``(``LogScopeKind`` 모양 —
+  ``id``·``resolve(value)``).
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from typing import Protocol, runtime_checkable
 
 from agent_console_contracts import NodeRun, Run, RunEvent, RunStatus
 from agent_console_contracts.logs import LogAggregateRequest, LogAggregateRow, LogEventPage
-from agent_console_logs import LogClassifier, LogFilter, LogSource
+from agent_console_logs import LogClassifier, LogFilter, LogScopeKind, LogSource
 from agent_console_modkit import PortKey, Topic
 
 
@@ -39,9 +41,10 @@ class RunReader(Protocol):
         status: Iterable[RunStatus] | None = None,
         conversation_id: str | None = None,
         agent: str | None = None,
+        parent_run_id: str | None = None,
         limit: int | None = None,
     ) -> builtins.list[Run]:
-        """최신 생성순."""
+        """최신 생성순. ``parent_run_id`` = 그 Run의 직접 자식만(범위 ``run-tree``)."""
         ...
 
     def list_node_runs(self, run_id: str) -> builtins.list[NodeRun]: ...
@@ -105,12 +108,16 @@ RUNS_EVENTS: PortKey[EventReader] = PortKey("runs.events", "실행 이벤트 조
 LOG_SOURCES: PortKey[RuntimeLogSource] = PortKey(
     "logs.sources", "런타임 로그 출처(출처 + 분류기)", multi=True
 )
+LOG_SCOPE_KINDS: PortKey[LogScopeKind] = PortKey(
+    "logs.scope_kinds", "로그 범위 종류(X27, scope=<종류>:<값>)", multi=True
+)
 RUNS_EVENT: Topic[EventLike] = Topic("runs.event")
 """저장된 실행 이벤트(전부). 이 연동은 ``run_id``만 본다."""
 
 __all__ = [
     "LOGS_INGEST",
     "LOGS_QUERY",
+    "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
     "RUNS_EVENT",
     "RUNS_EVENTS",

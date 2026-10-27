@@ -1,7 +1,6 @@
 /** 백엔드 구독 로그인·로그아웃 문구(한 곳). 단계 안내·사유·notice·쓰기 범위는 서버가 준 문장을 그대로 보이며 여기에는 없다. */
 export const loginMessages = {
   titleFallback: "로그인",
-  noticeHeading: "본인 구독, 본인 책임",
   writesHeading: "이 PC에서 바뀌는 것",
   start: "로그인 시작",
   starting: "시작하는 중…",

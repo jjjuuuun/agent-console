@@ -16,7 +16,7 @@ I/O가 없다. 백엔드가 결과를 sink로 내보낸다. 관측 이벤트(`ho
 | `TaskStartedMessage` | `agent.subagent_started` (대상 귀속) |
 | `TaskNotificationMessage`·끝난 `TaskUpdatedMessage` | `agent.subagent_stopped` (총 토큰) |
 | `RateLimitEvent` | `usage.rate_limit` |
-| `ResultMessage` | `agent.usage` (최종 누적값) |
+| `ResultMessage` | `agent.usage` (최종 누적값, `duration_ms` = `duration_api_ms`) |
 
 서브에이전트 귀속(design §R3.1d·§R3.4): 최상위 위임 도구 호출(`Agent`/`Task`)의 입력
 `subagent_type`이 등록한 서브에이전트 이름이면 그 호출 id를 대상에 묶는다. `parent_tool_use_id`가
@@ -313,7 +313,19 @@ class MessageTranslator:
         if msg.usage is None and msg.total_cost_usd is None:
             return []
         self.usage = usage_from_sdk(msg.usage, msg.total_cost_usd)
-        return [Emission("agent.usage", AgentUsagePayload(usage=self.usage, model=self.model))]
+        # C2(design §5.5R.1): 모델 호출 소요 = SDK 결과의 API 시간(`duration_api_ms`, 실행 전체의
+        # 모델 API 대기 합). 값이 없거나 음수면 싣지 않는다(추정하지 않음).
+        api_ms = _int_or_none(getattr(msg, "duration_api_ms", None))
+        return [
+            Emission(
+                "agent.usage",
+                AgentUsagePayload(
+                    usage=self.usage,
+                    model=self.model,
+                    duration_ms=api_ms if api_ms is not None and api_ms >= 0 else None,
+                ),
+            )
+        ]
 
     # ------------------------------------------------------------ 도구
 

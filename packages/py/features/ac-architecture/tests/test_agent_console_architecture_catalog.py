@@ -23,11 +23,11 @@ def _p(title: str) -> ArchitectureProfile:
     return ArchitectureProfile(title=title)
 
 
-def test_package_default_data_is_a_placeholder() -> None:
-    # 기본 프로필 내용은 5.5R.8 몫이다. 지금은 자리만 있고(파일은 휠에 들어간다) 읽기는 성공한다.
+def test_package_default_data_has_one_profile() -> None:
+    # 패키지 기본 데이터(5.5R.8): 프로필 하나. 내용 검사·골든은 test_..._default_profile.py.
     data = resources.files("agent_console_architecture").joinpath(DEFAULT_PROFILES_RESOURCE)
     assert data.is_file()
-    assert load_default_profiles() == {}
+    assert list(load_default_profiles()) == ["agent-architecture"]
 
 
 def test_missing_default_file_is_empty(tmp_path: Path) -> None:

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
@@ -47,11 +48,16 @@ from ._source import CLAUDE_CODE_FORMAT, META_KIND_SUBAGENT
 
 __all__ = [
     "MCP_PATTERN_GROUPS",
+    "OMITTED_KEY",
     "ClaudeCodeClassifier",
     "McpPatternError",
     "compile_mcp_pattern",
+    "omitted_row",
     "summary_text",
 ]
+
+OMITTED_KEY = "omitted"
+"""원문을 저장하지 않는 행 규칙(`store_raw: false`)이 크기·해시를 싣는 키."""
 
 MCP_PATTERN_GROUPS = ("server", "tool")
 """`mcp_tool_pattern` 틀에 있어야 하는 자리 표시 이름."""
@@ -130,6 +136,44 @@ def _matches(rule: Mapping[str, Any], row: JsonValue) -> bool:
         if not any(fnmatchcase(actual, str(p)) for p in patterns):
             return False
     return True
+
+
+def _unescape(token: str) -> str:
+    return token.replace("~1", "/").replace("~0", "~")
+
+
+def omitted_row(row: Mapping[str, Any], keep: Sequence[str] = ()) -> dict[str, Any]:
+    """원문 대신 저장할 값: `keep` 포인터 값(같은 위치) + `omitted`{`bytes`, `sha256`}.
+
+    크기·해시는 행을 키 정렬·공백 없는 JSON(UTF-8)으로 쓴 것 기준이다(같은 내용이면 같은 해시).
+
+    Args:
+        row: 원본 행(JSON 객체).
+        keep: 남길 값의 JSON 포인터(빈 문자열·없는 값은 건너뛴다).
+
+    Returns:
+        새 객체. 원본을 바꾸지 않는다.
+
+    예:
+        >>> omitted_row({"type": "x", "body": "비밀"}, ["/type"])["type"]
+        'x'
+    """
+    data = json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    out: dict[str, Any] = {}
+    for pointer in keep:
+        value = json_pointer(row, pointer) if pointer.startswith("/") else None
+        if value is None:
+            continue
+        *parents, last = [_unescape(t) for t in pointer[1:].split("/")]
+        target = out
+        for token in parents:
+            nested = target.get(token)
+            if not isinstance(nested, dict):
+                nested = target[token] = {}
+            target = nested
+        target[last] = value
+    out[OMITTED_KEY] = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    return out
 
 
 def _cfg_map(cfg: Mapping[str, Any], key: str) -> Mapping[str, Any]:
@@ -238,6 +282,24 @@ def _file_name(path: str) -> str:
     return PureWindowsPath(path).name if "\\" in path else PurePosixPath(path).name
 
 
+def document_kind(kinds: Mapping[str, Any], path: str) -> str | None:
+    """문서 경로 → 종류(`document_kinds` 데이터). 없으면 None.
+
+    키가 글롭(`*`·`?`·`[`)이 아니면 파일 이름과 같을 때, 글롭이면 `/`로 맞춘 경로 전체에 맞을 때
+    (`*`는 `/`도 넘는다, 예: `*/.claude/rules/*.md`) 그 종류다. 파일 이름이 먼저, 그다음 글롭은
+    긴 것부터 본다.
+    """
+    found = kinds.get(_file_name(path))
+    if found:
+        return str(found)
+    normalized = path.replace("\\", "/")
+    globs = sorted((k for k in kinds if any(c in k for c in "*?[")), key=lambda k: (-len(k), k))
+    for key in globs:
+        if fnmatchcase(normalized, key) and kinds[key]:
+            return str(kinds[key])
+    return None
+
+
 class ClaudeCodeClassifier:
     """Claude Code 세션 기록 분류기(X6). 행 단위 무상태 — 같은 행과 맥락이면 늘 같은 결과다."""
 
@@ -271,6 +333,33 @@ class ClaudeCodeClassifier:
         # 내부 추론 본문은 처음부터 지운 사본으로만 다룬다(detail·raw 어디에도 남지 않게).
         row = self._scrub(row, set(_strs(cfg.get("thinking_block_types"))), self._note(cfg))
         base = self._base(row, meta, cfg)
+        return self._with_row_correlation(self._drafts(row, base, meta, cfg), row, cfg)
+
+    @staticmethod
+    def _with_row_correlation(
+        drafts: list[LogEventDraft], row: Mapping[str, Any], cfg: Mapping[str, Any]
+    ) -> list[LogEventDraft]:
+        """설정 `row_correlation`(근거 이름 → 포인터): 행에 값이 있으면 그 행의 모든 이벤트에
+        근거를 더한다(이벤트가 이미 가진 같은 근거는 그대로 둔다).
+
+        예: 응답 행 `requestRef` → `request_id`.
+        """
+        extra: dict[str, str] = {}
+        for basis, pointer in _cfg_map(cfg, "row_correlation").items():
+            text = _scalar_text(json_pointer(row, str(pointer)))
+            if text:
+                extra[str(basis)] = text
+        if not extra:
+            return drafts
+        return [replace(d, correlation={**extra, **d.correlation}) for d in drafts]
+
+    def _drafts(
+        self,
+        row: Mapping[str, Any],
+        base: Mapping[str, Any],
+        meta: Mapping[str, JsonValue],
+        cfg: Mapping[str, Any],
+    ) -> list[LogEventDraft]:
         for rule in [*_cfg_list(cfg, "extra_row_rules"), *_cfg_list(cfg, "row_rules")]:
             if isinstance(rule, Mapping) and _matches(rule, row):
                 return [self._rule_event(rule, row, base, meta)]
@@ -353,6 +442,10 @@ class ClaudeCodeClassifier:
                 correlation[str(basis)] = text
         detail_pointer = str(rule.get("detail") or "")
         detail = json_pointer(row, detail_pointer) if detail_pointer else row
+        raw: JsonValue = row
+        if rule.get("store_raw") is False:
+            # 원문(요청 본문 등)을 색인에 넣지 않는다: 크기·해시와 keep 값만(design §5.5R 5.5R.34).
+            detail = raw = omitted_row(row, _strs(rule.get("keep")))
         merged = dict(base)
         for key in ("role", "turn_id"):
             if key in values:
@@ -366,7 +459,7 @@ class ClaudeCodeClassifier:
             tags=_strs(rule.get("tags")),
             correlation=correlation,
             detail=row if detail is None else detail,
-            raw=row,
+            raw=raw,
             summary=summary_text(row if detail is None else detail, rule.get("summary")),
             **values,
         )
@@ -575,7 +668,7 @@ class ClaudeCodeClassifier:
             path = _scalar_text(json_pointer(data, str(item.get("path_pointer") or "/file_path")))
             if not path:
                 continue
-            kind = str(kinds.get(_file_name(path)) or default_kind)
+            kind = document_kind(kinds, path) or default_kind
             out.append(
                 LogDocumentRef(path=path, kind=kind, action=str(item.get("action") or "mentioned"))
             )

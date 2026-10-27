@@ -221,7 +221,7 @@ export const defaultLogViewMessages: LogViewMessages = {
   sessionList: "세션 목록",
   sessionLimit: "상위 {n}개만 표시합니다. 기간이나 프로젝트로 좁혀 보세요.",
   sessionColumns: {
-    start: "시작", session: "세션", project: "프로젝트", threads: "에이전트", events: "이벤트", errors: "오류", models: "모델", tokens: "토큰", length: "길이", source: "출처",
+    start: "시작", session: "세션", title: "제목", project: "프로젝트", threads: "에이전트", events: "이벤트", errors: "오류", models: "모델", tokens: "토큰", length: "길이", source: "출처",
   },
   sortStartAsc: "시작 시각 오름차순",
   sortStartDesc: "시작 시각 내림차순",

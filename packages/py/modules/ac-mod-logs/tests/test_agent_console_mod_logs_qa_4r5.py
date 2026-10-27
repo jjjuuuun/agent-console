@@ -19,7 +19,7 @@ def test_logs_branch_up_down_leaves_other_branches_untouched(tmp_path: Path) -> 
     before = set(sa.inspect(db.engine).get_table_names())
     revs = (db.revision(), db.revision("chat"), db.revision("usage"))
     db.upgrade([chat.BRANCH, usage.BRANCH, BRANCH])
-    assert db.revision("logs") == "logs_0001"
+    assert db.revision("logs") == "logs_0002"
     assert (db.revision(), db.revision("chat"), db.revision("usage")) == revs
     db.downgrade_branch(BRANCH)
     after = set(sa.inspect(db.engine).get_table_names())

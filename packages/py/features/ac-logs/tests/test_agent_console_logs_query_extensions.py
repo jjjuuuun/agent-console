@@ -168,6 +168,17 @@ def test_extension_names_only_when_registered() -> None:
     assert EXT.parse(filter_to_params(flt)) == flt
 
 
+def test_extension_blank_value_is_kept() -> None:
+    """5.5R.10: 확장 필터의 빈 값(`name=`)은 값 `""` 하나다(이름 없는 묶음 `arch_group=`)."""
+    flt = EXT.parse({"fake_tool": ""})
+    assert flt.extra == (("fake_tool", ("",)),)
+    assert EXT.parse({"fake_tool": [""]}).extra == (("fake_tool", ("",)),)
+    assert EXT.parse({"fake_tool": None}).extra == ()
+    assert EXT.parse(filter_to_params(flt)) == flt
+    # 기본 필드의 빈 값은 지금처럼 버린다
+    assert parse_log_filter({"tool": ""}).tool == ()
+
+
 def test_schema_lists_new_and_extension_filters() -> None:
     names = [f.id for f in query_schema().filters]
     assert {"thread", "scope", "max_seq"} <= set(names)

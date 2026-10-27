@@ -290,3 +290,18 @@ describe("리듬·줄 높이(5.2R.74)", () => {
     expect(css).toMatch(/--ac-lh-xs:\s*18px/);
   });
 });
+
+describe("5.5R.30 화면 후속", () => {
+  it("경고 배너 아이콘은 물음표 원이 아니라 경고 삼각형이다", () => {
+    expect(css).toMatch(/\.ac-banner\[data-tone="warning"\] \{ --ac-banner-icon: var\(--ac-icon-warning\); \}/);
+    const m = /--ac-icon-warning: url\("([^"]+)"\)/.exec(css);
+    expect(m).not.toBeNull();
+    expect(decodeURIComponent(m![1]!)).toContain("M8 2.2 14.4 13.4H1.6z");
+  });
+  it("대화상자 버튼 세로 쌓임은 정말 좁은 폭에서만(sm 400도 우측 정렬 가로 배치)", () => {
+    const widths = [...css.matchAll(/@container \(max-width: (\d+)px\) \{\s*\.ac-dialog-actions/g)].map((x) => Number(x[1]));
+    expect(widths).toHaveLength(1);
+    expect(widths[0]!).toBeLessThan(400 - 2);
+    expect(ruleBody(".ac-dialog-actions")).toContain("justify-content: flex-end");
+  });
+});

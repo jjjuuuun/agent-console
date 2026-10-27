@@ -754,6 +754,8 @@ class InvokeStrategy:
       - `calls`: 부를 대상 id 목록(같은 id 반복 가능). 기본 = 대상마다 한 번.
       - `parallel`: 참이면 동시에 부른다(기본은 순서대로).
       - `max_depth`: `invoke_node(max_depth=)`(기본 디스크립터 `max_depth` = 제한 없음).
+      - `tool_use_ids`: 선택. 호출 순번(0부터) → `invoke_node(tool_use_id=)`
+        (위임 도구 호출 id 흉내).
     결과 텍스트 = 호출마다 `"<대상>#<call>:<상태>:<out 값>"`을 `" | "`로 이은 것. 대상이 실패해도
     위임자는 성공한다(결과에 남는다). 결과 목록은 probe `invocations`에도 남는다.
     """
@@ -775,15 +777,21 @@ class InvokeStrategy:
         raw_limit = ctx.config.get("max_depth", self.descriptor.max_depth)
         limit = int(raw_limit) if raw_limit is not None else None
 
-        async def one(target: str) -> NodeRunView:
+        ids = [str(i) for i in ctx.config.get("tool_use_ids") or []]
+
+        async def one(index: int, target: str) -> NodeRunView:
             return await ctx.invoke_node(
-                target, {"in": plan.request.prompt}, by_edge=edges[target], max_depth=limit
+                target,
+                {"in": plan.request.prompt},
+                by_edge=edges[target],
+                max_depth=limit,
+                tool_use_id=ids[index] if index < len(ids) else None,
             )
 
         if ctx.config.get("parallel"):
-            views = list(await asyncio.gather(*(one(t) for t in targets)))
+            views = list(await asyncio.gather(*(one(i, t) for i, t in enumerate(targets))))
         else:
-            views = [await one(t) for t in targets]
+            views = [await one(i, t) for i, t in enumerate(targets)]
         probe = ctx.services.get(PROBE)
         if probe is not None:
             probe.invocations.extend(views)

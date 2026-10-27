@@ -70,6 +70,7 @@ def selector_predicate(
     *,
     profile_id: str,
     operators: Mapping[str, ConditionOperator],
+    matcher: ProfileMatcher | None = None,
 ) -> EventPredicate:
     """선택 필터 → 이벤트 판정 함수. 투영 결과의 같은 대상 `count`와 같은 이벤트를 고른다.
 
@@ -81,6 +82,8 @@ def selector_predicate(
         selector: 선택 필터(투영 결과의 `selector`).
         profile_id: 이 프로필의 id(`arch`의 프로필과 같아야 한다).
         operators: 조건 연산자.
+        matcher: 쓸 판정기(같은 프로필·연산자로 만든 것). 판정 결과를 기억하는 하위 클래스를 넘겨
+            투영에서 이미 판정한 이벤트를 다시 판정하지 않게 할 때 쓴다. 없으면 새로 만든다.
 
     Returns:
         이벤트 판정 함수(순수 함수, 같은 이벤트에 늘 같은 값).
@@ -94,7 +97,7 @@ def selector_predicate(
         raise ArchitectureSelectorError(
             f"구조도 선택의 프로필 {target.profile!r}이(가) {profile_id!r}과(와) 다릅니다"
         )
-    matcher = ProfileMatcher(profile, operators)
+    judge = matcher if matcher is not None else ProfileMatcher(profile, operators)
     group = selector.arch_group
     sources: Collection[str] | None = (
         frozenset(selector.arch_sources) if selector.arch_sources is not None else None
@@ -112,7 +115,7 @@ def selector_predicate(
             raise ArchitectureSelectorError(f"칸 {cell_id!r}은(는) 묶을 값이 없습니다")
 
         def hit(event: LogEvent) -> bool:
-            found = matcher.match(event)
+            found = judge.match(event)
             if cell_id not in found.cells:
                 return False
             return group is None or found.groups.get(cell_id) == want_group
@@ -130,7 +133,7 @@ def selector_predicate(
             return lambda _event: False
 
         def hit(event: LogEvent) -> bool:
-            return edge_id in matcher.match(event).edges
+            return edge_id in judge.match(event).edges
 
     else:
         if group is not None:
@@ -139,7 +142,7 @@ def selector_predicate(
             return lambda _event: False
 
         def hit(event: LogEvent) -> bool:
-            return matcher.match(event).unassigned
+            return judge.match(event).unassigned
 
     if sources is None:
         return hit

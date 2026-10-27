@@ -3,7 +3,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SchemaForm } from "./index";
 import type { JsonSchema, SchemaFormProps } from "./index";
-import { readXUi, resolveNode, resolveTier, splitByTier } from "./xui";
+import { humanizeEnumText, readXUi, resolveNode, resolveTier, splitByTier } from "./xui";
 
 afterEach(cleanup);
 beforeEach(() => localStorage.clear());
@@ -285,6 +285,15 @@ describe("불리언·enum·속성 추가 단추 (F11)", () => {
     expect(screen.getByRole("option", { name: "바로 실행" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "ask" })).toBeNull();
     expect(screen.getByRole("option", { name: "에이 라벨" })).toBeTruthy();
+  });
+  it("설명 문장의 enum 원시 값은 괄호째 지우거나 라벨로 바꾼다(F11)", () => {
+    const labels = { ask: "물어보기", run: "실행하기" };
+    expect(humanizeEnumText("물어볼지(ask) 실행할지(run) 정합니다.", labels)).toBe("물어볼지 실행할지 정합니다.");
+    expect(humanizeEnumText("바로 실행하려면 run으로 바꾸세요. running은 그대로", labels)).toBe("바로 실행하려면 실행하기으로 바꾸세요. running은 그대로");
+    expect(humanizeEnumText("그대로", undefined)).toBe("그대로");
+    const withDesc: JsonSchema = { type: "object", properties: { mode: { type: "string", title: "방식", enum: ["ask", "run"], description: "물어볼지(ask) 실행할지(run) 정합니다.", "x-ui": { tier: "basic", enum_labels: labels } } } };
+    render(<SchemaForm schema={withDesc} value={{}} />);
+    expect(screen.getByText("물어볼지 실행할지 정합니다.")).toBeTruthy();
   });
   it("선언된 속성이 있는 루트에는 속성 추가 단추가 없다", () => {
     render(<SchemaForm schema={s} value={{}} />);

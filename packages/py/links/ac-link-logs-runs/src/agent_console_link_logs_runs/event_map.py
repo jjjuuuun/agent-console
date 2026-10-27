@@ -8,7 +8,9 @@
 - 문자열 값은 틀이다: ``{/JSON 포인터}``(이벤트 JSON 기준)와 이름 ``{type}``·``{node}``·
   ``{parent_node}``·``{thread}``·``{actor}``·``{run_id}``를 채운다. 없는 값은 빈 문자열.
 - ``{pointer, map, default}`` 값: 포인터 값을 문자열(``true``·``false``·``null``·숫자는 JSON 표기)로
-  바꿔 ``map``에서 찾고, 없으면 ``default``(없으면 그 문자열 그대로).
+  바꿔 ``map``에서 찾고, 없으면 ``default``(없으면 그 문자열 그대로). 찾은 ``map`` 값과
+  ``default``도 틀이다(예: ``default: "{node}"``). ``from``·``to``도 이 조건부 값을 쓸 수 있다
+  (design §5.5R.1 C7: ``node.started``의 ``to``는 위임 호출일 때만).
 """
 
 from __future__ import annotations
@@ -88,6 +90,8 @@ VALUE_FIELD_TITLES: dict[str, str] = {
     "model": "모델",
     "message_id": "메시지 id",
     "role": "역할",
+    "from": "보낸 쪽",
+    "to": "받는 쪽",
 }
 """``VALUE_FIELDS``의 설정 폼 라벨."""
 
@@ -104,13 +108,16 @@ def _pointer_field(title: str, description: str, example: str) -> dict[str, Any]
     }
 
 
-def _value_schema(name: str) -> dict[str, Any]:
+def _value_schema(
+    name: str, *, description: str | None = None, example: str = "{type}"
+) -> dict[str, Any]:
     """틀 문자열 또는 ``{pointer, map, default}`` 규칙 하나(필드 ``name``)."""
     label = VALUE_FIELD_TITLES.get(name, name)
     return {
         "title": label,
-        "description": f"로그의 {label} 값. 틀(예: {{type}}) 또는 이벤트에서 읽어 바꾸는 규칙.",
-        **x_ui(tier="advanced", example="{type}"),
+        "description": description
+        or f"로그의 {label} 값. 틀(예: {{type}}) 또는 이벤트에서 읽어 바꾸는 규칙.",
+        **x_ui(tier="advanced", example=example),
         "oneOf": [
             {**_TEMPLATE, "title": "틀"},
             {
@@ -125,14 +132,16 @@ def _value_schema(name: str) -> dict[str, Any]:
                     "map": {
                         "type": "object",
                         "title": "값 바꾸기",
-                        "description": "읽은 값 → 보일 값. 없는 값은 없을 때 값을 쓴다.",
+                        "description": (
+                            "읽은 값 → 보일 값(틀, 예: {node}). 없는 값은 없을 때 값을 쓴다."
+                        ),
                         **x_ui(tier="advanced"),
                         "additionalProperties": {"type": "string"},
                     },
                     "default": {
                         "type": "string",
                         "title": "없을 때 값",
-                        "description": "바꾸기 표에 없을 때 쓸 값. 비우면 읽은 값 그대로.",
+                        "description": ("바꾸기 표에 없을 때 쓸 값(틀). 비우면 읽은 값 그대로."),
                         **x_ui(tier="advanced", example="other"),
                     },
                 },
@@ -148,18 +157,16 @@ RULE_SCHEMA: dict[str, Any] = {
     "title": "대응 규칙",
     "properties": {
         **{name: _value_schema(name) for name in VALUE_FIELDS},
-        "from": {
-            **_TEMPLATE,
-            "title": "보낸 쪽",
-            "description": "보낸 쪽(틀, 비면 없음).",
-            **x_ui(tier="advanced", example="{node}"),
-        },
-        "to": {
-            **_TEMPLATE,
-            "title": "받는 쪽",
-            "description": "받는 쪽(틀, 비면 없음).",
-            **x_ui(tier="advanced", example="{parent_node}"),
-        },
+        "from": _value_schema(
+            "from",
+            description="보낸 쪽(틀 또는 이벤트에서 읽어 바꾸는 규칙, 비면 없음).",
+            example="{node}",
+        ),
+        "to": _value_schema(
+            "to",
+            description="받는 쪽(틀 또는 이벤트에서 읽어 바꾸는 규칙, 비면 없음).",
+            example="{parent_node}",
+        ),
         "tags": {
             "type": "array",
             "title": "태그",
@@ -261,7 +268,10 @@ def render(template: str, document: JsonValue, names: Mapping[str, str]) -> str:
 
 
 def resolve(spec: Any, document: JsonValue, names: Mapping[str, str]) -> str:
-    """규칙 값(틀 또는 ``{pointer, map, default}``) → 문자열. 값이 없으면 빈 문자열."""
+    """규칙 값(틀 또는 ``{pointer, map, default}``) → 문자열. 값이 없으면 빈 문자열.
+
+    ``map``에서 찾은 값과 ``default``도 틀로 채운다(``{node}``·``{/포인터}`` 등).
+    """
     if isinstance(spec, str):
         return render(spec, document, names)
     if isinstance(spec, Mapping):
@@ -270,10 +280,10 @@ def resolve(spec: Any, document: JsonValue, names: Mapping[str, str]) -> str:
         key = _string_form(raw)
         table = spec.get("map")
         if isinstance(table, Mapping) and key in table:
-            return str(table[key])
+            return render(str(table[key]), document, names)
         default = spec.get("default")
         if isinstance(default, str):
-            return default
+            return render(default, document, names)
         return "" if raw is None else key
     return ""
 
