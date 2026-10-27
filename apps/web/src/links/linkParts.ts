@@ -27,6 +27,8 @@ export const DEFAULT_LINK_PARTS: readonly LinkPartDef[] = [
   { id: P.logsRunsTab, requires: ["logs:runs"], onMissing: "hide" },
   // 세션 상세 흐름 패널의 [구조도] 세그먼트(screen-architecture.md 5). 없으면 세그먼트도 질의도 없다.
   { id: P.logsArchitectureFlow, requires: ["logs:architecture"], onMissing: "hide" },
+  // 실행 상세 검사 패널의 [구조도] 탭(screen-architecture.md 6.1). 로그 구조도와 로그-실행 연동이 모두 있어야 한다.
+  { id: P.runsArchitectureTab, requires: ["logs:architecture", "logs:runs"], onMissing: "hide" },
   { id: P.logsUsageLink, requires: ["usage"], onMissing: "hide" },
   // 팀 구성·에이전트 (screens-v3.md 2.1, 2.5)
   { id: P.teamsValidationColumn, requires: ["definitions:graph", "runs:team-rules"], onMissing: "hide" },

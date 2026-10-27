@@ -202,3 +202,106 @@ def test_default_profile_equals_reference(operators: Ops) -> None:
             assert matcher.match(event) == _reference(
                 profile, operators, frozenset({"error"}), event
             )
+
+
+# ---------------------------------------------------------------- 거르기·결과 공유 (5.5R.36)
+
+
+def _gated_profile() -> ArchitectureProfile:
+    def eq(path: str, value: Any) -> dict[str, Any]:
+        return {"path": path, "op": "eq", "value": value}
+
+    cells: dict[str, Any] = {
+        "llm": {"when": {"all": [eq("/category", "llm")]}, "group_by": "/tool"},
+        "tool": {"when": {"all": [eq("/category", "tool"), eq("/thread", "main")]}},
+        "either": {"when": {"any": [{"path": "/category", "op": "in", "value": ["hook", 1]}]}},
+        "not_llm": {"when": {"all": [eq("/category", "llm")], "negate": True}},
+        "flag": {"when": {"all": [eq("/category", True)]}},
+        "one": {"when": {"all": [eq("/category", 1)]}},
+        "any_thread": {"when": {"all": [eq("/thread", "main")]}},
+        "tagged": {"when": {"all": [{"path": "/tags", "op": "contains", "value": "x"}]}},
+        "tagged_llm": {
+            "when": {
+                "all": [{"path": "/tags", "op": "contains", "value": "x"}, eq("/category", "llm")]
+            }
+        },
+        "deep": {"when": {"all": [eq("/category", "tool"), eq("/doc/0/kind", "spec")]}},
+        "whole": {"when": {"all": [{"path": "", "op": "exists"}, eq("/category", "hook")]}},
+    }
+    edges = [
+        {
+            "id": f"e{i}",
+            "from": "llm",
+            "to": "tool",
+            "kind": "observed",
+            "when": {"all": [eq("/category", c)]},
+        }
+        for i, c in enumerate(["llm", "tool", None, 1.0])
+    ]
+    return ArchitectureProfile.model_validate({"cells": cells, "edges": edges})
+
+
+GATE_VALUES: list[Any] = ["llm", "tool", "hook", True, 1, 1.0, 0, None, ["llm"], {"a": 1}, ""]
+
+
+def _subjects() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for i, value in enumerate(GATE_VALUES * 2):
+        subject: dict[str, Any] = {
+            "thread": "main" if i % 2 else "sub",
+            "tool": f"t{i % 3}",
+            "tags": [["x"], [], ["x", "y"], "x", {"x": 1}][i % 5],
+            "doc": [{"kind": "spec" if i % 4 else "other"}],
+        }
+        if i < len(GATE_VALUES) or i % 3:
+            subject["category"] = value
+        out.append(subject)
+    return out
+
+
+def _reference_subject(
+    profile: ArchitectureProfile, operators: Ops, subject: dict[str, Any]
+) -> EventMatch:
+    def holds(spec: ConditionSpec) -> bool:
+        return evaluate_conditions(spec, subject, operators).result
+
+    cells = [cid for cid, c in profile.cells.items() if c.when is not None and holds(c.when)]
+    groups = {}
+    for cid in cells:
+        pointer = profile.cells[cid].group_by
+        if pointer is not None:
+            value = resolve_pointer(subject, pointer)
+            groups[cid] = None if value is MISSING or value in (None, "") else str(value)
+    edges = [e.id for e in profile.edges if e.when is not None and holds(e.when)]
+    return EventMatch(cells=tuple(cells), edges=tuple(edges), groups=groups, error=False)
+
+
+def test_gate_keeps_results_for_typed_and_unhashable_values(operators: Ops) -> None:
+    profile = _gated_profile()
+    matcher = ProfileMatcher(profile, operators)
+    assert matcher._gate is not None  # 범주 키로 거른다
+    assert matcher._gate.keys[0] == "category"
+    for _ in range(2):  # 두 번째는 기억한 거르기 표로
+        for subject in _subjects():
+            assert matcher.match_subject(subject) == _reference_subject(
+                profile, operators, subject
+            ), subject
+
+
+def test_gate_table_limit(operators: Ops, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_console_architecture import _match
+
+    monkeypatch.setattr(_match, "GATE_TABLE_LIMIT", 2)
+    monkeypatch.setattr(_match, "MATCH_TABLE_LIMIT", 1)
+    profile = _gated_profile()
+    matcher = ProfileMatcher(profile, operators)
+    for subject in _subjects():
+        assert matcher.match_subject(subject) == _reference_subject(profile, operators, subject)
+
+
+def test_same_results_share_one_object(operators: Ops) -> None:
+    matcher = ProfileMatcher(_gated_profile(), operators)
+    a = matcher.match_subject({"category": "tool", "thread": "main"})
+    b = matcher.match_subject({"category": "tool", "thread": "main", "title": "다른 이벤트"})
+    assert a is b
+    assert matcher.match_subject({"category": "tool", "thread": "sub"}) != a

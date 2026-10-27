@@ -373,6 +373,8 @@ export interface FitOptions {
   widthFloor?: number;
 }
 export const MIN_ZOOM = 0.25;
+/** 전체 맞춤(`contain`)은 하한이 없다(명세 §4.1). 0이 되지 않게만 막는다. */
+export const CONTAIN_MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 2;
 export const VIEW_MARGIN = 16;
 
@@ -390,7 +392,7 @@ export function fitViewport(mode: Exclude<ArchFitMode, "none">, canvas: Size, co
   const zw = (container.width - 2 * m) / canvas.width;
   if (mode === "width") return { x: m, y: m, zoom: clampZoom(Math.max(options.widthFloor ?? 0.6, zw), min, max) };
   const zh = (container.height - 2 * m) / canvas.height;
-  const zoom = clampZoom(Math.min(zw, zh), min, max);
+  const zoom = clampZoom(Math.min(zw, zh), Math.min(min, CONTAIN_MIN_ZOOM), max);
   return { x: Math.max(m, (container.width - canvas.width * zoom) / 2), y: Math.max(m, (container.height - canvas.height * zoom) / 2), zoom };
 }
 

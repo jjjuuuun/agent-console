@@ -14,6 +14,7 @@ export const LINK_PART_IDS = {
   logsRunLink: "logs.run-link",
   logsRunsTab: "logs.runs-tab",
   logsArchitectureFlow: "logs.architecture-flow",
+  runsArchitectureTab: "runs.architecture-tab",
   logsUsageLink: "logs.usage-link",
   teamsValidationColumn: "teams.validation-column",
   agentsUsagesPanel: "agents.usages-panel",

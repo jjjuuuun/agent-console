@@ -301,6 +301,14 @@ export function shouldAutoFoldFlow(o: { tableHeight: number; minRows: number; ro
   return !o.collapsed && !o.userOpened && o.tableHeight < o.minRows * o.rowHeight;
 }
 
+/**
+ * 구조도 흐름 패널의 기본 높이: `min(기본, 뷰포트 − 표 N행 − 고정 머리)`, 하한 `floor`(명세 §5.2).
+ * 사용자가 저장한 높이가 없을 때만 쓴다.
+ */
+export function archDefaultHeight(o: { viewportHeight: number; preferred: number; floor: number; tableRows: number; rowHeight: number; chrome: number }): number {
+  return Math.max(o.floor, Math.min(o.preferred, o.viewportHeight - o.tableRows * o.rowHeight - o.chrome));
+}
+
 /** 저장된 값을 범위 안으로 맞춘다(숫자가 아니면 기본값). */
 export function clampOr(value: number, min: number, max: number, fallback: number): number {
   return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;

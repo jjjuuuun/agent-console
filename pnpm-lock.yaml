@@ -95,6 +95,9 @@ importers:
       react-router:
         specifier: ^7.9.0
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
     devDependencies:
       '@agent-console/tsconfig':
         specifier: ^0.1.0

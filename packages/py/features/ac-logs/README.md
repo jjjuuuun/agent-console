@@ -86,6 +86,7 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 | 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
 | 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
 | 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
+| 행 읽기(5.5R.36) | `query_event_rows(index, flt, ctx) -> LogEventRowPage`(`rows`·`next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)`(끝까지, 쪽마다 `on_page(행 수)`), `page_rows(read, flt, on_page=)`(쪽 읽기 함수 → 행), 선택 능력 `LogEventRowReader`(`query_event_rows`·`iter_event_rows` 메서드, 메모리·SQLite 색인이 가진다), `event_row(event)`, `complete_event_row(data, seq=)`, 형식 `LogEventRow`·`PageCallback` |
 | SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
 | 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
 | 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`) |
@@ -122,6 +123,27 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
   섞이지 않는다. seq는 `AUTOINCREMENT`라 지운 뒤에도 다시 쓰이지 않는다(키셋 커서 안전).
 - 토큰은 `log_usage`의 (source, thread, message_id) 한 행이며, 같은 키가 다시 오면 output이 크거나 같을 때만 바꾼다.
 - 한계: 검색어 `q`는 `log_search`를 훑는다(10만 건에서 수백 ms). 세션 목록은 질의마다 집계한다.
+
+### 행 읽기(모델 없이)
+
+범위 전체를 읽어 판정·집계만 하는 쪽(예: 구조도)은 이벤트 모델이 필요 없다. `iter_event_rows`는 같은 목록을
+JSON 행(dict)으로 준다. 행은 같은 쪽의 `LogEvent`를 `model_dump(mode="json", by_alias=True)`한 것과 같다(목록
+모양 — `detail`·`raw`는 None, 키는 계약 별칭 `from` 등). SQLite 색인은 저장된 본문 JSON에 기본값만 채워
+검증·덤프를 건너뛴다(선택 능력 `LogEventRowReader`). `iter_event_rows`는 쪽마다 본문 문자열만 읽어 두고 행을
+하나씩 만든다(한 쪽의 행 dict를 한꺼번에 들고 있지 않아 큰 범위에서 메모리·GC 부담이 적다). 능력이 없는 색인은
+`query_events` 결과를 덤프한다. 행은 읽기 전용으로 쓴다.
+
+```python
+>>> from agent_console_logs import event_row, iter_event_rows
+>>> index = open_log_index(path)
+>>> rows = list(iter_event_rows(index, LogFilter(), QueryContext()))
+>>> rows[0]["title"], rows[0]["from"], rows[0]["detail"]
+('안녕', [], None)
+>>> rows == [event_row(e) for e in index.query_events(LogFilter(), QueryContext()).items]
+True
+>>> index.close()
+
+```
 
 ## 질의 확장: 범위 종류(X27)·필터 확장(X28)
 

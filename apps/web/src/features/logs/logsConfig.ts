@@ -77,6 +77,12 @@ export const LOGS_LIMITS = {
   archFlowHeightMin: 200,
   archFlowHeightMax: 600,
   archFlowHeightDefault: 400,
+  /** 저장된 높이가 없을 때 기본 높이의 하한(뷰포트가 낮아도 이보다 작게 시작하지 않는다) */
+  archFlowHeightFloor: 240,
+  /** 기본 높이를 정할 때 표에 남기는 행 수 */
+  archFlowTableRows: 4,
+  /** 흐름 패널 밖의 고정 머리 합계(상단 바·세션 머리·재생 막대·흐름 머리·필터 줄·표 머리, px) */
+  archFlowChromeHeight: 400,
   /** `logs.ingested` 뒤 구조도를 다시 질의하기까지(screen-architecture.md 5.3) */
   archDebounceMs: 1000,
 } as const;

@@ -1,17 +1,21 @@
-"""규모 측정(5.5R.10, 5.5R.6 QA 조건): 큰 세션 구조도의 첫 호출·캐시 적중·증분, `arch` 첫 쪽.
+"""규모 측정(5.5R.10, 5.5R.6 QA 조건, 5.5R.36): 큰 세션 구조도의 첫 호출·캐시 적중·증분,
+`arch` 첫 쪽.
 
 색인은 `agent_console_logs.testing.build_scale_index`(SQLite 파일)이고, 프로필은 이 테스트가 만든
 칸 16개·
 연결 21개 합성 프로필이다(기본 프로필 크기와 같은 판정 수).
 
 기본 실행은 이벤트 5,000개로 작업량(읽은 이벤트·판정 수·투영 수)만 단언한다. 50,000개 측정은
-`AGENT_CONSOLE_PERF=measure`(수치만 출력) 또는 `strict`(벽시계도 단언 — 첫 호출 2.5초, 증분 0.5초,
-캐시 적중 0.1초, `arch` 첫 쪽 0.5초)로 켠다. 수치는 `-s`로 본다.
+`AGENT_CONSOLE_PERF=measure`(수치만 출력) 또는 `strict`(벽시계도 단언 — 첫 호출 1.5초, 증분 0.1초,
+캐시 적중 0.1초, `arch` 첫 쪽 0.5초, 한가한 장비 전용)로 켠다. 수치는 `-s`로 본다.
 
-첫 호출 목표는 1초다(design §5.5R.10). 5.5R.35에서 조건 판정을 빠른 경로로 바꿔 판정은 50,000건에
-약 0.5~0.6초가 되었고, 남은 비용은 색인 읽기(이벤트 모델 생성, 약 1~1.5초)와 투영(약 0.3초)이라
-strict 상한은 2.5초로 둔다. 증분의 남은 비용은 새 판정이 아니라 범위 전체 재투영이다.
-수치는 design §5.5R.10 `[5.5R.35 구현·측정]`.
+5.5R.36에서 범위를 모델 없는 JSON 행으로 읽고(`ac-logs` `iter_event_rows`), 판정기가 최상위
+키 값으로 칸·연결을 미리 거르며, 칸·연결별 누적 집계(`ArchitectureTally`)에 새 이벤트만 더하게
+바꿨다. 같은 프로세스에서 데워진 첫 호출은 약 0.7초(같은 조건 5.5R.35 1.5초)지만 이 테스트처럼
+색인을 막 만든 프로세스의 첫 호출은 1.35~1.55초라 strict 상한은 1.5초로 둔다(목표 1초, 남은
+원인은 design 기록). 맞는 행이 범위 끝에만 있는 `arch` 첫 쪽(범위를 거의 다
+읽음)은 기록만 한다(design §5.5R.10 `[5.5R.6]` "기록만"). 수치는 design §5.5R.10
+`[5.5R.36 구현·측정]`.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ import pytest
 
 from agent_console_contracts.architecture import ArchitectureProfile
 from agent_console_link_logs_architecture.scopes import MemoMatcher
+from agent_console_link_logs_architecture.settings import DEFAULT_PAGE_SIZE
 from agent_console_link_logs_architecture.testing import LogArchitectureHarness, selector_params
 from agent_console_logs import IndexBatch, QueryContext
 from agent_console_logs.sqlite import SqliteLogIndex, open_log_index
@@ -38,8 +43,8 @@ from agent_console_logs.testing import (
 MEASURE = os.environ.get("AGENT_CONSOLE_PERF", "") in ("measure", "strict")
 MAIN = 50_000 if MEASURE else 5_000
 NEW = 500
-FIRST_SECONDS = 2.5
-INCREMENT_SECONDS = 0.5
+FIRST_SECONDS = 1.5
+INCREMENT_SECONDS = 0.1
 HIT_SECONDS = 0.1
 FIRST_PAGE_SECONDS = 0.5
 CTX = QueryContext(error_categories=frozenset({"error"}))
@@ -119,7 +124,7 @@ def test_first_call_cache_hit_and_increment(big: tuple[SqliteLogIndex, ScaleLayo
     first, cold = _timed(lambda: h.project(**params))
     assert first.event_total == layout.main_events
     assert (s.events_read, s.judged, s.projections) == (MAIN, MAIN, 1)
-    assert s.pages == -(-MAIN // 200)
+    assert s.pages == -(-MAIN // DEFAULT_PAGE_SIZE)
     _report("첫 호출(읽기 + 판정 + 투영)", cold, pages=s.pages, judged=s.judged)
 
     pages = s.pages

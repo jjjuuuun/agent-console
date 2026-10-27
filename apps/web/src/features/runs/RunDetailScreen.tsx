@@ -48,9 +48,10 @@ import "./runs.css";
 
 // 세션 로그 탭은 로그 기능의 공개 API이며, 탭을 열 때만 내려받는다.
 const SessionLogsTab = lazy(() => import("../logs").then((m) => ({ default: m.RunSessionLogsTab })));
+const ArchitectureTab = lazy(() => import("../logs").then((m) => ({ default: m.RunArchitectureTab })));
 
 /** 검사 패널 탭 순서(Alt+번호). 이 목록이 탭 id의 유일한 원천이다. */
-export const INSPECTOR_TABS = ["trace", "agents", "observe", "interactions", "node", "logs"] as const;
+export const INSPECTOR_TABS = ["trace", "agents", "observe", "interactions", "node", "logs", "architecture"] as const;
 type InspectorTab = (typeof INSPECTOR_TABS)[number];
 /** 추적 연동이 만드는 탭(`INSPECTOR_TABS`의 첫 항목). 이 탭만 연동 부분 규칙을 따른다. */
 const TRACE_TAB: InspectorTab = INSPECTOR_TABS[0];
@@ -58,6 +59,8 @@ const TRACE_TAB: InspectorTab = INSPECTOR_TABS[0];
 const LOGS_TAB: InspectorTab = INSPECTOR_TABS[5];
 /** 관측 탭(`INSPECTOR_TABS`의 세 번째). 서버가 접두어 목록을 비우면 탭이 없다(5.5R.13). */
 const OBSERVE_TAB: InspectorTab = INSPECTOR_TABS[2];
+/** 구조도 탭(마지막). 로그 구조도와 로그-실행 연동 역할이 모두 있을 때만 있다. */
+const ARCH_TAB: InspectorTab = INSPECTOR_TABS[6];
 
 const TERMINAL_NODE_STATUSES = ["succeeded", "failed", "skipped", "cancelled"];
 
@@ -76,11 +79,12 @@ export function RunDetailScreen() {
   // 위임 흐름 탭은 추적 연동이 켜져 있을 때만 있다. 꺼졌으면 탭 줄에서 빠지고 기본 탭은 남은 첫 탭이다.
   const flowPart = useLinkPart(LINK_PART_IDS.runsFlowTab);
   const logsPart = useLinkPart(LINK_PART_IDS.logsRunsTab);
+  const archPart = useLinkPart(LINK_PART_IDS.runsArchitectureTab);
   const view = useRunView(id, { trace: flowPart.visible });
   const observe = useObservePrefixes();
   const tabIds = useMemo(
-    () => INSPECTOR_TABS.filter((tabId) => (tabId !== TRACE_TAB || flowPart.visible) && (tabId !== LOGS_TAB || logsPart.visible) && (tabId !== OBSERVE_TAB || observe.enabled)),
-    [flowPart.visible, logsPart.visible, observe.enabled],
+    () => INSPECTOR_TABS.filter((tabId) => (tabId !== TRACE_TAB || flowPart.visible) && (tabId !== LOGS_TAB || logsPart.visible) && (tabId !== OBSERVE_TAB || observe.enabled) && (tabId !== ARCH_TAB || archPart.visible)),
+    [flowPart.visible, logsPart.visible, observe.enabled, archPart.visible],
   );
   const defaultTab: InspectorTab = tabIds[0] ?? TRACE_TAB;
   const connection = useConnectionStatus(ws);
@@ -589,6 +593,7 @@ export function RunDetailScreen() {
 
   const content: Record<InspectorTab, React.ReactNode> = {
     logs: null,
+    architecture: null,
     trace: (
       <TraceTab
         trace={view.trace}
@@ -706,6 +711,12 @@ export function RunDetailScreen() {
     </Suspense>
   );
 
+  content.architecture = (
+    <Suspense fallback={<div className="app-loading" role="status">{appMessages.common.loadingScreen}</div>}>
+      <ArchitectureTab runId={id} running={active} hasChildren={tree.children.length > 0} refreshKey={view.events.length} />
+    </Suspense>
+  );
+
   return (
     <div className="app-screen-frame runs-detail" data-screen="run-detail">
       <RunHeader
@@ -802,6 +813,7 @@ export function RunDetailScreen() {
               { ...tabItem("interactions", t.tabs.interactions, pendingList.length), content: content.interactions },
               { ...tabItem("node", t.tabs.node), content: content.node },
               ...(logsPart.visible ? [{ ...tabItem(LOGS_TAB, t.tabs.logs), content: content.logs }] : []),
+              ...(archPart.visible ? [{ ...tabItem(ARCH_TAB, t.tabs.architecture), content: content.architecture }] : []),
             ]}
           />
         </div>

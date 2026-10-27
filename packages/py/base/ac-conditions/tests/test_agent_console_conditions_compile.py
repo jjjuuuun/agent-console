@@ -21,8 +21,10 @@ from agent_console_conditions import (
     compile_condition_item,
     compile_conditions,
     compile_pointer,
+    condition_keys,
     conditions_hold,
     evaluate_conditions,
+    necessary_items,
     resolve_pointer,
 )
 from agent_console_contracts import ConditionItem, ConditionOperatorDescriptor, ConditionSpec
@@ -312,3 +314,73 @@ def test_short_circuit_and_operator_snapshot() -> None:
 def test_empty_and_negate() -> None:
     assert compile_conditions(ConditionSpec(), {})(None) is True
     assert compile_conditions(ConditionSpec(all=[], any=[], negate=True), {})({}) is False
+
+
+# ---------------------------------------------------------------- necessary_items (5.5R.36)
+# 낸 항목이 거짓이면 조건 묶음도 거짓이고, 항목 결과는 그 키 값에만 달렸다(판정기가 최상위 키
+# 값별로 기억해 맞을 수 없는 조건을 미리 거르는 근거).
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_necessary_items_are_necessary(seed: int) -> None:
+    rng = random.Random(seed)
+    operators = _operators()
+    subjects = [_subject(rng) for _ in range(30)]
+    seen = 0
+    for _ in range(300):
+        spec = _spec(rng, OP_NAMES)
+        whole = compile_conditions(spec, operators)
+        for key, item in necessary_items(spec, operators):
+            seen += 1
+            for subject in subjects:
+                if not item(subject):
+                    assert not whole(subject), (spec, subject)
+                # 결과는 그 키 값에만 달렸다
+                if isinstance(subject, dict):
+                    alone = {key: subject[key]} if key in subject else {}
+                    assert item(alone) == item(subject), (spec, key, subject)
+    assert seen > 50
+
+
+def _eq(path: str, value: str = "x") -> ConditionItem:
+    return ConditionItem(path=path, op="eq", value=value)
+
+
+def test_shapes() -> None:
+    operators = _operators()
+
+    def keys(spec: ConditionSpec) -> list[str]:
+        return [k for k, _ in necessary_items(spec, operators)]
+
+    assert keys(ConditionSpec(all=[_eq("/a"), _eq("/b/c"), _eq("")])) == ["a"]
+    assert keys(ConditionSpec(all=[_eq("/a")], any=[_eq("/b")])) == ["a", "b"]
+    assert keys(ConditionSpec(any=[_eq("/a"), _eq("/b")])) == []  # 하나만 참이어도 된다
+    assert keys(ConditionSpec(all=[_eq("/a")], negate=True)) == []
+    assert keys(ConditionSpec()) == []
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_condition_keys_cover_what_is_read(seed: int) -> None:
+    """`condition_keys`의 키만 남긴 대상도 판정 결과가 같다(문서 전체를 읽으면 None)."""
+    rng = random.Random(100 + seed)
+    operators = _operators()
+    subjects = [s for s in (_subject(rng) for _ in range(30)) if isinstance(s, dict)]
+    whole = 0
+    for _ in range(300):
+        spec = _spec(rng, OP_NAMES)
+        keys = condition_keys(spec)
+        if keys is None:
+            whole += 1
+            continue
+        holds = compile_conditions(spec, operators)
+        for subject in subjects:
+            alone = {k: v for k, v in subject.items() if k in keys}
+            assert holds(alone) == holds(subject), (spec, subject)
+    assert 0 < whole < 300
+
+
+def test_condition_keys_shapes() -> None:
+    assert condition_keys(ConditionSpec()) == frozenset()
+    spec = ConditionSpec(all=[_eq("/a/0"), _eq("/b")], any=[_eq("/c~1d")])
+    assert condition_keys(spec) == frozenset({"a", "b", "c/d"})
+    assert condition_keys(ConditionSpec(any=[_eq("")])) is None

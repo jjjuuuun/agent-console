@@ -40,7 +40,7 @@ import { SplitHandle } from "./SplitHandle";
 import { archiveFilterFor, useArchiveDownload } from "./archive";
 import { CELL_IDS, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_FIELD, SESSION_EVENT_COLUMNS_DEFAULT, SUGGEST_FROM } from "./logsConfig";
 import { errorBlockOf } from "./logsErrors";
-import { categoryItems, filterSessionEvents, laneLabels, laneOf, originOf, paramsKey, suggestionsFor, eventFieldValues, toLaneEvents, shouldAutoFoldFlow, clampOr, valuesOf, withValues } from "./logsLib";
+import { categoryItems, filterSessionEvents, laneLabels, laneOf, originOf, paramsKey, suggestionsFor, eventFieldValues, toLaneEvents, shouldAutoFoldFlow, archDefaultHeight, clampOr, valuesOf, withValues } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
@@ -217,7 +217,17 @@ export function SessionDetailPage() {
     setFlowH(n);
     storage.set(LOGS_STORAGE.flowHeight, String(n));
   };
-  const [archH, setArchH] = useState(() => clampOr(readNumber(storage.get(LOGS_STORAGE.archFlowHeight), LOGS_LIMITS.archFlowHeightDefault), LOGS_LIMITS.archFlowHeightMin, LOGS_LIMITS.archFlowHeightMax, LOGS_LIMITS.archFlowHeightDefault));
+  const [archH, setArchH] = useState(() => {
+    const fallback = archDefaultHeight({
+      viewportHeight: typeof window === "undefined" ? 900 : window.innerHeight,
+      preferred: LOGS_LIMITS.archFlowHeightDefault,
+      floor: LOGS_LIMITS.archFlowHeightFloor,
+      tableRows: LOGS_LIMITS.archFlowTableRows,
+      rowHeight: LOGS_LIMITS.tableRowHeight,
+      chrome: LOGS_LIMITS.archFlowChromeHeight,
+    });
+    return clampOr(readNumber(storage.get(LOGS_STORAGE.archFlowHeight), fallback), LOGS_LIMITS.archFlowHeightMin, LOGS_LIMITS.archFlowHeightMax, fallback);
+  });
   const setArchHeight = (n: number) => {
     setArchH(n);
     storage.set(LOGS_STORAGE.archFlowHeight, String(n));
@@ -515,7 +525,7 @@ export function SessionDetailPage() {
               <p className="logs-empty">{hasHiddenCategories && !includeHidden ? `${t.detail.onlyHidden}` : t.detail.noEvents}{hasHiddenCategories && !includeHidden ? <Button size="sm" onClick={() => setIncludeHidden(true)}>{t.detail.includeHidden}</Button> : null}</p>
             ) : emptyRows ? (
               <div className="logs-empty">
-                <p>{t.detail.noMatch(visible.length)}</p>
+                <p>{archCount === 0 && arch.targetTitle !== "" ? archMessages.table.zero(arch.targetTitle) : t.detail.noMatch(visible.length)}</p>
                 <Button size="sm" onClick={clearFilters}>{t.clearFilters}</Button>
               </div>
             ) : (

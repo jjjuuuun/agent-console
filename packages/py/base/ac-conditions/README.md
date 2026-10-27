@@ -83,6 +83,18 @@ False
 `MISSING`도 받음)를 낼 수 있다. 기본 10개는 모두 가진다. 능력이 없거나 None을 돌려주거나 만들다 예외가 나면
 빠른 경로도 그 항목만 `evaluate(actual, expected)`로 판정한다(결과가 같아야 한다).
 
+`necessary_items(spec, operators)`는 조건 묶음이 참이려면 반드시 참이어야 하는 "최상위 키 하나" 항목(`all`의
+항목, `any`가 하나뿐이면 그 항목)을 `(키, 항목 판정)`으로 낸다(`negate`면 없음). 항목 결과는 그 키 값에만
+달렸으므로, 같은 조건으로 많은 대상을 판정하는 쪽이 키 값별로 결과를 기억해 맞을 수 없는 조건을 미리 거를 수
+있다(`ac-architecture` `ProfileMatcher`, 5.5R.36).
+
+```python
+>>> from agent_console_conditions import necessary_items
+>>> [key for key, _ in necessary_items(spec, operators)]
+['output', 'iteration']
+
+```
+
 새 연산자는 `descriptor`(`ConditionOperatorDescriptor`)와 `evaluate(actual, expected) -> bool`을 가진 객체다.
 entry point 이름은 디스크립터 id와 같게 둔다.
 

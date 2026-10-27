@@ -5,7 +5,9 @@
 
 - ``logs.query``: 로그 색인 읽기(``mod-logs``). 필터 읽기(``parse_filter``)·질의 맥락
   (``query_context`` — 분류 체계에서 오류로 표시한 범주)·이벤트 쪽 넘김(``events``)·상세(``event``)·
-  토큰 표본(``token_samples``)만 쓴다.
+  토큰 표본(``token_samples``)만 쓴다. 행 읽기(``iter_event_rows`` — ``LogRowReader``)가 있으면
+  범위를 모델 없이 JSON 행으로 읽는다(선택 능력, 없으면 ``events`` 결과를 덤프한다 — 결과는
+  같다).
 - ``architecture.catalog``: 병합된 구조도 프로필과 조건 연산자(``mod-architecture``). ``catalog()``·
   ``operators()``·``max_scope_events``만 쓴다.
 
@@ -17,13 +19,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Protocol, runtime_checkable
 
 from agent_console_architecture import ProfileCatalog
 from agent_console_conditions import ConditionOperator
 from agent_console_contracts.logs import LogEventDetail, LogEventPage, TokenSample
-from agent_console_logs import JsonValue, LogFilter, LogFilterExtension, QueryContext
+from agent_console_logs import (
+    JsonValue,
+    LogEventRow,
+    LogFilter,
+    LogFilterExtension,
+    PageCallback,
+    QueryContext,
+)
 from agent_console_modkit import PortKey
 
 
@@ -40,6 +49,19 @@ class LogQueryReader(Protocol):
     def event(self, uid: str) -> LogEventDetail | None: ...
 
     def token_samples(self, flt: LogFilter) -> list[TokenSample]: ...
+
+
+@runtime_checkable
+class LogRowReader(Protocol):
+    """``logs.query``의 선택 능력: 범위를 모델 없이 JSON 행으로(``mod-logs`` ``iter_event_rows``).
+
+    ``flt.cursor``부터 끝까지, 같은 필터의 ``events`` 쪽들을 ``agent_console_logs.event_row``로
+    바꾼 것과 같은 행을 차례로 낸다. ``on_page``는 쪽을 읽을 때마다 그 쪽의 행 수로 부른다.
+    """
+
+    def iter_event_rows(
+        self, flt: LogFilter, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]: ...
 
 
 @runtime_checkable
@@ -68,4 +90,5 @@ __all__ = [
     "LOG_FILTER_PREDICATES",
     "ArchitectureCatalogReader",
     "LogQueryReader",
+    "LogRowReader",
 ]

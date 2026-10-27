@@ -17,7 +17,7 @@
 
 | 구분 | 이름 | 모양 |
 | --- | --- | --- |
-| 제공 | `logs.query` | `LogQueryPort`(목록·상세·세션·타임라인·집계·handoff·토큰 표본·분류 체계·질의 맥락) |
+| 제공 | `logs.query` | `LogQueryPort`(목록·목록 행(`iter_event_rows`, 모델 없는 JSON 행, 5.5R.36)·상세·세션·타임라인·집계·handoff·토큰 표본·분류 체계·질의 맥락) |
 | 제공 | `logs.ingest` | `LogIngestPort`(`add_runtime_source`·`request_scan(source_ids, ref_hint=)`·`scan`) |
 | 제공 | `server.warnings` | `logs.storage_memory`·`logs.redaction_unavailable`·`logs.source_failed`·`logs.unknown_classifier` |
 | 선택(multi) | `logs.sources` | `RuntimeLogSource`(`source`·`classifier` 속성, 예: `testing.RuntimeSource`) |
@@ -172,7 +172,7 @@ open_log_storage(None).kind  # DB도 경로도 없으면 "memory"
 | --- | --- |
 | `module` / `LogsModule` / `MODULE_ID` / `WEB_ROLES` | 서버 모듈(entry point `agent_console.server_modules`) |
 | `base_taxonomy_of` | 옵션 `base_taxonomy_file` → 기본 분류 체계(`LogsService(base_taxonomy=)`에 넘길 값) |
-| `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`parse_filter`·`extensions`·`events`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
+| `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`parse_filter`·`extensions`·`events`·`iter_event_rows`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
 | `LogsModuleSettings` | 설치자 옵션 |
 | `LogRedaction` | 저장 직전 비밀 의심 가리기(포트 값으로) |
 | `LOGS_QUERY`·`LOGS_INGEST`·`SERVER_WARNINGS`·`LOG_SOURCES`·`LOG_SCOPE_KINDS`·`LOG_FILTER_PREDICATES`·`WORKSPACE_SETTINGS`·`SECRET_RULES`·`LOGS_INGESTED`·`LOGS_TOPIC` | 포트·토픽·WS 토픽 |

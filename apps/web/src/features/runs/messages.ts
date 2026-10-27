@@ -123,6 +123,7 @@ export const runsMessages = {
     interactions: "상호작용",
     node: "노드·연결",
     logs: "세션 로그",
+    architecture: "구조도",
   },
   trace: {
     loading: "위임 흐름을 불러오는 중…",

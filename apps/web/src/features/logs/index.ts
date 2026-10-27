@@ -18,3 +18,5 @@ export { RunSessionLogsTab } from "./RunSessionLogsTab";
 export type { RunSessionLogsTabProps } from "./RunSessionLogsTab";
 export { LOGS_ROLE, LOG_TABS } from "./logsConfig";
 export { slotFor } from "./slots";
+export { RunArchitectureTab } from "./RunArchitectureTab";
+export type { RunArchitectureTabProps } from "./RunArchitectureTab";

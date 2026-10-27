@@ -48,6 +48,7 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 | `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신(결정 §R13-11) | 직접 만든 `useAsync`(1R.22 전 방식) |
 | `pretendard` ^1.3.9 | 기본 글꼴 자체 호스팅(`src/styles/fonts.css`가 woff2를 가리킨다, 5.2R.53). CDN 없이 오프라인에서도 같은 글꼴 | 시스템 글꼴만 사용 |
 | `vite-plugin-pwa` ^2 + `workbox-window` (dev) | manifest·서비스 워커(워크박스) 생성, 설치 가능한 앱 | 수작업 manifest + 서비스 워커 |
+| `yaml` ^2 | 설정 › 구조도 프로필 YAML 읽기·쓰기(줄 번호 오류 포함, 5.5R.17) | `js-yaml`(오류 위치·주석 보존이 약함) |
 | `@agent-console/contracts` | 서버 계약 타입·JSON Schema(Pydantic에서 생성) | — |
 | `@agent-console/api-client` | REST·WebSocket 클라이언트 | — |
 | `@agent-console/ui` | 토큰·기본 컴포넌트(대화상자·탭·팝오버 등) | — |

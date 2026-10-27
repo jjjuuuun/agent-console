@@ -4,6 +4,7 @@
  */
 export { ArchitectureDiagram } from "./ArchitectureDiagram";
 export type { ArchitectureDiagramProps } from "./ArchitectureDiagram";
+export type { ToolbarParts } from "./Toolbar";
 export { ArchitectureCellList } from "./ArchitectureCellList";
 export type { ArchitectureCellListProps } from "./ArchitectureCellList";
 export { ArchitectureInfoBar } from "./ArchitectureInfoBar";

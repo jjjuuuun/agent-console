@@ -114,6 +114,16 @@ describe("세션 상세 [구조도] 세그먼트", () => {
     expect(screen.queryByText(/^구조도 칸가/)).toBeNull();
   });
 
+  it("관측값이 0건인 칸을 누르면 표 자리에 0건 문구가 보인다", async () => {
+    mount("/logs/sessions/ses-1", ["logs", "logs:architecture"], {
+      getLogArchitecture: async () => archView({ cells: [sampleCell("zz9", { label: "빈칸", x: 100, y: 60, metrics: { count: obs(0) }, selector: { arch: "pf-1:cell:zz9" } })], edges: [] }),
+      listLogEvents: async () => ({ items: [] }),
+    });
+    const panel = await openArch();
+    fireEvent.click(await within(panel).findByRole("button", { name: /^빈칸/ }, LONG));
+    await screen.findByText("구조도 빈칸 0건이라 걸러낼 이벤트가 없습니다", {}, LONG);
+  });
+
   it("수집 안 됨 칸은 필터가 걸리지 않고 안내 토스트만 뜬다", async () => {
     const { mocks } = mount("/logs/sessions/ses-1", ["logs", "logs:architecture"]);
     const panel = await openArch();

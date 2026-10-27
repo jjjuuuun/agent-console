@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Iterator
 
 from agent_console_contracts import HandoffMatrix
 from agent_console_contracts.logs import (
@@ -24,6 +25,13 @@ from agent_console_logs._index import (
     BatchResult,
     IndexBatch,
     StoredCursor,
+)
+from agent_console_logs._rows import (
+    LogEventRow,
+    LogEventRowPage,
+    PageCallback,
+    event_row,
+    page_rows,
 )
 
 __all__ = ["MemoryLogIndex"]
@@ -122,6 +130,19 @@ class MemoryLogIndex:
     ) -> LogEventPage:
         events, _ = self._snapshot()
         return q.page_events(events, flt, ctx, with_total=with_total)
+
+    def query_event_rows(self, flt: LogFilter, ctx: QueryContext) -> LogEventRowPage:
+        """`query_events` 쪽을 행으로(선택 능력 `LogEventRowReader`의 기준 구현 — 덤프)."""
+        page = self.query_events(flt, ctx)
+        return LogEventRowPage(
+            rows=[event_row(e) for e in page.items], next_cursor=page.next_cursor
+        )
+
+    def iter_event_rows(
+        self, flt: LogFilter, ctx: QueryContext, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]:
+        """`flt.cursor`부터 끝까지 행(쪽마다 `query_event_rows`)."""
+        return page_rows(lambda f: self.query_event_rows(f, ctx), flt, on_page=on_page)
 
     def get_event(
         self,

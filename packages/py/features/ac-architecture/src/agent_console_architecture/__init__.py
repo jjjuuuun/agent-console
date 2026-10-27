@@ -14,7 +14,8 @@
     - 검사: ``profile_issues(profile, *, operators, filters=None, profile_id=None)``,
       ``check_profile_data(data, ...)``, ``ID_PATTERN``
     - 투영: ``project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens,
-      error_categories, max_seq, notes, cell_size) -> ArchitectureView``, ``DEFAULT_CELL_SIZE``,
+      error_categories, max_seq, notes, cell_size, matches) -> ArchitectureView``(이벤트·JSON 행),
+      증분 투영 ``ArchitectureTally``(``add_event``·``add_row``·``view``), ``DEFAULT_CELL_SIZE``,
       ``DEFAULT_METRICS``, ``KNOWN_METRICS``
     - 판정: ``ProfileMatcher``(순수 판정기, 캐시 가능 — 조건은 만들 때 한 번 컴파일하고 참·거짓만
       낸다), ``EventMatch``, ``event_subject``,
@@ -56,6 +57,7 @@ from ._selector import (
     parse_arch,
     selector_predicate,
 )
+from ._tally import ArchitectureTally
 
 __all__ = [
     "ARCHITECTURE_PROFILES_EXTENSION",
@@ -67,6 +69,7 @@ __all__ = [
     "KNOWN_METRICS",
     "ArchTarget",
     "ArchitectureSelectorError",
+    "ArchitectureTally",
     "EventMatch",
     "EventPredicate",
     "ProfileCatalog",

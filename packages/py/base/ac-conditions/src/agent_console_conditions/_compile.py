@@ -179,6 +179,57 @@ def compile_conditions(
     )
 
 
+def necessary_items(
+    spec: ConditionSpec, operators: Mapping[str, ConditionOperator]
+) -> tuple[tuple[str, SubjectPredicate], ...]:
+    """조건 묶음이 참이려면 반드시 참이어야 하는 "최상위 키 하나" 항목들: (키, 항목 판정).
+
+    `all`의 항목 전부와 `any`의 항목이 하나뿐이면 그 항목이 해당한다(`negate`면 없음). 경로가
+    `/키` 하나인 항목만 낸다. 항목 판정의 결과는 판단 대상(JSON 객체)의 그 키 값에만 달렸다(같은
+    값이면 같은 결과 — 연산자는 부작용이 없다는 프로토콜 계약). 많은 대상을 판정하는 쪽이 키 값별로
+    결과를 기억해 맞을 수 없는 조건 묶음을 미리 걸러 낼 때 쓴다.
+
+    Args:
+        spec: 조건 데이터.
+        operators: 연산자 id → 연산자(`compile_condition_item`과 같다).
+
+    Returns:
+        (최상위 키, 항목 판정 `판단 대상 → 참·거짓`)들. 없으면 빈 튜플.
+    """
+    if spec.negate:
+        return ()
+    items = list(spec.all or [])
+    if spec.any and len(spec.any) == 1:
+        items.append(spec.any[0])
+    out: list[tuple[str, SubjectPredicate]] = []
+    for item in items:
+        tokens = _parse_pointer(item.path)
+        if tokens is None or len(tokens) != 1:
+            continue
+        out.append((tokens[0][0], compile_condition_item(item, operators)))
+    return tuple(out)
+
+
+def condition_keys(spec: ConditionSpec) -> frozenset[str] | None:
+    """조건 묶음이 읽는 판단 대상의 최상위 키들(경로 `/a/b`는 `a`를 읽는다).
+
+    판정 결과는 판단 대상(JSON 객체)의 이 키들 값에만 달렸다(같은 값이면 같은 결과 — 연산자는
+    부작용이 없다는 프로토콜 계약). `/`로 시작하지 않는 경로는 아무것도 읽지 않는다(늘 `MISSING`).
+
+    Returns:
+        키 집합. 문서 전체(`""`)를 읽는 항목이 있으면 None(모든 키에 달렸다).
+    """
+    keys: set[str] = set()
+    for item in (*(spec.all or ()), *(spec.any or ())):
+        tokens = _parse_pointer(item.path)
+        if tokens is None:
+            continue
+        if not tokens:
+            return None
+        keys.add(tokens[0][0])
+    return frozenset(keys)
+
+
 def conditions_hold(
     spec: ConditionSpec, subject: Any, operators: Mapping[str, ConditionOperator]
 ) -> bool:

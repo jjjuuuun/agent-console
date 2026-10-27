@@ -55,6 +55,12 @@ from agent_console_logs._index import (
     IndexBatch,
     StoredCursor,
 )
+from agent_console_logs._rows import (
+    LogEventRow,
+    LogEventRowPage,
+    PageCallback,
+    complete_event_row,
+)
 from agent_console_logs._windows import sum_samples
 
 from ._clauses import Clause, error_expr, event_clauses, usage_clauses
@@ -139,6 +145,15 @@ def pair_times_select(
         .where(*where, e.c.call_id != "", sa.tuple_(e.c.thread, e.c.call_id).in_(pairs))
         .group_by(e.c.session, e.c.thread, e.c.call_id)
     )
+
+
+def _stored_row(stored: Any, durations: dict[str, float]) -> LogEventRow:
+    """저장된 행(seq·body·uid) → 목록 행(짝 소요가 있으면 `duration_ms`)."""
+    row = complete_event_row(json.loads(stored.body), seq=stored.seq)
+    found = durations.get(stored.uid)
+    if found is not None:
+        row["duration_ms"] = found
+    return row
 
 
 def _chunks[T](items: Sequence[T], size: int) -> Iterator[Sequence[T]]:
@@ -404,30 +419,49 @@ class SqliteLogIndex:
 
     # ---------------------------------------------------------------- 목록·상세
 
+    def _page_rows(
+        self,
+        conn: Connection,
+        flt: LogFilter,
+        ctx: QueryContext,
+        *,
+        with_total: bool,
+        pair_columns: bool = False,
+    ) -> tuple[Sequence[Any], bool, int | None]:
+        """목록 쪽의 (seq, body) 행(`limit`개까지), 더 있는지, 전체 수.
+
+        `pair_columns`면 짝 계산 열(uid·세션·thread·call_id·단계)도 읽는다(본문을 풀지 않고 짝을
+        찾을 때). 기본은 읽지 않는다 — 색인만으로 후보를 고르는 질의가 표를 더 읽지 않게.
+        """
+        e = log_events
+        where = event_clauses(conn, flt, ctx, e)
+        total = (
+            conn.scalar(sa.select(sa.func.count()).select_from(e).where(*where))
+            if with_total
+            else None
+        )
+        columns: list[Any] = [e.c.seq, log_bodies.c.body]
+        if pair_columns:
+            columns += [e.c.uid, e.c.session, e.c.thread, e.c.call_id, e.c.stage]
+        stmt = (
+            sa.select(*columns)
+            .select_from(e.join(log_bodies, log_bodies.c.seq == e.c.seq))
+            .where(*where)
+        )
+        if flt.cursor is not None:
+            c = int(flt.cursor)
+            stmt = stmt.where(e.c.seq > c if flt.order == "asc" else e.c.seq < c)
+        stmt = stmt.order_by(e.c.seq.asc() if flt.order == "asc" else e.c.seq.desc())
+        rows = conn.execute(stmt.limit(flt.limit + 1)).all()
+        return rows[: flt.limit], len(rows) > flt.limit, total
+
     def query_events(
         self, flt: LogFilter, ctx: QueryContext, *, with_total: bool = False
     ) -> LogEventPage:
-        e = log_events
         with self._read() as conn:
-            where = event_clauses(conn, flt, ctx, e)
-            total = (
-                conn.scalar(sa.select(sa.func.count()).select_from(e).where(*where))
-                if with_total
-                else None
-            )
-            stmt = (
-                sa.select(e.c.seq, log_bodies.c.body)
-                .select_from(e.join(log_bodies, log_bodies.c.seq == e.c.seq))
-                .where(*where)
-            )
-            if flt.cursor is not None:
-                c = int(flt.cursor)
-                stmt = stmt.where(e.c.seq > c if flt.order == "asc" else e.c.seq < c)
-            stmt = stmt.order_by(e.c.seq.asc() if flt.order == "asc" else e.c.seq.desc())
-            rows = conn.execute(stmt.limit(flt.limit + 1)).all()
-            items = [_load_event(r.seq, r.body) for r in rows[: flt.limit]]
+            rows, more, total = self._page_rows(conn, flt, ctx, with_total=with_total)
+            items = [_load_event(r.seq, r.body) for r in rows]
             durations = self._pair_durations(conn, items, [], ctx)
-        more = len(rows) > flt.limit
         return LogEventPage(
             items=[
                 ev.model_copy(update={"duration_ms": durations[ev.uid]})
@@ -438,6 +472,47 @@ class SqliteLogIndex:
             total=total,
             next_cursor=str(items[-1].seq) if more and items else None,
         )
+
+    def _raw_page(
+        self, flt: LogFilter, ctx: QueryContext
+    ) -> tuple[Sequence[Any], str | None, dict[str, float]]:
+        """행 읽기용 쪽: 저장된 행(본문 문자열 그대로), 다음 커서, 짝 소요(uid → ms).
+
+        짝은 색인 열(세션·thread·call_id·단계)로 찾으므로 본문을 풀지 않는다.
+        """
+        with self._read() as conn:
+            rows, more, _total = self._page_rows(
+                conn, flt, ctx, with_total=False, pair_columns=True
+            )
+            durations = self._pair_durations(conn, rows, [], ctx)
+        return rows, (str(rows[-1].seq) if more and rows else None), durations
+
+    def query_event_rows(self, flt: LogFilter, ctx: QueryContext) -> LogEventRowPage:
+        """`query_events`와 같은 쪽을 모델 없이 행으로(선택 능력 `LogEventRowReader`).
+
+        저장된 본문 JSON에 기본값을 채운다(`complete_event_row`) — 검증·덤프를 건너뛴다.
+        """
+        rows, next_cursor, durations = self._raw_page(flt, ctx)
+        return LogEventRowPage(
+            rows=[_stored_row(r, durations) for r in rows], next_cursor=next_cursor
+        )
+
+    def iter_event_rows(
+        self, flt: LogFilter, ctx: QueryContext, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]:
+        """`flt.cursor`부터 끝까지 행. 쪽마다 본문 문자열만 읽어 두고 행은 하나씩 만든다(한 쪽의
+        행 dict를 한꺼번에 들고 있지 않는다 — 큰 범위에서 메모리·GC 부담이 적다). 연결은 쪽을
+        읽는 동안만 쓴다."""
+        cursor = flt.cursor
+        while True:
+            rows, next_cursor, durations = self._raw_page(flt.with_(cursor=cursor), ctx)
+            if on_page is not None:
+                on_page(len(rows))
+            for r in rows:
+                yield _stored_row(r, durations)
+            if next_cursor is None or not rows:
+                return
+            cursor = next_cursor
 
     def get_event(
         self,
@@ -665,7 +740,10 @@ class SqliteLogIndex:
 
     @staticmethod
     def _pair_durations(
-        conn: Connection, shown: Sequence[LogEvent], where: Sequence[Clause], ctx: QueryContext
+        conn: Connection,
+        shown: Sequence[Any],
+        where: Sequence[Clause],
+        ctx: QueryContext,
     ) -> dict[str, float]:
         """`shown` 중 짝 이벤트(같은 세션·thread·`call_id`의 시작·끝 단계)의 소요 시간(ms).
 

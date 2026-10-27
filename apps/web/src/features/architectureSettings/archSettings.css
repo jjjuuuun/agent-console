@@ -1,0 +1,56 @@
+/* 설정 › 구조도 (screen-architecture.md §7). 토큰만 쓴다. */
+.arch-settings { min-width: 0; }
+.arch-settings-panel { display: flex; flex-direction: column; gap: var(--ac-space-3); min-width: 0; }
+.arch-settings-listhead { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; }
+.arch-settings-list-title { margin: 0; font-size: var(--ac-text-md); font-weight: 600; }
+.arch-settings-listhead-actions { display: inline-flex; gap: var(--ac-space-2); flex-wrap: wrap; }
+.arch-settings-note { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-settings-table { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.arch-settings-rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.arch-settings-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--ac-space-3); padding: var(--ac-space-2) var(--ac-space-3); border-bottom: 1px solid var(--ac-border); min-height: 40px; }
+.arch-settings-row:last-child { border-bottom: 0; }
+.arch-settings-row[data-open="true"] { background: var(--ac-surface-2); }
+.arch-settings-row-main { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.arch-settings-row-title { font-weight: 500; min-width: 0; flex: 0 1 auto; }
+.arch-settings-row-id { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); min-width: 0; flex: 0 1 auto; }
+.arch-settings-origin { flex: none; background: var(--ac-surface-3); white-space: nowrap; }
+.arch-settings-row-meta { display: inline-flex; align-items: center; gap: var(--ac-space-3); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); white-space: nowrap; }
+.arch-settings-row-actions { display: inline-flex; gap: var(--ac-space-1); flex-wrap: wrap; justify-content: flex-end; }
+.arch-settings-dot { width: 8px; height: 8px; border-radius: var(--ac-radius-full); background: var(--ac-accent); flex: none; }
+.arch-settings-issues-count { color: var(--ac-text); }
+.arch-settings-groups { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.arch-settings-disabled { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.arch-settings-empty { border: 1px dashed var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-4); display: flex; flex-direction: column; gap: var(--ac-space-2); align-items: flex-start; }
+.arch-settings-empty-title { margin: 0; font-weight: 600; }
+.arch-settings-editor { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.arch-settings-editor-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; }
+.arch-settings-editor-title { margin: 0; font-size: var(--ac-text-md); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.arch-settings-editor-actions { display: inline-flex; gap: var(--ac-space-2); }
+.arch-settings-editor-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); gap: var(--ac-space-3); min-width: 0; }
+.arch-settings-yaml { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); min-width: 0; height: 320px; overflow: hidden; }
+.arch-settings-results { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: var(--ac-space-2); min-width: 0; max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.arch-settings-results-title { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.arch-settings-count { margin: 0; font-weight: 600; }
+.arch-settings-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.arch-settings-issue { display: flex; gap: var(--ac-space-2); align-items: flex-start; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-settings-issue-text { min-width: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.arch-settings-issue-path { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.arch-settings-ok { margin: 0; color: var(--ac-success); display: inline-flex; gap: var(--ac-space-1); align-items: center; }
+.arch-settings-ok .app-sev { color: var(--ac-success); }
+.arch-settings-failed { margin: 0; }
+.arch-settings-checked { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.arch-settings-warn { margin: 0; color: var(--ac-warning); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-settings-idform { display: flex; flex-direction: column; gap: var(--ac-space-3); }
+.arch-settings-label { display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-settings-input { font: inherit; padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: var(--ac-text); min-width: 0; }
+.arch-settings-mono { font-family: var(--ac-font-mono); }
+.arch-settings-paste { resize: vertical; }
+.arch-settings-select { display: inline-flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
+.arch-settings-chip { background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+@media (max-width: 1100px) {
+  .arch-settings-editor-body { grid-template-columns: minmax(0, 1fr); }
+  .arch-settings-row { grid-template-columns: minmax(0, 1fr); row-gap: var(--ac-space-1); }
+  .arch-settings-row-actions { justify-content: flex-start; }
+}
+.arch-settings-save-host { display: inline-flex; border-radius: var(--ac-radius-sm); }
+.arch-settings-issue .app-sev { flex: none; width: 1.2em; text-align: center; font-weight: 700; }

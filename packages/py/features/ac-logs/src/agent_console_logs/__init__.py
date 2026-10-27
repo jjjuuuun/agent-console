@@ -6,6 +6,8 @@
   (entry point `agent_console.log_sources`·`agent_console.log_classifiers`).
 - 증분 jsonl 출처 기반 클래스 `JsonlFileSource`(agent_bench `_ingest` 규칙).
 - 수집기 `LogIngestor`, 색인 프로토콜 `LogIndex`(메모리 구현은 `testing.MemoryLogIndex`).
+- 행 읽기(5.5R.36): `query_event_rows`·`iter_event_rows` — 목록 쪽을 모델 없이 JSON 행(dict)으로
+  (선택 능력 `LogEventRowReader`, 메모리·SQLite 색인이 가진다).
 - 순수 함수: `bounded`·`event_uid`·`link_events`·`merge_taxonomy`·`group_projects`·`block_windows`,
   질의 의미 `agent_console_logs.query`.
 - 오프라인 보관본: `build_archive`(`LogArchive` v1, 필터 범위·크기 한도·가림) +
@@ -75,6 +77,17 @@ from ._registries import (
     LogRegistries,
     as_log_classifier,
     as_log_source,
+)
+from ._rows import (
+    LogEventRow,
+    LogEventRowPage,
+    LogEventRowReader,
+    PageCallback,
+    complete_event_row,
+    event_row,
+    iter_event_rows,
+    page_rows,
+    query_event_rows,
 )
 from ._source import (
     DIAGNOSTIC_META_KEY,
@@ -152,6 +165,9 @@ __all__ = [
     "LoadReport",
     "LogClassifier",
     "LogEventDraft",
+    "LogEventRow",
+    "LogEventRowPage",
+    "LogEventRowReader",
     "LogFilter",
     "LogFilterContext",
     "LogFilterExtension",
@@ -164,6 +180,7 @@ __all__ = [
     "LogScopeKind",
     "LogSource",
     "LogSourceContext",
+    "PageCallback",
     "QueryContext",
     "RawRecord",
     "ReadResult",
@@ -178,11 +195,13 @@ __all__ = [
     "bounded",
     "build_archive",
     "build_record",
+    "complete_event_row",
     "correlation_keys",
     "dirty_surrogates",
     "effective_config",
     "error_categories",
     "escape_html",
+    "event_row",
     "event_uid",
     "expand_user_path",
     "filter_to_params",
@@ -191,18 +210,21 @@ __all__ = [
     "group_projects",
     "hidden_categories",
     "identity_for",
+    "iter_event_rows",
     "json_pointer",
     "link_events",
     "load_default_session_title_rules",
     "load_default_taxonomy",
     "load_taxonomy",
     "merge_taxonomy",
+    "page_rows",
     "pair_durations",
     "parse_log_filter",
     "parse_session_title_rules",
     "parse_tz",
     "pick_session_title",
     "query_context",
+    "query_event_rows",
     "query_schema",
     "read_only_open",
     "render_archive",

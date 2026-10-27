@@ -23,6 +23,8 @@ export interface ToolbarProps {
   onViewMode: (mode: ArchViewMode) => void;
   onToggleLegend: () => void;
   legendButtonRef: React.Ref<HTMLButtonElement>;
+  /** 왼쪽 끝에 놓을 앱 컨트롤(프로필 선택·빵 부스러기 등). */
+  lead?: ReactNode;
   /** 오른쪽에 덧붙일 앱 컨트롤(프로필 선택·크게 보기 등). */
   extra?: ReactNode;
 }
@@ -33,6 +35,7 @@ export function Toolbar(p: ToolbarProps) {
   const diagram = p.viewMode === "diagram";
   return (
     <div className="ac-arch-toolbar" role="toolbar" aria-label={m.fit}>
+      {p.lead}
       {p.parts.zoom && diagram ? (
         <>
           <button type="button" className="ac-arch-btn" aria-label={m.zoomOut} title={`${m.zoomOut} (-)`} onClick={() => p.onZoom(1 / 1.25)}>−</button>

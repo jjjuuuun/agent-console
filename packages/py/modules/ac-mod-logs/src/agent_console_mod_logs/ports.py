@@ -32,7 +32,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import HandoffMatrix, Issue, WorkspaceSettings
@@ -51,10 +51,12 @@ from agent_console_contracts.modules import LogsIngestedPayload
 from agent_console_logs import (
     JsonValue,
     LogClassifier,
+    LogEventRow,
     LogFilter,
     LogFilterExtension,
     LogScopeKind,
     LogSource,
+    PageCallback,
     QueryContext,
 )
 from agent_console_modkit import PortKey, Topic
@@ -88,6 +90,12 @@ class LogQueryPort(Protocol):
         ...
 
     def events(self, flt: LogFilter, *, with_total: bool = False) -> LogEventPage: ...
+
+    def iter_event_rows(
+        self, flt: LogFilter, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]:
+        """``flt.cursor``부터 끝까지 ``events``와 같은 이벤트를 모델 없이 JSON 행으로(5.5R.36)."""
+        ...
 
     def event(self, uid: str) -> LogEventDetail | None: ...
 

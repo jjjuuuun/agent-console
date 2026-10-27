@@ -49,7 +49,7 @@ def test_caches_respect_limits(index: LogIndex) -> None:
     assert len(h.views.cache) <= 2
     h2 = Harness(index, cache_scopes=8, cache_events=50)
     h2.project(session="S1")
-    assert sum(len(s.events) for s in h2.views.cache) <= 50
+    assert sum(len(s) for s in h2.views.cache) <= 50
 
 
 def test_judged_does_not_grow_with_profile_edits(index: LogIndex) -> None:

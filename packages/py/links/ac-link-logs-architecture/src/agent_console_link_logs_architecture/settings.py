@@ -9,7 +9,7 @@ from agent_console_contracts import x_ui
 DEFAULT_CACHE_SCOPES = 8
 DEFAULT_CACHE_EVENTS = 100_000
 DEFAULT_CACHE_PROFILES = 4
-DEFAULT_PAGE_SIZE = 200
+DEFAULT_PAGE_SIZE = 1000
 
 
 class LogsArchitectureSettings(BaseModel):
@@ -62,8 +62,11 @@ class LogsArchitectureSettings(BaseModel):
         json_schema_extra=x_ui(tier="advanced", unit="개"),
         default=DEFAULT_PAGE_SIZE,
         ge=1,
-        le=200,
-        description="범위 이벤트를 색인에서 읽을 때 쪽 하나의 크기(색인 목록 상한 200 이하).",
+        le=10_000,
+        description=(
+            "범위 이벤트를 색인에서 읽을 때 쪽 하나의 크기. 클수록 질의 수가 줄고 한 번에 "
+            "메모리에 올리는 이벤트가 는다."
+        ),
     )
 
 

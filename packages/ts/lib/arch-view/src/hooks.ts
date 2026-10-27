@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Size } from "./layout";
 
-/** 요소 크기를 관찰한다. 레이아웃이 없는 환경(크기 0)에서는 `fallback`을 쓴다. */
-export function useElementSize(ref: RefObject<HTMLElement | null>, fallback?: Size): Size {
+/**
+ * 요소 크기를 관찰한다. 레이아웃이 없는 환경(크기 0)에서는 `fallback`을 쓴다. 요소가 나중에 생기거나 바뀌는 경우(보기 전환)를 위해 `remountKey`가 바뀌면 다시 붙는다.
+ */
+export function useElementSize(ref: RefObject<HTMLElement | null>, fallback?: Size, remountKey?: unknown): Size {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   useEffect(() => {
     const el = ref.current;
@@ -17,7 +19,7 @@ export function useElementSize(ref: RefObject<HTMLElement | null>, fallback?: Si
     const ro = new ResizeObserver(read);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [ref]);
+  }, [ref, remountKey]);
   return size.width > 0 && size.height > 0 ? size : (fallback ?? size);
 }
 

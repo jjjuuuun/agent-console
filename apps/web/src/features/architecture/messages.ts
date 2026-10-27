@@ -43,6 +43,7 @@ export const archMessages = {
     only: (name: string, n: number) => `구조도 ${name} ${n.toLocaleString("ko-KR")}건`,
     partial: (name: string, n: number, k: number) => `구조도 ${name} ${n.toLocaleString("ko-KR")}건 중 ${k.toLocaleString("ko-KR")}건 (다른 필터 적용)`,
     loading: (name: string) => `구조도 ${name} 이벤트를 불러오는 중…`,
+    zero: (name: string) => `구조도 ${name} 0건이라 걸러낼 이벤트가 없습니다`,
   },
   /** 서버 안내(`view.notes`)는 서버가 만든 문구를 그대로 쓰고, 설정으로 가는 단추만 앱이 단다. */
   banner: {
@@ -66,6 +67,21 @@ export const archMessages = {
     },
     error: { title: "구조도를 불러오지 못했습니다", action: "다시 시도" },
     profileError: { title: "이 프로필을 그릴 수 없습니다", action: "설정에서 고치기" },
+  },
+  runTab: {
+    explain: "이 실행의 플랫폼 기록과 에이전트 세션 로그를 합쳐 그린 구조도입니다. 같은 호출은 한 번만 셉니다.",
+    includeChildren: "자식 실행 포함",
+    on: "포함",
+    off: "제외",
+    rootLabel: "실행",
+    scopeRun: "이 실행",
+    scopeTree: "자식 실행 포함",
+    splitLabel: "구조도 높이 조절",
+  },
+  dialog: {
+    title: (profile: string, scope: string) => `구조도 · ${profile} · ${scope}`,
+    close: "닫기",
+    expand: "크게 보기",
   },
   aria: { live: "구조도 갱신 알림" },
 } as const;

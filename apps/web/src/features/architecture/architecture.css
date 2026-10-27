@@ -1,10 +1,10 @@
 /* 구조도 패널(앱 층). 그림 자체의 모양은 @agent-console/arch-view/styles.css가 정한다. 색·간격은 토큰만 쓴다. */
 .arch-panel { display: flex; flex-direction: column; gap: var(--ac-space-2); height: 100%; min-height: 0; min-width: 0; }
-.arch-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2) var(--ac-space-3); flex: none; min-height: var(--ac-control-md); }
 .arch-profile { display: inline-flex; align-items: center; gap: var(--ac-space-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
 .arch-profile select { max-width: var(--ac-chip-max-w, 240px); height: var(--ac-control-md); }
-.arch-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--ac-space-3); flex: none; min-height: 24px; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.arch-status { padding: 2px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--ac-space-3); flex: none; min-height: 24px; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .arch-status > span + span::before { content: "·"; margin-right: var(--ac-space-3); color: var(--ac-text-subtle); }
+.arch-status > span { white-space: nowrap; }
 .arch-basis { display: inline-flex; align-items: center; height: 20px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .arch-status > .arch-basis::before { content: none; margin: 0; }
 .arch-link { background: none; border: 0; padding: 0; color: var(--ac-accent); font: inherit; cursor: pointer; text-decoration: underline; }
@@ -37,5 +37,11 @@
 .arch-chip-x:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
 .arch-table-note { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 
-/* 건너뛰기 링크는 포커스를 받을 때만 보인다(패널 밖으로 밀려 나온 채 보이지 않게 가린다). */
-.arch-panel .ac-arch-skip:not(:focus) { clip-path: inset(50%); width: 1px; height: 1px; padding: 0; overflow: hidden; border: 0; }
+/* [크게 보기] 대화상자: 폭 min(100vw − 48, 1680), 높이 min(100vh − 48, 1000). 1024 이하에서는 여백 12px(명세 §6.4). */
+.arch-dialog { display: flex; flex-direction: column; gap: var(--ac-space-2); box-sizing: border-box; width: min(calc(100vw - 48px), 1680px); height: min(calc(100vh - 48px), 1000px); padding: var(--ac-space-3) var(--ac-space-4); background: var(--ac-surface-1); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-lg); box-shadow: var(--ac-shadow-1); overflow: hidden; }
+.arch-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-3); flex: none; min-height: 32px; }
+.arch-dialog-title { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--ac-text-lg); }
+.arch-dialog-diagram { display: flex; flex-direction: column; flex: 3 1 0; min-height: 200px; min-width: 0; }
+.arch-dialog-diagram > .arch-panel { height: auto; flex: 1 1 auto; }
+.arch-dialog-table { flex: 2 1 0; min-height: 160px; min-width: 0; overflow: hidden; }
+@media (max-width: 1279px) { .arch-dialog { width: calc(100vw - 24px); height: calc(100vh - 24px); } .arch-dialog-diagram { flex: 11 1 0; } .arch-dialog-table { flex: 9 1 0; } }

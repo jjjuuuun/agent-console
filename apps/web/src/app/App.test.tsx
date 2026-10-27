@@ -15,6 +15,18 @@ beforeAll(preloadScreens, 120_000);
 
 afterEach(cleanup);
 
+/**
+ * 키를 누르고 결과가 나올 때까지 같은 키를 다시 누른다.
+ * 화면이 나타난 직후에는 단축키 처리기(useEffect로 붙는다)가 아직 안 붙었을 수 있어, 한 번만 누르면 부하가 큰 환경에서 키가 사라진다.
+ * 같은 키를 되풀이해도 결과(이동·대화상자 열기)는 멱등이다.
+ */
+async function pressUntil(keys: readonly string[], done: () => void) {
+  await waitFor(() => {
+    for (const key of keys) fireEvent.keyDown(document.body, { key });
+    done();
+  });
+}
+
 function mount(clients: ApiClients, path: string) {
   const router = createMemoryRouter(buildAppRoutes({ platform: "other" }), { initialEntries: [path] });
   const view = render(
@@ -176,14 +188,8 @@ describe("앱 셸", () => {
     const { clients } = createFakeClients({ getSettingsVersioned: vi.fn(async () => ({ value: settings, version_hash: "s1" })) });
     const { router } = mount(clients, "/chat");
     await screen.findByRole("navigation", { name: "주 메뉴" });
-    fireEvent.keyDown(document.body, { key: "g" });
-    fireEvent.keyDown(document.body, { key: "a" });
-    await waitFor(() => expect(router.state.location.pathname).toBe("/agents"));
-    await waitFor(() => {
-      fireEvent.keyDown(document.body, { key: "g" });
-      fireEvent.keyDown(document.body, { key: "x" });
-      expect(router.state.location.pathname).toBe("/teams");
-    });
+    await pressUntil(["g", "a"], () => expect(router.state.location.pathname).toBe("/agents"));
+    await pressUntil(["g", "x"], () => expect(router.state.location.pathname).toBe("/teams"));
   });
 
   it("Ctrl+K 빠른 이동: 화면 그룹과 목록 그룹, 한 그룹이 실패해도 나머지는 나온다", async () => {
@@ -193,8 +199,11 @@ describe("앱 셸", () => {
     });
     const { router } = mount(clients, "/chat");
     await screen.findByRole("navigation", { name: "주 메뉴" });
-    fireEvent.keyDown(document.body, { key: "k", ctrlKey: true });
-    const dialog = await screen.findByRole("dialog", { name: "빠른 이동" });
+    await waitFor(() => {
+      fireEvent.keyDown(document.body, { key: "k", ctrlKey: true });
+      expect(screen.getByRole("dialog", { name: "빠른 이동" })).toBeTruthy();
+    });
+    const dialog = screen.getByRole("dialog", { name: "빠른 이동" });
     expect(await within(dialog).findByText("팀 하나")).toBeTruthy();
     expect(within(dialog).getByText("화면")).toBeTruthy();
     expect(within(dialog).queryByText("에이전트", { selector: ".ac-palette-group-title" })).toBeNull();
@@ -205,8 +214,8 @@ describe("앱 셸", () => {
   it("?로 도움말을 열면 실제 적용 중인 키 표를 보인다", async () => {
     mount(createFakeClients().clients, "/chat");
     await screen.findByRole("navigation", { name: "주 메뉴" });
-    fireEvent.keyDown(document.body, { key: "?" });
-    const dialog = await screen.findByRole("dialog", { name: "단축키" });
+    await pressUntil(["?"], () => expect(screen.getByRole("dialog", { name: "단축키" })).toBeTruthy());
+    const dialog = screen.getByRole("dialog", { name: "단축키" });
     expect(within(dialog).getByText("빠른 이동 열기")).toBeTruthy();
     expect(within(dialog).getByText("채팅(으)로 이동")).toBeTruthy();
   });
@@ -216,8 +225,8 @@ describe("도움말 시작 순서", () => {
   it("도움말 맨 위 [시작 순서 다시 보기]가 시작하기 대화상자를 연다", async () => {
     mount(createFakeClients().clients, "/runs");
     await screen.findByRole("navigation", { name: "주 메뉴" });
-    fireEvent.keyDown(document.body, { key: "?" });
-    const help = await screen.findByRole("dialog", { name: "단축키" });
+    await pressUntil(["?"], () => expect(screen.getByRole("dialog", { name: "단축키" })).toBeTruthy());
+    const help = screen.getByRole("dialog", { name: "단축키" });
     fireEvent.click(within(help).getByRole("button", { name: "시작 순서 다시 보기" }));
     const dialog = await screen.findByRole("dialog", { name: "시작하기" });
     expect(await within(dialog).findByText("팀 만들기")).toBeTruthy();

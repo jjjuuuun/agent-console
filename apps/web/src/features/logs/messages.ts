@@ -413,6 +413,10 @@ export const logsMessages = {
     closeDrawer: "닫기",
     loadFailed: "세션 로그를 불러오지 못했습니다",
     tableLabel: "세션 로그 이벤트",
+    archEmpty: "이 범위에 이벤트가 없습니다",
+    archSearch: "이벤트 검색",
+    categories: (selected: number) => (selected > 0 ? `범주 ${selected}` : "범주"),
+    archTableLabel: "구조도 범위의 이벤트",
   },
   shortcuts: {
     helpFind: "가상 스크롤이라 화면 밖 행은 브라우저 찾기(Ctrl+F)로 찾지 못합니다. `/` 검색을 쓰세요.",

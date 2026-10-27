@@ -17,7 +17,8 @@
 | 프로필 읽기 | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
 | 병합 | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)`는 없거나 0개여도 예외 없음) |
 | 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None)`, `check_profile_data(data, ...)` |
-| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`matches` = 미리 판정한 결과, 반복 투영 캐시용) |
+| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`events` = `LogEvent` 또는 그 JSON 행, `matches` = 미리 판정한 결과, 반복 투영 캐시용) |
+| 증분 투영 | `ArchitectureTally(profile, *, profile_id)`: `add_event(event, match)`·`add_row(row, match)`로 새 이벤트만 더하고 `view(source_kinds=, tokens=, notes=)`로 그린다(같은 이벤트를 한 번에 투영한 결과와 같다. 출처 종류는 `view` 인자라 바뀌어도 다시 세지 않는다. 소요 합은 `math.fsum`) |
 | 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`·`parse_arch` |
 | 플러그인(X23) | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
 | 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML), `load_sample(name)`(수집 결과 표본: 이벤트·토큰·출처 종류, `SAMPLES`) |
@@ -50,6 +51,23 @@
 (4.0, ['claude-code-jsonl'])
 
 ```
+
+수집이 이어지는 범위는 누적 집계에 새 이벤트만 더한다(5.5R.36).
+
+```python
+>>> from agent_console_architecture import ArchitectureTally, ProfileMatcher
+>>> matcher = ProfileMatcher(default, default_operators()[0])
+>>> tally = ArchitectureTally(default, profile_id="agent-architecture")
+>>> for event in sample.events:
+...     tally.add_event(event, matcher.match(event))
+>>> tally.view(source_kinds=sample.source_kinds, tokens=sample.tokens) == view
+True
+
+```
+
+판정기(`ProfileMatcher`)는 칸·연결 조건 중 "참이려면 반드시 참인 최상위 키 항목"(`ac-conditions`
+`necessary_items`)이 가장 많이 쓰는 키(예: `/category`) 값별로 맞을 수 없는 칸·연결을 미리 거르고, 같은 판정
+결과는 같은 객체를 나눠 쓴다(결과는 거르지 않을 때와 같다 — 차등 테스트).
 
 ## 의존성: 무엇을 / 왜 / 대안
 

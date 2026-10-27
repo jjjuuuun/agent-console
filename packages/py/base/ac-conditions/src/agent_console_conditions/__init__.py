@@ -11,7 +11,9 @@
       ``shorten_actual``, ``DEFAULT_MAX_ACTUAL_CHARS``, ``ConditionReasons``
     - 빠른 판정(근거 없음, 참·거짓만): ``compile_conditions(spec, operators)`` →
       ``CompiledConditions``(``compiled(subject) -> bool``), ``compile_condition_item``,
-      ``conditions_hold(spec, subject, operators)``, ``compile_pointer``
+      ``conditions_hold(spec, subject, operators)``, ``compile_pointer``, ``necessary_items(spec,
+      operators)``(참이려면 반드시 참인 최상위 키 항목 — 키 값별로 기억해 미리 거르기),
+      ``condition_keys(spec)``(조건이 읽는 최상위 키)
     - 저장 전 검사: ``condition_issues(spec, operators, *, base_path, edge_id, node_id)``,
       ``ConditionIssueCodes``
     - 확장 지점: ``ConditionOperator``(프로토콜), ``ValueChecker``(선택 능력),
@@ -34,7 +36,9 @@ from ._compile import (
     SubjectPredicate,
     compile_condition_item,
     compile_conditions,
+    condition_keys,
     conditions_hold,
+    necessary_items,
 )
 from ._evaluate import (
     DEFAULT_MAX_ACTUAL_CHARS,
@@ -96,12 +100,14 @@ __all__ = [
     "compile_conditions",
     "compile_pointer",
     "condition_issues",
+    "condition_keys",
     "conditions_hold",
     "default_operators",
     "evaluate_conditions",
     "json_equal",
     "json_type",
     "load_condition_operators",
+    "necessary_items",
     "new_operator_registry",
     "operator_descriptors",
     "operator_map",

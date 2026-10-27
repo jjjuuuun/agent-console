@@ -18,7 +18,7 @@ import asyncio
 import contextlib
 import logging
 import threading
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -50,6 +50,7 @@ from agent_console_logs import (
     ERROR_UNKNOWN_CLASSIFIER,
     JsonValue,
     LogClassifier,
+    LogEventRow,
     LogFilter,
     LogFilterExtension,
     LogIndex,
@@ -58,9 +59,11 @@ from agent_console_logs import (
     LogRegistries,
     LogScopeKind,
     LogSource,
+    PageCallback,
     QueryContext,
     SessionTitleRule,
     build_archive,
+    iter_event_rows,
     load_default_session_title_rules,
     load_default_taxonomy,
     merge_taxonomy,
@@ -436,6 +439,20 @@ class LogsService:
 
     def events(self, flt: LogFilter, *, with_total: bool = False) -> LogEventPage:
         return self._index.query_events(flt, self._context_for(flt), with_total=with_total)
+
+    def iter_event_rows(
+        self, flt: LogFilter, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]:
+        """``flt.cursor``부터 끝까지 ``events``와 같은 이벤트를 모델 없이 JSON 행으로
+        (``ac-logs`` ``iter_event_rows``, ``flt.limit``개씩 읽는다).
+
+        범위 전체를 읽어 판정·집계만 하는 쪽(예: 구조도 연동)이 쓴다. ``on_page``는 쪽을 읽을 때마다
+        그 쪽의 행 수로 부른다.
+
+        Raises:
+            LogQueryError: ``events``와 같은 경우(첫 쪽을 읽을 때).
+        """
+        return iter_event_rows(self._index, flt, self._context_for(flt), on_page=on_page)
 
     def event(self, uid: str) -> LogEventDetail | None:
         return self._index.get_event(uid, self.query_context(), max_detail_bytes=self._max_detail)

@@ -541,4 +541,14 @@ describe("도구줄 구성", () => {
     renderDiagram(defaultProfileView(), { messages: { zoomIn: "Zoom in", metricCount: "{n}x" } });
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();
   });
+
+  it("toolbarLead는 도구줄 맨 앞, afterToolbar는 도구줄과 그림 사이에 놓인다", () => {
+    const { container } = renderDiagram(defaultProfileView(), { toolbarLead: <span data-testid="lead">앞</span>, afterToolbar: <p data-testid="after">상태</p>, toolbarExtra: <span data-testid="extra">뒤</span> });
+    const toolbar = container.querySelector(".ac-arch-toolbar")!;
+    expect(toolbar.firstElementChild).toBe(screen.getByTestId("lead"));
+    expect(toolbar.contains(screen.getByTestId("extra"))).toBe(true);
+    const after = screen.getByTestId("after");
+    expect(toolbar.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(after.compareDocumentPosition(container.querySelector(".ac-arch-canvas")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

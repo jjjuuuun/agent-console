@@ -12,7 +12,7 @@ import { defaultEdgeStyles, defaultMetricKinds, defaultTones } from "./defaults"
 import { EdgeLayer } from "./EdgeLayer";
 import { useControllable, useElementSize } from "./hooks";
 import {
-  MAX_ZOOM, MIN_ZOOM, VIEW_MARGIN, canvasSize, ensureVisible, fitViewport, gridLayout, nearestInDirection, zoomAround,
+  CONTAIN_MIN_ZOOM, MAX_ZOOM, MIN_ZOOM, VIEW_MARGIN, canvasSize, ensureVisible, fitViewport, gridLayout, nearestInDirection, zoomAround,
 } from "./layout";
 import type { Direction, Size, Viewport } from "./layout";
 import { formatMessage, resolveMessages } from "./messages";
@@ -72,8 +72,12 @@ export interface ArchitectureDiagramProps {
 
   /** 도구줄 구성. `false`면 도구줄이 없다. */
   toolbar?: boolean | ToolbarParts;
+  /** 도구줄 왼쪽 끝에 놓을 앱 컨트롤(프로필 선택·빵 부스러기). */
+  toolbarLead?: ReactNode;
   /** 도구줄 오른쪽에 덧붙일 앱 컨트롤. */
   toolbarExtra?: ReactNode;
+  /** 도구줄과 그림 사이에 놓을 줄(상태 줄 등). */
+  afterToolbar?: ReactNode;
   /** 선택 정보 줄을 그림 아래에 둔다(기본 true). */
   infoBar?: boolean;
   className?: string;
@@ -92,7 +96,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
     view, selection = null, highlight = null, onSelect, onBlocked, onDrill, onBack, onSkip,
     scale: scaleProp, onScaleChange, fullScaleMin = 0.6, containerSize,
     mode = "live", tones = defaultTones, edgeStyles = defaultEdgeStyles, cellRenderers, metricKinds = defaultMetricKinds,
-    edgeLegend, toolbar = true, toolbarExtra, infoBar = true, className,
+    edgeLegend, toolbar = true, toolbarLead, toolbarExtra, afterToolbar, infoBar = true, className,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
   const [fitMode, setFitMode] = useControllable<ArchFitMode>(props.fitMode, props.defaultFitMode ?? "width", props.onFitModeChange);
@@ -113,7 +117,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
   const edgesById = useMemo(() => Object.fromEntries((view?.edges ?? []).map((e) => [e.id, e])), [view]);
   const rects = useMemo(() => (view ? gridLayout(view) : {}), [view]);
   const size = useMemo(() => (view ? canvasSize(view, rects) : { width: 0, height: 0 }), [view, rects]);
-  const container = useElementSize(canvasRef, containerSize);
+  const container = useElementSize(canvasRef, containerSize, viewMode);
   const models = useMemo(() => (view ? buildEdgeModels(view, rects, { edgeStyles, messages }) : []), [view, rects, edgeStyles, messages]);
   const hl = useMemo(() => highlightSets(highlight), [highlight]);
   if (fitMode !== "none") lastFit.current = fitMode;
@@ -316,7 +320,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
           <Toolbar
             parts={parts} messages={messages} scale={zoom} fitMode={fitMode} viewMode={viewMode} legendOpen={legendOpen} legendId={legendId}
             onZoom={zoomBy} onResetScale={resetScale} onFitMode={setFitMode} onViewMode={setViewMode}
-            onToggleLegend={() => setLegendOpen((o) => !o)} legendButtonRef={legendBtn} extra={toolbarExtra}
+            onToggleLegend={() => setLegendOpen((o) => !o)} legendButtonRef={legendBtn} lead={toolbarLead} extra={toolbarExtra}
           />
           {legendOpen ? (
             <div id={legendId} className="ac-arch-popover" role="group" aria-label={messages.legend}>
@@ -325,6 +329,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
           ) : null}
         </div>
       ) : null}
+      {afterToolbar}
       {mode === "layout" ? <p className="ac-arch-note">{messages.layoutNote}</p> : null}
       {viewMode === "list" ? (
         <ArchitectureCellList view={view} selection={selection} highlight={highlight} onSelect={onSelect} onBlocked={onBlocked} tones={tones} metricKinds={metricKinds} messages={messages} />
@@ -337,7 +342,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
               nodeTypes={nodeTypes}
               viewport={vp}
               onViewportChange={applyViewport}
-              minZoom={MIN_ZOOM}
+              minZoom={CONTAIN_MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               translateExtent={[[-VIEW_MARGIN * 4, -VIEW_MARGIN * 4], [size.width + VIEW_MARGIN * 4, size.height + VIEW_MARGIN * 4]]}
               nodesDraggable={false}

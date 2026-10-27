@@ -95,7 +95,9 @@ describe("확대·이동", () => {
     expect(fitViewport("width", canvas, { width: 756, height: 400 }).zoom).toBe(0.6);
     expect(fitViewport("width", canvas, { width: 1204, height: 400 }).zoom).toBeCloseTo((1204 - 32) / 1520);
     expect(fitViewport("contain", canvas, { width: 420, height: 240 }).zoom).toBeCloseTo((240 - 32) / 812);
-    expect(fitViewport("contain", canvas, { width: 100, height: 100 }).zoom).toBe(0.25);
+    // 좁은 칸(실행 상세 탭 388폭)에서도 전체가 보인다: 0.25 아래로도 내려간다.
+    expect(fitViewport("contain", canvas, { width: 388, height: 240 }).zoom).toBeCloseTo((388 - 32) / 1520);
+    expect(fitViewport("contain", canvas, { width: 100, height: 100 }).zoom).toBe(0.05);
     expect(fitViewport("width", canvas, { width: 0, height: 0 }).zoom).toBe(1);
   });
   it("zoomAround는 기준 점을 고정", () => {

@@ -175,6 +175,7 @@ export const messages = {
     runsTab4: "상호작용 탭",
     runsTab5: "노드 탭",
     runsTab6: "세션 로그 탭",
+    runsTab7: "구조도 탭",
     runsNodeNext: "다음 노드 선택",
     runsNodePrev: "이전 노드 선택",
     runsCancel: "실행 취소",
@@ -424,6 +425,7 @@ export const messages = {
       modules: "이 서버에 설치된 기능과 연동의 상태입니다. 읽기 전용이며, 켜고 끄는 일은 서버 설치자가 설정 파일 또는 서버 실행 옵션으로 합니다.",
       server: "이 항목은 서버 설정 파일에서만 바꿉니다. 웹에서 바꾸면 로컬 전용 원칙이 깨질 수 있기 때문입니다.",
       versionsUi: "버전 비교 화면에서 목록 항목(노드·연결 등)을 부를 이름을 어떤 키에서 찾을지 정합니다. 비워 두면 기본 목록을 씁니다.",
+      architecture: "구조도가 칸과 연결을 그리는 규칙(프로필)을 고르고 고칩니다.",
       versions: "설정을 저장할 때마다 버전이 쌓입니다. 이전 버전과 비교하고 되돌릴 수 있습니다.",
     },
     sections: {
@@ -436,6 +438,7 @@ export const messages = {
       interaction: "상호작용",
       usage: "사용량",
       logs: "로그 출처",
+      architecture: "구조도",
       shortcuts: "단축키",
       notifications: "알림",
       projects: "프로젝트",

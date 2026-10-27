@@ -20,12 +20,19 @@
 | 출처 종류 | 출처 id 그대로(출처 id = 등록 이름). 설정 `source_kinds`가 바꾼다 |
 | 토큰 표본 | `logs.query.token_samples`(같은 범위 필터) |
 
-## 결과 캐시·증분 읽기(design §5.5R.10 `[5.5R.10 구현]`)
+## 결과 캐시·증분 읽기·증분 투영(design §5.5R.10 `[5.5R.10 구현]`·`[5.5R.36 구현]`)
 
-범위(필터)마다 읽은 이벤트·토큰 표본·프로필별 판정 결과·투영 결과를 기억한다.
+범위(필터)마다 읽은 이벤트 요약·토큰 표본·프로필별 판정 결과와 누적 집계·투영 결과를 기억한다.
 
-- 다시 부르면 마지막 `seq` 뒤만 읽고(키셋 커서), 새 이벤트만 판정한다. 새 이벤트가 없고 (프로필,
-  출처 종류, `max_seq`)가 같으면 투영 결과를 그대로 준다.
+- 범위 이벤트는 모델이 아니라 JSON 행으로 읽는다. `logs.query`에 선택 능력 `iter_event_rows`(`LogRowReader`,
+  `mod-logs`가 가진다)가 있으면 그것을, 없으면 `events` 결과를 행으로 덤프한다(결과는 같다).
+- 새 행은 읽을 때 기억한 프로필(키) 모두로 판정하고 칸·연결별 누적 집계(`ArchitectureTally`)에 더한 뒤
+  버린다. 범위에는 이벤트 요약(`LIGHT_FIELDS`: seq·출처·uid·thread·응답 id·시각·소요)과 판정 결과만 남는다.
+  이미 읽은 범위에 새 프로필이 오면 같은 범위를 다시 읽어 그 프로필로만 판정한다(다시 읽은 것이 다르면
+  처음부터).
+- 다시 부르면 마지막 `seq` 뒤만 읽고(키셋 커서), 새 이벤트만 판정·집계한다. 새 이벤트가 없고 (프로필,
+  출처 종류, `max_seq`)가 같으면 투영 결과를 그대로 준다. `max_seq`가 범위 끝보다 앞이면 그 앞까지를
+  요약으로 한 번에 투영한다.
 - 기억한 범위가 맞는지 범위 전체 수(`total`) 질의 하나로 확인한다. 다르면(범위 종류가 세션을 더 품음,
   묶기 설정 변경, 보존 정리) 처음부터 다시 읽는다.
 - `arch` 필터는 이 캐시의 판정 결과를 먼저 본다(구조도를 그린 범위의 이벤트는 다시 판정하지 않음).
@@ -88,7 +95,7 @@ pip install agent-console-link-logs-architecture
 
 | 방향 | 포트 | 모양 |
 | --- | --- | --- |
-| 필수 | `logs.query` | `query_context`·`parse_filter`·`events`(키셋 쪽, `with_total`)·`event`·`token_samples` |
+| 필수 | `logs.query` | `query_context`·`parse_filter`·`events`(키셋 쪽, `with_total`)·`event`·`token_samples`, 있으면 `iter_event_rows`(선택 능력 `LogRowReader`) |
 | 필수 | `architecture.catalog` | `catalog() -> ProfileCatalog`·`operators()`·`max_scope_events` |
 | 제공 | `logs.filter_predicates`(X28) | `ArchitectureFilter`(`arch`·`arch_group`·`arch_sources`) |
 
@@ -100,7 +107,7 @@ pip install agent-console-link-logs-architecture
 | `cache_scopes` | `8` | 기억할 범위 수(0 = 캐시 없음, 매번 처음부터) |
 | `cache_events` | `100000` | 기억한 범위들의 이벤트 수 합 상한(넘으면 오래 쓰지 않은 범위부터 버림) |
 | `cache_profiles` | `4` | 범위 하나에 기억할 판정 결과(프로필 키) 수. 프로필을 고치면 새 키가 생기므로 넘으면 오래 쓰지 않은 것부터 버림 |
-| `page_size` | `200` | 색인에서 범위 이벤트를 읽는 쪽 크기 |
+| `page_size` | `1000` | 색인에서 범위 이벤트를 읽는 쪽 크기(1~10000, 5.5R.36에서 200 → 1000) |
 
 ## 단독 실행
 

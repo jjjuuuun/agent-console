@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import "@agent-console/arch-view/styles.css";
 import "./architecture.css";
-import { ArchitectureDiagram, type ArchFitMode, type ArchViewMode } from "@agent-console/arch-view";
+import { ArchitectureDiagram, type ArchFitMode, type ArchViewMode, type ToolbarParts } from "@agent-console/arch-view";
 import { Banner, Button } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
 import { ARCH_LIMITS, ARCH_STORAGE } from "./archConfig";
@@ -33,10 +33,24 @@ export interface ArchitecturePanelProps {
   onSkip?: () => void;
   /** 뷰포트 폭(기본 보기 판정). 생략하면 창 폭. */
   viewportWidth?: number;
+  /** 그림 도구줄 구성(생략하면 전부). 실행 상세 탭은 확대·맞춤 단추를 빼고 [그림|목록]·범례만 둔다. */
+  toolbar?: boolean | ToolbarParts;
+  /** 프로필이 하나이고 하위 구조도·레인 기준이 없으면 머리 줄(프로필·빵 부스러기)을 그리지 않는다 */
+  hideEmptyHead?: boolean;
+  /** 저장된 맞춤 선택이 없을 때의 맞춤(기본 폭 맞춤) */
+  defaultFit?: ArchFitMode;
+  /** 저장된 보기 선택이 없을 때의 보기(생략하면 뷰포트 폭으로 정한다) */
+  defaultView?: ArchViewMode;
+  /** 맞춤·보기 선택을 저장하는 localStorage 키(생략하면 세션 화면과 같은 키) */
+  storageKeys?: { fit?: string; view?: string };
+  /** 그림 영역(도구줄·캔버스·선택 정보 줄) 높이(px). 생략하면 부모가 준 높이의 남는 부분을 채운다. */
+  diagramHeight?: number;
+  /** 그림 도구줄 오른쪽에 덧붙일 컨트롤([크게 보기] 등) */
+  toolbarExtra?: ReactNode;
   className?: string;
 }
 
-const readFit = (v: string | null): ArchFitMode => (v === "contain" || v === "none" ? v : "width");
+const readFit = (v: string | null, fallback: ArchFitMode): ArchFitMode => (v === "contain" || v === "width" || v === "none" ? v : fallback);
 
 /**
  * 구조도 패널(화면 명세 §5): 프로필·빵 부스러기·상태 줄·그림/목록·빈 상태. 데이터와 동작은 `useArchitectureController`가 준다.
@@ -45,10 +59,13 @@ const readFit = (v: string | null): ArchFitMode => (v === "contain" || v === "no
 export function ArchitecturePanel(p: ArchitecturePanelProps) {
   const c = p.controller;
   const storage = useStorage();
-  const [fit, setFit] = useState<ArchFitMode>(() => readFit(storage.get(ARCH_STORAGE.fit)));
+  const fitKey = p.storageKeys?.fit ?? ARCH_STORAGE.fit;
+  const viewKey = p.storageKeys?.view ?? ARCH_STORAGE.view;
+  const [fit, setFit] = useState<ArchFitMode>(() => readFit(storage.get(fitKey), p.defaultFit ?? "width"));
   const [viewMode, setViewMode] = useState<ArchViewMode>(() => {
-    const saved = storage.get(ARCH_STORAGE.view);
+    const saved = storage.get(viewKey);
     if (saved === "diagram" || saved === "list") return saved;
+    if (p.defaultView !== undefined) return p.defaultView;
     return (p.viewportWidth ?? (typeof window === "undefined" ? 1440 : window.innerWidth)) >= ARCH_LIMITS.listBelowWidth ? "diagram" : "list";
   });
   const [unavailableOpen, setUnavailableOpen] = useState(false);
@@ -84,25 +101,27 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
   const kinds = sourceKinds(view).join(", ");
   const notes = view.notes ?? [];
 
-  return (
-    <section className={joinClass("arch-panel", p.className)} aria-label={t.region} data-refreshing={c.refreshing ? "true" : undefined}>
-      <div className="arch-head">
-        {profiles.length >= 2 ? (
-          <label className="arch-profile">
-            <span>{t.profile}</span>
-            <select value={view.profile} onChange={(e) => c.setProfile(e.target.value)}>
-              {profiles.map((x) => (
-                <option key={x.id} value={x.id}>{x.title || x.id}</option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <ArchitectureBreadcrumb rootLabel={p.rootLabel ?? t.breadcrumb.root} steps={c.drill.map((s) => s.label)} onGoTo={c.goTo} />
-        {(p.laneNames ?? []).map((name) => (
-          <span key={name} className="arch-basis">{t.status.laneBasis(name)}</span>
-        ))}
-      </div>
-
+  const hideHead = p.hideEmptyHead === true && profiles.length < 2 && c.drill.length === 0 && (p.laneNames ?? []).length === 0;
+  const lead = hideHead ? undefined : (
+    <>
+      {profiles.length >= 2 ? (
+        <label className="arch-profile">
+          <span>{t.profile}</span>
+          <select value={view.profile} onChange={(e) => c.setProfile(e.target.value)}>
+            {profiles.map((x) => (
+              <option key={x.id} value={x.id}>{x.title || x.id}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <ArchitectureBreadcrumb rootLabel={p.rootLabel ?? t.breadcrumb.root} steps={c.drill.map((s) => s.label)} onGoTo={c.goTo} />
+      {(p.laneNames ?? []).map((name) => (
+        <span key={name} className="arch-basis">{t.status.laneBasis(name)}</span>
+      ))}
+    </>
+  );
+  const afterToolbar = (
+    <>
       <div className="arch-status">
         <span>{t.status.events(view.event_total)}</span>
         {p.wholeRange === true ? <span className="arch-basis">{t.status.wholeRange}</span> : null}
@@ -130,7 +149,11 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
           ))}
         </ul>
       ) : null}
+    </>
+  );
 
+  return (
+    <section className={joinClass("arch-panel", p.className)} aria-label={t.region} data-refreshing={c.refreshing ? "true" : undefined}>
       {notes.map((note) => (
         <Banner key={note.code} tone="info" className="arch-banner" {...(p.onOpenSettings !== undefined && note.code.endsWith("profile_issues") ? { actions: <Button size="sm" onClick={p.onOpenSettings}>{t.banner.openSettings}</Button> } : {})}>
           {note.message}
@@ -147,7 +170,7 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
         </Banner>
       ) : null}
 
-      <div className="arch-diagram">
+      <div className="arch-diagram" {...(p.diagramHeight === undefined ? {} : { style: { height: p.diagramHeight, flex: "none" } })}>
         {c.refreshing ? <div className="arch-progress" aria-hidden="true" /> : null}
         <ArchitectureDiagram
           view={view}
@@ -158,10 +181,14 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
           onDrill={c.drillInto}
           onBack={c.drill.length > 0 ? () => c.goTo(c.drill.length - 2) : undefined}
           {...(p.onSkip === undefined ? {} : { onSkip: p.onSkip })}
+          {...(p.toolbar === undefined ? {} : { toolbar: p.toolbar })}
+          {...(lead === undefined ? {} : { toolbarLead: lead })}
+          afterToolbar={afterToolbar}
+          {...(p.toolbarExtra === undefined ? {} : { toolbarExtra: p.toolbarExtra })}
           fitMode={fit}
-          onFitModeChange={(m) => { setFit(m); if (m !== "none") storage.set(ARCH_STORAGE.fit, m); }}
+          onFitModeChange={(m) => { setFit(m); if (m !== "none") storage.set(fitKey, m); }}
           viewMode={viewMode}
-          onViewModeChange={(m) => { setViewMode(m); storage.set(ARCH_STORAGE.view, m); }}
+          onViewModeChange={(m) => { setViewMode(m); storage.set(viewKey, m); }}
         />
       </div>
       <span className="ac-sr-only" role="status" aria-live="polite" aria-atomic="true">{c.announcement}</span>

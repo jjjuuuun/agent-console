@@ -37,12 +37,15 @@ from agent_console_logs import (
     IndexBatch,
     IndexRecord,
     JsonValue,
+    LogEventRow,
     LogFilter,
     LogFilterExtension,
     LogIndex,
     LogQueryExtensions,
     LogScopeKind,
+    PageCallback,
     QueryContext,
+    iter_event_rows,
 )
 from agent_console_logs.testing import MemoryLogIndex, make_record
 from agent_console_modkit import Module, ModuleContext, ModuleParts
@@ -96,6 +99,12 @@ class IndexLogQuery:
 
     def events(self, flt: LogFilter, *, with_total: bool = False) -> LogEventPage:
         return self.index.query_events(flt, self._refined(flt), with_total=with_total)
+
+    def iter_event_rows(
+        self, flt: LogFilter, *, on_page: PageCallback | None = None
+    ) -> Iterator[LogEventRow]:
+        """행 읽기(``LogRowReader``, ``mod-logs`` ``iter_event_rows``와 같은 모양)."""
+        return iter_event_rows(self.index, flt, self._refined(flt), on_page=on_page)
 
     def event(self, uid: str) -> LogEventDetail | None:
         return self.index.get_event(uid, self._ctx)

@@ -76,11 +76,15 @@ describe("로그 REST", () => {
     await rest.getLogEventArchitecture("u/1", "p x");
     await rest.getLogEventArchitecture("u2");
     await rest.listArchitectureProfiles();
+    await rest.getArchitectureProfile("p/1");
+    await rest.checkArchitectureProfile({ id: "p1", profile: {} });
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
       "GET /logs/architecture?session=s1&thread=t1&thread=t2&profile=p%20x&max_seq=7",
       "GET /logs/events/u%2F1/architecture?profile=p%20x",
       "GET /logs/events/u2/architecture",
       "GET /architecture/profiles",
+      "GET /architecture/profiles/p%2F1",
+      "POST /architecture/profiles/check",
     ]);
   });
 

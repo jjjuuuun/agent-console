@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LogDashboard, LogEvent, LogSourceInfo, WorkspaceSettings } from "@agent-console/contracts";
 import { findReservedConflicts, reservedParams, toTaxonomyView, isErrorEvent, isHiddenEvent } from "@agent-console/log-view";
 import { FILTER_FIELDS, FILTER_KEYS, SCREEN_PARAMS, SUGGEST_FROM } from "./logsConfig";
-import { categoryItems, classifyEmpty, filterSessionEvents, firstUseSources, offReadingSources, paramsKey, parseRange, rangeToWindow, shouldAutoFoldFlow, clampOr, toLaneEvents, toRequestParams, withDashboards } from "./logsLib";
+import { categoryItems, classifyEmpty, filterSessionEvents, firstUseSources, offReadingSources, paramsKey, parseRange, rangeToWindow, shouldAutoFoldFlow, archDefaultHeight, clampOr, toLaneEvents, toRequestParams, withDashboards } from "./logsLib";
 
 const ev = (over: Partial<LogEvent> & { uid: string }): LogEvent => ({ seq: 1, source: "s", observed_at: 0, category: "c1", ...over });
 const names = { search: "q", category: FILTER_KEYS.category, since: FILTER_KEYS.since, until: FILTER_KEYS.until, source: FILTER_KEYS.source, suggestFrom: SUGGEST_FROM };
@@ -133,5 +133,13 @@ describe("흐름 패널 자동 접기 (5R.21)", () => {
     expect(clampOr(10, 96, 480, 240)).toBe(96);
     expect(clampOr(900, 96, 480, 240)).toBe(480);
     expect(clampOr(Number.NaN, 96, 480, 240)).toBe(240);
+  });
+  it("archDefaultHeight: min(기본, 뷰포트 − 표 N행 − 머리), 하한 floor", () => {
+    const base = { preferred: 400, floor: 240, tableRows: 4, rowHeight: 32, chrome: 400 };
+    expect(archDefaultHeight({ ...base, viewportHeight: 1200 })).toBe(400);
+    expect(archDefaultHeight({ ...base, viewportHeight: 768 })).toBe(240);
+    expect(archDefaultHeight({ ...base, viewportHeight: 1000 })).toBe(400);
+    expect(archDefaultHeight({ ...base, viewportHeight: 880 })).toBe(352);
+    expect(archDefaultHeight({ ...base, viewportHeight: 300 })).toBe(240);
   });
 });
