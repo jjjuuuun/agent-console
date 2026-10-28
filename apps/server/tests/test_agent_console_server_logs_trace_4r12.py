@@ -75,8 +75,12 @@ def _write_session(root: Path) -> Path:
 
 
 def _enable(client: Any, roots: Path) -> None:
+    # 5.7R.30 후속: 로그는 앱에 등록된 프로젝트 폴더의 세션만 읽는다(픽스처 키 -work-demo).
+    project = {"id": "demo", "name": "Demo", "working_directory": "/work/demo"}
+    assert client.post(f"{API}/projects", json=project).status_code == 201
     settings = client.get(f"{API}/settings").json()
-    entry = {"id": "claude-code-jsonl", "enabled": True, "config": {"roots": [str(roots)]}}
+    config = {"roots": [str(roots)], "project_scope": "registered"}
+    entry = {"id": "claude-code-jsonl", "enabled": True, "config": config}
     settings["logs"] = {"sources": [entry]}
     assert client.put(f"{API}/settings", json=settings).status_code == 200
     assert client.post(f"{API}/logs/scan").status_code == 202

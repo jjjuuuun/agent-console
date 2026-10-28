@@ -8,3 +8,7 @@ export { MEMORY_ROLE, MEMORY_PARAMS, SETTINGS_SECTION } from "./memoryConfig";
 export { memoryMessages } from "./messages";
 export { parseView, writeView, scopeParam, parseScopeParam } from "./memoryUrl";
 export type { MemoryViewState } from "./memoryUrl";
+export { useMemoryKinds, useMemoryScopes, memoryKeys } from "./useMemoryApi";
+export { useMemoryContext, type MemoryContext } from "./useMemoryContext";
+export { MEMORY_LIMITS, IMPORTED_AUTHOR_KIND } from "./memoryConfig";
+export { RunMemoryChips, type RunMemoryChipsProps } from "./RunMemoryChips";

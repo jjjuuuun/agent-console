@@ -60,6 +60,17 @@ describe("로그: 세션 목록", () => {
     expect(card.textContent).toContain("대화 원문이 포함될 수 있고");
   });
 
+  it("서버 경고 logs.no_projects가 있으면 빈 로그 화면에 서버 문구로 안내하고, 없으면 보이지 않는다", async () => {
+    const info = (warnings: unknown[]) => ({ listLogEvents: async () => ({ items: [] }), getServerInfo: async () => ({ server_version: "1", contracts_version: "1", plugins: [], attributes: {}, warnings }) });
+    mount("/logs/sessions", { listLogSessions: async () => [], ...info([{ code: "logs.no_projects", severity: "warning", message: "서버가 준 안내 문구" }]) });
+    await screen.findByTestId("logs-empty-b", {}, LONG);
+    expect((await screen.findByText("서버가 준 안내 문구", {}, LONG)).closest(".logs-no-projects")).toBeTruthy();
+    cleanup();
+    mount("/logs/sessions", { listLogSessions: async () => [], ...info([]) });
+    await screen.findByTestId("logs-empty-b", {}, LONG);
+    expect(document.querySelector(".logs-no-projects")).toBeNull();
+  });
+
   it("목록이 비면 필터 없는 limit=1 조회로 B(수집된 로그 없음)와 C(조건 불일치)를 가르고, 조회 실패는 C", async () => {
     const probe: Record<string, unknown>[] = [];
     mount("/logs/sessions", { listLogSessions: async () => [], listLogEvents: async (p: Record<string, unknown>) => (probe.push(p), { items: [] }) });

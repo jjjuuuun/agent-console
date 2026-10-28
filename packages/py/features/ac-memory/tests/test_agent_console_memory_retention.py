@@ -362,3 +362,62 @@ def test_plan_is_the_same_with_and_without_entry_scanner() -> None:
     )
     assert fast.count == slow.count > 0
     assert sorted(fast.items, key=lambda i: i.key) == sorted(slow.items, key=lambda i: i.key)
+
+
+# ---- 5.7R.28: 계획 항목 상세·고정 제외 수·판단 대상 경로 제안 -----------------------------
+
+
+def test_plan_items_carry_updated_at_and_bytes_and_count_excluded_pinned() -> None:
+    store, clock = _store()
+    kept = store.write(NOTES, "a", "본문 가", author=user_author(), tags=["tmp"]).entry
+    p1 = _write(store, "p1", tags=["tmp"], pinned=True)
+    _write(store, "p2", tags=["tmp"], pinned=True)
+    _write(store, "p-other", pinned=True)  # 규칙에 맞지 않는 고정 항목은 세지 않는다
+    clock.advance(40 * DAY)
+
+    plan = retention_plan(store, [TEMP_OLD], now=clock(), operators=OPS)
+
+    [item] = plan.items
+    assert (item.key, item.updated_at, item.bytes) == ("a", kept.updated_at, kept.bytes)
+    assert item.bytes == len("본문 가".encode())
+    assert (plan.count, plan.excluded_pinned) == (1, 2)
+    # 잘라도 고정 제외 수는 전체 기준이다.
+    cut = retention_plan(store, [TEMP_OLD], now=clock(), operators=OPS, limit=1)
+    assert cut.excluded_pinned == 2
+    # 적용은 고정 항목을 건드리지 않는다.
+    assert apply_retention(store, plan).archived == 1
+    assert store.get(kept.id).archived  # type: ignore[union-attr]
+    assert not store.get(p1).archived  # type: ignore[union-attr]
+
+
+def test_excluded_pinned_is_zero_without_rules_or_when_already_done() -> None:
+    store, clock = _store()
+    pid = _write(store, "p", tags=["tmp"], pinned=True)
+    store.archive(pid, author=user_author())
+    clock.advance(40 * DAY)
+    assert retention_plan(store, [], now=clock(), operators=OPS).excluded_pinned == 0
+    # 이미 보관된 고정 항목에 보관 규칙: 할 일이 없으니 제외로도 세지 않는다.
+    assert retention_plan(store, [TEMP_OLD], now=clock(), operators=OPS).excluded_pinned == 0
+
+
+def test_contract_subject_path_examples_match_subject_fields() -> None:
+    """계약의 경로 제안(`MEMORY_RETENTION_SUBJECT_PATHS`)이 판단 대상 키와 어긋나지 않는다."""
+    from agent_console_contracts.memory import MEMORY_RETENTION_SUBJECT_PATHS
+
+    tops = {p.split("/")[1] for p in MEMORY_RETENTION_SUBJECT_PATHS}
+    assert tops == set(RETENTION_SUBJECT_FIELDS)
+    entry = sample_entry_summary(created_at=0.0, updated_at=DAY, last_read_at=2 * DAY)
+    subject = retention_subject(entry, now=4 * DAY)
+    for path in MEMORY_RETENTION_SUBJECT_PATHS:
+        node: Any = subject
+        for token in path.split("/")[1:]:
+            assert isinstance(node, dict), path
+            assert token in node, path
+            node = node[token]
+    # 규칙 스키마: 조건 항목 경로에 제안이 붙고, 검증·평가는 그대로다.
+    schema = MemoryRetentionRule.model_json_schema()
+    item = schema["$defs"]["MemoryRetentionConditionItem"]
+    assert item["properties"]["path"]["examples"] == list(MEMORY_RETENTION_SUBJECT_PATHS)
+    assert schema["properties"]["when"]["x-ui"]["widget"] == "condition-list"
+    rule = MemoryRetentionRule.model_validate(TEMP_OLD)
+    assert compile_retention_rules([rule], OPS).rules

@@ -1,6 +1,6 @@
 import { formatDateTime } from "../../lib/format";
 import { usageMessages as u } from "./messages";
-import { RESET_DATE_AFTER_SECONDS } from "./usageConfig";
+import { RESET_CLOCK_LOCALE, RESET_DATE_AFTER_SECONDS, RESET_WEEKDAY_WITHIN_DAYS } from "./usageConfig";
 import { formatRemaining } from "./usageLib";
 
 /** 초기화 시각이 기준(`farAfterSeconds`)보다 먼 미래인가. */
@@ -29,4 +29,32 @@ export function formatResetsPhrase(
 export function futureResetsText(resetsAt: number, nowSec: number): string {
   const p = formatResetsPhrase(resetsAt, nowSec, u.cards.resets, u.cards.resetsOnDate);
   return p.far ? p.text : `${p.text} ${u.cards.resetsAt(formatDateTime(resetsAt))}`;
+}
+
+export interface ResetClockText {
+  today: (time: string) => string;
+  other: (day: string, time: string) => string;
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/**
+ * 사이드바 초기화 줄. 오늘이면 "오후 2:20에 초기화", 다른 날이면 "(일요일) 오후 12:00에 초기화".
+ * 요일 대신 날짜로 바꾸는 기준(`weekdayWithinDays`)과 로케일은 인자(기본은 설정 데이터)다.
+ */
+export function formatResetClock(
+  resetsAt: number,
+  nowSec: number,
+  text: ResetClockText,
+  weekdayWithinDays: number = RESET_WEEKDAY_WITHIN_DAYS,
+  locale: string = RESET_CLOCK_LOCALE,
+): string {
+  const at = new Date(resetsAt * 1000);
+  const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+  if (sameDay(at, new Date(nowSec * 1000))) return text.today(time);
+  const near = resetsAt - nowSec <= weekdayWithinDays * 86_400;
+  const day = near ? at.toLocaleDateString(locale, { weekday: "long" }) : at.toLocaleDateString(locale, { month: "long", day: "numeric" });
+  return text.other(day, time);
 }

@@ -72,7 +72,7 @@ export const DEFAULT_ROUTES: readonly RouteDef[] = [
   { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run" },
   { id: "usage", serves: "usage", requires: ["usage"], path: "/usage", titleKey: "nav.usage", icon: "usage", badgeSource: null, gotoKey: "u", position: "main", group: "observe" },
   { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"] },
-  { id: "settings", serves: "settings", requires: [], path: "/settings", titleKey: "nav.settings", icon: "settings", badgeSource: null, gotoKey: "s", position: "footer" },
+  { id: "settings", serves: "settings", requires: [], path: "/settings", titleKey: "nav.settings", icon: "settings", badgeSource: null, gotoKey: "s", position: "bottom" },
 ];
 
 /** 로고 클릭·루트(`/`) 진입 시 가는 첫 화면: `home` 표시가 있는 첫 항목, 없으면 첫 `main` 항목, 없으면 첫 항목. */

@@ -180,7 +180,7 @@ export function ImportDialog({ onClose, onViewImported, onImported }: ImportDial
                 <strong>{text?.label ?? p.id}</strong>
                 <span className="mem-help"> {text?.help ?? ""}</span>
                 {p.warns && text?.warn !== undefined ? (
-                  <span className="mem-warn"><span className="mem-mark" aria-hidden="true" /> {text.warn}</span>
+                  <span className="mem-warn mem-warn-line"><span className="mem-mark" aria-hidden="true" /> {text.warn}</span>
                 ) : null}
               </Choice>
             );

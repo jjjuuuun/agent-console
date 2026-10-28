@@ -270,7 +270,7 @@ web:
   open:
     enabled: false             # 준비되면 웹 화면을 연다(serve --open/--no-open이 덮어씀)
     url: null                  # 열 주소({host}·{port} 치환). 비우면 serve_static일 때 서버 주소
-    command: null              # 브라우저 대신 실행할 명령(예: [msedge, "--app={url}"], WSL [explorer.exe, "{url}"])
+    command: null              # 브라우저 대신 실행할 명령(예: [msedge, "--app={url}"])
     wait_seconds: 30           # 준비 신호를 기다리는 최대 초
 modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기 전용, serve --enable-module/--disable-module이 우선)
   enabled: null                # null = 설치된 모듈 전부. 목록이면 그것만

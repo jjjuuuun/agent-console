@@ -65,7 +65,7 @@ export function ConflictDialog({ open, openedVersion, server, serverAuthor, mine
         ariaLabel={`${t.conflict.server(server.version)} / ${t.conflict.mine}`}
         mode={layout}
         unifiedBelow={900}
-        height={320}
+        maxHeight={320}
         onModeChange={(mode) => {
           setLayout(mode);
           storage.set(MEMORY_STORAGE.diffLayout, mode);

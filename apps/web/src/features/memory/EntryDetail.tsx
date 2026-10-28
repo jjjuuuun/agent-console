@@ -3,6 +3,7 @@
  * 서버 값과 초안은 `useEntryEditor`가, 그림은 `@agent-console/memory-view`가 맡고 이 컴포넌트는 둘을 잇는다.
  */
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useScrollCue } from "./useScrollCue";
 import { Banner, Button, Disclosure, Icon, IconButton, Menu, Popover, Spinner, StatusIcon } from "@agent-console/ui";
 import type { MemoryEntry, MemoryScopeKindInfo, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryEntryEditor, MemoryEntryMeta, scopeLabel, type MemoryEntryEditorHandle, type ScopeLabel } from "@agent-console/memory-view";
@@ -57,6 +58,7 @@ export function EntryDetail(props: EntryDetailProps) {
   const editor = useEntryEditor(id, t.detail.saveFailedNote);
   const storage = useStorage();
   const editorHandle = useRef<MemoryEntryEditorHandle>(null);
+  const [attachMeta, metaMore] = useScrollCue<HTMLDivElement>();
   const [pending, setPending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(() => {
@@ -218,6 +220,7 @@ export function EntryDetail(props: EntryDetailProps) {
           </Banner>
         ) : null}
       </div>
+      <div className="mem-meta-scroll" ref={attachMeta} tabIndex={0} role="region" aria-label={t.detail.infoRegion}>
       <Disclosure
         className="mem-meta"
         summary={viewMessages["detail.info"]}
@@ -241,6 +244,8 @@ export function EntryDetail(props: EntryDetailProps) {
           {...(onOpenRun === undefined ? {} : { onOpenRun })}
         />
       </Disclosure>
+      {metaMore ? <div className="mem-scroll-cue" aria-hidden="true" /> : null}
+      </div>
       <div className="mem-detail-editor" data-ac-editable>
         <MemoryEntryEditor
           value={draft.content}

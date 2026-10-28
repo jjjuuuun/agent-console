@@ -27,6 +27,9 @@ export interface AgentsTabProps {
   summaryOf?(event: RunEvent): string | undefined;
   /** actor 이름 뒤에 붙는 덧말(`(← 위임자 위임)`). 없으면 생략 */
   actorNote?(actor: string): string | undefined;
+  /** 이벤트 type 접두 필터 값을 밖(주소)이 정한다. 생략하면 이 탭이 상태를 가진다 */
+  typePrefix?: string;
+  onTypePrefixChange?(next: string): void;
   /** 이벤트 목록 위의 안내(활성 자식 실행의 이벤트는 각 실행 화면에서 본다) */
   topNote?: ReactNode;
 }
@@ -41,7 +44,12 @@ function relTime(ts: number, start: number | undefined): string {
 
 /** 탭 ② 에이전트: 왼쪽 actor 목록, 오른쪽 이벤트 목록(필터·합친 텍스트 행·JSON 펼침). 데이터는 props. */
 export function AgentsTab(p: AgentsTabProps) {
-  const [prefix, setPrefix] = useState("");
+  const [localPrefix, setLocalPrefix] = useState("");
+  const prefix = p.typePrefix ?? localPrefix;
+  const setPrefix = (next: string) => {
+    setLocalPrefix(next);
+    p.onTypePrefixChange?.(next);
+  };
   const [text, setText] = useState("");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [follow, setFollow] = useState(p.running);
@@ -136,6 +144,7 @@ export function AgentsTab(p: AgentsTabProps) {
             <span className="app-muted">{t.agents.typeFilter}</span>
             <select value={prefix} onChange={(e) => setPrefix(e.target.value)}>
               <option value="">{t.agents.anyPrefix}</option>
+              {prefix !== "" && !prefixes.includes(prefix) ? <option value={prefix}>{prefix}</option> : null}
               {prefixes.map((x) => (
                 <option key={x} value={x}>{x}</option>
               ))}

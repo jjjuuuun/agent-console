@@ -18,7 +18,7 @@ profiles:
     description: 로그 이벤트를 에이전트 구성 요소(칸)와 전달(연결)로 묶어 센다
     canvas: {width: 1520, height: 812}
     zones:
-      - {id: local, label: "LOCAL · 사용자 PC / WSL", description: "하네스 · SDK / CLI · 에이전트 런타임 · 작업 파일",
+      - {id: local, label: "LOCAL · 사용자 PC", description: "하네스 · SDK / CLI · 에이전트 런타임 · 작업 파일",
          x: 10, y: 16, w: 1260, h: 780, style: boundary}
       - {id: remote, label: "REMOTE · 모델 서버", description: "네트워크로 모델 요청 / 응답",
          x: 1290, y: 16, w: 220, h: 780, style: service}

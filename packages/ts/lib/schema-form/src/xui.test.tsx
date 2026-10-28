@@ -286,6 +286,18 @@ describe("불리언·enum·속성 추가 단추 (F11)", () => {
     expect(screen.queryByRole("option", { name: "ask" })).toBeNull();
     expect(screen.getByRole("option", { name: "에이 라벨" })).toBeTruthy();
   });
+  it("배열 enum(체크박스 묶음)도 x-ui.enum_labels 라벨을 쓴다", () => {
+    const arr: JsonSchema = {
+      type: "object",
+      properties: {
+        access: { type: "array", title: "허용할 일", uniqueItems: true, items: { type: "string", enum: ["read", "write"] }, "x-ui": { tier: "basic", enum_labels: { read: "읽기", write: "쓰기" } } },
+      },
+    };
+    render(<SchemaForm schema={arr} value={{ access: ["read"] }} uiSchema={{ access: { "ui:widget": "checkboxes" } }} />);
+    expect(screen.getByRole("checkbox", { name: "읽기" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "쓰기" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: "read" })).toBeNull();
+  });
   it("설명 문장의 enum 원시 값은 괄호째 지우거나 라벨로 바꾼다(F11)", () => {
     const labels = { ask: "물어보기", run: "실행하기" };
     expect(humanizeEnumText("물어볼지(ask) 실행할지(run) 정합니다.", labels)).toBe("물어볼지 실행할지 정합니다.");

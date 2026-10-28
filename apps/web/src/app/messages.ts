@@ -427,6 +427,7 @@ export const messages = {
       server: "이 항목은 서버 설정 파일에서만 바꿉니다. 웹에서 바꾸면 로컬 전용 원칙이 깨질 수 있기 때문입니다.",
       versionsUi: "버전 비교 화면에서 목록 항목(노드·연결 등)을 부를 이름을 어떤 키에서 찾을지 정합니다. 비워 두면 기본 목록을 씁니다.",
       architecture: "구조도가 칸과 연결을 그리는 규칙(프로필)을 고르고 고칩니다.",
+      memory: "에이전트와 사람이 함께 쓰는 메모리의 범위 종류, 정리 규칙, 비밀 처리를 정합니다.",
       versions: "설정을 저장할 때마다 버전이 쌓입니다. 이전 버전과 비교하고 되돌릴 수 있습니다.",
     },
     sections: {
@@ -440,6 +441,7 @@ export const messages = {
       usage: "사용량",
       logs: "로그 출처",
       architecture: "구조도",
+      memory: "메모리",
       shortcuts: "단축키",
       notifications: "알림",
       projects: "프로젝트",

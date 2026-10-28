@@ -19,6 +19,11 @@ from agent_console_contracts import (
 )
 from agent_console_runtime import BackendLoginContext, LoginDriver, LoginRefusedError
 
+from ._auth_dir import (
+    AuthDirLocation,
+    ClaudeSdkAuthDirOptions,
+    prepare_auth_dir,
+)
 from ._env import EnvPolicy
 from ._login import (
     CLI_LOGIN_METHOD_ID,
@@ -67,6 +72,9 @@ class ClaudeLoginSupport:
         environ: 부모 환경(None = ``ctx.environ``, 그것도 비면 ``os.environ``).
         spawner: PTY 어댑터(테스트 주입, None = 플랫폼 기본).
         pty: PTY 사용 가능 여부(None = ``detect_pty(spawner)``).
+        auth_dir: 앱 전용 자격 폴더(5.7R.30). 있으면 로그인·로그아웃 하위 프로세스의
+            ``CLAUDE_CONFIG_DIR``가 이 폴더이고, 시작 전에 폴더를 준비한다(700·``.gitignore``).
+        auth_dir_options: 자격 폴더 설정(권한·``.gitignore`` 줄).
     """
 
     def __init__(
@@ -80,8 +88,12 @@ class ClaudeLoginSupport:
         environ: Mapping[str, str] | None,
         spawner: Any | None = None,
         pty: PtySupport | None = None,
+        auth_dir: AuthDirLocation | None = None,
+        auth_dir_options: ClaudeSdkAuthDirOptions | None = None,
     ) -> None:
         self.options = options
+        self._creds = auth_dir
+        self._creds_options = auth_dir_options or ClaudeSdkAuthDirOptions()
         self._allow = allow_subscription_auth
         self._readiness = readiness
         self._locate = cli_locator
@@ -115,6 +127,33 @@ class ClaudeLoginSupport:
             return self._environ
         return ctx_environ or os.environ
 
+    def _child_env(self, parent: Mapping[str, str]) -> dict[str, str]:
+        env = login_env(parent, self._policy, self.options)
+        if self._creds is not None:
+            env.update(self._creds.env())
+        return env
+
+    def _prepare(self) -> None:
+        """자격 폴더 준비. 실패하면 거절(메시지에 경로·자격 내용 없음)."""
+        if self._creds is None:
+            return
+        try:
+            prepare_auth_dir(self._creds, self._creds_options)
+        except OSError:
+            raise LoginRefusedError(
+                ErrorCodes.BACKEND_LOGIN_UNSUPPORTED, self.options.texts.failed_auth_dir
+            ) from None
+
+    def _writes(self) -> list[str]:
+        t = self.options.texts
+        if self._creds is None:
+            return writes_lines(self.options, self._parent())
+        name = self._creds.login_files[0].name if self._creds.login_files else ""
+        lines = [t.writes_credentials.format(path=self._creds.display_file(name))]
+        if t.writes_private:
+            lines.append(t.writes_private)
+        return lines
+
     def methods(self) -> list[LoginMethodInfo]:
         """디스크립터 ``login_methods``(능력이 없으면 빈 목록)."""
         if not self.enabled:
@@ -126,7 +165,7 @@ class ClaudeLoginSupport:
                 label=t.label,
                 description=t.description,
                 notice=t.notice,
-                writes=writes_lines(self.options, self._parent()),
+                writes=self._writes(),
                 needs_browser=True,
             )
         ]
@@ -140,7 +179,10 @@ class ClaudeLoginSupport:
         if not self.enabled or token_auth:
             return []
         t = self.options.texts
-        if state == ReadinessStates.SUBSCRIPTION_UNVERIFIED:
+        if state in (
+            ReadinessStates.SUBSCRIPTION_UNVERIFIED,
+            ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED,
+        ):
             return [
                 ReadinessAction(
                     kind="login", method_id=CLI_LOGIN_METHOD_ID, label=t.label, primary=True
@@ -191,12 +233,13 @@ class ClaudeLoginSupport:
             )
         from ._login_driver import ClaudeCliLoginDriver
 
+        self._prepare()
         parent = self._parent(ctx.environ)
         return await ClaudeCliLoginDriver.start(
             self.options,
             argv=self._argv(self.options.command, "login"),
             status_argv=self._argv(self.options.status_command, "status"),
-            env=login_env(parent, self._policy, self.options),
+            env=self._child_env(parent),
             warnings=env_warnings(parent, self.options),
             spawner=self._spawner,
         )
@@ -222,12 +265,13 @@ class ClaudeLoginSupport:
 
         if argv is None:
             return result(False, t.logout_cli_missing, LoginReasonCodes.CLI_MISSING)
+        self._prepare()
         parent = self._parent(ctx.environ)
         size = self.options.pty_size
         try:
             session = await PtySession.spawn(
                 argv,
-                env=login_env(parent, self._policy, self.options),
+                env=self._child_env(parent),
                 cwd=self.options.cwd,
                 cols=size.cols,
                 rows=size.rows,
@@ -251,7 +295,7 @@ class ClaudeLoginSupport:
             )
         if code != 0:
             return result(False, t.logout_failed.format(code=code), LoginReasonCodes.LOGOUT_FAILED)
-        return result(True, t.logout_ok)
+        return result(True, t.logout_ok_private if self._creds is not None else t.logout_ok)
 
 
 __all__ = ["ClaudeLoginSupport", "PtySupport", "detect_pty"]

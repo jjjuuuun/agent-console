@@ -172,19 +172,12 @@ def test_imports_project_dir_defaults_to_base_dir_not_runs_working_directory(
     tmp_path: Path,
 ) -> None:
     """H3(4R.18): `mod-imports.project_dir`는 자기 옵션이다. 생략하면 호스트 `paths.base_dir`이고
-    실행 모듈의 `working_directory`를 기본값으로 읽지 않는다. 내보내기 `home`도 가져오기 `home`을
-    따라가지 않는다."""
+    실행 모듈의 `working_directory`를 기본값으로 읽지 않는다."""
     project = tmp_path / "proj"
     (project / ".claude").mkdir(parents=True)
     home = tmp_path / "nohome"
-    settings = make_settings(
-        tmp_path,
-        options={
-            "mod-runs": {"working_directory": str(project)},
-            "mod-imports": {"home": str(home)},
-        },
-    )
-    assert "project_dir" not in settings.modules.options["mod-imports"]
+    settings = make_settings(tmp_path, options={"mod-runs": {"working_directory": str(project)}})
+    assert "project_dir" not in settings.modules.options.get("mod-imports", {})
     assert "home" not in settings.modules.options.get("mod-exports", {})
     env = {"HOME": str(home)}
     with server(settings, environ=env) as client:
@@ -196,6 +189,21 @@ def test_imports_project_dir_defaults_to_base_dir_not_runs_working_directory(
         assert sources["project-claude"]["available"] is True
     explicit = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
     assert explicit.modules.options["mod-imports"]["project_dir"] == str(project)
+
+
+def test_imports_home_is_removed_key(tmp_path: Path) -> None:
+    """5.7R.30b: 사용자 전역 ~/.claude 가져오기(`mod-imports.home`)는 없앴다.
+
+    남아 있으면 removed_key로 이유를 안내하고 시작을 거부한다."""
+    config = tmp_path / CONFIG_FILENAME
+    text = "modules:\n  options:\n    mod-imports:\n      home: ~\n"
+    config.write_text(text, encoding="utf-8")
+    with pytest.raises(ConfigError) as exc:
+        load_settings(config, environ={})
+    assert exc.value.code == SETTINGS_REMOVED_KEY
+    [removed] = exc.value.removed
+    assert (removed.old, removed.new) == ("modules.options.mod-imports.home", None)
+    assert "~/.claude" in removed.message
 
 
 def test_usage_windows_only_does_not_read_run_records(tmp_path: Path) -> None:

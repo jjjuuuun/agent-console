@@ -121,6 +121,7 @@ from agent_console_runtime._interactions import (
     as_interaction_kind,
 )
 from agent_console_runtime._interfaces import (
+    BACKEND_HOST_PARAM,
     BACKEND_OPTIONS_HOOK,
     NODE_ACTOR_HOOK,
     NODE_NAME_HOOK,
@@ -128,6 +129,7 @@ from agent_console_runtime._interfaces import (
     AgentRequest,
     AgentResult,
     BackendEventSink,
+    BackendHostContext,
     Blocked,
     Clock,
     ConfigurableBackend,
@@ -150,6 +152,7 @@ from agent_console_runtime._interfaces import (
     SubagentResultListener,
     SubagentSpec,
     ValidationContext,
+    accepts_host_context,
     node_actor,
     node_display_name,
 )
@@ -266,6 +269,7 @@ from agent_console_runtime._validation import (
 
 __all__ = [
     "BACKENDS_GROUP",
+    "BACKEND_HOST_PARAM",
     "BACKEND_OPTIONS_HOOK",
     "DEFAULT_ACCEPTS_KEYS",
     "DEFAULT_GRACE_SECONDS",
@@ -302,6 +306,7 @@ __all__ = [
     "AgentResult",
     "BackendCheckContext",
     "BackendEventSink",
+    "BackendHostContext",
     "BackendLoginContext",
     "BackendLoginService",
     "BackendReadinessService",
@@ -406,6 +411,7 @@ __all__ = [
     "UnknownBackendError",
     "UnknownInteractionError",
     "ValidationContext",
+    "accepts_host_context",
     "apply_contribution",
     "as_backend",
     "as_delegation_strategy",

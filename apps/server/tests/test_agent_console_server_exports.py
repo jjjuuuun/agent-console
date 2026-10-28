@@ -153,7 +153,7 @@ def setup(tmp_path: Path) -> tuple[Path, Path, Path, Any]:
     settings = make_settings(
         tmp_path,
         options={
-            "mod-imports": {"project_dir": str(project), "home": str(home)},
+            "mod-imports": {"project_dir": str(project)},
             "mod-exports": {
                 "home": str(home),  # 보호 위치 기준(4R.18: 자기 옵션)
                 "roots": [

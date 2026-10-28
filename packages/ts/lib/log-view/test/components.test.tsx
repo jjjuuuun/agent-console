@@ -19,7 +19,7 @@ describe("LogEventTable", () => {
     ev({ uid: "c", seq: 3, time: 1_700_000_002, category: "never-seen", title: "plain", status: "failed" }),
   ];
   const columns = eventColumns(["time", "category", "title", "duration"]);
-  const base = { rows, columns, taxonomy: view, isError, slotFor, originTime: 1_700_000_000 } as const;
+  const base = { rows, columns, taxonomy: view, isError, slotFor, originTime: 1_700_000_000, timeMode: "elapsed" } as const;
 
   it("모르는 범주·100자 이름·분류 체계 0개도 깨지지 않고 오류는 tone=danger만 표시", () => {
     render(<LogEventTable {...base} />);
@@ -38,8 +38,8 @@ describe("LogEventTable", () => {
     expect(screen.queryByText("오류")).toBeNull();
   });
 
-  it("절대 시각 모드와 값 없음은 0이 아니라 –", () => {
-    render(<LogEventTable {...base} timeMode="absolute" />);
+  it("시각만 모드와 값 없음은 0이 아니라 –", () => {
+    render(<LogEventTable {...base} timeMode="time" />);
     expect(screen.getAllByText("–").length).toBeGreaterThan(0); // 소요 없는 행
     expect(screen.queryByText("+0:00.000")).toBeNull();
   });

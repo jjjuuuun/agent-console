@@ -6,9 +6,9 @@
 공개 API:
     - ``module``(``ResourcesModule``): entry point ``agent_console.server_modules``의
       ``mod-resources``.
-    - 포트(``ports``): ``DEFINITIONS_STORE``(필수)·``DEFINITION_USAGES``(선택)·
-      ``RESOURCES_LOOKUP``·``RESOURCE_TYPES``(제공), 프로토콜 ``DefinitionUsages``·
-      ``ResourceStore``.
+    - 포트(``ports``): ``DEFINITIONS_STORE``(필수)·``DEFINITION_USAGES``·``DEFINITION_CHECKS``
+      (선택)·``RESOURCES_LOOKUP``·``RESOURCE_TYPES``(제공), 프로토콜 ``DefinitionUsages``·
+      ``DefinitionCheck``·``ResourceStore``.
     - HTTP 없이 쓰는 부품: ``ResourceService``, ``StoreResources``(저장소 위 ``ResourceLookup``),
       ``resource_types_of``, ``resource_issues``·``merge_strategies``.
     - ``build_router``: FastAPI 라우터(접두 없음). ``ERROR_MAP``: 모듈 오류 맵.
@@ -21,10 +21,12 @@ from .errors import ERROR_MAP, NOT_MULTI_FILE, RESERVED_FILE_NAME, ResourceRejec
 from .lookup import StoreResources, resource_types_of
 from .module import MODULE_ID, WEB_ROLES, ResourcesModule, module
 from .ports import (
+    DEFINITION_CHECKS,
     DEFINITION_USAGES,
     DEFINITIONS_STORE,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
+    DefinitionCheck,
     DefinitionUsages,
     ResourceStore,
 )
@@ -36,6 +38,7 @@ __all__ = [
     "DEFAULT_CONTENT_FILES",
     "DEFAULT_RESERVED_FILE_NAMES",
     "DEFINITIONS_STORE",
+    "DEFINITION_CHECKS",
     "DEFINITION_USAGES",
     "ERROR_MAP",
     "MODULE_ID",
@@ -44,6 +47,7 @@ __all__ = [
     "RESOURCES_LOOKUP",
     "RESOURCE_TYPES",
     "WEB_ROLES",
+    "DefinitionCheck",
     "DefinitionUsages",
     "ResourceModuleSettings",
     "ResourceRejectedError",

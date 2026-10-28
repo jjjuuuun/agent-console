@@ -8,7 +8,7 @@ Agent Console 리소스 기능 모듈(design §3R.1.3, R12·R13.1). 리소스 �
   파일 경로의 한 칸이 예약 이름(설정 `reserved_file_names`, 기본 `.git`·`_bundle`, 대소문자 무시)이면 저장은 하고
   `X-Console-Issues` 헤더로 warning 이슈 `resource.reserved_file_name`(`path` = JSON Pointer `/files/<파일 경로>`, `details = {path, name}`, 메시지에 파일 경로)을 돌려준다.
   붙은 곳(`/resources/{id}/usages`)은 `link-definitions-teams`가 붙인다.
-- 필수 포트: `definitions.store`. 선택 포트: `definitions.usages`(목록 `usage_count`, 없으면 null).
+- 필수 포트: `definitions.store`. 선택 포트: `definitions.usages`(목록 `usage_count`, 없으면 null), `definitions.checks`(여러 제공자, 저장 전 정의 검사 — 만들기·저장 때 error는 422 `validation_failed`, warning·info는 저장하고 `X-Console-Issues` 헤더로 싣는다. 예: 메모리 리소스의 `memory.unknown_scope_kind`. 없으면 종류 검사만).
 - 제공 포트: `resources.lookup`(`ac-resources.ResourceLookup` + `FileContentLookup`), `resources.types`(종류 레지스트리).
 - 종류 레지스트리는 호스트 기본 서비스 `registries`의 `resource_types` 확장. 없으면(단독 실행) entry point와
   워크스페이스 `resource-types/*.yaml`을 직접 읽는다. 본문 크기 한도는 정의 저장소(`mod-definitions`)가 건다.

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+import logging
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from agent_console_contracts import (
@@ -23,7 +24,9 @@ from agent_console_resources import (
 from agent_console_store import RESOURCE_KIND, SCOPE_FIELD, StoredDefinition
 
 from .errors import NOT_MULTI_FILE, RESERVED_FILE_NAME, ResourceRejectedError
-from .ports import DefinitionUsages, ResourceStore
+from .ports import DefinitionCheck, DefinitionUsages, ResourceStore
+
+_log = logging.getLogger("agent_console_mod_resources")
 
 RESOURCE_CONFIG_POINTER = "/config"
 """리소스 문서에서 config의 위치(종류 검사 이슈 path의 기준)."""
@@ -64,6 +67,8 @@ class ResourceService:
         content_files: 본문 형식 → 처음 저장할 본문 파일 이름.
         default_content_file: 표에 없는 형식의 본문 파일 이름.
         reserved_file_names: 여러 파일 본문 경로에 있으면 경고할 이름(대소문자 무시).
+        checks: 지금 저장 전 정의 검사 목록(``definitions.checks``, 부를 때마다 — 늦게 켜진
+            제공자도 보인다). 없으면 종류 검사만 한다.
     """
 
     def __init__(
@@ -76,8 +81,10 @@ class ResourceService:
         default_content_file: str = "content.txt",
         kind: str = RESOURCE_KIND.name,
         reserved_file_names: Iterable[str] = (),
+        checks: Callable[[], Sequence[DefinitionCheck]] = lambda: (),
     ) -> None:
         self.store = store
+        self._checks = checks
         self.types = types
         self.kind = kind
         self._usages = usages
@@ -87,11 +94,39 @@ class ResourceService:
 
     # ------------------------------------------------------------ 검사
 
-    def check(self, resource: Resource) -> None:
-        """종류 검사에 error가 있으면 ``ResourceRejectedError``(등록되지 않은 종류는 warning)."""
-        issues = resource_issues(resource, self.types)
+    def issues(self, resource: Resource) -> list[Issue]:
+        """종류 검사 이슈 + 저장 전 정의 검사(``definitions.checks``) 이슈(path = 문서 기준).
+
+        같은 코드·path의 이슈는 한 번만 낸다(종류 검사를 저장 전 검사로도 주는 연동이 있다).
+        검사 하나가 예외를 내면 기록하고 그 검사만 건너뛴다(제공 모듈의 오류 타입을 모른다).
+        """
+        found = resource_issues(resource, self.types)
+        checks = self._checks()
+        if not checks:
+            return found
+        seen = {(i.code, i.path) for i in found}
+        document = resource.model_dump(mode="json", exclude_unset=True)
+        for check in checks:
+            try:
+                extra = list(check.issues(self.kind, document))
+            except Exception:
+                _log.exception("저장 전 정의 검사 실패(리소스): %s", type(check).__name__)
+                continue
+            for issue in extra:
+                key = (issue.code, issue.path)
+                if key in seen:
+                    continue
+                seen.add(key)
+                found.append(issue)
+        return found
+
+    def check(self, resource: Resource) -> list[Issue]:
+        """검사에 error가 있으면 ``ResourceRejectedError``(422). 아니면 저장은 하되 보일 이슈
+        (warning·info — 예: 등록되지 않은 종류, 메모리 리소스의 모르는 범위 종류)를 돌려준다."""
+        issues = self.issues(resource)
         if any(i.severity == "error" for i in issues):
             raise ResourceRejectedError(issues, "리소스 설정에 오류가 있어 저장하지 않았습니다")
+        return issues
 
     def is_multi_file(self, type_id: str) -> bool:
         """종류 디스크립터가 여러 파일 본문(``content.multi_file``)이면 참. 모르는 종류는 거짓."""

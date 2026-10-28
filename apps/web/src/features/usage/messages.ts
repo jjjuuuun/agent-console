@@ -117,7 +117,7 @@ export const usageMessages = {
 /** 사용량 표시기(사이드바 등) 문구. 창 이름·출처 id는 여기에 없다. 기존 `usageMessages`의 문구는 재사용한다. */
 export const usageIndicatorMessages = {
   region: "사용량 표시기",
-  noData: "사용량 –",
+  noData: "사용량 정보 없음",
   noDataHint: "아직 관측된 사용량이 없습니다. 출처가 값을 줄 때 나타납니다",
   toSources: "출처 보기",
   loading: "사용량을 불러오는 중",
@@ -125,7 +125,7 @@ export const usageIndicatorMessages = {
   lastSuccess: (rel: string) => `마지막 성공 ${rel}. 다음 주기에 다시 시도합니다`,
   notObserved: "관측 없음",
   remainingText: (n: number) => `${n}% 남음`,
-  usedText: (n: number) => `${n}% 사용`,
+  usedText: (n: number) => `${n}% 사용됨`,
   spokenRemaining: (n: number) => `남음 ${n}%`,
   spokenUsed: (n: number) => `사용 ${n}%`,
   overLimit: (used: number) => `한도를 넘었습니다(사용 ${used}%)`,
@@ -133,13 +133,15 @@ export const usageIndicatorMessages = {
   resets: (rel: string) => `초기화 ${rel}`,
   resetsOnDate: (date: string) => `초기화 ${date}`,
   resetsPassed: "초기화 시각 지남",
+  /** 사이드바 초기화 줄: 오늘은 시각만, 다른 날은 요일(또는 날짜)을 앞에 붙인다 */
+  resetsClockToday: (time: string) => `${time}에 초기화`,
+  resetsClockOther: (day: string, time: string) => `(${day}) ${time}에 초기화`,
   oldValue: "초기화 시각이 지났습니다 — 표시된 값은 이전 창 기준일 수 있습니다",
   stale: "오래된 관측",
   /** 값이 없는 창의 툴팁·낭독: 사유는 출처가 준 사실 */
   noRatioTitle: (name: string, reason: string) => `${name}: 사용률 정보 없음(${reason})`,
   approxNote: "추정(로컬 로그)",
   unlinked: "사용률 미연결",
-  unlinkedLink: "연결 방법",
   unlinkedHint: "구독 사용률은 Claude Code 상태 줄을 연결하면 표시됩니다",
   openLabel: "눌러서 사용량 화면 열기",
   summary: (items: string) => `사용량: ${items}`,

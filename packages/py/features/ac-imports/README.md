@@ -7,7 +7,9 @@
 - **출처는 확장 지점이다.** 출처 = `ImportSource{descriptor, scan()}`. 출처를 만드는 공장을 entry point
   `agent_console.import_sources`로 등록한다. 서버는 출처 이름을 모른다.
 - **기본 출처(첫 구현)**: `claude` 공장이 `user-claude`(홈의 `~/.claude`)와 `project-claude`(작업 폴더의 `.claude/` +
-  `CLAUDE.md` + `.mcp.json`)를 만든다.
+  `CLAUDE.md` + `.mcp.json`)를 만든다. `user-claude`는 `ImportSourceContext.home`을 줄 때만 생기는 범용 부품이다.
+  **Agent Console 앱(`mod-imports`)은 `home`을 넘기지 않는다**(5.7R.30b, 사용자 결정 2026-10-28: 앱은 등록된 프로젝트
+  폴더와 자기 workspace 밖을 연동하지 않으므로 사용자 전역 `~/.claude` 구성을 가져오지 않는다).
 - 비밀처럼 보이는 값(MCP 서버의 `env`·`headers` 평문)은 **저장하지 않고** `secret://이름` 참조로 바꾼 뒤 경고로
   위치만 알린다(`import.secret_replaced`). `${VAR}` 형식은 `secret://VAR`로 바꾼다.
 - 인자(`--token x`, `--api-key=x`, 토큰 모양 값)·URL(쿼리 `api_key=` 등, 사용자 정보)에서 비밀로 보이는 값도

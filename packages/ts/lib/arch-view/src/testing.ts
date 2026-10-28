@@ -85,7 +85,7 @@ const EDGES: EdgeRow[] = [
 ];
 
 const ZONES: ArchitectureZone[] = [
-  { id: "local", label: "LOCAL · 사용자 PC / WSL", description: "하네스 · SDK / CLI · 에이전트 런타임 · 작업 파일", x: 10, y: 16, w: 1260, h: 780, style: "boundary" },
+  { id: "local", label: "LOCAL · 사용자 PC", description: "하네스 · SDK / CLI · 에이전트 런타임 · 작업 파일", x: 10, y: 16, w: 1260, h: 780, style: "boundary" },
   { id: "remote", label: "REMOTE · 모델 서버", description: "네트워크로 모델 요청 / 응답", x: 1290, y: 16, w: 220, h: 780, style: "service" },
   { id: "runtime", label: "모델 입력 준비 · 출력 처리 · 도구 순환", x: 370, y: 212, w: 880, h: 572, style: "runtime" },
 ];

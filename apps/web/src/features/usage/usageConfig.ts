@@ -26,6 +26,11 @@ export const DEFAULT_ROLLUP_PERIOD = "7d";
  */
 export const RESET_DATE_AFTER_SECONDS = 30 * 86_400;
 
+/** 사이드바 초기화 줄의 시각·요일 표기 언어(`Intl` 로케일). */
+export const RESET_CLOCK_LOCALE = "ko-KR";
+/** 초기화가 이 일수 안이면 요일("(일요일)"), 더 멀면 날짜("(11월 30일)")로 보인다. */
+export const RESET_WEEKDAY_WITHIN_DAYS = 7;
+
 // ---------------------------------------------------------------- 사용량 표시기(usage-everywhere.md)
 
 /** 사용량 화면의 전체 보고 조회 키. */
@@ -81,7 +86,7 @@ export const INDICATOR_FIELDS: readonly string[] = Object.values(INDICATOR_FIELD
 
 /** 값 앞에 `~`를 붙이는 신뢰 등급(추정·비공식). 디스크립터 `trust` 문자열과 비교한다. */
 export const APPROX_TRUST: readonly string[] = ["estimated", "unofficial"];
-/** 사용량 화면의 연결 안내 앵커(미니의 "연결 방법" 링크가 가리킨다) */
+/** 사용량 화면의 연결 안내 앵커(미니의 "사용률 미연결" 줄이 가리킨다) */
 export const USAGE_SETUP_HASH = "#setup";
 
 /** 색 규칙 `tone` 표(데이터): id → 아이콘 글자(색 단독 금지)·색 토큰. 모르는 tone은 중립. 글자가 빈 tone(정상)은 글리프를 그리지 않는다(소음 제거). */

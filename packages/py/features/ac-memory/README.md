@@ -134,7 +134,8 @@ extra `sqlite`가 필요하다. 같은 `MemoryStore` 의미를 파일 하나에 
 정리 규칙은 사용자 데이터(`MemoryRetentionRule`: id·조건 `when`·동작 `archive`|`delete`)다. **패키지 기본 규칙은 없다.** 빈 규칙이면 계획이 0건이다.
 
 - 판단 대상: `scope{kind, id}`·`key`·`tags`·`pinned`·`archived`·`bytes`·`version`·`age_days`·`idle_days`·`last_read_days`(도구로 읽은 적이 있을 때만)·`author_kind`·`created_by`·`updated_by`(`RETENTION_SUBJECT_FIELDS`).
-- 고정 항목은 판단하지 않는다. 선언 순서의 첫 규칙 하나만 쓴다.
+- 고정 항목은 정리하지 않는다(규칙에 맞으면 계획의 `excluded_pinned`로만 센다). 선언 순서의 첫 규칙 하나만 쓴다.
+- 계획 항목은 판단한 때의 `updated_at`·`bytes`를 싣는다(화면이 목록을 다시 읽지 않는다). 계약의 경로 제안 `MEMORY_RETENTION_SUBJECT_PATHS`(규칙 스키마 `examples`)는 `RETENTION_SUBJECT_FIELDS`와 맞춰 둔다(테스트가 어긋남을 잡는다).
 - 조건은 `ac-conditions` 컴파일 경로로 판정한다. 규칙 검사는 `retention_issues`(`condition_issues` 재사용, 빈 조건은 정리에서 error)다.
 - 적용(`apply_retention`)은 계획한 때의 버전으로만 바꾸고, 버전(쓴 주체 `system`, `label` = 규칙 id)으로 남아 되돌릴 수 있다.
 - 계획·내보내기는 `iter_entries`로 항목을 훑는다. 저장소가 선택 능력 `EntryScanner`(`scan_entries`)를 가지면 본문까지 한 번에 읽고, 없으면 `search` 쪽 단위로 읽는다. 큰 저장소 구현은 `scan_entries`를 두는 편이 빠르다.

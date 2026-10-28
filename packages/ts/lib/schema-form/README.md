@@ -62,6 +62,7 @@ props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonl
 - `onChange`는 **이 층의 값만** 돌려준다(상속 값 미포함). 지우면 문자열은 `""`, 그 외는 `null`로 남고 키는 유지된다.
 - 상태: `set`(편집 가능 + ↺), `inherited`(읽기 전용 스타일 + 덮어쓰기), `default`(읽기 전용 + 지정). 읽기 전용은 행의 `<fieldset disabled>`로 구현한다.
 - `Alt+Enter`: 포커스된 필드의 덮어쓰기/되돌리기 토글. 덮어쓰기 후 편집 가능해지면 입력으로 포커스가 이동한다.
+- `ui:widget: "checkboxes"`로 그린 enum 배열(`items.enum`)도 `x-ui.enum_labels`(배열 또는 `items` 쪽)를 라벨로 쓴다. 웹 리소스 폼은 5.7R.19부터 enum 배열 전체를 이 위젯으로 그린다.
 - 배열은 통째로 하나의 값(교체 병합)이라 배지 하나이고 원소 출처(`/tags/0`)는 모아서 본다.
 
 ## 스키마 `x-ui` 렌더 (5.2R.18)

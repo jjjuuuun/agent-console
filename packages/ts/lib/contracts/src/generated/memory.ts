@@ -16,6 +16,8 @@ export type {
   MemoryImportProblem,
   MemoryImportResult,
   MemoryMoveRequest,
+  MemoryRetentionCondition,
+  MemoryRetentionConditionItem,
   MemoryRetentionPlan,
   MemoryRetentionPlanItem,
   MemoryRetentionPlanRequest,

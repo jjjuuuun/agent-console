@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { formatResetsPhrase, isFarReset } from "./resetDisplay";
+import { formatResetClock, formatResetsPhrase, isFarReset } from "./resetDisplay";
 import { RESET_DATE_AFTER_SECONDS } from "./usageConfig";
 
 const rel = (r: string) => `까지 ${r}`;
@@ -29,5 +29,21 @@ describe("5.5R.30 레일 글리프 자리", () => {
     expect(mark).not.toContain("position: absolute");
     expect(/\.usage-ind-rail-value \{([^}]*)\}/.exec(css)![1]!).toContain("inline-flex");
     expect(/\.usage-ind-rail-item \{ width: min\((\d+)px/.exec(css)![1]).toBe("40");
+  });
+});
+
+describe("사이드바 초기화 줄(사용자 요청 10/28)", () => {
+  const text = { today: (t: string) => `${t}에 초기화`, other: (d: string, t: string) => `(${d}) ${t}에 초기화` };
+  const at = (y: number, mo: number, d: number, h: number, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime() / 1000;
+  const now = at(2026, 10, 28, 9);
+  it("오늘이면 시각만", () => {
+    expect(formatResetClock(at(2026, 10, 28, 14, 20), now, text)).toBe("오후 2:20에 초기화");
+  });
+  it("다른 날이면 요일을 앞에(일주일 이내), 더 멀면 날짜", () => {
+    expect(formatResetClock(at(2026, 11, 1, 12), now, text)).toBe("(일요일) 오후 12:00에 초기화");
+    expect(formatResetClock(at(2026, 11, 30, 0, 5), now, text)).toBe("(11월 30일) 오전 12:05에 초기화");
+  });
+  it("기준 일수·로케일은 인자", () => {
+    expect(formatResetClock(at(2026, 11, 1, 12), now, text, 2)).toBe("(11월 1일) 오후 12:00에 초기화");
   });
 });

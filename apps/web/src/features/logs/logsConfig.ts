@@ -160,7 +160,7 @@ export const UNGROUPED_PROJECT_VALUE = LOG_PROJECT_UNGROUPED;
 export const DASHBOARD_COLUMNS = { wide: 12, narrow: 6, narrowBelow: 1280 } as const;
 
 /** 서버 가림 경고 코드(서버 정보 경고 목록에서 찾는다). */
-export const WARNING_CODES = { redactionUnavailable: "logs.redaction_unavailable", unknownClassifier: "logs.unknown_classifier" } as const;
+export const WARNING_CODES = { redactionUnavailable: "logs.redaction_unavailable", unknownClassifier: "logs.unknown_classifier", noProjects: "logs.no_projects" } as const;
 
 /** 단축키 범위(라우트의 `shortcutScopes`와 같은 값). */
 export const LOGS_SCOPES = { common: "logs", session: "logs-session", search: "logs-search", dashboard: "logs-dashboard" } as const;

@@ -3,7 +3,8 @@ import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { RouterProvider, type createBrowserRouter } from "react-router";
 import { IconRegistryProvider, THEME_CYCLE, ThemeProvider, ToastProvider, useToast, type ThemeChoice } from "@agent-console/ui";
 import { ApiProvider } from "./ApiContext";
-import { DEFAULT_LINK_PARTS } from "../links";
+import { DEFAULT_CONFIG_WIDGETS, DEFAULT_LINK_PARTS } from "../links";
+import { ConfigWidgetsProvider, type ConfigWidgetTable } from "./ConfigWidgets";
 import { LinkPartsProvider, ModulesProvider, type LinkPartDef } from "../modules";
 import type { ApiClients, FeatureSignal } from "./apiClients";
 import { AppStatusProvider } from "./AppStatus";
@@ -37,6 +38,8 @@ export interface AppRootProps {
   createClients: (hooks: ClientHooks) => Promise<ApiClients>;
   /** 연동 부분 등록 데이터(기본: `links/linkParts`) */
   linkParts?: readonly LinkPartDef[];
+  /** 스키마 `x-ui.widget` 이름 → 위젯 등록 데이터(기본: `links/configWidgets`) */
+  configWidgets?: ConfigWidgetTable;
   router: ReturnType<typeof createBrowserRouter>;
   storage?: SafeStorage;
   /** 새로고침 동작(테스트 주입) */
@@ -75,7 +78,7 @@ function createSignalBus() {
 }
 
 /** 앱 부팅(주소·토큰 획득) -> 테마·질의·토스트·API 컨텍스트 -> 라우터. */
-export function AppRoot({ createClients, router, storage = appStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS }: AppRootProps) {
+export function AppRoot({ createClients, router, storage = appStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS }: AppRootProps) {
   const [attempt, setAttempt] = useState(0);
   const [boot, setBoot] = useState<Boot | null>(null);
   const [authRejected, setAuthRejected] = useState(false);
@@ -154,9 +157,11 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
           <BackgroundErrorBridge bus={bus} />
           <ModulesProvider subscribeSignals={signals.subscribe}>
             <LinkPartsProvider parts={linkParts}>
-              <AppStatusProvider value={status}>
-                <RouterProvider router={router} />
-              </AppStatusProvider>
+              <ConfigWidgetsProvider widgets={configWidgets}>
+                <AppStatusProvider value={status}>
+                  <RouterProvider router={router} />
+                </AppStatusProvider>
+              </ConfigWidgetsProvider>
             </LinkPartsProvider>
           </ModulesProvider>
         </ToastProvider>

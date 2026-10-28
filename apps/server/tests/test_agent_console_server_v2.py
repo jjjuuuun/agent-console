@@ -141,8 +141,15 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
     (home / ".claude" / "agents" / "helper.md").write_text(
         "---\nname: helper\ndescription: 돕는다\n---\n도와준다.", encoding="utf-8"
     )
+    (home / ".claude" / "agents" / "global.md").write_text(
+        "---\nname: global\ndescription: 전역\n---\n전역.", encoding="utf-8"
+    )
     project = tmp_path / "proj"
-    project.mkdir()
+    (project / ".claude" / "agents").mkdir(parents=True)
+    (project / ".claude" / "CLAUDE.md").write_text("프로젝트 지침", encoding="utf-8")
+    (project / ".claude" / "agents" / "helper.md").write_text(
+        "---\nname: helper\ndescription: 돕는다\n---\n도와준다.", encoding="utf-8"
+    )
     (project / ".mcp.json").write_text(
         json.dumps({"mcpServers": {"gh": {"url": "https://x.invalid", "headers": {"A": "plain"}}}}),
         encoding="utf-8",
@@ -151,32 +158,29 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
     settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
     with server(settings, environ={"HOME": str(home)}) as client:
         sources = {s["id"]: s for s in client.get(f"{API}/resources/import/sources").json()}
-        assert sources["user-claude"]["available"] is True
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "user-claude"})
+        # 5.7R.30b: 사용자 전역 ~/.claude는 출처가 아니다(프로젝트 .claude/만).
+        assert list(sources) == ["project-claude"]
+        assert sources["project-claude"]["available"] is True
+        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
         assert preview.status_code == 200
         candidates = preview.json()["candidates"]
         assert {c["kind"] for c in candidates} == {"agent", "resource"}
+        assert "global" not in {c["name"] for c in candidates}
         result = client.post(
             f"{API}/resources/import",
             json={
-                "source": "user-claude",
+                "source": "project-claude",
                 "items": [{"candidate_id": c["id"]} for c in candidates],
             },
         ).json()
         assert {i["action"] for i in result["items"]} == {"created"}
         assert client.get(f"{API}/agents/helper").json()["system_prompt"] == "도와준다."
-
-        mcp = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
-        [server_item] = [c for c in mcp.json()["candidates"] if c["resource_type"] == "mcp-server"]
-        client.post(
-            f"{API}/resources/import",
-            json={"source": "project-claude", "items": [{"candidate_id": server_item["id"]}]},
-        )
+        server_item = next(c for c in candidates if c["resource_type"] == "mcp-server")
         stored = client.get(f"{API}/resources/{server_item['suggested_id']}").json()
         assert "plain" not in json.dumps(stored)
         missing = client.post(f"{API}/resources/import/preview", json={"source": "nope"})
         assert missing.status_code == 404
-    assert _snapshot(home) | _snapshot(project) == before  # 원본(가짜 ~/.claude) 무변경
+    assert _snapshot(home) | _snapshot(project) == before  # 원본(가짜 ~/.claude·프로젝트) 무변경
 
 
 # ---------------------------------------------------------------- 사용량

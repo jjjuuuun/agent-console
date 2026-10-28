@@ -89,7 +89,7 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 
 | 방식 | 설정 | 동작 |
 | --- | --- | --- |
-| **본인 구독 로그인 자격(기본, 본인 책임)** | `auth: {mode: subscription}` (+ 선택 `oauth_token: secret://…`). `auth: {}`도 같다 | `ANTHROPIC_API_KEY`를 빈 값으로 덮어써 API 키가 끼어들지 않게 한다. 토큰을 주면 `CLAUDE_CODE_OAUTH_TOKEN`으로, 없으면 CLI가 HOME 아래 로그인 자격(Claude Code 로그인)을 읽는다 |
+| **본인 구독 로그인 자격(기본, 본인 책임)** | `auth: {mode: subscription}` (+ 선택 `oauth_token: secret://…`). `auth: {}`도 같다 | `ANTHROPIC_API_KEY`를 빈 값으로 덮어써 API 키가 끼어들지 않게 한다. 토큰을 주면 `CLAUDE_CODE_OAUTH_TOKEN`으로, 없으면 CLI가 앱 전용 자격 폴더(아래 "앱 전용 자격 폴더")의 로그인 자격을 읽는다 |
 | API 키(선택) | `auth: {mode: api_key, api_key: secret://anthropic_api_key}` | `ANTHROPIC_API_KEY`로 넘기고 `CLAUDE_CODE_OAUTH_TOKEN`은 비운다. 키가 없으면 실행하지 않는다(`auth_missing`) |
 
 - **기본은 구독(본인 책임), API 키도 선택 가능**(5.2R.79, 사용자 지시 F13). `ClaudeSdkAuth.mode` 기본값은
@@ -111,6 +111,64 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
   적었을 때만 한다). 변수 이름은 `api_key_env`·`oauth_token_env`로 바꿀 수 있다.
 - `setting_sources` 기본값은 `["project"]`이고 `user`는 들어 있지 않다(사용자 `~/.claude` 설정 격리).
 
+### 앱 전용 자격 폴더 (5.7R.30·5.7R.30b, 사용자 결정 2026-10-28)
+
+구독 로그인은 **앱 하나에 로그인 하나**다. 자격은 `~/.claude`도 프로젝트(작업) 폴더도 아닌 **앱 workspace**(서버
+`--workspace`, 앱 데이터 폴더) 안 한 곳에 두고 모든 프로젝트·모든 실행이 함께 쓴다. 기본 `<workspace>/.state/claude`
+(앱 상태 폴더 `.state/` — DB·실행 폴더와 같은 곳)이고 이 폴더를 `CLAUDE_CONFIG_DIR`로 SDK 실행·연결 테스트·로그인
+PTY(`claude auth login`·`status`·`logout`) 하위 프로세스에 함께 넘긴다. 자격이 있으면 자동으로 쓰고, 없으면 상태가
+`subscription_login_required`("로그인 필요")다. **`~/.claude`(HOME)나 서버 환경의 `CLAUDE_CONFIG_DIR`로 대신하지 않는다.**
+앱은 자격 때문에 프로젝트 폴더에 아무것도 쓰지 않는다(`.gitignore` 줄도 workspace 쪽에만).
+
+> 5.7R.30(07edaa9)에서 만들어진 `<프로젝트>/.agent-console/claude`는 옮기거나 지우지 않는다. 새 위치에 자격이 없으므로
+> 상태가 "로그인 필요"로 나온다 — **한 번 다시 로그인**하면 된다. 옛 폴더가 필요 없으면 직접 지운다.
+
+- 경로 해석은 한 곳이다: `ClaudeSdkBackend.credential_dir(person_id=None) -> Path | None`(공개) → `resolve_auth_dir`
+  (`AuthDirLocation` — 절대 경로·화면 표시용 상대 경로·환경 변수 이름·로그인 파일). 기준은 앱 workspace이고 프로젝트
+  인자는 없다. 앱은 `from_options(..., host=BackendHostContext(workspace_dir=…))`로 workspace를 넘긴다(`mod-runs`가
+  호스트 `paths.workspace`). 개인 모드는 `person_id=None` 하나뿐이다. 팀 모드(사람별 자격)는 `config_dir` 틀의
+  `{person}` 자리(`PERSON_PLACEHOLDER`, 예 `.state/people/{person}/claude`)와 이 인자로만 넓힌다. 단독 사용에서
+  workspace를 주지 않으면(그리고 경로가 상대 경로면) 앱 전용 폴더를 쓰지 않고 하위 프로세스 환경을 그대로 따른다.
+- 준비(`prepare_auth_dir`, 실행·연결 테스트·로그인·로그아웃 직전, 멱등): 폴더 만들기(700) → **workspace** 폴더
+  `.gitignore`에 `.state/` 줄(workspace가 git 저장소 안일 때 의미가 있다. 파일이 없으면 만들고, 사용자 파일이면 끝에
+  줄만 더하고, 앞뒤 `/`만 다른 줄이 이미 있으면 그대로) → 폴더와 바로 아래 파일 권한 좁히기(700·600). 준비하지 못하면
+  실행은 `backend.auth_dir_unavailable`로 실패하고 로그인은 거절한다(메시지에 경로·자격 내용 없음).
+- 상태 점검(`status`)은 폴더를 만들지 않는다. 이미 있는 폴더·파일 권한만 좁히고, 좁혀지지 않으면(예: WSL `/mnt/c`)
+  점검 항목 `auth_dir_permissions`와 `detail`로 알린다. 점검 항목 `auth_dir`의 `note`와 `detail`에 위치(workspace 기준
+  상대 경로)를 싣는다.
+- 자격 파일 내용은 읽지 않는다(있는지·권한만). 로그·응답·화면에 내용이 나가지 않는다.
+- 에이전트 `backend_options.env`에 `CLAUDE_CONFIG_DIR`를 적어도 앱 전용 폴더가 이기고 `log.warning`을 낸다.
+- 기존 `oauth_token: secret://…` 방식과 API 키 방식은 그대로다(`CLAUDE_CONFIG_DIR`만 같이 넘어간다).
+- `setting_sources`에 `user`를 넣어도 CLI는 `CLAUDE_CONFIG_DIR`(= 앱 자격 폴더)의 사용자 설정을 본다. `~/.claude`를
+  읽게 되는 것은 `auth_dir.config_dir: null`(앱 전용 폴더 끄기)일 때뿐이다.
+
+설치자 설정 `auth_dir`(`ClaudeSdkAuthDirOptions`):
+
+| 키 | 기본 | 의미 |
+| --- | --- | --- |
+| `config_dir` | `.state/claude` | 자격 폴더. 상대 경로는 앱 workspace 기준, `~`·`${이름}`·`{person}`(팀 모드 틀) 가능. `null`이면 앱 전용 폴더를 쓰지 않음(서버 환경 `CLAUDE_CONFIG_DIR`·`~/.claude`). 바꾸면 로그 출처 `claude-code-jsonl`의 `workspace_roots`(기본 `.state/claude/projects`)도 함께 바꾼다 |
+| `env_var` | `CLAUDE_CONFIG_DIR` | 하위 프로세스에 줄 환경 변수 이름 |
+| `login_files` | `[".credentials.json"]` | 로그인됨으로 볼 파일(폴더 안, 있는지만 본다) |
+| `dir_mode` · `file_mode` | `0o700` · `0o600` | 권한(POSIX) |
+| `gitignore` · `gitignore_entry` | `true` · `null`(= workspace 기준 첫 폴더 + `/`) | workspace `.gitignore`에 더할지·더할 줄. 폴더가 workspace 밖이면 더하지 않음 |
+
+```python
+>>> from pathlib import Path
+>>> from agent_console_backend_claude_sdk import ClaudeSdkAuthDirOptions, ClaudeSdkBackend, resolve_auth_dir
+>>> loc = resolve_auth_dir(ClaudeSdkAuthDirOptions(), workspace="/data/app", environ={})
+>>> loc.display, loc.path == Path("/data/app/.state/claude")
+('.state/claude', True)
+>>> ClaudeSdkBackend(workspace="/data/app", environ={}).credential_dir() == loc.path
+True
+
+```
+
+로그 수집(`ac-logs-claude`)은 앱 workspace의 `.state/claude/projects`(앱 실행 세션)와 `~/.claude/projects`(CLI 세션,
+읽기 전용) 두 곳에서 등록된 프로젝트 폴더 키의 세션만 읽는다(포함 패턴이 `*.jsonl`이라 자격 파일은 읽지 않는다).
+내보내기·가져오기는 정의에서 만들거나 프로젝트 `.claude/`만 읽으므로 이 폴더를 다루지 않는다. 테스트:
+`tests/…_auth_dir_57r30.py`(있음·없음·권한 문제, 빈 HOME의 `~/.claude` 무시, workspace `.gitignore`, 프로젝트 폴더
+무변경, 프로젝트 A·B가 같은 폴더, `credential_dir` 사람별 틀, FakePty 로그인이 같은 폴더에 씀).
+
 ### 상태 점검과 연결 테스트 (5.2R.68, ux-overhaul §15.8)
 
 디스크립터가 `capabilities.status = true`·`capabilities.probe = true`를 선언하고 두 선택 메서드를 구현한다
@@ -128,8 +186,10 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
   | `auth_missing` | error | API 키 비밀이 없음(해결 버튼 "API 키 넣는 곳 보기") |
   | `subscription_disabled` | warn | 구독 방식인데 `allow_subscription_auth`가 꺼짐(해결 버튼 "설치자 설정 보기") |
   | `subscription_ready` | warn | 구독 방식이 켜져 있고 토큰 비밀 또는 로그인 파일이 있음("본인 책임" 문구를 `detail`에) |
-  | `subscription_unverified` | warn | 구독 방식이 켜져 있으나 로그인 파일(`readiness.subscription_files`)을 찾지 못함 |
+  | `subscription_login_required` | warn | 앱 전용 자격 폴더에 로그인 파일이 없음("로그인 필요", 5.7R.30). 이 폴더만 본다 |
+  | `subscription_unverified` | warn | 앱 전용 폴더를 끈 경우(`auth_dir.config_dir: null`) 로그인 파일(`readiness.subscription_files`)을 찾지 못함 |
 
+  앱 전용 자격 폴더가 있으면 그 폴더의 `auth_dir.login_files`만 본다. 앱 전용 폴더를 끈 경우에만 아래 규칙이다.
   로그인 파일은 후보 중 **처음 풀리는 하나만** 본다(`login_file`). CLI처럼 하위 프로세스가 받을
   `CLAUDE_CONFIG_DIR`(환경 정책 적용 후, 빈 값 = 없음)가 있으면 그 폴더만, 없으면 `~/.claude`를 본다.
   `CLAUDE_CONFIG_DIR`가 빈 폴더면 홈에 로그인 파일이 있어도 `subscription_unverified`다.
@@ -185,8 +245,8 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 
 앱 화면에서 Claude 구독 로그인을 시작하고 끝낸다(터미널을 열지 않는다). 서버가 `claude auth login`을 PTY 하위
 프로세스로 띄우고 화면 글자를 읽어 로그인 주소·코드 요청을 웹 대화상자로 중계한다. **로그인 자격은 Claude Code CLI가
-자기 위치(`CLAUDE_CONFIG_DIR` 또는 `~/.claude/.credentials.json`)에 쓴다. 앱은 토큰을 받거나 저장하지 않는다.** 한 번
-로그인하면 상태 점검·실행·터미널의 Claude Code가 같은 로그인을 그대로 쓴다.
+앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR` = 기본 `<앱 workspace>/.state/claude`)에 쓴다. 앱은 토큰을 받거나 저장하지
+않는다.** 한 번 로그인하면 상태 점검·실행이 같은 폴더를 쓴다. 터미널의 Claude Code(`~/.claude`) 로그인과는 따로다.
 
 - 디스크립터: `capabilities.login = true`·`capabilities.logout = true`, `login_methods = [cli-login]`(문구·본인 책임
   안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`(5.2R.80)다.
@@ -194,7 +254,7 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
   미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다. `allow_subscription_auth =
   false`이면 `login_refusal()`(`LoginRefusalAware`)이 이유를 알려 로그인·로그아웃 요청이 `backend.login_unsupported`가
   아니라 409 `backend.subscription_auth_disabled`로 거절된다.
-- `status()`의 `actions`: 구독 방식이고 로그인 파일이 없으면(`subscription_unverified`) 주 버튼 `login`, 있으면
+- `status()`의 `actions`: 구독 방식이고 로그인 파일이 없으면(`subscription_login_required`·`subscription_unverified`) 주 버튼 `login`, 있으면
   (`subscription_ready`) 메뉴의 `login`(다시 로그인)·`logout`. 토큰 비밀(`oauth_token`) 방식이면 버튼이 없다.
   상태 점검은 계속 **파일 존재만** 본다(`claude auth status`는 Node 프로세스를 띄워 폴링마다 쓰기엔 비싸다 —
   로그인 성공 판정에만 쓴다).
@@ -226,7 +286,7 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 | `pty_size` | `{cols: 400, rows: 40}` | 긴 URL이 줄바꿈되지 않게 넓게 |
 | `cwd` | `null` | 작업 폴더 |
 | `env` · `env_inherit` · `env_clear` | `{TERM: xterm-256color}` · `CLAUDE_CONFIG_DIR`·`BROWSER`·`DISPLAY`·`WAYLAND_DISPLAY`·`XDG_*`·`WSL_*` · 키·토큰 변수 3개 | 하위 프로세스 환경 |
-| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | 시작 확인 창에 보일 쓰기 경로(처음 풀리는 하나) |
+| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | 앱 전용 폴더를 끈 경우 시작 확인 창에 보일 쓰기 경로(처음 풀리는 하나). 앱 전용 폴더가 있으면 그 위치(상대 경로)와 `texts.writes_private` |
 | `status_timeout_s` · `logout_timeout_s` · `exit_wait_s` · `terminate_grace_s` | `20` · `20` · `10` · `2` | 시간(초) |
 | `screen_lines` | `40` | 진행에 싣는 화면 줄 수 |
 | `texts` | `ClaudeSdkLoginTexts` | 버튼·단계·사유·본인 책임 안내 문구 |
@@ -252,29 +312,26 @@ pydantic_core.ValidationError: 위험한 정규식(rules.success)
 
 #### 구독 로그인 수동 스모크(사람이 실제로 로그인해 보는 순서)
 
-자동 테스트는 실제 로그인을 하지 않는다. 아래는 사람이 자기 계정으로 확인하는 순서다. **실제 `~/.claude` 로그인이
-바뀐다**(터미널의 Claude Code도 같은 로그인을 쓴다). 실제 로그인을 건드리기 싫으면 빈 폴더를 `CLAUDE_CONFIG_DIR`로
-주고 같은 셸에서 서버를 띄운다(그 폴더에만 쓴다).
+자동 테스트는 실제 로그인을 하지 않는다. 아래는 사람이 자기 계정으로 확인하는 순서다. 로그인은 앱 workspace의 앱 전용
+폴더(`<앱 workspace>/.state/claude`)에만 쓰이고 `~/.claude`는 바뀌지 않는다.
 
 ```bash
-export CLAUDE_CONFIG_DIR=$HOME/.cache/agent-console-login-smoke   # 선택: 실제 ~/.claude 대신
-mkdir -p "$CLAUDE_CONFIG_DIR"
-claude auth logout || true              # 시작 상태: 로그아웃(위 폴더를 쓰면 이미 비어 있다)
-uv run agent-console serve --open       # 127.0.0.1:8765
+uv run agent-console serve --open       # 127.0.0.1:8765, 작업 폴더 = 설정 파일 폴더
 ```
 
-1. 로그아웃 상태에서 설정 › 실행 백엔드의 Claude Agent SDK 카드가 "구독 로그인 정보를 찾지 못함"이고 **[구독으로
-   로그인]**이 보인다 → 누르면 시작 확인 창(본인 책임 안내, 쓰기 경로 = `$CLAUDE_CONFIG_DIR/.credentials.json` 또는
-   `~/.claude/.credentials.json`)이 뜬다. 이때 `ps -ef | grep "auth login"`에 하위 프로세스가 없다.
+1. 처음에는 설정 › 실행 백엔드의 Claude Agent SDK 카드가 "로그인 필요"와 자격 위치(`.state/claude`)를 보이고
+   **[구독으로 로그인]**이 보인다 → 누르면 시작 확인 창(본인 책임 안내, 쓰기 경로 =
+   `.state/claude/.credentials.json`)이 뜬다. 이때 `ps -ef | grep "auth login"`에 하위 프로세스가 없다.
 2. [로그인 시작] → 브라우저 창이 열리거나 [로그인 페이지 열기]로 연다 → 브라우저에서 로그인한다. WSL처럼 콜백이 닿지
    않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
-3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서 같은 `CLAUDE_CONFIG_DIR`로 `claude auth status; echo $?`
+3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서
+   `CLAUDE_CONFIG_DIR=<앱 workspace>/.state/claude claude auth status; echo $?`
    → JSON의 `authMethod`가 `claude.ai`이고 종료 코드 0이다.
 4. 대화상자를 [닫기]로 닫고 카드의 [연결 테스트]를 누르면 통과한다(짧은 요청 한 번, 구독 사용량이 조금 든다).
 5. 다시 [구독으로 로그인] → 진행 중에 [취소]를 누르면 "취소했습니다"이고 `ps`에 `auth login`이 남지 않는다. 시간
    초과는 설정 `modules.options.mod-runs.backend_login.timeout_s: 30`으로 줄여 두고 30초 기다려 확인한다(프로세스가
    남지 않는다).
-6. 카드의 `…` › 로그아웃(연결 해제) → 확인 → 카드가 다시 "구독 로그인 정보를 찾지 못함"(`subscription_unverified`)
+6. 카드의 `…` › 로그아웃(연결 해제) → 확인 → 카드가 다시 "로그인 필요"(`subscription_login_required`)
    이고 `claude auth status` 종료 코드가 1이다.
 
 화면 문구가 맞지 않으면(CLI 버전 변화) 대화상자의 "CLI 화면 보기"로 화면을 보고 `login.rules`를 고친다. 판정은
@@ -413,7 +470,7 @@ overage_status}`. 값을 지어내지 않는다(없으면 null).
 
 ## 설치자 설정 (`ConfigurableBackend` 훅)
 
-`ClaudeSdkBackend.from_options(options, *, secrets, environ)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
+`ClaudeSdkBackend.from_options(options, *, secrets, environ, host=None)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
 `backends.claude-agent-sdk`를 이 훅에 넘겨 entry point로(인자 없이) 만든 인스턴스를 교체한다. 키의 의미는 이 패키지만 안다.
 
 | 키 | 기본 | 의미 |
@@ -427,6 +484,7 @@ overage_status}`. 값을 지어내지 않는다(없으면 null).
 | `allow_subscription_auth` | `true` | 본인 구독 로그인 자격(`auth.mode=subscription`) 허용(기본 구독, 본인 책임 — API 키도 선택 가능). `false`로 끄면 검증 error `backend.subscription_auth_disabled`·실행 거부, 켜져 있으면 강화된 경고(§인증) |
 | `hook_probe_command` | `null`(= `[현재 파이썬, -m, agent_console_hook_probe]`) | `observe.hook_probe`일 때 hook 명령을 감쌀 probe 실행 인자(아래 "hook probe 감싸기") |
 | `hook_probe_folder` | `hook-probe` | 노드 실행 폴더 아래 기록 폴더 이름(경로 구분자 없는 이름) |
+| `auth_dir` | `ClaudeSdkAuthDirOptions()`(`.state/claude`, 앱 workspace 기준) | 앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR`, §인증 "앱 전용 자격 폴더") |
 | `login` | `ClaudeSdkLoginOptions()`(켜짐) | 앱 화면 구독 로그인·로그아웃(§인증 "구독 로그인") |
 | `readiness` | `ClaudeSdkReadinessOptions()` | 상태 점검·연결 테스트가 볼 인증 방식(`auth`), `cli_path`, `subscription_files`, `probe_prompt`·`probe_model`·`probe_extra_args`, 문구 `texts`(§인증 "상태 점검과 연결 테스트") |
 

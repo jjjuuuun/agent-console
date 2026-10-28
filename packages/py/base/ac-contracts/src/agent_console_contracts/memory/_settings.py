@@ -13,13 +13,13 @@
 import json
 from functools import cache
 from importlib.resources import files
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from pydantic import ConfigDict, Field
 
 from agent_console_contracts._base import DefinitionModel, NonEmptyStr, Slug
-from agent_console_contracts.common import x_ui
-from agent_console_contracts.runs import ConditionSpec
+from agent_console_contracts.common import JsonPointer, x_ui
+from agent_console_contracts.runs import ConditionItem, ConditionSpec
 
 _DEFAULTS_FILE = "memory_access_defaults.json"
 
@@ -33,6 +33,36 @@ MemoryRetentionAction = Literal["archive", "delete"]
 """정리 규칙 동작: archive = 보관, delete = 표시 삭제(되돌릴 수 있음)."""
 
 _ACCESS_LABELS = {"read": "읽기", "search": "검색", "write": "쓰기", "delete": "지우기"}
+
+MEMORY_SCOPE_KINDS_WIDGET: Final = "memory-scope-kinds"
+"""설정 `scope_kinds` 필드의 화면 위젯 이름(`x-ui.widget`, 이름은 데이터 — 화면이 등록한다)."""
+
+MEMORY_RETENTION_RULES_WIDGET: Final = "memory-retention-rules"
+"""설정 `retention` 필드의 화면 위젯 이름(`x-ui.widget`)."""
+
+MEMORY_RETENTION_CONDITION_WIDGET: Final = "condition-list"
+"""정리 규칙 `when` 필드의 화면 위젯 이름(연결 조건과 같은 조건 목록 위젯)."""
+
+MEMORY_RETENTION_SUBJECT_PATHS: Final[tuple[str, ...]] = (
+    "/tags",
+    "/idle_days",
+    "/age_days",
+    "/last_read_days",
+    "/key",
+    "/scope/kind",
+    "/scope/id",
+    "/bytes",
+    "/version",
+    "/archived",
+    "/pinned",
+    "/author_kind",
+    "/created_by/kind",
+    "/updated_by/kind",
+)
+"""정리 규칙 조건이 볼 수 있는 판단 대상 경로 제안(스키마 `examples`, 화면 콤보박스).
+
+판단 대상 모양은 `ac-memory`의 `RETENTION_SUBJECT_FIELDS`가 정한다(최상위 키마다 경로 하나 이상 —
+`ac-memory` 테스트가 어긋남을 잡는다). 제안일 뿐 다른 경로도 쓸 수 있다."""
 
 
 @cache
@@ -240,6 +270,61 @@ class MemoryAccessConfig(DefinitionModel):
     )
 
 
+class MemoryRetentionConditionItem(ConditionItem):
+    """조건 하나입니다. 기록의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다."""
+
+    # 연결 조건 항목(`ConditionItem`)과 같은 모양이고 `path`의 설명·제안 경로(`examples`)만 정리
+    # 판단 대상(`MEMORY_RETENTION_SUBJECT_PATHS`)으로 바꾼다. 평가는 `ac-conditions` 그대로다.
+
+    model_config = ConfigDict(title="정리 조건 하나")
+
+    path: JsonPointer = Field(
+        title="볼 값",
+        description=(
+            "기록에서 비교할 값의 위치입니다(예: /tags, /idle_days 마지막 쓰기 뒤 지난 날, "
+            "/scope/kind 범위 종류)."
+        ),
+        json_schema_extra={
+            "examples": list(MEMORY_RETENTION_SUBJECT_PATHS),
+            **x_ui(
+                tier="basic",
+                when="태그·지난 날 수·범위 같은 다른 값을 보고 정리하고 싶을 때 바꾸세요.",
+                example="/idle_days",
+            ),
+        },
+    )
+
+
+class MemoryRetentionCondition(ConditionSpec):
+    """정리할 기록을 고르는 조건입니다.
+
+    '모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 합니다. 조건이 하나도 없으면 모든 기록이
+    맞으므로 규칙을 쓰지 않습니다. '결과 뒤집기'를 켜면 결과를 반대로 씁니다.
+    """
+
+    # `ConditionSpec`과 같은 모양(검사·평가 경로가 그대로 받는다)이고 항목만 정리 판단 대상 경로
+    # 제안이 붙은 `MemoryRetentionConditionItem`이다.
+
+    model_config = ConfigDict(title="정리 조건")
+
+    all: list[MemoryRetentionConditionItem] | None = Field(  # type: ignore[assignment]
+        default=None,
+        title="모두 참",
+        description="여기 적은 조건이 모두 맞는 기록만 정리합니다.",
+        json_schema_extra=x_ui(
+            tier="basic", when="여러 조건이 모두 맞는 기록만 정리하고 싶을 때 더하세요."
+        ),
+    )
+    any: list[MemoryRetentionConditionItem] | None = Field(  # type: ignore[assignment]
+        default=None,
+        title="하나라도 참",
+        description="여기 적은 조건 중 하나만 맞아도 정리합니다.",
+        json_schema_extra=x_ui(
+            tier="basic", when="조건 중 하나만 맞아도 정리하고 싶을 때 더하세요."
+        ),
+    )
+
+
 class MemoryRetentionRule(DefinitionModel):
     """조건에 맞는 오래된 기록을 보관하거나 지우는 규칙입니다. 고정한 기록은 건드리지 않습니다."""
 
@@ -258,11 +343,15 @@ class MemoryRetentionRule(DefinitionModel):
             example="stale-temp",
         ),
     )
-    when: ConditionSpec = Field(
+    when: MemoryRetentionCondition = Field(
         title="정리할 기록 조건",
         description="이 조건에 맞는 기록을 정리합니다. 예: 태그가 임시이고 30일 넘게 안 쓴 기록.",
         # 필드 라벨이 참조 모델 제목과 같으면 생성기가 라벨을 빼므로 다른 문구로 둔다.
-        json_schema_extra=x_ui(tier="basic", when="정리할 기록을 고르는 기준을 바꿀 때 고치세요."),
+        json_schema_extra=x_ui(
+            tier="basic",
+            when="정리할 기록을 고르는 기준을 바꿀 때 고치세요.",
+            widget=MEMORY_RETENTION_CONDITION_WIDGET,
+        ),
     )
     action: MemoryRetentionAction = Field(
         default="archive",
@@ -323,7 +412,11 @@ class MemorySettings(DefinitionModel):
         description="범위 종류 id마다 이름과 나누는 값을 둡니다. 같은 id면 바꾸고, 비우면 끕니다.",
         json_schema_extra={
             "default": {},
-            **x_ui(tier="basic", when="범위를 더하거나 기본 범위를 바꾸고 싶을 때 고치세요."),
+            **x_ui(
+                tier="basic",
+                when="범위를 더하거나 기본 범위를 바꾸고 싶을 때 고치세요.",
+                widget=MEMORY_SCOPE_KINDS_WIDGET,
+            ),
         },
     )
     secrets: MemorySecretPolicy = Field(
@@ -331,7 +424,7 @@ class MemorySettings(DefinitionModel):
         title="비밀 값 처리",
         description="기록에 비밀로 보이는 값이 있을 때 쓰기를 거부할지, 가리고 저장할지 고릅니다.",
         json_schema_extra=x_ui(
-            tier="advanced",
+            tier="basic",
             when="가린 채로라도 기록을 남기고 싶을 때 바꾸세요.",
             enum_labels={"reject": "거부", "redact": "가리고 저장"},
         ),
@@ -342,7 +435,7 @@ class MemorySettings(DefinitionModel):
         title="기록당 버전 보관 수",
         description="한 기록의 옛 버전을 몇 개까지 남길지 정합니다. 넘으면 오래된 것부터 지웁니다.",
         json_schema_extra=x_ui(
-            tier="advanced", when="저장 공간을 줄이거나 기록을 더 오래 남기고 싶을 때 바꾸세요."
+            tier="basic", when="저장 공간을 줄이거나 기록을 더 오래 남기고 싶을 때 바꾸세요."
         ),
     )
     retention: MemoryRetentionSettings = Field(
@@ -350,6 +443,8 @@ class MemorySettings(DefinitionModel):
         title="기록 정리",
         description="오래된 기록을 보관하거나 지우는 규칙입니다.",
         json_schema_extra=x_ui(
-            tier="basic", when="쌓인 기록을 자동으로 정리하고 싶을 때 고치세요."
+            tier="basic",
+            when="쌓인 기록을 자동으로 정리하고 싶을 때 고치세요.",
+            widget=MEMORY_RETENTION_RULES_WIDGET,
         ),
     )

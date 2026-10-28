@@ -27,7 +27,7 @@ from typing import Any, Literal
 from agent_console_contracts import CONTRACT_VERSIONS, Issue, KnownIssueCodes
 from agent_console_contracts.logs import LogSettings, LogTaxonomy
 from agent_console_contracts.modules import LogsIngestedPayload
-from agent_console_logs import LogRegistries, load_default_taxonomy
+from agent_console_logs import LogRegistries, ProjectFolders, load_default_taxonomy
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .errors import ERROR_MAP
@@ -39,6 +39,7 @@ from .ports import (
     LOGS_INGEST,
     LOGS_INGESTED,
     LOGS_QUERY,
+    PROJECT_FOLDERS,
     SECRET_RULES,
     SERVER_WARNINGS,
     SOURCE_DEFAULTS,
@@ -151,6 +152,7 @@ class LogsModule:
             SOURCE_DEFAULTS,
             LOG_SCOPE_KINDS,
             LOG_FILTER_PREDICATES,
+            PROJECT_FOLDERS,
         ),
         settings_schema=LogsModuleSettings,
         contracts={"logs": CONTRACT_VERSIONS["logs"]},
@@ -178,6 +180,21 @@ class LogsModule:
             # 다른 모듈이 정한 출처 기본 켜기(설정에 enabled가 없는 출처만, 설정 파일은 그대로)
             defaults = collect_source_defaults(ctx.ports(SOURCE_DEFAULTS))
             return apply_source_defaults(current, defaults)
+
+        def project_folders() -> ProjectFolders:
+            # 앱에 등록된 프로젝트 폴더만 수집한다. 포트가 없으면 등록된 프로젝트 없음(빈 범위).
+            reader = ctx.port(PROJECT_FOLDERS)
+            if reader is None:
+                return ProjectFolders()
+            try:
+                value = reader()
+                return ProjectFolders(
+                    current=tuple(Path(p) for p in value.current),
+                    registered=tuple(Path(p) for p in value.registered),
+                )
+            except Exception:  # 프로젝트를 읽지 못하면 이번 수집은 빈 범위
+                _log.exception("등록된 프로젝트 폴더를 읽지 못했습니다")
+                return ProjectFolders()
 
         redaction = LogRedaction(
             workspace=lambda: ctx.port(WORKSPACE_SETTINGS), rules=lambda: ctx.port(SECRET_RULES)
@@ -213,6 +230,7 @@ class LogsModule:
             base_taxonomy=base_taxonomy_of(cfg.base_taxonomy_file, base),
             scope_kinds=lambda: ctx.ports(LOG_SCOPE_KINDS),
             filter_predicates=lambda: ctx.ports(LOG_FILTER_PREDICATES),
+            projects=project_folders,
         )
         runtime_problems: list[Issue] = []
 

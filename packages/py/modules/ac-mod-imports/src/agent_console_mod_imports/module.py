@@ -29,7 +29,7 @@ from agent_console_registry import Registry
 
 from .ports import DEFINITIONS_STORE, SECRET_RULES
 from .routes import build_router
-from .settings import SETTINGS_COMPAT, ImportModuleSettings, resolve_home
+from .settings import SETTINGS_COMPAT, ImportModuleSettings
 
 MODULE_ID = "mod-imports"
 WEB_ROLES: tuple[str, ...] = ("imports",)
@@ -99,7 +99,6 @@ class ImportsModule:
         sources = build_import_sources(
             import_factories_of(ctx.registries),
             ImportSourceContext(
-                home=resolve_home(cfg.home, ctx.environ, base),
                 project_dir=project if project is not None else base,
                 options=cfg.options,
                 secret_rules=ctx.port(SECRET_RULES),

@@ -36,5 +36,24 @@
     "deleted": "deleted",
     "sort": "sort",
     "sortOrder": "order"
+  },
+  "runChips": {
+    "typePrefix": "memory.",
+    "write": {
+      "types": [
+        "write",
+        "delete"
+      ]
+    },
+    "read": {
+      "types": [
+        "read",
+        "search"
+      ],
+      "openPrefix": "memory.read"
+    },
+    "cap": 200,
+    "debounceMs": 1000,
+    "okStatus": "ok"
   }
 }

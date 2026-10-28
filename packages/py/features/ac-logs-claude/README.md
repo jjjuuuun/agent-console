@@ -14,6 +14,16 @@ Claude Code 세션 기록(서브에이전트 포함)을 `agent-console-logs`의 
 - `thinking` 본문(과 서명)은 어디에도 저장하지 않는다. "내부 추론 본문 생략" 표시만 남는다.
 - 비밀 의심 값 가림은 수집기(`LogIngestor(redact=...)`)가 저장 직전에 건다.
 - 서버·웹 없이 쓴다. `agent_console_logs.LogRegistries().load()`가 entry point로 찾는다.
+- **앱에서는 등록된 프로젝트 폴더의 세션만 읽는다**(5.7R.30 후속, 사용자 원칙 "기능은 앱이 만들거나 등록한 프로젝트에
+  대해서만"). 수집기가 `LogIngestor(projects=...)`로 `ProjectFolders`(현재·등록된 프로젝트 폴더)를 주면 이 출처의
+  `in_scope`가 `projects/<키>/…`의 키를 프로젝트 폴더 이름(`project_key`)과 맞춰 범위 밖 단위를 건너뛴다(메타 파일도
+  읽지 않는다). 등록된 프로젝트가 없으면 아무것도 읽지 않는다(홈 전체를 읽는 대체 동작 없음). `roots`를 직접 적어도
+  같은 필터가 걸린다. `projects`를 주지 않는 단독 사용은 예전처럼 루트 전체를 읽는다.
+- **기본으로 읽는 곳은 두 곳이다**(5.7R.30b, 사용자 결정 2026-10-28 "앱 하나에 로그인 하나"): (a) CLI 세션
+  `~/.claude/projects`(또는 `CLAUDE_CONFIG_DIR` 아래, 읽기 전용 — 앱이 `~/.claude`에서 읽는 유일한 예외), (b) 앱이
+  실행한 세션 `<앱 workspace>/.state/claude/projects`(앱 전용 구독 자격 폴더 아래, `workspace_roots`). 둘 다 같은 범위
+  필터(등록된 프로젝트 폴더 키)를 지난 것만 읽는다. 앱 workspace는 호스트 경로 `LogIngestor(paths={"workspace": …})`
+  로 받는다. 프로젝트(작업) 폴더 안은 읽지 않는다.
 
 ## 설치
 
@@ -73,7 +83,10 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 
 | 키 | 기본값 | 뜻 |
 | --- | --- | --- |
-| `roots` | `[]` | 읽을 `projects` 폴더 목록. 비면 아래 규칙 |
+| `project_scope` | `current` | 수집 범위: `current`(현재 프로젝트) / `registered`(등록된 프로젝트 전체). 설정 화면 기본 칸 |
+| `workspace_roots` | `[".state/claude/projects"]` | 앱 실행 세션 폴더(앱 workspace 기준 상대 경로, 절대 경로 가능 — 앱 전용 구독 자격 폴더 아래). `roots`가 비었을 때만. 백엔드 `auth_dir.config_dir`를 바꾸면 함께 바꾼다. 5.7R.30의 `project_roots`(프로젝트 안 상대 경로)는 스키마에 `deprecated`로만 남아 읽지 않는다(값이 있으면 앱이 정보 이슈 `logs.ignored_key`) |
+| `project_key_keep`·`project_key_replacement` | `""`·`-` | 작업 폴더 → `projects` 아래 폴더 이름 규칙(영문자·숫자·남길 글자 밖은 바꿈 글자로, 예: `/work/demo` → `-work-demo`). Claude Code가 문서로 정하지 않은 규칙이라 바뀌면 고친다 |
+| `roots` | `[]` | 읽을 `projects` 폴더 목록. 비면 아래 규칙(CLI 세션) + `workspace_roots`(앱 실행 세션). 적어도 범위 필터는 그대로 |
 | `config_dir_env`·`config_dir_subpath` | `CLAUDE_CONFIG_DIR`·`projects` | 주입된 환경에 이 변수가 있으면 그 아래 하위 경로 |
 | `default_root` | `~/.claude/projects` | 둘 다 없을 때(`~`는 주입된 `HOME`·`USERPROFILE`) |
 | `include` | `*/*.jsonl`, `*/*/subagents/**/agent-*.jsonl` | 루트 기준 글롭 |
@@ -81,6 +94,10 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | `subagents_dir`·`meta_suffix` | `subagents`·`.meta.json` | 서브에이전트 폴더·메타 파일 이름 |
 | `meta_fields` | `role=/agentType`, `description=/description`, `tool_use_id=/toolUseId` | 메타 JSON에서 꺼낼 값(JSON 포인터) |
 | `max_meta_bytes` | 65536 | 이보다 큰 메타 파일은 읽지 않음 |
+
+범위가 바뀌어 이미 색인된 범위 밖 기록이 있으면 수집기가 다음 수집 때 이 출처 색인을 비우고(커서 포함) 범위 안만
+처음부터 다시 읽는다(`LogIngestor.scope_purged`). 보존 기간(`retention_days`)은 그 뒤 수집·정리 주기에 그대로 걸린다.
+자격 파일(`.credentials.json`)은 포함 패턴(`*.jsonl`) 밖이라 열지 않는다.
 
 `SourceRef.meta`(분류기 맥락): `kind`(`session`·`subagent`), `project`, `session`, `thread`, 서브에이전트면
 `parent`·`role`·`description`·`tool_use_id`, 메인 세션이면 `subagents`(위임 호출 id → 서브에이전트 thread).
@@ -231,7 +248,8 @@ agent-console logs purge --config agent-console.yaml --source claude-code-jsonl 
 
 | 이름 | 용도 |
 | --- | --- |
-| `ClaudeCodeJsonlSource` | X5 출처(`JsonlFileSource` 상속, `default_roots`·`ref_meta`) |
+| `ClaudeCodeJsonlSource` | X5 출처(`JsonlFileSource` 상속, `default_roots`·`ref_meta`, 범위 `in_scope`·`allowed_keys`) |
+| `project_key(folder, keep=, replacement=)` | 작업 폴더 → Claude Code `projects` 아래 폴더 이름 |
 | `ClaudeCodeClassifier` | X6 분류기 |
 | `source_config_schema()`·`classifier_config_schema()` | 설정 스키마(기본값 포함, 사본) |
 | `compile_mcp_pattern(pattern)`·`McpPatternError` | MCP 이름 틀 → 매처(자리 표시 검사) |

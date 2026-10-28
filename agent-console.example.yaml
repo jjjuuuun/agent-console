@@ -43,8 +43,7 @@ modules:
       max_per_definition: null     # 정의마다 남길 버전 수(null = 모두). 예: 50
     mod-definitions:
       max_content_bytes: 10485760  # 정의 하나(리소스 등)의 본문 총량 한도(바이트, null = 무제한)
-    mod-imports:                   # 가져오기(~/.claude·프로젝트 .claude/ 복사, 원본은 읽기만)
-      home: null                   # 사용자 홈(~/.claude의 부모). 비우면 HOME·USERPROFILE
+    mod-imports:                   # 가져오기(프로젝트 .claude/ 복사, 원본은 읽기만. 사용자 전역 ~/.claude는 가져오지 않음)
       project_dir: null            # 프로젝트 폴더(.claude/·.mcp.json). 비우면 이 파일 폴더(작업 폴더를 따라가지 않는다)
     mod-runs:                      # 실행 엔진·기록
       working_directory: null      # 에이전트 작업 폴더(비우면 이 파일 폴더). 환경변수 AGENT_CONSOLE_WORKING_DIRECTORY
@@ -107,4 +106,4 @@ web:
   open:
     enabled: false             # 준비되면 웹 화면을 연다. 명령행 serve --open/--no-open이 덮어쓴다
     url: null                  # 비우면 serve_static일 때 서버 주소. {host}·{port} 자리 사용 가능
-    command: null              # 예: [msedge, "--app={url}"](설치한 PWA 창), WSL [explorer.exe, "{url}"]
+    command: null              # 예: [msedge, "--app={url}"](설치한 PWA 창)

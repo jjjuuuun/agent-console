@@ -70,6 +70,13 @@ describe("MemoryScopeTree (수용 기준 2·3)", () => {
     rerender(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={() => undefined} />);
     expect(screen.queryByText("삭제됨")).toBeNull();
   });
+  it("같은 종류의 범위가 전부 삭제됨이면 종류 행에만 한 번 표시", () => {
+    render(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={() => undefined} resolvers={{ graph_id: () => ({ status: "deleted" }) }} />);
+    const row = screen.getByRole("treeitem", { name: /^g1, 항목 60개/ });
+    expect(row.textContent).not.toContain("삭제됨");
+    expect(screen.getByRole("treeitem", { name: /^책상, 항목 88개/ }).textContent).toContain("삭제됨");
+    expect(screen.getByRole("treeitem", { name: /^책상, 항목 88개, 삭제됨/ })).toBeTruthy();
+  });
   it("접기·키보드·숨김 줄·메뉴", () => {
     const onShowHidden = vi.fn();
     const onNewIn = vi.fn();
@@ -200,6 +207,17 @@ describe("RetentionPreview (수용 기준 26)", () => {
     expect(screen.getByText("처음 200개만 보입니다. 외 300개")).toBeTruthy();
     expect(screen.getAllByRole("row").length).toBeLessThan(40);
     expect(screen.getAllByText("3일 전").length).toBeGreaterThan(0);
+  });
+  it("detailOf·excludedPinned를 생략하면 계획 항목의 updated_at·bytes와 계획의 excluded_pinned를 쓴다(5.7R.28)", () => {
+    const one = samplePlan(1);
+    const item = { ...one.items![0]!, updated_at: SAMPLE_NOW - 2 * 86_400, bytes: 512 };
+    const { unmount } = render(<RetentionPreview {...base} plan={{ ...one, items: [item], excluded_pinned: 3 }} />);
+    expect(screen.getByText(/고정 3개 제외/)).toBeTruthy();
+    expect(screen.getByText("2일 전")).toBeTruthy();
+    expect(screen.getByText("512 B")).toBeTruthy();
+    unmount();
+    render(<RetentionPreview {...base} plan={{ ...one, excluded_pinned: 0 }} />);
+    expect(screen.queryByText(/고정 \d+개 제외/)).toBeNull();
   });
   it("[지금 적용]은 canApply일 때만, 꺼진 이유를 보인다", () => {
     const onApply = vi.fn();

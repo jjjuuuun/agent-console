@@ -237,6 +237,7 @@
 
 /* ===== 4. 간격·반경·크기·모션·z-index ===== */
 :root {
+  --ac-scroll-cue-height: 16px;
   --ac-space-1: 4px;
   --ac-space-2: 8px;
   --ac-space-3: 12px;

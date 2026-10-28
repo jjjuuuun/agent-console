@@ -4,7 +4,7 @@ import { formatBytes, formatRelativeTime, formatTimestamp } from "./format";
 import { useNowSeconds, useVirtualRows } from "./hooks";
 import { formatMessage, messageOr, resolveMessages } from "./messages";
 
-/** 계획 항목에 덧붙일 표시 정보(계약의 계획 항목에는 크기·마지막 쓰기가 없어 앱이 목록 질의로 채운다). */
+/** 계획 항목의 표시 정보(마지막 쓰기·크기). 계약 계획 항목에 같은 필드가 있어 기본은 항목 값을 쓴다. */
 export interface RetentionItemDetail {
   updated_at?: number | null;
   bytes?: number | null;
@@ -22,7 +22,7 @@ export interface RetentionPreviewProps {
   error?: boolean;
   /** 미리보기를 한 시각(Unix epoch 초). */
   previewedAt?: number | null;
-  /** 서버가 고정으로 제외된 수를 주면 넘긴다(안 주면 문구가 없다). */
+  /** 고정으로 제외된 수. 생략하면 계획의 `excluded_pinned`(0이면 문구가 없다), null이면 문구를 숨긴다. */
   excludedPinned?: number | null;
   onPreview: () => void;
   /** [지금 적용]. 확인 창은 앱이 띄운다(미리보기 수를 그 창에 쓸 수 있다). */
@@ -36,7 +36,7 @@ export interface RetentionPreviewProps {
   resultAt?: number | null;
   /** 범위 라벨 글. */
   scopeText?: (scope: MemoryScopeRef) => string;
-  /** 항목 id → 마지막 쓰기·크기. 없으면 "–". */
+  /** 항목 → 마지막 쓰기·크기. 생략하면 계획 항목의 `updated_at`·`bytes`, 값이 없으면 "–". */
   detailOf?: (item: MemoryRetentionPlanItem) => RetentionItemDetail | undefined;
   now?: number;
   maxRows?: number;
@@ -46,7 +46,7 @@ export interface RetentionPreviewProps {
 
 /** 정리 미리보기: 대상 요약 + 가상 표(규칙·동작·범위·키·마지막 쓰기·크기) + [지금 적용]. 호출·확인은 앱이 한다. */
 export function RetentionPreview({
-  plan, ruleCount, loading = false, error = false, previewedAt, excludedPinned = null, onPreview, onApply, canApply = false, applyBlockedReason = null, result = null, resultAt,
+  plan, ruleCount, loading = false, error = false, previewedAt, excludedPinned, onPreview, onApply, canApply = false, applyBlockedReason = null, result = null, resultAt,
   scopeText, detailOf, now, maxRows = RETENTION_MAX_ROWS, messages: custom, className,
 }: RetentionPreviewProps) {
   const m = resolveMessages(custom);
@@ -61,6 +61,7 @@ export function RetentionPreview({
   const rest = plan ? Math.max(0, count - items.length) : 0;
   const scopeName = (s: MemoryScopeRef) => scopeText?.(s) ?? `${s.kind}:${s.id ?? ""}`;
   const hasRules = ruleCount > 0;
+  const pinnedOut = excludedPinned !== undefined ? excludedPinned : plan?.excluded_pinned ? plan.excluded_pinned : null;
 
   return (
     <div className={`ac-mem-root ac-mem-retention${className ? ` ${className}` : ""}`}>
@@ -81,7 +82,7 @@ export function RetentionPreview({
         <>
           <p className="ac-mem-retention-summary">
             {formatMessage(m["retention.summary"] as string, { n: count, a: archives, d: deletes })}
-            {excludedPinned !== null ? <span className="ac-mem-muted"> ({formatMessage(m["retention.excludedPinned"] as string, { p: excludedPinned })})</span> : null}
+            {pinnedOut !== null ? <span className="ac-mem-muted"> ({formatMessage(m["retention.excludedPinned"] as string, { p: pinnedOut })})</span> : null}
           </p>
           {items.length === 0 ? (
             <p className="ac-mem-empty">{m["retention.none"]}</p>
@@ -100,7 +101,7 @@ export function RetentionPreview({
                   {virtual.getVirtualItems().map((vi) => {
                     const it = items[vi.index];
                     if (!it) return null;
-                    const detail = detailOf?.(it);
+                    const detail: RetentionItemDetail = detailOf ? detailOf(it) ?? {} : it;
                     const action = messageOr(m, `retention.action.${it.action}`, it.action);
                     return (
                       <div key={`${it.entry_id}:${it.version}`} role="row" aria-rowindex={vi.index + 2} className="ac-mem-tr" style={{ height: vi.size, transform: `translateY(${vi.start}px)` }}>
@@ -112,10 +113,10 @@ export function RetentionPreview({
                         </div>
                         <div role="cell" className="ac-mem-td ac-ellipsis" title={scopeName(it.scope)}>{scopeName(it.scope)}</div>
                         <div role="cell" className="ac-mem-td ac-ellipsis" title={it.key}>{it.key}</div>
-                        <div role="cell" className="ac-mem-td ac-mem-num" data-align="right" title={detail?.updated_at ? formatTimestamp(detail.updated_at) : undefined}>
-                          {detail?.updated_at ? formatRelativeTime(detail.updated_at, nowSec, m) : m["time.never"]}
+                        <div role="cell" className="ac-mem-td ac-mem-num" data-align="right" title={detail.updated_at ? formatTimestamp(detail.updated_at) : undefined}>
+                          {detail.updated_at ? formatRelativeTime(detail.updated_at, nowSec, m) : m["time.never"]}
                         </div>
-                        <div role="cell" className="ac-mem-td ac-mem-num" data-align="right">{detail?.bytes !== null && detail?.bytes !== undefined ? formatBytes(detail.bytes, m) : m["time.never"]}</div>
+                        <div role="cell" className="ac-mem-td ac-mem-num" data-align="right">{detail.bytes !== null && detail.bytes !== undefined ? formatBytes(detail.bytes, m) : m["time.never"]}</div>
                       </div>
                     );
                   })}

@@ -20,13 +20,17 @@
 .usage-ind-value { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; color: var(--ac-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .usage-ind-value[data-empty="true"] { color: var(--ac-text-muted); font-weight: 400; }
 .usage-ind-tone { margin-left: 2px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--usage-ind-tone, var(--ac-text)); }
+/* 사이드바 단순 항목: 제목·값 / 막대 / 초기화 시각을 세로로 쌓는다(좁은 폭에서 읽기 좋게). 항목 사이는 링크 gap이 띄운다 */
+.usage-ind-simple { gap: 3px; }
+.usage-ind-simple .usage-ind-head { align-items: center; }
+.usage-ind-simple .usage-ind-label { min-width: 0; font-weight: var(--ac-fw-strong); color: var(--ac-text); }
+.usage-ind-simple .usage-ind-value { font-weight: 400; color: var(--ac-text-muted); }
+.usage-ind[data-layout="block"] .usage-ind-link { gap: var(--ac-space-3); }
 .usage-ind-sub { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 .usage-ind .ac-gauge { height: var(--ac-usage-ind-gauge-h); }
 .usage-ind .ac-gauge[data-no-value="true"] { min-height: var(--ac-usage-ind-gauge-h); height: var(--ac-usage-ind-gauge-h); padding: 0; background: transparent; border: 1px dashed var(--ac-border-strong); }
 /* 추정 값: 채움 색은 그대로, 막대 끝에 점선 테두리 */
 .usage-ind-bar[data-approx="true"] .ac-gauge { border-style: dotted; border-color: var(--ac-border-strong); }
-.usage-ind-setup { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
-.usage-ind-setup-link { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-accent); white-space: nowrap; }
 .usage-ind-item[data-stale="true"] .ac-gauge { opacity: 0.6; }
 .usage-ind-msg { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
 .usage-ind-skeleton { height: 30px; }
@@ -62,9 +66,6 @@
 .usage-ind-pop-head, .usage-ind-pop-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }
 .usage-ind-pop-item { display: flex; flex-direction: column; gap: 4px; padding-bottom: var(--ac-space-2); border-bottom: 1px solid var(--ac-border); }
 .usage-ind-pop-line { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
-.usage-ind-pop-flag { color: var(--ac-warning); }
-.usage-ind-pop-foot { padding-top: var(--ac-space-1); }
-.usage-ind-source { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 
 /* 설정 화면 미리보기·편집기 */
 .usage-ind-preview { display: flex; gap: var(--ac-space-4); align-items: flex-start; flex-wrap: wrap; }

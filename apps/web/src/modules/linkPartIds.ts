@@ -21,4 +21,5 @@ export const LINK_PART_IDS = {
   teamsDraftPreview: "teams.draft-preview",
   teamsConditionOperators: "teams.condition-operators",
   runsTraceChildGroups: "runs.trace-child-groups",
+  runsMemoryChips: "runs.memory-chips",
 } as const;

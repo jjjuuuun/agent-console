@@ -90,6 +90,12 @@ source_modules = ["agent_console_projects"]
 forbidden_modules = ["@all", "!agent_console_projects", "!agent_console_contracts"]
 
 [[contracts]]
+name = "local-folders는 다른 agent_console 패키지에 의존하지 않는다 (표준 라이브러리만, 파일 시스템은 주입, design §PI.10)"
+type = "forbidden"
+source_modules = ["agent_console_local_folders"]
+forbidden_modules = ["@all", "!agent_console_local_folders"]
+
+[[contracts]]
 name = "safe-regex는 다른 agent_console 패키지에 의존하지 않는다"
 type = "forbidden"
 source_modules = ["agent_console_safe_regex"]

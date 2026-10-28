@@ -6,7 +6,8 @@
 공개 API:
     - ``module``(``ImportsModule``): entry point ``agent_console.server_modules``의 ``mod-imports``.
     - ``build_router``: FastAPI 라우터(접두 없음).
-    - ``ImportModuleSettings``·``resolve_home``: 설치자 설정(``modules.options.mod-imports``).
+    - ``ImportModuleSettings``: 설치자 설정(``modules.options.mod-imports``). 출처는 프로젝트
+      폴더 안뿐이다(사용자 ``~/.claude`` 없음, 5.7R.30b).
     - ``import_factories_of``·``import_error_reply``: 출처 공장 레지스트리 찾기·오류 변환.
     - 포트: ``DEFINITIONS_STORE``(필수)·``SECRET_RULES``(선택).
     - ``testing.local_definitions_module``: 단독 실행·테스트용 ``definitions.store`` 제공 모듈.
@@ -24,11 +25,11 @@ from .module import (
 )
 from .ports import DEFINITIONS_STORE, SECRET_RULES, SecretRulesReader
 from .routes import build_router
-from .settings import HOME_ENV_NAMES, ImportModuleSettings, resolve_home
+from .settings import HOME_REMOVED_REASON, ImportModuleSettings
 
 __all__ = [
     "DEFINITIONS_STORE",
-    "HOME_ENV_NAMES",
+    "HOME_REMOVED_REASON",
     "MODULE_ID",
     "SECRET_RULES",
     "WEB_ROLES",
@@ -39,5 +40,4 @@ __all__ = [
     "import_error_reply",
     "import_factories_of",
     "module",
-    "resolve_home",
 ]

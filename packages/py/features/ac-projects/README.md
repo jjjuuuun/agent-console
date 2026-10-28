@@ -24,6 +24,7 @@
 | `scope_issues(defs, projects, *, references, messages=None)` | 범위 이슈 목록(`Issue`) |
 | `move_plan(target, to, defs, *, references, projects=None)` | 옮기기 계획(`MovePlan`). P 전용 → 공용이면 참조 닫힘의 P 전용 정의를 `required=False`로 함께 |
 | `delete_plan(project_id, defs)` | 프로젝트 삭제 때 영향받는 정의(`DeletePlan`) |
+| `project_folders(projects, *, working_directory)` | 등록된 프로젝트 → 폴더 묶음 `ProjectFolderSet(current, registered)`(작업 폴더 없는 프로젝트 = 앱 작업 폴더, 현재 = 앱 작업 폴더와 같은 폴더의 프로젝트). 로그 수집 범위 등 "앱의 프로젝트 폴더만" 다루는 기능이 쓴다 |
 | `suggest_log_projects(project, log_projects, *, working_directory=None)` | 작업 폴더와 같은 경로(또는 아래)의 로그 묶음 id 제안. 연결은 하지 않음 |
 | `log_paths_from_sessions(sessions)` | 로그 세션 요약 → 묶음 id별 경로 |
 | `project_layer_value(project)` | 프로젝트 층 값(`settings`의 지정한 필드 + `working_directory`) |

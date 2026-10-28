@@ -43,8 +43,9 @@ def test_import_does_not_follow_file_symlink_out_of_claude_dir(tmp_path: Path) -
     outside.write_text(OUTSIDE_MARK, encoding="utf-8")
     (home / ".claude" / "CLAUDE.md").symlink_to(outside)
     (home / ".claude" / "agents" / "evil.md").symlink_to(outside)
-    with server(make_settings(tmp_path), environ={"HOME": str(home)}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "user-claude"})
+    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(home)}})
+    with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
+        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
         candidates = preview.json()["candidates"]
         assert candidates == []  # 링크는 후보가 되지 않아야 한다
         assert OUTSIDE_MARK not in json.dumps(candidates)
@@ -84,19 +85,16 @@ def test_import_blocks_linked_dirs_project_file_and_nested_escape(tmp_path: Path
     outside_dir = tmp_path / "outside"
     outside_dir.mkdir()
     (outside_dir / "a.md").write_text(OUTSIDE_MARK, encoding="utf-8")
-    home = tmp_path / "home"
-    (home / ".claude" / "rules").mkdir(parents=True)
-    (home / ".claude" / "rules" / "sub").symlink_to(outside_dir)
     project = tmp_path / "proj"
-    (project / ".claude").mkdir(parents=True)
+    (project / ".claude" / "rules").mkdir(parents=True)
+    (project / ".claude" / "rules" / "sub").symlink_to(outside_dir)
     (project / ".claude" / "agents").symlink_to(outside_dir)
     (project / "CLAUDE.md").symlink_to(outside_dir / "a.md")
     settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
-    with server(settings, environ={"HOME": str(home)}) as client:
-        for source in ("user-claude", "project-claude"):
-            preview = client.post(f"{API}/resources/import/preview", json={"source": source})
-            assert preview.json()["candidates"] == []
-            assert OUTSIDE_MARK not in preview.text
+    with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
+        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        assert preview.json()["candidates"] == []
+        assert OUTSIDE_MARK not in preview.text
 
 
 def test_import_allows_linked_root_but_not_escape_below_it(tmp_path: Path) -> None:
@@ -106,11 +104,12 @@ def test_import_allows_linked_root_but_not_escape_below_it(tmp_path: Path) -> No
     outside = tmp_path / "o.md"
     outside.write_text(OUTSIDE_MARK, encoding="utf-8")
     (real / "agents" / "bad.md").symlink_to(outside)
-    home = tmp_path / "home"
-    home.mkdir()
-    (home / ".claude").symlink_to(real)
-    with server(make_settings(tmp_path), environ={"HOME": str(home)}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "user-claude"})
+    project = tmp_path / "proj"
+    project.mkdir()
+    (project / ".claude").symlink_to(real)
+    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
+        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
         names = [c["name"] for c in preview.json()["candidates"]]
         assert names == ["ok"]
 

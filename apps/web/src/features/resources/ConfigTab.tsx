@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { useConfigWidgets } from "../../app/ConfigWidgets";
 import { SchemaForm, type FormError } from "@agent-console/schema-form";
 import { STRING_TAGS_FIELD, StringTagsField } from "../settings";
-import { buildConfigUi } from "./configUi";
+import { buildConfigUi, withEnumArraysUnique } from "./configUi";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Banner } from "@agent-console/ui";
 import { resourceMessages as t } from "./messages";
@@ -19,12 +20,13 @@ export interface ConfigTabProps {
 
 /** 종류의 `config_schema`·`ui_schema`로 그리는 설정 폼. 출처 배지는 없다(리소스는 층 병합 대상이 아니다). */
 export function ConfigTab({ descriptor, value, onChange, errors, disabled }: ConfigTabProps) {
-  const schema = descriptor.config_schema;
+  const schema = useMemo(() => (descriptor.config_schema === undefined ? undefined : withEnumArraysUnique(descriptor.config_schema)), [descriptor.config_schema]);
   const hasFields = useMemo(() => {
     const props = schema?.["properties"];
     return typeof props === "object" && props !== null && Object.keys(props).length > 0;
   }, [schema]);
-  const ui = useMemo(() => buildConfigUi(schema, descriptor.ui_schema as Record<string, unknown> | undefined), [schema, descriptor.ui_schema]);
+  const widgets = useConfigWidgets();
+  const ui = useMemo(() => buildConfigUi(schema, descriptor.ui_schema as Record<string, unknown> | undefined, new Set(Object.keys(widgets))), [schema, descriptor.ui_schema, widgets]);
   const secretFields = useMemo(() => secretFieldsOf(schema), [schema]);
   if (schema === undefined || !hasFields) return <p className="app-muted">{t.config.empty}</p>;
   const plain = plainSecretPaths(value, secretFields);
@@ -45,6 +47,7 @@ export function ConfigTab({ descriptor, value, onChange, errors, disabled }: Con
       schema={schema}
       uiSchema={ui}
       customFields={FIELDS}
+      customWidgets={widgets}
       value={value}
       onChange={(next) => onChange((next ?? {}) as Record<string, unknown>)}
       errors={[...(errors ?? []), ...warnings.filter((w) => !(errors ?? []).some((e) => e.path === w.path))]}

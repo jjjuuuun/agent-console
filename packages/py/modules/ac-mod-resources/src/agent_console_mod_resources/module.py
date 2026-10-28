@@ -1,6 +1,8 @@
 """서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-resources``, design §3R.1.3).
 
-- 필수: ``definitions.store``. 선택: ``definitions.usages``(목록 ``usage_count``, 없으면 null).
+- 필수: ``definitions.store``. 선택: ``definitions.usages``(목록 ``usage_count``, 없으면 null),
+  ``definitions.checks``(여러 제공자 — 만들기·저장 때 error 422, warning·info는
+  ``X-Console-Issues`` 헤더).
 - 제공: ``resources.lookup``(정의·본문·여러 파일 조회), ``resources.types``(종류 레지스트리).
 - 종류 레지스트리: 호스트 기본 서비스 ``registries``의 ``resource_types`` 확장(호스트가 플러그인 +
   선언형을 로드). 호스트가 주지 않으면(단독 실행) entry point와 워크스페이스 선언형 폴더를 읽는다.
@@ -16,7 +18,13 @@ from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .errors import ERROR_MAP
 from .lookup import StoreResources, resource_types_of
-from .ports import DEFINITION_USAGES, DEFINITIONS_STORE, RESOURCE_TYPES, RESOURCES_LOOKUP
+from .ports import (
+    DEFINITION_CHECKS,
+    DEFINITION_USAGES,
+    DEFINITIONS_STORE,
+    RESOURCE_TYPES,
+    RESOURCES_LOOKUP,
+)
 from .routes import build_router
 from .service import ResourceService
 from .settings import ResourceModuleSettings
@@ -44,7 +52,7 @@ class ResourcesModule:
         description="리소스 라이브러리 CRUD·본문·여러 파일, 리소스 종류·병합 전략 목록",
         provides=(RESOURCES_LOOKUP, RESOURCE_TYPES),
         requires=(DEFINITIONS_STORE,),
-        optional=(DEFINITION_USAGES,),
+        optional=(DEFINITION_USAGES, DEFINITION_CHECKS),
         settings_schema=ResourceModuleSettings,
         contracts={"resources": CONTRACT_VERSIONS["resources"]},
         web_roles=WEB_ROLES,
@@ -66,6 +74,7 @@ class ResourcesModule:
             content_files=cfg.content_files,
             default_content_file=cfg.default_content_file,
             reserved_file_names=cfg.reserved_file_names,
+            checks=lambda: ctx.ports(DEFINITION_CHECKS),
         )
         ctx.provide(RESOURCES_LOOKUP, StoreResources(store))
         ctx.provide(RESOURCE_TYPES, types)

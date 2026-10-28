@@ -20,6 +20,7 @@ export const logsMessages = {
   scanDone: (n: number) => `새 이벤트 ${n.toLocaleString("ko-KR")}개를 수집했습니다`,
   scanPartial: (title: string, rest: number) => `일부 출처에서 오류가 났습니다 (${title}${rest > 0 ? ` 외 ${rest}` : ""})`,
   scanFailed: "수집을 시작하지 못했습니다",
+  noProjects: "프로젝트를 먼저 만들거나 등록하세요. 로그는 등록된 프로젝트 폴더의 기록만 수집합니다.",
   openSourceStatus: "출처 상태 보기",
   loading: "불러오는 중…",
   loadFailed: "로그를 불러오지 못했습니다",
@@ -57,9 +58,6 @@ export const logsMessages = {
     unknownError: "서버가 이 필터를 받아들이지 않았습니다",
     columns: "열",
     columnsLabel: "표시할 열",
-    timeMode: "시각 표기 전환",
-    timeRelative: "상대 시각",
-    timeAbsolute: "절대 시각",
   },
   first: {
     title: "아직 켜진 로그 출처가 없습니다",

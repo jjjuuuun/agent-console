@@ -49,6 +49,8 @@ import "./runs.css";
 // 세션 로그 탭은 로그 기능의 공개 API이며, 탭을 열 때만 내려받는다.
 const SessionLogsTab = lazy(() => import("../logs").then((m) => ({ default: m.RunSessionLogsTab })));
 const ArchitectureTab = lazy(() => import("../logs").then((m) => ({ default: m.RunArchitectureTab })));
+// 요약 줄의 메모리 칩은 메모리-실행 연동이 있을 때만 내려받는다.
+const MemoryChips = lazy(() => import("../memory").then((m) => ({ default: m.RunMemoryChips })));
 
 /** 검사 패널 탭 순서(Alt+번호). 이 목록이 탭 id의 유일한 원천이다. */
 export const INSPECTOR_TABS = ["trace", "agents", "observe", "interactions", "node", "logs", "architecture"] as const;
@@ -61,6 +63,9 @@ const LOGS_TAB: InspectorTab = INSPECTOR_TABS[5];
 const OBSERVE_TAB: InspectorTab = INSPECTOR_TABS[2];
 /** 구조도 탭(마지막). 로그 구조도와 로그-실행 연동 역할이 모두 있을 때만 있다. */
 const ARCH_TAB: InspectorTab = INSPECTOR_TABS[6];
+
+/** 이벤트 탭의 type 접두 필터를 주소에 싣는 인자 이름 */
+const TYPE_PREFIX_PARAM = "type_prefix";
 
 const TERMINAL_NODE_STATUSES = ["succeeded", "failed", "skipped", "cancelled"];
 
@@ -80,6 +85,7 @@ export function RunDetailScreen() {
   const flowPart = useLinkPart(LINK_PART_IDS.runsFlowTab);
   const logsPart = useLinkPart(LINK_PART_IDS.logsRunsTab);
   const archPart = useLinkPart(LINK_PART_IDS.runsArchitectureTab);
+  const memoryPart = useLinkPart(LINK_PART_IDS.runsMemoryChips);
   const view = useRunView(id, { trace: flowPart.visible });
   const observe = useObservePrefixes();
   const tabIds = useMemo(
@@ -634,6 +640,8 @@ export function RunDetailScreen() {
         onRetry={view.reloadEvents}
         actors={agentActors}
         onActorsChange={(next) => setParam({ actor: next.join(",") })}
+        typePrefix={params.get(TYPE_PREFIX_PARAM) ?? ""}
+        onTypePrefixChange={(next) => setParam({ [TYPE_PREFIX_PARAM]: next === "" ? null : next })}
         agentName={lookups.agentName}
         isSubagent={(a) => subagentActors.has(a)}
         startedAt={firstTs}
@@ -739,6 +747,15 @@ export function RunDetailScreen() {
         cancelling={cancelBusy}
         disconnected={connection === "reconnecting" || connection === "closed"}
         idleSeconds={idleSeconds}
+        {...(memoryPart.visible
+          ? {
+              extra: (
+                <Suspense fallback={null}>
+                  <MemoryChips runId={id} active={active} onOpenReads={(typePrefix) => setParam({ tab: "agents", [TYPE_PREFIX_PARAM]: typePrefix })} />
+                </Suspense>
+              ),
+            }
+          : {})}
         {...(tree.isChild && tree.chain.length > 1
           ? {
               breadcrumb: (

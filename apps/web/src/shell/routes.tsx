@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation, type RouteObject } from "react-router";
 import { lookupMessage } from "../app/messages";
 import { useGraphList } from "../features/library";
+import { ARCH_POPOUT } from "../features/architecture";
 import { ROUTE_ROLES } from "../features/library/paths";
 import { PROJECTS_SECTION_ID, ProjectsSection } from "../features/projects";
 import { RouteGate, useModules, useRequiresPartition } from "../modules";
@@ -28,6 +29,7 @@ const SessionsPage = lazyScreen(() => import("../features/logs"), "SessionsPage"
 const SessionDetailPage = lazyScreen(() => import("../features/logs"), "SessionDetailPage");
 const SearchPage = lazyScreen(() => import("../features/logs"), "SearchPage");
 const DashboardsPage = lazyScreen(() => import("../features/logs"), "DashboardsPage");
+const ArchitecturePopoutScreen = lazyScreen(() => import("../features/logs"), "ArchitecturePopoutScreen");
 
 /** 모든 화면 번들을 미리 내려받는다(유휴 시간 선로딩, 테스트에서 첫 이동 지연 제거). */
 export function preloadScreens(): Promise<unknown> {
@@ -154,6 +156,8 @@ export function buildAppRoutes({ routes = DEFAULT_ROUTES, groups, pages = DEFAUL
     }),
   );
   return [
+    // 구조도 분리 창: 앱 셸(사이드바·배너) 밖의 전용 화면. 주소는 구조도 기능이 정한다(`ARCH_POPOUT.path`).
+    { path: ARCH_POPOUT.path.replace(/^\//, ""), element: <ArchitecturePopoutScreen /> },
     {
       element: <Shell routes={routes} {...(groups ? { groups } : {})} {...(platform ? { platform } : {})} />,
       children: [

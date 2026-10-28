@@ -113,7 +113,6 @@ def test_root_that_is_symlink_or_claude_home_refused(tmp_path: Path) -> None:
     s = make_settings(
         tmp_path,
         options={
-            "mod-imports": {"home": str(home)},
             # 보호 위치 기준 홈은 내보내기 자기 옵션이다(4R.18: 가져오기 home을 읽지 않음).
             "mod-exports": {
                 "home": str(home),

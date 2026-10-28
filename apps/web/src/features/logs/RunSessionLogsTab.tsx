@@ -1,3 +1,4 @@
+import { useLogTimeMode } from "./useLogTimeMode";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,7 +64,8 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
   const rows = useMemo(() => (errorsOnly ? items.filter(isError) : items), [items, errorsOnly, isError]);
   const chips = useMemo(() => orderCategories(categoryItems(items, items), taxonomy), [items, taxonomy]);
   const origin = useMemo(() => originOf(items), [items]);
-  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS), []);
+  const time = useLogTimeMode();
+  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, undefined, time.widths), [time.widths]);
   const selected = selectedUidRaw === null ? undefined : items.find((e) => e.uid === selectedUidRaw);
   // 목록에서 사라진 행의 선택은 없는 것으로 본다
   const selectedUid = selected === undefined ? null : selectedUidRaw;
@@ -123,6 +125,8 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
         taxonomy={taxonomy}
         isError={isError}
         slotFor={slotFor}
+        timeMode={time.mode}
+        onTimeModeChange={time.setMode}
         originTime={origin}
         loading={pages.isPending}
         hasMore={pages.hasNextPage}

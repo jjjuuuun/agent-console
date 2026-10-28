@@ -20,6 +20,12 @@ export function formatAbsoluteTime(epochSeconds: number): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
 }
 
+/** 날짜 포함 절대 시각(브라우저 로컬 시간대) `YYYY-MM-DD HH:mm:ss`. */
+export function formatDateTime(epochSeconds: number): string {
+  const d = new Date(epochSeconds * 1000);
+  return `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 /** 소요 시간: `<1초` ms, `<60초` 소수 1자리 초, 그 외 `분 초`. */
 export function formatDurationMs(ms: number, units = { ms: "ms", s: "초", m: "분" }): string {
   if (ms < 1000) return `${Math.round(ms)}${units.ms}`;
@@ -48,6 +54,7 @@ export function formatNumber(n: number): string {
 export const defaultFormatters: Formatters = {
   relativeTime: formatRelativeTime,
   absoluteTime: formatAbsoluteTime,
+  dateTime: formatDateTime,
   duration: (ms) => formatDurationMs(ms),
   tokens: formatTokensShort,
   number: formatNumber,
@@ -69,8 +76,18 @@ export function shortPath(path: string): string {
   return `…/${parts.slice(-2).join("/")}`;
 }
 
-/** epoch 초 -> 로컬 시각 전체 + ISO(툴팁용). */
+/** 브라우저 시간대 이름(예 `Asia/Seoul`). 알 수 없으면 빈 문자열. */
+function zoneName(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** epoch 초 -> 로컬 시각 전체 + 시간대 + ISO 원문(툴팁용). 예: `2026. 10. 28. 오전 11:42:07 Asia/Seoul (2026-10-28T02:42:07.000Z)` */
 export function fullTimeTitle(epochSeconds: number): string {
   const d = new Date(epochSeconds * 1000);
-  return `${d.toLocaleString()} (${d.toISOString()})`;
+  const zone = zoneName();
+  return `${d.toLocaleString()}${zone ? ` ${zone}` : ""} (${d.toISOString()})`;
 }

@@ -39,6 +39,7 @@ from typing import Any
 from agent_console_contracts import CONTRACT_VERSIONS, Issue, RunEvent
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_runtime import (
+    BackendHostContext,
     GraphRuntime,
     InMemoryEventBus,
     Registries,
@@ -295,7 +296,15 @@ class RunsModule:
                 await asyncio.to_thread(database.upgrade)  # legacy 계보(실행 기록 표), 멱등
             # 1) 이전 프로세스의 Run·대기 상호작용 정리를 가장 먼저(design §R14.5)
             service.recovered = recover_unfinished_runs(recorder, sink=bus)
-            configure_backends(registries, backend_options, secrets=secrets, environ=ctx.environ)
+            configure_backends(
+                registries,
+                backend_options,
+                secrets=secrets,
+                environ=ctx.environ,
+                host=BackendHostContext(
+                    workspace_dir=ctx.paths.workspace if ctx.paths is not None else None
+                ),
+            )
             if show_hidden_backends:  # 개발·테스트용 백엔드도 선택지·설정 카드에 보인다
                 reveal_hidden_backends(registries)
             redaction.refresh()

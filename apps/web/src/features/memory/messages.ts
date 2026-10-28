@@ -4,6 +4,14 @@
  * 범위 종류·범위 이름·도구 이름·태그는 없다(서버 데이터).
  */
 export const memoryMessages = {
+  runChips: {
+    label: "메모리 사용",
+    write: (n: string) => `메모리 쓰기 ${n}`,
+    read: (n: string) => `메모리 읽기 ${n}`,
+    failed: (n: number) => `실패 ${n}`,
+    writeTip: "이 실행이 마지막으로 쓴 항목을 엽니다.",
+    readTip: "읽기 이벤트를 이벤트 표에서 봅니다.",
+  },
   title: "메모리",
   region: "공유 메모리",
   loading: "불러오는 중…",
@@ -54,6 +62,7 @@ export const memoryMessages = {
     summaryTitle: "범위 요약",
     emptyHint: "항목을 고르면 여기에 보입니다.",
     close: "항목 닫기",
+    infoRegion: "항목 정보",
     copyKey: "키 복사",
     keyCopied: "키를 복사했습니다",
     notInFilter: "이 항목은 현재 필터에 안 맞습니다.",

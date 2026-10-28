@@ -1,6 +1,6 @@
 export * from "./types";
 export { defaultLogViewMessages, mergeMessages, fmt, type LogViewMessages, type DeepPartial } from "./messages";
-export { defaultFormatters, mergeFormatters, formatRelativeTime, formatAbsoluteTime, formatDurationMs, formatTokensShort, formatNumber, shortId, shortPath, fullTimeTitle } from "./format";
+export { defaultFormatters, mergeFormatters, formatRelativeTime, formatAbsoluteTime, formatDateTime, formatDurationMs, formatTokensShort, formatNumber, shortId, shortPath, fullTimeTitle } from "./format";
 export { toTaxonomyView, isErrorEvent, isHiddenEvent, colorFor, slotColor, countCategories, orderCategories, type CategoryItem } from "./taxonomy";
 export { sortEvents, visibleThrough, indexOfSeq, seqAtIndex, playbackDelay, usePlayback, nextSpeed, DEFAULT_SPEEDS, DEFAULT_GAP_CAP_MS, SKIP_GAP_CAP_MS, MIN_DELAY_MS, type TimedEvent, type UsePlaybackOptions, type PlaybackState } from "./playback";
 export { focusLogControl, type LogFocusTarget, type FocusLogControlOptions } from "./focus";
@@ -26,3 +26,5 @@ export { DashboardGrid, type DashboardGridProps, type WidgetResult, type Dashboa
 export { WidgetEditor, validateWidget, type WidgetEditorProps } from "./WidgetEditor";
 export { TemplatePicker, type TemplatePickerProps, type TemplateApplyRequest } from "./TemplatePicker";
 export { ColorSlotPicker, type ColorSlotPickerProps } from "./ColorSlotPicker";
+export { TIME_MODES, parseTimeMode, timeColumnWidth, formatEventTime, type TimeMode, type EventTimeText } from "./timeMode";
+export { TimeModeMenu, type TimeModeMenuProps } from "./TimeModeMenu";

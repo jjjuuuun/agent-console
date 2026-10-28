@@ -67,3 +67,16 @@ export const WARNING_PREFIX = "memory.";
 
 /** 서버 경고 코드(화면이 따로 다루는 것). 그 밖의 `memory.` 경고는 서버 원문을 그대로 보인다. */
 export const WARNING_CODES: { readonly storageMemory: string; readonly searchFallback: string } = data.warningCodes;
+
+/**
+ * 실행 상세 요약 줄의 메모리 칩 데이터(`memoryData.json`): 이 실행의 `typePrefix` 이벤트를 세어 type 뒤쪽 이름이 `write.types`면 쓰기, `read.types`면 읽기로 센다.
+ * `cap`을 넘으면 "{cap}+"로 보이고 `okStatus`가 아닌 payload `status`는 실패로 센다. 읽기 칩은 이벤트 목록을 `read.openPrefix`로 연다.
+ */
+export const RUN_CHIPS: {
+  readonly typePrefix: string;
+  readonly write: { readonly types: readonly string[] };
+  readonly read: { readonly types: readonly string[]; readonly openPrefix: string };
+  readonly cap: number;
+  readonly debounceMs: number;
+  readonly okStatus: string;
+} = data.runChips;

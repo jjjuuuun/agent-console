@@ -265,7 +265,9 @@ def test_no_install_option_or_public_api_accepts_tokens() -> None:
     suspicious = ("store", "save", "persist", "credential", "oauth", "token")
     assert not [n for n in pkg.__all__ if any(w in n.lower() for w in suspicious)]
     backend_methods = {n for n in dir(ClaudeSdkBackend) if not n.startswith("_")}
-    assert not [n for n in backend_methods if any(w in n.lower() for w in suspicious)]
+    # credential_dir(5.7R.30b)는 자격 폴더 **경로**만 돌려준다(값을 받거나 읽지 않음, design §PI.9).
+    path_only = {"credential_dir"}
+    assert not [n for n in backend_methods - path_only if any(w in n.lower() for w in suspicious)]
     # 5.2R.82: 앱 화면 구독 로그인은 `claude auth login`을 중계만 한다(자격은 CLI가 자기 위치에 쓰고
     # 앱은 토큰을 받지 않는다). 로그인 이름은 이 목록뿐이고 토큰을 담는 설정 칸은 없다.
     login_api = {

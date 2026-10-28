@@ -12,11 +12,13 @@ from typing import Any
 
 from agent_console_runtime import (
     BACKEND_OPTIONS_HOOK,
+    BackendHostContext,
     ConfigurableBackend,
     EnvSecretProvider,
     Registries,
     SecretProvider,
     SecretResolver,
+    accepts_host_context,
 )
 
 _log = logging.getLogger("agent_console_mod_runs")
@@ -32,12 +34,13 @@ def configure_backends(
     *,
     secrets: SecretResolver,
     environ: Mapping[str, str],
+    host: BackendHostContext | None = None,
 ) -> list[str]:
     """등록된 백엔드 중 ``ConfigurableBackend`` 훅이 있는 것을 설정 값으로 다시 만들어 교체한다.
 
     entry point는 인자 없이 만들어지므로 생성 인자(설정 ``backends.<id>``)와 공용 비밀 해석기·환경은
     백엔드의 ``from_options`` 훅으로 넘긴다. 훅이 없는 백엔드에 설정이 있거나, 등록되지 않은 id에
-    설정이 있으면 경고만 남긴다.
+    설정이 있으면 경고만 남긴다. 훅이 ``host`` 키워드를 받으면 ``host``(앱 workspace 등)도 넘긴다.
 
     Returns:
         교체한 백엔드 id 목록.
@@ -58,7 +61,11 @@ def configure_backends(
             continue
         try:
             hook = type(entry.item).from_options
-            backend = hook(options, secrets=secrets, environ=environ)
+            if host is not None and accepts_host_context(hook):
+                with_host: Any = hook  # 선택 키워드(프로토콜에 없음, 서명으로 확인함)
+                backend = with_host(options, secrets=secrets, environ=environ, host=host)
+            else:
+                backend = hook(options, secrets=secrets, environ=environ)
         except ValueError as exc:
             raise BackendOptionsError(f"backends.{entry.key}: {exc}") from None
         registries.backends.register(

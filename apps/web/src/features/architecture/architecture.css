@@ -45,3 +45,16 @@
 .arch-dialog-diagram > .arch-panel { height: auto; flex: 1 1 auto; }
 .arch-dialog-table { flex: var(--arch-table-grow, 1) 1 0; min-height: var(--arch-table-min, 120px); min-width: 0; overflow: hidden; }
 @media (max-width: 1279px) { .arch-dialog { width: calc(100vw - 24px); height: calc(100vh - 24px); } .arch-dialog-diagram { flex: var(--arch-diagram-grow-narrow, 11) 1 0; } .arch-dialog-table { flex: var(--arch-table-grow-narrow, 9) 1 0; } }
+
+/* 분리 중 접힌 자리(원래 창) */
+.arch-popout-fold { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ac-space-2) var(--ac-space-4); box-sizing: border-box; min-height: 64px; padding: var(--ac-space-3) var(--ac-space-4); border: 1px dashed var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); }
+.arch-popout-fold-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 280px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.arch-popout-fold-actions { display: flex; flex-wrap: wrap; gap: var(--ac-space-2); flex: none; }
+.arch-popout-fold > .arch-banner { flex: 1 1 100%; }
+
+/* 분리 창(앱 셸 밖 화면) */
+.arch-popout { display: flex; flex-direction: column; gap: var(--ac-space-2); box-sizing: border-box; height: 100vh; padding: var(--ac-space-3) var(--ac-space-4); background: var(--ac-bg, var(--ac-surface-1)); color: var(--ac-text); }
+.arch-popout-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-3); flex: none; min-height: 32px; }
+.arch-popout-title { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--ac-text-lg); }
+.arch-popout-body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.arch-popout-body > .arch-panel { flex: 1 1 auto; }

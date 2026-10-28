@@ -4,3 +4,4 @@
  * 두 기능의 공개 API를 조립하는 컴포넌트(`links/<a>-<b>/`)를 둔다.
  */
 export { DEFAULT_LINK_PARTS } from "./linkParts";
+export { DEFAULT_CONFIG_WIDGETS } from "./configWidgets";

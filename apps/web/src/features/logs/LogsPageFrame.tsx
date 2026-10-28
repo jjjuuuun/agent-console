@@ -44,6 +44,8 @@ export function LogsPageFrame({ tab, title, actions, status, children }: LogsPag
   useEffect(() => storage.set(LOGS_STORAGE.lastTab, tab), [storage, tab]);
   const info = useApiQuery(queryKeys.descriptors("server-info"), (rest) => rest.getServerInfo(), { retry: false, meta: { silentBackgroundError: true } });
   const redaction = (info.data?.warnings ?? []).some((w) => w.code === WARNING_CODES.redactionUnavailable);
+  // 등록된 프로젝트가 없으면 로그 출처가 아무것도 읽지 않는다 — 빈 화면의 이유를 서버 문구(detail)로 보여 준다.
+  const noProjects = (info.data?.warnings ?? []).find((w) => w.code === WARNING_CODES.noProjects);
 
   const go = (id: string) => {
     const seg = LOG_TABS.find((x) => x.id === id)?.segment;
@@ -74,6 +76,7 @@ export function LogsPageFrame({ tab, title, actions, status, children }: LogsPag
         ))}
       </div>
       {redaction && tab !== "dashboards" ? <Banner tone="warning" className="logs-redaction">{t.filters.redactionWarning}</Banner> : null}
+      {noProjects !== undefined ? <Banner tone="warning" className="logs-no-projects">{noProjects.message || t.noProjects}</Banner> : null}
       <LogProjectNote filterParam={FILTER_KEYS.project} />
       <div className="logs-body">{children}</div>
     </div>

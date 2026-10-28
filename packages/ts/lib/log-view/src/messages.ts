@@ -24,6 +24,8 @@ export interface LogViewMessages {
   columns: Record<string, string>; // 열 id -> 머리글(모르는 id는 id 원문)
   timeAbsolute: string;
   timeRelative: string;
+  /** 시각 열 머리의 표시 방식 메뉴 */
+  timeMode: { label: string; datetime: string; time: string; elapsed: string };
   // 필터 막대
   filterBar: string;
   searchPlaceholder: string;
@@ -181,6 +183,7 @@ export const defaultLogViewMessages: LogViewMessages = {
   },
   timeAbsolute: "절대 시각으로 보기",
   timeRelative: "상대 시각으로 보기",
+  timeMode: { label: "시각 표시 방식", datetime: "날짜·시각", time: "시각만", elapsed: "경과 시각(시작 기준)" },
   filterBar: "필터",
   searchPlaceholder: "검색어",
   searchLabel: "검색어",

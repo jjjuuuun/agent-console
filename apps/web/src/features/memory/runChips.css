@@ -1,0 +1,6 @@
+/* 실행 상세 요약 줄의 메모리 칩 (screen-memory.md §12.2). 토큰만 쓴다. */
+.mem-runchips { display: inline-flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
+.mem-runchip-item { display: inline-flex; align-items: center; gap: var(--ac-space-1); }
+.mem-runchip { display: inline-flex; align-items: center; min-height: var(--ac-control-sm); padding: 0 var(--ac-space-2); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-full); background: var(--ac-btn-bg); color: var(--ac-text); text-decoration: none; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mem-runchip:hover { background: var(--ac-surface-2); }
+.mem-runchip-fail { color: var(--ac-warning); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }

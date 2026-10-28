@@ -10,6 +10,8 @@
 - ``query_extensions_module``: ``logs.scope_kinds``(X27)·``logs.filter_predicates``(X28)에
   범위 종류·필터 확장을 주는 모듈(연동 모듈 흉내, 가짜는 ``agent_console_logs.testing``의
   ``TableScopeKind``·``FieldFilter``).
+- ``project_folders_module``: ``projects.folders``(등록된 프로젝트 폴더)를 주는 모듈
+  (``mod-projects`` 흉내). 범위를 아는 출처(``claude-code-jsonl``)는 이 폴더의 기록만 읽는다.
 """
 
 from __future__ import annotations
@@ -19,17 +21,30 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agent_console_contracts import WorkspaceSettings
-from agent_console_logs import LogClassifier, LogFilterExtension, LogScopeKind, LogSource
+from agent_console_logs import (
+    LogClassifier,
+    LogFilterExtension,
+    LogScopeKind,
+    LogSource,
+    ProjectFolders,
+)
 from agent_console_modkit import Module, ModuleContext, ModuleParts
 from agent_console_modkit.testing import fake_module
 from agent_console_store import SETTINGS_KIND, FileDefinitionStore, NotFound
 
-from .ports import LOG_FILTER_PREDICATES, LOG_SCOPE_KINDS, LOG_SOURCES, WORKSPACE_SETTINGS
+from .ports import (
+    LOG_FILTER_PREDICATES,
+    LOG_SCOPE_KINDS,
+    LOG_SOURCES,
+    PROJECT_FOLDERS,
+    WORKSPACE_SETTINGS,
+)
 
 LOCAL_SETTINGS_ID = "local-settings"
 STATIC_SETTINGS_ID = "static-settings"
 RUNTIME_SOURCES_ID = "runtime-log-sources"
 QUERY_EXTENSIONS_ID = "log-query-extensions"
+PROJECT_FOLDERS_ID = "project-folders"
 DEFAULT_WORKSPACE = Path(".agent-console")
 
 
@@ -117,13 +132,33 @@ def query_extensions_module(
     )
 
 
+def project_folders_module(
+    current: Sequence[Path] = (),
+    registered: Sequence[Path] | None = None,
+    module_id: str = PROJECT_FOLDERS_ID,
+) -> Module:
+    """``projects.folders`` 제공 모듈. ``registered``를 비우면 ``current``와 같다."""
+    folders = ProjectFolders(
+        current=tuple(current),
+        registered=tuple(registered if registered is not None else current),
+    )
+
+    def build(ctx: ModuleContext) -> ModuleParts:
+        ctx.provide(PROJECT_FOLDERS, lambda: folders)
+        return ModuleParts()
+
+    return fake_module(module_id, kind="testing", provides=[PROJECT_FOLDERS], on_build=build)
+
+
 __all__ = [
     "LOCAL_SETTINGS_ID",
+    "PROJECT_FOLDERS_ID",
     "QUERY_EXTENSIONS_ID",
     "RUNTIME_SOURCES_ID",
     "STATIC_SETTINGS_ID",
     "RuntimeSource",
     "local_settings_module",
+    "project_folders_module",
     "query_extensions_module",
     "runtime_sources_module",
     "static_settings_module",

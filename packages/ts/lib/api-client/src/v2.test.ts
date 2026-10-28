@@ -94,8 +94,8 @@ describe("REST v2: 새 경로", () => {
     await rest.listResources({ type: "instruction" });
     await rest.listResourceUsages("res");
     await rest.listImportSources();
-    await rest.previewImport({ source: "user-claude" });
-    await rest.importResources({ source: "user-claude", items: [{ candidate_id: "c1" }] });
+    await rest.previewImport({ source: "project-claude" });
+    await rest.importResources({ source: "project-claude", items: [{ candidate_id: "c1" }] });
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
       "GET /server-info",
       "GET /delegation-strategies",

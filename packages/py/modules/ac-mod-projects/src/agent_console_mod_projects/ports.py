@@ -4,6 +4,8 @@
 
 - ``projects.lookup``: 프로젝트 읽기(``ProjectLookup`` — ``get_project``·``list_projects``).
   실행 준비 층 공급(``link-projects-runs``) 등이 이름으로 받는다.
+- ``projects.folders``(5.7R.30 후속): 등록된 프로젝트 폴더(``ProjectFolderSet`` — 현재·전체).
+  로그 수집 범위 등 "앱의 프로젝트 폴더만" 다루는 기능이 이름으로 받는다.
 - ``definitions.checks``(여러 제공자): 정의 저장 전 범위 검사(경고·정보만, 저장을 막지 않음).
   정의 읽기 포트가 없으면 빈 목록을 낸다(사실상 꺼짐).
 
@@ -20,11 +22,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import Issue, Project
 from agent_console_modkit import PortKey, Topic
+from agent_console_projects import ProjectFolderSet
 
 
 class StoredLike(Protocol):
@@ -101,6 +104,9 @@ class SavedLike(Protocol):
 
 
 PROJECTS_LOOKUP: PortKey[ProjectLookup] = PortKey("projects.lookup", "프로젝트 읽기")
+PROJECT_FOLDERS: PortKey[Callable[[], ProjectFolderSet]] = PortKey(
+    "projects.folders", "앱에 등록된 프로젝트 폴더(현재·전체)"
+)
 DEFINITION_CHECKS: PortKey[DefinitionCheck] = PortKey(
     "definitions.checks", "저장 전 정의 검사", multi=True
 )
@@ -118,6 +124,7 @@ __all__ = [
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "PROJECTS_LOOKUP",
+    "PROJECT_FOLDERS",
     "DefinitionCheck",
     "DefinitionReader",
     "DefinitionWriter",

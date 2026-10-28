@@ -8,7 +8,7 @@ ETag = 정의 ``version_hash``(본문 포함 해시). 본문·파일 쓰기도 �
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from agent_console_contracts import (
     ErrorResponse,
+    Issue,
     MergeStrategyInfo,
     Resource,
     ResourceFile,
@@ -52,6 +53,11 @@ def resource_response(stored: StoredDefinition, *, status_code: int = 200) -> JS
     )
 
 
+def _issue_dicts(issues: Sequence[Issue]) -> list[dict[str, Any]]:
+    """응답 헤더에 실을 이슈(값을 담지 않는 계약 ``Issue``)."""
+    return [i.model_dump(mode="json", exclude_none=True) for i in issues]
+
+
 def _media_type(value: str | None) -> str | None:
     if not value:
         return None
@@ -84,10 +90,14 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
 
     @router.post("/resources", response_model=Resource, status_code=201, responses=errors(409))
     async def create_resource(resource: Resource) -> JSONResponse:
-        """만들기. 종류 검사에 error 이슈(예: 평문 비밀)가 있으면 422 ``validation_failed``."""
+        """만들기. 검사(종류 검사 + ``definitions.checks``)에 error 이슈(예: 평문 비밀)가 있으면
+        422 ``validation_failed``. warning·info는 저장하고 ``X-Console-Issues`` 헤더로 싣는다."""
         svc = service()
-        svc.check(resource)
-        return resource_response(svc.store.create(svc.kind, resource), status_code=201)
+        issues = svc.check(resource)
+        return with_issues(
+            resource_response(svc.store.create(svc.kind, resource), status_code=201),
+            _issue_dicts(issues),
+        )
 
     @router.get("/resources/{resource_id}", response_model=Resource, responses=errors())
     async def get_resource(resource_id: str) -> JSONResponse:
@@ -99,13 +109,14 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
     async def put_resource(
         resource_id: str, resource: Resource, if_match: IfMatchHeader = None
     ) -> JSONResponse:
-        """저장. ``If-Match`` 필수(428), 불일치 412. 종류 검사 error는 422(버전 검사보다 먼저)."""
+        """저장. ``If-Match`` 필수(428), 불일치 412. 검사 error는 422(버전 검사보다 먼저),
+        warning·info는 ``X-Console-Issues`` 헤더."""
         if resource_id != resource.id:
             raise IdMismatchError(resource_id, resource.id)
         svc = service()
-        svc.check(resource)
+        issues = svc.check(resource)
         stored = svc.store.save(svc.kind, resource, expected_version=if_match_version(if_match))
-        return resource_response(stored)
+        return with_issues(resource_response(stored), _issue_dicts(issues))
 
     @router.delete("/resources/{resource_id}", status_code=204, responses=errors(412))
     async def delete_resource(resource_id: str, if_match: IfMatchHeader = None) -> Response:
@@ -222,11 +233,7 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
             await request.body(),
             expected_version=if_match_version(if_match),
         )
-        issues = svc.file_path_issues(file_path)
-        return with_issues(
-            resource_response(stored),
-            [i.model_dump(mode="json", exclude_none=True) for i in issues],
-        )
+        return with_issues(resource_response(stored), _issue_dicts(svc.file_path_issues(file_path)))
 
     @router.delete(
         "/resources/{resource_id}/files/{file_path:path}",

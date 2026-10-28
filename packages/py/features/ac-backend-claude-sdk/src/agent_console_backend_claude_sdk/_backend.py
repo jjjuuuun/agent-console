@@ -10,6 +10,7 @@ import tempfile
 import time
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from claude_agent_sdk import (
@@ -45,6 +46,7 @@ from agent_console_runtime import (
     AgentResult,
     BackendCheckContext,
     BackendEventSink,
+    BackendHostContext,
     BackendLoginContext,
     CancelToken,
     InteractivePort,
@@ -57,6 +59,13 @@ from agent_console_runtime import (
     is_secret_ref,
 )
 
+from ._auth_dir import (
+    AuthDirLocation,
+    ClaudeSdkAuthDirOptions,
+    prepare_auth_dir,
+    resolve_auth_dir,
+    secure_auth_dir,
+)
 from ._bundle import (
     COMMAND_HOOK_SLOTS,
     RESOURCE_SLOTS,
@@ -105,6 +114,7 @@ from ._probe import (
 )
 from ._readiness import (
     PROBE_CATEGORIES,
+    AuthDirView,
     ClaudeSdkReadinessOptions,
     ProbeOutcome,
     ProbeReasonCodes,
@@ -185,6 +195,14 @@ class ClaudeSdkInstallOptions(BaseModel):
         description="상태 점검·연결 테스트가 볼 인증 방식(기본 구독 로그인, API 키도 선택 가능), "
         "실행 파일 경로, 테스트 프롬프트·모델·CLI 인자, 문구.",
     )
+    auth_dir: ClaudeSdkAuthDirOptions = Field(
+        default_factory=ClaudeSdkAuthDirOptions,
+        description="앱 전용 Claude Code 자격 폴더(CLAUDE_CONFIG_DIR, 기본 "
+        "<앱 workspace>/.state/claude, 앱 하나에 로그인 하나 — 모든 프로젝트가 함께 쓴다). "
+        "실행·연결 테스트·구독 로그인·상태 점검이 이 폴더만 쓴다(~/.claude로 대신하지 않음). "
+        "폴더 700·파일 600, workspace .gitignore에 제외 줄(프로젝트 폴더에는 쓰지 않음). "
+        "null이면 서버 환경을 따른다.",
+    )
     login: ClaudeSdkLoginOptions = Field(
         default_factory=ClaudeSdkLoginOptions,
         description="앱 화면 구독 로그인(claude auth login을 PTY로 중계, 기본 켜짐)·로그아웃. 실행 "
@@ -247,6 +265,8 @@ class ClaudeSdkErrorCodes:
     AUTH_MISSING = "auth_missing"
     SUBSCRIPTION_AUTH_DISABLED = AUTH_ISSUES.SUBSCRIPTION_DISABLED
     BACKEND_ERROR = "backend_error"
+    AUTH_DIR_UNAVAILABLE = "backend.auth_dir_unavailable"
+    """앱 전용 자격 폴더를 만들거나 열 수 없다(권한 등, 5.7R.30)."""
     NO_RESULT = "backend_no_result"
     AGENT_ERROR = "agent_error"
 
@@ -343,6 +363,11 @@ class ClaudeSdkBackend:
             `capabilities.login/logout = true`·`login_methods = [cli-login]`.
         pty_spawner: 로그인용 PTY 어댑터(`agent_console_pty_session.PtySpawner`, 테스트 주입).
         pty_support: PTY 사용 가능 여부(None = 감지, 테스트 주입).
+        auth_dir: 앱 전용 자격 폴더 설정(`ClaudeSdkAuthDirOptions`, 설치자 설정
+            `auth_dir`, 5.7R.30·5.7R.30b). 기본 `<workspace>/.state/claude`(앱 하나에 로그인 하나).
+        workspace: 앱 workspace(앱 데이터 폴더). 자격 폴더 상대 경로의 기준(앱은 `from_options`의
+            `host.workspace_dir`로 넘긴다). None이고 자격 폴더가 상대 경로면 앱 전용 폴더를 쓰지
+            않는다(단독 사용 — 하위 프로세스 환경을 그대로 따른다).
     """
 
     def __init__(
@@ -371,8 +396,17 @@ class ClaudeSdkBackend:
         login: ClaudeSdkLoginOptions | Mapping[str, Any] | None = None,
         pty_spawner: Any | None = None,
         pty_support: PtySupport | None = None,
+        auth_dir: ClaudeSdkAuthDirOptions | Mapping[str, Any] | None = None,
+        workspace: Path | str | None = None,
     ) -> None:
         self._client_factory = client_factory
+        self._creds_options = ClaudeSdkAuthDirOptions.model_validate(auth_dir or {})
+        self._workspace = workspace
+        self._creds: AuthDirLocation | None = resolve_auth_dir(
+            self._creds_options,
+            workspace=workspace,
+            environ=environ if environ is not None else os.environ,
+        )
         self._readiness = ClaudeSdkReadinessOptions.model_validate(readiness or {})
         self._cli_locator = cli_locator
         self._path_exists = path_exists
@@ -405,6 +439,8 @@ class ClaudeSdkBackend:
             environ=environ,
             spawner=pty_spawner,
             pty=pty_support,
+            auth_dir=self._creds,
+            auth_dir_options=self._creds_options,
         )
         self.collector_reports: list[Any] = []
         """`from_options`가 entry point를 읽은 보고서(`agent_console_registry.LoadReport`)."""
@@ -449,8 +485,12 @@ class ClaudeSdkBackend:
         *,
         secrets: SecretResolver,
         environ: Mapping[str, str],
+        host: BackendHostContext | None = None,
     ) -> ClaudeSdkBackend:
         """`ConfigurableBackend` 훅: 설치자 설정(`ClaudeSdkInstallOptions`)으로 만든다.
+
+        `host.workspace_dir`(앱 workspace)는 앱 전용 자격 폴더(`auth_dir.config_dir`) 상대 경로의
+        기준이다(앱 하나에 로그인 하나, 프로젝트 폴더는 쓰지 않는다).
 
         `secrets`는 남은 참조 해석·raw 가리기에, `environ`은 환경 정책을 적용할 부모 환경으로 쓴다.
         관측 수집기는 entry point `agent_console.collectors`에서 찾는다(보고서는
@@ -483,6 +523,8 @@ class ClaudeSdkBackend:
             hook_probe_folder=parsed.hook_probe_folder,
             readiness=parsed.readiness,
             login=parsed.login,
+            auth_dir=parsed.auth_dir,
+            workspace=host.workspace_dir if host is not None else None,
         )
         backend.collector_reports = list(reports)
         return backend
@@ -617,7 +659,17 @@ class ClaudeSdkBackend:
         cli = self._cli_locator(self._readiness.cli_path)
         parent = self._environ if self._environ is not None else os.environ
         # CLI가 실제로 받을 환경(정책으로 가린 키 = 빈 값)으로 로그인 파일 위치를 푼다.
-        child = {**parent, **apply_env_policy(parent, self._env_policy, {})}
+        child = {**parent, **apply_env_policy(parent, self._env_policy, self._creds_env())}
+        view: AuthDirView | None = None
+        if self._creds is not None:
+            # 정적 점검: 폴더를 만들지 않고, 이미 있는 폴더·파일 권한만 좁힌다.
+            perms = secure_auth_dir(self._creds, self._creds_options)
+            view = AuthDirView(
+                display=self._creds.display,
+                files=tuple(str(p) for p in self._creds.login_files),
+                permissions_ok=perms.ok if perms.checked else None,
+                loose=perms.loose,
+            )
         assessment = assess_readiness(
             self._readiness,
             allow_subscription_auth=self._allow_subscription_auth,
@@ -625,8 +677,57 @@ class ClaudeSdkBackend:
             cli_found=cli is not None,
             environ=child,
             path_exists=self._path_exists,
+            auth_dir=view,
         )
         return assessment, cli
+
+    @property
+    def auth_dir_location(self) -> AuthDirLocation | None:
+        """앱 전용 자격 폴더(None = 쓰지 않음)."""
+        return self._creds
+
+    def credential_dir(self, person_id: str | None = None) -> Path | None:
+        """구독 자격 폴더(``CLAUDE_CONFIG_DIR``) — **경로 해석 한 함수**(5.7R.30b, design §PI.9).
+
+        앱 하나에 로그인 하나다: 기준은 앱 workspace(``from_options``의 ``host.workspace_dir``)이고
+        프로젝트 인자는 없다. 개인 모드는 ``person_id=None`` 하나뿐이다. 팀 모드에서는 설치자 설정
+        ``auth_dir.config_dir`` 틀의 ``{person}`` 자리와 이 인자로 사람별 폴더를 고른다.
+        파일 시스템을 건드리지 않는다.
+
+        Returns:
+            절대 경로. 앱 전용 폴더를 쓰지 않으면(``config_dir: null``·workspace 모름) None.
+
+        Raises:
+            ValueError: ``person_id``가 폴더 이름으로 안전하지 않을 때.
+
+        >>> b = ClaudeSdkBackend(workspace="/data/app", environ={})
+        >>> b.credential_dir().as_posix()
+        '/data/app/.state/claude'
+        >>> ClaudeSdkBackend(environ={}).credential_dir() is None  # 단독 사용(workspace 모름)
+        True
+        """
+        if person_id is None:
+            return self._creds.path if self._creds is not None else None
+        loc = resolve_auth_dir(
+            self._creds_options,
+            workspace=self._creds.workspace if self._creds is not None else self._workspace,
+            environ=self._environ if self._environ is not None else os.environ,
+            person_id=person_id,
+        )
+        return loc.path if loc is not None else None
+
+    def _creds_env(self) -> dict[str, str]:
+        return self._creds.env() if self._creds is not None else {}
+
+    def _prepare_auth_dir(self) -> bool:
+        """실행·연결 테스트 전 자격 폴더 준비. 실패하면 False(예외 문장은 버린다)."""
+        if self._creds is None:
+            return True
+        try:
+            prepare_auth_dir(self._creds, self._creds_options)
+        except OSError:
+            return False
+        return True
 
     async def status(self, ctx: BackendCheckContext) -> BackendReadiness:
         """선택 능력(정적 점검, ux-overhaul §15.8): 모델·네트워크를 부르지 않는다.
@@ -639,7 +740,10 @@ class ClaudeSdkBackend:
         a, _cli = self._assess(ctx)
         detail = a.detail
         note = self._login.unavailable_note
-        if note and a.state == ReadinessStates.SUBSCRIPTION_UNVERIFIED:
+        if note and a.state in (
+            ReadinessStates.SUBSCRIPTION_UNVERIFIED,
+            ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED,
+        ):
             detail = f"{detail} {note}".strip()
         return BackendReadiness(
             backend_id=ctx.backend_id,
@@ -722,6 +826,7 @@ class ClaudeSdkBackend:
         if auth.mode == "api_key":
             auth = auth.model_copy(update={"api_key": api_key_ref(auth)})
         explicit, _warnings = _auth_env(auth, {}, self._lookup)
+        explicit = {**explicit, **self._creds_env()}
         parent = self._environ if self._environ is not None else os.environ
         return ClaudeAgentOptions(
             tools=[],
@@ -741,6 +846,8 @@ class ClaudeSdkBackend:
 
     async def _probe_call(self, cli: str, timeout_s: float) -> ProbeOutcome:
         budget = max(0.05, timeout_s - min(PROBE_DISCONNECT_SECONDS, timeout_s * 0.1))
+        if not self._prepare_auth_dir():
+            return ProbeOutcome(False, ProbeReasonCodes.ERROR, {"error": "auth_dir"})
         with tempfile.TemporaryDirectory(prefix="ac-probe-") as cwd:
             try:
                 options = self._probe_options(cli, cwd)
@@ -803,6 +910,12 @@ class ClaudeSdkBackend:
                 ClaudeSdkErrorCodes.SUBSCRIPTION_AUTH_DISABLED,
                 SUBSCRIPTION_AUTH_DISABLED_MESSAGE,
                 {"option": "auth.mode", "install_option": "allow_subscription_auth"},
+            )
+        if not self._prepare_auth_dir():
+            return _failed(
+                ClaudeSdkErrorCodes.AUTH_DIR_UNAVAILABLE,
+                "앱 전용 자격 폴더를 준비하지 못했습니다(폴더 권한과 설치자 설정 "
+                "auth_dir.config_dir을 확인하세요)",
             )
         try:
             prepared = self._prepare(req, opts)
@@ -1128,10 +1241,19 @@ class ClaudeSdkBackend:
                         timeout=spec.timeout_seconds or opts.hook_timeout_seconds,
                     )
                 )
+        creds_env = self._creds_env()
+        overridden = sorted(k for k in creds_env if k in prepared.env)
+        if overridden:
+            warnings.append(
+                LogWarningPayload(
+                    message="앱 전용 자격 폴더가 설정의 env 값을 덮어씁니다(설치자 설정 auth_dir)",
+                    details={"option": "env", "keys": overridden},
+                )
+            )
         options = build_sdk_options(
             req,
             opts,
-            env=apply_env_policy(parent, self._env_policy, prepared.env),
+            env=apply_env_policy(parent, self._env_policy, {**prepared.env, **creds_env}),
             hooks=hooks,
             include_hook_events=observers.include_hook_events,
             can_use_tool=bridge,

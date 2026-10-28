@@ -6497,6 +6497,51 @@ export interface MemoryMoveRequest {
   to_key?: string | null;
 }
 /**
+ * 정리할 기록을 고르는 조건입니다.
+ *
+ * '모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 합니다. 조건이 하나도 없으면 모든 기록이
+ * 맞으므로 규칙을 쓰지 않습니다. '결과 뒤집기'를 켜면 결과를 반대로 씁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionCondition".
+ */
+export interface MemoryRetentionCondition {
+  /**
+   * 여기 적은 조건이 모두 맞는 기록만 정리합니다.
+   */
+  all?: MemoryRetentionConditionItem[] | null;
+  /**
+   * 여기 적은 조건 중 하나만 맞아도 정리합니다.
+   */
+  any?: MemoryRetentionConditionItem[] | null;
+  /**
+   * 켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.
+   */
+  negate?: boolean | null;
+  [k: string]: unknown;
+}
+/**
+ * 조건 하나입니다. 기록의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionConditionItem".
+ */
+export interface MemoryRetentionConditionItem {
+  /**
+   * 기록에서 비교할 값의 위치입니다(예: /tags, /idle_days 마지막 쓰기 뒤 지난 날, /scope/kind 범위 종류).
+   */
+  path: string;
+  /**
+   * 값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.
+   */
+  op: string;
+  /**
+   * 볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).
+   */
+  value?: unknown;
+  [k: string]: unknown;
+}
+/**
  * 정리 미리보기(dry run) 결과.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -6512,6 +6557,10 @@ export interface MemoryRetentionPlan {
    * `items`를 `limit`에서 잘랐는지.
    */
   truncated?: boolean;
+  /**
+   * 규칙에 맞았지만 고정이라 빠진 항목 수(`count`에 들지 않는다, 지운 항목은 세지 않음).
+   */
+  excluded_pinned?: number;
   /**
    * 규칙 검사 문제.
    */
@@ -6536,6 +6585,14 @@ export interface MemoryRetentionPlanItem {
    */
   rule: string;
   action: "archive" | "delete";
+  /**
+   * 판단한 때의 마지막 쓰기 시각(Unix epoch 초).
+   */
+  updated_at?: number | null;
+  /**
+   * 판단한 때의 본문 바이트 수.
+   */
+  bytes?: number | null;
 }
 /**
  * `POST /memory/retention/plan`·`/apply` 본문. 규칙을 주면 저장 전 규칙으로 시험한다.
@@ -6583,7 +6640,7 @@ export interface MemoryRetentionRule {
    * 규칙을 가리키는 고유 이름입니다. 정리 기록에 남습니다.
    */
   id: string;
-  when: ConditionSpec;
+  when: MemoryRetentionCondition;
   /**
    * 맞는 기록을 보관할지 지울지 고릅니다. 둘 다 화면에서 되돌릴 수 있습니다.
    */

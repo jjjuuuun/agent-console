@@ -1,0 +1,4 @@
+{
+  "origin": { "default": "default", "user": "user", "pluginPrefix": "plugin:" },
+  "kindSpecKeys": { "label": "label", "description": "description", "template": "id" }
+}

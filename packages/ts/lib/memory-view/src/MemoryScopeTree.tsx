@@ -121,6 +121,13 @@ export function MemoryScopeTree({
     }
   };
 
+  /** 같은 종류의 범위(둘 이상)가 전부 정의에서 지워졌으면 "삭제됨" 표지는 종류 행에 한 번만 단다. */
+  const allDeletedKinds = new Set(
+    [...grouped.groups, ...grouped.unavailable]
+      .filter((g) => !g.selfScope && g.scopes.length > 1 && g.state !== "unknown" && g.scopes.every((s) => scopeLabel(s.scope, g.info, resolvers, true).deleted))
+      .map((g) => g.kind),
+  );
+
   const hasMenu = Boolean(onNewIn ?? onExportScope ?? onClearScope);
   const [menuFor, setMenuFor] = useState<string | null>(null);
 
@@ -151,6 +158,7 @@ export function MemoryScopeTree({
             const chips: string[] = [];
             if (g.state === "unknown") chips.push(m["scope.unknownKind"] as string);
             if (g.state === "disabled") chips.push(m["scope.disabledKind"] as string);
+            if (allDeletedKinds.has(g.kind)) chips.push(m["scope.deleted"] as string);
             const ref: MemoryScopeRef = { kind: g.kind, id: "" };
             const isSel = g.selfScope && sameScope(selected, ref);
             const tip = g.state === "unknown" ? (m["scope.unknownKind.tip"] as string) : g.state === "disabled" ? (m["scope.disabledKind.tip"] as string) : (g.info?.description ?? undefined);
@@ -169,6 +177,7 @@ export function MemoryScopeTree({
           }
           const sel = sameScope(selected, row.scope.scope);
           const chips = [row.label.deleted ? (m["scope.deleted"] as string) : ""].filter(Boolean);
+          const shownChips = allDeletedKinds.has(row.group.kind) ? [] : chips;
           const stateLabel = row.group.state === "unknown" ? (m["scope.unknownKind"] as string) : row.group.state === "disabled" ? (m["scope.disabledKind"] as string) : "";
           const menuOpen = menuFor === row.id;
           return (
@@ -181,7 +190,7 @@ export function MemoryScopeTree({
                   <span key={i} className={p.mono ? "ac-mem-mono" : undefined}>{i > 0 ? " / " : ""}{p.text}</span>
                 ))}
               </span>
-              {chips.map((c) => <span key={c} className="ac-mem-chip" data-tone="warning"><span className="ac-mem-icon ac-mem-icon-unknown" aria-hidden="true" />{c}</span>)}
+              {shownChips.map((c) => <span key={c} className="ac-mem-chip" data-tone="warning"><span className="ac-mem-icon ac-mem-icon-unknown" aria-hidden="true" />{c}</span>)}
               {countCell(row.scope.entries)}
               {hasMenu && row.group.state === "ok" ? (
                 <>

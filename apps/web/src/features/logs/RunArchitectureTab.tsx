@@ -5,7 +5,7 @@ import { Button, Switch } from "@agent-console/ui";
 import { isErrorEvent } from "@agent-console/log-view";
 import type { LogEvent } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
-import { ARCH_FIT, ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_STORAGE, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
+import { ARCH_FIT, ARCH_RUN_HEIGHT, ARCH_RUN_SCOPE, ARCH_SCOPE_KIND, ARCH_STORAGE, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitectureDialog, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
 import { RunArchitectureEvents, NO_RUN_EVENT_FILTERS, type RunEventFilters } from "./RunArchitectureEvents";
 import { settingsLogsHref } from "./LogsEmpty";
 import { useLogsIngested, LogsLiveProvider } from "./LogsLive";
@@ -58,7 +58,10 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
   const scope = useMemo(() => ({ [ARCH_RUN_SCOPE.param]: `${includeChildren ? ARCH_RUN_SCOPE.tree : ARCH_RUN_SCOPE.run}:${runId}` }), [includeChildren, runId]);
   const schema = useLogSchema();
   const filterTitle = useCallback((name: string) => schema.data?.filters?.find((f) => f.id === name)?.title || name, [schema.data]);
+  // 구조도를 새 창으로 분리하면 이 탭의 그림 칸이 접히고, 분리 창과 선택·강조를 주고받는다.
+  const { sync: archSync, popout } = useArchPopoutHost({ kind: ARCH_SCOPE_KIND.run, id: runId, scope, enabled: true });
   const arch = useArchitectureController({ scope, enabled: true, highlightUid: selectedUid, filterTitle });
+  useArchSync({ sync: archSync, controller: arch, role: "origin", highlightUid: selectedUid, scope });
   const isError = useCallback((e: Pick<LogEvent, "category" | "tags">) => isErrorEvent(e, taxonomy), [taxonomy]);
 
   // 구조도 선택이 없을 때는 범위 전체 이벤트, 있으면 서버가 걸러 준 이벤트(칸 횟수와 행 수가 같다).
@@ -100,6 +103,7 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
   const toolbarExtra = (
     <>
       {includeSwitch}
+      <PopoutButton popout={popout} />
       <Button ref={expandRef} size="sm" aria-haspopup="dialog" onClick={() => setExpanded(true)}>{archMessages.dialog.expand} ⤢</Button>
     </>
   );
@@ -141,9 +145,18 @@ function RunArchitecture({ runId, running, hasChildren, refreshKey }: RunArchite
     <div className="arch-run" data-fill-height="">
       <p className="arch-table-note arch-run-explain">{archMessages.runTab.explain}</p>
       <div className="arch-run-diagram">
-        {expanded ? null : <ArchitecturePanel controller={arch} toolbarExtra={toolbarExtra} diagramHeight={canvasH + ARCH_RUN_HEIGHT.chrome} {...panelProps} />}
+        {popout.mode !== "docked" ? (
+          <PopoutPlaceholder popout={popout} />
+        ) : expanded ? null : (
+          <>
+            <PopoutNotice popout={popout} />
+            <ArchitecturePanel controller={arch} toolbarExtra={toolbarExtra} diagramHeight={canvasH + ARCH_RUN_HEIGHT.chrome} {...panelProps} />
+          </>
+        )}
       </div>
-      <SplitHandle orientation="horizontal" size={canvasH} min={ARCH_RUN_HEIGHT.min} max={ARCH_RUN_HEIGHT.max} onChange={changeHeight} label={archMessages.runTab.splitLabel} />
+      {popout.mode !== "docked" ? null : (
+        <SplitHandle orientation="horizontal" size={canvasH} min={ARCH_RUN_HEIGHT.min} max={ARCH_RUN_HEIGHT.max} onChange={changeHeight} label={archMessages.runTab.splitLabel} />
+      )}
       <div className="arch-run-chips"><ArchitectureChips chips={arch.chips} /></div>
       <div className="arch-run-table">{expanded ? null : pane("arch-run-q")}</div>
       <ArchitectureDialog

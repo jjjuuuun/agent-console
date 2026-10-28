@@ -434,6 +434,36 @@ async def test_write_budget_per_run() -> None:
     assert [p["status"] for _, p in stack.memory(run)] == ["ok", "rate_limited"]
 
 
+async def test_write_budget_is_shared_with_nested_team_child_run() -> None:
+    """5.7R.28 (5): 한도는 루트 Run 하나에 하나 — 중첩 팀 자식 Run도 같은 한도를 쓴다."""
+    res = access("w", [{"kind": "journal", "access": ["write"]}])
+    lead = agent(
+        "lead", "$prompt", ("memory_write", {"key": "lead", "content": "1"}), resources=("w",)
+    )
+    c1 = agent(
+        "c1", "$host_1_status", ("memory_write", {"key": "child", "content": "2"}), resources=("w",)
+    )
+    parent = team(
+        [node("lead"), node("T", type="team", team_ref="child")],
+        [
+            edge("m", "you", "says", "lead", "in", "message"),
+            edge("h", "lead", "out", "T", "in", "handoff"),
+            edge("r", "T", "out", "you", "hears", "reply"),
+        ],
+        "parent",
+    )
+    stack = make_stack(
+        [lead, c1],
+        [res],
+        service=memory_service(),
+        max_writes=1,
+        teams={"child": solo("c1", "child")},
+    )
+    run = await stack.run(parent, "hi")
+    assert run.status == "completed", run.error
+    assert [p["status"] for _, p in stack.memory(run)] == ["ok", "rate_limited"]
+
+
 async def test_without_memory_service_run_completes_with_one_slot_warning() -> None:
     res = access("w", [{"kind": "journal", "access": ["write"]}])
     a = agent(

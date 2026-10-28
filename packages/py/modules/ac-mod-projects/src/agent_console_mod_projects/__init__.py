@@ -6,12 +6,15 @@
 
 공개 API:
     - ``module``(``ProjectsModule``), ``MODULE_ID``, ``WEB_ROLES``
-    - 포트: ``PROJECTS_LOOKUP``(제공)·``DEFINITION_CHECKS``(제공, multi)·``DEFINITIONS_LOOKUP``·
+    - 포트: ``PROJECTS_LOOKUP``(제공)·``PROJECT_FOLDERS``(제공, ``projects.folders`` — 등록된
+      프로젝트 폴더 현재·전체, 5.7R.30 후속)·``DEFINITION_CHECKS``(제공, multi)·
+      ``DEFINITIONS_LOOKUP``·
       ``DEFINITIONS_STORE``·``DEFINITIONS_REFERENCES``(multi)·토픽 ``DEFINITIONS_SAVED``,
       프로토콜 ``ProjectLookup``·``DefinitionReader``·``DefinitionWriter``
     - 서버 없이 쓰는 부품: ``ProjectRepository``·``project_kind``·``ProjectService``·
       ``DefinitionSnapshot``·``combine_references``·``read_definitions``
-    - 설정 ``ProjectModuleSettings``
+    - 설정 ``ProjectModuleSettings``(``SETTINGS_COMPAT``: 앱 작업 폴더 기본값 = 실행 모듈
+      작업 폴더)
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from .ports import (
     DEFINITIONS_REFERENCES,
     DEFINITIONS_SAVED,
     DEFINITIONS_STORE,
+    PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
     DefinitionCheck,
     DefinitionReader,
@@ -36,7 +40,7 @@ from .service import (
     DefinitionsUnavailableError,
     ProjectService,
 )
-from .settings import ProjectModuleSettings
+from .settings import SETTINGS_COMPAT, ProjectModuleSettings
 
 __all__ = [
     "CODE_DEFINITIONS_UNAVAILABLE",
@@ -47,7 +51,9 @@ __all__ = [
     "DEFINITION_CHECKS",
     "MODULE_ID",
     "PROJECTS_LOOKUP",
+    "PROJECT_FOLDERS",
     "PROJECT_KIND_NAME",
+    "SETTINGS_COMPAT",
     "WEB_ROLES",
     "DefinitionCheck",
     "DefinitionReader",

@@ -59,6 +59,9 @@ class ReadinessStates:
     SUBSCRIPTION_READY = "subscription_ready"
     SUBSCRIPTION_UNVERIFIED = "subscription_unverified"
     """구독 방식이 켜져 있으나 로그인 파일을 찾지 못함(키체인 등 파일 밖에 둔 경우일 수 있다)."""
+    SUBSCRIPTION_LOGIN_REQUIRED = "subscription_login_required"
+    """앱 전용 자격 폴더(5.7R.30)에 로그인 파일이 없음 — "로그인 필요". ``~/.claude``는 보지
+    않는다."""
     SUBSCRIPTION_TOKEN_MISSING = "subscription_token_missing"
     CLI_MISSING = "cli_missing"
 
@@ -124,7 +127,7 @@ class ClaudeSdkReadinessTexts(BaseModel):
         "Anthropic 문서는 Agent SDK 기반 앱에 API 키 사용을 안내합니다. 본인 구독 로그인으로 "
         "쓰려면 설치자 설정에서 구독 방식 허용(allow_subscription_auth)을 켜세요(본인 책임)."
     )
-    subscription_ready_summary: str = "구독 방식으로 인증됨 (본인 책임)"
+    subscription_ready_summary: str = "구독 준비됨 (본인 책임)"
     subscription_ready_short: str = "본인 책임"
     subscription_ready_detail: str = (
         "본인 Claude Code 구독 로그인으로 실행합니다. Anthropic 문서는 Agent SDK 기반 앱에 API 키 "
@@ -135,6 +138,18 @@ class ClaudeSdkReadinessTexts(BaseModel):
     subscription_unverified_detail: str = (
         "로그인 파일을 찾지 못했습니다. 터미널에서 claude를 실행해 로그인했는지 확인하세요. "
         "운영체제 보관함(키체인 등)에 저장했다면 파일이 없어도 동작할 수 있습니다."
+    )
+    login_required_summary: str = "로그인 필요 — 앱 전용 자격 폴더에 구독 로그인 정보가 없습니다"
+    login_required_short: str = "로그인 필요"
+    login_required_detail: str = (
+        "앱 작업 공간의 자격 폴더 {path}에 구독 로그인 정보가 없습니다. [구독으로 로그인]을 "
+        "누르면 이 폴더에 저장되고 모든 프로젝트가 함께 씁니다. 터미널의 ~/.claude 로그인은 "
+        "쓰지 않습니다."
+    )
+    auth_dir_detail: str = "자격 위치: {path}"
+    permissions_loose_detail: str = (
+        "자격 폴더 권한을 좁히지 못했습니다({names}). 이 파일 시스템이 권한을 지원하지 않을 수 "
+        "있으니 다른 사용자가 읽을 수 없는 위치인지 확인하세요."
     )
     subscription_token_missing_summary: str = "구독 토큰 없음 — 토큰이 설정되지 않았습니다"
     subscription_token_missing_short: str = "토큰 없음"
@@ -151,6 +166,10 @@ class ClaudeSdkReadinessTexts(BaseModel):
     check_subscription_allowed: str = "구독 방식 허용(설치자 설정)"
     check_token: str = "구독 토큰"
     check_login_file: str = "구독 로그인 파일"
+    check_auth_dir: str = "자격 위치"
+    check_auth_dir_permissions: str = "자격 폴더 권한"
+    note_permissions_ok: str = "그룹·다른 사용자 접근 없음"
+    note_permissions_loose: str = "넓음 — 좁히지 못함: {names}"
     note_found: str = "있음"
     note_missing: str = "없음"
     note_secret: str = "비밀 '{name}': {state}"
@@ -237,6 +256,23 @@ class ReadinessAssessment:
     probe_block_message: str = ""
 
 
+@dataclass(frozen=True)
+class AuthDirView:
+    """앱 전용 자격 폴더 점검 재료(5.7R.30, 값 없음). 있으면 로그인 파일은 이 폴더만 본다.
+
+    Attributes:
+        display: 화면에 보일 위치(앱 workspace 기준 상대 경로, 밖이면 절대 경로).
+        files: 로그인 파일 절대 경로(있는지만 본다).
+        permissions_ok: 권한 점검 결과(None = 점검 안 함 — 폴더 없음·POSIX 아님).
+        loose: 좁히지 못한 항목 이름.
+    """
+
+    display: str
+    files: tuple[str, ...]
+    permissions_ok: bool | None = None
+    loose: tuple[str, ...] = ()
+
+
 def secret_name(ref: str) -> str:
     """``secret://이름`` → ``이름``."""
     return ref.removeprefix(SECRET_REF_PREFIX)
@@ -312,6 +348,7 @@ def assess_readiness(
     cli_found: bool,
     environ: Mapping[str, str],
     path_exists: Callable[[str], bool] = os.path.exists,
+    auth_dir: AuthDirView | None = None,
 ) -> ReadinessAssessment:
     """인증 해석 결과 → 상태. 모델·네트워크를 부르지 않고 비밀 값을 읽지 않는다.
 
@@ -326,6 +363,9 @@ def assess_readiness(
         environ: 로그인 확인 파일 경로를 풀 환경. CLI 하위 프로세스가 **실제로 받을** 환경을
             넘긴다(환경 정책으로 가려진 키는 빈 값 = 없음).
         path_exists: 파일 존재 확인(주입).
+        auth_dir: 앱 전용 자격 폴더(5.7R.30). 주면 로그인 파일은 이 폴더만 보고
+            (``subscription_files``·``environ``의 홈은 보지 않는다) 없으면
+            ``subscription_login_required``("로그인 필요")다.
     """
     t = options.texts
     auth = options.auth
@@ -357,7 +397,7 @@ def assess_readiness(
         )
     if auth.mode == "subscription":
         result = _assess_subscription(
-            options, allow_subscription_auth, has_secret, environ, path_exists, checks
+            options, allow_subscription_auth, has_secret, environ, path_exists, checks, auth_dir
         )
     else:
         result = _assess_api_key(auth, has_secret, t, checks)
@@ -400,6 +440,7 @@ def _assess_subscription(
     environ: Mapping[str, str],
     path_exists: Callable[[str], bool],
     checks: list[ReadinessCheck],
+    auth_dir: AuthDirView | None = None,
 ) -> ReadinessAssessment:
     t = options.texts
     auth = options.auth
@@ -444,6 +485,8 @@ def _assess_subscription(
             probe_block=ProbeReasonCodes.AUTH_MISSING,
             probe_block_message=t.probe_auth_missing,
         )
+    if auth_dir is not None:
+        return _assess_auth_dir(t, ready, path_exists, checks, auth_dir)
     path = login_file(options.subscription_files, environ)
     paths = [path] if path else []
     found = sum(1 for p in paths if path_exists(p))
@@ -463,6 +506,55 @@ def _assess_subscription(
         summary=t.subscription_unverified_summary,
         short_summary=t.subscription_unverified_short,
         detail=f"{t.subscription_unverified_detail} {t.subscription_ready_detail}",
+    )
+
+
+def _assess_auth_dir(
+    t: ClaudeSdkReadinessTexts,
+    ready: ReadinessAssessment,
+    path_exists: Callable[[str], bool],
+    checks: list[ReadinessCheck],
+    creds: AuthDirView,
+) -> ReadinessAssessment:
+    """앱 전용 자격 폴더 모드: 이 폴더의 로그인 파일만 본다(홈·``~/.claude`` 없음)."""
+    checks.append(
+        ReadinessCheck(id="auth_dir", title=t.check_auth_dir, ok=True, note=creds.display)
+    )
+    found = sum(1 for p in creds.files if path_exists(p))
+    checks.append(
+        ReadinessCheck(
+            id="subscription_file",
+            title=t.check_login_file,
+            ok=found > 0,
+            note=t.note_files.format(count=len(creds.files), found=found),
+        )
+    )
+    extra: list[str] = [t.auth_dir_detail.format(path=creds.display)]
+    if creds.permissions_ok is not None:
+        names = ", ".join(creds.loose)
+        checks.append(
+            ReadinessCheck(
+                id="auth_dir_permissions",
+                title=t.check_auth_dir_permissions,
+                ok=creds.permissions_ok,
+                note=(
+                    t.note_permissions_ok
+                    if creds.permissions_ok
+                    else t.note_permissions_loose.format(names=names)
+                ),
+            )
+        )
+        if not creds.permissions_ok:
+            extra.append(t.permissions_loose_detail.format(names=names))
+    if found:
+        detail = " ".join([ready.detail, *extra]).strip()
+        return dataclasses.replace(ready, detail=detail)
+    return ReadinessAssessment(
+        state=ReadinessStates.SUBSCRIPTION_LOGIN_REQUIRED,
+        tone="warn",
+        summary=t.login_required_summary,
+        short_summary=t.login_required_short,
+        detail=" ".join([t.login_required_detail.format(path=creds.display), *extra[1:]]),
     )
 
 
@@ -587,6 +679,7 @@ __all__ = [
     "DEFAULT_SUBSCRIPTION_FILES",
     "NETWORK_ERROR_NAMES",
     "PROBE_CATEGORIES",
+    "AuthDirView",
     "ClaudeSdkReadinessOptions",
     "ClaudeSdkReadinessTexts",
     "FixLink",

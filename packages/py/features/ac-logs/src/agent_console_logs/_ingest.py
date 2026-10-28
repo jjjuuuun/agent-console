@@ -32,6 +32,7 @@ from ._config import ConfigError, effective_config
 from ._draft import TAG_DIAGNOSTIC, LogEventDraft
 from ._index import IndexBatch, IndexRecord, LogIndex, StoredCursor
 from ._projects import RepoRootResolver
+from ._purge import PurgeableLogIndex, PurgeScope
 from ._registries import LogRegistries
 from ._source import (
     DIAGNOSTIC_META_KEY,
@@ -40,7 +41,9 @@ from ._source import (
     LogClassifier,
     LogSource,
     LogSourceContext,
+    ProjectFolders,
     RawRecord,
+    ScopedLogSource,
     SourceRef,
     read_only_open,
 )
@@ -102,6 +105,9 @@ class LogIngestor:
         repo_root_of: cwd → 본 저장소 경로. 없으면 `.git` 파일을 읽는 기본 구현(수집마다 캐시).
         diagnostic_category: 진단 이벤트 범주(design §4R.4: `error`).
         diagnostic_source: 진단 이벤트 `source`(계약: `diagnostic`).
+        projects: 앱에 등록된 프로젝트 폴더를 돌려주는 함수(수집마다 부른다). None이면 범위 필터
+            없음. 값이 있으면 ``ScopedLogSource`` 출처의 범위 밖 단위를 읽지 않고, 이미 색인된
+            범위 밖 단위가 있으면 그 출처 색인을 비우고(커서 포함) 다시 읽는다.
     """
 
     def __init__(
@@ -119,6 +125,7 @@ class LogIngestor:
         repo_root_of: Callable[[str], str] | None = None,
         diagnostic_category: str = "error",
         diagnostic_source: str = "diagnostic",
+        projects: Callable[[], ProjectFolders | None] | None = None,
     ) -> None:
         if budget_bytes <= 0 or batch_size <= 0:
             raise ValueError("budget_bytes와 batch_size는 0보다 커야 합니다")
@@ -134,6 +141,9 @@ class LogIngestor:
         self._repo_root_of = repo_root_of
         self._diag_category = diagnostic_category
         self._diag_source = diagnostic_source
+        self._projects = projects
+        self._skipped: dict[str, int] = {}
+        self._purged: dict[str, int] = {}
         self._runtime: dict[str, _Runtime] = {}
         self._status: dict[str, LogSourceStatus] = {}
         self._locks: dict[str, threading.Lock] = {}
@@ -181,6 +191,21 @@ class LogIngestor:
                 )
             )
         return out
+
+    def source_of(self, source_id: str) -> LogSource | None:
+        """출처 id → 출처(플러그인·런타임). 없으면 None."""
+        for sid, source, _origin in self._all_sources():
+            if sid == source_id:
+                return source
+        return None
+
+    def scope_skipped(self, source_id: str) -> int:
+        """마지막 수집에서 프로젝트 범위 밖이라 건너뛴 단위 수(설정 roots가 넓을 때 알림용)."""
+        return self._skipped.get(source_id, 0)
+
+    def scope_purged(self, source_id: str) -> int:
+        """범위가 바뀌어 색인을 비운 범위 밖 단위 수(지금까지 합)."""
+        return self._purged.get(source_id, 0)
 
     # ---------------------------------------------------------------- 수집
 
@@ -280,6 +305,7 @@ class LogIngestor:
                 paths=self._paths,
                 open_read=self._open_read,
                 now=self._clock,
+                projects=self._projects() if self._projects is not None else None,
             )
             try:
                 refs = list(source.discover(ctx))
@@ -287,6 +313,7 @@ class LogIngestor:
                 raise _SourceFailureError(
                     ERROR_SOURCE_FAILED, f"{type(exc).__name__}: {exc}"
                 ) from None
+            refs = self._apply_scope(sid, source, ctx, refs)
             budget = self._budget
             for ref in refs:
                 stored = self._index.get_cursor(sid, ref.ref)
@@ -348,6 +375,23 @@ class LogIngestor:
             diagnostics=counters["diagnostics"],
             pending_bytes=pending if refs else None,
         )
+
+    def _apply_scope(
+        self, sid: str, source: LogSource, ctx: LogSourceContext, refs: list[SourceRef]
+    ) -> list[SourceRef]:
+        """프로젝트 범위 필터. 범위 밖 색인이 남아 있으면 그 출처 색인을 비우고 다시 읽게 한다."""
+        if ctx.projects is None or not isinstance(source, ScopedLogSource):
+            self._skipped.pop(sid, None)
+            return refs
+        kept = [r for r in refs if source.in_scope(r.ref, ctx)]
+        self._skipped[sid] = len(refs) - len(kept)
+        stale = [c.ref for c in self._index.list_cursors(sid) if not source.in_scope(c.ref, ctx)]
+        if stale and isinstance(self._index, PurgeableLogIndex):
+            # 범위 밖 단위만 골라 지우는 API가 없어 출처 전체를 비우고 범위 안을 처음부터
+            # 다시 읽는다.
+            self._index.purge(PurgeScope(sources=(sid,), rescan=True), dry_run=False)
+            self._purged[sid] = self._purged.get(sid, 0) + len(stale)
+        return kept
 
     def _read_ref(
         self,

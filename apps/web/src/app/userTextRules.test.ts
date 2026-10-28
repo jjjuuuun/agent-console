@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { USER_TEXT_RULES } from "@agent-console/contracts/constants";
 
 /**
@@ -9,6 +9,9 @@ import { USER_TEXT_RULES } from "@agent-console/contracts/constants";
  * 금지 패턴은 `USER_TEXT_RULES`(서버 계약의 데이터 하나) scope `messages`를 그대로 쓴다.
  * 웹 앱과 TS 라이브러리 소스의 문자열 리터럴·템플릿 조각만 검사한다(주석·테스트 파일 제외).
  */
+
+// 수백 파일 파싱이라 미러 단독 실행에서도 15초가 걸린다(파싱 범위를 줄이면 검사 의미가 줄어 시간 제한만 늘린다).
+vi.setConfig({ testTimeout: 40_000 });
 
 const ROOT = resolve(__dirname, "../../../..");
 const SCAN_DIRS = [join(ROOT, "apps/web/src"), ...readdirSync(join(ROOT, "packages/ts/lib")).map((d) => join(ROOT, "packages/ts/lib", d, "src"))];

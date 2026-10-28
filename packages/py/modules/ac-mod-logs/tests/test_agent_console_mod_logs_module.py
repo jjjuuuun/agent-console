@@ -136,6 +136,7 @@ def test_descriptor_declares_ports_roles_and_lineage() -> None:
         "logs.source_defaults",
         "logs.scope_kinds",
         "logs.filter_predicates",
+        "projects.folders",
     }
     assert d.requires == ()
     assert d.web_roles == WEB_ROLES == ("logs",)

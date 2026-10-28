@@ -43,8 +43,10 @@ export interface LogTaxonomyView {
 export interface Formatters {
   /** 상대 시각: ms 간격 -> "+1:23.456". */
   relativeTime(ms: number): string;
-  /** 절대 시각: epoch 초 -> 로컬 "HH:mm:ss.SSS". */
+  /** 시각만: epoch 초 -> 로컬 "HH:mm:ss.SSS". */
   absoluteTime(epochSeconds: number): string;
+  /** 날짜 포함 절대 시각: epoch 초 -> 로컬 "YYYY-MM-DD HH:mm:ss". */
+  dateTime(epochSeconds: number): string;
   /** 소요 시간(ms) -> "842ms" "12.3초" "2분 05초". */
   duration(ms: number): string;
   /** 토큰 약식 -> "4.1k". */

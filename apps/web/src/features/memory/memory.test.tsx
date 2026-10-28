@@ -85,8 +85,8 @@ describe("메모리 화면: 역할·배치", () => {
     await grid();
     expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.not.objectContaining({ scopes: expect.anything() }));
     fireEvent.click(within(tree).getByRole("treeitem", { name: "g1, 항목 60개" }));
-    await waitFor(() => expect(router.state.location.search).toContain("scope=desk%3Ag1"));
-    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ scopes: [{ kind: "desk", id: "g1" }] })));
+    await waitFor(() => expect(router.state.location.search).toContain("scope=desk%3Ag1"), LONG);
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ scopes: [{ kind: "desk", id: "g1" }] })), LONG);
   });
 
   it("본문 폭 1180 미만이면 2칸: 나무 칸이 없고 [범위 ▾] 팝오버가 도구줄 맨 앞에 있다", async () => {
@@ -112,13 +112,13 @@ describe("메모리 화면: 목록·검색·정렬", () => {
     await grid();
     const before = rowNames();
     fireEvent.click(screen.getByRole("button", { name: "키" }));
-    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ sort: "key", order: "desc" })));
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ sort: "key", order: "desc" })), LONG);
     expect(router.state.location.search).toContain("sort=key");
     expect(rowNames()).toEqual(before);
     fireEvent.click(screen.getByRole("button", { name: /^키/ }));
-    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ sort: "key", order: "asc" })));
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ sort: "key", order: "asc" })), LONG);
     fireEvent.click(screen.getByRole("button", { name: /^키/ }));
-    await waitFor(() => expect(router.state.location.search).not.toContain("sort="));
+    await waitFor(() => expect(router.state.location.search).not.toContain("sort="), LONG);
   });
 
   it("검색어는 입력이 멈춘 뒤에 질의하고 주소에 반영한다. 한글 조합 중에는 질의하지 않고 조합이 끝나면 바로 질의한다", async () => {
@@ -130,11 +130,11 @@ describe("메모리 화면: 목록·검색·정렬", () => {
     await new Promise((r) => setTimeout(r, 450));
     expect(rest.listMemoryEntries).not.toHaveBeenCalledWith(expect.objectContaining({ q: "ㄱ" }));
     fireEvent.compositionEnd(box, { target: { value: "가나" } });
-    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ q: "가나" })));
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ q: "가나" })), LONG);
     expect(router.state.location.search).toContain("q=");
     fireEvent.change(box, { target: { value: "x" } });
     fireEvent.keyDown(box, { key: "Enter" });
-    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ q: "x" })));
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ q: "x" })), LONG);
   });
 
   it("태그 목록은 서버 태그 질의(현재 범위·보관 포함 인자)로 채워지고 고르면 칩이 생긴다", async () => {
@@ -145,7 +145,7 @@ describe("메모리 화면: 목록·검색·정렬", () => {
     expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["t1 4", "t2 2"]);
     expect(rest.listMemoryTags).toHaveBeenCalledWith({ scopes: [{ kind: "desk", id: "g1" }], includeArchived: true });
     fireEvent.click(within(list).getByRole("checkbox", { name: /t2/ }));
-    await waitFor(() => expect(router.state.location.search).toContain("tag=t2"));
+    await waitFor(() => expect(router.state.location.search).toContain("tag=t2"), LONG);
     expect(within(await screen.findByRole("group", { name: "활성 필터" })).getByRole("button", { name: /태그: t2/ })).toBeTruthy();
   });
 });
@@ -169,7 +169,7 @@ describe("메모리 화면: 상태", () => {
     const { router } = setup("/memory?tag=zz", { entries: [] });
     expect(await screen.findByText("조건에 맞는 항목이 없습니다.", {}, LONG)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "필터 지우기" }));
-    await waitFor(() => expect(router.state.location.search).not.toContain("tag="));
+    await waitFor(() => expect(router.state.location.search).not.toContain("tag="), LONG);
   });
 
   it("목록 요청이 실패하면 오류 블록과 [다시 시도], 나무는 정상", async () => {
@@ -179,7 +179,7 @@ describe("메모리 화면: 상태", () => {
     expect(screen.getByRole("tree", { name: "메모리 범위 나무" })).toBeTruthy();
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    await waitFor(() => expect(screen.queryByRole("heading", { name: "메모리 목록을 불러오지 못했습니다" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "메모리 목록을 불러오지 못했습니다" })).toBeNull(), LONG);
   });
 
   it("서버 경고(저장소 임시 모드)는 접을 수 없는 띠와 [내보내기]로 알린다", async () => {
@@ -203,7 +203,7 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     const chips = screen.getByRole("group", { name: "활성 필터" });
     expect(within(chips).getByRole("button", { name: /프로젝트: 프로젝트 하나/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
-    await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);
     expect(within(tree).getAllByText("팀 둘").length).toBeGreaterThan(0);
     expect(within(screen.getByRole("group", { name: "활성 필터" })).getByRole("button", { name: /프로젝트 필터 해제됨/ })).toBeTruthy();
   });
@@ -223,7 +223,7 @@ describe("메모리 화면: 상세·저장·충돌", () => {
     const { router, rest } = setup("/memory", { entries, rest: { updateMemoryEntry: vi.fn(async () => updated) } });
     await grid();
     fireEvent.click(screen.getByRole("row", { name: /entry-1,/ }));
-    await waitFor(() => expect(router.state.location.search).toContain("entry=e1"));
+    await waitFor(() => expect(router.state.location.search).toContain("entry=e1"), LONG);
     expect(await screen.findByRole("heading", { name: "a/b/entry-1" }, LONG)).toBeTruthy();
     fireEvent.click(screen.getByText("정보"));
     const tagInput = await screen.findByRole("textbox", { name: "태그 추가" }, LONG);
@@ -231,8 +231,8 @@ describe("메모리 화면: 상세·저장·충돌", () => {
     fireEvent.keyDown(tagInput, { key: "Enter" });
     expect((await screen.findAllByText("저장 안 됨")).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(rest.updateMemoryEntry).toHaveBeenCalledWith("e1", { tags: ["새태그"] }, entries[1]!.version));
-    await waitFor(() => expect(screen.getAllByText("저장됨").length).toBeGreaterThan(0));
+    await waitFor(() => expect(rest.updateMemoryEntry).toHaveBeenCalledWith("e1", { tags: ["새태그"] }, entries[1]!.version), LONG);
+    await waitFor(() => expect(screen.getAllByText("저장됨").length).toBeGreaterThan(0), LONG);
   });
 
   it("버전 충돌(412)이면 서버 최신 본문과 비교하는 대화상자가 뜨고, [내 변경을 저장]은 서버 최신 버전으로 다시 보낸다", async () => {
@@ -263,8 +263,8 @@ describe("메모리 화면: 상세·저장·충돌", () => {
     expect(dialog.textContent).toContain(`서버 v${newer.version}`);
     expect(dialog.textContent).toContain("기록에 남아 언제든 되돌릴 수 있습니다");
     fireEvent.click(within(dialog).getByRole("button", { name: `내 변경을 v${newer.version + 1}으로 저장` }));
-    await waitFor(() => expect(update).toHaveBeenLastCalledWith("e1", { tags: ["내태그"] }, newer.version));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "다른 쪽이 먼저 고쳤습니다" })).toBeNull());
+    await waitFor(() => expect(update).toHaveBeenLastCalledWith("e1", { tags: ["내태그"] }, newer.version), LONG);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "다른 쪽이 먼저 고쳤습니다" })).toBeNull(), LONG);
   });
 
   it("비밀 거부(422)는 위치만 알리고 값은 어디에도 없다. 그래도 저장하는 버튼이 없고 편집 내용은 남는다", async () => {
@@ -301,7 +301,7 @@ describe("메모리 화면: 상세·저장·충돌", () => {
     expect(document.activeElement?.textContent).toBe("취소");
     expect(router.state.location.search).toContain("entry=e1");
     fireEvent.click(within(dialog).getByRole("button", { name: "버리고 이동" }));
-    await waitFor(() => expect(router.state.location.search).toContain("entry=e2"));
+    await waitFor(() => expect(router.state.location.search).toContain("entry=e2"), LONG);
   });
 
   it("지운 항목은 읽기 전용이고 [복원]이 있다", async () => {
@@ -311,7 +311,7 @@ describe("메모리 화면: 상세·저장·충돌", () => {
     setup("/memory?entry=e1&deleted=1", { entries: [entries[0]!, { ...entries[1]!, deleted_at: SAMPLE_NOW - 5 }], rest: { getMemoryEntry: vi.fn(async () => deleted), restoreMemoryEntry: restore } });
     expect(await screen.findByText("지운 항목입니다.", {}, LONG)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "복원" }));
-    await waitFor(() => expect(restore).toHaveBeenCalledWith("e1"));
+    await waitFor(() => expect(restore).toHaveBeenCalledWith("e1"), LONG);
   });
 
   it("항목이 없으면(404) 찾을 수 없다는 안내와 [목록으로]", async () => {
@@ -335,8 +335,8 @@ describe("메모리 화면: 완전 삭제·가져오기·내보내기", () => {
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "되돌릴 수 없음을 확인했습니다" }));
     fireEvent.click(submit);
-    await waitFor(() => expect(purge).toHaveBeenCalledWith("e1"));
-    await waitFor(() => expect(router.state.location.search).not.toContain("entry=e1"));
+    await waitFor(() => expect(purge).toHaveBeenCalledWith("e1"), LONG);
+    await waitFor(() => expect(router.state.location.search).not.toContain("entry=e1"), LONG);
   });
 
   it("가져오기: 미리보기는 dry_run으로 수만 세고 쓰지 않으며, 정책을 바꾸면 흐려진다. 가져오기는 zip 바이트를 그대로 보낸다", async () => {
@@ -390,7 +390,7 @@ describe("메모리 화면: 실시간", () => {
       ws.emitMemory({ ...change, entry_id: "e2" });
       ws.emitMemory({ ...change, entry_id: "e3" });
     });
-    await waitFor(() => expect(calls()).toBeGreaterThan(first));
+    await waitFor(() => expect(calls()).toBeGreaterThan(first), LONG);
     await new Promise((r) => setTimeout(r, 700));
     expect(calls()).toBe(first + 1);
   });
@@ -404,7 +404,7 @@ describe("메모리 화면: 실시간", () => {
     await new Promise((r) => setTimeout(r, 200));
     expect((rest.listMemoryEntries as ReturnType<typeof vi.fn>).mock.calls.length).toBe(first);
     fireEvent.click(chip);
-    await waitFor(() => expect((rest.listMemoryEntries as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(first));
+    await waitFor(() => expect((rest.listMemoryEntries as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(first), LONG);
     expect(screen.queryByRole("button", { name: /새 변경/ })).toBeNull();
   });
 

@@ -20,6 +20,7 @@ from agent_console_mod_projects import (
     CODE_DEFINITIONS_UNAVAILABLE,
     DEFINITION_CHECKS,
     DEFINITIONS_STORE,
+    PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
     DefinitionSnapshot,
     ProjectLookup,
@@ -140,6 +141,46 @@ def test_projects_lookup_port(tmp_path: Path) -> None:
     assert project.name == "A"
     assert lookup.get_project("zz") is None
     assert lookup.get_project("../x") is None
+
+
+def test_projects_folders_port(tmp_path: Path) -> None:
+    """5.7R.30 후속: ``projects.folders`` — 등록된 프로젝트 폴더, 앱 작업 폴더의 프로젝트가 현재."""
+    assembly = _assembly(tmp_path)
+    folders = assembly.port(PROJECT_FOLDERS)
+    assert folders is not None
+    assert folders().registered == ()  # 등록 없음 = 빈 범위
+    with _client(assembly) as client:
+        client.post(f"{API}/projects", json={"id": "here", "name": "Here"})
+        client.post(
+            f"{API}/projects",
+            json={"id": "far", "name": "Far", "working_directory": str(tmp_path / "far")},
+        )
+    found = folders()
+    assert set(found.registered) == {tmp_path.absolute(), tmp_path / "far"}
+    assert found.current == (tmp_path.absolute(),)
+
+
+def test_projects_folders_follow_runs_working_directory(tmp_path: Path) -> None:
+    """앱 작업 폴더 기본값은 실행 모듈 설정(working_directory)에서 온다(SeedSetting)."""
+    from agent_console_mod_projects import SETTINGS_COMPAT
+
+    assert [(s.key, s.source) for s in SETTINGS_COMPAT.seeds] == [
+        ("working_directory", "modules.options.mod-runs.working_directory")
+    ]
+    config = ModulesConfig(
+        options={"mod-projects": {"snapshot_ttl_seconds": 0, "working_directory": "work"}}
+    )
+    base = BaseServices(
+        paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state")
+    )
+    assembly = assemble(
+        [module, local_definitions_module(workspace=tmp_path / "ws")], config, base=base
+    )
+    with _client(assembly) as client:
+        client.post(f"{API}/projects", json={"id": "p", "name": "P"})
+    folders = assembly.port(PROJECT_FOLDERS)
+    assert folders is not None
+    assert folders().current == ((tmp_path / "work").absolute(),)
 
 
 # ---------------------------------------------------------------- 옮기기

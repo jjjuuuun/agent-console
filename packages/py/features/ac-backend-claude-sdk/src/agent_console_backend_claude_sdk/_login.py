@@ -197,6 +197,10 @@ class ClaudeSdkLoginTexts(BaseModel):
     )
     writes_credentials: str = "Claude Code 로그인 정보: {path}"
     writes_shared: str = "터미널의 Claude Code도 같은 로그인을 씁니다"
+    writes_private: str = (
+        "앱 전용 자격 폴더(앱 작업 공간 안)입니다. 모든 프로젝트가 이 로그인 하나를 함께 쓰고, "
+        "터미널의 Claude Code(~/.claude) 로그인과 따로 저장됩니다"
+    )
 
     starting: str = "Claude Code 로그인을 시작하고 있습니다."
     waiting_browser: str = (
@@ -225,6 +229,10 @@ class ClaudeSdkLoginTexts(BaseModel):
     )
 
     logout_ok: str = "로그아웃했습니다. 이 PC의 Claude Code 로그인이 지워졌습니다."
+    logout_ok_private: str = "로그아웃했습니다. 앱 전용 자격 폴더의 로그인이 지워졌습니다."
+    failed_auth_dir: str = (
+        "자격 폴더를 준비하지 못했습니다. 폴더 권한과 설치자 설정 auth_dir.config_dir을 확인하세요."
+    )
     logout_failed: str = "로그아웃하지 못했습니다(종료 코드 {code})."
     logout_timeout: str = "로그아웃이 {seconds:g}초 안에 끝나지 않았습니다."
     logout_cli_missing: str = "Claude Code 실행 파일을 찾지 못해 로그아웃하지 못했습니다."

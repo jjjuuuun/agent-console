@@ -28,11 +28,16 @@
 - ``logs.filter_predicates``(여러 제공자, X28): 필터 확장(``LogFilterExtension`` — ``fields``·
   ``build(values, context)``). 이름이 ``GET /logs/schema`` filters에 실리고 질의 때 이벤트를
   판정한다. 없거나 끄면 그 이름은 422.
+- ``projects.folders``(5.7R.30 후속): 앱에 등록된 프로젝트 폴더(``current``·``registered``).
+  범위를 아는 출처(``ScopedLogSource``, 예: ``claude-code-jsonl``)는 이 폴더의 기록만 읽는다.
+  없으면 등록된 프로젝트가 없는 것으로 보고 그 출처는 아무것도 읽지 않는다(홈 전체를 읽는 대체
+  동작 없음) — ``logs.no_projects`` 경고.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import HandoffMatrix, Issue, WorkspaceSettings
@@ -146,6 +151,21 @@ type WorkspaceSettingsReader = Callable[[], WorkspaceSettings]
 type WarningSource = Callable[[], Sequence[Issue]]
 """``server.warnings`` 포트 모양."""
 
+
+@runtime_checkable
+class ProjectFoldersLike(Protocol):
+    """``projects.folders``가 돌려주는 값 모양(현재 프로젝트 폴더·등록된 프로젝트 폴더)."""
+
+    @property
+    def current(self) -> Sequence[Path]: ...
+
+    @property
+    def registered(self) -> Sequence[Path]: ...
+
+
+type ProjectFoldersReader = Callable[[], ProjectFoldersLike]
+"""``projects.folders`` 포트 모양."""
+
 LOGS_QUERY: PortKey[LogQueryPort] = PortKey("logs.query", "로그 색인 읽기")
 LOGS_INGEST: PortKey[LogIngestPort] = PortKey("logs.ingest", "로그 수집(런타임 출처·수집 예약)")
 SERVER_WARNINGS: PortKey[WarningSource] = PortKey("server.warnings", "서버 정보 경고", multi=True)
@@ -168,6 +188,10 @@ LOG_FILTER_PREDICATES: PortKey[LogFilterExtension] = PortKey(
     "logs.filter_predicates", "로그 필터 확장(X28, 이름 묶음 → 이벤트 판정)", multi=True
 )
 
+PROJECT_FOLDERS: PortKey[ProjectFoldersReader] = PortKey(
+    "projects.folders", "앱에 등록된 프로젝트 폴더(현재·전체)"
+)
+
 LOGS_INGESTED: Topic[LogsIngestedPayload] = Topic("logs.ingested")
 """수집으로 새 이벤트가 색인됐을 때(``source_ids``·``count``·``max_seq``)."""
 
@@ -178,12 +202,15 @@ __all__ = [
     "LOG_FILTER_PREDICATES",
     "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
+    "PROJECT_FOLDERS",
     "SECRET_RULES",
     "SERVER_WARNINGS",
     "SOURCE_DEFAULTS",
     "WORKSPACE_SETTINGS",
     "LogIngestPort",
     "LogQueryPort",
+    "ProjectFoldersLike",
+    "ProjectFoldersReader",
     "RuntimeLogSource",
     "SecretRulesReader",
     "SuspectedRules",

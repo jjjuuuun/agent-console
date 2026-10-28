@@ -52,13 +52,13 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("사이드바 푸터에 앞 2개 창이 보이고 주 메뉴 nav 밖이며 탭 정지는 링크 1개다", async () => {
     mount();
-    const link = await screen.findByRole("link", { name: /^사용량: win-1 사용 63%, 초기화까지 2시간 1\d분\. win-2 weird/ });
+    const link = await screen.findByRole("link", { name: /^사용량: win-1 사용 63%, 초기화까지 2시간 1\d분\. win-3 사용 10%\./ });
     const nav = screen.getByRole("navigation", { name: "주 메뉴" });
     expect(nav.contains(link)).toBe(false);
     expect(nav.textContent).not.toMatch(/63%/);
     expect(link.getAttribute("href")).toBe("/usage");
-    expect(link.getAttribute("aria-label")).toMatch(/win-2 weird, 사용률 정보 없음/);
-    expect(link.getAttribute("aria-label")).not.toMatch(/win-3/); // max_items 기본 2
+    // 상태만 주는 창(win-2)은 사이드바에 없고, 값이 있는 창만 앞에서 max_items(기본 2)개
+    expect(link.getAttribute("aria-label")).not.toMatch(/win-2|weird|사용률 정보 없음/);
     expect(link.getAttribute("aria-label")).toMatch(/눌러서 사용량 화면 열기$/);
     expect(indicator()!.closest(".ac-sidebar-footer")).not.toBeNull();
     expect(indicator()!.querySelectorAll("a, button, [tabindex]").length).toBe(1);
@@ -97,7 +97,7 @@ describe("사용량 표시기: 기본 설정", () => {
     const link = await screen.findByRole("link", { name: /^사용량:/ });
     fireEvent.focus(link);
     const pop = await screen.findByRole("group", { name: "사용량" });
-    expect(within(pop).getByText("사용 63%")).toBeTruthy();
+    expect(within(pop).getByText("63% 사용됨")).toBeTruthy();
     expect(within(pop).getByText("win-3")).toBeTruthy(); // 표시 대상이 아니어도 관측된 창은 팝오버에 있다
     expect(link.getAttribute("aria-describedby")).toBe(pop.id);
     fireEvent.keyDown(document.body, { key: "Escape" });
@@ -114,7 +114,7 @@ describe("사용량 표시기: 기본 설정", () => {
 
 describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
   const miniReport = (windows: UsageReport["windows"]): Record<string, unknown> => ({ getUsage: vi.fn(async () => ({ generated_at: now, windows, rollups: [] })) });
-  const rows = () => Array.from(document.querySelectorAll(".usage-ind-row"));
+  const rows = () => Array.from(document.querySelectorAll(".usage-ind-simple .usage-ind-head"));
 
   it("기본 색 규칙은 계약 데이터에서 온다: 63%는 success 톤, 글리프 없음, 퍼센트 글자색은 톤이 아니다", async () => {
     mount();
@@ -122,7 +122,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
     const item = document.querySelector<HTMLElement>('.usage-ind-item[data-tone="success"]')!;
     expect(item).not.toBeNull();
     expect(item.style.getPropertyValue("--ac-gauge-fill")).toBe("var(--ac-success)");
-    expect(item.querySelector(".usage-ind-value")!.textContent).toBe("63%");
+    expect(item.querySelector(".usage-ind-value")!.textContent).toBe("63% 사용됨");
     expect(item.querySelector(".usage-ind-tone")).toBeNull();
   });
 
@@ -133,30 +133,37 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
     ]));
     await screen.findByRole("link", { name: /^사용량:/ });
     const [a, b] = rows().map((r) => r.querySelector(".usage-ind-value")!.textContent);
-    expect(a).toBe("75%▲");
-    expect(b).toBe("93%✕");
+    expect(a).toBe("75% 사용됨▲");
+    expect(b).toBe("93% 사용됨✕");
   });
 
-  it("상태·토큰 값은 글자로 그리지 않고 빈 점선 트랙과 –만 보이며 사유는 툴팁에 있다", async () => {
+  it("상태·토큰만 주는 창은 사이드바에 그리지 않고 '사용량 정보 없음' 한 줄만 보인다(사용자 요청 10/28)", async () => {
     mount({}, miniReport([
       { source: "src-a", window: "win-1", status: "idle", observed_at: now - 30 },
       { source: "src-a", window: "win-2", used_tokens: 1_100_000_000, observed_at: now - 30 },
     ]));
     await screen.findByRole("link", { name: /^사용량:/ });
-    const text = indicator()!.textContent!;
-    expect(text).not.toMatch(/idle|1\.1G|유휴|토큰/);
-    expect(rows().map((r) => r.querySelector(".usage-ind-value")!.textContent)).toEqual(["–", "–"]);
-    expect(indicator()!.querySelectorAll('.ac-gauge[data-no-value="true"]').length).toBe(2);
-    const titles = Array.from(document.querySelectorAll(".usage-ind-item")).map((e) => e.getAttribute("title"));
-    expect(titles[0]).toMatch(/사용률 정보 없음\(/);
-    expect(titles[1]).toMatch(/사용률 정보 없음\(한도 정보 없음, 토큰/);
+    expect(indicator()!.textContent).toBe("사용량 정보 없음");
+    expect(indicator()!.textContent).not.toMatch(/idle|1\.1G|유휴|토큰/i);
+    expect(indicator()!.querySelector(".ac-gauge")).toBeNull();
   });
 
-  it("추정 출처의 값은 ~를 붙이고 툴팁에 추정(로컬 로그)을 적는다", async () => {
+  it("사이드바 항목은 제목·'N% 사용됨'·막대·초기화 시각만 있다(신뢰·관측 시각·상태 없음)", async () => {
+    mount();
+    await screen.findByRole("link", { name: /^사용량:/ });
+    const item = document.querySelector<HTMLElement>(".usage-ind-simple")!;
+    expect(Array.from(item.children).map((c) => c.className.split(" ")[0])).toEqual(["usage-ind-head", "usage-ind-bar", "usage-ind-sub"]);
+    expect(item.querySelector(".usage-ind-label")!.textContent).toBe("win-1");
+    expect(item.querySelector(".usage-ind-sub")!.textContent).toMatch(/에 초기화$/);
+    expect(item.textContent).not.toMatch(/◆|관측|⚠/);
+    expect(document.querySelectorAll(".usage-ind-simple").length).toBe(2); // win-2(상태)는 건너뛰고 win-1·win-3
+  });
+
+  it("추정 출처의 값은 툴팁에 추정(로컬 로그)을 적는다(사이드바 글자에는 ~를 붙이지 않는다)", async () => {
     const est: UsageSourceInfo[] = [{ descriptor: { id: "src-a", title: "로컬", trust: "estimated" }, enabled: true }];
     mount({}, { ...miniReport([{ source: "src-a", window: "win-1", used_ratio: 0.42, observed_at: now - 30 }]), listUsageSources: vi.fn(async () => est) });
     await screen.findByRole("link", { name: /^사용량:/ });
-    await waitFor(() => expect(rows()[0]!.querySelector(".usage-ind-value")!.textContent).toBe("~42%"));
+    await waitFor(() => expect(rows()[0]!.querySelector(".usage-ind-value")!.textContent).toBe("42% 사용됨"));
     expect(document.querySelector(".usage-ind-item")!.getAttribute("title")).toMatch(/추정\(로컬 로그\)/);
   });
 
@@ -166,16 +173,18 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
     const link = await screen.findByRole("link", { name: /^사용량:/ });
     await waitFor(() => expect(link.getAttribute("href")).toBe("/usage#setup"));
     expect(indicator()!.textContent).toMatch(/사용률 미연결/);
-    expect(indicator()!.textContent).toMatch(/연결 방법/);
+    expect(indicator()!.textContent).not.toMatch(/연결 방법|›/); // 줄 전체가 링크다(따로 강조된 글자 없음)
+    expect(link.getAttribute("aria-label")).toMatch(/상태 줄을 연결/);
     expect(document.querySelector(".ac-gauge")).toBeNull();
   });
 
   it("hide_when_empty면 미연결 안내도 그리지 않는다", async () => {
     const needs: UsageSourceInfo[] = [{ descriptor: { id: "src-a", title: "공식", trust: "official", needs_setup: true }, enabled: true }];
     mount(withIndicator({ hide_when_empty: true }), { ...miniReport([{ source: "src-a", window: "win-1", status: "idle", observed_at: now - 30 }]), listUsageSources: vi.fn(async () => needs) });
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
-    expect(link.getAttribute("href")).toBe("/usage");
-    expect(indicator()!.textContent).not.toMatch(/미연결/);
+    // 보일 사용률이 없으니 표시기 자체를 그리지 않는다(상태만 주는 창은 값으로 치지 않는다)
+    await screen.findByRole("navigation", { name: "주 메뉴" });
+    await act(async () => {});
+    expect(indicator()).toBeNull();
   });
 });
 
@@ -298,11 +307,11 @@ describe("사용량 표시기: 설정", () => {
   it("남은 양/사용한 양, 항목 선택, 창 지정", async () => {
     mount(withIndicator({ value_mode: "used", windows: ["win-3", "win-x"], fields: ["label", "value"] }));
     const link = await screen.findByRole("link", { name: /^사용량:/ });
-    expect(link.getAttribute("aria-label")).toMatch(/win-3 사용 10%\. win-x 관측 없음\./);
-    expect(indicator()!.querySelector(".ac-gauge")).toBeNull();
-    // 미니 줄은 숫자만 보인다(사용/남음 설명은 툴팁·aria-label)
-    expect(indicator()!.textContent).toContain("10%");
-    expect(indicator()!.textContent).toContain("win-x");
+    expect(link.getAttribute("aria-label")).toMatch(/^사용량: win-3 사용 10%\. 눌러서/);
+    // 사이드바 항목은 `fields` 설정과 상관없이 제목·값·막대·초기화 시각 고정(fields는 칩 모양에만 적용)
+    expect(indicator()!.querySelector(".ac-gauge")).not.toBeNull();
+    expect(indicator()!.textContent).toContain("10% 사용됨");
+    expect(indicator()!.textContent).not.toContain("win-x"); // 관측 없는 창은 사이드바에 그리지 않는다
   });
 
   it("색 규칙이 적용되면 아이콘과 문장을 함께 쓴다(색 단독 아님)", async () => {
@@ -334,7 +343,7 @@ describe("사용량 표시기: 설정", () => {
     expect(indicator()!.getAttribute("data-corner")).toBe("bottom-left");
   });
 
-  it("hide_when_empty면 관측이 없을 때 렌더하지 않고, 기본이면 '사용량 –'을 보인다", async () => {
+  it("hide_when_empty면 관측이 없을 때 렌더하지 않고, 기본이면 '사용량 정보 없음'을 보인다", async () => {
     const empty = { getUsage: vi.fn(async () => ({ windows: [], rollups: [], generated_at: now })) };
     mount(withIndicator({ hide_when_empty: true }), empty);
     await screen.findByRole("navigation", { name: "주 메뉴" });
@@ -343,7 +352,7 @@ describe("사용량 표시기: 설정", () => {
     expect(indicator()).toBeNull();
     cleanup();
     mount({}, empty);
-    expect((await screen.findByRole("link", { name: /^사용량:/ })).textContent).toContain("사용량 –");
+    expect((await screen.findByRole("link", { name: /^사용량:/ })).textContent).toContain("사용량 정보 없음");
   });
 
   it("also_in_title이면 제목 끝에 첫 항목이 붙고, 끄면 이전 제목 그대로", async () => {

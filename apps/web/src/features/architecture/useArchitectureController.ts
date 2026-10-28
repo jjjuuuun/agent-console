@@ -48,8 +48,19 @@ export interface ArchitectureChip {
   onRemove(): void;
 }
 
+/** 창끼리 맞춰야 하는 구조도 상태(선택·하위 구조도 단계·프로필). 다른 창(분리 창)과 주고받는다. */
+export interface ArchitectureSyncState {
+  selection: ArchTarget | null;
+  drill: readonly DrillStep[];
+  profile: string | undefined;
+}
+
 export interface ArchitectureController {
   enabled: boolean;
+  /** 창 사이에 맞출 상태(내용이 같으면 같은 참조) */
+  syncState: ArchitectureSyncState;
+  /** 다른 창에서 온 상태를 그대로 받아들인다(저장소에는 쓰지 않는다). */
+  applySyncState(state: ArchitectureSyncState): void;
   /** 서버에 요청한 프로필 id(없으면 서버 기본) */
   profile: string | undefined;
   setProfile(id: string): void;
@@ -143,6 +154,12 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
     [storage, storageKey],
   );
   const select = useCallback((next: ArchTarget | null) => setSelection(next), []);
+  const syncState = useMemo<ArchitectureSyncState>(() => ({ selection, drill, profile }), [selection, drill, profile]);
+  const applySyncState = useCallback((state: ArchitectureSyncState) => {
+    setProfileState(state.profile);
+    setSelection(state.selection);
+    setDrill(state.drill);
+  }, []);
   const blocked = useCallback(
     (_target: ArchTarget, reason: "not_collected" | "structural") => toast({ tone: "info", text: reason === "structural" ? t.toast.structural : t.toast.notCollected }),
     [toast],
@@ -207,6 +224,8 @@ export function useArchitectureController(opts: ArchitectureControllerOptions): 
   const error: ArchErrorInfo | null = enabled && noRules ? { kind: "rules", message: "" } : viewQ.isError && view === undefined ? classifyArchError(viewQ.error) : null;
   return {
     enabled,
+    syncState,
+    applySyncState,
     profile,
     setProfile,
     profiles: profilesQ.data,

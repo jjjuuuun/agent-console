@@ -127,6 +127,10 @@ class JsonlFileSource:
 
     # ---------------------------------------------------------------- 출처 구현
 
+    def accepts(self, rel: str, ctx: LogSourceContext) -> bool:
+        """이 단위의 맥락을 읽을지(기본 참). 범위를 아는 하위 클래스가 ``in_scope``로 바꾼다."""
+        return True
+
     def roots(self, ctx: LogSourceContext) -> list[Path]:
         """유효 루트 목록(설정 `roots`, 비었으면 `default_roots`)."""
         configured = ctx.config.get("roots") or []
@@ -191,7 +195,8 @@ class JsonlFileSource:
                         ref=rel,
                         size=stat.st_size,
                         mtime=stat.st_mtime,
-                        meta=dict(self.ref_meta(root, path, ctx)),
+                        # 범위 밖 단위는 맥락(메타 파일)을 읽지 않는다 — 수집기가 건너뛴다.
+                        meta=dict(self.ref_meta(root, path, ctx)) if self.accepts(rel, ctx) else {},
                     )
                 )
         return refs

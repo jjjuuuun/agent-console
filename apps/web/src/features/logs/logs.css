@@ -147,3 +147,6 @@
 .logs-runtab-chips { flex: 1 1 100%; min-width: 0; }
 .logs-runtab-empty { display: flex; flex-direction: column; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-3) var(--ac-space-2); color: var(--ac-text-muted); font-size: 13px; text-align: center; }
 .logs-runtab-empty p { margin: 0; }
+
+/* 구조도를 새 창으로 분리한 동안 접힌 자리 */
+.logs-flow-body--arch-folded { padding: var(--ac-space-2); }

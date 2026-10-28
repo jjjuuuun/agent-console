@@ -23,8 +23,10 @@ __all__ = [
     "LogClassifier",
     "LogSource",
     "LogSourceContext",
+    "ProjectFolders",
     "RawRecord",
     "ReadResult",
+    "ScopedLogSource",
     "SourceRef",
     "read_only_open",
 ]
@@ -102,6 +104,32 @@ class ReadResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectFolders:
+    """앱에 등록된 프로젝트 폴더(출처 범위 필터 재료, 5.7R.30 후속).
+
+    기능은 앱이 만들거나 등록한 프로젝트(로컬 폴더)에 대해서만 동작한다. 이 값을 받은 출처는
+    범위 밖 폴더의 기록을 읽지 않는다. 등록된 프로젝트가 없으면 둘 다 비어 있고 아무것도
+    읽지 않는다.
+
+    Attributes:
+        current: 현재 프로젝트 폴더(0개 또는 1개).
+        registered: 등록된 프로젝트 폴더 전체.
+    """
+
+    current: tuple[Path, ...] = ()
+    registered: tuple[Path, ...] = ()
+
+    def select(self, scope: str) -> tuple[Path, ...]:
+        """범위 이름(출처 설정 데이터) → 폴더. ``registered``면 전체, 그 밖은 현재 프로젝트."""
+        return self.registered if scope == "registered" else self.current
+
+    @property
+    def empty(self) -> bool:
+        """등록된 프로젝트가 없다."""
+        return not self.registered and not self.current
+
+
+@dataclass(frozen=True, slots=True)
 class LogSourceContext:
     """출처에 넘기는 맥락(모두 주입, 전역 없음).
 
@@ -112,6 +140,8 @@ class LogSourceContext:
         paths: 호스트가 주는 기본 경로(`workspace`·`state` 등, 없을 수 있음).
         open_read: 읽기 전용 열기. 출처는 파일을 이것으로만 연다(테스트에서 쓰기 감시).
         now: 현재 시각(epoch 초).
+        projects: 앱에 등록된 프로젝트 폴더. None이면 범위 필터 없음(앱 밖 단독 사용). 값이 있으면
+            ``ScopedLogSource``를 구현한 출처는 범위 밖 단위를 읽지 않는다.
     """
 
     source_id: str
@@ -120,6 +150,7 @@ class LogSourceContext:
     paths: Mapping[str, Path] = field(default_factory=dict)
     open_read: Callable[[Path], BinaryIO] = read_only_open
     now: Callable[[], float] = field(default=lambda: 0.0)
+    projects: ProjectFolders | None = None
 
 
 @runtime_checkable
@@ -159,6 +190,16 @@ class ClassifyContext:
     source_id: str
     ref: SourceRef
     config: Mapping[str, JsonValue] = field(default_factory=dict)
+
+
+@runtime_checkable
+class ScopedLogSource(Protocol):
+    """프로젝트 범위를 아는 출처(선택). 수집기는 ``ctx.projects``가 있으면 범위 밖 단위를 건너뛰고,
+    이미 색인된 범위 밖 단위가 있으면 그 출처 색인을 비우고 다시 읽는다."""
+
+    def in_scope(self, ref: str, ctx: LogSourceContext) -> bool:
+        """단위(``SourceRef.ref``)가 ``ctx.projects``의 범위 안인가."""
+        ...
 
 
 @runtime_checkable

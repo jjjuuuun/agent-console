@@ -36,7 +36,7 @@ def build_router(service: Callable[[], ImportService]) -> APIRouter:
         responses=_ERRORS,
     )
     async def import_sources() -> list[ImportSourceDescriptor]:
-        """가져오기 출처(플러그인이 만든다. 기본: 사용자 `~/.claude`, 프로젝트 `.claude/`)."""
+        """가져오기 출처(플러그인이 만든다. 기본: 프로젝트 `.claude/`)."""
         return service().descriptors()
 
     @router.post("/resources/import/preview", response_model=ImportPreview, responses=_ERRORS)

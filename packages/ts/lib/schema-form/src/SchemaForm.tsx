@@ -16,7 +16,7 @@ import type { DeprecatedApplied } from "./deprecated";
 import { changedPaths, deepMerge, extractLayerValue, fieldProvenance } from "./provenance";
 import { XUiContext, XUiFieldTemplate, XUiObjectFieldTemplate } from "./XUiParts";
 import type { XUiContextValue } from "./XUiParts";
-import { CheckboxFieldWidget, LabeledRadioWidget, LabeledSelectWidget } from "./fieldWidgets";
+import { CheckboxFieldWidget, LabeledCheckboxesWidget, LabeledRadioWidget, LabeledSelectWidget } from "./fieldWidgets";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { mergeUi, RAW_JSON_FIELD, rawJsonUiSchema } from "./rawFields";
 import type { JsonSchema, SchemaFormFieldProps, SchemaFormMessages, SchemaFormProps, SchemaFormWidgetProps } from "./types";
@@ -198,7 +198,7 @@ export function SchemaForm(props: SchemaFormProps) {
   const showRaw = raw || !renderable;
 
   const widgets = useMemo(() => {
-    const out: Record<string, ComponentType<WidgetProps>> = { CheckboxWidget: CheckboxFieldWidget, SelectWidget: LabeledSelectWidget, RadioWidget: LabeledRadioWidget };
+    const out: Record<string, ComponentType<WidgetProps>> = { CheckboxWidget: CheckboxFieldWidget, SelectWidget: LabeledSelectWidget, RadioWidget: LabeledRadioWidget, CheckboxesWidget: LabeledCheckboxesWidget };
     for (const [name, W] of Object.entries(customWidgets ?? {})) out[name] = adaptWidget(W);
     return out;
   }, [customWidgets]);

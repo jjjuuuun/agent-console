@@ -35,6 +35,7 @@ __all__ = [
     "META_KIND_SESSION",
     "META_KIND_SUBAGENT",
     "ClaudeCodeJsonlSource",
+    "project_key",
 ]
 
 CLAUDE_CODE_SOURCE_ID = "claude-code-jsonl"
@@ -52,6 +53,23 @@ _JSONL = ".jsonl"
 
 def _str(value: Any) -> str:
     return value if isinstance(value, str) else ""
+
+
+def project_key(folder: str | Path, *, keep: str = "", replacement: str = "-") -> str:
+    """작업 폴더 경로 → Claude Code `projects` 아래 폴더 이름(영문자·숫자·`keep` 밖 글자를 바꿈).
+
+    Claude Code는 이 규칙을 문서로 정하지 않았다(사용자 보고·도구 구현 기준). 출처 설정
+    `project_key_keep`·`project_key_replacement`로 바꾼다. 이름은 손실 변환이라 되돌리지 않는다.
+
+    >>> project_key("/work/demo"), project_key("/home/u/my.app_x")
+    ('-work-demo', '-home-u-my-app-x')
+    >>> project_key("C:\\git\\cc-plus")
+    'C--git-cc-plus'
+    """
+    text = str(folder)
+    return "".join(
+        ch if (ch.isascii() and ch.isalnum()) or ch in keep else replacement for ch in text
+    )
 
 
 class ClaudeCodeJsonlSource(JsonlFileSource):
@@ -90,18 +108,68 @@ class ClaudeCodeJsonlSource(JsonlFileSource):
     # ---------------------------------------------------------------- 루트
 
     def default_roots(self, ctx: LogSourceContext) -> list[Path]:
-        """`roots`가 비었을 때: `config_dir_env` 환경 변수 아래 하위 경로, 없으면 `default_root`.
+        """`roots`가 비었을 때 두 곳(5.7R.30b): CLI 세션 + 앱 자격 폴더의 세션.
 
+        - 앱 실행 세션: 호스트 경로 `ctx.paths["workspace"]`(앱 workspace) 기준 `workspace_roots`
+          (기본 `.state/claude/projects` — 앱 하나에 하나인 구독 자격 폴더 아래). 절대 경로도 된다.
+          workspace를 모르면(단독 사용) 상대 경로는 건너뛴다.
+        - CLI 세션: `config_dir_env` 환경 변수 아래 하위 경로, 없으면 `default_root`
+          (`~/.claude/projects`, 읽기만 한다).
+
+        어느 루트든 수집기가 같은 프로젝트 범위(`in_scope`, 등록된 프로젝트 폴더 키)로 거른다.
         환경 변수는 주입된 `ctx.environ`에서만 읽는다(프로세스 환경을 몰래 읽지 않음).
         """
         env_name = _str(ctx.config.get("config_dir_env"))
         config_dir = ctx.environ.get(env_name, "") if env_name else ""
+        roots: list[Path] = []
         if config_dir:
             sub = _str(ctx.config.get("config_dir_subpath"))
             base = expand_user_path(config_dir, ctx.environ)
-            return [base / sub if sub else base]
-        default_root = _str(ctx.config.get("default_root"))
-        return [expand_user_path(default_root, ctx.environ)] if default_root else []
+            roots.append(base / sub if sub else base)
+        else:
+            default_root = _str(ctx.config.get("default_root"))
+            if default_root:
+                roots.append(expand_user_path(default_root, ctx.environ))
+        workspace = ctx.paths.get("workspace")
+        subs = ctx.config.get("workspace_roots")
+        for sub in subs if isinstance(subs, list) else []:
+            if not isinstance(sub, str) or not sub:
+                continue
+            path = expand_user_path(sub, ctx.environ)
+            if not path.is_absolute():
+                if workspace is None:
+                    continue  # 앱 workspace를 모름(단독 사용)
+                path = workspace / path
+            if path not in roots:
+                roots.append(path)
+        return roots
+
+    # ---------------------------------------------------------------- 프로젝트 범위
+
+    def allowed_keys(self, ctx: LogSourceContext) -> set[str] | None:
+        """설정 `project_scope`의 프로젝트 폴더 → `projects` 아래 폴더 이름 집합.
+
+        `ctx.projects`가 없으면 None(필터 없음).
+        """
+        if ctx.projects is None:
+            return None
+        scope = _str(ctx.config.get("project_scope")) or "current"
+        keep = _str(ctx.config.get("project_key_keep"))
+        replacement = ctx.config.get("project_key_replacement")
+        rep = replacement if isinstance(replacement, str) else "-"
+        return {project_key(f, keep=keep, replacement=rep) for f in ctx.projects.select(scope)}
+
+    def accepts(self, rel: str, ctx: LogSourceContext) -> bool:
+        """범위 밖 단위는 발견할 때 메타 파일을 읽지 않는다."""
+        return self.in_scope(rel, ctx)
+
+    def in_scope(self, ref: str, ctx: LogSourceContext) -> bool:
+        """`ScopedLogSource`: ref의 첫 폴더(프로젝트 키)가 범위 안 프로젝트인가."""
+        keys = self.allowed_keys(ctx)
+        if keys is None:
+            return True
+        head = ref.split("/", 1)[0]
+        return "/" in ref and head in keys
 
     # ---------------------------------------------------------------- 파일별 맥락
 

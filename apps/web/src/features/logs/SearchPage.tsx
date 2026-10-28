@@ -16,6 +16,7 @@ import { LogsPageFrame } from "./LogsPageFrame";
 import { useLogsIngested } from "./LogsLive";
 import { SplitHandle } from "./SplitHandle";
 import { useArchiveDownload } from "./archive";
+import { useLogTimeMode } from "./useLogTimeMode";
 import { CELL_IDS, DEFAULT_RANGE, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_EVENT_COLUMNS_DEFAULT, SEARCH_VIEWS, SUGGEST_FROM } from "./logsConfig";
 import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
 import { classifyEmpty, enabledCount, eventFieldValues, originOf, parseRange, rangeToWindow, suggestionsFor, toRequestParams, withValues } from "./logsLib";
@@ -55,8 +56,8 @@ export function SearchPage() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const height = useElementHeight(wrapRef, 420);
   const [cols, setCols] = useColumnChoice(LOGS_STORAGE.colsSession + ".search", EVENT_COLUMN_IDS, SEARCH_EVENT_COLUMNS_DEFAULT);
-  const columns = useMemo(() => eventColumns(cols), [cols]);
-  const [timeMode, setTimeMode] = useState<"relative" | "absolute">(() => (storage.get(LOGS_STORAGE.timeMode) === "absolute" ? "absolute" : "relative"));
+  const time = useLogTimeMode();
+  const columns = useMemo(() => eventColumns(cols, undefined, time.widths), [cols, time.widths]);
   const [detailW, setDetailW] = useState(() => Number(storage.get(LOGS_STORAGE.detailWidth)) || LOGS_LIMITS.detailWidthDefault);
 
   const viewParam = url.screen[SCREEN_PARAMS.view]?.[0];
@@ -156,8 +157,9 @@ export function SearchPage() {
         taxonomy={taxonomy}
         isError={isError}
         slotFor={slotFor}
-        timeMode={timeMode}
-        originTime={timeMode === "relative" ? origin : null}
+        timeMode={time.mode}
+        onTimeModeChange={time.setMode}
+        originTime={origin}
         loading={events.isPending}
         hasMore={events.hasNextPage}
         loadingMore={events.isFetchingNextPage}
@@ -221,7 +223,6 @@ export function SearchPage() {
         {view === EVENTS_VIEW ? (
           <>
             <Button size="sm" aria-pressed={order === "desc"} onClick={() => setOrder(order === "desc" ? "asc" : "desc")}>{order === "desc" ? t.search.orderDesc : t.search.orderAsc}</Button>
-            <Button size="sm" aria-pressed={timeMode === "absolute"} aria-label={t.filters.timeMode} onClick={() => { const next = timeMode === "relative" ? "absolute" : "relative"; setTimeMode(next); storage.set(LOGS_STORAGE.timeMode, next); }}>⏱ {timeMode === "relative" ? t.filters.timeRelative : t.filters.timeAbsolute}</Button>
             <ColumnsMenu all={EVENT_COLUMN_IDS} selected={cols} labelOf={(id) => eventColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
           </>
         ) : null}

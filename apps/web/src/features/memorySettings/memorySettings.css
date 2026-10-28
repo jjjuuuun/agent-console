@@ -1,0 +1,75 @@
+/* 설정 › 메모리 (screen-memory.md §10, §11). 토큰만 쓴다. */
+.memset { display: flex; flex-direction: column; gap: var(--ac-space-4); min-width: 0; }
+.memset-panel { display: flex; flex-direction: column; gap: var(--ac-space-3); min-width: 0; container-type: inline-size; }
+.memset-listhead { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; }
+.memset-title { margin: 0; font-size: var(--ac-text-md); font-weight: 600; }
+.memset-subtitle { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.memset-note { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.memset-strong { font-weight: 600; min-width: 0; }
+.memset-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.memset-muted { color: var(--ac-text-muted); }
+.memset-num { font-variant-numeric: tabular-nums; }
+.memset-warn { margin: 0; color: var(--ac-warning); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.memset-warn-inline { color: var(--ac-warning); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }
+.memset-dot { width: 8px; height: 8px; border-radius: var(--ac-radius-full); background: var(--ac-accent); flex: none; }
+.memset-loading { display: flex; align-items: center; gap: var(--ac-space-2); }
+.memset-empty { border: 1px dashed var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-4); display: flex; flex-direction: column; gap: var(--ac-space-2); align-items: flex-start; }
+.memset-table { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.memset-head, .memset-row { display: grid; grid-template-columns: minmax(96px, 1fr) minmax(64px, 0.7fr) minmax(90px, 1.2fr) 100px 48px 80px; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3); }
+.memset-head { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); border-bottom: 1px solid var(--ac-border); background: var(--ac-surface-2); border-radius: var(--ac-radius-md) var(--ac-radius-md) 0 0; }
+.memset-rows { list-style: none; margin: 0; padding: 0; }
+.memset-disabled .memset-rows, ol.memset-rows { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.memset-table .memset-rows { border: 0; }
+.memset-row { border-bottom: 1px solid var(--ac-border); min-height: 40px; }
+.memset-row:last-child { border-bottom: 0; }
+.memset-cell { min-width: 0; display: flex; align-items: center; gap: var(--ac-space-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.memset-cell-label { min-width: 0; }
+.memset-origin { background: var(--ac-surface-3); white-space: nowrap; }
+.memset-row > .memset-actions { grid-column: 1 / -1; justify-content: flex-start; }
+.memset-actions { display: inline-flex; gap: var(--ac-space-1); flex-wrap: wrap; justify-content: flex-end; }
+.memset-disabled { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.memset-rule-row { display: grid; grid-template-columns: 112px minmax(0, 0.8fr) minmax(0, 1.4fr) minmax(0, 1fr) auto; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3); border-bottom: 1px solid var(--ac-border); min-height: 40px; }
+.memset-rule-row:last-child { border-bottom: 0; }
+.memset-order { gap: var(--ac-space-1); }
+.memset-chip-static { display: inline-flex; align-items: center; gap: var(--ac-space-1); padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-sm); background: var(--ac-surface-3); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }
+.memset-chip-static[data-tone="danger"] { background: var(--ac-danger-bg); }
+.memset-danger-icon { display: inline-block; width: 12px; height: 12px; background: var(--ac-danger); -webkit-mask: var(--ac-icon-failed) center / contain no-repeat; mask: var(--ac-icon-failed) center / contain no-repeat; }
+.memset-preview { display: flex; flex-direction: column; gap: var(--ac-space-2); border-top: 1px solid var(--ac-border); padding-top: var(--ac-space-3); }
+.memset-link { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.memset-form { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.memset-label { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.memset-input { font: inherit; padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: var(--ac-text); min-width: 0; }
+.memset-chips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); align-items: center; }
+.memset-chip { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-full); background: var(--ac-btn-bg); color: var(--ac-text); cursor: pointer; min-height: 24px; }
+.memset-check { border-top: 1px solid var(--ac-border); padding-top: var(--ac-space-2); display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.memset-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.memset-issue { display: flex; gap: var(--ac-space-2); align-items: flex-start; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.memset-issue .app-sev { flex: none; width: 1.2em; text-align: center; font-weight: 700; }
+.memset-issue-text { min-width: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.memset-issue-path { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.memset-rule { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: var(--ac-space-3); min-width: 0; }
+.memset-rule-form, .memset-rule-side { min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.memset-rule-pane { padding-top: var(--ac-space-2); max-height: 420px; overflow: auto; }
+.memset-cards { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.memset-card { display: flex; gap: var(--ac-space-2); align-items: flex-start; padding: var(--ac-space-2) var(--ac-space-3); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); cursor: pointer; }
+.memset-card[data-checked="true"] { border-color: var(--ac-accent); background: var(--ac-surface-2); }
+.memset-card-body { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
+.memset-kv { display: flex; flex-direction: column; margin: 0; }
+.memset-kv-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 2fr); gap: var(--ac-space-2); padding: var(--ac-space-1) 0; border-bottom: 1px solid var(--ac-border); }
+.memset-kv-row dt, .memset-kv-row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.memset-scopekind { display: flex; width: 100%; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; min-width: 0; }
+.memset-scopekind select, .memset-scopekind input { flex: 1 1 12rem; width: 100%; font: inherit; padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); color: var(--ac-text); min-width: 0; }
+.memset-unknown { background: var(--ac-surface-3); color: var(--ac-warning); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+@container (max-width: 719px) {
+  .memset-head { display: none; }
+  .memset-table .memset-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--ac-space-1); }
+  .memset-table .memset-row > :nth-child(3) { grid-column: 1 / -1; }
+  .memset-table .memset-row > :nth-child(2) { grid-column: 1; }
+  .memset-table .memset-row > :nth-child(4) { grid-column: 2; justify-self: end; }
+  .memset-table .memset-row > :nth-child(5), .memset-table .memset-row > :nth-child(6) { grid-column: auto; }
+  .memset-table .memset-row > :nth-child(7) { grid-column: 1 / -1; justify-content: flex-start; }
+  .memset-rule-row { grid-template-columns: minmax(0, 1fr); row-gap: var(--ac-space-1); }
+}
+@media (max-width: 1100px) {
+  .memset-rule { grid-template-columns: minmax(0, 1fr); }
+}

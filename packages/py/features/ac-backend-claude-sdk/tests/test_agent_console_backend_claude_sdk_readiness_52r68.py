@@ -205,7 +205,7 @@ async def test_subscription_disabled_then_enabled() -> None:
     )
     on = await backend.status(_ctx(secrets))
     assert (on.state, on.tone) == (ReadinessStates.SUBSCRIPTION_READY, "warn")
-    assert on.summary == "구독 방식으로 인증됨 (본인 책임)"
+    assert on.summary == "구독 준비됨 (본인 책임)"
     assert "본인 책임" in on.detail
     assert factory.clients == []
 

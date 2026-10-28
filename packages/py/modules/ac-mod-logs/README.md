@@ -24,6 +24,7 @@
 | 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`logs.*`, `secrets.redact_suspected_in_logs`) |
 | 선택 | `secrets.rules` | `() -> SecretRules`(`redact_value`) |
 | 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(5.2R.27, 예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
+| 선택 | `projects.folders` | 앱에 등록된 프로젝트 폴더(`current`·`registered`, 5.7R.30 후속). 범위를 아는 출처(`claude-code-jsonl`)는 이 폴더의 기록만 읽는다. 없으면 등록된 프로젝트 없음으로 보고 그 출처는 아무것도 읽지 않으며 경고 `logs.no_projects`("프로젝트를 먼저 만들거나 등록하세요"). 설정 `roots`에서 범위 밖 기록을 건너뛰면 `logs.out_of_scope`. 단독 실행에서 쓰려면 `--with mod-projects`, 테스트는 `testing.project_folders_module`. 출처는 호스트 경로 `workspace`(앱 workspace)도 맥락 `paths`로 받는다(`claude-code-jsonl`의 앱 실행 세션 루트 `workspace_roots`, 5.7R.30b) |
 | 선택(multi) | `logs.scope_kinds` | X27 `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
 | 선택(multi) | `logs.filter_predicates` | X28 `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
 | 토픽 | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
@@ -213,3 +214,9 @@ uv run ruff check .
 uv run mypy
 uv run pytest          # README.md의 doctest 포함
 ```
+
+## 출처 설정의 지운 키(5.7R.30b)
+
+출처 설정 스키마가 `deprecated: true`로 표시한 키(예: `claude-code-jsonl`의 옛 `project_roots`)가 설정에 남아 있으면
+읽지 않고 정보 이슈 `logs.ignored_key`(`details.source`·`details.key`, `server.warnings`)를 낸다. 키 이름은 출처 스키마
+데이터에서 오고 이 모듈은 출처별 키를 모른다. 서버 시작은 막지 않는다.

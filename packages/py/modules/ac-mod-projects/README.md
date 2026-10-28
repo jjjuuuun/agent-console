@@ -57,6 +57,7 @@ pip install agent-console-mod-projects
 | 포트 | 방향 | 없으면 |
 | --- | --- | --- |
 | `projects.lookup` | 제공(`get_project`·`list_projects`) | — |
+| `projects.folders` | 제공(`() -> ProjectFolderSet` — 등록된 프로젝트 폴더 `registered`, 앱 작업 폴더와 같은 폴더의 프로젝트 `current`, 5.7R.30 후속) | 앱 작업 폴더 = 설정 `working_directory`(기본: `modules.options.mod-runs.working_directory`를 이어받음, 그것도 없으면 설정 파일 폴더). 작업 폴더가 없는 프로젝트는 앱 작업 폴더 |
 | `definitions.checks` | 제공(저장 전 범위 경고) | — |
 | `definitions.lookup` / `definitions.store` | 선택(읽기 / 쓰기) | 범위 검사·계획 = `project.definitions_unavailable` 정보, 옮기기 적용·정의가 있는 삭제 = 409 `feature_unavailable` |
 | `definitions.references` (여러 제공자, X25) | 선택 | 참조 규칙 대신 `project.references_unavailable` 정보 |

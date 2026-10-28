@@ -68,3 +68,6 @@ export const ARCH_RUN_SCOPE = { param: "scope", run: "run", tree: "run-tree" } a
 
 /** 실행 상세 탭 그림 높이(px, 화면 명세 §6.2: 기본 240, 조절 160~480). `chrome`은 캔버스 위 도구줄과 아래 선택 정보 줄의 높이 합. */
 export const ARCH_RUN_HEIGHT = { default: 240, min: 160, max: 480, chrome: 104 } as const;
+
+/** 구조도 범위 종류 id(분리 창 채널 이름·분리 선호 저장 키에 쓴다). 서버 범위 종류(`ARCH_RUN_SCOPE`)와는 별개의 화면 쪽 이름이다. */
+export const ARCH_SCOPE_KIND = { session: "session", run: "run" } as const;

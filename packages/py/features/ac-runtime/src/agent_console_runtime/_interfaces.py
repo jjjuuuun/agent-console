@@ -8,9 +8,11 @@ X12 위임 방식(`DelegationStrategy`)은 `_delegation.py`에 있다."""
 from __future__ import annotations
 
 import builtins
+import inspect
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -454,6 +456,43 @@ class ExecutionBackend(Protocol):
 
 BACKEND_OPTIONS_HOOK = "from_options"
 """`ConfigurableBackend`의 생성 훅 이름(앱이 duck typing으로 찾는다)."""
+
+BACKEND_HOST_PARAM = "host"
+"""`from_options` 훅이 이 이름의 키워드 인자를 받으면 앱이 `BackendHostContext`를 넘긴다(선택)."""
+
+
+@dataclass(frozen=True)
+class BackendHostContext:
+    """앱이 백엔드 설정 훅에 넘기는 호스트 정보(선택, 5.7R.30·5.7R.30b).
+
+    키 해석은 백엔드가 한다. 앱은 값만 채운다. 팀 모드(사람별 자격)처럼 범위가 넓어지면 이
+    자리에 필드를 더한다.
+
+    Attributes:
+        workspace_dir: 앱 workspace(앱 데이터 폴더, 서버 ``--workspace``) 절대 경로. 백엔드가 앱이
+            관리하는 상대 경로(예: 앱 하나에 하나인 구독 자격 폴더)를 푸는 기준. 프로젝트(작업)
+            폴더가 아니다 — 앱은 등록만으로 프로젝트 폴더에 쓰지 않는다. 모르면 None.
+    """
+
+    workspace_dir: Path | None = None
+
+
+def accepts_host_context(hook: Callable[..., Any]) -> bool:
+    """`from_options` 훅이 `host` 키워드 인자를 받는지(받는 훅에만 `BackendHostContext`를 넘긴다).
+
+    >>> def old(options, *, secrets, environ): ...
+    >>> def new(options, *, secrets, environ, host=None): ...
+    >>> accepts_host_context(old), accepts_host_context(new)
+    (False, True)
+    """
+    try:
+        params = inspect.signature(hook).parameters
+    except (TypeError, ValueError):
+        return False
+    param = params.get(BACKEND_HOST_PARAM)
+    if param is not None:
+        return param.kind in (param.KEYWORD_ONLY, param.POSITIONAL_OR_KEYWORD)
+    return any(p.kind is p.VAR_KEYWORD for p in params.values())
 
 
 @runtime_checkable

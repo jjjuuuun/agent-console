@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,10 +18,12 @@ from agent_console_runtime import (
     AgentRequest,
     AgentResult,
     BackendEventSink,
+    BackendHostContext,
     CancelToken,
     EnvSecretProvider,
     Registries,
     SecretResolver,
+    accepts_host_context,
 )
 
 
@@ -84,3 +87,32 @@ async def test_configure_backends_calls_hook_and_warns(caplog: pytest.LogCapture
         configure_backends(
             _registries(), {"hooked": {"bad": True}}, secrets=resolver, environ=environ
         )
+
+
+class HostAwareBackend(_Base):
+    """5.7R.30: `host` 키워드를 받는 훅에는 프로젝트 폴더 등 호스트 정보를 넘긴다."""
+
+    seen_host: Any = None
+
+    @classmethod
+    def from_options(
+        cls,
+        options: Mapping[str, Any],
+        *,
+        secrets: SecretResolver,
+        environ: Mapping[str, str],
+        host: BackendHostContext | None = None,
+    ) -> HostAwareBackend:
+        cls.seen_host = host
+        return cls("aware")
+
+
+def test_configure_backends_passes_host_only_to_hooks_that_accept_it(tmp_path: Path) -> None:
+    registries = _registries()
+    registries.backends.register("aware", HostAwareBackend("aware"), source="test")
+    host = BackendHostContext(workspace_dir=tmp_path)
+    replaced = configure_backends(registries, {}, secrets=SecretResolver([]), environ={}, host=host)
+    assert set(replaced) == {"hooked", "aware"}  # 옛 훅(host 없음)도 그대로 불린다
+    assert HostAwareBackend.seen_host is host
+    assert accepts_host_context(HostAwareBackend.from_options)
+    assert not accepts_host_context(HookBackend.from_options)

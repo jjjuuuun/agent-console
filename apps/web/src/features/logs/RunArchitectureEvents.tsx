@@ -1,3 +1,4 @@
+import { useLogTimeMode } from "./useLogTimeMode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@agent-console/ui";
@@ -47,7 +48,8 @@ export function RunArchitectureEvents(p: RunArchitectureEventsProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [chipsOpen, setChipsOpen] = useState(false);
   const height = useElementHeight(wrapRef, 200, 80);
-  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS), []);
+  const time = useLogTimeMode();
+  const columns = useMemo(() => eventColumns(RUN_TAB_COLUMNS, undefined, time.widths), [time.widths]);
   const { events, isError } = p;
   const filtered = f.q !== "" || f.errorsOnly || f.categories.length > 0;
   const needle = f.q.trim().toLowerCase();
@@ -109,6 +111,8 @@ export function RunArchitectureEvents(p: RunArchitectureEventsProps) {
           taxonomy={p.taxonomy}
           isError={p.isError}
           slotFor={slotFor}
+          timeMode={time.mode}
+          onTimeModeChange={time.setMode}
           originTime={origin}
           loading={p.loading}
           hasMore={p.hasMore}

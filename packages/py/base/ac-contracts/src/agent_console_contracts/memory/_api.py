@@ -112,6 +112,10 @@ class MemoryRetentionPlanItem(ContractModel):
     version: int = Field(ge=1, description="판단한 때의 버전(적용 때 바뀌었으면 건너뜀).")
     rule: NonEmptyStr = Field(description="맞은 규칙 id(선언 순서의 첫 규칙).")
     action: MemoryRetentionAction
+    updated_at: float | None = Field(
+        default=None, description="판단한 때의 마지막 쓰기 시각(Unix epoch 초)."
+    )
+    bytes: int | None = Field(default=None, ge=0, description="판단한 때의 본문 바이트 수.")
 
 
 class MemoryRetentionPlanRequest(ContractModel):
@@ -133,6 +137,13 @@ class MemoryRetentionPlan(ContractModel):
     items: list[MemoryRetentionPlanItem] = Field(default_factory=list)
     count: int = Field(ge=0, description="맞은 항목 전체 수(`items`가 잘렸어도 전체).")
     truncated: bool = Field(default=False, description="`items`를 `limit`에서 잘랐는지.")
+    excluded_pinned: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "규칙에 맞았지만 고정이라 빠진 항목 수(`count`에 들지 않는다, 지운 항목은 세지 않음)."
+        ),
+    )
     issues: list[Issue] = Field(default_factory=list, description="규칙 검사 문제.")
 
 

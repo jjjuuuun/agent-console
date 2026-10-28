@@ -37,10 +37,13 @@ export function CheckboxFieldWidget(p: WidgetProps) {
 }
 
 /** enum 값을 `x-ui.enum_labels`의 라벨로 바꿔 기본 위젯에 넘긴다(`oneOf`의 `title`은 폼 엔진이 이미 라벨로 쓴다). */
-function withEnumLabels(name: "SelectWidget" | "RadioWidget") {
+function withEnumLabels(name: "SelectWidget" | "RadioWidget" | "CheckboxesWidget") {
   return function LabeledEnumWidget(p: WidgetProps) {
     const Base = getDefaultRegistry().widgets[name] as ComponentType<WidgetProps>;
-    const labels = readXUi(p.schema).enumLabels;
+    // 배열 enum(체크박스 묶음)은 배열 쪽 x-ui를 먼저, 없으면 items 쪽 x-ui를 본다.
+    const items = (p.schema as { items?: unknown }).items;
+    const itemSchema = items !== null && typeof items === "object" && !Array.isArray(items) ? (items as typeof p.schema) : undefined;
+    const labels = readXUi(p.schema).enumLabels ?? (itemSchema === undefined ? undefined : readXUi(itemSchema).enumLabels);
     const opts = p.options.enumOptions;
     if (labels === undefined || opts === undefined) return <Base {...p} />;
     const mapped = opts.map((o) => ({ ...o, label: labels[String(o.value)] ?? o.label }));
@@ -49,3 +52,4 @@ function withEnumLabels(name: "SelectWidget" | "RadioWidget") {
 }
 export const LabeledSelectWidget = withEnumLabels("SelectWidget");
 export const LabeledRadioWidget = withEnumLabels("RadioWidget");
+export const LabeledCheckboxesWidget = withEnumLabels("CheckboxesWidget");

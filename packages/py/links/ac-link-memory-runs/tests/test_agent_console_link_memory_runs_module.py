@@ -285,3 +285,53 @@ def test_definition_check_warns_unknown_scope_kind(tmp_path: Path) -> None:
         assert [(i.code, i.path) for i in issues] == [
             (KnownIssueCodes.MEMORY_UNKNOWN_SCOPE_KIND, "/config/scopes/1/kind")
         ]
+
+
+def test_resource_save_carries_unknown_scope_kind_warning(tmp_path: Path) -> None:
+    """5.7R.28: 리소스 만들기·저장 응답 ``X-Console-Issues``에 경고가 실리고 저장은 된다."""
+    with _client(tmp_path) as (client, _assembly):
+        doc = {
+            "id": "mem-ghost",
+            "type": RTYPE.id,
+            "name": "x",
+            "config": {"scopes": [{"kind": "notes"}, {"kind": "ghost"}]},
+        }
+        created = client.post(f"{API}/resources", json=doc)
+        assert created.status_code == 201
+        [issue] = json.loads(created.headers["x-console-issues"])
+        assert (issue["severity"], issue["code"], issue["path"], issue["details"]) == (
+            "warning",
+            KnownIssueCodes.MEMORY_UNKNOWN_SCOPE_KIND,
+            "/config/scopes/1/kind",
+            {"kind": "ghost"},
+        )
+        fixed = {**doc, "config": {"scopes": [{"kind": "notes"}]}}
+        saved = client.put(
+            f"{API}/resources/mem-ghost",
+            json=fixed,
+            headers={"If-Match": created.headers["etag"]},
+        )
+        assert saved.status_code == 200
+        assert "x-console-issues" not in saved.headers
+
+
+def test_agent_node_memory_write_reaches_ws_memory_changed(tmp_path: Path) -> None:
+    """5.7R.13 QA 후속: agent 노드가 메모리 도구로 쓰면 WS ``memory.changed``(본문 없음)."""
+    with _client(tmp_path) as (client, _assembly):
+        with client.websocket_connect(f"/ws?token={TOKEN}") as ws:
+            ws.send_json({"type": "subscribe", "payload": {"topic": "memory.changed"}})
+            client.get(f"{API}/memory/scope-kinds")  # 구독이 자리 잡을 시간
+            created = client.post(
+                f"{API}/runs", json={"graph_id": "solo", "input": {"text": "시작"}}
+            )
+            assert created.status_code == 202, created.text
+            run_id = created.json()["id"]
+            message = ws.receive_json()
+        assert message["type"] == "memory.changed"
+        payload = message["payload"]
+        assert payload["scope"] == {"kind": "notes", "id": "solo"}
+        assert payload["key"] == "결정/형식"
+        assert payload["author_kind"] == "agent"
+        assert BODY not in json.dumps(message, ensure_ascii=False)
+        entries = client.get(f"{API}/memory/entries").json()["items"]
+        assert entries[0]["updated_by"]["run_id"] == run_id

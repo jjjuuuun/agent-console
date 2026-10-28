@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "description": "폴더 탐색 기본값. hidden_names = 점·숨김 속성이 없어도 숨김으로 볼 폴더 이름(대소문자 무시, 기본은 빈 목록). roots = 경로 방식별 기본 시작 위치 규칙: path(틀, ~ = 홈, each가 있으면 {item}) 또는 parent + name_pattern(그 아래 폴더 중 이름이 맞는 것). label 틀은 {path}·{name}·{NAME}(대문자)·{item}.",
+  "hidden_names": [],
+  "roots": {
+    "posix": [
+      {"kind": "home", "path": "~", "label": "~"},
+      {"kind": "root", "path": "/", "label": "/"},
+      {"kind": "mount", "parent": "/Volumes", "name_pattern": "^[^.]", "label": "{name}"}
+    ],
+    "windows": [
+      {"kind": "home", "path": "~", "label": "~"},
+      {"kind": "drive", "each": "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "path": "{item}:\\", "label": "{item}:"}
+    ]
+  }
+}

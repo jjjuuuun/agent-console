@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { fullTimeTitle, mergeFormatters, shortId, shortPath } from "./format";
+import { mergeFormatters, shortId, shortPath } from "./format";
 import { fmt, mergeMessages, type DeepPartial, type LogViewMessages } from "./messages";
 import { groupByMessage } from "./group";
 import { CategoryChip, ErrorIcon, listStateBlock, NeutralChip } from "./parts";
 import { colorFor } from "./taxonomy";
+import { formatEventTime, type TimeMode } from "./timeMode";
+import { TimeModeMenu } from "./TimeModeMenu";
 import type { ColumnSpec, Formatters, ListSlots, LogEventRow, LogTaxonomyView, SlotFor } from "./types";
 import { useVirtualRows } from "./virtual";
 
@@ -40,8 +42,11 @@ export interface LogEventTableProps extends ListSlots {
   /** 오류 행 판정(앱이 `isErrorEvent(row, taxonomy)`를 주입. 판정은 한 곳). */
   isError: (row: LogEventRow) => boolean;
   slotFor: SlotFor;
-  timeMode?: "relative" | "absolute";
-  /** 상대 시각의 기준(epoch 초). */
+  /** 시각 열 표시 방식(기본 `datetime`: 기록된 실제 시각, 날짜 포함). */
+  timeMode?: TimeMode;
+  /** 주면 시각 열 머리에 표시 방식 메뉴가 생긴다. 열 폭은 `timeColumnWidth(timeMode)`를 `eventColumns` 폭 표로 넘긴다. */
+  onTimeModeChange?: (mode: TimeMode) => void;
+  /** `elapsed` 방식의 기준 시각(epoch 초). */
   originTime?: number | null | undefined;
   /** 같은 응답(thread + message_id) 묶기. */
   groupByMessage?: boolean;
@@ -86,7 +91,7 @@ function colWidth(w: number | string): string {
  * `→/←` 응답 묶음 펼침/접기, `Shift+F10` 행 메뉴.
  */
 export function LogEventTable({ ref, ...props }: LogEventTableProps) {
-  const { rows, columns, selectedUid, onSelect, onActivate, onRowMenu, taxonomy, isError, slotFor, timeMode = "relative", originTime, followLast, onFollowChange, density = "dense", onNearEnd, nearEndThreshold = 20, loadingMore, hasMore, currentUid, highlight, renderCell, laneLabelFor, height = 480, ariaLabel, messages, formatters: formatterOverrides, groupByMessage: groupMessages, loading, error, onRetry, renderLoading, renderEmpty, renderError, emptyBelowHeader } = props;
+  const { rows, columns, selectedUid, onSelect, onActivate, onRowMenu, taxonomy, isError, slotFor, timeMode = "datetime", onTimeModeChange, originTime, followLast, onFollowChange, density = "dense", onNearEnd, nearEndThreshold = 20, loadingMore, hasMore, currentUid, highlight, renderCell, laneLabelFor, height = 480, ariaLabel, messages, formatters: formatterOverrides, groupByMessage: groupMessages, loading, error, onRetry, renderLoading, renderEmpty, renderError, emptyBelowHeader } = props;
   const m = useMemo(() => mergeMessages(messages), [messages]);
   const formatters = useMemo(() => mergeFormatters(formatterOverrides), [formatterOverrides]);
   const rowH = ROW_H[density];
@@ -247,11 +252,18 @@ export function LogEventTable({ ref, ...props }: LogEventTableProps) {
           onKeyDown={onKeyDown}
         >
           <div role="row" aria-rowindex={1} className="ac-lv-rowhead" style={{ gridTemplateColumns: template }}>
-            {columns.map((c) => (
-              <div key={c.id} role="columnheader" data-align={c.align ?? "start"} className="ac-lv-ellipsis">
-                {c.header}
-              </div>
-            ))}
+            {columns.map((c) =>
+              c.id === "time" && onTimeModeChange ? (
+                <div key={c.id} role="columnheader" data-align={c.align ?? "start"} className="ac-lv-timehead">
+                  <span className="ac-lv-ellipsis">{c.header}</span>
+                  <TimeModeMenu mode={timeMode} onChange={onTimeModeChange} label={m.timeMode.label} names={m.timeMode} />
+                </div>
+              ) : (
+                <div key={c.id} role="columnheader" data-align={c.align ?? "start"} className="ac-lv-ellipsis">
+                  {c.header}
+                </div>
+              ),
+            )}
           </div>
           {keepHeader ? <div className="ac-lv-empty-body" style={{ height }}>{state}</div> : null}
           <div ref={scrollRef} className="ac-lv-scroll" style={keepHeader ? { height: 0, overflow: "hidden" } : { height }} onScroll={onScroll}>
@@ -348,7 +360,7 @@ interface CellCtx {
   formatters: Formatters;
   taxonomy: LogTaxonomyView;
   slotFor: SlotFor;
-  timeMode: "relative" | "absolute";
+  timeMode: TimeMode;
   originTime: number | null | undefined;
   isError: (row: LogEventRow) => boolean;
   laneLabelFor: ((thread: string) => string | undefined) | undefined;
@@ -360,11 +372,11 @@ function defaultEventCell(id: string, row: LogEventRow, c: CellCtx): ReactNode {
   const { m, formatters } = c;
   switch (id) {
     case "time": {
-      if (row.time == null) return m.none;
-      const text = c.timeMode === "absolute" || c.originTime == null ? formatters.absoluteTime(row.time) : formatters.relativeTime((row.time - c.originTime) * 1000);
+      const t = formatEventTime(c.timeMode, row.time, c.originTime, formatters);
+      if (t === null) return m.none;
       return (
-        <span className="ac-lv-num" title={fullTimeTitle(row.time)}>
-          {text}
+        <span className="ac-lv-num" title={t.title}>
+          {t.text}
         </span>
       );
     }

@@ -138,7 +138,7 @@ export function LogEventDetail({ ref, ...props }: LogEventDetailProps) {
   const err = isError(event);
   const lane = event.thread ?? event.actor;
   const timeLine = [
-    event.time != null ? formatters.absoluteTime(event.time) : null,
+    event.time != null ? formatters.dateTime(event.time) : null,
     event.time != null && originTime != null ? `(${formatters.relativeTime((event.time - originTime) * 1000)})` : null,
     event.duration_ms != null ? fmt("· {d}", { d: formatters.duration(event.duration_ms) }) : null,
     lane ? `· ${laneLabelFor?.(lane) ?? lane}` : null,

@@ -21,7 +21,7 @@ from typing import Any
 
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
 from agent_console_modkit import DatabaseHandle, ModuleContext, ModuleDescriptor, ModuleParts
-from agent_console_projects import References
+from agent_console_projects import ProjectFolderSet, References, project_folders
 from agent_console_store import (
     FileDefinitionStore,
     LazyVersionRepository,
@@ -37,6 +37,7 @@ from .ports import (
     DEFINITIONS_REFERENCES,
     DEFINITIONS_SAVED,
     DEFINITIONS_STORE,
+    PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
     DefinitionReader,
     SavedLike,
@@ -44,7 +45,7 @@ from .ports import (
 from .repository import PROJECT_KIND_NAME, ProjectRepository, project_kind
 from .routes import build_router
 from .service import ProjectService
-from .settings import ProjectModuleSettings
+from .settings import SETTINGS_COMPAT, ProjectModuleSettings
 
 MODULE_ID = "mod-projects"
 WEB_ROLES: tuple[str, ...] = ("projects",)
@@ -89,9 +90,10 @@ class ProjectsModule:
         kind="feature",
         title="프로젝트",
         description="프로젝트 만들기·고치기·지우기, 정의 범위(공용·프로젝트 전용) 검사와 옮기기",
-        provides=(PROJECTS_LOOKUP, DEFINITION_CHECKS),
+        provides=(PROJECTS_LOOKUP, DEFINITION_CHECKS, PROJECT_FOLDERS),
         optional=(DEFINITIONS_LOOKUP, DEFINITIONS_STORE, DEFINITIONS_REFERENCES),
         settings_schema=ProjectModuleSettings,
+        settings_compat=SETTINGS_COMPAT,
         contracts={"projects": CONTRACT_VERSIONS["projects"]},
         web_roles=WEB_ROLES,
     )
@@ -133,7 +135,15 @@ class ProjectsModule:
             snapshot.invalidate()
 
         ctx.subscribe(DEFINITIONS_SAVED, on_saved)
+        base_dir = ctx.paths.base_dir if ctx.paths is not None else Path(".")
+        wd = cfg.working_directory or Path(".")
+        working_directory = (wd if wd.is_absolute() else base_dir / wd).absolute()
+
+        def folders() -> ProjectFolderSet:
+            return project_folders(repository.list_projects(), working_directory=working_directory)
+
         ctx.provide(PROJECTS_LOOKUP, repository)
+        ctx.provide(PROJECT_FOLDERS, folders)
         ctx.provide(DEFINITION_CHECKS, ProjectScopeCheck(lambda: service))
 
         return ModuleParts(routers=[build_router(lambda: service)], error_map=dict(ERROR_MAP))

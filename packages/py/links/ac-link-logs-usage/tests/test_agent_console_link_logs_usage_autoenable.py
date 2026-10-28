@@ -24,7 +24,7 @@ from agent_console_link_logs_usage import (
     module,
 )
 from agent_console_mod_logs import module as logs_module
-from agent_console_mod_logs.testing import static_settings_module
+from agent_console_mod_logs.testing import project_folders_module, static_settings_module
 from agent_console_mod_usage import module as usage_module
 from agent_console_modkit import BaseServices, Module, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
@@ -98,6 +98,8 @@ def _client(
         usage_module,
         static_settings_module(settings or WorkspaceSettings()),
         module,
+        # 5.7R.30 후속: 로그는 등록된 프로젝트 폴더의 세션만 읽는다(가짜 홈 키 -work-demo).
+        project_folders_module([Path("/work/demo")]),
     ]
     assembly = assemble(stack, ModulesConfig(disabled=list(disabled)), base=base)
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])

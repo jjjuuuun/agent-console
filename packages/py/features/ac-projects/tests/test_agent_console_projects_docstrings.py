@@ -7,10 +7,10 @@ from types import ModuleType
 
 import pytest
 
-from agent_console_projects import _layer, _logs, _scope
+from agent_console_projects import _folders, _layer, _logs, _scope
 
 
-@pytest.mark.parametrize("module", [_layer, _logs, _scope])
+@pytest.mark.parametrize("module", [_folders, _layer, _logs, _scope])
 def test_module_doctests(module: ModuleType) -> None:
     result = doctest.testmod(module, optionflags=doctest.ELLIPSIS)
     assert result.attempted > 0

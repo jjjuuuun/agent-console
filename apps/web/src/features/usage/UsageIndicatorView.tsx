@@ -1,10 +1,9 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { Gauge, TrustBadge } from "@agent-console/ui";
-import { formatRelative } from "../../lib/format";
+import { Gauge } from "@agent-console/ui";
 import { itemFlags, itemRailValue, itemValueText } from "./indicatorText";
 import { usageIndicatorMessages as t, usageMessages as u } from "./messages";
 import { APPROX_TRUST, INDICATOR_FIELD as F, INDICATOR_TONES } from "./usageConfig";
-import { formatResetsPhrase } from "./resetDisplay";
+import { formatResetClock } from "./resetDisplay";
 import { indicatorFill, type IndicatorItem } from "./usageLib";
 
 export type IndicatorLayout = "block" | "rail" | "chip";
@@ -42,7 +41,7 @@ export interface UsageIndicatorViewProps {
   maxChipItems?: number;
   /** 미리보기에서 "예시" 칩을 붙일지 */
   example?: boolean;
-  /** 주면, 보일 사용률이 하나도 없을 때 "사용률 미연결 · 연결 방법" 한 줄을 그리고 링크가 이 주소(연결 안내 앵커)로 간다 */
+  /** 주면, 보일 사용률이 하나도 없을 때 "사용률 미연결" 한 줄(별도 링크 글자 없이 줄 전체가 링크)을 그리고 링크가 이 주소(연결 안내 앵커)로 간다 */
   setupHref?: string;
 }
 
@@ -83,49 +82,32 @@ function miniValue(item: IndicatorItem, mode: string, approx: boolean): string {
 }
 
 /**
- * 사이드바 미니 한 항목: `라벨(최대 5자) | 막대 | 값` 한 줄. 초기화·관측 시각은 필드에 넣었을 때만 아랫줄로 붙는다.
+ * 사이드바 한 항목(사용자 요청 10/28): 제목·`N% 사용됨` 한 줄, 막대 한 줄, 초기화 시각 한 줄만.
+ * 상태·신뢰·관측 시각·토큰 같은 부가 정보는 그리지 않는다(상세는 사용량 화면). `fields` 설정은 칩 모양에만 적용된다.
  */
-function ItemBlock({ item, fields, mode, nowMs, sourceInfo }: { item: IndicatorItem; fields: readonly string[]; mode: string; nowMs: number; sourceInfo: UsageIndicatorViewProps["sourceInfo"] }) {
+function ItemBlock({ item, mode, nowMs, sourceInfo }: { item: IndicatorItem; mode: string; nowMs: number; sourceInfo: SourceInfo }) {
   const nowSec = nowMs / 1000;
   const fill = indicatorFill(item, mode);
   const dim = item.stale || item.reset === "passed";
-  const approx = item.kind === "ratio" && isApprox(item, sourceInfo);
-  const src = item.source !== undefined && sourceInfo !== undefined ? sourceInfo(item.source) : undefined;
-  const has = (f: string) => fields.includes(f);
-  const label = has(F.label) ? (
-    <span key={F.label} className="usage-ind-label" title={item.name}>
-      {has(F.trust) && src ? <span className="usage-ind-trust" aria-hidden="true" data-trust={src.trust} title={`${u.trust[src.trust] ?? src.trust} · ${src.title}`}>◆ </span> : null}
-      {item.stale ? <span aria-hidden="true">⚠ </span> : null}
-      {item.short ?? item.name}
-    </span>
-  ) : null;
-  const gauge = has(F.gauge) ? (
-    <div key={F.gauge} className="usage-ind-bar" aria-hidden="true" data-approx={approx ? "true" : undefined}>
-      <Gauge {...(fill === undefined ? {} : { value: fill })} stale={dim} label={item.name} noValueLabel="" />
-    </div>
-  ) : null;
-  const value = has(F.value) ? (
-    <span key={F.value} className="usage-ind-value ac-num" data-empty={item.kind !== "ratio" ? "true" : undefined}>
-      {item.overLimit || item.reset === "passed" ? <span aria-hidden="true">▲ </span> : null}
-      {miniValue(item, mode, approx)}
-      <ToneMark item={item} />
-    </span>
-  ) : null;
-  const subs: ReactNode[] = [];
-  if (has(F.reset) && item.observed) {
-    subs.push(
-      <div key="reset" className="usage-ind-sub">
-        {item.reset === "passed" ? `▲ ${t.resetsPassed}` : item.reset === "future" && item.resetsAt != null ? formatResetsPhrase(item.resetsAt, nowSec, t.resets, t.resetsOnDate).text : u.cards.resetsUnknown}
-      </div>,
-    );
-  }
-  if (has(F.observed) && item.observedAt !== undefined) {
-    subs.push(<div key="observed" className="usage-ind-sub">{u.cards.observedAt(formatRelative(item.observedAt, nowMs))}</div>);
-  }
+  const reset =
+    item.reset === "passed"
+      ? t.resetsPassed
+      : item.reset === "future" && item.resetsAt != null
+        ? formatResetClock(item.resetsAt, nowSec, { today: t.resetsClockToday, other: t.resetsClockOther })
+        : null;
   return (
-    <div className="usage-ind-item" data-stale={dim ? "true" : undefined} data-tone={item.rule?.tone} style={toneStyle(item)} title={itemTitle(item, mode, approx)}>
-      {label !== null || gauge !== null || value !== null ? <div className="usage-ind-row">{label}{gauge}{value}</div> : null}
-      {subs}
+    <div className="usage-ind-item usage-ind-simple" data-stale={dim ? "true" : undefined} data-tone={item.rule?.tone} style={toneStyle(item)} title={itemTitle(item, mode, isApprox(item, sourceInfo))}>
+      <div className="usage-ind-head">
+        <span className="usage-ind-label ac-ellipsis">{item.name}</span>
+        <span className="usage-ind-value ac-num">
+          {itemValueText(item, mode)}
+          <ToneMark item={item} />
+        </span>
+      </div>
+      <div className="usage-ind-bar" aria-hidden="true">
+        <Gauge {...(fill === undefined ? {} : { value: fill })} stale={dim} label={item.name} noValueLabel="" />
+      </div>
+      {reset === null ? null : <div className="usage-ind-sub">{reset}</div>}
     </div>
   );
 }
@@ -184,7 +166,7 @@ function ChipBody({ items, fields, mode, maxItems }: { items: readonly Indicator
  */
 export function UsageIndicatorView(p: UsageIndicatorViewProps) {
   let body: ReactNode;
-  const unlinked = p.layout === "block" && p.status === "ready" && p.setupHref !== undefined && !p.items.some((i) => i.kind === "ratio");
+  const unlinked = p.layout === "block" && (p.status === "ready" || p.status === "empty") && p.setupHref !== undefined && !p.items.some((i) => i.kind === "ratio");
   // 접힘 레일에는 값이 있는 창만 그린다(빈 타일 금지). 보일 것이 없으면 아무것도 그리지 않는다.
   const railItems = p.layout === "rail" ? p.items.filter((i) => i.observed && i.kind === "ratio") : p.items;
   if (p.layout === "rail" && (p.status === "loading" || p.status === "empty" || (p.status === "ready" && railItems.length === 0))) return null;
@@ -192,21 +174,19 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
     body = <div className="usage-ind-skeleton app-skeleton-row" aria-hidden="true" />;
   } else if (p.status === "error-empty") {
     body = <div className="usage-ind-msg"><span aria-hidden="true">! </span>{p.layout === "rail" ? "" : t.loadFailed}</div>;
+  } else if (unlinked) {
+    body = (
+      <div className="usage-ind-msg" title={t.unlinkedHint}>{t.unlinked}</div>
+    );
   } else if (p.status === "empty") {
     body = <div className="usage-ind-msg">{p.layout === "rail" ? u.common.none : t.noData}</div>;
   } else if (p.layout === "rail") {
     body = railItems.map((i) => <ItemRail key={i.window} item={i} mode={p.valueMode} sourceInfo={p.sourceInfo} />);
-  } else if (unlinked) {
-    body = (
-      <div className="usage-ind-setup">
-        <span className="usage-ind-msg" title={t.unlinkedHint}>{t.unlinked}</span>
-        <span className="usage-ind-setup-link" aria-hidden="true">{t.unlinkedLink} ›</span>
-      </div>
-    );
   } else if (p.layout === "chip") {
     body = <ChipBody items={p.items} fields={p.fields} mode={p.valueMode} maxItems={p.maxChipItems} />;
   } else {
-    body = p.items.map((i) => <ItemBlock key={i.window} item={i} fields={p.fields} mode={p.valueMode} nowMs={p.nowMs} sourceInfo={p.sourceInfo} />);
+    const rows = p.items.filter((i) => i.observed && i.kind === "ratio");
+    body = rows.length === 0 ? <div className="usage-ind-msg">{t.noData}</div> : rows.map((i) => <ItemBlock key={i.window} item={i} mode={p.valueMode} nowMs={p.nowMs} sourceInfo={p.sourceInfo} />);
   }
   return (
     <div className="usage-ind" data-layout={p.layout} data-host={p.host} data-corner={p.corner} data-status={p.status} data-error={p.hasError ? "true" : undefined}>
@@ -225,14 +205,5 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
       </a>
       {p.children}
     </div>
-  );
-}
-
-/** 신뢰 배지 한 줄(팝오버용 재사용). */
-export function SourceLine({ trust, title }: { trust: string; title: string }) {
-  return (
-    <span className="usage-ind-source">
-      <TrustBadge trust={trust} label={u.trust[trust] ?? trust} /> <span className="ac-ellipsis">{title}</span>
-    </span>
   );
 }

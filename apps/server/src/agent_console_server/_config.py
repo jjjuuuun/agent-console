@@ -114,7 +114,7 @@ class WebOpenSettings(_Section):
         default=None,
         description=(
             "기본 브라우저 대신 실행할 명령과 인자(셸 없이 실행). `{url}` 자리에 주소가 들어간다. "
-            '예: 설치한 PWA 창 `["msedge", "--app={url}"]`, WSL `["explorer.exe", "{url}"]`.'
+            '예: 설치한 PWA 창 `["msedge", "--app={url}"]`.'
         ),
     )
     wait_seconds: float = Field(

@@ -23,7 +23,7 @@ import threading
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from agent_console_contracts import HandoffMatrix, Issue, KnownIssueCodes
 from agent_console_contracts.logs import (
@@ -62,9 +62,11 @@ from agent_console_logs import (
     LogScopeKind,
     LogSource,
     PageCallback,
+    ProjectFolders,
     PurgeableLogIndex,
     PurgeResult,
     QueryContext,
+    ScopedLogSource,
     SessionTitleRule,
     build_archive,
     iter_event_rows,
@@ -81,6 +83,37 @@ from .errors import LogPurgeUnsupportedError
 from .settings import DEFAULT_MAX_DETAIL_BYTES, DEFAULT_TIMELINE_LIMIT
 
 _log = logging.getLogger("agent_console_mod_logs")
+
+ISSUE_NO_PROJECTS = "logs.no_projects"
+"""경고: 등록된 프로젝트가 없어 범위를 아는 출처가 아무것도 읽지 않는다."""
+
+ISSUE_OUT_OF_SCOPE = "logs.out_of_scope"
+"""경고: 설정 ``roots``에 등록되지 않은 프로젝트 기록이 있어 건너뛰었다."""
+
+ISSUE_IGNORED_KEY = "logs.ignored_key"
+"""정보: 출처 설정에 출처 스키마가 ``deprecated: true``로 표시한 키가 있어 읽지 않았다(5.7R.30b)."""
+
+
+def _deprecated_keys(schema: Mapping[str, Any], config: Mapping[str, Any]) -> list[str]:
+    """설정 키 중 출처 스키마가 ``deprecated: true``로 표시한 것(이름순, 키 이름을 모른다)."""
+    props = schema.get("properties")
+    if not isinstance(props, Mapping):
+        return []
+    return sorted(
+        k
+        for k in config
+        if isinstance(props.get(k), Mapping) and props[k].get("deprecated") is True
+    )
+
+
+def _configured_roots(settings: LogSettings | None, source_id: str) -> bool:
+    """설정에서 이 출처의 ``roots``를 직접 적었는가."""
+    for item in (settings.sources or []) if settings is not None else []:
+        if item.id == source_id:
+            roots = (item.config or {}).get("roots")
+            return bool(roots)
+    return False
+
 
 SECONDS_PER_DAY = 86_400.0
 
@@ -120,6 +153,8 @@ class LogsService:
         open_read: 원본 읽기 전용 열기(테스트에서 쓰기 감시).
         archive_max_events·archive_max_bytes: 보관본 이벤트 수·바이트 합 상한.
         scope_kinds: 지금 등록된 범위 종류(X27)를 돌려주는 함수(질의마다 부른다).
+        projects: 앱에 등록된 프로젝트 폴더(수집마다 부른다, 5.7R.30 후속). None이면 범위 필터
+            없음(앱 밖 단독 사용). 값이 있으면 범위를 아는 출처는 그 폴더의 기록만 읽는다.
         filter_predicates: 지금 등록된 필터 확장(X28)을 돌려주는 함수(질의마다 부른다).
     """
 
@@ -147,6 +182,7 @@ class LogsService:
         archive_max_bytes: int = DEFAULT_ARCHIVE_MAX_BYTES,
         scope_kinds: Callable[[], Iterable[LogScopeKind]] = tuple,
         filter_predicates: Callable[[], Iterable[LogFilterExtension]] = tuple,
+        projects: Callable[[], ProjectFolders | None] | None = None,
     ) -> None:
         self._index = index
         self._registries = registries
@@ -163,7 +199,9 @@ class LogsService:
             open_read=open_read,
             budget_bytes=budget_bytes,
             batch_size=batch_size,
+            projects=projects,
         )
+        self._projects = projects
         self._retention = retention_days
         self._max_detail = max_detail_bytes
         self._timeline_limit = timeline_limit
@@ -287,9 +325,17 @@ class LogsService:
         self._ingestor.add_runtime_source(source, classifier=classifier)
 
     def source_issues(self) -> list[Issue]:
-        """마지막 수집에서 실패한 출처(``server.warnings``). 메시지에 원본 경로·예외 문장 없음."""
+        """마지막 수집에서 실패한 출처(``server.warnings``). 메시지에 원본 경로·예외 문장 없음.
+
+        프로젝트 범위: 등록된 프로젝트가 없으면 ``logs.no_projects``, 설정 ``roots``가 범위 밖
+        폴더를 가리켜 건너뛰었으면 ``logs.out_of_scope``(출처별). 출처 스키마가 ``deprecated``로
+        표시한 키가 설정에 남아 있으면 정보 ``logs.ignored_key``(출처·키별).
+        """
         out: list[Issue] = []
-        for info in self._ingestor.sources(self._settings()):
+        settings = self._settings()
+        out.extend(self._scope_issues(settings))
+        out.extend(self._ignored_key_issues(settings))
+        for info in self._ingestor.sources(settings):
             code = info.status.error_code
             if not code or not info.enabled:
                 continue
@@ -306,6 +352,69 @@ class LogsService:
                     details={"source": info.descriptor.id, "error_code": code},
                 )
             )
+        return out
+
+    def _ignored_key_issues(self, settings: LogSettings | None) -> list[Issue]:
+        """출처 설정에 남은 deprecated 키(읽지 않음) → 정보 이슈(출처·키마다)."""
+        if settings is None:
+            return []
+        schemas = {
+            i.descriptor.id: i.descriptor.config_schema for i in self._ingestor.sources(settings)
+        }
+        out: list[Issue] = []
+        for item in settings.sources or []:
+            schema = schemas.get(item.id)
+            if not isinstance(schema, Mapping) or not item.config:
+                continue
+            for key in _deprecated_keys(schema, item.config):
+                out.append(
+                    Issue(
+                        severity="info",
+                        code=ISSUE_IGNORED_KEY,
+                        message=f"로그 출처 {item.id} 설정의 {key}는 더 이상 읽지 않습니다. "
+                        "설정에서 지워도 됩니다",
+                        details={"source": item.id, "key": key},
+                    )
+                )
+        return out
+
+    def _scope_issues(self, settings: LogSettings | None) -> list[Issue]:
+        if self._projects is None:
+            return []
+        folders = self._projects()
+        scoped = [
+            info
+            for info in self._ingestor.sources(settings)
+            if info.enabled
+            and isinstance(self._ingestor.source_of(info.descriptor.id), ScopedLogSource)
+        ]
+        if not scoped:
+            return []
+        out: list[Issue] = []
+        if folders is None or folders.empty:
+            out.append(
+                Issue(
+                    severity="warning",
+                    code=ISSUE_NO_PROJECTS,
+                    message="프로젝트를 먼저 만들거나 등록하세요. 로그는 앱에 등록된 프로젝트 "
+                    "폴더의 기록만 수집합니다",
+                    details={"sources": [i.descriptor.id for i in scoped]},
+                )
+            )
+            return out
+        for info in scoped:
+            skipped = self._ingestor.scope_skipped(info.descriptor.id)
+            configured = _configured_roots(settings, info.descriptor.id)
+            if skipped and configured:
+                out.append(
+                    Issue(
+                        severity="warning",
+                        code=ISSUE_OUT_OF_SCOPE,
+                        message=f"로그 출처 {info.descriptor.id}의 루트 폴더에 등록되지 않은 "
+                        f"프로젝트 기록 {skipped}개가 있어 건너뛰었습니다",
+                        details={"source": info.descriptor.id, "skipped": skipped},
+                    )
+                )
         return out
 
     # ---------------------------------------------------------------- 수집

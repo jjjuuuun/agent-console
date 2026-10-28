@@ -117,9 +117,10 @@ describe("설정 화면의 섹션과 모듈", () => {
     expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
     expect(screen.queryByRole("button", { name: "되돌리기" })).toBeNull();
     expect(screen.getByText("이 서버에는 켜진 기능이 없습니다.")).toBeTruthy();
-    // 사이드바 주 메뉴에는 화면이 없고 아래 고정 줄의 설정만 남는다(5.2R.59: 글자 있는 항목)
+    // 설정은 position:bottom 데이터 → 주 메뉴 목록에는 링크가 없고 하단 "도구" 그룹의 아이콘 링크(이름은 aria-label)로 있다
     const side = screen.getByRole("navigation", { name: "주 메뉴" });
-    expect(within(side).getAllByRole("link").map((a) => a.querySelector(".ac-sidebar-label")?.textContent)).toEqual(["설정"]);
+    expect(within(side).queryAllByRole("link")).toEqual([]);
+    expect(within(screen.getByRole("group", { name: "도구" })).getByRole("link", { name: "설정" })).toBeTruthy();
   });
 
   it("설정 문서 기능만 꺼지면 폼 섹션은 사라지고 설정 문서를 부르지 않으며, 사라진 섹션을 가리키는 #usage 해시는 첫 섹션으로 간다", async () => {

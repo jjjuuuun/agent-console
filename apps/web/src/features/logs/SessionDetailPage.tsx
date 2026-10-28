@@ -25,11 +25,12 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
-import { ArchitectureChips, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
+import { ARCH_SCOPE_KIND, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
 import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
+import { useLogTimeMode } from "./useLogTimeMode";
 import { useDetailLink } from "./useDetailLink";
 import { LogsPageFrame } from "./LogsPageFrame";
 import { settingsLogsHref } from "./LogsEmpty";
@@ -135,16 +136,19 @@ export function SessionDetailPage() {
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [grouped, setGrouped] = useState(true);
   const [follow, setFollow] = useState(true);
-  const [timeMode, setTimeMode] = useState<"relative" | "absolute">(() => (storage.get(LOGS_STORAGE.timeMode) === "absolute" ? "absolute" : "relative"));
+  const time = useLogTimeMode();
   const laneFilter = url.screen[SCREEN_PARAMS.lane] ?? NO_STRINGS;
 
   // ---- 구조도 세그먼트(역할 `logs:architecture`가 없으면 질의도 세그먼트도 없다). 레인 필터는 서버 `thread` 필터로 보낸다.
   const [archOpened, setArchOpened] = useState(false);
-  const archEnabled = archVisible && archOpened;
   const archScope = useMemo(() => ({ [FILTER_KEYS.session]: session, [FILTER_KEYS.thread]: laneFilter }), [session, laneFilter]);
+  // 구조도를 새 창으로 분리한 동안에는 이 화면의 구조도 칸이 접혀 있어도 질의를 이어 간다(분리 창에서 고른 칸이 표를 거른다).
+  const { sync: archSync, popout } = useArchPopoutHost({ kind: ARCH_SCOPE_KIND.session, id: session, scope: archScope, enabled: archVisible });
+  const archEnabled = archVisible && (archOpened || popout.mode !== "docked");
   const schema = useLogSchema(archEnabled);
   const filterTitle = useCallback((name: string) => schema.data?.filters?.find((f) => f.id === name)?.title || name, [schema.data]);
   const arch = useArchitectureController({ scope: archScope, enabled: archEnabled, highlightUid: selectedUid, filterTitle });
+  useArchSync({ sync: archSync, controller: arch, role: "origin", highlightUid: selectedUid, scope: archScope });
   useLogsIngested((info) => arch.ingested(info.count), LOGS_LIMITS.archDebounceMs, archEnabled);
   const archActive = archEnabled && arch.rowsParams !== null;
   // 구조도로 걸러졌을 때 표는 서버가 센 이벤트를 그대로 쓴다(숨김 범주 포함 — 표의 수가 칸의 횟수와 같아야 한다).
@@ -242,7 +246,7 @@ export function SessionDetailPage() {
 
   // ---- 열 구성 / 메뉴
   const [cols, setCols] = useColumnChoice(LOGS_STORAGE.colsSession, EVENT_COLUMN_IDS, SESSION_EVENT_COLUMNS_DEFAULT);
-  const columns = useMemo(() => eventColumns(cols), [cols]);
+  const columns = useMemo(() => eventColumns(cols, undefined, time.widths), [cols, time.widths]);
   const [menu, setMenu] = useState<{ items: readonly LogMenuItem[]; anchor: RowMenuAnchor; note?: string } | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const tableH = useElementHeight(tableWrapRef, 360);
@@ -433,9 +437,14 @@ export function SessionDetailPage() {
             {flowCollapsed ? null : (
               <>
               {effectiveFlowView === "arch" ? (
+                popout.mode !== "docked" ? (
+                  <div className="logs-flow-body logs-flow-body--arch-folded"><PopoutPlaceholder popout={popout} /></div>
+                ) : (
                 <div className="logs-flow-body logs-flow-body--arch" style={{ height: archH }}>
+                  <PopoutNotice popout={popout} />
                   <ArchitecturePanel
                     controller={arch}
+                    toolbarExtra={<PopoutButton popout={popout} />}
                     laneNames={laneFilter.map((id) => labels.get(id) ?? id)}
                     wholeRange={!atEnd}
                     hasFilters={hasActiveFilter(url.filter) || errorsOnly || laneFilter.length > 0}
@@ -446,6 +455,7 @@ export function SessionDetailPage() {
                     onSkip={() => eventTableRef.current?.focus()}
                   />
                 </div>
+                )
               ) : (
               <div className="logs-flow-body" style={{ maxHeight: flowH }}>
                 <SessionFlow
@@ -465,7 +475,7 @@ export function SessionDetailPage() {
                 />
               </div>
               )}
-              {effectiveFlowView === "arch" ? (
+              {effectiveFlowView === "arch" && popout.mode !== "docked" ? null : effectiveFlowView === "arch" ? (
                 <SplitHandle orientation="horizontal" size={archH} min={LOGS_LIMITS.archFlowHeightMin} max={LOGS_LIMITS.archFlowHeightMax} onChange={setArchHeight} label={t.detail.flowSplitLabel} />
               ) : (
                 <SplitHandle orientation="horizontal" size={flowH} min={LOGS_LIMITS.flowHeightMin} max={LOGS_LIMITS.flowHeightMax} onChange={setFlowHeight} label={t.detail.flowSplitLabel} />
@@ -507,7 +517,6 @@ export function SessionDetailPage() {
                 </span>
               ))}
               <ArchitectureChips chips={arch.chips} />
-              <Button size="sm" onClick={() => { const next = timeMode === "relative" ? "absolute" : "relative"; setTimeMode(next); storage.set(LOGS_STORAGE.timeMode, next); }} aria-label={t.filters.timeMode} aria-pressed={timeMode === "absolute"}>⏱ {timeMode === "relative" ? t.filters.timeRelative : t.filters.timeAbsolute}</Button>
               <ColumnsMenu all={EVENT_COLUMN_IDS} selected={cols} labelOf={(id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
             </div>
           </div>
@@ -540,7 +549,8 @@ export function SessionDetailPage() {
                 taxonomy={taxonomy}
                 isError={isError}
                 slotFor={slotFor}
-                timeMode={timeMode}
+                timeMode={time.mode}
+                onTimeModeChange={time.setMode}
                 originTime={origin}
                 groupByMessage={grouped}
                 followLast={playback.playing || live ? follow : undefined}

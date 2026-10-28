@@ -206,3 +206,13 @@
 .ac-lv-swatch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .ac-lv-swatch:has(input:checked) { border-color: var(--lv-accent); background: var(--ac-accent-bg, transparent); }
 .ac-lv-swatch:has(input:focus-visible) { outline: 2px solid var(--ac-focus-ring, var(--lv-accent)); }
+
+/* 시각 열 머리의 표시 방식 메뉴 */
+.ac-lv-timehead { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.ac-lv-timemenu { position: relative; display: inline-flex; flex: none; }
+.ac-lv-timemenu-btn { min-width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: var(--lv-radius); background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.ac-lv-timemenu-btn:hover, .ac-lv-timemenu-btn[aria-expanded="true"] { background: var(--ac-surface-2, var(--lv-surface-2)); border-color: var(--lv-border); }
+.ac-lv-timemenu-list { position: absolute; top: 100%; left: 0; z-index: 20; display: flex; flex-direction: column; min-width: 200px; padding: 4px; border: 1px solid var(--lv-border); border-radius: var(--lv-radius); background: var(--lv-surface); box-shadow: var(--ac-shadow-1); font-weight: 400; }
+.ac-lv-timemenu-list button { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; border: 0; border-radius: var(--lv-radius); background: transparent; color: var(--lv-text, inherit); font: inherit; text-align: start; cursor: pointer; white-space: nowrap; }
+.ac-lv-timemenu-list button:hover, .ac-lv-timemenu-list button:focus-visible { background: var(--ac-surface-2, var(--lv-surface-2)); }
+.ac-lv-timemenu-mark { width: 12px; flex: none; color: var(--lv-accent); }

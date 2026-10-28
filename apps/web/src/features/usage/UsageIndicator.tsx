@@ -109,12 +109,17 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
     () => buildWindowGroups(report.data?.windows ?? [], order, (id) => index.get(id)?.descriptor.trust === OFFICIAL_TRUST),
     [report.data?.windows, order, index],
   );
-  const items = useMemo(
-    () => buildIndicatorItems({ groups, labels, windowInfo, nowSec, staleAfterSeconds: staleAfter, colorRules: cfg.color_rules, windows: cfg.windows, maxItems: cfg.max_items }),
-    [groups, labels, windowInfo, nowSec, staleAfter, cfg.color_rules, cfg.windows, cfg.max_items],
-  );
+  // 사이드바(펼침·레일)와 낭독에는 값이 있는 사용률 창만 쓴다(상태·토큰만 주는 창은 사용량 화면에서). 보일 창 수는 걸러낸 뒤에 적용한다.
+  // 플로팅 칩은 설정한 창을 그대로 둔다.
+  const items = useMemo(() => {
+    if (layout === "chip") return buildIndicatorItems({ groups, labels, windowInfo, nowSec, staleAfterSeconds: staleAfter, colorRules: cfg.color_rules, windows: cfg.windows, maxItems: cfg.max_items });
+    const ratio = buildIndicatorItems({ groups, labels, windowInfo, nowSec, staleAfterSeconds: staleAfter, colorRules: cfg.color_rules, windows: cfg.windows, maxItems: groups.length }).filter(
+      (i) => i.observed && i.kind === "ratio",
+    );
+    return cfg.windows.length > 0 ? ratio : ratio.slice(0, cfg.max_items);
+  }, [layout, groups, labels, windowInfo, nowSec, staleAfter, cfg.color_rules, cfg.windows, cfg.max_items]);
   const popItems = useMemo(
-    () => buildIndicatorItems({ groups, labels, windowInfo, nowSec, staleAfterSeconds: staleAfter, colorRules: cfg.color_rules, windows: NONE, maxItems: INDICATOR_POPOVER_MAX }),
+    () => buildIndicatorItems({ groups, labels, windowInfo, nowSec, staleAfterSeconds: staleAfter, colorRules: cfg.color_rules, windows: NONE, maxItems: groups.length }).filter((i) => i.observed && i.kind === "ratio").slice(0, INDICATOR_POPOVER_MAX),
     [groups, labels, windowInfo, nowSec, staleAfter, cfg.color_rules],
   );
   const { known: fields } = splitFields(cfg.fields);
@@ -125,6 +130,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   if (report.isPending) status = "loading";
   else if (report.data === undefined) status = "error-empty";
   else if (groups.length === 0 && cfg.windows.length === 0) status = "empty";
+  else if (layout !== "chip" && items.length === 0) status = "empty";
 
   // ----- 요약 팝오버: 호버 300ms / 포커스 즉시 / 단축키 6초 고정
   const [hover, setHover] = useState(false);
@@ -244,9 +250,6 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
     },
   ];
 
-  const hiddenCount = Math.max(0, groups.length - popItems.length);
-  const sourceErrors = (sources.data ?? []).filter((s) => s.error != null).length;
-  const otherCount = groups.reduce((n, g) => n + g.others.length, 0);
   const emptyText = (sources.data ?? [])
     .filter((s) => s.enabled !== false && s.descriptor.description)
     .map((s) => s.descriptor.description as string)
@@ -255,7 +258,7 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   const extra: string[] = [];
   if (status === "loading") extra.push(t.loading);
   if (status === "error-empty") extra.push(t.loadFailed);
-  if (status === "empty") extra.push(t.noDataHint);
+  if (status === "empty") extra.push(setupHref === undefined ? t.noDataHint : t.unlinkedHint);
   if (report.isError && hasData) extra.push(t.loadFailed);
   const ariaLabel = status === "ready" ? indicatorAriaLabel(items, cfg.value_mode, nowSec, extra) : `${t.summary(extra.join(". "))}. ${t.openLabel}`;
 
@@ -299,13 +302,8 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
           <UsageIndicatorPopover
             id={popId}
             items={popItems}
-            hiddenCount={hiddenCount}
             valueMode={cfg.value_mode}
             nowMs={nowMs}
-            updatedAtMs={report.dataUpdatedAt > 0 ? report.dataUpdatedAt : undefined}
-            sourceInfo={sourceInfo}
-            sourceErrors={sourceErrors}
-            otherCount={otherCount}
             emptyText={emptyText === "" ? undefined : `${t.noDataHint}. ${emptyText}`}
             side={layout === "chip" ? "up" : "right"}
           />

@@ -2,12 +2,50 @@
   "$comment": "claude-code-jsonl 출처 설정 스키마. 기본값은 데이터이고 설정 logs.sources[id=claude-code-jsonl].config가 덮어쓴다. 원본은 읽기만 한다.",
   "type": "object",
   "properties": {
+    "project_scope": {
+      "type": "string",
+      "enum": ["current", "registered"],
+      "default": "current",
+      "title": "수집 범위",
+      "description": "앱에 등록된 프로젝트 폴더의 세션만 읽는다. 등록된 프로젝트가 없으면 아무것도 읽지 않는다. 루트 폴더를 직접 적어도 범위 밖은 건너뛴다.",
+      "x-ui": {"tier": "basic", "enum_labels": {"current": "현재 프로젝트", "registered": "등록된 프로젝트 전체"}, "when": "다른 등록 프로젝트의 세션도 함께 보고 싶을 때 바꾸세요."}
+    },
+    "project_key_keep": {
+      "type": "string",
+      "default": "",
+      "title": "프로젝트 폴더 이름에 남길 글자",
+      "description": "작업 폴더 경로에서 영문자·숫자와 이 글자만 남기고 나머지는 바꿈 글자로 바꿔 세션 폴더 이름을 만든다(예: /work/demo → -work-demo).",
+      "x-ui": {"tier": "advanced"}
+    },
+    "project_key_replacement": {
+      "type": "string",
+      "default": "-",
+      "title": "프로젝트 폴더 이름 바꿈 글자",
+      "description": "영문자·숫자·남길 글자가 아닌 글자를 이 글자로 바꾼다.",
+      "x-ui": {"tier": "advanced"}
+    },
+    "workspace_roots": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": [".state/claude/projects"],
+      "title": "앱 실행 세션 폴더",
+      "description": "앱이 실행한 세션 폴더(앱 작업 공간 기준). 기본은 구독 자격 폴더 아래이고, 실행 백엔드의 자격 폴더를 바꾸면 함께 바꾼다.",
+      "x-ui": {"tier": "advanced"}
+    },
+    "project_roots": {
+      "type": "array",
+      "items": {"type": "string"},
+      "deprecated": true,
+      "title": "프로젝트 안 세션 폴더(읽지 않음)",
+      "description": "더 이상 읽지 않는다. 앱 실행 세션 폴더 칸을 쓴다.",
+      "x-ui": {"tier": "advanced"}
+    },
     "roots": {
       "type": "array",
       "items": {"type": "string", "minLength": 1},
       "default": [],
       "title": "루트 폴더",
-      "description": "Claude Code projects 폴더 목록. 비우면 설정 폴더 환경 변수 아래 하위 경로, 없으면 기본 루트. `~`는 홈 폴더.",
+      "description": "Claude Code projects 폴더 목록. 비우면 기본 루트와 앱 실행 세션 폴더를 읽는다. 등록된 프로젝트 밖은 건너뛴다.",
       "x-ui": {"tier": "advanced"}
     },
     "include": {

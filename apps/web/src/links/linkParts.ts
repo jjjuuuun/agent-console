@@ -40,5 +40,7 @@ export const DEFAULT_LINK_PARTS: readonly LinkPartDef[] = [
   { id: P.teamsConditionOperators, requires: ["runs"], onMissing: "hide" },
   // 위임 흐름 탭의 자식 실행 묶음(탭 자체가 `runs:trace`에 달려 있어 별도 처리 없음)
   { id: P.runsTraceChildGroups, requires: ["runs:trace"], onMissing: "hide" },
+  // 실행 상세 요약 줄의 "메모리 쓰기 n · 읽기 m" 칩(screen-memory.md 12.2). 메모리-실행 연동 역할이 없으면 칩도 질의도 없다.
+  { id: P.runsMemoryChips, requires: ["memory:runs"], onMissing: "hide" },
   // 내보내기의 "의존 항목 자동 포함"(screens-v3.md 3)은 아직 화면에 없다. 생기면 `exports.dependencies`를 여기에 등록한다.
 ];

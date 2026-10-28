@@ -612,6 +612,8 @@
       "MemoryImportProblem",
       "MemoryImportResult",
       "MemoryMoveRequest",
+      "MemoryRetentionCondition",
+      "MemoryRetentionConditionItem",
       "MemoryRetentionPlan",
       "MemoryRetentionPlanItem",
       "MemoryRetentionPlanRequest",
@@ -13806,6 +13808,130 @@
       "title": "MemoryMoveRequest",
       "type": "object"
     },
+    "MemoryRetentionCondition": {
+      "additionalProperties": true,
+      "description": "정리할 기록을 고르는 조건입니다.\n\n'모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 합니다. 조건이 하나도 없으면 모든 기록이\n맞으므로 규칙을 쓰지 않습니다. '결과 뒤집기'를 켜면 결과를 반대로 씁니다.",
+      "properties": {
+        "all": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/MemoryRetentionConditionItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "여기 적은 조건이 모두 맞는 기록만 정리합니다.",
+          "title": "모두 참",
+          "x-ui": {
+            "tier": "basic",
+            "when": "여러 조건이 모두 맞는 기록만 정리하고 싶을 때 더하세요."
+          }
+        },
+        "any": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/MemoryRetentionConditionItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "여기 적은 조건 중 하나만 맞아도 정리합니다.",
+          "title": "하나라도 참",
+          "x-ui": {
+            "tier": "basic",
+            "when": "조건 중 하나만 맞아도 정리하고 싶을 때 더하세요."
+          }
+        },
+        "negate": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.",
+          "title": "결과 뒤집기",
+          "x-ui": {
+            "tier": "advanced",
+            "when": "조건이 맞지 않을 때 지나가게 하고 싶을 때 켜세요."
+          }
+        }
+      },
+      "title": "정리 조건",
+      "type": "object"
+    },
+    "MemoryRetentionConditionItem": {
+      "additionalProperties": true,
+      "description": "조건 하나입니다. 기록의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.",
+      "properties": {
+        "path": {
+          "description": "기록에서 비교할 값의 위치입니다(예: /tags, /idle_days 마지막 쓰기 뒤 지난 날, /scope/kind 범위 종류).",
+          "examples": [
+            "/tags",
+            "/idle_days",
+            "/age_days",
+            "/last_read_days",
+            "/key",
+            "/scope/kind",
+            "/scope/id",
+            "/bytes",
+            "/version",
+            "/archived",
+            "/pinned",
+            "/author_kind",
+            "/created_by/kind",
+            "/updated_by/kind"
+          ],
+          "pattern": "^(/.*)?$",
+          "title": "볼 값",
+          "type": "string",
+          "x-ui": {
+            "example": "/idle_days",
+            "tier": "basic",
+            "when": "태그·지난 날 수·범위 같은 다른 값을 보고 정리하고 싶을 때 바꾸세요."
+          }
+        },
+        "op": {
+          "description": "값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.",
+          "minLength": 1,
+          "title": "비교 방법",
+          "type": "string",
+          "x-ui": {
+            "tier": "basic",
+            "when": "같음·포함·있음 등 비교 방법을 바꾸고 싶을 때 고르세요."
+          }
+        },
+        "value": {
+          "default": null,
+          "description": "볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).",
+          "title": "비교할 값",
+          "x-ui": {
+            "example": "approve",
+            "tier": "basic",
+            "when": "어떤 값일 때 지나갈지 바꾸고 싶을 때 적으세요."
+          }
+        }
+      },
+      "required": [
+        "path",
+        "op"
+      ],
+      "title": "정리 조건 하나",
+      "type": "object"
+    },
     "MemoryRetentionPlan": {
       "description": "정리 미리보기(dry run) 결과.",
       "properties": {
@@ -13824,6 +13950,12 @@
           "default": false,
           "description": "`items`를 `limit`에서 잘랐는지.",
           "type": "boolean"
+        },
+        "excluded_pinned": {
+          "default": 0,
+          "description": "규칙에 맞았지만 고정이라 빠진 항목 수(`count`에 들지 않는다, 지운 항목은 세지 않음).",
+          "minimum": 0,
+          "type": "integer"
         },
         "issues": {
           "description": "규칙 검사 문제.",
@@ -13869,6 +14001,31 @@
             "delete"
           ],
           "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "판단한 때의 마지막 쓰기 시각(Unix epoch 초)."
+        },
+        "bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "판단한 때의 본문 바이트 수."
         }
       },
       "required": [
@@ -13963,12 +14120,13 @@
           }
         },
         "when": {
-          "$ref": "#/$defs/ConditionSpec",
+          "$ref": "#/$defs/MemoryRetentionCondition",
           "description": "이 조건에 맞는 기록을 정리합니다. 예: 태그가 임시이고 30일 넘게 안 쓴 기록.",
           "title": "정리할 기록 조건",
           "x-ui": {
             "tier": "basic",
-            "when": "정리할 기록을 고르는 기준을 바꿀 때 고치세요."
+            "when": "정리할 기록을 고르는 기준을 바꿀 때 고치세요.",
+            "widget": "condition-list"
           }
         },
         "action": {
@@ -14337,7 +14495,8 @@
           "type": "object",
           "x-ui": {
             "tier": "basic",
-            "when": "범위를 더하거나 기본 범위를 바꾸고 싶을 때 고치세요."
+            "when": "범위를 더하거나 기본 범위를 바꾸고 싶을 때 고치세요.",
+            "widget": "memory-scope-kinds"
           }
         },
         "secrets": {
@@ -14354,7 +14513,7 @@
               "redact": "가리고 저장",
               "reject": "거부"
             },
-            "tier": "advanced",
+            "tier": "basic",
             "when": "가린 채로라도 기록을 남기고 싶을 때 바꾸세요."
           }
         },
@@ -14365,7 +14524,7 @@
           "title": "기록당 버전 보관 수",
           "type": "integer",
           "x-ui": {
-            "tier": "advanced",
+            "tier": "basic",
             "when": "저장 공간을 줄이거나 기록을 더 오래 남기고 싶을 때 바꾸세요."
           }
         },
@@ -14375,7 +14534,8 @@
           "title": "기록 정리",
           "x-ui": {
             "tier": "basic",
-            "when": "쌓인 기록을 자동으로 정리하고 싶을 때 고치세요."
+            "when": "쌓인 기록을 자동으로 정리하고 싶을 때 고치세요.",
+            "widget": "memory-retention-rules"
           }
         }
       },

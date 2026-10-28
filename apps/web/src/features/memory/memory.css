@@ -10,7 +10,8 @@
 .mem-help { margin: 0; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .mem-error { display: block; min-height: var(--ac-lh-xs); margin: 0; color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .mem-warn { display: inline-flex; align-items: center; gap: var(--ac-space-1); color: var(--ac-text); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
-.mem-mark { display: inline-block; flex: none; width: 12px; height: 12px; background: var(--ac-warning); mask: var(--ac-icon-unknown) center / contain no-repeat; -webkit-mask: var(--ac-icon-unknown) center / contain no-repeat; }
+.mem-mark { display: inline-block; flex: none; width: 16px; height: 16px; background: var(--ac-warning); mask: var(--ac-icon-unknown) center / contain no-repeat; -webkit-mask: var(--ac-icon-unknown) center / contain no-repeat; }
+.mem-warn-line { display: flex; margin-top: var(--ac-space-1); gap: var(--ac-space-2); }
 .mem-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .mem-linkbtn { all: unset; color: var(--ac-accent); cursor: pointer; text-decoration: underline; font-size: inherit; line-height: inherit; }
 .mem-linkbtn:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
@@ -64,7 +65,7 @@
 .mem-taglist .ac-choice > span { display: flex; gap: var(--ac-space-2); min-width: 0; }
 
 /* 상세 */
-.mem-detail { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
+.mem-detail { container-type: size; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
 .mem-detail-head { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; min-height: 48px; padding: 0 var(--ac-space-3); background: var(--ac-surface-2); border-bottom: 1px solid var(--ac-border); }
 .mem-detail-title { flex: 1 1 0; min-width: 0; margin: 0; font-size: var(--ac-text-md); line-height: var(--ac-lh-md); font-weight: 600; }
 .mem-detail-actions { display: flex; align-items: center; gap: var(--ac-space-1); flex: none; }
@@ -74,7 +75,10 @@
 .mem-bands { display: flex; flex-direction: column; gap: var(--ac-space-1); flex: none; }
 .mem-bands:empty { display: none; }
 .mem-band { border-radius: 0; }
-.mem-meta { flex: none; border-bottom: 1px solid var(--ac-border); padding: 0 var(--ac-space-3); max-height: 46%; overflow: auto; }
+.mem-meta-scroll { flex: none; min-height: 0; border-bottom: 1px solid var(--ac-border); max-height: max(160px, 45cqh); overflow-y: scroll; scrollbar-gutter: stable; }
+.mem-meta { padding: 0 var(--ac-space-3); }
+/* 스크롤 단서(screen-memory §5.2): 넘치고 끝이 아닐 때만 하단 그림자, 공간은 차지하지 않는다 */
+.mem-scroll-cue { position: sticky; bottom: 0; height: var(--ac-scroll-cue-height); margin-top: calc(var(--ac-scroll-cue-height) * -1); background: linear-gradient(to top, var(--ac-surface-1), transparent); pointer-events: none; }
 .mem-detail-editor { flex: 1 1 0; min-height: 200px; display: flex; flex-direction: column; }
 .mem-detail-editor > .ac-mem-editor { flex: 1 1 0; min-height: 0; }
 .mem-detail-hint { padding: var(--ac-space-4); margin: 0; }

@@ -41,6 +41,8 @@ export interface RunHeaderProps {
   waitingSuffix?: string | undefined;
   /** 중단 배너에 더하는 문구("자식 실행도 중단되었습니다") */
   interruptedNote?: string | undefined;
+  /** 둘째 줄 끝에 붙는 칩 자리(다른 기능이 꽂는다, 예: 메모리 쓰기·읽기 칩) */
+  extra?: ReactNode;
   /** 보조 줄 문구: 자식 실행 실패 요약, 실패 처리됨 등 */
   notes?: readonly { key: string; text: string; tone: "danger" | "info" }[];
 }
@@ -97,6 +99,7 @@ export function RunHeader(p: RunHeaderProps) {
         {p.runningNode ? <button type="button" className="app-link-btn" onClick={() => p.onFocusNode(p.runningNode!.id)}>{t.detail.running(p.runningNode.label)}</button> : null}
         {showIdle ? <span>{t.detail.idle(Math.floor(p.idleSeconds!))}</span> : null}
         {p.childMenu}
+        {p.extra}
         {(p.notes ?? []).map((n) => (
           <span key={n.key} className="runs-header-note" data-tone={n.tone} role="status">
             <span aria-hidden="true">{n.tone === "danger" ? "▲ " : "ⓘ "}</span>

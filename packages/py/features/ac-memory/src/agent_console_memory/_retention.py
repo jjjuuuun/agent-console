@@ -6,7 +6,10 @@
   `scope{kind, id}`·`key`·`tags`·`pinned`·`archived`·`bytes`·`version`·`age_days`(만든 뒤)·
   `idle_days`(마지막 쓰기 뒤)·`last_read_days`(도구로 읽은 기록이 있을 때만 키가 있다)·
   `author_kind`(마지막으로 쓴 주체 종류)·`created_by`·`updated_by`(쓴 주체 객체). 일 수는 실수다.
-- 고정(`pinned`) 항목과 지운 항목은 판단하지 않는다.
+- 고정(`pinned`) 항목은 정리하지 않는다(규칙에 맞으면 계획의 `excluded_pinned`로만 센다).
+  지운 항목은 판단하지 않는다.
+- 계획 항목에는 판단한 때의 마지막 쓰기 시각·본문 크기(`updated_at`·`bytes`)를 싣는다(화면이 목록을
+  다시 읽지 않게).
 - 여러 규칙이 맞으면 선언 순서의 첫 규칙 하나만 쓴다. 그 규칙의 동작이 이미 된 상태(보관된 항목을
   보관)면 계획에 넣지 않는다(뒤 규칙도 보지 않는다).
 - 조건은 `ac-conditions` 컴파일 경로(`compile_conditions`)로 판정하고, 규칙이 읽는 판단 대상 키만
@@ -286,7 +289,8 @@ def retention_plan(
         page_size: 저장소에서 한 번에 읽는 수.
 
     Returns:
-        `MemoryRetentionPlan`(항목 순서는 저장소가 낸 순서 — `iter_entries`).
+        `MemoryRetentionPlan`(항목 순서는 저장소가 낸 순서 — `iter_entries`). 규칙에 맞은 고정
+        항목은 `items`·`count`에 넣지 않고 `excluded_pinned`로 센다.
 
     Raises:
         ValueError: 규칙 목록을 주면서 `operators`가 없을 때.
@@ -299,35 +303,41 @@ def retention_plan(
         rule_set = compile_retention_rules(rules, operators)
     items: list[MemoryRetentionPlanItem] = []
     count = 0
+    pinned = 0
     compiled = rule_set.rules
     if compiled:
         subject_of = _subject_builder(rule_set.keys)
         for entry in iter_entries(store, scopes=scopes, page_size=page_size, with_content=False):
-            if entry.pinned:
-                continue
             subject = subject_of(entry, now)
             for candidate in compiled:
                 if not candidate.holds.predicate(subject):
                     continue
                 action = candidate.rule.action
-                if not _no_op(entry, action):
-                    count += 1
-                    if limit is None or len(items) < limit:
-                        items.append(
-                            MemoryRetentionPlanItem(
-                                entry_id=entry.id,
-                                scope=entry.scope,
-                                key=entry.key,
-                                version=entry.version,
-                                rule=candidate.rule.id,
-                                action=action,
-                            )
+                if _no_op(entry, action):
+                    break
+                if entry.pinned:
+                    pinned += 1
+                    break
+                count += 1
+                if limit is None or len(items) < limit:
+                    items.append(
+                        MemoryRetentionPlanItem(
+                            entry_id=entry.id,
+                            scope=entry.scope,
+                            key=entry.key,
+                            version=entry.version,
+                            rule=candidate.rule.id,
+                            action=action,
+                            updated_at=entry.updated_at,
+                            bytes=entry.bytes,
                         )
+                    )
                 break
     return MemoryRetentionPlan(
         items=items,
         count=count,
         truncated=count > len(items),
+        excluded_pinned=pinned,
         issues=list(rule_set.issues),
     )
 

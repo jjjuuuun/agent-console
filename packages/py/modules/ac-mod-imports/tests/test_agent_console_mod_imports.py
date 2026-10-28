@@ -10,12 +10,20 @@ from fastapi.testclient import TestClient
 from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE
 from agent_console_mod_imports import (
     DEFINITIONS_STORE,
+    HOME_REMOVED_REASON,
     SECRET_RULES,
     module,
-    resolve_home,
 )
+from agent_console_mod_imports.settings import SETTINGS_COMPAT
 from agent_console_mod_imports.testing import local_definitions_module
-from agent_console_modkit import Assembly, BaseServices, ModulesConfig, Paths, assemble
+from agent_console_modkit import (
+    Assembly,
+    BaseServices,
+    ModulesConfig,
+    Paths,
+    assemble,
+    removed_settings,
+)
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_modkit.testing import fake_module
 from agent_console_secret_rules import default_rules
@@ -24,12 +32,26 @@ TOKEN = "t" * 32
 
 
 def _home(tmp_path: Path) -> Path:
+    """빈 HOME 픽스처: ~/.claude/agents·settings.json(전역 구성 — 읽으면 안 된다)."""
     home = tmp_path / "home"
     (home / ".claude" / "agents").mkdir(parents=True)
-    (home / ".claude" / "agents" / "pl.md").write_text(
-        "---\nname: pl\ndescription: 설계\n---\n당신은 PL입니다.\n", encoding="utf-8"
+    (home / ".claude" / "agents" / "global.md").write_text(
+        "---\nname: global\ndescription: 전역\n---\n전역 에이전트.\n", encoding="utf-8"
+    )
+    (home / ".claude" / "settings.json").write_text(
+        '{"permissions": {"allow": ["Read"]}}', encoding="utf-8"
     )
     return home
+
+
+def _project(tmp_path: Path) -> Path:
+    """등록 프로젝트 폴더의 .claude/agents."""
+    project = tmp_path / "proj"
+    (project / ".claude" / "agents").mkdir(parents=True)
+    (project / ".claude" / "agents" / "pl.md").write_text(
+        "---\nname: pl\ndescription: 설계\n---\n당신은 PL입니다.\n", encoding="utf-8"
+    )
+    return project
 
 
 def _assembly(tmp_path: Path, *extra: Any, environ: dict[str, str], **options: Any) -> Assembly:
@@ -49,10 +71,11 @@ def _client(assembly: Assembly) -> TestClient:
     return client
 
 
-def test_preview_and_import_from_home_env(tmp_path: Path) -> None:
+def test_preview_and_import_from_project(tmp_path: Path) -> None:
     home = _home(tmp_path)
-    assembly = _assembly(tmp_path, environ={"HOME": str(home)})
-    original = (home / ".claude" / "agents" / "pl.md").read_bytes()
+    project = _project(tmp_path)
+    assembly = _assembly(tmp_path, environ={"HOME": str(home)}, project_dir="proj")
+    original = (project / ".claude" / "agents" / "pl.md").read_bytes()
     with _client(assembly) as client:
         sources = client.get("/api/v1/resources/import/sources").json()
         user = next(s for s in sources if s["available"])
@@ -70,21 +93,52 @@ def test_preview_and_import_from_home_env(tmp_path: Path) -> None:
     store = assembly.port(DEFINITIONS_STORE)
     assert store is not None
     assert store.list_ids("agent") == [agent["suggested_id"]]
-    assert (home / ".claude" / "agents" / "pl.md").read_bytes() == original
+    assert (project / ".claude" / "agents" / "pl.md").read_bytes() == original
 
 
-def test_configured_home_and_project_dir_resolve_against_base(tmp_path: Path) -> None:
-    _home(tmp_path)
+def test_user_global_claude_is_not_read(tmp_path: Path) -> None:
+    """5.7R.30b: HOME에 ~/.claude/agents가 있어도 출처는 프로젝트 .claude/뿐이고 읽지 않는다."""
+    home = _home(tmp_path)
+    _project(tmp_path)
+    assembly = _assembly(
+        tmp_path, environ={"HOME": str(home), "USERPROFILE": str(home)}, project_dir="proj"
+    )
+    with _client(assembly) as client:
+        sources = client.get("/api/v1/resources/import/sources").json()
+        assert [s["id"] for s in sources] == ["project-claude"]
+        assert all(str(home) not in str(s) for s in sources)
+        preview = client.post(
+            "/api/v1/resources/import/preview", json={"source": "project-claude"}
+        ).json()
+        names = {c["name"] for c in preview["candidates"]}
+        assert "global" not in names
+        assert names == {"pl"}
+        gone = client.post("/api/v1/resources/import/preview", json={"source": "user-claude"})
+        assert gone.status_code == 404
+
+
+def test_old_home_setting_is_removed_key(tmp_path: Path) -> None:
+    """옛 ``home``은 settings.removed_key 방식으로 이유를 알린다(설정 원문 검사)."""
+    data = {"modules": {"options": {"mod-imports": {"home": "~"}}}}
+    [found] = removed_settings(data, {"mod-imports": SETTINGS_COMPAT})
+    assert found.path == "modules.options.mod-imports.home"
+    assert found.message().startswith(HOME_REMOVED_REASON)
+    assert (
+        removed_settings(
+            {"modules": {"options": {"mod-imports": {}}}}, {"mod-imports": SETTINGS_COMPAT}
+        )
+        == []
+    )
+
+
+def test_project_dir_resolves_against_base(tmp_path: Path) -> None:
     (tmp_path / "proj" / ".claude").mkdir(parents=True)
-    assembly = _assembly(tmp_path, environ={}, home="home", project_dir="proj")
+    assembly = _assembly(tmp_path, environ={}, project_dir="proj")
     with _client(assembly) as client:
         roots = {
             s["id"]: s["available"] for s in client.get("/api/v1/resources/import/sources").json()
         }
-    assert roots
-    assert all(roots.values())
-    assert resolve_home(None, {"USERPROFILE": "C:/u"}, None) == Path("C:/u")
-    assert resolve_home(None, {}, tmp_path) is None
+    assert roots == {"project-claude": True}
 
 
 def test_secret_rules_port_is_passed_to_sources(tmp_path: Path) -> None:
@@ -118,8 +172,8 @@ def test_requires_store_and_disabled_is_404(tmp_path: Path) -> None:
 
 def test_import_request_project_stamps_scope(tmp_path: Path) -> None:
     """요청 ``project``(계약 0.8.0) → 가져온 정의에 범위를 찍는다. 생략 = 공용(5.2R.31)."""
-    home = _home(tmp_path)
-    assembly = _assembly(tmp_path, environ={"HOME": str(home)})
+    _project(tmp_path)
+    assembly = _assembly(tmp_path, environ={}, project_dir="proj")
     with _client(assembly) as client:
         sources = client.get("/api/v1/resources/import/sources").json()
         user = next(s for s in sources if s["available"])

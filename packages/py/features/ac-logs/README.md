@@ -83,7 +83,7 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 
 | 묶음 | 이름 |
 | --- | --- |
-| 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
+| 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, 프로젝트 범위 `ProjectFolders`·`ScopedLogSource`(5.7R.30 후속: `LogIngestor(projects=…)`를 주면 `in_scope`를 구현한 출처의 범위 밖 단위를 건너뛰고, 이미 색인된 범위 밖 단위가 있으면 그 출처 색인을 비우고 다시 읽는다 — `scope_skipped`·`scope_purged`. `JsonlFileSource.accepts`가 거짓인 단위는 발견 때 맥락을 읽지 않는다), `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
 | 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
 | 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
 | 색인 비우기(M-3) | `purge_index(index, *, sources=None, categories=None, before=None, rescan=True, dry_run=False) -> PurgeResult`, `reset_index(index, *, dry_run=False)`, 범위 `PurgeScope`, 선택 능력 `PurgeableLogIndex`(`purge(scope, dry_run=)`, 메모리·SQLite 색인이 가진다) |

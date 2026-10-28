@@ -39,6 +39,8 @@ export interface TextDiffProps {
   onModeChange?: (mode: "split" | "unified") => void;
   /** px. 기본 360(넘치면 스크롤) */
   height?: number;
+  /** px. 주면 `height` 대신 내용 높이에 맞추고 이 값에서 멈춘다(넘치면 스크롤). 짧은 diff 아래 빈 여백이 없다 */
+  maxHeight?: number;
   messages?: Partial<TextDiffMessages>;
   className?: string;
 }
@@ -85,6 +87,7 @@ export function TextDiff({
   showToolbar = true,
   onModeChange,
   height = 360,
+  maxHeight,
   messages,
   className,
 }: TextDiffProps) {
@@ -215,7 +218,7 @@ export function TextDiff({
       <div
         ref={host}
         data-ac-editable=""
-        style={{ height, overflow: "auto", border: "1px solid var(--ac-border, #2e3541)", borderRadius: "var(--ac-radius-md, 6px)", background: "var(--ac-surface-1, #161a20)" }}
+        style={{ ...(maxHeight === undefined ? { height } : { maxHeight }), overflow: "auto", border: "1px solid var(--ac-border, #2e3541)", borderRadius: "var(--ac-radius-md, 6px)", background: "var(--ac-surface-1, #161a20)" }}
       />
     </div>
   );

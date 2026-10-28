@@ -297,8 +297,23 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
     const ed = t.closest<HTMLElement>("[data-edge-id]");
     return ed?.dataset.edgeId ? { kind: "edge", id: ed.dataset.edgeId } : null;
   };
+  // 포인터로 누른 칸은 이미 눈에 보이는 곳을 누른 것이다. 이때 포커스가 그림을 옮기면 누르는 사이 칸이 밀려
+  // mouseup이 다른 곳에 닿아 클릭이 사라진다(5.7R.31). 키보드 포커스만 그 칸이 보이도록 옮긴다.
+  const pointerDown = useRef(false);
+  const onPointerDownCapture = () => {
+    pointerDown.current = true;
+    const release = () => {
+      pointerDown.current = false;
+      window.removeEventListener("pointerup", release, true);
+      window.removeEventListener("pointercancel", release, true);
+    };
+    window.addEventListener("pointerup", release, true);
+    window.addEventListener("pointercancel", release, true);
+  };
   const onFocusCapture = (e: React.FocusEvent<HTMLDivElement>) => {
     if (!canvasRef.current?.contains(e.target)) return;
+    // 포인터 포커스는 미리보기 줄도 띄우지 않는다: 줄이 생겨 캔버스 높이가 바뀌면 맞춤 배율이 달라져 칸이 밀리고 클릭이 사라진다.
+    if (pointerDown.current) return;
     const t = targetFromEvent(e.target);
     setFocusTarget(t);
     const r = t ? rectOfTarget(t) : null;
@@ -330,6 +345,7 @@ export function ArchitectureDiagram(props: ArchitectureDiagramProps) {
       data-view={viewMode}
       style={{ ["--arch-inv" as string]: String(1 / zoom) }}
       onKeyDown={onKeyDown}
+      onPointerDownCapture={onPointerDownCapture}
       onFocusCapture={onFocusCapture}
       onBlurCapture={onBlurCapture}
     >
