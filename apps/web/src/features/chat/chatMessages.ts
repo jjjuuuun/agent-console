@@ -124,10 +124,16 @@ export const chatMessages = {
     viewSettings: "설정 보기 →",
     queued: (n: number) => `앞 작업이 끝나면 이어서 처리됩니다 (${n}건 대기)`,
     queuedToast: (position: number) => `대기열 #${position}에 넣었습니다`,
-    pendingHint: (n: number) => `카드에서 답해 주세요 (${n}건 대기)`,
     sendFailed: "메시지를 보내지 못했습니다",
     tooLong: "메시지가 너무 깁니다",
     answerFailed: "답을 보내지 못했습니다",
+  },
+  /** 되묻기 답 입력칸(`chat.answer.*`, 명세 screen-chat §10.10). 띠·토글·카드 힌트 문구는 chat 패키지 기본값이 같은 키 이름으로 갖는다. */
+  answer: {
+    placeholderCard: "새 메시지 (질문은 위 카드에서 답하세요)",
+    placeholderCards: (n: number) => `새 메시지 (대기 중인 질문 ${n}건은 각 카드에서 답하세요)`,
+    movedToCard: "답 입력칸이 카드로 옮겨졌습니다. 입력창의 내용은 새 메시지로 보내집니다.",
+    movedToComposer: "답 입력칸이 입력창으로 옮겨졌습니다.",
   },
   held: {
     banner: (n: number) => `서버가 다시 시작되어 대기열 ${n}건이 멈춰 있습니다.`,

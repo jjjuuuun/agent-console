@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ApiError } from "@agent-console/api-client";
-import { ANSWER_MODES, Composer, MessageList, type AnswerMode, type ComposerHandle, type QueuedRow } from "@agent-console/chat";
+import { ANSWER_MODES, Composer, MessageList, answerCardIds, answerViaOf, resolveAnswerSurface, type AnswerMode, type ComposerHandle, type QueuedRow } from "@agent-console/chat";
 import type { BackendDescriptor, Fix, Interaction, InteractionKindDescriptor } from "@agent-console/contracts";
 import { Banner, Button, ConfirmDialog, Spinner, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
@@ -24,7 +24,7 @@ import { EmptyConversation } from "./EmptyViews";
 import { InteractionItem } from "./InteractionItem";
 import { badgeOfBackend, effectiveBackendId } from "./lib/backendBadge";
 import { actorLabel as buildActorLabel, buildAgentView } from "./lib/actors";
-import { answerTarget as findAnswerTarget, buildResponse, quoteForResend } from "./lib/answer";
+import { buildResponse, quoteForResend } from "./lib/answer";
 import { resolveChatSettings } from "./lib/chatSettings";
 import { lastUsedByGraph } from "./lib/conversations";
 import { readDraft, writeDraft } from "./lib/drafts";
@@ -145,7 +145,14 @@ export function ChatPane(props: ChatPaneProps) {
   );
   const pending = useMemo(() => (cardPart.visible ? turns.flatMap((turn) => (turn.interactions ?? []).filter((i) => i.status === "pending")) : []), [turns, cardPart.visible]);
   const activeTurn = useMemo(() => [...turns].reverse().find((turn) => isActiveStatus(turn.status)), [turns]);
-  const target = useMemo(() => findAnswerTarget(pending, descriptors, answerEnabled), [pending, descriptors, answerEnabled]);
+  // 되묻기 답 입력칸의 주인은 이 파생 값 하나에서만 정해진다(입력창·카드·띠·placeholder가 모두 이 값을 따른다)
+  const surface = useMemo(() => resolveAnswerSurface({ pending, descriptors, answerWithComposer: answerEnabled, context: "chat" }), [pending, descriptors, answerEnabled]);
+  const target = useMemo(() => {
+    if (surface.surface !== "composer") return null;
+    const interaction = pending.find((i) => i.id === surface.interactionId);
+    const descriptor = interaction ? descriptors.get(interaction.kind) : undefined;
+    return interaction && descriptor ? { interaction, descriptor } : null;
+  }, [surface, pending, descriptors]);
   const lastTurn = turns[turns.length - 1];
   const summary = useMemo(() => (plan.data ? summarizeTeam(plan.data, graph.data?.graph, naming) : undefined), [plan.data, graph.data, naming]);
 
@@ -158,6 +165,27 @@ export function ChatPane(props: ChatPaneProps) {
   const [modeState, setModeState] = useState<{ id: string | undefined; mode: AnswerMode }>({ id: undefined, mode: ANSWER_MODES.answer });
   const mode = modeState.id === targetId ? modeState.mode : ANSWER_MODES.answer;
   const setMode = (next: AnswerMode) => setModeState({ id: targetId, mode: next });
+  const answerPaused = target !== null && mode === ANSWER_MODES.message;
+  // 카드 ↔ 입력창 전환 때 초안을 옮긴다(카드가 알려 준 자유 텍스트 초안)
+  const cardDrafts = useRef(new Map<string, string>());
+  const prevOwner = useRef<{ composerId: string | undefined; pendingCount: number }>({ composerId: undefined, pendingCount: 0 });
+  const [movedNote, setMovedNote] = useState("");
+  useEffect(() => {
+    const prev = prevOwner.current;
+    const composerId = target?.interaction.id;
+    prevOwner.current = { composerId, pendingCount: pending.length };
+    if (prev.composerId !== undefined && composerId === undefined && pending.length >= 2) {
+      // 입력창 → 카드(대기가 늘었다): 입력창 내용은 그대로 둔다
+      toast({ tone: "info", text: t.answer.movedToCard });
+    } else if (prev.composerId === undefined && composerId !== undefined && prev.pendingCount >= 2) {
+      // 카드 → 입력창(하나만 남았다): 입력창이 비어 있을 때만 카드 초안을 옮기고, 아니면 입력창을 우선한다
+      const draft = cardDrafts.current.get(composerId);
+      if (draft !== undefined && draft.trim() !== "") setText((cur) => (cur.trim() === "" ? draft : cur));
+      setMovedNote(t.answer.movedToComposer);
+    }
+    if (composerId !== undefined) cardDrafts.current.delete(composerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 주인(target)이나 대기 수가 바뀔 때만
+  }, [target?.interaction.id, pending.length]);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<Notice | undefined>();
   // 거절 안내는 거절당한 그 실행이 진행 중인 동안만 보인다(끝나면 저절로 사라진다)
@@ -318,9 +346,15 @@ export function ChatPane(props: ChatPaneProps) {
   const focusOldestPending = useCallback(() => {
     const first = pending[0];
     if (!first) return;
+    if (target !== null) {
+      // 입력창이 답을 받는다: 대기 카드까지 스크롤하고 입력창에 포커스
+      document.querySelector<HTMLElement>(`[data-interaction-id="${CSS.escape(first.id)}"]`)?.scrollIntoView?.({ block: "center" });
+      composer.current?.focus();
+      return;
+    }
     setFocusId(first.id);
     setTimeout(() => setFocusId(undefined), 50);
-  }, [pending]);
+  }, [pending, target]);
   const lastToken = useRef(props.focusPendingToken);
   useEffect(() => {
     if (props.focusPendingToken !== lastToken.current) {
@@ -491,6 +525,7 @@ export function ChatPane(props: ChatPaneProps) {
           interactionDescriptors={descriptorRecord}
           renderInteraction={(interaction, descriptor) => !cardPart.visible ? null : (
             <InteractionItem
+              key={`${interaction.id}:${answerViaOf(surface, interaction.id)}`}
               interaction={interaction}
               descriptor={descriptor}
               now={nowMs / 1000}
@@ -499,6 +534,9 @@ export function ChatPane(props: ChatPaneProps) {
               onRespond={async (i, response) => void (await respondState.respond(i, response))}
               errors={respondState.errorsOf(interaction.id)}
               disabled={!connected}
+              answerVia={answerViaOf(surface, interaction.id)}
+              {...(answerPaused && target?.interaction.id === interaction.id ? { answerPaused } : {})}
+              onDraftChange={(iid, text) => cardDrafts.current.set(iid, text)}
               onEscape={() => composer.current?.focus()}
               {...(interaction.status === "expired" && interaction.close_reason === "interrupted" && lastTurn && lastTurn.interactions?.some((x) => x.id === interaction.id) ? { onResendAsMessage: resendAsMessage } : {})}
             />
@@ -567,6 +605,7 @@ export function ChatPane(props: ChatPaneProps) {
           <ConnectedBackendChooserCard mode="change" options={backendList.data ?? []} initialId={teamBackend ?? defaultBackend} busy={choosing} error={chooserError} onConfirm={(b) => void chooseBackend(b)} />
         ) : null}
         {notice?.fix ? <FixButtons fix={notice.fix} /> : null}
+        <div className="ac-sr-only" role="status" aria-live="polite">{movedNote}</div>
         <Composer
           ref={composer}
           value={text}
@@ -578,14 +617,11 @@ export function ChatPane(props: ChatPaneProps) {
           {...(!connected ? { sendHint: t.composer.disconnected } : sendPart.note !== undefined ? { sendHint: sendPart.note } : {})}
           sending={sending}
           {...(composerNotice ? { busyNotice: composerNotice } : {})}
-          {...(pending.length > 0 && target === null ? { pendingHint: t.composer.pendingHint(pending.length) } : {})}
-          {...(target !== null ? { answerTarget: { label: labelOf(target.interaction), kindTitle: target.descriptor.title }, answerMode: mode } : {})}
+          {...(pending.length === 1 && target === null ? { placeholderHint: t.answer.placeholderCard } : pending.length >= 2 ? { placeholderHint: t.answer.placeholderCards(pending.length) } : {})}
+          {...(target !== null ? { answerTarget: { label: labelOf(target.interaction), kindTitle: target.descriptor.title, describedBy: `${answerCardIds(target.interaction.id).body} ${answerCardIds(target.interaction.id).hint}` }, answerMode: mode } : {})}
           onSwitchToMessage={() => setMode(ANSWER_MODES.message)}
           onSwitchToAnswer={() => setMode(ANSWER_MODES.answer)}
-          onSendAsMessage={() => {
-            setMode(ANSWER_MODES.message);
-            void send(true);
-          }}
+          onSendAsMessage={() => void send(true)}
           onRecallLast={() => {
             const last = [...turns].reverse()[0];
             if (last) setText(last.user_text);

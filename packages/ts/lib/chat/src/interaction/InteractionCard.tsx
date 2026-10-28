@@ -5,6 +5,7 @@ import { s } from "../shared/styles";
 import { fill, formatCountdown, formatSeconds, mergeMessages } from "../shared/util";
 import { FallbackRenderer } from "./FallbackRenderer";
 import { defaultInteractionMessages, type InteractionMessages } from "./messages";
+import { answerCardIds } from "./answerSurface";
 import { defaultRenderers } from "./renderers";
 import type { FallbackArgs, FieldError, Interaction, InteractionKindDescriptor, RenderEditor, RendererComponent } from "./types";
 
@@ -32,6 +33,15 @@ export interface InteractionCardProps {
   /** Esc: 카드에서 입력창으로 포커스를 옮기는 일은 앱이 한다. */
   onEscape?: () => void;
   renderEditor?: RenderEditor;
+  /**
+   * 답 입력칸의 위치. 기본 `inline`(카드 안). `external`이면 입력 요소와 제출 버튼을 그리지 않고 질문 본문과 힌트 줄만 보인다
+   * (입력창이 답을 받는다). 판정은 앱이 `resolveAnswerSurface`로 하고, 카드는 종류를 모른다.
+   */
+  answerVia?: "inline" | "external";
+  /** `external`일 때 입력창이 "새 메시지" 모드라 이 요청이 아직 답을 기다리는 중임을 힌트 줄에 알린다. */
+  answerPaused?: boolean;
+  /** 자유 텍스트 초안이 바뀔 때(렌더러가 지원할 때만). 카드 → 입력창 전환 때 초안을 옮기는 데 쓴다. */
+  onDraftChange?: (text: string) => void;
   messages?: Partial<InteractionMessages>;
   /**
    * 요청자 옆 작은 칩(예: 중첩 팀 안의 요청이면 `중첩 팀`, 자식 실행 출처). 문구는 앱이 정한다. `href`나 `onClick`이 있으면 누를 수 있다.
@@ -114,14 +124,29 @@ export function InteractionCard(props: InteractionCardProps) {
   const remaining = pending && interaction.expires_at != null ? interaction.expires_at - now : undefined;
   const dur = (sec: number) => formatSeconds(sec, m.units);
   const readOnly = !pending;
+  const external = pending && props.answerVia === "external";
+  const ids = answerCardIds(interaction.id);
 
-  const rendererProps = { interaction, descriptor, onSubmit: submit, submitting, errors, disabled: disabled || submitting, readOnly, messages: m, renderEditor: props.renderEditor };
+  const rendererProps = {
+    interaction,
+    descriptor,
+    onSubmit: submit,
+    submitting,
+    errors,
+    disabled: disabled || submitting,
+    readOnly,
+    readOnlyInput: external,
+    messages: m,
+    renderEditor: props.renderEditor,
+    ...(props.onDraftChange ? { onDraftChange: props.onDraftChange } : {}),
+  };
+  // 입력창이 답을 받을 때 앱 주입 폴백(스키마 폼)은 입력을 그리므로 쓰지 않고 내장 폴백으로 요청 내용만 보인다
   const bodyNode = Renderer ? (
     <Renderer {...rendererProps} />
-  ) : props.renderFallback ? (
+  ) : props.renderFallback && !external ? (
     props.renderFallback({ interaction, descriptor, onSubmit: submit, submitting, errors, disabled: disabled || submitting, readOnly })
   ) : (
-    <FallbackRenderer interaction={interaction} descriptor={descriptor} onSubmit={submit} submitting={submitting} errors={errors} disabled={disabled || submitting} readOnly={readOnly} messages={m} />
+    <FallbackRenderer interaction={interaction} descriptor={descriptor} onSubmit={submit} submitting={submitting} errors={errors} disabled={disabled || submitting} readOnly={readOnly} readOnlyInput={external} messages={m} />
   );
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -154,7 +179,7 @@ export function InteractionCard(props: InteractionCardProps) {
   const icon = <span className="ac-status-icon" aria-hidden="true" />;
   const rootProps = {
     role: "group" as const,
-    "aria-label": fill(m.cardLabel, { title, actor, state: stateLabel }),
+    "aria-label": external ? fill(m.answer.cardLabelExternal, { label: fill(m.cardLabel, { title, actor, state: stateLabel }) }) : fill(m.cardLabel, { title, actor, state: stateLabel }),
     "aria-busy": submitting || undefined,
     "data-interaction-id": interaction.id,
     "data-card-state": kind,
@@ -221,8 +246,15 @@ export function InteractionCard(props: InteractionCardProps) {
           </div>
         ) : null}
         {interaction.title ? <div className="ac-text" style={{ fontWeight: 600 }}>{interaction.title}</div> : null}
-        {interaction.message ? <Markdown text={interaction.message} /> : null}
-        {bodyNode}
+        <div id={external ? ids.body : undefined} style={s.col("var(--ac-space-2)")}>
+          {interaction.message ? <Markdown text={interaction.message} /> : null}
+          {bodyNode}
+        </div>
+        {external ? (
+          <div id={ids.hint} data-part="answer-hint" style={s.muted}>
+            {props.answerPaused ? m.answer.hintCardPaused : m.answer.hintComposer}
+          </div>
+        ) : null}
         {errorLines.length > 0 ? (
           <div role="alert" style={s.banner("danger")}>
             {errorLines.map((l, i) => (

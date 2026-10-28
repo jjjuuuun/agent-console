@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, type KeyboardEvent, type Ref } from "react";
+import { useEffect, useId, useImperativeHandle, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { Btn } from "../shared/Button";
 import { s } from "../shared/styles";
 import { fill, mergeMessages } from "../shared/util";
@@ -6,31 +6,51 @@ import { fill, mergeMessages } from "../shared/util";
 export interface ComposerMessages {
   inputLabel: string;
   placeholder: string;
-  answerPlaceholder: string;
   send: string;
-  answer: string;
   sending: string;
   /** 전송 키 안내. 키: 해석된 전송 키(`enter` | `mod_enter`). */
   keyHint: Record<string, string>;
-  answeringTo: string; // {target}, {kind}
-  switchToMessage: string;
-  messageMode: string;
-  switchToAnswer: string;
+  /** 되묻기 답변 모드(`chat.answer.*`). */
+  answer: {
+    /** 띠 문구. {target}, {kind} */
+    strip: string;
+    /** 토글이 "새 메시지"일 때의 띠 문구. */
+    stripMessage: string;
+    /** 토글 그룹 접근성 이름. */
+    modeGroup: string;
+    modeAnswer: string;
+    modeMessage: string;
+    /** 답변 모드 placeholder. */
+    placeholder: string;
+    /** 답변 모드 키 안내(전송 키별). */
+    keyHint: Record<string, string>;
+    /** 스크린리더 낭독. {target} */
+    srEnterAnswer: string;
+    srEnterMessage: string;
+  };
 }
 
 export const defaultComposerMessages: ComposerMessages = {
   inputLabel: "메시지 입력",
   placeholder: "메시지를 입력하세요…",
-  answerPlaceholder: "답을 입력하세요…",
   send: "전송",
-  answer: "답하기",
   sending: "전송 중",
   keyHint: { enter: "Enter 전송 · Shift+Enter 줄바꿈", mod_enter: "Ctrl+Enter 전송 · Enter 줄바꿈" },
-  answeringTo: "{target}의 {kind}에 답하는 중",
-  switchToMessage: "새 메시지로 보내기",
-  messageMode: "새 메시지 모드",
-  switchToAnswer: "질문에 답하기",
+  answer: {
+    strip: "{target}의 {kind}에 답하는 중",
+    stripMessage: "새 메시지로 보내는 중 — 질문은 대기 중",
+    modeGroup: "보내는 방식",
+    modeAnswer: "답하기",
+    modeMessage: "새 메시지",
+    placeholder: "답을 입력하세요…",
+    keyHint: { enter: "Enter 답하기 · Ctrl+Shift+Enter 새 메시지로", mod_enter: "Ctrl+Enter 답하기 · Ctrl+Shift+Enter 새 메시지로" },
+    srEnterAnswer: "{target}의 질문에 답하는 입력창입니다",
+    srEnterMessage: "새 메시지 입력창입니다",
+  },
 };
+
+/** 답변 모드 전환 단축키 표시용. */
+export const ANSWER_TOGGLE_SHORTCUT = "Alt+Shift+A";
 
 /** 답변 모드 띠 상태: `answer` = 대기 요청에 답하기, `message` = 새 메시지로 보내기. 앱이 문자열을 직접 쓰지 않게 상수로도 낸다. */
 export const ANSWER_MODES = { answer: "answer", message: "message" } as const;
@@ -54,18 +74,23 @@ export interface ComposerProps {
   sendHint?: string;
   sending?: boolean;
   busyNotice?: { text: string; tone: "info" | "warning" | "danger" };
-  /** 대기 카드가 여럿이거나 입력창 답변이 불가할 때의 안내 줄. */
-  pendingHint?: string;
   /**
-   * 있으면 답변 모드 띠를 보이고 [전송]을 [답하기]로 바꾼다.
-   * `label`은 "{요청자} · {종류 title}" 등 앱이 만든 문구.
+   * 입력창 위 안내 줄. 호환용으로만 남겼고 앱은 `placeholderHint`를 쓴다.
+   * @deprecated 입력칸 안내는 `placeholderHint`로.
    */
-  answerTarget?: { label: string; kindTitle: string };
+  pendingHint?: string;
+  /** 일반 입력일 때 placeholder 안내(예: 질문은 위 카드에서 답하세요). 답변 모드·`placeholder`가 있으면 무시한다. */
+  placeholderHint?: string;
+  /**
+   * 있으면 답변 모드 띠(두 칸 토글)를 보이고 [전송]을 [답하기]로 바꾼다.
+   * `label`은 "{요청자}" 등 앱이 만든 문구. `describedBy`는 입력창 `aria-describedby`에 더할 DOM id(질문 본문 등, 답변 모드일 때만).
+   */
+  answerTarget?: { label: string; kindTitle: string; describedBy?: string };
   /** 띠 상태(제어형). 기본 `answer`. */
   answerMode?: AnswerMode;
   onSwitchToMessage?: () => void;
   onSwitchToAnswer?: () => void;
-  /** Ctrl+Shift+Enter: 답변 모드에서 이번 전송을 새 메시지로. 없으면 `onSwitchToMessage`만 부른다. */
+  /** Ctrl+Shift+Enter: 답변 모드에서 이번 전송만 새 메시지로(토글 선택은 바꾸지 않는다). */
   onSendAsMessage?: () => void;
   onRecallLast?: () => void;
   onEscape?: () => void;
@@ -98,6 +123,23 @@ export function Composer(props: ComposerProps) {
   const composing = useRef(false);
   const justEnded = useRef(false);
   const answering = !!answerTarget && answerMode === "answer";
+  const stripId = useId();
+  const toggleRefs = useRef<Record<AnswerMode, HTMLButtonElement | null>>({ answer: null, message: null });
+  // 모드 전환·답변 입력창 진입을 한 번씩 낭독한다(같은 상태가 이어지는 동안 다시 읽지 않는다)
+  const [announce, setAnnounce] = useState("");
+  const lastAnnounced = useRef<string>("");
+  const announceKey = answerTarget ? `${answerMode}:${answerTarget.label}` : "";
+  useEffect(() => {
+    if (announceKey === lastAnnounced.current) return;
+    lastAnnounced.current = announceKey;
+    setAnnounce(answerTarget ? fill(answerMode === "answer" ? m.answer.srEnterAnswer : m.answer.srEnterMessage, { target: answerTarget.label }) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- announceKey가 모드·대상을 대표한다
+  }, [announceKey]);
+  const toggleMode = () => {
+    if (!answerTarget) return;
+    if (answerMode === "answer") props.onSwitchToMessage?.();
+    else props.onSwitchToAnswer?.();
+  };
 
   useImperativeHandle(ref, () => ({ focus: () => area.current?.focus() }), []);
   // 처음 그릴 때 입력창이 비활성이면 포커스가 안 간다. 활성이 되는 순간, 다른 곳에 포커스가 없을 때만 다시 준다.
@@ -122,6 +164,11 @@ export function Composer(props: ComposerProps) {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === "KeyA" && answerTarget) {
+      e.preventDefault();
+      toggleMode();
+      return;
+    }
     if (e.key === "Escape") {
       props.onEscape?.();
       return;
@@ -135,8 +182,7 @@ export function Composer(props: ComposerProps) {
     if (isImeEvent(e, justEnded.current) || composing.current) return;
     if (e.ctrlKey && e.shiftKey && answerTarget) {
       e.preventDefault();
-      if (props.onSendAsMessage) props.onSendAsMessage();
-      else props.onSwitchToMessage?.();
+      props.onSendAsMessage?.();
       return;
     }
     const mod = e.ctrlKey || e.metaKey;
@@ -147,34 +193,70 @@ export function Composer(props: ComposerProps) {
     }
   };
 
+  const onToggleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.altKey && e.shiftKey && e.code === "KeyA") {
+      e.preventDefault();
+      toggleMode();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      area.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const next: AnswerMode = answerMode === "answer" ? "message" : "answer";
+      (next === "answer" ? props.onSwitchToAnswer : props.onSwitchToMessage)?.();
+      toggleRefs.current[next]?.focus();
+    }
+  };
+  const radio = (mode: AnswerMode, label: string, onSelect: (() => void) | undefined) => {
+    const checked = answerMode === mode;
+    return (
+      <button
+        key={mode}
+        ref={(el) => {
+          toggleRefs.current[mode] = el;
+        }}
+        type="button"
+        role="radio"
+        aria-checked={checked}
+        tabIndex={checked ? 0 : -1}
+        data-mode={mode}
+        title={`${label} (${ANSWER_TOGGLE_SHORTCUT})`}
+        aria-keyshortcuts="Alt+Shift+A"
+        className="ac-composer-mode"
+        onClick={() => {
+          if (!checked) onSelect?.();
+        }}
+        onKeyDown={onToggleKey}
+      >
+        {label}
+      </button>
+    );
+  };
+  const stripText = answerTarget ? (answering ? fill(m.answer.strip, { target: answerTarget.label, kind: answerTarget.kindTitle }) : m.answer.stripMessage) : "";
   const strip = answerTarget ? (
-    <div
-      data-testid="answer-strip"
-      data-answer-mode={answerMode}
-      style={{ ...s.row(), minHeight: 28, padding: "0 var(--ac-space-2)", borderLeft: "3px solid var(--ac-status-waiting)", background: "var(--ac-status-waiting-bg)", fontSize: "var(--ac-text-xs, 12px)" }}
-    >
-      {answering ? (
-        <>
-          <span>⏸ {fill(m.answeringTo, { target: answerTarget.label, kind: answerTarget.kindTitle })}</span>
-          <span aria-hidden="true">—</span>
-          <button type="button" className="ac-btn" data-variant="ghost" data-size="sm" onClick={props.onSwitchToMessage}>
-            {m.switchToMessage}
-          </button>
-        </>
-      ) : (
-        <>
-          <span>{m.messageMode}</span>
-          <span aria-hidden="true">—</span>
-          <button type="button" className="ac-btn" data-variant="ghost" data-size="sm" onClick={props.onSwitchToAnswer}>
-            {m.switchToAnswer}
-          </button>
-        </>
-      )}
+    <div role="group" aria-label={m.answer.modeGroup} className="ac-composer-strip" data-testid="answer-strip" data-answer-mode={answerMode}>
+      <span className="ac-composer-strip-text" id={stripId} title={stripText}>
+        <span aria-hidden="true">⏸ </span>
+        {stripText}
+      </span>
+      <span role="radiogroup" aria-label={m.answer.modeGroup} className="ac-composer-modes">
+        {radio("answer", m.answer.modeAnswer, props.onSwitchToAnswer)}
+        {radio("message", m.answer.modeMessage, props.onSwitchToMessage)}
+      </span>
     </div>
   ) : null;
+  const describedBy = answerTarget && answering ? [stripId, answerTarget.describedBy].filter(Boolean).join(" ") : undefined;
+  const keyHint = answering ? m.answer.keyHint[sendKey] : m.keyHint[sendKey];
 
   return (
-    <div style={s.col("var(--ac-space-1)")}>
+    <div className="ac-composer" style={s.col("var(--ac-space-1)")}>
+      <div className="ac-sr-only" aria-live="polite" role="status">
+        {announce}
+      </div>
       {props.disabledReason ? (
         <div role="note" style={s.banner("warning")}>
           {props.disabledReason}
@@ -194,7 +276,8 @@ export function Composer(props: ComposerProps) {
           value={value}
           disabled={disabled}
           rows={1}
-          placeholder={props.placeholder ?? (answering ? m.answerPlaceholder : m.placeholder)}
+          placeholder={props.placeholder ?? (answering ? m.answer.placeholder : (props.placeholderHint ?? m.placeholder))}
+          aria-describedby={describedBy}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionStart={() => {
@@ -211,12 +294,12 @@ export function Composer(props: ComposerProps) {
           style={{ ...s.input, resize: "none", minHeight: "var(--ac-composer-min-h, 44px)", maxHeight: "var(--ac-composer-max-h, 200px)", overflowY: "auto" }}
         />
         <Btn variant="primary" size="lg" disabled={!canSend} loading={props.sending} onClick={trySend}>
-          {answering ? m.answer : m.send}
+          {answering ? m.answer.modeAnswer : m.send}
         </Btn>
       </div>
       <div style={{ ...s.row(), justifyContent: "space-between", ...s.muted }}>
         <span>{props.sendHint ?? ""}</span>
-        <span>{m.keyHint[sendKey]}</span>
+        <span className="ac-composer-keyhint" title={keyHint}>{keyHint}</span>
       </div>
     </div>
   );

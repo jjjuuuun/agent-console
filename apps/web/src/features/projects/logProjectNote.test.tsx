@@ -35,20 +35,21 @@ describe("LogProjectNote: 프로젝트 교체 시 로그 필터", () => {
   it("목록이 늦게 로드돼도(첫 렌더 wanted 없음) 프로젝트를 바꾸면 이전 필터를 새 값으로 교체한다", async () => {
     // 직접 진입: 현재는 a, 목록은 아직 없음
     setState({ enabled: true, current: "a", currentProject: undefined });
-    const router = createMemoryRouter([{ path: "/logs", element: <LogProjectNote filterParam="project" /> }], { initialEntries: ["/logs?prj=a&project=proj-a"] });
+    const router = createMemoryRouter([{ path: "/logs", element: <LogProjectNote filterParam="project" /> }], { initialEntries: ["/logs?prj=a&project=a"] });
     render(
       <StorageProvider storage={createSafeStorage(null)}>
         <RouterProvider router={router} />
       </StorageProvider>,
     );
-    // 목록 로드: a는 로그 묶음 proj-a, b는 없음
-    act(() => setState({ enabled: true, current: "a", currentProject: project("a", { log_projects: ["proj-a"] }) }));
+    // 목록 로드: 로그 필터 값은 프로젝트 id 자신(33m: project=<id>)
+    act(() => setState({ enabled: true, current: "a", currentProject: project("a") }));
     // b로 전환(주소의 현재 프로젝트 쿼리가 먼저 정리된다)
     await act(async () => {
-      await router.navigate("/logs?prj=b&project=proj-a", { replace: true });
+      await router.navigate("/logs?prj=b&project=a", { replace: true });
       setState({ enabled: true, current: "b", currentProject: project("b") });
     });
-    await waitFor(() => expect(router.state.location.search).not.toContain("project="));
+    await waitFor(() => expect(router.state.location.search).toContain("project=b"));
+    expect(router.state.location.search).not.toContain("project=a");
     expect(router.state.location.search).toContain("prj=b");
   });
 });

@@ -29,10 +29,16 @@ export interface InteractionItemProps {
   onResendAsMessage?: (interaction: Interaction) => void;
   /** 요청자 옆 작은 칩(중첩 팀 안의 요청이면 `중첩 팀`) */
   contextChip?: { text: string; title?: string };
+  /** 답 입력칸 위치(`resolveAnswerSurface` 결과). 기본 inline */
+  answerVia?: "inline" | "external";
+  /** external일 때 입력창이 "새 메시지" 모드 */
+  answerPaused?: boolean;
+  /** 자유 텍스트 초안 변경 알림(카드 → 입력창 전환 때 초안 이동용) */
+  onDraftChange?: (interactionId: string, text: string) => void;
 }
 
 /** 상호작용 카드 하나: `InteractionCard`에 응답 호출·폴백·편집기를 연결한다(종류 이름을 모른다). */
-export function InteractionItem({ interaction, descriptor, now, actorLabel, onRespond, errors, disabled, onEscape, onResendAsMessage, contextChip }: InteractionItemProps) {
+export function InteractionItem({ interaction, descriptor, now, actorLabel, onRespond, errors, disabled, onEscape, onResendAsMessage, contextChip, answerVia, answerPaused, onDraftChange }: InteractionItemProps) {
   return (
     <InteractionCard
       interaction={interaction}
@@ -45,6 +51,9 @@ export function InteractionItem({ interaction, descriptor, now, actorLabel, onRe
       renderEditor={renderCardEditor}
       {...(errors ? { errors } : {})}
       {...(disabled ? { disabled } : {})}
+      {...(answerVia ? { answerVia } : {})}
+      {...(answerPaused ? { answerPaused } : {})}
+      {...(onDraftChange ? { onDraftChange: (text: string) => onDraftChange(interaction.id, text) } : {})}
       {...(onEscape ? { onEscape } : {})}
       {...(onResendAsMessage ? { serverRestartHint: { onResendAsMessage: () => onResendAsMessage(interaction) } } : {})}
     />

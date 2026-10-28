@@ -59,6 +59,15 @@ export interface InteractionMessages {
     hasFeedback: string;
     decisionsLabel: string;
   };
+  /** 되묻기 답 입력칸 안내(`chat.answer.*`). */
+  answer: {
+    /** 카드 힌트 줄: 답은 아래 입력창에서. */
+    hintComposer: string;
+    /** 입력창이 "새 메시지" 모드일 때의 힌트 줄. */
+    hintCardPaused: string;
+    /** 카드 접근성 이름에 덧붙이는 말. {label} = 기본 접근성 이름 */
+    cardLabelExternal: string;
+  };
   fallback: {
     payload: string;
     responseLabel: string;
@@ -125,6 +134,11 @@ export const defaultInteractionMessages: InteractionMessages = {
     edited: "수정함",
     hasFeedback: "의견 있음",
     decisionsLabel: "결정",
+  },
+  answer: {
+    hintComposer: "아래 입력창에 답하세요",
+    hintCardPaused: "답은 아직 기다리는 중입니다. 입력창의 [답하기]로 전환하세요",
+    cardLabelExternal: "{label}, 답은 입력창에서",
   },
   fallback: {
     payload: "요청 내용",

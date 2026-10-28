@@ -1,29 +1,6 @@
 import type { Interaction, InteractionKindDescriptor } from "@agent-console/contracts";
 import { setAt } from "../../../lib/jsonPointer";
 
-export interface AnswerTarget {
-  interaction: Interaction;
-  descriptor: InteractionKindDescriptor;
-}
-
-/** payload의 질문 수. 질문 배열이 없으면 1로 본다. */
-export function questionCount(interaction: Interaction): number {
-  const q = interaction.payload?.["questions"];
-  return Array.isArray(q) ? q.length : 1;
-}
-
-/**
- * 입력창 답변 모드 판정(종류 이름은 쓰지 않는다): 대기 상호작용이 정확히 하나, 그 종류에 `free_text_path`가 있고,
- * 설정이 켜져 있고, 질문이 둘 이상이 아니다.
- */
-export function answerTarget(pending: readonly Interaction[], descriptors: ReadonlyMap<string, InteractionKindDescriptor>, enabled: boolean): AnswerTarget | null {
-  if (!enabled || pending.length !== 1) return null;
-  const interaction = pending[0]!;
-  const descriptor = descriptors.get(interaction.kind);
-  if (!descriptor?.free_text_path || questionCount(interaction) >= 2) return null;
-  return { interaction, descriptor };
-}
-
 /** 입력창 텍스트를 종류의 `free_text_path`(JSON Pointer) 자리에 넣은 응답. */
 export function buildResponse(descriptor: Pick<InteractionKindDescriptor, "free_text_path">, text: string): Record<string, unknown> {
   const path = descriptor.free_text_path;

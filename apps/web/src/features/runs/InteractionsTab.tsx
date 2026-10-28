@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { InteractionCard, type FallbackArgs, type FieldError, type RenderEditor, type RendererComponent } from "@agent-console/chat";
+import { InteractionCard, answerViaOf, resolveAnswerSurface, type FallbackArgs, type FieldError, type RenderEditor, type RendererComponent } from "@agent-console/chat";
 import type { Interaction, InteractionKindDescriptor } from "@agent-console/contracts";
 import { Button, StatusChip } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -59,6 +59,10 @@ export function InteractionsTab(p: InteractionsTabProps) {
     [p.interactions, state, actor, p.nodeFilter],
   );
 
+  // 실행 상세에는 입력창이 없다: 판정은 항상 카드이며, 카드가 요청마다 입력칸을 하나씩 가진다(screen-chat §10.6)
+  const pendingAll = p.interactions.filter((i) => i.status === "pending");
+  const surface = resolveAnswerSurface({ pending: pendingAll, descriptors: new Map(pendingAll.flatMap((i) => { const k = p.kindOf(i.kind); return k ? [[i.kind, k] as const] : []; })), answerWithComposer: true, context: "run-detail" });
+
   if (p.status === "loading" && p.interactions.length === 0) return <div className="app-loading" role="status">{t.interactions.loading}</div>;
   if (p.status === "error" && p.interactions.length === 0) return <ErrorBlock title={t.interactions.loadFailed} retryLabel={appMessages.common.retry} onRetry={p.onRetry} />;
   if (p.interactions.length === 0) return <div className="app-empty"><p>{t.interactions.empty}</p></div>;
@@ -110,6 +114,7 @@ export function InteractionsTab(p: InteractionsTabProps) {
                   descriptor={kind}
                   actorLabel={p.actorLabel(i)}
                   now={p.nowSec}
+                  answerVia={answerViaOf(surface, i.id)}
                   onRespond={(response) => p.onRespond(i, response)}
                   errors={p.errorsOf(i.id)}
                   {...(p.contextChipOf?.(i) ? { contextChip: p.contextChipOf(i)! } : {})}

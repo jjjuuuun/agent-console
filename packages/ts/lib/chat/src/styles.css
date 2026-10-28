@@ -93,3 +93,24 @@ button.ac-chat-row-main:hover .ac-ellipsis, a.ac-chat-row-main:hover .ac-ellipsi
 .ac-chat-footer-link { display: inline-flex; align-items: center; gap: 2px; height: var(--ac-control-sm, 24px); padding: 0 var(--ac-space-1); background: transparent; border: 0; border-radius: var(--ac-radius-sm); color: var(--ac-accent); font: inherit; cursor: pointer; }
 .ac-chat-footer-link:hover { background: var(--ac-surface-3); }
 .ac-chat-footer-link:focus-visible { outline: 2px solid var(--ac-focus-ring, var(--ac-accent)); outline-offset: 1px; }
+
+/* ===== 5.7R.40 되묻기 답 입력칸 하나로 (screen-chat §10) =====
+ * 답변 모드 띠 = 32px, waiting tint + 왼쪽 3px 막대. 오른쪽에 두 칸 분할 토글(폭 auto, 줄바꿈 금지). */
+.ac-composer { container-type: inline-size; container-name: ac-composer; }
+.ac-composer-strip { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; padding: 0 var(--ac-space-2); border-left: 3px solid var(--ac-status-waiting); background: var(--ac-status-waiting-bg); font-size: var(--ac-text-xs, 12px); box-sizing: border-box; }
+.ac-composer-strip-text { flex: 1 1 120px; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-composer-modes { flex: none; display: inline-flex; border: 1px solid var(--ac-border-strong, var(--ac-border)); border-radius: var(--ac-radius-md); overflow: hidden; background: var(--ac-surface-1); }
+.ac-composer-mode { height: 24px; padding: 0 var(--ac-space-3); border: 0; background: transparent; color: var(--ac-text); font: inherit; font-size: var(--ac-text-xs, 12px); white-space: nowrap; cursor: pointer; }
+.ac-composer-mode + .ac-composer-mode { border-left: 1px solid var(--ac-border-strong, var(--ac-border)); }
+.ac-composer-mode[aria-checked="true"] { background: var(--ac-accent); color: var(--ac-text-on-accent); font-weight: 600; }
+.ac-composer-mode:focus-visible { outline: 2px solid var(--ac-focus-ring, var(--ac-accent)); outline-offset: -2px; }
+.ac-composer-keyhint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 채팅 영역 560 미만: 키 안내 숨김(title로만). 480 미만: 띠 문구 숨기고 아이콘 + 토글만 */
+@container ac-composer (max-width: 559px) {
+  .ac-composer-keyhint { display: none; }
+}
+@container ac-composer (max-width: 479px) {
+  .ac-composer-strip-text { flex: none; min-width: 0; width: 1.4em; }
+  .ac-composer-strip-text { font-size: 0; }
+  .ac-composer-strip-text > span[aria-hidden] { font-size: var(--ac-text-xs, 12px); }
+}

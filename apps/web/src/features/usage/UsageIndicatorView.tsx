@@ -170,6 +170,9 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
   // 접힘 레일에는 값이 있는 창만 그린다(빈 타일 금지). 보일 것이 없으면 아무것도 그리지 않는다.
   const railItems = p.layout === "rail" ? p.items.filter((i) => i.observed && i.kind === "ratio") : p.items;
   if (p.layout === "rail" && (p.status === "loading" || p.status === "empty" || (p.status === "ready" && railItems.length === 0))) return null;
+  // 사이드바(펼침·레일)는 보일 내용이 있을 때만 그린다: 로딩 중(스켈레톤 상자가 빈 상자로 남던 결함)과
+  // 보일 사용률도 연결 안내도 없을 때는 컨테이너(배경·테두리·여백)를 남기지 않는다. 칩은 기존대로.
+  if (p.layout === "block" && !unlinked && (p.status === "loading" || p.status === "empty" || (p.status === "ready" && !p.items.some((i) => i.observed && i.kind === "ratio")))) return null;
   if (p.status === "loading") {
     body = <div className="usage-ind-skeleton app-skeleton-row" aria-hidden="true" />;
   } else if (p.status === "error-empty") {

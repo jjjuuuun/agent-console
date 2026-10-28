@@ -23,7 +23,7 @@ import { UsageIndicator, INDICATOR_HOSTS } from "../features/usage";
 import { createBrowserPorts, NotificationsProvider, type NotificationPorts } from "../features/notifications";
 import { isViewingTarget, targetPath, type TargetRoutes } from "../features/notifications/routing";
 import { ROUTE_ROLES } from "../features/library/paths";
-import { PROJECT_SHORTCUT_DEFS, ProjectsProvider, SETTINGS_PROJECTS_HASH, SidebarProjectSwitcher, useProjects } from "../features/projects";
+import { PROJECT_SHORTCUT_DEFS, ProjectsProvider, SETTINGS_PROJECTS_HASH, SidebarProjectRegion, useProjects } from "../features/projects";
 import { LINK_PART_IDS, ModuleNotices, useLinkPart, useModules, useRequiresPartition } from "../modules";
 import { routeServing } from "./routeConfig";
 import { PendingInteractionsProvider, usePendingInteractions } from "./pending";
@@ -305,13 +305,13 @@ function ShellFrame({ routes, groups, openRoutes, offRoutes, platform, sidebar, 
           }}
           onOpenQuickNav={() => setPaletteOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
-          headerSlot={
+          headerSlot={<UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.sidebarHeader} collapsed={sidebar.collapsed} />}
+          footerSlot={
             <>
-              <SidebarProjectSwitcher collapsed={sidebar.collapsed} shortcutHint={shortcutHint("project.switch")} />
-              <UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.sidebarHeader} collapsed={sidebar.collapsed} />
+              <SidebarProjectRegion rail={sidebar.collapsed} />
+              <UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.sidebarFooter} collapsed={sidebar.collapsed} />
             </>
           }
-          footerSlot={<UsageIndicator routes={openRoutes} host={INDICATOR_HOSTS.sidebarFooter} collapsed={sidebar.collapsed} />}
         />
       </div>
       {sidebar.drawer ? <div className="app-drawer-backdrop" aria-hidden="true" onClick={() => sidebar.setCollapsed(true)} /> : null}

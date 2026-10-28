@@ -89,3 +89,8 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 .chat-fallback { display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .chat-fallback-actions { display: flex; justify-content: flex-end; }
 .start-guide { display: flex; flex-direction: column; gap: var(--ac-space-3); width: 100%; }
+
+/* 5.7R.40: 낮은 화면(1024x800 등)에서는 입력창 최대 높이를 줄여 메시지 영역을 지킨다 */
+@media (max-height: 820px) {
+  .chat-composer { --ac-composer-max-h: 120px; }
+}

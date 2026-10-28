@@ -111,10 +111,10 @@ describe("열린 대화와 입력창 답변 모드", () => {
     await waitFor(() => expect((box as HTMLTextAreaElement).value).toBe(""));
   });
 
-  it("[새 메시지로 보내기]로 바꾸면 메시지 전송(postMessage)이 된다", async () => {
+  it("토글을 [새 메시지]로 바꾸면 메시지 전송(postMessage)이 된다", async () => {
     const h = createHarness();
     mount(h);
-    fireEvent.click(await screen.findByRole("button", { name: "새 메시지로 보내기" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "새 메시지" }));
     expect((await screen.findByTestId("answer-strip")).getAttribute("data-answer-mode")).toBe("message");
     type(await composer(), "다음 작업");
     fireEvent.click(screen.getByRole("button", { name: "전송" }));
@@ -122,14 +122,14 @@ describe("열린 대화와 입력창 답변 모드", () => {
     expect(h.rest["respondInteraction"]).not.toHaveBeenCalled();
   });
 
-  it("대기 상호작용이 둘이면 답변 모드가 꺼지고 카드에서 답하라고 안내한다", async () => {
+  it("대기 상호작용이 둘이면 띠가 없고 입력창 placeholder가 카드에서 답하라고 안내한다", async () => {
     const h = createHarness({
       listTurns: async () => [turn({ interactions: [pending(), pending({ id: "i2", kind: "kind-w", created_at: 1001 })] })],
     });
     mount(h);
     await screen.findAllByRole("group", { name: /응답 대기/ });
     expect(screen.queryByTestId("answer-strip")).toBeNull();
-    expect(await screen.findByText("카드에서 답해 주세요 (2건 대기)")).toBeTruthy();
+    expect((await composer()).getAttribute("placeholder")).toBe("새 메시지 (대기 중인 질문 2건은 각 카드에서 답하세요)");
   });
 
   it("이미 답한 요청(409)이면 안내하고 서버 상태를 반영한다", async () => {

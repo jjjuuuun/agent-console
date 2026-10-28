@@ -70,8 +70,35 @@ describe("첫 프로젝트 안내 단계", () => {
   });
 });
 
+
+/** 사이드바 프로젝트 영역(펼침 또는 레일)을 기다린다. */
+async function findRegion() {
+  return screen.findByRole("region", { name: "프로젝트" });
+}
+/** 영역에서 프로젝트를 고른다: 레일이면 팝오버를 열고 메뉴 항목, 펼침이면 항목 버튼. */
+async function pickProject(name: string) {
+  const region = await findRegion();
+  const railBtn = region.querySelector<HTMLElement>(".prj-rail-btn");
+  if (railBtn !== null) {
+    fireEvent.click(railBtn);
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: new RegExp(`^${name}`) }));
+    return;
+  }
+  fireEvent.click(within(region).getByRole("button", { name: new RegExp(`^${name}`) }));
+}
+async function clickAdd() {
+  const region = await findRegion();
+  const railBtn = region.querySelector<HTMLElement>(".prj-rail-btn");
+  if (railBtn !== null) {
+    fireEvent.click(railBtn);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "폴더 추가" }));
+    return;
+  }
+  fireEvent.click(within(region).getByRole("button", { name: "폴더 추가" }));
+}
+
 describe("앱 안의 프로젝트 UI", () => {
-  it("프로젝트 역할이 있으면 사이드바에 전환기가 있고, 고르면 주소와 대화 목록이 따라간다", async () => {
+  it("프로젝트 역할이 있으면 사이드바에 프로젝트 영역이 있고, 고르면 주소와 대화 목록이 따라간다", async () => {
     const { clients } = createFakeClients(
       { listModules: vi.fn(async () => [mod("m-1", ["conversations", "projects"])]), listConversations: vi.fn(async () => [conv("c-a", "a"), conv("c-b", "b"), conv("c-shared", null)]) },
       { listProjects: vi.fn(async () => [project("a"), project("b")]) },
@@ -80,8 +107,7 @@ describe("앱 안의 프로젝트 UI", () => {
     const list = await screen.findByRole("listbox", { name: "대화 목록" });
     await waitFor(() => expect(within(list).getAllByRole("option")).toHaveLength(3));
 
-    fireEvent.click(await screen.findByRole("button", { name: /프로젝트: 모든 프로젝트/ }));
-    fireEvent.click(within(await screen.findByRole("listbox", { name: "프로젝트 목록" })).getByRole("option", { name: "A" }));
+    await pickProject("A");
 
     await waitFor(() => expect(router.state.location.search).toContain("prj=a"));
     await waitFor(() => expect(within(screen.getByRole("listbox", { name: "대화 목록" })).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("대화-c-a"), expect.stringContaining("대화-c-shared")])));
@@ -105,7 +131,7 @@ describe("앱 안의 프로젝트 UI", () => {
       { listProjects: vi.fn(async () => [project("a")]) },
     );
     const { router } = mountApp(clients, "/chat?prj=ghost");
-    expect(await screen.findByRole("button", { name: /프로젝트: 모든 프로젝트/ })).toBeTruthy();
+    expect(await findRegion()).toBeTruthy();
     await waitFor(() => expect(router.state.location.search).not.toContain("ghost"));
   });
 
@@ -115,7 +141,7 @@ describe("앱 안의 프로젝트 UI", () => {
       { listProjects: vi.fn(async () => [project("a"), project("proj-a")]) },
     );
     const { router } = mountApp(clients, "/chat?project=proj-a");
-    expect(await screen.findByRole("button", { name: /프로젝트: 모든 프로젝트/ })).toBeTruthy();
+    expect(await findRegion()).toBeTruthy();
     await new Promise((r) => setTimeout(r, 50));
     expect(router.state.location.search).toBe("?project=proj-a");
   });
@@ -127,14 +153,13 @@ describe("앱 안의 프로젝트 UI", () => {
       { listModules: vi.fn(async () => [mod("m-1", ["conversations", "projects", "logs"])]) },
       { listProjects: vi.fn(() => late) },
     );
-    const { router } = mountApp(clients, "/logs/sessions?prj=a&project=proj-a");
+    const { router } = mountApp(clients, "/logs/sessions?prj=a&project=a");
     await new Promise((r) => setTimeout(r, 100));
-    release([project("a", { log_projects: ["proj-a"] }), project("b")]);
+    release([project("a"), project("b")]);
     await screen.findByRole("button", { name: "필터 초기화" });
-    fireEvent.click(await screen.findByRole("button", { name: /프로젝트: A/ }));
-    fireEvent.click(within(await screen.findByRole("listbox", { name: "프로젝트 목록" })).getByRole("option", { name: "B" }));
+    await pickProject("B");
     await waitFor(() => expect(router.state.location.search).toContain("prj=b"));
-    await waitFor(() => expect(router.state.location.search).not.toContain("project="));
+    await waitFor(() => expect(router.state.location.search).toContain("project=b"));
   });
 
   it("프로젝트 역할이 없으면 전환기·필터·태그가 전부 없고 나머지는 그대로 동작한다", async () => {
@@ -155,7 +180,7 @@ describe("앱 안의 프로젝트 UI", () => {
     expect(projects.listProjects).not.toHaveBeenCalled();
   });
 
-  it("프로젝트 0개면 [프로젝트 만들기]로 만들기 창이 열리고, 만들면 그 프로젝트로 전환한다", async () => {
+  it("프로젝트 0개면 [폴더 추가]로 만들기 창이 열리고, 만들면 그 프로젝트로 전환한다", async () => {
     const created = project("fresh", { name: "새 앱" });
     let list: Project[] = [];
     const { clients, projects } = createFakeClients(
@@ -163,7 +188,7 @@ describe("앱 안의 프로젝트 UI", () => {
       { listProjects: vi.fn(async () => list), createProject: vi.fn(async () => { list = [created]; return { value: created, version_hash: "h" }; }) },
     );
     const { router } = mountApp(clients, "/chat");
-    fireEvent.click(await screen.findByRole("button", { name: "프로젝트 만들기" }));
+    await clickAdd();
     const dialog = await screen.findByRole("dialog", { name: "새 프로젝트" });
     fireEvent.change(within(dialog).getByLabelText(/^이름/), { target: { value: "새 앱" } });
     await act(async () => {
@@ -171,7 +196,7 @@ describe("앱 안의 프로젝트 UI", () => {
     });
     await waitFor(() => expect(projects.createProject).toHaveBeenCalled());
     await waitFor(() => expect(router.state.location.search).toContain("prj=fresh"));
-    expect(await screen.findByRole("button", { name: /^프로젝트: 새 앱 \(/ })).toBeTruthy();
+    expect((await screen.findAllByRole("button", { name: /프로젝트.*새 앱/ })).length).toBeGreaterThan(0);
   });
 });
 

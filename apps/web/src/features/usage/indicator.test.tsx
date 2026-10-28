@@ -137,15 +137,15 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
     expect(b).toBe("93% 사용됨✕");
   });
 
-  it("상태·토큰만 주는 창은 사이드바에 그리지 않고 '사용량 정보 없음' 한 줄만 보인다(사용자 요청 10/28)", async () => {
+  it("상태·토큰만 주는 창뿐이면 사이드바에 아무것도 그리지 않는다(빈 상자 결함, 사용자 요청 10/28)", async () => {
     mount({}, miniReport([
       { source: "src-a", window: "win-1", status: "idle", observed_at: now - 30 },
       { source: "src-a", window: "win-2", used_tokens: 1_100_000_000, observed_at: now - 30 },
     ]));
-    await screen.findByRole("link", { name: /^사용량:/ });
-    expect(indicator()!.textContent).toBe("사용량 정보 없음");
-    expect(indicator()!.textContent).not.toMatch(/idle|1\.1G|유휴|토큰/i);
-    expect(indicator()!.querySelector(".ac-gauge")).toBeNull();
+    await screen.findByRole("navigation", { name: "주 메뉴" });
+    await act(async () => {});
+    await waitFor(() => expect(document.body.textContent).not.toMatch(/idle|1\.1G|유휴|토큰/i));
+    expect(indicator()).toBeNull();
   });
 
   it("사이드바 항목은 제목·'N% 사용됨'·막대·초기화 시각만 있다(신뢰·관측 시각·상태 없음)", async () => {
@@ -343,7 +343,7 @@ describe("사용량 표시기: 설정", () => {
     expect(indicator()!.getAttribute("data-corner")).toBe("bottom-left");
   });
 
-  it("hide_when_empty면 관측이 없을 때 렌더하지 않고, 기본이면 '사용량 정보 없음'을 보인다", async () => {
+  it("관측이 없으면 hide_when_empty 여부와 상관없이 사이드바에 상자를 남기지 않는다", async () => {
     const empty = { getUsage: vi.fn(async () => ({ windows: [], rollups: [], generated_at: now })) };
     mount(withIndicator({ hide_when_empty: true }), empty);
     await screen.findByRole("navigation", { name: "주 메뉴" });
@@ -352,7 +352,9 @@ describe("사용량 표시기: 설정", () => {
     expect(indicator()).toBeNull();
     cleanup();
     mount({}, empty);
-    expect((await screen.findByRole("link", { name: /^사용량:/ })).textContent).toContain("사용량 정보 없음");
+    await screen.findByRole("navigation", { name: "주 메뉴" });
+    await act(async () => {});
+    expect(indicator()).toBeNull();
   });
 
   it("also_in_title이면 제목 끝에 첫 항목이 붙고, 끄면 이전 제목 그대로", async () => {

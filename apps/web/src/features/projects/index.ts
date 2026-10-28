@@ -1,7 +1,10 @@
 /** 프로젝트 UI의 공개 API(다른 기능 폴더는 이 파일로만 import한다). 프로젝트 기능이 꺼져 있으면 모든 부품이 아무것도 그리지 않는다. */
+import "@agent-console/folder-picker/styles.css";
 import "./projects.css";
 export { ProjectsProvider, useProjects, PROJECTS_QUERY_KEY, SCOPE_VIEW_STORAGE_KEY, type ProjectsValue } from "./ProjectsContext";
 export { SidebarProjectSwitcher } from "./SidebarProjectSwitcher";
+export { SidebarProjectRegion, PROJECT_REGION_COLLAPSED_KEY } from "./SidebarProjectRegion";
+export { ProjectRegion, type ProjectRegionProps, type RegionProject } from "./ProjectRegion";
 export { ProjectSwitcher, type ProjectSwitcherProps } from "./ProjectSwitcher";
 export { ProjectsSection } from "./ProjectsSection";
 export { ProjectField, ProjectTag, ScopeFilter, useNewScope, type NewScope } from "./ScopeControls";

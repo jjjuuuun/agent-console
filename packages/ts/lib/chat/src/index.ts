@@ -23,12 +23,14 @@ export type { FlatStep } from "./messages/progressLogic";
 export type { AgentView, AvatarSpec, StepAvatar, ProgressChild, ProgressStep, QueuedRow, ReplyDisplay, ReplyItem } from "./messages/types";
 
 // 입력창 (1R.19 + 답변 모드 1R.31)
-export { ANSWER_MODES, Composer, defaultComposerMessages, resolveSendKey } from "./composer/Composer";
+export { ANSWER_MODES, ANSWER_TOGGLE_SHORTCUT, Composer, defaultComposerMessages, resolveSendKey } from "./composer/Composer";
 export type { AnswerMode, ComposerHandle, ComposerMessages, ComposerProps } from "./composer/Composer";
 
 // 상호작용 카드 (1R.31)
 export { InteractionCard, cardKind } from "./interaction/InteractionCard";
 export type { InteractionCardProps } from "./interaction/InteractionCard";
+export { answerCardIds, answerViaOf, resolveAnswerSurface } from "./interaction/answerSurface";
+export type { AnswerSurface, AnswerSurfaceContext, ResolveAnswerSurfaceInput } from "./interaction/answerSurface";
 export { defaultRenderers } from "./interaction/renderers";
 export { ChoicesRenderer, parseQuestions } from "./interaction/ChoicesRenderer";
 export { PermissionRenderer, PERMISSION_DECISIONS, decisionValues } from "./interaction/PermissionRenderer";

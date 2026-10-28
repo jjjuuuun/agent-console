@@ -78,7 +78,7 @@ function buildAnswers(questions: ChoiceQuestion[], states: QState[]): Record<str
 }
 
 /** 질문 배열 → 라디오/체크 타일 + 직접 입력. 응답 `{answers}`. */
-export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, submitting, disabled, readOnly, messages }) => {
+export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, submitting, disabled, readOnly, readOnlyInput, onDraftChange, messages }) => {
   const mc = messages.choices;
   const questions = parseQuestions(interaction.payload);
   const [states, setStates] = useState<QState[]>(() => (readOnly ? fromResponse(questions, interaction.response) : questions.map(emptyState)));
@@ -86,6 +86,7 @@ export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, subm
   const locked = disabled || readOnly || submitting;
   const ready = questions.every((q, i) => isComplete(q, states[i] ?? emptyState()));
 
+  const draftable = questions.length === 1;
   const update = (i: number, fn: (st: QState) => QState) => setStates((prev) => prev.map((st, k) => (k === i ? fn(st) : st)));
   const toggleOption = (qi: number, oi: number) => {
     const q = questions[qi];
@@ -151,7 +152,7 @@ export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, subm
           <div key={qi} data-question={qi} style={s.col("var(--ac-space-1)")} onKeyDown={(e) => onBlockKey(qi, e)}>
             {q.header ? <span style={{ ...s.chip, alignSelf: "flex-start" }}>{q.header}</span> : null}
             {q.question ? <div className="ac-text" style={{ fontSize: "var(--ac-text-sm, 13px)", fontWeight: 600 }}>{q.question}</div> : null}
-            {free ? (
+            {free && readOnlyInput ? null : free ? (
               <textarea
                 aria-label={q.question || mc.freePlaceholder}
                 placeholder={mc.freePlaceholder}
@@ -159,7 +160,10 @@ export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, subm
                 disabled={locked}
                 rows={2}
                 style={s.input}
-                onChange={(e) => update(qi, (x) => ({ ...x, text: e.target.value }))}
+                onChange={(e) => {
+                  update(qi, (x) => ({ ...x, text: e.target.value }));
+                  if (draftable) onDraftChange?.(e.target.value);
+                }}
               />
             ) : (
               <div role={q.multi ? "group" : "radiogroup"} aria-label={q.question || undefined} style={s.col("var(--ac-space-1)")}>
@@ -181,7 +185,7 @@ export const ChoicesRenderer: RendererComponent = ({ interaction, onSubmit, subm
           </div>
         );
       })}
-      {readOnly ? null : (
+      {readOnly || readOnlyInput ? null : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <Btn variant="primary" disabled={!ready || locked} loading={submitting} title={ready ? undefined : mc.allRequired} onClick={submit}>
             {mc.submit}

@@ -60,6 +60,9 @@ importers:
       '@agent-console/contracts':
         specifier: ^0.12.0
         version: link:../../packages/ts/lib/contracts
+      '@agent-console/folder-picker':
+        specifier: ^0.1.0
+        version: link:../../packages/ts/lib/folder-picker
       '@agent-console/graph-editor':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/graph-editor

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Agent, ChatTurn, ConversationSummary, EdgeTypeDescriptor, Graph, Interaction, InteractionKindDescriptor, NodeTypeDescriptor, RunEvent, TeamPlanSummary } from "@agent-console/contracts";
 import { ApiError } from "@agent-console/api-client";
 import { actorLabel, buildAgentView } from "./actors";
-import { answerTarget, buildResponse, questionCount, quoteForResend } from "./answer";
+import { buildResponse, quoteForResend } from "./answer";
 import { assembleTurns, mergeInteractions, streamPlaceholders } from "./assemble";
 import { resolveChatSettings } from "./chatSettings";
 import { filterConversations, pendingSinceOf, sortConversations, upsertConversation } from "./conversations";
@@ -185,22 +185,9 @@ describe("턴 조립", () => {
   });
 });
 
-describe("입력창 답변 모드", () => {
+describe("입력창 답변 응답 만들기(판정은 chat 패키지 resolveAnswerSurface)", () => {
   const descriptor: InteractionKindDescriptor = { id: "kind-z", title: "임의", free_text_path: "/deep/text" };
-  const descriptors = indexById([descriptor, { id: "kind-no", title: "없음" }]);
   const pend = (over: Partial<Interaction> = {}): Interaction => ({ id: "i1", run_id: "r1", node_id: "n", kind: "kind-z", status: "pending", created_at: 1, ...over });
-  it("정확히 하나 + free_text_path + 설정 켜짐일 때만", () => {
-    expect(answerTarget([pend()], descriptors, true)?.interaction.id).toBe("i1");
-    expect(answerTarget([pend()], descriptors, false)).toBeNull();
-    expect(answerTarget([pend(), pend({ id: "i2" })], descriptors, true)).toBeNull();
-    expect(answerTarget([pend({ kind: "kind-no" })], descriptors, true)).toBeNull();
-    expect(answerTarget([], descriptors, true)).toBeNull();
-  });
-  it("질문이 둘 이상이면 끈다(배열이 없으면 하나)", () => {
-    expect(questionCount(pend())).toBe(1);
-    expect(answerTarget([pend({ payload: { questions: [{}, {}] } })], descriptors, true)).toBeNull();
-    expect(answerTarget([pend({ payload: { questions: [{}] } })], descriptors, true)).not.toBeNull();
-  });
   it("응답은 free_text_path 자리에 텍스트를 넣는다", () => {
     expect(buildResponse(descriptor, "답")).toEqual({ deep: { text: "답" } });
     expect(() => buildResponse({ free_text_path: null }, "x")).toThrow();

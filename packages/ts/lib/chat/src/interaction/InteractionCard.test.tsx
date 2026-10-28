@@ -350,3 +350,54 @@ describe("상태별 표시", () => {
     expect(screen.getByText("Waiting 12초")).toBeTruthy();
   });
 });
+
+describe("answerVia=external (5.7R.40, 입력칸은 입력창 하나)", () => {
+  const freePayload = { questions: [{ question: "어느 환경에 배포할까요?", options: [] }] };
+  const freeDesc = (over = {}) => makeDescriptor({ ui_hints: { renderer: "choices" }, free_text_path: "/response", ...over });
+
+  it("선택 렌더러: 질문 문장과 힌트만 그리고 textarea·[보내기]는 없다", () => {
+    setup({ interaction: makeInteraction({ payload: freePayload }), descriptor: freeDesc(), answerVia: "external" });
+    expect(screen.getByText("어느 환경에 배포할까요?")).toBeTruthy();
+    expect(card().querySelector("textarea, input")).toBeNull();
+    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+    expect(screen.getByText("아래 입력창에 답하세요")).toBeTruthy();
+  });
+  it("기본(inline)은 입력칸과 [보내기]를 가진다", () => {
+    setup({ interaction: makeInteraction({ payload: freePayload }), descriptor: freeDesc() });
+    expect(card().querySelectorAll("textarea")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "보내기" })).toBeTruthy();
+    expect(screen.queryByText("아래 입력창에 답하세요")).toBeNull();
+  });
+  it("접근성 이름에 ', 답은 입력창에서'가 붙고 본문·힌트 id가 입력창 연결용으로 달린다", () => {
+    setup({ interaction: makeInteraction({ id: "q9", payload: freePayload }), descriptor: freeDesc(), answerVia: "external" });
+    expect(card().getAttribute("aria-label")).toMatch(/, 답은 입력창에서$/);
+    expect(document.getElementById("ac-answer-body-q9")?.textContent).toContain("어느 환경에 배포할까요?");
+    expect(document.getElementById("ac-answer-hint-q9")).toBeTruthy();
+  });
+  it("answerPaused이면 힌트가 '아직 기다리는 중'으로 바뀐다", () => {
+    setup({ interaction: makeInteraction({ payload: freePayload }), descriptor: freeDesc(), answerVia: "external", answerPaused: true });
+    expect(screen.getByText(/아직 기다리는 중/)).toBeTruthy();
+  });
+  it("임의 renderer 이름으로 직접 만든 렌더러도 readOnlyInput을 받는다", () => {
+    const seen: boolean[] = [];
+    const Custom: RendererComponent = ({ readOnlyInput }) => {
+      seen.push(readOnlyInput);
+      return <div>임의</div>;
+    };
+    setup({ descriptor: makeDescriptor({ ui_hints: { renderer: "zzz" } }), renderers: { zzz: Custom }, answerVia: "external" });
+    expect(seen.at(-1)).toBe(true);
+  });
+  it("모르는 renderer는 주입 폴백 대신 내장 폴백으로 입력 없이 요청 내용만 보인다", () => {
+    const renderFallback = vi.fn(() => <div>폼</div>);
+    setup({ interaction: makeInteraction({ payload: freePayload }), descriptor: makeDescriptor({ ui_hints: { renderer: "unknown-r" }, free_text_path: "/response" }), renderFallback, answerVia: "external" });
+    expect(renderFallback).not.toHaveBeenCalled();
+    expect(card().querySelector("textarea")).toBeNull();
+    expect(screen.queryByRole("button", { name: "보내기" })).toBeNull();
+  });
+  it("자유 텍스트 초안이 바뀌면 onDraftChange로 알린다", () => {
+    const onDraftChange = vi.fn();
+    setup({ interaction: makeInteraction({ payload: freePayload }), descriptor: freeDesc(), onDraftChange });
+    fireEvent.change(card().querySelector("textarea")!, { target: { value: "스테이징" } });
+    expect(onDraftChange).toHaveBeenCalledWith("스테이징");
+  });
+});

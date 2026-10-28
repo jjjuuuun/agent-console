@@ -119,9 +119,11 @@ describe("채팅 상호작용 카드: 루트 기준", () => {
     const card = await screen.findByRole("group", { name: /임의 질문/ });
     expect(within(card).getByText("중첩 팀")).toBeTruthy();
     await waitFor(() => expect(card.textContent).toContain("하위 팀 노드(중첩 팀) ›"));
-    fireEvent.change(within(card).getByLabelText("답변칸"), { target: { value: "예" } });
-    fireEvent.click(within(card).getByRole("button", { name: /보내기|확인|답/ }));
-    await waitFor(() => expect(h.rest["respondInteraction"]).toHaveBeenCalledWith("c1", "ci", expect.anything()));
+    // 대기 요청이 하나이고 자유 텍스트 하나로 끝나는 모양이면 답은 입력창에서 받는다(카드에는 입력칸이 없다)
+    expect(within(card).queryByLabelText("답변칸")).toBeNull();
+    fireEvent.change(await screen.findByLabelText("메시지 입력"), { target: { value: "예" } });
+    fireEvent.click(screen.getByRole("button", { name: "답하기" }));
+    await waitFor(() => expect(h.rest["respondInteraction"]).toHaveBeenCalledWith("c1", "ci", { response: "예" }));
   });
 
   it("WS로 대화 id 없이 오는 자식 요청도 루트 Run 기준으로 이 대화에 쌓인다", async () => {

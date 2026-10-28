@@ -81,40 +81,84 @@ describe("Composer 한글 IME", () => {
   });
 });
 
-describe("Composer 답변 모드 (1R.31)", () => {
-  const target = { label: "PL · 설계", kindTitle: "질문" };
-  it("answerTarget이 있으면 띠와 [답하기], placeholder가 바뀐다", () => {
-    const onSwitch = vi.fn();
-    setup({ answerTarget: target, onSwitchToMessage: onSwitch });
-    expect(screen.getByTestId("answer-strip").textContent).toContain("PL · 설계의 질문에 답하는 중");
+describe("Composer 답변 모드 (5.7R.40)", () => {
+  const target = { label: "PL", kindTitle: "질문", describedBy: "card-body card-hint" };
+  it("answerTarget이 있으면 띠(group)·두 칸 토글(radiogroup)·[답하기]·placeholder", () => {
+    setup({ answerTarget: target });
+    expect(screen.getByTestId("answer-strip").textContent).toContain("PL의 질문에 답하는 중");
+    expect(screen.getByRole("group", { name: "보내는 방식" })).toBeTruthy();
+    expect(screen.getByRole("radiogroup")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "답하기" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: "새 메시지" }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByRole("button", { name: "답하기" })).toBeTruthy();
     expect(screen.getByPlaceholderText("답을 입력하세요…")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "새 메시지로 보내기" }));
-    expect(onSwitch).toHaveBeenCalled();
+    expect(screen.getByText(/Enter 답하기 · Ctrl\+Shift\+Enter 새 메시지로/)).toBeTruthy();
   });
-  it("message 모드: 띠가 새 메시지 모드로, [질문에 답하기]로 복귀, 버튼은 [전송]", () => {
-    const onAnswer = vi.fn();
-    setup({ answerTarget: target, answerMode: "message", onSwitchToAnswer: onAnswer });
-    expect(screen.getByTestId("answer-strip").textContent).toContain("새 메시지 모드");
+  it("aria-describedby는 답변 모드에서만 띠 id와 카드 id를 가리킨다", () => {
+    const { box, rerender } = setup({ answerTarget: target });
+    const ids = (box.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(ids).toHaveLength(3);
+    expect(document.getElementById(ids[0]!)?.textContent).toContain("PL의 질문에 답하는 중");
+    expect(ids.slice(1)).toEqual(["card-body", "card-hint"]);
+    rerender(<Composer value="x" onChange={() => {}} onSend={() => {}} answerTarget={target} answerMode="message" />);
+    expect(screen.getByRole("textbox").getAttribute("aria-describedby")).toBeNull();
+  });
+  it("토글 클릭·화살표·Alt+Shift+A로 모드를 바꾼다", () => {
+    const toMsg = vi.fn();
+    const toAnswer = vi.fn();
+    const { box, rerender } = setup({ answerTarget: target, onSwitchToMessage: toMsg, onSwitchToAnswer: toAnswer });
+    fireEvent.click(screen.getByRole("radio", { name: "새 메시지" }));
+    expect(toMsg).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(box, { key: "A", code: "KeyA", altKey: true, shiftKey: true });
+    expect(toMsg).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(screen.getByRole("radio", { name: "답하기" }), { key: "ArrowRight" });
+    expect(toMsg).toHaveBeenCalledTimes(3);
+    rerender(<Composer value="x" onChange={() => {}} onSend={() => {}} answerTarget={target} answerMode="message" onSwitchToMessage={toMsg} onSwitchToAnswer={toAnswer} />);
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "A", code: "KeyA", altKey: true, shiftKey: true });
+    expect(toAnswer).toHaveBeenCalledTimes(1);
+  });
+  it("토글에서 Esc는 입력창 본문으로 포커스를 옮긴다", () => {
+    const onEscape = vi.fn();
+    const { box } = setup({ answerTarget: target, onEscape });
+    fireEvent.keyDown(screen.getByRole("radio", { name: "답하기" }), { key: "Escape" });
+    expect(document.activeElement).toBe(box);
+    expect(onEscape).not.toHaveBeenCalled();
+  });
+  it("message 모드: 띠 문구·placeholder·버튼이 일반으로 돌아간다", () => {
+    setup({ answerTarget: target, answerMode: "message", placeholderHint: "무시됨 아님" });
+    expect(screen.getByTestId("answer-strip").textContent).toContain("새 메시지로 보내는 중 — 질문은 대기 중");
     expect(screen.getByRole("button", { name: "전송" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "질문에 답하기" }));
-    expect(onAnswer).toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "새 메시지" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("textbox").getAttribute("placeholder")).toBe("무시됨 아님");
+    expect(screen.getByText(/Enter 전송/)).toBeTruthy();
   });
-  it("answerTarget이 없으면 띠가 없다", () => {
-    setup();
+  it("모드 전환·진입을 aria-live 영역으로 한 번 낭독한다", () => {
+    const { rerender } = setup({ answerTarget: target });
+    const live = () => screen.getAllByRole("status").map((n) => n.textContent).join("|");
+    expect(live()).toContain("PL의 질문에 답하는 입력창입니다");
+    rerender(<Composer value="x" onChange={() => {}} onSend={() => {}} answerTarget={target} answerMode="message" />);
+    expect(live()).toContain("새 메시지 입력창입니다");
+  });
+  it("answerTarget이 없으면 띠가 없고 placeholderHint가 placeholder가 된다", () => {
+    setup({ placeholderHint: "새 메시지 (질문은 위 카드에서 답하세요)" });
     expect(screen.queryByTestId("answer-strip")).toBeNull();
+    expect(screen.getByRole("textbox").getAttribute("placeholder")).toBe("새 메시지 (질문은 위 카드에서 답하세요)");
   });
-  it("Ctrl+Shift+Enter는 새 메시지로 보내기(onSendAsMessage 우선, 없으면 onSwitchToMessage)", () => {
+  it("Ctrl+Shift+Enter는 이번 전송만 새 메시지로 보내고 모드는 바꾸지 않는다", () => {
     const asMsg = vi.fn();
     const sw = vi.fn();
     const onSend = vi.fn();
-    const { box, rerender } = setup({ answerTarget: target, onSendAsMessage: asMsg, onSwitchToMessage: sw, onSend });
+    const { box } = setup({ answerTarget: target, onSendAsMessage: asMsg, onSwitchToMessage: sw, onSend });
     fireEvent.keyDown(box, { key: "Enter", ctrlKey: true, shiftKey: true });
     expect(asMsg).toHaveBeenCalledTimes(1);
+    expect(sw).not.toHaveBeenCalled();
     expect(onSend).not.toHaveBeenCalled();
-    rerender(<Composer value="x" onChange={() => {}} onSend={onSend} answerTarget={target} onSwitchToMessage={sw} />);
-    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", ctrlKey: true, shiftKey: true });
-    expect(sw).toHaveBeenCalledTimes(1);
+  });
+  it("답변 모드에서도 IME 조합 중 Enter는 전송하지 않는다", () => {
+    const { box, onSend } = setup({ answerTarget: target });
+    fireEvent.compositionStart(box);
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(onSend).not.toHaveBeenCalled();
   });
 });
 

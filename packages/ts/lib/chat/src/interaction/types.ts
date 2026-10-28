@@ -23,8 +23,15 @@ export interface RendererProps {
   disabled: boolean;
   /** 읽기 전용(답함·만료·끊김 등). `interaction.response`가 있으면 보여 준다. */
   readOnly: boolean;
+  /**
+   * 답 입력칸이 카드 밖(입력창)에 있다(`answerVia="external"`). true면 입력 요소와 제출 버튼을 그리지 않고 질문 내용만 보인다.
+   * 읽기 전용(`readOnly`)과 달리 답을 받는 중이다.
+   */
+  readOnlyInput: boolean;
   messages: InteractionMessages;
   renderEditor?: RenderEditor;
+  /** 자유 텍스트 하나짜리 입력의 초안이 바뀔 때 알린다(카드 ↔ 입력창 전환 때 초안을 옮기는 데 쓴다). 쓰지 않는 렌더러는 무시한다. */
+  onDraftChange?: (text: string) => void;
 }
 
 /** `summarize`가 있으면 접힌 줄의 요약("답함: …")에 쓴다. */
