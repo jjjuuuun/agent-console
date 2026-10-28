@@ -9,12 +9,17 @@ import type {
   Run,
   UpdateConversationRequest,
 } from "@agent-console/contracts";
+import type { AssignProjectRequest, AssignProjectResult, ProjectCounts } from "@agent-console/contracts/projects";
 import { enc, query, type RestIo } from "../io";
 
 /** GET `/conversations` 필터. */
 export interface ListConversationsParams {
   graph_id?: string;
   archived?: boolean;
+  /** 그 프로젝트의 대화만(`project_id`, 불투명 문자열). 생략 = 모두. */
+  project?: string;
+  /** `app` = 앱 저장소에 남은 옛 기록, `project` = 프로젝트 폴더 기록(기본). */
+  source?: string;
 }
 
 /** GET `/conversations/{id}/turns` 페이지 매김. */
@@ -28,6 +33,10 @@ export interface ListTurnsParams {
 export type PostMessageResult = { run: Run } | { queued: QueuedMessage };
 
 export interface ChatClient {
+  /** `project_id`별 대화 수(보관한 대화 포함. `ProjectCounts`). */
+  getConversationProjectCounts(): Promise<ProjectCounts>;
+  /** 대화를 프로젝트에 넣는다(`ids` 또는 `from_null`). 못 옮긴 것은 결과 `skipped`에 이유와 함께. */
+  assignConversationsToProject(request: AssignProjectRequest): Promise<AssignProjectResult>;
   listConversations(params?: ListConversationsParams): Promise<ConversationSummary[]>;
   createConversation(request: CreateConversationRequest): Promise<Conversation>;
   getConversation(id: string): Promise<Conversation>;
@@ -50,6 +59,8 @@ export interface ChatClient {
 
 export function createChatClient(io: RestIo): ChatClient {
   return {
+    getConversationProjectCounts: () => io.request("GET", "/conversations/project-counts"),
+    assignConversationsToProject: (request) => io.request("POST", "/conversations/assign-project", { body: request }),
     listConversations: (params) => io.request("GET", `/conversations${query(params)}`),
     createConversation: (req) => io.request("POST", "/conversations", { body: req }),
     getConversation: (id) => io.request("GET", `/conversations/${enc(id)}`),

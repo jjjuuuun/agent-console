@@ -6,14 +6,13 @@ import { logsMessages as t, useLogScan, useLogSources } from "../../logs";
 import type { SectionEditProps } from "./FormSections";
 import { LogsProjectsBlock } from "./logs/LogsProjectsBlock";
 import { LogsSourcesBlock } from "./logs/LogsSourcesBlock";
-import { LogsTaxonomyBlock } from "./logs/LogsTaxonomyBlock";
 
 function hasObserveSchema(): boolean {
   const def = contractsSchema.$defs["AgentSettings"] as { properties?: Record<string, unknown> } | undefined;
   return def?.properties?.["observe"] !== undefined;
 }
 
-/** 해시 `#logs?source=<id>` / `#logs/taxonomy`에서 펼칠 블록과 출처 id를 읽는다. */
+/** 해시 `#logs?source=<id>` / `#logs/projects`에서 펼칠 블록과 출처 id를 읽는다(옛 `#logs/taxonomy`는 `sectionIdFromHash`가 분류 섹션으로 보낸다). */
 function readHash(hash: string): { block: string | null; source: string | null } {
   const raw = hash.replace(/^#/, "");
   const [path = "", query = ""] = raw.split("?");
@@ -27,7 +26,7 @@ export interface LogsSectionProps extends SectionEditProps {
   dirty: boolean;
 }
 
-/** 설정 "로그 출처": 수집 출처 · 분류 체계 · 프로젝트 묶기. `logs.dashboards`는 이 화면이 그리지 않고(로그 > 대시보드에서 편집) 저장해도 그대로 둔다. */
+/** 설정 "로그 출처": 수집 출처 · 프로젝트 묶기(33p가 삭제). 분류 체계는 `LogTaxonomySection`(섹션 "로그 분류"). `logs.dashboards`는 이 화면이 그리지 않고(로그 > 대시보드에서 편집) 저장해도 그대로 둔다. */
 export function LogsSection(props: LogsSectionProps) {
   const { hash } = useLocation();
   const target = readHash(hash);
@@ -35,7 +34,6 @@ export function LogsSection(props: LogsSectionProps) {
   const scan = useLogScan(sources.data);
   const anyEnabled = (sources.data ?? []).some((s) => s.enabled);
   const sourcesErrors = (props.errors ?? []).filter((e) => e.path.startsWith("/logs/sources"));
-  const taxErrors = (props.errors ?? []).filter((e) => e.path.startsWith("/logs/taxonomy"));
   const projErrors = (props.errors ?? []).filter((e) => e.path.startsWith("/logs/projects"));
   const dot = (n: number) => (n > 0 ? <span className="app-sev" data-severity="error" role="img" aria-label={t.settings.errorDot}> ●</span> : null);
   return (
@@ -46,9 +44,6 @@ export function LogsSection(props: LogsSectionProps) {
       </div>
       <Disclosure summary={<>{t.settings.blocks.sources}{dot(sourcesErrors.length)}</>} defaultOpen>
         <LogsSourcesBlock {...props} focusSource={target.source} observeHref={hasObserveSchema() ? "#common" : undefined} />
-      </Disclosure>
-      <Disclosure summary={<>{t.settings.blocks.taxonomy}{dot(taxErrors.length)}</>} {...(target.block === "taxonomy" ? { defaultOpen: true } : {})}>
-        <LogsTaxonomyBlock {...props} />
       </Disclosure>
       <Disclosure summary={<>{t.settings.blocks.projects}{dot(projErrors.length)}</>} {...(target.block === "projects" ? { defaultOpen: true } : {})}>
         <LogsProjectsBlock {...props} />

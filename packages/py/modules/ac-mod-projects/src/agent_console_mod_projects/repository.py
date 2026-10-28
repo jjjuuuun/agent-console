@@ -33,7 +33,10 @@ CLEARABLE_FIELDS: frozenset[str] = frozenset({"working_directory", "settings"})
 
 def project_kind(directory: str = DEFAULT_DIRECTORY) -> DefinitionKind:
     """프로젝트 정의 종류(모델 ``Project``, 폴더 ``directory``)."""
-    return DefinitionKind(name=PROJECT_KIND_NAME, directory=directory, model=Project)
+    # 앱 등록부 종류라 프로젝트 사본 공간에 들어가지 않는다(design §PI.4.2, 5.7R.33w).
+    return DefinitionKind(
+        name=PROJECT_KIND_NAME, directory=directory, model=Project, portable=False
+    )
 
 
 def create_document(body: ProjectCreate) -> dict[str, Any]:

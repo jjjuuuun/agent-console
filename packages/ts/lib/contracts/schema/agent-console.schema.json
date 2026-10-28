@@ -6,16 +6,16 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.12.0",
+    "CONTRACTS_VERSION": "0.12.1",
     "CONTRACT_VERSIONS": {
-      "common": "1.6.0",
+      "common": "1.7.0",
       "resources": "1.1.0",
       "logs": "1.1.0",
       "definitions": "1.4.0",
-      "runs": "1.4.0",
+      "runs": "1.5.0",
       "usage": "1.1.0",
-      "projects": "3.0.0",
-      "chat": "1.1.0",
+      "projects": "3.1.0",
+      "chat": "1.2.0",
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
@@ -166,7 +166,9 @@
       "PROJECT_COPY_CONFLICT": "project.copy_conflict",
       "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
       "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
-      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
+      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
+      "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
+      "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
       "bad_request": 400,
@@ -222,7 +224,9 @@
       "project.copy_conflict": 409,
       "folders.dialog_unavailable": 409,
       "folders.dialog_busy": 409,
-      "folders.dialog_timeout": 409
+      "folders.dialog_timeout": 409,
+      "project.records_unavailable": 409,
+      "chat.session_unavailable": 409
     },
     "KNOWN_ISSUE_CODES": {
       "LIMITS_NOT_ENFORCED": "limits.not_enforced",
@@ -281,7 +285,12 @@
       "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
       "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
       "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
-      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
+      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
+      "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
+      "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
+      "PROJECT_NETWORK_FS": "project.network_fs",
+      "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
+      "RUN_OTHER_HOST": "run.other_host"
     },
     "KNOWN_SUGGESTION_IDS": {
       "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
@@ -359,6 +368,36 @@
       "FAILED": "failed"
     },
     "PROJECT_MANIFEST_FORMAT": 1,
+    "KNOWN_PROJECT_RECORDS_STATES": {
+      "ABSENT": "absent",
+      "READY": "ready",
+      "NEWER": "newer",
+      "UNAVAILABLE": "unavailable"
+    },
+    "KNOWN_RECORDS_UNAVAILABLE_REASONS": {
+      "FOLDER_MISSING": "folder_missing",
+      "READONLY": "readonly",
+      "NEWER": "newer",
+      "BUSY": "busy",
+      "CORRUPT": "corrupt",
+      "MIGRATION_FAILED": "migration_failed",
+      "LINK_DISABLED": "link_disabled"
+    },
+    "KNOWN_EXISTING_PROJECT_STATES": {
+      "FOUND": "found",
+      "INVALID": "invalid"
+    },
+    "KNOWN_SESSION_STATES": {
+      "AVAILABLE": "available",
+      "RELOCATABLE": "relocatable",
+      "ARCHIVED": "archived",
+      "MISSING": "missing",
+      "NOT_APPLICABLE": "not_applicable"
+    },
+    "KNOWN_QUEUE_HOLD_REASONS": {
+      "RESTART": "restart",
+      "OTHER_HOST": "other_host"
+    },
     "USER_TEXT_RULES": {
       "version": 1,
       "description": "사용자에게 보이는 문구에 넣지 않는 패턴(설계 문서 번호·내부 노드 id). Python·TS 린트 테스트가 이 파일 하나를 읽는다. 패턴은 Python re와 JavaScript RegExp가 같게 읽는 문법만 쓴다.",
@@ -668,6 +707,7 @@
       "DefinitionKey",
       "DefinitionMove",
       "DeletePlan",
+      "ExistingProjectProbe",
       "FolderCapabilities",
       "FolderCheck",
       "FolderCheckRequest",
@@ -677,6 +717,8 @@
       "FolderPickRequest",
       "FolderPickResult",
       "FolderRoot",
+      "ManifestResetRequest",
+      "ManifestResetResult",
       "MovePlan",
       "MovePlanRequest",
       "OutsideFolderPath",
@@ -689,20 +731,27 @@
       "ProjectManifest",
       "ProjectNotImportedDetails",
       "ProjectOutsideFolderDetails",
+      "ProjectRecordsUnavailableDetails",
       "ProjectRegistration",
       "ProjectStatus",
       "ProjectUpdate",
-      "ProjectView"
+      "ProjectView",
+      "RecordsMoveRequest",
+      "RecordsMoveResult",
+      "RecordsMoveSelect"
     ],
     "chat": [
       "ChatReply",
       "ChatTurn",
       "Conversation",
+      "ConversationSessions",
       "ConversationSummary",
       "CreateConversationRequest",
+      "MissingSessionPolicy",
       "PostMessageRequest",
       "QueuedMessage",
       "SessionRef",
+      "SessionStatus",
       "UpdateConversationRequest"
     ],
     "exports": [
@@ -6733,6 +6782,31 @@
       "title": "Conversation",
       "type": "object"
     },
+    "ConversationSessions": {
+      "description": "`GET /conversations/{id}/sessions` 응답(0.12.1).",
+      "properties": {
+        "conversation_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "continuable": {
+          "description": "그대로 이어 갈 수 있는가(missing인 항목이 없음). false면 화면은 배너와 [새 세션으로 계속]·[새 대화]를 보인다.",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/SessionStatus"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "continuable"
+      ],
+      "title": "ConversationSessions",
+      "type": "object"
+    },
     "ConversationSummary": {
       "description": "`GET /conversations` 목록 항목, WS `conversation.updated` 내용.\n\n목록 질의 `?project=`(0.8.0)는 같은 `project_id`인 대화만 준다.",
       "properties": {
@@ -8720,6 +8794,74 @@
       "title": "ErrorResponse",
       "type": "object"
     },
+    "ExistingProjectProbe": {
+      "description": "폴더 확인에서 찾은 기존 프로젝트 구성 요약입니다.\n\n확인은 매니페스트 파일과 종류 폴더의 파일 **개수**만 읽는다. 사본 파일 이름·내용은 싣지 않는다.",
+      "properties": {
+        "state": {
+          "description": "found·invalid(`KnownExistingProjectStates`, 열린 문자열).",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "매니페스트의 폴더 id(읽을 수 있을 때). 화면 표시용 원문."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "매니페스트의 이름(읽을 수 있을 때)."
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "매니페스트의 설명."
+        },
+        "definitions": {
+          "default": 0,
+          "description": "폴더에 있는 구성 사본 개수(옮길 수 있는 종류 폴더의 파일 수).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "issue": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Issue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "읽을 수 없는 이유(invalid일 때, 예: `project.manifest_invalid`)."
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "ExistingProjectProbe",
+      "type": "object"
+    },
     "ExportConflictPolicy": {
       "enum": [
         "skip",
@@ -9255,6 +9397,44 @@
           ],
           "default": null,
           "description": "같은·겹치는 등록 프로젝트(taken·overlap_* 상태일 때)."
+        },
+        "existing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExistingProjectProbe"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "폴더에 이미 있는 프로젝트 구성(매니페스트) 요약. null = 없음 또는 서버가 알리지 않음."
+        },
+        "suggested_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "등록하면 쓸 id 제안(매니페스트 id 또는 폴더 이름 slug, 겹치면 `-2`…, 서버가 계산). 화면은 id를 계산하지 않는다."
+        },
+        "config_dir": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "폴더 안 프로젝트 구성 폴더 이름(화면 문구 `{dir}`). null = 서버가 알리지 않음."
         }
       },
       "required": [
@@ -13967,6 +14147,51 @@
       "title": "LoopIterationPayload",
       "type": "object"
     },
+    "ManifestResetRequest": {
+      "description": "`POST /projects/{id}/manifest/reset` 요청(상태 `manifest_invalid`일 때만, 아니면 409).\n\n옛 매니페스트는 지우지 않고 `<config_dir>/.state/backups/project-<UTC>.yaml`로 옮긴다. 새\n매니페스트 = 등록 id + 이 이름·설명(설정은 비움). 사본·메모리·기록은 건드리지 않는다.",
+      "properties": {
+        "name": {
+          "description": "새 매니페스트의 이름.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "새 매니페스트의 설명."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ManifestResetRequest",
+      "type": "object"
+    },
+    "ManifestResetResult": {
+      "description": "`POST /projects/{id}/manifest/reset` 응답.",
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/ProjectView"
+        },
+        "backup_path": {
+          "description": "옛 매니페스트를 옮긴 경로.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "project",
+        "backup_path"
+      ],
+      "title": "ManifestResetResult",
+      "type": "object"
+    },
     "MemoryAccessConfig": {
       "additionalProperties": true,
       "description": "에이전트에게 공유 메모리를 줍니다. 범위마다 읽기·검색·쓰기·지우기 권한을 정합니다.",
@@ -16074,6 +16299,13 @@
       "title": "MergeStrategyInfo",
       "type": "object"
     },
+    "MissingSessionPolicy": {
+      "enum": [
+        "fail",
+        "fresh"
+      ],
+      "type": "string"
+    },
     "ModelInfo": {
       "description": "백엔드가 제공하는 모델 하나(`list_models()`). 모델 목록은 코드에 없다.",
       "properties": {
@@ -17402,6 +17634,11 @@
       "properties": {
         "text": {
           "type": "string"
+        },
+        "on_missing_session": {
+          "$ref": "#/$defs/MissingSessionPolicy",
+          "default": "fail",
+          "description": "이 앱에 이어 갈 세션 기록이 없는 노드가 있을 때(0.12.1). fail = 409 `chat.session_unavailable`, fresh = 그 노드는 새 세션으로 시작."
         }
       },
       "required": [
@@ -17935,6 +18172,37 @@
       "title": "프로젝트 설정",
       "type": "object"
     },
+    "ProjectRecordsUnavailableDetails": {
+      "description": "409 `project.records_unavailable`의 `details`.",
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reason": {
+          "description": "쓸 수 없는 이유(`KnownRecordsUnavailableReasons`, 열린 문자열).",
+          "type": "string"
+        },
+        "backup_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "올리기 전에 만든 백업 파일(`migration_failed`일 때)."
+        }
+      },
+      "required": [
+        "project_id",
+        "reason"
+      ],
+      "title": "ProjectRecordsUnavailableDetails",
+      "type": "object"
+    },
     "ProjectRegistration": {
       "additionalProperties": true,
       "description": "이 앱이 프로젝트로 등록한 폴더입니다. 폴더와 등록 상태만 담습니다.",
@@ -18170,11 +18438,46 @@
           "type": "array"
         },
         "issues": {
-          "description": "상태와 별개인 안내(예: 정보 `project.memory_network_fs`). 화면은 모르는 코드도 보인다.",
+          "description": "상태와 별개인 안내(예: 정보 `project.network_fs`·`project.gitignore_outdated`). 화면은 모르는 코드도 보인다.",
           "items": {
             "$ref": "#/$defs/Issue"
           },
           "type": "array"
+        },
+        "config_dir": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "폴더 안 프로젝트 구성 폴더 이름(설치자 설정 `mod-projects.config_dir`, 화면 문구 `{dir}`). null = 서버가 알리지 않음."
+        },
+        "records_state": {
+          "default": "ready",
+          "description": "프로젝트 기록 DB 상태(`KnownProjectRecordsStates`, 열린 문자열). 화면은 이 값을 해석하지 않고 `records_writable`로 읽기 전용을 정한다. 보내지 않은 옛 서버는 ready.",
+          "type": "string"
+        },
+        "records_writable": {
+          "default": true,
+          "description": "대화·실행 기록을 쓸 수 있는가(기록 DB가 absent·ready이고 폴더에 쓸 수 있을 때만 true). false면 채팅·실행 시작을 막고(409 `project.records_unavailable`) 지난 기록 보기만 된다. 보내지 않은 옛 서버는 true.",
+          "type": "boolean"
+        },
+        "records_issue": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Issue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "기록을 쓸 수 없는 이유(보통 `project.records_unavailable`, `details` = `ProjectRecordsUnavailableDetails`). 쓸 수 있으면 null."
         }
       },
       "required": [
@@ -18233,6 +18536,18 @@
           "default": false,
           "description": "재시작으로 멈춘 항목(`chat.queue_after_restart = ask`). 실행·취소를 고른다.",
           "type": "boolean"
+        },
+        "held_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "멈춘 이유(0.12.1, `KnownQueueHoldReasons`, 열린 문자열). held가 아니면 null."
         }
       },
       "required": [
@@ -18323,6 +18638,81 @@
         "warn",
         "error",
         "unknown"
+      ],
+      "type": "string"
+    },
+    "RecordsMoveRequest": {
+      "description": "`POST /runs/move-to-project`·`POST /conversations/move-to-project` 요청(0.12.1).\n\n앱 DB의 기록을 그 프로젝트의 기록 DB로 옮긴다. Run은 자손·노드·이벤트·상호작용과 함께, 대화는\n대기열(과 연동이 있으면 그 Run)과 함께 간다. 대상에 같은 id가 있으면 건너뛴다. `project_id`는\n불투명 문자열이다(기능 모듈은 프로젝트를 모른다).",
+      "properties": {
+        "project_id": {
+          "description": "옮길 대상 프로젝트(등록 id).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "select": {
+          "$ref": "#/$defs/RecordsMoveSelect",
+          "description": "옮길 기록 고르기."
+        },
+        "ids": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "`select`가 ids일 때 옮길 기록 id(필수)."
+        },
+        "remove_source": {
+          "default": true,
+          "description": "옮긴 뒤(개수 확인 후) 앱 DB의 원본을 지운다. false면 원본을 남긴다.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id",
+        "select"
+      ],
+      "title": "RecordsMoveRequest",
+      "type": "object"
+    },
+    "RecordsMoveResult": {
+      "description": "move-to-project 응답.",
+      "properties": {
+        "moved": {
+          "default": 0,
+          "description": "옮긴 기록 수(함께 옮긴 자식 Run 포함).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skipped": {
+          "default": 0,
+          "description": "대상에 같은 id가 있어 건너뛴 기록 수.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "failed": {
+          "description": "옮기지 못한 기록과 이유(`details.id`).",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "RecordsMoveResult",
+      "type": "object"
+    },
+    "RecordsMoveSelect": {
+      "enum": [
+        "project",
+        "null",
+        "ids"
       ],
       "type": "string"
     },
@@ -19144,6 +19534,18 @@
           ],
           "default": null,
           "description": "프로젝트 id(0.8.0, 불투명 문자열). null = 프로젝트 없음. `GET /runs?project=`로 같음 비교해 거른다. 자식 Run은 루트 값을 물려받는다."
+        },
+        "host_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 Run을 돌린 앱의 id(0.12.1, workspace마다 한 번 만든 불투명 문자열). 같은 기록을 두 앱이 쓸 때 재시작 복구는 자기 host_id의 Run만 한다. null = 알리지 않음."
         },
         "rerun_of": {
           "anyOf": [
@@ -20016,6 +20418,43 @@
         "session_id"
       ],
       "title": "SessionRef",
+      "type": "object"
+    },
+    "SessionStatus": {
+      "description": "대화 노드 하나의 백엔드 세션 이어 가기 상태.",
+      "properties": {
+        "node_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "backend": {
+          "description": "백엔드 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "백엔드 세션 id(있으면)."
+        },
+        "state": {
+          "description": "이어 가기 상태(`KnownSessionStates`, 열린 문자열).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_id",
+        "backend",
+        "state"
+      ],
+      "title": "SessionStatus",
       "type": "object"
     },
     "SettingsLayerInfo": {

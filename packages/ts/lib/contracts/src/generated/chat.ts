@@ -9,13 +9,16 @@ export type {
   ChatReply,
   ChatTurn,
   Conversation,
+  ConversationSessions,
   ConversationSummary,
   CreateConversationRequest,
+  MissingSessionPolicy,
   PostMessageRequest,
   QueuedMessage,
   SessionRef,
+  SessionStatus,
   UpdateConversationRequest,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "chat" as const;
-export const CONTRACT_VERSION = "1.1.0" as const;
+export const CONTRACT_VERSION = "1.2.0" as const;

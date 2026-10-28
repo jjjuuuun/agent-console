@@ -6,7 +6,7 @@
 - 제공: ``runs.scopes``(실행의 ``project_id`` → 프로젝트 층, 없는 프로젝트 = ``project.unknown``
   경고 후 층 없이), ``settings.scope_layers``(유효 설정 ``?project=``).
 - 프로젝트 층 = ``project_layer_value``(프로젝트 ``settings``의 지정한 필드 +
-  ``working_directory``).
+  ``working_directory`` = 프로젝트 ``folder``).
   위치는 공통 바로 아래(``ac-teams`` ``scope_layers``). 자식 Run은 부모(루트) Run의 층을 물려받는다.
 - 이 연동이 꺼지면: 실행·대화의 ``project_id`` 기록·거르기는 그대로이고, 실행에 프로젝트 층(작업
   폴더·설정)만 들어가지 않는다.

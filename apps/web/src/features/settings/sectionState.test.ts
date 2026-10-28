@@ -14,7 +14,8 @@ describe("sectionState", () => {
 
   it("해시에서 섹션 id만 뽑는다(뒤 조각 무시)", () => {
     expect(sectionIdFromHash("#logs?source=x")).toBe("logs");
-    expect(sectionIdFromHash("#logs/taxonomy")).toBe("logs");
+    expect(sectionIdFromHash("#logs/taxonomy")).toBe("log-taxonomy");
+    expect(sectionIdFromHash("#log-taxonomy")).toBe("log-taxonomy");
     expect(sectionIdFromHash("")).toBe("");
   });
 

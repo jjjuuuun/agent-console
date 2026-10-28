@@ -19,6 +19,7 @@ export type {
   DefinitionKey,
   DefinitionMove,
   DeletePlan,
+  ExistingProjectProbe,
   FolderCapabilities,
   FolderCheck,
   FolderCheckRequest,
@@ -28,6 +29,8 @@ export type {
   FolderPickRequest,
   FolderPickResult,
   FolderRoot,
+  ManifestResetRequest,
+  ManifestResetResult,
   MovePlan,
   MovePlanRequest,
   OutsideFolderPath,
@@ -40,11 +43,15 @@ export type {
   ProjectManifest,
   ProjectNotImportedDetails,
   ProjectOutsideFolderDetails,
+  ProjectRecordsUnavailableDetails,
   ProjectRegistration,
   ProjectStatus,
   ProjectUpdate,
   ProjectView,
+  RecordsMoveRequest,
+  RecordsMoveResult,
+  RecordsMoveSelect,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "projects" as const;
-export const CONTRACT_VERSION = "3.0.0" as const;
+export const CONTRACT_VERSION = "3.1.0" as const;

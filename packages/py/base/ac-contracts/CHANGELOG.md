@@ -1,5 +1,28 @@
 # 변경 기록
 
+## 0.12.1
+
+- 계약 0.12.1(5.7R.33c3, design §PI.4.6·§PI.16, K33-37). **더하기만** 한다: 새 필드는 모두 선택이라 0.12.0 응답이 그대로
+  읽힌다. 사내 의존 범위는 그대로 `>=0.12,<0.13`(TS `^0.12.0`). 하위 계약 버전: `projects` 3.1.0, `runs` 1.5.0,
+  `chat` 1.2.0, `common` 1.7.0(오류·이슈 코드).
+- `projects` 3.1.0: `ProjectView.config_dir?`·`records_state`(기본 `ready`, 문서 상수 `KnownProjectRecordsStates`)·
+  `records_writable`(기본 true)·`records_issue?`, `FolderCheck.existing?: ExistingProjectProbe{state, id?, name?,
+  description?, definitions, issue?}`(`KnownExistingProjectStates` found·invalid)·`suggested_id?`·`config_dir?`,
+  `ManifestResetRequest{name, description?}`·`ManifestResetResult{project, backup_path}`,
+  `RecordsMoveRequest{project_id, select: project|null|ids, ids?, remove_source=true}`(ids는 select가 ids일 때만, 필수)·
+  `RecordsMoveResult{moved, skipped, failed: Issue[]}`, `ProjectRecordsUnavailableDetails{project_id, reason,
+  backup_path?}`(`KnownRecordsUnavailableReasons`).
+- `runs` 1.5.0: `Run.host_id?`.
+- `chat` 1.2.0: `SessionStatus{node_id, backend, session_id?, state}`(`KnownSessionStates`)·
+  `ConversationSessions{conversation_id, continuable, items}`, `PostMessageRequest.on_missing_session`
+  (`MissingSessionPolicy` fail·fresh, 기본 fail), `QueuedMessage.held_reason?`(`KnownQueueHoldReasons` restart·other_host —
+  표에 이미 있던 값을 계약에 드러냄).
+- 오류 코드(409): `project.records_unavailable`·`chat.session_unavailable`. 정보 이슈(오류 코드 아님):
+  `project.network_fs`(메모리·기록 DB 공통, `details.files`)·`project.gitignore_outdated`·`run.other_host`.
+  `project.memory_network_fs`는 deprecated 별칭으로 남긴다(서버는 새 이름만 낸다).
+- `x-constants`: `KNOWN_PROJECT_RECORDS_STATES`·`KNOWN_RECORDS_UNAVAILABLE_REASONS`·`KNOWN_EXISTING_PROJECT_STATES`·
+  `KNOWN_SESSION_STATES`·`KNOWN_QUEUE_HOLD_REASONS`.
+
 ## 0.12.0
 
 - 계약 v11(5.7R.33c2, design §PI.10 — 프로젝트 구성 = 폴더 안 사본, K33-24). 사내 의존 범위는 `>=0.12,<0.13`(TS `^0.12.0`).

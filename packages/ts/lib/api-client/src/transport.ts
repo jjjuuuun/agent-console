@@ -37,13 +37,14 @@ export function createRestIo(options: RestClientOptions): RestIo {
   async function requestRaw(
     method: string,
     path: string,
-    opts: { body?: unknown; text?: string; bytes?: Uint8Array; headers?: Record<string, string> } = {},
+    opts: { body?: unknown; text?: string; bytes?: Uint8Array; headers?: Record<string, string>; signal?: AbortSignal } = {},
   ): Promise<{ text: string; parsed: unknown; etag: string | undefined; response: Response }> {
     const doFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     const headers: Record<string, string> = { Accept: "application/json", ...opts.headers };
     const token = resolveToken(options.token);
     if (token !== undefined && token !== "") headers["X-Console-Token"] = token;
     const init: RequestInit = { method, headers };
+    if (opts.signal !== undefined) init.signal = opts.signal;
     if (opts.text !== undefined) {
       if (headers["Content-Type"] === undefined) headers["Content-Type"] = "text/plain; charset=utf-8";
       init.body = opts.text;
@@ -76,7 +77,7 @@ export function createRestIo(options: RestClientOptions): RestIo {
     return { text, parsed, etag: parseEtag(response.headers.get("ETag")), response };
   }
 
-  async function request<T>(method: string, path: string, opts: { body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
+  async function request<T>(method: string, path: string, opts: { body?: unknown; headers?: Record<string, string>; signal?: AbortSignal } = {}): Promise<T> {
     return (await requestRaw(method, path, opts)).parsed as T;
   }
 
@@ -84,7 +85,7 @@ export function createRestIo(options: RestClientOptions): RestIo {
   async function requestVersioned<T>(
     method: string,
     path: string,
-    opts: { body?: unknown; text?: string; bytes?: Uint8Array; headers?: Record<string, string> } = {},
+    opts: { body?: unknown; text?: string; bytes?: Uint8Array; headers?: Record<string, string>; signal?: AbortSignal } = {},
   ): Promise<Versioned<T>> {
     const r = await requestRaw(method, path, opts);
     const issues = parseIssuesHeader(r.response.headers.get(ISSUES_HEADER));

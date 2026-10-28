@@ -103,6 +103,14 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 버전 해시는 주입한다: `DefinitionKind(..., hash_fn=...)` 또는 `FileDefinitionStore(..., hash_fn=...)`.
 (1.12에서 ac-graph의 `graph_hash`를 그래프 종류에 주입한다.)
 
+`DefinitionKind.portable`(기본 참)은 프로젝트 폴더 사본 공간(`ac-project-space`)에 둘 수 있는 종류인지다. 싱글턴 종류는
+값과 상관없이 옮길 수 없다(`is_portable`). 앱 등록부 같은 종류는 `portable=False`로 등록한다.
+
+쓰기 전 검사는 `write_guard`로 주입한다(`FileDefinitionStore(..., write_guard=fn)`). `fn(kind, id, document, files)`가
+예외를 던지면 문서·본문·버전 기록 어느 것도 쓰지 않는다(`ac-project-space`의 비밀 검사가 이것을 쓴다).
+`load_yaml_text`·`dump_yaml`·`merge_into`·`wrap_value`·`to_plain`·`atomic_write_bytes`는 같은 YAML 형식(주석·키 순서 보존)으로
+다른 파일(예: 폴더 매니페스트)을 다룰 때 쓰는 공개 도구다.
+
 ## 동작 규칙 요약
 
 - 파일은 임시 파일 + `os.replace`로 원자적으로 쓴다. 기존 파일은 주석·키 순서를 보존하며 갱신하고, 모르는 필드도 보존한다.

@@ -2,6 +2,11 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.12.1]
+- 계약 0.12.1(5.7R.33c3, design §PI.4.6·§PI.16). 더하기만 한다(새 필드는 모두 선택). 사내 의존 범위는 `^0.12.0` 그대로. `@agent-console/contracts/projects` 3.1.0, `runs` 1.5.0, `chat` 1.2.0, `common` 1.7.0.
+- 새 타입: `ExistingProjectProbe`·`ManifestResetRequest`·`ManifestResetResult`·`RecordsMoveRequest`·`RecordsMoveResult`·`RecordsMoveSelect`·`ProjectRecordsUnavailableDetails`(projects), `SessionStatus`·`ConversationSessions`·`MissingSessionPolicy`(chat). 새 선택 필드: `ProjectView.config_dir`·`records_state`·`records_writable`·`records_issue`, `FolderCheck.existing`·`suggested_id`·`config_dir`, `Run.host_id`, `PostMessageRequest.on_missing_session`, `QueuedMessage.held_reason`.
+- 새 상수: `KNOWN_PROJECT_RECORDS_STATES`·`KNOWN_RECORDS_UNAVAILABLE_REASONS`·`KNOWN_EXISTING_PROJECT_STATES`·`KNOWN_SESSION_STATES`·`KNOWN_QUEUE_HOLD_REASONS`, `ERROR_CODES`·`KNOWN_ISSUE_CODES`의 `PROJECT_RECORDS_UNAVAILABLE`·`CHAT_SESSION_UNAVAILABLE`(409), `KNOWN_ISSUE_CODES`의 `PROJECT_NETWORK_FS`·`PROJECT_GITIGNORE_OUTDATED`·`RUN_OTHER_HOST`(정보 이슈만). `PROJECT_MEMORY_NETWORK_FS`는 deprecated 별칭.
+
 ## [0.12.0]
 - 계약 v11(5.7R.33c2, design §PI.10). 사내 의존 범위를 `^0.12.0`으로 올린다. `@agent-console/contracts/projects` 3.0.0, `memory` 1.1.0, `common` 1.6.0.
 - 깨지는 변경(projects 3.0): `ProjectUse`·`ProjectUseMode`·`ProjectImportMode`·`ProjectUsesUpdate`·`UseCopyRequest`·`UseCopyResult`·`DefinitionCopy`·`LegacyUse`·`LegacyUsesPlan`·`LegacyUsesApplyRequest`·`LegacyUseResult`·`LegacyUsesApplyResult` 삭제, `Project`·`ProjectCreate`·`ProjectUpdate`의 `uses`·`import_mode` 삭제, `ProjectNotImportedDetails`의 `reason`·`import_mode` → `in_library`.

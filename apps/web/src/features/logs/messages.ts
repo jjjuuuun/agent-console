@@ -14,6 +14,21 @@ export const logsMessages = {
     session: (shortId: string) => `세션 ${shortId}`,
   },
   refresh: "새로 고침",
+  /** 5.7R.32: 공통 틀(헤더 [⟳][⋯]·알림 줄) 문구 */
+  header: {
+    refresh: "새로 고침",
+    more: "더 보기",
+    menu: {
+      scan: "지금 수집",
+      archive: "보관본 내려받기",
+      popout: "구조도를 새 창으로 열기",
+      copySession: "세션 id 복사",
+    },
+  },
+  notice: {
+    more: (n: number) => `외 ${n}건`,
+    showAll: "모두 보기",
+  },
   refreshing: "갱신 중…",
   scan: "지금 수집",
   scanning: "수집 중…",
@@ -29,6 +44,7 @@ export const logsMessages = {
   clearFilters: "필터 지우기",
   copy: "복사",
   copied: "복사했습니다",
+  dash: "–",
   filters: {
     labels: {
       q: "검색어",
@@ -119,12 +135,34 @@ export const logsMessages = {
     newEvents: (n: number) => `새 이벤트 ${n}건이 수집되었습니다`,
     reloadBanner: "새로 고침",
   },
+  /** [보기 ▾] 메뉴(5.7R.32) */
+  view: {
+    button: "보기",
+    groupResponses: "응답 묶기",
+    includeHidden: "숨긴 범주 포함",
+    timeMode: "시각 표시",
+    columns: "열 구성",
+    sort: "정렬",
+    taxonomyLink: "분류 체계 편집…",
+  },
   detail: {
     back: "세션 목록",
     backToList: "세션 목록으로",
     notFoundTitle: "세션을 찾을 수 없습니다",
     notFoundBody: "보존 기간이 지났거나 색인에서 지워졌을 수 있습니다.",
     copySession: "세션 id 복사",
+    sessionId: "세션 id",
+    seconds: "초",
+    models: "모델",
+    infoButton: "세션 정보",
+    infoShort: "정보",
+    info: {
+      title: "세션 정보",
+      tokensBreakdown: (i: string, o: string, r: string, c: string) => ` (입력 ${i} · 출력 ${o} · 캐시 읽기 ${r} · 캐시 생성 ${c})`,
+    },
+    viewTabs: "세션 보기",
+    view: { events: "이벤트", architecture: "구조도" } as Readonly<Record<string, string>>,
+    flowShow: "흐름 보기",
     start: "시작",
     length: "길이",
     agents: "에이전트",
@@ -145,6 +183,7 @@ export const logsMessages = {
     flowLanes: "레인",
     flowTrace: "위임 흐름",
     flowArch: "구조도",
+    popoutNotice: "구조도를 새 창으로 열어 둔 상태입니다",
     flowToggleHide: "흐름 접기",
     flowToggleShow: "흐름 펴기",
     flowView: "흐름 보기",
@@ -193,6 +232,8 @@ export const logsMessages = {
     archive: "보관본",
     orderDesc: "시각 ↓",
     orderAsc: "시각 ↑",
+    orderDescName: "최신 순",
+    orderAscName: "오래된 순",
   },
   dashboards: {
     title: "대시보드",
@@ -393,6 +434,7 @@ export const logsMessages = {
   },
   runTab: {
     title: "세션 로그",
+    infoLabel: "이 탭에 대해",
     explain: "이 실행의 에이전트 세션 로그입니다. 플랫폼 이벤트는 ‘에이전트’ 탭에 있습니다.",
     sessions: (n: number) => `세션 ${n}개`,
     sessionsMore: (n: number) => `외 ${n}개`,

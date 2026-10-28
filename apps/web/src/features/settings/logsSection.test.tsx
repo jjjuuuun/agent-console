@@ -104,13 +104,11 @@ describe("설정: 로그 출처", () => {
   });
 });
 
-describe("설정: 분류 체계·프로젝트 묶기", () => {
-  it("분류 체계 표: 기본값 배지, 톤 선택지에 계약 어휘 전부, 이름을 바꾸면 지정됨(저장 전까지 서버 변경 없음)", async () => {
-    const clients = mount([src("a", { enabled: true })]);
-    const table = await screen.findByRole("grid", { name: "분류 체계 표" }, LONG).catch(async () => {
-      fireEvent.click(await screen.findByText("분류 체계", {}, LONG));
-      return screen.findByRole("grid", { name: "분류 체계 표" }, LONG);
-    });
+describe("설정: 로그 분류(5.7R.32, 분류 체계를 섹션으로 분리)", () => {
+  const tableOf = async () => screen.findByRole("grid", { name: "분류 체계 표" }, LONG);
+  it("로그 분류 섹션(#log-taxonomy): 기본값 배지, 톤 선택지에 계약 어휘 전부, 이름을 바꾸면 지정됨(저장 전까지 서버 변경 없음)", async () => {
+    const clients = mount([src("a", { enabled: true })], {}, {}, "log-taxonomy");
+    const table = await tableOf();
     const name = within(table).getByLabelText("cat-z 표시 이름") as HTMLInputElement;
     expect(name.placeholder).toBe("범주 제트");
     const tone = within(table).getByLabelText("cat-z 톤") as HTMLSelectElement;
@@ -118,6 +116,17 @@ describe("설정: 분류 체계·프로젝트 묶기", () => {
     fireEvent.change(name, { target: { value: "새 이름" } });
     expect(within(table).getAllByText("지정됨").length).toBeGreaterThan(0);
     expect((clients.rest as unknown as { putSettingsVersioned: { mock: { calls: unknown[] } } }).putSettingsVersioned.mock.calls).toHaveLength(0);
+  });
+
+  it("옛 주소 #logs/taxonomy도 로그 분류 섹션을 연다. 로그 출처 섹션에는 분류 표가 없다", async () => {
+    mount([src("a", { enabled: true })], {}, {}, "logs/taxonomy");
+    await tableOf();
+    expect(screen.getByRole("link", { name: /로그 분류/ }).getAttribute("aria-current")).toBe("location");
+    cleanup();
+    mount([src("a", { enabled: true })], {}, {}, "logs");
+    await screen.findByText("출처-a", {}, LONG);
+    expect(screen.queryByRole("grid", { name: "분류 체계 표" })).toBeNull();
+    expect(screen.getByRole("link", { name: /로그 분류/ })).toBeTruthy();
   });
 });
 

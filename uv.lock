@@ -53,6 +53,7 @@ members = [
     "agent-console-mod-versions",
     "agent-console-modkit",
     "agent-console-nodes-core",
+    "agent-console-project-space",
     "agent-console-projects",
     "agent-console-pty-session",
     "agent-console-registry",
@@ -344,7 +345,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.12.0"
+version = "0.12.1"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -2010,11 +2011,13 @@ dev = [
 ]
 
 [[package]]
-name = "agent-console-projects"
+name = "agent-console-project-space"
 version = "0.1.0"
-source = { editable = "packages/py/features/ac-projects" }
+source = { editable = "packages/py/features/ac-project-space" }
 dependencies = [
     { name = "agent-console-contracts" },
+    { name = "agent-console-secret-rules" },
+    { name = "agent-console-store" },
 ]
 
 [package.dev-dependencies]
@@ -2026,7 +2029,42 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" }]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-projects"
+version = "0.2.0"
+source = { editable = "packages/py/features/ac-projects" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-local-folders" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-local-folders", editable = "packages/py/features/ac-local-folders" },
+]
 
 [package.metadata.requires-dev]
 dev = [

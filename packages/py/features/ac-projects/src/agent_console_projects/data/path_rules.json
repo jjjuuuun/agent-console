@@ -1,0 +1,5 @@
+{
+  "$comment": "프로젝트 폴더 비교 규칙(ac-projects). case_insensitive: 대소문자를 무시하고 비교할 POSIX 경로 앞부분 패턴(fnmatch, 경로 조각 단위). Windows 경로는 규칙 없이 늘 대소문자를 무시한다. 기본은 비어 있다 — 특정 실행 환경 전용 규칙을 기본으로 두지 않는다. 예: {\"pattern\": \"/mnt/?\", \"description\": \"WSL drvfs 드라이브\"}, {\"pattern\": \"/Volumes/*\"}.",
+  "format": 1,
+  "case_insensitive": []
+}

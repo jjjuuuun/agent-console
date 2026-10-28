@@ -15,11 +15,13 @@ export interface ErrorBlockProps {
   onRetry?: () => void;
   /** 해결 버튼(오류 데이터 `fix`). 역할을 맡은 화면이 없으면 그 버튼은 숨는다 */
   fix?: Fix | null | undefined;
+  /** 보조 버튼(예: 새로고침) */
+  secondary?: { label: string; onClick: () => void };
   children?: ReactNode;
 }
 
 /** 영역 전체를 대신하는 에러 블록. */
-export function ErrorBlock({ title, message, details, detailsLabel = "상세", retryLabel, onRetry, fix, children }: ErrorBlockProps) {
+export function ErrorBlock({ title, message, details, detailsLabel = "상세", retryLabel, onRetry, fix, secondary, children }: ErrorBlockProps) {
   return (
     <div className="app-error-block" role="alert">
       <h2 className="app-block-title">{title}</h2>
@@ -31,6 +33,7 @@ export function ErrorBlock({ title, message, details, detailsLabel = "상세", r
           {retryLabel ?? "다시 시도"}
         </Button>
       )}
+      {secondary === undefined ? null : <Button onClick={secondary.onClick}>{secondary.label}</Button>}
       {details === undefined || details === "" ? null : (
         <details className="app-details">
           <summary>{detailsLabel}</summary>

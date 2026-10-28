@@ -70,9 +70,16 @@ export const LOGS_LIMITS = {
   tableMinRows: 8,
   /** 표 한 행 높이(dense, px) — 최소 행 수와 곱해 흐름 패널 자동 접기 기준을 만든다 */
   tableRowHeight: 32,
+  /** 이벤트 표(`LogEventTable`)에 `height`를 줄 때 칸 높이에서 뺄 값: 표 머리 32 + 테두리 — 스크롤 영역 높이가 이만큼 작아야 표가 칸을 넘치지 않는다 */
+  tableChrome: 36,
   flowHeightMin: 96,
   flowHeightMax: 480,
-  flowHeightDefault: 240,
+  /** 흐름 패널 기본 높이(5.7R.32: 240 → 160). 저장된 높이가 있으면 그 값이 이긴다 */
+  flowHeightDefault: 160,
+  /** 이 폭 이상일 때만 흐름 패널이 펼쳐서 시작한다(저장된 접힘 선택이 없을 때) */
+  flowOpenFrom: 1280,
+  /** 세션 상세·실행 상세의 범주 칩: 이 개수까지만 바로 보이고 나머지는 [더 보기 ▾ (+n)] */
+  categoryChipsInline: 4,
   /** 구조도 세그먼트의 흐름 패널 높이(screen-architecture.md 5.2) */
   archFlowHeightMin: 200,
   archFlowHeightMax: 600,
@@ -92,6 +99,11 @@ export interface RangeOption {
   /** 지금부터 거슬러 올라갈 초. null = 전체(기간 제한 없음) */
   seconds: number | null;
 }
+/** 설정 › 로그 분류 섹션의 주소 해시(`/settings#log-taxonomy`). 옛 `#logs/taxonomy`도 같은 섹션으로 열린다. */
+export const SETTINGS_TAXONOMY_HASH = "log-taxonomy";
+
+/** 세션 상세의 뷰 탭 id(URL `view` 값). 구조도 뷰는 `?view=architecture`, 이벤트 뷰는 파라미터 없음. */
+export const SESSION_VIEWS = { events: "events", architecture: "architecture" } as const;
 /** 화면 전용 URL 파라미터 이름(서버 필터가 아니다 — `log-view`의 `reservedParams`와 같은 목록, 충돌 테스트가 확인한다). */
 export const SCREEN_PARAMS = { through: "through", lane: "lane", view: "view", range: "range", tab: "tab" } as const;
 
@@ -158,6 +170,12 @@ export const UNGROUPED_PROJECT_VALUE = LOG_PROJECT_UNGROUPED;
 
 /** 대시보드 기본 격자 열 수와 좁은 화면 열 수. */
 export const DASHBOARD_COLUMNS = { wide: 12, narrow: 6, narrowBelow: 1280 } as const;
+
+/**
+ * 알림 줄 우선순위(작을수록 먼저, 5.7R.32 §4.1): 비밀 가림 불가 → 프로젝트 없음 → 잘림·큰 세션 → 새 이벤트·라이브 이동 → 다른 출처 힌트.
+ * 값은 순서만 의미한다.
+ */
+export const NOTICE_PRIORITY = { redaction: 1, noProjects: 2, limit: 3, fresh: 4, hint: 5 } as const;
 
 /** 서버 가림 경고 코드(서버 정보 경고 목록에서 찾는다). */
 export const WARNING_CODES = { redactionUnavailable: "logs.redaction_unavailable", unknownClassifier: "logs.unknown_classifier", noProjects: "logs.no_projects" } as const;

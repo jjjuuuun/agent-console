@@ -129,7 +129,7 @@
 .logs-runtab-table { min-height: 120px; }
 .logs-runtab-drawer { flex: 0 0 40%; min-height: 0; overflow: auto; border-top: 1px solid var(--ac-border); }
 .logs-runtab-drawer-head { display: flex; gap: var(--ac-space-2); align-items: center; padding: var(--ac-space-1) var(--ac-space-2); }
-.logs-runtab-explain { font-size: 12px; }
+
 
 @media (prefers-reduced-motion: reduce) {
   .logs-frame *, .logs-drawer, .logs-menu { transition: none !important; animation: none !important; }
@@ -150,3 +150,67 @@
 
 /* 구조도를 새 창으로 분리한 동안 접힌 자리 */
 .logs-flow-body--arch-folded { padding: var(--ac-space-2); }
+
+/* ---- 5.7R.32 로그 단순화 ---- */
+.logs-wide { display: inline; }
+.logs-narrow { display: none; }
+@media (max-width: 1279px) {
+  .logs-wide { display: none; }
+  .logs-narrow { display: inline; }
+}
+/* 알림 줄: 높이 32px 한 줄. 알림이 없으면 DOM 자체가 없다 */
+.logs-noticebar { display: flex; align-items: center; gap: var(--ac-space-2); padding: 0 var(--ac-space-4); min-height: 32px; border-bottom: 1px solid var(--ac-border-soft); }
+.logs-noticebar > .logs-notice { flex: 1 1 0; min-width: 0; }
+.logs-notice { min-height: 32px; padding-block: 2px; box-sizing: border-box; align-items: center; }
+.logs-notice .ac-banner-body, .logs-notice .ac-text, .logs-notice-text { min-width: 0; font-size: 13px; }
+.logs-notice-text { display: block; }
+.logs-notice-more { flex: none; white-space: nowrap; }
+.logs-notice-pop { width: min(560px, 90vw); }
+.logs-notice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.logs-notice--wrap { min-height: 0; }
+/* 메뉴·팝오버 */
+.logs-actionmenu { min-width: 220px; max-width: 320px; padding: var(--ac-space-1); }
+.logs-actionmenu-body { display: flex; flex-direction: column; gap: 2px; }
+.logs-actionmenu .logs-menu-item { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 28px; }
+.logs-actionmenu .logs-menu-item .ac-ellipsis { flex: 1 1 auto; min-width: 0; }
+.logs-menu-mark { flex: none; width: 14px; text-align: center; font-size: 12px; }
+.logs-menu-kbd { flex: none; font-size: 12px; color: var(--ac-text-muted); font-family: var(--ac-font-mono, monospace); }
+.logs-actionmenu-heading { padding: var(--ac-space-1) var(--ac-space-2) 0; font-size: 12px; color: var(--ac-text-muted); }
+.logs-actionmenu-group { display: flex; flex-direction: column; gap: 2px; }
+.logs-infopop { width: 320px; max-width: 90vw; padding: var(--ac-space-2); }
+.logs-info { margin: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: 13px; }
+.logs-info-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--ac-space-2); align-items: baseline; }
+.logs-info dt { color: var(--ac-text-muted); font-size: 12px; }
+.logs-info dd { margin: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--ac-space-1); word-break: keep-all; overflow-wrap: anywhere; }
+.ac-mono-wrap { overflow-wrap: anywhere; word-break: break-all; }
+/* 뷰 탭 */
+.logs-viewtabs { display: flex; gap: var(--ac-space-1); height: 32px; border-bottom: 1px solid var(--ac-border); }
+.logs-viewtabs .ac-tab { display: inline-flex; align-items: center; font-size: 13px; }
+.logs-viewtabs .ac-tab[aria-selected="true"] { box-shadow: inset 0 -2px 0 var(--ac-accent); font-weight: 600; }
+/* 세션 상세 헤더 한 줄 */
+.logs-session-head { min-height: 36px; justify-content: center; }
+.logs-session-line { flex-wrap: nowrap; min-width: 0; }
+.logs-session-line .logs-summary { min-width: 0; flex: 0 1 auto; }
+.logs-filterline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.logs-filterline > .ac-lv-filterbar { flex: 1 1 auto; min-width: 0; }
+.logs-errtoggle[aria-pressed="true"] { font-weight: 600; background: var(--ac-accent-bg); border-color: var(--ac-accent); box-shadow: inset 0 -2px 0 var(--ac-accent); }
+.logs-archview { display: flex; flex-direction: column; }
+/* 구조도 레인 줌: 패널에 호버·포커스가 있을 때만 보인다 */
+.logs-flow .ac-lv-row-actions { opacity: 0; }
+.logs-flow:hover .ac-lv-row-actions, .logs-flow:focus-within .ac-lv-row-actions { opacity: 1; }
+/* 분리 안내 한 줄 */
+.arch-popout-fold[data-compact="true"] { min-height: 32px; padding-block: 2px; }
+.logs-infobtn { flex: none; width: var(--ac-control-sm); height: var(--ac-control-sm); padding: 0; border: 0; background: none; color: var(--ac-text-muted); cursor: pointer; border-radius: var(--ac-radius-sm); font: inherit; }
+.logs-infobtn:hover { color: var(--ac-text); }
+.logs-infobtn:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
+.logs-runtab-explain { margin: 0; font-size: 12px; }
+/* 세션 상세는 표 행을 먼저 지킨다(5.7R.32 AC-2): 재생 막대 40px, 접힌 흐름 머리 28px 한 줄, 블록 사이 간격 4px */
+.logs-session-main { gap: var(--ac-space-1); }
+.logs-session .ac-lv-playbar { height: 40px; }
+.logs-viewrow { display: flex; align-items: center; gap: var(--ac-space-2); border-bottom: 1px solid var(--ac-border); min-height: 32px; }
+.logs-viewrow .logs-viewtabs { border-bottom: 0; }
+.logs-flow[data-collapsed="true"] { display: none; }
+.logs-filterline > .ac-lv-filterbar { flex: 0 1 auto; }
+.logs-viewrow .logs-segments { margin-right: var(--ac-space-1); }
+/* 헤더 [⋯] 메뉴가 바로 아래 탭 줄(같은 sticky 층)에 가려지지 않게 헤더를 한 층 올린다 */
+.logs-frame .ac-pageheader { z-index: calc(var(--ac-z-header, 10) + 1); }

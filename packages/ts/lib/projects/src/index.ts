@@ -22,7 +22,7 @@ export { DEFAULT_BADGE_MESSAGES, SCOPE_BADGE_KEYS, badgeLabel, scopeBadge } from
 export type { ScopeBadge, ScopeBadgeKind, ScopeBadgeOptions, ScopeBadgeTone } from "./badge";
 
 export { applyLogFilter, logFilterFor } from "./logs";
-export type { LegacyLogProjectsHolder, ProjectLogFilter } from "./logs";
+export type { LogProjectRef, ProjectLogFilter } from "./logs";
 
 export {
   DEFAULT_PROJECT_PARAM,
@@ -46,3 +46,75 @@ export {
 
 export { createProjectsClient } from "./client";
 export type { ProjectsClient, ProjectsIo, ProjectsVersioned } from "./client";
+
+export {
+  DEFAULT_PROJECT_MESSAGES,
+  RETIRED_TERMS,
+  createProjectsText,
+  formatMessage,
+} from "./messages";
+export type { MessageParams, MessageRef, ProjectMessageKey, ProjectsText } from "./messages";
+
+export {
+  ABILITY_TABLE,
+  BLOCKED_KEYS,
+  PROJECT_ACTIONS,
+  STATUS_PROFILES,
+  abilityProfile,
+  configDirLabel,
+  isArchived,
+  isConfigWritable,
+  projectAbilities,
+  statusInfo,
+} from "./status";
+export type { AbilityOptions, AbilityProfile, ProjectAbility, ProjectAction, ProjectStateInput, StatusInfo, StatusTone } from "./status";
+
+export { normalizeSpace, sameSpace, spaceLabel, spaceParam, spaceQuery, toSpaceRef } from "./space";
+export type { SpaceId, SpaceKind, SpaceLabel } from "./space";
+
+export {
+  COPY_ACTION_CHOICES,
+  COPY_REASON_REQUESTED,
+  SLUG_PATTERN,
+  actionChoicesFor,
+  buildApplyRequest,
+  canSubmit,
+  copyItemKey,
+  defaultActionFor,
+  firstUsableRequested,
+  initialSelections,
+  itemsNeedingChoice,
+  mergeReplan,
+  resultRow,
+  selectAction,
+  skipWarnings,
+  suggestRename,
+  summarizeResult,
+  summarizeSelections,
+  summaryMessage,
+  targetStateLabel,
+  validateNewId,
+} from "./copy";
+export type {
+  BuildApplyOptions,
+  CopyActionChoice,
+  CopySelection,
+  CopySelections,
+  NewIdProblem,
+  ResultRow,
+  ResultRowKind,
+  ResultSummary,
+  SelectionSummary,
+  SkipWarning,
+  SubmitState,
+} from "./copy";
+
+export { folderCapabilities, folderCheckData, folderCheckOutcome, folderErrorOutcome, folderPickOutcome } from "./folders";
+export type {
+  ErrorLike,
+  FolderAdapterOptions,
+  PickerCapabilities,
+  PickerCheckOutcome,
+  PickerFolderCheck,
+  PickerPickOutcome,
+} from "./folders";

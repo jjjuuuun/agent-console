@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Banner, Button, Tag } from "@agent-console/ui";
-import { logFilterFor, readProjectParam, type LegacyLogProjectsHolder } from "@agent-console/projects";
+import { logFilterFor, readProjectParam } from "@agent-console/projects";
 import { CURRENT_PROJECT_PARAM } from "../../app/projectScope";
 import { useStorage } from "../../app/StorageContext";
 import { ROUTE_ROLES, routePath } from "../library";
@@ -31,7 +31,7 @@ export function LogProjectNote({ filterParam }: { filterParam: string }) {
   const storage = useStorage();
   const location = useLocation();
   const navigate = useNavigate();
-  const info = logFilterFor((p.currentProject ?? null) as LegacyLogProjectsHolder | null);
+  const info = logFilterFor(p.currentProject ?? null);
   const params = new URLSearchParams(location.search);
   const urlProject = params.get(filterParam);
   const active = p.enabled && p.current !== null;
@@ -71,7 +71,7 @@ export function LogProjectNote({ filterParam }: { filterParam: string }) {
 
   if (!active || p.currentProject === undefined) return null;
   const name = p.currentProject.name;
-  if (!info.linked) {
+  if (info.filter === undefined) {
     return (
       <Banner tone="info" actions={<Button size="sm" onClick={() => void navigate(`${routePath(ROUTE_ROLES.settings)}${SETTINGS_PROJECTS_HASH}`)}>{t.logs.connect}</Button>}>
         {t.logs.notConnected(name)}

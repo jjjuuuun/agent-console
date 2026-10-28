@@ -5,12 +5,13 @@
 - 보기 규칙: `isVisible`·`filterByScope`·`groupByScope`(공용 + 이 프로젝트 / 이 프로젝트만 / 공용만)
 - 새 정의의 기본 범위: `defaultScopeFor`(서버 설정 `projects.new_definition_scope` 데이터를 받는다)
 - 범위 배지: `scopeBadge`(문구 키와 톤만 돌려준다), 기본 문구 `DEFAULT_BADGE_MESSAGES`
-- 로그 필터: `logFilterFor`(프로젝트의 `log_projects` → 로그 필터 `project`)
+- 로그 필터: `logFilterFor`(프로젝트 id → 로그 필터 `project=<id>`, `LogSessionSummary.project_id` 기준)
 - 현재 프로젝트: `createCurrentProjectStore`(주소 `?project=`와 브라우저 저장, 저장소·주소는 주입)
 - 옮기기 계획: `mergeMovePlans`·`selectMoves`·`moveTargetOfIssue`
-- REST: `createProjectsClient`(전송은 주입, `@agent-console/api-client`의 `RestIo`가 맞는다)
+- 프로젝트 2(5.7R.33m): 상태 문구·색조 `statusInfo`, 상태별 할 수 있는 일과 막힌 이유 `projectAbilities`(표는 데이터), 공간 칩·질의 `spaceLabel`·`spaceParam`, 복사 계획 도우미(`initialSelections`·`canSubmit`·`skipWarnings`·`buildApplyRequest`·`summarizeResult` …), 폴더 선택 어댑터(`folderCheckOutcome`·`folderPickOutcome`: 계약 → `@agent-console/folder-picker`가 받는 모양), 문구 표 `DEFAULT_PROJECT_MESSAGES`·`createProjectsText`
+- (deprecated, 33p·33t에서 삭제) REST: `createProjectsClient`(전송은 주입, `@agent-console/api-client`의 `RestIo`가 맞는다)
 
-의존은 `@agent-console/contracts`뿐이다(타입과, 값은 상수 진입점 `@agent-console/contracts/constants`의 이슈 코드·제안 id만). 종류 이름·프로젝트 목록·문구를 코드에 고정하지 않는다.
+의존은 `@agent-console/contracts`뿐이다(타입과, 값은 상수 진입점 `@agent-console/contracts/constants`의 이슈 코드·제안 id·상태·복사 동작 상수만). 종류 이름·프로젝트 목록·문구를 코드에 고정하지 않는다.
 
 ## 설치
 저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.

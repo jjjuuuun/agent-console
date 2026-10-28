@@ -140,7 +140,9 @@ class ProjectsModule:
         working_directory = (wd if wd.is_absolute() else base_dir / wd).absolute()
 
         def folders() -> ProjectFolderSet:
-            return project_folders(repository.list_projects(), working_directory=working_directory)
+            return project_folders(
+                repository.list_projects(), base_dir=base_dir, working_directory=working_directory
+            )
 
         ctx.provide(PROJECTS_LOOKUP, repository)
         ctx.provide(PROJECT_FOLDERS, folders)

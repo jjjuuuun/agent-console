@@ -1,12 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { WorkspaceSettings } from "@agent-console/contracts";
+import { CONTRACTS_VERSION, type WorkspaceSettings } from "@agent-console/contracts";
 import { ApiError, NETWORK_ERROR_CODE } from "@agent-console/api-client";
 import { createFakeClients, pendingInteraction, versionConflict } from "../testing/fakes";
 import type { ApiClients } from "./apiClients";
 import { AppRoot } from "./AppRoot";
 import { BootError } from "./boot";
+import { BOOT_RETRY } from "./bootRetry";
 import { createAppQueryClient } from "./queries";
 import { createSafeStorage } from "./storage";
 import { buildAppRoutes, preloadScreens } from "../shell/routes";
@@ -43,13 +44,53 @@ describe("부팅", () => {
       .mockRejectedValueOnce(new BootError("http://127.0.0.1:8765", new ApiError(0, { code: NETWORK_ERROR_CODE, message: "Failed to fetch" }), true))
       .mockResolvedValue(clients);
     const router = createMemoryRouter(buildAppRoutes(), { initialEntries: ["/settings"] });
-    render(<AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} />);
+    render(<AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ ...BOOT_RETRY, giveUpMs: 0 }} />);
     expect(await screen.findByText("서버에 연결할 수 없습니다")).toBeTruthy();
     expect(screen.getAllByText(/http:\/\/127\.0\.0\.1:8765/).length).toBeGreaterThan(0);
     expect(screen.getByText(/허용 출처/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(await screen.findByRole("heading", { name: "설정", level: 1 })).toBeTruthy();
     expect(createClients).toHaveBeenCalledTimes(2);
+  });
+
+  it("서버가 켜지는 중이면 오류 대신 준비 중을 보이고, 자동으로 다시 시도해 저절로 열린다(새로고침 불필요)", async () => {
+    const { clients } = createFakeClients();
+    const refused = () => new BootError("http://127.0.0.1:8765", new ApiError(0, { code: NETWORK_ERROR_CODE, message: "Failed to fetch" }), false);
+    const notReady = () => new BootError("http://127.0.0.1:8765", new ApiError(503, { code: "not_ready", message: "not ready" }), false);
+    const createClients = vi.fn().mockRejectedValueOnce(refused()).mockRejectedValueOnce(notReady()).mockResolvedValue(clients);
+    const onReload = vi.fn();
+    const router = createMemoryRouter(buildAppRoutes(), { initialEntries: ["/settings"] });
+    render(
+      <AppRoot
+        createClients={createClients}
+        router={router}
+        storage={createSafeStorage(null)}
+        onReload={onReload}
+        queryClient={createAppQueryClient({ retry: false })}
+        bootRetry={{ initialMs: 10, maxMs: 20, factor: 2, giveUpMs: 10_000 }}
+      />,
+    );
+    expect(await screen.findByText(/서버가 켜지기를 기다리는 중/)).toBeTruthy();
+    expect(screen.queryByText("서버에 연결할 수 없습니다")).toBeNull();
+    expect(await screen.findByText(/서버를 준비하는 중/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "새로고침" })).toBeNull();
+    expect(await screen.findByRole("heading", { name: "설정", level: 1 })).toBeTruthy();
+    expect(createClients).toHaveBeenCalledTimes(3);
+    expect(onReload).not.toHaveBeenCalled();
+  });
+
+  it("오래 실패하면 자동 재시도를 멈추고 [다시 시도]와 [새로고침]을 보인다", async () => {
+    const refused = new BootError("http://127.0.0.1:8765", new ApiError(0, { code: NETWORK_ERROR_CODE, message: "Failed to fetch" }), false);
+    const createClients = vi.fn().mockRejectedValue(refused);
+    const onReload = vi.fn();
+    const router = createMemoryRouter(buildAppRoutes(), { initialEntries: ["/settings"] });
+    render(
+      <AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} onReload={onReload} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ initialMs: 5, maxMs: 5, factor: 1, giveUpMs: 40 }} />,
+    );
+    expect(await screen.findByText("서버에 연결할 수 없습니다")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "새로고침" }));
+    expect(onReload).toHaveBeenCalled();
+    expect(createClients.mock.calls.length).toBeGreaterThan(1);
   });
 
   it("인증이 거부되면 전역 배너와 새로고침 버튼을 보여 준다", async () => {
@@ -77,7 +118,28 @@ describe("부팅", () => {
     const { clients } = createFakeClients();
     clients.meta.contractsVersion = "0.0.0-other";
     mount(clients, "/chat");
-    expect(await screen.findByText(/버전이 다릅니다/)).toBeTruthy();
+    const banner = await screen.findByLabelText("버전 불일치");
+    // 두 값과 조치가 보이고, 서버가 낡았으면 새로고침 버튼은 두지 않는다(눌러도 효과 없음, 5.7R.36)
+    expect(banner.textContent).toContain(`서버 0.0.0-other · 웹 ${CONTRACTS_VERSION}`);
+    expect(banner.textContent).toContain("uv sync --all-packages");
+    expect(within(banner).queryByRole("button", { name: "새로고침" })).toBeNull();
+  });
+
+  it("웹이 낡았으면 새로고침 버튼을 둔다", async () => {
+    const { clients } = createFakeClients();
+    clients.meta.contractsVersion = "99.0.0";
+    mount(clients, "/chat");
+    const banner = await screen.findByLabelText("버전 불일치");
+    expect(within(banner).getByRole("button", { name: "새로고침" })).toBeTruthy();
+  });
+
+  it("패치 차이만 있으면 배너를 띄우지 않는다", async () => {
+    const { clients } = createFakeClients();
+    const [major, minor, patch] = CONTRACTS_VERSION.split(".").map(Number);
+    clients.meta.contractsVersion = `${major}.${minor}.${(patch ?? 0) + 1}`;
+    mount(clients, "/chat");
+    await screen.findByRole("navigation", { name: "주 메뉴" });
+    expect(screen.queryByLabelText("버전 불일치")).toBeNull();
   });
 });
 

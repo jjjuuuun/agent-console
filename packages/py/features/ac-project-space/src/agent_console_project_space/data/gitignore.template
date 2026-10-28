@@ -1,0 +1,14 @@
+# Agent Console가 프로젝트 폴더에 처음 만든 기본 틀입니다. 줄을 지우거나 더해도 됩니다.
+# 줄 앞의 /는 이 폴더(.agent-console/) 바로 아래만 가리킵니다(구성 이름과 겹치지 않게).
+# 실행하면서 생기는 캐시, 임시 파일, 기록 DB 백업
+/.state/
+# 프로젝트 메모리(이진 파일)
+/memory.sqlite3
+/memory.sqlite3-*
+# 프로젝트 기록 DB(대화, 실행, 이벤트, 사본 버전)
+/records.sqlite3
+/records.sqlite3-*
+# 백엔드 세션 기록 보관 사본
+/sessions/
+# 옛 버전이 프로젝트 안에 만들었을 수 있는 자격 폴더 - 커밋되지 않게
+/claude/

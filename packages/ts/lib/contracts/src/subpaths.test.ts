@@ -31,6 +31,8 @@ import type {
   ProjectView,
 } from "@agent-console/contracts/projects";
 import type { SpaceRef } from "@agent-console/contracts/common";
+import type { ConversationSessions, PostMessageRequest, QueuedMessage } from "@agent-console/contracts/chat";
+import type { Run } from "@agent-console/contracts/runs";
 import type { MemoryCopyRequest } from "@agent-console/contracts/memory";
 import type { UsageReport } from "@agent-console/contracts/usage";
 
@@ -179,7 +181,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("프로젝트 2.0(0.11.0, 5.7R.33c)·3.0(0.12.0, 5.7R.33c2): 폴더·이슈 코드", () => {
-    expect(projects.CONTRACT_VERSION).toBe("3.0.0");
+    expect(projects.CONTRACT_VERSION).toMatch(/^3\./);
     expect(modulesOf["projects"]).toEqual(
       expect.arrayContaining(["ProjectView", "FolderCheck", "FolderListing", "AssignProjectRequest", "ProjectCounts"]),
     );
@@ -223,7 +225,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(modulesOf["common"]).toContain("SpaceRef");
     expect(modulesOf["memory"]).toEqual(expect.arrayContaining(["MemoryCopyRequest", "MemoryCopyResult"]));
     expect(memory.CONTRACT_VERSION).toBe("1.1.0");
-    expect(CONTRACT_VERSIONS.common).toBe("1.6.0");
+    expect(CONTRACT_VERSIONS.common).toMatch(/^1\.([6-9]|\d\d)\./);
     expectTypeOf<ProjectNotImportedDetails["in_library"]>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<ProjectView["config_writable"]>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<ProjectView["kinds"]>().toEqualTypeOf<string[] | undefined>();
@@ -254,5 +256,56 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
       expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)[code]).toBe(status);
     }
     expect(KNOWN_ISSUE_CODES.PROJECT_MEMORY_NETWORK_FS).toBe("project.memory_network_fs");
+  });
+
+  it("0.12.1(5.7R.33c3): 기록 공간·폴더 확인 보강 — 더하기만, 새 필드는 선택", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.12.1");
+    expect(projects.CONTRACT_VERSION).toBe("3.1.0");
+    expect(chat.CONTRACT_VERSION).toBe("1.2.0");
+    expect(CONTRACT_VERSIONS.runs).toBe("1.5.0");
+    expect(CONTRACT_VERSIONS.common).toBe("1.7.0");
+    expect(modulesOf["projects"]).toEqual(
+      expect.arrayContaining([
+        "ExistingProjectProbe",
+        "ManifestResetRequest",
+        "ManifestResetResult",
+        "ProjectRecordsUnavailableDetails",
+        "RecordsMoveRequest",
+        "RecordsMoveResult",
+      ]),
+    );
+    expect(modulesOf["chat"]).toEqual(expect.arrayContaining(["ConversationSessions", "SessionStatus"]));
+    expectTypeOf<ProjectView["records_state"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<ProjectView["records_writable"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<ProjectView["config_dir"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<FolderCheck["suggested_id"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<NonNullable<FolderCheck["existing"]>["definitions"]>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<Run["host_id"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<PostMessageRequest["on_missing_session"]>().toEqualTypeOf<"fail" | "fresh" | undefined>();
+    expectTypeOf<QueuedMessage["held_reason"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<ConversationSessions["continuable"]>().toEqualTypeOf<boolean>();
+    expect(constants.KNOWN_PROJECT_RECORDS_STATES.NEWER).toBe("newer");
+    expect(constants.KNOWN_RECORDS_UNAVAILABLE_REASONS.LINK_DISABLED).toBe("link_disabled");
+    expect(constants.KNOWN_EXISTING_PROJECT_STATES.INVALID).toBe("invalid");
+    expect(constants.KNOWN_SESSION_STATES.NOT_APPLICABLE).toBe("not_applicable");
+    expect(constants.KNOWN_QUEUE_HOLD_REASONS.OTHER_HOST).toBe("other_host");
+    const errors: Record<string, string> = {
+      PROJECT_RECORDS_UNAVAILABLE: "project.records_unavailable",
+      CHAT_SESSION_UNAVAILABLE: "chat.session_unavailable",
+    };
+    for (const [name, code] of Object.entries(errors)) {
+      expect((KNOWN_ISSUE_CODES as Record<string, string>)[name]).toBe(code);
+      expect((ERROR_CODES as Record<string, string>)[name]).toBe(code);
+      expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)[code]).toBe(409);
+    }
+    const info: Record<string, string> = {
+      PROJECT_NETWORK_FS: "project.network_fs",
+      PROJECT_GITIGNORE_OUTDATED: "project.gitignore_outdated",
+      RUN_OTHER_HOST: "run.other_host",
+    };
+    for (const [name, code] of Object.entries(info)) {
+      expect((KNOWN_ISSUE_CODES as Record<string, string>)[name]).toBe(code);
+      expect((ERROR_CODES as Record<string, string>)[name]).toBeUndefined();
+    }
   });
 });

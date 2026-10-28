@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, useShortcuts, useToast } from "@agent-console/ui";
+import { useShortcuts, useToast } from "@agent-console/ui";
 import { SessionList, focusLogControl, hasActiveFilter, sessionColumns } from "@agent-console/log-view";
 import { LinkPart, LINK_PART_IDS } from "../../modules";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -9,7 +9,9 @@ import { useStorage } from "../../app/StorageContext";
 import { Link } from "react-router";
 import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
-import { EmptyNoLogs, EmptyNoMatch, FirstUseCard, NewEventsBanner, OtherSourcesHint } from "./LogsEmpty";
+import { EmptyNoLogs, EmptyNoMatch, FirstUseCard, freshNotice, useOtherSourcesNotice } from "./LogsEmpty";
+import type { ActionMenuEntry } from "./ActionMenu";
+import type { LogNotice } from "./NoticeBar";
 import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu } from "./LogMenu";
 import { LogsPageFrame } from "./LogsPageFrame";
@@ -144,6 +146,12 @@ export function SessionsPage() {
     );
   }
 
+  const otherSources = useOtherSourcesNotice(sources.data, list.length > 0);
+  const notices: LogNotice[] = [];
+  if (newCount > 0) notices.push({ ...freshNotice("new-events", t.sessions.newEvents(newCount)), action: { label: t.sessions.reloadBanner, onClick: refresh } });
+  if (otherSources !== null) notices.push(otherSources);
+  const headerMenu: ActionMenuEntry[] = anyEnabled ? [{ kind: "item", id: "scan", label: t.header.menu.scan, hint: "Shift+R", onSelect: () => void scan.run() }] : [];
+
   const menuItems = (id: string) => [
     { id: "open", label: t.sessions.openSession, onSelect: () => open(id) },
     { id: "copy", label: t.sessions.copyId, onSelect: () => copyId(id) },
@@ -156,15 +164,10 @@ export function SessionsPage() {
     <LogsPageFrame
       tab="sessions"
       status={<span className="app-muted" role="status">{scan.scanning ? t.scanning : q.isFetching && !q.isPending ? t.refreshing : ""}</span>}
-      actions={
-        <>
-          <Button size="sm" onClick={refresh}>{t.refresh} ⟳</Button>
-          {anyEnabled ? <Button size="sm" loading={scan.scanning} onClick={() => void scan.run()}>{t.scan}</Button> : null}
-        </>
-      }
+      onRefresh={refresh}
+      menu={headerMenu}
+      notices={notices}
     >
-      {list.length > 0 ? <OtherSourcesHint sources={sources.data} /> : null}
-      {newCount > 0 ? <NewEventsBanner text={t.sessions.newEvents(newCount)} action={t.sessions.reloadBanner} onAction={refresh} /> : null}
       <div className="logs-toolbar">
         <LogFilters
           value={url.filter}

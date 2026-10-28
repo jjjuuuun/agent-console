@@ -65,7 +65,8 @@
 .mem-taglist .ac-choice > span { display: flex; gap: var(--ac-space-2); min-width: 0; }
 
 /* 상세 */
-.mem-detail { container-type: size; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
+/* 정보 영역 상한 = 상세 칸 높이 − 예약(머리 48 + 편집기 최소 200 + 상태 줄 28 + 띠 여유 24). 편집기 최소 높이를 지키는 한 정보 영역이 내용만큼 자란다(5.7R.37). */
+.mem-detail { --mem-meta-reserve: 300px; container-type: size; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
 .mem-detail-head { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; min-height: 48px; padding: 0 var(--ac-space-3); background: var(--ac-surface-2); border-bottom: 1px solid var(--ac-border); }
 .mem-detail-title { flex: 1 1 0; min-width: 0; margin: 0; font-size: var(--ac-text-md); line-height: var(--ac-lh-md); font-weight: 600; }
 .mem-detail-actions { display: flex; align-items: center; gap: var(--ac-space-1); flex: none; }
@@ -75,7 +76,7 @@
 .mem-bands { display: flex; flex-direction: column; gap: var(--ac-space-1); flex: none; }
 .mem-bands:empty { display: none; }
 .mem-band { border-radius: 0; }
-.mem-meta-scroll { flex: none; min-height: 0; border-bottom: 1px solid var(--ac-border); max-height: max(160px, 45cqh); overflow-y: scroll; scrollbar-gutter: stable; }
+.mem-meta-scroll { flex: none; min-height: 0; border-bottom: 1px solid var(--ac-border); max-height: max(160px, calc(100cqh - var(--mem-meta-reserve))); overflow-y: scroll; scrollbar-gutter: stable; }
 .mem-meta { padding: 0 var(--ac-space-3); }
 /* 스크롤 단서(screen-memory §5.2): 넘치고 끝이 아닐 때만 하단 그림자, 공간은 차지하지 않는다 */
 .mem-scroll-cue { position: sticky; bottom: 0; height: var(--ac-scroll-cue-height); margin-top: calc(var(--ac-scroll-cue-height) * -1); background: linear-gradient(to top, var(--ac-surface-1), transparent); pointer-events: none; }

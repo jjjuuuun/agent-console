@@ -33,9 +33,16 @@ export function countSectionChanges(keys: readonly string[], base: unknown, draf
   return n;
 }
 
-/** 주소 해시(`#logs?source=x`·`#logs/taxonomy`)에서 섹션 id만 뽑는다. 없으면 빈 문자열. */
+/**
+ * 섹션이 쪼개지기 전 주소(`해시 경로` → 지금 섹션 id). 저장해 둔 북마크·옛 링크가 계속 열리게 한다.
+ * 5.7R.32: 분류 체계가 "로그 출처" 안의 블록에서 "로그 분류" 섹션이 됐다.
+ */
+export const LEGACY_SECTION_HASHES: Readonly<Record<string, string>> = { "logs/taxonomy": "log-taxonomy" };
+
+/** 주소 해시(`#logs?source=x`·옛 `#logs/taxonomy`)에서 섹션 id만 뽑는다. 없으면 빈 문자열. */
 export function sectionIdFromHash(hash: string): string {
-  return (hash.replace(/^#/, "").split("?")[0] ?? "").split("/")[0] ?? "";
+  const path = hash.replace(/^#/, "").split("?")[0] ?? "";
+  return LEGACY_SECTION_HASHES[path] ?? path.split("/")[0] ?? "";
 }
 
 /** 섹션 목록을 `group` 첫 등장 순서대로 묶는다(묶음 제목 목록은 데이터에서 나온다). */

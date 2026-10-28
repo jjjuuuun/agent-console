@@ -1,13 +1,14 @@
 [project]
 name = "agent-console-projects"
-version = "0.1.0"
-description = "프로젝트 범위 순수 규칙: 보이는지, 범위 검사, 옮기기 계획, 로그 묶음 제안, 프로젝트 층 값"
+version = "0.2.0"
+description = "프로젝트 순수 규칙: 폴더 등록 충돌·상태, 등록부+매니페스트 합치기, 공간 사이 복사 계획, 경로 지킴(x-path), 옛 데이터 해석, 프로젝트 층 값"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-contracts>=0.12,<0.13",
+    "agent-console-local-folders>=0.1,<0.2",
 ]
 
 [dependency-groups]

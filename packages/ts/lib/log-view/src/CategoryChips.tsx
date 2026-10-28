@@ -17,7 +17,7 @@ export interface CategoryChipsProps {
   slotFor: SlotFor;
   selected: readonly string[];
   onChange: (next: string[]) => void;
-  /** 이 개수를 넘으면 나머지는 [더 보기]에 둔다. */
+  /** 이 개수를 넘으면 나머지는 [더 보기 ▾ (+n)]에 둔다(선택된 칩은 접혀 있어도 보인다). */
   maxInline?: number;
   messages?: DeepPartial<LogViewMessages>;
   ariaLabel?: string;
@@ -32,7 +32,9 @@ export function CategoryChips(props: CategoryChipsProps) {
   const m = useMemo(() => mergeMessages(props.messages), [props.messages]);
   const [showAll, setShowAll] = useState(false);
   const ordered = useMemo(() => orderCategories(items, taxonomy), [items, taxonomy]);
-  const visible = showAll ? ordered : ordered.slice(0, maxInline);
+  // 접힌 동안에도 선택된 칩은 숨기지 않는다(고른 필터가 보이지 않는 일이 없게).
+  const visible = showAll ? ordered : ordered.filter((it, i) => i < maxInline || selected.includes(it.id));
+  const hiddenCount = ordered.length - visible.length;
   const root = useRef<HTMLDivElement>(null);
 
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
@@ -71,7 +73,7 @@ export function CategoryChips(props: CategoryChipsProps) {
       })}
       {ordered.length > maxInline ? (
         <button type="button" className="ac-lv-linkbtn" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>
-          {showAll ? m.collapseGroup : `${m.more} ▾`}
+          {showAll ? m.collapseGroup : `${m.more} ▾${hiddenCount > 0 ? ` (+${hiddenCount})` : ""}`}
         </button>
       ) : null}
     </div>

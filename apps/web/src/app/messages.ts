@@ -10,6 +10,9 @@ import { objectParticle } from "../lib/korean";
 export const messages = {
   app: { name: "Agent Console", mainLabel: "본문", booting: "서버에 연결하는 중…", skipToMain: "본문으로 건너뛰기" },
   boot: {
+    /** 서버가 켜지는 중 자동 재시도 상태: 연결되면 저절로 열린다 */
+    preparing: "서버를 준비하는 중입니다… 준비되면 자동으로 열립니다.",
+    waiting: "서버가 켜지기를 기다리는 중입니다… 켜지면 자동으로 연결합니다.",
     failedTitle: "서버에 연결할 수 없습니다",
     failedBody: (address: string) => `서버(${address})가 실행 중인지 확인하세요. 서버는 \`agent-console serve\`로 시작합니다.`,
     corsHint: "서버 설정의 허용 출처에 이 주소가 있어야 합니다.",
@@ -18,7 +21,11 @@ export const messages = {
     authExpired: "인증이 만료되었습니다.",
     reload: "새로고침",
     authRegion: "인증 오류",
-    versionMismatch: "서버와 웹의 버전이 다릅니다. 새로고침하세요.",
+    /** 계약 버전 불일치 배너(5.7R.36): 두 값 + 낡은 쪽에 맞는 조치 */
+    versionMismatch: (server: string, web: string) => `서버와 웹의 계약 버전이 맞지 않습니다 — 서버 ${server} · 웹 ${web}.`,
+    versionFixServer: "서버가 웹보다 오래되었습니다. 서버를 업데이트하고 다시 시작하세요(소스에서 실행 중이면 `uv sync --all-packages` 뒤 다시 시작).",
+    versionFixWeb: "웹이 서버보다 오래되었습니다. 새로고침하세요. 계속 뜨면 웹을 다시 빌드하세요(`pnpm --filter @agent-console/web build`).",
+    versionFixUnknown: "새로고침해도 계속 뜨면 서버를 다시 시작하고(소스에서 실행 중이면 `uv sync --all-packages` 뒤), 웹을 다시 빌드하세요.",
     versionRegion: "버전 불일치",
   },
   /** 실행 백엔드 해결 카드(`BackendChooserCard`) */
@@ -193,6 +200,9 @@ export const messages = {
     logsErrorsOnly: "오류만 보기 켜고 끄기",
     logsToggleFlow: "흐름 패널 접기/펴기",
     logsFlowView: "레인/위임 흐름 전환",
+    logsToggleView: "이벤트/구조도 보기 전환",
+    logsSessionInfo: "세션 정보 열기",
+    logsViewMenu: "[보기] 메뉴 열기",
     logsToggleDetail: "상세 패널 접기/펴기",
     logsHandoffToggle: "이벤트/handoff 보기 전환",
     logsEditToggle: "대시보드 편집 모드",
@@ -426,6 +436,7 @@ export const messages = {
       modules: "이 서버에 설치된 기능과 연동의 상태입니다. 읽기 전용이며, 켜고 끄는 일은 서버 설치자가 설정 파일 또는 서버 실행 옵션으로 합니다.",
       server: "이 항목은 서버 설정 파일에서만 바꿉니다. 웹에서 바꾸면 로컬 전용 원칙이 깨질 수 있기 때문입니다.",
       versionsUi: "버전 비교 화면에서 목록 항목(노드·연결 등)을 부를 이름을 어떤 키에서 찾을지 정합니다. 비워 두면 기본 목록을 씁니다.",
+      logTaxonomy: "범주 이름·설명·보임·색·톤을 정합니다. 수집된 로그에는 영향이 없고 표시만 바뀝니다.",
       architecture: "구조도가 칸과 연결을 그리는 규칙(프로필)을 고르고 고칩니다.",
       memory: "에이전트와 사람이 함께 쓰는 메모리의 범위 종류, 정리 규칙, 비밀 처리를 정합니다.",
       versions: "설정을 저장할 때마다 버전이 쌓입니다. 이전 버전과 비교하고 되돌릴 수 있습니다.",
@@ -440,6 +451,7 @@ export const messages = {
       interaction: "상호작용",
       usage: "사용량",
       logs: "로그 출처",
+      logTaxonomy: "로그 분류",
       architecture: "구조도",
       memory: "메모리",
       shortcuts: "단축키",

@@ -20,6 +20,8 @@ import { createRunsClient, type RunsClient } from "./clients/runs";
 import { createSettingsClient, type SettingsClient } from "./clients/settings";
 import { createUsageClient, type UsageClient } from "./clients/usage";
 import { createVersionsClient, type VersionsClient } from "./clients/versions";
+import { createProjectsClient, type ProjectsClient } from "./clients/projects";
+import { withSpace } from "./io";
 import { createRestIo, type RestClientOptions } from "./transport";
 
 export type { FetchLike, RestClientOptions } from "./transport";
@@ -50,7 +52,8 @@ export interface RestClient
     LoginClient,
     LogsClient,
     ArchitectureClient,
-    MemoryClient {}
+    MemoryClient,
+    ProjectsClient {}
 
 /**
  * REST 클라이언트를 만든다.
@@ -75,6 +78,30 @@ export function createRestClient(options: RestClientOptions): RestClient {
     ...createLoginClient(io),
     ...createLogsClient(io),
     ...createArchitectureClient(io),
+    ...createMemoryClient(io),
+    ...createProjectsClient(io),
+  };
+}
+
+/**
+ * 한 공간(라이브러리 또는 프로젝트 폴더의 사본 저장소)을 보는 정의·메모리 클라이언트. 모든 요청에 `?project=<id>`가 붙는다.
+ * `project`가 null·undefined면 공간 인자 없이 `createRestClient`와 같은 주소로 요청한다(라이브러리).
+ * 프로젝트 모듈이 없는 서버에는 `project`를 주지 않는다.
+ */
+export interface SpaceRestClient extends AgentsClient, GraphsClient, ResourcesClient, VersionsClient, MemoryClient {}
+
+/**
+ * 공간 하나의 정의·메모리 클라이언트를 만든다.
+ * @param options 서버 주소·토큰·fetch 주입
+ * @param project 프로젝트 id(`SpaceRef.project_id`). null = 라이브러리
+ */
+export function createSpaceRestClient(options: RestClientOptions, project: string | null | undefined): SpaceRestClient {
+  const io = withSpace(createRestIo(options), project);
+  return {
+    ...createAgentsClient(io),
+    ...createGraphsClient(io),
+    ...createResourcesClient(io),
+    ...createVersionsClient(io),
     ...createMemoryClient(io),
   };
 }

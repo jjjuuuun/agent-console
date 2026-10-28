@@ -66,27 +66,45 @@ function mount(path: string, roles: string[], rest: Record<string, unknown> = {}
   return { clients, ws, mocks, router };
 }
 const openArch = async () => {
-  fireEvent.click(await screen.findByRole("button", { name: "구조도" }, LONG));
+  fireEvent.click(await screen.findByRole("tab", { name: "구조도" }, LONG));
   return screen.findByRole("region", { name: "구조도" }, LONG);
 };
 
-describe("세션 상세 [구조도] 세그먼트", () => {
-  it("역할 logs:architecture가 없으면 세그먼트가 없고 구조도 API를 부르지 않는다", async () => {
+describe("세션 상세 [구조도] 뷰 탭", () => {
+  it("역할 logs:architecture가 없으면 뷰 탭 줄이 없고 구조도 API를 부르지 않는다", async () => {
     const { mocks } = mount("/logs/sessions/ses-1", ["logs", "logs:trace"]);
-    await screen.findByRole("group", { name: "흐름 보기" }, LONG);
-    expect(screen.queryByRole("button", { name: "구조도" })).toBeNull();
+    await screen.findByRole("slider", {}, LONG);
+    expect(screen.queryByRole("tablist", { name: "세션 보기" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "구조도" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "구조도를 새 창으로 열기" })).toBeNull();
     expect(mocks["getLogArchitecture"]).not.toHaveBeenCalled();
     expect(mocks["listArchitectureProfiles"]).not.toHaveBeenCalled();
   });
 
-  it("세그먼트를 처음 열기 전에는 질의하지 않고, 열면 범위(세션·레인)로 질의한다", async () => {
+  it("뷰 탭 [구조도]를 처음 고르기 전에는 질의하지 않고, 고르면 범위(세션·레인)로 질의한다", async () => {
     const { mocks } = mount("/logs/sessions/ses-1", ["logs", "logs:architecture"]);
-    const btn = await screen.findByRole("button", { name: "구조도" }, LONG);
+    const btn = await screen.findByRole("tab", { name: "구조도" }, LONG);
     expect(mocks["getLogArchitecture"]).not.toHaveBeenCalled();
     fireEvent.click(btn);
     await screen.findByRole("region", { name: "구조도" }, LONG);
     expect(mocks["getLogArchitecture"]).toHaveBeenCalledTimes(1);
     expect(mocks["getLogArchitecture"]!.mock.calls[0]![0]).toMatchObject({ session: "ses-1" });
+  });
+
+  it("뷰 탭을 바꿔도 구조도 칩과 표 필터가 유지되고, ?view=architecture는 새로 고침해도 구조도 뷰를 연다(AC-4)", async () => {
+    const { router } = mount("/logs/sessions/ses-1?view=architecture", ["logs", "logs:architecture"]);
+    const panel = await screen.findByRole("region", { name: "구조도" }, LONG);
+    expect(screen.getByRole("tab", { name: "구조도" }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(await within(panel).findByRole("button", { name: /^칸가/ }, LONG));
+    await screen.findByText("구조도: 칸가", {}, LONG);
+    fireEvent.click(screen.getByRole("tab", { name: "이벤트" }));
+    await waitFor(() => expect(router.state.location.search).not.toContain("view="), LONG);
+    expect(screen.queryByRole("region", { name: "구조도" })).toBeNull(); // 그림은 이벤트 뷰에서 그리지 않는다
+    expect(screen.getByText("구조도: 칸가")).toBeTruthy(); // 컨트롤러는 그대로라 칩이 남는다
+    fireEvent.click(screen.getByRole("tab", { name: "구조도" }));
+    await waitFor(() => expect(router.state.location.search).toContain("view=architecture"), LONG);
+    await screen.findByRole("region", { name: "구조도" }, LONG);
+    expect(screen.getByText("구조도: 칸가")).toBeTruthy();
   });
 
   it("목록의 칸 행 수 = 뷰의 칸 수, 연결 행 수 = 연결 수 (이름은 데이터에서만)", async () => {
@@ -165,7 +183,7 @@ describe("세션 상세 [구조도] 세그먼트", () => {
     expect(within(await screen.findByRole("navigation", { name: "구조도 위치" })).queryByRole("button")).toBeNull();
   });
 
-  it("빈 상태: 규칙 없음(A)은 안내 블록, 상한 초과(D)는 서버 수치를 쓰며 레인 세그먼트는 그대로 쓸 수 있다", async () => {
+  it("빈 상태: 규칙 없음(A)은 안내 블록, 상한 초과(D)는 서버 수치를 쓰며 이벤트 뷰로 돌아갈 수 있다", async () => {
     mount("/logs/sessions/ses-1", ["logs", "logs:architecture"], {
       getLogArchitecture: async () => {
         throw new ApiError(404, { code: ERROR_CODES.ARCHITECTURE_PROFILE_NOT_FOUND, message: "프로필 없음" });
@@ -174,7 +192,7 @@ describe("세션 상세 [구조도] 세그먼트", () => {
     await openArch();
     await screen.findByText("구조도 규칙이 없습니다", {}, LONG);
     expect(screen.getByRole("button", { name: "설정 열기" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "레인" }));
+    fireEvent.click(screen.getByRole("tab", { name: "이벤트" }));
     expect(screen.queryByText("구조도 규칙이 없습니다")).toBeNull();
     cleanup();
     mount("/logs/sessions/ses-1", ["logs", "logs:architecture"], {

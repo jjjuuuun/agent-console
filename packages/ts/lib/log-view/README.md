@@ -43,6 +43,7 @@ import "@agent-console/log-view/styles.css";
 | 영역 | 이름 |
 | --- | --- |
 | 컴포넌트 | `LogEventTable` `LogFilterBar` `CategoryChips` `LogEventDetail` `SessionList` `PlaybackBar` `LaneRibbon` `HandoffMatrixView` `DashboardGrid` `WidgetEditor` `TemplatePicker` `ColorSlotPicker` `UnknownWidget` `AggregateTable` |
+| 모양 옵션(5.7R.32) | `LogFilterBar`의 `savedPlacement`(`menu` 기본: 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역 / `button`: [★ ▾] 단추), `PlaybackBar`의 `settingsPlacement`(`popover` 기본: 속도·공백 건너뛰기가 [재생 설정 ▾] 안 / `inline`), `CategoryChips`의 `maxInline`(선택된 칩은 접혀도 보임) |
 | 빈 표(5.5R.20) | `LogEventTable`의 `emptyBelowHeader`를 켜면 행이 0개여도 표 머리를 그리고 `renderEmpty` 안내를 머리 아래에 놓는다 |
 | 명령형 API(5R.21) | `LogEventTable`·`LogEventDetail`는 `ref`로 `LogEventTableHandle`(`scrollToUid`·`focus`)·`LogEventDetailHandle`(`selectTabAt`·`focusTab`·`visibleTabs`)를 낸다. `onActivate`(표 Enter)·`activeTab`/`onActiveTabChange`(상세)·`onActiveChange`(`SessionList`)로 앱이 DOM을 읽거나 클릭하지 않는다 |
 | 위젯 레지스트리(X21) | `WidgetDescriptor` `createWidgetRegistry` `builtinWidgets`(metric·bar·line·table) `validateQuery` |

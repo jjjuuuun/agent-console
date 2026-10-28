@@ -181,21 +181,43 @@ describe("LogFilterBar", () => {
     expect(screen.getByRole("alert").textContent).toContain("잘못된 값");
   });
 
-  it("즐겨찾는 필터: 저장·적용·삭제 콜백", () => {
+  it("즐겨찾는 필터(기본 menu): [+ 필터] 메뉴 맨 아래 구역에서 적용·삭제·저장, ★ 단추는 없다", () => {
     const onSave = vi.fn();
     const onApply = vi.fn();
     const onDelete = vi.fn();
-    render(<Harness savedFilters={[{ name: "내것", value: { "ff-text": "z" } }]} onSaveFilter={onSave} onApplySaved={onApply} onDeleteSaved={onDelete} />);
-    fireEvent.click(screen.getByLabelText("즐겨찾는 필터"));
+    render(<Harness initial={{ "ff-text": "z" }} savedFilters={[{ name: "내것", value: { "ff-text": "z" } }]} onSaveFilter={onSave} onApplySaved={onApply} onDeleteSaved={onDelete} />);
+    expect(screen.queryByText("★ ▾")).toBeNull();
+    fireEvent.click(screen.getByText("+ 필터"));
+    expect(screen.getByRole("group", { name: "즐겨찾는 필터" })).toBeTruthy();
     fireEvent.click(screen.getByLabelText("내것 적용"));
     expect(onApply).toHaveBeenCalledWith({ name: "내것", value: { "ff-text": "z" } });
-    fireEvent.click(screen.getByLabelText("즐겨찾는 필터"));
+    fireEvent.click(screen.getByText("+ 필터"));
     fireEvent.click(screen.getByLabelText("내것 삭제"));
     expect(onDelete).toHaveBeenCalledWith("내것");
+    fireEvent.click(screen.getByText("현재 필터를 즐겨찾기로 저장…"));
     fireEvent.change(screen.getByLabelText("저장할 이름"), { target: { value: "새 이름" } });
     fireEvent.click(screen.getByText("현재 필터 저장"));
     expect(onSave).toHaveBeenCalledWith("새 이름");
   });
+
+  it("걸린 필터가 없으면 저장 항목이 없고, 필터를 다 써도 즐겨찾기 때문에 [+ 필터]는 남는다", () => {
+    render(<Harness initial={{ "ff-text": "a", "ff-sel": "o1", "ff-multi": ["m1"], "ff-time": "2026-01-01T00:00:00.000Z" }} savedFilters={[]} onSaveFilter={() => undefined} />);
+    fireEvent.click(screen.getByText("+ 필터"));
+    expect(screen.getByText("저장된 필터가 없습니다")).toBeTruthy();
+    cleanup();
+    render(<Harness savedFilters={[]} onSaveFilter={() => undefined} />);
+    fireEvent.click(screen.getByText("+ 필터"));
+    expect(screen.queryByText("현재 필터를 즐겨찾기로 저장…")).toBeNull();
+  });
+
+  it("savedPlacement=button이면 예전처럼 막대의 [★ ▾] 단추", () => {
+    const onApply = vi.fn();
+    render(<Harness savedPlacement="button" savedFilters={[{ name: "내것", value: { "ff-text": "z" } }]} onApplySaved={onApply} />);
+    fireEvent.click(screen.getByLabelText("즐겨찾는 필터"));
+    fireEvent.click(screen.getByLabelText("내것 적용"));
+    expect(onApply).toHaveBeenCalled();
+  });
+
 });
 
 describe("CategoryChips", () => {
@@ -401,6 +423,31 @@ describe("PlaybackBar", () => {
     expect(container.querySelectorAll(".ac-lv-scrub-tick").length).toBeGreaterThan(0);
     rerender(<PlaybackBar {...props} index={5} playing onIndexChange={() => undefined} />);
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("재생 시작");
+  });
+  it("속도·공백 건너뛰기는 [재생 설정 ▾] 팝오버 안에 있고, 1×가 아니면 단추 옆에 속도가 적힌다", () => {
+    const onSpeed = vi.fn();
+    const onSkip = vi.fn();
+    const { rerender } = render(<PlaybackBar {...props} index={2} onIndexChange={() => undefined} onSpeedChange={onSpeed} onSkipGapsChange={onSkip} />);
+    expect(screen.queryByLabelText("속도")).toBeNull();
+    expect(screen.queryByTestId("speed-badge")).toBeNull();
+    const btn = screen.getByRole("button", { name: "재생 설정" });
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(btn);
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.change(screen.getByLabelText("속도"), { target: { value: "2" } });
+    expect(onSpeed).toHaveBeenCalledWith(2);
+    fireEvent.click(screen.getByLabelText("공백 건너뛰기"));
+    expect(onSkip).toHaveBeenCalledWith(false);
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "재생 설정" }), { key: "Escape" });
+    expect(screen.queryByLabelText("속도")).toBeNull();
+    expect(document.activeElement).toBe(btn);
+    rerender(<PlaybackBar {...props} speed={2} index={2} onIndexChange={() => undefined} />);
+    expect(screen.getByTestId("speed-badge").textContent).toBe("2×");
+  });
+  it("settingsPlacement=inline이면 막대에 속도 select와 체크가 그대로 보인다", () => {
+    render(<PlaybackBar {...props} settingsPlacement="inline" index={2} onIndexChange={() => undefined} />);
+    expect(screen.getByLabelText("속도")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "재생 설정" })).toBeNull();
   });
   it("끌기는 놓을 때 한 번만 확정한다", () => {
     const onIndex = vi.fn();

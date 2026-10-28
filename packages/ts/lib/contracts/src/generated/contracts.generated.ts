@@ -218,14 +218,24 @@ export type KnownRunEvent =
 export type LogUngroupedPolicy = "cwd" | "repo_root" | "none";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectStatus".
+ */
+export type ProjectStatus = string;
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MissingSessionPolicy".
+ */
+export type MissingSessionPolicy = "fail" | "fresh";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ModuleStatus".
  */
 export type ModuleStatus = string;
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ProjectStatus".
+ * via the `definition` "RecordsMoveSelect".
  */
-export type ProjectStatus = string;
+export type RecordsMoveSelect = "project" | "null" | "ids";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "UsageTrust".
@@ -4138,6 +4148,41 @@ export interface SessionRef {
   };
 }
 /**
+ * `GET /conversations/{id}/sessions` 응답(0.12.1).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConversationSessions".
+ */
+export interface ConversationSessions {
+  conversation_id: string;
+  /**
+   * 그대로 이어 갈 수 있는가(missing인 항목이 없음). false면 화면은 배너와 [새 세션으로 계속]·[새 대화]를 보인다.
+   */
+  continuable: boolean;
+  items?: SessionStatus[];
+}
+/**
+ * 대화 노드 하나의 백엔드 세션 이어 가기 상태.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SessionStatus".
+ */
+export interface SessionStatus {
+  node_id: string;
+  /**
+   * 백엔드 id.
+   */
+  backend: string;
+  /**
+   * 백엔드 세션 id(있으면).
+   */
+  session_id?: string | null;
+  /**
+   * 이어 가기 상태(`KnownSessionStates`, 열린 문자열).
+   */
+  state: string;
+}
+/**
  * `GET /conversations` 목록 항목, WS `conversation.updated` 내용.
  *
  * 목록 질의 `?project=`(0.8.0)는 같은 `project_id`인 대화만 준다.
@@ -5117,6 +5162,40 @@ export interface ErrorResponse {
   error: ErrorInfo;
 }
 /**
+ * 폴더 확인에서 찾은 기존 프로젝트 구성 요약입니다.
+ *
+ * 확인은 매니페스트 파일과 종류 폴더의 파일 **개수**만 읽는다. 사본 파일 이름·내용은 싣지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ExistingProjectProbe".
+ */
+export interface ExistingProjectProbe {
+  /**
+   * found·invalid(`KnownExistingProjectStates`, 열린 문자열).
+   */
+  state: string;
+  /**
+   * 매니페스트의 폴더 id(읽을 수 있을 때). 화면 표시용 원문.
+   */
+  id?: string | null;
+  /**
+   * 매니페스트의 이름(읽을 수 있을 때).
+   */
+  name?: string | null;
+  /**
+   * 매니페스트의 설명.
+   */
+  description?: string | null;
+  /**
+   * 폴더에 있는 구성 사본 개수(옮길 수 있는 종류 폴더의 파일 수).
+   */
+  definitions?: number;
+  /**
+   * 읽을 수 없는 이유(invalid일 때, 예: `project.manifest_invalid`).
+   */
+  issue?: Issue | null;
+}
+/**
  * 내보낼 파일 하나(내용은 담지 않는다).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -5349,6 +5428,18 @@ export interface FolderCheck {
    * 같은·겹치는 등록 프로젝트(taken·overlap_* 상태일 때).
    */
   conflict?: FolderConflict | null;
+  /**
+   * 폴더에 이미 있는 프로젝트 구성(매니페스트) 요약. null = 없음 또는 서버가 알리지 않음.
+   */
+  existing?: ExistingProjectProbe | null;
+  /**
+   * 등록하면 쓸 id 제안(매니페스트 id 또는 폴더 이름 slug, 겹치면 `-2`…, 서버가 계산). 화면은 id를 계산하지 않는다.
+   */
+  suggested_id?: string | null;
+  /**
+   * 폴더 안 프로젝트 구성 폴더 이름(화면 문구 `{dir}`). null = 서버가 알리지 않음.
+   */
+  config_dir?: string | null;
 }
 /**
  * 폴더 확인에서 찾은 등록 충돌 하나.
@@ -6515,6 +6606,143 @@ export interface LogsIngestedPayload {
    * 지금 색인의 최대 seq.
    */
   max_seq?: number | null;
+}
+/**
+ * `POST /projects/{id}/manifest/reset` 요청(상태 `manifest_invalid`일 때만, 아니면 409).
+ *
+ * 옛 매니페스트는 지우지 않고 `<config_dir>/.state/backups/project-<UTC>.yaml`로 옮긴다. 새
+ * 매니페스트 = 등록 id + 이 이름·설명(설정은 비움). 사본·메모리·기록은 건드리지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ManifestResetRequest".
+ */
+export interface ManifestResetRequest {
+  /**
+   * 새 매니페스트의 이름.
+   */
+  name: string;
+  /**
+   * 새 매니페스트의 설명.
+   */
+  description?: string | null;
+}
+/**
+ * `POST /projects/{id}/manifest/reset` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ManifestResetResult".
+ */
+export interface ManifestResetResult {
+  project: ProjectView;
+  /**
+   * 옛 매니페스트를 옮긴 경로.
+   */
+  backup_path: string;
+}
+/**
+ * 프로젝트 + 서버가 계산한 상태(저장하지 않음).
+ *
+ * `GET /projects`(→ `ProjectView[]`)·`GET /projects/{id}`·`POST /projects`·`PUT /projects/{id}`
+ * 응답이다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectView".
+ */
+export interface ProjectView {
+  project: Project;
+  status: ProjectStatus;
+  /**
+   * 상태 이유 한 줄(예: 겹치는 프로젝트 id). 화면에 그대로 보인다.
+   */
+  status_detail?: string | null;
+  /**
+   * 버전 해시(`If-Match`에 쓴다). 등록부·매니페스트 둘 중 하나가 바뀌면 바뀐다. 저장소가 주지 않으면 null.
+   */
+  version_hash?: string | null;
+  /**
+   * 폴더 안 프로젝트 구성(`.agent-console/`)에 쓸 수 있는가. false면 가져오기·편집·메모리 쓰기를 막고(409 `project.config_readonly`) 보기·로그는 된다. 보내지 않은 옛 서버는 true.
+   */
+  config_writable?: boolean;
+  /**
+   * 폴더 id(매니페스트 `id`). 등록 id와 다를 때만 화면에 보인다. 모르면 null.
+   */
+  manifest_id?: string | null;
+  /**
+   * 이 프로젝트 공간에 둘 수 있는 정의 종류 이름(옮길 수 있는 종류, 열린 문자열). 빈 목록 = 서버가 알리지 않음.
+   */
+  kinds?: string[];
+  /**
+   * 상태와 별개인 안내(예: 정보 `project.network_fs`·`project.gitignore_outdated`). 화면은 모르는 코드도 보인다.
+   */
+  issues?: Issue[];
+  /**
+   * 폴더 안 프로젝트 구성 폴더 이름(설치자 설정 `mod-projects.config_dir`, 화면 문구 `{dir}`). null = 서버가 알리지 않음.
+   */
+  config_dir?: string | null;
+  /**
+   * 프로젝트 기록 DB 상태(`KnownProjectRecordsStates`, 열린 문자열). 화면은 이 값을 해석하지 않고 `records_writable`로 읽기 전용을 정한다. 보내지 않은 옛 서버는 ready.
+   */
+  records_state?: string;
+  /**
+   * 대화·실행 기록을 쓸 수 있는가(기록 DB가 absent·ready이고 폴더에 쓸 수 있을 때만 true). false면 채팅·실행 시작을 막고(409 `project.records_unavailable`) 지난 기록 보기만 된다. 보내지 않은 옛 서버는 true.
+   */
+  records_writable?: boolean;
+  /**
+   * 기록을 쓸 수 없는 이유(보통 `project.records_unavailable`, `details` = `ProjectRecordsUnavailableDetails`). 쓸 수 있으면 null.
+   */
+  records_issue?: Issue | null;
+}
+/**
+ * 프로젝트입니다. 로컬 폴더 하나와 그 프로젝트에서 쓸 설정을 묶습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "Project".
+ */
+export interface Project {
+  /**
+   * 이 프로젝트가 무엇인지 적습니다.
+   */
+  description?: string;
+  /**
+   * 이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.
+   */
+  settings?: AgentSettings | null;
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 찾기·거르기에 쓰는 꼬리표입니다.
+   */
+  labels?: string[];
+  /**
+   * 등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.
+   */
+  archived?: boolean;
+  /**
+   * 등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.
+   */
+  archived_at?: number | null;
+  kind?: "project";
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 파일 이름으로도 씁니다.
+   */
+  id: string;
+  /**
+   * 프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.
+   */
+  name: string;
+  /**
+   * 이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.
+   */
+  folder: string | null;
+  /**
+   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  schema_version?: number;
+  [k: string]: unknown;
 }
 /**
  * 에이전트에게 공유 메모리를 줍니다. 범위마다 읽기·검색·쓰기·지우기 권한을 정합니다.
@@ -7773,58 +8001,7 @@ export interface PluginInfo {
  */
 export interface PostMessageRequest {
   text: string;
-}
-/**
- * 프로젝트입니다. 로컬 폴더 하나와 그 프로젝트에서 쓸 설정을 묶습니다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "Project".
- */
-export interface Project {
-  /**
-   * 이 프로젝트가 무엇인지 적습니다.
-   */
-  description?: string;
-  /**
-   * 이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.
-   */
-  settings?: AgentSettings | null;
-  /**
-   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
-   */
-  attributes?: {
-    [k: string]: unknown;
-  };
-  /**
-   * 찾기·거르기에 쓰는 꼬리표입니다.
-   */
-  labels?: string[];
-  /**
-   * 등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.
-   */
-  archived?: boolean;
-  /**
-   * 등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.
-   */
-  archived_at?: number | null;
-  kind?: "project";
-  /**
-   * 가리킬 때 쓰는 고유 이름입니다. 파일 이름으로도 씁니다.
-   */
-  id: string;
-  /**
-   * 프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.
-   */
-  name: string;
-  /**
-   * 이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.
-   */
-  folder: string | null;
-  /**
-   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
-   */
-  schema_version?: number;
-  [k: string]: unknown;
+  on_missing_session?: MissingSessionPolicy;
 }
 /**
  * 기능 하나의 기록 개수(`GET /runs/project-counts`·`GET /conversations/project-counts`).
@@ -7997,6 +8174,23 @@ export interface ProjectPreferences {
   [k: string]: unknown;
 }
 /**
+ * 409 `project.records_unavailable`의 `details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectRecordsUnavailableDetails".
+ */
+export interface ProjectRecordsUnavailableDetails {
+  project_id: string;
+  /**
+   * 쓸 수 없는 이유(`KnownRecordsUnavailableReasons`, 열린 문자열).
+   */
+  reason: string;
+  /**
+   * 올리기 전에 만든 백업 파일(`migration_failed`일 때).
+   */
+  backup_path?: string | null;
+}
+/**
  * 이 앱이 프로젝트로 등록한 폴더입니다. 폴더와 등록 상태만 담습니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -8049,43 +8243,6 @@ export interface ProjectUpdate {
   } | null;
 }
 /**
- * 프로젝트 + 서버가 계산한 상태(저장하지 않음).
- *
- * `GET /projects`(→ `ProjectView[]`)·`GET /projects/{id}`·`POST /projects`·`PUT /projects/{id}`
- * 응답이다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ProjectView".
- */
-export interface ProjectView {
-  project: Project;
-  status: ProjectStatus;
-  /**
-   * 상태 이유 한 줄(예: 겹치는 프로젝트 id). 화면에 그대로 보인다.
-   */
-  status_detail?: string | null;
-  /**
-   * 버전 해시(`If-Match`에 쓴다). 등록부·매니페스트 둘 중 하나가 바뀌면 바뀐다. 저장소가 주지 않으면 null.
-   */
-  version_hash?: string | null;
-  /**
-   * 폴더 안 프로젝트 구성(`.agent-console/`)에 쓸 수 있는가. false면 가져오기·편집·메모리 쓰기를 막고(409 `project.config_readonly`) 보기·로그는 된다. 보내지 않은 옛 서버는 true.
-   */
-  config_writable?: boolean;
-  /**
-   * 폴더 id(매니페스트 `id`). 등록 id와 다를 때만 화면에 보인다. 모르면 null.
-   */
-  manifest_id?: string | null;
-  /**
-   * 이 프로젝트 공간에 둘 수 있는 정의 종류 이름(옮길 수 있는 종류, 열린 문자열). 빈 목록 = 서버가 알리지 않음.
-   */
-  kinds?: string[];
-  /**
-   * 상태와 별개인 안내(예: 정보 `project.memory_network_fs`). 화면은 모르는 코드도 보인다.
-   */
-  issues?: Issue[];
-}
-/**
  * 실행 중이라 대기열에 넣은 메시지(`chat.busy_policy = queue`).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -8109,6 +8266,55 @@ export interface QueuedMessage {
    * 재시작으로 멈춘 항목(`chat.queue_after_restart = ask`). 실행·취소를 고른다.
    */
   held?: boolean;
+  /**
+   * 멈춘 이유(0.12.1, `KnownQueueHoldReasons`, 열린 문자열). held가 아니면 null.
+   */
+  held_reason?: string | null;
+}
+/**
+ * `POST /runs/move-to-project`·`POST /conversations/move-to-project` 요청(0.12.1).
+ *
+ * 앱 DB의 기록을 그 프로젝트의 기록 DB로 옮긴다. Run은 자손·노드·이벤트·상호작용과 함께, 대화는
+ * 대기열(과 연동이 있으면 그 Run)과 함께 간다. 대상에 같은 id가 있으면 건너뛴다. `project_id`는
+ * 불투명 문자열이다(기능 모듈은 프로젝트를 모른다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RecordsMoveRequest".
+ */
+export interface RecordsMoveRequest {
+  /**
+   * 옮길 대상 프로젝트(등록 id).
+   */
+  project_id: string;
+  select: RecordsMoveSelect;
+  /**
+   * `select`가 ids일 때 옮길 기록 id(필수).
+   */
+  ids?: string[] | null;
+  /**
+   * 옮긴 뒤(개수 확인 후) 앱 DB의 원본을 지운다. false면 원본을 남긴다.
+   */
+  remove_source?: boolean;
+}
+/**
+ * move-to-project 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RecordsMoveResult".
+ */
+export interface RecordsMoveResult {
+  /**
+   * 옮긴 기록 수(함께 옮긴 자식 Run 포함).
+   */
+  moved?: number;
+  /**
+   * 대상에 같은 id가 있어 건너뛴 기록 수.
+   */
+  skipped?: number;
+  /**
+   * 옮기지 못한 기록과 이유(`details.id`).
+   */
+  failed?: Issue[];
 }
 /**
  * `POST /node-types/{id}/ports` 요청. 응답은 PortSpec.
@@ -8445,6 +8651,10 @@ export interface Run {
    * 프로젝트 id(0.8.0, 불투명 문자열). null = 프로젝트 없음. `GET /runs?project=`로 같음 비교해 거른다. 자식 Run은 루트 값을 물려받는다.
    */
   project_id?: string | null;
+  /**
+   * 이 Run을 돌린 앱의 id(0.12.1, workspace마다 한 번 만든 불투명 문자열). 같은 기록을 두 앱이 쓸 때 재시작 복구는 자기 host_id의 Run만 한다. null = 알리지 않음.
+   */
+  host_id?: string | null;
   rerun_of?: string | null;
   from_node?: string | null;
   /**
@@ -9134,17 +9344,17 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.12.0" as const;
+export const CONTRACTS_VERSION = "0.12.1" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.6.0",
+  "common": "1.7.0",
   "resources": "1.1.0",
   "logs": "1.1.0",
   "definitions": "1.4.0",
-  "runs": "1.4.0",
+  "runs": "1.5.0",
   "usage": "1.1.0",
-  "projects": "3.0.0",
-  "chat": "1.1.0",
+  "projects": "3.1.0",
+  "chat": "1.2.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
@@ -9307,7 +9517,9 @@ export const ERROR_CODES = {
   "PROJECT_COPY_CONFLICT": "project.copy_conflict",
   "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
   "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
-  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
+  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
+  "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
+  "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -9364,7 +9576,9 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "project.copy_conflict": 409,
   "folders.dialog_unavailable": 409,
   "folders.dialog_busy": 409,
-  "folders.dialog_timeout": 409
+  "folders.dialog_timeout": 409,
+  "project.records_unavailable": 409,
+  "chat.session_unavailable": 409
 } as const;
 
 export const KNOWN_ISSUE_CODES = {
@@ -9424,7 +9638,12 @@ export const KNOWN_ISSUE_CODES = {
   "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
   "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
   "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
-  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
+  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
+  "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
+  "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
+  "PROJECT_NETWORK_FS": "project.network_fs",
+  "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
+  "RUN_OTHER_HOST": "run.other_host"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {
@@ -9518,6 +9737,41 @@ export const KNOWN_FOLDER_PICK_STATUSES = {
 } as const;
 
 export const PROJECT_MANIFEST_FORMAT = 1 as const;
+
+export const KNOWN_PROJECT_RECORDS_STATES = {
+  "ABSENT": "absent",
+  "READY": "ready",
+  "NEWER": "newer",
+  "UNAVAILABLE": "unavailable"
+} as const;
+
+export const KNOWN_RECORDS_UNAVAILABLE_REASONS = {
+  "FOLDER_MISSING": "folder_missing",
+  "READONLY": "readonly",
+  "NEWER": "newer",
+  "BUSY": "busy",
+  "CORRUPT": "corrupt",
+  "MIGRATION_FAILED": "migration_failed",
+  "LINK_DISABLED": "link_disabled"
+} as const;
+
+export const KNOWN_EXISTING_PROJECT_STATES = {
+  "FOUND": "found",
+  "INVALID": "invalid"
+} as const;
+
+export const KNOWN_SESSION_STATES = {
+  "AVAILABLE": "available",
+  "RELOCATABLE": "relocatable",
+  "ARCHIVED": "archived",
+  "MISSING": "missing",
+  "NOT_APPLICABLE": "not_applicable"
+} as const;
+
+export const KNOWN_QUEUE_HOLD_REASONS = {
+  "RESTART": "restart",
+  "OTHER_HOST": "other_host"
+} as const;
 
 export const USER_TEXT_RULES = {
   "version": 1,

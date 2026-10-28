@@ -17,6 +17,7 @@ from .definition_store import (
     DEFAULT_MAX_CONTENT_BYTES,
     BaseDefinitionStore,
     InMemoryDefinitionStore,
+    WriteGuard,
 )
 from .errors import (
     AlreadyExists,
@@ -69,6 +70,7 @@ from .project_assign import (
 )
 from .snapshot import get_run_snapshot
 from .sqlite import SqliteStorage, create_sqlite_engine, open_sqlite
+from .yaml_io import atomic_write_bytes, dump_yaml, load_yaml_text, merge_into, to_plain, wrap_value
 
 __all__ = [
     "AGENT_KIND",
@@ -114,7 +116,9 @@ __all__ = [
     "VersionRecorded",
     "VersionRepository",
     "VersionRequired",
+    "WriteGuard",
     "assign_project",
+    "atomic_write_bytes",
     "branch_version_table",
     "canonical_json",
     "check_content_path",
@@ -123,13 +127,18 @@ __all__ = [
     "current_revision",
     "default_hash",
     "downgrade",
+    "dump_yaml",
     "get_run_snapshot",
     "list_graph_summaries",
+    "load_yaml_text",
+    "merge_into",
     "open_sqlite",
     "plan_assignment",
     "store_error_body",
+    "to_plain",
     "to_project_counts",
     "to_versioned_graph",
     "upgrade",
     "versions_for",
+    "wrap_value",
 ]

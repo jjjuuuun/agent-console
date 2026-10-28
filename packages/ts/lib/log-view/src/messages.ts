@@ -40,6 +40,8 @@ export interface LogViewMessages {
   saveFilter: string;
   saveFilterName: string;
   noSavedFilters: string;
+  /** [+ 필터] 메뉴 맨 아래의 "현재 필터를 즐겨찾기로 저장…" 항목 */
+  saveCurrentFilter: string;
   applySaved: string; // {name}
   deleteSaved: string; // {name}
   clearFilters: string;
@@ -81,6 +83,9 @@ export interface LogViewMessages {
   scrubber: string;
   speed: string;
   skipGaps: string;
+  /** [재생 설정 ▾] 단추 이름(속도·공백 건너뛰기 팝오버) */
+  playSettings: string;
+  playSettingsShort: string;
   positionText: string; // {v} {n} {time} {title}
   beforeStart: string; // {n}
   playbackStarted: string;
@@ -197,6 +202,7 @@ export const defaultLogViewMessages: LogViewMessages = {
   saveFilter: "현재 필터 저장",
   saveFilterName: "저장할 이름",
   noSavedFilters: "저장된 필터가 없습니다",
+  saveCurrentFilter: "현재 필터를 즐겨찾기로 저장…",
   applySaved: "{name} 적용",
   deleteSaved: "{name} 삭제",
   clearFilters: "필터 지우기",
@@ -239,6 +245,8 @@ export const defaultLogViewMessages: LogViewMessages = {
   scrubber: "재생 위치",
   speed: "속도",
   skipGaps: "공백 건너뛰기",
+  playSettings: "재생 설정",
+  playSettingsShort: "설정",
   positionText: "{v}번째 / {n} · {time} · {title}",
   beforeStart: "시작 전 · 0 / {n}",
   playbackStarted: "재생 시작",

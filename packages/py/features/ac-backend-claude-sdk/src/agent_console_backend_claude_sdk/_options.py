@@ -11,7 +11,7 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from agent_console_contracts import x_ui
+from agent_console_contracts import x_path, x_ui
 
 type PermissionModeName = Literal[
     "default", "acceptEdits", "plan", "bypassPermissions", "dontAsk", "auto"
@@ -353,12 +353,16 @@ class ClaudeSdkBackendOptions(BaseModel):
         default_factory=list,
         title="추가 폴더",
         description="허용 폴더 밖에 더 읽게 할 폴더입니다.",
-        json_schema_extra=x_ui(
-            tier="advanced",
-            when="에이전트가 작업 폴더 밖의 문서를 읽어야 할 때 더하세요.",
-            group="files",
-            group_title="설정·파일",
-        ),
+        # x-path: 프로젝트 실행에서 경로 지킴 대상(design §PI.5 X33, ac-projects.outside_paths).
+        json_schema_extra={
+            **x_path("directory"),
+            **x_ui(
+                tier="advanced",
+                when="에이전트가 작업 폴더 밖의 문서를 읽어야 할 때 더하세요.",
+                group="files",
+                group_title="설정·파일",
+            ),
+        },
     )
     env: dict[str, str] = Field(
         default_factory=dict,

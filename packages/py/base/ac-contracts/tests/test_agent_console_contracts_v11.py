@@ -56,11 +56,16 @@ def _load_yaml(text: str) -> Any:
 # ---------------------------------------------------------------- 버전
 
 
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
 def test_contracts_version_is_v11() -> None:
-    assert CONTRACTS_VERSION == "0.12.0"
+    """0.12.0에서 정한 버전 이상이다(정확한 지금 값은 v12 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 12, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.12.0"
-    assert CONTRACT_VERSIONS == {
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v11 = {
         "common": "1.6.0",
         "resources": "1.1.0",
         "logs": "1.1.0",
@@ -75,6 +80,8 @@ def test_contracts_version_is_v11() -> None:
         "memory": "1.1.0",
         "modules": "1.3.0",
     }
+    for sub, version in v11.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 _REMOVED = (

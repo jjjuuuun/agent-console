@@ -54,6 +54,13 @@ class Run(ContractModel):
             "같음 비교해 거른다. 자식 Run은 루트 값을 물려받는다."
         ),
     )
+    host_id: str | None = Field(
+        default=None,
+        description=(
+            "이 Run을 돌린 앱의 id(0.12.1, workspace마다 한 번 만든 불투명 문자열). 같은 기록을 "
+            "두 앱이 쓸 때 재시작 복구는 자기 host_id의 Run만 한다. null = 알리지 않음."
+        ),
+    )
     rerun_of: str | None = None
     from_node: str | None = None
     resumed_from: str | None = Field(

@@ -63,7 +63,7 @@ const chat = createChatClient(createRestIo({ baseUrl: "http://127.0.0.1:8765", t
 const conversations = await chat.listConversations({ archived: false });
 ```
 
-하위 경로: `core`(부트스트랩·서버 정보·모듈 목록 `listModules`), `catalog`(종류 목록), `agents`, `graphs`, `runs`, `chat`, `interactions`, `usage`, `resources`, `imports`, `exports`, `settings`, `versions`, `logs`, `memory`, `architecture`, 그리고 `io`·`transport`.
+하위 경로: `core`(부트스트랩·서버 정보·모듈 목록 `listModules`), `catalog`(종류 목록), `agents`, `graphs`, `runs`, `chat`, `interactions`, `usage`, `resources`, `imports`, `exports`, `settings`, `versions`, `logs`, `memory`, `projects`, `architecture`, 그리고 `io`·`transport`.
 
 ## 공개 API
 - `createClient(opts)` → `{ rest, ws }` (같은 `baseUrl`/`token`)
@@ -101,3 +101,7 @@ const conversations = await chat.listConversations({ archived: false });
 
 ## 테스트
 `pnpm test` (패키지 폴더 또는 루트, Vitest). 가짜 `fetch`/`WebSocket`/타이머로 REST 정상·오류·412, 재접속 백오프, `since_seq` 재생, 콘솔 seq 중복 제거를 검증한다.
+
+## 프로젝트와 공간 (5.7R.33m)
+- `projects` 클라이언트(`createProjectsClient`, `createRestClient`에도 합쳐져 있다): `listProjects`·`getProject`·`createProject`·`updateProject`·`unregisterProject`, 폴더 `checkFolder`·`createFolder`·`listFolders`·`getFolderCapabilities`·`pickFolder(request, {signal})`(abort하면 서버가 창을 닫는다), 공간 사이 복사 `planCopy`·`applyCopy`, 옛 기록 `planLegacyCopy`. 기록 개수·프로젝트에 넣기는 `runs`(`getRunProjectCounts`·`assignRunsToProject`)와 `chat`, 메모리 복사는 `memory`(`copyMemory`)에 있다(기능끼리 import하지 않는다).
+- 공간 인자: 정의·메모리 REST는 `?project=<id>`로 프로젝트 폴더의 사본 저장소를 고른다(없으면 공용). 기능 클라이언트는 공간을 모르고, 전송을 `withSpace(io, "payments")`로 감싸거나 `createSpaceRestClient(options, "payments")`로 정의·버전·메모리 묶음을 얻는다. `null`·생략이면 요청 주소가 달라지지 않는다.

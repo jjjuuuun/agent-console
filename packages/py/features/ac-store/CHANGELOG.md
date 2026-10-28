@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- 5.7R.33w: `DefinitionKind.portable`·`is_portable`(프로젝트 사본 공간에 둘 수 있는 종류, 싱글턴·`settings`는 아님),
+  쓰기 전 검사 훅 `WriteGuard`(`write_guard=`, `FileDefinitionStore`·`InMemoryDefinitionStore`), YAML 도구 공개
+  (`load_yaml_text`·`dump_yaml`·`merge_into`·`wrap_value`·`to_plain`·`atomic_write_bytes`). 기존 동작·표 변경 없음.
+
 - 5.2R.33: `LazyVersionRepository`·`versions_for(database)`(`ac-mod-definitions`에서 옮김). 같은 워크스페이스를 나눠 맡는 저장소 인스턴스(정의·프로젝트 모듈)가 같은 버전 기록소를 쓴다.
 - 5.2R.31: 기본 종류 graph·agent·resource의 `summary_fields`에 범위 필드 `project`(`SCOPE_FIELD`, 공개).
   값이 있을 때만 요약 `extra`에 실린다. `list_graph_summaries`가 `GraphSummary.project`를 채운다.

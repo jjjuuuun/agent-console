@@ -9,6 +9,7 @@ import { LinkPartsProvider, ModulesProvider, type LinkPartDef } from "../modules
 import type { ApiClients, FeatureSignal } from "./apiClients";
 import { AppStatusProvider } from "./AppStatus";
 import { BootError } from "./boot";
+import { BOOT_RETRY, bootRetryDelay, classifyBootFailure, type BootFailureKind, type BootRetryPolicy } from "./bootRetry";
 import { ErrorBlock, errorDetails, LoadingBlock } from "./ErrorBlock";
 import { describeError } from "./errors";
 import { appIcons } from "./icons";
@@ -46,11 +47,14 @@ export interface AppRootProps {
   onReload?: () => void;
   /** 질의 클라이언트(테스트 주입). 생략하면 앱 기본 */
   queryClient?: QueryClient;
+  /** 부팅 자동 재시도 정책(기본 `BOOT_RETRY`). 서버가 켜지는 중이면 기다렸다가 저절로 붙는다 */
+  bootRetry?: BootRetryPolicy;
 }
 
 type Boot =
   | { attempt: number; status: "ready"; clients: ApiClients }
-  | { attempt: number; status: "error"; error: unknown };
+  | { attempt: number; status: "error"; error: unknown }
+  | { attempt: number; status: "waiting"; kind: Exclude<BootFailureKind, "fatal"> };
 
 const BACKGROUND_ERROR = "background-error";
 
@@ -78,7 +82,8 @@ function createSignalBus() {
 }
 
 /** 앱 부팅(주소·토큰 획득) -> 테마·질의·토스트·API 컨텍스트 -> 라우터. */
-export function AppRoot({ createClients, router, storage = appStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS }: AppRootProps) {
+export function AppRoot({ createClients, router, storage = appStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY }: AppRootProps) {
+  const [bootRetry] = useState(bootRetryProp); // 정책은 마운트 때 한 번 고정(인라인 객체가 효과를 다시 돌리지 않게)
   const [attempt, setAttempt] = useState(0);
   const [boot, setBoot] = useState<Boot | null>(null);
   const [authRejected, setAuthRejected] = useState(false);
@@ -90,21 +95,36 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
   useEffect(() => {
     let cancelled = false;
     let created: ApiClients | undefined;
-    createClients({ onAuthRejected: () => setAuthRejected(true), onFeatureSignal: signals.emit }).then(
-      (clients) => {
-        created = clients;
-        if (cancelled) clients.ws.close();
-        else setBoot({ attempt, status: "ready", clients });
-      },
-      (error: unknown) => {
-        if (!cancelled) setBoot({ attempt, status: "error", error });
-      },
-    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const startedAt = Date.now();
+    // 서버가 켜지는 중이면(연결 거부·503 not_ready) 백오프로 다시 시도한다. 한도를 넘기거나 기다려도 소용없는 오류면 오류 화면.
+    const tryBoot = (retries: number) => {
+      createClients({ onAuthRejected: () => setAuthRejected(true), onFeatureSignal: signals.emit }).then(
+        (clients) => {
+          created = clients;
+          if (cancelled) clients.ws.close();
+          else setBoot({ attempt, status: "ready", clients });
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          const kind = classifyBootFailure(error);
+          const delay = bootRetryDelay(bootRetry, retries);
+          if (kind === "fatal" || Date.now() - startedAt + delay > bootRetry.giveUpMs) {
+            setBoot({ attempt, status: "error", error });
+            return;
+          }
+          setBoot({ attempt, status: "waiting", kind });
+          timer = setTimeout(() => tryBoot(retries + 1), delay);
+        },
+      );
+    };
+    tryBoot(0);
     return () => {
       cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
       created?.ws.close();
     };
-  }, [createClients, attempt, signals]);
+  }, [createClients, attempt, signals, bootRetry]);
 
   const booting = boot === null || boot.attempt !== attempt;
   const showSpinner = useDelayed(booting);
@@ -129,6 +149,13 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
   if (booting) {
     return themed(<div className="app-boot">{showSpinner ? <LoadingBlock label={m.app.booting} /> : null}</div>);
   }
+  if (boot.status === "waiting") {
+    return themed(
+      <div className="app-boot">
+        <LoadingBlock label={boot.kind === "not-ready" ? m.boot.preparing : m.boot.waiting} />
+      </div>,
+    );
+  }
   if (boot.status === "error") {
     const bootError = boot.error instanceof BootError ? boot.error : undefined;
     const cause = bootError?.cause ?? boot.error;
@@ -144,6 +171,7 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
           detailsLabel={m.common.details}
           retryLabel={m.boot.retry}
           onRetry={() => setAttempt((a) => a + 1)}
+          secondary={{ label: m.boot.reload, onClick: onReload }}
         >
           {bootError?.corsSuspected ? <p className="ac-text app-wrap">{m.boot.corsHint}</p> : null}
         </ErrorBlock>

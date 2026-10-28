@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Banner, Button, IconButton, useShortcuts, useToast } from "@agent-console/ui";
+import { Button, IconButton, useToast } from "@agent-console/ui";
 import {
   CategoryChips,
   LogEventTable,
@@ -26,28 +26,35 @@ import { useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { ARCH_SCOPE_KIND, PopoutButton, PopoutNotice, PopoutPlaceholder, useArchPopoutHost, useArchSync, ArchitectureChips, ArchitecturePanel, archMessages, observedValue, useArchitectureController } from "../architecture";
-import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
+import type { ActionMenuEntry } from "./ActionMenu";
+import { useColumnChoice } from "./ColumnsMenu";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { LogFilters, buildFilterFields } from "./LogFilters";
 import { LogMenu, type LogMenuItem } from "./LogMenu";
 import { useLogTimeMode } from "./useLogTimeMode";
 import { useDetailLink } from "./useDetailLink";
 import { LogsPageFrame } from "./LogsPageFrame";
-import { settingsLogsHref } from "./LogsEmpty";
+import { freshNotice, settingsLogsHref, useOtherSourcesNotice } from "./LogsEmpty";
+import { LogViewMenu } from "./LogViewMenu";
+import type { LogNotice } from "./NoticeBar";
+import { SessionInfoPopover } from "./SessionInfoPopover";
+import { ViewTabs } from "./ViewTabs";
+import { useSessionShortcuts } from "./sessionShortcuts";
 import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { useLogsIngested } from "./LogsLive";
 import { FlowSegments, SessionFlow, type FlowView } from "./SessionFlow";
 import { SplitHandle } from "./SplitHandle";
 import { archiveFilterFor, useArchiveDownload } from "./archive";
-import { CELL_IDS, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_FIELD, SESSION_EVENT_COLUMNS_DEFAULT, SUGGEST_FROM } from "./logsConfig";
+import { CELL_IDS, SETTINGS_TAXONOMY_HASH, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_STORAGE, NOTICE_PRIORITY, SCREEN_PARAMS, SEARCH_FIELD, SESSION_EVENT_COLUMNS_DEFAULT, SESSION_VIEWS, SUGGEST_FROM } from "./logsConfig";
 import { errorBlockOf } from "./logsErrors";
-import { categoryItems, filterSessionEvents, laneLabels, laneOf, originOf, paramsKey, suggestionsFor, eventFieldValues, toLaneEvents, shouldAutoFoldFlow, archDefaultHeight, clampOr, valuesOf, withValues } from "./logsLib";
+import { categoryItems, enabledCount, filterSessionEvents, laneLabels, laneOf, originOf, paramsKey, suggestionsFor, eventFieldValues, toLaneEvents, shouldAutoFoldFlow, defaultFlowCollapsed, archDefaultHeight, clampOr, valuesOf, withValues } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
 import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState, useSelectedUid } from "./useLogFilterState";
-import { logKeys, useLogSchema, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
+import { logKeys, useLogSchema, useLogSources, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
+import { useLogScan } from "./useLogScan";
 
 const FIELDS = buildFilterFields();
 const NO_PARAMS = {} as const;
@@ -63,7 +70,11 @@ function readNumber(raw: string | null, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** 세션 상세(`/logs/sessions/:session`): 재생 막대 + 흐름 패널(레인·위임 흐름) + 범주 칩 + 이벤트 표 + 상세 패널. */
+/**
+ * 세션 상세(`/logs/sessions/:session`, 5.7R.32 재편): 헤더 한 줄 + [세션 정보] · 재생 막대(+[재생 설정]) · 뷰 탭 [이벤트 | 구조도] ·
+ * (이벤트 뷰) 흐름 패널 · 필터 줄(+[보기]) · 이벤트 표 · 상세 패널.
+ * 구조도 컨트롤러·분리 창 호스트·`useArchSync`는 이 컴포넌트 최상위에 있어 뷰를 바꿔도 언마운트되지 않는다(칸 선택·칩·분리 창 연동 유지).
+ */
 export function SessionDetailPage() {
   const { session = "" } = useParams();
   const navigate = useNavigate();
@@ -78,6 +89,10 @@ export function SessionDetailPage() {
   const download = useArchiveDownload();
   const traceVisible = useLinkPart(LINK_PART_IDS.logsTraceFlow).visible;
   const archVisible = useLinkPart(LINK_PART_IDS.logsArchitectureFlow).visible;
+  const sources = useLogSources();
+  const scan = useLogScan(sources.data);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
 
   // ---- 데이터
   const tl = useLogTimeline(session, NO_PARAMS);
@@ -96,6 +111,7 @@ export function SessionDetailPage() {
   const labels = useMemo(() => laneLabels(lanes), [lanes]);
   const laneLabelFor = useCallback((id: string) => labels.get(id), [labels]);
   const origin = useMemo(() => originOf(all), [all]);
+  const otherSources = useOtherSourcesNotice(sources.data, all.length > 0);
 
   // ---- 재생 위치(로컬 상태가 진실, URL `through`는 초기값이자 정지했을 때의 기록)
   const throughRaw = url.screen[SCREEN_PARAMS.through]?.[0];
@@ -139,10 +155,14 @@ export function SessionDetailPage() {
   const time = useLogTimeMode();
   const laneFilter = url.screen[SCREEN_PARAMS.lane] ?? NO_STRINGS;
 
-  // ---- 구조도 세그먼트(역할 `logs:architecture`가 없으면 질의도 세그먼트도 없다). 레인 필터는 서버 `thread` 필터로 보낸다.
+  // ---- 구조도 뷰(역할 `logs:architecture`가 없으면 질의도 뷰 탭도 없다). 레인 필터는 서버 `thread` 필터로 보낸다.
+  const viewParam = url.screen[SCREEN_PARAMS.view]?.[0];
+  const archView = archVisible && viewParam === SESSION_VIEWS.architecture;
+  const setView = (v: string) => url.setScreen({ [SCREEN_PARAMS.view]: v === SESSION_VIEWS.events ? null : v });
   const [archOpened, setArchOpened] = useState(false);
+  if (archView && !archOpened) setArchOpened(true); // 구조도는 뷰 탭 [구조도]를 처음 고를 때까지 질의하지 않는다
   const archScope = useMemo(() => ({ [FILTER_KEYS.session]: session, [FILTER_KEYS.thread]: laneFilter }), [session, laneFilter]);
-  // 구조도를 새 창으로 분리한 동안에는 이 화면의 구조도 칸이 접혀 있어도 질의를 이어 간다(분리 창에서 고른 칸이 표를 거른다).
+  // 구조도를 새 창으로 분리한 동안에는 이 화면이 이벤트 뷰여도 질의를 이어 간다(분리 창에서 고른 칸이 표를 거른다).
   const { sync: archSync, popout } = useArchPopoutHost({ kind: ARCH_SCOPE_KIND.session, id: session, scope: archScope, enabled: archVisible });
   const archEnabled = archVisible && (archOpened || popout.mode !== "docked");
   const schema = useLogSchema(archEnabled);
@@ -194,17 +214,17 @@ export function SessionDetailPage() {
   }, [index, selectedUid, selected?.i]);
 
   // ---- 흐름 패널
-  const [flowSaved, setFlowSaved] = useState(() => storage.get(LOGS_STORAGE.flowCollapsed) === "1");
+  // 저장된 접힘 선택이 있으면 그 값, 없으면 폭 ≥ 1280일 때만 펼쳐서 시작한다(좁은 화면은 표 행을 먼저 지킨다).
+  const [flowSaved, setFlowSaved] = useState(() => defaultFlowCollapsed(storage.get(LOGS_STORAGE.flowCollapsed), typeof window === "undefined" ? LOGS_LIMITS.flowOpenFrom : window.innerWidth, LOGS_LIMITS.flowOpenFrom));
   // 표 공간이 모자라 자동으로 접은 상태(저장하지 않는다). 사용자가 직접 펴면 다시 자동으로 접지 않는다.
   const [flowAuto, setFlowAuto] = useState(false);
   const [flowUserOpened, setFlowUserOpened] = useState(false);
   const flowCollapsed = flowSaved || flowAuto;
   const [flowView, setFlowView] = useState<FlowView>("lane");
-  // 쓸 수 있는 보기: 레인은 늘 있고, 위임 흐름·구조도는 연동 역할이 있을 때만 있다.
-  const flowViews = useMemo<FlowView[]>(() => ["lane", ...(traceVisible ? (["trace"] as const) : []), ...(archVisible ? (["arch"] as const) : [])], [traceVisible, archVisible]);
+  // 쓸 수 있는 보기: 레인은 늘 있고, 위임 흐름은 연동 역할이 있을 때만 있다.
+  const flowViews = useMemo<FlowView[]>(() => ["lane", ...(traceVisible ? (["trace"] as const) : [])], [traceVisible]);
   const effectiveFlowView: FlowView = flowViews.includes(flowView) ? flowView : "lane";
-  if (effectiveFlowView === "arch" && !flowCollapsed && !archOpened) setArchOpened(true); // 구조도는 처음 열 때까지 질의하지 않는다
-  const trace = useLogTrace(session, traceVisible && !flowCollapsed && effectiveFlowView === "trace");
+  const trace = useLogTrace(session, traceVisible && !flowCollapsed && !archView && effectiveFlowView === "trace");
   const toggleFlow = () => {
     if (flowCollapsed) {
       setFlowUserOpened(true);
@@ -270,18 +290,6 @@ export function SessionDetailPage() {
     ];
     setMenu({ items, anchor });
   };
-  const openArchiveMenu = (el: HTMLElement | null) => {
-    const r = el?.getBoundingClientRect();
-    setMenu({
-      anchor: { x: r?.left ?? 0, y: r?.bottom ?? 0, element: el ?? undefined },
-      items: [
-        { id: "html", label: `${t.sessions.archive} — ${t.sessions.archiveHtml}`, onSelect: () => void download(archiveFilterFor(session), "html") },
-        { id: "json", label: `${t.sessions.archive} — ${t.sessions.archiveJson}`, onSelect: () => void download(archiveFilterFor(session), "json") },
-      ],
-      note: t.sessions.archiveOffline,
-    });
-  };
-
   const speeds = [0.5, 1, 2, 5, 10, 30];
   const changeSpeed = (s: number) => {
     playback.setSpeed(s);
@@ -291,19 +299,25 @@ export function SessionDetailPage() {
     playback.setSkipGaps(v);
     storage.set(LOGS_STORAGE.skipGaps, v ? "1" : "0");
   };
-  useShortcuts([
-    { id: "logs.s.play", scope: LOGS_SCOPES.session, keys: "k", titleKey: "shortcuts.logsPlayToggle", run: playback.toggle },
-    { id: "logs.s.prev", scope: LOGS_SCOPES.session, keys: ",", titleKey: "shortcuts.logsStepBack", run: () => playback.step(-1) },
-    { id: "logs.s.next", scope: LOGS_SCOPES.session, keys: ".", titleKey: "shortcuts.logsStepForward", run: () => playback.step(1) },
-    { id: "logs.s.slower", scope: LOGS_SCOPES.session, keys: "[", titleKey: "shortcuts.logsSpeedDown", run: () => changeSpeed(nextSpeed(speeds, playback.speed, -1)) },
-    { id: "logs.s.faster", scope: LOGS_SCOPES.session, keys: "]", titleKey: "shortcuts.logsSpeedUp", run: () => changeSpeed(nextSpeed(speeds, playback.speed, 1)) },
-    { id: "logs.s.errors", scope: LOGS_SCOPES.session, keys: "e", titleKey: "shortcuts.logsErrorsOnly", run: () => setErrorsOnly((v) => !v) },
-    { id: "logs.s.flow", scope: LOGS_SCOPES.session, keys: "t", titleKey: "shortcuts.logsToggleFlow", run: toggleFlow },
-    { id: "logs.s.view", scope: LOGS_SCOPES.session, keys: "v", titleKey: "shortcuts.logsFlowView", run: () => flowViews.length > 1 && setFlowView((v) => flowViews[(Math.max(0, flowViews.indexOf(v)) + 1) % flowViews.length] ?? "lane") },
-    { id: "logs.s.detail", scope: LOGS_SCOPES.session, keys: "d", titleKey: "shortcuts.logsToggleDetail", run: () => selectedUid !== null && setSelectedUid(null) },
-    { id: "logs.s.search", scope: LOGS_SCOPES.session, keys: "/", titleKey: "shortcuts.logsFocusSearch", run: () => searchRef.current?.focus() },
-    { id: "logs.s.chips", scope: LOGS_SCOPES.session, keys: "f", titleKey: "shortcuts.logsCategoryFocus", run: () => focusLogControl("categoryChips") },
-  ]);
+  const refresh = () => void tl.refetch();
+  useSessionShortcuts({
+    refresh,
+    scan: () => void scan.run(),
+    playToggle: playback.toggle,
+    stepBack: () => playback.step(-1),
+    stepForward: () => playback.step(1),
+    slower: () => changeSpeed(nextSpeed(speeds, playback.speed, -1)),
+    faster: () => changeSpeed(nextSpeed(speeds, playback.speed, 1)),
+    errorsOnly: () => setErrorsOnly((v) => !v),
+    toggleFlow,
+    flowView: () => !archView && flowViews.length > 1 && setFlowView((v) => flowViews[(Math.max(0, flowViews.indexOf(v)) + 1) % flowViews.length] ?? "lane"),
+    toggleView: () => archVisible && setView(archView ? SESSION_VIEWS.events : SESSION_VIEWS.architecture),
+    sessionInfo: () => setInfoOpen((v) => !v),
+    viewMenu: () => setViewOpen(true),
+    toggleDetail: () => selectedUid !== null && setSelectedUid(null),
+    focusSearch: () => searchRef.current?.focus(),
+    focusChips: () => focusLogControl("categoryChips"),
+  });
 
   const summary = timeline?.session;
   const notFound = tl.isError && (tl.error as { status?: number } | null)?.status === 404;
@@ -334,6 +348,7 @@ export function SessionDetailPage() {
   const archCount = observedValue(arch.target?.count);
   const archOthers = hasActiveFilter(url.filter) || errorsOnly || !atEnd;
   const hasHiddenCategories = hiddenIds.length > 0;
+  const summaryText = [summary?.project ? summary.project.label || summary.project.id : null, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString("ko-KR")}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
   const emptyRows = rows.length === 0;
   const detailOpen = selectedUid !== null;
   const durationMs = summary?.first_time != null && summary?.last_time != null ? Math.max(0, (summary.last_time - summary.first_time) * 1000) : null;
@@ -344,16 +359,109 @@ export function SessionDetailPage() {
     url.setScreen({ [SCREEN_PARAMS.lane]: null });
   };
 
+  // ---- 알림 줄(우선순위 순으로 하나만 보이고 나머지는 "외 n건")
+  const notices: LogNotice[] = [];
+  if (all.length > LOGS_LIMITS.bigSessionWarn) notices.push({ id: "big", priority: NOTICE_PRIORITY.limit, tone: "info", text: t.detail.big, title: t.detail.big, className: "logs-banner" });
+  if (timeline?.truncated) notices.push({ id: "truncated", priority: NOTICE_PRIORITY.limit, tone: "info", text: t.detail.loadMoreNote(all.length), title: t.detail.loadMoreNote(all.length), className: "logs-banner" });
+  if (liveBanner && !live) {
+    notices.push({
+      ...freshNotice("live", t.detail.liveBanner),
+      action: {
+        label: t.detail.liveAction,
+        onClick: () => {
+          setLiveBanner(false);
+          setPos(null);
+          url.setScreen({ [SCREEN_PARAMS.through]: null });
+          void tl.refetch();
+        },
+      },
+    });
+  }
+  if (otherSources !== null) notices.push(otherSources);
+
+  // ---- 헤더 [⋯]: 지금 수집 · 보관본 · 구조도 새 창 · 세션 id 복사
+  const headerMenu: ActionMenuEntry[] = [
+    ...(enabledCount(sources.data) > 0 ? [{ kind: "item" as const, id: "scan", label: t.header.menu.scan, hint: "Shift+R", onSelect: () => void scan.run() }] : []),
+    { kind: "item", id: "archive-html", label: `${t.header.menu.archive} — ${t.sessions.archiveHtml}`, onSelect: () => void download(archiveFilterFor(session), "html") },
+    { kind: "item", id: "archive-json", label: `${t.header.menu.archive} — ${t.sessions.archiveJson}`, onSelect: () => void download(archiveFilterFor(session), "json") },
+    ...(archVisible && popout.supported ? [{ kind: "item" as const, id: "popout", label: t.header.menu.popout, onSelect: popout.open }] : []),
+    { kind: "item", id: "copy", label: t.header.menu.copySession, onSelect: () => copy(session) },
+  ];
+
+  const detailTable = (
+    <div ref={tableWrapRef} className="logs-tablewrap" data-dim={tl.isError ? "true" : undefined}>
+      {tl.isPending ? (
+        <div className="app-loading" role="status" aria-busy="true">{all.length > LOGS_LIMITS.bigSessionProgress ? t.detail.loadingProgress(all.length) : t.loading}</div>
+      ) : all.length === 0 ? (
+        <p className="logs-empty">{hasHiddenCategories && !includeHidden ? `${t.detail.onlyHidden}` : t.detail.noEvents}{hasHiddenCategories && !includeHidden ? <Button size="sm" onClick={() => setIncludeHidden(true)}>{t.view.includeHidden}</Button> : null}</p>
+      ) : emptyRows ? (
+        <div className="logs-empty">
+          <p>{archCount === 0 && arch.targetTitle !== "" ? archMessages.table.zero(arch.targetTitle) : t.detail.noMatch(visible.length)}</p>
+          <Button size="sm" onClick={clearFilters}>{t.clearFilters}</Button>
+        </div>
+      ) : (
+        <LogEventTable
+          ref={eventTableRef}
+          onActivate={activateEvent}
+          rows={rows}
+          columns={columns}
+          selectedUid={selectedUid}
+          onSelect={setSelectedUid}
+          onRowMenu={openRowMenu}
+          taxonomy={taxonomy}
+          isError={isError}
+          slotFor={slotFor}
+          timeMode={time.mode}
+          onTimeModeChange={time.setMode}
+          originTime={origin}
+          groupByMessage={grouped}
+          followLast={playback.playing || live ? follow : undefined}
+          onFollowChange={setFollow}
+          currentUid={all[index]?.uid ?? null}
+          laneLabelFor={laneLabelFor}
+          height={Math.max(160, tableH - LOGS_LIMITS.tableChrome)}
+          ariaLabel={t.detail.ariaTable}
+          renderCell={(id, row) =>
+            id === CELL_IDS.lane && laneOf(row) !== "" ? (
+              <button type="button" className="logs-linkbtn ac-ellipsis" tabIndex={-1} title={`${labels.get(laneOf(row)) ?? laneOf(row)} — ${t.detail.onlyThisLane}`} onClick={(ev) => { ev.stopPropagation(); setLane(laneOf(row)); }}>
+                {labels.get(laneOf(row)) ?? laneOf(row)}
+              </button>
+            ) : undefined
+          }
+        />
+      )}
+    </div>
+  );
+
+  // 레인 칩·구조도 칩: 어느 뷰에서나 보인다(구조도 뷰는 첫 줄, 이벤트 뷰는 범주 칩 줄 끝).
+  const filterChips = (
+    <>
+      {laneFilter.map((id) => (
+        <span key={id} className="logs-chip">
+          {t.detail.laneChip(labels.get(id) ?? id)}
+          <button type="button" className="logs-chipx" aria-label={t.detail.removeLane(labels.get(id) ?? id)} onClick={() => setLane(id)}>×</button>
+        </span>
+      ))}
+      <ArchitectureChips chips={arch.chips} />
+    </>
+  );
+  const viewTabs = archVisible ? [{ id: SESSION_VIEWS.events, label: t.detail.view[SESSION_VIEWS.events] ?? SESSION_VIEWS.events }, { id: SESSION_VIEWS.architecture, label: t.detail.view[SESSION_VIEWS.architecture] ?? SESSION_VIEWS.architecture }] : [];
+  const popoutFolded = popout.mode !== "docked";
+  // 흐름 패널의 머리([흐름 접기/보기] + [레인 | 위임 흐름])는 뷰 탭 줄 오른쪽에 둔다 — 세로 한 줄(40px)을 아껴 표 행을 늘린다(5.7R.32 AC-2).
+
   return (
     <LogsPageFrame
       tab="sessions"
       title={t.docTitle.session(session.slice(0, 8))}
-      status={<span className="app-muted" role="status">{tl.isFetching && !tl.isPending ? t.refreshing : ""}</span>}
-      actions={<Button size="sm" onClick={() => void tl.refetch()}>{t.refresh} ⟳</Button>}
+      status={<span className="app-muted" role="status">{scan.scanning ? t.scanning : tl.isFetching && !tl.isPending ? t.refreshing : ""}</span>}
+      onRefresh={refresh}
+      menu={headerMenu}
+      notices={notices}
     >
       <div
         className="logs-session"
         data-detail={detailOpen ? "open" : "closed"}
+        data-view={archView ? SESSION_VIEWS.architecture : SESSION_VIEWS.events}
         onKeyDown={(e) => {
           if (e.key === "Escape" && !e.defaultPrevented && laneFilter.length > 0) url.setScreen({ [SCREEN_PARAMS.lane]: null });
         }}
@@ -368,49 +476,15 @@ export function SessionDetailPage() {
               {summary === undefined ? (
                 <span className="app-skeleton-row logs-skel-inline" aria-hidden="true" />
               ) : (
-                <span className="logs-summary app-wrap">
-                  {summary.project ? `${t.detail.project} ${summary.project.label || summary.project.id}` : null}
-                  {summary.models && summary.models.length > 0 ? ` · ${summary.models.join(", ")}` : null}
-                  {` · ${t.detail.events} ${(summary.events ?? all.length).toLocaleString("ko-KR")}`}
-                  {` · ${t.detail.errors} ${errorCount}`}
-                  {summary.tokens?.total != null ? ` · ${t.detail.tokens} ${summary.tokens.total.toLocaleString("ko-KR")}` : null}
+                <span className="logs-summary ac-ellipsis" title={summaryText}>
+                  <span className="logs-summary-project">{summary.project ? `${summary.project.label || summary.project.id} · ` : null}</span>
+                  {`${t.detail.events} ${(summary.events ?? all.length).toLocaleString("ko-KR")} · ${t.detail.errors} ${errorCount}`}
                 </span>
               )}
               <span className="logs-spacer" />
-              <Button size="sm" aria-haspopup="menu" onClick={(e) => openArchiveMenu(e.currentTarget)}>{t.sessions.archive} ▾</Button>
+              <SessionInfoPopover session={session} summary={summary} errorCount={errorCount} eventCount={all.length} durationMs={durationMs} open={infoOpen} onOpenChange={setInfoOpen} onCopy={copy} />
             </div>
-            {summary === undefined ? null : (
-              <div className="logs-session-line app-muted">
-                <span>{t.detail.start} {summary.first_time != null ? new Date(summary.first_time * 1000).toLocaleString("ko-KR") : "–"}</span>
-                {durationMs !== null ? <span> · {t.detail.length} {Math.round(durationMs / 1000)}초</span> : null}
-                {summary.thread_count != null ? <span> · {t.detail.agents} {summary.thread_count}</span> : null}
-              </div>
-            )}
           </header>
-
-          {all.length > LOGS_LIMITS.bigSessionWarn ? <Banner tone="info" className="logs-banner">{t.detail.big}</Banner> : null}
-          {timeline?.truncated ? <Banner tone="info" className="logs-banner">{t.detail.loadMoreNote(all.length)}</Banner> : null}
-          {liveBanner && !live ? (
-            <Banner
-              tone="info"
-              className="logs-banner"
-              actions={
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setLiveBanner(false);
-                    setPos(null);
-                    url.setScreen({ [SCREEN_PARAMS.through]: null });
-                    void tl.refetch();
-                  }}
-                >
-                  {t.detail.liveAction}
-                </Button>
-              }
-            >
-              {t.detail.liveBanner}
-            </Banner>
-          ) : null}
 
           <PlaybackBar
             events={all}
@@ -429,17 +503,24 @@ export function SessionDetailPage() {
             maxTicks={LOGS_LIMITS.maxErrorTicks}
           />
 
-          <section className="logs-flow" data-collapsed={flowCollapsed ? "true" : undefined} aria-label={t.detail.flowPanel}>
-            <div className="logs-flow-head">
-              <Button size="sm" aria-expanded={!flowCollapsed} onClick={toggleFlow}>{flowCollapsed ? t.detail.flowToggleShow : t.detail.flowToggleHide}</Button>
-              {!flowCollapsed ? <FlowSegments view={effectiveFlowView} views={flowViews} onChange={(v) => { setFlowView(v); setFlowUserOpened(true); }} /> : null}
+          {viewTabs.length > 1 || !archView ? (
+            <div className="logs-viewrow">
+              <ViewTabs tabs={viewTabs} value={archView ? SESSION_VIEWS.architecture : SESSION_VIEWS.events} onChange={setView} label={t.detail.viewTabs} idPrefix="logs-view" />
+              <span className="logs-spacer" />
+              {archView ? null : (
+                <>
+                  {flowCollapsed ? null : <FlowSegments view={effectiveFlowView} views={flowViews} onChange={(v) => { setFlowView(v); setFlowUserOpened(true); }} />}
+                  <Button size="sm" aria-expanded={!flowCollapsed} aria-controls="logs-flow-panel" onClick={toggleFlow}>{flowCollapsed ? t.detail.flowShow : t.detail.flowToggleHide}</Button>
+                </>
+              )}
             </div>
-            {flowCollapsed ? null : (
-              <>
-              {effectiveFlowView === "arch" ? (
-                popout.mode !== "docked" ? (
-                  <div className="logs-flow-body logs-flow-body--arch-folded"><PopoutPlaceholder popout={popout} /></div>
-                ) : (
+          ) : null}
+
+          {archView ? (
+            <div className="logs-archview">
+              {popoutFolded ? (
+                <div className="logs-flow-body logs-flow-body--arch-folded"><PopoutPlaceholder popout={popout} /></div>
+              ) : (
                 <div className="logs-flow-body logs-flow-body--arch" style={{ height: archH }}>
                   <PopoutNotice popout={popout} />
                   <ArchitecturePanel
@@ -455,70 +536,81 @@ export function SessionDetailPage() {
                     onSkip={() => eventTableRef.current?.focus()}
                   />
                 </div>
-                )
-              ) : (
-              <div className="logs-flow-body" style={{ maxHeight: flowH }}>
-                <SessionFlow
-                  view={effectiveFlowView}
-                  lanes={lanes}
-                  laneLabelFor={(id) => labels.get(id) ?? id}
-                  events={laneEvents}
-                  cursorTime={cursorTime}
-                  trace={{ data: trace.data, loading: trace.isPending, error: trace.error, refetch: () => void trace.refetch() }}
-                  taxonomy={taxonomy}
-                  selectedUid={selectedUid}
-                  onSelectEvent={(uid) => setSelectedUid(uid)}
-                  onSelectLane={setLane}
-                  playing={playback.playing}
-                  atEnd={atEnd}
-                  lastTime={all.length > 0 ? (all[all.length - 1]?.time ?? null) : null}
-                />
-              </div>
               )}
-              {effectiveFlowView === "arch" && popout.mode !== "docked" ? null : effectiveFlowView === "arch" ? (
-                <SplitHandle orientation="horizontal" size={archH} min={LOGS_LIMITS.archFlowHeightMin} max={LOGS_LIMITS.archFlowHeightMax} onChange={setArchHeight} label={t.detail.flowSplitLabel} />
-              ) : (
-                <SplitHandle orientation="horizontal" size={flowH} min={LOGS_LIMITS.flowHeightMin} max={LOGS_LIMITS.flowHeightMax} onChange={setFlowHeight} label={t.detail.flowSplitLabel} />
-              )}
-              </>
-            )}
-          </section>
+              {popoutFolded ? null : <SplitHandle orientation="horizontal" size={archH} min={LOGS_LIMITS.archFlowHeightMin} max={LOGS_LIMITS.archFlowHeightMax} onChange={setArchHeight} label={t.detail.flowSplitLabel} />}
+            </div>
+          ) : (
+            <>
+              {popoutFolded && archVisible ? <PopoutPlaceholder popout={popout} compact /> : null}
+              <section id="logs-flow-panel" className="logs-flow" data-collapsed={flowCollapsed ? "true" : undefined} aria-label={t.detail.flowPanel}>
+                {flowCollapsed ? null : (
+                  <>
+                    <div className="logs-flow-body" style={{ maxHeight: flowH }}>
+                      <SessionFlow
+                        view={effectiveFlowView}
+                        lanes={lanes}
+                        laneLabelFor={(id) => labels.get(id) ?? id}
+                        events={laneEvents}
+                        cursorTime={cursorTime}
+                        trace={{ data: trace.data, loading: trace.isPending, error: trace.error, refetch: () => void trace.refetch() }}
+                        taxonomy={taxonomy}
+                        selectedUid={selectedUid}
+                        onSelectEvent={(uid) => setSelectedUid(uid)}
+                        onSelectLane={setLane}
+                        playing={playback.playing}
+                        atEnd={atEnd}
+                        lastTime={all.length > 0 ? (all[all.length - 1]?.time ?? null) : null}
+                      />
+                    </div>
+                    <SplitHandle orientation="horizontal" size={flowH} min={LOGS_LIMITS.flowHeightMin} max={LOGS_LIMITS.flowHeightMax} onChange={setFlowHeight} label={t.detail.flowSplitLabel} />
+                  </>
+                )}
+              </section>
+            </>
+          )}
 
           <div className="logs-filterrow">
-            <LogFilters
-              value={url.filter}
-              onChange={url.setFilter}
-              options={options}
-              suggestions={suggestions}
-              inputRef={searchRef}
-              compact
-              savedExtra={() => ({ errorsOnly, lanes: laneFilter })}
-              onApplySavedExtra={(extra) => {
-                setErrorsOnly(extra?.["errorsOnly"] === true);
-                const l = extra?.["lanes"];
-                url.setScreen({ [SCREEN_PARAMS.lane]: Array.isArray(l) ? (l as string[]) : null });
-              }}
-            />
-            <CategoryChips
-              items={chipItems}
-              taxonomy={taxonomy}
-              slotFor={slotFor}
-              selected={valuesOf(url.filter, FILTER_KEYS.category)}
-              onChange={(next) => url.setFilter(withValues(url.filter, FILTER_KEYS.category, next))}
-            />
-            <div className="logs-toggles">
-              <label className="app-check"><input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />{t.detail.errorsOnly} ({errorCount})</label>
-              <label className="app-check"><input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} />{t.detail.groupResponses}</label>
-              {hasHiddenCategories ? <label className="app-check"><input type="checkbox" checked={includeHidden} onChange={(e) => setIncludeHidden(e.target.checked)} />{t.detail.includeHidden}</label> : null}
-              {laneFilter.map((id) => (
-                <span key={id} className="logs-chip">
-                  {t.detail.laneChip(labels.get(id) ?? id)}
-                  <button type="button" className="logs-chipx" aria-label={t.detail.removeLane(labels.get(id) ?? id)} onClick={() => setLane(id)}>×</button>
-                </span>
-              ))}
-              <ArchitectureChips chips={arch.chips} />
-              <ColumnsMenu all={EVENT_COLUMN_IDS} selected={cols} labelOf={(id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
+            <div className="logs-filterline">
+              <LogFilters
+                value={url.filter}
+                onChange={url.setFilter}
+                options={options}
+                suggestions={suggestions}
+                inputRef={searchRef}
+                compact
+                savedExtra={() => ({ errorsOnly, lanes: laneFilter })}
+                onApplySavedExtra={(extra) => {
+                  setErrorsOnly(extra?.["errorsOnly"] === true);
+                  const l = extra?.["lanes"];
+                  url.setScreen({ [SCREEN_PARAMS.lane]: Array.isArray(l) ? (l as string[]) : null });
+                }}
+              />
+              <Button size="sm" aria-pressed={errorsOnly} className="logs-errtoggle" onClick={() => setErrorsOnly(!errorsOnly)}>{t.detail.errorsOnly} ({errorCount})</Button>
+              {archView ? filterChips : null}
+              <span className="logs-spacer" />
+              <LogViewMenu
+                open={viewOpen}
+                onOpenChange={setViewOpen}
+                groupResponses={{ checked: grouped, onChange: setGrouped }}
+                includeHidden={hasHiddenCategories ? { checked: includeHidden, onChange: setIncludeHidden } : undefined}
+                time={{ mode: time.mode, onChange: time.setMode }}
+                columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => columns.find((c) => c.id === id)?.header?.toString() ?? eventColumns([id])[0]?.header?.toString() ?? id, onChange: setCols }}
+                onEditTaxonomy={() => void navigate(`${pathForRole(LINK_ROLES.settings)}#${SETTINGS_TAXONOMY_HASH}`)}
+              />
             </div>
+            {archView ? null : (
+              <div className="logs-filterline">
+                <CategoryChips
+                  items={chipItems}
+                  taxonomy={taxonomy}
+                  slotFor={slotFor}
+                  selected={valuesOf(url.filter, FILTER_KEYS.category)}
+                  onChange={(next) => url.setFilter(withValues(url.filter, FILTER_KEYS.category, next))}
+                  maxInline={LOGS_LIMITS.categoryChipsInline}
+                />
+                {filterChips}
+              </div>
+            )}
           </div>
 
           {archCount === undefined ? null : (
@@ -527,48 +619,7 @@ export function SessionDetailPage() {
             </p>
           )}
 
-          <div ref={tableWrapRef} className="logs-tablewrap" data-dim={tl.isError ? "true" : undefined}>
-            {tl.isPending ? (
-              <div className="app-loading" role="status" aria-busy="true">{all.length > LOGS_LIMITS.bigSessionProgress ? t.detail.loadingProgress(all.length) : t.loading}</div>
-            ) : all.length === 0 ? (
-              <p className="logs-empty">{hasHiddenCategories && !includeHidden ? `${t.detail.onlyHidden}` : t.detail.noEvents}{hasHiddenCategories && !includeHidden ? <Button size="sm" onClick={() => setIncludeHidden(true)}>{t.detail.includeHidden}</Button> : null}</p>
-            ) : emptyRows ? (
-              <div className="logs-empty">
-                <p>{archCount === 0 && arch.targetTitle !== "" ? archMessages.table.zero(arch.targetTitle) : t.detail.noMatch(visible.length)}</p>
-                <Button size="sm" onClick={clearFilters}>{t.clearFilters}</Button>
-              </div>
-            ) : (
-              <LogEventTable
-                ref={eventTableRef}
-                onActivate={activateEvent}
-                rows={rows}
-                columns={columns}
-                selectedUid={selectedUid}
-                onSelect={setSelectedUid}
-                onRowMenu={openRowMenu}
-                taxonomy={taxonomy}
-                isError={isError}
-                slotFor={slotFor}
-                timeMode={time.mode}
-                onTimeModeChange={time.setMode}
-                originTime={origin}
-                groupByMessage={grouped}
-                followLast={playback.playing || live ? follow : undefined}
-                onFollowChange={setFollow}
-                currentUid={all[index]?.uid ?? null}
-                laneLabelFor={laneLabelFor}
-                height={Math.max(160, tableH - 8)}
-                ariaLabel={t.detail.ariaTable}
-                renderCell={(id, row) =>
-                  id === CELL_IDS.lane && laneOf(row) !== "" ? (
-                    <button type="button" className="logs-linkbtn ac-ellipsis" tabIndex={-1} title={`${labels.get(laneOf(row)) ?? laneOf(row)} — ${t.detail.onlyThisLane}`} onClick={(ev) => { ev.stopPropagation(); setLane(laneOf(row)); }}>
-                      {labels.get(laneOf(row)) ?? laneOf(row)}
-                    </button>
-                  ) : undefined
-                }
-              />
-            )}
-          </div>
+          {detailTable}
         </div>
 
         {detailOpen && selectedUid !== null ? (

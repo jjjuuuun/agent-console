@@ -35,6 +35,9 @@ class DefinitionKind:
             모든 파일의 sha256이 들어간다(파일이 `content.file` 하나뿐이면 단일 파일 때와
             해시가 같다).
         summary_fields: 목록 요약(`DefinitionSummary.extra`)에 복사해 줄 최상위 문자열 필드.
+        portable: True면 프로젝트 폴더의 사본 공간(`.agent-console/`)에 둘 수 있는 종류다
+            (design §PI.4.2). 싱글턴 종류는 이 값과 상관없이 옮길 수 없다(`is_portable`).
+            앱 등록부 같은 종류는 False로 등록한다.
     """
 
     name: str
@@ -47,12 +50,18 @@ class DefinitionKind:
     content_field: str | None = None
     multi_file: bool = False
     summary_fields: tuple[str, ...] = ()
+    portable: bool = True
 
     def __post_init__(self) -> None:
         if self.content_field is not None and self.singleton_file is not None:
             raise ValueError(f"{self.name}: a singleton kind cannot have content files")
         if self.multi_file and self.content_field is None:
             raise ValueError(f"{self.name}: multi_file needs content_field")
+
+    @property
+    def is_portable(self) -> bool:
+        """프로젝트 사본 공간에 둘 수 있나: `portable`이고 싱글턴이 아니다."""
+        return self.portable and self.singleton_file is None
 
     @property
     def is_singleton(self) -> bool:
@@ -71,7 +80,7 @@ AGENT_KIND = DefinitionKind(
     name="agent", directory="agents", model=Agent, summary_fields=(SCOPE_FIELD,)
 )
 SETTINGS_KIND = DefinitionKind(
-    name="settings", model=WorkspaceSettings, singleton_file="settings.yaml"
+    name="settings", model=WorkspaceSettings, singleton_file="settings.yaml", portable=False
 )
 RESOURCE_KIND = DefinitionKind(
     name="resource",

@@ -6,8 +6,12 @@ import { HandoffMatrixView, LogEventTable, focusLogControl, eventColumns, hasAct
 import type { LogEvent } from "@agent-console/contracts";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
-import { ColumnsMenu, useColumnChoice } from "./ColumnsMenu";
-import { EmptyNoLogs, EmptyNoMatch, FirstUseCard, NewEventsBanner, OtherSourcesHint } from "./LogsEmpty";
+import { useColumnChoice } from "./ColumnsMenu";
+import { EmptyNoLogs, EmptyNoMatch, FirstUseCard, freshNotice, useOtherSourcesNotice } from "./LogsEmpty";
+import type { ActionMenuEntry } from "./ActionMenu";
+import { LogViewMenu } from "./LogViewMenu";
+import type { LogNotice } from "./NoticeBar";
+import { LINK_ROLES, pathForRole } from "./routeLinks";
 import { LogDetailPanel } from "./LogDetailPanel";
 import { useDetailLink } from "./useDetailLink";
 import { LogFilters, RangeControl, buildFilterFields } from "./LogFilters";
@@ -17,7 +21,7 @@ import { useLogsIngested } from "./LogsLive";
 import { SplitHandle } from "./SplitHandle";
 import { useArchiveDownload } from "./archive";
 import { useLogTimeMode } from "./useLogTimeMode";
-import { CELL_IDS, DEFAULT_RANGE, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_EVENT_COLUMNS_DEFAULT, SEARCH_VIEWS, SUGGEST_FROM } from "./logsConfig";
+import { CELL_IDS, DEFAULT_RANGE, SETTINGS_TAXONOMY_HASH, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_EVENT_COLUMNS_DEFAULT, SEARCH_VIEWS, SUGGEST_FROM } from "./logsConfig";
 import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
 import { classifyEmpty, enabledCount, eventFieldValues, originOf, parseRange, rangeToWindow, suggestionsFor, toRequestParams, withValues } from "./logsLib";
 import { logsMessages as t } from "./messages";
@@ -92,6 +96,7 @@ export function SearchPage() {
     { id: "logs.x.filter", scope: LOGS_SCOPES.search, keys: "f", titleKey: "shortcuts.logsFocusFilter", run: () => focusLogControl("addFilter", { activate: true }) },
     { id: "logs.x.view", scope: LOGS_SCOPES.search, keys: "h", titleKey: "shortcuts.logsHandoffToggle", run: () => setView(view === EVENTS_VIEW ? MATRIX_VIEW : EVENTS_VIEW) },
     { id: "logs.x.refresh", scope: LOGS_SCOPES.search, keys: "r", titleKey: "shortcuts.logsRefresh", run: refresh },
+    { id: "logs.x.scan", scope: LOGS_SCOPES.search, keys: "Shift+R", titleKey: "shortcuts.logsScan", run: () => void scan.run() },
   ]);
 
   const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast({ tone: "success", text: t.copied, durationMs: 2000 }));
@@ -108,17 +113,15 @@ export function SearchPage() {
       ],
     });
   };
-  const openArchiveMenu = (el: HTMLElement | null) => {
-    const r = el?.getBoundingClientRect();
-    setMenu({
-      anchor: { x: r?.left ?? 0, y: r?.bottom ?? 0, element: el ?? undefined },
-      items: [
-        { id: "html", label: `${t.sessions.archive} — ${t.sessions.archiveHtml}`, onSelect: () => void download(handoffParams, "html") },
-        { id: "json", label: `${t.sessions.archive} — ${t.sessions.archiveJson}`, onSelect: () => void download(handoffParams, "json") },
-      ],
-      note: t.sessions.archiveOffline,
-    });
-  };
+  const otherSources = useOtherSourcesNotice(sources.data, rows.length > 0);
+  const notices: LogNotice[] = [];
+  if (newBanner) notices.push({ ...freshNotice("new-events", t.search.newBanner), action: { label: t.search.loadNew, onClick: refresh } });
+  if (otherSources !== null) notices.push(otherSources);
+  const headerMenu: ActionMenuEntry[] = [
+    ...(enabledCount(sources.data) > 0 ? [{ kind: "item" as const, id: "scan", label: t.header.menu.scan, hint: "Shift+R", onSelect: () => void scan.run() }] : []),
+    { kind: "item", id: "archive-html", label: `${t.header.menu.archive} — ${t.sessions.archiveHtml}`, onSelect: () => void download(handoffParams, "html") },
+    { kind: "item", id: "archive-json", label: `${t.header.menu.archive} — ${t.sessions.archiveJson}`, onSelect: () => void download(handoffParams, "json") },
+  ];
 
   const cells: HandoffCell[] = (handoffs.data?.cells ?? []).map((c) => ({ from: c.from ?? c.source, to: c.to ?? c.target, via: c.via ?? c.kind, count: c.count }));
   const clearFilters = () => url.setFilter({});
@@ -184,15 +187,10 @@ export function SearchPage() {
     <LogsPageFrame
       tab="search"
       status={<span className="app-muted" role="status">{scan.scanning ? t.scanning : (view === EVENTS_VIEW ? events.isFetching : handoffs.isFetching) && !events.isPending ? t.refreshing : ""}</span>}
-      actions={
-        <>
-          <Button size="sm" onClick={refresh}>{t.refresh} ⟳</Button>
-          {enabledCount(sources.data) > 0 ? <Button size="sm" loading={scan.scanning} onClick={() => void scan.run()}>{t.scan}</Button> : null}
-        </>
-      }
+      onRefresh={refresh}
+      menu={headerMenu}
+      notices={notices}
     >
-      {rows.length > 0 ? <OtherSourcesHint sources={sources.data} /> : null}
-      {newBanner ? <NewEventsBanner text={t.search.newBanner} action={t.search.loadNew} onAction={refresh} /> : null}
       <div className="logs-toolbar">
         <LogFilters
           value={url.filter}
@@ -221,12 +219,13 @@ export function SearchPage() {
         <span className="app-muted" aria-live="polite">{view === EVENTS_VIEW ? count : ""}</span>
         <span className="logs-spacer" />
         {view === EVENTS_VIEW ? (
-          <>
-            <Button size="sm" aria-pressed={order === "desc"} onClick={() => setOrder(order === "desc" ? "asc" : "desc")}>{order === "desc" ? t.search.orderDesc : t.search.orderAsc}</Button>
-            <ColumnsMenu all={EVENT_COLUMN_IDS} selected={cols} labelOf={(id) => eventColumns([id])[0]?.header?.toString() ?? id} onChange={setCols} />
-          </>
+          <LogViewMenu
+            sort={{ order, onChange: setOrder }}
+            time={{ mode: time.mode, onChange: time.setMode }}
+            columns={{ all: EVENT_COLUMN_IDS, selected: cols, labelOf: (id) => eventColumns([id])[0]?.header?.toString() ?? id, onChange: setCols }}
+            onEditTaxonomy={() => void navigate(`${pathForRole(LINK_ROLES.settings)}#${SETTINGS_TAXONOMY_HASH}`)}
+          />
         ) : null}
-        <Button size="sm" aria-haspopup="menu" onClick={(e) => openArchiveMenu(e.currentTarget)}>{t.search.archive} ▾</Button>
       </div>
       <div className="logs-search-main" data-detail={selectedUid !== null ? "open" : "closed"}>
         <div ref={wrapRef} className="logs-tablewrap" data-dim={(view === EVENTS_VIEW ? events.isError : handoffs.isError) && Object.keys(fieldErrors).length > 0 ? "true" : undefined}>

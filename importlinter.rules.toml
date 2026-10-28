@@ -84,10 +84,10 @@ source_modules = ["agent_console_conditions"]
 forbidden_modules = ["@all", "!agent_console_conditions", "!agent_console_contracts", "!agent_console_registry", "!agent_console_safe_regex"]
 
 [[contracts]]
-name = "projects는 contracts에만 의존 (순수 범위 규칙, 참조 추출은 주입 — teams·store를 모른다, design §UX-P.5·§UX-P.6 X25)"
+name = "projects는 contracts, local-folders에만 의존 (순수 등록·복사 계획·경로 지킴 규칙, 참조 추출·고치기는 주입 — teams·store를 모른다, design §PI.10·§UX-P.6 X25, 경로 비교는 local-folders 재사용 5.7R.33d)"
 type = "forbidden"
 source_modules = ["agent_console_projects"]
-forbidden_modules = ["@all", "!agent_console_projects", "!agent_console_contracts"]
+forbidden_modules = ["@all", "!agent_console_projects", "!agent_console_contracts", "!agent_console_local_folders"]
 
 [[contracts]]
 name = "local-folders는 다른 agent_console 패키지에 의존하지 않는다 (표준 라이브러리만, 파일 시스템은 주입, design §PI.10)"
@@ -235,6 +235,13 @@ name = "store는 contracts에만 의존 (runtime 프로토콜은 구조적 타�
 type = "forbidden"
 source_modules = ["agent_console_store"]
 forbidden_modules = ["@all", "!agent_console_contracts"]
+allow_indirect_imports = true
+
+[[contracts]]
+name = "project-space는 contracts, store, secret-rules에만 의존 (프로젝트 폴더의 구성 사본 공간 -- 서버·모듈·레지스트리를 모른다, 비밀 규칙은 기본 검사용, design §PI.4)"
+type = "forbidden"
+source_modules = ["agent_console_project_space"]
+forbidden_modules = ["@all", "!agent_console_project_space", "!agent_console_contracts", "!agent_console_store", "!agent_console_secret_rules"]
 allow_indirect_imports = true
 
 [[contracts]]

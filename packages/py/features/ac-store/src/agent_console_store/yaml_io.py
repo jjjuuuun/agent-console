@@ -85,6 +85,23 @@ def merge_into(old: Any, new: Any) -> Any:
     return wrap_value(new)
 
 
+def load_yaml_text(text: str, name: str = "document") -> CommentedMap:
+    """YAML 텍스트를 왕복 가능한 객체로 읽는다. 빈 문서는 빈 매핑.
+
+    Raises:
+        DefinitionCorrupt: 문법 오류이거나 최상위가 객체가 아니다(`name`은 메시지에만 쓴다).
+    """
+    try:
+        data = _yaml().load(text)
+    except Exception as exc:
+        raise DefinitionCorrupt(f"{name}: invalid YAML ({exc.__class__.__name__})") from exc
+    if data is None:
+        return CommentedMap()
+    if not isinstance(data, CommentedMap):
+        raise DefinitionCorrupt(f"{name}: top level must be a mapping")
+    return data
+
+
 def load_yaml_file(path: Path) -> CommentedMap | None:
     """파일을 왕복 가능한 객체로 읽는다. 없으면 None, 문법 오류·비객체면 `DefinitionCorrupt`."""
     try:
@@ -93,15 +110,7 @@ def load_yaml_file(path: Path) -> CommentedMap | None:
         return None
     except (OSError, UnicodeDecodeError) as exc:
         raise DefinitionCorrupt(f"{path.name}: {exc}") from exc
-    try:
-        data = _yaml().load(text)
-    except Exception as exc:
-        raise DefinitionCorrupt(f"{path.name}: invalid YAML ({exc.__class__.__name__})") from exc
-    if data is None:
-        return CommentedMap()
-    if not isinstance(data, CommentedMap):
-        raise DefinitionCorrupt(f"{path.name}: top level must be a mapping")
-    return data
+    return load_yaml_text(text, path.name)
 
 
 def dump_yaml(data: Any) -> str:

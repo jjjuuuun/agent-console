@@ -55,6 +55,12 @@ def _resource_file(path: str, size: int, sha256: str) -> ResourceFile:
     )
 
 
+type WriteGuard = Callable[[DefinitionKind, str, Mapping[str, Any], Mapping[str, bytes]], None]
+"""쓰기 전 검사 훅: `(종류, id, 저장할 문서, 저장할 본문 파일)`. 거부하려면 예외를 던진다.
+문서·본문·버전 기록을 쓰기 **전에** 불리므로 거부하면 아무것도 바뀌지 않는다
+(`create`·`save`·`write_*`·`restore_version` 공통)."""
+
+
 class BaseDefinitionStore(ABC):
     """`DefinitionStore` 공통 구현. 하위 클래스는 원시 문서 입출력 다섯 개만 채운다."""
 
@@ -67,7 +73,9 @@ class BaseDefinitionStore(ABC):
         clock: Callable[[], float] = time.time,
         max_content_bytes: int | None = DEFAULT_MAX_CONTENT_BYTES,
         max_versions: int | None = None,
+        write_guard: WriteGuard | None = None,
     ) -> None:
+        self._write_guard = write_guard
         self._kinds = kinds_by_name(kinds)
         self._max_content_bytes = max_content_bytes
         self._max_versions = max_versions
@@ -699,6 +707,8 @@ class BaseDefinitionStore(ABC):
     ) -> StoredDefinition:
         """문서(와 바뀐 본문)를 쓰고 버전을 남긴다. 검사를 마친 뒤 본문을 먼저 쓰고 문서를 쓴다."""
         put = put or {}
+        if self._write_guard is not None:
+            self._write_guard(kind, id, document, put)
         if put or drop:
             self._check_body_change(kind, id, put, drop)
         for path, data in put.items():
@@ -763,6 +773,7 @@ class InMemoryDefinitionStore(BaseDefinitionStore):
         clock: Callable[[], float] = time.time,
         max_content_bytes: int | None = DEFAULT_MAX_CONTENT_BYTES,
         max_versions: int | None = None,
+        write_guard: WriteGuard | None = None,
     ) -> None:
         super().__init__(
             kinds,
@@ -771,6 +782,7 @@ class InMemoryDefinitionStore(BaseDefinitionStore):
             clock=clock,
             max_content_bytes=max_content_bytes,
             max_versions=max_versions,
+            write_guard=write_guard,
         )
         self._docs: dict[tuple[str, str], dict[str, Any]] = {}
         self._bodies: dict[tuple[str, str, str], bytes] = {}

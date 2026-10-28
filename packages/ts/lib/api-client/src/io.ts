@@ -51,11 +51,12 @@ export interface BlobResponse {
 
 /** 기능 클라이언트가 쓰는 전송 함수. 실패는 모두 `ApiError`. */
 export interface RestIo {
-  request<T>(method: string, path: string, opts?: { body?: unknown; headers?: Headers }): Promise<T>;
+  /** `signal`이 abort되면 요청을 끊는다(오래 열려 있는 요청용, 예: OS 폴더 선택 창). 끊긴 요청은 `network_error` `ApiError`로 reject된다. */
+  request<T>(method: string, path: string, opts?: { body?: unknown; headers?: Headers; signal?: AbortSignal }): Promise<T>;
   requestVersioned<T>(
     method: string,
     path: string,
-    opts?: { body?: unknown; bytes?: Uint8Array; text?: string; headers?: Headers },
+    opts?: { body?: unknown; bytes?: Uint8Array; text?: string; headers?: Headers; signal?: AbortSignal },
   ): Promise<Versioned<T>>;
   /** 본문을 텍스트로 받는다(`ETag` 포함). */
   requestText(method: string, path: string, opts?: { text?: string; headers?: Headers }): Promise<Versioned<string>>;
@@ -109,4 +110,31 @@ export function filenameFromDisposition(value: string | null): string | undefine
   const plain = /filename\s*=\s*"([^"]*)"|filename\s*=\s*([^;]+)/i.exec(value);
   const name = plain?.[1] ?? plain?.[2]?.trim();
   return name === undefined || name === "" ? undefined : name;
+}
+
+/** 질의 인자 `project`의 이름(정의·메모리·대화·실행 REST 공통, design §PI.10). */
+export const SPACE_PARAM = "project";
+
+/** 경로에 질의 하나를 더한다(`?`가 있으면 `&`). 이미 같은 이름이 있으면 그대로 둔다. */
+export function withQueryParam(path: string, name: string, value: string): string {
+  const q = path.indexOf("?");
+  if (q >= 0 && new RegExp(`[?&]${enc(name)}=`).test(path.slice(q))) return path;
+  return `${path}${q >= 0 ? "&" : "?"}${enc(name)}=${enc(value)}`;
+}
+
+/**
+ * 모든 요청에 `?project=<id>`를 붙이는 전송을 만든다(공간 = 라이브러리 또는 프로젝트 폴더의 사본 저장소).
+ * `project`가 null·undefined·빈 문자열이면 `io`를 그대로 돌려준다(요청 주소가 지금과 같다).
+ * 기능 클라이언트는 공간을 모른다: `createGraphsClient(withSpace(io, "payments"))`처럼 감싸서 쓴다.
+ * 프로젝트 모듈이 없는 서버에는 공간 인자를 보내지 않는 것이 맞다(호출하는 쪽이 결정).
+ */
+export function withSpace(io: RestIo, project: string | null | undefined): RestIo {
+  if (project === null || project === undefined || project === "") return io;
+  const at = (path: string) => withQueryParam(path, SPACE_PARAM, project);
+  return {
+    request: (method, path, opts) => io.request(method, at(path), opts),
+    requestVersioned: (method, path, opts) => io.requestVersioned(method, at(path), opts),
+    requestText: (method, path, opts) => io.requestText(method, at(path), opts),
+    requestBlob: (method, path, opts) => io.requestBlob(method, at(path), opts),
+  };
 }

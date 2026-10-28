@@ -302,6 +302,16 @@ export function shouldAutoFoldFlow(o: { tableHeight: number; minRows: number; ro
 }
 
 /**
+ * 흐름 패널이 접힌 채 시작하는지(5.7R.32). 저장된 선택(`"1"` 접힘 / `"0"` 폄)이 있으면 폭과 무관하게 그 값이 이기고,
+ * 저장값이 없을 때만 폭 기준(`openFrom` 미만이면 접힘)을 쓴다.
+ */
+export function defaultFlowCollapsed(saved: string | null, width: number, openFrom: number): boolean {
+  if (saved === "1") return true;
+  if (saved === "0") return false;
+  return width < openFrom;
+}
+
+/**
  * 구조도 흐름 패널의 기본 높이: `min(기본, 뷰포트 − 표 N행 − 고정 머리)`, 하한 `floor`(명세 §5.2).
  * 사용자가 저장한 높이가 없을 때만 쓴다.
  */

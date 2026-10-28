@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Banner, Button, EmptyState } from "@agent-console/ui";
+import { Button, EmptyState } from "@agent-console/ui";
 import type { LogSourceInfo } from "@agent-console/contracts";
-import { HintBanner } from "../../app/hints";
+import { useHint } from "../../app/hints";
 import { useNow } from "../../app/useNow";
 import { useStorage } from "../../app/StorageContext";
 import { ROUTE_ROLES, routeIconNode } from "../library";
 import { LINK_ROLES, pathForRole } from "./routeLinks";
-import { LOGS_STORAGE } from "./logsConfig";
+import { LOGS_STORAGE, NOTICE_PRIORITY } from "./logsConfig";
+import type { LogNotice } from "./NoticeBar";
 import { firstUseSources, offReadingSources } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { sourceStatusLine } from "./sourceStatus";
@@ -133,23 +134,27 @@ export function EmptyNoMatch({ onClearFilters, onAllRange }: EmptyCProps) {
   );
 }
 
-/** D: 이벤트가 있고 외부 파일을 읽는 출처가 꺼져 있을 때의 안내 배너(닫으면 다시 안 보인다). */
-export function OtherSourcesHint({ sources }: { sources: readonly LogSourceInfo[] | undefined }) {
+/**
+ * D: 이벤트가 있고 외부 파일을 읽는 출처가 꺼져 있을 때의 안내(닫으면 다시 안 보인다). 알림 줄에 넣을 데이터를 돌려준다(없으면 null).
+ * `active`가 false면 아무것도 내지 않는다(예: 목록이 비어 있을 때).
+ */
+export function useOtherSourcesNotice(sources: readonly LogSourceInfo[] | undefined, active: boolean): LogNotice | null {
+  const hint = useHint(LOGS_STORAGE.hintOtherSources);
   const off = offReadingSources(sources);
-  if (off.length === 0) return null;
+  if (!active || !hint.visible || off.length === 0) return null;
   const titles = off.slice(0, 2).map((s) => s.descriptor.title).join(", ");
-  return (
-    <HintBanner id={LOGS_STORAGE.hintOtherSources}>
-      {t.empty.hintD(titles, Math.max(0, off.length - 2))} <Link to={settingsLogsHref()}>{t.empty.hintDAction}</Link>
-    </HintBanner>
-  );
+  const plain = t.empty.hintD(titles, Math.max(0, off.length - 2));
+  return {
+    id: "other-sources",
+    priority: NOTICE_PRIORITY.hint,
+    tone: "info",
+    text: <>{plain} <Link to={settingsLogsHref()}>{t.empty.hintDAction}</Link></>,
+    title: plain,
+    onDismiss: hint.dismiss,
+  };
 }
 
-/** 알림 배너(필터와 상관없이 새 이벤트가 수집됨). */
-export function NewEventsBanner({ text, action, onAction }: { text: string; action: string; onAction: () => void }) {
-  return (
-    <Banner tone="info" className="logs-new-banner" actions={<Button size="sm" onClick={onAction}>{action}</Button>}>
-      {text}
-    </Banner>
-  );
+/** 새 이벤트가 수집됐다는 알림의 바탕(버튼은 호출자가 `action`으로 더한다). 라이브 이동 알림도 같은 모양이다. */
+export function freshNotice(id: string, text: string): LogNotice {
+  return { id, priority: NOTICE_PRIORITY.fresh, tone: "info", text, title: text, className: "logs-new-banner" };
 }

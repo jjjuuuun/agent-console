@@ -9,7 +9,8 @@ import { createWsClient, type WsClient, type WsClientOptions } from "./ws";
 export const PACKAGE_NAME = "@agent-console/api-client" as const;
 
 export { ApiError, NETWORK_ERROR_CODE } from "./errors";
-export { createRestClient } from "./rest";
+export { createRestClient, createSpaceRestClient } from "./rest";
+export type { SpaceRestClient } from "./rest";
 export type {
   FetchLike,
   HandoffParams,
@@ -32,13 +33,14 @@ export type {
   Versioned,
 } from "./rest";
 export type { TokenSource } from "./token";
-export { definitionBase, encodePath, filenameFromDisposition, ISSUES_HEADER, parseIssuesHeader } from "./io";
+export { definitionBase, encodePath, filenameFromDisposition, ISSUES_HEADER, parseIssuesHeader, SPACE_PARAM, withQueryParam, withSpace } from "./io";
 export type { BlobResponse, RestIo } from "./io";
 export { createRestIo } from "./transport";
 export type { ExportArchive } from "./clients/exports";
 export { LOG_EMPTY_VALUE, logQuery } from "./clients/logs";
 export { memoryConflictVersion, memoryScopeText } from "./clients/memory";
 export type { MemoryClient, MemoryImportPolicyName } from "./clients/memory";
+export type { ListFoldersParams, ProjectsClient } from "./clients/projects";
 export type { ResourceFileContent } from "./clients/resources";
 export type { VersionFileContent } from "./clients/versions";
 export {

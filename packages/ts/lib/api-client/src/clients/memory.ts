@@ -4,6 +4,8 @@
  * 질의에서는 `<종류>:<범위 id>` 문자열(`memoryScopeText`)로 쓴다.
  */
 import type {
+  MemoryCopyRequest,
+  MemoryCopyResult,
   MemoryEntry,
   MemoryEntryPage,
   MemoryImportResult,
@@ -93,6 +95,11 @@ export function memoryConflictVersion(error: unknown): number | undefined {
 }
 
 export interface MemoryClient {
+  /**
+   * 메모리를 한 공간에서 다른 공간으로 복사한다(`POST /memory/copy`, 복사 뒤에는 독립). 공간 = `SpaceRef`(null = 공용).
+   * 충돌은 `on_conflict`가 정하고 `remap`은 범위 id 바꾸기. 결과에 복사·건너뜀 수와 충돌 목록.
+   */
+  copyMemory(request: MemoryCopyRequest): Promise<MemoryCopyResult>;
   /** 병합된 범위 종류(끈 종류는 `disabled: true`). */
   listMemoryScopeKinds(): Promise<MemoryScopeKindList>;
   /** 항목이 있는 범위 요약. `kind`로 종류 하나만. */
@@ -136,6 +143,7 @@ export function createMemoryClient(io: RestIo): MemoryClient {
   const ifMatch = (version: number | undefined) => (version === undefined ? {} : { headers: { "If-Match": String(version) } });
   const scopeParam = (scopes: readonly MemoryScopeRef[] | undefined) => (scopes ?? []).map(memoryScopeText);
   return {
+    copyMemory: (request) => io.request("POST", "/memory/copy", { body: request }),
     listMemoryScopeKinds: () => io.request("GET", "/memory/scope-kinds"),
     listMemoryScopes: (kind) => io.request("GET", `/memory/scopes${memoryQuery({ kind })}`),
     listMemoryTags: (params) =>

@@ -80,7 +80,7 @@ class ProjectScope:
     >>> class Lookup:
     ...     def get_project(self, project_id):
     ...         if project_id == "app":
-    ...             return Project(id="app", name="App", working_directory="/w/app")
+    ...             return Project(id="app", name="App", folder="/w/app")
     ...         return None
     >>> scope = ProjectScope(lambda: Lookup())
     >>> found = scope.layers("app")

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .content_path import check_content_path, resolve_inside
-from .definition_store import DEFAULT_MAX_CONTENT_BYTES, BaseDefinitionStore
+from .definition_store import DEFAULT_MAX_CONTENT_BYTES, BaseDefinitionStore, WriteGuard
 from .errors import DefinitionCorrupt, InvalidContentPath
 from .hashing import HashFn, default_hash
 from .interfaces import VersionRepository
@@ -43,6 +43,7 @@ class FileDefinitionStore(BaseDefinitionStore):
         clock: 현재 시각(epoch 초) 공급자.
         max_content_bytes: 정의 하나의 본문 총량 한도(None = 무제한). 넘으면 `ContentTooLarge`.
         max_versions: 정의마다 남길 버전 수(None = 모두). 현재 버전은 항상 남는다.
+        write_guard: 쓰기 전 검사 훅(`WriteGuard`). 예외를 던지면 쓰지 않는다.
     """
 
     def __init__(
@@ -55,6 +56,7 @@ class FileDefinitionStore(BaseDefinitionStore):
         clock: Callable[[], float] = time.time,
         max_content_bytes: int | None = DEFAULT_MAX_CONTENT_BYTES,
         max_versions: int | None = None,
+        write_guard: WriteGuard | None = None,
     ) -> None:
         super().__init__(
             kinds,
@@ -63,6 +65,7 @@ class FileDefinitionStore(BaseDefinitionStore):
             clock=clock,
             max_content_bytes=max_content_bytes,
             max_versions=max_versions,
+            write_guard=write_guard,
         )
         self.root = Path(root)
         self._digests: dict[Path, tuple[int, int, str]] = {}

@@ -28,6 +28,11 @@ export interface PlaybackBarProps {
   /** 끌기를 놓을 때만 위치를 확정한다(기본 true). false면 끄는 동안에도 `onIndexChange`를 부른다. */
   commitOnRelease?: boolean;
   maxTicks?: number;
+  /**
+   * 속도·공백 건너뛰기를 어디에 두는가. `popover`(기본) = [재생 설정 ▾] 단추 하나(속도가 1×가 아니면 단추 옆에 "2×"로 상태를 적는다),
+   * `inline` = 예전처럼 막대에 select와 체크박스를 늘어놓는다.
+   */
+  settingsPlacement?: "popover" | "inline";
   formatters?: Partial<Formatters>;
   messages?: DeepPartial<LogViewMessages>;
   ariaLabel?: string;
@@ -41,7 +46,7 @@ const clampInt = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo
  * 슬라이더 값 `v = index + 1`(0 = 시작 전). 키보드: `←→` ±1, `Shift+←→` ±10, `PageUp/Down` ±100, `Home` 첫 이벤트, `End` 끝.
  */
 export function PlaybackBar(props: PlaybackBarProps) {
-  const { events, index, onIndexChange, playing, onPlayingChange, speed, onSpeedChange, speeds = DEFAULT_SPEEDS, skipGaps, onSkipGapsChange, errorIndexes = [], describe, ended, commitOnRelease = true, maxTicks = 200, ariaLabel } = props;
+  const { events, index, onIndexChange, playing, onPlayingChange, speed, onSpeedChange, speeds = DEFAULT_SPEEDS, skipGaps, onSkipGapsChange, errorIndexes = [], describe, ended, commitOnRelease = true, maxTicks = 200, settingsPlacement = "popover", ariaLabel } = props;
   const m = useMemo(() => mergeMessages(props.messages), [props.messages]);
   const formatters = useMemo(() => mergeFormatters(props.formatters), [props.formatters]);
   const n = events.length;
@@ -173,23 +178,106 @@ export function PlaybackBar(props: PlaybackBarProps) {
       <span className="ac-lv-num">
         {shown} / {n}
       </span>
-      <label className="ac-lv-inline" htmlFor={`${id}-speed`}>
-        {m.speed}
-        <select id={`${id}-speed`} value={speed} onChange={(e) => onSpeedChange(Number(e.target.value))}>
-          {(speeds.includes(speed) ? speeds : [...speeds, speed]).map((s) => (
-            <option key={s} value={s}>
-              {s}×
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="ac-lv-inline">
-        <input type="checkbox" checked={skipGaps} onChange={(e) => onSkipGapsChange(e.target.checked)} />
-        {m.skipGaps}
-      </label>
+      {settingsPlacement === "inline" ? (
+        <>
+          <label className="ac-lv-inline" htmlFor={`${id}-speed`}>
+            {m.speed}
+            <select id={`${id}-speed`} value={speed} onChange={(e) => onSpeedChange(Number(e.target.value))}>
+              {(speeds.includes(speed) ? speeds : [...speeds, speed]).map((s) => (
+                <option key={s} value={s}>
+                  {s}×
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ac-lv-inline">
+            <input type="checkbox" checked={skipGaps} onChange={(e) => onSkipGapsChange(e.target.checked)} />
+            {m.skipGaps}
+          </label>
+        </>
+      ) : (
+        <PlaybackSettings id={id} speed={speed} speeds={speeds} onSpeedChange={onSpeedChange} skipGaps={skipGaps} onSkipGapsChange={onSkipGapsChange} m={m} />
+      )}
       <span role="status" aria-live="polite" className="ac-lv-sr">
         {announce}
       </span>
     </div>
+  );
+}
+
+interface PlaybackSettingsProps {
+  id: string;
+  speed: number;
+  speeds: readonly number[];
+  onSpeedChange: (speed: number) => void;
+  skipGaps: boolean;
+  onSkipGapsChange: (v: boolean) => void;
+  m: LogViewMessages;
+}
+
+/** [재생 설정 ▾]: 속도 select와 공백 건너뛰기 체크를 담은 비모달 팝오버. 바깥 클릭·`Esc`로 닫고 `Esc`면 단추로 포커스가 돌아온다. */
+function PlaybackSettings({ id, speed, speeds, onSpeedChange, skipGaps, onSkipGapsChange, m }: PlaybackSettingsProps) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    panel.current?.querySelector<HTMLElement>("select, input")?.focus();
+    const down = (e: MouseEvent) => {
+      if (e.target instanceof Node && !wrap.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", down);
+    return () => document.removeEventListener("mousedown", down);
+  }, [open]);
+  return (
+    <span ref={wrap} className="ac-lv-settings">
+      <button
+        ref={button}
+        type="button"
+        className="ac-lv-btn"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? `${id}-settings` : undefined}
+        aria-label={m.playSettings}
+        title={m.playSettings}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="ac-lv-wide">{m.playSettings}</span>
+        <span className="ac-lv-narrow">{m.playSettingsShort}</span> ▾
+      </button>
+      {speed !== 1 ? <span className="ac-lv-num ac-lv-speedbadge" data-testid="speed-badge">{speed}×</span> : null}
+      {open ? (
+        <div
+          ref={panel}
+          id={`${id}-settings`}
+          role="dialog"
+          aria-label={m.playSettings}
+          className="ac-lv-pop ac-lv-settingspop"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              setOpen(false);
+              button.current?.focus();
+            }
+          }}
+        >
+          <label className="ac-lv-inline" htmlFor={`${id}-speed`}>
+            {m.speed}
+            <select id={`${id}-speed`} value={speed} onChange={(e) => onSpeedChange(Number(e.target.value))}>
+              {(speeds.includes(speed) ? speeds : [...speeds, speed]).map((s) => (
+                <option key={s} value={s}>
+                  {s}×
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ac-lv-inline">
+            <input type="checkbox" checked={skipGaps} onChange={(e) => onSkipGapsChange(e.target.checked)} />
+            {m.skipGaps}
+          </label>
+        </div>
+      ) : null}
+    </span>
   );
 }

@@ -19,6 +19,11 @@ export interface LogFilterBarProps {
   fieldErrors?: Readonly<Record<string, string>>;
   /** select/multiselect 선택지를 동적으로 줄 때(필드의 `options`가 우선). */
   renderSelectOptions?: (name: string) => readonly { value: string; label?: string }[] | undefined;
+  /**
+   * 즐겨찾는 필터를 어디에 두는가. `menu`(기본) = [+ 필터] 메뉴 맨 아래 구역(필터 막대의 단추가 하나 줄어든다),
+   * `button` = 예전처럼 막대의 [★ ▾] 단추.
+   */
+  savedPlacement?: "menu" | "button";
   savedFilters?: readonly SavedFilter[];
   onSaveFilter?: (name: string) => void;
   onApplySaved?: (filter: SavedFilter) => void;
@@ -53,13 +58,14 @@ function toLocalInput(v: string | undefined): string {
  * (필터 이름이 늘면 `fields`에 한 줄 추가). 값은 URL 쿼리와 같은 모양(`LogFilterValue`).
  */
 export function LogFilterBar(props: LogFilterBarProps) {
-  const { fields, value, onChange, searchField, searchMaxLength = 500, debounceMs = 300, suggestions, fieldErrors, renderSelectOptions, savedFilters, onSaveFilter, onApplySaved, onDeleteSaved, trailing, inputRef, compact, ariaLabel } = props;
+  const { fields, value, onChange, searchField, searchMaxLength = 500, debounceMs = 300, suggestions, fieldErrors, renderSelectOptions, savedPlacement = "menu", savedFilters, onSaveFilter, onApplySaved, onDeleteSaved, trailing, inputRef, compact, ariaLabel } = props;
   const m = useMemo(() => mergeMessages(props.messages), [props.messages]);
   const uid = useId();
   const [editing, setEditing] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [saveOpen, setSaveOpen] = useState(false);
   const specs = useMemo(() => new Map(fields.map((f) => [f.name, f] as const)), [fields]);
 
   // 검색 입력: 로컬 상태 + 디바운스. 외부 값이 바뀌면(칩 지우기·저장된 필터 적용) 따라간다.
@@ -87,6 +93,7 @@ export function LogFilterBar(props: LogFilterBarProps) {
 
   const activeNames = Object.keys(value).filter((n) => n !== searchField && asList(value[n]).length > 0);
   const orderedNames = [...fields.map((f) => f.name).filter((n) => activeNames.includes(n)), ...activeNames.filter((n) => !specs.has(n))];
+  const savedInMenu = savedPlacement === "menu" && Boolean(onSaveFilter || savedFilters);
   const addable = fields.filter((f) => f.name !== searchField && !activeNames.includes(f.name));
 
   const setField = (name: string, values: string[]) => {
@@ -94,6 +101,20 @@ export function LogFilterBar(props: LogFilterBarProps) {
     if (values.length === 0) delete next[name];
     else next[name] = values.length === 1 && specs.get(name)?.input !== "multiselect" ? (values[0] as string) : values;
     onChange(next);
+  };
+
+  const onMenuKey = (e: KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setMenuOpen(false);
+      return;
+    }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const list = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])'));
+    const i = list.indexOf(document.activeElement as HTMLElement);
+    if (list.length === 0 || (document.activeElement instanceof HTMLInputElement)) return;
+    e.preventDefault();
+    list[(i + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length]?.focus();
   };
 
   const options = (spec: FilterFieldSpec) => spec.options ?? renderSelectOptions?.(spec.name);
@@ -145,13 +166,13 @@ export function LogFilterBar(props: LogFilterBarProps) {
         })}
       </ul>
       <div className="ac-lv-addwrap">
-        {addable.length > 0 ? (
+        {addable.length > 0 || savedInMenu ? (
           <>
             <button type="button" className="ac-lv-btn" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
               {m.addFilter}
             </button>
             {menuOpen ? (
-              <ul role="menu" className="ac-lv-menu" onKeyDown={(e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false)}>
+              <ul role="menu" className="ac-lv-menu" onKeyDown={onMenuKey}>
                 {addable.map((f) => (
                   <li key={f.name} role="none">
                     <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setEditing(f.name); }}>
@@ -159,6 +180,53 @@ export function LogFilterBar(props: LogFilterBarProps) {
                     </button>
                   </li>
                 ))}
+                {savedInMenu ? (
+                  <li role="none" className="ac-lv-saved-section">
+                    <div role="group" aria-label={m.savedFilters}>
+                      {addable.length > 0 ? <div className="ac-lv-sep" role="separator" /> : null}
+                      <div className="ac-lv-menuhead" aria-hidden="true">{m.savedFilters}</div>
+                      {(savedFilters ?? []).length === 0 ? <p className="ac-lv-muted">{m.noSavedFilters}</p> : null}
+                      <ul className="ac-lv-savedlist">
+                        {(savedFilters ?? []).map((f) => (
+                          <li key={f.name} role="none">
+                            <button type="button" role="menuitem" onClick={() => { onApplySaved?.(f); setMenuOpen(false); }} aria-label={fmt(m.applySaved, { name: f.name })}>
+                              <span className="ac-lv-ellipsis">{f.name}</span>
+                            </button>
+                            {onDeleteSaved ? (
+                              <button type="button" className="ac-lv-chipx" aria-label={fmt(m.deleteSaved, { name: f.name })} onClick={() => onDeleteSaved(f.name)}>
+                                ×
+                              </button>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                      {onSaveFilter && (activeNames.length > 0 || text.trim() !== "") ? (
+                        saveOpen ? (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              if (saveName.trim()) {
+                                onSaveFilter(saveName.trim().slice(0, MAX_SAVED_NAME));
+                                setSaveName("");
+                                setSaveOpen(false);
+                                setMenuOpen(false);
+                              }
+                            }}
+                          >
+                            <input className="ac-lv-input" autoFocus aria-label={m.saveFilterName} maxLength={MAX_SAVED_NAME} value={saveName} onChange={(e) => setSaveName(e.target.value)} />
+                            <button type="submit" className="ac-lv-btn" disabled={!saveName.trim()}>
+                              {m.saveFilter}
+                            </button>
+                          </form>
+                        ) : (
+                          <button type="button" role="menuitem" onClick={() => setSaveOpen(true)}>
+                            {m.saveCurrentFilter}
+                          </button>
+                        )
+                      ) : null}
+                    </div>
+                  </li>
+                ) : null}
               </ul>
             ) : null}
             {editing && !activeNames.includes(editing) && specs.get(editing) ? (
@@ -169,7 +237,7 @@ export function LogFilterBar(props: LogFilterBarProps) {
           </>
         ) : null}
       </div>
-      {onSaveFilter || savedFilters ? (
+      {savedPlacement === "button" && (onSaveFilter || savedFilters) ? (
         <div className="ac-lv-addwrap">
           <button type="button" className="ac-lv-btn" aria-haspopup="true" aria-expanded={savedOpen} aria-label={m.savedFilters} onClick={() => setSavedOpen(!savedOpen)}>
             ★ ▾

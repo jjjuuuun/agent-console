@@ -134,6 +134,12 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     projects.AssignProjectRequest,
     projects.AssignProjectResult,
     projects.ProjectCounts,
+    # 프로젝트 3.1(0.12.1, design §PI.4.6·§PI.16)
+    projects.ProjectRecordsUnavailableDetails,
+    projects.RecordsMoveRequest,
+    projects.RecordsMoveResult,
+    projects.ManifestResetRequest,
+    projects.ManifestResetResult,
     # 리소스
     resources.Resource,
     resources.ResourceAttachment,
@@ -183,6 +189,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     chat.UpdateConversationRequest,
     chat.PostMessageRequest,
     chat.QueuedMessage,
+    chat.ConversationSessions,
     # 관측
     usage.UsageWindowSnapshot,
     usage.UsageReport,
@@ -395,6 +402,13 @@ def build_schema() -> dict[str, Any]:
             "KNOWN_COPY_STATUSES": _upper_constants(projects.KnownCopyStatuses),
             "KNOWN_FOLDER_PICK_STATUSES": _upper_constants(projects.KnownFolderPickStatuses),
             "PROJECT_MANIFEST_FORMAT": projects.PROJECT_MANIFEST_FORMAT,
+            "KNOWN_PROJECT_RECORDS_STATES": _upper_constants(projects.KnownProjectRecordsStates),
+            "KNOWN_RECORDS_UNAVAILABLE_REASONS": _upper_constants(
+                projects.KnownRecordsUnavailableReasons
+            ),
+            "KNOWN_EXISTING_PROJECT_STATES": _upper_constants(projects.KnownExistingProjectStates),
+            "KNOWN_SESSION_STATES": _upper_constants(chat.KnownSessionStates),
+            "KNOWN_QUEUE_HOLD_REASONS": _upper_constants(chat.KnownQueueHoldReasons),
             "USER_TEXT_RULES": user_text_rules_data(),
         },
         "x-modules": submodule_definitions(sorted(defs)),

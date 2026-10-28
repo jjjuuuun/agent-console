@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.12.0"
+CONTRACTS_VERSION: Final = "0.12.1"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -33,14 +33,14 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.6.0",
+    "common": "1.7.0",
     "resources": "1.1.0",
     "logs": "1.1.0",
     "definitions": "1.4.0",
-    "runs": "1.4.0",
+    "runs": "1.5.0",
     "usage": "1.1.0",
-    "projects": "3.0.0",
-    "chat": "1.1.0",
+    "projects": "3.1.0",
+    "chat": "1.2.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
@@ -51,7 +51,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
 (`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0, `memory`는 0.10.0에서
 1.0.0으로 시작. `projects`는 0.11.0에서 2.0.0 — 프로젝트 = 로컬 폴더, 0.12.0에서 3.0.0 — 프로젝트
-구성 = 폴더 안 사본, design §PI)."""
+구성 = 폴더 안 사본, 0.12.1에서 3.1.0 — 프로젝트 기록 DB·폴더 확인 보강, design §PI)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -190,6 +190,17 @@ class ErrorCodes:
     FOLDERS_DIALOG_TIMEOUT: Final = "folders.dialog_timeout"
     """폴더 선택 창이 시간 상한 안에 닫히지 않았다(HTTP 409, 서버가 창 프로세스를 끝냄)."""
 
+    # ---- 5.7R.33c3(design §PI.4.6·§PI.16, 0.12.1): 프로젝트 기록 DB·대화 이어 가기
+    PROJECT_RECORDS_UNAVAILABLE: Final = "project.records_unavailable"
+    """프로젝트 기록 DB(`<folder>/<config_dir>/records.sqlite3`)에 쓸 수 없어 대화·실행 시작이나
+    기록 쓰기를 하지 않았다(HTTP 409). 앱 DB에 대신 쓰지 않는다(K33-31). `details` =
+    `ProjectRecordsUnavailableDetails{project_id, reason, backup_path?}`(이유
+    `KnownRecordsUnavailableReasons`). 실행 중에 폴더가 사라지면 그 Run의 `error.code`로도 쓴다."""
+    CHAT_SESSION_UNAVAILABLE: Final = "chat.session_unavailable"
+    """이 앱에 대화의 백엔드 세션 기록이 없어 이어 갈 수 없다(HTTP 409, design §PI.4.6.4).
+    `details` = `{conversation_id, node_ids}`. 다시 보낼 때 `on_missing_session: "fresh"`면 그
+    노드는 새 세션으로 시작한다."""
+
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.BAD_REQUEST: 400,
@@ -246,6 +257,8 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.FOLDERS_DIALOG_UNAVAILABLE: 409,
     ErrorCodes.FOLDERS_DIALOG_BUSY: 409,
     ErrorCodes.FOLDERS_DIALOG_TIMEOUT: 409,
+    ErrorCodes.PROJECT_RECORDS_UNAVAILABLE: 409,
+    ErrorCodes.CHAT_SESSION_UNAVAILABLE: 409,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
@@ -421,11 +434,28 @@ class KnownIssueCodes:
     PROJECT_COPY_CONFLICT: Final = "project.copy_conflict"
     """복사 결과 항목의 이슈(`CopyApplyItemResult.issue`, status conflict)."""
     PROJECT_MEMORY_NETWORK_FS: Final = "project.memory_network_fs"
-    """프로젝트 폴더가 네트워크 파일 시스템이라 메모리 SQLite 잠금을 믿을 수 없다(info,
-    `ProjectView.issues`, 감지할 수 있을 때만, K33-22). 오류 코드가 아니다."""
+    """(deprecated, 0.12.1) `PROJECT_NETWORK_FS`의 옛 이름. 서버는 새 이름만 낸다. 화면·도구는 두
+    이름을 같은 뜻으로 읽는다. 다음 major에서 삭제."""
     FOLDERS_DIALOG_UNAVAILABLE: Final = "folders.dialog_unavailable"
     FOLDERS_DIALOG_BUSY: Final = "folders.dialog_busy"
     FOLDERS_DIALOG_TIMEOUT: Final = "folders.dialog_timeout"
+
+    # ---- 5.7R.33c3(design §PI.4.6·§PI.16, 0.12.1). 앞 둘은 `ErrorCodes`의 같은 이름과 같다.
+    PROJECT_RECORDS_UNAVAILABLE: Final = "project.records_unavailable"
+    """`ProjectView.records_issue`로도 쓴다(기록 DB를 쓸 수 없는 이유, `details.reason`)."""
+    CHAT_SESSION_UNAVAILABLE: Final = "chat.session_unavailable"
+    PROJECT_NETWORK_FS: Final = "project.network_fs"
+    """프로젝트 폴더가 네트워크 파일 시스템이라 SQLite 잠금(메모리·기록 DB)을 믿을 수 없다(info,
+    `ProjectView.issues`, 감지할 수 있을 때만, K33-22). `details.files` = 영향받는 파일 이름
+    (예: `memory.sqlite3`·`records.sqlite3`). 오류 코드가 아니다. 0.12.0의
+    `project.memory_network_fs`를 일반화했다."""
+    PROJECT_GITIGNORE_OUTDATED: Final = "project.gitignore_outdated"
+    """앱이 만든 `.gitignore` 틀에 지금 틀의 줄이 빠져 있다(info, `ProjectView.issues`). 사용자가
+    [덧붙이기]를 누를 때만 빠진 줄을 끝에 더한다. `details.lines` = 빠진 줄. 오류 코드가 아니다."""
+    RUN_OTHER_HOST: Final = "run.other_host"
+    """끝나지 않은 Run이 다른 앱(`Run.host_id`가 이 앱과 다름)의 것이다(info, 다른 앱에서 실행 중
+    또는 그 앱이 비정상 종료). 이 앱은 복구하지 않고, 사용자가 [끊긴 것으로 표시]를 누를 때만
+    바꾼다(design §PI.4.6.5). `details.host_id`. 오류 코드가 아니다."""
 
 
 class KnownSuggestionIds:

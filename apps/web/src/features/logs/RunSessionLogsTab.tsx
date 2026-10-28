@@ -1,8 +1,8 @@
 import { useLogTimeMode } from "./useLogTimeMode";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Banner, Button, useShortcuts } from "@agent-console/ui";
+import { Button, useShortcuts } from "@agent-console/ui";
 import { CategoryChips, LogEventTable, eventColumns, isErrorEvent, orderCategories, type LogFilterValue } from "@agent-console/log-view";
 import type { LogEvent } from "@agent-console/contracts";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -49,6 +49,9 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
   const [q, setQ] = useState("");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [follow, setFollow] = useState(true);
+  // 설명은 ⓘ로 줄였다(5.7R.32). 펼침 상태는 저장하지 않는다 — 열 때마다 접힌 채 시작한다.
+  const [explainOpen, setExplainOpen] = useState(false);
+  const explainId = useId();
   const [selectedUidRaw, setSelectedUid] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const height = useElementHeight(wrapRef, 240, 120);
@@ -158,10 +161,12 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
 
   return (
     <div className="logs-runtab">
-      <Banner tone="info" className="logs-runtab-explain">{t.runTab.explain}</Banner>
-      {!noSessions ? (
-        <>
-          <div className="logs-runtab-sessions">
+      <div className="logs-runtab-sessions">
+        <button type="button" className="logs-infobtn" aria-label={t.runTab.infoLabel} title={t.runTab.explain} aria-expanded={explainOpen} aria-controls={explainOpen ? explainId : undefined} onClick={() => setExplainOpen((v) => !v)}>
+          <span aria-hidden="true">ⓘ</span>
+        </button>
+        {noSessions ? null : (
+          <>
             <span>{t.runTab.sessions(sessions.length)}</span>
             {sessions.slice(0, 3).map((s) => (
               <Link key={s} className="logs-linkbtn logs-mono" to={`/logs/sessions/${encodeURIComponent(s)}`} title={s}>{s.slice(0, 8)} ↗</Link>
@@ -170,33 +175,36 @@ function RunSessionLogs({ runId, running, selectedNodeId, onSelectNode }: RunSes
             <span className="app-muted">{t.runTab.events(total)}</span>
             <span className="logs-spacer" />
             {openInLogs}
-          </div>
-          <div className="logs-runtab-filters">
-            <input
-              id="logs-runtab-q"
-              type="search"
-              className="logs-input"
-              aria-label={t.filters.labels[SEARCH_FIELD] ?? SEARCH_FIELD}
-              placeholder={t.filters.labels[SEARCH_FIELD] ?? ""}
-              maxLength={LOGS_LIMITS.searchMaxLength}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onCompositionStart={() => (composing.current = true)}
-              onCompositionEnd={(e) => {
-                composing.current = false;
-                setQ(e.currentTarget.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !composing.current) commitQ(q);
-              }}
-              onBlur={() => !composing.current && q !== (valuesOf(filter, SEARCH_FIELD)[0] ?? "") && commitQ(q)}
-            />
-            <CategoryChips items={chips} taxonomy={taxonomy} slotFor={slotFor} selected={valuesOf(filter, FILTER_KEYS.category)} onChange={setCategories} maxInline={6} />
-            <label className="app-check"><input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />{t.runTab.errorsOnly}</label>
-            {running ? <label className="app-check"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />{t.runTab.follow}</label> : null}
-            {highlighted !== undefined ? <Button size="sm" onClick={() => setSelectedUid(highlighted.uid)}>{t.runTab.toNode}</Button> : null}
-          </div>
-        </>
+          </>
+        )}
+      </div>
+      {explainOpen ? <p id={explainId} className="logs-runtab-explain app-muted" role="status">{t.runTab.explain}</p> : null}
+      {!noSessions ? (
+        <div className="logs-runtab-filters">
+          <input
+            id="logs-runtab-q"
+            type="search"
+            className="logs-input"
+            aria-label={t.filters.labels[SEARCH_FIELD] ?? SEARCH_FIELD}
+            placeholder={t.filters.labels[SEARCH_FIELD] ?? ""}
+            maxLength={LOGS_LIMITS.searchMaxLength}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onCompositionStart={() => (composing.current = true)}
+            onCompositionEnd={(e) => {
+              composing.current = false;
+              setQ(e.currentTarget.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !composing.current) commitQ(q);
+            }}
+            onBlur={() => !composing.current && q !== (valuesOf(filter, SEARCH_FIELD)[0] ?? "") && commitQ(q)}
+          />
+          <CategoryChips items={chips} taxonomy={taxonomy} slotFor={slotFor} selected={valuesOf(filter, FILTER_KEYS.category)} onChange={setCategories} maxInline={LOGS_LIMITS.categoryChipsInline} />
+          <label className="app-check"><input type="checkbox" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />{t.runTab.errorsOnly}</label>
+          {running ? <label className="app-check"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />{t.runTab.follow}</label> : null}
+          {highlighted !== undefined ? <Button size="sm" onClick={() => setSelectedUid(highlighted.uid)}>{t.runTab.toNode}</Button> : null}
+        </div>
       ) : null}
       <div ref={wrapRef} className="logs-tablewrap logs-runtab-table" data-dim={pages.isError && pages.data !== undefined ? "true" : undefined}>
         {body}

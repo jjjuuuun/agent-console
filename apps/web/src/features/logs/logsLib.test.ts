@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LogDashboard, LogEvent, LogSourceInfo, WorkspaceSettings } from "@agent-console/contracts";
 import { findReservedConflicts, reservedParams, toTaxonomyView, isErrorEvent, isHiddenEvent } from "@agent-console/log-view";
 import { FILTER_FIELDS, FILTER_KEYS, SCREEN_PARAMS, SUGGEST_FROM } from "./logsConfig";
-import { categoryItems, classifyEmpty, filterSessionEvents, firstUseSources, offReadingSources, paramsKey, parseRange, rangeToWindow, shouldAutoFoldFlow, archDefaultHeight, clampOr, toLaneEvents, toRequestParams, withDashboards } from "./logsLib";
+import { categoryItems, classifyEmpty, filterSessionEvents, firstUseSources, offReadingSources, paramsKey, parseRange, rangeToWindow, shouldAutoFoldFlow, defaultFlowCollapsed, archDefaultHeight, clampOr, toLaneEvents, toRequestParams, withDashboards } from "./logsLib";
 
 const ev = (over: Partial<LogEvent> & { uid: string }): LogEvent => ({ seq: 1, source: "s", observed_at: 0, category: "c1", ...over });
 const names = { search: "q", category: FILTER_KEYS.category, since: FILTER_KEYS.since, until: FILTER_KEYS.until, source: FILTER_KEYS.source, suggestFrom: SUGGEST_FROM };
@@ -141,5 +141,18 @@ describe("흐름 패널 자동 접기 (5R.21)", () => {
     expect(archDefaultHeight({ ...base, viewportHeight: 1000 })).toBe(400);
     expect(archDefaultHeight({ ...base, viewportHeight: 880 })).toBe(352);
     expect(archDefaultHeight({ ...base, viewportHeight: 300 })).toBe(240);
+  });
+});
+
+describe("defaultFlowCollapsed(5.7R.32 폭 규칙)", () => {
+  it("저장값이 없으면 폭 1280 미만은 접고 이상은 편다", () => {
+    expect(defaultFlowCollapsed(null, 1024, 1280)).toBe(true);
+    expect(defaultFlowCollapsed(null, 1279, 1280)).toBe(true);
+    expect(defaultFlowCollapsed(null, 1280, 1280)).toBe(false);
+  });
+  it("저장값이 있으면 폭과 무관하게 저장값이 이긴다(키·형식 그대로 \"1\"/\"0\")", () => {
+    expect(defaultFlowCollapsed("0", 800, 1280)).toBe(false);
+    expect(defaultFlowCollapsed("1", 1920, 1280)).toBe(true);
+    expect(defaultFlowCollapsed("x", 800, 1280)).toBe(true); // 알 수 없는 값은 저장값 없음으로 본다
   });
 });

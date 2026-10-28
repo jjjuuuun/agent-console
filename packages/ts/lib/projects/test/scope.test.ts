@@ -118,18 +118,19 @@ describe("scopeBadge", () => {
 });
 
 describe("logFilterFor", () => {
-  test("연결된 묶음을 쉼표 목록으로", () => {
-    expect(logFilterFor({ log_projects: ["a", " b ", "a", ""] })).toEqual({ filter: { project: "a,b" }, groups: ["a", "b"], linked: true });
+  test("프로젝트 id 하나로 거른다 (문자열·프로젝트·보기 모두 같은 결과)", () => {
+    const want = { filter: { project: "app" }, id: "app" };
+    expect(logFilterFor("app")).toEqual(want);
+    expect(logFilterFor({ id: " app " })).toEqual(want);
+    expect(logFilterFor({ project: { id: "app" } })).toEqual(want);
   });
-  test("연결 없음 = 거르지 않음 + 안내", () => {
-    expect(logFilterFor({ log_projects: [] })).toEqual({ filter: undefined, groups: [], linked: false });
-    expect(logFilterFor({})).toMatchObject({ linked: false });
-  });
-  test("모든 프로젝트 = 거르지 않음, 안내 없음", () => {
-    expect(logFilterFor(null)).toEqual({ filter: undefined, groups: [], linked: true });
+  test("프로젝트 없음·쓸 수 없는 id = 거르지 않음", () => {
+    for (const none of [null, undefined, "", "  ", "a,b"]) {
+      expect(logFilterFor(none)).toEqual({ filter: undefined, id: null });
+    }
   });
   test("applyLogFilter는 project 키를 대체하고 나머지를 보존", () => {
-    expect(applyLogFilter({ project: "x", model: "m" }, { log_projects: ["p"] })).toEqual({ project: "p", model: "m" });
+    expect(applyLogFilter({ project: "x", model: "m" }, "p")).toEqual({ project: "p", model: "m" });
     const base = { model: "m" };
     expect(applyLogFilter(base, null)).toBe(base);
   });

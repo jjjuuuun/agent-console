@@ -1,4 +1,4 @@
-"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 3.0.0 — 0.12.0).
+"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 3.1.0 — 0.12.1).
 
 프로젝트 = 로컬 폴더 하나(절대 경로) + 그 폴더 안의 프로젝트 구성(`.agent-console/`, design §PI.2).
 기능(채팅·실행·로그·메모리 등)은 등록된 프로젝트 폴더에 대해서만 동작한다. 앱 workspace의 구성은
@@ -9,6 +9,14 @@
 저장은 두 곳이다: 앱 등록부 `ProjectRegistration`(`<workspace>/projects/<id>.yaml`)과 폴더
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
+
+3.0에 더한 것(3.1.0, 더하기만 — design §PI.4.6·§PI.16):
+- 프로젝트 기록 DB 상태 `ProjectView.records_state`·`records_writable`·`records_issue`
+  (`KnownProjectRecordsStates`), 쓸 수 없는 이유 `ProjectRecordsUnavailableDetails`
+  (`KnownRecordsUnavailableReasons`), 앱 DB 옛 기록 옮기기 `RecordsMoveRequest`·`RecordsMoveResult`.
+- 폴더 확인 `FolderCheck.existing`(`ExistingProjectProbe`, `KnownExistingProjectStates`)·
+  `suggested_id`·`config_dir`, `ProjectView.config_dir`, 설정 파일 다시 만들기
+  `ManifestResetRequest`·`ManifestResetResult`.
 
 2.0에서 바뀐 것(3.0.0):
 - `uses`·`import_mode`·`ProjectUse`·`ProjectUseMode`·`ProjectImportMode` 삭제. 옛 파일의 두 키는
@@ -111,6 +119,60 @@ class KnownFolderConflictRelations:
     SAME: Final = "same"
     PARENT: Final = "parent"
     CHILD: Final = "child"
+
+
+class KnownProjectRecordsStates:
+    """`ProjectView.records_state`의 알려진 값(design §PI.4.6.2, 0.12.1). **문서 상수**다.
+
+    목록·enum이 아니다. 화면은 이 값으로 분기하지 않고 `records_writable`·`records_issue`를 쓴다.
+    이름 → 값 표를 스키마 `x-constants.KNOWN_PROJECT_RECORDS_STATES`로 내보낸다.
+    """
+
+    ABSENT: Final = "absent"
+    """기록 DB 파일이 아직 없다(보기 = 빈 목록, 처음 쓸 때 만든다)."""
+    READY: Final = "ready"
+    """이 앱의 계보 head와 같다(뒤처졌던 것은 백업 후 올렸다)."""
+    NEWER: Final = "newer"
+    """더 새 앱이 올린 리비전이다. 읽기만 된다(쓰기 409 `reason: newer`)."""
+    UNAVAILABLE: Final = "unavailable"
+    """열 수 없거나 쓸 수 없다(이유는 `records_issue.details.reason`)."""
+
+
+class KnownRecordsUnavailableReasons:
+    """`ProjectRecordsUnavailableDetails.reason`의 알려진 값(design §PI.4.6.2·.5·.6).
+
+    **문서 상수**다.
+
+    이름 → 값 표를 스키마 `x-constants.KNOWN_RECORDS_UNAVAILABLE_REASONS`로 내보낸다.
+    """
+
+    FOLDER_MISSING: Final = "folder_missing"
+    """프로젝트 폴더가 없다."""
+    READONLY: Final = "readonly"
+    """폴더(또는 기록 DB)에 쓸 수 없다(`config_writable = false`, K33-34)."""
+    NEWER: Final = "newer"
+    """더 새 앱이 올린 기록 DB다(앱을 업데이트해야 쓸 수 있다)."""
+    BUSY: Final = "busy"
+    """다른 연결이 잠금을 바쁨 대기 시간 넘게 잡고 있다(이 쓰기만 실패, 재시도는 호출자)."""
+    CORRUPT: Final = "corrupt"
+    """기록 DB 파일이 깨졌다(앱이 지우거나 고치지 않는다)."""
+    MIGRATION_FAILED: Final = "migration_failed"
+    """뒤처진 기록 DB를 올리다 실패했다(백업 경로는 `backup_path`)."""
+    LINK_DISABLED: Final = "link_disabled"
+    """기록 공간 연동(`records.spaces` 포트)이 꺼져 있다."""
+
+
+class KnownExistingProjectStates:
+    """`ExistingProjectProbe.state`의 알려진 값(design §PI.16 ①, 0.12.1). **문서 상수**다.
+
+    이름 → 값 표를 스키마 `x-constants.KNOWN_EXISTING_PROJECT_STATES`로 내보낸다.
+    """
+
+    FOUND: Final = "found"
+    """폴더에 읽을 수 있는 매니페스트가 있다(등록하면 채택한다)."""
+    INVALID: Final = "invalid"
+    """매니페스트가 있으나 읽을 수 없다(등록은 되고 폴더에 쓰지 않는다, 상태 `manifest_invalid`,
+    K33-35)."""
 
 
 # ---------------------------------------------------------------- 프로젝트 정의(등록부·매니페스트)
@@ -441,7 +503,38 @@ class ProjectView(ContractModel):
     issues: list[Issue] = Field(
         default_factory=list,
         description=(
-            "상태와 별개인 안내(예: 정보 `project.memory_network_fs`). 화면은 모르는 코드도 보인다."
+            "상태와 별개인 안내(예: 정보 `project.network_fs`·`project.gitignore_outdated`). "
+            "화면은 모르는 코드도 보인다."
+        ),
+    )
+    # ---- 3.1.0(0.12.1, design §PI.4.6·§PI.16). 보내지 않은 0.12.0 서버도 읽힌다(모두 선택).
+    config_dir: NonEmptyStr | None = Field(
+        default=None,
+        description=(
+            "폴더 안 프로젝트 구성 폴더 이름(설치자 설정 `mod-projects.config_dir`, 화면 문구 "
+            "`{dir}`). null = 서버가 알리지 않음."
+        ),
+    )
+    records_state: str = Field(
+        default=KnownProjectRecordsStates.READY,
+        description=(
+            "프로젝트 기록 DB 상태(`KnownProjectRecordsStates`, 열린 문자열). 화면은 이 값을 "
+            "해석하지 않고 `records_writable`로 읽기 전용을 정한다. 보내지 않은 옛 서버는 ready."
+        ),
+    )
+    records_writable: bool = Field(
+        default=True,
+        description=(
+            "대화·실행 기록을 쓸 수 있는가(기록 DB가 absent·ready이고 폴더에 쓸 수 있을 때만 "
+            "true). false면 채팅·실행 시작을 막고(409 `project.records_unavailable`) 지난 기록 "
+            "보기만 된다. 보내지 않은 옛 서버는 true."
+        ),
+    )
+    records_issue: Issue | None = Field(
+        default=None,
+        description=(
+            "기록을 쓸 수 없는 이유(보통 `project.records_unavailable`, `details` = "
+            "`ProjectRecordsUnavailableDetails`). 쓸 수 있으면 null."
         ),
     )
 
@@ -638,6 +731,28 @@ class FolderConflict(ContractModel):
     folder: str | None = Field(default=None, description="그 프로젝트의 폴더.")
 
 
+class ExistingProjectProbe(ContractModel):
+    """폴더 확인에서 찾은 기존 프로젝트 구성 요약입니다.
+
+    확인은 매니페스트 파일과 종류 폴더의 파일 **개수**만 읽는다. 사본 파일 이름·내용은 싣지 않는다.
+    """
+
+    state: str = Field(description="found·invalid(`KnownExistingProjectStates`, 열린 문자열).")
+    id: str | None = Field(
+        default=None, description="매니페스트의 폴더 id(읽을 수 있을 때). 화면 표시용 원문."
+    )
+    name: str | None = Field(default=None, description="매니페스트의 이름(읽을 수 있을 때).")
+    description: str | None = Field(default=None, description="매니페스트의 설명.")
+    definitions: int = Field(
+        default=0,
+        ge=0,
+        description="폴더에 있는 구성 사본 개수(옮길 수 있는 종류 폴더의 파일 수).",
+    )
+    issue: Issue | None = Field(
+        default=None, description="읽을 수 없는 이유(invalid일 때, 예: `project.manifest_invalid`)."
+    )
+
+
 class FolderCheck(ContractModel):
     """폴더 확인 결과(ac-local-folders `check_folder` + 등록부). 폴더 안 파일 이름·내용은 없다."""
 
@@ -665,6 +780,26 @@ class FolderCheck(ContractModel):
     status: str = Field(description="확인 상태(`KnownFolderCheckStatuses`, 열린 문자열).")
     conflict: FolderConflict | None = Field(
         default=None, description="같은·겹치는 등록 프로젝트(taken·overlap_* 상태일 때)."
+    )
+    # ---- 3.1.0(0.12.1, design §PI.16 ①). 보내지 않은 0.12.0 서버도 읽힌다(모두 선택).
+    existing: ExistingProjectProbe | None = Field(
+        default=None,
+        description=(
+            "폴더에 이미 있는 프로젝트 구성(매니페스트) 요약. null = 없음 또는 서버가 알리지 않음."
+        ),
+    )
+    suggested_id: Slug | None = Field(
+        default=None,
+        description=(
+            "등록하면 쓸 id 제안(매니페스트 id 또는 폴더 이름 slug, 겹치면 `-2`…, 서버가 계산). "
+            "화면은 id를 계산하지 않는다."
+        ),
+    )
+    config_dir: NonEmptyStr | None = Field(
+        default=None,
+        description=(
+            "폴더 안 프로젝트 구성 폴더 이름(화면 문구 `{dir}`). null = 서버가 알리지 않음."
+        ),
     )
 
 
@@ -804,6 +939,84 @@ class ProjectOutsideFolderDetails(ContractModel):
     paths: list[OutsideFolderPath] = Field(default_factory=list)
 
 
+class ProjectRecordsUnavailableDetails(ContractModel):
+    """409 `project.records_unavailable`의 `details`."""
+
+    # 0.12.1, design §PI.4.6.
+
+    project_id: NonEmptyStr
+    reason: str = Field(
+        description="쓸 수 없는 이유(`KnownRecordsUnavailableReasons`, 열린 문자열)."
+    )
+    backup_path: str | None = Field(
+        default=None, description="올리기 전에 만든 백업 파일(`migration_failed`일 때)."
+    )
+
+
+# ---------------------------------------------------------------- 설정 파일 다시 만들기(§PI.16 ③)
+
+
+class ManifestResetRequest(ContractModel):
+    """`POST /projects/{id}/manifest/reset` 요청(상태 `manifest_invalid`일 때만, 아니면 409).
+
+    옛 매니페스트는 지우지 않고 `<config_dir>/.state/backups/project-<UTC>.yaml`로 옮긴다. 새
+    매니페스트 = 등록 id + 이 이름·설명(설정은 비움). 사본·메모리·기록은 건드리지 않는다.
+    """
+
+    name: NonEmptyStr = Field(description="새 매니페스트의 이름.")
+    description: str | None = Field(default=None, description="새 매니페스트의 설명.")
+
+
+class ManifestResetResult(ContractModel):
+    """`POST /projects/{id}/manifest/reset` 응답."""
+
+    project: ProjectView
+    backup_path: str = Field(description="옛 매니페스트를 옮긴 경로.")
+
+
+# ---------------------------------------------------------------- 옛 기록 옮기기(design §PI.4.6.7)
+
+
+type RecordsMoveSelect = Literal["project", "null", "ids"]
+"""옮길 앱 DB 기록 고르기: project = 그 등록 id를 가진 기록, null = 프로젝트 없는 기록,
+ids = `ids`에 적은 기록."""
+
+
+class RecordsMoveRequest(ContractModel):
+    """`POST /runs/move-to-project`·`POST /conversations/move-to-project` 요청(0.12.1).
+
+    앱 DB의 기록을 그 프로젝트의 기록 DB로 옮긴다. Run은 자손·노드·이벤트·상호작용과 함께, 대화는
+    대기열(과 연동이 있으면 그 Run)과 함께 간다. 대상에 같은 id가 있으면 건너뛴다. `project_id`는
+    불투명 문자열이다(기능 모듈은 프로젝트를 모른다).
+    """
+
+    project_id: NonEmptyStr = Field(description="옮길 대상 프로젝트(등록 id).")
+    select: RecordsMoveSelect = Field(description="옮길 기록 고르기.")
+    ids: list[NonEmptyStr] | None = Field(
+        default=None, description="`select`가 ids일 때 옮길 기록 id(필수)."
+    )
+    remove_source: bool = Field(
+        default=True,
+        description="옮긴 뒤(개수 확인 후) 앱 DB의 원본을 지운다. false면 원본을 남긴다.",
+    )
+
+    @model_validator(mode="after")
+    def _ids_match_select(self) -> "RecordsMoveRequest":
+        if (self.select == "ids") != (self.ids is not None):
+            raise ValueError("select가 ids일 때만, 그리고 반드시 ids를 지정합니다")
+        return self
+
+
+class RecordsMoveResult(ContractModel):
+    """move-to-project 응답."""
+
+    moved: int = Field(default=0, ge=0, description="옮긴 기록 수(함께 옮긴 자식 Run 포함).")
+    skipped: int = Field(default=0, ge=0, description="대상에 같은 id가 있어 건너뛴 기록 수.")
+    failed: list[Issue] = Field(
+        default_factory=list, description="옮기지 못한 기록과 이유(`details.id`)."
+    )
+
+
 # ---------------------------------------------------------------- 이전 기록 넣기·개수(design §PI.8)
 
 
@@ -917,6 +1130,7 @@ __all__ = [
     "DefinitionMove",
     "DefinitionScope",
     "DeletePlan",
+    "ExistingProjectProbe",
     "FolderCapabilities",
     "FolderCheck",
     "FolderCheckRequest",
@@ -929,10 +1143,15 @@ __all__ = [
     "KnownCopyActions",
     "KnownCopyStatuses",
     "KnownCopyTargetStates",
+    "KnownExistingProjectStates",
     "KnownFolderCheckStatuses",
     "KnownFolderConflictRelations",
     "KnownFolderPickStatuses",
+    "KnownProjectRecordsStates",
     "KnownProjectStatuses",
+    "KnownRecordsUnavailableReasons",
+    "ManifestResetRequest",
+    "ManifestResetResult",
     "MovePlan",
     "MovePlanRequest",
     "OutsideFolderPath",
@@ -946,9 +1165,13 @@ __all__ = [
     "ProjectNotImportedDetails",
     "ProjectOutsideFolderDetails",
     "ProjectPreferences",
+    "ProjectRecordsUnavailableDetails",
     "ProjectRegistration",
     "ProjectStatus",
     "ProjectUpdate",
     "ProjectView",
+    "RecordsMoveRequest",
+    "RecordsMoveResult",
+    "RecordsMoveSelect",
     "ignored_project_keys",
 ]

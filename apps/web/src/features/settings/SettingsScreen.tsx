@@ -30,6 +30,7 @@ import { AppearanceSection } from "./sections/AppearanceSection";
 import { ServerSection } from "./sections/ServerSection";
 import { UsageSection } from "./sections/UsageSection";
 import { LogsSection } from "./sections/LogsSection";
+import { LogTaxonomySection } from "./sections/LogTaxonomySection";
 import { ArchitectureSettingsEditor } from "../architectureSettings";
 import { MemorySettingsEditor } from "../memorySettings";
 import { SETTINGS_SECTION as MEMORY_SECTION_KEY, MEMORY_ROLE } from "../memory";
@@ -60,7 +61,9 @@ export const SETTINGS_SECTIONS: readonly SectionDef[] = [
   { id: "interaction", titleKey: "interaction", descriptionKey: "interaction", keys: ["interaction"], group: "defaults", requires: DOCUMENT_REQUIRES },
   { id: "merge-rules", titleKey: "mergeRules", descriptionKey: "mergeRules", keys: ["settings_merge"], group: "defaults", requires: DOCUMENT_REQUIRES },
   { id: "editor", titleKey: "editor", descriptionKey: "editor", keys: ["editor"], group: "defaults", requires: DOCUMENT_REQUIRES },
-  { id: "logs", titleKey: "logs", descriptionKey: "logs", keys: ["logs"], group: "data", requires: [...DOCUMENT_REQUIRES, "logs"] },
+  // 로그 설정 문서(`logs`)는 두 섹션이 나눠 편집한다: 출처·프로젝트 묶기·대시보드 / 분류 체계(5.7R.32).
+  { id: "logs", titleKey: "logs", descriptionKey: "logs", keys: ["logs/sources", "logs/projects", "logs/dashboards"], group: "data", requires: [...DOCUMENT_REQUIRES, "logs"] },
+  { id: "log-taxonomy", titleKey: "logTaxonomy", descriptionKey: "logTaxonomy", keys: ["logs/taxonomy"], group: "data", requires: [...DOCUMENT_REQUIRES, "logs"] },
   // 구조도 프로필은 구조도 모듈이 켜져 있을 때만 있다(역할 `architecture`).
   { id: "architecture", titleKey: "architecture", descriptionKey: "architecture", keys: ["architecture"], group: "data", requires: [...DOCUMENT_REQUIRES, "architecture"] },
   // 메모리 설정(범위 종류·정리 규칙·비밀 처리)은 메모리 모듈이 켜져 있을 때만 있다(역할 `memory`).
@@ -193,6 +196,8 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
         return <UsageSection {...props} />;
       case "logs":
         return <LogsSection {...props} dirty={editor.dirty} />;
+      case "log-taxonomy":
+        return <LogTaxonomySection {...props} />;
       case "architecture":
         return (
           <ArchitectureSettingsEditor

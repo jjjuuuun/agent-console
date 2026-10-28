@@ -29,11 +29,11 @@ export function PopoutNotice({ popout }: { popout: ArchPopout }) {
   );
 }
 
-/** 분리 중(또는 분리해서 보기로 기억됨)일 때 구조도 자리에 접어서 보이는 안내와 [다시 합치기]. */
-export function PopoutPlaceholder({ popout }: { popout: ArchPopout }) {
+/** 분리 중(또는 분리해서 보기로 기억됨)일 때 구조도 자리에 접어서 보이는 안내와 [다시 합치기]. `compact`면 한 줄로 줄인다(구조도 뷰가 아닌 화면 위쪽에 놓을 때). */
+export function PopoutPlaceholder({ popout, compact = false }: { popout: ArchPopout; compact?: boolean }) {
   const pending = popout.mode === "pending";
   return (
-    <section className="arch-popout-fold" aria-label={t.region} data-popout={popout.mode} data-testid="arch-popout-fold">
+    <section className="arch-popout-fold" aria-label={t.region} data-popout={popout.mode} data-compact={compact ? "true" : undefined} data-testid="arch-popout-fold">
       <div className="arch-popout-fold-text">
         <strong>{pending ? t.popout.pendingTitle : t.popout.detachedTitle}</strong>
         <span className="app-muted">{pending ? t.popout.pendingBody : t.popout.detachedBody}</span>

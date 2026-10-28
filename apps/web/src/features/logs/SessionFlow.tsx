@@ -13,12 +13,12 @@ export function laneOfSpan(spanId: string, laneIds: readonly string[]): string |
   return laneIds.find((l) => spanId === l) ?? laneIds.find((l) => spanId.endsWith(`:${l}`));
 }
 
-/** 흐름 패널 세그먼트: 레인 · 위임 흐름(`logs:trace`) · 구조도(`logs:architecture`). 앞의 둘은 `SessionFlow`가, 구조도는 `features/architecture`가 그린다. */
-export type FlowView = "lane" | "trace" | "arch";
-const FLOW_LABELS: Readonly<Record<FlowView, string>> = { lane: t.detail.flowLanes, trace: t.detail.flowTrace, arch: t.detail.flowArch };
+/** 흐름 패널 세그먼트: 레인 · 위임 흐름(`logs:trace`). 구조도는 5.7R.32부터 세션 상세의 뷰 탭 [구조도]다(`SessionArchView`). */
+export type FlowView = "lane" | "trace";
+const FLOW_LABELS: Readonly<Record<FlowView, string>> = { lane: t.detail.flowLanes, trace: t.detail.flowTrace };
 
 export interface SessionFlowProps {
-  view: Exclude<FlowView, "arch">;
+  view: FlowView;
   lanes: readonly LogLane[];
   laneLabelFor(id: string): string;
   events: readonly LaneEvent[];
