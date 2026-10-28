@@ -73,7 +73,7 @@ def test_contracts_version_is_v5_or_later() -> None:
     constants = build_schema()["x-constants"]
     assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
     assert constants["CONTRACT_VERSIONS"] == CONTRACT_VERSIONS
-    assert CONTRACT_VERSIONS["logs"] == "1.0.0"
+    assert tuple(int(x) for x in CONTRACT_VERSIONS["logs"].split(".")) >= (1, 0, 0)
     assert tuple(int(x) for x in CONTRACT_VERSIONS["modules"].split(".")) >= (1, 1, 0)
     # logs는 definitions 아래 층(설정 모델을 definitions가 쓴다)
     assert CONTRACT_SUBMODULES.index("logs") < CONTRACT_SUBMODULES.index("definitions")

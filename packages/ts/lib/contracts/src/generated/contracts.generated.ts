@@ -223,6 +223,11 @@ export type LogUngroupedPolicy = "cwd" | "repo_root" | "none";
 export type ModuleStatus = string;
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectStatus".
+ */
+export type ProjectStatus = string;
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "UsageTrust".
  */
 export type UsageTrust = string;
@@ -3381,6 +3386,54 @@ export interface ArchitectureView {
   notes?: ArchitectureNote[];
 }
 /**
+ * `POST /runs/assign-project`·`POST /conversations/assign-project` 요청.
+ *
+ * `ids`(그 기록만) 또는 `from_null: true`(프로젝트 없는 기록 전부) 중 하나만 준다. 루트 Run이면
+ * 자식 Run도 함께 넣는다. 이미 다른 프로젝트인 기록은 `ids`로 명시했을 때만 옮긴다.
+ * `project_id`는 불투명 문자열이다(기능 모듈은 프로젝트를 모른다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AssignProjectRequest".
+ */
+export interface AssignProjectRequest {
+  /**
+   * 넣을 프로젝트 id.
+   */
+  to: string;
+  ids?: string[] | null;
+  from_null?: boolean;
+}
+/**
+ * assign-project 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AssignProjectResult".
+ */
+export interface AssignProjectResult {
+  /**
+   * 넣은 기록 수(함께 넣은 자식 Run 포함).
+   */
+  assigned: number;
+  skipped?: AssignProjectSkip[];
+}
+/**
+ * 넣지 않은 기록 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AssignProjectSkip".
+ */
+export interface AssignProjectSkip {
+  id: string;
+  /**
+   * 열린 문자열(예: not_found, other_project, busy).
+   */
+  reason: string;
+  /**
+   * 그 기록의 지금 프로젝트.
+   */
+  project_id?: string | null;
+}
+/**
  * 실행 백엔드 능력.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -4143,6 +4196,183 @@ export interface ConversationUpdatedPayload {
   conversation: ConversationSummary;
 }
 /**
+ * 적용할 항목 하나와 사용자가 고른 동작.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyApplyItem".
+ */
+export interface CopyApplyItem {
+  kind: string;
+  id: string;
+  /**
+   * 동작(`KnownCopyActions`, 열린 문자열).
+   */
+  action: string;
+  /**
+   * rename일 때 새 id(필수).
+   */
+  new_id?: string | null;
+  /**
+   * 계획 때 원본 버전 해시.
+   */
+  source_version: string;
+  /**
+   * 계획 때 대상 버전 해시(대상에 없었으면 null).
+   */
+  target_version?: string | null;
+}
+/**
+ * 적용 항목 하나의 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyApplyItemResult".
+ */
+export interface CopyApplyItemResult {
+  kind: string;
+  /**
+   * 원본 id.
+   */
+  id: string;
+  /**
+   * 대상에 쓴 id(rename일 때).
+   */
+  new_id?: string | null;
+  /**
+   * 결과(`KnownCopyStatuses`, 열린 문자열).
+   */
+  status: string;
+  /**
+   * conflict·skipped 등의 이유(예: `project.copy_conflict`).
+   */
+  issue?: Issue | null;
+}
+/**
+ * `POST /projects/copy/apply` 요청: 계획에서 고른 항목을 적용한다.
+ *
+ * 사본에는 원본 id·버전·시각을 쓰지 않는다(완전 독립, 사용자 결정 B). 리소스 본문 파일도 함께
+ * 복사한다. 대상 프로젝트 폴더에 쓸 수 없으면 409 `project.config_readonly`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyApplyRequest".
+ */
+export interface CopyApplyRequest {
+  source: SpaceRef;
+  target: SpaceRef;
+  items: CopyApplyItem[];
+  /**
+   * 적용한 항목을 원본 공간에서 지운다(옛 프로젝트 전용 정의 정리에 쓴다).
+   */
+  remove_source?: boolean;
+}
+/**
+ * 저장소 공간 하나: 라이브러리(앱 workspace) 또는 프로젝트 공간.
+ *
+ * `project_id`가 null이면 라이브러리, 값이 있으면 그 등록 프로젝트 폴더의 공간이다. 정의 복사
+ * (`projects`)와 메모리 복사(`memory`)가 함께 쓴다. REST 질의에서는 `?project=<id>`(없으면
+ * 라이브러리)로 같은 뜻을 적는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpaceRef".
+ */
+export interface SpaceRef {
+  /**
+   * 프로젝트 등록 id. null = 라이브러리(공용 구성·공용 메모리).
+   */
+  project_id?: string | null;
+}
+/**
+ * `POST /projects/copy/apply` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyApplyResult".
+ */
+export interface CopyApplyResult {
+  items?: CopyApplyItemResult[];
+}
+/**
+ * `POST /projects/copy/plan` 응답(저장하지 않음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyPlan".
+ */
+export interface CopyPlan {
+  items?: CopyPlanItem[];
+  /**
+   * 계획 경고(예: 참조를 찾지 못함, 순환 참조).
+   */
+  warnings?: Issue[];
+}
+/**
+ * 복사 계획의 항목 하나(요청한 것 또는 참조 때문에 함께 들어온 것).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyPlanItem".
+ */
+export interface CopyPlanItem {
+  kind: string;
+  id: string;
+  name?: string;
+  /**
+   * 계획에 든 이유(열린 문자열): requested = 요청함, referenced = 참조로 들어옴.
+   */
+  reason: string;
+  /**
+   * 이 항목을 참조하는 계획 안 정의.
+   */
+  referenced_by?: DefinitionKey[];
+  /**
+   * 원본 버전 해시(적용 때 바뀌었으면 conflict).
+   */
+  source_version: string;
+  /**
+   * 대상 공간의 같은 (종류, id) 상태(`KnownCopyTargetStates`, 열린 문자열).
+   */
+  target_state: string;
+  /**
+   * 대상의 지금 버전 해시(대상에 없으면 null). 적용 때 `If-Match`.
+   */
+  target_version?: string | null;
+  /**
+   * 기본 동작(`KnownCopyActions`). null = 사용자가 골라야 한다(대상 내용이 다름).
+   */
+  default_action?: string | null;
+}
+/**
+ * 정의 하나를 가리키는 키(종류 이름 + id). 표시 이름은 선택.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DefinitionKey".
+ */
+export interface DefinitionKey {
+  /**
+   * 정의 종류 이름(예: agent, graph, resource).
+   */
+  kind: string;
+  id: string;
+  name?: string;
+}
+/**
+ * `POST /projects/copy/plan` 요청: 고른 정의를 원본 공간에서 대상 공간으로 복사할 계획.
+ *
+ * 공간은 `SpaceRef`(`project_id` null = 라이브러리). 라이브러리 → 프로젝트가 기본 방향이고
+ * 프로젝트 → 라이브러리, 프로젝트 → 프로젝트도 같은 모양이다. 계획은 아무것도 쓰지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyPlanRequest".
+ */
+export interface CopyPlanRequest {
+  source: SpaceRef;
+  target: SpaceRef;
+  /**
+   * 복사할 정의(종류·id). 표시 이름은 무시한다.
+   */
+  items: DefinitionKey[];
+  /**
+   * 참조 닫힘(팀이 쓰는 에이전트·리소스·중첩 팀)도 계획에 넣는다.
+   */
+  include_references?: boolean;
+}
+/**
  * `POST /conversations` 요청. 응답은 `Conversation`(201).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -4257,21 +4487,7 @@ export interface DiffChange {
   secret?: boolean;
 }
 /**
- * 정의 하나를 가리키는 키(종류 이름 + id). 표시 이름은 선택.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "DefinitionKey".
- */
-export interface DefinitionKey {
-  /**
-   * 정의 종류 이름(예: agent, graph, resource).
-   */
-  kind: string;
-  id: string;
-  name?: string;
-}
-/**
- * 정의 하나의 범위 바꾸기(필드 `project` 하나를 고쳐 저장). null = 공용.
+ * (deprecated, 0.11.0) 정의 하나의 범위 바꾸기(필드 `project`를 고쳐 저장). null = 공용.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "DefinitionMove".
@@ -4396,9 +4612,7 @@ export interface DelegationStrategyDescriptor {
   ui_hints?: UiHints | null;
 }
 /**
- * `POST /projects/{id}/delete-plan` 응답: 삭제하면 무엇이 바뀌는지(저장하지 않음).
- *
- * 삭제는 `DELETE /projects/{id}?mode=<ProjectDeleteMode>`(생략 = `default_mode`)로 한다.
+ * (deprecated, 0.11.0) `POST /projects/{id}/delete-plan` 응답. 2.0 삭제 = 등록 해제(보관).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "DeletePlan".
@@ -5068,6 +5282,229 @@ export interface FeatureUnavailableDetails {
   port: string;
 }
 /**
+ * `GET /projects/folders/capabilities` 응답: 이 서버에서 쓸 수 있는 폴더 고르기 방법.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderCapabilities".
+ */
+export interface FolderCapabilities {
+  /**
+   * 앱 안 찾아보기(`GET /projects/folders`).
+   */
+  browse?: boolean;
+  /**
+   * 서버가 데스크톱 폴더 대화상자를 띄울 수 있다.
+   */
+  native_dialog?: boolean;
+  /**
+   * 쓸 대화상자 제공자 id(데이터·플러그인, 열린 문자열).
+   */
+  provider?: string | null;
+  /**
+   * 쓸 수 없는 이유(열린 문자열, 예: remote·off·no_provider). 화면에 그대로 보인다.
+   */
+  reason?: string | null;
+}
+/**
+ * 폴더 확인 결과(ac-local-folders `check_folder` + 등록부). 폴더 안 파일 이름·내용은 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderCheck".
+ */
+export interface FolderCheck {
+  /**
+   * 받은 입력 그대로.
+   */
+  input: string;
+  /**
+   * 저장될 경로(정규화 + 링크를 푼 실제 경로). 경로가 아니면 null.
+   */
+  path?: string | null;
+  exists?: boolean;
+  is_dir?: boolean;
+  readable?: boolean;
+  writable?: boolean;
+  /**
+   * 없고, 상위 폴더에 만들 수 있다.
+   */
+  can_create?: boolean;
+  hidden?: boolean;
+  /**
+   * 입력 경로와 저장될 경로가 다르다(링크를 거침).
+   */
+  link?: boolean;
+  /**
+   * 경로가 없을 때 가장 가까운 존재하는 상위 폴더(탐색 시작용, K33-13). 탐색 범위 밖이면 null.
+   */
+  nearest_existing?: string | null;
+  /**
+   * 입력이 쓸 수 없는 경로인 이유 코드(예: relative, foreign_path).
+   */
+  problem?: string | null;
+  /**
+   * 확인 상태(`KnownFolderCheckStatuses`, 열린 문자열).
+   */
+  status: string;
+  /**
+   * 같은·겹치는 등록 프로젝트(taken·overlap_* 상태일 때).
+   */
+  conflict?: FolderConflict | null;
+}
+/**
+ * 폴더 확인에서 찾은 등록 충돌 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderConflict".
+ */
+export interface FolderConflict {
+  project_id: string;
+  /**
+   * same·parent·child(`KnownFolderConflictRelations`).
+   */
+  relation: string;
+  /**
+   * 보관(등록 해제)된 프로젝트인가.
+   */
+  archived?: boolean;
+  /**
+   * 그 프로젝트의 폴더.
+   */
+  folder?: string | null;
+}
+/**
+ * `POST /projects/folders/check` 요청(루프백 전용, 아니면 403 `folders.remote_disabled`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderCheckRequest".
+ */
+export interface FolderCheckRequest {
+  /**
+   * 사용자가 입력한 경로(그대로). 비면 status invalid.
+   */
+  path: string;
+  /**
+   * 없으면 만든다(사용자가 [이 경로에 폴더 만들기]를 누를 때만 true). 한 단계만.
+   */
+  create?: boolean;
+  /**
+   * 이 프로젝트를 같은·겹침 검사에서 뺀다(경로 다시 지정, K33-13). 없는 id면 무시한다.
+   */
+  exclude_project_id?: string | null;
+}
+/**
+ * 하위 폴더 하나. 파일은 목록에 없다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderEntry".
+ */
+export interface FolderEntry {
+  name: string;
+  /**
+   * 목록 경로 + 이름(링크는 풀지 않음).
+   */
+  path: string;
+  hidden?: boolean;
+  /**
+   * 심볼릭 링크·접합점(등록하면 실제 경로로 저장).
+   */
+  link?: boolean;
+  /**
+   * 읽을 수 없어 들어갈 수 없다.
+   */
+  locked?: boolean;
+  /**
+   * 이 폴더로 등록된 프로젝트 id.
+   */
+  project_id?: string | null;
+}
+/**
+ * `GET /projects/folders?path=&hidden=` 응답: 하위 폴더 이름만(루프백 서버 전용).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderListing".
+ */
+export interface FolderListing {
+  /**
+   * 목록 경로(정규화, 링크는 풀지 않음).
+   */
+  path: string;
+  /**
+   * 상위 폴더. 루트·탐색 범위 밖이면 null.
+   */
+  parent?: string | null;
+  entries?: FolderEntry[];
+  /**
+   * 탐색 시작 위치.
+   */
+  roots?: FolderRoot[];
+  /**
+   * 개수·시간 상한으로 잘렸다.
+   */
+  truncated?: boolean;
+  /**
+   * 시간 상한으로 멈췄다.
+   */
+  timed_out?: boolean;
+  /**
+   * 숨겨서 뺀 폴더 수.
+   */
+  hidden_count?: number;
+}
+/**
+ * 탐색 시작 위치 하나(홈·드라이브·마운트 등).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderRoot".
+ */
+export interface FolderRoot {
+  /**
+   * 시작 위치 종류(열린 문자열, 예: home·root·drive·mount).
+   */
+  kind: string;
+  path: string;
+  label?: string;
+}
+/**
+ * `POST /projects/folders/pick` 요청(루프백 전용). 사용자가 고를 때까지 열려 있다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderPickRequest".
+ */
+export interface FolderPickRequest {
+  /**
+   * 처음 열 폴더(없으면 제공자 기본).
+   */
+  initial?: string | null;
+  /**
+   * 대화상자 제목.
+   */
+  title?: string | null;
+}
+/**
+ * `POST /projects/folders/pick` 응답. 고른 경로는 폴더 확인을 지나 `check`에 담긴다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "FolderPickResult".
+ */
+export interface FolderPickResult {
+  /**
+   * 결과(`KnownFolderPickStatuses`, 열린 문자열).
+   */
+  status: string;
+  /**
+   * 고른 경로(picked일 때).
+   */
+  path?: string | null;
+  /**
+   * 고른 경로의 폴더 확인 결과.
+   */
+  check?: FolderCheck | null;
+  /**
+   * 쓴 대화상자 제공자 id.
+   */
+  provider?: string | null;
+}
+/**
  * `GET /graphs` 목록 항목.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -5559,9 +5996,14 @@ export interface LogSessionSummary {
   cwd?: string;
   repo_root?: string;
   /**
-   * 프로젝트 묶음.
+   * @deprecated
+   * 이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다.
    */
   project?: LogProjectRef | null;
+  /**
+   * 세션 작업 폴더가 들어 있는 등록 프로젝트의 id(불투명 문자열, 0.11.0). 어느 등록 폴더에도 들지 않으면 null.
+   */
+  project_id?: string | null;
   first_time?: number | null;
   last_time?: number | null;
   events?: number;
@@ -5577,7 +6019,7 @@ export interface LogSessionSummary {
   tokens?: LogTokenTotals | null;
 }
 /**
- * 프로젝트 묶음(묶기 규칙을 적용한 결과).
+ * 프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogProjectRef".
@@ -5793,7 +6235,7 @@ export interface LogMetricInfo {
   unit?: string | null;
 }
 /**
- * 경로 패턴(예: ~/work/app/**)에 맞는 로그를 한 프로젝트로 묶습니다.
+ * 이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogProjectGroup".
@@ -5814,7 +6256,7 @@ export interface LogProjectGroup {
   [k: string]: unknown;
 }
 /**
- * 로그를 프로젝트별로 묶는 규칙. 바꾸면 바로 반영된다(다시 수집할 필요 없음).
+ * 이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogProjectSettings".
@@ -5900,7 +6342,7 @@ export interface LogSourceScanResult {
   pending_bytes?: number | null;
 }
 /**
- * 읽을 로그 출처, 범주 표시, 프로젝트 묶기, 대시보드. 비운 항목은 기본값을 따른다.
+ * 읽을 로그 출처, 범주 표시, 대시보드. 비운 항목은 기본값을 따른다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogSettings".
@@ -5915,7 +6357,8 @@ export interface LogSettings {
    */
   taxonomy?: LogTaxonomy | null;
   /**
-   * 로그를 경로에 따라 프로젝트별로 묶는 규칙입니다.
+   * @deprecated
+   * 더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).
    */
   projects?: LogProjectSettings | null;
   /**
@@ -6236,6 +6679,109 @@ export interface MemoryChangedMessage {
   id?: string | null;
   type: "memory.changed";
   payload: MemoryChanged;
+}
+/**
+ * 대상에 같은 범위·키가 있던 항목 하나와 그 처리.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryCopyConflict".
+ */
+export interface MemoryCopyConflict {
+  scope: MemoryScopeRef;
+  key: string;
+  /**
+   * 처리(열린 문자열, `on_conflict` 값): skip·overwrite·rename.
+   */
+  resolution: string;
+  /**
+   * rename일 때 대상에 쓴 키.
+   */
+  new_key?: string | null;
+}
+/**
+ * 메모리 복사에서 고를 항목(1.1.0). 모든 조건은 AND이고 비운 조건은 거르지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryCopyFilter".
+ */
+export interface MemoryCopyFilter {
+  /**
+   * 범위 종류 id 중 하나.
+   */
+  scope_kinds?: string[] | null;
+  /**
+   * 범위 id 중 하나.
+   */
+  scope_ids?: string[] | null;
+  /**
+   * 키 중 하나.
+   */
+  keys?: string[] | null;
+  /**
+   * 태그 중 하나라도 붙은 항목.
+   */
+  tags?: string[] | null;
+}
+/**
+ * `POST /memory/copy` 본문: 공간 사이 메모리 항목 복사.
+ *
+ * 라이브러리 → 프로젝트가 기본 방향이고 프로젝트 → 라이브러리도 같은 모양이다. 복사 뒤 독립이며
+ * 출처를 기록하지 않는다. 같은 범위·키가 대상에 있으면 `on_conflict`(가져오기와 같은 어휘)를
+ * 따른다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryCopyRequest".
+ */
+export interface MemoryCopyRequest {
+  source: SpaceRef;
+  target: SpaceRef;
+  filter?: MemoryCopyFilter;
+  on_conflict?: "skip" | "overwrite" | "rename";
+  /**
+   * 범위 id 바꾸기(앞의 것이 먼저 맞는다).
+   */
+  remap?: MemoryScopeRemap[];
+}
+/**
+ * 복사할 때 범위 id 바꾸기 하나(예: 원본 맥락의 프로젝트·팀 id → 대상 맥락의 id).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryScopeRemap".
+ */
+export interface MemoryScopeRemap {
+  /**
+   * 원본 범위 id.
+   */
+  from: string;
+  /**
+   * 대상 범위 id.
+   */
+  to: string;
+  /**
+   * 이 범위 종류에만 적용한다. null = 모든 범위 종류.
+   */
+  kind?: string | null;
+}
+/**
+ * `POST /memory/copy` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryCopyResult".
+ */
+export interface MemoryCopyResult {
+  /**
+   * 대상에 쓴 항목 수(덮어씀·이름 바꿈 포함).
+   */
+  copied?: number;
+  /**
+   * 쓰지 않은 항목 수(충돌 건너뜀·거부 포함).
+   */
+  skipped?: number;
+  conflicts?: MemoryCopyConflict[];
+  /**
+   * 쓰지 못한 이유(예: `memory.secret_rejected`, 범위 종류 없음). 본문은 싣지 않는다.
+   */
+  issues?: Issue[];
 }
 /**
  * 메모리 항목 하나(본문 포함). `GET /memory/entries/{id}` 응답.
@@ -7014,10 +7560,10 @@ export interface ModuleOptionsView {
   yaml_snippet?: string;
 }
 /**
- * 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.
+ * (deprecated, 0.11.0) 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.
  *
- * P 전용 → 공용: `moves`에 그 정의가 쓰는 P 전용 정의(참조 닫힘)가 함께 들어간다(기본 선택).
- * 공용 → P 전용: 그 정의를 쓰는 다른 프로젝트·공용 정의는 `warnings`로 알린다(막지 않음).
+ * 2.0에서 정의의 프로젝트 전용 범위가 없어졌다(K33-5). 옛 `project` 필드 정리는
+ * 복사 계획(`CopyPlan`, `remove_source`)을 쓴다. 다음 major에서 삭제.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "MovePlan".
@@ -7035,7 +7581,7 @@ export interface MovePlan {
   warnings?: Issue[];
 }
 /**
- * `POST /projects/move-plan` 요청: 정의 하나를 `to` 범위로 옮길 때의 계획을 계산한다.
+ * (deprecated, 0.11.0) `POST /projects/move-plan` 요청. 다음 major에서 삭제.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "MovePlanRequest".
@@ -7176,6 +7722,31 @@ export interface NotificationSettings {
   [k: string]: unknown;
 }
 /**
+ * 프로젝트 폴더 밖을 가리킨 경로 값 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "OutsideFolderPath".
+ */
+export interface OutsideFolderPath {
+  /**
+   * 설정에 적힌 값 그대로.
+   */
+  value: string;
+  /**
+   * 폴더 기준으로 푼 절대 경로.
+   */
+  resolved?: string | null;
+  /**
+   * 값의 위치(설정 문서 기준 JSON Pointer).
+   */
+  pointer: string;
+  /**
+   * 값을 정한 설정 층 이름(열린 문자열, 예: 공통·프로젝트·팀·노드).
+   */
+  layer?: string | null;
+  node_id?: string | null;
+}
+/**
  * 서버가 읽은 플러그인 하나(설정 화면 서버 정보, 읽기 전용).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -7204,47 +7775,51 @@ export interface PostMessageRequest {
   text: string;
 }
 /**
- * 프로젝트입니다. 작업 폴더와 연결한 로그, 그 프로젝트에서 쓸 설정을 묶습니다.
+ * 프로젝트입니다. 로컬 폴더 하나와 그 프로젝트에서 쓸 설정을 묶습니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "Project".
  */
 export interface Project {
   /**
-   * 프로젝트를 부르는 이름입니다. 위쪽 프로젝트 고르기에 보입니다.
-   */
-  name: string;
-  /**
    * 이 프로젝트가 무엇인지 적습니다.
    */
   description?: string;
   /**
-   * 이 프로젝트에서 실행하는 에이전트의 작업 폴더. 비우면 서버 설정의 작업 폴더.
-   */
-  working_directory?: string | null;
-  /**
-   * 이 프로젝트로 볼 로그 묶음입니다. 비우면 로그를 거르지 않습니다.
-   */
-  log_projects?: string[];
-  /**
    * 이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.
    */
   settings?: AgentSettings | null;
-  /**
-   * 찾기·거르기에 쓰는 꼬리표입니다.
-   */
-  labels?: string[];
   /**
    * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
    */
   attributes?: {
     [k: string]: unknown;
   };
+  /**
+   * 찾기·거르기에 쓰는 꼬리표입니다.
+   */
+  labels?: string[];
+  /**
+   * 등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.
+   */
+  archived?: boolean;
+  /**
+   * 등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.
+   */
+  archived_at?: number | null;
   kind?: "project";
   /**
    * 가리킬 때 쓰는 고유 이름입니다. 파일 이름으로도 씁니다.
    */
   id: string;
+  /**
+   * 프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.
+   */
+  name: string;
+  /**
+   * 이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.
+   */
+  folder: string | null;
   /**
    * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
    */
@@ -7252,36 +7827,39 @@ export interface Project {
   [k: string]: unknown;
 }
 /**
- * 새 프로젝트를 만들 때 적는 값입니다.
+ * 기능 하나의 기록 개수(`GET /runs/project-counts`·`GET /conversations/project-counts`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectCounts".
+ */
+export interface ProjectCounts {
+  total?: number;
+  /**
+   * `project_id`가 null인 기록 수.
+   */
+  no_project?: number;
+  /**
+   * project_id → 개수(없는·보관 프로젝트 id도 그대로).
+   */
+  by_project?: {
+    [k: string]: number;
+  };
+}
+/**
+ * 프로젝트 폴더를 등록할 때 적는 값입니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ProjectCreate".
  */
 export interface ProjectCreate {
   /**
-   * 프로젝트를 부르는 이름입니다. 위쪽 프로젝트 고르기에 보입니다.
-   */
-  name: string;
-  /**
    * 이 프로젝트가 무엇인지 적습니다.
    */
   description?: string;
   /**
-   * 이 프로젝트에서 실행하는 에이전트의 작업 폴더. 비우면 서버 설정의 작업 폴더.
-   */
-  working_directory?: string | null;
-  /**
-   * 이 프로젝트로 볼 로그 묶음입니다. 비우면 로그를 거르지 않습니다.
-   */
-  log_projects?: string[];
-  /**
    * 이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.
    */
   settings?: AgentSettings | null;
-  /**
-   * 찾기·거르기에 쓰는 꼬리표입니다.
-   */
-  labels?: string[];
   /**
    * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
    */
@@ -7289,13 +7867,121 @@ export interface ProjectCreate {
     [k: string]: unknown;
   };
   /**
-   * 새 프로젝트의 고유 이름입니다. 영문·숫자·-·_만 쓰며 이미 있는 이름은 못 씁니다.
+   * 찾기·거르기에 쓰는 꼬리표입니다.
    */
-  id: string;
+  labels?: string[];
+  /**
+   * 이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다.
+   */
+  folder: string;
+  /**
+   * 고유 이름입니다. 비우면 폴더 이름으로 만듭니다. 만든 뒤에는 바꿀 수 없습니다.
+   */
+  id?: string | null;
+  /**
+   * 프로젝트를 부르는 이름입니다. 비우면 폴더 이름입니다.
+   */
+  name?: string | null;
   [k: string]: unknown;
 }
 /**
- * 프로젝트 관련 설정입니다. 새로 만드는 에이전트·팀 등을 어느 범위에 둘지 정합니다.
+ * 409 `project.folder_taken`·`project.folder_overlaps`의 `details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectFolderConflictDetails".
+ */
+export interface ProjectFolderConflictDetails {
+  /**
+   * 이미 그 폴더(또는 겹치는 폴더)를 가진 프로젝트.
+   */
+  project_id: string;
+  /**
+   * 겹침의 관계 parent·child(`folder_taken`이면 null).
+   */
+  relation?: string | null;
+  archived?: boolean;
+  folder?: string | null;
+}
+/**
+ * 409 `project.folder_missing`의 `details`: 프로젝트 상태가 ready가 아니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectFolderUnavailableDetails".
+ */
+export interface ProjectFolderUnavailableDetails {
+  project_id: string;
+  status: ProjectStatus;
+  folder?: string | null;
+}
+/**
+ * 프로젝트 폴더에 들어 있는 프로젝트 정보입니다. 폴더와 함께 옮겨지고 git으로 관리됩니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectManifest".
+ */
+export interface ProjectManifest {
+  /**
+   * 이 프로젝트가 무엇인지 적습니다.
+   */
+  description?: string;
+  /**
+   * 이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.
+   */
+  settings?: AgentSettings | null;
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 매니페스트 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  format?: number;
+  /**
+   * 이 폴더의 프로젝트 id입니다. 프로젝트 메모리 범위 등 폴더 안 데이터가 씁니다.
+   */
+  id: string;
+  /**
+   * 프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.
+   */
+  name: string;
+  [k: string]: unknown;
+}
+/**
+ * 422 `project.not_imported`의 `details`: 실행 대상이 이 프로젝트 공간에 없다(K33-18).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectNotImportedDetails".
+ */
+export interface ProjectNotImportedDetails {
+  project_id: string;
+  /**
+   * 실행 대상 정의 종류.
+   */
+  kind: string;
+  /**
+   * 실행 대상 정의 id.
+   */
+  id: string;
+  /**
+   * 라이브러리에 같은 (종류, id)가 있다 — 화면은 [가져와서 실행]을 낸다.
+   */
+  in_library?: boolean;
+}
+/**
+ * 422 `project.outside_folder`의 `details`(경로 지킴, `x-path` 필드만 본다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectOutsideFolderDetails".
+ */
+export interface ProjectOutsideFolderDetails {
+  project_id: string;
+  folder: string;
+  paths?: OutsideFolderPath[];
+}
+/**
+ * 이전 형식의 프로젝트 설정입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ProjectPreferences".
@@ -7311,10 +7997,42 @@ export interface ProjectPreferences {
   [k: string]: unknown;
 }
 /**
+ * 이 앱이 프로젝트로 등록한 폴더입니다. 폴더와 등록 상태만 담습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectRegistration".
+ */
+export interface ProjectRegistration {
+  /**
+   * 찾기·거르기에 쓰는 꼬리표입니다.
+   */
+  labels?: string[];
+  /**
+   * 등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.
+   */
+  archived?: boolean;
+  /**
+   * 등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.
+   */
+  archived_at?: number | null;
+  kind?: "project";
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 파일 이름으로도 씁니다. 실행·대화 기록이 이 id로 프로젝트를 가리킵니다.
+   */
+  id: string;
+  /**
+   * 이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.
+   */
+  folder: string | null;
+  [k: string]: unknown;
+}
+/**
  * `PUT /projects/{id}` 요청. 생략한 필드는 그대로 둔다.
  *
- * `working_directory`·`settings`의 null은 값을 지운다(상속으로 되돌림).
- * `name`의 null은 생략과 같다.
+ * `settings`의 null은 값을 지운다(상속으로 되돌림). 다른 필드의 null은 생략과 같다.
+ * `folder`는 경로 다시 지정이다(같은·겹침 검사는 자기 자신을 빼고 한다). `archived: false`는
+ * 등록 해제한 프로젝트를 다시 등록한다(폴더 검사를 다시 한다). 이름·설명·설정·속성은 폴더
+ * 매니페스트에, 폴더·보관·라벨은 등록부에 쓴다. 옛 키(`uses`·`import_mode`)는 무시한다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ProjectUpdate".
@@ -7322,13 +8040,50 @@ export interface ProjectPreferences {
 export interface ProjectUpdate {
   name?: string | null;
   description?: string | null;
-  working_directory?: string | null;
-  log_projects?: string[] | null;
+  folder?: string | null;
   settings?: AgentSettings | null;
+  archived?: boolean | null;
   labels?: string[] | null;
   attributes?: {
     [k: string]: unknown;
   } | null;
+}
+/**
+ * 프로젝트 + 서버가 계산한 상태(저장하지 않음).
+ *
+ * `GET /projects`(→ `ProjectView[]`)·`GET /projects/{id}`·`POST /projects`·`PUT /projects/{id}`
+ * 응답이다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ProjectView".
+ */
+export interface ProjectView {
+  project: Project;
+  status: ProjectStatus;
+  /**
+   * 상태 이유 한 줄(예: 겹치는 프로젝트 id). 화면에 그대로 보인다.
+   */
+  status_detail?: string | null;
+  /**
+   * 버전 해시(`If-Match`에 쓴다). 등록부·매니페스트 둘 중 하나가 바뀌면 바뀐다. 저장소가 주지 않으면 null.
+   */
+  version_hash?: string | null;
+  /**
+   * 폴더 안 프로젝트 구성(`.agent-console/`)에 쓸 수 있는가. false면 가져오기·편집·메모리 쓰기를 막고(409 `project.config_readonly`) 보기·로그는 된다. 보내지 않은 옛 서버는 true.
+   */
+  config_writable?: boolean;
+  /**
+   * 폴더 id(매니페스트 `id`). 등록 id와 다를 때만 화면에 보인다. 모르면 null.
+   */
+  manifest_id?: string | null;
+  /**
+   * 이 프로젝트 공간에 둘 수 있는 정의 종류 이름(옮길 수 있는 종류, 열린 문자열). 빈 목록 = 서버가 알리지 않음.
+   */
+  kinds?: string[];
+  /**
+   * 상태와 별개인 안내(예: 정보 `project.memory_network_fs`). 화면은 모르는 코드도 보인다.
+   */
+  issues?: Issue[];
 }
 /**
  * 실행 중이라 대기열에 넣은 메시지(`chat.busy_policy = queue`).
@@ -8359,7 +9114,8 @@ export interface WorkspaceSettings {
   secrets?: SecretRuleSettings;
   logs?: LogSettings;
   /**
-   * 새 정의를 공용으로 둘지 프로젝트 전용으로 둘지의 기본값입니다.
+   * @deprecated
+   * 더 이상 쓰지 않습니다. 구성은 모두 공용이고 프로젝트가 가져다 씁니다.
    */
   projects?: ProjectPreferences | null;
   /**
@@ -8378,21 +9134,21 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.10.0" as const;
+export const CONTRACTS_VERSION = "0.12.0" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.4.0",
+  "common": "1.6.0",
   "resources": "1.1.0",
-  "logs": "1.0.0",
-  "definitions": "1.3.0",
+  "logs": "1.1.0",
+  "definitions": "1.4.0",
   "runs": "1.4.0",
   "usage": "1.1.0",
-  "projects": "1.0.0",
+  "projects": "3.0.0",
   "chat": "1.1.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
-  "memory": "1.0.0",
+  "memory": "1.1.0",
   "modules": "1.3.0"
 } as const;
 
@@ -8524,7 +9280,34 @@ export const ERROR_CODES = {
   "ARCHITECTURE_SCOPE_TOO_LARGE": "architecture.scope_too_large",
   "MEMORY_INVALID_KEY": "memory.invalid_key",
   "MEMORY_TOO_LARGE": "memory.too_large",
-  "MEMORY_SECRET_REJECTED": "memory.secret_rejected"
+  "MEMORY_SECRET_REJECTED": "memory.secret_rejected",
+  "PROJECT_REQUIRED": "project.required",
+  "PROJECT_NOT_IMPORTED": "project.not_imported",
+  "PROJECT_FOLDER_MISSING": "project.folder_missing",
+  "PROJECT_FOLDER_TAKEN": "project.folder_taken",
+  "PROJECT_FOLDER_OVERLAPS": "project.folder_overlaps",
+  "PROJECT_OUTSIDE_FOLDER": "project.outside_folder",
+  "FOLDERS_REMOTE_DISABLED": "folders.remote_disabled",
+  "FOLDERS_EMPTY": "folders.empty",
+  "FOLDERS_INVALID_PATH": "folders.invalid_path",
+  "FOLDERS_RELATIVE": "folders.relative",
+  "FOLDERS_FOREIGN_PATH": "folders.foreign_path",
+  "FOLDERS_NO_HOME": "folders.no_home",
+  "FOLDERS_OUTSIDE_ROOTS": "folders.outside_roots",
+  "FOLDERS_NOT_FOUND": "folders.not_found",
+  "FOLDERS_NOT_DIRECTORY": "folders.not_directory",
+  "FOLDERS_NO_ACCESS": "folders.no_access",
+  "FOLDERS_INVALID_NAME": "folders.invalid_name",
+  "FOLDERS_EXISTS": "folders.exists",
+  "FOLDERS_MISSING_PARENT": "folders.missing_parent",
+  "FOLDERS_IO_ERROR": "folders.io_error",
+  "PROJECT_NOT_FOUND": "project.not_found",
+  "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
+  "PROJECT_CONFIG_READONLY": "project.config_readonly",
+  "PROJECT_COPY_CONFLICT": "project.copy_conflict",
+  "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
+  "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
+  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -8554,7 +9337,34 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "architecture.scope_too_large": 422,
   "memory.invalid_key": 422,
   "memory.too_large": 422,
-  "memory.secret_rejected": 422
+  "memory.secret_rejected": 422,
+  "project.required": 422,
+  "project.not_imported": 422,
+  "project.folder_missing": 409,
+  "project.folder_taken": 409,
+  "project.folder_overlaps": 409,
+  "project.outside_folder": 422,
+  "folders.remote_disabled": 403,
+  "folders.empty": 422,
+  "folders.invalid_path": 422,
+  "folders.relative": 422,
+  "folders.foreign_path": 422,
+  "folders.no_home": 422,
+  "folders.outside_roots": 403,
+  "folders.not_found": 404,
+  "folders.not_directory": 422,
+  "folders.no_access": 422,
+  "folders.invalid_name": 422,
+  "folders.exists": 409,
+  "folders.missing_parent": 422,
+  "folders.io_error": 500,
+  "project.not_found": 404,
+  "project.manifest_invalid": 409,
+  "project.config_readonly": 409,
+  "project.copy_conflict": 409,
+  "folders.dialog_unavailable": 409,
+  "folders.dialog_busy": 409,
+  "folders.dialog_timeout": 409
 } as const;
 
 export const KNOWN_ISSUE_CODES = {
@@ -8597,7 +9407,24 @@ export const KNOWN_ISSUE_CODES = {
   "TOOLS_PROVIDER_FAILED": "tools.provider_failed",
   "TOOLS_DUPLICATE_NAME": "tools.duplicate_name",
   "TOOLS_BACKEND_CAPABILITY_MISSING": "tools.backend_capability_missing",
-  "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted"
+  "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted",
+  "PROJECT_REQUIRED": "project.required",
+  "PROJECT_NOT_IMPORTED": "project.not_imported",
+  "PROJECT_FOLDER_MISSING": "project.folder_missing",
+  "PROJECT_FOLDER_TAKEN": "project.folder_taken",
+  "PROJECT_FOLDER_OVERLAPS": "project.folder_overlaps",
+  "PROJECT_OUTSIDE_FOLDER": "project.outside_folder",
+  "FOLDERS_REMOTE_DISABLED": "folders.remote_disabled",
+  "SETTINGS_IGNORED_KEY": "settings.ignored_key",
+  "LOGS_NO_PROJECTS": "logs.no_projects",
+  "PROJECT_NOT_FOUND": "project.not_found",
+  "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
+  "PROJECT_CONFIG_READONLY": "project.config_readonly",
+  "PROJECT_COPY_CONFLICT": "project.copy_conflict",
+  "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
+  "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
+  "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
+  "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {
@@ -8619,6 +9446,78 @@ export const X_UI_TIERS = [
   "basic",
   "advanced"
 ] as const;
+
+export const X_PATH = "x-path" as const;
+
+export const X_PATH_KINDS = [
+  "directory",
+  "file"
+] as const;
+
+export const KNOWN_PROJECT_STATUSES = {
+  "READY": "ready",
+  "FOLDER_MISSING": "folder_missing",
+  "NOT_A_DIRECTORY": "not_a_directory",
+  "NO_ACCESS": "no_access",
+  "FOLDER_UNSET": "folder_unset",
+  "FOLDER_CONFLICT": "folder_conflict",
+  "MANIFEST_INVALID": "manifest_invalid"
+} as const;
+
+export const KNOWN_FOLDER_CHECK_STATUSES = {
+  "OK": "ok",
+  "OK_READONLY": "ok_readonly",
+  "MISSING": "missing",
+  "MISSING_PARENT": "missing_parent",
+  "NOT_DIRECTORY": "not_directory",
+  "NO_ACCESS": "no_access",
+  "INVALID": "invalid",
+  "TAKEN": "taken",
+  "TAKEN_ARCHIVED": "taken_archived",
+  "OVERLAP_PARENT": "overlap_parent",
+  "OVERLAP_CHILD": "overlap_child",
+  "SAME_PATH": "same_path"
+} as const;
+
+export const KNOWN_FOLDER_CONFLICT_RELATIONS = {
+  "SAME": "same",
+  "PARENT": "parent",
+  "CHILD": "child"
+} as const;
+
+export const KNOWN_COPY_ACTIONS = {
+  "COPY": "copy",
+  "REUSE": "reuse",
+  "OVERWRITE": "overwrite",
+  "RENAME": "rename",
+  "SKIP": "skip"
+} as const;
+
+export const KNOWN_COPY_TARGET_STATES = {
+  "ABSENT": "absent",
+  "IDENTICAL": "identical",
+  "DIFFERENT": "different"
+} as const;
+
+export const KNOWN_COPY_STATUSES = {
+  "COPIED": "copied",
+  "REUSED": "reused",
+  "OVERWRITTEN": "overwritten",
+  "RENAMED": "renamed",
+  "SKIPPED": "skipped",
+  "CONFLICT": "conflict"
+} as const;
+
+export const KNOWN_FOLDER_PICK_STATUSES = {
+  "PICKED": "picked",
+  "CANCELLED": "cancelled",
+  "UNAVAILABLE": "unavailable",
+  "BUSY": "busy",
+  "TIMEOUT": "timeout",
+  "FAILED": "failed"
+} as const;
+
+export const PROJECT_MANIFEST_FORMAT = 1 as const;
 
 export const USER_TEXT_RULES = {
   "version": 1,

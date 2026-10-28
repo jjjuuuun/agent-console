@@ -17,6 +17,7 @@ from agent_console_contracts import (
     WS_AUTH_CLOSE_CODES,
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_UNAUTHORIZED,
+    X_PATH_KINDS,
     Agent,
     AgentSettings,
     AgentSubagentEvent,
@@ -248,6 +249,13 @@ def test_package_source_names_only_in_document_constants() -> None:
     for path in src.glob("*.py"):
         text = path.read_text(encoding="utf-8")
         allowed = INTERACTION_KINDS | SLOT_NAMES if path.name == "constants.py" else set()
+        if path.name == "common.py":
+            # 0.11.0 경로 주석 `x-path`의 고정 어휘(directory·file)는 리소스 종류 이름이 아니다.
+            allowed = set(X_PATH_KINDS)
+        if path.name == "projects.py":
+            # 0.12.0 `IGNORED_PROJECT_KEYS`: 옛 프로젝트 파일 키 `uses`(읽고 버림)는
+            # 연결 종류 이름이 아니다.
+            allowed = {"uses"}
         for name in names - allowed:
             assert f'"{name}"' not in text, (path.name, name)
 

@@ -52,7 +52,7 @@ def test_purge_then_rescan_drops_old_blob_body(tmp_path: Path) -> None:
     settings = make_settings(tmp_path / "srv", options={"mod-logs": QUIET})
     env = {"CLAUDE_CONFIG_DIR": str(tmp_path / "empty-claude")}
     with server(settings, environ=env) as client:
-        project = {"id": "w", "name": "W", "working_directory": "/w"}
+        project = {"id": "w", "name": "W", "folder": "/w"}
         assert client.post(f"{API}/projects", json=project).status_code == 201
         put = client.put(f"{API}/settings", json=_settings(root, REENABLE))
         assert put.status_code == 200, put.text

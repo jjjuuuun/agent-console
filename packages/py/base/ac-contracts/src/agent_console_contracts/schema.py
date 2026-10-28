@@ -29,7 +29,7 @@ from . import (
     runs,
     usage,
 )
-from .common import X_UI, X_UI_TIERS
+from .common import X_PATH, X_PATH_KINDS, X_UI, X_UI_TIERS
 from .constants import (
     CONTRACT_SUBMODULES,
     CONTRACT_VERSIONS,
@@ -78,6 +78,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     common.Endpoint,
     common.UiHints,
     common.Fix,
+    common.SpaceRef,
     # 정의
     definitions.Agent,
     definitions.Limits,
@@ -112,6 +113,27 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     projects.MovePlanRequest,
     projects.MovePlan,
     projects.DeletePlan,
+    # 프로젝트 2.0(0.11.0)·3.0(0.12.0, design §PI)
+    projects.ProjectRegistration,
+    projects.ProjectManifest,
+    projects.ProjectView,
+    projects.CopyPlanRequest,
+    projects.CopyPlan,
+    projects.CopyApplyRequest,
+    projects.CopyApplyResult,
+    projects.FolderCapabilities,
+    projects.FolderPickRequest,
+    projects.FolderPickResult,
+    projects.FolderCheckRequest,
+    projects.FolderCheck,
+    projects.FolderListing,
+    projects.ProjectFolderConflictDetails,
+    projects.ProjectFolderUnavailableDetails,
+    projects.ProjectNotImportedDetails,
+    projects.ProjectOutsideFolderDetails,
+    projects.AssignProjectRequest,
+    projects.AssignProjectResult,
+    projects.ProjectCounts,
     # 리소스
     resources.Resource,
     resources.ResourceAttachment,
@@ -233,6 +255,8 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     memory.MemoryRetentionPlan,
     memory.MemoryRetentionResult,
     memory.MemoryImportResult,
+    memory.MemoryCopyRequest,
+    memory.MemoryCopyResult,
     memory.MemorySecretRejectedDetails,
     memory.MemoryTagList,
     memory.MemoryEventPayload,
@@ -359,6 +383,18 @@ def build_schema() -> dict[str, Any]:
             "WS_AUTH_CLOSE_CODES": list(WS_AUTH_CLOSE_CODES),
             "X_UI": X_UI,
             "X_UI_TIERS": list(X_UI_TIERS),
+            "X_PATH": X_PATH,
+            "X_PATH_KINDS": list(X_PATH_KINDS),
+            "KNOWN_PROJECT_STATUSES": _upper_constants(projects.KnownProjectStatuses),
+            "KNOWN_FOLDER_CHECK_STATUSES": _upper_constants(projects.KnownFolderCheckStatuses),
+            "KNOWN_FOLDER_CONFLICT_RELATIONS": _upper_constants(
+                projects.KnownFolderConflictRelations
+            ),
+            "KNOWN_COPY_ACTIONS": _upper_constants(projects.KnownCopyActions),
+            "KNOWN_COPY_TARGET_STATES": _upper_constants(projects.KnownCopyTargetStates),
+            "KNOWN_COPY_STATUSES": _upper_constants(projects.KnownCopyStatuses),
+            "KNOWN_FOLDER_PICK_STATUSES": _upper_constants(projects.KnownFolderPickStatuses),
+            "PROJECT_MANIFEST_FORMAT": projects.PROJECT_MANIFEST_FORMAT,
             "USER_TEXT_RULES": user_text_rules_data(),
         },
         "x-modules": submodule_definitions(sorted(defs)),

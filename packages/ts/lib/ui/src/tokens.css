@@ -328,6 +328,14 @@
   --ac-header-title-max: min(48ch, 40%);
   --ac-tip-delay: 150ms;
   --ac-gauge-h: 8px;
+  /* 프로젝트 영역·폴더 찾아보기 (tokens.md 5.1, screen-projects.md §1.3, 5.7R.33l) */
+  --ac-project-row-h: 44px;
+  --ac-project-region-head-h: 28px;
+  --ac-project-list-max-h: clamp(96px, 28vh, 242px);
+  --ac-browse-h: min(280px, 40vh);
+  --ac-browse-row-h: 32px;
+  --ac-pick-box-min-h: 56px;
+  --ac-pick-btn-h: 40px;
   --ac-z-sidebar: 15;
   --ac-z-panel: 10;
   --ac-z-header: 20;

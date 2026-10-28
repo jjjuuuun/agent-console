@@ -20,7 +20,8 @@ def test_normalize_path() -> None:
 
 
 def test_suggest_matches_same_or_sub_path_and_skips_linked() -> None:
-    project = Project(id="app", name="App", working_directory="/w/app", log_projects=["linked"])
+    # 0.11.0: Project 모델에는 log_projects가 없다(읽고 버림). 옛 dict 형식으로 제안 규칙만 본다.
+    project = {"working_directory": "/w/app", "log_projects": ["linked"]}
     groups = {
         "linked": ["/w/app"],
         "app-main": ["/w/app"],
@@ -37,7 +38,7 @@ def test_suggest_windows_paths_case_insensitive() -> None:
 
 
 def test_suggest_without_working_directory_uses_fallback_or_nothing() -> None:
-    project = Project(id="app", name="App")
+    project = Project(id="app", name="App", folder=None)
     groups = {"g": ["/srv/app"]}
     assert suggest_log_projects(project, groups) == []
     assert suggest_log_projects(project, groups, working_directory="/srv/app") == ["g"]
@@ -73,12 +74,14 @@ def test_layer_value_only_set_fields_plus_working_directory() -> None:
 
 
 def test_layer_value_settings_working_directory_when_field_empty() -> None:
-    project = Project(id="app", name="App", settings=AgentSettings(working_directory="/s"))
+    project = Project(
+        id="app", name="App", folder=None, settings=AgentSettings(working_directory="/s")
+    )
     assert project_layer_value(project) == {"working_directory": "/s"}
 
 
 def test_layer_value_empty_project_is_empty_layer() -> None:
-    assert project_layer_value(Project(id="app", name="App")) == {}
+    assert project_layer_value(Project(id="app", name="App", folder=None)) == {}
 
 
 def test_layer_value_from_mapping_drops_unknown_keys() -> None:

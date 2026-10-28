@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Banner, Button, Tag } from "@agent-console/ui";
-import { logFilterFor, readProjectParam } from "@agent-console/projects";
+import { logFilterFor, readProjectParam, type LegacyLogProjectsHolder } from "@agent-console/projects";
 import { CURRENT_PROJECT_PARAM } from "../../app/projectScope";
 import { useStorage } from "../../app/StorageContext";
 import { ROUTE_ROLES, routePath } from "../library";
@@ -31,7 +31,7 @@ export function LogProjectNote({ filterParam }: { filterParam: string }) {
   const storage = useStorage();
   const location = useLocation();
   const navigate = useNavigate();
-  const info = logFilterFor(p.currentProject === undefined ? null : { log_projects: p.currentProject.log_projects ?? [] });
+  const info = logFilterFor((p.currentProject ?? null) as LegacyLogProjectsHolder | null);
   const params = new URLSearchParams(location.search);
   const urlProject = params.get(filterParam);
   const active = p.enabled && p.current !== null;

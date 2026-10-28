@@ -9,7 +9,7 @@ from typing import Annotated, Any, ClassVar, Final, Literal
 
 from pydantic import ConfigDict, Field, StringConstraints
 
-from ._base import ContractModel, JsonObject, NonEmptyStr, OmitWhenUnsetContract
+from ._base import ContractModel, JsonObject, NonEmptyStr, OmitWhenUnsetContract, Slug
 
 JsonPointer = Annotated[str, StringConstraints(pattern=r"^(/.*)?$")]
 
@@ -98,6 +98,34 @@ def x_ui(
     if example is not _UNSET:
         body[XUiKeys.EXAMPLE] = example
     return {X_UI: body}
+
+
+# ---------------------------------------------------------------- 스키마 확장 x-path(0.11.0)
+
+X_PATH: Final = "x-path"
+"""JSON Schema 속성 확장 키(design §PI.5, X33): 이 값이 로컬 경로라는 표시. 값은 `X_PATH_KINDS`
+중 하나다. 목록 필드에 달면 각 항목이 경로다. 경로 지킴(`ac-projects.outside_paths`)은 필드 이름이
+아니라 이 주석만 본다. 새 백엔드·노드 옵션 스키마가 경로를 받으면 이 주석만 달면 된다."""
+
+type XPathKind = Literal["directory", "file"]
+"""`x-path` 값(고정 어휘): directory = 폴더, file = 파일."""
+
+X_PATH_KINDS: Final = ("directory", "file")
+"""`x-path`의 값 목록."""
+
+
+def x_path(kind: XPathKind = "directory") -> dict[str, Any]:
+    """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-path": kind}`를 만든다.
+
+    다른 확장 키와 함께 쓰려면 `{**x_ui(...), **x_path()}`처럼 합친다.
+    예외: `kind`가 `X_PATH_KINDS`에 없으면 `ValueError`.
+
+    >>> x_path()
+    {'x-path': 'directory'}
+    """
+    if kind not in X_PATH_KINDS:
+        raise ValueError(f"알 수 없는 x-path 종류: {kind!r}")
+    return {X_PATH: kind}
 
 
 # ---------------------------------------------------------------- 오류 해결 데이터(0.8.0)
@@ -320,7 +348,23 @@ class UiHints(ContractModel):
     )
 
 
+class SpaceRef(ContractModel):
+    """저장소 공간 하나: 라이브러리(앱 workspace) 또는 프로젝트 공간.
+
+    `project_id`가 null이면 라이브러리, 값이 있으면 그 등록 프로젝트 폴더의 공간이다. 정의 복사
+    (`projects`)와 메모리 복사(`memory`)가 함께 쓴다. REST 질의에서는 `?project=<id>`(없으면
+    라이브러리)로 같은 뜻을 적는다.
+    """
+
+    project_id: Slug | None = Field(
+        default=None, description="프로젝트 등록 id. null = 라이브러리(공용 구성·공용 메모리)."
+    )
+    # 1.6.0(0.12.0), design §PI.4.2.
+
+
 __all__ = [
+    "X_PATH",
+    "X_PATH_KINDS",
     "X_UI",
     "X_UI_TIERS",
     "Endpoint",
@@ -333,9 +377,12 @@ __all__ = [
     "PortDef",
     "PortSpec",
     "Position",
+    "SpaceRef",
     "UiHints",
     "Usage",
+    "XPathKind",
     "XUiKeys",
     "XUiTier",
+    "x_path",
     "x_ui",
 ]

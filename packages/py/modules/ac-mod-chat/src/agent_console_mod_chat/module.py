@@ -130,7 +130,13 @@ class ChatModule:
             await service.aclose()
 
         return ModuleParts(
-            routers=[build_router(lambda: service, require_graphs=require_graphs)],
+            routers=[
+                build_router(
+                    lambda: service,
+                    require_graphs=require_graphs,
+                    projects=lambda: storage.projects,
+                )
+            ],
             ws_topics=topic_handlers(service, hub=hub),
             error_map=error_map(MODULE_ID),
             startup=[start],

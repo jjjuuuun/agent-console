@@ -15,25 +15,21 @@ export interface ProjectEditFormProps {
   onSwitch: () => void;
 }
 
-const splitList = (text: string): string[] => text.split(",").map((s) => s.trim()).filter((s) => s !== "");
-
 /**
- * 프로젝트 하나 고치기(표현 전용): 이름·설명·작업 폴더·로그 연결(쉼표 목록). 열 때마다 새 초안으로 시작하도록 호출자가 `key`를 준다.
+ * 프로젝트 하나 고치기(표현 전용): 이름·설명·폴더. 열 때마다 새 초안으로 시작하도록 호출자가 `key`를 준다.
+ * 계약 0.11.0: 로그 묶음 연결(`log_projects`)이 없어졌고(K33-15) 폴더는 비울 수 없다(경로 다시 지정만).
  * 프로젝트 층 설정(settings)·꼬리표는 이 폼이 건드리지 않는다(생략한 필드는 서버가 그대로 둔다).
  */
 export function ProjectEditForm({ project, busy, error, onSave, onDelete, isCurrent, onSwitch }: ProjectEditFormProps) {
   const uid = useId();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
-  const [directory, setDirectory] = useState(project.working_directory ?? "");
-  const [logs, setLogs] = useState((project.log_projects ?? []).join(", "));
+  const [directory, setDirectory] = useState(project.folder ?? "");
 
   const patch: ProjectUpdate = {};
   if (name.trim() !== project.name) patch.name = name.trim();
   if (description.trim() !== (project.description ?? "")) patch.description = description.trim();
-  if (directory.trim() !== (project.working_directory ?? "")) patch.working_directory = directory.trim() === "" ? null : directory.trim();
-  const nextLogs = splitList(logs);
-  if (nextLogs.join("\u0000") !== (project.log_projects ?? []).join("\u0000")) patch.log_projects = nextLogs;
+  if (directory.trim() !== "" && directory.trim() !== (project.folder ?? "")) patch.folder = directory.trim();
   const dirty = Object.keys(patch).length > 0;
   const invalid = name.trim() === "";
 
@@ -61,11 +57,6 @@ export function ProjectEditForm({ project, busy, error, onSave, onDelete, isCurr
         <label htmlFor={`${uid}-wd`}>{t.manage.workingDirectory}</label>
         <input id={`${uid}-wd`} className="ac-input ac-mono" value={directory} onChange={(e) => setDirectory(e.target.value)} aria-describedby={`${uid}-wd-note`} />
         <span id={`${uid}-wd-note`} className="app-muted lib-field-note">{t.manage.workingDirectoryHint}</span>
-      </div>
-      <div className="lib-field">
-        <label htmlFor={`${uid}-logs`}>{t.manage.logProjects}</label>
-        <input id={`${uid}-logs`} className="ac-input ac-mono" value={logs} onChange={(e) => setLogs(e.target.value)} aria-describedby={`${uid}-logs-note`} />
-        <span id={`${uid}-logs-note`} className="app-muted lib-field-note">{t.manage.logProjectsHint}</span>
       </div>
       <div className="prj-edit-actions">
         <Button variant="primary" type="submit" loading={busy === true} disabled={!dirty || invalid}>{t.manage.save}</Button>

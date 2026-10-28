@@ -2,6 +2,7 @@
   "extends": "{{tsconfigName}}/library.json",
   "compilerOptions": {
     "types": ["node"],
+    "customConditions": ["development"],
     "paths": { "{{name}}": ["./src/index.ts"] }
   },
   "include": ["src", "test", "vitest.config.ts"]

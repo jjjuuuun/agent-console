@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.10.0"
+CONTRACTS_VERSION: Final = "0.12.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -33,24 +33,25 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.4.0",
+    "common": "1.6.0",
     "resources": "1.1.0",
-    "logs": "1.0.0",
-    "definitions": "1.3.0",
+    "logs": "1.1.0",
+    "definitions": "1.4.0",
     "runs": "1.4.0",
     "usage": "1.1.0",
-    "projects": "1.0.0",
+    "projects": "3.0.0",
     "chat": "1.1.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
-    "memory": "1.0.0",
+    "memory": "1.1.0",
     "modules": "1.3.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
 (`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0, `memory`는 0.10.0에서
-1.0.0으로 시작)."""
+1.0.0으로 시작. `projects`는 0.11.0에서 2.0.0 — 프로젝트 = 로컬 폴더, 0.12.0에서 3.0.0 — 프로젝트
+구성 = 폴더 안 사본, design §PI)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -62,7 +63,8 @@ LOG_EVENT_ORDERS: Final = ("asc", "desc")
 
 LOG_PROJECT_UNGROUPED: Final = "~ungrouped"
 """로그 필터 `project`의 예약 값: 묶기 규칙에 맞지 않은 로그(design §4R.9). `~` 접두로 그룹 id와
-겹치지 않는다."""
+겹치지 않는다. 0.11.0 deprecated(K33-15): 로그 필터 `project`는 등록 프로젝트 id를 받는다.
+다음 major에서 삭제."""
 
 
 class ErrorCodes:
@@ -124,6 +126,70 @@ class ErrorCodes:
     """메모리 본문에 비밀 의심 값이 있어 쓰기를 거부했다(설정 비밀 처리 = 거부, 0.10.0, HTTP 422).
     본문·찾은 값은 응답에 싣지 않는다. `details` = `MemorySecretRejectedDetails{field, rules}`."""
 
+    # ---- 5.7R.33(design §PI, 0.11.0): 프로젝트 = 로컬 폴더, 실행 사전 점검, 폴더 확인·탐색
+    PROJECT_REQUIRED: Final = "project.required"
+    """프로젝트 기능이 있는 조립에서 `project_id` 없이 실행·대화를 시작했다(HTTP 422).
+    fix = [프로젝트 고르기]."""
+    PROJECT_NOT_IMPORTED: Final = "project.not_imported"
+    """실행 대상이 이 프로젝트에서 쓸 수 없다(HTTP 422). `details` =
+    `ProjectNotImportedDetails{project_id, kind, id, in_library}`(0.12.0): 실행 대상이 그 프로젝트
+    공간에 없다. `in_library` = 라이브러리에는 있음(화면 [가져와서 실행], K33-18)."""
+    PROJECT_FOLDER_MISSING: Final = "project.folder_missing"
+    """프로젝트 상태가 ready가 아니라 시작하지 않았다(폴더 없음·권한·미지정·겹침, HTTP 409).
+    `details` = `ProjectFolderUnavailableDetails{project_id, status, folder?}`."""
+    PROJECT_FOLDER_TAKEN: Final = "project.folder_taken"
+    """같은 폴더가 이미 등록돼 있다(HTTP 409, K33-2). `details` =
+    `ProjectFolderConflictDetails{project_id, archived}`."""
+    PROJECT_FOLDER_OVERLAPS: Final = "project.folder_overlaps"
+    """등록된 폴더와 겹친다(한쪽이 다른 쪽 안, HTTP 409, K33-2). `details` =
+    `ProjectFolderConflictDetails{project_id, relation: parent|child}`."""
+    PROJECT_OUTSIDE_FOLDER: Final = "project.outside_folder"
+    """설정의 경로 값(`x-path` 필드)이 프로젝트 폴더 밖이다(HTTP 422, design §PI.5). `details` =
+    `ProjectOutsideFolderDetails{project_id, folder, paths}`."""
+    FOLDERS_REMOTE_DISABLED: Final = "folders.remote_disabled"
+    """서버가 루프백이 아닌 주소에 묶여 폴더 확인·탐색·만들기를 열지 않았다(HTTP 403, design §PI.6).
+    설치자 설정 `mod-projects.allow_remote_browse`로만 켠다."""
+    # 폴더 작업 실패(`ac-local-folders` `FolderError.code`에 `folders.` 접두를 붙인 값).
+    FOLDERS_EMPTY: Final = "folders.empty"
+    FOLDERS_INVALID_PATH: Final = "folders.invalid_path"
+    FOLDERS_RELATIVE: Final = "folders.relative"
+    FOLDERS_FOREIGN_PATH: Final = "folders.foreign_path"
+    """다른 OS 경로(예: 리눅스 서버에 Windows 드라이브 경로). 경로 제안은 하지 않는다."""
+    FOLDERS_NO_HOME: Final = "folders.no_home"
+    FOLDERS_OUTSIDE_ROOTS: Final = "folders.outside_roots"
+    """탐색 범위(`browse_roots`) 밖(HTTP 403)."""
+    FOLDERS_NOT_FOUND: Final = "folders.not_found"
+    """목록을 볼 폴더가 없다(HTTP 404)."""
+    FOLDERS_NOT_DIRECTORY: Final = "folders.not_directory"
+    FOLDERS_NO_ACCESS: Final = "folders.no_access"
+    FOLDERS_INVALID_NAME: Final = "folders.invalid_name"
+    FOLDERS_EXISTS: Final = "folders.exists"
+    """만들려는 폴더가 이미 있다(HTTP 409)."""
+    FOLDERS_MISSING_PARENT: Final = "folders.missing_parent"
+    FOLDERS_IO_ERROR: Final = "folders.io_error"
+    """파일 시스템 오류(HTTP 500, 메시지에 경로 밖 정보 없음)."""
+
+    # ---- 5.7R.33c2(design §PI.4·§PI.6, 0.12.0): 프로젝트 공간·복사·네이티브 폴더 대화상자
+    PROJECT_NOT_FOUND: Final = "project.not_found"
+    """정의·메모리 경로의 `?project=`(공간)나 복사 요청의 `SpaceRef`가 등록되지 않은 프로젝트를
+    가리킨다(HTTP 404). `details.project_id`."""
+    PROJECT_MANIFEST_INVALID: Final = "project.manifest_invalid"
+    """폴더 매니페스트(`.agent-console/project.yaml`)를 읽을 수 없어 시작·쓰기를 하지 않았다
+    (HTTP 409). `details` = `ProjectFolderUnavailableDetails{project_id, status, folder?}`."""
+    PROJECT_CONFIG_READONLY: Final = "project.config_readonly"
+    """프로젝트 폴더의 구성(`.agent-console/`)에 쓸 수 없어 가져오기·편집·메모리 쓰기를 하지
+    않았다(HTTP 409, `ProjectView.config_writable = false`). `details.project_id`."""
+    PROJECT_COPY_CONFLICT: Final = "project.copy_conflict"
+    """복사 계획 뒤 원본 또는 대상이 바뀌었다. 보통 복사 결과 항목의 이슈
+    (`CopyApplyItemResult.issue`)로 쓰고, 오류로 낼 때는 HTTP 409. `details.kind`·`details.id`."""
+    FOLDERS_DIALOG_UNAVAILABLE: Final = "folders.dialog_unavailable"
+    """네이티브 폴더 대화상자를 쓸 수 없다(제공자 없음·꺼짐·원격 바인딩, HTTP 409). 화면은 앱 안
+    찾아보기로 간다. 선택 응답에서는 `FolderPickResult.status = unavailable`."""
+    FOLDERS_DIALOG_BUSY: Final = "folders.dialog_busy"
+    """다른 폴더 선택 창이 열려 있다(한 번에 하나, HTTP 409)."""
+    FOLDERS_DIALOG_TIMEOUT: Final = "folders.dialog_timeout"
+    """폴더 선택 창이 시간 상한 안에 닫히지 않았다(HTTP 409, 서버가 창 프로세스를 끝냄)."""
+
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.BAD_REQUEST: 400,
@@ -153,6 +219,33 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.MEMORY_INVALID_KEY: 422,
     ErrorCodes.MEMORY_TOO_LARGE: 422,
     ErrorCodes.MEMORY_SECRET_REJECTED: 422,
+    ErrorCodes.PROJECT_REQUIRED: 422,
+    ErrorCodes.PROJECT_NOT_IMPORTED: 422,
+    ErrorCodes.PROJECT_FOLDER_MISSING: 409,
+    ErrorCodes.PROJECT_FOLDER_TAKEN: 409,
+    ErrorCodes.PROJECT_FOLDER_OVERLAPS: 409,
+    ErrorCodes.PROJECT_OUTSIDE_FOLDER: 422,
+    ErrorCodes.FOLDERS_REMOTE_DISABLED: 403,
+    ErrorCodes.FOLDERS_EMPTY: 422,
+    ErrorCodes.FOLDERS_INVALID_PATH: 422,
+    ErrorCodes.FOLDERS_RELATIVE: 422,
+    ErrorCodes.FOLDERS_FOREIGN_PATH: 422,
+    ErrorCodes.FOLDERS_NO_HOME: 422,
+    ErrorCodes.FOLDERS_OUTSIDE_ROOTS: 403,
+    ErrorCodes.FOLDERS_NOT_FOUND: 404,
+    ErrorCodes.FOLDERS_NOT_DIRECTORY: 422,
+    ErrorCodes.FOLDERS_NO_ACCESS: 422,
+    ErrorCodes.FOLDERS_INVALID_NAME: 422,
+    ErrorCodes.FOLDERS_EXISTS: 409,
+    ErrorCodes.FOLDERS_MISSING_PARENT: 422,
+    ErrorCodes.FOLDERS_IO_ERROR: 500,
+    ErrorCodes.PROJECT_NOT_FOUND: 404,
+    ErrorCodes.PROJECT_MANIFEST_INVALID: 409,
+    ErrorCodes.PROJECT_CONFIG_READONLY: 409,
+    ErrorCodes.PROJECT_COPY_CONFLICT: 409,
+    ErrorCodes.FOLDERS_DIALOG_UNAVAILABLE: 409,
+    ErrorCodes.FOLDERS_DIALOG_BUSY: 409,
+    ErrorCodes.FOLDERS_DIALOG_TIMEOUT: 409,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
@@ -252,10 +345,10 @@ class KnownIssueCodes:
     """백엔드를 쓰는 노드의 실행 백엔드가 층 어디에도 정해지지 않았다(노드 이슈로도, 실행 거부 오류
     코드 `ErrorCodes.BACKEND_UNRESOLVED`로도 쓴다). `fix`로 [노드에서 지정]·[기본값으로 지정]."""
     PROJECT_SHARED_USES_PROJECT: Final = "project.shared_uses_project"
-    """공용 정의가 프로젝트 전용 정의를 쓴다(warning, 저장·실행은 막지 않음). `details.project`·
-    `details.kind`·`details.id` = 참조된 정의."""
+    """(0.11.0부터 내지 않음, K33-5) 공용 정의가 프로젝트 전용 정의를 쓴다(warning).
+    `details.project`·`details.kind`·`details.id` = 참조된 정의."""
     PROJECT_CROSS_PROJECT: Final = "project.cross_project"
-    """프로젝트 P 전용 정의가 다른 프로젝트 Q 전용 정의를 쓴다(warning)."""
+    """(0.11.0부터 내지 않음, K33-5) 프로젝트 P 전용 정의가 다른 프로젝트 Q 전용 정의를 쓴다."""
     PROJECT_UNKNOWN: Final = "project.unknown"
     """정의·실행이 없는 프로젝트 id를 가리킨다(info, 공용·프로젝트 층 없음으로 취급)."""
     PROJECT_REFERENCES_UNAVAILABLE: Final = "project.references_unavailable"
@@ -304,6 +397,35 @@ class KnownIssueCodes:
     ARCHITECTURE_CONDITION_PATH_UNLISTED: Final = "architecture.condition_path_unlisted"
     """구조도 프로필 조건이 목록 본문에 없는 경로(예: 상세 전용 경로)를 봐서 맞지 않는다(warning,
     M-4). `details.prefix` = 걸린 경로 접두."""
+
+    # ---- 5.7R.33(design §PI, 0.11.0): 프로젝트 = 로컬 폴더. 값은 `ErrorCodes`의 같은 이름과 같다
+    # (실행 거부 오류 코드로도, 사전 점검·검증 이슈 코드로도 쓴다).
+    PROJECT_REQUIRED: Final = "project.required"
+    PROJECT_NOT_IMPORTED: Final = "project.not_imported"
+    """`details.in_library` = 라이브러리에는 있음(0.12.0, K33-18)."""
+    PROJECT_FOLDER_MISSING: Final = "project.folder_missing"
+    PROJECT_FOLDER_TAKEN: Final = "project.folder_taken"
+    PROJECT_FOLDER_OVERLAPS: Final = "project.folder_overlaps"
+    PROJECT_OUTSIDE_FOLDER: Final = "project.outside_folder"
+    FOLDERS_REMOTE_DISABLED: Final = "folders.remote_disabled"
+    SETTINGS_IGNORED_KEY: Final = "settings.ignored_key"
+    """설정에 이제 쓰지 않는 키가 있어 읽고 무시했다(info, 서버 시작은 막지 않음). 예:
+    `projects.new_definition_scope`(§PI.8), `logs.projects`(K33-15). `details.key` = 설정 경로."""
+    LOGS_NO_PROJECTS: Final = "logs.no_projects"
+    """등록된 프로젝트가 없어 로그를 수집하지 않는다(info, design §PI.5)."""
+
+    # ---- 5.7R.33c2(design §PI.4·§PI.6, 0.12.0). 값은 `ErrorCodes`의 같은 이름과 같다.
+    PROJECT_NOT_FOUND: Final = "project.not_found"
+    PROJECT_MANIFEST_INVALID: Final = "project.manifest_invalid"
+    PROJECT_CONFIG_READONLY: Final = "project.config_readonly"
+    PROJECT_COPY_CONFLICT: Final = "project.copy_conflict"
+    """복사 결과 항목의 이슈(`CopyApplyItemResult.issue`, status conflict)."""
+    PROJECT_MEMORY_NETWORK_FS: Final = "project.memory_network_fs"
+    """프로젝트 폴더가 네트워크 파일 시스템이라 메모리 SQLite 잠금을 믿을 수 없다(info,
+    `ProjectView.issues`, 감지할 수 있을 때만, K33-22). 오류 코드가 아니다."""
+    FOLDERS_DIALOG_UNAVAILABLE: Final = "folders.dialog_unavailable"
+    FOLDERS_DIALOG_BUSY: Final = "folders.dialog_busy"
+    FOLDERS_DIALOG_TIMEOUT: Final = "folders.dialog_timeout"
 
 
 class KnownSuggestionIds:

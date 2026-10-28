@@ -6,16 +6,45 @@
 
 // 계약 하위 모듈 `projects`: @agent-console/contracts/projects
 export type {
+  AssignProjectRequest,
+  AssignProjectResult,
+  AssignProjectSkip,
+  CopyApplyItem,
+  CopyApplyItemResult,
+  CopyApplyRequest,
+  CopyApplyResult,
+  CopyPlan,
+  CopyPlanItem,
+  CopyPlanRequest,
   DefinitionKey,
   DefinitionMove,
   DeletePlan,
+  FolderCapabilities,
+  FolderCheck,
+  FolderCheckRequest,
+  FolderConflict,
+  FolderEntry,
+  FolderListing,
+  FolderPickRequest,
+  FolderPickResult,
+  FolderRoot,
   MovePlan,
   MovePlanRequest,
+  OutsideFolderPath,
   Project,
+  ProjectCounts,
   ProjectCreate,
   ProjectDeleteMode,
+  ProjectFolderConflictDetails,
+  ProjectFolderUnavailableDetails,
+  ProjectManifest,
+  ProjectNotImportedDetails,
+  ProjectOutsideFolderDetails,
+  ProjectRegistration,
+  ProjectStatus,
   ProjectUpdate,
+  ProjectView,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "projects" as const;
-export const CONTRACT_VERSION = "1.0.0" as const;
+export const CONTRACT_VERSION = "3.0.0" as const;

@@ -1,0 +1,87 @@
+{
+  "format": 1,
+  "description": "네이티브 폴더 선택 창 명령 표(X35). 위에서부터 이 서버 프로세스에서 쓸 수 있는 첫 항목을 쓴다. argv·env의 {initial}·{title}만 바뀐다. 스크립트 문자열 안에 사용자 값을 넣지 말고 env로 넘긴다.",
+  "dialogs": [
+    {
+      "id": "windows-powershell",
+      "label": "Windows 폴더 찾아보기",
+      "platforms": ["win32"],
+      "requires": ["powershell"],
+      "argv": [
+        "powershell",
+        "-NoProfile",
+        "-NonInteractive",
+        "-STA",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = $env:AGENT_CONSOLE_DIALOG_TITLE; $d.ShowNewFolderButton = $true; if ($env:AGENT_CONSOLE_DIALOG_INITIAL) { $d.SelectedPath = $env:AGENT_CONSOLE_DIALOG_INITIAL }; $o = New-Object System.Windows.Forms.Form; $o.TopMost = $true; $o.ShowInTaskbar = $false; $o.StartPosition = 'CenterScreen'; $o.Size = New-Object System.Drawing.Size(1, 1); $o.Opacity = 0; $o.Show(); $o.Activate(); $r = $d.ShowDialog($o); $o.Close(); if ($r -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); [Console]::Out.WriteLine($d.SelectedPath) }"
+      ],
+      "env": {
+        "AGENT_CONSOLE_DIALOG_TITLE": "{title}",
+        "AGENT_CONSOLE_DIALOG_INITIAL": "{initial}"
+      },
+      "cancel_exit_codes": [],
+      "encoding": "utf-8"
+    },
+    {
+      "id": "macos-osascript",
+      "label": "macOS 폴더 선택",
+      "platforms": ["darwin"],
+      "requires": ["osascript"],
+      "argv": [
+        "osascript",
+        "-e", "on run argv",
+        "-e", "set p to item 1 of argv",
+        "-e", "set d to item 2 of argv",
+        "-e", "try",
+        "-e", "if d is \"\" then",
+        "-e", "set f to choose folder with prompt p",
+        "-e", "else",
+        "-e", "set f to choose folder with prompt p default location (POSIX file d)",
+        "-e", "end if",
+        "-e", "on error number -128",
+        "-e", "return \"\"",
+        "-e", "end try",
+        "-e", "return POSIX path of f",
+        "-e", "end run",
+        "{title}",
+        "{initial}"
+      ],
+      "cancel_exit_codes": [],
+      "encoding": "utf-8"
+    },
+    {
+      "id": "zenity",
+      "label": "zenity 폴더 선택",
+      "platforms": ["linux", "freebsd"],
+      "requires": ["zenity"],
+      "env_requires": ["DISPLAY", "WAYLAND_DISPLAY"],
+      "argv": [
+        "zenity",
+        "--file-selection",
+        "--directory",
+        "--title={title}",
+        {"when": "initial", "args": ["--filename={initial}/"]}
+      ],
+      "cancel_exit_codes": [1],
+      "encoding": "utf-8"
+    },
+    {
+      "id": "kdialog",
+      "label": "KDE 폴더 선택",
+      "platforms": ["linux", "freebsd"],
+      "requires": ["kdialog"],
+      "env_requires": ["DISPLAY", "WAYLAND_DISPLAY"],
+      "argv": [
+        "kdialog",
+        "--title",
+        "{title}",
+        "--getexistingdirectory",
+        {"when": "initial", "args": ["{initial}"]}
+      ],
+      "cancel_exit_codes": [1],
+      "encoding": "utf-8"
+    }
+  ]
+}

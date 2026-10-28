@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import builtins
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import Any
 
 import sqlalchemy as sa
@@ -15,6 +15,7 @@ from sqlalchemy import Connection, Engine
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from agent_console_contracts import Conversation
+from agent_console_store import AssignCandidate
 
 from . import schema as t
 from .models import QueueCounts, QueuedItem, QueueItemExistsError, QueueItemNotFoundError
@@ -70,6 +71,46 @@ class SqliteConversationRepository:
             stmt = stmt.limit(limit)
         with self._engine.connect() as conn:
             return [Conversation.model_validate_json(d) for d in conn.execute(stmt).scalars()]
+
+    # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
+
+    def project_id_counts(self) -> dict[str | None, int]:
+        """project_id별 대화 수(보관한 대화 포함)."""
+        c = t.conversations.c
+        stmt = sa.select(c.project_id, sa.func.count()).group_by(c.project_id)
+        with self._engine.connect() as conn:
+            return {row[0]: int(row[1]) for row in conn.execute(stmt)}
+
+    def candidates(self, ids: Collection[str] | None) -> builtins.list[AssignCandidate]:
+        c = t.conversations.c
+        if ids is None:
+            stmt = sa.select(c.id, c.project_id).where(c.project_id.is_(None))
+            with self._engine.connect() as conn:
+                return [AssignCandidate(r[0], r[1]) for r in conn.execute(stmt)]
+        out: builtins.list[AssignCandidate] = []
+        wanted = builtins.list(ids)
+        with self._engine.connect() as conn:
+            for i in range(0, len(wanted), 500):
+                stmt = sa.select(c.id, c.project_id).where(c.id.in_(wanted[i : i + 500]))
+                out.extend(AssignCandidate(r[0], r[1]) for r in conn.execute(stmt))
+        return out
+
+    def set_project(self, ids: Collection[str], project_id: str) -> int:
+        """열과 `doc`의 project_id를 함께 바꾼다(`updated_at`은 그대로 — 정렬을 바꾸지 않는다)."""
+        c = t.conversations.c
+        wanted = builtins.list(ids)
+        changed = 0
+        with self._engine.begin() as conn:
+            for i in range(0, len(wanted), 500):
+                changed += conn.execute(
+                    sa.update(t.conversations)
+                    .where(c.id.in_(wanted[i : i + 500]))
+                    .values(
+                        project_id=project_id,
+                        doc=sa.func.json_set(c.doc, "$.project_id", project_id),
+                    )
+                ).rowcount
+        return changed
 
     def delete(self, conversation_id: str) -> bool:
         """대화와 그 대기열을 한 트랜잭션에서 지운다. 대화가 있었으면 True."""

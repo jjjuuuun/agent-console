@@ -174,6 +174,32 @@ def test_project_id_is_stored_and_listed_by_query(tmp_path: Path) -> None:
     second.services.database.close()  # type: ignore[union-attr]
 
 
+def test_assign_project_and_counts_routes() -> None:
+    """5.7R.33j: ``GET /conversations/project-counts``·``POST …/assign-project``."""
+    with _client(assemble([module, _definitions()])) as client:
+        a = client.post(f"{API}/conversations", json={"graph_id": "team"}).json()
+        b = client.post(
+            f"{API}/conversations", json={"graph_id": "team", "project_id": "p1"}
+        ).json()
+        counts = client.get(f"{API}/conversations/project-counts")
+        assert counts.status_code == 200, counts.text
+        assert counts.json() == {"total": 2, "no_project": 1, "by_project": {"p1": 1}}
+        bad = client.post(f"{API}/conversations/assign-project", json={"to": "p2"})
+        assert bad.status_code in (400, 422)
+        res = client.post(
+            f"{API}/conversations/assign-project", json={"to": "p2", "from_null": True}
+        )
+        assert res.json() == {"assigned": 1, "skipped": []}
+        assert client.get(f"{API}/conversations/{a['id']}").json()["project_id"] == "p2"
+        assert client.get(f"{API}/conversations/{b['id']}").json()["project_id"] == "p1"
+        res = client.post(
+            f"{API}/conversations/assign-project", json={"to": "p2", "ids": [b["id"], "nope"]}
+        )
+        assert res.json()["assigned"] == 1
+        assert res.json()["skipped"][0]["reason"] == "not_found"
+        assert client.get(f"{API}/conversations/project-counts").json()["by_project"] == {"p2": 2}
+
+
 def test_ws_unknown_conversation_is_not_found() -> None:
     with (
         _client(assemble([module])) as client,

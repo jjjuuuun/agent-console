@@ -63,10 +63,10 @@ describe("createProjectsClient", () => {
   });
   test("만들기·고치기(If-Match는 주었을 때만)", async () => {
     const { client, requestVersioned } = make();
-    await client.createProject({ id: "n", name: "n" });
+    await client.createProject({ id: "n", name: "n", folder: "/w/n" });
     await client.updateProject("a", { name: "m" });
     await client.updateProject("a", { name: "m" }, "h1");
-    expect(requestVersioned).toHaveBeenNthCalledWith(1, "POST", "/projects", { body: { id: "n", name: "n" } });
+    expect(requestVersioned).toHaveBeenNthCalledWith(1, "POST", "/projects", { body: { id: "n", name: "n", folder: "/w/n" } });
     expect(requestVersioned).toHaveBeenNthCalledWith(2, "PUT", "/projects/a", { body: { name: "m" } });
     expect(requestVersioned).toHaveBeenNthCalledWith(3, "PUT", "/projects/a", { body: { name: "m" }, headers: { "If-Match": "h1" } });
   });

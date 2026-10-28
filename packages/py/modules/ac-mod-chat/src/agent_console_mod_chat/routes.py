@@ -19,16 +19,20 @@ from fastapi import APIRouter, Query, Response
 
 from agent_console_chat import ChatService
 from agent_console_contracts import (
+    AssignProjectRequest,
+    AssignProjectResult,
     ChatTurn,
     Conversation,
     ConversationSummary,
     CreateConversationRequest,
     ErrorResponse,
     PostMessageRequest,
+    ProjectCounts,
     QueuedMessage,
     Run,
     UpdateConversationRequest,
 )
+from agent_console_store import ProjectAssignStore, assign_project, count_projects
 
 MAX_TURN_LIMIT = 500
 
@@ -46,6 +50,7 @@ def build_router(
     service: Callable[[], ChatService],
     *,
     require_graphs: Callable[[], None] = lambda: None,
+    projects: Callable[[], ProjectAssignStore] | None = None,
 ) -> APIRouter:
     """대화·대기열 라우터.
 
@@ -53,6 +58,8 @@ def build_router(
         service: 대화 서비스를 돌려주는 함수(요청마다 부른다).
         require_graphs: 팀 구성을 읽어야 하는 요청(만들기·팀 구성 바꾸기) 전에 부른다. 팀 구성
             조회를 쓸 수 없으면 예외(예: ``feature_unavailable``)를 던진다.
+        projects: 프로젝트 넣기·개수 포트(``project_id`` 열을 가진 저장소).
+            없으면 두 경로를 만들지 않는다.
     """
     router = APIRouter()
 
@@ -65,6 +72,23 @@ def build_router(
         """대화 요약(최근 갱신순): 마지막 턴 상태·대기열 수·대기 중 상호작용 수.
         ``project`` = 그 ``project_id``인 대화만(불투명 문자열, 생략 = 모두)."""
         return service().list(graph_id=graph_id, archived=archived, project_id=project)
+
+    if projects is not None:
+        # 고정 경로는 ``/conversations/{conversation_id}``보다 먼저 등록한다.
+        @router.get(
+            "/conversations/project-counts", response_model=ProjectCounts, responses=errors()
+        )
+        async def conversation_project_counts() -> ProjectCounts:
+            """``project_id``별 대화 수(보관한 대화 포함, 프로젝트 없음 = ``no_project``)."""
+            return count_projects(projects())
+
+        @router.post(
+            "/conversations/assign-project", response_model=AssignProjectResult, responses=errors()
+        )
+        async def assign_conversation_project(body: AssignProjectRequest) -> AssignProjectResult:
+            """대화를 프로젝트에 넣는다. ``ids``는 지금 프로젝트와 상관없이 옮기고,
+            ``from_null``은 프로젝트 없는 대화만 넣는다. 없는 id는 ``skipped``(``not_found``)."""
+            return assign_project(projects(), body)
 
     @router.post(
         "/conversations", response_model=Conversation, status_code=201, responses=errors(409)

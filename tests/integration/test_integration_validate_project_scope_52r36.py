@@ -49,7 +49,9 @@ def _graph(graph_id: str, agent_ref: str) -> dict[str, Any]:
 
 def _seed(client: TestClient, *, project: bool) -> None:
     if project:
-        created = client.post(f"{API}/projects", json={"id": "alpha", "name": "알파"})
+        created = client.post(
+            f"{API}/projects", json={"id": "alpha", "name": "알파", "folder": "/w/alpha"}
+        )
         assert created.status_code == 201, created.text
     agent = agent_doc("pa-2", "답: $prompt", **({"project": "alpha"} if project else {}))
     assert client.post(f"{API}/agents", json=agent).status_code == 201

@@ -35,6 +35,8 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import ValidationError
 
 from agent_console_contracts import (
+    AssignProjectRequest,
+    AssignProjectResult,
     BackendDescriptor,
     BackendLoginInput,
     BackendLoginSession,
@@ -54,6 +56,7 @@ from agent_console_contracts import (
     ModelInfo,
     NodeTypeDescriptor,
     PortSpec,
+    ProjectCounts,
     ResolvePortsRequest,
     RespondInteractionRequest,
     ResumeOptions,
@@ -65,6 +68,7 @@ from agent_console_contracts import (
 )
 from agent_console_registry import UnknownExtensionError
 from agent_console_runtime import BackendLoginService, BackendReadinessService, LoginInputError
+from agent_console_store import ProjectAssignStore, assign_project, count_projects
 
 from .errors import (
     BackendNotFoundError,
@@ -105,6 +109,7 @@ def build_router(
     readiness: Callable[[], BackendReadinessService] | None = None,
     login: Callable[[], BackendLoginService] | None = None,
     observe_event_prefixes: Sequence[str] = DEFAULT_OBSERVE_EVENT_PREFIXES,
+    projects: Callable[[], ProjectAssignStore] | None = None,
 ) -> APIRouter:
     """실행 모듈 라우터.
 
@@ -116,6 +121,8 @@ def build_router(
         activity_limit: 에이전트 활동 기본 개수.
         readiness: 백엔드 준비 상태·연결 테스트 서비스. None이면 그 세 경로를 붙이지 않는다.
         login: 백엔드 로그인 서비스. None이면 로그인·로그아웃 경로 6개를 붙이지 않는다.
+        projects: 프로젝트 넣기·개수 포트(``project_id``를 가진 Run 저장소).
+            None이면 두 경로를 붙이지 않는다.
         observe_event_prefixes: ``GET /observe-event-prefixes``가 내는 관측 탭 이벤트 type 접두어
             (기본 = 패키지 기본 데이터, 빈 목록 = 관측 탭 끔).
     """
@@ -167,6 +174,20 @@ def build_router(
             limit=limit,
         )
         return found
+
+    if projects is not None:
+        # 고정 경로는 ``/runs/{run_id}``보다 먼저 등록한다.
+        @router.get("/runs/project-counts", response_model=ProjectCounts, responses=errors())
+        async def run_project_counts() -> ProjectCounts:
+            """``project_id``별 루트 Run 수(자식 제외, 프로젝트 없음 = ``no_project``)."""
+            return count_projects(projects())
+
+        @router.post("/runs/assign-project", response_model=AssignProjectResult, responses=errors())
+        async def assign_run_project(body: AssignProjectRequest) -> AssignProjectResult:
+            """Run을 프로젝트에 넣는다. 루트 Run이면 자식도 함께. ``ids``는 지금 프로젝트와 상관없이
+            옮기고 ``from_null``은 프로젝트 없는 Run만 넣는다.
+            실행 중인 트리는 ``busy``로 건너뛴다."""
+            return assign_project(projects(), body)
 
     @router.get("/runs/{run_id}", response_model=RunSnapshot, responses=errors())
     async def get_run(run_id: str) -> RunSnapshot:

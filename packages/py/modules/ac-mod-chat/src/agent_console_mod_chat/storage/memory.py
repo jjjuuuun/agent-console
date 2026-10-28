@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import builtins
 import threading
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from dataclasses import replace
 
 from agent_console_contracts import Conversation
+from agent_console_store import AssignCandidate
 
 from .models import QueueCounts, QueuedItem, QueueItemExistsError, QueueItemNotFoundError
 
@@ -55,6 +56,34 @@ class InMemoryConversationRepository:
             ]
         rows.sort(key=lambda c: (c.updated_at, c.id), reverse=True)
         return [c.model_copy(deep=True) for c in rows[:limit]]
+
+    # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
+
+    def project_id_counts(self) -> dict[str | None, int]:
+        out: dict[str | None, int] = {}
+        with self._s.lock:
+            for c in self._s.conversations.values():
+                out[c.project_id] = out.get(c.project_id, 0) + 1
+        return out
+
+    def candidates(self, ids: Collection[str] | None) -> builtins.list[AssignCandidate]:
+        wanted = None if ids is None else set(ids)
+        with self._s.lock:
+            return [
+                AssignCandidate(c.id, c.project_id)
+                for c in self._s.conversations.values()
+                if (c.project_id is None if wanted is None else c.id in wanted)
+            ]
+
+    def set_project(self, ids: Collection[str], project_id: str) -> int:
+        changed = 0
+        with self._s.lock:
+            for cid in ids:
+                row = self._s.conversations.get(cid)
+                if row is not None:
+                    row.project_id = project_id
+                    changed += 1
+        return changed
 
     def delete(self, conversation_id: str) -> bool:
         """대화와 그 대기열을 함께 지운다. 대화가 있었으면 True."""

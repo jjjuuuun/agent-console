@@ -29,8 +29,8 @@ pip install agent-console-mod-projects
 >>> root = tempfile.mkdtemp()
 >>> repo = ProjectRepository(
 ...     FileDefinitionStore(root, [project_kind()], versions=InMemoryVersionRepository()))
->>> repo.create(ProjectCreate(id="app", name="앱")).document
-{'id': 'app', 'name': '앱'}
+>>> repo.create(ProjectCreate(id="app", name="앱", folder="/work/app")).document
+{'id': 'app', 'folder': '/work/app', 'name': '앱'}
 >>> [p.name for p in repo.list_projects()]
 ['앱']
 >>> service = ProjectService(repo, snapshot=DefinitionSnapshot(lambda: None))

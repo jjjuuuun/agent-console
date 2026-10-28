@@ -24,6 +24,7 @@ from agent_console_contracts import (
 )
 
 from .errors import EventConflict, InteractionClosed, NotFound
+from .project_assign import AssignCandidate
 
 UNFINISHED_STATUSES: tuple[RunStatus, ...] = ("queued", "running", "paused", "waiting")
 """종료되지 않은 Run 상태(`interrupt_unfinished` 대상)."""
@@ -210,6 +211,40 @@ class InMemoryRunRepository:
             ]
         rows.sort(key=lambda r: (r.created_at, r.id), reverse=True)
         return [r.model_copy(deep=True) for r in rows[:limit]]
+
+    # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
+
+    def project_id_counts(self) -> dict[str | None, int]:
+        """루트 Run의 project_id별 개수."""
+        out: dict[str | None, int] = {}
+        with self._s._lock:
+            for r in self._s._runs.values():
+                if r.root_run_id is None:
+                    out[r.project_id] = out.get(r.project_id, 0) + 1
+        return out
+
+    def candidates(self, ids: Collection[str] | None) -> builtins.list[AssignCandidate]:
+        wanted = None if ids is None else set(ids)
+        with self._s._lock:
+            return [
+                AssignCandidate(r.id, r.project_id, r.root_run_id, r.status in UNFINISHED_STATUSES)
+                for r in self._s._runs.values()
+                if (
+                    r.project_id is None
+                    if wanted is None
+                    else r.id in wanted or r.root_run_id in wanted
+                )
+            ]
+
+    def set_project(self, ids: Collection[str], project_id: str) -> int:
+        changed = 0
+        with self._s._lock:
+            for rid in ids:
+                run = self._s._runs.get(rid)
+                if run is not None:
+                    run.project_id = project_id
+                    changed += 1
+        return changed
 
     def save_node_run(self, node_run: NodeRun) -> None:
         key = (node_run.node_id, node_run.attempt, node_run.iteration, node_run.call)

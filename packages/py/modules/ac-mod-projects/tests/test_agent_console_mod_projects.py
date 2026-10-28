@@ -98,23 +98,28 @@ def test_crud_round_trip_stores_projects_yaml(tmp_path: Path) -> None:
         assert client.get(f"{API}/projects").json() == []
         created = client.post(
             f"{API}/projects",
-            json={"id": "app", "name": "앱", "working_directory": "/work/app"},
+            json={"id": "app", "name": "앱", "folder": "/work/app"},
         )
         assert created.status_code == 201, created.text
-        assert created.json() == {"id": "app", "name": "앱", "working_directory": "/work/app"}
+        assert created.json() == {"id": "app", "name": "앱", "folder": "/work/app"}
         etag = created.headers["etag"]
         assert (tmp_path / "ws" / "projects" / "app.yaml").is_file()
-        dup = client.post(f"{API}/projects", json={"id": "app", "name": "x"})
+        dup = client.post(f"{API}/projects", json={"id": "app", "name": "x", "folder": "/work/x"})
         assert dup.status_code == 409
         assert client.get(f"{API}/projects/app").headers["etag"] == etag
 
         put = client.put(
             f"{API}/projects/app",
-            json={"description": "설명", "working_directory": None, "name": None},
+            json={"description": "설명", "name": None},
             headers={"If-Match": etag},
         )
         assert put.status_code == 200, put.text
-        assert put.json() == {"id": "app", "name": "앱", "description": "설명"}
+        assert put.json() == {
+            "id": "app",
+            "name": "앱",
+            "folder": "/work/app",
+            "description": "설명",
+        }
         stale = client.put(f"{API}/projects/app", json={"name": "y"}, headers={"If-Match": etag})
         assert stale.status_code == 412
         assert [p["id"] for p in client.get(f"{API}/projects").json()] == ["app"]
@@ -124,7 +129,7 @@ def test_crud_round_trip_stores_projects_yaml(tmp_path: Path) -> None:
         assert client.delete(f"{API}/projects/app").status_code == 204
         assert client.get(f"{API}/projects/app").status_code == 404
         assert client.delete(f"{API}/projects/app").status_code == 404
-        bad = client.post(f"{API}/projects", json={"id": "bad id", "name": "x"})
+        bad = client.post(f"{API}/projects", json={"id": "bad id", "name": "x", "folder": "/w/x"})
         assert bad.status_code == 422
 
 
@@ -133,8 +138,8 @@ def test_projects_lookup_port(tmp_path: Path) -> None:
     lookup = assembly.port(PROJECTS_LOOKUP)
     assert isinstance(lookup, ProjectLookup)
     with _client(assembly) as client:
-        client.post(f"{API}/projects", json={"id": "b", "name": "B"})
-        client.post(f"{API}/projects", json={"id": "a", "name": "A"})
+        client.post(f"{API}/projects", json={"id": "b", "name": "B", "folder": "/w/b"})
+        client.post(f"{API}/projects", json={"id": "a", "name": "A", "folder": "/w/a"})
     assert [p.id for p in lookup.list_projects()] == ["a", "b"]
     project = lookup.get_project("a")
     assert isinstance(project, Project)
@@ -150,10 +155,10 @@ def test_projects_folders_port(tmp_path: Path) -> None:
     assert folders is not None
     assert folders().registered == ()  # 등록 없음 = 빈 범위
     with _client(assembly) as client:
-        client.post(f"{API}/projects", json={"id": "here", "name": "Here"})
+        client.post(f"{API}/projects", json={"id": "here", "name": "Here", "folder": str(tmp_path)})
         client.post(
             f"{API}/projects",
-            json={"id": "far", "name": "Far", "working_directory": str(tmp_path / "far")},
+            json={"id": "far", "name": "Far", "folder": str(tmp_path / "far")},
         )
     found = folders()
     assert set(found.registered) == {tmp_path.absolute(), tmp_path / "far"}
@@ -177,7 +182,10 @@ def test_projects_folders_follow_runs_working_directory(tmp_path: Path) -> None:
         [module, local_definitions_module(workspace=tmp_path / "ws")], config, base=base
     )
     with _client(assembly) as client:
-        client.post(f"{API}/projects", json={"id": "p", "name": "P"})
+        client.post(
+            f"{API}/projects",
+            json={"id": "p", "name": "P", "folder": str((tmp_path / "work").absolute())},
+        )
     folders = assembly.port(PROJECT_FOLDERS)
     assert folders is not None
     assert folders().current == ((tmp_path / "work").absolute(),)
@@ -189,7 +197,12 @@ def test_projects_folders_follow_runs_working_directory(tmp_path: Path) -> None:
 def _seed(assembly: Assembly, client: TestClient) -> Any:
     """프로젝트 app·web, app 전용 coder(→ app 전용 리소스 guide), 공용 lead(→ coder)."""
     for pid in ("app", "web"):
-        assert client.post(f"{API}/projects", json={"id": pid, "name": pid}).status_code == 201
+        assert (
+            client.post(
+                f"{API}/projects", json={"id": pid, "name": pid, "folder": f"/w/{pid}"}
+            ).status_code
+            == 201
+        )
     store = _store(assembly)
     store.create("resource", _resource("guide", "app"))
     store.create("agent", _agent("coder", "app", uses=[["resource", "guide"]]))
@@ -327,7 +340,12 @@ def test_without_definitions_crud_works_and_rest_is_info_or_409(tmp_path: Path) 
     (check,) = assembly.ports(DEFINITION_CHECKS)
     assert check.issues("agent", _agent("x", "app")) == []
     with _client(assembly) as client:
-        assert client.post(f"{API}/projects", json={"id": "app", "name": "앱"}).status_code == 201
+        assert (
+            client.post(
+                f"{API}/projects", json={"id": "app", "name": "앱", "folder": "/w/app"}
+            ).status_code
+            == 201
+        )
         plan = client.post(f"{API}/projects/app/delete-plan").json()
         assert plan["definitions"] == []
         assert [w["code"] for w in plan["warnings"]] == ["project.definitions_unavailable"]
@@ -418,7 +436,12 @@ def test_database_opened_only_when_projects_are_used(tmp_path: Path) -> None:
         assert lookup.list_projects() == []
         assert client.get(f"{API}/projects").json() == []
         assert database.upgraded == []
-        assert client.post(f"{API}/projects", json={"id": "a", "name": "A"}).status_code == 201
+        assert (
+            client.post(
+                f"{API}/projects", json={"id": "a", "name": "A", "folder": "/w/a"}
+            ).status_code
+            == 201
+        )
         assert database.upgraded == [[]]  # legacy 계보(정의 버전 표) 한 번
         client.put(f"{API}/projects/a", json={"name": "B"})
     assert database.upgraded == [[]]

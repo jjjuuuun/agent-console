@@ -18,7 +18,7 @@ export interface ProjectGuideProps {
 
 /** 단계 데이터(순수): 완료 여부는 서버 데이터로만 계산한다. */
 export function guideSteps(p: Pick<ProjectGuideProps, "projects" | "project" | "hasConversation">): { id: string; done: boolean }[] {
-  const configured = p.project !== undefined && ((p.project.working_directory ?? "") !== "" || (p.project.log_projects ?? []).length > 0);
+  const configured = p.project !== undefined && (p.project.folder ?? "") !== "";
   return [
     { id: "create", done: p.projects.length > 0 },
     { id: "configure", done: configured },

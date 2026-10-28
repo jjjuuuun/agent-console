@@ -128,7 +128,10 @@ class LogSourceSetting(DefinitionModel):
 
 
 class LogProjectGroup(DefinitionModel):
-    """경로 패턴(예: ~/work/app/**)에 맞는 로그를 한 프로젝트로 묶습니다."""
+    """이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시)."""
+
+    # 0.11.0 deprecated(design §PI.14 K33-15). 세션의 프로젝트는 등록 프로젝트 폴더로만 정한다.
+    # 다음 major에서 삭제.
 
     model_config = ConfigDict(title="프로젝트 묶음")
 
@@ -164,9 +167,11 @@ class LogProjectGroup(DefinitionModel):
 
 
 class LogProjectSettings(DefinitionModel):
-    """로그를 프로젝트별로 묶는 규칙. 바꾸면 바로 반영된다(다시 수집할 필요 없음)."""
+    """이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시)."""
 
-    # design §4R.6. 질의 때 적용한다(group_projects).
+    # design §4R.6에서 시작. 0.11.0 deprecated(design §PI.14 K33-15): 서버는 읽고 무시하며 정보
+    # 이슈 `settings.ignored_key`를 낸다(시작은 막지 않음). 로그의 프로젝트는 등록 프로젝트 폴더로
+    # 정한다(세션 `project_id`). 다음 major에서 삭제.
 
     model_config = ConfigDict(title="프로젝트 묶기")
 
@@ -310,7 +315,7 @@ class LogDashboard(DefinitionModel):
 
 
 class LogSettings(DefinitionModel):
-    """읽을 로그 출처, 범주 표시, 프로젝트 묶기, 대시보드. 비운 항목은 기본값을 따른다."""
+    """읽을 로그 출처, 범주 표시, 대시보드. 비운 항목은 기본값을 따른다."""
 
     model_config = ConfigDict(title="로그 설정")
 
@@ -332,11 +337,9 @@ class LogSettings(DefinitionModel):
     )
     projects: LogProjectSettings | None = Field(
         default=None,
-        title="프로젝트 묶기",
-        description="로그를 경로에 따라 프로젝트별로 묶는 규칙입니다.",
-        json_schema_extra=x_ui(
-            tier="advanced", when="로그를 프로젝트별로 묶어 보고 싶을 때 바꾸세요."
-        ),
+        title="프로젝트 묶기(이전 형식)",
+        description="더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).",
+        json_schema_extra={"deprecated": True, **x_ui(tier="advanced")},
     )
     dashboards: list[LogDashboard] | None = Field(
         default=None,

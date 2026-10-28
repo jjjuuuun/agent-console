@@ -9,6 +9,10 @@ export type {
   MemoryAccessConfig,
   MemoryAuthor,
   MemoryChanged,
+  MemoryCopyConflict,
+  MemoryCopyFilter,
+  MemoryCopyRequest,
+  MemoryCopyResult,
   MemoryEntry,
   MemoryEntryPage,
   MemoryEntrySummary,
@@ -29,6 +33,7 @@ export type {
   MemoryScopeKindList,
   MemoryScopeKindSpec,
   MemoryScopeRef,
+  MemoryScopeRemap,
   MemoryScopeSummary,
   MemorySecretRejectedDetails,
   MemorySettings,
@@ -43,4 +48,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "memory" as const;
-export const CONTRACT_VERSION = "1.0.0" as const;
+export const CONTRACT_VERSION = "1.1.0" as const;

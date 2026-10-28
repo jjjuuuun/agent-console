@@ -61,11 +61,12 @@ describe("ProjectSwitcher(표현)", () => {
 describe("첫 프로젝트 안내 단계", () => {
   it("완료 여부는 서버 데이터로만 계산한다", () => {
     expect(guideSteps({ projects: [], project: undefined, hasConversation: false }).map((s) => s.done)).toEqual([false, false, false]);
-    const p = project("a", { working_directory: "/w" });
+    const p = project("a", { folder: "/w" });
     expect(guideSteps({ projects: [p], project: p, hasConversation: false }).map((s) => s.done)).toEqual([true, true, false]);
     expect(guideSteps({ projects: [p], project: p, hasConversation: true }).map((s) => s.done)).toEqual([true, true, true]);
-    const logs = project("b", { log_projects: ["x"] });
-    expect(guideSteps({ projects: [logs], project: logs, hasConversation: false })[1]!.done).toBe(true);
+    // 계약 0.11.0: 폴더가 없는 옛 프로젝트(folder_unset)는 설정 단계가 끝나지 않았다
+    const legacy = project("b", { folder: null });
+    expect(guideSteps({ projects: [legacy], project: legacy, hasConversation: false })[1]!.done).toBe(false);
   });
 });
 
@@ -192,7 +193,7 @@ describe("설정 > 프로젝트 섹션", () => {
   });
 
   it("프로젝트를 고쳐 저장하면 바뀐 필드만 If-Match 해시와 함께 보낸다", async () => {
-    const a = project("a", { name: "앱", working_directory: "/old" });
+    const a = project("a", { name: "앱", folder: "/old" });
     const { clients, projects } = createFakeClients(
       { listModules: vi.fn(async () => modules) },
       {
@@ -205,7 +206,7 @@ describe("설정 > 프로젝트 섹션", () => {
     const dir = (await screen.findByLabelText("작업 폴더")) as HTMLInputElement;
     fireEvent.change(dir, { target: { value: "/new" } });
     fireEvent.click(screen.getByRole("button", { name: "프로젝트 저장" }));
-    await waitFor(() => expect(projects.updateProject).toHaveBeenCalledWith("a", { working_directory: "/new" }, "h1"));
+    await waitFor(() => expect(projects.updateProject).toHaveBeenCalledWith("a", { folder: "/new" }, "h1"));
   });
 
   it("삭제는 삭제 계획을 보여 주고 고른 방식으로 지운다", async () => {

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 from agent_console_chat import ConversationRepository, QueueStore
 from agent_console_contracts import Issue
 from agent_console_modkit import DatabaseHandle
+from agent_console_store import ProjectAssignStore
 
 from .memory import InMemoryChatStorage
 from .repository import SqliteChatStorage
@@ -28,6 +30,11 @@ class ChatStorage:
     conversations: ConversationRepository
     queue: QueueStore
     in_memory: bool
+
+    @property
+    def projects(self) -> ProjectAssignStore:
+        """프로젝트 넣기·개수 포트(대화 저장소 구현이 `ProjectAssignStore`도 구현한다)."""
+        return cast(ProjectAssignStore, self.conversations)
 
 
 def open_chat_storage(database: DatabaseHandle | None) -> ChatStorage:

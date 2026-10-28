@@ -133,7 +133,7 @@ PTY(`claude auth login`·`status`·`logout`) 하위 프로세스에 함께 넘�
   `.gitignore`에 `.state/` 줄(workspace가 git 저장소 안일 때 의미가 있다. 파일이 없으면 만들고, 사용자 파일이면 끝에
   줄만 더하고, 앞뒤 `/`만 다른 줄이 이미 있으면 그대로) → 폴더와 바로 아래 파일 권한 좁히기(700·600). 준비하지 못하면
   실행은 `backend.auth_dir_unavailable`로 실패하고 로그인은 거절한다(메시지에 경로·자격 내용 없음).
-- 상태 점검(`status`)은 폴더를 만들지 않는다. 이미 있는 폴더·파일 권한만 좁히고, 좁혀지지 않으면(예: WSL `/mnt/c`)
+- 상태 점검(`status`)은 폴더를 만들지 않는다. 이미 있는 폴더·파일 권한만 좁히고, 좁혀지지 않으면(권한을 지원하지 않는 파일 시스템)
   점검 항목 `auth_dir_permissions`와 `detail`로 알린다. 점검 항목 `auth_dir`의 `note`와 `detail`에 위치(workspace 기준
   상대 경로)를 싣는다.
 - 자격 파일 내용은 읽지 않는다(있는지·권한만). 로그·응답·화면에 내용이 나가지 않는다.
@@ -285,7 +285,7 @@ True
 | `on_success_keys` · `submit_keys` | `["enter"]` · `["enter"]` | 성공 문구 뒤·코드 뒤에 보낼 키 |
 | `pty_size` | `{cols: 400, rows: 40}` | 긴 URL이 줄바꿈되지 않게 넓게 |
 | `cwd` | `null` | 작업 폴더 |
-| `env` · `env_inherit` · `env_clear` | `{TERM: xterm-256color}` · `CLAUDE_CONFIG_DIR`·`BROWSER`·`DISPLAY`·`WAYLAND_DISPLAY`·`XDG_*`·`WSL_*` · 키·토큰 변수 3개 | 하위 프로세스 환경 |
+| `env` · `env_inherit` · `env_clear` | `{TERM: xterm-256color}` · `CLAUDE_CONFIG_DIR`·`BROWSER`·`DISPLAY`·`WAYLAND_DISPLAY`·`XDG_*` · 키·토큰 변수 3개 | 하위 프로세스 환경(환경별로 더 물려줄 변수는 `env_inherit`에 더한다) |
 | `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | 앱 전용 폴더를 끈 경우 시작 확인 창에 보일 쓰기 경로(처음 풀리는 하나). 앱 전용 폴더가 있으면 그 위치(상대 경로)와 `texts.writes_private` |
 | `status_timeout_s` · `logout_timeout_s` · `exit_wait_s` · `terminate_grace_s` | `20` · `20` · `10` · `2` | 시간(초) |
 | `screen_lines` | `40` | 진행에 싣는 화면 줄 수 |
@@ -322,8 +322,8 @@ uv run agent-console serve --open       # 127.0.0.1:8765, 작업 폴더 = 설정
 1. 처음에는 설정 › 실행 백엔드의 Claude Agent SDK 카드가 "로그인 필요"와 자격 위치(`.state/claude`)를 보이고
    **[구독으로 로그인]**이 보인다 → 누르면 시작 확인 창(본인 책임 안내, 쓰기 경로 =
    `.state/claude/.credentials.json`)이 뜬다. 이때 `ps -ef | grep "auth login"`에 하위 프로세스가 없다.
-2. [로그인 시작] → 브라우저 창이 열리거나 [로그인 페이지 열기]로 연다 → 브라우저에서 로그인한다. WSL처럼 콜백이 닿지
-   않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
+2. [로그인 시작] → 브라우저 창이 열리거나 [로그인 페이지 열기]로 연다 → 브라우저에서 로그인한다. 브라우저의
+   로그인 완료 신호가 서버에 닿지 않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
 3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서
    `CLAUDE_CONFIG_DIR=<앱 workspace>/.state/claude claude auth status; echo $?`
    → JSON의 `authMethod`가 `claude.ai`이고 종료 코드 0이다.

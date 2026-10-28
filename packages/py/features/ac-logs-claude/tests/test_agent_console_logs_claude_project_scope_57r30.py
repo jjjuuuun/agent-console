@@ -3,12 +3,13 @@
 빈 HOME 픽스처의 `~/.claude/projects`에 프로젝트 둘(`/work/demo`·`/work/other`)과 앱 전용 자격 폴더
 (5.7R.30b: `<앱 workspace>/.state/claude/projects`)를 두고 범위(`current`·`registered`)·등록 없음·
 넓은 roots·범위 변경 뒤 정리를 확인한다. 두 루트 모두 같은 범위 필터를 지난다. 실제 `~/.claude`는
-읽지 않는다.
+읽지 않는다. 세션 기록(본 세션 + 서브에이전트)은 `tests/data` 없이 `_write_project`가 코드로 만든다
+(공개본에는 테스트 데이터가 없다).
 """
 
 from __future__ import annotations
 
-import shutil
+import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -20,8 +21,59 @@ from agent_console_logs import LogIngestor, LogRegistries, ProjectFolders
 from agent_console_logs.testing import MemoryLogIndex, RecordingOpen
 from agent_console_logs_claude import ClaudeCodeJsonlSource, project_key
 
-DATA = Path(__file__).parent / "data" / "claude_config" / "projects" / "-work-demo"
 SOURCE = "claude-code-jsonl"
+SESSION = "11111111-1111-4111-8111-111111111111"
+
+
+def _row(kind: str, uuid: str, second: int, message: dict[str, Any], **extra: Any) -> str:
+    row: dict[str, Any] = {
+        "sessionId": SESSION,
+        "cwd": "/work/demo",
+        "version": "2.1.0",
+        "isSidechain": False,
+        "type": kind,
+        "uuid": uuid,
+        "timestamp": f"2026-10-01T00:00:{second:02d}.000Z",
+        "message": message,
+        **extra,
+    }
+    return json.dumps(row, ensure_ascii=False)
+
+
+def _write_project(dest: Path) -> None:
+    """최소 프로젝트 폴더: 본 세션 jsonl 하나 + 서브에이전트 jsonl·meta 하나(커서 2개)."""
+    sub = dest / SESSION / "subagents"
+    sub.mkdir(parents=True)
+    main = [
+        _row("user", "u1", 0, {"role": "user", "content": "문서를 정리해 줘"}),
+        _row(
+            "assistant",
+            "a1",
+            1,
+            {
+                "id": "msg_1",
+                "role": "assistant",
+                "model": "claude-test-model",
+                "content": [{"type": "text", "text": "정리했습니다."}],
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+            },
+        ),
+    ]
+    side = [
+        _row(
+            "user",
+            "s-u1",
+            2,
+            {"role": "user", "content": "문서를 검토해 줘"},
+            isSidechain=True,
+            agentId="a1b2",
+        ),
+    ]
+    (dest / f"{SESSION}.jsonl").write_text("\n".join(main) + "\n", encoding="utf-8")
+    (sub / "agent-a1b2.jsonl").write_text("\n".join(side) + "\n", encoding="utf-8")
+    meta = {"agentType": "reviewer", "description": "문서 검토", "toolUseId": "toolu_agent"}
+    meta_text = json.dumps(meta, ensure_ascii=False)
+    (sub / "agent-a1b2.meta.json").write_text(meta_text, encoding="utf-8")
 
 
 @pytest.fixture
@@ -29,7 +81,7 @@ def home(tmp_path: Path) -> Path:
     """빈 HOME: ~/.claude/projects 아래 두 프로젝트(demo·other)."""
     projects = tmp_path / "home" / ".claude" / "projects"
     for key in ("-work-demo", "-work-other"):
-        shutil.copytree(DATA, projects / key)
+        _write_project(projects / key)
     return tmp_path / "home"
 
 
@@ -109,8 +161,8 @@ def test_app_auth_folder_sessions_are_read_and_credentials_never(
     project = tmp_path / "proj"
     project.mkdir()
     app_dir = workspace / ".state" / "claude"
-    shutil.copytree(DATA, app_dir / "projects" / project_key(project))
-    shutil.copytree(DATA, app_dir / "projects" / "-work-unregistered")
+    _write_project(app_dir / "projects" / project_key(project))
+    _write_project(app_dir / "projects" / "-work-unregistered")
     (app_dir / ".credentials.json").write_text('{"token": "never-read"}', encoding="utf-8")
     (app_dir / "projects" / ".credentials.json").write_text("{}", encoding="utf-8")
     index = MemoryLogIndex()
@@ -178,7 +230,7 @@ def test_old_project_roots_is_ignored(home: Path, tmp_path: Path) -> None:
     """5.7R.30b: 옛 `project_roots`(프로젝트 안 상대 경로)는 deprecated로 남고 읽지 않는다."""
     project = tmp_path / "proj"
     old = project / ".agent-console" / "claude" / "projects" / project_key(project)
-    shutil.copytree(DATA, old)
+    _write_project(old)
     schema = ClaudeCodeJsonlSource.descriptor.config_schema
     props: Any = schema["properties"]
     assert props["project_roots"]["deprecated"] is True

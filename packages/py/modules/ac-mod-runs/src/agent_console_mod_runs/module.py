@@ -328,6 +328,7 @@ class RunsModule:
                     lambda: service,
                     lambda: interactions,
                     runs=lambda: recorder.runs,
+                    projects=lambda: recorder.runs,
                     events=lambda: recorder.events,
                     activity_limit=cfg.activity_limit,
                     readiness=lambda: readiness,

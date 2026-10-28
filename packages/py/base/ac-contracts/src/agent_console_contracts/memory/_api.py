@@ -6,7 +6,11 @@
 `If-Match: <version>`) → `MemoryEntry`, `POST /memory/entries/{id}/move`(`MemoryMoveRequest`),
 `GET /memory/entries/{id}/versions` → `MemoryVersionSummary[]`, `POST /memory/retention/plan` →
 `MemoryRetentionPlan`, `POST /memory/retention/apply` → `MemoryRetentionResult`,
-`POST /memory/import` → `MemoryImportResult`, `GET /memory/tags` → `MemoryTagList`.
+`POST /memory/import` → `MemoryImportResult`, `GET /memory/tags` → `MemoryTagList`,
+`POST /memory/copy`(`MemoryCopyRequest`) → `MemoryCopyResult`(1.1.0, design §PI.4.3).
+(1.1.0) 모든 경로는 질의 `project=<등록 id>`를 받아 그 프로젝트 공간의 메모리 저장소를 쓴다(없으면
+라이브러리 저장소). 이것은 계약 모델이 아니라 경로 문서다. 모르는 프로젝트는 404
+`project.not_found`.
 WS 메시지 `memory.changed`의 payload는 `MemoryChanged`.
 
 실행 이벤트 `memory.*`의 payload는 `MemoryEventPayload`다. RunEvent `type`은 열린 문자열이고
@@ -19,6 +23,7 @@ from typing import Final, Literal, get_args
 from pydantic import Field, model_validator
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr, Slug
+from agent_console_contracts.common import SpaceRef
 from agent_console_contracts.definitions import Issue
 
 from ._models import (
@@ -179,6 +184,71 @@ class MemoryImportResult(ContractModel):
     renamed: int = Field(default=0, ge=0)
     skipped: int = Field(default=0, ge=0)
     errors: list[MemoryImportProblem] = Field(default_factory=list)
+
+
+class MemoryCopyFilter(ContractModel):
+    """메모리 복사에서 고를 항목(1.1.0). 모든 조건은 AND이고 비운 조건은 거르지 않는다."""
+
+    scope_kinds: list[Slug] | None = Field(default=None, description="범위 종류 id 중 하나.")
+    scope_ids: list[str] | None = Field(default=None, description="범위 id 중 하나.")
+    keys: list[str] | None = Field(default=None, description="키 중 하나.")
+    tags: list[str] | None = Field(default=None, description="태그 중 하나라도 붙은 항목.")
+
+
+class MemoryScopeRemap(ContractModel):
+    """복사할 때 범위 id 바꾸기 하나(예: 원본 맥락의 프로젝트·팀 id → 대상 맥락의 id)."""
+
+    from_: str = Field(alias="from", description="원본 범위 id.")
+    to: str = Field(description="대상 범위 id.")
+    kind: Slug | None = Field(
+        default=None, description="이 범위 종류에만 적용한다. null = 모든 범위 종류."
+    )
+
+
+class MemoryCopyRequest(ContractModel):
+    """`POST /memory/copy` 본문: 공간 사이 메모리 항목 복사.
+
+    라이브러리 → 프로젝트가 기본 방향이고 프로젝트 → 라이브러리도 같은 모양이다. 복사 뒤 독립이며
+    출처를 기록하지 않는다. 같은 범위·키가 대상에 있으면 `on_conflict`(가져오기와 같은 어휘)를
+    따른다.
+    """
+
+    # 1.1.0(0.12.0), design §PI.4.3.
+
+    source: SpaceRef
+    target: SpaceRef
+    filter: MemoryCopyFilter = Field(
+        default_factory=MemoryCopyFilter, description="고를 항목. 비우면 원본의 모든 항목."
+    )
+    on_conflict: MemoryImportPolicy = "skip"
+    remap: list[MemoryScopeRemap] = Field(
+        default_factory=list, description="범위 id 바꾸기(앞의 것이 먼저 맞는다)."
+    )
+
+
+class MemoryCopyConflict(ContractModel):
+    """대상에 같은 범위·키가 있던 항목 하나와 그 처리."""
+
+    scope: MemoryScopeRef = Field(description="대상 범위(바꾸기 적용 뒤).")
+    key: NonEmptyStr
+    resolution: str = Field(
+        description="처리(열린 문자열, `on_conflict` 값): skip·overwrite·rename."
+    )
+    new_key: str | None = Field(default=None, description="rename일 때 대상에 쓴 키.")
+
+
+class MemoryCopyResult(ContractModel):
+    """`POST /memory/copy` 응답."""
+
+    copied: int = Field(default=0, ge=0, description="대상에 쓴 항목 수(덮어씀·이름 바꿈 포함).")
+    skipped: int = Field(default=0, ge=0, description="쓰지 않은 항목 수(충돌 건너뜀·거부 포함).")
+    conflicts: list[MemoryCopyConflict] = Field(default_factory=list)
+    issues: list[Issue] = Field(
+        default_factory=list,
+        description=(
+            "쓰지 못한 이유(예: `memory.secret_rejected`, 범위 종류 없음). 본문은 싣지 않는다."
+        ),
+    )
 
 
 MemorySecretField = Literal["content", "key", "tags"]

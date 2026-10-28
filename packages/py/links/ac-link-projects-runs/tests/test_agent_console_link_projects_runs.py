@@ -243,8 +243,8 @@ def test_ports_match_consumer_protocols(tmp_path: Path) -> None:
 def _scope(**options: Any) -> ProjectScope:
     projects_ = MemoryProjects(
         [
-            Project(id="app", name="App", working_directory="/w/app"),
-            Project(id="empty", name="빈 프로젝트"),
+            Project(id="app", name="App", folder="/w/app"),
+            Project(id="empty", name="빈 프로젝트", folder=None),
         ]
     )
     return ProjectScope(lambda: projects_, **options)
@@ -302,7 +302,7 @@ def test_lookup_missing_or_broken_is_ignored() -> None:
 def test_memory_projects_module_provides_lookup(tmp_path: Path) -> None:
     base = BaseServices(paths=Paths(base_dir=tmp_path, workspace=tmp_path, state=tmp_path))
     assembly = assemble(
-        [memory_projects_module([Project(id="app", name="App")]), module], base=base
+        [memory_projects_module([Project(id="app", name="App", folder=None)]), module], base=base
     )
     [scope] = assembly.ports(SCOPE_LAYERS)
     assert [layer.id for layer in scope.scope_layers("app").layers] == ["project"]

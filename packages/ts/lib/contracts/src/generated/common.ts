@@ -15,9 +15,10 @@ export type {
   PortDef,
   PortSpec,
   Position,
+  SpaceRef,
   UiHints,
   Usage,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "common" as const;
-export const CONTRACT_VERSION = "1.4.0" as const;
+export const CONTRACT_VERSION = "1.6.0" as const;

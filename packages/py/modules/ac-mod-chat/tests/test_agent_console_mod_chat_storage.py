@@ -354,3 +354,24 @@ def test_chat_0002_upgrade_keeps_old_rows_null_and_downgrade_only_drops_the_colu
     db.upgrade([BRANCH])  # 다시 올리면 doc에서 열을 채운다
     assert [c.id for c in storage.conversations.list(project_id="p")] == ["c10"]
     db.close()
+
+
+# ---- 프로젝트 넣기·개수 (5.7R.33j) -------------------------------------------
+def test_assign_project_and_counts_on_both_stores(storage: Any) -> None:
+    from agent_console_contracts import AssignProjectRequest
+    from agent_console_store import assign_project, count_projects
+
+    repo = storage.conversations
+    repo.save(make_conv("c1", updated_at=1.0))
+    repo.save(make_conv("c2", updated_at=2.0, project_id="x", archived=True))
+    repo.save(make_conv("c3", updated_at=3.0))
+    counts = count_projects(repo)
+    assert (counts.total, counts.no_project, counts.by_project) == (3, 2, {"x": 1})
+    res = assign_project(repo, AssignProjectRequest(to="p", from_null=True))
+    assert res.assigned == 2
+    assert repo.get("c2").project_id == "x"  # 다른 프로젝트는 from_null이 건드리지 않는다
+    assert (repo.get("c1").project_id, repo.get("c1").updated_at) == ("p", 1.0)
+    moved = assign_project(repo, AssignProjectRequest(to="p", ids=["c2", "zz"]))
+    assert (moved.assigned, [s.id for s in moved.skipped]) == (1, ["zz"])
+    assert [c.id for c in repo.list(project_id="p")] == ["c3", "c2", "c1"]
+    assert count_projects(repo).by_project == {"p": 3}

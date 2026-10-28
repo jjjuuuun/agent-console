@@ -29,7 +29,8 @@ export function ProjectCreateDialog({ open, existingIds, busy, error, onSubmit, 
       onClose={onClose}
       onSubmit={(v) => {
         const wd = directory.trim();
-        onSubmit({ id: v.id, name: v.name, ...(v.description === "" ? {} : { description: v.description }), ...(wd === "" ? {} : { working_directory: wd }) });
+        // 계약 0.11.0: 폴더 필수(비우면 서버가 422로 거절한다). 폴더 고르기 화면은 5.7R.33n.
+        onSubmit({ id: v.id, name: v.name, folder: wd, ...(v.description === "" ? {} : { description: v.description }) });
       }}
       extra={
         <div className="lib-field">

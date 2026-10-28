@@ -2,6 +2,19 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.12.0]
+- 계약 v11(5.7R.33c2, design §PI.10). 사내 의존 범위를 `^0.12.0`으로 올린다. `@agent-console/contracts/projects` 3.0.0, `memory` 1.1.0, `common` 1.6.0.
+- 깨지는 변경(projects 3.0): `ProjectUse`·`ProjectUseMode`·`ProjectImportMode`·`ProjectUsesUpdate`·`UseCopyRequest`·`UseCopyResult`·`DefinitionCopy`·`LegacyUse`·`LegacyUsesPlan`·`LegacyUsesApplyRequest`·`LegacyUseResult`·`LegacyUsesApplyResult` 삭제, `Project`·`ProjectCreate`·`ProjectUpdate`의 `uses`·`import_mode` 삭제, `ProjectNotImportedDetails`의 `reason`·`import_mode` → `in_library`.
+- 새 타입: `ProjectRegistration`·`ProjectManifest`, `SpaceRef`(common), `CopyPlanRequest`·`CopyPlan`·`CopyPlanItem`·`CopyApplyRequest`·`CopyApplyItem`·`CopyApplyResult`·`CopyApplyItemResult`, `FolderCapabilities`·`FolderPickRequest`·`FolderPickResult`, `MemoryCopyRequest`·`MemoryCopyFilter`·`MemoryScopeRemap`·`MemoryCopyResult`·`MemoryCopyConflict`. 새 선택 필드 `ProjectView.config_writable`·`manifest_id`·`kinds`·`issues`.
+- 새 상수: `KNOWN_COPY_ACTIONS`·`KNOWN_COPY_TARGET_STATES`·`KNOWN_COPY_STATUSES`·`KNOWN_FOLDER_PICK_STATUSES`·`PROJECT_MANIFEST_FORMAT`, `KNOWN_PROJECT_STATUSES.MANIFEST_INVALID`, `ERROR_CODES`·`KNOWN_ISSUE_CODES`의 `PROJECT_NOT_FOUND`·`PROJECT_MANIFEST_INVALID`·`PROJECT_CONFIG_READONLY`·`PROJECT_COPY_CONFLICT`·`FOLDERS_DIALOG_UNAVAILABLE`·`FOLDERS_DIALOG_BUSY`·`FOLDERS_DIALOG_TIMEOUT`, `KNOWN_ISSUE_CODES.PROJECT_MEMORY_NETWORK_FS`(정보 이슈만).
+
+## [0.11.0]
+- 계약 v10(5.7R.33c, design §PI.10). 사내 의존 범위를 `^0.11.0`으로 올린다. `@agent-console/contracts/projects` 2.0.0, `common` 1.5.0, `definitions` 1.4.0, `logs` 1.1.0.
+- 깨지는 변경(projects 2.0): `Project.working_directory`·`log_projects` 삭제 → `Project.folder: string | null`(필수 키), `ProjectCreate.folder` 필수(`id`·`name` 선택), `ProjectUpdate`에서 `working_directory`·`log_projects` 삭제·`folder`·`uses`·`import_mode`·`archived` 추가.
+- 새 타입: `ProjectUse`·`ProjectImportMode`·`ProjectUseMode`·`ProjectStatus`·`ProjectView`·`ProjectUsesUpdate`·`UseCopyRequest`·`UseCopyResult`·`DefinitionCopy`·`FolderCheckRequest`·`FolderCheck`·`FolderConflict`·`FolderListing`·`FolderEntry`·`FolderRoot`·`ProjectNotImportedDetails`·`ProjectFolderConflictDetails`·`ProjectFolderUnavailableDetails`·`ProjectOutsideFolderDetails`·`OutsideFolderPath`·`AssignProjectRequest`·`AssignProjectResult`·`AssignProjectSkip`·`ProjectCounts`·`LegacyUse`·`LegacyUsesPlan`·`LegacyUsesApplyRequest`·`LegacyUseResult`·`LegacyUsesApplyResult`, `LogSessionSummary.project_id`.
+- 새 상수: `X_PATH`·`X_PATH_KINDS`·`KNOWN_PROJECT_STATUSES`·`KNOWN_FOLDER_CHECK_STATUSES`·`KNOWN_FOLDER_CONFLICT_RELATIONS`, `ERROR_CODES`·`KNOWN_ISSUE_CODES`의 `PROJECT_*`·`FOLDERS_*`·`SETTINGS_IGNORED_KEY`·`LOGS_NO_PROJECTS`.
+- `@deprecated`: `LogSettings.projects`, `WorkspaceSettings.projects`, `LogSessionSummary.project`.
+
 ## [0.10.0]
 - 계약 v9(5.7R.3, design §5.7R.5). 사내 의존 범위를 `^0.10.0`으로 올린다. 새 하위 경로 `@agent-console/contracts/memory`(1.0.0), `modules` 1.3.0(`WsServerMessage`에 `memory.changed`).
 - 새 타입(memory): `MemorySettings`·`MemoryScopeKindSpec`·`MemoryRetentionSettings`·`MemoryRetentionRule`·`MemoryAccessConfig`·`MemoryScopeAccess`·`MemoryTools`·`MemoryToolText`, `MemoryScopeRef`·`MemoryAuthor`·`MemoryEntry`·`MemoryEntrySummary`·`MemoryEntryPage`·`MemoryVersion`·`MemoryVersionSummary`·`MemoryScopeSummary`·`MemoryScopeKindInfo`·`MemoryScopeKindList`, REST `MemoryWriteRequest`·`MemoryUpdateRequest`·`MemoryMoveRequest`·`MemoryRetentionPlanRequest`·`MemoryRetentionPlan`·`MemoryRetentionPlanItem`·`MemoryRetentionResult`·`MemoryImportResult`·`MemoryImportProblem`·`MemoryTagList`·`MemoryTagCount`·`MemorySecretRejectedDetails`, 이벤트 `MemoryEventPayload`(본문·검색어 원문 없음), WS `MemoryChanged`·`MemoryChangedMessage`.

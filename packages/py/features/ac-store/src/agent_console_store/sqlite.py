@@ -11,7 +11,7 @@ import builtins
 import hashlib
 import json
 import sqlite3
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +43,7 @@ from .memory import (
     status_set,
 )
 from .migrate import upgrade
+from .project_assign import AssignCandidate
 
 
 def create_sqlite_engine(target: str | Path, *, journal_mode: str = "WAL") -> Engine:
@@ -357,6 +358,65 @@ class SqliteRunRepository:
         with self._engine.connect() as conn:
             return [Run.model_validate_json(d) for d in conn.execute(stmt).scalars()]
 
+    # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
+
+    def _col_project(self) -> Any:
+        return (
+            self._runs.c.project_id
+            if self._project
+            else sa.func.json_extract(self._runs.c.doc, "$.project_id")
+        )
+
+    def _col_root(self) -> Any:
+        return (
+            self._runs.c.root_run_id
+            if self._lineage
+            else sa.func.json_extract(self._runs.c.doc, "$.root_run_id")
+        )
+
+    def project_id_counts(self) -> dict[str | None, int]:
+        """루트 Run의 project_id별 개수(자식 Run은 세지 않는다)."""
+        project = self._col_project()
+        stmt = (
+            sa.select(project, sa.func.count()).where(self._col_root().is_(None)).group_by(project)
+        )
+        with self._engine.connect() as conn:
+            return {row[0]: int(row[1]) for row in conn.execute(stmt)}
+
+    def candidates(self, ids: Collection[str] | None) -> builtins.list[AssignCandidate]:
+        """`ids`가 None이면 project_id가 null인 Run 전부, 아니면 그 Run과 자손(`root_run_id`)."""
+        project, root = self._col_project(), self._col_root()
+        base = sa.select(self._runs.c.id, project, root, self._runs.c.status)
+        out: dict[str, AssignCandidate] = {}
+        with self._engine.connect() as conn:
+            if ids is None:
+                rows = conn.execute(base.where(project.is_(None)))
+                out = {
+                    r[0]: AssignCandidate(r[0], r[1], r[2], r[3] in UNFINISHED_STATUSES)
+                    for r in rows
+                }
+            else:
+                for chunk in _chunks(list(ids)):
+                    where = sa.or_(self._runs.c.id.in_(chunk), root.in_(chunk))
+                    for r in conn.execute(base.where(where)):
+                        out[r[0]] = AssignCandidate(r[0], r[1], r[2], r[3] in UNFINISHED_STATUSES)
+        return list(out.values())
+
+    def set_project(self, ids: Collection[str], project_id: str) -> int:
+        """Run의 project_id를 바꾼다(열과 `doc` 모두). 바뀐 수를 돌려준다."""
+        changed = 0
+        with self._engine.begin() as conn:
+            for chunk in _chunks(list(ids)):
+                values: dict[str, Any] = {
+                    "doc": sa.func.json_set(self._runs.c.doc, "$.project_id", project_id)
+                }
+                if self._project:
+                    values["project_id"] = project_id
+                changed += conn.execute(
+                    sa.update(self._runs).where(self._runs.c.id.in_(chunk)).values(**values)
+                ).rowcount
+        return changed
+
     def save_node_run(self, node_run: NodeRun) -> None:
         values = {
             "run_id": node_run.run_id,
@@ -419,6 +479,12 @@ class SqliteRunRepository:
                 conn.execute(sa.delete(table).where(table.c.run_id == run_id))
             result = conn.execute(sa.delete(t.runs).where(t.runs.c.id == run_id))
         return result.rowcount > 0
+
+
+def _chunks(items: builtins.list[str], size: int = 500) -> Iterator[builtins.list[str]]:
+    """SQLite 변수 개수 한도를 피해 `IN` 목록을 나눈다."""
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
 
 
 def _with_type_prefix(stmt: sa.Select[Any], prefix: str | None) -> sa.Select[Any]:

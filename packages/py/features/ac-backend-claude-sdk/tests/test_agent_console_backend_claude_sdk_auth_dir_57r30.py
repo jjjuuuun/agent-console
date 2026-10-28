@@ -224,7 +224,7 @@ def test_secure_tightens_loose_modes(workspace: Path) -> None:
 async def test_permission_problem_is_reported(
     workspace: Path, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """권한을 좁히지 못하는 파일 시스템(예: /mnt/c): 상태 점검이 알린다(값 없음)."""
+    """권한을 지원하지 않는 파일 시스템: 상태 점검이 알린다(값 없음)."""
     loc_dir = _auth_dir(workspace)
     loc_dir.mkdir(parents=True)
     os.chmod(loc_dir, 0o755)

@@ -22,7 +22,7 @@ export { DEFAULT_BADGE_MESSAGES, SCOPE_BADGE_KEYS, badgeLabel, scopeBadge } from
 export type { ScopeBadge, ScopeBadgeKind, ScopeBadgeOptions, ScopeBadgeTone } from "./badge";
 
 export { applyLogFilter, logFilterFor } from "./logs";
-export type { ProjectLogFilter } from "./logs";
+export type { LegacyLogProjectsHolder, ProjectLogFilter } from "./logs";
 
 export {
   DEFAULT_PROJECT_PARAM,

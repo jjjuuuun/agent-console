@@ -69,11 +69,10 @@ DEFAULT_LOGIN_ENV_INHERIT: tuple[str, ...] = (
     "DISPLAY",
     "WAYLAND_DISPLAY",
     "XDG_*",
-    "WSL_DISTRO_NAME",
-    "WSL_INTEROP",
-    "WSLENV",
 )
-"""환경 정책 허용 목록에 더해 물려줄 변수(로그인 위치·브라우저 열기에 필요, ``*`` 글롭)."""
+"""환경 정책 허용 목록에 더해 물려줄 변수(로그인 위치·브라우저 열기에 필요, ``*`` 글롭).
+
+운영체제·환경별 변수가 더 필요하면 설치자 설정 ``login.env_inherit``에 더한다."""
 
 DEFAULT_LOGIN_ENV: Mapping[str, str] = {"TERM": "xterm-256color"}
 """하위 프로세스에 명시로 줄 값(대화형 화면이 터미널 종류를 알아야 한다)."""

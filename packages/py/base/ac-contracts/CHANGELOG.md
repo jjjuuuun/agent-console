@@ -1,5 +1,57 @@
 # 변경 기록
 
+## 0.12.0
+
+- 계약 v11(5.7R.33c2, design §PI.10 — 프로젝트 구성 = 폴더 안 사본, K33-24). 사내 의존 범위는 `>=0.12,<0.13`(TS `^0.12.0`).
+  하위 계약 버전: `projects` 2.0.0 → **3.0.0**, `memory` 1.1.0, `common` 1.6.0.
+- 삭제(소비자 없음): `ProjectUse`·`ProjectUseMode`·`ProjectImportMode`, `Project`·`ProjectCreate`·`ProjectUpdate`의 `uses`·
+  `import_mode`, `ProjectUsesUpdate`, `UseCopyRequest`·`UseCopyResult`·`DefinitionCopy`, `LegacyUse`·`LegacyUsesPlan`·
+  `LegacyUsesApplyRequest`·`LegacyUseResult`·`LegacyUsesApplyResult`, `ProjectNotImportedDetails.reason`·`import_mode`.
+  옛 YAML의 `uses`·`import_mode`(그리고 `log_projects`)는 읽고 버린다(저장 때 빠짐). `IGNORED_PROJECT_KEYS`·
+  `ignored_project_keys(doc)`로 읽는 쪽이 `settings.ignored_key` 이슈를 낼 수 있다.
+- 추가(`projects`): `ProjectRegistration{kind, id, folder, archived, archived_at, labels}`(앱 등록부, 모르는 키 보존),
+  `ProjectManifest{format, id, name, description, settings, attributes}`(폴더 매니페스트, 모르는 키 보존,
+  `PROJECT_MANIFEST_FORMAT` = 1), `ProjectView.config_writable`(기본 true)·`manifest_id`·`kinds`·`issues`, 상태
+  `manifest_invalid`, 복사 `CopyPlanRequest`·`CopyPlan`·`CopyPlanItem`·`CopyApplyRequest`·`CopyApplyItem`(rename이면
+  `new_id` 필수)·`CopyApplyResult`·`CopyApplyItemResult`, 폴더 선택 `FolderCapabilities`·`FolderPickRequest`·
+  `FolderPickResult`, `ProjectNotImportedDetails.in_library`. 문서 상수 `KnownCopyActions`·`KnownCopyTargetStates`·
+  `KnownCopyStatuses`·`KnownFolderPickStatuses`(→ `x-constants`). `DefinitionKey`는 deprecated 묶음 밖으로 옮겼다.
+- 추가(`common` 1.6.0): `SpaceRef{project_id?}`(null = 라이브러리).
+- 추가(`memory` 1.1.0): `MemoryCopyRequest{source, target, filter: MemoryCopyFilter, on_conflict, remap: MemoryScopeRemap[]}`
+  (`remap` 항목 키 `from`), `MemoryCopyResult{copied, skipped, conflicts: MemoryCopyConflict[], issues}`.
+- 오류·이슈 코드: `project.not_found`(404)·`project.manifest_invalid`(409)·`project.config_readonly`(409)·
+  `project.copy_conflict`(409, 보통 항목 이슈)·`folders.dialog_unavailable`·`folders.dialog_busy`·`folders.dialog_timeout`(409),
+  정보 이슈 `project.memory_network_fs`(오류 코드 아님).
+- 그대로: 0.11 deprecated 항목(`MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode` 등).
+
+## 0.11.0
+
+- 계약 v10(5.7R.33c, design §PI.10 프로젝트 격리·공용 구성). 사내 의존 범위는 `>=0.11,<0.12`(TS `^0.11.0`). 하위 계약 버전:
+  `projects` 1.0.0 → **2.0.0**, `common` 1.5.0(`x-path`), `definitions` 1.4.0(`x-path` 주석, `projects` 섹션 deprecated),
+  `logs` 1.1.0(`LogSessionSummary.project_id`, 묶기 설정 deprecated).
+- `projects` 2.0.0(프로젝트 = 로컬 폴더): `Project.folder`(필수 키, 읽을 때 옛 `working_directory`를 옮김, 폴더 없는 옛 파일은
+  null = 상태 `folder_unset`), `log_projects` 삭제(읽고 버림), 새 필드 `uses: ProjectUse[]`(`kind` 열린 문자열, `mode` ref·pin,
+  pin은 `version` 필수, `enabled`, 같은 `(kind, id)` 중복 거부)·`import_mode`(explicit 기본·all)·`archived`·`archived_at`.
+  `ProjectCreate`는 `folder` 필수·`id`·`name` 선택. `ProjectUpdate`에 `folder`(경로 다시 지정)·`uses`·`import_mode`·`archived`(다시 등록),
+  `working_directory`·`log_projects` 삭제. 파이썬 소비자 호환용 읽기 전용 속성 `Project.working_directory`(= folder)·
+  `Project.log_projects`(늘 빈 목록)은 스키마 밖이며 33e·33i 뒤 삭제한다.
+- 새 DTO: `ProjectView`(상태 계산 값, `KnownProjectStatuses` 문서 상수)·`ProjectUsesUpdate`·`UseCopyRequest`·`UseCopyResult`·
+  `DefinitionCopy`, 폴더 `FolderCheckRequest{path, create, exclude_project_id?}`(K33-13)·`FolderCheck`(ac-local-folders 결과 +
+  등록부 `status`·`conflict: FolderConflict`, `nearest_existing`, 경로 제안 필드 없음 — 다른 OS 경로는 `invalid`+`foreign_path`)·
+  `FolderListing`·`FolderEntry{… project_id?}`·`FolderRoot`, 오류 details `ProjectNotImportedDetails{reason?}`(K33-14)·
+  `ProjectFolderConflictDetails`·`ProjectFolderUnavailableDetails`·`ProjectOutsideFolderDetails`·`OutsideFolderPath`, 이전 기록
+  `AssignProjectRequest{to, ids | from_null}`·`AssignProjectResult`·`AssignProjectSkip`·`ProjectCounts`, 옛 정의 정리 `LegacyUse`·
+  `LegacyUsesPlan`·`LegacyUsesApplyRequest`·`LegacyUseResult`·`LegacyUsesApplyResult`.
+- deprecated(다음 major에서 삭제): `MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`,
+  `WorkspaceSettings.projects`(`ProjectPreferences`), `LogSettings.projects`(`LogProjectSettings`·`LogProjectGroup`),
+  `LogSessionSummary.project`(`LogProjectRef`), `LOG_PROJECT_UNGROUPED`. 스키마 `deprecated: true`, 읽기는 그대로 된다.
+- 오류 코드: `project.required`(422)·`project.not_imported`(422)·`project.folder_missing`(409)·`project.folder_taken`(409)·
+  `project.folder_overlaps`(409)·`project.outside_folder`(422)·`folders.remote_disabled`(403), 폴더 작업 실패 `folders.<ac-local-folders
+  코드>`(not_found 404, outside_roots 403, exists 409, io_error 500, 나머지 422). `KnownIssueCodes`에 같은 7개 +
+  `settings.ignored_key`·`logs.no_projects`.
+- 스키마 주석 `x-path`(`X_PATH`·`X_PATH_KINDS`·`x_path()`): `AgentSettings.working_directory`, `Limits.directories`.
+- `x-constants`: `X_PATH`·`X_PATH_KINDS`·`KNOWN_PROJECT_STATUSES`·`KNOWN_FOLDER_CHECK_STATUSES`·`KNOWN_FOLDER_CONFLICT_RELATIONS`.
+
 ## 0.10.0
 
 - 계약 v9(5.7R.3, design §5.7R.5 공유 메모리). 사내 의존 범위는 `>=0.10,<0.11`(TS `^0.10.0`). 하위 계약 버전:

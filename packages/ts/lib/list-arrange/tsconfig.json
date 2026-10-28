@@ -2,6 +2,7 @@
   "extends": "@agent-console/tsconfig/library.json",
   "compilerOptions": {
     "types": ["node"],
+    "customConditions": ["development"],
     "paths": { "@agent-console/list-arrange": ["./src/index.ts"] }
   },
   "include": ["src", "test", "vitest.config.ts"]

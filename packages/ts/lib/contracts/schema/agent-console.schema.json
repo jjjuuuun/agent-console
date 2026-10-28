@@ -6,20 +6,20 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.10.0",
+    "CONTRACTS_VERSION": "0.12.0",
     "CONTRACT_VERSIONS": {
-      "common": "1.4.0",
+      "common": "1.6.0",
       "resources": "1.1.0",
-      "logs": "1.0.0",
-      "definitions": "1.3.0",
+      "logs": "1.1.0",
+      "definitions": "1.4.0",
       "runs": "1.4.0",
       "usage": "1.1.0",
-      "projects": "1.0.0",
+      "projects": "3.0.0",
       "chat": "1.1.0",
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
-      "memory": "1.0.0",
+      "memory": "1.1.0",
       "modules": "1.3.0"
     },
     "USAGE_REPORT_PARTS": [
@@ -139,7 +139,34 @@
       "ARCHITECTURE_SCOPE_TOO_LARGE": "architecture.scope_too_large",
       "MEMORY_INVALID_KEY": "memory.invalid_key",
       "MEMORY_TOO_LARGE": "memory.too_large",
-      "MEMORY_SECRET_REJECTED": "memory.secret_rejected"
+      "MEMORY_SECRET_REJECTED": "memory.secret_rejected",
+      "PROJECT_REQUIRED": "project.required",
+      "PROJECT_NOT_IMPORTED": "project.not_imported",
+      "PROJECT_FOLDER_MISSING": "project.folder_missing",
+      "PROJECT_FOLDER_TAKEN": "project.folder_taken",
+      "PROJECT_FOLDER_OVERLAPS": "project.folder_overlaps",
+      "PROJECT_OUTSIDE_FOLDER": "project.outside_folder",
+      "FOLDERS_REMOTE_DISABLED": "folders.remote_disabled",
+      "FOLDERS_EMPTY": "folders.empty",
+      "FOLDERS_INVALID_PATH": "folders.invalid_path",
+      "FOLDERS_RELATIVE": "folders.relative",
+      "FOLDERS_FOREIGN_PATH": "folders.foreign_path",
+      "FOLDERS_NO_HOME": "folders.no_home",
+      "FOLDERS_OUTSIDE_ROOTS": "folders.outside_roots",
+      "FOLDERS_NOT_FOUND": "folders.not_found",
+      "FOLDERS_NOT_DIRECTORY": "folders.not_directory",
+      "FOLDERS_NO_ACCESS": "folders.no_access",
+      "FOLDERS_INVALID_NAME": "folders.invalid_name",
+      "FOLDERS_EXISTS": "folders.exists",
+      "FOLDERS_MISSING_PARENT": "folders.missing_parent",
+      "FOLDERS_IO_ERROR": "folders.io_error",
+      "PROJECT_NOT_FOUND": "project.not_found",
+      "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
+      "PROJECT_CONFIG_READONLY": "project.config_readonly",
+      "PROJECT_COPY_CONFLICT": "project.copy_conflict",
+      "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
+      "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
+      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
       "bad_request": 400,
@@ -168,7 +195,34 @@
       "architecture.scope_too_large": 422,
       "memory.invalid_key": 422,
       "memory.too_large": 422,
-      "memory.secret_rejected": 422
+      "memory.secret_rejected": 422,
+      "project.required": 422,
+      "project.not_imported": 422,
+      "project.folder_missing": 409,
+      "project.folder_taken": 409,
+      "project.folder_overlaps": 409,
+      "project.outside_folder": 422,
+      "folders.remote_disabled": 403,
+      "folders.empty": 422,
+      "folders.invalid_path": 422,
+      "folders.relative": 422,
+      "folders.foreign_path": 422,
+      "folders.no_home": 422,
+      "folders.outside_roots": 403,
+      "folders.not_found": 404,
+      "folders.not_directory": 422,
+      "folders.no_access": 422,
+      "folders.invalid_name": 422,
+      "folders.exists": 409,
+      "folders.missing_parent": 422,
+      "folders.io_error": 500,
+      "project.not_found": 404,
+      "project.manifest_invalid": 409,
+      "project.config_readonly": 409,
+      "project.copy_conflict": 409,
+      "folders.dialog_unavailable": 409,
+      "folders.dialog_busy": 409,
+      "folders.dialog_timeout": 409
     },
     "KNOWN_ISSUE_CODES": {
       "LIMITS_NOT_ENFORCED": "limits.not_enforced",
@@ -210,7 +264,24 @@
       "TOOLS_PROVIDER_FAILED": "tools.provider_failed",
       "TOOLS_DUPLICATE_NAME": "tools.duplicate_name",
       "TOOLS_BACKEND_CAPABILITY_MISSING": "tools.backend_capability_missing",
-      "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted"
+      "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted",
+      "PROJECT_REQUIRED": "project.required",
+      "PROJECT_NOT_IMPORTED": "project.not_imported",
+      "PROJECT_FOLDER_MISSING": "project.folder_missing",
+      "PROJECT_FOLDER_TAKEN": "project.folder_taken",
+      "PROJECT_FOLDER_OVERLAPS": "project.folder_overlaps",
+      "PROJECT_OUTSIDE_FOLDER": "project.outside_folder",
+      "FOLDERS_REMOTE_DISABLED": "folders.remote_disabled",
+      "SETTINGS_IGNORED_KEY": "settings.ignored_key",
+      "LOGS_NO_PROJECTS": "logs.no_projects",
+      "PROJECT_NOT_FOUND": "project.not_found",
+      "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
+      "PROJECT_CONFIG_READONLY": "project.config_readonly",
+      "PROJECT_COPY_CONFLICT": "project.copy_conflict",
+      "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
+      "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
+      "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
+      "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout"
     },
     "KNOWN_SUGGESTION_IDS": {
       "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
@@ -226,6 +297,68 @@
       "basic",
       "advanced"
     ],
+    "X_PATH": "x-path",
+    "X_PATH_KINDS": [
+      "directory",
+      "file"
+    ],
+    "KNOWN_PROJECT_STATUSES": {
+      "READY": "ready",
+      "FOLDER_MISSING": "folder_missing",
+      "NOT_A_DIRECTORY": "not_a_directory",
+      "NO_ACCESS": "no_access",
+      "FOLDER_UNSET": "folder_unset",
+      "FOLDER_CONFLICT": "folder_conflict",
+      "MANIFEST_INVALID": "manifest_invalid"
+    },
+    "KNOWN_FOLDER_CHECK_STATUSES": {
+      "OK": "ok",
+      "OK_READONLY": "ok_readonly",
+      "MISSING": "missing",
+      "MISSING_PARENT": "missing_parent",
+      "NOT_DIRECTORY": "not_directory",
+      "NO_ACCESS": "no_access",
+      "INVALID": "invalid",
+      "TAKEN": "taken",
+      "TAKEN_ARCHIVED": "taken_archived",
+      "OVERLAP_PARENT": "overlap_parent",
+      "OVERLAP_CHILD": "overlap_child",
+      "SAME_PATH": "same_path"
+    },
+    "KNOWN_FOLDER_CONFLICT_RELATIONS": {
+      "SAME": "same",
+      "PARENT": "parent",
+      "CHILD": "child"
+    },
+    "KNOWN_COPY_ACTIONS": {
+      "COPY": "copy",
+      "REUSE": "reuse",
+      "OVERWRITE": "overwrite",
+      "RENAME": "rename",
+      "SKIP": "skip"
+    },
+    "KNOWN_COPY_TARGET_STATES": {
+      "ABSENT": "absent",
+      "IDENTICAL": "identical",
+      "DIFFERENT": "different"
+    },
+    "KNOWN_COPY_STATUSES": {
+      "COPIED": "copied",
+      "REUSED": "reused",
+      "OVERWRITTEN": "overwritten",
+      "RENAMED": "renamed",
+      "SKIPPED": "skipped",
+      "CONFLICT": "conflict"
+    },
+    "KNOWN_FOLDER_PICK_STATUSES": {
+      "PICKED": "picked",
+      "CANCELLED": "cancelled",
+      "UNAVAILABLE": "unavailable",
+      "BUSY": "busy",
+      "TIMEOUT": "timeout",
+      "FAILED": "failed"
+    },
+    "PROJECT_MANIFEST_FORMAT": 1,
     "USER_TEXT_RULES": {
       "version": 1,
       "description": "사용자에게 보이는 문구에 넣지 않는 패턴(설계 문서 번호·내부 노드 id). Python·TS 린트 테스트가 이 파일 하나를 읽는다. 패턴은 Python re와 JavaScript RegExp가 같게 읽는 문법만 쓴다.",
@@ -283,6 +416,7 @@
       "PortDef",
       "PortSpec",
       "Position",
+      "SpaceRef",
       "UiHints",
       "Usage"
     ],
@@ -521,15 +655,44 @@
       "UsageWindowSnapshot"
     ],
     "projects": [
+      "AssignProjectRequest",
+      "AssignProjectResult",
+      "AssignProjectSkip",
+      "CopyApplyItem",
+      "CopyApplyItemResult",
+      "CopyApplyRequest",
+      "CopyApplyResult",
+      "CopyPlan",
+      "CopyPlanItem",
+      "CopyPlanRequest",
       "DefinitionKey",
       "DefinitionMove",
       "DeletePlan",
+      "FolderCapabilities",
+      "FolderCheck",
+      "FolderCheckRequest",
+      "FolderConflict",
+      "FolderEntry",
+      "FolderListing",
+      "FolderPickRequest",
+      "FolderPickResult",
+      "FolderRoot",
       "MovePlan",
       "MovePlanRequest",
+      "OutsideFolderPath",
       "Project",
+      "ProjectCounts",
       "ProjectCreate",
       "ProjectDeleteMode",
-      "ProjectUpdate"
+      "ProjectFolderConflictDetails",
+      "ProjectFolderUnavailableDetails",
+      "ProjectManifest",
+      "ProjectNotImportedDetails",
+      "ProjectOutsideFolderDetails",
+      "ProjectRegistration",
+      "ProjectStatus",
+      "ProjectUpdate",
+      "ProjectView"
     ],
     "chat": [
       "ChatReply",
@@ -605,6 +768,10 @@
       "MemoryAccessConfig",
       "MemoryAuthor",
       "MemoryChanged",
+      "MemoryCopyConflict",
+      "MemoryCopyFilter",
+      "MemoryCopyRequest",
+      "MemoryCopyResult",
       "MemoryEntry",
       "MemoryEntryPage",
       "MemoryEntrySummary",
@@ -625,6 +792,7 @@
       "MemoryScopeKindList",
       "MemoryScopeKindSpec",
       "MemoryScopeRef",
+      "MemoryScopeRemap",
       "MemoryScopeSummary",
       "MemorySecretRejectedDetails",
       "MemorySettings",
@@ -935,6 +1103,7 @@
           "default": null,
           "description": "에이전트가 일하는 폴더입니다. 비우면 프로젝트나 서버 설정의 작업 폴더를 씁니다.",
           "title": "작업 폴더",
+          "x-path": "directory",
           "x-ui": {
             "example": "/home/me/projects/app",
             "tier": "advanced",
@@ -1349,6 +1518,7 @@
           "default": null,
           "description": "에이전트가 일하는 폴더입니다. 비우면 프로젝트나 서버 설정의 작업 폴더를 씁니다.",
           "title": "작업 폴더",
+          "x-path": "directory",
           "x-ui": {
             "example": "/home/me/projects/app",
             "tier": "advanced",
@@ -1890,6 +2060,7 @@
           "default": null,
           "description": "에이전트가 일하는 폴더입니다. 비우면 프로젝트나 서버 설정의 작업 폴더를 씁니다.",
           "title": "작업 폴더",
+          "x-path": "directory",
           "x-ui": {
             "example": "/home/me/projects/app",
             "tier": "advanced",
@@ -4988,6 +5159,92 @@
       "title": "영역",
       "type": "object"
     },
+    "AssignProjectRequest": {
+      "description": "`POST /runs/assign-project`·`POST /conversations/assign-project` 요청.\n\n`ids`(그 기록만) 또는 `from_null: true`(프로젝트 없는 기록 전부) 중 하나만 준다. 루트 Run이면\n자식 Run도 함께 넣는다. 이미 다른 프로젝트인 기록은 `ids`로 명시했을 때만 옮긴다.\n`project_id`는 불투명 문자열이다(기능 모듈은 프로젝트를 모른다).",
+      "properties": {
+        "to": {
+          "description": "넣을 프로젝트 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "ids": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "from_null": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "AssignProjectRequest",
+      "type": "object"
+    },
+    "AssignProjectResult": {
+      "description": "assign-project 응답.",
+      "properties": {
+        "assigned": {
+          "description": "넣은 기록 수(함께 넣은 자식 Run 포함).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skipped": {
+          "items": {
+            "$ref": "#/$defs/AssignProjectSkip"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "assigned"
+      ],
+      "title": "AssignProjectResult",
+      "type": "object"
+    },
+    "AssignProjectSkip": {
+      "description": "넣지 않은 기록 하나.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reason": {
+          "description": "열린 문자열(예: not_found, other_project, busy).",
+          "type": "string"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "그 기록의 지금 프로젝트."
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "title": "AssignProjectSkip",
+      "type": "object"
+    },
     "AttachmentMode": {
       "enum": [
         "add",
@@ -6606,6 +6863,271 @@
       "title": "ConversationUpdatedPayload",
       "type": "object"
     },
+    "CopyApplyItem": {
+      "description": "적용할 항목 하나와 사용자가 고른 동작.",
+      "properties": {
+        "kind": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "action": {
+          "description": "동작(`KnownCopyActions`, 열린 문자열).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "new_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "rename일 때 새 id(필수)."
+        },
+        "source_version": {
+          "description": "계획 때 원본 버전 해시.",
+          "type": "string"
+        },
+        "target_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "계획 때 대상 버전 해시(대상에 없었으면 null)."
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "action",
+        "source_version"
+      ],
+      "title": "CopyApplyItem",
+      "type": "object"
+    },
+    "CopyApplyItemResult": {
+      "description": "적용 항목 하나의 결과.",
+      "properties": {
+        "kind": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "description": "원본 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "new_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "대상에 쓴 id(rename일 때)."
+        },
+        "status": {
+          "description": "결과(`KnownCopyStatuses`, 열린 문자열).",
+          "type": "string"
+        },
+        "issue": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Issue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "conflict·skipped 등의 이유(예: `project.copy_conflict`)."
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "status"
+      ],
+      "title": "CopyApplyItemResult",
+      "type": "object"
+    },
+    "CopyApplyRequest": {
+      "description": "`POST /projects/copy/apply` 요청: 계획에서 고른 항목을 적용한다.\n\n사본에는 원본 id·버전·시각을 쓰지 않는다(완전 독립, 사용자 결정 B). 리소스 본문 파일도 함께\n복사한다. 대상 프로젝트 폴더에 쓸 수 없으면 409 `project.config_readonly`.",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "target": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CopyApplyItem"
+          },
+          "type": "array"
+        },
+        "remove_source": {
+          "default": false,
+          "description": "적용한 항목을 원본 공간에서 지운다(옛 프로젝트 전용 정의 정리에 쓴다).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "items"
+      ],
+      "title": "CopyApplyRequest",
+      "type": "object"
+    },
+    "CopyApplyResult": {
+      "description": "`POST /projects/copy/apply` 응답.",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CopyApplyItemResult"
+          },
+          "type": "array"
+        }
+      },
+      "title": "CopyApplyResult",
+      "type": "object"
+    },
+    "CopyPlan": {
+      "description": "`POST /projects/copy/plan` 응답(저장하지 않음).",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CopyPlanItem"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "description": "계획 경고(예: 참조를 찾지 못함, 순환 참조).",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "CopyPlan",
+      "type": "object"
+    },
+    "CopyPlanItem": {
+      "description": "복사 계획의 항목 하나(요청한 것 또는 참조 때문에 함께 들어온 것).",
+      "properties": {
+        "kind": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "reason": {
+          "description": "계획에 든 이유(열린 문자열): requested = 요청함, referenced = 참조로 들어옴.",
+          "type": "string"
+        },
+        "referenced_by": {
+          "description": "이 항목을 참조하는 계획 안 정의.",
+          "items": {
+            "$ref": "#/$defs/DefinitionKey"
+          },
+          "type": "array"
+        },
+        "source_version": {
+          "description": "원본 버전 해시(적용 때 바뀌었으면 conflict).",
+          "type": "string"
+        },
+        "target_state": {
+          "description": "대상 공간의 같은 (종류, id) 상태(`KnownCopyTargetStates`, 열린 문자열).",
+          "type": "string"
+        },
+        "target_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "대상의 지금 버전 해시(대상에 없으면 null). 적용 때 `If-Match`."
+        },
+        "default_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "기본 동작(`KnownCopyActions`). null = 사용자가 골라야 한다(대상 내용이 다름)."
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "reason",
+        "source_version",
+        "target_state"
+      ],
+      "title": "CopyPlanItem",
+      "type": "object"
+    },
+    "CopyPlanRequest": {
+      "description": "`POST /projects/copy/plan` 요청: 고른 정의를 원본 공간에서 대상 공간으로 복사할 계획.\n\n공간은 `SpaceRef`(`project_id` null = 라이브러리). 라이브러리 → 프로젝트가 기본 방향이고\n프로젝트 → 라이브러리, 프로젝트 → 프로젝트도 같은 모양이다. 계획은 아무것도 쓰지 않는다.",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "target": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "items": {
+          "description": "복사할 정의(종류·id). 표시 이름은 무시한다.",
+          "items": {
+            "$ref": "#/$defs/DefinitionKey"
+          },
+          "type": "array"
+        },
+        "include_references": {
+          "default": true,
+          "description": "참조 닫힘(팀이 쓰는 에이전트·리소스·중첩 팀)도 계획에 넣는다.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "items"
+      ],
+      "title": "CopyPlanRequest",
+      "type": "object"
+    },
     "CreateConversationRequest": {
       "description": "`POST /conversations` 요청. 응답은 `Conversation`(201).",
       "properties": {
@@ -6806,7 +7328,7 @@
       "type": "object"
     },
     "DefinitionMove": {
-      "description": "정의 하나의 범위 바꾸기(필드 `project` 하나를 고쳐 저장). null = 공용.",
+      "description": "(deprecated, 0.11.0) 정의 하나의 범위 바꾸기(필드 `project`를 고쳐 저장). null = 공용.",
       "properties": {
         "kind": {
           "description": "정의 종류 이름(예: agent, graph, resource).",
@@ -7101,7 +7623,7 @@
       "type": "object"
     },
     "DeletePlan": {
-      "description": "`POST /projects/{id}/delete-plan` 응답: 삭제하면 무엇이 바뀌는지(저장하지 않음).\n\n삭제는 `DELETE /projects/{id}?mode=<ProjectDeleteMode>`(생략 = `default_mode`)로 한다.",
+      "description": "(deprecated, 0.11.0) `POST /projects/{id}/delete-plan` 응답. 2.0 삭제 = 등록 해제(보관).",
       "properties": {
         "project_id": {
           "minLength": 1,
@@ -8604,6 +9126,414 @@
       "title": "흐름 설정",
       "type": "object"
     },
+    "FolderCapabilities": {
+      "description": "`GET /projects/folders/capabilities` 응답: 이 서버에서 쓸 수 있는 폴더 고르기 방법.",
+      "properties": {
+        "browse": {
+          "default": false,
+          "description": "앱 안 찾아보기(`GET /projects/folders`).",
+          "type": "boolean"
+        },
+        "native_dialog": {
+          "default": false,
+          "description": "서버가 데스크톱 폴더 대화상자를 띄울 수 있다.",
+          "type": "boolean"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "쓸 대화상자 제공자 id(데이터·플러그인, 열린 문자열)."
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "쓸 수 없는 이유(열린 문자열, 예: remote·off·no_provider). 화면에 그대로 보인다."
+        }
+      },
+      "title": "FolderCapabilities",
+      "type": "object"
+    },
+    "FolderCheck": {
+      "description": "폴더 확인 결과(ac-local-folders `check_folder` + 등록부). 폴더 안 파일 이름·내용은 없다.",
+      "properties": {
+        "input": {
+          "description": "받은 입력 그대로.",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "저장될 경로(정규화 + 링크를 푼 실제 경로). 경로가 아니면 null."
+        },
+        "exists": {
+          "default": false,
+          "type": "boolean"
+        },
+        "is_dir": {
+          "default": false,
+          "type": "boolean"
+        },
+        "readable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "writable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "can_create": {
+          "default": false,
+          "description": "없고, 상위 폴더에 만들 수 있다.",
+          "type": "boolean"
+        },
+        "hidden": {
+          "default": false,
+          "type": "boolean"
+        },
+        "link": {
+          "default": false,
+          "description": "입력 경로와 저장될 경로가 다르다(링크를 거침).",
+          "type": "boolean"
+        },
+        "nearest_existing": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "경로가 없을 때 가장 가까운 존재하는 상위 폴더(탐색 시작용, K33-13). 탐색 범위 밖이면 null."
+        },
+        "problem": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "입력이 쓸 수 없는 경로인 이유 코드(예: relative, foreign_path)."
+        },
+        "status": {
+          "description": "확인 상태(`KnownFolderCheckStatuses`, 열린 문자열).",
+          "type": "string"
+        },
+        "conflict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FolderConflict"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "같은·겹치는 등록 프로젝트(taken·overlap_* 상태일 때)."
+        }
+      },
+      "required": [
+        "input",
+        "status"
+      ],
+      "title": "FolderCheck",
+      "type": "object"
+    },
+    "FolderCheckRequest": {
+      "description": "`POST /projects/folders/check` 요청(루프백 전용, 아니면 403 `folders.remote_disabled`).",
+      "properties": {
+        "path": {
+          "description": "사용자가 입력한 경로(그대로). 비면 status invalid.",
+          "type": "string"
+        },
+        "create": {
+          "default": false,
+          "description": "없으면 만든다(사용자가 [이 경로에 폴더 만들기]를 누를 때만 true). 한 단계만.",
+          "type": "boolean"
+        },
+        "exclude_project_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 프로젝트를 같은·겹침 검사에서 뺀다(경로 다시 지정, K33-13). 없는 id면 무시한다."
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "FolderCheckRequest",
+      "type": "object"
+    },
+    "FolderConflict": {
+      "description": "폴더 확인에서 찾은 등록 충돌 하나.",
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "relation": {
+          "description": "same·parent·child(`KnownFolderConflictRelations`).",
+          "type": "string"
+        },
+        "archived": {
+          "default": false,
+          "description": "보관(등록 해제)된 프로젝트인가.",
+          "type": "boolean"
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "그 프로젝트의 폴더."
+        }
+      },
+      "required": [
+        "project_id",
+        "relation"
+      ],
+      "title": "FolderConflict",
+      "type": "object"
+    },
+    "FolderEntry": {
+      "description": "하위 폴더 하나. 파일은 목록에 없다.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "description": "목록 경로 + 이름(링크는 풀지 않음).",
+          "type": "string"
+        },
+        "hidden": {
+          "default": false,
+          "type": "boolean"
+        },
+        "link": {
+          "default": false,
+          "description": "심볼릭 링크·접합점(등록하면 실제 경로로 저장).",
+          "type": "boolean"
+        },
+        "locked": {
+          "default": false,
+          "description": "읽을 수 없어 들어갈 수 없다.",
+          "type": "boolean"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 폴더로 등록된 프로젝트 id."
+        }
+      },
+      "required": [
+        "name",
+        "path"
+      ],
+      "title": "FolderEntry",
+      "type": "object"
+    },
+    "FolderListing": {
+      "description": "`GET /projects/folders?path=&hidden=` 응답: 하위 폴더 이름만(루프백 서버 전용).",
+      "properties": {
+        "path": {
+          "description": "목록 경로(정규화, 링크는 풀지 않음).",
+          "type": "string"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상위 폴더. 루트·탐색 범위 밖이면 null."
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/FolderEntry"
+          },
+          "type": "array"
+        },
+        "roots": {
+          "description": "탐색 시작 위치.",
+          "items": {
+            "$ref": "#/$defs/FolderRoot"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "default": false,
+          "description": "개수·시간 상한으로 잘렸다.",
+          "type": "boolean"
+        },
+        "timed_out": {
+          "default": false,
+          "description": "시간 상한으로 멈췄다.",
+          "type": "boolean"
+        },
+        "hidden_count": {
+          "default": 0,
+          "description": "숨겨서 뺀 폴더 수.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "FolderListing",
+      "type": "object"
+    },
+    "FolderPickRequest": {
+      "description": "`POST /projects/folders/pick` 요청(루프백 전용). 사용자가 고를 때까지 열려 있다.",
+      "properties": {
+        "initial": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "처음 열 폴더(없으면 제공자 기본)."
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "대화상자 제목."
+        }
+      },
+      "title": "FolderPickRequest",
+      "type": "object"
+    },
+    "FolderPickResult": {
+      "description": "`POST /projects/folders/pick` 응답. 고른 경로는 폴더 확인을 지나 `check`에 담긴다.",
+      "properties": {
+        "status": {
+          "description": "결과(`KnownFolderPickStatuses`, 열린 문자열).",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "고른 경로(picked일 때)."
+        },
+        "check": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FolderCheck"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "고른 경로의 폴더 확인 결과."
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "쓴 대화상자 제공자 id."
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "FolderPickResult",
+      "type": "object"
+    },
+    "FolderRoot": {
+      "description": "탐색 시작 위치 하나(홈·드라이브·마운트 등).",
+      "properties": {
+        "kind": {
+          "description": "시작 위치 종류(열린 문자열, 예: home·root·drive·mount).",
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "title": "FolderRoot",
+      "type": "object"
+    },
     "Graph": {
       "additionalProperties": true,
       "description": "팀 구성입니다. 노드(에이전트 등)와 그 사이 연결로 일이 흘러가는 순서를 정합니다.",
@@ -9012,6 +9942,7 @@
           "default": null,
           "description": "에이전트가 일하는 폴더입니다. 비우면 프로젝트나 서버 설정의 작업 폴더를 씁니다.",
           "title": "작업 폴더",
+          "x-path": "directory",
           "x-ui": {
             "example": "/home/me/projects/app",
             "group": "agent",
@@ -10741,6 +11672,7 @@
           "default": null,
           "description": "에이전트가 읽고 쓸 수 있는 폴더입니다. {workspace}는 작업 공간 경로로 바뀝니다.",
           "title": "허용 디렉터리",
+          "x-path": "directory",
           "x-ui": {
             "example": [
               "{workspace}"
@@ -11640,7 +12572,7 @@
     },
     "LogProjectGroup": {
       "additionalProperties": true,
-      "description": "경로 패턴(예: ~/work/app/**)에 맞는 로그를 한 프로젝트로 묶습니다.",
+      "description": "이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
       "properties": {
         "id": {
           "description": "묶음을 가리키는 고유 이름입니다.",
@@ -11694,7 +12626,7 @@
       "type": "object"
     },
     "LogProjectRef": {
-      "description": "프로젝트 묶음(묶기 규칙을 적용한 결과).",
+      "description": "프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다.",
       "properties": {
         "id": {
           "minLength": 1,
@@ -11713,7 +12645,7 @@
     },
     "LogProjectSettings": {
       "additionalProperties": true,
-      "description": "로그를 프로젝트별로 묶는 규칙. 바꾸면 바로 반영된다(다시 수집할 필요 없음).",
+      "description": "이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
       "properties": {
         "groups": {
           "anyOf": [
@@ -11881,7 +12813,20 @@
             }
           ],
           "default": null,
-          "description": "프로젝트 묶음."
+          "deprecated": true,
+          "description": "이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다."
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "세션 작업 폴더가 들어 있는 등록 프로젝트의 id(불투명 문자열, 0.11.0). 어느 등록 폴더에도 들지 않으면 null."
         },
         "first_time": {
           "anyOf": [
@@ -11948,7 +12893,7 @@
     },
     "LogSettings": {
       "additionalProperties": true,
-      "description": "읽을 로그 출처, 범주 표시, 프로젝트 묶기, 대시보드. 비운 항목은 기본값을 따른다.",
+      "description": "읽을 로그 출처, 범주 표시, 대시보드. 비운 항목은 기본값을 따른다.",
       "properties": {
         "sources": {
           "anyOf": [
@@ -11997,11 +12942,11 @@
             }
           ],
           "default": null,
-          "description": "로그를 경로에 따라 프로젝트별로 묶는 규칙입니다.",
-          "title": "프로젝트 묶기",
+          "deprecated": true,
+          "description": "더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).",
+          "title": "프로젝트 묶기(이전 형식)",
           "x-ui": {
-            "tier": "advanced",
-            "when": "로그를 프로젝트별로 묶어 보고 싶을 때 바꾸세요."
+            "tier": "advanced"
           }
         },
         "dashboards": {
@@ -13276,6 +14221,179 @@
       "title": "MemoryChangedMessage",
       "type": "object"
     },
+    "MemoryCopyConflict": {
+      "description": "대상에 같은 범위·키가 있던 항목 하나와 그 처리.",
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/MemoryScopeRef",
+          "description": "대상 범위(바꾸기 적용 뒤)."
+        },
+        "key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "resolution": {
+          "description": "처리(열린 문자열, `on_conflict` 값): skip·overwrite·rename.",
+          "type": "string"
+        },
+        "new_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "rename일 때 대상에 쓴 키."
+        }
+      },
+      "required": [
+        "scope",
+        "key",
+        "resolution"
+      ],
+      "title": "MemoryCopyConflict",
+      "type": "object"
+    },
+    "MemoryCopyFilter": {
+      "description": "메모리 복사에서 고를 항목(1.1.0). 모든 조건은 AND이고 비운 조건은 거르지 않는다.",
+      "properties": {
+        "scope_kinds": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "범위 종류 id 중 하나."
+        },
+        "scope_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "범위 id 중 하나."
+        },
+        "keys": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "키 중 하나."
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "태그 중 하나라도 붙은 항목."
+        }
+      },
+      "title": "MemoryCopyFilter",
+      "type": "object"
+    },
+    "MemoryCopyRequest": {
+      "description": "`POST /memory/copy` 본문: 공간 사이 메모리 항목 복사.\n\n라이브러리 → 프로젝트가 기본 방향이고 프로젝트 → 라이브러리도 같은 모양이다. 복사 뒤 독립이며\n출처를 기록하지 않는다. 같은 범위·키가 대상에 있으면 `on_conflict`(가져오기와 같은 어휘)를\n따른다.",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "target": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "filter": {
+          "$ref": "#/$defs/MemoryCopyFilter",
+          "description": "고를 항목. 비우면 원본의 모든 항목."
+        },
+        "on_conflict": {
+          "default": "skip",
+          "enum": [
+            "skip",
+            "overwrite",
+            "rename"
+          ],
+          "type": "string"
+        },
+        "remap": {
+          "description": "범위 id 바꾸기(앞의 것이 먼저 맞는다).",
+          "items": {
+            "$ref": "#/$defs/MemoryScopeRemap"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "title": "MemoryCopyRequest",
+      "type": "object"
+    },
+    "MemoryCopyResult": {
+      "description": "`POST /memory/copy` 응답.",
+      "properties": {
+        "copied": {
+          "default": 0,
+          "description": "대상에 쓴 항목 수(덮어씀·이름 바꿈 포함).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skipped": {
+          "default": 0,
+          "description": "쓰지 않은 항목 수(충돌 건너뜀·거부 포함).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/MemoryCopyConflict"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "description": "쓰지 못한 이유(예: `memory.secret_rejected`, 범위 종류 없음). 본문은 싣지 않는다.",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "MemoryCopyResult",
+      "type": "object"
+    },
     "MemoryEntry": {
       "description": "메모리 항목 하나(본문 포함). `GET /memory/entries/{id}` 응답.",
       "properties": {
@@ -14385,6 +15503,38 @@
       "title": "MemoryScopeRef",
       "type": "object"
     },
+    "MemoryScopeRemap": {
+      "description": "복사할 때 범위 id 바꾸기 하나(예: 원본 맥락의 프로젝트·팀 id → 대상 맥락의 id).",
+      "properties": {
+        "from": {
+          "description": "원본 범위 id.",
+          "type": "string"
+        },
+        "to": {
+          "description": "대상 범위 id.",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 범위 종류에만 적용한다. null = 모든 범위 종류."
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "MemoryScopeRemap",
+      "type": "object"
+    },
     "MemoryScopeSummary": {
       "description": "`GET /memory/scopes` 항목: 범위 하나의 요약.",
       "properties": {
@@ -15087,7 +16237,7 @@
       "type": "string"
     },
     "MovePlan": {
-      "description": "옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.\n\nP 전용 → 공용: `moves`에 그 정의가 쓰는 P 전용 정의(참조 닫힘)가 함께 들어간다(기본 선택).\n공용 → P 전용: 그 정의를 쓰는 다른 프로젝트·공용 정의는 `warnings`로 알린다(막지 않음).",
+      "description": "(deprecated, 0.11.0) 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.\n\n2.0에서 정의의 프로젝트 전용 범위가 없어졌다(K33-5). 옛 `project` 필드 정리는\n복사 계획(`CopyPlan`, `remove_source`)을 쓴다. 다음 major에서 삭제.",
       "properties": {
         "target": {
           "$ref": "#/$defs/DefinitionKey",
@@ -15126,7 +16276,7 @@
       "type": "object"
     },
     "MovePlanRequest": {
-      "description": "`POST /projects/move-plan` 요청: 정의 하나를 `to` 범위로 옮길 때의 계획을 계산한다.",
+      "description": "(deprecated, 0.11.0) `POST /projects/move-plan` 요청. 다음 major에서 삭제.",
       "properties": {
         "kind": {
           "minLength": 1,
@@ -16024,6 +17174,61 @@
       ],
       "type": "string"
     },
+    "OutsideFolderPath": {
+      "description": "프로젝트 폴더 밖을 가리킨 경로 값 하나.",
+      "properties": {
+        "value": {
+          "description": "설정에 적힌 값 그대로.",
+          "type": "string"
+        },
+        "resolved": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "폴더 기준으로 푼 절대 경로."
+        },
+        "pointer": {
+          "description": "값의 위치(설정 문서 기준 JSON Pointer).",
+          "pattern": "^(/.*)?$",
+          "type": "string"
+        },
+        "layer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "값을 정한 설정 층 이름(열린 문자열, 예: 공통·프로젝트·팀·노드)."
+        },
+        "node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "value",
+        "pointer"
+      ],
+      "title": "OutsideFolderPath",
+      "type": "object"
+    },
     "PluginInfo": {
       "description": "서버가 읽은 플러그인 하나(설정 화면 서버 정보, 읽기 전용).",
       "properties": {
@@ -16207,19 +17412,8 @@
     },
     "Project": {
       "additionalProperties": true,
-      "description": "프로젝트입니다. 작업 폴더와 연결한 로그, 그 프로젝트에서 쓸 설정을 묶습니다.",
+      "description": "프로젝트입니다. 로컬 폴더 하나와 그 프로젝트에서 쓸 설정을 묶습니다.",
       "properties": {
-        "name": {
-          "description": "프로젝트를 부르는 이름입니다. 위쪽 프로젝트 고르기에 보입니다.",
-          "minLength": 1,
-          "title": "이름",
-          "type": "string",
-          "x-ui": {
-            "example": "결제 서비스",
-            "tier": "basic",
-            "when": "프로젝트 고르기 목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
-          }
-        },
         "description": {
           "default": "",
           "description": "이 프로젝트가 무엇인지 적습니다.",
@@ -16229,37 +17423,6 @@
             "example": "결제 API와 관리 화면",
             "tier": "basic",
             "when": "이 프로젝트가 무엇인지 함께 쓰는 사람에게 알리고 싶을 때 적으세요."
-          }
-        },
-        "working_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "이 프로젝트에서 실행하는 에이전트의 작업 폴더. 비우면 서버 설정의 작업 폴더.",
-          "title": "작업 폴더",
-          "x-ui": {
-            "example": "/home/me/projects/app",
-            "tier": "basic",
-            "when": "이 프로젝트의 에이전트를 특정 저장소에서 일하게 하고 싶을 때 정하세요."
-          }
-        },
-        "log_projects": {
-          "default": [],
-          "description": "이 프로젝트로 볼 로그 묶음입니다. 비우면 로그를 거르지 않습니다.",
-          "items": {
-            "type": "string"
-          },
-          "title": "연결한 로그 묶음",
-          "type": "array",
-          "x-ui": {
-            "tier": "advanced",
-            "when": "이 프로젝트를 고르면 관련 로그만 보이게 하고 싶을 때 고르세요."
           }
         },
         "settings": {
@@ -16279,6 +17442,16 @@
             "when": "이 프로젝트에서만 모델·지침을 다르게 하고 싶을 때 바꾸세요."
           }
         },
+        "attributes": {
+          "additionalProperties": true,
+          "default": {},
+          "description": "다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.",
+          "title": "기타 속성",
+          "type": "object",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
         "labels": {
           "default": [],
           "description": "찾기·거르기에 쓰는 꼬리표입니다.",
@@ -16291,13 +17464,29 @@
             "tier": "advanced"
           }
         },
-        "attributes": {
-          "additionalProperties": true,
-          "default": {},
-          "description": "다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.",
-          "title": "기타 속성",
-          "type": "object",
+        "archived": {
+          "default": false,
+          "description": "등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.",
+          "title": "등록 해제됨",
+          "type": "boolean",
           "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "archived_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.",
+          "title": "등록 해제 시각",
+          "x-ui": {
+            "example": null,
             "tier": "advanced"
           }
         },
@@ -16315,6 +17504,35 @@
             "tier": "advanced"
           }
         },
+        "name": {
+          "description": "프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.",
+          "minLength": 1,
+          "title": "이름",
+          "type": "string",
+          "x-ui": {
+            "example": "결제 서비스",
+            "tier": "basic",
+            "when": "프로젝트 목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.",
+          "title": "폴더",
+          "x-ui": {
+            "example": "/home/me/work/payments",
+            "tier": "basic",
+            "when": "폴더를 옮기거나 이름을 바꿨을 때 [경로 다시 지정]으로 바꾸세요."
+          }
+        },
         "schema_version": {
           "default": 1,
           "description": "파일 형식 번호입니다. 직접 바꾸지 않습니다.",
@@ -16326,27 +17544,42 @@
         }
       },
       "required": [
+        "id",
         "name",
-        "id"
+        "folder"
       ],
       "title": "프로젝트",
       "type": "object"
     },
+    "ProjectCounts": {
+      "description": "기능 하나의 기록 개수(`GET /runs/project-counts`·`GET /conversations/project-counts`).",
+      "properties": {
+        "total": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "no_project": {
+          "default": 0,
+          "description": "`project_id`가 null인 기록 수.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "by_project": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "project_id → 개수(없는·보관 프로젝트 id도 그대로).",
+          "type": "object"
+        }
+      },
+      "title": "ProjectCounts",
+      "type": "object"
+    },
     "ProjectCreate": {
       "additionalProperties": true,
-      "description": "새 프로젝트를 만들 때 적는 값입니다.",
+      "description": "프로젝트 폴더를 등록할 때 적는 값입니다.",
       "properties": {
-        "name": {
-          "description": "프로젝트를 부르는 이름입니다. 위쪽 프로젝트 고르기에 보입니다.",
-          "minLength": 1,
-          "title": "이름",
-          "type": "string",
-          "x-ui": {
-            "example": "결제 서비스",
-            "tier": "basic",
-            "when": "프로젝트 고르기 목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
-          }
-        },
         "description": {
           "default": "",
           "description": "이 프로젝트가 무엇인지 적습니다.",
@@ -16356,37 +17589,6 @@
             "example": "결제 API와 관리 화면",
             "tier": "basic",
             "when": "이 프로젝트가 무엇인지 함께 쓰는 사람에게 알리고 싶을 때 적으세요."
-          }
-        },
-        "working_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "이 프로젝트에서 실행하는 에이전트의 작업 폴더. 비우면 서버 설정의 작업 폴더.",
-          "title": "작업 폴더",
-          "x-ui": {
-            "example": "/home/me/projects/app",
-            "tier": "basic",
-            "when": "이 프로젝트의 에이전트를 특정 저장소에서 일하게 하고 싶을 때 정하세요."
-          }
-        },
-        "log_projects": {
-          "default": [],
-          "description": "이 프로젝트로 볼 로그 묶음입니다. 비우면 로그를 거르지 않습니다.",
-          "items": {
-            "type": "string"
-          },
-          "title": "연결한 로그 묶음",
-          "type": "array",
-          "x-ui": {
-            "tier": "advanced",
-            "when": "이 프로젝트를 고르면 관련 로그만 보이게 하고 싶을 때 고르세요."
           }
         },
         "settings": {
@@ -16406,6 +17608,16 @@
             "when": "이 프로젝트에서만 모델·지침을 다르게 하고 싶을 때 바꾸세요."
           }
         },
+        "attributes": {
+          "additionalProperties": true,
+          "default": {},
+          "description": "다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.",
+          "title": "기타 속성",
+          "type": "object",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
         "labels": {
           "default": [],
           "description": "찾기·거르기에 쓰는 꼬리표입니다.",
@@ -16418,6 +17630,171 @@
             "tier": "advanced"
           }
         },
+        "folder": {
+          "description": "이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다.",
+          "minLength": 1,
+          "title": "폴더",
+          "type": "string",
+          "x-ui": {
+            "example": "/home/me/work/payments",
+            "tier": "basic",
+            "when": "이 프로젝트로 작업할 저장소·폴더를 [폴더 선택]으로 고르거나 경로를 적으세요."
+          }
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "고유 이름입니다. 비우면 폴더 이름으로 만듭니다. 만든 뒤에는 바꿀 수 없습니다.",
+          "title": "id",
+          "x-ui": {
+            "example": "payments",
+            "tier": "advanced"
+          }
+        },
+        "name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "프로젝트를 부르는 이름입니다. 비우면 폴더 이름입니다.",
+          "title": "이름",
+          "x-ui": {
+            "example": "결제 서비스",
+            "tier": "basic",
+            "when": "폴더 이름과 다른 이름으로 부르고 싶을 때 적으세요."
+          }
+        }
+      },
+      "required": [
+        "folder"
+      ],
+      "title": "프로젝트 폴더 추가",
+      "type": "object"
+    },
+    "ProjectDeleteMode": {
+      "enum": [
+        "move_to_shared",
+        "delete_definitions"
+      ],
+      "type": "string"
+    },
+    "ProjectFolderConflictDetails": {
+      "description": "409 `project.folder_taken`·`project.folder_overlaps`의 `details`.",
+      "properties": {
+        "project_id": {
+          "description": "이미 그 폴더(또는 겹치는 폴더)를 가진 프로젝트.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "relation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "겹침의 관계 parent·child(`folder_taken`이면 null)."
+        },
+        "archived": {
+          "default": false,
+          "type": "boolean"
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "title": "ProjectFolderConflictDetails",
+      "type": "object"
+    },
+    "ProjectFolderUnavailableDetails": {
+      "description": "409 `project.folder_missing`의 `details`: 프로젝트 상태가 ready가 아니다.",
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProjectStatus"
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project_id",
+        "status"
+      ],
+      "title": "ProjectFolderUnavailableDetails",
+      "type": "object"
+    },
+    "ProjectManifest": {
+      "additionalProperties": true,
+      "description": "프로젝트 폴더에 들어 있는 프로젝트 정보입니다. 폴더와 함께 옮겨지고 git으로 관리됩니다.",
+      "properties": {
+        "description": {
+          "default": "",
+          "description": "이 프로젝트가 무엇인지 적습니다.",
+          "title": "설명",
+          "type": "string",
+          "x-ui": {
+            "example": "결제 API와 관리 화면",
+            "tier": "basic",
+            "when": "이 프로젝트가 무엇인지 함께 쓰는 사람에게 알리고 싶을 때 적으세요."
+          }
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 프로젝트의 에이전트 설정입니다. 비운 항목은 공통 설정을 따릅니다.",
+          "title": "프로젝트 층 설정",
+          "x-ui": {
+            "tier": "advanced",
+            "when": "이 프로젝트에서만 모델·지침을 다르게 하고 싶을 때 바꾸세요."
+          }
+        },
         "attributes": {
           "additionalProperties": true,
           "default": {},
@@ -16428,35 +17805,103 @@
             "tier": "advanced"
           }
         },
+        "format": {
+          "default": 1,
+          "description": "매니페스트 파일 형식 번호입니다. 직접 바꾸지 않습니다.",
+          "minimum": 1,
+          "title": "형식 버전",
+          "type": "integer",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
         "id": {
-          "description": "새 프로젝트의 고유 이름입니다. 영문·숫자·-·_만 쓰며 이미 있는 이름은 못 씁니다.",
+          "description": "이 폴더의 프로젝트 id입니다. 프로젝트 메모리 범위 등 폴더 안 데이터가 씁니다.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
-          "title": "id",
+          "title": "폴더 id",
           "type": "string",
           "x-ui": {
             "example": "payments",
+            "tier": "advanced"
+          }
+        },
+        "name": {
+          "description": "프로젝트를 부르는 이름입니다. 왼쪽 메뉴 프로젝트 목록에 보입니다.",
+          "minLength": 1,
+          "title": "이름",
+          "type": "string",
+          "x-ui": {
+            "example": "결제 서비스",
             "tier": "basic",
-            "when": "만들 때 한 번 정하며, 파일 이름으로 쓰기 좋은 짧은 영문으로 적으세요."
+            "when": "프로젝트 목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
           }
         }
       },
       "required": [
-        "name",
-        "id"
+        "id",
+        "name"
       ],
-      "title": "프로젝트 만들기",
+      "title": "프로젝트 매니페스트",
       "type": "object"
     },
-    "ProjectDeleteMode": {
-      "enum": [
-        "move_to_shared",
-        "delete_definitions"
+    "ProjectNotImportedDetails": {
+      "description": "422 `project.not_imported`의 `details`: 실행 대상이 이 프로젝트 공간에 없다(K33-18).",
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "description": "실행 대상 정의 종류.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "description": "실행 대상 정의 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "in_library": {
+          "default": false,
+          "description": "라이브러리에 같은 (종류, id)가 있다 — 화면은 [가져와서 실행]을 낸다.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id",
+        "kind",
+        "id"
       ],
-      "type": "string"
+      "title": "ProjectNotImportedDetails",
+      "type": "object"
+    },
+    "ProjectOutsideFolderDetails": {
+      "description": "422 `project.outside_folder`의 `details`(경로 지킴, `x-path` 필드만 본다).",
+      "properties": {
+        "project_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "paths": {
+          "items": {
+            "$ref": "#/$defs/OutsideFolderPath"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "project_id",
+        "folder"
+      ],
+      "title": "ProjectOutsideFolderDetails",
+      "type": "object"
     },
     "ProjectPreferences": {
       "additionalProperties": true,
-      "description": "프로젝트 관련 설정입니다. 새로 만드는 에이전트·팀 등을 어느 범위에 둘지 정합니다.",
+      "description": "이전 형식의 프로젝트 설정입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
       "properties": {
         "new_definition_scope": {
           "additionalProperties": {
@@ -16490,8 +17935,93 @@
       "title": "프로젝트 설정",
       "type": "object"
     },
+    "ProjectRegistration": {
+      "additionalProperties": true,
+      "description": "이 앱이 프로젝트로 등록한 폴더입니다. 폴더와 등록 상태만 담습니다.",
+      "properties": {
+        "labels": {
+          "default": [],
+          "description": "찾기·거르기에 쓰는 꼬리표입니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "라벨",
+          "type": "array",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "archived": {
+          "default": false,
+          "description": "등록 해제(보관)한 프로젝트입니다. 목록·기능에서 빠지고 기록은 남습니다.",
+          "title": "등록 해제됨",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "archived_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "등록 해제한 시각(Unix epoch 초)입니다. 서버가 채웁니다.",
+          "title": "등록 해제 시각",
+          "x-ui": {
+            "example": null,
+            "tier": "advanced"
+          }
+        },
+        "kind": {
+          "const": "project",
+          "default": "project",
+          "type": "string"
+        },
+        "id": {
+          "description": "가리킬 때 쓰는 고유 이름입니다. 파일 이름으로도 씁니다. 실행·대화 기록이 이 id로 프로젝트를 가리킵니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "등록 id",
+          "type": "string",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "이 프로젝트의 로컬 폴더(절대 경로)입니다. 기능은 이 폴더 안에서만 동작합니다. 옛 파일에 폴더가 없으면 비어 있습니다.",
+          "title": "폴더",
+          "x-ui": {
+            "example": "/home/me/work/payments",
+            "tier": "basic",
+            "when": "폴더를 옮기거나 이름을 바꿨을 때 [경로 다시 지정]으로 바꾸세요."
+          }
+        }
+      },
+      "required": [
+        "id",
+        "folder"
+      ],
+      "title": "프로젝트 등록",
+      "type": "object"
+    },
+    "ProjectStatus": {
+      "type": "string"
+    },
     "ProjectUpdate": {
-      "description": "`PUT /projects/{id}` 요청. 생략한 필드는 그대로 둔다.\n\n`working_directory`·`settings`의 null은 값을 지운다(상속으로 되돌림).\n`name`의 null은 생략과 같다.",
+      "description": "`PUT /projects/{id}` 요청. 생략한 필드는 그대로 둔다.\n\n`settings`의 null은 값을 지운다(상속으로 되돌림). 다른 필드의 null은 생략과 같다.\n`folder`는 경로 다시 지정이다(같은·겹침 검사는 자기 자신을 빼고 한다). `archived: false`는\n등록 해제한 프로젝트를 다시 등록한다(폴더 검사를 다시 한다). 이름·설명·설정·속성은 폴더\n매니페스트에, 폴더·보관·라벨은 등록부에 쓴다. 옛 키(`uses`·`import_mode`)는 무시한다.",
       "properties": {
         "name": {
           "anyOf": [
@@ -16516,24 +18046,11 @@
           ],
           "default": null
         },
-        "working_directory": {
+        "folder": {
           "anyOf": [
             {
+              "minLength": 1,
               "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "log_projects": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
             },
             {
               "type": "null"
@@ -16545,6 +18062,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/AgentSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "archived": {
+          "anyOf": [
+            {
+              "type": "boolean"
             },
             {
               "type": "null"
@@ -16580,6 +18108,80 @@
         }
       },
       "title": "ProjectUpdate",
+      "type": "object"
+    },
+    "ProjectView": {
+      "description": "프로젝트 + 서버가 계산한 상태(저장하지 않음).\n\n`GET /projects`(→ `ProjectView[]`)·`GET /projects/{id}`·`POST /projects`·`PUT /projects/{id}`\n응답이다.",
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/Project"
+        },
+        "status": {
+          "$ref": "#/$defs/ProjectStatus",
+          "description": "ready 또는 문제 상태(`KnownProjectStatuses`, 열린 문자열)."
+        },
+        "status_detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상태 이유 한 줄(예: 겹치는 프로젝트 id). 화면에 그대로 보인다."
+        },
+        "version_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "버전 해시(`If-Match`에 쓴다). 등록부·매니페스트 둘 중 하나가 바뀌면 바뀐다. 저장소가 주지 않으면 null."
+        },
+        "config_writable": {
+          "default": true,
+          "description": "폴더 안 프로젝트 구성(`.agent-console/`)에 쓸 수 있는가. false면 가져오기·편집·메모리 쓰기를 막고(409 `project.config_readonly`) 보기·로그는 된다. 보내지 않은 옛 서버는 true.",
+          "type": "boolean"
+        },
+        "manifest_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "폴더 id(매니페스트 `id`). 등록 id와 다를 때만 화면에 보인다. 모르면 null."
+        },
+        "kinds": {
+          "description": "이 프로젝트 공간에 둘 수 있는 정의 종류 이름(옮길 수 있는 종류, 열린 문자열). 빈 목록 = 서버가 알리지 않음.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "description": "상태와 별개인 안내(예: 정보 `project.memory_network_fs`). 화면은 모르는 코드도 보인다.",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "project",
+        "status"
+      ],
+      "title": "ProjectView",
       "type": "object"
     },
     "QueueAfterRestart": {
@@ -18446,6 +20048,26 @@
         "id"
       ],
       "title": "SettingsLayerInfo",
+      "type": "object"
+    },
+    "SpaceRef": {
+      "description": "저장소 공간 하나: 라이브러리(앱 workspace) 또는 프로젝트 공간.\n\n`project_id`가 null이면 라이브러리, 값이 있으면 그 등록 프로젝트 폴더의 공간이다. 정의 복사\n(`projects`)와 메모리 복사(`memory`)가 함께 쓴다. REST 질의에서는 `?project=<id>`(없으면\n라이브러리)로 같은 뜻을 적는다.",
+      "properties": {
+        "project_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "프로젝트 등록 id. null = 라이브러리(공용 구성·공용 메모리)."
+        }
+      },
+      "title": "SpaceRef",
       "type": "object"
     },
     "SubscribeMessage": {
@@ -20457,8 +22079,9 @@
             }
           ],
           "default": null,
-          "description": "새 정의를 공용으로 둘지 프로젝트 전용으로 둘지의 기본값입니다.",
-          "title": "프로젝트",
+          "deprecated": true,
+          "description": "더 이상 쓰지 않습니다. 구성은 모두 공용이고 프로젝트가 가져다 씁니다.",
+          "title": "프로젝트(이전 형식)",
           "x-ui": {
             "tier": "advanced"
           }

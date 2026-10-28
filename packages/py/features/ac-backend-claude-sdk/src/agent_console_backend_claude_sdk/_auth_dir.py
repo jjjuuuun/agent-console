@@ -272,7 +272,7 @@ def secure_auth_dir(
 ) -> PermissionReport:
     """이미 있는 자격 폴더와 바로 아래 파일 권한을 좁힌다(폴더를 만들지 않는다).
 
-    파일 시스템이 권한을 지원하지 않으면(예: WSL의 ``/mnt/c``) 좁혀지지 않은 항목을 ``loose``로
+    파일 시스템이 권한을 지원하지 않으면 좁혀지지 않은 항목을 ``loose``로
     알린다. 하위 폴더 안은 폴더 권한(700)이 막는다.
     """
     if not (_posix() if posix is None else posix):

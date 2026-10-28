@@ -43,4 +43,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "logs" as const;
-export const CONTRACT_VERSION = "1.0.0" as const;
+export const CONTRACT_VERSION = "1.1.0" as const;

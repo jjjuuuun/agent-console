@@ -4,6 +4,8 @@
 `MemorySettings`, 범위 종류 `MemoryScopeKindSpec`, 리소스 `memory`의 접근 설정 `MemoryAccessConfig`,
 정리 규칙 `MemoryRetentionRule` — 모르는 키 보존), REST DTO, 실행 이벤트 `memory.*` payload
 (`MemoryEventPayload`, 본문·검색어 원문 없음), WS 알림 payload(`MemoryChanged`).
+1.1.0(0.12.0): 공간 사이 복사 `MemoryCopyRequest`·`MemoryCopyResult`(design §PI.4.3,
+`common.SpaceRef`).
 범위 종류 이름·도구 이름은 전부 데이터이고 계약은 아무 이름도 모른다(도구 기본 이름·설명은 패키지
 데이터 `data/memory_access_defaults.json`).
 
@@ -19,6 +21,10 @@ from ._api import (
     MEMORY_EVENT_PREFIX,
     KnownMemoryContextFields,
     MemoryChanged,
+    MemoryCopyConflict,
+    MemoryCopyFilter,
+    MemoryCopyRequest,
+    MemoryCopyResult,
     MemoryEventPayload,
     MemoryEventStatus,
     MemoryImportPolicy,
@@ -31,6 +37,7 @@ from ._api import (
     MemoryRetentionResult,
     MemoryScopeKindInfo,
     MemoryScopeKindList,
+    MemoryScopeRemap,
     MemorySecretField,
     MemorySecretRejectedDetails,
     MemoryTagCount,
@@ -97,6 +104,10 @@ __all__ = [
     "MemoryAuthorKind",
     "MemoryChangeOp",
     "MemoryChanged",
+    "MemoryCopyConflict",
+    "MemoryCopyFilter",
+    "MemoryCopyRequest",
+    "MemoryCopyResult",
     "MemoryEntry",
     "MemoryEntryPage",
     "MemoryEntrySummary",
@@ -120,6 +131,7 @@ __all__ = [
     "MemoryScopeKindList",
     "MemoryScopeKindSpec",
     "MemoryScopeRef",
+    "MemoryScopeRemap",
     "MemoryScopeSummary",
     "MemorySecretField",
     "MemorySecretPolicy",

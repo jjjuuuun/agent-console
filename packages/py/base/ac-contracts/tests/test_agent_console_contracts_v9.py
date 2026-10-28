@@ -101,12 +101,17 @@ def _entry(**extra: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------- 버전·하위 모듈
 
 
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
 def test_contracts_version_is_v9() -> None:
-    assert CONTRACTS_VERSION == "0.10.0"
+    """0.10.0에서 정한 버전 이상이다(정확한 지금 값은 v10 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 10, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.10.0"
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
     assert constants["CONTRACT_VERSIONS"] == CONTRACT_VERSIONS
-    assert CONTRACT_VERSIONS == {
+    v9 = {
         "common": "1.4.0",
         "resources": "1.1.0",
         "logs": "1.0.0",
@@ -121,6 +126,8 @@ def test_contracts_version_is_v9() -> None:
         "memory": "1.0.0",
         "modules": "1.3.0",
     }
+    for sub, version in v9.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 def test_memory_submodule_sits_with_architecture() -> None:

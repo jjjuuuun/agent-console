@@ -284,6 +284,37 @@ def test_project_id_is_stored_and_runs_listed_by_project_and_root_only(tmp_path:
         assert set(ids(root_only="true")) == {inside.json()["id"], plain["id"]}
 
 
+@pytest.mark.parametrize("sqlite", [False, True])
+def test_assign_project_and_counts_routes(tmp_path: Path, sqlite: bool) -> None:
+    """5.7R.33j: ``GET /runs/project-counts``·``POST /runs/assign-project``."""
+    _seed(tmp_path / "ws")
+    db = SqliteDatabase.open(tmp_path / "c.sqlite3") if sqlite else None
+    with _client(tmp_path, _providers(tmp_path / "ws"), database=db) as (client, _assembly):
+        body = {"graph_id": "flow", "input": {"text": "안녕"}}
+        a = client.post(f"{API}/runs", json=body).json()["id"]
+        b = client.post(f"{API}/runs", json={**body, "project_id": "p1"}).json()["id"]
+        _wait(client, a)
+        _wait(client, b)
+        counts = client.get(f"{API}/runs/project-counts")
+        assert counts.status_code == 200, counts.text
+        assert counts.json() == {"total": 2, "no_project": 1, "by_project": {"p1": 1}}
+        assert client.post(f"{API}/runs/assign-project", json={"to": "p2"}).status_code in (
+            400,
+            422,
+        )
+        res = client.post(f"{API}/runs/assign-project", json={"to": "p2", "from_null": True})
+        assert res.json() == {"assigned": 1, "skipped": []}
+        assert client.get(f"{API}/runs/{a}").json()["run"]["project_id"] == "p2"
+        assert client.get(f"{API}/runs/{b}").json()["run"]["project_id"] == "p1"
+        res = client.post(f"{API}/runs/assign-project", json={"to": "p2", "ids": [b, "nope"]})
+        assert res.json()["assigned"] == 1
+        assert [s["reason"] for s in res.json()["skipped"]] == ["not_found"]
+        assert client.get(f"{API}/runs", params={"project": "p2"}).json()
+        assert client.get(f"{API}/runs/project-counts").json()["by_project"] == {"p2": 2}
+    if db is not None:
+        db.close()
+
+
 def test_engine_only_without_preparers_warns_team_rules_unavailable(tmp_path: Path) -> None:
     """준비자(팀 규칙)가 없으면 엔진 검증만으로 실행하고 ``team.rules_unavailable``을 낸다."""
     _seed(tmp_path / "ws")

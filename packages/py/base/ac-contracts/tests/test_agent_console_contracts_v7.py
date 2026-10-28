@@ -146,13 +146,13 @@ def test_projects_submodule_is_usable_alone() -> None:
 
 
 def test_project_defaults_and_round_trip() -> None:
+    """0.8.0 형식의 프로젝트 파일도 읽힌다(2.0.0 읽기 호환, 정확한 2.0 규칙은 v10 테스트)."""
     doc = {"id": "app", "name": "앱"}
     project = Project.model_validate(doc)
     assert project.kind == "project"
-    assert project.working_directory is None
-    assert project.log_projects == []
+    assert project.folder is None  # 폴더 없는 옛 파일 = folder_unset
     assert project.settings is None
-    assert project.model_dump(mode="json", exclude_unset=True) == doc
+    assert project.model_dump(mode="json", exclude_unset=True) == {**doc, "folder": None}
     full = {
         "kind": "project",
         "id": "app",
@@ -165,17 +165,19 @@ def test_project_defaults_and_round_trip() -> None:
         "attributes": {"k": 1},
         "zz_kept": True,
     }
-    assert Project.model_validate(full).model_dump(mode="json", exclude_unset=True) == full
+    dumped = Project.model_validate(full).model_dump(mode="json", exclude_unset=True)
+    expected = {k: v for k, v in full.items() if k not in {"working_directory", "log_projects"}}
+    assert dumped == {**expected, "folder": "/w"}
     with pytest.raises(ValidationError):
         Project.model_validate({"id": "bad id", "name": "n"})
 
 
 def test_project_create_and_update() -> None:
-    created = ProjectCreate.model_validate({"id": "p", "name": "P"})
+    created = ProjectCreate.model_validate({"id": "p", "name": "P", "folder": "/w/p"})
     assert "kind" not in ProjectCreate.model_fields
     assert created.id == "p"
-    update = ProjectUpdate.model_validate({"working_directory": None})
-    assert update.model_dump(exclude_unset=True) == {"working_directory": None}
+    update = ProjectUpdate.model_validate({"settings": None})
+    assert update.model_dump(exclude_unset=True) == {"settings": None}
     assert ProjectUpdate().model_dump(exclude_unset=True) == {}
 
 

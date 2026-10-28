@@ -14,10 +14,10 @@ def test_no_projects_is_empty() -> None:
 
 def test_current_is_registered_project_at_app_folder() -> None:
     projects = [
-        Project(id="a", name="A", working_directory="/w/a"),
-        Project(id="b", name="B", working_directory="sub"),
-        Project(id="c", name="C"),
-        Project(id="d", name="D", working_directory="/w/a/"),
+        Project(id="a", name="A", folder="/w/a"),
+        Project(id="b", name="B", folder="sub"),
+        Project(id="c", name="C", folder=None),
+        Project(id="d", name="D", folder="/w/a/"),
     ]
     sets = project_folders(projects, working_directory=Path("/w/app"))
     assert sets.registered == (Path("/w/a"), Path("/w/app/sub"), Path("/w/app"))

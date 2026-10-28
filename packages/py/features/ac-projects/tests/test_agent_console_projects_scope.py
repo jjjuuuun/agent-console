@@ -115,7 +115,7 @@ def test_cross_project_warns() -> None:
     team = d(TEAM, "t1", "p", f"{MEMBER}/m1", f"{NOTE}/n1")
     issues = scope_issues(
         [team, d(MEMBER, "m1", "q"), d(NOTE, "n1", "p")],
-        [Project(id="p", name="P"), {"id": "q"}],
+        [Project(id="p", name="P", folder=None), {"id": "q"}],
         references=refs,
     )
     assert [(i.code, i.details["id"]) for i in issues] == [

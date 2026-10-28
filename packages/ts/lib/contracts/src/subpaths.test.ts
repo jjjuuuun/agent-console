@@ -18,7 +18,20 @@ import type { LogEvent, LogLane, LogSettings, LogTimeline, LogWidget } from "@ag
 import * as modules from "@agent-console/contracts/modules";
 import type { LogsIngestedMessage, ModuleInfo } from "@agent-console/contracts/modules";
 import * as projects from "@agent-console/contracts/projects";
-import type { DefinitionMove, Project } from "@agent-console/contracts/projects";
+import type {
+  DefinitionMove,
+  FolderCheck,
+  FolderCheckRequest,
+  CopyApplyItem,
+  CopyPlanItem,
+  FolderPickResult,
+  Project,
+  ProjectManifest,
+  ProjectNotImportedDetails,
+  ProjectView,
+} from "@agent-console/contracts/projects";
+import type { SpaceRef } from "@agent-console/contracts/common";
+import type { MemoryCopyRequest } from "@agent-console/contracts/memory";
 import type { UsageReport } from "@agent-console/contracts/usage";
 
 import packageJson from "../package.json";
@@ -96,10 +109,11 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
 
   it("projects 하위 경로(0.8.0): 프로젝트·옮기기 계획, 정의 범위·오류 해결 데이터", () => {
     expect(projects.CONTRACT_MODULE).toBe("projects");
-    expect(projects.CONTRACT_VERSION).toBe("1.0.0");
+    expect(projects.CONTRACT_VERSION).toBe(CONTRACT_VERSIONS.projects);
     expect(modulesOf["projects"]).toEqual(expect.arrayContaining(["Project", "MovePlan", "DeletePlan"]));
     expect(modulesOf["definitions"]).toContain("ProjectPreferences");
-    expectTypeOf<Project["working_directory"]>().toEqualTypeOf<string | null | undefined>();
+    // 2.0.0(0.11.0): working_directory → folder(필수 키, 옛 파일은 null)
+    expectTypeOf<Project["folder"]>().toEqualTypeOf<string | null>();
     // `from`은 JSON 키 그대로
     expectTypeOf<DefinitionMove["from"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<Agent["project"]>().toEqualTypeOf<string | null | undefined>();
@@ -129,7 +143,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
 
   it("memory 하위 경로(0.10.0): 이벤트 payload에 본문·검색어 원문이 없다", () => {
     expect(memory.CONTRACT_MODULE).toBe("memory");
-    expect(memory.CONTRACT_VERSION).toBe("1.0.0");
+    expect(memory.CONTRACT_VERSION).toBe(CONTRACT_VERSIONS.memory);
     expect(modulesOf["memory"]).toEqual(
       expect.arrayContaining(["MemorySettings", "MemoryAccessConfig", "MemoryEntry", "MemoryEventPayload", "MemoryChanged"]),
     );
@@ -162,5 +176,83 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(KNOWN_ISSUE_CODES.PROJECT_DEFINITIONS_UNAVAILABLE).toBe("project.definitions_unavailable");
     expect(KNOWN_ISSUE_CODES.BACKEND_UNRESOLVED).toBe(ERROR_CODES.BACKEND_UNRESOLVED);
     expect(KNOWN_SUGGESTION_IDS.PROJECT_MOVE_TO_SHARED).toBe("project.move_to_shared");
+  });
+
+  it("프로젝트 2.0(0.11.0, 5.7R.33c)·3.0(0.12.0, 5.7R.33c2): 폴더·이슈 코드", () => {
+    expect(projects.CONTRACT_VERSION).toBe("3.0.0");
+    expect(modulesOf["projects"]).toEqual(
+      expect.arrayContaining(["ProjectView", "FolderCheck", "FolderListing", "AssignProjectRequest", "ProjectCounts"]),
+    );
+    expectTypeOf<FolderCheckRequest["exclude_project_id"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<FolderCheck["nearest_existing"]>().toEqualTypeOf<string | null | undefined>();
+    const codes: Record<string, [string, number]> = {
+      PROJECT_REQUIRED: ["project.required", 422],
+      PROJECT_NOT_IMPORTED: ["project.not_imported", 422],
+      PROJECT_FOLDER_MISSING: ["project.folder_missing", 409],
+      PROJECT_FOLDER_TAKEN: ["project.folder_taken", 409],
+      PROJECT_FOLDER_OVERLAPS: ["project.folder_overlaps", 409],
+      PROJECT_OUTSIDE_FOLDER: ["project.outside_folder", 422],
+      FOLDERS_REMOTE_DISABLED: ["folders.remote_disabled", 403],
+    };
+    for (const [name, [code, status]] of Object.entries(codes)) {
+      expect((KNOWN_ISSUE_CODES as Record<string, string>)[name]).toBe(code);
+      expect((ERROR_CODES as Record<string, string>)[name]).toBe(code);
+      expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)[code]).toBe(status);
+    }
+    expect(constants.KNOWN_PROJECT_STATUSES.FOLDER_MISSING).toBe("folder_missing");
+    expect(constants.X_PATH).toBe("x-path");
+  });
+
+  it("프로젝트 3.0(0.12.0, 5.7R.33c2): uses 삭제, 매니페스트·공간·복사·폴더 선택·메모리 복사", () => {
+    expect(modulesOf["projects"]).toEqual(
+      expect.arrayContaining([
+        "ProjectRegistration",
+        "ProjectManifest",
+        "CopyPlanRequest",
+        "CopyPlan",
+        "CopyApplyRequest",
+        "CopyApplyResult",
+        "FolderCapabilities",
+        "FolderPickRequest",
+        "FolderPickResult",
+      ]),
+    );
+    for (const gone of ["ProjectUse", "ProjectUsesUpdate", "UseCopyRequest", "LegacyUsesPlan"]) {
+      expect(modulesOf["projects"]).not.toContain(gone);
+    }
+    expect(modulesOf["common"]).toContain("SpaceRef");
+    expect(modulesOf["memory"]).toEqual(expect.arrayContaining(["MemoryCopyRequest", "MemoryCopyResult"]));
+    expect(memory.CONTRACT_VERSION).toBe("1.1.0");
+    expect(CONTRACT_VERSIONS.common).toBe("1.6.0");
+    expectTypeOf<ProjectNotImportedDetails["in_library"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<ProjectView["config_writable"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<ProjectView["kinds"]>().toEqualTypeOf<string[] | undefined>();
+    expectTypeOf<ProjectManifest["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<SpaceRef["project_id"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<CopyPlanItem["target_state"]>().toEqualTypeOf<string>();
+    expectTypeOf<CopyApplyItem["action"]>().toEqualTypeOf<string>();
+    expectTypeOf<FolderPickResult["status"]>().toEqualTypeOf<string>();
+    expectTypeOf<MemoryCopyRequest["source"]>().toEqualTypeOf<SpaceRef>();
+    expect(constants.KNOWN_COPY_ACTIONS.RENAME).toBe("rename");
+    expect(constants.KNOWN_COPY_TARGET_STATES.DIFFERENT).toBe("different");
+    expect(constants.KNOWN_COPY_STATUSES.CONFLICT).toBe("conflict");
+    expect(constants.KNOWN_FOLDER_PICK_STATUSES.BUSY).toBe("busy");
+    expect(constants.KNOWN_PROJECT_STATUSES.MANIFEST_INVALID).toBe("manifest_invalid");
+    expect(constants.PROJECT_MANIFEST_FORMAT).toBe(1);
+    const codes: Record<string, [string, number]> = {
+      PROJECT_NOT_FOUND: ["project.not_found", 404],
+      PROJECT_MANIFEST_INVALID: ["project.manifest_invalid", 409],
+      PROJECT_CONFIG_READONLY: ["project.config_readonly", 409],
+      PROJECT_COPY_CONFLICT: ["project.copy_conflict", 409],
+      FOLDERS_DIALOG_UNAVAILABLE: ["folders.dialog_unavailable", 409],
+      FOLDERS_DIALOG_BUSY: ["folders.dialog_busy", 409],
+      FOLDERS_DIALOG_TIMEOUT: ["folders.dialog_timeout", 409],
+    };
+    for (const [name, [code, status]] of Object.entries(codes)) {
+      expect((KNOWN_ISSUE_CODES as Record<string, string>)[name]).toBe(code);
+      expect((ERROR_CODES as Record<string, string>)[name]).toBe(code);
+      expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)[code]).toBe(status);
+    }
+    expect(KNOWN_ISSUE_CODES.PROJECT_MEMORY_NETWORK_FS).toBe("project.memory_network_fs");
   });
 });

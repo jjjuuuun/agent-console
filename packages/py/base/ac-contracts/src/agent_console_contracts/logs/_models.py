@@ -223,7 +223,7 @@ class LogTokenTotals(ContractModel):
 
 
 class LogProjectRef(ContractModel):
-    """프로젝트 묶음(묶기 규칙을 적용한 결과)."""
+    """프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다."""
 
     id: NonEmptyStr
     label: str = ""
@@ -237,7 +237,18 @@ class LogSessionSummary(ContractModel):
     title: str = Field(default="", description="첫 입력 등에서 뽑은 짧은 제목.")
     cwd: str = ""
     repo_root: str = ""
-    project: LogProjectRef | None = Field(default=None, description="프로젝트 묶음.")
+    project: LogProjectRef | None = Field(
+        default=None,
+        description="이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다.",
+        json_schema_extra={"deprecated": True},
+    )
+    project_id: str | None = Field(
+        default=None,
+        description=(
+            "세션 작업 폴더가 들어 있는 등록 프로젝트의 id(불투명 문자열, 0.11.0). "
+            "어느 등록 폴더에도 들지 않으면 null."
+        ),
+    )
     first_time: float | None = None
     last_time: float | None = None
     events: int = Field(default=0, ge=0)

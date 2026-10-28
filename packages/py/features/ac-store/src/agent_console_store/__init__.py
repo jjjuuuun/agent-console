@@ -58,6 +58,15 @@ from .lazy_versions import LazyVersionRepository, versions_for
 from .memory import InMemoryStorage, InMemoryVersionRepository
 from .migrate import branch_version_table, current_revision, downgrade, upgrade
 from .observed import ObservedVersionRepository, VersionRecorded
+from .project_assign import (
+    AssignCandidate,
+    AssignPlan,
+    ProjectAssignStore,
+    assign_project,
+    count_projects,
+    plan_assignment,
+    to_project_counts,
+)
 from .snapshot import get_run_snapshot
 from .sqlite import SqliteStorage, create_sqlite_engine, open_sqlite
 
@@ -71,6 +80,8 @@ __all__ = [
     "SCOPE_FIELD",
     "SETTINGS_KIND",
     "AlreadyExists",
+    "AssignCandidate",
+    "AssignPlan",
     "BaseDefinitionStore",
     "ContentTooLarge",
     "DefinitionCorrupt",
@@ -92,6 +103,7 @@ __all__ = [
     "MigrationBranchLike",
     "NotFound",
     "ObservedVersionRepository",
+    "ProjectAssignStore",
     "RunRepository",
     "SqliteDatabase",
     "SqliteStorage",
@@ -102,9 +114,11 @@ __all__ = [
     "VersionRecorded",
     "VersionRepository",
     "VersionRequired",
+    "assign_project",
     "branch_version_table",
     "canonical_json",
     "check_content_path",
+    "count_projects",
     "create_sqlite_engine",
     "current_revision",
     "default_hash",
@@ -112,7 +126,9 @@ __all__ = [
     "get_run_snapshot",
     "list_graph_summaries",
     "open_sqlite",
+    "plan_assignment",
     "store_error_body",
+    "to_project_counts",
     "to_versioned_graph",
     "upgrade",
     "versions_for",

@@ -13,7 +13,7 @@
     "@agent-console/api-client": "^0.1.0",
     "@agent-console/arch-view": "^0.1.0",
     "@agent-console/chat": "^0.1.0",
-    "@agent-console/contracts": "^0.10.0",
+    "@agent-console/contracts": "^0.12.0",
     "@agent-console/graph-editor": "^0.1.0",
     "@agent-console/list-arrange": "^0.1.0",
     "@agent-console/log-view": "^0.1.0",
