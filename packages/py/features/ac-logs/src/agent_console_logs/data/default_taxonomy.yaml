@@ -19,6 +19,7 @@ categories:
   spec: {label: SPEC}
   agents_md: {label: AGENTS.md}
   document: {label: 문서}
+  memory: {label: 메모리}  # 에이전트 공유 메모리 도구 호출(플랫폼 실행 대응표 memory.*)
   workspace: {label: 파일 변경}
   usage: {label: 사용량}
   control: {label: 에이전트 제어}

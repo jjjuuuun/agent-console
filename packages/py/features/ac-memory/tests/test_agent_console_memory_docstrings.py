@@ -7,12 +7,21 @@ from types import ModuleType
 
 import pytest
 
-from agent_console_memory import _access, _keys, _policy, _scope_kinds, _shared, _toolkit
+from agent_console_memory import (
+    _access,
+    _keys,
+    _policy,
+    _scan,
+    _scope_kinds,
+    _shared,
+    _toolkit,
+)
 from agent_console_memory.testing import _samples
 
 
 @pytest.mark.parametrize(
-    "module", [_access, _keys, _policy, _scope_kinds, _shared, _toolkit, _samples]
+    "module",
+    [_access, _keys, _policy, _scan, _scope_kinds, _shared, _toolkit, _samples],
 )
 def test_module_doctests(module: ModuleType) -> None:
     result = doctest.testmod(module, optionflags=doctest.ELLIPSIS)

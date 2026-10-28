@@ -33,10 +33,10 @@ export function useHasUnsaved(): boolean {
 }
 
 /**
- * 저장하지 않은 변경이 있으면 라우트 이동·탭 닫기를 확인한다(데이터 라우터 필요).
- * 렌더 결과는 이탈 확인 다이얼로그이며, 화면 어디에든 한 번 둔다.
+ * 저장하지 않은 변경을 앱에 알리고(새 버전 적용 전 확인 등에 쓰인다) 탭 닫기(`beforeunload`)를 막는다.
+ * 라우트 이동 확인은 하지 않는다 — 화면이 자기 확인 창을 쓸 때(예: 같은 경로 안의 항목 전환) 이것만 쓴다.
  */
-export function UnsavedGuard({ dirty }: { dirty: boolean }) {
+export function useReportUnsaved(dirty: boolean): void {
   const { report } = useContext(UnsavedContext);
   const owner = useRef(Symbol("unsaved"));
   useEffect(() => {
@@ -54,6 +54,14 @@ export function UnsavedGuard({ dirty }: { dirty: boolean }) {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
+}
+
+/**
+ * 저장하지 않은 변경이 있으면 라우트 이동·탭 닫기를 확인한다(데이터 라우터 필요).
+ * 렌더 결과는 이탈 확인 다이얼로그이며, 화면 어디에든 한 번 둔다.
+ */
+export function UnsavedGuard({ dirty }: { dirty: boolean }) {
+  useReportUnsaved(dirty);
 
   const blocker = useBlocker(dirty);
   return (

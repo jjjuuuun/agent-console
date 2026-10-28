@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.7R.13(5.7R.6 후속): `POST /logs/index/purge` 본문 `all` — 범위 없이 실제로 지우려면 `all: true`가 필요(없으면 422). 비우기를 지원하지 않는 색인은 400 `logs.purge_unsupported`(`LogPurgeUnsupportedError`).
 - 5.2R.106 후속: 설치자 옵션 `base_taxonomy_file`(기본 분류 체계 교체, `false`·빈 문자열 = 끄기)과 `base_taxonomy_of`. 모듈이 `LogsService(base_taxonomy=)`에 넘긴다.
 - 5.2R.27: 선택 multi 포트 `logs.source_defaults`(설정에 `enabled`가 없는 출처의 기본값, 설정 파일 무변경), `apply_source_defaults`·`collect_source_defaults`.
 

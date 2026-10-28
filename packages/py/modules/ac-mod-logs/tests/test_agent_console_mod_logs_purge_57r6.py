@@ -265,14 +265,65 @@ def test_purge_rejects_bad_body_and_keeps_source_files(tmp_path: Path) -> None:
             ]
             seen["codes"] = [client.post(purge, json=body).status_code for body in bodies]
             seen["count"] = len(_categories(client))
-            seen["reset"] = client.post(purge, json={"dry_run": False}).json()
+            refused = client.post(purge, json={"dry_run": False})
+            seen["refused"] = (refused.status_code, refused.json()["error"]["details"]["path"])
+            seen["kept"] = len(_categories(client))
+            seen["reset"] = client.post(purge, json={"dry_run": False, "all": True}).json()
             seen["after"] = _categories(client)
 
     out = io.StringIO()
     assert main(["--config", str(config)], serve=serve, out=out, environ={}) == 0
     assert seen["codes"] == [422, 422, 422, 422]
     assert seen["count"] > 0
+    # 범위 없이 실제로 지우려면 all: true 확인이 있어야 한다(없으면 아무것도 지우지 않고 422).
+    assert seen["refused"] == (422, "all")
+    assert seen["kept"] == seen["count"]
     assert seen["reset"]["events"] == seen["count"]
     assert seen["reset"]["agents"] >= 1
     assert seen["after"] == []
     assert tree_digest(root) == digest  # 원본은 읽기 전용
+
+
+def test_purge_all_confirmation_only_for_unscoped_real_delete() -> None:
+    """``all``은 범위 없는 실제 비우기에만 필요하다(dry_run·범위가 있으면 없어도 된다)."""
+    from agent_console_mod_logs.purge import LogPurgeRequest
+
+    assert LogPurgeRequest(dry_run=False).needs_confirmation
+    assert not LogPurgeRequest(dry_run=False, all=True).needs_confirmation
+    assert not LogPurgeRequest().needs_confirmation  # dry_run 기본
+    assert not LogPurgeRequest(dry_run=False, categories=["llm"]).needs_confirmation
+    assert not LogPurgeRequest(dry_run=False, before=1.0).needs_confirmation
+
+
+def test_purge_unsupported_index_is_client_error() -> None:
+    """비우기를 지원하지 않는 색인이면 500이 아니라 400 ``logs.purge_unsupported``."""
+    from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE
+    from agent_console_logs import LogIndex
+    from agent_console_logs.testing import MemoryLogIndex
+    from agent_console_mod_logs import module as logs_module
+    from agent_console_mod_logs.errors import PURGE_UNSUPPORTED
+    from agent_console_mod_logs.ports import LOGS_QUERY
+    from agent_console_modkit import assemble
+    from agent_console_modkit.host import SecurityPolicy, create_host_app
+
+    class _NoPurge:
+        """``LogIndex``만 있고 ``purge``가 없는 색인(감싸서 넘긴다)."""
+
+        def __init__(self, inner: LogIndex) -> None:
+            self._inner = inner
+
+        def __getattr__(self, name: str) -> Any:
+            if name == "purge":
+                raise AttributeError(name)
+            return getattr(self._inner, name)
+
+    assembly = assemble([logs_module])
+    svc = assembly.port(LOGS_QUERY)
+    svc._index = _NoPurge(MemoryLogIndex())  # type: ignore[union-attr]  # 비우기 없는 색인으로 바꿔 끼움
+    policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
+    app = create_host_app(assembly, policy=policy, error_status=HTTP_STATUS_BY_ERROR_CODE)
+    with TestClient(app) as client:
+        client.headers["X-Console-Token"] = TOKEN
+        response = client.post(f"{API}/logs/index/purge", json={"categories": ["llm"]})
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == PURGE_UNSUPPORTED

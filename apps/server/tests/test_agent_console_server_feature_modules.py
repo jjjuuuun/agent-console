@@ -31,6 +31,7 @@ FEATURE_ROLES: dict[str, list[str]] = {
     "mod-chat": ["conversations"],
     "mod-projects": ["projects"],
     "mod-architecture": ["architecture"],
+    "mod-memory": ["memory"],
 }
 """design §3R.1.3 표의 web_roles(3R.18 웹 조립과 맞춘다)."""
 
@@ -49,6 +50,7 @@ PROBES: dict[str, tuple[str, str]] = {
     "mod-chat": ("GET", "/conversations"),
     "mod-projects": ("GET", "/projects"),
     "mod-architecture": ("GET", "/architecture/profiles"),
+    "mod-memory": ("GET", "/memory/scope-kinds"),
 }
 """모듈마다 켜져 있으면 200인 대표 경로."""
 

@@ -48,8 +48,8 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 ## 기술 스택
 | 영역 | 확정 |
 | --- | --- |
-| 서버·실행 엔진·CLI | Python 3.12+, uv workspace (`packages/py/{base,features,kit,modules,links}/*`, `apps/server`, `apps/cli`) |
-| 웹 | TypeScript, React 19 + Vite(메타 프레임워크 없음), pnpm workspace (`packages/ts/{config,lib}/*`, `apps/web`) |
+| 서버·실행 엔진·CLI | Python 3.12+(최신 보안 패치 권장), uv 0.13.4+, uv workspace (`packages/py/{base,features,kit,modules,links}/*`, `apps/server`, `apps/cli`) |
+| 웹 | TypeScript, React 19 + Vite(메타 프레임워크 없음), Node `^22.23.4 \|\| ^24.22.1 \|\| >=26.12.1`, pnpm 10.34.5+ workspace(`packageManager` 10.34.9) (`packages/ts/{config,lib}/*`, `apps/web`) |
 | 서버·실시간 | FastAPI + uvicorn, WebSocket 단일 채널 (`/ws`) |
 | 계약 | Pydantic v2(`agent_console_contracts`)가 단일 소스 → JSON Schema/OpenAPI → TS 타입 생성(`@agent-console/contracts`), 생성물 커밋 + 드리프트 검사 |
 | 실행 엔진 | 자체 asyncio 경량 스케줄러(`GraphRuntime` 인터페이스 뒤) |
@@ -62,6 +62,7 @@ Claude Code로 이 저장소를 개발할 때 따르는 규칙이다. 사람 기
 | 이름 | Python import `agent_console_*`, 배포 `agent-console-*`, TS `@agent-console/*` |
 
 고정·환경 메모:
+- 런타임 최소 버전: Node `^22.23.4 || ^24.22.1 || >=26.12.1`(CVE-2026-111497, 루트 `engines.node`), pnpm 10.34.5 이상(CVE-2026-82392, `packageManager` 10.34.9), uv 0.13.4 이상, Python 3.12 이상 + 최신 보안 패치(CVE-2026-115557). `engine-strict`는 켜지 않는다(범위 밖이면 경고만).
 - TypeScript는 6.0.x로 고정한다. typescript-eslint 8.x가 TS 7을 지원하지 않기 때문이며, 지원되면 올린다.
 - Vitest 워커 수는 기본 min(4, CPU-1)이고 `VITEST_MAX_WORKERS`로 바꾼다. 루트 `vitest.config.ts`가 계산값을 패키지·인라인 프로젝트에 같이 쓰게 하므로 패키지 config에는 maxWorkers를 두지 않는다. 부하가 큰 환경에서는 `--testTimeout=60000`을 준다.
 - DOM 테스트는 happy-dom을 쓴다. 레이아웃 API가 필요한 테스트(React Flow)는 jsdom이나 브라우저 모드로 전환할 수 있다.

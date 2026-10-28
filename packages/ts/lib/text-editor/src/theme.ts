@@ -31,6 +31,12 @@ export const editorTheme: Extension = EditorView.theme({
   },
   ".cm-activeLine": { backgroundColor: "color-mix(in srgb, var(--ac-accent, #6aa6ff) 8%, transparent)" },
   ".cm-activeLineGutter": { backgroundColor: "var(--ac-surface-3, #262c36)" },
+  // 비교 보기에서 접힌 변경 없는 구간 줄(@codemirror/merge 기본은 흰 바탕 그라데이션이라 다크에서 튄다)
+  ".cm-collapsedLines": {
+    backgroundImage: "none",
+    backgroundColor: "var(--ac-surface-3, #262c36)",
+    color: "var(--ac-text-muted, #a3acba)",
+  },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
     backgroundColor: "color-mix(in srgb, var(--ac-accent, #6aa6ff) 30%, transparent)",
   },

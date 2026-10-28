@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -30,6 +30,7 @@ members = [
     "agent-console-link-logs-runs",
     "agent-console-link-logs-trace",
     "agent-console-link-logs-usage",
+    "agent-console-link-memory-runs",
     "agent-console-link-projects-runs",
     "agent-console-link-runs-teams",
     "agent-console-link-runs-trace",
@@ -43,6 +44,7 @@ members = [
     "agent-console-mod-exports",
     "agent-console-mod-imports",
     "agent-console-mod-logs",
+    "agent-console-mod-memory",
     "agent-console-mod-projects",
     "agent-console-mod-resources",
     "agent-console-mod-runs",
@@ -940,6 +942,69 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-link-memory-runs"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-memory-runs" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-memory" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-nodes-core" },
+    { name = "agent-console-resources" },
+    { name = "agent-console-runtime" },
+    { name = "agent-console-store" },
+    { name = "pydantic" },
+    { name = "ruamel-yaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-backend-fake-agent" },
+    { name = "agent-console-delegation-host" },
+    { name = "agent-console-link-definitions-teams" },
+    { name = "agent-console-link-runs-teams" },
+    { name = "agent-console-mod-definitions" },
+    { name = "agent-console-mod-memory" },
+    { name = "agent-console-mod-resources" },
+    { name = "agent-console-mod-runs" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-memory", editable = "packages/py/features/ac-memory" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-nodes-core", editable = "packages/py/features/ac-nodes-core" },
+    { name = "agent-console-resources", editable = "packages/py/features/ac-resources" },
+    { name = "agent-console-runtime", editable = "packages/py/features/ac-runtime" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
+    { name = "agent-console-delegation-host", editable = "packages/py/features/ac-delegation-host" },
+    { name = "agent-console-link-definitions-teams", editable = "packages/py/links/ac-link-definitions-teams" },
+    { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
+    { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
+    { name = "agent-console-mod-memory", editable = "packages/py/modules/ac-mod-memory" },
+    { name = "agent-console-mod-resources", editable = "packages/py/modules/ac-mod-resources" },
+    { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-link-projects-runs"
 version = "0.1.0"
 source = { editable = "packages/py/links/ac-link-projects-runs" }
@@ -1217,12 +1282,18 @@ dependencies = [
     { name = "ruamel-yaml" },
 ]
 
+[package.optional-dependencies]
+sqlite = [
+    { name = "sqlalchemy" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "sqlalchemy" },
 ]
 
 [package.metadata]
@@ -1232,7 +1303,9 @@ requires-dist = [
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
+    { name = "sqlalchemy", marker = "extra == 'sqlite'", specifier = ">=2.0" },
 ]
+provides-extras = ["sqlite"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1240,6 +1313,7 @@ dev = [
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "ruff", specifier = ">=0.6" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
 ]
 
 [[package]]
@@ -1512,6 +1586,55 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-mod-memory"
+version = "0.1.0"
+source = { editable = "packages/py/modules/ac-mod-memory" }
+dependencies = [
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-memory", extra = ["sqlite"] },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-registry" },
+    { name = "agent-console-store" },
+    { name = "alembic" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "sqlalchemy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-memory", extras = ["sqlite"], editable = "packages/py/features/ac-memory" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "alembic", specifier = ">=1.13" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
     { name = "sqlalchemy", specifier = ">=2.0" },
 ]
 
@@ -2139,6 +2262,7 @@ dependencies = [
     { name = "agent-console-link-logs-runs" },
     { name = "agent-console-link-logs-trace" },
     { name = "agent-console-link-logs-usage" },
+    { name = "agent-console-link-memory-runs" },
     { name = "agent-console-link-projects-runs" },
     { name = "agent-console-link-runs-teams" },
     { name = "agent-console-link-runs-trace" },
@@ -2150,6 +2274,7 @@ dependencies = [
     { name = "agent-console-mod-exports" },
     { name = "agent-console-mod-imports" },
     { name = "agent-console-mod-logs" },
+    { name = "agent-console-mod-memory" },
     { name = "agent-console-mod-projects" },
     { name = "agent-console-mod-resources" },
     { name = "agent-console-mod-runs" },
@@ -2192,6 +2317,7 @@ requires-dist = [
     { name = "agent-console-link-logs-runs", editable = "packages/py/links/ac-link-logs-runs" },
     { name = "agent-console-link-logs-trace", editable = "packages/py/links/ac-link-logs-trace" },
     { name = "agent-console-link-logs-usage", editable = "packages/py/links/ac-link-logs-usage" },
+    { name = "agent-console-link-memory-runs", editable = "packages/py/links/ac-link-memory-runs" },
     { name = "agent-console-link-projects-runs", editable = "packages/py/links/ac-link-projects-runs" },
     { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
     { name = "agent-console-link-runs-trace", editable = "packages/py/links/ac-link-runs-trace" },
@@ -2203,6 +2329,7 @@ requires-dist = [
     { name = "agent-console-mod-exports", editable = "packages/py/modules/ac-mod-exports" },
     { name = "agent-console-mod-imports", editable = "packages/py/modules/ac-mod-imports" },
     { name = "agent-console-mod-logs", editable = "packages/py/modules/ac-mod-logs" },
+    { name = "agent-console-mod-memory", editable = "packages/py/modules/ac-mod-memory" },
     { name = "agent-console-mod-projects", editable = "packages/py/modules/ac-mod-projects" },
     { name = "agent-console-mod-resources", editable = "packages/py/modules/ac-mod-resources" },
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
@@ -2554,11 +2681,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2026.7.22"
+version = "2026.10.23"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/c2/24167ea9858356b47a87a50d39908bfdb72ceeefe0041586e704e5376b3a/certifi-2026.7.22.tar.gz", hash = "sha256:741e2c3b351ddf169a738da9f2c048608ff7f2c5cc02f1ebc6b118bb090d5d55", size = 138112, upload-time = "2026-07-22T03:35:12.644Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/11/b524cbd9bbdaca58608e4cf4053fd463417549e1959fa8d3aa18319f9555/certifi-2026.10.23.tar.gz", hash = "sha256:a9895e6e2758b371e0545e321a3a8fd1fcfd9829ada8824a936dfb16aaaf36cd", size = 136225, upload-time = "2026-10-23T11:36:16.478Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl", hash = "sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775", size = 136983, upload-time = "2026-07-22T03:35:11.276Z" },
+    { url = "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl", hash = "sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1", size = 135082, upload-time = "2026-10-23T11:36:14.763Z" },
 ]
 
 [[package]]

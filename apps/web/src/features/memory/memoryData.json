@@ -1,0 +1,40 @@
+{
+  "authorKindFilters": [
+    "",
+    "agent",
+    "user",
+    "system"
+  ],
+  "importPolicies": [
+    {
+      "id": "skip",
+      "warns": false
+    },
+    {
+      "id": "overwrite",
+      "warns": true
+    },
+    {
+      "id": "rename",
+      "warns": false
+    }
+  ],
+  "defaultImportPolicy": "skip",
+  "warningCodes": {
+    "storageMemory": "memory.storage_memory",
+    "searchFallback": "memory.search_fallback"
+  },
+  "importedAuthorKind": "system",
+  "params": {
+    "scope": "scope",
+    "entry": "entry",
+    "q": "q",
+    "tag": "tag",
+    "authorRun": "author_run",
+    "authorKind": "author_kind",
+    "archived": "archived",
+    "deleted": "deleted",
+    "sort": "sort",
+    "sortOrder": "order"
+  }
+}

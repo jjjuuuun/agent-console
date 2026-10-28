@@ -114,6 +114,7 @@ button.ac-mem-chip { cursor: pointer; }
 .ac-mem-th { padding: 0 var(--ac-space-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ac-mem-th[data-align="right"], .ac-mem-td[data-align="right"] { text-align: right; justify-content: flex-end; }
 .ac-mem-th[data-align="center"], .ac-mem-td[data-align="center"] { text-align: center; justify-content: center; }
+.ac-mem-th[data-align="center"] { text-overflow: clip; }
 .ac-mem-th-btn { font-weight: 600; color: inherit; text-decoration: none; }
 .ac-mem-tbody { position: relative; }
 .ac-mem-tr { position: absolute; top: 0; left: 0; width: 100%; border-bottom: 1px solid var(--ac-border-soft); border-left: 2px solid transparent; cursor: default; }

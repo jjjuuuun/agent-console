@@ -14,6 +14,7 @@ import { createImportsClient, type ImportsClient } from "./clients/imports";
 import { createInteractionsClient, type InteractionsClient } from "./clients/interactions";
 import { createLoginClient, type LoginClient } from "./clients/login";
 import { createLogsClient, type LogsClient } from "./clients/logs";
+import { createMemoryClient, type MemoryClient } from "./clients/memory";
 import { createResourcesClient, type ResourcesClient } from "./clients/resources";
 import { createRunsClient, type RunsClient } from "./clients/runs";
 import { createSettingsClient, type SettingsClient } from "./clients/settings";
@@ -29,6 +30,7 @@ export type { ListConversationsParams, ListTurnsParams, PostMessageResult } from
 export type { ListInteractionsParams } from "./clients/interactions";
 export type { LogArchiveFormat, LogArchiveParams, LogQueryParams } from "./clients/logs";
 export type { ListResourcesParams } from "./clients/resources";
+export type { ListMemoryEntriesParams, LogIndexPurgeRequest, LogIndexPurgeResult } from "./clients/memory";
 
 /** `/api/v1` REST 호출을 계약 타입으로 감싼 클라이언트(모든 기능). 실패는 모두 `ApiError`. */
 export interface RestClient
@@ -47,7 +49,8 @@ export interface RestClient
     VersionsClient,
     LoginClient,
     LogsClient,
-    ArchitectureClient {}
+    ArchitectureClient,
+    MemoryClient {}
 
 /**
  * REST 클라이언트를 만든다.
@@ -72,5 +75,6 @@ export function createRestClient(options: RestClientOptions): RestClient {
     ...createLoginClient(io),
     ...createLogsClient(io),
     ...createArchitectureClient(io),
+    ...createMemoryClient(io),
   };
 }

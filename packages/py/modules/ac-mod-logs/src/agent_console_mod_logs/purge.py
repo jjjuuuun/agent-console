@@ -17,7 +17,11 @@ _Name = Annotated[str, Field(min_length=1)]
 
 
 class LogPurgeRequest(BaseModel):
-    """색인 비우기 요청. 주어진 조건을 모두 만족하는 이벤트를 지운다(생략 = 그 조건 없음)."""
+    """색인 비우기 요청. 주어진 조건을 모두 만족하는 이벤트를 지운다(생략 = 그 조건 없음).
+
+    범위가 하나도 없이 실제로 지우면(``dry_run: false``) 색인 전체가 지워지므로 ``all: true``
+    확인이 있어야 한다(없으면 422, CLI ``--all``과 같은 안전장치).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -39,6 +43,23 @@ class LogPurgeRequest(BaseModel):
         ),
     )
     dry_run: bool = Field(default=True, description="true(기본)면 지우지 않고 지울 행 수만 센다.")
+    all: bool = Field(
+        default=False,
+        description=(
+            "범위(출처·범주·시각) 없이 실제로 지울 때(dry_run=false) 필요한 확인 값. "
+            "true여야 색인 전체를 지운다."
+        ),
+    )
+
+    @property
+    def unscoped(self) -> bool:
+        """범위 조건(출처·범주·시각)이 하나도 없는지."""
+        return self.sources is None and self.categories is None and self.before is None
+
+    @property
+    def needs_confirmation(self) -> bool:
+        """범위 없이 실제로 지우려는데 ``all: true`` 확인이 없는지."""
+        return not self.dry_run and self.unscoped and not self.all
 
 
 class LogPurgeResponse(BaseModel):

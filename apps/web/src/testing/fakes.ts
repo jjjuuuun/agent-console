@@ -6,6 +6,7 @@ import { vi } from "vitest";
 import type { ConnectionStatus, RestClient, WsClient } from "@agent-console/api-client";
 import { ApiError } from "@agent-console/api-client";
 import { CONTRACTS_VERSION, type Interaction, type WorkspaceSettings } from "@agent-console/contracts";
+import type { MemoryChanged } from "@agent-console/contracts/memory";
 import type { ProjectsClient } from "@agent-console/projects";
 import type { ApiClients } from "../app/apiClients";
 
@@ -56,6 +57,8 @@ export interface FakeWs extends WsClient {
   emitInteraction(interaction: Interaction): void;
   /** 로그 수집 알림(`logs.ingested`)을 구독자에게 보낸다 */
   emitLogs(count: number, sourceIds?: string[]): void;
+  /** 메모리 변경 알림(`memory.changed`)을 구독자에게 보낸다 */
+  emitMemory(changed: MemoryChanged): void;
 }
 
 export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
@@ -63,6 +66,7 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
   const statusListeners = new Set<(s: ConnectionStatus) => void>();
   const interactionListeners = new Set<(i: Interaction) => void>();
   const logListeners = new Set<(p: { count: number; source_ids?: string[] }) => void>();
+  const memoryListeners = new Set<(c: MemoryChanged) => void>();
   return {
     get status() {
       return status;
@@ -81,6 +85,10 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
       logListeners.add(handler);
       return { topic: "logs", unsubscribe: () => logListeners.delete(handler) };
     },
+    subscribeMemory(handler: (c: MemoryChanged) => void) {
+      memoryListeners.add(handler);
+      return { topic: "memory.changed", unsubscribe: () => memoryListeners.delete(handler) };
+    },
     subscribe: vi.fn(),
     subscribeRun: vi.fn(),
     subscribeConversation: vi.fn(),
@@ -91,6 +99,9 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
     },
     emitInteraction(i: Interaction) {
       interactionListeners.forEach((l) => l(i));
+    },
+    emitMemory(changed: MemoryChanged) {
+      memoryListeners.forEach((l) => l(changed));
     },
     emitLogs(count: number, sourceIds?: string[]) {
       logListeners.forEach((l) => l({ count, ...(sourceIds ? { source_ids: sourceIds } : {}) }));

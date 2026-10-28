@@ -152,6 +152,22 @@ types:
     duration_ms: /payload/duration_ms
   usage.rate_limit: {category: usage, title: "사용 한도 {/payload/window} {/payload/status}"}
 
+  # 메모리 도구 호출(`link-memory-runs`, payload = 계약 MemoryEventPayload — 본문·검색어 원문 없음).
+  # 범위·키를 문서 표지(kind memory, path = 범위 종류/범위 id/키)로 옮겨 문서 필터·구조도 조건이 그대로 본다.
+  # 동작 → 문서 action 대응은 아래 map(데이터). 지우기는 `removed`다: `deleted`는 파일 변경 어휘라
+  # 기본 구조도 Workspace 칸(`/documents/0/action in [created, modified, deleted]`)에도 맞는다.
+  # 범주 이름을 바꾸거나 이 규칙을 끄면(설정 event_map에서 `"memory.*": {}`) 메모리 이벤트는 범주 other다.
+  "memory.*":
+    category: memory
+    title: "메모리 {/payload/op} {/payload/scope/kind}:{/payload/key}"
+    status: {pointer: /payload/status, map: {ok: ok, denied: block}, default: error}
+    correlation: {tool_use_id: "{/payload/tool_use_id}", memory_scope: "{/payload/scope/kind}"}
+    documents:
+      - kind: memory
+        # 범위를 모르는 호출(권한 없음 등, payload scope = null)은 문서 표지를 남기지 않는다(빈 path = 뺌)
+        path: {pointer: /payload/scope, map: {"null": ""}, default: "{/payload/scope/kind}/{/payload/scope/id}/{/payload/key}"}
+        action: {pointer: /payload/op, map: {read: read, write: written, delete: removed, search: searched}}
+
   "interaction.*": {category: control, title: "{type}"}
   log.warning: {category: system, status: warning, title: "{/payload/message}"}
 

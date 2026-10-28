@@ -304,3 +304,112 @@ class MemoryStoreContractTests:
             (S3, 1, 0, 1),
         ]
         assert [s.scope for s in store.list_scopes(kind="k2")] == [S3]
+
+    # ---- 훑기(선택 능력 EntryScanner) ---------------------------------------------------
+
+    def test_scan_entries_matches_search_when_supported(self) -> None:
+        """`scan_entries`를 가진 저장소는 `search` 길과 같은 항목을 본문까지 낸다."""
+        from agent_console_memory._scan import EntryScanner
+
+        store, _ = self._store()
+        if not isinstance(store, EntryScanner):
+            pytest.skip("선택 능력 EntryScanner 없음")
+        for i in range(7):
+            store.write(
+                S1 if i % 2 else S2, f"n/{i}", f"본문 {i}", author=user_author(), tags=["t"]
+            )
+        store.write(S3, "x", "other", author=user_author())
+        archived = store.write(S1, "arch", "old", author=user_author()).entry
+        store.archive(archived.id, author=user_author())
+        gone = store.write(S1, "gone", "bye", author=user_author()).entry
+        store.delete(gone.id, author=user_author())
+        for scopes in (None, [S1], [S1, S3], [S1, S1], []):
+            for include in (True, False):
+                found = list(store.scan_entries(scopes=scopes, include_archived=include))
+                expected = store.search(
+                    MemoryQuery(scopes=scopes, include_archived=include, limit=500)
+                ).items
+                assert sorted(e.id for e in found) == sorted(i.id for i in expected)
+                assert len({e.id for e in found}) == len(found)
+                for entry in found:
+                    assert entry == store.get(entry.id)
+
+    def test_scan_heads_match_entries_when_supported(self) -> None:
+        """`scan_heads`를 가진 저장소는 `scan_entries`와 같은 항목을 본문 없는 머리로 낸다."""
+        from agent_console_memory._scan import EntryHead, HeadScanner
+
+        store, _ = self._store()
+        if not isinstance(store, HeadScanner):
+            pytest.skip("선택 능력 HeadScanner 없음")
+        for i in range(5):
+            store.write(S1 if i % 2 else S2, f"n/{i}", f"본문 {i}", author=user_author())
+        archived = store.write(S1, "arch", "old", author=user_author(), tags=["a", "b"]).entry
+        store.archive(archived.id, author=user_author())
+        gone = store.write(S1, "gone", "bye", author=user_author()).entry
+        store.delete(gone.id, author=user_author())
+        for scopes in (None, [S1], [S1, S1], []):
+            for include in (True, False):
+                found = list(store.scan_heads(scopes=scopes, include_archived=include))
+                expected = store.search(
+                    MemoryQuery(scopes=scopes, include_archived=include, limit=500)
+                ).items
+                assert sorted(e.id for e in found) == sorted(i.id for i in expected)
+                assert len({e.id for e in found}) == len(found)
+                for head in found:
+                    assert isinstance(head, EntryHead)
+                    entry = store.get(head.id)
+                    assert entry is not None
+                    want = entry.model_dump(exclude={"content"})
+                    want["tags"] = tuple(want["tags"])
+                    got = head._asdict()
+                    got["scope"] = head.scope.model_dump()
+                    got["created_by"] = head.created_by.model_dump()
+                    got["updated_by"] = head.updated_by.model_dump()
+                    assert got == want
+
+    def test_count_tags_matches_scanning_when_supported(self) -> None:
+        """`count_tags`를 가진 저장소는 직접 훑어 센 결과와 같은 수를 낸다(쓰기·지우기·보관 뒤)."""
+        from agent_console_memory._scan import TagCounter
+
+        store, _ = self._store()
+        if not isinstance(store, TagCounter):
+            pytest.skip("선택 능력 TagCounter 없음")
+        me = user_author()
+        for i in range(9):
+            store.write(
+                (S1, S2, S3)[i % 3],
+                f"t/{i}",
+                f"본문 {i}",
+                author=me,
+                tags=["공통", f"t{i % 2}"] + (["드묾"] if i == 4 else []),
+            )
+        store.write(S1, "t/0", "바뀜", author=me, tags=["바뀐-태그"])  # 태그 교체
+        archived = store.write(S2, "arch", "old", author=me, tags=["공통", "보관"]).entry
+        store.archive(archived.id, author=me)
+        gone = store.write(S1, "gone", "bye", author=me, tags=["지움"]).entry
+        store.delete(gone.id, author=me)
+        purged = store.write(S3, "purged", "bye", author=me, tags=["영구"]).entry
+        store.delete(purged.id, author=me)
+        store.purge(purged.id)
+        restored = store.write(S3, "back", "x", author=me, tags=["되살림"]).entry
+        store.delete(restored.id, author=me)
+        store.restore(restored.id, author=me)
+
+        def scanned(scopes: list[MemoryScopeRef] | None, include: bool) -> dict[str, int]:
+            counts: dict[str, int] = {}
+            items = store.search(MemoryQuery(scopes=scopes, include_archived=include, limit=500))
+            for item in items.items:
+                for tag in set(item.tags):
+                    counts[tag] = counts.get(tag, 0) + 1
+            return counts
+
+        for scopes in (None, [S1], [S1, S3], [S2, S2], []):
+            for include in (True, False):
+                got = store.count_tags(scopes=scopes, include_archived=include)
+                assert got == scanned(scopes, include), (scopes, include)
+        everything = store.count_tags()
+        assert everything["공통"] == 9  # t/0은 태그를 바꿨고 보관 항목은 센다
+        assert "지움" not in everything
+        assert "영구" not in everything
+        assert everything["되살림"] == 1
+        assert "보관" not in store.count_tags(include_archived=False)

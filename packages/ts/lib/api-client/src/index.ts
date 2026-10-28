@@ -15,6 +15,7 @@ export type {
   HandoffParams,
   ListConversationsParams,
   ListGraphsParams,
+  ListMemoryEntriesParams,
   ListInteractionsParams,
   ListResourcesParams,
   ListRunEventsParams,
@@ -22,6 +23,8 @@ export type {
   ListTurnsParams,
   LogArchiveFormat,
   LogArchiveParams,
+  LogIndexPurgeRequest,
+  LogIndexPurgeResult,
   LogQueryParams,
   PostMessageResult,
   RestClient,
@@ -34,6 +37,8 @@ export type { BlobResponse, RestIo } from "./io";
 export { createRestIo } from "./transport";
 export type { ExportArchive } from "./clients/exports";
 export { LOG_EMPTY_VALUE, logQuery } from "./clients/logs";
+export { memoryConflictVersion, memoryScopeText } from "./clients/memory";
+export type { MemoryClient, MemoryImportPolicyName } from "./clients/memory";
 export type { ResourceFileContent } from "./clients/resources";
 export type { VersionFileContent } from "./clients/versions";
 export {

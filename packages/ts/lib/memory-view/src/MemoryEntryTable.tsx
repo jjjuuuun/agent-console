@@ -149,7 +149,7 @@ export function MemoryEntryTable({
     : formatMessage(m["table.summary"] as string, { n: total ?? entries.length });
   const order = query.trim() !== "" ? m["table.order.result"] : orderText(sort, m);
 
-  const headerCell = (id: EntryColumnId, label: string, align: "left" | "right" | "center" = "left") => {
+  const headerCell = (id: EntryColumnId, label: React.ReactNode, align: "left" | "right" | "center" = "left") => {
     const sortKey = sortKeys?.[id];
     const active = sortKey !== undefined && sort?.key === sortKey;
     return (
@@ -169,7 +169,7 @@ export function MemoryEntryTable({
         <div role="grid" aria-label={m["a11y.table"]} aria-rowcount={rowCount < 0 ? -1 : rowCount + 1} aria-colcount={columns.length} onKeyDown={onKeyDown}
           className="ac-mem-grid" style={{ minWidth, ["--ac-mem-cols" as string]: gridTemplate }}>
           <div role="row" aria-rowindex={1} className="ac-mem-thead">
-            {headerCell("pin", m["table.pinned"] as string, "center")}
+            {headerCell("pin", <><span className="ac-mem-sr">{m["table.pinned"]}</span><span className="ac-mem-icon ac-mem-icon-pin" aria-hidden="true" /></>, "center")}
             {headerCell("key", m["table.key"] as string)}
             {headerCell("author", m["table.author"] as string)}
             {headerCell("updated", m["table.updated"] as string, "right")}

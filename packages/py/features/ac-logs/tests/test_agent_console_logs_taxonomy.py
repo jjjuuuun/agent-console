@@ -11,6 +11,13 @@ def test_default_taxonomy_marks_error_danger() -> None:
     assert dangers == ["error"]
 
 
+def test_default_taxonomy_labels_memory_category() -> None:
+    # 5.7R.16: 대응표 memory.*의 범주 라벨(라벨만, tone·숨김 없음 — 사용자가 바꾸거나 지움)
+    memory = load_default_taxonomy().categories["memory"]
+    assert memory.label == "메모리"
+    assert (memory.tone, memory.visible) == (None, None)
+
+
 def test_missing_or_empty_taxonomy_is_empty(tmp_path: Path) -> None:
     assert load_default_taxonomy(tmp_path / "none.yaml") == LogTaxonomy()
     (tmp_path / "e.yaml").write_text("", encoding="utf-8")

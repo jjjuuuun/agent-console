@@ -12,10 +12,10 @@
 
 ## 준비물
 
-- Python 3.12 이상
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Node.js 22 이상
-- pnpm 10 (`corepack enable`로 켤 수 있습니다)
+- Python 3.12 이상 (최신 보안 패치를 권장합니다)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.4 이상
+- Node.js `^22.23.4 || ^24.22.1 || >=26.12.1` (보안 패치가 들어간 버전입니다)
+- pnpm 10.34.5 이상 (`corepack enable`로 켜면 루트 `packageManager`에 적힌 10.34.9를 씁니다)
 
 ## 설치
 

@@ -14,12 +14,17 @@ dependencies = [
     "ruamel-yaml>=0.18",
 ]
 
+[project.optional-dependencies]
+# 하위 모듈 `sqlite`(SQLite 저장소)와 `testing`의 규모 측정 도구. 최상위는 이것 없이 동작한다.
+sqlite = ["sqlalchemy>=2.0"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
+    "sqlalchemy>=2.0",
 ]
 
 [build-system]

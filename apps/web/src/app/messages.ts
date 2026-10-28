@@ -97,6 +97,7 @@ export const messages = {
     agents: "에이전트",
     resources: "리소스",
     runs: "실행 기록",
+    memory: "메모리",
     usage: "사용량",
     logs: "로그",
     settings: "설정",

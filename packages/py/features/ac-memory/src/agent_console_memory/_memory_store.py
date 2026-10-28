@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -436,6 +436,35 @@ class InMemoryMemoryStore:
             next_cursor=encode_cursor(end) if end < len(matched) else None,
             total=len(matched),
         )
+
+    def scan_entries(
+        self,
+        *,
+        scopes: Sequence[MemoryScopeRef] | None = None,
+        include_archived: bool = True,
+    ) -> Iterator[MemoryEntry]:
+        """선택 능력 `EntryScanner`: 지우지 않은 항목(본문 포함)을 순서 없이 낸다(부른 때 사본)."""
+        wanted = None if scopes is None else {_scope_key(s) for s in scopes}
+        with self._lock:
+            live = [self._rows[eid].entry for eid in self._live.values()]
+        for entry in live:
+            if entry.archived and not include_archived:
+                continue
+            if wanted is None or _scope_key(entry.scope) in wanted:
+                yield entry
+
+    def count_tags(
+        self,
+        *,
+        scopes: Sequence[MemoryScopeRef] | None = None,
+        include_archived: bool = True,
+    ) -> dict[str, int]:
+        """선택 능력 `TagCounter`: 태그 → 그 태그를 가진 지우지 않은 항목 수."""
+        counts: dict[str, int] = {}
+        for entry in self.scan_entries(scopes=scopes, include_archived=include_archived):
+            for tag in set(entry.tags):
+                counts[tag] = counts.get(tag, 0) + 1
+        return counts
 
     def list_scopes(self, *, kind: str | None = None) -> list[MemoryScopeSummary]:
         """`MemoryStore.list_scopes`."""

@@ -142,10 +142,10 @@ forbidden_modules = ["@all", "!agent_console_architecture", "!agent_console_cont
 allow_indirect_imports = true
 
 [[contracts]]
-name = "memory는 contracts, conditions, secret-rules, registry에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
+name = "memory는 contracts, conditions, secret-rules, registry, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
 type = "forbidden"
 source_modules = ["agent_console_memory"]
-forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry"]
+forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry", "!sqlalchemy"]
 allow_indirect_imports = true
 
 [[contracts]]

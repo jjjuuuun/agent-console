@@ -108,10 +108,10 @@
     "@agent-console/eslint-config": "^0.1.0",
     "@agent-console/tsconfig": "^0.1.0",
     "@types/node": "^26.6.5",
-    "eslint": "^10.12.0",
-    "happy-dom": "^21.0.1",
+    "eslint": "^10.13.0",
+    "happy-dom": "^21.0.4",
     "json-schema-to-typescript": "16.0.0",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }

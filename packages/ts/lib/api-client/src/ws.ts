@@ -12,6 +12,7 @@ import {
   WS_CLOSE_FORBIDDEN,
   WS_CLOSE_UNAUTHORIZED,
 } from "@agent-console/contracts";
+import type { MemoryChanged } from "@agent-console/contracts/memory";
 import { resolveToken, type TokenSource } from "./token";
 
 /** 브라우저 `WebSocket`(또는 `ws` 패키지, 테스트용 가짜)이 만족하는 최소 모양. */
@@ -136,6 +137,11 @@ export interface WsClient {
    * 재접속하면 자동으로 다시 구독한다(재생 없음).
    */
   subscribeLogs(handler: (ingested: LogsIngestedPayload) => void, options?: Pick<SubscribeOptions, "onError">): Subscription;
+  /**
+   * `memory.changed` 토픽(공유 메모리): 항목 하나가 바뀔 때마다 변경 알림(본문 없음)을 준다.
+   * 구독 직후에는 아무것도 보내지 않는다(앱이 REST로 처음 불러온다). 재접속하면 자동으로 다시 구독한다(재생 없음).
+   */
+  subscribeMemory(handler: (changed: MemoryChanged) => void, options?: Pick<SubscribeOptions, "onError">): Subscription;
   /** `subscribe("run:<runId>", …)`의 단축. */
   subscribeRun(runId: string, handler: (event: RunEvent) => void, options?: SubscribeOptions): Subscription;
   /** 서버가 보낸 모든 메시지(중복 제거 전, 원본). `graph:` 토픽 등 전용 핸들러가 없는 메시지용. */
@@ -160,6 +166,8 @@ const MAX_TRACKED_REQUESTS = 200;
 
 /** 로그 수집 알림 토픽 이름(서버와 정확히 일치). */
 const LOGS_TOPIC = "logs";
+/** 공유 메모리 변경 알림 토픽 이름(서버와 정확히 일치). */
+const MEMORY_TOPIC = "memory.changed";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -335,6 +343,8 @@ export function createWsClient(options: WsClientOptions): WsClient {
         return dispatchPlain("interactions", message);
       case "logs.ingested":
         return dispatchPlain(LOGS_TOPIC, message);
+      case "memory.changed":
+        return dispatchPlain(MEMORY_TOPIC, message);
       case "error":
         return handleError(message.payload, message.id ?? undefined);
       default:
@@ -464,6 +474,14 @@ export function createWsClient(options: WsClientOptions): WsClient {
         LOGS_TOPIC,
         (m) => {
           if (m.type === "logs.ingested") handler(m.payload);
+        },
+        opts?.onError,
+      ),
+    subscribeMemory: (handler, opts) =>
+      subscribePlain(
+        MEMORY_TOPIC,
+        (m) => {
+          if (m.type === "memory.changed") handler(m.payload);
         },
         opts?.onError,
       ),

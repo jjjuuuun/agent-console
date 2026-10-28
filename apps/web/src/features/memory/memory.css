@@ -1,0 +1,117 @@
+/*
+ * 메모리 화면 조립 스타일(docs/design/screen-memory.md §2, §15). 색·간격은 tokens.css의 --ac-* 변수만 쓰고,
+ * 표·나무·정보 격자·기록 등 표현 컴포넌트의 모양은 @agent-console/memory-view/styles.css가 가진다.
+ * 범위 종류 이름·도구 이름은 이 파일에 없다.
+ */
+.mem-frame { min-height: 0; word-break: keep-all; overflow-wrap: break-word; }
+.mem-frame :focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.mem-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); overflow-wrap: anywhere; word-break: break-all; }
+.mem-muted { color: var(--ac-text-muted); }
+.mem-help { margin: 0; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.mem-error { display: block; min-height: var(--ac-lh-xs); margin: 0; color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.mem-warn { display: inline-flex; align-items: center; gap: var(--ac-space-1); color: var(--ac-text); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.mem-mark { display: inline-block; flex: none; width: 12px; height: 12px; background: var(--ac-warning); mask: var(--ac-icon-unknown) center / contain no-repeat; -webkit-mask: var(--ac-icon-unknown) center / contain no-repeat; }
+.mem-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.mem-linkbtn { all: unset; color: var(--ac-accent); cursor: pointer; text-decoration: underline; font-size: inherit; line-height: inherit; }
+.mem-linkbtn:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }
+.mem-iconbtn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--ac-control-sm); height: var(--ac-control-sm); padding: 0; border: 0; border-radius: var(--ac-radius-sm); background: transparent; color: var(--ac-text-muted); cursor: pointer; }
+.mem-iconbtn:hover { background: var(--ac-hover-bg); color: var(--ac-text); }
+.mem-input { box-sizing: border-box; height: var(--ac-control-md); width: 100%; min-width: 0; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; }
+.mem-input[aria-invalid="true"] { border-color: var(--ac-danger); }
+.mem-label { display: block; color: var(--ac-text-subtle); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); margin-bottom: var(--ac-space-1); }
+.mem-field { display: flex; flex-direction: column; min-width: 0; }
+.mem-field-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ac-space-3); }
+.mem-field-row > .mem-field { flex: 1 1 140px; }
+.mem-subfield { display: flex; flex-direction: column; gap: var(--ac-space-1); margin-top: var(--ac-space-2); }
+.mem-check { display: inline-flex; align-items: center; gap: var(--ac-space-2); min-height: var(--ac-control-md); }
+.mem-form { display: flex; flex-direction: column; gap: var(--ac-space-3); min-width: 0; }
+.mem-skeleton { display: flex; align-items: center; justify-content: center; min-height: 96px; padding: var(--ac-space-4); }
+
+/* 본문 배치: 범위 나무 | 항목 표 | 상세 */
+.mem-banner { margin: var(--ac-space-2) var(--ac-space-4) 0; }
+.mem-body { flex: 1 1 0; min-height: 0; display: flex; align-items: stretch; margin: var(--ac-space-2) var(--ac-space-4) var(--ac-space-3); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); overflow: hidden; }
+.mem-body > .ac-empty { margin: auto; }
+.mem-tree { flex: none; min-width: 0; overflow: hidden; background: var(--ac-surface-1); }
+.mem-list { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--ac-surface-1); }
+.mem-list[data-busy] .mem-table-wrap { opacity: 0.6; }
+.mem-list[data-busy]::before { content: ""; position: absolute; left: 0; right: 0; top: 32px; height: 2px; background: var(--ac-accent); z-index: 1; }
+.mem-table-wrap { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.mem-table-wrap > .ac-mem-table { flex: 1 1 0; min-height: 0; }
+.mem-detail-pane { flex: none; min-width: 0; display: flex; flex-direction: column; background: var(--ac-surface-1); overflow: hidden; }
+.mem-split { flex: none; width: 1px; background: var(--ac-border); cursor: col-resize; position: relative; }
+.mem-split::after { content: ""; position: absolute; inset: 0 -3px; }
+.mem-split:hover, .mem-split:focus-visible { background: var(--ac-accent); }
+.mem-chips { display: flex; align-items: center; gap: var(--ac-space-3); min-height: 32px; margin: var(--ac-space-1) var(--ac-space-4) 0; }
+.mem-chips > .ac-chiprow { flex: 1 1 0; min-width: 0; }
+.mem-newchanges { all: unset; box-sizing: border-box; display: block; padding: var(--ac-space-1) var(--ac-space-3); background: var(--ac-accent-bg); color: var(--ac-text); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; border-bottom: 1px solid var(--ac-border); }
+.mem-newchanges:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: -2px; }
+
+/* 도구줄 */
+.mem-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ac-space-2) var(--ac-space-3); min-height: 48px; padding: var(--ac-space-1) var(--ac-space-4); }
+.mem-tool { display: inline-flex; align-items: center; gap: var(--ac-space-1); max-width: var(--ac-chip-max-w, 240px); height: var(--ac-control-md); padding: 0 var(--ac-space-3); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; cursor: pointer; }
+.mem-tool:hover { background: var(--ac-hover-bg); }
+.mem-tool[data-active] { border-color: var(--ac-accent); background: var(--ac-accent-bg); }
+.mem-scope-btn > span { min-width: 0; }
+.mem-search { display: flex; align-items: center; gap: var(--ac-space-2); flex: 1 1 200px; max-width: 320px; min-width: 200px; height: var(--ac-control-md); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text-muted); }
+.mem-search:focus-within { border-color: var(--ac-accent); }
+.mem-search-input { flex: 1 1 0; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--ac-text); font: inherit; }
+.mem-toolbar-end { display: inline-flex; align-items: center; gap: var(--ac-space-3); margin-left: auto; }
+.mem-pop { min-width: 240px; max-width: 320px; }
+.mem-pop-tree { width: 320px; max-height: min(480px, 70vh); padding: 0; overflow: auto; }
+.mem-pop-body { display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-2); }
+.mem-pop-note { padding: var(--ac-space-2) var(--ac-space-3); }
+.mem-taglist { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow: auto; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.mem-taglist .ac-choice > span { display: flex; gap: var(--ac-space-2); min-width: 0; }
+
+/* 상세 */
+.mem-detail { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
+.mem-detail-head { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; min-height: 48px; padding: 0 var(--ac-space-3); background: var(--ac-surface-2); border-bottom: 1px solid var(--ac-border); }
+.mem-detail-title { flex: 1 1 0; min-width: 0; margin: 0; font-size: var(--ac-text-md); line-height: var(--ac-lh-md); font-weight: 600; }
+.mem-detail-actions { display: flex; align-items: center; gap: var(--ac-space-1); flex: none; }
+.mem-save-state { display: inline-flex; align-items: center; gap: var(--ac-space-1); flex: none; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.mem-save-state[data-state="failed"] { color: var(--ac-danger); }
+.mem-note { margin: 0; padding: var(--ac-space-1) var(--ac-space-3); background: var(--ac-surface-2); color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); border-bottom: 1px solid var(--ac-border); }
+.mem-bands { display: flex; flex-direction: column; gap: var(--ac-space-1); flex: none; }
+.mem-bands:empty { display: none; }
+.mem-band { border-radius: 0; }
+.mem-meta { flex: none; border-bottom: 1px solid var(--ac-border); padding: 0 var(--ac-space-3); max-height: 46%; overflow: auto; }
+.mem-detail-editor { flex: 1 1 0; min-height: 200px; display: flex; flex-direction: column; }
+.mem-detail-editor > .ac-mem-editor { flex: 1 1 0; min-height: 0; }
+.mem-detail-hint { padding: var(--ac-space-4); margin: 0; }
+.mem-summary { padding: var(--ac-space-4); display: flex; flex-direction: column; gap: var(--ac-space-3); align-items: flex-start; }
+.mem-summary-title { margin: 0; max-width: 100%; font-size: var(--ac-text-lg, 16px); line-height: var(--ac-lh-md); font-weight: 600; }
+.mem-summary-grid { display: grid; gap: var(--ac-space-2); margin: 0; }
+.mem-summary-grid dt { color: var(--ac-text-subtle); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.mem-summary-grid dd { margin: 0; }
+.mem-new { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
+.mem-new-fields { flex: none; display: flex; flex-direction: column; gap: var(--ac-space-3); padding: var(--ac-space-3); border-bottom: 1px solid var(--ac-border); max-height: 52%; overflow: auto; }
+.mem-new-editor { flex: 1 1 0; min-height: 200px; display: flex; flex-direction: column; }
+.mem-new-editor > .ac-mem-editor { flex: 1 1 0; min-height: 0; }
+.mem-benefits { margin: var(--ac-space-3) 0; padding-left: var(--ac-space-5); text-align: left; font-size: var(--ac-text-md); line-height: var(--ac-lh-md); display: flex; flex-direction: column; gap: var(--ac-space-1); }
+
+/* 대화상자 */
+.mem-move-current { margin: 0; display: flex; flex-wrap: wrap; gap: var(--ac-space-2); align-items: baseline; min-width: 0; }
+.mem-history { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--ac-space-3); min-height: 360px; }
+.mem-conflict-line { margin: 0 0 var(--ac-space-2); }
+.mem-conflict-heads { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ac-space-3); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-subtle); }
+.mem-purge-summary { margin: var(--ac-space-3) 0; overflow-wrap: anywhere; }
+.mem-drop { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ac-space-3); min-height: 96px; padding: var(--ac-space-3); border: 2px dashed var(--ac-border-strong); border-radius: var(--ac-radius-md); }
+.mem-drop[data-drag] { background: var(--ac-accent-bg); }
+.mem-file { display: inline-flex; align-items: center; gap: var(--ac-space-2); min-width: 0; max-width: 100%; }
+.mem-file > .mem-mono { max-width: 240px; }
+.mem-policy { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.mem-preview { display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-3); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); }
+.mem-preview[data-stale] { opacity: 0.6; }
+.mem-preview-title { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.mem-counts { display: flex; flex-wrap: wrap; gap: var(--ac-space-1) var(--ac-space-4); font-variant-numeric: tabular-nums; }
+.mem-issue-list { list-style: none; margin: var(--ac-space-2) 0 0; padding: 0; max-height: 160px; overflow: auto; display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.mem-issue-list > li { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.mem-issue-path { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mem-frame * { transition: none !important; animation: none !important; }
+}
+@media (forced-colors: active) {
+  .mem-tool[data-active] { border-color: Highlight; }
+  .mem-split { background: ButtonText; }
+}

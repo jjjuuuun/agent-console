@@ -102,8 +102,8 @@ async def read_purge_request(request: Request) -> LogPurgeRequest:
     """``POST /logs/index/purge`` 본문 → ``LogPurgeRequest``(본문 없음·``null`` = 기본값, dry_run).
 
     Raises:
-        LogQueryError: JSON이 아니거나 모양이 틀림(모르는 키·빈 목록 등). 입력 값은 메시지에
-            싣지 않는다.
+        LogQueryError: JSON이 아니거나 모양이 틀림(모르는 키·빈 목록 등), 또는 범위 없이 실제로
+            지우는데 ``all: true``가 없음. 입력 값은 메시지에 싣지 않는다.
     """
     raw = await request.body()
     if not raw.strip():
@@ -117,11 +117,16 @@ async def read_purge_request(request: Request) -> LogPurgeRequest:
     if not isinstance(data, dict):
         raise LogQueryError("본문은 객체여야 합니다", "body")
     try:
-        return LogPurgeRequest.model_validate(data)
+        req = LogPurgeRequest.model_validate(data)
     except ValidationError as exc:
         first = exc.errors(include_input=False, include_url=False)[0]
         path = ".".join(str(p) for p in first.get("loc", ())) or "body"
         raise LogQueryError(f"{path}: {first.get('msg', '')}", path) from None
+    if req.needs_confirmation:
+        raise LogQueryError(
+            "all: 범위(출처·범주·시각) 없이 색인 전체를 지우려면 all: true가 필요합니다", "all"
+        )
+    return req
 
 
 def filter_params(request: Request) -> dict[str, Any]:
@@ -251,7 +256,9 @@ def build_router(
         """색인 비우기(M-3): 출처·범주·시각 범위의 색인 행을 지운다. 원본 파일은 그대로다.
 
         ``dry_run``은 기본 true(지울 행 수만 센다). ``rescan``(기본 true)이면 범위 출처의 커서도
-        지워 다음 수집이 지금 분류 규칙으로 다시 색인한다. 수집 중이면 끝난 뒤 돈다.
+        지워 다음 수집이 지금 분류 규칙으로 다시 색인한다. 수집 중이면 끝난 뒤 돈다. 범위 없이
+        실제로 지우려면 ``all: true``가 있어야 한다(없으면 422). 색인이 비우기를 지원하지 않으면
+        400 ``logs.purge_unsupported``.
         """
         req = await read_purge_request(request)
         result = await service().purge(

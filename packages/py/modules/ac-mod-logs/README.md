@@ -44,12 +44,14 @@
 
 ### 색인 비우기 `POST /logs/index/purge`(M-3)
 
-본문 `LogPurgeRequest{sources?, categories?, before?, rescan=true, dry_run=true}`(모듈 안 모델, 모르는 키·빈 목록은 422),
+본문 `LogPurgeRequest{sources?, categories?, before?, rescan=true, dry_run=true, all=false}`(모듈 안 모델, 모르는 키·빈 목록은 422),
 응답 `LogPurgeResponse{dry_run, events, usage, cursors, agents}`(지운, dry_run이면 지울 행 수). 두 모델은 계약 밖이라
 OpenAPI에는 인라인 스키마(`routes.PURGE_BODY_SCHEMA`·`PURGE_RESPONSE_SCHEMA`)로만 싣는다. 의미는
 `agent_console_logs.purge_index`다. **dry_run이 기본**이라 `"dry_run": false`를 줘야 지운다. 본문을 생략하면 색인 전체를
 센다. `rescan`이면 범위 출처의 커서도 지워 다음 수집(`POST /logs/scan` 또는 배경 수집)이 지금 분류 규칙으로 다시
-색인한다. 진행 중인 수집이 끝난 뒤 수집 잠금 안에서 돌고, 원본 파일은 건드리지 않는다. 서비스에서는
+색인한다. 진행 중인 수집이 끝난 뒤 수집 잠금 안에서 돌고, 원본 파일은 건드리지 않는다. 범위(출처·범주·시각) 없이
+실제로 지우려면(`"dry_run": false`) `"all": true` 확인이 있어야 한다(없으면 아무것도 지우지 않고 422, `details.path =
+"all"` — CLI `--all`과 같은 안전장치). 색인이 비우기를 지원하지 않으면 400 `logs.purge_unsupported`. 서비스에서는
 `LogsService.purge(...)`(async). 서버 없이 색인 파일을 고치려면 `agent-console logs purge`(apps/cli).
 
 ```bash

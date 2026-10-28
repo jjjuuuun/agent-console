@@ -20,6 +20,7 @@ const TeamListPage = lazyScreen(() => import("../features/teams/TeamListPage"), 
 const SettingsScreen = lazyScreen(() => import("../features/settings/SettingsScreen"), "SettingsScreen");
 const RunsListScreen = lazyScreen(() => import("../features/runs/RunsListScreen"), "RunsListScreen");
 const RunDetailScreen = lazyScreen(() => import("../features/runs/RunDetailScreen"), "RunDetailScreen");
+const MemoryPage = lazyScreen(() => import("../features/memory"), "MemoryPage");
 const UsageScreen = lazyScreen(() => import("../features/usage/UsageScreen"), "UsageScreen");
 const LogsLayout = lazyScreen(() => import("../features/logs"), "LogsLayout");
 const LogsIndexRedirect = lazyScreen(() => import("../features/logs"), "LogsIndexRedirect");
@@ -30,7 +31,7 @@ const DashboardsPage = lazyScreen(() => import("../features/logs"), "DashboardsP
 
 /** 모든 화면 번들을 미리 내려받는다(유휴 시간 선로딩, 테스트에서 첫 이동 지연 제거). */
 export function preloadScreens(): Promise<unknown> {
-  return Promise.all([ChatScreen, AgentsScreen, ResourcesScreen, TeamEditorPage, TeamListPage, SettingsScreen, RunsListScreen, RunDetailScreen, UsageScreen, LogsLayout, SessionsPage, SessionDetailPage, SearchPage, DashboardsPage].map((s) => s.preload()));
+  return Promise.all([ChatScreen, AgentsScreen, ResourcesScreen, TeamEditorPage, TeamListPage, SettingsScreen, RunsListScreen, RunDetailScreen, MemoryPage, UsageScreen, LogsLayout, SessionsPage, SessionDetailPage, SearchPage, DashboardsPage].map((s) => s.preload()));
 }
 
 /** 라우트 id → 그 화면의 하위 라우트(라우트 경로 기준 상대 경로). 새 화면은 여기에 한 줄 등록한다. */
@@ -54,6 +55,7 @@ const SETTINGS_SECTION_RENDERERS: Readonly<Record<string, () => ReactNode>> = {
  * - 1R.23: `teams`(목록 `/teams`, 편집기 `/teams/:id`), `agents`, `resources`
  * - 1R.24: `chat`(`/chat`, `/chat/:conversationId`)
  * - 1R.25: `runs`(`/runs`, `/runs/:id`), `usage`
+ * - 5.7R.18: `memory`(`/memory`, 선택·필터는 주소 인자)
  * - 4R.17: `logs`(`/logs/sessions[/:session]`, `/logs/search`, `/logs/dashboards[/:id]`; `/logs`는 마지막에 본 탭으로 이동)
  */
 export const DEFAULT_PAGES: PageTable = {
@@ -69,6 +71,7 @@ export const DEFAULT_PAGES: PageTable = {
     { index: true, element: <RunsListScreen /> },
     { path: ":id", element: <RunDetailScreen /> },
   ],
+  memory: () => [{ index: true, element: <MemoryPage /> }],
   usage: () => [{ index: true, element: <UsageScreen /> }],
   // 하위 화면 셋은 한 층(수집 알림 구독 하나)을 공유한다. 탭 줄·헤더는 각 화면이 `LogsPageFrame`으로 그린다.
   logs: () => [

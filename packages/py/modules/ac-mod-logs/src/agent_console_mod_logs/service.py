@@ -62,6 +62,7 @@ from agent_console_logs import (
     LogScopeKind,
     LogSource,
     PageCallback,
+    PurgeableLogIndex,
     PurgeResult,
     QueryContext,
     SessionTitleRule,
@@ -76,6 +77,7 @@ from agent_console_logs import (
     read_only_open,
 )
 
+from .errors import LogPurgeUnsupportedError
 from .settings import DEFAULT_MAX_DETAIL_BYTES, DEFAULT_TIMELINE_LIMIT
 
 _log = logging.getLogger("agent_console_mod_logs")
@@ -454,8 +456,10 @@ class LogsService:
 
         Raises:
             ValueError: 빈 목록·빈 이름.
-            TypeError: 색인이 비우기를 지원하지 않는다.
+            LogPurgeUnsupportedError: 색인이 비우기를 지원하지 않는다(``PurgeableLogIndex`` 아님).
         """
+        if not isinstance(self._index, PurgeableLogIndex):
+            raise LogPurgeUnsupportedError(type(self._index).__name__)
         if self._scan_lock is None:
             self._scan_lock = asyncio.Lock()
         async with self._scan_lock:

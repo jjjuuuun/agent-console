@@ -9,6 +9,7 @@ import { DEFINITION_KINDS } from "./kinds";
 export const ROUTE_ROLES = {
   conversations: "conversations",
   runs: "runs",
+  memory: "memory",
   settings: "settings",
   usage: "usage",
   logs: "logs",
