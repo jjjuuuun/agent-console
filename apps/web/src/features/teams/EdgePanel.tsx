@@ -10,7 +10,7 @@ import { teamMessages as t } from "./messages";
 import type { TeamPanelContext } from "./panelContext";
 import { edgeKindOf, edgesOf, issuesOfEdge, latestById, nodeLabel, nodesOf, withEdge } from "./teamsLogic";
 
-/** 포트 표시 이름: 노드 타입 정적 포트의 `label`. 없으면 포트 id 원문(한글을 추측해 만들지 않는다). */
+/** 포트 표시 이름: 노드 타입 정적 포트의 이름 필드. 없으면 포트 id 원문(한글을 추측해 만들지 않는다). */
 function portTitle(types: readonly NodeTypeDescriptor[], typeId: string | undefined, dir: "inputs" | "outputs", port: string): { text: string; raw: boolean } {
   const ports = types.find((d) => d.id === typeId)?.static_ports?.[dir] ?? [];
   const label = ports.find((p) => p.name === port)?.label;
