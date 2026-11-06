@@ -56,3 +56,15 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_mod_chat.ports:CHAT_CONVERSATIONS", reason = "대화 모듈이 연동 모듈에 주는 서비스 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_chat.ports:CHAT_TURN_LAUNCHER", reason = "대화-실행 연동이 턴 실행을 붙이는 모듈 사이 통로(구현은 그 연동 하나)" },
+    { port = "agent_console_mod_chat.ports:CHAT_RUNS", reason = "대화-실행 연동이 턴 Run 조회를 붙이는 모듈 사이 통로" },
+    { port = "agent_console_mod_chat.ports:CHAT_RUN_EVENTS", reason = "대화-실행 연동이 턴 이벤트 조회를 붙이는 모듈 사이 통로" },
+    { port = "agent_console_mod_chat.ports:CHAT_INTERACTIONS", reason = "대화-실행 연동이 턴 상호작용 조회를 붙이는 모듈 사이 통로" },
+    { port = "agent_console_mod_chat.ports:CHAT_TURN_SESSIONS", reason = "대화-실행 연동이 턴 세션 수집·정리 규칙을 주는 모듈 사이 통로" },
+    { port = "agent_console_mod_chat.ports:CHAT_MOVE_HOOKS", reason = "대화 옮기기에 딸린 실행 기록 옮기기를 묶는 모듈 사이 통로(대화-실행 연동이 제공)" },
+]

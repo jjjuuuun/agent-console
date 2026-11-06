@@ -52,3 +52,15 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.definition-store]
+title = "정의 저장소"
+area = "host"
+design_id = "X11"
+summary = "에이전트·팀 구성 등 정의를 저장하는 곳을 다른 구현으로 바꾼다(주입)"
+registration = { kind = "injection" }
+interface = ["agent_console_store:DefinitionStore", "agent_console_store:BaseDefinitionStore"]
+builtin = "none"
+example = { kind = "reference", path = "packages/py/features/ac-store", note = "FileDefinitionStore(파일 YAML)·InMemoryDefinitionStore" }
+guide = "host.md"

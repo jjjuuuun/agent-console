@@ -1,0 +1,14 @@
+# 예제 README 필수 절. 제목(##·###)에 별칭 중 하나가 들어 있으면 그 절이 있다고 본다.
+sections:
+  - id: code
+    title: 최소 코드
+    aliases: [최소 코드, 만드는 법]
+  - id: registration
+    title: 등록
+    aliases: [등록]
+  - id: install
+    title: 설치·제거
+    aliases: [설치·제거]
+  - id: test
+    title: 테스트
+    aliases: [테스트]

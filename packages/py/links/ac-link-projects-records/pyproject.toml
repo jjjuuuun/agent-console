@@ -54,3 +54,10 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_link_projects_records.ports:RECORDS_SPACES", reason = "프로젝트 연동이 공간 이름 → 프로젝트 기록 DB를 기능 모듈에 주는 모듈 사이 통로(구현은 이 연동 하나)" },
+    { port = "agent_console_link_projects_records.ports:RECORDS_SESSIONS", reason = "대화 모듈이 프로젝트 기록 공간의 세션 이어 가기 상태를 받는 모듈 사이 통로. 새 백엔드의 세션 보관은 backend-session-archive 지점" },
+]

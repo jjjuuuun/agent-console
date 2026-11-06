@@ -53,3 +53,14 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.exporter]
+title = "내보내기 형식"
+area = "transfer"
+design_id = "X8"
+summary = "정의를 바깥 형식(파일·폴더)으로 내보내는 형식을 더한다"
+registration = { kind = "entry-point", group = "agent_console_exports:EXPORTERS_GROUP" }
+interface = ["agent_console_exports:Exporter", "agent_console_exports:ExporterFactory", "agent_console_exports:ExportOutput"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-transfer" }
+guide = "transfer.md"

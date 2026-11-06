@@ -1,0 +1,16 @@
+# 문서 영역(영역 페이지 하나 = 파일 하나). 순서 = reference.md 표 순서.
+# 새 영역: 여기 한 줄 + 문서 폴더에 그 파일. 선언의 `area` 값은 이 id 중 하나여야 한다.
+areas:
+  - {id: graph, title: 그래프·실행, file: graph.md}
+  - {id: backends, title: 실행 백엔드, file: backends.md}
+  - {id: resources, title: 리소스, file: resources.md}
+  - {id: usage, title: 사용량, file: usage.md}
+  - {id: logs, title: 로그, file: logs.md}
+  - {id: transfer, title: 가져오기·내보내기, file: transfer.md}
+  - {id: host, title: 서버 호스트·모듈, file: host.md}
+  - {id: projects, title: 프로젝트, file: projects.md}
+  - {id: architecture, title: 구조도, file: architecture.md}
+  - {id: memory, title: 메모리, file: memory.md}
+  - {id: sdd, title: SDD, file: sdd.md}
+  - {id: wiki, title: 위키, file: wiki.md}
+  - {id: web, title: 웹, file: web.md}

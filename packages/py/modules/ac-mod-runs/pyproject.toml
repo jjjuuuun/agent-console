@@ -68,3 +68,43 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.run-scope]
+title = "실행 범위"
+area = "projects"
+design_id = "X26"
+summary = "Run마다 노드 서비스·경고·정의 출처·기록 공간을 더한다(예: 요청한 프로젝트의 공간)"
+registration = { kind = "port", port = "agent_console_mod_runs.ports:RUN_SCOPES" }
+interface = ["agent_console_mod_runs.ports:RunScoper", "agent_console_mod_runs.ports:RunScopeLike", "agent_console_mod_runs.ports:RunDefinitionsScoper"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-link" },
+    { kind = "reference", path = "packages/py/links/ac-link-projects-runs" },
+]
+guide = "projects.md"
+
+[tool.agent-console.extension-points.run-labels]
+title = "실행 라벨"
+area = "host"
+design_id = "X45"
+summary = "Run에 라벨을 달아 다른 기능·스크립트가 자기 실행을 묶고 목록에서 거른다(label= 질의)"
+registration = { kind = "field", name = "Run.labels" }
+interface = ["agent_console_contracts:Run"]
+builtin = "none"
+example = { kind = "snippet" }
+guide = "host.md"
+
+# 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-ports = [
+    { port = "runs.starter", reason = "실행 모듈이 실행 시작·검증·취소를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "runs.reader", reason = "실행 모듈이 Run·NodeRun 조회를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "runs.events", reason = "실행 모듈이 실행 이벤트 조회를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "interactions.port", reason = "실행 모듈이 상호작용 조회·응답을 대화 연동에 주는 통로. 새 상호작용 종류는 interaction-kind 지점" },
+    { port = "runs.move_hook", reason = "실행 모듈이 대화 옮기기에 딸린 Run 옮기기 훅을 대화 연동에 주는 통로" },
+    { port = "runs.preparers", reason = "팀 구성 연동이 실행 전 검사·준비를 실행 모듈에 보태는 모듈 사이 다중 통로" },
+    { port = "runs.services", reason = "연동 모듈이 노드 서비스를 실행 모듈에 보태는 모듈 사이 다중 통로. Run마다 도구를 더하는 확장은 run-scope·agent-tool-provider 지점" },
+    { port = "runs.resume_handlers", reason = "대화 연동이 이어 가기 처리기를 실행 모듈에 보태는 모듈 사이 다중 통로" },
+    { port = "runs.session_archive", reason = "실행 모듈이 백엔드 id → 세션 기록 보관을 프로젝트 기록 연동에 주는 통로. 새 백엔드의 보관 능력은 backend-session-archive 지점" },
+    { port = "secrets.redact", reason = "실행 모듈이 해석한 비밀 값 가리기를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+]

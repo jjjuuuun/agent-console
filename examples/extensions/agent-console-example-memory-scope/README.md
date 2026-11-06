@@ -1,6 +1,6 @@
 # agent-console-example-memory-scope
 
-새 **메모리 범위 종류**(확장 지점 X29)를 플러그인 패키지 하나로 추가하는 예제(R0.3·R10.4·R16.1).
+새 **메모리 범위 종류**를 플러그인 패키지 하나로 추가하는 예제.
 엔진·서버·웹 코드를 고치지 않고, 설치하면 범위 종류 목록(`GET /api/v1/memory/scope-kinds`)에
 `origin: plugin:agent-console-example-memory-scope`로 나타나고, 제거하면 사라진다.
 
@@ -84,10 +84,12 @@ memory:
 
 ## 설치·제거
 
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-memory-scope   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-memory-scope                        # 제거
+uv pip install -e examples/extensions/agent-console-example-memory-scope   # 설치
+uv pip uninstall agent-console-example-memory-scope                        # 제거
 ```
 
 설치·제거 뒤 **서버를 재시작**한다(`mod-memory`가 켜져 있어야 한다).
@@ -106,6 +108,6 @@ uv run --project ../../.. python -m pytest
 ```
 
 설치 없이 돈다(`pythonpath = ["src"]`). 설치·제거는 임시 폴더에 이 패키지의 `dist-info`를 만들었다 지우는 것으로
-흉내 내고(X29 그룹의 발견만 그 폴더로 격리하므로 실제로 설치한 venv에서도 결과가 같다), 서버 시작과 같은 순서
+흉내 내고(범위 종류 entry point 그룹의 발견만 그 폴더로 격리하므로 실제로 설치한 venv에서도 결과가 같다), 서버 시작과 같은 순서
 (호스트 플러그인 로더 → `mod-memory` 조립)로 목록과 범위 계산을 확인한다.
 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).

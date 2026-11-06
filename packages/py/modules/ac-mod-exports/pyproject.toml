@@ -58,3 +58,9 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-ports = [
+    { port = "exports.dependencies", reason = "팀 구성 연동이 함께 내보낼 정의를 계산해 주는 모듈 사이 통로. 새 내보내기 형식은 exporter 지점" },
+]

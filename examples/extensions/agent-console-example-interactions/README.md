@@ -1,7 +1,7 @@
 # agent-console-example-interactions
 
-새 **상호작용 종류**(실행 중 사용자에게 받는 요청, 확장 지점 X15)와 그 종류를 허용하는 **연결 종류**(X2)를
-플러그인 패키지 하나로 추가하는 예제(R0·R10.4). 엔진·서버·웹 코드를 고치지 않는다.
+새 **상호작용 종류**(실행 중 사용자에게 받는 요청)와 그 종류를 허용하는 **연결 종류**를
+플러그인 패키지 하나로 추가하는 예제. 엔진·서버·웹 코드를 고치지 않는다.
 
 - 상호작용 종류 `example.sign_off`(서명 받기): 요청 `{text}`, 응답 `{approved: boolean (필수), note?: string}`.
   화면 힌트 `renderer = "example-sign-off"`는 웹이 모르는 이름이라, 웹은 **응답 스키마로 만든 폼**(승인함 체크박스 + 메모)으로 받는다.
@@ -65,10 +65,12 @@ entry point가 디스크립터 객체를 가리키면 로더(`as_interaction_kin
 
 ## 설치·제거
 
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-interactions   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-interactions                        # 제거
+uv pip install -e examples/extensions/agent-console-example-interactions   # 설치
+uv pip uninstall agent-console-example-interactions                        # 제거
 ```
 
 설치·제거 뒤 **서버를 재시작**한다.

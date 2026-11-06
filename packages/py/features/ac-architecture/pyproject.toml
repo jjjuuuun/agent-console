@@ -48,3 +48,18 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.architecture-profile]
+title = "구조도 프로필"
+area = "architecture"
+design_id = "X23"
+summary = "구조도의 칸·연결·수집 범위 묶음(프로필)을 사용자 설정이나 플러그인으로 더한다"
+registration = { kind = "entry-point", group = "agent_console_architecture:ARCHITECTURE_PROFILES_GROUP" }
+interface = ["agent_console_architecture:ProfileSource", "agent_console_contracts.architecture:ArchitectureProfile"]
+settings = ["architecture.profiles", "architecture.include_defaults"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-architecture" },
+    { kind = "snippet", note = "사용자 설정 architecture.profiles 데이터" },
+]
+guide = "architecture.md"

@@ -1,0 +1,68 @@
+# 예제 확장: 내보내기 형식(X8) + 가져오기 출처(X16) 한 쌍. uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-transfer"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 정의를 JSON 파일 하나로 내보내고 같은 파일에서 가져오기(example-json)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.14,<0.15",
+    "agent-console-exports>=0.1,<0.2",
+    "agent-console-imports>=0.1,<0.2",
+    "agent-console-secret-rules>=0.1,<0.2",
+    "pydantic>=2.9",
+]
+
+# 등록은 이 두 표로 끝난다. 그룹 이름 = agent_console_exports.EXPORTERS_GROUP ·
+# agent_console_imports.IMPORT_SOURCES_GROUP. entry point 이름 = 형식 id(내보내기는 디스크립터 id와 같아야 한다).
+# 값은 공장: 내보내기 = 설치자 옵션 → 형식, 가져오기 = 환경 값(ImportSourceContext) → 출처 목록.
+[project.entry-points."agent_console.exporters"]
+"example-json" = "agent_console_example_transfer:json_bundle_exporter"
+
+[project.entry-points."agent_console.import_sources"]
+"example-json" = "agent_console_example_transfer:json_bundle_sources"
+
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["exporter", "import-source"]
+
+# 개발 의존: 왕복 시험이 실제 정의 저장소(파일 workspace)를 쓴다.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "agent-console-store>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

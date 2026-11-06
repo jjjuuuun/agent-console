@@ -62,3 +62,14 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.condition-operator]
+title = "조건 연산자"
+area = "graph"
+design_id = "X22"
+summary = "조건 연결·조건 규칙에서 쓰는 비교 연산자를 더한다"
+registration = { kind = "entry-point", group = "agent_console_conditions:CONDITION_OPERATORS_GROUP" }
+interface = ["agent_console_conditions:ConditionOperator"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-condition" }
+guide = "graph.md"

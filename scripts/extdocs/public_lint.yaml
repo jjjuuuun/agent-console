@@ -1,0 +1,21 @@
+# 공개 가능 린트: 공개 문서에 내부 참조가 남지 않게 한다. 패턴은 Python 정규식(줄 단위).
+# 코드 블록 안도 검사한다(복사해 쓰는 예에 내부 경로가 섞이지 않게).
+rules:
+  - id: internal-doc-link
+    message: 내부 설계 문서(specs/·docs/design/)를 가리킨다
+    pattern: "(?<![A-Za-z0-9_-])(?:specs/|docs/design/)"
+  - id: internal-config
+    message: 내부 개발 설정(CLAUDE.md·.claude/)을 가리킨다
+    pattern: "CLAUDE\\.md|(?<![A-Za-z0-9_])\\.claude/"
+  - id: design-section
+    message: 설계 절 표기(§)
+    pattern: "§"
+  - id: task-number
+    message: "작업 번호(예: 5.2R.3)"
+    pattern: "(?<![A-Za-z0-9.])\\d+(?:\\.\\d+)?R\\.\\d+"
+  - id: local-path
+    message: 로컬 경로
+    pattern: "/home/|/mnt/[a-z]/|/Users/|\\b[A-Za-z]:\\\\"
+  - id: email
+    message: 이메일 주소
+    pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"

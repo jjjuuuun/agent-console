@@ -69,3 +69,14 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.collector]
+title = "관측 수집기"
+area = "logs"
+design_id = "X7"
+summary = "claude-agent-sdk 실행 중 hook·도구 호출 등을 관측해 실행 이벤트로 남기는 수집기를 더한다"
+registration = { kind = "entry-point", group = "agent_console_backend_claude_sdk.collectors:COLLECTORS_GROUP" }
+interface = ["agent_console_backend_claude_sdk.collectors:ClaudeSdkCollector", "agent_console_backend_claude_sdk.collectors:BaseClaudeSdkCollector", "agent_console_backend_claude_sdk.collectors:CollectorContext"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-collector" }
+guide = "logs.md"

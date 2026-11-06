@@ -119,13 +119,16 @@ typecheck = { sequence = [
 imports = { cmd = "lint-imports", help = "import-linter 의존 방향 계약 (design.md §6.2)" }
 test = { cmd = "pytest", help = "pytest 전체" }
 check = { sequence = [
-    "lint", "typecheck", "imports", "pkg-lint", "schema-help-lint", "test", "examples",
-], help = "lint → typecheck → imports → pkg-lint → schema-help-lint → test → examples" }
+    "lint", "typecheck", "imports", "pkg-lint", "schema-help-lint",
+    "extpoints-check", "extdocs-check", "extdocs-test", "test", "examples",
+], help = "lint → typecheck → imports → pkg-lint → schema-help-lint → extpoints-check → extdocs-check → extdocs-test → test → examples" }
 schema-help-lint = { cmd = "python scripts/schema_help_lint.py --quiet", help = "설정 폼 도움말 린트: 계약·번들 플러그인 스키마의 설명·x-ui.tier·예시(번들 = 오류, 외부 = 경고)" }
 # 확장 예제(워크스페이스 멤버가 아님, P8): 예제 폴더 자기 설정으로 mypy·pytest(설치하지 않고 src 경로).
 examples = { sequence = [
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-architecture" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-architecture" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-backend" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-backend" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-collector" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-collector" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-condition" },
@@ -136,18 +139,28 @@ examples = { sequence = [
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-edges" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-interactions" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-interactions" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-link" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-link" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-log-source" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-log-source" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-memory-scope" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-memory-scope" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-module" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-module" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-nodes" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-nodes" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-secret-provider" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-secret-provider" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-sdd-junit" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-sdd-junit" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-usage" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-usage" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-transfer" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-transfer" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-wiki-check" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-wiki-check" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-wiki-search" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-wiki-search" },
 ], help = "확장 예제(examples/extensions/*)를 각 폴더 설정으로 mypy·pytest" }
 fmt = { sequence = [
     { cmd = "ruff check --fix ." },
@@ -172,6 +185,17 @@ mypy-package = { cmd = "mypy", cwd = "${path}", args = [
     { name = "path", positional = true, required = true, help = "패키지 폴더(저장소 루트 기준, 예: packages/py/modules/ac-mod-runs)" },
 ], help = "패키지 폴더 하나를 그 패키지 설정으로 mypy(캐시는 루트 .mypy_cache)" }
 pkgkit-test = { cmd = "pytest -q -c scripts/pkgkit/pytest.ini scripts/pkgkit", help = "pkgkit 도구 자체 테스트" }
+
+# ---------------------------------------------------------------- extdocs (확장 지점 대조·가이드 생성, scripts/extdocs/README.md)
+# 단계적 적용: 선언·예제·가이드가 다 채워지기 전에는 --allow-missing으로 "아직 없음"만 경고로 낮춘다.
+# extpoints-check의 --allow-missing은 선언 채우기(8R.4b)가 끝나면, extdocs-check의 것은 영역 가이드가 끝나면 뗀다.
+extpoints-check = { cmd = "python scripts/extdocs/extdocs.py --quiet points --allow-missing", help = "확장 지점 대조: 코드(그룹 상수·entry point·모듈 포트) ↔ 패키지 선언·기호·예제·README 절(문서 없이 동작)" }
+extdocs = { cmd = "python scripts/extdocs/extdocs.py generate", help = "확장 가이드 생성: reference.md·영역 페이지 생성 구간·예제 색인 [--scaffold]" }
+extdocs-check = { cmd = "python scripts/extdocs/extdocs.py --quiet docs --allow-missing guides", help = "확장 가이드 드리프트: 재생성 diff 0·손글·링크·공개 가능 린트·doctest·조각 검증(문서 폴더 없으면 건너뜀)" }
+extdocs-test = { sequence = [
+    { cmd = "mypy --strict --warn-unreachable .", cwd = "scripts/extdocs" },
+    { cmd = "pytest -q -c scripts/extdocs/pytest.ini scripts/extdocs" },
+], help = "extdocs 도구 자체 mypy·테스트" }
 
 # ---------------------------------------------------------------- ruff
 [tool.ruff]

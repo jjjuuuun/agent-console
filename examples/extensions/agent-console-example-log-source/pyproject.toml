@@ -21,6 +21,10 @@ dependencies = [
 [project.entry-points."agent_console.log_classifiers"]
 "example.text_log" = "agent_console_example_log_source:TextLogClassifier"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["log-source", "log-classifier"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

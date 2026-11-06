@@ -1,0 +1,65 @@
+# 예제 확장: 위키 검색 방식 하나(X48). uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-wiki-search"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 메모리 안 낱말 역색인 위키 검색 방식(example-inverted)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.14,<0.15",
+    "agent-console-wiki>=0.1,<0.2",
+    "agent-console-secret-rules>=0.1,<0.2",
+]
+
+# 등록은 이 표 하나로 끝난다. 그룹 이름 = agent_console_wiki.SEARCH_INDEX_GROUP,
+# entry point 이름 = 검색 방식 id(= 설정 `wiki.search_backend`). 값은 인자 없는 함수 하나로,
+# 이 함수가 색인 공장 `(root, options) -> WikiSearchIndex`를 돌려준다.
+[project.entry-points."agent_console.wiki_search_indexes"]
+"example-inverted" = "agent_console_example_wiki_search:index_factory"
+
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["wiki-search-index"]
+
+# 개발 의존: 테스트가 위키 서버 모듈(mod-wiki)을 조립해 검색 방식을 고르는 경로를 확인한다.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "httpx>=0.27",
+    "agent-console-mod-wiki>=0.1,<0.2",
+    "agent-console-modkit[host]>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

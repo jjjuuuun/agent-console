@@ -54,3 +54,15 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.usage-source]
+title = "사용량 출처"
+area = "usage"
+design_id = "X13"
+summary = "사용량(창 사용률·토큰)을 읽어 오는 출처를 더한다"
+registration = { kind = "entry-point", group = "agent_console_usage:USAGE_SOURCES_GROUP" }
+interface = ["agent_console_usage:UsageSource", "agent_console_usage:UsageSourceContext", "agent_console_usage:UsageRecord"]
+settings = ["usage.sources"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-usage" }
+guide = "usage.md"

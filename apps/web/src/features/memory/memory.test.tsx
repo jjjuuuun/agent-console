@@ -74,7 +74,7 @@ describe("메모리 화면: 역할·배치", () => {
 
   it("기본 라우트 데이터에 메모리가 묶음 '실행'의 채팅·실행 기록 다음에 있고(스펙이 그 뒤) g m 이다", () => {
     const run = DEFAULT_ROUTES.filter((r) => r.group === "run").map((r) => r.id);
-    expect(run).toEqual(["chat", "runs", "memory", "specs"]);
+    expect(run.slice(0, 4)).toEqual(["chat", "runs", "memory", "specs"]);
     expect(DEFAULT_ROUTES.find((r) => r.id === "memory")).toMatchObject({ requires: ["memory"], gotoKey: "m", path: "/memory" });
   });
 

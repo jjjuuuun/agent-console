@@ -85,3 +85,18 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.agent-tool-provider]
+title = "에이전트 도구 공급자"
+area = "memory"
+design_id = "X30"
+summary = "에이전트 노드 실행마다 도구와 지침을 더한다(노드 서비스로 넘긴다)"
+registration = { kind = "service", name = "agent_console_nodes_core:TOOL_PROVIDERS" }
+interface = ["agent_console_nodes_core:ToolProvider", "agent_console_nodes_core:TOOL_PROVIDERS"]
+builtin = "none"
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-link" },
+    { kind = "contract-tests", symbols = ["agent_console_nodes_core.testing:EchoToolProvider"] },
+]
+guide = "memory.md"

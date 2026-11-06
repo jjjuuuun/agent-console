@@ -244,7 +244,7 @@ class RunScopeLike(Protocol):
 
 @runtime_checkable
 class RunScoper(Protocol):
-    """``runs.scopes`` 항목: 실행 범위(5.2R.34).
+    """``runs.scopes`` 항목: 실행 범위.
 
     실행 시작(일반 실행·이어 가기·대화 턴)마다 검사·사전 점검·준비보다 먼저 부른다. 자식 Run은
     부르지 않는다(부모 서비스를 물려받는다). 예외는 기록하고 그 공급자를 건너뛴다(실행은 범위
@@ -264,7 +264,7 @@ class RunScoper(Protocol):
 
 @runtime_checkable
 class RunDefinitionsScoper(Protocol):
-    """``runs.scopes`` 항목의 **선택** 메서드(5.7R.33y, X26): Run의 정의 조회 출처.
+    """``runs.scopes`` 항목의 **선택** 메서드: Run의 정의 조회 출처(X26).
 
     ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 Run 당시 그래프 조회
     (``graph_of_run``)에서 **그래프를 읽기 전에** 부른다(``scope_run``은 읽은 그래프를 받으므로

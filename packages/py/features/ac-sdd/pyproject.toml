@@ -50,3 +50,26 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.spec-template]
+title = "문서 틀"
+area = "sdd"
+design_id = "X40"
+summary = "스펙을 만들 때 복사할 문서 뼈대와 규칙(정의 종류 spec-template)을 화면·파일·가져오기로 만든다"
+registration = { kind = "definition", name = "spec-template" }
+interface = "agent_console_contracts.sdd:SpecTemplate"
+builtin = "none"
+example = { kind = "snippet", note = "문서 틀 정의 데이터" }
+guide = "sdd.md"
+
+[tool.agent-console.extension-points.sdd-syntax]
+title = "작업 문법·요구 ID·단계 규칙"
+area = "sdd"
+design_id = "X41"
+summary = "문서에서 작업·요구·단계를 읽는 규칙을 데이터로 바꾼다(패키지 기본 → 사용자 설정 → 스펙 규칙)"
+registration = { kind = "data", path = "data/default_syntax.yaml", settings = ["sdd.syntax"], disable = ["sdd.include_default_syntax"] }
+interface = ["agent_console_contracts.sdd:SpecSyntax", "agent_console_sdd:load_default_syntax"]
+builtin = "none"
+example = { kind = "snippet", note = "사용자 설정 sdd.syntax 데이터" }
+guide = "sdd.md"

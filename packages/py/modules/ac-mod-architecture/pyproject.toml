@@ -58,3 +58,19 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_mod_architecture.ports:ARCHITECTURE_CATALOG", reason = "구조도 모듈이 병합한 프로필 카탈로그를 연동 모듈에 주는 통로(구현은 이 모듈 하나). 프로필은 architecture-profile 지점으로 더한다" },
+]
+
+[tool.agent-console.extension-points.architecture-profile-check]
+title = "구조도 프로필 검사 보탬"
+area = "architecture"
+design_id = "X32"
+summary = "구조도 프로필 검사에 경고를 더한다(예: 로그 목록에 없는 경로)"
+registration = { kind = "port", port = "agent_console_mod_architecture.ports:PROFILE_CHECKS" }
+interface = "agent_console_mod_architecture.ports:ProfileCheck"
+example = { kind = "reference", path = "packages/py/links/ac-link-logs-architecture" }
+guide = "architecture.md"

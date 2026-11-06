@@ -122,8 +122,10 @@ class ProfileChecker(Protocol):
 
 @runtime_checkable
 class TaskIssueSource(Protocol):
-    """선택 능력: 작업 이슈(6R.15). 서버 모듈은 작업 목록·스펙 보기를 만들 때 부르고, 돌려준
-    이슈를 `task_key`가 같은 작업의 `ParsedTask.issues`에 더한다(`task_key`가 없는 이슈는 버린다).
+    """선택 능력: 작업 이슈.
+
+    서버 모듈은 작업 목록·스펙 보기를 만들 때 부르고, 돌려준 이슈를 `task_key`가 같은 작업의
+    `ParsedTask.issues`에 더한다(`task_key`가 없는 이슈는 버린다).
 
     예: 실행 결과를 상태에 반영하지 못함 `sdd.status_not_applied`, 자동 진행이 건너뜀
     `sdd.automation_skipped`. 메모리에 둔 상태만 보는 빠른 동기 호출이어야 한다(외부 호출 금지).
@@ -135,8 +137,7 @@ class TaskIssueSource(Protocol):
 
 @runtime_checkable
 class AutomationControl(Protocol):
-    """선택 능력: 자동 진행 상태·멈춤·다시 시작(§6R.18 Q7). 없으면
-    `capabilities.automation=false`."""
+    """선택 능력: 자동 진행 상태·멈춤·다시 시작. 없으면 `capabilities.automation=false`."""
 
     def automation_state(self, ctx: SpecContext) -> AutomationState | None: ...
 

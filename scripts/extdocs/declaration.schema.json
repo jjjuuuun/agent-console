@@ -1,0 +1,381 @@
+{
+  "$defs": {
+    "Example": {
+      "additionalProperties": false,
+      "description": "지점을 보이는 예제 하나.\n\n``package``(설치형 예제 폴더 ``path``), ``reference``(저장소 안 참조 구현 ``path``),\n``contract-tests``(계약 테스트 묶음·대역 기호 ``symbols``), ``snippet``(가이드 절 안의\n검증되는 조각 — 절은 지점의 ``guide``).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "package",
+            "reference",
+            "contract-tests",
+            "snippet"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "한 줄 설명(선택)",
+          "title": "Note"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "저장소 루트 기준 폴더",
+          "title": "Path"
+        },
+        "symbols": {
+          "description": "계약 테스트·대역 기호",
+          "items": {
+            "type": "string"
+          },
+          "title": "Symbols",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Example",
+      "type": "object"
+    },
+    "ExampleMarker": {
+      "additionalProperties": false,
+      "description": "예제 패키지가 자기가 보이는 지점을 알리는 표.",
+      "properties": {
+        "points": {
+          "description": "이 예제가 보이는 지점 slug",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "title": "ExampleMarker",
+      "type": "object"
+    },
+    "ExtensionPoint": {
+      "additionalProperties": false,
+      "description": "확장 지점 선언 하나(표 키 = slug).",
+      "properties": {
+        "area": {
+          "description": "문서 영역 id(areas.yaml)",
+          "minLength": 1,
+          "title": "Area",
+          "type": "string"
+        },
+        "builtin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "기본 구현 목록을 모으는 방법(entry-points·providers·none)",
+          "title": "Builtin"
+        },
+        "design_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "내부 설계 번호(문서에 내지 않음)",
+          "title": "Design Id"
+        },
+        "example": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Example"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/Example"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "예제(하나 이상이어야 완성)",
+          "title": "Example"
+        },
+        "guide": {
+          "anyOf": [
+            {
+              "pattern": "^[^#\\s]+\\.md(?:#[^\\s#]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "가이드 파일#절",
+          "title": "Guide"
+        },
+        "interface": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "공개 기호(모듈:이름, @pkg#이름)",
+          "title": "Interface"
+        },
+        "registration": {
+          "$ref": "#/$defs/Registration"
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "관련 설정 키",
+          "title": "Settings"
+        },
+        "summary": {
+          "description": "한 줄 설명",
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "title": {
+          "description": "사람이 읽는 이름",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "area",
+        "summary",
+        "registration"
+      ],
+      "title": "ExtensionPoint",
+      "type": "object"
+    },
+    "InternalGroup": {
+      "additionalProperties": false,
+      "description": "확장 지점이 아닌 entry point 그룹과 그 사유.",
+      "properties": {
+        "group": {
+          "description": "그룹 이름 또는 그룹 상수 기호",
+          "minLength": 1,
+          "title": "Group",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group",
+        "reason"
+      ],
+      "title": "InternalGroup",
+      "type": "object"
+    },
+    "InternalPort": {
+      "additionalProperties": false,
+      "description": "확장 지점이 아닌 포트(모듈끼리 쓰는 내부 포트)와 그 사유.",
+      "properties": {
+        "port": {
+          "description": "포트 이름 또는 포트 기호(모듈:이름)",
+          "minLength": 1,
+          "title": "Port",
+          "type": "string"
+        },
+        "reason": {
+          "description": "확장 지점이 아닌 이유",
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "port",
+        "reason"
+      ],
+      "title": "InternalPort",
+      "type": "object"
+    },
+    "Registration": {
+      "additionalProperties": true,
+      "description": "등록 방법. ``kind``는 열린 문자열이다(생성기가 모르는 값은 원문 그대로 표에 나온다).\n\n생성기가 아는 ``kind``와 쓰는 필드:\n``entry-point``(``group`` = 그룹 상수 기호 ``모듈:이름`` 또는 그룹 문자열),\n``port``(``port`` = ``PortKey`` 기호, ``multi``), ``data``(``path``·``settings``·``disable``),\n``injection``, ``annotation``·``descriptor``·``registry``(``name``), ``props``(``export``).\n모르는 kind가 쓰는 필드를 위해 그 밖의 키도 받는다.",
+      "properties": {
+        "disable": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "끄는 설정 키",
+          "title": "Disable"
+        },
+        "export": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "TS export(@pkg#이름)",
+          "title": "Export"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "entry point 그룹 상수 기호 또는 그룹 이름",
+          "title": "Group"
+        },
+        "kind": {
+          "description": "등록 종류(열린 문자열)",
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "multi": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "다중 포트 여부(생략하면 코드에서 읽음)",
+          "title": "Multi"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "주석 키·서술자 필드·레지스트리 이름",
+          "title": "Name"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "패키지 데이터 파일(패키지 폴더 기준)",
+          "title": "Path"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "포트 기호(모듈:이름)",
+          "title": "Port"
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "덮어쓰는 설정 키",
+          "title": "Settings"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Registration",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {
+    "$ref": "#/$defs/ExtensionPoint"
+  },
+  "description": "선언 표 전체: slug → 선언. 공용 JSON Schema의 최상위.",
+  "propertyNames": {
+    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+  },
+  "title": "Agent Console extension point declarations",
+  "type": "object"
+}

@@ -53,3 +53,17 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.resource-type]
+title = "리소스 종류"
+area = "resources"
+design_id = "X14"
+summary = "에이전트에 붙이는 리소스 종류를 더한다(코드 플러그인 또는 workspace의 선언형 YAML)"
+registration = { kind = "entry-point", group = "agent_console_resources:RESOURCE_TYPES_GROUP" }
+interface = ["agent_console_resources:ResourceType", "agent_console_resources:SchemaResourceType", "agent_console_resources:DeclarativeTypeSpec"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-link" },
+    { kind = "reference", path = "examples/resource-types", note = "코드 없는 선언형 종류 prompt-snippet.yaml(workspace resource-types 폴더)" },
+]
+guide = "resources.md"

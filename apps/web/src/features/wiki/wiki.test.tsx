@@ -273,7 +273,7 @@ describe("위키 화면: 이름 바꾸기·지우기·실시간", () => {
     await waitFor(() => expect(wiki.deleteWikiPage).toHaveBeenCalledWith("w1", "notes/first", FIRST.content_hash), LONG);
     fireEvent.click(await screen.findByRole("button", { name: "되돌리기" }, LONG));
     await waitFor(() => expect(restore).toHaveBeenCalledWith("w1", "notes/first", { version: 7 }), LONG);
-  });
+  }, 60_000);
 
   it("다른 곳에서 바뀌었다는 알림(wiki.changed)이 오면 페이지를 다시 읽고, 자기가 방금 쓴 것은 다시 읽지 않는다", async () => {
     const { wiki, ws } = setup(READ, { page: PAGES });

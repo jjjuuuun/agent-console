@@ -59,3 +59,24 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.log-source]
+title = "로그 출처"
+area = "logs"
+design_id = "X5"
+summary = "새 로그 형식(파일·폴더)을 읽어 색인에 넣는 출처를 더한다"
+registration = { kind = "entry-point", group = "agent_console_logs:LOG_SOURCES_GROUP" }
+interface = ["agent_console_logs:LogSource", "agent_console_logs:LogSourceContext", "agent_console_logs:RawRecord"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-log-source" }
+guide = "logs.md"
+
+[tool.agent-console.extension-points.log-classifier]
+title = "로그 분류기"
+area = "logs"
+design_id = "X6"
+summary = "출처가 읽은 원본 행을 정규화된 로그 이벤트로 바꾸는 분류기를 더한다"
+registration = { kind = "entry-point", group = "agent_console_logs:LOG_CLASSIFIERS_GROUP" }
+interface = ["agent_console_logs:LogClassifier", "agent_console_logs:ClassifyContext", "agent_console_logs:LogEventDraft"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-log-source" }
+guide = "logs.md"

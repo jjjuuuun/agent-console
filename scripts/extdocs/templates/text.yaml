@@ -1,0 +1,31 @@
+# 생성 파일의 고정 문구(제목·머리말·표 머리). 바꾸려면 이 파일만 고친다.
+generated_notice: "<!-- 이 파일은 `uv run poe extdocs`가 만든다. 직접 고치지 않는다. -->"
+reference_title: "확장 지점 참조"
+reference_intro: "패키지 선언과 코드에서 만든 표다. 설명은 영역 페이지에 있다."
+examples_title: "확장 예제"
+examples_intro: "예제 하나가 확장 지점 하나 이상을 보인다. 설치·제거·테스트는 각 README를 본다."
+todo_text: "<!-- extdocs:todo 이 절의 설명(언제 쓰나·최소 모양·규칙·흔한 실수)을 쓰고 이 줄을 지운다 -->"
+headings:
+  points: "확장 지점"
+  groups: "entry point 그룹"
+  ports: "포트"
+  modules: "서버 모듈"
+  contracts: "계약 하위 모듈 버전"
+  events: "알려진 RunEvent type"
+  facts_register: "등록"
+  facts_interface: "인터페이스"
+  facts_settings: "설정"
+  facts_builtin: "기본 구현"
+  facts_example: "예제"
+  facts_disable: "끄기·제거"
+columns:
+  points: [영역, slug, 제목, 등록 종류, 등록 이름, 기본 구현 수, 예제 종류]
+  groups: [그룹, 정의 상수, 기본 등록]
+  ports: [포트, 제공, 필수 소비, 선택 소비, 다중, 내부 사유]
+  modules: [id, 종류, web_roles, 계약 하위 모듈, 계보(범위)]
+  contracts: [하위 모듈, 버전]
+  examples: [예제, 언어, 보이는 지점, 설치]
+labels:
+  "yes": 예
+  "no": 아니오
+  none: "—"

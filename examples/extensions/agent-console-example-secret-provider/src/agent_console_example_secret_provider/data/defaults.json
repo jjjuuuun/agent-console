@@ -1,0 +1,8 @@
+{
+  "path_env": "AGENT_CONSOLE_EXAMPLE_SECRETS_FILE",
+  "comment_prefixes": ["#"],
+  "name_pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$",
+  "strip_quotes": true,
+  "upper_fallback": true,
+  "max_file_bytes": 65536
+}

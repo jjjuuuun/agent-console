@@ -1,7 +1,6 @@
 # agent-console-example-wiki-check
 
-위키 페이지를 쓸 때 **코드가 필요한 검사**를 플러그인 패키지 하나로 더하는 예제이자 작성 가이드
-(확장 지점 X50 "쓰기 검사 보탬", R10.4, design §7R.5·`[7R.8 구현]`·`[7R.12 구현]`·`[7R.16 구현]`).
+위키 페이지를 쓸 때 **코드가 필요한 검사**를 플러그인 패키지 하나로 더하는 예제이자 작성 가이드.
 엔진·서버·웹 코드를 고치지 않는다. 설치하고 사용자 설정에서 켜면 위키 쓰기(화면·REST·에이전트 도구)에
 경고나 거부가 걸리고, 켜지 않거나 제거하면 아무 영향이 없다.
 
@@ -95,7 +94,7 @@ class NoTodoInDecisions:
 
 서버 시작 때 호스트 플러그인 로더(`mod-wiki`의 `agent_console.host_plugin_loaders: wiki`)가 이 그룹을 읽는다.
 **설치만으로는 쓰이지 않는다** — 사용자 설정에 적어야 쓰기 판단에 들어간다(다른 모듈이 포트 `wiki.write_checks`로
-주는 검사는 늘 켜지고 `enabled: false`로 끈다, design `[7R.12 구현]`). 같은 클래스를 다른 id로 쓰려면
+주는 검사는 늘 켜지고 `enabled: false`로 끈다). 같은 클래스를 다른 id로 쓰려면
 `lambda options: FrontMatterKeysCheck(options, check_id="team.status")` 같은 함수를 그 이름의 entry point로 등록한다.
 
 ## 설정 예
@@ -130,12 +129,12 @@ wiki:
 
 ## 설치·제거
 
-저장소 루트에서 실행한다. WSL(`/mnt/c`)에서는 환경변수를 붙인다(CLAUDE.md "고정·환경 메모").
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-wiki-check   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-wiki-check                        # 제거
+uv pip install -e examples/extensions/agent-console-example-wiki-check   # 설치
+uv pip uninstall agent-console-example-wiki-check                        # 제거
 ```
 
 entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.

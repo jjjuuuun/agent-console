@@ -270,7 +270,9 @@ class Reply:
 
 @runtime_checkable
 class EdgeType(Protocol):
-    """엣지 타입(X2). 엔진은 디스크립터 `scheduling`에 따라 `activates`를 부른다(design §R3.1).
+    """엣지 타입(X2). 엔진은 디스크립터 `scheduling`에 따라 `activates`를 부른다.
+
+    스케줄 종류별 동작(design §R3.1):
 
     - `flow`: 소스 노드가 끝나면(succeeded·failed) 부른다.
       `Activation`이면 통과(타깃 입력 포트에 값), None이면 이 경로는 죽는다(dead-path).
@@ -299,10 +301,11 @@ class EdgeValidationContext:
 
 @runtime_checkable
 class EdgeValidator(Protocol):
-    """선택 능력(X2): 엣지 config의 의미 검증(스키마 검사 뒤, 저장 전 검사, design §5R.8).
+    """선택 능력(X2): 엣지 config의 의미 검증(스키마 검사 뒤, 저장 전 검사).
 
     이슈의 `path`는 엣지 config 기준이다. `edge_id`를 비우면 엔진이 채운다. config가 스키마에
     맞지 않을 수도 있으므로(스키마 이슈는 따로 난다) 해석에 실패하면 빈 목록을 돌려준다.
+    (design §5R.8)
     """
 
     def validate_edge(self, edge: EdgeSpec, ctx: EdgeValidationContext) -> list[Issue]: ...

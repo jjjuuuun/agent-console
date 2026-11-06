@@ -19,6 +19,10 @@ dependencies = [
 [project.entry-points."agent_console.sdd_verification_sources"]
 "example.junit" = "agent_console_example_sdd_junit:JUnitVerificationSource"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["sdd-verification-source"]
+
 # 개발 의존: 테스트가 스펙 서버 모듈(mod-sdd)을 조립해 추적 표에 결과가 들어가는지 확인한다.
 [dependency-groups]
 dev = [

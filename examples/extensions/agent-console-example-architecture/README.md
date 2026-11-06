@@ -1,6 +1,6 @@
 # agent-console-example-architecture
 
-새 **구조도 프로필**(확장 지점 X23)을 플러그인 패키지 하나로 추가하는 예제(R0.3·R10.4).
+새 **구조도 프로필**을 플러그인 패키지 하나로 추가하는 예제.
 엔진·서버·웹 코드를 고치지 않고, 설치하면 구조도 프로필 목록(`GET /api/v1/architecture/profiles`)에
 `origin: plugin:agent-console-example-architecture`로 나타나고, 제거하면 사라진다.
 
@@ -8,7 +8,7 @@
 - 내용은 코드가 아니라 데이터 파일 `src/agent_console_example_architecture/data/example_architecture.yaml`이다.
   형식은 워크스페이스 설정 `architecture.profiles`와 같다(계약 `ArchitectureProfile`).
 - 칸 id·범주 값은 예제가 정한 임의 값이다. 사용자 팀 구성이나 기본 프로필이 아니다.
-- 로그 출처 플러그인(X5)이 자기 형식용 프로필을 함께 낼 때도 같은 entry point를 쓴다.
+- 로그 출처 플러그인이 자기 형식용 프로필을 함께 낼 때도 같은 entry point를 쓴다.
 
 이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
 
@@ -73,10 +73,12 @@ architecture:
 
 ## 설치·제거
 
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-architecture   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-architecture                        # 제거
+uv pip install -e examples/extensions/agent-console-example-architecture   # 설치
+uv pip uninstall agent-console-example-architecture                        # 제거
 ```
 
 설치·제거 뒤 **서버를 재시작**한다.

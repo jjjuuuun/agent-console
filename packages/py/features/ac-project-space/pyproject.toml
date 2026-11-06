@@ -46,3 +46,26 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.portable-definition-kind]
+title = "프로젝트 공간에 들어가는 정의 종류"
+area = "projects"
+design_id = "X36"
+summary = "정의 종류를 등록할 때 프로젝트 폴더 사본 공간에 둘 수 있는지 정한다"
+registration = { kind = "descriptor", name = "DefinitionKind.portable" }
+interface = "agent_console_store:DefinitionKind"
+builtin = "none"
+example = { kind = "snippet", note = "DefinitionKind(portable=..., library=...)" }
+guide = "projects.md"
+
+[tool.agent-console.extension-points.project-space-layout]
+title = "프로젝트 폴더 배치·.gitignore 틀"
+area = "projects"
+design_id = "X37"
+summary = "프로젝트 폴더 안 설정 폴더 이름과 .gitignore 기본 틀을 데이터로 바꾼다"
+registration = { kind = "data", path = "data/gitignore.template", settings = ["mod-projects.config_dir"] }
+interface = "agent_console_project_space:default_gitignore_template"
+builtin = "none"
+example = { kind = "snippet", note = "설치자 설정 mod-projects.config_dir" }
+guide = "projects.md"

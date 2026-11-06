@@ -18,6 +18,10 @@ dependencies = [
 [project.entry-points."agent_console.architecture_profiles"]
 "example.architecture" = "agent_console_example_architecture:profiles"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["architecture-profile"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

@@ -1,0 +1,7 @@
+{
+  "tokenizer": "whitespace",
+  "tokenizers": {
+    "whitespace": "\\S+",
+    "word": "\\w+"
+  }
+}

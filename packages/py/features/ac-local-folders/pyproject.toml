@@ -42,3 +42,15 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.folder-browse-defaults]
+title = "폴더 탐색 시작 위치·숨김 이름"
+area = "projects"
+design_id = "X34"
+summary = "폴더 탐색 창의 시작 위치와 숨기는 이름을 데이터로 바꾼다"
+registration = { kind = "data", path = "data/browse_defaults.json", settings = ["mod-projects.browse_roots"] }
+interface = "agent_console_local_folders:load_browse_defaults"
+builtin = "none"
+example = { kind = "snippet", note = "설치자 설정 mod-projects.browse_roots" }
+guide = "projects.md"

@@ -120,10 +120,10 @@ class DelegationContribution(BaseModel):
 
 @runtime_checkable
 class ComposableDelegation(DelegationStrategy, Protocol):
-    """X12 선택 프로토콜: 다른 방식과 한 위임자에서 합쳐 실행할 수 있는 위임 방식(design §5R.3).
+    """선택 프로토콜: 다른 방식과 한 위임자에서 합쳐 실행할 수 있는 위임 방식.
 
     디스크립터 `composable`이 참인 방식이 구현한다. `contribute`는 백엔드를 부르지 않고 요청에 더할
-    것만 만든다. `run`은 이 방식 하나만 쓸 때 부른다.
+    것만 만든다. `run`은 이 방식 하나만 쓸 때 부른다(X12 선택 프로토콜, design §5R.3).
     """
 
     def contribute(self, plan: DelegationPlan, ctx: NodeContext) -> DelegationContribution: ...

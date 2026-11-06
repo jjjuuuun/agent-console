@@ -1,0 +1,22 @@
+{
+  "title": "JSON 묶음 파일(예제)",
+  "description": "정의를 JSON 파일 하나로 옮긴다. 비밀은 참조(secret://)로만 담긴다.",
+  "file_name": "agent-console-bundle.json",
+  "format_name": "agent-console-example-bundle",
+  "format_version": 1,
+  "fields": {
+    "format": "format",
+    "version": "version",
+    "items": "definitions",
+    "kind": "kind",
+    "id": "id",
+    "document": "document",
+    "files": "files",
+    "text": "text",
+    "base64": "base64"
+  },
+  "name_field": "name",
+  "type_field": "type",
+  "drop_fields": [],
+  "max_file_bytes": 10485760
+}

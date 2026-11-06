@@ -18,6 +18,10 @@ dependencies = [
 [project.entry-points."agent_console.memory_scope_kinds"]
 "example.memory_scope" = "agent_console_example_memory_scope:scope_kinds"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["memory-scope-kind"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

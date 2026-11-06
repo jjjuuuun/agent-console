@@ -1,6 +1,6 @@
 # agent-console-example-condition
 
-새 **조건 연산자**(확장 지점 X22)를 플러그인 패키지 하나로 추가하는 예제(R0·R10.4, design §5R.14).
+새 **조건 연산자**를 플러그인 패키지 하나로 추가하는 예제.
 엔진·서버·웹 코드를 고치지 않고, 설치하면 연산자 목록(`GET /api/v1/condition-operators`)과 편집기 조건 위젯의
 연산자 선택지에 나타나고, 조건 연결(`when`)·조건을 읽는 다른 확장이 그대로 쓴다. 제거하면 사라진다.
 
@@ -78,12 +78,12 @@ edges:
 
 ## 설치·제거
 
-저장소 루트에서 실행한다. WSL(`/mnt/c`)에서는 환경변수를 붙인다(CLAUDE.md "고정·환경 메모").
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-condition   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-condition                        # 제거
+uv pip install -e examples/extensions/agent-console-example-condition   # 설치
+uv pip uninstall agent-console-example-condition                        # 제거
 ```
 
 entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.

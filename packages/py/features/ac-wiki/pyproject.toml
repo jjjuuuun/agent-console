@@ -57,3 +57,51 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.wiki-rules]
+title = "위키 규칙"
+area = "wiki"
+design_id = "X46"
+summary = "에이전트 지침·쓰기·점검 규칙·페이지 틀·문법(정의 종류 wiki-rules)을 화면·파일·가져오기로 만든다"
+registration = { kind = "definition", name = "wiki-rules" }
+interface = "agent_console_contracts.wiki:WikiRulesDefinition"
+builtin = "none"
+example = { kind = "snippet", note = "위키 규칙 정의 데이터" }
+guide = "wiki.md"
+
+[tool.agent-console.extension-points.wiki-syntax]
+title = "위키 문법"
+area = "wiki"
+design_id = "X47"
+summary = "링크 패턴·머리말 역할·제목 출처·확장자·링크 스킴·기본 점검 심각도를 데이터로 바꾼다"
+registration = { kind = "data", path = "data/default_syntax.yaml", settings = ["wiki.syntax"], disable = ["wiki.include_default_syntax"] }
+interface = ["agent_console_contracts.wiki:WikiSyntax", "agent_console_wiki:load_default_syntax"]
+builtin = "none"
+example = { kind = "snippet", note = "사용자 설정 wiki.syntax 데이터" }
+guide = "wiki.md"
+
+[tool.agent-console.extension-points.wiki-search-index]
+title = "위키 검색 색인"
+area = "wiki"
+design_id = "X48"
+summary = "위키 검색을 다른 색인 구현으로 바꾼다"
+registration = { kind = "entry-point", group = "agent_console_wiki:SEARCH_INDEX_GROUP" }
+interface = "agent_console_wiki:WikiSearchIndex"
+settings = ["wiki.search_backend", "mod-wiki.search.backend"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-wiki-search" },
+    { kind = "contract-tests", symbols = ["agent_console_wiki.testing:WikiSearchContractTests"] },
+]
+guide = "wiki.md"
+
+[tool.agent-console.extension-points.wiki-history]
+title = "페이지 기록 저장소"
+area = "wiki"
+design_id = "X49"
+summary = "위키 페이지 기록을 다른 저장소에 둔다"
+registration = { kind = "injection" }
+interface = "agent_console_wiki:WikiHistory"
+builtin = "none"
+example = { kind = "contract-tests", symbols = ["agent_console_wiki.testing:WikiHistoryContractTests"] }
+guide = "wiki.md"

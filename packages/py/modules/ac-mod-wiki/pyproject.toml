@@ -60,3 +60,22 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_mod_wiki.ports:WIKI_SERVICE", reason = "위키 모듈이 연동 모듈에 주는 서비스 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_wiki.ports:WIKI_SPACES", reason = "프로젝트 연동이 공간 이름 → 위키 저장 공간을 주는 모듈 사이 통로" },
+    { port = "agent_console_mod_wiki.ports:WIKI_INTEGRATIONS", reason = "저장소 연동 모듈이 켜 주는 능력 이름을 알리는 모듈 사이 통로(능력 이름은 위키 모듈이 아는 것만 뜻이 있다)" },
+]
+
+[tool.agent-console.extension-points.wiki-write-check]
+title = "위키 쓰기 검사 보탬"
+area = "wiki"
+design_id = "X50"
+summary = "위키 페이지를 쓸 때 경고·거부를 내는 검사를 플러그인이나 연동 모듈로 더한다"
+registration = { kind = "entry-point", group = "agent_console_mod_wiki:WRITE_CHECKS_GROUP", port = "agent_console_mod_wiki.ports:WIKI_WRITE_CHECKS" }
+interface = "agent_console_wiki:WikiWriteCheck"
+settings = ["wiki.write_checks"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-wiki-check" }
+guide = "wiki.md"

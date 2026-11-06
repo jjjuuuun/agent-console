@@ -47,3 +47,79 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.node-type]
+title = "노드 종류"
+area = "graph"
+design_id = "X1"
+summary = "팀 구성 그래프에 새 노드 종류를 더한다(설정 스키마·실행 동작)"
+registration = { kind = "entry-point", group = "agent_console_runtime:NODE_TYPES_GROUP" }
+interface = ["agent_console_runtime:NodeType", "agent_console_runtime:NodeContext", "agent_console_runtime:NodeResult"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-nodes" }
+guide = "graph.md"
+
+[tool.agent-console.extension-points.edge-type]
+title = "연결 종류"
+area = "graph"
+design_id = "X2"
+summary = "노드 사이 연결에 새 종류를 더한다(활성화 규칙·사이클·검증)"
+registration = { kind = "entry-point", group = "agent_console_runtime:EDGE_TYPES_GROUP" }
+interface = ["agent_console_runtime:EdgeType", "agent_console_runtime:EdgeValidator"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-edges" }
+guide = "graph.md"
+
+[tool.agent-console.extension-points.delegation-strategy]
+title = "위임 방식"
+area = "graph"
+design_id = "X12"
+summary = "에이전트가 다른 에이전트에 일을 넘기는 방식을 더한다"
+registration = { kind = "entry-point", group = "agent_console_runtime:DELEGATION_STRATEGIES_GROUP" }
+interface = ["agent_console_runtime:DelegationStrategy", "agent_console_runtime:ComposableDelegation", "agent_console_runtime:DelegationPlan"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-delegation" }
+guide = "graph.md"
+
+[tool.agent-console.extension-points.interaction-kind]
+title = "상호작용 종류"
+area = "graph"
+design_id = "X15"
+summary = "실행 중 사람에게 묻는 상호작용(질문·승인 등)의 종류를 더한다"
+registration = { kind = "entry-point", group = "agent_console_runtime:INTERACTION_KINDS_GROUP" }
+interface = ["agent_console_runtime:InteractionKind", "agent_console_runtime:StaticInteractionKind"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-interactions" }
+guide = "graph.md"
+
+[tool.agent-console.extension-points.execution-backend]
+title = "실행 백엔드"
+area = "backends"
+design_id = "X3"
+summary = "에이전트 노드를 실제로 실행하는 백엔드(모델·CLI·대본)를 더한다"
+registration = { kind = "entry-point", group = "agent_console_runtime:BACKENDS_GROUP" }
+interface = ["agent_console_runtime:ExecutionBackend", "agent_console_runtime:ConfigurableBackend", "agent_console_runtime:AgentRequest", "agent_console_runtime:AgentResult"]
+settings = ["modules.options.mod-runs.backends"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-backend" }
+guide = "backends.md"
+
+[tool.agent-console.extension-points.backend-session-archive]
+title = "백엔드 세션 기록 보관·복원"
+area = "backends"
+design_id = "X38"
+summary = "백엔드가 세션 기록 파일을 보관·복원하는 선택 능력을 갖춰 이어 가기를 프로젝트 기록에 붙인다"
+registration = { kind = "capability", name = "session_archive" }
+interface = ["agent_console_runtime:SessionArchiveCapable", "agent_console_runtime:SessionArchive", "agent_console_runtime:ArchiveFile"]
+builtin = "none"
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-backend" },
+    { kind = "reference", path = "packages/py/features/ac-backend-claude-sdk", note = "JsonlFolderSessionArchive를 쓰는 기본 백엔드" },
+]
+guide = "backends.md"
+
+[tool.agent-console.extension-points.secret-provider]
+title = "비밀 값 공급자"
+area = "backends"
+design_id = "X10"
+summary = "환경변수 다음에 비밀 값을 찾을 곳(파일·비밀 저장소)을 더한다"
+registration = { kind = "entry-point", group = "agent_console_runtime:SECRET_PROVIDERS_GROUP" }
+interface = ["agent_console_runtime:SecretProvider"]
+example = { kind = "package", path = "examples/extensions/agent-console-example-secret-provider" }
+guide = "backends.md"

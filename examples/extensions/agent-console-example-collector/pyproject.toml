@@ -18,6 +18,10 @@ dependencies = [
 [project.entry-points."agent_console.collectors"]
 "example.tool_count" = "agent_console_example_collector:ToolCountCollector"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["collector"]
+
 # 개발 의존: 테스트가 공개 계약(AgentSettings 등)과 실행 요청(agent_console_runtime)을 직접 만든다.
 [dependency-groups]
 dev = [

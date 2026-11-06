@@ -59,3 +59,42 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.log-scope-kind]
+title = "로그 범위 종류"
+area = "logs"
+design_id = "X27"
+summary = "로그 조회 범위 scope=<종류>:<값>의 종류를 더한다(값 → 세션·Run 묶음)"
+registration = { kind = "port", port = "agent_console_mod_logs.ports:LOG_SCOPE_KINDS" }
+interface = "agent_console_logs:LogScopeKind"
+example = { kind = "reference", path = "packages/py/links/ac-link-logs-runs" }
+guide = "logs.md"
+
+[tool.agent-console.extension-points.log-filter-predicate]
+title = "로그 필터 확장"
+area = "logs"
+design_id = "X28"
+summary = "로그 조회에 새 필터 이름 묶음과 이벤트 판정을 더한다"
+registration = { kind = "port", port = "agent_console_mod_logs.ports:LOG_FILTER_PREDICATES" }
+interface = "agent_console_logs:LogFilterExtension"
+example = { kind = "reference", path = "packages/py/links/ac-link-logs-architecture" }
+guide = "logs.md"
+
+[tool.agent-console.extension-points.runtime-log-source]
+title = "런타임 로그 출처"
+area = "logs"
+design_id = "X5r"
+summary = "다른 모듈의 데이터(예: 플랫폼 실행 기록)를 로그 색인에 넣는 출처를 연동 모듈이 준다"
+registration = { kind = "port", port = "agent_console_mod_logs.ports:LOG_SOURCES" }
+interface = ["agent_console_mod_logs.ports:RuntimeLogSource"]
+example = { kind = "reference", path = "packages/py/links/ac-link-logs-runs" }
+guide = "logs.md"
+
+# 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-ports = [
+    { port = "logs.query", reason = "로그 모듈이 색인 읽기를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "logs.ingest", reason = "로그 모듈이 런타임 출처 수집·수집 예약을 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "logs.source_defaults", reason = "연동 모듈이 자기 출처의 기본 켜기 값을 로그 모듈에 알리는 모듈 사이 통로. 새 출처는 log-source·runtime-log-source 지점" },
+]

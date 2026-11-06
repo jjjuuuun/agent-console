@@ -1,0 +1,73 @@
+# 예제 확장: 연동 모듈 하나 — 실행 범위(`runs.scopes`) 항목으로 Run마다 에이전트 도구 공급자.
+# uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-link"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 실행 중인 에이전트에게 노트 읽기 도구를 주는 연동 모듈(link-example-notes-runs)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.14,<0.15",
+    "agent-console-modkit>=0.1,<0.2",
+    "agent-console-nodes-core>=0.1,<0.2",
+    "agent-console-resources>=0.1,<0.2",
+    "agent-console-runtime>=0.1,<0.2",
+    "pydantic>=2.9",
+]
+
+# 연동 모듈. 그룹 = agent_console_modkit.MODULES_GROUP, 이름 = 모듈 id.
+[project.entry-points."agent_console.server_modules"]
+link-example-notes-runs = "agent_console_example_link.module:module"
+
+# 리소스 종류(에이전트에 붙이면 도구를 받는다). 이름 = 레지스트리 key = 디스크립터 id(패키지 데이터).
+[project.entry-points."agent_console.resource_types"]
+example-notes = "agent_console_example_link.resource_type:NotesResourceType"
+
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["run-scope", "agent-tool-provider", "resource-type"]
+
+# 개발 의존: 엔진 시험(fake 백엔드)·테스트 호스트 조립(기능 모듈)·통합 서버(agent-console-server).
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "httpx>=0.27",
+    "agent-console-modkit[host]>=0.1,<0.2",
+    "agent-console-backend-fake-agent>=0.1,<0.2",
+    "agent-console-server>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+# `tests`는 시험 도우미(`notes_helpers`). 셋째 경로는 이웃 예제(노트 모듈)다. 저장소 밖에 이 폴더만 복사하면 없고, 그 모듈을 쓰는 시험만 건너뛴다.
+pythonpath = ["src", "tests", "../agent-console-example-module/src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

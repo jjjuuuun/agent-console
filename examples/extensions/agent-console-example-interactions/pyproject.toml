@@ -21,6 +21,10 @@ dependencies = [
 [project.entry-points."agent_console.edge_types"]
 "example.ask_sign_off" = "agent_console_example_interactions:AskSignOffEdge"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["interaction-kind"]
+
 # 개발 의존: 테스트가 팀 의미 계산(agent_console_teams)으로 등록 결과를 확인한다.
 [dependency-groups]
 dev = [

@@ -18,6 +18,10 @@ dependencies = [
 [project.entry-points."agent_console.delegation_strategies"]
 "example.round_robin" = "agent_console_example_delegation:RoundRobinDelegation"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["delegation-strategy"]
+
 # 개발 의존: 테스트가 기본 노드(에이전트 노드·위임 연결)·fake 백엔드·팀 검증으로 끝까지 돌려 본다.
 [dependency-groups]
 dev = [

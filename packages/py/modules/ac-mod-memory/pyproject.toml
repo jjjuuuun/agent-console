@@ -60,3 +60,10 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_mod_memory.ports:MEMORY_SERVICE", reason = "메모리 모듈이 연동 모듈(실행 도구)에 주는 서비스 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_memory.ports:MEMORY_SPACES", reason = "프로젝트 연동이 공간 이름 → 메모리 저장소를 주는 모듈 사이 통로. 저장소 교체는 memory-store 지점" },
+]

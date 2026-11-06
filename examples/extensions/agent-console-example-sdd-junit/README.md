@@ -1,8 +1,8 @@
 # agent-console-example-sdd-junit
 
-스펙(SDD) 추적 표에 **다른 곳의 테스트 결과**를 넣는 검증 결과 출처(확장 지점 X42)를 플러그인 패키지 하나로
-추가하는 예제이자 작성 가이드(R10.4, design §6R.4·§6R.17 구현).
-엔진·서버·웹 코드를 고치지 않는다. 설치하고 사용자 설정에서 켜면 스펙의 추적 표(`GET /sdd/specs/{id}/trace`)
+스펙(SDD) 추적 표에 **다른 곳의 테스트 결과**를 넣는 검증 결과 출처를 플러그인 패키지 하나로
+추가하는 예제이자 작성 가이드.
+엔진·서버·웹 코드를 고치지 않는다. 설치하고 사용자 설정에서 켜면 스펙의 추적 표(스펙 REST의 `GET …/{id}/trace`)
 검증 열에 JUnit XML 결과가 나오고, 끄거나 제거하면 사라진다.
 
 검증 결과 출처 `example.junit`
@@ -92,7 +92,7 @@ agent_console_example_sdd_junit._options.JUnitOptionsError: /paths/0: 파일 패
 
 서버 시작 때 호스트 플러그인 로더(`mod-sdd`의 `agent_console.host_plugin_loaders: sdd`)가 이 그룹을 읽는다.
 **설치만으로는 쓰이지 않는다** — 사용자 설정에 `enabled: true`로 적어야 추적 표에 들어간다(연동 모듈이 포트로 주는
-기본 출처 `runs`와 다르다, design `[6R.13 구현]`). 같은 클래스를 다른 id로 쓰려면 `JUnitVerificationSource("ci")`를
+기본 출처 `runs`와 다르다). 같은 클래스를 다른 id로 쓰려면 `JUnitVerificationSource("ci")`를
 돌려주는 함수를 entry point로 등록한다.
 
 ## 설정 예
@@ -134,12 +134,12 @@ sdd:
 
 ## 설치·제거
 
-저장소 루트에서 실행한다. WSL(`/mnt/c`)에서는 환경변수를 붙인다(CLAUDE.md "고정·환경 메모").
+저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
+`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-sdd-junit   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-sdd-junit                        # 제거
+uv pip install -e examples/extensions/agent-console-example-sdd-junit   # 설치
+uv pip uninstall agent-console-example-sdd-junit                        # 제거
 ```
 
 entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.

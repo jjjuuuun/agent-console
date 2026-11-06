@@ -1,0 +1,14 @@
+{
+  "route": "/example-notes",
+  "template_kind": "example-note-template",
+  "template_dir": "example-note-templates",
+  "user_section": "example_notes",
+  "records_space_prefix": "project:",
+  "max_notes": 200,
+  "max_text_chars": 4000,
+  "database_file": "example-notes.sqlite3",
+  "user": {
+    "newest_first": true,
+    "list_limit": 50
+  }
+}

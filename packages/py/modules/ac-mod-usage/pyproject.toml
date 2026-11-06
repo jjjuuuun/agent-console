@@ -58,3 +58,22 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
+[tool.agent-console.extension-points.runtime-usage-source]
+title = "런타임 사용량 출처"
+area = "usage"
+design_id = "X13r"
+summary = "다른 모듈의 데이터(예: 로그 색인)로 사용량을 계산하는 출처를 연동 모듈이 준다"
+registration = { kind = "port", port = "agent_console_mod_usage:USAGE_SOURCES" }
+interface = ["agent_console_usage:UsageSource"]
+example = { kind = "reference", path = "packages/py/links/ac-link-logs-usage" }
+guide = "usage.md"
+
+# 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-ports = [
+    { port = "usage.service", reason = "사용량 모듈이 연동 모듈에 존재·보고 서비스를 알리는 통로(구현은 이 모듈 하나)" },
+    { port = "usage.event_query", reason = "실행-사용량 연동이 실행 이벤트 조회를 사용량 모듈에 주는 모듈 사이 통로(구현은 그 연동 하나)" },
+    { port = "usage.token_rollups", reason = "실행-사용량 연동이 플랫폼 실행분 토큰 집계를 주는 모듈 사이 통로(구현은 그 연동 하나)" },
+]

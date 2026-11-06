@@ -56,3 +56,45 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console]
+internal-ports = [
+    { port = "agent_console_mod_projects.ports:PROJECTS_LOOKUP", reason = "프로젝트 모듈이 연동 모듈에 주는 읽기 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_projects.ports:PROJECT_FOLDERS", reason = "등록된 프로젝트 폴더를 다른 기능 모듈에 주는 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_projects.ports:PROJECTS_SPACES", reason = "프로젝트 공간을 연동 모듈에 여는 통로(구현은 이 모듈 하나)" },
+]
+
+[tool.agent-console.extension-points.definition-references]
+title = "정의 참조 추출"
+area = "projects"
+design_id = "X25"
+summary = "정의 문서가 쓰는 다른 정의를 알려 복사 계획·범위 검사의 참조 닫힘에 넣는다"
+registration = { kind = "port", port = "agent_console_mod_projects.ports:DEFINITIONS_REFERENCES" }
+interface = "agent_console_mod_projects.ports:References"
+example = { kind = "reference", path = "packages/py/links/ac-link-definitions-teams" }
+guide = "projects.md"
+
+[tool.agent-console.extension-points.definition-reference-rewriter]
+title = "정의 참조 고치기"
+area = "projects"
+design_id = "X25"
+summary = "이름을 바꿔 복사할 때 정의 문서 안의 참조를 새 이름으로 고친다"
+registration = { kind = "port", port = "agent_console_mod_projects.ports:DEFINITIONS_REWRITERS" }
+interface = "agent_console_projects:RewriteReferences"
+example = { kind = "snippet", note = "참조 고치기 함수 하나를 포트로 제공" }
+guide = "projects.md"
+
+[tool.agent-console.extension-points.folder-dialog-provider]
+title = "폴더 선택 창 제공자"
+area = "projects"
+design_id = "X35"
+summary = "운영체제 폴더 선택 창을 명령 데이터나 코드 제공자로 더한다"
+registration = { kind = "entry-point", group = "agent_console_mod_projects:FOLDER_DIALOGS_GROUP" }
+interface = "agent_console_mod_projects:FolderDialogProvider"
+settings = ["mod-projects.folder_dialog.providers", "mod-projects.folder_dialog.include_default_providers"]
+example = [
+    { kind = "reference", path = "packages/py/features/ac-local-folders", note = "명령 표 데이터 data/folder_dialogs.json" },
+    { kind = "snippet", note = "코드 제공자" },
+]
+guide = "projects.md"

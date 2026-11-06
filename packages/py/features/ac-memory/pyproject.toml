@@ -54,3 +54,29 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.memory-scope-kind]
+title = "메모리 범위 종류"
+area = "memory"
+design_id = "X29"
+summary = "공유 메모리의 범위 종류(id 틀)를 사용자 설정이나 플러그인으로 더한다"
+registration = { kind = "entry-point", group = "agent_console_memory:MEMORY_SCOPE_KINDS_GROUP" }
+interface = "agent_console_memory:MemoryScopeKind"
+settings = ["memory.scope_kinds", "memory.include_default_scope_kinds"]
+example = [
+    { kind = "package", path = "examples/extensions/agent-console-example-memory-scope" },
+    { kind = "snippet", note = "사용자 설정 memory.scope_kinds 데이터" },
+]
+guide = "memory.md"
+
+[tool.agent-console.extension-points.memory-store]
+title = "메모리 저장소"
+area = "memory"
+design_id = "X31"
+summary = "공유 메모리를 다른 저장소(DB·원격 등)에 둔다"
+registration = { kind = "injection" }
+interface = "agent_console_memory:MemoryStore"
+builtin = "none"
+example = { kind = "contract-tests", symbols = ["agent_console_memory.testing.contract:MemoryStoreContractTests", "agent_console_memory:InMemoryMemoryStore"] }
+guide = "memory.md"

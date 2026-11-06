@@ -1,0 +1,62 @@
+# extdocs 도구 설정 — 도구가 아는 값은 전부 여기에 있다(코드에 고정하지 않는다).
+# 경로는 저장소 루트(--root) 기준. 바깥 저장소에 복사해 쓸 때는 이 파일만 고친다(--config).
+
+# 문서 폴더. 없으면 `extdocs-check`는 "문서 폴더 없음 — 건너뜀"으로 0 종료한다(공개본).
+docs_dir: docs/extending
+# 문서 폴더 안 생성 파일(전부 생성)
+reference_file: reference.md
+# 예제 색인(전부 생성). 문서 폴더가 있을 때만 검사한다.
+examples_index: examples/extensions/README.md
+
+# 대조 대상: 루트 pyproject의 [tool.uv.workspace] members 중 [tool.uv.sources]에서
+# workspace = true로 이은 배포만(설치해 둔 예제·바깥 플러그인은 섞이지 않는다).
+pyproject_tool_table: agent-console
+
+# TS 선언(package.json "agentConsole") 위치. export 대조는 TS 도구(pnpm extdocs-check)가 한다.
+ts_package_globs:
+  - packages/ts/*/*
+  - apps/web
+  - examples/web/*
+ts_table: agentConsole
+
+# 예제 폴더. install·remove 문장의 {path}·{name}은 예제 폴더 경로·배포 이름.
+example_roots:
+  - glob: examples/extensions/*
+    language: python
+    install: "uv pip install -e {path}"
+    remove: "uv pip uninstall {name}"
+  - glob: examples/web/*
+    language: ts
+    install: "pnpm --filter {name} test"
+    remove: ""
+
+# 코드 쪽 확장 지점 찾기
+code:
+  # 모듈 수준 문자열 상수 중 이름·값이 둘 다 맞으면 entry point 그룹 상수로 본다.
+  group_constant_name: "^[A-Z][A-Z0-9_]*_GROUP$"
+  group_value: "^agent_console\\."
+  # pyproject [project.entry-points] 표의 이 패턴 그룹도 대조한다.
+  entry_point_group: "^agent_console\\."
+  # 서버 모듈 그룹(서술자 descriptor만 읽어 포트를 모은다. build하지 않는다).
+  modules_group: agent_console.server_modules
+
+# reference.md의 계약 표(기호가 없거나 import되지 않으면 그 표만 빠진다).
+facts:
+  contract_versions: "agent_console_contracts:CONTRACT_VERSIONS"
+  known_event_types: "agent_console_contracts:KNOWN_RUN_EVENT_TYPES"
+
+# 공개 가능 린트·링크 검사·doctest 대상(문서 폴더가 있을 때)
+docs_globs:
+  - docs/extending/**/*.md
+  - examples/extensions/README.md
+public_lint_globs:
+  - docs/extending/**/*.md
+  - examples/**/README.md
+# --report 모드 기본 대상(경고만, 0 종료)
+report_globs:
+  - packages/**/README.md
+  - apps/*/README.md
+  - README.md
+
+# 서술자 대조 시간 상한(초). 넘으면 실패.
+descriptor_time_limit_seconds: 10

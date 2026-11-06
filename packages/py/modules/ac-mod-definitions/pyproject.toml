@@ -59,3 +59,19 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-ports = [
+    { port = "definitions.lookup", reason = "정의 모듈이 다른 기능 모듈·연동에 주는 정의 읽기 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
+    { port = "definitions.store", reason = "정의 모듈이 다른 기능 모듈에 주는 정의 저장소 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
+    { port = "definitions.spaces", reason = "프로젝트 모듈이 공간 이름 → 정의 저장소를 기능 모듈에 주는 모듈 사이 통로" },
+    { port = "definitions.checks", reason = "기능 모듈·연동이 저장 전 정의 검사를 정의 모듈에 보태는 모듈 사이 다중 통로. 새 정의 종류의 검사는 definition-kind-contribution 지점" },
+    { port = "definitions.dependencies", reason = "팀 구성 연동이 정의 사이 의존을 계산해 주는 모듈 사이 통로(구현은 그 연동 하나)" },
+    { port = "definitions.usages", reason = "팀 구성 연동이 정의가 붙은 곳을 리소스 모듈에 주는 모듈 사이 통로(구현은 그 연동 하나)" },
+    { port = "graphs.entry_labels", reason = "팀 구성 연동이 팀 구성 입구 이름을 정의 모듈에 주는 모듈 사이 통로" },
+    { port = "graphs.session_summary", reason = "팀 구성 연동이 목록용 세션 집계를 정의 모듈에 주는 모듈 사이 통로" },
+    { port = "graphs.validation", reason = "실행-팀 구성 연동이 목록용 검증 요약을 정의 모듈에 주는 모듈 사이 통로" },
+    { port = "secrets.rules", reason = "정의 모듈이 지금 비밀 의심 규칙(사용자 설정)을 다른 모듈에 나눠 주는 통로. 비밀 값 출처를 더하는 확장은 secret-provider 지점" },
+    { port = "workspace.settings", reason = "정의 모듈이 지금 워크스페이스 설정을 다른 모듈에 나눠 주는 통로(구현은 이 모듈 하나)" },
+]

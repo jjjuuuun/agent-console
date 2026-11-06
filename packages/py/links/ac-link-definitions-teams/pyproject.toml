@@ -58,3 +58,14 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
+[tool.agent-console.extension-points.settings-scope-layer]
+title = "범위 설정 층"
+area = "projects"
+design_id = "X26"
+summary = "범위 id(예: 프로젝트)마다 유효 설정에 끼울 설정 층을 준다"
+registration = { kind = "port", port = "agent_console_link_definitions_teams.ports:SCOPE_LAYERS" }
+interface = "agent_console_link_definitions_teams.ports:ScopeLayersSource"
+example = { kind = "reference", path = "packages/py/links/ac-link-projects-runs" }
+guide = "projects.md"

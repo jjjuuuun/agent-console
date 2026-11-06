@@ -60,3 +60,9 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_console_*"]
+
+# 확장 지점이 아닌 entry point 그룹(scripts/extdocs 대조에서 뺀다).
+[tool.agent-console]
+internal-groups = [
+    { group = "agent_console.config_schemas", reason = "런타임 출처의 설정 스키마를 저장소 도구(설정 스키마 라벨 검사)에 알리는 개발용 목록. 서버는 읽지 않는다" },
+]

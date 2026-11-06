@@ -16,6 +16,10 @@ dependencies = [
 [project.entry-points."agent_console.condition_operators"]
 "example.word_count_at_least" = "agent_console_example_condition:WordCountAtLeast"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["condition-operator"]
+
 # 개발 의존: 테스트가 조건 평가기·저장 전 검사(ac-conditions)와 조건 연결(ac-nodes-core `when`)로 확인한다.
 [dependency-groups]
 dev = [

@@ -17,6 +17,10 @@ dependencies = [
 [project.entry-points."agent_console.usage_sources"]
 "example.manual_count" = "agent_console_example_usage:ManualCountSource"
 
+# 이 예제가 보이는 확장 지점(slug는 확장 지점 선언과 맞춘다).
+[tool.agent-console.example]
+points = ["usage-source"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",
