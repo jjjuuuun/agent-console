@@ -42,7 +42,7 @@ class LogsTraceLink:
         version=_version(),
         kind="link",
         title="로그·추적 연동",
-        description="세션 로그 위임 흐름(/logs/sessions/{id}/trace)",
+        description="세션 로그에서 에이전트 사이 위임 흐름을 보여 준다",
         requires=(LOGS_QUERY,),
         contracts={"logs": CONTRACT_VERSIONS["logs"], "runs": CONTRACT_VERSIONS["runs"]},
         settings_schema=LogTraceSettings,

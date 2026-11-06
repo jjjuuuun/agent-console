@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 6R.12: `GraphRuntime.start(labels=)` — 루트 Run의 `Run.labels`로 기록만 한다(자식 Run은 물려받지 않음, 상한 검사는 호출자).
+
 - 5.2R.80(F14): 백엔드 계정 로그인 확장 지점 — 선택 능력 `LoginCapableBackend`·`LogoutCapableBackend`,
   `LoginDriver`·`LoginProgress`·`BackendLoginContext`, 세션 서비스 `BackendLoginService`(세션 하나·시간 상한·하트비트·
   취소·종료 정리·가림·로그 규칙), `mask_values`, 오류 `LoginUnsupportedError`·`LogoutUnsupportedError`·`LoginBusyError`·

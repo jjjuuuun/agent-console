@@ -44,6 +44,7 @@ def test_branch_is_named_runs_and_owns_the_run_tables() -> None:
         ["runs", "0001"],
         ["runs", "0002"],
         ["runs", "0003"],
+        ["runs", "0004"],
     ]
 
 
@@ -51,7 +52,7 @@ def test_empty_db_legacy_plus_runs_lineage_matches_metadata(tmp_path: Path) -> N
     db = SqliteDatabase.open(tmp_path / "e.sqlite3")
     db.upgrade([BRANCH])
     assert db.revision() == "0003"
-    assert db.revision("runs") == "runs_0003"
+    assert db.revision("runs") == "runs_0004"
     assert {"root_run_id", "parent_node_id"} <= _cols(db.engine, "runs")
     assert {"call", "invoked_by"} <= _cols(db.engine, "node_runs")
     assert "root_run_id" in _cols(db.engine, "interactions")
@@ -198,7 +199,7 @@ def test_disabled_module_does_not_upgrade_the_lineage(tmp_path: Path) -> None:
         load_registries(found)
         return found
 
-    for disabled, expected in ((["mod-runs"], None), ([], "runs_0003")):
+    for disabled, expected in ((["mod-runs"], None), ([], "runs_0004")):
         db = SqliteDatabase.open(tmp_path / f"{len(disabled)}.sqlite3")
         assemble(
             [module, local_definitions_module()],
@@ -222,7 +223,7 @@ def test_migration_scripts_are_package_data_and_work_after_copy(tmp_path: Path) 
     shutil.copytree(BRANCH.versions, copied, ignore=shutil.ignore_patterns("__pycache__"))
     db = SqliteDatabase.open(tmp_path / "empty.sqlite3")
     db.upgrade([type("B", (), {"name": "runs", "versions": copied})()])
-    assert db.revision("runs") == "runs_0003"
+    assert db.revision("runs") == "runs_0004"
     db.close()
 
 
@@ -317,7 +318,7 @@ def test_5r_database_upgrades_with_null_project_and_old_rows_readable(tmp_path: 
     db = SqliteDatabase.open(path)
     assert db.revision("runs") == "runs_0002"
     db.upgrade([BRANCH])
-    assert db.revision("runs") == "runs_0003"
+    assert db.revision("runs") == "runs_0004"
     storage = SqliteStorage(db.engine)
     run = storage.runs.get("old")
     assert run is not None

@@ -20,6 +20,8 @@
 | `key_names` | `DEFAULT_KEY_NAMES` | 비밀 이름 단어. 이름을 단어로 나눠(구분자·camelCase) 이어지는 단어를 붙인 것이 같으면 의심(`api_key`·`apiKey`·`x-api-key`·`APIKEY`). `author`·`max_tokens`는 단어가 달라 안 걸린다 |
 | `name_exceptions` | `DEFAULT_NAME_EXCEPTIONS` | 비밀 단어 **뒤에** 오면 비밀이 아닌 이름(`--key-file`, `auth_mode`, `token_url`) |
 | `value_patterns` | `DEFAULT_VALUE_PATTERNS` | 텍스트 안 비밀 모양(알려진 접두 토큰 — 앞이 단어 경계면 몸통 6자 이상, 앞에 글자가 붙었으면(`xxxsk-…`) 숫자·대문자가 있고 구분자 없는 16자 구간이 있는 키 모양 몸통만, JWT, PEM 개인 키, `Bearer x`, `--token x`, `API_KEY=x`·`?token=x`·`"password": "x"`, `user:pw@`). 이름 그룹 `secret` = 가릴 부분, `name` = 비밀 이름이어야 매치 |
+| `weak_key_names` | `DEFAULT_WEAK_KEY_NAMES` (`key`) | 뜻이 넓은 키 이름. 이름에서 걸린 키 이름이 모두 이것이면(`input_key`·`sort_key`) 구조 판정에서 값이 비밀 모양일 때만 의심. `api_key`(`apikey`)처럼 다른 키 이름에도 걸리면 이름만으로 의심. `weak_key_names=()`면 끈다. `with_extra(key_names=)`로 더한 이름은 약한 이름에서 빠진다 |
+| `weak_value_patterns` | `DEFAULT_WEAK_VALUE_PATTERNS` | 약한 이름 아래 값의 비밀 모양(구분자 없는 글자·숫자 16자 이상에 숫자가 섞임, UUID). `value_patterns`에 맞는 값(`sk-…`)도 비밀 모양 |
 | `is_reference` | `secret://…` | 참조(값이 아니라 이름)는 의심·가림에서 뺀다 |
 
 사용자 규칙은 `with_extra(key_names=, value_patterns=)`로 **더하기만** 한다. 기본 규칙을 줄이는 공개 방법은
@@ -31,6 +33,9 @@
 - 문자열 잎: 비어 있지 않고 참조가 아니며, 가까운 비밀 키 이름 아래이거나(`key_name`) 안에 비밀 모양이 있으면
   (`value_pattern`) 의심.
 - 숫자 잎(불리언·null 제외): 비밀 키 이름 아래면 의심(`{"API_KEY": 12345}`).
+- 약한 키 이름 아래(`{"input_key": "question"}`)는 값이 비밀 모양일 때만 의심한다(`{"input_key": "sk-…"}`·
+  16진수 32자). 이름 판정(`name_suspected`)·텍스트 가리기·인자 목록의 플래그(`--key x`)는 약한 이름도 그대로
+  이름만으로 의심한다(안전한 쪽).
 - 하위 객체·목록은 가장 가까운 비밀 키 이름을 **이어받는다**. 단 자기 이름의 마지막 단어가 예외 단어면
   이어받지 않는다(`{"auth": {"mode": "oauth"}}`).
 - 인자 목록에서 비밀 플래그(`--token`) 다음 항목은 비밀 값으로 본다.

@@ -69,6 +69,10 @@
       ``resolve_writes``·``writes_lines``·``env_warnings``, ``ClaudeLoginSupport``·``PtySupport``·
       ``detect_pty``. 드라이버 ``ClaudeCliLoginDriver``는 하위 모듈
       ``agent_console_backend_claude_sdk.login_driver``(PTY 필요)
+    - 세션 기록 보관·복원(X38, 5.7R.33y3, design §PI.4.6.4): ``ClaudeSdkBackend.session_archive``
+      (앱 전용 자격 폴더가 있을 때만, ``projects/<키>/<세션>.jsonl`` + ``<세션>/``만 다룬다 — 자격·
+      설정·다른 세션 파일 제외), 부품 ``claude_session_archive``, 상수 ``CLAUDE_PROJECTS_DIR``·
+      ``CLAUDE_SESSION_SUFFIX``
 """
 
 from agent_console_backend_claude_sdk._auth_dir import (
@@ -218,6 +222,11 @@ from agent_console_backend_claude_sdk._redact import (
     RawSanitizer,
     to_jsonable,
 )
+from agent_console_backend_claude_sdk._session_archive import (
+    CLAUDE_PROJECTS_DIR,
+    CLAUDE_SESSION_SUFFIX,
+    claude_session_archive,
+)
 from agent_console_backend_claude_sdk._subagents import (
     SubagentMapping,
     build_agent_definitions,
@@ -235,7 +244,9 @@ __all__ = [
     "ALLOW_ALL",
     "AUTH_ISSUES",
     "BLOCK_EXIT_CODE",
+    "CLAUDE_PROJECTS_DIR",
     "CLAUDE_SDK_BACKEND_ID",
+    "CLAUDE_SESSION_SUFFIX",
     "CLI_LOGIN_METHOD_ID",
     "COLLECTOR_ISSUES",
     "COMMAND_HOOK_SLOTS",
@@ -327,6 +338,7 @@ __all__ = [
     "classify_probe_error",
     "classify_probe_messages",
     "claude_sdk_config_schema",
+    "claude_session_archive",
     "command_hook",
     "delegation_result_text",
     "detect_pty",

@@ -105,10 +105,7 @@ class LogsUsageLink:
         version=_version(),
         kind="link",
         title="로그·사용량 연동",
-        description=(
-            "로컬 로그 토큰 추정 창(사용량 출처 local-logs, 신뢰 등급 estimated)과 "
-            "이 PC에 있는 로그 출처의 기본 켜기"
-        ),
+        description="이 PC의 로그로 토큰 사용량을 추정하고, 로그가 있는 출처를 기본으로 켠다",
         provides=(USAGE_SOURCES, SOURCE_DEFAULTS),
         requires=(LOGS_QUERY, USAGE_SERVICE),
         optional=(LOGS_INGEST,),

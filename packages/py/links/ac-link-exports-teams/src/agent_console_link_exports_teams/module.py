@@ -36,7 +36,7 @@ class ExportsTeamsLink:
         version=_version(),
         kind="link",
         title="내보내기·팀 연동",
-        description="내보낼 정의가 쓰는 에이전트·리소스(의존 자동 포함)",
+        description="내보낼 때 구성이 쓰는 에이전트·리소스를 함께 넣는다",
         provides=(EXPORT_DEPENDENCIES,),
         requires=(DEFINITIONS_LOOKUP,),
         optional=(WORKSPACE_SETTINGS,),

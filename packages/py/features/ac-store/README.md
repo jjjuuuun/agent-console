@@ -105,6 +105,9 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 `DefinitionKind.portable`(기본 참)은 프로젝트 폴더 사본 공간(`ac-project-space`)에 둘 수 있는 종류인지다. 싱글턴 종류는
 값과 상관없이 옮길 수 없다(`is_portable`). 앱 등록부 같은 종류는 `portable=False`로 등록한다.
+`DefinitionKind.library`(기본 참)가 거짓인 종류는 라이브러리 공간(앱 workspace)에 두지 않고 프로젝트·단독 공간에만 둔다.
+저장소는 이 값을 보지 않으며, 라이브러리 저장소를 여는 쪽이 그 종류를 빼고 연다(그 종류 요청은 `NotFound`).
+`kind.with_summary_fields(*fields)`는 목록 요약 필드를 더한 사본이다.
 
 쓰기 전 검사는 `write_guard`로 주입한다(`FileDefinitionStore(..., write_guard=fn)`). `fn(kind, id, document, files)`가
 예외를 던지면 문서·본문·버전 기록 어느 것도 쓰지 않는다(`ac-project-space`의 비밀 검사가 이것을 쓴다).
@@ -158,6 +161,12 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 모양 `RecordsHandle`·`RecordsSpaces`와 포트 이름 `RECORDS_SPACES_PORT`(`records.spaces`), `is_network_fs`(네트워크 파일
 시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
 `backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
+
+## 앱 DB 기록 옮기기 (`RecordsMove`, design §PI.4.6.7, 5.7R.33j2)
+
+도메인을 모르는 표 단위 옮기기 도구다. 기본 표 + 딸린 표 + 묶음 id만 주면 두 엔진 사이에서
+복사(대상 한 트랜잭션, 같은 키는 건너뜀) → 확인(행 수·값) → 원본 삭제(원본 한 트랜잭션) 순서로 옮기고,
+실패하면 대상을 되돌린다(`run_moves`가 여러 작업을 한 흐름으로 묶는다). 모듈 docstring에 실행 가능한 예가 있다.
 
 ## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`, 5.7R.33x)
 

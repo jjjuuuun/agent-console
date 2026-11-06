@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.12.2"
+CONTRACTS_VERSION: Final = "0.13.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -19,6 +19,7 @@ CONTRACT_SUBMODULES: Final = (
     "imports",
     "architecture",
     "memory",
+    "sdd",
     "modules",
 )
 """기능별 계약 하위 모듈(아래 층 → 위 층 순). 모든 모델은 이 중 하나에 정의된다.
@@ -28,24 +29,26 @@ import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층�
 `runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
 `chat`·`exports`·`imports`·`architecture`도 서로 모른다(0.9.0: `architecture`는 `runs`의 조건·
 `logs`의 이벤트·`definitions`의 이슈를 쓴다. 0.10.0: `memory`도 같은 층이고 `runs`의 조건·
-`definitions`의 이슈만 쓴다). `modules`는 맨 위다.
+`definitions`의 이슈만 쓴다. 0.13.0: `sdd`도 같은 층이고 `common`·`definitions`·`runs`만 쓴다).
+`modules`는 맨 위다.
 TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름>`)로 나뉜다.
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.7.0",
+    "common": "1.8.0",
     "resources": "1.1.0",
-    "logs": "1.1.0",
+    "logs": "1.2.0",
     "definitions": "1.5.0",
-    "runs": "1.6.0",
+    "runs": "1.7.0",
     "usage": "1.1.0",
     "projects": "3.1.0",
-    "chat": "1.2.0",
+    "chat": "1.3.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
     "memory": "1.1.0",
-    "modules": "1.3.0",
+    "sdd": "1.0.0",
+    "modules": "1.4.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
@@ -53,7 +56,13 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 1.0.0으로 시작. `projects`는 0.11.0에서 2.0.0 — 프로젝트 = 로컬 폴더, 0.12.0에서 3.0.0 — 프로젝트
 구성 = 폴더 안 사본, 0.12.1에서 3.1.0 — 프로젝트 기록 DB·폴더 확인 보강, design §PI).
 0.12.2(5.7R.34·38): `runs` 1.6.0 — 디스크립터 화면 속성(세션·백엔드·중첩), `definitions` 1.5.0 —
-이슈 `hint`·`group`, `GraphPatch.unset_node_fields`."""
+이슈 `hint`·`group`, `GraphPatch.unset_node_fields`.
+0.13.0(6R.3, design §6R.6): 새 하위 모듈 `sdd` 1.0.0, `common` 1.8.0(`LabelDisplay`·`RecordSource`·
+`KnownUiWidgets`·`x-ui.itemTitle`·`sdd.*` 오류·이슈 코드), `logs`
+1.2.0(`LogSourceInfo.default_effective`),
+`runs` 1.7.0(`Run.labels`·`RunPage`), `chat` 1.3.0(`ConversationPage`, 대화 만들기 요청 모르는 키
+거부),
+`modules` 1.4.0(`ModuleInfo.description`·`label_display`, WS `sdd.changed`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -203,6 +212,36 @@ class ErrorCodes:
     `details` = `{conversation_id, node_ids}`. 다시 보낼 때 `on_missing_session: "fresh"`면 그
     노드는 새 세션으로 시작한다."""
 
+    # ---- 6R(design §6R.6·§6R.18, 0.13.0): 스펙(SDD)
+    SDD_NOT_FOUND: Final = "sdd.not_found"
+    """스펙·문서 틀·작업이 없다(HTTP 404). `details.kind`(spec·template·task)·`details.id`."""
+    SDD_DOCUMENT_MISSING: Final = "sdd.document_missing"
+    """스펙 문서 본문 파일이 없다(HTTP 404). 읽기로 파일을 만들지 않는다 — `PUT`에
+    `If-None-Match: *`를 주면 만든다. `details` = `SddDocumentMissingDetails{document_id, file}`."""
+    SDD_TEMPLATE_EXISTS: Final = "sdd.template_exists"
+    """틀로 저장(`on_conflict=fail`)에서 같은 id의 문서 틀이 있다(HTTP 409). `details.id`."""
+    SDD_GATE_BLOCKED: Final = "sdd.gate_blocked"
+    """관문 조건이 맞지 않아 실행·작업 상태·문서 상태 바꾸기를 막았다(HTTP 422). `details` =
+    `SddGateBlockedDetails{gate_id, message, document_ids}`."""
+    SDD_TASK_CHANGED: Final = "sdd.task_changed"
+    """작업 머리 줄이 화면이 본 것과 달라 고치지 않았다(HTTP 409, 줄 해시 충돌). `details` =
+    `SddTaskChangedDetails{task_key, line_hash, line, text}`."""
+    SDD_TRANSITION_DENIED: Final = "sdd.transition_denied"
+    """문서 상태 전환 규칙에 그 전환(또는 그 쪽 `by`)이 없다(HTTP 403).
+    `details.from`·`details.to`."""
+    SDD_ACTION_UNAVAILABLE: Final = "sdd.action_unavailable"
+    """고른 작업 동작이 그 작업에서 쓸 수 없다(HTTP 409, 한꺼번에 시작에서는 작업별 결과 이슈)."""
+    SDD_SPACES_UNAVAILABLE: Final = "sdd.spaces_unavailable"
+    """프로젝트가 있는 조립에서 프로젝트 연동이 꺼져 스펙 공간이 없다(HTTP 409). 앱 workspace에 대신
+    만들지 않는다."""
+    SDD_CONFIG_READONLY: Final = "sdd.config_readonly"
+    """단독 루트(프로젝트 없이 쓰는 스펙 폴더)에 쓸 수 없다(HTTP 409). 프로젝트 공간이면
+    `project.config_readonly`를 쓴다."""
+    SDD_SECRET_REJECTED: Final = "sdd.secret_rejected"
+    """설정 `sdd.secret_scan = reject`에서 문서 본문·실행 입력에 비밀 의심 값이 있어 거부했다(HTTP
+    422).
+    값은 싣지 않는다. `details.document_id?`·`details.rules`."""
+
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.BAD_REQUEST: 400,
@@ -261,13 +300,24 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.FOLDERS_DIALOG_TIMEOUT: 409,
     ErrorCodes.PROJECT_RECORDS_UNAVAILABLE: 409,
     ErrorCodes.CHAT_SESSION_UNAVAILABLE: 409,
+    ErrorCodes.SDD_NOT_FOUND: 404,
+    ErrorCodes.SDD_DOCUMENT_MISSING: 404,
+    ErrorCodes.SDD_TEMPLATE_EXISTS: 409,
+    ErrorCodes.SDD_GATE_BLOCKED: 422,
+    ErrorCodes.SDD_TASK_CHANGED: 409,
+    ErrorCodes.SDD_TRANSITION_DENIED: 403,
+    ErrorCodes.SDD_ACTION_UNAVAILABLE: 409,
+    ErrorCodes.SDD_SPACES_UNAVAILABLE: 409,
+    ErrorCodes.SDD_CONFIG_READONLY: 409,
+    ErrorCodes.SDD_SECRET_REJECTED: 422,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
-RUN_ORIGINS: Final = ("chat", "web", "api", "task", "resume")
+RUN_ORIGINS: Final = ("chat", "web", "api", "task", "resume", "sdd")
 """`Run.origin`의 알려진 값. chat=채팅 대화의 한 턴,
 web=웹 [실행] 버튼, api=외부 REST 호출(기본), task=작업 관리(Phase 6),
-resume=끊긴 실행의 노드부터 다시 실행(`Run.resumed_from`, design §2R.10). 다른 값도 허용."""
+resume=끊긴 실행의 노드부터 다시 실행(`Run.resumed_from`, design §2R.10),
+sdd=스펙 작업 실행(0.13.0, 라벨로 스펙·작업과 이어짐). 다른 값도 허용."""
 
 WS_CLOSE_UNAUTHORIZED: Final = 4401
 """WS close 코드: 토큰 없음·불일치. 클라이언트는 재접속하지 않는다."""
@@ -458,6 +508,59 @@ class KnownIssueCodes:
     """끝나지 않은 Run이 다른 앱(`Run.host_id`가 이 앱과 다름)의 것이다(info, 다른 앱에서 실행 중
     또는 그 앱이 비정상 종료). 이 앱은 복구하지 않고, 사용자가 [끊긴 것으로 표시]를 누를 때만
     바꾼다(design §PI.4.6.5). `details.host_id`. 오류 코드가 아니다."""
+
+    # ---- 6R(design §6R.1.3·§6R.1.1·§6R.6, 0.13.0): 스펙 파싱·규칙 검사·정보. `SpecIssue`로 낸다
+    # (문서·줄·작업 위치, 값 원문 없음). 앞 넷은 `ErrorCodes`의 같은 이름과 같은 값이다.
+    SDD_GATE_BLOCKED: Final = "sdd.gate_blocked"
+    """동작 `disabled`·결과 이슈로도 쓴다. `details.gate_id`."""
+    SDD_ACTION_UNAVAILABLE: Final = "sdd.action_unavailable"
+    SDD_DOCUMENT_MISSING: Final = "sdd.document_missing"
+    """문서 목록의 파일이 없다(파싱 이슈, warning)."""
+    SDD_TASK_CHANGED: Final = "sdd.task_changed"
+    SDD_DUPLICATE_TASK_ID: Final = "sdd.duplicate_task_id"
+    """같은 작업 id가 둘 이상(뒤의 것은 위치 키로)."""
+    SDD_UNKNOWN_DEPENDENCY: Final = "sdd.unknown_dependency"
+    """의존 필드가 없는 작업 키를 가리킨다. `details.ref`."""
+    SDD_DEPENDENCY_CYCLE: Final = "sdd.dependency_cycle"
+    """순환 의존. `details.cycle` = 작업 키 목록."""
+    SDD_UNKNOWN_STATUS_MARKER: Final = "sdd.unknown_status_marker"
+    """체크 칸 글자가 어느 작업 상태에도 없다(그 작업은 첫 상태로 본다)."""
+    SDD_RANGE_UNRESOLVED: Final = "sdd.range_unresolved"
+    """의존 범위(`a~b`)의 끝을 문서에서 찾지 못했다."""
+    SDD_UNKNOWN_REQUIREMENT: Final = "sdd.unknown_requirement"
+    """작업의 요구 필드가 요구 문서에 없는 id를 가리킨다(info). `details.ref`."""
+    SDD_PARSE_TIMEOUT: Final = "sdd.parse_timeout"
+    """문서 하나 파싱이 시간 상한(`mod-sdd.parse_timeout_ms`)을 넘어 그 문서를 건너뛰었다."""
+    SDD_TOO_MANY_TASKS: Final = "sdd.too_many_tasks"
+    """작업 수가 상한(`mod-sdd.max_tasks`)을 넘어 뒤를 읽지 않았다. `details.limit`."""
+    SDD_SYNTAX_MISSING: Final = "sdd.syntax_missing"
+    """작업 문법이 비었다(기본 문법 꺼짐 + 설정·규칙 없음, info). 작업·계획·추적이 비어 있다."""
+    SDD_INVALID_PATTERN: Final = "sdd.invalid_pattern"
+    """문법의 정규식을 컴파일할 수 없거나 안전 상한에 걸린다(error). `Issue.path` = 규칙 기준
+    위치."""
+    SDD_UNKNOWN_STATE: Final = "sdd.unknown_state"
+    """전환·처음 상태·관문·`on_edit`가 없는 문서 상태를, 또는 `status_on`이 없는 작업 상태를
+    가리킨다(error). `details.ref`."""
+    SDD_DUPLICATE_STATUS_MARKER: Final = "sdd.duplicate_status_marker"
+    """두 작업 상태가 같은 체크 칸 글자를 쓴다(error). `details.marker`."""
+    SDD_UNKNOWN_VARIABLE: Final = "sdd.unknown_variable"
+    """실행 프로필 입력 틀이 모르는 변수를 쓴다(warning, 실행 때 원문 그대로). `details.name`."""
+    SDD_PROFILE_GRAPH_MISSING: Final = "sdd.profile_graph_missing"
+    """실행 프로필의 팀 구성이 그 공간에 없다(warning, 실행 동작이 [가져와서 실행]을 안내).
+    `details.graph`."""
+    SDD_UNKNOWN_PROFILE: Final = "sdd.unknown_profile"
+    """자동 진행이 없는 실행 프로필을 가리킨다(error). `details.ref`."""
+    SDD_STATUS_NOT_APPLIED: Final = "sdd.status_not_applied"
+    """실행이 끝났지만 프로필 `status_on`대로 작업 상태를 바꾸지 못했다(info, 폴더 없음·쓸 수 없음·
+    줄 바뀜·관문). `details.run_id`·`details.gate_id?`."""
+    SDD_SECRET_SUSPECT: Final = "sdd.secret_suspect"
+    """문서 본문에 비밀 의심 값이 있다(info, `sdd.secret_scan = warn`). 위치(`line`)만, 값 없음."""
+    SDD_SECRET_REJECTED: Final = "sdd.secret_rejected"
+    SDD_SETTINGS_INVALID: Final = "sdd.settings_invalid"
+    """설정 섹션 sdd의 일부가 형식에 맞지 않아 그 부분을 빼고 읽었다(`ServerInfo.warnings`).
+    `Issue.path` = 섹션 기준 경로."""
+    SDD_AUTOMATION_SKIPPED: Final = "sdd.automation_skipped"
+    """자동 진행이 연속 실패 상한을 넘은 작업을 건너뛰었다(info). `details.failures`."""
 
 
 class KnownSuggestionIds:

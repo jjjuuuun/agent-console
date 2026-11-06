@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { RestClient } from "@agent-console/api-client";
+import type { SpaceRestClient } from "@agent-console/api-client";
 import type { Graph, Interaction, NodeRun, Run, RunEvent, Trace } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
+import { useQuery } from "@tanstack/react-query";
 import { useApiQuery } from "../../app/queries";
 import { INTERACTION_EVENT_PREFIX, RUN_REFETCH_DEBOUNCE_MS, SNAPSHOT_EVENT_PREFIXES } from "./runsConfig";
 import { isActiveRun, lastSeqOf, mergeEvents } from "./runsLib";
@@ -18,7 +19,8 @@ const runKey = (id: string) => ["run", id] as const;
 const traceKey = (id: string) => ["run", id, "trace"] as const;
 const interactionsKey = (id: string) => ["run", id, "interactions"] as const;
 
-export async function loadRunGraph(rest: RestClient, graphId: string, versionHash: string): Promise<RunGraphResult> {
+/** 실행 당시 버전의 그래프(없으면 현재 버전). `rest`는 실행이 속한 공간(`space(run.project_id)`)의 클라이언트다. */
+export async function loadRunGraph(rest: Pick<SpaceRestClient, "getGraph" | "getGraphVersion">, graphId: string, versionHash: string): Promise<RunGraphResult> {
   try {
     const version = await rest.getGraphVersion(graphId, versionHash);
     if (version.content != null) return { graph: version.content as unknown as Graph, exact: true };
@@ -27,6 +29,18 @@ export async function loadRunGraph(rest: RestClient, graphId: string, versionHas
   }
   const current = await rest.getGraph(graphId);
   return { graph: current.graph, exact: false };
+}
+
+/** 실행이 속한 공간(프로젝트 또는 공용)에서 그 실행의 그래프를 읽는다. 실행이 없으면 질의하지 않는다. */
+export function useRunGraph(run: Pick<Run, "id" | "graph_id" | "graph_version" | "project_id"> | undefined) {
+  const { space } = useApi();
+  const projectId = run?.project_id ?? null;
+  return useQuery<RunGraphResult, Error>({
+    queryKey: ["run", run?.id ?? "", "graph", projectId, run?.graph_id, run?.graph_version],
+    queryFn: () => loadRunGraph(space(projectId), run!.graph_id, run!.graph_version),
+    enabled: run !== undefined,
+    staleTime: Infinity,
+  });
 }
 
 export type LoadState = "loading" | "ready" | "error";
@@ -76,10 +90,7 @@ export function useRunView(runId: string, options: { /** false면 trace(위임 �
   const trace = useApiQuery(traceKey(runId), (r) => r.getRunTrace(runId), { enabled: options.trace ?? true });
   const interactions = useApiQuery(interactionsKey(runId), (r) => r.listRunInteractions(runId));
   const run = snapshot.data?.run;
-  const graph = useApiQuery(["run", runId, "graph", run?.graph_id, run?.graph_version], (r) => loadRunGraph(r, run!.graph_id, run!.graph_version), {
-    enabled: run !== undefined,
-    staleTime: Infinity,
-  });
+  const graph = useRunGraph(run);
 
   // 이벤트 상태는 실행 id와 함께 저장한다(다른 실행으로 바뀌면 effect에서 동기 setState 없이 비어 보이게).
   const [store, setStore] = useState<{ runId: string; events: readonly RunEvent[]; status: LoadState }>({ runId, events: [], status: "loading" });

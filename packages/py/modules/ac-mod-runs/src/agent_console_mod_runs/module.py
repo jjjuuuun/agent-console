@@ -1,12 +1,15 @@
 """서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-runs``).
 
 - 제공: ``runs.starter``·``runs.reader``·``runs.events``·``interactions.port``·``secrets.redact``·
-  ``server.warnings``·``server.attributes``. 토픽 ``runs.event``(저장된 이벤트마다)·
-  ``interactions.updated``. WS ``run:<id>``·``interactions``.
+  ``server.warnings``·``server.attributes``·``runs.session_archive``(X38). 토픽
+  ``runs.event``(저장된 이벤트마다)·``interactions.updated``. WS ``run:<id>``·``interactions``.
 - 필수: ``definitions.lookup``(실행할 팀 구성). 선택: ``runs.preparers``·``runs.services``·
   ``runs.scopes``·``runs.resume_handlers``·``workspace.settings``·``secrets.rules``(``ports.py``).
 - 저장: 호스트 DB 핸들의 legacy 테이블(``runs``·``node_runs``·``run_events``·``interactions``),
-  없으면 메모리(경고 ``runs.storage_memory``).
+  없으면 메모리(경고 ``runs.storage_memory``). 선택 포트 ``records.spaces``가 있으면
+  ``project_id``가 있는 Run은 그 프로젝트 기록 DB에만 쓴다(5.7R.33y2, ``records.py``) - 시작 전에
+  쓸 수 있는지 확인(409 ``project.records_unavailable``), ``host_id``를 적고, 공간을 처음 열 때 자기
+  앱의 끝나지 않은 Run만 끊김으로 정리, 실행 중 기록 DB를 잃으면 Run 취소 + 앱 대기 파일.
 - 백엔드 준비 상태·연결 테스트(ux-overhaul §15.8): ``GET /backends/status``·
   ``GET /backends/{id}/status``·``POST /backends/{id}/probe``. 백엔드 선택 능력
   (``status``·``probe``)만 쓰고 id를 모른다. 시간 상한은 설정 ``backend_probe_timeout_max_s``.
@@ -40,6 +43,7 @@ from agent_console_contracts import CONTRACT_VERSIONS, Issue, RunEvent
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_runtime import (
     BackendHostContext,
+    BackendSessionArchives,
     GraphRuntime,
     InMemoryEventBus,
     Registries,
@@ -48,8 +52,9 @@ from agent_console_runtime import (
 )
 
 from .backends import build_secret_resolver, configure_backends, reveal_hidden_backends
-from .errors import DEFAULT_CHILD_RESUME_FIX, ChildResumeFix, error_map
+from .errors import ChildResumeFix, child_resume_fix_of, error_map
 from .interactions import InteractionService
+from .move import RunMover
 from .observe import observe_event_prefixes_of
 from .plugins import (
     CONDITION_OPERATORS_EXTENSION,
@@ -61,13 +66,16 @@ from .ports import (
     DEFINITIONS_LOOKUP,
     INTERACTIONS_PORT,
     INTERACTIONS_UPDATED,
+    RECORDS_SPACES,
     RESUME_HANDLERS,
     RUN_PREPARERS,
     RUN_SCOPES,
     RUN_SERVICES,
     RUNS_EVENT,
     RUNS_EVENTS,
+    RUNS_MOVE,
     RUNS_READER,
+    RUNS_SESSION_ARCHIVE,
     RUNS_STARTER,
     SECRET_REDACT,
     SECRET_RULES,
@@ -77,6 +85,7 @@ from .ports import (
     RunEnvironment,
 )
 from .readiness import build_login_service, build_readiness_service
+from .records import SpaceRecorder, recover_space, space_records
 from .redaction import SuspectedRedaction
 from .routes import build_router
 from .service import RunService, team_rules_warning
@@ -100,6 +109,17 @@ def _version() -> str:
         return version("agent-console-mod-runs")
     except PackageNotFoundError:  # pragma: no cover - 설치 없이 소스로 실행
         return "0.0.0"
+
+
+def _backend_lookup(registries: Registries) -> Callable[[str], object | None]:
+    """백엔드 id → 지금 등록된 백엔드(없으면 None). 시작 훅이 설정으로 바꿔 끼운 뒤의 값을 본다."""
+
+    def find(backend_id: str) -> object | None:
+        if backend_id not in registries.backends:
+            return None
+        return registries.backends.get(backend_id)
+
+    return find
 
 
 def _registries(found: Any) -> Registries:
@@ -143,7 +163,9 @@ class RunsModule:
     """실행 기능 모듈.
 
     Args:
-        child_resume_fix: 자식 Run 이어 가기 거절(409)의 해결 버튼 문구·웹 역할 데이터.
+        child_resume_fix: 자식 Run 이어 가기 거절(409)의 해결 버튼 문구·웹 역할 데이터. None이면
+            패키지 데이터(``data/issue_fixes.json``). 설치자 옵션 ``issue_fixes_file``이 있으면 그
+            파일이 이긴다.
     """
 
     descriptor = ModuleDescriptor(
@@ -151,13 +173,13 @@ class RunsModule:
         version=_version(),
         kind="feature",
         title="실행",
-        description=(
-            "실행 엔진·Run·이벤트·상호작용 경로, WS run:·interactions, 재시작 복구·이어 가기"
-        ),
+        description="팀 구성을 실행하고 진행·결과를 기록하며 끊긴 실행을 이어 간다",
         provides=(
             RUNS_STARTER,
             RUNS_READER,
             RUNS_EVENTS,
+            RUNS_MOVE,
+            RUNS_SESSION_ARCHIVE,
             INTERACTIONS_PORT,
             SECRET_REDACT,
             SERVER_WARNINGS,
@@ -171,6 +193,7 @@ class RunsModule:
             RESUME_HANDLERS,
             WORKSPACE_SETTINGS,
             SECRET_RULES,
+            RECORDS_SPACES,
         ),
         settings_schema=RunsModuleSettings,
         settings_compat=SETTINGS_COMPAT,
@@ -179,7 +202,7 @@ class RunsModule:
         migrations=(BRANCH,),
     )
 
-    def __init__(self, *, child_resume_fix: ChildResumeFix = DEFAULT_CHILD_RESUME_FIX) -> None:
+    def __init__(self, *, child_resume_fix: ChildResumeFix | None = None) -> None:
         self._child_resume_fix = child_resume_fix
 
     def build(self, ctx: ModuleContext) -> ModuleParts:
@@ -196,7 +219,29 @@ class RunsModule:
             working_directory=_resolve(base_dir, cfg.working_directory or Path(".")),
             run_files_root=_resolve(state_dir, cfg.run_files_dir),
         )
-        recorder, in_memory = open_recorder(ctx.database)
+        host_recorder, in_memory = open_recorder(ctx.database)
+        loop_holder: list[asyncio.AbstractEventLoop] = []
+        active_ids: list[Callable[[], list[str]]] = []
+        records = space_records(
+            lambda: ctx.port(RECORDS_SPACES),
+            prefix=cfg.records_space_prefix,
+            on_open=lambda project_id: recover_space(
+                records,
+                project_id,
+                active=lambda: active_ids[0]() if active_ids else [],
+            ),
+        )
+        service_ref: list[RunService] = []
+
+        def on_lost(run_id: str, reason: str) -> None:
+            """기록 DB를 잃은 Run을 취소한다(워커 스레드에서 불려 이벤트 루프로 넘긴다)."""
+            if not loop_holder or not service_ref:
+                return
+            loop_holder[0].call_soon_threadsafe(
+                service_ref[0].cancel, run_id, f"project.records_unavailable: {reason}"
+            )
+
+        recorder = SpaceRecorder(host_recorder, records, on_lost=on_lost)
         bus = InMemoryEventBus(maxsize=cfg.runtime.event_queue_size)
         redaction = SuspectedRedaction(
             lambda: ctx.port(WORKSPACE_SETTINGS), lambda: ctx.port(SECRET_RULES)
@@ -270,7 +315,10 @@ class RunsModule:
             before_use=redaction.refresh,
             resume_origin=cfg.resume_origin,
             shutdown_timeout=cfg.runtime.shutdown_timeout,
+            records=recorder,
         )
+        service_ref.append(service)
+        active_ids.append(runtime.active_run_ids)
 
         def warnings() -> list[Issue]:
             found: list[Issue] = []
@@ -283,6 +331,10 @@ class RunsModule:
         ctx.provide(RUNS_STARTER, service)
         ctx.provide(RUNS_READER, recorder.runs)
         ctx.provide(RUNS_EVENTS, recorder.events)
+        ctx.provide(RUNS_SESSION_ARCHIVE, BackendSessionArchives(_backend_lookup(registries)))
+        mover = RunMover(lambda: getattr(host_recorder, "engine", None), records)
+        if not in_memory:  # 메모리 저장소는 옮길 원본 DB가 없다
+            ctx.provide(RUNS_MOVE, mover.conversation_hook())
         ctx.provide(INTERACTIONS_PORT, interactions)
         ctx.provide(SECRET_REDACT, lambda text: str(secrets.redact(text)))
         ctx.provide(SERVER_WARNINGS, warnings)
@@ -292,6 +344,7 @@ class RunsModule:
         show_hidden_backends = cfg.show_hidden_backends
 
         async def start() -> None:
+            loop_holder.append(asyncio.get_running_loop())
             if database is not None:
                 await asyncio.to_thread(database.upgrade)  # legacy 계보(실행 기록 표), 멱등
             # 1) 이전 프로세스의 Run·대기 상호작용 정리를 가장 먼저(design §R14.5)
@@ -328,7 +381,8 @@ class RunsModule:
                     lambda: service,
                     lambda: interactions,
                     runs=lambda: recorder.runs,
-                    projects=lambda: recorder.runs,
+                    projects=lambda: host_recorder.runs,
+                    mover=(lambda: mover) if not in_memory else None,
                     events=lambda: recorder.events,
                     activity_limit=cfg.activity_limit,
                     readiness=lambda: readiness,
@@ -339,7 +393,13 @@ class RunsModule:
             ws_topics=topic_handlers(
                 service, bus=bus, events=recorder.events, interactions=interactions, hub=ctx.ws_hub
             ),
-            error_map=error_map(child_resume=self._child_resume_fix),
+            error_map=error_map(
+                child_resume=child_resume_fix_of(
+                    cfg.issue_fixes_file,
+                    ctx.paths.base_dir if ctx.paths is not None else None,
+                    default=self._child_resume_fix,
+                )
+            ),
             startup=[start],
             shutdown=[stop],
         )

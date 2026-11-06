@@ -52,7 +52,7 @@ class ResourcesModule:
         version=_version(),
         kind="feature",
         title="리소스",
-        description="리소스 라이브러리 CRUD·본문·여러 파일, 리소스 종류·병합 전략 목록",
+        description="에이전트가 쓰는 리소스(지침·스킬 같은 파일)를 모아 관리한다",
         provides=(RESOURCES_LOOKUP, RESOURCE_TYPES),
         requires=(DEFINITIONS_STORE,),
         optional=(DEFINITION_USAGES, DEFINITION_CHECKS, DEFINITIONS_SPACES),

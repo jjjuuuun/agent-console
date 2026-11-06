@@ -233,12 +233,8 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
           </>
         );
       case "projects":
-        return (
-          <>
-            {sectionRenderers?.[def.id]?.()}
-            <UserSection {...props} sections={def.keys} />
-          </>
-        );
+        // 프로젝트 관리 작업만(screen-projects §8). 옛 `projects` 설정 키(새 정의 범위 기본값)는 이 화면에서 편집하지 않는다.
+        return <>{sectionRenderers?.[def.id]?.()}</>;
       default:
         return <UserSection {...props} sections={def.keys} />;
     }

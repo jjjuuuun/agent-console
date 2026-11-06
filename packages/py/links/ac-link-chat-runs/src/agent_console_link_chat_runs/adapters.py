@@ -2,7 +2,9 @@
 
 - ``RuntimeTurnLauncher``: ``agent_console_chat.TurnLauncher`` = ``runs.starter.start_run``.
   ``TurnStart.sessions``는 노드 서비스 ``SESSIONS``(이 Run에만, ``ac-nodes-core`` 키)로,
-  ``conversation_id``·``origin``·``seed``·``resumed_from``은 Run으로 넘긴다.
+  ``conversation_id``·``origin``·``seed``·``resumed_from``은 Run으로 넘긴다. 세션 이어 가기 안내
+  ``TurnStart.session_notes``(5.7R.33y3)가 있으면 ``run.started`` payload 키 ``chat_sessions``
+  (``CHAT_SESSIONS_CONTEXT``)로 남긴다.
 - ``ConversationResume``: ``runs.resume_handlers`` 항목. 대화 턴이면 같은 대화의 새 턴으로
   이어 간다.
 - ``ConversationNotifier``: ``runs.event`` 구독. 상호작용(``interaction.*``)·대기(``run.waiting``·
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import builtins
 from collections.abc import Callable, Collection, Iterable, Mapping
+from typing import Any
 
 from agent_console_chat import EventReader, TurnHandle, TurnStart, sessions_from_events
 from agent_console_contracts import Interaction, Run, RunEvent, SessionRef
@@ -29,6 +32,9 @@ from agent_console_runtime import ResumeStart, session_refs
 from .ports import ChatLike, LineageRunReader, RootInteractionReader, RunStarter
 
 INTERACTION_EVENT_PREFIX = "interaction."
+CHAT_SESSIONS_CONTEXT = "chat_sessions"
+"""``run.started`` payload의 키(실행 맥락이 payload에 바로 합쳐진다): 노드(세션 키) → 이어 가기
+안내(``archived``·``relocatable``·``fresh``, 5.7R.33y3). 화면이 턴에 한 줄 안내를 보인다."""
 RUN_STATE_EVENTS: frozenset[str] = frozenset({"run.waiting", "run.resumed"})
 """대화 요약(마지막 턴 상태)이 바뀌는 실행 이벤트."""
 
@@ -45,6 +51,9 @@ class RuntimeTurnLauncher:
 
     async def start_turn(self, turn: TurnStart) -> TurnHandle:
         extra = {SESSIONS: session_refs(turn.sessions)} if turn.sessions else None
+        options: dict[str, Any] = {}
+        if turn.session_notes:  # 안내가 있을 때만(옛 실행 시작 구현과도 맞게)
+            options["run_context"] = {CHAT_SESSIONS_CONTEXT: dict(turn.session_notes)}
         return await self._starter.start_run(
             turn.graph,
             turn.input,
@@ -54,6 +63,7 @@ class RuntimeTurnLauncher:
             seed=turn.seed,
             resumed_from=turn.resumed_from,
             project_id=turn.project_id,
+            **options,
         )
 
     def cancel(self, run_id: str, reason: str = "cancelled") -> bool:
@@ -77,7 +87,11 @@ class ConversationResume:
         chat = self._chat()
         if chat is None:  # pragma: no cover - accepts가 거른다
             raise RuntimeError("대화 서비스가 없습니다")
-        return await chat.resume_turn(request.run.id, graph=request.graph, seed=request.seed)
+        target = _for_project(chat, request.run.project_id)
+        resumed: Run = await target.resume_turn(
+            request.run.id, graph=request.graph, seed=request.seed
+        )
+        return resumed
 
 
 class ConversationNotifier:
@@ -110,7 +124,7 @@ class ConversationNotifier:
         if run is not None and run.conversation_id is None and run.root_run_id is not None:
             run = self._starter.current_run(run.root_run_id)  # 자식 Run → 루트 대화
         if run is not None and run.conversation_id is not None:
-            self._chat.notify(run.conversation_id)
+            _for_project(self._chat, run.project_id).notify(run.conversation_id)
 
 
 class RootInteractions:
@@ -125,6 +139,11 @@ class RootInteractions:
 
     def __init__(self, source: RootInteractionReader) -> None:
         self._source = source
+
+    def for_project(self, project_id: str | None) -> RootInteractions:
+        """그 프로젝트(기록 공간)에 묶은 조회(원본의 선택 메서드 ``for_project``, 없으면 자신)."""
+        method = getattr(self._source, "for_project", None)
+        return RootInteractions(method(project_id)) if callable(method) else self
 
     def list(
         self,
@@ -180,6 +199,13 @@ class LineageSessions:
         }
 
 
+def _for_project(chat: Any, project_id: str | None) -> Any:
+    """대화 서비스의 선택 메서드 ``for_project``(프로젝트 대화 = 그 기록 공간의 서비스, 5.7R.33y2).
+    없거나 ``project_id``가 없으면 그대로."""
+    method = getattr(chat, "for_project", None)
+    return method(project_id) if project_id and callable(method) else chat
+
+
 def _lineage(run: Run, by_id: Mapping[str, Run], root_id: str) -> builtins.list[str] | None:
     """자식 Run → 루트까지의 부모 노드 id(안쪽부터). 계보가 끊기거나 돌면 None."""
     path: builtins.list[str] = []
@@ -197,6 +223,7 @@ def _lineage(run: Run, by_id: Mapping[str, Run], root_id: str) -> builtins.list[
 
 
 __all__ = [
+    "CHAT_SESSIONS_CONTEXT",
     "INTERACTION_EVENT_PREFIX",
     "RUN_STATE_EVENTS",
     "ConversationNotifier",

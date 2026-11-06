@@ -242,6 +242,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | --- | --- |
 | `PortKey[T](name, description="", multi=False)` | 포트 이름(같음 = 이름). `multi`면 여럿이 제공해도 충돌 아님 |
 | `Topic[T](name)` | 모듈 이벤트 토픽 |
+| `KindContribution[K](kind, references=None, summary_fields=())` / `KindReferences` / `DEFINITION_KIND_CONTRIBUTIONS` | 정의 종류 기여(X44). 여러 제공자 포트 `definitions.kind_contributions` — 공급 모듈(예: SDD)과 소비 모듈(정의·프로젝트)이 서로 import하지 않게 키트에 둔다. 키트는 종류 값의 타입을 모른다(정의 모듈은 `agent_console_store.DefinitionKind`만 받는다) |
 | `ModuleDescriptor` | `id`·`version`·`kind`(`feature`/`link`, 열린 문자열)·`title`·`description`·`provides`·`requires`·`optional`·`settings_schema`·`contracts`(`{계약 하위 모듈: 버전}`)·`web_roles`·`migrations`·`settings_compat` |
 | `ModuleParts` | `routers`·`ws_topics`(키가 `:`로 끝나면 접두)·`error_map`(예외 → 코드 문자열 또는 `ErrorMapper`)·`startup`·`shutdown`(역순)·`background` |
 | `ErrorReply(code, message=None, details={}, headers={}, fix=None)` / `ErrorMapper` / `ErrorMapping` / `error_reply` | `error_map` 값: 코드만이면 문자열, 상세·헤더(예: `ETag`)·해결 버튼(`fix`, 주었을 때만 본문 `error.fix`)이 필요하면 예외 → `ErrorReply` 함수 |

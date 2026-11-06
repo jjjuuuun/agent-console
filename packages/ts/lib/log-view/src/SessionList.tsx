@@ -31,6 +31,8 @@ export interface SessionListProps extends ListSlots {
   now?: () => number;
   /** 출처 id -> 표시 이름. 없으면 id. */
   sourceLabelFor?: (id: string) => string | undefined;
+  /** 등록 프로젝트 id -> 표시 이름(`LogSessionSummary.project_id` 기준 "프로젝트" 열). 없거나 모르면 id. */
+  projectLabelFor?: (id: string) => string | undefined;
   /** 토큰 툴팁의 [사용량에서 보기] 같은 연동 슬롯. */
   renderTokenExtra?: (session: LogSessionSummary) => ReactNode;
   height?: number;
@@ -87,7 +89,7 @@ export function fitColumns<Row>(columns: readonly ColumnSpec<Row>[], avail: numb
 
 /** 세션 표(가상 스크롤, `role="grid"`). 값이 없으면 0이 아니라 "–". 오류가 있으면 아이콘 + 색. */
 export function SessionList(props: SessionListProps) {
-  const { sessions, columns, selectedId, onActiveChange, onOpen, onRowMenu, order, onOrderChange, limitReached, limit, startColumnId = "start", height = 480, ariaLabel, sourceLabelFor, renderTokenExtra } = props;
+  const { sessions, columns, selectedId, onActiveChange, onOpen, onRowMenu, order, onOrderChange, limitReached, limit, startColumnId = "start", height = 480, ariaLabel, sourceLabelFor, projectLabelFor, renderTokenExtra } = props;
   const m = useMemo(() => mergeMessages(props.messages), [props.messages]);
   const formatters = useMemo(() => mergeFormatters(props.formatters), [props.formatters]);
   const now = props.now ?? Date.now;
@@ -154,6 +156,7 @@ export function SessionList(props: SessionListProps) {
       case "title":
         return s.title ? <span className="ac-lv-ellipsis" title={s.title}>{s.title}</span> : m.none;
       case "project":
+        if (s.project_id) return <span className="ac-lv-ellipsis" title={s.project_id}>{projectLabelFor?.(s.project_id) ?? s.project_id}</span>;
         return s.project ? <span className="ac-lv-ellipsis" title={s.project.id}>{s.project.label || s.project.id}</span> : m.none;
       case "threads":
         return s.thread_count == null ? m.none : <span className="ac-lv-num">{s.thread_count}</span>;

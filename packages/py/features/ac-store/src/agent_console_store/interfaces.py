@@ -324,7 +324,12 @@ class RunRepository(Protocol):
     """Run과 NodeRun 기록."""
 
     def save(self, run: Run) -> None:
-        """Run을 저장한다(없으면 만들고 있으면 전체 교체)."""
+        """Run을 저장한다(없으면 만들고 있으면 전체 교체).
+
+        루트 Run의 `labels`는 라벨 표(계보 `runs_0004`)에도 같은 내용으로 다시 쓴다(상한 검사는 시작
+        요청 `CreateRunRequest`가 한다. 저장소는 검사하지 않는다).
+        자식 Run의 라벨은 표에 넣지 않는다.
+        """
         ...
 
     def get(self, run_id: str) -> Run | None: ...
@@ -355,6 +360,33 @@ class RunRepository(Protocol):
         `resumed_from`은 그 Run을 이어 간 Run들이다(이미 이어 갔는지 확인).
 
         `agent`는 그 에이전트(정의 id)가 `actor`로 남긴 이벤트가 있는 Run이다.
+        """
+        ...
+
+    def page(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+        project_id: str | None = None,
+        root_only: bool = False,
+        status: Iterable[RunStatus] | None = None,
+        graph_id: str | None = None,
+        labels: Mapping[str, str] | None = None,
+    ) -> tuple[builtins.list[Run], str | None]:
+        """커서 페이지(design §6R.2). `(items, next_cursor)`, 끝이면 `next_cursor`는 None.
+
+        정렬은 `created_at` 내림차순 + `id` 내림차순이고, 조건은 `list`와 같이 모두 만족해야 한다.
+        `labels`의 모든 (키, 값)을 가진 Run만이다(AND, 라벨은 루트 Run에만 있다).
+        `cursor`는 이전
+        응답의 `next_cursor`(불투명)이며 모양이 틀리면 `InvalidCursor`. `limit`은 1~1000.
+        """
+        ...
+
+    def descendants(self, root_run_id: str) -> builtins.list[Run]:
+        """그 루트 아래 모든 자손 Run(루트 제외)을 생성 순(`created_at`, `id` 오름차순)으로.
+
+        `root_run_id` 색인 질의 한 번이다(자손마다 되묻지 않는다).
         """
         ...
 
@@ -405,10 +437,12 @@ class EventRepository(Protocol):
         limit: int | None = None,
         actor: str | None = None,
         type_prefix: str | None = None,
+        node: str | None = None,
     ) -> list[RunEvent]:
         """`seq > since_seq`인 이벤트를 seq 오름차순으로.
 
         `actor`는 정확히 같은 값, `type_prefix`는 `type`이 그 문자열로 시작하는 것(대소문자 구분).
+        `node`는 `node_path`에 그 노드 id가 있는 이벤트(하위 그래프 안 이벤트 포함, 6R.12 M-9).
         """
         ...
 

@@ -8,6 +8,9 @@
   앱 DB와 같은 계보 사슬(legacy + 켜진 모듈 중 ``project`` 범위 계보)을 맞춘다.
 - 앱 id ``host_id``(``<상태 폴더>/host_id``)와 쓰기 실패 대기 파일
   (``<상태 폴더>/records-spool/``)을 둔다.
+- 세션 기록 보관(5.7R.33y3, design §PI.4.6.4): ``records.sessions``(대화 이어 가기 상태·복원) 제공,
+  ``runs.event`` 구독으로 노드가 끝나면 세션 원본을 ``<구성 폴더>/sessions/<backend>/<session>/``에
+  복사(설정 ``session_archive``, 기본 켬). 백엔드 보관 기능은 선택 포트 ``runs.session_archive``.
 - 이 연동이 꺼지면: 프로젝트 기록 DB가 없다. 소비 모듈은 ``records.spaces``가 없는 것으로 보고
   앱 조립은 기록을 막는다(앱 DB에 조용히 쓰지 않는다).
 """
@@ -20,7 +23,16 @@ from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .host_id import HOST_ID_FILE, load_host_id
 from .pool import PoolOptions, RecordsSpacePool
-from .ports import PROJECTS_SPACES, RECORDS_SPACES
+from .ports import (
+    PROJECTS_SPACES,
+    RECORDS_SESSIONS,
+    RECORDS_SPACES,
+    RUNS_EVENT,
+    RUNS_READER,
+    RUNS_SESSION_ARCHIVE,
+    SERVER_WARNINGS,
+)
+from .sessions import ProjectSessionArchive, SessionArchiver
 from .settings import ProjectsRecordsSettings
 from .spool import RecordsSpool
 
@@ -42,9 +54,10 @@ class ProjectsRecordsLink:
         version=_version(),
         kind="link",
         title="프로젝트 기록 연동",
-        description="프로젝트 폴더의 기록 DB를 열어 실행·대화 기록을 폴더에 둔다",
-        provides=(RECORDS_SPACES,),
+        description="실행·대화 기록을 프로젝트 폴더 안에 둔다",
+        provides=(RECORDS_SPACES, RECORDS_SESSIONS, SERVER_WARNINGS),
         requires=(PROJECTS_SPACES,),
+        optional=(RUNS_SESSION_ARCHIVE, RUNS_READER),
         settings_schema=ProjectsRecordsSettings,
     )
 
@@ -72,6 +85,14 @@ class ProjectsRecordsLink:
             ),
         )
         ctx.provide(RECORDS_SPACES, pool)
+        sessions = ProjectSessionArchive(
+            lambda: ctx.port(PROJECTS_SPACES),
+            lambda: ctx.port(RUNS_SESSION_ARCHIVE),
+            settings=cfg.session_archive,
+        )
+        ctx.provide(RECORDS_SESSIONS, sessions)
+        ctx.provide(SERVER_WARNINGS, sessions.warnings)
+        ctx.subscribe(RUNS_EVENT, SessionArchiver(sessions, lambda: ctx.port(RUNS_READER)))
 
         async def stop() -> None:
             pool.close_all()

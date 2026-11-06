@@ -9,7 +9,13 @@ Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페�
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
   `server.warnings`(평문 비밀 점검 `secret.plain_found`). 토픽 `definitions.saved{kind, id, version_hash}`.
 - 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`
-  (팀 구성 목록의 검증 요약·입구 이름, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x).
+  (팀 구성 목록의 검증 요약·입구 이름, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x),
+  `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 X44 — 아래).
+- 종류 기여(X44, 6R.5): 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
+  저장소에 더한다(build 때, 그리고 모든 build가 끝난 뒤 시작 훅에서 한 번 더). `library=False` 종류는 라이브러리에
+  두지 않으므로 그 종류의 라이브러리 요청(예: 버전 경로)은 404이고, 프로젝트 공간에만 들어간다(공간 종류는
+  `mod-projects`가 같은 포트에서 계산). 기본 종류와 같은 이름의 기여는 경고 로그를 남기고 건너뛴다. 기여의 참조
+  추출(`references`)은 복사 계획을 만드는 `mod-projects`가 같은 포트에서 직접 읽는다.
 - 공간(`?project=<이름>`): 에이전트·팀 구성 경로(목록·조회·만들기·저장·삭제·복제)가 그 공간 저장소를 쓴다. 포트가 없으면
   409 `feature_unavailable`(라이브러리에 쓰지 않음), 모르는 공간 404 `project.not_found`. 질의가 없으면 라이브러리.
   이 모듈은 이름의 뜻(프로젝트)을 모른다. 공간 저장의 알림은 제공자가 `definitions.saved`에 `space`를 담아 낸다.
@@ -51,6 +57,25 @@ pip install agent-console-mod-definitions
 True
 >>> [(w.code, w.path) for w in assembly.ports(SERVER_WARNINGS)[0]()]
 [('secret.plain_found', '/token'), ('definitions.versions_memory', None)]
+
+```
+
+종류 기여(X44): 기여 모듈이 종류를 주면 라이브러리 저장소에 생긴다(`library=False` 종류는 생기지 않는다).
+
+```python
+>>> from agent_console_modkit import KindContribution
+>>> from agent_console_modkit.testing import fake_module
+>>> from agent_console_store import DefinitionKind
+>>> from agent_console_mod_definitions import KIND_CONTRIBUTIONS
+>>> def contribute(ctx):
+...     ctx.provide(KIND_CONTRIBUTIONS, KindContribution(DefinitionKind("note-template", "note-templates")))
+...     ctx.provide(KIND_CONTRIBUTIONS, KindContribution(DefinitionKind("note", "notes", library=False)))
+>>> kinds = fake_module("kinds", provides=[KIND_CONTRIBUTIONS], on_build=contribute)
+>>> root2 = Path(tempfile.mkdtemp())
+>>> paths2 = Paths(base_dir=root2, workspace=root2 / "ws", state=root2 / "state")
+>>> lib = assemble([module, kinds], base=BaseServices(paths=paths2)).port(DEFINITIONS_STORE)
+>>> [k for k in lib.kinds() if k.startswith("note")]
+['note-template']
 
 ```
 

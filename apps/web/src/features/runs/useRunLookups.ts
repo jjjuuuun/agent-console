@@ -1,9 +1,12 @@
 import { useMemo } from "react";
+import { useQueries } from "@tanstack/react-query";
 import type { Agent, ConversationSummary, EdgeTypeDescriptor, GraphSummary, InteractionKindDescriptor, NodeTypeDescriptor } from "@agent-console/contracts";
 import { queryKeys, useApiQuery } from "../../app/queries";
 import type { RestClient } from "@agent-console/api-client";
 import { LOOKUP_REQUIRES } from "../../app/requirements";
 import { useRequires } from "../../modules";
+import { useApi } from "../../app/ApiContext";
+import { useProjects } from "../projects";
 
 const loadAgents = (rest: RestClient) => rest.listAgents();
 const loadGraphs = (rest: RestClient) => rest.listGraphs();
@@ -20,7 +23,8 @@ export interface RunLookups {
   edgeTypes: readonly EdgeTypeDescriptor[];
   interactionKinds: readonly InteractionKindDescriptor[];
   agentName(id: string | null | undefined): string;
-  graphName(id: string): string | undefined;
+  /** 팀 구성 이름. `projectId`를 주면 그 프로젝트 공간을 먼저 보고, 없으면 공용을 포함한 모든 공간에서 찾는다 */
+  graphName(id: string, projectId?: string | null): string | undefined;
   conversationTitle(id: string | null | undefined): string | undefined;
   edgeTitle(kind: string | null | undefined): string | undefined;
   /** 연결 종류 디스크립터의 `ui_hints.icon`(위임 흐름 방식 아이콘). 없으면 undefined */
@@ -39,6 +43,20 @@ export function useRunLookups(): RunLookups {
   const agentsOn = useRequires(LOOKUP_REQUIRES.agents).phase === "met";
   const graphsOn = useRequires(LOOKUP_REQUIRES.graphs).phase === "met";
   const conversationsOn = useRequires(LOOKUP_REQUIRES.conversations).phase === "met";
+  const { space } = useApi();
+  const projects = useProjects();
+  // 프로젝트 구성 실행도 이름을 풀 수 있게 등록된 프로젝트 공간의 구성 목록도 읽는다(대화상자와 같은 질의 키).
+  const spaceIds = useMemo(() => projects.views.map((v) => v.project.id), [projects.views]);
+  const spaceGraphData = useQueries({
+    queries: spaceIds.map((pid) => ({
+      queryKey: ["list", "graphs", "space", pid] as const,
+      queryFn: () => space(pid).listGraphs(),
+      enabled: graphsOn,
+      retry: false,
+      meta: { silentBackgroundError: true },
+    })),
+    combine: (results) => results.map((r) => r.data),
+  });
   const agents = useApiQuery(queryKeys.list("agents"), loadAgents, { enabled: agentsOn });
   const graphs = useApiQuery(queryKeys.list("graphs"), loadGraphs, { enabled: graphsOn });
   const conversations = useApiQuery(queryKeys.list("conversations", { archived: false }), loadConversations, { enabled: conversationsOn });
@@ -47,7 +65,18 @@ export function useRunLookups(): RunLookups {
   const kinds = useApiQuery(queryKeys.descriptors("interaction-kinds"), loadKinds);
   return useMemo(() => {
     const a = agents.data ?? EMPTY;
-    const g = graphs.data ?? EMPTY;
+    const library = graphs.data ?? EMPTY;
+    const byProject = new Map<string, readonly GraphSummary[]>();
+    spaceIds.forEach((pid, i) => byProject.set(pid, spaceGraphData[i] ?? EMPTY));
+    const seen = new Set(library.map((x) => x.id));
+    const g: GraphSummary[] = [...library];
+    for (const list of byProject.values()) {
+      for (const x of list) {
+        if (seen.has(x.id)) continue;
+        seen.add(x.id);
+        g.push(x);
+      }
+    }
     const c = conversations.data ?? EMPTY;
     const e = edgeTypes.data ?? EMPTY;
     const k = kinds.data ?? EMPTY;
@@ -59,11 +88,14 @@ export function useRunLookups(): RunLookups {
       edgeTypes: e,
       interactionKinds: k,
       agentName: (id) => (id === null || id === undefined || id === "" ? "" : (a.find((x) => x.id === id)?.name ?? id)),
-      graphName: (id) => g.find((x) => x.id === id)?.name,
+      graphName: (id, projectId) => {
+        const own = projectId === null || projectId === undefined ? undefined : byProject.get(projectId)?.find((x) => x.id === id)?.name;
+        return own ?? library.find((x) => x.id === id)?.name ?? g.find((x) => x.id === id)?.name;
+      },
       conversationTitle: (id) => (id === null || id === undefined ? undefined : c.find((x) => x.id === id)?.title),
       edgeTitle: (kind) => (kind === null || kind === undefined ? undefined : (e.find((x) => x.id === kind)?.title ?? kind)),
       edgeIcon: (kind) => (kind === null || kind === undefined ? undefined : (e.find((x) => x.id === kind)?.ui_hints?.icon ?? undefined)),
       kindOf: (id) => k.find((x) => x.id === id),
     };
-  }, [agents.data, graphs.data, conversations.data, nodeTypes.data, edgeTypes.data, kinds.data]);
+  }, [agents.data, graphs.data, spaceIds, spaceGraphData, conversations.data, nodeTypes.data, edgeTypes.data, kinds.data]);
 }

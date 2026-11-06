@@ -5,10 +5,11 @@
 - 필수 포트 없음. 선택: ``chat.turn_launcher``·``chat.runs``·``chat.run_events``·
   ``chat.interactions``·``chat.turn_sessions``(실행 연결 — 보통 ``link-chat-runs``가 준다),
   ``definitions.lookup``, ``definitions.spaces``(프로젝트 대화의 팀 구성 = 그 공간에서만, 5.7R.33y),
-  ``workspace.settings``(``ports.py``).
+  ``workspace.settings``, ``records.sessions``(세션 이어 가기 상태·복원, 5.7R.33y3)(``ports.py``).
 - 저장: 이 모듈이 소유한 ``conversations``·``chat_queue``(``storage/``)를 호스트 DB 핸들의 엔진
   위에 둔다. 마이그레이션 계보 ``chat``은 모듈이 켜질 때만 올라간다(테이블은 legacy 0002·0003이
-  만들었다). DB가 없으면 메모리(경고 ``chat.storage_memory``).
+  만들었다). DB가 없으면 메모리(경고 ``chat.storage_memory``). 선택 포트 ``records.spaces``가
+  있으면 프로젝트 대화·대기열은 그 프로젝트 기록 DB에만 둔다(5.7R.33y2, ``spaces.py``).
 - 시작: 실행 연결을 서비스에 붙인다(``ChatService.connect`` — 연결
   모듈은 이 모듈의 포트가 필요해 조립 순서상 뒤에 빌드되므로 시작 때 읽는다). 재시작 대기열 정책은
   턴 실행기를 주는 연동 모듈이 시작할 때 적용한다.
@@ -19,6 +20,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
@@ -28,9 +30,11 @@ from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
 from .errors import error_map
 from .graphs import PortGraphLookup
+from .move import ConversationMover
 from .ports import (
     CHAT_CONVERSATIONS,
     CHAT_INTERACTIONS,
+    CHAT_MOVE_HOOKS,
     CHAT_RUN_EVENTS,
     CHAT_RUNS,
     CHAT_TURN_LAUNCHER,
@@ -38,10 +42,14 @@ from .ports import (
     CONVERSATIONS_UPDATED,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SPACES,
+    RECORDS_SESSIONS,
+    RECORDS_SPACES,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
 )
 from .routes import build_router
+from .settings import SETTINGS_COMPAT, ChatModuleSettings
+from .spaces import SpaceConversations, SpacedChatService, SpaceQueue, chat_records
 from .storage import BRANCH, memory_storage_warning, open_chat_storage
 from .ws import conversation_topic, topic_handlers, updated_message
 
@@ -67,9 +75,7 @@ class ChatModule:
         version=_version(),
         kind="feature",
         title="채팅",
-        description=(
-            "대화·턴·메시지·대기열 경로, WS conversation:. 턴 실행·상호작용은 포트로 받는다"
-        ),
+        description="에이전트와 대화하고 메시지·대기열을 관리한다",
         provides=(CHAT_CONVERSATIONS, SERVER_WARNINGS),
         optional=(
             CHAT_TURN_LAUNCHER,
@@ -80,13 +86,21 @@ class ChatModule:
             DEFINITIONS_LOOKUP,
             DEFINITIONS_SPACES,
             WORKSPACE_SETTINGS,
+            RECORDS_SPACES,
+            CHAT_MOVE_HOOKS,
+            RECORDS_SESSIONS,
         ),
+        settings_schema=ChatModuleSettings,
+        settings_compat=SETTINGS_COMPAT,
         contracts={"chat": CONTRACT_VERSIONS["chat"]},
         web_roles=WEB_ROLES,
         migrations=(BRANCH,),
     )
 
     def build(self, ctx: ModuleContext) -> ModuleParts:
+        cfg = ctx.settings
+        if not isinstance(cfg, ChatModuleSettings):
+            cfg = ChatModuleSettings()
         storage = open_chat_storage(ctx.database)
         graphs = PortGraphLookup(
             lambda: ctx.port(DEFINITIONS_LOOKUP), spaces=lambda: ctx.port(DEFINITIONS_SPACES)
@@ -101,12 +115,41 @@ class ChatModule:
             hub.publish(conversation_topic(summary.id), updated_message(summary))
             ctx.publish(CONVERSATIONS_UPDATED, summary)
 
-        service = ChatService(
+        settings = layered_chat_settings(common)
+
+        def make_space(
+            conversations: SpaceConversations,
+            queue: SpaceQueue,
+            busy: Callable[[str], str | None],
+        ) -> ChatService:
+            """프로젝트 공간 하나의 대화 서비스(같은 팀 구성 조회·설정·알림)."""
+            return ChatService(
+                conversations,
+                graphs,
+                settings=settings,
+                listener=publish,
+                queue=queue,
+                busy_elsewhere=busy,
+            )
+
+        service_records = chat_records(
+            lambda: ctx.port(RECORDS_SPACES), prefix=cfg.records_space_prefix
+        )
+        service = SpacedChatService(
             storage.conversations,
             graphs,
-            settings=layered_chat_settings(common),
+            settings=settings,
             listener=publish,
             queue=storage.queue,
+            records=service_records,
+            make=make_space,
+        )
+
+        database = ctx.database
+        mover = ConversationMover(
+            lambda: database.engine if database is not None else None,
+            service_records,
+            lambda: ctx.ports(CHAT_MOVE_HOOKS),
         )
 
         def warnings() -> list[Issue]:
@@ -126,6 +169,7 @@ class ChatModule:
                 events=ctx.port(CHAT_RUN_EVENTS),
                 interactions=ctx.port(CHAT_INTERACTIONS),
                 sessions=ctx.port(CHAT_TURN_SESSIONS),
+                continuity=ctx.port(RECORDS_SESSIONS),
             )
             if not service.can_send:
                 _log.info("턴 실행기가 없어 대화 메시지 전송이 꺼져 있습니다(대화·대기열은 동작)")
@@ -139,6 +183,7 @@ class ChatModule:
                     lambda: service,
                     require_graphs=require_graphs,
                     projects=lambda: storage.projects,
+                    mover=(lambda: mover) if database is not None else None,
                 )
             ],
             ws_topics=topic_handlers(service, hub=hub),

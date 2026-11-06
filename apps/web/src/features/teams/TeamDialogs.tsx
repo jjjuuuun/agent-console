@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { EdgeTypeDescriptor, GraphSummary, NodeTypeDescriptor } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
-import { DEFINITION_KINDS, useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
+import { useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
 import { projectBody, useProjectId } from "../../app/projectScope";
 import { useNewScope } from "../projects";
 import { teamMessages as t } from "./messages";
@@ -33,7 +33,7 @@ export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated
   const cloneId = pickedClone ?? graphs[0]?.id ?? "";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scope = useNewScope(DEFINITION_KINDS.graph ?? "");
+  const scope = useNewScope();
 
   const submit = async (v: NewDefinitionValues) => {
     setBusy(true);

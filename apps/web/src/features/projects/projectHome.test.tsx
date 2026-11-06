@@ -226,3 +226,37 @@ describe("폴더 추가 진입점", () => {
     await waitFor(() => expect(document.activeElement).toBe(within(dlg).getByRole("button", { name: "폴더 선택…" })));
   });
 });
+
+describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => {
+  it("[공용에서 가져오기…]가 복사 계획 대화상자를 고르기 단계로 열고, 구성 표 행 메뉴에 [공용에 저장…]이 있다", async () => {
+    const { space } = mount([view("a")], "/projects/a", { listConversations: vi.fn(async () => []), listRuns: vi.fn(async () => []) });
+    space.mockImplementation(((id: string | null) => createFakeRest({ listAgents: vi.fn(async () => (id === null ? [{ id: "lib-agent", name: "공용 에이전트" }] : [{ id: "pl", name: "기획 에이전트" }])) })) as never);
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByRole("link", { name: "기획 에이전트" });
+    fireEvent.click(within(config).getByRole("button", { name: "공용에서 가져오기…" }));
+    const dialog = await screen.findByRole("dialog", { name: "공용에서 가져오기 — 프로젝트 a" });
+    expect(await within(dialog).findByRole("checkbox", { name: "공용 에이전트" })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /공용에서 가져오기/ })).toBeNull());
+    fireEvent.click(within(config).getByRole("button", { name: "기획 에이전트 작업" }));
+    expect(await screen.findByRole("menuitem", { name: "공용에 저장…" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "삭제" })).toBeTruthy();
+  });
+
+  it("읽기 전용 폴더에서는 [공용에 저장…]을 제외한 쓰기 동작이 막히고(삭제 비활성), 가져오기 버튼은 aria-disabled", async () => {
+    mount([view("a", { config_writable: false })], "/projects/a", { listConversations: vi.fn(async () => []), listRuns: vi.fn(async () => []) });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByRole("link", { name: "기획 에이전트" });
+    expect(within(config).getByRole("button", { name: "공용에서 가져오기…" }).getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(within(config).getByRole("button", { name: "기획 에이전트 작업" }));
+    expect((await screen.findByRole("menuitem", { name: "삭제" })).hasAttribute("disabled") || (await screen.findByRole("menuitem", { name: "삭제" })).getAttribute("aria-disabled") === "true").toBe(true);
+  });
+
+  it("[채팅 시작]은 새 대화 대화상자를 여는 주소(?new=1)로 간다", async () => {
+    mount([view("a")], "/projects/a", { listConversations: vi.fn(async () => []), listRuns: vi.fn(async () => []) });
+    const link = await screen.findByRole("link", { name: "채팅 시작" });
+    expect(link.getAttribute("href")).toMatch(/new=1/);
+    expect(link.getAttribute("href")).toMatch(/prj=a/);
+  });
+});
+

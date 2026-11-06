@@ -210,6 +210,17 @@ interactions_v2 = interactions.to_metadata(runs_lineage_metadata)
 interactions_v2.append_column(sa.Column("root_run_id", sa.Text))
 sa.Index("ix_interactions_root", interactions_v2.c.root_run_id)
 
+# `runs_0004`: 루트 Run 라벨 투영. 진실은 `runs.doc`의 `labels`, 이 표는 라벨 AND 질의용 색인이다.
+run_labels = sa.Table(
+    "run_labels",
+    runs_lineage_metadata,
+    sa.Column("run_id", sa.Text, nullable=False),
+    sa.Column("key", sa.Text, nullable=False),
+    sa.Column("value", sa.Text, nullable=False),
+    sa.PrimaryKeyConstraint("run_id", "key"),
+    sa.Index("ix_run_labels_kv", "key", "value", "run_id"),
+)
+
 # 계보 밖 표도 같이 두어 이 metadata 하나로 "legacy + 계보" 전체 모양을 비교할 수 있게 한다.
 for _table in metadata.tables.values():
     if _table.name not in runs_lineage_metadata.tables:
@@ -244,3 +255,11 @@ def runs_project_active(engine: sa.Engine) -> bool:
     if "runs" not in inspector.get_table_names():
         return False
     return "project_id" in {c["name"] for c in inspector.get_columns("runs")}
+
+
+def runs_labels_active(engine: sa.Engine) -> bool:
+    """`run_labels` 표가 DB에 있는가(`runs_0004` 적용 여부).
+
+    없으면 저장소는 라벨을 `doc`에만 남기고, 라벨 거르기는 `doc`의 JSON을 훑는다.
+    """
+    return "run_labels" in sa.inspect(engine).get_table_names()

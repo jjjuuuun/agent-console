@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Agent } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { Disclosure } from "@agent-console/ui";
-import { DEFINITION_KINDS, DefinitionIdField, useDefinitionId, type DefinitionId } from "../library";
+import { DefinitionIdField, useDefinitionId, type DefinitionId } from "../library";
 import { useNewScope } from "../projects";
 import { AgentEditorForm, type AgentUpdate } from "./AgentEditorForm";
 import { AgentResourcesTab } from "./AgentTabs";
@@ -31,7 +31,7 @@ export interface AgentCreateDraft {
 export function useAgentCreateDraft(existingIds: ReadonlySet<string>, fallbackId: string): AgentCreateDraft {
   const [agent, setAgentState] = useState<Agent>({ id: "", name: "" } as Agent);
   const id = useDefinitionId(agent.name, existingIds, fallbackId);
-  const scope = useNewScope(DEFINITION_KINDS.agent ?? "");
+  const scope = useNewScope();
   const setAgent = (next: AgentUpdate) => setAgentState((cur) => (typeof next === "function" ? next(cur) : next));
   return useMemo(
     () => ({

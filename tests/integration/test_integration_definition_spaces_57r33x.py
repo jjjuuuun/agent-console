@@ -240,3 +240,43 @@ def test_app_assembly_secret_rejection_has_field_issues(tmp_path: Path) -> None:
     details = bad.json()["error"]["details"]
     assert [i["path"] for i in details["issues"]] == ["/attributes/k"]
     assert plain not in bad.text
+
+
+def _team_graph(edge_config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": "team",
+        "name": "팀",
+        "nodes": [
+            {"id": "you", "type": "user", "label": "나"},
+            {"id": "lead", "type": "agent", "label": "리더", "config": {}},
+        ],
+        "edges": [
+            {
+                "id": "m1",
+                "source": {"node": "you", "port": "says"},
+                "target": {"node": "lead", "port": "in"},
+                "kind": "message",
+                "config": edge_config,
+            }
+        ],
+    }
+
+
+def test_team_graph_with_input_key_saves_to_space_57r33y2(
+    tmp_path: Path, spaces: FolderSpaces
+) -> None:
+    """5.7R.33y2 결함: 연결 config의 ``input_key``가 평문 비밀로 잡혀 422가 나던 것."""
+    with _app(tmp_path, spaces) as client:
+        ok = client.post(f"{API}/graphs?project=pa", json=_team_graph({"input_key": "message"}))
+        assert ok.status_code == 201, ok.text
+        assert (tmp_path / "A" / ".agent-console" / "graphs" / "team.yaml").exists()
+
+        secret = "sk-ant-" + "abcdef123456"
+        bad = client.post(
+            f"{API}/graphs?project=pb",
+            json=_team_graph({"input_key": "message", "api_key": secret}),
+        )
+        assert bad.status_code == 422
+        paths = [i["path"] for i in bad.json()["error"]["details"]["issues"]]
+        assert paths == ["/edges/0/config/api_key"]
+        assert secret not in bad.text

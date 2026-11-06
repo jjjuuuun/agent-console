@@ -9,7 +9,11 @@
     - 포트·토픽(``ports``): 제공 ``RUNS_STARTER``·``RUNS_READER``·``RUNS_EVENTS``·
       ``INTERACTIONS_PORT``·``SECRET_REDACT``·``SERVER_WARNINGS``·``SERVER_ATTRIBUTES``, 토픽
       ``RUNS_EVENT``·``INTERACTIONS_UPDATED``. 받음 ``DEFINITIONS_LOOKUP``(필수)·``RUN_PREPARERS``·
-      ``RUN_SERVICES``·``RUN_SCOPES``·``RESUME_HANDLERS``·``WORKSPACE_SETTINGS``·``SECRET_RULES``.
+      ``RUN_SERVICES``·``RUN_SCOPES``·``RESUME_HANDLERS``·``WORKSPACE_SETTINGS``·``SECRET_RULES``·
+      ``RECORDS_SPACES``(프로젝트 기록 DB, 5.7R.33y2).
+    - 기록 자리(``records``, 5.7R.33y2): ``SpaceRecorder``(엔진 저장 묶음 + 읽기, ``project_id``가
+      있는 Run은 그 기록 DB로)·``SpaceReader``·``space_records``·``recover_space``(자기 앱 Run만
+      재시작 복구)·``interrupt_run``.
     - 확장 지점 프로토콜: ``RunPreparer``(+ ``RunPreparation``, 선택 사전 점검 ``RunPreflight`` →
       ``RunPreflightError``, 선택 이슈 꾸미기 ``RunIssueAnnotator``)·``RunScoper``(+ ``RunScope``,
       요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34, 선택 메서드 ``RunDefinitionsScoper`` →
@@ -19,7 +23,9 @@
       ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
       백엔드 숨김 풀기)·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
     - ``build_router``·``topic_handlers``·``ERROR_MAP``(``error_map(child_resume=)``, 자식 Run
-      이어 가기 거절 버튼 데이터 ``ChildResumeFix``), 설정 ``RunsModuleSettings``.
+      이어 가기 거절 버튼 데이터 ``ChildResumeFix`` — 기본은 패키지 데이터
+      ``data/issue_fixes.json``, ``load_child_resume_fix``·``child_resume_fix_of``),
+      설정 ``RunsModuleSettings``.
     - 관측 탭 이벤트 접두어 데이터(5.5R.13): ``DEFAULT_OBSERVE_EVENT_PREFIXES``·
       ``load_observe_event_prefixes``·``observe_event_prefixes_of``.
 """
@@ -43,10 +49,19 @@ from .errors import (
     PortConfigError,
     RunNotFoundError,
     RunPreflightError,
+    child_resume_fix_of,
     error_map,
+    load_child_resume_fix,
 )
 from .interactions import INTERACTIONS_TOPIC, InteractionService
 from .module import MODULE_ID, WEB_ROLES, PublishingSink, RunsModule, module
+from .move import (
+    MOVE_BUSY,
+    MOVE_FAILED,
+    MOVE_NOT_FOUND,
+    ConversationRunMove,
+    RunMover,
+)
 from .observe import (
     DEFAULT_OBSERVE_EVENT_PREFIXES,
     load_observe_event_prefixes,
@@ -56,6 +71,7 @@ from .ports import (
     DEFINITIONS_LOOKUP,
     INTERACTIONS_PORT,
     INTERACTIONS_UPDATED,
+    RECORDS_SPACES,
     RESUME_HANDLERS,
     RUN_DEFINITIONS,
     RUN_PREPARERS,
@@ -63,6 +79,7 @@ from .ports import (
     RUN_SERVICES,
     RUNS_EVENT,
     RUNS_EVENTS,
+    RUNS_MOVE,
     RUNS_READER,
     RUNS_STARTER,
     SECRET_REDACT,
@@ -84,6 +101,15 @@ from .ports import (
     RunScoper,
     RunServiceProvider,
 )
+from .records import (
+    SpaceEvents,
+    SpaceInteractions,
+    SpaceReader,
+    SpaceRecorder,
+    interrupt_run,
+    recover_space,
+    space_records,
+)
 from .redaction import SuspectedRedaction
 from .routes import build_router
 from .service import TEAM_RULES_UNAVAILABLE, RunService, blocks_run, team_rules_warning
@@ -100,9 +126,14 @@ __all__ = [
     "INTERACTIONS_TOPIC",
     "INTERACTIONS_UPDATED",
     "MODULE_ID",
+    "MOVE_BUSY",
+    "MOVE_FAILED",
+    "MOVE_NOT_FOUND",
+    "RECORDS_SPACES",
     "RESUME_HANDLERS",
     "RUNS_EVENT",
     "RUNS_EVENTS",
+    "RUNS_MOVE",
     "RUNS_READER",
     "RUNS_STARTER",
     "RUN_DEFINITIONS",
@@ -121,6 +152,7 @@ __all__ = [
     "BackendNotFoundError",
     "BackendOptionsError",
     "ChildResumeFix",
+    "ConversationRunMove",
     "DefinitionLookup",
     "DefinitionReadError",
     "DefinitionSource",
@@ -133,6 +165,7 @@ __all__ = [
     "RunDefinitionsScoper",
     "RunEnvironment",
     "RunIssueAnnotator",
+    "RunMover",
     "RunNotFoundError",
     "RunPreflight",
     "RunPreflightError",
@@ -146,17 +179,26 @@ __all__ = [
     "RunsModule",
     "RunsModuleSettings",
     "RuntimeOptions",
+    "SpaceEvents",
+    "SpaceInteractions",
+    "SpaceReader",
+    "SpaceRecorder",
     "SuspectedRedaction",
     "blocks_run",
     "build_router",
     "build_secret_resolver",
+    "child_resume_fix_of",
     "configure_backends",
     "error_map",
+    "interrupt_run",
+    "load_child_resume_fix",
     "load_observe_event_prefixes",
     "module",
     "observe_event_prefixes_of",
     "open_recorder",
+    "recover_space",
     "reveal_hidden_backends",
+    "space_records",
     "team_rules_warning",
     "topic_handlers",
 ]

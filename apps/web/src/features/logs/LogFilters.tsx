@@ -2,7 +2,7 @@ import { useMemo, useReducer, type ReactNode, type Ref } from "react";
 import { LogFilterBar, createLocalStorageSavedFilters, type FilterFieldSpec, type LogFilterValue, type SavedFilter, type SavedFilterStore } from "@agent-console/log-view";
 import type { LogSourceInfo } from "@agent-console/contracts";
 import { useStorage } from "../../app/StorageContext";
-import { CUSTOM_RANGE_SEP, FILTER_FIELDS, LOGS_LIMITS, LOGS_STORAGE, RANGE_OPTIONS, SEARCH_FIELD, UNGROUPED_PROJECT_VALUE } from "./logsConfig";
+import { CUSTOM_RANGE_SEP, FILTER_FIELDS, LOGS_LIMITS, LOGS_STORAGE, RANGE_OPTIONS, SEARCH_FIELD } from "./logsConfig";
 import { customRangeValue, parseRange } from "./logsLib";
 import { logsMessages as t } from "./messages";
 
@@ -29,8 +29,6 @@ export interface FilterOptionsData {
   /** 분류 체계 순서 + 데이터에 나온 범주 id */
   categoryIds: readonly string[];
   categoryName(id: string): string;
-  /** 설정 `logs.projects.groups`의 그룹 */
-  projectGroups: readonly { id: string; label?: string | null | undefined }[];
 }
 
 export interface LogFiltersProps {
@@ -64,8 +62,6 @@ export function LogFilters({ value, onChange, options, suggestions, fieldErrors,
     const def = FILTER_FIELDS.find((f) => f.name === name);
     if (def?.optionsFrom === "sources") return (options.sources ?? []).map((s) => ({ value: s.descriptor.id, label: s.descriptor.title }));
     if (def?.optionsFrom === "categories") return options.categoryIds.map((id) => ({ value: id, label: options.categoryName(id) }));
-    if (def?.optionsFrom === "projects")
-      return [...options.projectGroups.map((g) => ({ value: g.id, label: g.label?.trim() ? g.label : g.id })), { value: UNGROUPED_PROJECT_VALUE, label: t.filters.ungrouped }];
     return undefined;
   };
   return (

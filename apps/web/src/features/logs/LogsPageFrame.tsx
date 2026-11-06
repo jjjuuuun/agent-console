@@ -4,11 +4,11 @@ import { IconButton, PageHeader, useShortcuts } from "@agent-console/ui";
 import { queryKeys, useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
-import { LogProjectNote } from "../projects";
+import { ProjectChip } from "../projects";
 import { ActionMenu, type ActionMenuEntry } from "./ActionMenu";
 import { LogsLiveProvider } from "./LogsLive";
 import { NoticeBar, type LogNotice } from "./NoticeBar";
-import { DEFAULT_LOG_TAB, FILTER_KEYS, LOGS_SCOPES, LOGS_STORAGE, LOG_TABS, NOTICE_PRIORITY, WARNING_CODES, type LogTabId } from "./logsConfig";
+import { DEFAULT_LOG_TAB, LOGS_SCOPES, LOGS_STORAGE, LOG_TABS, NOTICE_PRIORITY, WARNING_CODES, type LogTabId } from "./logsConfig";
 import { logsMessages as t } from "./messages";
 
 /** 로그 라우트의 공통 층: 수집 알림 구독(WS `logs`)을 하나 열고 하위 화면에 나눠 준다. */
@@ -88,6 +88,7 @@ export function LogsPageFrame({ tab, title, actions, status, onRefresh, menu, no
         {...(status === undefined ? {} : { status })}
         actions={
           <>
+            <ProjectChip />
             {actions}
             {onRefresh === undefined ? null : <IconButton label={t.header.refresh} title={`${t.header.refresh} (R)`} icon="⟳" size="sm" onClick={onRefresh} />}
             {menu === undefined ? null : <ActionMenu label={t.header.more} trigger="⋯" triggerClassName="ac-icon-btn" triggerVariant="ghost" entries={menu} />}
@@ -102,7 +103,6 @@ export function LogsPageFrame({ tab, title, actions, status, onRefresh, menu, no
         ))}
       </div>
       <NoticeBar notices={[...common, ...(notices ?? [])]} />
-      <LogProjectNote filterParam={FILTER_KEYS.project} />
       <div className="logs-body">{children}</div>
     </div>
   );

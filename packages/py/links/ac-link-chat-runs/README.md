@@ -68,6 +68,7 @@ interrupted
 | 제공 | `chat.interactions` | `RootInteractions`(루트 기준) |
 | 제공 | `chat.turn_sessions` | `LineageSessions`(자식 Run 세션 = 경로 키) |
 | 제공(multi) | `runs.resume_handlers` | `ConversationResume` |
+| 선택 → 제공(multi) | `runs.move_hook` → `chat.move_hooks` | 받은 훅 그대로(5.7R.33j2): 옛 대화 옮기기 때 그 Run도 함께 |
 
 ## 단독 실행
 

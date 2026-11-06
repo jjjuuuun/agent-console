@@ -22,6 +22,11 @@
   에이전트·팀 구성 경로가 ``?project=<이름>``을 받아 그 공간 저장소를 쓴다. 없으면 ``?project=``
   요청은 409 ``feature_unavailable``이고 질의 없는 요청은 지금처럼 라이브러리. 이 모듈은 이름이
   무엇을 가리키는지(프로젝트) 모른다.
+- ``definitions.kind_contributions``(여러 제공자, X44, 6R.5): 정의 종류 기여
+  (``agent_console_modkit.KindContribution``). ``library=True`` 종류만 라이브러리 저장소에 더한다
+  (``library=False`` 종류의 라이브러리 요청은 모르는 종류라 404). 기본 종류와 이름이 같은 기여는
+  건너뛴다. 기여의 참조 추출은 이 모듈이 쓰지 않는다 — 복사 계획을 만드는 쪽(프로젝트 모듈)이 같은
+  포트에서 직접 읽는다.
 """
 
 from __future__ import annotations
@@ -31,7 +36,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import Graph, GraphValidationSummary, Issue, WorkspaceSettings
-from agent_console_modkit import PortKey, Topic
+from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey, Topic
 from agent_console_secret_rules import SecretRules
 from agent_console_store import DEFINITIONS_SPACES_PORT, DefinitionSpaces, FileDefinitionStore
 
@@ -102,6 +107,8 @@ DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
     DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
 )
 DEFINITIONS_SAVED: Topic[SavedDefinition] = Topic("definitions.saved")
+KIND_CONTRIBUTIONS: PortKey[KindContribution[Any]] = DEFINITION_KIND_CONTRIBUTIONS
+"""``definitions.kind_contributions``(키트의 같은 포트, X44)."""
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
@@ -111,6 +118,7 @@ __all__ = [
     "DEFINITION_CHECKS",
     "GRAPH_ENTRY_LABELS",
     "GRAPH_VALIDATION",
+    "KIND_CONTRIBUTIONS",
     "SECRET_RULES",
     "SERVER_WARNINGS",
     "WORKSPACE_SETTINGS",

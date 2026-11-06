@@ -24,7 +24,7 @@ pip install agent-console-link-projects-records
 
 ## 의존성 (무엇을 / 왜 / 대안)
 
-새 외부 의존은 없다(`agent-console-store`·`agent-console-project-space`·`agent-console-modkit`은 사내 패키지).
+새 외부 의존은 없다(`agent-console-store`·`agent-console-project-space`·`agent-console-modkit`·`agent-console-runtime`(세션 보관 부품, 5.7R.33y3)은 사내 패키지).
 
 ## 최소 사용
 
@@ -59,6 +59,11 @@ pip install agent-console-link-projects-records
 
 `space_prefix`·`max_open_spaces`(기본 8)·`idle_close_seconds`(300)·`busy_timeout_ms`(5000)·`backups_keep`(3)·
 `journal`(auto = 네트워크 드라이브면 DELETE)·`spool_dir`. 모두 고급 설정이다.
+
+`session_archive{enabled, dir}`(5.7R.33y3, 기본 켬·`sessions`): 노드가 끝나면 대화 세션 원본을
+`<폴더>/.agent-console/<dir>/<backend>/<session>/`에 복사하고(`runs.event` 구독, 백엔드 보관 기능은 선택 포트 `runs.session_archive`),
+`records.sessions` 포트로 이어 가기 상태·복원을 준다(`ProjectSessionArchive`). 자격 파일은 넣지 않는다. 폴더를 공유하면 대화 원본도
+함께 공유된다. 끄면 새로 보관하지 않고 이미 있는 사본은 지우지 않는다. 보관 실패는 정보 이슈 `records.session_archive_failed`.
 
 ## 단독 실행
 

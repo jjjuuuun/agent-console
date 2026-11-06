@@ -33,7 +33,8 @@ class ModuleDescriptor:
         version: 모듈 버전(보고용).
         kind: ``"feature"``(기능 모듈) 또는 ``"link"``(연동 모듈). 열린 문자열.
         title: 사람이 읽는 이름.
-        description: 설명.
+        description: 사람(앱 사용자)이 읽는 한 줄 설명. ``/modules`` 보고의 ``description``으로
+            나간다(빈 문자열 = 없음). 경로·포트·내부 이름 같은 개발자용 설명은 README에 둔다.
         provides: 제공하는 포트. ``build``에서 ``ctx.provide``로 실제 구현을 넣는다.
         requires: 필수 포트. 하나라도 없으면 이 모듈은 ``unsatisfied``로 꺼진다(이유 보고).
         optional: 선택 포트. 없으면 ``ctx.port``가 None(또는 빈 목록)이고 그 부분만 끈다.
@@ -124,6 +125,9 @@ class ModuleParts:
         startup: 시작 때 조립 순서대로 부를 코루틴 함수.
         shutdown: 종료 때 **역순**으로 부를 코루틴 함수.
         background: 시작 뒤 작업으로 띄울 코루틴 함수(종료 때 취소).
+        label_display: 이 모듈이 붙이는 실행 라벨의 표시 규칙(JSON 값 목록, 계약 ``LabelDisplay``
+            모양 — 키트는 계약을 모른다). 설치자 설정(라벨 접두 등)에 따라 달라지므로 서술자가
+            아니라 build 결과로 낸다. 호스트가 ``/modules`` 보고의 ``label_display``로 싣는다.
     """
 
     routers: list[Any] = field(default_factory=list)
@@ -132,6 +136,7 @@ class ModuleParts:
     startup: list[Callable[[], Awaitable[None]]] = field(default_factory=list)
     shutdown: list[Callable[[], Awaitable[None]]] = field(default_factory=list)
     background: list[Callable[[], Awaitable[None]]] = field(default_factory=list)
+    label_display: list[Mapping[str, Any]] = field(default_factory=list)
 
 
 @runtime_checkable

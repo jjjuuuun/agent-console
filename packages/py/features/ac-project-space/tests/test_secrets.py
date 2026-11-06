@@ -72,3 +72,53 @@ def test_read_only_space_refuses_writes(folder: Path) -> None:
         space.definitions.create("agent", sample_agent())
     assert space.definitions.list_ids("agent") == []
     assert snapshot_tree(folder) == {}
+
+
+def _team_graph(edge_config: dict[str, object]) -> dict[str, object]:
+    """연결 config가 든 최소 team_graph 문서(5.7R.33y2 재현용)."""
+    return {
+        "id": "team",
+        "name": "팀",
+        "nodes": [
+            {"id": "you", "type": "user", "label": "나"},
+            {"id": "lead", "type": "agent", "label": "리더", "config": {}},
+        ],
+        "edges": [
+            {
+                "id": "m1",
+                "source": {"node": "you", "port": "says"},
+                "target": {"node": "lead", "port": "in"},
+                "kind": "message",
+                "config": edge_config,
+            }
+        ],
+    }
+
+
+def test_edge_input_key_is_not_a_secret(folder: Path) -> None:
+    space = open_space(folder)
+    space.definitions.create("graph", _team_graph({"input_key": "message", "template": "{x}"}))
+    assert "input_key: message" in (folder / ".agent-console/graphs/team.yaml").read_text()
+
+
+def test_real_secret_in_graph_is_still_refused(folder: Path) -> None:
+    space = open_space(folder)
+    with pytest.raises(SecretRejected) as caught:
+        space.definitions.create(
+            "graph", _team_graph({"input_key": "message", "api_key": "sk-" + "ant-abcdef123456"})
+        )
+    assert [f.path for f in caught.value.findings] == ["/edges/0/config/api_key"]
+    with pytest.raises(SecretRejected) as shaped:
+        space.definitions.create(
+            "graph", _team_graph({"input_key": "9f86d081884c7d659a2feaa0c55ad015"})
+        )
+    assert [f.path for f in shaped.value.findings] == ["/edges/0/config/input_key"]
+
+
+def test_weak_name_rule_is_user_configurable(folder: Path) -> None:
+    strict = open_space(folder, secret_rules=SecretRules().with_extra(key_names=["key"]))
+    with pytest.raises(SecretRejected):
+        strict.definitions.create("graph", _team_graph({"input_key": "message"}))
+    off = open_space(folder, secret_rules=SecretRules(weak_key_names=()))
+    with pytest.raises(SecretRejected):
+        off.definitions.create("graph", _team_graph({"input_key": "message"}))

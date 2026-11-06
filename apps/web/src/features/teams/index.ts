@@ -2,3 +2,4 @@
 export { GraphIssuesPreview } from "./GraphIssuesPreview";
 export { ValidationChip, blocksRun } from "./ValidationChip";
 export { teamMessages } from "./messages";
+export { hasEntry } from "./entry";

@@ -24,11 +24,16 @@ from agent_console_contracts import (
 )
 
 
-def test_contracts_version_is_0_12_2() -> None:
-    assert CONTRACTS_VERSION == "0.12.2"
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_12_2() -> None:
+    """0.12.2에서 정한 버전 이상이다(정확한 지금 값은 0.13.0 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 12, 2)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.12.2"
-    assert CONTRACT_VERSIONS == {
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0122 = {
         "common": "1.7.0",
         "resources": "1.1.0",
         "logs": "1.1.0",
@@ -43,6 +48,8 @@ def test_contracts_version_is_0_12_2() -> None:
         "memory": "1.1.0",
         "modules": "1.3.0",
     }
+    for sub, version in v0122.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
     assert constants["KNOWN_DELEGATION_SESSIONS"] == {"SAME": "same", "SEPARATE": "separate"}
     assert constants["KNOWN_DELEGATION_BACKENDS"] == {"DELEGATOR": "delegator", "TARGET": "target"}
 

@@ -46,7 +46,7 @@ class LogsArchitectureLink:
         version=_version(),
         kind="link",
         title="로그·구조도 연동",
-        description="로그 범위 구조도(/logs/architecture)·이벤트 멤버십, 이벤트 표 필터 arch",
+        description="로그를 구조도 위에 겹쳐 보고 구조도 칸으로 이벤트를 거른다",
         provides=(LOG_FILTER_PREDICATES, PROFILE_CHECKS),
         requires=(LOGS_QUERY, ARCHITECTURE_CATALOG),
         settings_schema=LogsArchitectureSettings,

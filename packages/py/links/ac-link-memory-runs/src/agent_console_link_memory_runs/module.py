@@ -45,7 +45,7 @@ class MemoryRunsLink:
         version=_version(),
         kind="link",
         title="메모리·실행 연동",
-        description="에이전트에게 메모리 도구를 주고 호출마다 memory.* 실행 이벤트를 남긴다",
+        description="실행 중인 에이전트가 공유 메모리를 읽고 쓰게 하고 그 기록을 남긴다",
         provides=(RUN_SCOPES, DEFINITION_CHECKS),
         requires=(MEMORY_SERVICE,),
         settings_schema=MemoryRunsSettings,

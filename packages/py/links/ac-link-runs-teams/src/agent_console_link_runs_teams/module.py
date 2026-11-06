@@ -60,7 +60,7 @@ class RunsTeamsLink:
         version=_version(),
         kind="link",
         title="실행·팀 연동",
-        description="팀 규칙 검증·실행 준비·노드 서비스, 팀 구성 검증 요약·검증 경로",
+        description="팀 구성 규칙을 검사하고 실행을 준비한다",
         provides=(RUN_PREPARERS, RUN_SERVICES, GRAPH_VALIDATION),
         requires=(RUNS_STARTER, DEFINITIONS_LOOKUP),
         optional=(WORKSPACE_SETTINGS, RESOURCES_LOOKUP, RESOURCE_TYPES, DEFINITION_CHECKS),

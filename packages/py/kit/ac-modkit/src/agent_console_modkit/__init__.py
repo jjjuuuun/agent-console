@@ -28,6 +28,9 @@
     - 모듈 옵션 읽기 전용 보기(5.2R.29): ``read_module_options``·``Assembly.module_options`` →
       ``ModuleOptions``(스키마·가린 값), ``mask_values``·``OPTIONS_MASK``·``SECRET_SCHEMA_KEY``.
       비밀 의심 판정은 ``SecretPathFinder``로 주입한다. 쓰기는 없다.
+    - 정의 종류 기여(X44, 6R.5): ``KindContribution[K]{kind, references?, summary_fields}``·
+      ``KindReferences``와 여러 제공자 포트 ``DEFINITION_KIND_CONTRIBUTIONS``
+      (``definitions.kind_contributions``).
 
 HTTP 호스트(보안·토큰·``/health``·WS 다중화)는 ``agent_console_modkit.host``(extra ``[host]``),
 모듈 하나 단독 실행은 ``agent_console_modkit.standalone``(extra ``[host]``).
@@ -90,6 +93,7 @@ from ._hostext import (
     secret_providers_of,
 )
 from ._hub import Hub, HubSubscription
+from ._kinds import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, KindReferences
 from ._loading import MODULES_GROUP, as_module, load_installed_modules
 from ._module import (
     KNOWN_MODULE_KINDS,
@@ -114,6 +118,7 @@ from ._ports import PortKey, Topic
 from ._services import BaseServices, Paths, utc_now
 
 __all__ = [
+    "DEFINITION_KIND_CONTRIBUTIONS",
     "FEATURE_UNAVAILABLE",
     "HOST_DATABASE_GROUP",
     "HOST_EXTENSIONS_REPORT_GROUP",
@@ -143,6 +148,8 @@ __all__ = [
     "HostPlugins",
     "Hub",
     "HubSubscription",
+    "KindContribution",
+    "KindReferences",
     "MigrationBranch",
     "Module",
     "ModuleContext",

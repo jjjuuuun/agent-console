@@ -140,10 +140,7 @@ class LogsModule:
         version=_version(),
         kind="feature",
         title="로그",
-        description=(
-            "로그 출처 수집(배경·수동)·색인 질의(/logs…)·대시보드 템플릿, WS logs. "
-            "런타임 출처·설정·가림 규칙은 포트로 받는다"
-        ),
+        description="이 PC의 에이전트 로그를 모아 검색하고 대시보드로 본다",
         provides=(LOGS_QUERY, LOGS_INGEST, SERVER_WARNINGS),
         optional=(
             LOG_SOURCES,
@@ -178,8 +175,10 @@ class LogsModule:
             reader = ctx.port(WORKSPACE_SETTINGS)
             current = reader().logs if reader is not None else None
             # 다른 모듈이 정한 출처 기본 켜기(설정에 enabled가 없는 출처만, 설정 파일은 그대로)
-            defaults = collect_source_defaults(ctx.ports(SOURCE_DEFAULTS))
-            return apply_source_defaults(current, defaults)
+            return apply_source_defaults(current, source_defaults())
+
+        def source_defaults() -> dict[str, bool]:
+            return collect_source_defaults(ctx.ports(SOURCE_DEFAULTS))
 
         def project_folders() -> ProjectFolders:
             # 앱에 등록된 프로젝트 폴더만 수집한다. 포트가 없으면 등록된 프로젝트 없음(빈 범위).
@@ -232,6 +231,7 @@ class LogsModule:
             scope_kinds=lambda: ctx.ports(LOG_SCOPE_KINDS),
             filter_predicates=lambda: ctx.ports(LOG_FILTER_PREDICATES),
             projects=project_folders,
+            source_defaults=source_defaults,
         )
         runtime_problems: list[Issue] = []
 

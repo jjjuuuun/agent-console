@@ -40,6 +40,13 @@ export const appIcons: Readonly<Record<string, IconComponent>> = {
       <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
     </>,
   ),
+  library: svg(
+    <>
+      <rect x="2.5" y="3" width="3" height="10" rx=".6" />
+      <rect x="6.5" y="3" width="3" height="10" rx=".6" />
+      <path d="M11.2 3.6l2.6.7-2 8.7-2.6-.7z" />
+    </>,
+  ),
   // 프로젝트 폴더 상태 아이콘(screen-projects §1.4): 모양이 다르다(색만으로 구분하지 않는다).
   folder: svg(<path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />),
   "folder-off": svg(

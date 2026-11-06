@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Resource, ResourceTypeDescriptor } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
-import { DEFINITION_KINDS, DefinitionIdField, DescriptorIcon, Field, libraryMessages as lm, useDefinitionId, type DefinitionId } from "../library";
+import { DefinitionIdField, DescriptorIcon, Field, libraryMessages as lm, useDefinitionId, type DefinitionId } from "../library";
 import { useNewScope } from "../projects";
 import { ResourceEditorForm, type ResourceDocUpdate } from "./ResourceEditorForm";
 import { ResourceTypeGrid } from "./ResourceTypeGrid";
@@ -39,7 +39,7 @@ export function useResourceCreateDraft(types: readonly ResourceTypeDescriptor[],
   const descriptor = types.find((x) => x.id === typeId);
   const name = doc?.resource.name ?? "";
   const id = useDefinitionId(name, existingIds, fallbackId);
-  const scope = useNewScope(DEFINITION_KINDS.resource ?? "");
+  const scope = useNewScope();
   const setTypeId = (next: string | null) => {
     setTypeIdState(next);
     if (next === null) {

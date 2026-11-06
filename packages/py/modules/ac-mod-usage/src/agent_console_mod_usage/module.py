@@ -153,7 +153,7 @@ class UsageModule:
         version=_version(),
         kind="feature",
         title="사용량",
-        description="창 스냅샷·토큰 집계·출처 목록(/usage, /usage/sources)",
+        description="구독 사용률과 토큰 사용량을 보여 준다",
         provides=(USAGE_SERVICE, SERVER_WARNINGS, DEFINITION_CHECKS),
         optional=(EVENT_QUERY, TOKEN_ROLLUPS, WORKSPACE_SETTINGS, USAGE_SOURCES),
         settings_schema=UsageModuleSettings,

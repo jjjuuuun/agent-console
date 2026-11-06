@@ -10,7 +10,8 @@
     - ``module``(``ProjectsModule``), ``MODULE_ID``, ``WEB_ROLES``
     - 포트: 제공 ``PROJECTS_LOOKUP``·``PROJECT_FOLDERS``·``PROJECTS_SPACES``·``DEFINITIONS_SPACES``,
       선택 ``DEFINITIONS_LOOKUP``·``DEFINITIONS_STORE``·``DEFINITIONS_REFERENCES``·
-      ``DEFINITIONS_REWRITERS``·``RECORDS_SPACES``·``SECRET_RULES``, 토픽 ``DEFINITIONS_SAVED``
+      ``DEFINITIONS_REWRITERS``·``RECORDS_SPACES``·``SECRET_RULES``·``KIND_CONTRIBUTIONS``(X44),
+      토픽 ``DEFINITIONS_SAVED``
     - 서버 없이 쓰는 부품: ``ProjectRepository``·``project_kind``·``ProjectManager``·
       ``ProjectSpaceCache``·``FolderService``·``FolderPicker``·``CopyService``
     - 확장 지점: 코드 선택 창 제공자 ``FolderDialogProvider``(entry point
@@ -22,7 +23,12 @@
 from __future__ import annotations
 
 from .copying import CopyService, space_index
-from .definitions import DefinitionSnapshot, combine_references, read_definitions
+from .definitions import (
+    DefinitionSnapshot,
+    combine_references,
+    contribution_references,
+    read_definitions,
+)
 from .errors import ProjectError
 from .folders import (
     FOLDER_DIALOGS_GROUP,
@@ -39,6 +45,7 @@ from .ports import (
     DEFINITIONS_SAVED,
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
+    KIND_CONTRIBUTIONS,
     PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
     PROJECTS_SPACES,
@@ -65,6 +72,7 @@ __all__ = [
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "FOLDER_DIALOGS_GROUP",
+    "KIND_CONTRIBUTIONS",
     "MODULE_ID",
     "PROJECTS_LOOKUP",
     "PROJECTS_SPACES",
@@ -95,6 +103,7 @@ __all__ = [
     "ProjectsModule",
     "ScopeService",
     "combine_references",
+    "contribution_references",
     "library_kinds",
     "load_dialog_providers",
     "module",

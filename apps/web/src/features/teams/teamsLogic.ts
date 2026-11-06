@@ -230,6 +230,20 @@ export function overviewOf(graph: Graph, nodeTypes: readonly NodeTypeDescriptor[
   return { entries, exits, asks, declared };
 }
 
+/**
+ * 시작 조건(데이터): 대화를 시작하려면 모두 충족해야 한다. 안내 띠는 하나라도 못 채웠을 때만 보인다.
+ * 입구·답변은 연결 종류의 `scheduling`에서 계산한 개요(`overviewOf`)를 읽으므로 노드·연결 종류 id를 고정하지 않는다.
+ */
+export const START_CONDITIONS: ReadonlyArray<{ id: string; met: (overview: TeamOverview) => boolean }> = [
+  { id: "entry", met: (o) => o.entries.length > 0 },
+  { id: "exit", met: (o) => o.exits.length > 0 },
+];
+
+/** 시작 조건을 모두 채웠는가 */
+export function startConditionsMet(overview: TeamOverview): boolean {
+  return START_CONDITIONS.every((c) => c.met(overview));
+}
+
 // ---------------------------------------------------------------- 이슈
 
 export interface IssueTarget {

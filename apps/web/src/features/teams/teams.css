@@ -66,8 +66,9 @@
 .team-bundle-warning-text { overflow-wrap: anywhere; word-break: keep-all; }
 .team-slot-warn { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 400; }
 
-/* 5.2R.9: 캔버스 안 좌하단 알림(우측 패널·상단 컨트롤을 가리지 않는다) */
-.team-canvas-toasts { position: absolute; left: calc(var(--ac-palette-w) + var(--ac-canvas-toast-left)); bottom: var(--ac-canvas-toast-bottom); z-index: 30; width: max-content; max-width: min(360px, calc(100% - var(--ac-palette-w) - var(--ac-canvas-toast-left) - var(--ac-space-3))); pointer-events: none; }
+/* 5.7R.39: 캔버스 안 상단 중앙 알림(도구줄 아래 · 하단 컨트롤·줌 버튼을 가리지 않는다) */
+.team-canvas-toasts { position: absolute; left: var(--ac-palette-w); right: 0; top: var(--ac-canvas-toast-top); z-index: 30; display: flex; justify-content: center; padding-inline: var(--ac-space-3); box-sizing: border-box; pointer-events: none; }
+.team-canvas-toasts > * { max-width: min(420px, 100%); }
 .team-canvas-toasts > * { pointer-events: auto; }
 /* 빈 캔버스 안내 카드 */
 .team-canvas-empty { position: absolute; top: 0; bottom: 0; right: 0; left: var(--ac-palette-w); box-sizing: border-box; padding-inline: var(--ac-space-3); display: flex; align-items: flex-start; padding-top: 48px; justify-content: center; pointer-events: none; z-index: 5; }
@@ -113,7 +114,7 @@
 .team-hint-text { flex: 0 1 auto; min-width: 0; }
 .team-hint-line .app-link-btn { flex: none; }
 .team-side[data-overlay="true"] { position: absolute; right: 0; top: 0; bottom: 0; z-index: 25; width: min(360px, 100%); max-width: 100%; resize: none; box-shadow: var(--ac-shadow-1); }
-.team-canvas[data-palette="overlay"] .team-canvas-toasts { left: var(--ac-canvas-toast-left); max-width: min(360px, calc(100% - var(--ac-canvas-toast-left) - var(--ac-space-3))); }
+.team-canvas[data-palette="overlay"] .team-canvas-toasts { left: 0; }
 .team-canvas[data-palette="overlay"] .team-canvas-empty { left: 0; }
 
 /* 5.7R.38: 이슈 묶음·정보·hint */

@@ -16,7 +16,7 @@
   font-family: var(--ac-font-sans);
   font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm);
 }
-.ac-ge-canvas { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.ac-ge-canvas { container: ac-ge-canvas / inline-size; position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .ac-ge-flow { position: relative; flex: 1; min-width: 0; min-height: 0; }
 .ac-ge-defs { position: absolute; width: 0; height: 0; }
 .ac-ge-sr-only {
@@ -29,8 +29,9 @@
 .ac-ge-palette-wrap[data-overlay="true"] { position: absolute; left: 0; top: 0; bottom: 0; z-index: 25; box-shadow: var(--ac-shadow-1); }
 /* 좌상단 도구줄 슬롯(앱 단추)과 미니맵 토글 */
 .ac-ge-actions { display: flex; align-items: center; gap: var(--ac-space-2); }
-/* 앱 단추 줄이 있으면 선택 도구줄은 그 아래 줄에 둔다(같은 모서리 겹침 방지) */
-.ac-ge-actions ~ .ac-ge-toolbar { margin-top: 44px; }
+/* 5.7R.39: 앱 단추 줄과 선택 도구줄은 한 줄이다. 캔버스 폭이 모자라면 부가 항목은 [⋯] 메뉴로 넘어간다(컨테이너 쿼리). */
+.ac-ge-topbar { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--ac-space-2); max-width: calc(100% - 24px); }
+.ac-ge-topbar > * { flex: none; }
 .ac-ge-minimap-toggle-wrap { margin: var(--ac-space-2); }
 .ac-ge-minimap-toggle > svg { flex: none; width: 16px; height: 16px; }
 .ac-ge-minimap-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; }
@@ -86,6 +87,14 @@
 .ac-ge-node-label { font-weight: 600; line-height: 18px; word-break: keep-all; overflow-wrap: break-word; }
 .ac-ge-root[data-zoom-title="boost"] .ac-ge-node-label { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(1em, calc(12px / var(--ac-ge-zoom))); line-height: max(18px, calc(16px / var(--ac-ge-zoom))); }
 .ac-ge-root[data-zoom-title="boost"] .ac-ge-node-header .ac-ge-badges { display: none; }
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-node-type,
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-port,
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-port-note,
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-summary,
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-status,
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-issues { font-size: max(var(--ac-text-xs), calc(12px / var(--ac-ge-zoom))); line-height: max(var(--ac-lh-xs), calc(16px / var(--ac-ge-zoom))); }
+.ac-ge-root[data-zoom-title="boost"] .ac-ge-node-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-ge-root[data-zoom-ports="hidden"] .ac-ge-port-label { display: none; }
 .ac-ge-node-type { font-size: var(--ac-text-xs); line-height: 16px; color: var(--ac-text-muted); }
 .ac-ge-status { flex: none; display: inline-flex; align-items: center; gap: var(--ac-space-1); max-width: 96px; min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text); }
 .ac-ge-status-label { min-width: 0; }
@@ -157,7 +166,16 @@
 /* 미니맵: 노드는 배경보다 뚜렷한 면, 지금 보는 영역(mask 안)은 accent 테두리 */
 .ac-ge-root .react-flow__minimap-node { fill: color-mix(in srgb, var(--ac-accent) 45%, var(--ac-surface-1)); stroke: var(--ac-accent); stroke-width: 1; }
 .ac-ge-root .react-flow__minimap-mask { stroke: var(--ac-accent); stroke-width: 2; stroke-linejoin: round; }
-.ac-ge-toolbar { display: flex; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--ac-space-2); }
+.ac-ge-toolbar-extras { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--ac-space-2); white-space: nowrap; }
+.ac-ge-toolbar-more { display: none; position: relative; }
+.ac-ge-toolbar-pop { position: absolute; top: calc(100% + var(--ac-space-1)); left: 0; z-index: 40; display: flex; flex-direction: column; align-items: stretch; gap: var(--ac-space-2); padding: var(--ac-space-2); white-space: nowrap; background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-1); }
+.ac-ge-toolbar-pop .ac-ge-toggle-wrap { display: flex; flex-direction: column; }
+.ac-ge-btn--icon { display: inline-flex; align-items: center; justify-content: center; width: var(--ac-control-sm); padding: 0; }
+@container ac-ge-canvas (max-width: 760px) {
+  .ac-ge-toolbar-extras { display: none; }
+  .ac-ge-toolbar-more { display: inline-flex; }
+}
 .ac-ge-toolbar-count { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 
 /* 설정 패널 슬롯 */
@@ -165,7 +183,7 @@
 
 /* 토스트·다이얼로그 */
 .ac-ge-toast {
-  position: absolute; left: 50%; bottom: var(--ac-space-5); transform: translateX(-50%); z-index: 60;
+  position: absolute; left: 50%; top: var(--ac-canvas-toast-top, 56px); transform: translateX(-50%); z-index: 60;
   display: flex; align-items: center; gap: var(--ac-space-3); max-width: 90%; padding: var(--ac-space-2) var(--ac-space-3);
   background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-left: 3px solid var(--ac-info); border-radius: var(--ac-radius-lg);
   box-shadow: var(--ac-shadow-1);
@@ -285,7 +303,7 @@
 .ac-ge-handle-slot--top { top: 0; }
 .ac-ge-handle-slot--bottom { bottom: 0; }
 /* 면 글리프: 핸들이 행 옆이 아닐 때 행 끝에 표시 */
-.ac-ge-port-glyph { flex: none; margin: 0 var(--ac-space-1); font-size: 10px; line-height: 1; color: var(--ac-text-muted); opacity: 0.7; }
+.ac-ge-port-glyph { flex: none; margin: 0 var(--ac-space-1); font-size: var(--ac-text-xs); line-height: 1; color: var(--ac-text-muted); opacity: 0.7; }
 .ac-ge-port--out .ac-ge-port-glyph { order: -1; }
 .ac-ge-port[data-hot="true"] { background: var(--ac-accent-bg, var(--ac-surface-3)); }
 .ac-ge-handle-slot[data-hot="true"] > .ac-ge-handle { border-color: var(--ac-accent); box-shadow: 0 0 0 2px var(--ac-accent); }

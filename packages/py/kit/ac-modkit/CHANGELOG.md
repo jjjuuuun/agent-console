@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 6R.5: 정의 종류 기여(X44) `KindContribution[K]{kind, references?, summary_fields}`·`KindReferences`와 여러 제공자 포트 `DEFINITION_KIND_CONTRIBUTIONS`(`definitions.kind_contributions`). 키트는 종류 값의 타입을 모른다(매개변수).
 - 5.7R.33x: `host.SpaceQuery`·`SPACE_QUERY`(저장 공간 질의 `?project=`, 라우트 매개변수 형식).
 - 5.7R.33w2: `MigrationBranch.scopes`(기본 `("app",)`, X39)와 `ModuleContext.active_migrations(scope)`. 호스트는 `app` 범위 계보만 앱 DB에 올린다(기존 모듈은 그대로).
 

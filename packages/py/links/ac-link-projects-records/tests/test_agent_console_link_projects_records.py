@@ -548,5 +548,6 @@ def test_module_check_runs_without_with() -> None:
 
 def test_ports_are_declared_on_the_descriptor() -> None:
     d = module.descriptor
-    assert [p.name for p in d.provides] == ["records.spaces"]
+    assert [p.name for p in d.provides] == ["records.spaces", "records.sessions", "server.warnings"]
+    assert [p.name for p in d.optional] == ["runs.session_archive", "runs.reader"]
     assert [p.name for p in d.requires] == [PROJECTS_SPACES.name]

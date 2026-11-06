@@ -26,6 +26,10 @@
       (``FakeLoginState``), 상태 점검은 로그인 전 ``FAKE_LOGIN_REQUIRED_STATE``. PTY·네트워크 없음
     - 묶음 미리보기 훅 ``FakeBackend.preview_notes``(info ``HOOK_PROBE_NOTE_CODE``),
       ``DEFAULT_HOOK_PROBE_FOLDER``
+    - 세션 기록 흉내(X38, 5.7R.33y3): 설치자 설정 ``session_dir``을 주면 실행마다
+      `<폴더>/<cwd 키>/<세션>.jsonl`을 남기고 이어 쓰는 요청에 파일이 없으면
+      ``FAKE_SESSION_MISSING_CODE``로 실패한다. ``FakeBackend.session_archive``(보관·복원),
+      ``fake_session_archive``·``fake_session_key``
     - ``FakeInstallOptions``·``FakeRateLimit``: 설치자 설정 형식(``FakeBackend.from_options`` 훅)
     - ``bundle_summary``·``mask_secret_refs``: 실행 묶음 요약
       (응답에 넣는 옵션 `echo_bundle`·템플릿 변수 `$bundle`)
@@ -76,6 +80,11 @@ from agent_console_backend_fake_agent._login import (
     FakeLoginTexts,
     FakeScriptedLoginDriver,
 )
+from agent_console_backend_fake_agent._sessions import (
+    FAKE_SESSION_MISSING_CODE,
+    fake_session_archive,
+    fake_session_key,
+)
 
 __all__ = [
     "DEFAULT_DELEGATE_TOOL",
@@ -90,6 +99,7 @@ __all__ = [
     "FAKE_LOGIN_METHOD_ID",
     "FAKE_LOGIN_REQUIRED_STATE",
     "FAKE_READY_STATE",
+    "FAKE_SESSION_MISSING_CODE",
     "HOOK_PROBE_NOTE_CODE",
     "HOOK_PROBE_SWITCH",
     "UNKNOWN_HOST_TOOL_TEXT",
@@ -114,6 +124,8 @@ __all__ = [
     "HostCallStatus",
     "bundle_summary",
     "fake_config_schema",
+    "fake_session_archive",
+    "fake_session_key",
     "mask_secret_refs",
     "observe_switch_on",
 ]

@@ -1,0 +1,23 @@
+# ac-sdd 패키지 기본 작업 문법(design §6R.1.3). 사용자 설정 `sdd.include_default_syntax: false`로 끈다.
+# 병합 순서: 이 파일 → 사용자 설정 `sdd.syntax` → 스펙 `rules.syntax`(+ `rules.task_statuses`).
+# 키 단위 덮어쓰기, 목록·`roles`는 통째로 바꾼다. 모양은 계약 `agent_console_contracts.sdd.SpecSyntax`.
+task:
+  list_item: checkbox                 # checkbox | bullet | ordered
+  statuses:
+    - {id: todo, label: 할 일, marker: " "}
+    - {id: done, label: 완료, marker: [x, X], done: true}
+  # 작업 id = 줄 머리의 숫자가 하나 이상 든 낱말(1.2, 6R.10, T-12). "Write docs"의 Write는 id가 아니다.
+  id_pattern: '^(?P<id>(?=[\w.\-]*\d)[0-9A-Za-z][\w.\-]*)\s+'
+  field_pattern: '\[(?P<key>[\w\-]+):\s*(?P<value>[^\]]*)\]'
+  list_separator: ','
+  range_separator: '~'
+  none_values: ['—', '-', '']
+  roles: {depends: dependencies, req: requirements, owner: assignee}
+  body: nested
+requirement:
+  patterns:
+    - '^\*\*(?P<id>[A-Z][A-Za-z]*\d[\w.]*)\*\*'
+    - '^#{2,6}\s+(?P<id>[A-Z][A-Za-z]*\d[\w.]*)\b'
+stage:
+  heading_levels: [2, 3]
+  pattern: null

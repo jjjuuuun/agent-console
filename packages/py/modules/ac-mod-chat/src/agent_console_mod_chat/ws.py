@@ -39,18 +39,27 @@ def updated_message(summary: ConversationSummary) -> ConversationUpdatedMessage:
 
 
 def topic_handlers(service: ChatService, *, hub: Hub[Any]) -> dict[str, WsTopicHandler]:
-    """이 모듈의 WS 토픽 처리기(키가 ``:``로 끝나면 접두)."""
+    """이 모듈의 WS 토픽 처리기(키가 ``:``로 끝나면 접두).
+
+    대화 서비스에 선택 메서드 ``service_of``(대화 id → 그 대화를 가진 서비스, 프로젝트 기록 공간
+    포함 - 5.7R.33y2)가 있으면 그것으로 찾는다."""
+
+    def owner(conversation_id: str) -> ChatService:
+        method = getattr(service, "service_of", None)
+        found: ChatService = method(conversation_id) if callable(method) else service
+        return found
 
     async def handle(req: WsSubscribeRequest) -> WsForward | WsReject | None:
+        chat = owner(req.target)
         try:
-            service.get(req.target)
+            chat.get(req.target)
         except ConversationNotFoundError:
             return WsReject(ErrorCodes.NOT_FOUND, "대화가 없습니다")
 
         async def forward(send: WsSend) -> None:
             sub = hub.subscribe(req.topic)  # 현재 요약을 보내기 전에 연다(경합 없음)
             try:
-                await send(updated_message(service.summary(req.target)))
+                await send(updated_message(chat.summary(req.target)))
                 async for message in sub:
                     await send(message)
             finally:

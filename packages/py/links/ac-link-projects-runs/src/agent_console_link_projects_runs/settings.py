@@ -35,6 +35,17 @@ class ProjectsRunsSettings(BaseModel):
             "실행의 프로젝트를 찾지 못했을 때 경고 문구($project 자리 채움). 실행은 계속한다."
         ),
     )
+    require_project: bool = Field(
+        title="프로젝트 없이 실행 막기",
+        json_schema_extra=x_ui(tier="advanced"),
+        # 기본 거짓(임시, 5.7R.33g 결정): 웹 실행 시작이 아직 project_id를 보내지 않는다(33o·33v).
+        # 웹이 보내게 되면 기본을 참으로 바꾼다(design §PI.4.5 규칙 1).
+        default=False,
+        description=(
+            "켜면 프로젝트를 고르지 않은 실행·대화를 시작하지 않는다(실행은 프로젝트 폴더에서만). "
+            "끄면 프로젝트 없는 실행은 서버 작업 폴더에서 돈다."
+        ),
+    )
 
 
 __all__ = ["ProjectsRunsSettings"]

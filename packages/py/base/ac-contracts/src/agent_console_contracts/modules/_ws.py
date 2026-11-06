@@ -13,6 +13,7 @@ from agent_console_contracts.chat import ConversationSummary
 from agent_console_contracts.common import ErrorInfo
 from agent_console_contracts.memory import MemoryChanged
 from agent_console_contracts.runs import Interaction, RunEvent
+from agent_console_contracts.sdd import SddChanged
 
 
 class WsMessageBase(ContractModel):
@@ -117,6 +118,16 @@ class MemoryChangedMessage(WsMessageBase):
     payload: MemoryChanged
 
 
+class SddChangedMessage(WsMessageBase):
+    """스펙 모듈 토픽: 스펙 저장·작업 고치기·외부 변경·자동 진행 상태 변화(본문 없음, 1.4.0).
+
+    토픽 이름은 스펙 모듈이 정한다. 화면은 받은 스펙을 다시 불러온다.
+    """
+
+    type: Literal["sdd.changed"]
+    payload: SddChanged
+
+
 class WsServerMessage(
     RootModel[
         Annotated[
@@ -125,6 +136,7 @@ class WsServerMessage(
             | InteractionUpdatedMessage
             | LogsIngestedMessage
             | MemoryChangedMessage
+            | SddChangedMessage
             | ErrorMessage,
             Field(discriminator="type"),
         ]

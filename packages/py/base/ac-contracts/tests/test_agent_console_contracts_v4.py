@@ -61,6 +61,8 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
     "architecture": _BELOW_DEFINITIONS | {"definitions", "runs"},
     # 0.10.0(design §5.7R.5): memory도 같은 층(runs의 조건·definitions의 이슈만 쓴다)
     "memory": _BELOW_DEFINITIONS | {"definitions", "runs"},
+    # 0.13.0(design §6R.6): sdd도 같은 층이고 common·definitions·runs만 쓴다
+    "sdd": {"common", "definitions", "runs"},
     "modules": {
         "common",
         "resources",
@@ -74,6 +76,7 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
         "imports",
         # 0.10.0: WS 메시지 `memory.changed`의 payload
         "memory",
+        "sdd",
     },
 }
 
@@ -105,6 +108,7 @@ def test_contract_versions_cover_every_submodule() -> None:
         "projects",
         "architecture",
         "memory",
+        "sdd",
     }
     for version in CONTRACT_VERSIONS.values():
         major, minor, patch = version.split(".")

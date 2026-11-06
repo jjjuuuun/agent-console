@@ -15,6 +15,8 @@
 - ``server.warnings``(여러 제공자): 팀 규칙이 없을 때 ``team.rules_unavailable``, 실행 기록 저장소가
   메모리일 때 ``runs.storage_memory``.
 - ``server.attributes``(여러 제공자): ``{"recovered_runs": n}``(``GET /server-info`` 속성).
+- ``runs.session_archive``(5.7R.33y3, X38): 백엔드 id → 세션 기록 보관·복원
+  (``agent_console_runtime.BackendSessionArchives.get`` — 능력이 없는 백엔드는 None).
 - 토픽 ``runs.event``(``RunEvent``, 저장된 이벤트마다)·``interactions.updated``(``Interaction``).
 
 받음:
@@ -36,6 +38,9 @@
   없으면 일반 실행으로 새 Run을 시작한다.
 - 선택 ``workspace.settings``: 공통 설정(``secrets.redact_suspected_in_logs``).
 - 선택 ``secrets.rules``: 비밀 의심 규칙(``redact_suspected``가 있는 객체를 돌려주는 함수).
+- 선택 ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들
+  (``agent_console_store.RecordsSpaces``). 있으면 ``project_id``가 있는 Run은 그 기록 DB에만 쓰고
+  ``?project=`` 조회는 거기서 읽는다. 없으면 호스트 DB.
 """
 
 from __future__ import annotations
@@ -59,7 +64,8 @@ from agent_console_contracts import (
     WorkspaceSettings,
 )
 from agent_console_modkit import PortKey, Topic
-from agent_console_runtime import ResumeStart, ServiceKey, Services
+from agent_console_runtime import BackendSessionArchives, ResumeStart, ServiceKey, Services
+from agent_console_store import RECORDS_SPACES_PORT, RecordsSpaces
 
 if TYPE_CHECKING:
     from .interactions import InteractionService
@@ -339,6 +345,22 @@ WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
     "workspace.settings", "지금 워크스페이스 설정"
 )
 SECRET_RULES: PortKey[SecretRulesReader] = PortKey("secrets.rules", "지금 비밀 의심 규칙")
+RECORDS_SPACES: PortKey[RecordsSpaces] = PortKey(
+    RECORDS_SPACES_PORT, "공간 이름 → 프로젝트 기록 DB 핸들"
+)
+"""선택(5.7R.33y2): 있으면 ``project_id``가 있는 Run은 그 프로젝트 기록 DB에 쓴다(보통
+``link-projects-records``가 준다). 없으면 호스트 DB(기능 단독)."""
+
+RUNS_MOVE: PortKey[Any] = PortKey("runs.move_hook", "대화 옮기기에 거는 Run 옮기기 훅")
+"""제공(5.7R.33j2): 대화를 프로젝트 기록 DB로 옮길 때 그 대화의 Run을 같은 작업으로 옮기는 훅
+(``ConversationRunMove`` - ``busy``·``prepare``). 보통 ``link-chat-runs``가 받아 대화 모듈의
+``chat.move_hooks``로 낸다. 기록 공간 포트나 앱 DB가 없으면 제공하지 않는다."""
+
+RUNS_SESSION_ARCHIVE: PortKey[BackendSessionArchives] = PortKey(
+    "runs.session_archive", "백엔드 id → 세션 기록 보관·복원(X38)"
+)
+"""제공(5.7R.33y3): 등록된 백엔드의 선택 능력 ``session_archive()``를 찾아 준다. 보관 위치·켜기는
+받는 쪽(보통 ``link-projects-records``)이 정한다."""
 
 RUNS_EVENT: Topic[RunEvent] = Topic("runs.event")
 """저장이 끝난 실행 이벤트(전부). 구독자는 필요한 것만 거른다."""
@@ -349,10 +371,13 @@ __all__ = [
     "DEFINITIONS_LOOKUP",
     "INTERACTIONS_PORT",
     "INTERACTIONS_UPDATED",
+    "RECORDS_SPACES",
     "RESUME_HANDLERS",
     "RUNS_EVENT",
     "RUNS_EVENTS",
+    "RUNS_MOVE",
     "RUNS_READER",
+    "RUNS_SESSION_ARCHIVE",
     "RUNS_STARTER",
     "RUN_DEFINITIONS",
     "RUN_PREPARERS",

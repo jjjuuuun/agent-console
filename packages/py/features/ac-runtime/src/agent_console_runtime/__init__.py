@@ -57,6 +57,12 @@
       ``LoginSessionNotFoundError``·``LoginInputError``. 능력이 꺼진 이유 알림(선택)
       ``LoginRefusalAware``·``login_refusal_of``.
       테스트용 ``agent_console_runtime.testing_login``
+    - 세션 기록 보관·복원(X38, design §PI.4.6.4): 선택 능력 ``SessionArchiveCapable``
+      (``session_archive()`` → ``SessionArchive``: ``files``·``status``·``restore``) +
+      ``ArchiveFile``·``SessionKey``, 백엔드 id로 찾기 ``BackendSessionArchives``·
+      ``session_archive_of``, 공용 구현 ``JsonlFolderSessionArchive``
+      (``<루트>/<cwd 키>/<세션>.jsonl`` 모양), 도우미 ``copy_files``·``session_files_in``·
+      ``safe_name``·``safe_relative``
     - 서비스·비밀·취소: ``Services``·``ServiceKey``, ``SecretResolver``·``EnvSecretProvider``,
       ``CancelToken``
     - 프로세스: ``process_group_kwargs``, ``terminate_process_group``, ``aterminate_process_group``
@@ -257,6 +263,20 @@ from agent_console_runtime._secrets import (
     is_secret_ref,
 )
 from agent_console_runtime._services import MissingServiceError, ServiceKey, Services
+from agent_console_runtime._session_archive import (
+    SESSION_ARCHIVE_HOOK,
+    ArchiveFile,
+    BackendSessionArchives,
+    JsonlFolderSessionArchive,
+    SessionArchive,
+    SessionArchiveCapable,
+    SessionKey,
+    copy_files,
+    safe_name,
+    safe_relative,
+    session_archive_of,
+    session_files_in,
+)
 from agent_console_runtime._sessions import session_refs
 from agent_console_runtime._usage import preview, sum_usage
 from agent_console_runtime._validation import (
@@ -299,17 +319,20 @@ __all__ = [
     "RESERVED_EVENT_PREFIXES",
     "SECRET_PROVIDERS_GROUP",
     "SECRET_REF_PREFIX",
+    "SESSION_ARCHIVE_HOOK",
     "TERMINAL_PHASES",
     "UNKNOWN_STATE",
     "Activation",
     "AgentRequest",
     "AgentResult",
+    "ArchiveFile",
     "BackendCheckContext",
     "BackendEventSink",
     "BackendHostContext",
     "BackendLoginContext",
     "BackendLoginService",
     "BackendReadinessService",
+    "BackendSessionArchives",
     "Blocked",
     "CancelToken",
     "ChildRunPreparation",
@@ -352,6 +375,7 @@ __all__ = [
     "InteractionRequest",
     "InteractionWriter",
     "InteractivePort",
+    "JsonlFolderSessionArchive",
     "LoginBusyError",
     "LoginCapableBackend",
     "LoginDriver",
@@ -399,6 +423,9 @@ __all__ = [
     "SecretResolver",
     "ServiceKey",
     "Services",
+    "SessionArchive",
+    "SessionArchiveCapable",
+    "SessionKey",
     "SessionRef",
     "SinkWrapper",
     "SkipReasons",
@@ -421,6 +448,7 @@ __all__ = [
     "as_secret_provider",
     "aterminate_process_group",
     "call_host_tool",
+    "copy_files",
     "descriptor_version",
     "duplicate_host_tool_names",
     "duplicate_names_code",
@@ -443,6 +471,10 @@ __all__ = [
     "resume_issues",
     "resume_options",
     "resume_seed",
+    "safe_name",
+    "safe_relative",
+    "session_archive_of",
+    "session_files_in",
     "session_refs",
     "sum_usage",
     "supports_login",

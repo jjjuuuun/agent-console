@@ -140,27 +140,9 @@ export const projectMessages = {
     cancel: "취소",
     close: "닫기",
   },
-  guide: {
-    title: "첫 프로젝트 시작하기",
-    stepsLabel: "프로젝트 시작 3단계",
-    go: "열기",
-    steps: {
-      create: { label: "프로젝트 만들기", hint: "이름만 있으면 됩니다.", action: "만들기" },
-      configure: { label: "작업 폴더·로그 연결", hint: "에이전트가 일할 폴더와 볼 로그를 정합니다.", action: "설정" },
-      start: { label: "이 프로젝트로 대화 시작", hint: "대화·실행이 이 프로젝트로 묶입니다.", action: "대화로" },
-    } as Record<string, { label: string; hint: string; action: string }>,
-    done: "완료",
-    dismiss: "안내 닫기",
-  },
   usage: {
     accountWide: "계정 전체",
-    accountWideTitle: "구독 사용량은 프로젝트가 아니라 계정 전체 기준입니다. 프로젝트 전환기를 따르지 않습니다.",
-  },
-  logs: {
-    filterFromProject: (name: string) => `프로젝트 “${name}”의 로그만 보는 중`,
-    resetFilter: "필터 초기화",
-    connect: "로그 연결",
-    notConnected: (name: string) => `프로젝트 “${name}”에 연결된 로그가 없습니다.`,
+    accountWideTitle: "구독 사용량은 프로젝트가 아니라 계정 전체 기준입니다.",
   },
   scopeIssue: {
     title: (n: number) => `범위 경고 ${n}개`,

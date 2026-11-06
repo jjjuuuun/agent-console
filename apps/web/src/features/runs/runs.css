@@ -82,3 +82,17 @@
 .runs-node-events { list-style: none; padding: 0; margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .runs-inspector .ac-tabs-list { overflow-x: auto; }
 .runs-inspector .ac-tab { white-space: nowrap; display: inline-flex; align-items: center; gap: var(--ac-space-1); }
+
+/* 새 실행 대화상자(5.7R.33v) */
+.run-start-input { display: flex; flex-direction: column; gap: var(--ac-space-2); margin-top: var(--ac-space-3); min-width: 0; }
+.run-start-input-title { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.run-inputs { display: flex; flex-direction: column; gap: var(--ac-space-3); min-width: 0; }
+.run-input-port { min-width: 0; }
+.run-input-area { width: 100%; box-sizing: border-box; min-height: 5.5em; max-height: 16em; resize: vertical; overflow-y: auto; }
+.run-input-area[data-mono="true"] { font-family: var(--ac-font-mono); }
+.run-input-help { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.run-input-error { color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.run-input-none { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.run-start-load-error { display: flex; align-items: center; gap: var(--ac-space-2); }
+.run-start-hint { margin-right: auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); align-self: center; }
+.run-start { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }

@@ -113,9 +113,7 @@ class MemoryModule:
         version=_version(),
         kind="feature",
         title="공유 메모리",
-        description=(
-            "공유 메모리 기록·버전·검색·정리·내보내기/가져오기(/memory/*), WS memory.changed"
-        ),
+        description="에이전트가 함께 쓰는 메모리를 기록·검색·정리한다",
         provides=(MEMORY_SERVICE, SERVER_WARNINGS),
         optional=(WORKSPACE_SETTINGS, MEMORY_SPACES),
         settings_schema=MemoryModuleSettings,

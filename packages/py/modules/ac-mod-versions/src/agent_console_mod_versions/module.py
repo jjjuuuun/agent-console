@@ -50,7 +50,7 @@ class VersionsModule:
         version=_version(),
         kind="feature",
         title="버전",
-        description="정의 버전 목록·비교·되돌리기, 보존 개수",
+        description="구성의 이전 버전을 보고 비교하고 되돌린다",
         requires=(DEFINITIONS_STORE,),
         optional=(DEFINITION_CHECKS, SECRET_RULES, DEFINITIONS_SPACES),
         settings_schema=VersionModuleSettings,

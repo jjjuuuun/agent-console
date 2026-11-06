@@ -201,6 +201,15 @@ class RunsModuleSettings(BaseModel):
         description="에이전트 최근 활동 목록에 기본으로 보이는 개수.",
         json_schema_extra=x_ui(tier="advanced", unit="개"),
     )
+    records_space_prefix: str = Field(
+        default="project:",
+        title="기록 공간 이름 접두",
+        description=(
+            "프로젝트 기록 DB 공간 이름 = 이 접두 + 프로젝트 id(기록 연동 설정 space_prefix를 "
+            "이어받는다)."
+        ),
+        json_schema_extra=x_ui(tier="advanced"),
+    )
     observe_event_prefixes: list[str] | None = Field(
         default=None,
         title="관측 탭 이벤트 접두어",
@@ -214,6 +223,27 @@ class RunsModuleSettings(BaseModel):
             when="새 관측 수집기가 다른 접두어로 이벤트를 낼 때 더하거나, 관측 탭을 끌 때.",
         ),
     )
+
+    issue_fixes_file: Path | None = Field(
+        default=None,
+        title="해결 버튼 표 파일",
+        description=(
+            "실행 오류의 해결 버튼 표(JSON, 예: [맨 위 실행 열기]). 비우면 기본 표, "
+            "표에 버튼이 없으면 버튼 없음. 상대 경로는 설정 파일 폴더 기준."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example="runs-issue-fixes.json",
+            when="해결 버튼 문구·데려갈 화면을 바꾸거나 끌 때.",
+        ),
+    )
+
+    @field_validator("issue_fixes_file", mode="before")
+    @classmethod
+    def _blank_fixes_file(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("observe_event_prefixes")
     @classmethod
@@ -234,14 +264,18 @@ SETTINGS_COMPAT = SettingsCompat(
         EnvSetting("MAX_CONCURRENCY", ("runtime", "max_concurrency")),
         EnvSetting("SHOW_HIDDEN_BACKENDS", ("show_hidden_backends",)),
     ),
-    seeds=(SeedSetting("min_redact_chars", "secrets.min_redact_chars"),),
+    seeds=(
+        SeedSetting("min_redact_chars", "secrets.min_redact_chars"),
+        SeedSetting("records_space_prefix", "modules.options.link-projects-records.space_prefix"),
+    ),
 )
 """호스트 설정 호환: 옛 최상위 ``runtime``·``backends``·``working_directory``는 4R.18에서 읽기
 호환을 끝냈다(``settings.removed_key`` 오류로 새 위치 안내). 환경변수
 ``<접두어>WORKING_DIRECTORY``·``MAX_CONCURRENCY``·``SHOW_HIDDEN_BACKENDS``는 이 모듈 설정으로
 들어간다. 호스트
 ``secrets.min_redact_chars``는
-기록 가리기 최소 길이의 기본값이다."""
+기록 가리기 최소 길이의 기본값이고, 기록 연동의 ``space_prefix``는 기록 공간 이름 접두의
+기본값이다."""
 
 
 __all__ = [

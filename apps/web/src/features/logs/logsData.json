@@ -16,11 +16,6 @@
       "optionsFrom": "sources"
     },
     {
-      "name": "project",
-      "input": "select",
-      "optionsFrom": "projects"
-    },
-    {
       "name": "model",
       "input": "text"
     },

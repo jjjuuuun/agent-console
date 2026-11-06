@@ -6,19 +6,35 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 
-from agent_console_contracts import ModuleInfo
+from pydantic import ValidationError
+
+from agent_console_contracts import LabelDisplay, ModuleInfo
 from agent_console_modkit import ModuleReport
 
 from ._config import ServerSettings
+
+_log = logging.getLogger("agent_console_server")
+
+
+def _label_display(report: ModuleReport) -> list[LabelDisplay]:
+    out: list[LabelDisplay] = []
+    for item in report.label_display:
+        try:
+            out.append(LabelDisplay.model_validate(item))
+        except ValidationError:
+            _log.warning("모듈 %s의 라벨 표시 규칙 하나가 형식에 맞지 않아 뺍니다", report.id)
+    return out
 
 
 def module_info(report: ModuleReport) -> ModuleInfo:
     """modkit `ModuleReport` → 계약 `ModuleInfo`.
 
     `requires`는 필수·선택 포트를 함께 담는다(계약 설명: 상태 판단 근거). `reason`은 modkit이
-    이미 가린 문구다(`failed`는 예외 형식만).
+    이미 가린 문구다(`failed`는 예외 형식만). `description`은 모듈 서술자 데이터(빈 값 = null).
+    `label_display`는 켜진 모듈의 build 결과(`ModuleParts.label_display`, 형식이 틀린 항목은 뺀다).
     """
     return ModuleInfo(
         id=report.id,
@@ -30,6 +46,8 @@ def module_info(report: ModuleReport) -> ModuleInfo:
         web_roles=list(report.web_roles),
         provides=list(report.provides),
         requires=list(dict.fromkeys([*report.requires, *report.optional])),
+        description=report.description.strip() or None,
+        label_display=_label_display(report),
     )
 
 

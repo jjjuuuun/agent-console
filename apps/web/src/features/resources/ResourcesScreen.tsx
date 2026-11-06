@@ -9,13 +9,12 @@ import { messages as m } from "../../app/messages";
 import { useRegisterCommands } from "../../shell/commands";
 import { useResourceList, useResourceTypes } from "../settings";
 import { DEFINITION_KINDS, useInvalidateLists, type DetailRequest } from "../library";
-import { useScopedList } from "../projects";
+import { SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { CreateResourceDialog } from "./CreateResourceDialog";
 import { ImportDialog } from "./ImportDialog";
 import { ResourceDetail } from "./ResourceDetail";
 import { ResourceList } from "./ResourceList";
 import { resourceMessages as t } from "./messages";
-const scopeOfResource = (r: ResourceSummary) => r.project;
 const idOfResource = (r: ResourceSummary) => r.id;
 const nameOfResource = (r: ResourceSummary) => r.name;
 
@@ -44,7 +43,7 @@ export function ResourcesScreen({ basePath }: ResourcesScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [request, setRequest] = useState<DetailRequest | undefined>(undefined);
   const [onlyIds, setOnlyIds] = useState<ReadonlySet<string> | null>(null);
-  const scoped = useScopedList(resources.data, { scopeOf: scopeOfResource, kind: DEFINITION_KINDS.resource, idOf: idOfResource, nameOf: nameOfResource });
+  const scoped = useConfigTransfer(resources.data, { kind: DEFINITION_KINDS.resource, idOf: idOfResource, nameOf: nameOfResource });
 
   if (search.get("new") !== null) {
     const next = new URLSearchParams(search);
@@ -78,12 +77,12 @@ export function ResourcesScreen({ basePath }: ResourcesScreenProps) {
 
   return (
     <div className="app-screen-frame" data-screen="resources">
-      <PageHeader title={m.nav.resources} />
+      <PageHeader title={m.nav.resources} status={<SpaceChip />} />
+      <SpaceNote />
       <div className="lib-split">
         <ResourceList
           resources={scoped.items}
-          scopeBar={scoped.parts.filter}
-          selectTool={scoped.parts.select}
+          selectTool={scoped.selectTool}
           rowExtra={scoped.rowExtra}
           types={types.data}
           typesFailed={types.isError}

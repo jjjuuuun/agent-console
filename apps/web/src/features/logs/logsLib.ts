@@ -323,3 +323,8 @@ export function archDefaultHeight(o: { viewportHeight: number; preferred: number
 export function clampOr(value: number, min: number, max: number, fallback: number): number {
   return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 }
+
+/** 현재 프로젝트를 로그 요청 필터(`project=<등록 id>`)로. 프로젝트 기능이 꺼져 있으면(null) 빈 객체. */
+export function projectParam(project: string | null): Record<string, string> {
+  return project === null ? {} : { [FILTER_KEYS.project]: project };
+}

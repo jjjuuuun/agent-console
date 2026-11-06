@@ -19,9 +19,9 @@ source_modules = ["@packages"]
 forbidden_modules = ["@app"]
 
 [[contracts]]
-name = "safe-regex 사용처는 secret-rules와 conditions(`matches` 연산자)뿐 (다른 패키지는 이 둘을 거친다, design §2R.4·§5R.5)"
+name = "safe-regex 사용처는 secret-rules, conditions(`matches` 연산자), sdd(작업 문법 정규식)뿐 (다른 패키지는 이들을 거친다, design §2R.4·§5R.5·§6R.3)"
 type = "forbidden"
-source_modules = ["@all", "!agent_console_secret_rules", "!agent_console_conditions", "!agent_console_safe_regex"]
+source_modules = ["@all", "!agent_console_secret_rules", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_sdd"]
 forbidden_modules = ["agent_console_safe_regex"]
 allow_indirect_imports = true
 
@@ -65,12 +65,12 @@ source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory·sdd는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5·§6R.6)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
     "modules",
-    "chat | exports | imports | architecture | memory",
+    "chat | exports | imports | architecture | memory | sdd",
     "runs | usage | projects",
     "definitions",
     "resources | logs",
@@ -106,6 +106,13 @@ name = "text-template는 다른 agent_console 패키지에 의존하지 않는�
 type = "forbidden"
 source_modules = ["agent_console_text_template"]
 forbidden_modules = ["@all"]
+
+[[contracts]]
+name = "sdd는 contracts, safe-regex, conditions, text-template, store에만 의존 (실행·프로젝트·런타임을 모른다 — 문서 문자열만 받는다, design §6R.3)"
+type = "forbidden"
+source_modules = ["agent_console_sdd"]
+forbidden_modules = ["@all", "!agent_console_sdd", "!agent_console_contracts", "!agent_console_safe_regex", "!agent_console_conditions", "!agent_console_text_template", "!agent_console_store"]
+allow_indirect_imports = true
 
 [[contracts]]
 name = "settings는 다른 agent_console 패키지에 의존하지 않는다 (순수 층 병합, design §R9.4)"
@@ -223,10 +230,10 @@ type = "independence"
 modules = ["agent_console_nodes_core", "agent_console_backend_claude_sdk", "agent_console_backend_fake_agent"]
 
 [[contracts]]
-name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, pty-session(선택 login), hook-probe(선택)에만 의존 (구독 로그인 PTY, ux-overhaul §15.9)"
+name = "backend-claude-sdk는 contracts, registry, runtime, secret-rules, claude-format(세션 폴더 키), pty-session(선택 login), hook-probe(선택)에만 의존 (구독 로그인 PTY, ux-overhaul §15.9)"
 type = "forbidden"
 source_modules = ["agent_console_backend_claude_sdk"]
-forbidden_modules = ["@all", "!agent_console_backend_claude_sdk", "!agent_console_contracts", "!agent_console_registry", "!agent_console_runtime", "!agent_console_secret_rules", "!agent_console_pty_session", "!agent_console_hook_probe"]
+forbidden_modules = ["@all", "!agent_console_backend_claude_sdk", "!agent_console_contracts", "!agent_console_registry", "!agent_console_runtime", "!agent_console_secret_rules", "!agent_console_pty_session", "!agent_console_hook_probe", "!agent_console_claude_format"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -344,10 +351,10 @@ source_modules = ["agent_console_logs"]
 forbidden_modules = ["@all", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry"]
 
 [[contracts]]
-name = "logs-claude는 logs, contracts에만 의존 (포맷 플러그인, 서버·저장소를 모른다, design §4R.1)"
+name = "logs-claude는 logs, contracts, claude-format(폴더 키 규칙)에만 의존 (포맷 플러그인, 서버·저장소를 모른다, design §4R.1)"
 type = "forbidden"
 source_modules = ["agent_console_logs_claude"]
-forbidden_modules = ["@all", "!agent_console_logs_claude", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry"]
+forbidden_modules = ["@all", "!agent_console_logs_claude", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry", "!agent_console_claude_format"]
 
 [[contracts]]
 name = "hook-probe는 logs, contracts, registry, secret-rules에만 의존 (design §4R.7)"

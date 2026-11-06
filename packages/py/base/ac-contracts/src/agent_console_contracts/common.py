@@ -44,7 +44,42 @@ class XUiKeys:
     """선택지 값 → 사람이 읽는 라벨. 선택지 필드는 모든 값의 라벨을 둔다."""
     WIDGET: Final = "widget"
     """이 필드를 그릴 화면 위젯 이름(열린 문자열, 1.4.0). 화면이 그 이름의 위젯을 등록했으면 쓰고,
-    모르면 기본 폼으로 그린다."""
+    모르면 기본 폼으로 그린다. 알려진 이름은 문서 상수 `KnownUiWidgets`."""
+    ITEM_TITLE: Final = "itemTitle"
+    """목록 필드에서 항목 카드 머리로 쓸 값의 위치(항목 기준 JSON Pointer, 예: `/title`, 1.8.0).
+    없거나 그 값이 비면 화면은 순번을 보인다."""
+
+
+class KnownUiWidgets:
+    """`x-ui.widget`의 알려진 이름(1.8.0). **문서 상수**다.
+
+    목록·enum이 아니다. 위젯 이름은 열린 문자열이고, 화면이 모르는 이름은 스키마 폼 기본 위젯으로
+    그린다(경고 없음). 이름 → 값 표를 스키마 `x-constants.KNOWN_UI_WIDGETS`로 내보낸다.
+    """
+
+    ARCHITECTURE_PROFILES: Final = "architecture-profiles"
+    MEMORY_SCOPE_KINDS: Final = "memory-scope-kinds"
+    MEMORY_SCOPE_KIND: Final = "memory-scope-kind"
+    MEMORY_RETENTION_RULES: Final = "memory-retention-rules"
+    CONDITION_LIST: Final = "condition-list"
+    """조건 목록(연결 조건·정리 규칙)."""
+    # ---- 1.8.0(0.13.0): 스펙 규칙·문서 틀 폼(design §6R.18 Q11)
+    CONDITION: Final = "condition"
+    """조건 하나(모두 참·하나라도 참 묶음) 편집기."""
+    REGEX: Final = "regex"
+    """정규식 입력(검사·미리보기)."""
+    TEMPLATE_TEXT: Final = "template-text"
+    """입력 틀 문장(`{이름}` 변수 자동 완성)."""
+    GRAPH_REF: Final = "graph-ref"
+    """팀 구성 id 고르기."""
+    PROFILE_REF: Final = "profile-ref"
+    """같은 규칙의 실행 프로필 id 고르기."""
+    STATE_REF: Final = "state-ref"
+    """같은 규칙의 문서 상태 id 고르기."""
+    STATUS_REF: Final = "status-ref"
+    """같은 규칙의 작업 상태 id 고르기."""
+    TONE: Final = "tone"
+    """표시 색조 고르기(열린 문자열)."""
 
 
 type XUiTier = Literal["basic", "advanced"]
@@ -67,11 +102,12 @@ def x_ui(
     unit: str | None = None,
     enum_labels: Mapping[str, str] | None = None,
     widget: str | None = None,
+    item_title: str | None = None,
 ) -> dict[str, Any]:
     """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-ui": {...}}`를 만든다.
 
     인자: 넘긴 것만 담는다(`enum_labels` = 선택지 값별 라벨, `widget` = 화면 위젯 이름,
-    `example`은 None도 값으로 담는다).
+    `item_title` = 목록 항목 카드 머리 값의 위치(`itemTitle`), `example`은 None도 값으로 담는다).
     다른 확장 키(`x-merge` 등)와 함께
     쓰려면 `{**x_ui(tier="advanced"), "x-merge": "replace"}`처럼 합친다.
     반환: 새 dict(호출마다 새 객체).
@@ -92,6 +128,7 @@ def x_ui(
         (XUiKeys.UNIT, unit),
         (XUiKeys.ENUM_LABELS, None if enum_labels is None else dict(enum_labels)),
         (XUiKeys.WIDGET, widget),
+        (XUiKeys.ITEM_TITLE, item_title),
     ):
         if value is not None:
             body[key] = value
@@ -283,10 +320,12 @@ class Position(ContractModel):
 
 
 class UiHints(ContractModel):
-    """표시용 선택 힌트. 없어도 화면이 동작해야 한다(기본: 카테고리 해시 색 + 제목 첫 글자).
+    """종류를 화면에 어떻게 보일지 정하는 선택 항목입니다.
 
-    값 목록은 고정하지 않는다. 화면은 해석할 수 없는 값을 무시하고 기본 표시로 돌아간다.
+    비워 두면 화면이 이름의 첫 글자와 자동 색으로 보입니다. 화면이 모르는 값은 무시합니다.
     """
+
+    # 값 목록은 고정하지 않는다(열린 문자열). 기본 표시 = 카테고리 해시 색 + 제목 첫 글자.
 
     model_config = ConfigDict(extra="allow")
 
@@ -362,7 +401,54 @@ class SpaceRef(ContractModel):
     # 1.6.0(0.12.0), design §PI.4.2.
 
 
+# ---------------------------------------------------------------- 기록 출처·라벨 표시(1.8.0)
+
+type RecordSource = Literal["project", "app"]
+"""목록 페이지의 기록 출처(고정 어휘, design §6R.18 Q14): project = 프로젝트 폴더 기록 DB,
+app = 앱 DB(프로젝트 폴더로 옮기기 전 옛 기록)."""
+
+RECORD_SOURCES: Final = ("project", "app")
+"""`RecordSource`의 값 목록."""
+
+
+class LabelDisplayTarget(ContractModel):
+    """라벨 칩을 눌렀을 때 열 화면. 서버는 웹 경로를 모른다(`FixTarget`과 같은 원칙).
+
+    웹은 `role`(웹 라우트 역할)을 라우트 데이터로 경로로 풀고, `id_from` 라벨의 값을 그 화면의 항목
+    id로 쓴다. 그 역할을 맡은 화면이 없으면 칩은 링크 없이 보인다.
+    """
+
+    role: NonEmptyStr = Field(description="웹 라우트 역할 이름(열린 문자열).")
+    id_from: NonEmptyStr = Field(description="항목 id로 쓸 값을 가진 라벨 키(같은 Run의 라벨).")
+    query: str | None = Field(
+        default=None,
+        description=(
+            "화면에 넘길 추가 질의 값 틀. `{value}`(이 라벨 값)·`{labels.<키>}`(같은 Run의 "
+            "다른 라벨)만 치환한다. null = 없음."
+        ),
+    )
+
+
+class LabelDisplay(ContractModel):
+    """Run 라벨 키 하나를 화면에 보이는 규칙(1.8.0).
+
+    모듈이 `ModuleInfo.label_display`로 선언하는 일반 데이터다. 웹은 `GET /modules`에서 모아
+    `Run.labels`와 키로 맞춰 칩을 그린다. 웹 경로 문자열 필드는 두지 않는다(`target`은 역할 + id).
+    """
+
+    key: NonEmptyStr = Field(description="라벨 키(접두 포함, 예: 설치자가 정한 접두 + spec).")
+    title: NonEmptyStr = Field(description="칩 앞에 붙는 이름(사용자 언어).")
+    target: LabelDisplayTarget | None = Field(
+        default=None, description="눌렀을 때 열 화면. null = 링크 없는 칩."
+    )
+    group: str | None = Field(
+        default=None, description="같은 그룹 라벨을 한 칩 묶음으로 보인다(열린 문자열)."
+    )
+    order: float | None = Field(default=None, description="칩 순서(작을수록 앞).")
+
+
 __all__ = [
+    "RECORD_SOURCES",
     "X_PATH",
     "X_PATH_KINDS",
     "X_UI",
@@ -374,9 +460,13 @@ __all__ = [
     "FixAction",
     "FixTarget",
     "JsonPointer",
+    "KnownUiWidgets",
+    "LabelDisplay",
+    "LabelDisplayTarget",
     "PortDef",
     "PortSpec",
     "Position",
+    "RecordSource",
     "SpaceRef",
     "UiHints",
     "Usage",

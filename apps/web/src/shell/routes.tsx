@@ -4,13 +4,13 @@ import { lookupMessage } from "../app/messages";
 import { useGraphList } from "../features/library";
 import { ARCH_POPOUT } from "../features/architecture";
 import { ROUTE_ROLES } from "../features/library/paths";
-import { PROJECTS_SECTION_ID, ProjectHomeScreen, ProjectsSection, folderHomeMessages } from "../features/projects";
+import { PROJECTS_SECTION_ID, ProjectGate, ProjectHomeScreen, ProjectsSection, SpaceScope, folderHomeMessages } from "../features/projects";
 import { PROJECT_REQUIRES } from "../app/requirements";
 import { RouteGate, useModules, useRequiresPartition } from "../modules";
 import { lazyScreen } from "./lazyScreen";
 import { NotFoundScreen } from "./NotFoundScreen";
 import { PlaceholderScreen } from "./PlaceholderScreen";
-import { DEFAULT_ROUTES, homeRoute, redirectTarget, routeServing, type RouteDef, type RouteGroupDef } from "./routeConfig";
+import { DEFAULT_ROUTES, homeRoute, isDefinitionRoute, redirectTarget, routeServing, type RouteDef, type RouteGroupDef } from "./routeConfig";
 import { Shell } from "./Shell";
 
 // 화면은 모두 처음 열 때 불러온다(그래프·마크다운·타임라인 등 무거운 패키지가 첫 번들에 들어가지 않게).
@@ -114,7 +114,18 @@ function RouteLayout({ route, routes }: { route: RouteDef; routes: readonly Rout
   const home = homeRoute(met.filter((r) => r.id !== route.id));
   return (
     <RouteGate requires={route.requires ?? []} screenTitle={lookupMessage(route.titleKey)} modulesHref={modulesHref(routes) ?? "/"} home={home === undefined ? undefined : { title: lookupMessage(home.titleKey), path: home.path }}>
-      <Outlet />
+      {route.projectScoped === true ? (
+        <ProjectGate title={lookupMessage(route.titleKey)} libraryHref={routeServing(routes, ROUTE_ROLES.graph)?.path}>
+          <Outlet />
+        </ProjectGate>
+      ) : isDefinitionRoute(route) ? (
+        // 구성 화면: 주소의 `?prj=`가 프로젝트 사본을 가리키면 아래 화면 전체가 그 프로젝트 공간을 본다
+        <SpaceScope>
+          <Outlet />
+        </SpaceScope>
+      ) : (
+        <Outlet />
+      )}
     </RouteGate>
   );
 }

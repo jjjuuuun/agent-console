@@ -149,6 +149,7 @@ def test_package_source_has_no_example_extension_names() -> None:
         "model",
         "check",
         "data",
+        "condition",  # 0.13.0: 화면 위젯 이름(KnownUiWidgets.CONDITION)
     }  # 필드·kind 이름과 겹치는 일반어 제외
     for path in src.rglob("*.py"):
         text = path.read_text(encoding="utf-8")

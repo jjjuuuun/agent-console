@@ -10,13 +10,14 @@ uv sync --all-packages                               # 워크스페이스 안
 uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 ```
 
-의존: `agent-console-runtime`, `agent-console-contracts`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
+의존: `agent-console-runtime`, `agent-console-contracts`, `agent-console-claude-format`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
 `claude-agent-sdk`. 선택: `[hook-probe]`, `[login]`.
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `claude-agent-sdk` (확인 버전 0.2.166, CLI 번들) | Claude Code 에이전트 실행 | design §7.4 결정: 훅 콜백·MCP·interrupt를 함께 쓰고 설치가 단순 | CLI `stream-json` 직접 구동(agent_bench 방식) 백엔드를 별도로 추가 |
 | `agent-console-registry` (사내) | 관측 수집기(X7) entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식(4R.8) | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
+| `agent-console-claude-format` (사내) | 세션 보관의 폴더 키 `project_key`(작업 폴더 → `projects/<키>`, 5.7R.33y3) | 로그 출처와 같은 함수 한 곳(복사 금지, design §PI.4.6.4). `ruamel.yaml`만 딸려 온다 | `agent-console-logs-claude` 의존(로그 색인 의존까지 끌려옴) / 규칙 복사 |
 | `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다(4R.9). 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
 
 | `agent-console-secret-rules` (사내) | 구독 로그인 화면 글자 규칙(사용자가 고치는 정규식)의 안전 검사(`ac-safe-regex`를 거침) | 사용자 정규식은 한 곳의 검사기를 거친다는 규칙(design §2R.4) | `re.compile` 그대로(위험한 정규식을 막지 못함) |
@@ -629,6 +630,13 @@ JSON-RPC(`initialize` → `tools/call`)로 in-process 서버를 부른다(SDK �
 
 SDK 핸들러는 입력만 받아(MCP 요청의 `_meta`도 넘기지 않음) 도구 호출 id를 모른다. 그래서 위임 도구가 부른 대상
 NodeRun의 `tool_use_id`(design §5.5R.1 C7)는 이 백엔드에서 null이다.
+
+## 세션 기록 보관·복원 (X38, 5.7R.33y3)
+
+`ClaudeSdkBackend.session_archive()`는 앱 전용 자격 폴더(`<workspace>/.state/claude`)가 있을 때만
+`projects/<키>/<세션>.jsonl`과 `<세션>/` 아래 파일을 다루는 `SessionArchive`를 준다(키 = `agent_console_claude_format.project_key`).
+`.credentials.json`·`settings.json`·다른 세션 파일은 보관하지 않고, 복원은 `projects/<지금 키>/`에만 쓴다. 자격 폴더가 없으면
+(단독 사용·`auth_dir.config_dir: null`) None이라 `~/.claude`는 읽지 않는다.
 
 ## 미확인 SDK 동작 (실호출 스모크로 확인할 항목)
 

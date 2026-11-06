@@ -173,9 +173,20 @@ class LogIngestor:
     def _settings_by_id(settings: LogSettings | None) -> dict[str, LogSourceSetting]:
         return {s.id: s for s in (settings.sources or [])} if settings else {}
 
-    def sources(self, settings: LogSettings | None = None) -> list[LogSourceInfo]:
-        """출처 목록과 상태(`GET /logs/sources`)."""
+    def sources(
+        self, settings: LogSettings | None = None, *, defaults: Mapping[str, bool] | None = None
+    ) -> list[LogSourceInfo]:
+        """출처 목록과 상태(`GET /logs/sources`).
+
+        Args:
+            settings: 로그 설정(사용자 `enabled` 반영). 없으면 디스크립터 기본값.
+            defaults: 다른 쪽이 정한 출처 기본 켜기(출처 id → bool, 예: 이 PC에 로그가 있으면
+                켬). `default_effective`(사용자 설정을 뺀 켜짐 값) = 이 값 → 없으면 디스크립터
+                `default_enabled`. 이 함수는 `enabled`를 정할 때 이 값을 쓰지 않는다 — 호출자가
+                `settings`에 이미 반영해 넘긴다.
+        """
         by_id = self._settings_by_id(settings)
+        base = dict(defaults or {})
         out: list[LogSourceInfo] = []
         for sid, source, origin in self._all_sources():
             desc = source.descriptor.model_copy(update={"id": sid})
@@ -188,6 +199,7 @@ class LogIngestor:
                     enabled=source_enabled(desc, by_id.get(sid)),
                     origin=origin,
                     status=status,
+                    default_effective=base.get(sid, desc.default_enabled),
                 )
             )
         return out

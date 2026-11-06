@@ -26,6 +26,8 @@ export interface ChatHeaderProps {
   moreFooter?: React.ReactNode;
   onToggleList: () => void;
   listOpen: boolean;
+  /** 프로젝트 문맥 칩 자리(화면이 `ProjectChip`을 넣는다). 없으면 그리지 않는다 */
+  projectSlot?: React.ReactNode;
 }
 
 /** 제목 편집 입력: 열릴 때 현재 제목으로 시작해 선택된다. Enter 저장, Esc 취소, 포커스를 잃으면 저장. */
@@ -98,6 +100,7 @@ export function ChatHeader(props: ChatHeaderProps) {
         {props.teamMenu.length > 0 ? <ActionMenu label={chatMessages.menu.changeTeam} items={props.teamMenu} icon="▾" size="sm" /> : null}
       </div>
       <span className="app-spacer" />
+      {props.projectSlot}
       {props.waitingCount > 0 ? (
         <Button size="sm" className="chat-waiting-chip" title={t.waitingChipHint} onClick={props.onJumpToPending}>
           {`⏸ ${t.waitingChip(props.waitingCount)}`}

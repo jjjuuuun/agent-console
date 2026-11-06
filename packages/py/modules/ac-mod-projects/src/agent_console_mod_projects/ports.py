@@ -26,6 +26,10 @@
   ``records_state = unavailable``·``reason = link_disabled``.
 - ``secrets.rules``: 비밀 의심 규칙(프로젝트 공간 쓰기·라이브러리로 복사할 때 검사). 없으면
   기본 규칙.
+- ``definitions.kind_contributions``(여러 제공자, X44, 6R.5): 정의 종류 기여
+  (``agent_console_modkit.KindContribution``). 프로젝트 공간 종류 = 라이브러리 종류 + 기여 종류
+  (``library=False`` 포함) 중 옮길 수 있는 것. 기여의 ``references``는 ``definitions.references``와
+  합쳐 복사 계획·범위 검사의 참조 닫힘에 쓴다.
 - 토픽 ``definitions.saved``: 옛 범위 정리용 정의 스냅샷 캐시를 버린다.
 """
 
@@ -35,7 +39,7 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import Project
-from agent_console_modkit import PortKey, Topic
+from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey, Topic
 from agent_console_project_space import ProjectSpace
 from agent_console_projects import ProjectFolderSet, RewriteReferences
 from agent_console_secret_rules import SecretRules
@@ -157,6 +161,8 @@ RECORDS_SPACES: PortKey[RecordsSpaces] = PortKey(
 )
 SECRET_RULES: PortKey[Callable[[], SecretRules]] = PortKey("secrets.rules", "지금 비밀 의심 규칙")
 DEFINITIONS_SAVED: Topic[SavedLike] = Topic("definitions.saved")
+KIND_CONTRIBUTIONS: PortKey[KindContribution[Any]] = DEFINITION_KIND_CONTRIBUTIONS
+"""``definitions.kind_contributions``(키트의 같은 포트, X44)."""
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
@@ -165,6 +171,7 @@ __all__ = [
     "DEFINITIONS_SAVED",
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
+    "KIND_CONTRIBUTIONS",
     "PROJECTS_LOOKUP",
     "PROJECTS_SPACES",
     "PROJECT_FOLDERS",

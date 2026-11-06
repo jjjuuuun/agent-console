@@ -6,3 +6,5 @@ export { useSaveDefaultBackend } from "./useSaveDefaultBackend";
 export { effectiveBackendId } from "./effective";
 export { precheckBackends, type BackendPrecheckInput } from "./precheck";
 export { ConnectedBackendChooserCard } from "./ConnectedBackendChooserCard";
+export { graphBackendIds, type GraphBackendsInput } from "./graphBackends";
+export { useGraphLoginGate } from "./useGraphLoginGate";

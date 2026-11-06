@@ -158,6 +158,8 @@ class LogsService:
         projects: 앱에 등록된 프로젝트 폴더(수집마다 부른다, 5.7R.30 후속). None이면 범위 필터
             없음(앱 밖 단독 사용). 값이 있으면 범위를 아는 출처는 그 폴더의 기록만 읽는다.
         filter_predicates: 지금 등록된 필터 확장(X28)을 돌려주는 함수(질의마다 부른다).
+        source_defaults: 다른 쪽이 정한 출처 기본 켜기(출처 id → bool)를 돌려주는 함수. 출처
+            목록의 ``default_effective``에만 쓴다(``enabled`` 반영은 ``settings``가 이미 한다).
     """
 
     def __init__(
@@ -185,8 +187,10 @@ class LogsService:
         scope_kinds: Callable[[], Iterable[LogScopeKind]] = tuple,
         filter_predicates: Callable[[], Iterable[LogFilterExtension]] = tuple,
         projects: Callable[[], ProjectFolders | None] | None = None,
+        source_defaults: Callable[[], Mapping[str, bool]] = dict,
     ) -> None:
         self._index = index
+        self._source_defaults = source_defaults
         self._registries = registries
         self._settings = settings
         self._redact = redact
@@ -334,8 +338,9 @@ class LogsService:
     # ---------------------------------------------------------------- 출처
 
     def sources(self) -> list[LogSourceInfo]:
-        """출처 목록과 상태(플러그인 + 런타임)."""
-        return self._ingestor.sources(self._settings())
+        """출처 목록과 상태(플러그인 + 런타임). `default_effective`는 `source_defaults` →
+        디스크립터 기본(사용자 설정을 뺀 값, 화면 ↺가 돌아갈 값)."""
+        return self._ingestor.sources(self._settings(), defaults=self._source_defaults())
 
     def classifiers(self) -> list[LogClassifierDescriptor]:
         return self._registries.classifier_descriptors()

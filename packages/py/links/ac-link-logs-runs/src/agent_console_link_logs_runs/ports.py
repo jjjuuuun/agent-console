@@ -47,6 +47,10 @@ class RunReader(Protocol):
         """최신 생성순. ``parent_run_id`` = 그 Run의 직접 자식만(범위 ``run-tree``)."""
         ...
 
+    # 선택 메서드(있으면 ``run-tree``가 씀): ``descendants(root_run_id) -> list[Run]``
+    # — 그 루트 아래 모든 자손을 한 번에(``RunRepository.descendants``).
+    # 없으면 ``list(parent_run_id=)``로 따라간다.
+
     def list_node_runs(self, run_id: str) -> builtins.list[NodeRun]: ...
 
 

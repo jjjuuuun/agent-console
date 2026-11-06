@@ -25,7 +25,7 @@ SAMPLES = [
     f"{PEM} after",
     PEM_OPEN,
     "use AIzaSyA1234567890abcdef here",
-    "gh ghp_ABCDEFGHIJKLMNOP and sk-ant-0123456789abcdef",
+    "gh ghp_ABCDEFGHIJKLMNOP and sk-" + "ant-0123456789abcdef",  # 비밀 검사 오인 방지로 나눠 씀
     "aws AKIAABCDEFGHIJKLMNOP x",
     "slack " + "xox" + "b-123456-abcdef",  # 비밀 검사 오인 방지로 나눠 씀
     "hf hf_abcdefghijk npm npm_abcdefghijk",

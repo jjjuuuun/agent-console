@@ -1,0 +1,49 @@
+/* 복사 계획 대화상자(screen-projects §5.1). 색·간격은 --ac-* 토큰만 쓴다. 본문은 Dialog가 스크롤하고 버튼 줄은 고정이다. */
+.cpd { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.cpd-intro { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-filter { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.cpd-filter > input { flex: 1 1 auto; min-width: 0; }
+.cpd-kind { display: inline-flex; align-items: center; gap: var(--ac-space-1); flex: none; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-kind select { width: auto; min-width: 96px; }
+.cpd-list, .cpd-plan { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm); min-width: 0; }
+.cpd-list { max-height: min(40vh, 320px); overflow-y: auto; }
+.cpd-pick-row { display: grid; grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1.6fr) auto; align-items: center; gap: var(--ac-space-2); min-height: 44px; padding: 0 var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); }
+.cpd-pick-row:last-child, .cpd-plan-row:last-child { border-bottom: 0; }
+.cpd-pick-row[data-checked="true"] { background: var(--ac-accent-bg); }
+.cpd-pick-choice { min-width: 0; }
+.cpd-name { display: block; min-width: 0; }
+.cpd-kind-chip { max-width: 120px; }
+.cpd-desc { min-width: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-subtle, var(--ac-text-muted)); }
+.cpd-exists { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }
+.cpd-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ac-space-2); padding: var(--ac-space-3) 0; }
+.cpd-empty p { margin: 0; }
+.cpd-error { margin: 0; color: var(--ac-danger); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.cpd-plan-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.cpd-plan-row { display: flex; flex-direction: column; gap: var(--ac-space-1); padding: var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); min-height: var(--ac-copy-row-h, 52px); box-sizing: border-box; }
+.cpd-plan-row[data-invalid="true"] { outline: 1px solid var(--ac-warning); outline-offset: -1px; }
+.cpd-plan-row[data-skipped="true"] .cpd-item { opacity: 0.6; }
+.cpd-plan-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 168px; align-items: center; gap: var(--ac-space-2); min-width: 0; }
+.cpd-plan-row[data-result] .cpd-plan-main { grid-template-columns: minmax(0, 1fr) auto auto; }
+.cpd-item { min-width: 0; }
+.cpd-item-name { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
+.cpd-item-reason { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-state { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; color: var(--ac-text-muted); }
+.cpd-state[data-state="different"] { color: var(--ac-warning); }
+.cpd-action { width: 168px; max-width: 100%; }
+.cpd-note { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-danger { color: var(--ac-danger); }
+.cpd-warning { color: var(--ac-warning); }
+.cpd-rename { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ac-space-2); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-rename label { display: inline-flex; align-items: center; gap: var(--ac-space-1); }
+.cpd-result-head { margin: 0; font-weight: 600; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.cpd-result-status { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); min-width: 0; }
+.cpd-result-status[data-kind="error"] { color: var(--ac-danger); }
+.cpd-result-status[data-kind="conflict"] { color: var(--ac-warning); }
+.cpd-independent { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.cpd-skeleton { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.cpd-skeleton-row { height: 52px; border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); animation: cpd-pulse 1.2s ease-in-out infinite; }
+@keyframes cpd-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .cpd-skeleton-row { animation: none; } }
+.cpd-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--ac-space-2); flex-wrap: wrap; width: 100%; }
+.cpd-foot-info { margin-right: auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); min-width: 0; }
+@media (max-width: 640px) { .cpd-pick-row { grid-template-columns: minmax(0, 1fr) auto; } .cpd-desc { display: none; } .cpd-plan-main { grid-template-columns: auto minmax(0, 1fr); } .cpd-state, .cpd-action { grid-column: 2; } }

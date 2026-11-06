@@ -29,12 +29,13 @@ from agent_console_contracts import (
     EdgeSpec,
     EdgeTypeDescriptor,
     KnownDelegationSessions,
+    LogWarningPayload,
     ReplyFields,
     UiHints,
     x_ui,
 )
 from agent_console_resources import render_template
-from agent_console_runtime import Activation, NodeRunView, Reply
+from agent_console_runtime import Activation, Blocked, NodeRunView, Reply
 
 from ._common import (
     AGENT_ROLE,
@@ -59,6 +60,15 @@ DEFAULT_MESSAGE_KEY: Final = "text"
 """`message` 연결이 `input_key`를 생략했을 때 Run 입력에서 꺼낼 키(메시지 본문).
 
 대화 서비스(`ac-chat` `ChatOptions.message_input_key`) 기본값과 같다."""
+
+INPUT_KEY_MISSING: Final = "input_key_missing"
+"""`edge.skipped.reason`: Run 입력에 `message` 연결의 입력 키가 없어 그 입구로 보내지 않았다(6R.7).
+
+함께 내는 `log.warning`의 `details`는 `input_key`(찾은 키)·`input_keys`(받은 키 이름들 — 값은
+담지 않는다)다. 다른 키를 쓰려면 연결 설정 `input_key`를 고친다(엔진은 키를 추측하지 않는다)."""
+
+MAX_LISTED_INPUT_KEYS: Final = 20
+"""경고 `details.input_keys`에 담는 받은 키 이름 수 상한."""
 
 
 def _passed_value(source: NodeRunView, edge: EdgeSpec) -> tuple[bool, Any]:
@@ -327,15 +337,17 @@ class MessageEdge:
         ui_hints=UiHints(icon="✉"),
     )
 
-    def activates(self, source: NodeRunView, edge: EdgeSpec) -> Activation | None:
-        """Run 입력에서 값을 꺼내 `template`을 적용한 값을 넘긴다. 없으면 None."""
+    def activates(self, source: NodeRunView, edge: EdgeSpec) -> Activation | Blocked | None:
+        """Run 입력에서 값을 꺼내 `template`을 적용한 값을 넘긴다.
+
+        입력 키가 없으면 `Blocked(INPUT_KEY_MISSING)`(경고 포함), 그 밖에 못 넘기면 None."""
         ok, run_input = _passed_value(source, edge)
         cfg = _config(MessageEdgeConfig, edge.config)
         if not ok or not isinstance(run_input, Mapping) or cfg is None:
             return None
         key = cfg.input_key or DEFAULT_MESSAGE_KEY
         if key not in run_input:
-            return None
+            return _missing_key(key, run_input)
         value = run_input[key]
         if cfg.template is None:
             return Activation(value)
@@ -344,6 +356,24 @@ class MessageEdge:
         }
         variables["message"] = as_text(value)
         return Activation(render_template(cfg.template, variables))
+
+
+def _missing_key(key: str, run_input: Mapping[Any, Any]) -> Blocked:
+    """입력 키가 없을 때: 사유(`edge.skipped`) + 사람이 읽는 경고(`log.warning`, 키 이름만)."""
+    names = sorted(str(k) for k in run_input)[:MAX_LISTED_INPUT_KEYS]
+    got = ", ".join(names) if names else "없음"
+    return Blocked(
+        reason=INPUT_KEY_MISSING,
+        warnings=(
+            LogWarningPayload(
+                message=(
+                    f"실행 입력에 {key!r} 키가 없어 이 입구로 보내지 않았습니다(받은 키: {got}). "
+                    "연결 설정의 입력 키를 실행 입력에 맞추세요."
+                ),
+                details={"input_key": key, "input_keys": names},
+            ),
+        ),
+    )
 
 
 # ---------------------------------------------------------------- reply (exit)

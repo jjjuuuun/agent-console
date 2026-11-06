@@ -1,0 +1,14 @@
+{
+  "spec_kind": "spec",
+  "template_kind": "spec-template",
+  "spec_dir": "specs",
+  "template_dir": "spec-templates",
+  "standalone_dir": "sdd",
+  "run_label_prefix": "sdd.",
+  "import_extensions": [".md", ".markdown"],
+  "max_bulk_start": 10,
+  "max_tasks": 20000,
+  "parse_timeout_ms": 2000,
+  "import_limit": 500,
+  "parse_cache_entries": 64
+}

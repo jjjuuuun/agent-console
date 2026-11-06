@@ -54,6 +54,7 @@ from agent_console_runtime import (
     LoginRefusedError,
     SecretNotFoundError,
     SecretResolver,
+    SessionArchive,
     SessionRef,
     SubagentResultListener,
     is_secret_ref,
@@ -129,6 +130,7 @@ from ._readiness import (
     probe_message,
 )
 from ._redact import DEFAULT_MAX_RAW_CHARS, RawSanitizer
+from ._session_archive import claude_session_archive
 from ._subagents import SubagentMapping, build_agent_definitions
 from ._translate import Emission, MessageTranslator
 from .collectors import default_collectors, discover_collectors, select_collectors
@@ -685,6 +687,22 @@ class ClaudeSdkBackend:
     def auth_dir_location(self) -> AuthDirLocation | None:
         """앱 전용 자격 폴더(None = 쓰지 않음)."""
         return self._creds
+
+    def session_archive(self) -> SessionArchive | None:
+        """X38 선택 능력: 앱 전용 자격 폴더의 세션 기록 보관·복원(design §PI.4.6.4).
+
+        앱 전용 자격 폴더가 없으면 None(이어 가기 상태 ``not_applicable``) — ``~/.claude``는 보지
+        않는다.
+
+        >>> ClaudeSdkBackend(environ={}).session_archive() is None
+        True
+        >>> b = ClaudeSdkBackend(workspace="/data/app", environ={})
+        >>> b.session_archive().root.as_posix()
+        '/data/app/.state/claude/projects'
+        """
+        if self._creds is None:
+            return None
+        return claude_session_archive(self._creds.path)
 
     def credential_dir(self, person_id: str | None = None) -> Path | None:
         """구독 자격 폴더(``CLAUDE_CONFIG_DIR``) — **경로 해석 한 함수**(5.7R.30b, design §PI.9).

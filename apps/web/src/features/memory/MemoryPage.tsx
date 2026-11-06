@@ -24,7 +24,7 @@ import { queryKeys, useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
 import { ROUTE_ROLES, routeIconNode, routePath, useRouteOn } from "../library";
-import { useProjects } from "../projects";
+import { ProjectChip } from "../projects";
 import { ClearScopeDialog, PurgeDialog } from "./PurgeDialogs";
 import { EntryDetail, type EntryDetailHandle } from "./EntryDetail";
 import { HistoryDialog } from "./HistoryDialog";
@@ -70,7 +70,6 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const view = useMemo(() => parseView(params), [params]);
   const qc = useQueryClient();
   const storage = useStorage();
-  const projects = useProjects();
   const ctx = useMemoryContext();
   const limits = useMemoryLimits();
   const actions = useMemoryActions();
@@ -330,7 +329,6 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const chips: ChipItem[] = [];
   const addChip = (id: string, label: string, remove: () => void, title?: string) =>
     chips.push({ id, label, title: title ?? t.chip.remove(label), icon: "close", active: true, onSelect: remove });
-  if (ctx.project !== null && ctx.projectName !== null) addChip("current-prj", t.chip.project(ctx.projectName), () => projects.setCurrent(null));
   if (showAllScopes && ctx.project !== null) addChip("released", t.chip.projectReleased, () => setShowAllScopes(false));
   if (view.tag !== null) addChip("tag", t.chip.tag(view.tag), () => change({ tag: null }));
   if (view.authorKind !== null) addChip("authorKind", t.chip.authorKind(t.authorKind[view.authorKind] ?? view.authorKind), () => change({ authorKind: null }));
@@ -442,6 +440,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
 
   const headerActions = (
     <>
+      <ProjectChip />
       <Button variant="primary" icon={<Icon name="plus" />} onClick={() => startCreate()} disabled={noKinds}>{t.actions.new}</Button>
       <Popover
         open={exportOpen}

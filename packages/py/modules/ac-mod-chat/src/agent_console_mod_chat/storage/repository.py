@@ -124,23 +124,50 @@ class SqliteConversationRepository:
         return result.rowcount > 0
 
 
-def _queued(row: Any) -> QueuedItem:
+OTHER_HOST_HOLD_REASON = "other_host"
+"""다른 앱(``host_id``가 다름)이 넣은 항목의 보이는 ``held_reason``(design §PI.4.6.5)."""
+
+
+def _queued(row: Any, host_id: str | None = None) -> QueuedItem:
+    other = _is_other(row, host_id)
     return QueuedItem(
         id=row.id,
         conversation_id=row.conversation_id,
         position=row.position,
         text=row.text,
         created_at=row.created_at,
-        held=bool(row.held),
-        held_reason=row.held_reason,
+        held=bool(row.held) or other,
+        held_reason=OTHER_HOST_HOLD_REASON if other else row.held_reason,
+        host_id=getattr(row, "host_id", None),
     )
 
 
-class SqliteQueueRepository:
-    """`chat_queue` 테이블 위의 대기열 저장소. 순번 정리는 한 트랜잭션 안에서 한다."""
+def _is_other(row: Any, host_id: str | None) -> bool:
+    found = getattr(row, "host_id", None)
+    return host_id is not None and found is not None and found != host_id
 
-    def __init__(self, engine: Engine) -> None:
+
+class SqliteQueueRepository:
+    """`chat_queue` 테이블 위의 대기열 저장소. 순번 정리는 한 트랜잭션 안에서 한다.
+
+    Args:
+        engine: DB 엔진.
+        host_id: 이 앱의 id(프로젝트 기록 DB처럼 두 앱이 같은 표를 쓸 때, 5.7R.33y2). 주면 넣는
+            항목에 적고, 다른 앱의 항목은 멈춘 것(``held_reason: other_host``)으로 보이며 꺼내지
+            않는다. 재시작 정책(``hold_all``·``clear``)은 자기 항목(과 ``host_id`` 없는 옛 항목)만
+            바꾼다. [실행](``release``)하면 그 항목은 이 앱 것이 된다. None이면 지금 동작.
+    """
+
+    def __init__(self, engine: Engine, *, host_id: str | None = None) -> None:
         self._engine = engine
+        self.host_id = host_id
+
+    def _own(self) -> Any:
+        """자기 항목 조건(``host_id``가 같거나 없음). ``host_id``를 모르면 모두."""
+        c = t.chat_queue.c
+        if self.host_id is None:
+            return sa.true()
+        return sa.or_(c.host_id.is_(None), c.host_id == self.host_id)
 
     @staticmethod
     def _compact(conn: Connection, conversation_id: str) -> None:
@@ -182,6 +209,7 @@ class SqliteQueueRepository:
                     held=int(held),
                     held_reason=held_reason if held else None,
                     created_at=created_at,
+                    **({"host_id": self.host_id} if self.host_id is not None else {}),
                 )
             )
         return QueuedItem(
@@ -192,12 +220,13 @@ class SqliteQueueRepository:
             created_at=created_at,
             held=held,
             held_reason=held_reason if held else None,
+            host_id=self.host_id,
         )
 
     def get(self, item_id: str) -> QueuedItem | None:
         with self._engine.connect() as conn:
             row = conn.execute(sa.select(t.chat_queue).where(t.chat_queue.c.id == item_id)).first()
-        return None if row is None else _queued(row)
+        return None if row is None else _queued(row, self.host_id)
 
     def list(
         self, conversation_id: str | None = None, *, held: bool | None = None
@@ -206,11 +235,12 @@ class SqliteQueueRepository:
         stmt = sa.select(t.chat_queue)
         if conversation_id is not None:
             stmt = stmt.where(c.conversation_id == conversation_id)
-        if held is not None:
+        if held is not None and self.host_id is None:
             stmt = stmt.where(c.held == int(held))
         stmt = stmt.order_by(c.conversation_id, c.position, c.id)
         with self._engine.connect() as conn:
-            return [_queued(r) for r in conn.execute(stmt)]
+            found = [_queued(r, self.host_id) for r in conn.execute(stmt)]
+        return found if held is None else [i for i in found if i.held == held]
 
     def remove(self, item_id: str) -> bool:
         c = t.chat_queue.c
@@ -226,7 +256,11 @@ class SqliteQueueRepository:
 
     def hold_all(self, reason: str | None = None, *, conversation_id: str | None = None) -> int:
         c = t.chat_queue.c
-        stmt = sa.update(t.chat_queue).where(c.held == 0).values(held=1, held_reason=reason)
+        stmt = (
+            sa.update(t.chat_queue)
+            .where(c.held == 0, self._own())
+            .values(held=1, held_reason=reason)
+        )
         if conversation_id is not None:
             stmt = stmt.where(c.conversation_id == conversation_id)
         with self._engine.begin() as conn:
@@ -235,13 +269,14 @@ class SqliteQueueRepository:
     def release(self, item_id: str) -> QueuedItem:
         c = t.chat_queue.c
         with self._engine.begin() as conn:
-            result = conn.execute(
-                sa.update(t.chat_queue).where(c.id == item_id).values(held=0, held_reason=None)
-            )
+            values: dict[str, Any] = {"held": 0, "held_reason": None}
+            if self.host_id is not None:
+                values["host_id"] = self.host_id  # [실행]하면 이 앱 것이 된다
+            result = conn.execute(sa.update(t.chat_queue).where(c.id == item_id).values(**values))
             if result.rowcount == 0:
                 raise QueueItemNotFoundError(f"queue/{item_id}")
             row = conn.execute(sa.select(t.chat_queue).where(c.id == item_id)).one()
-        return _queued(row)
+        return _queued(row, self.host_id)
 
     def pop_next(self, conversation_id: str) -> QueuedItem | None:
         c = t.chat_queue.c
@@ -252,17 +287,20 @@ class SqliteQueueRepository:
                 .order_by(c.position, c.id)
                 .limit(1)
             ).first()
-            if row is None or row.held:
+            if row is None or row.held or _is_other(row, self.host_id):
                 return None
             deleted = conn.execute(sa.delete(t.chat_queue).where(c.id == row.id)).rowcount
             if deleted == 0:  # 다른 연결이 먼저 꺼냈다
                 return None
             self._compact(conn, conversation_id)
-        return _queued(row)
+        return _queued(row, self.host_id)
 
     def counts(self, conversation_ids: Iterable[str] | None = None) -> dict[str, QueueCounts]:
         c = t.chat_queue.c
-        stmt = sa.select(c.conversation_id, sa.func.count(), sa.func.sum(c.held)).group_by(
+        held_expr: Any = c.held
+        if self.host_id is not None:  # 다른 앱 항목도 멈춘 것으로 센다
+            held_expr = sa.case((sa.not_(self._own()), 1), else_=c.held)
+        stmt = sa.select(c.conversation_id, sa.func.count(), sa.func.sum(held_expr)).group_by(
             c.conversation_id
         )
         if conversation_ids is not None:
@@ -274,18 +312,24 @@ class SqliteQueueRepository:
             }
 
     def clear(self, conversation_id: str) -> int:
+        """그 대화의 자기 항목을 지운다(``host_id``를 모르면 모두). 대화를 지우면 대화 저장소가 모든
+        항목을 함께 지운다."""
         c = t.chat_queue.c
         with self._engine.begin() as conn:
-            return int(
+            removed = int(
                 conn.execute(
-                    sa.delete(t.chat_queue).where(c.conversation_id == conversation_id)
+                    sa.delete(t.chat_queue).where(c.conversation_id == conversation_id, self._own())
                 ).rowcount
             )
+            if removed and self.host_id is not None:
+                self._compact(conn, conversation_id)
+            return removed
 
 
 class SqliteChatStorage:
-    """호스트 엔진 위의 대화·대기열 저장소 묶음."""
+    """엔진 위의 대화·대기열 저장소 묶음(``host_id``는 대기열에, ``SqliteQueueRepository``)."""
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, *, host_id: str | None = None) -> None:
+        self.engine = engine
         self.conversations = SqliteConversationRepository(engine)
-        self.queue = SqliteQueueRepository(engine)
+        self.queue = SqliteQueueRepository(engine, host_id=host_id)

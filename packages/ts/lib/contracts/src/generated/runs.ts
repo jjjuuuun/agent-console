@@ -102,6 +102,7 @@ export type {
   RunChildStartedPayload,
   RunEvent,
   RunLifecycleEvent,
+  RunPage,
   RunReplyEvent,
   RunReplyPayload,
   RunSnapshot,
@@ -118,4 +119,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "runs" as const;
-export const CONTRACT_VERSION = "1.6.0" as const;
+export const CONTRACT_VERSION = "1.7.0" as const;

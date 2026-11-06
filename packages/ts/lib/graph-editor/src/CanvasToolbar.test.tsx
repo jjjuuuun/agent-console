@@ -87,3 +87,25 @@ describe("5.2R.20 캔버스 도구줄 슬롯·미니맵 토글·오버레이 팔
     expect(id).toBeUndefined();
   });
 });
+
+describe("5.7R.39 도구줄 한 줄·넘침 메뉴", () => {
+  it("선택이 있으면 앱 단추와 선택 도구가 같은 한 줄(.ac-ge-topbar)에 있고, 삭제는 이름 있는 아이콘 단추다", () => {
+    setup({ showMinimap: false, canvasActions: <button type="button">앱 단추</button> });
+    expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
+    fireEvent.click(screen.getByLabelText(/^노드 시작/));
+    const del = screen.getByRole("button", { name: "삭제" });
+    expect(del.closest(".ac-ge-topbar")).toBe(screen.getByRole("button", { name: "앱 단추" }).closest(".ac-ge-topbar"));
+  });
+
+  it("[⋯]를 누르면 넘친 항목이 메뉴에 나오고 Esc로 닫힌다", () => {
+    setup({ showMinimap: false });
+    fireEvent.click(screen.getByLabelText(/^노드 시작/));
+    const more = screen.getByRole("button", { name: "더 많은 작업" });
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(more);
+    const pop = screen.getByRole("group", { name: "더 많은 작업" });
+    expect(pop.textContent).toContain("복제");
+    fireEvent.keyDown(pop, { key: "Escape" });
+    expect(screen.queryByRole("group", { name: "더 많은 작업" })).toBeNull();
+  });
+});

@@ -9,8 +9,10 @@
     - 포트·토픽(``ports``): ``DEFINITIONS_STORE``·``DEFINITIONS_LOOKUP``·``WORKSPACE_SETTINGS``·
       ``SECRET_RULES``·``DEFINITION_CHECKS``(multi)·``SERVER_WARNINGS``(multi)·
       ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``DEFINITIONS_SPACES``(선택, 공간 이름 → 저장소)·
+      ``KIND_CONTRIBUTIONS``(선택 multi, 정의 종류 기여 X44)·
       ``DEFINITIONS_SAVED``(``SavedDefinition`` — ``space`` 포함).
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
+      ``register_contributed_kinds``(종류 기여 → 라이브러리 저장소에 등록),
       ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``PlainSecretScan``·
       ``scan_store``·``plain_secret_warnings``(평문 점검), ``DefinitionService``.
     - ``build_router``: FastAPI 라우터(접두 없음, ``service(space)`` 공장).
@@ -31,6 +33,7 @@ from .ports import (
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
     GRAPH_VALIDATION,
+    KIND_CONTRIBUTIONS,
     SECRET_RULES,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
@@ -42,7 +45,13 @@ from .ports import (
 from .routes import build_router
 from .service import DefinitionService
 from .settings import DEFAULT_PLAIN_SECRET_ISSUE_CODES, DefinitionModuleSettings
-from .store import DefinitionFileStore, LazyVersionRepository, build_store, definition_kinds
+from .store import (
+    DefinitionFileStore,
+    LazyVersionRepository,
+    build_store,
+    definition_kinds,
+    register_contributed_kinds,
+)
 from .workspace import (
     INVALID_RULE,
     SecretRuleCheck,
@@ -62,6 +71,7 @@ __all__ = [
     "GRAPH_ENTRY_LABELS",
     "GRAPH_VALIDATION",
     "INVALID_RULE",
+    "KIND_CONTRIBUTIONS",
     "MODULE_ID",
     "SECRET_RULES",
     "SERVER_WARNINGS",
@@ -88,6 +98,7 @@ __all__ = [
     "definition_kinds",
     "module",
     "plain_secret_warnings",
+    "register_contributed_kinds",
     "scan_store",
     "settings_rule_issues",
 ]

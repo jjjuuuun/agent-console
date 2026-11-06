@@ -4,6 +4,8 @@
 
 - 필수: ``chat.conversations``·``runs.starter``·``runs.reader``·``runs.events``. 선택:
   ``interactions.port``. 구독: ``runs.event``(대화 요약 알림).
+- 선택 ``runs.move_hook``이 있으면 ``chat.move_hooks``로 낸다(옛 대화 옮기기 때 Run도 함께,
+  5.7R.33j2).
 - 제공: ``chat.turn_launcher``(턴 = ``start_run(conversation_id=)``)·``chat.runs``·
   ``chat.run_events``·``chat.interactions``(있을 때, 루트 기준 — 자식 Run 요청 포함),
   ``chat.turn_sessions``(자식 Run 노드 세션을 경로 키로 — 중첩 팀 대화 이어 쓰기),
@@ -35,6 +37,7 @@ from .adapters import (
 from .ports import (
     CHAT_CONVERSATIONS,
     CHAT_INTERACTIONS,
+    CHAT_MOVE_HOOKS,
     CHAT_RUN_EVENTS,
     CHAT_RUNS,
     CHAT_TURN_LAUNCHER,
@@ -43,6 +46,7 @@ from .ports import (
     RESUME_HANDLERS,
     RUNS_EVENT,
     RUNS_EVENTS,
+    RUNS_MOVE,
     RUNS_READER,
     RUNS_STARTER,
 )
@@ -69,7 +73,7 @@ class ChatRunsLink:
         version=_version(),
         kind="link",
         title="채팅·실행 연동",
-        description="대화 턴 시작·대화 알림·상호작용·턴 이어 가기·재시작 대기열 정책·종료 순서",
+        description="대화에서 에이전트 실행을 시작하고 진행·질문을 대화에 보여 준다",
         provides=(
             CHAT_TURN_LAUNCHER,
             CHAT_RUNS,
@@ -77,9 +81,10 @@ class ChatRunsLink:
             CHAT_INTERACTIONS,
             CHAT_TURN_SESSIONS,
             RESUME_HANDLERS,
+            CHAT_MOVE_HOOKS,
         ),
         requires=(CHAT_CONVERSATIONS, RUNS_STARTER, RUNS_READER, RUNS_EVENTS),
-        optional=(INTERACTIONS_PORT,),
+        optional=(INTERACTIONS_PORT, RUNS_MOVE),
         contracts={"chat": CONTRACT_VERSIONS["chat"], "runs": CONTRACT_VERSIONS["runs"]},
         web_roles=WEB_ROLES,
     )
@@ -99,6 +104,9 @@ class ChatRunsLink:
         if interactions is not None:
             ctx.provide(CHAT_INTERACTIONS, RootInteractions(interactions))
         ctx.provide(RESUME_HANDLERS, ConversationResume(lambda: chat))
+        move_hook = ctx.port(RUNS_MOVE)
+        if move_hook is not None:  # 앱 DB 옛 대화를 옮길 때 그 Run도 함께(5.7R.33j2)
+            ctx.provide(CHAT_MOVE_HOOKS, move_hook)
         ctx.subscribe(RUNS_EVENT, ConversationNotifier(chat, starter))
 
         async def start() -> None:

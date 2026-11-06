@@ -4,8 +4,6 @@
  * 필터 필드 이름은 서버 `LogFilter` 이름(`GET /logs/schema`의 `filters`)이며, 서버에 이름이 늘면 한 줄만 더한다.
  */
 import type { FilterInput } from "@agent-console/log-view";
-import { LOG_PROJECT_UNGROUPED } from "@agent-console/contracts";
-import { logsMessages as t } from "./messages";
 import data from "./logsData.json";
 
 /** 이 화면이 맡는 역할(라우트 `serves`·`requires`와 같은 값). 모듈 id가 아니다. */
@@ -121,7 +119,7 @@ export const DEFAULT_RANGE: Readonly<Record<"sessions" | "search", string>> = { 
 export const CUSTOM_RANGE_SEP = "..";
 
 /** 필터 값 입력 방식과 선택지 소스(이름만 있고 값은 서버 데이터). */
-export type FilterOptionsSource = "sources" | "categories" | "projects";
+export type FilterOptionsSource = "sources" | "categories";
 export interface FilterFieldDef {
   name: string;
   input: FilterInput;
@@ -155,18 +153,8 @@ export const RUN_TABLE_MIN_BODY = 160;
 /** 열 id 중 화면 코드가 특별히 다루는 것(시각 표기 전환·레인 필터 등). */
 export const CELL_IDS = data.cellIds;
 
-/** 묶이지 않은 항목 정책 선택지(계약 `LogUngroupedPolicy` 값 + 문구 키). 값이 목록에 없으면 원문으로 보존한다. */
-export const UNGROUPED_OPTIONS: readonly { value: string; label: string; description: string }[] = [
-  { value: "cwd", label: t.settings.projects.ungrouped.cwd.label, description: t.settings.projects.ungrouped.cwd.description },
-  { value: "repo_root", label: t.settings.projects.ungrouped.repo_root.label, description: t.settings.projects.ungrouped.repo_root.description },
-  { value: "none", label: t.settings.projects.ungrouped.none.label, description: t.settings.projects.ungrouped.none.description },
-];
-
 /** 분류 체계 `tone`의 알려진 어휘(계약 문서 상수). 모르는 값은 원문 그대로 보존한다. */
 export const TONE_VOCABULARY: readonly string[] = ["danger", "warning", "success", "info", "neutral"];
-
-/** 프로젝트 필터의 "묶이지 않음" 값(계약 상수). */
-export const UNGROUPED_PROJECT_VALUE = LOG_PROJECT_UNGROUPED;
 
 /** 대시보드 기본 격자 열 수와 좁은 화면 열 수. */
 export const DASHBOARD_COLUMNS = { wide: 12, narrow: 6, narrowBelow: 1280 } as const;

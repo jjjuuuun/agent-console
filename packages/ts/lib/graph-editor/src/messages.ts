@@ -28,6 +28,8 @@ export interface GraphEditorMessages {
   paletteAddHint: string;
   canvasLabel: string;
   remove: string;
+  /** 도구줄이 좁을 때 넘친 항목을 모아 둔 [⋯] 단추의 이름 */
+  moreActions: string;
   duplicate: string;
   removed: string; // {count}
   undo: string;
@@ -310,6 +312,7 @@ export const defaultMessages: GraphEditorMessages = {
   paletteAddHint: "더블클릭하거나 Enter로 추가, 캔버스로 끌어다 놓기",
   canvasLabel: "그래프 캔버스",
   remove: "삭제",
+  moreActions: "더 많은 작업",
   duplicate: "복제",
   removed: "{count}개를 삭제했습니다.",
   undo: "되돌리기",

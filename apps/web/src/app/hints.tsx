@@ -29,10 +29,13 @@ export function useHint(id: string): { visible: boolean; dismiss: () => void } {
   return { visible: !hidden, dismiss };
 }
 
-/** 화면 첫 방문 안내 배너(닫기 가능, 키 `ac.hint.<id>`). */
-export function HintBanner({ id, children }: { id: string; children: ReactNode }) {
+/**
+ * 화면 첫 방문 안내 배너(닫기 가능, 키 `ac.hint.<id>`).
+ * `satisfied`가 true면(안내가 요구하는 조건을 이미 채움) 보이지 않는다. 저장된 닫힘 표시는 건드리지 않는다.
+ */
+export function HintBanner({ id, children, satisfied = false }: { id: string; children: ReactNode; satisfied?: boolean }) {
   const { visible, dismiss } = useHint(id);
-  if (!visible) return null;
+  if (!visible || satisfied) return null;
   return (
     <Banner tone="info" data-hint={id} actions={<Button size="sm" onClick={dismiss}>{m.hints.dismiss}</Button>}>
       {children}

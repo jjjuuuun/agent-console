@@ -40,7 +40,7 @@ class RunsTraceLink:
         version=_version(),
         kind="link",
         title="실행·추적 연동",
-        description="위임 흐름(/runs/{id}/trace)·넘김 집계(/runs/handoffs)",
+        description="실행에서 에이전트 사이 위임 흐름과 넘김 횟수를 보여 준다",
         requires=(RUNS_READER, RUNS_EVENTS),
         optional=(DEFINITIONS_LOOKUP,),
         contracts={"runs": CONTRACT_VERSIONS["runs"]},

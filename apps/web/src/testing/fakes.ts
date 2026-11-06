@@ -119,7 +119,9 @@ export function createFakeClients(restOverrides: Partial<Record<keyof RestClient
   const rest = createFakeRest(restOverrides);
   const ws = createFakeWs();
   const projects = createFakeProjects(projectsOverrides);
-  const space = vi.fn(() => createFakeRest() as never);
+  // 공간 클라이언트: 기본은 빈 가짜지만 실행 그래프 조회(`getGraph`·`getGraphVersion`)는 공용과 같은 값을 돌려준다(실행 화면이 실행의 공간으로 조회하므로).
+  const sharedGraphOverrides = Object.fromEntries((["getGraph", "getGraphVersion", "getGraphPlan"] as const).filter((k) => k in restOverrides).map((k) => [k, restOverrides[k]]));
+  const space = vi.fn(() => createFakeRest(sharedGraphOverrides) as never);
   const clients: ApiClients = { rest, projects, space, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
   return { rest, ws, projects, space, clients };
 }

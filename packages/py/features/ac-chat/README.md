@@ -56,6 +56,11 @@
 조립 순서상 서비스를 먼저 만들고 실행 연결을 나중에 아는 조립기(서버 모듈)는 턴을 시작하기 전에
 `connect(launcher=, runs=, events=, interactions=, sessions=)`를 한 번 부른다(`can_send`로 전송 가능 여부를 본다).
 
+선택 연결 `SessionContinuity`(`state`·`prepare`, 5.7R.33y3): 주면 `ChatService.session_states(id)`가 노드별 이어 가기 상태
+(`ConversationSessions`)를 보이고, 보내기 전에 기록이 없는 노드가 있으면 `SessionUnavailableError`(409 `chat.session_unavailable`,
+`details{conversation_id, node_ids}`), `on_missing_session: "fresh"`면 그 노드만 새 세션으로 시작한다. 보관 사본·옛 위치에서 복원한
+노드는 `TurnStart.session_notes`(`archived`·`relocatable`·`fresh`)로 실행기에 알린다. 예제 구현 `testing.MemoryContinuity`.
+
 ## 설치
 
 ```bash

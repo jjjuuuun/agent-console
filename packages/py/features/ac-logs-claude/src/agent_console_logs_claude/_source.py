@@ -18,6 +18,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, ClassVar
 
+from agent_console_claude_format import project_key
 from agent_console_contracts.logs import LogSourceDescriptor
 from agent_console_logs import (
     JsonlFileSource,
@@ -53,23 +54,6 @@ _JSONL = ".jsonl"
 
 def _str(value: Any) -> str:
     return value if isinstance(value, str) else ""
-
-
-def project_key(folder: str | Path, *, keep: str = "", replacement: str = "-") -> str:
-    """작업 폴더 경로 → Claude Code `projects` 아래 폴더 이름(영문자·숫자·`keep` 밖 글자를 바꿈).
-
-    Claude Code는 이 규칙을 문서로 정하지 않았다(사용자 보고·도구 구현 기준). 출처 설정
-    `project_key_keep`·`project_key_replacement`로 바꾼다. 이름은 손실 변환이라 되돌리지 않는다.
-
-    >>> project_key("/work/demo"), project_key("/home/u/my.app_x")
-    ('-work-demo', '-home-u-my-app-x')
-    >>> project_key("C:\\git\\cc-plus")
-    'C--git-cc-plus'
-    """
-    text = str(folder)
-    return "".join(
-        ch if (ch.isascii() and ch.isalnum()) or ch in keep else replacement for ch in text
-    )
 
 
 class ClaudeCodeJsonlSource(JsonlFileSource):

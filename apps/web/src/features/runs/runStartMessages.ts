@@ -1,0 +1,21 @@
+/** 새 실행 대화상자 문구(docs/design/screen-run-start.md §5). 폴더·구성·오류 문구는 프로젝트 기능의 `targetPickerMessages`를 쓴다. */
+export const runStartMessages = {
+  title: "새 실행",
+  button: "새 실행",
+  submit: "실행 시작",
+  busy: "시작하는 중…",
+  hintShortcut: "Ctrl+Enter로 시작",
+  input: "입력",
+  inputNone: "이 구성은 입력을 받지 않습니다.",
+  inputLoading: "입력 정보를 불러오는 중…",
+  inputLoadError: "입력 정보를 불러오지 못했습니다",
+  inputUnknownType: "형식을 알 수 없어 JSON으로 입력합니다",
+  inputRequired: "필수 입력입니다",
+  inputInvalidJson: "JSON 형식이 올바르지 않습니다",
+  error: "실행을 시작하지 못했습니다",
+  retry: "다시 시도",
+  blockedConfig: "구성을 고르세요",
+  blockedInput: "필수 입력을 채우세요",
+  configLabel: "실행할 구성",
+  noGraphs: "이 프로젝트에 실행할 구성이 없습니다",
+} as const;

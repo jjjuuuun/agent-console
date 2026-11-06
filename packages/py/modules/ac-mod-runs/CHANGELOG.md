@@ -2,6 +2,12 @@
 
 ## 미출시
 
+- 6R.12: `GET /runs/page`(`RunPage`, `cursor`·`limit`·`project`·`root_only`·`status`(여러 번)·`graph_id`·`label=<키>=<값>`(여러 번 AND)·`source`), 기록 공간이 있으면 폴더 기록 끝 → 앱 DB 옛 기록 `source=app`으로 잇는 커서(Q14), `POST /runs` `labels`(루트 Run, `RunService.start_graph`·`start_run(labels=)`), `GET /runs/{id}/events?node=`, 옛 `GET /runs` OpenAPI deprecated, 400 `bad_request`(`InvalidCursor`·`RunQueryError`). `runs.reader`에 `page`·`descendants`(공간 자리 따라감).
+
+- 6R.6: 계보 `runs` `runs_0004`(`run_labels(run_id, key, value)` + 색인 `ix_run_labels_kv`(`key`, `value`, `run_id`), 올릴 때 루트 Run `doc.labels`로 채우고 되돌리면 표만 지움). 옛 기록 옮기기가 라벨 행을 함께 옮김(확인 테스트 추가). 라우트 변경 없음(6R.12).
+
+- 5.7R.33j2: `POST /runs/move-to-project`(앱 DB 옛 Run → 프로젝트 기록 DB, `RunMover`), 포트 `runs.move_hook`(`ConversationRunMove`, 대화 옮기기에 거는 Run 훅). 표 변경 없음.
+- 5.7R.33y2: 선택 포트 `records.spaces` — `project_id`가 있는 Run(자식 포함)을 그 프로젝트 기록 DB에(`SpaceRecorder`, `host_id` 기록), 시작 전 확인 409 `project.records_unavailable`·404 `project.not_found`, 공간을 처음 열 때 자기 `host_id` Run만 복구(`recover_space`), 실행 중 기록 DB를 잃으면 대기 줄 + 취소, `?project=`·`?source=app`, `POST /runs/{id}/mark-interrupted`, 설정 `records_space_prefix`.
 - 5.7R.33w2: 계보 `runs` 서술자 `scopes=("app","project")`(프로젝트 기록 DB에도 올라감).
 
 - 5.5R.13(B-10): 관측 탭 이벤트 type 접두어를 웹 상수(`OBSERVE_PREFIXES`)에서 데이터로 옮겼다. 패키지 기본 데이터

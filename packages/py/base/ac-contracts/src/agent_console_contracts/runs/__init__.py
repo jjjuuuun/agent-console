@@ -2,6 +2,9 @@
 
 Run·NodeRun·실행 이벤트·상호작용·흐름(trace)·노드/연결/백엔드/위임/상호작용 종류 디스크립터와
 실행 REST DTO. 의존: `common`, `definitions`. 설계: design §2.3, §3.3, §5.4, §R14.
+1.7.0(0.13.0, design §6R.1.5·§6R.9): `Run.labels`·`CreateRunRequest.labels`(상한
+`RUN_LABEL_LIMITS`),
+커서 페이지 `RunPage{items, next_cursor, source}`.
 """
 
 from ._api import (
@@ -117,12 +120,15 @@ from ._login import (
     BackendLogoutResult,
 )
 from ._models import (
+    RUN_LABEL_LIMITS,
     NodeRun,
     NodeRunStatus,
     Run,
+    RunPage,
     RunSnapshot,
     RunStatus,
     WaitInfo,
+    run_label_problems,
 )
 from ._readiness import (
     BackendProbeRequest,
@@ -145,6 +151,7 @@ __all__ = [
     "INTERACTION_CLOSED_STATUSES",
     "KNOWN_RUN_EVENT_TYPES",
     "RUN_EVENT_SCHEMA_VERSION",
+    "RUN_LABEL_LIMITS",
     "AgentContextPreparedEvent",
     "AgentContextPreparedPayload",
     "AgentMessageEvent",
@@ -244,6 +251,7 @@ __all__ = [
     "RunEvent",
     "RunEventBase",
     "RunLifecycleEvent",
+    "RunPage",
     "RunReplyEvent",
     "RunReplyPayload",
     "RunSnapshot",
@@ -258,4 +266,5 @@ __all__ = [
     "UsageRateLimitPayload",
     "WaitInfo",
     "parse_run_event",
+    "run_label_problems",
 ]

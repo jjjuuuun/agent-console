@@ -9,6 +9,9 @@
       ``link-projects-records``. 설정 ``ProjectsRecordsSettings``.
     - ``RecordsSpacePool``: HTTP 없이 쓰는 부품 - ``open(space)``·``state(space)``·``close(space)``
       (``records.spaces`` 모양). 열린 핸들 캐시(상한·유휴 닫기)와 대기 파일 다시 쓰기.
+    - 세션 기록 보관(5.7R.33y3, X38): ``ProjectSessionArchive``(``records.sessions`` — ``state``·
+      ``prepare``·``archive``), ``SessionArchiver``(``runs.event`` → 노드가 끝나면 보관),
+      설정 ``SessionArchiveSettings``(``session_archive{enabled, dir}``).
     - ``load_host_id``: 앱 id 파일. ``RecordsSpool``: 쓰기 실패 대기 파일.
     - 포트(``ports``): 받음 ``PROJECTS_SPACES``(필수), 제공 ``RECORDS_SPACES``.
     - ``testing``: ``FolderSpaces``·``folder_spaces_module``(단독 실행·테스트).
@@ -21,10 +24,17 @@ from .module import MODULE_ID, ProjectsRecordsLink, module
 from .pool import PoolOptions, RecordsSpacePool, SpaceRecords, UnknownSpace
 from .ports import PROJECTS_SPACES, RECORDS_SPACES, ProjectSpaces, SpaceLike
 from .replay import Applier, default_appliers, storage_apply
+from .sessions import (
+    ARCHIVE_FAILED_CODE,
+    ProjectSessionArchive,
+    SessionArchiver,
+    SessionArchiveSettings,
+)
 from .settings import ProjectsRecordsSettings
 from .spool import DrainResult, RecordsSpool
 
 __all__ = [
+    "ARCHIVE_FAILED_CODE",
     "HOST_ID_FILE",
     "MODULE_ID",
     "PROJECTS_SPACES",
@@ -32,11 +42,14 @@ __all__ = [
     "Applier",
     "DrainResult",
     "PoolOptions",
+    "ProjectSessionArchive",
     "ProjectSpaces",
     "ProjectsRecordsLink",
     "ProjectsRecordsSettings",
     "RecordsSpacePool",
     "RecordsSpool",
+    "SessionArchiveSettings",
+    "SessionArchiver",
     "SpaceLike",
     "SpaceRecords",
     "UnknownSpace",

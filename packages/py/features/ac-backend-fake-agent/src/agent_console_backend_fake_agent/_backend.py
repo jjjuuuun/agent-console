@@ -45,6 +45,7 @@ from agent_console_runtime import (
     AgentResult,
     BackendCheckContext,
     BackendEventSink,
+    BackendHostContext,
     BackendLoginContext,
     CancelToken,
     HostTool,
@@ -53,6 +54,7 @@ from agent_console_runtime import (
     LoginDriver,
     LoginRefusedError,
     SecretResolver,
+    SessionArchive,
     SessionRef,
     SubagentResultListener,
     SubagentSpec,
@@ -80,6 +82,7 @@ from ._login import (
     FakeLoginState,
     FakeScriptedLoginDriver,
 )
+from ._sessions import FAKE_SESSION_MISSING_CODE, append_turn, fake_session_archive, session_file
 
 FAKE_BACKEND_ID = "fake-agent"
 """기본 디스크립터 id(entry point 이름과 같다)."""
@@ -168,6 +171,13 @@ class FakeInstallOptions(BaseModel):
         description="대본 로그인(e2e·웹 개발용, PTY·네트워크 없음). null = 로그인 능력 없음. {}만 "
         "주면 기본 대본(코드 ok = 성공, 그 밖 = verify_failed).",
     )
+    session_dir: str | None = Field(
+        default=None,
+        min_length=1,
+        description="가짜 세션 기록 폴더(X38 보관·복원 흉내, e2e·테스트용). 주면 실행마다 "
+        "<폴더>/<cwd 키>/<세션>.jsonl에 한 줄을 남기고, 이어 쓰는 요청인데 파일이 없으면 실패한다. "
+        "상대 경로는 앱 workspace 기준. null = 세션 기록 없음(이어 가기 상태 not_applicable).",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -219,6 +229,9 @@ class FakeBackend:
         hook_probe_folder: `observe.hook_probe` 기록 흉내 폴더(`run_folder` 아래).
         login: 대본 로그인(`FakeLoginScript`, ux-overhaul §15.9). 주면 `capabilities.login/logout`
             을 선언하고 상태 점검이 로그인 여부(메모리)를 보인다. None이면 능력 없음.
+        session_dir: 가짜 세션 기록 폴더(X38 흉내). 주면 실행마다 `<폴더>/<cwd 키>/<세션>.jsonl`에
+            한 줄을 남기고, 이어 쓰는 요청인데 파일이 없으면 `fake.session_missing`으로 실패한다.
+            `session_archive()`가 보관·복원을 준다. None이면 둘 다 없다(지금 동작).
     """
 
     def __init__(
@@ -235,7 +248,9 @@ class FakeBackend:
         observe_collectors: Mapping[str, str] | None = None,
         hook_probe_folder: str = DEFAULT_HOOK_PROBE_FOLDER,
         login: FakeLoginScript | Mapping[str, Any] | None = None,
+        session_dir: Path | str | None = None,
     ) -> None:
+        self._session_dir = Path(session_dir) if session_dir is not None else None
         script = FakeLoginScript.model_validate(login) if login is not None else None
         self._login = script if script is not None and script.enabled else None
         self.login_state = FakeLoginState(
@@ -291,10 +306,12 @@ class FakeBackend:
         *,
         secrets: SecretResolver,
         environ: Mapping[str, str],
+        host: BackendHostContext | None = None,
     ) -> FakeBackend:
         """`ConfigurableBackend` 훅: 설치자 설정(`FakeInstallOptions`)으로 만든다.
 
-        `secrets`·`environ`은 쓰지 않는다(외부 호출이 없다).
+        `secrets`·`environ`은 쓰지 않는다(외부 호출이 없다). `host.workspace_dir`는 상대
+        `session_dir`의 기준이다(없으면 상대 경로 그대로).
 
         Raises:
             ValueError: 모르는 키·잘못된 값(위치와 사유만, 값은 넣지 않는다).
@@ -312,7 +329,14 @@ class FakeBackend:
             observe_collectors=parsed.observe_collectors,
             hook_probe_folder=parsed.hook_probe_folder,
             login=parsed.login,
+            session_dir=_session_root(parsed.session_dir, host),
         )
+
+    def session_archive(self) -> SessionArchive | None:
+        """X38 선택 능력: `session_dir`이 있을 때만 가짜 세션 기록 보관·복원."""
+        if self._session_dir is None:
+            return None
+        return fake_session_archive(self._session_dir)
 
     def preview_notes(self, effective: AgentSettings, bundle: ResourceBundle) -> list[Issue]:
         """선택 훅(`ac-teams.PreviewNotes`): `observe.hook_probe`가 참이면 claude-sdk처럼 info
@@ -440,6 +464,21 @@ class FakeBackend:
             else self._ids()
         )
         session = SessionRef(backend=backend_id, session_id=session_id)
+        record = self._session_record(req, session_id)
+        if record is not None and req.session is not None and not record.is_file():
+            return AgentResult(
+                status="failed",
+                session=None,
+                error=ErrorInfo(
+                    code=FAKE_SESSION_MISSING_CODE,
+                    message="이어 쓸 세션 기록이 이 앱에 없습니다(fake)",
+                    details={"session_id": session_id},
+                ),
+            )
+        if record is not None:
+            await asyncio.to_thread(
+                append_turn, record, {"session_id": session_id, "prompt": req.prompt}
+            )
         rule = options.pick(req.prompt)
         message_id = f"{session_id}:msg"
         bundle = bundle_summary(req.bundle, self.descriptor.capabilities.resource_slots)
@@ -554,6 +593,12 @@ class FakeBackend:
             usage=usage,
             session=session,
         )
+
+    def _session_record(self, req: AgentRequest, session_id: str) -> Path | None:
+        """가짜 세션 기록 파일(`session_dir`·`cwd`가 있을 때만)."""
+        if self._session_dir is None or not req.cwd:
+            return None
+        return session_file(self._session_dir, req.cwd, session_id)
 
     def _probe_writer(self, req: AgentRequest, session_id: str) -> _ProbeWriter | None:
         if not req.run_folder or req.observe.get(HOOK_PROBE_SWITCH) is not True:
@@ -825,6 +870,16 @@ def _record_file(session_id: str) -> str:
     if _SAFE_NAME.fullmatch(session_id) and not session_id.startswith("."):
         return session_id + ".jsonl"
     return "s-" + hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:32] + ".jsonl"
+
+
+def _session_root(value: str | None, host: BackendHostContext | None) -> Path | None:
+    """설치자 `session_dir` → 절대 경로(상대 경로는 앱 workspace 기준)."""
+    if value is None:
+        return None
+    path = Path(value).expanduser()
+    if not path.is_absolute() and host is not None and host.workspace_dir is not None:
+        path = Path(host.workspace_dir) / path
+    return path
 
 
 def _append(path: Path, line: str) -> None:

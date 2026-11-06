@@ -2,6 +2,16 @@
 
 ## 미출시
 
+- 6R.12: 이벤트 `EventRepository.list(node=)`(`node_path`에 그 노드 id가 있는 이벤트 — 첫 칸은 `node_id` 열 색인, 하위 그래프는 `json_each`), 출처 잇기 커서 `page_across_sources`·`SourcePage`·`encode_source_cursor`·`decode_source_cursor`(`<출처>.<저장소 커서>`, design §6R.18 Q14). 더하기만, 표 변경 없음.
+
+- 6R.6: `RunRepository.page(cursor, limit, project_id, root_only, status, graph_id, labels) -> (items, next_cursor)`(커서 = `created_at`·`id` 내림차순, 불투명), `descendants(root_run_id)`, 루트 Run `labels`를 표 `run_labels`(계보 `runs_0004`)에 투영(`save`가 다시 쓰고 `delete`가 지움, 표가 없으면 `doc`에서 거름), 공개 `InvalidCursor`·`MAX_PAGE_LIMIT`·`encode_cursor`·`decode_cursor`. 더하기만.
+
+- 5.7R.33j2: `RecordsMove`·`MoveSpec`·`MoveDependent`·`run_moves`·`MoveVerifyError`·`MovePartialError`(표 단위 옮기기: 복사 → 확인 → 원본 삭제, 실패 시 대상 롤백). 더하기만, 표 변경 없음.
+
+- 5.7R.33y2: `RecordsStores`(프로젝트 id → 기록 DB 위 저장소 묶음, 처음 열기 훅), `RecordsUnavailable.project_id`·`details()`.
+
+- 6R.5: `DefinitionKind.library`(기본 참, 거짓 = 라이브러리 공간에 두지 않는 종류, X36 확장)와 `DefinitionKind.with_summary_fields(*fields)`. 저장소 동작 변경 없음.
+
 - 5.7R.33x: 공간 고르기 `spaces`(`DEFINITIONS_SPACES_PORT`·`DefinitionSpaces`·`SpaceStores`·`UnknownSpace` 404 `project.not_found`·`SpacesUnavailable` 409 `feature_unavailable`), 기록 DB 위 버전 기록소 `RecordsVersionRepository`(읽기 `read_engine`, 쓰기 `writable_engine`), 선택 프로토콜 `VersionWriteCheck.ensure_writable`(`ObservedVersionRepository`가 안쪽으로 넘김), `StoreError.field_issues()` — `store_error_body`가 `validation_failed`의 `details.issues`를 채운다(기본 빈 목록, 기존 동작 같음).
 
 - 5.7R.33f: `BaseDefinitionStore.kind_info(name) -> DefinitionKind`(등록된 종류 정보, 같은 종류로 프로젝트 사본 공간을 열 때). 더하기만.

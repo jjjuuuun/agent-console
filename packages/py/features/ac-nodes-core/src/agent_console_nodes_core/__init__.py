@@ -45,7 +45,8 @@
       ``ToolProvider``, 맥락 ``ToolProvisionContext``(``ToolEmit``), 결과 ``ToolProvision``,
       ``provide_tools``·``drop_taken``, 경고 코드 ``ToolProviderCodes``(``tools.*``).
       테스트 공급자 ``agent_console_nodes_core.testing.EchoToolProvider``
-    - 상수: ``DEFAULT_MESSAGE_KEY``, ``SDK_SUBAGENTS``, 오류 코드 ``NodesCoreErrorCodes``, 포트 이름
+    - 상수: ``DEFAULT_MESSAGE_KEY``, ``INPUT_KEY_MISSING``(입력 키 없음 사유),
+      ``SDK_SUBAGENTS``, 오류 코드 ``NodesCoreErrorCodes``, 포트 이름
 """
 
 from agent_console_nodes_core._common import (
@@ -91,6 +92,7 @@ from agent_console_nodes_core.delegation import SDK_SUBAGENTS, SdkSubagentsStrat
 from agent_console_nodes_core.edges import (
     DEFAULT_MESSAGE_KEY,
     HOST_STRATEGY,
+    INPUT_KEY_MISSING,
     AskUserEdge,
     AskUserEdgeConfig,
     DataEdge,
@@ -176,6 +178,7 @@ __all__ = [
     "ERROR_FIXES",
     "HEARS_PORT",
     "HOST_STRATEGY",
+    "INPUT_KEY_MISSING",
     "IN_PORT",
     "ITEM_FILES_KEY",
     "ITEM_TREES_DIR",

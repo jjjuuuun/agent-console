@@ -7,7 +7,8 @@
   저장소의 종류 정보(``kind_info``)를 그대로 쓴다(해시가 같아 복사 계획의 identical 판정이 맞음).
 - 제공: ``projects.lookup``·``projects.folders``·``projects.spaces``·``definitions.spaces``.
 - 선택: ``definitions.lookup``·``definitions.store``·``definitions.references``·
-  ``definitions.reference_rewriters``·``records.spaces``·``secrets.rules``.
+  ``definitions.reference_rewriters``·``records.spaces``·``secrets.rules``·
+  ``definitions.kind_contributions``(X44 — 공간 종류에 더하고 참조 추출을 복사 계획에 합친다).
   구독 ``definitions.saved``.
 - 웹 역할 ``projects``. 이 모듈을 끄면 프로젝트 기능이 없고 각 기능은 단독 동작한다.
 """
@@ -16,7 +17,7 @@ from __future__ import annotations
 
 import shutil
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -33,6 +34,7 @@ from agent_console_store import (
     DEFAULT_KINDS,
     DefinitionKind,
     FileDefinitionStore,
+    KindContributionLike,
     LazyVersionRepository,
     ObservedVersionRepository,
     RecordsHandle,
@@ -40,11 +42,12 @@ from agent_console_store import (
     RecordsVersionRepository,
     StoreError,
     VersionRepository,
+    contributed_kinds,
     versions_for,
 )
 
 from .copying import CopyService
-from .definitions import DefinitionSnapshot, combine_references
+from .definitions import DefinitionSnapshot, combine_references, contribution_references
 from .errors import ERROR_MAP
 from .folders import FolderDialogProvider, FolderPicker, FolderService, load_dialog_providers
 from .ports import (
@@ -54,6 +57,7 @@ from .ports import (
     DEFINITIONS_SAVED,
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
+    KIND_CONTRIBUTIONS,
     PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
     PROJECTS_SPACES,
@@ -103,11 +107,22 @@ def open_versions(database: DatabaseHandle | None) -> VersionRepository:
     return versions_for(database)
 
 
-def library_kinds(store: Any) -> list[DefinitionKind]:
-    """라이브러리 저장소의 종류 정보(``kind_info``가 없으면 ``ac-store`` 기본 종류에서 이름이 같은
-    것)."""
-    if store is None:
-        return list(DEFAULT_KINDS)
+def library_kinds(
+    store: Any, contributions: Iterable[KindContributionLike] = ()
+) -> list[DefinitionKind]:
+    """프로젝트 공간에 쓸 종류 정보.
+
+    라이브러리 저장소의 종류(``kind_info``가 없으면 ``ac-store`` 기본 종류에서 이름이 같은 것,
+    저장소가 없으면 기본 종류) + 종류 기여(X44, ``library=False`` 포함) 중 이름이 없는 것.
+    기여가 없으면 6R.5 전과 같다. 옮길 수 있는지(``is_portable``)는 공간이 거른다.
+    """
+    out = list(DEFAULT_KINDS) if store is None else _store_kinds(store)
+    reserved = {k.name for k in out} | {PROJECT_KIND_NAME}
+    out.extend(contributed_kinds(contributions, reserved=reserved))
+    return out
+
+
+def _store_kinds(store: Any) -> list[DefinitionKind]:
     info = getattr(store, "kind_info", None)
     defaults = {k.name: k for k in DEFAULT_KINDS}
     out: list[DefinitionKind] = []
@@ -145,7 +160,7 @@ class ProjectsModule:
         version=_version(),
         kind="feature",
         title="프로젝트",
-        description="프로젝트 폴더 등록·폴더 고르기·프로젝트 구성 공간·공간 사이 복사",
+        description="프로젝트 폴더를 등록하고 프로젝트마다 구성을 따로 둔다",
         provides=(PROJECTS_LOOKUP, PROJECT_FOLDERS, PROJECTS_SPACES, DEFINITIONS_SPACES),
         optional=(
             DEFINITIONS_LOOKUP,
@@ -154,6 +169,7 @@ class ProjectsModule:
             DEFINITIONS_REWRITERS,
             RECORDS_SPACES,
             SECRET_RULES,
+            KIND_CONTRIBUTIONS,
         ),
         settings_schema=ProjectModuleSettings,
         settings_compat=SETTINGS_COMPAT,
@@ -208,7 +224,7 @@ class ProjectsModule:
 
         def space_options() -> dict[str, Any]:
             return {
-                "kinds": library_kinds(reader()),
+                "kinds": library_kinds(reader(), ctx.ports(KIND_CONTRIBUTIONS)),
                 "config_dir": cfg.config_dir,
                 "layout": layout,
                 "secret_rules": secret_rules(),
@@ -283,7 +299,12 @@ class ProjectsModule:
         )
 
         def references() -> References | None:
-            return combine_references(ctx.ports(DEFINITIONS_REFERENCES))
+            return combine_references(
+                [
+                    *ctx.ports(DEFINITIONS_REFERENCES),
+                    *contribution_references(ctx.ports(KIND_CONTRIBUTIONS)),
+                ]
+            )
 
         copies = CopyService(
             library=library,

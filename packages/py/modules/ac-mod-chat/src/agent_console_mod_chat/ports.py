@@ -25,6 +25,14 @@
   (``DefinitionSpaces.open``). 있으면 프로젝트 대화의 팀 구성은 그 공간에서만 찾는다(라이브러리로
   넘어가 찾지 않음, 없으면 404 ``not_found``). 없으면 모든 대화가 ``definitions.lookup``(지금 동작).
 - ``workspace.settings``: 공통 설정(``chat.*``). 없으면 스키마 기본값.
+- ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들. 있으면
+  프로젝트 대화·대기열은 그 기록 DB에만 두고 ``?project=`` 경로는 거기서 읽는다(``spaces.py``).
+  없으면 모든 대화가 호스트 DB(지금 동작).
+- ``records.sessions``(5.7R.33y3, design §PI.4.6.4 X38): 대화 노드 세션 이어 가기 상태·복원
+  (``agent_console_chat.SessionContinuity`` — ``state``·``prepare``, 보통
+  ``link-projects-records``가 준다). 있으면 ``GET /conversations/{id}/sessions``가 상태를 보이고
+  보내기 전에 기록이 없는 노드를 409 ``chat.session_unavailable``(또는
+  ``on_missing_session: "fresh"``)로 처리한다. 없으면 모든 세션이 ``not_applicable``(지금 동작).
 """
 
 from __future__ import annotations
@@ -37,11 +45,15 @@ from agent_console_chat import (
     EventReader,
     InteractionReader,
     RunReader,
+    SessionContinuity,
     TurnLauncher,
     TurnSessions,
 )
 from agent_console_contracts import ConversationSummary, Issue, WorkspaceSettings
 from agent_console_modkit import PortKey, Topic
+from agent_console_store import RECORDS_SPACES_PORT, RecordsSpaces
+
+from .move import MoveHook
 
 
 class StoredLike(Protocol):
@@ -83,6 +95,18 @@ DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
 WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
     "workspace.settings", "지금 워크스페이스 설정"
 )
+RECORDS_SPACES: PortKey[RecordsSpaces] = PortKey(
+    RECORDS_SPACES_PORT, "공간 이름 → 프로젝트 기록 DB 핸들"
+)
+CHAT_MOVE_HOOKS: PortKey[MoveHook] = PortKey(
+    "chat.move_hooks", "대화 옮기기에 묶이는 딸린 기록 옮기기", multi=True
+)
+"""선택(5.7R.33j2, 여러 제공자): 앱 DB 옛 대화를 프로젝트 기록 DB로 옮길 때 같은 작업으로 옮길 딸린
+기록(예: 대화의 Run - ``link-chat-runs``)과 옮긴 뒤 훅(예: 세션 보관 사본). 없으면 대화·대기열만."""
+
+RECORDS_SESSIONS: PortKey[SessionContinuity] = PortKey(
+    "records.sessions", "대화 세션 이어 가기 상태·복원(X38)"
+)
 
 CONVERSATIONS_UPDATED: Topic[ConversationSummary] = Topic("conversations.updated")
 """대화 요약이 바뀔 때(새 턴·제목·상태·대기열·대기 상호작용 수)."""
@@ -90,6 +114,7 @@ CONVERSATIONS_UPDATED: Topic[ConversationSummary] = Topic("conversations.updated
 __all__ = [
     "CHAT_CONVERSATIONS",
     "CHAT_INTERACTIONS",
+    "CHAT_MOVE_HOOKS",
     "CHAT_RUNS",
     "CHAT_RUN_EVENTS",
     "CHAT_TURN_LAUNCHER",
@@ -97,6 +122,8 @@ __all__ = [
     "CONVERSATIONS_UPDATED",
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_SPACES",
+    "RECORDS_SESSIONS",
+    "RECORDS_SPACES",
     "SERVER_WARNINGS",
     "WORKSPACE_SETTINGS",
     "DefinitionLookup",

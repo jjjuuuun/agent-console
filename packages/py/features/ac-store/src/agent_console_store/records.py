@@ -66,14 +66,32 @@ class RecordsUnavailable(StoreError):
     Attributes:
         reason: `KnownRecordsUnavailableReasons`의 값(readonly·newer·busy·corrupt 등).
         backup_path: 올리다 실패했을 때 되돌릴 백업 파일.
+        project_id: 어느 프로젝트의 기록인가(공간을 고른 쪽이 채운다, 5.7R.33y2). 없으면 None.
     """
 
     code = ErrorCodes.PROJECT_RECORDS_UNAVAILABLE
 
-    def __init__(self, reason: str, message: str = "", *, backup_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        reason: str,
+        message: str = "",
+        *,
+        backup_path: Path | None = None,
+        project_id: str | None = None,
+    ) -> None:
         super().__init__(message or f"records db unavailable: {reason}")
         self.reason = reason
         self.backup_path = backup_path
+        self.project_id = project_id
+
+    def details(self) -> dict[str, Any]:
+        """409 본문 `details`(`ProjectRecordsUnavailableDetails` 모양, 없는 값은 뺀다)."""
+        out: dict[str, Any] = {"reason": self.reason}
+        if self.project_id is not None:
+            out["project_id"] = self.project_id
+        if self.backup_path is not None:
+            out["backup_path"] = str(self.backup_path)
+        return out
 
 
 class RecordsAbsent(StoreError):

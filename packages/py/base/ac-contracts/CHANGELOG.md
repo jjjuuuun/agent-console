@@ -1,5 +1,25 @@
 # 변경 기록
 
+## 0.13.0
+
+- 계약 0.13.0(6R.3, design §6R.6·§6R.18 Q1~Q14). 새 하위 모듈은 minor로 올린다(0.10.0 `memory` 선례). 사내 의존 범위
+  `>=0.13,<0.14`(TS `^0.13.0`). 하위 계약 버전: **`sdd` 1.0.0**(새), `common` 1.8.0, `logs` 1.2.0, `runs` 1.7.0,
+  `chat` 1.3.0, `modules` 1.4.0.
+- `sdd` 1.0.0: 문서 틀·스펙·규칙·작업 문법·설정 섹션(모르는 키 보존, 규칙 폼 `x-ui` — `schema-help-lint` 통과), 파싱·계획·
+  추적·화면 정보 보기, REST 요청·결과, 오류 상세, WS payload `SddChanged`, 문서 상수 9종(`x-constants`).
+  상태 라벨은 `label`만(`label_key` 없음) — 보기(`TaskStatusInfo`·`DocumentStateInfo`)는 늘 채운다.
+- `common` 1.8.0: `LabelDisplay{key, title, target?: LabelDisplayTarget{role, id_from, query?}, group?, order?}`(웹 경로 없음),
+  `RecordSource`(project·app)·`RECORD_SOURCES`, 문서 상수 `KnownUiWidgets`(기존 5 + 새 8: condition·regex·template-text·
+  graph-ref·profile-ref·state-ref·status-ref·tone), `XUiKeys.ITEM_TITLE`(`itemTitle`)·`x_ui(item_title=)`, `UiHints` 설명을
+  사용자 말로. 오류 코드 `sdd.*` 10종(HTTP 표), 이슈 코드 `sdd.*`, `RUN_ORIGINS`에 `sdd`.
+- `runs` 1.7.0: `Run.labels`(기본 {})·`CreateRunRequest.labels`(상한 `RUN_LABEL_LIMITS` 키 16·키 64자·값 256자, 넘으면 검증 오류),
+  `run_label_problems()`, `RunPage{items, next_cursor?, source}`.
+- `chat` 1.3.0: `ConversationPage{items: ConversationSummary[], next_cursor?, source}`. `CreateConversationRequest`는 모르는 키를
+  거부한다(`extra=forbid`, 422) — 웹·e2e·테스트가 보내는 키(`graph_id`·`title`·`project_id`)를 먼저 점검했다.
+- `logs` 1.2.0: `LogSourceInfo.default_effective?`(설정을 뺀 켜짐 값).
+- `modules` 1.4.0: `ModuleInfo.description?`·`label_display: LabelDisplay[]`, WS `SddChangedMessage`(`sdd.changed`).
+- 0.12 응답(새 필드 없음)은 그대로 읽힌다(기존 모델에 더한 필드는 모두 선택).
+
 ## 0.12.2
 
 - 계약 0.12.2(5.7R.34·5.7R.38, `docs/design/screen-delegation.md` §14·§15). **더하기만** 한다: 새 필드는 모두

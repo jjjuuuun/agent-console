@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 5.7R.33j2: 선택 포트 `runs.move_hook`을 `chat.move_hooks`로 낸다(대화를 프로젝트 기록 DB로 옮길 때 그 Run도 함께).
+- 5.7R.33y2: 대화 이어 가기·알림이 대화 서비스의 선택 메서드 `for_project(run.project_id)`를 쓴다, `RootInteractions.for_project`.
 - 5R.13: `chat.interactions` = `RootInteractions`(턴 상호작용을 루트 Run 기준으로 — 자식 Run 요청 포함), `ConversationNotifier`가 자식 Run 이벤트를 루트 대화로 알린다. 소비자 포트 `interactions.port` 모양 `RootInteractionReader`.
 
 ## 0.1.0

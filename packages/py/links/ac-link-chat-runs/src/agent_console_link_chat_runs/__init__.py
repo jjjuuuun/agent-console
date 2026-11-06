@@ -7,7 +7,8 @@
       (필수)·``INTERACTIONS_PORT``(선택), 구독 ``RUNS_EVENT``, 제공 ``CHAT_TURN_LAUNCHER``·
       ``CHAT_RUNS``·``CHAT_RUN_EVENTS``·``CHAT_INTERACTIONS``·``CHAT_TURN_SESSIONS``·
       ``RESUME_HANDLERS``.
-    - HTTP 없이 쓰는 부품(``adapters``): ``RuntimeTurnLauncher``(대화 턴 = 실행 시작),
+    - HTTP 없이 쓰는 부품(``adapters``): ``RuntimeTurnLauncher``(대화 턴 = 실행 시작, 세션 이어
+      가기 안내는 ``run.started`` 맥락 ``CHAT_SESSIONS_CONTEXT``),
       ``ConversationResume``(대화 턴 이어 가기), ``ConversationNotifier``(실행 이벤트 → 대화 알림,
       자식 Run은 루트 대화로), ``RootInteractions``(턴 상호작용을 루트 기준으로),
       ``LineageSessions``(턴 세션 — 자식 Run 노드는 경로 키로).
@@ -16,6 +17,7 @@
 from __future__ import annotations
 
 from .adapters import (
+    CHAT_SESSIONS_CONTEXT,
     INTERACTION_EVENT_PREFIX,
     RUN_STATE_EVENTS,
     ConversationNotifier,
@@ -28,6 +30,7 @@ from .module import MODULE_ID, WEB_ROLES, ChatRunsLink, module
 from .ports import (
     CHAT_CONVERSATIONS,
     CHAT_INTERACTIONS,
+    CHAT_MOVE_HOOKS,
     CHAT_RUN_EVENTS,
     CHAT_RUNS,
     CHAT_TURN_LAUNCHER,
@@ -36,6 +39,7 @@ from .ports import (
     RESUME_HANDLERS,
     RUNS_EVENT,
     RUNS_EVENTS,
+    RUNS_MOVE,
     RUNS_READER,
     RUNS_STARTER,
     ChatLike,
@@ -48,8 +52,10 @@ from .ports import (
 __all__ = [
     "CHAT_CONVERSATIONS",
     "CHAT_INTERACTIONS",
+    "CHAT_MOVE_HOOKS",
     "CHAT_RUNS",
     "CHAT_RUN_EVENTS",
+    "CHAT_SESSIONS_CONTEXT",
     "CHAT_TURN_LAUNCHER",
     "CHAT_TURN_SESSIONS",
     "INTERACTIONS_PORT",
@@ -58,6 +64,7 @@ __all__ = [
     "RESUME_HANDLERS",
     "RUNS_EVENT",
     "RUNS_EVENTS",
+    "RUNS_MOVE",
     "RUNS_READER",
     "RUNS_STARTER",
     "RUN_STATE_EVENTS",

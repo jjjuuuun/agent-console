@@ -175,6 +175,14 @@ class LogSourceInfo(ContractModel):
         description="plugin = entry point 출처, runtime = 다른 모듈이 준 출처(열린 문자열).",
     )
     status: LogSourceStatus = Field(default_factory=LogSourceStatus)
+    default_effective: bool | None = Field(
+        default=None,
+        description=(
+            "사용자 설정(enabled)을 뺐을 때의 켜짐 값(1.2.0). 디스크립터 기본에 자동 켜기(이 PC에 "
+            "로그가 있음 등)까지 반영한 값이라 화면의 ↺(기본값으로)가 이 값으로 돌아간다. "
+            "null = 서버가 알리지 않음(화면은 디스크립터 `default_enabled`를 쓴다)."
+        ),
+    )
 
 
 class LogSourceScanResult(ContractModel):

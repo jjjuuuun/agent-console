@@ -6,7 +6,10 @@
 - 선택: ``definitions.checks``(여러 제공자 — 저장 전 검사), ``graphs.validation``·
   ``graphs.entry_labels``(팀 구성 목록의 검증 요약·입구 이름, 없으면 null),
   ``definitions.spaces``(공간 이름 → 정의 저장소 — 에이전트·팀 구성 경로의 ``?project=``. 공간
-  목록의 검증 요약은 null: 검증 제공자가 라이브러리를 본다).
+  목록의 검증 요약은 null: 검증 제공자가 라이브러리를 본다), ``definitions.kind_contributions``
+  (여러 제공자, X44 — ``library=True`` 기여 종류를 라이브러리 저장소에 더한다. build 때 한 번,
+  모든 모듈 build가 끝난 뒤 시작 훅에서 한 번 더 읽는다. ``library=False`` 종류는 라이브러리에
+  두지 않아 그 종류 요청은 404).
 - 저장소: 워크스페이스 폴더(``BaseServices.paths.workspace``)의 YAML. 버전 기록은 호스트 DB 핸들
   (``BaseServices.database``)의 legacy 테이블, 없으면 메모리(``server.warnings``에
   ``definitions.versions_memory`` 경고). 시작 때 legacy 계보를 올리고(멱등)
@@ -36,6 +39,7 @@ from .ports import (
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
     GRAPH_VALIDATION,
+    KIND_CONTRIBUTIONS,
     SECRET_RULES,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
@@ -44,7 +48,13 @@ from .ports import (
 from .routes import build_router
 from .service import DefinitionService
 from .settings import SETTINGS_COMPAT, DefinitionModuleSettings
-from .store import DefinitionFileStore, LazyVersionRepository, build_store, versions_for
+from .store import (
+    DefinitionFileStore,
+    LazyVersionRepository,
+    build_store,
+    register_contributed_kinds,
+    versions_for,
+)
 from .workspace import SecretRuleCheck, WorkspaceState
 
 MODULE_ID = "mod-definitions"
@@ -83,7 +93,7 @@ class DefinitionsModule:
         version=_version(),
         kind="feature",
         title="정의",
-        description="에이전트·팀 구성·공통 설정 저장소와 CRUD, 워크스페이스 설정·비밀 규칙",
+        description="에이전트·팀 구성·공통 설정을 만들고 고치고 저장한다",
         provides=(
             DEFINITIONS_STORE,
             DEFINITIONS_LOOKUP,
@@ -92,7 +102,13 @@ class DefinitionsModule:
             DEFINITION_CHECKS,
             SERVER_WARNINGS,
         ),
-        optional=(DEFINITION_CHECKS, GRAPH_VALIDATION, GRAPH_ENTRY_LABELS, DEFINITIONS_SPACES),
+        optional=(
+            DEFINITION_CHECKS,
+            GRAPH_VALIDATION,
+            GRAPH_ENTRY_LABELS,
+            DEFINITIONS_SPACES,
+            KIND_CONTRIBUTIONS,
+        ),
         settings_schema=DefinitionModuleSettings,
         settings_compat=SETTINGS_COMPAT,
         contracts={"definitions": CONTRACT_VERSIONS["definitions"]},
@@ -120,6 +136,7 @@ class DefinitionsModule:
             on_deleted=deleted,
             max_content_bytes=cfg.max_content_bytes,
         )
+        register_contributed_kinds(store, ctx.ports(KIND_CONTRIBUTIONS))
         state = WorkspaceState(store)
         codes = frozenset(cfg.plain_secret_issue_codes)
         scan = PlainSecretScan(
@@ -170,6 +187,9 @@ class DefinitionsModule:
         database = ctx.database
 
         async def start() -> None:
+            # 여러 제공자 선택 포트는 제공 모듈이 이 모듈보다 늦게 build될 수 있다(modkit README).
+            if register_contributed_kinds(store, ctx.ports(KIND_CONTRIBUTIONS)):
+                scan.invalidate()
             root.mkdir(parents=True, exist_ok=True)
             if database is not None:
                 await asyncio.to_thread(database.upgrade)  # legacy 계보(정의 버전 표), 멱등

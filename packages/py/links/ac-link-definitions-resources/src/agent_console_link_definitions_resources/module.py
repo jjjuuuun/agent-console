@@ -45,7 +45,7 @@ class DefinitionsResourcesLink:
         version=_version(),
         kind="link",
         title="정의·리소스 연동",
-        description="저장 전 리소스 종류 검사·첨부 검사, 평문 점검 기여",
+        description="구성을 저장하기 전에 붙인 리소스가 맞는지 검사한다",
         provides=(DEFINITION_CHECKS,),
         requires=(DEFINITIONS_LOOKUP, RESOURCE_TYPES),
         optional=(RESOURCES_LOOKUP, SECRET_RULES),

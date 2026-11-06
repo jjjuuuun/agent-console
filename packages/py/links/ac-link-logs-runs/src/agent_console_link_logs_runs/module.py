@@ -78,9 +78,7 @@ class LogsRunsLink:
         version=_version(),
         kind="link",
         title="로그·실행 연동",
-        description=(
-            "플랫폼 실행 이벤트 → 로그(런타임 출처 platform-runs)·실행 세션 로그(/runs/{id}/logs)"
-        ),
+        description="앱에서 한 실행의 기록을 로그 화면에서도 보게 한다",
         provides=(LOG_SOURCES, LOG_SCOPE_KINDS),
         requires=(LOGS_INGEST, LOGS_QUERY, RUNS_READER, RUNS_EVENTS),
         settings_schema=LogsRunsSettings,

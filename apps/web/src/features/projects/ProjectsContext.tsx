@@ -24,6 +24,7 @@ import type { RestClient } from "@agent-console/api-client";
 import { useStorage } from "../../app/StorageContext";
 import type { SafeStorage } from "../../app/storage";
 import { ApiError } from "@agent-console/api-client";
+import { DEFAULT_ROUTES, isDefinitionPath } from "../../shell/routeConfig";
 import { useModules, useRequires } from "../../modules";
 import { useToast } from "@agent-console/ui";
 import { folderHomeMessages } from "./folderHomeMessages";
@@ -181,6 +182,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       store.set(fromUrl);
       return;
     }
+    // 구성 화면(팀·에이전트·리소스)에서 `?prj=`는 "그 프로젝트의 사본을 본다"는 공간 선택이다(screen-projects §5.3).
+    // 주소에 없으면 공용 화면이므로 현재 프로젝트를 다시 붙이지 않는다.
+    if (fromUrl === undefined && isDefinitionPath(location.pathname, DEFAULT_ROUTES)) return;
     if ((fromUrl ?? null) !== store.get()) {
       void navigate({ pathname: location.pathname, search: writeProjectParam(location.search, store.get(), CURRENT_PROJECT_PARAM), hash: location.hash }, { replace: true });
     }

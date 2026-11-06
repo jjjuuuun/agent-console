@@ -52,7 +52,7 @@ class ProjectsMemoryLink:
         version=_version(),
         kind="link",
         title="프로젝트 메모리 연동",
-        description="프로젝트 폴더의 memory.sqlite3를 열어 프로젝트 메모리로 쓴다",
+        description="프로젝트 폴더 안에 그 프로젝트의 메모리를 둔다",
         provides=(MEMORY_SPACES,),
         requires=(PROJECTS_SPACES,),
         settings_schema=ProjectsMemorySettings,

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 6R.12(M-15): `run_tree_ids`가 읽기의 선택 메서드 `descendants`(루트 Run일 때 색인 질의 한 번)를 쓴다. 없거나 중간 Run·빈 결과면 예전처럼 직접 자식을 따라간다. 자손 1,000개 측정 테스트.
+
 - 5.7R.7(M-2): 대응표 목록 값 `{each: <목록 포인터>, ...항목 틀}` — `tags`·`correlation` 값·새 키
   `documents`(문서 틀 하나 또는 목록, `LogDocumentRef` 모양). 항목 틀 안 `{./키}`·`{.}`·`pointer: ./키`는
   원소 기준, 빈 항목은 빼고 같은 항목은 한 번. 순수 함수 `resolve_strings`·`resolve_documents`, 상수

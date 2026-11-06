@@ -37,7 +37,7 @@ class RunsUsageLink:
         version=_version(),
         kind="link",
         title="실행·사용량 연동",
-        description="실행 이벤트 조회·플랫폼 실행분 토큰 집계(증분 캐시)",
+        description="앱에서 한 실행의 토큰 사용량을 사용량 화면에 더한다",
         provides=(USAGE_EVENT_QUERY, USAGE_TOKEN_ROLLUPS),
         requires=(RUNS_READER, RUNS_EVENTS),
         contracts={"usage": CONTRACT_VERSIONS["usage"]},

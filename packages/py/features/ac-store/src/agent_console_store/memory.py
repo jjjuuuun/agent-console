@@ -25,6 +25,7 @@ from agent_console_contracts import (
 
 from .errors import EventConflict, InteractionClosed, NotFound
 from .project_assign import AssignCandidate
+from .run_page import clamp_limit, decode_cursor, encode_cursor
 
 UNFINISHED_STATUSES: tuple[RunStatus, ...] = ("queued", "running", "paused", "waiting")
 """종료되지 않은 Run 상태(`interrupt_unfinished` 대상)."""
@@ -212,6 +213,44 @@ class InMemoryRunRepository:
         rows.sort(key=lambda r: (r.created_at, r.id), reverse=True)
         return [r.model_copy(deep=True) for r in rows[:limit]]
 
+    def descendants(self, root_run_id: str) -> builtins.list[Run]:
+        with self._s._lock:
+            rows = [r for r in self._s._runs.values() if r.root_run_id == root_run_id]
+        rows.sort(key=lambda r: (r.created_at, r.id))
+        return [r.model_copy(deep=True) for r in rows]
+
+    def page(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+        project_id: str | None = None,
+        root_only: bool = False,
+        status: Iterable[RunStatus] | None = None,
+        graph_id: str | None = None,
+        labels: Mapping[str, str] | None = None,
+    ) -> tuple[builtins.list[Run], str | None]:
+        limit = clamp_limit(limit)
+        after = None if cursor is None else decode_cursor(cursor)
+        statuses = None if status is None else set(status)
+        wanted = dict(labels or {})
+        with self._s._lock:
+            rows = [
+                r
+                for r in self._s._runs.values()
+                if (project_id is None or r.project_id == project_id)
+                and (not root_only or r.root_run_id is None)
+                and (graph_id is None or r.graph_id == graph_id)
+                and (statuses is None or r.status in statuses)
+                and (not wanted or (r.root_run_id is None and wanted.items() <= r.labels.items()))
+                and (after is None or (r.created_at, r.id) < after)
+            ]
+        rows.sort(key=lambda r: (r.created_at, r.id), reverse=True)
+        more = len(rows) > limit
+        rows = rows[:limit]
+        next_cursor = encode_cursor(rows[-1].created_at, rows[-1].id) if more else None
+        return [r.model_copy(deep=True) for r in rows], next_cursor
+
     # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
 
     def project_id_counts(self) -> dict[str | None, int]:
@@ -326,6 +365,7 @@ class InMemoryEventRepository:
         limit: int | None = None,
         actor: str | None = None,
         type_prefix: str | None = None,
+        node: str | None = None,
     ) -> builtins.list[RunEvent]:
         with self._s._lock:
             rows = [
@@ -334,6 +374,7 @@ class InMemoryEventRepository:
                 if s > since_seq
                 and (actor is None or e.actor == actor)
                 and (not type_prefix or e.type.startswith(type_prefix))
+                and (node is None or node in e.node_path)
             ]
         return [e.model_copy(deep=True) for e in rows[:limit]]
 

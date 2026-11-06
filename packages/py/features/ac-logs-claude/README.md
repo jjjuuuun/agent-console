@@ -36,6 +36,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | --- | --- | --- | --- |
 | `agent-console-logs` | 출처 기반 클래스 `JsonlFileSource`, 초안·약속 태그, 수집기 | X5·X6 확장 지점의 코어 | — |
 | `agent-console-contracts` | 디스크립터·`TokenSample`·`LogDocumentRef` | 계약 단일 소스 | — |
+| `agent-console-claude-format` | 폴더 키 `project_key`(5.7R.33y3부터 그쪽에 두고 여기서 다시 내보냄) | 실행 백엔드 세션 보관과 같은 함수 한 곳 | 함수 복사(규칙이 바뀌면 두 곳을 고쳐야 함) |
 
 ## 최소 사용
 

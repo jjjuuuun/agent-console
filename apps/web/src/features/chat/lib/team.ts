@@ -1,14 +1,11 @@
-import type { Agent, Graph, GraphSummary, NodeSpec, NodeTypeDescriptor, TeamPlanSummary } from "@agent-console/contracts";
+import type { Agent, Graph, NodeSpec, NodeTypeDescriptor, TeamPlanSummary } from "@agent-console/contracts";
 
 /** 연결 종류 id → 디스크립터. */
 export function indexById<T extends { id: string }>(items: readonly T[] | undefined): ReadonlyMap<string, T> {
   return new Map((items ?? []).map((i) => [i.id, i]));
 }
 
-/** 서버가 계산한 입구 목록이 있으면 "입구 없음"을 판정한다. 계산하지 않았으면(null) 모른다(undefined). */
-export function hasEntry(team: Pick<GraphSummary, "entry_labels">): boolean | undefined {
-  return team.entry_labels == null ? undefined : team.entry_labels.length > 0;
-}
+export { hasEntry } from "../../teams";
 
 export interface NamingContext {
   nodeTypes: ReadonlyMap<string, NodeTypeDescriptor>;

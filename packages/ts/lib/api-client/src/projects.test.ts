@@ -47,6 +47,22 @@ describe("프로젝트 2 REST", () => {
     expect(last(calls)).toMatchObject({ method: "DELETE", path: "/projects/a", headers: { "If-Match": "h2" } });
   });
 
+  it("가져오기·내보내기는 질의 project·target·source를 넘기고, 생략하면 주소가 그대로다 (33o)", async () => {
+    const { rest, calls } = server(() => ({ body: { candidates: [], items: [] } }));
+    await rest.previewImport({ source: "s" }, { project: "p 1", target: "library" });
+    expect(last(calls).path).toBe("/resources/import/preview?project=p%201&target=library");
+    await rest.importResources({ source: "s", items: [] }, { project: "p" });
+    expect(last(calls).path).toBe("/resources/import?project=p");
+    await rest.importResources({ source: "s", items: [] });
+    expect(last(calls).path).toBe("/resources/import");
+    await rest.planExport({ format: "f", items: [] } as never, { project: "p", source: "library" });
+    expect(last(calls).path).toBe("/exports/plan?project=p&source=library");
+    await rest.writeExport({} as never, { project: "p" });
+    expect(last(calls).path).toBe("/exports/write?project=p");
+    await rest.planExport({ format: "f", items: [] } as never);
+    expect(last(calls).path).toBe("/exports/plan");
+  });
+
   it("설정 파일 다시 만들기·.gitignore 덧붙이기 경로", async () => {
     const { rest, calls } = server();
     await rest.resetProjectManifest("a/b", { name: "n", description: "d" });

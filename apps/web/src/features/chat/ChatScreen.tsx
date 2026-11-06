@@ -1,7 +1,7 @@
-import { useScopedList } from "../projects";
+import { NEW_PARAM, useProjects } from "../projects";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button, ConfirmDialog, Dialog, useShortcuts, useToast } from "@agent-console/ui";
 import type { ConversationSummary, Interaction } from "@agent-console/contracts";
 import { describeError } from "../../app/errors";
@@ -20,6 +20,7 @@ import { chatPaths } from "./paths";
 import { filterConversations, lastUsedByGraph, pendingSinceOf, sortConversations, upsertConversation } from "./lib/conversations";
 import { LAST_GRAPH_KEY } from "./lib/drafts";
 import { indexById } from "./lib/team";
+import { NewConversationDialog } from "./NewConversationDialog";
 import { TeamPickerDialog } from "./TeamPickerDialog";
 import { GraphIssuesPreview } from "../teams";
 import { useConversationActions } from "./useConversationActions";
@@ -34,8 +35,6 @@ const t = chatMessages;
 const WATCH_LIMIT = 30;
 
 /** 채팅 화면(라우트 `/chat`, `/chat/:conversationId`): 대화 목록 + 열린 대화. 데이터는 훅이, 표현은 chat 패키지가 맡는다. */
-const scopeOfConversation = (c: ConversationSummary) => c.project_id;
-const idOfConversation = (c: ConversationSummary) => c.id;
 
 export function ChatScreen() {
   const { conversationId } = useParams();
@@ -45,7 +44,6 @@ export function ChatScreen() {
   const actions = useConversationActions();
   const nowMs = useNow(true);
   const conversations = useConversationList();
-  const scoped = useScopedList(conversations.data, { scopeOf: scopeOfConversation, idOf: idOfConversation, nameOf: idOfConversation });
   const graphs = useGraphList();
   const agents = useAgentList();
   const settings = useWorkspaceSettings();
@@ -55,7 +53,17 @@ export function ChatScreen() {
   const [includeArchived, setIncludeArchived] = useState(false);
   const [listOpen, setListOpen] = useState(true);
   const [focusToken, setFocusToken] = useState(0);
-  const [newDialog, setNewDialog] = useState<{ preselected?: string } | null>(null);
+  const projects = useProjects();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // 프로젝트 홈의 [채팅 시작]이 `?new=1`을 붙여 오면 처음부터 새 대화 대화상자가 열려 있다(아래 효과가 질의를 지운다)
+  const [newDialog, setNewDialog] = useState<{ preselected?: string; project?: string } | null>(() => {
+    if (searchParams.get(NEW_PARAM) !== "1") return null;
+    const project = searchParams.get("prj");
+    return { preselected: storage.get(LAST_GRAPH_KEY) ?? undefined, ...(project === null ? {} : { project }) };
+  });
+  // 프로젝트가 하나 이상 등록되어 있으면 새 대화는 프로젝트 대화상자(폴더 줄 + 그 프로젝트의 구성)로 연다
+  const projectDialog = projects.enabled && projects.views.some((v) => v.project.archived !== true);
+  const projectsPending = projects.enabled && !projects.loaded;
   const [newBusy, setNewBusy] = useState(false);
   const [newError, setNewError] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<ConversationSummary | null>(null);
@@ -64,7 +72,8 @@ export function ChatScreen() {
   const [deleteTarget, setDeleteTarget] = useState<ConversationSummary | null>(null);
 
   const agentMap = useMemo(() => indexById(agents.data), [agents.data]);
-  const currentGraph = useChatGraph((conversations.data ?? []).find((c) => c.id === conversationId)?.graph_id);
+  const currentConv = (conversations.data ?? []).find((c) => c.id === conversationId);
+  const currentGraph = useChatGraph(currentConv?.graph_id, currentConv?.project_id ?? null);
   const nodeLabelOf = useCallback(
     (i: Interaction) => currentGraph.data?.graph.nodes?.find((n) => n.id === (i.node_path?.[0] ?? i.node_id))?.label || undefined,
     [currentGraph.data],
@@ -79,7 +88,7 @@ export function ChatScreen() {
   const watched = (conversations.data ?? []).slice(0, WATCH_LIMIT).map((c) => c.id).join(",");
   useEffect(() => {
     const subs = (watched === "" ? [] : watched.split(",")).map((id) =>
-      ws.subscribeConversation(id, (summary) => queryClient.setQueryData<ConversationSummary[]>(chatKeys.conversations(), (cur) => (cur ? upsertConversation(cur, summary) : cur))),
+      ws.subscribeConversation(id, (summary) => queryClient.setQueriesData<ConversationSummary[]>({ queryKey: chatKeys.conversations() }, (cur) => (cur ? upsertConversation(cur, summary) : cur))),
     );
     return () => subs.forEach((s) => s?.unsubscribe());
   }, [ws, queryClient, watched]);
@@ -89,16 +98,27 @@ export function ChatScreen() {
   }, [queryClient, pendingKey]);
   const sortValue = settings.data?.value.chat?.list_sort;
   const visible = useMemo(
-    () => sortConversations(filterConversations(scoped.items ?? [], { query, includeArchived }), sortValue, since),
-    [scoped.items, query, includeArchived, sortValue, since],
+    () => sortConversations(filterConversations(conversations.data ?? [], { query, includeArchived }), sortValue, since),
+    [conversations.data, query, includeArchived, sortValue, since],
   );
   const teamNames = useMemo(() => new Map((graphs.data ?? []).map((g) => [g.id, g.name])), [graphs.data]);
   const teamName = useCallback((graphId: string) => (graphs.data === undefined ? "…" : teamNames.get(graphId)), [graphs.data, teamNames]);
 
-  const openNew = useCallback((preselected?: string) => {
+  const openNew = useCallback((preselected?: string, project?: string) => {
     setNewError(null);
-    setNewDialog({ preselected: preselected ?? storage.get(LAST_GRAPH_KEY) ?? undefined });
+    setNewDialog({ preselected: preselected ?? storage.get(LAST_GRAPH_KEY) ?? undefined, ...(project === undefined ? {} : { project }) });
   }, [storage]);
+
+  // 새 대화 질의는 한 번 읽고 지운다(새로고침해도 다시 열리지 않게)
+  const wantsNew = searchParams.get(NEW_PARAM) === "1";
+  useEffect(() => {
+    if (!wantsNew) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(NEW_PARAM);
+      return next;
+    }, { replace: true });
+  }, [wantsNew, setSearchParams]);
 
   useRegisterCommands([{ id: "chat.new", titleKey: "palette.actions.chatNew", run: () => openNew() }]);
 
@@ -167,7 +187,7 @@ export function ChatScreen() {
       <aside className="chat-list-pane" aria-label={t.list.label}>
         <ConversationList
           conversations={visible}
-          header={scoped.bar}
+          header={projects.enabled && projects.currentProject !== undefined ? <p className="chat-list-project ac-ellipsis app-muted" title={projects.currentProject.folder ?? undefined}>{projects.currentProject.name}</p> : null}
           totalCount={conversations.data?.length ?? 0}
           selectedId={conversationId}
           loading={conversations.isLoading}
@@ -207,8 +227,20 @@ export function ChatScreen() {
         )}
       </section>
 
+      {newDialog !== null && projectDialog && !projectsPending ? (
+        <NewConversationDialog
+          preselected={newDialog.preselected}
+          initialProject={newDialog.project}
+          nowMs={nowMs}
+          onClose={() => setNewDialog(null)}
+          onCreated={(created) => {
+            setNewDialog(null);
+            goTo(created.id);
+          }}
+        />
+      ) : null}
       <TeamPickerDialog
-        open={newDialog !== null}
+        open={newDialog !== null && !projectDialog && !projectsPending}
         title={t.newDialog.title}
         confirmLabel={t.newDialog.start}
         graphs={graphs.data ?? []}

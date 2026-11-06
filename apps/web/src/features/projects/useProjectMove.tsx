@@ -89,11 +89,13 @@ export interface SelectionToolbarProps {
   /** 지금 보이는 항목 id(모두 선택용) */
   visibleIds: readonly string[];
   onMove: () => void;
+  /** 선택한 항목에 쓸 동작 버튼 글자(기본 "프로젝트로 이동…") */
+  actionLabel?: string;
   className?: string;
 }
 
 /** 목록 위 한 줄: [선택] 토글 + (선택 모드에서) `n개 선택됨` [모두 선택] [프로젝트로 이동…]. */
-export function SelectionToolbar({ selection, visibleIds, onMove, className }: SelectionToolbarProps) {
+export function SelectionToolbar({ selection, visibleIds, onMove, actionLabel, className }: SelectionToolbarProps) {
   const { selecting, setSelecting, selected, setAll } = selection;
   return (
     <div className={["prj-selectbar", className].filter(Boolean).join(" ")}>
@@ -104,7 +106,7 @@ export function SelectionToolbar({ selection, visibleIds, onMove, className }: S
         <>
           <span className="app-muted" role="status">{t.move.selected(selected.size)}</span>
           <Button size="sm" variant="ghost" onClick={() => setAll(visibleIds)} disabled={visibleIds.length === 0}>{t.move.selectAll}</Button>
-          <Button size="sm" variant="primary" disabled={selected.size === 0} onClick={onMove}>{t.move.menu}</Button>
+          <Button size="sm" variant="primary" disabled={selected.size === 0} onClick={onMove}>{actionLabel ?? t.move.menu}</Button>
         </>
       ) : null}
     </div>

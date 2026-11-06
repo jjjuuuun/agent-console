@@ -6,21 +6,22 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.12.2",
+    "CONTRACTS_VERSION": "0.13.0",
     "CONTRACT_VERSIONS": {
-      "common": "1.7.0",
+      "common": "1.8.0",
       "resources": "1.1.0",
-      "logs": "1.1.0",
+      "logs": "1.2.0",
       "definitions": "1.5.0",
-      "runs": "1.6.0",
+      "runs": "1.7.0",
       "usage": "1.1.0",
       "projects": "3.1.0",
-      "chat": "1.2.0",
+      "chat": "1.3.0",
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
       "memory": "1.1.0",
-      "modules": "1.3.0"
+      "sdd": "1.0.0",
+      "modules": "1.4.0"
     },
     "USAGE_REPORT_PARTS": [
       "windows",
@@ -105,8 +106,33 @@
       "web",
       "api",
       "task",
-      "resume"
+      "resume",
+      "sdd"
     ],
+    "RUN_LABEL_LIMITS": {
+      "max_labels": 16,
+      "max_key_length": 64,
+      "max_value_length": 256
+    },
+    "RECORD_SOURCES": [
+      "project",
+      "app"
+    ],
+    "KNOWN_UI_WIDGETS": {
+      "ARCHITECTURE_PROFILES": "architecture-profiles",
+      "MEMORY_SCOPE_KINDS": "memory-scope-kinds",
+      "MEMORY_SCOPE_KIND": "memory-scope-kind",
+      "MEMORY_RETENTION_RULES": "memory-retention-rules",
+      "CONDITION_LIST": "condition-list",
+      "CONDITION": "condition",
+      "REGEX": "regex",
+      "TEMPLATE_TEXT": "template-text",
+      "GRAPH_REF": "graph-ref",
+      "PROFILE_REF": "profile-ref",
+      "STATE_REF": "state-ref",
+      "STATUS_REF": "status-ref",
+      "TONE": "tone"
+    },
     "LOG_EVENT_ORDERS": [
       "asc",
       "desc"
@@ -168,7 +194,17 @@
       "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
       "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
       "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
-      "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable"
+      "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
+      "SDD_NOT_FOUND": "sdd.not_found",
+      "SDD_DOCUMENT_MISSING": "sdd.document_missing",
+      "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
+      "SDD_GATE_BLOCKED": "sdd.gate_blocked",
+      "SDD_TASK_CHANGED": "sdd.task_changed",
+      "SDD_TRANSITION_DENIED": "sdd.transition_denied",
+      "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
+      "SDD_SPACES_UNAVAILABLE": "sdd.spaces_unavailable",
+      "SDD_CONFIG_READONLY": "sdd.config_readonly",
+      "SDD_SECRET_REJECTED": "sdd.secret_rejected"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
       "bad_request": 400,
@@ -226,7 +262,17 @@
       "folders.dialog_busy": 409,
       "folders.dialog_timeout": 409,
       "project.records_unavailable": 409,
-      "chat.session_unavailable": 409
+      "chat.session_unavailable": 409,
+      "sdd.not_found": 404,
+      "sdd.document_missing": 404,
+      "sdd.template_exists": 409,
+      "sdd.gate_blocked": 422,
+      "sdd.task_changed": 409,
+      "sdd.transition_denied": 403,
+      "sdd.action_unavailable": 409,
+      "sdd.spaces_unavailable": 409,
+      "sdd.config_readonly": 409,
+      "sdd.secret_rejected": 422
     },
     "KNOWN_ISSUE_CODES": {
       "LIMITS_NOT_ENFORCED": "limits.not_enforced",
@@ -290,7 +336,31 @@
       "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
       "PROJECT_NETWORK_FS": "project.network_fs",
       "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
-      "RUN_OTHER_HOST": "run.other_host"
+      "RUN_OTHER_HOST": "run.other_host",
+      "SDD_GATE_BLOCKED": "sdd.gate_blocked",
+      "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
+      "SDD_DOCUMENT_MISSING": "sdd.document_missing",
+      "SDD_TASK_CHANGED": "sdd.task_changed",
+      "SDD_DUPLICATE_TASK_ID": "sdd.duplicate_task_id",
+      "SDD_UNKNOWN_DEPENDENCY": "sdd.unknown_dependency",
+      "SDD_DEPENDENCY_CYCLE": "sdd.dependency_cycle",
+      "SDD_UNKNOWN_STATUS_MARKER": "sdd.unknown_status_marker",
+      "SDD_RANGE_UNRESOLVED": "sdd.range_unresolved",
+      "SDD_UNKNOWN_REQUIREMENT": "sdd.unknown_requirement",
+      "SDD_PARSE_TIMEOUT": "sdd.parse_timeout",
+      "SDD_TOO_MANY_TASKS": "sdd.too_many_tasks",
+      "SDD_SYNTAX_MISSING": "sdd.syntax_missing",
+      "SDD_INVALID_PATTERN": "sdd.invalid_pattern",
+      "SDD_UNKNOWN_STATE": "sdd.unknown_state",
+      "SDD_DUPLICATE_STATUS_MARKER": "sdd.duplicate_status_marker",
+      "SDD_UNKNOWN_VARIABLE": "sdd.unknown_variable",
+      "SDD_PROFILE_GRAPH_MISSING": "sdd.profile_graph_missing",
+      "SDD_UNKNOWN_PROFILE": "sdd.unknown_profile",
+      "SDD_STATUS_NOT_APPLIED": "sdd.status_not_applied",
+      "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
+      "SDD_SECRET_REJECTED": "sdd.secret_rejected",
+      "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
+      "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped"
     },
     "KNOWN_SUGGESTION_IDS": {
       "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
@@ -406,6 +476,53 @@
       "DELEGATOR": "delegator",
       "TARGET": "target"
     },
+    "KNOWN_DOCUMENT_ROLES": {
+      "REQUIREMENTS": "requirements",
+      "TASKS": "tasks"
+    },
+    "KNOWN_TASK_FIELD_ROLES": {
+      "DEPENDENCIES": "dependencies",
+      "REQUIREMENTS": "requirements",
+      "ASSIGNEE": "assignee",
+      "WEIGHT": "weight"
+    },
+    "KNOWN_GATE_TARGETS": {
+      "RUN": "run",
+      "TASK_STATUS": "task_status",
+      "DOCUMENT_STATE": "document_state"
+    },
+    "KNOWN_TRANSITION_ACTORS": {
+      "HUMAN": "human",
+      "RUN": "run",
+      "AGENT": "agent"
+    },
+    "KNOWN_TRACE_GAPS": {
+      "NO_TASK": "no_task",
+      "NO_RUN": "no_run",
+      "NOT_VERIFIED": "not_verified",
+      "VERIFICATION_FAILED": "verification_failed",
+      "TASK_NOT_DONE": "task_not_done"
+    },
+    "KNOWN_TASK_LINK_KINDS": {
+      "RUN": "run"
+    },
+    "KNOWN_AUTOMATION_STOP_REASONS": {
+      "USER": "user",
+      "STAGE_DONE": "stage_done",
+      "SPEC_DONE": "spec_done",
+      "FAILURES": "failures",
+      "LINK_DISABLED": "link_disabled"
+    },
+    "KNOWN_SYNTAX_SOURCES": {
+      "DEFAULT": "default",
+      "SETTINGS": "settings",
+      "SPEC": "spec"
+    },
+    "KNOWN_TASK_ACTION_STATUSES": {
+      "STARTED": "started",
+      "BLOCKED": "blocked",
+      "FAILED": "failed"
+    },
     "USER_TEXT_RULES": {
       "version": 1,
       "description": "사용자에게 보이는 문구에 넣지 않는 패턴(설계 문서 번호·내부 노드 id). Python·TS 린트 테스트가 이 파일 하나를 읽는다. 패턴은 Python re와 JavaScript RegExp가 같게 읽는 문법만 쓴다.",
@@ -460,9 +577,12 @@
       "Fix",
       "FixAction",
       "FixTarget",
+      "LabelDisplay",
+      "LabelDisplayTarget",
       "PortDef",
       "PortSpec",
       "Position",
+      "RecordSource",
       "SpaceRef",
       "UiHints",
       "Usage"
@@ -679,6 +799,7 @@
       "RunChildStartedPayload",
       "RunEvent",
       "RunLifecycleEvent",
+      "RunPage",
       "RunReplyEvent",
       "RunReplyPayload",
       "RunSnapshot",
@@ -754,6 +875,7 @@
       "ChatReply",
       "ChatTurn",
       "Conversation",
+      "ConversationPage",
       "ConversationSessions",
       "ConversationSummary",
       "CreateConversationRequest",
@@ -864,6 +986,88 @@
       "MemoryVersionSummary",
       "MemoryWriteRequest"
     ],
+    "sdd": [
+      "AutomationConfig",
+      "AutomationScope",
+      "AutomationState",
+      "BulkActionsRequest",
+      "BulkActionsResult",
+      "BulkStartRequest",
+      "BulkStartResult",
+      "DocumentStateChange",
+      "DocumentStateInfo",
+      "DocumentStateOnEdit",
+      "DocumentStateSpec",
+      "EffectiveSyntax",
+      "ImportFile",
+      "ImportFileListing",
+      "ParsedDocument",
+      "ParsedRequirement",
+      "ParsedStage",
+      "ParsedTask",
+      "RequirementSyntax",
+      "RulesCheckRequest",
+      "RulesCheckResult",
+      "RunProfile",
+      "RunProfileSummary",
+      "SaveAsTemplateRequest",
+      "SaveAsTemplateResult",
+      "SaveAsTemplateStatus",
+      "SddCapabilities",
+      "SddChanged",
+      "SddDocumentMissingDetails",
+      "SddGateBlockedDetails",
+      "SddInfo",
+      "SddLimits",
+      "SddSettings",
+      "SddTaskChangedDetails",
+      "SecretScanMode",
+      "SpecContentRef",
+      "SpecCreateRequest",
+      "SpecDefinition",
+      "SpecDocument",
+      "SpecDocumentContent",
+      "SpecDocumentSummary",
+      "SpecDocumentWrite",
+      "SpecExportRequest",
+      "SpecExportResult",
+      "SpecGate",
+      "SpecImportRequest",
+      "SpecIndex",
+      "SpecIssue",
+      "SpecRules",
+      "SpecSummary",
+      "SpecSyntax",
+      "SpecTemplate",
+      "SpecTemplateSummary",
+      "SpecView",
+      "StageRef",
+      "StageSyntax",
+      "StateChange",
+      "StateTransition",
+      "TaskAction",
+      "TaskActionKey",
+      "TaskActionRequest",
+      "TaskActionResult",
+      "TaskLink",
+      "TaskPatch",
+      "TaskPatchResult",
+      "TaskPlan",
+      "TaskStatusInfo",
+      "TaskStatusSpec",
+      "TaskSyntax",
+      "TemplateConflictPolicy",
+      "TemplateVariable",
+      "TraceMatrix",
+      "TraceOrphans",
+      "TraceRow",
+      "TraceUnknownRef",
+      "TraceVerification",
+      "VerificationConfig",
+      "VerificationRef",
+      "VerificationResult",
+      "VerificationSourceSetting"
+    ],
     "modules": [
       "BootstrapResponse",
       "ConversationUpdatedMessage",
@@ -881,6 +1085,7 @@
       "ModuleStatus",
       "PluginInfo",
       "RunEventMessage",
+      "SddChangedMessage",
       "ServerInfo",
       "SubscribeMessage",
       "SubscribePayload",
@@ -5312,6 +5517,138 @@
       ],
       "type": "string"
     },
+    "AutomationConfig": {
+      "additionalProperties": true,
+      "description": "자동 진행입니다. 켜면 의존이 끝난 작업을 차례로 실행합니다.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "켜면 준비된 작업을 자동으로 시작합니다. 기본은 꺼짐입니다.",
+          "title": "켜기",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "작업을 하나씩 직접 시작하지 않으려면 켜세요."
+          }
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "자동으로 시작할 때 쓸 실행 프로필입니다.",
+          "title": "실행 프로필",
+          "x-ui": {
+            "example": "implement",
+            "tier": "basic",
+            "when": "자동 진행에 다른 실행 프로필을 쓰고 싶을 때 고르세요.",
+            "widget": "profile-ref"
+          }
+        },
+        "max_parallel": {
+          "default": 1,
+          "description": "한 번에 돌릴 작업 수의 상한입니다.",
+          "minimum": 1,
+          "title": "동시 실행 수",
+          "type": "integer",
+          "x-ui": {
+            "tier": "basic",
+            "unit": "개",
+            "when": "여러 작업을 함께 돌리고 싶을 때 늘리세요."
+          }
+        },
+        "max_failures": {
+          "default": 3,
+          "description": "같은 작업이 이만큼 연달아 실패하면 그 작업을 건너뜁니다.",
+          "minimum": 1,
+          "title": "실패 상한",
+          "type": "integer",
+          "x-ui": {
+            "tier": "advanced",
+            "unit": "번"
+          }
+        },
+        "scope": {
+          "$ref": "#/$defs/AutomationScope",
+          "default": "stage",
+          "description": "지금 단계가 끝나면 멈출지, 스펙 전체를 이어 갈지 고릅니다.",
+          "title": "범위",
+          "x-ui": {
+            "enum_labels": {
+              "spec": "스펙 전체",
+              "stage": "단계까지"
+            },
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "AutomationConfig",
+      "type": "object"
+    },
+    "AutomationScope": {
+      "enum": [
+        "stage",
+        "spec"
+      ],
+      "type": "string"
+    },
+    "AutomationState": {
+      "description": "자동 진행 상태(실행 연동이 메모리에 가짐, 스펙에 저장하지 않는다).",
+      "properties": {
+        "enabled": {
+          "description": "스펙 규칙의 자동 진행이 켜져 있다.",
+          "type": "boolean"
+        },
+        "running": {
+          "description": "지금 새 작업을 시작하고 있다(멈춤이면 false).",
+          "type": "boolean"
+        },
+        "active_runs": {
+          "description": "진행 중인 실행 id.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skipped_keys": {
+          "description": "실패 상한을 넘어 건너뛴 작업 키.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failures": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "작업 키 → 연속 실패 수.",
+          "type": "object"
+        },
+        "stopped_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "멈춘 이유(열린 문자열, `KnownAutomationStopReasons`). 진행 중이면 null."
+        }
+      },
+      "required": [
+        "enabled",
+        "running"
+      ],
+      "title": "AutomationState",
+      "type": "object"
+    },
     "BackendCapabilities": {
       "description": "실행 백엔드 능력.",
       "properties": {
@@ -5932,6 +6269,87 @@
         "contracts_version"
       ],
       "title": "BootstrapResponse",
+      "type": "object"
+    },
+    "BulkActionsRequest": {
+      "description": "`POST /sdd/specs/{id}/bulk-actions`: 고른 작업들에서 쓸 수 있는 동작의 합집합.",
+      "properties": {
+        "task_keys": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_keys"
+      ],
+      "title": "BulkActionsRequest",
+      "type": "object"
+    },
+    "BulkActionsResult": {
+      "description": "한꺼번에 시작 대화상자의 동작 목록. 연동이 없으면 빈 목록.",
+      "properties": {
+        "actions": {
+          "description": "합집합(연동·동작 id로 같은 것을 묶음).",
+          "items": {
+            "$ref": "#/$defs/TaskAction"
+          },
+          "type": "array"
+        },
+        "per_task": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/TaskActionKey"
+            },
+            "type": "array"
+          },
+          "description": "작업 키 → 그 작업에서 쓸 수 있는 동작.",
+          "type": "object"
+        }
+      },
+      "title": "BulkActionsResult",
+      "type": "object"
+    },
+    "BulkStartRequest": {
+      "description": "`POST /sdd/specs/{id}/bulk-start`: 고른 작업을 한 동작으로 시작(상한\n`SddLimits.max_bulk_start`).",
+      "properties": {
+        "task_keys": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "action": {
+          "$ref": "#/$defs/TaskActionKey"
+        },
+        "args": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "required": [
+        "task_keys",
+        "action"
+      ],
+      "title": "BulkStartRequest",
+      "type": "object"
+    },
+    "BulkStartResult": {
+      "description": "작업별 결과(그 동작이 안 맞는 작업은 `failed` + `sdd.action_unavailable`).",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/TaskActionResult"
+          },
+          "type": "array"
+        }
+      },
+      "title": "BulkStartResult",
       "type": "object"
     },
     "BundlePreview": {
@@ -6792,6 +7210,38 @@
       "title": "Conversation",
       "type": "object"
     },
+    "ConversationPage": {
+      "description": "`GET /conversations/page` 응답: 대화 목록 커서 페이지(1.3.0).\n\n정렬은 `updated_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다\n(불투명 문자열). 질의 `?project=`는 서버가 거른다. 프로젝트 목록은 폴더 기록\n(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로 읽는다.",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ConversationSummary"
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "다음 페이지 커서. null = 끝."
+        },
+        "source": {
+          "$ref": "#/$defs/RecordSource",
+          "description": "이 페이지의 기록 출처(project·app)."
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "ConversationPage",
+      "type": "object"
+    },
     "ConversationSessions": {
       "description": "`GET /conversations/{id}/sessions` 응답(0.12.1).",
       "properties": {
@@ -7213,7 +7663,8 @@
       "type": "object"
     },
     "CreateConversationRequest": {
-      "description": "`POST /conversations` 요청. 응답은 `Conversation`(201).",
+      "additionalProperties": false,
+      "description": "`POST /conversations` 요청. 응답은 `Conversation`(201).\n\n1.3.0부터 모르는 키를 거부한다(422). 보낼 수 있는 키: `graph_id`·`title`·`project_id`.",
       "properties": {
         "graph_id": {
           "minLength": 1,
@@ -7290,6 +7741,13 @@
           ],
           "default": null,
           "description": "이 실행의 프로젝트 id(0.8.0). 생략 = 프로젝트 없음. 존재 확인은 연동 모듈이 한다."
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "루트 Run 라벨(1.7.0, `Run.labels`). 상한 `RUN_LABEL_LIMITS`를 넘으면 검증 오류.",
+          "type": "object"
         }
       },
       "required": [
@@ -7811,6 +8269,160 @@
         "replace"
       ],
       "type": "string"
+    },
+    "DocumentStateChange": {
+      "description": "`POST /sdd/specs/{id}/documents/{doc}/state` 요청: 문서 상태 전환(전환·관문 검사).",
+      "properties": {
+        "to": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상태 바꾼 기록에 남길 한 줄."
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "DocumentStateChange",
+      "type": "object"
+    },
+    "DocumentStateInfo": {
+      "description": "문서 상태 하나(보기용, 라벨이 늘 채워짐).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "DocumentStateInfo",
+      "type": "object"
+    },
+    "DocumentStateOnEdit": {
+      "additionalProperties": true,
+      "description": "이 상태의 문서 본문을 고쳤을 때 바꿀 상태입니다.",
+      "properties": {
+        "to": {
+          "description": "본문을 고치면 이 문서 상태로 돌아갑니다.",
+          "minLength": 1,
+          "title": "바꿀 상태",
+          "type": "string",
+          "x-ui": {
+            "example": "draft",
+            "tier": "basic",
+            "when": "승인 뒤 고친 문서를 다시 검토받게 하고 싶을 때 고르세요.",
+            "widget": "state-ref"
+          }
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "DocumentStateOnEdit",
+      "type": "object"
+    },
+    "DocumentStateSpec": {
+      "additionalProperties": true,
+      "description": "문서 상태 하나입니다(예: 초안, 검토 중, 승인됨).",
+      "properties": {
+        "id": {
+          "description": "상태를 가리키는 이름입니다. 전환 규칙과 관문 조건이 이 이름을 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "example": "approved",
+            "order": 1,
+            "tier": "basic",
+            "when": "상태를 새로 더할 때 한 번 정하세요."
+          }
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "화면에 보일 이름입니다. 비우면 id를 보입니다.",
+          "title": "표시 이름",
+          "x-ui": {
+            "example": "승인됨",
+            "tier": "basic",
+            "when": "화면에 보이는 상태 이름을 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "칩 색조입니다(예: success, warning, danger). 모르는 값이면 기본 색입니다.",
+          "title": "색조",
+          "x-ui": {
+            "example": "success",
+            "tier": "advanced",
+            "widget": "tone"
+          }
+        },
+        "on_edit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DocumentStateOnEdit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 상태의 문서 본문을 고쳤을 때 바꿀 상태입니다. 비우면 그대로 둡니다.",
+          "title": "고치면",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DocumentStateSpec",
+      "type": "object"
     },
     "DraftGraphRequest": {
       "description": "저장하지 않은 초안 그래프로 계산하는 요청(검증·계획 미리보기). 저장하지 않는다.",
@@ -8696,6 +9308,33 @@
         "value"
       ],
       "title": "EffectiveSettings",
+      "type": "object"
+    },
+    "EffectiveSyntax": {
+      "description": "`GET /sdd/specs/{id}/syntax`: 병합한 작업 문법과 값마다 출처.\n\n`sources` 키 = 문법 문서 기준 위치(예: `/task/id_pattern`), 값 = 출처(열린 문자열, 알려진 값\n`KnownSyntaxSources` default·settings·spec). 기본 문법이 꺼졌으면 `default`는 나오지 않는다.",
+      "properties": {
+        "syntax": {
+          "$ref": "#/$defs/SpecSyntax"
+        },
+        "sources": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "statuses": {
+          "items": {
+            "$ref": "#/$defs/TaskStatusInfo"
+          },
+          "type": "array"
+        },
+        "empty": {
+          "default": false,
+          "description": "작업 문법이 비었다(작업·계획·추적 탭은 '작업 문법 없음').",
+          "type": "boolean"
+        }
+      },
+      "title": "EffectiveSyntax",
       "type": "object"
     },
     "Endpoint": {
@@ -10831,6 +11470,55 @@
       "title": "ImportCandidate",
       "type": "object"
     },
+    "ImportFile": {
+      "description": "가져오기용 폴더 안 마크다운 파일 하나.",
+      "properties": {
+        "name": {
+          "description": "파일 이름(폴더 기준).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "size": {
+          "description": "바이트.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "title_guess": {
+          "default": "",
+          "description": "첫 큰 제목, 없으면 파일 이름.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "size"
+      ],
+      "title": "ImportFile",
+      "type": "object"
+    },
+    "ImportFileListing": {
+      "description": "`GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일(재귀하지 않음).",
+      "properties": {
+        "path": {
+          "default": "",
+          "description": "프로젝트 폴더 기준 상대 경로(빈 값 = 폴더 루트).",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ImportFile"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "default": false,
+          "description": "상한을 넘어 일부만 보였다.",
+          "type": "boolean"
+        }
+      },
+      "title": "ImportFileListing",
+      "type": "object"
+    },
     "ImportPreview": {
       "description": "`POST /resources/import/preview` 응답.",
       "properties": {
@@ -11941,6 +12629,96 @@
       "$ref": "#/$defs/AnyKnownRunEvent",
       "description": "알려진 RunEvent 판별 유니온(`type`으로 구분).",
       "title": "KnownRunEvent"
+    },
+    "LabelDisplay": {
+      "description": "Run 라벨 키 하나를 화면에 보이는 규칙(1.8.0).\n\n모듈이 `ModuleInfo.label_display`로 선언하는 일반 데이터다. 웹은 `GET /modules`에서 모아\n`Run.labels`와 키로 맞춰 칩을 그린다. 웹 경로 문자열 필드는 두지 않는다(`target`은 역할 + id).",
+      "properties": {
+        "key": {
+          "description": "라벨 키(접두 포함, 예: 설치자가 정한 접두 + spec).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "description": "칩 앞에 붙는 이름(사용자 언어).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LabelDisplayTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "눌렀을 때 열 화면. null = 링크 없는 칩."
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "같은 그룹 라벨을 한 칩 묶음으로 보인다(열린 문자열)."
+        },
+        "order": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "칩 순서(작을수록 앞)."
+        }
+      },
+      "required": [
+        "key",
+        "title"
+      ],
+      "title": "LabelDisplay",
+      "type": "object"
+    },
+    "LabelDisplayTarget": {
+      "description": "라벨 칩을 눌렀을 때 열 화면. 서버는 웹 경로를 모른다(`FixTarget`과 같은 원칙).\n\n웹은 `role`(웹 라우트 역할)을 라우트 데이터로 경로로 풀고, `id_from` 라벨의 값을 그 화면의 항목\nid로 쓴다. 그 역할을 맡은 화면이 없으면 칩은 링크 없이 보인다.",
+      "properties": {
+        "role": {
+          "description": "웹 라우트 역할 이름(열린 문자열).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "id_from": {
+          "description": "항목 id로 쓸 값을 가진 라벨 키(같은 Run의 라벨).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "화면에 넘길 추가 질의 값 틀. `{value}`(이 라벨 값)·`{labels.<키>}`(같은 Run의 다른 라벨)만 치환한다. null = 없음."
+        }
+      },
+      "required": [
+        "role",
+        "id_from"
+      ],
+      "title": "LabelDisplayTarget",
+      "type": "object"
     },
     "Limits": {
       "additionalProperties": true,
@@ -13352,6 +14130,18 @@
         },
         "status": {
           "$ref": "#/$defs/LogSourceStatus"
+        },
+        "default_effective": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "사용자 설정(enabled)을 뺐을 때의 켜짐 값(1.2.0). 디스크립터 기본에 자동 켜기(이 PC에 로그가 있음 등)까지 반영한 값이라 화면의 ↺(기본값으로)가 이 값으로 돌아간다. null = 서버가 알리지 않음(화면은 디스크립터 `default_enabled`를 쓴다)."
         }
       },
       "required": [
@@ -16525,6 +17315,25 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "모듈 한 줄 설명(1.4.0, 사용자 언어). null = 모듈이 내지 않음(화면은 제공 연결·화면 역할로 대신 설명한다)."
+        },
+        "label_display": {
+          "description": "이 모듈이 붙이는 Run 라벨의 표시 규칙(1.4.0). 웹은 모든 모듈의 값을 모아 `Run.labels`와 키로 맞춘다. 웹 경로는 담지 않는다.",
+          "items": {
+            "$ref": "#/$defs/LabelDisplay"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -17594,6 +18403,240 @@
         "pointer"
       ],
       "title": "OutsideFolderPath",
+      "type": "object"
+    },
+    "ParsedDocument": {
+      "description": "문서 하나의 파싱 상태.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "file": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "exists": {
+          "default": true,
+          "description": "본문 파일이 있는가(없으면 다른 값은 비어 있다).",
+          "type": "boolean"
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "본문 파일 해시(`If-Match`용)."
+        },
+        "tasks": {
+          "default": 0,
+          "description": "이 문서에서 찾은 작업 수.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requirements": {
+          "default": 0,
+          "description": "이 문서에서 찾은 요구 수.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "file"
+      ],
+      "title": "ParsedDocument",
+      "type": "object"
+    },
+    "ParsedRequirement": {
+      "description": "요구 역할 문서에서 찾은 요구 하나.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "description": "그 줄의 나머지 글(요구 제목 추정).",
+          "type": "string"
+        },
+        "document": {
+          "description": "문서 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "line": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "document",
+        "line"
+      ],
+      "title": "ParsedRequirement",
+      "type": "object"
+    },
+    "ParsedStage": {
+      "description": "작업 문서의 단계(제목) 하나와 진행.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "document": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "done": {
+          "default": 0,
+          "description": "끝난 작업 수.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "default": 0,
+          "description": "작업 수.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "document",
+        "line"
+      ],
+      "title": "ParsedStage",
+      "type": "object"
+    },
+    "ParsedTask": {
+      "description": "작업 문서에서 찾은 작업 하나.",
+      "properties": {
+        "key": {
+          "description": "작업 키(작업 id, 없으면 `@문서:순번`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 줄 머리의 작업 id(없으면 null)."
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "status": {
+          "description": "작업 상태 id(`TaskStatusInfo.id`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "`[키: 값]` 필드 원문.",
+          "type": "object"
+        },
+        "requirements": {
+          "description": "요구 역할 필드의 요구 id.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "dependencies": {
+          "description": "의존 역할 필드의 작업 키(범위는 풀어 둠).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StageRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "document": {
+          "description": "문서 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "line": {
+          "description": "머리 줄 번호(1부터).",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "line_hash": {
+          "description": "머리 줄 해시(상태 고치기 `expected_line_hash`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "ready": {
+          "default": false,
+          "description": "끝나지 않았고 의존 작업이 모두 끝났다(준비됨).",
+          "type": "boolean"
+        },
+        "body": {
+          "default": "",
+          "description": "작업 본문(하위 목록·문단 원문).",
+          "type": "string"
+        },
+        "links": {
+          "description": "이어진 항목(최근 순, 연동이 없으면 빈 값).",
+          "items": {
+            "$ref": "#/$defs/TaskLink"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "status",
+        "document",
+        "line",
+        "line_hash"
+      ],
+      "title": "ParsedTask",
       "type": "object"
     },
     "PluginInfo": {
@@ -18776,6 +19819,13 @@
       ],
       "type": "string"
     },
+    "RecordSource": {
+      "enum": [
+        "project",
+        "app"
+      ],
+      "type": "string"
+    },
     "RecordsMoveRequest": {
       "description": "`POST /runs/move-to-project`·`POST /conversations/move-to-project` 요청(0.12.1).\n\n앱 DB의 기록을 그 프로젝트의 기록 DB로 옮긴다. Run은 자손·노드·이벤트·상호작용과 함께, 대화는\n대기열(과 연동이 있으면 그 Run)과 함께 간다. 대상에 같은 id가 있으면 건너뛴다. `project_id`는\n불투명 문자열이다(기능 모듈은 프로젝트를 모른다).",
       "properties": {
@@ -18916,6 +19966,37 @@
         }
       },
       "title": "ReplyFields",
+      "type": "object"
+    },
+    "RequirementSyntax": {
+      "additionalProperties": true,
+      "description": "요구 문서에서 요구 id를 찾는 규칙입니다.",
+      "properties": {
+        "patterns": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "줄마다 시험할 정규식 목록입니다. id 이름의 묶음이 요구 id입니다.",
+          "title": "요구 id 찾기",
+          "x-ui": {
+            "example": [
+              "^\\*\\*(?P<id>[A-Z][A-Za-z]*\\d[\\w.]*)\\*\\*"
+            ],
+            "tier": "advanced",
+            "widget": "regex"
+          }
+        }
+      },
+      "title": "RequirementSyntax",
       "type": "object"
     },
     "ResolvePortsRequest": {
@@ -19580,6 +20661,39 @@
       "title": "ReviewDecision",
       "type": "object"
     },
+    "RulesCheckRequest": {
+      "description": "`POST /sdd/templates/check`: 규칙·문서 목록 검사(저장하지 않음). 응답은\n`RulesCheckResult`.",
+      "properties": {
+        "rules": {
+          "additionalProperties": true,
+          "description": "규칙 문서(스펙 규칙 모양).",
+          "type": "object"
+        },
+        "documents": {
+          "description": "문서 목록.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "title": "RulesCheckRequest",
+      "type": "object"
+    },
+    "RulesCheckResult": {
+      "description": "규칙 검사 결과.",
+      "properties": {
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "RulesCheckResult",
+      "type": "object"
+    },
     "Run": {
       "description": "그래프 1회 실행. 하위 그래프는 자식 Run(parent_run_id).\n\n목록 `GET /runs` 질의(0.8.0): `project`(같은 `project_id`만), `root_only`(true면 루트 Run만,\n`root_run_id`가 null인 것). 기존 질의(`graph_id`·`conversation_id`·`root` 등)는 그대로다.",
       "properties": {
@@ -19763,6 +20877,13 @@
             }
           ],
           "default": null
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "라벨(1.7.0, 문자열 → 문자열). 실행을 다른 기능의 항목(예: 스펙 작업)과 잇는 일반 필드다. 루트 Run에만 있고 자식 Run은 빈 값이다. 목록 질의 `label=<키>=<값>`(여러 번 = AND). 상한 `RUN_LABEL_LIMITS`.",
+          "type": "object"
         }
       },
       "required": [
@@ -20205,6 +21326,186 @@
       "title": "RunLifecycleEvent",
       "type": "object"
     },
+    "RunPage": {
+      "description": "`GET /runs/page` 응답: 실행 목록 커서 페이지(1.7.0).\n\n정렬은 `created_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다(불투명\n문자열).\n프로젝트 목록은 폴더 기록(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로\n읽는다(두 출처를 시간순으로 섞지 않는다).",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/Run"
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "다음 페이지 커서. null = 끝."
+        },
+        "source": {
+          "$ref": "#/$defs/RecordSource",
+          "description": "이 페이지의 기록 출처(project·app)."
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "RunPage",
+      "type": "object"
+    },
+    "RunProfile": {
+      "additionalProperties": true,
+      "description": "실행 프로필 하나입니다. 작업을 어느 팀 구성에 어떤 입력으로 맡길지 정합니다.",
+      "properties": {
+        "id": {
+          "description": "가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "example": "implement",
+            "order": 1,
+            "tier": "basic",
+            "when": "프로필을 새로 더할 때 한 번 정하세요."
+          }
+        },
+        "title": {
+          "description": "실행 메뉴에 보일 이름입니다.",
+          "minLength": 1,
+          "title": "이름",
+          "type": "string",
+          "x-ui": {
+            "example": "구현",
+            "order": 2,
+            "tier": "basic",
+            "when": "실행 메뉴에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "graph": {
+          "description": "작업을 맡길 팀 구성입니다. 그 프로젝트에 있는 팀 구성이어야 합니다.",
+          "minLength": 1,
+          "title": "팀 구성",
+          "type": "string",
+          "x-ui": {
+            "example": "dev-team",
+            "order": 3,
+            "tier": "basic",
+            "when": "작업을 다른 팀에게 맡기고 싶을 때 고르세요.",
+            "widget": "graph-ref"
+          }
+        },
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConditionSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 조건에 맞는 작업에만 메뉴에 보입니다. 비우면 모든 작업에 보입니다.",
+          "title": "보일 작업",
+          "x-ui": {
+            "tier": "advanced",
+            "widget": "condition"
+          }
+        },
+        "input": {
+          "additionalProperties": true,
+          "description": "팀 구성 입력 이름 → 값입니다. 값의 중괄호 변수(예: 작업 id)는 실행할 때 채웁니다.",
+          "title": "입력",
+          "type": "object",
+          "x-ui": {
+            "example": {
+              "request": "작업 {task_id} {task_title}"
+            },
+            "tier": "basic",
+            "when": "팀에게 보낼 요청 문장을 바꾸고 싶을 때 고치세요.",
+            "widget": "template-text"
+          }
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 실행의 목적입니다(예: implement, verify). 검증 결과를 고를 때 씁니다.",
+          "title": "목적",
+          "x-ui": {
+            "example": "verify",
+            "tier": "advanced"
+          }
+        },
+        "status_on": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "실행 상태(예: succeeded) → 바꿀 작업 상태입니다. 비우면 작업 상태를 바꾸지 않습니다.",
+          "title": "결과에 따른 작업 상태",
+          "type": "object",
+          "x-ui": {
+            "example": {
+              "started": "doing",
+              "succeeded": "review"
+            },
+            "tier": "basic",
+            "when": "실행이 끝나면 작업 표시를 자동으로 바꾸고 싶을 때 고치세요.",
+            "widget": "status-ref"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "graph"
+      ],
+      "title": "RunProfile",
+      "type": "object"
+    },
+    "RunProfileSummary": {
+      "description": "문서 틀 목록의 실행 프로필 요약.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "graph": {
+          "default": "",
+          "type": "string"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RunProfileSummary",
+      "type": "object"
+    },
     "RunReplyEvent": {
       "properties": {
         "schema_version": {
@@ -20436,6 +21737,407 @@
       "title": "RunStatusPayload",
       "type": "object"
     },
+    "SaveAsTemplateRequest": {
+      "description": "`POST /sdd/specs/{id}/save-as-template`: 스펙의 문서 목록·규칙을 문서 틀로 복사한다.\n\n문서 상태 값·상태 바꾼 기록은 빼고, `include_content=false`면 본문 파일은 빈 파일이다. 프로필의\n팀 구성은 함께 복사하지 않는다(틀은 id만 가진다).",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "틀 id. 생략하면 이름에서 만든다."
+        },
+        "include_content": {
+          "default": false,
+          "description": "문서 본문도 복사한다.",
+          "type": "boolean"
+        },
+        "on_conflict": {
+          "$ref": "#/$defs/TemplateConflictPolicy",
+          "default": "fail"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpaceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "저장할 공간. 생략 = 라이브러리(공용 구성)."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SaveAsTemplateRequest",
+      "type": "object"
+    },
+    "SaveAsTemplateResult": {
+      "description": "틀로 저장 결과.",
+      "properties": {
+        "template_id": {
+          "description": "저장한 문서 틀 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/SpaceRef"
+        },
+        "status": {
+          "$ref": "#/$defs/SaveAsTemplateStatus"
+        }
+      },
+      "required": [
+        "template_id",
+        "status"
+      ],
+      "title": "SaveAsTemplateResult",
+      "type": "object"
+    },
+    "SaveAsTemplateStatus": {
+      "enum": [
+        "created",
+        "overwritten",
+        "renamed"
+      ],
+      "type": "string"
+    },
+    "SddCapabilities": {
+      "description": "켜진 연동에 따라 쓸 수 있는 기능(포트 유무로 계산).",
+      "properties": {
+        "runs": {
+          "default": false,
+          "description": "작업 실행·실행 칩(실행 연동 있음).",
+          "type": "boolean"
+        },
+        "templates": {
+          "default": false,
+          "description": "문서 틀 저장·편집(정의 모듈 있음).",
+          "type": "boolean"
+        },
+        "verification": {
+          "default": false,
+          "description": "검증 결과 열(검증 출처 하나 이상).",
+          "type": "boolean"
+        },
+        "automation": {
+          "default": false,
+          "description": "자동 진행(연동이 지원).",
+          "type": "boolean"
+        },
+        "import_export": {
+          "default": false,
+          "description": "폴더에서 가져오기·폴더로 내보내기(폴더 접근 있음).",
+          "type": "boolean"
+        }
+      },
+      "title": "SddCapabilities",
+      "type": "object"
+    },
+    "SddChanged": {
+      "description": "WS `sdd.changed` payload: 스펙이 바뀜(본문 없음). 화면은 그 스펙을 다시 불러온다.",
+      "properties": {
+        "space": {
+          "$ref": "#/$defs/SpaceRef",
+          "description": "그 스펙의 공간."
+        },
+        "spec_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "새 정의 버전(삭제면 null)."
+        },
+        "automation": {
+          "default": false,
+          "description": "자동 진행 상태만 바뀌었다.",
+          "type": "boolean"
+        },
+        "deleted": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "spec_id"
+      ],
+      "title": "SddChanged",
+      "type": "object"
+    },
+    "SddChangedMessage": {
+      "description": "스펙 모듈 토픽: 스펙 저장·작업 고치기·외부 변경·자동 진행 상태 변화(본문 없음, 1.4.0).\n\n토픽 이름은 스펙 모듈이 정한다. 화면은 받은 스펙을 다시 불러온다.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "요청 상관 id(선택)."
+        },
+        "type": {
+          "const": "sdd.changed",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/SddChanged"
+        }
+      },
+      "required": [
+        "type",
+        "payload"
+      ],
+      "title": "SddChangedMessage",
+      "type": "object"
+    },
+    "SddDocumentMissingDetails": {
+      "description": "`sdd.document_missing`(HTTP 404) 오류의 `error.details`.",
+      "properties": {
+        "document_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "file": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "file"
+      ],
+      "title": "SddDocumentMissingDetails",
+      "type": "object"
+    },
+    "SddGateBlockedDetails": {
+      "description": "`sdd.gate_blocked`(HTTP 422) 오류의 `error.details`, 동작의 `disabled.details`.",
+      "properties": {
+        "gate_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "message": {
+          "default": "",
+          "type": "string"
+        },
+        "document_ids": {
+          "description": "관문 조건이 보는 문서 id(화면 [문서 열기]).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "gate_id"
+      ],
+      "title": "SddGateBlockedDetails",
+      "type": "object"
+    },
+    "SddInfo": {
+      "description": "`GET /sdd/info?project=`: 스펙 화면 정보(웹이 모듈 id를 몰라도 켜짐·한도를 안다).",
+      "properties": {
+        "spec_root": {
+          "default": "",
+          "description": "스펙 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).",
+          "type": "string"
+        },
+        "writable": {
+          "default": true,
+          "description": "이 공간에 쓸 수 있다(false면 보기만).",
+          "type": "boolean"
+        },
+        "limits": {
+          "$ref": "#/$defs/SddLimits"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/SddCapabilities"
+        },
+        "label_display": {
+          "description": "실행 라벨 표시 규칙(`ModuleInfo.label_display`와 같은 값의 사본).",
+          "items": {
+            "$ref": "#/$defs/LabelDisplay"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "limits"
+      ],
+      "title": "SddInfo",
+      "type": "object"
+    },
+    "SddLimits": {
+      "description": "스펙 기능 한도(설치자 옵션).",
+      "properties": {
+        "max_bulk_start": {
+          "description": "한꺼번에 시작할 수 있는 작업 수.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_tasks": {
+          "description": "스펙 하나의 작업 수 상한.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_doc_bytes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "문서 본문 크기 상한(바이트). null = 정하지 않음."
+        }
+      },
+      "required": [
+        "max_bulk_start",
+        "max_tasks"
+      ],
+      "title": "SddLimits",
+      "type": "object"
+    },
+    "SddSettings": {
+      "additionalProperties": true,
+      "description": "스펙 기능의 작업 문법, 비밀 검사, 검증 결과 출처를 정합니다.",
+      "properties": {
+        "include_default_syntax": {
+          "default": true,
+          "description": "앱이 주는 기본 작업 문법(체크 칸 작업 줄 등)을 씁니다.",
+          "title": "기본 작업 문법 사용",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "기본 문법 대신 내가 만든 문법만 쓰고 싶을 때 끄세요."
+          }
+        },
+        "syntax": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpecSyntax"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "모든 스펙에 쓸 작업 문법입니다. 스펙 규칙이 있으면 그쪽이 먼저입니다.",
+          "title": "작업 문법",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "secret_scan": {
+          "$ref": "#/$defs/SecretScanMode",
+          "default": "warn",
+          "description": "문서 본문에 비밀로 보이는 값이 있을 때 어떻게 할지 고릅니다.",
+          "title": "비밀 값 검사",
+          "x-ui": {
+            "enum_labels": {
+              "off": "검사 안 함",
+              "reject": "저장 거부",
+              "warn": "알리고 저장"
+            },
+            "tier": "basic",
+            "when": "오탐이 많으면 끄고, 비밀이 섞이면 안 되면 거부로 바꾸세요."
+          }
+        },
+        "verification_sources": {
+          "description": "실행 말고 다른 곳(예: 테스트 결과 파일)에서 검증 결과를 가져옵니다.",
+          "items": {
+            "$ref": "#/$defs/VerificationSourceSetting"
+          },
+          "title": "검증 결과 출처",
+          "type": "array",
+          "x-ui": {
+            "itemTitle": "/id",
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "스펙",
+      "type": "object"
+    },
+    "SddTaskChangedDetails": {
+      "description": "`sdd.task_changed`(HTTP 409) 오류의 `error.details`: 지금 머리 줄.",
+      "properties": {
+        "task_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "line_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "지금 머리 줄 해시(작업이 없으면 null)."
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "지금 머리 줄 원문."
+        }
+      },
+      "required": [
+        "task_key"
+      ],
+      "title": "SddTaskChangedDetails",
+      "type": "object"
+    },
     "SecretRuleSettings": {
       "additionalProperties": true,
       "description": "비밀 값으로 의심할 규칙을 더합니다. 기본 규칙에 더하기만 하며 줄일 수는 없습니다.",
@@ -20483,6 +22185,14 @@
       },
       "title": "비밀 규칙",
       "type": "object"
+    },
+    "SecretScanMode": {
+      "enum": [
+        "off",
+        "warn",
+        "reject"
+      ],
+      "type": "string"
     },
     "SendKey": {
       "enum": [
@@ -20644,6 +22354,1460 @@
       "title": "SpaceRef",
       "type": "object"
     },
+    "SpecContentRef": {
+      "additionalProperties": true,
+      "description": "정의 파일 옆 본문 폴더의 대표 파일입니다.",
+      "properties": {
+        "file": {
+          "description": "본문 폴더 안에서 먼저 열 파일입니다.",
+          "minLength": 1,
+          "title": "대표 파일",
+          "type": "string",
+          "x-ui": {
+            "example": "requirements.md",
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "SpecContentRef",
+      "type": "object"
+    },
+    "SpecCreateRequest": {
+      "description": "`POST /sdd/specs` 요청. 응답은 `SpecView`(201).",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "스펙 id. 생략하면 이름에서 만든다."
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "같은 공간의 문서 틀 id. 생략 = 빈 스펙(빈 문서 하나 + 규칙 비움). 다른 공간의 틀은 먼저 프로젝트로 복사한다."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SpecCreateRequest",
+      "type": "object"
+    },
+    "SpecDefinition": {
+      "additionalProperties": true,
+      "description": "스펙입니다. 문서와 문서 상태, 이 스펙의 규칙을 담습니다.",
+      "properties": {
+        "kind": {
+          "description": "정의 종류 이름입니다. 직접 바꾸지 않습니다.",
+          "minLength": 1,
+          "title": "종류",
+          "type": "string",
+          "x-ui": {
+            "example": "spec",
+            "tier": "advanced"
+          }
+        },
+        "id": {
+          "description": "가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "schema_version": {
+          "default": 1,
+          "description": "파일 형식 번호입니다. 직접 바꾸지 않습니다.",
+          "title": "형식 버전",
+          "type": "integer",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "name": {
+          "description": "목록에 보일 이름입니다.",
+          "minLength": 1,
+          "title": "이름",
+          "type": "string",
+          "x-ui": {
+            "example": "결제 v2",
+            "tier": "basic",
+            "when": "목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "description": {
+          "default": "",
+          "description": "무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.",
+          "title": "설명",
+          "type": "string",
+          "x-ui": {
+            "example": "요구 → 설계 → 작업 순서로 씁니다",
+            "tier": "basic",
+            "when": "목록에서 쓰임새를 알리고 싶을 때 적으세요."
+          }
+        },
+        "documents": {
+          "description": "문서 목록입니다. 순서대로 탭에 보입니다.",
+          "items": {
+            "$ref": "#/$defs/SpecDocument"
+          },
+          "title": "문서",
+          "type": "array",
+          "x-ui": {
+            "itemTitle": "/title",
+            "tier": "basic",
+            "when": "문서를 더하거나 순서를 바꿀 때 고치세요."
+          }
+        },
+        "rules": {
+          "$ref": "#/$defs/SpecRules",
+          "description": "문서 상태·작업 상태·관문·실행 프로필 같은 규칙입니다.",
+          "title": "규칙",
+          "x-ui": {
+            "tier": "basic",
+            "when": "승인 단계나 실행 방법을 바꿀 때 고치세요."
+          }
+        },
+        "labels": {
+          "description": "찾기·거르기에 쓰는 꼬리표입니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "라벨",
+          "type": "array",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "attributes": {
+          "additionalProperties": true,
+          "description": "다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.",
+          "title": "기타 속성",
+          "type": "object",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpecContentRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "본문 폴더의 대표 파일입니다. 앱이 채웁니다.",
+          "title": "본문",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "name"
+      ],
+      "title": "스펙",
+      "type": "object"
+    },
+    "SpecDocument": {
+      "additionalProperties": true,
+      "description": "스펙 문서 하나입니다. 순서대로 탭에 보입니다.",
+      "properties": {
+        "id": {
+          "description": "문서를 가리키는 이름입니다. 관문 조건과 입력 틀 변수가 이 이름을 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "example": "design",
+            "order": 1,
+            "tier": "basic",
+            "when": "문서를 새로 더할 때 한 번 정하세요."
+          }
+        },
+        "title": {
+          "description": "탭과 목록에 보일 문서 이름입니다.",
+          "minLength": 1,
+          "title": "제목",
+          "type": "string",
+          "x-ui": {
+            "example": "설계",
+            "order": 2,
+            "tier": "basic",
+            "when": "탭에 보이는 이름을 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "file": {
+          "description": "본문 파일 이름입니다. 스펙 폴더 안 상대 경로만 씁니다.",
+          "minLength": 1,
+          "title": "파일",
+          "type": "string",
+          "x-ui": {
+            "example": "design.md",
+            "order": 3,
+            "tier": "basic",
+            "when": "본문 파일 이름을 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "roles": {
+          "description": "이 문서를 무엇으로 읽을지입니다(requirements = 요구, tasks = 작업). 비우면 읽기만 합니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "쓰임",
+          "type": "array",
+          "x-ui": {
+            "example": [
+              "tasks"
+            ],
+            "tier": "basic",
+            "when": "작업 목록이나 요구 id를 이 문서에서 읽게 할 때 고르세요."
+          }
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "지금 문서 상태입니다. 상태 전환 버튼으로 바꿉니다.",
+          "title": "상태",
+          "x-ui": {
+            "example": "draft",
+            "tier": "advanced",
+            "widget": "state-ref"
+          }
+        },
+        "state_changed": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateChange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상태를 마지막으로 바꾼 쪽과 시각입니다. 앱이 채웁니다.",
+          "title": "상태 바꾼 기록",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "file"
+      ],
+      "title": "SpecDocument",
+      "type": "object"
+    },
+    "SpecDocumentContent": {
+      "description": "`GET /sdd/specs/{id}/documents/{doc}` 응답: 본문 원문과 해시.\n\n본문 파일이 없으면 404 `sdd.document_missing`(읽기로 파일을 만들지 않는다).",
+      "properties": {
+        "document_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "file": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "content_hash": {
+          "description": "본문 해시(`If-Match`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "issues": {
+          "description": "정보 이슈(예: `sdd.secret_suspect`, 위치만·값 없음).",
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "document_id",
+        "file",
+        "content",
+        "content_hash"
+      ],
+      "title": "SpecDocumentContent",
+      "type": "object"
+    },
+    "SpecDocumentSummary": {
+      "description": "스펙 목록의 문서 상태 칩 하나.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "state_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "풀린 상태 라벨(상태가 있으면)."
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "SpecDocumentSummary",
+      "type": "object"
+    },
+    "SpecDocumentWrite": {
+      "description": "`PUT /sdd/specs/{id}/documents/{doc}` 요청. `If-Match` 본문 해시, 새로 만들 때만\n`If-None-Match: *`.",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "SpecDocumentWrite",
+      "type": "object"
+    },
+    "SpecExportRequest": {
+      "description": "`POST /sdd/specs/{id}/export`: 스펙 문서를 프로젝트 폴더 안 경로로 복사한다.",
+      "properties": {
+        "to_dir": {
+          "description": "프로젝트 폴더 기준 상대 경로(앱 구성 폴더 안은 거부).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "description": "false면 있는 파일은 건너뛴다.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "to_dir"
+      ],
+      "title": "SpecExportRequest",
+      "type": "object"
+    },
+    "SpecExportResult": {
+      "description": "폴더로 내보내기 결과.",
+      "properties": {
+        "to_dir": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "written": {
+          "description": "쓴 파일(to_dir 기준).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skipped": {
+          "description": "있어서 건너뛴 파일.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "to_dir"
+      ],
+      "title": "SpecExportResult",
+      "type": "object"
+    },
+    "SpecGate": {
+      "additionalProperties": true,
+      "description": "관문 하나입니다. 조건이 맞지 않으면 실행이나 상태 바꾸기를 막고 안내 문장을 보입니다.",
+      "properties": {
+        "id": {
+          "description": "가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "example": "design-approved",
+            "tier": "basic",
+            "when": "관문을 새로 더할 때 한 번 정하세요."
+          }
+        },
+        "applies_to": {
+          "description": "이 관문이 막는 일입니다(run = 실행, task_status = 작업 상태, document_state = 문서 상태).",
+          "items": {
+            "type": "string"
+          },
+          "title": "막을 일",
+          "type": "array",
+          "x-ui": {
+            "example": [
+              "run"
+            ],
+            "tier": "basic",
+            "when": "관문이 막을 일을 더하거나 뺄 때 고치세요."
+          }
+        },
+        "require": {
+          "$ref": "#/$defs/ConditionSpec",
+          "description": "이 조건이 맞아야 지나갑니다. 예: 설계 문서 상태가 승인됨.",
+          "title": "통과 조건",
+          "x-ui": {
+            "tier": "basic",
+            "when": "무엇이 끝나야 지나갈지 바꿀 때 고치세요.",
+            "widget": "condition"
+          }
+        },
+        "message": {
+          "default": "",
+          "description": "막혔을 때 화면에 보일 문장입니다.",
+          "title": "안내 문장",
+          "type": "string",
+          "x-ui": {
+            "example": "설계가 승인되기 전에는 작업을 실행하지 않습니다",
+            "tier": "basic",
+            "when": "막힌 이유를 사람이 알기 쉽게 적고 싶을 때 고치세요."
+          }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "SpecGate",
+      "type": "object"
+    },
+    "SpecImportRequest": {
+      "description": "`POST /sdd/specs/import`: 프로젝트 폴더 안 마크다운 파일을 새 스펙 본문으로 **복사**한다.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "files": {
+          "description": "프로젝트 폴더 기준 상대 경로(링크·`..` 거부).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "files"
+      ],
+      "title": "SpecImportRequest",
+      "type": "object"
+    },
+    "SpecIndex": {
+      "description": "스펙 문서를 파싱한 결과(읽을 때마다 계산, 저장하지 않음).",
+      "properties": {
+        "documents": {
+          "items": {
+            "$ref": "#/$defs/ParsedDocument"
+          },
+          "type": "array"
+        },
+        "requirements": {
+          "items": {
+            "$ref": "#/$defs/ParsedRequirement"
+          },
+          "type": "array"
+        },
+        "stages": {
+          "items": {
+            "$ref": "#/$defs/ParsedStage"
+          },
+          "type": "array"
+        },
+        "tasks": {
+          "items": {
+            "$ref": "#/$defs/ParsedTask"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "SpecIndex",
+      "type": "object"
+    },
+    "SpecIssue": {
+      "description": "스펙 파싱·규칙 검사 이슈. `Issue`에 문서·줄·작업 위치를 더한다(값 원문은 담지 않는다).\n\n알려진 코드는 `KnownIssueCodes`의 `sdd.*`(열린 문자열).",
+      "properties": {
+        "severity": {
+          "$ref": "#/$defs/IssueSeverity"
+        },
+        "code": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "edge_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "path": {
+          "anyOf": [
+            {
+              "pattern": "^(/.*)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "details": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "suggestions": {
+          "description": "서버가 계산한 수정 제안(없으면 제안 버튼 없음).",
+          "items": {
+            "$ref": "#/$defs/IssueSuggestion"
+          },
+          "type": "array"
+        },
+        "blocks_run": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 이슈가 있으면 실행이 거부되는지. 검증한 쪽이 정한다. null = 정하지 않음(이 경우 severity가 error인 것만 실행을 막는다)."
+        },
+        "fix": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fix"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음."
+        },
+        "hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "해결 안내 한 줄(0.12.2, 사용자 언어). null = 없음."
+        },
+        "group": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IssueGroup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "묶음 표시(0.12.2). 같은 `group.key`의 이슈는 한 행으로 묶고 `group.message`를 보인다. 같은 묶음 안 제안의 `id`가 같으면 화면은 버튼 하나로 모두 적용한다. null = 묶지 않음."
+        },
+        "document": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "문서 id(문서 하나에 걸린 이슈)."
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "그 문서의 줄 번호(1부터)."
+        },
+        "task_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 하나에 걸린 이슈면 작업 키."
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "title": "SpecIssue",
+      "type": "object"
+    },
+    "SpecRules": {
+      "additionalProperties": true,
+      "description": "스펙 규칙입니다. 문서 상태·승인, 작업 상태, 관문, 실행 프로필, 검증, 자동 진행을 정합니다.",
+      "properties": {
+        "syntax": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpecSyntax"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업·요구·단계를 문서에서 읽는 규칙입니다. 비우면 앱 설정과 기본 규칙을 씁니다.",
+          "title": "작업 문법",
+          "x-ui": {
+            "order": 8,
+            "tier": "advanced"
+          }
+        },
+        "document_states": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/DocumentStateSpec"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "문서가 가질 수 있는 상태입니다(예: 초안, 승인됨). 비우면 상태를 쓰지 않습니다.",
+          "title": "문서 상태",
+          "x-ui": {
+            "itemTitle": "/label",
+            "order": 1,
+            "tier": "basic",
+            "when": "문서 승인 단계를 더하거나 이름을 바꿀 때 고치세요."
+          }
+        },
+        "initial_document_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "새 문서가 갖는 상태입니다. 비우면 문서 상태 목록의 첫 번째입니다.",
+          "title": "처음 문서 상태",
+          "x-ui": {
+            "example": "draft",
+            "tier": "advanced",
+            "widget": "state-ref"
+          }
+        },
+        "transitions": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/StateTransition"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "문서 상태를 바꿀 수 있는 길과 바꿀 수 있는 쪽입니다.",
+          "title": "상태 전환",
+          "x-ui": {
+            "itemTitle": "/to",
+            "order": 2,
+            "tier": "basic",
+            "when": "누가 승인할 수 있는지 바꿀 때 고치세요."
+          }
+        },
+        "task_statuses": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TaskStatusSpec"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 상태와 체크 칸 글자입니다. 비우면 작업 문법의 상태를 씁니다.",
+          "title": "작업 상태",
+          "x-ui": {
+            "itemTitle": "/label",
+            "order": 3,
+            "tier": "basic",
+            "when": "진행 중·검증 대기 같은 상태를 더할 때 고치세요."
+          }
+        },
+        "gates": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SpecGate"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "조건이 맞기 전에는 실행이나 상태 바꾸기를 막습니다. 기본은 없습니다.",
+          "title": "관문",
+          "x-ui": {
+            "itemTitle": "/id",
+            "order": 4,
+            "tier": "basic",
+            "when": "설계 승인 전 실행 금지 같은 규칙을 두고 싶을 때 더하세요."
+          }
+        },
+        "run_profiles": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RunProfile"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업을 맡길 팀 구성과 입력입니다. 작업의 실행 메뉴에 보입니다.",
+          "title": "실행 프로필",
+          "x-ui": {
+            "itemTitle": "/title",
+            "order": 5,
+            "tier": "basic",
+            "when": "작업을 실행할 팀이나 요청 문장을 바꿀 때 고치세요."
+          }
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VerificationConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "어떤 실행을 검증으로 볼지 정합니다. 추적 표의 검증 열에 씁니다.",
+          "title": "검증",
+          "x-ui": {
+            "order": 6,
+            "tier": "advanced"
+          }
+        },
+        "automation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AutomationConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "준비된 작업을 자동으로 시작하는 설정입니다. 비우면 꺼짐입니다.",
+          "title": "자동 진행",
+          "x-ui": {
+            "order": 7,
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "SpecRules",
+      "type": "object"
+    },
+    "SpecSummary": {
+      "description": "`GET /sdd/specs` 목록 항목.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "directory": {
+          "default": "",
+          "description": "문서 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).",
+          "type": "string"
+        },
+        "documents": {
+          "items": {
+            "$ref": "#/$defs/SpecDocumentSummary"
+          },
+          "type": "array"
+        },
+        "task_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "작업 상태 id → 작업 수.",
+          "type": "object"
+        },
+        "tasks_total": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tasks_done": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ready": {
+          "default": 0,
+          "description": "준비된 작업 수.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "current_stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StageRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "끝나지 않은 첫 단계(없으면 null)."
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "마지막 저장 시각(Unix epoch 초)."
+        },
+        "issues": {
+          "default": 0,
+          "description": "오류 이슈 수(자세한 것은 스펙 보기).",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "SpecSummary",
+      "type": "object"
+    },
+    "SpecSyntax": {
+      "additionalProperties": true,
+      "description": "작업·요구·단계를 문서에서 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.",
+      "properties": {
+        "task": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskSyntax"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 줄을 읽는 규칙입니다.",
+          "title": "작업 줄",
+          "x-ui": {
+            "order": 1,
+            "tier": "advanced"
+          }
+        },
+        "requirement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RequirementSyntax"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "요구 문서에서 요구 id를 찾는 규칙입니다.",
+          "title": "요구 id",
+          "x-ui": {
+            "order": 2,
+            "tier": "advanced"
+          }
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StageSyntax"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 문서의 제목을 단계로 보는 규칙입니다.",
+          "title": "단계",
+          "x-ui": {
+            "order": 3,
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "SpecSyntax",
+      "type": "object"
+    },
+    "SpecTemplate": {
+      "additionalProperties": true,
+      "description": "문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다.",
+      "properties": {
+        "kind": {
+          "description": "정의 종류 이름입니다. 직접 바꾸지 않습니다.",
+          "minLength": 1,
+          "title": "종류",
+          "type": "string",
+          "x-ui": {
+            "example": "spec",
+            "tier": "advanced"
+          }
+        },
+        "id": {
+          "description": "가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "schema_version": {
+          "default": 1,
+          "description": "파일 형식 번호입니다. 직접 바꾸지 않습니다.",
+          "title": "형식 버전",
+          "type": "integer",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "name": {
+          "description": "목록에 보일 이름입니다.",
+          "minLength": 1,
+          "title": "이름",
+          "type": "string",
+          "x-ui": {
+            "example": "결제 v2",
+            "tier": "basic",
+            "when": "목록에서 알아보기 쉬운 이름으로 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "description": {
+          "default": "",
+          "description": "무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.",
+          "title": "설명",
+          "type": "string",
+          "x-ui": {
+            "example": "요구 → 설계 → 작업 순서로 씁니다",
+            "tier": "basic",
+            "when": "목록에서 쓰임새를 알리고 싶을 때 적으세요."
+          }
+        },
+        "documents": {
+          "description": "문서 목록입니다. 순서대로 탭에 보입니다.",
+          "items": {
+            "$ref": "#/$defs/SpecDocument"
+          },
+          "title": "문서",
+          "type": "array",
+          "x-ui": {
+            "itemTitle": "/title",
+            "tier": "basic",
+            "when": "문서를 더하거나 순서를 바꿀 때 고치세요."
+          }
+        },
+        "rules": {
+          "$ref": "#/$defs/SpecRules",
+          "description": "문서 상태·작업 상태·관문·실행 프로필 같은 규칙입니다.",
+          "title": "규칙",
+          "x-ui": {
+            "tier": "basic",
+            "when": "승인 단계나 실행 방법을 바꿀 때 고치세요."
+          }
+        },
+        "labels": {
+          "description": "찾기·거르기에 쓰는 꼬리표입니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "라벨",
+          "type": "array",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "attributes": {
+          "additionalProperties": true,
+          "description": "다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.",
+          "title": "기타 속성",
+          "type": "object",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpecContentRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "본문 폴더의 대표 파일입니다. 앱이 채웁니다.",
+          "title": "본문",
+          "x-ui": {
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "name"
+      ],
+      "title": "문서 틀",
+      "type": "object"
+    },
+    "SpecTemplateSummary": {
+      "description": "`GET /sdd/templates` 항목: 이 공간의 문서 틀 하나.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "documents": {
+          "items": {
+            "$ref": "#/$defs/SpecDocument"
+          },
+          "type": "array"
+        },
+        "run_profiles": {
+          "items": {
+            "$ref": "#/$defs/RunProfileSummary"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "SpecTemplateSummary",
+      "type": "object"
+    },
+    "SpecView": {
+      "description": "`GET /sdd/specs/{id}`: 스펙 정의 + 파싱 결과 + 풀린 라벨.",
+      "properties": {
+        "spec": {
+          "$ref": "#/$defs/SpecDefinition"
+        },
+        "index": {
+          "$ref": "#/$defs/SpecIndex"
+        },
+        "version_hash": {
+          "description": "정의 버전 해시(`If-Match`용).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "directory": {
+          "default": "",
+          "description": "문서 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).",
+          "type": "string"
+        },
+        "task_statuses": {
+          "description": "유효 작업 상태(규칙 → 문법 순, 라벨 채움).",
+          "items": {
+            "$ref": "#/$defs/TaskStatusInfo"
+          },
+          "type": "array"
+        },
+        "document_states": {
+          "description": "유효 문서 상태(라벨 채움).",
+          "items": {
+            "$ref": "#/$defs/DocumentStateInfo"
+          },
+          "type": "array"
+        },
+        "automation_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AutomationState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "자동 진행 상태. 실행 연동이 없으면 null."
+        },
+        "issues": {
+          "description": "규칙 검사 이슈.",
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "spec",
+        "version_hash"
+      ],
+      "title": "SpecView",
+      "type": "object"
+    },
+    "StageRef": {
+      "description": "단계 하나를 가리키는 키와 제목.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StageRef",
+      "type": "object"
+    },
+    "StageSyntax": {
+      "additionalProperties": true,
+      "description": "작업 문서의 제목을 단계로 보는 규칙입니다.",
+      "properties": {
+        "heading_levels": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 수준의 제목(2 = 두 번째 큰 제목)을 단계로 봅니다.",
+          "title": "단계 제목 수준",
+          "x-ui": {
+            "example": [
+              2,
+              3
+            ],
+            "tier": "advanced"
+          }
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "제목에서 단계 id를 찾는 정규식입니다. 비우면 제목 전체를 씁니다.",
+          "title": "단계 id 찾기",
+          "x-ui": {
+            "example": null,
+            "tier": "advanced",
+            "widget": "regex"
+          }
+        }
+      },
+      "title": "StageSyntax",
+      "type": "object"
+    },
+    "StateChange": {
+      "additionalProperties": true,
+      "description": "문서 상태를 마지막으로 바꾼 기록입니다. 앱이 채웁니다.",
+      "properties": {
+        "by": {
+          "description": "상태를 바꾼 쪽입니다(예: human = 사람, run = 실행).",
+          "minLength": 1,
+          "title": "바꾼 쪽",
+          "type": "string",
+          "x-ui": {
+            "example": "human",
+            "tier": "advanced"
+          }
+        },
+        "at": {
+          "description": "바꾼 시각입니다(1970년부터 센 초).",
+          "title": "시각",
+          "type": "number",
+          "x-ui": {
+            "tier": "advanced",
+            "unit": "초"
+          }
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "실행이 바꿨으면 그 실행 id입니다.",
+          "title": "실행",
+          "x-ui": {
+            "example": null,
+            "tier": "advanced"
+          }
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "바꿀 때 남긴 한 줄 메모입니다.",
+          "title": "메모",
+          "x-ui": {
+            "example": "검토 완료",
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "by",
+        "at"
+      ],
+      "title": "StateChange",
+      "type": "object"
+    },
+    "StateTransition": {
+      "additionalProperties": true,
+      "description": "문서 상태를 바꿀 수 있는 길 하나입니다. 누가 바꿀 수 있는지도 정합니다.",
+      "properties": {
+        "from": {
+          "description": "이 상태에서 출발합니다. 별표(*)는 어느 상태에서나 뜻입니다.",
+          "minLength": 1,
+          "title": "이전 상태",
+          "type": "string",
+          "x-ui": {
+            "example": "review",
+            "order": 1,
+            "tier": "basic",
+            "when": "이 전환을 쓸 수 있는 출발 상태를 바꿀 때 고르세요.",
+            "widget": "state-ref"
+          }
+        },
+        "to": {
+          "description": "이 상태로 바꿉니다.",
+          "minLength": 1,
+          "title": "다음 상태",
+          "type": "string",
+          "x-ui": {
+            "example": "approved",
+            "order": 2,
+            "tier": "basic",
+            "when": "전환이 도착할 상태를 바꿀 때 고르세요.",
+            "widget": "state-ref"
+          }
+        },
+        "by": {
+          "description": "이 전환을 할 수 있는 쪽입니다(예: human = 사람, run = 실행). 비우면 아무도 못 합니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "바꿀 수 있는 쪽",
+          "type": "array",
+          "x-ui": {
+            "example": [
+              "human"
+            ],
+            "tier": "basic",
+            "when": "사람만 승인하게 하거나 실행도 바꾸게 할 때 고치세요."
+          }
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "StateTransition",
+      "type": "object"
+    },
     "SubscribeMessage": {
       "properties": {
         "id": {
@@ -20700,6 +23864,682 @@
       "title": "SubscribePayload",
       "type": "object"
     },
+    "TaskAction": {
+      "description": "작업 연동(X43)이 내는 동작 하나. 기본 연동은 실행 프로필마다 하나.",
+      "properties": {
+        "integration": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "description": "메뉴에 보일 이름(데이터 원문).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "disabled": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Issue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "지금 쓸 수 없는 이유(예: 관문). null = 쓸 수 있음."
+        }
+      },
+      "required": [
+        "integration",
+        "id",
+        "label"
+      ],
+      "title": "TaskAction",
+      "type": "object"
+    },
+    "TaskActionKey": {
+      "description": "작업 동작 하나를 가리키는 키(연동 id + 동작 id).",
+      "properties": {
+        "integration": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "integration",
+        "id"
+      ],
+      "title": "TaskActionKey",
+      "type": "object"
+    },
+    "TaskActionRequest": {
+      "description": "`POST /sdd/specs/{id}/tasks/{key}/actions/{integration}/{action}` 요청.",
+      "properties": {
+        "args": {
+          "additionalProperties": true,
+          "description": "동작이 정한 인자.",
+          "type": "object"
+        }
+      },
+      "title": "TaskActionRequest",
+      "type": "object"
+    },
+    "TaskActionResult": {
+      "description": "작업 동작 결과. `status`는 열린 문자열(알려진 값 `KnownTaskActionStatuses`).",
+      "properties": {
+        "task_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "issue": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Issue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "TaskActionResult",
+      "type": "object"
+    },
+    "TaskLink": {
+      "description": "작업과 이어진 외부 항목 하나(작업 연동 X43이 낸다). 기본 연동은 실행(`kind=run`, `ref`=Run\nid).",
+      "properties": {
+        "integration": {
+          "description": "연동 id(열린 문자열).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "description": "항목 종류(열린 문자열, 알려진 값 `KnownTaskLinkKinds`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "ref": {
+          "description": "항목 id(실행이면 루트 Run id).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "task_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 연결이 가리키는 작업 키."
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "항목 상태(실행이면 Run 상태)."
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "항목 시각(Unix epoch 초)."
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "실행 프로필 목적(있으면)."
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "실행 프로필 id(있으면)."
+        },
+        "totals": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Usage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "토큰·비용 합(실행이면 `Run.totals`)."
+        }
+      },
+      "required": [
+        "integration",
+        "kind",
+        "ref"
+      ],
+      "title": "TaskLink",
+      "type": "object"
+    },
+    "TaskPatch": {
+      "description": "`PATCH /sdd/specs/{id}/tasks/{key}`: 작업 머리 줄의 상태·필드만 고친다(줄 하나).",
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "바꿀 작업 상태 id. 생략 = 그대로."
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "바꿀 필드(값 null = 필드 지우기). 생략 = 그대로."
+        },
+        "expected_line_hash": {
+          "description": "화면이 본 머리 줄 해시. 다르면 409 `sdd.task_changed`.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_line_hash"
+      ],
+      "title": "TaskPatch",
+      "type": "object"
+    },
+    "TaskPatchResult": {
+      "description": "작업 고치기 결과.",
+      "properties": {
+        "task": {
+          "$ref": "#/$defs/ParsedTask"
+        },
+        "version_hash": {
+          "description": "저장 뒤 스펙 정의 버전.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "content_hash": {
+          "description": "저장 뒤 작업 문서 본문 해시.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "version_hash",
+        "content_hash"
+      ],
+      "title": "TaskPatchResult",
+      "type": "object"
+    },
+    "TaskPlan": {
+      "description": "`GET /sdd/specs/{id}/plan`: 끝나지 않은 작업의 의존 계획.",
+      "properties": {
+        "ready": {
+          "description": "지금 시작할 수 있는 작업 키.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "layers": {
+          "description": "위상 층(= 병렬 묶음), 앞에서부터 차례.",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "critical_path": {
+          "description": "가장 긴 의존 사슬(= 병목), 시작 → 끝.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "blocked": {
+          "description": "끝나지 않은 의존이 있어 기다리는 작업 키.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cycles": {
+          "description": "순환 의존(이슈로도 낸다).",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "title": "TaskPlan",
+      "type": "object"
+    },
+    "TaskStatusInfo": {
+      "description": "작업 상태 하나(보기용, 라벨이 늘 채워짐 — 데이터의 label → 없으면 id).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "markers": {
+          "description": "체크 칸 글자(첫 번째가 상태를 바꿀 때 쓰는 글자).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "done": {
+          "default": false,
+          "type": "boolean"
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "색조(열린 문자열)."
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "TaskStatusInfo",
+      "type": "object"
+    },
+    "TaskStatusSpec": {
+      "additionalProperties": true,
+      "description": "작업 상태 하나입니다. 작업 줄의 체크 칸 글자로 상태를 구분합니다.",
+      "properties": {
+        "id": {
+          "description": "상태를 가리키는 이름입니다. 실행 결과 반영과 관문 조건이 이 이름을 씁니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "id",
+          "type": "string",
+          "x-ui": {
+            "example": "doing",
+            "order": 1,
+            "tier": "basic",
+            "when": "상태를 새로 더할 때 한 번 정하세요."
+          }
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "화면에 보일 이름입니다. 비우면 id를 보입니다.",
+          "title": "표시 이름",
+          "x-ui": {
+            "example": "진행 중",
+            "tier": "basic",
+            "when": "화면에 보이는 상태 이름을 바꾸고 싶을 때 바꾸세요."
+          }
+        },
+        "marker": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "작업 줄 대괄호 안의 글자입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).",
+          "title": "체크 칸 글자",
+          "x-ui": {
+            "example": "~",
+            "order": 2,
+            "tier": "basic",
+            "when": "문서에서 이 상태를 다른 글자로 적고 싶을 때 바꾸세요."
+          }
+        },
+        "done": {
+          "default": false,
+          "description": "켜면 이 상태의 작업을 끝난 것으로 봅니다. 의존 작업의 준비 판단에 씁니다.",
+          "title": "끝난 상태",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "완료로 칠 상태에서만 켜세요."
+          }
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "칩 색조입니다(예: success, warning, danger). 모르는 값이면 기본 색입니다.",
+          "title": "색조",
+          "x-ui": {
+            "example": "success",
+            "tier": "advanced",
+            "widget": "tone"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "marker"
+      ],
+      "title": "TaskStatusSpec",
+      "type": "object"
+    },
+    "TaskSyntax": {
+      "additionalProperties": true,
+      "description": "작업 줄을 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.",
+      "properties": {
+        "list_item": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "어떤 목록 항목을 작업으로 볼지입니다(예: checkbox = 체크 칸 목록).",
+          "title": "작업 줄 모양",
+          "x-ui": {
+            "example": "checkbox",
+            "tier": "advanced"
+          }
+        },
+        "statuses": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TaskStatusSpec"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "체크 칸 글자와 상태의 짝입니다. 규칙의 작업 상태가 있으면 그쪽이 먼저입니다.",
+          "title": "작업 상태",
+          "x-ui": {
+            "itemTitle": "/label",
+            "tier": "advanced"
+          }
+        },
+        "id_pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 줄 머리에서 작업 id를 찾는 정규식입니다. id 이름의 묶음을 씁니다.",
+          "title": "작업 id 찾기",
+          "x-ui": {
+            "example": "^(?P<id>[0-9A-Za-z][\\w.\\-]*)\\s+",
+            "tier": "advanced",
+            "widget": "regex"
+          }
+        },
+        "field_pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 줄에서 [키: 값] 같은 필드를 찾는 정규식입니다. key와 value 묶음을 씁니다.",
+          "title": "필드 찾기",
+          "x-ui": {
+            "example": "\\[(?P<key>[\\w\\-]+):\\s*(?P<value>[^\\]]*)\\]",
+            "tier": "advanced",
+            "widget": "regex"
+          }
+        },
+        "list_separator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "필드 값 하나에 여러 값을 적을 때 사이에 넣는 글자입니다.",
+          "title": "값 나누기 글자",
+          "x-ui": {
+            "example": ",",
+            "tier": "advanced"
+          }
+        },
+        "range_separator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "두 작업 id 사이에 넣어 문서 순서상 그 사이 작업 전부를 뜻하는 글자입니다.",
+          "title": "범위 글자",
+          "x-ui": {
+            "example": "~",
+            "tier": "advanced"
+          }
+        },
+        "none_values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "필드 값이 이 중 하나면 값이 없는 것으로 봅니다(예: 대시).",
+          "title": "값 없음 표시",
+          "x-ui": {
+            "example": [
+              "—",
+              "-"
+            ],
+            "tier": "advanced"
+          }
+        },
+        "roles": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "필드 이름 → 역할입니다. 의존·요구·담당 역할을 계획과 추적 표가 읽습니다.",
+          "title": "필드 역할",
+          "x-ui": {
+            "example": {
+              "depends": "dependencies",
+              "req": "requirements"
+            },
+            "tier": "advanced"
+          }
+        },
+        "body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 아래 들여쓴 목록·문단을 작업 본문으로 볼지입니다(예: nested).",
+          "title": "작업 본문",
+          "x-ui": {
+            "example": "nested",
+            "tier": "advanced"
+          }
+        },
+        "max_depth": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "몇 단계까지 들여쓴 체크 칸을 작업으로 볼지입니다. 비우면 모두 봅니다.",
+          "title": "작업 깊이",
+          "x-ui": {
+            "example": 2,
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "TaskSyntax",
+      "type": "object"
+    },
     "TeamPlanSummary": {
       "description": "팀 구성 실행 계획 요약(`GET /graphs/{id}/plan`, 초안 `POST /graphs/plan`).",
       "properties": {
@@ -20724,6 +24564,43 @@
         }
       },
       "title": "TeamPlanSummary",
+      "type": "object"
+    },
+    "TemplateConflictPolicy": {
+      "enum": [
+        "fail",
+        "overwrite",
+        "rename"
+      ],
+      "type": "string"
+    },
+    "TemplateVariable": {
+      "description": "실행 프로필 입력 틀 변수 하나(`{이름}`).",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "example": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "TemplateVariable",
       "type": "object"
     },
     "TokenRollupRow": {
@@ -20968,6 +24845,133 @@
       "title": "TraceLink",
       "type": "object"
     },
+    "TraceMatrix": {
+      "description": "`GET /sdd/specs/{id}/trace`.",
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/TraceRow"
+          },
+          "type": "array"
+        },
+        "orphans": {
+          "$ref": "#/$defs/TraceOrphans"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/SpecIssue"
+          },
+          "type": "array"
+        }
+      },
+      "title": "TraceMatrix",
+      "type": "object"
+    },
+    "TraceOrphans": {
+      "description": "추적 표 밖의 빈 곳.",
+      "properties": {
+        "tasks_without_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unknown_requirement_refs": {
+          "items": {
+            "$ref": "#/$defs/TraceUnknownRef"
+          },
+          "type": "array"
+        },
+        "unknown_task_links": {
+          "description": "지금 문서에 없는 작업 키를 가리키는 연결(이름 바뀜 등).",
+          "items": {
+            "$ref": "#/$defs/TaskLink"
+          },
+          "type": "array"
+        }
+      },
+      "title": "TraceOrphans",
+      "type": "object"
+    },
+    "TraceRow": {
+      "description": "추적 표의 요구 하나: 요구 → 작업 → 실행 → 검증.",
+      "properties": {
+        "id": {
+          "description": "요구 id.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "document": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "tasks": {
+          "description": "이 요구를 참조하는 작업 키.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "runs": {
+          "description": "이 작업들의 최근 실행.",
+          "items": {
+            "$ref": "#/$defs/TaskLink"
+          },
+          "type": "array"
+        },
+        "totals": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Usage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 작업들 실행의 토큰 합."
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TraceVerification"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/VerificationResult"
+          },
+          "type": "array"
+        },
+        "gaps": {
+          "description": "빈 곳 코드(열린 문자열, `KnownTraceGaps`).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "document",
+        "line"
+      ],
+      "title": "TraceRow",
+      "type": "object"
+    },
     "TraceSpan": {
       "description": "위임 흐름의 구간 하나.",
       "properties": {
@@ -21191,9 +25195,64 @@
       "title": "TraceSpan",
       "type": "object"
     },
+    "TraceUnknownRef": {
+      "description": "작업이 참조했지만 요구 문서에 없는 요구 id.",
+      "properties": {
+        "task_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requirement_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_key",
+        "requirement_id"
+      ],
+      "title": "TraceUnknownRef",
+      "type": "object"
+    },
+    "TraceVerification": {
+      "description": "추적 행의 마지막 검증 결과 요약.",
+      "properties": {
+        "status": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "TraceVerification",
+      "type": "object"
+    },
     "UiHints": {
       "additionalProperties": true,
-      "description": "표시용 선택 힌트. 없어도 화면이 동작해야 한다(기본: 카테고리 해시 색 + 제목 첫 글자).\n\n값 목록은 고정하지 않는다. 화면은 해석할 수 없는 값을 무시하고 기본 표시로 돌아간다.",
+      "description": "종류를 화면에 어떻게 보일지 정하는 선택 항목입니다.\n\n비워 두면 화면이 이름의 첫 글자와 자동 색으로 보입니다. 화면이 모르는 값은 무시합니다.",
       "properties": {
         "icon": {
           "anyOf": [
@@ -22384,6 +26443,185 @@
       "title": "UsageWindowSnapshot",
       "type": "object"
     },
+    "VerificationConfig": {
+      "additionalProperties": true,
+      "description": "어떤 실행을 검증으로 볼지와 실행 결과를 검증 결과로 바꾸는 표입니다.",
+      "properties": {
+        "purposes": {
+          "description": "이 목적의 실행 프로필로 돌린 실행을 검증으로 봅니다.",
+          "items": {
+            "type": "string"
+          },
+          "title": "검증 목적",
+          "type": "array",
+          "x-ui": {
+            "example": [
+              "verify"
+            ],
+            "tier": "basic",
+            "when": "검증으로 칠 실행 프로필 목적을 바꿀 때 고치세요."
+          }
+        },
+        "result_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "실행 상태 → 검증 결과(예: succeeded → pass)입니다. 없는 상태는 그대로 씁니다.",
+          "title": "결과 바꾸기",
+          "type": "object",
+          "x-ui": {
+            "example": {
+              "failed": "fail",
+              "succeeded": "pass"
+            },
+            "tier": "advanced"
+          }
+        }
+      },
+      "title": "VerificationConfig",
+      "type": "object"
+    },
+    "VerificationRef": {
+      "description": "검증 결과의 근거: 실행 또는 프로젝트 폴더 안 파일.",
+      "properties": {
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "프로젝트 폴더 기준 상대 경로."
+        }
+      },
+      "title": "VerificationRef",
+      "type": "object"
+    },
+    "VerificationResult": {
+      "description": "검증 결과 하나(검증 결과 출처 X42가 낸다).",
+      "properties": {
+        "source": {
+          "description": "출처 id(기본 `runs`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "status": {
+          "description": "결과(열린 문자열, 예: pass·fail·unknown).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "task_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requirement_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "label": {
+          "default": "",
+          "type": "string"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ref": {
+          "$ref": "#/$defs/VerificationRef"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source",
+        "status"
+      ],
+      "title": "VerificationResult",
+      "type": "object"
+    },
+    "VerificationSourceSetting": {
+      "additionalProperties": true,
+      "description": "검증 결과를 가져올 곳 하나입니다(예: 테스트 결과 파일).",
+      "properties": {
+        "id": {
+          "description": "설치된 검증 결과 출처의 이름입니다.",
+          "minLength": 1,
+          "title": "출처",
+          "type": "string",
+          "x-ui": {
+            "example": "junit",
+            "tier": "basic",
+            "when": "다른 검증 결과 출처를 쓰고 싶을 때 고르세요."
+          }
+        },
+        "enabled": {
+          "default": true,
+          "description": "끄면 이 출처의 결과를 추적 표에 넣지 않습니다.",
+          "title": "켜기",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "잠시 이 출처를 쓰지 않으려면 끄세요."
+          }
+        },
+        "options": {
+          "additionalProperties": true,
+          "description": "출처가 정한 설정입니다(예: 결과 파일 위치).",
+          "title": "옵션",
+          "type": "object",
+          "x-ui": {
+            "example": {
+              "path": "reports/junit.xml"
+            },
+            "tier": "advanced"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "VerificationSourceSetting",
+      "type": "object"
+    },
     "VersionConflictDetails": {
       "description": "`version_conflict`(HTTP 412) 오류의 `error.details`. 서버의 현재 버전 요약.",
       "properties": {
@@ -22719,7 +26957,8 @@
           "interaction.updated": "#/$defs/InteractionUpdatedMessage",
           "logs.ingested": "#/$defs/LogsIngestedMessage",
           "memory.changed": "#/$defs/MemoryChangedMessage",
-          "run.event": "#/$defs/RunEventMessage"
+          "run.event": "#/$defs/RunEventMessage",
+          "sdd.changed": "#/$defs/SddChangedMessage"
         },
         "propertyName": "type"
       },
@@ -22738,6 +26977,9 @@
         },
         {
           "$ref": "#/$defs/MemoryChangedMessage"
+        },
+        {
+          "$ref": "#/$defs/SddChangedMessage"
         },
         {
           "$ref": "#/$defs/ErrorMessage"

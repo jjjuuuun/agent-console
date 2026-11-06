@@ -15,6 +15,7 @@ from agent_console_contracts import (
     Run,
     RunEvent,
     RunStatus,
+    SessionRef,
 )
 
 from ._ports import Clock, TurnStart
@@ -296,9 +297,33 @@ class FakeLauncher:
         return handle.current
 
 
+class MemoryContinuity:
+    """`SessionContinuity` 예제 구현(메모리): 세션 id → 상태. `prepare`는 복원 흉내로 상태를
+    `available`로 바꾸고 복원 전 상태를 돌려준다(`missing`·`not_applicable`은 그대로).
+
+    Args:
+        states: 세션 id → 상태(없으면 `available`).
+    """
+
+    def __init__(self, states: Mapping[str, str] | None = None) -> None:
+        self.states: dict[str, str] = dict(states or {})
+        self.prepared: builtins.list[tuple[str | None, str]] = []
+
+    def state(self, project_id: str | None, session: SessionRef) -> str:
+        return self.states.get(session.session_id, "available")
+
+    def prepare(self, project_id: str | None, session: SessionRef) -> str:
+        before = self.state(project_id, session)
+        self.prepared.append((project_id, session.session_id))
+        if before in ("archived", "relocatable"):
+            self.states[session.session_id] = "available"
+        return before
+
+
 __all__ = [
     "FakeLauncher",
     "FakeTurnHandle",
+    "MemoryContinuity",
     "MemoryConversations",
     "MemoryEvents",
     "MemoryGraphs",

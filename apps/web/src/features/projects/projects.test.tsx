@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectView } from "@agent-console/contracts/projects";
 import { mountApp } from "../../testing/screenHarness";
 import { createFakeClients } from "../../testing/fakes";
-import { guideSteps } from "./ProjectGuide";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 
 afterEach(cleanup);
@@ -59,19 +58,6 @@ describe("ProjectSwitcher(표현)", () => {
     expect(screen.queryByRole("listbox")).toBeNull();
   });
 });
-
-describe("첫 프로젝트 안내 단계", () => {
-  it("완료 여부는 서버 데이터로만 계산한다", () => {
-    expect(guideSteps({ projects: [], project: undefined, hasConversation: false }).map((s) => s.done)).toEqual([false, false, false]);
-    const p = project("a", { folder: "/w" });
-    expect(guideSteps({ projects: [p], project: p, hasConversation: false }).map((s) => s.done)).toEqual([true, true, false]);
-    expect(guideSteps({ projects: [p], project: p, hasConversation: true }).map((s) => s.done)).toEqual([true, true, true]);
-    // 계약 0.11.0: 폴더가 없는 옛 프로젝트(folder_unset)는 설정 단계가 끝나지 않았다
-    const legacy = project("b", { folder: null });
-    expect(guideSteps({ projects: [legacy], project: legacy, hasConversation: false })[1]!.done).toBe(false);
-  });
-});
-
 
 /** 사이드바 프로젝트 영역(펼침 또는 레일)을 기다린다. */
 async function findRegion() {
@@ -175,39 +161,90 @@ describe("설정 > 프로젝트 섹션", () => {
     expect(await within(nav2).findByRole("link", { name: /^프로젝트/ })).toBeTruthy();
   });
 
-  it("프로젝트를 고쳐 저장하면 바뀐 필드만 If-Match 해시와 함께 보낸다", async () => {
-    const a = project("a", { name: "앱", folder: "/old" });
-    const { clients, projects } = createFakeClients(
-      { listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => views(a)) },
-      {
-        getProjectVersioned: vi.fn(async () => ({ value: a, version_hash: "h1" })),
-        updateProject: vi.fn(async () => ({ value: a, version_hash: "h2" })),
-      },
-    );
+  const counts = (no_project: number, by_project: Record<string, number> = {}) => ({ total: no_project + Object.values(by_project).reduce((a, b) => a + b, 0), no_project, by_project });
+
+  it("등록 표는 이름(홈 링크)·폴더·상태·동작만 두고 가이드·편집 폼이 없다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const { clients } = createFakeClients({ listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => views(a)) });
     mountApp(clients, "/settings#projects");
-    const dir = (await screen.findByLabelText("작업 폴더")) as HTMLInputElement;
-    fireEvent.change(dir, { target: { value: "/new" } });
-    fireEvent.click(screen.getByRole("button", { name: "프로젝트 저장" }));
-    await waitFor(() => expect(projects.updateProject).toHaveBeenCalledWith("a", { folder: "/new" }, "h1"));
+    const table = await screen.findByRole("table", { name: "등록된 프로젝트" });
+    expect(within(table).getByRole("link", { name: "앱" }).getAttribute("href")).toContain("/projects/a");
+    expect(within(table).getByText("/w/app")).toBeTruthy();
+    expect(within(table).getByRole("button", { name: /경로 다시 지정/ })).toBeTruthy();
+    expect(within(table).getByRole("button", { name: /등록 해제/ })).toBeTruthy();
+    expect(screen.queryByLabelText("작업 폴더")).toBeNull();
+    expect(screen.queryByText(/삭제…/)).toBeNull();
   });
 
-  it("삭제는 삭제 계획을 보여 주고 고른 방식으로 지운다", async () => {
-    const a = project("a", { name: "앱" });
-    const { clients, projects } = createFakeClients(
-      { listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => views(a)) },
-      {
-        getProjectVersioned: vi.fn(async () => ({ value: a, version_hash: "h1" })),
-        getDeletePlan: vi.fn(async () => ({ project_id: "a", default_mode: "move_to_shared", definitions: [{ kind: "k-x", id: "d1", name: "정의 하나" }], warnings: [] })),
-        deleteProject: vi.fn(async () => undefined),
-      },
-    );
+  it("앱에 남은 기록은 채팅 → 실행 순서로 select=project, remove_source 기본 켜짐으로 옮긴다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const calls: string[] = [];
+    const { clients } = createFakeClients({
+      listModules: vi.fn(async () => modules),
+      listProjects: vi.fn(async () => views(a)),
+      getConversationProjectCounts: vi.fn(async () => counts(0, { a: 3 })),
+      getRunProjectCounts: vi.fn(async () => counts(0, { a: 2 })),
+      moveConversationsToProject: vi.fn(async (r: unknown) => { calls.push(`chat:${JSON.stringify(r)}`); return { moved: 3 }; }),
+      moveRunsToProject: vi.fn(async (r: unknown) => { calls.push(`run:${JSON.stringify(r)}`); return { moved: 2 }; }),
+    });
     mountApp(clients, "/settings#projects");
-    fireEvent.click(await screen.findByRole("button", { name: "삭제…" }));
-    const dialog = await screen.findByRole("dialog", { name: /프로젝트 “앱” 삭제/ });
-    expect(await within(dialog).findByText("정의 하나")).toBeTruthy();
-    expect((within(dialog).getByRole("radio", { name: /공용으로 옮기기/ }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(within(dialog).getByRole("radio", { name: /함께 삭제/ }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
-    await waitFor(() => expect(projects.deleteProject).toHaveBeenCalledWith("a", { mode: "delete_definitions" }));
+    fireEvent.click(await screen.findByRole("button", { name: /앱 프로젝트 폴더로 옮기기/ }));
+    const dialog = await screen.findByRole("dialog", { name: /이전 기록을 프로젝트 폴더로 옮기기/ });
+    expect((within(dialog).getByRole("checkbox", { name: /옮긴 뒤 앱에서 지우기/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(dialog).getByRole("button", { name: "옮기기 (5)" }));
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[0]).toBe('chat:{"project_id":"a","select":"project","remove_source":true}');
+    expect(calls[1]).toBe('run:{"project_id":"a","select":"project","remove_source":true}');
+  });
+
+  it("프로젝트 없는 이전 기록은 기능별로 프로젝트에 넣고, 폴더에 바로 저장(기본 켜짐)이면 move-to-project를 부른다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const move = vi.fn(async () => ({ moved: 4 }));
+    const { clients } = createFakeClients({
+      listModules: vi.fn(async () => modules),
+      listProjects: vi.fn(async () => views(a)),
+      getConversationProjectCounts: vi.fn(async () => counts(4)),
+      getRunProjectCounts: vi.fn(async () => counts(0)),
+      moveConversationsToProject: move,
+    });
+    mountApp(clients, "/settings#projects");
+    expect(await screen.findByText("프로젝트에 속하지 않은 이전 기록이 있습니다")).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: /프로젝트에 넣기/ })[0] as HTMLElement);
+    const dialog = await screen.findByRole("dialog", { name: /이전 기록 4건을 프로젝트에 넣기/ });
+    expect(within(dialog).getByRole("button", { name: "넣기" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(within(dialog).getByRole("radio", { name: /앱/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "넣기" }));
+    await waitFor(() => expect(move).toHaveBeenCalledWith({ project_id: "a", select: "null", remove_source: true }));
+  });
+
+  it("[그대로 두기]는 그 기능의 안내를 접고 [숨긴 안내 보기]로 다시 연다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const { clients } = createFakeClients({
+      listModules: vi.fn(async () => modules),
+      listProjects: vi.fn(async () => views(a)),
+      getConversationProjectCounts: vi.fn(async () => counts(2)),
+      getRunProjectCounts: vi.fn(async () => counts(0)),
+    });
+    mountApp(clients, "/settings#projects");
+    fireEvent.click(await screen.findByRole("button", { name: /그대로 두기/ }));
+    expect(screen.queryByRole("button", { name: /프로젝트에 넣기/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "숨긴 안내 보기" }));
+    expect(await screen.findByRole("button", { name: /프로젝트에 넣기/ })).toBeTruthy();
+  });
+
+  it("등록 해제된 프로젝트는 접힌 목록에 앱 기록 개수와 함께 나온다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const gone = project("g", { name: "옛앱", folder: "/w/old", archived: true });
+    const { clients } = createFakeClients({
+      listModules: vi.fn(async () => modules),
+      listProjects: vi.fn(async () => views(a, gone)),
+      getConversationProjectCounts: vi.fn(async () => counts(0, { g: 3 })),
+      getRunProjectCounts: vi.fn(async () => counts(0, { g: 2 })),
+    });
+    mountApp(clients, "/settings#projects");
+    const summary = await screen.findByText("등록 해제된 프로젝트 (1)");
+    fireEvent.click(summary);
+    expect(await screen.findByText(/앱에 저장됨: 채팅 3 · 실행 2/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 등록" })).toBeTruthy();
   });
 });

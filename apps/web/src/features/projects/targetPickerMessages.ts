@@ -1,0 +1,73 @@
+/**
+ * 시작 대상 고르기(`ProjectTargetPicker`)와 시작 오류 배너의 문구 표(screen-projects §5.4).
+ * 구성 종류·프로젝트 이름은 값으로 받는다(코드에 고정하지 않는다).
+ */
+export const targetPickerMessages = {
+  folder: {
+    label: "폴더",
+    change: "바꾸기",
+    changeLabel: "이 대화상자의 폴더 바꾸기",
+    willSwitch: (name: string) => `시작하면 현재 프로젝트가 ‘${name}’(으)로 바뀝니다.`,
+    repath: "경로 다시 지정",
+    problem: (status: string) => `폴더 상태: ${status}`,
+  },
+  config: {
+    label: "구성",
+    search: "구성 검색",
+    searchPlaceholder: "검색…",
+    list: "시작할 구성",
+    loading: "구성 목록을 불러오는 중…",
+    loadFailed: "구성 목록을 불러오지 못했습니다",
+    retry: "다시 시도",
+    noMatches: "맞는 구성이 없습니다",
+    import: "＋ 공용에서 가져오기…",
+    emptyTitle: "이 프로젝트에 팀 구성이 없습니다",
+    importPrimary: "공용에서 가져오기…",
+    createHere: "이 프로젝트에서 새로 만들기",
+    editConfig: "구성 편집 →",
+    showIssues: "문제 보기",
+    hideIssues: "문제 닫기",
+    blockedChip: (n: number) => `실행을 막는 문제 ${n}건`,
+    warnChip: (n: number) => `▲ 경고 ${n}건`,
+    nodes: (n: number) => `노드 ${n}`,
+    lastUsed: (rel: string) => `마지막 사용 ${rel}`,
+    notSelectable: "실행을 막는 문제가 있어 선택할 수 없습니다",
+  },
+  start: {
+    newChatTitle: "새 대화",
+    startChat: "대화 시작",
+    titleLabel: "제목",
+    titleHelp: "비워 두면 첫 메시지로 정해집니다.",
+    cancel: "취소",
+    creating: "시작하는 중…",
+  },
+  /** 시작 버튼이 막힌 이유 */
+  blocked: {
+    noConfig: "시작할 구성을 고르세요",
+    signedOut: "로그인이 필요합니다",
+    signIn: "설정 › 백엔드",
+  },
+  /** 시작 오류 → 배너 문구(서버 코드는 화면에 노출하지 않는다) */
+  error: {
+    required: "프로젝트를 고른 뒤에 시작할 수 있습니다",
+    pickProject: "프로젝트 고르기",
+    notImportedInLibrary: (name: string) => `‘${name}’은(는) 이 프로젝트에 없고 공용 구성에만 있습니다`,
+    importAndRun: "가져와서 실행",
+    notImportedMissing: (name: string) => `‘${name}’을(를) 찾을 수 없습니다`,
+    toLibrary: "구성 화면으로",
+    folderUnusable: "프로젝트 폴더를 쓸 수 없어 시작하지 못했습니다",
+    repath: "경로 다시 지정",
+    manifestInvalid: "프로젝트 설정 파일을 읽을 수 없어 시작하지 못했습니다",
+    checkInHome: "프로젝트 홈에서 확인",
+    recordsReadonly: "이 폴더에 쓸 수 없어 대화·실행 기록을 저장할 수 없어 시작하지 못했습니다",
+    recordsFolderMissing: "프로젝트 폴더를 쓸 수 없어 시작하지 못했습니다",
+    recordsNewer: "더 새 버전의 앱이 이 폴더의 기록을 만들었습니다. 앱을 업데이트하세요",
+    recordsBroken: "이 폴더의 기록 파일을 쓸 수 없어 시작하지 못했습니다",
+    recordsBusy: "다른 앱이 기록 파일을 쓰고 있어 시작하지 못했습니다",
+    retry: "다시 시도",
+    configReadonly: "이 폴더에는 쓸 수 없어 구성을 가져오거나 고치지 못했습니다",
+    outsideFolder: (path: string, layer: string) => `‘${path}’는 프로젝트 폴더 밖입니다${layer === "" ? "" : ` (출처: ${layer})`}`,
+    openSettings: "설정 열기",
+    dismiss: "취소",
+  },
+} as const;

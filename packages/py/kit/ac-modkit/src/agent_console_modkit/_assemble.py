@@ -96,6 +96,9 @@ class ModuleReport:
         reason: 상태 이유(사람용). ``failed``는 예외 형식만 담고 메시지는 가린다.
         missing: ``unsatisfied``일 때 빠진 필수 포트 이름.
         conflicts: ``conflict``일 때 충돌한 포트 이름(같은 id 충돌이면 빈 튜플).
+        description: 서술자 ``description``(사람이 읽는 한 줄 설명, 빈 문자열 = 없음).
+        label_display: 켜진 모듈의 build 결과 ``ModuleParts.label_display``(JSON 값, 꺼지면
+            빈 튜플).
     """
 
     id: str
@@ -111,6 +114,8 @@ class ModuleReport:
     optional: tuple[str, ...] = ()
     web_roles: tuple[str, ...] = ()
     contracts: Mapping[str, str] = field(default_factory=dict, hash=False)
+    description: str = ""
+    label_display: tuple[Mapping[str, Any], ...] = field(default=(), hash=False)
 
     @property
     def active(self) -> bool:
@@ -123,6 +128,7 @@ class ModuleReport:
             "version": self.version,
             "kind": self.kind,
             "title": self.title,
+            "description": self.description,
             "state": self.state.value,
             "reason": self.reason,
             "missing": list(self.missing),
@@ -132,6 +138,7 @@ class ModuleReport:
             "optional": list(self.optional),
             "web_roles": list(self.web_roles),
             "contracts": dict(self.contracts),
+            "label_display": [dict(item) for item in self.label_display],
         }
 
 
@@ -490,6 +497,7 @@ def _base_report(
         version=d.version,
         kind=d.kind,
         title=d.title,
+        description=d.description,
         state=state,
         reason=reason,
         provides=tuple(p.name for p in d.provides),
@@ -738,7 +746,12 @@ def assemble(
             ws_owner[k] = mid
         parts[mid] = built
         active_modules.append(d)
-        reports[idx] = _base_report(d, ModuleState.ACTIVE, None)
+        reports[idx] = _base_report(
+            d,
+            ModuleState.ACTIVE,
+            None,
+            label_display=tuple(dict(item) for item in built.label_display),
+        )
 
     report = sorted(reports.values(), key=lambda r: r.id)
     return Assembly(

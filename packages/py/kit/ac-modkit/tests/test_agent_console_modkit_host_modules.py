@@ -67,6 +67,7 @@ def test_report_carries_contracts_mapping_and_to_dict() -> None:
         version="1.2.3",
         kind="feature",
         title="X",
+        description="엑스 기능",
         optional=(PortKey("p.opt"),),
         contracts={"chat": "1.0.0"},
         web_roles=("x",),
@@ -77,6 +78,7 @@ def test_report_carries_contracts_mapping_and_to_dict() -> None:
     assert data["state"] == "active"
     assert data["contracts"] == {"chat": "1.0.0"}
     assert data["optional"] == ["p.opt"]
+    assert report.description == data["description"] == "엑스 기능"
     json.dumps(data)  # JSON으로 보낼 수 있다
 
 

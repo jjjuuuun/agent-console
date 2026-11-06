@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Button, Dialog } from "@agent-console/ui";
 import { ResourceTypeGrid } from "./ResourceTypeGrid";
-import { DEFINITION_KINDS, DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, libraryMessages as lm } from "../library";
+import { DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, libraryMessages as lm } from "../library";
 import { useNewScope } from "../projects";
 import { resourceMessages as t } from "./messages";
 
@@ -21,7 +21,7 @@ export interface CreateResourceDialogProps {
 export function CreateResourceDialog({ types, existingIds, initialTypeId, busy, error, onCreate, onClose }: CreateResourceDialogProps) {
   const [typeId, setTypeId] = useState<string | null>(initialTypeId ?? (types.length === 1 ? (types[0]?.id ?? null) : null));
   const chosen = types.find((x) => x.id === typeId);
-  const scope = useNewScope(DEFINITION_KINDS.resource ?? "");
+  const scope = useNewScope();
 
   if (chosen === undefined) {
     return (

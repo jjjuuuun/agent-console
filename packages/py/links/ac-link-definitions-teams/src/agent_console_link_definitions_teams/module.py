@@ -64,7 +64,7 @@ class DefinitionsTeamsLink:
         version=_version(),
         kind="link",
         title="정의·팀 연동",
-        description="사용처·유효 설정·실행 계획·묶음 미리보기, 목록 입구 이름·사용 수·쓰는 정의",
+        description="구성이 어디에 쓰이는지와 실제 적용 설정·실행 계획을 보여 준다",
         provides=(
             GRAPH_ENTRY_LABELS,
             DEFINITION_USAGES,

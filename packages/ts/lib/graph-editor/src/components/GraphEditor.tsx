@@ -222,6 +222,8 @@ const REFIT_WINDOW_MS = 3000;
 const LOW_ZOOM = 0.6;
 /** 이 줌 미만이면 노드 제목을 화면 12px 상당으로 키운다(한 줄 말줄임, 전체 이름은 title 툴팁). 14px 기준 12/14 */
 const TITLE_BOOST_ZOOM = 0.85;
+/** 이 줌 미만이면 포트 라벨을 숨긴다(화면 12px 이상으로 키워도 24px 포트 줄에 못 들어간다). 점(핸들)은 남는다. */
+const PORT_LABEL_MIN_ZOOM = 0.75;
 /** 노드 카드 대략 크기의 절반: 보이는 영역 중앙에 놓을 때 카드 중심을 맞추는 값 */
 const CARD_HALF_W = 110;
 const CARD_HALF_H = 40;
@@ -251,6 +253,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   // 낮은 줌: 경계를 넘을 때만 다시 그린다(연결마다 구독하지 않는다)
   const lowZoom = useStore((st) => st.transform[2] < LOW_ZOOM);
   const titleBoost = useStore((st) => st.transform[2] < TITLE_BOOST_ZOOM);
+  const portsHidden = useStore((st) => st.transform[2] < PORT_LABEL_MIN_ZOOM);
   // 줌을 CSS 변수로 내보낸다(가장자리 띠가 줌아웃에서도 화면에서 일정한 굵기를 갖게). 노드를 다시 그리지 않고 루트 요소에만 쓴다.
   const flowStore = useStoreApi();
   // 연결을 끄는 동안 노드 위에 보이는 "여기에 연결" 라벨(CSS `content`가 읽는다)
@@ -326,6 +329,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   /** `T` 키: 선택한 연결의 종류를 바꾸는 선택 UI(새 연결 만들기와 같은 `EdgeKindDialog`) */
   const [kindChange, setKindChange] = useState<{ edgeId: string; candidates: EdgeTypeDescriptor[]; preselected: string; info: Record<string, EdgeKindCandidateInfo> } | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [choiceFor, setChoiceFor] = useState<{ nodeId: string; toggle: RoleToggle } | null>(null);
   const onChoiceMenuKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
     const menu = e.currentTarget;
@@ -1374,6 +1378,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
 
   // ---- 설정 패널 슬롯 ----
   const multi = eff.nodeIds.length + eff.edgeIds.length;
+  if (moreOpen && multi === 0) setMoreOpen(false); // 선택이 사라지면 넘침 메뉴도 닫는다
   const selNode: NodeSpec | undefined = eff.nodeIds.length === 1 && multi === 1 ? gNodes.find((n) => n.id === eff.nodeIds[0]) : undefined;
   if (choiceFor !== null && choiceFor.nodeId !== selNode?.id) setChoiceFor(null); // 선택 노드가 바뀌면 후보 메뉴를 닫는다
   const selEdge: EdgeSpec | undefined = eff.edgeIds.length === 1 && multi === 1 ? edgesOf(graph).find((e) => e.id === eff.edgeIds[0]) : undefined;
@@ -1504,8 +1509,69 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   }, [overlayOpen]);
   const undoAvailable = toast?.undo !== undefined && sameGraph(graph, toast.undo.after);
 
+  const toolbarExtras = (
+    <>
+      {selNode !== undefined &&
+        ROLE_TOGGLES.map((t) => {
+          const info = toggleInfos(selNode.id)[t];
+          if (!info.available) return null;
+          const choices = toggleChoices(info);
+          const needsChoice = !info.on && choices.length > 1;
+          const menuOpen = needsChoice && choiceFor?.nodeId === selNode.id && choiceFor.toggle === t;
+          return (
+            <span key={t} className="ac-ge-toggle-wrap">
+              <button
+                type="button"
+                className="ac-ge-btn"
+                aria-pressed={info.on}
+                aria-haspopup={needsChoice ? "menu" : undefined}
+                aria-expanded={needsChoice ? menuOpen : undefined}
+                title={m.toolbarLabel.replace("{label}", selNode.label ?? selNode.id)}
+                onClick={() => {
+                  if (needsChoice) setChoiceFor(menuOpen ? null : { nodeId: selNode.id, toggle: t });
+                  else toggleRole(selNode.id, t, !info.on);
+                }}
+              >
+                {m.toggleLabels[t] ?? t}
+              </button>
+              {menuOpen && (
+                <span className="ac-ge-choice-menu" role="menu" aria-label={m.toggleChoose} onKeyDown={onChoiceMenuKeyDown}>
+                  {choices.map((c, i) => (
+                    <button
+                      key={`${c.kindId}:${c.userNodeId}`}
+                      type="button"
+                      role="menuitem"
+                      className="ac-ge-btn"
+                      autoFocus={i === 0}
+                      onClick={() => {
+                        setChoiceFor(null);
+                        toggleRole(selNode.id, t, true, { kindId: c.kindId, userNodeId: c.userNodeId });
+                      }}
+                    >
+                      {info.kinds.length > 1 ? `${c.kindTitle} · ${c.userLabel}` : c.userLabel}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      {selNode !== undefined && (
+        <button type="button" className="ac-ge-btn" aria-keyshortcuts="R" title={m.rotateDirection} onClick={() => rotateDirection(selNode.id)}>
+          <span aria-hidden="true">⟳</span> {m.rotateDirection}
+        </button>
+      )}
+      {eff.nodeIds.length + eff.edgeIds.length > 1 && <span className="ac-ge-toolbar-count">{format(m.selectedCount, { count: multi })}</span>}
+      {eff.nodeIds.length > 0 && (
+        <button type="button" className="ac-ge-btn" onClick={duplicateSelected}>
+          {m.duplicate}
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div ref={rootRef} className={["ac-ge-root", props.className].filter(Boolean).join(" ")} style={props.style} data-readonly={readOnly ? "true" : undefined} data-connecting={connecting ? "true" : undefined} data-zoom-lod={lowZoom ? "icon" : undefined} data-zoom-title={titleBoost ? "boost" : undefined}>
+    <div ref={rootRef} className={["ac-ge-root", props.className].filter(Boolean).join(" ")} style={props.style} data-readonly={readOnly ? "true" : undefined} data-connecting={connecting ? "true" : undefined} data-zoom-lod={lowZoom ? "icon" : undefined} data-zoom-title={titleBoost ? "boost" : undefined} data-zoom-ports={portsHidden ? "hidden" : undefined}>
       {showPalette && (
         <aside
           className="ac-ge-palette-wrap"
@@ -1650,72 +1716,37 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
               )}
             </Panel>
           )}
-          {!readOnly && props.canvasActions !== undefined && (
-            <Panel position="top-left" className="ac-ge-actions">
-              {props.canvasActions}
-            </Panel>
-          )}
-          {!readOnly && multi > 0 && (
-            <Panel position="top-left" className="ac-ge-toolbar">
-              {selNode !== undefined &&
-                ROLE_TOGGLES.map((t) => {
-                  const info = toggleInfos(selNode.id)[t];
-                  if (!info.available) return null;
-                  const choices = toggleChoices(info);
-                  const needsChoice = !info.on && choices.length > 1;
-                  const menuOpen = needsChoice && choiceFor?.nodeId === selNode.id && choiceFor.toggle === t;
-                  return (
-                    <span key={t} className="ac-ge-toggle-wrap">
-                      <button
-                        type="button"
-                        className="ac-ge-btn"
-                        aria-pressed={info.on}
-                        aria-haspopup={needsChoice ? "menu" : undefined}
-                        aria-expanded={needsChoice ? menuOpen : undefined}
-                        title={m.toolbarLabel.replace("{label}", selNode.label ?? selNode.id)}
-                        onClick={() => {
-                          if (needsChoice) setChoiceFor(menuOpen ? null : { nodeId: selNode.id, toggle: t });
-                          else toggleRole(selNode.id, t, !info.on);
-                        }}
-                      >
-                        {m.toggleLabels[t] ?? t}
-                      </button>
-                      {menuOpen && (
-                        <span className="ac-ge-choice-menu" role="menu" aria-label={m.toggleChoose} onKeyDown={onChoiceMenuKeyDown}>
-                          {choices.map((c, i) => (
-                            <button
-                              key={`${c.kindId}:${c.userNodeId}`}
-                              type="button"
-                              role="menuitem"
-                              className="ac-ge-btn"
-                              autoFocus={i === 0}
-                              onClick={() => {
-                                setChoiceFor(null);
-                                toggleRole(selNode.id, t, true, { kindId: c.kindId, userNodeId: c.userNodeId });
-                              }}
-                            >
-                              {info.kinds.length > 1 ? `${c.kindTitle} · ${c.userLabel}` : c.userLabel}
-                            </button>
-                          ))}
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              {selNode !== undefined && (
-                <button type="button" className="ac-ge-btn" aria-keyshortcuts="R" title={m.rotateDirection} onClick={() => rotateDirection(selNode.id)}>
-                  <span aria-hidden="true">⟳</span> {m.rotateDirection}
-                </button>
+          {!readOnly && (props.canvasActions !== undefined || multi > 0) && (
+            <Panel position="top-left" className="ac-ge-topbar">
+              {props.canvasActions !== undefined && <div className="ac-ge-actions">{props.canvasActions}</div>}
+              {multi > 0 && (
+                <div className="ac-ge-toolbar">
+                  <div className="ac-ge-toolbar-extras">{toolbarExtras}</div>
+                  <span className="ac-ge-toolbar-more">
+                    <button
+                      type="button"
+                      className="ac-ge-btn ac-ge-btn--icon"
+                      aria-haspopup="true"
+                      aria-expanded={moreOpen}
+                      aria-label={m.moreActions}
+                      title={m.moreActions}
+                      onClick={() => setMoreOpen((v) => !v)}
+                    >
+                      <span aria-hidden="true">⋯</span>
+                    </button>
+                    {moreOpen && (
+                      <div className="ac-ge-toolbar-pop" role="group" aria-label={m.moreActions} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setMoreOpen(false); } }}>
+                        {toolbarExtras}
+                      </div>
+                    )}
+                  </span>
+                  <button type="button" className="ac-ge-btn ac-ge-btn--icon ac-ge-btn--danger" aria-label={m.remove} title={m.remove} onClick={removeSelected}>
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v4.5M9.2 6.5v4.5" />
+                    </svg>
+                  </button>
+                </div>
               )}
-              {eff.nodeIds.length + eff.edgeIds.length > 1 && <span className="ac-ge-toolbar-count">{format(m.selectedCount, { count: multi })}</span>}
-              {eff.nodeIds.length > 0 && (
-                <button type="button" className="ac-ge-btn" onClick={duplicateSelected}>
-                  {m.duplicate}
-                </button>
-              )}
-              <button type="button" className="ac-ge-btn ac-ge-btn--danger" onClick={removeSelected}>
-                {m.remove}
-              </button>
             </Panel>
           )}
         </ReactFlow>

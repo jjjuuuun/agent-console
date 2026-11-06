@@ -12,11 +12,17 @@
 루트 그래프(현재·버전)를 그 출처에서 읽고, 노드 서비스 공급자에게 ``RunEnvironment.definitions``로,
 노드·준비자·자식 Run에게 서비스 ``RUN_DEFINITIONS``로 넘긴다. 출처를 준 공급자가 없으면
 ``definitions.lookup`` 그대로다(서비스 ``RUN_DEFINITIONS`` 없음).
+
+기록 자리(5.7R.33y2): ``records``(``SpaceRecorder``)가 공간 포트를 가졌으면 ``project_id``가 있는
+Run은 그 프로젝트 기록 DB에 쓴다. 시작 전에 그 기록 DB를 쓸 수 있는지 확인하고(못 쓰면 409
+``project.records_unavailable``, 모르는 프로젝트 404 ``project.not_found`` - Run을 만들지 않는다,
+앱 DB로 대신 쓰지 않는다), 조회·이어 가기·[끊긴 것으로 표시]는 ``project_id``로 그 공간을 본다.
 """
 
 from __future__ import annotations
 
 import asyncio
+import builtins
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -57,7 +63,7 @@ from agent_console_runtime import (
     edge_type_descriptors,
     node_type_descriptors,
 )
-from agent_console_store import NotFound, StoreError
+from agent_console_store import NotFound, RecordsUnavailable, StoreError, UnknownSpace
 
 from .errors import DefinitionReadError, RunPreflightError, issues_from_errors
 from .plugins import condition_operators
@@ -74,9 +80,13 @@ from .ports import (
     RunScoper,
     RunServiceProvider,
 )
+from .records import UNFINISHED, SpaceRecorder, interrupt_run
 
 GRAPH_KIND = "graph"
 """정의 저장소에서 팀 구성 종류 이름(``agent_console_store.GRAPH_KIND.name``과 같다)."""
+
+MARK_INTERRUPTED_MESSAGE = "사용자가 끊긴 것으로 표시했습니다"
+"""[끊긴 것으로 표시]로 정리한 Run의 ``error.message``."""
 
 TEAM_RULES_UNAVAILABLE = "team.rules_unavailable"
 """경고 코드: 실행 전 준비자(팀 규칙)가 없어 엔진 검증만으로 실행한다."""
@@ -117,6 +127,7 @@ class RunService:
         before_use: 검증·시작 직전에 부르는 함수(예: 기록 가리기 규칙 갱신).
         resume_origin: 처리기가 맡지 않은 이어 가기 Run의 ``origin``.
         shutdown_timeout: 종료 때 실행 중 Run 정리를 기다리는 최대 초.
+        records: 기록 자리(``SpaceRecorder``, 엔진에 넘긴 것과 같은 객체). None이면 ``runs``만 본다.
     """
 
     def __init__(
@@ -134,8 +145,11 @@ class RunService:
         before_use: Callable[[], None] = lambda: None,
         resume_origin: str = "resume",
         shutdown_timeout: float = 10.0,
+        records: SpaceRecorder | None = None,
     ) -> None:
         self.runtime = runtime
+        self.records = records
+        self._events = events
         self._runs = runs
         self._lookup = lookup
         self.environment = environment
@@ -430,9 +444,11 @@ class RunService:
         version_hash: str | None = None,
         origin: str = "api",
         project_id: str | None = None,
+        labels: Mapping[str, str] | None = None,
     ) -> RunHandle:
         """저장된 팀 구성을 id로 실행한다(``POST /runs``): 정의 출처를 정하고 그 출처에서 그래프를
-        읽은 뒤 ``start_run``과 같이 시작한다(출처는 한 번만 정한다).
+        읽은 뒤 ``start_run``과 같이 시작한다(출처는 한 번만 정한다). ``labels`` = 루트 Run의
+        ``Run.labels``(6R.12, 상한 검사는 ``CreateRunRequest``가 했다).
 
         Raises:
             DefinitionReadError: 그래프를 읽지 못했다(그 출처에 없으면 ``not_found``).
@@ -442,7 +458,7 @@ class RunService:
         source = self.definitions_for(project_id, graph_id)
         graph = self._read_graph(source or self._lookup, graph_id, version_hash)
         return await self._start(
-            graph, input, origin=origin, project_id=project_id, definitions=source
+            graph, input, origin=origin, project_id=project_id, definitions=source, labels=labels
         )
 
     async def start_run(
@@ -456,6 +472,8 @@ class RunService:
         seed: Mapping[str, Mapping[str, Any]] | None = None,
         resumed_from: str | None = None,
         project_id: str | None = None,
+        run_context: Mapping[str, Any] | None = None,
+        labels: Mapping[str, str] | None = None,
     ) -> RunHandle:
         """팀 구성을 실행한다: 검증(차단 이슈) → 준비(``runs.preparers``) → ``GraphRuntime.start``.
 
@@ -464,6 +482,10 @@ class RunService:
             seed: 이어 가기(§2R.10) 노드 입력. ``resumed_from``: 원래 Run id.
             project_id: ``Run.project_id``로 기록한다(불투명 문자열, 자식 Run은 부모 값을 받는다).
                 실행 범위 공급자(``runs.scopes``)에 넘겨 이 Run의 서비스·경고를 정한다.
+            run_context: ``run.started`` payload에 더할 호출자 값(예: 대화 턴의 세션 이어 가기
+                안내 ``chat_sessions``, 5.7R.33y3). 같은 키는 준비자 값이 이긴다.
+            labels: 루트 Run 라벨 ``Run.labels``(6R.12). 상한은 호출자가 검사한다
+                (``run_label_problems``).
 
         Raises:
             GraphValidationError: 실행을 막는 이슈. Run을 만들지 않는다.
@@ -481,6 +503,8 @@ class RunService:
             resumed_from=resumed_from,
             project_id=project_id,
             definitions=source,
+            run_context=run_context,
+            labels=labels,
         )
 
     async def _start(
@@ -495,8 +519,11 @@ class RunService:
         resumed_from: str | None = None,
         project_id: str | None = None,
         definitions: DefinitionSource | None = None,
+        run_context: Mapping[str, Any] | None = None,
+        labels: Mapping[str, str] | None = None,
     ) -> RunHandle:
         services, scope_warnings = self.scope(graph, self.current_services(definitions), project_id)
+        self.check_records(project_id)
         self._raise_blockers(graph, services)
         self._raise_preflight(graph, services)
         prep = self._prepare(graph, services)
@@ -517,21 +544,101 @@ class RunService:
             flow_settings=prep.flow,
             delegation_settings=prep.delegation,
             project_id=project_id,
-            run_context=prep.context,
+            run_context={**(run_context or {}), **prep.context},
             start_warnings=scope_warnings,
+            labels=labels,
         )
 
     def cancel(self, run_id: str, reason: str = "cancelled") -> bool:
         """실행 중 Run 취소 요청(처음 요청이면 True)."""
         return self.runtime.cancel(run_id, reason)
 
-    def current_run(self, run_id: str) -> Run | None:
-        """실행 중이면 손잡이의 Run, 아니면 저장본(없으면 None)."""
+    def check_records(self, project_id: str | None) -> None:
+        """그 프로젝트 기록 DB를 쓸 수 있는지 확인한다(없으면 만들고 계보를 올린다).
+
+        ``project_id``가 없거나 기록 공간 포트가 없으면 아무것도 하지 않는다(호스트 DB).
+
+        Raises:
+            RunPreflightError: 쓸 수 없다(409 ``project.records_unavailable``, ``details.reason``)
+                또는 모르는 프로젝트(404 ``project.not_found``). Run을 만들지 않는다.
+        """
+        records = self.records
+        if not project_id or records is None or not records.spaced or records.records is None:
+            return
+        try:
+            records.records.ensure_writable(project_id)
+        except RecordsUnavailable as exc:
+            raise RunPreflightError(
+                ErrorInfo(
+                    code=ErrorCodes.PROJECT_RECORDS_UNAVAILABLE,
+                    message="이 프로젝트의 기록을 저장할 수 없어 실행을 시작하지 않았습니다",
+                    details={**exc.details(), "project_id": project_id},
+                )
+            ) from None
+        except (UnknownSpace, LookupError):
+            raise RunPreflightError(
+                ErrorInfo(
+                    code=ErrorCodes.PROJECT_NOT_FOUND,
+                    message="프로젝트를 찾을 수 없습니다",
+                    details={"project_id": project_id},
+                )
+            ) from None
+
+    def reader(self, project_id: str | None = None) -> Any:
+        """읽기: ``project_id``가 있고 기록 공간이 있으면 그 공간에 묶인 읽기(``SpaceReader``),
+        아니면 ``runs``(호스트 또는 기억한 자리)."""
+        if self.records is not None:
+            return self.records.for_project(project_id)
+        return self._runs
+
+    def current_run(self, run_id: str, project_id: str | None = None) -> Run | None:
+        """실행 중이면 손잡이의 Run, 아니면 저장본(없으면 None). ``project_id``가 있으면 그 공간."""
         handle = self.runtime.get(run_id)
         if handle is not None:
             return handle.run
+        if project_id is not None and self.records is not None:
+            found_in: Run | None = self.records.for_project(project_id).get(run_id)
+            return found_in
         found: Run | None = self._runs.get(run_id)
         return found
+
+    def resume_for(self, project_id: str | None) -> ResumeService:
+        """그 프로젝트 공간의 Run을 이어 가는 서비스(없으면 호스트 기본 ``resume``)."""
+        if project_id is None or self.records is None or not self.records.spaced:
+            return self.resume
+        reader = self.records.for_project(project_id)
+        return ResumeService(
+            _ScopedRuns(reader),
+            _ScopedEvents(reader),
+            graph_of=self.graph_of_run,
+            node_types=self.node_types,
+            starter=self._start_resumed,
+        )
+
+    def mark_interrupted(self, run_id: str, project_id: str | None = None) -> Run | None:
+        """끝나지 않은 Run을 끊긴 것으로 표시한다(다른 앱의 Run 포함, K33-30). 이 프로세스에서
+        돌고 있으면 끊는다. 이미 끝났으면 그대로. 없으면 None.
+
+        Raises:
+            RunPreflightError: 그 공간에 쓸 수 없다(409 ``project.records_unavailable``).
+        """
+        handle = self.runtime.get(run_id)
+        if handle is not None:
+            handle.interrupt(MARK_INTERRUPTED_MESSAGE)
+            return handle.run
+        run = self.current_run(run_id, project_id)
+        if run is None or run.status not in UNFINISHED:
+            return run
+        if project_id is not None and self.records is not None and self.records.spaced:
+            self.check_records(project_id)
+            assert self.records.records is not None
+            storage = self.records.records.writer(project_id)
+            done = interrupt_run(storage, run_id, message=MARK_INTERRUPTED_MESSAGE)
+            return self.records.for_project(project_id).view(done) if done is not None else None
+        host = self.records.host if self.records is not None else None
+        if host is None:
+            return run
+        return interrupt_run(host, run_id, message=MARK_INTERRUPTED_MESSAGE)
 
     async def _start_resumed(self, request: ResumeStart) -> Run:
         for handler in self._resume_handlers():
@@ -595,6 +702,39 @@ class RunService:
         return operator_descriptors(condition_operators(self.registries))
 
 
+class _ScopedRuns:
+    """``ResumeService``가 쓰는 Run 읽기(공간에 묶인 읽기 위)."""
+
+    def __init__(self, reader: Any) -> None:
+        self._reader = reader
+
+    def get(self, run_id: str) -> Run | None:
+        found: Run | None = self._reader.get(run_id)
+        return found
+
+    def list(self, **filters: Any) -> builtins.list[Run]:
+        found: builtins.list[Run] = self._reader.list(**filters)
+        return found
+
+    def list_node_runs(self, run_id: str) -> builtins.list[Any]:
+        found: builtins.list[Any] = self._reader.list_node_runs(run_id)
+        return found
+
+
+class _ScopedEvents:
+    """``ResumeService``가 쓰는 이벤트 읽기(공간에 묶인 읽기 위)."""
+
+    def __init__(self, reader: Any) -> None:
+        self._reader = reader
+
+    def list(self, run_id: str, **filters: Any) -> builtins.list[Any]:
+        found: builtins.list[Any] = self._reader.events(run_id, **filters)
+        return found
+
+    def last_seq(self, run_id: str) -> int:
+        return int(self._reader.last_seq(run_id))
+
+
 def team_rules_warning() -> Issue:
     """``team.rules_unavailable`` 경고(``GET /server-info``·시작 로그)."""
     return Issue(
@@ -608,6 +748,7 @@ def team_rules_warning() -> Issue:
 
 __all__ = [
     "GRAPH_KIND",
+    "MARK_INTERRUPTED_MESSAGE",
     "TEAM_RULES_UNAVAILABLE",
     "RunService",
     "blocks_run",

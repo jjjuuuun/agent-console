@@ -41,6 +41,23 @@ import type {
 import type { GraphPatch, Issue } from "@agent-console/contracts/definitions";
 import type { MemoryCopyRequest } from "@agent-console/contracts/memory";
 import type { UsageReport } from "@agent-console/contracts/usage";
+import * as sdd from "@agent-console/contracts/sdd";
+import type {
+  ParsedTask,
+  SddChanged,
+  SddInfo,
+  SpecDefinition,
+  SpecRules,
+  SpecTemplate,
+  SpecView,
+  StateTransition,
+  TaskStatusInfo,
+} from "@agent-console/contracts/sdd";
+import type { LabelDisplay, LabelDisplayTarget, RecordSource } from "@agent-console/contracts/common";
+import type { RunPage } from "@agent-console/contracts/runs";
+import type { ConversationPage } from "@agent-console/contracts/chat";
+import type { LogSourceInfo } from "@agent-console/contracts/logs";
+import type { SddChangedMessage } from "@agent-console/contracts/modules";
 
 import packageJson from "../package.json";
 import {
@@ -64,6 +81,8 @@ import {
 
 const pkg = packageJson as { version: string; exports: Record<string, unknown> };
 const modulesOf = contractsSchema["x-modules"] as Record<string, string[]>;
+/** semver 비교용 정수(각 마디 1000 미만 가정). */
+const ver = (text: string): number => text.split(".").reduce((acc, part) => acc * 1000 + Number(part), 0);
 
 describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () => {
   it("하위 모듈마다 package.json exports 하위 경로가 있다", () => {
@@ -266,10 +285,10 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
 
   it("0.12.1(5.7R.33c3): 기록 공간·폴더 확인 보강 — 더하기만, 새 필드는 선택", () => {
     // 지금 버전은 0.12.2 블록이 고정한다(여기는 0.12.1에서 더한 것만 본다).
-    expect(constants.CONTRACTS_VERSION).toMatch(/^0\.12\./);
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.12.1"));
     expect(projects.CONTRACT_VERSION).toBe("3.1.0");
-    expect(chat.CONTRACT_VERSION).toBe("1.2.0");
-    expect(CONTRACT_VERSIONS.common).toBe("1.7.0");
+    expect(ver(chat.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.2.0"));
+    expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.7.0"));
     expect(modulesOf["projects"]).toEqual(
       expect.arrayContaining([
         "ExistingProjectProbe",
@@ -316,10 +335,10 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.12.2(5.7R.34·38): 디스크립터 세션 속성·이슈 hint·group·unset_node_fields — 더하기만", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.12.2");
-    expect(CONTRACT_VERSIONS.runs).toBe("1.6.0");
-    expect(CONTRACT_VERSIONS.definitions).toBe("1.5.0");
-    expect(packageJson.version).toBe("0.12.2");
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.12.2"));
+    expect(ver(CONTRACT_VERSIONS.runs)).toBeGreaterThanOrEqual(ver("1.6.0"));
+    expect(ver(CONTRACT_VERSIONS.definitions)).toBeGreaterThanOrEqual(ver("1.5.0"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(modulesOf["definitions"]).toEqual(expect.arrayContaining(["IssueGroup", "NodeFieldRef"]));
     expectTypeOf<DelegationStrategyDescriptor["session"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<DelegationStrategyDescriptor["backend"]>().toEqualTypeOf<string | null | undefined>();
@@ -331,5 +350,55 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<NonNullable<GraphPatch["unset_node_fields"]>[number]["path"]>().toEqualTypeOf<string>();
     expect(constants.KNOWN_DELEGATION_SESSIONS).toEqual({ SAME: "same", SEPARATE: "separate" });
     expect(constants.KNOWN_DELEGATION_BACKENDS).toEqual({ DELEGATOR: "delegator", TARGET: "target" });
+  });
+
+  it("0.13.0(6R.3): 하위 모듈 sdd 1.0.0, 라벨 표시·페이지 출처·위젯 이름", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.13.0");
+    expect(packageJson.version).toBe("0.13.0");
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.8.0", logs: "1.2.0", runs: "1.7.0", chat: "1.3.0", sdd: "1.0.0", modules: "1.4.0" });
+    expect(sdd.CONTRACT_MODULE).toBe("sdd");
+    expect(sdd.CONTRACT_VERSION).toBe("1.0.0");
+    expect(pkg.exports["./sdd"]).toBeDefined();
+    expect(modulesOf["sdd"]).toEqual(
+      expect.arrayContaining([
+        "SpecTemplate", "SpecDefinition", "SpecRules", "SddSettings", "SpecView", "SpecSummary", "ParsedTask",
+        "TaskPlan", "TraceMatrix", "SddInfo", "SddCapabilities", "SddLimits", "SpecTemplateSummary", "TemplateVariable",
+        "BulkActionsRequest", "BulkActionsResult", "AutomationState", "SaveAsTemplateRequest", "SaveAsTemplateResult",
+        "ImportFileListing", "ImportFile", "SddGateBlockedDetails", "SddChanged",
+      ]),
+    );
+    expect(modulesOf["common"]).toEqual(expect.arrayContaining(["LabelDisplay", "LabelDisplayTarget"]));
+    expect(modulesOf["runs"]).toContain("RunPage");
+    expect(modulesOf["chat"]).toContain("ConversationPage");
+    // 라벨 표시는 웹 경로 문자열을 담지 않는다(역할 + id로 웹이 푼다).
+    expectTypeOf<keyof LabelDisplay>().toEqualTypeOf<"key" | "title" | "target" | "group" | "order">();
+    expectTypeOf<keyof LabelDisplayTarget>().toEqualTypeOf<"role" | "id_from" | "query">();
+    expectTypeOf<NonNullable<ModuleInfo["label_display"]>[number]>().toEqualTypeOf<LabelDisplay>();
+    expectTypeOf<SddInfo["label_display"]>().toEqualTypeOf<LabelDisplay[] | undefined>();
+    expectTypeOf<RecordSource>().toEqualTypeOf<"project" | "app">();
+    expectTypeOf<RunPage["source"]>().toEqualTypeOf<"project" | "app">();
+    expectTypeOf<ConversationPage["source"]>().toEqualTypeOf<"project" | "app">();
+    expectTypeOf<Run["labels"]>().toEqualTypeOf<{ [k: string]: string } | undefined>();
+    expectTypeOf<LogSourceInfo["default_effective"]>().toEqualTypeOf<boolean | null | undefined>();
+    expectTypeOf<StateTransition["from"]>().toEqualTypeOf<string>();
+    expectTypeOf<TaskStatusInfo["label"]>().toEqualTypeOf<string>();
+    expectTypeOf<SpecView["directory"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<ParsedTask["line_hash"]>().toEqualTypeOf<string>();
+    expectTypeOf<SddChangedMessage["payload"]>().toEqualTypeOf<SddChanged>();
+    expectTypeOf<SpecTemplate["rules"]>().toEqualTypeOf<SpecRules | undefined>();
+    expectTypeOf<SpecDefinition["documents"]>().not.toBeAny();
+    expect(constants.KNOWN_UI_WIDGETS).toMatchObject({
+      CONDITION: "condition", REGEX: "regex", TEMPLATE_TEXT: "template-text", GRAPH_REF: "graph-ref",
+      PROFILE_REF: "profile-ref", STATE_REF: "state-ref", STATUS_REF: "status-ref", TONE: "tone",
+    });
+    expect(constants.KNOWN_GATE_TARGETS).toEqual({ RUN: "run", TASK_STATUS: "task_status", DOCUMENT_STATE: "document_state" });
+    expect(constants.KNOWN_DOCUMENT_ROLES).toEqual({ REQUIREMENTS: "requirements", TASKS: "tasks" });
+    expect(constants.RUN_ORIGINS).toContain("sdd");
+    expect(constants.RUN_LABEL_LIMITS).toEqual({ max_labels: 16, max_key_length: 64, max_value_length: 256 });
+    expect(constants.RECORD_SOURCES).toEqual(["project", "app"]);
+    expect(HTTP_STATUS_BY_ERROR_CODE["sdd.document_missing"]).toBe(404);
+    expect(HTTP_STATUS_BY_ERROR_CODE["sdd.template_exists"]).toBe(409);
+    expect(HTTP_STATUS_BY_ERROR_CODE["sdd.gate_blocked"]).toBe(422);
+    expect(KNOWN_ISSUE_CODES.SDD_STATUS_NOT_APPLIED).toBe("sdd.status_not_applied");
   });
 });

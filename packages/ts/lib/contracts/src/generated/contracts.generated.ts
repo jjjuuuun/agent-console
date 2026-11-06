@@ -108,6 +108,11 @@ export type IssueSeverity = "error" | "warning" | "info";
 export type JoinRule = "any" | "all";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AutomationScope".
+ */
+export type AutomationScope = "stage" | "spec";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "BackendLoginPhase".
  */
 export type BackendLoginPhase =
@@ -147,6 +152,11 @@ export type QueueAfterRestart = "ask" | "run" | "drop";
  * via the `definition` "ConflictPolicy".
  */
 export type ConflictPolicy = "skip" | "overwrite" | "rename";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RecordSource".
+ */
+export type RecordSource = "project" | "app";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "DiffOp".
@@ -238,6 +248,21 @@ export type ModuleStatus = string;
 export type RecordsMoveSelect = "project" | "null" | "ids";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TemplateConflictPolicy".
+ */
+export type TemplateConflictPolicy = "fail" | "overwrite" | "rename";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SaveAsTemplateStatus".
+ */
+export type SaveAsTemplateStatus = "created" | "overwritten" | "renamed";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SecretScanMode".
+ */
+export type SecretScanMode = "off" | "warn" | "reject";
+/**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "UsageTrust".
  */
 export type UsageTrust = string;
@@ -260,6 +285,7 @@ export type WsServerMessage =
   | InteractionUpdatedMessage
   | LogsIngestedMessage
   | MemoryChangedMessage
+  | SddChangedMessage
   | ErrorMessage;
 
 /**
@@ -3490,6 +3516,66 @@ export interface AssignProjectSkip {
   project_id?: string | null;
 }
 /**
+ * 자동 진행입니다. 켜면 의존이 끝난 작업을 차례로 실행합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AutomationConfig".
+ */
+export interface AutomationConfig {
+  /**
+   * 켜면 준비된 작업을 자동으로 시작합니다. 기본은 꺼짐입니다.
+   */
+  enabled?: boolean;
+  /**
+   * 자동으로 시작할 때 쓸 실행 프로필입니다.
+   */
+  profile?: string | null;
+  /**
+   * 한 번에 돌릴 작업 수의 상한입니다.
+   */
+  max_parallel?: number;
+  /**
+   * 같은 작업이 이만큼 연달아 실패하면 그 작업을 건너뜁니다.
+   */
+  max_failures?: number;
+  scope?: AutomationScope;
+  [k: string]: unknown;
+}
+/**
+ * 자동 진행 상태(실행 연동이 메모리에 가짐, 스펙에 저장하지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "AutomationState".
+ */
+export interface AutomationState {
+  /**
+   * 스펙 규칙의 자동 진행이 켜져 있다.
+   */
+  enabled: boolean;
+  /**
+   * 지금 새 작업을 시작하고 있다(멈춤이면 false).
+   */
+  running: boolean;
+  /**
+   * 진행 중인 실행 id.
+   */
+  active_runs?: string[];
+  /**
+   * 실패 상한을 넘어 건너뛴 작업 키.
+   */
+  skipped_keys?: string[];
+  /**
+   * 작업 키 → 연속 실패 수.
+   */
+  failures?: {
+    [k: string]: number;
+  };
+  /**
+   * 멈춘 이유(열린 문자열, `KnownAutomationStopReasons`). 진행 중이면 null.
+   */
+  stopped_reason?: string | null;
+}
+/**
  * 실행 백엔드 능력.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -3618,9 +3704,9 @@ export interface CollectorDescriptor {
   emits?: string[];
 }
 /**
- * 표시용 선택 힌트. 없어도 화면이 동작해야 한다(기본: 카테고리 해시 색 + 제목 첫 글자).
+ * 종류를 화면에 어떻게 보일지 정하는 선택 항목입니다.
  *
- * 값 목록은 고정하지 않는다. 화면은 해석할 수 없는 값을 무시하고 기본 표시로 돌아간다.
+ * 비워 두면 화면이 이름의 첫 글자와 자동 색으로 보입니다. 화면이 모르는 값은 무시합니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "UiHints".
@@ -4005,6 +4091,103 @@ export interface BootstrapResponse {
   contracts_version: string;
 }
 /**
+ * `POST /sdd/specs/{id}/bulk-actions`: 고른 작업들에서 쓸 수 있는 동작의 합집합.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BulkActionsRequest".
+ */
+export interface BulkActionsRequest {
+  /**
+   * @minItems 1
+   */
+  task_keys: [string, ...string[]];
+}
+/**
+ * 한꺼번에 시작 대화상자의 동작 목록. 연동이 없으면 빈 목록.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BulkActionsResult".
+ */
+export interface BulkActionsResult {
+  /**
+   * 합집합(연동·동작 id로 같은 것을 묶음).
+   */
+  actions?: TaskAction[];
+  /**
+   * 작업 키 → 그 작업에서 쓸 수 있는 동작.
+   */
+  per_task?: {
+    [k: string]: TaskActionKey[];
+  };
+}
+/**
+ * 작업 연동(X43)이 내는 동작 하나. 기본 연동은 실행 프로필마다 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskAction".
+ */
+export interface TaskAction {
+  integration: string;
+  id: string;
+  /**
+   * 메뉴에 보일 이름(데이터 원문).
+   */
+  label: string;
+  purpose?: string | null;
+  /**
+   * 지금 쓸 수 없는 이유(예: 관문). null = 쓸 수 있음.
+   */
+  disabled?: Issue | null;
+}
+/**
+ * 작업 동작 하나를 가리키는 키(연동 id + 동작 id).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskActionKey".
+ */
+export interface TaskActionKey {
+  integration: string;
+  id: string;
+}
+/**
+ * `POST /sdd/specs/{id}/bulk-start`: 고른 작업을 한 동작으로 시작(상한
+ * `SddLimits.max_bulk_start`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BulkStartRequest".
+ */
+export interface BulkStartRequest {
+  /**
+   * @minItems 1
+   */
+  task_keys: [string, ...string[]];
+  action: TaskActionKey;
+  args?: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * 작업별 결과(그 동작이 안 맞는 작업은 `failed` + `sdd.action_unavailable`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "BulkStartResult".
+ */
+export interface BulkStartResult {
+  items?: TaskActionResult[];
+}
+/**
+ * 작업 동작 결과. `status`는 열린 문자열(알려진 값 `KnownTaskActionStatuses`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskActionResult".
+ */
+export interface TaskActionResult {
+  task_key?: string | null;
+  status: string;
+  run_id?: string | null;
+  issue?: Issue | null;
+}
+/**
  * 노드 실행 묶음 미리보기(`GET /graphs/{id}/nodes/{node}/bundle-preview`, 초안 `POST`).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -4194,39 +4377,22 @@ export interface SessionRef {
   };
 }
 /**
- * `GET /conversations/{id}/sessions` 응답(0.12.1).
+ * `GET /conversations/page` 응답: 대화 목록 커서 페이지(1.3.0).
+ *
+ * 정렬은 `updated_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다
+ * (불투명 문자열). 질의 `?project=`는 서버가 거른다. 프로젝트 목록은 폴더 기록
+ * (`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로 읽는다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ConversationSessions".
+ * via the `definition` "ConversationPage".
  */
-export interface ConversationSessions {
-  conversation_id: string;
+export interface ConversationPage {
+  items?: ConversationSummary[];
   /**
-   * 그대로 이어 갈 수 있는가(missing인 항목이 없음). false면 화면은 배너와 [새 세션으로 계속]·[새 대화]를 보인다.
+   * 다음 페이지 커서. null = 끝.
    */
-  continuable: boolean;
-  items?: SessionStatus[];
-}
-/**
- * 대화 노드 하나의 백엔드 세션 이어 가기 상태.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "SessionStatus".
- */
-export interface SessionStatus {
-  node_id: string;
-  /**
-   * 백엔드 id.
-   */
-  backend: string;
-  /**
-   * 백엔드 세션 id(있으면).
-   */
-  session_id?: string | null;
-  /**
-   * 이어 가기 상태(`KnownSessionStates`, 열린 문자열).
-   */
-  state: string;
+  next_cursor?: string | null;
+  source: RecordSource;
 }
 /**
  * `GET /conversations` 목록 항목, WS `conversation.updated` 내용.
@@ -4264,6 +4430,41 @@ export interface ConversationSummary {
    * 프로젝트 id(0.8.0, 불투명 문자열). null = 프로젝트 없음.
    */
   project_id?: string | null;
+}
+/**
+ * `GET /conversations/{id}/sessions` 응답(0.12.1).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConversationSessions".
+ */
+export interface ConversationSessions {
+  conversation_id: string;
+  /**
+   * 그대로 이어 갈 수 있는가(missing인 항목이 없음). false면 화면은 배너와 [새 세션으로 계속]·[새 대화]를 보인다.
+   */
+  continuable: boolean;
+  items?: SessionStatus[];
+}
+/**
+ * 대화 노드 하나의 백엔드 세션 이어 가기 상태.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SessionStatus".
+ */
+export interface SessionStatus {
+  node_id: string;
+  /**
+   * 백엔드 id.
+   */
+  backend: string;
+  /**
+   * 백엔드 세션 id(있으면).
+   */
+  session_id?: string | null;
+  /**
+   * 이어 가기 상태(`KnownSessionStates`, 열린 문자열).
+   */
+  state: string;
 }
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -4466,6 +4667,8 @@ export interface CopyPlanRequest {
 /**
  * `POST /conversations` 요청. 응답은 `Conversation`(201).
  *
+ * 1.3.0부터 모르는 키를 거부한다(422). 보낼 수 있는 키: `graph_id`·`title`·`project_id`.
+ *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "CreateConversationRequest".
  */
@@ -4503,6 +4706,12 @@ export interface CreateRunRequest {
    * 이 실행의 프로젝트 id(0.8.0). 생략 = 프로젝트 없음. 존재 확인은 연동 모듈이 한다.
    */
   project_id?: string | null;
+  /**
+   * 루트 Run 라벨(1.7.0, `Run.labels`). 상한 `RUN_LABEL_LIMITS`를 넘으면 검증 오류.
+   */
+  labels?: {
+    [k: string]: string;
+  };
 }
 /**
  * 사이클을 허용하는 연결 종류의 반복 정책(0.7.0).
@@ -4728,6 +4937,68 @@ export interface DeletePlan {
   definitions?: DefinitionKey[];
   default_mode?: ProjectDeleteMode;
   warnings?: Issue[];
+}
+/**
+ * `POST /sdd/specs/{id}/documents/{doc}/state` 요청: 문서 상태 전환(전환·관문 검사).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DocumentStateChange".
+ */
+export interface DocumentStateChange {
+  to: string;
+  /**
+   * 상태 바꾼 기록에 남길 한 줄.
+   */
+  note?: string | null;
+}
+/**
+ * 문서 상태 하나(보기용, 라벨이 늘 채워짐).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DocumentStateInfo".
+ */
+export interface DocumentStateInfo {
+  id: string;
+  label: string;
+  tone?: string | null;
+}
+/**
+ * 이 상태의 문서 본문을 고쳤을 때 바꿀 상태입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DocumentStateOnEdit".
+ */
+export interface DocumentStateOnEdit {
+  /**
+   * 본문을 고치면 이 문서 상태로 돌아갑니다.
+   */
+  to: string;
+  [k: string]: unknown;
+}
+/**
+ * 문서 상태 하나입니다(예: 초안, 검토 중, 승인됨).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DocumentStateSpec".
+ */
+export interface DocumentStateSpec {
+  /**
+   * 상태를 가리키는 이름입니다. 전환 규칙과 관문 조건이 이 이름을 씁니다.
+   */
+  id: string;
+  /**
+   * 화면에 보일 이름입니다. 비우면 id를 보입니다.
+   */
+  label?: string | null;
+  /**
+   * 칩 색조입니다(예: success, warning, danger). 모르는 값이면 기본 색입니다.
+   */
+  tone?: string | null;
+  /**
+   * 이 상태의 문서 본문을 고쳤을 때 바꿀 상태입니다. 비우면 그대로 둡니다.
+   */
+  on_edit?: DocumentStateOnEdit | null;
+  [k: string]: unknown;
 }
 /**
  * 저장하지 않은 초안 그래프로 계산하는 요청(검증·계획 미리보기). 저장하지 않는다.
@@ -5190,6 +5461,176 @@ export interface SettingsLayerInfo {
    * 층 값이 온 곳(예: 정의 종류/id, 파일). 표시용.
    */
   source?: string | null;
+}
+/**
+ * `GET /sdd/specs/{id}/syntax`: 병합한 작업 문법과 값마다 출처.
+ *
+ * `sources` 키 = 문법 문서 기준 위치(예: `/task/id_pattern`), 값 = 출처(열린 문자열, 알려진 값
+ * `KnownSyntaxSources` default·settings·spec). 기본 문법이 꺼졌으면 `default`는 나오지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "EffectiveSyntax".
+ */
+export interface EffectiveSyntax {
+  syntax?: SpecSyntax;
+  sources?: {
+    [k: string]: string;
+  };
+  statuses?: TaskStatusInfo[];
+  /**
+   * 작업 문법이 비었다(작업·계획·추적 탭은 '작업 문법 없음').
+   */
+  empty?: boolean;
+}
+/**
+ * 작업·요구·단계를 문서에서 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecSyntax".
+ */
+export interface SpecSyntax {
+  /**
+   * 작업 줄을 읽는 규칙입니다.
+   */
+  task?: TaskSyntax | null;
+  /**
+   * 요구 문서에서 요구 id를 찾는 규칙입니다.
+   */
+  requirement?: RequirementSyntax | null;
+  /**
+   * 작업 문서의 제목을 단계로 보는 규칙입니다.
+   */
+  stage?: StageSyntax | null;
+  [k: string]: unknown;
+}
+/**
+ * 작업 줄을 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskSyntax".
+ */
+export interface TaskSyntax {
+  /**
+   * 어떤 목록 항목을 작업으로 볼지입니다(예: checkbox = 체크 칸 목록).
+   */
+  list_item?: string | null;
+  /**
+   * 체크 칸 글자와 상태의 짝입니다. 규칙의 작업 상태가 있으면 그쪽이 먼저입니다.
+   */
+  statuses?: TaskStatusSpec[] | null;
+  /**
+   * 작업 줄 머리에서 작업 id를 찾는 정규식입니다. id 이름의 묶음을 씁니다.
+   */
+  id_pattern?: string | null;
+  /**
+   * 작업 줄에서 [키: 값] 같은 필드를 찾는 정규식입니다. key와 value 묶음을 씁니다.
+   */
+  field_pattern?: string | null;
+  /**
+   * 필드 값 하나에 여러 값을 적을 때 사이에 넣는 글자입니다.
+   */
+  list_separator?: string | null;
+  /**
+   * 두 작업 id 사이에 넣어 문서 순서상 그 사이 작업 전부를 뜻하는 글자입니다.
+   */
+  range_separator?: string | null;
+  /**
+   * 필드 값이 이 중 하나면 값이 없는 것으로 봅니다(예: 대시).
+   */
+  none_values?: string[] | null;
+  /**
+   * 필드 이름 → 역할입니다. 의존·요구·담당 역할을 계획과 추적 표가 읽습니다.
+   */
+  roles?: {
+    [k: string]: string;
+  } | null;
+  /**
+   * 작업 아래 들여쓴 목록·문단을 작업 본문으로 볼지입니다(예: nested).
+   */
+  body?: string | null;
+  /**
+   * 몇 단계까지 들여쓴 체크 칸을 작업으로 볼지입니다. 비우면 모두 봅니다.
+   */
+  max_depth?: number | null;
+  [k: string]: unknown;
+}
+/**
+ * 작업 상태 하나입니다. 작업 줄의 체크 칸 글자로 상태를 구분합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskStatusSpec".
+ */
+export interface TaskStatusSpec {
+  /**
+   * 상태를 가리키는 이름입니다. 실행 결과 반영과 관문 조건이 이 이름을 씁니다.
+   */
+  id: string;
+  /**
+   * 화면에 보일 이름입니다. 비우면 id를 보입니다.
+   */
+  label?: string | null;
+  /**
+   * 작업 줄 대괄호 안의 글자입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).
+   */
+  marker: string | string[];
+  /**
+   * 켜면 이 상태의 작업을 끝난 것으로 봅니다. 의존 작업의 준비 판단에 씁니다.
+   */
+  done?: boolean;
+  /**
+   * 칩 색조입니다(예: success, warning, danger). 모르는 값이면 기본 색입니다.
+   */
+  tone?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * 요구 문서에서 요구 id를 찾는 규칙입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RequirementSyntax".
+ */
+export interface RequirementSyntax {
+  /**
+   * 줄마다 시험할 정규식 목록입니다. id 이름의 묶음이 요구 id입니다.
+   */
+  patterns?: string[] | null;
+  [k: string]: unknown;
+}
+/**
+ * 작업 문서의 제목을 단계로 보는 규칙입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "StageSyntax".
+ */
+export interface StageSyntax {
+  /**
+   * 이 수준의 제목(2 = 두 번째 큰 제목)을 단계로 봅니다.
+   */
+  heading_levels?: number[] | null;
+  /**
+   * 제목에서 단계 id를 찾는 정규식입니다. 비우면 제목 전체를 씁니다.
+   */
+  pattern?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * 작업 상태 하나(보기용, 라벨이 늘 채워짐 — 데이터의 label → 없으면 id).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskStatusInfo".
+ */
+export interface TaskStatusInfo {
+  id: string;
+  label: string;
+  /**
+   * 체크 칸 글자(첫 번째가 상태를 바꿀 때 쓰는 글자).
+   */
+  markers?: string[];
+  done?: boolean;
+  /**
+   * 색조(열린 문자열).
+   */
+  tone?: string | null;
 }
 /**
  * 팀 구성의 입구 하나(입구 연결의 도착 노드).
@@ -5850,6 +6291,43 @@ export interface ImportWarning {
   keys?: string[];
 }
 /**
+ * 가져오기용 폴더 안 마크다운 파일 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ImportFile".
+ */
+export interface ImportFile {
+  /**
+   * 파일 이름(폴더 기준).
+   */
+  name: string;
+  /**
+   * 바이트.
+   */
+  size: number;
+  /**
+   * 첫 큰 제목, 없으면 파일 이름.
+   */
+  title_guess?: string;
+}
+/**
+ * `GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일(재귀하지 않음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ImportFileListing".
+ */
+export interface ImportFileListing {
+  /**
+   * 프로젝트 폴더 기준 상대 경로(빈 값 = 폴더 루트).
+   */
+  path?: string;
+  files?: ImportFile[];
+  /**
+   * 상한을 넘어 일부만 보였다.
+   */
+  truncated?: boolean;
+}
+/**
  * `POST /resources/import/preview` 응답.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -6014,6 +6492,60 @@ export interface InteractionUpdatedMessage {
  */
 export interface InteractionUpdatedPayload {
   interaction: Interaction;
+}
+/**
+ * Run 라벨 키 하나를 화면에 보이는 규칙(1.8.0).
+ *
+ * 모듈이 `ModuleInfo.label_display`로 선언하는 일반 데이터다. 웹은 `GET /modules`에서 모아
+ * `Run.labels`와 키로 맞춰 칩을 그린다. 웹 경로 문자열 필드는 두지 않는다(`target`은 역할 + id).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "LabelDisplay".
+ */
+export interface LabelDisplay {
+  /**
+   * 라벨 키(접두 포함, 예: 설치자가 정한 접두 + spec).
+   */
+  key: string;
+  /**
+   * 칩 앞에 붙는 이름(사용자 언어).
+   */
+  title: string;
+  /**
+   * 눌렀을 때 열 화면. null = 링크 없는 칩.
+   */
+  target?: LabelDisplayTarget | null;
+  /**
+   * 같은 그룹 라벨을 한 칩 묶음으로 보인다(열린 문자열).
+   */
+  group?: string | null;
+  /**
+   * 칩 순서(작을수록 앞).
+   */
+  order?: number | null;
+}
+/**
+ * 라벨 칩을 눌렀을 때 열 화면. 서버는 웹 경로를 모른다(`FixTarget`과 같은 원칙).
+ *
+ * 웹은 `role`(웹 라우트 역할)을 라우트 데이터로 경로로 풀고, `id_from` 라벨의 값을 그 화면의 항목
+ * id로 쓴다. 그 역할을 맡은 화면이 없으면 칩은 링크 없이 보인다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "LabelDisplayTarget".
+ */
+export interface LabelDisplayTarget {
+  /**
+   * 웹 라우트 역할 이름(열린 문자열).
+   */
+  role: string;
+  /**
+   * 항목 id로 쓸 값을 가진 라벨 키(같은 Run의 라벨).
+   */
+  id_from: string;
+  /**
+   * 화면에 넘길 추가 질의 값 틀. `{value}`(이 라벨 값)·`{labels.<키>}`(같은 Run의 다른 라벨)만 치환한다. null = 없음.
+   */
+  query?: string | null;
 }
 /**
  * `POST /logs/aggregate` 본문. 차원·지표·필터 이름은 열린 문자열.
@@ -6591,6 +7123,10 @@ export interface LogSourceInfo {
    */
   origin?: string;
   status?: LogSourceStatus;
+  /**
+   * 사용자 설정(enabled)을 뺐을 때의 켜짐 값(1.2.0). 디스크립터 기본에 자동 켜기(이 PC에 로그가 있음 등)까지 반영한 값이라 화면의 ↺(기본값으로)가 이 값으로 돌아간다. null = 서버가 알리지 않음(화면은 디스크립터 `default_enabled`를 쓴다).
+   */
+  default_effective?: boolean | null;
 }
 /**
  * 출처 하나의 수집 상태.
@@ -7821,6 +8357,14 @@ export interface ModuleInfo {
    * 필요한 포트 이름(필수·선택 모두, 상태 판단 근거).
    */
   requires?: string[];
+  /**
+   * 모듈 한 줄 설명(1.4.0, 사용자 언어). null = 모듈이 내지 않음(화면은 제공 연결·화면 역할로 대신 설명한다).
+   */
+  description?: string | null;
+  /**
+   * 이 모듈이 붙이는 Run 라벨의 표시 규칙(1.4.0). 웹은 모든 모듈의 값을 모아 `Run.labels`와 키로 맞춘다. 웹 경로는 담지 않는다.
+   */
+  label_display?: LabelDisplay[];
 }
 /**
  * `GET /modules/{id}/options` 응답: 모듈 옵션의 읽기 전용 보기(0.8.0).
@@ -8039,6 +8583,238 @@ export interface OutsideFolderPath {
    */
   layer?: string | null;
   node_id?: string | null;
+}
+/**
+ * 문서 하나의 파싱 상태.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ParsedDocument".
+ */
+export interface ParsedDocument {
+  id: string;
+  file: string;
+  roles?: string[];
+  /**
+   * 본문 파일이 있는가(없으면 다른 값은 비어 있다).
+   */
+  exists?: boolean;
+  /**
+   * 본문 파일 해시(`If-Match`용).
+   */
+  content_hash?: string | null;
+  /**
+   * 이 문서에서 찾은 작업 수.
+   */
+  tasks?: number;
+  /**
+   * 이 문서에서 찾은 요구 수.
+   */
+  requirements?: number;
+}
+/**
+ * 요구 역할 문서에서 찾은 요구 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ParsedRequirement".
+ */
+export interface ParsedRequirement {
+  id: string;
+  /**
+   * 그 줄의 나머지 글(요구 제목 추정).
+   */
+  title?: string;
+  /**
+   * 문서 id.
+   */
+  document: string;
+  line: number;
+}
+/**
+ * 작업 문서의 단계(제목) 하나와 진행.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ParsedStage".
+ */
+export interface ParsedStage {
+  id: string;
+  title?: string;
+  document: string;
+  line: number;
+  /**
+   * 끝난 작업 수.
+   */
+  done?: number;
+  /**
+   * 작업 수.
+   */
+  total?: number;
+}
+/**
+ * 작업 문서에서 찾은 작업 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ParsedTask".
+ */
+export interface ParsedTask {
+  /**
+   * 작업 키(작업 id, 없으면 `@문서:순번`).
+   */
+  key: string;
+  /**
+   * 작업 줄 머리의 작업 id(없으면 null).
+   */
+  id?: string | null;
+  title?: string;
+  /**
+   * 작업 상태 id(`TaskStatusInfo.id`).
+   */
+  status: string;
+  /**
+   * `[키: 값]` 필드 원문.
+   */
+  fields?: {
+    [k: string]: string;
+  };
+  /**
+   * 요구 역할 필드의 요구 id.
+   */
+  requirements?: string[];
+  /**
+   * 의존 역할 필드의 작업 키(범위는 풀어 둠).
+   */
+  dependencies?: string[];
+  stage?: StageRef | null;
+  /**
+   * 문서 id.
+   */
+  document: string;
+  /**
+   * 머리 줄 번호(1부터).
+   */
+  line: number;
+  /**
+   * 머리 줄 해시(상태 고치기 `expected_line_hash`).
+   */
+  line_hash: string;
+  /**
+   * 끝나지 않았고 의존 작업이 모두 끝났다(준비됨).
+   */
+  ready?: boolean;
+  /**
+   * 작업 본문(하위 목록·문단 원문).
+   */
+  body?: string;
+  /**
+   * 이어진 항목(최근 순, 연동이 없으면 빈 값).
+   */
+  links?: TaskLink[];
+  issues?: SpecIssue[];
+}
+/**
+ * 단계 하나를 가리키는 키와 제목.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "StageRef".
+ */
+export interface StageRef {
+  id: string;
+  title?: string;
+}
+/**
+ * 작업과 이어진 외부 항목 하나(작업 연동 X43이 낸다). 기본 연동은 실행(`kind=run`, `ref`=Run
+ * id).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskLink".
+ */
+export interface TaskLink {
+  /**
+   * 연동 id(열린 문자열).
+   */
+  integration: string;
+  /**
+   * 항목 종류(열린 문자열, 알려진 값 `KnownTaskLinkKinds`).
+   */
+  kind: string;
+  /**
+   * 항목 id(실행이면 루트 Run id).
+   */
+  ref: string;
+  /**
+   * 이 연결이 가리키는 작업 키.
+   */
+  task_key?: string | null;
+  /**
+   * 항목 상태(실행이면 Run 상태).
+   */
+  status?: string | null;
+  /**
+   * 항목 시각(Unix epoch 초).
+   */
+  at?: number | null;
+  /**
+   * 실행 프로필 목적(있으면).
+   */
+  purpose?: string | null;
+  /**
+   * 실행 프로필 id(있으면).
+   */
+  profile?: string | null;
+  /**
+   * 토큰·비용 합(실행이면 `Run.totals`).
+   */
+  totals?: Usage | null;
+}
+/**
+ * 스펙 파싱·규칙 검사 이슈. `Issue`에 문서·줄·작업 위치를 더한다(값 원문은 담지 않는다).
+ *
+ * 알려진 코드는 `KnownIssueCodes`의 `sdd.*`(열린 문자열).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecIssue".
+ */
+export interface SpecIssue {
+  severity: IssueSeverity;
+  code: string;
+  message: string;
+  node_id?: string | null;
+  edge_id?: string | null;
+  path?: string | null;
+  details?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 서버가 계산한 수정 제안(없으면 제안 버튼 없음).
+   */
+  suggestions?: IssueSuggestion[];
+  /**
+   * 이 이슈가 있으면 실행이 거부되는지. 검증한 쪽이 정한다. null = 정하지 않음(이 경우 severity가 error인 것만 실행을 막는다).
+   */
+  blocks_run?: boolean | null;
+  /**
+   * 해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음.
+   */
+  fix?: Fix | null;
+  /**
+   * 해결 안내 한 줄(0.12.2, 사용자 언어). null = 없음.
+   */
+  hint?: string | null;
+  /**
+   * 묶음 표시(0.12.2). 같은 `group.key`의 이슈는 한 행으로 묶고 `group.message`를 보인다. 같은 묶음 안 제안의 `id`가 같으면 화면은 버튼 하나로 모두 적용한다. null = 묶지 않음.
+   */
+  group?: IssueGroup | null;
+  /**
+   * 문서 id(문서 하나에 걸린 이슈).
+   */
+  document?: string | null;
+  /**
+   * 그 문서의 줄 번호(1부터).
+   */
+  line?: number | null;
+  /**
+   * 작업 하나에 걸린 이슈면 작업 키.
+   */
+  task_key?: string | null;
 }
 /**
  * 서버가 읽은 플러그인 하나(설정 화면 서버 정보, 읽기 전용).
@@ -8668,6 +9444,36 @@ export interface ReviewDecision {
   ui_hints?: UiHints | null;
 }
 /**
+ * `POST /sdd/templates/check`: 규칙·문서 목록 검사(저장하지 않음). 응답은
+ * `RulesCheckResult`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RulesCheckRequest".
+ */
+export interface RulesCheckRequest {
+  /**
+   * 규칙 문서(스펙 규칙 모양).
+   */
+  rules?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 문서 목록.
+   */
+  documents?: {
+    [k: string]: unknown;
+  }[];
+}
+/**
+ * 규칙 검사 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RulesCheckResult".
+ */
+export interface RulesCheckResult {
+  issues?: SpecIssue[];
+}
+/**
  * 그래프 1회 실행. 하위 그래프는 자식 Run(parent_run_id).
  *
  * 목록 `GET /runs` 질의(0.8.0): `project`(같은 `project_id`만), `root_only`(true면 루트 Run만,
@@ -8735,6 +9541,12 @@ export interface Run {
   ended_at?: number | null;
   error?: ErrorInfo | null;
   totals?: Usage | null;
+  /**
+   * 라벨(1.7.0, 문자열 → 문자열). 실행을 다른 기능의 항목(예: 스펙 작업)과 잇는 일반 필드다. 루트 Run에만 있고 자식 Run은 빈 값이다. 목록 질의 `label=<키>=<값>`(여러 번 = AND). 상한 `RUN_LABEL_LIMITS`.
+   */
+  labels?: {
+    [k: string]: string;
+  };
 }
 /**
  * 일반 RunEvent. 모든 이벤트가 이 형태로 직렬화·저장된다.
@@ -8789,6 +9601,78 @@ export interface RunEventMessage {
   payload: RunEvent;
 }
 /**
+ * `GET /runs/page` 응답: 실행 목록 커서 페이지(1.7.0).
+ *
+ * 정렬은 `created_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다(불투명
+ * 문자열).
+ * 프로젝트 목록은 폴더 기록(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로
+ * 읽는다(두 출처를 시간순으로 섞지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RunPage".
+ */
+export interface RunPage {
+  items?: Run[];
+  /**
+   * 다음 페이지 커서. null = 끝.
+   */
+  next_cursor?: string | null;
+  source: RecordSource;
+}
+/**
+ * 실행 프로필 하나입니다. 작업을 어느 팀 구성에 어떤 입력으로 맡길지 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RunProfile".
+ */
+export interface RunProfile {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 실행 메뉴에 보일 이름입니다.
+   */
+  title: string;
+  /**
+   * 작업을 맡길 팀 구성입니다. 그 프로젝트에 있는 팀 구성이어야 합니다.
+   */
+  graph: string;
+  /**
+   * 이 조건에 맞는 작업에만 메뉴에 보입니다. 비우면 모든 작업에 보입니다.
+   */
+  when?: ConditionSpec | null;
+  /**
+   * 팀 구성 입력 이름 → 값입니다. 값의 중괄호 변수(예: 작업 id)는 실행할 때 채웁니다.
+   */
+  input?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 이 실행의 목적입니다(예: implement, verify). 검증 결과를 고를 때 씁니다.
+   */
+  purpose?: string | null;
+  /**
+   * 실행 상태(예: succeeded) → 바꿀 작업 상태입니다. 비우면 작업 상태를 바꾸지 않습니다.
+   */
+  status_on?: {
+    [k: string]: string;
+  };
+  [k: string]: unknown;
+}
+/**
+ * 문서 틀 목록의 실행 프로필 요약.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "RunProfileSummary".
+ */
+export interface RunProfileSummary {
+  id: string;
+  title?: string;
+  graph?: string;
+  purpose?: string | null;
+}
+/**
  * `GET /runs/{id}` 응답. 이후 WS `subscribe run:<id> since_seq=last_seq`로 증분을 받는다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -8802,6 +9686,237 @@ export interface RunSnapshot {
    * 이 Run이 만든 자식 Run(중첩 팀). null = 서버가 채우지 않음, [] = 자식 없음.
    */
   children?: Run[] | null;
+}
+/**
+ * `POST /sdd/specs/{id}/save-as-template`: 스펙의 문서 목록·규칙을 문서 틀로 복사한다.
+ *
+ * 문서 상태 값·상태 바꾼 기록은 빼고, `include_content=false`면 본문 파일은 빈 파일이다. 프로필의
+ * 팀 구성은 함께 복사하지 않는다(틀은 id만 가진다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SaveAsTemplateRequest".
+ */
+export interface SaveAsTemplateRequest {
+  name: string;
+  /**
+   * 틀 id. 생략하면 이름에서 만든다.
+   */
+  id?: string | null;
+  /**
+   * 문서 본문도 복사한다.
+   */
+  include_content?: boolean;
+  on_conflict?: TemplateConflictPolicy;
+  /**
+   * 저장할 공간. 생략 = 라이브러리(공용 구성).
+   */
+  target?: SpaceRef | null;
+}
+/**
+ * 틀로 저장 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SaveAsTemplateResult".
+ */
+export interface SaveAsTemplateResult {
+  /**
+   * 저장한 문서 틀 id.
+   */
+  template_id: string;
+  target?: SpaceRef;
+  status: SaveAsTemplateStatus;
+}
+/**
+ * 켜진 연동에 따라 쓸 수 있는 기능(포트 유무로 계산).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddCapabilities".
+ */
+export interface SddCapabilities {
+  /**
+   * 작업 실행·실행 칩(실행 연동 있음).
+   */
+  runs?: boolean;
+  /**
+   * 문서 틀 저장·편집(정의 모듈 있음).
+   */
+  templates?: boolean;
+  /**
+   * 검증 결과 열(검증 출처 하나 이상).
+   */
+  verification?: boolean;
+  /**
+   * 자동 진행(연동이 지원).
+   */
+  automation?: boolean;
+  /**
+   * 폴더에서 가져오기·폴더로 내보내기(폴더 접근 있음).
+   */
+  import_export?: boolean;
+}
+/**
+ * WS `sdd.changed` payload: 스펙이 바뀜(본문 없음). 화면은 그 스펙을 다시 불러온다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddChanged".
+ */
+export interface SddChanged {
+  space?: SpaceRef;
+  spec_id: string;
+  /**
+   * 새 정의 버전(삭제면 null).
+   */
+  version_hash?: string | null;
+  /**
+   * 자동 진행 상태만 바뀌었다.
+   */
+  automation?: boolean;
+  deleted?: boolean;
+}
+/**
+ * 스펙 모듈 토픽: 스펙 저장·작업 고치기·외부 변경·자동 진행 상태 변화(본문 없음, 1.4.0).
+ *
+ * 토픽 이름은 스펙 모듈이 정한다. 화면은 받은 스펙을 다시 불러온다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddChangedMessage".
+ */
+export interface SddChangedMessage {
+  /**
+   * 요청 상관 id(선택).
+   */
+  id?: string | null;
+  type: "sdd.changed";
+  payload: SddChanged;
+}
+/**
+ * `sdd.document_missing`(HTTP 404) 오류의 `error.details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddDocumentMissingDetails".
+ */
+export interface SddDocumentMissingDetails {
+  document_id: string;
+  file: string;
+}
+/**
+ * `sdd.gate_blocked`(HTTP 422) 오류의 `error.details`, 동작의 `disabled.details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddGateBlockedDetails".
+ */
+export interface SddGateBlockedDetails {
+  gate_id: string;
+  message?: string;
+  /**
+   * 관문 조건이 보는 문서 id(화면 [문서 열기]).
+   */
+  document_ids?: string[];
+}
+/**
+ * `GET /sdd/info?project=`: 스펙 화면 정보(웹이 모듈 id를 몰라도 켜짐·한도를 안다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddInfo".
+ */
+export interface SddInfo {
+  /**
+   * 스펙 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).
+   */
+  spec_root?: string;
+  /**
+   * 이 공간에 쓸 수 있다(false면 보기만).
+   */
+  writable?: boolean;
+  limits: SddLimits;
+  capabilities?: SddCapabilities;
+  /**
+   * 실행 라벨 표시 규칙(`ModuleInfo.label_display`와 같은 값의 사본).
+   */
+  label_display?: LabelDisplay[];
+}
+/**
+ * 스펙 기능 한도(설치자 옵션).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddLimits".
+ */
+export interface SddLimits {
+  /**
+   * 한꺼번에 시작할 수 있는 작업 수.
+   */
+  max_bulk_start: number;
+  /**
+   * 스펙 하나의 작업 수 상한.
+   */
+  max_tasks: number;
+  /**
+   * 문서 본문 크기 상한(바이트). null = 정하지 않음.
+   */
+  max_doc_bytes?: number | null;
+}
+/**
+ * 스펙 기능의 작업 문법, 비밀 검사, 검증 결과 출처를 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddSettings".
+ */
+export interface SddSettings {
+  /**
+   * 앱이 주는 기본 작업 문법(체크 칸 작업 줄 등)을 씁니다.
+   */
+  include_default_syntax?: boolean;
+  /**
+   * 모든 스펙에 쓸 작업 문법입니다. 스펙 규칙이 있으면 그쪽이 먼저입니다.
+   */
+  syntax?: SpecSyntax | null;
+  secret_scan?: SecretScanMode;
+  /**
+   * 실행 말고 다른 곳(예: 테스트 결과 파일)에서 검증 결과를 가져옵니다.
+   */
+  verification_sources?: VerificationSourceSetting[];
+  [k: string]: unknown;
+}
+/**
+ * 검증 결과를 가져올 곳 하나입니다(예: 테스트 결과 파일).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "VerificationSourceSetting".
+ */
+export interface VerificationSourceSetting {
+  /**
+   * 설치된 검증 결과 출처의 이름입니다.
+   */
+  id: string;
+  /**
+   * 끄면 이 출처의 결과를 추적 표에 넣지 않습니다.
+   */
+  enabled?: boolean;
+  /**
+   * 출처가 정한 설정입니다(예: 결과 파일 위치).
+   */
+  options?: {
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+/**
+ * `sdd.task_changed`(HTTP 409) 오류의 `error.details`: 지금 머리 줄.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SddTaskChangedDetails".
+ */
+export interface SddTaskChangedDetails {
+  task_key: string;
+  /**
+   * 지금 머리 줄 해시(작업이 없으면 null).
+   */
+  line_hash?: string | null;
+  line?: number | null;
+  /**
+   * 지금 머리 줄 원문.
+   */
+  text?: string | null;
 }
 /**
  * 비밀 값으로 의심할 규칙을 더합니다. 기본 규칙에 더하기만 하며 줄일 수는 없습니다.
@@ -8843,6 +9958,495 @@ export interface ServerInfo {
   warnings?: Issue[];
 }
 /**
+ * 정의 파일 옆 본문 폴더의 대표 파일입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecContentRef".
+ */
+export interface SpecContentRef {
+  /**
+   * 본문 폴더 안에서 먼저 열 파일입니다.
+   */
+  file: string;
+  [k: string]: unknown;
+}
+/**
+ * `POST /sdd/specs` 요청. 응답은 `SpecView`(201).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecCreateRequest".
+ */
+export interface SpecCreateRequest {
+  /**
+   * 스펙 id. 생략하면 이름에서 만든다.
+   */
+  id?: string | null;
+  name: string;
+  description?: string;
+  /**
+   * 같은 공간의 문서 틀 id. 생략 = 빈 스펙(빈 문서 하나 + 규칙 비움). 다른 공간의 틀은 먼저 프로젝트로 복사한다.
+   */
+  template?: string | null;
+}
+/**
+ * 스펙입니다. 문서와 문서 상태, 이 스펙의 규칙을 담습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecDefinition".
+ */
+export interface SpecDefinition {
+  /**
+   * 정의 종류 이름입니다. 직접 바꾸지 않습니다.
+   */
+  kind: string;
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  schema_version?: number;
+  /**
+   * 목록에 보일 이름입니다.
+   */
+  name: string;
+  /**
+   * 무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.
+   */
+  description?: string;
+  /**
+   * 문서 목록입니다. 순서대로 탭에 보입니다.
+   */
+  documents?: SpecDocument[];
+  rules?: SpecRules;
+  /**
+   * 찾기·거르기에 쓰는 꼬리표입니다.
+   */
+  labels?: string[];
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 본문 폴더의 대표 파일입니다. 앱이 채웁니다.
+   */
+  content?: SpecContentRef | null;
+  [k: string]: unknown;
+}
+/**
+ * 스펙 문서 하나입니다. 순서대로 탭에 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecDocument".
+ */
+export interface SpecDocument {
+  /**
+   * 문서를 가리키는 이름입니다. 관문 조건과 입력 틀 변수가 이 이름을 씁니다.
+   */
+  id: string;
+  /**
+   * 탭과 목록에 보일 문서 이름입니다.
+   */
+  title: string;
+  /**
+   * 본문 파일 이름입니다. 스펙 폴더 안 상대 경로만 씁니다.
+   */
+  file: string;
+  /**
+   * 이 문서를 무엇으로 읽을지입니다(requirements = 요구, tasks = 작업). 비우면 읽기만 합니다.
+   */
+  roles?: string[];
+  /**
+   * 지금 문서 상태입니다. 상태 전환 버튼으로 바꿉니다.
+   */
+  state?: string | null;
+  /**
+   * 상태를 마지막으로 바꾼 쪽과 시각입니다. 앱이 채웁니다.
+   */
+  state_changed?: StateChange | null;
+  [k: string]: unknown;
+}
+/**
+ * 문서 상태를 마지막으로 바꾼 기록입니다. 앱이 채웁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "StateChange".
+ */
+export interface StateChange {
+  /**
+   * 상태를 바꾼 쪽입니다(예: human = 사람, run = 실행).
+   */
+  by: string;
+  /**
+   * 바꾼 시각입니다(1970년부터 센 초).
+   */
+  at: number;
+  /**
+   * 실행이 바꿨으면 그 실행 id입니다.
+   */
+  run_id?: string | null;
+  /**
+   * 바꿀 때 남긴 한 줄 메모입니다.
+   */
+  note?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * 스펙 규칙입니다. 문서 상태·승인, 작업 상태, 관문, 실행 프로필, 검증, 자동 진행을 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecRules".
+ */
+export interface SpecRules {
+  /**
+   * 작업·요구·단계를 문서에서 읽는 규칙입니다. 비우면 앱 설정과 기본 규칙을 씁니다.
+   */
+  syntax?: SpecSyntax | null;
+  /**
+   * 문서가 가질 수 있는 상태입니다(예: 초안, 승인됨). 비우면 상태를 쓰지 않습니다.
+   */
+  document_states?: DocumentStateSpec[] | null;
+  /**
+   * 새 문서가 갖는 상태입니다. 비우면 문서 상태 목록의 첫 번째입니다.
+   */
+  initial_document_state?: string | null;
+  /**
+   * 문서 상태를 바꿀 수 있는 길과 바꿀 수 있는 쪽입니다.
+   */
+  transitions?: StateTransition[] | null;
+  /**
+   * 작업 상태와 체크 칸 글자입니다. 비우면 작업 문법의 상태를 씁니다.
+   */
+  task_statuses?: TaskStatusSpec[] | null;
+  /**
+   * 조건이 맞기 전에는 실행이나 상태 바꾸기를 막습니다. 기본은 없습니다.
+   */
+  gates?: SpecGate[] | null;
+  /**
+   * 작업을 맡길 팀 구성과 입력입니다. 작업의 실행 메뉴에 보입니다.
+   */
+  run_profiles?: RunProfile[] | null;
+  /**
+   * 어떤 실행을 검증으로 볼지 정합니다. 추적 표의 검증 열에 씁니다.
+   */
+  verification?: VerificationConfig | null;
+  /**
+   * 준비된 작업을 자동으로 시작하는 설정입니다. 비우면 꺼짐입니다.
+   */
+  automation?: AutomationConfig | null;
+  [k: string]: unknown;
+}
+/**
+ * 문서 상태를 바꿀 수 있는 길 하나입니다. 누가 바꿀 수 있는지도 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "StateTransition".
+ */
+export interface StateTransition {
+  /**
+   * 이 상태에서 출발합니다. 별표(*)는 어느 상태에서나 뜻입니다.
+   */
+  from: string;
+  /**
+   * 이 상태로 바꿉니다.
+   */
+  to: string;
+  /**
+   * 이 전환을 할 수 있는 쪽입니다(예: human = 사람, run = 실행). 비우면 아무도 못 합니다.
+   */
+  by?: string[];
+  [k: string]: unknown;
+}
+/**
+ * 관문 하나입니다. 조건이 맞지 않으면 실행이나 상태 바꾸기를 막고 안내 문장을 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecGate".
+ */
+export interface SpecGate {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 이 관문이 막는 일입니다(run = 실행, task_status = 작업 상태, document_state = 문서 상태).
+   */
+  applies_to?: string[];
+  require?: ConditionSpec;
+  /**
+   * 막혔을 때 화면에 보일 문장입니다.
+   */
+  message?: string;
+  [k: string]: unknown;
+}
+/**
+ * 어떤 실행을 검증으로 볼지와 실행 결과를 검증 결과로 바꾸는 표입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "VerificationConfig".
+ */
+export interface VerificationConfig {
+  /**
+   * 이 목적의 실행 프로필로 돌린 실행을 검증으로 봅니다.
+   */
+  purposes?: string[];
+  /**
+   * 실행 상태 → 검증 결과(예: succeeded → pass)입니다. 없는 상태는 그대로 씁니다.
+   */
+  result_map?: {
+    [k: string]: string;
+  };
+  [k: string]: unknown;
+}
+/**
+ * `GET /sdd/specs/{id}/documents/{doc}` 응답: 본문 원문과 해시.
+ *
+ * 본문 파일이 없으면 404 `sdd.document_missing`(읽기로 파일을 만들지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecDocumentContent".
+ */
+export interface SpecDocumentContent {
+  document_id: string;
+  file: string;
+  content: string;
+  /**
+   * 본문 해시(`If-Match`).
+   */
+  content_hash: string;
+  /**
+   * 정보 이슈(예: `sdd.secret_suspect`, 위치만·값 없음).
+   */
+  issues?: SpecIssue[];
+}
+/**
+ * 스펙 목록의 문서 상태 칩 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecDocumentSummary".
+ */
+export interface SpecDocumentSummary {
+  id: string;
+  title?: string;
+  state?: string | null;
+  /**
+   * 풀린 상태 라벨(상태가 있으면).
+   */
+  state_label?: string | null;
+  tone?: string | null;
+}
+/**
+ * `PUT /sdd/specs/{id}/documents/{doc}` 요청. `If-Match` 본문 해시, 새로 만들 때만
+ * `If-None-Match: *`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecDocumentWrite".
+ */
+export interface SpecDocumentWrite {
+  content: string;
+}
+/**
+ * `POST /sdd/specs/{id}/export`: 스펙 문서를 프로젝트 폴더 안 경로로 복사한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecExportRequest".
+ */
+export interface SpecExportRequest {
+  /**
+   * 프로젝트 폴더 기준 상대 경로(앱 구성 폴더 안은 거부).
+   */
+  to_dir: string;
+  /**
+   * false면 있는 파일은 건너뛴다.
+   */
+  overwrite?: boolean;
+}
+/**
+ * 폴더로 내보내기 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecExportResult".
+ */
+export interface SpecExportResult {
+  to_dir: string;
+  /**
+   * 쓴 파일(to_dir 기준).
+   */
+  written?: string[];
+  /**
+   * 있어서 건너뛴 파일.
+   */
+  skipped?: string[];
+}
+/**
+ * `POST /sdd/specs/import`: 프로젝트 폴더 안 마크다운 파일을 새 스펙 본문으로 **복사**한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecImportRequest".
+ */
+export interface SpecImportRequest {
+  id?: string | null;
+  name: string;
+  /**
+   * 프로젝트 폴더 기준 상대 경로(링크·`..` 거부).
+   *
+   * @minItems 1
+   */
+  files: [string, ...string[]];
+}
+/**
+ * 스펙 문서를 파싱한 결과(읽을 때마다 계산, 저장하지 않음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecIndex".
+ */
+export interface SpecIndex {
+  documents?: ParsedDocument[];
+  requirements?: ParsedRequirement[];
+  stages?: ParsedStage[];
+  tasks?: ParsedTask[];
+  issues?: SpecIssue[];
+}
+/**
+ * `GET /sdd/specs` 목록 항목.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecSummary".
+ */
+export interface SpecSummary {
+  id: string;
+  name?: string;
+  description?: string;
+  /**
+   * 문서 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).
+   */
+  directory?: string;
+  documents?: SpecDocumentSummary[];
+  /**
+   * 작업 상태 id → 작업 수.
+   */
+  task_counts?: {
+    [k: string]: number;
+  };
+  tasks_total?: number;
+  tasks_done?: number;
+  /**
+   * 준비된 작업 수.
+   */
+  ready?: number;
+  /**
+   * 끝나지 않은 첫 단계(없으면 null).
+   */
+  current_stage?: StageRef | null;
+  /**
+   * 마지막 저장 시각(Unix epoch 초).
+   */
+  updated_at?: number | null;
+  /**
+   * 오류 이슈 수(자세한 것은 스펙 보기).
+   */
+  issues?: number;
+}
+/**
+ * 문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecTemplate".
+ */
+export interface SpecTemplate {
+  /**
+   * 정의 종류 이름입니다. 직접 바꾸지 않습니다.
+   */
+  kind: string;
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  schema_version?: number;
+  /**
+   * 목록에 보일 이름입니다.
+   */
+  name: string;
+  /**
+   * 무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.
+   */
+  description?: string;
+  /**
+   * 문서 목록입니다. 순서대로 탭에 보입니다.
+   */
+  documents?: SpecDocument[];
+  rules?: SpecRules;
+  /**
+   * 찾기·거르기에 쓰는 꼬리표입니다.
+   */
+  labels?: string[];
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 본문 폴더의 대표 파일입니다. 앱이 채웁니다.
+   */
+  content?: SpecContentRef | null;
+  [k: string]: unknown;
+}
+/**
+ * `GET /sdd/templates` 항목: 이 공간의 문서 틀 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecTemplateSummary".
+ */
+export interface SpecTemplateSummary {
+  id: string;
+  name?: string;
+  description?: string;
+  documents?: SpecDocument[];
+  run_profiles?: RunProfileSummary[];
+  issues?: SpecIssue[];
+}
+/**
+ * `GET /sdd/specs/{id}`: 스펙 정의 + 파싱 결과 + 풀린 라벨.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecView".
+ */
+export interface SpecView {
+  spec: SpecDefinition;
+  index?: SpecIndex;
+  /**
+   * 정의 버전 해시(`If-Match`용).
+   */
+  version_hash: string;
+  /**
+   * 문서 폴더(프로젝트 폴더 기준 상대 경로, 화면은 그대로 보인다).
+   */
+  directory?: string;
+  /**
+   * 유효 작업 상태(규칙 → 문법 순, 라벨 채움).
+   */
+  task_statuses?: TaskStatusInfo[];
+  /**
+   * 유효 문서 상태(라벨 채움).
+   */
+  document_states?: DocumentStateInfo[];
+  /**
+   * 자동 진행 상태. 실행 연동이 없으면 null.
+   */
+  automation_state?: AutomationState | null;
+  /**
+   * 규칙 검사 이슈.
+   */
+  issues?: SpecIssue[];
+}
+/**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "SubscribeMessage".
  */
@@ -8869,6 +10473,87 @@ export interface SubscribePayload {
   since_seq?: number | null;
 }
 /**
+ * `POST /sdd/specs/{id}/tasks/{key}/actions/{integration}/{action}` 요청.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskActionRequest".
+ */
+export interface TaskActionRequest {
+  /**
+   * 동작이 정한 인자.
+   */
+  args?: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * `PATCH /sdd/specs/{id}/tasks/{key}`: 작업 머리 줄의 상태·필드만 고친다(줄 하나).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskPatch".
+ */
+export interface TaskPatch {
+  /**
+   * 바꿀 작업 상태 id. 생략 = 그대로.
+   */
+  status?: string | null;
+  /**
+   * 바꿀 필드(값 null = 필드 지우기). 생략 = 그대로.
+   */
+  fields?: {
+    [k: string]: string | null;
+  } | null;
+  /**
+   * 화면이 본 머리 줄 해시. 다르면 409 `sdd.task_changed`.
+   */
+  expected_line_hash: string;
+}
+/**
+ * 작업 고치기 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskPatchResult".
+ */
+export interface TaskPatchResult {
+  task: ParsedTask;
+  /**
+   * 저장 뒤 스펙 정의 버전.
+   */
+  version_hash: string;
+  /**
+   * 저장 뒤 작업 문서 본문 해시.
+   */
+  content_hash: string;
+}
+/**
+ * `GET /sdd/specs/{id}/plan`: 끝나지 않은 작업의 의존 계획.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TaskPlan".
+ */
+export interface TaskPlan {
+  /**
+   * 지금 시작할 수 있는 작업 키.
+   */
+  ready?: string[];
+  /**
+   * 위상 층(= 병렬 묶음), 앞에서부터 차례.
+   */
+  layers?: string[][];
+  /**
+   * 가장 긴 의존 사슬(= 병목), 시작 → 끝.
+   */
+  critical_path?: string[];
+  /**
+   * 끝나지 않은 의존이 있어 기다리는 작업 키.
+   */
+  blocked?: string[];
+  /**
+   * 순환 의존(이슈로도 낸다).
+   */
+  cycles?: string[][];
+}
+/**
  * 팀 구성 실행 계획 요약(`GET /graphs/{id}/plan`, 초안 `POST /graphs/plan`).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -8883,6 +10568,17 @@ export interface TeamPlanSummary {
   grants?: {
     [k: string]: InteractionGrant;
   };
+}
+/**
+ * 실행 프로필 입력 틀 변수 하나(`{이름}`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TemplateVariable".
+ */
+export interface TemplateVariable {
+  name: string;
+  description?: string;
+  example?: string | null;
 }
 /**
  * 플랫폼 실행분 토큰 집계 한 줄. 비어 있는 차원은 그 차원으로 나누지 않은 것이다.
@@ -8992,6 +10688,120 @@ export interface TraceLink {
    * 도착 span이 자식 Run에 있으면 그 Run id.
    */
   run_id?: string | null;
+}
+/**
+ * `GET /sdd/specs/{id}/trace`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TraceMatrix".
+ */
+export interface TraceMatrix {
+  rows?: TraceRow[];
+  orphans?: TraceOrphans;
+  issues?: SpecIssue[];
+}
+/**
+ * 추적 표의 요구 하나: 요구 → 작업 → 실행 → 검증.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TraceRow".
+ */
+export interface TraceRow {
+  /**
+   * 요구 id.
+   */
+  id: string;
+  title?: string;
+  document: string;
+  line: number;
+  /**
+   * 이 요구를 참조하는 작업 키.
+   */
+  tasks?: string[];
+  /**
+   * 이 작업들의 최근 실행.
+   */
+  runs?: TaskLink[];
+  /**
+   * 이 작업들 실행의 토큰 합.
+   */
+  totals?: Usage | null;
+  verification?: TraceVerification | null;
+  results?: VerificationResult[];
+  /**
+   * 빈 곳 코드(열린 문자열, `KnownTraceGaps`).
+   */
+  gaps?: string[];
+}
+/**
+ * 추적 행의 마지막 검증 결과 요약.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TraceVerification".
+ */
+export interface TraceVerification {
+  status: string;
+  at?: number | null;
+  source?: string | null;
+}
+/**
+ * 검증 결과 하나(검증 결과 출처 X42가 낸다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "VerificationResult".
+ */
+export interface VerificationResult {
+  /**
+   * 출처 id(기본 `runs`).
+   */
+  source: string;
+  /**
+   * 결과(열린 문자열, 예: pass·fail·unknown).
+   */
+  status: string;
+  task_key?: string | null;
+  requirement_ids?: string[];
+  label?: string;
+  at?: number | null;
+  ref?: VerificationRef;
+  detail?: string | null;
+}
+/**
+ * 검증 결과의 근거: 실행 또는 프로젝트 폴더 안 파일.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "VerificationRef".
+ */
+export interface VerificationRef {
+  run_id?: string | null;
+  /**
+   * 프로젝트 폴더 기준 상대 경로.
+   */
+  path?: string | null;
+}
+/**
+ * 추적 표 밖의 빈 곳.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TraceOrphans".
+ */
+export interface TraceOrphans {
+  tasks_without_requirements?: string[];
+  unknown_requirement_refs?: TraceUnknownRef[];
+  /**
+   * 지금 문서에 없는 작업 키를 가리키는 연결(이름 바뀜 등).
+   */
+  unknown_task_links?: TaskLink[];
+}
+/**
+ * 작업이 참조했지만 요구 문서에 없는 요구 id.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "TraceUnknownRef".
+ */
+export interface TraceUnknownRef {
+  task_key: string;
+  requirement_id: string;
 }
 /**
  * 화면 동작 설정.
@@ -9410,22 +11220,23 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.12.2" as const;
+export const CONTRACTS_VERSION = "0.13.0" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.7.0",
+  "common": "1.8.0",
   "resources": "1.1.0",
-  "logs": "1.1.0",
+  "logs": "1.2.0",
   "definitions": "1.5.0",
-  "runs": "1.6.0",
+  "runs": "1.7.0",
   "usage": "1.1.0",
   "projects": "3.1.0",
-  "chat": "1.2.0",
+  "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
   "memory": "1.1.0",
-  "modules": "1.3.0"
+  "sdd": "1.0.0",
+  "modules": "1.4.0"
 } as const;
 
 export const USAGE_REPORT_PARTS = [
@@ -9519,8 +11330,36 @@ export const RUN_ORIGINS = [
   "web",
   "api",
   "task",
-  "resume"
+  "resume",
+  "sdd"
 ] as const;
+
+export const RUN_LABEL_LIMITS = {
+  "max_labels": 16,
+  "max_key_length": 64,
+  "max_value_length": 256
+} as const;
+
+export const RECORD_SOURCES = [
+  "project",
+  "app"
+] as const;
+
+export const KNOWN_UI_WIDGETS = {
+  "ARCHITECTURE_PROFILES": "architecture-profiles",
+  "MEMORY_SCOPE_KINDS": "memory-scope-kinds",
+  "MEMORY_SCOPE_KIND": "memory-scope-kind",
+  "MEMORY_RETENTION_RULES": "memory-retention-rules",
+  "CONDITION_LIST": "condition-list",
+  "CONDITION": "condition",
+  "REGEX": "regex",
+  "TEMPLATE_TEXT": "template-text",
+  "GRAPH_REF": "graph-ref",
+  "PROFILE_REF": "profile-ref",
+  "STATE_REF": "state-ref",
+  "STATUS_REF": "status-ref",
+  "TONE": "tone"
+} as const;
 
 export const LOG_EVENT_ORDERS = [
   "asc",
@@ -9585,7 +11424,17 @@ export const ERROR_CODES = {
   "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
   "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
   "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
-  "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable"
+  "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
+  "SDD_NOT_FOUND": "sdd.not_found",
+  "SDD_DOCUMENT_MISSING": "sdd.document_missing",
+  "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
+  "SDD_GATE_BLOCKED": "sdd.gate_blocked",
+  "SDD_TASK_CHANGED": "sdd.task_changed",
+  "SDD_TRANSITION_DENIED": "sdd.transition_denied",
+  "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
+  "SDD_SPACES_UNAVAILABLE": "sdd.spaces_unavailable",
+  "SDD_CONFIG_READONLY": "sdd.config_readonly",
+  "SDD_SECRET_REJECTED": "sdd.secret_rejected"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -9644,7 +11493,17 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "folders.dialog_busy": 409,
   "folders.dialog_timeout": 409,
   "project.records_unavailable": 409,
-  "chat.session_unavailable": 409
+  "chat.session_unavailable": 409,
+  "sdd.not_found": 404,
+  "sdd.document_missing": 404,
+  "sdd.template_exists": 409,
+  "sdd.gate_blocked": 422,
+  "sdd.task_changed": 409,
+  "sdd.transition_denied": 403,
+  "sdd.action_unavailable": 409,
+  "sdd.spaces_unavailable": 409,
+  "sdd.config_readonly": 409,
+  "sdd.secret_rejected": 422
 } as const;
 
 export const KNOWN_ISSUE_CODES = {
@@ -9709,7 +11568,31 @@ export const KNOWN_ISSUE_CODES = {
   "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
   "PROJECT_NETWORK_FS": "project.network_fs",
   "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
-  "RUN_OTHER_HOST": "run.other_host"
+  "RUN_OTHER_HOST": "run.other_host",
+  "SDD_GATE_BLOCKED": "sdd.gate_blocked",
+  "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
+  "SDD_DOCUMENT_MISSING": "sdd.document_missing",
+  "SDD_TASK_CHANGED": "sdd.task_changed",
+  "SDD_DUPLICATE_TASK_ID": "sdd.duplicate_task_id",
+  "SDD_UNKNOWN_DEPENDENCY": "sdd.unknown_dependency",
+  "SDD_DEPENDENCY_CYCLE": "sdd.dependency_cycle",
+  "SDD_UNKNOWN_STATUS_MARKER": "sdd.unknown_status_marker",
+  "SDD_RANGE_UNRESOLVED": "sdd.range_unresolved",
+  "SDD_UNKNOWN_REQUIREMENT": "sdd.unknown_requirement",
+  "SDD_PARSE_TIMEOUT": "sdd.parse_timeout",
+  "SDD_TOO_MANY_TASKS": "sdd.too_many_tasks",
+  "SDD_SYNTAX_MISSING": "sdd.syntax_missing",
+  "SDD_INVALID_PATTERN": "sdd.invalid_pattern",
+  "SDD_UNKNOWN_STATE": "sdd.unknown_state",
+  "SDD_DUPLICATE_STATUS_MARKER": "sdd.duplicate_status_marker",
+  "SDD_UNKNOWN_VARIABLE": "sdd.unknown_variable",
+  "SDD_PROFILE_GRAPH_MISSING": "sdd.profile_graph_missing",
+  "SDD_UNKNOWN_PROFILE": "sdd.unknown_profile",
+  "SDD_STATUS_NOT_APPLIED": "sdd.status_not_applied",
+  "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
+  "SDD_SECRET_REJECTED": "sdd.secret_rejected",
+  "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
+  "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {
@@ -9847,6 +11730,62 @@ export const KNOWN_DELEGATION_SESSIONS = {
 export const KNOWN_DELEGATION_BACKENDS = {
   "DELEGATOR": "delegator",
   "TARGET": "target"
+} as const;
+
+export const KNOWN_DOCUMENT_ROLES = {
+  "REQUIREMENTS": "requirements",
+  "TASKS": "tasks"
+} as const;
+
+export const KNOWN_TASK_FIELD_ROLES = {
+  "DEPENDENCIES": "dependencies",
+  "REQUIREMENTS": "requirements",
+  "ASSIGNEE": "assignee",
+  "WEIGHT": "weight"
+} as const;
+
+export const KNOWN_GATE_TARGETS = {
+  "RUN": "run",
+  "TASK_STATUS": "task_status",
+  "DOCUMENT_STATE": "document_state"
+} as const;
+
+export const KNOWN_TRANSITION_ACTORS = {
+  "HUMAN": "human",
+  "RUN": "run",
+  "AGENT": "agent"
+} as const;
+
+export const KNOWN_TRACE_GAPS = {
+  "NO_TASK": "no_task",
+  "NO_RUN": "no_run",
+  "NOT_VERIFIED": "not_verified",
+  "VERIFICATION_FAILED": "verification_failed",
+  "TASK_NOT_DONE": "task_not_done"
+} as const;
+
+export const KNOWN_TASK_LINK_KINDS = {
+  "RUN": "run"
+} as const;
+
+export const KNOWN_AUTOMATION_STOP_REASONS = {
+  "USER": "user",
+  "STAGE_DONE": "stage_done",
+  "SPEC_DONE": "spec_done",
+  "FAILURES": "failures",
+  "LINK_DISABLED": "link_disabled"
+} as const;
+
+export const KNOWN_SYNTAX_SOURCES = {
+  "DEFAULT": "default",
+  "SETTINGS": "settings",
+  "SPEC": "spec"
+} as const;
+
+export const KNOWN_TASK_ACTION_STATUSES = {
+  "STARTED": "started",
+  "BLOCKED": "blocked",
+  "FAILED": "failed"
 } as const;
 
 export const USER_TEXT_RULES = {

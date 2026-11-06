@@ -89,6 +89,19 @@ def test_disabled_by_default(tmp_path: Path) -> None:
     assert set(infos) == {"normalized-v1", "mapped-jsonl"}
     assert not any(i.enabled for i in infos.values())
     assert all(i.origin == "plugin" for i in infos.values())
+    assert all(i.default_effective is False for i in infos.values())
+
+
+def test_default_effective_uses_defaults_not_settings(tmp_path: Path) -> None:
+    """``default_effective`` = 넘긴 기본값 → 디스크립터 기본, 사용자 설정은 보지 않는다(6R.7)."""
+    ingestor, _ = _ingestor()
+    settings = _settings(tmp_path)  # normalized-v1을 켬
+    infos = {i.descriptor.id: i for i in ingestor.sources(settings)}
+    assert infos["normalized-v1"].enabled is True
+    assert infos["normalized-v1"].default_effective is False
+    infos = {i.descriptor.id: i for i in ingestor.sources(None, defaults={"mapped-jsonl": True})}
+    assert infos["mapped-jsonl"].default_effective is True
+    assert infos["mapped-jsonl"].enabled is False  # enabled에는 반영하지 않는다(호출자 몫)
 
 
 def test_shrunk_file_reread_without_duplicates(tmp_path: Path) -> None:

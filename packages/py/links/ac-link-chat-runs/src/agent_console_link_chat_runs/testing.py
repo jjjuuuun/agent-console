@@ -94,6 +94,7 @@ class LocalRunStarter:
         seed: Mapping[str, Mapping[str, Any]] | None = None,
         resumed_from: str | None = None,
         project_id: str | None = None,
+        run_context: Mapping[str, Any] | None = None,
     ) -> LocalRunHandle:
         self._n += 1
         self.calls.append(
@@ -106,6 +107,7 @@ class LocalRunStarter:
                 "seed": seed,
                 "resumed_from": resumed_from,
                 "project_id": project_id,
+                "run_context": dict(run_context or {}),
             }
         )
         run = Run(

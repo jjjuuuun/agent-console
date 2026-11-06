@@ -2113,6 +2113,7 @@ class GraphRuntime:
         project_id: str | None = None,
         run_context: Mapping[str, Any] | None = None,
         start_warnings: Sequence[Issue] = (),
+        labels: Mapping[str, str] | None = None,
     ) -> RunHandle:
         """Run을 만들고(`run.created` 저장 완료 후) 백그라운드에서 실행을 시작한다.
 
@@ -2148,6 +2149,8 @@ class GraphRuntime:
                 준비자가 다른 값을 주지 않으면 같은 값을 받는다.
             start_warnings: `run.started` 뒤에 `log.warning`으로 낼 실행 수준 경고(예: 준비 중
                 알게 된 문제). `details`에 `code`를 더한다.
+            labels: Run 메타 `Run.labels`(6R.12, 루트 Run에만). 엔진은 뜻을 모르고 기록만 한다.
+                자식 Run은 물려받지 않는다. 상한 검사는 호출자(`CreateRunRequest`) 몫이다.
 
         Raises:
             GraphValidationError: `validate`가 참이고 error 이슈가 있을 때(Run을 만들지 않음).
@@ -2183,6 +2186,7 @@ class GraphRuntime:
             resumed_from=resumed_from,
             project_id=project_id,
             created_at=self._settings.clock(),
+            labels=dict(labels or {}),
         )
         policy = WaitPolicy(
             grants=dict(interaction_grants or {}),

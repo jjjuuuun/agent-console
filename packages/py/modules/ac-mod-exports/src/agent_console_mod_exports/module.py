@@ -132,7 +132,7 @@ class ExportsModule:
         version=_version(),
         kind="feature",
         title="내보내기",
-        description="형식 목록·미리보기·보관 파일·허용 폴더 쓰기(/exporters, /exports/*)",
+        description="구성을 다른 도구 형식으로 미리 보고 지정한 폴더에 내보낸다",
         requires=(DEFINITIONS_LOOKUP,),
         optional=(EXPORT_DEPENDENCIES, SECRET_RULES, PROJECT_FOLDERS, DEFINITIONS_SPACES),
         settings_schema=ExportModuleSettings,

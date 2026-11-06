@@ -75,7 +75,20 @@ def run_sessions(
 
 
 def run_tree_ids(runs: RunReader, root: str) -> list[str]:
-    """``root``와 아래 모든 자식 Run id(넓이 우선, ``root`` 먼저). 순환이 있어도 한 번씩만."""
+    """``root``와 아래 모든 자식 Run id(``root`` 먼저). 순환이 있어도 한 번씩만.
+
+    ``root``가 루트 Run이고 읽기에 선택 메서드 ``descendants(root_run_id)``(``RunRepository``,
+    ``root_run_id`` 색인 질의 한 번, 6R.12 M-15)가 있으면 그것을 쓴다(뒤는 생성 순). 아니면 직접
+    자식을 ``list(parent_run_id=)``로 넓이 우선으로 따라간다(중간 Run을 고른 경우, 자손 질의가 빈
+    경우 — ``root_run_id``를 적지 않은 옛 기록 포함).
+    """
+    finder = getattr(runs, "descendants", None)
+    if callable(finder):
+        top = runs.get(root)
+        if top is not None and top.root_run_id is None:
+            found = [r.id for r in finder(root)]
+            if found:
+                return list(dict.fromkeys([root, *found]))
     seen = [root]
     known = {root}
     queue = [root]

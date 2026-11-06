@@ -6,7 +6,7 @@ import contextlib
 import logging
 import time
 import uuid
-from collections.abc import Coroutine, Mapping
+from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,14 +14,19 @@ from agent_console_contracts import (
     ChatSettings,
     ChatTurn,
     Conversation,
+    ConversationSessions,
     ConversationSummary,
     CreateConversationRequest,
     Graph,
+    KnownSessionStates,
+    MissingSessionPolicy,
     PostMessageRequest,
     QueueAfterRestart,
     QueuedMessage,
     Run,
     RunStatus,
+    SessionRef,
+    SessionStatus,
     UpdateConversationRequest,
 )
 
@@ -32,6 +37,7 @@ from ._errors import (
     GraphNotFoundError,
     InvalidMessageError,
     QueuedMessageNotFoundError,
+    SessionUnavailableError,
     TurnNotFoundError,
     TurnNotResumableError,
 )
@@ -46,6 +52,7 @@ from ._ports import (
     InteractionReader,
     ProjectGraphLookup,
     RunReader,
+    SessionContinuity,
     TurnHandle,
     TurnLauncher,
     TurnSessions,
@@ -73,6 +80,13 @@ RUNS_DEPENDENCY = "runs"
 CLOSED_RUN_STATUSES: frozenset[str] = frozenset({"completed", "failed", "cancelled", "interrupted"})
 """턴이 끝난 Run 상태. 대화가 턴 마무리(세션 기록)를 마치기 전에는 바깥에 `CLOSING_STATUS`로
 보인다(5.2R.39 순서: 답변·세션 기록 → 상태 공개 → 알림)."""
+FRESH_SESSION_NOTE = "fresh"
+"""`TurnStart.session_notes` 값: 세션 기록이 없어 그 노드를 새 세션으로 시작했다."""
+RESTORED_STATES: frozenset[str] = frozenset(
+    {KnownSessionStates.ARCHIVED, KnownSessionStates.RELOCATABLE}
+)
+"""보내기 직전에 복원한 상태(턴 안내에 남긴다)."""
+
 CLOSING_STATUS: RunStatus = "running"
 """턴 마무리 중(Run은 끝났고 대화가 아직 세션을 기록하지 않음)에 보이는 상태."""
 
@@ -152,6 +166,12 @@ class ChatService:
         ids: id 생성기(대화·대기열 항목).
         options: 조립 옵션.
         queue: 대기열 저장소(기본 `MemoryQueue`).
+        busy_elsewhere: 이 프로세스 밖에서 그 대화의 턴이 돌고 있으면 그 Run id(예: 같은 기록 DB를
+            쓰는 다른 앱, design §PI.4.6.5). 기본은 없음(메모리 표시만).
+        continuity: 세션 이어 가기 상태·복원(`SessionContinuity`, 5.7R.33y3). 있으면 보내기 전에
+            세션 기록이 없는 노드를 찾아 409 `chat.session_unavailable`(또는 `on_missing_session:
+            "fresh"`면 그 노드만 새 세션)로 처리하고, 보관 사본·옛 위치의 기록은 복원한 뒤 이어
+            간다. 없으면 지금 동작(모든 세션 `not_applicable`).
     """
 
     def __init__(
@@ -170,7 +190,11 @@ class ChatService:
         ids: IdFactory = _default_ids,
         options: ChatOptions | None = None,
         queue: QueueStore | None = None,
+        busy_elsewhere: Callable[[str], str | None] | None = None,
+        continuity: SessionContinuity | None = None,
     ) -> None:
+        self._busy_elsewhere = busy_elsewhere
+        self._continuity = continuity
         self._launcher = launcher
         self._conversations = conversations
         self._runs = runs
@@ -199,6 +223,7 @@ class ChatService:
         events: EventReader | None = None,
         interactions: InteractionReader | None = None,
         sessions: TurnSessions | None = None,
+        continuity: SessionContinuity | None = None,
     ) -> None:
         """실행 연결을 (다시) 정한다(모두 바꾼다, None = 없음 — `sessions`는 기본 규칙). 조립
         순서상 서비스를 먼저 만들고 연결을 나중에 아는 조립기(예: 서버 모듈의 시작 훅)가 턴을
@@ -208,6 +233,7 @@ class ChatService:
         self._events = events
         self._interactions = interactions
         self._sessions = sessions
+        self._continuity = continuity
 
     @property
     def can_send(self) -> bool:
@@ -264,6 +290,43 @@ class ChatService:
         sizes = self._queue.counts([c.id for c in items]) if items else {}
         return [self._summarize(c, sizes) for c in items]
 
+    def page(
+        self,
+        *,
+        after: tuple[float, str] | None = None,
+        limit: int = 50,
+        graph_id: str | None = None,
+        archived: bool | None = None,
+        project_id: str | None = None,
+    ) -> tuple[builtins.list[ConversationSummary], tuple[float, str] | None]:
+        """대화 요약 한 페이지(`updated_at`·`id` 내림차순, 6R.12 L-19).
+
+        요약(마지막 턴·대기열·대기 중 상호작용 계산)은 이 페이지의 대화에만 한다.
+
+        Args:
+            after: 이전 페이지 마지막 대화의 (`updated_at`, `id`). 이보다 뒤만 돌려준다.
+                None = 처음.
+            limit: 최대 개수(1 이상).
+            graph_id, archived, project_id: `list`와 같은 거르기.
+
+        Returns:
+            (요약, 다음 페이지 기준) — 뒤에 더 있으면 이 페이지 마지막 대화의 (`updated_at`, `id`),
+            끝이면 None. 커서 문자열 모양은 호출자(서버 모듈)가 정한다.
+
+        페이지 사이에 대화가 갱신되면 그 대화는 맨 앞으로 옮겨 가므로 이미 지난 페이지에서 다시
+        보이지 않는다(화면은 갱신 알림으로 다시 읽는다).
+        """
+        size = max(1, limit)
+        extra = {"project_id": project_id} if project_id is not None else {}
+        items = self._conversations.list(graph_id=graph_id, archived=archived, **extra)
+        rows = [c for c in items if after is None or (c.updated_at, c.id) < after]
+        rows.sort(key=lambda c: (c.updated_at, c.id), reverse=True)
+        more = len(rows) > size
+        rows = rows[:size]
+        sizes = self._queue.counts([c.id for c in rows]) if rows else {}
+        last = (rows[-1].updated_at, rows[-1].id) if more else None
+        return [self._summarize(c, sizes) for c in rows], last
+
     def summary(self, conversation_id: str) -> ConversationSummary:
         """대화 요약(마지막 턴 상태·대기열 수·대기 중 상호작용 수).
 
@@ -318,13 +381,22 @@ class ChatService:
     # ------------------------------------------------------------ 메시지
 
     def is_busy(self, conversation_id: str) -> bool:
-        """실행 중인 턴이 있는지(응답 대기 `waiting`도 실행 중이다)."""
-        return conversation_id in self._active
+        """실행 중인 턴이 있는지(응답 대기 `waiting`도 실행 중이다). `busy_elsewhere`를 주었으면
+        이 프로세스 밖의 턴도 센다."""
+        return self.active_run_id(conversation_id) is not None
 
     def active_run_id(self, conversation_id: str) -> str | None:
         """실행 중인 턴의 Run id(없으면 None)."""
         handle = self._active.get(conversation_id)
-        return handle.run_id if handle is not None else None
+        if handle is not None:
+            return handle.run_id
+        if self._busy_elsewhere is None:
+            return None
+        try:
+            return self._busy_elsewhere(conversation_id)
+        except Exception:
+            _log.exception("다른 곳의 실행 중 턴 확인 실패: %s", conversation_id)
+            return None
 
     async def post_message(
         self, conversation_id: str, request: PostMessageRequest
@@ -354,6 +426,7 @@ class ChatService:
                 raise ChatFeatureUnavailableError(
                     LAUNCHER_DEPENDENCY, "턴 실행기가 연결되지 않아 메시지를 보낼 수 없습니다"
                 )
+            conversation, notes = self._check_sessions(conversation, request.on_missing_session)
             busy = self.is_busy(conversation_id)
             waiting = conversation_id in self._queue.counts([conversation_id])
             if busy or waiting:
@@ -381,8 +454,34 @@ class ChatService:
                         self._notify(conversation)
                     current = self._queue.get(item.id)
                     return _queued_message(current if current is not None else item)
-            handle = await self._start(conversation, text)
+            handle = await self._start(conversation, text, notes=notes)
             return handle.run
+
+    def session_states(self, conversation_id: str) -> ConversationSessions:
+        """대화 노드 세션을 이 앱에서 이어 갈 수 있나(`GET /conversations/{id}/sessions`).
+
+        세션 이어 가기 연결(`continuity`)이 없으면 모든 세션이 `not_applicable`이고
+        `continuable = true`다. 상태를 알 수 없는 오류도 `not_applicable`로 본다(보내기는 막지
+        않는다).
+
+        Raises:
+            ConversationNotFoundError: 대화가 없을 때.
+        """
+        conversation = self.get(conversation_id)
+        items = [
+            SessionStatus(
+                node_id=key,
+                backend=ref.backend,
+                session_id=ref.session_id,
+                state=self._session_state(conversation, ref),
+            )
+            for key, ref in sorted(conversation.sessions.items())
+        ]
+        return ConversationSessions(
+            conversation_id=conversation.id,
+            continuable=all(item.state != KnownSessionStates.MISSING for item in items),
+            items=items,
+        )
 
     def queue(self, conversation_id: str) -> builtins.list[QueuedMessage]:
         """대기열(1 = 다음 차례).
@@ -650,6 +749,7 @@ class ChatService:
         seed: dict[str, dict[str, Any]] | None = None,
         resumed_from: str | None = None,
         origin: str | None = None,
+        notes: Mapping[str, str] | None = None,
     ) -> TurnHandle:
         """락 안에서 부른다. Run을 시작하고 대화를 갱신한 뒤 끝을 감시한다."""
         launcher = self._launcher
@@ -662,6 +762,9 @@ class ChatService:
             sessions = self._session_rules().prune(
                 conversation.sessions, [n.id for n in graph.nodes]
             )
+        sessions, prepared = self._prepare_sessions(conversation, sessions)
+        dropped = {k for k, v in prepared.items() if v == FRESH_SESSION_NOTE}
+        session_notes = {**(notes or {}), **prepared}
         handle = await launcher.start_turn(
             TurnStart(
                 conversation_id=conversation.id,
@@ -673,6 +776,7 @@ class ChatService:
                 seed=seed,
                 resumed_from=resumed_from,
                 project_id=conversation.project_id,
+                session_notes=session_notes,
             )
         )
         self._active[conversation.id] = handle
@@ -684,13 +788,74 @@ class ChatService:
             self._active.pop(conversation.id, None)
             return handle
         conversation = self._maybe_title(latest, text, graph)
-        conversation = conversation.model_copy(
-            update={"last_run_id": handle.run_id, "updated_at": self._clock()}
-        )
+        update: dict[str, Any] = {"last_run_id": handle.run_id, "updated_at": self._clock()}
+        if dropped:  # 기록이 없어 새 세션으로 시작한 노드의 옛 세션은 버린다
+            update["sessions"] = {
+                k: v for k, v in conversation.sessions.items() if k not in dropped
+            }
+        conversation = conversation.model_copy(update=update)
         self._conversations.save(conversation)
         self._spawn(conversation.id, self._watch(conversation.id, handle))
         self._notify(conversation)
         return handle
+
+    def _session_state(self, conversation: Conversation, ref: SessionRef) -> str:
+        continuity = self._continuity
+        if continuity is None:
+            return KnownSessionStates.NOT_APPLICABLE
+        try:
+            return continuity.state(conversation.project_id, ref)
+        except Exception:  # 상태를 모르면 보내기를 막지 않는다
+            _log.exception("대화 %s 세션 상태 확인 실패", conversation.id)
+            return KnownSessionStates.NOT_APPLICABLE
+
+    def _check_sessions(
+        self, conversation: Conversation, policy: MissingSessionPolicy
+    ) -> tuple[Conversation, dict[str, str]]:
+        """보내기 전 점검(락 안). 기록이 없는 노드가 있으면 `fail`은 409, `fresh`는 그 세션을 버린
+        대화(저장함)와 안내(키 → `fresh`)를 돌려준다."""
+        if self._continuity is None or not conversation.sessions:
+            return conversation, {}
+        missing = sorted(
+            key
+            for key, ref in conversation.sessions.items()
+            if self._session_state(conversation, ref) == KnownSessionStates.MISSING
+        )
+        if not missing:
+            return conversation, {}
+        if policy != FRESH_SESSION_NOTE:
+            raise SessionUnavailableError(
+                "이 앱에는 이 대화의 세션 기록이 없습니다",
+                details={"conversation_id": conversation.id, "node_ids": missing},
+            )
+        kept = {k: v for k, v in conversation.sessions.items() if k not in missing}
+        updated = conversation.model_copy(update={"sessions": kept, "updated_at": self._clock()})
+        self._conversations.save(updated)
+        return updated, dict.fromkeys(missing, FRESH_SESSION_NOTE)
+
+    def _prepare_sessions(
+        self, conversation: Conversation, sessions: Mapping[str, SessionRef]
+    ) -> tuple[dict[str, SessionRef], dict[str, str]]:
+        """시작 직전 복원(락 안). 복원한 노드는 안내(`archived`·`relocatable`), 놓지 못한 노드는
+        세션을 빼고 `fresh`(대기열에서 꺼낸 턴 등 — 메시지를 버리지 않는다)."""
+        continuity = self._continuity
+        if continuity is None or not sessions:
+            return dict(sessions), {}
+        kept: dict[str, SessionRef] = {}
+        notes: dict[str, str] = {}
+        for key, ref in sessions.items():
+            try:
+                state = continuity.prepare(conversation.project_id, ref)
+            except Exception:
+                _log.exception("대화 %s 세션 복원 실패", conversation.id)
+                state = KnownSessionStates.NOT_APPLICABLE
+            if state == KnownSessionStates.MISSING:
+                notes[key] = FRESH_SESSION_NOTE
+                continue
+            if state in RESTORED_STATES:
+                notes[key] = state
+            kept[key] = ref
+        return kept, notes
 
     def _spawn(self, conversation_id: str, coro: Coroutine[Any, Any, None]) -> None:
         """대화 이름표를 단 감시 태스크(`wait_idle`·`aclose`가 기다리고 정리한다)."""

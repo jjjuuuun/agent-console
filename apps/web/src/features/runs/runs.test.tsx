@@ -51,7 +51,7 @@ describe("실행 기록 목록", () => {
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
     expect(rows[0]!.getAttribute("data-waiting")).toBe("true");
-    expect(within(rows[0]!).getByText("응답 대기")).toBeTruthy();
+    expect(within(rows[0]!).getAllByText(/응답 대기/)).toHaveLength(1);
     expect(within(rows[0]!).getByRole("link", { name: "로그인 화면 스펙" })).toBeTruthy();
     expect(within(rows[0]!).getByText("4.1k")).toBeTruthy();
     expect(within(rows[1]!).getByText("(직접 실행: API)")).toBeTruthy();
@@ -74,7 +74,7 @@ describe("실행 기록 목록", () => {
   it("실행이 하나도 없으면 안내와 채팅으로 가는 버튼", async () => {
     mount("/runs", { listRuns: async () => [] });
     expect(await screen.findByText(/아직 실행 기록이 없습니다/)).toBeTruthy();
-    expect(screen.getByText("채팅에서 대화를 시작하면 여기에 쌓입니다.")).toBeTruthy();
+    expect(screen.getByText("위의 [새 실행]으로 시작하거나 채팅에서 대화를 시작하면 여기에 쌓입니다.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "채팅으로" })).toBeTruthy();
   });
 

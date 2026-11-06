@@ -260,8 +260,7 @@
   --ac-palette-w: 240px;
   --ac-sidepanel-w: 360px;
   /* 편집기 캔버스 알림 위치: 줌 컨트롤 오른쪽, 미니맵·툴바 위(미니맵 높이 + 여백) */
-  --ac-canvas-toast-left: 56px;
-  --ac-canvas-toast-bottom: 176px;
+  --ac-canvas-toast-top: 56px;
   --ac-row-h: 40px;
   --ac-row-h-dense: 32px;
   /* 로그 분석(tokens.md 5.9, 4R.17): 크기 토큰. 색은 기존 토큰의 별칭이라 여기서 새로 정의하지 않는다 */

@@ -6,6 +6,7 @@
   ac-store가 제공하고 여기서 다시 내보낸다(5.2R.33, 프로젝트 모듈과 같은 구현).
 - 저장 알림: 버전이 기록될 때마다(만들기·저장·본문 쓰기·되돌리기) ``on_saved(kind, id, hash)``.
 - 삭제 알림: 삭제가 성공하면 ``on_deleted(kind, id)``(버전이 기록되지 않으므로 따로 알린다).
+- 종류 기여(X44, 6R.5): ``register_contributed_kinds``가 ``library=True`` 기여 종류를 더한다.
 """
 
 from __future__ import annotations
@@ -26,10 +27,12 @@ from agent_console_store import (
     SETTINGS_KIND,
     DefinitionKind,
     FileDefinitionStore,
+    KindContributionLike,
     LazyVersionRepository,
     ObservedVersionRepository,
     VersionRecorded,
     VersionRepository,
+    contributed_kinds,
     versions_for,
 )
 
@@ -68,6 +71,8 @@ class DefinitionFileStore(FileDefinitionStore):
     ) -> None:
         super().__init__(root, kinds, versions=versions, max_content_bytes=max_content_bytes)
         self._on_deleted = on_deleted
+        self.contributed: set[str] = set()
+        """종류 기여(X44)로 더한 종류 이름(``register_contributed_kinds``)."""
 
     def delete(self, kind: str, id: str, *, expected_version: str | None = None) -> None:
         super().delete(kind, id, expected_version=expected_version)
@@ -76,6 +81,33 @@ class DefinitionFileStore(FileDefinitionStore):
                 self._on_deleted(kind, id)
             except Exception:
                 _log.exception("정의 삭제 알림 실패: %s/%s", kind, id)
+
+
+def register_contributed_kinds(
+    store: DefinitionFileStore, contributions: Iterable[KindContributionLike]
+) -> list[str]:
+    """종류 기여(X44) 중 라이브러리에 두는 것(``library=True``)을 저장소에 등록한다(멱등).
+
+    이미 있는 이름(기본 종류·앞서 등록한 기여)은 건너뛴다. 기본 종류와 겹치는 기여·종류 값이 아닌
+    기여는 경고 로그를 남긴다(``library=False``는 정상이라 남기지 않는다). 반환 = 새로 등록한 이름.
+    """
+    before = set(store.kinds())
+    seen: set[str] = set()
+
+    def skipped(name: str, reason: str) -> None:
+        if reason == "not_library" or name in seen or name in store.contributed:
+            return  # 정상(프로젝트 공간 전용) 또는 지난번에 등록한 기여(다시 부름)
+        seen.add(name)
+        _log.warning("정의 종류 기여를 건너뜁니다: %s (%s)", name, reason)
+
+    added: list[str] = []
+    for kind in contributed_kinds(
+        contributions, reserved=before, library_only=True, on_skip=skipped
+    ):
+        store.register_kind(kind)
+        store.contributed.add(kind.name)
+        added.append(kind.name)
+    return added
 
 
 def build_store(
@@ -114,5 +146,6 @@ __all__ = [
     "build_store",
     "definition_kinds",
     "graph_kind_hash",
+    "register_contributed_kinds",
     "versions_for",
 ]

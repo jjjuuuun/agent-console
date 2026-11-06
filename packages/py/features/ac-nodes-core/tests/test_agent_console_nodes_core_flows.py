@@ -32,6 +32,8 @@ from agent_console_contracts import (
 )
 from agent_console_nodes_core import (
     AGENT_LOOKUP,
+    DEFAULT_MESSAGE_KEY,
+    INPUT_KEY_MISSING,
     RESOURCE_LOOKUP,
     RESOURCE_TYPES_EXTENSION,
     RUN_FILES_ROOT,
@@ -394,6 +396,23 @@ async def test_message_input_key_and_template() -> None:
     run = await stack.runtime().run(graph, {"request": "로그인", "who": "민수"})
     assert run.status == "completed", run.error
     assert stack.request_of("a").prompt == "요청: 로그인 (민수)"
+
+
+async def test_message_missing_input_key_explains_skip() -> None:
+    """입력 키가 없으면 입구가 skipped — 사유(`edge.skipped`)와 경고(키 이름만)가 남는다(6R.7)."""
+    stack = make_stack(agent("a"))
+    graph = team([you(), n("a", "a")], [msg("m", "a"), ans("r", "a")])
+    run = await stack.runtime().run(graph, {"prompt": "비밀 아님", "zeta": 1})
+    assert run.status == "completed", run.error  # 엔진 의미는 그대로(입구가 지나가지 않음)
+    assert stack.node_runs(run)["a"].status == "skipped"
+    [skipped] = [ev.payload for ev in stack.events(run, "edge.skipped")]
+    assert skipped["edge_id"] == "m"
+    assert skipped["reason"] == INPUT_KEY_MISSING
+    [warning] = [dict(ev.payload) for ev in stack.events(run, "log.warning")]
+    assert warning["details"]["input_key"] == DEFAULT_MESSAGE_KEY
+    assert warning["details"]["input_keys"] == ["prompt", "zeta"]
+    assert warning["details"]["edge_id"] == "m"
+    assert "비밀 아님" not in warning["message"]  # 값은 담지 않는다
 
 
 # ---------------------------------------------------------------- 설정 층·세션·상호작용

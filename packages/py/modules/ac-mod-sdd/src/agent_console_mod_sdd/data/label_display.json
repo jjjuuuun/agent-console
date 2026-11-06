@@ -1,0 +1,6 @@
+[
+  {"key": "spec", "title": "스펙", "target": {"role": "sdd", "id_from": "spec"}, "group": "sdd", "order": 1},
+  {"key": "task", "title": "작업", "target": {"role": "sdd", "id_from": "spec", "query": "task={value}"}, "group": "sdd", "order": 2},
+  {"key": "profile", "title": "실행 프로필", "group": "sdd", "order": 3},
+  {"key": "purpose", "title": "목적", "group": "sdd", "order": 4}
+]

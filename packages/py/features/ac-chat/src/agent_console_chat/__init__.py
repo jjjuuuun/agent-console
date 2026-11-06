@@ -4,6 +4,11 @@
 턴을 조립한다. 저장소·실행 엔진·상호작용 조회는 모두 프로토콜로 주입받으며(실행 연결은 선택 —
 없으면 대화·대기열만 동작하고 전송은 `ChatFeatureUnavailableError`) 이 패키지는
 `agent_console_contracts` 외의 Agent Console 패키지를 import하지 않는다.
+
+세션 이어 가기(5.7R.33y3, design §PI.4.6.4): 선택 연결 `SessionContinuity`(`state`·`prepare`)를
+주면 `ChatService.session_states`가 노드별 상태를 보이고, 보내기 전에 기록이 없는 노드를
+`SessionUnavailableError`(409 `chat.session_unavailable`) 또는 `on_missing_session: "fresh"`로
+처리하며, 보관 사본에서 복원한 노드는 `TurnStart.session_notes`(`FRESH_SESSION_NOTE` 등)로 알린다.
 """
 
 from ._errors import (
@@ -14,6 +19,7 @@ from ._errors import (
     GraphNotFoundError,
     InvalidMessageError,
     QueuedMessageNotFoundError,
+    SessionUnavailableError,
     TurnNotFoundError,
     TurnNotResumableError,
 )
@@ -28,6 +34,7 @@ from ._ports import (
     InteractionReader,
     ProjectGraphLookup,
     RunReader,
+    SessionContinuity,
     TurnHandle,
     TurnLauncher,
     TurnSessions,
@@ -42,7 +49,14 @@ from ._queue import (
     QueueSize,
     QueueStore,
 )
-from ._service import LAUNCHER_DEPENDENCY, RUNS_DEPENDENCY, ChatOptions, ChatService
+from ._service import (
+    FRESH_SESSION_NOTE,
+    LAUNCHER_DEPENDENCY,
+    RESTORED_STATES,
+    RUNS_DEPENDENCY,
+    ChatOptions,
+    ChatService,
+)
 from ._settings import layered_chat_settings, overlay_chat_settings
 from ._turns import (
     REPLY_EVENT,
@@ -57,9 +71,11 @@ from ._turns import (
 )
 
 __all__ = [
+    "FRESH_SESSION_NOTE",
     "LAUNCHER_DEPENDENCY",
     "REPLY_EVENT",
     "RESTART_HOLD_REASON",
+    "RESTORED_STATES",
     "RUNS_DEPENDENCY",
     "SESSION_EVENT",
     "ChatError",
@@ -88,6 +104,8 @@ __all__ = [
     "QueuedMessageNotFoundError",
     "RootRunSessions",
     "RunReader",
+    "SessionContinuity",
+    "SessionUnavailableError",
     "TurnHandle",
     "TurnLauncher",
     "TurnNotFoundError",

@@ -5,6 +5,9 @@
 - **키 이름**(`key_names`): 이름을 단어로 나눠(구분자·camelCase) 이어지는 단어를 붙인 것이 키 이름과
   같으면 비밀 이름이다. 키 이름도 같은 방식으로 단어로 나눠 비교한다(`api_key` = `apikey`).
 - **이름 예외 단어**(`name_exceptions`): 비밀 단어 뒤에 이 단어가 오면 비밀 이름이 아니다.
+- **약한 키 이름**(`weak_key_names`)과 **약한 이름 값 모양**(`weak_value_patterns`): 이름에서
+  걸린 키 이름이 모두 약한 이름이면(`input_key`의 `key`) 구조 판정(`find_suspected`)에서 값이
+  비밀 모양일 때만 의심한다. 이름 판정(`name_suspected`)과 텍스트 가리기는 바뀌지 않는다(안전한 쪽).
 - **값 패턴**(`value_patterns`): 텍스트 안 비밀 모양 정규식(`ac-safe-regex`로 검사·실행).
   이름 그룹 `secret`(가릴 부분)·`name`(비밀 이름이어야 함)을 쓸 수 있다.
 
@@ -29,7 +32,13 @@ from agent_console_safe_regex import (
     compile_user_regex,
 )
 
-from ._defaults import DEFAULT_KEY_NAMES, DEFAULT_NAME_EXCEPTIONS, DEFAULT_VALUE_PATTERNS
+from ._defaults import (
+    DEFAULT_KEY_NAMES,
+    DEFAULT_NAME_EXCEPTIONS,
+    DEFAULT_VALUE_PATTERNS,
+    DEFAULT_WEAK_KEY_NAMES,
+    DEFAULT_WEAK_VALUE_PATTERNS,
+)
 
 __all__ = [
     "DEFAULT_MAX_SCAN_CHARS",
@@ -61,6 +70,11 @@ _MASK_FILL = "x"
 
 _CHUNK_OVERLAP = 4096
 """조각 경계에 걸친 비밀을 놓치지 않게 겹치는 글자 수."""
+
+_STRONG: Final = 2
+_WEAK: Final = 1
+_PLAIN: Final = 0
+"""이름 판정 단계: 이름만으로 의심(`_STRONG`), 값이 비밀 모양일 때만(`_WEAK`), 아님(`_PLAIN`)."""
 
 SECRET_REF_PREFIX = "secret://"
 
@@ -183,6 +197,10 @@ class SecretRules:
         key_names: 비밀 이름 단어(기본 `DEFAULT_KEY_NAMES`).
         value_patterns: 텍스트 안 비밀 모양 정규식(기본 `DEFAULT_VALUE_PATTERNS`).
         name_exceptions: 비밀 단어 뒤에 오면 비밀 이름이 아니게 하는 단어.
+        weak_key_names: 이름만으로는 의심하지 않는 키 이름(기본 `DEFAULT_WEAK_KEY_NAMES`). 구조
+            판정에서 걸린 키 이름이 모두 이것이면 값이 비밀 모양일 때만 의심한다. 빈 목록이면 끈다.
+        weak_value_patterns: 약한 이름 아래 값이 비밀 모양인지 보는 정규식(기본
+            `DEFAULT_WEAK_VALUE_PATTERNS`). `value_patterns`에 맞는 값도 비밀 모양으로 본다.
         is_reference: 참조 문자열이면 참(의심·가림에서 뺀다). 기본 `secret://…`.
         mask: 가린 자리에 넣을 문자열.
         timeout: 패턴 하나가 조각 하나를 훑는 시간 제한(초).
@@ -198,6 +216,8 @@ class SecretRules:
         value_patterns: Iterable[str] = DEFAULT_VALUE_PATTERNS,
         *,
         name_exceptions: Iterable[str] = DEFAULT_NAME_EXCEPTIONS,
+        weak_key_names: Iterable[str] = DEFAULT_WEAK_KEY_NAMES,
+        weak_value_patterns: Iterable[str] = DEFAULT_WEAK_VALUE_PATTERNS,
         is_reference: Callable[[str], bool] = default_is_reference,
         mask: str = REDACTED,
         timeout: float = DEFAULT_SCAN_TIMEOUT_SECONDS,
@@ -205,10 +225,16 @@ class SecretRules:
     ) -> None:
         names = tuple(key_names)
         patterns = tuple(value_patterns)
+        weak_names = tuple(weak_key_names)
+        weak_patterns = tuple(weak_value_patterns)
         problems = _problems(names, patterns, "key_names", "value_patterns")
+        problems += _problems(weak_names, weak_patterns, "weak_key_names", "weak_value_patterns")
         if problems:
             raise InvalidSecretRuleError(problems)
         compiled = [_compile(p, timeout=timeout, max_chars=max_scan_chars) for p in patterns]
+        weak_compiled = [
+            _compile(p, timeout=timeout, max_chars=max_scan_chars) for p in weak_patterns
+        ]
         self.key_names: tuple[str, ...] = names
         self.value_patterns: tuple[str, ...] = patterns
         self.name_exceptions: frozenset[str] = frozenset(w.lower() for w in name_exceptions)
@@ -216,8 +242,12 @@ class SecretRules:
         self.mask = mask
         self.timeout = timeout
         self.max_scan_chars = max(_CHUNK_OVERLAP * 2, max_scan_chars)
+        self.weak_key_names: tuple[str, ...] = weak_names
+        self.weak_value_patterns: tuple[str, ...] = weak_patterns
         self._compact_names = frozenset(_compact(n) for n in names)
+        self._weak_names = frozenset(_compact(n) for n in weak_names)
         self._patterns = tuple(compiled)
+        self._weak_patterns = tuple(weak_compiled)
 
     # ------------------------------------------------------------ 만들기
 
@@ -225,6 +255,9 @@ class SecretRules:
         self, *, key_names: Iterable[str] = (), value_patterns: Iterable[str] = ()
     ) -> SecretRules:
         """이 규칙에 사용자 규칙을 **더한** 새 규칙(줄이는 방법은 없다).
+
+        더한 키 이름은 약한 이름 목록에 있어도 이름만으로 의심한다(사용자가 직접 적은 이름이 우선:
+        `key_names=["key"]`면 `input_key`도 다시 이름만으로 의심).
 
         Raises:
             InvalidSecretRuleError: 추가 규칙이 잘못됐을 때(위치는 추가 목록 기준).
@@ -234,10 +267,13 @@ class SecretRules:
         problems = check_extra_rules(extra_names, extra_patterns)
         if problems:
             raise InvalidSecretRuleError(problems)
+        added = {_compact(n) for n in extra_names}
         return SecretRules(
             (*self.key_names, *extra_names),
             (*self.value_patterns, *extra_patterns),
             name_exceptions=self.name_exceptions,
+            weak_key_names=tuple(n for n in self.weak_key_names if _compact(n) not in added),
+            weak_value_patterns=self.weak_value_patterns,
             is_reference=self.is_reference,
             mask=self.mask,
             timeout=self.timeout,
@@ -251,7 +287,12 @@ class SecretRules:
 
         이어지는 단어를 붙인 것이 키 이름과 같고, 그 뒤 단어 중에 예외 단어가 없으면 의심한다.
         """
+        return self._name_level(name) != _PLAIN
+
+    def _name_level(self, name: str) -> int:
+        """이름 판정 단계. 걸린 키 이름 중 하나라도 약한 이름이 아니면 `_STRONG`."""
         words = _words(name)
+        level = _PLAIN
         for start in range(len(words)):
             joined = ""
             for end in range(start, len(words)):
@@ -259,6 +300,23 @@ class SecretRules:
                 if joined in self._compact_names and not any(
                     w in self.name_exceptions for w in words[end + 1 :]
                 ):
+                    if joined not in self._weak_names:
+                        return _STRONG
+                    level = _WEAK
+        return level
+
+    def _weak_value_suspected(self, text: str) -> bool:
+        """약한 이름 아래 값이 비밀 모양인가(약한 값 모양 또는 값 패턴). 시간 초과는 의심."""
+        for pattern in self._weak_patterns:
+            for _offset, chunk in self._chunks(text):
+                try:
+                    if pattern.compiled.search(chunk) is not None:
+                        return True
+                except RegexTimeoutError:
+                    _log.warning(
+                        "약한 이름 값 모양 검사가 시간 제한을 넘었습니다(패턴 %d자)",
+                        len(pattern.source),
+                    )
                     return True
         return False
 
@@ -402,14 +460,14 @@ class SecretRules:
             path: 결과 위치 앞에 붙일 JSON Pointer(예: 문서 안 위치).
             name: `value` 자신의 키 이름(있으면 그 이름부터 판정).
         """
-        secret = name is not None and self.name_suspected(name)
-        return list(self._walk(value, path, secret))
+        level = self._name_level(name) if name is not None else _PLAIN
+        return list(self._walk(value, path, level))
 
-    def _walk(self, value: Any, pointer: str, secret: bool) -> Iterator[Finding]:
+    def _walk(self, value: Any, pointer: str, level: int) -> Iterator[Finding]:
         if isinstance(value, str):
             if not value or self.is_reference(value):
                 return
-            if secret:
+            if level == _STRONG:
                 yield Finding(pointer, FindingReason.KEY_NAME)
                 return
             spans, timed_out = self._spans(value)
@@ -417,23 +475,27 @@ class SecretRules:
                 yield Finding(pointer, FindingReason.VALUE_PATTERN)
             elif timed_out:
                 yield Finding(pointer, FindingReason.TIMEOUT)
+            elif level == _WEAK and self._weak_value_suspected(value):
+                yield Finding(pointer, FindingReason.KEY_NAME)
         elif isinstance(value, bool) or value is None:
             return
         elif isinstance(value, int | float):
-            if secret:
+            if level == _STRONG or (level == _WEAK and self._weak_value_suspected(str(value))):
                 yield Finding(pointer, FindingReason.KEY_NAME)
         elif isinstance(value, dict):
             for key, item in value.items():
                 text = str(key)
-                child = self.name_suspected(text) or (secret and not self._name_plain(text))
-                yield from self._walk(item, f"{pointer}/{_escape(text)}", child)
+                own = self._name_level(text)
+                inherited = _PLAIN if self._name_plain(text) else level
+                yield from self._walk(item, f"{pointer}/{_escape(text)}", max(own, inherited))
         elif isinstance(value, list | tuple):
             flag_value = False
             for index, item in enumerate(value):
-                # 인자 목록의 `--token`, `값` 꼴: 비밀 플래그 다음 항목은 비밀 값으로 본다.
+                # 인자 목록의 `--token`, `값` 꼴: 비밀 플래그 다음 항목은 비밀 값으로 본다
+                # (플래그는 약한 이름이라도 이름만으로 본다 — 명령 인자는 안전한 쪽).
                 is_flag = isinstance(item, str) and item.startswith("-")
-                value_of_flag = flag_value and not is_flag
-                yield from self._walk(item, f"{pointer}/{index}", secret or value_of_flag)
+                child = _STRONG if flag_value and not is_flag else level
+                yield from self._walk(item, f"{pointer}/{index}", child)
                 flag_value = self._secret_flag(item)
 
     def _secret_flag(self, item: Any) -> bool:

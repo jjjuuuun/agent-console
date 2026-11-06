@@ -133,6 +133,9 @@ class TurnStart:
         seed: 이어 가기(§2R.10)면 노드 id → 저장된 입력(`GraphRuntime.start(seed=)`), 아니면 None.
         resumed_from: 이어 가기면 끊긴 원래 Run id(`Run.resumed_from`으로 기록해야 한다).
         project_id: 대화의 프로젝트 id(`Run.project_id`로 기록한다, 5.2R.32). 없으면 None.
+        session_notes: 이 턴에서 세션 이어 가기가 평소와 달랐던 노드(키 → `archived`·
+            `relocatable`·`fresh`, 5.7R.33y3). 실행기는 `run.started` 맥락 등으로 남겨 화면이 한 줄
+            안내를 보이게 한다. 비면 평소대로.
     """
 
     conversation_id: str
@@ -144,6 +147,30 @@ class TurnStart:
     seed: Mapping[str, Mapping[str, Any]] | None = None
     resumed_from: str | None = None
     project_id: str | None = None
+    session_notes: Mapping[str, str] = field(default_factory=dict)
+
+
+@runtime_checkable
+class SessionContinuity(Protocol):
+    """선택 연결(5.7R.33y3, design §PI.4.6.4 X38): 대화 노드 세션을 이 앱에서 이어 갈 수 있나.
+
+    상태 값은 계약 `KnownSessionStates`(available·relocatable·archived·missing·not_applicable,
+    열린 문자열)다. 서비스는 `missing`만 특별히 본다(보내기 409 또는 새 세션). 연결하지 않으면 모든
+    세션이 `not_applicable`(지금 동작).
+    """
+
+    def state(self, project_id: str | None, session: SessionRef) -> str:
+        """지금 상태(파일을 쓰지 않는다)."""
+        ...
+
+    def prepare(self, project_id: str | None, session: SessionRef) -> str:
+        """보내기 직전에 이어 갈 수 있게 놓는다(보관 사본·옛 위치에서 복원).
+
+        Returns:
+            복원했으면 복원 전 상태(`archived`·`relocatable`), 이미 있으면 `available`, 놓지
+            못했으면 `missing`, 모르면 `not_applicable`.
+        """
+        ...
 
 
 class TurnHandle(Protocol):

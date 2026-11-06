@@ -11,7 +11,7 @@ export interface RunsTableProps {
   runs: readonly Run[];
   /** 지금(ms). 상대 시각·진행 중 경과 계산용(주입) */
   nowMs: number;
-  graphName(id: string): string | undefined;
+  graphName(id: string, projectId?: string | null): string | undefined;
   conversationTitle(id: string | null | undefined): string | undefined;
   /** 행을 열 때(Enter·클릭) */
   onOpen(run: Run): void;
@@ -121,7 +121,7 @@ export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, o
                 {child ? <Tag className="runs-waiting-tag">{t.list.childChip}</Tag> : null}
               </td>
               <td className="ac-ellipsis">
-                <Link to={hrefs.graph(run.graph_id)}>{graphName(run.graph_id) ?? t.list.unknownGraph}</Link>
+                <Link to={hrefs.graph(run.graph_id)}>{graphName(run.graph_id, run.project_id) ?? t.list.unknownGraph}</Link>
               </td>
               <td className="ac-ellipsis" title={summary}>
                 {child && run.parent_run_id ? (
@@ -151,7 +151,6 @@ export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, o
                   hrefs={hrefs}
                   {...(nested ? { nested: { child, hasChildren: nested.hasChildren(run), onShowChildren: () => nested.onShowChildren(run) } } : {})}
                 />
-                {waiting ? <Tag className="runs-waiting-tag">{t.list.waitingBar}</Tag> : null}
               </td>
             </tr>
           );

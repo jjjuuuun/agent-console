@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+
 import { Link } from "react-router";
 import { Button, EmptyState, type MenuItemDef } from "@agent-console/ui";
 import { MenuPopover } from "./MenuPopover";
@@ -19,13 +19,12 @@ export interface ProjectConfigCardProps {
   /** 새로 만들기 메뉴 항목(종류 제목 + 이동 주소) */
   creatable: readonly { kind: string; title: string; href: string }[];
   onNew: (item: { kind: string; title: string; href: string }) => void;
-  /**
-   * 공용에서 가져오기 슬롯(33o의 복사 계획 대화상자). 대화상자를 열고 닫는 상태는 이 카드가 들고,
-   * 열렸을 때 이 함수가 그릴 대화상자를 돌려준다. 없으면 자리 안내만 보인다.
-   */
-  renderImport?: ((state: { onClose: () => void }) => ReactNode) | undefined;
-  /** 행 `⋯` 메뉴를 확장하는 슬롯(33o: 이름 바꾸기·공용에 저장·삭제) */
+  /** [공용에서 가져오기…]를 눌렀을 때(복사 계획 대화상자는 호출자가 연다). 없으면 버튼이 없다 */
+  onImport?: (() => void) | undefined;
+  /** 행 `⋯` 메뉴를 확장하는 슬롯(공용에 저장·삭제) */
   rowMenu?: ((row: ConfigRow) => readonly MenuItemDef[]) | undefined;
+  /** 방금 가져온 행의 키(`ConfigRow.key`): 1.5초 강조 */
+  highlightKey?: string | undefined;
   /** 구성 사본 열기 */
   onOpen: (href: string) => void;
   nowMs: number;
@@ -36,10 +35,8 @@ export interface ProjectConfigCardProps {
  * 가져오기·행 동작의 실제 대화상자는 슬롯으로 받는다.
  */
 export function ProjectConfigCard(p: ProjectConfigCardProps) {
-  const [importing, setImporting] = useState(false);
-  const [note, setNote] = useState(false);
   const blocked = p.blockedReason;
-  const importBtn = (primary: boolean) => (
+  const importBtn = (primary: boolean) => p.onImport === undefined ? null : (
     <Button
       size="sm"
       variant={primary ? "primary" : "secondary"}
@@ -47,8 +44,7 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
       title={blocked}
       onClick={() => {
         if (blocked !== undefined) return;
-        if (p.renderImport === undefined) setNote(true);
-        else setImporting(true);
+        p.onImport?.();
       }}
     >
       {m.home.configImport}
@@ -75,7 +71,6 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
           </div>
         )}
       </header>
-      {note ? <p className="prj-note-inline app-muted" role="status">{m.home.configImportSoon}</p> : null}
       {p.unreadable ? (
         <p className="app-muted">{m.home.configUnreadable}</p>
       ) : empty ? (
@@ -98,7 +93,7 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
             </thead>
             <tbody>
               {p.rows.map((r) => (
-                <tr key={r.key}>
+                <tr key={r.key} data-highlight={p.highlightKey === r.key ? "true" : undefined}>
                   <td className="prj-cell-name">{r.href === undefined ? <span className="ac-ellipsis" title={r.name}>{r.name}</span> : <Link className="ac-ellipsis" to={r.href} title={r.name}>{r.name}</Link>}</td>
                   <td><span className="prj-kind-chip ac-ellipsis" title={r.kindTitle}>{r.kindTitle}</span></td>
                   <td className="app-muted" title={r.modifiedAt === undefined ? undefined : new Date(r.modifiedAt * 1000).toLocaleString("ko")}>{relativeTime(p.nowMs, r.modifiedAt)}</td>
@@ -124,7 +119,6 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
           {p.loading ? <p className="app-muted">{m.home.loading}</p> : null}
         </>
       )}
-      {importing && p.renderImport ? p.renderImport({ onClose: () => setImporting(false) }) : null}
     </section>
   );
 }

@@ -47,6 +47,10 @@ def _defaults_module(value: Callable[[], Mapping[str, bool]]) -> Module:
 
 
 def _enabled(settings: WorkspaceSettings, *extra: Module) -> bool:
+    return bool(_row(settings, *extra)["enabled"])
+
+
+def _row(settings: WorkspaceSettings, *extra: Module) -> dict[str, Any]:
     base = BaseServices(clock=lambda: datetime(2027, 1, 1, tzinfo=UTC))
     assembly = assemble(
         [module, static_settings_module(settings), *extra],
@@ -59,7 +63,7 @@ def _enabled(settings: WorkspaceSettings, *extra: Module) -> bool:
         client.headers["X-Console-Token"] = TOKEN
         rows: list[dict[str, Any]] = client.get("/api/v1/logs/sources").json()
     [row] = [r for r in rows if r["descriptor"]["id"] == SOURCE]
-    return bool(row["enabled"])
+    return row
 
 
 def test_apply_keeps_explicit_values_and_original() -> None:
@@ -119,3 +123,22 @@ def test_port_is_read_each_time() -> None:
         assert enabled() is False
         state["on"] = True  # 예: 그 로그 폴더가 나중에 생김
         assert enabled() is True
+
+
+def test_default_effective_ignores_user_setting() -> None:
+    """``default_effective`` = 사용자 설정을 뺀 켜짐 값(6R.7, L-18): 화면 ↺가 돌아갈 값."""
+    on = _defaults_module(lambda: {SOURCE: True})
+    explicit_off = WorkspaceSettings.model_validate(
+        {"logs": {"sources": [{"id": SOURCE, "enabled": False}]}}
+    )
+    explicit_on = WorkspaceSettings.model_validate(
+        {"logs": {"sources": [{"id": SOURCE, "enabled": True}]}}
+    )
+    # 제공자 없음: 디스크립터 기본(꺼짐). 사용자가 켜도 기본값은 꺼짐
+    assert _row(WorkspaceSettings())["default_effective"] is False
+    row = _row(explicit_on)
+    assert (row["enabled"], row["default_effective"]) == (True, False)
+    # 제공자가 켬: 사용자가 꺼도 기본값은 켬(↺ = 켜짐으로 돌아감)
+    row = _row(explicit_off, on)
+    assert (row["enabled"], row["default_effective"]) == (False, True)
+    assert _row(WorkspaceSettings(), on)["default_effective"] is True

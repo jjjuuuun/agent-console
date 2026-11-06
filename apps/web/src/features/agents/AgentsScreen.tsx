@@ -6,12 +6,11 @@ import { describeError } from "../../app/errors";
 import { messages as m } from "../../app/messages";
 import { useRegisterCommands } from "../../shell/commands";
 import { useAgentList, useInvalidateLists, NewDefinitionDialog, DEFINITION_KINDS, type DetailRequest } from "../library";
-import { useNewScope, useScopedList } from "../projects";
+import { SpaceChip, SpaceNote, useConfigTransfer, useNewScope } from "../projects";
 import { useApi } from "../../app/ApiContext";
 import { AgentDetail } from "./AgentDetail";
 import { AgentList } from "./AgentList";
 import { agentMessages as t } from "./messages";
-const scopeOfAgent = (a: Agent) => a.project;
 const idOfAgent = (a: Agent) => a.id;
 const nameOfAgent = (a: Agent) => a.name;
 
@@ -31,7 +30,7 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [request, setRequest] = useState<DetailRequest | undefined>(undefined);
-  const scoped = useScopedList(agents.data, { scopeOf: scopeOfAgent, kind: DEFINITION_KINDS.agent, idOf: idOfAgent, nameOf: nameOfAgent });
+  const scoped = useConfigTransfer(agents.data, { kind: DEFINITION_KINDS.agent, idOf: idOfAgent, nameOf: nameOfAgent });
 
   useRegisterCommands([{ id: "agents.new", titleKey: "palette.actions.libAgentNew", run: () => { setError(null); setCreating(true); } }]);
   const go = (agentId: string) => void navigate(`${basePath}/${encodeURIComponent(agentId)}`);
@@ -58,12 +57,12 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
 
   return (
     <div className="app-screen-frame" data-screen="agents">
-      <PageHeader title={m.nav.agents} />
+      <PageHeader title={m.nav.agents} status={<SpaceChip />} />
+      <SpaceNote />
       <div className="lib-split">
         <AgentList
           agents={scoped.items}
-          scopeBar={scoped.parts.filter}
-          selectTool={scoped.parts.select}
+          selectTool={scoped.selectTool}
           rowExtra={scoped.rowExtra}
           loading={agents.isLoading}
           error={agents.isError ? agents.error : null}
@@ -90,7 +89,7 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
 
 function CreateAgent({ existing, busy, error, onClose, onCreate }: { existing: ReadonlySet<string>; busy: boolean; error: string | null; onClose: () => void; onCreate: (v: { name: string; id: string; description: string }, role: string, scope: { project?: string }) => void }) {
   const [role, setRole] = useState("");
-  const scope = useNewScope(DEFINITION_KINDS.agent ?? "");
+  const scope = useNewScope();
   return (
     <NewDefinitionDialog
       open

@@ -2,6 +2,12 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.13.0]
+- 계약 0.13.0(6R.3). 사내 의존 범위 `^0.13.0`. 새 하위 경로 **`@agent-console/contracts/sdd`**(1.0.0). `common` 1.8.0, `logs` 1.2.0, `runs` 1.7.0, `chat` 1.3.0, `modules` 1.4.0.
+- 새 타입: `sdd` 전부(`SpecTemplate`·`SpecDefinition`·`SpecRules`·`SpecView`·`ParsedTask`·`TaskPlan`·`TraceMatrix`·`SddInfo` 등), `LabelDisplay`·`LabelDisplayTarget`·`RecordSource`(common), `RunPage`(runs), `ConversationPage`(chat), `SddChangedMessage`(modules, `WsServerMessage` 유니온에 더함). 새 선택 필드: `Run.labels`, `CreateRunRequest.labels`, `ModuleInfo.description`·`label_display`, `LogSourceInfo.default_effective`.
+- 새 상수: `RUN_LABEL_LIMITS`, `RECORD_SOURCES`, `KNOWN_UI_WIDGETS`, `KNOWN_DOCUMENT_ROLES`·`KNOWN_TASK_FIELD_ROLES`·`KNOWN_GATE_TARGETS`·`KNOWN_TRANSITION_ACTORS`·`KNOWN_TRACE_GAPS`·`KNOWN_TASK_LINK_KINDS`·`KNOWN_AUTOMATION_STOP_REASONS`·`KNOWN_SYNTAX_SOURCES`·`KNOWN_TASK_ACTION_STATUSES`, `RUN_ORIGINS`에 `sdd`, 오류·이슈 코드 `sdd.*`.
+- 요청 변경: `CreateConversationRequest`에 모르는 키를 보내면 서버가 422로 거부한다.
+
 ## [0.12.2]
 - 계약 0.12.2(5.7R.34·5.7R.38). 더하기만 한다(새 필드는 모두 선택). 사내 의존 범위는 `^0.12.0` 그대로. `runs` 1.6.0, `definitions` 1.5.0.
 - 새 선택 필드: `DelegationStrategyDescriptor.session`·`backend`·`nestable`(서버가 `session`은 `shares_session`, `nestable`은 `max_depth`에서 채워 보낸다), `EdgeTypeDescriptor.session`, `NodeTypeDescriptor.opens_session`(기본 true), `Issue.hint`·`group: IssueGroup{key, message}`, `GraphPatch.unset_node_fields: NodeFieldRef{node_id, path}[]`.

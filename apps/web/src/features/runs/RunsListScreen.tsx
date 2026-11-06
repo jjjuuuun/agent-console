@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RestClient } from "@agent-console/api-client";
 import type { Run } from "@agent-console/contracts";
-import { Button, ConfirmDialog, EmptyState, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
+import { Button, ConfirmDialog, EmptyState, Icon, IconButton, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
@@ -13,18 +13,20 @@ import { useNow } from "../../app/useNow";
 import { usePendingInteractions } from "../../shell/pending";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { HandoffMatrixView } from "./HandoffMatrixView";
-import { useScopedList } from "../projects";
+import { NEW_PARAM, ProjectChip, useProjects } from "../projects";
+import { useRegisterCommands } from "../../shell/commands";
+import { useProjectId } from "../../app/projectScope";
 import { ROUTE_ROLES, routeIconNode, routePath } from "../library";
 import { RunsFilterBar, type RunsFilters } from "./RunsFilterBar";
 import { RunsTable } from "./RunsTable";
+import { RunStartDialog } from "./RunStartDialog";
+import { runStartMessages as startText } from "./runStartMessages";
 import { useRunLookups } from "./useRunLookups";
 import { runStatusLabels, runsMessages as t } from "./messages";
 import { DEFAULT_PERIOD, PERIOD_OPTIONS, RUN_LIST_LIMIT, RUN_LIST_POLL_MS, WAITING_RUN_STATUS } from "./runsConfig";
 import { activeCounts, filterRuns, inputSummary, isActiveRun } from "./runsLib";
 import "./runs.css";
 
-const scopeOfRun = (r: Run) => r.project_id;
-const idOfRun = (r: Run) => r.id;
 
 /** 화면이 알아야 하는 경로 규칙(라우트 설정과 맞춘다). 컨테이너만 쓴다. */
 export const runHrefs = {
@@ -76,18 +78,39 @@ export function RunsListScreen() {
   const handoffPart = useLinkPart(LINK_PART_IDS.runsHandoffView);
   const view = handoffPart.visible && params.get("view") === "handoffs" ? "handoffs" : "list";
   const [cancelTarget, setCancelTarget] = useState<Run | null>(null);
+  // 프로젝트 홈의 [실행…]이 `?new=1&prj=`를 붙여 오면 처음부터 새 실행 대화상자가 열려 있다(아래 효과가 질의를 지운다)
+  const projects = useProjects();
+  const [startDialog, setStartDialog] = useState<{ project?: string } | null>(() => {
+    if (params.get(NEW_PARAM) !== "1") return null;
+    const prj = params.get("prj");
+    return prj === null ? {} : { project: prj };
+  });
+  const wantsNew = params.get(NEW_PARAM) === "1";
+  useEffect(() => {
+    if (!wantsNew) return;
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(NEW_PARAM);
+      return next;
+    }, { replace: true });
+  }, [wantsNew, setParams]);
+  // 프로젝트가 하나도 없으면 이 화면은 안내가 대신하므로 새 실행도 없다
+  const canStartRun = projects.enabled && projects.views.some((v) => v.project.archived !== true);
+  const openStart = () => setStartDialog({});
   const searchRef = useRef<HTMLInputElement>(null);
   const firstRef = useRef<HTMLSelectElement>(null);
 
+  const project = useProjectId();
   const serverParams = useMemo(
     () => ({
       limit: RUN_LIST_LIMIT,
+      ...(project !== null ? { project } : {}),
       ...(filters.graph ? { graph_id: filters.graph } : {}),
       ...(filters.agent ? { agent_id: filters.agent } : {}),
       ...(filters.conversation ? { conversation_id: filters.conversation } : {}),
       ...(filters.root ? { root: filters.root } : {}),
     }),
-    [filters.graph, filters.agent, filters.conversation, filters.root],
+    [project, filters.graph, filters.agent, filters.conversation, filters.root],
   );
   const runsQ = useApiQuery(queryKeys.list("runs", serverParams), (r) => r.listRuns(serverParams), {
     refetchInterval: (q) => (q.state.data?.some((r) => isActiveRun(r.status)) ? RUN_LIST_POLL_MS : false),
@@ -95,11 +118,12 @@ export function RunsListScreen() {
   const lookups = useRunLookups();
   const handoffParams = useMemo(() => {
     const p: Record<string, string> = {};
+    if (project !== null) p["project"] = project;
     if (filters.graph) p["graph_id"] = filters.graph;
     if (filters.agent) p["agent_id"] = filters.agent;
     if (filters.conversation) p["conversation_id"] = filters.conversation;
     return p;
-  }, [filters.graph, filters.agent, filters.conversation]);
+  }, [project, filters.graph, filters.agent, filters.conversation]);
   const handoffsQ = useApiQuery(queryKeys.list("run-handoffs", handoffParams), loadHandoffs(handoffParams), { enabled: view === "handoffs" });
 
   const pending = usePendingInteractions();
@@ -107,8 +131,7 @@ export function RunsListScreen() {
     void qc.invalidateQueries({ queryKey: ["list", "runs"] });
   }, [pending.count, qc]);
 
-  const scopedRuns = useScopedList(runsQ.data, { scopeOf: scopeOfRun, idOf: idOfRun, nameOf: idOfRun });
-  const runs = scopedRuns.items;
+  const runs = runsQ.data;
   const anyActive = runs?.some((r) => isActiveRun(r.status)) ?? false;
   const nowMs = useNow(anyActive, 1000);
   const graphName = lookups.graphName;
@@ -124,7 +147,7 @@ export function RunsListScreen() {
         { statuses: filters.statuses, period: filters.period, query: filters.query },
         nowMs / 1000,
         PERIOD_OPTIONS,
-        (run) => [graphName(run.graph_id), conversationTitle(run.conversation_id), inputSummary(run.input)].filter(Boolean).join("\n"),
+        (run) => [graphName(run.graph_id, run.project_id), conversationTitle(run.conversation_id), inputSummary(run.input)].filter(Boolean).join("\n"),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [runs, statusKey, filters.period, filters.query, lookups.graphs, lookups.conversations, minuteBucket],
@@ -155,7 +178,9 @@ export function RunsListScreen() {
   useShortcuts([
     { id: "runs.search", scope: "runs", keys: "/", titleKey: "shortcuts.runsSearch", run: () => searchRef.current?.focus() },
     { id: "runs.filters", scope: "runs", keys: "f", titleKey: "shortcuts.runsFilters", run: () => firstRef.current?.focus() },
+    ...(canStartRun ? [{ id: "runs.new", scope: "runs", keys: "n", titleKey: "shortcuts.runsNew", run: openStart }] : []),
   ]);
+  useRegisterCommands(canStartRun ? [{ id: "runs.new", titleKey: "palette.actions.runNew", run: openStart }] : []);
 
   const confirmCancel = () => {
     const target = cancelTarget;
@@ -231,9 +256,11 @@ export function RunsListScreen() {
         title={t.list.title}
         status={<span className="app-muted" aria-live="polite">{t.list.summary(counts.running, counts.waiting)}</span>}
         actions={
-          <Button size="sm" loading={runsQ.isFetching && !runsQ.isPending} onClick={() => void runsQ.refetch()}>
-            {t.list.refresh}
-          </Button>
+          <>
+          <ProjectChip />
+          {canStartRun ? <Button variant="primary" size="sm" onClick={openStart}>{startText.button}</Button> : null}
+          <IconButton size="sm" label={t.list.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={runsQ.isFetching && !runsQ.isPending ? "true" : undefined} onClick={() => void runsQ.refetch()} />
+          </>
         }
       />
       <div className="app-screen-body runs-body">
@@ -259,8 +286,18 @@ export function RunsListScreen() {
           searchRef={searchRef}
           firstRef={firstRef}
         />
-        {view === "handoffs" ? handoffBody : (<>{scopedRuns.bar}{body}</>)}
+        {view === "handoffs" ? handoffBody : body}
       </div>
+      {startDialog !== null && canStartRun ? (
+        <RunStartDialog
+          initialProject={startDialog.project}
+          onClose={() => setStartDialog(null)}
+          onStarted={(started) => {
+            setStartDialog(null);
+            void navigate(runHrefs.run(started.id));
+          }}
+        />
+      ) : null}
       <ConfirmDialog
         open={cancelTarget !== null}
         title={t.list.cancelTitle}

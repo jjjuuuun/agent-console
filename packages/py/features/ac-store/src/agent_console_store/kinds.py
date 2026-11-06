@@ -1,7 +1,8 @@
 """정의 종류(kind) 등록. 새 종류는 `DefinitionKind` 하나를 만들어 저장소에 넘기면 된다."""
 
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, replace
+from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -38,6 +39,10 @@ class DefinitionKind:
         portable: True면 프로젝트 폴더의 사본 공간(`.agent-console/`)에 둘 수 있는 종류다
             (design §PI.4.2). 싱글턴 종류는 이 값과 상관없이 옮길 수 없다(`is_portable`).
             앱 등록부 같은 종류는 False로 등록한다.
+        library: True면 라이브러리 공간(앱 workspace)에도 둘 수 있다. False면 프로젝트·단독 공간에만
+            둔다(예: 프로젝트마다 따로인 문서, design §6R.3 X36). 저장소는 이 값을 보지 않는다 —
+            라이브러리 저장소를 여는 쪽이 `library=False` 종류를 빼고 연다(그 종류의 라이브러리
+            요청은 모르는 종류라 `NotFound`).
     """
 
     name: str
@@ -51,6 +56,7 @@ class DefinitionKind:
     multi_file: bool = False
     summary_fields: tuple[str, ...] = ()
     portable: bool = True
+    library: bool = True
 
     def __post_init__(self) -> None:
         if self.content_field is not None and self.singleton_file is not None:
@@ -66,6 +72,18 @@ class DefinitionKind:
     @property
     def is_singleton(self) -> bool:
         return self.singleton_file is not None
+
+    def with_summary_fields(self, *fields: str) -> "DefinitionKind":
+        """목록 요약 필드를 더한 사본(이미 있는 이름은 건너뛴다, 순서 유지). 더할 것이 없으면 자기
+        자신.
+
+        >>> GRAPH_KIND.with_summary_fields("status", "project").summary_fields
+        ('project', 'status')
+        """
+        extra = tuple(dict.fromkeys(f for f in fields if f not in self.summary_fields))
+        if not extra:
+            return self
+        return replace(self, summary_fields=(*self.summary_fields, *extra))
 
 
 GRAPH_KIND = DefinitionKind(
@@ -105,3 +123,64 @@ def kinds_by_name(kinds: Iterable[DefinitionKind]) -> dict[str, DefinitionKind]:
             raise ValueError(f"duplicate definition kind: {kind.name}")
         result[kind.name] = kind
     return result
+
+
+class KindContributionLike(Protocol):
+    """종류 기여 하나의 모양(`agent_console_modkit.KindContribution`과 같다, X44). 이 패키지는
+    키트를 모르므로 모양만 맞춘다."""
+
+    @property
+    def kind(self) -> object: ...
+
+    @property
+    def summary_fields(self) -> tuple[str, ...]: ...
+
+
+type KindSkipped = Callable[[str, str], None]
+"""`(종류 이름, 이유)`: 기여를 건너뛰었다.
+
+이유: `not_a_kind`·`reserved`·`duplicate`·`not_library`."""
+
+
+def contributed_kinds(
+    contributions: Iterable[KindContributionLike],
+    *,
+    reserved: Iterable[str] = (),
+    library_only: bool = False,
+    on_skip: KindSkipped | None = None,
+) -> list[DefinitionKind]:
+    """종류 기여 목록 → 더할 종류(기여의 `summary_fields`를 더한 사본, 들어온 순서).
+
+    Args:
+        contributions: 기여 목록(제공 모듈 id 순).
+        reserved: 이미 있는 종류 이름(이 이름의 기여는 건너뛴다 — 기존 종류를 바꾸지 않는다).
+        library_only: 참이면 `library=False` 종류를 뺀다(라이브러리 저장소용).
+        on_skip: 건너뛴 기여 알림(로그용). 종류 값이 `DefinitionKind`가 아니면 이름은 `repr`.
+
+    같은 이름이 두 번 오면 먼저 온 것만 쓴다.
+
+    >>> from types import SimpleNamespace as C
+    >>> note = DefinitionKind(name="note", directory="notes", library=False)
+    >>> [k.name for k in contributed_kinds([C(kind=note, summary_fields=())])]
+    ['note']
+    >>> contributed_kinds([C(kind=note, summary_fields=())], library_only=True)
+    []
+    """
+    taken = set(reserved)
+    out: list[DefinitionKind] = []
+    for item in contributions:
+        kind = item.kind
+        if not isinstance(kind, DefinitionKind):
+            reason, name = "not_a_kind", repr(kind)
+        elif kind.name in taken:
+            dup = any(k.name == kind.name for k in out)
+            reason, name = ("duplicate" if dup else "reserved"), kind.name
+        elif library_only and not kind.library:
+            reason, name = "not_library", kind.name
+        else:
+            taken.add(kind.name)
+            out.append(kind.with_summary_fields(*item.summary_fields))
+            continue
+        if on_skip is not None:
+            on_skip(name, reason)
+    return out

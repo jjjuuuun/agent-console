@@ -55,6 +55,30 @@ def combine_references(sources: Iterable[ReferenceSource]) -> References | None:
     return references
 
 
+def contribution_references(contributions: Iterable[Any]) -> list[ReferenceSource]:
+    """종류 기여(X44)의 ``references``를 X25 모양 ``(kind, document)``로(그 종류 문서에만 적용).
+
+    ``references``가 없는 기여는 건너뛴다(목록이 비면 참조 추출이 없는 것과 같다).
+    """
+    out: list[ReferenceSource] = []
+    for item in contributions:
+        extract = getattr(item, "references", None)
+        name = getattr(getattr(item, "kind", None), "name", None)
+        if extract is None or not isinstance(name, str):
+            continue
+
+        def source(
+            kind: str,
+            document: Mapping[str, Any],
+            _name: str = name,
+            _extract: Callable[[Mapping[str, Any]], Iterable[tuple[str, str]]] = extract,
+        ) -> Iterable[tuple[str, str]]:
+            return list(_extract(document)) if kind == _name else []
+
+        out.append(source)
+    return out
+
+
 class DefinitionSnapshot:
     """정의 목록 캐시(스레드 안전).
 

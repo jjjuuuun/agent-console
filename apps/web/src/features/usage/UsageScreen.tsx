@@ -9,7 +9,7 @@ import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { queryKeys, useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { useNow } from "../../app/useNow";
 import { formatRelative } from "../../lib/format";
-import { AccountWideNote } from "../projects";
+import { AccountWideNote, ProjectUsageSection } from "../projects";
 import { ROUTE_ROLES, routeIconNode } from "../library";
 import { RollupPanel, buildLinesByView } from "./RollupPanel";
 import { SourcesPanel } from "./SourcesPanel";
@@ -176,6 +176,7 @@ export function UsageScreen() {
       <div className="app-screen-body usage-body">
         {report.isError && report.data !== undefined ? <Banner tone="warning">{t.staleData}</Banner> : null}
         {cards}
+        <ProjectUsageSection />
         {setupSources.length > 0 ? (
           <div className="usage-guides" id="setup">
             {setupSources.map((x) => {

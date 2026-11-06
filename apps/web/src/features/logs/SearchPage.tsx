@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useProjectId } from "../../app/projectScope";
 import { Link, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, useShortcuts, useToast } from "@agent-console/ui";
@@ -23,7 +24,7 @@ import { useArchiveDownload } from "./archive";
 import { useLogTimeMode } from "./useLogTimeMode";
 import { CELL_IDS, DEFAULT_RANGE, SETTINGS_TAXONOMY_HASH, EVENT_COLUMN_IDS, FILTER_KEYS, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SEARCH_EVENT_COLUMNS_DEFAULT, SEARCH_VIEWS, SUGGEST_FROM } from "./logsConfig";
 import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
-import { classifyEmpty, enabledCount, eventFieldValues, originOf, parseRange, rangeToWindow, suggestionsFor, toRequestParams, withValues } from "./logsLib";
+import { classifyEmpty, enabledCount, eventFieldValues, originOf, parseRange, rangeToWindow, suggestionsFor, toRequestParams, projectParam, withValues } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { slotFor } from "./slots";
 import { useElementHeight } from "./useElementHeight";
@@ -46,6 +47,7 @@ export function SearchPage() {
   const toast = useToast();
   const storage = useStorage();
   const url = useLogUrlState(FIELDS);
+  const project = useProjectId();
   const [selectedUid, setSelectedUid] = useSelectedUid();
   const { tableRef: eventTableRef, panelRef: detailPanelRef, onActivate: activateEvent, reveal: revealEvent } = useDetailLink(selectedUid);
   const sources = useLogSources();
@@ -68,8 +70,8 @@ export function SearchPage() {
   const view: View = VIEWS.includes(viewParam ?? "") ? (viewParam as View) : EVENTS_VIEW;
   const rangeValue = url.screen[SCREEN_PARAMS.range]?.[0];
   const window = rangeToWindow(parseRange(rangeValue, DEFAULT_RANGE.search), anchor);
-  const params = useMemo(() => toRequestParams(url.filter, { [FILTER_KEYS.order]: order, [FILTER_KEYS.limit]: LOGS_LIMITS.eventsPage }, window), [url.filter, order, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
-  const handoffParams = useMemo(() => toRequestParams(url.filter, {}, window), [url.filter, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
+  const params = useMemo(() => toRequestParams(url.filter, { [FILTER_KEYS.order]: order, [FILTER_KEYS.limit]: LOGS_LIMITS.eventsPage, ...projectParam(project) }, window), [url.filter, project, order, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handoffParams = useMemo(() => toRequestParams(url.filter, { ...projectParam(project) }, window), [url.filter, project, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
   const events = useLogEventPages(params, view === EVENTS_VIEW);
   const handoffs = useLogHandoffs(handoffParams, view === MATRIX_VIEW);
   const rows = useMemo<LogEvent[]>(() => (events.data?.pages ?? []).flatMap((p) => p.items ?? []), [events.data]);

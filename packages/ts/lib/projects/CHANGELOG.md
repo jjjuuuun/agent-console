@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 문구 표에 복사 계획 대화상자·공간 칩 키를 더했다(`copy.import.*`·`copy.plan.*`·`copy.result.*`·`copy.submit.*`·`space.view_*`, 5.7R.33o). 도우미 함수는 그대로다.
 - `folderCheckData`가 `FolderCheck.existing`(found·invalid)을 folder-picker의 `manifest{name,count,valid}`로 옮긴다(5.7R.33n, 33m 후속).
 - 프로젝트 2(5.7R.33m, 계약 0.12.0): 상태 표현·능력 표(`statusInfo`·`projectAbilities`, 데이터 표 `ABILITY_TABLE`), 공간 표시와 질의 인자(`spaceLabel`·`spaceParam`), 복사 계획 도우미(`copy.ts`: 기본 동작·선택지·검사·적용 요청·결과 요약), 폴더 선택 어댑터(`folders.ts`, 계약 → folder-picker 모양), 문구 표(`DEFAULT_PROJECT_MESSAGES`, `createProjectsText`).
 - `logFilterFor`·`applyLogFilter`는 프로젝트 id(또는 프로젝트 객체) 하나로 `project=<id>`를 만든다. `LegacyLogProjectsHolder`·`ProjectLogFilter.groups/linked`를 없앴다(깨는 변경: 소비자는 웹 로그 연결 UI뿐, 33p가 지운다).

@@ -68,6 +68,12 @@ True
 
 ```
 
+## Claude Code 폴더 규칙
+
+`project_key(folder, keep="", replacement="-")`: 작업 폴더 경로 → Claude Code `projects` 아래 폴더 이름
+(예: `/work/demo` → `-work-demo`). 로그 출처(`agent-console-logs-claude`, 다시 내보냄)와 실행 백엔드의 세션
+보관(`agent-console-backend-claude-sdk`, 5.7R.33y3)이 이 함수 하나를 쓴다. 파일을 건드리지 않는다.
+
 ## 데이터(코드에 고정하지 않는 것)
 
 - `ClaudeMapping`: 만드는/읽는 정의 종류 이름(`agent`·`resource`·`graph`)과 리소스 종류 id

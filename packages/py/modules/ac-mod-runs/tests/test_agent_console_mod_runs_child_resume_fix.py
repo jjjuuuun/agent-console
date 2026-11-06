@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
+
+import pytest
 
 from agent_console_mod_runs import (
     DEFAULT_CHILD_RESUME_FIX,
@@ -12,7 +15,10 @@ from agent_console_mod_runs import (
     WEB_ROLES,
     ChildResumeFix,
     RunsModule,
+    RunsModuleSettings,
+    child_resume_fix_of,
     error_map,
+    load_child_resume_fix,
 )
 from agent_console_modkit import ErrorMapping, ErrorReply
 from agent_console_runtime import ResumeError
@@ -62,3 +68,39 @@ def test_no_fix_without_root() -> None:
 def test_module_accepts_data() -> None:
     data = ChildResumeFix(label="x", role="y")
     assert RunsModule(child_resume_fix=data)._child_resume_fix is data
+
+
+def test_default_comes_from_package_data() -> None:
+    """문구·역할은 코드 상수가 아니라 패키지 데이터(``data/issue_fixes.json``)다(6R.7, L-18)."""
+    import json
+    from importlib.resources import files
+
+    raw = json.loads(
+        files("agent_console_mod_runs").joinpath("data/issue_fixes.json").read_text("utf-8")
+    )
+    assert ChildResumeFix(**raw["child_resume"]) == DEFAULT_CHILD_RESUME_FIX
+    assert load_child_resume_fix() == DEFAULT_CHILD_RESUME_FIX
+
+
+def test_table_without_entry_means_no_button() -> None:
+    assert load_child_resume_fix('{"child_resume": {"label": "", "role": "runs"}}') is None
+    assert load_child_resume_fix("{}") is None
+    assert _reply_fix(error_map(child_resume=None)) is None
+
+
+def test_installer_file_overrides(tmp_path: Path) -> None:
+    (tmp_path / "fixes.json").write_text(
+        '{"child_resume": {"label": "처음으로", "role": "zz-runs"}}', encoding="utf-8"
+    )
+    fix = child_resume_fix_of(Path("fixes.json"), tmp_path)
+    assert fix == ChildResumeFix(label="처음으로", role="zz-runs")
+    assert child_resume_fix_of(None) == DEFAULT_CHILD_RESUME_FIX
+    custom = ChildResumeFix(label="x", role="y")
+    assert child_resume_fix_of(None, default=custom) is custom
+    assert child_resume_fix_of(Path("missing.json"), tmp_path) is None
+
+
+def test_settings_blank_file_is_default() -> None:
+    assert RunsModuleSettings(issue_fixes_file="  ").issue_fixes_file is None  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="객체"):
+        load_child_resume_fix("[]")

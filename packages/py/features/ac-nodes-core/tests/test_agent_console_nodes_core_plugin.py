@@ -25,6 +25,7 @@ from agent_console_contracts import (
     RunEvent,
 )
 from agent_console_nodes_core import (
+    INPUT_KEY_MISSING,
     SDK_SUBAGENTS,
     AgentNode,
     DataEdge,
@@ -50,9 +51,11 @@ from agent_console_runtime import (
     EDGE_TYPES_GROUP,
     INTERACTION_KINDS_GROUP,
     NODE_TYPES_GROUP,
+    Activation,
     AgentRequest,
     AgentResult,
     BackendEventSink,
+    Blocked,
     CancelToken,
     DelegationMember,
     DelegationPlan,
@@ -212,15 +215,18 @@ def test_message_selects_input_key_and_template() -> None:
     edge = MessageEdge()
     run_input = {"text": "안녕", "request": "요청", "who": "민"}
     act = edge.activates(_view(says=run_input), _spec("message", sp="says"))
-    assert act is not None
+    assert isinstance(act, Activation)
     assert act.value == "안녕"
     act = edge.activates(
         _view(says=run_input),
         _spec("message", sp="says", input_key="request", template="{who}: {message} {nope}"),
     )
-    assert act is not None
+    assert isinstance(act, Activation)
     assert act.value == "민: 요청 {nope}"
-    assert edge.activates(_view(says={"x": 1}), _spec("message", sp="says")) is None
+    blocked = edge.activates(_view(says={"x": 1}), _spec("message", sp="says"))
+    assert isinstance(blocked, Blocked)  # 입력 키 없음: 사유 있는 dead-path(6R.7)
+    assert blocked.reason == INPUT_KEY_MISSING
+    assert blocked.warnings[0].details == {"input_key": "text", "input_keys": ["x"]}
 
 
 def test_reply_builds_reply_from_config() -> None:

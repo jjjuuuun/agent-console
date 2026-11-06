@@ -1,7 +1,11 @@
 """REST 경로(접두 없음, 호스트가 ``/api/v1`` 아래 붙인다, design §5.2·§R14.4·§2R.10).
 
 - 실행: ``POST/GET /runs``, ``GET /runs/{id}``, ``POST /runs/{id}/cancel``,
-  ``GET /runs/{id}/events``
+  ``GET /runs/{id}/events``(``node=`` 서버 거르기, 6R.12)
+- 실행 목록 커서 페이지(6R.12, B-11·L-19): ``GET /runs/page``(``RunPage``). 옛 ``GET /runs``는
+  그대로 두고 OpenAPI ``deprecated``. 프로젝트 기록 공간이 있는 조립에서 ``?project=``는 폴더 기록
+  (``source=project``)을 끝까지 읽은 뒤 앱 DB 옛 기록(``source=app``)을 잇는다(Q14, 두 DB를 섞지
+  않음). 커서 = ``<출처>.<저장소 커서>``(``agent_console_store.page_across_sources``).
 - 상호작용: ``GET /runs/{id}/interactions``, ``POST /runs/{id}/interactions/{iid}/respond``,
   ``GET /interactions``
 - 이어 가기: ``GET /runs/{id}/resume-options``, ``POST /runs/{id}/resume``
@@ -21,6 +25,11 @@
 - 자식 Run(design §5R.7·§5R.11): ``GET /runs?root=<id>``(그 루트 아래 모든 자손),
   ``GET /runs/{id}``의 ``children``(직접 자식, 만든 순). 취소는 엔진이 자식에 전파한다.
 - 에이전트 활동: ``GET /agents/{id}/activity``
+- 프로젝트 기록 DB(5.7R.33y2, design §PI.4.6.3·.5·.7): Run 경로는 ``?project=<등록 id>``를 받는다.
+  기록 공간 포트가 있으면 그 프로젝트 기록 DB에서 읽고(파일이 없으면 빈 목록), 없으면 호스트 DB에서
+  ``project_id``로 거른다. 목록 ``?source=app`` = 그 ``project_id``를 가진 앱 DB 옛 기록(읽기 전용
+  표시). ``POST /runs/{id}/mark-interrupted?project=`` = 끝나지 않은 Run을 끊긴 것으로(다른 앱의
+  Run 포함).
 
 라우트는 요청 파싱 → 서비스 호출 → 응답 변환만 한다. 흐름(``/runs/{id}/trace``)·넘김 집계
 (``/runs/handoffs``)는 ``link-runs-trace``가 붙인다.
@@ -32,9 +41,11 @@ from collections.abc import Callable, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 
 from agent_console_contracts import (
+    RECORD_SOURCES,
     AssignProjectRequest,
     AssignProjectResult,
     BackendDescriptor,
@@ -57,18 +68,27 @@ from agent_console_contracts import (
     NodeTypeDescriptor,
     PortSpec,
     ProjectCounts,
+    RecordsMoveRequest,
+    RecordsMoveResult,
+    RecordSource,
     ResolvePortsRequest,
     RespondInteractionRequest,
     ResumeOptions,
     ResumeRunRequest,
     Run,
     RunEvent,
+    RunPage,
     RunSnapshot,
     RunStatus,
 )
 from agent_console_registry import UnknownExtensionError
 from agent_console_runtime import BackendLoginService, BackendReadinessService, LoginInputError
-from agent_console_store import ProjectAssignStore, assign_project, count_projects
+from agent_console_store import (
+    ProjectAssignStore,
+    assign_project,
+    count_projects,
+    page_across_sources,
+)
 
 from .errors import (
     BackendNotFoundError,
@@ -76,18 +96,49 @@ from .errors import (
     NodeTypeNotFoundError,
     PortConfigError,
     RunNotFoundError,
+    RunQueryError,
     issues_from_errors,
 )
 from .interactions import InteractionService
 from .login_gate import descriptor_without_login, readiness_without_login
+from .move import RunMover
 from .observe import DEFAULT_OBSERVE_EVENT_PREFIXES
 from .service import RunService
 
 DEFAULT_RUN_LIST_LIMIT = 200
+DEFAULT_RUN_PAGE_LIMIT = 50
+"""``GET /runs/page`` 기본 ``limit``."""
 MAX_RUN_LIST_LIMIT = 1000
 MAX_ACTIVITY_LIMIT = 1000
 
 Limit = Annotated[int, Query(ge=1, le=MAX_RUN_LIST_LIMIT)]
+
+SOURCE_PROJECT: RecordSource = "project"
+SOURCE_APP: RecordSource = "app"
+"""목록 ``?source=app``: 앱 DB 옛 기록(그 ``project_id``를 가진 행, 읽기 전용 표시)."""
+RunSource = RecordSource
+"""목록 출처(기본 ``project`` = 그 프로젝트 기록 DB, design §PI.4.6.8). 계약 ``RecordSource``."""
+
+
+def parse_label_filters(values: Sequence[str] | None) -> dict[str, str]:
+    """질의 ``label=<키>=<값>``(여러 번 = AND) → 사전. 첫 ``=``에서 나눈다(값에 ``=`` 가능).
+
+    >>> parse_label_filters(["sdd.spec=pay", "sdd.task=2.1=b"])
+    {'sdd.spec': 'pay', 'sdd.task': '2.1=b'}
+
+    Raises:
+        RunQueryError: ``=``이 없거나 키가 비었다. 같은 키에 다른 값을 두 번 주었다.
+    """
+    out: dict[str, str] = {}
+    for raw in values or ():
+        key, sep, value = raw.partition("=")
+        if not sep or not key:
+            raise RunQueryError("label은 '<키>=<값>' 모양이어야 합니다")
+        if key in out and out[key] != value:
+            raise RunQueryError("같은 label 키에 값이 둘입니다")
+        out[key] = value
+    return out
+
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse} for status in (400, 401, 403, 404, 413, 422, 500)
@@ -110,6 +161,7 @@ def build_router(
     login: Callable[[], BackendLoginService] | None = None,
     observe_event_prefixes: Sequence[str] = DEFAULT_OBSERVE_EVENT_PREFIXES,
     projects: Callable[[], ProjectAssignStore] | None = None,
+    mover: Callable[[], RunMover] | None = None,
 ) -> APIRouter:
     """실행 모듈 라우터.
 
@@ -123,14 +175,15 @@ def build_router(
         login: 백엔드 로그인 서비스. None이면 로그인·로그아웃 경로 6개를 붙이지 않는다.
         projects: 프로젝트 넣기·개수 포트(``project_id``를 가진 Run 저장소).
             None이면 두 경로를 붙이지 않는다.
+        mover: 앱 DB 옛 기록 옮기기(``POST /runs/move-to-project``). None이면 경로를 붙이지 않는다.
         observe_event_prefixes: ``GET /observe-event-prefixes``가 내는 관측 탭 이벤트 type 접두어
             (기본 = 패키지 기본 데이터, 빈 목록 = 관측 탭 끔).
     """
     prefixes = list(observe_event_prefixes)
     router = APIRouter()
 
-    def require_run(run_id: str) -> Run:
-        found = service().current_run(run_id)
+    def require_run(run_id: str, project: str | None = None) -> Run:
+        found = service().current_run(run_id, project)
         if found is None:
             raise RunNotFoundError(run_id)
         return found
@@ -148,10 +201,11 @@ def build_router(
             version_hash=body.version_hash,
             origin=body.origin,
             project_id=body.project_id,
+            labels=body.labels or None,
         )
         return handle.run
 
-    @router.get("/runs", response_model=list[Run], responses=errors())
+    @router.get("/runs", response_model=list[Run], responses=errors(), deprecated=True)
     async def list_runs(
         graph_id: str | None = None,
         conversation_id: str | None = None,
@@ -160,23 +214,84 @@ def build_router(
         root: str | None = None,
         project: str | None = None,
         root_only: bool = False,
+        source: RunSource = "project",
         limit: Limit = DEFAULT_RUN_LIST_LIMIT,
     ) -> list[Run]:
         """최신 생성순. 필터는 모두 AND. ``agent_id`` = 그 에이전트가 actor로 남긴 이벤트가 있는
         Run. ``root`` = 그 루트 Run 아래 모든 자식 Run(손자 포함, 루트 자신은 빠짐).
-        ``project`` = 그 ``project_id``인 Run만(불투명 문자열), ``root_only`` = 루트 Run만
+        ``project`` = 그 프로젝트의 Run만(기록 공간이 있으면 그 기록 DB, 없으면 ``project_id``로
+        거름), ``source=app`` = 그 ``project_id``를 가진 앱 DB 옛 기록, ``root_only`` = 루트 Run만
         (``limit``은 이 조건을 건 뒤에 적용된다)."""
-        found: list[Run] = runs().list(
-            graph_id=graph_id,
-            conversation_id=conversation_id,
-            agent=agent_id,
-            status=[status] if status is not None else None,
-            root_run_id=root,
-            project_id=project,
-            root_only=root_only,
-            limit=limit,
+        filters: dict[str, Any] = {
+            "graph_id": graph_id,
+            "conversation_id": conversation_id,
+            "agent": agent_id,
+            "status": [status] if status is not None else None,
+            "root_run_id": root,
+            "root_only": root_only,
+            "limit": limit,
+        }
+        svc = service()
+        if source == SOURCE_APP or project is None or svc.records is None:
+            host = svc.records.host.runs if svc.records is not None else runs()
+            found: list[Run] = host.list(**filters, project_id=project)
+            return found
+        return list(svc.reader(project).list(**filters))
+
+    @router.get("/runs/page", response_model=RunPage, responses=errors())
+    async def page_runs(
+        cursor: str | None = None,
+        limit: Annotated[int, Query(ge=1, le=MAX_RUN_LIST_LIMIT)] = DEFAULT_RUN_PAGE_LIMIT,
+        project: str | None = None,
+        root_only: bool = False,
+        status: Annotated[list[RunStatus] | None, Query()] = None,
+        graph_id: str | None = None,
+        label: Annotated[list[str] | None, Query()] = None,
+        source: RecordSource = "project",
+    ) -> RunPage:
+        """실행 목록 커서 페이지(``created_at`` 내림차순 + ``id``). 조건은 모두 AND.
+
+        - ``cursor`` = 이전 응답의 ``next_cursor``(불투명, 모양이 틀리면 400 ``bad_request``).
+          커서에 출처가 들어 있어 ``source``보다 우선한다.
+        - ``status``·``label=<키>=<값>``은 여러 번 줄 수 있다(상태는 OR, 라벨은 AND, 라벨은 루트
+          Run에만 있다).
+        - ``project`` = 그 프로젝트의 Run. 기록 공간이 있는 조립이면 폴더 기록 DB를 끝까지 읽은 뒤
+          ``next_cursor``가 앱 DB 옛 기록(``source=app``)의 처음을 가리킨다(옛 기록이 없으면 null).
+          한 페이지는 한 출처에서만 나오고 응답 ``source``가 그 출처다. ``source=app``으로 바로 옛
+          기록만 읽을 수도 있다. 공간이 없는 조립(기능 단독)은 호스트 DB 하나를 ``project_id``로
+          거르고 잇지 않는다.
+        """
+        filters: dict[str, Any] = {
+            "limit": limit,
+            "root_only": root_only,
+            "status": status or None,
+            "graph_id": graph_id,
+            "labels": parse_label_filters(label) or None,
+        }
+        svc = service()
+        spaced = project is not None and svc.records is not None and svc.records.spaced
+
+        def host_page(inner: str | None, size: int) -> tuple[list[Run], str | None]:
+            host = svc.records.host.runs if svc.records is not None else runs()
+            found: tuple[list[Run], str | None] = host.page(
+                **{**filters, "limit": size}, cursor=inner, project_id=project
+            )
+            return found
+
+        def read(src: str, inner: str | None) -> tuple[list[Run], str | None]:
+            if src == SOURCE_APP or not spaced:
+                return host_page(inner, limit)
+            found: tuple[list[Run], str | None] = svc.reader(project).page(**filters, cursor=inner)
+            return found
+
+        def has_any(src: str) -> bool:
+            return src == SOURCE_APP and bool(host_page(None, 1)[0])
+
+        order = RECORD_SOURCES if spaced else (source,)
+        page = page_across_sources(cursor, source, order=order, read=read, has_any=has_any)
+        return RunPage.model_validate(
+            {"items": page.items, "next_cursor": page.next_cursor, "source": page.source}
         )
-        return found
 
     if projects is not None:
         # 고정 경로는 ``/runs/{run_id}``보다 먼저 등록한다.
@@ -192,9 +307,36 @@ def build_router(
             실행 중인 트리는 ``busy``로 건너뛴다."""
             return assign_project(projects(), body)
 
+    if mover is not None:
+
+        @router.post(
+            "/runs/move-to-project", response_model=RecordsMoveResult, responses=errors(409)
+        )
+        async def move_runs_to_project(body: RecordsMoveRequest) -> RecordsMoveResult:
+            """앱 DB의 Run 기록을 그 프로젝트 기록 DB로 옮긴다(루트 Run + 자손·노드·이벤트·
+            상호작용).
+            대상에 같은 id가 있으면 ``skipped``, 실행 중인 묶음은 ``failed``(``run.move_busy``).
+            복사 -> 개수·값 확인 -> 원본 삭제(``remove_source``) 순서이고 실패하면 대상을 되돌린다.
+            기록 DB를 쓸 수 없으면 409 ``project.records_unavailable``, 모르는 프로젝트는 404."""
+            return await run_in_threadpool(mover().move, body)
+
     @router.get("/runs/{run_id}", response_model=RunSnapshot, responses=errors())
-    async def get_run(run_id: str) -> RunSnapshot:
-        """Run·NodeRun·마지막 이벤트 seq와 직접 자식 Run(``children``, 만든 순 — 중첩 팀)."""
+    async def get_run(run_id: str, project: str | None = None) -> RunSnapshot:
+        """Run·NodeRun·마지막 이벤트 seq와 직접 자식 Run(``children``, 만든 순 — 중첩 팀).
+        ``project`` = 그 프로젝트 기록 DB에서(없으면 호스트 DB)."""
+        if project is not None and service().records is not None:
+            reader = service().reader(project)
+            found = reader.get(run_id)
+            if found is None:
+                raise RunNotFoundError(run_id)
+            kids: list[Run] = reader.list(parent_run_id=run_id)
+            kids.sort(key=lambda child: (child.created_at, child.id))
+            return RunSnapshot(
+                run=found,
+                node_runs=reader.list_node_runs(run_id),
+                last_seq=reader.last_seq(run_id),
+                children=kids,
+            )
         run = runs().get(run_id)
         if run is None:
             raise RunNotFoundError(run_id)
@@ -207,15 +349,26 @@ def build_router(
             children=children,
         )
 
+    @router.post("/runs/{run_id}/mark-interrupted", response_model=Run, responses=errors(409))
+    async def mark_interrupted(run_id: str, project: str | None = None) -> Run:
+        """끝나지 않은 Run을 끊긴 것으로 표시한다(``interrupted``, 대기 요청 닫음). 다른 앱
+        (``Run.host_id``가 다름)이 남긴 Run도 사용자가 누를 때만 바꾼다(K33-30). 이 앱에서 돌고
+        있으면 끊는다. 이미 끝났으면 그대로(멱등). 기록 DB를 쓸 수 없으면 409
+        ``project.records_unavailable``. 없으면 404."""
+        found = service().mark_interrupted(run_id, project)
+        if found is None:
+            raise RunNotFoundError(run_id)
+        return found
+
     @router.post("/runs/{run_id}/cancel", response_model=Run, responses=errors())
-    async def cancel_run(run_id: str) -> Run:
+    async def cancel_run(run_id: str, project: str | None = None) -> Run:
         """취소 요청. 이미 끝난 Run은 그대로 돌려준다(멱등). 진행 중인 자식 Run도 함께 멈춘다
         (엔진이 전파). 자식 Run을 직접 취소하면 그 자식만 멈추고 부른 노드가 결과를 받는다."""
         handle = service().runtime.get(run_id)
         if handle is not None:
             handle.cancel("cancelled via api")
             return handle.run
-        return require_run(run_id)
+        return require_run(run_id, project)
 
     @router.get("/runs/{run_id}/events", response_model=list[RunEvent], responses=errors())
     async def run_events(
@@ -223,20 +376,28 @@ def build_router(
         actor: str | None = None,
         type_prefix: str | None = None,
         since_seq: Annotated[int, Query(ge=0)] = 0,
+        project: str | None = None,
+        node: str | None = None,
     ) -> list[RunEvent]:
-        """이 실행의 이벤트(seq 순). ``actor``(에이전트별 로그)·``type_prefix``(예: ``hook.``)."""
-        require_run(run_id)
-        found: list[RunEvent] = events().list(
-            run_id, since_seq=since_seq, actor=actor, type_prefix=type_prefix
-        )
+        """이 실행의 이벤트(seq 순). ``actor``(에이전트별 로그)·``type_prefix``(예: ``hook.``)·
+        ``node``(``node_path``에 그 노드 id가 있는 이벤트 — 하위 그래프 안 이벤트 포함, 6R.12)."""
+        require_run(run_id, project)
+        query: dict[str, Any] = {"since_seq": since_seq, "actor": actor, "type_prefix": type_prefix}
+        if node is not None:
+            query["node"] = node
+        if project is not None and service().records is not None:
+            return list(service().reader(project).events(run_id, **query))
+        found: list[RunEvent] = events().list(run_id, **query)
         return found
 
     # ------------------------------------------------------------ 상호작용
 
     @router.get("/runs/{run_id}/interactions", response_model=list[Interaction], responses=errors())
-    async def run_interactions(run_id: str) -> list[Interaction]:
+    async def run_interactions(run_id: str, project: str | None = None) -> list[Interaction]:
         """이 실행의 상호작용(대기·닫힘 모두, 오래된 순)."""
-        require_run(run_id)
+        require_run(run_id, project)
+        if project is not None and service().records is not None:
+            return list(service().reader(project).interactions(run_id=run_id))
         return interactions().list(run_id=run_id)
 
     @router.post(
@@ -256,29 +417,38 @@ def build_router(
         status: InteractionStatus | None = None,
         conversation_id: str | None = None,
         root: str | None = None,
+        project: str | None = None,
         limit: Limit = DEFAULT_RUN_LIST_LIMIT,
     ) -> list[Interaction]:
         """상호작용 목록, 최신순. ``status=pending``이면 대기 목록. ``root`` = 그 Run과 아래 모든
-        자식 Run의 상호작용(루트 기준, 중첩 팀 안의 요청 포함)."""
-        found = interactions().list(
-            status=status, conversation_id=conversation_id, root_run_id=root
-        )
+        자식 Run의 상호작용(루트 기준, 중첩 팀 안의 요청 포함). ``project`` = 그 프로젝트 기록
+        DB에서(없으면 호스트 DB)."""
+        if project is not None and service().records is not None:
+            found = (
+                service()
+                .reader(project)
+                .interactions(status=status, conversation_id=conversation_id, root_run_id=root)
+            )
+        else:
+            found = interactions().list(
+                status=status, conversation_id=conversation_id, root_run_id=root
+            )
         return list(reversed(found))[:limit]
 
     # ------------------------------------------------------------ 이어 가기
 
     @router.get("/runs/{run_id}/resume-options", response_model=ResumeOptions, responses=errors())
-    async def resume_options(run_id: str) -> ResumeOptions:
+    async def resume_options(run_id: str, project: str | None = None) -> ResumeOptions:
         """끊긴 노드 목록과 노드 타입 디스크립터의 ``rerunnable``, 끊기기 직전 상태(``status``).
 
         끊긴(``interrupted``) Run이 아니거나 이미 이어 간 Run이면 ``nodes``가 비어 있다. 없으면 404.
         """
-        return service().resume.options(run_id)
+        return service().resume_for(project).options(run_id)
 
     @router.post(
         "/runs/{run_id}/resume", response_model=Run, status_code=202, responses=errors(409)
     )
-    async def resume_run(run_id: str, body: ResumeRunRequest) -> Run:
+    async def resume_run(run_id: str, body: ResumeRunRequest, project: str | None = None) -> Run:
         """고른 노드를 저장된 입력으로 다시 실행하는 **새 Run**(202, ``origin = resume``,
         ``resumed_from``). 대화 턴이면 이어 가기 처리기(``runs.resume_handlers``)가 같은 대화의 새
         턴으로 시작한다.
@@ -287,7 +457,7 @@ def build_router(
         이미 이어 감·당시 팀 구성 없음·대화의 마지막 턴이 아님: 409 ``run_not_resumable``. 대화에
         실행 중인 턴: 409 ``conversation_busy``. 없음 404.
         """
-        return await service().resume.resume(run_id, body.node_ids)
+        return await service().resume_for(project).resume(run_id, body.node_ids)
 
     # ------------------------------------------------------------ 디스크립터
 
@@ -572,9 +742,11 @@ def _backend_login_routes(router: APIRouter, login: Callable[[], BackendLoginSer
 
 __all__ = [
     "DEFAULT_RUN_LIST_LIMIT",
+    "DEFAULT_RUN_PAGE_LIMIT",
     "LOGIN_INPUT_MAX_BYTES",
     "MAX_RUN_LIST_LIMIT",
     "NO_STORE",
     "build_router",
     "errors",
+    "parse_label_filters",
 ]

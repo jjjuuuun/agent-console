@@ -44,6 +44,7 @@ from .memory import (
 )
 from .migrate import upgrade
 from .project_assign import AssignCandidate
+from .run_page import clamp_limit, decode_cursor, encode_cursor
 
 
 def create_sqlite_engine(
@@ -275,6 +276,7 @@ class SqliteRunRepository:
         self._engine = engine
         self._lineage = t.runs_lineage_active(engine)
         self._project = self._lineage and t.runs_project_active(engine)
+        self._labels = self._lineage and t.runs_labels_active(engine)
         self._runs = t.runs_v2 if self._lineage else t.runs
         self._node_runs = t.node_runs_v2 if self._lineage else t.node_runs
 
@@ -304,6 +306,13 @@ class SqliteRunRepository:
         )
         with self._engine.begin() as conn:
             conn.execute(stmt)
+            if self._labels:
+                conn.execute(sa.delete(t.run_labels).where(t.run_labels.c.run_id == run.id))
+                if run.root_run_id is None and run.labels:
+                    conn.execute(
+                        sa.insert(t.run_labels),
+                        [{"run_id": run.id, "key": k, "value": v} for k, v in run.labels.items()],
+                    )
 
     def get(self, run_id: str) -> Run | None:
         with self._engine.connect() as conn:
@@ -364,6 +373,61 @@ class SqliteRunRepository:
             stmt = stmt.limit(limit)
         with self._engine.connect() as conn:
             return [Run.model_validate_json(d) for d in conn.execute(stmt).scalars()]
+
+    def descendants(self, root_run_id: str) -> builtins.list[Run]:
+        stmt = (
+            sa.select(self._runs.c.doc)
+            .where(self._col_root() == root_run_id)
+            .order_by(self._runs.c.created_at, self._runs.c.id)
+        )
+        with self._engine.connect() as conn:
+            return [Run.model_validate_json(d) for d in conn.execute(stmt).scalars()]
+
+    def page(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+        project_id: str | None = None,
+        root_only: bool = False,
+        status: Iterable[RunStatus] | None = None,
+        graph_id: str | None = None,
+        labels: Mapping[str, str] | None = None,
+    ) -> tuple[builtins.list[Run], str | None]:
+        limit = clamp_limit(limit)
+        c = self._runs.c
+        stmt = sa.select(c.doc, c.created_at, c.id)
+        if project_id is not None:
+            stmt = stmt.where(self._col_project() == project_id)
+        if root_only:
+            stmt = stmt.where(self._col_root().is_(None))
+        if graph_id is not None:
+            stmt = stmt.where(c.graph_id == graph_id)
+        if status is not None:
+            stmt = stmt.where(c.status.in_(list(status)))
+        for key, value in (labels or {}).items():
+            if self._labels:
+                stmt = stmt.where(
+                    c.id.in_(
+                        sa.select(t.run_labels.c.run_id).where(
+                            t.run_labels.c.key == key, t.run_labels.c.value == value
+                        )
+                    )
+                )
+            else:
+                path = '$.labels."' + key.replace('"', '\\"') + '"'
+                stmt = stmt.where(sa.func.json_extract(c.doc, path) == value)
+        if cursor is not None:
+            at, rid = decode_cursor(cursor)
+            stmt = stmt.where(sa.tuple_(c.created_at, c.id) < sa.tuple_(at, rid))
+        stmt = stmt.order_by(c.created_at.desc(), c.id.desc()).limit(limit + 1)
+        with self._engine.connect() as conn:
+            rows = conn.execute(stmt).all()
+        more = len(rows) > limit
+        rows = rows[:limit]
+        items = [Run.model_validate_json(r[0]) for r in rows]
+        next_cursor = encode_cursor(rows[-1][1], rows[-1][2]) if more and rows else None
+        return items, next_cursor
 
     # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
 
@@ -484,6 +548,8 @@ class SqliteRunRepository:
         with self._engine.begin() as conn:
             for table in (t.run_events, t.node_runs, t.routing_decisions, t.interactions):
                 conn.execute(sa.delete(table).where(table.c.run_id == run_id))
+            if self._labels:
+                conn.execute(sa.delete(t.run_labels).where(t.run_labels.c.run_id == run_id))
             result = conn.execute(sa.delete(t.runs).where(t.runs.c.id == run_id))
         return result.rowcount > 0
 
@@ -503,6 +569,14 @@ def _with_type_prefix(stmt: sa.Select[Any], prefix: str | None) -> sa.Select[Any
     upper = prefix[:-1] + chr(ord(prefix[-1]) + 1) if ord(prefix[-1]) < 0x10FFFF else None
     stmt = stmt.where(column >= prefix)
     return stmt if upper is None else stmt.where(column < upper)
+
+
+def _in_node_path(node: str) -> sa.ColumnElement[bool]:
+    """`node_path`에 `node`가 있는 이벤트. 첫 칸은 `node_id` 열(색인)이고, 하위 그래프 안 이벤트는
+    본문 `node_path`를 `json_each`로 본다(그 Run의 행만 훑는다)."""
+    c = t.run_events.c
+    path = sa.func.json_each(c.body, "$.node_path").table_valued("value")
+    return sa.or_(c.node_id == node, sa.exists().where(path.c.value == node))
 
 
 class SqliteEventRepository:
@@ -554,12 +628,15 @@ class SqliteEventRepository:
         limit: int | None = None,
         actor: str | None = None,
         type_prefix: str | None = None,
+        node: str | None = None,
     ) -> builtins.list[RunEvent]:
         c = t.run_events.c
         stmt = sa.select(c.body).where(c.run_id == run_id, c.seq > since_seq).order_by(c.seq)
         if actor is not None:
             stmt = stmt.where(c.actor == actor)
         stmt = _with_type_prefix(stmt, type_prefix)
+        if node is not None:
+            stmt = stmt.where(_in_node_path(node))
         if limit is not None:
             stmt = stmt.limit(limit)
         with self._engine.connect() as conn:

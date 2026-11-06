@@ -5,14 +5,17 @@
 1.2.0(0.12.1, design §PI.4.6.4·.5): 이어 가기 상태 `SessionStatus`·`ConversationSessions`
 (`KnownSessionStates`), 전송 요청 `on_missing_session`, 대기열 `QueuedMessage.held_reason`
 (`KnownQueueHoldReasons`).
+1.3.0(0.13.0, design §6R.9 L-19·§6R.18 Q14): 커서 페이지
+`ConversationPage{items, next_cursor, source}`. `CreateConversationRequest`는 모르는 키를 거부한다
+(`extra=forbid`, 예: `project` 오타가 조용히 무시되지 않게).
 """
 
 from typing import Final, Literal
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from ._base import ContractModel, JsonObject, NonEmptyStr
-from .common import Usage
+from .common import RecordSource, Usage
 from .runs import Interaction, RunStatus
 
 
@@ -70,8 +73,26 @@ class ConversationSummary(ContractModel):
     )
 
 
+class ConversationPage(ContractModel):
+    """`GET /conversations/page` 응답: 대화 목록 커서 페이지(1.3.0).
+
+    정렬은 `updated_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다
+    (불투명 문자열). 질의 `?project=`는 서버가 거른다. 프로젝트 목록은 폴더 기록
+    (`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로 읽는다.
+    """
+
+    items: list[ConversationSummary] = Field(default_factory=list)
+    next_cursor: str | None = Field(default=None, description="다음 페이지 커서. null = 끝.")
+    source: RecordSource = Field(description="이 페이지의 기록 출처(project·app).")
+
+
 class CreateConversationRequest(ContractModel):
-    """`POST /conversations` 요청. 응답은 `Conversation`(201)."""
+    """`POST /conversations` 요청. 응답은 `Conversation`(201).
+
+    1.3.0부터 모르는 키를 거부한다(422). 보낼 수 있는 키: `graph_id`·`title`·`project_id`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     graph_id: NonEmptyStr
     title: str | None = None
@@ -222,6 +243,7 @@ __all__ = [
     "ChatReply",
     "ChatTurn",
     "Conversation",
+    "ConversationPage",
     "ConversationSessions",
     "ConversationSummary",
     "CreateConversationRequest",

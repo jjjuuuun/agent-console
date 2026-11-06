@@ -22,8 +22,9 @@ export function useConversationActions() {
 
   return useMemo(
     () => ({
-      create: async (graphId: string, title: string): Promise<Conversation> => {
-        const created = await rest.createConversation({ graph_id: graphId, ...(title === "" ? {} : { title }), ...projectBody(projectId) });
+      /** @param project 대화상자에서 고른 프로젝트(생략하면 현재 프로젝트) */
+      create: async (graphId: string, title: string, project?: string | null): Promise<Conversation> => {
+        const created = await rest.createConversation({ graph_id: graphId, ...(title === "" ? {} : { title }), ...projectBody(project === undefined ? projectId : project) });
         settle(created);
         return created;
       },

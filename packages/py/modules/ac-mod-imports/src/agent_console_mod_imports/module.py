@@ -84,7 +84,7 @@ class ImportsModule:
         version=_version(),
         kind="feature",
         title="가져오기",
-        description="외부 설정(.claude 등)에서 정의를 복사해 가져오기(/resources/import/*)",
+        description="다른 도구의 설정(예: .claude)에서 구성을 복사해 가져온다",
         requires=(DEFINITIONS_STORE,),
         optional=(SECRET_RULES, PROJECT_FOLDERS, DEFINITIONS_SPACES),
         settings_schema=ImportModuleSettings,

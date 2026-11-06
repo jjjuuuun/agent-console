@@ -21,14 +21,23 @@
 - ``PortConfigError``(노드 config로 포트를 계산할 수 없음) → ``validation_failed``.
 - ``RunPreflightError``(준비자 사전 점검이 실행을 만들기 전에 막음, 예: ``backend.unresolved``) →
   그 ``ErrorInfo``의 ``code``·``message``·``details``·``fix`` 그대로.
+- ``RecordsUnavailable``(프로젝트 기록 DB를 쓸·읽을 수 없음, 5.7R.33y2) → 409
+  ``project.records_unavailable``(``details.reason``·``project_id``·``backup_path``).
+  ``UnknownSpace``(모르는 프로젝트) → 404 ``project.not_found``(``details.project_id``).
+- ``InvalidCursor``(목록 커서 모양이 틀림)·``RunQueryError``(목록 질의 값이 틀림) → 400
+  ``bad_request``(6R.12).
 - ``DefinitionReadError``(팀 구성을 읽지 못함 — 저장소 오류·계약에 맞지 않는 파일) → 그 ``code``.
   저장소 예외 형식(``StoreError``)은 정의 모듈의 오류 맵이 맡으므로 여기서는 다시 걸지 않는다.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from importlib.resources import files
+from pathlib import Path
 from typing import Any
 
 from agent_console_contracts import ErrorCodes, ErrorInfo, Fix, FixAction, FixTarget, Issue
@@ -48,6 +57,9 @@ from agent_console_runtime import (
     UnknownBackendError,
     UnknownInteractionError,
 )
+from agent_console_store import InvalidCursor, RecordsUnavailable, UnknownSpace
+
+_log = logging.getLogger("agent_console_mod_runs")
 
 ISSUE_CODE_PREFIX = "request."
 """pydantic 오류를 ``Issue``로 바꿀 때 code 접두어(뒤는 pydantic 오류 type)."""
@@ -146,19 +158,88 @@ GRAPH_INVALID_MESSAGE = "팀 구성에 실행을 막는 문제가 있습니다"
 class ChildResumeFix:
     """자식 Run 이어 가기 거절(409)의 해결 버튼 데이터.
 
+    기본값은 코드가 아니라 패키지 데이터 ``data/issue_fixes.json``의 ``child_resume``이다
+    (``DEFAULT_CHILD_RESUME_FIX``). 설치자는 ``modules.options.mod-runs.issue_fixes_file``로 바꾼다.
+
     Attributes:
         label: 버튼 문구.
         role: 데려갈 웹 라우트 역할(``FixTarget.role``, ``FixTarget.id`` = 루트 Run id). 기본은 이
             모듈이 선언한 실행 화면 역할(``module.WEB_ROLES``의 첫 값과 같다 — 테스트로 맞춘다).
     """
 
-    label: str = "맨 위 실행 열기"
-    role: str = "runs"
+    label: str
+    role: str
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> ChildResumeFix | None:
+        """``{"label": ..., "role": ...}`` → 버튼 데이터. 둘 중 하나라도 비면 None(버튼 없음)."""
+        label = str(data.get("label") or "").strip()
+        role = str(data.get("role") or "").strip()
+        if not label or not role:
+            return None
+        return cls(label=label, role=role)
 
 
-DEFAULT_CHILD_RESUME_FIX = ChildResumeFix()
-"""기본 해결 버튼 데이터. 바꾸려면 ``error_map(child_resume=)``·
-``RunsModule(child_resume_fix=)``."""
+def load_child_resume_fix(text: str | None = None) -> ChildResumeFix | None:
+    """해결 버튼 표(JSON)에서 자식 Run 이어 가기 버튼 데이터를 읽는다.
+
+    Args:
+        text: JSON 텍스트(``{"child_resume": {"label", "role"}}``). None이면 패키지 기본
+            ``data/issue_fixes.json``.
+
+    Returns:
+        버튼 데이터. 표에 ``child_resume``이 없거나 비어 있으면 None(버튼을 붙이지 않는다).
+
+    Raises:
+        ValueError: JSON이 아니거나 최상위가 객체가 아닐 때(``json.JSONDecodeError`` 포함).
+    """
+    if text is None:
+        text = files("agent_console_mod_runs").joinpath("data/issue_fixes.json").read_text("utf-8")
+    data = json.loads(text)
+    if not isinstance(data, Mapping):
+        raise ValueError("해결 버튼 표의 최상위는 객체여야 합니다")
+    entry = data.get("child_resume")
+    return ChildResumeFix.from_data(entry) if isinstance(entry, Mapping) else None
+
+
+def child_resume_fix_of(
+    path: Path | None, base: Path | None = None, *, default: ChildResumeFix | None = None
+) -> ChildResumeFix | None:
+    """설치자 옵션 ``issue_fixes_file`` → 자식 Run 이어 가기 버튼 데이터.
+
+    Args:
+        path: 표 파일(None = ``default``, 그것도 None이면 패키지 기본). 상대 경로는 ``base`` 기준.
+        base: 설정 파일 폴더.
+        default: 파일을 지정하지 않았을 때 쓸 값(``RunsModule(child_resume_fix=)``).
+
+    Returns:
+        버튼 데이터. 파일이 없으면 경고를 남기고 None(버튼 없음).
+
+    Raises:
+        ValueError: 파일 내용이 JSON 객체가 아닐 때.
+    """
+    if path is None:
+        return default if default is not None else DEFAULT_CHILD_RESUME_FIX
+    if not path.is_absolute() and base is not None:
+        path = base / path
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, NotADirectoryError):
+        _log.warning("해결 버튼 표 파일이 없어 버튼 없이 씁니다: %s", path)
+        return None
+    return load_child_resume_fix(text)
+
+
+def _package_default() -> ChildResumeFix:
+    fix = load_child_resume_fix()
+    if fix is None:  # pragma: no cover - 패키지 데이터가 보장한다(테스트로 확인)
+        raise RuntimeError("패키지 기본 해결 버튼 표에 child_resume이 없습니다")
+    return fix
+
+
+DEFAULT_CHILD_RESUME_FIX: ChildResumeFix = _package_default()
+"""패키지 기본 해결 버튼 데이터(``data/issue_fixes.json``). 바꾸려면 ``error_map(child_resume=)``·
+``RunsModule(child_resume_fix=)`` 또는 설치자 옵션 ``issue_fixes_file``."""
 
 
 def _first_fix(issues: Iterable[Issue]) -> dict[str, Any] | None:
@@ -206,7 +287,7 @@ def _closed(exc: Exception) -> ErrorReply:
     )
 
 
-def _resume_reply(exc: Exception, data: ChildResumeFix) -> ErrorReply:
+def _resume_reply(exc: Exception, data: ChildResumeFix | None) -> ErrorReply:
     if not isinstance(exc, ResumeError):  # pragma: no cover - 표가 형식을 보장한다
         return ErrorReply(code=ErrorCodes.BAD_REQUEST)
     details = dict(exc.details)
@@ -215,7 +296,7 @@ def _resume_reply(exc: Exception, data: ChildResumeFix) -> ErrorReply:
         Fix(
             actions=[FixAction(label=data.label, target=FixTarget(role=data.role, id=str(root)))]
         ).model_dump(mode="json", exclude_none=True)
-        if isinstance(root, str) and root
+        if data is not None and isinstance(root, str) and root
         else None
     )
     return ErrorReply(code=exc.code, message=exc.message, details=details, fix=fix)
@@ -245,6 +326,19 @@ def _preflight(exc: Exception) -> ErrorReply:
     return ErrorReply(code=error.code, message=error.message, details=dict(error.details), fix=fix)
 
 
+def records_unavailable_reply(exc: Exception) -> ErrorReply:
+    """``RecordsUnavailable`` → 409 ``project.records_unavailable``(``details``)."""
+    if not isinstance(exc, RecordsUnavailable):  # pragma: no cover
+        return ErrorReply(code=ErrorCodes.INTERNAL)
+    return ErrorReply(code=exc.code, details=exc.details())
+
+
+def unknown_space_reply(exc: Exception) -> ErrorReply:
+    """``UnknownSpace`` → 404 ``project.not_found``(``details.project_id``)."""
+    space = exc.space if isinstance(exc, UnknownSpace) else ""
+    return ErrorReply(code=ErrorCodes.PROJECT_NOT_FOUND, details={"project_id": space})
+
+
 def _probe_unsupported(exc: Exception) -> ErrorReply:
     backend = exc.backend_id if isinstance(exc, ProbeUnsupportedError) else None
     return ErrorReply(
@@ -252,6 +346,10 @@ def _probe_unsupported(exc: Exception) -> ErrorReply:
         message="이 실행 백엔드는 연결 테스트를 지원하지 않습니다",
         details={"backend": backend} if backend else {},
     )
+
+
+class RunQueryError(ValueError):
+    """목록 질의 값이 틀렸다(예: ``label=`` 에 ``=`` 없음, 6R.12) -> 400 ``bad_request``."""
 
 
 class LoginPayloadTooLargeError(ValueError):
@@ -324,12 +422,12 @@ def _login_too_large(exc: Exception) -> ErrorReply:
 
 
 def error_map(
-    *, child_resume: ChildResumeFix = DEFAULT_CHILD_RESUME_FIX
+    *, child_resume: ChildResumeFix | None = DEFAULT_CHILD_RESUME_FIX
 ) -> dict[type[Exception], ErrorMapping]:
     """모듈 ``error_map``(새 사전).
 
     Args:
-        child_resume: 자식 Run 이어 가기 거절의 해결 버튼 데이터.
+        child_resume: 자식 Run 이어 가기 거절의 해결 버튼 데이터(None = 버튼 없음).
     """
     table = dict(_BASE_ERROR_MAP)
     table[ResumeError] = lambda exc: _resume_reply(exc, child_resume)
@@ -356,6 +454,10 @@ _BASE_ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     PortConfigError: _ports,
     DefinitionReadError: _definition,
     RunPreflightError: _preflight,
+    RecordsUnavailable: records_unavailable_reply,
+    UnknownSpace: unknown_space_reply,
+    InvalidCursor: ErrorCodes.BAD_REQUEST,
+    RunQueryError: ErrorCodes.BAD_REQUEST,
 }
 
 ERROR_MAP: dict[type[Exception], ErrorMapping] = error_map()
@@ -372,7 +474,12 @@ __all__ = [
     "PortConfigError",
     "RunNotFoundError",
     "RunPreflightError",
+    "RunQueryError",
+    "child_resume_fix_of",
     "error_map",
     "issues_body",
     "issues_from_errors",
+    "load_child_resume_fix",
+    "records_unavailable_reply",
+    "unknown_space_reply",
 ]

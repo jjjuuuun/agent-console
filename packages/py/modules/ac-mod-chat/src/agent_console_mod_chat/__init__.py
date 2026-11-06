@@ -9,7 +9,8 @@
     - 포트·토픽(``ports``): 제공 ``CHAT_CONVERSATIONS``·``SERVER_WARNINGS``, 토픽
       ``CONVERSATIONS_UPDATED``. 받음(선택) ``CHAT_TURN_LAUNCHER``·``CHAT_RUNS``·
       ``CHAT_RUN_EVENTS``·``CHAT_INTERACTIONS``·``CHAT_TURN_SESSIONS``·``DEFINITIONS_LOOKUP``·
-      ``DEFINITIONS_SPACES``(프로젝트 대화의 팀 구성 출처, 5.7R.33y)·``WORKSPACE_SETTINGS``.
+      ``DEFINITIONS_SPACES``(프로젝트 대화의 팀 구성 출처, 5.7R.33y)·``WORKSPACE_SETTINGS``·
+      ``RECORDS_SESSIONS``(세션 이어 가기 상태·복원, 5.7R.33y3).
     - HTTP 없이 쓰는 부품: ``PortGraphLookup``(정의 읽기 → 팀 구성 조회), ``open_chat_storage``.
     - ``build_router``·``topic_handlers``·``error_map``.
 """
@@ -19,9 +20,11 @@ from __future__ import annotations
 from .errors import DEPENDENCY_PORTS, error_map
 from .graphs import PortGraphLookup
 from .module import MODULE_ID, WEB_ROLES, ChatModule, module
+from .move import ConversationMover, MoveHook
 from .ports import (
     CHAT_CONVERSATIONS,
     CHAT_INTERACTIONS,
+    CHAT_MOVE_HOOKS,
     CHAT_RUN_EVENTS,
     CHAT_RUNS,
     CHAT_TURN_LAUNCHER,
@@ -29,6 +32,7 @@ from .ports import (
     CONVERSATIONS_UPDATED,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SPACES,
+    RECORDS_SESSIONS,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
     DefinitionLookup,
@@ -41,6 +45,7 @@ from .ws import CONVERSATION_TOPIC, topic_handlers
 __all__ = [
     "CHAT_CONVERSATIONS",
     "CHAT_INTERACTIONS",
+    "CHAT_MOVE_HOOKS",
     "CHAT_RUNS",
     "CHAT_RUN_EVENTS",
     "CHAT_TURN_LAUNCHER",
@@ -51,14 +56,17 @@ __all__ = [
     "DEFINITIONS_SPACES",
     "DEPENDENCY_PORTS",
     "MODULE_ID",
+    "RECORDS_SESSIONS",
     "SERVER_WARNINGS",
     "STORAGE_MEMORY",
     "WEB_ROLES",
     "WORKSPACE_SETTINGS",
     "ChatModule",
     "ChatStorage",
+    "ConversationMover",
     "DefinitionLookup",
     "DefinitionSpaces",
+    "MoveHook",
     "PortGraphLookup",
     "build_router",
     "error_map",

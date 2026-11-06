@@ -13,7 +13,7 @@ export { useLogScan } from "./useLogScan";
 export { describeSourceStatus } from "./sourceStatus";
 export { settingsLogsHref } from "./LogsEmpty";
 export { logsMessages } from "./messages";
-export { FILTER_KEYS, TONE_VOCABULARY, UNGROUPED_OPTIONS, UNGROUPED_PROJECT_VALUE } from "./logsConfig";
+export { FILTER_KEYS, TONE_VOCABULARY } from "./logsConfig";
 export { RunSessionLogsTab } from "./RunSessionLogsTab";
 export type { RunSessionLogsTabProps } from "./RunSessionLogsTab";
 export { LOGS_ROLE, LOG_TABS } from "./logsConfig";

@@ -29,7 +29,7 @@ import { groupNodeRuns, nodeRunKey, runBadge, runOrdinalText, visibleRuns } from
 import { buildEdgeBadges, childForNodeRun, childNodeText, exhaustedLines, nestedRunSummaries } from "./runDelegation";
 import { failedChildCount } from "./runTree";
 import { useRunTree } from "./useRunTree";
-import { loadRunGraph } from "./useRunView";
+import { useRunGraph } from "./useRunView";
 import { InteractionsTab } from "./InteractionsTab";
 import { NodeTab } from "./NodeTab";
 import { ObserveTab } from "./ObserveTab";
@@ -279,7 +279,7 @@ export function RunDetailScreen() {
   };
   const teamNameOfRun = (runId: string): string | undefined => {
     const r = runId === id ? run : tree.descendants.find((x) => x.id === runId) ?? tree.chain.find((x) => x.id === runId);
-    return r === undefined ? undefined : lookups.graphName(r.graph_id);
+    return r === undefined ? undefined : lookups.graphName(r.graph_id, r.project_id);
   };
   const runHref = (runId: string, extra = "") => `/runs/${encodeURIComponent(runId)}${extra}`;
   const openRun = (runId: string, extra = "") => void navigate(runHref(runId, extra));
@@ -354,7 +354,7 @@ export function RunDetailScreen() {
   const operators = useConditionOperators();
   const renderIcon = useRenderIcon();
   const parentRun = tree.chain.length >= 2 ? tree.chain[tree.chain.length - 2] : undefined;
-  const parentGraph = useApiQuery(["run", parentRun?.id ?? "", "graph", parentRun?.graph_id, parentRun?.graph_version], (r) => loadRunGraph(r, parentRun!.graph_id, parentRun!.graph_version), { enabled: parentRun !== undefined, staleTime: Infinity });
+  const parentGraph = useRunGraph(parentRun);
   const statusOf = (status: string) => appMessages.nodeStatus[status] ?? appMessages.runStatus[status] ?? status;
   const nodeRunBadges = useMemo(() => {
     const out: Record<string, NodeRunBadge> = {};
@@ -499,7 +499,7 @@ export function RunDetailScreen() {
   const clock = (ts: number | null | undefined) => (ts == null ? "–" : formatClockTime(ts));
   const childRows: ChildRunRow[] = tree.children.map((c) => ({
     run: c,
-    teamName: lookups.graphName(c.graph_id) ?? c.graph_id,
+    teamName: lookups.graphName(c.graph_id, c.project_id) ?? c.graph_id,
     nodeText: childNodeText(tree.children, c, nodeLabel),
     statusLabel: runStatusLabels[c.status] ?? c.status,
     startedText: formatRelative(c.started_at ?? c.created_at, nowMs),
@@ -730,7 +730,7 @@ export function RunDetailScreen() {
       <RunHeader
         run={run}
         nowSec={nowSec}
-        graphName={lookups.graphName(run.graph_id)}
+        graphName={lookups.graphName(run.graph_id, run.project_id)}
         graphHref={runHrefs.graph(run.graph_id)}
         listHref="/runs"
         {...(conv ? { conversation: { title: lookups.conversationTitle(conv) ?? conv, href: runHrefs.conversation(conv) } } : {})}
@@ -760,7 +760,7 @@ export function RunDetailScreen() {
           ? {
               breadcrumb: (
                 <RunBreadcrumb
-                  items={tree.chain.map((r) => ({ id: r.id, short: shortRunId(r.id), teamName: lookups.graphName(r.graph_id) }))}
+                  items={tree.chain.map((r) => ({ id: r.id, short: shortRunId(r.id), teamName: lookups.graphName(r.graph_id, r.project_id) }))}
                   hrefOf={(rid) => runHref(rid)}
                 />
               ),

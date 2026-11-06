@@ -94,3 +94,5 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 @media (max-height: 820px) {
   .chat-composer { --ac-composer-max-h: 120px; }
 }
+
+.chat-list-project { margin: 0; padding: 4px var(--ac-space-3, 12px); font-size: 12px; font-weight: 600; }

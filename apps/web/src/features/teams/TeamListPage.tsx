@@ -14,7 +14,7 @@ import { Skeleton, useEdgeTypes } from "../settings";
 import { ActionMenu, type ActionMenuHandle, useGraphList, useInvalidateLists, useNodeTypes, DeleteDialog, useListView, useDefinitionEdits, ListEditDialogs, DEFINITION_KINDS, definitionKey, libraryMessages as lm, routePath, ROUTE_ROLES, useListShortcuts } from "../library";
 import { useRegisterCommands } from "../../shell/commands";
 import { StartGuide } from "../start";
-import { useScopedList } from "../projects";
+import { SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { ExportDialog, exportMessages } from "../exports";
 import { DuplicateTeamDialog, NewTeamDialog, RenameTeamDialog, useStartChat } from "./TeamDialogs";
 import { teamMessages as t } from "./messages";
@@ -24,7 +24,6 @@ import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { blocksRun, ValidationChip } from "./ValidationChip";
 import "./teams.css";
 
-const scopeOfGraph = (g: GraphSummary) => g.project;
 const idOfGraph = (g: GraphSummary) => g.id;
 const nameOfGraph = (g: GraphSummary) => g.name;
 
@@ -96,7 +95,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   const [activeId, setActiveId] = useState<string | undefined>(undefined);
   const searchRef = useRef<HTMLInputElement>(null);
   const menus = useRef(new Map<string, ActionMenuHandle>());
-  const scoped = useScopedList(graphs.data, { scopeOf: scopeOfGraph, kind: DEFINITION_KINDS.graph, idOf: idOfGraph, nameOf: nameOfGraph });
+  const scoped = useConfigTransfer(graphs.data, { kind: DEFINITION_KINDS.graph, idOf: idOfGraph, nameOf: nameOfGraph });
   const [moving, setMoving] = useState<GraphSummary | undefined>(undefined);
   const [labeling, setLabeling] = useState<GraphSummary | undefined>(undefined);
   // 폴더 이동·라벨은 최신 원문을 읽어 해당 필드만 바꿔 `If-Match`로 저장한다(5.2R.63).
@@ -132,7 +131,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     selectedId: activeId,
     idOf: idOfGraph,
     showMenu: !(graphs.isLoading || graphs.isError || (graphs.data ?? []).length === 0),
-    extra: scoped.parts.select,
+    extra: scoped.selectTool,
   });
   const { arranged } = view;
   const rows = arranged.sorted;
@@ -299,6 +298,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                         { id: "open", label: t.list.open, onSelect: () => open(g.id) },
                         { id: "chat", label: t.list.startChat, disabled: !hasEntry(g), ...(hasEntry(g) ? {} : { title: t.list.startChatNoEntry }), onSelect: () => startChat(g) },
                         { id: "rename", label: t.list.rename, onSelect: () => setDialog({ kind: "rename", graph: g }) },
+                        ...(scoped.menuItem(g) === null ? [] : [scoped.menuItem(g) as NonNullable<ReturnType<typeof scoped.menuItem>>]),
                         { id: "move", label: t.arrange.move.title, onSelect: () => setMoving(g) },
                         { id: "labels", label: t.arrange.labels.title, onSelect: () => setLabeling(g) },
                         { id: "duplicate", label: t.list.duplicate, onSelect: () => setDialog({ kind: "duplicate", graph: g }) },
@@ -322,6 +322,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     <div className="app-screen-frame" data-screen="teams">
       <PageHeader
         title={m.nav.teams}
+        status={<SpaceChip />}
         actions={
           !graphs.isLoading && !graphs.isError && list.length === 0 ? undefined : (
           <>
@@ -331,8 +332,8 @@ export function TeamListPage({ basePath }: { basePath: string }) {
           )
         }
       />
+      <SpaceNote />
       <div className="app-screen-body">
-        {scoped.parts.filter}
         {chat.error ? <p className="app-sev" data-severity="error" role="alert">{chat.error}</p> : null}
         {body}
       </div>

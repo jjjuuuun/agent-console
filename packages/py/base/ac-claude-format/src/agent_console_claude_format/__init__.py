@@ -15,6 +15,7 @@
     - 규칙 파일: ``RuleFile``, ``parse_rule``, ``render_rule``
     - 설정: ``ClaudeSettings``, ``HookSpec``, ``parse_settings``, ``render_settings``,
       ``parse_hooks``, ``render_hooks``
+    - Claude Code 폴더 규칙: ``project_key``(작업 폴더 → ``projects`` 아래 폴더 이름)
     - MCP: ``parse_mcp``, ``render_mcp``, ``mcp_config_from_entry``, ``mcp_entry_from_config``,
       ``McpEntry``, ``env_placeholder``, ``parse_env_ref``
 
@@ -45,6 +46,7 @@ from ._mcp import (
     parse_mcp,
     render_mcp,
 )
+from ._paths import project_key
 from ._rule import PATHS_KEY, RuleFile, parse_rule, render_rule
 from ._settings import (
     COMMAND_HOOK_TYPE,
@@ -90,6 +92,7 @@ __all__ = [
     "parse_rule",
     "parse_settings",
     "parse_skill",
+    "project_key",
     "render_agent_md",
     "render_frontmatter",
     "render_hooks",

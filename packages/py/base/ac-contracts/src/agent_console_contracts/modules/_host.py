@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import Field
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
-from agent_console_contracts.common import ErrorInfo
+from agent_console_contracts.common import ErrorInfo, LabelDisplay
 from agent_console_contracts.definitions import Issue
 
 type ModuleStatus = NonEmptyStr
@@ -45,6 +45,21 @@ class ModuleInfo(ContractModel):
     provides: list[str] = Field(default_factory=list, description="제공하는 포트 이름.")
     requires: list[str] = Field(
         default_factory=list, description="필요한 포트 이름(필수·선택 모두, 상태 판단 근거)."
+    )
+    description: str | None = Field(
+        default=None,
+        description=(
+            "모듈 한 줄 설명(1.4.0, 사용자 언어). null = 모듈이 내지 않음(화면은 제공 연결·화면 "
+            "역할로 "
+            "대신 설명한다)."
+        ),
+    )
+    label_display: list[LabelDisplay] = Field(
+        default_factory=list,
+        description=(
+            "이 모듈이 붙이는 Run 라벨의 표시 규칙(1.4.0). 웹은 모든 모듈의 값을 "
+            "모아 `Run.labels`와 키로 맞춘다. 웹 경로는 담지 않는다."
+        ),
     )
 
 

@@ -26,6 +26,8 @@ class QueuedItem:
     held: bool = False
     """재시작 등으로 멈춘 항목. 사용자가 풀기 전에는 `pop_next`가 꺼내지 않는다."""
     held_reason: str | None = None
+    host_id: str | None = None
+    """넣은 앱의 id(프로젝트 기록 DB 대기열, 5.7R.33y2). 모르면 None."""
 
 
 @dataclass(frozen=True, slots=True)

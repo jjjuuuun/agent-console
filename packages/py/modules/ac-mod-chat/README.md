@@ -84,8 +84,12 @@ True running running
 | 선택 | `definitions.lookup` | `get(kind, id).document` — 없으면 대화 만들기 409 |
 | 선택 | `definitions.spaces` | `open(project_id).get(kind, id).document`(5.7R.33y) — 있으면 프로젝트 대화의 팀 구성은 그 공간에서만(없으면 404), 없으면 `definitions.lookup` |
 | 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`chat.*`) — 없으면 스키마 기본값 |
+| 선택(multi) | `chat.move_hooks` | `MoveHook`(`busy`·`prepare`, 선택 `after_move`, 5.7R.33j2) — 앱 DB 옛 대화를 `POST /conversations/move-to-project`로 옮길 때 같은 작업에 묶는 딸린 기록(예: 그 대화의 Run). 없으면 대화·대기열만 옮긴다 |
 
 실행 연결은 이 모듈이 시작할 때 읽는다(`ChatService.connect`). 연결 모듈은 `chat.conversations`가 필수라 조립 순서상 이 모듈보다 뒤에 빌드되기 때문이다. 재시작 대기열 정책(`chat.queue_after_restart`)은 턴 실행기를 주는 연동 모듈이 시작할 때 적용한다(실행기 없이는 대기열을 꺼내지 않고 남긴다).
+
+선택 포트 `records.sessions`(5.7R.33y3): `GET /conversations/{id}/sessions`(`ConversationSessions`)와 보내기 409
+`chat.session_unavailable`. 없으면 모든 세션이 `not_applicable`(지금 동작).
 
 ## 단독 실행
 

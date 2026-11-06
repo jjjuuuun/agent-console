@@ -1,12 +1,14 @@
 """실행 REST DTO: 실행 시작·이어 가기·포트 계산·답변 계획(design §5.2, §2R.6, §2R.10)."""
 
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
 
 from ._descriptors import BackendDescriptor
 from ._interactions import InteractionGrant
-from ._models import NodeRunStatus
+from ._models import NodeRunStatus, run_label_problems
 
 
 class ResolvePortsRequest(ContractModel):
@@ -33,6 +35,19 @@ class CreateRunRequest(ContractModel):
             "이 실행의 프로젝트 id(0.8.0). 생략 = 프로젝트 없음. 존재 확인은 연동 모듈이 한다."
         ),
     )
+    labels: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "루트 Run 라벨(1.7.0, `Run.labels`). 상한 `RUN_LABEL_LIMITS`를 넘으면 검증 오류."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _labels_within_limits(self) -> Self:
+        problems = run_label_problems(self.labels)
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
 
 
 class EntrySlot(ContractModel):

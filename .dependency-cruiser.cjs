@@ -8,7 +8,7 @@ module.exports = {
       name: "no-cross-package-deps",
       comment: "packages/ts/* 패키지는 자기 자신과 contracts 외의 형제 패키지를 import하지 않는다.",
       severity: "error",
-      from: { path: "^packages/ts/lib/([^/]+)/", pathNot: "^packages/ts/lib/memory-view/" },
+      from: { path: "^packages/ts/lib/([^/]+)/", pathNot: "^packages/ts/lib/(memory-view|sdd-view)/" },
       to: {
         path: "^packages/ts/lib/([^/]+)/",
         pathNot: ["^packages/ts/lib/$1/", "^packages/ts/lib/contracts/"],
@@ -29,6 +29,23 @@ module.exports = {
       comment: "memory-view는 contracts에서 타입만 가져온다(`import type`). 값 import는 계약 런타임을 번들에 끌어온다(arch-view와 같은 이유).",
       severity: "error",
       from: { path: "^packages/ts/lib/memory-view/src/" },
+      to: { path: "^packages/ts/lib/contracts/", dependencyTypesNot: ["type-only"] },
+    },
+    {
+      name: "sdd-view-allowed-deps",
+      comment: "sdd-view(스펙 표현)는 사내 패키지 중 contracts(타입만)와 text-editor(문서 편집기, design §6R.3)만 import한다. api-client·log-view·ui 등은 import하지 않고 연결은 props로 받는다(6R.18). 위 no-cross-package-deps에서 이 패키지만 빼고 여기서 대신 허용 범위를 정한다.",
+      severity: "error",
+      from: { path: "^packages/ts/lib/sdd-view/src/" },
+      to: {
+        path: "^packages/ts/(lib|config)/",
+        pathNot: ["^packages/ts/lib/sdd-view/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/"],
+      },
+    },
+    {
+      name: "sdd-view-contracts-types-only",
+      comment: "sdd-view는 contracts에서 타입만 가져온다(`import type`). 값 import는 계약 런타임을 번들에 끌어온다(memory-view와 같은 이유).",
+      severity: "error",
+      from: { path: "^packages/ts/lib/sdd-view/src/" },
       to: { path: "^packages/ts/lib/contracts/", dependencyTypesNot: ["type-only"] },
     },
     {

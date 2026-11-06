@@ -86,6 +86,7 @@ pip install agent-console-mod-runs
 | 제공 | `runs.reader` / `runs.events` | 저장소 Run·이벤트 리포지토리(읽기) |
 | 제공 | `interactions.port` | `InteractionService`(`list`·`get`·`pending`·`respond`) |
 | 제공 | `secrets.redact` | `(str) -> str` |
+| 제공 | `runs.move_hook` | `ConversationRunMove`(`busy`·`prepare`, 5.7R.33j2) — 대화를 프로젝트 기록 DB로 옮길 때 그 대화의 Run을 같은 작업으로(앱 DB가 있을 때만). 앱 DB 옛 Run은 `POST /runs/move-to-project` |
 | 제공(multi) | `server.warnings` / `server.attributes` | `team.rules_unavailable`·`runs.storage_memory` / `{"recovered_runs": n}` |
 | 토픽 | `runs.event` / `interactions.updated` | `RunEvent`(저장된 것 전부) / `Interaction` |
 | 필수 | `definitions.lookup` | `get(kind, id).document`·`get_version(kind, id, hash).content` |
@@ -145,6 +146,7 @@ ac-runtime `BackendLoginService`(선택 능력 `login`·`logout`)에 레지스�
 | `resume_origin` | `resume` | 처리기가 맡지 않은 이어 가기 Run의 `origin` |
 | `activity_limit` | 100 | 에이전트 활동 기본 개수 |
 | `observe_event_prefixes` | null | 실행 상세 [관측] 탭이 모을 이벤트 type 접두어(`GET /observe-event-prefixes`). null = 패키지 기본 데이터(`data/observe_event_prefixes.json`, `hook.`·`mcp.`), 목록 = 그 목록(공백·빈 값·중복 정리), `[]` = 관측 탭 끔(실행·이벤트 저장은 이 값을 쓰지 않아 그대로 동작) |
+| `issue_fixes_file` | null | 실행 오류 해결 버튼 표(JSON). null = 패키지 기본 데이터(`data/issue_fixes.json`: `child_resume{label, role}` — 자식 실행 이어 가기 거절(409) 때 [맨 위 실행 열기], 역할 `runs`, id = 루트 Run). 상대 경로는 설정 파일 폴더 기준, 파일이 없거나 `child_resume`이 비면 버튼 없음(`load_child_resume_fix`·`child_resume_fix_of`) |
 
 관측 탭 접두어 표는 서버 없이도 쓴다(교체용 파일은 같은 JSON 모양 `{"prefixes": [...]}`).
 

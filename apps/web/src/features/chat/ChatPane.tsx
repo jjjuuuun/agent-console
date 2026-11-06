@@ -39,6 +39,7 @@ import { useConversationActions } from "./useConversationActions";
 import { useConversationFeed } from "./useConversationFeed";
 import { useInteractionRespond } from "../interactions";
 import { useConversationList } from "./chatData";
+import { ProjectChip } from "../projects";
 import { useQueryClient } from "@tanstack/react-query";
 
 const t = chatMessages;
@@ -81,8 +82,8 @@ export function ChatPane(props: ChatPaneProps) {
   const conversation = useConversationDetail(id);
   const graphs = useGraphList();
   const list = useConversationList();
-  const graph = useChatGraph(conversation.data?.graph_id);
-  const plan = useChatPlan(conversation.data?.graph_id);
+  const graph = useChatGraph(conversation.data?.graph_id, conversation.data?.project_id ?? null);
+  const plan = useChatPlan(conversation.data?.graph_id, conversation.data?.project_id ?? null);
   const edgeTypes = useEdgeTypeList();
   const nodeTypes = useNodeTypeList();
   const agents = useAgentList();
@@ -99,7 +100,7 @@ export function ChatPane(props: ChatPaneProps) {
   const replyDisplay = typeof chat.reply_display === "string" ? chat.reply_display : "separate";
   const answerEnabled = chat.answer_with_composer !== false;
 
-  const feed = useConversationFeed({ conversationId: id, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, naming, interactions: cardPart.visible });
+  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? null, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, naming, interactions: cardPart.visible });
   const { turns } = feed;
   const notifyInfo = useCallback((text: string) => toast({ tone: "info", text }), [toast]);
   const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, notify: notifyInfo, messages: { failed: t.composer.answerFailed } });
@@ -490,6 +491,7 @@ export function ChatPane(props: ChatPaneProps) {
           { id: "delete", label: t.menu.delete, danger: true, onSelect: () => setConfirmDelete(true) },
         ]}
         moreFooter={moreFooter}
+        projectSlot={<ProjectChip />}
       />
       {teamBadge !== undefined && !badgeNoteDismissed ? (
         <Banner

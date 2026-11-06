@@ -1,0 +1,5 @@
+# ac-sdd 패키지 기본 데이터: 문서 틀 없이 만든 스펙의 문서 목록(design §6R.1.2 "빈 문서 하나 + 규칙 비움").
+# 바꾸려면 SpecRepository(blank_documents=…)에 다른 목록을 준다(서버는 설치자 옵션으로 넘길 수 있다).
+# 모양은 계약 `agent_console_contracts.sdd.SpecDocument` 목록. 역할(roles)이 없으므로 작업을 읽지 않는다.
+documents:
+  - {id: main, title: 문서, file: main.md}

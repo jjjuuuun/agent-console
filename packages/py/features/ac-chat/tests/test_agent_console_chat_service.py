@@ -661,3 +661,18 @@ async def test_conversation_deleted_while_turn_starting_cancels_turn() -> None:
     assert env.launcher.cancelled == [(run.id, "conversation_deleted")]
     assert not env.service.is_busy(conv.id)
     assert env.conversations.get(conv.id) is None  # 지워진 대화를 되살리지 않음
+
+
+async def test_busy_elsewhere_blocks_like_local_turn() -> None:
+    """5.7R.33y2: 다른 곳(같은 기록 DB를 쓰는 다른 앱)에서 도는 턴도 실행 중으로 센다."""
+    env = _env(_graph("g", ["pl"]), common=ChatSettings(busy_policy="reject"))
+    conv = env.service.create(CreateConversationRequest(graph_id="g"))
+    elsewhere = {conv.id: "run-of-other-app"}
+    env.service._busy_elsewhere = elsewhere.get
+    assert env.service.is_busy(conv.id)
+    with pytest.raises(ConversationBusyError) as caught:
+        await _post(env, conv.id, "a")
+    assert caught.value.details["run_id"] == "run-of-other-app"
+    elsewhere.clear()
+    assert not env.service.is_busy(conv.id)
+    assert isinstance(await _post(env, conv.id, "b"), Run)

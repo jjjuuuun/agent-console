@@ -285,6 +285,12 @@ backends:
 
 모르는 키·잘못된 값은 `ValueError`(위치와 사유만, 값은 넣지 않는다). 형식 모델: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
 
+## 세션 기록 흉내 (X38, 5.7R.33y3)
+
+설치자 설정 `session_dir`(상대 경로 = 앱 workspace 기준)을 주면 실행마다 `<폴더>/<cwd 키>/<세션>.jsonl`에 한 줄을 남기고, 이어
+쓰는 요청인데 파일이 없으면 `fake.session_missing`으로 실패한다(실제 백엔드가 세션 기록을 못 찾는 경우). `session_archive()`가
+보관·복원을 준다. 기본(null)은 지금 동작이다(이어 가기 상태 `not_applicable`).
+
 ## 테스트 도우미
 
 `agent_console_backend_fake_agent.testing`은 `agent_console_runtime.testing_sink`의 `ValidatingSink`·`ListeningSink`

@@ -25,7 +25,7 @@ import { useRegisterCommands } from "../../shell/commands";
 import { usePageTitle } from "../../shell/titles";
 import { Skeleton, useBackends, useEdgeTypes, useDelegationStrategies, useResourceList, useResourceTypes } from "../settings";
 import { ActionMenu, nodeAvatarsOf, useAgentList, useGraphList, useInteractionKinds, useInvalidateLists, useNodeTypes, DeleteDialog, DEFINITION_KINDS, definitionKey, definitionPath, NewDefinitionDialog, libraryMessages as lm, modeLabel, routePath, ROUTE_ROLES, ResourcePicker, useRouteOn, useRoutesOn } from "../library";
-import { useProjects, ProjectTag } from "../projects";
+import { useProjects, ProjectTag, SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { ConnectedBackendChooserCard, precheckBackends, useSaveDefaultBackend, type UnresolvedBackend } from "../backendChoice";
 import { DEFAULT_TEAM_CONVENTIONS, retryFocus } from "../delegation";
 import { useTeamPlan } from "./useTeamPlan";
@@ -43,7 +43,7 @@ import { TEAM_NAME_INPUT_ID, TeamPanel } from "./TeamPanel";
 import { loadGraph, saveGraph } from "./graphIo";
 import { teamMessages as t } from "./messages";
 import type { TeamPanelContext } from "./panelContext";
-import { blockingIssues, definitionKindTitles, edgesOf, nodeLabel, entrySourceNodeTypes, toggleRoleOnGraph, nodesOf, overviewOf, sharedAttachments, usageCounts, withSharedAttachments, type IssueTarget } from "./teamsLogic";
+import { blockingIssues, definitionKindTitles, edgesOf, nodeLabel, entrySourceNodeTypes, toggleRoleOnGraph, nodesOf, overviewOf, startConditionsMet, sharedAttachments, usageCounts, withSharedAttachments, type IssueTarget } from "./teamsLogic";
 import { useValidation } from "./useValidation";
 import { CanvasToastProvider, CanvasToastRegion, useCanvasToast } from "./canvasToast";
 import { AddControl, type AddView } from "./AddControl";
@@ -149,6 +149,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   };
   const routeOn = useRoutesOn();
   const projects = useProjects();
+  const transfer = useConfigTransfer<{ id: string; name: string }>(undefined, { kind: DEFINITION_KINDS.graph, idOf: (x) => x.id, nameOf: (x) => x.name });
   const backends = useBackends();
   const saveDefaultBackend = useSaveDefaultBackend();
   // 편집 영역(.team-main) 폭: 팔레트·우측 패널을 인라인으로 둘지 오버레이로 둘지 정한다. 0 = 아직 모름(인라인으로 본다)
@@ -684,7 +685,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     );
   })();
 
+  const copyItem = transfer.menuItem({ id, name: draft.name || id });
   const menuItems = [
+    ...(copyItem === null ? [] : [copyItem]),
     { id: "rename", label: t.editor.renameFocus, onSelect: () => { setForceTeam(true); setTeamTab("overview"); setPanelOpen(true); setTimeout(() => document.getElementById(TEAM_NAME_INPUT_ID)?.focus(), 0); } },
     { id: "duplicate", label: t.editor.duplicate, onSelect: () => { setDialogError(null); setDialog("duplicate"); } },
     { id: "export", label: exportMessages.menu, onSelect: exportAction.open },
@@ -706,6 +709,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
               <TeamBreadcrumb rootLabel={m.nav.teams} rootHref={basePath} from={openedFrom} current={draft.name || id} hrefOf={(pid) => definitionPath(openedFrom.definitionKind, pid)} />
             )}
             <SaveStatus dirty={editor.dirty} phase={editor.savePhase} onRetry={save} />
+            <SpaceChip />
           </>
         }
         actions={
@@ -727,6 +731,8 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
           </>
         }
       />
+      <SpaceNote />
+      {transfer.dialog}
       <div className="team-subbar">
         <div role="tablist" aria-label={t.editor.tabs} className="team-pagetabs">
           {(["edit", "runs", "versions"] as const).map((tab) => (
@@ -760,7 +766,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
       )}
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
       {chat.error ? <Banner tone="danger">{chat.error}</Banner> : null}
-      <HintBanner id="teams"><HintOneLine short={t.layout.hintShort} full={t.editor.hint} /></HintBanner>
+      <HintBanner id="teams" satisfied={overview !== undefined && startConditionsMet(overview)}><HintOneLine short={t.layout.hintShort} full={t.editor.hint} /></HintBanner>
 
       {pageTab === "versions" ? (
         <div className="app-screen-body">

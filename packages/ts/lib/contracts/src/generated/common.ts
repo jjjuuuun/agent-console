@@ -12,13 +12,16 @@ export type {
   Fix,
   FixAction,
   FixTarget,
+  LabelDisplay,
+  LabelDisplayTarget,
   PortDef,
   PortSpec,
   Position,
+  RecordSource,
   SpaceRef,
   UiHints,
   Usage,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "common" as const;
-export const CONTRACT_VERSION = "1.7.0" as const;
+export const CONTRACT_VERSION = "1.8.0" as const;

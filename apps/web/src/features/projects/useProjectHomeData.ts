@@ -21,9 +21,10 @@ export interface ConfigRow {
   href: string | undefined;
 }
 
-interface ListedItem {
+export interface ListedItem {
   id: string;
   name?: string | undefined;
+  description?: string | undefined;
   saved_at?: number | null | undefined;
 }
 
@@ -31,10 +32,17 @@ interface ListedItem {
  * 종류별 목록 읽기(데이터 표): 정의 종류(저장소 kind) -> 공간 클라이언트로 목록을 읽는 함수.
  * 종류가 늘면 항목을 더한다. 표에 없는 종류는 목록을 읽을 수 없어 구성 표에서 빠진다(오류 아님).
  */
-const KIND_LISTERS: Readonly<Record<string, (c: SpaceRestClient) => Promise<ListedItem[]>>> = {
+export const KIND_LISTERS: Readonly<Record<string, (c: SpaceRestClient) => Promise<ListedItem[]>>> = {
   ...(DEFINITION_KINDS.agent === undefined ? {} : { [DEFINITION_KINDS.agent]: (c: SpaceRestClient) => c.listAgents() }),
   ...(DEFINITION_KINDS.graph === undefined ? {} : { [DEFINITION_KINDS.graph]: (c: SpaceRestClient) => c.listGraphs() }),
   ...(DEFINITION_KINDS.resource === undefined ? {} : { [DEFINITION_KINDS.resource]: (c: SpaceRestClient) => c.listResources() }),
+};
+
+/** 종류별 삭제(데이터 표): 정의 종류 -> 공간 클라이언트로 하나 지우는 함수. 표에 없는 종류는 행 메뉴에 삭제가 없다. */
+export const KIND_DELETERS: Readonly<Record<string, (c: SpaceRestClient, id: string) => Promise<void>>> = {
+  ...(DEFINITION_KINDS.agent === undefined ? {} : { [DEFINITION_KINDS.agent]: (c: SpaceRestClient, id: string) => c.deleteAgent(id) }),
+  ...(DEFINITION_KINDS.graph === undefined ? {} : { [DEFINITION_KINDS.graph]: (c: SpaceRestClient, id: string) => c.deleteGraph(id) }),
+  ...(DEFINITION_KINDS.resource === undefined ? {} : { [DEFINITION_KINDS.resource]: (c: SpaceRestClient, id: string) => c.deleteResource(id) }),
 };
 
 const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });

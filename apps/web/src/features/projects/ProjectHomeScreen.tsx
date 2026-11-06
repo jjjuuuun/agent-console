@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Button, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, ConfirmDialog, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
 import { createProjectsText, projectAbilities, statusInfo } from "@agent-console/projects";
 import { ApiError } from "@agent-console/api-client";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
+import { describeError } from "../../app/errors";
 import { useDelayed } from "../../app/useDelayed";
 import { useNow } from "../../app/useNow";
-import { lookupMessage } from "../../app/messages";
+import { lookupMessage, messages as appMessages } from "../../app/messages";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { useBackendReadiness } from "../backendReadiness";
 import { ROUTE_ROLES, routePath, useRoutesOn } from "../library";
@@ -21,7 +22,9 @@ import { configUnreadable, manifestPath, problemBanners, type BannerAction, type
 import { useProjects } from "./ProjectsContext";
 import { RecentActivityCard } from "./RecentActivityCard";
 import { SETTINGS_PROJECTS_HASH } from "./sectionId";
-import { useProjectActivity, useProjectConfig } from "./useProjectHomeData";
+import { NEW_PARAM } from "./newParam";
+import { useCopyDialog } from "./useCopyDialog";
+import { KIND_DELETERS, useProjectActivity, useProjectConfig, type ConfigRow } from "./useProjectHomeData";
 
 const text = createProjectsText();
 const STATUS_ICON: Readonly<Record<string, string>> = {
@@ -69,7 +72,8 @@ function LoginLine() {
 export function ProjectHomeScreen() {
   const { id = "" } = useParams();
   const p = useProjects();
-  const { rest } = useApi();
+  const { rest, space } = useApi();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
   const now = useNow(true, 30_000);
@@ -79,6 +83,14 @@ export function ProjectHomeScreen() {
   const [resetOpen, setResetOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const copyDialog = useCopyDialog();
+  const [highlight, setHighlight] = useState<string | undefined>(undefined);
+  const [deleting, setDeleting] = useState<ConfigRow | null>(null);
+  useEffect(() => {
+    if (highlight === undefined) return;
+    const t = setTimeout(() => setHighlight(undefined), 1500);
+    return () => clearTimeout(t);
+  }, [highlight]);
 
   // 이 화면을 열면 현재 프로젝트가 이 프로젝트가 된다
   useEffect(() => {
@@ -120,8 +132,38 @@ export function ProjectHomeScreen() {
   const withPrj = (path: string) => `${path}?prj=${encodeURIComponent(id)}`;
   const reason = (a: keyof typeof abilities) => (abilities[a].allowed || abilities[a].reason === null ? undefined : text(abilities[a].reason));
 
-  const chatPath = routeOn(ROUTE_ROLES.conversations) ? withPrj(routePath(ROUTE_ROLES.conversations)) : undefined;
+  const configRowMenu = (row: ConfigRow): MenuItemDef[] => {
+    const saveBlock = reason("save_to_library");
+    const editBlock = reason("edit");
+    return [
+      {
+        id: "save-to-library",
+        label: text("copy.save_to_library"),
+        ...(saveBlock === undefined ? {} : { disabled: true, title: saveBlock }),
+        onSelect: () => copyDialog.open({ direction: "save", project: id, start: "plan", items: [{ kind: row.kind, id: row.id }] }),
+      },
+      ...(Object.hasOwn(KIND_DELETERS, row.kind)
+        ? [{ id: "delete", label: m.home.configDelete, danger: true, ...(editBlock === undefined ? {} : { disabled: true, title: editBlock }), onSelect: () => setDeleting(row) }]
+        : []),
+    ];
+  };
+  const removeConfigRow = async () => {
+    const row = deleting;
+    setDeleting(null);
+    if (row === null) return;
+    try {
+      await (KIND_DELETERS[row.kind] as NonNullable<(typeof KIND_DELETERS)[string]>)(space(id), row.id);
+      await queryClient.invalidateQueries({ queryKey: ["list"] });
+      toast({ tone: "success", text: m.home.configDeleted(row.name) });
+    } catch (e) {
+      toast({ tone: "danger", text: describeError(e, m.home.configDeleteFailed).message });
+    }
+  };
+
+  const chatPath = routeOn(ROUTE_ROLES.conversations) ? `${withPrj(routePath(ROUTE_ROLES.conversations))}&${NEW_PARAM}=1` : undefined;
   const runsPath = routeOn(ROUTE_ROLES.runs) ? withPrj(routePath(ROUTE_ROLES.runs)) : undefined;
+  // [실행…]은 실행 시작 대화상자를 연다(실행 기록 화면이 `?new=1`을 받아 연다)
+  const startRunPath = runsPath === undefined ? undefined : `${runsPath}&${NEW_PARAM}=1`;
   const shortcuts = DEFAULT_ROUTES.filter((r) => r.projectShortcut === true && routeOn(r.serves ?? r.id));
 
   const copy = async (value: string, done: string) => {
@@ -252,15 +294,15 @@ export function ProjectHomeScreen() {
               {m.home.startChat}
             </Link>
           )}
-          {runsPath === undefined ? null : (
+          {startRunPath === undefined ? null : (
             <Link
-              to={runsPath}
+              to={startRunPath}
               className="ac-btn"
               data-variant="secondary"
               data-size="md"
               aria-disabled={runBlock !== undefined ? "true" : undefined}
               title={runBlock}
-              onClick={gate(runsPath, runBlock)}
+              onClick={gate(startRunPath, runBlock)}
             >
               {m.home.startRun}
             </Link>
@@ -302,6 +344,9 @@ export function ProjectHomeScreen() {
             blockedReason={reason("copy_in")}
             creatable={config.creatable}
             onNew={(c) => void navigate(c.href)}
+            onImport={() => copyDialog.open({ direction: "import", project: id, start: "pick", onApplied: (o) => o.first !== null && setHighlight(`${o.first.kind}:${o.first.id}`) })}
+            rowMenu={configRowMenu}
+            highlightKey={highlight}
             onOpen={(href) => void navigate(href)}
             nowMs={now}
           />
@@ -318,6 +363,18 @@ export function ProjectHomeScreen() {
           />
         </div>
       )}
+      {copyDialog.dialog}
+      <ConfirmDialog
+        open={deleting !== null}
+        title={deleting === null ? "" : m.home.configDeleteTitle(deleting.name)}
+        confirmLabel={m.home.configDelete}
+        cancelLabel={appMessages.common.cancel}
+        danger
+        onConfirm={() => void removeConfigRow()}
+        onCancel={() => setDeleting(null)}
+      >
+        {m.home.configDeleteBody}
+      </ConfirmDialog>
       {resetOpen ? (
         <ManifestResetDialog
           name={view.project.name}

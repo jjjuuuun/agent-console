@@ -72,6 +72,7 @@ class RunStarter(Protocol):
         seed: Mapping[str, Mapping[str, Any]] | None = None,
         resumed_from: str | None = None,
         project_id: str | None = None,
+        run_context: Mapping[str, Any] | None = None,
     ) -> TurnHandle: ...
 
     def cancel(self, run_id: str, reason: str = ...) -> bool: ...
@@ -129,6 +130,14 @@ INTERACTIONS_PORT: PortKey[RootInteractionReader] = PortKey(
     "interactions.port", "상호작용 조회·응답"
 )
 
+RUNS_MOVE: PortKey[Any] = PortKey("runs.move_hook", "대화 옮기기에 거는 Run 옮기기 훅")
+"""선택(5.7R.33j2): ``mod-runs``가 주는 ``ConversationRunMove``(``busy``·``prepare``)."""
+CHAT_MOVE_HOOKS: PortKey[Any] = PortKey(
+    "chat.move_hooks", "대화 옮기기에 묶이는 딸린 기록 옮기기", multi=True
+)
+"""제공(5.7R.33j2, 여러 제공자 중 하나): ``runs.move_hook`` 그대로 - 대화를 프로젝트 기록 DB로
+옮길 때 그 대화의 Run(자손·노드·이벤트·상호작용)을 같은 작업으로 옮긴다."""
+
 CHAT_TURN_LAUNCHER: PortKey[TurnLauncher] = PortKey("chat.turn_launcher", "턴 시작·취소")
 CHAT_RUNS: PortKey[RunReader] = PortKey("chat.runs", "턴 Run 조회")
 CHAT_RUN_EVENTS: PortKey[EventReader] = PortKey("chat.run_events", "턴 이벤트 조회")
@@ -144,6 +153,7 @@ RUNS_EVENT: Topic[RunEvent] = Topic("runs.event")
 __all__ = [
     "CHAT_CONVERSATIONS",
     "CHAT_INTERACTIONS",
+    "CHAT_MOVE_HOOKS",
     "CHAT_RUNS",
     "CHAT_RUN_EVENTS",
     "CHAT_TURN_LAUNCHER",
@@ -152,6 +162,7 @@ __all__ = [
     "RESUME_HANDLERS",
     "RUNS_EVENT",
     "RUNS_EVENTS",
+    "RUNS_MOVE",
     "RUNS_READER",
     "RUNS_STARTER",
     "ChatLike",

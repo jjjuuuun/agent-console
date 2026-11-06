@@ -81,7 +81,7 @@ class ArchitectureModule:
         version=_version(),
         kind="feature",
         title="구조도",
-        description="구조도 프로필 목록·검사·단독 투영(/architecture/*)",
+        description="에이전트 구조도 프로필을 보고 검사한다",
         provides=(ARCHITECTURE_CATALOG, SERVER_WARNINGS),
         optional=(WORKSPACE_SETTINGS, PROFILE_CHECKS),
         settings_schema=ArchitectureModuleSettings,

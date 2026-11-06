@@ -155,6 +155,14 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
+### 세션 기록 보관·복원 (X38, 5.7R.33y3, design §PI.4.6.4)
+
+백엔드의 선택 메서드 `session_archive()`가 `SessionArchive`(`files`·`status`·`restore`)를 주면, 조립(연동 모듈)이 대화
+노드 세션 원본을 프로젝트 폴더에 보관하고 다른 앱에서 복원해 이어 간다. 상태 값은 계약 `KnownSessionStates`
+(`available`·`relocatable`·`missing`, 조립이 `archived`·`not_applicable`을 더함). `BackendSessionArchives(lookup)`이 백엔드 id로
+찾고(없으면 None = `not_applicable`), `JsonlFolderSessionArchive(root, key)`는 `<root>/<cwd 키>/<세션>.jsonl` + `<세션>/` 모양의 공용
+구현이다(그 세션 파일만 다루고, 복원은 `<root>/<지금 키>/`에만 쓴다. 이름 검사·링크 건너뛰기는 `copy_files`·`session_files_in`).
+
 ## 스케줄러 의미
 
 엔진은 연결 종류·노드 타입 이름을 모른다. 엣지 디스크립터 `scheduling`과 노드 디스크립터 `executable`만 본다

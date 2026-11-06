@@ -105,6 +105,8 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
 
 export interface FeedInput {
   conversationId: string;
+  /** 대화가 속한 프로젝트(자식 구성 그래프를 그 공간에서 읽는다). 없으면 공용 */
+  projectId?: string | null;
   ws: WsClient;
   graph: Graph | undefined;
   /** 계획 요약(답변 자리). 아직 못 받았으면 undefined */
@@ -145,8 +147,8 @@ export interface Feed {
  * - 진행 중인 턴은 `run:<id>`를 구독하고, 재접속하면 WS 클라이언트가 `since_seq`로 이어 받는다.
  * - 요약(`conversation:<id>`)이 바뀌면 턴·대기열을 다시 읽어 보정한다.
  */
-export function useConversationFeed({ conversationId, ws, graph, plan, kinds, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
-  const { rest } = useApi();
+export function useConversationFeed({ conversationId, projectId = null, ws, graph, plan, kinds, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
+  const { rest, space } = useApi();
   const queryClient = useQueryClient();
   const [older, setOlder] = useState<ChatTurn[]>([]);
   const [moreBefore, setMoreBefore] = useState<boolean | undefined>(undefined);
@@ -168,7 +170,7 @@ export function useConversationFeed({ conversationId, ws, graph, plan, kinds, na
   // 요약 구독: 새 턴·상태·대기 수가 바뀌면 목록 캐시를 갱신하고 턴을 보정한다.
   useEffect(() => {
     const sub = ws.subscribeConversation(conversationId, (summary: ConversationSummary) => {
-      queryClient.setQueryData<ConversationSummary[]>(chatKeys.conversations(), (cur) => (cur ? upsertConversation(cur, summary) : cur));
+      queryClient.setQueriesData<ConversationSummary[]>({ queryKey: chatKeys.conversations() }, (cur) => (cur ? upsertConversation(cur, summary) : cur));
       refresh();
     });
     return () => sub?.unsubscribe();
@@ -254,7 +256,7 @@ export function useConversationFeed({ conversationId, ws, graph, plan, kinds, na
   const childHistory = useHistoryRuns(doneChildIds);
   const childLive = useMemo(() => mergeLiveRuns(childHistory, childWs), [childHistory, childWs]);
   const childGraphResults = useQueries({
-    queries: childGraphIds.map((gid) => ({ queryKey: chatKeys.graph(gid), queryFn: () => rest.getGraph(gid), staleTime: 60_000 })),
+    queries: childGraphIds.map((gid) => ({ queryKey: chatKeys.graph(gid, projectId), queryFn: () => space(projectId).getGraph(gid), staleTime: 60_000 })),
     combine: (results) => results.map((r) => r.data),
   });
   const childGraphs = useMemo(() => {

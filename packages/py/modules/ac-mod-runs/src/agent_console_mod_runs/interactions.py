@@ -110,6 +110,16 @@ class InteractionService:
     def get(self, interaction_id: str) -> Interaction | None:
         return self._store.get(interaction_id)
 
+    def for_project(self, project_id: str | None) -> InteractionStore:
+        """그 프로젝트(기록 공간)에 묶인 조회(저장소의 선택 메서드 ``for_project``, 없으면 그대로).
+
+        응답·알림은 엔진 경로(이 서비스)로 한다. 조회만 공간에서 한다(5.7R.33y2)."""
+        method = getattr(self._store, "for_project", None)
+        if not callable(method):
+            return self._store
+        found: InteractionStore = method(project_id)
+        return found
+
     def pending(self) -> builtins.list[Interaction]:
         """대기 중인 상호작용(오래된 순)."""
         return self._store.list(status="pending")

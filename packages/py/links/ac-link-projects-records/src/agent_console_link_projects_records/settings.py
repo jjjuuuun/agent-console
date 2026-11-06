@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agent_console_contracts import x_ui
 
+from .sessions import SessionArchiveSettings
+
 
 class ProjectsRecordsSettings(BaseModel):
     """프로젝트 기록 DB 연동 설정."""
@@ -60,6 +62,15 @@ class ProjectsRecordsSettings(BaseModel):
         ),
         default="auto",
         description="auto는 네트워크 드라이브로 보이면 DELETE, 아니면 WAL을 쓴다.",
+    )
+    session_archive: SessionArchiveSettings = Field(
+        default_factory=SessionArchiveSettings,
+        title="대화 원본 보관",
+        json_schema_extra=x_ui(tier="advanced"),
+        description=(
+            "다른 앱에서도 대화를 이어 가도록 세션 원본을 프로젝트 폴더에 둡니다(기본 켬). 폴더를 "
+            "공유하면 대화 원본도 함께 공유됩니다."
+        ),
     )
     spool_dir: str = Field(
         title="대기 파일 폴더 이름",

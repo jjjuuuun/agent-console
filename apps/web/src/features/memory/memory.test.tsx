@@ -20,7 +20,8 @@ afterEach(cleanup);
 const LONG = { timeout: 15_000 };
 // 범위 종류·이름은 모두 임의 값(`memory-view/testing`의 표본)이다. 화면 코드는 이 이름을 모른다.
 const mod = (roles: string[]): ModuleInfo => ({ id: "m-any", kind: "k", version: "0.0.1", status: "active", web_roles: roles });
-const MEMORY_ROLE_MODULES = async () => [mod(["memory", "projects"])];
+// 프로젝트 역할은 프로젝트 전환기 테스트만 켠다(켜면 프로젝트 문지기가 본문을 막는다: 프로젝트 0개 = 안내 하나).
+const MEMORY_ROLE_MODULES = async () => [mod(["memory"])];
 
 const full = (e: MemoryEntrySummary, content = `본문 ${e.key}`): MemoryEntry => ({ ...e, content }) as MemoryEntry;
 
@@ -47,7 +48,7 @@ function setup(path: string, f: Fixture = {}) {
         return full(e);
       }),
       getModuleOptions: vi.fn(async () => ({ module_id: "m-any", values: { max_entry_bytes: 65_536 } })),
-      listProjects: vi.fn(async () => (f.projects ?? []).map((p) => ({ project: { ...p }, status: "ready", config_writable: true, kinds: [], records_writable: true, config_dir: ".cfg" }))),
+      listProjects: vi.fn(async () => (f.projects ?? []).map((p) => ({ project: { ...p, folder: `/work/${p.id}` }, status: "ready", config_writable: true, kinds: [], records_writable: true, config_dir: ".cfg" }))),
       ...f.rest,
     },
   );
@@ -200,8 +201,9 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     expect(await screen.findByText("다른 프로젝트 범위 6개 숨김", {}, LONG)).toBeTruthy();
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);
     expect(within(tree).queryAllByText("팀 둘")).toHaveLength(0);
-    const chips = screen.getByRole("group", { name: "활성 필터" });
-    expect(await within(chips).findByRole("button", { name: /프로젝트: 프로젝트 하나/ }, LONG)).toBeTruthy();
+    // 현재 프로젝트는 머리의 프로젝트 칩이 보인다(칩 해제로 프로젝트를 풀 수 없다: 활성 필터 칩 없음).
+    expect(await screen.findByRole("button", { name: "프로젝트 프로젝트 하나, 경로 /work/P1" }, LONG)).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "활성 필터" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
     await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);
     expect(within(tree).getAllByText("팀 둘").length).toBeGreaterThan(0);

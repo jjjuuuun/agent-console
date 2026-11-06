@@ -160,7 +160,14 @@ def _seed_project(store: FileDefinitionStore) -> str:
 @contextmanager
 def _server(tmp_path: Path, scoper: _ProjectDefinitions) -> Iterator[TestClient]:
     settings = make_settings(tmp_path)
-    modules = [*installed_modules(), _scope_module(scoper)]
+    # 실제 프로젝트 연동(link-projects-runs, 5.7R.33g)은 등록되지 않은 p1을 404로 막으므로 뺀다 —
+    # 이 테스트는 가짜 범위 모듈 하나로 정의 출처만 본다. 기록 연동(link-projects-records,
+    # 5.7R.33y2)도 등록되지 않은 p1의 기록 DB를 404로 막으므로 뺀다(기록은 호스트 DB).
+    skipped = {"link-projects-runs", "link-projects-records"}
+    modules = [
+        *(m for m in installed_modules() if m.descriptor.id not in skipped),
+        _scope_module(scoper),
+    ]
     app = create_app(settings, environ=default_environ(), token=TEST_TOKEN, modules=modules)
     with TestClient(app) as client:
         client.headers["X-Console-Token"] = TEST_TOKEN

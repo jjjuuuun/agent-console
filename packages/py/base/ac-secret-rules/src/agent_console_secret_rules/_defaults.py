@@ -75,6 +75,26 @@ DEFAULT_NAME_EXCEPTIONS: tuple[str, ...] = (
 `token_url`, `secret_name`). 하위 객체가 상위 비밀 이름을 이어받을 때도, 자기 이름의 마지막 단어가
 이 목록에 있으면 이어받지 않는다(`{"auth": {"mode": "oauth"}}`의 `mode`)."""
 
+DEFAULT_WEAK_KEY_NAMES: tuple[str, ...] = ("key",)
+"""뜻이 넓어 이름만으로는 비밀이라 단정하지 않는 키 이름(`key_names` 안의 단어).
+
+이름에서 걸린 키 이름이 모두 이 목록에 있으면(`input_key`·`sort_key`·`primary_key`) 값이 비밀
+모양(`DEFAULT_WEAK_VALUE_PATTERNS` 또는 `value_patterns`)일 때만 의심한다. `api_key`(= `apikey`)·
+`secret_key`(`secret`)처럼 다른 키 이름에도 걸리면 그대로 이름만으로 의심한다. 비우면
+(`SecretRules(weak_key_names=())`) 예전처럼 이름만으로 의심한다."""
+
+DEFAULT_WEAK_VALUE_PATTERNS: tuple[str, ...] = (
+    # 구분자 없이 이어진 글자·숫자 16자 이상에 숫자가 섞임(16진수·base64 키 모양).
+    # `step_2_output_summary`처럼 짧은 낱말을 구분자로 이은 이름은 걸리지 않는다.
+    r"(?<![A-Za-z0-9])(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{16,}",
+    # UUID 모양(라이선스·접근 키로 흔히 쓴다)
+    r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
+    r"[0-9A-Fa-f]{12}",
+)
+"""약한 키 이름(`DEFAULT_WEAK_KEY_NAMES`) 아래 값이 비밀처럼 생겼는지 보는 정규식(하나라도 맞으면
+의심). 값 패턴(`DEFAULT_VALUE_PATTERNS`)에 맞는 값(`sk-…`·JWT 등)은 이 목록과 상관없이
+늘 의심한다."""
+
 _TOKEN_CHARS = r"[A-Za-z0-9_\-]"
 
 _TOKEN_PREFIXES = (

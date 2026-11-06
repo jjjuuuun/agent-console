@@ -1,11 +1,47 @@
-"""런타임 엔티티(design §2.3): Run, NodeRun, RunSnapshot."""
+"""런타임 엔티티(design §2.3): Run, NodeRun, RunSnapshot, 커서 페이지 RunPage(1.7.0)."""
 
-from typing import Literal
+from collections.abc import Mapping
+from typing import Final, Literal
 
 from pydantic import Field
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
-from agent_console_contracts.common import ErrorInfo, Usage
+from agent_console_contracts.common import ErrorInfo, RecordSource, Usage
+
+RUN_LABEL_LIMITS: Final[dict[str, int]] = {
+    "max_labels": 16,
+    "max_key_length": 64,
+    "max_value_length": 256,
+}
+"""`Run.labels` 상한(1.7.0, design §6R.1.5 X45): 키 수·키 길이·값 길이(글자). 시작 요청
+(`CreateRunRequest.labels`)이 넘으면 검증 오류다. 저장된 Run은 다시 검사하지 않는다."""
+
+
+def run_label_problems(labels: Mapping[str, str]) -> list[str]:
+    """라벨이 `RUN_LABEL_LIMITS`를 넘는 곳을 사람이 읽는 문장 목록으로 돌려준다(빈 목록 = 문제
+    없음).
+
+    키는 빈 문자열이 아니어야 한다. 값은 빈 문자열도 된다.
+
+    >>> run_label_problems({"sdd.spec": "payments"})
+    []
+    >>> run_label_problems({"": "x"})
+    ['라벨 키가 비었습니다']
+    """
+    out: list[str] = []
+    if len(labels) > RUN_LABEL_LIMITS["max_labels"]:
+        out.append(f"라벨이 {len(labels)}개입니다(최대 {RUN_LABEL_LIMITS['max_labels']}개)")
+    for key, value in labels.items():
+        if not key:
+            out.append("라벨 키가 비었습니다")
+        elif len(key) > RUN_LABEL_LIMITS["max_key_length"]:
+            out.append(f"라벨 키가 {RUN_LABEL_LIMITS['max_key_length']}자를 넘습니다: {key[:16]}…")
+        if len(value) > RUN_LABEL_LIMITS["max_value_length"]:
+            out.append(
+                f"라벨 {key[:16]}의 값이 {RUN_LABEL_LIMITS['max_value_length']}자를 넘습니다"
+            )
+    return out
+
 
 type RunStatus = Literal[
     "queued", "running", "paused", "waiting", "completed", "failed", "cancelled", "interrupted"
@@ -72,6 +108,15 @@ class Run(ContractModel):
     ended_at: float | None = None
     error: ErrorInfo | None = None
     totals: Usage | None = None
+    labels: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "라벨(1.7.0, 문자열 → 문자열). 실행을 다른 기능의 항목(예: 스펙 작업)과 잇는 일반 "
+            "필드다. "
+            "루트 Run에만 있고 자식 Run은 빈 값이다. 목록 질의 `label=<키>=<값>`(여러 번 = AND). "
+            "상한 `RUN_LABEL_LIMITS`."
+        ),
+    )
 
 
 class NodeRun(ContractModel):
@@ -117,6 +162,20 @@ class RunSnapshot(ContractModel):
         default=None,
         description=("이 Run이 만든 자식 Run(중첩 팀). null = 서버가 채우지 않음, [] = 자식 없음."),
     )
+
+
+class RunPage(ContractModel):
+    """`GET /runs/page` 응답: 실행 목록 커서 페이지(1.7.0).
+
+    정렬은 `created_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다(불투명
+    문자열).
+    프로젝트 목록은 폴더 기록(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로
+    읽는다(두 출처를 시간순으로 섞지 않는다).
+    """
+
+    items: list[Run] = Field(default_factory=list)
+    next_cursor: str | None = Field(default=None, description="다음 페이지 커서. null = 끝.")
+    source: RecordSource = Field(description="이 페이지의 기록 출처(project·app).")
 
 
 class WaitInfo(ContractModel):

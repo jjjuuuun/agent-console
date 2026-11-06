@@ -39,6 +39,11 @@ export interface RouteDef {
   /** true면 프로젝트 홈의 요약 줄에 이 화면으로 가는 링크("로그"·"메모리")가 생긴다(현재 프로젝트 문맥을 따르는 화면). */
   projectShortcut?: boolean;
   /**
+   * true면 이 화면은 현재 프로젝트 안에서만 동작한다(screen-projects §7). 프로젝트가 0개이면 본문 전체가 `NoProjectState` 하나로 바뀐다.
+   * 프로젝트 기능이 꺼진 조립에서는 영향이 없다.
+   */
+  projectScoped?: boolean;
+  /**
    * 이 화면이 켜져 있으려면 서버에서 켜져 있어야 하는 모듈 id 또는 역할(모두 만족해야 한다, 비면 항상 켜짐).
    * 만족하지 못하면 사이드바·빠른 이동·`g` 단축키에서 빠지고, 주소로 들어오면 안내 화면이 나온다.
    * 모듈이 바뀌어도 화면 규칙이 안 바뀌도록 모듈 id보다 역할을 쓰는 것이 좋다(`docs/design/screen-modules.md` 1.3).
@@ -64,16 +69,26 @@ export function routeServing(routes: readonly RouteDef[], role: string): RouteDe
   return routes.find((r) => r.serves === role);
 }
 
+/** 정의 구성(팀·에이전트·리소스 등)을 편집하는 라우트인가: 역할이 `definition:<kind>`. 이 화면들은 주소 `?prj=`로 공간(공용/프로젝트 사본)을 고른다. */
+export function isDefinitionRoute(route: RouteDef): boolean {
+  return route.serves !== undefined && route.serves.startsWith("definition:");
+}
+
+/** 주소 경로가 정의 구성 라우트(또는 그 하위)에 속하는가. */
+export function isDefinitionPath(pathname: string, routes: readonly RouteDef[]): boolean {
+  return routes.some((r) => isDefinitionRoute(r) && (pathname === r.path || pathname.startsWith(`${r.path}/`)));
+}
+
 /** 기본 라우트 9개. 이것도 데이터이며 사용자가 다르게 원하면 이 배열만 고친다. */
 export const DEFAULT_ROUTES: readonly RouteDef[] = [
-  { id: "chat", serves: "conversations", requires: ["conversations"], path: "/chat", titleKey: "nav.chat", icon: "chat", badgeSource: "pendingInteractions", gotoKey: "c", position: "main", group: "run", home: true },
+  { id: "chat", serves: "conversations", requires: ["conversations"], path: "/chat", titleKey: "nav.chat", icon: "chat", badgeSource: "pendingInteractions", gotoKey: "c", position: "main", group: "run", home: true, projectScoped: true },
   { id: "teams", serves: "definition:graph", requires: ["definitions:graph"], path: "/teams", titleKey: "nav.teams", icon: "teams", badgeSource: null, gotoKey: "t", position: "main", group: "config", redirects: ["/graphs"] },
   { id: "agents", serves: "definition:agent", requires: ["definitions:agent"], path: "/agents", titleKey: "nav.agents", icon: "agents", badgeSource: null, gotoKey: "a", position: "main", group: "config" },
   { id: "resources", serves: "definition:resource", requires: ["definitions:resource"], path: "/resources", titleKey: "nav.resources", icon: "resources", badgeSource: null, gotoKey: "r", position: "main", group: "config" },
-  { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"] },
-  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true },
+  { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"], projectScoped: true },
+  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true, projectScoped: true },
   { id: "usage", serves: "usage", requires: ["usage"], path: "/usage", titleKey: "nav.usage", icon: "usage", badgeSource: null, gotoKey: "u", position: "main", group: "observe" },
-  { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"], projectShortcut: true },
+  { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"], projectShortcut: true, projectScoped: true },
   { id: "settings", serves: "settings", requires: [], path: "/settings", titleKey: "nav.settings", icon: "settings", badgeSource: null, gotoKey: "s", position: "bottom" },
 ];
 

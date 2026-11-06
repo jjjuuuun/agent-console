@@ -1,3 +1,5 @@
+import { useProjectId } from "../../app/projectScope";
+import { useProjects } from "../projects";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +21,7 @@ import { RangeControl } from "./LogFilters";
 import { useLogsIngested } from "./LogsLive";
 import { DEFAULT_RANGE, LOGS_LIMITS, LOGS_SCOPES, LOGS_STORAGE, SCREEN_PARAMS, SESSION_COLUMNS_DEFAULT, SESSION_COLUMN_IDS } from "./logsConfig";
 import { errorBlockOf, fieldErrorsOf } from "./logsErrors";
-import { classifyEmpty, enabledCount, parseRange, rangeToWindow, toRequestParams } from "./logsLib";
+import { classifyEmpty, enabledCount, parseRange, rangeToWindow, toRequestParams, projectParam } from "./logsLib";
 import { logsMessages as t } from "./messages";
 import { useArchiveDownload } from "./archive";
 import { useElementHeight } from "./useElementHeight";
@@ -39,6 +41,8 @@ export function SessionsPage() {
   const toast = useToast();
   const storage = useStorage();
   const url = useLogUrlState(FIELDS);
+  const project = useProjectId();
+  const projects = useProjects();
   const sources = useLogSources();
   const taxonomy = useLogTaxonomyView();
   const options = useFilterOptions(taxonomy, NO_SEEN);
@@ -58,7 +62,7 @@ export function SessionsPage() {
   const rangeValue = url.screen[SCREEN_PARAMS.range]?.[0];
   const range = parseRange(rangeValue, DEFAULT_RANGE.sessions);
   const window = rangeToWindow(range, anchor);
-  const params = useMemo(() => toRequestParams(url.filter, { order, limit: LOGS_LIMITS.sessionsPage }, window), [url.filter, order, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
+  const params = useMemo(() => toRequestParams(url.filter, { order, limit: LOGS_LIMITS.sessionsPage, ...projectParam(project) }, window), [url.filter, project, order, window.since, window.until]); // eslint-disable-line react-hooks/exhaustive-deps
   const q = useLogSessions(params);
   const list = q.data ?? [];
   const fieldErrors = useMemo(() => fieldErrorsOf(q.error), [q.error]);
@@ -127,6 +131,7 @@ export function SessionsPage() {
           }}
           sessions={list}
           columns={columns}
+          projectLabelFor={(id) => projects.names.get(id)}
           order={order}
           onOrderChange={setOrder}
           onOpen={open}

@@ -81,3 +81,13 @@ class InvalidMessageError(ChatError):
     """빈 메시지 등 요청 값이 잘못됐다."""
 
     code = ErrorCodes.BAD_REQUEST
+
+
+class SessionUnavailableError(ChatError):
+    """이 앱에 대화 노드의 백엔드 세션 기록이 없어 이어 갈 수 없다(design §PI.4.6.4, 409).
+
+    `details` = `{conversation_id, node_ids}`. 다시 보낼 때 `on_missing_session: "fresh"`면 그
+    노드는 새 세션으로 시작한다.
+    """
+
+    code = ErrorCodes.CHAT_SESSION_UNAVAILABLE
