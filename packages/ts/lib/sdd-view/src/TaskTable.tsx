@@ -7,7 +7,7 @@ import { flattenTaskRows, groupByStage, progressRatio, type TaskRow } from "./st
 import { TaskFieldChips } from "./TaskFieldChips";
 import { TaskRunChips } from "./TaskRunChips";
 import { TaskStatusMenu } from "./TaskStatusMenu";
-import { ToneChip } from "./ToneChip";
+import { ToneChip } from "@agent-console/markdown-doc";
 
 export const TASK_ROW_HEIGHT = 32;
 export const STAGE_ROW_HEIGHT = 32;

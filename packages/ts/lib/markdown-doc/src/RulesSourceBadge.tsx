@@ -12,7 +12,7 @@ export function RulesSourceBadge({ source, messages, className }: RulesSourceBad
   const text = resolveMessages(messages);
   const name = messageOr(text, `source.${source}`, source);
   return (
-    <span className={`ac-sdd-source${className ? ` ${className}` : ""}`} data-source={source} title={text["source.tip"]}>
+    <span className={`ac-md-source${className ? ` ${className}` : ""}`} data-source={source} title={text["source.tip"]}>
       {formatMessage(text["source.label"], { source: name })}
     </span>
   );

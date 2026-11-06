@@ -1,4 +1,6 @@
+import * as markdownDoc from "@agent-console/markdown-doc";
 import { describe, expect, it } from "vitest";
+import * as sdd from "./index";
 import { codeDisplay, statusTone, taskTitle, toneAttr } from "./display";
 import { applyPositions, createElkPlanLayout, planBundles, planToFlow } from "./plan";
 import { flattenTaskRows, groupByStage, progressRatio } from "./stages";
@@ -141,5 +143,16 @@ describe("trace·messages", () => {
     expect(resolveMessages({ "tasks.ready": "OK" })["tasks.ready"]).toBe("OK");
     expect(resolveMessages()["tasks.ready"]).toBe("준비됨");
     expect(messageOr({ a: "x" }, "b", "원문")).toBe("원문");
+  });
+});
+
+describe("markdown-doc 다시 내보내기(7R.6)", () => {
+  it("같은 이름이 같은 구현이다(두 벌이 아니다)", () => {
+    expect(sdd.DocumentEditor).toBe(markdownDoc.DocumentEditor);
+    expect(sdd.ToneChip).toBe(markdownDoc.ToneChip);
+    expect(sdd.DocumentStateChip).toBe(markdownDoc.DocumentStateChip);
+    expect(sdd.RulesSourceBadge).toBe(markdownDoc.RulesSourceBadge);
+    expect(sdd.EDITOR_VIEW_MODES).toBe(markdownDoc.EDITOR_VIEW_MODES);
+    expect(sdd.statusTone).toBe(markdownDoc.statusTone);
   });
 });

@@ -1,0 +1,75 @@
+/*
+ * @agent-console/markdown-doc 스타일. 색·글꼴·간격은 tokens.css의 --ac-* 변수만 쓴다(hex 직접 사용 금지).
+ * 앱이 tokens.css와 이 파일을 각각 한 번 로드한다(sdd-view/styles.css는 이 파일을 @import한다).
+ * 톤 이름 선택자는 톤 5종(어휘)만 있고, 모르는 톤은 중립으로 떨어진다. 칩·출처 배지는 편집기 밖에서도 단독으로 그려진다.
+ */
+.ac-md-root {
+  box-sizing: border-box;
+  min-width: 0;
+  color: var(--ac-text);
+  font-family: var(--ac-font-sans);
+  font-size: var(--ac-text-sm);
+  line-height: var(--ac-lh-sm);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.ac-md-root *, .ac-md-root *::before, .ac-md-root *::after { box-sizing: border-box; }
+.ac-md-root :focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: -2px; }
+.ac-md-root ul, .ac-md-root ol { margin: 0; padding: 0; list-style: none; }
+.ac-md-root p { margin: 0; }
+
+.ac-md-ellipsis { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-md-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); overflow-wrap: anywhere; }
+.ac-md-muted { color: var(--ac-text-muted); }
+.ac-md-spacer { flex: 1; }
+
+/* 톤: data-tone 하나로 아이콘·배경을 정한다. 모르는 톤은 중립 */
+.ac-md-chip {
+  --ac-tone-icon: var(--ac-text-subtle);
+  --ac-tone-bg: var(--ac-surface-3);
+  --ac-tone-glyph: var(--ac-icon-pending);
+}
+.ac-md-chip[data-tone="info"] { --ac-tone-icon: var(--ac-info); --ac-tone-bg: var(--ac-info-bg); --ac-tone-glyph: var(--ac-icon-queued); }
+.ac-md-chip[data-tone="success"] { --ac-tone-icon: var(--ac-success); --ac-tone-bg: var(--ac-success-bg); --ac-tone-glyph: var(--ac-icon-succeeded); }
+.ac-md-chip[data-tone="warning"] { --ac-tone-icon: var(--ac-warning); --ac-tone-bg: var(--ac-warning-bg); --ac-tone-glyph: var(--ac-icon-unknown); }
+.ac-md-chip[data-tone="danger"] { --ac-tone-icon: var(--ac-danger); --ac-tone-bg: var(--ac-danger-bg); --ac-tone-glyph: var(--ac-icon-failed); }
+
+.ac-md-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 240px; min-width: 0;
+  height: var(--ac-badge-h); padding: 0 8px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-full);
+  background: var(--ac-tone-bg); color: var(--ac-text); font-size: var(--ac-text-xs); font-weight: 600; line-height: 1; white-space: nowrap;
+}
+.ac-md-chip[data-size="normal"] { height: 24px; }
+.ac-md-chip-icon { flex: none; width: 14px; height: 14px; background: var(--ac-tone-icon); mask: var(--ac-tone-glyph) center / contain no-repeat; -webkit-mask: var(--ac-tone-glyph) center / contain no-repeat; }
+.ac-md-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.ac-md-btn { height: 28px; padding: 0 10px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); color: var(--ac-text); font: inherit; cursor: pointer; }
+.ac-md-btn[data-primary] { background: var(--ac-accent); border-color: var(--ac-accent); color: var(--ac-text-on-accent); }
+.ac-md-btn[aria-pressed="true"] { background: var(--ac-accent-bg-strong); border-color: var(--ac-accent); }
+.ac-md-btn:disabled, .ac-md-btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+.ac-md-segment { display: inline-flex; gap: 0; }
+.ac-md-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px 16px; text-align: center; }
+.ac-md-empty-title { font-size: var(--ac-text-md); font-weight: 600; }
+.ac-md-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); }
+.ac-md-banner[data-tone="warning"] { background: var(--ac-warning-bg); }
+.ac-md-banner[data-tone="info"] { background: var(--ac-info-bg); }
+.ac-md-banner-actions { display: inline-flex; gap: 8px; margin-left: auto; }
+.ac-md-source { display: inline-block; padding: 0 6px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm); background: var(--ac-surface-3); color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+
+/* 편집기 */
+.ac-md-editor { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
+.ac-md-editor-bar { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.ac-md-editor-title { font-weight: 600; max-width: 24ch; }
+.ac-md-editor-body { display: grid; flex: 1; min-height: 240px; gap: 8px; grid-template-columns: 1fr; }
+.ac-md-editor-body[data-mode="split"] { grid-template-columns: 1fr 1fr; }
+.ac-md-editor-pane { min-width: 0; min-height: 0; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); overflow: auto; }
+.ac-md-goto { display: flex; align-items: center; gap: 8px; }
+.ac-md-goto input { width: 9ch; height: 28px; padding: 0 8px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; }
+.ac-md-goto input[aria-invalid="true"] { border-color: var(--ac-danger); }
+.ac-md-compare { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.ac-md-compare-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ac-md-preview { padding: 12px 16px; background: var(--ac-surface-1); }
+.ac-md-preview pre, .ac-md-preview code { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.ac-md-preview pre { overflow: auto; padding: 8px; background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); }
+.ac-md-preview table { border-collapse: collapse; }
+.ac-md-preview th, .ac-md-preview td { padding: 2px 8px; border: 1px solid var(--ac-border-soft); }

@@ -1,6 +1,6 @@
 import type { SpecDocumentSummary } from "@agent-console/contracts/sdd";
 import { formatMessage, resolveMessages } from "./messages";
-import { DocumentStateChip } from "./ToneChip";
+import { DocumentStateChip } from "@agent-console/markdown-doc";
 
 export interface DocumentNavProps {
   documents: readonly SpecDocumentSummary[];

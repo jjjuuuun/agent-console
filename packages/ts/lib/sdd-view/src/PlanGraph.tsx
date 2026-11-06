@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { statusTone, type StatusLike } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
 import { applyPositions, createElkPlanLayout, planToFlow, PLAN_DEFAULTS, type PlanFlowOptions, type PlanLayoutEngine, type PlanNodeData } from "./plan";
-import { ToneChip } from "./ToneChip";
+import { ToneChip } from "@agent-console/markdown-doc";
 
 type PlanNode = Node<PlanNodeData & { statusLabel: string; statusTone: string; ariaText: string }, "sdd-plan-node">;
 

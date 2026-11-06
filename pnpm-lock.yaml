@@ -710,9 +710,9 @@ importers:
       '@agent-console/contracts':
         specifier: ^0.14.0
         version: link:../contracts
-      '@agent-console/text-editor':
+      '@agent-console/markdown-doc':
         specifier: ^0.1.0
-        version: link:../text-editor
+        version: link:../markdown-doc
       '@tanstack/react-virtual':
         specifier: ^3.14.21
         version: 3.14.21(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -722,12 +722,6 @@ importers:
       elkjs:
         specifier: ~0.12.0
         version: 0.12.0
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.3.0)(react@19.3.1)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
     devDependencies:
       '@agent-console/eslint-config':
         specifier: ^0.1.0

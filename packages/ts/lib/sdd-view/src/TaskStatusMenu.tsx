@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { statusTone, type StatusLike } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
-import { ToneChip } from "./ToneChip";
+import { ToneChip } from "@agent-console/markdown-doc";
 
 export interface TaskStatusMenuProps {
   /** 지금 상태 id */

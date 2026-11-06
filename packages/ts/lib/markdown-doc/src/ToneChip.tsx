@@ -1,4 +1,4 @@
-import { toneAttr, statusTone, type StatusLike } from "./display";
+import { toneAttr, statusTone, type StatusLike } from "./tone";
 
 export interface ToneChipProps {
   label: string;
@@ -17,9 +17,9 @@ export interface ToneChipProps {
  */
 export function ToneChip({ label, tone, size = "dense", title, className }: ToneChipProps) {
   return (
-    <span className={`ac-sdd-chip${className ? ` ${className}` : ""}`} data-tone={toneAttr(tone)} data-size={size} title={title ?? label}>
-      <span className="ac-sdd-chip-icon" aria-hidden="true" />
-      <span className="ac-sdd-chip-text">{label}</span>
+    <span className={`ac-md-chip${className ? ` ${className}` : ""}`} data-tone={toneAttr(tone)} data-size={size} title={title ?? label}>
+      <span className="ac-md-chip-icon" aria-hidden="true" />
+      <span className="ac-md-chip-text">{label}</span>
     </span>
   );
 }

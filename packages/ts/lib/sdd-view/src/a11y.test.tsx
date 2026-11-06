@@ -1,7 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import axe from "axe-core";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { DocumentEditor } from "./DocumentEditor";
 import { DocumentNav } from "./DocumentNav";
 import { GateNotice } from "./GateNotice";
 import { PlanBundles } from "./PlanBundles";
@@ -40,14 +39,6 @@ describe("접근성 (axe 0건)", () => {
     b.unmount();
     const c = render(<DocumentNav documents={sampleDocuments()} selectedId="d-req" />);
     expect(await violations(c.container)).toEqual([]);
-  });
-  it("문서 편집기(정상·읽기 전용·충돌·파일 없음)", async () => {
-    const doc = { id: "d", title: "문서", file: "a.md" };
-    for (const props of [{}, { readOnly: true, readOnlyReason: "쓸 수 없음" }, { conflict: true }, { missing: true }]) {
-      const { container, unmount } = render(<DocumentEditor document={doc} value={"# 제목\n본문"} onReload={() => undefined} {...props} />);
-      expect(await violations(container), JSON.stringify(props)).toEqual([]);
-      unmount();
-    }
   });
   it("작업 표(펼침·상태 메뉴 열림·충돌·문법 없음·빈 상태)", async () => {
     const { container, unmount } = render(<TaskTable tasks={sampleTasks()} statuses={sampleStatuses()} conflicts={{ T2: { task_key: "T2", text: "줄" } }} onStatusChange={() => undefined} />);

@@ -1,0 +1,63 @@
+{
+  "name": "@agent-console/markdown-doc",
+  "version": "0.1.0",
+  "description": "마크다운 문서 편집기·미리보기와 공용 상태 칩·출처 배지",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "axe-core": "^4.11.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "happy-dom": "^21.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@agent-console/contracts": "^0.14.0",
+    "@agent-console/text-editor": "^0.1.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

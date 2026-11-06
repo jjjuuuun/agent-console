@@ -1,7 +1,7 @@
 import type { TaskLink } from "@agent-console/contracts/sdd";
 import { statusTone } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
-import { ToneChip } from "./ToneChip";
+import { ToneChip } from "@agent-console/markdown-doc";
 
 export interface TaskRunChipsProps {
   links: readonly TaskLink[] | undefined;

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // README 예제가 패키지 이름으로 import하므로 테스트에서는 소스를 가리킨다.
-// 하위 경로 export를 추가하면 alias도 함께 추가한다. 사내 의존(text-editor)은 development 조건으로 소스를 읽는다.
+// 하위 경로 export를 추가하면 alias도 함께 추가한다. 사내 의존(markdown-doc)은 development 조건으로 소스를 읽는다.
 export default defineConfig({
   resolve: {
     conditions: ["development"],

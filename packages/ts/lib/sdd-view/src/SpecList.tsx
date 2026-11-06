@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import { useVirtualRows } from "./hooks";
 import { formatMessage, resolveMessages } from "./messages";
 import { progressRatio } from "./stages";
-import { DocumentStateChip } from "./ToneChip";
+import { DocumentStateChip } from "@agent-console/markdown-doc";
 
 export const SPEC_ROW_HEIGHT = 64;
 

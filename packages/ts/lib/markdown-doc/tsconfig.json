@@ -1,0 +1,9 @@
+{
+  "extends": "@agent-console/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "customConditions": ["development"],
+    "paths": { "@agent-console/markdown-doc": ["./src/index.ts"] }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

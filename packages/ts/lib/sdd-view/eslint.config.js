@@ -1,6 +1,6 @@
 import config from "@agent-console/eslint-config/react";
 
-// 사내 의존은 contracts "타입"과 text-editor뿐이다(design §6R.3). api-client 등은 import하지 않고 props로 받는다.
+// 사내 의존은 contracts "타입"과 markdown-doc(문서 편집기·칩, design §7R.3)뿐이다. api-client 등은 import하지 않고 props로 받는다.
 export default [
   ...config,
   {
@@ -12,8 +12,8 @@ export default [
         {
           patterns: [
             {
-              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/text-editor"],
-              message: "sdd-view는 contracts 타입과 text-editor만 import한다. 나머지는 props로 받는다.",
+              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/markdown-doc"],
+              message: "sdd-view는 contracts 타입과 markdown-doc만 import한다. 나머지는 props로 받는다.",
             },
             {
               group: ["@agent-console/contracts", "@agent-console/contracts/*"],

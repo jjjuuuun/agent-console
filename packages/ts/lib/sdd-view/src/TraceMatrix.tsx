@@ -4,7 +4,7 @@ import { codeDisplay, type CodeDisplayTable } from "./display";
 import { useVirtualRows } from "./hooks";
 import { formatMessage, messageOr, resolveMessages } from "./messages";
 import { filterTraceRows, gapLabelKey, hasGaps, verificationLabelKey } from "./trace";
-import { ToneChip } from "./ToneChip";
+import { ToneChip } from "@agent-console/markdown-doc";
 
 export const TRACE_ROW_HEIGHT = 32;
 

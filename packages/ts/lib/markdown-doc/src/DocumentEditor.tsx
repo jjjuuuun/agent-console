@@ -1,8 +1,7 @@
-import type { SpecIssue } from "@agent-console/contracts/sdd";
+import type { Issue } from "@agent-console/contracts/definitions";
 import { TextDiff, TextEditor, type TextEditorHandle } from "@agent-console/text-editor";
 import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownPreview, type MarkdownPreviewProps } from "./MarkdownPreview";
 import { formatMessage, resolveMessages } from "./messages";
 
 /** 보기 방식 어휘(단축키·저장값 검사에도 쓴다) */
@@ -16,6 +15,12 @@ export interface DocumentEditorHandle {
   /** 1부터 세는 줄로 이동하고 편집기에 포커스를 둔다. 편집기가 보이지 않으면 false. */
   goToLine: (line: number) => boolean;
 }
+
+/**
+ * 저장 응답의 점검 결과 한 건. 계약 `Issue`(common 이슈)의 `severity`·`code`·`message`만 필요하고, 문서 줄이 있는 이슈(`SpecIssue`·`WikiIssue`)는 `line`이 있다.
+ * 그래서 `SpecIssue`도 그대로 들어간다.
+ */
+export type DocumentIssue = Pick<Issue, "severity" | "code" | "message"> & { line?: number | null };
 
 export interface DocumentEditorProps {
   /** 열린 문서. null이면 "문서를 고르세요" 빈 상태. */
@@ -57,7 +62,7 @@ export interface DocumentEditorProps {
   onModeChange?: (mode: EditorViewMode) => void;
   handleRef?: Ref<DocumentEditorHandle>;
   /** 저장 응답의 점검 결과(비밀 의심 등). 문구는 서버 `message` 그대로. */
-  issues?: readonly SpecIssue[];
+  issues?: readonly DocumentIssue[];
   /** 파일 언어(기본 markdown). 미리보기는 markdown일 때만 있다. */
   language?: string;
   maxBytes?: number;
@@ -65,19 +70,21 @@ export interface DocumentEditorProps {
   defaultMode?: EditorViewMode;
   /** 편집기 위 도구줄 오른쪽에 붙일 것(상태 전환 메뉴 등). */
   toolbarExtra?: ReactNode;
+  /** 미리보기 훅(링크 그리기·원문 바꾸기·주소 허용). 그대로 `MarkdownPreview`에 넘긴다. */
+  previewHooks?: Pick<MarkdownPreviewProps, "renderLink" | "transformSource" | "urlTransform">;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
 
 /**
- * 문서 본문 편집기 = text-editor(CodeMirror) + react-markdown 미리보기. 저장·API를 모르고 상태는 전부 props다.
+ * 문서 본문 편집기 = text-editor(CodeMirror) + `MarkdownPreview`. 저장·API를 모르고 상태는 전부 props다.
  * IME 조합 중에는 [저장]을 잠그고 안내한다(text-editor의 조합 상태 API).
  */
 export function DocumentEditor(props: DocumentEditorProps) {
   const {
     document, value, onChange, onSave, dirty = false, saving = false, readOnly = false, readOnlyReason, missing = false, onCreateMissing, conflict = false,
     onReload, onOverwrite, onCopyMine, compare, defaultCompareOpen = false, externalChange = false, initialLine, mode: controlledMode, onModeChange, handleRef,
-    issues = [], language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, messages, className,
+    issues = [], language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, previewHooks, messages, className,
   } = props;
   const text = resolveMessages(messages);
   const [innerMode, setInnerMode] = useState<EditorViewMode>(defaultMode);
@@ -113,22 +120,22 @@ export function DocumentEditor(props: DocumentEditorProps) {
     });
     return () => cancelAnimationFrame(id);
   }, [initialLine, document?.id]);
-  const root = `ac-sdd-root ac-sdd-editor${className ? ` ${className}` : ""}`;
+  const root = `ac-md-root ac-md-editor${className ? ` ${className}` : ""}`;
 
   if (!document) {
     return (
-      <div className={`${root} ac-sdd-empty`} role="status">
-        <p className="ac-sdd-empty-title">{text["editor.empty"]}</p>
+      <div className={`${root} ac-md-empty`} role="status">
+        <p className="ac-md-empty-title">{text["editor.empty"]}</p>
       </div>
     );
   }
   if (missing) {
     return (
-      <div className={`${root} ac-sdd-empty`} role="alert" data-state="missing">
-        <p className="ac-sdd-empty-title">{text["editor.missing.title"]}</p>
-        <p className="ac-sdd-muted">{formatMessage(text["editor.missing.body"], { file: document.file })}</p>
+      <div className={`${root} ac-md-empty`} role="alert" data-state="missing">
+        <p className="ac-md-empty-title">{text["editor.missing.title"]}</p>
+        <p className="ac-md-muted">{formatMessage(text["editor.missing.body"], { file: document.file })}</p>
         {onCreateMissing ? (
-          <button type="button" className="ac-sdd-btn" data-primary="" onClick={onCreateMissing} disabled={readOnly} aria-disabled={readOnly || undefined}>
+          <button type="button" className="ac-md-btn" data-primary="" onClick={onCreateMissing} disabled={readOnly} aria-disabled={readOnly || undefined}>
             {text["editor.missing.create"]}
           </button>
         ) : null}
@@ -161,83 +168,83 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   return (
     <section className={root} aria-label={document.title} data-readonly={locked || undefined}>
-      <div className="ac-sdd-editor-bar">
-        <span className="ac-sdd-editor-title ac-sdd-ellipsis">{document.title}</span>
-        <span className="ac-sdd-mono ac-sdd-muted ac-sdd-ellipsis">{document.file}</span>
-        <span className="ac-sdd-spacer" />
+      <div className="ac-md-editor-bar">
+        <span className="ac-md-editor-title ac-md-ellipsis">{document.title}</span>
+        <span className="ac-md-mono ac-md-muted ac-md-ellipsis">{document.file}</span>
+        <span className="ac-md-spacer" />
         {previewable ? (
-          <div role="group" aria-label={text["editor.mode.group"]} className="ac-sdd-segment">
+          <div role="group" aria-label={text["editor.mode.group"]} className="ac-md-segment">
             {modes.map((m) => (
-              <button key={m} type="button" className="ac-sdd-btn" aria-pressed={mode === m} onClick={() => setMode(m)}>
+              <button key={m} type="button" className="ac-md-btn" aria-pressed={mode === m} onClick={() => setMode(m)}>
                 {text[`editor.mode.${m}`]}
               </button>
             ))}
           </div>
         ) : null}
         {compare ? (
-          <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+          <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
             {text["editor.compare"]}
           </button>
         ) : null}
-        <button type="button" className="ac-sdd-btn" aria-expanded={gotoOpen} onClick={() => (gotoOpen ? setGotoOpen(false) : openGoto())}>
+        <button type="button" className="ac-md-btn" aria-expanded={gotoOpen} onClick={() => (gotoOpen ? setGotoOpen(false) : openGoto())}>
           {text["editor.goto"]}
         </button>
         {toolbarExtra}
-        <span className="ac-sdd-muted" role="status">
+        <span className="ac-md-muted" role="status">
           {saving ? text["editor.saving"] : composing ? text["editor.composing"] : dirty ? text["editor.dirty"] : text["editor.saved"]}
         </span>
-        <button type="button" className="ac-sdd-btn" data-primary="" onClick={save} disabled={!canSave}>
+        <button type="button" className="ac-md-btn" data-primary="" onClick={save} disabled={!canSave}>
           {text["editor.save"]}
         </button>
       </div>
 
       {locked ? (
-        <p className="ac-sdd-banner" data-tone="info" role="status">
+        <p className="ac-md-banner" data-tone="info" role="status">
           <strong>{text["editor.readOnly.title"]}</strong> {readOnlyReason && readOnlyReason !== "" ? readOnlyReason : text["editor.readOnly.body"]}
         </p>
       ) : null}
       {conflict ? (
-        <div className="ac-sdd-banner" data-tone="warning" role="alert">
+        <div className="ac-md-banner" data-tone="warning" role="alert">
           <strong>{text["editor.conflict.title"]}</strong> {text["editor.conflict.body"]}
-          <span className="ac-sdd-banner-actions">
+          <span className="ac-md-banner-actions">
             {onReload ? (
-              <button type="button" className="ac-sdd-btn" onClick={onReload}>
+              <button type="button" className="ac-md-btn" onClick={onReload}>
                 {text["editor.conflict.reload"]}
               </button>
             ) : null}
             {onOverwrite ? (
-              <button type="button" className="ac-sdd-btn" onClick={onOverwrite} disabled={locked}>
+              <button type="button" className="ac-md-btn" onClick={onOverwrite} disabled={locked}>
                 {text["editor.conflict.overwrite"]}
               </button>
             ) : null}
             {compare ? (
-              <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+              <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
                 {text["editor.compare"]}
               </button>
             ) : null}
             {onCopyMine ? (
-              <button type="button" className="ac-sdd-btn" onClick={onCopyMine}>
+              <button type="button" className="ac-md-btn" onClick={onCopyMine}>
                 {text["editor.copyMine"]}
               </button>
             ) : null}
           </span>
         </div>
       ) : externalChange ? (
-        <div className="ac-sdd-banner" data-tone="info" role="status" data-state="external-change">
+        <div className="ac-md-banner" data-tone="info" role="status" data-state="external-change">
           {text["editor.external.body"]}
-          <span className="ac-sdd-banner-actions">
+          <span className="ac-md-banner-actions">
             {compare ? (
-              <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+              <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
                 {text["editor.compare"]}
               </button>
             ) : null}
             {onReload ? (
-              <button type="button" className="ac-sdd-btn" onClick={onReload}>
+              <button type="button" className="ac-md-btn" onClick={onReload}>
                 {text["editor.conflict.reload"]}
               </button>
             ) : null}
             {onCopyMine ? (
-              <button type="button" className="ac-sdd-btn" onClick={onCopyMine}>
+              <button type="button" className="ac-md-btn" onClick={onCopyMine}>
                 {text["editor.copyMine"]}
               </button>
             ) : null}
@@ -246,7 +253,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       ) : null}
       {gotoOpen ? (
         <form
-          className="ac-sdd-goto"
+          className="ac-md-goto"
           onSubmit={(e) => {
             e.preventDefault();
             submitGoto();
@@ -256,7 +263,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
             {text["editor.goto.label"]}{" "}
             <input
               ref={gotoInput}
-                            type="number"
+              type="number"
               min={1}
               inputMode="numeric"
               value={gotoText}
@@ -273,31 +280,31 @@ export function DocumentEditor(props: DocumentEditorProps) {
               }}
             />
           </label>
-          <button type="submit" className="ac-sdd-btn">{text["editor.goto.go"]}</button>
-          {gotoBad ? <span className="ac-sdd-muted" role="alert">{text["editor.goto.invalid"]}</span> : null}
+          <button type="submit" className="ac-md-btn">{text["editor.goto.go"]}</button>
+          {gotoBad ? <span className="ac-md-muted" role="alert">{text["editor.goto.invalid"]}</span> : null}
         </form>
       ) : null}
       {comparing && compare ? (
-        <div className="ac-sdd-compare" role="region" aria-label={text["editor.compare"]}>
-          <div className="ac-sdd-compare-head">
-            <span className="ac-sdd-muted">{formatMessage(text["editor.compare.head"], { before: compare.beforeLabel ?? text["editor.compare.before"], after: text["editor.compare.after"] })}</span>
-            <button type="button" className="ac-sdd-btn" onClick={() => setComparing(false)}>{text["common.close"]}</button>
+        <div className="ac-md-compare" role="region" aria-label={text["editor.compare"]}>
+          <div className="ac-md-compare-head">
+            <span className="ac-md-muted">{formatMessage(text["editor.compare.head"], { before: compare.beforeLabel ?? text["editor.compare.before"], after: text["editor.compare.after"] })}</span>
+            <button type="button" className="ac-md-btn" onClick={() => setComparing(false)}>{text["common.close"]}</button>
           </div>
           {compare.before === value ? (
-            <p className="ac-sdd-muted" role="status">{text["editor.compare.same"]}</p>
+            <p className="ac-md-muted" role="status">{text["editor.compare.same"]}</p>
           ) : (
             <TextDiff before={compare.before} after={value} language={language} ariaLabel={text["editor.compare"] ?? ""} maxHeight={320} />
           )}
         </div>
       ) : null}
       {issues.length > 0 ? (
-        <ul className="ac-sdd-banner" data-tone="warning" role="list" aria-label={text["editor.issues"]}>
+        <ul className="ac-md-banner" data-tone="warning" role="list" aria-label={text["editor.issues"]}>
           {issues.map((issue, i) => (
             <li key={`${issue.code}:${issue.line ?? ""}:${i}`}>
-              <span className="ac-sdd-mono">{issue.code}</span> {issue.message}
-              {issue.line ? <span className="ac-sdd-muted"> · {formatMessage(text["tasks.detail.line"], { line: issue.line })}</span> : null}
+              <span className="ac-md-mono">{issue.code}</span> {issue.message}
+              {issue.line ? <span className="ac-md-muted"> · {formatMessage(text["editor.issue.line"], { line: issue.line })}</span> : null}
               {issue.line && showEdit ? (
-                <button type="button" className="ac-sdd-btn" onClick={() => goTo(issue.line as number)}>
+                <button type="button" className="ac-md-btn" onClick={() => goTo(issue.line as number)}>
                   {text["editor.goto.issue"]}
                 </button>
               ) : null}
@@ -306,9 +313,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
         </ul>
       ) : null}
 
-      <div className="ac-sdd-editor-body" data-mode={previewable ? mode : "edit"}>
+      <div className="ac-md-editor-body" data-mode={previewable ? mode : "edit"}>
         {showEdit ? (
-          <div className="ac-sdd-editor-pane">
+          <div className="ac-md-editor-pane">
             <TextEditor
               value={value}
               {...(onChange ? { onChange } : {})}
@@ -324,8 +331,8 @@ export function DocumentEditor(props: DocumentEditorProps) {
           </div>
         ) : null}
         {showPreview ? (
-          <div className="ac-sdd-editor-pane ac-sdd-preview" role="region" aria-label={text["editor.preview"]}>
-            {value.trim() === "" ? <p className="ac-sdd-muted">{text["editor.previewEmpty"]}</p> : <Markdown remarkPlugins={[remarkGfm]}>{value}</Markdown>}
+          <div className="ac-md-editor-pane ac-md-preview" role="region" aria-label={text["editor.preview"]}>
+            {value.trim() === "" ? <p className="ac-md-muted">{text["editor.previewEmpty"]}</p> : <MarkdownPreview source={value} {...previewHooks} />}
           </div>
         ) : null}
       </div>
