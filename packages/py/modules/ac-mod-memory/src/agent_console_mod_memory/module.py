@@ -3,6 +3,9 @@
 - 제공: ``memory.service``(저장소·범위 종류·설정·도구 묶음), ``server.warnings``(저장소 메모리
   모드·전문 검색 폴백·저장된 ``memory`` 섹션 문제). 필수 포트 없음(혼자 켜진다).
 - 선택: ``workspace.settings``(사용자 설정 ``memory`` 섹션). 없으면 기본값.
+- 선택: ``memory.spaces``(5.7R.33z, 공간 이름 → 저장소). 있으면 REST ``?project=<id>``와
+  ``POST /memory/copy``가 그 공간을 쓰고, ``memory.service``의 ``space(name)``이 공간 서비스를 준다.
+  없으면 공간 이름이 온 요청은 409 ``feature_unavailable``(라이브러리만).
 - 경로: ``/memory/*``(범위 종류·범위·태그·항목 CRUD·버전·정리·설정 검사·내보내기/가져오기).
   WS 토픽 ``memory.changed``.
 - 저장: 계보 ``memory``(``storage.BRANCH``)는 모듈이 켜질 때만 호스트가 올린다.
@@ -36,17 +39,18 @@ from agent_console_conditions import (
 )
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
 from agent_console_contracts.memory import MemoryChanged
-from agent_console_memory import MemoryPolicy
+from agent_console_memory import MemoryPolicy, MemoryStore
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_registry import Registry
 
 from .config import section_of
 from .errors import ERROR_MAP
 from .plugins import plugin_kinds, scope_kind_registry
-from .ports import MEMORY_SERVICE, SERVER_WARNINGS, WORKSPACE_SETTINGS
+from .ports import MEMORY_SERVICE, MEMORY_SPACES, SERVER_WARNINGS, WORKSPACE_SETTINGS
 from .routes import build_router
 from .service import MemoryService
 from .settings import MemoryModuleSettings
+from .spaces import MemorySpaceServices
 from .storage import BRANCH, open_memory_storage
 from .ws import MEMORY_TOPIC, LoopPublisher, changed_message, topic_handlers
 
@@ -113,7 +117,7 @@ class MemoryModule:
             "공유 메모리 기록·버전·검색·정리·내보내기/가져오기(/memory/*), WS memory.changed"
         ),
         provides=(MEMORY_SERVICE, SERVER_WARNINGS),
-        optional=(WORKSPACE_SETTINGS,),
+        optional=(WORKSPACE_SETTINGS, MEMORY_SPACES),
         settings_schema=MemoryModuleSettings,
         contracts={"memory": CONTRACT_VERSIONS["memory"]},
         web_roles=WEB_ROLES,
@@ -152,19 +156,37 @@ class MemoryModule:
             reader = ctx.port(WORKSPACE_SETTINGS)
             return section_of(reader()) if reader is not None else None
 
-        service = MemoryService(
-            storage.store,
-            section=user_section,
-            plugins=lambda: plugin_kinds(registry),
-            operators=operators_of(ctx.registries),
-            limits=cfg.limits(),
-            transfer_limits=cfg.transfer_limits(),
-            on_change=publisher,
-            clock=now,
-            max_page_size=cfg.max_page_size,
-            max_tag_list=cfg.max_tag_list,
-            max_search_results=cfg.max_search_results,
+        spaces_ref: list[MemorySpaceServices] = []
+
+        def make_service(
+            store: MemoryStore,
+            context: Mapping[str, str] | None = None,
+            name: str | None = None,
+        ) -> MemoryService:
+            return MemoryService(
+                store,
+                section=user_section,
+                plugins=lambda: plugin_kinds(registry),
+                operators=operators_of(ctx.registries),
+                limits=cfg.limits(),
+                transfer_limits=cfg.transfer_limits(),
+                on_change=publisher,
+                clock=now,
+                max_page_size=cfg.max_page_size,
+                max_tag_list=cfg.max_tag_list,
+                max_search_results=cfg.max_search_results,
+                context_overrides=context,
+                spaces=spaces_ref[0] if spaces_ref else None,
+                space_name=name,
+            )
+
+        spaces = MemorySpaceServices(
+            lambda: ctx.port(MEMORY_SPACES),
+            lambda store, context: make_service(store, context),
         )
+        spaces_ref.append(spaces)
+        service = make_service(storage.store)
+        spaces.library = service
 
         def warnings() -> list[Issue]:
             out = list(storage.warnings())

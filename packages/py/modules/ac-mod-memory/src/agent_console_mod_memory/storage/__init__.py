@@ -24,8 +24,15 @@ from agent_console_memory.sqlite import SqliteMemoryStore, open_sqlite_memory_st
 from agent_console_modkit import MigrationBranch
 from agent_console_store import branch_version_table, create_sqlite_engine, upgrade
 
-BRANCH = MigrationBranch("memory", Path(__file__).parent / "migrations" / "versions")
-"""모듈 서술자 ``migrations``에 넣는 계보."""
+MEMORY_DB_SCOPE = "memory"
+"""메모리 전용 DB 범위 이름(X39 ``MigrationBranch.scopes``). 프로젝트 메모리 DB를 여는 쪽(예:
+``link-projects-memory``)이 ``ModuleContext.active_migrations(MEMORY_DB_SCOPE)``로 이 계보를 찾아 그
+파일에 올린다. 앱 DB(``app``)에도 그대로 올라간다."""
+
+BRANCH = MigrationBranch(
+    "memory", Path(__file__).parent / "migrations" / "versions", scopes=("app", MEMORY_DB_SCOPE)
+)
+"""모듈 서술자 ``migrations``에 넣는 계보(앱 DB + 메모리 전용 DB 범위)."""
 
 StorageKind = Literal["host", "file", "memory"]
 
@@ -150,6 +157,7 @@ def open_memory_storage(
 
 __all__ = [
     "BRANCH",
+    "MEMORY_DB_SCOPE",
     "MemoryStorage",
     "StorageKind",
     "host_database_file",

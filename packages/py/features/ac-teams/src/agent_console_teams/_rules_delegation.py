@@ -8,9 +8,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
-from agent_console_contracts import EdgeTypeDescriptor, IssueSuggestion
+from agent_console_contracts import EdgeTypeDescriptor, IssueGroup, IssueSuggestion
 
 from ._check_context import TeamCheckContext
 from ._issues import TeamIssueCodes, make_issue
@@ -246,27 +246,112 @@ def _check_outgoing_flow(ctx: TeamCheckContext) -> None:
             )
 
 
+MEMBER_FIELD_HINT = "이 값은 실행에 쓰이지 않습니다. 비워도 결과는 같습니다."
+"""`team.member_field_ignored`의 해결 안내(`Issue.hint`)."""
+
+VALUE_SOURCE_NODE = "node"
+"""`details.value_source`: 값이 이 팀의 노드 설정(노드 층)에서 왔다."""
+VALUE_SOURCE_AGENT = "agent"
+"""`details.value_source`: 값이 에이전트 정의(에이전트 층)에서 왔다."""
+
+
+def _backend_ok(ctx: TeamCheckContext, delegator: str, strategy: str) -> bool:
+    """위임자 백엔드가 방식에 필요한 능력을 가졌는지(능력을 모르면 참)."""
+    desc = ctx.strategies.get(strategy)
+    need = desc.requires_backend_capability if desc is not None else None
+    backend = ctx.backend_of(delegator)
+    caps = ctx.backends.get(backend) if backend is not None else None
+    return not need or caps is None or getattr(caps, need, None) is True
+
+
 def _check_member_fields(ctx: TeamCheckContext) -> None:
+    """위임받는 노드의 값 중 방식이 쓰지 않는 필드(위임자 값과 다를 때)를 정보 이슈로 알린다.
+
+    실행 결과는 달라지지 않으므로 `info`·`blocks_run: false`다(5.7R.38). 같은 위임자·방식·필드는
+    `group`으로 묶이고, 제안은 값의 출처(`value_source`)에 맞춘다: 노드 층이면 [값 비우기]
+    (`unset_node_fields`), 에이전트 층이면 해결 버튼(`fix`, 연동 쪽 데이터 표가 붙인다). 그 필드를
+    쓰는(`member_fields`) 다른 위임 방식이 있으면 방식 바꾸기 제안을 더한다.
+    """
+    c = ctx.c
     for link in ctx.plan.delegations:
         desc = ctx.strategies.get(link.strategy)
         if desc is None:
             continue
         mine = ctx.settings(link.member)
         boss = ctx.settings(link.delegator)
-        for name in type(mine).model_fields:
+        fields = type(mine).model_fields
+        for name in fields:
             if name in desc.member_fields:
                 continue
             value = getattr(mine, name)
             if value is None or value == getattr(boss, name):
                 continue
+            layers = ctx.field_layers(link.member, name)
+            details: dict[str, object] = {
+                "field": name,
+                "strategy": link.strategy,
+                "delegator": link.delegator,
+            }
+            from_node = c.node_layer.id in layers
+            from_agent = c.agent_layer.id in layers
+            if from_node:
+                details["value_source"] = VALUE_SOURCE_NODE
+            elif from_agent:
+                details["value_source"] = VALUE_SOURCE_AGENT
+            agent_id = ctx.plan.agent_refs.get(link.member)
+            if from_agent and agent_id is not None:
+                details["agent"] = agent_id
+                details["agent_kind"] = c.agent_kind
+            key = f"{link.delegator}|{link.strategy}|{name}"
+            title = fields[name].title or name
+            pointer = f"/{c.node_settings_key}/{name}"
+            node = ctx.plan.node(link.member)
+            raw = node.config.get(c.node_settings_key) if node is not None else None
+            unset = (
+                ctx.suggest.unset_fields(
+                    [(link.member, pointer)], suggestion_id=f"unset:{key}", label="값 비우기"
+                )
+                if isinstance(raw, Mapping) and name in raw
+                else None
+            )
+            suggestions: list[IssueSuggestion | None] = [unset]
+            edge = ctx.plan.edge(link.edge_id)
+            if edge is not None:
+                for sid, alt in ctx.strategies.items():
+                    if (
+                        sid == link.strategy
+                        or name not in alt.member_fields
+                        or not _backend_ok(ctx, link.delegator, sid)
+                    ):
+                        continue
+                    suggestions.append(
+                        ctx.suggest.switch_strategy(
+                            edge,
+                            sid,
+                            strategy_key=c.edge_strategy_key,
+                            suggestion_id=f"strategy:{key}:{sid}",
+                            label=f"위임 방식을 '{alt.title}'(으)로 바꾸기",
+                        )
+                    )
             ctx.add(
                 make_issue(
-                    "warning",
+                    "info",
                     _C.MEMBER_FIELD_IGNORED,
                     f"'{ctx.label(link.member)}'의 '{name}' 설정은 이 위임 방식에서 "
                     f"적용되지 않습니다(위임자 '{ctx.label(link.delegator)}'의 값을 씁니다)",
                     node_id=link.member,
                     edge_id=link.edge_id,
-                    details={"field": name, "strategy": link.strategy},
+                    path=pointer,
+                    details=details,
+                    suggestions=suggestions,
+                    blocks_run=False,
+                    hint=MEMBER_FIELD_HINT,
+                    group=IssueGroup(
+                        key=key,
+                        message=(
+                            f"'{title}' 설정은 위임 방식 '{desc.title}'에서 쓰이지 않습니다. "
+                            f"위임자 '{ctx.label(link.delegator)}'의 값을 씁니다."
+                        ),
+                    ),
                 )
             )

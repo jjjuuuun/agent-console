@@ -18,6 +18,7 @@ from agent_console_contracts import (
     EdgePortPair,
     EdgeSpec,
     EdgeTypeDescriptor,
+    KnownDelegationSessions,
     UiHints,
     x_ui,
 )
@@ -67,6 +68,8 @@ class LoopEdge:
             "닿으면 더 되돌리지 않고 위 노드의 다른 연결이 이어진다."
         ),
         scheduling="flow",
+        # 아래 노드는 자기 세션에서 돈다(화면 세션 표시, 5.7R.34).
+        session=KnownDelegationSessions.SEPARATE,
         cycle=CyclePolicy(max_iterations=DEFAULT_LOOP_MAX_ITERATIONS, title="반복"),
         connects=EdgeConnects(
             source=[AGENT_ROLE, TEAM_ROLE, USER_ROLE], target=[AGENT_ROLE, TEAM_ROLE, USER_ROLE]

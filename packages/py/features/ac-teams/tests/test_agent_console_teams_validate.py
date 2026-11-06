@@ -268,13 +268,71 @@ def test_backend_capability_required_by_strategy(k: Kit) -> None:
 
 
 @pytest.mark.parametrize("k", KITS, ids=IDS)
-def test_member_field_outside_member_fields_is_ignored_warning(k: Kit) -> None:
+def test_member_field_outside_member_fields_is_ignored_info(k: Kit) -> None:
+    """5.7R.38: 정보(실행을 막지 않음) + 묶음·안내 + 값 출처(에이전트)에 맞춘 제안."""
     nodes, edges = _base(k)
     agents = _agents("lead", "mate", mate={"backend": "other", "model": "m-x"})
     issues = _validate(k, k.graph(nodes, edges), agents=agents)
     issue = _one(issues, C.MEMBER_FIELD_IGNORED)
-    assert issue.details == {"field": "backend", "strategy": k["s_inner"]}
+    assert issue.severity == "info"
+    assert issue.blocks_run is False
+    assert issue.details == {
+        "field": "backend",
+        "strategy": k["s_inner"],
+        "delegator": "lead",
+        "value_source": "agent",
+        "agent": "mate",
+        "agent_kind": "agent",
+    }
     assert issue.node_id == "mate"
+    assert issue.path == "/settings/backend"
+    assert issue.hint
+    assert issue.group is not None
+    assert issue.group.key == f"lead|{k['s_inner']}|backend"
+    assert "MATE" not in issue.group.message  # 노드 이름 없는 문장
+    assert "'실행 백엔드'" in issue.group.message  # 필드 제목(계약 스키마)
+    # 값이 에이전트 정의에서 왔으므로 [값 비우기] 없음. 그 필드를 쓰는 방식(깊은)으로 바꾸기 제안:
+    # 능력이 없는 방식(먼: host_tools)은 빠진다.
+    ids = [s.id for s in issue.suggestions]
+    assert ids == [f"strategy:lead|{k['s_inner']}|backend:{k['s_deep']}"]
+    patch = issue.suggestions[0].patch
+    assert patch.remove_edge_ids == ["d1"]
+    assert [(e.id, e.kind) for e in patch.add_edges] == [("d1", k["invoke2"])]
+    assert patch.unset_node_fields == []
+
+
+@pytest.mark.parametrize("k", KITS, ids=IDS)
+def test_member_field_from_node_offers_unset_grouped(k: Kit) -> None:
+    """값이 노드 설정에서 왔으면 [값 비우기](unset_node_fields). 같은 위임자·방식·필드는 한 묶음."""
+    nodes, edges = _base(k)
+    nodes.append(k.worker("qa", settings={"model": "m-q"}))
+    nodes[2] = k.worker("mate", settings={"model": "m-x"})
+    edges.append(k.edge("d2", "invoke", "lead", "qa"))
+    strategies = [
+        s.model_copy(update={"member_fields": ["system_prompt"]}) if s.id == k["s_inner"] else s
+        for s in k.strategies
+    ]
+    issues = validate_team(
+        k.graph(nodes, edges),
+        node_types=k.node_types,
+        edge_types=k.edge_types,
+        strategies=strategies,
+        resolve_ports=Kit.resolve_ports,
+        agents=_agents("lead", "mate", "qa"),
+        workspace=WS,
+        backends=CAPS,
+    )
+    found = [i for i in issues if i.code == C.MEMBER_FIELD_IGNORED]
+    assert sorted(i.node_id or "" for i in found) == ["mate", "qa"]
+    assert len({i.group.key for i in found if i.group is not None}) == 1
+    for issue in found:
+        assert issue.details["value_source"] == "node"
+        assert "agent" not in issue.details
+        unset = issue.suggestions[0]
+        assert unset.id == f"unset:lead|{k['s_inner']}|model"  # 묶음 안에서 같은 id
+        assert [(r.node_id, r.path) for r in unset.patch.unset_node_fields] == [
+            (issue.node_id, "/settings/model")
+        ]
 
 
 def test_flow_cycle_including_review_reject_back_is_graph_cycle() -> None:

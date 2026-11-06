@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TokenRollupRow, UsageWindowSnapshot } from "@agent-console/contracts";
-import { aggregateRollup, buildIndicatorItems, buildWindowGroups, indicatorFill, pickColorRule, remainingPercent, usedPercent, filterRollupByDays, formatRemaining, hasValue, isStaleObservation, resetState, canRefreshNow, windowDisplayName, groupSetupSnippets } from "./usageLib";
+import { aggregateRollup, buildIndicatorItems, buildWindowGroups, indicatorFill, pickColorRule, remainingPercent, usedPercent, filterRollupByDays, formatRemaining, hasValue, isStaleObservation, resetState, canRefreshNow, windowDisplayName, groupSetupSnippets, formatTokens, groupWindowsByTrust, type WindowGroup } from "./usageLib";
 
 // 창 이름·출처 id는 임의 값이다. 코드에 고정된 목록이 없다는 것이 이 테스트의 전제다.
 const snap = (source: string, window: string, observed: number, extra: Partial<UsageWindowSnapshot> = {}): UsageWindowSnapshot => ({ source, window, observed_at: observed, ...extra });
@@ -181,5 +181,33 @@ describe("windowDisplayName·groupSetupSnippets", () => {
     const sn = (id: string, title: string, shell: string) => ({ id, title, shell, language: "", text: id });
     const g = groupSetupSnippets([sn("a", "A", ""), sn("b1", "B", "bash"), sn("b2", "B", "powershell")]);
     expect(g.map((x) => [x.title, x.items.length])).toEqual([["A", 1], ["B", 2]]);
+  });
+});
+
+describe("formatTokens·groupWindowsByTrust (5.7R.43)", () => {
+  it("formatTokens: 10,000 미만은 쉼표 전체, 이상은 한국어 compact", () => {
+    expect(formatTokens(0)).toBe("0");
+    expect(formatTokens(576)).toBe("576");
+    expect(formatTokens(9840)).toBe("9,840");
+    expect(formatTokens(12_345)).toBe("1.2만");
+    expect(formatTokens(54_000)).toBe("5.4만");
+    expect(formatTokens(3_835_480_500)).toMatch(/억/);
+  });
+
+  const mk = (window: string, source: string, rule: "recent" | "recent-official" = "recent") =>
+    ({ window, primary: { source, window, observed_at: 1 }, rule, fellBack: false, others: [] }) as WindowGroup;
+  const trusts: Record<string, string> = { a: "official", b: "estimated", c: "observed", d: "zzz", e: "unofficial" };
+
+  it("공식은 창 카드, 나머지는 등급당 한 묶음이며 순서는 데이터(관측 → 추정 → 비공식 → 모르는 값)", () => {
+    const g = groupWindowsByTrust([mk("w1", "b"), mk("w2", "a", "recent-official"), mk("w3", "d"), mk("w4", "a"), mk("w5", "c"), mk("w6", "b"), mk("w7", "e"), mk("w8", "x")], (id) => trusts[id] ?? "", "official", ["observed", "estimated", "unofficial"]);
+    expect(g.windowCards.map((x) => x.window)).toEqual(["w2", "w4"]);
+    expect(g.bundles.map((b) => b.trust)).toEqual(["observed", "estimated", "unofficial", "zzz", ""]);
+    expect(g.bundles[1]!.rows.map((x) => x.window)).toEqual(["w1", "w6"]);
+  });
+
+  it("공식이 없으면 창 카드 0, 묶음만", () => {
+    const g = groupWindowsByTrust([mk("w1", "b")], (id) => trusts[id] ?? "", "official", []);
+    expect(g.windowCards).toEqual([]);
+    expect(g.bundles).toHaveLength(1);
   });
 });

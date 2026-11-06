@@ -40,6 +40,7 @@ export type {
   GraphValidationSummary,
   InteractionSettings,
   Issue,
+  IssueGroup,
   IssueSeverity,
   IssueSuggestion,
   ItemAction,
@@ -47,6 +48,7 @@ export type {
   Limits,
   MergeStrategyInfo,
   NetworkPolicy,
+  NodeFieldRef,
   NodeLayout,
   NodeSpec,
   NotificationSettings,
@@ -72,4 +74,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "definitions" as const;
-export const CONTRACT_VERSION = "1.4.0" as const;
+export const CONTRACT_VERSION = "1.5.0" as const;

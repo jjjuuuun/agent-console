@@ -8,7 +8,9 @@
 - `GET  {컬렉션}/{id}/versions/{hash}/files[/{path}]` -- 그 버전의 본문 파일 목록·내용
 - `POST {컬렉션}/{id}/versions/{hash}/restore` -- 되돌리기 = 새 버전 저장(`If-Match` = 현재 해시)
 
-싱글턴 종류(설정)는 `{id}` 없이 `/settings/versions…`. 경로는 접두 없이 만들고 호스트가
+싱글턴 종류(설정)는 `{id}` 없이 `/settings/versions…`. 모든 경로가 질의 `?project=<공간 이름>`을
+받는다(`definitions.spaces` 포트의 그 공간 저장소·버전 기록, 없으면 409 `feature_unavailable`,
+모르는 공간 404 `project.not_found`). 경로는 접두 없이 만들고 호스트가
 ``/api/v1``을 붙인다.
 
 이 모듈은 경로 매개변수 이름(`graph_id` 등)을 컬렉션 표에서 정하므로 `from __future__ import
@@ -28,6 +30,7 @@ from agent_console_contracts import (
     ResourceFile,
     RestoreVersionRequest,
 )
+from agent_console_modkit.host import SpaceQuery
 
 from .service import VersionService
 from .settings import VersionedCollectionSetting
@@ -89,7 +92,7 @@ def _id_dependency(collection: VersionedCollectionSetting) -> Callable[..., str]
 def _add_collection(
     router: APIRouter,
     collection: VersionedCollectionSetting,
-    service: Callable[[], VersionService],
+    service: Callable[[str | None], VersionService],
 ) -> None:
     kind = collection.kind
     label = collection.label or kind
@@ -107,9 +110,9 @@ def _add_collection(
         responses=errors(),
         name=f"list_{tag}_versions",
     )
-    async def list_versions(item_id: ItemId) -> list[DefinitionVersion]:
+    async def list_versions(item_id: ItemId, space: SpaceQuery = None) -> list[DefinitionVersion]:
         """버전 목록(최신순, `content` 없음). 지운 정의의 이력도 남아 있다."""
-        return service().store.list_versions(kind, item_id)
+        return service(space).store.list_versions(kind, item_id)
 
     @router.get(
         f"{base}/versions/{{version_hash}}",
@@ -117,9 +120,11 @@ def _add_collection(
         responses=errors(),
         name=f"get_{tag}_version",
     )
-    async def get_version(item_id: ItemId, version_hash: str) -> DefinitionVersion:
+    async def get_version(
+        item_id: ItemId, version_hash: str, space: SpaceQuery = None
+    ) -> DefinitionVersion:
         """버전 하나(`content` = 그 버전의 정의 원문 -- 정의 GET처럼 가리지 않는다)."""
-        return service().store.get_version(kind, item_id, version_hash)
+        return service(space).store.get_version(kind, item_id, version_hash)
 
     @router.get(
         f"{base}/versions/{{version_hash}}/diff",
@@ -127,9 +132,11 @@ def _add_collection(
         responses=errors(),
         name=f"diff_{tag}_version_with_current",
     )
-    async def diff_with_current(item_id: ItemId, version_hash: str) -> DefinitionDiff:
+    async def diff_with_current(
+        item_id: ItemId, version_hash: str, space: SpaceQuery = None
+    ) -> DefinitionDiff:
         """이 버전 → 현재 버전 비교. 정의가 지워졌으면 404(두 버전 비교를 쓴다)."""
-        return service().diff(kind, item_id, version_hash, None)
+        return service(space).diff(kind, item_id, version_hash, None)
 
     @router.get(
         f"{base}/versions/{{version_hash}}/diff/{{to_hash}}",
@@ -137,11 +144,13 @@ def _add_collection(
         responses=errors(),
         name=f"diff_{tag}_versions",
     )
-    async def diff_versions(item_id: ItemId, version_hash: str, to_hash: str) -> DefinitionDiff:
+    async def diff_versions(
+        item_id: ItemId, version_hash: str, to_hash: str, space: SpaceQuery = None
+    ) -> DefinitionDiff:
         """`version_hash` → `to_hash` 비교. `changes[].path`는 RFC 6901 JSON Pointer
         (`remove`·`replace` = 이전 버전 문서 기준, `add` = 이후 버전 문서 기준). 비밀 위치는
         `secret=true`이고 값은 `***`. `content_changes`는 본문 파일 sha256 비교."""
-        return service().diff(kind, item_id, version_hash, to_hash)
+        return service(space).diff(kind, item_id, version_hash, to_hash)
 
     @router.get(
         f"{base}/versions/{{version_hash}}/files",
@@ -149,10 +158,12 @@ def _add_collection(
         responses=errors(),
         name=f"list_{tag}_version_files",
     )
-    async def list_files(item_id: ItemId, version_hash: str) -> list[ResourceFile]:
+    async def list_files(
+        item_id: ItemId, version_hash: str, space: SpaceQuery = None
+    ) -> list[ResourceFile]:
         """그 버전의 본문 파일(경로 순). 본문 스냅샷이 없으면 404(본문이 없는 종류, 0003 이전
         버전)."""
-        return service().store.list_version_files(kind, item_id, version_hash)
+        return service(space).store.list_version_files(kind, item_id, version_hash)
 
     @router.get(
         f"{base}/versions/{{version_hash}}/files/{{file_path:path}}",
@@ -160,9 +171,11 @@ def _add_collection(
         responses={**errors(), 200: {"content": {"application/octet-stream": {}}}},
         name=f"read_{tag}_version_file",
     )
-    async def read_file(item_id: ItemId, version_hash: str, file_path: str) -> Response:
+    async def read_file(
+        item_id: ItemId, version_hash: str, file_path: str, space: SpaceQuery = None
+    ) -> Response:
         """그 버전의 본문 파일 내용(텍스트는 `text/plain`, 그 밖은 `application/octet-stream`)."""
-        store = service().store
+        store = service(space).store
         data = store.read_version_file(kind, item_id, version_hash, file_path)
         media = next(
             (
@@ -185,6 +198,7 @@ def _add_collection(
         version_hash: str,
         body: Annotated[RestoreVersionRequest | None, Body()] = None,
         if_match: IfMatch = None,
+        space: SpaceQuery = None,
     ) -> JSONResponse:
         """되돌리기: 그 버전의 문서·본문으로 **새 버전**을 저장한다(이력은 지우지 않는다).
 
@@ -192,7 +206,7 @@ def _add_collection(
         되살린다. 저장 전 검사(저장 라우트와 같음)에 error가 있으면 422(평문 비밀이 든 옛 버전 등).
         응답 = 새 버전(`content` 포함) + `ETag`. 메시지 기본값 "restored from <hash>".
         """
-        svc = service()
+        svc = service(space)
         stored = svc.restore(
             kind,
             item_id,
@@ -209,7 +223,7 @@ def _add_collection(
 
 
 def build_router(
-    service: Callable[[], VersionService],
+    service: Callable[[str | None], VersionService],
     collections: Sequence[VersionedCollectionSetting],
 ) -> APIRouter:
     """버전 기록·비교·되돌리기 라우트(컬렉션 표마다 같은 경로)."""

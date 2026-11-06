@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { waitForOk } from "./app/ready.mjs";
 import { AppArgsError, USAGE, buildPlan, parseAppArgs, wslHint } from "./app/plan.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,4 +102,14 @@ for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => stopAll(sig));
 
 start("서버", plan.server);
 start("웹 미리보기", plan.web);
-console.log(`[app] 서버 ${plan.urls.server}  ·  웹 ${plan.urls.web}  (Ctrl-C로 둘 다 종료)`);
+console.log("[app] 서버 준비 중… (준비되면 웹 주소를 알려 드립니다. 서버가 켜지기 전에 웹을 열어도 자동으로 연결됩니다)");
+// 웹 주소 안내는 서버 /api/v1/health 가 200이 된 뒤에 한다(이 실행기는 브라우저를 열지 않는다).
+const slow = setTimeout(() => console.log("[app] 서버를 시작하는 중입니다(첫 실행은 몇 분 걸릴 수 있습니다)…"), 15000);
+slow.unref();
+const stopped = () => stopping;
+const serverReady = await waitForOk(`${plan.urls.server}/api/v1/health`, { intervalMs: 500, stop: stopped });
+clearTimeout(slow);
+if (serverReady) {
+  await waitForOk(plan.urls.web, { intervalMs: 300, stop: stopped });
+  if (!stopped()) console.log(`[app] 준비됨 — 서버 ${plan.urls.server}  ·  웹 ${plan.urls.web}  (Ctrl-C로 둘 다 종료)`);
+}

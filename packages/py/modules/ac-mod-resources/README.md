@@ -16,6 +16,9 @@ Agent Console 리소스 기능 모듈(design §3R.1.3, R12·R13.1). 리소스 �
   `default_content_file`, `reserved_file_names`(경고할 경로 칸 이름, 빈 목록이면 경고 없음).
 - 웹 역할: `definitions:resource`.
 
+공간(5.7R.33x): 선택 포트 `definitions.spaces`가 있으면 `/resources`·`/resources/{id}/…`가 `?project=<이름>`으로 그
+공간 저장소를 쓴다(공간 목록의 `usage_count`는 null). 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404.
+
 ## 설치
 
 ```bash

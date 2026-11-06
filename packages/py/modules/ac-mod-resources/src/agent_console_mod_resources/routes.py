@@ -3,6 +3,10 @@
 ETag = 정의 ``version_hash``(본문 포함 해시). 본문·파일 쓰기도 같은 버전으로 ``If-Match`` 한다.
 가져오기(``/resources/import/*``)는 ``mod-imports``가 붙인다(메서드·경로 깊이가 겹치지 않는다).
 붙은 곳(``/resources/{id}/usages``)은 정의·팀 연동(``link-definitions-teams``)이 붙인다.
+
+``/resources``·``/resources/{id}/…`` 경로는 질의 ``?project=<공간 이름>``을 받는다
+(``definitions.spaces`` 포트가 그 공간 저장소를 준다, 없으면 409 ``feature_unavailable``, 모르는
+공간 404 ``project.not_found``). 질의가 없으면 라이브러리.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from agent_console_contracts import (
 )
 from agent_console_modkit.host import (
     IfMatchHeader,
+    SpaceQuery,
     attachment_response,
     etag,
     if_match_version,
@@ -64,8 +69,8 @@ def _media_type(value: str | None) -> str | None:
     return value.split(";", 1)[0].strip().lower() or None
 
 
-def build_router(service: Callable[[], ResourceService]) -> APIRouter:
-    """리소스 경로 라우터(``service``는 요청마다 부른다)."""
+def build_router(service: Callable[[str | None], ResourceService]) -> APIRouter:
+    """리소스 경로 라우터(``service(space)``는 요청마다 부른다 — 공간 이름 None = 라이브러리)."""
     router = APIRouter()
 
     # ------------------------------------------------------------ 목록·디스크립터
@@ -73,7 +78,7 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
     @router.get("/resource-types", response_model=list[ResourceTypeDescriptor], responses=errors())
     async def list_resource_types() -> list[ResourceTypeDescriptor]:
         """리소스 종류(X14): 플러그인 + ``<workspace>/resource-types/*.yaml`` 선언형."""
-        return service().descriptors()
+        return service(None).descriptors()
 
     @router.get("/merge-strategies", response_model=list[MergeStrategyInfo], responses=errors())
     async def list_merge_strategies() -> list[MergeStrategyInfo]:
@@ -83,16 +88,18 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
     # ------------------------------------------------------------ CRUD
 
     @router.get("/resources", response_model=list[ResourceSummary], responses=errors())
-    async def list_resources(type: str | None = None) -> list[ResourceSummary]:
+    async def list_resources(
+        type: str | None = None, space: SpaceQuery = None
+    ) -> list[ResourceSummary]:
         """리소스 요약(id 순). ``type``으로 종류를 거른다. ``usage_count`` = 붙은 곳 수
         (계산하는 모듈이 꺼져 있으면 null)."""
-        return service().summaries(type)
+        return service(space).summaries(type)
 
     @router.post("/resources", response_model=Resource, status_code=201, responses=errors(409))
-    async def create_resource(resource: Resource) -> JSONResponse:
+    async def create_resource(resource: Resource, space: SpaceQuery = None) -> JSONResponse:
         """만들기. 검사(종류 검사 + ``definitions.checks``)에 error 이슈(예: 평문 비밀)가 있으면
         422 ``validation_failed``. warning·info는 저장하고 ``X-Console-Issues`` 헤더로 싣는다."""
-        svc = service()
+        svc = service(space)
         issues = svc.check(resource)
         return with_issues(
             resource_response(svc.store.create(svc.kind, resource), status_code=201),
@@ -100,28 +107,33 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         )
 
     @router.get("/resources/{resource_id}", response_model=Resource, responses=errors())
-    async def get_resource(resource_id: str) -> JSONResponse:
+    async def get_resource(resource_id: str, space: SpaceQuery = None) -> JSONResponse:
         """저장 원문 + ``ETag``."""
-        svc = service()
+        svc = service(space)
         return resource_response(svc.store.get(svc.kind, resource_id))
 
     @router.put("/resources/{resource_id}", response_model=Resource, responses=errors(412, 428))
     async def put_resource(
-        resource_id: str, resource: Resource, if_match: IfMatchHeader = None
+        resource_id: str,
+        resource: Resource,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> JSONResponse:
         """저장. ``If-Match`` 필수(428), 불일치 412. 검사 error는 422(버전 검사보다 먼저),
         warning·info는 ``X-Console-Issues`` 헤더."""
         if resource_id != resource.id:
             raise IdMismatchError(resource_id, resource.id)
-        svc = service()
+        svc = service(space)
         issues = svc.check(resource)
         stored = svc.store.save(svc.kind, resource, expected_version=if_match_version(if_match))
         return with_issues(resource_response(stored), _issue_dicts(issues))
 
     @router.delete("/resources/{resource_id}", status_code=204, responses=errors(412))
-    async def delete_resource(resource_id: str, if_match: IfMatchHeader = None) -> Response:
+    async def delete_resource(
+        resource_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> Response:
         """삭제(본문 포함). ``If-Match``는 선택."""
-        svc = service()
+        svc = service(space)
         svc.store.delete(svc.kind, resource_id, expected_version=if_match_version(if_match))
         return Response(status_code=204)
 
@@ -132,9 +144,9 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         response_class=Response,
         responses={**errors(), 200: {"content": {"text/plain": {}}}},
     )
-    async def get_content(resource_id: str) -> Response:
+    async def get_content(resource_id: str, space: SpaceQuery = None) -> Response:
         """본문(텍스트) + ``ETag``(정의 버전). 본문이 없으면 404."""
-        svc = service()
+        svc = service(space)
         stored = svc.store.get(svc.kind, resource_id)
         data = svc.store.read_content(svc.kind, resource_id)
         if data is None:
@@ -159,11 +171,14 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         openapi_extra={"requestBody": {"content": {"text/plain": {"schema": {"type": "string"}}}}},
     )
     async def put_content(
-        request: Request, resource_id: str, if_match: IfMatchHeader = None
+        request: Request,
+        resource_id: str,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> JSONResponse:
         """본문 저장(요청 본문 = 텍스트, ``Content-Type`` = 형식). ``If-Match`` 필수, 새 ``ETag``.
         config를 바꾸지 않으므로 종류 검사는 하지 않는다."""
-        svc = service()
+        svc = service(space)
         current = svc.store.get(svc.kind, resource_id)
         media = _media_type(request.headers.get("content-type"))
         file = svc.content_file_for(media, current.document)
@@ -183,9 +198,9 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
     @router.get(
         "/resources/{resource_id}/files", response_model=list[ResourceFile], responses=errors()
     )
-    async def list_files(resource_id: str) -> list[ResourceFile]:
+    async def list_files(resource_id: str, space: SpaceQuery = None) -> list[ResourceFile]:
         """본문 폴더의 파일 목록(경로 순, 링크·규칙 위반 이름 제외). 리소스가 없으면 404."""
-        svc = service()
+        svc = service(space)
         return svc.store.list_files(svc.kind, resource_id)
 
     @router.get(
@@ -193,9 +208,9 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         response_class=Response,
         responses={**errors(), 200: {"content": {"application/octet-stream": {}}}},
     )
-    async def read_file(resource_id: str, file_path: str) -> Response:
+    async def read_file(resource_id: str, file_path: str, space: SpaceQuery = None) -> Response:
         """파일 하나(텍스트 형식이면 ``text/plain``, 그 밖 바이너리) + ``ETag``(정의 버전)."""
-        svc = service()
+        svc = service(space)
         stored = svc.store.get(svc.kind, resource_id)
         data = svc.store.read_file(svc.kind, resource_id, file_path)
         media = next(
@@ -217,14 +232,18 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         },
     )
     async def write_file(
-        request: Request, resource_id: str, file_path: str, if_match: IfMatchHeader = None
+        request: Request,
+        resource_id: str,
+        file_path: str,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> JSONResponse:
         """파일 하나를 쓴다(만들기·덮어쓰기, 요청 본문 = 바이트). ``If-Match`` 필수.
 
         경로에 예약 이름(설정 ``reserved_file_names``, 기본 ``.git``·``_bundle``)이 있으면 저장은
         하고 ``X-Console-Issues`` 헤더로 warning 이슈(``resource.reserved_file_name``)를
         돌려준다."""
-        svc = service()
+        svc = service(space)
         svc.require_multi_file(svc.store.get(svc.kind, resource_id))
         stored = svc.store.write_file(
             svc.kind,
@@ -241,10 +260,13 @@ def build_router(service: Callable[[], ResourceService]) -> APIRouter:
         responses=errors(412, 428),
     )
     async def delete_file(
-        resource_id: str, file_path: str, if_match: IfMatchHeader = None
+        resource_id: str,
+        file_path: str,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> JSONResponse:
         """파일 하나를 지운다. ``If-Match`` 필수. 없는 파일은 404."""
-        svc = service()
+        svc = service(space)
         svc.require_multi_file(svc.store.get(svc.kind, resource_id))
         stored = svc.store.delete_file(
             svc.kind, resource_id, file_path, expected_version=if_match_version(if_match)

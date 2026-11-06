@@ -32,7 +32,13 @@ import type {
 } from "@agent-console/contracts/projects";
 import type { SpaceRef } from "@agent-console/contracts/common";
 import type { ConversationSessions, PostMessageRequest, QueuedMessage } from "@agent-console/contracts/chat";
-import type { Run } from "@agent-console/contracts/runs";
+import type {
+  DelegationStrategyDescriptor,
+  EdgeTypeDescriptor,
+  NodeTypeDescriptor,
+  Run,
+} from "@agent-console/contracts/runs";
+import type { GraphPatch, Issue } from "@agent-console/contracts/definitions";
 import type { MemoryCopyRequest } from "@agent-console/contracts/memory";
 import type { UsageReport } from "@agent-console/contracts/usage";
 
@@ -259,10 +265,10 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.12.1(5.7R.33c3): 기록 공간·폴더 확인 보강 — 더하기만, 새 필드는 선택", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.12.1");
+    // 지금 버전은 0.12.2 블록이 고정한다(여기는 0.12.1에서 더한 것만 본다).
+    expect(constants.CONTRACTS_VERSION).toMatch(/^0\.12\./);
     expect(projects.CONTRACT_VERSION).toBe("3.1.0");
     expect(chat.CONTRACT_VERSION).toBe("1.2.0");
-    expect(CONTRACT_VERSIONS.runs).toBe("1.5.0");
     expect(CONTRACT_VERSIONS.common).toBe("1.7.0");
     expect(modulesOf["projects"]).toEqual(
       expect.arrayContaining([
@@ -307,5 +313,23 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
       expect((KNOWN_ISSUE_CODES as Record<string, string>)[name]).toBe(code);
       expect((ERROR_CODES as Record<string, string>)[name]).toBeUndefined();
     }
+  });
+
+  it("0.12.2(5.7R.34·38): 디스크립터 세션 속성·이슈 hint·group·unset_node_fields — 더하기만", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.12.2");
+    expect(CONTRACT_VERSIONS.runs).toBe("1.6.0");
+    expect(CONTRACT_VERSIONS.definitions).toBe("1.5.0");
+    expect(packageJson.version).toBe("0.12.2");
+    expect(modulesOf["definitions"]).toEqual(expect.arrayContaining(["IssueGroup", "NodeFieldRef"]));
+    expectTypeOf<DelegationStrategyDescriptor["session"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<DelegationStrategyDescriptor["backend"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<DelegationStrategyDescriptor["nestable"]>().toEqualTypeOf<boolean | null | undefined>();
+    expectTypeOf<EdgeTypeDescriptor["session"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<NodeTypeDescriptor["opens_session"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<Issue["hint"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<NonNullable<Issue["group"]>["key"]>().toEqualTypeOf<string>();
+    expectTypeOf<NonNullable<GraphPatch["unset_node_fields"]>[number]["path"]>().toEqualTypeOf<string>();
+    expect(constants.KNOWN_DELEGATION_SESSIONS).toEqual({ SAME: "same", SEPARATE: "separate" });
+    expect(constants.KNOWN_DELEGATION_BACKENDS).toEqual({ DELEGATOR: "delegator", TARGET: "target" });
   });
 });

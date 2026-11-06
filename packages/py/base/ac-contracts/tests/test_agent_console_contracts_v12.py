@@ -44,10 +44,15 @@ from agent_console_contracts import (
 # ---------------------------------------------------------------- 버전
 
 
-def test_contracts_version_is_0_12_1() -> None:
-    assert CONTRACTS_VERSION == "0.12.1"
-    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == "0.12.1"
-    assert CONTRACT_VERSIONS == {
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_12_1() -> None:
+    """0.12.1에서 정한 버전 이상이다(정확한 지금 값은 0.12.2 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 12, 1)
+    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0121 = {
         "common": "1.7.0",
         "resources": "1.1.0",
         "logs": "1.1.0",
@@ -62,6 +67,8 @@ def test_contracts_version_is_0_12_1() -> None:
         "memory": "1.1.0",
         "modules": "1.3.0",
     }
+    for sub, version in v0121.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 def test_new_models_live_in_their_submodules() -> None:

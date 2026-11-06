@@ -34,6 +34,7 @@ export function RollupPanel(p: RollupPanelProps) {
   const max = useMemo(() => lines.reduce((m, l) => Math.max(m, l.total ?? 0), 0), [lines]);
   const name = (l: RollupLine) => (p.view === "day" ? dayLabel(l.value) : p.nameOf(p.view, l.value));
 
+  const hasNote = useMemo(() => lines.some((l) => l.precision.length > 0 || l.costUsd !== undefined), [lines]);
   const cell = (l: RollupLine) => (
     <>
       {l.precision.length > 0 ? <Tag title={l.precision.join(" / ")}>{t.rollup.totalOnly}</Tag> : null}
@@ -64,7 +65,7 @@ export function RollupPanel(p: RollupPanelProps) {
       {lines.length === 0 ? (
         <p className="app-muted" role="status">{p.loading ? t.rollup.empty : t.rollup.empty}</p>
       ) : asTable ? (
-        <table className="app-table" aria-label={t.rollup.tableLabel}>
+        <table className="app-table usage-rollup-table" aria-label={t.rollup.tableLabel}>
           <thead>
             <tr>
               <th scope="col">{t.rollup.columns.name}</th>
@@ -96,16 +97,16 @@ export function RollupPanel(p: RollupPanelProps) {
           ))}
         </ul>
       ) : (
-        <ul className="usage-bars" aria-label={t.rollup.barsLabel}>
+        <ul className="usage-bars" aria-label={t.rollup.barsLabel} data-note={hasNote ? "true" : "false"}>
           {lines.map((l) => (
             <li key={l.key} className="usage-bar-row">
               <span className="usage-bar-name ac-ellipsis" title={name(l)}>{name(l)}</span>
               <span className="usage-bar-track"><span className="usage-bar-fill" style={{ width: `${Math.round(barRatio(l.total, max) * 100)}%` }} /></span>
               <span className="ac-num usage-bar-total">{formatCount(l.total)}</span>
               <span className="app-muted usage-bar-split">
-                {l.input !== undefined || l.output !== undefined ? `${t.rollup.input} ${l.input === undefined ? t.rollup.noSplit : formatCount(l.input)} · ${t.rollup.output} ${l.output === undefined ? t.rollup.noSplit : formatCount(l.output)}` : t.rollup.noSplit}
+                {l.input !== undefined || l.output !== undefined ? t.rollup.inOut(l.input === undefined ? t.rollup.noSplit : formatCount(l.input), l.output === undefined ? t.rollup.noSplit : formatCount(l.output)) : t.rollup.noSplit}
               </span>
-              <span>{cell(l)}</span>
+              {hasNote ? <span className="usage-bar-note">{cell(l)}</span> : null}
             </li>
           ))}
         </ul>

@@ -36,6 +36,7 @@ from agent_console_contracts import (
     EdgeSpec,
     EdgeTypeDescriptor,
     Issue,
+    KnownDelegationSessions,
     LogWarningPayload,
     x_ui,
 )
@@ -155,6 +156,8 @@ class WhenEdge:
             "(예: 출력에 'PASS'가 있으면)."
         ),
         scheduling="flow",
+        # 아래 노드는 자기 세션에서 돈다(화면 세션 표시, 5.7R.34).
+        session=KnownDelegationSessions.SEPARATE,
         connects=EdgeConnects(
             source=[AGENT_ROLE, TEAM_ROLE, USER_ROLE], target=[AGENT_ROLE, TEAM_ROLE, USER_ROLE]
         ),
@@ -270,6 +273,8 @@ class OnErrorEdge:
             "처리된 것으로 본다."
         ),
         scheduling="flow",
+        # 아래 노드는 자기 세션에서 돈다(화면 세션 표시, 5.7R.34).
+        session=KnownDelegationSessions.SEPARATE,
         handles_failure=True,
         connects=EdgeConnects(
             source=[AGENT_ROLE, TEAM_ROLE, USER_ROLE], target=[AGENT_ROLE, TEAM_ROLE, USER_ROLE]

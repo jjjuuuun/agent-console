@@ -9,6 +9,7 @@ export interface GraphEditorMessages {
   issueAria: string; // {error} {warning}
   issueAriaErrorOnly: string; // {error}
   issueAriaWarningOnly: string; // {warning}
+  issueAriaInfo: string; // {info}
   attemptBadge: string; // {n}
   portMissing: string;
   portsLoading: string;
@@ -290,6 +291,7 @@ export const defaultMessages: GraphEditorMessages = {
   issueAria: "검증 오류 {error}건, 경고 {warning}건",
   issueAriaErrorOnly: "검증 오류 {error}건",
   issueAriaWarningOnly: "경고 {warning}건",
+  issueAriaInfo: "정보 {info}건",
   attemptBadge: "×{n}",
   portMissing: "이 포트는 더 이상 없습니다",
   portsLoading: "포트를 계산하는 중",

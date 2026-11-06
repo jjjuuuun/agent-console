@@ -183,6 +183,7 @@ class UserNode:
         category="대화",
         role=USER_ROLE,
         executable=True,
+        opens_session=False,  # 사용자 자리: 백엔드 세션을 열지 않는다(5.7R.34)
         config_schema=UserNodeConfig.model_json_schema(),
         ui_schema={"review": {"message": {"ui:widget": "textarea"}}},
         static_ports=_BASE_PORTS,

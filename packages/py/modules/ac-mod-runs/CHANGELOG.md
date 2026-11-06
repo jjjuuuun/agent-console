@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 5.7R.33w2: 계보 `runs` 서술자 `scopes=("app","project")`(프로젝트 기록 DB에도 올라감).
+
 - 5.5R.13(B-10): 관측 탭 이벤트 type 접두어를 웹 상수(`OBSERVE_PREFIXES`)에서 데이터로 옮겼다. 패키지 기본 데이터
   `data/observe_event_prefixes.json`(`hook.`·`mcp.`), 설치자 옵션 `observe_event_prefixes`(null = 기본, 목록 = 교체,
   `[]` = 끔), 경로 `GET /observe-event-prefixes`(`list[str]`, 계약 변경 없음), 공개 API

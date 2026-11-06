@@ -8,6 +8,10 @@
 - ``/graphs`` GET(요약 목록)·POST, ``/graphs/{id}`` GET·PUT(``If-Match`` 필수)·DELETE,
   ``POST /graphs/{id}/duplicate``
 - ``/settings`` GET(파일이 없으면 ``{}``)·PUT(``If-Match`` 선택)
+
+에이전트·팀 구성 경로는 질의 ``?project=<공간 이름>``을 받는다(``definitions.spaces`` 포트가 그
+공간의 저장소를 준다, 없으면 409 ``feature_unavailable``, 모르는 공간 404 ``project.not_found``).
+질의가 없으면 라이브러리. 공통 설정은 공간에 들어가지 않는 종류라 받지 않는다.
 """
 
 from __future__ import annotations
@@ -29,7 +33,7 @@ from agent_console_contracts import (
     VersionedGraph,
     WorkspaceSettings,
 )
-from agent_console_modkit.host import IfMatchHeader, if_match_version, json_with_etag
+from agent_console_modkit.host import IfMatchHeader, SpaceQuery, if_match_version, json_with_etag
 from agent_console_store import AGENT_KIND, GRAPH_KIND, SETTINGS_KIND, NotFound, StoredDefinition
 
 from .errors import IdMismatchError
@@ -76,43 +80,47 @@ def same_id(path_id: str, body_id: str, what: str) -> None:
         raise IdMismatchError(path_id, body_id, what)
 
 
-def build_router(service: Callable[[], DefinitionService]) -> APIRouter:
-    """정의 경로 라우터(``service``는 요청마다 부른다)."""
+def build_router(service: Callable[[str | None], DefinitionService]) -> APIRouter:
+    """정의 경로 라우터(``service(space)``는 요청마다 부른다 — 공간 이름 None = 라이브러리)."""
     router = APIRouter()
     agent, graph_kind, settings_kind = AGENT_KIND.name, GRAPH_KIND.name, SETTINGS_KIND.name
 
     # ------------------------------------------------------------ 에이전트
 
     @router.get("/agents", response_model=list[Agent], responses=errors())
-    async def list_agents() -> JSONResponse:
+    async def list_agents(space: SpaceQuery = None) -> JSONResponse:
         """저장 원문 목록(id 순). 읽을 수 없거나 계약에 맞지 않는 파일은 뺀다."""
-        return json_with_etag(service().documents(agent, Agent))
+        return json_with_etag(service(space).documents(agent, Agent))
 
     @router.post("/agents", response_model=Agent, status_code=201, responses=errors(409))
-    async def create_agent(body: Agent) -> JSONResponse:
+    async def create_agent(body: Agent, space: SpaceQuery = None) -> JSONResponse:
         """만들기. 저장 전 검사에 error가 있으면 422. 응답은 저장 원문(201, ``ETag``)."""
-        svc = service()
+        svc = service(space)
         svc.check(agent, body, AGENT_LABEL)
         return definition_response(svc.store.create(agent, body), Agent, status_code=201)
 
     @router.get("/agents/{agent_id}", response_model=Agent, responses=errors())
-    async def get_agent(agent_id: str) -> JSONResponse:
+    async def get_agent(agent_id: str, space: SpaceQuery = None) -> JSONResponse:
         """저장 원문 + ``ETag``."""
-        return definition_response(service().store.get(agent, agent_id), Agent)
+        return definition_response(service(space).store.get(agent, agent_id), Agent)
 
     @router.put("/agents/{agent_id}", response_model=Agent, responses=errors(412))
-    async def put_agent(agent_id: str, body: Agent, if_match: IfMatchHeader = None) -> JSONResponse:
+    async def put_agent(
+        agent_id: str, body: Agent, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> JSONResponse:
         """저장(요청에 쓴 키만 저장한다). 응답은 저장 원문 + 새 ``ETag``."""
         same_id(agent_id, body.id, "에이전트")
-        svc = service()
+        svc = service(space)
         svc.check(agent, body, AGENT_LABEL)
         stored = svc.store.save(agent, body, expected_version=if_match_version(if_match))
         return definition_response(stored, Agent)
 
     @router.delete("/agents/{agent_id}", status_code=204, responses=errors(412))
-    async def delete_agent(agent_id: str, if_match: IfMatchHeader = None) -> Response:
+    async def delete_agent(
+        agent_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> Response:
         """삭제(204). ``If-Match``는 선택(주면 지금 버전과 같아야 한다)."""
-        service().store.delete(agent, agent_id, expected_version=if_match_version(if_match))
+        service(space).store.delete(agent, agent_id, expected_version=if_match_version(if_match))
         return Response(status_code=204)
 
     # ------------------------------------------------------------ 팀 구성(그래프)
@@ -122,36 +130,42 @@ def build_router(service: Callable[[], DefinitionService]) -> APIRouter:
         validate: Annotated[
             bool, Query(description="false면 검증 요약(`validation`)을 계산하지 않는다(null).")
         ] = True,
+        space: SpaceQuery = None,
     ) -> list[GraphSummary]:
         """목록(본문 없음). ``entry_labels`` = 입구 노드 표시 이름, ``validation`` = 검증 요약.
-        제공하는 모듈이 꺼져 있으면 둘 다 null."""
-        return service().graph_summaries(validate=validate)
+        제공하는 모듈이 꺼져 있으면 둘 다 null. 공간(``?project=``) 목록의 ``validation``은 null."""
+        return service(space).graph_summaries(validate=validate)
 
     @router.post("/graphs", response_model=VersionedGraph, status_code=201, responses=errors(409))
-    async def create_graph(body: Graph) -> JSONResponse:
+    async def create_graph(body: Graph, space: SpaceQuery = None) -> JSONResponse:
         """만들기. 저장 전 검사에 error가 있으면 422. 응답 ``graph``는 저장 원문(201)."""
-        svc = service()
+        svc = service(space)
         svc.check(graph_kind, body, GRAPH_LABEL)
         return versioned_graph(svc.store.create(graph_kind, body), status_code=201)
 
     @router.get("/graphs/{graph_id}", response_model=VersionedGraph, responses=errors())
-    async def get_graph(graph_id: str) -> JSONResponse:
+    async def get_graph(graph_id: str, space: SpaceQuery = None) -> JSONResponse:
         """``graph`` = 저장 원문 + ``ETag``."""
-        return versioned_graph(service().store.get(graph_kind, graph_id))
+        return versioned_graph(service(space).store.get(graph_kind, graph_id))
 
     @router.put("/graphs/{graph_id}", response_model=VersionedGraph, responses=errors(412, 428))
-    async def put_graph(graph_id: str, body: Graph, if_match: IfMatchHeader = None) -> JSONResponse:
+    async def put_graph(
+        graph_id: str, body: Graph, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> JSONResponse:
         """저장. ``If-Match`` 없음 → 428 ``version_required``, 불일치 → 412 ``version_conflict``."""
         same_id(graph_id, body.id, "그래프")
-        svc = service()
+        svc = service(space)
         svc.check(graph_kind, body, GRAPH_LABEL)
         stored = svc.store.save(graph_kind, body, expected_version=if_match_version(if_match))
         return versioned_graph(stored)
 
     @router.delete("/graphs/{graph_id}", status_code=204, responses=errors(412))
-    async def delete_graph(graph_id: str, if_match: IfMatchHeader = None) -> Response:
+    async def delete_graph(
+        graph_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> Response:
         """삭제(204). ``If-Match``는 선택. 버전 이력은 남는다."""
-        service().store.delete(graph_kind, graph_id, expected_version=if_match_version(if_match))
+        store = service(space).store
+        store.delete(graph_kind, graph_id, expected_version=if_match_version(if_match))
         return Response(status_code=204)
 
     @router.post(
@@ -160,9 +174,11 @@ def build_router(service: Callable[[], DefinitionService]) -> APIRouter:
         status_code=201,
         responses=errors(409),
     )
-    async def duplicate_graph(graph_id: str, body: DuplicateGraphRequest) -> JSONResponse:
-        """서버에서 복제한다. 새 id가 이미 있으면 409 ``already_exists``."""
-        store = service().store
+    async def duplicate_graph(
+        graph_id: str, body: DuplicateGraphRequest, space: SpaceQuery = None
+    ) -> JSONResponse:
+        """서버에서 복제한다(같은 공간 안). 새 id가 이미 있으면 409 ``already_exists``."""
+        store = service(space).store
         source = store.get(graph_kind, graph_id).document
         stored = store.create(
             graph_kind,
@@ -177,7 +193,7 @@ def build_router(service: Callable[[], DefinitionService]) -> APIRouter:
     async def get_settings() -> JSONResponse:
         """저장 원문(쓰지 않은 키는 없다). 파일이 없으면 ``{}``(ETag 없음)."""
         try:
-            stored = service().store.get(settings_kind, settings_kind)
+            stored = service(None).store.get(settings_kind, settings_kind)
         except NotFound:
             return json_with_etag({})
         return definition_response(stored, WorkspaceSettings)
@@ -185,7 +201,7 @@ def build_router(service: Callable[[], DefinitionService]) -> APIRouter:
     @router.put("/settings", response_model=WorkspaceSettings, responses=errors(412))
     async def put_settings(body: WorkspaceSettings, if_match: IfMatchHeader = None) -> JSONResponse:
         """저장(요청에 쓴 키만). ``If-Match``는 선택(주면 지금 버전과 같아야 한다)."""
-        svc = service()
+        svc = service(None)
         svc.check(settings_kind, body, SETTINGS_LABEL)
         stored = svc.store.save(settings_kind, body, expected_version=if_match_version(if_match))
         return definition_response(stored, WorkspaceSettings)

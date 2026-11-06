@@ -7,7 +7,10 @@
 공개 API:
     - ``module``(``MemoryModule``): entry point ``agent_console.server_modules``의 ``mod-memory``.
     - 포트(``ports``): 제공 ``MEMORY_SERVICE``(``MemoryServicePort``)·``SERVER_WARNINGS``,
-      받음(선택) ``WORKSPACE_SETTINGS``.
+      받음(선택) ``WORKSPACE_SETTINGS``·``MEMORY_SPACES``(5.7R.33z, ``MemorySpaces``·
+      ``MemorySpaceLike``).
+    - 공간(5.7R.33z): ``MemorySpaceServices``(공간 이름 → 서비스), 오류 ``MemorySpaceError``·
+      ``MemorySpacesUnavailable``·``UnknownMemorySpace``, 메모리 DB 범위 ``MEMORY_DB_SCOPE``.
     - HTTP 없이 쓰는 부품: ``MemoryService``(서비스), ``open_memory_storage``(저장소 열기·계보
       ``BRANCH``), ``ObservedMemoryStore``·``observe``(변경 알림 감싸개), ``parse_memory_settings``·
       ``section_of``(설정 섹션 읽기), ``MemoryModuleSettings``(설치자 옵션).
@@ -21,17 +24,41 @@ from .config import SECTION_KEY, parse_memory_settings, section_of
 from .errors import ERROR_MAP, MemoryRequestError, VersionRequiredError
 from .module import MODULE_ID, WEB_ROLES, MemoryModule, module
 from .observed import ObservedMemoryStore, changed, observe
-from .ports import MEMORY_SERVICE, SERVER_WARNINGS, WORKSPACE_SETTINGS, MemoryServicePort
+from .ports import (
+    MEMORY_SERVICE,
+    MEMORY_SPACES,
+    MEMORY_SPACES_PORT,
+    SERVER_WARNINGS,
+    WORKSPACE_SETTINGS,
+    MemoryServicePort,
+    MemorySpaceLike,
+    MemorySpaces,
+)
 from .routes import build_router
 from .service import USER_AUTHOR, MemoryService
 from .settings import MemoryModuleSettings
-from .storage import BRANCH, MemoryStorage, open_memory_storage, storage_memory_warning
+from .spaces import (
+    MemorySpaceError,
+    MemorySpaceServices,
+    MemorySpacesUnavailable,
+    UnknownMemorySpace,
+)
+from .storage import (
+    BRANCH,
+    MEMORY_DB_SCOPE,
+    MemoryStorage,
+    open_memory_storage,
+    storage_memory_warning,
+)
 from .ws import MEMORY_TOPIC, LoopPublisher, changed_message, topic_handlers
 
 __all__ = [
     "BRANCH",
     "ERROR_MAP",
+    "MEMORY_DB_SCOPE",
     "MEMORY_SERVICE",
+    "MEMORY_SPACES",
+    "MEMORY_SPACES_PORT",
     "MEMORY_TOPIC",
     "MODULE_ID",
     "SECTION_KEY",
@@ -45,8 +72,14 @@ __all__ = [
     "MemoryRequestError",
     "MemoryService",
     "MemoryServicePort",
+    "MemorySpaceError",
+    "MemorySpaceLike",
+    "MemorySpaceServices",
+    "MemorySpaces",
+    "MemorySpacesUnavailable",
     "MemoryStorage",
     "ObservedMemoryStore",
+    "UnknownMemorySpace",
     "VersionRequiredError",
     "build_router",
     "changed",

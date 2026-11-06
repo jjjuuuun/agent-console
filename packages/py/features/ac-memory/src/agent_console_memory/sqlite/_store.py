@@ -84,6 +84,8 @@ SearchBackend = Literal["fts5", "like"]
 
 MIN_FTS_CHARS = 3
 SCAN_PAGE_SIZE = 2_000
+JOURNAL_MODES: tuple[str, ...] = ("WAL", "DELETE")
+"""허용 저널 방식(``journal``)."""
 """`scan_entries`가 한 번에 읽는 항목 수."""
 """trigram 색인이 답할 수 있는 최소 검색어 길이(글자)."""
 
@@ -300,7 +302,11 @@ class SqliteMemoryStore:
         use_fts: bool | None = None,
         busy_timeout_seconds: float = 10.0,
         create: bool = True,
+        journal: str = "WAL",
     ) -> None:
+        if journal not in JOURNAL_MODES:
+            raise ValueError(f"journal은 {', '.join(JOURNAL_MODES)} 중 하나다")
+        self._journal = journal
         self.policy = policy if policy is not None else MemoryPolicy()
         self._clock = clock
         self._new_id: Callable[[], str] = (
@@ -340,6 +346,7 @@ class SqliteMemoryStore:
                 connect_args={"check_same_thread": False, "timeout": min(self._busy_timeout, 0.5)},
             )
         memory = self._memory
+        journal = self._journal
 
         @event.listens_for(engine, "connect")
         def _on_connect(dbapi: sqlite3.Connection, _record: object) -> None:
@@ -347,7 +354,7 @@ class SqliteMemoryStore:
             dbapi.create_function("ac_fold", 1, _fold, deterministic=True)
             cursor = dbapi.cursor()
             if not memory:
-                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute(f"PRAGMA journal_mode={journal}")
                 cursor.execute("PRAGMA synchronous=NORMAL")
             cursor.execute("PRAGMA secure_delete=ON")  # 완전 삭제한 원문을 파일에서도 덮어쓴다
             cursor.close()
@@ -1265,6 +1272,7 @@ def open_sqlite_memory_store(
     use_fts: bool | None = None,
     busy_timeout_seconds: float = 10.0,
     create: bool = True,
+    journal: str = "WAL",
 ) -> SqliteMemoryStore:
     """SQLite 메모리 저장소를 연다(없는 표는 만든다).
 
@@ -1277,6 +1285,8 @@ def open_sqlite_memory_store(
             FTS5가 없으면 포함 검색이다(``warnings()``에 사유).
         busy_timeout_seconds: 다른 쪽이 쓰기 잠금을 쥐고 있을 때 기다리는 총 시간.
         create: False면 표를 만들지 않는다(마이그레이션이 만든 DB에 붙을 때).
+        journal: 저널 방식 ``WAL``(기본)·``DELETE``(네트워크 파일 시스템 등 WAL 공유 메모리를 믿을
+            수 없을 때).
 
     Returns:
         ``SqliteMemoryStore``(``with``로 닫을 수 있다).
@@ -1289,4 +1299,5 @@ def open_sqlite_memory_store(
         use_fts=use_fts,
         busy_timeout_seconds=busy_timeout_seconds,
         create=create,
+        journal=journal,
     )

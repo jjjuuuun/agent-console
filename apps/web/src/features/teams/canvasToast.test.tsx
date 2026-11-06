@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Graph, Issue } from "@agent-console/contracts";
+import { MemoryRouter } from "react-router";
 import { CanvasToastProvider, CanvasToastRegion, useCanvasToast } from "./canvasToast";
 import { IssuesPanel } from "./IssuesPanel";
 import { VALIDATION_DEBOUNCE_MS } from "./useValidation";
@@ -58,7 +59,7 @@ describe("검증 줄", () => {
 
   it("접힌 줄에 첫 오류와 주 제안 버튼이 한 줄로 보이고, 누르면 제안이 적용된다", () => {
     const apply = vi.fn();
-    render(<IssuesPanel graph={graph} validation={validation} open={false} onToggle={() => undefined} onValidate={() => undefined} onFocus={() => undefined} onApplySuggestion={apply} />);
+    render(<MemoryRouter><IssuesPanel graph={graph} validation={validation} open={false} onToggle={() => undefined} onValidate={() => undefined} onFocus={() => undefined} onApplySuggestion={apply} /></MemoryRouter>);
     expect(screen.getByText(/입구가 없습니다/)).toBeTruthy();
     const btn = screen.getByRole("button", { name: "'안내원'을 입구로 연결" });
     expect(btn.className).toContain("ac-ge-btn--primary");
@@ -67,7 +68,7 @@ describe("검증 줄", () => {
   });
 
   it("펼친 표에는 '제안' 열 머리가 없고 행 제안은 주 버튼이다", () => {
-    render(<IssuesPanel graph={graph} validation={validation} open onToggle={() => undefined} onValidate={() => undefined} onFocus={() => undefined} onApplySuggestion={() => undefined} />);
+    render(<MemoryRouter><IssuesPanel graph={graph} validation={validation} open onToggle={() => undefined} onValidate={() => undefined} onFocus={() => undefined} onApplySuggestion={() => undefined} /></MemoryRouter>);
     expect(screen.queryByRole("columnheader", { name: "제안" })).toBeNull();
     expect(screen.getByRole("button", { name: "'안내원'을 입구로 연결" }).className).toContain("ac-ge-btn--primary");
   });

@@ -8,6 +8,11 @@ FastAPI가 스레드에서 부른다(이벤트 루프를 막지 않는다). 응�
   ``version_conflict`` + ``details.current_version``). 옮기기·보관·지우기는 ``If-Match``가 선택이다.
 - 만들기는 같은 범위·키가 있으면 409 ``already_exists``(``details.entry_id``).
 - 쓰기 검사 실패는 422 ``memory.invalid_key``·``memory.too_large``·``memory.secret_rejected``.
+- 공간(5.7R.33z): 항목·범위·태그·정리·내보내기/가져오기 경로와 ``/memory/scope-kinds``는 질의
+  ``?project=<id>``(``modkit.host.SpaceQuery``, 정의 경로와 같은 이름)로 공간을 고른다. 없으면
+  라이브러리. 공간 제공자가 없으면 409 ``feature_unavailable``, 모르는 공간은 404
+  ``project.not_found``. 범위 종류·설정 검사는 공간과 무관하다(앱 설정 하나).
+  ``POST /memory/copy``는 본문 ``source``·``target``으로 공간을 받는다.
 """
 
 from __future__ import annotations
@@ -24,6 +29,8 @@ from starlette.concurrency import run_in_threadpool
 from agent_console_contracts import ErrorResponse, Issue
 from agent_console_contracts.memory import (
     MEMORY_ENTRY_SORTS,
+    MemoryCopyRequest,
+    MemoryCopyResult,
     MemoryEntry,
     MemoryEntryPage,
     MemoryImportPolicy,
@@ -42,7 +49,7 @@ from agent_console_contracts.memory import (
     MemoryWriteRequest,
 )
 from agent_console_memory import MemoryQuery, TooLargeError
-from agent_console_modkit.host import IfMatchHeader, if_match_version, json_with_etag
+from agent_console_modkit.host import IfMatchHeader, SpaceQuery, if_match_version, json_with_etag
 
 from .errors import MemoryRequestError, VersionRequiredError
 from .service import MemoryService
@@ -141,9 +148,13 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
     """``/memory/*`` 라우터.
 
     Args:
-        service: 서비스를 돌려주는 함수(요청마다 부른다).
+        service: 라이브러리 서비스를 돌려주는 함수(요청마다 부른다). 공간은 그 서비스의
+            ``space(name)``으로 고른다.
     """
     router = APIRouter()
+
+    def pick(space: str | None) -> MemoryService:
+        return service().space(space or None)
 
     # ---- 범위 ---------------------------------------------------------------------------
 
@@ -152,9 +163,12 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         response_model=MemoryScopeKindList,
         responses=_errors(401, 403, 500),
     )
-    def scope_kinds() -> MemoryScopeKindList:
-        """병합된 범위 종류(패키지 기본 → 플러그인 → 사용자, 끈 종류는 ``disabled: true``)."""
-        return service().scope_kinds()
+    def scope_kinds(space: SpaceQuery = None) -> MemoryScopeKindList:
+        """병합된 범위 종류(패키지 기본 → 플러그인 → 사용자, 끈 종류는 ``disabled: true``).
+
+        공간을 주면 그 공간이 열리는지 확인한 뒤 같은 목록(``context_fields`` 포함)을 준다.
+        """
+        return pick(space).scope_kinds()
 
     @router.get(
         "/memory/scopes",
@@ -163,20 +177,22 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
     )
     def scopes(
         kind: Annotated[str | None, Query(description="범위 종류 id(생략 = 전부).")] = None,
+        space: SpaceQuery = None,
     ) -> list[MemoryScopeSummary]:
         """항목이 있는 범위 요약(항목 수·보관 수·크기·최근 시각·``kind_known``)."""
-        return service().scopes(kind)
+        return pick(space).scopes(kind)
 
     @router.get("/memory/tags", response_model=MemoryTagList, responses=_errors(401, 403, 422, 500))
     def tags(
         scope: ScopeQuery = None,
         include_archived: Annotated[bool, Query(description="보관 항목도 센다.")] = False,
+        space: SpaceQuery = None,
     ) -> MemoryTagList:
         """태그와 항목 수(항목 수 내림차순). 지운 항목은 세지 않는다.
 
         상한을 넘으면 ``truncated``.
         """
-        return service().tags(parse_scopes(scope), include_archived=include_archived)
+        return pick(space).tags(parse_scopes(scope), include_archived=include_archived)
 
     # ---- 항목 ---------------------------------------------------------------------------
 
@@ -197,6 +213,7 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         order: Annotated[str, Query(description="정렬 방향(asc·desc).")] = "desc",
         cursor: Annotated[str | None, Query(description="앞 쪽 응답의 `next_cursor`.")] = None,
         limit: Annotated[int, Query(ge=1, description="쪽 크기(설치자 상한 이하로 줄인다).")] = 50,
+        space: SpaceQuery = None,
     ) -> MemoryEntryPage:
         """목록·검색(``q`` = 키·본문·태그 전문 검색). 모르는 ``sort``·``order``는 422."""
         if sort not in MEMORY_ENTRY_SORTS:
@@ -218,7 +235,7 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
             cursor=cursor or None,
             limit=limit,
         )
-        return service().entries(query)
+        return pick(space).entries(query)
 
     @router.post(
         "/memory/entries",
@@ -226,18 +243,20 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         status_code=201,
         responses=_errors(401, 403, 409, 422, 500),
     )
-    def create_entry(body: MemoryWriteRequest) -> Response:
+    def create_entry(body: MemoryWriteRequest, space: SpaceQuery = None) -> Response:
         """새 항목(버전 1, 쓴 주체 = 사용자). 같은 범위·키가 있으면 409 ``already_exists``."""
-        return _entry_response(service().create(body), status_code=201)
+        return _entry_response(pick(space).create(body), status_code=201)
 
     @router.get(
         "/memory/entries/{entry_id}",
         response_model=MemoryEntry,
         responses=_errors(401, 403, 404, 500),
     )
-    def get_entry(entry_id: str, include_deleted: bool = False) -> Response:
+    def get_entry(
+        entry_id: str, include_deleted: bool = False, space: SpaceQuery = None
+    ) -> Response:
         """항목 하나(본문 포함, ``ETag`` = 버전). 지운 항목은 ``include_deleted``일 때만."""
-        return _entry_response(service().get(entry_id, include_deleted=include_deleted))
+        return _entry_response(pick(space).get(entry_id, include_deleted=include_deleted))
 
     @router.put(
         "/memory/entries/{entry_id}",
@@ -245,12 +264,15 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         responses=_errors(401, 403, 404, 412, 422, 428, 500),
     )
     def update_entry(
-        entry_id: str, body: MemoryUpdateRequest, if_match: IfMatchHeader = None
+        entry_id: str,
+        body: MemoryUpdateRequest,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> Response:
         """고치기(생략 = 그대로). ``If-Match`` 없음 → 428, 다름 → 412(``current_version``)."""
         version = parse_version(if_match, required=True)
         assert version is not None
-        return _entry_response(service().update(entry_id, body, if_version=version))
+        return _entry_response(pick(space).update(entry_id, body, if_version=version))
 
     @router.delete(
         "/memory/entries/{entry_id}",
@@ -266,13 +288,14 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
             bool, Query(description="true면 버전·검색 행까지 완전히 지운다(되돌릴 수 없음).")
         ] = False,
         if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> Response:
         """표시 삭제(기본, 지운 항목을 돌려준다) 또는 완전 삭제(``purge=true``, 204)."""
         if purge:
-            service().purge(entry_id)
+            pick(space).purge(entry_id)
             return Response(status_code=204)
         version = parse_version(if_match, required=False)
-        return _entry_response(service().delete(entry_id, if_version=version))
+        return _entry_response(pick(space).delete(entry_id, if_version=version))
 
     @router.post(
         "/memory/entries/{entry_id}/move",
@@ -280,31 +303,38 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         responses=_errors(401, 403, 404, 409, 412, 422, 500),
     )
     def move_entry(
-        entry_id: str, body: MemoryMoveRequest, if_match: IfMatchHeader = None
+        entry_id: str,
+        body: MemoryMoveRequest,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
     ) -> Response:
-        """범위·키 옮기기(id 그대로). 대상에 같은 키가 있으면 409."""
+        """범위·키 옮기기(id 그대로, 같은 공간 안). 대상에 같은 키가 있으면 409."""
         version = parse_version(if_match, required=False)
-        return _entry_response(service().move(entry_id, body, if_version=version))
+        return _entry_response(pick(space).move(entry_id, body, if_version=version))
 
     @router.post(
         "/memory/entries/{entry_id}/archive",
         response_model=MemoryEntry,
         responses=_errors(401, 403, 404, 412, 422, 500),
     )
-    def archive_entry(entry_id: str, if_match: IfMatchHeader = None) -> Response:
+    def archive_entry(
+        entry_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> Response:
         """보관(이미 보관이면 그대로)."""
         version = parse_version(if_match, required=False)
-        return _entry_response(service().archive(entry_id, archived=True, if_version=version))
+        return _entry_response(pick(space).archive(entry_id, archived=True, if_version=version))
 
     @router.post(
         "/memory/entries/{entry_id}/unarchive",
         response_model=MemoryEntry,
         responses=_errors(401, 403, 404, 412, 422, 500),
     )
-    def unarchive_entry(entry_id: str, if_match: IfMatchHeader = None) -> Response:
+    def unarchive_entry(
+        entry_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
+    ) -> Response:
         """보관 풀기(이미 풀려 있으면 그대로)."""
         version = parse_version(if_match, required=False)
-        return _entry_response(service().archive(entry_id, archived=False, if_version=version))
+        return _entry_response(pick(space).archive(entry_id, archived=False, if_version=version))
 
     @router.post(
         "/memory/entries/{entry_id}/restore",
@@ -316,27 +346,28 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
         version: Annotated[
             int | None, Query(ge=1, description="이 버전의 본문으로(생략 = 지운 항목 되살리기).")
         ] = None,
+        space: SpaceQuery = None,
     ) -> Response:
         """되돌리기. 되살릴 범위·키에 다른 항목이 있으면 409."""
-        return _entry_response(service().restore(entry_id, version=version))
+        return _entry_response(pick(space).restore(entry_id, version=version))
 
     @router.get(
         "/memory/entries/{entry_id}/versions",
         response_model=list[MemoryVersionSummary],
         responses=_errors(401, 403, 404, 500),
     )
-    def list_versions(entry_id: str) -> list[MemoryVersionSummary]:
+    def list_versions(entry_id: str, space: SpaceQuery = None) -> list[MemoryVersionSummary]:
         """버전 목록(오름차순, 본문 없음). 지운 항목도 본다."""
-        return service().versions(entry_id)
+        return pick(space).versions(entry_id)
 
     @router.get(
         "/memory/entries/{entry_id}/versions/{version}",
         response_model=MemoryVersion,
         responses=_errors(401, 403, 404, 500),
     )
-    def get_version(entry_id: str, version: int) -> MemoryVersion:
+    def get_version(entry_id: str, version: int, space: SpaceQuery = None) -> MemoryVersion:
         """버전 하나(본문 포함)."""
-        return service().version(entry_id, version)
+        return pick(space).version(entry_id, version)
 
     # ---- 정리 ---------------------------------------------------------------------------
 
@@ -347,25 +378,26 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
     )
     def retention_plan(
         body: Annotated[MemoryRetentionPlanRequest | None, Body()] = None,
+        space: SpaceQuery = None,
     ) -> MemoryRetentionPlan:
         """정리 미리보기(아무것도 바꾸지 않는다). 본문 ``rules``로 저장 전 규칙을 시험할 수 있다.
 
         규칙 문제는 ``issues``(위치 ``/rules/<i>``, 저장된 규칙이면
         ``/memory/retention/rules/<i>``).
         """
-        return service().plan_retention(body)
+        return pick(space).plan_retention(body)
 
     @router.post(
         "/memory/retention/apply",
         response_model=MemoryRetentionResult,
         responses=_errors(401, 403, 500),
     )
-    def retention_apply() -> MemoryRetentionResult:
+    def retention_apply(space: SpaceQuery = None) -> MemoryRetentionResult:
         """저장된 정리 규칙을 지금 적용한다.
 
         보관·표시 삭제만 하고, 쓴 주체가 ``system``인 버전으로 남아 되돌릴 수 있다.
         """
-        return service().apply_retention()
+        return pick(space).apply_retention()
 
     @router.post(
         "/memory/settings/check",
@@ -396,12 +428,14 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
     def export(
         scope: ScopeQuery = None,
         include_archived: Annotated[bool, Query(description="보관 항목도 내보낸다.")] = True,
+        space: SpaceQuery = None,
     ) -> StreamingResponse:
         """지우지 않은 항목을 마크다운 zip으로 내려받는다(폴더에 쓰지 않는다)."""
         scopes = parse_scopes(scope)
+        svc = pick(space)
         spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES)  # noqa: SIM115 - 응답이 닫는다
         try:
-            service().export_to(spool, scopes, include_archived=include_archived)
+            svc.export_to(spool, scopes, include_archived=include_archived)
         except BaseException:
             spool.close()
             raise
@@ -434,19 +468,38 @@ def build_router(service: Callable[[], MemoryService]) -> APIRouter:
             str, Query(description="같은 범위·키가 있을 때: skip·overwrite·rename.")
         ] = "skip",
         dry_run: Annotated[bool, Query(description="true면 쓰지 않고 같은 수를 센다.")] = False,
+        space: SpaceQuery = None,
     ) -> MemoryImportResult:
         """마크다운 zip(본문 그대로)을 가져온다. 경로 공격·암호화 항목은 그 파일만 거부하고,
         크기·항목 수 상한(zip 폭탄)은 422 ``memory.too_large``, zip이 아니면 422
         ``validation_failed``로 묶음 전체를 거부한다."""
         if policy not in get_args(MemoryImportPolicy):
             raise MemoryRequestError("policy는 skip·overwrite·rename 중 하나여야 합니다", "policy")
-        svc = service()
+        svc = await run_in_threadpool(pick, space)
         chosen = cast(MemoryImportPolicy, policy)
         data = await read_limited_body(request, svc.transfer_limits.max_archive_bytes)
         try:
             return await run_in_threadpool(svc.import_archive, data, policy=chosen, dry_run=dry_run)
         finally:
             data.close()
+
+    # ---- 공간 사이 복사 ---------------------------------------------------------------------
+
+    @router.post(
+        "/memory/copy",
+        response_model=MemoryCopyResult,
+        responses=_errors(400, 401, 403, 404, 409, 422, 500),
+    )
+    def copy(body: MemoryCopyRequest) -> MemoryCopyResult:
+        """공간 사이 메모리 복사(라이브러리 ↔ 프로젝트, 프로젝트 ↔ 프로젝트).
+
+        ``filter``로 고른 원본 항목을 대상에 새 항목으로 쓴다(쓴 주체 = 사용자, 버전 기록은 옮기지
+        않음). 복사 뒤 독립이고 출처를 기록하지 않는다. 같은 범위·키가 대상에 있으면
+        ``on_conflict``(skip·overwrite·rename)를 따르고 ``conflicts``에 남긴다. ``remap``은 범위 id
+        바꾸기(어느 범위 종류가 대상인지는 화면이 범위 종류의 ``context_fields``로 판단한다).
+        원본과 대상이 같으면 400 ``bad_request``.
+        """
+        return service().copy(body)
 
     return router
 

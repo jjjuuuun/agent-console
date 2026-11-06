@@ -255,7 +255,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `EventBus` | `subscribe`(해제 함수 반환)·`publish`(막히지 않음)·`deliver`(기다림)·`drain`·`errors` |
 | `Hub[T]` | WS 토픽 문자열 팬아웃(느린 구독자는 버림·`dropped`) |
 | `BaseServices` / `Paths` | 호스트 기본 서비스 |
-| `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions)` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보만 build 직전에 `database.upgrade`로 올린다(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
+| `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions, scopes=("app",))` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보 중 `scopes`에 `"app"`이 든 것만 build 직전에 `database.upgrade`로 올린다(다른 범위, 예: 프로젝트 기록 DB의 `"project"`는 그 DB를 여는 모듈이 `ModuleContext.active_migrations(scope)`로 읽어 올린다)(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
 | `load_installed_modules(group=MODULES_GROUP)` | entry point에서 모듈 읽기(ac-registry 로더) |
 | `load_host_plugins(*, enabled, paths, modules, options, entry_points)` → `HostPlugins` / `PluginLoadContext` / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` | 호스트 플러그인 레지스트리: 묶음 공장(`HOST_REGISTRIES_GROUP`, 이름 순 첫 번째, 없으면 `ExtensionRegistries`) → 로더(`HOST_PLUGIN_LOADERS_GROUP`, 이름 순) → `register(registries)` 플러그인. 실패는 보고 |
 | `open_host_database(path)` | DB 공장(`HOST_DATABASE_GROUP`) → `DatabaseHandle`(없으면 None) |

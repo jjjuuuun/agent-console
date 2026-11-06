@@ -17,6 +17,7 @@ from agent_console_contracts import (
     Endpoint,
     GraphPatch,
     IssueSuggestion,
+    NodeFieldRef,
     NodeSpec,
     NodeTypeDescriptor,
     PortSpec,
@@ -248,6 +249,61 @@ class SuggestionBuilder:
             id=suggestion_id,
             label=label(desc),
             patch=GraphPatch(remove_edge_ids=[edge.id], add_edges=[replaced]),
+        )
+
+    def switch_strategy(
+        self,
+        edge: EdgeSpec,
+        strategy: str,
+        *,
+        strategy_key: str,
+        suggestion_id: str,
+        label: str,
+    ) -> IssueSuggestion | None:
+        """위임 연결의 위임 방식을 `strategy`로 바꾸는 제안(같은 id·같은 포트).
+
+        패치는 `remove_edge_ids` + `add_edges`다. 먼저 그 방식이 기본인 연결 종류
+        (`invocation.strategy`)로 바꾸기를 찾고(`replace_kind`, 방식 덮어쓰기 키는 뺀다),
+        없으면 지금 종류의 config에 방식 덮어쓰기(`strategy_key`)를 넣어 스키마를 통과하는지
+        본다. 둘 다 안 되면 None.
+        """
+        by_kind = self.replace_kind(
+            edge,
+            accept=lambda d: d.invocation is not None and d.invocation.strategy == strategy,
+            suggestion_id=suggestion_id,
+            label=lambda _d: label,
+            drop_keys=(strategy_key,),
+        )
+        if by_kind is not None:
+            return by_kind
+        desc = self._plan.edge_descriptors.get(edge.id)
+        if desc is None or desc.invocation is None:
+            return None
+        config = {**edge.config, strategy_key: strategy}
+        if desc.invocation.strategy == strategy:
+            config.pop(strategy_key, None)
+        if not _config_fits(desc, config):
+            return None
+        replaced = edge.model_copy(update={"config": config})
+        return IssueSuggestion(
+            id=suggestion_id,
+            label=label,
+            patch=GraphPatch(remove_edge_ids=[edge.id], add_edges=[replaced]),
+        )
+
+    @staticmethod
+    def unset_fields(
+        refs: list[tuple[str, str]], *, suggestion_id: str, label: str
+    ) -> IssueSuggestion | None:
+        """노드 config 위치들(`(노드 id, JSON Pointer)`)을 지우는 제안. 비면 None."""
+        if not refs:
+            return None
+        return IssueSuggestion(
+            id=suggestion_id,
+            label=label,
+            patch=GraphPatch(
+                unset_node_fields=[NodeFieldRef(node_id=n, path=path) for n, path in refs]
+            ),
         )
 
     def narrow(

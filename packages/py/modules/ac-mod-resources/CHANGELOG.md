@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.7R.33x: 선택 포트 `definitions.spaces`. `/resources`·`/resources/{id}/…`(목록·조회·만들기·저장·삭제·본문·여러 파일)이 `?project=<공간>`을 받는다. 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`. 공간 목록의 `usage_count`는 null. **깨는 변경**: `build_router(service)`의 `service`가 공간 이름 하나를 받는다.
 - 5.2R.31: 목록 `ResourceSummary.project`를 채운다(요약 `extra.project`, 공용 = null).
 
 ## 0.1.0

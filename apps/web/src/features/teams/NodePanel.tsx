@@ -9,13 +9,14 @@ import { AgentSettingsForm, ATTACHMENT_MODES, Avatar, DescriptorIcon, Field, edi
 import { DelegationSettings, stringAt, delegationMessages } from "../delegation";
 import { NodeConfigForm } from "./forms";
 import { DraftNotice } from "./DraftNotice";
+import { ignoredFieldReasons, IgnoredValueClear } from "./ignoredFields";
 import { useDraftPreview } from "./useDraftPreview";
 import { useCanvasToast } from "./canvasToast";
 import { teamMessages as t } from "./messages";
 import { attachmentErrorsAt } from "../../lib/attachmentProblems";
 import { diffNodeLayer, nodeLayerAttachments, ownAttachments, reorderLinkEdges, replaceNode, withLinkMode, withNodeOwnAttachments } from "./nodeResources";
 import type { TeamPanelContext } from "./panelContext";
-import { toggleRoleOnGraph, addCounterpartAndToggle, attachResource, configText, descriptorOf, detachResource, edgesOf, freshId, incomingInvocations, issuesOfNode, nodesOf, resourceEdgeKinds, resourceLinks, resourceNodeType, sharedAttachments, strategyOfInvocation, withConfigText, withNode, withNodeConfig } from "./teamsLogic";
+import { toggleRoleOnGraph, addCounterpartAndToggle, attachResource, configText, descriptorOf, detachResource, edgesOf, freshId, incomingInvocations, issuesOfNode, nodesOf, resourceEdgeKinds, resourceLinks, resourceNodeType, sharedAttachments, withConfigText, withNode, withNodeConfig } from "./teamsLogic";
 
 const TOGGLES: readonly RoleToggle[] = ["entry", "exit", "interaction"];
 const HIDDEN_IN_SETTINGS: readonly string[] = ["resources"];
@@ -164,7 +165,8 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
         <ul className="team-problem-list">
           {mine.map((issue, i) => (
             <li key={`${i}:${issue.code}`} data-severity={issue.severity}>
-              <span className="app-sev" data-severity={issue.severity}>{issue.severity === "error" ? "✕" : "▲"}</span> {issueMessage(issue)}
+              <span className="app-sev" data-severity={issue.severity}>{issue.severity === "error" ? "✕" : issue.severity === "warning" ? "▲" : "ⓘ"}</span> {issueMessage(issue)}
+              {issue.hint ? <div className="team-issue-hint app-muted">{issue.hint}</div> : null}
               <div>
                 <IssueSuggestionButtons issue={issue} onApply={ctx.onApplySuggestion} />
                 {openNested === undefined || d?.binds == null || !(issue.path ?? "").includes(`/config/${d.binds.field}`) ? null : (
@@ -218,13 +220,26 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
   const backendId = typeof own["backend"] === "string" ? (own["backend"] as string) : effBackend;
   const sourceByLayer = useMemo(() => new Map((eff.data?.layers ?? []).map((l) => [l.id, l.source])), [eff.data]);
 
-  const disabledPaths = useMemo(() => {
-    const incoming = incomingInvocations(node.id, ctx.graph, ctx.edgeTypes);
-    const first = incoming[0];
-    const strategy = first === undefined ? undefined : ctx.strategies.find((s) => s.id === strategyOfInvocation(first.edge, first.kind)) ?? strategies.data?.find((s) => s.id === strategyOfInvocation(first.edge, first.kind));
-    const reason = strategy === undefined ? t.settings.inapplicableGeneric : t.settings.inapplicable(strategy.title);
-    return Object.fromEntries((eff.data?.inapplicable ?? []).map((p) => [p, reason]));
-  }, [eff.data, node.id, ctx.graph, ctx.edgeTypes, ctx.strategies, strategies.data]);
+  const allStrategies = useMemo(() => (ctx.strategies.length > 0 ? ctx.strategies : (strategies.data ?? [])), [ctx.strategies, strategies.data]);
+  const disabledPaths = useMemo(
+    () => ignoredFieldReasons(eff.data?.inapplicable ?? [], node.id, ctx.graph, ctx.edgeTypes, allStrategies),
+    [eff.data, node.id, ctx.graph, ctx.edgeTypes, allStrategies],
+  );
+  const clearIgnored = (path: string) => {
+    const next = structuredClone(own);
+    const keys = path.replace(/^\//, "").split("/");
+    let cur: Record<string, unknown> = next;
+    for (const k of keys.slice(0, -1)) {
+      const child = cur[k];
+      if (child === null || typeof child !== "object") return;
+      cur = child as Record<string, unknown>;
+    }
+    delete cur[keys[keys.length - 1]!];
+    const config = { ...(node.config ?? {}) };
+    if (Object.keys(next).length === 0) delete config["settings"];
+    else config["settings"] = next;
+    ctx.onUndoableChange(withNodeConfig(ctx.graph, node.id, config), t.settings.ignoredClearDone);
+  };
 
   const fieldWarnings = useMemo(() => Object.fromEntries((eff.data?.warnings ?? []).filter((w) => typeof w.path === "string").map((w) => [w.path as string, `${w.message} (${w.code})`])), [eff.data]);
   const mergeNotes = useMemo(() => {
@@ -245,6 +260,7 @@ function BoundSettings({ ctx, node, focusPath }: { ctx: TeamPanelContext; node: 
       {eff.isDraft && eff.isError && eff.data === undefined ? <Banner tone="warning">{t.settings.effectiveFailed}</Banner> : null}
       {!eff.isDraft && saved && ctx.dirty ? <p className="app-muted lib-field-note">{t.settings.staleNote}</p> : null}
       {limited > 0 ? <FieldWarningSummary count={limited} /> : null}
+      <IgnoredValueClear reasons={disabledPaths} ownValue={own} disabled={ctx.disabled} onClear={clearIgnored} />
       <AgentSettingsForm
         value={own}
         onChange={(next) => {

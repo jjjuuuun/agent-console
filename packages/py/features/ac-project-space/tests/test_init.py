@@ -180,3 +180,54 @@ def test_template_has_no_inline_comments() -> None:
     for line in default_gitignore_template().splitlines():
         stripped = line.strip()
         assert not stripped or stripped.startswith("#") or "#" not in stripped
+
+
+# ---- 5.7R.33w2: .gitignore 틀 점검·덧붙이기 -------------------------------------
+
+
+def test_missing_gitignore_lines_and_append(folder, manifest) -> None:  # type: ignore[no-untyped-def]
+    from agent_console_project_space import (
+        append_gitignore,
+        default_gitignore_template,
+        missing_gitignore_lines,
+        open_space,
+    )
+
+    space = open_space(folder)
+    template = default_gitignore_template()
+    wanted = [t for t in (x.strip() for x in template.splitlines()) if t.startswith("/")]
+    assert missing_gitignore_lines(space) == wanted  # 파일이 없으면 전부
+
+    space.root.mkdir()
+    user = "node_modules/\n/memory.sqlite3\n/records.sqlite3-*"  # 마지막 줄바꿈 없음
+    space.gitignore_path.write_text(user, encoding="utf-8")
+    missing = missing_gitignore_lines(space)
+    assert "/memory.sqlite3" not in missing
+    assert "/records.sqlite3-*" not in missing
+    assert "/records.sqlite3" in missing
+
+    added = append_gitignore(space)
+    assert added == missing
+    text = space.gitignore_path.read_text(encoding="utf-8")
+    assert text.startswith(user + "\n")  # 사용자 줄은 그대로
+    assert text.count("/memory.sqlite3\n") == 1
+    assert missing_gitignore_lines(space) == []
+    assert append_gitignore(space) == []  # 더할 줄이 없으면 쓰지 않는다
+
+
+def test_append_gitignore_refuses_readonly_and_creates_when_absent(folder) -> None:  # type: ignore[no-untyped-def]
+    import dataclasses
+
+    import pytest
+
+    from agent_console_project_space import ConfigReadonly, append_gitignore, open_space
+
+    space = open_space(folder)
+    assert append_gitignore(space)  # 없으면 틀로 만든다
+    assert space.gitignore_path.read_text(encoding="utf-8").startswith("# Agent Console")
+
+    other = folder.parent / "ro"
+    other.mkdir()
+    ro_space = dataclasses.replace(open_space(other), config_writable=False)
+    with pytest.raises(ConfigReadonly):
+        append_gitignore(ro_space)

@@ -90,3 +90,12 @@ def test_guard_sees_body_files_and_blocks_restore(tmp_path: Path) -> None:
             "resource", "r1", first.version_hash, expected_version=second.version_hash
         )
     assert store.read_file("resource", "r1", "a.md") == b"hello"
+
+
+def test_kind_info_returns_registered_kind(tmp_path: Path) -> None:
+    from agent_console_store import NotFound
+
+    store = FileDefinitionStore(tmp_path, DEFAULT_KINDS)
+    assert store.kind_info("settings") is SETTINGS_KIND
+    with pytest.raises(NotFound):
+        store.kind_info("nope")

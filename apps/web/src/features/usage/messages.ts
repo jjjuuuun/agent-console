@@ -19,7 +19,9 @@ export const usageMessages = {
     allowed: { label: "허용", tone: "success" },
     allowed_warning: { label: "허용 (경고)", tone: "warning" },
     rejected: { label: "거부됨", tone: "danger" },
-  } as Record<string, { label: string; tone: Tone }>,
+    // 활동 없음(톤 없음). aria는 접근성 이름. 상태 어휘는 열려 있어 표에 없는 값은 원문으로 보인다.
+    idle: { label: "사용 없음", aria: (window: string) => `최근 ${window} 사용 없음` },
+  } as Record<string, { label: string; tone?: Tone; aria?: (window: string) => string }>,
   /** 신뢰 등급 값 → 한글 라벨 */
   trust: { official: "공식", observed: "관측", estimated: "추정", unofficial: "비공식" } as Record<string, string>,
   cards: {
@@ -27,28 +29,46 @@ export const usageMessages = {
     empty: "아직 값이 없습니다",
     emptyBody: "켜진 출처가 값을 받으면 여기에 나타납니다.",
     howToConnect: "연결 방법",
-    usedValue: (pct: string) => `${pct} 사용`,
-    tokensUsed: (compact: string) => `${compact} 토큰 사용`,
-    noLimit: "한도 정보 없음",
+    headline: (pct: string) => `${pct} 사용`,
+    tokens: (n: string) => `토큰 ${n}`,
     noRatio: "사용률 정보 없음",
-    statusOnly: "사용률 정보 없음 — 이 출처는 상태만 알려 줍니다",
+    noRatioHeadline: "사용률 없음",
     noValue: "관측된 값이 없습니다",
     resets: (rel: string) => `초기화까지 ${rel}`,
+    resetsLine: (rel: string, abs: string) => `초기화까지 ${rel} · ${abs}`,
     resetsAt: (abs: string) => `(${abs})`,
-    /** 기준보다 먼 초기화는 상대 시간 대신 날짜로 */
+    /** 기준보다 먼 초기화는 상대 시간 대신 날짜로(사이드바 표시기) */
     resetsOnDate: (date: string) => `초기화 ${date}`,
-    resetsUnknown: "초기화 시각 정보 없음",
-    resetsPassed: "초기화 시각이 지났습니다 — 표시된 값은 이전 창 기준일 수 있습니다",
+    resetsPassed: "초기화 시각이 지났습니다 — 이전 창 기준일 수 있습니다",
+    resetsPassedShort: "초기화 시각 지남",
     observedAt: (rel: string) => `관측 ${rel}`,
     staleChip: "오래된 관측",
     otherSources: (n: number) => `다른 출처 (${n})`,
-    ruleOrder: "대표값: 설정한 출처 순서",
-    ruleRecentOfficial: "대표값: 가장 최근 공식 출처",
-    ruleRecent: "대표값: 가장 최근 값",
-    ruleFallback: "설정한 순서의 출처에 값이 없어 기본 규칙을 썼습니다",
+    info: "자세히",
+    /** ⓘ 툴팁으로 접힌 줄들 */
+    hidden: {
+      noLimit: "한도 정보 없음",
+      resetsUnknown: "초기화 시각 정보 없음",
+      statusOnly: "사용률 정보 없음 — 이 출처는 상태만 알려 줍니다",
+      ruleFallback: "설정한 순서의 출처에 값이 없어 기본 규칙을 썼습니다",
+    },
     ariaLabel: (name: string, value: string, resets: string) => `${name}, ${value}, ${resets}`,
     gaugeLabel: (name: string) => `${name} 사용률`,
     sourceLine: (title: string) => title,
+  },
+  /** 공식이 아닌 등급 묶음 카드 */
+  group: {
+    title: { observed: "관측 값", estimated: "로그 추정", unofficial: "비공식 값" } as Record<string, string>,
+    titleFallback: (trust: string) => `${trust} 값`,
+    basisPrimary: "공식 값이 연결되기 전까지는 이 값이 기준입니다",
+    basisReference: "공식 값이 있어 참고용으로 봅니다",
+    noValueRow: "–",
+  },
+  /** 격자 아래 기준 문구 */
+  basis: {
+    recentOfficial: "각 창의 값은 가장 최근 공식 출처 기준입니다",
+    order: "각 창의 값은 설정한 출처 순서 기준입니다",
+    recent: "각 창의 값은 가장 최근 값 기준입니다",
   },
   nestedNote: "중첩 팀의 자식 실행은 상위 실행에 포함되어 한 번만 집계됩니다.",
   rollup: {
@@ -71,6 +91,7 @@ export const usageMessages = {
     tableLabel: "토큰 집계 표",
     note: "에이전트별 값은 서로 더하지 않습니다. 위임자의 값에 서브에이전트 토큰이 포함되는지는 백엔드에 따라 다를 수 있어, 화면은 서버가 준 값을 그대로 보여 줍니다.",
     columns: { name: "이름", total: "합계", input: "입력", output: "출력", cost: "비용", note: "비고" },
+    inOut: (i: string, o: string) => `입력 ${i} · 출력 ${o}`,
     barsLabel: "토큰 집계 막대",
   },
   sources: {

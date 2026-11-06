@@ -293,6 +293,34 @@ class ScopeKindCatalog:
         kind = self.get(kind_id)
         return None if kind is None else resolve_scope(kind, context)
 
+    def unresolvable(self) -> ScopeKindCatalog:
+        """같은 범위 종류(이름·설명·목록)이지만 어떤 맥락에서도 범위 id를 풀지 않는 사본.
+
+        저장소를 쓸 수 없는 실행(예: 프로젝트 메모리 저장소가 없음)에 도구 모양은 그대로 주되 모든
+        호출이 ``memory.scope_unavailable``이 되게 할 때 쓴다.
+
+        >>> c = merge_scope_kinds(include_defaults=False, user={"n": {"label": "N", "id": ""}})
+        >>> from agent_console_contracts.memory import MemoryAccessContext
+        >>> c.resolve("n", MemoryAccessContext()) is not None, c.unresolvable().resolve(
+        ...     "n", MemoryAccessContext())
+        (True, None)
+        """
+        blocked = tuple(
+            MemoryScopeKind(
+                id=k.id,
+                label=k.label,
+                description=k.description,
+                template=None,
+                resolver=None,
+                origin=k.origin,
+                overrides=k.overrides,
+            )
+            for k in self.kinds
+        )
+        return ScopeKindCatalog(
+            kinds=blocked, disabled=self.disabled, include_defaults=self.include_defaults
+        )
+
     def listing(self, *, include_disabled: bool = True) -> MemoryScopeKindList:
         """`GET /memory/scope-kinds` 응답 모양."""
         infos = [k.info() for k in self.kinds]

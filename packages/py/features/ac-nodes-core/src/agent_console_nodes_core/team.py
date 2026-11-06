@@ -194,6 +194,8 @@ class TeamNode:
         category="팀",
         role=TEAM_ROLE,
         executable=True,
+        # 자식 Run을 돌릴 뿐 자기 백엔드 세션은 없다(세션은 자식 Run의 노드가 연다, 5.7R.34).
+        opens_session=False,
         binds=DefinitionBinding(kind="graph", field="team_ref"),
         config_schema=TeamNodeConfig.model_json_schema(),
         ui_schema={

@@ -5,12 +5,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agent_console_contracts import ErrorCodes
+from agent_console_contracts import ErrorCodes, Issue, KnownIssueCodes
 from agent_console_store import StoreError
 
+SECRET_REJECTED_MESSAGE = (
+    "비밀처럼 보이는 값은 프로젝트 폴더에 저장하지 않습니다. 비밀 저장소에 넣고 secret://<이름> "
+    "참조로 바꾸세요"
+)
+"""평문 비밀 거부 이슈의 문구(값은 담지 않는다)."""
 
-class SpaceError(Exception):
-    """프로젝트 공간 예외의 베이스."""
+
+class SpaceError(StoreError):
+    """프로젝트 공간 예외의 베이스. 저장소 예외(`StoreError`)라서 정의 경로의 공용 오류 매핑
+    (`store_error_body`)이 그 `code`로 응답한다(33x)."""
 
     code: str = ErrorCodes.INTERNAL
 
@@ -72,3 +79,16 @@ class SecretRejected(StoreError):
             f"({len(findings)} found at {where})"
         )
         self.findings = findings
+
+    def field_issues(self) -> list[Issue]:
+        """위치마다 error 이슈 하나(`secret.plain_found`, `details.reason` = 의심 이유, 값 없음)."""
+        return [
+            Issue(
+                severity="error",
+                code=KnownIssueCodes.SECRET_PLAIN_FOUND,
+                message=SECRET_REJECTED_MESSAGE,
+                path=f.path,
+                details={"reason": f.reason},
+            )
+            for f in self.findings
+        ]

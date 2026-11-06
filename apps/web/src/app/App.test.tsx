@@ -44,7 +44,7 @@ describe("부팅", () => {
       .mockRejectedValueOnce(new BootError("http://127.0.0.1:8765", new ApiError(0, { code: NETWORK_ERROR_CODE, message: "Failed to fetch" }), true))
       .mockResolvedValue(clients);
     const router = createMemoryRouter(buildAppRoutes(), { initialEntries: ["/settings"] });
-    render(<AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ ...BOOT_RETRY, giveUpMs: 0 }} />);
+    render(<AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ ...BOOT_RETRY, giveUpMs: 0, notReadyGiveUpMs: 0 }} />);
     expect(await screen.findByText("서버에 연결할 수 없습니다")).toBeTruthy();
     expect(screen.getAllByText(/http:\/\/127\.0\.0\.1:8765/).length).toBeGreaterThan(0);
     expect(screen.getByText(/허용 출처/)).toBeTruthy();
@@ -67,7 +67,7 @@ describe("부팅", () => {
         storage={createSafeStorage(null)}
         onReload={onReload}
         queryClient={createAppQueryClient({ retry: false })}
-        bootRetry={{ initialMs: 10, maxMs: 20, factor: 2, giveUpMs: 10_000 }}
+        bootRetry={{ initialMs: 10, maxMs: 20, factor: 2, giveUpMs: 10_000, notReadyGiveUpMs: null }}
       />,
     );
     expect(await screen.findByText(/서버가 켜지기를 기다리는 중/)).toBeTruthy();
@@ -85,7 +85,7 @@ describe("부팅", () => {
     const onReload = vi.fn();
     const router = createMemoryRouter(buildAppRoutes(), { initialEntries: ["/settings"] });
     render(
-      <AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} onReload={onReload} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ initialMs: 5, maxMs: 5, factor: 1, giveUpMs: 40 }} />,
+      <AppRoot createClients={createClients} router={router} storage={createSafeStorage(null)} onReload={onReload} queryClient={createAppQueryClient({ retry: false })} bootRetry={{ initialMs: 5, maxMs: 5, factor: 1, giveUpMs: 40, notReadyGiveUpMs: 40 }} />,
     );
     expect(await screen.findByText("서버에 연결할 수 없습니다")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "새로고침" }));

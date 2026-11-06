@@ -14,7 +14,7 @@ import json
 from collections.abc import Collection, Mapping, Sequence
 from typing import Annotated, Any
 
-from fastapi import Header, Response
+from fastapi import Header, Query, Response
 from fastapi.responses import JSONResponse
 
 TEXT_FILE_MEDIA_TYPE = "text/plain; charset=utf-8"
@@ -30,6 +30,21 @@ IfMatchHeader = Annotated[
     Header(alias="If-Match", description="마지막으로 받은 version_hash(ETag)."),
 ]
 """라우트 매개변수 형식: ``if_match: IfMatchHeader = None``."""
+
+SPACE_QUERY = "project"
+"""저장 공간을 고르는 질의 이름(정의·메모리·실행·대화가 같은 이름을 쓴다, design §PI.4.2)."""
+
+SpaceQuery = Annotated[
+    str | None,
+    Query(
+        alias=SPACE_QUERY,
+        description=(
+            "저장 공간 이름(프로젝트 등록 id). 없으면 기본 공간(앱 workspace). 공간을 주는 모듈이 "
+            "없으면 409 feature_unavailable, 모르는 공간은 404 project.not_found."
+        ),
+    ),
+]
+"""라우트 매개변수 형식: ``space: SpaceQuery = None``(질의 ``?project=<id>``)."""
 
 
 def if_match_version(value: str | None) -> str | None:

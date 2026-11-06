@@ -15,7 +15,7 @@ import {
   useStoreApi,
 } from "@xyflow/react";
 import type { Ref } from "react";
-import type { Connection as FlowConnection, EdgeChange, FinalConnectionState, NodeChange, OnConnectStartParams } from "@xyflow/react";
+import type { Connection as FlowConnection, EdgeChange, FinalConnectionState, FitViewOptions, NodeChange, OnConnectStartParams } from "@xyflow/react";
 import type { EdgeLayout, NodeLayout, EdgeTypeDescriptor, Graph, Issue, IssueSuggestion, NodeSpec, EdgeSpec } from "@agent-console/contracts";
 import { format, mergeMessages } from "../messages";
 import { createEdgeShapeRegistry } from "../shapes/registry";
@@ -165,7 +165,7 @@ const ENTRY_FIT_MARGIN = 24;
 const OFFSCREEN_TOLERANCE = 2;
 
 /** 화면 밖에 있거나 가장자리에 걸쳐 잘린 노드 수를 알리는 단서. 눌러서 전체가 보이게 줄인다(큰 그래프에서 입구 기준 첫 맞춤 뒤 이동 단서). */
-function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string; hint: string; onShowAll: () => void }) {
+function OffscreenCue({ label, hint, onShowAll, liftedByToggle = false }: { label: (n: number) => string; hint: string; onShowAll: () => void; liftedByToggle?: boolean }) {
   const count = useStore((st) => {
     const [tx, ty, z] = st.transform;
     if (st.width <= 0 || st.height <= 0) return 0;
@@ -184,7 +184,7 @@ function OffscreenCue({ label, hint, onShowAll }: { label: (n: number) => string
   });
   if (count === 0) return null;
   return (
-    <Panel position="top-right" className="ac-ge-offscreen">
+    <Panel position="bottom-right" className={liftedByToggle ? "ac-ge-offscreen ac-ge-offscreen--beside-toggle" : "ac-ge-offscreen"}>
       <button type="button" className="ac-ge-btn" title={hint} aria-label={`${label(count)}. ${hint}`} onClick={onShowAll}>
         {label(count)}
       </button>
@@ -212,8 +212,8 @@ async function fitReadable(flow: ReturnType<typeof useReactFlow>, size: { width:
   await flow.setViewport({ x: ENTRY_FIT_MARGIN - b.x * zoom, y: (size.height - bottomInset) / 2 - (b.y + b.height / 2) * zoom, zoom }, { duration });
 }
 
-/** 보기 도구줄(아래 가운데)이 차지하는 높이(px). 첫 맞춤이 이만큼 아래를 비워 둔다. */
-const VIEW_TOOLBAR_INSET = 44;
+/** 보기 도구줄(아래 가운데)이 차지하는 높이와 노드와의 간격(px). 첫 맞춤이 이만큼 아래를 비워 둔다(React Flow 맞춤이 줌 한도로 여백을 다 못 쓰는 경우의 여유 포함). */
+const VIEW_TOOLBAR_INSET = 80;
 
 /** 첫 맞춤 뒤 캔버스 크기가 바뀌어도(옆 패널이 자리 잡는 동안) 다시 맞추는 시간(ms). 이후 크기 변화는 사용자 시점을 건드리지 않는다. */
 const REFIT_WINDOW_MS = 3000;
@@ -615,6 +615,12 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   // 렌더 중에는 ref를 쓰지 않는다. 맞춤 효과(아래)보다 먼저 도는 레이아웃 효과에서 갱신한다.
   useLayoutEffect(() => {
     insetRef.current = toolbarInset;
+  }, [toolbarInset]);
+  // React Flow 자체의 첫 맞춤도 아래 도구줄 높이를 비워 둔다(우리 재맞춤이 "사용자가 건드리지 않음" 조건에서 빠져도 노드가 가려지지 않게)
+  const initialFitOptions = useMemo((): FitViewOptions => {
+    if (toolbarInset <= 0) return FIT_VIEW_OPTIONS;
+    const side: `${number}%` = `${FIT_VIEW_OPTIONS.padding * 100}%`;
+    return { ...FIT_VIEW_OPTIONS, padding: { top: side, left: side, right: side, bottom: `${toolbarInset}px` } };
   }, [toolbarInset]);
   useEffect(() => {
     // 정리를 적용한 새 그래프가 들어온 뒤 화면에 맞춘다(움직임 줄이기 설정이면 애니메이션 없음)
@@ -1218,7 +1224,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     (issue: Issue, suggestion: IssueSuggestion): boolean => {
       if (readOnly) return false;
       const res = applyGraphPatch(graph, suggestion.patch);
-      if (res.addedNodeIds.length + res.addedEdgeIds.length + res.removedEdgeIds.length === 0) return false;
+      if (res.addedNodeIds.length + res.addedEdgeIds.length + res.removedEdgeIds.length + res.unsetFieldCount === 0) return false;
       emit(res.graph, "apply-suggestion");
       onApplySuggestion?.(issue, suggestion); // 실제로 적용된 뒤에만 알린다
       const newEdge = res.graph.edges?.find((e) => e.id === res.addedEdgeIds[0]);
@@ -1586,7 +1592,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
           minZoom={0.25}
           maxZoom={2}
           fitView
-          fitViewOptions={FIT_VIEW_OPTIONS}
+          fitViewOptions={initialFitOptions}
           proOptions={{ hideAttribution: true }}
           ariaLabelConfig={m.flowLabels}
         >
@@ -1613,6 +1619,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
           <OffscreenCue
             label={(n) => format(m.offscreenNodes, { count: n })}
             hint={m.offscreenHint}
+            liftedByToggle={onShowMinimapChange !== undefined}
             onShowAll={() => void flow.fitView({ padding: FIT_VIEW_OPTIONS.padding, maxZoom: 1, minZoom: 0.25, duration: 200 })}
           />
           {tidy.ghost}

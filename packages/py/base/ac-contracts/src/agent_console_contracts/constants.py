@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.12.1"
+CONTRACTS_VERSION: Final = "0.12.2"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -36,8 +36,8 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "common": "1.7.0",
     "resources": "1.1.0",
     "logs": "1.1.0",
-    "definitions": "1.4.0",
-    "runs": "1.5.0",
+    "definitions": "1.5.0",
+    "runs": "1.6.0",
     "usage": "1.1.0",
     "projects": "3.1.0",
     "chat": "1.2.0",
@@ -51,7 +51,9 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
 (`logs`는 0.6.0, `projects`는 0.8.0, `architecture`는 0.9.0, `memory`는 0.10.0에서
 1.0.0으로 시작. `projects`는 0.11.0에서 2.0.0 — 프로젝트 = 로컬 폴더, 0.12.0에서 3.0.0 — 프로젝트
-구성 = 폴더 안 사본, 0.12.1에서 3.1.0 — 프로젝트 기록 DB·폴더 확인 보강, design §PI)."""
+구성 = 폴더 안 사본, 0.12.1에서 3.1.0 — 프로젝트 기록 DB·폴더 확인 보강, design §PI).
+0.12.2(5.7R.34·38): `runs` 1.6.0 — 디스크립터 화면 속성(세션·백엔드·중첩), `definitions` 1.5.0 —
+이슈 `hint`·`group`, `GraphPatch.unset_node_fields`."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,

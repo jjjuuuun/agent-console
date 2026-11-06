@@ -8,6 +8,7 @@
 
 from . import schema
 from ._store import (
+    JOURNAL_MODES,
     MIN_FTS_CHARS,
     SearchBackend,
     SqliteMemoryStore,
@@ -16,6 +17,7 @@ from ._store import (
 )
 
 __all__ = [
+    "JOURNAL_MODES",
     "MIN_FTS_CHARS",
     "SearchBackend",
     "SqliteMemoryStore",

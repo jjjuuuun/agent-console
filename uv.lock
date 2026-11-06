@@ -31,6 +31,8 @@ members = [
     "agent-console-link-logs-trace",
     "agent-console-link-logs-usage",
     "agent-console-link-memory-runs",
+    "agent-console-link-projects-memory",
+    "agent-console-link-projects-records",
     "agent-console-link-projects-runs",
     "agent-console-link-runs-teams",
     "agent-console-link-runs-trace",
@@ -345,7 +347,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.12.1"
+version = "0.12.2"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -1000,6 +1002,90 @@ dev = [
     { name = "agent-console-mod-resources", editable = "packages/py/modules/ac-mod-resources" },
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-link-projects-memory"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-projects-memory" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-memory", extra = ["sqlite"] },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-project-space" },
+    { name = "agent-console-store" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-mod-memory" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-memory", extras = ["sqlite"], editable = "packages/py/features/ac-memory" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-project-space", editable = "packages/py/features/ac-project-space" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-mod-memory", editable = "packages/py/modules/ac-mod-memory" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-link-projects-records"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-projects-records" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-project-space" },
+    { name = "agent-console-store" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-mod-chat" },
+    { name = "agent-console-mod-runs" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-project-space", editable = "packages/py/features/ac-project-space" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-mod-chat", editable = "packages/py/modules/ac-mod-chat" },
+    { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
@@ -1674,12 +1760,15 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-projects"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/modules/ac-mod-projects" }
 dependencies = [
     { name = "agent-console-contracts" },
+    { name = "agent-console-local-folders" },
     { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-project-space" },
     { name = "agent-console-projects" },
+    { name = "agent-console-secret-rules" },
     { name = "agent-console-store" },
     { name = "fastapi" },
     { name = "pydantic" },
@@ -1697,8 +1786,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-local-folders", editable = "packages/py/features/ac-local-folders" },
     { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-project-space", editable = "packages/py/features/ac-project-space" },
     { name = "agent-console-projects", editable = "packages/py/features/ac-projects" },
+    { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "agent-console-store", editable = "packages/py/features/ac-store" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pydantic", specifier = ">=2.9" },
@@ -2325,6 +2417,7 @@ dependencies = [
     { name = "agent-console-link-logs-trace" },
     { name = "agent-console-link-logs-usage" },
     { name = "agent-console-link-memory-runs" },
+    { name = "agent-console-link-projects-memory" },
     { name = "agent-console-link-projects-runs" },
     { name = "agent-console-link-runs-teams" },
     { name = "agent-console-link-runs-trace" },
@@ -2380,6 +2473,7 @@ requires-dist = [
     { name = "agent-console-link-logs-trace", editable = "packages/py/links/ac-link-logs-trace" },
     { name = "agent-console-link-logs-usage", editable = "packages/py/links/ac-link-logs-usage" },
     { name = "agent-console-link-memory-runs", editable = "packages/py/links/ac-link-memory-runs" },
+    { name = "agent-console-link-projects-memory", editable = "packages/py/links/ac-link-projects-memory" },
     { name = "agent-console-link-projects-runs", editable = "packages/py/links/ac-link-projects-runs" },
     { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
     { name = "agent-console-link-runs-trace", editable = "packages/py/links/ac-link-runs-trace" },

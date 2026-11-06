@@ -130,6 +130,57 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 - 실행 기록 계보(design §5R.10): `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 표 정의와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다. 계보 없이 이 패키지만 쓰는 경로와 기존 DB의 행이 같은 정의를 쓰기 때문이다. 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
 - 마이그레이션: `upgrade(engine)`, `downgrade(engine, "base")`, `current_revision(engine)`. 기존 마이그레이션 파일은 고치지 않고 새로 추가한다.
 
+## 프로젝트 기록 DB 열기 (`open_records_db`, design §PI.4.6.2)
+
+폴더 안 SQLite 파일 하나를 **앱 DB와 같은 계보 사슬**(legacy + 넘겨받은 모듈 계보)로 맞춘다. 서버·모듈 없이 쓴다.
+파일이 없으면 만들지 않고(`absent`, 보기 = 빈 목록) 처음 쓸 때 `writable_engine()`이 만든다. 뒤처졌으면 쓰기 잠금 안에서
+리비전을 다시 읽고 SQLite 온라인 백업을 남긴 뒤 계보별로 올린다(두 연결이 동시에 열어도 한쪽만 적용). 이 앱이 모르는
+리비전(더 새 앱)이면 `mode=ro`로만 열고(`newer`), 깨졌거나 올리다 실패하면 `unavailable`(`reason`, 백업 경로)이다.
+**자동으로 내리지 않는다.** 계보 이름 목록은 코드에 없다(호출자가 켜진 모듈의 `project` 범위 계보를 넘긴다).
+
+```python
+>>> import tempfile
+>>> from pathlib import Path
+>>> from agent_console_store import open_records_db
+>>> folder = Path(tempfile.mkdtemp())
+>>> db = open_records_db(folder / "records.sqlite3", [], backup_dir=folder / "backups")
+>>> db.state.state, db.read_engine() is None  # 보기만 해서는 파일을 만들지 않는다
+('absent', True)
+>>> _ = db.writable_engine()  # 처음 쓸 때 만들고 legacy를 올린다
+>>> db.state.state, db.revision()
+('ready', '0003')
+>>> db.close()
+
+```
+
+공개: `RecordsDb`(`state`·`read_engine()`·`writable_engine()`·`revision()`·`refresh()`·`close()`), `RecordsState`,
+`RecordsUnavailable`(`reason`·`backup_path`, 코드 `project.records_unavailable`), `RecordsAbsent`, 소비 모듈이 받는
+모양 `RecordsHandle`·`RecordsSpaces`와 포트 이름 `RECORDS_SPACES_PORT`(`records.spaces`), `is_network_fs`(네트워크 파일
+시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
+`backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
+
+## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`, 5.7R.33x)
+
+정의를 다루는 모듈은 요청의 공간 이름(REST `?project=<이름>`)으로 저장소를 고른다. 이름이 없으면 기본(라이브러리),
+제공자(`DefinitionSpaces.open(space)`)가 없는데 이름이 오면 `SpacesUnavailable`(409 `feature_unavailable` —
+질의를 무시하고 라이브러리에 쓰지 않는다), 모르는 이름은 `UnknownSpace`(404 `project.not_found`). 이름의 뜻(프로젝트
+등록 id 등)은 제공자만 안다. `MappedSpaces`는 이름 → 저장소 표로 된 예제 구현이다.
+
+```python
+>>> from agent_console_store import InMemoryDefinitionStore, MappedSpaces, SpaceStores
+>>> library, project = InMemoryDefinitionStore(), InMemoryDefinitionStore()
+>>> stores = SpaceStores(library, lambda: MappedSpaces({"p1": project}))
+>>> stores.get(None) is library, stores.get("p1") is project
+(True, True)
+
+```
+
+공간의 버전 기록을 그 폴더의 기록 DB에 두려면 `RecordsVersionRepository(lambda: handle)`(읽기 `read_engine()` — 파일이
+없으면 빈 결과, 쓰기 `writable_engine()`)을 저장소의 `versions`로 준다. 이 기록소는 `VersionWriteCheck.ensure_writable()`
+을 만족해, 쓰기 전 검사가 부르면 기록 DB를 쓸 수 없을 때(앞선 리비전 등 `RecordsUnavailable` 409) 정의 파일도 쓰지
+않는다. `StoreError.field_issues()`를 덮어쓴 예외(예: 평문 비밀 거부)는 `store_error_body`가 422 `details.issues`에
+필드 위치로 싣는다.
+
 ## 개발·재사용(단독)
 
 이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전

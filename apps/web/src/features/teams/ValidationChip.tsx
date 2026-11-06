@@ -50,10 +50,11 @@ export function ValidationChip({ summary }: ValidationChipProps) {
 
 export const ISSUE_PREVIEW_LIMIT = 5;
 
-/** 펼침에 보일 이슈: 막는 팀 구성이면 `blocks_run` 이슈 우선(없으면 전부), 오류 -> 경고 순서, 최대 5개. */
+/** 펼침에 보일 이슈: 오류·경고만(정보는 편집기 검증 패널에서만 보인다, 5.7R.38). 막는 팀 구성이면 `blocks_run` 이슈 우선, 오류 -> 경고 순서, 최대 5개. */
 export function previewIssues(issues: readonly Issue[], blocked: boolean, limit = ISSUE_PREVIEW_LIMIT): { shown: Issue[]; rest: number } {
-  const blocking = issues.filter((i) => i.blocks_run === true);
-  const pool = sortIssues(blocked && blocking.length > 0 ? blocking : issues);
+  const visible = issues.filter((i) => i.severity !== "info");
+  const blocking = visible.filter((i) => i.blocks_run === true);
+  const pool = sortIssues(blocked && blocking.length > 0 ? blocking : visible);
   return { shown: pool.slice(0, limit), rest: Math.max(0, pool.length - limit) };
 }
 

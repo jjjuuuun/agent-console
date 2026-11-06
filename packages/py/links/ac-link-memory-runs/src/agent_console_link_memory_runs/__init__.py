@@ -12,7 +12,8 @@
       ``memory``), ``load_memory_resource_type``, ``memory_slot``, ``access_item``.
     - 도구 공급자(X30): ``MemoryToolProvider``, ``merge_access``(층 합치기), ``access_context``,
       ``as_host_tool``, ``event_payload``, 경고 코드 ``MemoryRunsCodes``.
-    - 실행 범위(X26): ``MemoryRunScope``·``RunScopeResult``.
+    - 실행 범위(X26): ``MemoryRunScope``·``RunScopeResult``. 프로젝트 공간(5.7R.33z):
+      ``space_service``·``UnavailableMemoryService``.
     - 저장 전 검사: ``MemoryResourceCheck``(모르는 범위 종류 경고).
     - 포트(``ports``): 받음 ``MEMORY_SERVICE``(필수), 제공 ``RUN_SCOPES``·``DEFINITION_CHECKS``.
     - ``testing``: ``StaticMemoryService``·``memory_service_module``(단독 실행·테스트).
@@ -39,7 +40,7 @@ from .resource_type import (
     load_memory_resource_type,
     memory_slot,
 )
-from .scope import MemoryRunScope, RunScopeResult
+from .scope import MemoryRunScope, RunScopeResult, UnavailableMemoryService, space_service
 from .settings import DEFAULT_MAX_WRITES_PER_RUN, MemoryRunsSettings
 
 __all__ = [
@@ -60,6 +61,7 @@ __all__ = [
     "MemoryServiceLike",
     "MemoryToolProvider",
     "RunScopeResult",
+    "UnavailableMemoryService",
     "access_context",
     "access_item",
     "as_host_tool",
@@ -68,4 +70,5 @@ __all__ = [
     "memory_slot",
     "merge_access",
     "module",
+    "space_service",
 ]

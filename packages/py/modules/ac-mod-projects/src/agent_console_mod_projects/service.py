@@ -1,4 +1,7 @@
-"""프로젝트 경로가 쓰는 동작: 범위 검사·옮기기 계획과 적용·삭제 계획과 삭제(FastAPI를 모른다).
+"""(deprecated) 옛 정의 범위 정리: 범위 검사·옮기기 계획과 적용(FastAPI를 모른다).
+
+정의의 ``project`` 필드(옛 프로젝트 전용 범위)는 design §PI(K33-5)에서 없어졌다. 옛 [정리] 화면이
+남아 있는 동안만 쓰고 33t에서 지운다. 새 정리는 ``CopyService.legacy_plan``(복사 계획 형식)이다.
 
 규칙 계산은 순수 패키지 ``ac-projects``가 하고, 여기서는 저장소를 읽고 쓴다. 다른 기능은 함수로
 받는다(없으면 그 부분만 꺼진다, design §UX-P.5):
@@ -13,12 +16,11 @@ from __future__ import annotations
 import copy
 import string
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Final, Literal
+from typing import Any, Final
 
 from agent_console_contracts import (
     DefinitionKey,
     DefinitionMove,
-    DeletePlan,
     Issue,
     KnownIssueCodes,
     MovePlan,
@@ -30,7 +32,6 @@ from agent_console_projects import (
     References,
     ScopedDefinition,
     UnknownDefinitionError,
-    delete_plan,
     move_plan,
     scope_issues,
 )
@@ -51,8 +52,6 @@ MODULE_MESSAGES: Mapping[str, str] = {
 }
 """이 모듈이 더하는 기본 문구(설정 ``messages``로 바꾼다)."""
 
-type DeleteMode = Literal["move_to_shared", "delete_definitions"]
-
 
 def _template(messages: Mapping[str, str], code: str) -> str:
     return string.Template(messages.get(code) or MODULE_MESSAGES.get(code, code)).safe_substitute()
@@ -70,8 +69,8 @@ class DefinitionsUnavailableError(Exception):
     """정의 쓰기 포트가 없어 할 수 없는 동작(호스트가 409로 바꾸게 모듈이 감싼다)."""
 
 
-class ProjectService:
-    """프로젝트 동작 묶음.
+class ScopeService:
+    """(deprecated, 33t에서 삭제) 옛 정의 범위(``project`` 필드) 검사·옮기기.
 
     Args:
         projects: 프로젝트 저장소.
@@ -249,52 +248,6 @@ class ProjectService:
             }
         )
 
-    # ------------------------------------------------------------ 삭제
-
-    def delete_plan(self, project_id: str) -> DeletePlan:
-        """삭제하면 바뀌는 것(저장하지 않음). 프로젝트가 없으면 ``NotFound``."""
-        self.projects.require(project_id)
-        defs = self.snapshot.get()
-        if defs is None:
-            return DeletePlan(project_id=project_id, warnings=[self._defs_unavailable()])
-        return delete_plan(project_id, defs)
-
-    def delete(
-        self,
-        project_id: str,
-        *,
-        mode: DeleteMode = "move_to_shared",
-        expected_version: str | None = None,
-    ) -> DeletePlan:
-        """프로젝트 삭제. 그 프로젝트 전용 정의는 ``mode``대로 공용으로 옮기거나 함께 지운다.
-
-        실행·대화의 ``project_id``는 건드리지 않는다(화면에 "삭제된 프로젝트"). 정의 읽기가
-        없으면 정의는 그대로 두고(없는 프로젝트를 가리키므로 공용으로 보인다) 프로젝트만 지운다.
-
-        Returns:
-            처리한 정의 목록(``definitions``)과 정보 이슈.
-
-        Raises:
-            NotFound: 프로젝트가 없다.
-            VersionConflict: ``expected_version``이 지금 버전과 다르다(정의는 건드리지 않음).
-        """
-        stored = self.projects.get(project_id)
-        if expected_version is not None and expected_version != stored.version_hash:
-            self.projects.delete(project_id, expected_version=expected_version)  # 412를 낸다
-        plan = self.delete_plan(project_id)
-        if plan.definitions:
-            writer = self._require_writer()
-            try:
-                for item in plan.definitions:
-                    if mode == "delete_definitions":
-                        writer.delete(item.kind, item.id)
-                    else:
-                        self._apply_one(writer, item.kind, item.id, None, required=True)
-            finally:
-                self.snapshot.invalidate()
-        self.projects.delete(project_id, expected_version=stored.version_hash)
-        return plan.model_copy(update={"default_mode": mode})
-
 
 def issues_payload(issues: Sequence[Issue]) -> list[dict[str, Any]]:
     """이슈 목록 → JSON(``None`` 필드 제외)."""
@@ -305,7 +258,6 @@ __all__ = [
     "CODE_DEFINITIONS_UNAVAILABLE",
     "MODULE_MESSAGES",
     "DefinitionsUnavailableError",
-    "DeleteMode",
-    "ProjectService",
+    "ScopeService",
     "issues_payload",
 ]

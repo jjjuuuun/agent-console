@@ -13,7 +13,7 @@ from typing import Any
 
 from agent_console_contracts import DefinitionVersion
 
-from .interfaces import VersionRepository
+from .interfaces import VersionRepository, VersionWriteCheck
 
 type VersionRecorded = Callable[[str, str, str], None]
 """``(kind, id, version_hash)``: 버전 하나가 기록됐다."""
@@ -70,6 +70,11 @@ class ObservedVersionRepository:
 
     def prune_blobs(self) -> int:
         return self.inner.prune_blobs()
+
+    def ensure_writable(self) -> None:
+        """안쪽 기록소가 `VersionWriteCheck`이면 그대로 부른다(아니면 늘 쓸 수 있음)."""
+        if isinstance(self.inner, VersionWriteCheck):
+            self.inner.ensure_writable()
 
 
 __all__ = ["ObservedVersionRepository", "VersionRecorded"]

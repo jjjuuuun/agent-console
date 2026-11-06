@@ -363,3 +363,52 @@ export function plainText(md: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+// ---------------------------------------------------------------- 카드 묶음·토큰 표기 (5.7R.43)
+
+/** 토큰 수 표기: 10,000 미만은 쉼표 전체("9,840"), 이상은 한국어 compact("1.2만"). 집계 표는 쓰지 않는다(항상 쉼표 전체). */
+export function formatTokens(n: number, locale: string = "ko"): string {
+  if (!Number.isFinite(n)) return "–";
+  if (Math.abs(n) < 10_000) return n.toLocaleString(locale);
+  return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+}
+
+export interface TrustBundle {
+  /** 묶음의 신뢰 등급 값(출처 디스크립터 원문, 모르는 값 포함) */
+  trust: string;
+  rows: WindowGroup[];
+}
+
+export interface GroupedWindows {
+  /** 공식 등급 대표값을 가진 창(창마다 카드) */
+  windowCards: WindowGroup[];
+  /** 그 밖의 등급 묶음(등급당 카드 한 장), 정해진 순서 → 모르는 값 */
+  bundles: TrustBundle[];
+}
+
+/**
+ * 창 묶음을 신뢰 등급으로 나눈다. 대표값 출처의 등급이 `officialTrust`면 창 카드, 아니면 그 등급의 묶음 행.
+ * 묶음 순서는 `trustOrder`에 적힌 순서, 거기 없는 등급은 처음 나온 순서로 뒤에 붙는다. 창 안 순서는 입력 순서를 지킨다.
+ * @param trustOf 출처 id → 등급 값(모르면 빈 문자열)
+ */
+export function groupWindowsByTrust(
+  groups: readonly WindowGroup[],
+  trustOf: (sourceId: string) => string,
+  officialTrust: string,
+  trustOrder: readonly string[],
+): GroupedWindows {
+  const windowCards: WindowGroup[] = [];
+  const byTrust = new Map<string, WindowGroup[]>();
+  for (const g of groups) {
+    const trust = trustOf(g.primary.source);
+    if (trust === officialTrust) windowCards.push(g);
+    else byTrust.set(trust, [...(byTrust.get(trust) ?? []), g]);
+  }
+  const bundles: TrustBundle[] = [];
+  for (const trust of trustOrder) {
+    const rows = byTrust.get(trust);
+    if (rows !== undefined) bundles.push({ trust, rows });
+  }
+  for (const [trust, rows] of byTrust) if (!trustOrder.includes(trust)) bundles.push({ trust, rows });
+  return { windowCards, bundles };
+}

@@ -5,6 +5,9 @@
 - 선택 ``definitions.checks``(여러 제공자): 저장 전 검사. 되돌리기 전 검사(error면 422)와 비교
   결과의 비밀 위치(설정 ``secret_issue_codes``의 이슈) 판정에 쓴다. 없으면 검사 없이 되돌린다.
 - 선택 ``secrets.rules``: 지금 비밀 의심 규칙(``() -> SecretRules``). 없으면 기본 규칙.
+- 선택 ``definitions.spaces``: 공간 이름 → 정의 저장소(``agent_console_store.DefinitionSpaces``,
+  ``VersionStore`` 모양이어야 한다). 있으면 버전 경로가 ``?project=<이름>``을 받아 그 공간의 버전
+  기록을 쓴다. 없으면 ``?project=`` 요청은 409 ``feature_unavailable``.
 - 구독 토픽 ``definitions.saved``(``SavedDefinition``): 정의가 저장될 때마다 보존 개수
   (``max_per_definition``)를 적용한다.
 """
@@ -17,7 +20,12 @@ from typing import Any, Protocol, runtime_checkable
 from agent_console_contracts import Issue
 from agent_console_modkit import PortKey, Topic
 from agent_console_secret_rules import SecretRules
-from agent_console_store import DefinitionStore, VersionRepository
+from agent_console_store import (
+    DEFINITIONS_SPACES_PORT,
+    DefinitionSpaces,
+    DefinitionStore,
+    VersionRepository,
+)
 
 
 class VersionStore(DefinitionStore, Protocol):
@@ -38,7 +46,11 @@ class DefinitionCheck(Protocol):
 
 @runtime_checkable
 class SavedDefinition(Protocol):
-    """``definitions.saved`` 토픽 항목(정의 하나가 새 버전으로 저장됨)."""
+    """``definitions.saved`` 토픽 항목(정의 하나가 새 버전으로 저장됨).
+
+    선택 속성 ``space``(저장소 공간 이름, None = 라이브러리)가 있으면 그 공간에 보존 개수를
+    적용한다.
+    """
 
     @property
     def kind(self) -> str: ...
@@ -54,6 +66,9 @@ type SecretRulesReader = Callable[[], SecretRules]
 """지금 비밀 의심 규칙을 돌려주는 함수(``secrets.rules`` 포트 모양)."""
 
 DEFINITIONS_STORE: PortKey[VersionStore] = PortKey("definitions.store", "정의 저장소")
+DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
+    DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
+)
 DEFINITION_CHECKS: PortKey[DefinitionCheck] = PortKey(
     "definitions.checks", "저장 전 정의 검사", multi=True
 )
@@ -62,6 +77,7 @@ DEFINITIONS_SAVED: Topic[SavedDefinition] = Topic("definitions.saved")
 
 __all__ = [
     "DEFINITIONS_SAVED",
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "SECRET_RULES",

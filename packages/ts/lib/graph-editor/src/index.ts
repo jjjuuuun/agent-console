@@ -58,6 +58,7 @@ export { planAutoConnect, rankEdgeKinds, withoutEdges } from "./logic/autoConnec
 export type { AutoConnectPlan, PlanAutoConnectInput } from "./logic/autoConnect";
 export {
   applyGraphPatch,
+  mergeSuggestions,
   applyRoleToggle,
   candidateEdgeKinds,
   canHaveResources,

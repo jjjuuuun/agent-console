@@ -15,6 +15,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine
 
 _SCRIPT_LOCATION = Path(__file__).parent / "migrations"
@@ -75,3 +76,33 @@ def current_revision(engine: Engine, *, version_table: str = LEGACY_VERSION_TABL
     with engine.connect() as connection:
         context = MigrationContext.configure(connection, opts={"version_table": version_table})
         return context.get_current_revision()
+
+
+def upgrade_on(
+    connection: Connection,
+    revision: str = "head",
+    *,
+    versions: Path | None = None,
+    version_table: str = LEGACY_VERSION_TABLE,
+) -> None:
+    """이미 열린 연결 위에서 `revision`까지 올린다. 커밋은 호출자가 한다.
+
+    호출자가 먼저 `BEGIN IMMEDIATE`로 쓰기 잠금을 잡아 두면 여러 계보를 한 잠금 안에서 올린다.
+    """
+    command.upgrade(_config(connection, versions, version_table), revision)
+
+
+def script_revisions(versions: Path | None = None) -> tuple[str | None, frozenset[str]]:
+    """계보 스크립트의 `(head, 아는 리비전 전부)`. DB는 열지 않는다. 스크립트가 없으면 `(None, {})`.
+
+    Args:
+        versions: 모듈 브랜치의 리비전 스크립트 폴더. None이면 legacy.
+    """
+    config = Config()
+    config.set_main_option("script_location", str(_SCRIPT_LOCATION))
+    if versions is not None:
+        config.set_main_option("path_separator", ";")
+        config.set_main_option("version_locations", str(versions))
+    script = ScriptDirectory.from_config(config)
+    revisions = frozenset(r.revision for r in script.walk_revisions())
+    return script.get_current_head(), revisions

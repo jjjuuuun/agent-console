@@ -17,7 +17,8 @@
     - ``create_host_app`` / ``install_error_map`` / ``install_feature_unavailable`` /
       ``include_routers``·``ROUTE_FIRST_KINDS``(모듈 라우터 붙이기 — 연동 모듈 먼저)
     - ``HostSettings`` / ``load_host_settings`` / ``read_config_file``
-    - HTTP 도우미: ``IfMatchHeader`` / ``if_match_version`` / ``etag`` / ``json_with_etag`` /
+    - HTTP 도우미: ``SpaceQuery``·``SPACE_QUERY``(저장 공간 질의 ``?project=``) /
+      ``IfMatchHeader`` / ``if_match_version`` / ``etag`` / ``json_with_etag`` /
       ``attachment_response``(버전 있는 자원·본문 파일 응답) / ``with_issues``·``ISSUES_HEADER``
       (성공 응답의 경고 이슈 헤더)
 """
@@ -35,9 +36,11 @@ from ._health import NOT_READY_MESSAGE, build_health_router
 from ._http import (
     BINARY_FILE_MEDIA_TYPE,
     ISSUES_HEADER,
+    SPACE_QUERY,
     TEXT_FILE_MEDIA_TYPE,
     TEXT_LIKE_MEDIA_TYPES,
     IfMatchHeader,
+    SpaceQuery,
     attachment_response,
     etag,
     if_match_version,
@@ -108,6 +111,7 @@ __all__ = [
     "ROUTE_FIRST_KINDS",
     "SECURITY_HEADERS",
     "SENSITIVE_QUERY_PARAMS",
+    "SPACE_QUERY",
     "TEXT_FILE_MEDIA_TYPE",
     "TEXT_LIKE_MEDIA_TYPES",
     "TOKEN_HEADER",
@@ -125,6 +129,7 @@ __all__ = [
     "SecurityMiddleware",
     "SecurityOptions",
     "SecurityPolicy",
+    "SpaceQuery",
     "TopicsSource",
     "WsCodec",
     "WsCommand",

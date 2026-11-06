@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "검증 이슈·노드 실패 코드 → 해결 버튼(Fix.actions). 자리표시자: {team_kind}(팀 구성 정의 종류), {graph_id}, {node_id}, {edge_id}, {item_id}(노드 id, 없으면 엣지 id). 채운 값이 비면 그 칸은 null이다. role은 웹 라우트 역할 이름이다.",
+  "description": "검증 이슈·노드 실패 코드 → 해결 버튼(Fix.actions). 자리표시자: {team_kind}(팀 구성 정의 종류), {graph_id}, {node_id}, {edge_id}, {item_id}(노드 id, 없으면 엣지 id), {detail_<키>}(이슈 details의 문자열 값). 채운 값이 비면 그 칸은 null이다. requires(자리표시자 이름 목록) 중 하나라도 비면 그 버튼은 만들지 않는다. role은 웹 라우트 역할 이름이다.",
   "rules": [
     {
       "codes": ["team.no_entry"],
@@ -33,6 +33,12 @@
       "actions": [
         {"label": "위임 깊이 한도 바꾸기", "target": {"role": "settings", "section": "delegation"}, "focus": "/max_depth"},
         {"label": "팀 구성에서 보기", "target": {"role": "definition:{team_kind}", "id": "{graph_id}", "section": "{item_id}"}}
+      ]
+    },
+    {
+      "codes": ["team.member_field_ignored"],
+      "actions": [
+        {"label": "에이전트 설정 열기", "target": {"role": "definition:{detail_agent_kind}", "id": "{detail_agent}"}, "focus": "/{detail_field}", "requires": ["detail_agent", "detail_agent_kind", "detail_field"]}
       ]
     }
   ]

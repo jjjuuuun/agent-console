@@ -21,7 +21,7 @@ export interface NodeCardProps {
   inputs: readonly PortView[];
   outputs: readonly PortView[];
   state?: NodeStateView;
-  issueCount?: { error: number; warning: number };
+  issueCount?: { error: number; warning: number; info?: number };
   selected?: boolean;
   width?: number;
   /** 디스크립터를 찾지 못한 노드(tokens 4.5) */
@@ -65,7 +65,7 @@ export function nodeAriaLabel(
 ): string {
   const status = p.state === undefined ? "" : `, 상태 ${statusLabel(p.state.status, m)}`;
   const ic = p.issueCount;
-  const errors = ic !== undefined && ic.error + ic.warning > 0 ? `, ${issueAriaText(ic, m)}` : "";
+  const errors = ic !== undefined && ic.error + ic.warning + (ic.info ?? 0) > 0 ? `, ${issueAriaText(ic, m)}` : "";
   // 정의 바인딩: ", {부제} {이름}, {본문}, {배지들}"(버전 고정 등은 배지 전문)
   const bind =
     p.bind === undefined
@@ -79,7 +79,12 @@ export function nodeAriaLabel(
 }
 
 /** 이슈 배지 접근성 이름: "검증 오류 N건, 경고 M건"(0인 쪽은 생략). */
-export function issueAriaText(c: { error: number; warning: number }, m: GraphEditorMessages): string {
+export function issueAriaText(c: { error: number; warning: number; info?: number }, m: GraphEditorMessages): string {
+  const info = c.info ?? 0;
+  if (info > 0) {
+    const head = c.error + c.warning > 0 ? `${issueAriaText({ error: c.error, warning: c.warning }, m)}, ` : "";
+    return head + format(m.issueAriaInfo, { info });
+  }
   if (c.error > 0 && c.warning > 0) return format(m.issueAria, { error: c.error, warning: c.warning });
   if (c.error > 0) return format(m.issueAriaErrorOnly, { error: c.error });
   return format(m.issueAriaWarningOnly, { warning: c.warning });
@@ -252,7 +257,7 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
             <span className="ac-ge-status-label ac-ellipsis">{statusLabel(state.status, m)}</span>
           </span>
         )}
-        {props.issueCount !== undefined && props.issueCount.error + props.issueCount.warning > 0 && (
+        {props.issueCount !== undefined && props.issueCount.error + props.issueCount.warning + (props.issueCount.info ?? 0) > 0 && (
           <span className="ac-ge-issues" role="img" aria-label={issueAriaText(props.issueCount, m)} title={issueAriaText(props.issueCount, m)}>
             {props.issueCount.error > 0 && (
               <span className="ac-ge-issue" data-severity="error">
@@ -264,6 +269,12 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
               <span className="ac-ge-issue" data-severity="warning">
                 <span aria-hidden="true">▲</span>
                 <span aria-hidden="true">{props.issueCount.warning}</span>
+              </span>
+            )}
+            {(props.issueCount.info ?? 0) > 0 && (
+              <span className="ac-ge-issue" data-severity="info">
+                <span aria-hidden="true">ⓘ</span>
+                <span aria-hidden="true">{props.issueCount.info}</span>
               </span>
             )}
           </span>

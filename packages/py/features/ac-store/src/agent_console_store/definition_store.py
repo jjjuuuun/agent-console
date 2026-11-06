@@ -136,6 +136,13 @@ class BaseDefinitionStore(ABC):
     def kinds(self) -> list[str]:
         return list(self._kinds)
 
+    def kind_info(self, name: str) -> DefinitionKind:
+        """등록된 종류 정보(폴더·해시 함수·본문 방식 등). 없으면 `NotFound`.
+
+        같은 종류로 다른 저장소(예: 프로젝트 사본 공간)를 열 때 쓴다.
+        """
+        return self._kind(name)
+
     def register_kind(self, kind: DefinitionKind) -> None:
         """종류를 추가한다. 이름이 이미 있으면 `ValueError`."""
         if kind.name in self._kinds:

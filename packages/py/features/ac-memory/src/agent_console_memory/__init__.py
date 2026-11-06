@@ -37,12 +37,22 @@
       ``HeadScanner``(``scan_heads``, 본문 없는 머리
       ``EntryHead``)·``TagCounter``(``count_tags``), 태그 집계
       ``tag_counts``.
+    - 저장소 사이 복사(design §PI.4.3): ``copy_memory``(조건·충돌·범위 id 바꾸기, 복사 뒤
+      독립)·``matches_filter``·``remap_scope``·``copy_author``·``DEFAULT_COPY_RENAME_FORMAT``.
+      범위 종류를 풀지 않는 사본 ``ScopeKindCatalog.unresolvable()``.
     - SQLite 저장소(X31 구현): 하위 모듈 ``sqlite``(``open_sqlite_memory_store``).
       sqlalchemy가 필요해 이 최상위는 import하지 않는다.
     - 테스트 도구: 하위 모듈 ``testing``(가짜 시계·표본), ``testing.contract``(저장소 계약 묶음).
 """
 
 from ._access import allowed, default_scope_kind, granted_ops, scope_kinds_for
+from ._copy import (
+    DEFAULT_COPY_RENAME_FORMAT,
+    copy_author,
+    copy_memory,
+    matches_filter,
+    remap_scope,
+)
 from ._errors import (
     EntryExistsError,
     EntryNotFoundError,
@@ -144,6 +154,7 @@ from ._transfer import (
 )
 
 __all__ = [
+    "DEFAULT_COPY_RENAME_FORMAT",
     "DEFAULT_SCOPE_KINDS_RESOURCE",
     "KEY_SEPARATOR",
     "MEMORY_SCOPE_KINDS_EXTENSION",
@@ -202,6 +213,8 @@ __all__ = [
     "check_tags",
     "compile_retention_rules",
     "content_digest",
+    "copy_author",
+    "copy_memory",
     "decode_cursor",
     "decode_scope_id",
     "default_scope_kind",
@@ -219,12 +232,14 @@ __all__ = [
     "load_default_scope_kinds",
     "load_scope_kind_plugins",
     "load_tool_text",
+    "matches_filter",
     "merge_scope_kinds",
     "new_scope_kind_registry",
     "parse_archive_path",
     "parse_markdown",
     "plugin_scope_kinds",
     "prepare_write",
+    "remap_scope",
     "render_markdown",
     "render_template",
     "resolve_scope",

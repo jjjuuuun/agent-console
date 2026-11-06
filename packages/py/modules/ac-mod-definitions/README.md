@@ -9,7 +9,10 @@ Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페�
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
   `server.warnings`(평문 비밀 점검 `secret.plain_found`). 토픽 `definitions.saved{kind, id, version_hash}`.
 - 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`
-  (팀 구성 목록의 검증 요약·입구 이름, 없으면 null).
+  (팀 구성 목록의 검증 요약·입구 이름, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x).
+- 공간(`?project=<이름>`): 에이전트·팀 구성 경로(목록·조회·만들기·저장·삭제·복제)가 그 공간 저장소를 쓴다. 포트가 없으면
+  409 `feature_unavailable`(라이브러리에 쓰지 않음), 모르는 공간 404 `project.not_found`. 질의가 없으면 라이브러리.
+  이 모듈은 이름의 뜻(프로젝트)을 모른다. 공간 저장의 알림은 제공자가 `definitions.saved`에 `space`를 담아 낸다.
 - 버전 기록: 호스트 DB 핸들(`BaseServices.database`)의 legacy 테이블(시작 때 legacy 계보를 올린다), 없으면 메모리.
 - 평문 점검 캐시는 `definitions.saved`·삭제 때 버린다(계산 잠금과 짧은 상태 잠금을 나눠 교착·낡은 캐시를 막는다).
 - 설정 `modules.options.mod-definitions`: `max_content_bytes`(정의 본문 총량 한도, 옛 `resources.max_content_bytes`),

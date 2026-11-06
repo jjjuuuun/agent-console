@@ -7,7 +7,10 @@ HTTP를 모른다. 저장소(``MemoryStore``)·사용자 설정 섹션 읽기·�
   기본 → 플러그인 → 사용자), 정리 규칙 컴파일. 입력이 바뀔 때만 다시 계산한다(지문 비교).
 - 저장소 정책 맞추기: 비밀 처리 방식·버전 보관 수가 바뀌면 저장소 ``policy``를 바꿔 끼운다.
 - 사람 연산(쓴 주체 ``user``), 정리 미리보기·적용(쓴 주체 ``system``), 내보내기·가져오기.
-- 에이전트 도구 묶음 만들기(``toolkit``, 실행 연동이 쓴다).
+- 에이전트 도구 묶음 만들기(``toolkit``, 실행 연동이 쓴다). 공간 서비스는 맥락 바꾸기
+  (``context_overrides``, 예: 프로젝트 공간의 ``project_id`` = 폴더 id)를 도구 맥락에 덮어쓴다.
+- 공간(5.7R.33z): ``space(name)``(이름 → 그 공간의 서비스, 없으면 자기 자신), ``copy``(공간 사이
+  메모리 복사, 복사 뒤 독립).
 
 모든 쓰기는 변경 알림 감싸개(``ObservedMemoryStore``)를 거친다.
 """
@@ -21,7 +24,7 @@ import time
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import IO, Any, Final
+from typing import IO, TYPE_CHECKING, Any, Final
 
 from agent_console_conditions import ConditionOperator
 from agent_console_contracts import Issue
@@ -30,6 +33,8 @@ from agent_console_contracts.memory import (
     MemoryAccessConfig,
     MemoryAccessContext,
     MemoryAuthor,
+    MemoryCopyRequest,
+    MemoryCopyResult,
     MemoryEntry,
     MemoryEntryPage,
     MemoryImportPolicy,
@@ -58,6 +63,7 @@ from agent_console_memory import (
     MemoryScopeKind,
     MemorySecretGuard,
     MemoryStore,
+    MemoryStoreError,
     MemoryToolkit,
     MemoryTransferLimits,
     RetentionRuleSet,
@@ -68,6 +74,7 @@ from agent_console_memory import (
     WriteBudget,
     apply_retention,
     compile_retention_rules,
+    copy_memory,
     import_markdown,
     iter_entries,
     load_default_scope_kinds,
@@ -78,6 +85,9 @@ from agent_console_memory import (
 
 from .config import SECTION_KEY, parse_memory_settings
 from .observed import ChangeSink, ObservedMemoryStore, observe
+
+if TYPE_CHECKING:
+    from .spaces import MemorySpaceServices
 
 _log = logging.getLogger(__name__)
 
@@ -164,6 +174,12 @@ class MemoryService:
         max_search_results: 에이전트 검색 도구 한 번의 최대 결과 수.
         default_scope_kinds: 패키지 기본 범위 종류 데이터를 돌려주는 함수(기본
             ``load_default_scope_kinds``, 처음 한 번 읽는다).
+        context_overrides: 도구 접근 맥락에 덮어쓸 값(필드 이름 → 값, 공간 서비스용).
+        spaces: 공간 고르기(``space``·``copy``가 쓴다). 없으면 공간 이름이 온 요청은
+            ``MemorySpacesUnavailable``. 만든 뒤 ``spaces`` 속성으로 붙여도 된다.
+
+    Attributes:
+        space_name: 이 서비스의 공간 이름(라이브러리는 None).
     """
 
     def __init__(
@@ -182,7 +198,13 @@ class MemoryService:
         max_tag_list: int = 500,
         max_search_results: int = 20,
         default_scope_kinds: Callable[[], Mapping[str, Any]] = load_default_scope_kinds,
+        context_overrides: Mapping[str, str] | None = None,
+        spaces: MemorySpaceServices | None = None,
+        space_name: str | None = None,
     ) -> None:
+        self.context_overrides: Mapping[str, str] = dict(context_overrides or {})
+        self.spaces = spaces
+        self.space_name = space_name
         self._limits = limits if limits is not None else MemoryLimits()
         self._transfer = transfer_limits if transfer_limits is not None else MemoryTransferLimits()
         self._scanner: SecretScanner = scanner if scanner is not None else SecretRulesScanner()
@@ -326,18 +348,68 @@ class MemoryService:
         write_budget: WriteBudget | None = None,
         text: ToolText | None = None,
     ) -> MemoryToolkit:
-        """에이전트 도구 묶음(이 저장소·지금 범위 종류·설치자 검색 상한)."""
+        """에이전트 도구 묶음(이 저장소·지금 범위 종류·설치자 검색 상한).
+
+        ``context_overrides``가 있으면 그 값(맥락에 있는 필드만)으로 ``context``를 덮어쓴다.
+        """
         state = self._refresh()
         return MemoryToolkit(
             self._store,
             access=access,
-            context=context,
+            context=self.effective_context(context),
             catalog=state.catalog,
             author=author,
             text=text,
             on_event=on_event,
             write_budget=write_budget,
             max_search_results=self.max_search_results,
+        )
+
+    def effective_context(self, context: MemoryAccessContext) -> MemoryAccessContext:
+        """``context``에 ``context_overrides``를 덮어쓴 맥락(모르는 필드 이름은 무시)."""
+        fields = type(context).model_fields
+        update = {k: v for k, v in self.context_overrides.items() if k in fields}
+        return context.model_copy(update=update) if update else context
+
+    # ---- 공간 ---------------------------------------------------------------------------
+
+    def space(self, name: str | None) -> MemoryService:
+        """공간 이름 → 그 공간의 서비스(None·빈 문자열 = 라이브러리 = 공간 고르기의 기본).
+
+        Raises:
+            MemorySpacesUnavailable: 공간 고르기가 없거나 제공자가 없다.
+            UnknownMemorySpace: 모르는 공간.
+            MemorySpaceError: 그 공간을 열 수 없다.
+        """
+        if self.spaces is None:
+            if not name:
+                return self
+            from .spaces import MemorySpacesUnavailable
+
+            raise MemorySpacesUnavailable(name)
+        if not name:
+            return self.spaces.library if self.spaces.library is not None else self
+        return self.spaces.get(name)
+
+    def copy(self, request: MemoryCopyRequest) -> MemoryCopyResult:
+        """``POST /memory/copy``: 공간 사이 복사(쓴 주체 = 사용자, 복사 뒤 독립, 출처 기록 없음).
+
+        원본과 대상이 같은 공간이면 ``MemoryStoreError``(400 ``bad_request``).
+        """
+        source_name = request.source.project_id or None
+        target_name = request.target.project_id or None
+        if source_name == target_name:
+            raise MemoryStoreError("원본과 대상이 같은 공간입니다")
+        source = self.space(source_name)
+        target = self.space(target_name)
+        source._refresh()
+        return copy_memory(
+            source._store,
+            target.store,
+            filter=request.filter,
+            on_conflict=request.on_conflict,
+            remap=request.remap,
+            author=USER_AUTHOR,
         )
 
     # ---- 범위 ---------------------------------------------------------------------------

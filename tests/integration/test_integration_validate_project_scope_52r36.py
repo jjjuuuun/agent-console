@@ -1,7 +1,8 @@
-"""5.2R.36 결함 B: 팀 구성 검증(`POST /graphs/{id}/validate`)에 프로젝트 범위 경고가 붙는다.
+"""5.2R.36 결함 B → 5.7R.33f 개정: 팀 구성 검증에 옛 프로젝트 범위 경고가 붙지 않는다.
 
-- 공용 팀 g-shared가 alpha 전용 에이전트 pa-2를 쓰면 검증 결과에 `project.shared_uses_project`
-  경고와 제안 `project.move_to_shared`가 온다(`POST /projects/scope-issues`와 같은 코드).
+- 정의의 `project` 필드(옛 프로젝트 전용 범위)는 design §PI(K33-5)에서 없어졌다. `mod-projects`는
+  `definitions.checks` 범위 경고를 더 내지 않는다(5.7R.33f). 옛 [정리] 화면용
+  `POST /projects/scope-issues`(deprecated, 33t 삭제)만 같은 코드를 낸다.
 - 프로젝트 모듈(`mod-projects`)을 끄면 검증 결과는 엔진 + 팀 규칙 그대로(범위 경고 없음)다.
 """
 
@@ -47,10 +48,12 @@ def _graph(graph_id: str, agent_ref: str) -> dict[str, Any]:
     }
 
 
-def _seed(client: TestClient, *, project: bool) -> None:
+def _seed(client: TestClient, *, project: bool, folder: Path | None = None) -> None:
     if project:
+        assert folder is not None
+        folder.mkdir(parents=True, exist_ok=True)
         created = client.post(
-            f"{API}/projects", json={"id": "alpha", "name": "알파", "folder": "/w/alpha"}
+            f"{API}/projects", json={"id": "alpha", "name": "알파", "folder": str(folder)}
         )
         assert created.status_code == 201, created.text
     agent = agent_doc("pa-2", "답: $prompt", **({"project": "alpha"} if project else {}))
@@ -63,20 +66,19 @@ def _codes(issues: list[dict[str, Any]]) -> set[str]:
     return {i["code"] for i in issues}
 
 
-def test_validate_reports_project_scope_warning(tmp_path: Path) -> None:
+def test_validate_has_no_project_scope_warning(tmp_path: Path) -> None:
     with server(make_settings(tmp_path, options=OPTIONS)) as client:
-        _seed(client, project=True)
-        assert SHARED_USES_PROJECT in _codes(client.post(f"{API}/projects/scope-issues").json())
+        _seed(client, project=True, folder=tmp_path / "alpha")
+        scope = client.post(f"{API}/projects/scope-issues").json()
+        [old] = [i for i in scope if i["code"] == SHARED_USES_PROJECT]
+        assert [s["id"] for s in old["suggestions"]] == [MOVE_TO_SHARED]
 
         saved = client.post(f"{API}/graphs/g-shared/validate").json()
         draft = client.post(
             f"{API}/graphs/g-shared/validate", json=_graph("g-shared", "pa-2")
         ).json()
         for issues in (saved, draft):
-            [warning] = [i for i in issues if i["code"] == SHARED_USES_PROJECT]
-            assert warning["severity"] == "warning"
-            assert [s["id"] for s in warning["suggestions"]] == [MOVE_TO_SHARED]
-            assert warning["details"]["id"] == "pa-2"
+            assert not [i for i in issues if i["code"].startswith("project.")]
             assert all(i["severity"] != "error" for i in issues)
 
 

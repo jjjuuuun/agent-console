@@ -1,13 +1,17 @@
 # agent-console-mod-projects
 
-Agent Console 프로젝트 기능 모듈(모듈 id `mod-projects`, design §UX-P.5).
+Agent Console 프로젝트 기능 모듈(모듈 id `mod-projects`, design §PI).
 
-- 프로젝트(사용자가 만든 이름 붙은 작업 단위)를 워크스페이스 `projects/<id>.yaml`에 저장한다
-  (자기 `FileDefinitionStore` 인스턴스, 정의 모듈의 종류 목록은 바꾸지 않는다).
-- 정의 범위(공용 / 프로젝트 전용, 정의의 `project` 필드) 검사·옮기기·삭제 계획을 REST와 포트로
-  낸다. 규칙 계산은 순수 패키지 `agent-console-projects`가 한다.
-- 프로젝트는 정리·거르기 단위이지 **보안 격리가 아니다**. 범위 규칙은 경고만 내고 저장·실행을
-  막지 않는다.
+- 프로젝트 = 로컬 폴더 + 그 폴더 안 구성 사본(`<folder>/.agent-console/`). 앱 등록부
+  (`<workspace>/projects/<id>.yaml`)에는 폴더·보관·라벨만, 이름·설명·프로젝트 층은 폴더 매니페스트
+  (`.agent-console/project.yaml`)에 둔다.
+- 등록할 때 매니페스트와 `.gitignore`를 **없을 때만** 만든다. 있으면 채택하고, 깨졌으면 폴더에 아무것도
+  쓰지 않는다(상태 `manifest_invalid`, [설정 파일 다시 만들기]).
+- 같은 폴더·겹치는 폴더는 등록하지 않는다(409). 삭제는 등록 해제(보관)이고 폴더 내용·기록은 지우지 않는다.
+- 폴더 확인·앱 안 찾아보기·네이티브 폴더 선택 창(서버 컴퓨터, 루프백 서버에서만), 공간 사이 복사
+  (라이브러리 ↔ 프로젝트, 참조 닫힘·충돌 선택·본문 파일 포함·비밀 거부)를 REST로 낸다.
+- 규칙 계산은 순수 패키지 `agent-console-projects`·`agent-console-local-folders`·
+  `agent-console-project-space`가 한다.
 
 ## 설치
 
@@ -18,24 +22,33 @@ pip install agent-console-mod-projects
 
 ## 최소 사용
 
-서버 없이 저장소와 서비스만 쓴다(정의 읽기 포트가 없으면 범위 검사는 "검사 못 함" 정보).
+서버 없이 등록부와 동작 묶음만 쓴다(폴더를 등록하면 그 폴더에 `.agent-console/`가 생긴다).
 
 ```python
->>> import tempfile
+>>> import tempfile, pathlib
 >>> from agent_console_contracts import ProjectCreate
+>>> from agent_console_local_folders import LocalFileSystem
 >>> from agent_console_store import FileDefinitionStore, InMemoryVersionRepository
 >>> from agent_console_mod_projects import (
-...     DefinitionSnapshot, ProjectRepository, ProjectService, project_kind)
->>> root = tempfile.mkdtemp()
+...     ProjectManager, ProjectRepository, ProjectSpaceCache, project_kind)
+>>> ws, folder = pathlib.Path(tempfile.mkdtemp()), pathlib.Path(tempfile.mkdtemp()) / "pay"
+>>> folder.mkdir()
 >>> repo = ProjectRepository(
-...     FileDefinitionStore(root, [project_kind()], versions=InMemoryVersionRepository()))
->>> repo.create(ProjectCreate(id="app", name="앱", folder="/work/app")).document
-{'id': 'app', 'folder': '/work/app', 'name': '앱'}
->>> [p.name for p in repo.list_projects()]
-['앱']
->>> service = ProjectService(repo, snapshot=DefinitionSnapshot(lambda: None))
->>> [i.code for i in service.scope_issues()]
-['project.definitions_unavailable']
+...     FileDefinitionStore(ws, [project_kind()], versions=InMemoryVersionRepository()))
+>>> options = lambda: {"config_dir": ".agent-console"}
+>>> manager_box = []
+>>> spaces = ProjectSpaceCache(lambda pid: manager_box[0].folder_of(pid), options=options)
+>>> manager = ProjectManager(
+...     repo, fs=LocalFileSystem(), spaces=spaces, space_options=options, base_dir=ws)
+>>> manager_box.append(manager)
+>>> view = manager.create(ProjectCreate(folder=str(folder), name="결제"))
+>>> view.project.id, view.project.name, view.status
+('pay', '결제', 'ready')
+>>> (folder / ".agent-console" / "project.yaml").is_file()
+True
+>>> spaces.open("pay").folder == folder
+True
+>>> manager.close()
 
 ```
 
@@ -43,34 +56,52 @@ pip install agent-console-mod-projects
 
 ## REST (호스트가 `/api/v1`을 붙인다)
 
-| 경로 | 동작 |
-| --- | --- |
-| `GET /projects` · `POST /projects` | 목록(저장 원문) · 만들기(201, `ETag`, 같은 id면 409) |
-| `GET·PUT·DELETE /projects/{id}` | PUT은 요청에 쓴 필드만(`working_directory`·`settings`의 null = 지우기), `If-Match` 선택. DELETE `?mode=move_to_shared`(기본)\|`delete_definitions` |
-| `POST /projects/{id}/delete-plan` | `DeletePlan`(그 프로젝트 전용 정의, 저장하지 않음) |
-| `POST /projects/move-plan` | `MovePlanRequest` → `MovePlan`(P 전용 → 공용이면 참조 닫힘을 함께 옮기기 후보로) |
-| `POST /projects/move` | `MovePlan`(계획 그대로 또는 고른 `moves`만)을 적용 → 실제로 바꾼 이동 + 적용 뒤 경고 |
-| `POST /projects/scope-issues` | 워크스페이스 전체 범위 이슈 `Issue[]` |
+| 메서드·경로 | 요청 → 응답 | 오류 |
+| --- | --- | --- |
+| `GET /projects` | → `ProjectView[]`(보관 포함) | — |
+| `POST /projects` | `ProjectCreate` → 201 `ProjectView` + `ETag` | 409 `project.folder_taken`(보관이면 `details.archived`)·`project.folder_overlaps`, 409 `already_exists`, 422 `folders.*`(경로 아님), 422 비밀 |
+| `GET /projects/{id}` | → `ProjectView` + `ETag`(등록부·매니페스트 합친 해시) | 404 |
+| `PUT /projects/{id}` | `ProjectUpdate`(+`If-Match`) → `ProjectView` | 412, 409 겹침·`project.folder_missing`·`project.manifest_invalid`·`project.config_readonly` |
+| `DELETE /projects/{id}` | (+`If-Match`) → 204(보관) | 404, 412 |
+| `POST /projects/{id}/manifest/reset` | `ManifestResetRequest` → `ManifestResetResult` | 409(깨진 상태 아님 `already_exists`·쓰기 불가) |
+| `POST /projects/{id}/gitignore/append` | → `ProjectView` | 409 폴더 없음·쓰기 불가 |
+| `POST /projects/{id}/legacy/plan` | → `CopyPlan`(라이브러리의 옛 `project` 필드 정의 → 이 공간) | 404, 409 `feature_unavailable` |
+| `POST /projects/copy/plan` | `CopyPlanRequest` → `CopyPlan` | 400 같은 공간, 404 `project.not_found`, 409 `feature_unavailable`·`project.manifest_invalid` |
+| `POST /projects/copy/apply` | `CopyApplyRequest` → `CopyApplyResult`(바뀐 항목만 `conflict`) | 위 + 409 `project.config_readonly`, 422 비밀(아무것도 쓰지 않음) |
+| `GET /projects/folders?path=&hidden=` | → `FolderListing`(폴더 이름만) | 403 `folders.remote_disabled`, 4xx `folders.*` |
+| `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck`(겹침·기존 구성 개수·`suggested_id`·`config_dir`) | 403 |
+| `GET /projects/folders/capabilities` | → `FolderCapabilities` | — |
+| `POST /projects/folders/pick` | `FolderPickRequest` → `FolderPickResult`(picked·cancelled·unavailable·busy·timeout·failed) | 403(루프백 아님) |
+| (deprecated) `POST /projects/move-plan`·`/move`·`/scope-issues` | 옛 정의 범위 정리(33t에서 삭제) | — |
+
+선택 창 요청은 사용자가 고를 때까지 열려 있다. 요청을 끊으면 서버가 창 프로세스를 끝낸다.
 
 ## 포트
 
 | 포트 | 방향 | 없으면 |
 | --- | --- | --- |
-| `projects.lookup` | 제공(`get_project`·`list_projects`) | — |
-| `projects.folders` | 제공(`() -> ProjectFolderSet` — 등록된 프로젝트 폴더 `registered`, 앱 작업 폴더와 같은 폴더의 프로젝트 `current`, 5.7R.30 후속) | 앱 작업 폴더 = 설정 `working_directory`(기본: `modules.options.mod-runs.working_directory`를 이어받음, 그것도 없으면 설정 파일 폴더). 작업 폴더가 없는 프로젝트는 앱 작업 폴더 |
-| `definitions.checks` | 제공(저장 전 범위 경고) | — |
-| `definitions.lookup` / `definitions.store` | 선택(읽기 / 쓰기) | 범위 검사·계획 = `project.definitions_unavailable` 정보, 옮기기 적용·정의가 있는 삭제 = 409 `feature_unavailable` |
-| `definitions.references` (여러 제공자, X25) | 선택 | 참조 규칙 대신 `project.references_unavailable` 정보 |
-| 토픽 `definitions.saved` | 구독 | 스냅샷 캐시가 `snapshot_ttl_seconds` 뒤에 갱신 |
+| `projects.lookup` | 제공(`get_project`·`list_projects`, 합친 `Project`) | — |
+| `projects.folders` | 제공(`() -> ProjectFolderSet`, `entries`(id·폴더)·`project_for`) | — |
+| `projects.spaces` | 제공(`open(project_id) -> ProjectSpace`, 캐시 상한·유휴 닫기. 모르는 id `LookupError`, 폴더 없음 `FolderMissing`) | — |
+| `definitions.spaces` | 제공(`open(project_id) -> DefinitionStore`) | — |
+| `definitions.lookup`·`definitions.store` | 선택(라이브러리) | 라이브러리가 낀 복사 409 `feature_unavailable`, 공간 종류 = `ac-store` 기본 |
+| `definitions.references`(여러) | 선택 | 복사 계획에 `project.references_unavailable` 정보 |
+| `definitions.reference_rewriters`(여러) | 선택(이름 바꾸기 복사의 참조 고치기) | 참조는 그대로, 결과 항목에 정보 이슈 |
+| `records.spaces` | 선택(`ProjectView.records_*`) | `records_state=unavailable`·`reason=link_disabled` |
+| `secrets.rules` | 선택 | 기본 비밀 규칙 |
 
-모듈을 끄면 프로젝트 종류를 열지 않아 `projects/` 폴더는 무시되고, 정의의 `project` 필드는 파일에
-남지만 아무도 거르지 않는다(지금과 같음).
+확장 지점 X35: 코드 선택 창 제공자는 entry point `agent_console.folder_dialogs`
+(`FolderDialogProvider{id, available(environ), pick(*, initial, title, timeout, cancel)}`)로 더한다.
+데이터 제공자(명령 표)는 설정 `folder_dialog.providers`.
 
 ## 설정 (`modules.options.mod-projects`)
 
-- `directory`(기본 `projects`): 워크스페이스 안 프로젝트 폴더.
-- `messages`: 범위 검사 문구 바꾸기(이슈 코드 → `string.Template` 문구).
-- `snapshot_ttl_seconds`(기본 2): 범위 검사가 읽은 정의 목록을 다시 쓰는 시간.
+- `directory`(등록부 폴더), `config_dir`(기본 `.agent-console`), `records_file`(기록 DB 파일 이름)
+- `status_timeout_seconds`(기본 2), `browse_roots`, `allow_remote_browse`(기본 끔),
+  `server_host`(서버 `host`를 이어받음), `case_insensitive_paths`(예 `/mnt/?`)
+- `folder_dialog`: `mode`(auto·off)·`providers`·`include_default_providers`·`timeout_seconds`(기본 300)
+- `max_open_spaces`·`idle_close_seconds`(공간 캐시), `records_space_prefix`(기록 연동 `space_prefix`를
+  이어받음), `messages`, (옛) `working_directory`·`snapshot_ttl_seconds`
 
 ## 단독 실행
 

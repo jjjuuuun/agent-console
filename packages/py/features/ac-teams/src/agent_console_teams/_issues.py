@@ -9,6 +9,7 @@ from agent_console_contracts import (
     AgentSettings,
     InteractionGrant,
     Issue,
+    IssueGroup,
     IssueSeverity,
     IssueSuggestion,
     KnownIssueCodes,
@@ -36,7 +37,11 @@ class TeamIssueCodes:
     DELEGATION_CYCLE: Final = "team.delegation_cycle"  # error
     FLOW_FROM_DELEGATE: Final = "team.flow_from_delegate"  # error
     BACKEND_CAPABILITY_MISSING: Final = "team.backend_capability_missing"  # error
-    MEMBER_FIELD_IGNORED: Final = "team.member_field_ignored"  # warning
+    MEMBER_FIELD_IGNORED: Final = "team.member_field_ignored"
+    """info(5.7R.38부터, 실행을 막지 않음): 위임받는 노드의 설정 값이 위임 방식에서 쓰이지 않는다
+    (위임자 값을 씀). `details{field, strategy, delegator, value_source(node|agent), agent?,
+    agent_kind?}`, `group{key = 위임자·방식·필드, message}`, `hint`. 제안: 값이 노드에서 왔으면
+    [값 비우기](`unset_node_fields`), 그 필드를 쓰는 다른 위임 방식이 있으면 방식 바꾸기."""
     VALIDATOR_FAILED: Final = "team.validator_failed"  # warning
     INTERACTION_NO_PATH: Final = "interaction.no_path"  # warning(백엔드 훅이 냄)
     INTERACTION_UNSUPPORTED_IN_DELEGATE: Final = "interaction.unsupported_in_delegate"  # warning
@@ -101,8 +106,15 @@ def make_issue(
     suggestions: Iterable[IssueSuggestion | None] = (),
     blocks_run: bool | None = None,
     path: str | None = None,
+    hint: str | None = None,
+    group: IssueGroup | None = None,
 ) -> Issue:
-    """`Issue` 하나(제안 중 None은 뺀다)."""
+    """`Issue` 하나(제안 중 None은 뺀다). `hint`·`group`은 줄 때만 이슈에 담긴다."""
+    extra: dict[str, Any] = {}
+    if hint is not None:
+        extra["hint"] = hint
+    if group is not None:
+        extra["group"] = group
     return Issue(
         severity=severity,
         code=code,
@@ -113,4 +125,5 @@ def make_issue(
         details=dict(details or {}),
         suggestions=[s for s in suggestions if s is not None],
         blocks_run=blocks_run,
+        **extra,
     )

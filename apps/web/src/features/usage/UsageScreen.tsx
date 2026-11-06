@@ -14,10 +14,12 @@ import { ROUTE_ROLES, routeIconNode } from "../library";
 import { RollupPanel, buildLinesByView } from "./RollupPanel";
 import { SourcesPanel } from "./SourcesPanel";
 import { UsageSetupGuide, type SetupGuideState } from "./UsageSetupGuide";
+import { TrustGroupCard } from "./TrustGroupCard";
 import { WindowCard } from "./WindowCard";
+import { basisKind } from "./cardParts";
 import { usageMessages as t } from "./messages";
-import { OFFICIAL_TRUST, USAGE_POLL_MS, USAGE_REPORT_KEY, USAGE_SOURCES_KEY, USAGE_ROLLUP_PERIODS, USAGE_ROLLUP_VIEWS, USAGE_SETUP_HASH, DEFAULT_ROLLUP_PERIOD, DEFAULT_ROLLUP_VIEW } from "./usageConfig";
-import { buildWindowGroups, plainText, filterRollupByDays, sourceIndex, windowDisplayName, windowNameIndex, type RollupDimension } from "./usageLib";
+import { OFFICIAL_TRUST, USAGE_TRUST_ORDER, USAGE_POLL_MS, USAGE_REPORT_KEY, USAGE_SOURCES_KEY, USAGE_ROLLUP_PERIODS, USAGE_ROLLUP_VIEWS, USAGE_SETUP_HASH, DEFAULT_ROLLUP_PERIOD, DEFAULT_ROLLUP_VIEW } from "./usageConfig";
+import { buildWindowGroups, groupWindowsByTrust, plainText, filterRollupByDays, sourceIndex, windowDisplayName, windowNameIndex, type RollupDimension } from "./usageLib";
 import "./usage.css";
 
 const NO_SOURCES: readonly string[] = [];
@@ -57,6 +59,10 @@ export function UsageScreen() {
   const groups = useMemo(
     () => buildWindowGroups(report.data?.windows ?? [], order, (id) => index.get(id)?.descriptor.trust === OFFICIAL_TRUST),
     [report.data?.windows, order, index],
+  );
+  const grouped = useMemo(
+    () => groupWindowsByTrust(groups, (id) => index.get(id)?.descriptor.trust ?? "", OFFICIAL_TRUST, USAGE_TRUST_ORDER),
+    [groups, index],
   );
   const latestBySource = useMemo(() => {
     const map = new Map<string, number>();
@@ -116,6 +122,7 @@ export function UsageScreen() {
     cards = (
       <div className="usage-cards" role="status" aria-busy="true" aria-label={t.loading}>
         {[0, 1, 2].map((i) => <div key={i} className="usage-card app-skeleton-row" style={{ height: 140 }} />)}
+        <div className="app-skeleton-row usage-basis-skeleton" />
       </div>
     );
   } else if (report.isError && report.data === undefined) {
@@ -142,13 +149,23 @@ export function UsageScreen() {
       />
     );
   } else {
+    const nameOfGroup = (g: (typeof groups)[number]) => windowDisplayName(g.window, labels, windowInfo[g.window], sourceInfo(g.primary.source).title);
+    const hasOfficialCard = grouped.windowCards.length > 0;
     cards = (
-      <div className="usage-cards" role="list" aria-label={t.cards.region} data-dim={report.isError ? "true" : undefined}>
-        {groups.map((g) => (
-          <div role="listitem" key={g.window}>
-            <WindowCard name={windowDisplayName(g.window, labels, windowInfo[g.window], sourceInfo(g.primary.source).title)} group={g} sourceInfo={sourceInfo} nowMs={nowMs} staleAfterSeconds={staleAfter} />
-          </div>
-        ))}
+      <div className="usage-cards-area" data-dim={report.isError ? "true" : undefined}>
+        <div className="usage-cards" role="list" aria-label={t.cards.region} aria-describedby="usage-basis">
+          {grouped.windowCards.map((g) => (
+            <div role="listitem" key={g.window}>
+              <WindowCard name={nameOfGroup(g)} group={g} sourceInfo={sourceInfo} nowMs={nowMs} staleAfterSeconds={staleAfter} />
+            </div>
+          ))}
+          {grouped.bundles.map((b) => (
+            <div role="listitem" key={`trust:${b.trust}`}>
+              <TrustGroupCard trust={b.trust} rows={b.rows} nameOf={nameOfGroup} sourceInfo={sourceInfo} hasOfficialCard={hasOfficialCard} nowMs={nowMs} staleAfterSeconds={staleAfter} />
+            </div>
+          ))}
+        </div>
+        <p id="usage-basis" className="usage-basis app-muted">{t.basis[basisKind(groups, order.length > 0)]}</p>
       </div>
     );
   }

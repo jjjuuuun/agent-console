@@ -5,7 +5,7 @@ from __future__ import annotations
 import builtins
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -60,6 +60,19 @@ class DefinitionSummary:
     """종류의 `summary_fields`에서 복사한 문자열 필드(예: 리소스의 `type`)."""
     attributes: dict[str, Any] = field(default_factory=dict)
     """문서의 최상위 `attributes`(객체일 때만, 복사본). 없거나 객체가 아니면 빈 dict."""
+
+
+@runtime_checkable
+class VersionWriteCheck(Protocol):
+    """쓰기 전에 기록소를 쓸 수 있는지 확인할 수 있는 버전 기록소(선택 프로토콜, 33x).
+
+    정의 저장소의 쓰기 전 검사(`WriteGuard`)가 불러, 버전을 쓸 수 없을 때 정의 파일도 쓰지 않게
+    한다.
+    """
+
+    def ensure_writable(self) -> None:
+        """쓸 수 없으면 예외(`StoreError` — 예: `RecordsUnavailable`). 쓸 수 있으면 반환."""
+        ...
 
 
 class VersionRepository(Protocol):

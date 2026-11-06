@@ -1,51 +1,84 @@
-"""서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-projects``, design §UX-P.5).
+"""서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-projects``, design §PI.10).
 
-- 저장: 워크스페이스(``BaseServices.paths.workspace``)의 ``projects/<id>.yaml``을 자기
+- 등록부: 워크스페이스(``BaseServices.paths.workspace``)의 ``projects/<id>.yaml``을 자기
   ``FileDefinitionStore`` 인스턴스로 맡는다(정의 모듈 종류 목록은 그대로). 버전 기록은 호스트 DB
-  핸들의 정의 버전 표(legacy 계보), 없으면 메모리. 기록소는 처음 쓸 때 연다(그때 멱등 upgrade —
-  프로젝트를 쓰지 않는 서버는 DB 파일을 만들지 않는다).
-- 제공: ``projects.lookup``, ``definitions.checks``(범위 경고, 정의 읽기 포트가 있을 때만
-  이슈를 낸다).
-- 선택: ``definitions.lookup``·``definitions.store``·``definitions.references``. 구독
-  ``definitions.saved``(정의 스냅샷 캐시 버리기).
-- 웹 역할 ``projects``. 이 모듈을 끄면 프로젝트 종류를 열지 않아 ``projects/`` 폴더는 무시되고,
-  정의의 ``project`` 필드는 파일·요약에 남지만 아무도 거르지 않는다(지금과 같음).
+  핸들의 정의 버전 표(legacy 계보), 없으면 메모리 — 처음 쓸 때 연다.
+- 프로젝트 공간: 등록 폴더의 ``<config_dir>/``(``ac-project-space``). 정의 종류는 라이브러리
+  저장소의 종류 정보(``kind_info``)를 그대로 쓴다(해시가 같아 복사 계획의 identical 판정이 맞음).
+- 제공: ``projects.lookup``·``projects.folders``·``projects.spaces``·``definitions.spaces``.
+- 선택: ``definitions.lookup``·``definitions.store``·``definitions.references``·
+  ``definitions.reference_rewriters``·``records.spaces``·``secrets.rules``.
+  구독 ``definitions.saved``.
+- 웹 역할 ``projects``. 이 모듈을 끄면 프로젝트 기능이 없고 각 기능은 단독 동작한다.
 """
 
 from __future__ import annotations
 
+import shutil
+import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-from agent_console_contracts import CONTRACT_VERSIONS, Issue
+from agent_console_contracts import CONTRACT_VERSIONS
+from agent_console_local_folders import CommandRunner, FileSystem, LocalFileSystem, SubprocessRunner
 from agent_console_modkit import DatabaseHandle, ModuleContext, ModuleDescriptor, ModuleParts
-from agent_console_projects import ProjectFolderSet, References, project_folders
+from agent_console_modkit.host import is_loopback_host
+from agent_console_project_space import SpaceLayout
+from agent_console_projects import References, load_path_rules
+from agent_console_secret_rules import SecretRules, default_rules
 from agent_console_store import (
+    DEFAULT_KINDS,
+    DefinitionKind,
     FileDefinitionStore,
     LazyVersionRepository,
+    ObservedVersionRepository,
+    RecordsHandle,
+    RecordsUnavailable,
+    RecordsVersionRepository,
+    StoreError,
     VersionRepository,
     versions_for,
 )
 
+from .copying import CopyService
 from .definitions import DefinitionSnapshot, combine_references
 from .errors import ERROR_MAP
+from .folders import FolderDialogProvider, FolderPicker, FolderService, load_dialog_providers
 from .ports import (
-    DEFINITION_CHECKS,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_REFERENCES,
+    DEFINITIONS_REWRITERS,
     DEFINITIONS_SAVED,
+    DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     PROJECT_FOLDERS,
     PROJECTS_LOOKUP,
+    PROJECTS_SPACES,
+    RECORDS_SPACES,
+    SECRET_RULES,
     DefinitionReader,
     SavedLike,
 )
+from .projects import ProjectManager
 from .repository import PROJECT_KIND_NAME, ProjectRepository, project_kind
-from .routes import build_router
-from .service import ProjectService
+from .routes import Services, build_router
+from .service import ScopeService
 from .settings import SETTINGS_COMPAT, ProjectModuleSettings
+from .spaces import DefinitionSpacesView, ProjectSpaceCache, VersionsFactory
+
+
+@dataclass(frozen=True)
+class SpaceSaved:
+    """공간 저장 알림(``definitions.saved`` 항목 + 공간 이름 = 등록 id, 33x)."""
+
+    kind: str
+    id: str
+    version_hash: str
+    space: str | None = None
+
 
 MODULE_ID = "mod-projects"
 WEB_ROLES: tuple[str, ...] = ("projects",)
@@ -63,46 +96,94 @@ def _version() -> str:
 
 
 def open_versions(database: DatabaseHandle | None) -> VersionRepository:
-    """정의 버전 기록소를 연다(처음 쓸 때만 부른다). DB가 있으면 legacy 계보를 올리고(멱등) 그
-    DB의 정의 버전 표를, 없으면 메모리를 쓴다. 시작 때 열지 않으므로 프로젝트를 쓰지 않는 서버는
-    DB 파일을 만들지 않는다."""
+    """등록부 버전 기록소를 연다(처음 쓸 때만). DB가 있으면 legacy 계보를 올리고(멱등) 그 DB의 정의
+    버전 표를, 없으면 메모리를 쓴다. 프로젝트를 쓰지 않는 서버는 DB 파일을 만들지 않는다."""
     if database is not None:
         database.upgrade()
     return versions_for(database)
 
 
-class ProjectScopeCheck:
-    """``definitions.checks`` 하나: 저장하려는 정의의 범위 경고(``ProjectService.check``)."""
-
-    def __init__(self, service: Callable[[], ProjectService]) -> None:
-        self._service = service
-
-    def issues(self, kind: str, document: Mapping[str, Any]) -> Sequence[Issue]:
-        return self._service().check(kind, document)
+def library_kinds(store: Any) -> list[DefinitionKind]:
+    """라이브러리 저장소의 종류 정보(``kind_info``가 없으면 ``ac-store`` 기본 종류에서 이름이 같은
+    것)."""
+    if store is None:
+        return list(DEFAULT_KINDS)
+    info = getattr(store, "kind_info", None)
+    defaults = {k.name: k for k in DEFAULT_KINDS}
+    out: list[DefinitionKind] = []
+    for name in store.kinds():
+        if name == PROJECT_KIND_NAME:
+            continue
+        kind: Any = None
+        if callable(info):
+            try:
+                kind = info(name)
+            except StoreError:
+                kind = None
+        kind = kind if isinstance(kind, DefinitionKind) else defaults.get(name)
+        if kind is not None:
+            out.append(kind)
+    return out
 
 
 class ProjectsModule:
-    """프로젝트 기능 모듈."""
+    """프로젝트 기능 모듈.
+
+    Args:
+        runner: 선택 창 명령 실행기(기본 ``SubprocessRunner``). 테스트는 가짜를 넣는다.
+        dialog_providers: 코드 선택 창 제공자(기본 entry point ``agent_console.folder_dialogs``).
+        platform: 서버 플랫폼(기본 ``sys.platform``).
+        which: 실행 파일 찾기(기본 ``shutil.which``).
+        fs: 폴더 상태 읽기(기본 ``LocalFileSystem``).
+        versions: 프로젝트 공간 버전 기록소 공장. 기본 = `records.spaces`가 있으면 그 폴더 기록 DB
+            (`RecordsVersionRepository`, 저장마다 `definitions.saved`에 `space`), 없으면
+            메모리(33x).
+    """
 
     descriptor = ModuleDescriptor(
         id=MODULE_ID,
         version=_version(),
         kind="feature",
         title="프로젝트",
-        description="프로젝트 만들기·고치기·지우기, 정의 범위(공용·프로젝트 전용) 검사와 옮기기",
-        provides=(PROJECTS_LOOKUP, DEFINITION_CHECKS, PROJECT_FOLDERS),
-        optional=(DEFINITIONS_LOOKUP, DEFINITIONS_STORE, DEFINITIONS_REFERENCES),
+        description="프로젝트 폴더 등록·폴더 고르기·프로젝트 구성 공간·공간 사이 복사",
+        provides=(PROJECTS_LOOKUP, PROJECT_FOLDERS, PROJECTS_SPACES, DEFINITIONS_SPACES),
+        optional=(
+            DEFINITIONS_LOOKUP,
+            DEFINITIONS_STORE,
+            DEFINITIONS_REFERENCES,
+            DEFINITIONS_REWRITERS,
+            RECORDS_SPACES,
+            SECRET_RULES,
+        ),
         settings_schema=ProjectModuleSettings,
         settings_compat=SETTINGS_COMPAT,
         contracts={"projects": CONTRACT_VERSIONS["projects"]},
         web_roles=WEB_ROLES,
     )
 
+    def __init__(
+        self,
+        *,
+        runner: CommandRunner | None = None,
+        dialog_providers: Sequence[FolderDialogProvider] | None = None,
+        platform: str | None = None,
+        which: Callable[[str], str | None] | None = None,
+        fs: FileSystem | None = None,
+        versions: VersionsFactory | None = None,
+    ) -> None:
+        self._runner = runner
+        self._providers = dialog_providers
+        self._platform = platform
+        self._which = which
+        self._fs = fs
+        self._versions = versions
+
     def build(self, ctx: ModuleContext) -> ModuleParts:
         cfg = ctx.settings
         if not isinstance(cfg, ProjectModuleSettings):
             cfg = ProjectModuleSettings()
         root = ctx.paths.workspace if ctx.paths is not None else DEFAULT_WORKSPACE
+        base_dir = (ctx.paths.base_dir if ctx.paths is not None else Path(".")).absolute()
         database = ctx.database
         store = FileDefinitionStore(
             root,
@@ -110,23 +191,124 @@ class ProjectsModule:
             versions=LazyVersionRepository(lambda: open_versions(database)),
         )
         repository = ProjectRepository(store)
+        fs = self._fs or LocalFileSystem()
+        environ: Mapping[str, str] = ctx.environ
+        rules = load_path_rules({"case_insensitive": list(cfg.case_insensitive_paths)})
+        layout = SpaceLayout(records_file=cfg.records_file) if cfg.records_file else SpaceLayout()
+
+        def library() -> Any:
+            return ctx.port(DEFINITIONS_STORE)
 
         def reader() -> DefinitionReader | None:
             return ctx.port(DEFINITIONS_LOOKUP) or ctx.port(DEFINITIONS_STORE)
 
+        def secret_rules() -> SecretRules:
+            port = ctx.port(SECRET_RULES)
+            return port() if port is not None else default_rules()
+
+        def space_options() -> dict[str, Any]:
+            return {
+                "kinds": library_kinds(reader()),
+                "config_dir": cfg.config_dir,
+                "layout": layout,
+                "secret_rules": secret_rules(),
+            }
+
+        manager_ref: list[ProjectManager] = []
+
+        def folder_of(project_id: str) -> str | None:
+            return manager_ref[0].folder_of(project_id)
+
+        def records_versions(project_id: str, _root: Path) -> VersionRepository | None:
+            """기본 공간 버전 기록소(33x): 그 폴더 기록 DB(``records.spaces``), 없으면 메모리."""
+            if ctx.port(RECORDS_SPACES) is None:
+                return None
+            name = cfg.records_space_prefix + project_id
+
+            def handle() -> RecordsHandle:
+                port = ctx.port(RECORDS_SPACES)
+                if port is None:
+                    raise RecordsUnavailable("link_disabled")
+                return port.open(name)
+
+            def saved(kind: str, item_id: str, version_hash: str) -> None:
+                ctx.publish(DEFINITIONS_SAVED, SpaceSaved(kind, item_id, version_hash, project_id))
+
+            return ObservedVersionRepository(RecordsVersionRepository(handle), saved)
+
+        spaces = ProjectSpaceCache(
+            folder_of,
+            options=space_options,
+            max_open=cfg.max_open_spaces,
+            idle_seconds=cfg.idle_close_seconds,
+            versions=self._versions or records_versions,
+        )
+        wd = cfg.working_directory or Path(".")
+        manager = ProjectManager(
+            repository,
+            fs=fs,
+            spaces=spaces,
+            space_options=space_options,
+            base_dir=base_dir,
+            rules=rules,
+            records=lambda: ctx.port(RECORDS_SPACES),
+            records_prefix=cfg.records_space_prefix,
+            status_timeout=cfg.status_timeout_seconds,
+            environ=environ,
+            working_directory=(wd if wd.is_absolute() else base_dir / wd).absolute(),
+            config_dir=cfg.config_dir,
+        )
+        manager_ref.append(manager)
+
+        loopback = is_loopback_host(cfg.server_host or "127.0.0.1")
+        folders = FolderService(
+            fs=fs,
+            registered=manager.registered,
+            taken_ids=repository.ids,
+            space_options=space_options,
+            allowed=lambda: loopback or cfg.allow_remote_browse,
+            environ=environ,
+            roots=cfg.browse_roots,
+            rules=rules,
+            config_dir=cfg.config_dir,
+        )
+        picker = FolderPicker(
+            settings=cfg.folder_dialog,
+            runner=self._runner or SubprocessRunner(),
+            providers=(self._providers if self._providers is not None else load_dialog_providers()),
+            loopback=lambda: loopback,
+            platform=self._platform or sys.platform,
+            which=self._which or shutil.which,
+            environ=environ,
+            fs=fs,
+            check=folders.check_path,
+        )
+
         def references() -> References | None:
             return combine_references(ctx.ports(DEFINITIONS_REFERENCES))
 
+        copies = CopyService(
+            library=library,
+            spaces=spaces,
+            known=lambda pid: repository.find(pid) is not None,
+            references=references,
+            rewriters=lambda: ctx.ports(DEFINITIONS_REWRITERS),
+            library_rules=secret_rules,
+            unavailable=lambda: ctx.unavailable(
+                DEFINITIONS_STORE, "정의 기능이 꺼져 있어 공용 구성을 복사할 수 없습니다"
+            ),
+            messages=cfg.messages,
+        )
         snapshot = DefinitionSnapshot(
             reader, ttl=cfg.snapshot_ttl_seconds, skip_kinds=(PROJECT_KIND_NAME,)
         )
-        service = ProjectService(
+        scope = ScopeService(
             repository,
             snapshot=snapshot,
             writer=lambda: ctx.port(DEFINITIONS_STORE),
             references=references,
             unavailable=lambda: ctx.unavailable(
-                DEFINITIONS_STORE, "정의 기능이 꺼져 있어 정의를 옮기거나 지울 수 없습니다"
+                DEFINITIONS_STORE, "정의 기능이 꺼져 있어 정의를 옮길 수 없습니다"
             ),
             messages=cfg.messages,
         )
@@ -135,20 +317,24 @@ class ProjectsModule:
             snapshot.invalidate()
 
         ctx.subscribe(DEFINITIONS_SAVED, on_saved)
-        base_dir = ctx.paths.base_dir if ctx.paths is not None else Path(".")
-        wd = cfg.working_directory or Path(".")
-        working_directory = (wd if wd.is_absolute() else base_dir / wd).absolute()
+        ctx.provide(PROJECTS_LOOKUP, manager)
+        ctx.provide(PROJECT_FOLDERS, manager.folder_set)
+        ctx.provide(PROJECTS_SPACES, spaces)
+        ctx.provide(DEFINITIONS_SPACES, DefinitionSpacesView(spaces))
 
-        def folders() -> ProjectFolderSet:
-            return project_folders(
-                repository.list_projects(), base_dir=base_dir, working_directory=working_directory
-            )
+        async def shutdown() -> None:
+            manager.close()
 
-        ctx.provide(PROJECTS_LOOKUP, repository)
-        ctx.provide(PROJECT_FOLDERS, folders)
-        ctx.provide(DEFINITION_CHECKS, ProjectScopeCheck(lambda: service))
-
-        return ModuleParts(routers=[build_router(lambda: service)], error_map=dict(ERROR_MAP))
+        services = Services(
+            projects=lambda: manager,
+            folders=lambda: folders,
+            picker=lambda: picker,
+            copies=lambda: copies,
+            scope=lambda: scope,
+        )
+        return ModuleParts(
+            routers=[build_router(services)], error_map=dict(ERROR_MAP), shutdown=[shutdown]
+        )
 
 
 module = ProjectsModule()
@@ -158,7 +344,8 @@ __all__ = [
     "DEFAULT_WORKSPACE",
     "MODULE_ID",
     "WEB_ROLES",
-    "ProjectScopeCheck",
     "ProjectsModule",
+    "library_kinds",
     "module",
+    "open_versions",
 ]

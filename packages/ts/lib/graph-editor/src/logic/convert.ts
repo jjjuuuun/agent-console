@@ -270,7 +270,7 @@ export function buildFlowModel(i: FlowModelInput): FlowModel {
     }
     if (state !== undefined) data.state = state;
     const ic = i.issues?.nodes.get(n.id);
-    if (ic !== undefined && ic.error + ic.warning > 0) data.issueCount = { error: ic.error, warning: ic.warning };
+    if (ic !== undefined && ic.error + ic.warning + ic.other > 0) data.issueCount = { error: ic.error, warning: ic.warning, ...(ic.other > 0 ? { info: ic.other } : {}) };
     if (d === undefined) data.unknownType = n.type;
     return {
       id: n.id,

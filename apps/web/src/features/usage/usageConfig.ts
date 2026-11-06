@@ -8,6 +8,9 @@ export const USAGE_POLL_MS = 30_000;
 /** 대표값 규칙(기본)의 "공식" 신뢰 등급 값. 디스크립터 `trust` 문자열과 비교한다. */
 export const OFFICIAL_TRUST = "official";
 
+/** 공식이 아닌 등급 묶음 카드의 순서(데이터). 여기 없는 등급은 처음 나온 순서로 뒤에 붙는다. */
+export const USAGE_TRUST_ORDER: readonly string[] = ["observed", "estimated", "unofficial"];
+
 /** 집계 보기(차원) 목록. 표시 이름은 messages.rollup.views. */
 export const USAGE_ROLLUP_VIEWS: readonly RollupDimension[] = ["agent_id", "graph_id", "model", "day"];
 export const DEFAULT_ROLLUP_VIEW: RollupDimension = "agent_id";

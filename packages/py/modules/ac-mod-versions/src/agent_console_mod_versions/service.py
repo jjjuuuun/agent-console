@@ -48,6 +48,8 @@ class VersionService:
         rules: 지금 비밀 의심 규칙을 돌려주는 함수(없으면 기본 규칙).
         secret_issue_codes: 비밀 위치로 볼 검사 이슈 코드.
         max_per_definition: 정의마다 남길 버전 수(None = 모두).
+        spaces: 공간 이름 → 그 공간의 서비스(``definitions.saved``의 ``space`` 항목용). 없으면 공간
+            항목은 건너뛴다.
     """
 
     def __init__(
@@ -58,8 +60,10 @@ class VersionService:
         rules: Callable[[], SecretRules] | None = None,
         secret_issue_codes: Collection[str] = DEFAULT_SECRET_ISSUE_CODES,
         max_per_definition: int | None = None,
+        spaces: Callable[[str], VersionService] | None = None,
     ) -> None:
         self.store = store
+        self._spaces = spaces
         self._checks = checks
         self._rules = rules or default_rules
         self._secret_codes = frozenset(secret_issue_codes)
@@ -178,8 +182,22 @@ class VersionService:
         return removed
 
     def on_saved(self, saved: SavedDefinition) -> None:
-        """``definitions.saved`` 구독자: 저장된 정의에 보존 개수를 적용한다."""
-        self.retain(saved.kind, saved.id, (saved.version_hash,))
+        """``definitions.saved`` 구독자: 저장된 정의에 보존 개수를 적용한다.
+
+        항목에 ``space``가 있으면 그 공간(``spaces``)의 서비스로 적용한다. 공간을 열 수 없으면
+        기록만 하고 넘어간다(저장은 이미 끝났다).
+        """
+        space = getattr(saved, "space", None)
+        target = self
+        if isinstance(space, str) and space:
+            if self._spaces is None:
+                return
+            try:
+                target = self._spaces(space)
+            except Exception:
+                _log.exception("보존 개수 적용: 공간을 열 수 없음 %s", space)
+                return
+        target.retain(saved.kind, saved.id, (saved.version_hash,))
 
     def retain_all(self) -> int:
         """저장소의 모든 정의에 보존 개수를 적용한다(시작 때 한 번)."""

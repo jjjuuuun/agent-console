@@ -1,6 +1,12 @@
 /* 사용량 화면. 게이지 채움 색은 사용률에 따라 바꾸지 않는다(--ac-gauge-fill 고정). */
 .usage-body { display: flex; flex-direction: column; gap: var(--ac-space-5); }
 .usage-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ac-space-3); }
+.usage-cards-area { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.usage-cards-area[data-dim="true"] { opacity: 0.6; }
+.usage-cards > [role="listitem"] { display: flex; min-width: 0; }
+.usage-cards > [role="listitem"] > .usage-card { flex: 1 1 auto; }
+.usage-basis { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.usage-basis-skeleton { grid-column: 1 / -1; height: 16px; max-width: 320px; }
 .usage-card { background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
 .usage-card[data-old="true"] .usage-value { opacity: 0.6; }
 .usage-card-head { display: flex; align-items: center; gap: var(--ac-space-2); }
@@ -10,6 +16,25 @@
 .usage-big { font-size: 20px; font-weight: 600; line-height: 28px; }
 .usage-none { color: var(--ac-text-muted); }
 .usage-reset, .usage-source, .usage-rule { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.usage-oneline { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.usage-source { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
+.usage-source > .usage-oneline { flex: 1 1 auto; }
+.usage-headline { display: flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
+.usage-big-muted { font-size: var(--ac-text-md); line-height: 28px; color: var(--ac-text-muted); }
+.usage-tokens { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.usage-info { position: relative; display: inline-flex; flex: 0 0 auto; }
+.usage-info-btn { appearance: none; background: none; border: 0; padding: 0 2px; margin: 0; font: inherit; font-size: 12px; line-height: 1; color: var(--ac-text-muted); cursor: help; border-radius: var(--ac-radius-sm); }
+.usage-info-btn:hover, .usage-info-btn:focus-visible { color: var(--ac-text); }
+.usage-info-line { display: block; }
+.usage-group-basis { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.usage-group-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.usage-group-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 28px; min-width: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.usage-group-name { flex: 0 0 56px; }
+.usage-group-value { display: inline-flex; align-items: center; gap: var(--ac-space-2); flex: 1 1 auto; min-width: 0; }
+.usage-row-val { font-weight: 600; }
+.usage-row-tokens { font-size: var(--ac-text-xs); }
+.usage-group-gauge { flex: 0 0 48px; display: inline-flex; }
+.usage-group-reset { flex: 0 0 auto; font-size: var(--ac-text-xs); white-space: nowrap; }
 .usage-rule { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .usage-warn { color: var(--ac-warning); }
 .usage-others-list { margin: var(--ac-space-1) 0 0; padding-left: var(--ac-space-4); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); display: flex; flex-direction: column; gap: var(--ac-space-1); }
@@ -18,10 +43,27 @@
 .usage-rollup-head > .app-block-title { margin: 0; margin-right: auto; }
 .usage-rollup-head > .runs-filter { flex-direction: row; align-items: center; gap: var(--ac-space-2); }
 .usage-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.usage-bar-row { display: grid; grid-template-columns: 160px minmax(120px, 1fr) 80px minmax(160px, auto) auto; gap: var(--ac-space-2); align-items: center; min-height: 32px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.usage-bar-row { display: grid; grid-template-columns: minmax(120px, 240px) minmax(80px, 1fr) 80px 176px 96px; gap: var(--ac-space-2); align-items: center; min-height: 32px; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .usage-bar-track { background: var(--ac-surface-3); height: 12px; border-radius: var(--ac-radius-full); overflow: hidden; display: block; }
 .usage-bar-fill { display: block; height: 100%; background: color-mix(in srgb, var(--ac-accent) 60%, transparent); }
+.usage-bars[data-note="false"] .usage-bar-row { grid-template-columns: minmax(120px, 240px) minmax(80px, 1fr) 80px 176px; }
 .usage-bar-total { text-align: right; }
+.usage-bar-split { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.usage-bar-note { display: inline-flex; gap: var(--ac-space-1); min-width: 0; }
+.usage-rollup { container-type: inline-size; }
+@container (max-width: 720px) {
+  .usage-bar-row, .usage-bars[data-note="false"] .usage-bar-row { grid-template-columns: minmax(100px, 1fr) minmax(60px, 1fr) 80px 96px; grid-template-areas: "name bar total note" ". split split ."; min-height: 44px; }
+  .usage-bars[data-note="false"] .usage-bar-row { grid-template-columns: minmax(100px, 1fr) minmax(60px, 1fr) 80px; grid-template-areas: "name bar total" ". split split"; }
+  .usage-bar-name { grid-area: name; }
+  .usage-bar-track { grid-area: bar; }
+  .usage-bar-total { grid-area: total; }
+  .usage-bar-split { grid-area: split; font-size: var(--ac-text-xs); }
+  .usage-bar-note { grid-area: note; }
+}
+.usage-rollup-table { table-layout: fixed; }
+.usage-rollup-table th:first-child { width: 240px; }
+.usage-rollup-table th:nth-child(2), .usage-rollup-table th:nth-child(3), .usage-rollup-table th:nth-child(4) { width: 96px; text-align: right; }
+.usage-rollup-table th:nth-child(5) { width: 120px; }
 .usage-columns { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; gap: var(--ac-space-1); height: 160px; }
 .usage-columns li { flex: 1 1 0; min-width: 18px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: var(--ac-space-1); }
 .usage-col-bar { display: block; width: 100%; background: color-mix(in srgb, var(--ac-accent) 60%, transparent); border-radius: var(--ac-radius-sm) var(--ac-radius-sm) 0 0; min-height: 2px; }

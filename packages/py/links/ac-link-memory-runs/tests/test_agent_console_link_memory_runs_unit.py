@@ -397,3 +397,77 @@ def test_no_hardcoded_scope_kind_tool_or_resource_type_names() -> None:
             continue
         leaked = _string_constants(path) & banned
         assert not leaked, (path.name, leaked)
+
+
+# ---------------------------------------------------------------- 프로젝트 공간(5.7R.33z)
+
+
+def _graph() -> Any:
+    from agent_console_contracts import Graph
+
+    return Graph.model_validate({"id": "g1", "name": "g", "nodes": [], "edges": []})
+
+
+class _NoSpaces:
+    """``space`` 없는 옛 서비스 모양."""
+
+    def __init__(self, inner: StaticMemoryService) -> None:
+        self.inner = inner
+
+    def catalog(self) -> Any:
+        return self.inner.catalog()
+
+    def toolkit(self, *args: Any, **kwargs: Any) -> Any:
+        return self.inner.toolkit(*args, **kwargs)
+
+
+class _Failing(StaticMemoryService):
+    def space(self, name: str | None) -> StaticMemoryService:
+        if name:
+            err = RuntimeError("폴더 없음")
+            err.code = "project.folder_missing"  # type: ignore[attr-defined]
+            raise err
+        return self
+
+
+CONFIG = {"scopes": [{"kind": "journal", "access": ["read", "write"]}]}
+
+
+async def test_project_run_uses_space_store_only() -> None:
+    project = _service()
+    library = StaticMemoryService(catalog=project.catalog(), spaces={"p1": project})
+    scope = MemoryRunScope(lambda: library, slot="memory")
+    found = scope.scope_run(_graph(), Services(), project_id="p1")
+    assert found is not None
+    [provider] = found.services[TOOL_PROVIDERS]
+    got = provider.provide(_ctx(ResourceBundle(slots={"memory": [_item(CONFIG)]})))
+    assert got.warnings == ()
+    write = next(t for t in got.host_tools if t.name.endswith("write"))
+    result = await write.handler({"key": "k", "content": "x"})
+    assert not result.is_error, result.text
+    from agent_console_contracts.memory import MemoryScopeRef
+
+    assert project.store.find(MemoryScopeRef(kind="journal", id=""), "k") is not None
+    assert library.store.find(MemoryScopeRef(kind="journal", id=""), "k") is None
+
+
+@pytest.mark.parametrize("make", [lambda s: _NoSpaces(s), lambda s: _Failing(catalog=s.catalog())])
+async def test_project_run_without_space_is_scope_unavailable(make: Any) -> None:
+    base = _service()
+    service = make(base)
+    scope = MemoryRunScope(lambda: service, slot="memory")
+    found = scope.scope_run(_graph(), Services(), project_id="p1")
+    assert found is not None
+    [provider] = found.services[TOOL_PROVIDERS]
+    got = provider.provide(_ctx(ResourceBundle(slots={"memory": [_item(CONFIG)]})))
+    assert got.consumed_slots == {"memory"}
+    assert [w.code for w in got.warnings] == [KnownIssueCodes.MEMORY_SCOPE_UNAVAILABLE]
+    names = [t.name for t in got.host_tools]
+    assert names  # 도구 모양은 그대로
+    write = next(t for t in got.host_tools if t.name.endswith("write"))
+    result = await write.handler({"key": "k", "content": "x"})
+    assert result.is_error
+    assert KnownIssueCodes.MEMORY_SCOPE_UNAVAILABLE in result.text
+    from agent_console_contracts.memory import MemoryScopeRef
+
+    assert base.store.find(MemoryScopeRef(kind="journal", id=""), "k") is None

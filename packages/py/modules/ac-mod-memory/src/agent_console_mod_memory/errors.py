@@ -14,6 +14,9 @@
 | 그 밖의 ``MemoryStoreError``(커서 형식 등) | ``bad_request``(400) | — |
 | ``MemoryRequestError``(틀린 질의·본문) | ``validation_failed``(422) | ``path``·``issues`` |
 | ``VersionRequiredError``(``If-Match`` 없음) | ``version_required``(428) | — |
+| ``MemorySpacesUnavailable``(공간 제공자 없음) | ``feature_unavailable``(409) | ``project_id`` |
+| ``UnknownMemorySpace`` | ``project.not_found``(404) | ``project_id`` |
+| 그 밖의 ``MemorySpaceError``(폴더 없음 등) | 제공자 예외의 ``code`` | ``project_id`` |
 """
 
 from __future__ import annotations
@@ -33,6 +36,8 @@ from agent_console_memory import (
     VersionConflictError,
 )
 from agent_console_modkit import ErrorMapping, ErrorReply
+
+from .spaces import MemorySpaceError
 
 INVALID_REQUEST: Final = "memory.invalid_request"
 """요청 이슈 코드(``details.issues[].code``): 질의 인자·본문 모양이 틀렸다."""
@@ -108,7 +113,14 @@ def _store(exc: Exception) -> ErrorReply:
     return ErrorReply(code=store_error_code(exc), message=exc.message, details=dict(_details(exc)))
 
 
+def _space(exc: Exception) -> ErrorReply:
+    if not isinstance(exc, MemorySpaceError):  # pragma: no cover - 표가 형식을 보장한다
+        return ErrorReply(code=ErrorCodes.FEATURE_UNAVAILABLE)
+    return ErrorReply(code=exc.code, message=exc.message, details={"project_id": exc.space})
+
+
 ERROR_MAP: dict[type[Exception], ErrorMapping] = {
+    MemorySpaceError: _space,
     MemoryStoreError: _store,
     MemoryRequestError: _request,
     VersionRequiredError: _version_required,

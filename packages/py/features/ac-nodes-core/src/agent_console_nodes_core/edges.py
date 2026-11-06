@@ -28,6 +28,7 @@ from agent_console_contracts import (
     EdgePortPair,
     EdgeSpec,
     EdgeTypeDescriptor,
+    KnownDelegationSessions,
     ReplyFields,
     UiHints,
     x_ui,
@@ -92,6 +93,8 @@ class HandoffEdge:
             "위 노드가 끝나면 결과를 아래 노드에 넘긴다. 아래 노드는 별도 세션으로 실행된다."
         ),
         scheduling="flow",
+        # 아래 노드는 자기 세션에서 돈다(화면 세션 표시, 5.7R.34).
+        session=KnownDelegationSessions.SEPARATE,
         connects=EdgeConnects(
             source=[AGENT_ROLE, TEAM_ROLE, USER_ROLE], target=[AGENT_ROLE, TEAM_ROLE, USER_ROLE]
         ),

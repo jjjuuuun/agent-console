@@ -9,6 +9,7 @@ import pytest
 
 from agent_console_memory import (
     _access,
+    _copy,
     _keys,
     _policy,
     _scan,
@@ -21,7 +22,7 @@ from agent_console_memory.testing import _samples
 
 @pytest.mark.parametrize(
     "module",
-    [_access, _keys, _policy, _scan, _scope_kinds, _shared, _toolkit, _samples],
+    [_access, _copy, _keys, _policy, _scan, _scope_kinds, _shared, _toolkit, _samples],
 )
 def test_module_doctests(module: ModuleType) -> None:
     result = doctest.testmod(module, optionflags=doctest.ELLIPSIS)

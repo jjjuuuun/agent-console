@@ -20,7 +20,7 @@ import asyncio
 import contextlib
 import heapq
 import logging
-from collections.abc import Awaitable, Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
@@ -29,7 +29,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from ._database import DatabaseHandle
+from ._database import DatabaseHandle, MigrationBranch
 from ._errors import ErrorMapping, FeatureUnavailableError
 from ._events import EventBus, Handler
 from ._hub import Hub
@@ -188,12 +188,14 @@ class ModuleContext:
         settings: BaseModel | None,
         services: BaseServices,
         table: _PortTable,
+        active: Sequence[ModuleDescriptor] = (),
     ) -> None:
         self.descriptor = descriptor
         self.module_id = descriptor.id
         self.settings = settings
         self.services = services
         self._table = table
+        self._active = active
         self._provided: list[tuple[PortKey[Any], Any]] = []
         self._unsubscribers: list[Callable[[], None]] = []
         self._readable = {p.name: p for p in (*descriptor.requires, *descriptor.optional)}
@@ -289,6 +291,14 @@ class ModuleContext:
         if not declared.multi and any(k.name == key.name for k, _ in self._provided):
             raise ValueError(f"{self.module_id}: 단일 포트를 두 번 제공했습니다: {key.name}")
         self._provided.append((declared, impl))
+
+    def active_migrations(self, scope: str) -> tuple[MigrationBranch, ...]:
+        """지금 켜진 모듈 중 ``scope`` 범위를 선언한 마이그레이션 계보(X39).
+
+        조립이 끝난 뒤 부르면 켜진 모듈 전체가 보인다(build 도중에는 앞서 켜진 모듈만). 다른
+        범위의 DB(예: 프로젝트 기록 DB)를 여는 모듈이 **열 때마다** 불러 올릴 계보를 정한다.
+        """
+        return tuple(b for d in self._active for b in d.migrations if scope in b.scopes)
 
     # ------------------------------------------------------------ 이벤트
 
@@ -561,6 +571,7 @@ def assemble(
     warnings: list[str] = []
     reports: dict[int, ModuleReport] = {}  # 입력 위치 → 보고(같은 id가 여럿일 수 있어 위치로)
     table = _PortTable()
+    active_modules: list[ModuleDescriptor] = []  # 켜진 모듈의 서술자(조립 순서, 계속 늘어남)
 
     # 1) 같은 id
     by_id: dict[str, list[int]] = {}
@@ -691,16 +702,19 @@ def assemble(
                 d, ModuleState.FAILED, f"설정 검증 실패: {_validation_locations(exc)}"
             )
             continue
-        if d.migrations and services.database is not None:
+        app_branches = tuple(b for b in d.migrations if "app" in b.scopes)
+        if app_branches and services.database is not None:
             try:
-                services.database.upgrade(d.migrations)
+                services.database.upgrade(app_branches)
             except Exception as exc:
                 _log.exception("모듈 마이그레이션 실패: %s", mid)
                 reports[idx] = _base_report(
                     d, ModuleState.FAILED, f"마이그레이션 실패({type(exc).__name__})"
                 )
                 continue
-        ctx = ModuleContext(d, settings=settings, services=services, table=table)
+        ctx = ModuleContext(
+            d, settings=settings, services=services, table=table, active=active_modules
+        )
         try:
             built = module.build(ctx)
             if not isinstance(built, ModuleParts):
@@ -723,6 +737,7 @@ def assemble(
         for k in built.ws_topics:
             ws_owner[k] = mid
         parts[mid] = built
+        active_modules.append(d)
         reports[idx] = _base_report(d, ModuleState.ACTIVE, None)
 
     report = sorted(reports.values(), key=lambda r: r.id)

@@ -1,6 +1,7 @@
 """서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-resources``, design §3R.1.3).
 
-- 필수: ``definitions.store``. 선택: ``definitions.usages``(목록 ``usage_count``, 없으면 null),
+- 필수: ``definitions.store``. 선택: ``definitions.spaces``(``?project=`` 공간 저장소),
+  ``definitions.usages``(목록 ``usage_count``, 없으면 null),
   ``definitions.checks``(여러 제공자 — 만들기·저장 때 error 422, warning·info는
   ``X-Console-Issues`` 헤더).
 - 제공: ``resources.lookup``(정의·본문·여러 파일 조회), ``resources.types``(종류 레지스트리).
@@ -15,12 +16,14 @@ from importlib.metadata import PackageNotFoundError, version
 
 from agent_console_contracts import CONTRACT_VERSIONS
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
+from agent_console_store import DefinitionStore, SpaceStores
 
 from .errors import ERROR_MAP
 from .lookup import StoreResources, resource_types_of
 from .ports import (
     DEFINITION_CHECKS,
     DEFINITION_USAGES,
+    DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
@@ -52,7 +55,7 @@ class ResourcesModule:
         description="리소스 라이브러리 CRUD·본문·여러 파일, 리소스 종류·병합 전략 목록",
         provides=(RESOURCES_LOOKUP, RESOURCE_TYPES),
         requires=(DEFINITIONS_STORE,),
-        optional=(DEFINITION_USAGES, DEFINITION_CHECKS),
+        optional=(DEFINITION_USAGES, DEFINITION_CHECKS, DEFINITIONS_SPACES),
         settings_schema=ResourceModuleSettings,
         contracts={"resources": CONTRACT_VERSIONS["resources"]},
         web_roles=WEB_ROLES,
@@ -76,9 +79,26 @@ class ResourcesModule:
             reserved_file_names=cfg.reserved_file_names,
             checks=lambda: ctx.ports(DEFINITION_CHECKS),
         )
+        stores: SpaceStores[DefinitionStore] = SpaceStores(
+            store, lambda: ctx.port(DEFINITIONS_SPACES)
+        )
+
+        def service_for(space: str | None) -> ResourceService:
+            if not space:
+                return service
+            # 붙은 곳(usages)은 라이브러리 기준이라 공간 목록에서는 계산하지 않는다(null).
+            return ResourceService(
+                stores.get(space),
+                types,
+                content_files=cfg.content_files,
+                default_content_file=cfg.default_content_file,
+                reserved_file_names=cfg.reserved_file_names,
+                checks=lambda: ctx.ports(DEFINITION_CHECKS),
+            )
+
         ctx.provide(RESOURCES_LOOKUP, StoreResources(store))
         ctx.provide(RESOURCE_TYPES, types)
-        return ModuleParts(routers=[build_router(lambda: service)], error_map=dict(ERROR_MAP))
+        return ModuleParts(routers=[build_router(service_for)], error_map=dict(ERROR_MAP))
 
 
 module = ResourcesModule()

@@ -81,7 +81,7 @@
 /* 검증 줄(접힘): 첫 오류 + 제안 버튼 */
 .team-issues-first { display: inline-flex; align-items: center; gap: var(--ac-space-2); min-width: 0; flex: 1 1 auto; }
 .team-issues-first-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.team-issue-fix { max-width: 16rem; }
+
 .team-issue-fix .ac-ge-suggestions { display: flex; justify-content: flex-end; }
 
 /* ---- [+ 추가] 메뉴·정의 고르기 (5.2R.20) ---- */
@@ -115,3 +115,15 @@
 .team-side[data-overlay="true"] { position: absolute; right: 0; top: 0; bottom: 0; z-index: 25; width: min(360px, 100%); max-width: 100%; resize: none; box-shadow: var(--ac-shadow-1); }
 .team-canvas[data-palette="overlay"] .team-canvas-toasts { left: var(--ac-canvas-toast-left); max-width: min(360px, calc(100% - var(--ac-canvas-toast-left) - var(--ac-space-3))); }
 .team-canvas[data-palette="overlay"] .team-canvas-empty { left: 0; }
+
+/* 5.7R.38: 이슈 묶음·정보·hint */
+.team-issue-hint { font-size: 12px; line-height: 16px; }
+.team-issue-actions { display: inline-flex; gap: var(--ac-space-2); justify-content: flex-end; flex-wrap: wrap; position: relative; }
+.team-issue-more { position: relative; display: inline-block; }
+.team-issue-expand { margin-right: var(--ac-space-1); }
+.team-issue-row[data-severity="info"] td:first-child { border-left: 3px solid var(--ac-border-strong); }
+.team-issue-sub td { background: var(--ac-surface-2, transparent); }
+.team-issue-sub-label { padding-left: 16px; }
+.team-issue-bucket td { height: 32px; }
+.team-issue-fix { max-width: 22rem; }
+.team-ignored-list { list-style: none; margin: 0 0 var(--ac-space-2); padding: 0; font-size: 12px; display: flex; flex-direction: column; gap: var(--ac-space-1); }

@@ -7,6 +7,9 @@
   null(계산 안 함).
 - 선택 ``definitions.checks``(여러 제공자): 저장 전 정의 검사(``DefinitionCheck``). 만들기·저장 때
   error는 422, warning·info는 응답 헤더 ``X-Console-Issues``로 싣는다. 없으면 종류 검사만.
+- 선택 ``definitions.spaces``: 공간 이름 → 정의 저장소(``agent_console_store.DefinitionSpaces``).
+  있으면 리소스 경로가 ``?project=<이름>``을 받아 그 공간 저장소를 쓴다(공간 목록의
+  ``usage_count``는 null). 없으면 ``?project=`` 요청은 409 ``feature_unavailable``.
 
 제공:
 - ``resources.lookup``: ``ac-resources.ResourceLookup`` + ``FileContentLookup``
@@ -23,7 +26,7 @@ from agent_console_contracts import DefinitionReference, Issue
 from agent_console_modkit import PortKey
 from agent_console_registry import Registry
 from agent_console_resources import ResourceLookup, ResourceType
-from agent_console_store import DefinitionStore
+from agent_console_store import DEFINITIONS_SPACES_PORT, DefinitionSpaces, DefinitionStore
 
 
 @runtime_checkable
@@ -45,6 +48,9 @@ type ResourceStore = DefinitionStore
 
 
 DEFINITIONS_STORE: PortKey[ResourceStore] = PortKey("definitions.store", "정의 저장소")
+DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
+    DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
+)
 DEFINITION_USAGES: PortKey[DefinitionUsages] = PortKey("definitions.usages", "정의가 붙은 곳")
 DEFINITION_CHECKS: PortKey[DefinitionCheck] = PortKey(
     "definitions.checks", "저장 전 정의 검사", multi=True
@@ -53,6 +59,7 @@ RESOURCES_LOOKUP: PortKey[ResourceLookup] = PortKey("resources.lookup", "리소�
 RESOURCE_TYPES: PortKey[Registry[ResourceType]] = PortKey("resources.types", "리소스 종류")
 
 __all__ = [
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "DEFINITION_USAGES",

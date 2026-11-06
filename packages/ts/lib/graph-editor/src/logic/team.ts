@@ -10,6 +10,7 @@ import type {
   EdgeTypeDescriptor,
   Graph,
   GraphPatch,
+  IssueSuggestion,
   NodeSpec,
   NodeTypeDescriptor,
   PortSpec,
@@ -298,7 +299,10 @@ export function applyRoleToggle(graph: Graph, nodeId: string, toggle: RoleToggle
  * 서버가 준 수정 제안(patch)을 그래프에 적용한다(순수 함수). 이슈 코드를 해석하지 않는다.
  * 이미 있는 id의 노드·엣지는 건너뛰고, 끝점 노드가 그래프에 없는 엣지도 건너뛴다(어긋난 제안 방어).
  */
-export function applyGraphPatch(graph: Graph, patch: GraphPatch | undefined | null): { graph: Graph; addedNodeIds: string[]; addedEdgeIds: string[]; removedEdgeIds: string[] } {
+export function applyGraphPatch(
+  graph: Graph,
+  patch: GraphPatch | undefined | null,
+): { graph: Graph; addedNodeIds: string[]; addedEdgeIds: string[]; removedEdgeIds: string[]; unsetFieldCount: number } {
   const nodes = nodesOf(graph);
   const nodeIds = new Set(nodes.map((n) => n.id));
   const removeIds = new Set(patch?.remove_edge_ids ?? []);
@@ -310,12 +314,56 @@ export function applyGraphPatch(graph: Graph, patch: GraphPatch | undefined | nu
   const newEdges = (patch?.add_edges ?? [])
     .filter((e) => !edgeIds.has(e.id) && nodeIds.has(e.source.node) && nodeIds.has(e.target.node))
     .map((e) => structuredClone(e));
+  // 적용 순서: 엣지 삭제 -> 노드·엣지 추가 -> 노드 값 지우기
+  const merged = [...nodes, ...newNodes];
+  let unsetFieldCount = 0;
+  const refs = patch?.unset_node_fields ?? [];
+  const finalNodes =
+    refs.length === 0
+      ? merged
+      : merged.map((n) => {
+          const mine = refs.filter((r) => r.node_id === n.id);
+          if (mine.length === 0) return n;
+          const config = structuredClone((n.config ?? {}) as Record<string, unknown>);
+          let touched = false;
+          for (const r of mine) if (unsetPointer(config, r.path)) { touched = true; unsetFieldCount += 1; }
+          return touched ? { ...n, config } : n;
+        });
   return {
-    graph: { ...graph, nodes: [...nodes, ...newNodes], edges: [...kept, ...newEdges] },
+    graph: { ...graph, nodes: finalNodes, edges: [...kept, ...newEdges] },
     addedNodeIds: newNodes.map((n) => n.id),
     addedEdgeIds: newEdges.map((e) => e.id),
     removedEdgeIds,
+    unsetFieldCount,
   };
+}
+
+/** JSON Pointer(`/a/b`) 위치의 키를 지운다. 없으면 false. 빈 포인터는 지우지 않는다. */
+function unsetPointer(root: Record<string, unknown>, pointer: string): boolean {
+  if (!pointer.startsWith("/")) return false;
+  const keys = pointer.slice(1).split("/").map((k) => k.replace(/~1/g, "/").replace(/~0/g, "~"));
+  let cur: unknown = root;
+  for (const k of keys.slice(0, -1)) {
+    if (cur === null || typeof cur !== "object") return false;
+    cur = (cur as Record<string, unknown>)[k];
+  }
+  const last = keys[keys.length - 1]!;
+  if (cur === null || typeof cur !== "object" || Array.isArray(cur) || !(last in (cur as Record<string, unknown>))) return false;
+  delete (cur as Record<string, unknown>)[last];
+  return true;
+}
+
+/** 같은 `id`의 제안 여러 개를 하나로 합친다(패치의 목록을 이어 붙임, 중복 제거). 첫 제안의 id·label을 쓴다. 빈 목록이면 undefined. */
+export function mergeSuggestions(list: readonly IssueSuggestion[]): IssueSuggestion | undefined {
+  const first = list[0];
+  if (first === undefined) return undefined;
+  const uniq = <T,>(xs: T[], key: (x: T) => string) => [...new Map(xs.map((x) => [key(x), x])).values()];
+  const patches = list.map((s) => s.patch);
+  const add_nodes = uniq(patches.flatMap((p) => p?.add_nodes ?? []), (n) => n.id);
+  const add_edges = uniq(patches.flatMap((p) => p?.add_edges ?? []), (e) => e.id);
+  const remove_edge_ids = [...new Set(patches.flatMap((p) => p?.remove_edge_ids ?? []))];
+  const unset_node_fields = uniq(patches.flatMap((p) => p?.unset_node_fields ?? []), (r) => `${r.node_id}\u0000${r.path}`);
+  return { ...first, patch: { ...(first.patch ?? {}), add_nodes, add_edges, remove_edge_ids, unset_node_fields } };
 }
 
 // ---------------------------------------------------------------- 리소스 보기

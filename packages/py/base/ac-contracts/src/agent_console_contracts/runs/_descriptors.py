@@ -5,9 +5,9 @@
 속성으로만 동작한다. 연결 종류·상호작용 종류·위임 방식의 id는 모두 임의 문자열이다.
 """
 
-from typing import Literal
+from typing import Final, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
 from agent_console_contracts.common import JsonPointer, PortSpec, UiHints
@@ -21,6 +21,36 @@ type EdgeScheduling = Literal["flow", "none", "entry", "exit"]
 - entry: 도착 노드가 입구다. Run 입력을 넣는다. 위상·사이클 계산에서 빠진다.
 - exit: 출발 노드가 끝나면 그 출력을 답변(`run.reply`)으로 발행한다. 위상·사이클 계산에서 빠진다.
 """
+
+
+class KnownDelegationSessions:
+    """세션 속성(`DelegationStrategyDescriptor.session`·`EdgeTypeDescriptor.session`)의 알려진 값
+    (0.12.2, 5.7R.34). **문서 상수**다: 값은 열린 문자열이고 화면은 모르는 값을 원문으로 보인다.
+    스키마 `x-constants.KNOWN_DELEGATION_SESSIONS`로 내보낸다.
+    """
+
+    SAME: Final = "same"
+    """대상이 위임자(앞 노드) 세션 안에서 돈다(`shares_session: true`와 같다)."""
+    SEPARATE: Final = "separate"
+    """대상이 자기 세션을 따로 연다(`shares_session: false`와 같다)."""
+
+
+class KnownDelegationBackends:
+    """`DelegationStrategyDescriptor.backend`의 알려진 값(0.12.2, 5.7R.34). **문서 상수**다.
+
+    스키마 `x-constants.KNOWN_DELEGATION_BACKENDS`로 내보낸다.
+    """
+
+    DELEGATOR: Final = "delegator"
+    """대상이 위임자의 실행 백엔드로 돈다."""
+    TARGET: Final = "target"
+    """대상이 자기 설정의 실행 백엔드로 돈다."""
+
+
+_SESSION_DESCRIPTION: Final = (
+    "실행 세션(화면 표시 속성, 0.12.2). 알려진 값 `same`(앞 노드 세션 안)·`separate`(자기 세션). "
+    "열린 문자열이며 null이면 화면은 세션 표시를 하지 않는다."
+)
 
 
 class DefinitionBinding(ContractModel):
@@ -66,6 +96,13 @@ class NodeTypeDescriptor(ContractModel):
     rerunnable: bool = Field(
         default=False,
         description=("끊긴 실행을 이어 갈 때 저장된 입력으로 이 노드부터 다시 실행할 수 있는지."),
+    )
+    opens_session: bool = Field(
+        default=True,
+        description=(
+            "이 타입의 노드가 실행되면 백엔드 세션을 여는지(화면 표시 속성, 0.12.2). false면 세션 "
+            "수 집계·세션 표시에서 뺀다(예: 사용자 쪽 노드, 리소스)."
+        ),
     )
     ui_hints: UiHints | None = None
 
@@ -164,6 +201,13 @@ class EdgeTypeDescriptor(ContractModel):
         description=(
             "출발 노드가 실패해도 지나갈 수 있는 연결(실패 처리). "
             "화면·검증 표시용이며 실제 통과 여부는 연결 종류 구현이 정한다."
+        ),
+    )
+    session: str | None = Field(
+        default=None,
+        description=(
+            _SESSION_DESCRIPTION
+            + " 위임 연결(`invocation`이 있음)은 이 값 대신 위임 방식의 `session`을 쓴다."
         ),
     )
     config_schema: JsonObject = Field(default_factory=dict)
@@ -371,7 +415,53 @@ class DelegationStrategyDescriptor(ContractModel):
             "돌아 위임자 세션에 대상의 상호작용 권한을 더하지 않는다."
         ),
     )
+    session: str | None = Field(
+        default=None,
+        description=(
+            _SESSION_DESCRIPTION + " 생략하면 `shares_session`에서 채운다(true = same, false = "
+            "separate). 알려진 값이 `shares_session`과 어긋나면 검증 오류다."
+        ),
+    )
+    backend: str | None = Field(
+        default=None,
+        description=(
+            "대상이 쓰는 실행 백엔드(화면 표시 속성, 0.12.2). 알려진 값 `delegator`(위임자 백엔드)·"
+            "`target`(대상 자기 백엔드). 열린 문자열, null = 표시하지 않음."
+        ),
+    )
+    nestable: bool | None = Field(
+        default=None,
+        description=(
+            "대상이 다시 위임할 수 있는지(화면 표시 속성, 0.12.2). 생략하면 `max_depth`에서 "
+            "채운다(null 또는 2 이상 = true). `max_depth`와 어긋나면 검증 오류다."
+        ),
+    )
     ui_hints: UiHints | None = None
+
+    @model_validator(mode="after")
+    def _fill_display_attributes(self) -> Self:
+        """`session`·`nestable`을 엔진 속성(`shares_session`·`max_depth`)에서 채우거나 맞춰 본다.
+
+        채운 값은 지정한 필드(`model_fields_set`)로 치지 않는다: 저장·비교용 `exclude_unset`
+        직렬화는 그대로이고 전체 직렬화(REST 응답)에만 나타난다.
+        """
+        same, separate = KnownDelegationSessions.SAME, KnownDelegationSessions.SEPARATE
+        derived_session = same if self.shares_session else separate
+        known = (same, separate)
+        if self.session is None:
+            object.__setattr__(self, "session", derived_session)
+        elif self.session in known and self.session != derived_session:
+            raise ValueError(
+                f"session {self.session!r}이 shares_session {self.shares_session}과 맞지 않습니다"
+            )
+        derived_nestable = self.max_depth is None or self.max_depth >= 2
+        if self.nestable is None:
+            object.__setattr__(self, "nestable", derived_nestable)
+        elif self.nestable != derived_nestable:
+            raise ValueError(
+                f"nestable {self.nestable}이 max_depth {self.max_depth}와 맞지 않습니다"
+            )
+        return self
 
 
 class InteractionKindDescriptor(ContractModel):

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { formatResetClock, formatResetsPhrase, isFarReset } from "./resetDisplay";
+import { formatResetClock, formatResetsPhrase, isFarReset, formatShortClock, formatResetLine } from "./resetDisplay";
 import { RESET_DATE_AFTER_SECONDS } from "./usageConfig";
 
 const rel = (r: string) => `까지 ${r}`;
@@ -45,5 +45,20 @@ describe("사이드바 초기화 줄(사용자 요청 10/28)", () => {
   });
   it("기준 일수·로케일은 인자", () => {
     expect(formatResetClock(at(2026, 11, 1, 12), now, text, 2)).toBe("(11월 1일) 오후 12:00에 초기화");
+  });
+});
+
+describe("formatShortClock·formatResetLine (5.7R.43)", () => {
+  const base = new Date(2026, 9, 28, 15, 0, 0).getTime() / 1000;
+  it("같은 날은 시각만, 다른 날은 월/일(요일), 다른 해는 연도 포함", () => {
+    expect(formatShortClock(base + 45 * 60, base)).toBe("오후 3:45");
+    expect(formatShortClock(new Date(2026, 9, 31, 14, 45).getTime() / 1000, base)).toBe("10/31(토) 오후 2:45");
+    expect(formatShortClock(new Date(2027, 0, 3, 14, 45).getTime() / 1000, base)).toMatch(/^2027\. 1\. 3\. 오후 2:45$/);
+  });
+  it("한 줄 형식과 초 포함 전체 시각", () => {
+    const at = new Date(2026, 9, 31, 14, 45, 12).getTime() / 1000;
+    const r = formatResetLine(at, base, { line: (rel, abs) => `초기화까지 ${rel} · ${abs}` });
+    expect(r.text).toBe("초기화까지 2일 23시간 · 10/31(토) 오후 2:45");
+    expect(r.full).toContain("2026. 10. 31.");
   });
 });

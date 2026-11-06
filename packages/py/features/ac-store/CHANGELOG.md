@@ -2,6 +2,14 @@
 
 ## 미출시
 
+- 5.7R.33x: 공간 고르기 `spaces`(`DEFINITIONS_SPACES_PORT`·`DefinitionSpaces`·`SpaceStores`·`UnknownSpace` 404 `project.not_found`·`SpacesUnavailable` 409 `feature_unavailable`), 기록 DB 위 버전 기록소 `RecordsVersionRepository`(읽기 `read_engine`, 쓰기 `writable_engine`), 선택 프로토콜 `VersionWriteCheck.ensure_writable`(`ObservedVersionRepository`가 안쪽으로 넘김), `StoreError.field_issues()` — `store_error_body`가 `validation_failed`의 `details.issues`를 채운다(기본 빈 목록, 기존 동작 같음).
+
+- 5.7R.33f: `BaseDefinitionStore.kind_info(name) -> DefinitionKind`(등록된 종류 정보, 같은 종류로 프로젝트 사본 공간을 열 때). 더하기만.
+
+- 5.7R.33w2: `open_records_db`·`RecordsDb`·`inspect_records`(프로젝트 기록 DB 열기: 없음·같음·뒤처짐(백업 후 올림)·앞섬(읽기만)·깨짐·읽기 전용),
+  `RecordsHandle`·`RecordsSpaces`·`RECORDS_SPACES_PORT`·`RecordsState`·`RecordsUnavailable`, `is_network_fs`·`can_write_path`,
+  `migrate.upgrade_on`·`script_revisions`, `create_sqlite_engine(journal_mode=None, timeout=)`. 기존 동작·표 변경 없음.
+
 - 5.7R.33w: `DefinitionKind.portable`·`is_portable`(프로젝트 사본 공간에 둘 수 있는 종류, 싱글턴·`settings`는 아님),
   쓰기 전 검사 훅 `WriteGuard`(`write_guard=`, `FileDefinitionStore`·`InMemoryDefinitionStore`), YAML 도구 공개
   (`load_yaml_text`·`dump_yaml`·`merge_into`·`wrap_value`·`to_plain`·`atomic_write_bytes`). 기존 동작·표 변경 없음.

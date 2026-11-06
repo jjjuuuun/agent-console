@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from agent_console_contracts.memory import (
     MemoryAccessConfig,
     MemoryAccessContext,
@@ -38,6 +40,8 @@ class StaticMemoryService:
         store: 저장소(없으면 새 ``InMemoryMemoryStore``).
         catalog: 범위 종류(없으면 ``ac-memory`` 패키지 기본 데이터).
         max_search_results: 에이전트 검색 결과 상한.
+        spaces: 공간 이름 → 그 공간 서비스(``space``가 쓴다). None이면 공간 구분 없는 대역(모든
+            공간 = 자기 자신). 표에 없는 이름은 ``LookupError``.
 
     >>> from agent_console_memory import load_default_scope_kinds
     >>> service = StaticMemoryService()
@@ -51,7 +55,9 @@ class StaticMemoryService:
         *,
         catalog: ScopeKindCatalog | None = None,
         max_search_results: int = 20,
+        spaces: Mapping[str, StaticMemoryService] | None = None,
     ) -> None:
+        self.spaces = dict(spaces) if spaces is not None else None
         self.store: MemoryStore = store if store is not None else InMemoryMemoryStore()
         self._catalog = catalog if catalog is not None else merge_scope_kinds()
         self.max_search_results = max_search_results
@@ -59,6 +65,19 @@ class StaticMemoryService:
     def catalog(self) -> ScopeKindCatalog:
         """범위 종류 목록."""
         return self._catalog
+
+    def space(self, name: str | None) -> StaticMemoryService:
+        """공간 서비스(``mod-memory`` ``MemoryService.space`` 모양).
+
+        Raises:
+            LookupError: ``spaces`` 표에 없는 이름.
+        """
+        if not name or self.spaces is None:
+            return self
+        try:
+            return self.spaces[name]
+        except KeyError:
+            raise LookupError(name) from None
 
     def toolkit(
         self,

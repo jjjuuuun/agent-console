@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 5.7R.33x: 선택 포트 `definitions.spaces`(공간 이름 → 정의 저장소, `ac-store.DefinitionSpaces`). 에이전트·팀 구성 경로가 `?project=<공간>`을 받는다(목록·조회·만들기·저장·삭제·복제). 포트가 없으면 `?project=` 요청은 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`, 질의 없는 요청은 그대로 라이브러리. 공간 쓰기의 평문 비밀 거부는 422 `details.issues`(필드 위치), 쓰기 불가 폴더 409 `project.config_readonly`. 공간 목록의 `validation`은 null. `SavedDefinition.space`(기본 None) 추가. **깨는 변경**: `build_router(service)`의 `service`가 공간 이름 하나를 받는다(`Callable[[str | None], DefinitionService]`).
 - 5.2R.104: 프리셋 기능을 지웠다. 남은 설정 키 `presets`·`modules.options.mod-presets`를 `RemovedSetting`으로 선언해 호스트가 "프리셋 기능은 삭제되었습니다" 오류로 시작을 거부한다(`PRESETS_REMOVED_REASON`). 개발 의존 `agent-console-mod-presets`를 뺐다.
 - 5.2R.33: `LazyVersionRepository`·`versions_for`를 `ac-store`로 옮겼다(이 모듈 `store`는 다시 내보낸다, 동작 같음).
 - 4R.18: 옛 최상위 `resources` 읽기 호환 제거(`settings.removed_key` 오류로 새 위치 안내).

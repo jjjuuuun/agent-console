@@ -2806,6 +2806,14 @@ export interface Issue {
    * 해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음.
    */
   fix?: Fix | null;
+  /**
+   * 해결 안내 한 줄(0.12.2, 사용자 언어). null = 없음.
+   */
+  hint?: string | null;
+  /**
+   * 묶음 표시(0.12.2). 같은 `group.key`의 이슈는 한 행으로 묶고 `group.message`를 보인다. 같은 묶음 안 제안의 `id`가 같으면 화면은 버튼 하나로 모두 적용한다. null = 묶지 않음.
+   */
+  group?: IssueGroup | null;
 }
 /**
  * 검증 이슈의 수정 제안 하나. 화면은 이슈 코드가 아니라 이 데이터로 제안 버튼을 그린다.
@@ -2822,7 +2830,9 @@ export interface IssueSuggestion {
   patch?: GraphPatch;
 }
 /**
- * 그래프 초안에 적용할 변경(노드·엣지 추가, 엣지 삭제). 적용은 클라이언트가 초안에 한다.
+ * 그래프 초안에 적용할 변경(노드·엣지 추가, 엣지 삭제, 노드 설정 값 지우기).
+ *
+ * 적용은 클라이언트가 초안에 한다. 순서: 엣지 삭제 → 노드·엣지 추가 → 노드 값 지우기.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "GraphPatch".
@@ -2831,6 +2841,10 @@ export interface GraphPatch {
   add_nodes?: NodeSpec[];
   add_edges?: EdgeSpec[];
   remove_edge_ids?: string[];
+  /**
+   * 노드 config에서 지울 위치(0.12.2). 없는 위치는 무시한다. 지정했을 때만 직렬화한다.
+   */
+  unset_node_fields?: NodeFieldRef[];
 }
 /**
  * 팀 안의 노드 하나입니다. 노드 종류에 따라 하는 일과 설정 항목이 다릅니다.
@@ -2983,6 +2997,38 @@ export interface EdgeLayout {
    */
   label_offset?: Position | null;
   [k: string]: unknown;
+}
+/**
+ * 노드 config 안 위치 하나(`GraphPatch.unset_node_fields`, 0.12.2).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "NodeFieldRef".
+ */
+export interface NodeFieldRef {
+  /**
+   * 노드 id.
+   */
+  node_id: string;
+  /**
+   * 노드 `config` 기준 JSON Pointer(예: `/settings/model`). 빈 문자열은 쓰지 않는다.
+   */
+  path: string;
+}
+/**
+ * 같은 원인의 이슈 묶음 표시(0.12.2). 화면은 `key`가 같은 이슈를 한 행으로 묶는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "IssueGroup".
+ */
+export interface IssueGroup {
+  /**
+   * 묶음 키(불투명 문자열, 같으면 한 행).
+   */
+  key: string;
+  /**
+   * 묶음 행 문장(노드 이름 없는 문장, 사용자 언어).
+   */
+  message: string;
 }
 /**
  * `GET /architecture/profiles/{id}` 응답: 목록 항목 + 프로필 본문 + 검사 결과.
@@ -4654,6 +4700,18 @@ export interface DelegationStrategyDescriptor {
    * 위임받는 노드가 위임자 세션 안에서 실행되는지(0.8.0). false면 대상이 자기 세션에서 돌아 위임자 세션에 대상의 상호작용 권한을 더하지 않는다.
    */
   shares_session?: boolean;
+  /**
+   * 실행 세션(화면 표시 속성, 0.12.2). 알려진 값 `same`(앞 노드 세션 안)·`separate`(자기 세션). 열린 문자열이며 null이면 화면은 세션 표시를 하지 않는다. 생략하면 `shares_session`에서 채운다(true = same, false = separate). 알려진 값이 `shares_session`과 어긋나면 검증 오류다.
+   */
+  session?: string | null;
+  /**
+   * 대상이 쓰는 실행 백엔드(화면 표시 속성, 0.12.2). 알려진 값 `delegator`(위임자 백엔드)·`target`(대상 자기 백엔드). 열린 문자열, null = 표시하지 않음.
+   */
+  backend?: string | null;
+  /**
+   * 대상이 다시 위임할 수 있는지(화면 표시 속성, 0.12.2). 생략하면 `max_depth`에서 채운다(null 또는 2 이상 = true). `max_depth`와 어긋나면 검증 오류다.
+   */
+  nestable?: boolean | null;
   ui_hints?: UiHints | null;
 }
 /**
@@ -5053,6 +5111,10 @@ export interface EdgeTypeDescriptor {
    * 출발 노드가 실패해도 지나갈 수 있는 연결(실패 처리). 화면·검증 표시용이며 실제 통과 여부는 연결 종류 구현이 정한다.
    */
   handles_failure?: boolean;
+  /**
+   * 실행 세션(화면 표시 속성, 0.12.2). 알려진 값 `same`(앞 노드 세션 안)·`separate`(자기 세션). 열린 문자열이며 null이면 화면은 세션 표시를 하지 않는다. 위임 연결(`invocation`이 있음)은 이 값 대신 위임 방식의 `session`을 쓴다.
+   */
+  session?: string | null;
   config_schema?: {
     [k: string]: unknown;
   };
@@ -7912,6 +7974,10 @@ export interface NodeTypeDescriptor {
    * 끊긴 실행을 이어 갈 때 저장된 입력으로 이 노드부터 다시 실행할 수 있는지.
    */
   rerunnable?: boolean;
+  /**
+   * 이 타입의 노드가 실행되면 백엔드 세션을 여는지(화면 표시 속성, 0.12.2). false면 세션 수 집계·세션 표시에서 뺀다(예: 사용자 쪽 노드, 리소스).
+   */
+  opens_session?: boolean;
   ui_hints?: UiHints | null;
 }
 /**
@@ -9344,14 +9410,14 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.12.1" as const;
+export const CONTRACTS_VERSION = "0.12.2" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.7.0",
   "resources": "1.1.0",
   "logs": "1.1.0",
-  "definitions": "1.4.0",
-  "runs": "1.5.0",
+  "definitions": "1.5.0",
+  "runs": "1.6.0",
   "usage": "1.1.0",
   "projects": "3.1.0",
   "chat": "1.2.0",
@@ -9771,6 +9837,16 @@ export const KNOWN_SESSION_STATES = {
 export const KNOWN_QUEUE_HOLD_REASONS = {
   "RESTART": "restart",
   "OTHER_HOST": "other_host"
+} as const;
+
+export const KNOWN_DELEGATION_SESSIONS = {
+  "SAME": "same",
+  "SEPARATE": "separate"
+} as const;
+
+export const KNOWN_DELEGATION_BACKENDS = {
+  "DELEGATOR": "delegator",
+  "TARGET": "target"
 } as const;
 
 export const USER_TEXT_RULES = {

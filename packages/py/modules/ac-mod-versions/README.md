@@ -12,6 +12,10 @@ Agent Console 버전 기능 모듈(design §3R.1.3, R2.5, D3·E-16). 정의 버�
   비우면 모두 — 저장할 때와 시작할 때 적용), `collections`(버전 경로 표), `secret_issue_codes`.
 - 웹 역할: `versions`.
 
+공간(5.7R.33x): 선택 포트 `definitions.spaces`가 있으면 모든 버전 경로가 `?project=<이름>`으로 그 공간의 버전 기록을
+쓴다. `definitions.saved` 항목에 `space`가 있으면 보존 개수도 그 공간에 적용한다. 포트가 없으면 409
+`feature_unavailable`, 모르는 공간 404.
+
 ## 설치
 
 ```bash

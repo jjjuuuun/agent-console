@@ -21,10 +21,19 @@ class MigrationBranch:
         name: 계보 이름(보통 모듈 짧은 이름, 예: ``"usage"``). 식별자여야 하고 ``legacy``는 못 쓴다.
         versions: 리비전 스크립트 폴더. 패키지 데이터로 배포되는 경로
             (``Path(__file__).parent / "migrations" / "versions"``)를 준다.
+        scopes: 이 계보를 올릴 DB 범위(열린 문자열 목록, X39). 기본 ``("app",)`` = 앱 DB에만.
+            호스트는 ``"app"``이 든 계보만 앱 DB에 올리고, ``"project"`` 같은 다른 범위는 그 범위의
+            DB를 여는 쪽(예: 프로젝트 기록 DB 연동 모듈)이 ``ModuleContext.active_migrations``로
+            읽어 올린다. 코드에 계보 이름 목록은 없다.
     """
 
     name: str
     versions: Path
+    scopes: tuple[str, ...] = ("app",)
+
+    def __post_init__(self) -> None:
+        if not self.scopes or any(not s for s in self.scopes):
+            raise ValueError("scopes는 비어 있지 않은 이름의 목록이어야 합니다")
 
 
 @runtime_checkable

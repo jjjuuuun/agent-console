@@ -58,3 +58,24 @@ export function formatResetClock(
   const day = near ? at.toLocaleDateString(locale, { weekday: "long" }) : at.toLocaleDateString(locale, { month: "long", day: "numeric" });
   return text.other(day, time);
 }
+
+export interface ResetLineText {
+  /** 초기화 줄 구절 (예: `초기화까지 {rel} · {abs}`) */
+  line: (rel: string, abs: string) => string;
+}
+
+/** 카드 초기화 줄의 짧은 절대 시각: 같은 날 "오후 3:45", 같은 해 다른 날 "10/31(토) 오후 2:45", 다른 해 "2027. 1. 3. 오후 2:45". */
+export function formatShortClock(resetsAt: number, nowSec: number, locale: string = RESET_CLOCK_LOCALE): string {
+  const at = new Date(resetsAt * 1000);
+  const now = new Date(nowSec * 1000);
+  const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+  if (sameDay(at, now)) return time;
+  if (at.getFullYear() !== now.getFullYear()) return `${at.toLocaleDateString(locale, { year: "numeric", month: "numeric", day: "numeric" })} ${time}`;
+  const wd = at.toLocaleDateString(locale, { weekday: "short" });
+  return `${at.getMonth() + 1}/${at.getDate()}(${wd}) ${time}`;
+}
+
+/** 미래 초기화의 한 줄 문구와 초 단위 전체 시각(title용). */
+export function formatResetLine(resetsAt: number, nowSec: number, text: ResetLineText): { text: string; full: string } {
+  return { text: text.line(formatRemaining(resetsAt - nowSec), formatShortClock(resetsAt, nowSec)), full: formatDateTime(resetsAt) };
+}

@@ -46,10 +46,14 @@ from .migrate import upgrade
 from .project_assign import AssignCandidate
 
 
-def create_sqlite_engine(target: str | Path, *, journal_mode: str = "WAL") -> Engine:
+def create_sqlite_engine(
+    target: str | Path, *, journal_mode: str | None = "WAL", timeout: float = 15.0
+) -> Engine:
     """SQLite 엔진. `target`은 파일 경로, `":memory:"`, 또는 `sqlite:///...` URL.
 
     `journal_mode`: 기본 WAL. 지원하지 않는 파일시스템이면 SQLite 기본값으로 둔다.
+    None이면 바꾸지 않는다.
+    `timeout`: 잠금이 풀리길 기다리는 시간(초, 파일 DB).
     """
     text = str(target)
     if text == ":memory:" or text == "sqlite://" or text.startswith("sqlite:///:memory:"):
@@ -65,13 +69,16 @@ def create_sqlite_engine(target: str | Path, *, journal_mode: str = "WAL") -> En
             path = Path(text)
             path.parent.mkdir(parents=True, exist_ok=True)
             url = f"sqlite:///{path.as_posix()}"
-        engine = sa.create_engine(url, connect_args={"check_same_thread": False, "timeout": 15})
+        engine = sa.create_engine(
+            url, connect_args={"check_same_thread": False, "timeout": timeout}
+        )
 
     @sa.event.listens_for(engine, "connect")
     def _on_connect(dbapi_connection: sqlite3.Connection, _record: object) -> None:
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute(f"PRAGMA journal_mode={journal_mode}")
+            if journal_mode:
+                cursor.execute(f"PRAGMA journal_mode={journal_mode}")
             cursor.execute("PRAGMA synchronous=NORMAL")
         except sqlite3.DatabaseError:
             pass

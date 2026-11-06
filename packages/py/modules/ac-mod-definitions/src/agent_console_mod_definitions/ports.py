@@ -9,14 +9,19 @@
 - ``definitions.checks``(여러 제공자): 이 모듈은 공통 설정의 비밀 규칙 검사(위험한 정규식)를 낸다.
 - ``server.warnings``(여러 제공자): ``() -> Sequence[Issue]`` — 저장된 정의의 평문 비밀 의심
   (``secret.plain_found``, 정의 저장 때 무효화되는 캐시).
-- 토픽 ``definitions.saved``: ``SavedDefinition{kind, id, version_hash}``
-  (저장·되돌리기·본문 쓰기마다).
+- 토픽 ``definitions.saved``: ``SavedDefinition{kind, id, version_hash, space}``
+  (저장·되돌리기·본문 쓰기마다). ``space``는 저장소 공간 이름(None = 라이브러리). 공간 저장소의
+  알림은 ``definitions.spaces`` 제공자가 같은 토픽에 ``space``를 담아 낸다(33x).
 
 받음(모두 선택 — 없으면 그 부분만 꺼진다):
 
 - ``definitions.checks``(여러 제공자): 저장 전 검사(``DefinitionCheck``). 없으면 모델 검증만.
 - ``graphs.validation``: 팀 구성 목록의 검증 요약(``GraphValidationSource``). 없으면 ``null``.
 - ``graphs.entry_labels``: 팀 구성 목록의 입구 이름(``GraphEntryLabels``). 없으면 ``null``.
+- ``definitions.spaces``: 공간 이름 → 정의 저장소(``agent_console_store.DefinitionSpaces``). 있으면
+  에이전트·팀 구성 경로가 ``?project=<이름>``을 받아 그 공간 저장소를 쓴다. 없으면 ``?project=``
+  요청은 409 ``feature_unavailable``이고 질의 없는 요청은 지금처럼 라이브러리. 이 모듈은 이름이
+  무엇을 가리키는지(프로젝트) 모른다.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ from typing import Any, Protocol, runtime_checkable
 from agent_console_contracts import Graph, GraphValidationSummary, Issue, WorkspaceSettings
 from agent_console_modkit import PortKey, Topic
 from agent_console_secret_rules import SecretRules
-from agent_console_store import FileDefinitionStore
+from agent_console_store import DEFINITIONS_SPACES_PORT, DefinitionSpaces, FileDefinitionStore
 
 
 @runtime_checkable
@@ -56,11 +61,16 @@ class GraphEntryLabels(Protocol):
 
 @dataclass(frozen=True)
 class SavedDefinition:
-    """``definitions.saved`` 항목(design §3R.1.5 ``{kind, id, version_hash}``)."""
+    """``definitions.saved`` 항목(design §3R.1.5 ``{kind, id, version_hash}`` + 공간 이름).
+
+    Attributes:
+        space: 저장소 공간 이름(``?project=`` 값). None = 라이브러리(앱 workspace).
+    """
 
     kind: str
     id: str
     version_hash: str
+    space: str | None = None
 
 
 type WorkspaceSettingsReader = Callable[[], WorkspaceSettings]
@@ -88,11 +98,15 @@ GRAPH_VALIDATION: PortKey[GraphValidationSource] = PortKey(
     "graphs.validation", "팀 구성 목록 검증 요약"
 )
 GRAPH_ENTRY_LABELS: PortKey[GraphEntryLabels] = PortKey("graphs.entry_labels", "팀 구성 입구 이름")
+DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
+    DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
+)
 DEFINITIONS_SAVED: Topic[SavedDefinition] = Topic("definitions.saved")
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_SAVED",
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "GRAPH_ENTRY_LABELS",

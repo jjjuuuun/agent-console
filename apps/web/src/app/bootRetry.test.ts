@@ -1,7 +1,7 @@
 import { ApiError, NETWORK_ERROR_CODE } from "@agent-console/api-client";
 import { describe, expect, it } from "vitest";
 import { BootError } from "./boot";
-import { BOOT_RETRY, bootRetryDelay, classifyBootFailure } from "./bootRetry";
+import { BOOT_RETRY, bootRetryDelay, classifyBootFailure, shouldGiveUp } from "./bootRetry";
 
 const boot = (cause: unknown) => new BootError("http://x", cause, false);
 
@@ -16,5 +16,12 @@ describe("부팅 실패 분류", () => {
   it("대기는 지수로 늘고 상한에서 멈춘다", () => {
     const d = [0, 1, 2, 3, 6].map((n) => bootRetryDelay(BOOT_RETRY, n));
     expect(d).toEqual([500, 1000, 2000, 4000, 5000]);
+  });
+  it("연결 대기는 5분 한도, 준비 중(503)은 한도 없이, 치명 오류는 즉시 포기", () => {
+    expect(BOOT_RETRY.giveUpMs).toBe(300_000);
+    expect(shouldGiveUp(BOOT_RETRY, "unreachable", 200_000, 5000)).toBe(false);
+    expect(shouldGiveUp(BOOT_RETRY, "unreachable", 299_000, 5000)).toBe(true);
+    expect(shouldGiveUp(BOOT_RETRY, "not-ready", 10_000_000, 5000)).toBe(false);
+    expect(shouldGiveUp(BOOT_RETRY, "fatal", 0, 0)).toBe(true);
   });
 });

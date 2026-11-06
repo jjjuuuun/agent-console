@@ -1,5 +1,19 @@
 # 변경 기록
 
+## 0.12.2
+
+- 계약 0.12.2(5.7R.34·5.7R.38, `docs/design/screen-delegation.md` §14·§15). **더하기만** 한다: 새 필드는 모두
+  선택이라 0.12.1 응답이 그대로 읽힌다. 사내 의존 범위는 그대로 `>=0.12,<0.13`(TS `^0.12.0`). 하위 계약 버전:
+  `runs` 1.6.0, `definitions` 1.5.0.
+- `runs` 1.6.0: 화면용 디스크립터 속성. `DelegationStrategyDescriptor.session`(열린 문자열, 생략하면
+  `shares_session`에서 same/separate로 채움)·`backend`(열린 문자열, delegator·target)·`nestable`(생략하면
+  `max_depth`가 null 또는 2 이상일 때 true). 채운 값은 지정한 필드로 치지 않는다(`exclude_unset` 직렬화 그대로).
+  알려진 값이 엔진 속성과 어긋나면 검증 오류. `EdgeTypeDescriptor.session`(위임 아닌 연결 종류),
+  `NodeTypeDescriptor.opens_session`(기본 true). 문서 상수 `KnownDelegationSessions`·`KnownDelegationBackends`
+  (스키마 `x-constants.KNOWN_DELEGATION_SESSIONS`·`KNOWN_DELEGATION_BACKENDS`).
+- `definitions` 1.5.0: `Issue.hint`·`Issue.group: IssueGroup{key, message}`(지정했을 때만 직렬화),
+  `GraphPatch.unset_node_fields: NodeFieldRef{node_id, path}[]`(노드 config 기준 JSON Pointer, 지정했을 때만 직렬화).
+
 ## 0.12.1
 
 - 계약 0.12.1(5.7R.33c3, design §PI.4.6·§PI.16, K33-37). **더하기만** 한다: 새 필드는 모두 선택이라 0.12.0 응답이 그대로

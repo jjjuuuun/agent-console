@@ -6,7 +6,9 @@
 
 - 필수 ``memory.service``: 메모리 서비스(``MemoryServiceLike`` — ``catalog()``·``toolkit(...)``).
   ``mod-memory``가 준다. 없으면 이 연동은 꺼진다(실행은 메모리 도구 없이, 메모리 칸은 백엔드가
-  적용하지 못한 칸 경고 R13.5).
+  적용하지 못한 칸 경고 R13.5). 선택 메서드 ``space(name)``(5.7R.33z, ``mod-memory``가 준다):
+  프로젝트 실행은 그 공간 서비스만 쓴다(없거나 실패하면 그 실행의 메모리 도구는
+  ``scope_unavailable``).
 
 제공:
 

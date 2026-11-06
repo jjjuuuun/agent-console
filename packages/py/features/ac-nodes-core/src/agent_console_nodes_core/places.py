@@ -64,6 +64,7 @@ class ResourceNode:
         category="리소스",
         role=RESOURCE_ROLE,
         executable=False,
+        opens_session=False,  # 실행되지 않는다(화면 세션 집계에서 뺀다, 5.7R.34)
         binds=DefinitionBinding(kind="resource", field="resource_ref"),
         config_schema=ResourceNodeConfig.model_json_schema(),
         static_ports=_RESOURCE_PORTS,

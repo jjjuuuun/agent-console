@@ -41,7 +41,8 @@ class ModuleDescriptor:
         contracts: 이 모듈이 쓰는 계약 하위 모듈 → 버전(보고용, 예: ``{"chat": "1.0.0"}``).
         web_roles: 웹 라우트 역할(예: ``"conversations"``).
         migrations: 이 모듈이 소유한 DB 마이그레이션 계보. 호스트가 **이 모듈이 켜질 때만**
-            ``database.upgrade``로 올린다(build 직전). 호스트에 DB가 없으면 올리지 않는다.
+            ``database.upgrade``로 올린다(build 직전). 앱 DB에는 ``scopes``에 ``"app"``이 든 계보만
+            올린다(다른 범위의 DB는 그 DB를 여는 쪽이 올린다). 호스트에 DB가 없으면 올리지 않는다.
         settings_compat: 호스트 설정 호환 선언(옛 최상위 키·환경변수·명령행 별칭 → 이 모듈 설정).
             호스트는 모듈 이름을 모르므로 모듈이 알린다(``SettingsCompat``). None이면 없음.
     """

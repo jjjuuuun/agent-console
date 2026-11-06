@@ -58,6 +58,12 @@ async function card(name: string): Promise<HTMLElement> {
   return cards[0]!;
 }
 
+/** 공식이 아닌 등급 묶음 카드의 행(창 하나). */
+async function row(name: string): Promise<HTMLElement> {
+  const rows = await screen.findAllByRole("listitem", { name: new RegExp(`(^|\\s)${name},`) });
+  return rows[0]!;
+}
+
 describe("사용량 화면: 창 카드", () => {
   it("창 이름은 '출처 제목 + 창 id' 폴백이고 값은 '사용' 기준이며, 대표값은 가장 최근의 공식 출처이며 다른 출처는 접혀 있다", async () => {
     mount();
@@ -67,52 +73,76 @@ describe("사용량 화면: 창 카드", () => {
     expect(c.textContent).not.toMatch(/남음/);
     expect(within(c).getByRole("meter").getAttribute("aria-valuenow")).toBe("0.63");
     expect(within(c).getByText("공식")).toBeTruthy();
-    expect(within(c).getByText(/초기화까지 2시간 1\d분/)).toBeTruthy();
-    expect(within(c).getByText("대표값: 가장 최근 공식 출처")).toBeTruthy();
+    expect(within(c).getByText(/초기화까지 2시간 1\d분 · /)).toBeTruthy();
+    expect(c.textContent).not.toContain("대표값");
     expect(within(c).queryByText("90% 사용")).toBeNull();
     fireEvent.click(within(c).getByRole("button", { name: /다른 출처 \(1\)/ }));
     expect(within(c).getByText("90% 사용")).toBeTruthy();
   });
 
-  it("상태만 주는 창은 퍼센트를 그리지 않고, 모르는 상태는 원문으로 보인다", async () => {
+  it("공식 값이 없는 창은 등급별 묶음 카드의 행이 된다(관측 → 모르는 등급). 상태만 주는 창은 퍼센트를 그리지 않는다", async () => {
     mount();
-    const c = await card("win-2");
-    expect(within(c).getByText("허용 (경고)")).toBeTruthy();
-    expect(within(c).getByText(/사용률 정보 없음/)).toBeTruthy();
-    expect(within(c).queryByRole("meter")).toBeNull();
-    expect(c.textContent).not.toMatch(/\d+%/);
-    const odd = await card("win-4");
+    const w2 = await row("win-2");
+    expect(within(w2).getByText("허용 (경고)")).toBeTruthy();
+    // 정보 없는 줄은 글자로 보이지 않고 스크린리더용 텍스트(.ac-sr-only)에만 있다
+    expect(w2.querySelector(".ac-sr-only")?.textContent).toMatch(/사용률 정보 없음/);
+    expect(within(w2).queryByRole("meter")).toBeNull();
+    expect(w2.textContent).not.toMatch(/\d+%/);
+    const odd = await row("win-4");
     expect(within(odd).getByText("weird-status")).toBeTruthy();
-    expect(within(odd).getByText("새 등급 출처")).toBeTruthy();
-    expect(within(odd).getByText("brand-new")).toBeTruthy();
+    const groups = screen.getAllByRole("group").filter((g) => g.classList.contains("usage-group"));
+    expect(groups.map((g) => g.querySelector("h3")?.textContent)).toEqual(["관측 값", "brand-new 값"]);
+    expect(within(groups[0]!).getByText("관측")).toBeTruthy();
+    expect(within(groups[1]!).getByText("brand-new")).toBeTruthy();
+    // 공식 창 카드가 있으므로 참고용 부제
+    expect(within(groups[0]!).getByText("공식 값이 있어 참고용으로 봅니다")).toBeTruthy();
   });
 
-  it("토큰 수만 주는 창은 한도 정보 없음, 게이지 없음 · 초기화 시각이 지났으면 사실로 표시", async () => {
+  it("공식 창 카드가 없으면 묶음 카드 부제가 '이 값이 기준' 으로 바뀐다", async () => {
+    mount({ getUsage: async () => report({ windows: [{ source: "src-obs", window: "win-2", used_ratio: 0.1, observed_at: now - 30 }] }) });
+    expect(await screen.findByText("공식 값이 연결되기 전까지는 이 값이 기준입니다")).toBeTruthy();
+    expect(screen.getByText("각 창의 값은 가장 최근 값 기준입니다")).toBeTruthy();
+  });
+
+  it("토큰 수만 주는 창은 사용률 없음 + 토큰 n, 게이지 없음 · 초기화 시각이 지났으면 사실로 표시", async () => {
     mount();
-    const c = await card("win-3");
-    expect(within(c).getByText("1.2k 토큰 사용")).toBeTruthy(); // 컴팩트 표기(정확한 수는 툴팁)
-    expect(within(c).getByText("한도 정보 없음")).toBeTruthy();
+    const c = await row("win-3");
+    expect(within(c).getByText("토큰 1,234")).toBeTruthy();
+    expect(c.textContent).not.toMatch(/토큰 사용/);
+    expect(c.querySelector(".ac-sr-only")?.textContent).toMatch(/한도 정보 없음/);
     expect(within(c).queryByRole("meter")).toBeNull();
-    expect(within(c).getByText(/초기화 시각이 지났습니다/)).toBeTruthy();
+    expect(within(c).getByText(/초기화 시각 지남/)).toBeTruthy();
   });
 
-  it("stale_after_seconds가 null이면 오래된 관측 칩이 없고, 숫자로 정하면 그보다 오래된 카드에만 붙는다", async () => {
+  it("success 톤 상태 칩은 숨기고 warning 칩은 보인다", async () => {
     mount();
-    await card("win-2");
+    const c = await card("win-1");
+    expect(within(c).queryByText("허용")).toBeNull();
+    cleanup();
+    mount({ getUsage: async () => report({ windows: [{ source: "src-off", window: "win-1", used_ratio: 0.81, status: "allowed_warning", observed_at: now - 5 }] }) });
+    const w = await card("win-1");
+    expect(within(w).getByText("81% 사용")).toBeTruthy();
+    expect(within(w).getByText("허용 (경고)")).toBeTruthy();
+  });
+
+  it("stale_after_seconds가 null이면 오래된 관측 칩이 없고, 숫자로 정하면 그보다 오래된 행에만 붙는다", async () => {
+    mount();
+    await row("win-2");
     expect(screen.queryByText(/오래된 관측/)).toBeNull();
     cleanup();
     mount({}, { usage: { stale_after_seconds: 600 } });
-    const old = await card("win-2");
+    const old = await row("win-2");
     expect(within(old).getByText(/오래된 관측/)).toBeTruthy();
-    const fresh = await card("win-4");
+    const fresh = await row("win-4");
     expect(within(fresh).queryByText(/오래된 관측/)).toBeNull();
   });
 
   it("창 표시 이름은 설정 window_labels, 대표값 순서는 primary_source_order를 따른다", async () => {
     mount({}, { usage: { window_labels: { "win-1": "5시간 창" }, primary_source_order: ["src-obs", "src-off"] } });
-    const c = await card("5시간 창");
+    // 대표가 관측 출처로 바뀌면 공식 창 카드가 아니라 묶음 카드의 행이 된다
+    const c = await row("5시간 창");
     expect(within(c).getByText("90% 사용")).toBeTruthy();
-    expect(within(c).getByText("대표값: 설정한 출처 순서")).toBeTruthy();
+    expect(screen.getByText("각 창의 값은 설정한 출처 순서 기준입니다")).toBeTruthy();
   });
 
   it("카드가 하나도 없으면 빈 상태 안내(출처 설명 포함)", async () => {
@@ -136,6 +166,9 @@ describe("사용량 화면: 집계와 출처", () => {
     expect(rows[0]!.textContent).toContain("에이전트 하나");
     expect(rows[0]!.textContent).toContain("입력 90 · 출력 30");
     expect(rows[1]!.textContent).toContain("총 토큰만");
+    // 비고 칸은 칩이 없는 행도 예약해 열이 어긋나지 않는다(고정 격자)
+    expect(rows[0]!.children.length).toBe(rows[1]!.children.length);
+    expect(list.getAttribute("data-note")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "표로 보기" }));
     expect(within(screen.getByRole("table", { name: "토큰 집계 표" })).getAllByRole("row")).toHaveLength(3);
   });

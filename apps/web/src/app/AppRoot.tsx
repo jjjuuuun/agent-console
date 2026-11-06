@@ -9,7 +9,7 @@ import { LinkPartsProvider, ModulesProvider, type LinkPartDef } from "../modules
 import type { ApiClients, FeatureSignal } from "./apiClients";
 import { AppStatusProvider } from "./AppStatus";
 import { BootError } from "./boot";
-import { BOOT_RETRY, bootRetryDelay, classifyBootFailure, type BootFailureKind, type BootRetryPolicy } from "./bootRetry";
+import { BOOT_RETRY, bootRetryDelay, classifyBootFailure, shouldGiveUp, type BootFailureKind, type BootRetryPolicy } from "./bootRetry";
 import { ErrorBlock, errorDetails, LoadingBlock } from "./ErrorBlock";
 import { describeError } from "./errors";
 import { appIcons } from "./icons";
@@ -109,7 +109,7 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
           if (cancelled) return;
           const kind = classifyBootFailure(error);
           const delay = bootRetryDelay(bootRetry, retries);
-          if (kind === "fatal" || Date.now() - startedAt + delay > bootRetry.giveUpMs) {
+          if (kind === "fatal" || shouldGiveUp(bootRetry, kind, Date.now() - startedAt, delay)) {
             setBoot({ attempt, status: "error", error });
             return;
           }

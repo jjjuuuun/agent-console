@@ -17,6 +17,7 @@ from agent_console_store import (
     FileDefinitionStore,
     HashFn,
     VersionRepository,
+    VersionWriteCheck,
     default_hash,
 )
 
@@ -31,7 +32,9 @@ class SpaceOptions(TypedDict, total=False):
     kinds: Iterable[DefinitionKind]
     """다룰 정의 종류 전체. 이 중 `is_portable`인 것만 공간에 들어간다. 기본 `DEFAULT_KINDS`."""
     versions: VersionRepository | None
-    """버전 기록 저장소(보통 그 폴더 기록 DB의 것). 생략하면 메모리(프로세스 동안만)."""
+    """버전 기록 저장소(보통 그 폴더 기록 DB의 것 — `agent_console_store.RecordsVersionRepository`).
+    생략하면 메모리(프로세스 동안만). `VersionWriteCheck`(`ensure_writable`)를 만족하면 정의를 쓰기
+    전에 불러, 버전을 쓸 수 없을 때(예: 기록 DB가 앞선 리비전) 정의 파일도 쓰지 않는다."""
     config_dir: str
     """프로젝트 폴더 안 구성 폴더 이름. 기본 `.agent-console`."""
     layout: SpaceLayout
@@ -102,8 +105,16 @@ def scan_secrets(
 
 
 def _make_guard(
-    *, writable: bool, rules: SecretRules, scan_bodies: bool
+    *,
+    writable: bool,
+    rules: SecretRules,
+    scan_bodies: bool,
+    versions: VersionRepository | None = None,
 ) -> Callable[[DefinitionKind, str, Mapping[str, Any], Mapping[str, bytes]], None]:
+    """쓰기 전 검사: 읽기 전용 → 평문 비밀 → 버전 기록소 쓰기 가능(`VersionWriteCheck`) 순."""
+    target: object = versions  # 버전 기록소 프로토콜과 별개인 선택 프로토콜이라 object로 좁힌다
+    check = target if isinstance(target, VersionWriteCheck) else None
+
     def guard(
         kind: DefinitionKind, id: str, document: Mapping[str, Any], put: Mapping[str, bytes]
     ) -> None:
@@ -122,6 +133,8 @@ def _make_guard(
                 ]
         if findings:
             raise SecretRejected(tuple(findings))
+        if check is not None:
+            check.ensure_writable()
 
     return guard
 
@@ -146,16 +159,20 @@ def build_space(
         writable = files.is_writable(root)
     kinds = portable_kinds(options.get("kinds", DEFAULT_KINDS))
     max_bytes = options.get("max_content_bytes", DEFAULT_MAX_CONTENT_BYTES)
+    versions = options.get("versions")
     store = FileDefinitionStore(
         root,
         kinds,
-        versions=options.get("versions"),
+        versions=versions,
         hash_fn=options.get("hash_fn", default_hash),
         clock=options.get("clock", time.time),
         max_content_bytes=max_bytes,
         max_versions=options.get("max_versions"),
         write_guard=_make_guard(
-            writable=writable, rules=rules, scan_bodies=options.get("scan_bodies", False)
+            writable=writable,
+            rules=rules,
+            scan_bodies=options.get("scan_bodies", False),
+            versions=versions,
         ),
     )
     return ProjectSpace(

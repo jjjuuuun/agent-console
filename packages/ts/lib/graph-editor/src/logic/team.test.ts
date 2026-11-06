@@ -7,6 +7,7 @@ import { buildFlowModel } from "./convert";
 import { declaredLabels, evaluateWhen } from "./declared";
 import {
   applyGraphPatch,
+  mergeSuggestions,
   applyRoleToggle,
   candidateEdgeKinds,
   canHaveResources,
@@ -155,6 +156,24 @@ describe("applyGraphPatch (서버 제안 적용)", () => {
     expect(res.graph.edges!.map((e) => e.id)).toEqual(["n1"]);
     expect(g.edges).toHaveLength(1);
     expect(applyGraphPatch(g, undefined).graph.nodes).toHaveLength(4);
+  });
+});
+
+describe("applyGraphPatch unset_node_fields · mergeSuggestions (5.7R.38)", () => {
+  it("노드 config의 경로를 지우고 없는 경로는 무시한다", () => {
+    const g = { ...teamGraph(), nodes: teamGraph().nodes!.map((n) => (n.id === "a1" ? { ...n, config: { a: { b: 1, c: 2 }, d: 3 } } : n)) };
+    const res = applyGraphPatch(g, { unset_node_fields: [{ node_id: "a1", path: "/a/b" }, { node_id: "a1", path: "/zz" }, { node_id: "ghost", path: "/a" }] });
+    expect(res.unsetFieldCount).toBe(1);
+    expect(res.graph.nodes!.find((n) => n.id === "a1")!.config).toEqual({ a: { c: 2 }, d: 3 });
+    expect(g.nodes!.find((n) => n.id === "a1")!.config).toEqual({ a: { b: 1, c: 2 }, d: 3 });
+  });
+  it("같은 id 제안을 하나로 합친다", () => {
+    const m = mergeSuggestions([
+      { id: "unset", label: "비우기", patch: { unset_node_fields: [{ node_id: "a1", path: "/x" }] } },
+      { id: "unset", label: "비우기", patch: { unset_node_fields: [{ node_id: "a2", path: "/x" }, { node_id: "a1", path: "/x" }] } },
+    ]);
+    expect(m?.patch?.unset_node_fields).toHaveLength(2);
+    expect(mergeSuggestions([])).toBeUndefined();
   });
 });
 

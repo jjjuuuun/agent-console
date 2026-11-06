@@ -94,6 +94,7 @@
 .ac-ge-attempt { flex: none; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); padding: 0 var(--ac-space-1); border-radius: var(--ac-radius-sm); border: 1px solid var(--ac-border-strong); font-variant-numeric: tabular-nums; }
 .ac-ge-issue[data-severity="error"] { color: var(--ac-danger); border-color: var(--ac-danger); }
 .ac-ge-issue[data-severity="warning"] { color: var(--ac-warning); border-color: var(--ac-warning); }
+.ac-ge-issue[data-severity="info"] { color: var(--ac-text-muted); border-color: var(--ac-border-strong); }
 .ac-ge-port-note { padding: 0 var(--ac-space-3) var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 .ac-ge-port-note[data-failed="true"] { color: var(--ac-warning); }
 .ac-ge-ports { padding: var(--ac-space-1) 0; border-top: 1px solid var(--ac-border); }
@@ -454,3 +455,6 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 .ac-ge-choice-row[aria-disabled="true"] { opacity: 0.6; }
 .ac-ge-choice-reason { display: block; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
 .ac-ge-offscreen .ac-ge-btn { white-space: nowrap; }
+/* 아래 줄(보기 도구줄 높이 안) 오른쪽 끝. 노드가 없는 여백에 둬서 노드를 덮지 않는다. 미니맵 토글이 있으면 그 왼쪽. */
+.ac-ge-offscreen { margin: var(--ac-space-2); }
+.ac-ge-offscreen--beside-toggle { margin-right: calc(var(--ac-space-2) * 2 + 28px); }

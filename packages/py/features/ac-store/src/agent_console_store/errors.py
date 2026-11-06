@@ -4,13 +4,20 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_console_contracts import Interaction, VersionConflictDetails
+from agent_console_contracts import Interaction, Issue, VersionConflictDetails
 
 
 class StoreError(Exception):
     """저장소 예외의 베이스. `code`는 계약의 오류 코드 문자열이다."""
 
     code: str = "internal"
+
+    def field_issues(self) -> list[Issue]:
+        """필드 위치 이슈(값 없음). `validation_failed` 응답의 `details.issues`에 실린다.
+
+        기본은 빈 목록이다. 거부 이유를 필드마다 알 수 있는 예외(예: 평문 비밀 거부)가 덮어쓴다.
+        """
+        return []
 
 
 class NotFound(StoreError):
@@ -106,7 +113,8 @@ def store_error_body(exc: StoreError) -> StoreErrorBody:
     """`StoreError` → `StoreErrorBody`. 서버 모듈들이 같은 매핑을 쓴다(모듈마다 복사하지 않는다).
 
     - `VersionConflict`(412): `details` = `VersionConflictDetails`, `ETag` = 현재 버전.
-    - `validation_failed`(정의 파일 손상 등): `details = {"issues": []}`(422는 항상 issues).
+    - `validation_failed`(정의 파일 손상, 평문 비밀 거부 등): `details = {"issues": [...]}`
+      (422는 항상 issues. 내용은 `StoreError.field_issues()`, 없으면 빈 목록).
     - 그 밖: `details = {}`.
     """
     details: dict[str, Any] = {}
@@ -117,5 +125,7 @@ def store_error_body(exc: StoreError) -> StoreErrorBody:
         if isinstance(current, str) and current:
             headers["ETag"] = f'"{current}"'
     elif exc.code == "validation_failed":
-        details = {"issues": []}
+        details = {
+            "issues": [i.model_dump(mode="json", exclude_none=True) for i in exc.field_issues()]
+        }
     return StoreErrorBody(code=exc.code, message=str(exc), details=details, headers=headers)

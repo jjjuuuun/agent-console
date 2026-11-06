@@ -19,8 +19,10 @@ from .open import STORAGE_MEMORY, ChatStorage, memory_storage_warning, open_chat
 from .repository import SqliteChatStorage, SqliteConversationRepository, SqliteQueueRepository
 from .schema import TABLE_NAMES, chat_queue, conversations, metadata
 
-BRANCH = MigrationBranch("chat", Path(__file__).parent / "migrations" / "versions")
-"""모듈 서술자 ``migrations``에 넣는 계보."""
+BRANCH = MigrationBranch(
+    "chat", Path(__file__).parent / "migrations" / "versions", scopes=("app", "project")
+)
+"""모듈 서술자 ``migrations``에 넣는 계보. 앱 DB와 프로젝트 기록 DB 둘 다에 올라간다(X39)."""
 
 __all__ = [
     "BRANCH",

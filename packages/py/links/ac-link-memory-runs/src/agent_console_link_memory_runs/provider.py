@@ -229,6 +229,9 @@ class MemoryToolProvider:
         if access is None:
             return ToolProvision(consumed_slots=consumed, warnings=tuple(issues))
         context = access_context(ctx, project_id=self.project_id, root_graph_id=self.root_graph_id)
+        extra = getattr(service, "issue", None)
+        if isinstance(extra, Issue):
+            issues = [*issues, extra]
 
         async def on_event(event_type: str, payload: MemoryEventPayload) -> None:
             await ctx.emit(event_type, event_payload(payload))

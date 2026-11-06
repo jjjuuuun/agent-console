@@ -14,9 +14,11 @@ export interface BootRetryPolicy {
   factor: number;
   /** 이 시간 동안 계속 실패하면 자동 재시도를 멈추고 오류 화면([다시 시도]·[새로고침])을 보인다. 0이면 바로 오류 */
   giveUpMs: number;
+  /** 서버가 응답하며 "준비 중"(503 not_ready)이라고 할 때의 한도. null이면 한도 없이 기다린다(서버가 살아 있고 곧 준비됨) */
+  notReadyGiveUpMs: number | null;
 }
 
-export const BOOT_RETRY: BootRetryPolicy = { initialMs: 500, maxMs: 5000, factor: 2, giveUpMs: 60_000 };
+export const BOOT_RETRY: BootRetryPolicy = { initialMs: 500, maxMs: 5000, factor: 2, giveUpMs: 300_000, notReadyGiveUpMs: null };
 
 /**
  * 부팅 실패 분류.
@@ -37,4 +39,11 @@ export function classifyBootFailure(error: unknown): BootFailureKind {
 /** `attempt`(0부터)번째 재시도 전 대기(ms). */
 export function bootRetryDelay(policy: BootRetryPolicy, attempt: number): number {
   return Math.min(policy.maxMs, policy.initialMs * policy.factor ** attempt);
+}
+
+/** 지금까지 `elapsedMs` 기다렸고 다음 대기가 `delayMs`일 때 포기해야 하는가. */
+export function shouldGiveUp(policy: BootRetryPolicy, kind: BootFailureKind, elapsedMs: number, delayMs: number): boolean {
+  if (kind === "fatal") return true;
+  const limit = kind === "not-ready" ? policy.notReadyGiveUpMs : policy.giveUpMs;
+  return limit !== null && elapsedMs + delayMs > limit;
 }

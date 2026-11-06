@@ -409,6 +409,8 @@ def build_schema() -> dict[str, Any]:
             "KNOWN_EXISTING_PROJECT_STATES": _upper_constants(projects.KnownExistingProjectStates),
             "KNOWN_SESSION_STATES": _upper_constants(chat.KnownSessionStates),
             "KNOWN_QUEUE_HOLD_REASONS": _upper_constants(chat.KnownQueueHoldReasons),
+            "KNOWN_DELEGATION_SESSIONS": _upper_constants(runs.KnownDelegationSessions),
+            "KNOWN_DELEGATION_BACKENDS": _upper_constants(runs.KnownDelegationBackends),
             "USER_TEXT_RULES": user_text_rules_data(),
         },
         "x-modules": submodule_definitions(sorted(defs)),

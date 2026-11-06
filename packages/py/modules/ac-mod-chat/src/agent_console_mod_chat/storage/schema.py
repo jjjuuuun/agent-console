@@ -1,7 +1,7 @@
 """`conversations`·`chat_queue` 테이블 정의(SQLAlchemy Core).
 
 두 테이블은 legacy 마이그레이션 0002·0003이 만들었다. `conversations.project_id`와 그 색인은
-`chat_0002`가 더했다(이동은 코드 소유권만 바뀐다,
+`chat_0002`가, `chat_queue.host_id`는 `chat_0003`이 더했다(이동은 코드 소유권만 바뀐다,
 design §3R.1.7). 컬럼으로 올린 것은 목록 필터·정렬(그래프, 보관 여부, 갱신 시각)과 대기열 순서에
 쓰는 필드뿐이고, 대화 전체는 `doc`(JSON)에 둔다.
 """
@@ -39,6 +39,7 @@ chat_queue = sa.Table(
     sa.Column("held", sa.Integer, nullable=False, server_default="0"),
     sa.Column("held_reason", sa.Text),
     sa.Column("created_at", sa.Float, nullable=False),
+    sa.Column("host_id", sa.Text),
     sa.Index("ix_chat_queue_conversation_position", "conversation_id", "position"),
 )
 

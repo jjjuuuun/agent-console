@@ -28,7 +28,7 @@ from ._nested import TeamLookup
 from ._plan import TeamPlan, edge_kinds
 from ._preview import session_owner
 from ._run import delegation_settings, flow_settings
-from ._settings import delegation_max_depth, node_settings
+from ._settings import NodeSettings, delegation_max_depth, node_settings
 from ._suggest import SuggestionBuilder
 
 __all__ = ["TeamCheckContext"]
@@ -82,7 +82,7 @@ class TeamCheckContext:
         except ValidationError:  # 설정이 틀리면 계약 기본값(설정 오류는 설정 검사가 알린다)
             self.max_nesting_setting = DelegationSettings().max_nesting
         self.issues: list[Issue] = []
-        self._settings: dict[str, AgentSettings] = {}
+        self._settings: dict[str, NodeSettings] = {}
 
     def opening_inbound(self, node_id: str) -> tuple[str, ...]:
         """노드로 들어오는 입구·흐름 엣지 중 반복을 닫는 사이클 연결을 뺀 것.
@@ -95,8 +95,8 @@ class TeamCheckContext:
     def add(self, issue: Issue) -> None:
         self.issues.append(issue)
 
-    def settings(self, node_id: str) -> AgentSettings:
-        """노드의 유효 설정(캐시)."""
+    def node_settings(self, node_id: str) -> NodeSettings:
+        """노드의 유효 설정 결과(값·출처, 캐시)."""
         if node_id not in self._settings:
             self._settings[node_id] = node_settings(
                 self.plan,
@@ -104,8 +104,22 @@ class TeamCheckContext:
                 agents=self.agents,
                 workspace=self.workspace,
                 strategies=self.strategies,
-            ).effective.value
+            )
         return self._settings[node_id]
+
+    def settings(self, node_id: str) -> AgentSettings:
+        """노드의 유효 설정 값(캐시)."""
+        return self.node_settings(node_id).effective.value
+
+    def field_layers(self, node_id: str, name: str) -> set[str]:
+        """노드 유효 설정에서 최상위 필드 `name`(과 그 아래 위치)의 값이 온 층 id들."""
+        pointer = f"/{name}"
+        provenance = self.node_settings(node_id).resolved.provenance
+        return {
+            layer
+            for at, layer in provenance.items()
+            if at == pointer or at.startswith(pointer + "/")
+        }
 
     def backend_of(self, node_id: str) -> str | None:
         return self.settings(node_id).backend or self.default_backend

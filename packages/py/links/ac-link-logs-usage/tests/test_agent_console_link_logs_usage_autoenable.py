@@ -170,7 +170,8 @@ def test_first_usage_response_has_local_logs_without_settings(tmp_path: Path) ->
         assert sources["local-logs"]["enabled"] is True
         assert sources["local-logs"]["descriptor"]["auto_enable"] is True
         titles = {w["id"]: w["title"] for w in sources["local-logs"]["descriptor"]["windows"]}
-        assert titles["local_five_hour"] == "5시간(로그 추정)"
+        assert titles["local_five_hour"] == "5시간"  # 창 이름에 신뢰 말 없음(5.7R.43)
+        assert titles["local_seven_day"] == "7일"
     # 원본은 읽기 전용: 가짜 ~/.claude는 그대로, 설정 파일은 만들지 않는다
     assert _tree_digest(home / ".claude") == before
     assert not (tmp_path / "ws").exists() or not any((tmp_path / "ws").rglob("settings*"))

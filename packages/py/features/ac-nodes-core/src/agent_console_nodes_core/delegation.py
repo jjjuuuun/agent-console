@@ -30,6 +30,8 @@ from agent_console_contracts import (
     DelegationStrategyDescriptor,
     ErrorInfo,
     Issue,
+    KnownDelegationBackends,
+    KnownDelegationSessions,
     KnownInteractionKinds,
     RunEvent,
 )
@@ -179,6 +181,10 @@ class SdkSubagentsStrategy:
         composable=True,
         # 대상은 위임자 세션 안에서 돈다 — 대상의 상호작용 종류가 위임자 세션 grant에 더해진다.
         shares_session=True,
+        # 화면 표시 속성(5.7R.34): 같은 세션 · 위임자 백엔드 · 다시 위임 불가(깊이 1).
+        session=KnownDelegationSessions.SAME,
+        backend=KnownDelegationBackends.DELEGATOR,
+        nestable=False,
     )
 
     def validate(self, plan: DelegationPlan) -> list[Issue]:

@@ -45,6 +45,7 @@ from .interfaces import (
     RunRepository,
     StoredDefinition,
     VersionRepository,
+    VersionWriteCheck,
 )
 from .kinds import (
     AGENT_KIND,
@@ -57,7 +58,14 @@ from .kinds import (
 )
 from .lazy_versions import LazyVersionRepository, versions_for
 from .memory import InMemoryStorage, InMemoryVersionRepository
-from .migrate import branch_version_table, current_revision, downgrade, upgrade
+from .migrate import (
+    branch_version_table,
+    current_revision,
+    downgrade,
+    script_revisions,
+    upgrade,
+    upgrade_on,
+)
 from .observed import ObservedVersionRepository, VersionRecorded
 from .project_assign import (
     AssignCandidate,
@@ -68,7 +76,29 @@ from .project_assign import (
     plan_assignment,
     to_project_counts,
 )
+from .records import (
+    RECORDS_SPACES_PORT,
+    RecordsAbsent,
+    RecordsDb,
+    RecordsHandle,
+    RecordsSpaces,
+    RecordsState,
+    RecordsUnavailable,
+    can_write_path,
+    inspect_records,
+    is_network_fs,
+    open_records_db,
+)
+from .records_versions import RecordsEngines, RecordsVersionRepository
 from .snapshot import get_run_snapshot
+from .spaces import (
+    DEFINITIONS_SPACES_PORT,
+    DefinitionSpaces,
+    MappedSpaces,
+    SpaceStores,
+    SpacesUnavailable,
+    UnknownSpace,
+)
 from .sqlite import SqliteStorage, create_sqlite_engine, open_sqlite
 from .yaml_io import atomic_write_bytes, dump_yaml, load_yaml_text, merge_into, to_plain, wrap_value
 
@@ -76,8 +106,10 @@ __all__ = [
     "AGENT_KIND",
     "DEFAULT_KINDS",
     "DEFAULT_MAX_CONTENT_BYTES",
+    "DEFINITIONS_SPACES_PORT",
     "GRAPH_KIND",
     "LEGACY_BRANCH",
+    "RECORDS_SPACES_PORT",
     "RESOURCE_KIND",
     "SCOPE_FIELD",
     "SETTINGS_KIND",
@@ -88,6 +120,7 @@ __all__ = [
     "ContentTooLarge",
     "DefinitionCorrupt",
     "DefinitionKind",
+    "DefinitionSpaces",
     "DefinitionStore",
     "DefinitionSummary",
     "EventConflict",
@@ -102,24 +135,38 @@ __all__ = [
     "InvalidContentPath",
     "InvalidIdentifier",
     "LazyVersionRepository",
+    "MappedSpaces",
     "MigrationBranchLike",
     "NotFound",
     "ObservedVersionRepository",
     "ProjectAssignStore",
+    "RecordsAbsent",
+    "RecordsDb",
+    "RecordsEngines",
+    "RecordsHandle",
+    "RecordsSpaces",
+    "RecordsState",
+    "RecordsUnavailable",
+    "RecordsVersionRepository",
     "RunRepository",
+    "SpaceStores",
+    "SpacesUnavailable",
     "SqliteDatabase",
     "SqliteStorage",
     "StoreError",
     "StoreErrorBody",
     "StoredDefinition",
+    "UnknownSpace",
     "VersionConflict",
     "VersionRecorded",
     "VersionRepository",
     "VersionRequired",
+    "VersionWriteCheck",
     "WriteGuard",
     "assign_project",
     "atomic_write_bytes",
     "branch_version_table",
+    "can_write_path",
     "canonical_json",
     "check_content_path",
     "count_projects",
@@ -129,16 +176,21 @@ __all__ = [
     "downgrade",
     "dump_yaml",
     "get_run_snapshot",
+    "inspect_records",
+    "is_network_fs",
     "list_graph_summaries",
     "load_yaml_text",
     "merge_into",
+    "open_records_db",
     "open_sqlite",
     "plan_assignment",
+    "script_revisions",
     "store_error_body",
     "to_plain",
     "to_project_counts",
     "to_versioned_graph",
     "upgrade",
+    "upgrade_on",
     "versions_for",
     "wrap_value",
 ]

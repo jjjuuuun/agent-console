@@ -8,11 +8,13 @@
       ``mod-definitions``.
     - 포트·토픽(``ports``): ``DEFINITIONS_STORE``·``DEFINITIONS_LOOKUP``·``WORKSPACE_SETTINGS``·
       ``SECRET_RULES``·``DEFINITION_CHECKS``(multi)·``SERVER_WARNINGS``(multi)·
-      ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``DEFINITIONS_SAVED``(``SavedDefinition``).
+      ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``DEFINITIONS_SPACES``(선택, 공간 이름 → 저장소)·
+      ``DEFINITIONS_SAVED``(``SavedDefinition`` — ``space`` 포함).
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
       ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``PlainSecretScan``·
       ``scan_store``·``plain_secret_warnings``(평문 점검), ``DefinitionService``.
-    - ``build_router``: FastAPI 라우터(접두 없음). ``ERROR_MAP``: 모듈 오류 맵.
+    - ``build_router``: FastAPI 라우터(접두 없음, ``service(space)`` 공장).
+      ``ERROR_MAP``: 모듈 오류 맵.
     - ``DefinitionModuleSettings``: 설치자 설정(``modules.options.mod-definitions``).
 """
 
@@ -25,6 +27,7 @@ from .ports import (
     DEFINITION_CHECKS,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SAVED,
+    DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
     GRAPH_VALIDATION,
@@ -52,6 +55,7 @@ __all__ = [
     "DEFAULT_PLAIN_SECRET_ISSUE_CODES",
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_SAVED",
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "ERROR_MAP",

@@ -13,7 +13,7 @@
   이름은 `config_dir`·`SpaceLayout` 인자다. `.gitignore` 틀은 패키지 데이터 `data/gitignore.template`이다.
 - 파일 시스템은 `SpaceFiles`로 주입한다(기본 `LocalFiles`). 정의 저장소 자체는 `FileDefinitionStore`라서
   그 root는 로컬 경로다.
-- 기록 DB(`records.sqlite3`)·메모리 DB 경로만 알려 준다(`records_db_path`·`memory_db_path`). 파일은 만들지 않는다.
+- 기록 DB(`records.sqlite3`)·메모리 DB 경로만 알려 준다(`records_db_path`·`memory_db_path`). 파일은 만들지 않는다. 기록 DB를 여는 일은 `ac-store`의 `open_records_db`가 한다(이 패키지는 경로만 안다).
 
 ## 설치
 
@@ -70,11 +70,15 @@ pip install agent-console-project-space
 | `portable_kinds(kinds)` | 공간에 들어가는 종류(`DefinitionKind.is_portable`) |
 | `scan_secrets(rules, document)` | 평문 비밀 의심 위치(값 없음) |
 | `default_gitignore_template()` | 패키지 데이터 `.gitignore` 틀 |
+| `missing_gitignore_lines(space, template=None)` | 틀의 `/` 줄 중 `.gitignore`에 빠진 줄(파일이 없으면 전부). 알리기만 한다 |
+| `append_gitignore(space, template=None)` | 빠진 줄을 끝에 덧붙이고(있는 줄은 그대로) 더한 줄을 돌려준다. 읽기 전용이면 `ConfigReadonly` |
 | `SpaceFiles`·`LocalFiles` | 파일 시스템 주입점 / 기본 구현 |
-| 예외 | `SpaceError` 하위: `FolderMissing`·`ConfigReadonly`·`UnsafeConfigDir`·`ManifestInvalid`(`reason`), `SecretRejected`(`StoreError`, `findings`). `code`는 계약 `ErrorCodes` |
+| 예외 | `SpaceError`(`StoreError`) 하위: `FolderMissing`·`ConfigReadonly`·`UnsafeConfigDir`·`ManifestInvalid`(`reason`), `SecretRejected`(`StoreError`, `findings`, `field_issues()` → 422 `details.issues`). `code`는 계약 `ErrorCodes` — 서버는 공용 `store_error_body`로 응답한다 |
 
 `.gitignore` 틀의 줄은 구성 폴더 바로 아래만 가리키도록 `/`로 시작한다(리소스 이름이 `claude`·`sessions`여도
-커밋에서 빠지지 않게). 버전 기록은 호출자가 `versions=`로 넘긴다(보통 그 폴더 기록 DB). 생략하면 메모리다.
+커밋에서 빠지지 않게). 버전 기록은 호출자가 `versions=`로 넘긴다(보통 그 폴더 기록 DB —
+`agent_console_store.RecordsVersionRepository`). 생략하면 메모리다. 기록소가 `ensure_writable()`을 주면 정의를 쓰기
+전에 불러, 기록 DB를 쓸 수 없을 때 정의 파일도 쓰지 않는다.
 테스트 도구는 `agent_console_project_space.testing`(`ReadOnlyFiles` 등)이다.
 
 ## 개발·재사용

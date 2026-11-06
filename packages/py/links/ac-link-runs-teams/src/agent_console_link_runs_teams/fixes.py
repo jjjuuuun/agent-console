@@ -13,6 +13,20 @@
     {'role': 'definition:graph', 'id': 'g1'}
     >>> fixes.fix_for("other", team_kind="graph", graph_id="g1") is None
     True
+
+이슈 ``details``의 문자열 값은 ``{detail_<키>}`` 자리표시자로 쓸 수 있다. 버튼 틀의
+``requires``(자리표시자 이름 목록) 중 하나라도 비면 그 버튼은 만들지 않는다(예: 값이 에이전트
+정의에서 온 이슈에만 붙이는 버튼).
+
+    >>> fixes = IssueFixes.from_data({"rules": [{"codes": ["x.y"], "actions": [
+    ...     {"label": "에이전트 열기", "target": {"role": "definition:{detail_agent_kind}",
+    ...      "id": "{detail_agent}"}, "requires": ["detail_agent"]}]}]})
+    >>> fixes.fix_for("x.y", team_kind="graph", graph_id="g1") is None
+    True
+    >>> fix = fixes.fix_for("x.y", team_kind="graph", graph_id="g1",
+    ...                     details={"agent": "a1", "agent_kind": "agent"})
+    >>> fix.actions[0].target.model_dump(exclude_none=True)
+    {'role': 'definition:agent', 'id': 'a1'}
 """
 
 from __future__ import annotations
@@ -29,6 +43,7 @@ from agent_console_contracts import Fix, FixAction, FixTarget, Issue
 __all__ = ["DEFAULT_ISSUE_FIXES", "IssueFixes", "load_issue_fixes"]
 
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
+_DETAIL_PREFIX = "detail_"
 
 
 def _fill(template: Any, values: Mapping[str, str | None]) -> str | None:
@@ -69,6 +84,7 @@ class IssueFixes:
         graph_id: str | None,
         node_id: str | None = None,
         edge_id: str | None = None,
+        details: Mapping[str, Any] | None = None,
     ) -> Fix | None:
         """코드의 해결 버튼(표에 없거나 채운 뒤 버튼이 하나도 남지 않으면 None).
 
@@ -77,19 +93,29 @@ class IssueFixes:
             team_kind: 팀 구성 정의 종류 이름(``{team_kind}``).
             graph_id: 팀 구성 id(``{graph_id}``).
             node_id / edge_id: 문제 위치(``{node_id}``·``{edge_id}``, ``{item_id}`` = 노드 → 엣지).
+            details: 이슈 ``details``. 문자열 값이 ``{detail_<키>}``가 된다(선택).
         """
         templates = self.rules.get(code)
         if not templates:
             return None
-        values = {
-            "team_kind": team_kind,
-            "graph_id": graph_id,
-            "node_id": node_id,
-            "edge_id": edge_id,
-            "item_id": node_id or edge_id,
+        values: dict[str, str | None] = {
+            f"{_DETAIL_PREFIX}{k}": v
+            for k, v in (details or {}).items()
+            if isinstance(k, str) and isinstance(v, str)
         }
+        values.update(
+            {
+                "team_kind": team_kind,
+                "graph_id": graph_id,
+                "node_id": node_id,
+                "edge_id": edge_id,
+                "item_id": node_id or edge_id,
+            }
+        )
         actions: list[FixAction] = []
         for tpl in templates:
+            if any(not values.get(str(name)) for name in tpl.get("requires", ())):
+                continue
             target = tpl.get("target") or {}
             role = _fill(target.get("role"), values)
             label = _fill(tpl.get("label"), values)
@@ -121,6 +147,7 @@ class IssueFixes:
                     graph_id=graph_id,
                     node_id=issue.node_id,
                     edge_id=issue.edge_id,
+                    details=issue.details,
                 )
                 if fix is not None:
                     issue = issue.model_copy(update={"fix": fix})

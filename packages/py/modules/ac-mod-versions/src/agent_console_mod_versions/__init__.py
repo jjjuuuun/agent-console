@@ -23,6 +23,7 @@ from .module import MODULE_ID, WEB_ROLES, VersionsModule, module
 from .ports import (
     DEFINITION_CHECKS,
     DEFINITIONS_SAVED,
+    DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     SECRET_RULES,
     DefinitionCheck,
@@ -43,6 +44,7 @@ __all__ = [
     "DEFAULT_COLLECTIONS",
     "DEFAULT_SECRET_ISSUE_CODES",
     "DEFINITIONS_SAVED",
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "ERROR_MAP",

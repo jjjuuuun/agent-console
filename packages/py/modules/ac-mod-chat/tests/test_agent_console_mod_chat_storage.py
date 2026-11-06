@@ -214,7 +214,7 @@ def test_upgrade_on_empty_db_creates_tables_and_branch_version(tmp_path: Path) -
     db.upgrade([BRANCH])
     assert set(sa.inspect(db.engine).get_table_names()) >= TABLE_NAMES
     assert db.revision() == "0003"
-    assert db.revision("chat") == "chat_0002"
+    assert db.revision("chat") == "chat_0003"
     names = {i["name"] for t in TABLE_NAMES for i in sa.inspect(db.engine).get_indexes(t)}
     assert {
         "ix_conversations_archived_updated",
@@ -234,9 +234,11 @@ def test_branch_downgrade_and_reapply_keeps_tables_and_data(tmp_path: Path) -> N
     db.downgrade_branch(BRANCH)
     assert db.revision("chat") is None
     assert storage.conversations.get("c1") is not None  # 테이블은 legacy 소유라 그대로
-    assert [q.id for q in storage.queue.list()] == ["a"]
+    with db.engine.connect() as conn:  # 되돌리면 host_id 열이 없으므로 원시 질의로 행을 확인
+        assert [r[0] for r in conn.exec_driver_sql("SELECT id FROM chat_queue")] == ["a"]
     db.upgrade([BRANCH])
-    assert db.revision("chat") == "chat_0002"
+    assert [q.id for q in storage.queue.list()] == ["a"]
+    assert db.revision("chat") == "chat_0003"
     db.close()
 
 
@@ -277,7 +279,7 @@ def test_migration_scripts_are_package_data_and_work_after_copy(tmp_path: Path) 
     shutil.copytree(BRANCH.versions, copied, ignore=shutil.ignore_patterns("__pycache__"))
     db = SqliteDatabase.open(tmp_path / "empty.sqlite3")
     db.upgrade([type("B", (), {"name": "chat", "versions": copied})()])
-    assert db.revision("chat") == "chat_0002"
+    assert db.revision("chat") == "chat_0003"
     db.close()
 
 
@@ -332,7 +334,7 @@ def test_chat_0002_upgrade_keeps_old_rows_null_and_downgrade_only_drops_the_colu
     db = SqliteDatabase.open(path)
     db.upgrade([BRANCH])
     storage = SqliteChatStorage(db.engine)
-    assert db.revision("chat") == "chat_0002"
+    assert db.revision("chat") == "chat_0003"
     old = storage.conversations.get("c9")
     assert old is not None
     assert old.project_id is None
@@ -375,3 +377,30 @@ def test_assign_project_and_counts_on_both_stores(storage: Any) -> None:
     assert (moved.assigned, [s.id for s in moved.skipped]) == (1, ["zz"])
     assert [c.id for c in repo.list(project_id="p")] == ["c3", "c2", "c1"]
     assert count_projects(repo).by_project == {"p": 3}
+
+
+# ---- 대기열 host_id (5.7R.33w2, chat_0003) ------------------------------------
+
+
+def test_chat_0003_adds_nullable_host_id_and_downgrade_drops_only_it(tmp_path: Path) -> None:
+    db = SqliteDatabase.open(tmp_path / "h.sqlite3")
+    db.upgrade([BRANCH])
+    cols = {c["name"]: c for c in sa.inspect(db.engine).get_columns("chat_queue")}
+    assert "host_id" in cols
+    assert cols["host_id"]["nullable"]
+    storage = SqliteChatStorage(db.engine)
+    _q(storage, "a")
+    db.downgrade_branch(BRANCH, "chat_0002")
+    cols_after = {c["name"] for c in sa.inspect(db.engine).get_columns("chat_queue")}
+    assert "host_id" not in cols_after
+    assert {"held", "held_reason", "created_at"} <= cols_after
+    with db.engine.connect() as conn:
+        assert [r[0] for r in conn.exec_driver_sql("SELECT id FROM chat_queue")] == ["a"]
+    db.upgrade([BRANCH])
+    assert [q.id for q in storage.queue.list()] == ["a"]
+    assert db.revision("chat") == "chat_0003"
+    db.close()
+
+
+def test_branches_are_declared_for_app_and_project_scopes() -> None:
+    assert set(BRANCH.scopes) == {"app", "project"}

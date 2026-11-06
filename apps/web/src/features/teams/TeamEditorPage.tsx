@@ -495,10 +495,20 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
       return;
     }
     const prev = draft;
+    const unset = suggestion.patch?.unset_node_fields?.length ?? 0;
     if (handle.current?.applySuggestion(issue, suggestion) === true && prev !== undefined) {
-      toast({ tone: "info", text: t.issues.applied, mergeKey: "apply-suggestion", mergeText: t.issues.appliedMany, action: { label: t.issues.undo, onClick: () => editor.setDraft(prev) } });
+      toast({ tone: "info", text: unset > 0 ? t.issues.actionUnsetDone(new Set(suggestion.patch?.unset_node_fields?.map((r) => r.node_id)).size) : t.issues.applied, mergeKey: "apply-suggestion", mergeText: t.issues.appliedMany, action: { label: t.issues.undo, onClick: () => editor.setDraft(prev) } });
     }
   }
+
+  /** [노드 설정 열기]: 노드 선택 + [설정] 탭 + 필드 포커스(경로가 없으면 탭만) */
+  const openNodeSettings = (nodeId: string, path: string | undefined) => {
+    setForceTeam(false);
+    setPanelOpen(true);
+    setNodeTab("settings");
+    setFixFocusPath(path ?? null);
+    setFocus({ nodeId, token: (focus?.token ?? 0) + 1 });
+  };
 
   const focusTarget = (target: IssueTarget) => {
     if (target.nodeId === undefined) return;
@@ -912,6 +922,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
             onValidate={() => validation.validateNow()}
             onFocus={focusTarget}
             onApplySuggestion={applySuggestion}
+            onOpenNode={openNodeSettings}
           />
         </>
       )}

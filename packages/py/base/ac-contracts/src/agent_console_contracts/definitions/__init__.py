@@ -31,8 +31,10 @@ from ._api import (
 from ._issues import (
     GraphPatch,
     Issue,
+    IssueGroup,
     IssueSeverity,
     IssueSuggestion,
+    NodeFieldRef,
 )
 from ._models import (
     DEFAULT_NOTIFICATION_EVENTS,
@@ -118,6 +120,7 @@ __all__ = [
     "GraphValidationSummary",
     "InteractionSettings",
     "Issue",
+    "IssueGroup",
     "IssueSeverity",
     "IssueSuggestion",
     "ItemAction",
@@ -125,6 +128,7 @@ __all__ = [
     "Limits",
     "MergeStrategyInfo",
     "NetworkPolicy",
+    "NodeFieldRef",
     "NodeLayout",
     "NodeSpec",
     "NotificationSettings",

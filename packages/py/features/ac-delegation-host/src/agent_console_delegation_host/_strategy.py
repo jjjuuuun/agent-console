@@ -25,6 +25,8 @@ from agent_console_contracts import (
     DelegationStrategyDescriptor,
     ErrorInfo,
     Issue,
+    KnownDelegationBackends,
+    KnownDelegationSessions,
 )
 from agent_console_runtime import (
     Activation,
@@ -83,6 +85,7 @@ def host_descriptor(strategy_id: str = HOST) -> DelegationStrategyDescriptor:
     - `composable: true`: 다른 composable 방식(예: 서브에이전트)과 한 위임자에서 합쳐 실행한다.
     - `shares_session: false`: 대상은 자기 세션에서 돈다. 대상의 상호작용 종류·대기 한도는
       위임자 세션 grant에 더하지 않는다(design §5.2R.7, 결정 J-10).
+    - 화면 표시 속성(5.7R.34): `session: separate`·`backend: target`·`nestable: true`.
     """
     return DelegationStrategyDescriptor(
         id=strategy_id,
@@ -100,6 +103,10 @@ def host_descriptor(strategy_id: str = HOST) -> DelegationStrategyDescriptor:
         member_interaction_kinds=None,
         composable=True,
         shares_session=False,
+        # 화면 표시 속성(5.7R.34): 별도 세션 · 대상 자기 백엔드 · 다시 위임 가능.
+        session=KnownDelegationSessions.SEPARATE,
+        backend=KnownDelegationBackends.TARGET,
+        nestable=True,
     )
 
 

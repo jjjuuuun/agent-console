@@ -10,6 +10,7 @@ from agent_console_modkit import (
     BaseServices,
     DatabaseHandle,
     MigrationBranch,
+    ModuleContext,
     ModulesConfig,
     ModuleState,
     assemble,
@@ -85,3 +86,42 @@ def test_without_database_module_still_builds() -> None:
     assembly = assemble([a], None, base=BaseServices())
     assert assembly.report[0].state is ModuleState.ACTIVE
     assert a.contexts[0].database is None
+
+
+def _scoped(name: str, *scopes: str) -> MigrationBranch:
+    return MigrationBranch(name, Path("/nowhere") / name, scopes=scopes)
+
+
+def test_default_scope_is_app() -> None:
+    assert _branch("a").scopes == ("app",)
+
+
+def test_empty_scopes_are_rejected() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="scopes는 비어 있지 않은"):
+        MigrationBranch("a", Path("/x"), scopes=())
+
+
+def test_host_database_gets_only_app_scoped_branches() -> None:
+    db = RecordingDatabase()
+    both = fake_module("mod-both", migrations=[_scoped("both", "app", "project")])
+    proj = fake_module("mod-proj", migrations=[_scoped("proj", "project")])
+    assemble([both, proj], None, base=BaseServices(database=db))
+    assert db.upgrades == [["both"]]
+
+
+def test_active_migrations_lists_enabled_modules_by_scope() -> None:
+    both = fake_module("mod-both", migrations=[_scoped("both", "app", "project")])
+    proj = fake_module("mod-proj", migrations=[_scoped("proj", "project")])
+    app_only = fake_module("mod-app", migrations=[_branch("appb")])
+    off = fake_module("mod-off", migrations=[_scoped("off", "project")])
+    seen: list[ModuleContext] = []
+    spy = fake_module("mod-spy", on_build=lambda ctx: seen.append(ctx))
+    assemble(
+        [both, proj, app_only, off, spy], ModulesConfig(disabled=["mod-off"]), base=BaseServices()
+    )
+    ctx = seen[0]
+    assert sorted(b.name for b in ctx.active_migrations("project")) == ["both", "proj"]
+    assert sorted(b.name for b in ctx.active_migrations("app")) == ["appb", "both"]
+    assert ctx.active_migrations("unknown") == ()

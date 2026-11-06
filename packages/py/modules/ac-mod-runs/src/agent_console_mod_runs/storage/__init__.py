@@ -18,8 +18,10 @@ from agent_console_contracts import Issue
 from agent_console_modkit import DatabaseHandle, MigrationBranch
 from agent_console_store import InMemoryStorage, SqliteStorage
 
-BRANCH = MigrationBranch("runs", Path(__file__).parent / "migrations" / "versions")
-"""모듈 서술자 ``migrations``에 넣는 계보."""
+BRANCH = MigrationBranch(
+    "runs", Path(__file__).parent / "migrations" / "versions", scopes=("app", "project")
+)
+"""모듈 서술자 ``migrations``에 넣는 계보. 앱 DB와 프로젝트 기록 DB 둘 다에 올라간다(X39)."""
 
 STORAGE_MEMORY = "runs.storage_memory"
 """경고 코드: DB가 없어 실행 기록을 메모리에만 둔다."""

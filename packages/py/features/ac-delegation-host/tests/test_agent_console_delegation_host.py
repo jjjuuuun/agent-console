@@ -291,6 +291,8 @@ def test_descriptor_rules_are_values() -> None:
     assert d.member_interaction_kinds is None
     assert d.requires_backend_capability == "host_tools"
     assert d.shares_session is False  # 대상은 자기 세션(5.2R.43, 결정 J-10)
+    # 화면 표시 속성(5.7R.34)
+    assert (d.session, d.backend, d.nestable) == ("separate", "target", True)
     assert d.member_fields == list(AgentSettings.model_fields)
     props = d.config_schema["properties"]
     assert props["tool_name"]["default"] == "delegate"
