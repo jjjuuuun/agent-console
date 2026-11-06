@@ -42,6 +42,16 @@ class SpecCreateRequest(ContractModel):
     )
 
 
+class SpecTemplateCreateRequest(ContractModel):
+    """`POST /sdd/templates` 요청: 빈 문서 틀(문서 0개, 규칙 비움)을 만든다.
+
+    응답은 `SpecTemplate`(201, `ETag` = 정의 버전)."""
+
+    id: Slug | None = Field(default=None, description="문서 틀 id. 생략하면 이름에서 만든다.")
+    name: NonEmptyStr
+    description: str = ""
+
+
 class SpecImportRequest(ContractModel):
     """`POST /sdd/specs/import`: 프로젝트 폴더 안 마크다운 파일을 새 스펙 본문으로 **복사**한다."""
 
@@ -383,6 +393,7 @@ __all__ = [
     "SpecExportRequest",
     "SpecExportResult",
     "SpecImportRequest",
+    "SpecTemplateCreateRequest",
     "TaskAction",
     "TaskActionKey",
     "TaskActionRequest",

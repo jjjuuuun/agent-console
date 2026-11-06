@@ -12,6 +12,7 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from agent_console_contracts.sdd import (
+    ImportDir,
     ImportFile,
     ImportFileListing,
     SpecDefinition,
@@ -163,10 +164,12 @@ def list_import_files(
     limit: int = DEFAULT_IMPORT_LIMIT,
     reserved: Collection[str] = (),
 ) -> ImportFileListing:
-    """가져오기에 쓸 폴더 하나의 파일 목록(재귀하지 않음, §6R.18 Q13).
+    """가져오기에 쓸 폴더 하나의 파일 목록과 바로 아래 하위 폴더(재귀하지 않음, §6R.18 Q13, 6R.20d).
 
-    숨김(`.`로 시작)·링크·폴더·확장자가 맞지 않는 파일은 뺀다. 이름 순, 상한을 넘으면
-    `truncated`. 제목 추정 = 첫 `#` 제목 → 없으면 파일 이름.
+    파일: 숨김(`.`로 시작)·링크·확장자가 맞지 않는 파일은 뺀다. 제목 추정 = 첫 `#` 제목 → 없으면
+    파일 이름. 하위 폴더(`dirs`): 숨김·링크(정션 포함)·예약 폴더(루트의 `reserved` 이름)는 뺀다 —
+    다시 이 함수에 `path`로 넘겨 한 단계씩 연다. 둘 다 이름 순이고 각각 `limit`까지, 어느 쪽이든
+    넘으면 `truncated`.
 
     Args:
         files: 프로젝트 폴더 파일 접근.
@@ -188,6 +191,17 @@ def list_import_files(
     except NotADirectoryError:
         raise SpecPathError(path, "not_directory") from None
     hidden_ok = {r.casefold() for r in reserved}
+    folders = sorted(
+        (
+            e
+            for e in entries
+            if e.is_dir
+            and not e.is_link
+            and not e.name.startswith(".")
+            and not (not base and e.name.casefold() in hidden_ok)
+        ),
+        key=lambda e: e.name.casefold(),
+    )
     picked = sorted(
         (
             e
@@ -208,4 +222,10 @@ def list_import_files(
         data = files.read(rel) or b""
         stem = posixpath.splitext(e.name)[0]
         out.append(ImportFile(name=e.name, size=e.size, title_guess=guess_title(data, stem)))
-    return ImportFileListing(path=base, files=out, truncated=len(picked) > limit)
+    dirs = [ImportDir(name=e.name) for e in folders[:limit]]
+    return ImportFileListing(
+        path=base,
+        files=out,
+        dirs=dirs,
+        truncated=len(picked) > limit or len(folders) > limit,
+    )

@@ -45,6 +45,26 @@ class GraphValidationSummary(ContractModel):
     )
 
 
+class GraphSessionSummary(ContractModel):
+    """팀 구성 목록의 세션 집계(0.13.2).
+
+    세션 값 = 연결마다 디스크립터의 `session`(위임 연결은 유효 위임 방식 — 연결 config 덮어쓰기 →
+    종류 기본 — 의 값, 그 밖의 연결은 연결 종류의 값). 값은 열린 문자열이고 서버는 값의 뜻을 모른다.
+    집계 대상 노드 = 노드 타입 `opens_session`이 false가 아니고 세션 값이 있는 연결에 한 번이라도
+    닿은 노드. 화면은 `delegated`에서 자기가 아는 값(예: 같은 세션)을 골라 쓰고 나머지를
+    `nodes`에서 뺀다.
+    """
+
+    nodes: int = Field(ge=0, description="집계 대상 노드 수.")
+    delegated: dict[str, int] = Field(
+        default_factory=dict,
+        description=(
+            "세션 값 → 들어오는 위임 연결의 세션 값이 모두 그 값인 대상 노드 수. 위임 연결이 없거나"
+            " 값이 섞인 노드는 어느 값에도 들지 않는다(`nodes`에만 들어간다)."
+        ),
+    )
+
+
 class GraphSummary(ContractModel):
     """`GET /graphs` 목록 항목."""
 
@@ -71,6 +91,13 @@ class GraphSummary(ContractModel):
         default_factory=dict,
         description=(
             "팀 구성 원문의 자유 속성(`Graph.attributes` 그대로, 폴더 `ui.folder` 등). 생략 = 없음."
+        ),
+    )
+    session_summary: GraphSessionSummary | None = Field(
+        default=None,
+        description=(
+            "세션 집계(0.13.2). null = 계산하지 않음(제공 모듈이 꺼짐·해석할 수 없는 그래프) 또는"
+            " 세션 값이 있는 연결이 하나도 없음(요약을 숨긴다)."
         ),
     )
 

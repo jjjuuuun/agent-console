@@ -13,6 +13,8 @@
 
 제공:
 - ``graphs.entry_labels``: 팀 구성 입구 노드 표시 이름(``mod-definitions`` 목록).
+- ``graphs.session_summary``: 팀 구성 세션 집계(``mod-definitions`` 목록, 6R.20k — 위임 방식은
+  호스트 레지스트리에서 읽는다).
 - ``definitions.usages``: 정의가 붙은 곳(``mod-resources`` 목록 ``usage_count``).
 - ``definitions.dependencies``: 정의 문서가 쓰는 정의(여러 정의를 쓸 때 쓰는 정의 먼저, 5R.15).
 - ``definitions.references``(여러 제공자, X25): 참조 추출 함수 ``(kind, document) -> [(kind, id)]``
@@ -24,7 +26,13 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
-from agent_console_contracts import DefinitionReference, Graph, Issue, WorkspaceSettings
+from agent_console_contracts import (
+    DefinitionReference,
+    Graph,
+    GraphSessionSummary,
+    Issue,
+    WorkspaceSettings,
+)
 from agent_console_modkit import PortKey
 from agent_console_registry import Registry
 from agent_console_resources import ResourceLookup, ResourceType
@@ -51,6 +59,13 @@ class EntryLabels(Protocol):
     """``graphs.entry_labels`` 모양."""
 
     def entry_labels(self, graph: Graph) -> list[str] | None: ...
+
+
+@runtime_checkable
+class SessionSummaries(Protocol):
+    """``graphs.session_summary`` 모양."""
+
+    def session_summary(self, graph: Graph) -> GraphSessionSummary | None: ...
 
 
 @runtime_checkable
@@ -103,6 +118,9 @@ RESOURCE_TYPES: PortKey[Registry[ResourceType]] = PortKey("resources.types", "�
 SECRET_REDACT: PortKey[Redactor] = PortKey("secrets.redact", "해석한 비밀 값 가리기")
 SECRET_RULES: PortKey[SecretRulesReader] = PortKey("secrets.rules", "지금 비밀 의심 규칙")
 GRAPH_ENTRY_LABELS: PortKey[EntryLabels] = PortKey("graphs.entry_labels", "팀 구성 입구 이름")
+GRAPH_SESSION_SUMMARY: PortKey[SessionSummaries] = PortKey(
+    "graphs.session_summary", "팀 구성 목록 세션 집계"
+)
 DEFINITION_USAGES: PortKey[DefinitionUsages] = PortKey("definitions.usages", "정의가 붙은 곳")
 DEFINITION_DEPENDENCIES: PortKey[DocumentDependencies] = PortKey(
     "definitions.dependencies", "정의 문서가 쓰는 정의"
@@ -120,6 +138,7 @@ __all__ = [
     "DEFINITION_REFERENCES",
     "DEFINITION_USAGES",
     "GRAPH_ENTRY_LABELS",
+    "GRAPH_SESSION_SUMMARY",
     "RESOURCES_LOOKUP",
     "RESOURCE_TYPES",
     "SCOPE_LAYERS",
@@ -135,6 +154,7 @@ __all__ = [
     "ScopeLayersLike",
     "ScopeLayersSource",
     "SecretRulesReader",
+    "SessionSummaries",
     "StoredLike",
     "WorkspaceSettingsReader",
 ]

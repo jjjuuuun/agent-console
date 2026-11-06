@@ -20,6 +20,10 @@ from typing import Any
 
 from agent_console_server.testing import API, agent_doc, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 OPTIONS: dict[str, dict[str, Any]] = {
     "mod-logs": {"scan_interval_seconds": 0, "startup_scan": False},
     "link-logs-runs": {"debounce_seconds": 0},
@@ -121,7 +125,7 @@ def _run(client: Any) -> tuple[str, str]:
 
 
 def test_run_and_run_tree_scope_counts_from_fake_delegation(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path, options=OPTIONS)) as client:
+    with server(make_settings(tmp_path, options={**NO_PROJECT_GATE, **OPTIONS})) as client:
         root_id, child_id = _run(client)
         counts = _indexed(client, [root_id, child_id])
 
@@ -157,7 +161,11 @@ def test_run_and_run_tree_scope_counts_from_fake_delegation(tmp_path: Path) -> N
 
 
 def test_disabled_link_logs_runs_rejects_run_scopes(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, options=OPTIONS, modules={"disabled": ["link-logs-runs"]})
+    settings = make_settings(
+        tmp_path,
+        options={**NO_PROJECT_GATE, **OPTIONS},
+        modules={"disabled": ["link-logs-runs"]},
+    )
     with server(settings) as client:
         for scope in ("run:r1", "run-tree:r1"):
             response = client.get(f"{API}/logs/events", params={"scope": scope})

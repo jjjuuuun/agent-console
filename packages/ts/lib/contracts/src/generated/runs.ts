@@ -119,4 +119,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "runs" as const;
-export const CONTRACT_VERSION = "1.7.0" as const;
+export const CONTRACT_VERSION = "1.8.0" as const;

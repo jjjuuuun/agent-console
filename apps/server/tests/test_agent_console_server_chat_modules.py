@@ -15,6 +15,10 @@ from typing import Any
 from agent_console_contracts import ErrorCodes, ErrorResponse, FeatureUnavailableDetails
 from agent_console_server.testing import API, make_settings, seed_chat, server, wait_for
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 CHAT_ROLES: dict[str, list[str]] = {
     "mod-chat": ["conversations"],
     "link-chat-runs": ["conversations:runs"],
@@ -36,7 +40,7 @@ def _assert_send_unavailable(client: Any, conversation_id: str) -> None:
 
 
 def test_chat_module_and_link_are_active_with_roles(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         infos = _infos(client)
         for module_id, roles in CHAT_ROLES.items():
             assert infos[module_id]["status"] == "active", infos[module_id]
@@ -61,7 +65,9 @@ def test_chat_module_and_link_are_active_with_roles(tmp_path: Path) -> None:
 
 def test_core_definitions_chat_only_lists_and_rejects_send(tmp_path: Path) -> None:
     """ "core + definitions + chat": 대화 목록 정상, 메시지 전송 409 `feature_unavailable`."""
-    settings = make_settings(tmp_path, modules={"enabled": ["mod-definitions", "mod-chat"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"enabled": ["mod-definitions", "mod-chat"]}
+    )
     with server(settings) as client:
         infos = _infos(client)
         assert infos["mod-chat"]["status"] == "active"
@@ -88,7 +94,7 @@ def test_core_definitions_chat_only_lists_and_rejects_send(tmp_path: Path) -> No
 
 def test_chat_without_definitions_cannot_create(tmp_path: Path) -> None:
     """정의 읽기가 없으면 대화 만들기만 409(목록은 동작)."""
-    settings = make_settings(tmp_path, modules={"enabled": ["mod-chat"]})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"enabled": ["mod-chat"]})
     with server(settings) as client:
         assert client.get(f"{API}/conversations").json() == []
         res = client.post(f"{API}/conversations", json={"graph_id": "chat"})
@@ -98,7 +104,9 @@ def test_chat_without_definitions_cannot_create(tmp_path: Path) -> None:
 
 
 def test_disabling_link_turns_off_send_only(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["link-chat-runs"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["link-chat-runs"]}
+    )
     with server(settings) as client:
         infos = _infos(client)
         assert infos["link-chat-runs"]["status"] == "disabled"
@@ -110,7 +118,7 @@ def test_disabling_link_turns_off_send_only(tmp_path: Path) -> None:
 
 
 def test_disabling_chat_module(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["mod-chat"]})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["mod-chat"]})
     with server(settings) as client:
         infos = _infos(client)
         assert infos["mod-chat"]["status"] == "disabled"

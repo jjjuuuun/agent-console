@@ -6,6 +6,9 @@
 
 - ``GET /sdd/info`` · ``GET /sdd/templates`` · ``GET /sdd/templates/variables`` ·
   ``POST /sdd/templates/check``
+- 문서 틀 하나(``template_routes``, 6R.20a): ``POST /sdd/templates`` ·
+  ``GET·PUT·DELETE /sdd/templates/{id}`` · ``…/variables`` · ``…/files[/{path}]`` ·
+  ``…/versions[/{hash}[/files[/{path}]]]`` · ``POST …/versions/{hash}/restore``
 - ``GET·POST /sdd/specs`` · ``POST /sdd/specs/import`` · ``GET /sdd/import/files``
 - ``GET·PUT·DELETE /sdd/specs/{id}`` · ``POST /sdd/specs/{id}/check``
 - ``GET·PUT /sdd/specs/{id}/documents/{doc}`` · ``POST …/documents/{doc}/state``
@@ -79,6 +82,7 @@ from agent_console_sdd import (
 from .errors import SddRequestError
 from .secrets import SCAN_REJECT, SecretRejectedError
 from .service import SddScope, SddService, gather_actions
+from .template_routes import build_template_router
 
 _ERROR_STATUSES = (400, 401, 403, 404, 409, 422, 500)
 _HUMAN = KnownTransitionActors.HUMAN
@@ -250,7 +254,8 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
         path: Annotated[str, Query(description="폴더 기준 상대 경로(빈 값 = 루트).")] = "",
         space: SpaceQuery = None,
     ) -> ImportFileListing:
-        """가져오기용 폴더 안 파일 목록(재귀 없음, 서버가 루프백일 때만, §6R.18 Q13)."""
+        """가져오기용 폴더 안 파일 목록과 바로 아래 하위 폴더(재귀 없음 — 하위 폴더는 다시
+        ``path``로 연다, 숨김·링크·예약 폴더 제외, 서버가 루프백일 때만, §6R.18 Q13·6R.20d)."""
         svc = service()
         if not svc.ports.loopback():
             raise SddRequestError(
@@ -705,6 +710,8 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
             spec, contents, files, body.to_dir, overwrite=body.overwrite, reserved=sc.reserved
         )
 
+    # 문서 틀 하나(6R.20a): 고정 경로(/sdd/templates/variables 등) 뒤에 붙여 그쪽이 먼저 맞는다.
+    router.include_router(build_template_router(service))
     return router
 
 

@@ -6,7 +6,8 @@ Agent Console 정의 ↔ 팀 의미 연동 모듈(design §3R.1.4 L9, R2·R13.5)
   `GET /graphs/{id}/plan`·`POST /graphs/plan`(초안), `GET /graphs/{id}/nodes/{node}/effective-settings`·
   `POST /graphs/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview`·`POST /graphs/bundle-preview`.
   `x-secret` 평문과 해석한 비밀 값은 가린다.
-- 제공 포트: `graphs.entry_labels`(팀 구성 목록 입구 이름), `definitions.usages`(리소스 목록 `usage_count`),
+- 제공 포트: `graphs.entry_labels`(팀 구성 목록 입구 이름), `graphs.session_summary`(팀 구성 목록 세션 집계 —
+  `ac-teams.session_summary`, 위임 방식은 호스트 레지스트리), `definitions.usages`(리소스 목록 `usage_count`),
   `definitions.dependencies`(문서가 쓰는 정의 `TeamDocumentDependencies` — 팀 구성 → 에이전트·리소스·자식 팀 구성,
   에이전트 → 리소스. 여러 정의를 한꺼번에 쓸 때 쓰는 정의부터 쓰는 순서를 정하는 데 쓴다. 지금 기본 모듈 중
   소비자는 없다),
@@ -16,7 +17,7 @@ Agent Console 정의 ↔ 팀 의미 연동 모듈(design §3R.1.4 L9, R2·R13.5)
   `secrets.redact`(없으면 `secrets.rules`의 의심 값 가리기), `secrets.rules`.
 - 디스크립터: 호스트 기본 서비스 `registries`(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다(`catalog_from_registries`).
 - 웹 역할(`WEB_ROLES`): `definitions:teams` — 팀 구성 편집기의 초안 미리보기(`POST /graphs/plan`·`effective-settings`·`bundle-preview`)와 에이전트 사용처 패널(`GET /agents/{id}/usages`)이 이 역할로 켜진다.
-- 꺼지면: 위 경로는 404(웹이 해당 패널을 숨김), 목록의 입구 이름·사용 수는 null.
+- 꺼지면: 위 경로는 404(웹이 해당 패널을 숨김), 목록의 입구 이름·세션 집계·사용 수는 null.
 
 ## 설치
 

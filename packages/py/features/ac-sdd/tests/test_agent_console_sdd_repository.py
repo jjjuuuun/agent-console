@@ -324,3 +324,37 @@ def test_template_store_separate_from_spec_store() -> None:
     saved = split.save_as_template(stored.id, name="Copy")
     assert saved.template_id in library.list_ids(TEST_TEMPLATE_KIND)
     assert repo.store.list_ids(TEST_TEMPLATE_KIND) == []
+
+
+def test_template_create_save_delete() -> None:
+    """6R.20a: 빈 틀 만들기 → 저장(If-Match, 본문 그대로) → 지우기. 만든 스펙은 틀과 독립."""
+    from agent_console_store import AlreadyExists
+
+    repo = memory_repository()
+    made = repo.create_template(name="새 틀", taken=["spec-template-x"])
+    tpl = made.template
+    assert (tpl.documents, tpl.rules.document_states) == ([], None)
+    assert made.id == repo.template_ids()[0]
+    again = repo.create_template(name="새 틀")
+    assert again.id != made.id  # 이름이 같으면 -2
+    with pytest.raises(AlreadyExists):
+        repo.create_template(name="x", id=made.id)
+    assert repo.create_template(name="v", taken=["v"]).id == "v-2"
+
+    store = repo.template_store
+    with_file = store.write_file(
+        TEST_TEMPLATE_KIND, made.id, "req.md", b"# req\n", expected_version=made.version_hash
+    )
+    doc = {**with_file.document, "documents": [{"id": "req", "title": "요구", "file": "req.md"}]}
+    with pytest.raises(VersionConflict):
+        repo.save_template(doc, expected_version="stale")
+    saved = repo.save_template(doc, expected_version=with_file.version_hash, message="규칙")
+    assert [d.id for d in saved.template.documents] == ["req"]
+    assert repo.template_files(made.id) == {"req.md": b"# req\n"}
+
+    spec = repo.create(name="S", template=made.id)
+    repo.delete_template(made.id, expected_version=saved.version_hash)
+    assert made.id not in repo.template_ids()
+    assert repo.get(spec.id).spec.documents[0].id == "req"
+    with pytest.raises(SpecNotFoundError):
+        repo.delete_template(made.id)

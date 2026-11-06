@@ -8,8 +8,8 @@ Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페�
 - 제공 포트: `definitions.store`·`definitions.lookup`(같은 파일 저장소), `workspace.settings`(`() -> WorkspaceSettings`),
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
   `server.warnings`(평문 비밀 점검 `secret.plain_found`). 토픽 `definitions.saved{kind, id, version_hash}`.
-- 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`
-  (팀 구성 목록의 검증 요약·입구 이름, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x),
+- 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`·
+  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x),
   `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 X44 — 아래).
 - 종류 기여(X44, 6R.5): 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
   저장소에 더한다(build 때, 그리고 모든 build가 끝난 뒤 시작 훅에서 한 번 더). `library=False` 종류는 라이브러리에

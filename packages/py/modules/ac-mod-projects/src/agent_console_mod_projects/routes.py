@@ -12,6 +12,8 @@
 | ``POST /projects/{id}/legacy/plan`` | → ``CopyPlan``(라이브러리 → 이 프로젝트) |
 | ``POST /projects/copy/plan`` | ``CopyPlanRequest`` → ``CopyPlan`` |
 | ``POST /projects/copy/apply`` | ``CopyApplyRequest`` → ``CopyApplyResult`` |
+| ``GET /projects/copy/kinds?project=`` | → ``CopyKindInfo[]``(그 공간의 복사 종류, 6R.20a) |
+| ``GET /projects/copy/items?project=&kind=`` | → ``CopyItem[]``(그 공간의 정의 목록) |
 | ``GET /projects/folders?path=&hidden=`` | → ``FolderListing`` |
 | ``POST /projects/folders/check`` | ``FolderCheckRequest`` → ``FolderCheck`` |
 | ``GET /projects/folders/capabilities`` | → ``FolderCapabilities`` |
@@ -33,8 +35,11 @@ from fastapi.responses import JSONResponse
 from agent_console_contracts import (
     CopyApplyRequest,
     CopyApplyResult,
+    CopyItem,
+    CopyKindInfo,
     CopyPlan,
     CopyPlanRequest,
+    ErrorCodes,
     ErrorResponse,
     FolderCapabilities,
     FolderCheck,
@@ -50,10 +55,12 @@ from agent_console_contracts import (
     ProjectCreate,
     ProjectUpdate,
     ProjectView,
+    SpaceRef,
 )
-from agent_console_modkit.host import IfMatchHeader, if_match_version, json_with_etag
+from agent_console_modkit.host import IfMatchHeader, SpaceQuery, if_match_version, json_with_etag
 
 from .copying import CopyService
+from .errors import ProjectError
 from .folders import FolderPicker, FolderService
 from .projects import ProjectManager
 from .service import ScopeService, issues_payload
@@ -104,6 +111,18 @@ async def _pick(
             cancel.set()
 
 
+def _space_ref(space: str | None) -> SpaceRef:
+    """질의 ``?project=`` → ``SpaceRef``(id 모양이 아니면 404 ``project.not_found``)."""
+    try:
+        return SpaceRef(project_id=space or None)
+    except ValueError:
+        raise ProjectError(
+            ErrorCodes.PROJECT_NOT_FOUND,
+            f"프로젝트를 찾을 수 없습니다: {space}",
+            {"project_id": space},
+        ) from None
+
+
 def build_router(services: Services) -> APIRouter:
     """프로젝트 경로."""
     router = APIRouter(tags=["projects"])
@@ -149,6 +168,28 @@ def build_router(services: Services) -> APIRouter:
     async def apply_copy(body: CopyApplyRequest) -> JSONResponse:
         """복사 적용(항목별 결과, 계획 뒤 바뀐 항목만 conflict)."""
         return _json(await asyncio.to_thread(s.copies().apply, body))
+
+    @router.get("/projects/copy/kinds", response_model=list[CopyKindInfo], responses=errors())
+    async def copy_kinds(space: SpaceQuery = None) -> JSONResponse:
+        """그 공간(없음 = 라이브러리)에서 복사에 쓸 정의 종류와 ``library``·``portable`` 값.
+
+        화면은 종류 이름 표 없이 이 목록과 ``/projects/copy/items``로 복사 대화상자를 채운다.
+        """
+        ref = _space_ref(space)
+        kinds = await asyncio.to_thread(s.copies().kinds, ref)
+        return JSONResponse([k.model_dump(mode="json") for k in kinds])
+
+    @router.get("/projects/copy/items", response_model=list[CopyItem], responses=errors())
+    async def copy_items(
+        space: SpaceQuery = None,
+        kind: Annotated[
+            str | None, Query(description="정의 종류(생략 = 복사 종류 전부). 모르면 404.")
+        ] = None,
+    ) -> JSONResponse:
+        """그 공간의 정의 목록(본문 없음). 종류는 ``/projects/copy/kinds``의 것만."""
+        ref = _space_ref(space)
+        items = await asyncio.to_thread(s.copies().items, ref, kind)
+        return JSONResponse([i.model_dump(mode="json") for i in items])
 
     # ---------------------------------------------------------------- (deprecated) 옛 범위
 

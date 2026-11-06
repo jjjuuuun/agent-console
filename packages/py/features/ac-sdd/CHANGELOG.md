@@ -18,3 +18,7 @@
 - 6R.13: `SpecRepository(template_store=…)` — 문서 틀을 스펙과 다른 저장소에서 읽고 쓴다(기본 = `store`).
 - 계약 후속(0.13.1): 선택 능력 프로토콜 `TaskIssueSource.task_issues(ctx, tasks)`(X43 연동의 작업 이슈 →
   `ParsedTask.issues`)를 문서화하고 공개했다. 이미 쓰던 메서드 모양 그대로다.
+- 6R.20d: `list_import_files`가 바로 아래 하위 폴더 `ImportFileListing.dirs`도 준다(재귀 없음, 숨김·링크·루트
+  예약 폴더 제외, 이름 순, 각각 `limit`까지 — 넘으면 `truncated`).
+- 6R.20a: `SpecRepository.create_template`(빈 틀, `taken` = 피할 id)·`save_template`(`If-Match`)·
+  `delete_template` — 틀 저장소(`template_store`)에 쓴다.

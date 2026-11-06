@@ -23,6 +23,8 @@ import type {
   FolderCheck,
   FolderCheckRequest,
   CopyApplyItem,
+  CopyItem,
+  CopyKindInfo,
   CopyPlanItem,
   FolderPickResult,
   Project,
@@ -38,17 +40,25 @@ import type {
   NodeTypeDescriptor,
   Run,
 } from "@agent-console/contracts/runs";
-import type { GraphPatch, Issue } from "@agent-console/contracts/definitions";
+import type {
+  GraphPatch,
+  GraphSessionSummary,
+  GraphSummary,
+  Issue,
+} from "@agent-console/contracts/definitions";
 import type { MemoryCopyRequest } from "@agent-console/contracts/memory";
 import type { UsageReport } from "@agent-console/contracts/usage";
 import * as sdd from "@agent-console/contracts/sdd";
 import type {
+  ImportDir,
+  ImportFileListing,
   ParsedTask,
   SddChanged,
   SddInfo,
   SpecDefinition,
   SpecRules,
   SpecTemplate,
+  SpecTemplateCreateRequest,
   SpecView,
   StateTransition,
   TaskStatusInfo,
@@ -286,7 +296,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   it("0.12.1(5.7R.33c3): 기록 공간·폴더 확인 보강 — 더하기만, 새 필드는 선택", () => {
     // 지금 버전은 0.12.2 블록이 고정한다(여기는 0.12.1에서 더한 것만 본다).
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.12.1"));
-    expect(projects.CONTRACT_VERSION).toBe("3.1.0");
+    expect(ver(projects.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("3.1.0"));
     expect(ver(chat.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.7.0"));
     expect(modulesOf["projects"]).toEqual(
@@ -406,14 +416,39 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.13.1(계약 후속): 비밀 규칙 weak_key_names, 문서 상수 — 더하기만", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.13.1");
-    expect(packageJson.version).toBe("0.13.1");
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.9.0", definitions: "1.6.0", sdd: "1.0.1" });
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.13.1"));
+    expect(ver(packageJson.version)).toBeGreaterThanOrEqual(ver("0.13.1"));
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.9.0" });
+    expect(ver(CONTRACT_VERSIONS.definitions)).toBeGreaterThanOrEqual(ver("1.6.0"));
+    expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.0.1"));
     expectTypeOf<NonNullable<WorkspaceSettings["secrets"]>["weak_key_names"]>().toEqualTypeOf<string[] | null | undefined>();
     expect(ERROR_CODES.FAKE_SESSION_MISSING).toBe("fake.session_missing");
     expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)["fake.session_missing"]).toBeUndefined();
     expect(KNOWN_ISSUE_CODES.RECORDS_SESSION_ARCHIVE_FAILED).toBe("records.session_archive_failed");
     expect(KNOWN_ISSUE_CODES.RUN_MOVE_BUSY).toBe("run.move_busy");
     expect(KNOWN_ISSUE_CODES.SDD_AUTOMATION_SKIPPED).toBe("sdd.automation_skipped");
+  });
+
+  it("0.13.2(6R.19 서버 후속): Run.has_children — 더하기만", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.13.2");
+    expect(packageJson.version).toBe("0.13.2");
+    expect(CONTRACT_VERSIONS).toMatchObject({ runs: "1.8.0" });
+    expectTypeOf<Run["has_children"]>().toEqualTypeOf<boolean | null | undefined>();
+  });
+
+  it("0.13.2(6R.20k): GraphSummary.session_summary — 더하기만", () => {
+    expect(CONTRACT_VERSIONS).toMatchObject({ definitions: "1.7.0" });
+    expectTypeOf<GraphSummary["session_summary"]>().toEqualTypeOf<GraphSessionSummary | null | undefined>();
+    const summary: GraphSessionSummary = { nodes: 2, delegated: { "사용자 값": 1 } };
+    expect(summary.delegated).toEqual({ "사용자 값": 1 });
+  });
+
+  it("0.13.2(6R.20a·6R.20d): 하위 폴더·문서 틀 만들기·복사 종류 — 더하기만", () => {
+    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.1.0", projects: "3.2.0" });
+    expectTypeOf<ImportFileListing["dirs"]>().toEqualTypeOf<ImportDir[] | undefined>();
+    expectTypeOf<SpecTemplateCreateRequest["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<SpecTemplateCreateRequest["id"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<CopyKindInfo["kind"]>().toEqualTypeOf<string>();
+    expectTypeOf<CopyItem["saved_at"]>().toEqualTypeOf<number | null | undefined>();
   });
 });

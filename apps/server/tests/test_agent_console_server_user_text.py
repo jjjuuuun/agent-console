@@ -18,6 +18,10 @@ import pytest
 from agent_console_contracts.user_text import UserTextViolation, scan_forbidden_text
 from agent_console_server.testing import API, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 DESCRIPTOR_PATHS = (
     "/backends",
     "/node-types",
@@ -71,7 +75,7 @@ def _scan(value: Any, scope: str, at: str) -> list[UserTextViolation]:
 
 @pytest.fixture
 def client(tmp_path: Path) -> Any:
-    with server(make_settings(tmp_path)) as c:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as c:
         yield c
 
 

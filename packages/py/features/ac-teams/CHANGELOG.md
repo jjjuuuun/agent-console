@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 6R.20k(계약 0.13.2): 세션 집계 `session_summary(plan, strategies) -> GraphSessionSummary | None`(screen-delegation §14.4.4, 웹 `sessionView.sessionSummary`와 같은 규칙)·`edge_sessions(plan, strategies)`. 세션 값은 디스크립터의 열린 문자열이고 값별로 센다(값 이름·방식 id를 비교하지 않음). 세션 값이 있는 연결이 없으면 None.
 - 5.2R.94(잔해 정리): **공개 API 삭제** — `TeamIssueCodes.DELEGATION_TOO_DEEP`(옛 별칭)을 뺐다.
   `TeamIssueCodes.DELEGATION_DEPTH_EXCEEDED`를 쓴다(값 `delegation.depth_exceeded`는 같다).
 - 5.2R.43: 위임 방식 디스크립터 `shares_session` 반영. `session_grant`는 false 방식(예: `host`) 대상의 상호작용 종류·대기 한도를 위임자 세션에 더하지 않는다. 새 공개 함수 `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`, `session_owner(plan, node_id, strategies=None)`(자기 세션 대상에서 멈춤), `prepare_run(..., strategies=None)`(주면 엔진 대기 grant = 세션 grant). 백엔드 `validate_settings` 훅은 자기 세션 대상도 자기 grant로 검사한다. 테스트 키트 `s_far`는 `shares_session=False`.

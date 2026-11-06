@@ -45,6 +45,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 TOKEN = "t" * 32
 TERMINAL = frozenset({"completed", "failed", "cancelled", "interrupted"})
 
@@ -271,7 +275,7 @@ def test_removed_plugin_leaves_data_as_validation_issue(tmp_path: Path) -> None:
 def test_delegation_secrets_not_exposed(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """위임 과제·결과에 비밀 값이 섞여도 스냅샷·trace·목록·로그에 원문이 없다."""
     caplog.set_level(logging.DEBUG)
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         # 비밀은 해석된 뒤부터 가려진다 — 먼저 한 번 해석시킨다
         warm = client.post(f"{API}/agents", json=_agent("warm", f"secret://{SECRET_NAME}"))
         assert warm.status_code == 201
@@ -342,7 +346,7 @@ def test_delegation_secrets_not_exposed(tmp_path: Path, caplog: pytest.LogCaptur
 
 def test_widened_limits_warn_on_effective_settings(tmp_path: Path) -> None:
     """공통 설정의 `limits.directories`보다 팀 구성이 넓히면 `settings.widened` 경고."""
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         put = client.put(
             f"{API}/settings",
             json={"agent_defaults": {"backend": "fake-agent", "limits": {"directories": ["/w"]}}},
@@ -377,7 +381,7 @@ def test_link_modules_exist_for_every_pair() -> None:
 )
 def test_each_link_off_server_runs_a_flow(tmp_path: Path, link_id: str) -> None:
     """연동 하나를 꺼도 실행·조회가 돈다. 그 연동의 경로만 사라지거나 feature_unavailable."""
-    settings = make_settings(tmp_path, modules={"disabled": [link_id]})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"disabled": [link_id]})
     with server(settings) as client:
         mods = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         assert mods[link_id]["status"] == "disabled"
@@ -401,7 +405,7 @@ def test_only_links_with_everything_else_off(tmp_path: Path) -> None:
     features = [
         m.descriptor.id for m in installed_modules() if not m.descriptor.id.startswith("link-")
     ]
-    settings = make_settings(tmp_path, modules={"disabled": features})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"disabled": features})
     with server(settings) as client:
         assert client.get(f"{API}/health").status_code == 200
         mods = client.get(f"{API}/modules").json()

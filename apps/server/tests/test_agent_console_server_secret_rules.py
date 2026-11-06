@@ -17,6 +17,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 TOKEN = "ghp_PlainToken123456"
 
 
@@ -36,7 +40,7 @@ def _run(client: TestClient, text: str) -> tuple[dict[str, Any], str]:
 
 
 def test_suspected_values_are_redacted_in_run_records_and_toggle(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed(client)
         snap, events = _run(client, f"키는 {TOKEN} 입니다")
         assert snap["run"]["status"] == "completed"
@@ -55,7 +59,7 @@ def test_suspected_values_are_redacted_in_run_records_and_toggle(tmp_path: Path)
 
 
 def test_user_rules_only_add_and_dangerous_patterns_rejected(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         bad = _settings_put(client, {"secrets": {"extra_value_patterns": ["ok_[0-9]+", "(a+)+$"]}})
         assert bad.status_code == 422, bad.text
         issues = bad.json()["error"]["details"]["issues"]
@@ -81,7 +85,7 @@ def test_user_rules_only_add_and_dangerous_patterns_rejected(tmp_path: Path) -> 
 
 
 def test_plain_found_warnings_cache_and_invalidation(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     resources = settings.workspace_path / "resources"
     resources.mkdir(parents=True)
     legacy: dict[str, Any] = {
@@ -113,7 +117,9 @@ def test_plain_found_warnings_cache_and_invalidation(tmp_path: Path) -> None:
 
 
 def test_expose_paths_false_hides_workspace(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path, security={"expose_paths": False})) as client:
+    with server(
+        make_settings(tmp_path, options=NO_PROJECT_GATE, security={"expose_paths": False})
+    ) as client:
         attributes = client.get(f"{API}/server-info").json()["attributes"]
         assert "workspace" not in attributes
         assert str(tmp_path) not in json.dumps(attributes)
@@ -121,7 +127,7 @@ def test_expose_paths_false_hides_workspace(tmp_path: Path) -> None:
 
 def test_declarative_x_secret_plain_rejected(tmp_path: Path) -> None:
     """선언형 종류는 `pattern` 없이 `x-secret`만 달아도 평문이 거부된다."""
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     types_dir = settings.workspace_path / "resource-types"
     types_dir.mkdir(parents=True)
     (types_dir / "api-token.yaml").write_text(

@@ -7,6 +7,10 @@ from typing import Any
 
 from agent_console_server.testing import API, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 OBSERVE_RULES: list[dict[str, Any]] = [
     {"type": "hook.invoked", "payload": {"event": "PreToolUse", "hook_type": "sdk-callback"}},
     {"type": "mcp.server_status", "payload": {"servers": [{"name": "docs", "status": "ok"}]}},
@@ -74,7 +78,7 @@ def _events(client: Any, run_id: str, prefix: str) -> list[dict[str, Any]]:
 
 
 def test_fake_observe_events_are_queryable_by_type_prefix(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         run_id = _run(client, "watcher", {"hooks": True, "mcp": True})
         hooks = _events(client, run_id, "hook.")
         assert [e["type"] for e in hooks] == ["hook.invoked"]
@@ -86,7 +90,7 @@ def test_fake_observe_events_are_queryable_by_type_prefix(tmp_path: Path) -> Non
 
 
 def test_fake_observe_events_need_observe_setting(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         off = _run(client, "quiet", None)
         assert _events(client, off, "hook.") == []
         assert _events(client, off, "mcp.") == []

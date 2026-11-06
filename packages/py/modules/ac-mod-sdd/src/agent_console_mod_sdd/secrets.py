@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, Final
 
 from agent_console_contracts.constants import ErrorCodes, KnownIssueCodes
@@ -75,4 +75,26 @@ def scan_text(
     return out
 
 
-__all__ = ["SCAN_OFF", "SCAN_REJECT", "SCAN_WARN", "SecretRejectedError", "scan_text"]
+def document_issues(rules: SecretRules, document: Mapping[str, Any]) -> list[SpecIssue]:
+    """정의 문서(YAML)의 비밀 의심 위치(``sdd.secret_suspect``, error, 값 없음). 단독 저장소 쓰기 전
+    검사와 문서 틀 버전 되돌리기가 쓴다."""
+    return [
+        SpecIssue(
+            severity="error",
+            code=KnownIssueCodes.SDD_SECRET_SUSPECT,
+            message="비밀로 보이는 값이 있습니다(값은 보이지 않습니다).",
+            path=f.path or "/",
+            details={"reason": f.reason},
+        )
+        for f in rules.find_suspected(dict(document))
+    ]
+
+
+__all__ = [
+    "SCAN_OFF",
+    "SCAN_REJECT",
+    "SCAN_WARN",
+    "SecretRejectedError",
+    "document_issues",
+    "scan_text",
+]

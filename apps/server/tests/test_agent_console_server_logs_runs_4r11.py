@@ -15,6 +15,10 @@ from typing import Any
 
 from agent_console_server.testing import API, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 OBSERVE_RULES: list[dict[str, Any]] = [
     {"type": "hook.invoked", "payload": {"event": "PreToolUse", "hook_type": "sdk-callback"}},
     {
@@ -99,7 +103,7 @@ def _until(client: Any, path: str, params: dict[str, str], count: int) -> dict[s
 
 
 def test_fake_run_events_show_in_logs_with_hook_mcp_and_session_logs(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         snap = _run(client)
         run_id = snap["run"]["id"]
         (session,) = {n["backend_session_id"] for n in snap["node_runs"] if n["node_id"] == "a"}
@@ -125,7 +129,9 @@ def test_fake_run_events_show_in_logs_with_hook_mcp_and_session_logs(tmp_path: P
 
 
 def test_link_off_hides_session_logs_and_platform_source(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["link-logs-runs"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["link-logs-runs"]}
+    )
     with server(settings) as client:
         snap = _run(client)
         assert client.get(f"{API}/runs/{snap['run']['id']}/logs").status_code == 404

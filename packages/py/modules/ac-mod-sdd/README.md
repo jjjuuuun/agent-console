@@ -6,6 +6,10 @@ Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`, design §6R.3·§6R.7). `ac-s
 - REST `/sdd/*`(스펙 목록·만들기·보기·저장·삭제, 문서 본문·상태, 작업·고치기, 계획·추적·입력 변수·
   유효 문법, 작업 연동 동작·한꺼번에 시작·자동 진행, 틀로 저장, 폴더에서 가져오기·내보내기, 화면 정보
   `GET /sdd/info`). 모든 경로가 `?project=<공간 이름>`을 받는다.
+- 문서 틀 하나(6R.20a, `template_routes`): `POST /sdd/templates`(빈 틀), `GET·PUT·DELETE /sdd/templates/{id}`
+  (`ETag`·`If-Match` = 정의 버전), 뼈대 파일 `…/files[/{path}]`, 버전 `…/versions…`·`…/restore`. 저장소는 틀
+  목록과 같다(라이브러리 → 없으면 단독 루트, `?project=` = 그 공간). `variables`·`check`는 틀 id로 쓸 수 없다.
+- `GET /sdd/import/files?path=`: 그 폴더의 마크다운 파일과 바로 아래 하위 폴더(`dirs`, 숨김·링크·예약 제외).
 - WS 토픽 `sdd.changed`(본문 없음 — 화면은 다시 읽는다).
 - 정의 종류 기여(X44, `definitions.kind_contributions`): 문서 틀(라이브러리·프로젝트, 실행 프로필의
   팀 구성 참조 추출)과 스펙(`library=False`). 종류 이름·폴더 이름은 설치자 옵션(기본값은 패키지 데이터

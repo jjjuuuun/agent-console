@@ -24,6 +24,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 _PLUGIN = """
 from agent_console_nodes_core import UserNode
 
@@ -91,7 +95,11 @@ def plugin_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ServerSe
         textwrap.dedent(_PLUGIN), encoding="utf-8"
     )
     monkeypatch.syspath_prepend(str(plugin_dir))
-    return make_settings(tmp_path, plugins={"modules": ["ac_server_test_2r21_nodes:register"]})
+    return make_settings(
+        tmp_path,
+        options=NO_PROJECT_GATE,
+        plugins={"modules": ["ac_server_test_2r21_nodes:register"]},
+    )
 
 
 def _interrupted_run(settings: ServerSettings, review_type: str) -> str:

@@ -703,6 +703,32 @@ class CopyApplyResult(ContractModel):
     items: list[CopyApplyItemResult] = Field(default_factory=list)
 
 
+class CopyKindInfo(ContractModel):
+    """`GET /projects/copy/kinds` 항목: 한 공간에서 복사 대상으로 고를 수 있는 정의 종류 하나.
+
+    종류 이름은 서버가 아는 정의 종류(기본 종류 + 기능 모듈의 종류 기여 X44) 그대로다. 화면은 이
+    목록과 `GET /projects/copy/items`만으로 복사 대화상자 목록을 채운다(종류 이름 표를 두지 않음).
+    """
+
+    kind: NonEmptyStr = Field(description="정의 종류 이름(열린 문자열).")
+    library: bool = Field(description="라이브러리(공용 구성)에 둘 수 있다 — 프로젝트 → 공용 복사.")
+    portable: bool = Field(
+        description="프로젝트 공간에 둘 수 있다 — 공용·다른 프로젝트 → 이 프로젝트 복사."
+    )
+
+
+class CopyItem(ContractModel):
+    """`GET /projects/copy/items` 항목: 한 공간의 정의 하나(본문 없음)."""
+
+    kind: NonEmptyStr
+    id: NonEmptyStr
+    name: str = ""
+    description: str = ""
+    saved_at: float | None = Field(
+        default=None, description="마지막 저장 시각(유닉스 초, 모르면 null)."
+    )
+
+
 # ---------------------------------------------------------------- 폴더 확인·탐색(design §PI.6)
 
 
@@ -1123,6 +1149,8 @@ __all__ = [
     "CopyApplyItemResult",
     "CopyApplyRequest",
     "CopyApplyResult",
+    "CopyItem",
+    "CopyKindInfo",
     "CopyPlan",
     "CopyPlanItem",
     "CopyPlanRequest",

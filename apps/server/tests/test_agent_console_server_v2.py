@@ -23,6 +23,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 
 def _snapshot(root: Path) -> dict[str, tuple[bytes, int]]:
     out: dict[str, tuple[bytes, int]] = {}
@@ -54,7 +58,7 @@ def test_descriptors_and_server_info(tmp_path: Path) -> None:
         "contributes: [{slot: instructions, template: '{name}'}]\n",
         encoding="utf-8",
     )
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         types = {t["id"] for t in client.get(f"{API}/resource-types").json()}
         assert {"instruction", "file", "mcp-server", "tool-permission", "tip"} <= types
         strategies = {s["id"] for s in client.get(f"{API}/delegation-strategies").json()}
@@ -75,7 +79,7 @@ def test_descriptors_and_server_info(tmp_path: Path) -> None:
 
 
 def test_resource_crud_content_etag_and_usages(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         created = client.post(f"{API}/resources", json=_resource())
         assert created.status_code == 201
         etag = created.headers["ETag"]
@@ -155,7 +159,7 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
         json.dumps({"mcpServers": {"gh": {"url": "https://x.invalid", "headers": {"A": "plain"}}}}),
         encoding="utf-8",
     )
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings, environ={"HOME": str(home)}) as client:
         # 5.7R.33k: 출처는 등록 프로젝트 폴더(`?project=`), 공용 경로로 읽으려고 공용에 가져온다
         register_project(client, "p", project)
@@ -197,7 +201,7 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
 
 
 def test_usage_report_and_sources(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         settings = client.get(f"{API}/settings").json()
         settings.setdefault("usage", {})["sources"] = [
             {"id": "fake", "config": {"windows": [{"window": "five_hour", "used_ratio": 0.25}]}}
@@ -219,7 +223,7 @@ def test_usage_report_and_sources(tmp_path: Path) -> None:
 
 
 def test_graph_duplicate_effective_bundle_and_summaries(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         short = _resource(content=None, config={"title": "지침", "text": "짧게 답한다."})
         assert client.post(f"{API}/resources", json=short).status_code == 201
         seed(client)
@@ -263,7 +267,7 @@ def test_graph_duplicate_effective_bundle_and_summaries(tmp_path: Path) -> None:
 
 
 def test_runs_filters_events_trace_handoffs_activity(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed(client)
         run = client.post(
             f"{API}/runs", json={"graph_id": "flow", "input": {"request": "go"}}
@@ -312,7 +316,7 @@ def test_validate_reports_team_rules_once(tmp_path: Path) -> None:
 
     구조 이슈는 한 번만 나온다.
     """
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed(client)
         doc = client.get(f"{API}/graphs/flow").json()["graph"]
         doc["edges"] = [e for e in doc["edges"] if e["kind"] != "message"]
@@ -335,7 +339,7 @@ def test_claude_sdk_without_key_fails_with_auth_missing(tmp_path: Path) -> None:
 
     API 키 방식인데 키가 없으면 노드가 auth_missing으로 실패한다.
     """
-    with server(make_settings(tmp_path), environ={}) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE), environ={}) as client:
         assert "claude-agent-sdk" in {b["id"] for b in client.get(f"{API}/backends").json()}
         agent = {
             "id": "real",
@@ -369,7 +373,10 @@ def test_claude_sdk_without_key_fails_with_auth_missing(tmp_path: Path) -> None:
 
 
 def _cors_client(tmp_path: Path, origin: str) -> Any:
-    return server(make_settings(tmp_path, security={"allowed_origins": [origin]}), with_token=False)
+    return server(
+        make_settings(tmp_path, options=NO_PROJECT_GATE, security={"allowed_origins": [origin]}),
+        with_token=False,
+    )
 
 
 def test_cors_allowed_origin_preflight_and_expose_etag(tmp_path: Path) -> None:
@@ -430,7 +437,7 @@ def test_cors_allowed_origin_preflight_and_expose_etag(tmp_path: Path) -> None:
 
 
 def test_unknown_api_path_is_json_404(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         response = client.get(f"{API}/nope")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "not_found"

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 6R.19 서버 후속: `RunRepository.page(conversation_id=, agent=, root_run_id=)`(`list`와 같은 뜻), 돌려주는 Run마다 `has_children`(직접 자식 유무, 페이지 행을 한 번에 셈 — 색인 `ix_runs_parent`, N+1 없음)을 채운다. 계약 0.13.2(`Run.has_children`). 더하기만, 표 변경 없음.
+
 - 6R.12: 이벤트 `EventRepository.list(node=)`(`node_path`에 그 노드 id가 있는 이벤트 — 첫 칸은 `node_id` 열 색인, 하위 그래프는 `json_each`), 출처 잇기 커서 `page_across_sources`·`SourcePage`·`encode_source_cursor`·`decode_source_cursor`(`<출처>.<저장소 커서>`, design §6R.18 Q14). 더하기만, 표 변경 없음.
 
 - 6R.6: `RunRepository.page(cursor, limit, project_id, root_only, status, graph_id, labels) -> (items, next_cursor)`(커서 = `created_at`·`id` 내림차순, 불투명), `descendants(root_run_id)`, 루트 Run `labels`를 표 `run_labels`(계보 `runs_0004`)에 투영(`save`가 다시 쓰고 `delete`가 지움, 표가 없으면 `doc`에서 거름), 공개 `InvalidCursor`·`MAX_PAGE_LIMIT`·`encode_cursor`·`decode_cursor`. 더하기만.

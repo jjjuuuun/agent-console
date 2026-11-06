@@ -229,17 +229,27 @@ class InMemoryRunRepository:
         status: Iterable[RunStatus] | None = None,
         graph_id: str | None = None,
         labels: Mapping[str, str] | None = None,
+        conversation_id: str | None = None,
+        agent: str | None = None,
+        root_run_id: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         limit = clamp_limit(limit)
         after = None if cursor is None else decode_cursor(cursor)
         statuses = None if status is None else set(status)
         wanted = dict(labels or {})
         with self._s._lock:
+            parents = {r.parent_run_id for r in self._s._runs.values() if r.parent_run_id}
             rows = [
                 r
                 for r in self._s._runs.values()
                 if (project_id is None or r.project_id == project_id)
                 and (not root_only or r.root_run_id is None)
+                and (root_run_id is None or r.root_run_id == root_run_id)
+                and (conversation_id is None or r.conversation_id == conversation_id)
+                and (
+                    agent is None
+                    or any(e.actor == agent for e in self._s._events.get(r.id, {}).values())
+                )
                 and (graph_id is None or r.graph_id == graph_id)
                 and (statuses is None or r.status in statuses)
                 and (not wanted or (r.root_run_id is None and wanted.items() <= r.labels.items()))
@@ -249,7 +259,8 @@ class InMemoryRunRepository:
         more = len(rows) > limit
         rows = rows[:limit]
         next_cursor = encode_cursor(rows[-1].created_at, rows[-1].id) if more else None
-        return [r.model_copy(deep=True) for r in rows], next_cursor
+        items = [r.model_copy(deep=True, update={"has_children": r.id in parents}) for r in rows]
+        return items, next_cursor
 
     # ------------------------------------------------ 프로젝트 넣기·개수(`ProjectAssignStore`)
 

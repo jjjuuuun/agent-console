@@ -13,10 +13,14 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, object]] = {"link-projects-runs": {"require_project": False}}
+
 
 def test_agent_console_server_runs_from_empty_workspace(tmp_path: Path) -> None:
     """빈 워크스페이스로 기동 → 사용자가 정의를 만들고 → 실행."""
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         assert client.get(f"{API}/graphs").json() == []
         assert client.get(f"{API}/agents").json() == []
         assert client.get(f"{API}/settings").json().get("default_entry") is None
@@ -36,7 +40,7 @@ def test_workspace_settings_keep_removed_console_keys(tmp_path: Path) -> None:
     (ws / "settings.yaml").write_text(
         "default_entry: old-graph\nconsole: {command_prefix: '!'}\n", encoding="utf-8"
     )
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         got = client.get(f"{API}/settings")
         assert got.status_code == 200
         assert got.json()["default_entry"] == "old-graph"

@@ -719,6 +719,72 @@ class SpecRepository:
         self.get_template(template_id)
         return self._all_files(self.template_kind, template_id)
 
+    def create_template(
+        self,
+        *,
+        name: str,
+        id: str | None = None,
+        description: str | None = None,
+        taken: Sequence[str] = (),
+        message: str | None = None,
+    ) -> StoredSpec:
+        """빈 문서 틀(문서 0개, 규칙 비움)을 틀 저장소에 만든다(6R.20a, screen-sdd §11.1).
+
+        Args:
+            name: 이름. id: 주면 그 id(있으면 `AlreadyExists`), 없으면 이름에서 만들고 겹치면 `-2`….
+            description: 설명. taken: 이름에서 id를 만들 때 피할 값(예: 경로 예약어).
+            message: 버전 기록 메시지(기본 "만듦").
+
+        Raises:
+            AlreadyExists: 같은 id가 있다(`ac-store`). pydantic.ValidationError: 이름·id가 틀렸다.
+        """
+        store = self.template_store
+        template_id = id or unique_id(
+            name,
+            [*store.list_ids(self.template_kind), *taken],
+            fallback=slug_id(self.template_kind, fallback="item"),
+        )
+        raw: dict[str, Any] = {
+            "kind": self.template_kind,
+            "id": template_id,
+            "name": name,
+            "documents": [],
+            "rules": {},
+        }
+        if description:
+            raw["description"] = description
+        SpecTemplate.model_validate(raw)
+        return _stored(store.create(self.template_kind, raw, message=message or "만듦"))
+
+    def save_template(
+        self,
+        document: SpecTemplate | Mapping[str, Any],
+        *,
+        expected_version: str | None,
+        message: str = "",
+    ) -> StoredSpec:
+        """문서 틀 정의(규칙·문서 목록)를 저장한다(`If-Match`, 본문 파일은 그대로)."""
+        raw = (
+            document.model_dump(mode="json", by_alias=True, exclude_unset=True)
+            if isinstance(document, SpecTemplate)
+            else dict(document)
+        )
+        raw["kind"] = self.template_kind
+        return _stored(
+            self.template_store.save(
+                self.template_kind, raw, expected_version=expected_version, message=message
+            )
+        )
+
+    def delete_template(self, template_id: str, *, expected_version: str | None = None) -> None:
+        """문서 틀 정의와 본문 파일을 지운다(이미 만든 스펙에는 영향 없음)."""
+        try:
+            self.template_store.delete(
+                self.template_kind, template_id, expected_version=expected_version
+            )
+        except NotFound:
+            raise SpecNotFoundError("template", template_id) from None
+
     def template_summaries(
         self, *, graphs: Sequence[str] | None = None
     ) -> list[SpecTemplateSummary]:

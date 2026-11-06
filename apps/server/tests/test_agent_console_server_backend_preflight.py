@@ -12,6 +12,10 @@ from typing import Any
 from agent_console_contracts import BackendUnresolvedDetails, ErrorCodes
 from agent_console_server.testing import API, chat_graph, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 
 def _agent() -> dict[str, Any]:
     # 백엔드를 정하지 않은 에이전트(응답 규칙만, 어느 층에도 backend 없음)
@@ -29,7 +33,7 @@ def _assert_unresolved(body: dict[str, Any]) -> None:
 
 
 def test_run_and_chat_turn_without_backend_are_422_and_leave_no_records(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         assert client.post(f"{API}/agents", json=_agent()).status_code == 201
         assert client.post(f"{API}/graphs", json=chat_graph()).status_code == 201
 

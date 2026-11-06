@@ -123,6 +123,8 @@ pip install agent-console-sdd
 >>> folder = MemorySpecFiles({"docs/tasks.md": "# 작업\n- [ ] 1 첫 일\n", "docs/.x.md": "숨김"})
 >>> [f.name for f in list_import_files(folder, "docs", extensions=[".md"]).files]
 ['tasks.md']
+>>> [d.name for d in list_import_files(folder, "", extensions=[".md"]).dirs]   # 하위 폴더(재귀 없음)
+['docs']
 >>> got = import_documents(folder, ["docs/tasks.md"])
 >>> stored = repo.create(name="Demo", documents=got.documents, contents=got.contents)
 >>> stored.id, [d.title for d in stored.spec.documents]

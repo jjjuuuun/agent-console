@@ -1,5 +1,23 @@
 # 변경 기록
 
+## 0.13.2
+
+- 계약 0.13.2(6R.19 서버 후속). **더하기만** 한다: 새 필드는 선택이라 0.13.1 응답이 그대로 읽힌다. 사내 의존 범위는
+  그대로 `>=0.13,<0.14`(TS `^0.13.0`). 하위 계약 버전: `runs` 1.8.0, `definitions` 1.7.0, `sdd` 1.1.0, `projects` 3.2.0.
+- `sdd` 1.1.0(6R.20d·6R.20a): `ImportFileListing.dirs: list[ImportDir] = []`(`GET /sdd/import/files`의 바로 아래 하위 폴더,
+  이름 순, 숨김·링크·예약 폴더 제외, `truncated`는 파일·폴더 어느 쪽이든 상한을 넘으면 참) + 새 `ImportDir{name}`.
+  `SpecTemplateCreateRequest{id?, name, description}`(`POST /sdd/templates` 빈 문서 틀 만들기, 응답 `SpecTemplate`).
+- `projects` 3.2.0(6R.20a, 6R.20c 입력): `CopyKindInfo{kind, library, portable}`(`GET /projects/copy/kinds`)·
+  `CopyItem{kind, id, name, description, saved_at?}`(`GET /projects/copy/items`) — 복사 대화상자가 종류 이름 표 없이
+  서버가 아는 정의 종류(기본 + X44 기여)와 그 목록을 읽는다.
+- `runs` 1.8.0: `Run.has_children: bool | None = None`(직접 자식 Run — `parent_run_id`가 이 Run — 이 있는지).
+  `GET /runs/page`가 페이지 행을 한 번에 세어 채운다(N+1 없음). null = 서버가 채우지 않음(옛 `GET /runs`·
+  `GET /runs/{id}` 등). 저장하는 값이 아니라 읽기 표시 값이다.
+- `definitions` 1.7.0(6R.20k): `GraphSummary.session_summary: GraphSessionSummary | None = None`
+  (`GET /graphs` 목록 행의 세션 집계, screen-delegation §14.4.4). `GraphSessionSummary{nodes, delegated: {세션 값: 수}}` —
+  세션 값은 열린 문자열이고 값별로 센다(같은/별도 이름을 계약·서버가 고정하지 않는다). null = 계산하지 않음 또는 세션
+  값이 있는 연결이 없음.
+
 ## 0.13.1
 
 - 계약 0.13.1(계약 후속: 6R.15·6R.16·5.7R.33y2·5.7R.33y3). **더하기만** 한다: 새 필드는 선택이라 0.13.0 응답·설정이

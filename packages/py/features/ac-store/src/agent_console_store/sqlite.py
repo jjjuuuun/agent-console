@@ -393,6 +393,9 @@ class SqliteRunRepository:
         status: Iterable[RunStatus] | None = None,
         graph_id: str | None = None,
         labels: Mapping[str, str] | None = None,
+        conversation_id: str | None = None,
+        agent: str | None = None,
+        root_run_id: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         limit = clamp_limit(limit)
         c = self._runs.c
@@ -401,6 +404,14 @@ class SqliteRunRepository:
             stmt = stmt.where(self._col_project() == project_id)
         if root_only:
             stmt = stmt.where(self._col_root().is_(None))
+        if root_run_id is not None:
+            stmt = stmt.where(self._col_root() == root_run_id)
+        if conversation_id is not None:
+            stmt = stmt.where(c.conversation_id == conversation_id)
+        if agent is not None:
+            stmt = stmt.where(
+                c.id.in_(sa.select(t.run_events.c.run_id).where(t.run_events.c.actor == agent))
+            )
         if graph_id is not None:
             stmt = stmt.where(c.graph_id == graph_id)
         if status is not None:
@@ -423,9 +434,21 @@ class SqliteRunRepository:
         stmt = stmt.order_by(c.created_at.desc(), c.id.desc()).limit(limit + 1)
         with self._engine.connect() as conn:
             rows = conn.execute(stmt).all()
-        more = len(rows) > limit
-        rows = rows[:limit]
-        items = [Run.model_validate_json(r[0]) for r in rows]
+            more = len(rows) > limit
+            rows = rows[:limit]
+            ids = [r[2] for r in rows]
+            parents: set[str] = set()
+            if ids:
+                # 페이지 행의 직접 자식 유무를 한 번에 센다(``ix_runs_parent`` 색인, N+1 없음).
+                parents = set(
+                    conn.execute(
+                        sa.select(c.parent_run_id).where(c.parent_run_id.in_(ids)).distinct()
+                    ).scalars()
+                )
+        items = [
+            Run.model_validate_json(r[0]).model_copy(update={"has_children": r[2] in parents})
+            for r in rows
+        ]
         next_cursor = encode_cursor(rows[-1][1], rows[-1][2]) if more and rows else None
         return items, next_cursor
 

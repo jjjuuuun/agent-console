@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 6R.20k: 제공 포트 `graphs.session_summary`(`TeamViews.session_summary(graph)` → `ac-teams.session_summary(plan, catalog.strategies)`, 해석할 수 없는 그래프 = None). `GET /graphs` 행의 `session_summary`가 이 값이다. 프로토콜 `SessionSummaries`.
 - 5.2R.104: 프리셋 기능 삭제에 따라 개발 의존 `agent-console-mod-presets`와 그 소비 프로토콜 검사를 뺐다. `definitions.dependencies` 포트는 그대로 제공한다(기본 모듈 중 소비자 없음).
 - 5.2R.34: 유효 설정 경로 3개에 선택 질의 `project`, 선택 포트 `settings.scope_layers`(`ScopeLayersSource`) — 범위 층을
   공통 바로 아래에 끼우고 공급자 경고를 `warnings`에 더한다.

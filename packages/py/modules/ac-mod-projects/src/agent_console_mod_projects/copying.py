@@ -23,6 +23,8 @@ from agent_console_contracts import (
     CopyApplyItemResult,
     CopyApplyRequest,
     CopyApplyResult,
+    CopyItem,
+    CopyKindInfo,
     CopyPlan,
     CopyPlanRequest,
     ErrorCodes,
@@ -53,6 +55,7 @@ from agent_console_projects import (
 from agent_console_secret_rules import SecretRules
 from agent_console_store import (
     AlreadyExists,
+    DefinitionKind,
     DefinitionStore,
     NotFound,
     StoreError,
@@ -207,6 +210,8 @@ class CopyService:
         library_rules: 라이브러리로 쓸 때의 비밀 규칙.
         unavailable: 라이브러리 저장소가 없을 때 던질 예외를 만든다.
         messages: 문구 바꾸기.
+        kind_info: 아는 정의 종류(기본 종류 + 종류 기여 X44, ``library``·``portable`` 값). 복사
+            대화상자 메타데이터(``kinds``·``items``)가 쓴다. 없으면 두 목록이 빈다.
     """
 
     def __init__(
@@ -220,8 +225,10 @@ class CopyService:
         library_rules: Callable[[], SecretRules],
         unavailable: Callable[[], Exception],
         messages: Mapping[str, str] | None = None,
+        kind_info: Callable[[], Sequence[DefinitionKind]] = lambda: (),
     ) -> None:
         self._library = library
+        self._kind_info = kind_info
         self._spaces = spaces
         self._known = known
         self._references = references
@@ -255,6 +262,59 @@ class CopyService:
             space.secret_rules,
             space.config_writable,
         )
+
+    # ------------------------------------------------------------ 종류·목록(복사 대화상자)
+
+    def kinds(self, ref: SpaceRef) -> list[CopyKindInfo]:
+        """그 공간에 있는 정의 종류 중 복사에 쓸 수 있는 것(싱글턴·모르는 종류 제외, 저장소 순서).
+
+        ``library``·``portable``은 종류 값 그대로라 화면이 방향(공용 → 프로젝트는 ``portable``,
+        프로젝트 → 공용은 ``library``)으로 거른다. 종류 이름을 모르는 화면도 같은 목록을 쓴다.
+        """
+        space = self.space(ref, target=False)
+        info = {k.name: k for k in self._kind_info()}
+        present = space.kinds if space.kinds is not None else tuple(space.store.kinds())
+        out: list[CopyKindInfo] = []
+        for name in present:
+            kind = info.get(name)
+            if kind is None or kind.is_singleton:
+                continue
+            out.append(CopyKindInfo(kind=name, library=kind.library, portable=kind.is_portable))
+        return out
+
+    def items(self, ref: SpaceRef, kind: str | None = None) -> list[CopyItem]:
+        """그 공간의 정의 목록(본문 없음, 종류 순 → 저장소 요약 순). ``kind``를 주면 그 종류만.
+
+        Raises:
+            ProjectError: ``kind``가 이 공간의 복사 종류가 아니다(404 ``not_found``).
+        """
+        space = self.space(ref, target=False)
+        names = [k.kind for k in self.kinds(ref)]
+        if kind is not None:
+            if kind not in names:
+                raise ProjectError(
+                    ErrorCodes.NOT_FOUND,
+                    f"이 공간에서 복사할 수 없는 종류입니다: {kind}",
+                    {"kind": kind},
+                )
+            names = [kind]
+        out: list[CopyItem] = []
+        for name in names:
+            try:
+                summaries = space.store.summaries(name)
+            except StoreError:
+                continue
+            out.extend(
+                CopyItem(
+                    kind=name,
+                    id=s.id,
+                    name=s.name,
+                    description=s.description,
+                    saved_at=s.saved_at,
+                )
+                for s in summaries
+            )
+        return out
 
     def _pair(self, source: SpaceRef, target: SpaceRef) -> tuple[Space, Space]:
         if source.project_id == target.project_id:

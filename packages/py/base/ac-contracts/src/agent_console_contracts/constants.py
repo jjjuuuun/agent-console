@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.13.1"
+CONTRACTS_VERSION: Final = "0.13.2"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,16 +38,16 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "common": "1.9.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
-    "definitions": "1.6.0",
-    "runs": "1.7.0",
+    "definitions": "1.7.0",
+    "runs": "1.8.0",
     "usage": "1.1.0",
-    "projects": "3.1.0",
+    "projects": "3.2.0",
     "chat": "1.3.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
     "memory": "1.1.0",
-    "sdd": "1.0.1",
+    "sdd": "1.1.0",
     "modules": "1.4.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
@@ -66,7 +66,12 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 0.13.1(계약 후속, 더하기만): `common` 1.9.0(문서 상수 `ErrorCodes.FAKE_SESSION_MISSING`,
 `KnownIssueCodes.RECORDS_SESSION_ARCHIVE_FAILED`·`RUN_MOVE_BUSY`), `definitions` 1.6.0
 (`SecretRuleSettings.weak_key_names`), `sdd` 1.0.1(`ParsedTask.issues` 설명 — X43 선택 메서드
-`task_issues`)."""
+`task_issues`).
+0.13.2(6R.19 서버 후속, 더하기만): `runs` 1.8.0(`Run.has_children` — 목록 페이지가 채우는 직접 자식
+유무, null = 채우지 않음), `definitions` 1.7.0(`GraphSummary.session_summary` — 팀 구성 목록의
+세션 집계 `GraphSessionSummary`, 6R.20k), `sdd` 1.1.0(`ImportFileListing.dirs`·`ImportDir` —
+가져오기 폴더의 하위 폴더 6R.20d, `SpecTemplateCreateRequest` — 문서 틀 단건 REST 6R.20a),
+`projects` 3.2.0(`CopyKindInfo`·`CopyItem` — 복사 대화상자의 종류·목록 메타데이터 6R.20a)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,

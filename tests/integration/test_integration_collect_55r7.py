@@ -33,6 +33,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 BODY = "규칙 본문 BODY-MARKER-7f3 — 이 글은 이벤트에 실리면 안 된다"
 OPTIONS: dict[str, dict[str, Any]] = {
     "mod-logs": {"scan_interval_seconds": 0, "startup_scan": False},
@@ -103,7 +107,7 @@ def _log_events(client: Any, run_id: str) -> list[dict[str, Any]]:
 
 
 def test_fake_run_new_fields_are_recorded_and_indexed(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, options=OPTIONS)
+    settings = make_settings(tmp_path, options={**NO_PROJECT_GATE, **OPTIONS})
     with server(settings) as client:
         made = client.post(
             f"{API}/resources",

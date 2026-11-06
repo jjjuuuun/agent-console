@@ -396,12 +396,28 @@ class ImportFile(ContractModel):
     title_guess: str = Field(default="", description="첫 큰 제목, 없으면 파일 이름.")
 
 
+class ImportDir(ContractModel):
+    """가져오기용 폴더 안 하위 폴더 하나(그 아래는 다시 `?path=`로 연다)."""
+
+    name: NonEmptyStr = Field(description="폴더 이름(목록 폴더 기준).")
+
+
 class ImportFileListing(ContractModel):
-    """`GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일(재귀하지 않음)."""
+    """`GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일과 하위 폴더(재귀하지
+    않음)."""
 
     path: str = Field(default="", description="프로젝트 폴더 기준 상대 경로(빈 값 = 폴더 루트).")
     files: list[ImportFile] = Field(default_factory=list)
-    truncated: bool = Field(default=False, description="상한을 넘어 일부만 보였다.")
+    dirs: list[ImportDir] = Field(
+        default_factory=list,
+        description=(
+            "바로 아래 하위 폴더(이름 순). 숨김·링크·예약 폴더(앱 구성 폴더 등)는 뺀다. 0.13.2 전 "
+            "서버는 보내지 않는다(빈 목록)."
+        ),
+    )
+    truncated: bool = Field(
+        default=False, description="파일이나 하위 폴더가 상한을 넘어 일부만 보였다."
+    )
 
 
 class SddChanged(ContractModel):
@@ -418,6 +434,7 @@ __all__ = [
     "AutomationState",
     "DocumentStateInfo",
     "EffectiveSyntax",
+    "ImportDir",
     "ImportFile",
     "ImportFileListing",
     "ParsedDocument",

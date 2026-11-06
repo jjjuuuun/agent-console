@@ -21,6 +21,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 LINK_ROLES: dict[str, list[str]] = {
     "link-runs-teams": ["runs:team-rules"],
     "link-runs-trace": ["runs:trace"],
@@ -33,7 +37,7 @@ def _codes(client: Any) -> list[str]:
 
 
 def test_runs_module_and_links_are_active_with_roles(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         infos = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         assert infos["mod-runs"]["status"] == "active"
         assert infos["mod-runs"]["web_roles"] == ["runs"]
@@ -59,7 +63,7 @@ def test_without_team_link_runs_use_engine_validation_only(tmp_path: Path) -> No
     """`link-runs-teams`를 끄면 팀 규칙 없이 엔진 검증만으로 실행되고 경고가 나온다."""
     graph = team_graph("ghost")
     graph["nodes"][1]["config"]["agent_ref"] = "nobody"  # 팀 규칙 error(team.agent_not_found)
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed(client)
         assert client.post(f"{API}/graphs", json=graph).status_code == 201
         blocked = client.post(f"{API}/runs", json={"graph_id": "ghost"})
@@ -67,7 +71,9 @@ def test_without_team_link_runs_use_engine_validation_only(tmp_path: Path) -> No
         codes = {i["code"] for i in blocked.json()["error"]["details"]["issues"]}
         assert codes & {"agent.not_found", "team.agent_not_found"}
 
-    settings = make_settings(tmp_path, modules={"disabled": ["link-runs-teams"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["link-runs-teams"]}
+    )
     with server(settings) as client:
         statuses = {m["id"]: m["status"] for m in client.get(f"{API}/modules").json()}
         assert statuses["link-runs-teams"] == "disabled"
@@ -88,7 +94,7 @@ def test_without_team_link_runs_use_engine_validation_only(tmp_path: Path) -> No
 
 
 def test_disabling_runs_module_turns_off_runs_and_dependents(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["mod-runs"]})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["mod-runs"]})
     with server(settings) as client:
         infos = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         assert infos["mod-runs"]["status"] == "disabled"
@@ -106,7 +112,9 @@ def test_disabling_runs_module_turns_off_runs_and_dependents(tmp_path: Path) -> 
 
 
 def test_disabling_trace_link_hides_trace_only(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["link-runs-trace"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["link-runs-trace"]}
+    )
     with server(settings) as client:
         seed(client)
         run_id = client.post(f"{API}/runs", json={"graph_id": "flow"}).json()["id"]
@@ -120,6 +128,7 @@ def test_runs_options_new_location(tmp_path: Path) -> None:
     project.mkdir()
     settings = make_settings(
         tmp_path,
+        options=NO_PROJECT_GATE,
         modules={
             "options": {
                 "mod-runs": {

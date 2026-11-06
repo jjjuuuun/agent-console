@@ -18,6 +18,8 @@
 - ``definitions.checks``(여러 제공자): 저장 전 검사(``DefinitionCheck``). 없으면 모델 검증만.
 - ``graphs.validation``: 팀 구성 목록의 검증 요약(``GraphValidationSource``). 없으면 ``null``.
 - ``graphs.entry_labels``: 팀 구성 목록의 입구 이름(``GraphEntryLabels``). 없으면 ``null``.
+- ``graphs.session_summary``: 팀 구성 목록의 세션 집계(``GraphSessionSummarySource``, 6R.20k).
+  없으면 ``null``(위임 방식 등 디스크립터를 아는 연동이 계산한다 — 이 모듈은 세션 값의 뜻을 모른다).
 - ``definitions.spaces``: 공간 이름 → 정의 저장소(``agent_console_store.DefinitionSpaces``). 있으면
   에이전트·팀 구성 경로가 ``?project=<이름>``을 받아 그 공간 저장소를 쓴다. 없으면 ``?project=``
   요청은 409 ``feature_unavailable``이고 질의 없는 요청은 지금처럼 라이브러리. 이 모듈은 이름이
@@ -35,7 +37,13 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
-from agent_console_contracts import Graph, GraphValidationSummary, Issue, WorkspaceSettings
+from agent_console_contracts import (
+    Graph,
+    GraphSessionSummary,
+    GraphValidationSummary,
+    Issue,
+    WorkspaceSettings,
+)
 from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey, Topic
 from agent_console_secret_rules import SecretRules
 from agent_console_store import DEFINITIONS_SPACES_PORT, DefinitionSpaces, FileDefinitionStore
@@ -62,6 +70,13 @@ class GraphEntryLabels(Protocol):
     """팀 구성 하나의 입구 노드 표시 이름(해석할 수 없으면 None)."""
 
     def entry_labels(self, graph: Graph) -> list[str] | None: ...
+
+
+@runtime_checkable
+class GraphSessionSummarySource(Protocol):
+    """팀 구성 하나의 세션 집계(계산할 수 없거나 세션 값이 있는 연결이 없으면 None)."""
+
+    def session_summary(self, graph: Graph) -> GraphSessionSummary | None: ...
 
 
 @dataclass(frozen=True)
@@ -103,6 +118,9 @@ GRAPH_VALIDATION: PortKey[GraphValidationSource] = PortKey(
     "graphs.validation", "팀 구성 목록 검증 요약"
 )
 GRAPH_ENTRY_LABELS: PortKey[GraphEntryLabels] = PortKey("graphs.entry_labels", "팀 구성 입구 이름")
+GRAPH_SESSION_SUMMARY: PortKey[GraphSessionSummarySource] = PortKey(
+    "graphs.session_summary", "팀 구성 목록 세션 집계"
+)
 DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
     DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
 )
@@ -117,6 +135,7 @@ __all__ = [
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
     "GRAPH_ENTRY_LABELS",
+    "GRAPH_SESSION_SUMMARY",
     "GRAPH_VALIDATION",
     "KIND_CONTRIBUTIONS",
     "SECRET_RULES",
@@ -124,6 +143,7 @@ __all__ = [
     "WORKSPACE_SETTINGS",
     "DefinitionCheck",
     "GraphEntryLabels",
+    "GraphSessionSummarySource",
     "GraphValidationSource",
     "SavedDefinition",
     "SecretRulesReader",

@@ -28,10 +28,14 @@ from agent_console_server.testing import (
     ws_path,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, object]] = {"link-projects-runs": {"require_project": False}}
+
 
 @pytest.fixture
 def client(tmp_path: Path) -> Iterator[TestClient]:
-    with server(make_settings(tmp_path)) as c:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as c:
         yield c
 
 
@@ -91,7 +95,9 @@ def test_agent_console_server_ws_errors_echo_request_id(client: TestClient) -> N
 
 
 def test_agent_console_server_ws_message_size_limit(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, security={"max_ws_message_bytes": 1024})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, security={"max_ws_message_bytes": 1024}
+    )
     with server(settings) as client, client.websocket_connect(ws_path()) as ws:
         ws.send_text('{"type":"console.open","payload":{},"pad":"' + "x" * 2048 + '"}')
         assert ws.receive_json()["payload"]["code"] == "payload_too_large"
@@ -110,7 +116,9 @@ class _QuietTopicModule:
 
 
 def test_agent_console_server_ws_subscription_limit(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, security={"max_ws_subscriptions": 2})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, security={"max_ws_subscriptions": 2}
+    )
     modules = [*installed_modules(), _QuietTopicModule()]
     app = create_app(settings, environ={}, token=TEST_TOKEN, modules=modules)
     with TestClient(app) as client, client.websocket_connect(ws_path()) as ws:

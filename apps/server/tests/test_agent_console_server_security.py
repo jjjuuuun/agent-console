@@ -32,6 +32,10 @@ from agent_console_server.testing import (
     ws_path,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, object]] = {"link-projects-runs": {"require_project": False}}
+
 MAX_BODY = 2048
 
 
@@ -39,6 +43,7 @@ MAX_BODY = 2048
 def client(tmp_path: Path) -> Iterator[TestClient]:
     settings = make_settings(
         tmp_path,
+        options=NO_PROJECT_GATE,
         security={
             "allowed_hosts": ["testserver"],
             "allowed_origins": ["http://localhost:5173"],
@@ -154,22 +159,28 @@ def test_agent_console_server_ws_auth_close_codes(client: TestClient) -> None:
 
 def test_agent_console_server_remote_bind_requires_opt_in(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
-        create_app(make_settings(tmp_path, host="0.0.0.0"), environ={})
+        create_app(make_settings(tmp_path, options=NO_PROJECT_GATE, host="0.0.0.0"), environ={})
     app = create_app(
-        make_settings(tmp_path, host="0.0.0.0", security={"allow_remote": True}), environ={}
+        make_settings(
+            tmp_path, options=NO_PROJECT_GATE, host="0.0.0.0", security={"allow_remote": True}
+        ),
+        environ={},
     )
     assert app.state.settings.host == "0.0.0.0"
-    assert make_settings(tmp_path).host == "127.0.0.1"  # 기본은 루프백
+    assert make_settings(tmp_path, options=NO_PROJECT_GATE).host == "127.0.0.1"  # 기본은 루프백
 
 
 def test_agent_console_server_random_token_when_unset(tmp_path: Path) -> None:
-    first = create_app(make_settings(tmp_path), environ={}).state.policy
-    second = create_app(make_settings(tmp_path), environ={}).state.policy
+    first = create_app(make_settings(tmp_path, options=NO_PROJECT_GATE), environ={}).state.policy
+    second = create_app(make_settings(tmp_path, options=NO_PROJECT_GATE), environ={}).state.policy
     assert isinstance(first, SecurityPolicy)
     assert len(first.token) >= 32
     assert first.token != second.token
     configured = create_app(
-        make_settings(tmp_path, security={"token": "configured-token-123"}), environ={}
+        make_settings(
+            tmp_path, options=NO_PROJECT_GATE, security={"token": "configured-token-123"}
+        ),
+        environ={},
     )
     assert configured.state.policy.token == "configured-token-123"
 
@@ -179,7 +190,7 @@ def test_agent_console_server_secrets_not_in_responses_or_logs(
 ) -> None:
     """비밀 참조로 해석한 값은 응답(Run·스냅샷·WS)·로그 어디에도 원문으로 나오지 않는다."""
     caplog.set_level(logging.DEBUG)
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         client.post(f"{API}/agents", json=agent_doc("fast", f"secret://{SECRET_NAME}"))
         client.post(f"{API}/agents", json=agent_doc("slow", f"키는 secret://{SECRET_NAME}"))
         client.post(f"{API}/graphs", json=team_graph())

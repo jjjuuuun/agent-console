@@ -373,11 +373,19 @@ class RunRepository(Protocol):
         status: Iterable[RunStatus] | None = None,
         graph_id: str | None = None,
         labels: Mapping[str, str] | None = None,
+        conversation_id: str | None = None,
+        agent: str | None = None,
+        root_run_id: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         """커서 페이지(design §6R.2). `(items, next_cursor)`, 끝이면 `next_cursor`는 None.
 
         정렬은 `created_at` 내림차순 + `id` 내림차순이고, 조건은 `list`와 같이 모두 만족해야 한다.
         `labels`의 모든 (키, 값)을 가진 Run만이다(AND, 라벨은 루트 Run에만 있다).
+        `conversation_id`·`agent`·`root_run_id`는 `list`와 같은 뜻이다(6R.19: `agent` = 그
+        에이전트가 `actor`로 남긴 이벤트가 있는 Run, `root_run_id` = 그 루트 아래 모든 자손, 루트
+        자신은 제외).
+        돌려주는 Run마다 `has_children`(직접 자식 Run 유무)를 채운다. 페이지 행 전체를 한 번에 센다
+        (행마다 되묻지 않는다).
         `cursor`는 이전
         응답의 `next_cursor`(불투명)이며 모양이 틀리면 `InvalidCursor`. `limit`은 1~1000.
         """

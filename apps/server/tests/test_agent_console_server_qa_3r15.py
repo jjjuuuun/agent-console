@@ -10,9 +10,13 @@ from pathlib import Path
 
 from agent_console_server.testing import API, make_settings, seed_chat, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, object]] = {"link-projects-runs": {"require_project": False}}
+
 
 def test_deleting_conversation_keeps_its_runs(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         conv = client.post(f"{API}/conversations", json={"graph_id": "chat"}).json()
         messages = f"{API}/conversations/{conv['id']}/messages"

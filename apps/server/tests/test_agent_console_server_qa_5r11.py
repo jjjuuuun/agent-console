@@ -19,6 +19,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 
 def _edge(eid: str, s: tuple[str, str], t: tuple[str, str], kind: str) -> dict[str, Any]:
     return {
@@ -51,7 +55,7 @@ def _seed(client: TestClient) -> None:
 
 
 def test_nested_run_lineage_and_child_question(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client)
         saved = client.post(f"{API}/graphs", json=outer_graph())
         assert saved.status_code == 201, saved.text
@@ -78,7 +82,7 @@ def test_nested_run_lineage_and_child_question(tmp_path: Path) -> None:
 
 
 def test_version_pin_and_issues(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client)
         v1 = client.get(f"{API}/graphs/chat").json()["version_hash"]
         client.post(f"{API}/graphs", json=outer_graph("pin", version=v1))
@@ -102,7 +106,7 @@ def test_version_pin_and_issues(tmp_path: Path) -> None:
 
 
 def test_conversation_continues_nested_child_session(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client)
         assert client.post(f"{API}/graphs", json=outer_graph()).status_code == 201
         conv = client.post(f"{API}/conversations", json={"graph_id": "outer"}).json()
@@ -146,7 +150,7 @@ def _one_turn(client: TestClient, conv_id: str, text: str) -> None:
 
 
 def test_grandchild_path_key_and_prune(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client)
         assert client.post(f"{API}/graphs", json=outer_graph("mid", ref="chat")).status_code == 201
         # 중간 팀의 팀 노드 id는 T, 바깥은 U로 바꿔 둔다
@@ -182,7 +186,9 @@ def test_grandchild_path_key_and_prune(tmp_path: Path) -> None:
 
 
 def test_chat_works_with_link_chat_runs_disabled(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["link-chat-runs"]})
+    settings = make_settings(
+        tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["link-chat-runs"]}
+    )
     with server(settings) as client:
         _seed(client)
         assert client.post(f"{API}/graphs", json=outer_graph()).status_code == 201

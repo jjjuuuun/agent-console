@@ -38,6 +38,10 @@ from agent_console_link_logs_runs.testing import LocalLogs, PlatformRunsRig
 from agent_console_logs import QueryContext
 from agent_console_server.testing import API, agent_doc, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 SOURCE = "platform-runs"
 OPTIONS: dict[str, dict[str, Any]] = {
     "mod-logs": {"scan_interval_seconds": 0, "startup_scan": False},
@@ -278,7 +282,7 @@ def test_user_profile_memory_cell_counts_match(
         if renamed
         else None
     )
-    with server(make_settings(tmp_path, options=OPTIONS)) as client:
+    with server(make_settings(tmp_path, options={**NO_PROJECT_GATE, **OPTIONS})) as client:
         default_id = client.get(f"{API}/architecture/profiles").json()["default_profile"]
         base = client.get(f"{API}/architecture/profiles/{default_id}").json()["profile"]
         body = _settings_body(client, base, category, event_map)
@@ -343,7 +347,7 @@ def test_user_profile_memory_cell_counts_match(
 
 def test_turning_off_default_memory_rule_gives_other(tmp_path: Path) -> None:
     # 시험 4(design §5.7R.10 표 7행): 설정 event_map에서 기본 규칙을 빈 규칙으로 끈다
-    with server(make_settings(tmp_path, options=OPTIONS)) as client:
+    with server(make_settings(tmp_path, options={**NO_PROJECT_GATE, **OPTIONS})) as client:
         default_id = client.get(f"{API}/architecture/profiles").json()["default_profile"]
         base = client.get(f"{API}/architecture/profiles/{default_id}").json()["profile"]
         body = _settings_body(client, base, "memory", {MEMORY_RULE: {}})

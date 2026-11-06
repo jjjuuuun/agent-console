@@ -19,6 +19,10 @@ from fastapi.testclient import TestClient
 
 from agent_console_server.testing import API, make_settings, seed, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 DEFAULT_ID = "agent-architecture"
 QUIET = {"mod-logs": {"startup_scan": False, "scan_interval_seconds": 0}}
 MINE: dict[str, Any] = {
@@ -82,7 +86,7 @@ def test_defaults_off_gives_no_rules_and_rest_works(
 ) -> None:
     root = tmp_path / "logs"
     _write_logs(root)
-    with server(make_settings(tmp_path / "s", options=QUIET)) as client:
+    with server(make_settings(tmp_path / "s", options={**NO_PROJECT_GATE, **QUIET})) as client:
         # 대조: 설정 전에는 기본 프로필이 보인다(꺼진 효과를 확인하기 위한 기준선).
         before = client.get(f"{API}/architecture/profiles").json()
         assert [p["id"] for p in before["profiles"]] == [DEFAULT_ID]
@@ -106,7 +110,7 @@ def test_defaults_off_gives_no_rules_and_rest_works(
 def test_same_id_user_profile_replaces_default(tmp_path: Path) -> None:
     root = tmp_path / "logs"
     _write_logs(root)
-    with server(make_settings(tmp_path / "s", options=QUIET)) as client:
+    with server(make_settings(tmp_path / "s", options={**NO_PROJECT_GATE, **QUIET})) as client:
         _configure(client, root, {"profiles": {DEFAULT_ID: MINE}})
         listing = client.get(f"{API}/architecture/profiles").json()
         assert [(p["id"], p["title"], p["origin"]) for p in listing["profiles"]] == [

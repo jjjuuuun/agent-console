@@ -136,6 +136,51 @@ def test_injected_realpath_outside_is_link(tmp_path: Path) -> None:
     assert _reason(exc) == "link"
 
 
+def test_list_marks_dirs_resolving_outside_as_links(tmp_path: Path) -> None:
+    """6R.20d: 링크로 안 보여도 실제 경로가 폴더 밖인 하위 폴더는 링크로 표시(목록에서 빠짐)."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "away").mkdir()
+    (tmp_path / "a.md").write_text("# a", encoding="utf-8")
+
+    def fake(path: str) -> str:
+        return "/elsewhere/away" if path.endswith("away") else path
+
+    files = ProjectSpecFiles(tmp_path, realpath=fake)
+    by_name = {e.name: e for e in files.list("")}
+    assert by_name["away"].is_link is True
+    assert by_name["docs"].is_link is False
+    listing = list_import_files(files, "", extensions=[".md"])
+    assert [d.name for d in listing.dirs] == ["docs"]
+    with pytest.raises(SpecPathError) as exc:
+        list_import_files(files, "away", extensions=[".md"])
+    assert _reason(exc) == "link"
+
+
+def test_import_listing_subfolders_hide_config_folder(tmp_path: Path) -> None:
+    """6R.20d: 구성 폴더(예약 경로 전체, 대소문자 무시)·숨김 폴더는 하위 폴더 목록에 없다."""
+    (tmp_path / ".agent-console" / "specs").mkdir(parents=True)
+    (tmp_path / "docs" / "nested").mkdir(parents=True)
+    (tmp_path / "build" / "gen").mkdir(parents=True)
+    (tmp_path / "build" / "keep").mkdir(parents=True)
+    files = ProjectSpecFiles(tmp_path, reserved=[".agent-console", "build/gen"])
+    root = list_import_files(files, "", extensions=[".md"], reserved=[".agent-console"])
+    assert [d.name for d in root.dirs] == ["build", "docs"]
+    build = list_import_files(files, "build", extensions=[".md"])
+    assert [d.name for d in build.dirs] == ["keep"]
+    assert [d.name for d in list_import_files(files, "docs", extensions=[".md"]).dirs] == ["nested"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink needs privileges on Windows")
+def test_import_listing_subfolders_skip_symlinks(tmp_path: Path) -> None:
+    folder = tmp_path / "p"
+    (folder / "docs").mkdir(parents=True)
+    (tmp_path / "outside").mkdir()
+    (folder / "ext").symlink_to(tmp_path / "outside", target_is_directory=True)
+    (folder / "inner").symlink_to(folder / "docs", target_is_directory=True)
+    listing = list_import_files(ProjectSpecFiles(folder), "", extensions=[".md"])
+    assert [d.name for d in listing.dirs] == ["docs"]
+
+
 def _spec() -> SpecDefinition:
     return SpecDefinition.model_validate(
         {

@@ -118,6 +118,8 @@ def test_views_routes_and_list_extras(tmp_path: Path) -> None:
         assert [(u["id"], u["node_ids"]) for u in refs] == [("team", ["m"])]
         assert client.get(f"{API}/resources").json()[0]["usage_count"] == 1
         assert client.get(f"{API}/graphs").json()[0]["entry_labels"] == ["A"]
+        # 세션 값이 있는 연결이 없는 팀 = null
+        assert client.get(f"{API}/graphs").json()[0]["session_summary"] is None
         plan = client.get(f"{API}/graphs/team/plan")
         assert plan.status_code == 200
         assert client.post(f"{API}/graphs/plan", json={"graph": graph}).json() == plan.json()
@@ -137,6 +139,23 @@ def test_views_routes_and_list_extras(tmp_path: Path) -> None:
         assert client.get(f"{API}/agents/alice/effective-settings").status_code == 200
 
 
+def test_list_session_summary_counts_by_strategy_session_value(tmp_path: Path) -> None:
+    """6R.20k: 위임 방식 디스크립터의 ``session`` 값별로 센다(값은 레지스트리 데이터에서 온다)."""
+    inner = next(d for d in KIT.strategies if d.id == KIT["s_inner"])
+    graph = KIT.graph(
+        [KIT.worker("lead"), KIT.worker("a")],
+        [KIT.edge("d1", "invoke", "lead", "a")],
+        graph_id="crew",
+    ).model_dump(mode="json", exclude_none=True)
+    with _client(_assembly(tmp_path)) as client:
+        assert client.post(f"{API}/graphs", json=graph).status_code == 201
+        row = client.get(f"{API}/graphs").json()[0]
+        assert inner.session is not None
+        assert row["session_summary"] == {"nodes": 2, "delegated": {inner.session: 1}}
+        spaced = client.get(f"{API}/graphs", params={"validate": "false"}).json()[0]
+        assert spaced["session_summary"] == row["session_summary"]
+
+
 def test_link_off_hides_routes_and_extras(tmp_path: Path) -> None:
     """연동이 꺼지면(§3R.1.4 L9 "없으면") 경로는 404, 목록의 입구 이름·사용 수는 null."""
     with _client(_assembly(tmp_path, link=False)) as client:
@@ -149,6 +168,7 @@ def test_link_off_hides_routes_and_extras(tmp_path: Path) -> None:
             status = client.post(f"{API}/graphs/{path}", json=draft).status_code
             assert status in (404, 405), path
         assert client.get(f"{API}/graphs").json()[0]["entry_labels"] is None
+        assert client.get(f"{API}/graphs").json()[0]["session_summary"] is None
         assert client.get(f"{API}/resources").json()[0]["usage_count"] is None
         assert client.get(f"{API}/agents/alice").status_code == 200  # 정의 CRUD는 그대로
 

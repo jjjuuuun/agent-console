@@ -27,6 +27,10 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 RULES: dict[str, Any] = {
     "document_states": [{"id": "draft"}, {"id": "approved"}],
     "initial_document_state": "draft",
@@ -139,7 +143,7 @@ def _run_task(client: TestClient, space: str | None, key: str, profile: str) -> 
 
 
 def test_standalone_spec_task_run_with_fake_backend(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed(client)  # 팀 구성 flow(fake 백엔드 에이전트 2개)
         _make_spec(client, None)
         info = client.get(f"{API}/sdd/info").json()
@@ -176,7 +180,7 @@ def test_standalone_spec_task_run_with_fake_backend(tmp_path: Path) -> None:
 
 
 def test_project_spec_runs_go_to_project_records(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         modules = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         if modules.get("link-projects-sdd", {}).get("status") != "active":
             pytest.skip("link-projects-sdd(6R.14)가 켜지지 않은 조립")
@@ -219,7 +223,7 @@ def test_project_spec_runs_go_to_project_records(tmp_path: Path) -> None:
 
 
 def test_runs_module_off_turns_link_off(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, modules={"disabled": ["mod-runs"]})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, modules={"disabled": ["mod-runs"]})
     with server(settings) as client:
         modules = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         assert modules["link-runs-sdd"]["status"] != "active"

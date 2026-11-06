@@ -27,6 +27,10 @@ from agent_console_server.testing import (
 )
 from agent_console_store import open_sqlite
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 
 def _ask(client: TestClient, text: str = "묻기 배포") -> dict[str, Any]:
     run: dict[str, Any] = client.post(
@@ -36,13 +40,13 @@ def _ask(client: TestClient, text: str = "묻기 배포") -> dict[str, Any]:
 
 
 def test_interaction_kinds_are_listed(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         kinds = {k["id"] for k in client.get(f"{API}/interaction-kinds").json()}
     assert {"question", "tool_permission", "review"} <= kinds
 
 
 def test_wait_respond_complete(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         run = _ask(client)
         [pending] = pending_of(client)
@@ -89,7 +93,7 @@ def test_wait_respond_complete(tmp_path: Path) -> None:
 
 
 def test_two_concurrent_responses_only_one_wins(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         run = _ask(client)
         [pending] = pending_of(client)
@@ -110,7 +114,7 @@ def test_unconnected_node_cannot_ask(tmp_path: Path) -> None:
     """`ask_user` 연결이 없는 그래프에서는 요청이 열리지 않는다(grant 없음)."""
     from agent_console_server.testing import asker_agent, chat_graph
 
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         client.post(f"{API}/agents", json=asker_agent())
         client.post(f"{API}/graphs", json=chat_graph(ask=False))
         run = _ask(client)
@@ -122,7 +126,7 @@ def test_unconnected_node_cannot_ask(tmp_path: Path) -> None:
 
 
 def test_ws_interactions_topic_sends_pending_first(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         run = _ask(client)
         [pending] = pending_of(client)
@@ -171,7 +175,7 @@ def test_restart_expires_pending_and_marks_turn_interrupted(tmp_path: Path) -> N
     대화는 HTTP로 만들고(대화 저장소는 mod-chat 소유라 SQL로 쓰지 않는다, 3R.16), 서버를 끈 뒤
     죽은 프로세스가 남긴 것처럼 대기 중 Run·상호작용만 실행 기록에 직접 쓴다.
     """
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         seed_chat(client)
         conv_id = client.post(f"{API}/conversations", json={"graph_id": "chat"}).json()["id"]
@@ -225,7 +229,7 @@ def test_shutdown_interrupts_waiting_runs_before_closing_store(tmp_path: Path) -
     정상 종료도 비정상 종료 뒤 재시작 복구와 같게 정리한다(§R14.5): 대기 요청은
     `expired`(close_reason `interrupted`), Run은 `interrupted`. 다시 시작한 뒤에도 그대로다.
     """
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         seed_chat(client)
         conv = client.post(f"{API}/conversations", json={"graph_id": "chat"}).json()
@@ -257,7 +261,11 @@ def test_shutdown_interrupts_waiting_runs_before_closing_store(tmp_path: Path) -
 
 def test_shutdown_timeout_does_not_hang(tmp_path: Path) -> None:
     settings = make_settings(
-        tmp_path, options={"mod-runs": {"runtime": {"shutdown_timeout": 0, "cancel_grace": 0}}}
+        tmp_path,
+        options={
+            **NO_PROJECT_GATE,
+            **{"mod-runs": {"runtime": {"shutdown_timeout": 0, "cancel_grace": 0}}},
+        },
     )
     with server(settings) as client:
         seed_chat(client)

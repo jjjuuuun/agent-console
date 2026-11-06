@@ -146,6 +146,43 @@ def test_list_import_files() -> None:
         list_import_files(files, ".agent-console", extensions=MD, reserved=RESERVED)
 
 
+def test_list_import_files_subfolders() -> None:
+    """6R.20d: 바로 아래 하위 폴더만(재귀 없음) — 숨김·링크·루트 예약 폴더 제외, 상한 truncated."""
+    files = MemorySpecFiles(
+        {
+            "docs/zeta/a.md": "# a\n",
+            "docs/Alpha/deep/b.md": "# b\n",
+            "docs/.git/c.md": "x",
+            "docs/.agent-console/d.md": "예약은 루트 첫 구성요소만",
+            "docs/top.md": "# 위\n",
+            ".agent-console/specs/s.md": "앱 구성",
+            "other/x.md": "x",
+        },
+        links=["docs/linked", "linked-root"],
+    )
+    listing = list_import_files(files, "docs", extensions=MD, reserved=RESERVED)
+    assert [d.name for d in listing.dirs] == [
+        "Alpha",
+        "zeta",
+    ]  # 숨김(.git·.agent-console)·링크 제외
+    assert [f.name for f in listing.files] == ["top.md"]
+    root = list_import_files(files, "", extensions=MD, reserved=RESERVED)
+    assert [d.name for d in root.dirs] == ["docs", "other"]  # 예약·링크 제외
+    deeper = list_import_files(files, "docs/Alpha", extensions=MD, reserved=RESERVED)
+    assert [d.name for d in deeper.dirs] == ["deep"]
+    assert deeper.files == []
+    small = list_import_files(files, "docs", extensions=MD, limit=1)
+    assert [d.name for d in small.dirs] == ["Alpha"]
+    assert small.truncated is True
+    assert list_import_files(files, "docs/zeta", extensions=MD).dirs == []
+
+
+def test_list_import_files_reserved_folder_is_hidden_case_insensitive() -> None:
+    files = MemorySpecFiles({".AGENT-CONSOLE/x.md": "x", "Specs/y.md": "y"})
+    root = list_import_files(files, "", extensions=MD, reserved=(".agent-console", "specs"))
+    assert root.dirs == []
+
+
 def test_guess_title() -> None:
     assert guess_title(b"intro\n## sub\n# Main\n", "f") == "Main"
     assert guess_title(b"#not-heading\n", "f") == "f"
@@ -167,6 +204,7 @@ def test_local_files_guard(tmp_path: Path) -> None:
     assert files.read("docs/none.md") is None
     listing = list_import_files(files, "docs", extensions=MD)
     assert [f.name for f in listing.files] == ["a.md"]  # 링크 제외
+    assert [d.name for d in list_import_files(files, "", extensions=MD).dirs] == ["docs"]
     for bad in ("escape/secret.md", "docs/linked.md"):
         with pytest.raises(SpecPathError):
             import_documents(files, [bad])

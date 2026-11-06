@@ -19,6 +19,10 @@ import pytest
 from agent_console_link_memory_runs import load_memory_resource_type, memory_slot
 from agent_console_server.testing import API, agent_doc, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 LINK = "link-memory-runs"
 RTYPE = load_memory_resource_type()
 BODY = "결정: 응답 형식은 JSON v2"
@@ -96,7 +100,7 @@ def _slot_warnings(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def test_all_on_agent_uses_memory_tools(tmp_path: Path) -> None:
     _settings_file(tmp_path)
-    with server(make_settings(tmp_path, options=QUIET)) as client:
+    with server(make_settings(tmp_path, options={**NO_PROJECT_GATE, **QUIET})) as client:
         infos = {m["id"]: m for m in client.get(f"{API}/modules").json()}
         assert infos[LINK]["status"] == "active"
         assert infos[LINK]["web_roles"] == ["memory:runs"]
@@ -120,7 +124,9 @@ def test_all_on_agent_uses_memory_tools(tmp_path: Path) -> None:
 @pytest.mark.parametrize(("off", "state"), [("mod-memory", "unsatisfied"), (LINK, "disabled")])
 def test_off_runs_normally_with_one_warning(tmp_path: Path, off: str, state: str) -> None:
     _settings_file(tmp_path)
-    settings = make_settings(tmp_path, options=QUIET, modules={"disabled": [off]})
+    settings = make_settings(
+        tmp_path, options={**NO_PROJECT_GATE, **QUIET}, modules={"disabled": [off]}
+    )
     with server(settings) as client:
         statuses = {m["id"]: m["status"] for m in client.get(f"{API}/modules").json()}
         assert statuses[LINK] == state

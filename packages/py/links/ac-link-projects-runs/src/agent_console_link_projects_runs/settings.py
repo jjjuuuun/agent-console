@@ -38,9 +38,9 @@ class ProjectsRunsSettings(BaseModel):
     require_project: bool = Field(
         title="프로젝트 없이 실행 막기",
         json_schema_extra=x_ui(tier="advanced"),
-        # 기본 거짓(임시, 5.7R.33g 결정): 웹 실행 시작이 아직 project_id를 보내지 않는다(33o·33v).
-        # 웹이 보내게 되면 기본을 참으로 바꾼다(design §PI.4.5 규칙 1).
-        default=False,
+        # 기본 참(5.7R.33v 후속 ⑤, design §PI.4.5 규칙 1): 웹 실행 시작이 항상 project_id를
+        # 보낸다. 0.3.0 전에는 거짓이었다(깨는 변경 — 프로젝트 없는 API 실행은 끄고 써야 한다).
+        default=True,
         description=(
             "켜면 프로젝트를 고르지 않은 실행·대화를 시작하지 않는다(실행은 프로젝트 폴더에서만). "
             "끄면 프로젝트 없는 실행은 서버 작업 폴더에서 돈다."

@@ -253,16 +253,18 @@ def test_child_run_uses_same_space(tmp_path: Path) -> None:
         assert _reply(events) == f"cwd={folder} model=m-proj"
 
 
-def test_required_project(tmp_path: Path) -> None:
-    options = {MODULE_ID: {"require_project": True}}
+def test_required_project_on_by_default(tmp_path: Path) -> None:
+    """0.3.0부터 기본 참(5.7R.33v 후속 ⑤): 설정 없이도 프로젝트 없는 실행을 막는다."""
+    for options in (None, {MODULE_ID: {"require_project": True}}):
+        with _client(tmp_path, options=options) as (client, _assembly):
+            error = _error(_start(client, "g1", None), 422, "project.required")
+            assert error["fix"]["actions"][0]["target"]["role"] == "projects"
+            _no_runs(client)
+
+
+def test_required_project_can_be_turned_off(tmp_path: Path) -> None:
+    options = {MODULE_ID: {"require_project": False}}
     with _client(tmp_path, options=options) as (client, _assembly):
-        error = _error(_start(client, "g1", None), 422, "project.required")
-        assert error["fix"]["actions"][0]["target"]["role"] == "projects"
-        _no_runs(client)
-
-
-def test_required_project_off_by_default(tmp_path: Path) -> None:
-    with _client(tmp_path) as (client, _assembly):
         run, events = _run(client, "g1", None)
         assert run["status"] == "completed"
         assert _reply(events) == "라이브러리"  # 프로젝트 없으면 라이브러리·서버 작업 폴더

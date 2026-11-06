@@ -317,6 +317,7 @@ class ProjectsModule:
                 DEFINITIONS_STORE, "정의 기능이 꺼져 있어 공용 구성을 복사할 수 없습니다"
             ),
             messages=cfg.messages,
+            kind_info=lambda: library_kinds(reader(), ctx.ports(KIND_CONTRIBUTIONS)),
         )
         snapshot = DefinitionSnapshot(
             reader, ttl=cfg.snapshot_ttl_seconds, skip_kinds=(PROJECT_KIND_NAME,)

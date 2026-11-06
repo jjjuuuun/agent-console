@@ -34,6 +34,7 @@ export type {
   FlowSettings,
   Graph,
   GraphPatch,
+  GraphSessionSummary,
   GraphSettings,
   GraphSummary,
   GraphUiLayout,
@@ -74,4 +75,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "definitions" as const;
-export const CONTRACT_VERSION = "1.6.0" as const;
+export const CONTRACT_VERSION = "1.7.0" as const;

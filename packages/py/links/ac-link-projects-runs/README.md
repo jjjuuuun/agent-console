@@ -19,7 +19,7 @@ Agent Console 프로젝트·실행 연동 모듈(design §UX-P.5·§5.2R.6). 실
 - 자식 Run(중첩 팀)은 부모 서비스를 물려받아 루트 Run의 프로젝트 층·정의 출처를 쓴다.
 - 이 연동을 끄면: `project_id` 기록·거르기는 그대로, 프로젝트 층·정의 출처·사전 점검만 빠진다.
 - 설정 `modules.options.link-projects-runs`: `layer_id`(기본 `project`), `layer_label`(기본
-  `프로젝트`), `unknown_message`(`string.Template`, 변수 `project`), `require_project`(기본 거짓 — 웹 실행 시작이 `project_id`를 보내게 되면(33o·33v) 참으로 바꾼다).
+  `프로젝트`), `unknown_message`(`string.Template`, 변수 `project`), `require_project`(기본 참, 0.3.0부터 — 프로젝트 없이 시작하는 실행·대화 턴은 422 `project.required`. 프로젝트 없는 실행을 쓰려면 `false`로 준다. `ProjectScope(require_project=)` 생성자 기본은 그대로 거짓).
 
 ## 설치
 

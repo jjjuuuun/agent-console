@@ -9,7 +9,13 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from agent_console_contracts import Graph, GraphSummary, GraphValidationSummary, Issue
+from agent_console_contracts import (
+    Graph,
+    GraphSessionSummary,
+    GraphSummary,
+    GraphValidationSummary,
+    Issue,
+)
 from agent_console_store import (
     GRAPH_KIND,
     DefinitionCorrupt,
@@ -21,7 +27,12 @@ from agent_console_store import (
 )
 
 from .errors import reject_errors
-from .ports import DefinitionCheck, GraphEntryLabels, GraphValidationSource
+from .ports import (
+    DefinitionCheck,
+    GraphEntryLabels,
+    GraphSessionSummarySource,
+    GraphValidationSource,
+)
 
 _log = logging.getLogger("agent_console_mod_definitions")
 
@@ -34,6 +45,7 @@ class DefinitionService:
         checks: 지금 저장 전 검사 목록(부를 때마다 — 늦게 켜진 제공자도 보인다).
         validation: 팀 구성 목록 검증 요약 제공자(없으면 None → 요약 null).
         entry_labels: 팀 구성 입구 이름 제공자(없으면 None → 이름 null).
+        session_summary: 팀 구성 세션 집계 제공자(없으면 None → 집계 null).
     """
 
     def __init__(
@@ -43,11 +55,13 @@ class DefinitionService:
         checks: Callable[[], Sequence[DefinitionCheck]] = lambda: (),
         validation: Callable[[], GraphValidationSource | None] = lambda: None,
         entry_labels: Callable[[], GraphEntryLabels | None] = lambda: None,
+        session_summary: Callable[[], GraphSessionSummarySource | None] = lambda: None,
     ) -> None:
         self.store = store
         self._checks = checks
         self._validation = validation
         self._entry_labels = entry_labels
+        self._session_summary = session_summary
 
     def issues(self, kind: str, document: Mapping[str, Any] | BaseModel) -> list[Issue]:
         """저장 전 검사 이슈 전부(검사가 없으면 빈 목록)."""
@@ -80,7 +94,7 @@ class DefinitionService:
         return stored
 
     def graph_summaries(self, *, validate: bool = True) -> list[GraphSummary]:
-        """팀 구성 목록: 저장소 요약 + 입구 이름 + 검증 요약(각각 제공자가 있을 때)."""
+        """팀 구성 목록: 저장소 요약 + 입구 이름 + 세션 집계 + 검증 요약(각각 제공자가 있을 때)."""
         summaries = list_graph_summaries(self.store)
         validations: Mapping[str, GraphValidationSummary | None] = {}
         source = self._validation() if validate else None
@@ -90,19 +104,31 @@ class DefinitionService:
             except Exception:
                 _log.exception("팀 구성 검증 요약 실패")
         labeler = self._entry_labels()
+        sessions = self._session_summary()
         out: list[GraphSummary] = []
         for summary in summaries:
             labels: list[str] | None = None
-            if labeler is not None:
+            session: GraphSessionSummary | None = None
+            if labeler is not None or sessions is not None:
                 stored = self._readable(GRAPH_KIND.name, summary.id, Graph)
-                if stored is not None:
+                graph = stored.model(Graph) if stored is not None else None
+                if graph is not None and labeler is not None:
                     try:
-                        labels = labeler.entry_labels(stored.model(Graph))
+                        labels = labeler.entry_labels(graph)
                     except Exception:
                         labels = None
+                if graph is not None and sessions is not None:
+                    try:
+                        session = sessions.session_summary(graph)
+                    except Exception:
+                        session = None
             out.append(
                 summary.model_copy(
-                    update={"entry_labels": labels, "validation": validations.get(summary.id)}
+                    update={
+                        "entry_labels": labels,
+                        "validation": validations.get(summary.id),
+                        "session_summary": session,
+                    }
                 )
             )
         return out

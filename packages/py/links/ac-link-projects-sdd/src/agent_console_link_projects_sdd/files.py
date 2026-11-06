@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Iterable
+from dataclasses import replace
 from pathlib import Path
 
 from agent_console_project_space import ConfigReadonly
@@ -146,7 +147,24 @@ class ProjectSpecFiles:
         return self._local.is_link(norm)
 
     def list(self, path: str) -> list[SpecFileEntry]:
-        """폴더 바로 아래 항목(재귀 없음). 예약 경로 항목은 뺀다."""
+        """폴더 바로 아래 항목(재귀 없음). 예약 경로 항목은 뺀다.
+
+        하위 폴더는 링크를 푼 실제 경로가 프로젝트 폴더 안인지 한 번 더 보고, 밖이면 링크로 표시한다
+        (``is_link=True`` — 가져오기 목록이 빼고, 그 경로를 열면 ``SpecPathError(link)``). 링크로
+        알아보지 못하는 재분석 지점(일부 Windows 정션 등)이 폴더 밖을 가리켜도 고를 수 없게 한다.
+        """
         norm = self._check(path)
-        entries = self._local.list(norm)
-        return [e for e in entries if not self._is_reserved(f"{norm}/{e.name}" if norm else e.name)]
+        root = self._realpath(str(self._folder))
+        out: list[SpecFileEntry] = []
+        for entry in self._local.list(norm):
+            rel = f"{norm}/{entry.name}" if norm else entry.name
+            if self._is_reserved(rel):
+                continue
+            if (
+                entry.is_dir
+                and not entry.is_link
+                and not folder_within(self._realpath(str(self._folder / rel)), root)
+            ):
+                entry = replace(entry, is_link=True)
+            out.append(entry)
+        return out

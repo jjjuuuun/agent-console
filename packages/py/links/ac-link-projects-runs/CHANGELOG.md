@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 0.3.0
+
+- **깨는 변경**(5.7R.33v 후속 ⑤): 설정 `require_project` 기본값을 참으로 바꿨다. 프로젝트 모듈이 켜진 조립에서
+  `project_id` 없이 `POST /runs`(대화 턴 포함)를 부르면 422 `project.required`다. 웹은 33v부터 항상
+  `project_id`를 보낸다. 전 동작은 `modules.options.link-projects-runs.require_project: false`. 라이브러리
+  `ProjectScope(require_project=)` 생성자 기본은 그대로 거짓이다.
+
 ## 0.2.0
 
 - 실행 사전 점검(5.7R.33g, design §PI.4.5·§PI.5·§PI.16 ②). `ProjectScope.run_definitions`(X26 선택

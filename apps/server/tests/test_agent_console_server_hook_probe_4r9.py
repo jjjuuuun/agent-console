@@ -15,6 +15,10 @@ from typing import Any
 
 from agent_console_server.testing import API, agent_doc, make_settings, server, team_graph, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 PROBE_RULE: dict[str, Any] = {"hook_probe": [{"event": "Stop", "after": "end"}]}
 NOTE = "observe.hook_probe_wrapped"
 
@@ -25,7 +29,10 @@ def test_hook_probe_command_install_option_reaches_backend(tmp_path: Path) -> No
     probe = ["/opt/probe", "--x"]
     settings = make_settings(
         tmp_path,
-        options={"mod-runs": {"backends": {"claude-agent-sdk": {"hook_probe_command": probe}}}},
+        options={
+            **NO_PROJECT_GATE,
+            **{"mod-runs": {"backends": {"claude-agent-sdk": {"hook_probe_command": probe}}}},
+        },
     )
     with server(settings) as client:
         starter = client.app.state.assembly.port(RUNS_STARTER)  # type: ignore[attr-defined]
@@ -44,7 +51,7 @@ def _seed(client: Any, *, hook_probe: bool) -> None:
 
 
 def test_fake_probe_records_land_in_node_run_folder(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client, hook_probe=True)
         run = client.post(f"{API}/runs", json={"graph_id": "flow", "input": {"request": "q"}})
         snap = wait_run(client, run.json()["id"])
@@ -60,7 +67,7 @@ def test_fake_probe_records_land_in_node_run_folder(tmp_path: Path) -> None:
 
 
 def test_fake_probe_off_by_default_writes_nothing(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client, hook_probe=False)
         run = client.post(f"{API}/runs", json={"graph_id": "flow", "input": {"request": "q"}})
         wait_run(client, run.json()["id"])
@@ -68,7 +75,7 @@ def test_fake_probe_off_by_default_writes_nothing(tmp_path: Path) -> None:
 
 
 def test_bundle_preview_announces_hook_probe(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         _seed(client, hook_probe=False)
         off = client.get(f"{API}/graphs/flow/nodes/a/bundle-preview").json()
         assert all(w["code"] != NOTE for w in off["warnings"])

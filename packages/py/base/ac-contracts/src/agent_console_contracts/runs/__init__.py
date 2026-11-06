@@ -5,6 +5,7 @@ Run·NodeRun·실행 이벤트·상호작용·흐름(trace)·노드/연결/백�
 1.7.0(0.13.0, design §6R.1.5·§6R.9): `Run.labels`·`CreateRunRequest.labels`(상한
 `RUN_LABEL_LIMITS`),
 커서 페이지 `RunPage{items, next_cursor, source}`.
+1.8.0(0.13.2, 6R.19 서버 후속): `Run.has_children`(목록 페이지 행의 직접 자식 유무, 선택).
 """
 
 from ._api import (

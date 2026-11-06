@@ -2,6 +2,13 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.13.2]
+- 계약 0.13.2(6R.19 서버 후속). 더하기만 한다(새 필드는 선택). 사내 의존 범위는 `^0.13.0` 그대로. `runs` 1.8.0, `definitions` 1.7.0.
+- 새 선택 필드: `Run.has_children?: boolean | null`(직접 자식 Run 유무, `GET /runs/page` 행에서 채움, null·생략 = 서버가 채우지 않음).
+- 새 선택 필드(6R.20k, `definitions` 1.7.0): `GraphSummary.session_summary?: GraphSessionSummary | null`(`GET /graphs` 행의 세션 집계 `{nodes, delegated: {세션 값: 수}}`, null·생략 = 계산하지 않음 또는 세션 값이 있는 연결 없음). 새 타입 `GraphSessionSummary`.
+- 새 선택 필드(6R.20d, `sdd` 1.1.0): `ImportFileListing.dirs?: ImportDir[]`(가져오기 폴더의 하위 폴더, 생략 = 옛 서버). 새 타입 `ImportDir`·`SpecTemplateCreateRequest`(6R.20a).
+- 새 타입(6R.20a, `projects` 3.2.0): `CopyKindInfo`·`CopyItem`(`GET /projects/copy/kinds`·`/projects/copy/items`).
+
 ## [0.13.1]
 - 계약 0.13.1(계약 후속 6R.15·6R.16·5.7R.33y2·5.7R.33y3). 더하기만 한다(새 필드는 모두 선택). 사내 의존 범위는 `^0.13.0` 그대로. `common` 1.9.0, `definitions` 1.6.0, `sdd` 1.0.1.
 - 새 선택 필드: `SecretRuleSettings.weak_key_names?: string[] | null`(null·생략 = 기본 데이터, 빈 목록 = 끔).

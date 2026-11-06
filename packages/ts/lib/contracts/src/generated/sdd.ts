@@ -18,6 +18,7 @@ export type {
   DocumentStateOnEdit,
   DocumentStateSpec,
   EffectiveSyntax,
+  ImportDir,
   ImportFile,
   ImportFileListing,
   ParsedDocument,
@@ -58,6 +59,7 @@ export type {
   SpecSummary,
   SpecSyntax,
   SpecTemplate,
+  SpecTemplateCreateRequest,
   SpecTemplateSummary,
   SpecView,
   StageRef,
@@ -89,4 +91,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "sdd" as const;
-export const CONTRACT_VERSION = "1.0.1" as const;
+export const CONTRACT_VERSION = "1.1.0" as const;

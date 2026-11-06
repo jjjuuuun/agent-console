@@ -1,4 +1,7 @@
-"""런타임 엔티티(design §2.3): Run, NodeRun, RunSnapshot, 커서 페이지 RunPage(1.7.0)."""
+"""런타임 엔티티(design §2.3): Run, NodeRun, RunSnapshot, 커서 페이지 RunPage(1.7.0).
+
+1.8.0: `Run.has_children`(목록 페이지 행의 직접 자식 유무).
+"""
 
 from collections.abc import Mapping
 from typing import Final, Literal
@@ -117,6 +120,14 @@ class Run(ContractModel):
             "상한 `RUN_LABEL_LIMITS`."
         ),
     )
+    has_children: bool | None = Field(
+        default=None,
+        description=(
+            "직접 자식 Run(`parent_run_id`가 이 Run)이 있는지(1.8.0). 목록 페이지 "
+            "`GET /runs/page`가 페이지 행을 한 번에 세어 채운다. null = 서버가 채우지 않음"
+            "(저장본·다른 응답). 저장하지 않는 읽기 전용 표시 값이다."
+        ),
+    )
 
 
 class NodeRun(ContractModel):
@@ -171,6 +182,7 @@ class RunPage(ContractModel):
     문자열).
     프로젝트 목록은 폴더 기록(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로
     읽는다(두 출처를 시간순으로 섞지 않는다).
+    1.8.0: 행마다 `has_children`(직접 자식 Run 유무)를 채운다.
     """
 
     items: list[Run] = Field(default_factory=list)

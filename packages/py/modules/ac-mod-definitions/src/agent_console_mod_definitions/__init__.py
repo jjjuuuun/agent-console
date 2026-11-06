@@ -8,7 +8,8 @@
       ``mod-definitions``.
     - 포트·토픽(``ports``): ``DEFINITIONS_STORE``·``DEFINITIONS_LOOKUP``·``WORKSPACE_SETTINGS``·
       ``SECRET_RULES``·``DEFINITION_CHECKS``(multi)·``SERVER_WARNINGS``(multi)·
-      ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``DEFINITIONS_SPACES``(선택, 공간 이름 → 저장소)·
+      ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``GRAPH_SESSION_SUMMARY``(세션 집계)·
+      ``DEFINITIONS_SPACES``(선택, 공간 이름 → 저장소)·
       ``KIND_CONTRIBUTIONS``(선택 multi, 정의 종류 기여 X44)·
       ``DEFINITIONS_SAVED``(``SavedDefinition`` — ``space`` 포함).
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
@@ -32,6 +33,7 @@ from .ports import (
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
+    GRAPH_SESSION_SUMMARY,
     GRAPH_VALIDATION,
     KIND_CONTRIBUTIONS,
     SECRET_RULES,
@@ -39,6 +41,7 @@ from .ports import (
     WORKSPACE_SETTINGS,
     DefinitionCheck,
     GraphEntryLabels,
+    GraphSessionSummarySource,
     GraphValidationSource,
     SavedDefinition,
 )
@@ -69,6 +72,7 @@ __all__ = [
     "DEFINITION_CHECKS",
     "ERROR_MAP",
     "GRAPH_ENTRY_LABELS",
+    "GRAPH_SESSION_SUMMARY",
     "GRAPH_VALIDATION",
     "INVALID_RULE",
     "KIND_CONTRIBUTIONS",
@@ -85,6 +89,7 @@ __all__ = [
     "DefinitionService",
     "DefinitionsModule",
     "GraphEntryLabels",
+    "GraphSessionSummarySource",
     "GraphValidationSource",
     "IdMismatchError",
     "LazyVersionRepository",

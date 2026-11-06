@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from agent_console_contracts import (
     HTTP_STATUS_BY_ERROR_CODE,
     Graph,
+    GraphSessionSummary,
     GraphValidationSummary,
     Issue,
     WorkspaceSettings,
@@ -22,6 +23,7 @@ from agent_console_mod_definitions import (
     DEFINITIONS_SAVED,
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
+    GRAPH_SESSION_SUMMARY,
     GRAPH_VALIDATION,
     SECRET_RULES,
     SERVER_WARNINGS,
@@ -29,6 +31,7 @@ from agent_console_mod_definitions import (
     WORKSPACE_SETTINGS,
     DefinitionCheck,
     GraphEntryLabels,
+    GraphSessionSummarySource,
     GraphValidationSource,
     SavedDefinition,
     module,
@@ -129,6 +132,7 @@ def test_graph_crud_duplicate_and_list_without_providers(tmp_path: Path) -> None
         assert [g["id"] for g in listed] == ["g1", "g2"]
         # 검증 요약·입구 이름 제공자가 없으면 null(연동이 꺼진 동작)
         assert all(g["validation"] is None and g["entry_labels"] is None for g in listed)
+        assert all(g["session_summary"] is None for g in listed)  # 세션 집계 제공자 없음
 
 
 def test_graph_list_carries_attributes_and_saved_at(tmp_path: Path) -> None:
@@ -158,22 +162,32 @@ class _Labels:
         return [f"입구-{graph.id}"]
 
 
+class _Sessions:
+    def session_summary(self, graph: Graph) -> GraphSessionSummary | None:
+        return GraphSessionSummary(nodes=len(graph.nodes), delegated={"임의-값": 1})
+
+
 def test_graph_list_uses_optional_providers(tmp_path: Path) -> None:
-    validation, labels = _Validation(), _Labels()
+    validation, labels, sessions = _Validation(), _Labels(), _Sessions()
     assert isinstance(validation, GraphValidationSource)
     assert isinstance(labels, GraphEntryLabels)
+    assert isinstance(sessions, GraphSessionSummarySource)
 
     def build(ctx: ModuleContext) -> None:
         ctx.provide(GRAPH_VALIDATION, validation)
         ctx.provide(GRAPH_ENTRY_LABELS, labels)
+        ctx.provide(GRAPH_SESSION_SUMMARY, sessions)
 
     provider = fake_module(
-        "graph-extras", provides=[GRAPH_VALIDATION, GRAPH_ENTRY_LABELS], on_build=build
+        "graph-extras",
+        provides=[GRAPH_VALIDATION, GRAPH_ENTRY_LABELS, GRAPH_SESSION_SUMMARY],
+        on_build=build,
     )
     with _client(_assembly(tmp_path, provider)) as client:
         client.post(f"{API}/graphs", json=GRAPH)
         item = client.get(f"{API}/graphs").json()[0]
         assert item["entry_labels"] == ["입구-g1"]
+        assert item["session_summary"] == {"nodes": 0, "delegated": {"임의-값": 1}}
         assert item["validation"]["error_count"] == 1
         assert (
             client.get(f"{API}/graphs", params={"validate": "false"}).json()[0]["validation"]

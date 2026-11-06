@@ -8,6 +8,10 @@ from typing import Any
 
 from agent_console_server.testing import API, make_settings, server, wait_run
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 SKILL = {"id": "review", "type": "skill", "name": "리뷰", "config": {"name": "review"}}
 RULE = {
     "id": "api",
@@ -70,7 +74,7 @@ def _agent(agent_id: str, refs: list[str]) -> dict[str, Any]:
 
 
 def test_files_crud_with_if_match(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         created = client.post(f"{API}/resources", json=SKILL)
         assert created.status_code == 201, created.text
         etag = _etag(created)
@@ -121,7 +125,10 @@ def test_files_crud_with_if_match(tmp_path: Path) -> None:
 
 
 def test_files_rejects_single_body_types_bad_paths_and_size(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, options={"mod-definitions": {"max_content_bytes": 16}})
+    settings = make_settings(
+        tmp_path,
+        options={**NO_PROJECT_GATE, **{"mod-definitions": {"max_content_bytes": 16}}},
+    )
     with server(settings) as client:
         instr = {"id": "guide", "type": "instruction", "name": "g", "config": {"text": "x"}}
         etag = _etag(client.post(f"{API}/resources", json=instr))
@@ -153,7 +160,10 @@ def test_run_writes_skill_and_rule_trees_only_under_run_folder(tmp_path: Path) -
     project = tmp_path / "project"
     project.mkdir()
     (project / "README.md").write_text("p", encoding="utf-8")
-    settings = make_settings(tmp_path, options={"mod-runs": {"working_directory": "project"}})
+    settings = make_settings(
+        tmp_path,
+        options={**NO_PROJECT_GATE, **{"mod-runs": {"working_directory": "project"}}},
+    )
     watched = [home, project]
     before = {p: sorted(x.relative_to(p) for x in p.rglob("*")) for p in watched}
     with server(settings, environ={"HOME": str(home)}) as client:
@@ -184,7 +194,10 @@ def test_run_writes_skill_and_rule_trees_only_under_run_folder(tmp_path: Path) -
 def test_unsupported_hooks_slot_is_a_validation_warning(tmp_path: Path) -> None:
     settings = make_settings(
         tmp_path,
-        options={"mod-runs": {"backends": {"fake-agent": {"resource_slots": ["instructions"]}}}},
+        options={
+            **NO_PROJECT_GATE,
+            **{"mod-runs": {"backends": {"fake-agent": {"resource_slots": ["instructions"]}}}},
+        },
     )
     with server(settings) as client:
         assert client.post(f"{API}/resources", json=HOOK).status_code == 201
@@ -202,7 +215,11 @@ def test_unsupported_hooks_slot_is_a_validation_warning(tmp_path: Path) -> None:
 
 def test_fake_echo_hooks_events_are_queryable(tmp_path: Path) -> None:
     settings = make_settings(
-        tmp_path, options={"mod-runs": {"backends": {"fake-agent": {"echo_hooks": True}}}}
+        tmp_path,
+        options={
+            **NO_PROJECT_GATE,
+            **{"mod-runs": {"backends": {"fake-agent": {"echo_hooks": True}}}},
+        },
     )
     with server(settings) as client:
         assert client.post(f"{API}/resources", json=HOOK).status_code == 201

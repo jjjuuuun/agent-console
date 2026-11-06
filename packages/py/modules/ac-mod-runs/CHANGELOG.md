@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 6R.19 서버 후속: `GET /runs/page`에 `agent_id`·`conversation_id`·`root`(옛 `GET /runs`와 같은 뜻), 행마다 `has_children`(계약 0.13.2 `Run.has_children`). 커서·출처 잇기 규칙 그대로.
 - 계약 0.13.1: `MOVE_BUSY`가 계약 문서 상수 `KnownIssueCodes.RUN_MOVE_BUSY`를 쓴다(값 같음).
 - 6R.16: `RunService.host_id(project_id)`(이 앱이 그 공간 Run에 적는 `host_id`, 공간 없음·기록 공간 없음 = None) — 자동 진행이 실행 기록에서 자기 앱 Run만 고른다.
 

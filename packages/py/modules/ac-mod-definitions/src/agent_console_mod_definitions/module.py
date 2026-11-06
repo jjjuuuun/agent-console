@@ -4,7 +4,8 @@
   ``secrets.rules``·``definitions.checks``(공통 설정 비밀 규칙 검사)·``server.warnings``(평문 점검).
   토픽 ``definitions.saved``를 낸다(저장마다, 저장소 쓰기 잠금 안 동기 호출, 구독자 예외 격리).
 - 선택: ``definitions.checks``(여러 제공자 — 저장 전 검사), ``graphs.validation``·
-  ``graphs.entry_labels``(팀 구성 목록의 검증 요약·입구 이름, 없으면 null),
+  ``graphs.entry_labels``·``graphs.session_summary``(팀 구성 목록의 검증 요약·입구 이름·세션 집계,
+  없으면 null),
   ``definitions.spaces``(공간 이름 → 정의 저장소 — 에이전트·팀 구성 경로의 ``?project=``. 공간
   목록의 검증 요약은 null: 검증 제공자가 라이브러리를 본다), ``definitions.kind_contributions``
   (여러 제공자, X44 — ``library=True`` 기여 종류를 라이브러리 저장소에 더한다. build 때 한 번,
@@ -38,6 +39,7 @@ from .ports import (
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
     GRAPH_ENTRY_LABELS,
+    GRAPH_SESSION_SUMMARY,
     GRAPH_VALIDATION,
     KIND_CONTRIBUTIONS,
     SECRET_RULES,
@@ -106,6 +108,7 @@ class DefinitionsModule:
             DEFINITION_CHECKS,
             GRAPH_VALIDATION,
             GRAPH_ENTRY_LABELS,
+            GRAPH_SESSION_SUMMARY,
             DEFINITIONS_SPACES,
             KIND_CONTRIBUTIONS,
         ),
@@ -170,6 +173,7 @@ class DefinitionsModule:
             checks=lambda: ctx.ports(DEFINITION_CHECKS),
             validation=lambda: ctx.port(GRAPH_VALIDATION),
             entry_labels=lambda: ctx.port(GRAPH_ENTRY_LABELS),
+            session_summary=lambda: ctx.port(GRAPH_SESSION_SUMMARY),
         )
         stores: SpaceStores[DefinitionStore] = SpaceStores(
             store, lambda: ctx.port(DEFINITIONS_SPACES)
@@ -182,6 +186,7 @@ class DefinitionsModule:
                 stores.get(space),
                 checks=lambda: ctx.ports(DEFINITION_CHECKS),
                 entry_labels=lambda: ctx.port(GRAPH_ENTRY_LABELS),
+                session_summary=lambda: ctx.port(GRAPH_SESSION_SUMMARY),
             )
 
         database = ctx.database

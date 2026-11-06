@@ -18,6 +18,7 @@ from agent_console_contracts import (
     DefinitionReference,
     EffectiveSettings,
     Graph,
+    GraphSessionSummary,
     Issue,
     TeamPlanSummary,
     WorkspaceSettings,
@@ -43,6 +44,7 @@ from agent_console_teams import (
     node_settings,
     plan_summary,
     resolve_settings,
+    session_summary,
 )
 
 from .ports import DefinitionLookup, Redactor, ScopeLayersSource
@@ -185,6 +187,14 @@ class TeamViews:
             return [plan.label_of(n) for n in plan.entry_nodes]
         except Exception:
             return None
+
+    def session_summary(self, graph: Graph) -> GraphSessionSummary | None:
+        """``graphs.session_summary``: 세션 값별 집계(해석할 수 없거나 세션 값이 없으면 None)."""
+        catalog = self.catalog
+        plan = catalog.try_plan(graph)
+        if plan is None:
+            return None
+        return session_summary(plan, catalog.strategies)
 
     # ------------------------------------------------------------ 화면 계산
 

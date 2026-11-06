@@ -5,14 +5,15 @@
 - 필수: ``definitions.lookup``. 선택: ``workspace.settings``·``resources.lookup``·
   ``resources.types``·``secrets.redact``·``secrets.rules``·``settings.scope_layers``(유효 설정
   ``?project=``의 범위 층, 5.2R.34).
-- 제공: ``graphs.entry_labels``(팀 구성 목록 입구 이름), ``definitions.usages``(리소스 목록
+- 제공: ``graphs.entry_labels``(팀 구성 목록 입구 이름), ``graphs.session_summary``(목록 세션 집계),
+  ``definitions.usages``(리소스 목록
   ``usage_count``), ``definitions.dependencies``(문서가 쓰는 정의 — 쓰는 정의 먼저 쓰기),
   ``definitions.references``(같은 계산의 참조 추출 함수, 여러 제공자 포트 X25 — 프로젝트 범위 검사).
   경로: 사용처·유효 설정·실행 계획·묶음 미리보기(저장본·초안).
 - 디스크립터: 호스트 기본 서비스 ``registries``(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다.
 - 웹 역할 ``definitions:teams``: 팀 구성 편집기의 초안 미리보기(실행 계획·유효 설정·묶음 미리보기
   ``POST /graphs/*``)와 에이전트 상세의 사용처 패널(``GET /agents/{id}/usages``).
-- 이 연동이 꺼지면: 경로 404(웹이 패널을 숨김), 목록 입구 이름·``usage_count``는 null.
+- 이 연동이 꺼지면: 경로 404(웹이 패널을 숨김), 목록 입구 이름·세션 집계·``usage_count``는 null.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from .ports import (
     DEFINITION_USAGES,
     DEFINITIONS_LOOKUP,
     GRAPH_ENTRY_LABELS,
+    GRAPH_SESSION_SUMMARY,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
     SCOPE_LAYERS,
@@ -67,6 +69,7 @@ class DefinitionsTeamsLink:
         description="구성이 어디에 쓰이는지와 실제 적용 설정·실행 계획을 보여 준다",
         provides=(
             GRAPH_ENTRY_LABELS,
+            GRAPH_SESSION_SUMMARY,
             DEFINITION_USAGES,
             DEFINITION_DEPENDENCIES,
             DEFINITION_REFERENCES,
@@ -109,6 +112,7 @@ class DefinitionsTeamsLink:
             scopes=lambda: ctx.ports(SCOPE_LAYERS),
         )
         ctx.provide(GRAPH_ENTRY_LABELS, views)
+        ctx.provide(GRAPH_SESSION_SUMMARY, views)
         ctx.provide(DEFINITION_USAGES, views)
         documents = TeamDocumentDependencies(lambda: catalog_from_registries(ctx.registries))
         ctx.provide(DEFINITION_DEPENDENCIES, documents)

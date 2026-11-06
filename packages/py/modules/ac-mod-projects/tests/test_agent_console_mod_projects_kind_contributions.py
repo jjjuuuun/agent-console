@@ -262,3 +262,41 @@ def test_contribution_references_without_reference_providers(tmp_path: Path) -> 
         _register(client, tmp_path / "2" / "work" / "pa")
         plan = _plan(client, None, "pa", [("agent", "a")])
         assert "project.references_unavailable" in [w["code"] for w in plan["warnings"]]
+
+
+def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
+    """6R.20a(6R.20c 입력): 복사 대화상자 메타데이터 — 기여한 임의 이름 종류가 표 없이 나온다."""
+    assembly = _assembly(tmp_path, contributions=True)
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    assert lib is not None
+    lib.create("agent", {"id": "a", "name": "에이", "description": "설명", "backend": "fake-agent"})
+    lib.create("note-template", {"id": "t1", "name": "틀"})
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        kinds = client.get(f"{API}/projects/copy/kinds").json()
+        by_kind = {k["kind"]: k for k in kinds}
+        assert by_kind["note-template"] == {
+            "kind": "note-template",
+            "library": True,
+            "portable": True,
+        }
+        assert "note" not in by_kind  # library=False 종류는 라이브러리에 없다
+        assert "settings" not in by_kind  # 싱글턴은 복사 대상이 아니다
+        assert by_kind["agent"]["portable"] is True
+
+        items = client.get(f"{API}/projects/copy/items").json()
+        assert {(i["kind"], i["id"]) for i in items} >= {("agent", "a"), ("note-template", "t1")}
+        only = client.get(f"{API}/projects/copy/items", params={"kind": "note-template"}).json()
+        assert [(i["kind"], i["id"], i["name"]) for i in only] == [("note-template", "t1", "틀")]
+        agent = client.get(f"{API}/projects/copy/items", params={"kind": "agent"}).json()
+        assert agent[0]["description"] == "설명"
+        assert isinstance(agent[0]["saved_at"], float)
+        missing = client.get(f"{API}/projects/copy/items", params={"kind": "nope"})
+        assert missing.status_code == 404
+
+        project = {k["kind"]: k for k in client.get(f"{API}/projects/copy/kinds?project=pa").json()}
+        assert project["note"] == {"kind": "note", "library": False, "portable": True}
+        assert "private" not in project  # portable=False 기여는 프로젝트 공간에 없다
+        assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []
+        assert client.get(f"{API}/projects/copy/kinds?project=zz").status_code == 404
+        assert client.get(f"{API}/projects/copy/kinds?project=..").status_code == 404

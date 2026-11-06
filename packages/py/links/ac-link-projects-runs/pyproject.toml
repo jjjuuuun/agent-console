@@ -1,6 +1,6 @@
 [project]
 name = "agent-console-link-projects-runs"
-version = "0.2.0"
+version = "0.3.0"
 description = "Agent Console — 프로젝트·실행 연동 모듈: 실행의 project_id로 프로젝트 설정 층·작업 폴더·정의 출처를 정하고 실행 전 점검한다"
 readme = "README.md"
 requires-python = ">=3.12"

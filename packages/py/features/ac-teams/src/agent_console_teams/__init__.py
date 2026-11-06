@@ -59,6 +59,9 @@
       안내 추가),
       강제되지 않는 실행 범위 ``limits_warnings(value, enforce)``
       (`node_settings`·`resolve_settings`에 ``backends``를 주면 자동으로 더함).
+    - 세션 집계(screen-delegation §14.4.4): ``session_summary(plan, strategies) ->
+      GraphSessionSummary | None``(세션 값별 — 값 이름을 모른다), ``edge_sessions(plan,
+      strategies)``(엣지 id → 세션 값).
     - 사용처: ``definition_references(kind, id, *, graphs, agents, workspace, node_types)``
       (노드 `binds`·설정 층 리소스 첨부로 찾는다). 반대 방향(쓰는 정의 — 에이전트·리소스·
       자식 팀 구성, 내보내기·쓰는 정의 먼저 쓰기용):
@@ -137,6 +140,7 @@ from agent_console_teams._run import (
     run_blockers,
     team_rules_apply,
 )
+from agent_console_teams._sessions import edge_sessions, session_summary
 from agent_console_teams._settings import (
     AGENT_SETTINGS_FIELDS,
     USER_SETTINGS_KEYS,
@@ -201,6 +205,7 @@ __all__ = [
     "delegation_static_issues",
     "delegation_targets",
     "describe_member",
+    "edge_sessions",
     "effective_settings",
     "find_team",
     "flow_settings",
@@ -226,6 +231,7 @@ __all__ = [
     "runs_in_own_session",
     "session_grant",
     "session_owner",
+    "session_summary",
     "settings_attachments",
     "settings_value",
     "shares_session",

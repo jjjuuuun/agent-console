@@ -35,8 +35,7 @@ from agent_console_conditions import (
     operator_map,
 )
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
-from agent_console_contracts.constants import KnownIssueCodes
-from agent_console_contracts.sdd import SddChanged, SpecIssue
+from agent_console_contracts.sdd import SddChanged
 from agent_console_modkit import (
     KindContribution,
     ModuleContext,
@@ -71,7 +70,7 @@ from .ports import (
     WORKSPACE_SETTINGS,
 )
 from .routes import build_router
-from .secrets import SecretRejectedError
+from .secrets import SecretRejectedError, document_issues
 from .service import SddPorts, SddService
 from .settings import SETTINGS_COMPAT, SddModuleSettings, package_defaults
 from .ws import SDD_TOPIC, ChangePublisher, changed_message, topic_handlers
@@ -148,18 +147,9 @@ def yaml_guard(rules: Callable[[], SecretRules]) -> Callable[..., None]:
     def guard(
         kind: DefinitionKind, id: str, document: Mapping[str, Any], put: Mapping[str, bytes]
     ) -> None:
-        found = rules().find_suspected(dict(document))
+        found = document_issues(rules(), document)
         if found:
-            raise SecretRejectedError(
-                SpecIssue(
-                    severity="error",
-                    code=KnownIssueCodes.SDD_SECRET_SUSPECT,
-                    message="비밀로 보이는 값이 있습니다(값은 보이지 않습니다).",
-                    path=f.path or "/",
-                    details={"reason": f.reason},
-                )
-                for f in found
-            )
+            raise SecretRejectedError(found)
 
     return guard
 

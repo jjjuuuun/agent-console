@@ -4582,6 +4582,45 @@ export interface CopyApplyResult {
   items?: CopyApplyItemResult[];
 }
 /**
+ * `GET /projects/copy/items` 항목: 한 공간의 정의 하나(본문 없음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyItem".
+ */
+export interface CopyItem {
+  kind: string;
+  id: string;
+  name?: string;
+  description?: string;
+  /**
+   * 마지막 저장 시각(유닉스 초, 모르면 null).
+   */
+  saved_at?: number | null;
+}
+/**
+ * `GET /projects/copy/kinds` 항목: 한 공간에서 복사 대상으로 고를 수 있는 정의 종류 하나.
+ *
+ * 종류 이름은 서버가 아는 정의 종류(기본 종류 + 기능 모듈의 종류 기여 X44) 그대로다. 화면은 이
+ * 목록과 `GET /projects/copy/items`만으로 복사 대화상자 목록을 채운다(종류 이름 표를 두지 않음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyKindInfo".
+ */
+export interface CopyKindInfo {
+  /**
+   * 정의 종류 이름(열린 문자열).
+   */
+  kind: string;
+  /**
+   * 라이브러리(공용 구성)에 둘 수 있다 — 프로젝트 → 공용 복사.
+   */
+  library: boolean;
+  /**
+   * 프로젝트 공간에 둘 수 있다 — 공용·다른 프로젝트 → 이 프로젝트 복사.
+   */
+  portable: boolean;
+}
+/**
  * `POST /projects/copy/plan` 응답(저장하지 않음).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -6099,6 +6138,30 @@ export interface FolderPickResult {
   provider?: string | null;
 }
 /**
+ * 팀 구성 목록의 세션 집계(0.13.2).
+ *
+ * 세션 값 = 연결마다 디스크립터의 `session`(위임 연결은 유효 위임 방식 — 연결 config 덮어쓰기 →
+ * 종류 기본 — 의 값, 그 밖의 연결은 연결 종류의 값). 값은 열린 문자열이고 서버는 값의 뜻을 모른다.
+ * 집계 대상 노드 = 노드 타입 `opens_session`이 false가 아니고 세션 값이 있는 연결에 한 번이라도
+ * 닿은 노드. 화면은 `delegated`에서 자기가 아는 값(예: 같은 세션)을 골라 쓰고 나머지를
+ * `nodes`에서 뺀다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "GraphSessionSummary".
+ */
+export interface GraphSessionSummary {
+  /**
+   * 집계 대상 노드 수.
+   */
+  nodes: number;
+  /**
+   * 세션 값 → 들어오는 위임 연결의 세션 값이 모두 그 값인 대상 노드 수. 위임 연결이 없거나 값이 섞인 노드는 어느 값에도 들지 않는다(`nodes`에만 들어간다).
+   */
+  delegated?: {
+    [k: string]: number;
+  };
+}
+/**
  * `GET /graphs` 목록 항목.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -6131,6 +6194,10 @@ export interface GraphSummary {
   attributes?: {
     [k: string]: unknown;
   };
+  /**
+   * 세션 집계(0.13.2). null = 계산하지 않음(제공 모듈이 꺼짐·해석할 수 없는 그래프) 또는 세션 값이 있는 연결이 하나도 없음(요약을 숨긴다).
+   */
+  session_summary?: GraphSessionSummary | null;
 }
 /**
  * 팀 구성 검증 결과 요약(엔진 검증 + 팀 검증을 합친 것).
@@ -6291,6 +6358,18 @@ export interface ImportWarning {
   keys?: string[];
 }
 /**
+ * 가져오기용 폴더 안 하위 폴더 하나(그 아래는 다시 `?path=`로 연다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ImportDir".
+ */
+export interface ImportDir {
+  /**
+   * 폴더 이름(목록 폴더 기준).
+   */
+  name: string;
+}
+/**
  * 가져오기용 폴더 안 마크다운 파일 하나.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -6311,7 +6390,8 @@ export interface ImportFile {
   title_guess?: string;
 }
 /**
- * `GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일(재귀하지 않음).
+ * `GET /sdd/import/files`: 프로젝트 폴더 안 한 폴더의 마크다운 파일과 하위 폴더(재귀하지
+ * 않음).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ImportFileListing".
@@ -6323,7 +6403,11 @@ export interface ImportFileListing {
   path?: string;
   files?: ImportFile[];
   /**
-   * 상한을 넘어 일부만 보였다.
+   * 바로 아래 하위 폴더(이름 순). 숨김·링크·예약 폴더(앱 구성 폴더 등)는 뺀다. 0.13.2 전 서버는 보내지 않는다(빈 목록).
+   */
+  dirs?: ImportDir[];
+  /**
+   * 파일이나 하위 폴더가 상한을 넘어 일부만 보였다.
    */
   truncated?: boolean;
 }
@@ -9550,6 +9634,10 @@ export interface Run {
   labels?: {
     [k: string]: string;
   };
+  /**
+   * 직접 자식 Run(`parent_run_id`가 이 Run)이 있는지(1.8.0). 목록 페이지 `GET /runs/page`가 페이지 행을 한 번에 세어 채운다. null = 서버가 채우지 않음(저장본·다른 응답). 저장하지 않는 읽기 전용 표시 값이다.
+   */
+  has_children?: boolean | null;
 }
 /**
  * 일반 RunEvent. 모든 이벤트가 이 형태로 직렬화·저장된다.
@@ -9610,6 +9698,7 @@ export interface RunEventMessage {
  * 문자열).
  * 프로젝트 목록은 폴더 기록(`source=project`)을 끝까지 읽은 뒤 앱 기록(`source=app`)을 따로
  * 읽는다(두 출처를 시간순으로 섞지 않는다).
+ * 1.8.0: 행마다 `has_children`(직접 자식 Run 유무)를 채운다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "RunPage".
@@ -10406,6 +10495,22 @@ export interface SpecTemplate {
    */
   content?: SpecContentRef | null;
   [k: string]: unknown;
+}
+/**
+ * `POST /sdd/templates` 요청: 빈 문서 틀(문서 0개, 규칙 비움)을 만든다.
+ *
+ * 응답은 `SpecTemplate`(201, `ETag` = 정의 버전).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "SpecTemplateCreateRequest".
+ */
+export interface SpecTemplateCreateRequest {
+  /**
+   * 문서 틀 id. 생략하면 이름에서 만든다.
+   */
+  id?: string | null;
+  name: string;
+  description?: string;
 }
 /**
  * `GET /sdd/templates` 항목: 이 공간의 문서 틀 하나.
@@ -11229,22 +11334,22 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.13.1" as const;
+export const CONTRACTS_VERSION = "0.13.2" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.9.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
-  "definitions": "1.6.0",
-  "runs": "1.7.0",
+  "definitions": "1.7.0",
+  "runs": "1.8.0",
   "usage": "1.1.0",
-  "projects": "3.1.0",
+  "projects": "3.2.0",
   "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
   "memory": "1.1.0",
-  "sdd": "1.0.1",
+  "sdd": "1.1.0",
   "modules": "1.4.0"
 } as const;
 

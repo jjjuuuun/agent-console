@@ -340,6 +340,13 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
   더하지 않는다(5.2R.43). `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`가 같은
   판단을 주고, `prepare_run(..., strategies=)`를 주면 엔진 대기 grant도 이 세션 단위다.
 
+## 세션 집계
+
+- `session_summary(plan, strategies)`: 팀 목록·팀 개요 요약용 `GraphSessionSummary{nodes, delegated}`. 연결의 세션 값 =
+  위임 연결은 유효 위임 방식(연결 config `strategy` → 종류 기본)의 `session`, 그 밖의 연결은 연결 종류의 `session`.
+  집계 대상 = `opens_session`이 false가 아니고 세션 값이 있는 연결에 닿은 노드. 들어오는 위임 연결의 세션 값이 모두 같은
+  대상은 그 값으로 `delegated[값]`에 센다. 값의 뜻은 모른다(화면이 아는 값을 고른다). 세션 값이 하나도 없으면 None.
+
 ## 개발·재사용(단독)
 
 이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전

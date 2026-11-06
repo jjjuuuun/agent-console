@@ -16,9 +16,13 @@ from agent_console_server.testing import (
     wait_run,
 )
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, object]] = {"link-projects-runs": {"require_project": False}}
+
 
 def test_env_prefix_reaches_runs_and_value_is_redacted(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, secrets={"env_prefix": "AC_"})
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE, secrets={"env_prefix": "AC_"})
     with server(settings, environ={f"AC_{SECRET_NAME}": SECRET_VALUE}) as client:
         client.post(f"{API}/agents", json=agent_doc("fast", f"secret://{SECRET_NAME}"))
         client.post(f"{API}/agents", json=agent_doc("slow", f"키 secret://{SECRET_NAME}"))
@@ -38,10 +42,14 @@ def test_allow_subscription_auth_reaches_backend_via_old_and_new_keys(tmp_path: 
 
     old = make_settings(
         tmp_path,
-        options={"mod-runs": {"backends": {"claude-agent-sdk": {"allow_subscription_auth": True}}}},
+        options={
+            **NO_PROJECT_GATE,
+            **{"mod-runs": {"backends": {"claude-agent-sdk": {"allow_subscription_auth": True}}}},
+        },
     )
     new = make_settings(
         tmp_path,
+        options=NO_PROJECT_GATE,
         modules={
             "options": {
                 "mod-runs": {"backends": {"claude-agent-sdk": {"allow_subscription_auth": True}}}

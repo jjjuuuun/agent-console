@@ -248,6 +248,9 @@ def build_router(
         graph_id: str | None = None,
         label: Annotated[list[str] | None, Query()] = None,
         source: RecordSource = "project",
+        agent_id: str | None = None,
+        conversation_id: str | None = None,
+        root: str | None = None,
     ) -> RunPage:
         """실행 목록 커서 페이지(``created_at`` 내림차순 + ``id``). 조건은 모두 AND.
 
@@ -255,6 +258,10 @@ def build_router(
           커서에 출처가 들어 있어 ``source``보다 우선한다.
         - ``status``·``label=<키>=<값>``은 여러 번 줄 수 있다(상태는 OR, 라벨은 AND, 라벨은 루트
           Run에만 있다).
+        - ``agent_id``·``conversation_id``·``root``는 옛 ``GET /runs``와 같은 뜻이다(6R.19):
+          ``agent_id`` = 그 에이전트가 actor로 남긴 이벤트가 있는 Run, ``root`` = 그 루트 Run 아래
+          모든 자손(루트 자신은 빠짐).
+        - 행마다 ``has_children``(직접 자식 Run 유무)를 채운다(페이지 행을 한 번에 센다).
         - ``project`` = 그 프로젝트의 Run. 기록 공간이 있는 조립이면 폴더 기록 DB를 끝까지 읽은 뒤
           ``next_cursor``가 앱 DB 옛 기록(``source=app``)의 처음을 가리킨다(옛 기록이 없으면 null).
           한 페이지는 한 출처에서만 나오고 응답 ``source``가 그 출처다. ``source=app``으로 바로 옛
@@ -267,6 +274,9 @@ def build_router(
             "status": status or None,
             "graph_id": graph_id,
             "labels": parse_label_filters(label) or None,
+            "agent": agent_id,
+            "conversation_id": conversation_id,
+            "root_run_id": root,
         }
         svc = service()
         spaced = project is not None and svc.records is not None and svc.records.spaced

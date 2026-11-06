@@ -24,6 +24,10 @@ from agent_console_server.testing import (
 )
 from agent_console_store import open_sqlite
 
+# 프로젝트와 무관한 실행 테스트: link-projects-runs 0.3.0부터 기본 참인 `require_project`를 끈다
+# (5.7R.33v 후속 ⑤).
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 REVIEW = {
     "title": "설계안 검토",
     "decisions": [{"id": "approved", "label": "승인"}, {"id": "rejected", "label": "반려"}],
@@ -69,7 +73,7 @@ def _node_events(client: TestClient, run_id: str, type: str) -> dict[str, Any]:
 
 
 def test_review_wait_restart_resume_reopens_review_and_runs_downstream(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         _review_team(client)
         conv = client.post(f"{API}/conversations", json={"graph_id": "review"}).json()
@@ -147,7 +151,7 @@ def test_review_wait_restart_resume_reopens_review_and_runs_downstream(tmp_path:
 
 def test_resume_rejects_node_type_that_is_not_rerunnable(tmp_path: Path) -> None:
     """디스크립터가 `rerunnable`이 아닌(여기서는 등록되지 않은) 노드 타입은 422."""
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         seed_chat(client)
         version = client.get(f"{API}/graphs/chat").json()["version_hash"]
@@ -204,7 +208,7 @@ def _busy_with_queue(client: TestClient) -> str:
 
 
 def test_queue_survives_restart_held_then_release_and_cancel(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         conv = _busy_with_queue(client)
     with server(settings) as client:  # 기본 chat.queue_after_restart = ask
@@ -241,7 +245,7 @@ def test_queue_survives_restart_held_then_release_and_cancel(tmp_path: Path) -> 
 
 
 def test_queue_after_restart_drop_and_run_modes(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path)
+    settings = make_settings(tmp_path, options=NO_PROJECT_GATE)
     with server(settings) as client:
         conv = _busy_with_queue(client)
         doc = client.get(f"{API}/settings").json()
