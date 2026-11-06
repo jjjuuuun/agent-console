@@ -129,6 +129,32 @@ class RunsSddSettings(BaseModel):
         description="실행 기록을 읽을 때 한 쪽에 담는 실행 수입니다.",
         json_schema_extra=x_ui(tier="advanced", unit="개", when="보통은 바꾸지 않아도 됩니다."),
     )
+    automation_failure_outcomes: list[str] = Field(
+        default_factory=lambda: list(_D["automation_failure_outcomes"]),
+        title="자동 진행: 실패로 셀 결과",
+        description=(
+            "자동 진행이 이 결과 이름으로 끝난 실행을 실패로 셉니다. 같은 작업이 스펙 규칙의 "
+            "실패 상한만큼 연달아 실패하면 그 작업을 건너뜁니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example=["failed"],
+            when="취소한 실행도 실패로 세고 싶으면 cancelled를 더하세요.",
+        ),
+    )
+    automation_retry_outcomes: list[str] = Field(
+        default_factory=lambda: list(_D["automation_retry_outcomes"]),
+        title="자동 진행: 다시 시작할 결과",
+        description=(
+            "이 결과 이름으로 끝난 작업은 실패로 세지 않고 다시 시작합니다(예: 끊긴 실행). 다른 "
+            "결과로 끝난 작업은 작업 줄이 바뀔 때까지 다시 시작하지 않습니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example=["interrupted"],
+            when="끊긴 실행을 자동으로 다시 돌리지 않으려면 비우세요.",
+        ),
+    )
 
 
 def finished_statuses() -> frozenset[str]:

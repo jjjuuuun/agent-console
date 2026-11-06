@@ -1,18 +1,29 @@
 """파싱 캐시 성능(design §6R.14·§6R.16 위험 7): 400KB·작업 3,000개 스펙을 다시 읽을 때 파싱하지
 않는다. 기본 실행은 작업량(캐시 맞음·빗나감 수)만, ``AGENT_CONSOLE_PERF=strict``일 때 벽시계(캐시
-맞은 읽기 100ms 이하)를 단언한다."""
+맞은 읽기 100ms 이하)를 단언한다. 문서 읽기 시간 상한(``parse_timeout_ms``)이나 정규식 매치 시간
+상한을 넘으면 그 문서의 작업을 버리므로, 기본 실행은 두 상한을 넉넉히 준다(느린 CI 러너)."""
 
 from __future__ import annotations
 
+import functools
 import os
 import time
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from agent_console_contracts.sdd import SpecDocument
 from agent_console_mod_sdd import SDD_SERVICE, SddService
+from agent_console_mod_sdd import cache as cache_module
+from agent_console_sdd import compile_syntax
 
 TASKS = 3000
+LOOSE_TIMEOUT_SECONDS = 600  # 기본 실행: 벽시계에 기대지 않는다
+
+
+def _strict() -> bool:
+    return os.environ.get("AGENT_CONSOLE_PERF", "") == "strict"
 
 
 def _build() -> dict[str, bytes]:
@@ -36,8 +47,13 @@ def _build() -> dict[str, bytes]:
     }
 
 
-def test_cached_load_skips_parse(tmp_path: Path, kit: Any) -> None:
-    service = kit.make_assembly(tmp_path).port(SDD_SERVICE)
+def test_cached_load_skips_parse(tmp_path: Path, kit: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    options: dict[str, Any] = {}
+    if not _strict():
+        options["parse_timeout_ms"] = LOOSE_TIMEOUT_SECONDS * 1000
+        loose = functools.partial(compile_syntax, regex_timeout=float(LOOSE_TIMEOUT_SECONDS))
+        monkeypatch.setattr(cache_module, "compile_syntax", loose)
+    service = kit.make_assembly(tmp_path, options=options).port(SDD_SERVICE)
     assert isinstance(service, SddService)
     repo = service.scope(None).repository
     docs = [
@@ -60,5 +76,5 @@ def test_cached_load_skips_parse(tmp_path: Path, kit: Any) -> None:
     stats = service.cache.stats()
     assert (stats["misses"], stats["hits"]) == (1, 3)
     print(f"cold {cold * 1000:.0f}ms, cached best {best * 1000:.0f}ms")
-    if os.environ.get("AGENT_CONSOLE_PERF", "") == "strict":
+    if _strict():
         assert best <= 0.1, f"cached load {best * 1000:.0f}ms > 100ms"

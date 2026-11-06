@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 6R.16: `RunService.host_id(project_id)`(이 앱이 그 공간 Run에 적는 `host_id`, 공간 없음·기록 공간 없음 = None) — 자동 진행이 실행 기록에서 자기 앱 Run만 고른다.
+
 - 6R.12: `GET /runs/page`(`RunPage`, `cursor`·`limit`·`project`·`root_only`·`status`(여러 번)·`graph_id`·`label=<키>=<값>`(여러 번 AND)·`source`), 기록 공간이 있으면 폴더 기록 끝 → 앱 DB 옛 기록 `source=app`으로 잇는 커서(Q14), `POST /runs` `labels`(루트 Run, `RunService.start_graph`·`start_run(labels=)`), `GET /runs/{id}/events?node=`, 옛 `GET /runs` OpenAPI deprecated, 400 `bad_request`(`InvalidCursor`·`RunQueryError`). `runs.reader`에 `page`·`descendants`(공간 자리 따라감).
 
 - 6R.6: 계보 `runs` `runs_0004`(`run_labels(run_id, key, value)` + 색인 `ix_run_labels_kv`(`key`, `value`, `run_id`), 올릴 때 루트 Run `doc.labels`로 채우고 되돌리면 표만 지움). 옛 기록 옮기기가 라벨 행을 함께 옮김(확인 테스트 추가). 라우트 변경 없음(6R.12).

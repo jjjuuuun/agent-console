@@ -22,8 +22,23 @@
 이 연동이나 `mod-runs`가 꺼지면 `capabilities.runs=false`이고 실행 버튼·실행 칩·검증 열이 없다.
 문서·작업·계획·추적(요구 ↔ 작업)은 그대로 동작한다.
 
-자동 진행(6R.16)은 `RunsTaskIntegration.start`(관문·입력·라벨·시작)와 `StatusReflector.add_listener`
-(실행 결과 알림) 위에 올린다.
+## 자동 진행(선택, 기본 꺼짐)
+
+스펙 규칙 `rules.automation{enabled, profile, max_parallel, max_failures, scope}`가 켜진 스펙만
+`SpecAutomation`이 움직인다. 꺼져 있으면 아무 실행도 시작하지 않는다.
+
+- 실행이 끝날 때마다(그리고 [다시 시작]·스펙 보기·앱 시작 때) `ready` 작업을 문서 순서로
+  `max_parallel`까지 `RunsTaskIntegration.start`로 시작한다. `profile`이 없으면 그 작업에 맞는 첫
+  프로필을 쓴다. 실행 중·건너뜀·정착(실패도 다시 시작도 아닌 결과로 끝나고 줄이 그대로)인 작업은 뺀다.
+- 결과 이름이 `automation_failure_outcomes`(기본 `failed`)면 연속 실패 +1, `max_failures`에 닿으면
+  건너뛰고 정보 이슈 `sdd.automation_skipped`. `automation_retry_outcomes`(기본 `interrupted`)는 세지
+  않고 다시 시작한다. 관문에 막힌 작업은 실패로 세지 않고 기다린다.
+- 멈춤 이유 `stopped_reason`: `user`·`spec_done`·`stage_done`(`scope: stage`)·`failures`. 멈춤은 새
+  실행만 막는다. [다시 시작]은 실패 수·건너뜀을 지운다.
+- 상태(`AutomationState`)는 메모리에만 있고 `RunsTaskIntegration.automation_state`·`control`
+  (`AutomationControl`)로 낸다. 바뀔 때마다 `sdd.service.notify(…, automation=True)`.
+- 재시작 뒤: 스펙을 처음 볼 때 실행 기록에서 **자기 앱**(`runs.starter`의 선택 메서드
+  `host_id(project_id)`) Run만 골라 연속 실패 수·정착한 작업을 되살리고 설정대로 이어 간다.
 
 ## 설치
 

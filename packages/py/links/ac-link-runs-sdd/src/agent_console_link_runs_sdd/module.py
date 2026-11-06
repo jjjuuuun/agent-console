@@ -6,17 +6,22 @@
 - 제공: ``sdd.integrations``(작업 연동 ``runs`` — 실행 프로필 동작·실행 연결·프로필 검사·결과
   반영 이슈), ``sdd.verification_sources``(검증 출처 ``runs``).
 - 설정 ``modules.options.link-runs-sdd``(``RunsSddSettings``, 기본값 = 패키지 데이터).
+- 자동 진행(``SpecAutomation``, 스펙 규칙 ``automation``이 켜졌을 때만): 실행이 끝날 때마다
+  준비된 작업을 시작한다. 앱 시작 때 단독 루트 스펙을 한 번 살펴본다. ``runs.starter``의 선택
+  메서드 ``host_id(project_id)``가 있으면 실행 기록에서 자기 앱 Run만 센다.
 - 이 연동(또는 ``mod-runs``)이 꺼지면 스펙 화면의 실행 버튼·실행 칩·검증 열이 없고
   (``capabilities.runs=false``), 문서·작업·계획·추적(요구 ↔ 작업)은 그대로 동작한다.
 """
 
 from __future__ import annotations
 
+import asyncio
 from importlib.metadata import PackageNotFoundError, version
 
 from agent_console_contracts import CONTRACT_VERSIONS
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 
+from .automation import SpecAutomation
 from .integration import RunsTaskIntegration
 from .ports import (
     RUNS_EVENT,
@@ -72,10 +77,36 @@ class RunsSddLink:
         integration = RunsTaskIntegration(
             sdd=sdd, starter=starter, reader=reader, reflector=reflector, settings=cfg
         )
+        host_id = getattr(starter, "host_id", None)
+        automation = SpecAutomation(
+            sdd=sdd,
+            integration=integration,
+            reflector=reflector,
+            finished_statuses=finished_statuses(),
+            failure_outcomes=cfg.automation_failure_outcomes,
+            retry_outcomes=cfg.automation_retry_outcomes,
+            host_id=host_id if callable(host_id) else None,
+        )
+        integration.automation = automation
         ctx.provide(SDD_INTEGRATIONS, integration)
         ctx.provide(SDD_VERIFICATION_SOURCES, RunsVerificationSource(integration))
         ctx.subscribe(RUNS_EVENT, reflector.on_event)
-        return ModuleParts()
+
+        async def start() -> None:
+            automation.bind(asyncio.get_running_loop())
+            # 재시작 뒤 이어 가기: 단독 루트 스펙(공간 스펙은 처음 볼 때 — 공간 목록 포트가 없다)
+            try:
+                ids = sdd.scope(None).repository.list_ids()
+            except Exception:
+                ids = []
+            for spec_id in ids:
+                automation.kick(None, spec_id)
+
+        async def stop() -> None:
+            automation.bind(None)
+            automation.close()
+
+        return ModuleParts(startup=[start], shutdown=[stop])
 
 
 module = RunsSddLink()

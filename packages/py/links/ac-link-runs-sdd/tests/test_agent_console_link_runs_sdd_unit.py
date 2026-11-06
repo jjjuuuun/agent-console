@@ -206,7 +206,8 @@ def test_protocols() -> None:
     )
     assert isinstance(integration, TaskIntegration)
     assert isinstance(integration, ProfileChecker)
-    assert not isinstance(integration, AutomationControl)  # 6R.16 몫
+    assert isinstance(integration, AutomationControl)  # 6R.16 — 자동 진행이 없으면 None을 낸다
+    assert integration.automation is None
     assert integration.link_kinds == ("run",)
     assert isinstance(RunsVerificationSource(integration), VerificationSource)
 

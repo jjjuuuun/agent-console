@@ -7,6 +7,10 @@
     - ``StatusReflector``·``TrackedRun``: 실행 상태 이벤트 → 실행 프로필 ``status_on`` 반영(작업
       머리
       줄 하나, 줄 해시 충돌 규칙). 반영 뒤 알림 ``add_listener``(자동 진행 자리).
+    - ``SpecAutomation``: 자동 진행(스펙 규칙 ``automation``, 기본 꺼짐 — 실행이 끝날 때마다 준비된
+      작업 시작, 연속 실패 건너뜀, 단계 끝 멈춤, 멈춤·다시 시작, 자기 ``host_id`` 실행만 셈).
+      ``RunsTaskIntegration.automation_state``·``control``(``AutomationControl``)로 낸다.
+      ``AUTOMATION_SKIPPED``: 건너뜀 정보 이슈 코드.
     - ``labeled_runs``·``run_time``: 라벨 질의 페이지 모으기.
     - ``start_issue``: 실행 시작 예외 → 오류 이슈.
     - ``RunsSddSettings``: 설치자 설정(기본값 = 패키지 데이터 ``data/defaults.json``).
@@ -16,6 +20,7 @@
 
 from __future__ import annotations
 
+from .automation import AUTOMATION_SKIPPED, OP_RESUME, OP_STOP, SpecAutomation
 from .integration import SECRET_REJECT, RunsTaskIntegration, start_issue
 from .module import MODULE_ID, RunsSddLink, module
 from .records import labeled_runs, run_time
@@ -31,7 +36,10 @@ from .settings import RunsSddSettings, package_defaults
 from .verification import RunsVerificationSource
 
 __all__ = [
+    "AUTOMATION_SKIPPED",
     "MODULE_ID",
+    "OP_RESUME",
+    "OP_STOP",
     "REASON_ERROR",
     "REASON_GATE_BLOCKED",
     "REASON_TASK_CHANGED",
@@ -41,6 +49,7 @@ __all__ = [
     "RunsSddSettings",
     "RunsTaskIntegration",
     "RunsVerificationSource",
+    "SpecAutomation",
     "StatusReflector",
     "TrackedRun",
     "labeled_runs",

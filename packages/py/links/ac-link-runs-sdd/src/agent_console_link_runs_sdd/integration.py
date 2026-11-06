@@ -11,7 +11,10 @@
 - **연결**(``links``): 스펙 라벨 질의 한 번(페이지를 상한까지) → ``TaskLink{kind=run}``.
 - **프로필 검사**(``check_profile``): 그 공간에 팀 구성이 없으면 ``sdd.profile_graph_missing``
   (warning, ``details.in_library`` = 공용 구성에만 있음).
-- **결과 반영 이슈**(선택 메서드 ``task_issues``): ``sdd.status_not_applied``(``StatusReflector``).
+- **결과 반영 이슈**(선택 메서드 ``task_issues``): ``sdd.status_not_applied``(``StatusReflector``),
+  자동 진행이 건너뛴 작업 ``sdd.automation_skipped``.
+- **자동 진행**(선택 능력 ``AutomationControl`` — ``automation_state``·``control``): 붙은
+  ``SpecAutomation``에 맡긴다(6R.16).
 
 실행 모듈·프로젝트 모듈을 import하지 않는다. 공간 이름 = 실행 ``project_id``(프로젝트 연동이 공간
 이름을 프로젝트 등록 id로 준다 — 단독 루트는 None).
@@ -20,12 +23,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agent_console_conditions import ConditionOperator, builtin_operators, evaluate_conditions
 from agent_console_contracts import Issue, Run, run_label_problems
 from agent_console_contracts.constants import ErrorCodes, KnownIssueCodes
 from agent_console_contracts.sdd import (
+    AutomationState,
     KnownGateTargets,
     KnownTaskActionStatuses,
     KnownTaskLinkKinds,
@@ -50,6 +54,9 @@ from .ports import (
 from .records import labeled_runs, run_time
 from .reflect import StatusReflector, TrackedRun
 from .settings import RunsSddSettings
+
+if TYPE_CHECKING:
+    from .automation import SpecAutomation
 
 SECRET_REJECT = "reject"
 """사용자 설정 ``secret_scan`` 값: 비밀 의심이 있으면 실행을 시작하지 않는다."""
@@ -86,6 +93,8 @@ class RunsTaskIntegration:
         self.reflector = reflector
         self.settings = settings or RunsSddSettings()
         self._operators = operators
+        self.automation: SpecAutomation | None = None
+        """자동 진행(6R.16, 모듈이 붙인다). None이면 ``automation_state``·``control``이 None."""
 
     @property
     def id(self) -> str:
@@ -310,7 +319,25 @@ class RunsTaskIntegration:
         """결과 반영 실패 정보 이슈(``sdd.status_not_applied``).
 
         ``mod-sdd``가 작업 보기에 싣는다."""
-        return self.reflector.issues(ctx.space, ctx.spec.id, [t.key for t in tasks])
+        keys = [t.key for t in tasks]
+        found = self.reflector.issues(ctx.space, ctx.spec.id, keys)
+        if self.automation is not None:
+            found.extend(self.automation.task_issues(ctx.space, ctx.spec.id, keys))
+        return found
+
+    # ------------------------------------------------------------ 자동 진행(AutomationControl)
+    def automation_state(self, ctx: SpecContext) -> AutomationState | None:
+        """자동 진행 상태(§6R.18 Q7, 선택 능력 ``AutomationControl``). 자동 진행이 없으면 None."""
+        if self.automation is None:
+            return None
+        return self.automation.automation_state(ctx)
+
+    async def control(self, ctx: SpecContext, op: str) -> AutomationState | None:
+        """자동 진행 멈춤(``stop``)·다시 시작(``resume``). 자동 진행이 없거나 모르는 ``op``면
+        None."""
+        if self.automation is None:
+            return None
+        return await self.automation.control(ctx, op)
 
 
 def _graph_missing(ctx: SpecContext, profile: RunProfile, *, in_library: bool) -> SpecIssue:

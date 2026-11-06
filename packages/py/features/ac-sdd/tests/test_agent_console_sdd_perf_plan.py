@@ -1,5 +1,6 @@
 """성능(design §6R.14): 계획 5,000작업·의존 15,000개 100ms, 추적 요구 1,000·작업 5,000·연결 20,000개
-1초(strict만 벽시계, 기본 실행은 작업량만 단언 — 6R.10 방식)."""
+1초(strict만 벽시계, 기본 실행은 작업량만 단언 — 6R.10 방식). 기본 실행은 정규식 매치 시간 상한을
+넉넉히 준다(상한을 넘으면 문서의 작업을 버려 느린 CI 러너에서 작업 수가 0이 된다)."""
 
 from __future__ import annotations
 
@@ -8,17 +9,23 @@ import time
 
 from agent_console_contracts import Usage
 from agent_console_contracts.sdd import SpecIndex, TaskLink, VerificationResult
+from agent_console_safe_regex import DEFAULT_TIMEOUT_SECONDS
 from agent_console_sdd import compile_syntax, effective_syntax, parse_spec, plan, trace
 from agent_console_sdd.testing import sample_spec
 
 TASKS = 5000
 REQS = 1000
 LINKS = 20000
-SYNTAX = compile_syntax(effective_syntax())
+LOOSE_REGEX_TIMEOUT = 600.0  # 기본 실행: 벽시계에 기대지 않는다
 
 
 def _strict() -> bool:
     return os.environ.get("AGENT_CONSOLE_PERF", "") == "strict"
+
+
+SYNTAX = compile_syntax(
+    effective_syntax(), regex_timeout=DEFAULT_TIMEOUT_SECONDS if _strict() else LOOSE_REGEX_TIMEOUT
+)
 
 
 def _index() -> SpecIndex:

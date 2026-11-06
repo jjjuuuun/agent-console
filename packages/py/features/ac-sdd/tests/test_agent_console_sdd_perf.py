@@ -1,7 +1,8 @@
 """성능(design §6R.14): 문서 3개·400KB·작업 3,000개 파싱 300ms 이하(strict만 벽시계).
 
 기본 실행은 작업량(작업 수·의존 수)만 단언하고, `AGENT_CONSOLE_PERF=strict`일 때 가장 빠른 실행
-시간을 단언한다(부하가 큰 장비에서 벽시계가 흔들리므로).
+시간을 단언한다(부하가 큰 장비에서 벽시계가 흔들리므로). 정규식 매치 시간 상한(기본 0.1초)을 넘으면
+그 문서의 작업을 버리므로(`sdd.parse_timeout`) 기본 실행은 시간 상한을 넉넉히 준다(느린 CI 러너).
 """
 
 from __future__ import annotations
@@ -9,14 +10,20 @@ from __future__ import annotations
 import os
 import time
 
+from agent_console_safe_regex import DEFAULT_TIMEOUT_SECONDS
 from agent_console_sdd import compile_syntax, effective_syntax, find_task, parse_spec, patch_task
 from agent_console_sdd.testing import sample_spec
 
 TASKS = 3000
+LOOSE_REGEX_TIMEOUT = 600.0  # 기본 실행: 벽시계에 기대지 않는다
 
 
 def _strict() -> bool:
     return os.environ.get("AGENT_CONSOLE_PERF", "") == "strict"
+
+
+def _regex_timeout() -> float:
+    return DEFAULT_TIMEOUT_SECONDS if _strict() else LOOSE_REGEX_TIMEOUT
 
 
 def _build() -> dict[str, str]:
@@ -49,7 +56,7 @@ def test_parse_400kb_3000_tasks() -> None:
     files = _build()
     total = sum(len(v.encode()) for v in files.values())
     assert total >= 400 * 1024
-    syntax = compile_syntax(effective_syntax())
+    syntax = compile_syntax(effective_syntax(), regex_timeout=_regex_timeout())
     spec = sample_spec()
     best = float("inf")
     index = None

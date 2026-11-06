@@ -1,0 +1,19 @@
+{
+  "paths": [],
+  "requirement_pattern": null,
+  "task_pattern": null,
+  "match_fields": ["classname", "name"],
+  "result_map": {
+    "passed": "pass",
+    "failed": "fail",
+    "error": "fail",
+    "skipped": "skipped"
+  },
+  "status_priority": ["fail", "skipped", "pass"],
+  "label": "JUnit",
+  "max_files": 50,
+  "max_file_bytes": 5000000,
+  "max_dirs": 2000,
+  "max_testcases": 20000,
+  "regex_timeout_ms": 50
+}

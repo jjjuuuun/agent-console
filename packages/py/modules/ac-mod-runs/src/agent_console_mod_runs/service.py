@@ -591,6 +591,21 @@ class RunService:
             return self.records.for_project(project_id)
         return self._runs
 
+    def host_id(self, project_id: str | None) -> str | None:
+        """이 앱이 그 공간 Run에 적는 ``host_id``(프로젝트 없음·기록 공간 없음·열 수 없음 = None).
+
+        다른 모듈(예: 자동 진행)이 실행 기록에서 자기 앱의 Run만 고를 때 쓴다(K33-30)."""
+        recorder = self.records
+        if project_id is None or recorder is None or not recorder.spaced:
+            return None
+        stores = recorder.records
+        if stores is None:
+            return None
+        try:
+            return stores.host_id(project_id)
+        except Exception:
+            return None
+
     def current_run(self, run_id: str, project_id: str | None = None) -> Run | None:
         """실행 중이면 손잡이의 Run, 아니면 저장본(없으면 None). ``project_id``가 있으면 그 공간."""
         handle = self.runtime.get(run_id)

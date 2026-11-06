@@ -9,9 +9,26 @@
     "cancelled": "cancelled",
     "interrupted": "interrupted"
   },
-  "status_events": ["run.started", "run.completed", "run.failed", "run.cancelled", "run.interrupted"],
-  "finished_statuses": ["completed", "failed", "cancelled", "interrupted"],
+  "status_events": [
+    "run.started",
+    "run.completed",
+    "run.failed",
+    "run.cancelled",
+    "run.interrupted"
+  ],
+  "finished_statuses": [
+    "completed",
+    "failed",
+    "cancelled",
+    "interrupted"
+  ],
   "max_link_runs": 2000,
   "page_size": 200,
-  "max_kept_issues": 1000
+  "max_kept_issues": 1000,
+  "automation_failure_outcomes": [
+    "failed"
+  ],
+  "automation_retry_outcomes": [
+    "interrupted"
+  ]
 }

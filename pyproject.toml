@@ -137,6 +137,8 @@ examples = { sequence = [
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-memory-scope" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-nodes" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-nodes" },
+    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-sdd-junit" },
+    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-sdd-junit" },
     { cmd = "mypy", cwd = "examples/extensions/agent-console-example-usage" },
     { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-usage" },
 ], help = "확장 예제(examples/extensions/*)를 각 폴더 설정으로 mypy·pytest" }

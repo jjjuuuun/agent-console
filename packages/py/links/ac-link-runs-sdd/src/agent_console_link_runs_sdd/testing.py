@@ -54,6 +54,7 @@ class FakeRuns:
         library: 공용 구성에 있는 팀 구성 id.
         emit: 이벤트를 받을 함수(모듈은 ``runs.event`` 발행을 넣는다).
         started: ``start_graph`` 인자 기록.
+        host: 이 가짜 앱의 ``host_id``(공간 Run에 적는다, None = 적지 않음). ``host_id``로 낸다.
     """
 
     graphs: dict[str | None, set[str]] = field(default_factory=dict)
@@ -62,9 +63,14 @@ class FakeRuns:
     started: list[dict[str, Any]] = field(default_factory=list)
     runs: dict[str, Run] = field(default_factory=dict)
     clock: Callable[[], float] = time.time
+    host: str | None = None
     _seq: dict[str, int] = field(default_factory=dict)
 
     # ------------------------------------------------------------ runs.starter
+    def host_id(self, project_id: str | None) -> str | None:
+        """선택 메서드: 공간 Run에 적는 이 앱의 id(공간 없음 = None)."""
+        return self.host if project_id is not None else None
+
     def definitions_for(self, project_id: str | None, graph_id: str) -> object | None:
         if project_id is None:
             return None
@@ -114,6 +120,7 @@ class FakeRuns:
             input=dict(input or {}),
             origin=origin,
             project_id=project_id,
+            host_id=self.host if project_id is not None else None,
             created_at=now + len(self.runs) * 1e-3,
             started_at=now,
             labels=dict(labels or {}),

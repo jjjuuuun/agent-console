@@ -142,10 +142,13 @@ def build_env(
     with_link: bool = True,
     with_runs: bool = True,
     options: Mapping[str, Any] | None = None,
+    store: FileDefinitionStore | None = None,
 ) -> tuple[Any, FakeRuns, FileDefinitionStore]:
+    """조립. ``store``를 주면 그 공간 저장소를 그대로 쓴다(틀을 다시 쓰지 않음 — 재시작 흉내)."""
     fake = runs or FakeRuns(graphs={SPACE: {"team-x", "qa"}, None: {"team-x", "qa"}})
-    store = FileDefinitionStore(tmp_path / SPACE, kinds())
-    write_template(store, template)
+    if store is None:
+        store = FileDefinitionStore(tmp_path / SPACE, kinds())
+        write_template(store, template)
     modules: list[Any] = [
         sdd_module,
         static_settings_module(settings if settings is not None else {}),
