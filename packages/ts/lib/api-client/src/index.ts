@@ -46,6 +46,17 @@ export type { MemoryClient, MemoryImportPolicyName } from "./clients/memory";
 export type { ListFoldersParams, ProjectsClient } from "./clients/projects";
 export { createSddClient } from "./clients/sdd";
 export type { ListSpecTasksParams, SddAutomationOp, SddClient } from "./clients/sdd";
+export { createWikiClient } from "./clients/wiki";
+export type {
+  ListWikiChangesParams,
+  ListWikiPagesParams,
+  SearchWikiParams,
+  WikiClient,
+  WikiGraphParams,
+  WikiImportOptions,
+  WikiImportPolicy,
+  WikiWriteOptions,
+} from "./clients/wiki";
 export type { ResourceFileContent } from "./clients/resources";
 export type { VersionFileContent } from "./clients/versions";
 export {

@@ -356,6 +356,16 @@
   --ac-browse-row-h: 32px;
   --ac-pick-box-min-h: 56px;
   --ac-pick-btn-h: 40px;
+  /* 위키 화면 (screen-wiki.md §1.5, 7R.19) */
+  --ac-wiki-tree-w: 240px;
+  --ac-wiki-side-w: 300px;
+  --ac-wiki-tree-row-h: 28px;
+  --ac-wiki-prose-max-w: 800px;
+  --ac-wiki-graph-node-w: 168px;
+  --ac-wiki-graph-node-h: 36px;
+  --ac-wiki-search-w: 280px;
+  --ac-wiki-search-w-focus: 360px;
+  --ac-wiki-link-dash: 1px dashed var(--ac-danger);
   --ac-z-sidebar: 15;
   --ac-z-panel: 10;
   --ac-z-header: 20;

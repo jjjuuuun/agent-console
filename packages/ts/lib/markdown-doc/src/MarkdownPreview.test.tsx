@@ -20,6 +20,15 @@ describe("MarkdownPreview", () => {
     const b = screen.getByRole("button", { name: "문서" });
     expect(b.getAttribute("data-href")).toBe("wiki:a/b");
   });
+  it("부모가 다시 그려져도 링크 요소가 지워졌다 다시 만들어지지 않는다(포커스 유지)", () => {
+    const draw = (label: string) => <MarkdownPreview source="[문서](wiki:a)" urlTransform={(u) => u} renderLink={(href, children) => <a href={href} data-label={label}>{children}</a>} />;
+    const view = render(draw("하나"));
+    const first = screen.getByRole("link", { name: "문서" });
+    view.rerender(draw("둘"));
+    const second = screen.getByRole("link", { name: "문서" });
+    expect(second).toBe(first);
+    expect(second.getAttribute("data-label")).toBe("둘");
+  });
   it("transformSource가 그리기 전에 원문을 바꾼다", () => {
     render(<MarkdownPreview source="[[페이지]]" transformSource={(t) => t.replace(/\[\[(.+?)\]\]/g, "[$1](/p/page)")} />);
     expect(screen.getByRole("link", { name: "페이지" }).getAttribute("href")).toBe("/p/page");

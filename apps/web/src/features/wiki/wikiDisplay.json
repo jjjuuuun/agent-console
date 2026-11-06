@@ -1,0 +1,41 @@
+{
+  "ops": {
+    "create": { "tone": "success", "labelKey": "create" },
+    "update": { "tone": "neutral", "labelKey": "update" },
+    "delete": { "tone": "danger", "labelKey": "delete" },
+    "move_in": { "tone": "info", "labelKey": "move_in" },
+    "move_out": { "tone": "info", "labelKey": "move_out" },
+    "restore": { "tone": "warning", "labelKey": "restore" },
+    "external": { "tone": "warning", "labelKey": "external" },
+    "import": { "tone": "info", "labelKey": "import" }
+  },
+  "authorKinds": {
+    "user": { "icon": "user", "labelKey": "user" },
+    "agent": { "icon": "agent", "labelKey": "agent" },
+    "system": { "icon": "system", "labelKey": "system" },
+    "external": { "icon": "external", "labelKey": "external" }
+  },
+  "linkStatuses": {
+    "ok": { "icon": "page", "labelKey": "ok" },
+    "broken": { "tone": "danger", "labelKey": "broken" },
+    "outside": { "icon": "external-link", "labelKey": "outside" },
+    "scheme": { "icon": "external-link", "labelKey": "scheme" }
+  },
+  "severities": {
+    "error": { "tone": "danger", "labelKey": "error" },
+    "warning": { "tone": "warning", "labelKey": "warning" },
+    "info": { "tone": "info", "labelKey": "info" }
+  },
+  "codes": {
+    "broken_link": { "labelKey": "broken_link", "hintKey": "broken_link" },
+    "orphan": { "labelKey": "orphan", "hintKey": "orphan" },
+    "duplicate_title": { "labelKey": "duplicate_title", "hintKey": "duplicate_title" }
+  },
+  "importStatuses": {
+    "created": { "tone": "success", "labelKey": "created" },
+    "skipped": { "tone": "neutral", "labelKey": "skipped" },
+    "overwritten": { "tone": "warning", "labelKey": "overwritten" },
+    "renamed": { "tone": "info", "labelKey": "renamed" },
+    "rejected": { "tone": "danger", "labelKey": "rejected" }
+  }
+}

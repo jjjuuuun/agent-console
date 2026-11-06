@@ -186,3 +186,28 @@ describe("TextEditor marks·goToOffset (7R.18)", () => {
     expect(ref.current?.goToOffset(Number.NaN)).toBe(false);
   });
 });
+
+describe("TextEditor insertAtCursor (7R.19)", () => {
+  it("커서 위치에 글을 끼우고 커서를 그 뒤로 옮기며 onChange가 불린다", () => {
+    const ref = createRef<TextEditorHandle>();
+    const seen: string[] = [];
+    const { container } = render(<TextEditor value="앞 뒤" ariaLabel="x" handleRef={ref} onChange={(v) => seen.push(v)} />);
+    viewOf(container).dispatch({ selection: { anchor: 2 } });
+    expect(ref.current?.insertAtCursor("[[링크]]")).toBe(true);
+    const view = viewOf(container);
+    expect(view.state.doc.toString()).toBe("앞 [[링크]]뒤");
+    expect(view.state.selection.main.head).toBe(2 + "[[링크]]".length);
+    expect(seen.at(-1)).toBe("앞 [[링크]]뒤");
+  });
+  it("선택 범위가 있으면 그 범위를 바꾸고, 읽기 전용이면 false", () => {
+    const ref = createRef<TextEditorHandle>();
+    const { container, unmount } = render(<TextEditor value="가나다" ariaLabel="x" handleRef={ref} />);
+    viewOf(container).dispatch({ selection: { anchor: 1, head: 2 } });
+    expect(ref.current?.insertAtCursor("X")).toBe(true);
+    expect(viewOf(container).state.doc.toString()).toBe("가X다");
+    unmount();
+    const ro = createRef<TextEditorHandle>();
+    render(<TextEditor value="가" ariaLabel="x" handleRef={ro} readOnly />);
+    expect(ro.current?.insertAtCursor("X")).toBe(false);
+  });
+});

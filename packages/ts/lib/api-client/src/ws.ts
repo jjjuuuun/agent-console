@@ -14,6 +14,7 @@ import {
 } from "@agent-console/contracts";
 import type { MemoryChanged } from "@agent-console/contracts/memory";
 import type { SddChanged } from "@agent-console/contracts/sdd";
+import type { WikiChanged } from "@agent-console/contracts/wiki";
 import { resolveToken, type TokenSource } from "./token";
 
 /** 브라우저 `WebSocket`(또는 `ws` 패키지, 테스트용 가짜)이 만족하는 최소 모양. */
@@ -148,6 +149,11 @@ export interface WsClient {
    * 구독 직후에는 아무것도 보내지 않는다(앱이 REST로 읽는다). 재접속하면 자동으로 다시 구독한다(재생 없음).
    */
   subscribeSdd(handler: (changed: SddChanged) => void, options?: Pick<SubscribeOptions, "onError">): Subscription;
+  /**
+   * `wiki.changed` 토픽(위키): 페이지 쓰기·이름 바꾸기·지우기·외부 변경 감지 뒤 변경 알림(본문 없음, `paths`는 바뀐 페이지)을 준다.
+   * 구독 직후에는 아무것도 보내지 않는다(앱이 REST로 읽는다). 재접속하면 자동으로 다시 구독한다(재생 없음).
+   */
+  subscribeWiki(handler: (changed: WikiChanged) => void, options?: Pick<SubscribeOptions, "onError">): Subscription;
   /** `subscribe("run:<runId>", …)`의 단축. */
   subscribeRun(runId: string, handler: (event: RunEvent) => void, options?: SubscribeOptions): Subscription;
   /** 서버가 보낸 모든 메시지(중복 제거 전, 원본). `graph:` 토픽 등 전용 핸들러가 없는 메시지용. */
@@ -176,6 +182,8 @@ const LOGS_TOPIC = "logs";
 const MEMORY_TOPIC = "memory.changed";
 /** 스펙 변경 알림 토픽 이름(서버와 정확히 일치). */
 const SDD_TOPIC = "sdd.changed";
+/** 위키 변경 알림 토픽 이름(서버와 정확히 일치). */
+const WIKI_TOPIC = "wiki.changed";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -355,6 +363,8 @@ export function createWsClient(options: WsClientOptions): WsClient {
         return dispatchPlain(MEMORY_TOPIC, message);
       case "sdd.changed":
         return dispatchPlain(SDD_TOPIC, message);
+      case "wiki.changed":
+        return dispatchPlain(WIKI_TOPIC, message);
       case "error":
         return handleError(message.payload, message.id ?? undefined);
       default:
@@ -500,6 +510,14 @@ export function createWsClient(options: WsClientOptions): WsClient {
         SDD_TOPIC,
         (m) => {
           if (m.type === "sdd.changed") handler(m.payload);
+        },
+        opts?.onError,
+      ),
+    subscribeWiki: (handler, opts) =>
+      subscribePlain(
+        WIKI_TOPIC,
+        (m) => {
+          if (m.type === "wiki.changed") handler(m.payload);
         },
         opts?.onError,
       ),

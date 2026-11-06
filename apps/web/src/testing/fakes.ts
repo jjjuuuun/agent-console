@@ -3,11 +3,12 @@
  * 종류·이름 문자열은 임의 값이며 앱의 어떤 분기에도 쓰이지 않는다.
  */
 import { vi } from "vitest";
-import type { ConnectionStatus, RestClient, SddClient, WsClient } from "@agent-console/api-client";
+import type { ConnectionStatus, RestClient, SddClient, WikiClient, WsClient } from "@agent-console/api-client";
 import { ApiError } from "@agent-console/api-client";
 import { CONTRACTS_VERSION, type Interaction, type WorkspaceSettings } from "@agent-console/contracts";
 import type { MemoryChanged } from "@agent-console/contracts/memory";
 import type { SddChanged } from "@agent-console/contracts/sdd";
+import type { WikiChanged } from "@agent-console/contracts/wiki";
 import type { ProjectsClient } from "@agent-console/projects";
 import type { ApiClients } from "../app/apiClients";
 
@@ -73,6 +74,8 @@ export interface FakeWs extends WsClient {
   emitMemory(changed: MemoryChanged): void;
   /** 스펙 변경 알림(`sdd.changed`)을 구독자에게 보낸다 */
   emitSdd(changed: SddChanged): void;
+  /** 위키 변경 알림(`wiki.changed`)을 구독자에게 보낸다 */
+  emitWiki(changed: WikiChanged): void;
 }
 
 export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
@@ -82,6 +85,7 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
   const logListeners = new Set<(p: { count: number; source_ids?: string[] }) => void>();
   const memoryListeners = new Set<(c: MemoryChanged) => void>();
   const sddListeners = new Set<(c: SddChanged) => void>();
+  const wikiListeners = new Set<(c: WikiChanged) => void>();
   return {
     get status() {
       return status;
@@ -108,6 +112,10 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
       sddListeners.add(handler);
       return { topic: "sdd.changed", unsubscribe: () => sddListeners.delete(handler) };
     },
+    subscribeWiki(handler: (c: WikiChanged) => void) {
+      wikiListeners.add(handler);
+      return { topic: "wiki.changed", unsubscribe: () => wikiListeners.delete(handler) };
+    },
     subscribe: vi.fn(),
     subscribeRun: vi.fn(),
     subscribeConversation: vi.fn(),
@@ -124,6 +132,9 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
     },
     emitSdd(changed: SddChanged) {
       sddListeners.forEach((l) => l(changed));
+    },
+    emitWiki(changed: WikiChanged) {
+      wikiListeners.forEach((l) => l(changed));
     },
     emitLogs(count: number, sourceIds?: string[]) {
       logListeners.forEach((l) => l({ count, ...(sourceIds ? { source_ids: sourceIds } : {}) }));
@@ -143,7 +154,13 @@ export function createFakeSdd(overrides: Partial<Record<keyof SddClient, unknown
   return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
 }
 
-export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, projectsOverrides: Partial<Record<keyof ProjectsClient, unknown>> = {}, sddOverrides: Partial<Record<keyof SddClient, unknown>> = {}) {
+/** 모든 메서드가 vi.fn인 가짜 위키 클라이언트. 덮어쓰지 않은 메서드는 undefined를 돌려준다. */
+export function createFakeWiki(overrides: Partial<Record<keyof WikiClient, unknown>> = {}): WikiClient {
+  const base: Record<string, unknown> = { ...overrides };
+  return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
+}
+
+export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, projectsOverrides: Partial<Record<keyof ProjectsClient, unknown>> = {}, sddOverrides: Partial<Record<keyof SddClient, unknown>> = {}, wikiOverrides: Partial<Record<keyof WikiClient, unknown>> = {}) {
   const rest = createFakeRest(restOverrides);
   const ws = createFakeWs();
   const projects = createFakeProjects(projectsOverrides);
@@ -152,8 +169,10 @@ export function createFakeClients(restOverrides: Partial<Record<keyof RestClient
   const space = vi.fn(() => createFakeRest(sharedGraphOverrides) as never);
   const sddClient = createFakeSdd(sddOverrides);
   const sdd = vi.fn(() => sddClient);
-  const clients: ApiClients = { rest, projects, space, sdd, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
-  return { rest, ws, projects, space, sdd, sddClient, clients };
+  const wikiClient = createFakeWiki(wikiOverrides);
+  const wiki = vi.fn(() => wikiClient);
+  const clients: ApiClients = { rest, projects, space, sdd, wiki, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
+  return { rest, ws, projects, space, sdd, sddClient, wiki, wikiClient, clients };
 }
 
 export function versionConflict(): ApiError {

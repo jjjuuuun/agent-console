@@ -24,6 +24,8 @@ export interface TextEditorHandle {
   goToLine: (line: number) => boolean;
   /** 0부터 세는 UTF-16 오프셋으로 커서를 옮기고 화면 가운데로 스크롤한다. 범위 밖이면 가까운 끝. 옮겼으면 true */
   goToOffset: (offset: number) => boolean;
+  /** 현재 선택 범위를 `text`로 바꾸고(선택이 없으면 커서 위치에 끼우고) 커서를 그 뒤로 옮긴다. 편집 불가면 false. 일반 편집과 같이 `onChange`가 불린다. */
+  insertAtCursor: (text: string) => boolean;
 }
 
 /**
@@ -168,6 +170,14 @@ export function TextEditor({
         if (v === null || !Number.isFinite(offset)) return false;
         const at = Math.min(Math.max(0, Math.trunc(offset)), v.state.doc.length);
         v.dispatch({ selection: { anchor: at }, effects: EditorView.scrollIntoView(at, { y: "center" }) });
+        v.focus();
+        return true;
+      },
+      insertAtCursor: (insert: string) => {
+        const v = view.current;
+        if (v === null || v.state.readOnly) return false;
+        const { from, to } = v.state.selection.main;
+        v.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true });
         v.focus();
         return true;
       },

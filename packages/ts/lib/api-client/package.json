@@ -94,6 +94,11 @@
       "types": "./dist/clients/sdd.d.ts",
       "default": "./dist/clients/sdd.js"
     },
+    "./wiki": {
+      "development": "./src/clients/wiki.ts",
+      "types": "./dist/clients/wiki.d.ts",
+      "default": "./dist/clients/wiki.js"
+    },
     "./projects": {
       "development": "./src/clients/projects.ts",
       "types": "./dist/clients/projects.d.ts",

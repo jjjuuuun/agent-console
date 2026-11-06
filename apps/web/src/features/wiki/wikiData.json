@@ -1,0 +1,91 @@
+{
+  "params": {
+    "tab": "tab",
+    "path": "path",
+    "mode": "mode",
+    "line": "line",
+    "anchor": "anchor",
+    "version": "v",
+    "side": "side"
+  },
+  "tabs": [
+    {
+      "id": "page",
+      "labelKey": "page"
+    },
+    {
+      "id": "graph",
+      "labelKey": "graph"
+    },
+    {
+      "id": "lint",
+      "labelKey": "lint"
+    },
+    {
+      "id": "rules",
+      "labelKey": "rules"
+    }
+  ],
+  "defaultTab": "page",
+  "sideTabs": [
+    {
+      "id": "backlinks",
+      "labelKey": "backlinks"
+    },
+    {
+      "id": "outlinks",
+      "labelKey": "outlinks"
+    },
+    {
+      "id": "history",
+      "labelKey": "history"
+    }
+  ],
+  "viewModes": [
+    "view",
+    "edit",
+    "split"
+  ],
+  "storage": {
+    "tree": "ac.wiki.tree.",
+    "treeTitleMode": "ac.wiki.treemode",
+    "pageView": "ac.wiki.pageview",
+    "lastTemplate": "ac.wiki.lasttemplate.",
+    "secretDismissed": "ac.wiki.secret."
+  },
+  "limits": {
+    "liveDebounceMs": 300,
+    "ownWriteTtlMs": 3000,
+    "searchDebounceMs": 250,
+    "previewDebounceMs": 600,
+    "moveDebounceMs": 400,
+    "nameMax": 100,
+    "skeletonDelayMs": 150,
+    "splitMinWidth": 880,
+    "drawerBelow": 1100,
+    "recentPages": 5,
+    "changesPage": 30,
+    "searchLimit": 20,
+    "restoreToastMs": 8000,
+    "splitViewportMin": 1360,
+    "bandMax": 2
+  },
+  "importPolicies": [
+    {
+      "id": "skip",
+      "labelKey": "skip"
+    },
+    {
+      "id": "overwrite",
+      "labelKey": "overwrite",
+      "destructive": true
+    },
+    {
+      "id": "rename",
+      "labelKey": "rename"
+    }
+  ],
+  "routeWords": {
+    "history": "history"
+  }
+}

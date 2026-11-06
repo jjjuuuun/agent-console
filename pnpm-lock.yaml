@@ -72,6 +72,9 @@ importers:
       '@agent-console/log-view':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/log-view
+      '@agent-console/markdown-doc':
+        specifier: ^0.1.0
+        version: link:../../packages/ts/lib/markdown-doc
       '@agent-console/memory-view':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/memory-view
@@ -93,6 +96,9 @@ importers:
       '@agent-console/ui':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/ui
+      '@agent-console/wiki-view':
+        specifier: ^0.1.0
+        version: link:../../packages/ts/lib/wiki-view
       '@tanstack/react-query':
         specifier: ^5.104.3
         version: 5.104.3(react@19.3.1)

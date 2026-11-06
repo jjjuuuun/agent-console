@@ -26,6 +26,8 @@ const MemoryPage = lazyScreen(() => import("../features/memory"), "MemoryPage");
 const SpecListScreen = lazyScreen(() => import("../features/sdd/SpecListScreen"), "SpecListScreen");
 const SpecDetailScreen = lazyScreen(() => import("../features/sdd/SpecDetailScreen"), "SpecDetailScreen");
 const TemplatesScreen = lazyScreen(() => import("../features/sdd/TemplatesScreen"), "TemplatesScreen");
+const WikiListScreen = lazyScreen(() => import("../features/wiki/WikiListScreen"), "WikiListScreen");
+const WikiScreen = lazyScreen(() => import("../features/wiki/WikiScreen"), "WikiScreen");
 const UsageScreen = lazyScreen(() => import("../features/usage/UsageScreen"), "UsageScreen");
 const LogsLayout = lazyScreen(() => import("../features/logs"), "LogsLayout");
 const LogsIndexRedirect = lazyScreen(() => import("../features/logs"), "LogsIndexRedirect");
@@ -37,7 +39,7 @@ const ArchitecturePopoutScreen = lazyScreen(() => import("../features/logs"), "A
 
 /** 모든 화면 번들을 미리 내려받는다(유휴 시간 선로딩, 테스트에서 첫 이동 지연 제거). */
 export function preloadScreens(): Promise<unknown> {
-  return Promise.all([ChatScreen, AgentsScreen, ResourcesScreen, TeamEditorPage, TeamListPage, SettingsScreen, RunsListScreen, RunDetailScreen, MemoryPage, SpecListScreen, SpecDetailScreen, TemplatesScreen, UsageScreen, LogsLayout, SessionsPage, SessionDetailPage, SearchPage, DashboardsPage].map((s) => s.preload()));
+  return Promise.all([ChatScreen, AgentsScreen, ResourcesScreen, TeamEditorPage, TeamListPage, SettingsScreen, RunsListScreen, RunDetailScreen, MemoryPage, SpecListScreen, SpecDetailScreen, TemplatesScreen, WikiListScreen, WikiScreen, UsageScreen, LogsLayout, SessionsPage, SessionDetailPage, SearchPage, DashboardsPage].map((s) => s.preload()));
 }
 
 /** 라우트 id → 그 화면의 하위 라우트(라우트 경로 기준 상대 경로). 새 화면은 여기에 한 줄 등록한다. */
@@ -84,6 +86,11 @@ export const DEFAULT_PAGES: PageTable = {
     { path: ":id", element: <SpecDetailScreen /> },
   ],
   "spec-templates": () => [{ index: true, element: <TemplatesScreen /> }],
+  // 7R.19: 위키 목록 `/wiki`(위키가 1개여도 목록), 위키 화면 `/wiki/:wiki`(탭·페이지·모드는 주소 인자)
+  wiki: () => [
+    { index: true, element: <WikiListScreen /> },
+    { path: ":wiki", element: <WikiScreen /> },
+  ],
   usage: () => [{ index: true, element: <UsageScreen /> }],
   // 하위 화면 셋은 한 층(수집 알림 구독 하나)을 공유한다. 탭 줄·헤더는 각 화면이 `LogsPageFrame`으로 그린다.
   logs: () => [

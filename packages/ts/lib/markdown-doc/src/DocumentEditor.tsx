@@ -16,6 +16,8 @@ export interface DocumentEditorHandle {
   goToLine: (line: number) => boolean;
   /** 0부터 세는 UTF-16 오프셋으로 커서를 옮기고 스크롤한다(서버 링크 범위 `start` 같은 값). 편집기가 보이지 않으면 false. */
   goToOffset: (offset: number) => boolean;
+  /** 커서 위치(선택이 있으면 그 범위)에 글을 끼운다. 편집기가 보이지 않거나 읽기 전용이면 false. */
+  insertAtCursor: (text: string) => boolean;
 }
 
 /**
@@ -121,6 +123,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       },
       goToLine: (line: number) => goTo(line),
       goToOffset: (offset: number) => handle.current?.goToOffset(offset) ?? false,
+      insertAtCursor: (insert: string) => handle.current?.insertAtCursor(insert) ?? false,
     }),
     [],
   );

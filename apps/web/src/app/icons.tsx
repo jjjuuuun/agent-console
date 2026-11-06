@@ -100,6 +100,14 @@ export const appIcons: Readonly<Record<string, IconComponent>> = {
       <path d="M6 7.5h4M6 10h4" />
     </>,
   ),
+  // 위키: 책 + 링크 고리(screen-wiki §1.5)
+  wiki: svg(
+    <>
+      <path d="M3.5 2.5h7.5a1.5 1.5 0 0 1 1.5 1.5v9.5H5A1.5 1.5 0 0 1 3.5 12z" />
+      <path d="M3.5 12A1.5 1.5 0 0 1 5 10.5h7.5" />
+      <path d="M6.6 6.2h1.2a1.1 1.1 0 0 1 0 2.2H6.6a1.1 1.1 0 0 1 0-2.2zM9.2 7.3h.6" />
+    </>,
+  ),
   // 톱니: 닫힌 외곽선(이빨 8개) + 가운데 원. 해(방사형 선)와 실루엣이 달라야 한다.
   settings: svg(
     <>
