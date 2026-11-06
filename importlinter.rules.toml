@@ -19,9 +19,9 @@ source_modules = ["@packages"]
 forbidden_modules = ["@app"]
 
 [[contracts]]
-name = "safe-regex 사용처는 secret-rules, conditions(`matches` 연산자), sdd(작업 문법 정규식)뿐 (다른 패키지는 이들을 거친다, design §2R.4·§5R.5·§6R.3)"
+name = "safe-regex 사용처는 secret-rules, conditions(`matches` 연산자), sdd(작업 문법 정규식), wiki(링크 패턴)뿐 (다른 패키지는 이들을 거친다, design §2R.4·§5R.5·§6R.3·§7R.3)"
 type = "forbidden"
-source_modules = ["@all", "!agent_console_secret_rules", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_sdd"]
+source_modules = ["@all", "!agent_console_secret_rules", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_sdd", "!agent_console_wiki"]
 forbidden_modules = ["agent_console_safe_regex"]
 allow_indirect_imports = true
 
@@ -115,6 +115,13 @@ forbidden_modules = ["@all", "!agent_console_sdd", "!agent_console_contracts", "
 allow_indirect_imports = true
 
 [[contracts]]
+name = "wiki는 contracts, store, conditions, safe-regex, safe-zip(zip 가져오기), text-template, secret-rules, registry(검색 색인 플러그인 로더)에만 의존 (실행·에이전트 노드·프로젝트·메모리·SDD를 모른다 — 페이지 원문만 받는다, design §7R.3)"
+type = "forbidden"
+source_modules = ["agent_console_wiki"]
+forbidden_modules = ["@all", "!agent_console_wiki", "!agent_console_contracts", "!agent_console_store", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_text_template", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip"]
+allow_indirect_imports = true
+
+[[contracts]]
 name = "settings는 다른 agent_console 패키지에 의존하지 않는다 (순수 층 병합, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_settings"]
@@ -161,10 +168,10 @@ forbidden_modules = ["@all", "!agent_console_architecture", "!agent_console_cont
 allow_indirect_imports = true
 
 [[contracts]]
-name = "memory는 contracts, conditions, secret-rules, registry, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
+name = "memory는 contracts, conditions, secret-rules, registry, safe-zip, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
 type = "forbidden"
 source_modules = ["agent_console_memory"]
-forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry", "!sqlalchemy"]
+forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip", "!sqlalchemy"]
 allow_indirect_imports = true
 
 [[contracts]]

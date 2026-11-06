@@ -152,3 +152,37 @@ describe("TextEditor: 줄 이동", () => {
     expect(ref.current?.goToLine(Number.NaN)).toBe(false);
   });
 });
+
+describe("TextEditor marks·goToOffset (7R.18)", () => {
+  const text = "😀 가나 [[다]] 끝";
+  const from = text.indexOf("[[다]]");
+  it("범위를 장식으로 칠하고(UTF-16), 편집하면 글을 따라 움직인다", () => {
+    const { container } = render(<TextEditor value={text} ariaLabel="x" marks={[{ from, to: from + 5, className: "m", attrs: { "data-k": "1" } }]} />);
+    const mark = () => container.querySelector<HTMLElement>('[data-k="1"]');
+    expect(mark()?.textContent).toBe("[[다]]");
+    viewOf(container).dispatch({ changes: { from: 0, insert: "앞에서 " }, userEvent: "input.type" });
+    expect(mark()?.textContent).toBe("[[다]]");
+  });
+  it("문서 밖·빈 범위는 버리고 새 목록을 주면 통째로 바뀐다", () => {
+    const { container, rerender } = render(<TextEditor value={text} ariaLabel="x" marks={[{ from: 0, to: 0, attrs: { "data-k": "e" } }, { from: 0, to: 999, attrs: { "data-k": "o" } }]} />);
+    expect(container.querySelector('[data-k="e"]')).toBeNull();
+    expect(container.querySelector('[data-k="o"]')).toBeNull();
+    rerender(<TextEditor value={text} ariaLabel="x" marks={[{ from: 3, to: 5, attrs: { "data-k": "n" } }]} />);
+    expect(container.querySelector('[data-k="n"]')?.textContent).toBe(text.slice(3, 5));
+  });
+  it("goToOffset은 UTF-16 오프셋으로 커서를 옮기고 범위 밖은 끝으로 맞춘다", () => {
+    const headAfter = (offset: number): number => {
+      const ref = createRef<TextEditorHandle>();
+      const { container, unmount } = render(<TextEditor value={text} ariaLabel="x" handleRef={ref} />);
+      expect(ref.current?.goToOffset(offset)).toBe(true);
+      const head = viewOf(container).state.selection.main.head;
+      unmount();
+      return head;
+    };
+    expect(headAfter(from)).toBe(from);
+    expect(headAfter(9999)).toBe(text.length);
+    const ref = createRef<TextEditorHandle>();
+    render(<TextEditor value={text} ariaLabel="x" handleRef={ref} />);
+    expect(ref.current?.goToOffset(Number.NaN)).toBe(false);
+  });
+});

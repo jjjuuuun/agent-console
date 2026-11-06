@@ -94,6 +94,8 @@ agent-console-sdd = { workspace = true }
 agent-console-mod-sdd = { workspace = true }
 agent-console-link-projects-sdd = { workspace = true }
 agent-console-link-runs-sdd = { workspace = true }
+agent-console-wiki = { workspace = true }
+agent-console-safe-zip = { workspace = true }
 
 # ---------------------------------------------------------------- poe (CLAUDE.md "명령어")
 # mypy 캐시는 저장소 루트 `.mypy_cache` 한곳에만 쌓는다(5.2R.94b). `poe examples`·`poe mypy-package`처럼
@@ -267,6 +269,7 @@ root_packages = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -276,6 +279,7 @@ root_packages = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 include_external_packages = true
 
@@ -339,6 +343,7 @@ source_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_settings",
@@ -347,11 +352,12 @@ source_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 forbidden_modules = ["agent_console_cli", "agent_console_server"]
 
 [[tool.importlinter.contracts]]
-name = "safe-regex 사용처는 secret-rules, conditions(`matches` 연산자), sdd(작업 문법 정규식)뿐 (다른 패키지는 이들을 거친다, design §2R.4·§5R.5·§6R.3)"
+name = "safe-regex 사용처는 secret-rules, conditions(`matches` 연산자), sdd(작업 문법 정규식), wiki(링크 패턴)뿐 (다른 패키지는 이들을 거친다, design §2R.4·§5R.5·§6R.3·§7R.3)"
 type = "forbidden"
 source_modules = [
     "agent_console_architecture",
@@ -409,6 +415,7 @@ source_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_server",
     "agent_console_settings",
     "agent_console_store",
@@ -481,6 +488,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -489,6 +497,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -550,6 +559,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -558,6 +568,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -622,6 +633,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -631,6 +643,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -694,6 +707,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -703,6 +717,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -763,6 +778,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -771,6 +787,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -834,6 +851,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -843,6 +861,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -916,6 +935,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -925,6 +945,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -986,6 +1007,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -995,6 +1017,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -1058,6 +1081,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1067,6 +1091,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -1130,6 +1155,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1139,6 +1165,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -1203,6 +1230,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1211,6 +1239,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -1272,7 +1301,76 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_secret_rules",
+    "agent_console_server",
+    "agent_console_settings",
+    "agent_console_teams",
+    "agent_console_trace",
+    "agent_console_usage",
+    "agent_console_wiki",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "wiki는 contracts, store, conditions, safe-regex, safe-zip(zip 가져오기), text-template, secret-rules, registry(검색 색인 플러그인 로더)에만 의존 (실행·에이전트 노드·프로젝트·메모리·SDD를 모른다 — 페이지 원문만 받는다, design §7R.3)"
+type = "forbidden"
+source_modules = ["agent_console_wiki"]
+forbidden_modules = [
+    "agent_console_architecture",
+    "agent_console_backend_claude_sdk",
+    "agent_console_backend_fake_agent",
+    "agent_console_chat",
+    "agent_console_claude_format",
+    "agent_console_cli",
+    "agent_console_delegation_host",
+    "agent_console_exports",
+    "agent_console_graph",
+    "agent_console_hook_probe",
+    "agent_console_imports",
+    "agent_console_link_chat_runs",
+    "agent_console_link_definitions_resources",
+    "agent_console_link_definitions_teams",
+    "agent_console_link_exports_teams",
+    "agent_console_link_logs_architecture",
+    "agent_console_link_logs_runs",
+    "agent_console_link_logs_trace",
+    "agent_console_link_logs_usage",
+    "agent_console_link_memory_runs",
+    "agent_console_link_projects_memory",
+    "agent_console_link_projects_records",
+    "agent_console_link_projects_runs",
+    "agent_console_link_projects_sdd",
+    "agent_console_link_runs_sdd",
+    "agent_console_link_runs_teams",
+    "agent_console_link_runs_trace",
+    "agent_console_link_runs_usage",
+    "agent_console_local_folders",
+    "agent_console_logs",
+    "agent_console_logs_claude",
+    "agent_console_memory",
+    "agent_console_mod_architecture",
+    "agent_console_mod_chat",
+    "agent_console_mod_definitions",
+    "agent_console_mod_exports",
+    "agent_console_mod_imports",
+    "agent_console_mod_logs",
+    "agent_console_mod_memory",
+    "agent_console_mod_projects",
+    "agent_console_mod_resources",
+    "agent_console_mod_runs",
+    "agent_console_mod_sdd",
+    "agent_console_mod_usage",
+    "agent_console_mod_versions",
+    "agent_console_modkit",
+    "agent_console_nodes_core",
+    "agent_console_project_space",
+    "agent_console_projects",
+    "agent_console_pty_session",
+    "agent_console_resources",
+    "agent_console_resources_core",
+    "agent_console_runtime",
+    "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
     "agent_console_teams",
@@ -1343,6 +1441,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1351,6 +1450,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -1412,12 +1512,14 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_store",
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1479,6 +1581,7 @@ forbidden_modules = [
     "agent_console_registry",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -1487,6 +1590,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1548,12 +1652,14 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_store",
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1617,6 +1723,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1625,6 +1732,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_text_template",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1691,6 +1799,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1700,11 +1809,12 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "memory는 contracts, conditions, secret-rules, registry, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
+name = "memory는 contracts, conditions, secret-rules, registry, safe-zip, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
 type = "forbidden"
 source_modules = ["agent_console_memory"]
 forbidden_modules = [
@@ -1769,6 +1879,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1832,6 +1943,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1840,6 +1952,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_text_template",
     "agent_console_trace",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1908,6 +2021,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1917,6 +2031,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -1978,6 +2093,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -1987,6 +2103,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2051,6 +2168,7 @@ forbidden_modules = [
     "agent_console_pty_session",
     "agent_console_resources_core",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -2058,6 +2176,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2120,6 +2239,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -2129,6 +2249,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2203,6 +2324,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -2211,6 +2333,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2273,6 +2396,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -2282,6 +2406,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2346,6 +2471,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -2354,6 +2480,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2417,6 +2544,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -2424,6 +2552,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 
@@ -2456,6 +2585,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
     "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
@@ -2549,6 +2679,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -2557,6 +2688,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_text_template",
     "agent_console_trace",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 ignore_imports = ["agent_console_cli._server -> agent_console_server"]
@@ -2590,6 +2722,7 @@ forbidden_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
     "agent_console_mod_architecture",
     "agent_console_mod_chat",
     "agent_console_mod_definitions",
@@ -2635,6 +2768,7 @@ source_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 forbidden_modules = ["agent_console_modkit"]
 
@@ -2685,6 +2819,7 @@ source_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 forbidden_modules = [
     "agent_console_mod_architecture",
@@ -2813,6 +2948,7 @@ source_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 forbidden_modules = [
     "agent_console_link_chat_runs",
@@ -2862,6 +2998,7 @@ source_modules = [
     "agent_console_teams",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 forbidden_modules = ["fastapi", "starlette"]
 
@@ -3408,6 +3545,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -3417,6 +3555,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -3476,6 +3615,7 @@ forbidden_modules = [
     "agent_console_resources_core",
     "agent_console_runtime",
     "agent_console_safe_regex",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_secret_rules",
     "agent_console_server",
@@ -3485,6 +3625,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 
 [[tool.importlinter.contracts]]
@@ -3544,6 +3685,7 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_safe_zip",
     "agent_console_sdd",
     "agent_console_server",
     "agent_console_settings",
@@ -3552,6 +3694,7 @@ forbidden_modules = [
     "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
+    "agent_console_wiki",
 ]
 allow_indirect_imports = true
 

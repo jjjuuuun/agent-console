@@ -1,7 +1,7 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentUnit } from "@codemirror/language";
-import { Annotation, Compartment, EditorState, type Extension } from "@codemirror/state";
-import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
+import { Annotation, Compartment, EditorState, StateEffect, StateField, type Extension } from "@codemirror/state";
+import { Decoration, type DecorationSet, EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 import { useEffect, useImperativeHandle, useMemo, useRef, type Ref } from "react";
 import { byteLength, jsonParseError, resolveLanguage } from "./languages";
 import { editorHighlight, editorTheme } from "./theme";
@@ -22,6 +22,20 @@ export interface TextEditorHandle {
   isComposing: () => boolean;
   /** 1부터 세는 줄로 커서를 옮기고 화면 가운데로 스크롤한다. 범위 밖이면 처음·끝 줄. 편집기에 초점을 둔다. 옮겼으면 true */
   goToLine: (line: number) => boolean;
+  /** 0부터 세는 UTF-16 오프셋으로 커서를 옮기고 화면 가운데로 스크롤한다. 범위 밖이면 가까운 끝. 옮겼으면 true */
+  goToOffset: (offset: number) => boolean;
+}
+
+/**
+ * 본문에 칠하는 범위 한 개(UTF-16 오프셋, `from` 포함 `to` 미포함). 서버가 준 링크 범위 같은 호출자 데이터이고 의미는 모른다.
+ * `className`은 호출자 CSS가 정하고 `attrs`는 `data-*` 같은 속성으로 붙는다. 편집하면 범위가 글을 따라 움직인다.
+ */
+export interface TextMark {
+  from: number;
+  to: number;
+  className?: string;
+  attrs?: Readonly<Record<string, string>>;
+  title?: string;
 }
 
 export interface TextEditorMessages {
@@ -51,9 +65,35 @@ export interface TextEditorProps {
   /** 명령형 핸들(`isComposing()`). */
   handleRef?: Ref<TextEditorHandle>;
   /** px 또는 'fill'(부모 높이를 채움). 기본 'fill' */
+  /** 칠할 범위 목록(제어형). 바뀌면 통째로 바꾸고, 그 사이 편집은 변경 매핑으로 따라간다. 문서 밖 범위는 버린다. */
+  marks?: readonly TextMark[];
   height?: number | "fill";
   messages?: Partial<TextEditorMessages>;
   className?: string;
+}
+
+const setMarksEffect = StateEffect.define<DecorationSet>();
+const marksField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    let next = value.map(tr.changes);
+    for (const e of tr.effects) if (e.is(setMarksEffect)) next = e.value;
+    return next;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+/** 범위 목록 → 장식 집합. 문서 길이를 벗어나거나 빈 범위는 버린다. */
+function buildMarks(marks: readonly TextMark[], length: number): DecorationSet {
+  const ranges = marks
+    .filter((m) => Number.isInteger(m.from) && Number.isInteger(m.to) && m.from >= 0 && m.to > m.from && m.to <= length)
+    .map((m) =>
+      Decoration.mark({
+        ...(m.className ? { class: m.className } : {}),
+        attributes: { ...(m.attrs ?? {}), ...(m.title ? { title: m.title } : {}) },
+      }).range(m.from, m.to),
+    );
+  return Decoration.set(ranges, true);
 }
 
 const DEFAULT_MESSAGES: TextEditorMessages = { tooLarge: "" };
@@ -87,6 +127,7 @@ export function TextEditor({
   onStatus,
   onCompositionChange,
   handleRef,
+  marks,
   height = "fill",
   messages,
   className,
@@ -119,6 +160,14 @@ export function TextEditor({
         if (v === null || !Number.isFinite(line)) return false;
         const at = v.state.doc.line(Math.min(Math.max(1, Math.trunc(line)), v.state.doc.lines));
         v.dispatch({ selection: { anchor: at.from }, effects: EditorView.scrollIntoView(at.from, { y: "center" }) });
+        v.focus();
+        return true;
+      },
+      goToOffset: (offset: number) => {
+        const v = view.current;
+        if (v === null || !Number.isFinite(offset)) return false;
+        const at = Math.min(Math.max(0, Math.trunc(offset)), v.state.doc.length);
+        v.dispatch({ selection: { anchor: at }, effects: EditorView.scrollIntoView(at, { y: "center" }) });
         v.focus();
         return true;
       },
@@ -178,6 +227,7 @@ export function TextEditor({
           ...defaultKeymap,
           ...historyKeymap,
         ]),
+        marksField,
         editorTheme,
         editorHighlight,
         c.language.of(resolveLanguage(language)),
@@ -222,6 +272,13 @@ export function TextEditor({
     // onStatus는 ref 경유로 최신을 쓰므로 의존하지 않는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
+
+  // 칠할 범위: `marks`가 바뀔 때만 통째로 바꾼다(편집 사이에는 변경 매핑이 따라가므로 value에 묶지 않는다). 본문 동기화 효과가 먼저 돈다.
+  useEffect(() => {
+    const v = view.current;
+    if (!v) return;
+    v.dispatch({ effects: setMarksEffect.of(buildMarks(marks ?? [], v.state.doc.length)) });
+  }, [marks]);
 
   useEffect(() => {
     view.current?.dispatch({

@@ -6,6 +6,7 @@
  */
 export { DocumentEditor, EDITOR_VIEW_MODES } from "./DocumentEditor";
 export type { DocumentEditorHandle, DocumentEditorProps, DocumentIssue, EditorViewMode } from "./DocumentEditor";
+export type { TextMark } from "@agent-console/text-editor";
 export { MarkdownPreview } from "./MarkdownPreview";
 export type { MarkdownPreviewProps } from "./MarkdownPreview";
 export { DocumentStateChip, ToneChip } from "./ToneChip";

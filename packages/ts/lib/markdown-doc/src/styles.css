@@ -59,6 +59,7 @@
 /* 편집기 */
 .ac-md-editor { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .ac-md-editor-bar { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.ac-md-editor-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; color: var(--ac-text-muted); font-size: var(--ac-text-xs); }
 .ac-md-editor-title { font-weight: 600; max-width: 24ch; }
 .ac-md-editor-body { display: grid; flex: 1; min-height: 240px; gap: 8px; grid-template-columns: 1fr; }
 .ac-md-editor-body[data-mode="split"] { grid-template-columns: 1fr 1fr; }

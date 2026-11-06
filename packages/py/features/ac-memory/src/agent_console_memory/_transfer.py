@@ -32,7 +32,6 @@ import io
 import json
 import re
 import stat
-import unicodedata
 import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -53,6 +52,14 @@ from agent_console_contracts.memory import (
     MemoryImportResult,
     MemoryScopeRef,
 )
+from agent_console_safe_zip import (
+    ZipFormatError,
+    ZipLimitError,
+    ZipLimits,
+    iter_members,
+    open_zip,
+)
+from agent_console_safe_zip import unsafe_archive_path as unsafe_archive_path
 
 from ._errors import MemoryStoreError, TooLargeError
 from ._keys import KEY_SEPARATOR
@@ -68,9 +75,7 @@ DEFAULT_RENAME_FORMAT: Final = "{key} ({n})"
 """`rename` 정책의 새 키 틀(`{key}` = 원래 키, `{n}` = 2부터 오르는 수)."""
 
 _CONTENT_TYPE = re.compile(r"[A-Za-z0-9!#$&^_.+-]{1,64}/[A-Za-z0-9!#$&^_.+-]{1,64}")
-_DRIVE = re.compile(r"[A-Za-z]:")
 _JSON_LINE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*): (.+)")
-_UNSAFE_SEGMENTS = frozenset({"", ".", ".."})
 _ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
 _MAX_SHOWN_PATH = 512
 _MAX_RENAME_TRIES = 10_000
@@ -117,6 +122,15 @@ class MemoryTransferLimits:
     max_total_bytes: int = 256 * 1024 * 1024
     max_front_matter_bytes: int = 16 * 1024
 
+    def zip_limits(self) -> ZipLimits:
+        """zip 읽기 상한(`ac-safe-zip`)으로."""
+        return ZipLimits(
+            max_archive_bytes=self.max_archive_bytes,
+            max_files=self.max_files,
+            max_file_bytes=self.max_file_bytes,
+            max_total_bytes=self.max_total_bytes,
+        )
+
 
 # ---- 경로 -------------------------------------------------------------------------------
 
@@ -157,27 +171,6 @@ def entry_archive_path(scope: MemoryScopeRef, key: str) -> str:
     'notes/_/결정/api.md'
     """
     return f"{scope.kind}/{encode_scope_id(scope.id)}/{key}{MARKDOWN_SUFFIX}"
-
-
-def unsafe_archive_path(name: str) -> bool:
-    """zip 안 경로가 위험한지: 절대 경로·드라이브 문자·역슬래시·제어 문자·`.`·`..`·빈 마디.
-
-    폴더 항목의 끝 `/` 하나는 허용한다.
-
-    >>> names = ("a/b.md", "../a.md", "/a.md", "a\\\\b.md", "C:a.md", "d/")
-    >>> [unsafe_archive_path(p) for p in names]
-    [False, True, True, True, True, False]
-    """
-    if not name or name.startswith("/") or "\\" in name or _DRIVE.match(name):
-        return True
-    if any(unicodedata.category(ch) in {"Cc", "Cf", "Zl", "Zp"} for ch in name):
-        return True
-    body = name[:-1] if name.endswith("/") else name
-    return any(segment in _UNSAFE_SEGMENTS for segment in body.split("/"))
-
-
-def _is_symlink(info: zipfile.ZipInfo) -> bool:
-    return stat.S_ISLNK(info.external_attr >> 16)
 
 
 def parse_archive_path(name: str) -> tuple[MemoryScopeRef, str]:
@@ -424,52 +417,6 @@ def import_author() -> MemoryAuthor:
     return MemoryAuthor(kind=KnownMemoryAuthorKinds.SYSTEM)
 
 
-def _archive_size(data: bytes | IO[bytes]) -> int:
-    if isinstance(data, bytes | bytearray | memoryview):
-        return len(data)
-    here = data.tell()
-    size = data.seek(0, io.SEEK_END)
-    data.seek(here)
-    return size - here
-
-
-def _open_archive(data: bytes | IO[bytes], limits: MemoryTransferLimits) -> zipfile.ZipFile:
-    size = _archive_size(data)
-    if size > limits.max_archive_bytes:
-        raise TooLargeError(
-            f"가져올 zip은 {limits.max_archive_bytes}바이트까지다",
-            limit="max_archive_bytes",
-            value=limits.max_archive_bytes,
-        )
-    source = io.BytesIO(bytes(data)) if isinstance(data, bytes | bytearray | memoryview) else data
-    try:
-        return zipfile.ZipFile(source)
-    except (zipfile.BadZipFile, OSError, ValueError, EOFError) as exc:
-        raise InvalidArchiveError("zip 파일로 읽지 못했다") from exc
-
-
-def _check_bomb(infos: Sequence[zipfile.ZipInfo], limits: MemoryTransferLimits) -> None:
-    if len(infos) > limits.max_files:
-        raise TooLargeError(
-            f"zip 항목은 {limits.max_files}개까지다", limit="max_files", value=limits.max_files
-        )
-    total = 0
-    for info in infos:
-        if info.file_size > limits.max_file_bytes:
-            raise TooLargeError(
-                f"zip 항목 하나는 풀어서 {limits.max_file_bytes}바이트까지다",
-                limit="max_file_bytes",
-                value=limits.max_file_bytes,
-            )
-        total += info.file_size
-    if total > limits.max_total_bytes:
-        raise TooLargeError(
-            f"zip을 풀면 {limits.max_total_bytes}바이트까지다",
-            limit="max_total_bytes",
-            value=limits.max_total_bytes,
-        )
-
-
 class _Importer:
     def __init__(
         self,
@@ -599,52 +546,47 @@ def import_markdown(
         author=author if author is not None else import_author(),
         rename_format=rename_format,
     )
-    with _open_archive(data, bounds) as archive:
-        infos = archive.infolist()
-        _check_bomb(infos, bounds)
-        read_total = 0
-        for info in infos:
-            name = info.filename
-            if unsafe_archive_path(name) or _is_symlink(info):
-                importer.problem(name, MemoryTransferCodes.UNSAFE_PATH, "위험한 경로라 받지 않았다")
-                continue
-            if info.is_dir():
-                continue
-            if info.flag_bits & 0x1:
-                importer.problem(name, MemoryTransferCodes.UNSUPPORTED, "암호화된 항목이다")
-                continue
-            try:
-                scope, key = parse_archive_path(name)
-            except ValueError as exc:
-                code = (
-                    MemoryTransferCodes.UNSUPPORTED
-                    if not name.endswith(MARKDOWN_SUFFIX)
-                    else MemoryTransferCodes.INVALID_FILE
-                )
-                importer.problem(name, code, str(exc))
-                continue
-            try:
-                with archive.open(info) as handle:
-                    raw = handle.read(bounds.max_file_bytes + 1)
-            except (zipfile.BadZipFile, OSError, EOFError, ValueError, NotImplementedError):
-                importer.problem(name, MemoryTransferCodes.INVALID_FILE, "압축 데이터가 깨졌다")
-                continue
-            read_total += len(raw)
-            if len(raw) > bounds.max_file_bytes or read_total > bounds.max_total_bytes:
-                raise TooLargeError(
-                    "풀린 크기가 상한을 넘었다(zip 머리의 크기가 실제와 다름)",
-                    limit="max_total_bytes",
-                    value=bounds.max_total_bytes,
-                )
-            try:
-                text = raw.decode("utf-8-sig")
-                front, body = parse_markdown(
-                    text, max_front_matter_chars=bounds.max_front_matter_bytes
-                )
-                meta = _meta(front)
-            except ValueError as exc:  # UnicodeDecodeError 포함
-                message = "UTF-8이 아니다" if isinstance(exc, UnicodeDecodeError) else str(exc)
-                importer.problem(name, MemoryTransferCodes.INVALID_FILE, message)
-                continue
-            importer.accept(name, scope, key, meta, body)
+    zip_limits = bounds.zip_limits()
+    try:
+        with open_zip(data, zip_limits) as archive:
+            for member in iter_members(archive, zip_limits):
+                name = member.name
+                if member.kind == "unsafe":
+                    importer.problem(
+                        name, MemoryTransferCodes.UNSAFE_PATH, "위험한 경로라 받지 않았다"
+                    )
+                    continue
+                if member.kind == "dir":
+                    continue
+                if member.kind == "encrypted":
+                    importer.problem(name, MemoryTransferCodes.UNSUPPORTED, "암호화된 항목이다")
+                    continue
+                try:
+                    scope, key = parse_archive_path(name)
+                except ValueError as exc:
+                    code = (
+                        MemoryTransferCodes.UNSUPPORTED
+                        if not name.endswith(MARKDOWN_SUFFIX)
+                        else MemoryTransferCodes.INVALID_FILE
+                    )
+                    importer.problem(name, code, str(exc))
+                    continue
+                if member.kind == "broken" or member.data is None:
+                    importer.problem(name, MemoryTransferCodes.INVALID_FILE, "압축 데이터가 깨졌다")
+                    continue
+                try:
+                    text = member.data.decode("utf-8-sig")
+                    front, body = parse_markdown(
+                        text, max_front_matter_chars=bounds.max_front_matter_bytes
+                    )
+                    meta = _meta(front)
+                except ValueError as exc:  # UnicodeDecodeError 포함
+                    message = "UTF-8이 아니다" if isinstance(exc, UnicodeDecodeError) else str(exc)
+                    importer.problem(name, MemoryTransferCodes.INVALID_FILE, message)
+                    continue
+                importer.accept(name, scope, key, meta, body)
+    except ZipLimitError as exc:
+        raise TooLargeError(str(exc), limit=exc.limit, value=exc.value) from exc
+    except ZipFormatError as exc:
+        raise InvalidArchiveError("zip 파일로 읽지 못했다") from exc
     return importer.result()

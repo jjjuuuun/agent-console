@@ -1,5 +1,5 @@
 import type { Issue } from "@agent-console/contracts/definitions";
-import { TextDiff, TextEditor, type TextEditorHandle } from "@agent-console/text-editor";
+import { TextDiff, TextEditor, type TextEditorHandle, type TextMark } from "@agent-console/text-editor";
 import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
 import { MarkdownPreview, type MarkdownPreviewProps } from "./MarkdownPreview";
 import { formatMessage, resolveMessages } from "./messages";
@@ -14,6 +14,8 @@ export interface DocumentEditorHandle {
   openGoToLine: () => void;
   /** 1부터 세는 줄로 이동하고 편집기에 포커스를 둔다. 편집기가 보이지 않으면 false. */
   goToLine: (line: number) => boolean;
+  /** 0부터 세는 UTF-16 오프셋으로 커서를 옮기고 스크롤한다(서버 링크 범위 `start` 같은 값). 편집기가 보이지 않으면 false. */
+  goToOffset: (offset: number) => boolean;
 }
 
 /**
@@ -70,6 +72,15 @@ export interface DocumentEditorProps {
   defaultMode?: EditorViewMode;
   /** 편집기 위 도구줄 오른쪽에 붙일 것(상태 전환 메뉴 등). */
   toolbarExtra?: ReactNode;
+  /**
+   * 본문에 칠할 범위(링크 장식 등). UTF-16 오프셋 `from`~`to`, 모양은 `className`을 호출자 CSS가 정한다. 편집하면 범위가 글을 따라 움직이고,
+   * 새 목록을 주면 통째로 바뀐다. 편집기가 보일 때만 적용된다.
+   */
+  marks?: readonly TextMark[];
+  /** 도구줄 아래, 점검 목록 위에 끼우는 띠 자리(충돌·규칙 거부 같은 앱 띠). */
+  banners?: ReactNode;
+  /** 편집기 아래 상태 줄 자리(줄·칸·글자 수, 링크 수 같은 앱 정보). */
+  statusBar?: ReactNode;
   /** 미리보기 훅(링크 그리기·원문 바꾸기·주소 허용). 그대로 `MarkdownPreview`에 넘긴다. */
   previewHooks?: Pick<MarkdownPreviewProps, "renderLink" | "transformSource" | "urlTransform">;
   messages?: Readonly<Record<string, string>>;
@@ -84,7 +95,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   const {
     document, value, onChange, onSave, dirty = false, saving = false, readOnly = false, readOnlyReason, missing = false, onCreateMissing, conflict = false,
     onReload, onOverwrite, onCopyMine, compare, defaultCompareOpen = false, externalChange = false, initialLine, mode: controlledMode, onModeChange, handleRef,
-    issues = [], language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, previewHooks, messages, className,
+    issues = [], marks, banners, statusBar, language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, previewHooks, messages, className,
   } = props;
   const text = resolveMessages(messages);
   const [innerMode, setInnerMode] = useState<EditorViewMode>(defaultMode);
@@ -109,6 +120,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         requestAnimationFrame(() => gotoInput.current?.focus());
       },
       goToLine: (line: number) => goTo(line),
+      goToOffset: (offset: number) => handle.current?.goToOffset(offset) ?? false,
     }),
     [],
   );
@@ -297,6 +309,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
           )}
         </div>
       ) : null}
+      {banners}
       {issues.length > 0 ? (
         <ul className="ac-md-banner" data-tone="warning" role="list" aria-label={text["editor.issues"]}>
           {issues.map((issue, i) => (
@@ -324,6 +337,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               ariaLabel={formatMessage(text["editor.label"], { title: document.title })}
               onSave={save}
               {...(maxBytes !== undefined ? { maxBytes } : {})}
+              {...(marks ? { marks } : {})}
               onCompositionChange={setComposing}
               handleRef={handle}
               messages={{ tooLarge: text["editor.tooLarge"] ?? "" }}
@@ -336,6 +350,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
           </div>
         ) : null}
       </div>
+      {statusBar ? <div className="ac-md-editor-status">{statusBar}</div> : null}
     </section>
   );
 }

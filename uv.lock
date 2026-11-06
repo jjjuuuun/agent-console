@@ -66,6 +66,7 @@ members = [
     "agent-console-resources-core",
     "agent-console-runtime",
     "agent-console-safe-regex",
+    "agent-console-safe-zip",
     "agent-console-sdd",
     "agent-console-secret-rules",
     "agent-console-server",
@@ -75,6 +76,7 @@ members = [
     "agent-console-text-template",
     "agent-console-trace",
     "agent-console-usage",
+    "agent-console-wiki",
     "agent-console-workspace",
 ]
 
@@ -1492,6 +1494,7 @@ dependencies = [
     { name = "agent-console-conditions" },
     { name = "agent-console-contracts" },
     { name = "agent-console-registry" },
+    { name = "agent-console-safe-zip" },
     { name = "agent-console-secret-rules" },
     { name = "ruamel-yaml" },
 ]
@@ -1515,6 +1518,7 @@ requires-dist = [
     { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-safe-zip", editable = "packages/py/base/ac-safe-zip" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "sqlalchemy", marker = "extra == 'sqlite'", specifier = ">=2.0" },
@@ -2524,6 +2528,29 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-safe-zip"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-safe-zip" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-sdd"
 version = "0.1.0"
 source = { editable = "packages/py/features/ac-sdd" }
@@ -2908,6 +2935,62 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "ruff", specifier = ">=0.6" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
+]
+
+[[package]]
+name = "agent-console-wiki"
+version = "0.1.0"
+source = { editable = "packages/py/features/ac-wiki" }
+dependencies = [
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-registry" },
+    { name = "agent-console-safe-regex" },
+    { name = "agent-console-safe-zip" },
+    { name = "agent-console-secret-rules" },
+    { name = "agent-console-store" },
+    { name = "agent-console-text-template" },
+    { name = "markdown-it-py" },
+    { name = "ruamel-yaml" },
+]
+
+[package.optional-dependencies]
+sqlite = [
+    { name = "alembic" },
+    { name = "sqlalchemy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-safe-regex", editable = "packages/py/base/ac-safe-regex" },
+    { name = "agent-console-safe-zip", editable = "packages/py/base/ac-safe-zip" },
+    { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "agent-console-text-template", editable = "packages/py/base/ac-text-template" },
+    { name = "alembic", marker = "extra == 'sqlite'", specifier = ">=1.13" },
+    { name = "markdown-it-py", specifier = ">=3.0" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
+    { name = "sqlalchemy", marker = "extra == 'sqlite'", specifier = ">=2.0" },
+]
+provides-extras = ["sqlite"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
 ]
 
 [[package]]

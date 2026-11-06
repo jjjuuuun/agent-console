@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentEditor } from "./DocumentEditor";
+import { DocumentEditor, type DocumentEditorHandle } from "./DocumentEditor";
 import { RulesSourceBadge } from "./RulesSourceBadge";
 
 afterEach(cleanup);
@@ -115,5 +115,28 @@ describe("DocumentEditor: previewHooks·이슈 타입", () => {
     render(<DocumentEditor document={doc} value="x" issues={[{ severity: "warning", code: "wiki.x", message: "줄 없음" }]} />);
     expect(screen.getByText(/줄 없음/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "줄로 이동", hidden: false })?.closest("li")).toBeNull();
+  });
+});
+
+describe("편집기 확장 자리 (7R.18)", () => {
+  it("marks 장식·banners·statusBar·goToOffset", async () => {
+    const ref: { current: DocumentEditorHandle | null } = { current: null };
+    const { container, getByText } = render(
+      <DocumentEditor
+        document={{ id: "a", title: "문서", file: "a.md" }}
+        value={"가나 [[다]] 😀 [[라]]"}
+        defaultMode="edit"
+        handleRef={ref}
+        marks={[{ from: 3, to: 8, className: "x-link", attrs: { "data-link": "3" } }]}
+        banners={<p>띠 자리</p>}
+        statusBar={<span>상태 자리</span>}
+      />,
+    );
+    expect(getByText("띠 자리")).toBeTruthy();
+    expect(getByText("상태 자리")).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 20));
+    const mark = container.querySelector('[data-link="3"]');
+    expect(mark?.textContent).toBe("[[다]]");
+    expect(typeof ref.current?.goToOffset).toBe("function");
   });
 });

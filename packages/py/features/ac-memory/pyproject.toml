@@ -11,6 +11,7 @@ dependencies = [
     "agent-console-conditions>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
+    "agent-console-safe-zip>=0.1,<0.2",
     "ruamel-yaml>=0.18",
 ]
 

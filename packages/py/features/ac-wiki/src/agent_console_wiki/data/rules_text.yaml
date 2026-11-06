@@ -1,0 +1,7 @@
+# ac-wiki 패키지 기본 문구(design §7R.1.2·§7R.18 Q7). 코드는 이 값을 모른다 — 호출자가 인자로 바꿀 수 있다.
+# instructions_header: 합친 지침에서 규칙마다 앞에 붙이는 머리 줄 틀(ac-text-template, 변수 name·id).
+instructions_header: '## {name}'
+# instructions_separator: 규칙 지침 사이 구분.
+instructions_separator: "\n\n"
+# import_rename: zip 가져오기 rename 정책의 새 경로 틀(변수 path·n — n은 2부터).
+import_rename: '{path}-{n}'

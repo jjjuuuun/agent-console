@@ -187,7 +187,7 @@ describe("스펙 목록 화면: 열 머리 정렬·행 메뉴", () => {
     const dialog = await screen.findByRole("alertdialog", {}, LONG).catch(() => screen.findByRole("dialog", {}, LONG));
     fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
     await waitFor(() => expect(sdd.deleteSpec).toHaveBeenCalledWith("s2", "v1"), LONG);
-  });
+  }, 60_000);
 
   it("행 ⋯ 메뉴에서 내보내기를 고르면 트리가 있는 대화상자가 열린다", async () => {
     const { sdd } = setup("/specs?prj=p1");

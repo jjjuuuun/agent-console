@@ -38,7 +38,7 @@ pip install "agent-console-memory[sqlite]"  # + 하위 모듈 `sqlite`(SQLite �
 # 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> "agent-console-memory[sqlite]"
 ```
 
-의존: `agent-console-contracts`(모델), `agent-console-conditions`(틀의 JSON 포인터), `agent-console-secret-rules`(비밀 판정 기본값), `agent-console-registry`(X29 로더), `ruamel-yaml`(패키지 기본 데이터 읽기). extra `sqlite`: `sqlalchemy`(하위 모듈 `sqlite`의 표 정의와 질의). 최상위 `agent_console_memory`는 sqlalchemy 없이 import된다. SQLite 저장소를 쓰는 소비자(예: 서버 모듈)는 `agent-console-memory[sqlite]`에 의존한다.
+의존: `agent-console-contracts`(모델), `agent-console-conditions`(틀의 JSON 포인터), `agent-console-secret-rules`(비밀 판정 기본값), `agent-console-registry`(X29 로더), `agent-console-safe-zip`(zip 가져오기 안전 규칙 — 위키 가져오기와 한 벌, 7R.8), `ruamel-yaml`(패키지 기본 데이터 읽기). extra `sqlite`: `sqlalchemy`(하위 모듈 `sqlite`의 표 정의와 질의). 최상위 `agent_console_memory`는 sqlalchemy 없이 import된다. SQLite 저장소를 쓰는 소비자(예: 서버 모듈)는 `agent-console-memory[sqlite]`에 의존한다.
 - `ruamel-yaml`은 무엇: YAML 읽기. 왜: 저장소 표준 YAML 라이브러리(정의 저장과 같다). 대안: JSON 데이터 파일(주석을 못 단다).
 - `sqlalchemy`는 무엇: SQLite 표 정의(`MetaData`)와 Core 질의. 왜: 서버 마이그레이션(Alembic)이 같은 표 정의와 비교할 수 있고 저장소 표준 접근 방식이다. 대안: 표준 `sqlite3` 직접 사용(의존이 없지만 마이그레이션 비교용 표 정의를 따로 둬야 한다).
 

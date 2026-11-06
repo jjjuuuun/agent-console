@@ -8,7 +8,7 @@ module.exports = {
       name: "no-cross-package-deps",
       comment: "packages/ts/* 패키지는 자기 자신과 contracts 외의 형제 패키지를 import하지 않는다.",
       severity: "error",
-      from: { path: "^packages/ts/lib/([^/]+)/", pathNot: "^packages/ts/lib/(memory-view|sdd-view|markdown-doc)/" },
+      from: { path: "^packages/ts/lib/([^/]+)/", pathNot: "^packages/ts/lib/(memory-view|sdd-view|markdown-doc|wiki-view)/" },
       to: {
         path: "^packages/ts/lib/([^/]+)/",
         pathNot: ["^packages/ts/lib/$1/", "^packages/ts/lib/contracts/"],
@@ -47,6 +47,27 @@ module.exports = {
       severity: "error",
       from: { path: "^packages/ts/lib/markdown-doc/src/" },
       to: { path: "^packages/ts/lib/contracts/", dependencyTypesNot: ["type-only"] },
+    },
+    {
+      name: "wiki-view-allowed-deps",
+      comment: "wiki-view(위키 표현)는 사내 패키지 중 contracts, markdown-doc(미리보기·칩·출처 배지), text-editor(기록 비교)만 import한다. api-client·ui·sdd-view 등은 import하지 않고 연결은 props로 받는다(7R.18, design §7R.3). 위 no-cross-package-deps에서 이 패키지만 빼고 여기서 대신 허용 범위를 정한다.",
+      severity: "error",
+      from: { path: "^packages/ts/lib/wiki-view/src/" },
+      to: {
+        path: "^packages/ts/(lib|config)/",
+        pathNot: ["^packages/ts/lib/wiki-view/", "^packages/ts/lib/markdown-doc/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/"],
+      },
+    },
+    {
+      name: "wiki-view-contracts-types-only",
+      comment: "wiki-view는 contracts에서 타입만 가져온다(`import type`). 값은 상수 전용 진입점(`src/generated/constants.ts`, 링크 상태·문법 출처 같은 문서 상수)에서만 가져온다(projects와 같은 이유: 스키마 JSON을 번들에 끌어오지 않는다).",
+      severity: "error",
+      from: { path: "^packages/ts/lib/wiki-view/src/" },
+      to: {
+        path: "^packages/ts/lib/contracts/",
+        pathNot: "^packages/ts/lib/contracts/src/generated/constants\\.ts$",
+        dependencyTypesNot: ["type-only"],
+      },
     },
     {
       name: "sdd-view-allowed-deps",

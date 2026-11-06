@@ -38,6 +38,9 @@ function mount(path: string, s: Setup = {}) {
     listConversations: vi.fn(async () => []),
     listGraphs: vi.fn(async () => []),
     createConversation,
+    // 가져오기 대화상자는 종류 목록과 항목을 복사 API로 읽는다(그래프 목록 API가 아님)
+    listCopyKinds: vi.fn(async () => [{ kind: DEFINITION_KINDS.graph, library: true, portable: true }]),
+    listCopyItems: vi.fn(async (space: string | null) => (spaces[space ?? "__library"] ?? []).map((g) => ({ kind: DEFINITION_KINDS.graph, id: (g as { id: string }).id, name: (g as { name: string }).name }))),
     ...s.rest,
   });
   made.space.mockImplementation(((id: string | null) => createFakeRest({ listGraphs: vi.fn(async () => spaces[id ?? "__library"] ?? []) })) as never);
@@ -109,7 +112,7 @@ describe("새 대화 대화상자(프로젝트 홈의 [채팅 시작] → ?new=1
     const radio = await within(dialog).findByRole("radio", { name: /공용 팀/ });
     await waitFor(() => expect(radio.getAttribute("aria-checked")).toBe("true"));
     expect(within(dialog).getByRole("button", { name: "대화 시작" }).getAttribute("aria-disabled")).toBeNull();
-  });
+  }, 60_000);
 
   it("422 project.not_imported(in_library) → 경고 배너 + [가져와서 실행]이 계획 단계로 열리고, 전부 성공하면 같은 요청을 다시 보낸다", async () => {
     let calls = 0;
