@@ -1,6 +1,8 @@
 """서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-exports``, design §3R.1.3).
 
-- 필수: ``definitions.lookup``. 선택: ``exports.dependencies``·``secrets.rules``.
+- 필수: ``definitions.lookup``. 선택: ``exports.dependencies``·``secrets.rules``·
+  ``projects.folders``·``definitions.spaces``(5.7R.33k: 있으면 쓰기 대상 = 등록 프로젝트 폴더,
+  원본 기본 = ``?project=`` 공간).
 - 형식 공장 레지스트리: 호스트 기본 서비스 ``registries``의 ``exporters`` 확장. 호스트가
   레지스트리를 주지 않으면(단독 실행) entry point에서 직접 읽는다.
 - 오류: ``ExportError`` → 그 ``code``(+ ``details``·``issues``), 토큰 없음 → ``unauthorized``.
@@ -20,8 +22,6 @@ from agent_console_exports import (
     ExporterFactory,
     ExportError,
     ExportRoot,
-    ExportService,
-    FolderWriter,
     as_exporter_factory,
     build_exporters,
     load_exporter_factories,
@@ -36,8 +36,14 @@ from agent_console_modkit import (
 )
 from agent_console_registry import Registry
 
-from .catalog import LookupExportCatalog
-from .ports import DEFINITIONS_LOOKUP, EXPORT_DEPENDENCIES, SECRET_RULES
+from .ports import (
+    DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
+    EXPORT_DEPENDENCIES,
+    PROJECT_FOLDERS,
+    SECRET_RULES,
+)
+from .projects import ProjectExports
 from .routes import TokenRequiredError, build_router
 from .settings import SETTINGS_COMPAT, ExportModuleSettings
 
@@ -113,6 +119,11 @@ def protected_paths(
     return out
 
 
+def _call(reader: Any) -> Any:
+    """포트 함수(``() -> 값``)를 부른다. 포트가 없으면 None."""
+    return reader() if callable(reader) else None
+
+
 class ExportsModule:
     """내보내기 기능 모듈."""
 
@@ -123,7 +134,7 @@ class ExportsModule:
         title="내보내기",
         description="형식 목록·미리보기·보관 파일·허용 폴더 쓰기(/exporters, /exports/*)",
         requires=(DEFINITIONS_LOOKUP,),
-        optional=(EXPORT_DEPENDENCIES, SECRET_RULES),
+        optional=(EXPORT_DEPENDENCIES, SECRET_RULES, PROJECT_FOLDERS, DEFINITIONS_SPACES),
         settings_schema=ExportModuleSettings,
         settings_compat=SETTINGS_COMPAT,
         contracts={"exports": CONTRACT_VERSIONS["exports"]},
@@ -139,16 +150,18 @@ class ExportsModule:
             raise RuntimeError("definitions.lookup이 없습니다")
         base = ctx.paths.base_dir if ctx.paths is not None else None
         roots = [ExportRoot(r.id, _resolve(r.path, base), r.label) for r in cfg.roots]
-        service = ExportService(
+        exports = ProjectExports(
             build_exporters(exporter_factories_of(ctx.registries), cfg.options),
-            LookupExportCatalog(lookup, ctx.port(EXPORT_DEPENDENCIES)),
-            writer=FolderWriter(
-                roots, protected=protected_paths(cfg, base=base, environ=ctx.environ)
-            ),
+            library=lookup,
+            dependencies=ctx.port(EXPORT_DEPENDENCIES),
+            roots=roots,
+            protected=protected_paths(cfg, base=base, environ=ctx.environ),
+            folders=lambda: _call(ctx.port(PROJECT_FOLDERS)),
+            spaces=lambda: ctx.port(DEFINITIONS_SPACES),
             secret_rules=ctx.port(SECRET_RULES),
         )
         return ModuleParts(
-            routers=[build_router(lambda: service, expose_paths=cfg.expose_paths)],
+            routers=[build_router(exports.service, expose_paths=cfg.expose_paths)],
             error_map=dict(ERROR_MAP),
         )
 

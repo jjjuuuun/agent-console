@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_console_logs import TAG_SESSION_TITLE, LogFilter, query_context
+from agent_console_logs import TAG_SESSION_TITLE, LogFilter, QueryContext, query_context
 from agent_console_logs._index import IndexBatch, LogIndex
 from agent_console_logs.sqlite import SqliteLogIndex, create_log_engine, log_metadata
 from agent_console_logs.testing import MemoryLogIndex, make_record
@@ -60,8 +60,10 @@ def index(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[LogIndex]:
         close()
 
 
-def _session(index: LogIndex, flt: LogFilter) -> tuple[str, str, int] | None:
-    found = [s for s in index.list_sessions(flt, query_context(None)) if s.session == "S"]
+def _session(
+    index: LogIndex, flt: LogFilter, ctx: QueryContext | None = None
+) -> tuple[str, str, int] | None:
+    found = [s for s in index.list_sessions(flt, ctx or query_context(None)) if s.session == "S"]
     if not found:
         return None
     s = found[0]
@@ -73,11 +75,11 @@ def test_unfiltered_title_and_cwd(index: LogIndex) -> None:
 
 
 def test_project_filter_keeps_title(index: LogIndex) -> None:
-    ctx = query_context(None)
+    ctx = query_context(None, project_for=lambda cwd: "pa" if cwd == "/w/a" else None)
     [summary] = [s for s in index.list_sessions(LogFilter(), ctx) if s.session == "S"]
-    assert summary.project is not None
-    flt = LogFilter(project=(summary.project.id,))
-    title, cwd, events = _session(index, flt) or ("", "", 0)
+    assert summary.project_id == "pa"
+    flt = LogFilter(project=(summary.project_id,))
+    title, cwd, events = _session(index, flt, ctx) or ("", "", 0)
     assert (title, cwd) == ("고친 제목", "/w/a")
     assert events < 5  # 포함 여부·집계는 필터를 따른다
 

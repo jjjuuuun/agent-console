@@ -40,6 +40,33 @@ export const appIcons: Readonly<Record<string, IconComponent>> = {
       <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
     </>,
   ),
+  // 프로젝트 폴더 상태 아이콘(screen-projects §1.4): 모양이 다르다(색만으로 구분하지 않는다).
+  folder: svg(<path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />),
+  "folder-off": svg(
+    <>
+      <path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+      <path d="M2.5 13.5l11-11" />
+    </>,
+  ),
+  "folder-lock": svg(
+    <>
+      <path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+      <rect x="6" y="8" width="4" height="3" rx=".6" />
+      <path d="M7 8V7a1 1 0 0 1 2 0v1" />
+    </>,
+  ),
+  "folder-help": svg(
+    <>
+      <path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+      <path d="M6.9 8a1.2 1.2 0 1 1 1.6 1.1c-.4.2-.5.5-.5.9M8 11.5v.01" />
+    </>,
+  ),
+  "folder-alert": svg(
+    <>
+      <path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+      <path d="M8 7.5v2.2M8 11.5v.01" />
+    </>,
+  ),
   runs: svg(
     <>
       <circle cx="8" cy="8" r="5.5" />

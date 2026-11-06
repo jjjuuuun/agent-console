@@ -1,18 +1,24 @@
 """5.2R.34: Run 유효 작업 폴더(``run.started`` payload ``cwd``) → 이 Run 이벤트의 ``cwd``(대응표
-``cwd_from`` 규칙, 데이터). 로그 프로젝트 묶기·``project`` 필터가 플랫폼 실행에도 걸린다."""
+``cwd_from`` 규칙, 데이터). 로그 ``project`` 필터(등록 프로젝트 id, 5.7R.33i)가 플랫폼 실행에도
+걸린다."""
 
 from __future__ import annotations
 
-from agent_console_contracts.logs import LogEvent, LogSettings
+from collections.abc import Callable
+
+from agent_console_contracts.logs import LogEvent
 from agent_console_link_logs_runs import SOURCE_ID, load_default_event_map
 from agent_console_link_logs_runs.testing import PlatformRunsRig, run_event, run_record
 from agent_console_logs import LogFilter, query_context
 
 
 def _events(
-    rig: PlatformRunsRig, settings: LogSettings | None = None, **flt: object
+    rig: PlatformRunsRig,
+    project_for: Callable[[str], str | None] | None = None,
+    **flt: object,
 ) -> list[LogEvent]:
-    page = rig.index.query_events(LogFilter(limit=200).with_(**flt), query_context(settings))
+    ctx = query_context(None, project_for=project_for)
+    page = rig.index.query_events(LogFilter(limit=200).with_(**flt), ctx)
     return page.items
 
 
@@ -40,11 +46,12 @@ def test_run_cwd_applies_to_later_events_and_survives_incremental_reads() -> Non
     cursor = rig.index.get_cursor(SOURCE_ID, "r1")
     assert cursor is not None
     assert cursor.state.get("cwd") == "/w/app"
-    # 프로젝트 묶기 규칙(경로 글롭)이 플랫폼 실행 이벤트에도 걸린다
-    settings = LogSettings.model_validate(
-        {"projects": {"groups": [{"id": "app", "match": ["/w/app/**", "/w/app"]}]}}
-    )
-    assert len(_events(rig, settings, project=["app"])) == 3
+
+    # 등록 프로젝트(cwd → id)가 플랫폼 실행 이벤트에도 걸린다
+    def project_for(cwd: str) -> str | None:
+        return "app" if cwd == "/w/app" or cwd.startswith("/w/app/") else None
+
+    assert len(_events(rig, project_for, project=["app"])) == 3
     assert len(_events(rig, cwd=["/w/app"])) == 3
 
 

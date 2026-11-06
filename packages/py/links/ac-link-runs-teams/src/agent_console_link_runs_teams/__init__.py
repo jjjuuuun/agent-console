@@ -14,6 +14,8 @@
       ``load_issue_fixes``, 설치자 옵션 ``RunsTeamsLinkSettings.issue_fixes_file``·
       ``issue_fixes_of``),
       ``ValidationSummaries``(목록 검증 요약), ``GraphValidationCache``·``workspace_revision``.
+    - Run의 정의 조회 출처(5.7R.33y): ``lookups_from``(출처 하나 → ``RunLookups`` 에이전트·팀 구성·
+      리소스 조회), 노드 서비스 키 ``RUN_DEFINITIONS``, 출처 모양 ``DefinitionSource``.
     - ``build_router``: ``POST /graphs/{id}/validate``(엔진 + 팀 규칙 + 저장 전 정의 검사의
       경고·정보 — ``definition_check_issues``·``with_definition_checks``).
 """
@@ -35,18 +37,21 @@ from .ports import (
     GRAPH_VALIDATION,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
+    RUN_DEFINITIONS,
     RUN_PREPARERS,
     RUN_SERVICES,
     RUNS_STARTER,
     WORKSPACE_SETTINGS,
     DefinitionCheck,
     DefinitionLookup,
+    DefinitionSource,
     RunChecker,
 )
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
 from .routes import build_router
 from .rules import RUN_CONTEXT_CWD, TeamRules, TeamRunPreparation, ValidationSummaries
 from .settings import RunsTeamsLinkSettings, issue_fixes_of
+from .sources import RunLookups, lookups_from
 
 __all__ = [
     "DEFAULT_BACKEND_FIX_TEXTS",
@@ -61,6 +66,7 @@ __all__ = [
     "RESOURCE_TYPES",
     "RUNS_STARTER",
     "RUN_CONTEXT_CWD",
+    "RUN_DEFINITIONS",
     "RUN_PREPARERS",
     "RUN_SERVICES",
     "WEB_ROLES",
@@ -68,9 +74,11 @@ __all__ = [
     "BackendFixTexts",
     "DefinitionCheck",
     "DefinitionLookup",
+    "DefinitionSource",
     "GraphValidationCache",
     "IssueFixes",
     "RunChecker",
+    "RunLookups",
     "RunsTeamsLink",
     "RunsTeamsLinkSettings",
     "TeamRules",
@@ -81,6 +89,7 @@ __all__ = [
     "definition_check_issues",
     "issue_fixes_of",
     "load_issue_fixes",
+    "lookups_from",
     "module",
     "with_definition_checks",
     "workspace_revision",

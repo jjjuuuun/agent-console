@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- 5.7R.33i(깨는 변경, 소비자 `mod-logs`·`mod-projects`만): `ProjectFolderSet.current`와 `project_folders(working_directory=)`(옛 로그 범위 `current` 호환)를 지웠다. 보관된 프로젝트 폴더는 `ProjectFolderSet.archived`(`archived_folders`)로 따로 낸다(같은 폴더가 등록·보관 둘 다면 등록이 이긴다). `project_for`는 그대로 보관 아님만 본다.
+
 ## 0.2.0
 
 - 작업 5.7R.33e(design §PI): 프로젝트 = 로컬 폴더 + 폴더 안 구성 사본. 의존 `agent-console-local-folders` 추가.

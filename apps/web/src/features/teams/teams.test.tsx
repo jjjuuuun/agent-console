@@ -354,6 +354,8 @@ describe("묶음 미리보기·초안 미리보기(계약 v3)", () => {
       getGraphPlan: vi.fn(async () => ({ entries: [{ edge_id: "x1", node_id: "a1" }], answers: [{ edge_id: "z", node_id: "a1", final: false }], grants: { h1: {} } })),
     }, []);
     mountApp(clients, "/teams/tm1");
+    // 6R.8: 선택이 없으면 패널은 닫혀 있다 — 버튼으로 연다
+    fireEvent.click(await screen.findByRole("button", { name: "팀 구성 패널" }));
     const exits = await screen.findByRole("region", { name: "답변 노드" });
     expect(await within(exits).findByText("일꾼 · 중간")).toBeTruthy();
     expect(within(await screen.findByRole("region", { name: "되묻기 허용 노드" })).getByText("나")).toBeTruthy();

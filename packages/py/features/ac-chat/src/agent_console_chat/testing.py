@@ -5,7 +5,7 @@
 
 import asyncio
 import builtins
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from agent_console_contracts import (
@@ -132,6 +132,33 @@ class MemoryGraphs:
 
     def get_graph(self, graph_id: str) -> Graph | None:
         return self.items.get(graph_id)
+
+
+class MemoryProjectGraphs(MemoryGraphs):
+    """`ProjectGraphLookup` 인메모리 구현: 라이브러리(`items`)와 프로젝트별 팀 구성(`projects`).
+
+    프로젝트 대화는 `projects[project_id]`에서만 찾는다(라이브러리로 넘어가지 않는다).
+    """
+
+    def __init__(
+        self,
+        graphs: Iterable[Graph] = (),
+        projects: Mapping[str, Iterable[Graph]] | None = None,
+    ) -> None:
+        super().__init__(graphs)
+        self.projects: dict[str, dict[str, Graph]] = {
+            pid: {g.id: g for g in found} for pid, found in (projects or {}).items()
+        }
+        self.calls: list[tuple[str | None, str]] = []
+        """(프로젝트 | None, 팀 구성 id) 조회 기록."""
+
+    def get_graph(self, graph_id: str) -> Graph | None:
+        self.calls.append((None, graph_id))
+        return super().get_graph(graph_id)
+
+    def get_project_graph(self, project_id: str, graph_id: str) -> Graph | None:
+        self.calls.append((project_id, graph_id))
+        return self.projects.get(project_id, {}).get(graph_id)
 
 
 @dataclass(eq=False)
@@ -276,5 +303,6 @@ __all__ = [
     "MemoryEvents",
     "MemoryGraphs",
     "MemoryInteractions",
+    "MemoryProjectGraphs",
     "MemoryRuns",
 ]

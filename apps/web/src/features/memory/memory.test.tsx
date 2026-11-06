@@ -47,9 +47,9 @@ function setup(path: string, f: Fixture = {}) {
         return full(e);
       }),
       getModuleOptions: vi.fn(async () => ({ module_id: "m-any", values: { max_entry_bytes: 65_536 } })),
+      listProjects: vi.fn(async () => (f.projects ?? []).map((p) => ({ project: { ...p }, status: "ready", config_writable: true, kinds: [], records_writable: true, config_dir: ".cfg" }))),
       ...f.rest,
     },
-    { listProjects: vi.fn(async () => (f.projects ?? []).map((p) => ({ ...p }))) },
   );
   const view = mountApp(clients, path);
   return { ...view, clients, ws, rest };
@@ -201,7 +201,7 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);
     expect(within(tree).queryAllByText("팀 둘")).toHaveLength(0);
     const chips = screen.getByRole("group", { name: "활성 필터" });
-    expect(within(chips).getByRole("button", { name: /프로젝트: 프로젝트 하나/ })).toBeTruthy();
+    expect(await within(chips).findByRole("button", { name: /프로젝트: 프로젝트 하나/ }, LONG)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
     await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);
     expect(within(tree).getAllByText("팀 둘").length).toBeGreaterThan(0);

@@ -154,13 +154,24 @@ type WarningSource = Callable[[], Sequence[Issue]]
 
 @runtime_checkable
 class ProjectFoldersLike(Protocol):
-    """``projects.folders``가 돌려주는 값 모양(현재 프로젝트 폴더·등록된 프로젝트 폴더)."""
+    """``projects.folders``가 돌려주는 값 모양(``agent_console_projects.ProjectFolderSet``가 만족).
+
+    범위는 등록된 프로젝트 전체 하나다(옛 ``current``는 5.7R.33i에서 없앴다).
+    """
 
     @property
-    def current(self) -> Sequence[Path]: ...
+    def registered(self) -> Sequence[Path]:
+        """등록(보관 아님) 프로젝트 폴더 전체."""
+        ...
 
     @property
-    def registered(self) -> Sequence[Path]: ...
+    def archived_folders(self) -> Sequence[Path]:
+        """보관된 프로젝트 폴더(새로 읽지 않고 색인은 남긴다)."""
+        ...
+
+    def project_for(self, path: str | Path) -> str | None:
+        """경로가 들어 있는 등록 프로젝트 id(하위 폴더 포함). 없으면 None."""
+        ...
 
 
 type ProjectFoldersReader = Callable[[], ProjectFoldersLike]
@@ -189,7 +200,7 @@ LOG_FILTER_PREDICATES: PortKey[LogFilterExtension] = PortKey(
 )
 
 PROJECT_FOLDERS: PortKey[ProjectFoldersReader] = PortKey(
-    "projects.folders", "앱에 등록된 프로젝트 폴더(현재·전체)"
+    "projects.folders", "앱에 등록된 프로젝트 폴더(전체·보관)"
 )
 
 LOGS_INGESTED: Topic[LogsIngestedPayload] = Topic("logs.ingested")

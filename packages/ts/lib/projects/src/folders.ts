@@ -28,6 +28,8 @@ export interface PickerFolderCheck {
   link?: boolean;
   nearest_existing?: string | null;
   problem?: string | null;
+  /** 폴더에 프로젝트 구성이 이미 있을 때(`existing`에서 옮긴다). `valid: false` = 설정 파일이 있으나 읽을 수 없음. */
+  manifest?: { name?: string | null; count?: number | null; valid?: boolean } | null;
 }
 
 /** picker `FolderCheckOutcome`과 같은 모양. */
@@ -58,6 +60,15 @@ export interface FolderAdapterOptions {
   projectName?: (projectId: string) => string | undefined;
 }
 
+/** `existing`(폴더 안 기존 프로젝트 요약) → picker `manifest`. 없으면 undefined. 아는 상태는 `found`·`invalid`뿐이다. */
+function manifestOf(check: FolderCheck): PickerFolderCheck["manifest"] {
+  const e = check.existing;
+  if (e === undefined || e === null) return undefined;
+  if (e.state === "invalid") return { valid: false, ...(e.name == null ? {} : { name: e.name }) };
+  if (e.state === "found") return { valid: true, name: e.name ?? null, count: e.definitions ?? 0 };
+  return undefined;
+}
+
 /** `FolderCheck` → picker 확인 데이터(`status`·`conflict`는 필드로 다시 계산하므로 빼고, 필드 기본값을 채운다). */
 export function folderCheckData(check: FolderCheck): PickerFolderCheck {
   return {
@@ -72,6 +83,7 @@ export function folderCheckData(check: FolderCheck): PickerFolderCheck {
     ...(check.link === undefined ? {} : { link: check.link }),
     ...(check.nearest_existing === undefined ? {} : { nearest_existing: check.nearest_existing }),
     ...(check.problem === undefined ? {} : { problem: check.problem }),
+    ...(manifestOf(check) === undefined ? {} : { manifest: manifestOf(check) }),
   };
 }
 

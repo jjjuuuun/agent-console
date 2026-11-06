@@ -14,7 +14,7 @@ import pytest
 import sqlalchemy as sa
 
 from agent_console_contracts.logs import LogEvent
-from agent_console_logs import LogFilter, LogScope, QueryContext
+from agent_console_logs import LogFilter, LogScope, QueryContext, RowCheckedPredicate
 from agent_console_logs.sqlite import SqliteLogIndex, open_log_index
 from agent_console_logs.testing import (
     CountingPredicate,
@@ -116,6 +116,33 @@ def test_first_page_rare_predicate_reads_whole_scope_once(
     assert counter.calls == layout.main_events  # 범위 밖(잡음 세션)은 판정하지 않는다
     sec = time_best(lambda: index.query_events(flt, ctx), runs=2)
     _report("first page/rare", sec, calls=layout.main_events, matches=len(page.items))
+
+
+def test_first_page_rare_row_predicate_builds_no_events(
+    big: tuple[SqliteLogIndex, ScaleLayout],
+) -> None:
+    """행 기준 미리 거르기(6R.9 M-1): 열 값으로 답하면 범위를 다 읽어도 이벤트를 만들지 않는다.
+
+    맞는 행은 `seq`로만 정한다(옛 경로 = 같은 판정을 이벤트로). 결과는 옛 경로와 같다.
+    """
+    index, layout = big
+    wanted = {s for s in range(1, 2 * layout.main_events + 1) if s % 7777 == 0}
+    counter = CountingPredicate(lambda e: e.seq in wanted)
+    by_row = RowCheckedPredicate(counter, lambda row: row["seq"] in wanted, frozenset({"seq"}))
+    flt = LogFilter(limit=50)
+    page = index.query_events(flt, _ctx(LogScope.of([layout.main_session]), by_row))
+    assert counter.calls == 0
+    old = index.query_events(flt, _ctx(LogScope.of([layout.main_session]), counter))
+    assert counter.calls == layout.main_events
+    assert [e.uid for e in page.items] == [e.uid for e in old.items]
+    assert page.items
+    ctx = _ctx(LogScope.of([layout.main_session]), by_row)
+    sec = time_best(lambda: index.query_events(flt, ctx), runs=2)
+    old_ctx = _ctx(LogScope.of([layout.main_session]), counter)
+    old_sec = time_best(lambda: index.query_events(flt, old_ctx), runs=2)
+    _report("first page/rare by row", sec, old_ms=round(old_sec * 1000), matches=len(page.items))
+    if perf_strict():
+        assert sec <= FIRST_PAGE_SECONDS
 
 
 def test_thread_filter_uses_seq_index_without_sort(big: tuple[SqliteLogIndex, ScaleLayout]) -> None:

@@ -104,6 +104,7 @@ class ClaudeCodeJsonlSource(JsonlFileSource):
 
     def __init__(self) -> None:
         self._meta_cache: dict[str, tuple[int, float, dict[str, JsonValue]]] = {}
+        self._cwd_cache: dict[str, tuple[int, float, str]] = {}
 
     # ---------------------------------------------------------------- 루트
 
@@ -147,29 +148,92 @@ class ClaudeCodeJsonlSource(JsonlFileSource):
     # ---------------------------------------------------------------- 프로젝트 범위
 
     def allowed_keys(self, ctx: LogSourceContext) -> set[str] | None:
-        """설정 `project_scope`의 프로젝트 폴더 → `projects` 아래 폴더 이름 집합.
+        """등록된 프로젝트 폴더 → `projects` 아래 폴더 이름 집합(범위 = 등록 전체, 5.7R.33i).
 
+        옛 설정 `project_scope`(`current`·`registered`)는 읽지 않는다(스키마 `deprecated`).
         `ctx.projects`가 없으면 None(필터 없음).
         """
         if ctx.projects is None:
             return None
-        scope = _str(ctx.config.get("project_scope")) or "current"
+        keep, rep = self._key_rules(ctx)
+        return {project_key(f, keep=keep, replacement=rep) for f in ctx.projects.registered}
+
+    def _key_rules(self, ctx: LogSourceContext) -> tuple[str, str]:
         keep = _str(ctx.config.get("project_key_keep"))
         replacement = ctx.config.get("project_key_replacement")
-        rep = replacement if isinstance(replacement, str) else "-"
-        return {project_key(f, keep=keep, replacement=rep) for f in ctx.projects.select(scope)}
+        return keep, replacement if isinstance(replacement, str) else "-"
 
     def accepts(self, rel: str, ctx: LogSourceContext) -> bool:
         """범위 밖 단위는 발견할 때 메타 파일을 읽지 않는다."""
         return self.in_scope(rel, ctx)
 
     def in_scope(self, ref: str, ctx: LogSourceContext) -> bool:
-        """`ScopedLogSource`: ref의 첫 폴더(프로젝트 키)가 범위 안 프로젝트인가."""
+        """`ScopedLogSource`: ref가 등록 프로젝트(하위 폴더 포함)의 기록인가.
+
+        1. 첫 폴더(프로젝트 키)를 등록 폴더 키와 비교한다. 같거나 `키 + 바꿈 글자`로 시작하지 않으면
+           범위 밖이다(파일·메타를 열지 않는다).
+        2. 맞으면 세션 cwd(파일 앞부분의 `cwd_pointer`)로 확정한다: cwd가 등록 폴더(하위 포함)
+           안이면 범위 안. 키는 손실 변환이라(`/w/a-b`와 `/w/a/b`가 같은 키) 키만으로 정하지 않는다.
+           cwd가 없는 파일은 키가 정확히 같을 때만 받는다. 파일이 사라졌으면(색인 유지 판정) 키로만.
+        """
         keys = self.allowed_keys(ctx)
         if keys is None:
             return True
+        if "/" not in ref:
+            return False
         head = ref.split("/", 1)[0]
-        return "/" in ref and head in keys
+        _keep, rep = self._key_rules(ctx)
+        exact = head in keys
+        if not exact and not any(rep and head.startswith(k + rep) for k in keys):
+            return False
+        projects = ctx.projects
+        if projects is None:  # pragma: no cover - allowed_keys가 None을 냈다
+            return True
+        path = self.resolve(ref, ctx)
+        if path is None:
+            return True  # 지금 파일이 없음: 이미 색인된 단위를 지우지 않는다
+        cwd = self._session_cwd(path, ctx)
+        if not cwd:
+            return exact
+        return projects.contains(cwd)
+
+    def _session_cwd(self, path: Path, ctx: LogSourceContext) -> str:
+        """파일 앞부분(설정 `cwd_peek_bytes`)에서 처음 나온 cwd(`cwd_pointer`). 없으면 빈 문자열.
+
+        경로별로 캐시한다. 찾은 cwd는 파일이 자라도 그대로 쓰고(앞부분은 바뀌지 않음), 줄어들면
+        (회전) 다시 본다. 못 찾았으면 크기·수정 시각이 바뀔 때 다시 본다. 줄이 깨졌으면 건너뛴다.
+        """
+        try:
+            stat = path.stat()
+        except OSError:
+            return ""
+        key = str(path)
+        cached = self._cwd_cache.get(key)
+        if cached is not None:
+            size, mtime, value = cached
+            if (value and stat.st_size >= size) or (
+                stat.st_size == size and stat.st_mtime == mtime
+            ):
+                return value
+        limit = ctx.config.get("cwd_peek_bytes")
+        max_bytes = limit if isinstance(limit, int) and limit > 0 else 262144
+        pointer = _str(ctx.config.get("cwd_pointer")) or "/cwd"
+        found = ""
+        try:
+            with ctx.open_read(path) as stream:
+                head = stream.read(max_bytes)
+        except OSError:
+            head = b""
+        for line in head.splitlines():
+            try:
+                value = json_pointer(json.loads(line), pointer)
+            except (ValueError, UnicodeDecodeError):
+                continue
+            if isinstance(value, str) and value:
+                found = value
+                break
+        self._cwd_cache[key] = (stat.st_size, stat.st_mtime, found)
+        return found
 
     # ---------------------------------------------------------------- 파일별 맥락
 

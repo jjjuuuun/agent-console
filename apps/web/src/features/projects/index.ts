@@ -18,3 +18,9 @@ export { ScopeIssuesList, useMoveIssueToShared, type MoveIssueToShared } from ".
 export { AccountWideNote, LogProjectNote } from "./AccountAndLogs";
 export { projectBody, useProjectId } from "./useProjectId";
 export { useProjectScopeFilter } from "./useProjectScopeFilter";
+export { ProjectHomeScreen } from "./ProjectHomeScreen";
+export { projectHomePath } from "./ProjectsContext";
+export { ProjectFolderDialog, type FolderSubmit, type ProjectFolderDialogProps, type RepathTarget } from "./ProjectFolderDialog";
+export { NoProjectState, type NoProjectStateProps } from "./NoProjectState";
+export { PROJECT_START_STEPS, buildProjectStartSteps, type ProjectStartCounts, type ProjectStartStepDef } from "./projectStartSteps";
+export { folderHomeMessages } from "./folderHomeMessages";

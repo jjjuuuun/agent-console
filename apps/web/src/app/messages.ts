@@ -271,9 +271,8 @@ export const messages = {
       libTeamStartChat: "이 팀 구성으로 대화 시작",
       exportCurrent: "내보내기…",
       projectSwitch: "프로젝트 전환…",
-      projectAll: "모든 프로젝트 보기",
       projectManage: "프로젝트 관리",
-      projectNew: "새 프로젝트 만들기",
+      projectNew: "프로젝트 폴더 추가",
     },
   },
   notifications: {

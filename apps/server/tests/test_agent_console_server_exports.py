@@ -1,6 +1,8 @@
 """내보내기 REST(2R.11)와 수용 기준 R1.2: `.claude` 픽스처 가져오기 → 내보내기 → 원본과 의미 비교.
 
 가짜 HOME·임시 폴더만 쓴다. 원본 픽스처는 읽기만 하는지(내용·시각·모드) 확인한다.
+5.7R.33k: 가져오기 출처·폴더 쓰기 대상은 등록 프로젝트 폴더다(`register_project`). 등록하면 폴더에
+`.agent-console/`가 생기므로 원본 비교는 그 폴더를 뺀다.
 """
 
 from __future__ import annotations
@@ -18,7 +20,16 @@ from agent_console_claude_format import (
     parse_rule,
     parse_settings,
 )
-from agent_console_server.testing import API, TEST_TOKEN, make_settings, seed, server
+from agent_console_server.testing import (
+    API,
+    TEST_TOKEN,
+    make_settings,
+    register_project,
+    seed,
+    server,
+)
+
+CONFIG_DIR = ".agent-console"
 
 PLAIN = "ghp_plain_value_123456"
 
@@ -87,7 +98,8 @@ def make_fixture(project: Path) -> None:
 
 def snapshot(root: Path) -> dict[str, tuple[bytes, int, int]]:
     out: dict[str, tuple[bytes, int, int]] = {}
-    for current, _, files in os.walk(root):
+    for current, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d != CONFIG_DIR]  # 등록이 만든 구성 폴더는 비교 밖
         for name in files:
             path = Path(current) / name
             st = path.stat()
@@ -99,7 +111,7 @@ def read_tree(root: Path) -> dict[str, bytes]:
     return {
         p.relative_to(root).as_posix(): p.read_bytes()
         for p in sorted(root.rglob("*"))
-        if p.is_file()
+        if p.is_file() and CONFIG_DIR not in p.relative_to(root).parts
     }
 
 
@@ -167,12 +179,23 @@ def setup(tmp_path: Path) -> tuple[Path, Path, Path, Any]:
     return project, home, out, settings
 
 
+def register_all(client: Any, tmp_path: Path) -> None:
+    """가져올 프로젝트·쓰기 대상(out)·홈(보호 위치 검사)을 프로젝트로 등록한다."""
+    register_project(client, "project", tmp_path / "project")
+    register_project(client, "out", tmp_path / "out")
+    register_project(client, "home", tmp_path / "home")
+
+
 def import_all(client: Any) -> None:
-    preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+    """등록 프로젝트 `project`의 .claude를 공용(라이브러리)으로 가져온다."""
+    q = {"project": "project", "target": "library"}
+    preview = client.post(
+        f"{API}/resources/import/preview", params=q, json={"source": "project-claude"}
+    )
     assert preview.status_code == 200, preview.text
     picks = [{"candidate_id": c["id"]} for c in preview.json()["candidates"]]
     result = client.post(
-        f"{API}/resources/import", json={"source": "project-claude", "items": picks}
+        f"{API}/resources/import", params=q, json={"source": "project-claude", "items": picks}
     )
     assert result.status_code == 200, result.text
     assert {i["action"] for i in result.json()["items"]} == {"created"}, result.json()
@@ -189,6 +212,7 @@ def test_claude_roundtrip_import_export_is_semantically_equal(tmp_path: Path) ->
     before = snapshot(tmp_path / "project")
     home_before = snapshot(home)
     with server(settings) as client:
+        register_all(client, tmp_path)
         import_all(client)
         items = all_items(client)
         types = {r["type"] for r in client.get(f"{API}/resources").json()}
@@ -226,11 +250,13 @@ def test_folder_write_roots_and_safety(tmp_path: Path) -> None:
     _, home, out, settings = setup(tmp_path)
     home_before = snapshot(home)
     with server(settings) as client:
+        register_all(client, tmp_path)
         import_all(client)
         items = all_items(client)
         roots = client.get(f"{API}/exports/roots")
         assert roots.status_code == 200
-        assert [r["id"] for r in roots.json()] == ["out", "home"]  # ~/.claude 루트는 빠진다
+        # 쓰기 대상 = 등록 프로젝트 폴더(설치자 roots `out`·`home`·`claude-home`은 쓰지 않는다)
+        assert sorted(r["id"] for r in roots.json()) == ["home", "out", "project"]
         del client.headers["X-Console-Token"]
         assert client.get(f"{API}/exports/roots").status_code == 401
         client.headers["X-Console-Token"] = TEST_TOKEN
@@ -263,7 +289,7 @@ def test_folder_write_roots_and_safety(tmp_path: Path) -> None:
         )
         assert protected.status_code == 422  # .claude/… 는 보호 위치
         claude_root = client.post(f"{API}/exports/write", json={**write, "root": "claude-home"})
-        assert claude_root.status_code == 404
+        assert claude_root.status_code == 404  # 등록 프로젝트가 아님
         unknown = client.post(f"{API}/exports/write", json={**write, "root": "nope"})
         assert unknown.status_code == 404
         bad_kind = client.post(

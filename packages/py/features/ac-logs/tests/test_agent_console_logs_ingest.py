@@ -343,7 +343,7 @@ def test_repo_root_from_worktree(tmp_path: Path) -> None:
     (logs / "e.jsonl").write_bytes(_v1(1, cwd=str(wt)) + _v1(2, cwd=str(wt)))
     ingestor.scan(off)
     newest = index.query_events(LogFilter(order="desc", limit=1), query_context(None)).items[0]
-    assert newest.repo_root == ""
+    assert newest.repo_root == "/repo"  # 옛 git_worktrees: false는 읽지 않는다(5.7R.33i)
 
 
 def test_invalid_constructor_values() -> None:

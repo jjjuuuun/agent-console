@@ -12,12 +12,13 @@
   ``TableScopeKind``·``FieldFilter``).
 - ``project_folders_module``: ``projects.folders``(등록된 프로젝트 폴더)를 주는 모듈
   (``mod-projects`` 흉내). 범위를 아는 출처(``claude-code-jsonl``)는 이 폴더의 기록만 읽는다.
+  값은 ``StaticProjectFolders``(등록 id → 폴더, 보관 폴더, 단순 경로 비교 ``project_for``).
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_console_contracts import WorkspaceSettings
@@ -26,7 +27,6 @@ from agent_console_logs import (
     LogFilterExtension,
     LogScopeKind,
     LogSource,
-    ProjectFolders,
 )
 from agent_console_modkit import Module, ModuleContext, ModuleParts
 from agent_console_modkit.testing import fake_module
@@ -132,16 +132,62 @@ def query_extensions_module(
     )
 
 
+@dataclass(frozen=True)
+class StaticProjectFolders:
+    """``projects.folders`` 값(``ProjectFoldersLike``)의 간단한 구현.
+
+    Attributes:
+        entries: 등록 id → 폴더(등록 순).
+        archived: 보관 id → 폴더.
+
+    ``project_for``는 ``/`` 경로 접두 비교(하위 폴더 포함, 가장 깊은 폴더가 이김)다.
+
+    >>> folders = StaticProjectFolders({"a": Path("/w/a")})
+    >>> folders.project_for("/w/a/src"), folders.project_for("/w/ab")
+    ('a', None)
+    """
+
+    entries: Mapping[str, Path] = field(default_factory=dict)
+    archived: Mapping[str, Path] = field(default_factory=dict)
+
+    @property
+    def registered(self) -> tuple[Path, ...]:
+        return tuple(self.entries.values())
+
+    @property
+    def archived_folders(self) -> tuple[Path, ...]:
+        return tuple(self.archived.values())
+
+    def project_for(self, path: str | Path) -> str | None:
+        target = Path(path).as_posix().rstrip("/") or "/"
+        best: tuple[int, str] | None = None
+        for pid, folder in self.entries.items():
+            base = folder.as_posix().rstrip("/") or "/"
+            inside = target == base or target.startswith(base.rstrip("/") + "/")
+            if inside and (best is None or len(base) > best[0]):
+                best = (len(base), pid)
+        return best[1] if best else None
+
+
+def _with_ids(folders: Sequence[Path] | Mapping[str, Path]) -> dict[str, Path]:
+    if isinstance(folders, Mapping):
+        return {str(k): Path(v) for k, v in folders.items()}
+    return {Path(f).name or str(f): Path(f) for f in folders}
+
+
 def project_folders_module(
-    current: Sequence[Path] = (),
-    registered: Sequence[Path] | None = None,
+    registered: Sequence[Path] | Mapping[str, Path] = (),
+    archived: Sequence[Path] | Mapping[str, Path] = (),
     module_id: str = PROJECT_FOLDERS_ID,
 ) -> Module:
-    """``projects.folders`` 제공 모듈. ``registered``를 비우면 ``current``와 같다."""
-    folders = ProjectFolders(
-        current=tuple(current),
-        registered=tuple(registered if registered is not None else current),
-    )
+    """``projects.folders`` 제공 모듈(등록 전체 범위, 5.7R.33i).
+
+    Args:
+        registered: 등록 폴더(목록이면 id = 폴더 이름) 또는 id → 폴더.
+        archived: 보관 폴더(같은 모양).
+        module_id: 모듈 id.
+    """
+    folders = StaticProjectFolders(_with_ids(registered), _with_ids(archived))
 
     def build(ctx: ModuleContext) -> ModuleParts:
         ctx.provide(PROJECT_FOLDERS, lambda: folders)
@@ -157,6 +203,7 @@ __all__ = [
     "RUNTIME_SOURCES_ID",
     "STATIC_SETTINGS_ID",
     "RuntimeSource",
+    "StaticProjectFolders",
     "local_settings_module",
     "project_folders_module",
     "query_extensions_module",

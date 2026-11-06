@@ -12,7 +12,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import BinaryIO
 
@@ -233,13 +233,9 @@ class LogIngestor:
         started = self._clock()
         by_id = self._settings_by_id(settings)
         resolver = self._repo_root_of
-        worktrees = not (
-            settings is not None
-            and settings.projects is not None
-            and settings.projects.git_worktrees is False
-        )
         if resolver is None:
-            resolver = RepoRootResolver(self._open_read) if worktrees else (lambda _cwd: "")
+            # 옛 묶기 설정 `logs.projects.git_worktrees`는 읽지 않는다(K33-15, 5.7R.33i).
+            resolver = RepoRootResolver(self._open_read)
         results: list[LogSourceScanResult] = []
         for sid, source, origin in self._all_sources():
             if source_ids is not None and sid not in source_ids:
@@ -314,6 +310,7 @@ class LogIngestor:
                     ERROR_SOURCE_FAILED, f"{type(exc).__name__}: {exc}"
                 ) from None
             refs = self._apply_scope(sid, source, ctx, refs)
+            repo_root_of = _guarded(repo_root_of, ctx.projects)
             budget = self._budget
             for ref in refs:
                 stored = self._index.get_cursor(sid, ref.ref)
@@ -385,7 +382,11 @@ class LogIngestor:
             return refs
         kept = [r for r in refs if source.in_scope(r.ref, ctx)]
         self._skipped[sid] = len(refs) - len(kept)
-        stale = [c.ref for c in self._index.list_cursors(sid) if not source.in_scope(c.ref, ctx)]
+        # 보관 프로젝트(`retained`)의 색인은 범위 밖으로 보지 않는다(새로 읽지는 않음, 5.7R.33i).
+        keep_ctx = replace(ctx, projects=ctx.projects.with_retained())
+        stale = [
+            c.ref for c in self._index.list_cursors(sid) if not source.in_scope(c.ref, keep_ctx)
+        ]
         if stale and isinstance(self._index, PurgeableLogIndex):
             # 범위 밖 단위만 골라 지우는 API가 없어 출처 전체를 비우고 범위 안을 처음부터
             # 다시 읽는다.
@@ -508,3 +509,16 @@ class LogIngestor:
             )
             for i, d in enumerate(drafts)
         ]
+
+
+def _guarded(
+    resolve: Callable[[str], str], projects: ProjectFolders | None
+) -> Callable[[str], str]:
+    """등록 폴더 밖 cwd의 `.git`은 읽지 않는다(design §PI.5, 범위가 있을 때만)."""
+    if projects is None:
+        return resolve
+
+    def guarded(cwd: str) -> str:
+        return resolve(cwd) if projects.contains(cwd) else ""
+
+    return guarded

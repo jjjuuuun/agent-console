@@ -166,7 +166,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   }, []);
   const widthKnown = mainWidth > 0;
   const panelInline = !widthKnown || mainWidth >= CANVAS_MIN_PX + PANEL_W_PX;
-  const panelOpen = panelPref ?? panelInline;
+  // 6R.8(L-18): 사용자가 직접 여닫기 전에는 노드·엣지를 선택했을 때만 인라인으로 연다(선택이 없으면 캔버스를 넓게 쓴다)
+  const hasSelection = selection.nodeIds.length + selection.edgeIds.length > 0;
+  const panelOpen = panelPref ?? (panelInline && hasSelection);
   const setPanelOpen = (open: boolean) => setPanelPref(open);
   // 우측 패널이 열려 있으면(인라인이든 오버레이든) 팔레트와 패널 중 패널이 우선하고, 자리가 모자라면 팔레트는 오버레이가 된다("동시에 둘만")
   const paletteInline = !widthKnown || mainWidth - (panelOpen ? PANEL_W_PX : 0) >= CANVAS_MIN_PX + PALETTE_W_PX;

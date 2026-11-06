@@ -68,7 +68,7 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 >>> ingestor.scan(settings).new_events          # 증분: 바뀐 것이 없으면 0
 0
 
->>> ctx = query_context(settings)               # 분류 체계·프로젝트 묶기(설정 데이터)
+>>> ctx = query_context(settings)               # 분류 체계(설정 데이터), 프로젝트는 project_for=
 >>> [e.title for e in index.query_events(LogFilter(), ctx).items]
 ['답변', '답변(이어짐)', '실패']
 >>> session = index.list_sessions(LogFilter(), ctx)[0]
@@ -83,15 +83,15 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 
 | 묶음 | 이름 |
 | --- | --- |
-| 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, 프로젝트 범위 `ProjectFolders`·`ScopedLogSource`(5.7R.30 후속: `LogIngestor(projects=…)`를 주면 `in_scope`를 구현한 출처의 범위 밖 단위를 건너뛰고, 이미 색인된 범위 밖 단위가 있으면 그 출처 색인을 비우고 다시 읽는다 — `scope_skipped`·`scope_purged`. `JsonlFileSource.accepts`가 거짓인 단위는 발견 때 맥락을 읽지 않는다), `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
+| 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, 프로젝트 범위 `ProjectFolders`(`registered`·`retained`·`project_for`, 5.7R.33i: 범위 = 등록 전체 하나, 보관 폴더는 새로 읽지 않고 색인 유지)·`ScopedLogSource`(5.7R.30 후속: `LogIngestor(projects=…)`를 주면 `in_scope`를 구현한 출처의 범위 밖 단위를 건너뛰고, 이미 색인된 범위 밖 단위가 있으면 그 출처 색인을 비우고 다시 읽는다 — `scope_skipped`·`scope_purged`. `JsonlFileSource.accepts`가 거짓인 단위는 발견 때 맥락을 읽지 않는다), `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
 | 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
 | 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
 | 색인 비우기(M-3) | `purge_index(index, *, sources=None, categories=None, before=None, rescan=True, dry_run=False) -> PurgeResult`, `reset_index(index, *, dry_run=False)`, 범위 `PurgeScope`, 선택 능력 `PurgeableLogIndex`(`purge(scope, dry_run=)`, 메모리·SQLite 색인이 가진다) |
 | 행 읽기(5.5R.36) | `query_event_rows(index, flt, ctx) -> LogEventRowPage`(`rows`·`next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)`(끝까지, 쪽마다 `on_page(행 수)`), `page_rows(read, flt, on_page=)`(쪽 읽기 함수 → 행), 선택 능력 `LogEventRowReader`(`query_event_rows`·`iter_event_rows` 메서드, 메모리·SQLite 색인이 가진다), `event_row(event)`, `complete_event_row(data, seq=)`, 형식 `LogEventRow`·`PageCallback` |
 | SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `open_existing_log_index(path)`(있는 색인만, 파일·테이블을 만들지 않음), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
 | 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
-| 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`) |
-| 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `group_projects`·`resolve_project`·`git_worktree_root`, `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
+| 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`), 행 기준 미리 거르기(선택) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck` |
+| 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `git_worktree_root`(옛 묶기 `group_projects`·`resolve_project`는 5.7R.33i에서 삭제 — 세션 프로젝트는 `QueryContext.project_for`), `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
 | 보관본 | `build_archive`(`LogArchive` v1: 필터 범위·`max_events`·`max_bytes`·`redact`, `ARCHIVE_VERSION`·`DEFAULT_ARCHIVE_MAX_EVENTS`·`DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive`(스크립트 없는 HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
 | 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(X27·X28 예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.PurgeContractTests`(비우기 의미), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
 
@@ -183,6 +183,13 @@ True
   이벤트와 응답 키가 같아야 한다.
 - 확장 판정·`max_seq`는 이벤트 전용 필터다(표본은 맞는 이벤트의 응답 키로 거른다). SQLite는 판정을
   연결 전용 SQL 함수로 부르므로 페이지·커서·집계가 그대로지만, 후보 행마다 본문 JSON을 읽는다.
+- **행 기준 미리 거르기(선택 능력, 6R.9)**: 판정 함수가 `row_fields`(색인 열 이름, `EVENT_ROW_FIELDS`
+  중에서)와 `check_row(row) -> True | False | None`을 가지면(`RowPredicate`, 기본 구현
+  `RowCheckedPredicate`) SQLite는 먼저 열 값으로 묻고, `None`(모름)인 행만 본문을 읽어 `LogEvent`로
+  판정한다. 확정 값은 판정 함수 값과 같아야 한다(메모리 색인은 늘 판정 함수를 쓴다).
+  `testing.FieldFilter(..., row_check=True)`가 예제다.
+- 값 목록(필터 값·범위 세션·run_id)이 500개를 넘으면 SQLite는 JSON 배열 하나를 `json_each`로 펼친다
+  (바인드 변수 1개 — 값이 수만 개여도 변수 한도에 걸리지 않는다).
 
 ```python
 >>> from agent_console_logs import IndexBatch, LogQueryExtensions, QueryContext
@@ -203,6 +210,14 @@ True
 >>> flt = ext.parse({"scope": "run:r1"})
 >>> [e.session for e in index.query_events(flt, ext.refine(flt, QueryContext())).items]
 ['S2']
+>>> from agent_console_logs import RowCheckedPredicate, row_check_of
+>>> fast = RowCheckedPredicate(
+...     lambda e: e.tool == "Read", lambda row: row["tool"] == "Read", frozenset({"tool"})
+... )
+>>> sorted(row_check_of(fast)[0])
+['seq', 'tool']
+>>> [e.tool for e in index.query_events(ext.parse({}), QueryContext(predicates=(fast,))).items]
+['Read']
 
 ```
 

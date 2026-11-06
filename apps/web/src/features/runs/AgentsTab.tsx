@@ -7,6 +7,7 @@ import { formatCount } from "../../lib/format";
 import { runsMessages as t } from "./messages";
 import { EVENT_PAGE_SIZE, TEXT_DELTA_EVENT } from "./runsConfig";
 import { buildEventRows, collectPrefixes, isErrorEvent, summarizeActors, summarizeEvent, truncate, type EventRow } from "./runsLib";
+import { matchesTypePrefix } from "../../lib/typePrefix";
 
 export interface AgentsTabProps {
   events: readonly RunEvent[];
@@ -66,7 +67,7 @@ export function AgentsTab(p: AgentsTabProps) {
     const q = text.trim().toLowerCase();
     return p.events.filter((e) => {
       if (p.actors.length > 0 && !p.actors.includes(e.actor ?? RUN_WIDE_ACTOR)) return false;
-      if (prefix !== "" && !e.type.startsWith(prefix)) return false;
+      if (!matchesTypePrefix(e.type, prefix)) return false;
       if (errorsOnly && !isErrorEvent(e)) return false;
       return q === "" || `${e.type} ${summaryOf?.(e) ?? summarizeEvent(e, 400)}`.toLowerCase().includes(q);
     });

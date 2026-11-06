@@ -7,6 +7,11 @@
 
 자식 Run(노드의 ``ctx.run_child``, design §5R.7)도 같은 검사·준비를 거친다: 서비스가 엔진의
 자식 Run 준비자(``GraphRuntime.child_preparer``)에 ``prepare_child``를 꽂는다.
+
+정의 조회 출처(5.7R.33y): ``runs.scopes`` 항목의 선택 메서드 ``run_definitions``가 Run의 출처를 주면
+루트 그래프(현재·버전)를 그 출처에서 읽고, 노드 서비스 공급자에게 ``RunEnvironment.definitions``로,
+노드·준비자·자식 Run에게 서비스 ``RUN_DEFINITIONS``로 넘긴다. 출처를 준 공급자가 없으면
+``definitions.lookup`` 그대로다(서비스 ``RUN_DEFINITIONS`` 없음).
 """
 
 from __future__ import annotations
@@ -14,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from pydantic import ValidationError
@@ -57,8 +62,11 @@ from agent_console_store import NotFound, StoreError
 from .errors import DefinitionReadError, RunPreflightError, issues_from_errors
 from .plugins import condition_operators
 from .ports import (
+    RUN_DEFINITIONS,
     DefinitionLookup,
+    DefinitionSource,
     ResumeHandler,
+    RunDefinitionsScoper,
     RunEnvironment,
     RunIssueAnnotator,
     RunPreflight,
@@ -157,17 +165,52 @@ class RunService:
 
     # ------------------------------------------------------------ 정의
 
-    def load_graph(self, graph_id: str, version_hash: str | None = None) -> Graph:
-        """팀 구성(현재 또는 그 버전).
+    def definitions_for(self, project_id: str | None, graph_id: str) -> DefinitionSource | None:
+        """Run의 정의 조회 출처(``runs.scopes``의 선택 메서드 ``run_definitions``, 뒤 공급자가
+        이긴다).
+
+        None이면 ``project_id``가 없거나 정한 공급자가 없다(``definitions.lookup``을 쓴다). 공급자
+        예외는 기록하고 건너뛴다.
+
+        Raises:
+            RunPreflightError: 공급자가 오류 본문을 돌려줬다(Run을 만들지 않는다).
+        """
+        if not project_id:
+            return None
+        found: DefinitionSource | None = None
+        for scoper in self._scopes():
+            if not isinstance(scoper, RunDefinitionsScoper):
+                continue
+            try:
+                result = scoper.run_definitions(project_id, graph_id)
+            except Exception:
+                _log.exception("정의 출처 계산 실패: %s", type(scoper).__name__)
+                continue
+            if isinstance(result, ErrorInfo):
+                raise RunPreflightError(result)
+            if result is not None:
+                found = result
+        return found
+
+    def load_graph(
+        self, graph_id: str, version_hash: str | None = None, *, project_id: str | None = None
+    ) -> Graph:
+        """팀 구성(현재 또는 그 버전). ``project_id``가 있으면 그 Run의 정의 출처에서 읽는다.
 
         Raises:
             DefinitionReadError: 없거나(``not_found``) 읽을 수 없거나 계약에 맞지 않는다.
+            RunPreflightError: 정의 출처 공급자가 막았다.
         """
+        source = self.definitions_for(project_id, graph_id)
+        return self._read_graph(source or self._lookup, graph_id, version_hash)
+
+    @staticmethod
+    def _read_graph(source: DefinitionLookup, graph_id: str, version_hash: str | None) -> Graph:
         try:
             if version_hash is None:
-                document: Mapping[str, Any] = self._lookup.get(GRAPH_KIND, graph_id).document
+                document: Mapping[str, Any] = source.get(GRAPH_KIND, graph_id).document
             else:
-                content = self._lookup.get_version(GRAPH_KIND, graph_id, version_hash).content
+                content = source.get_version(GRAPH_KIND, graph_id, version_hash).content
                 document = content or {}
             return Graph.model_validate(document)
         except StoreError as exc:
@@ -178,37 +221,62 @@ class RunService:
                 ErrorCodes.VALIDATION_FAILED, "팀 구성 파일이 계약 형식에 맞지 않습니다", issues
             ) from None
 
-    def find_graph(self, graph_id: str) -> Graph | None:
-        """지금 팀 구성(읽을 수 없으면 None)."""
+    def find_graph(self, graph_id: str, *, project_id: str | None = None) -> Graph | None:
+        """지금 팀 구성(읽을 수 없거나 출처 공급자가 막으면 None)."""
         try:
-            return self.load_graph(graph_id)
-        except DefinitionReadError:
+            return self.load_graph(graph_id, project_id=project_id)
+        except (DefinitionReadError, RunPreflightError):
             return None
 
     def graph_of_run(self, run: Run) -> Graph | None:
-        """Run 당시 팀 구성(버전 이력). 이력에 없으면 현재 정의가 같은 버전일 때만 그것을 쓴다."""
+        """Run 당시 팀 구성(버전 이력). 이력에 없으면 현재 정의가 같은 버전일 때만 그것을 쓴다.
+
+        Run에 ``project_id``가 있으면 그 Run의 정의 출처(``definitions_for``)에서 찾는다.
+        """
         try:
-            version = self._lookup.get_version(GRAPH_KIND, run.graph_id, run.graph_version)
+            scoped = self.definitions_for(run.project_id, run.graph_id)
+        except RunPreflightError:
+            return None
+        source = scoped or self._lookup
+        try:
+            version = source.get_version(GRAPH_KIND, run.graph_id, run.graph_version)
             if version.content is not None:
                 return Graph.model_validate(version.content)
         except (NotFound, StoreError, ValueError):
             pass
-        current = self.find_graph(run.graph_id)
+        try:
+            current: Graph | None = self._read_graph(source, run.graph_id, None)
+        except DefinitionReadError:
+            current = None
         if current is not None and graph_hash(current) == run.graph_version:
             return current
         return None
 
     # ------------------------------------------------------------ 서비스·검증
 
-    def current_services(self) -> Services:
-        """지금 노드 서비스(공급자들의 값을 순서대로 합친 것, 뒤 공급자가 이긴다)."""
+    def current_services(self, definitions: DefinitionSource | None = None) -> Services:
+        """지금 노드 서비스(공급자들의 값을 순서대로 합친 것, 뒤 공급자가 이긴다).
+
+        Args:
+            definitions: 이 Run의 정의 조회 출처(``definitions_for``). 있으면 공급자에게
+                ``RunEnvironment.definitions``로 넘기고 서비스 ``RUN_DEFINITIONS``를 더한다(엔진
+                기본 서비스는 바꾸지 않는다). None이면 지금과 같다.
+        """
         self._before_use()
+        env = (
+            self.environment
+            if definitions is None
+            else replace(self.environment, definitions=definitions)
+        )
         items: dict[ServiceKey[Any], Any] = {}
         for provider in self._providers():
             try:
-                items.update(provider.services(self.environment))
+                items.update(provider.services(env))
             except Exception:
                 _log.exception("노드 서비스 공급자 실패: %s", type(provider).__name__)
+        if definitions is not None:
+            items[RUN_DEFINITIONS] = definitions
+            return Services(items)
         services = Services(items)
         self.runtime.services = services
         return services
@@ -284,7 +352,12 @@ class RunService:
         self, graph: Graph, services: Services, project_id: str | None
     ) -> tuple[Services, list[Issue]]:
         """실행 범위 공급자(``runs.scopes``)들의 서비스를 더한 사본과 경고(순서대로, 실패는 기록하고
-        건너뛴다)."""
+        건너뛴다).
+
+        Raises:
+            RunPreflightError: 공급자 결과의 선택 속성 ``errors``(X26 거부, 5.7R.33g)에 오류가
+                있다(첫 오류). Run을 만들지 않는다.
+        """
         warnings: list[Issue] = []
         for scoper in self._scopes():
             try:
@@ -294,6 +367,10 @@ class RunService:
                 continue
             if found is None:
                 continue
+            errors = getattr(found, "errors", None) or ()  # 선택 속성(5.7R.33g)
+            for error in errors:
+                if isinstance(error, ErrorInfo):
+                    raise RunPreflightError(error)
             for key, value in found.services.items():
                 services = services.with_(key, value)
             warnings.extend(found.warnings)
@@ -345,6 +422,29 @@ class RunService:
 
     # ------------------------------------------------------------ 실행
 
+    async def start_graph(
+        self,
+        graph_id: str,
+        input: Mapping[str, Any] | None = None,
+        *,
+        version_hash: str | None = None,
+        origin: str = "api",
+        project_id: str | None = None,
+    ) -> RunHandle:
+        """저장된 팀 구성을 id로 실행한다(``POST /runs``): 정의 출처를 정하고 그 출처에서 그래프를
+        읽은 뒤 ``start_run``과 같이 시작한다(출처는 한 번만 정한다).
+
+        Raises:
+            DefinitionReadError: 그래프를 읽지 못했다(그 출처에 없으면 ``not_found``).
+            RunPreflightError: 정의 출처 공급자·준비자 사전 점검이 막았다.
+            GraphValidationError: 실행을 막는 이슈.
+        """
+        source = self.definitions_for(project_id, graph_id)
+        graph = self._read_graph(source or self._lookup, graph_id, version_hash)
+        return await self._start(
+            graph, input, origin=origin, project_id=project_id, definitions=source
+        )
+
     async def start_run(
         self,
         graph: Graph,
@@ -367,10 +467,36 @@ class RunService:
 
         Raises:
             GraphValidationError: 실행을 막는 이슈. Run을 만들지 않는다.
-            RunPreflightError: 준비자 사전 점검이 막았다(예: ``backend.unresolved``). Run을 만들지
-                않는다.
+            RunPreflightError: 준비자 사전 점검(예: ``backend.unresolved``)이나 정의 출처 공급자가
+                막았다. Run을 만들지 않는다.
         """
-        services, scope_warnings = self.scope(graph, self.current_services(), project_id)
+        source = self.definitions_for(project_id, graph.id)
+        return await self._start(
+            graph,
+            input,
+            origin=origin,
+            conversation_id=conversation_id,
+            extra_services=extra_services,
+            seed=seed,
+            resumed_from=resumed_from,
+            project_id=project_id,
+            definitions=source,
+        )
+
+    async def _start(
+        self,
+        graph: Graph,
+        input: Mapping[str, Any] | None,
+        *,
+        origin: str,
+        conversation_id: str | None = None,
+        extra_services: Mapping[ServiceKey[Any], Any] | None = None,
+        seed: Mapping[str, Mapping[str, Any]] | None = None,
+        resumed_from: str | None = None,
+        project_id: str | None = None,
+        definitions: DefinitionSource | None = None,
+    ) -> RunHandle:
+        services, scope_warnings = self.scope(graph, self.current_services(definitions), project_id)
         self._raise_blockers(graph, services)
         self._raise_preflight(graph, services)
         prep = self._prepare(graph, services)

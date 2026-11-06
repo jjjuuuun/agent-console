@@ -11,6 +11,7 @@
 - 저장: 실행 기록 표(`runs`·`node_runs`·`run_events`·`interactions`)는 이 모듈의 마이그레이션 계보 `runs`(`storage/migrations/versions`, 버전 테이블 `alembic_version_runs`)가 소유한다. `runs_0001`은 legacy가 만든 표를 넘겨받는 빈 기준점, `runs_0002`는 계보 새 열(`runs.root_run_id`·`parent_node_id`, `node_runs.call`·`invoked_by`, `interactions.root_run_id`)과 색인이다. 모듈을 끄면 계보를 올리지 않는다. 저장소 코드는 `ac-store`에 있다. 되돌릴 때는 `runs` 계보만 되돌린다(`call > 0`인 NodeRun 행은 옛 기본키에 둘 수 없어 사라진다). legacy는 다운그레이드하지 않는다.
 - 시작할 때 **가장 먼저** 이전 프로세스의 미종료 Run을 끊김으로 정리한다(`recover_unfinished_runs`).
 - 엔진은 노드 타입·팀 의미를 모른다. 팀 규칙은 `runs.preparers`, 노드 서비스는 `runs.services`, 대화 턴 이어 가기 같은 특수 경로는 `runs.resume_handlers`로 받는다(모두 여러 제공자 포트, 없으면 그 부분만 꺼진다).
+- 실행별 정의 출처(5.7R.33y): `runs.scopes` 항목의 선택 메서드 `run_definitions(project_id, graph_id)`(`RunDefinitionsScoper`)가 출처(`DefinitionSource` — `get`·`get_version`, 선택 `read_content`·`list_files`·`read_file`)를 주면 루트 그래프(현재·버전)·`graph_of_run`을 그 출처에서만 읽고(라이브러리로 넘어가지 않음), 노드 서비스 공급자에게 `RunEnvironment.definitions`, 노드·준비자·자식 Run에게 서비스 `RUN_DEFINITIONS`(`runs.definitions`)로 넘긴다. `ErrorInfo`를 돌려주면 Run을 만들지 않고 거부(`RunPreflightError`). `project_id`가 없거나 메서드가 없으면 지금 동작. `POST /runs`는 `RunService.start_graph`로 출처를 한 번만 정한다.
 
 ## 설치
 

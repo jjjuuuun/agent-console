@@ -9,7 +9,10 @@
     - ``ImportModuleSettings``: 설치자 설정(``modules.options.mod-imports``). 출처는 프로젝트
       폴더 안뿐이다(사용자 ``~/.claude`` 없음, 5.7R.30b).
     - ``import_factories_of``·``import_error_reply``: 출처 공장 레지스트리 찾기·오류 변환.
-    - 포트: ``DEFINITIONS_STORE``(필수)·``SECRET_RULES``(선택).
+    - 포트: ``DEFINITIONS_STORE``(필수)·``SECRET_RULES``·``PROJECT_FOLDERS``·``DEFINITIONS_SPACES``
+      (선택, 5.7R.33k — 출처 = 등록 프로젝트 폴더, 저장 위치 = 그 프로젝트 공간 또는 공용).
+    - ``ProjectImports``·``ImportProjectError``·``ImportTarget``: 요청 ``project``·``target`` →
+      가져오기 서비스(서버 없이도 쓴다).
     - ``testing.local_definitions_module``: 단독 실행·테스트용 ``definitions.store`` 제공 모듈.
 """
 
@@ -23,18 +26,31 @@ from .module import (
     import_factories_of,
     module,
 )
-from .ports import DEFINITIONS_STORE, SECRET_RULES, SecretRulesReader
+from .ports import (
+    DEFINITIONS_SPACES,
+    DEFINITIONS_STORE,
+    PROJECT_FOLDERS,
+    SECRET_RULES,
+    SecretRulesReader,
+)
+from .projects import ImportProjectError, ImportScope, ImportTarget, ProjectImports
 from .routes import build_router
 from .settings import HOME_REMOVED_REASON, ImportModuleSettings
 
 __all__ = [
+    "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "HOME_REMOVED_REASON",
     "MODULE_ID",
+    "PROJECT_FOLDERS",
     "SECRET_RULES",
     "WEB_ROLES",
     "ImportModuleSettings",
+    "ImportProjectError",
+    "ImportScope",
+    "ImportTarget",
     "ImportsModule",
+    "ProjectImports",
     "SecretRulesReader",
     "build_router",
     "import_error_reply",

@@ -17,13 +17,11 @@ from agent_console_contracts.logs import (
     LogEvent,
     LogFilterFieldInfo,
     LogMetricInfo,
-    LogProjectSettings,
     LogQuerySchema,
     LogSettings,
     LogTaxonomy,
 )
 
-from ._projects import DEFAULT_UNGROUPED_LABEL
 from ._taxonomy import error_categories, hidden_categories, load_default_taxonomy, merge_taxonomy
 from ._titles import (
     DEFAULT_SESSION_TITLE_RULES,
@@ -72,7 +70,7 @@ class LogFilter:
     Attributes:
         category: 범주·태그(`log_tags`).
         agent: actor·from·to 중 하나. `from_`·`to`: 그쪽만.
-        project: 프로젝트 묶음 id(`"~ungrouped"` = 묶기 규칙에 맞지 않음).
+        project: 등록 프로젝트 id(`"~ungrouped"` = 어느 등록 프로젝트에도 들지 않음).
         since·until: 시각(epoch 초, 이벤트 시각 없으면 색인 시각). `since <= t < until`.
         thread: thread id(여러 값, 레인 필터).
         q: 검색어(대소문자 무시 부분 일치, 원문 `raw` 제외, 500자).
@@ -380,25 +378,24 @@ class QueryContext:
     """질의 때 적용하는 사용자 데이터(색인을 다시 만들지 않고 바로 반영된다).
 
     Attributes:
-        projects: 프로젝트 묶기 규칙.
+        project_for: 작업 폴더(cwd) → 등록 프로젝트 id(없으면 None). 세션 `project_id`·필터
+            `project`·차원 `project`가 이것 하나로 정해진다(5.7R.33i). None이면 프로젝트 없음.
         error_categories: 오류로 셀 범주(분류 체계 `tone == "danger"`, F-25).
         hidden_categories: 타임라인에서 숨길 범주(`visible: false`).
         tz: `day`·`hour` 차원 시간대(None = 서버 로컬).
         pair_start_stages·pair_end_stages: 소요 시간 짝(같은 thread+call_id)의 단계 이름.
-        ungrouped_label: 정책 `none` 묶음 표시 이름.
         session_title_rules: 세션 제목 순위 규칙(위에서부터, 후보가 있는 첫 규칙이 이긴다, 5R.19).
         scope: 필터 `scope`의 해석 결과(X27, `LogQueryExtensions.refine`이 채운다).
         predicates: 확장 필터의 이벤트 판정 함수(X28, 모두 참이어야 맞음).
         extra_names: 집계 요청 필터(`LogAggregateRequest.filter`)를 읽을 때 받을 확장 필터 이름.
     """
 
-    projects: LogProjectSettings | None = None
+    project_for: Callable[[str], str | None] | None = field(default=None, compare=False)
     error_categories: frozenset[str] = frozenset()
     hidden_categories: frozenset[str] = frozenset()
     tz: tzinfo | None = None
     pair_start_stages: frozenset[str] = field(default_factory=lambda: frozenset({"start"}))
     pair_end_stages: frozenset[str] = field(default_factory=lambda: frozenset({"complete"}))
-    ungrouped_label: str = DEFAULT_UNGROUPED_LABEL
     session_title_rules: tuple[SessionTitleRule, ...] = DEFAULT_SESSION_TITLE_RULES
     scope: LogScope | None = None
     predicates: tuple[EventPredicate, ...] = ()
@@ -425,8 +422,11 @@ def query_context(
     base_taxonomy: LogTaxonomy | None = None,
     tz: tzinfo | None = None,
     session_title_rules: tuple[SessionTitleRule, ...] | None = None,
+    project_for: Callable[[str], str | None] | None = None,
 ) -> QueryContext:
     """설정(`WorkspaceSettings.logs`)에서 질의 맥락을 만든다.
+
+    옛 묶기 규칙 `settings.projects`는 읽지 않는다(K33-15). 프로젝트는 `project_for`로만 정한다.
 
     Args:
         settings: 로그 설정(없으면 기본값만).
@@ -434,6 +434,7 @@ def query_context(
         tz: 집계 시간대.
         session_title_rules: 세션 제목 순위 규칙(없으면 패키지 데이터
             `default_session_title_rules.yaml`).
+        project_for: cwd → 등록 프로젝트 id(`QueryContext.project_for`).
     """
     base = base_taxonomy if base_taxonomy is not None else load_default_taxonomy()
     taxonomy = merge_taxonomy(base, settings.taxonomy if settings else None)
@@ -443,7 +444,7 @@ def query_context(
         else load_default_session_title_rules()
     )
     return QueryContext(
-        projects=settings.projects if settings else None,
+        project_for=project_for,
         error_categories=error_categories(taxonomy),
         hidden_categories=hidden_categories(taxonomy),
         tz=tz,

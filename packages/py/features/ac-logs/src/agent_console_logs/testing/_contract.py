@@ -19,8 +19,6 @@ from agent_console_contracts.logs import (
     LogAggregateRequest,
     LogDocumentRef,
     LogLane,
-    LogProjectGroup,
-    LogProjectSettings,
     TokenSample,
 )
 from agent_console_logs._build import build_record
@@ -58,6 +56,18 @@ def make_record(
         observed_at=observed_at,
         repo_root=repo_root,
     )
+
+
+def _registered(folders: dict[str, str]) -> Any:
+    """등록 id → 폴더(접두 비교, 하위 폴더 포함)로 `project_for`를 만든다."""
+
+    def project_for(cwd: str) -> str | None:
+        for pid, folder in folders.items():
+            if cwd == folder or cwd.startswith(folder.rstrip("/") + "/"):
+                return pid
+        return None
+
+    return project_for
 
 
 def _ctx(**kw: Any) -> QueryContext:
@@ -245,14 +255,15 @@ class LogIndexContractTests:
 
     def test_project_filter(self) -> None:
         index = self._sample()
-        groups = LogProjectSettings(groups=[LogProjectGroup(id="p", match=["/w/**"])])
-        ctx = _ctx(projects=groups)
+        # 등록 프로젝트 id(5.7R.33i): /w 아래(하위 폴더 포함)만 "p", 나머지는 프로젝트 없음
+        ctx = _ctx(project_for=_registered({"p": "/w"}))
         got = index.query_events(LogFilter(project=("p",)), ctx).items
         assert {e.session for e in got} == {"S1"}
         rest = index.query_events(LogFilter(project=(UNGROUPED_PROJECT,)), ctx).items
         assert {e.category for e in rest} == {"error", "other"}
-        own = index.query_events(LogFilter(project=("/other",)), ctx).items
-        assert [e.category for e in own] == ["error"]
+        assert index.query_events(LogFilter(project=("/other",)), ctx).items == []
+        # 프로젝트 판정이 없으면(단독 사용) 어떤 id도 맞지 않는다
+        assert index.query_events(LogFilter(project=("p",)), _ctx()).items == []
 
     def test_keyset_pages_and_order(self) -> None:
         index = self._sample()
@@ -331,8 +342,13 @@ class LogIndexContractTests:
         assert s1.thread_count == 1
         assert (s1.first_time, s1.last_time) == (100.0, 102.0)
         assert s1.cwd == "/w/proj"
-        assert s1.project is not None
-        assert s1.project.id == "/w/proj"
+        assert s1.project_id is None  # 프로젝트 판정 없음
+        assert s1.project is None
+        with_projects = index.list_sessions(LogFilter(), _ctx(project_for=_registered({"p": "/w"})))
+        by_id = {s.session: s.project_id for s in with_projects}
+        assert by_id == {"S1": "p", "S2": None}
+        assert with_projects[1].project is not None
+        assert with_projects[1].project.id == "p"
         assert sessions[0].errors == 1
         assert sessions[0].title == ""
         assert index.list_sessions(LogFilter(limit=1), ctx)[0].session == "S2"

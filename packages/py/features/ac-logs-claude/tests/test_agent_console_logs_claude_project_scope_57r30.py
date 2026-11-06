@@ -1,10 +1,10 @@
 """5.7R.30 후속: `claude-code-jsonl`은 앱에 등록된 프로젝트 폴더의 세션만 읽는다.
 
 빈 HOME 픽스처의 `~/.claude/projects`에 프로젝트 둘(`/work/demo`·`/work/other`)과 앱 전용 자격 폴더
-(5.7R.30b: `<앱 workspace>/.state/claude/projects`)를 두고 범위(`current`·`registered`)·등록 없음·
-넓은 roots·범위 변경 뒤 정리를 확인한다. 두 루트 모두 같은 범위 필터를 지난다. 실제 `~/.claude`는
-읽지 않는다. 세션 기록(본 세션 + 서브에이전트)은 `tests/data` 없이 `_write_project`가 코드로 만든다
-(공개본에는 테스트 데이터가 없다).
+(5.7R.30b: `<앱 workspace>/.state/claude/projects`)를 두고 범위(5.7R.33i부터 등록 전체 하나)·등록
+없음·넓은 roots·범위 변경 뒤 정리를 확인한다. 두 루트 모두 같은 범위 필터를 지난다.
+실제 `~/.claude`는 읽지 않는다. 세션 기록(본 세션 + 서브에이전트)은 `tests/data` 없이
+`_write_project`가 코드로 만든다(공개본에는 테스트 데이터가 없다).
 """
 
 from __future__ import annotations
@@ -25,10 +25,12 @@ SOURCE = "claude-code-jsonl"
 SESSION = "11111111-1111-4111-8111-111111111111"
 
 
-def _row(kind: str, uuid: str, second: int, message: dict[str, Any], **extra: Any) -> str:
+def _row(
+    kind: str, uuid: str, second: int, message: dict[str, Any], *, cwd: str, **extra: Any
+) -> str:
     row: dict[str, Any] = {
         "sessionId": SESSION,
-        "cwd": "/work/demo",
+        "cwd": cwd,
         "version": "2.1.0",
         "isSidechain": False,
         "type": kind,
@@ -40,12 +42,16 @@ def _row(kind: str, uuid: str, second: int, message: dict[str, Any], **extra: An
     return json.dumps(row, ensure_ascii=False)
 
 
-def _write_project(dest: Path) -> None:
-    """최소 프로젝트 폴더: 본 세션 jsonl 하나 + 서브에이전트 jsonl·meta 하나(커서 2개)."""
+def _write_project(dest: Path, cwd: str | Path | None = None) -> None:
+    """최소 프로젝트 폴더: 본 세션 jsonl 하나 + 서브에이전트 jsonl·meta 하나(커서 2개).
+
+    `cwd`가 없으면 폴더 이름(`-work-demo` → `/work/demo`)에서 만든다.
+    """
+    where = str(cwd) if cwd is not None else dest.name.replace("-", "/")
     sub = dest / SESSION / "subagents"
     sub.mkdir(parents=True)
     main = [
-        _row("user", "u1", 0, {"role": "user", "content": "문서를 정리해 줘"}),
+        _row("user", "u1", 0, {"role": "user", "content": "문서를 정리해 줘"}, cwd=where),
         _row(
             "assistant",
             "a1",
@@ -57,6 +63,7 @@ def _write_project(dest: Path) -> None:
                 "content": [{"type": "text", "text": "정리했습니다."}],
                 "usage": {"input_tokens": 1, "output_tokens": 1},
             },
+            cwd=where,
         ),
     ]
     side = [
@@ -67,6 +74,7 @@ def _write_project(dest: Path) -> None:
             {"role": "user", "content": "문서를 검토해 줘"},
             isSidechain=True,
             agentId="a1b2",
+            cwd=where,
         ),
     ]
     (dest / f"{SESSION}.jsonl").write_text("\n".join(main) + "\n", encoding="utf-8")
@@ -115,21 +123,30 @@ def test_project_key_rule() -> None:
     assert project_key("/a.b", keep=".") == "-a.b"
 
 
-def test_current_scope_reads_only_current_project(home: Path) -> None:
+def test_scope_is_all_registered_projects(home: Path) -> None:
+    """5.7R.33i: 범위는 등록 전체 하나. 등록 안 된 프로젝트 기록은 건너뛴다."""
     index = MemoryLogIndex()
-    folders = [ProjectFolders(current=(Path("/work/demo"),), registered=(Path("/work/demo"),))]
+    folders = [ProjectFolders(registered=(Path("/work/demo"),))]
     ingestor = _ingestor(index, home, folders)
     report = ingestor.scan(_settings())
     assert report.sources[0].error_code is None
     assert _projects(index) == {"-work-demo"}
     assert ingestor.scope_skipped(SOURCE) > 0  # 다른 프로젝트 기록은 건너뜀
+    both = [ProjectFolders(registered=(Path("/work/demo"), Path("/work/other")))]
+    index2 = MemoryLogIndex()
+    _ingestor(index2, home, both).scan(_settings())
+    assert _projects(index2) == {"-work-demo", "-work-other"}
 
 
-def test_registered_scope_reads_all_registered(home: Path) -> None:
+@pytest.mark.parametrize("old", ["current", "registered"])
+def test_old_project_scope_value_is_ignored(home: Path, old: str) -> None:
+    """옛 `project_scope` 값이 있어도 결과가 같다(스키마 `deprecated`, 앱이 정보 이슈)."""
+    props: Any = ClaudeCodeJsonlSource.descriptor.config_schema["properties"]
+    assert props["project_scope"]["deprecated"] is True
+    assert "default" not in props["project_scope"]
+    both = [ProjectFolders(registered=(Path("/work/demo"), Path("/work/other")))]
     index = MemoryLogIndex()
-    both = (Path("/work/demo"), Path("/work/other"))
-    folders = [ProjectFolders(current=(Path("/work/demo"),), registered=both)]
-    _ingestor(index, home, folders).scan(_settings({"project_scope": "registered"}))
+    _ingestor(index, home, both).scan(_settings({"project_scope": old}))
     assert _projects(index) == {"-work-demo", "-work-other"}
 
 
@@ -143,7 +160,7 @@ def test_no_registered_project_reads_nothing(home: Path) -> None:
 
 def test_configured_roots_are_still_filtered(home: Path) -> None:
     index = MemoryLogIndex()
-    folders = [ProjectFolders(current=(Path("/work/other"),), registered=(Path("/work/other"),))]
+    folders = [ProjectFolders(registered=(Path("/work/other"),))]
     ingestor = _ingestor(index, home, folders)
     ingestor.scan(_settings({"roots": [str(home / ".claude" / "projects")]}))
     assert _projects(index) == {"-work-other"}
@@ -161,15 +178,15 @@ def test_app_auth_folder_sessions_are_read_and_credentials_never(
     project = tmp_path / "proj"
     project.mkdir()
     app_dir = workspace / ".state" / "claude"
-    _write_project(app_dir / "projects" / project_key(project))
+    _write_project(app_dir / "projects" / project_key(project), cwd=project)
     _write_project(app_dir / "projects" / "-work-unregistered")
     (app_dir / ".credentials.json").write_text('{"token": "never-read"}', encoding="utf-8")
     (app_dir / "projects" / ".credentials.json").write_text("{}", encoding="utf-8")
     index = MemoryLogIndex()
     opened = RecordingOpen()
-    folders = [ProjectFolders(current=(project,), registered=(project, Path("/work/demo")))]
+    folders = [ProjectFolders(registered=(project, Path("/work/demo")))]
     ingestor = _ingestor(index, home, folders, open_read=opened, paths={"workspace": workspace})
-    ingestor.scan(_settings({"project_scope": "registered"}))
+    ingestor.scan(_settings())
     # 앱 세션(proj)과 CLI 세션(~/.claude의 /work/demo)만. 등록 안 된 키는 두 루트 모두 무시.
     assert _projects(index) == {project_key(project), "-work-demo"}
     assert opened.opened
@@ -200,21 +217,42 @@ def _ctx(home: Path, folders: ProjectFolders, workspace: Path | None) -> Any:
 
 
 def test_scope_change_purges_out_of_scope_index(home: Path) -> None:
-    """범위를 좁히면 이미 색인된 범위 밖 기록을 지우고 범위 안만 다시 색인한다."""
+    """등록 해제(범위가 좁아짐)면 이미 색인된 범위 밖 기록을 지우고 범위 안만 다시 색인한다."""
     index = MemoryLogIndex()
     both = (Path("/work/demo"), Path("/work/other"))
-    folders = [ProjectFolders(current=(Path("/work/demo"),), registered=both)]
+    folders = [ProjectFolders(registered=both)]
     ingestor = _ingestor(index, home, folders)
-    ingestor.scan(_settings({"project_scope": "registered"}))
+    ingestor.scan(_settings())
     assert _projects(index) == {"-work-demo", "-work-other"}
     before = len(index._events)
-    ingestor.scan(_settings({"project_scope": "current"}))
+    folders[0] = ProjectFolders(registered=(Path("/work/demo"),))
+    ingestor.scan(_settings())
     assert _projects(index) == {"-work-demo"}
     purged = ingestor.scope_purged(SOURCE)
     assert purged == 2  # other 프로젝트의 세션 + 서브에이전트 기록
     assert len(index._events) < before
-    ingestor.scan(_settings({"project_scope": "current"}))
+    ingestor.scan(_settings())
     assert ingestor.scope_purged(SOURCE) == purged  # 범위 안만 남으면 다시 지우지 않는다
+
+
+def test_archived_project_stops_collecting_but_keeps_index(home: Path) -> None:
+    """보관 프로젝트(`retained`)는 새로 읽지 않지만 이미 색인된 기록은 지우지 않는다."""
+    index = MemoryLogIndex()
+    folders = [ProjectFolders(registered=(Path("/work/demo"), Path("/work/other")))]
+    ingestor = _ingestor(index, home, folders)
+    ingestor.scan(_settings())
+    folders[0] = ProjectFolders(registered=(Path("/work/demo"),), retained=(Path("/work/other"),))
+    other = home / ".claude" / "projects" / "-work-other" / f"{SESSION}.jsonl"
+    before = other.stat().st_size
+    with other.open("a", encoding="utf-8") as stream:
+        stream.write(_row("user", "u9", 9, {"role": "user", "content": "더"}, cwd="/work/other"))
+        stream.write("\n")
+    ingestor.scan(_settings())
+    assert _projects(index) == {"-work-demo", "-work-other"}
+    assert ingestor.scope_purged(SOURCE) == 0
+    ref = f"-work-other/{SESSION}.jsonl"
+    cursor = next(c for c in index.list_cursors(SOURCE) if c.ref == ref)
+    assert cursor.offset <= before  # 보관 뒤 덧붙인 줄은 읽지 않았다
 
 
 def test_standalone_without_projects_is_unfiltered(home: Path) -> None:
@@ -237,7 +275,7 @@ def test_old_project_roots_is_ignored(home: Path, tmp_path: Path) -> None:
     assert props["workspace_roots"]["default"] == [".state/claude/projects"]
     index = MemoryLogIndex()
     opened = RecordingOpen()
-    folders = [ProjectFolders(current=(project,), registered=(project,))]
+    folders = [ProjectFolders(registered=(project,))]
     _ingestor(index, home, folders, open_read=opened).scan(
         _settings({"project_roots": [".agent-console/claude/projects"]})
     )

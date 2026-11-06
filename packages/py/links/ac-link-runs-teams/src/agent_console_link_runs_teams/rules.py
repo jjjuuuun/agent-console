@@ -7,6 +7,10 @@
 계산은 ``ac-teams``(``validate_team``·``merge_validation``·``prepare_run``·``validation_summary``)에
 있다. 여기서는 정의 읽기·공통 설정·리소스·디스크립터(플러그인 레지스트리)를 모아 넘긴다. FastAPI를
 모른다. 실행 모듈(``mod-runs``)의 프로토콜은 구조적으로 만족한다(그 패키지를 import하지 않는다).
+
+Run의 정의 조회 출처(5.7R.33y): 실행 환경 ``definitions``(노드 서비스 공급)·노드 서비스
+``RUN_DEFINITIONS``(검사·사전 점검)가 있으면 에이전트·팀 구성(고정 버전)·리소스(본문) 조회를 그
+출처 하나에 묶는다(``sources.lookups_from``). 없으면 지금처럼 모듈이 받은 포트로 찾는다.
 """
 
 from __future__ import annotations
@@ -61,8 +65,9 @@ from agent_console_teams import (
 
 from .cache import GraphValidationCache, workspace_revision
 from .fixes import DEFAULT_ISSUE_FIXES, IssueFixes
-from .ports import DefinitionLookup, GraphLoader, RunChecker
+from .ports import RUN_DEFINITIONS, DefinitionLookup, DefinitionSource, GraphLoader, RunChecker
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
+from .sources import RunLookups, lookups_from
 
 _log = logging.getLogger("agent_console_link_runs_teams")
 
@@ -159,14 +164,35 @@ class TeamRules:
         """중첩 팀 조회 함수(팀 구성 읽기가 없으면 None)."""
         return self.find_team if self._graphs() is not None else None
 
-    def agents_for(self, plan: TeamPlan) -> dict[str, Agent]:
-        """팀 구성이 쓰는 에이전트 정의(id → 정의, 없는 것은 빠짐)."""
+    def agents_for(self, plan: TeamPlan, services: Services | None = None) -> dict[str, Agent]:
+        """팀 구성이 쓰는 에이전트 정의(id → 정의, 없는 것은 빠짐). ``services``에 Run의 정의 출처
+        (``RUN_DEFINITIONS``)가 있으면 그 출처에서만 찾는다."""
+        find = self._bound(services).find_agent
         found: dict[str, Agent] = {}
         for agent_id in set(plan.agent_refs.values()):
-            agent = self.find_agent(agent_id)
+            agent = find(agent_id)
             if agent is not None:
                 found[agent_id] = agent
         return found
+
+    def run_lookups(self, source: DefinitionSource) -> RunLookups:
+        """Run의 정의 출처 하나에 묶인 조회(에이전트·팀 구성·리소스, 5.7R.33y)."""
+        return lookups_from(source)
+
+    def _bound(self, services: Services | None) -> _Bound:
+        """이 검사·준비가 쓸 조회: Run의 정의 출처가 있으면 그 출처, 없으면 모듈이 받은 포트."""
+        source = services.get(RUN_DEFINITIONS) if services is not None else None
+        if source is None:
+            return _Bound(self.find_agent, self._resources(), self.team_lookup())
+        return self._bound_to(source)
+
+    def _bound_to(self, source: DefinitionSource) -> _Bound:
+        lookups = self.run_lookups(source)
+        # 켜고 끄기는 지금과 같다: 리소스 기능(``resources.lookup``)·팀 구성 읽기가 없으면
+        # 그 조회도 없다
+        resources = lookups.resources if self._resources() is not None else None
+        teams = lookups.find_team if self._graphs() is not None else None
+        return _Bound(lookups.find_agent, resources, teams)
 
     # ------------------------------------------------------------ runs.services
 
@@ -174,47 +200,55 @@ class TeamRules:
         """노드 서비스(``ac-nodes-core`` 키). ``env``는 실행 환경(``working_directory``·
         ``run_files_root``)."""
         workspace = self.workspace
+        source = getattr(env, "definitions", None)  # Run의 정의 출처(5.7R.33y, 없으면 None)
+        bound = (
+            self._bound_to(source)
+            if source is not None
+            else _Bound(self.find_agent, self._resources(), self.team_lookup())
+        )
         items: dict[ServiceKey[Any], Any] = {
-            AGENT_LOOKUP: self.find_agent,
+            AGENT_LOOKUP: bound.find_agent,
             WORKING_DIRECTORY: str(env.working_directory),
             WORKSPACE_SETTINGS_SERVICE: workspace,
             RUN_FILES_ROOT: str(env.run_files_root),
             ERROR_FIXES: self.error_fix,
         }
-        resources = self._resources()
-        if resources is not None:
-            items[RESOURCE_LOOKUP] = resources
+        if bound.resources is not None:
+            items[RESOURCE_LOOKUP] = bound.resources
         if workspace.default_backend:
             items[DEFAULT_BACKEND] = workspace.default_backend
-        teams = self.team_lookup()
-        if teams is not None:
-            items[TEAM_LOOKUP] = teams
+        if bound.teams is not None:
+            items[TEAM_LOOKUP] = bound.teams
         return items
 
     # ------------------------------------------------------------ runs.preparers
 
-    def team_issues(self, graph: Graph, *, plan: TeamPlan | None = None) -> list[Issue]:
-        """팀 구성 의미 검증(그래프 구조 검사는 빼고 — 엔진 검증과 겹치지 않게)."""
+    def team_issues(
+        self, graph: Graph, *, plan: TeamPlan | None = None, services: Services | None = None
+    ) -> list[Issue]:
+        """팀 구성 의미 검증(그래프 구조 검사는 빼고 — 엔진 검증과 겹치지 않게). ``services``에
+        Run의 정의 출처가 있으면 에이전트·리소스·중첩 팀을 그 출처에서만 찾는다."""
         catalog = self._catalog()
         workspace = self.workspace
         p = plan or catalog.plan(graph)
         registries = self._registries()
+        bound = self._bound(services)
         return validate_team(
             graph,
             node_types=catalog.node_types,
             edge_types=catalog.edge_types,
             strategies=catalog.strategies.values(),
-            agents=self.agents_for(p),
+            agents=self.agents_for(p, services),
             workspace=workspace,
             backends=catalog.backends,
             settings_validators=catalog.settings_validators,
             default_backend=workspace.default_backend,
-            resources=self._resources(),
+            resources=bound.resources,
             resource_types=self.types,
             resolve_ports=port_resolver(registries) if isinstance(registries, Registries) else None,
             graph_checks=False,
             plan=p,
-            teams=self.team_lookup(),
+            teams=bound.teams,
         )
 
     def check(
@@ -233,7 +267,7 @@ class TeamRules:
         engine = list(engine_issues)
         if not team_rules_apply(engine):
             return []
-        merged = merge_validation(engine, self.team_issues(graph))
+        merged = merge_validation(engine, self.team_issues(graph, services=services))
         return merged[len(engine) :]
 
     def error_fix(self, code: str, graph: Graph, node_id: str | None) -> Fix | None:
@@ -262,7 +296,7 @@ class TeamRules:
         if plan is None:
             return None
         workspace = self.workspace
-        agents = self.agents_for(plan)
+        agents = self.agents_for(plan, services)
         resolved = resolve_backends(
             plan,
             agents=agents,
@@ -309,6 +343,15 @@ class TeamRules:
             graph, self.workspace, scope_layers=_scope_layers(services)
         ).effective.value.working_directory
         return value or services.get(WORKING_DIRECTORY) or None
+
+
+@dataclass(frozen=True)
+class _Bound:
+    """검사·준비·노드 서비스가 쓸 조회 묶음(출처 하나 기준)."""
+
+    find_agent: Callable[[str], Agent | None]
+    resources: ResourceLookup | None
+    teams: Callable[[str, str | None], Graph | None] | None
 
 
 def _scope_layers(services: Services) -> Sequence[Layer]:

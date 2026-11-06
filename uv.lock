@@ -68,6 +68,7 @@ members = [
     "agent-console-settings",
     "agent-console-store",
     "agent-console-teams",
+    "agent-console-text-template",
     "agent-console-trace",
     "agent-console-usage",
     "agent-console-workspace",
@@ -2234,6 +2235,7 @@ dependencies = [
     { name = "agent-console-registry" },
     { name = "agent-console-secret-rules" },
     { name = "agent-console-settings" },
+    { name = "agent-console-text-template" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "referencing" },
@@ -2255,6 +2257,7 @@ requires-dist = [
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "agent-console-settings", editable = "packages/py/base/ac-settings" },
+    { name = "agent-console-text-template", editable = "packages/py/base/ac-text-template" },
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "referencing", specifier = ">=0.28" },
@@ -2609,6 +2612,29 @@ requires-dist = [
     { name = "agent-console-settings", editable = "packages/py/base/ac-settings" },
     { name = "pydantic", specifier = ">=2.9" },
 ]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-text-template"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-text-template" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
 
 [package.metadata.requires-dev]
 dev = [

@@ -10,7 +10,9 @@
   `PurgeableLogIndex`(메모리·SQLite 색인이 가진다).
 - 행 읽기(5.5R.36): `query_event_rows`·`iter_event_rows` — 목록 쪽을 모델 없이 JSON 행(dict)으로
   (선택 능력 `LogEventRowReader`, 메모리·SQLite 색인이 가진다).
-- 순수 함수: `bounded`·`event_uid`·`link_events`·`merge_taxonomy`·`group_projects`·`block_windows`,
+- 확장 판정 미리 거르기(6R.9 M-1, 선택 능력): `RowPredicate`·`RowCheckedPredicate`·`row_check_of`
+  ·`EVENT_ROW_FIELDS` — 판정 함수가 색인 열 값으로 먼저 답하면 SQLite 색인이 본문을 읽지 않는다.
+- 순수 함수: `bounded`·`event_uid`·`link_events`·`merge_taxonomy`·`block_windows`,
   질의 의미 `agent_console_logs.query`.
 - 오프라인 보관본: `build_archive`(`LogArchive` v1, 필터 범위·크기 한도·가림) +
   `render_archive`(스크립트 없는 HTML).
@@ -68,8 +70,6 @@ from ._projects import (
     UNGROUPED_PROJECT,
     RepoRootResolver,
     git_worktree_root,
-    group_projects,
-    resolve_project,
 )
 from ._purge import PurgeableLogIndex, PurgeResult, PurgeScope, purge_index, reset_index
 from ._registries import (
@@ -80,6 +80,14 @@ from ._registries import (
     LogRegistries,
     as_log_classifier,
     as_log_source,
+)
+from ._rowcheck import (
+    EVENT_ROW_FIELDS,
+    EventRow,
+    RowCheck,
+    RowCheckedPredicate,
+    RowPredicate,
+    row_check_of,
 )
 from ._rows import (
     LogEventRow,
@@ -146,6 +154,7 @@ __all__ = [
     "ERROR_INVALID_CONFIG",
     "ERROR_SOURCE_FAILED",
     "ERROR_UNKNOWN_CLASSIFIER",
+    "EVENT_ROW_FIELDS",
     "FILTER_FIELDS",
     "JSONL_CONFIG_SCHEMA",
     "LOG_CLASSIFIERS_EXTENSION",
@@ -163,6 +172,7 @@ __all__ = [
     "ConfigError",
     "Cursor",
     "EventPredicate",
+    "EventRow",
     "IndexBatch",
     "IndexRecord",
     "JsonValue",
@@ -194,6 +204,9 @@ __all__ = [
     "RawRecord",
     "ReadResult",
     "RepoRootResolver",
+    "RowCheck",
+    "RowCheckedPredicate",
+    "RowPredicate",
     "ScopedLogSource",
     "SessionTitleRule",
     "SourceRef",
@@ -217,7 +230,6 @@ __all__ = [
     "filter_to_params",
     "git_worktree_root",
     "glob_match",
-    "group_projects",
     "hidden_categories",
     "identity_for",
     "iter_event_rows",
@@ -241,8 +253,8 @@ __all__ = [
     "render_archive",
     "require_refined",
     "reset_index",
-    "resolve_project",
     "rolling_totals",
+    "row_check_of",
     "scrub_surrogates",
     "source_enabled",
     "sum_samples",

@@ -6,6 +6,7 @@ import { useApiQuery } from "../../app/queries";
 import { ROUTE_ROLES, routePath } from "../library";
 import { MEMORY_PARAMS, RUN_CHIPS } from "./memoryConfig";
 import { memoryMessages as t } from "./messages";
+import { joinTypePrefixes } from "../../lib/typePrefix";
 import { chipNumber, countRunChips } from "./runChips";
 import "./runChips.css";
 
@@ -13,7 +14,7 @@ export interface RunMemoryChipsProps {
   runId: string;
   /** 실행 중이면 이벤트가 들어오는 대로 1초 디바운스로 다시 센다 */
   active: boolean;
-  /** 읽기 칩: 이 실행의 이벤트 목록을 접두로 연다(호출 쪽이 탭·주소 인자를 안다) */
+  /** 읽기 칩: 이 실행의 이벤트 목록을 접두(여러 개면 쉼표로 이은 한 값)로 연다(호출 쪽이 탭·주소 인자를 안다) */
   onOpenReads: (typePrefix: string) => void;
 }
 
@@ -54,7 +55,7 @@ export function RunMemoryChips({ runId, active, onOpenReads }: RunMemoryChipsPro
         {fail(write.failed)}
       </span>
       <span className="mem-runchip-item">
-        <button type="button" className="mem-runchip" title={t.runChips.readTip} onClick={() => onOpenReads(RUN_CHIPS.read.openPrefix)}>{t.runChips.read(chipNumber(read.count))}</button>
+        <button type="button" className="mem-runchip" title={t.runChips.readTip} onClick={() => onOpenReads(joinTypePrefixes(RUN_CHIPS.read.openPrefixes))}>{t.runChips.read(chipNumber(read.count))}</button>
         {fail(read.failed)}
       </span>
     </span>

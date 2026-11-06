@@ -1,6 +1,7 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { MiddleEllipsisPath } from "@agent-console/folder-picker";
-import { Button, Icon, Popover } from "@agent-console/ui";
+import { Button, Icon, Popover, type MenuItemDef } from "@agent-console/ui";
+import { RowContextMenu } from "./RowContextMenu";
 import { projectMessages as t } from "./messages";
 import { projectInitial } from "./projectRegionLib";
 
@@ -10,6 +11,8 @@ export interface RegionProject {
   name: string;
   /** 로컬 폴더 절대 경로. null/빈 값 = 폴더 미지정 */
   folder: string | null;
+  /** 상태 표현(모양·색·글자 셋 모두): 아이콘 이름, 색조, 글자. 없으면 정상 폴더 */
+  status?: { icon: string; tone: "ok" | "neutral" | "warning" | "danger"; label: string; plain: boolean } | undefined;
 }
 
 export interface ProjectRegionProps {
@@ -22,6 +25,10 @@ export interface ProjectRegionProps {
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   onSelect: (id: string) => void;
+  /** 항목 우클릭·Shift+F10·ContextMenu 키 메뉴 항목. 없으면 메뉴 없음 */
+  menuItems?: ((project: RegionProject) => readonly MenuItemDef[]) | undefined;
+  /** 지금 프로젝트 홈을 보고 있는 프로젝트 id(`aria-current="page"`) */
+  homeOpenId?: string | null | undefined;
   /** [+ 폴더 추가] */
   onAdd: () => void;
   /** 첫 조회 중이며 200ms가 지났을 때만 true로 넘긴다(스켈레톤) */
@@ -34,28 +41,54 @@ export interface ProjectRegionProps {
   onRailOpenChange?: ((open: boolean) => void) | undefined;
 }
 
-function RowIcon() {
-  return <Icon name="projects" size={16} />;
+function RowIcon({ project }: { project: RegionProject }) {
+  return <Icon name={project.status?.icon ?? "folder"} size={16} />;
 }
 
-function Row({ project, current, onSelect, popover }: { project: RegionProject; current: boolean; onSelect: () => void; popover?: boolean }) {
+interface RowProps {
+  project: RegionProject;
+  current: boolean;
+  page?: boolean;
+  onSelect: () => void;
+  popover?: boolean;
+  onMenu?: ((project: RegionProject, at: { x: number; y: number }, restore: HTMLElement) => void) | undefined;
+}
+
+function Row({ project, current, page, onSelect, popover, onMenu }: RowProps) {
   const path = project.folder ?? "";
   const unset = path === "";
+  const statusText = project.status !== undefined && !project.status.plain ? project.status.label : undefined;
   return (
     <button
       type="button"
       className="prj-row"
       role={popover ? "menuitemradio" : undefined}
       aria-checked={popover ? current : undefined}
-      aria-current={popover ? undefined : current ? "true" : undefined}
+      aria-current={popover ? undefined : page ? "page" : current ? "true" : undefined}
+      aria-haspopup={onMenu === undefined ? undefined : "menu"}
       data-current={current ? "true" : undefined}
-      title={t.region.rowTitle(project.name, path)}
+      data-tone={project.status?.tone}
+      title={[t.region.rowTitle(project.name, path), statusText].filter((x) => x !== undefined).join("\n")}
       onClick={onSelect}
+      onContextMenu={(e) => {
+        if (onMenu === undefined) return;
+        e.preventDefault();
+        onMenu(project, { x: e.clientX, y: e.clientY }, e.currentTarget);
+      }}
+      onKeyDown={(e) => {
+        if (onMenu === undefined) return;
+        if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
+          e.preventDefault();
+          const r = e.currentTarget.getBoundingClientRect();
+          onMenu(project, { x: r.left + 24, y: r.bottom }, e.currentTarget);
+        }
+      }}
     >
-      <span className="prj-row-icon" aria-hidden="true"><RowIcon /></span>
+      <span className="prj-row-icon" aria-hidden="true"><RowIcon project={project} /></span>
       <span className="prj-row-text">
         <span className="prj-row-name ac-ellipsis">{project.name}</span>
         {unset ? <span className="prj-row-path" data-unset="true">{t.region.folderUnset}</span> : <MiddleEllipsisPath path={path} className="prj-row-path" />}
+        {statusText === undefined ? null : <span className="ac-sr-only">{statusText}</span>}
       </span>
     </button>
   );
@@ -85,6 +118,18 @@ export function ProjectRegion(p: ProjectRegionProps) {
   const listId = useId();
   const current = p.projects.find((x) => x.id === p.currentId);
   const [railState, setRailState] = useState(false);
+  const [menu, setMenu] = useState<{ project: RegionProject; x: number; y: number; restore: HTMLElement } | null>(null);
+  const openMenu = p.menuItems === undefined ? undefined : (project: RegionProject, at: { x: number; y: number }, restore: HTMLElement) => setMenu({ project, ...at, restore });
+  const closeMenu = () => {
+    setMenu((m) => {
+      m?.restore.focus();
+      return null;
+    });
+  };
+  const menuNode =
+    menu === null || p.menuItems === undefined ? null : (
+      <RowContextMenu x={menu.x} y={menu.y} label={t.region.menuLabel(menu.project.name)} items={p.menuItems(menu.project)} onClose={closeMenu} />
+    );
   const railOpen = p.railOpen ?? railState;
   const setRailOpen = (open: boolean) => {
     setRailState(open);
@@ -103,7 +148,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
           className="prj-rail-pop"
           renderTrigger={(tp) => (
             <button type="button" {...tp} className="prj-rail-btn" aria-label={t.region.railLabel(current?.name)} title={t.region.railLabel(current?.name)}>
-              <Icon name="projects" size={18} />
+              <Icon name="folder" size={18} />
               {current === undefined ? null : <span className="prj-badge" aria-hidden="true">{projectInitial(current.name)}</span>}
             </button>
           )}
@@ -112,7 +157,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
             <div className="prj-rail-body" onKeyDown={listKeyDown}>
               <div className="prj-rail-head">{t.region.label}</div>
               {p.projects.map((x) => (
-                <Row key={x.id} project={x} current={x.id === p.currentId} popover onSelect={() => { close(); p.onSelect(x.id); }} />
+                <Row key={x.id} project={x} current={x.id === p.currentId} popover onMenu={openMenu} onSelect={() => { close(); p.onSelect(x.id); }} />
               ))}
               {p.projects.length === 0 ? <p className="prj-note">{t.region.empty}</p> : null}
               <button type="button" role="menuitem" className="prj-add" onClick={() => { close(); p.onAdd(); }}>
@@ -122,6 +167,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
             </div>
           )}
         </Popover>
+        {menuNode}
       </section>
     );
   }
@@ -143,7 +189,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
       <div className="prj-list" role="list" aria-label={t.region.listLabel} onKeyDown={listKeyDown}>
         {p.projects.map((x) => (
           <div role="listitem" key={x.id}>
-            <Row project={x} current={x.id === p.currentId} onSelect={() => p.onSelect(x.id)} />
+            <Row project={x} current={x.id === p.currentId} page={x.id === p.homeOpenId} onMenu={openMenu} onSelect={() => p.onSelect(x.id)} />
           </div>
         ))}
       </div>
@@ -186,6 +232,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
         ) : null}
       </div>
       <div id={listId} className="prj-body-region" hidden={p.collapsed}>{p.collapsed ? null : body}</div>
+      {menuNode}
     </section>
   );
 }

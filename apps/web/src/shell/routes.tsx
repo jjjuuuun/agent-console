@@ -4,7 +4,8 @@ import { lookupMessage } from "../app/messages";
 import { useGraphList } from "../features/library";
 import { ARCH_POPOUT } from "../features/architecture";
 import { ROUTE_ROLES } from "../features/library/paths";
-import { PROJECTS_SECTION_ID, ProjectsSection } from "../features/projects";
+import { PROJECTS_SECTION_ID, ProjectHomeScreen, ProjectsSection, folderHomeMessages } from "../features/projects";
+import { PROJECT_REQUIRES } from "../app/requirements";
 import { RouteGate, useModules, useRequiresPartition } from "../modules";
 import { lazyScreen } from "./lazyScreen";
 import { NotFoundScreen } from "./NotFoundScreen";
@@ -136,6 +137,20 @@ function HomeRedirect({ routes }: { routes: readonly RouteDef[] }) {
   return target === undefined ? <NotFoundScreen homePath="/" /> : <Navigate to={target.path} replace />;
 }
 
+/**
+ * 프로젝트 홈 `/projects/:id`. 프로젝트 기능(서버 역할)이 꺼져 있으면 다른 화면과 같은 꺼진 기능 안내가 나온다.
+ * 사이드바 항목이 아니라 프로젝트 영역·폴더 추가 직후·`ProjectChip`이 여는 화면이라 라우트 설정 데이터(사이드바 목록)에 두지 않는다.
+ */
+function ProjectHomeRoute({ routes }: { routes: readonly RouteDef[] }) {
+  const { met } = useRequiresPartition(routes);
+  const home = homeRoute(met);
+  return (
+    <RouteGate requires={PROJECT_REQUIRES} screenTitle={folderHomeMessages.home.region} modulesHref={modulesHref(routes) ?? "/"} home={home === undefined ? undefined : { title: lookupMessage(home.titleKey), path: home.path }}>
+      <ProjectHomeScreen />
+    </RouteGate>
+  );
+}
+
 export interface BuildRoutesOptions {
   routes?: readonly RouteDef[];
   /** 사이드바 묶음(기본: `DEFAULT_ROUTE_GROUPS`) */
@@ -164,6 +179,7 @@ export function buildAppRoutes({ routes = DEFAULT_ROUTES, groups, pages = DEFAUL
         ...(home === undefined ? [] : [{ index: true, element: <HomeRedirect routes={routes} /> } satisfies RouteObject]),
         ...redirects,
         ...screens,
+        { path: "projects/:id", element: <ProjectHomeRoute routes={routes} /> },
         { path: "*", element: <NotFoundScreen homePath={home?.path ?? "/"} /> },
       ],
     },

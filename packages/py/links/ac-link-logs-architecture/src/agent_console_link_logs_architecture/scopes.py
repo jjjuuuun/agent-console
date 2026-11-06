@@ -23,6 +23,7 @@ from bisect import bisect_left
 from collections import OrderedDict
 from collections.abc import Callable, Collection, Hashable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent_console_architecture import ArchitectureTally, EventMatch, ProfileMatcher
 from agent_console_conditions import ConditionOperator
@@ -243,14 +244,18 @@ class ScopeEvents:
 
     def match_at(self, key: str, event: LogEvent) -> EventMatch | None:
         """이미 판정한 같은 이벤트(같은 ``seq``·``uid``)의 판정 결과. 없으면 None."""
+        return self.match_seq(key, event.seq, event.uid)
+
+    def match_seq(self, key: str, seq: int, uid: str) -> EventMatch | None:
+        """``match_at``과 같되 이벤트 대신 ``seq``·``uid`` 값으로(색인 행 기준 미리 거르기)."""
         found = self.judged.get(key)
         if found is None:
             return None
         seqs, lights, matches = self.seqs, self.lights, found.matches
-        i = bisect_left(seqs, event.seq)
-        if i >= len(matches) or i >= len(seqs) or seqs[i] != event.seq:
+        i = bisect_left(seqs, seq)
+        if i >= len(matches) or i >= len(seqs) or seqs[i] != seq:
             return None
-        if lights[i][2] != event.uid:
+        if lights[i][2] != uid:
             return None
         return matches[i]
 
@@ -333,8 +338,12 @@ class ScopeCache:
 
     def lookup(self, key: str, event: LogEvent) -> EventMatch | None:
         """기억한 범위 중 이 이벤트를 이미 판정한 결과(최근 범위부터)."""
+        return self.lookup_seq(key, event.seq, event.uid)
+
+    def lookup_seq(self, key: str, seq: int, uid: str) -> EventMatch | None:
+        """``lookup``과 같되 ``seq``·``uid`` 값으로."""
         for scope in reversed(self.scopes()):
-            found = scope.match_at(key, event)
+            found = scope.match_seq(key, seq, uid)
             if found is not None:
                 return found
         return None
@@ -351,8 +360,11 @@ class MemoMatcher(ProfileMatcher):
     """판정 결과를 먼저 범위 캐시에서 찾는 판정기(``selector_predicate(matcher=)``에 넘긴다).
 
     캐시에 없으면 목록용 사본(``detail``·``raw`` 없음 — 구조도가 센 이벤트와 같은 모양)으로
-    판정한다.
+    판정한다. 로그 색인 행 기준 미리 거르기(6R.9)에서는 ``seq``·``uid`` 열로 캐시만 본다
+    (``match_row`` — 없으면 None이라 색인이 이벤트를 만들어 ``match``를 부른다).
     """
+
+    row_fields: frozenset[str] = frozenset({"seq", "uid"})
 
     def __init__(
         self,
@@ -376,6 +388,15 @@ class MemoMatcher(ProfileMatcher):
             return found
         self.misses += 1
         return super().match(strip_body(event))
+
+    def match_row(self, row: Mapping[str, Any]) -> EventMatch | None:
+        seq, uid = row.get("seq"), row.get("uid")
+        if not isinstance(seq, int) or not isinstance(uid, str):
+            return None
+        found = self._cache.lookup_seq(self._key, seq, uid)
+        if found is not None:
+            self.hits += 1
+        return found
 
 
 __all__ = [

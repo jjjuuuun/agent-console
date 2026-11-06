@@ -1,6 +1,7 @@
 """2R.11 QA: 실서버 write 안전(경로 탈출·링크·보호 위치·토큰·빈 roots)과 zip 평문 비밀 없음.
 
-가짜 HOME·임시 폴더만 쓴다.
+가짜 HOME·임시 폴더만 쓴다. 5.7R.33k: 폴더 쓰기 대상은 등록 프로젝트 폴더(루트 id = 등록 id)다.
+등록하면 폴더에 `.agent-console/`가 생기므로 "아무것도 쓰지 않음" 비교는 그 폴더를 뺀다.
 """
 
 from __future__ import annotations
@@ -13,13 +14,29 @@ from typing import Any
 
 import pytest
 
-from agent_console_server.testing import API, TEST_TOKEN, agent_doc, make_settings, server
+from agent_console_server.testing import (
+    API,
+    TEST_TOKEN,
+    agent_doc,
+    make_settings,
+    register_project,
+    server,
+)
+
+CONFIG_DIR = ".agent-console"
 
 
 def tree_hash(root: Path) -> dict[str, bytes]:
     return {
-        str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()
+        str(p.relative_to(root)): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and CONFIG_DIR not in p.relative_to(root).parts
     }
+
+
+def written(folder: Path) -> list[str]:
+    """등록이 만든 구성 폴더를 뺀 내용."""
+    return sorted(p.name for p in folder.iterdir() if p.name != CONFIG_DIR)
 
 
 def put_agent(client: Any, prompt: str = "안녕") -> None:
@@ -57,12 +74,12 @@ def test_write_requires_token_and_roots(tmp_path: Path) -> None:
 def test_subdir_escape_rejected(tmp_path: Path, subdir: str) -> None:
     out = tmp_path / "out"
     out.mkdir()
-    s = make_settings(tmp_path, options={"mod-exports": {"roots": [{"id": "o", "path": str(out)}]}})
-    with server(s) as client:
+    with server(make_settings(tmp_path)) as client:
+        register_project(client, "o", out)
         put_agent(client)
         r = client.post(f"{API}/exports/write", json=req(root="o", subdir=subdir))
         assert r.status_code == 422, (subdir, r.text)
-    assert not any(out.iterdir())
+    assert written(out) == []
     assert sorted(p.name for p in tmp_path.iterdir() if p.name != "ws") == ["out"]
 
 
@@ -76,8 +93,8 @@ def test_symlink_dirs_and_files_refused(tmp_path: Path) -> None:
     os.symlink(outside, out / "link")  # 링크 폴더(정션 대체)
     (out / "real").mkdir()
     os.symlink(outside, out / "real" / ".claude")  # 중간 구성요소 링크
-    s = make_settings(tmp_path, options={"mod-exports": {"roots": [{"id": "o", "path": str(out)}]}})
-    with server(s) as client:
+    with server(make_settings(tmp_path)) as client:
+        register_project(client, "o", out)
         put_agent(client)
         assert (
             client.post(f"{API}/exports/write", json=req(root="o", subdir="link")).status_code
@@ -102,35 +119,31 @@ def test_symlink_dirs_and_files_refused(tmp_path: Path) -> None:
     assert tree_hash(outside) == {**before, "victim.txt": b"v"}
 
 
-def test_root_that_is_symlink_or_claude_home_refused(tmp_path: Path) -> None:
+def test_claude_home_inside_registered_folder_refused(tmp_path: Path) -> None:
+    """등록 폴더가 홈이어도 그 안의 `~/.claude`(보호 위치)에는 쓰지 않는다. 설치자 roots는 무시.
+
+    링크 루트 거부는 `ac-exports`(`FolderWriter`) 단위 테스트가 맡는다(등록은 실제 폴더만 받는다).
+    """
     home = tmp_path / "home"
     (home / ".claude" / "agents").mkdir(parents=True)
     (home / ".claude" / "agents" / "o.md").write_text("orig")
-    before = tree_hash(home)
-    real = tmp_path / "real"
-    real.mkdir()
-    os.symlink(real, tmp_path / "lnk")
     s = make_settings(
         tmp_path,
         options={
             # 보호 위치 기준 홈은 내보내기 자기 옵션이다(4R.18: 가져오기 home을 읽지 않음).
             "mod-exports": {
                 "home": str(home),
-                "roots": [
-                    {"id": "ch", "path": str(home / ".claude")},
-                    {"id": "h", "path": str(home)},
-                    {"id": "lnk", "path": str(tmp_path / "lnk")},
-                    {"id": "viaLink", "path": str(tmp_path / "real")},
-                ],
+                "roots": [{"id": "ch", "path": str(home / ".claude")}],
             },
         },
     )
     with server(s) as client:
+        register_project(client, "h", home)
+        before = tree_hash(home)
         put_agent(client)
         ids = [r["id"] for r in client.get(f"{API}/exports/roots").json()]
-        assert "ch" not in ids
-        assert "lnk" not in ids
-        for root, sub in [("ch", ""), ("ch", "agents"), ("h", ""), ("h", ".claude"), ("lnk", "")]:
+        assert ids == ["h"]  # 설치자 roots(ch)는 쓰지 않는다
+        for root, sub in [("ch", ""), ("ch", "agents"), ("h", ""), ("h", ".claude")]:
             r = client.post(f"{API}/exports/write", json=req(root=root, subdir=sub))
             assert r.status_code in (404, 422), (root, sub, r.text)
         # 대소문자 우회
@@ -139,7 +152,6 @@ def test_root_that_is_symlink_or_claude_home_refused(tmp_path: Path) -> None:
         )
         assert r.status_code in (404, 422)
     assert tree_hash(home) == before
-    assert not any(real.iterdir())
 
 
 def test_zip_has_no_plain_secret(tmp_path: Path) -> None:

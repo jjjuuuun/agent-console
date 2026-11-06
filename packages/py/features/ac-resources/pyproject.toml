@@ -11,6 +11,7 @@ dependencies = [
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-settings>=0.1,<0.2",
+    "agent-console-text-template>=0.1,<0.2",
     "pydantic>=2.9",
     "jsonschema>=4.23",
     "ruamel-yaml>=0.18",

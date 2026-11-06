@@ -9,7 +9,7 @@
     - 포트·토픽(``ports``): 제공 ``CHAT_CONVERSATIONS``·``SERVER_WARNINGS``, 토픽
       ``CONVERSATIONS_UPDATED``. 받음(선택) ``CHAT_TURN_LAUNCHER``·``CHAT_RUNS``·
       ``CHAT_RUN_EVENTS``·``CHAT_INTERACTIONS``·``CHAT_TURN_SESSIONS``·``DEFINITIONS_LOOKUP``·
-      ``WORKSPACE_SETTINGS``.
+      ``DEFINITIONS_SPACES``(프로젝트 대화의 팀 구성 출처, 5.7R.33y)·``WORKSPACE_SETTINGS``.
     - HTTP 없이 쓰는 부품: ``PortGraphLookup``(정의 읽기 → 팀 구성 조회), ``open_chat_storage``.
     - ``build_router``·``topic_handlers``·``error_map``.
 """
@@ -28,9 +28,11 @@ from .ports import (
     CHAT_TURN_SESSIONS,
     CONVERSATIONS_UPDATED,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
     DefinitionLookup,
+    DefinitionSpaces,
 )
 from .routes import build_router
 from .storage import STORAGE_MEMORY, ChatStorage, open_chat_storage
@@ -46,6 +48,7 @@ __all__ = [
     "CONVERSATIONS_UPDATED",
     "CONVERSATION_TOPIC",
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "DEPENDENCY_PORTS",
     "MODULE_ID",
     "SERVER_WARNINGS",
@@ -55,6 +58,7 @@ __all__ = [
     "ChatModule",
     "ChatStorage",
     "DefinitionLookup",
+    "DefinitionSpaces",
     "PortGraphLookup",
     "build_router",
     "error_map",

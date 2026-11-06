@@ -138,9 +138,8 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
       ...(projects.enabled
         ? [
             { id: "project.switch", titleKey: "palette.actions.projectSwitch", run: openSwitcher, shortcut: formatKeyCombo(PROJECT_SHORTCUT_DEFS[0].keys, platform) },
-            ...(projects.current === null ? [] : [{ id: "project.all", titleKey: "palette.actions.projectAll", run: () => projects.setCurrent(null) }]),
             { id: "project.manage", titleKey: "palette.actions.projectManage", run: () => void navigate(`${routeServing(routes, ROUTE_ROLES.settings)?.path ?? "/"}${SETTINGS_PROJECTS_HASH}`) },
-            { id: "project.new", titleKey: "palette.actions.projectNew", run: () => projects.requestCreate() },
+            { id: "project.new", titleKey: "palette.actions.projectNew", run: () => projects.requestAddFolder() },
           ]
         : []),
     ],

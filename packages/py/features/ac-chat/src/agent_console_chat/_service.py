@@ -44,6 +44,7 @@ from ._ports import (
     GraphLookup,
     IdFactory,
     InteractionReader,
+    ProjectGraphLookup,
     RunReader,
     TurnHandle,
     TurnLauncher,
@@ -221,7 +222,7 @@ class ChatService:
         Raises:
             GraphNotFoundError: 팀 구성이 없을 때.
         """
-        self._require_graph(request.graph_id)
+        self._require_graph(request.graph_id, request.project_id)
         now = self._clock()
         conversation = Conversation(
             id=self._ids(),
@@ -288,7 +289,7 @@ class ChatService:
         if request.archived is not None:
             changes["archived"] = request.archived
         if request.graph_id is not None and request.graph_id != conversation.graph_id:
-            graph = self._require_graph(request.graph_id)
+            graph = self._require_graph(request.graph_id, conversation.project_id)
             changes["graph_id"] = graph.id
             changes["sessions"] = self._session_rules().prune(
                 conversation.sessions, [n.id for n in graph.nodes]
@@ -356,7 +357,7 @@ class ChatService:
             busy = self.is_busy(conversation_id)
             waiting = conversation_id in self._queue.counts([conversation_id])
             if busy or waiting:
-                graph = self._graphs.get_graph(conversation.graph_id)
+                graph = self._graph(conversation.graph_id, conversation.project_id)
                 policy = self._chat_settings(graph).busy_policy
                 if busy and policy == "reject":
                     raise ConversationBusyError(
@@ -453,7 +454,7 @@ class ChatService:
                 if conversation is None:
                     self._queue.clear(conversation_id)
                     continue
-                graph = self._graphs.get_graph(conversation.graph_id)
+                graph = self._graph(conversation.graph_id, conversation.project_id)
                 mode = self._chat_settings(graph).queue_after_restart
                 applied[conversation_id] = mode
                 if mode == "drop":
@@ -611,8 +612,15 @@ class ChatService:
     def _lock(self, conversation_id: str) -> asyncio.Lock:
         return self._locks.setdefault(conversation_id, asyncio.Lock())
 
-    def _require_graph(self, graph_id: str) -> Graph:
-        graph = self._graphs.get_graph(graph_id)
+    def _graph(self, graph_id: str, project_id: str | None) -> Graph | None:
+        """대화의 팀 구성: 프로젝트 대화면 그 프로젝트의 정의 출처에서만(`ProjectGraphLookup`이 있을
+        때), 아니면 `get_graph`(5.7R.33y)."""
+        if project_id and isinstance(self._graphs, ProjectGraphLookup):
+            return self._graphs.get_project_graph(project_id, graph_id)
+        return self._graphs.get_graph(graph_id)
+
+    def _require_graph(self, graph_id: str, project_id: str | None = None) -> Graph:
+        graph = self._graph(graph_id, project_id)
         if graph is None:
             raise GraphNotFoundError(f"팀 구성 {graph_id!r}가 없습니다", details={"id": graph_id})
         return graph
@@ -648,7 +656,7 @@ class ChatService:
         if launcher is None:
             raise ChatFeatureUnavailableError(LAUNCHER_DEPENDENCY)
         if graph is None:
-            graph = self._require_graph(conversation.graph_id)
+            graph = self._require_graph(conversation.graph_id, conversation.project_id)
             sessions = dict(conversation.sessions)
         else:
             sessions = self._session_rules().prune(
@@ -752,7 +760,7 @@ class ChatService:
         except Exception:  # 세션 기록 실패가 대화 진행(대기열)을 막지 않게 한다
             _log.exception("턴 %s 세션 수집 실패", run.id)
             found = {}
-        graph = self._graphs.get_graph(conversation.graph_id)
+        graph = self._graph(conversation.graph_id, conversation.project_id)
         if graph is not None:  # 실행 중에 팀 구성이 바뀌었으면 새 팀 구성 기준으로 거른다
             found = rules.prune(found, [n.id for n in graph.nodes])
         sessions = {**conversation.sessions, **found}

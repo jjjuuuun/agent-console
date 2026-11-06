@@ -4,7 +4,7 @@
   WS ``conversation:<id>``. 경로 ``/conversations…``(대화·턴·메시지·대기열).
 - 필수 포트 없음. 선택: ``chat.turn_launcher``·``chat.runs``·``chat.run_events``·
   ``chat.interactions``·``chat.turn_sessions``(실행 연결 — 보통 ``link-chat-runs``가 준다),
-  ``definitions.lookup``,
+  ``definitions.lookup``, ``definitions.spaces``(프로젝트 대화의 팀 구성 = 그 공간에서만, 5.7R.33y),
   ``workspace.settings``(``ports.py``).
 - 저장: 이 모듈이 소유한 ``conversations``·``chat_queue``(``storage/``)를 호스트 DB 핸들의 엔진
   위에 둔다. 마이그레이션 계보 ``chat``은 모듈이 켜질 때만 올라간다(테이블은 legacy 0002·0003이
@@ -37,6 +37,7 @@ from .ports import (
     CHAT_TURN_SESSIONS,
     CONVERSATIONS_UPDATED,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
 )
@@ -77,6 +78,7 @@ class ChatModule:
             CHAT_INTERACTIONS,
             CHAT_TURN_SESSIONS,
             DEFINITIONS_LOOKUP,
+            DEFINITIONS_SPACES,
             WORKSPACE_SETTINGS,
         ),
         contracts={"chat": CONTRACT_VERSIONS["chat"]},
@@ -86,7 +88,9 @@ class ChatModule:
 
     def build(self, ctx: ModuleContext) -> ModuleParts:
         storage = open_chat_storage(ctx.database)
-        graphs = PortGraphLookup(lambda: ctx.port(DEFINITIONS_LOOKUP))
+        graphs = PortGraphLookup(
+            lambda: ctx.port(DEFINITIONS_LOOKUP), spaces=lambda: ctx.port(DEFINITIONS_SPACES)
+        )
         hub: Any = ctx.ws_hub
 
         def common() -> ChatSettings:

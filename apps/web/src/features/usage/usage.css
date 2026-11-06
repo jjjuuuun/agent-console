@@ -32,9 +32,9 @@
 .usage-group-name { flex: 0 0 56px; }
 .usage-group-value { display: inline-flex; align-items: center; gap: var(--ac-space-2); flex: 1 1 auto; min-width: 0; }
 .usage-row-val { font-weight: 600; }
-.usage-row-tokens { font-size: var(--ac-text-xs); }
+.usage-row-tokens { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .usage-group-gauge { flex: 0 0 48px; display: inline-flex; }
-.usage-group-reset { flex: 0 0 auto; font-size: var(--ac-text-xs); white-space: nowrap; }
+.usage-group-reset { flex: 0 0 auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: nowrap; }
 .usage-rule { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .usage-warn { color: var(--ac-warning); }
 .usage-others-list { margin: var(--ac-space-1) 0 0; padding-left: var(--ac-space-4); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); display: flex; flex-direction: column; gap: var(--ac-space-1); }
@@ -57,7 +57,7 @@
   .usage-bar-name { grid-area: name; }
   .usage-bar-track { grid-area: bar; }
   .usage-bar-total { grid-area: total; }
-  .usage-bar-split { grid-area: split; font-size: var(--ac-text-xs); }
+  .usage-bar-split { grid-area: split; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
   .usage-bar-note { grid-area: note; }
 }
 .usage-rollup-table { table-layout: fixed; }

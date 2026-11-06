@@ -27,6 +27,11 @@
 - 선택 ``runs.scopes``(여러 제공자): 실행 범위(``RunScoper``, 5.2R.34). 실행을 시작할 때 요청의
   ``project_id``(불투명 문자열)로 이 Run에만 더할 노드 서비스·경고를 정한다(예: 프로젝트 설정 층).
   검사·준비보다 먼저 부르므로 준비자도 그 서비스를 본다. 없으면 범위 없이 실행한다.
+  결과의 선택 속성 ``errors``(``ErrorInfo`` 목록, 5.7R.33g)가 있으면 첫 오류로 Run을 만들지 않는다.
+  선택 메서드 ``run_definitions``(``RunDefinitionsScoper``, 5.7R.33y)가 있으면 그 Run의 **정의 조회
+  출처**(그래프·에이전트·리소스·리소스 본문·팀 노드 고정 버전)를 정한다. 그래프를 읽기 전에 부른다.
+  출처를 받은 Run은 노드 서비스 ``RUN_DEFINITIONS``와 실행 환경 ``RunEnvironment.definitions``로
+  그 출처를 넘기고, 자식 Run은 서비스를 물려받아 같은 출처를 쓴다. 없으면 ``definitions.lookup``.
 - 선택 ``runs.resume_handlers``(여러 제공자): 이어 가기 처리기(``ResumeHandler``). 받는 처리기가
   없으면 일반 실행으로 새 Run을 시작한다.
 - 선택 ``workspace.settings``: 공통 설정(``secrets.redact_suspected_in_logs``).
@@ -84,6 +89,16 @@ class DefinitionLookup(Protocol):
     def get_version(self, kind: str, id: str, version_hash: str) -> VersionLike: ...
 
 
+@runtime_checkable
+class DefinitionSource(DefinitionLookup, Protocol):
+    """Run 하나의 정의 조회 출처(``RunDefinitionsScoper.run_definitions`` 결과).
+
+    ``definitions.lookup``과 같은 읽기(``get``·``get_version``)면 된다. 본문 파일 읽기
+    (``read_content``·``list_files``·``read_file``)는 소비자(예: ``link-runs-teams``의 리소스
+    조회)가 있으면 쓰는 선택 능력이다(``agent_console_store`` 정의 저장소가 모두 만족).
+    """
+
+
 @dataclass(frozen=True)
 class RunEnvironment:
     """노드 서비스 공급자에게 넘기는 실행 환경(설치자 설정 ``working_directory`` 등).
@@ -91,10 +106,13 @@ class RunEnvironment:
     Attributes:
         working_directory: 에이전트 작업 폴더(실행 범위의 기준).
         run_files_root: 실행 묶음 파일 폴더(노드마다 ``<root>/<run>/<node>/``).
+        definitions: 이 Run의 정의 조회 출처(``RunDefinitionsScoper``가 정했을 때만, 5.7R.33y).
+            None이면 공급자의 기본 출처(``definitions.lookup``)를 쓴다.
     """
 
     working_directory: Path
     run_files_root: Path
+    definitions: DefinitionSource | None = None
 
 
 @runtime_checkable
@@ -199,10 +217,13 @@ class RunScope:
     Attributes:
         services: 이 Run(과 자식 Run)에만 더할 노드 서비스(뒤 공급자가 이긴다).
         warnings: 실행을 막지 않는 경고. Run 이벤트 ``log.warning``으로 남는다.
+        errors: 실행을 막는 오류(X26 거부, 5.7R.33g — 선택 속성). 있으면 첫 오류로 Run을 만들지
+            않는다(``RunPreflightError``, HTTP 상태는 코드로). 예: 프로젝트 사전 점검.
     """
 
     services: Mapping[ServiceKey[Any], Any] = field(default_factory=dict)
     warnings: Sequence[Issue] = ()
+    errors: Sequence[ErrorInfo] = ()
 
 
 class RunScopeLike(Protocol):
@@ -231,6 +252,30 @@ class RunScoper(Protocol):
 
         Args:
             project_id: 요청의 ``Run.project_id``(불투명 문자열, 없으면 None).
+        """
+        ...
+
+
+@runtime_checkable
+class RunDefinitionsScoper(Protocol):
+    """``runs.scopes`` 항목의 **선택** 메서드(5.7R.33y, X26): Run의 정의 조회 출처.
+
+    ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 Run 당시 그래프 조회
+    (``graph_of_run``)에서 **그래프를 읽기 전에** 부른다(``scope_run``은 읽은 그래프를 받으므로
+    출처를 정할 수 없다). ``project_id``가 없는 실행에는 부르지 않는다(지금 동작). 여러 공급자가
+    출처를 주면 뒤 공급자가 이긴다. 오류 본문을 돌려주면 Run을 만들지 않고 그 오류
+    (``RunPreflightError``)를 낸다. 예외는 기록하고 그 공급자를 건너뛴다. 자식 Run은 부르지 않는다
+    (부모 서비스 ``RUN_DEFINITIONS``를 물려받는다).
+    """
+
+    def run_definitions(
+        self, project_id: str, graph_id: str
+    ) -> DefinitionSource | ErrorInfo | None:
+        """이 Run의 정의 출처, 막을 오류, 또는 None(정하지 않음 = 기본 출처).
+
+        Args:
+            project_id: 요청의 ``Run.project_id``(불투명 문자열, 비지 않음).
+            graph_id: 실행할(또는 Run이 실행한) 루트 팀 구성 id.
         """
         ...
 
@@ -284,6 +329,9 @@ DEFINITIONS_LOOKUP: PortKey[DefinitionLookup] = PortKey("definitions.lookup", "�
 RUN_PREPARERS: PortKey[RunPreparer] = PortKey("runs.preparers", "실행 전 검사·준비", multi=True)
 RUN_SERVICES: PortKey[RunServiceProvider] = PortKey("runs.services", "노드 서비스 공급", multi=True)
 RUN_SCOPES: PortKey[RunScoper] = PortKey("runs.scopes", "실행 범위(요청 project_id)", multi=True)
+RUN_DEFINITIONS: ServiceKey[DefinitionSource] = ServiceKey("runs.definitions")
+"""노드 서비스 키: 이 Run의 정의 조회 출처(``RunDefinitionsScoper``가 정했을 때만 넣는다, 5.7R.33y).
+소비자(``link-runs-teams`` 등)는 같은 이름의 키를 자기 쪽에 선언해 읽는다. 자식 Run은 물려받는다."""
 RESUME_HANDLERS: PortKey[ResumeHandler] = PortKey(
     "runs.resume_handlers", "이어 가기 처리기", multi=True
 )
@@ -306,6 +354,7 @@ __all__ = [
     "RUNS_EVENTS",
     "RUNS_READER",
     "RUNS_STARTER",
+    "RUN_DEFINITIONS",
     "RUN_PREPARERS",
     "RUN_SCOPES",
     "RUN_SERVICES",
@@ -316,9 +365,11 @@ __all__ = [
     "WORKSPACE_SETTINGS",
     "AttributeSource",
     "DefinitionLookup",
+    "DefinitionSource",
     "PreparationLike",
     "Redactor",
     "ResumeHandler",
+    "RunDefinitionsScoper",
     "RunEnvironment",
     "RunIssueAnnotator",
     "RunPreflight",

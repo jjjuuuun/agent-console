@@ -1,13 +1,19 @@
-"""1R.14 QA 추가 검증: 기본 설정의 CORS 닫힘, 가져오기 경로 탈출(심볼릭 링크), 비밀 치환 범위."""
+"""1R.14 QA 추가 검증: 기본 설정의 CORS 닫힘, 가져오기 경로 탈출(심볼릭 링크), 비밀 치환 범위.
+
+5.7R.33k: 가져오기 출처는 등록 프로젝트 폴더다(`register_project` + `?project=`). 결과를 공용 화면
+경로(`/resources/{id}`)로 읽으므로 저장 위치는 공용(`target=library`)이다.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from agent_console_server.testing import API, TEST_TOKEN, make_settings, server
+from agent_console_server.testing import API, TEST_TOKEN, make_settings, register_project, server
 
 OUTSIDE_MARK = "OUTSIDE-SECRET-MARK"
+Q = {"project": "p", "target": "library"}
+"""등록 프로젝트 `p`에서 공용으로 가져온다."""
 
 
 def test_default_settings_deny_every_cross_origin(tmp_path: Path) -> None:
@@ -43,9 +49,12 @@ def test_import_does_not_follow_file_symlink_out_of_claude_dir(tmp_path: Path) -
     outside.write_text(OUTSIDE_MARK, encoding="utf-8")
     (home / ".claude" / "CLAUDE.md").symlink_to(outside)
     (home / ".claude" / "agents" / "evil.md").symlink_to(outside)
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(home)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        register_project(client, "p", home)
+        preview = client.post(
+            f"{API}/resources/import/preview", params=Q, json={"source": "project-claude"}
+        )
         candidates = preview.json()["candidates"]
         assert candidates == []  # 링크는 후보가 되지 않아야 한다
         assert OUTSIDE_MARK not in json.dumps(candidates)
@@ -68,12 +77,16 @@ def test_mcp_args_and_url_secrets_are_not_stored_in_plain(tmp_path: Path) -> Non
         ),
         encoding="utf-8",
     )
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        register_project(client, "p", project)
+        preview = client.post(
+            f"{API}/resources/import/preview", params=Q, json={"source": "project-claude"}
+        )
         [cand] = [c for c in preview.json()["candidates"] if c["resource_type"] == "mcp-server"]
         client.post(
             f"{API}/resources/import",
+            params=Q,
             json={"source": "project-claude", "items": [{"candidate_id": cand["id"]}]},
         )
         stored = json.dumps(client.get(f"{API}/resources/{cand['suggested_id']}").json())
@@ -90,9 +103,12 @@ def test_import_blocks_linked_dirs_project_file_and_nested_escape(tmp_path: Path
     (project / ".claude" / "rules" / "sub").symlink_to(outside_dir)
     (project / ".claude" / "agents").symlink_to(outside_dir)
     (project / "CLAUDE.md").symlink_to(outside_dir / "a.md")
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        register_project(client, "p", project)
+        preview = client.post(
+            f"{API}/resources/import/preview", params=Q, json={"source": "project-claude"}
+        )
         assert preview.json()["candidates"] == []
         assert OUTSIDE_MARK not in preview.text
 
@@ -107,9 +123,12 @@ def test_import_allows_linked_root_but_not_escape_below_it(tmp_path: Path) -> No
     project = tmp_path / "proj"
     project.mkdir()
     (project / ".claude").symlink_to(real)
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        register_project(client, "p", project)
+        preview = client.post(
+            f"{API}/resources/import/preview", params=Q, json={"source": "project-claude"}
+        )
         names = [c["name"] for c in preview.json()["candidates"]]
         assert names == ["ok"]
 
@@ -128,12 +147,16 @@ def test_mcp_benign_args_are_untouched(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(tmp_path / "nohome")}) as client:
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        register_project(client, "p", project)
+        preview = client.post(
+            f"{API}/resources/import/preview", params=Q, json={"source": "project-claude"}
+        )
         [cand] = [c for c in preview.json()["candidates"] if c["resource_type"] == "mcp-server"]
         client.post(
             f"{API}/resources/import",
+            params=Q,
             json={"source": "project-claude", "items": [{"candidate_id": cand["id"]}]},
         )
         cfg = client.get(f"{API}/resources/{cand['suggested_id']}").json()["config"]

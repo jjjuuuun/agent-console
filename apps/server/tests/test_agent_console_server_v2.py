@@ -16,6 +16,7 @@ from agent_console_server.testing import (
     API,
     agent_doc,
     make_settings,
+    register_project,
     seed,
     seed_chat,
     server,
@@ -154,20 +155,29 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
         json.dumps({"mcpServers": {"gh": {"url": "https://x.invalid", "headers": {"A": "plain"}}}}),
         encoding="utf-8",
     )
-    before = _snapshot(home) | _snapshot(project)
-    settings = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
+    settings = make_settings(tmp_path)
     with server(settings, environ={"HOME": str(home)}) as client:
-        sources = {s["id"]: s for s in client.get(f"{API}/resources/import/sources").json()}
+        # 5.7R.33k: 출처는 등록 프로젝트 폴더(`?project=`), 공용 경로로 읽으려고 공용에 가져온다
+        register_project(client, "p", project)
+        before = _snapshot(home) | _snapshot(project)
+        q = {"project": "p", "target": "library"}
+        assert client.get(f"{API}/resources/import/sources").json() == []  # 프로젝트 없으면 없음
+        sources = {
+            s["id"]: s for s in client.get(f"{API}/resources/import/sources", params=q).json()
+        }
         # 5.7R.30b: 사용자 전역 ~/.claude는 출처가 아니다(프로젝트 .claude/만).
         assert list(sources) == ["project-claude"]
         assert sources["project-claude"]["available"] is True
-        preview = client.post(f"{API}/resources/import/preview", json={"source": "project-claude"})
+        preview = client.post(
+            f"{API}/resources/import/preview", params=q, json={"source": "project-claude"}
+        )
         assert preview.status_code == 200
         candidates = preview.json()["candidates"]
         assert {c["kind"] for c in candidates} == {"agent", "resource"}
         assert "global" not in {c["name"] for c in candidates}
         result = client.post(
             f"{API}/resources/import",
+            params=q,
             json={
                 "source": "project-claude",
                 "items": [{"candidate_id": c["id"]} for c in candidates],
@@ -178,7 +188,7 @@ def test_claude_import_reads_only(tmp_path: Path) -> None:
         server_item = next(c for c in candidates if c["resource_type"] == "mcp-server")
         stored = client.get(f"{API}/resources/{server_item['suggested_id']}").json()
         assert "plain" not in json.dumps(stored)
-        missing = client.post(f"{API}/resources/import/preview", json={"source": "nope"})
+        missing = client.post(f"{API}/resources/import/preview", params=q, json={"source": "nope"})
         assert missing.status_code == 404
     assert _snapshot(home) | _snapshot(project) == before  # 원본(가짜 ~/.claude·프로젝트) 무변경
 

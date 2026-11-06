@@ -243,7 +243,6 @@ class ProjectsModule:
             idle_seconds=cfg.idle_close_seconds,
             versions=self._versions or records_versions,
         )
-        wd = cfg.working_directory or Path(".")
         manager = ProjectManager(
             repository,
             fs=fs,
@@ -255,7 +254,6 @@ class ProjectsModule:
             records_prefix=cfg.records_space_prefix,
             status_timeout=cfg.status_timeout_seconds,
             environ=environ,
-            working_directory=(wd if wd.is_absolute() else base_dir / wd).absolute(),
             config_dir=cfg.config_dir,
         )
         manager_ref.append(manager)

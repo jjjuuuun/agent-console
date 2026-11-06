@@ -10,6 +10,9 @@
 - 선택 ``definitions.checks``(여러 제공자): 저장 전 정의 검사(``DefinitionCheck``). 검증 경로가
   그 경고·정보 이슈(예: 프로젝트 범위 경고)를 엔진·팀 규칙 이슈 뒤에 붙인다. 없으면 붙이지 않는다.
 - 토픽 ``definitions.saved``(구독): 검증 요약 캐시를 버린다.
+- 실행 환경 ``definitions``·노드 서비스 ``RUN_DEFINITIONS``(``mod-runs``, 5.7R.33y): Run의 정의 조회
+  출처. 있으면 노드 서비스(에이전트·팀 구성·리소스 조회)와 실행 전 검사·사전 점검이 그 출처만 본다.
+  없으면 ``definitions.lookup``·``resources.lookup``·``runs.starter.load_graph``.
 
 제공:
 
@@ -29,6 +32,7 @@ from agent_console_contracts import Graph, GraphValidationSummary, Issue, Worksp
 from agent_console_modkit import PortKey, Topic
 from agent_console_registry import Registry
 from agent_console_resources import ResourceLookup, ResourceType
+from agent_console_runtime import ServiceKey
 
 
 class StoredLike(Protocol):
@@ -41,6 +45,22 @@ class DefinitionLookup(Protocol):
     """정의 읽기. 없으면 저장소 예외(``NotFound`` 등)를 낸다."""
 
     def get(self, kind: str, id: str) -> StoredLike: ...
+
+
+class VersionLike(Protocol):
+    @property
+    def content(self) -> Mapping[str, Any] | None: ...
+
+
+@runtime_checkable
+class DefinitionSource(DefinitionLookup, Protocol):
+    """Run의 정의 조회 출처(``mod-runs`` ``DefinitionSource``와 같은 모양).
+
+    본문 파일 읽기(``read_content``·``list_files``·``read_file``)는 선택 능력이다(없으면 리소스
+    본문 없음). ``agent_console_store`` 정의 저장소가 모두 만족한다.
+    """
+
+    def get_version(self, kind: str, id: str, version_hash: str) -> VersionLike: ...
 
 
 @runtime_checkable
@@ -97,6 +117,8 @@ DEFINITION_CHECKS: PortKey[DefinitionCheck] = PortKey(
     "definitions.checks", "저장 전 정의 검사", multi=True
 )
 DEFINITIONS_SAVED: Topic[SavedLike] = Topic("definitions.saved")
+RUN_DEFINITIONS: ServiceKey[DefinitionSource] = ServiceKey("runs.definitions")
+"""노드 서비스 키: Run의 정의 조회 출처(``mod-runs``가 넣는다, 같은 이름 = 같은 키)."""
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
@@ -106,15 +128,18 @@ __all__ = [
     "RESOURCES_LOOKUP",
     "RESOURCE_TYPES",
     "RUNS_STARTER",
+    "RUN_DEFINITIONS",
     "RUN_PREPARERS",
     "RUN_SERVICES",
     "WORKSPACE_SETTINGS",
     "DefinitionCheck",
     "DefinitionLookup",
+    "DefinitionSource",
     "GraphLoader",
     "RunChecker",
     "SavedLike",
     "StoredLike",
     "ValidationSource",
+    "VersionLike",
     "WorkspaceSettingsReader",
 ]

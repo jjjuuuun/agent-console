@@ -67,7 +67,7 @@ export const usageMessages = {
   /** 격자 아래 기준 문구 */
   basis: {
     recentOfficial: "각 창의 값은 가장 최근 공식 출처 기준입니다",
-    order: "각 창의 값은 설정한 출처 순서 기준입니다",
+    configured: "각 창의 값은 설정한 출처 순서 기준입니다",
     recent: "각 창의 값은 가장 최근 값 기준입니다",
   },
   nestedNote: "중첩 팀의 자식 실행은 상위 실행에 포함되어 한 번만 집계됩니다.",

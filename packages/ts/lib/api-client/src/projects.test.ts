@@ -47,6 +47,14 @@ describe("프로젝트 2 REST", () => {
     expect(last(calls)).toMatchObject({ method: "DELETE", path: "/projects/a", headers: { "If-Match": "h2" } });
   });
 
+  it("설정 파일 다시 만들기·.gitignore 덧붙이기 경로", async () => {
+    const { rest, calls } = server();
+    await rest.resetProjectManifest("a/b", { name: "n", description: "d" });
+    expect(last(calls)).toMatchObject({ method: "POST", path: "/projects/a%2Fb/manifest/reset", body: { name: "n", description: "d" } });
+    await rest.appendProjectGitignore("a");
+    expect(last(calls)).toMatchObject({ method: "POST", path: "/projects/a/gitignore/append" });
+  });
+
   it("폴더 확인·만들기·목록·고르는 방법", async () => {
     const { rest, calls } = server();
     await rest.checkFolder({ path: "/x", exclude_project_id: "p1" });

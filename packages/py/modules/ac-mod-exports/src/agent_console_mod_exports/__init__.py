@@ -11,8 +11,11 @@
     - ``ExportModuleSettings``·``ExportRootSetting``·``protected_paths``: 설치자 설정
       (``modules.options.mod-exports``).
     - ``ERROR_MAP``·``export_error_reply``·``exporter_factories_of``.
-    - 포트: ``DEFINITIONS_LOOKUP``(필수)·``EXPORT_DEPENDENCIES``·``SECRET_RULES``(선택), 프로토콜
+    - 포트: ``DEFINITIONS_LOOKUP``(필수)·``EXPORT_DEPENDENCIES``·``SECRET_RULES``·
+      ``PROJECT_FOLDERS``·``DEFINITIONS_SPACES``(선택, 5.7R.33k), 프로토콜
       ``DefinitionLookup``·``ExportDependencies``.
+    - ``ProjectExports``·``ExportProjectError``·``ExportSource``: 요청 ``project``·``source`` →
+      내보내기 서비스(쓰기 대상 = 등록 프로젝트 폴더, 서버 없이도 쓴다).
     - ``testing.local_definitions_module``: 단독 실행·테스트용 ``definitions.lookup`` 제공 모듈.
 """
 
@@ -32,30 +35,38 @@ from .module import (
 )
 from .ports import (
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     EXPORT_DEPENDENCIES,
+    PROJECT_FOLDERS,
     SECRET_RULES,
     DefinitionLookup,
     ExportDependencies,
     SecretRulesReader,
 )
+from .projects import ExportProjectError, ExportSource, ProjectExports
 from .routes import ZIP_MEDIA_TYPE, TokenRequiredError, build_router, require_token
 from .settings import ExportModuleSettings, ExportRootSetting
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "ERROR_MAP",
     "EXPORT_DEPENDENCIES",
     "HOME_ENV_NAMES",
     "MODULE_ID",
+    "PROJECT_FOLDERS",
     "SECRET_RULES",
     "WEB_ROLES",
     "ZIP_MEDIA_TYPE",
     "DefinitionLookup",
     "ExportDependencies",
     "ExportModuleSettings",
+    "ExportProjectError",
     "ExportRootSetting",
+    "ExportSource",
     "ExportsModule",
     "LookupExportCatalog",
+    "ProjectExports",
     "SecretRulesReader",
     "TokenRequiredError",
     "build_router",

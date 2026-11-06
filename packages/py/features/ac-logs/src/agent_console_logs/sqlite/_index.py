@@ -720,6 +720,7 @@ class SqliteLogIndex:
                     cwd=cwd,
                     repo_root=repo_root,
                     project=LogProjectRef(id=pid, label=label) if pid else None,
+                    project_id=pid,
                     first_time=r.first,
                     last_time=r.last,
                     events=r.n,

@@ -262,7 +262,7 @@ describe("실행 요약 칩", () => {
     expect(rest["listRunEvents"]).toHaveBeenCalledWith("run-1", { type_prefix: "memory." });
     expect(screen.getByText("실패 1")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "메모리 읽기 2" }));
-    expect(onOpenReads).toHaveBeenCalledWith("memory.read");
+    expect(onOpenReads).toHaveBeenCalledWith("memory.read,memory.search");
   });
 
   it("메모리 이벤트가 하나도 없으면 칩이 없고, 200개를 넘으면 200+로 보인다", async () => {

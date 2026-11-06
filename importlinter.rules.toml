@@ -102,16 +102,22 @@ source_modules = ["agent_console_safe_regex"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
+name = "text-template는 다른 agent_console 패키지에 의존하지 않는다 (순수 안전 치환, design §6R.3)"
+type = "forbidden"
+source_modules = ["agent_console_text_template"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
 name = "settings는 다른 agent_console 패키지에 의존하지 않는다 (순수 층 병합, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_settings"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
-name = "resources는 contracts, registry, settings, secret-rules에만 의존 (리소스 종류 이름을 모른다, design §R9.4·§2R.4)"
+name = "resources는 contracts, registry, settings, secret-rules, text-template에만 의존 (리소스 종류 이름을 모른다, design §R9.4·§2R.4·§6R.3)"
 type = "forbidden"
 source_modules = ["agent_console_resources"]
-forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_settings", "!agent_console_secret_rules"]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_settings", "!agent_console_secret_rules", "!agent_console_text_template"]
 allow_indirect_imports = true
 
 [[contracts]]

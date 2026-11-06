@@ -50,7 +50,10 @@
         "read",
         "search"
       ],
-      "openPrefix": "memory.read"
+      "openPrefixes": [
+        "memory.read",
+        "memory.search"
+      ]
     },
     "cap": 200,
     "debounceMs": 1000,

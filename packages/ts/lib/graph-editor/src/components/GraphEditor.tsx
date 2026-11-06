@@ -616,12 +616,15 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   useLayoutEffect(() => {
     insetRef.current = toolbarInset;
   }, [toolbarInset]);
-  // React Flow 자체의 첫 맞춤도 아래 도구줄 높이를 비워 둔다(우리 재맞춤이 "사용자가 건드리지 않음" 조건에서 빠져도 노드가 가려지지 않게)
+  // React Flow 자체의 첫 맞춤도 아래 도구줄 높이를 비워 둔다(재맞춤이 "사용자가 건드리지 않음" 조건에서 빠져도 노드가 가려지지 않게).
+  // 캔버스가 아주 낮으면(도구줄이 절반을 먹는 경우) 높이의 25%까지만 비운다. 높이를 모르면(0) 기본 여백.
+  const canvasHeight = useStore((st) => st.height);
   const initialFitOptions = useMemo((): FitViewOptions => {
-    if (toolbarInset <= 0) return FIT_VIEW_OPTIONS;
+    if (toolbarInset <= 0 || canvasHeight <= 0) return FIT_VIEW_OPTIONS;
     const side: `${number}%` = `${FIT_VIEW_OPTIONS.padding * 100}%`;
-    return { ...FIT_VIEW_OPTIONS, padding: { top: side, left: side, right: side, bottom: `${toolbarInset}px` } };
-  }, [toolbarInset]);
+    const bottom: `${number}px` = `${Math.round(Math.min(toolbarInset, canvasHeight * 0.25))}px`;
+    return { ...FIT_VIEW_OPTIONS, padding: { top: side, left: side, right: side, bottom } };
+  }, [toolbarInset, canvasHeight]);
   useEffect(() => {
     // 정리를 적용한 새 그래프가 들어온 뒤 화면에 맞춘다(움직임 줄이기 설정이면 애니메이션 없음)
     if (pendingFit.current === null || pendingFit.current === graph) return;

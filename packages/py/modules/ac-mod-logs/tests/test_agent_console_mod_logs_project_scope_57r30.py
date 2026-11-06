@@ -48,7 +48,7 @@ class _ScopedSource:
 
     def in_scope(self, ref: str, ctx: LogSourceContext) -> bool:
         assert ctx.projects is not None
-        names = {p.name for p in ctx.projects.select(str(ctx.config.get("scope", "current")))}
+        names = {p.name for p in ctx.projects.registered}
         return ref.split("/", 1)[0] in names
 
     def read(
@@ -113,11 +113,13 @@ async def test_without_projects_nothing_is_read(tmp_path: Path) -> None:
     assert "logs.no_projects" in _codes(assembly)
 
 
-async def test_current_project_only(tmp_path: Path) -> None:
-    assembly = _assembly(
-        tmp_path, [project_folders_module([Path("/w/demo")], [Path("/w/demo"), Path("/w/other")])]
-    )
-    assert await _scan(assembly) == {"demo/s.jsonl"}
+async def test_all_registered_projects(tmp_path: Path) -> None:
+    """5.7R.33i: 범위는 등록 전체 하나(옛 current 없음)."""
+    assembly = _assembly(tmp_path, [project_folders_module([Path("/w/demo"), Path("/w/other")])])
+    assert await _scan(assembly) == {"demo/s.jsonl", "other/s.jsonl"}
+    assert "logs.no_projects" not in _codes(assembly)
+    only = _assembly(tmp_path, [project_folders_module([Path("/w/demo")])])
+    assert await _scan(only) == {"demo/s.jsonl"}
     assert "logs.no_projects" not in _codes(assembly)
     assert "logs.out_of_scope" not in _codes(assembly)  # 기본 루트는 알리지 않는다
 
@@ -181,3 +183,50 @@ async def test_deprecated_key_is_ignored_with_info_issue(tmp_path: Path) -> None
     assert ignored.severity == "info"
     assert ignored.details == {"source": SID, "key": "project_roots"}
     assert _DeprecatedKeySource.seen_workspace[-1] == tmp_path / "ws"
+
+
+async def test_old_log_projects_setting_is_ignored_with_info(tmp_path: Path) -> None:
+    """5.7R.33i(K33-15): 옛 ``logs.projects``가 있어도 결과가 같고 정보 ``settings.ignored_key``."""
+    settings = WorkspaceSettings.model_validate(
+        {
+            "logs": {
+                "sources": [{"id": SID, "enabled": True}],
+                "projects": {"groups": [{"id": "g", "match": ["/w/**"]}], "ungrouped": "none"},
+            }
+        }
+    )
+    assembly = assemble(
+        [
+            module,
+            static_settings_module(settings),
+            runtime_sources_module([RuntimeSource(_ScopedSource(), _Classifier())]),
+            project_folders_module({"demo-id": Path("/w/demo")}),
+        ],
+        ModulesConfig(options={"mod-logs": QUIET}),
+        base=BaseServices(
+            paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "st")
+        ),
+    )
+    await assembly.start(fail_fast=True)
+    try:
+        service = _service(assembly)
+        await service.scan()
+        assert {c.ref for c in service.index.list_cursors(SID)} == {"demo/s.jsonl"}
+        issues = [i for source in assembly.ports(SERVER_WARNINGS) for i in source()]
+        [ignored] = [i for i in issues if i.code == "settings.ignored_key"]
+        assert ignored.severity == "info"
+        assert ignored.details == {"key": "logs.projects"}
+        ctx = service.query_context()
+        assert ctx.project_for is not None
+        assert ctx.project_for("/w/demo/sub") == "demo-id"
+        assert ctx.project_for("/w/other") is None
+    finally:
+        await assembly.stop()
+
+
+async def test_archived_folders_are_retained_not_read(tmp_path: Path) -> None:
+    """보관 폴더는 읽지 않는다(범위 밖이지만 색인을 지우는 판정에서는 남김)."""
+    assembly = _assembly(
+        tmp_path, [project_folders_module([Path("/w/demo")], archived=[Path("/w/other")])]
+    )
+    assert await _scan(assembly) == {"demo/s.jsonl"}

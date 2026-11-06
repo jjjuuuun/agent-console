@@ -42,6 +42,7 @@ export const projectMessages = {
     folderUnset: "폴더를 지정하세요",
     railLabel: (name?: string) => (name === undefined ? "프로젝트" : `프로젝트: ${name}`),
     railMenuLabel: "프로젝트",
+    menuLabel: (name: string) => `${name} 메뉴`,
     rowTitle: (name: string, path: string) => (path === "" ? name : `${name}\n${path}`),
   },
   create: {

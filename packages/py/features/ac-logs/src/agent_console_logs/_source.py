@@ -105,28 +105,57 @@ class ReadResult:
 
 @dataclass(frozen=True, slots=True)
 class ProjectFolders:
-    """앱에 등록된 프로젝트 폴더(출처 범위 필터 재료, 5.7R.30 후속).
+    """앱에 등록된 프로젝트 폴더(출처 범위 필터 재료, 5.7R.30 후속·5.7R.33i).
 
     기능은 앱이 만들거나 등록한 프로젝트(로컬 폴더)에 대해서만 동작한다. 이 값을 받은 출처는
-    범위 밖 폴더의 기록을 읽지 않는다. 등록된 프로젝트가 없으면 둘 다 비어 있고 아무것도
-    읽지 않는다.
+    범위 밖 폴더의 기록을 읽지 않는다. 범위는 "등록된 프로젝트 전체" 하나다(옛 ``current`` 범위는
+    33i에서 없앴다). 등록된 프로젝트가 없으면 아무것도 읽지 않는다.
 
     Attributes:
-        current: 현재 프로젝트 폴더(0개 또는 1개).
-        registered: 등록된 프로젝트 폴더 전체.
+        registered: 등록된(보관 아님) 프로젝트 폴더 전체. 출처는 이 폴더(하위 폴더 포함)의 기록만
+            새로 읽는다.
+        retained: 보관된 프로젝트 폴더. 새로 읽지 않지만 이미 색인된 기록은 범위 밖으로 보지 않는다
+            (색인을 지우지 않음, design §PI.5).
+        project_for: 경로 → 등록 프로젝트 id(하위 폴더 포함, 없으면 None). 주면 ``contains``가
+            이것으로 판정한다(호스트의 경로 비교 규칙 — 대소문자 등 — 을 그대로 쓴다).
+
+    >>> folders = ProjectFolders(registered=(Path("/w/a"),))
+    >>> folders.contains("/w/a/src"), folders.contains("/w/ab"), folders.empty
+    (True, False, False)
     """
 
-    current: tuple[Path, ...] = ()
     registered: tuple[Path, ...] = ()
-
-    def select(self, scope: str) -> tuple[Path, ...]:
-        """범위 이름(출처 설정 데이터) → 폴더. ``registered``면 전체, 그 밖은 현재 프로젝트."""
-        return self.registered if scope == "registered" else self.current
+    retained: tuple[Path, ...] = ()
+    project_for: Callable[[str], str | None] | None = field(default=None, compare=False)
 
     @property
     def empty(self) -> bool:
         """등록된 프로젝트가 없다."""
-        return not self.registered and not self.current
+        return not self.registered
+
+    def contains(self, path: str) -> bool:
+        """경로가 등록 폴더(하위 폴더 포함) 안인가. ``project_for``가 없으면 단순 경로 비교."""
+        if not path:
+            return False
+        if self.project_for is not None:
+            return self.project_for(path) is not None
+        target = _norm(path)
+        for folder in self.registered:
+            base = _norm(str(folder))
+            if target == base or target.startswith(base.rstrip("/") + "/"):
+                return True
+        return False
+
+    def with_retained(self) -> ProjectFolders:
+        """보관 폴더까지 등록으로 본 값(색인 유지 판정용, ``project_for``는 쓰지 않음)."""
+        return ProjectFolders(registered=(*self.registered, *self.retained))
+
+
+def _norm(path: str) -> str:
+    value = path.replace("\\", "/")
+    while len(value) > 1 and value.endswith("/"):
+        value = value[:-1]
+    return value
 
 
 @dataclass(frozen=True, slots=True)

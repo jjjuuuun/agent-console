@@ -4,11 +4,25 @@
   "properties": {
     "project_scope": {
       "type": "string",
-      "enum": ["current", "registered"],
-      "default": "current",
-      "title": "수집 범위",
-      "description": "앱에 등록된 프로젝트 폴더의 세션만 읽는다. 등록된 프로젝트가 없으면 아무것도 읽지 않는다. 루트 폴더를 직접 적어도 범위 밖은 건너뛴다.",
-      "x-ui": {"tier": "basic", "enum_labels": {"current": "현재 프로젝트", "registered": "등록된 프로젝트 전체"}, "when": "다른 등록 프로젝트의 세션도 함께 보고 싶을 때 바꾸세요."}
+      "deprecated": true,
+      "title": "수집 범위(읽지 않음)",
+      "description": "더 이상 읽지 않는다. 로그는 앱에 등록된 프로젝트 전체(하위 폴더 포함)의 세션을 읽는다. 등록된 프로젝트가 없으면 아무것도 읽지 않는다.",
+      "x-ui": {"tier": "advanced", "example": "registered"}
+    },
+    "cwd_pointer": {
+      "type": "string",
+      "default": "/cwd",
+      "title": "세션 작업 폴더 위치",
+      "description": "세션 파일 한 줄(JSON)에서 작업 폴더를 꺼내는 JSON 포인터. 폴더 이름이 등록 폴더 키와 같거나 그 하위처럼 보이면 이 값으로 어느 프로젝트의 세션인지 확정한다.",
+      "x-ui": {"tier": "advanced", "when": "Claude Code 기록 형식이 바뀌어 작업 폴더 필드 이름이 달라졌을 때 바꾸세요."}
+    },
+    "cwd_peek_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 262144,
+      "title": "작업 폴더를 찾을 앞부분 크기",
+      "description": "세션 작업 폴더를 찾으려고 파일 앞에서 읽는 최대 바이트 수.",
+      "x-ui": {"tier": "advanced", "unit": "바이트"}
     },
     "project_key_keep": {
       "type": "string",

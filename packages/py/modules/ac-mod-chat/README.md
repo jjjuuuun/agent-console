@@ -82,6 +82,7 @@ True running running
 | 선택 | `chat.runs` / `chat.run_events` / `chat.interactions` | `RunReader` / `EventReader` / `InteractionReader` — 없으면 턴 목록 빈 값·대기 수 0 |
 | 선택 | `chat.turn_sessions` | `TurnSessions`(`collect`·`prune`) — 없으면 기본 규칙(턴 Run 자기 노드만, 키 = 노드 id) |
 | 선택 | `definitions.lookup` | `get(kind, id).document` — 없으면 대화 만들기 409 |
+| 선택 | `definitions.spaces` | `open(project_id).get(kind, id).document`(5.7R.33y) — 있으면 프로젝트 대화의 팀 구성은 그 공간에서만(없으면 404), 없으면 `definitions.lookup` |
 | 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`chat.*`) — 없으면 스키마 기본값 |
 
 실행 연결은 이 모듈이 시작할 때 읽는다(`ChatService.connect`). 연결 모듈은 `chat.conversations`가 필수라 조립 순서상 이 모듈보다 뒤에 빌드되기 때문이다. 재시작 대기열 정책(`chat.queue_after_restart`)은 턴 실행기를 주는 연동 모듈이 시작할 때 적용한다(실행기 없이는 대기열을 꺼내지 않고 남긴다).

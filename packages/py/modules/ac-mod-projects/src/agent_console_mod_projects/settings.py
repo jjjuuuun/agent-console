@@ -94,16 +94,12 @@ class ProjectModuleSettings(BaseModel):
     )
     working_directory: Path | None = Field(
         default=None,
-        title="앱 작업 폴더(옛 값)",
+        title="앱 작업 폴더(읽지 않음)",
         description=(
-            "옛 로그 범위 current가 쓰는 비교 폴더. 비우면 실행 설정의 작업 폴더, 그것도 없으면 "
-            "설정 파일 폴더."
+            "더 이상 읽지 않습니다. 로그는 등록한 프로젝트 전체를 모읍니다(옛 로그 범위 current용 "
+            "값이었음). 설정에서 지워도 됩니다."
         ),
-        json_schema_extra=x_ui(
-            tier="advanced",
-            example="./project",
-            when="옛 로그 범위(current)를 아직 쓸 때만.",
-        ),
+        json_schema_extra={"deprecated": True, **x_ui(tier="advanced", example="./project")},
     )
     snapshot_ttl_seconds: float = Field(
         title="정의 목록 재사용 시간",
@@ -181,13 +177,12 @@ class ProjectModuleSettings(BaseModel):
 
 SETTINGS_COMPAT = SettingsCompat(
     seeds=(
-        SeedSetting("working_directory", "modules.options.mod-runs.working_directory"),
         SeedSetting("server_host", "host"),
         SeedSetting("records_space_prefix", "modules.options.link-projects-records.space_prefix"),
     ),
 )
-"""다른 설정 값을 기본값으로 이어받는다(값이 없을 때만): 실행 모듈 작업 폴더, 서버 바인딩 주소,
-기록 연동의 공간 이름 접두."""
+"""다른 설정 값을 기본값으로 이어받는다(값이 없을 때만): 서버 바인딩 주소, 기록 연동의 공간 이름
+접두. 실행 모듈 작업 폴더는 5.7R.33i부터 이어받지 않는다(옛 로그 범위 current 삭제)."""
 
 
 __all__ = [

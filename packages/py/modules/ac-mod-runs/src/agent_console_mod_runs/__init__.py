@@ -12,8 +12,9 @@
       ``RUN_SERVICES``·``RUN_SCOPES``·``RESUME_HANDLERS``·``WORKSPACE_SETTINGS``·``SECRET_RULES``.
     - 확장 지점 프로토콜: ``RunPreparer``(+ ``RunPreparation``, 선택 사전 점검 ``RunPreflight`` →
       ``RunPreflightError``, 선택 이슈 꾸미기 ``RunIssueAnnotator``)·``RunScoper``(+ ``RunScope``,
-      요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34)·``RunServiceProvider``
-      (+ ``RunEnvironment``)·``ResumeHandler``.
+      요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34, 선택 메서드 ``RunDefinitionsScoper`` →
+      Run의 정의 조회 출처 ``DefinitionSource``·노드 서비스 키 ``RUN_DEFINITIONS``, 5.7R.33y)·
+      ``RunServiceProvider``(+ ``RunEnvironment``)·``ResumeHandler``.
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
       ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
       백엔드 숨김 풀기)·``build_secret_resolver``·``SuspectedRedaction``·``open_recorder``.
@@ -56,6 +57,7 @@ from .ports import (
     INTERACTIONS_PORT,
     INTERACTIONS_UPDATED,
     RESUME_HANDLERS,
+    RUN_DEFINITIONS,
     RUN_PREPARERS,
     RUN_SCOPES,
     RUN_SERVICES,
@@ -69,7 +71,9 @@ from .ports import (
     SERVER_WARNINGS,
     WORKSPACE_SETTINGS,
     DefinitionLookup,
+    DefinitionSource,
     ResumeHandler,
+    RunDefinitionsScoper,
     RunEnvironment,
     RunIssueAnnotator,
     RunPreflight,
@@ -101,6 +105,7 @@ __all__ = [
     "RUNS_EVENTS",
     "RUNS_READER",
     "RUNS_STARTER",
+    "RUN_DEFINITIONS",
     "RUN_PREPARERS",
     "RUN_SCOPES",
     "RUN_SERVICES",
@@ -118,12 +123,14 @@ __all__ = [
     "ChildResumeFix",
     "DefinitionLookup",
     "DefinitionReadError",
+    "DefinitionSource",
     "InteractionService",
     "LookupSecretProvider",
     "NodeTypeNotFoundError",
     "PortConfigError",
     "PublishingSink",
     "ResumeHandler",
+    "RunDefinitionsScoper",
     "RunEnvironment",
     "RunIssueAnnotator",
     "RunNotFoundError",

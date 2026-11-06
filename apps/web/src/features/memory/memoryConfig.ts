@@ -70,12 +70,12 @@ export const WARNING_CODES: { readonly storageMemory: string; readonly searchFal
 
 /**
  * 실행 상세 요약 줄의 메모리 칩 데이터(`memoryData.json`): 이 실행의 `typePrefix` 이벤트를 세어 type 뒤쪽 이름이 `write.types`면 쓰기, `read.types`면 읽기로 센다.
- * `cap`을 넘으면 "{cap}+"로 보이고 `okStatus`가 아닌 payload `status`는 실패로 센다. 읽기 칩은 이벤트 목록을 `read.openPrefix`로 연다.
+ * `cap`을 넘으면 "{cap}+"로 보이고 `okStatus`가 아닌 payload `status`는 실패로 센다. 읽기 칩은 이벤트 목록을 `read.openPrefixes`(여러 접두는 쉼표로 이어 필터 한 값)로 연다.
  */
 export const RUN_CHIPS: {
   readonly typePrefix: string;
   readonly write: { readonly types: readonly string[] };
-  readonly read: { readonly types: readonly string[]; readonly openPrefix: string };
+  readonly read: { readonly types: readonly string[]; readonly openPrefixes: readonly string[] };
   readonly cap: number;
   readonly debounceMs: number;
   readonly okStatus: string;

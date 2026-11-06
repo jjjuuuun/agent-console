@@ -89,6 +89,18 @@ def server(
         yield client
 
 
+def register_project(client: TestClient, project_id: str, folder: Path) -> dict[str, Any]:
+    """폴더를 프로젝트로 등록한다(``POST /projects``, 폴더에 ``.agent-console/``가 생긴다).
+
+    가져오기 출처·내보내기 쓰기 대상·로그 범위는 등록 프로젝트 폴더만이다(design §PI.5).
+    """
+    body = {"id": project_id, "name": project_id, "folder": str(folder)}
+    response = client.post(f"{API}/projects", json=body)
+    assert response.status_code == 201, response.text
+    created: dict[str, Any] = response.json()
+    return created
+
+
 def agent_doc(
     agent_id: str, response: str, *, backend: str = FAKE_BACKEND_ID, **extra: Any
 ) -> dict[str, Any]:

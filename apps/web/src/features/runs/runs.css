@@ -46,7 +46,7 @@
 .runs-inspector .ac-tab-panel:has(> [data-fill-height]) { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
 .runs-inspector [data-fill-height] { flex: 1 1 0; min-height: 0; }
 @media (max-width: 1279px) {
-  .runs-detail-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(360px, 54%) minmax(0, 1fr); }
+  .runs-detail-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(400px, 55%) minmax(0, 1fr); }
   .runs-detail-graph { border-right: 0; border-bottom: 1px solid var(--ac-border); min-height: 0; overflow: hidden; }
   .runs-graph-canvas { min-height: 320px; }
 }

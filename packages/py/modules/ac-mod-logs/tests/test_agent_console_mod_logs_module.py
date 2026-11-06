@@ -69,6 +69,7 @@ TOKEN = "t" * 32
 QUIET = {"startup_scan": False, "scan_interval_seconds": 0}
 """배경 수집 없음(테스트가 직접 수집한다)."""
 PROJECTS = {"groups": [{"id": "proj-a", "label": "프로젝트 A", "match": ["/work/proj-a/**"]}]}
+"""옛 묶기 설정(5.7R.33i부터 읽고 무시). 프로젝트는 ``projects.folders``(등록 폴더)로 정한다."""
 FIXTURE_EVENTS = 9
 
 

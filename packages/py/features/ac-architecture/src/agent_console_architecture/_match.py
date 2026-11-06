@@ -190,6 +190,18 @@ class ProfileMatcher:
         """이벤트 하나를 판정한다."""
         return self.match_subject(event_subject(event))
 
+    row_fields: frozenset[str] = frozenset()
+    """`match_row`가 읽는 색인 열 이름(로그 색인 행 기준 미리 거르기, 6R.9). 기본은 없음."""
+
+    def match_row(self, row: Mapping[str, Any]) -> EventMatch | None:
+        """색인 열 값(`row_fields`)만으로 판정할 수 있으면 그 결과, 없으면 None.
+
+        기본 판정기는 이벤트 전체가 필요해 늘 None이다. 판정 결과를 기억하는 하위 클래스가
+        `seq`·`uid` 같은 열로 기억한 결과를 돌려준다. 돌려준 값은 `match(event)`와 같아야 한다.
+        """
+        del row
+        return None
+
 
 class _Gate:
     """최상위 키 몇 개의 값으로 칸·연결을 미리 판정하거나 거른다(판정 결과는 같다).

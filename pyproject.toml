@@ -89,6 +89,7 @@ agent-console-local-folders = { workspace = true }
 agent-console-project-space = { workspace = true }
 agent-console-link-projects-records = { workspace = true }
 agent-console-link-projects-memory = { workspace = true }
+agent-console-text-template = { workspace = true }
 
 # ---------------------------------------------------------------- poe (CLAUDE.md "명령어")
 # mypy 캐시는 저장소 루트 `.mypy_cache` 한곳에만 쌓는다(5.2R.94b). `poe examples`·`poe mypy-package`처럼
@@ -262,6 +263,7 @@ root_packages = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -328,6 +330,7 @@ source_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -393,6 +396,7 @@ source_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -461,6 +465,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -525,6 +530,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -593,6 +599,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -660,6 +667,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -723,6 +731,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -790,6 +799,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -867,6 +877,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -932,6 +943,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -999,6 +1011,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1061,6 +1074,75 @@ forbidden_modules = [
     "agent_console_resources",
     "agent_console_resources_core",
     "agent_console_runtime",
+    "agent_console_secret_rules",
+    "agent_console_server",
+    "agent_console_settings",
+    "agent_console_store",
+    "agent_console_teams",
+    "agent_console_text_template",
+    "agent_console_trace",
+    "agent_console_usage",
+]
+
+[[tool.importlinter.contracts]]
+name = "text-template는 다른 agent_console 패키지에 의존하지 않는다 (순수 안전 치환, design §6R.3)"
+type = "forbidden"
+source_modules = ["agent_console_text_template"]
+forbidden_modules = [
+    "agent_console_architecture",
+    "agent_console_backend_claude_sdk",
+    "agent_console_backend_fake_agent",
+    "agent_console_chat",
+    "agent_console_claude_format",
+    "agent_console_cli",
+    "agent_console_conditions",
+    "agent_console_contracts",
+    "agent_console_delegation_host",
+    "agent_console_exports",
+    "agent_console_graph",
+    "agent_console_hook_probe",
+    "agent_console_imports",
+    "agent_console_link_chat_runs",
+    "agent_console_link_definitions_resources",
+    "agent_console_link_definitions_teams",
+    "agent_console_link_exports_teams",
+    "agent_console_link_logs_architecture",
+    "agent_console_link_logs_runs",
+    "agent_console_link_logs_trace",
+    "agent_console_link_logs_usage",
+    "agent_console_link_memory_runs",
+    "agent_console_link_projects_memory",
+    "agent_console_link_projects_records",
+    "agent_console_link_projects_runs",
+    "agent_console_link_runs_teams",
+    "agent_console_link_runs_trace",
+    "agent_console_link_runs_usage",
+    "agent_console_local_folders",
+    "agent_console_logs",
+    "agent_console_logs_claude",
+    "agent_console_memory",
+    "agent_console_mod_architecture",
+    "agent_console_mod_chat",
+    "agent_console_mod_definitions",
+    "agent_console_mod_exports",
+    "agent_console_mod_imports",
+    "agent_console_mod_logs",
+    "agent_console_mod_memory",
+    "agent_console_mod_projects",
+    "agent_console_mod_resources",
+    "agent_console_mod_runs",
+    "agent_console_mod_usage",
+    "agent_console_mod_versions",
+    "agent_console_modkit",
+    "agent_console_nodes_core",
+    "agent_console_project_space",
+    "agent_console_projects",
+    "agent_console_pty_session",
+    "agent_console_registry",
+    "agent_console_resources",
+    "agent_console_resources_core",
+    "agent_console_runtime",
+    "agent_console_safe_regex",
     "agent_console_secret_rules",
     "agent_console_server",
     "agent_console_settings",
@@ -1133,12 +1215,13 @@ forbidden_modules = [
     "agent_console_server",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
 
 [[tool.importlinter.contracts]]
-name = "resources는 contracts, registry, settings, secret-rules에만 의존 (리소스 종류 이름을 모른다, design §R9.4·§2R.4)"
+name = "resources는 contracts, registry, settings, secret-rules, text-template에만 의존 (리소스 종류 이름을 모른다, design §R9.4·§2R.4·§6R.3)"
 type = "forbidden"
 source_modules = ["agent_console_resources"]
 forbidden_modules = [
@@ -1260,6 +1343,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1322,6 +1406,7 @@ forbidden_modules = [
     "agent_console_safe_regex",
     "agent_console_server",
     "agent_console_store",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1389,6 +1474,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_usage",
 ]
 allow_indirect_imports = true
@@ -1458,6 +1544,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1522,6 +1609,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1589,6 +1677,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
 ]
 allow_indirect_imports = true
@@ -1660,6 +1749,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1725,6 +1815,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1791,6 +1882,7 @@ forbidden_modules = [
     "agent_console_secret_rules",
     "agent_console_server",
     "agent_console_store",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1857,6 +1949,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -1935,6 +2028,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -2001,6 +2095,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -2068,6 +2163,7 @@ forbidden_modules = [
     "agent_console_server",
     "agent_console_settings",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -2133,6 +2229,7 @@ forbidden_modules = [
     "agent_console_server",
     "agent_console_settings",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -2258,6 +2355,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
 ]
 allow_indirect_imports = true
@@ -3011,6 +3109,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -3075,6 +3174,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]
@@ -3137,6 +3237,7 @@ forbidden_modules = [
     "agent_console_settings",
     "agent_console_store",
     "agent_console_teams",
+    "agent_console_text_template",
     "agent_console_trace",
     "agent_console_usage",
 ]

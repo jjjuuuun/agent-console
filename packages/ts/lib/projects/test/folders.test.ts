@@ -92,6 +92,12 @@ describe("선택 창 응답 → picker", () => {
   test("picked인데 check가 없으면 경로만(picker가 확인 요청)", () => {
     expect(folderPickOutcome({ status: "picked", path: "/p" })).toEqual({ status: "picked", path: "/p" });
   });
+  test("existing(found·invalid)은 picker manifest로 옮긴다", () => {
+    const base = { input: "/x", status: "ok", path: "/x", exists: true, is_dir: true, readable: true, writable: true };
+    expect(folderCheckData({ ...base, existing: { state: "found", name: "N", definitions: 3 } }).manifest).toEqual({ valid: true, name: "N", count: 3 });
+    expect(folderCheckData({ ...base, existing: { state: "invalid" } }).manifest).toEqual({ valid: false });
+    expect(folderCheckData({ ...base, existing: null }).manifest).toBeUndefined();
+  });
   test("고르기 방법", () => {
     expect(folderCapabilities({ native_dialog: true, browse: true })).toEqual({ browse: true, native_dialog: true });
     expect(folderCapabilities({ reason: "remote" })).toEqual({ browse: true, native_dialog: false, reason: "remote" });

@@ -8,14 +8,18 @@
 - `POST /exports/write`: 허용 루트 아래에 쓰기(토큰 필수, `on_conflict` 기본 fail).
 
 경로는 접두 없이 만들고 호스트가 ``/api/v1``을 붙인다.
+
+5.7R.33k: 질의 ``project``(등록 id)와 ``source``(``project``·``library``)가 내보낼 원본을 정한다
+(``project``가 있으면 기본 그 프로젝트 공간, 없으면 공용). 프로젝트 기능이 있는 조립에서 폴더 쓰기
+루트는 등록 프로젝트 폴더(루트 id = 등록 id)다.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from agent_console_contracts import (
     ErrorResponse,
@@ -28,6 +32,8 @@ from agent_console_contracts import (
 )
 from agent_console_exports import ExportService
 from agent_console_modkit.host import TOKEN_HEADER
+
+from .projects import ExportSource
 
 ZIP_MEDIA_TYPE = "application/zip"
 
@@ -50,11 +56,24 @@ def require_token(request: Request) -> None:
         raise TokenRequiredError("토큰이 없거나 맞지 않습니다")
 
 
-def build_router(service: Callable[[], ExportService], *, expose_paths: bool = True) -> APIRouter:
-    """내보내기 라우터(``service``는 요청마다 부른다).
+ProjectParam = Annotated[
+    str | None, Query(description="등록 프로젝트 id(내보낼 원본 기본 = 그 프로젝트 공간).")
+]
+SourceParam = Annotated[
+    ExportSource | None,
+    Query(description="내보낼 원본: project(그 프로젝트 공간)·library(공용)."),
+]
+
+
+def build_router(
+    service: Callable[[str | None, ExportSource | None], ExportService],
+    *,
+    expose_paths: bool = True,
+) -> APIRouter:
+    """내보내기 라우터(``service(project, source)``는 요청마다 부른다).
 
     Args:
-        service: 서비스를 돌려주는 함수.
+        service: 서비스를 돌려주는 함수(질의 ``project``·``source``).
         expose_paths: ``/exports/roots``에 절대 경로를 보일지.
     """
     router = APIRouter()
@@ -62,22 +81,26 @@ def build_router(service: Callable[[], ExportService], *, expose_paths: bool = T
     @router.get("/exporters", response_model=list[ExporterDescriptor], responses=_errors())
     async def list_exporters() -> list[ExporterDescriptor]:
         """내보내기 형식(플러그인 entry point `agent_console.exporters`, 기본 `claude-dir`)."""
-        return service().descriptors()
+        return service(None, None).descriptors()
 
     @router.post("/exports/plan", response_model=ExportPlan, responses=_errors(409))
-    async def plan_export(body: ExportRequest) -> ExportPlan:
+    async def plan_export(
+        body: ExportRequest, project: ProjectParam = None, source: SourceParam = None
+    ) -> ExportPlan:
         """미리보기: 파일 경로·크기·동작과 경고. 아무것도 쓰지 않는다. `root`가 있으면 그 폴더
         기준 동작(create·skip·conflict), 없으면 모두 create. 잘못된 종류·옵션·경로는 422."""
-        return service().plan(body)
+        return service(project, source).plan(body)
 
     @router.post(
         "/exports/archive",
         response_class=Response,
         responses={**_errors(), 200: {"content": {ZIP_MEDIA_TYPE: {}}}},
     )
-    async def archive_export(body: ExportRequest) -> Response:
+    async def archive_export(
+        body: ExportRequest, project: ProjectParam = None, source: SourceParam = None
+    ) -> Response:
         """보관 파일(zip) 응답. 서버 디스크에 쓰지 않는다. 형식이 error 경고를 내면 422."""
-        archive = service().archive(body)
+        archive = service(project, source).archive(body)
         return Response(
             content=archive.data,
             media_type=ZIP_MEDIA_TYPE,
@@ -89,14 +112,16 @@ def build_router(service: Callable[[], ExportService], *, expose_paths: bool = T
         """폴더 쓰기를 허용한 루트(토큰 필수). 비면 폴더 쓰기 꺼짐. 설정 `expose_paths`가
         false면 경로를 비운다."""
         require_token(request)
-        return service().roots(expose_paths=expose_paths)
+        return service(None, None).roots(expose_paths=expose_paths)
 
     @router.post("/exports/write", response_model=ExportResult, responses=_errors(409))
-    async def write_export(body: ExportWriteRequest) -> ExportResult:
+    async def write_export(
+        body: ExportWriteRequest, project: ProjectParam = None, source: SourceParam = None
+    ) -> ExportResult:
         """허용 루트 아래 `subdir`에 쓴다. `on_conflict=fail`(기본)이면 다른 내용의 파일이 하나라도
         있을 때 아무것도 쓰지 않고 409 `already_exists`(`details.paths`). 경로 탈출·링크·보호
         위치(`~/.claude` 등)는 422, 모르는 루트는 404."""
-        return service().write(body)
+        return service(project, source).write(body)
 
     return router
 

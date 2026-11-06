@@ -189,8 +189,9 @@ class LogsModule:
             try:
                 value = reader()
                 return ProjectFolders(
-                    current=tuple(Path(p) for p in value.current),
                     registered=tuple(Path(p) for p in value.registered),
+                    retained=tuple(Path(p) for p in value.archived_folders),
+                    project_for=value.project_for,
                 )
             except Exception:  # 프로젝트를 읽지 못하면 이번 수집은 빈 범위
                 _log.exception("등록된 프로젝트 폴더를 읽지 못했습니다")

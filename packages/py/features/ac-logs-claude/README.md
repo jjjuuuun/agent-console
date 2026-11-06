@@ -83,7 +83,9 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 
 | 키 | 기본값 | 뜻 |
 | --- | --- | --- |
-| `project_scope` | `current` | 수집 범위: `current`(현재 프로젝트) / `registered`(등록된 프로젝트 전체). 설정 화면 기본 칸 |
+| `project_scope` | (없음) | 읽지 않음(5.7R.33i, 남아 있으면 정보 `logs.ignored_key`). 범위는 늘 등록된 프로젝트 전체(하위 폴더 포함) |
+| `cwd_pointer` | `/cwd` | 세션 작업 폴더 JSON 포인터. 폴더 키가 등록 폴더 키와 같거나 그 하위처럼 보이면 이 cwd가 등록 폴더 안인지로 확정한다(키는 손실 변환) |
+| `cwd_peek_bytes` | `262144` | cwd를 찾으려고 파일 앞에서 읽는 최대 바이트 |
 | `workspace_roots` | `[".state/claude/projects"]` | 앱 실행 세션 폴더(앱 workspace 기준 상대 경로, 절대 경로 가능 — 앱 전용 구독 자격 폴더 아래). `roots`가 비었을 때만. 백엔드 `auth_dir.config_dir`를 바꾸면 함께 바꾼다. 5.7R.30의 `project_roots`(프로젝트 안 상대 경로)는 스키마에 `deprecated`로만 남아 읽지 않는다(값이 있으면 앱이 정보 이슈 `logs.ignored_key`) |
 | `project_key_keep`·`project_key_replacement` | `""`·`-` | 작업 폴더 → `projects` 아래 폴더 이름 규칙(영문자·숫자·남길 글자 밖은 바꿈 글자로, 예: `/work/demo` → `-work-demo`). Claude Code가 문서로 정하지 않은 규칙이라 바뀌면 고친다 |
 | `roots` | `[]` | 읽을 `projects` 폴더 목록. 비면 아래 규칙(CLI 세션) + `workspace_roots`(앱 실행 세션). 적어도 범위 필터는 그대로 |

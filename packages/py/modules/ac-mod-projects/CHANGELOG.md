@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- 5.7R.33i: `projects.folders`에 보관 폴더(`archived`). 옛 로그 범위 `current`용 `ProjectManager(working_directory=)`와 `working_directory` 이어받기(SeedSetting)를 지웠다. 설정 `working_directory`는 남지만 읽지 않는다(스키마 `deprecated`).
+
 ## 0.2.0
 
 - 5.7R.33f(깨는 변경): 등록부 = `ProjectRegistration`(폴더·보관·라벨), 이름·설명·프로젝트 층은 폴더 매니페스트. 응답은 `ProjectView`(상태·`config_writable`·`manifest_id`·`kinds`·`issues`·`config_dir`·`records_*`, 시간 상한). 등록 = `init_space`(없을 때만 쓰고 채택, 깨진 매니페스트는 쓰지 않음), 겹침 409, DELETE = 보관, `PUT archived:false` = 다시 등록.

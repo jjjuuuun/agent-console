@@ -62,8 +62,8 @@ export function InfoHint({ lines, placement = "top" }: { lines: readonly string[
   );
 }
 
-/** 격자 아래 기준 문구의 종류. 설정 순서가 있으면 order, 아니면 공식 우선 규칙이 쓰였는지로 정한다. */
-export function basisKind(groups: readonly WindowGroup[], hasOrder: boolean): "order" | "recentOfficial" | "recent" {
-  if (hasOrder) return "order";
+/** 격자 아래 기준 문구의 종류. 설정 순서가 있으면 configured, 아니면 공식 우선 규칙이 쓰였는지로 정한다. */
+export function basisKind(groups: readonly WindowGroup[], hasOrder: boolean): "configured" | "recentOfficial" | "recent" {
+  if (hasOrder) return "configured";
   return groups.some((g) => g.rule === "recent-official") ? "recentOfficial" : "recent";
 }

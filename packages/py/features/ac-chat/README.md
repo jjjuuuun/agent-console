@@ -42,6 +42,7 @@
 | --- | --- | --- | --- |
 | `ConversationRepository`(필수) | `get`, `save`, `delete`, `list(graph_id=, archived=)` | 저장소 대화 리포지토리 | — |
 | `GraphLookup`(필수) | `get_graph(graph_id)` | 정의 저장소 위 함수 하나 | — |
+| `ProjectGraphLookup`(선택 능력, 5.7R.33y) | `get_project_graph(project_id, graph_id)` | 있으면 `project_id`가 있는 대화의 팀 구성은 그 프로젝트에서만 찾는다(가짜 `testing.MemoryProjectGraphs`) | 모든 대화가 `get_graph` |
 | `TurnLauncher` | `async start_turn(TurnStart) -> TurnHandle`, `cancel(run_id, reason)` | `GraphRuntime`을 감싼 얇은 어댑터(`TurnStart.sessions`를 노드 서비스로, `conversation_id`·`origin`을 Run에) | 전송·이어 가기 `ChatFeatureUnavailableError`, 대기열은 꺼내지 않고 남긴다 |
 | `TurnHandle` | `run_id`, `run`, `async wait()` | `GraphRuntime.start()`의 `RunHandle` 그대로 | — |
 | `RunReader` | `get`, `list(conversation_id=, limit=)`(최신순) | 저장소 Run 리포지토리 | 턴 목록이 비고 마지막 상태는 null |

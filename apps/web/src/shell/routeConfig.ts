@@ -36,6 +36,8 @@ export interface RouteDef {
    * (`routeServing`). id를 바꾸거나 다른 라우트로 역할을 옮겨도 링크가 깨지지 않는다.
    */
   serves?: string;
+  /** true면 프로젝트 홈의 요약 줄에 이 화면으로 가는 링크("로그"·"메모리")가 생긴다(현재 프로젝트 문맥을 따르는 화면). */
+  projectShortcut?: boolean;
   /**
    * 이 화면이 켜져 있으려면 서버에서 켜져 있어야 하는 모듈 id 또는 역할(모두 만족해야 한다, 비면 항상 켜짐).
    * 만족하지 못하면 사이드바·빠른 이동·`g` 단축키에서 빠지고, 주소로 들어오면 안내 화면이 나온다.
@@ -69,9 +71,9 @@ export const DEFAULT_ROUTES: readonly RouteDef[] = [
   { id: "agents", serves: "definition:agent", requires: ["definitions:agent"], path: "/agents", titleKey: "nav.agents", icon: "agents", badgeSource: null, gotoKey: "a", position: "main", group: "config" },
   { id: "resources", serves: "definition:resource", requires: ["definitions:resource"], path: "/resources", titleKey: "nav.resources", icon: "resources", badgeSource: null, gotoKey: "r", position: "main", group: "config" },
   { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"] },
-  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run" },
+  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true },
   { id: "usage", serves: "usage", requires: ["usage"], path: "/usage", titleKey: "nav.usage", icon: "usage", badgeSource: null, gotoKey: "u", position: "main", group: "observe" },
-  { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"] },
+  { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"], projectShortcut: true },
   { id: "settings", serves: "settings", requires: [], path: "/settings", titleKey: "nav.settings", icon: "settings", badgeSource: null, gotoKey: "s", position: "bottom" },
 ];
 

@@ -7,6 +7,8 @@ import {
   WS_AUTH_CLOSE_CODES,
   type WsClient,
   createRestIo,
+  createSpaceRestClient,
+  type SpaceRestClient,
 } from "@agent-console/api-client";
 import { createProjectsClient, type ProjectsClient } from "@agent-console/projects";
 
@@ -28,6 +30,8 @@ export interface ApiClients {
   rest: RestClient;
   /** 프로젝트 REST(서버 프로젝트 모듈이 꺼져 있으면 호출하지 않는다). 전송은 `rest`와 같은 주소·토큰·fetch */
   projects: ProjectsClient;
+  /** 한 공간(공용 = null, 프로젝트 id)의 정의·메모리 클라이언트. 모든 요청에 `?project=<id>`가 붙는다 */
+  space: (project: string | null) => SpaceRestClient;
   ws: WsClient;
   meta: ClientMeta;
 }
@@ -75,6 +79,7 @@ export function createApiClients(options: CreateApiClientsOptions): ApiClients {
   return {
     rest: createRestClient({ ...common, fetch: guardedFetch }),
     projects: createProjectsClient(createRestIo({ ...common, fetch: guardedFetch })),
+    space: (project) => createSpaceRestClient({ ...common, fetch: guardedFetch }, project),
     ws: createWsClient({
       ...common,
       noReconnectCloseCodes: WS_AUTH_CLOSE_CODES,

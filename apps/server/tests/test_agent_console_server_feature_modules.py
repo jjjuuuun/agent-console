@@ -16,7 +16,7 @@ import pytest
 
 from agent_console_modkit import PortKey
 from agent_console_server import CONFIG_FILENAME, SETTINGS_REMOVED_KEY, ConfigError, load_settings
-from agent_console_server.testing import API, agent_doc, make_settings, server
+from agent_console_server.testing import API, agent_doc, make_settings, register_project, server
 
 USAGE_TOKEN_ROLLUPS: PortKey[Any] = PortKey("usage.token_rollups")
 
@@ -165,28 +165,33 @@ def test_new_locations_start_without_settings_warnings(tmp_path: Path) -> None:
     with server(settings) as client:
         warnings = client.get(f"{API}/server-info").json()["warnings"]
         assert not [w for w in warnings if w["code"].startswith("settings.")]
+        # 5.7R.33k: 앱 조립의 쓰기 대상은 등록 프로젝트 폴더(설치자 roots는 단독 사용용)
+        assert client.get(f"{API}/exports/roots").json() == []
+        register_project(client, "o", out)
         assert [r["id"] for r in client.get(f"{API}/exports/roots").json()] == ["o"]
 
 
-def test_imports_project_dir_defaults_to_base_dir_not_runs_working_directory(
+def test_imports_project_dir_is_not_used_when_projects_module_is_on(
     tmp_path: Path,
 ) -> None:
-    """H3(4R.18): `mod-imports.project_dir`는 자기 옵션이다. 생략하면 호스트 `paths.base_dir`이고
-    실행 모듈의 `working_directory`를 기본값으로 읽지 않는다."""
+    """H3(4R.18): `mod-imports.project_dir`는 자기 옵션이다(실행 모듈 `working_directory`를 읽지
+    않음). 5.7R.33k: 앱 조립에는 프로젝트 모듈이 있으므로 출처는 등록 프로젝트 폴더뿐이고
+    `project_dir`·설정 파일 폴더(`base_dir`)는 출처가 아니다(모듈 단독 사용에서만 쓴다)."""
     project = tmp_path / "proj"
     (project / ".claude").mkdir(parents=True)
+    (tmp_path / ".claude").mkdir()
     home = tmp_path / "nohome"
     settings = make_settings(tmp_path, options={"mod-runs": {"working_directory": str(project)}})
     assert "project_dir" not in settings.modules.options.get("mod-imports", {})
     assert "home" not in settings.modules.options.get("mod-exports", {})
     env = {"HOME": str(home)}
     with server(settings, environ=env) as client:
-        sources = {s["id"]: s for s in client.get(f"{API}/resources/import/sources").json()}
-        assert sources["project-claude"]["available"] is False  # base_dir(tmp_path)에 .claude 없음
-    (tmp_path / ".claude").mkdir()
-    with server(settings, environ=env) as client:
-        sources = {s["id"]: s for s in client.get(f"{API}/resources/import/sources").json()}
+        assert client.get(f"{API}/resources/import/sources").json() == []
+        register_project(client, "p", project)
+        listed = client.get(f"{API}/resources/import/sources", params={"project": "p"}).json()
+        sources = {s["id"]: s for s in listed}
         assert sources["project-claude"]["available"] is True
+        assert sources["project-claude"]["path"].startswith(str(project))
     explicit = make_settings(tmp_path, options={"mod-imports": {"project_dir": str(project)}})
     assert explicit.modules.options["mod-imports"]["project_dir"] == str(project)
 

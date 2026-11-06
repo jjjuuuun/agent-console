@@ -119,8 +119,9 @@ export function createFakeClients(restOverrides: Partial<Record<keyof RestClient
   const rest = createFakeRest(restOverrides);
   const ws = createFakeWs();
   const projects = createFakeProjects(projectsOverrides);
-  const clients: ApiClients = { rest, projects, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
-  return { rest, ws, projects, clients };
+  const space = vi.fn(() => createFakeRest() as never);
+  const clients: ApiClients = { rest, projects, space, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
+  return { rest, ws, projects, space, clients };
 }
 
 export function versionConflict(): ApiError {

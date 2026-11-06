@@ -2,7 +2,8 @@
 
 - X5 `claude-code-jsonl`(`ClaudeCodeJsonlSource`): `projects/<키>/<세션>.jsonl`과
   `<세션>/subagents/**/agent-*.jsonl`(+ 메타 파일)을 찾아 증분으로 읽는다. 기본 꺼짐(F-5).
-  앱에서는 등록된 프로젝트 폴더의 세션만 읽는다(설정 `project_scope`, `in_scope`, `project_key`).
+  앱에서는 등록된 프로젝트 폴더(하위 폴더 포함)의 세션만 읽는다(`in_scope`, `project_key`,
+  세션 cwd로 확정).
   기본 루트는 CLI 세션(`~/.claude/projects`, 읽기 전용)과 앱 실행 세션
   (`<앱 workspace>/.state/claude/projects`, 설정 `workspace_roots`) 두 곳이다(5.7R.30b).
 - X6 `claude-code`(`ClaudeCodeClassifier`): 행 단위 무상태 분류(F-7). 도구 이름 특수 처리·범주·

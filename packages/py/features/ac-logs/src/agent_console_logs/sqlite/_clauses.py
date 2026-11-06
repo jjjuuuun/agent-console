@@ -7,13 +7,22 @@
 `ac_event_ok(seq, body, heavy)`로 부른다(본문을 읽어 `LogEvent`로 만든 뒤 판정, seq별 캐시).
 SQL이 다른 조건으로 후보를 좁힌 뒤 부르므로 페이지·커서·집계는 그대로다. 행마다 본문 JSON을
 읽으므로 큰 범위에서는 느리다(색인·후처리 기준은 5.5R.6).
+
+판정 함수 중 행 기준 미리 거르기(`RowPredicate`, 6R.9 M-1)를 가진 것이 있으면 먼저
+`ac_row_ok(seq, 열...)`이 후보 행의 열 값으로 답한다(1 맞음·0 안 맞음·2 모름). `CASE`가 2일 때만
+`ac_event_ok`를 불러 본문을 읽으므로, 열 값으로 답이 나는 행은 본문을 읽지도 `LogEvent`를 만들지도
+않는다.
+
+값 목록 IN(`_in`)은 값이 `_IN_CHUNK`개 이하면 바인드 변수 IN, 넘으면 JSON 배열 하나를
+`json_each`로 펼친 IN 부분 질의다(M-15). 변수 수가 값 수와 무관해 SQLite 변수 한도(배포판 기본
+32,766)를 넘지 않는다.
 """
 
 from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 import sqlalchemy as sa
@@ -24,15 +33,18 @@ from agent_console_contracts.logs import LogEvent
 from agent_console_logs import query as q
 from agent_console_logs._filter import LogFilter, LogScope, QueryContext, require_refined
 from agent_console_logs._projects import UNGROUPED_PROJECT
+from agent_console_logs._rowcheck import RowCheck, row_check_of
 
 from .schema import log_bodies, log_events, log_links, log_search, log_tags, log_usage
 
 __all__ = ["error_expr", "event_clauses", "load_event", "usage_clauses"]
 
 _IN_CHUNK = 500
-"""값 IN 한 번에 넣는 값 수(범위 목록이 클 때 나눈다)."""
+"""바인드 변수 IN의 최대 값 수. 넘으면 `json_each` 부분 질의 하나로 바꾼다(SQLite 변수 한도)."""
 
 _PREDICATE_FN = "ac_event_ok"
+_ROW_PREDICATE_FN = "ac_row_ok"
+_ROW_YES, _ROW_NO, _ROW_UNKNOWN = 1, 0, 2
 
 Clause = ColumnElement[bool]
 
@@ -40,8 +52,15 @@ _PAIR_CHUNK = 5000
 """튜플 IN 한 번에 넣는 쌍 수(SQLite 변수 상한 32766 아래)."""
 
 
-def _in(col: ColumnElement[Any], values: Sequence[str]) -> Clause:
-    return col.in_(list(values))
+def _in(col: ColumnElement[Any], values: Iterable[str]) -> Clause:
+    """`col IN values`. 값이 없으면 거짓, `_IN_CHUNK`개를 넘으면 `json_each` 부분 질의(변수 1개)."""
+    ordered = list(dict.fromkeys(values))
+    if not ordered:
+        return sa.false()
+    if len(ordered) <= _IN_CHUNK:
+        return col.in_(ordered)
+    each = sa.func.json_each(sa.bindparam(None, json.dumps(ordered), type_=sa.Text))
+    return col.in_(sa.select(sa.column("value")).select_from(each))
 
 
 def _project_clause(
@@ -71,10 +90,8 @@ def _project_clause(
 
 
 def _in_chunked(col: ColumnElement[Any], values: frozenset[str]) -> Clause:
-    ordered = sorted(values)
-    if not ordered:
-        return sa.false()
-    return sa.or_(*(col.in_(ordered[i : i + _IN_CHUNK]) for i in range(0, len(ordered), _IN_CHUNK)))
+    """범위 목록 IN(정렬해 SQL 문이 값 순서에 따라 달라지지 않게)."""
+    return _in(col, sorted(values))
 
 
 def _scope_clause(scope: LogScope, ev: FromClause) -> Clause:
@@ -122,6 +139,44 @@ def _register_predicates(conn: Connection, ctx: QueryContext) -> bool:
     return True
 
 
+def _row_checks(ctx: QueryContext) -> tuple[list[str], list[RowCheck]]:
+    """미리 거르기를 가진 판정 함수들의 (열 이름 순서, 함수). 열 이름의 첫째는 `seq`다."""
+    fields: set[str] = set()
+    checks: list[RowCheck] = []
+    for predicate in ctx.predicates:
+        found = row_check_of(predicate)
+        if found is None:
+            continue
+        fields |= found[0]
+        checks.append(found[1])
+    return ["seq", *sorted(fields - {"seq"})], checks
+
+
+def _unknown_row(_row: Mapping[str, Any]) -> bool | None:
+    return None
+
+
+def _register_row_checks(
+    conn: Connection, names: Sequence[str], checks: Sequence[RowCheck]
+) -> None:
+    """`ac_row_ok(seq, 열...)`: 모두 맞음 확정 1, 하나라도 안 맞음 확정 0, 그 밖 2."""
+    raw = conn.connection.driver_connection
+    assert isinstance(raw, sqlite3.Connection)
+
+    def row_ok(*values: Any) -> int:
+        row = dict(zip(names, values, strict=True))
+        answer = _ROW_YES
+        for check in checks:
+            hit = check(row)
+            if hit is False:
+                return _ROW_NO
+            if hit is None:
+                answer = _ROW_UNKNOWN
+        return answer
+
+    raw.create_function(_ROW_PREDICATE_FN, len(names), row_ok)
+
+
 def _predicate_clause(conn: Connection, ctx: QueryContext, ev: FromClause) -> Clause:
     if not _register_predicates(conn, ctx):
         raise NotImplementedError("확장 필터 판정은 SQLite 연결에서만 됩니다")
@@ -130,7 +185,16 @@ def _predicate_clause(conn: Connection, ctx: QueryContext, ev: FromClause) -> Cl
     body = sa.select(b.c.body).where(b.c.seq == seq).scalar_subquery()
     heavy = sa.select(b.c.heavy).where(b.c.seq == seq).scalar_subquery()
     call: ColumnElement[Any] = getattr(sa.func, _PREDICATE_FN)(seq, body, heavy)
-    return call == 1
+    names, checks = _row_checks(ctx)
+    if not checks:
+        return call == 1
+    if len(checks) < len(ctx.predicates):
+        # 미리 거르기가 없는 판정이 있으면 "모두 맞음"을 확정할 수 없다(그 판정은 본문으로)
+        checks.append(_unknown_row)
+    _register_row_checks(conn, names, checks)
+    row: ColumnElement[Any] = getattr(sa.func, _ROW_PREDICATE_FN)(*(ev.c[n] for n in names))
+    decided = sa.case({_ROW_YES: 1, _ROW_UNKNOWN: call}, value=row, else_=0)
+    return decided == 1
 
 
 def error_expr(ev: FromClause, ctx: QueryContext) -> Clause:
@@ -173,11 +237,11 @@ def event_clauses(
         if wanted:
             out.append(_in(col, wanted))
     if flt.category:
-        out.append(c["seq"].in_(sa.select(log_tags.c.seq).where(log_tags.c.tag.in_(flt.category))))
+        out.append(c["seq"].in_(sa.select(log_tags.c.seq).where(_in(log_tags.c.tag, flt.category))))
     for sides, wanted in ((None, flt.agent), (("from",), flt.from_), (("to",), flt.to)):
         if not wanted:
             continue
-        sub = sa.select(log_links.c.seq).where(log_links.c.agent.in_(list(wanted)))
+        sub = sa.select(log_links.c.seq).where(_in(log_links.c.agent, wanted))
         if sides is not None:
             sub = sub.where(log_links.c.side.in_(sides))
         out.append(c["seq"].in_(sub))

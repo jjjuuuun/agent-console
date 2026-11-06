@@ -140,11 +140,14 @@ def build_router(
     @router.post("/runs", response_model=Run, status_code=202, responses=errors())
     async def create_run(body: CreateRunRequest) -> Run:
         """Run 시작(202). 그래프·준비자 검증 실패면 422 ``validation_failed``
-        (``details.issues``)."""
-        svc = service()
-        graph = svc.load_graph(body.graph_id, body.version_hash)
-        handle = await svc.start_run(
-            graph, body.input, origin=body.origin, project_id=body.project_id
+        (``details.issues``). 그래프는 그 Run의 정의 출처(``project_id``가 있으면
+        ``runs.scopes``의 ``run_definitions``)에서 읽는다."""
+        handle = await service().start_graph(
+            body.graph_id,
+            body.input,
+            version_hash=body.version_hash,
+            origin=body.origin,
+            project_id=body.project_id,
         )
         return handle.run
 

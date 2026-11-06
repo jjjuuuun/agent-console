@@ -7,7 +7,7 @@
 import builtins
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import (
     ChatSettings,
@@ -105,6 +105,17 @@ class GraphLookup(Protocol):
 
     def get_graph(self, graph_id: str) -> Graph | None:
         """정의가 없으면 None."""
+        ...
+
+
+@runtime_checkable
+class ProjectGraphLookup(GraphLookup, Protocol):
+    """선택 능력(5.7R.33y): 프로젝트 대화의 팀 구성 조회. `GraphLookup` 구현이 함께 가지면
+    `project_id`가 있는 대화는 **그 프로젝트의 정의 출처에서만** 찾는다(라이브러리로 넘어가 찾지
+    않는다). 없으면 모든 대화가 `get_graph`를 쓴다(지금 동작)."""
+
+    def get_project_graph(self, project_id: str, graph_id: str) -> Graph | None:
+        """그 프로젝트(불투명 문자열)의 팀 구성. 없거나 그 프로젝트를 열 수 없으면 None."""
         ...
 
 

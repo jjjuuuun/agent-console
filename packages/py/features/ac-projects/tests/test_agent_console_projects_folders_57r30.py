@@ -9,10 +9,10 @@ from agent_console_projects import ProjectFolder, ProjectFolderSet, project_fold
 
 
 def test_no_projects_is_empty() -> None:
-    sets = project_folders([], working_directory=Path("/w"), flavor="posix")
+    sets = project_folders([], flavor="posix")
     assert sets.entries == ()
     assert sets.registered == ()
-    assert sets.current == ()
+    assert sets.archived == ()
 
 
 def test_entries_have_ids_and_skip_unset_archived_duplicates() -> None:
@@ -29,19 +29,28 @@ def test_entries_have_ids_and_skip_unset_archived_duplicates() -> None:
         ProjectFolder("b", Path("/w/app/sub")),
     )
     assert sets.registered == (Path("/w/a"), Path("/w/app/sub"))
-    assert sets.current == ()
+    assert sets.archived == (ProjectFolder("e", Path("/w/e")),)
+    assert sets.archived_folders == (Path("/w/e"),)
+    assert sets.project_for("/w/e/x") is None  # 보관 프로젝트에는 묶지 않는다
 
 
 def test_relative_folder_without_base_is_skipped() -> None:
     assert project_folders([{"id": "b", "folder": "sub"}], flavor="posix").entries == ()
 
 
-def test_current_compat_only_matches_registered_folder() -> None:
-    projects = [{"id": "a", "working_directory": "/w/a"}, {"id": "here", "folder": "/w/app"}]
-    sets = project_folders(projects, working_directory=Path("/w/app"), flavor="posix")
-    assert sets.current == (Path("/w/app"),)
-    none = project_folders(projects[:1], working_directory=Path("/w/app"), flavor="posix")
-    assert none.current == ()
+def test_current_compat_is_removed_33i() -> None:
+    sets = project_folders([{"id": "a", "folder": "/w/a"}], flavor="posix")
+    assert not hasattr(sets, "current")
+
+
+def test_archived_same_folder_loses_to_registered() -> None:
+    projects: list[dict[str, object]] = [
+        {"id": "old", "folder": "/w/a", "archived": True},
+        {"id": "new", "folder": "/w/a"},
+    ]
+    sets = project_folders(projects, flavor="posix")
+    assert [e.id for e in sets.entries] == ["new"]
+    assert sets.archived == ()
 
 
 def test_project_for_subfolder_and_outside() -> None:

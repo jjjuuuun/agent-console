@@ -81,7 +81,7 @@ True
 | 포트 | 방향 | 없으면 |
 | --- | --- | --- |
 | `projects.lookup` | 제공(`get_project`·`list_projects`, 합친 `Project`) | — |
-| `projects.folders` | 제공(`() -> ProjectFolderSet`, `entries`(id·폴더)·`project_for`) | — |
+| `projects.folders` | 제공(`() -> ProjectFolderSet`, `entries`(id·폴더)·`archived`(보관 폴더)·`project_for`) | — |
 | `projects.spaces` | 제공(`open(project_id) -> ProjectSpace`, 캐시 상한·유휴 닫기. 모르는 id `LookupError`, 폴더 없음 `FolderMissing`) | — |
 | `definitions.spaces` | 제공(`open(project_id) -> DefinitionStore`) | — |
 | `definitions.lookup`·`definitions.store` | 선택(라이브러리) | 라이브러리가 낀 복사 409 `feature_unavailable`, 공간 종류 = `ac-store` 기본 |
@@ -101,7 +101,7 @@ True
   `server_host`(서버 `host`를 이어받음), `case_insensitive_paths`(예 `/mnt/?`)
 - `folder_dialog`: `mode`(auto·off)·`providers`·`include_default_providers`·`timeout_seconds`(기본 300)
 - `max_open_spaces`·`idle_close_seconds`(공간 캐시), `records_space_prefix`(기록 연동 `space_prefix`를
-  이어받음), `messages`, (옛) `working_directory`·`snapshot_ttl_seconds`
+  이어받음), `messages`, (옛) `snapshot_ttl_seconds`, (읽지 않음, 33i) `working_directory`
 
 ## 단독 실행
 

@@ -118,7 +118,6 @@ class ProjectManager:
         status_timeout: 상태 계산 시간 상한(초).
         environ: ``~`` 풀이용 환경.
         clock: 보관 시각(epoch 초).
-        working_directory: (deprecated) ``ProjectFolderSet.current``용 비교 폴더.
         config_dir: 구성 폴더 이름(``ProjectView.config_dir``).
     """
 
@@ -136,7 +135,6 @@ class ProjectManager:
         status_timeout: float = 2.0,
         environ: Mapping[str, str] | None = None,
         clock: Callable[[], float] = time.time,
-        working_directory: Path | None = None,
         config_dir: str | None = None,
     ) -> None:
         self.repository = repository
@@ -150,7 +148,6 @@ class ProjectManager:
         self._timeout = status_timeout
         self.environ: Mapping[str, str] = dict(environ or {})
         self._clock = clock
-        self._working_directory = working_directory
         self.config_dir = config_dir
         self._pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=4, thread_name_prefix="project-status"
@@ -379,11 +376,10 @@ class ProjectManager:
         return merge_project(doc, manifest, flavor=self.fs.flavor)
 
     def folder_set(self) -> ProjectFolderSet:
-        """``projects.folders`` 값(보관·폴더 없음 제외)."""
+        """``projects.folders`` 값(폴더 없음 제외, 보관은 ``archived``)."""
         return project_folders(
             self.repository.registrations(),
             base_dir=self.base_dir,
-            working_directory=self._working_directory,
             flavor=self.fs.flavor,
             rules=self.rules,
         )

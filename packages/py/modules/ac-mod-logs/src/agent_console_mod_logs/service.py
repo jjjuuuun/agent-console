@@ -9,7 +9,9 @@
 - 비우기(M-3): ``purge``는 수집과 같은 잠금 안에서 ``purge_index``를 부른다(수집 중인 커서 쓰기와
   섞이지 않게).
 - 알림: 새 이벤트가 있으면 ``on_ingested(LogsIngestedPayload)``를 부른다(모듈이 토픽·WS로 보낸다).
-- 질의: 지금 설정(``logs.taxonomy``·``logs.projects``)으로 질의 맥락을 만들어 색인에 묻는다.
+- 질의: 지금 설정(``logs.taxonomy``)과 등록 프로젝트(``projects`` → 세션 ``project_id``)로 질의
+  맥락을 만들어 색인에 묻는다. 옛 묶기 설정 ``logs.projects``는 읽지 않는다(정보
+  ``settings.ignored_key``, K33-15).
   필터의 ``scope``·확장 필터는 등록된 범위 종류(X27)·필터 확장(X28)으로 풀어 맥락에 싣는다
   (``LogQueryExtensions``). 등록이 없으면 맥락은 그대로이고, 그 이름은 422다.
 """
@@ -260,7 +262,29 @@ class LogsService:
             base_taxonomy=self._base(),
             tz=parse_tz(tz),
             session_title_rules=self._title_rules,
+            project_for=self._project_resolver(),
         )
+
+    def _project_resolver(self) -> Callable[[str], str | None] | None:
+        """질의 한 번 동안 쓰는 cwd → 등록 프로젝트 id(같은 cwd는 한 번만 푼다).
+
+        등록 프로젝트를 모르면(포트 없음·읽기 실패) None — 세션 ``project_id``가 비고, 필터
+        ``project=<id>``는 아무것도 맞지 않는다.
+        """
+        if self._projects is None:
+            return None
+        folders = self._projects()
+        resolve = folders.project_for if folders is not None else None
+        if resolve is None:
+            return None
+        cache: dict[str, str | None] = {}
+
+        def project_for(cwd: str) -> str | None:
+            if cwd not in cache:
+                cache[cwd] = resolve(cwd)
+            return cache[cwd]
+
+        return project_for
 
     def taxonomy(self) -> LogTaxonomy:
         """유효 분류 체계(기본 + 설정 ``logs.taxonomy``)."""
@@ -355,13 +379,26 @@ class LogsService:
         return out
 
     def _ignored_key_issues(self, settings: LogSettings | None) -> list[Issue]:
-        """출처 설정에 남은 deprecated 키(읽지 않음) → 정보 이슈(출처·키마다)."""
+        """출처 설정에 남은 deprecated 키(읽지 않음) → 정보 이슈(출처·키마다).
+
+        옛 묶기 설정 ``logs.projects``가 있으면 정보 ``settings.ignored_key``(K33-15, 5.7R.33i).
+        """
         if settings is None:
             return []
+        out: list[Issue] = []
+        if settings.projects is not None:
+            out.append(
+                Issue(
+                    severity="info",
+                    code=KnownIssueCodes.SETTINGS_IGNORED_KEY,
+                    message="로그 설정의 프로젝트 묶기(logs.projects)는 더 이상 읽지 않습니다. "
+                    "로그는 등록한 프로젝트 폴더로 나뉩니다. 설정에서 지워도 됩니다",
+                    details={"key": "logs.projects"},
+                )
+            )
         schemas = {
             i.descriptor.id: i.descriptor.config_schema for i in self._ingestor.sources(settings)
         }
-        out: list[Issue] = []
         for item in settings.sources or []:
             schema = schemas.get(item.id)
             if not isinstance(schema, Mapping) or not item.config:

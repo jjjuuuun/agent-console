@@ -146,6 +146,7 @@ describe("중첩 노드 패널·팔레트", () => {
     const { clients } = clientsFor({ tm1: graphWith("tm2"), tm2: child() });
     mountApp(clients, "/teams/tm1");
     await screen.findByLabelText(/^노드 검토 파이프라인/);
+    fireEvent.click(await screen.findByRole("button", { name: "팀 구성 패널" }));
     const section = await screen.findByRole("region", { name: "중첩된 팀 구성" }).catch(() => screen.getByLabelText("중첩된 팀 구성"));
     expect(within(section).getByText("검토 파이프라인 → 둘째 팀")).toBeTruthy();
   });

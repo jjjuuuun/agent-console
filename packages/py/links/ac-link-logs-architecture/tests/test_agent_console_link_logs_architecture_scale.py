@@ -17,8 +17,10 @@
 0.99~2.49초, 몇 초짜리 부하 구간이면 연달아 잰 세 번이 모두 느림) 측정 모드에서는 새 화면
 묶음(빈 범위 캐시)으로 ``COLD_RUNS``번 재고, 이 프로세스의 CPU 시간(``time.process_time``) 최솟값을
 상한과 비교한다(벽시계도 함께 출력). 작업량 단언은 첫 번째 묶음에만 건다.
-맞는 행이 범위 끝에만 있는 `arch` 첫 쪽(범위를 거의 다 읽음)은 기록만 한다(design §5.5R.10
-`[5.5R.6]` "기록만"). 수치는 design §5.5R.10 `[5.5R.36 구현·측정]`.
+맞는 행이 범위 끝에만 있는 `arch` 첫 쪽(범위를 거의 다 읽음)은 5.5R.6에서 기록만 했다. 6R.9(M-1)에서
+`arch` 판정이 행 기준 미리 거르기(`seq`·`uid`로 판정 캐시만 봄)를 가져 본문을 읽지 않게 되어 strict
+상한 0.3초를 건다(옛 경로 0.6~0.9초 → 0.15~0.26초, 부하 7~10). 수치는 design §5.5R.10
+`[5.5R.36 구현·측정]`과 §6R `[6R.9 구현]`.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ COLD_RUNS = 3 if MEASURE else 1
 INCREMENT_SECONDS = 0.1
 HIT_SECONDS = 0.1
 FIRST_PAGE_SECONDS = 0.5
+RARE_PAGE_SECONDS = 0.3
 CTX = QueryContext(error_categories=frozenset({"error"}))
 
 # build_scale_index의 범주·스레드·도구 값에 맞춘 합성 프로필(측정 전용 데이터)
@@ -219,3 +222,4 @@ def test_first_call_cache_hit_and_increment(big: tuple[SqliteLogIndex, ScaleLayo
         assert inc < INCREMENT_SECONDS, inc
         assert hit < HIT_SECONDS, hit
         assert first_page < FIRST_PAGE_SECONDS, first_page
+        assert full_scan < RARE_PAGE_SECONDS, full_scan

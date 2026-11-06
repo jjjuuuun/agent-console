@@ -2,6 +2,7 @@
 
 ## 0.1.1 (미발행)
 
+- 6R.9(M-1): `ProfileMatcher.row_fields`·`match_row(row)`(기본 None). `selector_predicate`가 출처 제한이 있거나 판정기가 열 값으로 답할 수 있으면 행 기준 미리 거르기(`row_fields`·`check_row`, ac-logs `RowPredicate`와 같은 모양)를 가진다. 늘 거짓 대상(관측 안 하는 연결·분류 안 됨 꺼짐)은 행으로 거짓. 판정 결과는 같다.
 - 5.7R.8(M-4): `unlisted_path_issues(profile, unlisted_paths)`, `profile_issues(..., unlisted_paths=())`·
   `check_profile_data(..., unlisted_paths=())` — 조건(칸·연결 `when`, `error_when`) 경로가 주어진 접두와
   같거나 그 아래면 warning `architecture.condition_path_unlisted`(`details.prefix`·`condition_path`).

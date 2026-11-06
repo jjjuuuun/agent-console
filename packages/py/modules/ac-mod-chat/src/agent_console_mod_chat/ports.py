@@ -21,6 +21,9 @@
   노드만, 키 = 노드 id) — 중첩 팀 자식 노드 세션은 이어 쓰지 않는다.
 - ``definitions.lookup``: 팀 구성 읽기(``get(kind, id).document``). 없으면 대화 만들기·팀 구성
   바꾸기가 409 ``feature_unavailable``(목록·기록은 동작).
+- ``definitions.spaces``(5.7R.33y): 공간 이름(대화의 ``project_id``) → 그 공간의 정의 저장소
+  (``DefinitionSpaces.open``). 있으면 프로젝트 대화의 팀 구성은 그 공간에서만 찾는다(라이브러리로
+  넘어가 찾지 않음, 없으면 404 ``not_found``). 없으면 모든 대화가 ``definitions.lookup``(지금 동작).
 - ``workspace.settings``: 공통 설정(``chat.*``). 없으면 스키마 기본값.
 """
 
@@ -54,6 +57,12 @@ class DefinitionLookup(Protocol):
     def get(self, kind: str, id: str) -> StoredLike: ...
 
 
+class DefinitionSpaces(Protocol):
+    """``definitions.spaces`` 모양: 공간 이름 → 정의 저장소(모르는 공간·열 수 없으면 예외)."""
+
+    def open(self, project_id: str) -> DefinitionLookup: ...
+
+
 type WorkspaceSettingsReader = Callable[[], WorkspaceSettings]
 """``workspace.settings`` 포트 모양."""
 
@@ -68,6 +77,9 @@ CHAT_RUN_EVENTS: PortKey[EventReader] = PortKey("chat.run_events", "턴 이벤�
 CHAT_INTERACTIONS: PortKey[InteractionReader] = PortKey("chat.interactions", "턴 상호작용 조회")
 CHAT_TURN_SESSIONS: PortKey[TurnSessions] = PortKey("chat.turn_sessions", "턴 세션 수집·정리 규칙")
 DEFINITIONS_LOOKUP: PortKey[DefinitionLookup] = PortKey("definitions.lookup", "정의 읽기")
+DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
+    "definitions.spaces", "공간 이름(등록 id) → 정의 저장소"
+)
 WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
     "workspace.settings", "지금 워크스페이스 설정"
 )
@@ -84,9 +96,11 @@ __all__ = [
     "CHAT_TURN_SESSIONS",
     "CONVERSATIONS_UPDATED",
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "SERVER_WARNINGS",
     "WORKSPACE_SETTINGS",
     "DefinitionLookup",
+    "DefinitionSpaces",
     "StoredLike",
     "WarningSource",
     "WorkspaceSettingsReader",

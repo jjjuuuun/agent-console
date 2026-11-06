@@ -1,4 +1,4 @@
-import type { Project } from "@agent-console/contracts/projects";
+import type { Project, ProjectView } from "@agent-console/contracts/projects";
 
 const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
 
@@ -19,4 +19,9 @@ export function projectInitial(name: string | undefined): string {
 /** 접힘 저장 값 해석: `"1"`만 접힘, 그 밖(없음·읽기 실패)은 펼침. */
 export function parseCollapsed(raw: string | null): boolean {
   return raw === "1";
+}
+
+/** 사이드바에 보일 프로젝트 보기: 보관(등록 해제)된 것은 빼고 이름순. */
+export function regionViews(views: readonly ProjectView[]): ProjectView[] {
+  return views.filter((v) => v.project.archived !== true).sort((a, b) => collator.compare(a.project.name, b.project.name) || collator.compare(a.project.id, b.project.id));
 }

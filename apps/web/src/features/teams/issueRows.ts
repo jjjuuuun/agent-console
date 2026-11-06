@@ -7,7 +7,7 @@ export interface IssueRow {
   /** 행 키(묶음이면 `group.key`) */
   key: string;
   severity: Issue["severity"];
-  /** 묶음 문장(그룹 `message`). 묶음이 아니면 undefined */
+  /** 묶음 문장(그룹의 message 필드). 묶음이 아니면 undefined */
   groupMessage?: string;
   issues: Issue[];
 }

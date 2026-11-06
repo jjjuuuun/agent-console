@@ -15,6 +15,8 @@ import type {
   FolderListing,
   FolderPickRequest,
   FolderPickResult,
+  ManifestResetRequest,
+  ManifestResetResult,
   ProjectCreate,
   ProjectUpdate,
   ProjectView,
@@ -41,6 +43,11 @@ export interface ProjectsClient {
   updateProject(id: string, patch: ProjectUpdate, versionHash?: string): Promise<Versioned<ProjectView>>;
   /** 등록 해제(204). 폴더 안 파일은 지우지 않는다(서버가 보관 처리). */
   unregisterProject(id: string, versionHash?: string): Promise<void>;
+
+  /** 설정 파일을 다시 만든다(`status == "manifest_invalid"`일 때만, 아니면 409). 이전 파일은 서버가 백업으로 옮기고 `backup_path`를 준다. */
+  resetProjectManifest(id: string, body: ManifestResetRequest): Promise<ManifestResetResult>;
+  /** 구성 폴더의 `.gitignore`에 빠진 줄만 덧붙인다(기존 줄은 그대로). 갱신된 프로젝트를 돌려준다. */
+  appendProjectGitignore(id: string): Promise<ProjectView>;
 
   /** 폴더 확인. `create: true`면 없는 폴더를 만든다(사용자가 [폴더 만들기]를 눌렀을 때만). */
   checkFolder(request: FolderCheckRequest): Promise<FolderCheck>;
@@ -74,6 +81,9 @@ export function createProjectsClient(io: RestIo): ProjectsClient {
     updateProject: (id, patch, hash) =>
       io.requestVersioned("PUT", `/projects/${enc(id)}`, { body: patch, ...withHeaders(ifMatch(hash)) }),
     unregisterProject: (id, hash) => io.request("DELETE", `/projects/${enc(id)}`, withHeaders(ifMatch(hash))),
+
+    resetProjectManifest: (id, body) => io.request("POST", `/projects/${enc(id)}/manifest/reset`, { body }),
+    appendProjectGitignore: (id) => io.request("POST", `/projects/${enc(id)}/gitignore/append`),
 
     checkFolder: check,
     createFolder: (path) => check({ path, create: true }),

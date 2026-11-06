@@ -13,8 +13,6 @@ import pytest
 from agent_console_contracts.logs import (
     LogAggregateRequest,
     LogLane,
-    LogProjectGroup,
-    LogProjectSettings,
     TokenSample,
 )
 from agent_console_logs import (
@@ -99,10 +97,7 @@ def _records(seed: int, n: int) -> list[IndexRecord]:
 
 def _ctx() -> QueryContext:
     return QueryContext(
-        projects=LogProjectSettings(
-            groups=[LogProjectGroup(id="A", label="A", match=["/w/a/**", "/w/a"])],
-            ungrouped="cwd",
-        ),
+        project_for=lambda cwd: "A" if cwd == "/w/a" or cwd.startswith("/w/a/") else None,
         error_categories=frozenset({"error"}),
         hidden_categories=frozenset({"handoff"}),
         tz=UTC,

@@ -52,7 +52,7 @@ from ._filter import (
     parse_tz,
     require_refined,
 )
-from ._projects import UNGROUPED_PROJECT, resolve_project
+from ._projects import UNGROUPED_PROJECT
 from ._titles import pick_session_title
 from ._values import text
 from ._windows import sum_samples
@@ -133,13 +133,19 @@ def is_error(event: LogEvent, ctx: QueryContext) -> bool:
 
 
 def project_of(cwd: str, repo_root: str, ctx: QueryContext) -> tuple[str | None, str, bool]:
-    """(묶음 id 또는 None, 표시 이름, 묶기 규칙에 맞았는지)."""
-    ref, grouped = resolve_project(
-        cwd, repo_root, ctx.projects, ungrouped_label=ctx.ungrouped_label
-    )
-    if ref is None:
+    """(등록 프로젝트 id 또는 None, 표시 이름, 등록 프로젝트에 들었는지).
+
+    5.7R.33i(design §PI.5, K33-15): 세션의 프로젝트는 작업 폴더(`cwd`)가 들어 있는 등록 프로젝트
+    하나다(`ctx.project_for`, 하위 폴더 포함). 옛 묶기 규칙(`logs.projects`)은 읽지 않는다.
+    `repo_root`는 보지 않는다(등록 폴더 밖 작업 트리를 끌어오지 않음). `project_for`가 없으면
+    (앱 밖 단독 사용) 프로젝트 없음.
+    """
+    if not cwd or ctx.project_for is None:
         return None, "", False
-    return ref.id, ref.label, grouped
+    pid = ctx.project_for(cwd)
+    if not pid:
+        return None, "", False
+    return pid, pid, True
 
 
 def _project_ok(cwd: str, repo_root: str, wanted: Sequence[str], ctx: QueryContext) -> bool:
@@ -487,6 +493,7 @@ def _summary(
         cwd=cwd,
         repo_root=repo_root,
         project=LogProjectRef(id=pid, label=label) if pid else None,
+        project_id=pid,
         first_time=min(times) if times else None,
         last_time=max(times) if times else None,
         events=len(ordered),

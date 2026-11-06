@@ -5,6 +5,10 @@
 - 선택 ``exports.dependencies``: 정의가 쓰는 정의(``ExportDependencies``). 없으면 고른 항목만
   내보낸다(의존 자동 포함 없음).
 - 선택 ``secrets.rules``: 지금 비밀 의심 규칙(``() -> SecretRules``). 없으면 기본 규칙.
+- 선택 ``projects.folders``(5.7R.33k): 등록 프로젝트 폴더(``entries``의 id·폴더). 있으면 폴더 쓰기
+  대상 = 등록 폴더(루트 id = 등록 id)이고 설치자 ``roots``는 쓰지 않는다.
+- 선택 ``definitions.spaces``(5.7R.33k): 등록 id → 그 프로젝트 공간 정의 저장소. 내보낼 원본 기본
+  (``?project=``가 있을 때).
 """
 
 from __future__ import annotations
@@ -49,6 +53,12 @@ type SecretRulesReader = Callable[[], SecretRules]
 """지금 비밀 의심 규칙을 돌려주는 함수(``secrets.rules`` 포트 모양)."""
 
 DEFINITIONS_LOOKUP: PortKey[DefinitionLookup] = PortKey("definitions.lookup", "정의 읽기")
+PROJECT_FOLDERS: PortKey[Callable[[], Any]] = PortKey(
+    "projects.folders", "앱에 등록된 프로젝트 폴더(전체·보관)"
+)
+"""값 모양은 ``projects.ProjectFoldersLike``(``entries``)."""
+DEFINITIONS_SPACES: PortKey[Any] = PortKey("definitions.spaces", "공간 이름(등록 id) → 정의 저장소")
+"""값 모양은 ``projects.DefinitionSpacesLike``(``open(project_id)``)."""
 EXPORT_DEPENDENCIES: PortKey[ExportDependencies] = PortKey(
     "exports.dependencies", "정의가 쓰는 정의(함께 내보내기)"
 )
@@ -56,7 +66,9 @@ SECRET_RULES: PortKey[SecretRulesReader] = PortKey("secrets.rules", "지금 비�
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "EXPORT_DEPENDENCIES",
+    "PROJECT_FOLDERS",
     "SECRET_RULES",
     "DefinitionLookup",
     "ExportDependencies",

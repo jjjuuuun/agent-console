@@ -294,3 +294,6 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-section .usage-ind-editor-body { display: flex; flex-direction: column; gap: var(--ac-section-gap); }
 .app-settings-section .usage-ind-editor > h4 { margin-top: var(--ac-space-2); }
 .app-settings-section .usage-ind-toggles { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+
+/* 6R.8(L-18): 대화상자·서랍 안의 백엔드 카드는 바깥 테두리를 겹쳐 그리지 않는다(이중 테두리 방지) */
+.ac-dialog .app-backend-card, .ac-drawer .app-backend-card { border: 0; border-left: 3px solid var(--ac-accent); box-shadow: none; background: transparent; padding: var(--ac-space-2) var(--ac-space-3); }

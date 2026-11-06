@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ShortcutProvider, computeEffectiveKeys, useEffectiveShortcuts, useShortcuts, type ShortcutDef } from "./index";
+import { ShortcutProvider, computeEffectiveKeys, isPlainEditKeyCombo, useEffectiveShortcuts, useShortcuts, type ShortcutDef } from "./index";
 
 afterEach(() => {
   cleanup();
@@ -159,5 +159,20 @@ describe("ShortcutProvider", () => {
     expect(container.querySelector("output")?.textContent).toBe("k");
     key("s", { ctrlKey: true });
     expect(seen).toEqual(["2"]);
+  });
+});
+
+describe("isPlainEditKeyCombo", () => {
+  it("수식키 없는 Delete·Backspace만 참", () => {
+    expect(isPlainEditKeyCombo("Delete")).toBe(true);
+    expect(isPlainEditKeyCombo("Backspace")).toBe(true);
+    expect(isPlainEditKeyCombo("Shift+Delete")).toBe(true);
+  });
+  it("Ctrl/Meta/Alt 조합·일반 글자·해석 불가 입력은 거짓", () => {
+    expect(isPlainEditKeyCombo("Ctrl+Delete")).toBe(false);
+    expect(isPlainEditKeyCombo("Alt+Backspace")).toBe(false);
+    expect(isPlainEditKeyCombo("Meta+Backspace", "mac")).toBe(false);
+    expect(isPlainEditKeyCombo("g")).toBe(false);
+    expect(isPlainEditKeyCombo("")).toBe(false);
   });
 });

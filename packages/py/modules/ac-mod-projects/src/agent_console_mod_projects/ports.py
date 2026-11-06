@@ -5,7 +5,7 @@
 - ``projects.lookup``: 프로젝트 읽기(``ProjectLookup`` — ``get_project``·``list_projects``, 등록부 +
   폴더 매니페스트를 합친 ``Project``). ``link-projects-runs`` 등이 이름으로 받는다.
 - ``projects.folders``: 등록된 프로젝트 폴더(``ProjectFolderSet`` — ``entries``(id·폴더)·
-  ``project_for(path)``). 로그 수집 범위 등이 받는다.
+  ``archived``(보관 폴더)·``project_for(path)``). 로그 수집 범위·세션 ``project_id`` 등이 받는다.
 - ``projects.spaces``: 등록 id → 프로젝트 공간(``ProjectSpaces.open`` → ``ProjectSpace``:
   ``folder``·``definitions``·``records_db_path``·``memory_db_path``·``sessions_dir``·``state_dir``·
   ``config_writable``). 열린 공간 캐시(상한·유휴 닫기). 모르는 프로젝트 ``LookupError``, 폴더 없음
@@ -138,7 +138,7 @@ class SavedLike(Protocol):
 
 PROJECTS_LOOKUP: PortKey[ProjectLookup] = PortKey("projects.lookup", "프로젝트 읽기")
 PROJECT_FOLDERS: PortKey[Callable[[], ProjectFolderSet]] = PortKey(
-    "projects.folders", "앱에 등록된 프로젝트 폴더(현재·전체)"
+    "projects.folders", "앱에 등록된 프로젝트 폴더(전체·보관)"
 )
 PROJECTS_SPACES: PortKey[ProjectSpaces] = PortKey("projects.spaces", "프로젝트 공간 열기")
 DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(

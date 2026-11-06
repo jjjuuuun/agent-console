@@ -5,7 +5,11 @@ Agent Console 내보내기 기능 모듈(design §3R.1.3, §2R.7). 내보내기 
 - 경로: `GET /exporters`, `POST /exports/plan`(쓰기 없음), `POST /exports/archive`(zip 응답, 서버 디스크에 쓰지
   않음), `GET /exports/roots`(토큰 필수), `POST /exports/write`(허용 루트 아래에만, 기본 `on_conflict=fail`).
 - 필수 포트: `definitions.lookup`(정의 읽기). 선택 포트: `exports.dependencies`(없으면 고른 항목만 내보낸다),
-  `secrets.rules`(없으면 기본 의심 규칙).
+  `secrets.rules`(없으면 기본 의심 규칙), `projects.folders`·`definitions.spaces`(5.7R.33k, 아래).
+- 프로젝트 조립(5.7R.33k, design §PI.5): `projects.folders`가 있으면 폴더 쓰기 루트 = 등록 프로젝트 폴더(루트 id =
+  등록 id)이고 설치자 `roots`는 쓰지 않는다. 내보낼 원본 = 질의 `?project=` 공간(기본) 또는 `source=library`(공용),
+  `project`가 없으면 공용. 등록 안 된 id 404 `project.not_found`. zip 내려받기는 그대로. 프로젝트 공간 원본에는
+  `exports.dependencies`(공용 기준 계산)를 쓰지 않는다(고른 항목만).
 - 설정 `modules.options.mod-exports`(옛 최상위 `exports`는 4R.18부터 `settings.removed_key` 오류로 새 위치를 안내): `roots`·`home`·
   `protected_in_home`·`protected`·`options`·`expose_paths`. 상대 경로는 `base_dir` 기준.
 - 웹 역할: `exports`.

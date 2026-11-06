@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from agent_console_conditions import ConditionOperator
 from agent_console_contracts.architecture import (
@@ -13,7 +14,7 @@ from agent_console_contracts.architecture import (
 )
 from agent_console_contracts.logs import LogEvent
 
-from ._match import ProfileMatcher, is_observed_kind
+from ._match import EventMatch, ProfileMatcher, is_observed_kind
 
 _SEP = ":"
 
@@ -64,6 +65,68 @@ EventPredicate = Callable[[LogEvent], bool]
 """이벤트 판정 함수(참 = 표에 남긴다)."""
 
 
+class _SelectorPredicate:
+    """선택 필터 판정: (출처 허용) AND `decide(판정기 결과)`."""
+
+    __slots__ = ("_decide", "_judge", "_sources")
+
+    def __init__(
+        self,
+        decide: Callable[[EventMatch], bool],
+        judge: ProfileMatcher,
+        sources: Collection[str] | None,
+    ) -> None:
+        self._decide = decide
+        self._judge = judge
+        self._sources = sources
+
+    def __call__(self, event: LogEvent) -> bool:
+        if self._sources is not None and event.source not in self._sources:
+            return False
+        return self._decide(self._judge.match(event))
+
+
+class _RowSelectorPredicate(_SelectorPredicate):
+    """행 기준 미리 거르기도 가진 판정(로그 색인의 선택 능력 `row_fields`·`check_row`, 6R.9).
+
+    출처는 행의 `source` 열로, 판정은 판정기의 `match_row`(열 값으로 답할 수 있을 때)로 한다.
+    답할 수 없으면 None(색인이 이벤트로 `__call__`을 부른다). 결과는 `__call__`과 같다.
+    """
+
+    __slots__ = ("row_fields",)
+
+    def __init__(
+        self,
+        decide: Callable[[EventMatch], bool],
+        judge: ProfileMatcher,
+        sources: Collection[str] | None,
+    ) -> None:
+        super().__init__(decide, judge, sources)
+        fields = set(judge.row_fields)
+        if sources is not None:
+            fields.add("source")
+        self.row_fields: frozenset[str] = frozenset(fields)
+
+    def check_row(self, row: Mapping[str, Any]) -> bool | None:
+        if self._sources is not None and row.get("source") not in self._sources:
+            return False
+        found = self._judge.match_row(row)
+        return None if found is None else self._decide(found)
+
+
+class _Never:
+    """늘 거짓인 판정(관측하지 않는 연결, 분류 안 됨을 쓰지 않는 프로필). 본문이 필요 없다."""
+
+    __slots__ = ()
+    row_fields: frozenset[str] = frozenset()
+
+    def __call__(self, event: LogEvent) -> bool:
+        return False
+
+    def check_row(self, row: Mapping[str, Any]) -> bool | None:
+        return False
+
+
 def selector_predicate(
     profile: ArchitectureProfile,
     selector: ArchitectureSelector,
@@ -86,7 +149,9 @@ def selector_predicate(
             투영에서 이미 판정한 이벤트를 다시 판정하지 않게 할 때 쓴다. 없으면 새로 만든다.
 
     Returns:
-        이벤트 판정 함수(순수 함수, 같은 이벤트에 늘 같은 값).
+        이벤트 판정 함수(순수 함수, 같은 이벤트에 늘 같은 값). 출처 제한이 있거나 판정기가 열 값으로
+        답할 수 있으면(`ProfileMatcher.row_fields`) 로그 색인의 행 기준 미리 거르기
+        (`row_fields`·`check_row`, ac-logs `RowPredicate`와 같은 모양)도 가진다 — 결과는 같다.
 
     Raises:
         ArchitectureSelectorError: 형식이 틀렸거나 다른 프로필, 없는 칸·연결, 묶을 값이 없는 대상에
@@ -104,6 +169,7 @@ def selector_predicate(
     )
     want_group: str | None = group or None
 
+    decide: Callable[[EventMatch], bool]
     if target.kind == KnownArchitectureTargets.CELL:
         cell_id = target.id or ""
         cell = profile.cells.get(cell_id)
@@ -114,11 +180,12 @@ def selector_predicate(
         if group is not None and cell.group_by is None:
             raise ArchitectureSelectorError(f"칸 {cell_id!r}은(는) 묶을 값이 없습니다")
 
-        def hit(event: LogEvent) -> bool:
-            found = judge.match(event)
+        def in_cell(found: EventMatch) -> bool:
             if cell_id not in found.cells:
                 return False
             return group is None or found.groups.get(cell_id) == want_group
+
+        decide = in_cell
 
     elif target.kind == KnownArchitectureTargets.EDGE:
         edge_id = target.id or ""
@@ -130,25 +197,24 @@ def selector_predicate(
         if group is not None:
             raise ArchitectureSelectorError("연결에는 묶음 값을 줄 수 없습니다")
         if not is_observed_kind(edge.kind):
-            return lambda _event: False
+            return _Never()
 
-        def hit(event: LogEvent) -> bool:
-            return edge_id in judge.match(event).edges
+        def on_edge(found: EventMatch) -> bool:
+            return edge_id in found.edges
+
+        decide = on_edge
 
     else:
         if group is not None:
             raise ArchitectureSelectorError("분류 안 됨에는 묶음 값을 줄 수 없습니다")
         if not profile.unassigned:
-            return lambda _event: False
+            return _Never()
 
-        def hit(event: LogEvent) -> bool:
-            return judge.match(event).unassigned
+        def unassigned(found: EventMatch) -> bool:
+            return found.unassigned
 
-    if sources is None:
-        return hit
-    allowed = sources
+        decide = unassigned
 
-    def hit_from_sources(event: LogEvent) -> bool:
-        return event.source in allowed and hit(event)
-
-    return hit_from_sources
+    if judge.row_fields or sources is not None:
+        return _RowSelectorPredicate(decide, judge, sources)
+    return _SelectorPredicate(decide, judge, sources)
