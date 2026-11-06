@@ -20,6 +20,8 @@ export interface TextEditorStatus {
 export interface TextEditorHandle {
   /** IME 조합 중인지(compositionstart~compositionend). */
   isComposing: () => boolean;
+  /** 1부터 세는 줄로 커서를 옮기고 화면 가운데로 스크롤한다. 범위 밖이면 처음·끝 줄. 편집기에 초점을 둔다. 옮겼으면 true */
+  goToLine: (line: number) => boolean;
 }
 
 export interface TextEditorMessages {
@@ -108,7 +110,21 @@ export function TextEditor({
     composing.current = next;
     handlers.current.onCompositionChange?.(next);
   };
-  useImperativeHandle(handleRef, () => ({ isComposing: () => composing.current }), []);
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      isComposing: () => composing.current,
+      goToLine: (line: number) => {
+        const v = view.current;
+        if (v === null || !Number.isFinite(line)) return false;
+        const at = v.state.doc.line(Math.min(Math.max(1, Math.trunc(line)), v.state.doc.lines));
+        v.dispatch({ selection: { anchor: at.from }, effects: EditorView.scrollIntoView(at.from, { y: "center" }) });
+        v.focus();
+        return true;
+      },
+    }),
+    [],
+  );
 
   const text = { ...DEFAULT_MESSAGES, ...messages };
   const tooLarge = maxBytes !== undefined && byteLength(value) > maxBytes;

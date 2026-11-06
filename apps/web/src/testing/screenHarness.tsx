@@ -8,7 +8,7 @@ import { createMemoryRouter } from "react-router";
 import type { ApiClients } from "../app/apiClients";
 import { AppRoot } from "../app/AppRoot";
 import { createAppQueryClient } from "../app/queries";
-import { createSafeStorage } from "../app/storage";
+import { createSafeStorage, type SafeStorage } from "../app/storage";
 import type { LinkPartDef } from "../modules";
 import type { RouteDef } from "../shell/routeConfig";
 import { buildAppRoutes, preloadScreens, type PageTable } from "../shell/routes";
@@ -22,6 +22,8 @@ export interface MountOptions {
   pages?: PageTable;
   /** 연동 부분 등록 데이터(생략하면 앱 기본) */
   linkParts?: readonly LinkPartDef[];
+  /** 화면 상태 저장소(생략하면 저장하지 않는 메모리 저장소) */
+  storage?: SafeStorage;
 }
 
 export function mountApp(clients: ApiClients, path: string, options: MountOptions = {}) {
@@ -30,7 +32,7 @@ export function mountApp(clients: ApiClients, path: string, options: MountOption
     <AppRoot
       createClients={async () => clients}
       router={router}
-      storage={createSafeStorage(null)}
+      storage={options.storage ?? createSafeStorage(null)}
       queryClient={createAppQueryClient({ retry: false })}
       {...(options.linkParts ? { linkParts: options.linkParts } : {})}
     />,

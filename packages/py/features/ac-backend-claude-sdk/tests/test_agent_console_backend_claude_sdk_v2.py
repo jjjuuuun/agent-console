@@ -35,7 +35,7 @@ from agent_console_backend_claude_sdk.testing import (
     ListeningSink,
     ValidatingSink,
 )
-from agent_console_contracts import Agent, Limits, ResourceBundle
+from agent_console_contracts import Agent, BundleSource, Limits, ResourceBundle
 from agent_console_runtime import (
     AgentRequest,
     CancelToken,
@@ -501,6 +501,25 @@ async def test_instructions_join_system_prompt_and_preset_append() -> None:
         "preset": "claude_code",
         "append": "you lead\n\n## 팀 규칙\n존댓말\n\n노드 지침",
     }
+
+
+async def test_tool_provider_instructions_follow_resource_instructions() -> None:
+    """7R.5: agent 노드가 붙인 공급자 지침(출처 `tool_provider:<id>`)이 유효 지침 뒤에 이어진다."""
+    assert "instructions" in RESOURCE_SLOTS
+    clients, factory = _capture([_init(), _result()])
+    bundle = ResourceBundle(
+        slots={"instructions": ["리소스 지침", "공급자 지침"]},
+        sources={
+            "instructions": [
+                BundleSource(ref="ins", resource_type="instruction"),
+                BundleSource(ref="tool_provider:t.wiki"),
+            ]
+        },
+    )
+    await _backend(factory).run(
+        AgentRequest(agent=_agent(), prompt="p", bundle=bundle), ValidatingSink(), CancelToken()
+    )
+    assert clients[0].options.system_prompt == "you lead\n\n리소스 지침\n\n공급자 지침"
 
 
 async def test_files_become_add_dirs_notice_and_readable_paths(tmp_path: Any) -> None:

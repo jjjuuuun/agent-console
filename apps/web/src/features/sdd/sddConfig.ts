@@ -15,6 +15,12 @@ export const SDD_TEMPLATES_ROLE = "sdd:templates";
 /** 주소 인자 이름(`sddData.json`). 선택·거르기는 URL이 진실이다. */
 export const SDD_PARAMS: Readonly<Record<keyof typeof data.params, string>> = data.params;
 
+/** 스펙 목록 열 머리 정렬(데이터): 기본 정렬, 열 id·문구 키·처음 누를 때 방향. 비교 함수는 `SpecListScreen`의 `SPEC_COMPARATORS`가 id로 찾는다. */
+export const SPEC_SORT = data.specSort as {
+  default: { id: string; direction: "asc" | "desc" };
+  columns: readonly { id: string; labelKey: string; firstDirection: "asc" | "desc" }[];
+};
+
 /** 상세 탭 목록(데이터). 탭 본문은 `sddTabs`의 등록 표가 그린다 — 본문이 등록되지 않은 탭은 줄에 나오지 않는다. */
 export const SDD_TAB_DEFS: readonly { id: string; labelKey: string }[] = data.tabs;
 export const DEFAULT_TAB: string = data.defaultTab;
@@ -24,6 +30,8 @@ export const SDD_STORAGE = {
   tab: (specId: string) => `ac.sdd.tab.${specId}`,
   lastTemplate: (projectId: string | null) => `ac.sdd.lasttemplate.${projectId ?? ""}`,
   docView: "ac.sdd.docview",
+  /** 작업 탭 단계 접힘(스펙별, 사용자가 바꾼 단계만: 단계 키 → 접힘 여부) */
+  stage: (specId: string) => `ac.sdd.stage.${specId}`,
 } as const;
 
 export const SDD_LIMITS = {
@@ -41,6 +49,8 @@ export const SDD_LIMITS = {
   actionsStaleMs: 30_000,
   /** 이름 최대 글자 수 */
   nameMax: 100,
+  /** 규칙 초안이 바뀐 뒤 자동 검사까지 기다리는 시간(ms, screen-sdd §10.2) */
+  checkDebounceMs: 600,
   /** 목록 로딩 스켈레톤을 보이기 전 지연(ms) */
   skeletonDelayMs: 150,
 } as const;
@@ -81,3 +91,8 @@ export const PLAN_GRAPH_AUTO_LIMIT: number = data.planGraphAutoLimit;
 export const AUTOMATION_FIELDS = data.automationRules;
 /** 자동 진행 조작 이름(서버 경로의 끝, `sddData.json`). */
 export const AUTOMATION_OPS: Readonly<{ stop: string; resume: string }> = data.automationOps;
+
+/** 값 목록을 같은 폼의 배열에서 얻는 참조 위젯: 계약 `KNOWN_UI_WIDGETS` 상수 이름 → 값 안의 배열 위치(`sddData.json`). 위젯 이름 문자열은 코드에 없다. */
+export const WIDGET_REF_SOURCES: Readonly<Record<string, readonly string[]>> = data.widgetRefSources;
+/** 톤 위젯이 보여 주는 제안(톤 어휘는 열린 문자열이라 직접 입력도 된다). 라벨은 `messages.widgets.tones[labelKey]` */
+export const TONE_CHOICES: readonly { tone: string; labelKey: string }[] = data.toneChoices;

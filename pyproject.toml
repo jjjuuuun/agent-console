@@ -846,12 +846,12 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory·sdd는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5·§6R.6)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory·sdd·wiki는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5·§6R.6·§7R.7)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
     "modules",
-    "chat | exports | imports | architecture | memory | sdd",
+    "chat | exports | imports | architecture | memory | sdd | wiki",
     "runs | usage | projects",
     "definitions",
     "resources | logs",

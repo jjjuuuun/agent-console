@@ -92,7 +92,7 @@ describe("스펙 목록: 배치·빈 상태", () => {
     const { router } = setup("/specs?prj=p1", { specs: [summary(), summary({ id: "sp2", name: "배송", updated_at: 1_600_000_000 })] });
     expect(await screen.findByText("결제", {}, LONG)).toBeTruthy();
     expect(screen.getAllByText("초안").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: /배송/ }));
+    fireEvent.click(screen.getByText("배송"));
     await waitFor(() => expect(router.state.location.pathname).toBe("/specs/sp2"), LONG);
   });
 
@@ -314,12 +314,11 @@ describe("스펙 상세: 규칙 탭", () => {
 });
 
 describe("문서 틀 화면", () => {
-  it("공용 문서 틀 목록과 요약을 보인다(읽기 전용 안내 포함)", async () => {
-    const { sddFactory } = setup("/spec-templates?prj=p1", { sdd: { listSpecTemplates: vi.fn(async () => [{ id: "t1", name: "임의 틀", description: "설명", documents: [{ id: "a", title: "문서가", file: "a.md" }], run_profiles: [{ id: "p", title: "프로필가" }] }]) } });
+  it("문서 틀 목록을 보이고, 틀을 고르면 편집기가 열린다(공간은 주소의 ?prj, 편집은 templates.test)", async () => {
+    const { sddFactory } = setup("/spec-templates?prj=p1", { sdd: { listSpecTemplates: vi.fn(async () => [{ id: "t1", name: "임의 틀", description: "설명", documents: [{ id: "a", title: "문서가", file: "a.md" }], run_profiles: [{ id: "p", title: "프로필가" }] }]), getSpecTemplate: vi.fn(async () => ({ value: { kind: "k-x", id: "t1", name: "임의 틀", documents: [], rules: {} }, version_hash: "h1" })), listSpecTemplateFiles: vi.fn(async () => []) } });
     fireEvent.click(await screen.findByRole("button", { name: /임의 틀/ }, LONG));
-    expect(await screen.findByText("문서가")).toBeTruthy();
-    expect(screen.getByText("프로필가")).toBeTruthy();
-    expect(sddFactory).toHaveBeenCalledWith(null);
+    expect(await screen.findByTestId("sdd-template-editor", {}, LONG)).toBeTruthy();
+    expect(sddFactory).toHaveBeenCalledWith("p1");
   });
 
   it("틀이 0개면 안내가, 능력이 꺼져 있으면 꺼짐 안내가 나온다", async () => {

@@ -2,15 +2,17 @@
  * 문서 탭(screen-sdd §6): 문서 목록 + 편집기(저장 `If-Match`·외부 변경 충돌·파일 없음) + 상태 전환 메뉴.
  * 문서별 편집 내용은 이 탭이 열려 있는 동안 메모리에 남는다(문서를 오가도 잃지 않음). 본문·이름·상태 라벨은 서버 데이터다.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
-import { Banner, Button } from "@agent-console/ui";
-import { DocumentEditor, DocumentNav, GateNotice } from "@agent-console/sdd-view";
+import { Banner, Button, ConfirmDialog, useToast } from "@agent-console/ui";
+import { DocumentEditor, DocumentNav, EDITOR_VIEW_MODES, GateNotice, type DocumentEditorHandle, type EditorViewMode } from "@agent-console/sdd-view";
 import type { SddGateBlockedDetails, SpecDocumentSummary } from "@agent-console/contracts/sdd";
 import { useMediaQuery } from "../../lib/useMediaQuery";
-import { SDD_PARAMS, HUMAN_ACTOR, SDD_LIMITS, SECRET_SUSPECT_CODE } from "./sddConfig";
+import { useStorage } from "../../app/StorageContext";
+import { SDD_PARAMS, SDD_STORAGE, HUMAN_ACTOR, SDD_LIMITS, SECRET_SUSPECT_CODE } from "./sddConfig";
+import { useDocShortcuts } from "./docShortcuts";
 import { sddMessages as m, viewMessages } from "./messages";
 import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecDocument } from "./useSddApi";
@@ -46,6 +48,20 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
   const [transitionNote, setTransitionNote] = useState<string | null>(null);
   const [gate, setGate] = useState<SddGateBlockedDetails | null>(null);
   const wide = useMediaQuery(`(min-width: ${SDD_LIMITS.splitViewportMin}px)`);
+  const toast = useToast();
+  const storage = useStorage();
+  const editorRef = useRef<DocumentEditorHandle>(null);
+  const [confirm, setConfirm] = useState<"reload" | "overwrite" | null>(null);
+  // 보기 방식: 사람이 고른 값(저장)이 있으면 그것, 없으면 넓을 때 나란히·좁을 때 편집. 나란히는 넓은 화면에서만 쓴다.
+  const [pickedMode, setPickedMode] = useState<EditorViewMode | null>(() => {
+    const stored = storage.get(SDD_STORAGE.docView);
+    return EDITOR_VIEW_MODES.find((x) => x === stored) ?? null;
+  });
+  const mode: EditorViewMode = pickedMode === null || (pickedMode === "split" && !wide) ? (wide ? "split" : "edit") : pickedMode;
+  const changeMode = (next: EditorViewMode) => {
+    setPickedMode(next);
+    storage.set(SDD_STORAGE.docView, next);
+  };
 
   const server = docQ.data?.value;
   const serverHash = docQ.data?.version_hash ?? server?.content_hash;
@@ -89,7 +105,10 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
       qc.setQueryData(sddKeys.doc(space.key, specId, docId), saved);
       void refresh();
     } catch (e) {
-      if (e instanceof ApiError && e.code === ERROR_CODES.VERSION_CONFLICT) setConflicts((c) => ({ ...c, [docId]: true }));
+      if (e instanceof ApiError && e.code === ERROR_CODES.VERSION_CONFLICT) {
+        setConflicts((c) => ({ ...c, [docId]: true }));
+        void docQ.refetch(); // 비교에 쓸 서버 본문을 최신으로
+      }
       else if (e instanceof ApiError && e.code === ERROR_CODES.SDD_SECRET_REJECTED) {
         const lines = secretLines(e.details["issues"]);
         setFailure(m.doc.secretRejected(lines));
@@ -108,6 +127,13 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
   const overwrite = async () => {
     const fresh = await docQ.refetch();
     await save(fresh.data?.version_hash ?? serverHash);
+  };
+  const copyMine = () => {
+    const done = () => toast({ tone: "success", text: m.doc.copyMine });
+    const fail = () => toast({ tone: "danger", text: m.doc.copyFailed });
+    const clip = typeof navigator === "undefined" ? undefined : navigator.clipboard;
+    if (clip === undefined) fail();
+    else void clip.writeText(value).then(done, fail);
   };
   const createMissing = async () => {
     if (docId === null) return;
@@ -164,6 +190,23 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
       />
     );
 
+  // ---- 문서 오가기·단축키 ---------------------------------------------------------------------------
+  const docIndex = docs.findIndex((d) => d.id === docId);
+  const moveDoc = (delta: number) => {
+    const next = docs[docIndex + delta];
+    if (next !== undefined) select(next.id);
+  };
+  useDocShortcuts({
+    modeEdit: () => changeMode("edit"),
+    modePreview: () => changeMode("preview"),
+    modeSplit: () => { if (wide) changeMode("split"); },
+    prevDoc: () => moveDoc(-1),
+    nextDoc: () => moveDoc(1),
+    gotoLine: () => editorRef.current?.openGoToLine(),
+  });
+  const lineParam = Number(params.get(P.line));
+  const initialLine = Number.isInteger(lineParam) && lineParam > 0 ? lineParam : undefined;
+
   const secret = (docQ.data?.value.issues ?? []).filter((i) => i.code === SECRET_SUSPECT_CODE);
 
   if (docs.length === 0) {
@@ -192,7 +235,6 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
         {gate === null ? null : <GateNotice details={gate} documentTitles={Object.fromEntries(docs.map((d) => [d.id, d.title]))} onOpenDocument={(id) => select(id)} onDismiss={() => setGate(null)} messages={viewMessages} />}
         {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
         {dirty && onEdit !== undefined ? <p className="sdd-note" role="status">{m.doc.onEditWarn(stateLabel(onEdit))}</p> : null}
-        {externalChange ? <p className="sdd-note" role="status">{m.doc.externalDirty}</p> : null}
         {!docQ.isPending && (!docQ.isError || missing) ? (
           <DocumentEditor
             key={docId ?? ""}
@@ -206,16 +248,33 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
             {...(ctx.readOnlyReason === undefined ? {} : { readOnlyReason: ctx.readOnlyReason })}
             missing={missing}
             onCreateMissing={() => void createMissing()}
-            conflict={conflict}
-            onReload={() => void reload()}
-            onOverwrite={() => void overwrite()}
+            conflict={conflicts[docId ?? ""] === true}
+            externalChange={externalChange && conflicts[docId ?? ""] !== true}
+            onReload={() => setConfirm("reload")}
+            onOverwrite={() => setConfirm("overwrite")}
+            onCopyMine={copyMine}
+            {...(server === undefined || !dirty ? {} : { compare: { before: server.content, beforeLabel: conflict ? m.doc.serverVersion : m.doc.savedVersion } })}
+            {...(initialLine === undefined ? {} : { initialLine })}
+            mode={mode}
+            onModeChange={changeMode}
+            handleRef={editorRef}
             issues={secret.length > 0 ? secret : []}
-            defaultMode={wide ? "split" : "edit"}
             {...(typeof ctx.info?.limits.max_doc_bytes === "number" ? { maxBytes: ctx.info.limits.max_doc_bytes } : {})}
             toolbarExtra={transitionMenu}
             messages={viewMessages}
           />
         ) : null}
+        <ConfirmDialog
+          open={confirm !== null}
+          title={confirm === "overwrite" ? m.doc.overwriteTitle : m.doc.reloadTitle}
+          confirmLabel={confirm === "overwrite" ? m.doc.overwriteOk : m.doc.reloadOk}
+          cancelLabel={m.cancel}
+          danger
+          onConfirm={() => { const which = confirm; setConfirm(null); if (which === "overwrite") void overwrite(); else if (which === "reload") void reload(); }}
+          onCancel={() => setConfirm(null)}
+        >
+          {confirm === "overwrite" ? m.doc.overwriteBody : m.doc.reloadBody}
+        </ConfirmDialog>
         {secret.length > 0 ? <span className="ac-sr-only">{m.doc.secretSuspect(secret.length, secret.map((i) => i.line).filter((l) => l !== null && l !== undefined).join(", "))}</span> : null}
       </div>
     </div>

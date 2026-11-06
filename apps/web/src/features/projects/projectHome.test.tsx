@@ -229,7 +229,13 @@ describe("폴더 추가 진입점", () => {
 
 describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => {
   it("[공용에서 가져오기…]가 복사 계획 대화상자를 고르기 단계로 열고, 구성 표 행 메뉴에 [공용에 저장…]이 있다", async () => {
-    const { space } = mount([view("a")], "/projects/a", { listConversations: vi.fn(async () => []), listRuns: vi.fn(async () => []) });
+    // 복사 대화상자의 종류·항목은 서버가 준다(`GET /projects/copy/kinds`·`/items`): 종류 이름은 임의 값이다
+    const { space } = mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      listCopyKinds: vi.fn(async () => [{ kind: "zz-kind", library: true, portable: true }]),
+      listCopyItems: vi.fn(async (project: string | null) => (project === null ? [{ kind: "zz-kind", id: "lib-agent", name: "공용 에이전트" }] : [])),
+    });
     space.mockImplementation(((id: string | null) => createFakeRest({ listAgents: vi.fn(async () => (id === null ? [{ id: "lib-agent", name: "공용 에이전트" }] : [{ id: "pl", name: "기획 에이전트" }])) })) as never);
     const config = await screen.findByTestId("project-config-card");
     await within(config).findByRole("link", { name: "기획 에이전트" });

@@ -7,7 +7,7 @@ import "@agent-console/sdd-view/styles.css";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Banner, Button, ConfirmDialog, Dialog, PageHeader, Tabs, useToast, type TabItem } from "@agent-console/ui";
+import { Banner, Button, ConfirmDialog, PageHeader, Tabs, useToast, type TabItem } from "@agent-console/ui";
 import { ToneChip } from "@agent-console/sdd-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
@@ -21,6 +21,7 @@ import { PlanTab } from "./PlanTab";
 import { RulesTab } from "./RulesTab";
 import { DEFAULT_TAB, SDD_PARAMS, SDD_STORAGE, SDD_TAB_DEFS } from "./sddConfig";
 import { SpecExportDialog } from "./SpecExportDialog";
+import { SpecRenameDialog } from "./SpecRenameDialog";
 import { specsPath } from "./sddPaths";
 import type { SddTabPanels, SddTabProps } from "./sddTabs";
 import { TasksTab } from "./TasksTab";
@@ -61,8 +62,6 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
   const ownHashes = useRef(new Set<string>());
   useSddLive(ownHashes);
   const [dialog, setDialog] = useState<"export" | "delete" | "rename" | null>(null);
-  const [renaming, setRenaming] = useState("");
-  const [renameError, setRenameError] = useState<string | null>(null);
   const [dirtyTabs, setDirtyTabs] = useState<ReadonlySet<string>>(new Set());
   const reportDirty = useCallback((key: string, dirty: boolean) => {
     setDirtyTabs((cur) => {
@@ -140,16 +139,11 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
     void navigator.clipboard?.writeText(directory);
     toast({ tone: "success", text: m.head.copied });
   };
-  const rename = async () => {
-    if (renaming.trim() === "") return;
-    try {
-      const saved = await space.client.putSpec(view.spec.id, { ...view.spec, name: renaming.trim() }, versionHash);
-      if (saved.version_hash !== undefined) ownHashes.current.add(saved.version_hash);
-      setDialog(null);
-      await invalidate();
-    } catch (e) {
-      setRenameError(describeError(e, m.problem.generic).message);
-    }
+  const rename = async (name: string) => {
+    const saved = await space.client.putSpec(view.spec.id, { ...view.spec, name }, versionHash);
+    if (saved.version_hash !== undefined) ownHashes.current.add(saved.version_hash);
+    setDialog(null);
+    await invalidate();
   };
   const remove = async () => {
     try {
@@ -191,7 +185,7 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
               label="⋯"
               panelLabel={m.head.more}
               items={[
-                { id: "rename", label: m.head.rename, disabled: writeBlock !== undefined, onSelect: () => { setRenaming(view.spec.name); setRenameError(null); setDialog("rename"); } },
+                { id: "rename", label: m.head.rename, disabled: writeBlock !== undefined, onSelect: () => setDialog("rename") },
                 { id: "copy", label: m.head.copyPath, disabled: directory === "", onSelect: copyPath },
                 { id: "delete", label: m.head.delete, danger: true, disabled: writeBlock !== undefined, onSelect: () => setDialog("delete") },
               ]}
@@ -233,24 +227,13 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
         )}
       </div>
       {dialog === "export" ? (
-        <SpecExportDialog open onClose={() => setDialog(null)} blockedReason={writeBlock} onSubmit={(body) => space.client.exportSpec(view.spec.id, body)} />
+        <SpecExportDialog open onClose={() => setDialog(null)} blockedReason={writeBlock} loadDirs={(path) => space.client.listImportFiles(path)} onSubmit={(body) => space.client.exportSpec(view.spec.id, body)} />
       ) : null}
       <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
       <ConfirmDialog open={dialog === "delete"} title={m.delete.title(specName)} confirmLabel={m.delete.confirm} cancelLabel={m.cancel} danger onConfirm={() => void remove()} onCancel={() => setDialog(null)}>
         {m.delete.body(directory)}
       </ConfirmDialog>
-      <Dialog
-        open={dialog === "rename"}
-        title={m.rename.title}
-        onClose={() => setDialog(null)}
-        actions={<><Button onClick={() => setDialog(null)}>{m.cancel}</Button><Button variant="primary" aria-disabled={renaming.trim() === "" || undefined} onClick={() => void rename()}>{m.rename.submit}</Button></>}
-      >
-        <label className="sdd-field">
-          <span className="sdd-label">{m.rename.name}</span>
-          <input className="sdd-input" value={renaming} onChange={(e) => setRenaming(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) void rename(); }} />
-        </label>
-        {renameError === null ? null : <p className="app-field-error" role="alert">{renameError}</p>}
-      </Dialog>
+      {dialog === "rename" ? <SpecRenameDialog open initialName={view.spec.name} onClose={() => setDialog(null)} onSubmit={rename} /> : null}
     </div>
   );
 }

@@ -86,6 +86,13 @@
 
 /* 스펙 목록 */
 .ac-sdd-spec { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(120px, 1fr) minmax(140px, 2fr) auto; align-items: center; gap: 12px; width: 100%; height: 100%; padding: 0 12px; border: 0; border-bottom: 1px solid var(--ac-border-soft); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ac-sdd-spec[data-menu] { padding-right: 52px; }
+.ac-sdd-spec-menu { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); }
+.ac-sdd-sorthead-table { position: sticky; top: 0; z-index: 1; background: var(--ac-surface-1); }
+.ac-sdd-sorthead { display: flex; gap: 8px; padding: 2px 12px; border-bottom: 1px solid var(--ac-border-soft); }
+.ac-sdd-sortbtn { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 0; border-radius: 4px; background: none; color: var(--ac-text-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.ac-sdd-sortbtn:hover, .ac-sdd-sortbtn[data-active] { color: var(--ac-text); }
+.ac-sdd-sortbtn:focus-visible { outline: 2px solid var(--ac-focus-ring, currentColor); outline-offset: 1px; }
 .ac-sdd-spec[data-selected] { background: var(--ac-accent-bg); }
 .ac-sdd-spec-main, .ac-sdd-spec-progress, .ac-sdd-spec-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .ac-sdd-spec-name { font-weight: 600; }
@@ -105,6 +112,11 @@
 .ac-sdd-editor-body { display: grid; flex: 1; min-height: 240px; gap: 8px; grid-template-columns: 1fr; }
 .ac-sdd-editor-body[data-mode="split"] { grid-template-columns: 1fr 1fr; }
 .ac-sdd-editor-pane { min-width: 0; min-height: 0; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); overflow: auto; }
+.ac-sdd-goto { display: flex; align-items: center; gap: 8px; }
+.ac-sdd-goto input { width: 9ch; height: 28px; padding: 0 8px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; }
+.ac-sdd-goto input[aria-invalid="true"] { border-color: var(--ac-danger); }
+.ac-sdd-compare { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.ac-sdd-compare-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ac-sdd-preview { padding: 12px 16px; background: var(--ac-surface-1); }
 .ac-sdd-preview pre, .ac-sdd-preview code { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .ac-sdd-preview pre { overflow: auto; padding: 8px; background: var(--ac-surface-3); border-radius: var(--ac-radius-sm); }
@@ -113,6 +125,11 @@
 
 /* 작업 표 */
 .ac-sdd-stage { display: grid; grid-template-columns: auto minmax(0, 1fr) 120px auto; align-items: center; gap: 8px; width: 100%; min-height: var(--ac-sdd-stage-row-h); padding: 0 8px; border: 0; border-bottom: 1px solid var(--ac-border-soft); background: var(--ac-surface-2); color: inherit; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.ac-sdd-selbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: var(--ac-sdd-task-row-h); padding: 0 8px; border-bottom: 1px solid var(--ac-border-soft); background: var(--ac-surface-1); }
+.ac-sdd-check { flex: none; margin: 0; }
+.ac-sdd-task[data-selected] { background: var(--ac-accent-bg); }
+.ac-sdd-row-notice { padding: 4px 8px 8px 28px; }
+.ac-sdd-rowmenu { display: flex; flex-direction: column; gap: 2px; width: max-content; min-width: 160px; margin: 0 0 8px 28px; padding: 4px; list-style: none; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
 .ac-sdd-task { border-bottom: 1px solid var(--ac-border-soft); }
 .ac-sdd-task[data-open] { background: var(--ac-surface-1); }
 .ac-sdd-task-line { display: flex; align-items: center; gap: 8px; min-height: var(--ac-sdd-task-row-h); padding: 0 8px; }

@@ -1,0 +1,11 @@
+/* 문서 틀 화면(screen-sdd §11.1) 보조 스타일. 값은 디자인 토큰만 쓴다. */
+.sdd-template-item { display: flex; align-items: center; gap: var(--ac-space-1); }
+.sdd-template-item .sdd-template-row { flex: 1; min-width: 0; }
+.sdd-template-editor { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 0; flex: 1; }
+.sdd-template-editor .sdd-section-title { margin: 0; min-width: 0; }
+.sdd-check-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-surface-3); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.sdd-check-chip[data-tone="danger"] { color: var(--ac-danger-fg, var(--ac-text)); }
+.sdd-template-files { display: flex; flex-direction: column; gap: var(--ac-space-3); min-height: 0; }
+.sdd-template-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.sdd-template-links [data-tone="danger"] { color: var(--ac-danger-fg, var(--ac-text)); }
+.sdd-template-versions { display: flex; flex-direction: column; gap: var(--ac-space-2); }

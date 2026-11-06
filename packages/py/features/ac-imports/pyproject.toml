@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.13,<0.14",
+    "agent-console-contracts>=0.14,<0.15",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-claude-format>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",

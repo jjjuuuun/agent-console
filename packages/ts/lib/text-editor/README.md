@@ -40,6 +40,7 @@ import { TextEditor } from "@agent-console/text-editor";
 ## 동작 규칙
 - 한글 IME: 자동 완성·자동 괄호를 켜지 않고, 조합 중에는 저장 단축키를 처리하지 않는다. `value`가 현재 문서와 같으면 건드리지 않아 커서·조합이 유지된다.
 - 조합 상태 API: `onCompositionChange(composing)`는 compositionstart/end에서 상태가 바뀔 때만 부른다. `handleRef`로 받은 `TextEditorHandle.isComposing()`은 같은 값을 돌려준다. 조합 중 검사·저장 같은 부수 작업을 미루려는 소비처(설정 › 구조도, 메모리 편집기)가 쓴다. `onChange`는 조합 중에도 호출된다.
+- `TextEditorHandle.goToLine(line)`: 1부터 센 줄로 커서를 옮기고 가운데로 스크롤한다(범위 밖은 처음·끝 줄, 편집기가 없으면 false). 줄 이동 UI·단축키는 호출자가 만든다.
 - 탭 키 = 공백 2칸 들여쓰기(`Esc` 후 `Tab`으로 편집기를 빠져나갈 수 있다). 줄 번호, 줄바꿈 기본 켬(`lineWrap`).
 - 편집기 요소에 `data-ac-editable`을 달아, 앱 전역 단일 키 단축키 처리기가 무시할 수 있게 한다.
 - 공개 API: `TextEditor`, `resolveLanguage(name)`, `jsonParseError(text)`, 타입 `TextEditorHandle`/`TextEditorProps`/`TextEditorStatus`/`TextEditorMessages`/`EditorLanguage`.

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from agent_console_runtime import HostTool, HostToolResult
@@ -26,6 +27,9 @@ class EchoToolProvider:
             입력 원문은 싣지 않는다). None이면 내지 않는다.
         slot: 주면 묶음에 이 칸이 있을 때만 도구를 주고 그 칸을 소비한다(칸 값의 `prefix` 키가
             있으면 앞말로 쓴다). None이면 늘 준다.
+        instructions: 도구와 함께 줄 지침 글(`ToolProvision.instructions`, 7R.5). `slot`이 있으면
+            그 칸이 있을 때만 준다. 기본 빈 값 = 지침 없음.
+        tools: 거짓이면 도구 없이 지침만 준다(지침 전용 공급자 흉내).
 
     Attributes:
         contexts: 받은 맥락(테스트 확인용, 호출 순서).
@@ -39,16 +43,20 @@ class EchoToolProvider:
         prefix: str = "",
         event_type: str | None = "echo.called",
         slot: str | None = None,
+        instructions: Sequence[str] = (),
+        tools: bool = True,
     ) -> None:
         self.id = id
         self.tool_name = tool_name
         self.prefix = prefix
         self.event_type = event_type
         self.slot = slot
+        self.instructions = tuple(instructions)
+        self.tools = tools
         self.contexts: list[ToolProvisionContext] = []
 
     def provide(self, ctx: ToolProvisionContext) -> ToolProvision:
-        """도구 하나(또는 칸이 없으면 없음)."""
+        """도구 하나와 지침(또는 칸이 없으면 없음)."""
         self.contexts.append(ctx)
         prefix = self.prefix
         consumed: frozenset[str] = frozenset()
@@ -88,7 +96,11 @@ class EchoToolProvider:
             handler=handler,
             call_handler=call,
         )
-        return ToolProvision(host_tools=(tool,), consumed_slots=consumed)
+        return ToolProvision(
+            host_tools=(tool,) if self.tools else (),
+            consumed_slots=consumed,
+            instructions=self.instructions,
+        )
 
 
 def _prefix_of(value: Any, default: str) -> str:

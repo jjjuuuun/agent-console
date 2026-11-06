@@ -9,6 +9,8 @@
     - ``assemble(modules, config, base=)`` → ``Assembly``(위상 정렬·상태 5종·bindings·multi 목록).
     - ``ModulesConfig`` / ``ModuleState`` / ``ModuleReport``: 설정·상태·보고.
     - ``EventBus``: 모듈 이벤트 버스(구독자 예외 격리). ``Hub``: WS 토픽 팬아웃.
+    - ``LoopPublisher[T](publish, key=None)``: 다른 스레드 알림 → 바인드한 이벤트 루프
+      (같은 키 연속은 한 번, 루프가 닫힌 뒤에는 버림, 7R.4).
     - ``BaseServices`` / ``Paths``: 호스트 기본 서비스.
     - ``DatabaseHandle``(프로토콜) / ``MigrationBranch``: 공용 DB 핸들과 모듈이 선언하는
       마이그레이션 계보(구현은 저장 계층, 예: ``agent_console_store.SqliteDatabase``).
@@ -115,6 +117,7 @@ from ._options import (
     read_module_options,
 )
 from ._ports import PortKey, Topic
+from ._publisher import LoopPublisher
 from ._services import BaseServices, Paths, utc_now
 
 __all__ = [
@@ -150,6 +153,7 @@ __all__ = [
     "HubSubscription",
     "KindContribution",
     "KindReferences",
+    "LoopPublisher",
     "MigrationBranch",
     "Module",
     "ModuleContext",

@@ -34,10 +34,10 @@ import { TaskTable, DocumentEditor, PlanGraph, TraceMatrix } from "@agent-consol
 ## 컴포넌트
 | 컴포넌트 | 용도 |
 | --- | --- |
-| `SpecList` | 스펙 목록(가상). 진행·지금 단계·문서 상태 칩 |
+| `SpecList` | 스펙 목록(가상). 진행·지금 단계·문서 상태 칩. 열 머리 정렬(`sortColumns`·`sort`·`onSortChange`, `aria-sort`)과 행 메뉴 slot(`renderRowMenu`)은 props로 받는다 |
 | `DocumentNav` / `DocumentStateChip` / `ToneChip` | 문서 목록, 상태 칩(톤 5종 공통 규칙) |
-| `DocumentEditor` | text-editor + react-markdown 미리보기. 읽기 전용·파일 없음·충돌·IME 조합 |
-| `TaskTable` (`TaskStatusMenu`·`TaskFieldChips`·`TaskRunChips`) | 작업 표(가상, 단계 묶음, 인라인 펼침). 문법 없음·빈 상태·줄 충돌 |
+| `DocumentEditor` | text-editor + react-markdown 미리보기. 읽기 전용·파일 없음·충돌·IME 조합. 비교 기준 `compare`(→ [변경 비교], TextDiff)·`externalChange` 띠·`onCopyMine`([내 변경 복사]), 제어형 `mode`/`onModeChange`, `initialLine`·`handleRef`(`openGoToLine`·`goToLine`) — 데이터와 콜백만 받고 클립보드·확인 대화상자·단축키 등록은 호출자가 한다 |
+| `TaskTable` (`TaskStatusMenu`·`TaskFieldChips`·`TaskRunChips`) | 작업 표(가상, 단계 묶음, 인라인 펼침). 문법 없음·빈 상태·줄 충돌. 행 체크박스 선택(`selectable`·`selectedKeys`), 단계 접힘 덮어쓰기(`collapsedOverrides`), 행 아래 인라인 안내(`renderRowNotice`), 행 컨텍스트 메뉴(`rowMenuItems`), 단축키 처리기용 손잡이(`ref`: `TaskTableHandle`) |
 | `PlanGraph` / `PlanBundles` | @xyflow/react + elkjs 읽기 전용 그래프 / 병렬 묶음 글 |
 | `TraceMatrix` | 요구-작업-실행-검증 표(가상), 빈 곳 거르기 |
 | `GateNotice` / `RulesSourceBadge` | 관문 막힘 안내 / 규칙 값 출처 배지 |

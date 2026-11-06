@@ -3,6 +3,8 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 문서 틀 단건 REST(6R.20b, 서버 6R.20a, 계약 `sdd` 1.1.0): `SddClient`에 `createSpecTemplate`·`getSpecTemplate`·`putSpecTemplate`(`If-Match`)·`deleteSpecTemplate`·`listSpecTemplateVariables`·뼈대 파일 `listSpecTemplateFiles`·`readSpecTemplateFile`·`putSpecTemplateFile`·`deleteSpecTemplateFile`. 버전 기록은 기존 `versions` 클라이언트에 경로 `/sdd/templates/{id}`를 주면 된다.
+- 복사 종류·항목(6R.20c, 서버 6R.20a, 계약 `projects` 3.2.0): `projects`에 `listCopyKinds(project)`(`GET /projects/copy/kinds`, `CopyKindInfo{kind, library, portable}`)·`listCopyItems(project, kind?)`(`GET /projects/copy/items`, `CopyItem`).
 - 스펙(SDD) 클라이언트(6R.20, 서버 6R.13, 계약 `sdd` 1.0.0): 하위 경로 `sdd`(`createSddClient`, `SddClient`) — 스펙 목록·보기·저장·삭제, 문서 본문(`If-Match`·`If-None-Match: *`)·상태 전환, 작업 거르기·줄 고치기, 계획·추적·문법, 작업 동작·한꺼번에 시작, 자동 진행, 규칙 검사, 가져오기·내보내기, 문서 틀 목록·틀로 저장. 공간(`?project=`)은 `withSpace`로 묶는다. WS `subscribeSdd`(토픽 `sdd.changed`).
 - 목록 커서 페이지(6R.19, 서버 6R.12): `runsPage`(`GET /runs/page`, `RunsPageParams`)·`conversationsPage`(`GET /conversations/page`, `ConversationsPageParams`)와 이벤트 질의 `listRunEvents(id, { node })`. `query()`가 배열 값을 같은 키 되풀이(`status=a&status=b`)로 보낸다.
 - `previewImport`·`importResources`가 선택 인자 `ImportScope{project, target}`을, `planExport`·`downloadExportArchive`·`writeExport`가 `ExportScope{project, source}`를 받아 질의로 넘긴다(5.7R.33o, 서버 33i·33k). 생략하면 주소가 그대로다.

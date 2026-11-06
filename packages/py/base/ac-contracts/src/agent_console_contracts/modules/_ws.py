@@ -14,6 +14,7 @@ from agent_console_contracts.common import ErrorInfo
 from agent_console_contracts.memory import MemoryChanged
 from agent_console_contracts.runs import Interaction, RunEvent
 from agent_console_contracts.sdd import SddChanged
+from agent_console_contracts.wiki import WikiChanged
 
 
 class WsMessageBase(ContractModel):
@@ -128,6 +129,17 @@ class SddChangedMessage(WsMessageBase):
     payload: SddChanged
 
 
+class WikiChangedMessage(WsMessageBase):
+    """위키 모듈 토픽: 페이지 쓰기·옮기기·지우기·외부 변경 감지(본문 없음, 1.5.0).
+
+    토픽 이름은 위키 모듈이 정한다. 같은 묶음 연속은 한 번만 보낸다. 화면은 받은 페이지를 다시
+    불러온다.
+    """
+
+    type: Literal["wiki.changed"]
+    payload: WikiChanged
+
+
 class WsServerMessage(
     RootModel[
         Annotated[
@@ -137,6 +149,7 @@ class WsServerMessage(
             | LogsIngestedMessage
             | MemoryChangedMessage
             | SddChangedMessage
+            | WikiChangedMessage
             | ErrorMessage,
             Field(discriminator="type"),
         ]

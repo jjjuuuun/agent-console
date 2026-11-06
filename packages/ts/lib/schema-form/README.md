@@ -40,7 +40,7 @@ function Panel() {
 ```
 
 props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonly`, `idPrefix`, `focusPath`,
-`customWidgets`(`ui:widget` 이름 → 컴포넌트, props는 `SchemaFormWidgetProps`), `customFields`(`ui:field` 이름 → 컴포넌트, props는 `SchemaFormFieldProps` — 키-값 맵·첨부 목록처럼 객체·배열 값 전체를 한 컴포넌트가 그릴 때. 출처 표시 행 안에서도 동작), `validateOn`(`blur`|`change`|`submit`),
+`customWidgets`(`ui:widget` 이름 → 컴포넌트, props는 `SchemaFormWidgetProps`), `customFields`(`ui:field` 이름 → 컴포넌트, props는 `SchemaFormFieldProps`; `pointer` = 폼 값 안 이 필드의 JSON Pointer(배열 인덱스 포함) — 키-값 맵·첨부 목록처럼 객체·배열 값 전체를 한 컴포넌트가 그릴 때. 출처 표시 행 안에서도 동작), `validateOn`(`blur`|`change`|`submit`),
 `rawJsonToggle`, `messages`(한국어 기본값 부분 덮어쓰기), `className`.
 해석할 수 없는 스키마(`true`, `{}`)나 렌더 예외는 원시 JSON 편집기로 대체된다.
 

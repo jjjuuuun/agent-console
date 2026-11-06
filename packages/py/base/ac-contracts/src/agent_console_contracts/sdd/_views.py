@@ -333,6 +333,13 @@ class SpecTemplateSummary(ContractModel):
     """`GET /sdd/templates` 항목: 이 공간의 문서 틀 하나."""
 
     id: NonEmptyStr
+    kind: str | None = Field(
+        default=None,
+        description=(
+            "문서 틀의 정의 종류 이름(1.2.0, 설치자 데이터). 화면이 틀 원문을 읽지 않고 복사·버전 "
+            "경로의 종류를 안다. null = 서버가 채우지 않음(1.1.0 이하)."
+        ),
+    )
     name: str = ""
     description: str = ""
     documents: list[SpecDocument] = Field(default_factory=list)

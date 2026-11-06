@@ -16,13 +16,22 @@ export interface RunNoticeViewProps {
   documentTitles: Readonly<Record<string, string>>;
   onOpenDocument: (documentId: string) => void;
   onOpenRules: () => void;
+  /**
+   * 어느 안내를 이 자리에 그릴지 거른다(작업 키 또는 undefined=작업 없는 안내). 기본은 모두.
+   * 작업 탭은 머리에 `(k) => k === undefined`, 행 아래에 `(k) => k === 그 행의 키`를 준다(screen-sdd §7.4).
+   */
+  accepts?: (taskKey: string | undefined) => boolean;
+  /** 러너 밖 관문(`extraGate`)이 속한 작업 키 */
+  extraGateTaskKey?: string | undefined;
   /** 프로젝트가 있을 때만 [가져와서 실행]을 보인다 */
   canImport: boolean;
 }
 
-export function RunNoticeView({ runner, extraGate = null, onDismissExtra, documentTitles, onOpenDocument, onOpenRules, canImport }: RunNoticeViewProps) {
-  const notice = runner.notice;
-  const gate = notice?.kind === "gate" ? notice.details : extraGate;
+export function RunNoticeView({ runner, extraGate = null, onDismissExtra, documentTitles, onOpenDocument, onOpenRules, canImport, accepts = () => true, extraGateTaskKey }: RunNoticeViewProps) {
+  const own = runner.notice;
+  const notice = own !== null && accepts(own.kind === "gate" ? own.taskKey : own.task.key) ? own : null;
+  // 러너의 관문 안내가 있으면 러너가 우선한다(같은 관문을 두 자리에 그리지 않는다)
+  const gate = notice?.kind === "gate" ? notice.details : own?.kind === "gate" ? null : extraGate !== null && accepts(extraGateTaskKey) ? extraGate : null;
   return (
     <>
       {gate === null ? null : (

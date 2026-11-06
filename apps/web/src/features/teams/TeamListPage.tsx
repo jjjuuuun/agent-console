@@ -19,6 +19,7 @@ import { ExportDialog, exportMessages } from "../exports";
 import { DuplicateTeamDialog, NewTeamDialog, RenameTeamDialog, useStartChat } from "./TeamDialogs";
 import { teamMessages as t } from "./messages";
 import { summarizeEntries } from "./teamsLogic";
+import { summaryFromServer } from "./sessionView";
 import { DEFAULT_DIRECTION, teamGroupDefs, teamSortDefs, type SortDirection } from "./arrange";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { blocksRun, ValidationChip } from "./ValidationChip";
@@ -255,6 +256,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
               const g = d.graph;
               const i = d.index;
               const entry = summarizeEntries(g.entry_labels, t.list.entryMore);
+              const sessionSum = summaryFromServer(g.session_summary);
               return (
                 <tr
                   key={`${d.group ?? ""}:${g.id}`}
@@ -273,6 +275,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                       {scoped.rowExtra(g)}
                       <Link to={`${basePath}/${encodeURIComponent(g.id)}`} className="team-vchip-link" onClick={(e) => e.stopPropagation()}>{validationPart.visible ? <ValidationChip summary={g.validation} /> : null}</Link>
                     </div>
+                    {sessionSum === undefined ? null : <div className="app-muted lib-field-note team-session-summary" data-session-summary="">{t.sessions.teamSummary(sessionSum.separate, sessionSum.same)}</div>}
                   </td>
                   <td className="lib-cell-clip app-muted" title={g.description}>{g.description ?? ""}</td>
                   <td className="ac-num">{g.node_count}</td>

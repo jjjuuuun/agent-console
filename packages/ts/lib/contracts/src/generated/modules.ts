@@ -28,9 +28,10 @@ export type {
   SubscribePayload,
   UnsubscribeMessage,
   UnsubscribePayload,
+  WikiChangedMessage,
   WsClientMessage,
   WsServerMessage,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "modules" as const;
-export const CONTRACT_VERSION = "1.4.0" as const;
+export const CONTRACT_VERSION = "1.5.0" as const;

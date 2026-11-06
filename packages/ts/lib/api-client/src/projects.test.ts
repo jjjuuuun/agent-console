@@ -179,3 +179,21 @@ describe("공간 인자 (?project=)", () => {
     expect(calls[0]!.path).toBe("/projects");
   });
 });
+
+describe("복사 종류·항목 (6R.20a)", () => {
+  it("공용은 project 질의 없이, 프로젝트는 ?project=로 종류와 항목을 읽는다", async () => {
+    const { rest, calls } = (() => {
+      const calls: string[] = [];
+      const fetch: FetchLike = (url) => {
+        calls.push(url.replace("http://h/api/v1", ""));
+        return Promise.resolve(new Response("[]", { status: 200 }));
+      };
+      return { rest: createRestClient({ baseUrl: "http://h", token: "T", fetch }), calls };
+    })();
+    await rest.listCopyKinds(null);
+    await rest.listCopyKinds("p 1");
+    await rest.listCopyItems(null, "zz-kind");
+    await rest.listCopyItems("p 1");
+    expect(calls).toEqual(["/projects/copy/kinds", "/projects/copy/kinds?project=p%201", "/projects/copy/items?kind=zz-kind", "/projects/copy/items?project=p%201"]);
+  });
+});

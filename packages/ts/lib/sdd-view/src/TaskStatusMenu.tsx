@@ -63,6 +63,7 @@ export function TaskStatusMenu({ status, statuses, taskTitle, onSelect, readOnly
         ref={button}
         type="button"
         className="ac-sdd-chip-button"
+        data-sdd-trigger="status"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}

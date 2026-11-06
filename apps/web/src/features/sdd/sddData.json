@@ -8,10 +8,19 @@
     "status": "status",
     "stage": "stage",
     "ready": "ready",
+    "field": "field",
     "q": "q",
     "section": "section",
     "gaps": "gaps",
-    "only": "only"
+    "only": "only",
+    "sort": "sort"
+  },
+  "specSort": {
+    "default": { "id": "updated", "direction": "desc" },
+    "columns": [
+      { "id": "name", "labelKey": "name", "firstDirection": "asc" },
+      { "id": "updated", "labelKey": "updated", "firstDirection": "desc" }
+    ]
   },
   "tabs": [
     {
@@ -105,5 +114,41 @@
   "automationOps": {
     "stop": "stop",
     "resume": "resume"
-  }
+  },
+  "widgetRefSources": {
+    "STATE_REF": [
+      "rules",
+      "document_states"
+    ],
+    "STATUS_REF": [
+      "rules",
+      "task_statuses"
+    ],
+    "PROFILE_REF": [
+      "rules",
+      "run_profiles"
+    ]
+  },
+  "toneChoices": [
+    {
+      "tone": "neutral",
+      "labelKey": "neutral"
+    },
+    {
+      "tone": "info",
+      "labelKey": "info"
+    },
+    {
+      "tone": "success",
+      "labelKey": "success"
+    },
+    {
+      "tone": "warning",
+      "labelKey": "warning"
+    },
+    {
+      "tone": "danger",
+      "labelKey": "danger"
+    }
+  ]
 }

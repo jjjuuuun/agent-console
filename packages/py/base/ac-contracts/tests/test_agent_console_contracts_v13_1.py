@@ -43,7 +43,7 @@ def test_contracts_version_is_at_least_0_13_1() -> None:
         "sdd": "1.0.1",
         "modules": "1.4.0",
     }
-    assert set(CONTRACT_VERSIONS) == set(v0131)
+    assert set(CONTRACT_VERSIONS) >= set(v0131)
     for sub, version in v0131.items():
         assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 

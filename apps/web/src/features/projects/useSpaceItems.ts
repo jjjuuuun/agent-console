@@ -1,8 +1,7 @@
-import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
-import type { SpaceRestClient } from "@agent-console/api-client";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import type { CopyKindInfo } from "@agent-console/contracts/projects";
 import { useApi } from "../../app/ApiContext";
-import { KIND_LISTERS, kindTitle } from "./useProjectHomeData";
+import { kindTitle } from "./useProjectHomeData";
 
 /** 한 공간(공용 또는 프로젝트 사본)에 있는 정의 하나. 종류 이름은 서버가 준 문자열 그대로다. */
 export interface SpaceItem {
@@ -20,34 +19,45 @@ export interface SpaceItems {
   retry: () => void;
 }
 
-/** 목록을 읽을 수 있는 정의 종류(`KIND_LISTERS` 표의 키). 공용 공간은 이 전체를 대상으로 한다. */
-export const LISTABLE_KINDS: readonly string[] = Object.keys(KIND_LISTERS);
+/** 복사 방향을 가르는 종류 플래그(서버 `CopyKindInfo`의 불리언 필드 이름). `portable` = 프로젝트에 둘 수 있음, `library` = 공용에 둘 수 있음 */
+export type CopyKindFlag = keyof Pick<CopyKindInfo, "library" | "portable">;
 
 /**
- * 공간 하나의 정의 목록(종류별 병렬 조회). 공용 = `space` null.
- * @param kinds 읽을 종류(프로젝트는 `ProjectView.kinds`, 공용은 `LISTABLE_KINDS`). 목록을 읽을 수 없는 종류는 건너뛴다.
+ * 한 공간의 정의 목록. 종류 목록과 항목은 서버가 준다(`GET /projects/copy/kinds`·`/items`) — 웹은 종류 이름을 모르고,
+ * 새 종류(기능 모듈이 기여한 종류)는 코드 수정 없이 나온다. 공용 = `space` null.
+ * @param flag 이 플래그가 true인 종류만 읽는다(공용 → 프로젝트·프로젝트 쪽 목록 = `portable`, 프로젝트 → 공용·공용 쪽 목록 = `library`).
  * @param enabled false면 읽지 않는다(대화상자가 닫혀 있을 때).
  */
-export function useSpaceItems(space: string | null, kinds: readonly string[], enabled: boolean): SpaceItems {
-  const { space: spaceClient } = useApi();
-  const readable = useMemo(() => kinds.filter((k) => Object.hasOwn(KIND_LISTERS, k)), [kinds]);
+export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled: boolean): SpaceItems {
+  const { rest } = useApi();
+  const kindsQuery = useQuery({
+    queryKey: ["list", "copy-kinds", space ?? ""] as const,
+    queryFn: async () => (await rest.listCopyKinds(space)) ?? [],
+    enabled,
+    retry: false,
+    meta: { silentBackgroundError: true },
+  });
+  const kinds = (kindsQuery.data ?? []).filter((k) => k[flag]).map((k) => k.kind);
   const queries = useQueries({
-    queries: readable.map((kind) => ({
+    queries: kinds.map((kind) => ({
       queryKey: ["list", "space-items", space ?? "", kind] as const,
-      queryFn: () => (KIND_LISTERS[kind] as (c: SpaceRestClient) => Promise<{ id: string; name?: string | undefined; description?: string | undefined }[]>)(spaceClient(space)),
+      queryFn: async () => (await rest.listCopyItems(space, kind)) ?? [],
       enabled,
       retry: false,
       meta: { silentBackgroundError: true },
     })),
   });
   const items: SpaceItem[] = [];
-  readable.forEach((kind, i) => {
-    for (const x of queries[i]?.data ?? []) items.push({ kind, kindTitle: kindTitle(kind), id: x.id, name: x.name ?? x.id, description: x.description });
+  kinds.forEach((kind, i) => {
+    for (const x of queries[i]?.data ?? []) items.push({ kind, kindTitle: kindTitle(kind), id: x.id, name: x.name !== undefined && x.name !== "" ? x.name : x.id, description: x.description === "" ? undefined : x.description });
   });
   return {
     items,
-    loading: enabled && queries.some((q) => q.isPending),
-    failed: queries.some((q) => q.isError),
-    retry: () => queries.forEach((q) => void q.refetch()),
+    loading: enabled && (kindsQuery.isPending || queries.some((q) => q.isPending)),
+    failed: kindsQuery.isError || queries.some((q) => q.isError),
+    retry: () => {
+      void kindsQuery.refetch();
+      queries.forEach((q) => void q.refetch());
+    },
   };
 }

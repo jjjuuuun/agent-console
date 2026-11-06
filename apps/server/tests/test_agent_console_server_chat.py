@@ -21,6 +21,8 @@ from agent_console_server.testing import (
     ws_path,
 )
 
+NO_PROJECT_GATE: dict[str, dict[str, Any]] = {"link-projects-runs": {"require_project": False}}
+
 
 def _conversation(client: TestClient) -> dict[str, Any]:
     response = client.post(f"{API}/conversations", json={"graph_id": "chat"})
@@ -34,7 +36,7 @@ def _post(client: TestClient, conversation_id: str, text: str) -> Any:
 
 
 def test_conversation_turns_and_run_meta(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         missing = client.post(f"{API}/conversations", json={"graph_id": "nope"})
         assert missing.status_code == 404
@@ -77,7 +79,7 @@ def test_conversation_turns_and_run_meta(tmp_path: Path) -> None:
 
 def test_interaction_conversation_id_matches_run(tmp_path: Path) -> None:
     """(a) 채팅 어댑터가 `GraphRuntime.start(conversation_id=)`를 채운다 → Run·Interaction 일치."""
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         conv = _conversation(client)
         run = _post(client, conv["id"], "묻기 계속").json()
@@ -95,7 +97,7 @@ def test_interaction_conversation_id_matches_run(tmp_path: Path) -> None:
 
 
 def test_busy_queue_cancel_and_reject(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         conv = _conversation(client)
         run = _post(client, conv["id"], "묻기 하나").json()
@@ -129,7 +131,7 @@ def test_busy_queue_cancel_and_reject(tmp_path: Path) -> None:
 
 
 def test_ws_conversation_topic(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path)) as client:
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
         seed_chat(client)
         conv = _conversation(client)
         with client.websocket_connect(ws_path()) as ws:

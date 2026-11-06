@@ -32,7 +32,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.13.0"
+    "@agent-console/contracts": "^0.14.0"
   },
   "devDependencies": {
     "@agent-console/eslint-config": "^0.1.0",

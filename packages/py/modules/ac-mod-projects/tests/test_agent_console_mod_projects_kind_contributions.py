@@ -279,6 +279,7 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "kind": "note-template",
             "library": True,
             "portable": True,
+            "title": None,  # 계약 0.14.0 선택 필드(서술자가 이름을 주면 채운다)
         }
         assert "note" not in by_kind  # library=False 종류는 라이브러리에 없다
         assert "settings" not in by_kind  # 싱글턴은 복사 대상이 아니다
@@ -295,7 +296,12 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
         assert missing.status_code == 404
 
         project = {k["kind"]: k for k in client.get(f"{API}/projects/copy/kinds?project=pa").json()}
-        assert project["note"] == {"kind": "note", "library": False, "portable": True}
+        assert project["note"] == {
+            "kind": "note",
+            "library": False,
+            "portable": True,
+            "title": None,
+        }
         assert "private" not in project  # portable=False 기여는 프로젝트 공간에 없다
         assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []
         assert client.get(f"{API}/projects/copy/kinds?project=zz").status_code == 404

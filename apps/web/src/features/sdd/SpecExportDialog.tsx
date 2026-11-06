@@ -1,18 +1,24 @@
-/** 폴더로 내보내기(screen-sdd §4.4): 프로젝트 폴더 안(상대 경로) 대상에 문서를 복사한다. 제출은 props이고 결과를 이 대화상자가 보인다. */
+/**
+ * 폴더로 내보내기(screen-sdd §4.4): 프로젝트 폴더 안(상대 경로) 대상에 문서를 복사한다. 제출은 props이고 결과를 이 대화상자가 보인다.
+ * 대상 폴더는 `loadDirs`가 있으면 트리(한 단계씩, 프로젝트 폴더 밖으로 못 나감)로 고르고 경로 입력은 대안으로 남는다.
+ */
 import { useId, useRef, useState } from "react";
 import { Banner, Button, Choice, Dialog, Disclosure } from "@agent-console/ui";
-import type { SpecExportRequest, SpecExportResult } from "@agent-console/contracts/sdd";
+import type { ImportFileListing, SpecExportRequest, SpecExportResult } from "@agent-console/contracts/sdd";
 import { describeError } from "../../app/errors";
 import { sddMessages as m } from "./messages";
+import { SpecFolderBrowser } from "./SpecFolderBrowser";
 
 export interface SpecExportDialogProps {
   open: boolean;
   onClose: () => void;
   blockedReason?: string | undefined;
+  /** 폴더 하나의 하위 폴더 목록(프로젝트 폴더 기준 상대 경로). 없으면 트리 없이 입력만 쓴다 */
+  loadDirs?: ((path: string) => Promise<ImportFileListing>) | undefined;
   onSubmit: (body: SpecExportRequest) => Promise<SpecExportResult>;
 }
 
-export function SpecExportDialog({ open, onClose, blockedReason, onSubmit }: SpecExportDialogProps) {
+export function SpecExportDialog({ open, onClose, blockedReason, loadDirs, onSubmit }: SpecExportDialogProps) {
   const [dir, setDir] = useState("");
   const [overwrite, setOverwrite] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,8 +65,15 @@ export function SpecExportDialog({ open, onClose, blockedReason, onSubmit }: Spe
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
         {result === null ? (
           <>
+            {loadDirs === undefined ? null : (
+              <div className="sdd-field">
+                <span className="sdd-label">{m.import.browse}</span>
+                <SpecFolderBrowser id={`${uid}-tree`} load={loadDirs} rootLabel={m.import.root} onNavigate={setDir} onSelect={setDir} />
+                <span className="app-muted" role="status">{m.export.chosen(dir)}</span>
+              </div>
+            )}
             <label className="sdd-field" htmlFor={`${uid}-dir`}>
-              <span className="sdd-label">{m.export.folder}</span>
+              <span className="sdd-label">{loadDirs === undefined ? m.export.folder : m.export.manual}</span>
               <input id={`${uid}-dir`} ref={ref} className="sdd-input sdd-mono" value={dir} onChange={(e) => setDir(e.target.value)} />
             </label>
             <Choice checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)}>{m.export.overwrite}</Choice>

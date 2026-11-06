@@ -267,6 +267,11 @@ export type SecretScanMode = "off" | "warn" | "reject";
  */
 export type UsageTrust = string;
 /**
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSecretScanMode".
+ */
+export type WikiSecretScanMode = "off" | "warn" | "reject";
+/**
  * 클라이언트 → 서버 메시지 유니온.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -286,6 +291,7 @@ export type WsServerMessage =
   | LogsIngestedMessage
   | MemoryChangedMessage
   | SddChangedMessage
+  | WikiChangedMessage
   | ErrorMessage;
 
 /**
@@ -4619,6 +4625,10 @@ export interface CopyKindInfo {
    * 프로젝트 공간에 둘 수 있다 — 공용·다른 프로젝트 → 이 프로젝트 복사.
    */
   portable: boolean;
+  /**
+   * 종류 표시 이름(3.3.0, 사용자 언어). 종류를 기여한 모듈의 서술자가 준다. null = 서버가 모름(화면은 종류 이름을 그대로 보인다).
+   */
+  title?: string | null;
 }
 /**
  * `POST /projects/copy/plan` 응답(저장하지 않음).
@@ -5670,6 +5680,226 @@ export interface TaskStatusInfo {
    * 색조(열린 문자열).
    */
   tone?: string | null;
+}
+/**
+ * `GET …/syntax`: 병합한 위키 문법과 값마다 출처.
+ *
+ * `sources` 키 = 문법 문서 기준 위치(예: `/links`), 값 = 출처(열린 문자열: `default`·`settings`·
+ * `rules:<규칙 id>`). 기본 문법이 꺼졌으면 `default`는 나오지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "EffectiveWikiSyntax".
+ */
+export interface EffectiveWikiSyntax {
+  syntax?: WikiSyntax;
+  sources?: {
+    [k: string]: string;
+  };
+  /**
+   * 링크 규칙이 비었다(그래프·백링크 탭은 '링크 문법 없음').
+   */
+  empty?: boolean;
+  /**
+   * 문법 컴파일 이슈.
+   */
+  issues?: WikiIssue[];
+}
+/**
+ * 링크·머리말·제목을 페이지에서 읽는 규칙입니다.
+ *
+ * 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSyntax".
+ */
+export interface WikiSyntax {
+  /**
+   * 페이지 사이 링크를 찾는 규칙입니다. 비운 목록이면 링크를 찾지 않습니다.
+   */
+  links?: WikiLinkRule[] | null;
+  /**
+   * 페이지 맨 위 머리말을 읽는 규칙입니다.
+   */
+  front_matter?: WikiFrontMatter | null;
+  /**
+   * 제목을 어디서 읽을지 순서입니다(front_matter 머리말, first_heading 첫 제목, file_name 파일 이름).
+   */
+  title_sources?: string[] | null;
+  /**
+   * 이 확장자의 파일을 페이지로 봅니다.
+   */
+  page_extensions?: string[] | null;
+  /**
+   * 켜면 경로·제목·별칭을 비교할 때 대소문자를 가리지 않습니다.
+   */
+  case_insensitive?: boolean | null;
+  /**
+   * 페이지가 아니라 다른 화면으로 가는 링크 규칙입니다(예: run: 으로 시작).
+   */
+  schemes?: WikiScheme[] | null;
+  /**
+   * 끊긴 링크·고아 페이지·제목 겹침 점검을 켜고 끄며 심각도를 정합니다.
+   */
+  lint?: WikiLintDefaults | null;
+  [k: string]: unknown;
+}
+/**
+ * 링크를 찾는 규칙 하나입니다. 패턴으로 찾거나 마크다운 링크를 읽습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLinkRule".
+ */
+export interface WikiLinkRule {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * pattern은 정규식으로 찾고, markdown은 마크다운 링크 중 페이지 파일을 읽습니다.
+   */
+  kind: string;
+  /**
+   * 링크를 찾는 정규식입니다. target 묶음이 대상, label·anchor 묶음은 선택입니다.
+   */
+  pattern?: string | null;
+  /**
+   * 편집기의 링크 넣기가 만드는 글자 틀입니다. 비우면 이 규칙으로는 넣지 않습니다.
+   */
+  insert?: string | null;
+  /**
+   * 링크 대상을 무엇으로 찾을지 순서입니다(path 경로, title 제목, alias 별칭, relative_path 상대 경로). 비우면 찾지 않습니다.
+   */
+  resolve?: string[];
+  [k: string]: unknown;
+}
+/**
+ * 페이지 머리말(맨 위 YAML)을 읽는 규칙입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiFrontMatter".
+ */
+export interface WikiFrontMatter {
+  /**
+   * 머리말 앞뒤에 두는 줄입니다. 비우면 앱 설정이나 기본값을 따릅니다.
+   */
+  delimiter?: string | null;
+  /**
+   * 역할(title 제목, tags 태그, aliases 별칭) → 머리말 키 이름입니다.
+   */
+  roles?: {
+    [k: string]: string;
+  } | null;
+  [k: string]: unknown;
+}
+/**
+ * 페이지가 아니라 다른 화면으로 가는 링크 하나입니다(예: 실행 링크).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiScheme".
+ */
+export interface WikiScheme {
+  /**
+   * 링크 대상이 이 글자로 시작하면 페이지가 아니라 다른 화면으로 갑니다.
+   */
+  prefix: string;
+  target: WikiSchemeTarget;
+  [k: string]: unknown;
+}
+/**
+ * 링크 스킴이 가리킬 화면입니다. 화면 역할과 항목 id로 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSchemeTarget".
+ */
+export interface WikiSchemeTarget {
+  /**
+   * 열 화면의 역할 이름입니다. 앱 화면 목록이 이 이름으로 화면을 찾습니다.
+   */
+  role: string;
+  /**
+   * 화면의 항목 id로 쓸 값입니다. value는 링크에서 접두를 뺀 나머지입니다.
+   */
+  id_from?: string;
+  /**
+   * 화면에 넘길 추가 값 틀입니다. 중괄호 value를 링크 값으로 바꿉니다.
+   */
+  query?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * 기본 점검(끊긴 링크·고아 페이지·제목 겹침)을 켜고 끄는 규칙입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLintDefaults".
+ */
+export interface WikiLintDefaults {
+  /**
+   * 점검 이름(broken_link, orphan, duplicate_title) → 심각도입니다. 비운 값은 끕니다.
+   */
+  builtin?: {
+    [k: string]: IssueSeverity | null;
+  } | null;
+  /**
+   * 켜면 점검할 때 기존 페이지에도 쓰기 규칙을 돌려 어긋난 곳을 보입니다.
+   */
+  write_rules?: boolean | null;
+  /**
+   * 고아 페이지 점검에서 뺄 경로 모양입니다(예: archive/**). 첫 페이지는 늘 뺍니다.
+   */
+  orphan_ignore?: string[] | null;
+  [k: string]: unknown;
+}
+/**
+ * 위키 이슈(파싱·쓰기 규칙·점검·규칙 검사). `Issue`에 페이지·줄·규칙 위치를 더한다.
+ *
+ * `Issue.path`는 그대로 JSON 포인터(규칙 문서·설정 기준 위치)이고, 페이지 경로는 `page`에 둔다.
+ * 알려진 코드는 `KnownIssueCodes`의 `wiki.*`(열린 문자열). 값 원문(비밀 의심 값)은 담지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiIssue".
+ */
+export interface WikiIssue {
+  severity: IssueSeverity;
+  code: string;
+  message: string;
+  node_id?: string | null;
+  edge_id?: string | null;
+  path?: string | null;
+  details?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 서버가 계산한 수정 제안(없으면 제안 버튼 없음).
+   */
+  suggestions?: IssueSuggestion[];
+  /**
+   * 이 이슈가 있으면 실행이 거부되는지. 검증한 쪽이 정한다. null = 정하지 않음(이 경우 severity가 error인 것만 실행을 막는다).
+   */
+  blocks_run?: boolean | null;
+  /**
+   * 해결 버튼(다른 화면으로 이동, 0.8.0). 그래프 안 수정은 suggestions. null = 없음.
+   */
+  fix?: Fix | null;
+  /**
+   * 해결 안내 한 줄(0.12.2, 사용자 언어). null = 없음.
+   */
+  hint?: string | null;
+  /**
+   * 묶음 표시(0.12.2). 같은 `group.key`의 이슈는 한 행으로 묶고 `group.message`를 보인다. 같은 묶음 안 제안의 `id`가 같으면 화면은 버튼 하나로 모두 적용한다. null = 묶지 않음.
+   */
+  group?: IssueGroup | null;
+  /**
+   * 페이지 경로(페이지 하나에 걸린 이슈).
+   */
+  page?: string | null;
+  /**
+   * 그 페이지의 줄 번호(1부터).
+   */
+  line?: number | null;
+  /**
+   * 이슈를 낸 쓰기·점검 규칙 id(기본 점검이면 null).
+   */
+  rule_id?: string | null;
 }
 /**
  * 팀 구성의 입구 하나(입구 연결의 도착 노드).
@@ -10520,6 +10750,10 @@ export interface SpecTemplateCreateRequest {
  */
 export interface SpecTemplateSummary {
   id: string;
+  /**
+   * 문서 틀의 정의 종류 이름(1.2.0, 설치자 데이터). 화면이 틀 원문을 읽지 않고 복사·버전 경로의 종류를 안다. null = 서버가 채우지 않음(1.1.0 이하).
+   */
+  kind?: string | null;
   name?: string;
   description?: string;
   documents?: SpecDocument[];
@@ -11287,6 +11521,1657 @@ export interface VersionedGraph {
   saved_at?: number | null;
 }
 /**
+ * 에이전트에게 위키를 줍니다. 위키마다 허용할 일과 지침·경로 안내를 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiAccessConfig".
+ */
+export interface WikiAccessConfig {
+  /**
+   * 에이전트가 쓸 위키와 허용할 일입니다. 없는 위키는 쓸 수 없습니다.
+   */
+  wikis?: WikiAccessEntry[];
+  /**
+   * 도구를 부를 때 위키를 적지 않으면 쓰는 위키입니다. 비우면 첫 위키입니다.
+   */
+  default_wiki?: string | null;
+  /**
+   * 켜면 위키 규칙의 지침 본문을 에이전트 지침으로 함께 줍니다.
+   */
+  include_rules_instructions?: boolean;
+  /**
+   * 에이전트 지침에 붙는 안내 문장입니다. 중괄호 pages_dir, wiki, wiki_name을 쓸 수 있습니다. 비우면 없습니다.
+   */
+  path_hint?: string;
+  /**
+   * 읽은 페이지 앞에 붙는 줄입니다. 중괄호 wiki, path, updated_at, author를 쓸 수 있습니다.
+   */
+  result_header?: string;
+  /**
+   * 도구 결과 하나에 담을 최대 글자 수입니다. 넘으면 잘라서 줍니다.
+   */
+  max_result_chars?: number;
+  tools?: WikiToolNames;
+  [k: string]: unknown;
+}
+/**
+ * 에이전트가 이 위키에서 할 수 있는 일입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiAccessEntry".
+ */
+export interface WikiAccessEntry {
+  /**
+   * 권한을 줄 위키입니다. 실행하는 프로젝트의 위키 중에서 고릅니다.
+   */
+  wiki: string;
+  /**
+   * 읽기·검색·목록·링크 보기·쓰기·옮기기·지우기 중 허용할 것입니다.
+   */
+  access?: ("read" | "search" | "list" | "links" | "write" | "move" | "delete")[];
+  [k: string]: unknown;
+}
+/**
+ * 동작마다 에이전트에게 보이는 도구 이름과 설명입니다. 비우면 기본값을 씁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiToolNames".
+ */
+export interface WikiToolNames {
+  search?: WikiToolText;
+  read?: WikiToolText;
+  list?: WikiToolText;
+  links?: WikiToolText;
+  write?: WikiToolText;
+  move?: WikiToolText;
+  delete?: WikiToolText;
+  [k: string]: unknown;
+}
+/**
+ * 에이전트에게 보이는 도구 이름과 설명입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiToolText".
+ */
+export interface WikiToolText {
+  /**
+   * 에이전트가 부르는 이름입니다. 영문·숫자·밑줄·빼기만 씁니다.
+   */
+  name: string;
+  /**
+   * 에이전트가 언제 이 도구를 쓸지 판단하는 설명입니다.
+   */
+  description: string;
+  [k: string]: unknown;
+}
+/**
+ * 페이지를 쓴 쪽. `kind`는 열린 문자열(알려진 값 `KnownWikiAuthorKinds`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiAuthor".
+ */
+export interface WikiAuthor {
+  /**
+   * user·agent·system·external(열린 문자열).
+   */
+  kind: string;
+  agent_id?: string | null;
+  node_id?: string | null;
+  /**
+   * 중첩 팀 안의 노드 경로(바깥 → 안).
+   */
+  node_path?: string[];
+  run_id?: string | null;
+  root_run_id?: string | null;
+  graph_id?: string | null;
+  /**
+   * 기록 시점 이름(에이전트 정의 이름·노드 id·동작 이름 등). 기록할 때 채워 저장하므로 지운·바뀐 에이전트도 그때 이름이 남는다. null = 없음(웹은 agent_id → kind 라벨).
+   */
+  label?: string | null;
+}
+/**
+ * 이 페이지를 가리키는 페이지 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiBacklink".
+ */
+export interface WikiBacklink {
+  path: string;
+  title?: string;
+  /**
+   * 그 페이지 안 링크 수.
+   */
+  count?: number;
+}
+/**
+ * 켜진 연동에 따라 쓸 수 있는 기능(포트 유무로 계산).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiCapabilities".
+ */
+export interface WikiCapabilities {
+  /**
+   * 페이지 기록·되돌리기(기록 저장소 있음).
+   */
+  history?: boolean;
+  /**
+   * 검색(검색 색인 있음, 저하 포함).
+   */
+  search?: boolean;
+  /**
+   * 에이전트 쓰기(실행 연동 있음).
+   */
+  runs?: boolean;
+  /**
+   * 공용 구성의 위키 규칙 편집(라이브러리 공간 있음).
+   */
+  rules_library?: boolean;
+  /**
+   * zip 가져오기·내보내기.
+   */
+  import_export?: boolean;
+}
+/**
+ * 최근 변경 한 줄(`GET …/changes`·`GET /wiki/changes`): 기록에 위키 id·페이지 경로를 더한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiChange".
+ */
+export interface WikiChange {
+  version: number;
+  /**
+   * 동작(열린 문자열, 알려진 값 `KnownWikiVersionOps`).
+   */
+  op: string;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256: string;
+  bytes: number;
+  author: WikiAuthor;
+  message?: string | null;
+  /**
+   * 유닉스 초.
+   */
+  at: number;
+  /**
+   * 옮겨 온 옛 경로(op `move_in`일 때).
+   */
+  from?: string | null;
+  /**
+   * 옮겨 간 새 경로(op `move_out`일 때).
+   */
+  to?: string | null;
+  /**
+   * 위키 id(정의가 지워진 위키도 id로 나온다).
+   */
+  wiki: string;
+  path: string;
+}
+/**
+ * `GET /wiki/wikis/{wiki}/changes?limit=&cursor=&author_run=` 응답(최근 것부터).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiChangePage".
+ */
+export interface WikiChangePage {
+  items?: WikiChange[];
+  /**
+   * 다음 쪽 커서(없으면 끝).
+   */
+  next_cursor?: string | null;
+}
+/**
+ * WS `wiki.changed` payload: 위키 페이지가 바뀜(본문 없음).
+ *
+ * 화면은 그 페이지를 다시 불러온다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiChanged".
+ */
+export interface WikiChanged {
+  space?: SpaceRef;
+  wiki_id: string;
+  /**
+   * 바뀐 페이지 경로(빈 목록 = 정의만).
+   */
+  paths?: string[];
+  /**
+   * 페이지(또는 위키 정의)를 지웠다.
+   */
+  deleted?: boolean;
+  /**
+   * 앱 밖에서 고친 것을 감지했다.
+   */
+  external?: boolean;
+}
+/**
+ * 위키 모듈 토픽: 페이지 쓰기·옮기기·지우기·외부 변경 감지(본문 없음, 1.5.0).
+ *
+ * 토픽 이름은 위키 모듈이 정한다. 같은 묶음 연속은 한 번만 보낸다. 화면은 받은 페이지를 다시
+ * 불러온다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiChangedMessage".
+ */
+export interface WikiChangedMessage {
+  /**
+   * 요청 상관 id(선택).
+   */
+  id?: string | null;
+  type: "wiki.changed";
+  payload: WikiChanged;
+}
+/**
+ * 정의 파일 옆 본문 폴더의 파일 하나입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiContentRef".
+ */
+export interface WikiContentRef {
+  /**
+   * 본문 폴더 안의 상대 경로입니다.
+   */
+  file: string;
+  [k: string]: unknown;
+}
+/**
+ * `POST /wiki/wikis` 본문: 위키 만들기(정의만, 페이지 폴더는 첫 쓰기 때 생긴다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiCreateRequest".
+ */
+export interface WikiCreateRequest {
+  /**
+   * 비우면 이름에서 만든다(겹치면 뒤에 수).
+   */
+  id?: string | null;
+  name: string;
+  description?: string;
+  home?: string | null;
+  /**
+   * 쓸 위키 규칙 id(같은 공간).
+   */
+  rules?: string[];
+}
+/**
+ * 위키입니다. 이름, 첫 페이지, 쓰는 위키 규칙을 담습니다. 페이지는 폴더의 파일입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiDefinition".
+ */
+export interface WikiDefinition {
+  /**
+   * 정의 종류 이름입니다. 직접 바꾸지 않습니다.
+   */
+  kind: string;
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  schema_version?: number;
+  /**
+   * 목록에 보일 이름입니다.
+   */
+  name: string;
+  /**
+   * 무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.
+   */
+  description?: string;
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 위키를 열면 먼저 보일 페이지 경로입니다(확장자 없이). 비우면 목록을 엽니다.
+   */
+  home?: string | null;
+  /**
+   * 이 위키에 쓸 위키 규칙입니다. 순서대로 합칩니다. 비우면 규칙이 없습니다.
+   */
+  rules?: string[];
+  [k: string]: unknown;
+}
+/**
+ * RunEvent `wiki.<op>`의 payload: 에이전트 위키 도구 호출 하나.
+ *
+ * **본문·검색어 원문 없음**: 크기(`bytes`·`query_chars`)와 해시(`sha256`·`query_sha256`)만 싣는다.
+ * 로그 대응표는 이 값으로 문서 표지 `{kind: wiki, path: <위키>/<페이지>}`를 만든다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiEventPayload".
+ */
+export interface WikiEventPayload {
+  op: "read" | "search" | "list" | "links" | "write" | "move" | "delete";
+  /**
+   * 위키 id(모르면 null).
+   */
+  wiki?: string | null;
+  /**
+   * 페이지 경로(옮기기는 옛 경로).
+   */
+  path?: string | null;
+  /**
+   * 옮기기의 새 경로.
+   */
+  to?: string | null;
+  status:
+    | "ok"
+    | "denied"
+    | "not_found"
+    | "conflict"
+    | "too_large"
+    | "secret_rejected"
+    | "rule_rejected"
+    | "rate_limited"
+    | "wiki_unavailable"
+    | "invalid_path"
+    | "error";
+  /**
+   * 실패 사유 코드(`wiki.*`, ok면 null).
+   */
+  code?: string | null;
+  /**
+   * 쓴 뒤 버전(기록 없으면 null).
+   */
+  version?: number | null;
+  /**
+   * 본문 바이트 수.
+   */
+  bytes?: number | null;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256?: string | null;
+  /**
+   * 거부·경고한 규칙 id.
+   */
+  rule_ids?: string[];
+  /**
+   * 검색·목록 결과 수.
+   */
+  results?: number | null;
+  /**
+   * 검색어 글자 수.
+   */
+  query_chars?: number | null;
+  /**
+   * 검색어 sha256(16진수).
+   */
+  query_sha256?: string | null;
+  /**
+   * 사용자가 정한 도구 이름.
+   */
+  tool?: string | null;
+  /**
+   * 모델의 도구 호출 id.
+   */
+  tool_use_id?: string | null;
+  /**
+   * 처리 시간(ms).
+   */
+  duration_ms?: number | null;
+}
+/**
+ * `GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiGraph".
+ */
+export interface WikiGraph {
+  nodes?: WikiGraphNode[];
+  edges?: WikiGraphEdge[];
+  /**
+   * 상한을 넘어 일부 칸만 실었다.
+   */
+  truncated?: boolean;
+  /**
+   * 자르기 전 칸 수(모르면 null).
+   */
+  total?: number | null;
+}
+/**
+ * 그래프 칸 하나(페이지, 끊긴 대상, 또는 스킴 링크 대상).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiGraphNode".
+ */
+export interface WikiGraphNode {
+  /**
+   * 페이지 경로(끊긴 대상이면 링크가 적은 대상).
+   */
+  path: string;
+  title?: string;
+  /**
+   * 없는 페이지(끊긴 링크의 대상).
+   */
+  broken?: boolean;
+  /**
+   * 들어오는 링크가 없는 페이지.
+   */
+  orphan?: boolean;
+  /**
+   * 스킴 링크 대상이면 그 접두.
+   */
+  scheme?: string | null;
+  /**
+   * 위키의 첫 페이지.
+   */
+  home?: boolean;
+  /**
+   * 중심에서의 거리(전체 보기는 null).
+   */
+  depth?: number | null;
+}
+/**
+ * 그래프 연결 하나(같은 두 페이지 사이 링크는 하나로 묶고 수를 센다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiGraphEdge".
+ */
+export interface WikiGraphEdge {
+  from: string;
+  to: string;
+  count?: number;
+}
+/**
+ * 페이지 안 제목 하나(절 읽기·목차용).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiHeading".
+ */
+export interface WikiHeading {
+  level: number;
+  text: string;
+  /**
+   * 줄 번호(1부터).
+   */
+  line: number;
+}
+/**
+ * `GET …/pages/{path}/history` 응답. 버전 번호는 다시 매기지 않아 빈 번호가 있을 수 있다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiHistoryPage".
+ */
+export interface WikiHistoryPage {
+  /**
+   * 최근 것부터.
+   */
+  items?: WikiPageVersion[];
+  /**
+   * 보관 수를 넘어 지운 버전이 있다(그 버전은 `wiki.version_not_found`).
+   */
+  pruned?: boolean;
+}
+/**
+ * 페이지 기록 한 줄(`GET …/history`). 지우기도 버전이고 본문은 지우기 직전 해시를 가리킨다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageVersion".
+ */
+export interface WikiPageVersion {
+  version: number;
+  /**
+   * 동작(열린 문자열, 알려진 값 `KnownWikiVersionOps`).
+   */
+  op: string;
+  /**
+   * 본문 sha256(16진수).
+   */
+  sha256: string;
+  bytes: number;
+  author: WikiAuthor;
+  message?: string | null;
+  /**
+   * 유닉스 초.
+   */
+  at: number;
+  /**
+   * 옮겨 온 옛 경로(op `move_in`일 때).
+   */
+  from?: string | null;
+  /**
+   * 옮겨 간 새 경로(op `move_out`일 때).
+   */
+  to?: string | null;
+}
+/**
+ * zip 가져오기 항목 하나의 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiImportItem".
+ */
+export interface WikiImportItem {
+  /**
+   * zip 안 페이지 경로(확장자 없음).
+   */
+  path: string;
+  /**
+   * created·skipped·overwritten·renamed·rejected(열린 문자열, `KnownWikiImportStatuses`).
+   */
+  status: string;
+  /**
+   * renamed면 새 경로.
+   */
+  to?: string | null;
+  /**
+   * rejected·skipped의 이유(경로 공격·크기·비밀 등).
+   */
+  issues?: WikiIssue[];
+}
+/**
+ * `POST …/import`(zip) 결과. `dry_run=true`면 쓰지 않고 같은 결과를 계산한다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiImportResult".
+ */
+export interface WikiImportResult {
+  dry_run?: boolean;
+  items?: WikiImportItem[];
+  /**
+   * zip 전체 이슈(크기 상한·형식 등).
+   */
+  issues?: WikiIssue[];
+}
+/**
+ * `GET /wiki/info?project=`: 위키 화면 정보(웹이 모듈 id를 몰라도 켜짐·한도를 안다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiInfo".
+ */
+export interface WikiInfo {
+  /**
+   * 페이지 폴더의 부모(프로젝트 폴더 기준 상대 경로, 예 `.agent-console/wiki-pages`).
+   */
+  pages_root?: string;
+  capabilities?: WikiCapabilities;
+  limits: WikiLimits;
+  /**
+   * 공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).
+   */
+  issues?: WikiIssue[];
+}
+/**
+ * 위키 한도(설치자 옵션).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLimits".
+ */
+export interface WikiLimits {
+  /**
+   * 페이지 하나의 본문 크기 상한(바이트).
+   */
+  max_page_bytes: number;
+  /**
+   * 위키 하나의 페이지 수 상한.
+   */
+  max_pages: number;
+  /**
+   * 그래프 한 번에 보이는 칸 수 상한.
+   */
+  graph_max_nodes: number;
+}
+/**
+ * 페이지 안 링크 하나(원문 범위 + 해석 결과).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLink".
+ */
+export interface WikiLink {
+  /**
+   * 원문 시작(UTF-16 코드 단위, 본문 문자열 기준).
+   */
+  start: number;
+  /**
+   * 원문 끝(UTF-16 코드 단위, 제외).
+   */
+  end: number;
+  /**
+   * 링크 원문 그대로.
+   */
+  raw: string;
+  /**
+   * 링크 규칙 종류(열린 문자열, `KnownWikiLinkKinds`).
+   */
+  kind: string;
+  /**
+   * 이 링크를 찾은 링크 규칙 id.
+   */
+  rule_id: string;
+  /**
+   * 링크가 적은 대상 문자열.
+   */
+  target?: string | null;
+  /**
+   * 링크 글자. 서버가 늘 채운다(패턴의 label 묶음 → 없으면 target, 마크다운 링크는 링크 글자 → 비면 href).
+   */
+  label?: string;
+  /**
+   * 절 이름(`#` 뒤).
+   */
+  anchor?: string | null;
+  /**
+   * 찾은 페이지 경로(못 찾으면 null).
+   */
+  resolved?: string | null;
+  /**
+   * 대상 페이지가 없다(스킴 링크는 false).
+   */
+  broken?: boolean;
+  /**
+   * 위키 폴더 밖을 가리키는 상대 링크(`resolved` null, `broken` false).
+   */
+  outside?: boolean;
+  /**
+   * 끊긴 링크에서 만들 페이지 경로 제안(위키 폴더 기준, 확장자 없음, 경로 규칙에 맞을 때만). 해석 순서에 path·relative_path가 없으면 null.
+   */
+  suggested_path?: string | null;
+  /**
+   * 링크 상태(열린 문자열, `KnownWikiLinkStatuses`, 서버가 늘 채움). 우선순위 scheme > outside > broken > ok. 웹은 이 값만 본다.
+   */
+  status?: string;
+  /**
+   * 링크 스킴이면 열 화면(역할 + id, 웹 경로 없음). `id_from`은 풀린 id 값이다.
+   */
+  scheme_target?: LabelDisplayTarget | null;
+}
+/**
+ * 링크 넣기 글자.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLinkText".
+ */
+export interface WikiLinkText {
+  rule_id: string;
+  text: string;
+}
+/**
+ * `POST /wiki/wikis/{wiki}/link-text` 본문: 링크 넣기 글자 만들기.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLinkTextRequest".
+ */
+export interface WikiLinkTextRequest {
+  /**
+   * 링크를 넣을 페이지 경로(상대 경로 계산 기준).
+   */
+  from_page: string;
+  /**
+   * 대상 페이지 경로.
+   */
+  target: string;
+  /**
+   * 링크 글자(생략 = 대상 제목, 없으면 target).
+   */
+  label?: string | null;
+  /**
+   * 쓸 링크 규칙(생략 = 삽입 틀이 있는 첫 링크 규칙).
+   */
+  rule_id?: string | null;
+}
+/**
+ * 점검에 걸릴 페이지를 고르는 조건입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLintCondition".
+ */
+export interface WikiLintCondition {
+  /**
+   * 여기 적은 조건이 모두 맞는 페이지를 이슈로 보입니다.
+   */
+  all?: WikiLintConditionItem[] | null;
+  /**
+   * 여기 적은 조건 중 하나만 맞아도 이슈로 보입니다.
+   */
+  any?: WikiLintConditionItem[] | null;
+  /**
+   * 켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.
+   */
+  negate?: boolean | null;
+  [k: string]: unknown;
+}
+/**
+ * 조건 하나입니다. 페이지의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLintConditionItem".
+ */
+export interface WikiLintConditionItem {
+  /**
+   * 페이지에서 비교할 값의 위치입니다(예: /idle_days 마지막 수정 뒤 지난 날, /backlinks 들어오는 링크 수).
+   */
+  path: string;
+  /**
+   * 값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.
+   */
+  op: string;
+  /**
+   * 볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).
+   */
+  value?: unknown;
+  [k: string]: unknown;
+}
+/**
+ * `GET …/lint` 응답: 기본 점검 + 점검 규칙 이슈.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLintReport".
+ */
+export interface WikiLintReport {
+  issues?: WikiIssue[];
+  /**
+   * 점검한 페이지 수.
+   */
+  pages?: number;
+  /**
+   * 점검한 시각(유닉스 초).
+   */
+  generated_at?: number;
+  /**
+   * 심각도 → 이슈 수.
+   */
+  counts?: {
+    [k: string]: number;
+  };
+}
+/**
+ * 점검 규칙 하나입니다. 조건에 맞는 페이지를 점검 탭에 이슈로 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiLintRule".
+ */
+export interface WikiLintRule {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  when: WikiLintCondition;
+  severity?: IssueSeverity;
+  /**
+   * 이슈에 보일 문장입니다.
+   */
+  message?: string;
+  [k: string]: unknown;
+}
+/**
+ * `POST …/pages/{path}/move` 본문.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiMoveRequest".
+ */
+export interface WikiMoveRequest {
+  /**
+   * 새 페이지 경로(확장자 없음).
+   */
+  to: string;
+  /**
+   * 다른 페이지의 링크 문자열도 고친다.
+   */
+  rewrite_links?: boolean;
+  /**
+   * 참이면 옮기지 않고 결과만 계산한다.
+   */
+  dry_run?: boolean;
+  /**
+   * 옮길 페이지의 본문 해시(다르면 409).
+   */
+  if_hash?: string | null;
+  message?: string | null;
+}
+/**
+ * 옮기기 결과(`dry_run`이면 고칠 것 미리보기).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiMoveResult".
+ */
+export interface WikiMoveResult {
+  /**
+   * 실제로 옮겼다(`dry_run`이면 false).
+   */
+  moved?: boolean;
+  from: string;
+  to: string;
+  rewritten?: WikiRewrittenPage[];
+  /**
+   * 그사이 바뀌어 링크를 고치지 않은 페이지 경로(다시 읽고 손으로 고친다).
+   */
+  conflicts?: string[];
+  issues?: WikiIssue[];
+}
+/**
+ * 옮기기에서 링크를 고친(고칠) 페이지 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRewrittenPage".
+ */
+export interface WikiRewrittenPage {
+  path: string;
+  /**
+   * 고친 링크 수.
+   */
+  count: number;
+}
+/**
+ * `GET /wiki/wikis/{wiki}/pages?prefix=&tag=` 응답. 트리는 웹이 경로로 만든다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageList".
+ */
+export interface WikiPageList {
+  items?: WikiPageSummary[];
+  /**
+   * 상한을 넘어 일부만 실었다.
+   */
+  truncated?: boolean;
+  /**
+   * 실제 페이지 파일 수(잘렸을 때, 아니면 null).
+   */
+  total?: number | null;
+}
+/**
+ * 페이지 목록 한 줄(본문 없음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageSummary".
+ */
+export interface WikiPageSummary {
+  /**
+   * 페이지 경로(위키 폴더 기준, 확장자 없음).
+   */
+  path: string;
+  /**
+   * 문법의 제목 출처 순서로 정한 제목.
+   */
+  title?: string;
+  tags?: string[];
+  aliases?: string[];
+  bytes?: number;
+  /**
+   * 마지막 변경(유닉스 초, 모르면 null).
+   */
+  updated_at?: number | null;
+  /**
+   * 마지막으로 쓴 쪽(기록 없으면 null).
+   */
+  updated_by?: WikiAuthor | null;
+  links_out?: number;
+  backlinks?: number;
+  broken_links?: number;
+  /**
+   * 들어오는 링크가 없다(고아 점검 제외 경로 반영).
+   */
+  orphan?: boolean;
+  /**
+   * 위키의 첫 페이지다.
+   */
+  home?: boolean;
+  issues?: WikiIssue[];
+}
+/**
+ * `wiki.page_not_found`(HTTP 404) 오류의 `error.details`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageNotFoundDetails".
+ */
+export interface WikiPageNotFoundDetails {
+  path: string;
+  /**
+   * 파일은 없지만 기록이 있다(기록에서 되돌릴 수 있음).
+   */
+  has_history?: boolean;
+}
+/**
+ * 저장 전 시험 결과. 판단은 REST 쓰기와 같다(쓴 주체 사람, 기록·색인·알림을 건드리지 않음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPagePreview".
+ */
+export interface WikiPagePreview {
+  page: WikiPageSummary;
+  links?: WikiLink[];
+  headings?: WikiHeading[];
+  issues?: WikiIssue[];
+  rule_results?: WikiRuleResult[];
+  /**
+   * 지금 저장하면 거부된다(쓰기 규칙 또는 비밀 검사).
+   */
+  would_reject?: boolean;
+}
+/**
+ * 쓰기 규칙 하나의 판정 결과(맞은 규칙만).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRuleResult".
+ */
+export interface WikiRuleResult {
+  rule_id: string;
+  /**
+   * reject·warn(모르는 값은 warn으로 읽은 결과).
+   */
+  action: string;
+  message?: string;
+  /**
+   * 금지 패턴에 맞은 줄 번호(1부터).
+   */
+  lines?: number[];
+}
+/**
+ * `POST …/pages/{path}/preview` 본문: 저장 전 시험(쓰지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPagePreviewRequest".
+ */
+export interface WikiPagePreviewRequest {
+  /**
+   * 시험할 본문 원문(머리말 포함).
+   */
+  content: string;
+}
+/**
+ * 페이지 틀 하나입니다. 새 페이지를 만들 때 본문 뼈대로 씁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageTemplate".
+ */
+export interface WikiPageTemplate {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 새 페이지 대화상자에 보일 틀 이름입니다. 비우면 id를 보입니다.
+   */
+  title?: string | null;
+  /**
+   * 본문 폴더 안의 틀 파일입니다.
+   */
+  file: string;
+  /**
+   * 새 페이지 경로 틀입니다. 중괄호 slug는 제목에서 만든 이름입니다.
+   */
+  path?: string | null;
+  /**
+   * 틀에 쓰는 빈칸입니다. 제목·경로 이름·날짜는 앱이 채우므로 적지 않아도 됩니다.
+   */
+  variables?: WikiTemplateVariable[];
+  [k: string]: unknown;
+}
+/**
+ * 페이지 틀에서 쓰는 변수 하나입니다. 새 페이지 대화상자가 이 칸을 보입니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiTemplateVariable".
+ */
+export interface WikiTemplateVariable {
+  /**
+   * 틀에서 중괄호로 감싸 쓰는 이름입니다.
+   */
+  name: string;
+  /**
+   * 대화상자의 칸 이름입니다. 비우면 이름을 보입니다.
+   */
+  title?: string | null;
+  /**
+   * 칸 아래 보일 도움말입니다.
+   */
+  description?: string | null;
+  /**
+   * 빈칸에 흐리게 보일 예시 값입니다.
+   */
+  example?: string | null;
+  /**
+   * 앱이 채우는 변수인지입니다. 앱이 보기에서만 켭니다.
+   */
+  builtin?: boolean;
+  [k: string]: unknown;
+}
+/**
+ * `GET …/templates` 항목: 합친 페이지 틀 하나(어느 규칙에서 왔는지 + 틀 본문).
+ *
+ * 틀 필드(`id`·`title`·`file`·`path`)는 규칙의 `WikiPageTemplate`과 같다(보기라 폼 모델이 아니다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageTemplateInfo".
+ */
+export interface WikiPageTemplateInfo {
+  id: string;
+  title?: string | null;
+  file: string;
+  /**
+   * 새 페이지 경로 틀.
+   */
+  path?: string | null;
+  /**
+   * 선언 변수 + 틀 본문·경로 틀이 쓰는 이름의 합집합(앱이 채우는 것은 builtin).
+   */
+  variables?: WikiTemplateVariable[];
+  /**
+   * 이 틀을 준 위키 규칙 id.
+   */
+  rule_id: string;
+  /**
+   * 틀 본문(치환 전).
+   */
+  content?: string;
+}
+/**
+ * `GET /wiki/wikis/{wiki}/pages/{path}`: 페이지 하나(본문·링크·백링크).
+ *
+ * `ETag` = `content_hash`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageView".
+ */
+export interface WikiPageView {
+  page: WikiPageSummary;
+  /**
+   * 본문 원문(머리말 포함).
+   */
+  content: string;
+  /**
+   * 본문 sha256(16진수). 쓰기 `If-Match`에 쓴다.
+   */
+  content_hash: string;
+  /**
+   * 읽은 머리말(깨졌으면 빈 객체).
+   */
+  front_matter?: {
+    [k: string]: unknown;
+  };
+  headings?: WikiHeading[];
+  links?: WikiLink[];
+  backlinks?: WikiBacklink[];
+  issues?: WikiIssue[];
+}
+/**
+ * `PUT …/pages/{path}` 본문. 새 페이지는 `If-None-Match: *`, 고치기는 `If-Match: <해시>`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiPageWrite".
+ */
+export interface WikiPageWrite {
+  /**
+   * 본문 원문(머리말 포함).
+   */
+  content: string;
+  /**
+   * 기록에 남길 한 줄(선택).
+   */
+  message?: string | null;
+  /**
+   * 새 페이지를 이 페이지 틀로 만든다(`content`가 비었을 때만 틀 본문을 쓴다).
+   */
+  template?: string | null;
+}
+/**
+ * 위키 하나를 가리키는 짧은 표지.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRef".
+ */
+export interface WikiRef {
+  id: string;
+  name?: string;
+}
+/**
+ * `POST …/pages/{path}/restore` 본문: 그 버전 본문으로 새 버전(op `restore`)을 만든다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRestoreRequest".
+ */
+export interface WikiRestoreRequest {
+  version: number;
+  message?: string | null;
+}
+/**
+ * 위키 규칙 하나의 항목 수.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRuleCounts".
+ */
+export interface WikiRuleCounts {
+  write?: number;
+  lint?: number;
+  templates?: number;
+}
+/**
+ * 합친 규칙의 항목 하나(쓰기 규칙·점검 규칙·페이지 틀). 같은 id로 빠진 항목은 넣지 않는다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRuleEntry".
+ */
+export interface WikiRuleEntry {
+  /**
+   * write·lint·template(열린 문자열, `KnownWikiRuleEntryKinds`).
+   */
+  kind: string;
+  /**
+   * 항목 id.
+   */
+  id: string;
+  /**
+   * 이 항목을 준 위키 규칙 id.
+   */
+  rule_id: string;
+  /**
+   * 쓰기·점검 규칙의 안내 문장 또는 틀의 표시 이름.
+   */
+  label?: string;
+  /**
+   * 쓰기 규칙의 동작(그 밖은 null).
+   */
+  action?: string | null;
+  /**
+   * 점검 규칙의 심각도(그 밖은 null).
+   */
+  severity?: string | null;
+}
+/**
+ * 위키가 쓰는 위키 규칙 하나(순서대로).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRuleRef".
+ */
+export interface WikiRuleRef {
+  id: string;
+  name?: string;
+  /**
+   * 그 공간에 없는 규칙(`wiki.rules_missing`).
+   */
+  missing?: boolean;
+}
+/**
+ * `wiki.rule_rejected`(HTTP 422) 오류의 `error.details`(값 원문 없음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRuleRejectedDetails".
+ */
+export interface WikiRuleRejectedDetails {
+  rule_id: string;
+  message?: string;
+  /**
+   * 금지 패턴에 맞은 줄 번호(1부터).
+   */
+  lines?: number[];
+  /**
+   * 거부한 규칙이 여럿이면 모두(첫 것이 위 필드).
+   */
+  issues?: WikiIssue[];
+}
+/**
+ * `POST /wiki/rules/check`: 위키 규칙 검사(저장하지 않음). 응답은 `WikiRulesCheckResult`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesCheckRequest".
+ */
+export interface WikiRulesCheckRequest {
+  /**
+   * 규칙 문서(위키 규칙 모양).
+   */
+  rules?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 본문 폴더의 파일 목록(페이지 틀 파일 확인용). null = 저장된 규칙 것을 본다.
+   */
+  files?: string[] | null;
+}
+/**
+ * 위키 규칙 검사 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesCheckResult".
+ */
+export interface WikiRulesCheckResult {
+  issues?: WikiIssue[];
+}
+/**
+ * 위키 규칙입니다. 에이전트 지침, 쓰기·점검 규칙, 페이지 틀, 문법을 담습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesDefinition".
+ */
+export interface WikiRulesDefinition {
+  /**
+   * 정의 종류 이름입니다. 직접 바꾸지 않습니다.
+   */
+  kind: string;
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 파일 형식 번호입니다. 직접 바꾸지 않습니다.
+   */
+  schema_version?: number;
+  /**
+   * 목록에 보일 이름입니다.
+   */
+  name: string;
+  /**
+   * 무엇을 위한 것인지 적습니다. 목록에 함께 보입니다.
+   */
+  description?: string;
+  /**
+   * 다른 도구가 읽는 자유 속성입니다. 보통은 비워 둡니다.
+   */
+  attributes?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 위키 도구를 받는 에이전트에게 지침으로 주는 본문 파일입니다. 비우면 없습니다.
+   */
+  instructions?: WikiContentRef | null;
+  /**
+   * 새 페이지를 만들 때 고를 수 있는 본문 뼈대입니다.
+   */
+  page_templates?: WikiPageTemplate[];
+  /**
+   * 위에서부터 모두 봅니다. 거부하는 규칙이 하나라도 맞으면 쓰지 않습니다.
+   */
+  write_rules?: WikiWriteRule[];
+  /**
+   * 조건에 맞는 페이지를 점검 탭에 보입니다.
+   */
+  lint_rules?: WikiLintRule[];
+  /**
+   * 이 규칙을 쓰는 위키의 링크·머리말 문법입니다. 비우면 앱 설정을 따릅니다.
+   */
+  syntax?: WikiSyntax | null;
+  /**
+   * 본문 폴더의 대표 파일입니다. 앱이 채웁니다.
+   */
+  content?: WikiContentRef | null;
+  [k: string]: unknown;
+}
+/**
+ * 쓰기 규칙 하나입니다. 맞는 쓰기를 거부하거나 경고합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiWriteRule".
+ */
+export interface WikiWriteRule {
+  /**
+   * 가리킬 때 쓰는 고유 이름입니다. 영문·숫자·-·_만 씁니다.
+   */
+  id: string;
+  /**
+   * 이 경로 모양의 페이지에만 겁니다(예: decisions/**). 비우면 모든 페이지입니다.
+   */
+  applies_to?: string[];
+  /**
+   * 이 조건이 맞는 쓰기에만 겁니다. 비우면 모든 쓰기입니다.
+   */
+  when?: WikiWriteCondition | null;
+  /**
+   * 이 조건이 맞지 않으면 거부하거나 경고합니다. 예: 머리말에 근거가 있음.
+   */
+  require?: WikiWriteCondition | null;
+  /**
+   * 본문에 이 정규식에 맞는 줄이 있으면 거부하거나 경고합니다.
+   */
+  deny_patterns?: string[];
+  /**
+   * reject는 쓰기를 거부하고, warn은 쓰고 경고만 보입니다.
+   */
+  action?: string;
+  /**
+   * 거부·경고할 때 보일 문장입니다. 에이전트에게도 그대로 전합니다.
+   */
+  message?: string;
+  [k: string]: unknown;
+}
+/**
+ * 쓰기 규칙을 걸 쓰기를 고르는 조건입니다. 비우면 모든 쓰기에 겁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiWriteCondition".
+ */
+export interface WikiWriteCondition {
+  /**
+   * 여기 적은 조건이 모두 맞는 쓰기에만 겁니다.
+   */
+  all?: WikiWriteConditionItem[] | null;
+  /**
+   * 여기 적은 조건 중 하나만 맞아도 겁니다.
+   */
+  any?: WikiWriteConditionItem[] | null;
+  /**
+   * 켜면 조건이 맞지 않을 때 지나갑니다. 비우면 꺼짐입니다.
+   */
+  negate?: boolean | null;
+  [k: string]: unknown;
+}
+/**
+ * 조건 하나입니다. 쓰기의 '볼 값'을 '비교 방법'으로 '비교할 값'과 견줍니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiWriteConditionItem".
+ */
+export interface WikiWriteConditionItem {
+  /**
+   * 쓰기에서 비교할 값의 위치입니다(예: /change/op 동작, /author/kind 쓴 쪽, /page/tags 태그).
+   */
+  path: string;
+  /**
+   * 값을 어떻게 비교할지입니다(예: 같음, 포함). 고를 수 있는 방법은 서버가 알려 줍니다.
+   */
+  op: string;
+  /**
+   * 볼 값과 견줄 값입니다. 비교 방법에 따라 비워 둡니다(예: 값이 있는지 볼 때).
+   */
+  value?: unknown;
+  [k: string]: unknown;
+}
+/**
+ * `GET /wiki/rules` 항목: 위키 규칙 하나(본문 없음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesListItem".
+ */
+export interface WikiRulesListItem {
+  id: string;
+  name?: string;
+  description?: string;
+  counts?: WikiRuleCounts;
+  /**
+   * 지침 본문이 있다.
+   */
+  has_instructions?: boolean;
+  /**
+   * 이 규칙을 쓰는 위키(프로젝트 공간에서만 채움, 공용은 늘 빈 목록).
+   */
+  used_by?: WikiRef[];
+  issues?: WikiIssue[];
+}
+/**
+ * 위키가 쓰는 규칙을 합친 결과 요약(규칙 탭).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesSummary".
+ */
+export interface WikiRulesSummary {
+  /**
+   * 위키의 규칙 순서 그대로.
+   */
+  rules?: WikiRuleRef[];
+  /**
+   * 합친 지침 본문(규칙 이름 머리 줄 포함).
+   */
+  instructions?: string;
+  /**
+   * 합친 쓰기 규칙 수.
+   */
+  write_rules?: number;
+  /**
+   * 합친 점검 규칙 수.
+   */
+  lint_rules?: number;
+  /**
+   * 합친 페이지 틀 수.
+   */
+  page_templates?: number;
+  /**
+   * 합친 항목(쓰기 → 점검 → 틀, 규칙 순서대로).
+   */
+  entries?: WikiRuleEntry[];
+}
+/**
+ * `GET /wiki/rules/{id}`: 위키 규칙 하나 + 쓰는 위키 + 검사 이슈.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiRulesView".
+ */
+export interface WikiRulesView {
+  rules: WikiRulesDefinition;
+  /**
+   * 정의 버전(저장 `If-Match`에 쓴다).
+   */
+  version_hash: string;
+  /**
+   * 이 규칙을 쓰는 위키(공용은 늘 빈 목록).
+   */
+  used_by?: WikiRef[];
+  issues?: WikiIssue[];
+}
+/**
+ * `POST …/scan`: 앱 밖 변경 다시 읽기 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiScanResult".
+ */
+export interface WikiScanResult {
+  /**
+   * 앱 밖에서 바뀐 것으로 기록한 페이지(op `external`).
+   */
+  external?: string[];
+  /**
+   * 기록이 없어 처음 기록한 페이지(op `import`).
+   */
+  imported?: string[];
+  /**
+   * 파일이 사라진 페이지.
+   */
+  deleted?: string[];
+  /**
+   * 기록에 남겼다(기록 저장소를 쓸 수 없으면 false, 감지만).
+   */
+  recorded?: boolean;
+}
+/**
+ * 검색 결과 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSearchHit".
+ */
+export interface WikiSearchHit {
+  path: string;
+  title?: string;
+  /**
+   * 맞은 곳 주변 조각(비밀 가림 뒤 자름).
+   */
+  snippet?: string;
+  /**
+   * 점수(색인마다 다름, 큰 것이 앞).
+   */
+  score?: number | null;
+  /**
+   * 조각 안 강조 범위(조각 문자열 기준 UTF-16).
+   */
+  marks?: WikiTextRange[];
+}
+/**
+ * 문자열 안 범위(UTF-16 코드 단위, 끝 제외).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiTextRange".
+ */
+export interface WikiTextRange {
+  start: number;
+  end: number;
+}
+/**
+ * `GET …/search?q=&prefix=&tag=&limit=` 응답.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSearchResult".
+ */
+export interface WikiSearchResult {
+  items?: WikiSearchHit[];
+  /**
+   * 쓴 검색 방식 id(열린 문자열).
+   */
+  backend?: string;
+  /**
+   * 느린 대체 방식으로 찾았다(`wiki.search_degraded`).
+   */
+  degraded?: boolean;
+  truncated?: boolean;
+}
+/**
+ * 위키의 문법, 비밀 검사, 기록 보관, 검색 방식을 정합니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSettings".
+ */
+export interface WikiSettings {
+  /**
+   * 앱이 주는 기본 문법(겹대괄호 링크, 상대 경로 링크, 머리말)을 씁니다.
+   */
+  include_default_syntax?: boolean;
+  /**
+   * 모든 위키에 쓸 문법입니다. 위키 규칙의 문법이 있으면 그쪽이 먼저입니다.
+   */
+  syntax?: WikiSyntax | null;
+  /**
+   * 쓴 쪽(user 사람, agent 에이전트 등)마다 비밀로 보이는 값을 어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다.
+   */
+  secret_scan?: {
+    [k: string]: WikiSecretScanMode;
+  };
+  /**
+   * 한 페이지의 옛 버전을 몇 개까지 남길지입니다. 첫 버전은 늘 남깁니다.
+   */
+  max_versions_per_page?: number;
+  /**
+   * 설치된 검색 방식의 이름입니다. 비우면 설치할 때 정한 기본값을 씁니다.
+   */
+  search_backend?: string | null;
+  /**
+   * 설치된 쓰기 검사 중 켤 것입니다. 위키 규칙과 함께 봅니다.
+   */
+  write_checks?: WikiWriteCheckSetting[];
+  [k: string]: unknown;
+}
+/**
+ * 설치된 쓰기 검사 하나를 켜고 옵션을 줍니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiWriteCheckSetting".
+ */
+export interface WikiWriteCheckSetting {
+  /**
+   * 설치된 쓰기 검사의 이름입니다.
+   */
+  id: string;
+  /**
+   * 끄면 이 검사를 쓰지 않습니다.
+   */
+  enabled?: boolean;
+  /**
+   * 검사가 정한 설정입니다(예: 꼭 있어야 할 머리말 키).
+   */
+  options?: {
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+/**
+ * `GET /wiki/wikis` 항목: 이 공간의 위키 하나.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiSummary".
+ */
+export interface WikiSummary {
+  id: string;
+  name?: string;
+  description?: string;
+  home?: string | null;
+  /**
+   * 쓰는 규칙(순서대로).
+   */
+  rules?: WikiRuleRef[];
+  /**
+   * 페이지 수.
+   */
+  pages?: number;
+  /**
+   * 끊긴 링크 수.
+   */
+  broken_links?: number;
+  /**
+   * 고아 페이지 수.
+   */
+  orphans?: number;
+  /**
+   * 점검 이슈 수(심각도 → 수, 기본 점검·점검 규칙·쓰기 규칙 다시 보기 포함).
+   */
+  lint_counts?: {
+    [k: string]: number;
+  };
+  /**
+   * 최근 페이지 변경(유닉스 초).
+   */
+  updated_at?: number | null;
+  /**
+   * 최근 변경을 쓴 쪽.
+   */
+  updated_by?: WikiAuthor | null;
+  /**
+   * 페이지 폴더(프로젝트 폴더 기준 상대 경로).
+   */
+  directory?: string;
+  issues?: WikiIssue[];
+}
+/**
+ * 페이지 틀 렌더 결과.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiTemplateRender".
+ */
+export interface WikiTemplateRender {
+  /**
+   * 새 페이지 경로(경로 틀이 없거나 규칙에 어긋나면 null).
+   */
+  path?: string | null;
+  content?: string;
+  /**
+   * 값이 없어 비운 변수 이름.
+   */
+  missing?: string[];
+  issues?: WikiIssue[];
+}
+/**
+ * `POST /wiki/wikis/{wiki}/templates/{id}/render` 본문(쓰지 않는다).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiTemplateRenderRequest".
+ */
+export interface WikiTemplateRenderRequest {
+  title?: string | null;
+  /**
+   * 선언 변수 이름 → 값.
+   */
+  values?: {
+    [k: string]: string;
+  };
+}
+/**
+ * `GET /wiki/wikis/{wiki}`: 위키 정의 + 합친 규칙 요약 + 이슈.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "WikiView".
+ */
+export interface WikiView {
+  wiki: WikiDefinition;
+  /**
+   * 정의 버전(저장 `If-Match`에 쓴다).
+   */
+  version_hash: string;
+  /**
+   * 페이지 폴더(프로젝트 폴더 기준 상대 경로).
+   */
+  directory?: string;
+  rules?: WikiRulesSummary;
+  issues?: WikiIssue[];
+}
+/**
  * 이 워크스페이스의 공통 설정과 사용자 설정입니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -11334,23 +13219,24 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.13.2" as const;
+export const CONTRACTS_VERSION = "0.14.0" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.9.0",
+  "common": "1.10.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
   "runs": "1.8.0",
   "usage": "1.1.0",
-  "projects": "3.2.0",
+  "projects": "3.3.0",
   "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
   "memory": "1.1.0",
-  "sdd": "1.1.0",
-  "modules": "1.4.0"
+  "sdd": "1.2.0",
+  "wiki": "1.0.0",
+  "modules": "1.5.0"
 } as const;
 
 export const USAGE_REPORT_PARTS = [
@@ -11472,7 +13358,10 @@ export const KNOWN_UI_WIDGETS = {
   "PROFILE_REF": "profile-ref",
   "STATE_REF": "state-ref",
   "STATUS_REF": "status-ref",
-  "TONE": "tone"
+  "TONE": "tone",
+  "WIKI_REF": "wiki-ref",
+  "GLOB": "glob",
+  "WIKI_RULE_REFS": "wiki-rule-refs"
 } as const;
 
 export const LOG_EVENT_ORDERS = [
@@ -11549,6 +13438,17 @@ export const ERROR_CODES = {
   "SDD_SPACES_UNAVAILABLE": "sdd.spaces_unavailable",
   "SDD_CONFIG_READONLY": "sdd.config_readonly",
   "SDD_SECRET_REJECTED": "sdd.secret_rejected",
+  "WIKI_NOT_FOUND": "wiki.not_found",
+  "WIKI_PAGE_NOT_FOUND": "wiki.page_not_found",
+  "WIKI_PAGE_EXISTS": "wiki.page_exists",
+  "WIKI_RULE_REJECTED": "wiki.rule_rejected",
+  "WIKI_SECRET_REJECTED": "wiki.secret_rejected",
+  "WIKI_TOO_LARGE": "wiki.too_large",
+  "WIKI_SPACES_UNAVAILABLE": "wiki.spaces_unavailable",
+  "WIKI_HISTORY_UNAVAILABLE": "wiki.history_unavailable",
+  "WIKI_LINK_INSERT_UNAVAILABLE": "wiki.link_insert_unavailable",
+  "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
+  "WIKI_CONFIG_READONLY": "wiki.config_readonly",
   "FAKE_SESSION_MISSING": "fake.session_missing"
 } as const;
 
@@ -11618,7 +13518,18 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "sdd.action_unavailable": 409,
   "sdd.spaces_unavailable": 409,
   "sdd.config_readonly": 409,
-  "sdd.secret_rejected": 422
+  "sdd.secret_rejected": 422,
+  "wiki.not_found": 404,
+  "wiki.page_not_found": 404,
+  "wiki.page_exists": 409,
+  "wiki.rule_rejected": 422,
+  "wiki.secret_rejected": 422,
+  "wiki.too_large": 422,
+  "wiki.spaces_unavailable": 409,
+  "wiki.history_unavailable": 409,
+  "wiki.config_readonly": 409,
+  "wiki.link_insert_unavailable": 422,
+  "wiki.version_not_found": 404
 } as const;
 
 export const KNOWN_ISSUE_CODES = {
@@ -11661,6 +13572,7 @@ export const KNOWN_ISSUE_CODES = {
   "TOOLS_PROVIDER_FAILED": "tools.provider_failed",
   "TOOLS_DUPLICATE_NAME": "tools.duplicate_name",
   "TOOLS_BACKEND_CAPABILITY_MISSING": "tools.backend_capability_missing",
+  "TOOLS_INSTRUCTIONS_UNSUPPORTED": "tools.instructions_unsupported",
   "ARCHITECTURE_CONDITION_PATH_UNLISTED": "architecture.condition_path_unlisted",
   "PROJECT_REQUIRED": "project.required",
   "PROJECT_NOT_IMPORTED": "project.not_imported",
@@ -11709,7 +13621,48 @@ export const KNOWN_ISSUE_CODES = {
   "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
   "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped",
   "RECORDS_SESSION_ARCHIVE_FAILED": "records.session_archive_failed",
-  "RUN_MOVE_BUSY": "run.move_busy"
+  "RUN_MOVE_BUSY": "run.move_busy",
+  "WIKI_NOT_FOUND": "wiki.not_found",
+  "WIKI_PAGE_NOT_FOUND": "wiki.page_not_found",
+  "WIKI_PAGE_EXISTS": "wiki.page_exists",
+  "WIKI_RULE_REJECTED": "wiki.rule_rejected",
+  "WIKI_SECRET_REJECTED": "wiki.secret_rejected",
+  "WIKI_TOO_LARGE": "wiki.too_large",
+  "WIKI_SPACES_UNAVAILABLE": "wiki.spaces_unavailable",
+  "WIKI_HISTORY_UNAVAILABLE": "wiki.history_unavailable",
+  "WIKI_CONFIG_READONLY": "wiki.config_readonly",
+  "WIKI_RULE_WARNING": "wiki.rule_warning",
+  "WIKI_DENIED": "wiki.denied",
+  "WIKI_CONFLICT": "wiki.conflict",
+  "WIKI_RATE_LIMITED": "wiki.rate_limited",
+  "WIKI_WIKI_UNAVAILABLE": "wiki.wiki_unavailable",
+  "WIKI_INVALID_PATH": "wiki.invalid_path",
+  "WIKI_UNKNOWN_WIKI": "wiki.unknown_wiki",
+  "WIKI_SEARCH_DEGRADED": "wiki.search_degraded",
+  "WIKI_FRONT_MATTER_INVALID": "wiki.front_matter_invalid",
+  "WIKI_RULES_MISSING": "wiki.rules_missing",
+  "WIKI_DUPLICATE_RULE_ID": "wiki.duplicate_rule_id",
+  "WIKI_BROKEN_LINK": "wiki.broken_link",
+  "WIKI_ORPHAN": "wiki.orphan",
+  "WIKI_DUPLICATE_TITLE": "wiki.duplicate_title",
+  "WIKI_LINT_RULE": "wiki.lint_rule",
+  "WIKI_LINK_PATTERN_INVALID": "wiki.link_pattern_invalid",
+  "WIKI_UNKNOWN_LINK_KIND": "wiki.unknown_link_kind",
+  "WIKI_SYNTAX_MISSING": "wiki.syntax_missing",
+  "WIKI_INVALID_PATTERN": "wiki.invalid_pattern",
+  "WIKI_INVALID_GLOB": "wiki.invalid_glob",
+  "WIKI_TEMPLATE_MISSING": "wiki.template_missing",
+  "WIKI_UNKNOWN_VARIABLE": "wiki.unknown_variable",
+  "WIKI_UNKNOWN_ACTION": "wiki.unknown_action",
+  "WIKI_ALWAYS_REJECTS": "wiki.always_rejects",
+  "WIKI_PARSE_TIMEOUT": "wiki.parse_timeout",
+  "WIKI_TOO_MANY_PAGES": "wiki.too_many_pages",
+  "WIKI_SETTINGS_INVALID": "wiki.settings_invalid",
+  "WIKI_LINK_INSERT_UNAVAILABLE": "wiki.link_insert_unavailable",
+  "WIKI_HOME_MISSING": "wiki.home_missing",
+  "WIKI_RULE_VIOLATION": "wiki.rule_violation",
+  "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
+  "WIKI_SECRET_SUSPECT": "wiki.secret_suspect"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {
@@ -11904,6 +13857,174 @@ export const KNOWN_TASK_ACTION_STATUSES = {
   "BLOCKED": "blocked",
   "FAILED": "failed"
 } as const;
+
+export const KNOWN_WIKI_EVENT_TYPES = [
+  "wiki.read",
+  "wiki.search",
+  "wiki.list",
+  "wiki.links",
+  "wiki.write",
+  "wiki.move",
+  "wiki.delete"
+] as const;
+
+export const WIKI_ACCESS_OPS = [
+  "read",
+  "search",
+  "list",
+  "links",
+  "write",
+  "move",
+  "delete"
+] as const;
+
+export const WIKI_WRITE_SUBJECT_PATHS = [
+  "/change/op",
+  "/change/from",
+  "/change/to",
+  "/author/kind",
+  "/author/agent_id",
+  "/author/graph_id",
+  "/author/run_id",
+  "/author/node_id",
+  "/page/path",
+  "/page/title",
+  "/page/tags",
+  "/page/aliases",
+  "/page/front_matter",
+  "/page/bytes",
+  "/page/links_out",
+  "/page/broken_links",
+  "/before",
+  "/before/title",
+  "/before/tags"
+] as const;
+
+export const WIKI_LINT_SUBJECT_PATHS = [
+  "/path",
+  "/title",
+  "/tags",
+  "/front_matter",
+  "/bytes",
+  "/age_days",
+  "/idle_days",
+  "/backlinks",
+  "/links_out",
+  "/broken_links",
+  "/updated_by_kind"
+] as const;
+
+export const KNOWN_WIKI_LINK_KINDS = {
+  "PATTERN": "pattern",
+  "MARKDOWN": "markdown"
+} as const;
+
+export const KNOWN_WIKI_RESOLVERS = {
+  "PATH": "path",
+  "TITLE": "title",
+  "ALIAS": "alias",
+  "RELATIVE_PATH": "relative_path"
+} as const;
+
+export const KNOWN_WIKI_AUTHOR_KINDS = {
+  "USER": "user",
+  "AGENT": "agent",
+  "SYSTEM": "system",
+  "EXTERNAL": "external"
+} as const;
+
+export const KNOWN_WIKI_VERSION_OPS = {
+  "CREATE": "create",
+  "UPDATE": "update",
+  "DELETE": "delete",
+  "MOVE_OUT": "move_out",
+  "MOVE_IN": "move_in",
+  "RESTORE": "restore",
+  "EXTERNAL": "external",
+  "IMPORT": "import"
+} as const;
+
+export const KNOWN_WIKI_CHANGE_OPS = {
+  "CREATE": "create",
+  "UPDATE": "update",
+  "DELETE": "delete",
+  "MOVE": "move"
+} as const;
+
+export const KNOWN_WIKI_LINT_CODES = {
+  "BROKEN_LINK": "broken_link",
+  "ORPHAN": "orphan",
+  "DUPLICATE_TITLE": "duplicate_title"
+} as const;
+
+export const KNOWN_WIKI_FRONT_MATTER_ROLES = {
+  "TITLE": "title",
+  "TAGS": "tags",
+  "ALIASES": "aliases"
+} as const;
+
+export const KNOWN_WIKI_TITLE_SOURCES = {
+  "FRONT_MATTER": "front_matter",
+  "FIRST_HEADING": "first_heading",
+  "FILE_NAME": "file_name"
+} as const;
+
+export const KNOWN_WIKI_WRITE_ACTIONS = {
+  "REJECT": "reject",
+  "WARN": "warn"
+} as const;
+
+export const KNOWN_WIKI_SYNTAX_SOURCES = {
+  "DEFAULT": "default",
+  "SETTINGS": "settings",
+  "RULES_PREFIX": "rules:"
+} as const;
+
+export const KNOWN_WIKI_LINK_STATUSES = {
+  "OK": "ok",
+  "BROKEN": "broken",
+  "OUTSIDE": "outside",
+  "SCHEME": "scheme"
+} as const;
+
+export const KNOWN_WIKI_IMPORT_STATUSES = {
+  "CREATED": "created",
+  "SKIPPED": "skipped",
+  "OVERWRITTEN": "overwritten",
+  "RENAMED": "renamed",
+  "REJECTED": "rejected"
+} as const;
+
+export const KNOWN_WIKI_RULE_ENTRY_KINDS = {
+  "WRITE": "write",
+  "LINT": "lint",
+  "TEMPLATE": "template"
+} as const;
+
+export const WIKI_LINK_INSERT_VARIABLES = [
+  "target",
+  "label",
+  "relative_path"
+] as const;
+
+export const WIKI_TEMPLATE_BUILTIN_VARIABLES = [
+  "title",
+  "slug",
+  "date"
+] as const;
+
+export const WIKI_PATH_HINT_VARIABLES = [
+  "pages_dir",
+  "wiki",
+  "wiki_name"
+] as const;
+
+export const WIKI_RESULT_HEADER_VARIABLES = [
+  "wiki",
+  "path",
+  "updated_at",
+  "author"
+] as const;
 
 export const USER_TEXT_RULES = {
   "version": 1,

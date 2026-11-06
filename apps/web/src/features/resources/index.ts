@@ -2,3 +2,6 @@
 export { ResourceEditorForm, type ResourceEditorFormProps, type ResourceDocUpdate } from "./ResourceEditorForm";
 export { ResourceCreateForm, useResourceCreateDraft, type ResourceCreateDraft, type ResourceCreateFormProps } from "./ResourceCreateForm";
 export { createResourceDoc, type CreateResourceOutcome } from "./resourceLogic";
+/** 여러 파일 편집(파일 트리 + 편집기)과 그 초안 로직: 리소스가 아닌 다중 파일 본문(예: 문서 틀 뼈대 파일)도 같은 편집기를 쓴다. */
+export { MultiFileTab, type MultiFileTabProps } from "./MultiFileTab";
+export { planFileChanges, sortEntries, type FileEntry, type FilePlan } from "./fileTreeLogic";

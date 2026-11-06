@@ -4,6 +4,7 @@ import { ApiError, type SddClient } from "@agent-console/api-client";
 import type { ModuleInfo, Project, ProjectView } from "@agent-console/contracts";
 import type { EffectiveSyntax, ParsedTask, SddInfo, SpecView, TaskAction, TraceMatrix } from "@agent-console/contracts/sdd";
 import { createFakeClients } from "../../testing/fakes";
+import { createSafeStorage, type SafeStorage } from "../../app/storage";
 import { mountApp } from "../../testing/screenHarness";
 
 // 계획 그래프(@xyflow/react)는 레이아웃 API가 필요해 자리표시로 바꾼다. 글 목록(PlanBundles)은 진짜를 쓴다.
@@ -47,7 +48,7 @@ interface Fixture {
   sdd?: Record<string, unknown>;
 }
 
-function setup(path: string, f: Fixture = {}) {
+function setup(path: string, f: Fixture = {}, storage?: SafeStorage) {
   const view = f.view ?? specView();
   const projects = f.projects ?? [projectView(project("p1"))];
   const { clients, sddClient, rest } = createFakeClients(
@@ -64,7 +65,7 @@ function setup(path: string, f: Fixture = {}) {
       ...f.sdd,
     },
   );
-  const mounted = mountApp(clients, path);
+  const mounted = mountApp(clients, path, storage === undefined ? {} : { storage });
   return { ...mounted, sdd: sddClient as unknown as { [K in keyof SddClient]: ReturnType<typeof vi.fn> }, rest };
 }
 
@@ -156,6 +157,7 @@ describe("작업 탭: 준비된 작업 한꺼번에 시작", () => {
   it("준비된 작업만 목록에 나오고, 동작을 골라 시작하면 모두 시작될 때 닫히며 토스트가 나온다", async () => {
     const start = vi.fn(async () => ({ items: [{ task_key: "T1", status: "started", run_id: "r1" }] }));
     const { sdd } = setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listBulkActions: bulkActions, bulkStartTasks: start } });
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T1 선택" }, LONG));
     fireEvent.click(await screen.findByRole("button", { name: "준비된 작업 시작…" }, LONG));
     const dialog = await screen.findByRole("dialog", {}, LONG);
     expect(within(dialog).getAllByRole("checkbox")).toHaveLength(1);
@@ -167,6 +169,7 @@ describe("작업 탭: 준비된 작업 한꺼번에 시작", () => {
   it("일부가 막히거나 실패하면 닫지 않고 작업별 이유를 보인다", async () => {
     const start = vi.fn(async () => ({ items: [{ task_key: "T1", status: "failed", issue: { severity: "error", code: "x", message: "이 작업은 조건이 맞지 않습니다" } }] }));
     setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listBulkActions: bulkActions, bulkStartTasks: start } });
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T1 선택" }, LONG));
     fireEvent.click(await screen.findByRole("button", { name: "준비된 작업 시작…" }, LONG));
     const dialog = await screen.findByRole("dialog", {}, LONG);
     fireEvent.click(await within(dialog).findByRole("button", { name: "시작 (1)" }, LONG));
@@ -179,6 +182,117 @@ describe("작업 탭: 준비된 작업 한꺼번에 시작", () => {
     setup("/specs/sp1?prj=p1&tab=tasks", { view });
     const btn = await screen.findByRole("button", { name: "준비된 작업 시작…" }, LONG);
     expect(btn.getAttribute("aria-disabled")).toBe("true");
+  });
+});
+
+describe("작업 탭: 표 선택과 한꺼번에 시작 (6R.20i)", () => {
+  const bulkActions = vi.fn(async () => ({ actions: [ACTION_A], per_task: {} }));
+
+  it("선택이 없으면 버튼이 aria-disabled(준비된 작업을 선택하세요)이고, 준비 안 된 작업만 골라도 같다", async () => {
+    setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listBulkActions: bulkActions } });
+    const btn = await screen.findByRole("button", { name: "준비된 작업 시작…" }, LONG);
+    expect(btn.getAttribute("aria-disabled")).toBe("true");
+    expect(btn.getAttribute("title")).toBe("준비된 작업을 선택하세요");
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T2 선택" }, LONG));
+    expect(screen.getByRole("button", { name: "준비된 작업 시작…" }).getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("머리 체크박스는 보이는 준비된 작업만 고르고, '{n}개 선택'과 [선택 해제]가 있다", async () => {
+    setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listBulkActions: bulkActions } });
+    fireEvent.click(await screen.findByRole("checkbox", { name: "보이는 준비된 작업 모두 선택" }, LONG));
+    expect((screen.getByRole("checkbox", { name: "작업 T1 선택" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "작업 T2 선택" }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole("checkbox", { name: "작업 T3 선택" }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByText("1개 선택")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "선택 해제" }));
+    expect(screen.queryByText("1개 선택")).toBeNull();
+  });
+
+  it("준비 안 된 작업이 섞이면 대화상자에 건너뜀으로 나오고 제출에서 빠진다", async () => {
+    const start = vi.fn(async () => ({ items: [{ task_key: "T1", status: "started", run_id: "r1" }] }));
+    const { sdd } = setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listBulkActions: bulkActions, bulkStartTasks: start } });
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T1 선택" }, LONG));
+    fireEvent.click(screen.getByRole("checkbox", { name: "작업 T2 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "준비된 작업 시작…" }));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    expect(within(dialog).getByText("준비되지 않아 건너뜁니다")).toBeTruthy();
+    expect(within(dialog).getByText("선택한 작업 2개 중 1개를 시작합니다")).toBeTruthy();
+    fireEvent.click(await within(dialog).findByRole("button", { name: "시작 (1)" }, LONG));
+    await waitFor(() => expect(sdd.bulkStartTasks).toHaveBeenCalledWith("sp1", expect.objectContaining({ task_keys: ["T1"] })), LONG);
+  });
+});
+
+describe("작업 탭: 필드 거르기·단축키·인라인 안내 (6R.20i)", () => {
+  const withFields = () => specView({ index: { tasks: [task("T1", "s-open", { fields: { owner: "pl", team: "a" } }), task("T2", "s-open", { fields: { owner: "dev" } }), task("T3", "s-open", { fields: { owner: "pl" } })], stages: [] } });
+
+  it("필드 메뉴는 작업에 나온 키·값에서 만들고, 고르면 field=키=값으로 서버에 묻고 주소·칩에 남는다", async () => {
+    const { sdd, router } = setup("/specs/sp1?prj=p1&tab=tasks", { view: withFields() });
+    fireEvent.click(await screen.findByRole("button", { name: /^필드/ }, LONG));
+    fireEvent.click(await screen.findByRole("button", { name: "owner ›" }, LONG));
+    fireEvent.click(screen.getByRole("checkbox", { name: /pl/ }));
+    await waitFor(() => expect(sdd.listSpecTasks).toHaveBeenLastCalledWith("sp1", expect.objectContaining({ field: ["owner=pl"] })), LONG);
+    expect(decodeURIComponent(router.state.location.search)).toContain("field=owner=pl");
+    const chips = await screen.findByTestId("sdd-field-chips", {}, LONG);
+    fireEvent.click(within(chips).getByRole("button", { name: "owner: pl 조건 지우기" }));
+    await waitFor(() => expect(router.state.location.search).not.toContain("field="), LONG);
+  });
+
+  it("주소의 field 조건이 처음부터 서버 질의와 칩에 반영된다", async () => {
+    const { sdd } = setup("/specs/sp1?prj=p1&tab=tasks&field=owner%3Ddev", { view: withFields() });
+    await waitFor(() => expect(sdd.listSpecTasks).toHaveBeenCalledWith("sp1", expect.objectContaining({ field: ["owner=dev"] })), LONG);
+    expect(await screen.findByRole("button", { name: "owner: dev 조건 지우기" }, LONG)).toBeTruthy();
+  });
+
+  it("행에 포커스가 있으면 S는 상태 메뉴, O는 문서에서 열기를 한다(입력창 밖)", async () => {
+    const { router } = setup("/specs/sp1?prj=p1&tab=tasks");
+    const row = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    row.focus();
+    fireEvent.keyDown(row, { key: "s" });
+    expect(await screen.findByRole("menu", {}, LONG)).toBeTruthy();
+    cleanup();
+    const second = setup("/specs/sp1?prj=p1&tab=tasks");
+    const r2 = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    r2.focus();
+    fireEvent.keyDown(r2, { key: "o" });
+    await waitFor(() => expect(second.router.state.location.search).toContain("tab=documents"), LONG);
+    void router;
+  });
+
+  it("Shift+F10은 행 컨텍스트 메뉴(상태·실행·문서에서 열기·키 복사)를 연다", async () => {
+    setup("/specs/sp1?prj=p1&tab=tasks");
+    const row = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    row.focus();
+    fireEvent.keyDown(row, { key: "F10", shiftKey: true });
+    const menu = await screen.findByRole("menu", { name: "작업 T1 메뉴" }, LONG);
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["상태 바꾸기", "실행", "문서에서 열기", "작업 키 복사"]);
+  });
+
+  it("관문 안내는 그 작업의 행 아래에 보인다(탭 머리가 아니다)", async () => {
+    const blocked = new ApiError(422, { code: "sdd.gate_blocked", message: "x", details: { gate_id: "g1", message: "승인 문서가 먼저입니다" } });
+    setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { runTaskAction: vi.fn(async () => { throw blocked; }) } });
+    const menu = await openMenu();
+    fireEvent.click(await within(menu).findByRole("menuitem", { name: /임의 프로필 실행/ }, LONG));
+    const text = await screen.findByText("승인 문서가 먼저입니다", {}, LONG);
+    expect(text.closest('[data-sdd-task-key="T1"]')).not.toBeNull();
+  });
+
+  it("단계 접힘은 저장되고 다시 열면 복원된다(모두 끝난 단계는 처음부터 접힘)", async () => {
+    const store = new Map<string, string>();
+    const storage = createSafeStorage({ getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k), clear: () => store.clear(), key: () => null, length: 0 });
+    const view = specView({
+      index: { tasks: [task("T1", "s-open", { stage: { id: "g1", title: "단계 하나" } as ParsedTask["stage"] }), task("T3", "s-end", { stage: { id: "g2", title: "단계 둘" } as ParsedTask["stage"] })], stages: [{ id: "g1", title: "단계 하나", document: "d-tasks", line: 1 }, { id: "g2", title: "단계 둘", document: "d-tasks", line: 3 }] },
+    });
+    setup("/specs/sp1?prj=p1&tab=tasks", { view }, storage);
+    await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    expect(screen.queryByRole("button", { name: /^작업 T3, 상태/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /단계 하나 단계 접기·펼치기/ }));
+    expect(screen.queryByRole("button", { name: /^작업 T1, 상태/ })).toBeNull();
+    expect(JSON.parse(store.get("ac.sdd.stage.sp1") ?? "{}")).toEqual({ g1: true });
+    // 다시 열면 복원된다
+    cleanup();
+    setup("/specs/sp1?prj=p1&tab=tasks", { view }, storage);
+    await screen.findByRole("button", { name: /단계 하나 단계 접기·펼치기/ }, LONG);
+    expect(screen.queryByRole("button", { name: /^작업 T1, 상태/ })).toBeNull();
   });
 });
 

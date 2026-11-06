@@ -1,0 +1,20 @@
+/* 규칙 폼 x-ui 위젯 (screen-sdd §10.2) */
+.sdd-w-field { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
+.sdd-w-label { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+.sdd-w-line { display: flex; align-items: flex-start; gap: var(--ac-space-2); }
+.sdd-w-row { flex: 1; min-width: 0; }
+.sdd-w-row-main { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; flex: 1; }
+.sdd-w-row-main > input, .sdd-w-row-main > textarea { width: 100%; box-sizing: border-box; }
+.sdd-w-key { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); }
+.sdd-w-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-w-issues li[data-tone="danger"], .sdd-w-note[data-tone="danger"] { color: var(--ac-danger); }
+.sdd-w-issues li[data-tone="warning"], .sdd-w-note[data-tone="warning"] { color: var(--ac-warning); }
+.sdd-w-note { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-w-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-code); }
+.sdd-w-chips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); }
+.sdd-w-chip { min-height: var(--ac-control-sm, 24px); padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); color: var(--ac-text); font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; }
+.sdd-w-chip[aria-pressed="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg); }
+.sdd-w-chip:disabled { cursor: default; opacity: 0.6; }
+.sdd-w-tones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); }
+.sdd-w-tone { padding: 0; border: 2px solid transparent; border-radius: var(--ac-radius-full); background: none; cursor: pointer; }
+.sdd-w-tone[aria-pressed="true"] { border-color: var(--ac-accent); }

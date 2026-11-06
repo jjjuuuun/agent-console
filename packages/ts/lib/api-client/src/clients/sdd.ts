@@ -4,6 +4,7 @@
  * 서버: `mod-sdd`(`/api/v1/sdd…`). 공간 인자(`?project=`)는 `withSpace(io, project)`가 맡는다: `createSddClient(withSpace(io, "payments"))`.
  * 문서 종류·상태·단계·역할·프로필 이름을 모른다(전부 서버가 주는 데이터).
  */
+import type { ResourceFile } from "@agent-console/contracts";
 import type {
   BulkActionsRequest,
   BulkActionsResult,
@@ -25,6 +26,8 @@ import type {
   SpecExportResult,
   SpecImportRequest,
   SpecSummary,
+  SpecTemplate,
+  SpecTemplateCreateRequest,
   SpecTemplateSummary,
   SpecView,
   TaskAction,
@@ -36,7 +39,7 @@ import type {
   TraceMatrix,
   AutomationState,
 } from "@agent-console/contracts/sdd";
-import { enc, ifMatch, query, withHeaders, type RestIo, type Versioned } from "../io";
+import { enc, encodePath, ifMatch, query, withHeaders, type RestIo, type Versioned } from "../io";
 
 /** 작업 목록 거르기(서버 질의). 배열은 같은 키를 되풀이한다. 상태·단계는 "또는", 필드는 "그리고". */
 export interface ListSpecTasksParams {
@@ -50,6 +53,14 @@ export interface ListSpecTasksParams {
   ready?: boolean;
   /** 키·id·제목에 든 글 */
   q?: string;
+}
+
+/** 문서 틀 뼈대 파일 읽기 결과. `version_hash` = 틀 정의 버전(`ETag`, 다음 쓰기의 `If-Match`). 텍스트가 아니면 `text`가 null. */
+export interface TemplateFileContent {
+  text: string | null;
+  contentType: string;
+  size: number;
+  version_hash: string | undefined;
 }
 
 /** 자동 진행 조작 이름(서버 경로의 끝). */
@@ -76,6 +87,21 @@ export interface SddClient {
   /** 이 공간의 문서 틀 목록. */
   listSpecTemplates(): Promise<SpecTemplateSummary[]>;
   listTemplateVariables(template?: string): Promise<TemplateVariable[]>;
+  /** 빈 문서 틀 만들기(문서 0개, 규칙 비움). 201 + `ETag`. */
+  createSpecTemplate(body: SpecTemplateCreateRequest): Promise<Versioned<SpecTemplate>>;
+  /** 틀 원문 + `ETag`(정의 버전). 없으면 404 `sdd.not_found`. */
+  getSpecTemplate(id: string): Promise<Versioned<SpecTemplate>>;
+  /** 틀 저장. `If-Match` 필수(없으면 428, 낡으면 412). */
+  putSpecTemplate(id: string, body: SpecTemplate, versionHash: string): Promise<Versioned<SpecTemplate>>;
+  deleteSpecTemplate(id: string, versionHash?: string): Promise<void>;
+  /** 틀 기준 변수 목록(`listTemplateVariables(id)`와 같다). */
+  listSpecTemplateVariables(id: string): Promise<TemplateVariable[]>;
+  /** 뼈대 파일 목록(경로 순). */
+  listSpecTemplateFiles(id: string): Promise<ResourceFile[]>;
+  readSpecTemplateFile(id: string, path: string): Promise<TemplateFileContent>;
+  /** 뼈대 파일 쓰기. `versionHash` = 틀 정의 버전(`If-Match`). 응답 `version_hash`가 다음 쓰기의 `If-Match`다. 비밀 의심은 `issues`(`X-Console-Issues`). */
+  putSpecTemplateFile(id: string, path: string, content: string | Uint8Array, versionHash: string, mediaType?: string): Promise<Versioned<SpecTemplate>>;
+  deleteSpecTemplateFile(id: string, path: string, versionHash: string): Promise<Versioned<SpecTemplate>>;
   /** 문서 본문 읽기. `version_hash` = 본문 해시. 파일이 없으면 404 `sdd.document_missing`. */
   getSpecDocument(id: string, doc: string): Promise<Versioned<SpecDocumentContent>>;
   /** 본문 쓰기. `expectedHash` = `If-Match`(다르면 412), `createOnly` = `If-None-Match: *`(이미 있으면 거부). */
@@ -122,6 +148,23 @@ export function createSddClient(io: RestIo): SddClient {
     checkTemplate: (body) => io.request("POST", "/sdd/templates/check", { body }),
     listSpecTemplates: () => io.request("GET", "/sdd/templates"),
     listTemplateVariables: (template) => io.request("GET", `/sdd/templates/variables${query({ template })}`),
+    createSpecTemplate: (body) => io.requestVersioned("POST", "/sdd/templates", { body }),
+    getSpecTemplate: (id) => io.requestVersioned("GET", `/sdd/templates/${enc(id)}`),
+    putSpecTemplate: (id, body, hash) => io.requestVersioned("PUT", `/sdd/templates/${enc(id)}`, { body, ...withHeaders(ifMatch(hash)) }),
+    deleteSpecTemplate: (id, hash) => io.request("DELETE", `/sdd/templates/${enc(id)}`, withHeaders(ifMatch(hash))),
+    listSpecTemplateVariables: (id) => io.request("GET", `/sdd/templates/${enc(id)}/variables`),
+    listSpecTemplateFiles: (id) => io.request("GET", `/sdd/templates/${enc(id)}/files`),
+    readSpecTemplateFile: async (id, path) => {
+      const r = await io.requestBlob("GET", `/sdd/templates/${enc(id)}/files/${encodePath(path)}`, { headers: { Accept: "text/plain, application/octet-stream, */*" } });
+      const isText = r.contentType.toLowerCase().startsWith("text/");
+      return { text: isText ? await r.blob.text() : null, contentType: r.contentType, size: r.blob.size, version_hash: r.etag };
+    },
+    putSpecTemplateFile: (id, path, content, hash, mediaType) =>
+      io.requestVersioned("PUT", `/sdd/templates/${enc(id)}/files/${encodePath(path)}`, {
+        ...(typeof content === "string" ? { text: content } : { bytes: content }),
+        headers: { "If-Match": hash, "Content-Type": mediaType ?? (typeof content === "string" ? "text/plain; charset=utf-8" : "application/octet-stream") },
+      }),
+    deleteSpecTemplateFile: (id, path, hash) => io.requestVersioned("DELETE", `/sdd/templates/${enc(id)}/files/${encodePath(path)}`, { headers: { "If-Match": hash } }),
     getSpecDocument: (id, doc) => io.requestVersioned("GET", `${spec(id)}/documents/${enc(doc)}`),
     putSpecDocument: (id, doc, content, options = {}) =>
       io.requestVersioned("PUT", `${spec(id)}/documents/${enc(doc)}`, {

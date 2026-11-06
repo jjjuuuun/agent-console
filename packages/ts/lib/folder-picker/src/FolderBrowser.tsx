@@ -35,6 +35,16 @@ export interface FolderBrowserProps {
   /** 로딩 표시를 미루는 시간(ms). 기본 150. */
   loadingDelayMs?: number;
   autoFocus?: boolean;
+  /**
+   * 이 폴더 밖으로 나갈 수 없다(없으면 `roots` 목록까지 올라갈 수 있다). 빈 문자열도 유효하다(상대 경로의 루트).
+   * 시작 위치·`onNavigate`·위로 가기·빵부스러기 모두 이 폴더 안으로 제한되고, 빵부스러기는 이 폴더에서 시작한다.
+   * `roots`는 쓰지 않는다. 경로 구분자는 `/` 또는 `\\`.
+   */
+  rootPath?: string;
+  /** `rootPath`일 때 빵부스러기 첫 조각 이름(기본: 시작 위치 이름 문구). */
+  rootLabel?: string;
+  /** 숨김 폴더 보기 토글을 그린다(기본 true). 서버가 숨김을 구분하지 않으면 끈다. */
+  showHiddenToggle?: boolean;
 }
 
 interface Row {
@@ -52,6 +62,14 @@ type Loaded = { key: string; status: "ready" | "error"; data: FolderListingData 
 
 const INVALID_NAME = /[\\/:]/;
 
+/** `path`가 `root`와 같거나 그 아래인가(빈 `root`는 모든 상대 경로). */
+function isInside(root: string, path: string): boolean {
+  return root === "" || path === root || path.startsWith(`${root.replace(/[\\/]+$/, "")}/`) || path.startsWith(`${root.replace(/[\\/]+$/, "")}\\`);
+}
+function isBelow(root: string, path: string): boolean {
+  return path !== root && isInside(root, path) && path !== "";
+}
+
 function toRow(e: FolderEntryData): Row {
   return {
     key: e.path, name: e.name, path: e.path, hidden: e.hidden === true, link: e.link === true, locked: e.locked === true,
@@ -64,8 +82,9 @@ function toRow(e: FolderEntryData): Row {
  * 서버 호출(`list`·`createFolder`)은 props로 주입받는다. 현재 위치는 `onNavigate`로 알린다.
  */
 export function FolderBrowser(props: FolderBrowserProps): ReactElement {
-  const { id, t, roots, startPath, list, createFolder, onNavigate, onSelect, onClose, nearestNote, disabled, defaultShowHidden = false, rowHeightPx = 32, loadingDelayMs = 150, autoFocus = true } = props;
-  const [location, setLocation] = useState<string | null>(startPath);
+  const { id, t, roots, startPath, list, createFolder, onNavigate, onSelect, onClose, nearestNote, disabled, defaultShowHidden = false, rowHeightPx = 32, loadingDelayMs = 150, autoFocus = true, rootPath, rootLabel, showHiddenToggle = true } = props;
+  const clamp = useCallback((path: string | null): string | null => (rootPath === undefined ? path : path === null || !isInside(rootPath, path) ? rootPath : path), [rootPath]);
+  const [location, setLocation] = useState<string | null>(() => clamp(startPath));
   const [hidden, setHidden] = useState(defaultShowHidden);
   const [loaded, setLoaded] = useState<Loaded>({ key: "", status: "ready", data: null });
   const [reload, setReload] = useState(0);
@@ -135,17 +154,18 @@ export function FolderBrowser(props: FolderBrowserProps): ReactElement {
       setNoteOn(false);
       setCreating(null);
       setMoreOpen(false);
-      setLocation(path);
-      if (path !== null) onNavigate?.(path);
+      const to = clamp(path);
+      setLocation(to);
+      if (to !== null) onNavigate?.(to);
     },
-    [onNavigate],
+    [onNavigate, clamp],
   );
   const enter = (row: Row | undefined) => {
     if (!row || row.locked || disabled) return;
     go(row.path);
   };
   const up = () => {
-    if (location === null) return;
+    if (location === null || (rootPath !== undefined && location === rootPath)) return;
     cameFrom.current = location;
     go(load.data?.parent ?? null);
   };
@@ -222,10 +242,10 @@ export function FolderBrowser(props: FolderBrowserProps): ReactElement {
   // 빵부스러기
   const navCells = useElementCells(navRef);
   const crumbs = useMemo(() => {
-    const base: { label: string; path: string | null }[] = [{ label: t("folder.browse.roots"), path: null }];
-    if (location !== null) for (const s of splitPath(load.data?.path ?? location)) base.push(s);
+    const base: { label: string; path: string | null }[] = [rootPath === undefined ? { label: t("folder.browse.roots"), path: null } : { label: rootLabel ?? t("folder.browse.roots"), path: rootPath }];
+    if (location !== null) for (const s of splitPath(load.data?.path ?? location)) if (rootPath === undefined || isBelow(rootPath, s.path)) base.push(s);
     return base;
-  }, [location, load.data, t]);
+  }, [location, load.data, t, rootPath, rootLabel]);
   const collapsed = collapseCrumbs(crumbs, navCells ?? Number.POSITIVE_INFINITY, cells);
 
   const renderCrumb = (c: { label: string; path: string | null }, last: boolean) => (
@@ -267,10 +287,12 @@ export function FolderBrowser(props: FolderBrowserProps): ReactElement {
               )}
           </ol>
         </nav>
-        <label className="ac-fp-check">
-          <input type="checkbox" checked={hidden} disabled={disabled} onChange={(e) => setHidden(e.target.checked)} />
-          <span>{t("folder.browse.hidden")}</span>
-        </label>
+        {showHiddenToggle ? (
+          <label className="ac-fp-check">
+            <input type="checkbox" checked={hidden} disabled={disabled} onChange={(e) => setHidden(e.target.checked)} />
+            <span>{t("folder.browse.hidden")}</span>
+          </label>
+        ) : null}
         {createFolder ? (
           <button type="button" className="ac-fp-btn" data-size="sm" disabled={disabled || location === null} onClick={startNew}>{t("folder.browse.new")}</button>
         ) : null}

@@ -1,5 +1,53 @@
 # 변경 기록
 
+## 0.14.0
+
+- 계약 0.14.0(7R.3, design §7R.7). 새 하위 모듈은 minor로 올린다(0.10.0 `memory`·0.13.0 `sdd` 선례). 사내 의존
+  범위 `>=0.14,<0.15`(TS `^0.14.0`). 하위 계약 버전: **`wiki` 1.0.0**(새), `common` 1.10.0, `projects` 3.3.0,
+  `sdd` 1.2.0, `modules` 1.5.0. 기존 모델에 더한 필드는 모두 선택이라 0.13 응답이 그대로 읽힌다.
+- `wiki` 1.0.0: 사용자 데이터(모르는 키 보존) `WikiDefinition{name, description, home?, rules, attributes}`·
+  `WikiRulesDefinition{instructions?, page_templates, write_rules, lint_rules, syntax?}`·`WikiPageTemplate`·
+  `WikiWriteRule{applies_to, when?, require?, deny_patterns, action(열린 문자열), message}`·`WikiLintRule`·조건
+  `WikiWriteCondition`·`WikiLintCondition`(판단 대상 경로 제안 `WIKI_WRITE_SUBJECT_PATHS`·`WIKI_LINT_SUBJECT_PATHS`),
+  문법 `WikiSyntax{links?, front_matter?, title_sources?, page_extensions?, case_insensitive?, schemes?, lint?}`(모든
+  키 None = 상속)·`WikiLinkRule`·`WikiFrontMatter`·`WikiScheme`·`WikiSchemeTarget`(`LabelDisplayTarget`과 같은
+  모양의 폼 모델)·`WikiLintDefaults`, 설정 섹션 `WikiSettings`·`WikiWriteCheckSetting`, 리소스 `wiki` config
+  `WikiAccessConfig{wikis: WikiAccessEntry[], default_wiki?, include_rules_instructions, path_hint, result_header,
+  max_result_chars, tools: WikiToolNames}`(도구 이름·설명·문구 기본값은 패키지 데이터
+  `data/wiki_access_defaults.json` → 스키마 기본값, `wiki_access_defaults()`). 보기 `WikiInfo`·`WikiCapabilities`·
+  `WikiLimits`·`WikiSummary`·`WikiView`·`WikiRulesSummary`·`WikiRuleRef`·`WikiPageList`·`WikiPageSummary`·
+  `WikiPageView`·`WikiLink`(UTF-16 범위)·`WikiBacklink`·`WikiHeading`·`WikiPageVersion`(`from` 별칭)·`WikiAuthor`·
+  `WikiChange`·`WikiChangePage`·`WikiSearchResult`·`WikiSearchHit`·`WikiGraph`(`total`)·`WikiGraphNode`·
+  `WikiGraphEdge`(`from` 별칭)·`WikiIssue(Issue){page?, line?, rule_id?}`·`WikiLintReport`·`EffectiveWikiSyntax`·
+  `WikiPageTemplateInfo`. 요청·결과 `WikiCreateRequest`·`WikiPageWrite`·`WikiMoveRequest`·`WikiMoveResult`·
+  `WikiRewrittenPage`·`WikiRestoreRequest`·`WikiScanResult`·`WikiImportResult`·`WikiRulesCheckRequest`·
+  `WikiRulesCheckResult`·`WikiRuleRejectedDetails`, 실행 이벤트 `WikiEventPayload`(본문·검색어 원문 없음)·
+  `KNOWN_WIKI_EVENT_TYPES`·`WIKI_ACCESS_OPS`, WS `WikiChanged`. 문서 상수 `KnownWikiLinkKinds`·`KnownWikiResolvers`·
+  `KnownWikiAuthorKinds`·`KnownWikiVersionOps`·`KnownWikiChangeOps`·`KnownWikiLintCodes`·`KnownWikiFrontMatterRoles`·
+  `KnownWikiTitleSources`·`KnownWikiWriteActions`·`KnownWikiSyntaxSources`(→ `x-constants`). 층: `common`·
+  `definitions`·`runs`만 import(`memory`·`sdd`를 모른다).
+- `wiki` 1.0.0 — 7R.2a 결정(design §7R.18.1 Q1~Q19) 반영: 저장 전 시험 `WikiPagePreviewRequest`·`WikiPagePreview`·
+  `WikiRuleResult`, 링크 넣기 `WikiLinkRule.insert`·`WikiLinkTextRequest`·`WikiLinkText`, `WikiLink.label`(늘 채움)·
+  `outside`·`suggested_path`·`status`(`KnownWikiLinkStatuses`), `WikiSummary.rules: WikiRuleRef[]`·`lint_counts`·
+  `orphans`·`updated_by`, `WikiRulesSummary.entries: WikiRuleEntry[]`(`KnownWikiRuleEntryKinds`), 규칙 목록
+  `WikiRulesListItem{counts: WikiRuleCounts, has_instructions, used_by: WikiRef[]}`·단건 `WikiRulesView`,
+  `WikiGraphNode.home`·`depth`, 틀 변수 `WikiTemplateVariable`·`WikiPageTemplate.variables`·
+  `WikiPageTemplateInfo.variables`·`WikiTemplateRenderRequest`·`WikiTemplateRender`, `WikiChange.wiki`,
+  `WikiPageNotFoundDetails{path, has_history}`, `WikiPageList.total`, `WikiPageSummary.orphan`·`home`,
+  `WikiSearchHit.marks: WikiTextRange[]`, `WikiLintReport.generated_at`·`counts`, `WikiLintDefaults.write_rules`,
+  `WikiImportResult.items: WikiImportItem[]`(`KnownWikiImportStatuses`, 목록 넷은 뺌), `WikiHistoryPage{items, pruned}`,
+  `WikiAuthor.label` = 기록 시점 이름. 상수 `WIKI_LINK_INSERT_VARIABLES`·`WIKI_TEMPLATE_BUILTIN_VARIABLES`·
+  `WIKI_PATH_HINT_VARIABLES`·`WIKI_RESULT_HEADER_VARIABLES`.
+- `common` 1.10.0: `XUiKeys.VARIABLES`(`variables`)·`ENUM_TONES`(`enum_tones`)·`x_ui(variables=, enum_tones=)`,
+  `KnownUiWidgets.WIKI_RULE_REFS`(`wiki-rule-refs`), 이슈 코드 `wiki.link_insert_unavailable`(422)·`wiki.home_missing`·
+  `wiki.rule_violation`·`wiki.version_not_found`(404). `KnownUiWidgets.WIKI_REF`(`wiki-ref`)·`GLOB`(`glob`). 오류 코드 `wiki.*` 9종(HTTP 표: not_found·
+  page_not_found·version_not_found 404, page_exists·spaces_unavailable·history_unavailable·config_readonly 409, rule_rejected·
+  secret_rejected·too_large·link_insert_unavailable 422), 이슈 코드 `wiki.*`(도구 사유·파싱·점검·규칙 검사), `tools.instructions_unsupported`
+  (X30 `ToolProvision.instructions`, 7R.5). `sdd.automation_skipped`(6R.16 요청)는 0.13.0부터 있다.
+- `projects` 3.3.0(6R.20b 요청): `CopyKindInfo.title?`(종류 표시 이름, null = 종류 이름 그대로).
+- `sdd` 1.2.0(6R.20b 요청): `SpecTemplateSummary.kind?`(문서 틀의 정의 종류 이름, null = 채우지 않음).
+- `modules` 1.5.0: WS `WikiChangedMessage`(`wiki.changed`).
+
 ## 0.13.2
 
 - 계약 0.13.2(6R.19 서버 후속). **더하기만** 한다: 새 필드는 선택이라 0.13.1 응답이 그대로 읽힌다. 사내 의존 범위는

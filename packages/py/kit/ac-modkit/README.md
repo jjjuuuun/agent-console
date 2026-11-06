@@ -141,6 +141,27 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 
 ```
 
+WS 알림은 저장소 스레드에서도 오지만 `Hub`는 루프 스레드에서만 만진다. `LoopPublisher`가 시작 훅에서
+`bind`한 루프로 옮기고, 같은 변경을 두 번 알리면 한 번만 낸다(`key`).
+
+```python
+>>> import asyncio, threading
+>>> from agent_console_modkit import LoopPublisher
+>>> seen = []
+>>> pub = LoopPublisher(lambda p: seen.append((p, threading.current_thread().name)), key=lambda p: p)
+>>> async def scenario():
+...     pub.bind(asyncio.get_running_loop())
+...     for payload in ("a", "a", "b"):
+...         worker = threading.Thread(target=pub, args=(payload,), name="worker")
+...         worker.start()
+...         worker.join()
+...     await asyncio.sleep(0)
+>>> asyncio.run(scenario())
+>>> seen
+[('a', 'MainThread'), ('b', 'MainThread')]
+
+```
+
 <!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
 
 ### 모듈 옵션 읽기 전용 보기
@@ -255,6 +276,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `ModuleState` / `ModuleReport` | 상태 5종(`active`·`disabled`·`unsatisfied`·`failed`·`conflict`)과 보고(`reason`·`missing`·`conflicts`…, `to_dict()`) |
 | `EventBus` | `subscribe`(해제 함수 반환)·`publish`(막히지 않음)·`deliver`(기다림)·`drain`·`errors` |
 | `Hub[T]` | WS 토픽 문자열 팬아웃(느린 구독자는 버림·`dropped`) |
+| `LoopPublisher[T](publish, *, key=None)` | 다른 스레드에서 온 알림을 `bind(loop)`한 이벤트 루프 스레드로 옮겨 `publish`를 부른다. `key`가 같은 알림이 바로 이어지면 한 번만(키 None = 그 알림은 검사 안 함), 바인드 전·`bind(None)` 뒤는 바로 부름, 바인드한 루프가 닫혔으면 버림(`dropped`) |
 | `BaseServices` / `Paths` | 호스트 기본 서비스 |
 | `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions, scopes=("app",))` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보 중 `scopes`에 `"app"`이 든 것만 build 직전에 `database.upgrade`로 올린다(다른 범위, 예: 프로젝트 기록 DB의 `"project"`는 그 DB를 여는 모듈이 `ModuleContext.active_migrations(scope)`로 읽어 올린다)(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
 | `load_installed_modules(group=MODULES_GROUP)` | entry point에서 모듈 읽기(ac-registry 로더) |

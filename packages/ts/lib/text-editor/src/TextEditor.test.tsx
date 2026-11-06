@@ -130,3 +130,25 @@ describe("helpers", () => {
     expect(resolveLanguage("json")).not.toEqual([]);
   });
 });
+
+describe("TextEditor: 줄 이동", () => {
+  // happy-dom은 선택 변경 이벤트를 동기로 쏘아 포커스된 편집기에 두 번째 이동을 하면 오류가 난다. 케이스마다 새로 그린다.
+  const headAfter = (line: number): number => {
+    const ref = createRef<TextEditorHandle>();
+    const { container, unmount } = render(<TextEditor value={"가\n나\n다"} ariaLabel="x" handleRef={ref} />);
+    expect(ref.current?.goToLine(line)).toBe(true);
+    const head = viewOf(container).state.selection.main.head;
+    unmount();
+    return head;
+  };
+  it("goToLine은 그 줄 처음으로 커서를 옮기고, 범위 밖은 처음·끝 줄로 맞춘다", () => {
+    expect(headAfter(2)).toBe(2);
+    expect(headAfter(99)).toBe(4);
+    expect(headAfter(0)).toBe(0);
+  });
+  it("숫자가 아니면 옮기지 않고 false다", () => {
+    const ref = createRef<TextEditorHandle>();
+    render(<TextEditor value="가" ariaLabel="x" handleRef={ref} />);
+    expect(ref.current?.goToLine(Number.NaN)).toBe(false);
+  });
+});

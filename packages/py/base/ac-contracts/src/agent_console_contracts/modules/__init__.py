@@ -3,6 +3,7 @@
 `ModuleInfo`(GET /modules), 준비 신호·서버 정보, `feature_unavailable` 상세, `/ws` 메시지.
 맨 위 층이라 다른 하위 모듈을 모두 쓸 수 있다. 설계: design §3R.1.8, §5.3.
 1.4.0(0.13.0): `ModuleInfo.description`·`label_display`(`common.LabelDisplay`), WS `sdd.changed`.
+1.5.0(0.14.0): WS `wiki.changed`.
 """
 
 from ._host import (
@@ -30,6 +31,7 @@ from ._ws import (
     SubscribePayload,
     UnsubscribeMessage,
     UnsubscribePayload,
+    WikiChangedMessage,
     WsClientMessage,
     WsServerMessage,
 )
@@ -57,6 +59,7 @@ __all__ = [
     "SubscribePayload",
     "UnsubscribeMessage",
     "UnsubscribePayload",
+    "WikiChangedMessage",
     "WsClientMessage",
     "WsServerMessage",
 ]

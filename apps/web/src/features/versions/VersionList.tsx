@@ -26,10 +26,12 @@ export interface VersionListProps {
   onCopyHash: (hash: string) => void;
   /** 처음 보일 개수 */
   pageSize?: number;
+  /** false면 비교 UI(모드 선택·체크박스·비교 키)를 숨긴다(서버가 비교를 주지 않는 종류). 기본 true */
+  compare?: boolean;
 }
 
 /** 버전 목록(체크박스 최대 2, 키보드 `↑↓ Space Enter D R`). 서버·비교 계산을 모른다. */
-export function VersionList({ versions, now, checked, mode, onModeChange, onToggle, onCompareCurrent, onComparePair, onRestore, onViewRaw, onCopyHash, pageSize = 20 }: VersionListProps) {
+export function VersionList({ versions, now, checked, mode, onModeChange, onToggle, onCompareCurrent, onComparePair, onRestore, onViewRaw, onCopyHash, pageSize = 20, compare = true }: VersionListProps) {
   const [shown, setShown] = useState(pageSize);
   const [active, setActive] = useState(0);
   const rows = useRef(new Map<string, HTMLDivElement>());
@@ -56,15 +58,18 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
         focusAt(Math.max(i - 1, 0));
         break;
       case " ":
+        if (!compare) break;
         e.preventDefault();
         onToggle(hash);
         break;
       case "Enter":
+        if (!compare) break;
         e.preventDefault();
         onCompareCurrent(hash);
         break;
       case "d":
       case "D":
+        if (!compare) break;
         e.preventDefault();
         onComparePair();
         break;
@@ -78,13 +83,15 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
 
   return (
     <div className="ver-list-pane">
-      <div role="radiogroup" aria-label={t.mode.label} className="ver-mode">
-        {(["current", "pair"] as const).map((m) => (
-          <label key={m} className="ver-mode-opt">
-            <input type="radio" name="ver-mode" checked={mode === m} onChange={() => onModeChange(m)} /> {t.mode[m]}
-          </label>
-        ))}
-      </div>
+      {compare ? (
+        <div role="radiogroup" aria-label={t.mode.label} className="ver-mode">
+          {(["current", "pair"] as const).map((m) => (
+            <label key={m} className="ver-mode-opt">
+              <input type="radio" name="ver-mode" checked={mode === m} onChange={() => onModeChange(m)} /> {t.mode[m]}
+            </label>
+          ))}
+        </div>
+      ) : null}
       <div role="listbox" aria-label={t.list.label} aria-multiselectable="true" className="ver-list">
         {visible.map((v, i) => {
           const hash8 = shortId(v.version_hash);
@@ -106,17 +113,19 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
               onKeyDown={(e) => onKeyDown(e, v.version_hash, i)}
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest("button, input, [role=menu]")) return;
-                onCompareCurrent(v.version_hash);
+                if (compare) onCompareCurrent(v.version_hash);
               }}
             >
-              <input
-                type="checkbox"
-                tabIndex={-1}
-                checked={isChecked}
-                disabled={mode === "current" && isCurrent}
-                aria-label={t.list.checkLabel(hash8)}
-                onChange={() => onToggle(v.version_hash)}
-              />
+              {compare ? (
+                <input
+                  type="checkbox"
+                  tabIndex={-1}
+                  checked={isChecked}
+                  disabled={mode === "current" && isCurrent}
+                  aria-label={t.list.checkLabel(hash8)}
+                  onChange={() => onToggle(v.version_hash)}
+                />
+              ) : null}
               <span className="lib-mono">{hash8}</span>
               {isCurrent ? <Tag>{t.list.currentChip}</Tag> : null}
               <span className="app-muted ver-time" title={formatDateTime(v.saved_at)}>
@@ -138,7 +147,7 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
         })}
       </div>
       {versions.length > shown ? <Button onClick={() => setShown(shown + pageSize)}>{t.list.more}</Button> : null}
-      <p className="app-muted ver-keys">{t.list.keysHint}</p>
+      {compare ? <p className="app-muted ver-keys">{t.list.keysHint}</p> : null}
     </div>
   );
 }

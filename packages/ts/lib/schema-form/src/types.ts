@@ -111,6 +111,8 @@ export interface SchemaFormWidgetProps {
   options: Record<string, unknown>;
   /** 이 필드의 오류 메시지 */
   errors: string[];
+  /** 폼 값 안에서 이 필드의 위치(JSON Pointer, 루트는 빈 문자열). `customFields`로 그릴 때만 채운다. 배열 항목 안의 필드도 인덱스까지 정확하다. */
+  pointer?: string;
 }
 
 /**

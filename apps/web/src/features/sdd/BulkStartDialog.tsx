@@ -21,13 +21,15 @@ export interface BulkStartDialogProps {
   specId: string;
   /** 시작할 수 있는 준비된 작업(끝나지 않은 것) */
   readyTasks: readonly ParsedTask[];
+  /** 선택에 섞인 준비되지 않은 작업(목록에 muted로 보이고 제출 개수에서 빠진다) */
+  skippedTasks?: readonly ParsedTask[];
   /** 한 번에 시작할 수 있는 상한(서버 한도). 모르면 undefined */
   limit?: number | undefined;
   /** 실행이 막힌 이유(있으면 제출 단추가 `aria-disabled`) */
   blockedReason?: string | undefined;
 }
 
-export function BulkStartDialog({ open, onClose, specId, readyTasks, limit, blockedReason }: BulkStartDialogProps) {
+export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTasks = [], limit, blockedReason }: BulkStartDialogProps) {
   const space = useSddSpace();
   const qc = useQueryClient();
   const toast = useToast();
@@ -84,7 +86,7 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, limit, bloc
   return (
     <Dialog
       open={open}
-      title={m.bulk.title(readyTasks.length, chosen.length)}
+      title={m.bulk.title(readyTasks.length + skippedTasks.length, chosen.length)}
       onClose={onClose}
       actions={
         results === null ? (
@@ -133,6 +135,11 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, limit, bloc
                       <span className="sdd-mono">{t.key}</span>
                       <span className="ac-ellipsis">{t.title ?? t.key}</span>
                     </label>
+                  </li>
+                ))}
+                {skippedTasks.map((t) => (
+                  <li key={t.key} className="sdd-bulk-row app-muted" data-skipped="">
+                    <span className="sdd-mono">{t.key}</span> <span className="ac-ellipsis">{t.title ?? t.key}</span> <span>{m.bulk.skipped}</span>
                   </li>
                 ))}
               </ul>

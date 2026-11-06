@@ -46,3 +46,4 @@
 .ver-issues { border: 1px solid var(--ac-danger); border-radius: var(--ac-radius-md); padding: var(--ac-space-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .ver-issues ul { margin: var(--ac-space-1) 0 0; padding-left: var(--ac-space-4); }
 .ver-raw { max-height: 60vh; overflow: auto; }
+.ver-layout[data-compare="off"] { grid-template-columns: minmax(0, 1fr); }

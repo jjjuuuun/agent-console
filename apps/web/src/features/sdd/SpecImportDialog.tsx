@@ -1,8 +1,9 @@
 /**
  * 폴더에서 스펙 가져오기(screen-sdd §4.2): 프로젝트 폴더 안(상대 경로) 마크다운 파일을 고르고 순서를 정해 새 스펙으로 복사한다.
- * 목록 읽기·제출은 props다. 경로 검사(프로젝트 밖·구성 폴더 안)는 서버가 하고 오류는 폴더 칸 아래에 보인다.
+ * 폴더는 트리(한 단계씩, 프로젝트 폴더 밖으로 못 나감)로 고르고 경로 입력은 대안으로 남는다. 목록 읽기·제출은 props다.
+ * 경로 검사(프로젝트 밖·링크·구성 폴더 안)는 서버가 하고 오류는 폴더 칸 아래에 보인다.
  */
-import { useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
@@ -11,6 +12,7 @@ import { describeError } from "../../app/errors";
 import { classifySddError } from "./sddErrors";
 import { SDD_LIMITS } from "./sddConfig";
 import { sddMessages as m } from "./messages";
+import { SpecFolderBrowser } from "./SpecFolderBrowser";
 
 export interface SpecImportDialogProps {
   open: boolean;
@@ -40,29 +42,27 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
   const [name, setName] = useState(initialName);
   const [folderError, setFolderError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [browse, setBrowse] = useState({ key: 0, start: "" });
   const [busy, setBusy] = useState(false);
   const folderRef = useRef<HTMLInputElement>(null);
   const uid = useId();
   const blocked = blockedReason !== undefined && blockedReason !== "";
   const selected = (rows ?? []).filter((r) => r.checked);
 
-  const load = async () => {
-    setLoading(true);
+  /** 트리에서 목록이 도착했다: 파일 목록을 새로 채운다(전부 선택). */
+  const onListing = useCallback((path: string, listing: ImportFileListing) => {
     setFolderError(null);
-    try {
-      const listing = await loadFiles(folder.trim());
-      setRows((listing.files ?? []).map((f) => ({ path: joinPath(listing.path ?? folder.trim(), f.name), name: f.name, size: f.size, checked: true })));
-      setTruncated(listing.truncated === true);
-    } catch (e) {
-      setRows(null);
-      const remote = e instanceof ApiError && e.code === ERROR_CODES.FOLDERS_REMOTE_DISABLED;
-      const failure = classifySddError(e, m.problem.generic);
-      setFolderError(remote ? m.import.remote : failure.kind === "generic" || failure.kind === "problem" ? failure.message : m.problem.generic);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setRows((listing.files ?? []).map((f) => ({ path: joinPath(path, f.name), name: f.name, size: f.size, checked: true })));
+    setTruncated(listing.truncated === true);
+  }, []);
+  const onListError = useCallback((e: unknown) => {
+    setRows(null);
+    const remote = e instanceof ApiError && e.code === ERROR_CODES.FOLDERS_REMOTE_DISABLED;
+    const failure = classifySddError(e, m.problem.generic);
+    setFolderError(remote ? m.import.remote : failure.kind === "generic" || failure.kind === "problem" ? failure.message : m.problem.generic);
+  }, []);
+  /** 입력한 경로를 트리에서 연다(트리를 새로 마운트해 그 폴더를 읽는다). */
+  const load = () => setBrowse((b) => ({ key: b.key + 1, start: folder.trim() }));
 
   const move = (index: number, delta: number) =>
     setRows((prev) => {
@@ -111,10 +111,15 @@ export function SpecImportDialog({ open, onClose, initialName = "", loadFiles, b
         <p className="app-muted">{m.import.intro}</p>
         {error === null ? null : <Banner tone="danger">{error}</Banner>}
         <div className="sdd-field">
-          <label className="sdd-label" htmlFor={`${uid}-folder`}>{m.import.folder}</label>
+          <span className="sdd-label" id={`${uid}-browse`}>{m.import.browse}</span>
+          <SpecFolderBrowser key={browse.key} id={`${uid}-tree`} load={loadFiles} startPath={browse.start} rootLabel={m.import.root} onListing={onListing} onError={onListError} onNavigate={setFolder} />
+          <span className="app-muted" role="status">{m.import.current(folder)}</span>
+        </div>
+        <div className="sdd-field">
+          <label className="sdd-label" htmlFor={`${uid}-folder`}>{m.import.manual}</label>
           <div className="sdd-inline">
-            <input id={`${uid}-folder`} ref={folderRef} className="sdd-input sdd-mono" value={folder} placeholder={m.import.folderHint} onChange={(e) => setFolder(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) void load(); }} />
-            <Button size="sm" loading={loading} onClick={() => void load()}>{m.import.load}</Button>
+            <input id={`${uid}-folder`} ref={folderRef} className="sdd-input sdd-mono" value={folder} placeholder={m.import.folderHint} onChange={(e) => setFolder(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) load(); }} />
+            <Button size="sm" onClick={load}>{m.import.load}</Button>
           </div>
           {folderError === null ? null : <span className="app-field-error" role="alert">{folderError}</span>}
         </div>

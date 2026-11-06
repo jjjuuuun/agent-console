@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Callable
 from typing import Any, Final
 
@@ -15,6 +14,7 @@ from agent_console_contracts.modules import SddChangedMessage
 from agent_console_contracts.sdd import SddChanged
 from agent_console_modkit import (
     Hub,
+    LoopPublisher,
     WsForward,
     WsReject,
     WsSend,
@@ -31,46 +31,30 @@ def changed_message(payload: SddChanged) -> SddChangedMessage:
     return SddChangedMessage(type="sdd.changed", payload=payload)
 
 
-class ChangePublisher:
+def change_key(payload: SddChanged) -> tuple[Any, ...] | None:
+    """중복 판정 키: (공간, 스펙, 버전, 자동 진행, 삭제). 자동 진행 알림은 늘 낸다(None)."""
+    if payload.automation:
+        return None
+    return (
+        payload.space.project_id,
+        payload.spec_id,
+        payload.version_hash,
+        payload.automation,
+        payload.deleted,
+    )
+
+
+class ChangePublisher(LoopPublisher[SddChanged]):
     """``SddChanged``를 허브에 낸다. 같은 알림이 바로 이어 오면 한 번만 낸다(모듈 쓰기 + 저장소
-    저장 알림이 같은 변경을 두 번 알릴 수 있다).
+    저장 알림이 같은 변경을 두 번 알릴 수 있다). 키트 ``LoopPublisher``에 ``change_key``를 묶은 것
+    (7R.4).
 
     Args:
         publish: 루프 스레드에서 부를 발행 함수(예: 허브 ``publish``).
     """
 
     def __init__(self, publish: Callable[[SddChanged], None]) -> None:
-        self._publish = publish
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._last: tuple[Any, ...] | None = None
-
-    def bind(self, loop: asyncio.AbstractEventLoop | None) -> None:
-        """발행을 옮길 루프(None = 풀기 — 바로 부른다)."""
-        self._loop = loop
-
-    def __call__(self, payload: SddChanged) -> None:
-        key = (
-            payload.space.project_id,
-            payload.spec_id,
-            payload.version_hash,
-            payload.automation,
-            payload.deleted,
-        )
-        if not payload.automation and key == self._last:
-            return
-        self._last = key
-        loop = self._loop
-        if loop is None or loop.is_closed():
-            self._publish(payload)
-            return
-        try:
-            running = asyncio.get_running_loop()
-        except RuntimeError:
-            running = None
-        if running is loop:
-            self._publish(payload)
-        else:
-            loop.call_soon_threadsafe(self._publish, payload)
+        super().__init__(publish, key=change_key)
 
 
 def topic_handlers(*, hub: Hub[Any]) -> dict[str, WsTopicHandler]:
@@ -90,4 +74,4 @@ def topic_handlers(*, hub: Hub[Any]) -> dict[str, WsTopicHandler]:
     return {SDD_TOPIC: handle}
 
 
-__all__ = ["SDD_TOPIC", "ChangePublisher", "changed_message", "topic_handlers"]
+__all__ = ["SDD_TOPIC", "ChangePublisher", "change_key", "changed_message", "topic_handlers"]

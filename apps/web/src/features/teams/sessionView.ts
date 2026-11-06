@@ -119,3 +119,10 @@ export function sessionSummary(graph: Graph, nodeTypes: readonly NodeTypeDescrip
   }
   return { separate, same };
 }
+
+/** 서버 목록 요약(`GraphSummary.session_summary`)을 `{separate, same}`으로. null·없음이면 undefined(요약을 숨긴다). */
+export function summaryFromServer(summary: { nodes: number; delegated?: Record<string, number> } | null | undefined): { separate: number; same: number } | undefined {
+  if (summary == null) return undefined;
+  const same = summary.delegated?.[SESSIONS.SAME] ?? 0;
+  return { separate: Math.max(0, summary.nodes - same), same };
+}

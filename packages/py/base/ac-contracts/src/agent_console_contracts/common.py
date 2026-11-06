@@ -4,7 +4,7 @@
 `definitions`에 있다.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Annotated, Any, ClassVar, Final, Literal
 
 from pydantic import ConfigDict, Field, StringConstraints
@@ -48,6 +48,12 @@ class XUiKeys:
     ITEM_TITLE: Final = "itemTitle"
     """목록 필드에서 항목 카드 머리로 쓸 값의 위치(항목 기준 JSON Pointer, 예: `/title`, 1.8.0).
     없거나 그 값이 비면 화면은 순번을 보인다."""
+    VARIABLES: Final = "variables"
+    """틀 문장 필드에서 쓸 수 있는 변수 목록(1.10.0). 값 = `[{name, description}]`.
+    화면은 자동 완성·도움말로 보인다(틀 엔진은 서버 한 곳)."""
+    ENUM_TONES: Final = "enum_tones"
+    """선택지 값 → 표시 톤 이름(1.10.0, 열린 문자열: danger·warning·info·success·neutral).
+    모르는 톤은 기본 색."""
 
 
 class KnownUiWidgets:
@@ -80,6 +86,13 @@ class KnownUiWidgets:
     """같은 규칙의 작업 상태 id 고르기."""
     TONE: Final = "tone"
     """표시 색조 고르기(열린 문자열)."""
+    # ---- 1.10.0(0.14.0): 위키 규칙·리소스 폼(design §7R.7)
+    WIKI_REF: Final = "wiki-ref"
+    """그 공간의 위키 id 고르기(목록 = `GET /wiki/wikis`)."""
+    GLOB: Final = "glob"
+    """경로 모양 입력(예: `decisions/**`, 맞는 페이지 미리보기)."""
+    WIKI_RULE_REFS: Final = "wiki-rule-refs"
+    """위키가 쓰는 위키 규칙 목록 편집기(순서·더하기·빼기, 목록 = `GET /wiki/rules`)."""
 
 
 type XUiTier = Literal["basic", "advanced"]
@@ -103,11 +116,14 @@ def x_ui(
     enum_labels: Mapping[str, str] | None = None,
     widget: str | None = None,
     item_title: str | None = None,
+    variables: Sequence[Mapping[str, str]] | None = None,
+    enum_tones: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-ui": {...}}`를 만든다.
 
     인자: 넘긴 것만 담는다(`enum_labels` = 선택지 값별 라벨, `widget` = 화면 위젯 이름,
-    `item_title` = 목록 항목 카드 머리 값의 위치(`itemTitle`), `example`은 None도 값으로 담는다).
+    `item_title` = 목록 항목 카드 머리 값의 위치(`itemTitle`), `variables` = 틀 변수
+    `[{name, description}]`, `enum_tones` = 선택지 값별 톤, `example`은 None도 값으로 담는다).
     다른 확장 키(`x-merge` 등)와 함께
     쓰려면 `{**x_ui(tier="advanced"), "x-merge": "replace"}`처럼 합친다.
     반환: 새 dict(호출마다 새 객체).
@@ -129,6 +145,8 @@ def x_ui(
         (XUiKeys.ENUM_LABELS, None if enum_labels is None else dict(enum_labels)),
         (XUiKeys.WIDGET, widget),
         (XUiKeys.ITEM_TITLE, item_title),
+        (XUiKeys.VARIABLES, None if variables is None else [dict(v) for v in variables]),
+        (XUiKeys.ENUM_TONES, None if enum_tones is None else dict(enum_tones)),
     ):
         if value is not None:
             body[key] = value

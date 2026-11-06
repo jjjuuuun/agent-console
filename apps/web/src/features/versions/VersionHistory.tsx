@@ -29,6 +29,8 @@ export interface VersionHistoryProps {
   pathOptions?: ReadablePathOptions;
   /** 되돌리기(또는 실행 취소)에 성공한 뒤. 편집 화면이 초안을 버리고 다시 읽는다 */
   onRestored?: (result: { value: DefinitionVersion; version_hash: string | undefined }) => void;
+  /** false면 비교(변경 표·본문 비교)를 그리지 않고 목록·원문 보기·되돌리기만 한다(서버가 비교를 주지 않는 종류). 기본 true */
+  compare?: boolean;
 }
 
 function hash8Of(hash: string | undefined): string {
@@ -39,7 +41,7 @@ function hash8Of(hash: string | undefined): string {
  * 버전 탭 본문(정의 종류 공통): 목록 + 비교(필드 변경 표·본문 텍스트 비교) + 되돌리기(확인·토스트 [실행 취소]).
  * 서버 호출은 `base` 경로로만 한다. 비밀 값은 서버가 가린 그대로 보이고, 412는 충돌 배너, 422는 서버 이슈를 다이얼로그에 보인다.
  */
-export function VersionHistory({ base, currentHash, dirty = false, pathOptions, onRestored }: VersionHistoryProps) {
+export function VersionHistory({ base, currentHash, dirty = false, pathOptions, onRestored, compare = true }: VersionHistoryProps) {
   const { rest } = useApi();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -57,7 +59,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
   const [conflict, setConflict] = useState<{ details: VersionConflictDetails; hash: string; message: string } | null>(null);
 
   const serverCurrent = currentHash ?? versions[0]?.version_hash;
-  const target = useMemo(() => compareTarget(versions, checked, mode), [versions, checked, mode]);
+  const target = useMemo(() => (compare ? compareTarget(versions, checked, mode) : undefined), [compare, versions, checked, mode]);
   const diff = useVersionDiff(base, target?.from, target?.to);
   const fromDoc = useVersionDoc(base, diff.data?.from_hash);
   const toDoc = useVersionDoc(base, diff.data?.to_hash);
@@ -92,8 +94,8 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
   };
 
   const isCurrentTarget = target !== undefined && target.to === undefined && target.from !== serverCurrent;
-  const restoreSummaryDiff = useVersionDiff(base, restoreFor ?? undefined, undefined, restoreFor !== null);
-  const summary = restoreSummaryDiff.data === undefined ? undefined : diffTotals(restoreSummaryDiff.data);
+  const restoreSummaryDiff = useVersionDiff(base, restoreFor ?? undefined, undefined, compare && restoreFor !== null);
+  const summary = !compare ? null : restoreSummaryDiff.data === undefined ? undefined : diffTotals(restoreSummaryDiff.data);
 
   const closeRestore = () => {
     setRestoreFor(null);
@@ -206,7 +208,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
       {onlyCurrent ? (
         <p className="app-muted">{t.list.onlyCurrent}</p>
       ) : (
-        <div className="ver-layout">
+        <div className="ver-layout" data-compare={compare ? undefined : "off"}>
           <VersionList
             versions={versions}
             now={now}
@@ -221,11 +223,13 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
               setRestoreError(null);
               setRestoreFor(hash);
             }}
+            compare={compare}
             onViewRaw={setRawFor}
             onCopyHash={(hash) => {
               void navigator.clipboard?.writeText(hash).then(() => toast({ tone: "success", text: t.menu.copied }));
             }}
           />
+          {compare ? (
           <section className="ver-compare" aria-label={t.compare.region}>
             {target === undefined ? (
               <p className="app-muted">{mode === "pair" ? t.mode.pairHint : t.compare.pickTwo}</p>
@@ -270,6 +274,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
               </>
             )}
           </section>
+          ) : null}
         </div>
       )}
       {restoreFor === null ? null : (

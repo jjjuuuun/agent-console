@@ -13,7 +13,7 @@ import { ProvenanceContext, ProvenanceFieldTemplate } from "./ProvenanceFieldTem
 import type { ProvenanceContextValue } from "./ProvenanceFieldTemplate";
 import { applyDeprecated } from "./deprecated";
 import type { DeprecatedApplied } from "./deprecated";
-import { changedPaths, deepMerge, extractLayerValue, fieldProvenance } from "./provenance";
+import { changedPaths, deepMerge, extractLayerValue, fieldProvenance, toPointer } from "./provenance";
 import { XUiContext, XUiFieldTemplate, XUiObjectFieldTemplate } from "./XUiParts";
 import type { XUiContextValue } from "./XUiParts";
 import { CheckboxFieldWidget, LabeledCheckboxesWidget, LabeledRadioWidget, LabeledSelectWidget } from "./fieldWidgets";
@@ -125,6 +125,7 @@ function adaptFields(custom: Record<string, ComponentType<SchemaFormFieldProps>>
           schema={p.schema as Record<string, unknown>}
           options={options}
           errors={(Array.isArray(p.rawErrors) ? p.rawErrors : []).map(String)}
+          pointer={toPointer((p.fieldPathId?.path ?? []) as (string | number)[])}
         />
       );
     };

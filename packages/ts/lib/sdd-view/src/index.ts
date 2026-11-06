@@ -5,15 +5,15 @@
  * 상태·문서 종류·단계·톤 이름은 코드에 없고 전부 props 데이터다.
  */
 export { SpecList, SPEC_ROW_HEIGHT } from "./SpecList";
-export type { SpecListProps } from "./SpecList";
+export type { SpecListProps, SpecSortColumn, SpecSortState } from "./SpecList";
 export { DocumentNav } from "./DocumentNav";
 export type { DocumentNavProps } from "./DocumentNav";
-export { DocumentEditor } from "./DocumentEditor";
-export type { DocumentEditorProps, EditorViewMode } from "./DocumentEditor";
+export { DocumentEditor, EDITOR_VIEW_MODES } from "./DocumentEditor";
+export type { DocumentEditorHandle, DocumentEditorProps, EditorViewMode } from "./DocumentEditor";
 export { DocumentStateChip, ToneChip } from "./ToneChip";
 export type { DocumentStateChipProps, ToneChipProps } from "./ToneChip";
 export { TaskTable, STAGE_ROW_HEIGHT, TASK_DETAIL_HEIGHT, TASK_ROW_HEIGHT } from "./TaskTable";
-export type { TaskTableProps } from "./TaskTable";
+export type { TaskRowMenuItem, TaskTableHandle, TaskTableProps } from "./TaskTable";
 export { TaskStatusMenu } from "./TaskStatusMenu";
 export type { TaskStatusMenuProps } from "./TaskStatusMenu";
 export { TaskFieldChips } from "./TaskFieldChips";

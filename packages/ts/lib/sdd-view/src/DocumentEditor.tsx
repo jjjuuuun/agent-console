@@ -1,11 +1,21 @@
 import type { SpecIssue } from "@agent-console/contracts/sdd";
-import { TextEditor, type TextEditorHandle } from "@agent-console/text-editor";
-import { useRef, useState, type ReactNode } from "react";
+import { TextDiff, TextEditor, type TextEditorHandle } from "@agent-console/text-editor";
+import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { formatMessage, resolveMessages } from "./messages";
 
-export type EditorViewMode = "edit" | "preview" | "split";
+/** 보기 방식 어휘(단축키·저장값 검사에도 쓴다) */
+export const EDITOR_VIEW_MODES = ["edit", "split", "preview"] as const;
+export type EditorViewMode = (typeof EDITOR_VIEW_MODES)[number];
+
+/** `handleRef`로 받는 명령형 핸들. 단축키처럼 편집기 밖에서 오는 동작을 위한 것이다. */
+export interface DocumentEditorHandle {
+  /** "줄로 이동" 입력칸을 열고 포커스를 옮긴다. */
+  openGoToLine: () => void;
+  /** 1부터 세는 줄로 이동하고 편집기에 포커스를 둔다. 편집기가 보이지 않으면 false. */
+  goToLine: (line: number) => boolean;
+}
 
 export interface DocumentEditorProps {
   /** 열린 문서. null이면 "문서를 고르세요" 빈 상태. */
@@ -27,6 +37,25 @@ export interface DocumentEditorProps {
   conflict?: boolean;
   onReload?: () => void;
   onOverwrite?: () => void;
+  /** 충돌·외부 변경 때 [내 변경 복사]. 클립보드는 호출자가 다룬다(없으면 버튼 없음). */
+  onCopyMine?: () => void;
+  /**
+   * 비교 기준 본문(저장본 또는 충돌·외부 변경 때 서버본)과 그 이름. 주면 [변경 비교]가 나오고 누르면 기준 ↔ 현재 편집본 차이를 보인다.
+   * 비교 보기를 처음부터 열어 두려면 `defaultCompareOpen`.
+   */
+  compare?: { before: string; beforeLabel?: string };
+  defaultCompareOpen?: boolean;
+  /**
+   * 충돌은 아니지만 저장 안 된 편집이 있는 사이 서버 본문이 바뀐 상태. 안내 띠에 [변경 비교]([compare] 있을 때)·[서버 버전 불러오기]([onReload] 있을 때)가 나온다.
+   * `conflict`가 있으면 충돌 띠가 우선이다.
+   */
+  externalChange?: boolean;
+  /** 열 때 이동할 줄(1부터). 값이 바뀌면 다시 이동한다. */
+  initialLine?: number;
+  /** 보기 방식(제어형). 없으면 `defaultMode`에서 시작해 안에서 관리한다. */
+  mode?: EditorViewMode;
+  onModeChange?: (mode: EditorViewMode) => void;
+  handleRef?: Ref<DocumentEditorHandle>;
   /** 저장 응답의 점검 결과(비밀 의심 등). 문구는 서버 `message` 그대로. */
   issues?: readonly SpecIssue[];
   /** 파일 언어(기본 markdown). 미리보기는 markdown일 때만 있다. */
@@ -47,12 +76,43 @@ export interface DocumentEditorProps {
 export function DocumentEditor(props: DocumentEditorProps) {
   const {
     document, value, onChange, onSave, dirty = false, saving = false, readOnly = false, readOnlyReason, missing = false, onCreateMissing, conflict = false,
-    onReload, onOverwrite, issues = [], language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, messages, className,
+    onReload, onOverwrite, onCopyMine, compare, defaultCompareOpen = false, externalChange = false, initialLine, mode: controlledMode, onModeChange, handleRef,
+    issues = [], language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, messages, className,
   } = props;
   const text = resolveMessages(messages);
-  const [mode, setMode] = useState<EditorViewMode>(defaultMode);
+  const [innerMode, setInnerMode] = useState<EditorViewMode>(defaultMode);
+  const mode = controlledMode ?? innerMode;
+  const setMode = (next: EditorViewMode) => {
+    if (controlledMode === undefined) setInnerMode(next);
+    onModeChange?.(next);
+  };
   const [composing, setComposing] = useState(false);
+  const [comparing, setComparing] = useState(defaultCompareOpen);
+  const [gotoOpen, setGotoOpen] = useState(false);
+  const [gotoText, setGotoText] = useState("");
+  const [gotoBad, setGotoBad] = useState(false);
   const handle = useRef<TextEditorHandle>(null);
+  const gotoInput = useRef<HTMLInputElement>(null);
+  const goTo = (line: number): boolean => handle.current?.goToLine(line) ?? false;
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      openGoToLine: () => {
+        setGotoOpen(true);
+        requestAnimationFrame(() => gotoInput.current?.focus());
+      },
+      goToLine: (line: number) => goTo(line),
+    }),
+    [],
+  );
+  // 열 때(또는 줄 값이 바뀔 때) 그 줄로 이동한다. 편집기가 만들어진 다음 프레임에 시도한다.
+  useEffect(() => {
+    if (initialLine === undefined) return;
+    const id = requestAnimationFrame(() => {
+      handle.current?.goToLine(initialLine);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [initialLine, document?.id]);
   const root = `ac-sdd-root ac-sdd-editor${className ? ` ${className}` : ""}`;
 
   if (!document) {
@@ -84,7 +144,20 @@ export function DocumentEditor(props: DocumentEditorProps) {
   const save = () => {
     if (!locked && !conflict && !composing) onSave?.();
   };
-  const modes: EditorViewMode[] = previewable ? ["edit", "split", "preview"] : ["edit"];
+  const openGoto = () => {
+    setGotoOpen(true);
+    requestAnimationFrame(() => gotoInput.current?.focus());
+  };
+  const submitGoto = () => {
+    const line = Number(gotoText);
+    if (!Number.isInteger(line) || line < 1 || line > value.split("\n").length || !goTo(line)) {
+      setGotoBad(true);
+      return;
+    }
+    setGotoBad(false);
+    setGotoOpen(false);
+  };
+  const modes: readonly EditorViewMode[] = previewable ? EDITOR_VIEW_MODES : ["edit"];
 
   return (
     <section className={root} aria-label={document.title} data-readonly={locked || undefined}>
@@ -101,6 +174,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
             ))}
           </div>
         ) : null}
+        {compare ? (
+          <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+            {text["editor.compare"]}
+          </button>
+        ) : null}
+        <button type="button" className="ac-sdd-btn" aria-expanded={gotoOpen} onClick={() => (gotoOpen ? setGotoOpen(false) : openGoto())}>
+          {text["editor.goto"]}
+        </button>
         {toolbarExtra}
         <span className="ac-sdd-muted" role="status">
           {saving ? text["editor.saving"] : composing ? text["editor.composing"] : dirty ? text["editor.dirty"] : text["editor.saved"]}
@@ -129,7 +210,84 @@ export function DocumentEditor(props: DocumentEditorProps) {
                 {text["editor.conflict.overwrite"]}
               </button>
             ) : null}
+            {compare ? (
+              <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+                {text["editor.compare"]}
+              </button>
+            ) : null}
+            {onCopyMine ? (
+              <button type="button" className="ac-sdd-btn" onClick={onCopyMine}>
+                {text["editor.copyMine"]}
+              </button>
+            ) : null}
           </span>
+        </div>
+      ) : externalChange ? (
+        <div className="ac-sdd-banner" data-tone="info" role="status" data-state="external-change">
+          {text["editor.external.body"]}
+          <span className="ac-sdd-banner-actions">
+            {compare ? (
+              <button type="button" className="ac-sdd-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+                {text["editor.compare"]}
+              </button>
+            ) : null}
+            {onReload ? (
+              <button type="button" className="ac-sdd-btn" onClick={onReload}>
+                {text["editor.conflict.reload"]}
+              </button>
+            ) : null}
+            {onCopyMine ? (
+              <button type="button" className="ac-sdd-btn" onClick={onCopyMine}>
+                {text["editor.copyMine"]}
+              </button>
+            ) : null}
+          </span>
+        </div>
+      ) : null}
+      {gotoOpen ? (
+        <form
+          className="ac-sdd-goto"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitGoto();
+          }}
+        >
+          <label>
+            {text["editor.goto.label"]}{" "}
+            <input
+              ref={gotoInput}
+                            type="number"
+              min={1}
+              inputMode="numeric"
+              value={gotoText}
+              aria-invalid={gotoBad || undefined}
+              onChange={(e) => {
+                setGotoText(e.target.value);
+                setGotoBad(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.stopPropagation();
+                  setGotoOpen(false);
+                }
+              }}
+            />
+          </label>
+          <button type="submit" className="ac-sdd-btn">{text["editor.goto.go"]}</button>
+          {gotoBad ? <span className="ac-sdd-muted" role="alert">{text["editor.goto.invalid"]}</span> : null}
+        </form>
+      ) : null}
+      {comparing && compare ? (
+        <div className="ac-sdd-compare" role="region" aria-label={text["editor.compare"]}>
+          <div className="ac-sdd-compare-head">
+            <span className="ac-sdd-muted">{formatMessage(text["editor.compare.head"], { before: compare.beforeLabel ?? text["editor.compare.before"], after: text["editor.compare.after"] })}</span>
+            <button type="button" className="ac-sdd-btn" onClick={() => setComparing(false)}>{text["common.close"]}</button>
+          </div>
+          {compare.before === value ? (
+            <p className="ac-sdd-muted" role="status">{text["editor.compare.same"]}</p>
+          ) : (
+            <TextDiff before={compare.before} after={value} language={language} ariaLabel={text["editor.compare"] ?? ""} maxHeight={320} />
+          )}
         </div>
       ) : null}
       {issues.length > 0 ? (
@@ -138,6 +296,11 @@ export function DocumentEditor(props: DocumentEditorProps) {
             <li key={`${issue.code}:${issue.line ?? ""}:${i}`}>
               <span className="ac-sdd-mono">{issue.code}</span> {issue.message}
               {issue.line ? <span className="ac-sdd-muted"> · {formatMessage(text["tasks.detail.line"], { line: issue.line })}</span> : null}
+              {issue.line && showEdit ? (
+                <button type="button" className="ac-sdd-btn" onClick={() => goTo(issue.line as number)}>
+                  {text["editor.goto.issue"]}
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>

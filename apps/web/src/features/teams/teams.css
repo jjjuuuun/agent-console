@@ -133,3 +133,4 @@
 .team-edge-details-list { display: grid; grid-template-columns: auto 1fr; gap: var(--ac-space-1) var(--ac-space-2); margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .team-edge-details-list dt { color: var(--ac-text-muted); }
 .team-edge-details-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.team-session-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

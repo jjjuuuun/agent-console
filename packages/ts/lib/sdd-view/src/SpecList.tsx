@@ -7,6 +7,18 @@ import { DocumentStateChip } from "./ToneChip";
 
 export const SPEC_ROW_HEIGHT = 64;
 
+/** 열 머리 정렬 열 하나. id·라벨은 앱이 준다. */
+export interface SpecSortColumn {
+  id: string;
+  label: string;
+}
+
+/** 지금 정렬(열 id + 방향). */
+export interface SpecSortState {
+  id: string;
+  direction: "asc" | "desc";
+}
+
 export interface SpecListProps {
   specs: readonly SpecSummary[];
   selectedId?: string | null;
@@ -16,6 +28,14 @@ export interface SpecListProps {
   emptyActions?: ReactNode;
   /** 시각 표시(앱의 시간 서식). 없으면 ISO 날짜. */
   formatTime?: (epochSeconds: number) => string;
+  /** 열 머리 정렬 열(없으면 머리 줄을 그리지 않는다). 정렬은 앱이 한다 */
+  sortColumns?: readonly SpecSortColumn[];
+  /** 지금 정렬(없으면 어느 열도 정렬 표시 없음) */
+  sort?: SpecSortState | null;
+  /** 열 머리를 눌렀다(방향을 어떻게 바꿀지는 앱이 정한다) */
+  onSortChange?: (columnId: string) => void;
+  /** 행 오른쪽 메뉴 slot(예: `⋯` 메뉴 버튼). 행 버튼 밖에 놓여 키보드로 따로 닿는다 */
+  renderRowMenu?: (spec: SpecSummary) => ReactNode;
   /** 목록 높이(px 또는 'fill') */
   height?: number | "fill";
   messages?: Readonly<Record<string, string>>;
@@ -27,7 +47,7 @@ function defaultTime(seconds: number): string {
 }
 
 /** 스펙 목록(가상 목록). 진행·지금 단계·문서 상태·준비된 작업 수를 한 줄에 보인다. 스펙 이름·문서 종류는 데이터다. */
-export function SpecList({ specs, selectedId, onOpen, loading = false, emptyActions, formatTime = defaultTime, height = "fill", messages, className }: SpecListProps) {
+export function SpecList({ specs, selectedId, onOpen, loading = false, emptyActions, sortColumns, sort, onSortChange, renderRowMenu, formatTime = defaultTime, height = "fill", messages, className }: SpecListProps) {
   const text = resolveMessages(messages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtual = useVirtualRows({ count: specs.length, rowHeight: SPEC_ROW_HEIGHT, scrollRef });
@@ -47,6 +67,23 @@ export function SpecList({ specs, selectedId, onOpen, loading = false, emptyActi
       style={{ height: height === "fill" ? "100%" : height }}
       aria-busy={loading || undefined}
     >
+      {sortColumns !== undefined && sortColumns.length > 0 ? (
+        <div role="table" aria-label={text["specs.sort.label"]} className="ac-sdd-sorthead-table">
+          <div role="row" className="ac-sdd-sorthead">
+            {sortColumns.map((c) => {
+              const current = sort?.id === c.id ? sort.direction : null;
+              return (
+                <div key={c.id} role="columnheader" aria-sort={current === "asc" ? "ascending" : current === "desc" ? "descending" : "none"}>
+                  <button type="button" className="ac-sdd-sortbtn" data-active={current !== null || undefined} onClick={() => onSortChange?.(c.id)}>
+                    <span>{c.label}</span>
+                    <span aria-hidden="true">{current === "asc" ? "▲" : current === "desc" ? "▼" : ""}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <ul className="ac-sdd-vlist" role="list" aria-label={text["specs.list"]} style={{ height: virtual.getTotalSize() }}>
         {virtual.getVirtualItems().map((item) => {
           const spec = specs[item.index] as SpecSummary;
@@ -61,7 +98,7 @@ export function SpecList({ specs, selectedId, onOpen, loading = false, emptyActi
               aria-setsize={specs.length}
               aria-posinset={item.index + 1}
             >
-              <button type="button" className="ac-sdd-spec" data-selected={selected || undefined} aria-current={selected ? "true" : undefined} onClick={() => onOpen?.(spec)}>
+              <button type="button" className="ac-sdd-spec" data-menu={renderRowMenu !== undefined || undefined} data-selected={selected || undefined} aria-current={selected ? "true" : undefined} onClick={() => onOpen?.(spec)}>
                 <span className="ac-sdd-spec-main">
                   <span className="ac-sdd-spec-name ac-sdd-ellipsis">{spec.name && spec.name !== "" ? spec.name : spec.id}</span>
                   {spec.directory ? <span className="ac-sdd-mono ac-sdd-muted ac-sdd-ellipsis">{spec.directory}</span> : null}
@@ -91,6 +128,7 @@ export function SpecList({ specs, selectedId, onOpen, loading = false, emptyActi
                   ))}
                 </span>
               </button>
+              {renderRowMenu === undefined ? null : <span className="ac-sdd-spec-menu">{renderRowMenu(spec)}</span>}
             </li>
           );
         })}

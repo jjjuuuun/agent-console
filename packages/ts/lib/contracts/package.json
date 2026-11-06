@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/contracts",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "description": "Agent Console 계약 타입·상수·JSON Schema (Pydantic에서 생성)",
   "private": true,
   "license": "MIT",
@@ -89,6 +89,11 @@
       "development": "./src/generated/sdd.ts",
       "types": "./dist/src/generated/sdd.d.ts",
       "default": "./dist/src/generated/sdd.js"
+    },
+    "./wiki": {
+      "development": "./src/generated/wiki.ts",
+      "types": "./dist/src/generated/wiki.d.ts",
+      "default": "./dist/src/generated/wiki.js"
     },
     "./modules": {
       "development": "./src/generated/modules.ts",

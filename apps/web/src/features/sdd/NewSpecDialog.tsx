@@ -30,6 +30,8 @@ export interface NewSpecDialogProps {
   blockedReason?: string | undefined;
   /** 제출. 성공하면 호출자가 이동·닫기를 한다. 실패는 던진다(서버 문장이 맨 위 배너에 보인다) */
   onSubmit: (body: SpecCreateRequest) => Promise<void>;
+  /** [공용에서 가져오기…]: 공용 문서 틀을 이 프로젝트로 복사한다(복사가 끝나면 호출자가 틀 목록을 갱신). 없으면 버튼이 없다 */
+  onImportFromLibrary?: (() => void) | undefined;
   /** [폴더에서 가져오기…]: 이 대화상자를 닫고 가져오기를 연다 */
   onImport?: ((name: string) => void) | undefined;
   /** 틀 선택을 기억한다(없으면 기억 안 함) */
@@ -39,7 +41,7 @@ export interface NewSpecDialogProps {
 const collator = new Intl.Collator("ko");
 
 export function NewSpecDialog(props: NewSpecDialogProps) {
-  const { open, onClose, folder, specRoot, templates, templatesLoading = false, initialTemplate = null, initialName = "", templatesHref, blockedReason, onSubmit, onImport, onTemplateChosen } = props;
+  const { open, onClose, folder, specRoot, templates, templatesLoading = false, initialTemplate = null, initialName = "", templatesHref, blockedReason, onSubmit, onImport, onImportFromLibrary, onTemplateChosen } = props;
   const sorted = useMemo(() => [...templates].sort((a, b) => collator.compare(a.name ?? a.id, b.name ?? b.id)), [templates]);
   const [name, setName] = useState(initialName);
   const [id, setId] = useState("");
@@ -144,6 +146,18 @@ export function NewSpecDialog(props: NewSpecDialogProps) {
               </label>
             );
           })}
+          {onImportFromLibrary === undefined ? null : (
+            <button
+              type="button"
+              className="app-link-btn sdd-import-library"
+              disabled={busy}
+              aria-disabled={blocked || undefined}
+              title={blocked ? blockedReason : undefined}
+              onClick={() => { if (!blocked) onImportFromLibrary(); }}
+            >
+              ＋ {m.new.importFromLibrary}
+            </button>
+          )}
           <label className="sdd-radio" data-checked={selectedTemplate === null || undefined}>
             <input type="radio" name={`${uid}-tpl`} checked={selectedTemplate === null} onChange={() => setPick(null)} />
             <span className="sdd-radio-body">

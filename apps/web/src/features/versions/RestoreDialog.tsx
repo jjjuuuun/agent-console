@@ -11,8 +11,8 @@ export interface RestoreDialogProps {
   open: boolean;
   /** 되돌릴 버전 해시 앞 8자 */
   hash8: string;
-  /** 현재 -> 그 버전으로 바뀌는 수. 계산 중이면 undefined */
-  summary: { fields: number; content: number } | undefined;
+  /** 현재 -> 그 버전으로 바뀌는 수. 계산 중이면 undefined, 비교를 지원하지 않는 종류면 null(줄을 그리지 않는다) */
+  summary: { fields: number; content: number } | undefined | null;
   /** 저장 안 된 변경이 있다 */
   dirty: boolean;
   busy: boolean;
@@ -47,9 +47,11 @@ export function RestoreDialog({ open, hash8, summary, dirty, busy, issues, error
     >
       <div className="ver-restore">
         <p className="ac-text">{t.restore.body}</p>
-        <p className="app-muted ver-note" role="status">
-          {summary === undefined ? t.restore.summaryLoading : t.restore.summary(summary.fields, summary.content)}
-        </p>
+        {summary === null ? null : (
+          <p className="app-muted ver-note" role="status">
+            {summary === undefined ? t.restore.summaryLoading : t.restore.summary(summary.fields, summary.content)}
+          </p>
+        )}
         {dirty ? <p className="ver-warn">{t.restore.unsaved}</p> : null}
         <label className="ver-restore-message">
           <span>{t.restore.messageLabel}</span>

@@ -7,6 +7,8 @@
 import type {
   CopyApplyRequest,
   CopyApplyResult,
+  CopyItem,
+  CopyKindInfo,
   CopyPlan,
   CopyPlanRequest,
   FolderCapabilities,
@@ -69,6 +71,13 @@ export interface ProjectsClient {
   applyCopy(request: CopyApplyRequest): Promise<CopyApplyResult>;
   /** 옛 방식으로 만든 이 프로젝트 전용 정의를 프로젝트 사본으로 옮기는 계획(`CopyPlan` 형식). */
   planLegacyCopy(id: string): Promise<CopyPlan>;
+  /**
+   * 한 공간(`project` null = 공용)에서 복사에 쓸 정의 종류와 방향 플래그(`library`: 공용에 둘 수 있음, `portable`: 프로젝트에 둘 수 있음).
+   * 복사 대화상자는 종류 이름 표 없이 이 목록으로 채운다.
+   */
+  listCopyKinds(project: string | null): Promise<CopyKindInfo[]>;
+  /** 한 공간의 정의 목록(본문 없음). `kind`를 생략하면 복사 종류 전부, 모르는 종류는 404. */
+  listCopyItems(project: string | null, kind?: string): Promise<CopyItem[]>;
 }
 
 export function createProjectsClient(io: RestIo): ProjectsClient {
@@ -98,5 +107,7 @@ export function createProjectsClient(io: RestIo): ProjectsClient {
     planCopy: (request) => io.request("POST", "/projects/copy/plan", { body: request }),
     applyCopy: (request) => io.request("POST", "/projects/copy/apply", { body: request }),
     planLegacyCopy: (id) => io.request("POST", `/projects/${enc(id)}/legacy/plan`),
+    listCopyKinds: (project) => io.request("GET", `/projects/copy/kinds${query({ project: project ?? undefined })}`),
+    listCopyItems: (project, kind) => io.request("GET", `/projects/copy/items${query({ project: project ?? undefined, kind })}`),
   };
 }

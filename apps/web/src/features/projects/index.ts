@@ -36,4 +36,4 @@ export { ProjectTargetPicker, type ProjectTargetPickerProps, type TargetOption, 
 export { startErrorView, type StartErrorView, type StartFix } from "./startErrors";
 export { targetPickerMessages } from "./targetPickerMessages";
 export { NEW_PARAM } from "./newParam";
-export { useSpaceItems, LISTABLE_KINDS, type SpaceItem } from "./useSpaceItems";
+export { useSpaceItems, type CopyKindFlag, type SpaceItem } from "./useSpaceItems";

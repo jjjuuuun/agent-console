@@ -12,12 +12,19 @@ agent 노드 순서(`AgentNode`):
     3. 소비된 칸을 백엔드 요청 묶음에서 뺀다(그 칸의 "백엔드가 받지 않는 칸" 경고도 뺀다).
     4. 백엔드가 `host_tools` 능력이 없으면 공급 도구를 빼고 `tools.backend_capability_missing`
        경고(실행은 계속).
+    5. 공급자 지침(`ToolProvision.instructions`, 7R.5)을 요청 묶음 칸 `instructions` 끝에 공급자
+       순서대로 붙인다(유효 시스템 지침 = 에이전트 지침 + 리소스 지침 뒤). 출처는
+       `tool_provider:<id>`로 `agent.context_prepared`에 보인다. 백엔드가 그 칸을 받지 않으면
+       지침을 빼고 `tools.instructions_unsupported` 경고.
 
 공급자가 없으면(서비스가 없거나 빈 목록) 기존 실행과 같다.
 
 공개 API:
     - ``ToolProvider``(프로토콜), ``ToolProvisionContext``, ``ToolProvision``
-    - ``provide_tools``(공급자 여럿 부르기·격리·합치기), ``drop_taken``(이미 쓴 이름 빼기)
+    - ``provide_tools``(공급자 여럿 부르기·격리·합치기 → ``MergedToolProvision``),
+      ``drop_taken``(이미 쓴 이름 빼기)
+    - 지침: ``attach_instructions``(묶음 칸 끝에 붙이기), ``instruction_source``(출처 ref),
+      ``INSTRUCTION_SOURCE_PREFIX``
     - 경고 코드 ``ToolProviderCodes``
 """
 
@@ -27,16 +34,26 @@ from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final, Protocol, runtime_checkable
 
-from agent_console_contracts import BackendCapabilities, Issue, ResourceBundle
+from agent_console_contracts import (
+    BackendCapabilities,
+    BundleSource,
+    Issue,
+    KnownResourceSlots,
+    ResourceBundle,
+)
 from agent_console_runtime import CancelToken, HostTool
 
 __all__ = [
+    "INSTRUCTION_SOURCE_PREFIX",
+    "MergedToolProvision",
     "ToolEmit",
     "ToolProvider",
     "ToolProviderCodes",
     "ToolProvision",
     "ToolProvisionContext",
+    "attach_instructions",
     "drop_taken",
+    "instruction_source",
     "provide_tools",
 ]
 
@@ -50,6 +67,18 @@ class ToolProviderCodes:
     """공급 도구 이름이 이미 쓰인 이름(위임 도구·앞선 공급 도구)과 겹쳐 뺐다."""
     BACKEND_CAPABILITY_MISSING: Final = "tools.backend_capability_missing"
     """백엔드가 `capabilities.host_tools`를 선언하지 않아 공급 도구를 뺐다(실행은 계속)."""
+    INSTRUCTIONS_UNSUPPORTED: Final = "tools.instructions_unsupported"
+    """백엔드가 지침 칸(`capabilities.resource_slots`의 `instructions`)을 받지 않아 공급자 지침을
+    뺐다(도구는 그대로, 실행은 계속). 공급자마다 하나, details `provider`·`backend`."""
+
+
+INSTRUCTION_SOURCE_PREFIX: Final = "tool_provider:"
+"""공급자 지침의 묶음 출처(`BundleSource.ref`) 앞말. ref = 앞말 + 공급자 id."""
+
+
+def instruction_source(provider_id: str) -> str:
+    """공급자 id → 지침 출처 ref(`tool_provider:<id>`). `agent.context_prepared` 항목 id가 된다."""
+    return f"{INSTRUCTION_SOURCE_PREFIX}{provider_id}"
 
 
 type ToolEmit = Callable[[str, Mapping[str, Any]], Awaitable[None]]
@@ -97,11 +126,29 @@ class ToolProvision:
         host_tools: 모델에게 줄 도구(이름은 요청 안에서 유일해야 한다, 겹치면 빠진다).
         consumed_slots: 이 공급자가 읽어 처리한 묶음 칸. 백엔드 요청 묶음에서 빠진다.
         warnings: 이 노드의 `log.warning`으로 낼 이슈(details에 공급자 id가 붙는다).
+        instructions: 모델에게 줄 지침 글(7R.5). agent 노드가 유효 시스템 지침 뒤에 이 순서로
+            붙인다(공급자 id 머리는 붙이지 않는다). 빈 글은 빠진다. 기본 빈 값 = 지침 없음.
     """
 
     host_tools: Sequence[HostTool] = ()
     consumed_slots: frozenset[str] = field(default_factory=frozenset)
     warnings: Sequence[Issue] = ()
+    instructions: Sequence[str] = ()
+
+
+@dataclass(frozen=True)
+class MergedToolProvision(ToolProvision):
+    """`provide_tools`가 합친 결과. `instructions`와 같은 길이로 각 지침을 낸 공급자 id를 둔다.
+
+    Attributes:
+        instruction_providers: `instructions[i]`를 낸 공급자 id.
+    """
+
+    instruction_providers: Sequence[str] = ()
+
+    def sourced_instructions(self) -> list[tuple[str, str]]:
+        """(공급자 id, 지침 글) 목록(순서 그대로)."""
+        return list(zip(self.instruction_providers, self.instructions, strict=True))
 
 
 @runtime_checkable
@@ -126,7 +173,9 @@ def _provider_id(provider: object) -> str:
     return value if isinstance(value, str) and value else type(provider).__name__
 
 
-def provide_tools(providers: Iterable[ToolProvider], ctx: ToolProvisionContext) -> ToolProvision:
+def provide_tools(
+    providers: Iterable[ToolProvider], ctx: ToolProvisionContext
+) -> MergedToolProvision:
     """공급자들을 순서대로 불러 결과를 합친다(공급자 하나의 실패가 다른 공급자를 막지 않는다).
 
     - 예외(`Exception`)나 `ToolProvision`이 아닌 반환은 `tools.provider_failed` 경고(예외 형식
@@ -134,14 +183,19 @@ def provide_tools(providers: Iterable[ToolProvider], ctx: ToolProvisionContext) 
     - `HostTool`이 아닌 도구 항목도 같은 경고로 뺀다.
     - 앞선 공급자와 이름이 겹치는 도구는 `tools.duplicate_name` 경고로 뺀다.
     - 공급자 경고는 details에 `provider`를 붙여 그대로 모은다.
+    - 지침은 공급자 순서로 모은다. 문자열이 아닌 항목은 `tools.provider_failed` 경고로 빼고,
+      공백뿐인 글은 조용히 뺀다.
 
     Returns:
-        합친 결과(도구는 공급자 순서, 칸은 합집합, 경고는 발생 순서).
+        합친 결과(도구는 공급자 순서, 칸은 합집합, 경고는 발생 순서, 지침은 공급자 순서 +
+        지침마다 공급자 id).
     """
     tools: list[HostTool] = []
     names: set[str] = set()
     consumed: set[str] = set()
     warnings: list[Issue] = []
+    texts: list[str] = []
+    owners: list[str] = []
     for provider in providers:
         pid = _provider_id(provider)
         try:
@@ -169,6 +223,21 @@ def provide_tools(providers: Iterable[ToolProvider], ctx: ToolProvisionContext) 
         for item in got.warnings:
             warnings.append(item.model_copy(update={"details": {**item.details, "provider": pid}}))
         consumed.update(got.consumed_slots)
+        for item_text in got.instructions:
+            text: object = item_text  # 공급자는 타입을 어길 수 있다(사용자 플러그인)
+            if not isinstance(text, str):
+                warnings.append(
+                    _warning(
+                        ToolProviderCodes.PROVIDER_FAILED,
+                        f"도구 공급자 {pid!r}가 글이 아닌 지침을 줘 뺐습니다",
+                        provider=pid,
+                        error=type(text).__name__,
+                    )
+                )
+                continue
+            if text.strip():
+                texts.append(text)
+                owners.append(pid)
         for item_tool in got.host_tools:
             tool: object = item_tool  # 공급자는 타입을 어길 수 있다(사용자 플러그인)
             if not isinstance(tool, HostTool):
@@ -186,8 +255,51 @@ def provide_tools(providers: Iterable[ToolProvider], ctx: ToolProvisionContext) 
                 continue
             names.add(tool.name)
             tools.append(tool)
-    return ToolProvision(
-        host_tools=tuple(tools), consumed_slots=frozenset(consumed), warnings=tuple(warnings)
+    return MergedToolProvision(
+        host_tools=tuple(tools),
+        consumed_slots=frozenset(consumed),
+        warnings=tuple(warnings),
+        instructions=tuple(texts),
+        instruction_providers=tuple(owners),
+    )
+
+
+def attach_instructions(
+    bundle: ResourceBundle | None,
+    sourced: Sequence[tuple[str, str]],
+    *,
+    slot: str = KnownResourceSlots.INSTRUCTIONS,
+) -> ResourceBundle | None:
+    """공급자 지침을 묶음 칸 `slot` 끝에 붙인 사본(순수 함수, 원본은 그대로).
+
+    칸 값은 글 목록이다(기존 값이 목록이 아니면 한 항목으로 감싼다). 출처에는 공급자마다
+    `BundleSource(ref="tool_provider:<id>")`를 한 번씩 더한다.
+
+    Args:
+        bundle: 요청 묶음(없으면 새로 만든다).
+        sourced: (공급자 id, 지침 글) 목록. 비면 `bundle`을 그대로 돌려준다.
+        slot: 지침 칸 이름(기본 `KnownResourceSlots.INSTRUCTIONS`).
+
+    Returns:
+        지침을 붙인 묶음(`sourced`가 비면 입력 그대로, None이면 None).
+    """
+    if not sourced:
+        return bundle
+    base = bundle if bundle is not None else ResourceBundle()
+    current = base.slots.get(slot)
+    items: list[Any] = (
+        [] if current is None else list(current) if isinstance(current, list) else [current]
+    )
+    items.extend(text for _, text in sourced)
+    sources = list(base.sources.get(slot, []))
+    seen = {s.ref for s in sources}
+    for pid, _ in sourced:
+        ref = instruction_source(pid)
+        if ref not in seen:
+            seen.add(ref)
+            sources.append(BundleSource(ref=ref))
+    return base.model_copy(
+        update={"slots": {**base.slots, slot: items}, "sources": {**base.sources, slot: sources}}
     )
 
 

@@ -8,7 +8,7 @@ import { useApi } from "../../app/ApiContext";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { CopyPlanDialog, type CopyDirection, type CopyOutcome } from "./CopyPlanDialog";
 import { useProjects } from "./ProjectsContext";
-import { LISTABLE_KINDS, useSpaceItems } from "./useSpaceItems";
+import { useSpaceItems, type SpaceItem } from "./useSpaceItems";
 
 const text = createProjectsText();
 
@@ -21,6 +21,8 @@ export interface CopyRequest {
   /** 고르기부터(`pick`) 또는 고른 항목으로 계획부터(`plan`) */
   start: "pick" | "plan";
   items?: readonly DefinitionKey[];
+  /** 고르기 목록을 이 종류들로 좁힌다(호출 화면이 한 종류만 가져올 때, 예: 새 스펙의 문서 틀). 생략하면 서버가 준 복사 종류 전부 */
+  onlyKinds?: readonly string[];
   /** [가져오고 실행] 진입의 제출 문구 */
   submitStyle?: "default" | "run";
   /** 옛 방식으로 만든 이 프로젝트 전용 정의를 옮기는 계획(`planLegacyCopy`)을 쓴다. `direction: "move"`와 함께 쓴다 */
@@ -58,9 +60,12 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
   const queryClient = useQueryClient();
   const view = p.views.find((v) => v.project.id === request.project);
   const toProject = request.direction !== "save";
-  const projectKinds = view?.kinds ?? [];
-  const source = useSpaceItems(toProject ? null : request.project, toProject ? LISTABLE_KINDS : projectKinds, true);
-  const target = useSpaceItems(toProject ? request.project : null, toProject ? projectKinds : LISTABLE_KINDS, true);
+  // 공용 → 프로젝트는 `portable`, 프로젝트 → 공용은 `library`인 종류만(서버 종류 메타데이터, 종류 이름 표 없음)
+  const flag = toProject ? "portable" : "library";
+  const source = useSpaceItems(toProject ? null : request.project, flag, true);
+  const target = useSpaceItems(toProject ? request.project : null, flag, true);
+  const only = request.onlyKinds;
+  const narrow = (items: readonly SpaceItem[]) => (only === undefined ? [...items] : items.filter((i) => only.includes(i.kind)));
   const homeHref = libraryHome();
   if (view === undefined) return null;
   const name = view.project.name;
@@ -92,11 +97,11 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
       target={toSpaceRef(toProject ? request.project : null)}
       initialStep={request.start}
       {...(request.items === undefined ? {} : { initialItems: request.items })}
-      candidates={source.items}
+      candidates={narrow(source.items)}
       candidatesLoading={source.loading}
       candidatesFailed={source.failed}
       onCandidatesRetry={source.retry}
-      targetItems={target.items}
+      targetItems={narrow(target.items)}
       emptyAction={homeHref === undefined || request.direction === "save" ? undefined : <Link className="ac-btn" data-variant="secondary" data-size="sm" to={homeHref} onClick={onClose}>{text("copy.pick.to_library")}</Link>}
       {...(request.direction === "move" ? { removeSourceDefault: true } : {})}
       planCopy={(r) => (request.legacy === true ? rest.planLegacyCopy(request.project) : rest.planCopy(r))}

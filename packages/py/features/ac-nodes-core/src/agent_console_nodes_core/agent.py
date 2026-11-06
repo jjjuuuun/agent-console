@@ -23,6 +23,8 @@
 에이전트 도구 공급자(X30, `tools`): 서비스 `TOOL_PROVIDERS`가 있으면 4의 묶음 계산 뒤 공급자마다
 `provide`를 부르고, 공급 도구를 위임 기여 도구 뒤에 붙이며(이름이 겹치면 공급 도구를 뺀다), 소비한
 칸을 백엔드 요청 묶음에서 뺀다. 백엔드에 `host_tools` 능력이 없으면 공급 도구를 빼고 경고한다.
+공급자 지침(`ToolProvision.instructions`)은 요청 묶음 칸 `instructions` 끝에 붙이고(출처
+`tool_provider:<id>`, `agent.context_prepared`에 보임), 백엔드가 그 칸을 받지 않으면 빼고 경고한다.
 위임 대상(`sdk-subagents`)은 위임자 세션 안이라 따로 공급받지 않고, 자기 NodeRun으로 실행되는
 대상(`host`)은 자기 묶음으로 공급받는다.
 """
@@ -45,6 +47,7 @@ from agent_console_contracts import (
     DelegationStrategyDescriptor,
     ErrorInfo,
     Issue,
+    KnownResourceSlots,
     NodeTypeDescriptor,
     PortDef,
     PortSpec,
@@ -131,10 +134,12 @@ from .services import (
     AgentLookup,
 )
 from .tools import (
+    MergedToolProvision,
     ToolProviderCodes,
-    ToolProvision,
     ToolProvisionContext,
+    attach_instructions,
     drop_taken,
+    instruction_source,
     provide_tools,
 )
 
@@ -513,8 +518,10 @@ class AgentNode:
             fmt=PromptFormat.of(settings),
         )
         composed = await run.compose(ctx.node.id, ns, caps)
-        provision = await _provision(ctx, cfg.agent_ref, composed, caps)
+        provision = await _provision(ctx, cfg.agent_ref, composed, caps, backend_id)
         bundle = await run.finish(ctx.node.id, composed, provision.consumed_slots)
+        sourced = provision.sourced_instructions()
+        bundle = attach_instructions(bundle, sourced)
         provided = list(provision.host_tools)
         request = AgentRequest(
             agent=resolved,
@@ -540,6 +547,7 @@ class AgentNode:
                 run.resources,
                 resource_types=run.resource_types,
                 fragments=len(items),
+                inline=_inline_sources(sourced),
             ),
         )
 
@@ -555,17 +563,31 @@ class AgentNode:
         return _node_result(result, backend_id)
 
 
+def _inline_sources(sourced: Sequence[tuple[str, str]]) -> dict[str, str]:
+    """공급자 지침 → 출처 ref별 본문(`agent.context_prepared`의 바이트 수·해시 계산용)."""
+    joined: dict[str, list[str]] = {}
+    for pid, text in sourced:
+        joined.setdefault(instruction_source(pid), []).append(text)
+    return {ref: "\n\n".join(texts) for ref, texts in joined.items()}
+
+
 async def _provision(
-    ctx: NodeContext, agent_id: str, composed: ComposedBundle | None, caps: BackendCapabilities
-) -> ToolProvision:
-    """서비스 `TOOL_PROVIDERS`의 공급자를 불러 이 노드에 줄 도구를 모은다(X30). 경고는 여기서 낸다.
+    ctx: NodeContext,
+    agent_id: str,
+    composed: ComposedBundle | None,
+    caps: BackendCapabilities,
+    backend_id: str,
+) -> MergedToolProvision:
+    """서비스 `TOOL_PROVIDERS`의 공급자를 불러 이 노드에 줄 도구·지침을 모은다(X30). 경고는 여기서.
 
     공급자가 없으면 빈 결과(기존 실행과 같다). 백엔드에 `host_tools` 능력이 없으면 도구를 빼고
-    `tools.backend_capability_missing` 경고를 낸다(소비한 칸은 그대로 뺀다).
+    `tools.backend_capability_missing` 경고를 낸다(소비한 칸은 그대로 뺀다). 백엔드가 지침 칸
+    (`KnownResourceSlots.INSTRUCTIONS`)을 받지 않으면 지침을 빼고 공급자마다
+    `tools.instructions_unsupported`(details `provider`·`backend`).
     """
     providers = ctx.services.get(TOOL_PROVIDERS)
     if not providers:
-        return ToolProvision()
+        return MergedToolProvision()
 
     async def emit(type: str, payload: Mapping[str, Any]) -> None:
         await ctx.emit(type, payload)
@@ -598,8 +620,25 @@ async def _provision(
             )
         )
         tools = ()
+    texts, owners = provision.instructions, provision.instruction_providers
+    if texts and KnownResourceSlots.INSTRUCTIONS not in caps.resource_slots:
+        issues.extend(
+            Issue(
+                severity="warning",
+                code=ToolProviderCodes.INSTRUCTIONS_UNSUPPORTED,
+                message=f"실행 백엔드가 지침을 받지 않아 공급자 {pid!r}의 지침을 주지 않습니다",
+                details={"provider": pid, "backend": backend_id},
+            )
+            for pid in dict.fromkeys(owners)
+        )
+        texts, owners = (), ()
     await warn(ctx, issues, node=ctx.node.id)
-    return ToolProvision(host_tools=tools, consumed_slots=provision.consumed_slots)
+    return MergedToolProvision(
+        host_tools=tools,
+        consumed_slots=provision.consumed_slots,
+        instructions=texts,
+        instruction_providers=owners,
+    )
 
 
 def _delegation_tool_names(strategy: Any, plan: DelegationPlan, ctx: NodeContext) -> list[str]:

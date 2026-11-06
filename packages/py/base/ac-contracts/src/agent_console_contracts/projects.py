@@ -715,6 +715,13 @@ class CopyKindInfo(ContractModel):
     portable: bool = Field(
         description="프로젝트 공간에 둘 수 있다 — 공용·다른 프로젝트 → 이 프로젝트 복사."
     )
+    title: str | None = Field(
+        default=None,
+        description=(
+            "종류 표시 이름(3.3.0, 사용자 언어). 종류를 기여한 모듈의 서술자가 준다. null = 서버가 "
+            "모름(화면은 종류 이름을 그대로 보인다)."
+        ),
+    )
 
 
 class CopyItem(ContractModel):

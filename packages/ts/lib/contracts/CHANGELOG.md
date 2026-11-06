@@ -2,6 +2,13 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.0]
+- 계약 0.14.0(7R.3). 사내 의존 범위 `^0.14.0`(minor 올림 — 소비자 package.json 범위를 함께 올림). 새 하위 경로 **`@agent-console/contracts/wiki`**(1.0.0). `common` 1.10.0, `projects` 3.3.0, `sdd` 1.2.0, `modules` 1.5.0.
+- 새 타입: `wiki` 전부(`WikiDefinition`·`WikiRulesDefinition`·`WikiSyntax`·`WikiSettings`·`WikiAccessConfig`·`WikiInfo`·`WikiPageView`·`WikiLink`·`WikiPageVersion`·`WikiGraph`·`WikiSearchResult`·`WikiLintReport`·`WikiMoveResult`·`WikiEventPayload`·`WikiChanged` 등), `WikiChangedMessage`(modules, `WsServerMessage` 유니온에 더함).
+- 7R.2a 결정(design §7R.18.1): `WikiPagePreview`·`WikiLinkText`·`WikiTemplateRender`·`WikiRulesListItem`·`WikiRulesView`·`WikiHistoryPage`·`WikiImportItem`·`WikiPageNotFoundDetails`·`WikiTextRange` 등, `WikiLink.status`·`label`·`outside`·`suggested_path`, `WikiImportResult`는 `items`로 한 벌(목록 넷 없음). 스키마 `x-ui.variables`·`x-ui.enum_tones`, 위젯 `wiki-rule-refs`.
+- 새 선택 필드: `CopyKindInfo.title?`, `SpecTemplateSummary.kind?`.
+- 새 상수: `KNOWN_UI_WIDGETS.WIKI_REF`·`GLOB`, `ERROR_CODES.WIKI_*`, `KNOWN_ISSUE_CODES.WIKI_*`·`TOOLS_INSTRUCTIONS_UNSUPPORTED`, `KNOWN_WIKI_*`, `WIKI_ACCESS_OPS`, `WIKI_WRITE_SUBJECT_PATHS`·`WIKI_LINT_SUBJECT_PATHS`, `KNOWN_WIKI_EVENT_TYPES`.
+
 ## [0.13.2]
 - 계약 0.13.2(6R.19 서버 후속). 더하기만 한다(새 필드는 선택). 사내 의존 범위는 `^0.13.0` 그대로. `runs` 1.8.0, `definitions` 1.7.0.
 - 새 선택 필드: `Run.has_children?: boolean | null`(직접 자식 Run 유무, `GET /runs/page` 행에서 채움, null·생략 = 서버가 채우지 않음).

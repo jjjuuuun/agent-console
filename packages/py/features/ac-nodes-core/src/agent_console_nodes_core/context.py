@@ -80,6 +80,7 @@ def context_prepared_payload(
     *,
     resource_types: Registry[ResourceType] | None = None,
     fragments: int | None = None,
+    inline: Mapping[str, str | bytes] | None = None,
 ) -> AgentContextPreparedPayload:
     """실행 묶음 → `agent.context_prepared` payload(본문 없음).
 
@@ -89,6 +90,8 @@ def context_prepared_payload(
         resources: 선택. 본문 조회(바이트 수·해시 계산용). 없거나 본문이 없는 리소스는 둘 다 null.
         resource_types: 선택. 종류 레지스트리(여러 파일 본문 종류를 `read_files`로 읽는다).
         fragments: 프롬프트를 이룬 조각 수(모르면 None).
+        inline: 선택. 리소스가 아닌 출처 ref → 본문(예: 도구 공급자 지침 `tool_provider:<id>`).
+            이 ref는 리소스 조회 없이 이 본문으로 바이트 수·해시를 낸다.
 
     Returns:
         `AgentContextPreparedPayload`. 종류 = 출처의 리소스 종류 id(없으면 칸 이름).
@@ -102,7 +105,9 @@ def context_prepared_payload(
                 continue
             seen.add(source.ref)
             digest: tuple[int, str] | None = None
-            if resources is not None:
+            if inline is not None and source.ref in inline:
+                digest = content_digest(inline[source.ref])
+            elif resources is not None:
                 try:
                     digest = content_digest(_read(source.ref, resources, resource_types))
                 except Exception:  # 조회 구현(사용자 플러그인) 실패가 실행을 막지 않게

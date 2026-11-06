@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.13.2"
+CONTRACTS_VERSION: Final = "0.14.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -20,6 +20,7 @@ CONTRACT_SUBMODULES: Final = (
     "architecture",
     "memory",
     "sdd",
+    "wiki",
     "modules",
 )
 """기능별 계약 하위 모듈(아래 층 → 위 층 순). 모든 모델은 이 중 하나에 정의된다.
@@ -29,26 +30,29 @@ import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층�
 `runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
 `chat`·`exports`·`imports`·`architecture`도 서로 모른다(0.9.0: `architecture`는 `runs`의 조건·
 `logs`의 이벤트·`definitions`의 이슈를 쓴다. 0.10.0: `memory`도 같은 층이고 `runs`의 조건·
-`definitions`의 이슈만 쓴다. 0.13.0: `sdd`도 같은 층이고 `common`·`definitions`·`runs`만 쓴다).
+`definitions`의 이슈만 쓴다. 0.13.0: `sdd`도 같은 층이고 `common`·`definitions`·`runs`만 쓴다.
+0.14.0: `wiki`도 같은 층이고 `common`·`definitions`·`runs`만 쓴다 — `memory`·`sdd`를 import하지
+않는다).
 `modules`는 맨 위다.
 TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름>`)로 나뉜다.
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.9.0",
+    "common": "1.10.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
     "definitions": "1.7.0",
     "runs": "1.8.0",
     "usage": "1.1.0",
-    "projects": "3.2.0",
+    "projects": "3.3.0",
     "chat": "1.3.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
     "memory": "1.1.0",
-    "sdd": "1.1.0",
-    "modules": "1.4.0",
+    "sdd": "1.2.0",
+    "wiki": "1.0.0",
+    "modules": "1.5.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
@@ -71,7 +75,11 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 유무, null = 채우지 않음), `definitions` 1.7.0(`GraphSummary.session_summary` — 팀 구성 목록의
 세션 집계 `GraphSessionSummary`, 6R.20k), `sdd` 1.1.0(`ImportFileListing.dirs`·`ImportDir` —
 가져오기 폴더의 하위 폴더 6R.20d, `SpecTemplateCreateRequest` — 문서 틀 단건 REST 6R.20a),
-`projects` 3.2.0(`CopyKindInfo`·`CopyItem` — 복사 대화상자의 종류·목록 메타데이터 6R.20a)."""
+`projects` 3.2.0(`CopyKindInfo`·`CopyItem` — 복사 대화상자의 종류·목록 메타데이터 6R.20a).
+0.14.0(7R.3, design §7R.7): 새 하위 모듈 `wiki` 1.0.0, `common` 1.10.0(`KnownUiWidgets` `wiki-ref`·
+`glob`, `wiki.*` 오류·이슈 코드, `tools.instructions_unsupported`), `projects` 3.3.0
+(`CopyKindInfo.title`), `sdd` 1.2.0(`SpecTemplateSummary.kind`), `modules` 1.5.0(WS `wiki.changed`).
+사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -251,6 +259,37 @@ class ErrorCodes:
     422).
     값은 싣지 않는다. `details.document_id?`·`details.rules`."""
 
+    # ---- 7R(design §7R.7, 0.14.0): 위키
+    WIKI_NOT_FOUND: Final = "wiki.not_found"
+    """위키·위키 규칙이 없다(HTTP 404). `details.kind`(wiki·rules)·`details.id`."""
+    WIKI_PAGE_NOT_FOUND: Final = "wiki.page_not_found"
+    """페이지가 없다(HTTP 404). `details` = `WikiPageNotFoundDetails{path, has_history}`(파일은 없고
+    기록만 있으면 `has_history=true`)."""
+    WIKI_PAGE_EXISTS: Final = "wiki.page_exists"
+    """새 페이지(`If-None-Match: *`)·옮기기 대상 경로에 페이지가 이미 있다(HTTP 409).
+    `details.path`."""
+    WIKI_RULE_REJECTED: Final = "wiki.rule_rejected"
+    """위키 규칙의 쓰기 규칙이 쓰기를 거부했다(HTTP 422). `details` =
+    `WikiRuleRejectedDetails{rule_id, message, lines, issues}`(본문 원문 없음)."""
+    WIKI_SECRET_REJECTED: Final = "wiki.secret_rejected"
+    """설정 `wiki.secret_scan`이 reject인 쓴 주체의 본문에 비밀 의심 값이 있어 거부했다(HTTP 422).
+    값은 싣지 않는다. `details.rules`·`details.lines?`."""
+    WIKI_TOO_LARGE: Final = "wiki.too_large"
+    """본문이 크기 상한(`mod-wiki.max_page_bytes`)을 넘는다(HTTP 422). `details.limit`."""
+    WIKI_SPACES_UNAVAILABLE: Final = "wiki.spaces_unavailable"
+    """프로젝트가 있는 조립에서 프로젝트 연동이 꺼져 위키 공간이 없다(HTTP 409). 앱 workspace에
+    대신 만들지 않는다."""
+    WIKI_HISTORY_UNAVAILABLE: Final = "wiki.history_unavailable"
+    """기록 저장소가 없어 기록 보기·되돌리기를 할 수 없다(HTTP 409, `WikiCapabilities.history`가
+    false). 이슈 코드로도 쓴다."""
+    WIKI_LINK_INSERT_UNAVAILABLE: Final = "wiki.link_insert_unavailable"
+    """링크 삽입 틀이 있는 링크 규칙이 없다(HTTP 422, `POST …/link-text`)."""
+    WIKI_VERSION_NOT_FOUND: Final = "wiki.version_not_found"
+    """기록 버전이 없다(HTTP 404, 보관 수로 지워짐). `details.path`·`details.version`."""
+    WIKI_CONFIG_READONLY: Final = "wiki.config_readonly"
+    """단독 루트(프로젝트 없이 쓰는 위키 폴더)에 쓸 수 없다(HTTP 409). 프로젝트 공간이면
+    `project.config_readonly`를 쓴다(스펙의 `sdd.config_readonly`와 같은 판단)."""
+
     # ---- 0.13.1(5.7R.33y3 후속). HTTP 응답 코드가 아니다(아래 표에 없다).
     FAKE_SESSION_MISSING: Final = "fake.session_missing"
     """가짜 실행 백엔드(fake)가 이어 쓸 세션 기록 파일을 찾지 못해 실행이 실패했다
@@ -325,6 +364,17 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.SDD_SPACES_UNAVAILABLE: 409,
     ErrorCodes.SDD_CONFIG_READONLY: 409,
     ErrorCodes.SDD_SECRET_REJECTED: 422,
+    ErrorCodes.WIKI_NOT_FOUND: 404,
+    ErrorCodes.WIKI_PAGE_NOT_FOUND: 404,
+    ErrorCodes.WIKI_PAGE_EXISTS: 409,
+    ErrorCodes.WIKI_RULE_REJECTED: 422,
+    ErrorCodes.WIKI_SECRET_REJECTED: 422,
+    ErrorCodes.WIKI_TOO_LARGE: 422,
+    ErrorCodes.WIKI_SPACES_UNAVAILABLE: 409,
+    ErrorCodes.WIKI_HISTORY_UNAVAILABLE: 409,
+    ErrorCodes.WIKI_CONFIG_READONLY: 409,
+    ErrorCodes.WIKI_LINK_INSERT_UNAVAILABLE: 422,
+    ErrorCodes.WIKI_VERSION_NOT_FOUND: 404,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
@@ -474,6 +524,10 @@ class KnownIssueCodes:
     TOOLS_BACKEND_CAPABILITY_MISSING: Final = "tools.backend_capability_missing"
     """실행 백엔드가 플랫폼 도구(host tools)를 받지 못해 공급 도구를 뺐다(실행은 계속).
     `details.backend`·`details.provider`."""
+    TOOLS_INSTRUCTIONS_UNSUPPORTED: Final = "tools.instructions_unsupported"
+    """(0.14.0, X30) 실행 백엔드가 시스템 지침을 받을 길이 없어 도구 공급자의 지침
+    (`ToolProvision.instructions`)을 넣지 못했다(warning, 도구는 그대로 준다). `details.backend`·
+    `details.provider`."""
     ARCHITECTURE_CONDITION_PATH_UNLISTED: Final = "architecture.condition_path_unlisted"
     """구조도 프로필 조건이 목록 본문에 없는 경로(예: 상세 전용 경로)를 봐서 맞지 않는다(warning,
     M-4). `details.prefix` = 걸린 경로 접두."""
@@ -585,6 +639,94 @@ class KnownIssueCodes:
     RUN_MOVE_BUSY: Final = "run.move_busy"
     """기록 옮기기에서 끝나지 않은 Run이 있는 묶음이라 옮기지 않았다(`RecordsMoveResult`의 `failed`
     항목 이슈). `details.id` = 루트 Run id."""
+
+    # ---- 7R(design §7R.7, 0.14.0): 위키. `WikiIssue`로 낸다(페이지·줄·규칙 위치, 값 원문 없음).
+    # `ErrorCodes`에 같은 이름이 있으면 같은 값이다. 도구 결과 사유 코드(`WikiEventStatus`의
+    # ok 밖 값)는 `wiki.<상태>`다.
+    WIKI_NOT_FOUND: Final = "wiki.not_found"
+    WIKI_PAGE_NOT_FOUND: Final = "wiki.page_not_found"
+    WIKI_PAGE_EXISTS: Final = "wiki.page_exists"
+    WIKI_RULE_REJECTED: Final = "wiki.rule_rejected"
+    """쓰기 규칙이 거부했다(error). `rule_id`·`line?`, `details.message`."""
+    WIKI_SECRET_REJECTED: Final = "wiki.secret_rejected"
+    WIKI_TOO_LARGE: Final = "wiki.too_large"
+    WIKI_SPACES_UNAVAILABLE: Final = "wiki.spaces_unavailable"
+    WIKI_HISTORY_UNAVAILABLE: Final = "wiki.history_unavailable"
+    """기록 저장소가 없다(info, 화면 기록 탭 '기록 저장소 없음')."""
+    WIKI_CONFIG_READONLY: Final = "wiki.config_readonly"
+    WIKI_RULE_WARNING: Final = "wiki.rule_warning"
+    """쓰기 규칙(`action: warn`)이 맞았다 — 쓰기는 했다(warning, 응답 `X-Console-Issues`).
+    `rule_id`·`line?`, `details.message`."""
+    WIKI_DENIED: Final = "wiki.denied"
+    """에이전트 접근 설정이 그 위키·동작을 허용하지 않는다(도구 사유 코드)."""
+    WIKI_CONFLICT: Final = "wiki.conflict"
+    """`if_hash`가 지금 본문 해시와 다르다(도구 사유 코드, REST는 412 `version_conflict`)."""
+    WIKI_RATE_LIMITED: Final = "wiki.rate_limited"
+    """실행당 쓰기 한도를 넘었다(도구 사유 코드). `details.limit`."""
+    WIKI_WIKI_UNAVAILABLE: Final = "wiki.wiki_unavailable"
+    """리소스가 가리킨 위키가 그 실행의 공간에 없거나 위키 서비스가 없다(도구 사유 코드, 실행 준비
+    점검 경고)."""
+    WIKI_INVALID_PATH: Final = "wiki.invalid_path"
+    """페이지 경로가 위키 폴더를 벗어나거나 쓸 수 없는 이름이다(도구 사유 코드, REST는
+    `folders.invalid_path`)."""
+    WIKI_UNKNOWN_WIKI: Final = "wiki.unknown_wiki"
+    """리소스 `wiki`의 위키 id가 그 공간에 없다(warning, 정의 저장 검사). `details.wiki`."""
+    WIKI_SEARCH_DEGRADED: Final = "wiki.search_degraded"
+    """설정한 검색 색인을 쓸 수 없어 파일 훑기로 찾는다(info, 느림)."""
+    WIKI_FRONT_MATTER_INVALID: Final = "wiki.front_matter_invalid"
+    """머리말 YAML이 깨져 본문으로 읽었다(warning). `page`·`line?`."""
+    WIKI_RULES_MISSING: Final = "wiki.rules_missing"
+    """위키가 쓰는 위키 규칙이 그 공간에 없어 그 규칙만 빠졌다(warning). `details.id`."""
+    WIKI_DUPLICATE_RULE_ID: Final = "wiki.duplicate_rule_id"
+    """합친 규칙에 같은 id의 쓰기·점검 규칙·페이지 틀이 있어 앞의 것만 썼다(warning). `rule_id`."""
+    WIKI_BROKEN_LINK: Final = "wiki.broken_link"
+    """링크 대상 페이지가 없다(기본 점검, 심각도는 문법 데이터). `page`·`line`·`details.target`."""
+    WIKI_ORPHAN: Final = "wiki.orphan"
+    """들어오는 링크가 없는 페이지(기본 점검, 첫 페이지·제외 경로 빼고)."""
+    WIKI_DUPLICATE_TITLE: Final = "wiki.duplicate_title"
+    """두 페이지 이상이 같은 제목이다(기본 점검). `details.paths`."""
+    WIKI_LINT_RULE: Final = "wiki.lint_rule"
+    """점검 규칙에 맞은 페이지(심각도·문장은 규칙 데이터). `rule_id`·`page`."""
+    WIKI_LINK_PATTERN_INVALID: Final = "wiki.link_pattern_invalid"
+    """링크 패턴을 컴파일할 수 없거나 안전 상한에 걸리거나 `target` 묶음이 없다(error, 그 링크
+    규칙만 빠짐). `Issue.path` = 문법 기준 위치."""
+    WIKI_UNKNOWN_LINK_KIND: Final = "wiki.unknown_link_kind"
+    """링크 규칙 `kind`·`resolve`에 모르는 값이 있어 그 규칙(값)을 건너뛰었다(warning)."""
+    WIKI_SYNTAX_MISSING: Final = "wiki.syntax_missing"
+    """링크 규칙이 비었다(기본 문법 꺼짐 + 설정·규칙 없음, info). 그래프·백링크가 비어 있다."""
+    WIKI_INVALID_PATTERN: Final = "wiki.invalid_pattern"
+    """쓰기 규칙 금지 패턴(정규식)을 컴파일할 수 없거나 안전 상한에 걸린다(error, 규칙 검사)."""
+    WIKI_INVALID_GLOB: Final = "wiki.invalid_glob"
+    """경로 모양(`applies_to`·`orphan_ignore`)의 형식이 틀렸다(error, 규칙 검사)."""
+    WIKI_TEMPLATE_MISSING: Final = "wiki.template_missing"
+    """페이지 틀(또는 지침) 파일이 본문 폴더에 없다(error, 규칙 검사). `details.file`."""
+    WIKI_UNKNOWN_VARIABLE: Final = "wiki.unknown_variable"
+    """페이지 틀 경로 틀·경로 안내가 모르는 변수를 쓴다(warning). `details.name`."""
+    WIKI_UNKNOWN_ACTION: Final = "wiki.unknown_action"
+    """쓰기 규칙 `action`이 모르는 값이라 warn으로 읽었다(warning)."""
+    WIKI_ALWAYS_REJECTS: Final = "wiki.always_rejects"
+    """조건·금지 패턴이 없는 거부 규칙이라 모든 쓰기를 막는다(error, 규칙 검사 — 메모리 정리 규칙의
+    빈 조건과 같은 판단)."""
+    WIKI_PARSE_TIMEOUT: Final = "wiki.parse_timeout"
+    """페이지 하나 파싱이 시간 상한(`mod-wiki.parse_timeout_ms`)을 넘어 링크 없이 읽었다
+    (warning)."""
+    WIKI_TOO_MANY_PAGES: Final = "wiki.too_many_pages"
+    """페이지 수가 상한(`mod-wiki.max_pages`)을 넘어 뒤를 읽지 않았다(warning). `details.limit`."""
+    WIKI_SETTINGS_INVALID: Final = "wiki.settings_invalid"
+    """설정 섹션 wiki의 일부가 형식에 맞지 않아 그 부분을 빼고 읽었다(`ServerInfo.warnings`).
+    `Issue.path` = 섹션 기준 경로."""
+    WIKI_LINK_INSERT_UNAVAILABLE: Final = "wiki.link_insert_unavailable"
+    """유효 문법에 링크 삽입 틀(`insert`)이 있는 링크 규칙이 없다(`POST …/link-text` 422)."""
+    WIKI_HOME_MISSING: Final = "wiki.home_missing"
+    """위키의 첫 페이지(`home`)가 가리키는 페이지가 없다(info, `WikiSummary`·`WikiView` 이슈)."""
+    WIKI_RULE_VIOLATION: Final = "wiki.rule_violation"
+    """점검이 기존 페이지에 쓰기 규칙을 돌려 걸렸다(reject → error, warn → warning). `rule_id`·
+    `line?`. 끄기는 문법 `lint.write_rules`."""
+    WIKI_VERSION_NOT_FOUND: Final = "wiki.version_not_found"
+    """그 기록 버전이 없다(보관 수로 지워짐 등, `GET …/history/{version}`·되돌리기 404)."""
+    WIKI_SECRET_SUSPECT: Final = "wiki.secret_suspect"
+    """본문에 비밀 의심 값이 있다(info, 그 쓴 주체의 `secret_scan = warn`). 위치(`line`)만,
+    값 없음."""
 
 
 class KnownSuggestionIds:

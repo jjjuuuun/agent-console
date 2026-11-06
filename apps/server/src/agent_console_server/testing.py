@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -194,16 +195,41 @@ def ws_path(token: str | None = TEST_TOKEN) -> str:
     return "/ws" if token is None else f"/ws?token={token}"
 
 
+def receive_json(ws: WebSocketTestSession, *, timeout: float = 30.0) -> Any:
+    """`ws.receive_json()`과 같되 `timeout`초 안에 메시지가 없으면 `AssertionError`.
+
+    Starlette의 `receive_json()`은 상한 없이 기다려, 시작이 거절된 실행의 이벤트를 기다리는
+    테스트가 CI 전체를 멈추게 할 수 있다. 내부 수신 스트림이 없는 버전이면 그대로 기다린다.
+    """
+    stream = getattr(ws, "_send_rx", None)
+    if stream is None:
+        return ws.receive_json()
+
+    future = ws.portal.start_task_soon(stream.receive)
+    try:
+        message = future.result(timeout)
+    except TimeoutError:
+        future.cancel()
+        raise AssertionError(f"WS 메시지가 {timeout}초 안에 오지 않았다") from None
+    ws._raise_on_close(message)
+    text = message.get("text")
+    return json.loads(text if text is not None else message["bytes"].decode("utf-8"))
+
+
 def receive_until(
     ws: WebSocketTestSession,
     predicate: Callable[[dict[str, Any]], bool],
     *,
     limit: int = 500,
+    timeout: float = 30.0,
 ) -> list[dict[str, Any]]:
-    """`predicate`가 참인 메시지까지(포함) 받은 메시지 목록. `limit`개를 넘으면 실패."""
+    """`predicate`가 참인 메시지까지(포함) 받은 메시지 목록.
+
+    `limit`개를 넘거나 메시지 하나를 `timeout`초 넘게 기다리면 실패한다.
+    """
     received: list[dict[str, Any]] = []
     for _ in range(limit):
-        message: dict[str, Any] = ws.receive_json()
+        message: dict[str, Any] = receive_json(ws, timeout=timeout)
         received.append(message)
         if predicate(message):
             return received

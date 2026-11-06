@@ -23,6 +23,10 @@ export interface FolderPickerProps {
   list: FolderListFn;
   createFolder?: FolderCreateFn;
   roots: readonly FolderRootData[];
+  /** 찾아보기 패널이 이 폴더 밖으로 나가지 못하게 한다(`FolderBrowser.rootPath`). */
+  rootPath?: string;
+  /** `rootPath`일 때 빵부스러기 첫 조각 이름. */
+  rootLabel?: string;
   /**
    * 서버가 제공하는 폴더 고르기 방법. `native_dialog: true`면 [폴더 선택…]이 OS 선택 창(`onPickNative`)을 열고,
    * `false`면 앱 안 찾아보기 패널을 연다. `browse: false`면 버튼을 막고 직접 입력을 연다.
@@ -78,7 +82,7 @@ export interface FolderPickerProps {
  */
 export function FolderPicker(props: FolderPickerProps): ReactElement {
   const {
-    id, value, onValueChange, check, list, createFolder, roots, capabilities, onPickNative, configDir, messages, excludeProjectId, currentFolder, disabled,
+    id, value, onValueChange, check, list, createFolder, roots, rootPath, rootLabel, capabilities, onPickNative, configDir, messages, excludeProjectId, currentFolder, disabled,
     onStateChange, onSelectPhaseChange, onSubmit, onOpenProject, onPicked, pickRef, inputRef, autoFocus, defaultManualOpen = false, hideLabel, debounceMs,
     waitingEscapeMs = 30000, cancelledNoticeMs = 3000, copy,
   } = props;
@@ -419,6 +423,8 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
           id={browseId}
           t={t}
           roots={roots}
+          rootPath={rootPath}
+          rootLabel={rootLabel}
           startPath={open.start}
           list={list}
           createFolder={createFolder}

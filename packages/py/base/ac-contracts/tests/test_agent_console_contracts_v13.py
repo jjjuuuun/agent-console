@@ -50,7 +50,7 @@ def _ver(text: str) -> tuple[int, ...]:
 
 
 def test_contracts_version_is_at_least_0_13_0() -> None:
-    """0.13.0에서 정한 버전 이상이다(정확한 지금 값은 0.13.2 테스트가 고정한다)."""
+    """0.13.0에서 정한 버전 이상이다(정확한 지금 값은 0.14.0 테스트가 고정한다)."""
     assert _ver(CONTRACTS_VERSION) >= (0, 13, 0)
     constants = build_schema()["x-constants"]
     assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
@@ -70,7 +70,7 @@ def test_contracts_version_is_at_least_0_13_0() -> None:
         "sdd": "1.0.0",
         "modules": "1.4.0",
     }
-    assert set(CONTRACT_VERSIONS) == set(v0130)
+    assert set(CONTRACT_VERSIONS) >= set(v0130)
     for sub, version in v0130.items():
         assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 

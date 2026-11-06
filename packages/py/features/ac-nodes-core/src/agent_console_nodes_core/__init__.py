@@ -43,7 +43,9 @@
       어댑터 ``FunctionResources``
     - 에이전트 도구 공급자(X30, design §5.7R.3): 서비스 키 ``TOOL_PROVIDERS``, 프로토콜
       ``ToolProvider``, 맥락 ``ToolProvisionContext``(``ToolEmit``), 결과 ``ToolProvision``,
-      ``provide_tools``·``drop_taken``, 경고 코드 ``ToolProviderCodes``(``tools.*``).
+      ``provide_tools``(합친 결과 ``MergedToolProvision``)·``drop_taken``, 경고 코드
+      ``ToolProviderCodes``(``tools.*``). 공급자 지침(7R.5 ``ToolProvision.instructions``):
+      ``attach_instructions``·``instruction_source``·``INSTRUCTION_SOURCE_PREFIX``.
       테스트 공급자 ``agent_console_nodes_core.testing.EchoToolProvider``
     - 상수: ``DEFAULT_MESSAGE_KEY``, ``INPUT_KEY_MISSING``(입력 키 없음 사유),
       ``SDK_SUBAGENTS``, 오류 코드 ``NodesCoreErrorCodes``, 포트 이름
@@ -153,12 +155,16 @@ from agent_console_nodes_core.team import (
     session_path_key,
 )
 from agent_console_nodes_core.tools import (
+    INSTRUCTION_SOURCE_PREFIX,
+    MergedToolProvision,
     ToolEmit,
     ToolProvider,
     ToolProviderCodes,
     ToolProvision,
     ToolProvisionContext,
+    attach_instructions,
     drop_taken,
+    instruction_source,
     provide_tools,
 )
 from agent_console_nodes_core.user import ReviewConfig, UserNode, UserNodeConfig
@@ -179,6 +185,7 @@ __all__ = [
     "HEARS_PORT",
     "HOST_STRATEGY",
     "INPUT_KEY_MISSING",
+    "INSTRUCTION_SOURCE_PREFIX",
     "IN_PORT",
     "ITEM_FILES_KEY",
     "ITEM_TREES_DIR",
@@ -220,6 +227,7 @@ __all__ = [
     "HandoffEdge",
     "LoopEdge",
     "LoopEdgeConfig",
+    "MergedToolProvision",
     "MessageEdge",
     "MessageEdgeConfig",
     "NodesCoreErrorCodes",
@@ -249,11 +257,13 @@ __all__ = [
     "WhenEdgeConfig",
     "as_text",
     "assemble_prompt",
+    "attach_instructions",
     "child_sessions",
     "condition_subject",
     "content_digest",
     "context_prepared_payload",
     "drop_taken",
+    "instruction_source",
     "pick_replies",
     "provide_tools",
     "review_response_schema",

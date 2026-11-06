@@ -96,3 +96,10 @@
 .sdd-detail-list dt { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); }
 .sdd-detail-list dd { margin: 0; min-width: 0; }
 @media (max-width: 1099px) { .sdd-plan-body { flex-direction: column; } .sdd-plan-side { flex-basis: auto; } }
+
+/* 작업 탭 필드 거르기 (6R.20i) */
+.sdd-field-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); }
+.sdd-field-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 240px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm); background: var(--ac-surface-2); color: inherit; font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; }
+.sdd-field-values { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 220px; }
+.sdd-browse { height: 240px; display: flex; flex-direction: column; }
+.sdd-browse > .ac-fp-browser { flex: 1; min-height: 0; margin-top: 0; }

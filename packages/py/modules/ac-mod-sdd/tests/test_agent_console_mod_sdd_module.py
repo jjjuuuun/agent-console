@@ -295,3 +295,23 @@ def test_service_satisfies_port_shape(tmp_path: Path, kit: Any) -> None:
     assert service.label_key("task") == "sdd.task"
     assert service.secret_mode() == "warn"
     assert service.secret_findings(f"x {SECRET}")[0].code == "sdd.secret_suspect"
+
+
+def test_change_publisher_is_kit_loop_publisher_with_spec_key() -> None:
+    from agent_console_mod_sdd.ws import ChangePublisher
+    from agent_console_modkit import LoopPublisher
+
+    seen: list[SddChanged] = []
+    publisher = ChangePublisher(seen.append)
+    assert isinstance(publisher, LoopPublisher)
+    saved = SddChanged(spec_id="s", version_hash="v1")
+    auto = SddChanged(spec_id="s", version_hash="v1", automation=True)
+    for payload in (saved, saved, auto, auto, saved, SddChanged(spec_id="s", deleted=True)):
+        publisher(payload)
+    assert [(c.automation, c.deleted) for c in seen] == [
+        (False, False),
+        (True, False),
+        (True, False),
+        (False, False),
+        (False, True),
+    ]

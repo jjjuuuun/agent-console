@@ -21,7 +21,7 @@ import type { SddContext } from "./useSddContext";
 
 /** 화면에 한 번에 하나만 둔다(새 것이 이전 것을 대체). */
 export type RunNotice =
-  | { kind: "gate"; details: SddGateBlockedDetails }
+  | { kind: "gate"; details: SddGateBlockedDetails; /** 이 작업의 행 아래에 보인다. 없으면 탭 머리 */ taskKey?: string }
   | { kind: "error"; message: string; view: StartErrorView | null; task: ParsedTask; action: TaskAction };
 
 export interface TaskRunner {
@@ -88,12 +88,12 @@ export function useTaskRunner({ specId, ctx, onTaskChanged }: TaskRunnerOptions)
         });
         void refresh();
       } else if (result.status === KNOWN_TASK_ACTION_STATUSES.BLOCKED && result.issue != null) {
-        setNotice({ kind: "gate", details: gateOf(result.issue) });
+        setNotice({ kind: "gate", details: gateOf(result.issue), taskKey: task.key });
       } else {
         fail(task, action, undefined, result.issue ?? undefined);
       }
     } catch (e) {
-      if (e instanceof ApiError && e.code === ERROR_CODES.SDD_GATE_BLOCKED) setNotice({ kind: "gate", details: e.details as unknown as SddGateBlockedDetails });
+      if (e instanceof ApiError && e.code === ERROR_CODES.SDD_GATE_BLOCKED) setNotice({ kind: "gate", details: e.details as unknown as SddGateBlockedDetails, taskKey: task.key });
       else if (e instanceof ApiError && e.code === ERROR_CODES.SDD_TASK_CHANGED) {
         onTaskChanged?.(task, e.details as unknown as SddTaskChangedDetails);
         void refresh();

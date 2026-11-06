@@ -59,6 +59,7 @@ import type {
   SpecRules,
   SpecTemplate,
   SpecTemplateCreateRequest,
+  SpecTemplateSummary,
   SpecView,
   StateTransition,
   TaskStatusInfo,
@@ -68,6 +69,23 @@ import type { RunPage } from "@agent-console/contracts/runs";
 import type { ConversationPage } from "@agent-console/contracts/chat";
 import type { LogSourceInfo } from "@agent-console/contracts/logs";
 import type { SddChangedMessage } from "@agent-console/contracts/modules";
+import * as wiki from "@agent-console/contracts/wiki";
+import type {
+  WikiAccessConfig,
+  WikiChanged,
+  WikiDefinition,
+  WikiEventPayload,
+  WikiHistoryPage,
+  WikiImportResult,
+  WikiIssue,
+  WikiLink,
+  WikiPagePreview,
+  WikiRulesListItem,
+  WikiSummary,
+  WikiRulesDefinition,
+  WikiSyntax,
+} from "@agent-console/contracts/wiki";
+import type { WikiChangedMessage } from "@agent-console/contracts/modules";
 
 import packageJson from "../package.json";
 import {
@@ -418,7 +436,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   it("0.13.1(계약 후속): 비밀 규칙 weak_key_names, 문서 상수 — 더하기만", () => {
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.13.1"));
     expect(ver(packageJson.version)).toBeGreaterThanOrEqual(ver("0.13.1"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.9.0" });
+    expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.9.0"));
     expect(ver(CONTRACT_VERSIONS.definitions)).toBeGreaterThanOrEqual(ver("1.6.0"));
     expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.0.1"));
     expectTypeOf<NonNullable<WorkspaceSettings["secrets"]>["weak_key_names"]>().toEqualTypeOf<string[] | null | undefined>();
@@ -430,9 +448,9 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.13.2(6R.19 서버 후속): Run.has_children — 더하기만", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.13.2");
-    expect(packageJson.version).toBe("0.13.2");
-    expect(CONTRACT_VERSIONS).toMatchObject({ runs: "1.8.0" });
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.13.2"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(ver(CONTRACT_VERSIONS.runs)).toBeGreaterThanOrEqual(ver("1.8.0"));
     expectTypeOf<Run["has_children"]>().toEqualTypeOf<boolean | null | undefined>();
   });
 
@@ -444,11 +462,65 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.13.2(6R.20a·6R.20d): 하위 폴더·문서 틀 만들기·복사 종류 — 더하기만", () => {
-    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.1.0", projects: "3.2.0" });
+    expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.1.0"));
+    expect(ver(CONTRACT_VERSIONS.projects)).toBeGreaterThanOrEqual(ver("3.2.0"));
     expectTypeOf<ImportFileListing["dirs"]>().toEqualTypeOf<ImportDir[] | undefined>();
     expectTypeOf<SpecTemplateCreateRequest["name"]>().toEqualTypeOf<string>();
     expectTypeOf<SpecTemplateCreateRequest["id"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<CopyKindInfo["kind"]>().toEqualTypeOf<string>();
     expectTypeOf<CopyItem["saved_at"]>().toEqualTypeOf<number | null | undefined>();
+  });
+
+  it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.14.0");
+    expect(packageJson.version).toBe("0.14.0");
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" });
+    expect(wiki.CONTRACT_MODULE).toBe("wiki");
+    expect(wiki.CONTRACT_VERSION).toBe("1.0.0");
+    expect(pkg.exports["./wiki"]).toBeDefined();
+    expect(modulesOf["wiki"]).toEqual(
+      expect.arrayContaining([
+        "WikiDefinition", "WikiRulesDefinition", "WikiSyntax", "WikiSettings", "WikiAccessConfig", "WikiToolNames",
+        "WikiInfo", "WikiSummary", "WikiView", "WikiPageView", "WikiLink", "WikiPageVersion", "WikiAuthor",
+        "WikiSearchResult", "WikiGraph", "WikiLintReport", "WikiMoveRequest", "WikiMoveResult", "WikiEventPayload",
+        "WikiChanged", "EffectiveWikiSyntax",
+      ]),
+    );
+    expect(modulesOf["modules"]).toContain("WikiChangedMessage");
+    expectTypeOf<WikiChangedMessage["payload"]>().toEqualTypeOf<WikiChanged>();
+    expectTypeOf<WikiLink["start"]>().toEqualTypeOf<number>();
+    expectTypeOf<WikiIssue["page"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<WikiSyntax["links"]>().not.toBeAny();
+    expectTypeOf<WikiDefinition["rules"]>().toEqualTypeOf<string[] | undefined>();
+    expectTypeOf<WikiRulesDefinition["write_rules"]>().not.toBeAny();
+    expectTypeOf<WikiAccessConfig["tools"]>().not.toBeAny();
+    expectTypeOf<WikiEventPayload["rule_ids"]>().toEqualTypeOf<string[] | undefined>();
+    expectTypeOf<CopyKindInfo["title"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<SpecTemplateSummary["kind"]>().toEqualTypeOf<string | null | undefined>();
+    // 도구 기본 이름은 스키마 기본값에만 있다(웹은 이 값을 코드에 두지 않는다)
+    const defs = contractsSchema["$defs"] as Record<string, { properties: Record<string, { default?: { name?: string } }> }>;
+    expect(typeof defs["WikiToolNames"]?.properties["search"]?.default?.name).toBe("string");
+    expect(constants.KNOWN_UI_WIDGETS).toMatchObject({ WIKI_REF: "wiki-ref", GLOB: "glob" });
+    expect(constants.WIKI_ACCESS_OPS).toEqual(["read", "search", "list", "links", "write", "move", "delete"]);
+    expect(constants.KNOWN_WIKI_FRONT_MATTER_ROLES).toEqual({ TITLE: "title", TAGS: "tags", ALIASES: "aliases" });
+    expect(constants.KNOWN_WIKI_LINT_CODES).toEqual({ BROKEN_LINK: "broken_link", ORPHAN: "orphan", DUPLICATE_TITLE: "duplicate_title" });
+    expect(HTTP_STATUS_BY_ERROR_CODE["wiki.page_exists"]).toBe(409);
+    expect(HTTP_STATUS_BY_ERROR_CODE["wiki.rule_rejected"]).toBe(422);
+    expect(KNOWN_ISSUE_CODES.WIKI_BROKEN_LINK).toBe("wiki.broken_link");
+    expect(KNOWN_ISSUE_CODES.TOOLS_INSTRUCTIONS_UNSUPPORTED).toBe("tools.instructions_unsupported");
+    // 7R.2a(design §7R.18.1) 결정
+    expectTypeOf<WikiLink["status"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<WikiLink["label"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<WikiLink["suggested_path"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<WikiSummary["lint_counts"]>().toEqualTypeOf<{ [k: string]: number } | undefined>();
+    expectTypeOf<WikiPagePreview["would_reject"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<WikiHistoryPage["pruned"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<WikiRulesListItem["used_by"]>().not.toBeAny();
+    expectTypeOf<keyof WikiImportResult>().toEqualTypeOf<"dry_run" | "items" | "issues">();
+    expect(constants.KNOWN_WIKI_LINK_STATUSES).toEqual({ OK: "ok", BROKEN: "broken", OUTSIDE: "outside", SCHEME: "scheme" });
+    expect(constants.WIKI_TEMPLATE_BUILTIN_VARIABLES).toEqual(["title", "slug", "date"]);
+    expect(constants.KNOWN_UI_WIDGETS).toMatchObject({ WIKI_RULE_REFS: "wiki-rule-refs" });
+    expect(HTTP_STATUS_BY_ERROR_CODE["wiki.link_insert_unavailable"]).toBe(422);
+    expect(KNOWN_ISSUE_CODES.WIKI_VERSION_NOT_FOUND).toBe("wiki.version_not_found");
   });
 });

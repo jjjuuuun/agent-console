@@ -210,13 +210,21 @@ agent 노드 순서: 묶음 계산 → 공급자마다 `provide`(맥락 `ToolPro
 | `tools.provider_failed` | `provide` 예외(형식 이름만 싣는다)·잘못된 결과 | 그 공급자만 건너뜀 |
 | `tools.duplicate_name` | 위임 도구·앞선 공급 도구와 이름이 겹침 | 공급 도구를 뺌 |
 | `tools.backend_capability_missing` | 백엔드 `capabilities.host_tools`가 거짓 | 공급 도구를 모두 뺌, 실행은 계속 |
+| `tools.instructions_unsupported` | 공급자 지침이 있는데 백엔드 `capabilities.resource_slots`에 `instructions`가 없음 | 지침을 뺌(공급자마다 하나, details `provider`·`backend`), 도구·실행은 계속 |
+
+**공급자 지침**(7R.5): `ToolProvision.instructions`(글 목록, 기본 빈 값)는 요청 묶음 칸 `instructions` 끝에
+공급자 순서로 붙는다. 백엔드는 이 칸을 에이전트 지침·리소스 지침 뒤에 이어 붙이므로 "유효 시스템 지침 뒤"가
+된다(공급자 id 머리는 붙이지 않는다). 출처는 `BundleSource(ref="tool_provider:<id>")`라
+`agent.context_prepared`에 `tool_provider:<id>` 항목(종류 `instructions`, 바이트 수·해시)으로 보인다.
+공급자가 지침을 주지 않으면 요청은 전과 같다. 순수 함수 `attach_instructions(bundle, [(id, 글)])`로 같은 일을
+따로 할 수 있다.
 
 위임 대상 중 `sdk-subagents`는 위임자 세션 안이라 따로 공급받지 않고, `host` 대상은 자기 NodeRun이라 자기
 묶음으로 공급받는다. 방식 하나로 위임하면 공급 도구가 위임 방식의 `run`이 붙이는 위임 도구보다 앞에 놓인다
 (이름 충돌 검사는 방식의 `declared_names`, 없으면 `contribute`로 위임 도구 이름을 미리 읽어 한다).
 
 테스트·본보기 공급자 `agent_console_nodes_core.testing.EchoToolProvider`(입력 `text`를 돌려주는 도구 하나,
-호출마다 이벤트 하나, `slot`을 주면 그 칸이 있을 때만 도구를 주고 칸을 소비):
+호출마다 이벤트 하나, `slot`을 주면 그 칸이 있을 때만 도구를 주고 칸을 소비, `instructions`를 주면 지침도 준다):
 
 ```python
 >>> import asyncio
@@ -239,6 +247,12 @@ agent 노드 순서: 묶음 계산 → 공급자마다 `provide`(맥락 `ToolPro
 echo.called 2
 >>> result.text
 '> hi'
+
+>>> from agent_console_nodes_core import attach_instructions
+>>> provision = provide_tools([EchoToolProvider("notes", instructions=["노트는 도구로 고치세요."])], ctx)
+>>> bundle = attach_instructions(None, provision.sourced_instructions())
+>>> bundle.slots["instructions"], [s.ref for s in bundle.sources["instructions"]]
+(['노트는 도구로 고치세요.'], ['tool_provider:notes'])
 
 ```
 

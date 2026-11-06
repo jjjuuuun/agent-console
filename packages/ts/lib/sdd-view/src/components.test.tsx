@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { DocumentEditor } from "./DocumentEditor";
@@ -7,7 +8,7 @@ import { PlanBundles } from "./PlanBundles";
 import { PlanGraph } from "./PlanGraph";
 import { RulesSourceBadge } from "./RulesSourceBadge";
 import { SpecList } from "./SpecList";
-import { TaskTable } from "./TaskTable";
+import { TaskTable, type TaskTableHandle } from "./TaskTable";
 import { TaskStatusMenu } from "./TaskStatusMenu";
 import { TraceMatrix } from "./TraceMatrix";
 import { DocumentStateChip } from "./ToneChip";
@@ -52,6 +53,30 @@ describe("SpecList", () => {
     fireEvent.click(screen.getByText("sp2"));
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: "sp2" }));
     expect(screen.getByText("결제").closest("button")?.getAttribute("aria-current")).toBe("true");
+  });
+});
+
+describe("SpecList 정렬·행 메뉴", () => {
+  const columns = [{ id: "name", label: "이름" }, { id: "updated", label: "갱신" }];
+  it("열 머리에 aria-sort를 달고 누르면 열 id를 알린다", () => {
+    const onSortChange = vi.fn();
+    render(<SpecList specs={sampleSpecs()} sortColumns={columns} sort={{ id: "updated", direction: "desc" }} onSortChange={onSortChange} />);
+    expect(screen.getByRole("columnheader", { name: /갱신/ }).getAttribute("aria-sort")).toBe("descending");
+    expect(screen.getByRole("columnheader", { name: /이름/ }).getAttribute("aria-sort")).toBe("none");
+    fireEvent.click(screen.getByRole("button", { name: "이름" }));
+    expect(onSortChange).toHaveBeenCalledWith("name");
+  });
+  it("정렬 열이 없으면 머리 줄이 없다", () => {
+    render(<SpecList specs={sampleSpecs()} />);
+    expect(screen.queryByRole("columnheader")).toBeNull();
+  });
+  it("행 메뉴 slot은 행 버튼 밖에 있어 눌러도 열기가 호출되지 않는다", () => {
+    const onOpen = vi.fn();
+    const onMenu = vi.fn();
+    render(<SpecList specs={sampleSpecs()} onOpen={onOpen} renderRowMenu={(s) => <button type="button" aria-label={`${s.id} 메뉴`} onClick={() => onMenu(s.id)}>⋯</button>} />);
+    fireEvent.click(screen.getByRole("button", { name: "sp2 메뉴" }));
+    expect(onMenu).toHaveBeenCalledWith("sp2");
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
 
@@ -163,6 +188,81 @@ describe("DocumentEditor", () => {
     render(<DocumentEditor document={doc} value="{}" language="json" />);
     expect(screen.queryByRole("region", { name: "미리보기" })).toBeNull();
     expect(screen.queryByRole("group", { name: "보기 방식" })).toBeNull();
+  });
+});
+
+describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () => {
+  const statuses = sampleStatuses();
+  const checks = () => screen.getAllByRole("checkbox") as HTMLInputElement[];
+
+  it("머리 체크박스는 보이는 준비된 작업만 고르고 '{n}개 선택' + [선택 해제]가 나온다", () => {
+    const onSelectedChange = vi.fn();
+    render(<TaskTable tasks={sampleTasks()} statuses={statuses} selectable onSelectedChange={onSelectedChange} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "보이는 준비된 작업 모두 선택" }));
+    const picked = onSelectedChange.mock.calls[0]?.[0] as ReadonlySet<string>;
+    // T1은 끝난 작업이라 제외, T2~T5 중 ready=true인 것만
+    expect([...picked].sort()).toEqual(["T2", "T3", "T4", "T5"]);
+    expect(screen.getByText("4개 선택")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "선택 해제" }));
+    expect(screen.queryByText("4개 선택")).toBeNull();
+    expect(checks().filter((c) => c.checked)).toHaveLength(0);
+  });
+
+  it("Space는 행 선택을 토글하고 Esc는 펼침 → 선택 해제 순서로 하나만 닫는다", () => {
+    render(<TaskTable tasks={sampleTasks()} statuses={statuses} selectable />);
+    const row = screen.getByRole("button", { name: /^작업 T2, 상태/ });
+    row.focus();
+    fireEvent.keyDown(row, { key: " " });
+    expect((screen.getByRole("checkbox", { name: "작업 T2 선택" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.keyDown(row, { key: "ArrowRight" });
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.keyDown(row, { key: "Escape" });
+    expect(row.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText("1개 선택")).toBeTruthy();
+    fireEvent.keyDown(row, { key: "Escape" });
+    expect(screen.queryByText("1개 선택")).toBeNull();
+  });
+
+  it("selectable이 아니면 체크박스가 없다", () => {
+    render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  it("단계 접힘: 모두 끝난 단계는 처음부터 접히고, 바꾼 것만 onCollapsedChange로 알린다", () => {
+    const onCollapsedChange = vi.fn();
+    render(<TaskTable tasks={sampleTasks()} statuses={statuses} onCollapsedChange={onCollapsedChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /2단계 단계 접기·펼치기/ }));
+    expect(onCollapsedChange).toHaveBeenCalledWith({ st2: true });
+  });
+
+  it("행 아래 인라인 안내 자리와 손잡이(활성 행 키·행 메뉴)", () => {
+    const handle = createRef<TaskTableHandle>();
+    const onSelect = vi.fn();
+    render(
+      <TaskTable
+        ref={handle}
+        tasks={sampleTasks()}
+        statuses={statuses}
+        renderRowNotice={(t) => (t.key === "T2" ? <p>행 안내</p> : null)}
+        rowMenuItems={(t) => [{ id: "k", label: `${t.key} 복사`, onSelect }]}
+      />,
+    );
+    expect(screen.getByText("행 안내").closest('[data-sdd-task-key="T2"]')).not.toBeNull();
+    const row = screen.getByRole("button", { name: /^작업 T3, 상태/ });
+    row.focus();
+    expect(handle.current?.activeTaskKey()).toBe("T3");
+    act(() => handle.current?.openRowMenu("T3"));
+    const menu = screen.getByRole("menu", { name: "작업 T3 메뉴" });
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "T3 복사" }));
+    expect(onSelect).toHaveBeenCalled();
+    expect(screen.queryByRole("menu", { name: "작업 T3 메뉴" })).toBeNull();
+  });
+
+  it("손잡이로 상태 메뉴를 연다", () => {
+    const handle = createRef<TaskTableHandle>();
+    render(<TaskTable ref={handle} tasks={sampleTasks()} statuses={statuses} onStatusChange={() => undefined} />);
+    act(() => handle.current?.openStatusMenu("T2"));
+    expect(screen.getByRole("menu")).toBeTruthy();
   });
 });
 

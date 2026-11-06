@@ -108,3 +108,38 @@ describe("스펙(SDD) REST", () => {
     expect((err as ApiError).details).toMatchObject({ task_key: "T1", line_hash: "h2" });
   });
 });
+
+describe("문서 틀 단건 REST (6R.20a)", () => {
+  it("만들기·읽기·저장(If-Match)·삭제 경로, 공간은 ?project=", async () => {
+    const { io, calls } = server(() => ({ body: { id: "t 1" }, headers: { ETag: '"h1"' } }));
+    const sdd = createSddClient(withSpace(io, "p1"));
+    const made = await sdd.createSpecTemplate({ name: "틀" });
+    expect(calls[0]).toMatchObject({ method: "POST", path: "/sdd/templates?project=p1", body: { name: "틀" } });
+    expect(made.version_hash).toBe("h1");
+    await sdd.getSpecTemplate("t 1");
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/sdd/templates/t%201?project=p1" });
+    await sdd.putSpecTemplate("t 1", { kind: "k", id: "t 1", name: "n" }, "h1");
+    expect(last(calls)).toMatchObject({ method: "PUT", path: "/sdd/templates/t%201?project=p1" });
+    expect(last(calls).headers["If-Match"]).toBe("h1");
+    await sdd.deleteSpecTemplate("t 1", "h2");
+    expect(last(calls)).toMatchObject({ method: "DELETE" });
+    expect(last(calls).headers["If-Match"]).toBe("h2");
+    await sdd.listSpecTemplateVariables("t 1");
+    expect(last(calls).path).toBe("/sdd/templates/t%201/variables?project=p1");
+  });
+
+  it("뼈대 파일 목록·쓰기·지우기는 정의 버전을 If-Match로 보내고 응답 ETag를 돌려준다", async () => {
+    const { io, calls } = server(() => ({ body: { id: "t" }, headers: { ETag: '"h2"', "X-Console-Issues": JSON.stringify([{ severity: "warning", code: "secret", message: "비밀 의심" }]) } }));
+    const sdd = createSddClient(io);
+    await sdd.listSpecTemplateFiles("t");
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/sdd/templates/t/files" });
+    const saved = await sdd.putSpecTemplateFile("t", "a/b c.md", "{}", "h1");
+    expect(last(calls)).toMatchObject({ method: "PUT", path: "/sdd/templates/t/files/a/b%20c.md" });
+    expect(last(calls).headers["If-Match"]).toBe("h1");
+    expect(saved.version_hash).toBe("h2");
+    expect(saved.issues?.[0]?.message).toBe("비밀 의심");
+    const removed = await sdd.deleteSpecTemplateFile("t", "a.md", "h2");
+    expect(last(calls)).toMatchObject({ method: "DELETE", path: "/sdd/templates/t/files/a.md" });
+    expect(removed.version_hash).toBe("h2");
+  });
+});
