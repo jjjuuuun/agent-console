@@ -1,0 +1,27 @@
+{
+  "wiki_kind": "wiki",
+  "rules_kind": "wiki-rules",
+  "wiki_dir": "wikis",
+  "rules_dir": "wiki-rules",
+  "pages_dir": "wiki-pages",
+  "standalone_dir": "wiki",
+  "index_dir": "wiki-index",
+  "index_suffix": ".sqlite3",
+  "records_space_prefix": "project:",
+  "max_page_bytes": 524288,
+  "max_pages": 10000,
+  "parse_timeout_ms": 2000,
+  "parse_cache_entries": 20000,
+  "graph_max_nodes": 500,
+  "scan_interval_seconds": 0,
+  "summary_cache_entries": 256,
+  "max_search_results": 100,
+  "max_changes_page": 200,
+  "search": {"backend": "sqlite-fts", "fallback": "scan", "tokenizer": "trigram"},
+  "export_limits": {
+    "max_archive_bytes": 67108864,
+    "max_files": 50000,
+    "max_file_bytes": 524288,
+    "max_total_bytes": 268435456
+  }
+}

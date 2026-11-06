@@ -1,0 +1,60 @@
+# 예제 확장: 위키 쓰기 검사 플러그인 하나(X50). uv workspace 멤버가 아니다 — 따로 설치·제거한다.
+[project]
+name = "agent-console-example-wiki-check"
+version = "0.1.0"
+description = "Agent Console 예제 확장 — 위키 페이지 머리말에 필요한 키가 없으면 경고·거부하는 쓰기 검사(example.front-matter-keys)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "agent-console-contracts>=0.14,<0.15",
+    "agent-console-wiki>=0.1,<0.2",
+    "pydantic>=2.9",
+]
+
+# 등록은 이 표 하나로 끝난다. 그룹 이름 = agent_console_mod_wiki.plugins.WRITE_CHECKS_GROUP,
+# entry point 이름 = 검사 id(= 사용자 설정 `wiki.write_checks[].id`). 값은 옵션 매핑 하나를 받는 클래스.
+[project.entry-points."agent_console.wiki_write_checks"]
+"example.front-matter-keys" = "agent_console_example_wiki_check:FrontMatterKeysCheck"
+
+# 개발 의존: 테스트가 위키 서버 모듈(mod-wiki)을 조립해 쓰기에 경고·거부가 걸리는지 확인한다.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "httpx>=0.27",
+    "agent-console-mod-wiki>=0.1,<0.2",
+    "agent-console-modkit[host]>=0.1,<0.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+[tool.pytest.ini_options]
+testpaths = ["tests", "README.md"]
+addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# 예제는 워크스페이스에 설치하지 않고 검사한다(entry point를 알리지 않아 서버 테스트 결과가 그대로). 패키지 안 경로다.
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "N", "PT", "TID"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_console_*"]

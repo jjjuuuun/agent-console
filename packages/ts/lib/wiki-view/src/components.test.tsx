@@ -386,7 +386,7 @@ describe("LinkGraph·LinkList", () => {
     expect(screen.getByText("그래프에 그릴 페이지가 없습니다")).toBeTruthy();
   });
   it("접근성 이름의 노드 수, 배치 엔진 호출, 노드 종류는 모양·아이콘, 같은 입력=같은 엔진 입력", async () => {
-    const engine = vi.fn(async (_input: { nodes: Array<{ id: string }> }) => ({ a: { x: 0, y: 0 }, b: { x: 300, y: 0 }, c: { x: 0, y: 200 }, d: { x: 600, y: 0 }, e: { x: 300, y: 200 } }));
+    const engine = vi.fn<(input: { nodes: Array<{ id: string }> }) => Promise<Record<string, { x: number; y: number }>>>(async () => ({ a: { x: 0, y: 0 }, b: { x: 300, y: 0 }, c: { x: 0, y: 200 }, d: { x: 600, y: 0 }, e: { x: 300, y: 200 } }));
     const { container } = render(<LinkGraph graph={sampleGraph()} centerPath="a" engine={engine} height={400} />);
     await act(async () => {
       await Promise.resolve();

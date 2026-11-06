@@ -1,0 +1,9 @@
+{
+  "keys": [],
+  "paths": ["**"],
+  "severity": "error",
+  "ops": ["create", "update", "move"],
+  "allow_empty": false,
+  "code": "example.front_matter_missing",
+  "message": "머리말에 필요한 키가 없습니다: {missing}"
+}

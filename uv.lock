@@ -56,6 +56,7 @@ members = [
     "agent-console-mod-sdd",
     "agent-console-mod-usage",
     "agent-console-mod-versions",
+    "agent-console-mod-wiki",
     "agent-console-modkit",
     "agent-console-nodes-core",
     "agent-console-project-space",
@@ -2152,6 +2153,55 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-mod-wiki"
+version = "0.1.0"
+source = { editable = "packages/py/modules/ac-mod-wiki" }
+dependencies = [
+    { name = "agent-console-conditions" },
+    { name = "agent-console-contracts" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-registry" },
+    { name = "agent-console-safe-zip" },
+    { name = "agent-console-secret-rules" },
+    { name = "agent-console-store" },
+    { name = "agent-console-wiki", extra = ["sqlite"] },
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "agent-console-safe-zip", editable = "packages/py/base/ac-safe-zip" },
+    { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "agent-console-wiki", extras = ["sqlite"], editable = "packages/py/features/ac-wiki" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-modkit"
 version = "0.1.0"
 source = { editable = "packages/py/kit/ac-modkit" }
@@ -2659,6 +2709,7 @@ dependencies = [
     { name = "agent-console-mod-sdd" },
     { name = "agent-console-mod-usage" },
     { name = "agent-console-mod-versions" },
+    { name = "agent-console-mod-wiki" },
     { name = "agent-console-modkit", extra = ["host"] },
     { name = "agent-console-nodes-core" },
     { name = "agent-console-registry" },
@@ -2719,6 +2770,7 @@ requires-dist = [
     { name = "agent-console-mod-sdd", editable = "packages/py/modules/ac-mod-sdd" },
     { name = "agent-console-mod-usage", editable = "packages/py/modules/ac-mod-usage" },
     { name = "agent-console-mod-versions", editable = "packages/py/modules/ac-mod-versions" },
+    { name = "agent-console-mod-wiki", editable = "packages/py/modules/ac-mod-wiki" },
     { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
     { name = "agent-console-nodes-core", editable = "packages/py/features/ac-nodes-core" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
