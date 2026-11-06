@@ -12093,6 +12093,10 @@ export interface WikiInfo {
   capabilities?: WikiCapabilities;
   limits: WikiLimits;
   /**
+   * (1.1.0) 이 공간에 쓸 수 있나(공간 `config_writable`). false면 웹은 읽기 전용으로 그린다(쓰기는 409 `project.config_readonly`·`wiki.config_readonly`). null = 옛 서버 또는 알 수 없음(쓸 수 있다고 본다).
+   */
+  writable?: boolean | null;
+  /**
    * 공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).
    */
   issues?: WikiIssue[];
@@ -13030,7 +13034,7 @@ export interface WikiSettings {
    */
   syntax?: WikiSyntax | null;
   /**
-   * 쓴 쪽(user 사람, agent 에이전트 등)마다 비밀로 보이는 값을 어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다.
+   * 쓴 쪽(user 사람, agent 에이전트, system 앱이 대신 씀 등)마다 비밀로 보이는 값을 어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다.
    */
   secret_scan?: {
     [k: string]: WikiSecretScanMode;
@@ -13219,10 +13223,10 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.0" as const;
+export const CONTRACTS_VERSION = "0.14.1" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.10.0",
+  "common": "1.11.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
@@ -13235,7 +13239,7 @@ export const CONTRACT_VERSIONS = {
   "architecture": "1.0.0",
   "memory": "1.1.0",
   "sdd": "1.2.0",
-  "wiki": "1.0.0",
+  "wiki": "1.1.0",
   "modules": "1.5.0"
 } as const;
 
@@ -13662,7 +13666,8 @@ export const KNOWN_ISSUE_CODES = {
   "WIKI_HOME_MISSING": "wiki.home_missing",
   "WIKI_RULE_VIOLATION": "wiki.rule_violation",
   "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
-  "WIKI_SECRET_SUSPECT": "wiki.secret_suspect"
+  "WIKI_SECRET_SUSPECT": "wiki.secret_suspect",
+  "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {

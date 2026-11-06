@@ -24,8 +24,8 @@ pip install agent-console-link-projects-sdd
 
 ## 의존성 (무엇을 / 왜 / 대안)
 
-새 외부 의존은 없다(`agent-console-project-space`(공간·매니페스트)·`agent-console-projects`(경로 비교
-`folder_within`)·`agent-console-sdd`(`SpecFiles`·경로 검사)·`agent-console-store`·`agent-console-modkit`은 사내
+새 외부 의존은 없다(`agent-console-project-space`(공간·매니페스트)·`agent-console-projects`(경로 지킴
+`FolderGuard`)·`agent-console-sdd`(`SpecFiles`·경로 검사)·`agent-console-store`·`agent-console-modkit`은 사내
 패키지).
 
 ## 최소 사용

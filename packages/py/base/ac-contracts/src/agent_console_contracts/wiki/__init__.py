@@ -1,5 +1,7 @@
 """계약 하위 모듈 `wiki`: 위키(design §7R, 0.14.0에서 1.0.0으로 시작).
 
+1.1.0(0.14.1): `WikiInfo.writable`, `WikiSettings.secret_scan` 기본값에 `system: reject`(보안 강화).
+
 사용자 데이터(모르는 키 보존): 위키 `WikiDefinition`, 위키 규칙 `WikiRulesDefinition`
 (지침·쓰기 규칙·점검 규칙·페이지 틀·문법), 문법 `WikiSyntax`, 설정 섹션 `WikiSettings`, 리소스
 `wiki`의 접근 설정 `WikiAccessConfig`(도구 기본 이름·설명은 패키지 데이터

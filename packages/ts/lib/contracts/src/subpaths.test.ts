@@ -77,6 +77,7 @@ import type {
   WikiEventPayload,
   WikiHistoryPage,
   WikiImportResult,
+  WikiInfo,
   WikiIssue,
   WikiLink,
   WikiPagePreview,
@@ -472,11 +473,15 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.14.0");
-    expect(packageJson.version).toBe("0.14.0");
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" });
+    // 정확한 지금 값은 0.14.1 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.0"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    const v0140 = { common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" };
+    for (const [sub, version] of Object.entries(v0140)) {
+      expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0")).toBeGreaterThanOrEqual(ver(version));
+    }
     expect(wiki.CONTRACT_MODULE).toBe("wiki");
-    expect(wiki.CONTRACT_VERSION).toBe("1.0.0");
+    expect(wiki.CONTRACT_VERSION).toBe(CONTRACT_VERSIONS.wiki);
     expect(pkg.exports["./wiki"]).toBeDefined();
     expect(modulesOf["wiki"]).toEqual(
       expect.arrayContaining([
@@ -522,5 +527,16 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(constants.KNOWN_UI_WIDGETS).toMatchObject({ WIKI_RULE_REFS: "wiki-rule-refs" });
     expect(HTTP_STATUS_BY_ERROR_CODE["wiki.link_insert_unavailable"]).toBe(422);
     expect(KNOWN_ISSUE_CODES.WIKI_VERSION_NOT_FOUND).toBe("wiki.version_not_found");
+  });
+
+  it("0.14.1(7R.13·7R.17 후속): WikiInfo.writable, wiki.update_unavailable, secret_scan 기본값 system reject", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.14.1");
+    expect(packageJson.version).toBe("0.14.1");
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.11.0", wiki: "1.1.0", sdd: "1.2.0", modules: "1.5.0" });
+    expect(wiki.CONTRACT_VERSION).toBe("1.1.0");
+    expectTypeOf<WikiInfo["writable"]>().toEqualTypeOf<boolean | null | undefined>();
+    expect(KNOWN_ISSUE_CODES.WIKI_UPDATE_UNAVAILABLE).toBe("wiki.update_unavailable");
+    const defs = contractsSchema["$defs"] as Record<string, { properties: Record<string, { default?: unknown }> }>;
+    expect(defs["WikiSettings"]?.properties["secret_scan"]?.default).toEqual({ user: "warn", agent: "reject", system: "reject" });
   });
 });

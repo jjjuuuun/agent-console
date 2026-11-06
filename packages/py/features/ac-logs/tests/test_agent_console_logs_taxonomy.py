@@ -18,6 +18,15 @@ def test_default_taxonomy_labels_memory_category() -> None:
     assert (memory.tone, memory.visible) == (None, None)
 
 
+def test_default_taxonomy_labels_wiki_category() -> None:
+    # 7R.15: 대응표 wiki.*의 범주 라벨(라벨만 — order에 넣지 않음, 사용자가 바꾸거나 지움)
+    tax = load_default_taxonomy()
+    wiki = tax.categories["wiki"]
+    assert wiki.label == "위키"
+    assert (wiki.tone, wiki.visible) == (None, None)
+    assert "wiki" not in (tax.order or [])
+
+
 def test_missing_or_empty_taxonomy_is_empty(tmp_path: Path) -> None:
     assert load_default_taxonomy(tmp_path / "none.yaml") == LogTaxonomy()
     (tmp_path / "e.yaml").write_text("", encoding="utf-8")

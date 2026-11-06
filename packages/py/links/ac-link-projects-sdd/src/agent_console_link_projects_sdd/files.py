@@ -8,7 +8,8 @@
    구성 폴더는 정의 저장소 몫이고 가져오기·내보내기로 손대지 않는다. 경로 앞부분 비교는 대소문자를
    무시한다(대소문자를 무시하는 파일 시스템에서 우회되지 않게).
 2. **폴더 안 확인 한 번 더**: 링크를 푼 실제 경로가 프로젝트 폴더 안인지를 ``ac-projects``의
-   ``folder_within``(§PI.5 경로 지킴과 같은 비교 규칙)으로 본다. 밖이면 ``reason="link"``.
+   ``FolderGuard``(§PI.5 경로 지킴 — 예약 비교와 함께 ``link-projects-wiki``와 같은 규칙)로 본다.
+   밖이면 ``reason="link"``.
 3. **쓰기 불가**: ``writable=False``거나 쓰기가 ``PermissionError``면 ``ConfigReadonly``
    (409 ``project.config_readonly``). 앱이 쓰지 못하는 폴더에서 서버 오류(500)가 나지 않는다.
 """
@@ -21,27 +22,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from agent_console_project_space import ConfigReadonly
-from agent_console_projects import folder_within
+from agent_console_projects import FolderGuard, normalize_reserved
 from agent_console_sdd import LocalSpecFiles, SpecFileEntry, SpecPathError, check_project_path
 
 __all__ = ["ProjectSpecFiles", "normalize_reserved"]
-
-
-def normalize_reserved(paths: Iterable[str]) -> tuple[str, ...]:
-    """예약 경로 목록 정리: 앞뒤 ``/`` 빼기, 빈 값·중복(대소문자 무시) 빼기.
-
-    >>> normalize_reserved(["/.agent-console/", "", ".AGENT-console", "build/out"])
-    ('.agent-console', 'build/out')
-    """
-    out: list[str] = []
-    seen: set[str] = set()
-    for raw in paths:
-        norm = raw.strip().strip("/")
-        if not norm or norm.casefold() in seen:
-            continue
-        seen.add(norm.casefold())
-        out.append(norm)
-    return tuple(out)
 
 
 class ProjectSpecFiles:
@@ -78,10 +62,8 @@ class ProjectSpecFiles:
     ) -> None:
         self._folder = Path(folder)
         self._local = LocalSpecFiles(self._folder)
-        self._reserved = normalize_reserved(reserved)
-        self._folded = tuple(r.casefold() for r in self._reserved)
+        self._guard = FolderGuard(self._folder, reserved=reserved, realpath=realpath)
         self._writable = writable
-        self._realpath = realpath
 
     @property
     def folder(self) -> Path:
@@ -91,7 +73,7 @@ class ProjectSpecFiles:
     @property
     def reserved(self) -> tuple[str, ...]:
         """예약 경로(정리한 값)."""
-        return self._reserved
+        return self._guard.reserved
 
     @property
     def writable(self) -> bool:
@@ -100,18 +82,11 @@ class ProjectSpecFiles:
 
     # ---- 검사 ------------------------------------------------------------------
 
-    def _is_reserved(self, norm: str) -> bool:
-        key = norm.casefold()
-        return any(key == r or key.startswith(r + "/") for r in self._folded)
-
     def _check(self, path: str, *, allow_root: bool = True) -> str:
         norm = check_project_path(path, allow_root=allow_root)
-        if norm and self._is_reserved(norm):
-            raise SpecPathError(path, "reserved")
-        root = self._realpath(str(self._folder))
-        target = self._realpath(str(self._folder / norm)) if norm else root
-        if not folder_within(target, root):
-            raise SpecPathError(path, "link")
+        reason = self._guard.violation(norm)
+        if reason is not None:
+            raise SpecPathError(path, reason)
         return norm
 
     # ---- SpecFiles --------------------------------------------------------------
@@ -142,7 +117,7 @@ class ProjectSpecFiles:
     def is_link(self, path: str) -> bool:
         """심볼릭 링크·정션이다(예약 경로는 ``SpecPathError``)."""
         norm = check_project_path(path, allow_root=True)
-        if norm and self._is_reserved(norm):
+        if self._guard.is_reserved(norm):
             raise SpecPathError(path, "reserved")
         return self._local.is_link(norm)
 
@@ -154,17 +129,12 @@ class ProjectSpecFiles:
         알아보지 못하는 재분석 지점(일부 Windows 정션 등)이 폴더 밖을 가리켜도 고를 수 없게 한다.
         """
         norm = self._check(path)
-        root = self._realpath(str(self._folder))
         out: list[SpecFileEntry] = []
         for entry in self._local.list(norm):
             rel = f"{norm}/{entry.name}" if norm else entry.name
-            if self._is_reserved(rel):
+            if self._guard.is_reserved(rel):
                 continue
-            if (
-                entry.is_dir
-                and not entry.is_link
-                and not folder_within(self._realpath(str(self._folder / rel)), root)
-            ):
+            if entry.is_dir and not entry.is_link and not self._guard.resolves_inside(rel):
                 entry = replace(entry, is_link=True)
             out.append(entry)
         return out

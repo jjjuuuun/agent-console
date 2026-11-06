@@ -17,13 +17,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from agent_console_project_space import ProjectSpace, SpaceError, read_manifest
+from agent_console_projects import normalize_reserved, relative_inside
 from agent_console_sdd import SpecFiles
 from agent_console_store import DefinitionStore
 
-from .files import ProjectSpecFiles, normalize_reserved
+from .files import ProjectSpecFiles
 from .ports import ProjectSpaces, SpaceLike
 
 __all__ = ["ProjectSddSpace", "ProjectSddSpaces", "UnsafeSpaceRoot", "config_dir_of"]
@@ -67,13 +68,9 @@ def config_dir_of(space: SpaceLike) -> str:
         UnsafeSpaceRoot: 구성 폴더가 프로젝트 폴더와 같거나 밖이다.
     """
     try:
-        rel = Path(space.root).relative_to(Path(space.folder))
-    except ValueError:
-        raise UnsafeSpaceRoot("project config folder is outside the project folder") from None
-    text = PurePosixPath(*rel.parts).as_posix() if rel.parts else ""
-    if not text or text == "." or ".." in rel.parts:
-        raise UnsafeSpaceRoot("project config folder must be a folder inside the project")
-    return text
+        return relative_inside(space.root, space.folder)
+    except ValueError as exc:
+        raise UnsafeSpaceRoot(f"project config folder: {exc}") from None
 
 
 def _check_manifest(space: SpaceLike) -> None:

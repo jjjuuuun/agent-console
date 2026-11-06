@@ -1,5 +1,20 @@
 # 변경 기록
 
+## 0.14.1
+
+- 계약 0.14.1(7R.13·7R.17 계약 후속). 더하기와 기본값 변경이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS
+  `^0.14.0`) 그대로. 하위 계약 버전: `common` 1.11.0, `wiki` 1.1.0.
+- **기본값 변경(보안 강화)**: `WikiSettings.secret_scan` 기본값이 `{user: warn, agent: reject}` →
+  `{user: warn, agent: reject, system: reject}`. 전에는 `system` 키가 없어 `user` 값(warn)을 따랐기 때문에
+  위키 고치기 노드(`wiki-update`, 쓴 주체 system)로 에이전트 출력을 옮기면 에이전트가 직접 쓸 때(reject)보다
+  느슨하게 저장됐다. 이제 기본 설정에서 system 쓰기의 비밀 의심 본문은 422 `wiki.secret_rejected`(노드는
+  failed)다. 설정에 `secret_scan`을 직접 적은 workspace는 그 값을 그대로 쓴다(없는 쪽은 여전히 `user` 값).
+- 새 선택 필드(`wiki` 1.1.0): `WikiInfo.writable: bool | None`(공간 `config_writable`, null = 옛 서버·알 수
+  없음).
+- 새 문서 상수(`common` 1.11.0): `KnownIssueCodes.WIKI_UPDATE_UNAVAILABLE`(`wiki.update_unavailable`, 위키
+  고치기 노드의 위키 서비스 없음).
+- 루트 공개 별칭 `Slug`(`from agent_console_contracts import Slug`, 정의 id 모양). 모양은 그대로다.
+
 ## 0.14.0
 
 - 계약 0.14.0(7R.3, design §7R.7). 새 하위 모듈은 minor로 올린다(0.10.0 `memory`·0.13.0 `sdd` 선례). 사내 의존

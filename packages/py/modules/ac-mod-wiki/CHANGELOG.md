@@ -7,3 +7,4 @@
   검색·그래프·점검·변경·문법·scan·zip, 위키 규칙), WS `wiki.changed`, 정의 종류 기여(위키·위키 규칙),
   사용자 설정 섹션 `wiki`, 포트 `wiki.service`·선택 `wiki.spaces`·`records.spaces`·`wiki.write_checks`·
   `wiki.integrations`, 계보 `wiki`(app·project), X48·X50 호스트 플러그인 로더, 단독 실행.
+- 계약 0.14.1 후속: `GET /wiki/info`가 `writable`(공간 `config_writable`, 단독 공간은 true)을 채운다.

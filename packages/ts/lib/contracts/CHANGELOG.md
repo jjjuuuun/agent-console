@@ -2,6 +2,12 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.1]
+- 계약 0.14.1(7R.13·7R.17 계약 후속). 더하기와 기본값 변경. 사내 의존 범위는 `^0.14.0` 그대로. `wiki` 1.1.0, `common` 1.11.0.
+- **기본값 변경(보안 강화)**: 스키마 `WikiSettings.secret_scan` 기본값에 `system: "reject"`를 더했다(`{user: warn, agent: reject, system: reject}`). 웹 설정 폼의 기본 표시가 바뀐다.
+- 새 선택 필드: `WikiInfo.writable?: boolean | null`(false = 읽기 전용 공간, null·생략 = 옛 서버).
+- 새 상수: `KNOWN_ISSUE_CODES.WIKI_UPDATE_UNAVAILABLE`(`wiki.update_unavailable`).
+
 ## [0.14.0]
 - 계약 0.14.0(7R.3). 사내 의존 범위 `^0.14.0`(minor 올림 — 소비자 package.json 범위를 함께 올림). 새 하위 경로 **`@agent-console/contracts/wiki`**(1.0.0). `common` 1.10.0, `projects` 3.3.0, `sdd` 1.2.0, `modules` 1.5.0.
 - 새 타입: `wiki` 전부(`WikiDefinition`·`WikiRulesDefinition`·`WikiSyntax`·`WikiSettings`·`WikiAccessConfig`·`WikiInfo`·`WikiPageView`·`WikiLink`·`WikiPageVersion`·`WikiGraph`·`WikiSearchResult`·`WikiLintReport`·`WikiMoveResult`·`WikiEventPayload`·`WikiChanged` 등), `WikiChangedMessage`(modules, `WsServerMessage` 유니온에 더함).

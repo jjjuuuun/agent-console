@@ -54,6 +54,7 @@ from ._errors import (
     WikiPathError,
     WikiRuleRejectedError,
     WikiSecretRejectedError,
+    WikiSectionNotFoundError,
     WikiTemplateNotFoundError,
     WikiTooLargeError,
 )
@@ -63,6 +64,9 @@ from ._text import line_starts
 
 __all__ = [
     "TOOL_TEXT_RESOURCE",
+    "WIKI_WRITE_MODES",
+    "PageComposition",
+    "WikiFailure",
     "WikiToolOutcome",
     "WikiToolSpec",
     "WikiToolTarget",
@@ -71,6 +75,7 @@ __all__ = [
     "WikiWriteBudget",
     "WriteBudget",
     "access_wikis",
+    "compose_write",
     "default_wiki",
     "format_author",
     "format_time",
@@ -78,6 +83,7 @@ __all__ = [
     "replace_section",
     "section_span",
     "wiki_allowed",
+    "wiki_failure",
     "wiki_instructions",
     "wiki_ops",
     "wikis_for",
@@ -89,7 +95,9 @@ TOOL_TEXT_RESOURCE: Final = "data/tool_text.yaml"
 _ERROR: Final = "error"
 _RENDER_CHARS: Final = 10_000_000
 _MUTATING: Final = frozenset({"write", "move", "delete"})
-_WRITE_MODES: Final = ("replace", "append", "section")
+WIKI_WRITE_MODES: Final[tuple[str, ...]] = ("replace", "append", "section")
+"""쓰기 방식(도구 입력 `mode`·`wiki-update` 노드 설정): 통째로 바꾸기·끝에 덧붙이기·절 바꾸기."""
+_WRITE_MODES: Final = WIKI_WRITE_MODES
 
 
 # ---------------------------------------------------------------- 문구
@@ -258,6 +266,89 @@ def _append(text: str, addition: str) -> str:
     if text and not _ends_line(text):
         text += _newline(text)
     return text + addition
+
+
+@dataclass(frozen=True, slots=True)
+class PageComposition:
+    """`compose_write` 결과: 쓸 본문과 `WikiRepository.write` 조건.
+
+    Attributes:
+        content: 새 본문 전체.
+        create_only: 새 페이지로만 쓴다(그사이 생기면 `WikiPageExistsError`).
+        if_hash: 이 해시일 때만 쓴다(읽은 뒤 바뀌면 `WikiConflictError`).
+    """
+
+    content: str
+    create_only: bool = False
+    if_hash: str | None = None
+
+
+def compose_write(
+    repo: WikiRepository,
+    path: str,
+    *,
+    content: str | None,
+    mode: str = "replace",
+    section: str | None = None,
+    template: str | None = None,
+    title: str | None = None,
+    if_hash: str | None = None,
+) -> PageComposition:
+    """쓰기 방식대로 새 본문을 만든다(쓰지 않는다). 위키 도구 `write`와 다른 쓰기 주체가 같이 쓴다.
+
+    - `template`: 새 페이지만. 틀을 채운 본문 뒤에 `content`를 덧붙인다(있으면).
+    - `replace`: `content`가 본문 전체(페이지가 없으면 만든다).
+    - `append`: 지금 본문 끝에 `content`(줄을 맞춰 붙임, 페이지가 없으면 `content`로 만든다).
+    - `section`: 제목 `section`의 절 본문을 `content`로 바꾼다(제목 줄·다른 절은 그대로).
+
+    Args:
+        repo: 위키 저장소. path: 페이지 경로. content: 쓸 글(틀만 쓰면 None).
+        mode: `WIKI_WRITE_MODES` 중 하나. section: 절 제목(`section` 방식에서 필수).
+        template: 페이지 틀 id. title: 틀의 제목. if_hash: 지금 본문 해시 조건.
+
+    Raises:
+        ValueError: 모르는 방식, `section` 방식에 제목 없음, 쓸 글도 틀도 없음.
+        WikiConflictError: `if_hash`가 지금 본문과 다름. WikiPageExistsError: 틀인데 이미 있음.
+        WikiPageNotFoundError: `section` 방식인데 페이지가 없음. WikiSectionNotFoundError: 절 없음.
+        WikiTemplateNotFoundError: 틀 없음.
+
+    >>> from agent_console_wiki import compile_syntax, effective_syntax
+    >>> from agent_console_wiki.testing import MemoryWikiPages
+    >>> pages = MemoryWikiPages({"log.md": "# 기록\\n- 첫 줄\\n"})
+    >>> repo = WikiRepository(pages, wiki_id="notes", syntax=compile_syntax(effective_syntax()))
+    >>> compose_write(repo, "log", content="- 둘째 줄\\n", mode="append").content
+    '# 기록\\n- 첫 줄\\n- 둘째 줄\\n'
+    """
+    if mode not in WIKI_WRITE_MODES or (mode == "section" and not section):
+        raise ValueError(f"쓰기 방식이 맞지 않습니다: {mode!r}")
+    if template is None and content is None:
+        raise ValueError("쓸 글도 틀도 없습니다")
+    current = repo.current(path)
+    if if_hash is not None and (current is None or current.content_hash != if_hash):
+        raise WikiConflictError(
+            path, expected=if_hash, actual=current.content_hash if current else None
+        )
+    if template:
+        if current is not None:
+            raise WikiPageExistsError(path)
+        rendered = repo.render_template(template, title=title)
+        body = _append(rendered.content, content) if content else rendered.content
+        return PageComposition(body, create_only=True)
+    assert content is not None
+    if mode == "replace":
+        return PageComposition(content, if_hash=if_hash)
+    if current is None:
+        if mode == "section":
+            raise WikiPageNotFoundError(path, has_history=repo.has_history(path))
+        return PageComposition(content, create_only=True)
+    text = current.text
+    if mode == "append":
+        return PageComposition(_append(text, content), if_hash=current.content_hash)
+    headings = parse_page(current.path, current.data, repo.syntax).headings
+    span = section_span(text, headings, section or "")
+    if span is None:
+        raise WikiSectionNotFoundError(path, section or "")
+    return PageComposition(replace_section(text, span, content), if_hash=current.content_hash)
 
 
 # ---------------------------------------------------------------- 스펙·결과
@@ -474,6 +565,8 @@ def _map_error(exc: BaseException) -> _ToolError:
         return _ToolError("conflict", KnownIssueCodes.WIKI_CONFLICT, hash=exc.actual or "")
     if isinstance(exc, WikiPageExistsError):
         return _ToolError("conflict", exc.code)
+    if isinstance(exc, WikiSectionNotFoundError):
+        return _ToolError("not_found", exc.code, reason="section_not_found")
     if isinstance(exc, WikiPageNotFoundError | WikiTemplateNotFoundError):
         return _ToolError("not_found", exc.code)
     if isinstance(exc, WikiTooLargeError):
@@ -497,6 +590,32 @@ def _map_error(exc: BaseException) -> _ToolError:
     if isinstance(exc, WikiError):
         return _ToolError(_ERROR, exc.code)
     return _ToolError(_ERROR, _ERROR)
+
+
+@dataclass(frozen=True, slots=True)
+class WikiFailure:
+    """저장소 예외의 이벤트 값(`WikiEventPayload.status`·`code`·`rule_ids`).
+
+    Attributes:
+        status: 이벤트 상태(예 `rule_rejected`·`not_found`·`error`).
+        code: 사유 코드(`wiki.*` 등). reason: 문구 키(대개 `code`, 절 없음은 `section_not_found`).
+        rule_ids: 거부한 규칙 id(쓰기 규칙 거부일 때).
+    """
+
+    status: str
+    code: str
+    reason: str
+    rule_ids: tuple[str, ...] = ()
+
+
+def wiki_failure(exc: BaseException) -> WikiFailure:
+    """저장소 예외 → 이벤트 상태·사유 코드(위키 도구와 같은 분류, 런타임 밖 쓰기 주체가 쓴다).
+
+    >>> wiki_failure(WikiPageExistsError("a")).status
+    'conflict'
+    """
+    failure = _map_error(exc)
+    return WikiFailure(failure.status, failure.code, failure.reason, tuple(failure.rule_ids))
 
 
 def format_author(author: WikiAuthor | None) -> str:
@@ -993,36 +1112,17 @@ class WikiToolkit:
             return repo.write(path, body, author=author, message=message, **kw), body
 
         def _compose() -> tuple[WriteOutcome, str]:
-            current = repo.current(path)
-            if if_hash is not None and (current is None or current.content_hash != if_hash):
-                raise WikiConflictError(
-                    path, expected=if_hash, actual=current.content_hash if current else None
-                )
-            if template:
-                if current is not None:
-                    raise WikiPageExistsError(path)
-                rendered = repo.render_template(template, title=title)
-                body = _append(rendered.content, content) if content else rendered.content
-                return _write_body(body, create_only=True)
-            assert content is not None
-            if mode == "replace":
-                return _write_body(content, if_hash=if_hash)
-            if current is None:
-                if mode == "section":
-                    raise WikiPageNotFoundError(path, has_history=repo.has_history(path))
-                return _write_body(content, create_only=True)
-            text = current.text
-            if mode == "append":
-                new = _append(text, content)
-            else:
-                headings = parse_page(current.path, current.data, repo.syntax).headings
-                span = section_span(text, headings, section or "")
-                if span is None:
-                    raise _ToolError(
-                        "not_found", KnownIssueCodes.WIKI_NOT_FOUND, reason="section_not_found"
-                    )
-                new = replace_section(text, span, content)
-            return _write_body(new, if_hash=current.content_hash)
+            plan = compose_write(
+                repo,
+                path,
+                content=content,
+                mode=mode,
+                section=section,
+                template=template,
+                title=title,
+                if_hash=if_hash,
+            )
+            return _write_body(plan.content, create_only=plan.create_only, if_hash=plan.if_hash)
 
         outcome, size = await self._run(work)
         payload.update(path=outcome.path, sha256=outcome.content_hash, bytes=size)

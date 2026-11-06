@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 7R.13: 폴더 안 경로 지킴 `FolderGuard`(`is_reserved`·`contains_reserved`·`resolves_inside`·`violation`)·`normalize_reserved`·`relative_inside`·`GuardViolation`을 공개(design §PI.5). `link-projects-sdd` `ProjectSpecFiles`와 `link-projects-wiki` 페이지 폴더가 같은 규칙을 쓴다(복사 금지).
 - 5.7R.33i(깨는 변경, 소비자 `mod-logs`·`mod-projects`만): `ProjectFolderSet.current`와 `project_folders(working_directory=)`(옛 로그 범위 `current` 호환)를 지웠다. 보관된 프로젝트 폴더는 `ProjectFolderSet.archived`(`archived_folders`)로 따로 낸다(같은 폴더가 등록·보관 둘 다면 등록이 이긴다). `project_for`는 그대로 보관 아님만 본다.
 
 ## 0.2.0

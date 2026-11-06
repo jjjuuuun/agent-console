@@ -79,7 +79,7 @@ pip install agent-console-project-space
 커밋에서 빠지지 않게). 버전 기록은 호출자가 `versions=`로 넘긴다(보통 그 폴더 기록 DB —
 `agent_console_store.RecordsVersionRepository`). 생략하면 메모리다. 기록소가 `ensure_writable()`을 주면 정의를 쓰기
 전에 불러, 기록 DB를 쓸 수 없을 때 정의 파일도 쓰지 않는다.
-테스트 도구는 `agent_console_project_space.testing`(`ReadOnlyFiles` 등)이다.
+테스트 도구는 `agent_console_project_space.testing`(`ReadOnlyFiles`·`FolderSpaces` 등)이다.
 
 ## 개발·재사용
 

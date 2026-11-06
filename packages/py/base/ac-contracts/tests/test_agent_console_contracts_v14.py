@@ -43,10 +43,15 @@ def _load(text: str) -> Any:
 # ---------------------------------------------------------------- 버전
 
 
-def test_contracts_version_is_0_14_0() -> None:
-    assert CONTRACTS_VERSION == "0.14.0"
-    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == "0.14.0"
-    assert CONTRACT_VERSIONS == {
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_14_0() -> None:
+    """0.14.0에서 정한 버전 이상이다(정확한 지금 값은 0.14.1 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 14, 0)
+    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0140 = {
         "common": "1.10.0",
         "resources": "1.1.0",
         "logs": "1.2.0",
@@ -63,6 +68,9 @@ def test_contracts_version_is_0_14_0() -> None:
         "wiki": "1.0.0",
         "modules": "1.5.0",
     }
+    assert set(CONTRACT_VERSIONS) == set(v0140)
+    for sub, version in v0140.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
     # wiki는 memory·sdd와 같은 층(modules 바로 아래)
     assert CONTRACT_SUBMODULES.index("wiki") == CONTRACT_SUBMODULES.index("modules") - 1
 
@@ -301,12 +309,13 @@ def test_settings_defaults() -> None:
     s = wiki.WikiSettings()
     assert s.include_default_syntax is True
     assert s.syntax is None
-    assert s.secret_scan == {"user": "warn", "agent": "reject"}
+    # 0.14.1: system도 reject(보안 강화, test_agent_console_contracts_v14_1)
+    assert s.secret_scan == {"user": "warn", "agent": "reject", "system": "reject"}
     assert s.max_versions_per_page == 50
     assert s.search_backend is None
     assert s.write_checks == []
     prop = build_schema()["$defs"]["WikiSettings"]["properties"]["secret_scan"]
-    assert prop["default"] == {"user": "warn", "agent": "reject"}
+    assert prop["default"] == {"user": "warn", "agent": "reject", "system": "reject"}
 
 
 # ---------------------------------------------------------------- 접근 설정·도구 이름 기본값

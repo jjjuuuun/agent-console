@@ -797,7 +797,7 @@ class WikiService:
         )
 
     def info(self, scope: WikiScope) -> WikiInfo:
-        """``GET /wiki/info``."""
+        """``GET /wiki/info``. ``writable`` = 공간 ``config_writable``(단독 루트는 그 판단)."""
         issues: list[WikiIssue] = []
         probe = self._search_probe(self.settings())
         if probe.degraded:
@@ -811,6 +811,7 @@ class WikiService:
         return WikiInfo(
             pages_root=scope.pages_dir,
             capabilities=self.capabilities(scope),
+            writable=scope.writable,
             limits=WikiLimits(
                 max_page_bytes=self.options.max_page_bytes,
                 max_pages=self.options.max_pages,

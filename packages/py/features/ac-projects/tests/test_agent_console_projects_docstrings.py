@@ -10,6 +10,7 @@ import pytest
 from agent_console_projects import (
     _copy,
     _folders,
+    _guard,
     _identity,
     _layer,
     _legacy,
@@ -23,7 +24,19 @@ from agent_console_projects import (
 
 @pytest.mark.parametrize(
     "module",
-    [_copy, _folders, _identity, _layer, _legacy, _merge, _pathguard, _paths, _registry, _scope],
+    [
+        _copy,
+        _folders,
+        _guard,
+        _identity,
+        _layer,
+        _legacy,
+        _merge,
+        _pathguard,
+        _paths,
+        _registry,
+        _scope,
+    ],
 )
 def test_module_doctests(module: ModuleType) -> None:
     result = doctest.testmod(module, optionflags=doctest.ELLIPSIS)

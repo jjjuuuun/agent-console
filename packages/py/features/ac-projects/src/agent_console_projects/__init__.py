@@ -6,7 +6,8 @@
 - 합치기: 등록부 + 매니페스트 → `Project`(`merge_project`·`split_project`·`initial_manifest`·
   `combined_version`·`ignored_key_issues`).
 - 공간 사이 복사: `copy_plan`·`skip_warnings`·`apply_decisions`·`apply_renames`.
-- 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33).
+- 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33), 폴더 안 파일 접근
+  `FolderGuard`·`normalize_reserved`·`relative_inside`(예약 경로·링크를 푼 실제 경로, §PI.5).
 - 옛 데이터: `legacy_items`·`legacy_counts`·`without_scope_field`, 프로젝트 층 값
   `project_layer_value`. 옛 범위 규칙(`scope_issues`·`move_plan`·`delete_plan`·`visible`)은 [정리]
   화면 전환까지만 남는다(33t에서 삭제).
@@ -36,6 +37,7 @@ from ._copy import (
     skip_warnings,
 )
 from ._folders import ProjectFolder, ProjectFolderSet, project_folders
+from ._guard import FolderGuard, GuardViolation, normalize_reserved, relative_inside
 from ._identity import (
     FALLBACK_PREFIX,
     MAX_ID_LENGTH,
@@ -124,6 +126,8 @@ __all__ = [
     "CaseRule",
     "CopyDecision",
     "DefinitionId",
+    "FolderGuard",
+    "GuardViolation",
     "PathField",
     "PathRelation",
     "PathRules",
@@ -160,6 +164,7 @@ __all__ = [
     "load_path_rules",
     "merge_project",
     "move_plan",
+    "normalize_reserved",
     "outside_paths",
     "path_fields",
     "path_relation",
@@ -170,6 +175,7 @@ __all__ = [
     "registered_folders",
     "registration_id",
     "registry_conflicts",
+    "relative_inside",
     "renames_of",
     "resolve_folder",
     "scope_issues",

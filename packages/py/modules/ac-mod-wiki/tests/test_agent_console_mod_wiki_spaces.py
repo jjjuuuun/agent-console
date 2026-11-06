@@ -65,6 +65,7 @@ def test_project_spaces_are_isolated_with_records(tmp_path: Path, kit: Any, data
         info = client.get(f"{API}/wiki/info", params={"project": "pa"}).json()
         assert info["pages_root"] == ".agent-console/wiki-pages"
         assert info["capabilities"]["history"] is True
+        assert info["writable"] is True
         kit.make_rules(client, "pr", project="pa")
         made = client.post(
             f"{API}/wiki/wikis", json={"name": "notes", "rules": ["pr"]}, params={"project": "pa"}
@@ -121,6 +122,8 @@ def test_readonly_space_and_unavailable(tmp_path: Path, kit: Any) -> None:
         kit.make_assembly(tmp_path / "r", spaces_module({"pa": readonly}))
     ) as client:
         q = {"project": "pa"}
+        # 0.14.1: 화면 정보가 공간 config_writable을 알린다(웹은 읽기 전용으로 그린다)
+        assert client.get(f"{API}/wiki/info", params=q).json()["writable"] is False
         assert client.get(f"{API}/wiki/wikis/w/pages/p", params=q).status_code == 200
         assert client.get(f"{API}/wiki/wikis/w/search", params={**q, "q": "p"}).status_code == 200
         res = client.put(

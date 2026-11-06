@@ -101,6 +101,60 @@ notes [('other', 'broken')]
 | `wiki.integrations` | 선택(여러) | `WikiIntegration{id, capabilities}`(`runs` → `capabilities.runs`) |
 | `workspace.settings`·`secrets.rules`·`definitions.store` | 선택 | 설정·비밀 규칙·라이브러리 |
 
+## 로그·구조도에서 보기(예시 데이터)
+
+실행 연동(`link-wiki-runs`)이 남긴 실행 이벤트 `wiki.<op>`는 플랫폼 실행 로그 대응표
+(`ac-link-logs-runs` `run_event_map.yaml`의 `wiki.*`)가 범주 `wiki`, 문서 표지
+`{kind: wiki, path: <위키 id>/<페이지 경로>, action: read|read_links|written|removed|moved_from|moved_to}`,
+근거 `tool_use_id`·`wiki`(위키 id)로 옮긴다. 검색·목록은 페이지가 없어 문서 표지가 없다. 파일 변경 어휘
+(`created`·`modified`·`deleted`)는 쓰지 않는다(기본 구조도 Workspace 칸에 섞이지 않게).
+
+기본 구조도 프로필에는 Wiki 칸이 없다. 보고 싶으면 기본 프로필(`GET /architecture/profiles/agent-architecture`의
+`profile`)을 복제해 칸·연결·coverage를 더한다(`...`은 복제한 나머지). 저장소에 이 데이터를 두지 않는다.
+
+```yaml
+architecture:
+  profiles:
+    with-wiki:
+      title: 에이전트 아키텍처 + 위키
+      # ... 기본 프로필의 canvas·zones·error_when·source_priority·cells·edges·coverage를 그대로 복제 ...
+      cells:
+        # ... 기본 칸 ...
+        wiki:
+          label: Wiki
+          description: 위키 읽기·쓰기
+          x: 810
+          y: 730
+          zone: runtime
+          tone: gold
+          metrics: [count, errors]
+          group_by: /correlation/wiki          # 위키별 묶음
+          when: {all: [{path: /category, op: eq, value: wiki}]}
+      edges:
+        # ... 기본 연결 ...
+        - id: wiki_access
+          from: dispatch
+          to: wiki
+          label: 위키 접근
+          kind: observed
+          style: request
+          points: [[1054, 610], [1030, 610], [1030, 730], [906, 730]]
+          label_at: [968, 730]
+          metrics: [count, errors]
+          when: {all: [{path: /category, op: eq, value: wiki}]}
+      coverage:
+        platform-runs:
+          cells: [sdk, api, rules, context, llm, dispatch, hook, tools, mcp, result, delegation,
+                  subagents, response, wiki]
+```
+
+- 범주 이름도 데이터다. `logs.sources[id=platform-runs].config.event_map`에서 `wiki.*` 규칙을 통째로 다시
+  적어 `category: knowledge`로 바꾸면 위 조건의 `value`도 `knowledge`로 바꾼다.
+- 규칙을 끄려면 같은 자리에 `"wiki.*": {}`를 적는다. 위키 이벤트는 범주 `other`(제목 = 형식 이름)로 남고
+  Wiki 칸은 0회다.
+- 칸 횟수 = 그 실행의 위키 이벤트 수 = 칸을 눌렀을 때 이벤트 표 수다(저장소 통합 테스트
+  `test_integration_wiki_cell_7r15.py`).
+
 ## 개발·재사용
 
 이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.

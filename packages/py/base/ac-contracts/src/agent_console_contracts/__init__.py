@@ -12,7 +12,7 @@ projects·chat·exports·imports·architecture·memory·sdd·wiki·modules)에 �
 설계: specs/agent-console/design.md §2.2, §2.3, §3.3, §5.2~§5.7, §R9.3, §3R.3.
 """
 
-from ._base import ContractModel, DefinitionModel, JsonObject
+from ._base import ContractModel, DefinitionModel, JsonObject, Slug
 from .architecture import (
     DEFAULT_GROUP_LIMIT,
     ArchitectureCanvas,
@@ -1299,6 +1299,7 @@ __all__ = [
     "SessionRef",
     "SessionStatus",
     "SettingsLayerInfo",
+    "Slug",
     "SpaceRef",
     "SpecContentRef",
     "SpecCreateRequest",

@@ -7,14 +7,12 @@ import ast
 import importlib.metadata
 import io
 import json
-from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from agent_console_contracts import render_schema
-from agent_console_contracts.wiki import WikiIssue
 from agent_console_mod_wiki import (
     SECTION_KEY,
     WRITE_CHECKS_GROUP,
@@ -29,6 +27,7 @@ from agent_console_mod_wiki import (
 from agent_console_mod_wiki.ports import SERVER_WARNINGS
 from agent_console_mod_wiki.standalone import main
 from agent_console_mod_wiki.testing import (
+    FrontMatterKeyCheck,
     integration_module,
     library_module,
     write_check_module,
@@ -40,20 +39,6 @@ from agent_console_wiki import definition_kinds
 
 API = "/api/v1"
 SRC = Path(__file__).resolve().parents[1] / "src" / "agent_console_mod_wiki"
-
-
-class FrontMatterKeyCheck:
-    """X50 예: 머리말 키 하나가 없으면 거부(키 이름은 옵션 데이터)."""
-
-    def __init__(self, options: Mapping[str, Any] | None = None) -> None:
-        self.key = str((options or {}).get("key") or "")
-        self.id = "needs-key"
-
-    def check(self, subject: Mapping[str, Any], text: str) -> Sequence[WikiIssue]:
-        front = (subject.get("page") or {}).get("front_matter") or {}
-        if not self.key or self.key in front or subject["change"]["op"] == "delete":
-            return []
-        return [WikiIssue(severity="error", code="x.needs_key", message=f"{self.key} 필요")]
 
 
 def test_kind_contributions_and_references(tmp_path: Path, kit: Any) -> None:
@@ -128,7 +113,7 @@ def test_user_settings_keep_good_parts_and_warn(tmp_path: Path, kit: Any) -> Non
     }
     settings, issues = parse_wiki_settings(raw)
     assert settings.include_default_syntax is False
-    assert settings.secret_scan == {"user": "warn", "agent": "reject"}
+    assert settings.secret_scan == {"user": "warn", "agent": "reject", "system": "reject"}
     assert [c.id for c in settings.write_checks] == ["x"]
     assert settings.model_extra == {"future_key": {"a": 1}}
     assert {i.path for i in issues} == {"/wiki/secret_scan", "/wiki/write_checks/1"}
@@ -195,7 +180,7 @@ def test_write_check_port_and_setting_off(tmp_path: Path, kit: Any, database: An
 def test_write_check_plugin_needs_setting(tmp_path: Path, kit: Any) -> None:
     ep = importlib.metadata.EntryPoint(
         name="needs-key",
-        value=f"{FrontMatterKeyCheck.__module__}:FrontMatterKeyCheck",
+        value="agent_console_mod_wiki.testing:FrontMatterKeyCheck",
         group=WRITE_CHECKS_GROUP,
     )
     registry = new_write_check_registry()

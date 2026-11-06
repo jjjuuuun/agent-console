@@ -88,4 +88,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "wiki" as const;
-export const CONTRACT_VERSION = "1.0.0" as const;
+export const CONTRACT_VERSION = "1.1.0" as const;

@@ -127,7 +127,7 @@ def test_require_warns_only_in_scope_and_unknown_action() -> None:
 
 def test_secret_policy_per_author_kind() -> None:
     text = "설정\nAPI_KEY=sk-abcdefghijklmnop1234\n"
-    policy = WikiSecretPolicy()  # 계약 기본값: user warn, agent reject
+    policy = WikiSecretPolicy()  # 계약 기본값(0.14.1): user warn, agent·system reject
     agent = policy.check(text, "agent", page="p")
     assert agent.rejected
     assert agent.issues[0].code == "wiki.secret_rejected"
@@ -136,7 +136,11 @@ def test_secret_policy_per_author_kind() -> None:
     user = policy.check(text, "user")
     assert not user.rejected
     assert user.issues[0].code == "wiki.secret_suspect"
-    assert policy.check(text, "system").issues[0].code == "wiki.secret_suspect"  # 없는 종류 = user
+    system = policy.check(text, "system")  # 0.14.1: 노드가 대신 쓰는 본문도 거부(보안 강화)
+    assert system.rejected
+    assert system.issues[0].code == "wiki.secret_rejected"
+    # 없는 종류 = user 값
+    assert policy.check(text, "external").issues[0].code == "wiki.secret_suspect"
     off = WikiSecretPolicy(modes={"user": "off"})
     assert off.check(text, "agent").issues == []
     assert policy.check("평범한 글", "agent").issues == []

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 7R.15: 기본 분류 체계 데이터에 범주 `wiki`(라벨 `위키`만, `order`에는 넣지 않음).
 - 6R.9(M-1): 확장 판정 행 기준 미리 거르기(선택 능력) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck`. SQLite 색인은 `ac_row_ok`로 열 값에 먼저 묻고 모르는 행만 본문을 읽는다(결과 같음). `testing.FieldFilter(row_check=True)` 예제.
 - 6R.9(M-15): SQLite 값 목록 IN이 500개를 넘으면 `json_each` 부분 질의(바인드 변수 1개) — 값 40,000개도 기본 변수 한도(32,766) 아래. `category`·`agent`/`from`/`to` 필터도 같은 경로.
 - 5.7R.33i(깨는 변경): 세션 프로젝트 = 등록 프로젝트 id. `QueryContext.projects`(옛 묶기 규칙)·`ungrouped_label` 대신 `QueryContext.project_for`(cwd → 등록 id), `query_context(project_for=)`. `project_of`는 `project_for`만 본다(`repo_root` 안 봄). 세션 요약에 `project_id`(옛 `project`는 같은 id로 채움, deprecated). 옛 묶기 함수 `resolve_project`·`group_projects`·`project_base`·`DEFAULT_UNGROUPED_LABEL` 삭제(`UNGROUPED_PROJECT` = 어느 등록 프로젝트에도 들지 않음). 옛 설정 `logs.projects.git_worktrees`는 읽지 않는다.

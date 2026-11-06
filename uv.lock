@@ -35,10 +35,12 @@ members = [
     "agent-console-link-projects-records",
     "agent-console-link-projects-runs",
     "agent-console-link-projects-sdd",
+    "agent-console-link-projects-wiki",
     "agent-console-link-runs-sdd",
     "agent-console-link-runs-teams",
     "agent-console-link-runs-trace",
     "agent-console-link-runs-usage",
+    "agent-console-link-wiki-runs",
     "agent-console-local-folders",
     "agent-console-logs",
     "agent-console-logs-claude",
@@ -357,7 +359,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.14.0"
+version = "0.14.1"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -1209,6 +1211,53 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-link-projects-wiki"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-projects-wiki" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-project-space" },
+    { name = "agent-console-projects" },
+    { name = "agent-console-store" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-link-projects-records" },
+    { name = "agent-console-mod-projects" },
+    { name = "agent-console-mod-wiki" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-project-space", editable = "packages/py/features/ac-project-space" },
+    { name = "agent-console-projects", editable = "packages/py/features/ac-projects" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-link-projects-records", editable = "packages/py/links/ac-link-projects-records" },
+    { name = "agent-console-mod-projects", editable = "packages/py/modules/ac-mod-projects" },
+    { name = "agent-console-mod-wiki", editable = "packages/py/modules/ac-mod-wiki" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-link-runs-sdd"
 version = "0.1.0"
 source = { editable = "packages/py/links/ac-link-runs-sdd" }
@@ -1383,6 +1432,71 @@ requires-dist = [
 dev = [
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
     { name = "agent-console-mod-usage", editable = "packages/py/modules/ac-mod-usage" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-link-wiki-runs"
+version = "0.1.0"
+source = { editable = "packages/py/links/ac-link-wiki-runs" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-nodes-core" },
+    { name = "agent-console-resources" },
+    { name = "agent-console-runtime" },
+    { name = "agent-console-store" },
+    { name = "agent-console-text-template" },
+    { name = "agent-console-wiki" },
+    { name = "pydantic" },
+    { name = "ruamel-yaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "agent-console-backend-fake-agent" },
+    { name = "agent-console-delegation-host" },
+    { name = "agent-console-link-definitions-teams" },
+    { name = "agent-console-link-runs-teams" },
+    { name = "agent-console-mod-definitions" },
+    { name = "agent-console-mod-resources" },
+    { name = "agent-console-mod-runs" },
+    { name = "agent-console-mod-wiki" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-nodes-core", editable = "packages/py/features/ac-nodes-core" },
+    { name = "agent-console-resources", editable = "packages/py/features/ac-resources" },
+    { name = "agent-console-runtime", editable = "packages/py/features/ac-runtime" },
+    { name = "agent-console-store", editable = "packages/py/features/ac-store" },
+    { name = "agent-console-text-template", editable = "packages/py/base/ac-text-template" },
+    { name = "agent-console-wiki", editable = "packages/py/features/ac-wiki" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "ruamel-yaml", specifier = ">=0.18" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "agent-console-backend-fake-agent", editable = "packages/py/features/ac-backend-fake-agent" },
+    { name = "agent-console-delegation-host", editable = "packages/py/features/ac-delegation-host" },
+    { name = "agent-console-link-definitions-teams", editable = "packages/py/links/ac-link-definitions-teams" },
+    { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
+    { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
+    { name = "agent-console-mod-resources", editable = "packages/py/modules/ac-mod-resources" },
+    { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
+    { name = "agent-console-mod-wiki", editable = "packages/py/modules/ac-mod-wiki" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
@@ -2691,10 +2805,12 @@ dependencies = [
     { name = "agent-console-link-projects-records" },
     { name = "agent-console-link-projects-runs" },
     { name = "agent-console-link-projects-sdd" },
+    { name = "agent-console-link-projects-wiki" },
     { name = "agent-console-link-runs-sdd" },
     { name = "agent-console-link-runs-teams" },
     { name = "agent-console-link-runs-trace" },
     { name = "agent-console-link-runs-usage" },
+    { name = "agent-console-link-wiki-runs" },
     { name = "agent-console-logs-claude" },
     { name = "agent-console-mod-architecture" },
     { name = "agent-console-mod-chat" },
@@ -2752,10 +2868,12 @@ requires-dist = [
     { name = "agent-console-link-projects-records", editable = "packages/py/links/ac-link-projects-records" },
     { name = "agent-console-link-projects-runs", editable = "packages/py/links/ac-link-projects-runs" },
     { name = "agent-console-link-projects-sdd", editable = "packages/py/links/ac-link-projects-sdd" },
+    { name = "agent-console-link-projects-wiki", editable = "packages/py/links/ac-link-projects-wiki" },
     { name = "agent-console-link-runs-sdd", editable = "packages/py/links/ac-link-runs-sdd" },
     { name = "agent-console-link-runs-teams", editable = "packages/py/links/ac-link-runs-teams" },
     { name = "agent-console-link-runs-trace", editable = "packages/py/links/ac-link-runs-trace" },
     { name = "agent-console-link-runs-usage", editable = "packages/py/links/ac-link-runs-usage" },
+    { name = "agent-console-link-wiki-runs", editable = "packages/py/links/ac-link-wiki-runs" },
     { name = "agent-console-logs-claude", editable = "packages/py/features/ac-logs-claude" },
     { name = "agent-console-mod-architecture", editable = "packages/py/modules/ac-mod-architecture" },
     { name = "agent-console-mod-chat", editable = "packages/py/modules/ac-mod-chat" },

@@ -168,6 +168,31 @@ types:
         path: {pointer: /payload/scope, map: {"null": ""}, default: "{/payload/scope/kind}/{/payload/scope/id}/{/payload/key}"}
         action: {pointer: /payload/op, map: {read: read, write: written, delete: removed, search: searched}}
 
+  # 위키 도구 호출(`link-wiki-runs`, payload = 계약 WikiEventPayload — 본문·검색어 원문 없음).
+  # 위키·페이지 경로를 문서 표지(kind wiki, path = 위키 id/페이지 경로)로 옮긴다. 옮기기는 문서 둘
+  # (옛 경로 moved_from, 새 경로 moved_to). 페이지가 없는 호출(검색·목록, 위키를 모르는 거부)은 표지 없음.
+  # 동작 → 문서 action·상태 대응은 아래 map(데이터). 파일 변경 어휘(created·modified·deleted)는 쓰지 않는다 —
+  # 기본 구조도 Workspace 칸 조건에 맞지 않게. 권한 거부·쓰기 규칙 거부는 판정(block)이지 오류가 아니다.
+  # 범주 이름을 바꾸거나 이 규칙을 끄면(설정 event_map에서 `"wiki.*": {}`) 위키 이벤트는 범주 other다.
+  "wiki.*":
+    category: wiki
+    title:
+      pointer: /payload/path
+      map: {"null": "위키 {/payload/op} {/payload/wiki}"}
+      default: "위키 {/payload/op} {/payload/wiki}/{/payload/path}"
+    status: {pointer: /payload/status, map: {ok: ok, denied: block, rule_rejected: block}, default: error}
+    correlation: {tool_use_id: "{/payload/tool_use_id}", wiki: "{/payload/wiki}"}
+    documents:
+      - kind: wiki
+        path: {pointer: /payload/path, map: {"null": ""}, default: "{/payload/wiki}/{/payload/path}"}
+        action:
+          pointer: /payload/op
+          map: {read: read, links: read_links, write: written, move: moved_from, delete: removed,
+                search: searched, list: listed}
+      - kind: wiki
+        path: {pointer: /payload/to, map: {"null": ""}, default: "{/payload/wiki}/{/payload/to}"}
+        action: moved_to
+
   "interaction.*": {category: control, title: "{type}"}
   log.warning: {category: system, status: warning, title: "{/payload/message}"}
 

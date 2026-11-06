@@ -21,6 +21,7 @@ __all__ = [
     "WikiPathError",
     "WikiRuleRejectedError",
     "WikiSecretRejectedError",
+    "WikiSectionNotFoundError",
     "WikiTemplateNotFoundError",
     "WikiTooLargeError",
     "WikiVersionNotFoundError",
@@ -80,6 +81,25 @@ class WikiPageNotFoundError(WikiError, LookupError):
         )
         self.path = path
         self.has_history = has_history
+
+
+class WikiSectionNotFoundError(WikiError, LookupError):
+    """페이지에 그 제목의 절이 없다(`wiki.not_found`, `details.reason = section_not_found`).
+
+    Attributes:
+        path: 페이지 경로.
+        section: 찾은 제목.
+    """
+
+    code = KnownIssueCodes.WIKI_NOT_FOUND
+
+    def __init__(self, path: str, section: str) -> None:
+        super().__init__(
+            f"페이지에 그 절이 없습니다: {path!r}",
+            details={"path": path, "section": section, "reason": "section_not_found"},
+        )
+        self.path = path
+        self.section = section
 
 
 class WikiPageExistsError(WikiError, FileExistsError):

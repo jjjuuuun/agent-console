@@ -1,0 +1,14 @@
+# 리소스 종류 `wiki`(에이전트 위키 접근, design §7R.1.4) — 패키지 데이터.
+#
+# - `id`는 entry point `agent_console.resource_types`의 이름과 같아야 한다(리소스 정의의 `type`).
+# - `contributes`의 첫 칸이 실행 묶음 칸 이름이다. 위키 도구 공급자가 이 칸을 읽고 소비한다.
+#   공급자가 없으면(위키 모듈 꺼짐) 칸이 백엔드로 넘어가 "적용하지 못한 칸" 경고(R13.5)가 난다.
+# - `config_schema`는 여기 두지 않는다. 계약 `WikiAccessConfig`의 JSON Schema를 코드가 채운다
+#   (위키 칸은 계약의 `x-ui` 위젯 `wiki-ref`).
+id: wiki
+version: 1
+title: 위키 접근
+description: 에이전트에게 위키 도구(검색·읽기·목록·링크·쓰기·옮기기·지우기)와 위키 규칙 지침을 주고 위키마다 권한을 정합니다.
+combine: append
+contributes: [wiki]
+ui_hints: {icon: 위}

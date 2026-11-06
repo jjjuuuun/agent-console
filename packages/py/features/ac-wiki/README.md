@@ -262,6 +262,22 @@ True
 
 ```
 
+같은 쓰기 방식을 도구 밖에서도 쓴다(예: LLM 없이 페이지를 고치는 노드). `compose_write(repo, path, content=,
+mode=, section=, template=, title=, if_hash=)`는 새 본문과 `write` 조건(`PageComposition{content, create_only,
+if_hash}`)만 만들고 쓰지 않는다(절이 없으면 `WikiSectionNotFoundError` — 코드 `wiki.not_found`, `details.reason =
+section_not_found`). `wiki_failure(exc)`는 저장소 예외를 도구와 같은 이벤트 상태·사유 코드(`WikiFailure{status,
+code, reason, rule_ids}`)로 바꾼다.
+
+```python
+>>> from agent_console_wiki import WikiPageExistsError, compose_write, wiki_failure
+>>> plan = compose_write(repo, "log", content="둘째 기록", mode="append")
+>>> plan.content, plan.create_only, plan.if_hash == repo.current("log").content_hash
+('첫 기록\n둘째 기록', False, True)
+>>> wiki_failure(WikiPageExistsError("log")).status
+'conflict'
+
+```
+
 Claude Agent SDK에서는 스펙마다 `@tool`로 감싸 in-process MCP 서버에 넣는다(이 패키지는 SDK를 모른다):
 
 ```text

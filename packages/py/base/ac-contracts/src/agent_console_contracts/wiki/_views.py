@@ -67,6 +67,14 @@ class WikiInfo(ContractModel):
     )
     capabilities: WikiCapabilities = Field(default_factory=WikiCapabilities)
     limits: WikiLimits
+    writable: bool | None = Field(
+        default=None,
+        description=(
+            "(1.1.0) 이 공간에 쓸 수 있나(공간 `config_writable`). false면 웹은 읽기 전용으로 "
+            "그린다(쓰기는 409 `project.config_readonly`·`wiki.config_readonly`). null = 옛 서버 "
+            "또는 알 수 없음(쓸 수 있다고 본다)."
+        ),
+    )
     issues: list[WikiIssue] = Field(
         default_factory=list,
         description="공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).",

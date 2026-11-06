@@ -37,6 +37,7 @@ def test_full_lap_standalone(
     assert info["capabilities"]["history"] is True
     assert info["capabilities"]["runs"] is False
     assert info["pages_root"] == "wiki-pages"
+    assert info["writable"] is True  # 0.14.1: 단독 공간은 쓸 수 있다
 
     rule_id = kit.make_rules(client)
     created = client.post(

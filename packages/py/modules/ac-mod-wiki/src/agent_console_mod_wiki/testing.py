@@ -9,6 +9,8 @@
 - ``integration_module``: ``wiki.integrations``에 능력 선언 하나를 주는 모듈(``link-wiki-runs``
   대신, 예: ``{"runs"}``).
 - ``write_check_module``: ``wiki.write_checks``에 쓰기 검사 하나를 주는 모듈.
+- ``FrontMatterKeyCheck``: 쓰기 검사(X50) 예제. 머리말 키 하나가 없으면 거부한다. import 가능한
+  고정 경로라 entry point 값(``agent_console_mod_wiki.testing:FrontMatterKeyCheck``)으로도 쓴다.
 - ``library_module``: ``definitions.store``(라이브러리 저장소)를 주는 모듈
   (``mod-definitions`` 대신).
 - ``records_module``: ``records.spaces``를 주는 모듈(``link-projects-records`` 대신).
@@ -16,12 +18,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from agent_console_contracts import WorkspaceSettings
+from agent_console_contracts.wiki import WikiIssue
 from agent_console_modkit import Module, ModuleContext, ModuleParts
 from agent_console_modkit.testing import fake_module
 from agent_console_store import (
@@ -138,6 +141,26 @@ def integration_module(
     return fake_module(module_id, kind="testing", provides=[WIKI_INTEGRATIONS], on_build=build)
 
 
+class FrontMatterKeyCheck:
+    """쓰기 검사(X50) 예제: 머리말 키 하나가 없으면 거부한다.
+
+    키 이름은 옵션 ``key``, 검사 id는 ``needs-key``다.
+
+    삭제 변경과 키가 비어 있는 경우는 통과시킨다.
+    """
+
+    def __init__(self, options: Mapping[str, Any] | None = None) -> None:
+        self.key = str((options or {}).get("key") or "")
+        self.id = "needs-key"
+
+    def check(self, subject: Mapping[str, Any], text: str) -> Sequence[WikiIssue]:
+        """``subject["page"]["front_matter"]``에 ``key``가 없으면 오류 하나를 돌려준다."""
+        front = (subject.get("page") or {}).get("front_matter") or {}
+        if not self.key or self.key in front or subject["change"]["op"] == "delete":
+            return []
+        return [WikiIssue(severity="error", code="x.needs_key", message=f"{self.key} 필요")]
+
+
 def write_check_module(check: WikiWriteCheck, module_id: str = "test-wiki-check") -> Module:
     """``wiki.write_checks``에 쓰기 검사 하나를 주는 모듈."""
 
@@ -172,6 +195,7 @@ __all__ = [
     "DEFAULT_WORKSPACE",
     "LOCAL_SETTINGS_ID",
     "STATIC_SETTINGS_ID",
+    "FrontMatterKeyCheck",
     "SimpleIntegration",
     "SimpleWikiSpace",
     "SimpleWikiSpaces",

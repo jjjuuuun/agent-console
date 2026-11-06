@@ -147,7 +147,9 @@ def _default_access() -> list[WikiAccessOp]:
 
 
 def _default_secret_scan() -> dict[str, WikiSecretScanMode]:
-    return {"user": "warn", "agent": "reject"}
+    # 0.14.1: system(wiki-update 노드 등 앱이 대신 쓰는 쪽)도 reject — 에이전트 출력을 노드로 옮겨
+    # 쓸 때 에이전트가 직접 쓸 때보다 느슨해지지 않게 한다.
+    return {"user": "warn", "agent": "reject", "system": "reject"}
 
 
 # ---------------------------------------------------------------- 문법(syntax)
@@ -927,12 +929,14 @@ class WikiSettings(DefinitionModel):
         default_factory=_default_secret_scan,
         title="비밀 값 검사",
         description=(
-            "쓴 쪽(user 사람, agent 에이전트 등)마다 비밀로 보이는 값을 어떻게 할지입니다. "
-            "없는 쪽은 사람 값을 씁니다."
+            "쓴 쪽(user 사람, agent 에이전트, system 앱이 대신 씀 등)마다 비밀로 보이는 값을 "
+            "어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다."
         ),
         json_schema_extra={
-            "default": {"user": "warn", "agent": "reject"},
-            "examples": [{"user": "warn", "agent": "reject", "external": "off"}],
+            "default": {"user": "warn", "agent": "reject", "system": "reject"},
+            "examples": [
+                {"user": "warn", "agent": "reject", "system": "reject", "external": "off"}
+            ],
             **x_ui(
                 tier="basic",
                 when="오탐이 많으면 끄고, 비밀이 섞이면 안 되면 거부로 바꾸세요.",

@@ -31,6 +31,7 @@
 | `apply_decisions(items, *, source_index, target_index)` | 적용 판정(바뀐 항목만 `conflict`) |
 | `apply_renames(docs, renames, *, rewrite_references)` | 새 id + 묶음 안 참조 고치기 |
 | `path_fields(schema, value)`·`outside_paths(value, schema, root, allowed)` | `x-path` 값 찾기, 프로젝트 폴더 밖 경로(K33-7) |
+| `FolderGuard(folder, *, reserved, realpath)`·`normalize_reserved`·`relative_inside` | 폴더 안 파일 접근의 경로 지킴(§PI.5): 예약 경로(대소문자 무시)·링크를 푼 실제 경로가 폴더 안인지. 경로 문자열 검사는 호출자 몫 |
 | `legacy_items`·`legacy_counts`·`without_scope_field` | 옛 프로젝트 전용 정의(`project` 필드) 해석(§PI.8) |
 | `project_layer_value(project)` | 프로젝트 층 값(`settings` 지정 필드 + 작업 폴더 = `folder`) |
 | `visible`·`scope_issues`·`move_plan`·`delete_plan` | 옛 범위 규칙. [정리] 화면 전환까지만(33t에서 삭제) |

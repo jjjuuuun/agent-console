@@ -7,6 +7,10 @@
   최대 글자, `WriteBudget`), 지침 `instructions()`·`wiki_instructions`, 문구 데이터 `data/tool_text.yaml`
   (`WikiToolText`), 절 함수 `section_span`·`replace_section`.
 
+- 쓰기 방식 공개(7R.17): `compose_write`·`PageComposition`·`WIKI_WRITE_MODES`(도구 `write`가 같은 함수를 쓴다),
+  예외 `WikiSectionNotFoundError`(`wiki.not_found`, `reason=section_not_found` — 도구 사유 코드는 전과 같음),
+  `wiki_failure`·`WikiFailure`(저장소 예외 → 이벤트 상태·사유 코드).
+
 - SQLite 기록 저장소(7R.11): `sqlite.SqliteWikiHistory`(표 `wiki_page_versions`·`wiki_blobs`, 블롭 공유, 원자적
   `record`, `prune` 고아 블롭 삭제, 공간 전체 `changes`), 계보 `wiki`의 리비전 폴더 `sqlite.MIGRATIONS_DIR`·
   `BRANCH_NAME`(`wiki_0001`), 선택 의존 `sqlite`.
@@ -26,3 +30,5 @@
   링크와 만들 경로 제안·바깥 링크·스킴·고아·제목 겹침), 그래프 주변, 링크 대상만 고치는 이름 바꾸기, 링크
   넣기 글, 판단 대상 만들기, 검색 강조, 페이지 파일 접근(`WikiPages`·`LocalWikiPages`·`read_pages`), 시험
   도구(`MemoryWikiPages`·`WikiPagesContractTests`).
+- 계약 0.14.1 후속(코드 변화 없음): `WikiSecretPolicy()` 기본 방식은 계약 `WikiSettings` 기본값을 읽으므로 이제
+  `system`도 `reject`다(보안 강화). 위키 고치기 노드처럼 앱이 대신 쓰는 본문의 비밀 의심 값을 거부한다.

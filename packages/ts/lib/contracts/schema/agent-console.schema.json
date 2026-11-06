@@ -6,9 +6,9 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.14.0",
+    "CONTRACTS_VERSION": "0.14.1",
     "CONTRACT_VERSIONS": {
-      "common": "1.10.0",
+      "common": "1.11.0",
       "resources": "1.1.0",
       "logs": "1.2.0",
       "definitions": "1.7.0",
@@ -21,7 +21,7 @@
       "architecture": "1.0.0",
       "memory": "1.1.0",
       "sdd": "1.2.0",
-      "wiki": "1.0.0",
+      "wiki": "1.1.0",
       "modules": "1.5.0"
     },
     "USAGE_REPORT_PARTS": [
@@ -431,7 +431,8 @@
       "WIKI_HOME_MISSING": "wiki.home_missing",
       "WIKI_RULE_VIOLATION": "wiki.rule_violation",
       "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
-      "WIKI_SECRET_SUSPECT": "wiki.secret_suspect"
+      "WIKI_SECRET_SUSPECT": "wiki.secret_suspect",
+      "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable"
     },
     "KNOWN_SUGGESTION_IDS": {
       "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
@@ -28501,6 +28502,18 @@
         "limits": {
           "$ref": "#/$defs/WikiLimits"
         },
+        "writable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(1.1.0) 이 공간에 쓸 수 있나(공간 `config_writable`). false면 웹은 읽기 전용으로 그린다(쓰기는 409 `project.config_readonly`·`wiki.config_readonly`). null = 옛 서버 또는 알 수 없음(쓸 수 있다고 본다)."
+        },
         "issues": {
           "description": "공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).",
           "items": {
@@ -30664,13 +30677,15 @@
           },
           "default": {
             "user": "warn",
-            "agent": "reject"
+            "agent": "reject",
+            "system": "reject"
           },
-          "description": "쓴 쪽(user 사람, agent 에이전트 등)마다 비밀로 보이는 값을 어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다.",
+          "description": "쓴 쪽(user 사람, agent 에이전트, system 앱이 대신 씀 등)마다 비밀로 보이는 값을 어떻게 할지입니다. 없는 쪽은 사람 값을 씁니다.",
           "examples": [
             {
               "agent": "reject",
               "external": "off",
+              "system": "reject",
               "user": "warn"
             }
           ],

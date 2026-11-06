@@ -14,7 +14,10 @@ JsonObject = dict[str, Any]
 """임의 키-값 객체. 내용은 계약이 해석하지 않는다(디스크립터의 JSON Schema가 정의)."""
 
 Slug = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")]
-"""정의 id(파일 이름으로도 쓰인다). 영숫자로 시작, 영숫자·`_`·`-`, 최대 128자."""
+"""정의 id(파일 이름으로도 쓰인다). 영숫자로 시작, 영숫자·`_`·`-`, 최대 128자.
+
+0.14.1부터 패키지 루트에서 공개한다(`from agent_console_contracts import Slug`) — 노드 설정
+모델처럼 계약 밖에서 같은 id 모양을 검증할 때 정규식을 복사하지 않고 이 별칭을 쓴다."""
 
 NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
 
