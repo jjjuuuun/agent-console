@@ -3,11 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useApi } from "../../app/ApiContext";
 import { queryKeys, useApiQuery } from "../../app/queries";
 import { useProjectId } from "../../app/projectScope";
+import { useApiPagedQuery } from "../../app/pagedQuery";
+import type { ConversationSummary } from "@agent-console/contracts";
 
 /** 채팅 화면이 쓰는 질의 키. 쓰기 뒤에는 `["list"]` 접두로 한꺼번에 무효화한다(목록 키 규칙). */
 export const chatKeys = {
   /** 프로젝트를 주면 그 프로젝트 목록의 키, 생략하면 모든 대화 목록 키의 접두(무효화·일괄 갱신용). */
   conversations: (project?: string | null) => (project == null ? queryKeys.list("conversations") : queryKeys.list("conversations", { project })),
+  /** 대화 목록 페이지(무한 질의) 키. `chatKeys.conversations()` 접두 아래라 한꺼번에 무효화된다. */
+  conversationPages: (project: string | null, archived: boolean | undefined) => queryKeys.list("conversations", { project, archived, paged: true }),
   graphs: () => queryKeys.list("graphs"),
   agents: () => queryKeys.list("agents"),
   resources: () => queryKeys.list("resources"),
@@ -20,7 +24,8 @@ export const chatKeys = {
 };
 
 const loaders = {
-  conversations: (rest: RestClient, project: string | null) => rest.listConversations(project === null ? undefined : { project }),
+  conversationsPage: (rest: RestClient, project: string | null, archived: boolean | undefined, cursor: string | null) =>
+    rest.conversationsPage({ limit: CONVERSATION_PAGE_SIZE, ...(project === null ? {} : { project }), ...(archived === undefined ? {} : { archived }), ...(cursor === null ? {} : { cursor }) }),
   graphs: (rest: RestClient) => rest.listGraphs(),
   agents: (rest: RestClient) => rest.listAgents(),
   resources: (rest: RestClient) => rest.listResources(),
@@ -30,10 +35,20 @@ const loaders = {
   backends: (rest: RestClient) => rest.listBackends(),
 };
 
-/** 현재 프로젝트의 대화 목록(프로젝트 기능이 꺼져 있으면 모두). */
-export function useConversationList() {
+/** 대화 목록을 한 번에 읽는 수(서버 커서 페이지) */
+export const CONVERSATION_PAGE_SIZE = 50;
+
+/**
+ * 현재 프로젝트의 대화 목록(서버 `?project=`·커서 페이지, 프로젝트 기능이 꺼져 있으면 모두).
+ * `data`는 읽은 페이지를 이어 붙인 목록이고, `loadMore`로 다음 페이지를 읽는다. 프로젝트가 바뀌면 첫 페이지부터 다시 읽는다.
+ * @param options.archived true/false = 서버가 보관 여부로 거른다, 생략 = 모두
+ */
+export function useConversationList(options: { archived?: boolean } = {}) {
   const project = useProjectId();
-  return useApiQuery(chatKeys.conversations(project), (rest) => loaders.conversations(rest, project));
+  const archived = options.archived;
+  const paged = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(project, archived), (rest, cursor) => loaders.conversationsPage(rest, project, archived, cursor));
+  const { items, isPending, ...rest } = paged;
+  return { ...rest, data: items as ConversationSummary[] | undefined, isLoading: isPending };
 }
 export const useGraphList = (enabled = true) => useApiQuery(chatKeys.graphs(), loaders.graphs, { enabled });
 export const useAgentList = (enabled = true) => useApiQuery(chatKeys.agents(), loaders.agents, { enabled });

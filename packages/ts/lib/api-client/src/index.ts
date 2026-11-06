@@ -14,6 +14,7 @@ export type { SpaceRestClient } from "./rest";
 export type {
   FetchLike,
   HandoffParams,
+  ConversationsPageParams,
   ListConversationsParams,
   ListGraphsParams,
   ListMemoryEntriesParams,
@@ -30,6 +31,7 @@ export type {
   PostMessageResult,
   RestClient,
   RestClientOptions,
+  RunsPageParams,
   Versioned,
 } from "./rest";
 export type { TokenSource } from "./token";
@@ -42,6 +44,8 @@ export { LOG_EMPTY_VALUE, logQuery } from "./clients/logs";
 export { memoryConflictVersion, memoryScopeText } from "./clients/memory";
 export type { MemoryClient, MemoryImportPolicyName } from "./clients/memory";
 export type { ListFoldersParams, ProjectsClient } from "./clients/projects";
+export { createSddClient } from "./clients/sdd";
+export type { ListSpecTasksParams, SddAutomationOp, SddClient } from "./clients/sdd";
 export type { ResourceFileContent } from "./clients/resources";
 export type { VersionFileContent } from "./clients/versions";
 export {

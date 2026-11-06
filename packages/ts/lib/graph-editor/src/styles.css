@@ -476,3 +476,36 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 /* 아래 줄(보기 도구줄 높이 안) 오른쪽 끝. 노드가 없는 여백에 둬서 노드를 덮지 않는다. 미니맵 토글이 있으면 그 왼쪽. */
 .ac-ge-offscreen { margin: var(--ac-space-2); }
 .ac-ge-offscreen--beside-toggle { margin-right: calc(var(--ac-space-2) * 2 + 28px); }
+
+/* ---- 세션 구분 표시 (screen-delegation.md §14, 5.7R.34): 편집기는 앱이 준 칩·띠·표식을 그리기만 한다 ---- */
+.ac-ge-edge-chip[data-stacked="true"] { max-width: var(--ac-edge-chip-max-w, 280px); padding-top: 1px; padding-bottom: 1px; }
+.ac-ge-edge-rows { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ac-ge-edge-row { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; white-space: nowrap; }
+.ac-ge-edge-row1 { max-width: 168px; overflow: hidden; text-overflow: ellipsis; display: block; }
+.ac-ge-edge-row2 { overflow: hidden; }
+.ac-ge-edge-row2 .ac-ge-hint-chip { margin-left: 0; flex: none; }
+.ac-ge-hint-chip[data-lead="true"] { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.ac-ge-hint-chip[data-lead="true"] .ac-ge-chip-icon { margin-right: 0; display: inline-flex; }
+.ac-ge-hint-chip[data-lead="true"] .ac-ge-chip-icon > svg { width: 12px; height: 12px; }
+/* 줌 < 0.6: 종류 아이콘 + 앞 칩 아이콘만 한 줄 */
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-edge-chip[data-stacked="true"] { display: inline-flex; align-items: center; }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-edge-chip[data-stacked="true"] .ac-ge-edge-row1 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-edge-chip[data-stacked="true"] .ac-ge-edge-row2 > :not([data-lead="true"]) { display: none; }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-hint-chip[data-lead="true"] .ac-ge-lead-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+/* 노드: 왼쪽 3px 띠 + 헤더 표식 + 맨 아래 한 줄 칩 */
+.ac-ge-node[data-annotated-strip="true"]::before { content: ""; position: absolute; left: -3px; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; background: var(--ac-ge-session-strip); pointer-events: none; }
+.ac-ge-tag { gap: 4px; }
+.ac-ge-tag-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ac-ge-tag[data-pulse="true"] { animation: ac-ge-tag-pulse 1.2s ease-in-out infinite; }
+@keyframes ac-ge-tag-pulse { 50% { background: var(--ac-surface-2); } }
+@media (prefers-reduced-motion: reduce) { .ac-ge-tag[data-pulse="true"] { animation: none; } }
+.ac-ge-foot { display: flex; align-items: center; gap: 2px; height: 18px; padding: 0 var(--ac-space-3) 0 calc(var(--ac-space-3) + 6px); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); color: var(--ac-text-muted); min-width: 0; }
+.ac-ge-foot .ac-ge-chip-icon { display: inline-flex; margin-right: 0; flex: none; }
+.ac-ge-foot .ac-ge-chip-icon > svg { width: 12px; height: 12px; }
+.ac-ge-foot-text { min-width: 0; }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-foot { position: absolute; left: 6px; bottom: 2px; padding: 0; height: auto; }
+.ac-ge-root[data-zoom-lod="icon"] .ac-ge-foot-text { display: none; }
+.ac-ge-hint-chip[data-lead="true"] { border-style: solid; }
+.ac-ge-hint-chip[data-lead="true"][data-dashed="true"] { border-style: dashed; background: var(--ac-surface-2); }
+.ac-ge-node[data-emphasis="dim"] { opacity: 0.45; }
+.ac-ge-node[data-emphasis="on"] { outline: 2px solid var(--ac-accent); outline-offset: 2px; }

@@ -22,7 +22,7 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 
 ## 공개 API 요지
 
-계약 버전 `CONTRACTS_VERSION` = 0.13.0(새 하위 모듈 `sdd` 1.0.0 — 스펙 기반 개발, `Run.labels`·커서 페이지 `RunPage`·`ConversationPage`, 라벨 표시 `LabelDisplay`, design §6R.6·§6R.18. 0.12.2는 디스크립터 화면 속성(세션·백엔드·중첩)·이슈 `hint`·`group`·`GraphPatch.unset_node_fields`, `docs/design/screen-delegation.md` §14·§15. 0.12.1은 기록 공간·폴더 확인 보강, design §PI.4.6·§PI.16. 0.12.0은 §PI.10. v10(0.11.0)도 §PI.10, v9는 §5.7R.5, v8은 §5.5R.2.4, v7은 §5.2R.3, v6은 §5R.9, v5는 §4R.9, v4는 §3R.3, v3는 §2R.2, v2는 §R9.3).
+계약 버전 `CONTRACTS_VERSION` = 0.13.1(0.13.0 + 비밀 규칙 `SecretRuleSettings.weak_key_names`·문서 상수 `fake.session_missing`·`records.session_archive_failed`·`run.move_busy`·`ParsedTask.issues` 설명. 0.13.0은 새 하위 모듈 `sdd` 1.0.0 — 스펙 기반 개발, `Run.labels`·커서 페이지 `RunPage`·`ConversationPage`, 라벨 표시 `LabelDisplay`, design §6R.6·§6R.18. 0.12.2는 디스크립터 화면 속성(세션·백엔드·중첩)·이슈 `hint`·`group`·`GraphPatch.unset_node_fields`, `docs/design/screen-delegation.md` §14·§15. 0.12.1은 기록 공간·폴더 확인 보강, design §PI.4.6·§PI.16. 0.12.0은 §PI.10. v10(0.11.0)도 §PI.10, v9는 §5.7R.5, v8은 §5.5R.2.4, v7은 §5.2R.3, v6은 §5R.9, v5는 §4R.9, v4는 §3R.3, v3는 §2R.2, v2는 §R9.3).
 모델은 기능별 하위 모듈 `common`·`resources`·`logs`·`definitions`·`runs`·`usage`·`projects`·`chat`·`exports`·`imports`·`architecture`·`memory`·`sdd`·`modules`
 (`CONTRACT_SUBMODULES`, 버전 `CONTRACT_VERSIONS`)에 있고 루트가 전부를 다시 내보낸다. 기록은 `CHANGELOG.md`.
 

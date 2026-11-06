@@ -16,3 +16,5 @@
   오류 `SddError` 하위, 테스트 가짜(`MemorySpecFiles`·`FakeVerificationSource`·`FakeTaskIntegration`·
   `memory_repository`). 의존 추가: conditions·store·text-template.
 - 6R.13: `SpecRepository(template_store=…)` — 문서 틀을 스펙과 다른 저장소에서 읽고 쓴다(기본 = `store`).
+- 계약 후속(0.13.1): 선택 능력 프로토콜 `TaskIssueSource.task_issues(ctx, tasks)`(X43 연동의 작업 이슈 →
+  `ParsedTask.issues`)를 문서화하고 공개했다. 이미 쓰던 메서드 모양 그대로다.

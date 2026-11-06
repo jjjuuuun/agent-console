@@ -11,3 +11,4 @@
   `stopped_reason` user·spec_done·stage_done·failures, 재시작 뒤 실행 기록에서 자기 `host_id` Run만
   되살림). `RunsTaskIntegration.automation_state`·`control`(`AutomationControl`). 설치자 옵션
   `automation_failure_outcomes`·`automation_retry_outcomes`. `FakeRuns.host`·`host_id`.
+- 계약 후속: `AUTOMATION_SKIPPED`가 계약 문서 상수 `KnownIssueCodes.SDD_AUTOMATION_SKIPPED`를 쓴다(값 같음).

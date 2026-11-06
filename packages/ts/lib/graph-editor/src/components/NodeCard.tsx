@@ -5,7 +5,7 @@ import { defaultMessages, format } from "../messages";
 import type { PortView } from "../logic/ports";
 import { SIDE_GLYPH } from "../logic/layout";
 import type { Side } from "../shapes/types";
-import type { BindSummary, NodeRunBadge, NodeStateView, PortHandleRenderer } from "../types";
+import type { BindSummary, ChipView, NodeAnnotation, NodeRunBadge, NodeStateView, NodeTagView, PortHandleRenderer } from "../types";
 import { ResourceChips } from "./ResourceChips";
 import type { ResourceChip } from "../logic/team";
 
@@ -52,15 +52,56 @@ export interface NodeCardProps {
   bind?: BindSummary;
   /** 실행 상세용 회차·호출 배지 */
   runBadge?: NodeRunBadge;
+  /** 앱이 얹는 구분 표시(왼쪽 띠·헤더 표식·맨 아래 칩) */
+  annotation?: NodeAnnotation;
+  /** `ChipView.iconName`을 그리는 함수 */
+  renderIcon?: (name: string) => ReactNode;
   /** 반복 영역 윤곽(연결을 선택·포커스하는 동안) */
   loopRegion?: boolean;
   /** 노드 가장자리 띠 슬롯(편집기가 React Flow Handle을 넘김, 선택된 노드에서만). 단독 사용 시 생략 */
   edgeBands?: ReactNode;
 }
 
+/** 헤더 표식 하나. `onClick`이 있으면 단추(드래그로 번지지 않는다). */
+function NodeTag({ tag }: { tag: NodeTagView }) {
+  const body = (
+    <>
+      {tag.dotColor !== undefined ? <span className="ac-ge-tag-dot" aria-hidden="true" style={{ background: tag.dotColor }} /> : null}
+      {tag.text}
+    </>
+  );
+  const common = { className: "ac-ge-run-badge ac-ge-tag", "data-pulse": tag.pulse ? "true" : undefined, "aria-label": tag.ariaLabel, title: tag.ariaLabel };
+  if (tag.onClick === undefined) return <span {...common} role="img">{body}</span>;
+  return (
+    <button
+      type="button"
+      {...common}
+      className="ac-ge-run-badge ac-ge-tag nodrag nopan"
+      onClick={(e) => {
+        e.stopPropagation();
+        tag.onClick?.();
+      }}
+    >
+      {body}
+    </button>
+  );
+}
+
+/** 카드 맨 아래 한 줄 칩. 줌이 낮으면(루트 `data-zoom-lod`, CSS) 아이콘만 남는다. */
+function FootChip({ chip, renderIcon }: { chip: ChipView; renderIcon: ((name: string) => ReactNode) | undefined }) {
+  const full = chip.fullTitle ?? chip.title;
+  const icon = chip.iconName !== undefined ? (renderIcon?.(chip.iconName) ?? chip.iconText ?? null) : (chip.iconText ?? null);
+  return (
+    <div className="ac-ge-foot" title={full}>
+      {icon !== null && icon !== undefined && icon !== false ? <span className="ac-ge-chip-icon" aria-hidden="true">{icon}</span> : null}
+      <span className="ac-ge-foot-text ac-ellipsis">{chip.title}</span>
+    </div>
+  );
+}
+
 /** 노드 접근성 이름: "노드 {label}, 타입 {typeTitle}, 상태 {라벨}, 검증 오류 {n}건". */
 export function nodeAriaLabel(
-  p: Pick<NodeCardProps, "label" | "typeTitle" | "state" | "issueCount" | "bind" | "runBadge">,
+  p: Pick<NodeCardProps, "label" | "typeTitle" | "state" | "issueCount" | "bind" | "runBadge" | "annotation">,
   m: GraphEditorMessages = defaultMessages,
 ): string {
   const status = p.state === undefined ? "" : `, 상태 ${statusLabel(p.state.status, m)}`;
@@ -75,7 +116,8 @@ export function nodeAriaLabel(
         (p.bind.missing ? `, ${m.bindMissing}` : "") +
         (p.bind.badges ?? []).map((b) => `, ${b.fullTitle ?? b.title}`).join("");
   const run = p.runBadge === undefined ? "" : `, ${p.runBadge.ariaLabel}`;
-  return format(m.nodeAria, { label: p.label, typeTitle: p.typeTitle, status }) + bind + run + errors;
+  const note = [p.annotation?.lead, ...(p.annotation?.tags ?? [])].flatMap((t) => (t === undefined ? [] : [`, ${t.ariaLabel}`])).join("") + (p.annotation?.foot === undefined ? "" : `, ${p.annotation.foot.fullTitle ?? p.annotation.foot.title}`);
+  return format(m.nodeAria, { label: p.label, typeTitle: p.typeTitle, status }) + bind + run + note + errors;
 }
 
 /** 이슈 배지 접근성 이름: "검증 오류 N건, 경고 M건"(0인 쪽은 생략). */
@@ -171,7 +213,7 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
     );
   };
   const rows = Math.max(props.inputs.length, props.outputs.length);
-  const style = { "--ac-ge-accent": props.accent, width: props.width } as CSSProperties;
+  const style = { "--ac-ge-accent": props.accent, width: props.width, ...(props.annotation?.stripColor !== undefined ? { "--ac-ge-session-strip": props.annotation.stripColor } : {}) } as CSSProperties;
   const showAttempt = state?.attempt !== undefined && state.attempt > 1;
   const badges = props.badges ?? [];
   const shownBadges = badges.slice(0, 3);
@@ -194,6 +236,8 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
       data-loop-region={props.loopRegion ? "true" : undefined}
       data-missing={props.bind?.missing ? "true" : undefined}
       data-labels={props.portLabels ?? "auto"}
+      data-annotated-strip={props.annotation?.stripColor !== undefined ? "true" : undefined}
+      data-emphasis={props.annotation?.emphasis}
     >
       <span className="ac-ge-node-bar ac-status-keep" aria-hidden="true" />
       {props.edgeBands}
@@ -226,6 +270,10 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
             )}
           </span>
         )}
+        {props.annotation?.lead !== undefined ? <NodeTag tag={props.annotation.lead} /> : null}
+        {(props.annotation?.tags ?? []).map((tag) => (
+          <NodeTag key={tag.key} tag={tag} />
+        ))}
         {props.runBadge !== undefined &&
           (props.runBadge.onClick !== undefined ? (
             <button
@@ -359,6 +407,7 @@ export const NodeCard = memo(function NodeCard(props: NodeCardProps) {
           </button>
         </div>
       )}
+      {props.annotation?.foot !== undefined && !props.compact ? <FootChip chip={props.annotation.foot} renderIcon={props.renderIcon} /> : null}
     </div>
   );
 });

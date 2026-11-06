@@ -1,0 +1,86 @@
+{
+  "params": {
+    "tab": "tab",
+    "doc": "doc",
+    "line": "line",
+    "task": "task",
+    "req": "req",
+    "status": "status",
+    "stage": "stage",
+    "ready": "ready",
+    "q": "q",
+    "section": "section"
+  },
+  "tabs": [
+    {
+      "id": "documents",
+      "labelKey": "documents"
+    },
+    {
+      "id": "tasks",
+      "labelKey": "tasks"
+    },
+    {
+      "id": "plan",
+      "labelKey": "plan"
+    },
+    {
+      "id": "trace",
+      "labelKey": "trace"
+    },
+    {
+      "id": "rules",
+      "labelKey": "rules"
+    }
+  ],
+  "defaultTab": "documents",
+  "taskLinkKinds": [
+    "run"
+  ],
+  "gaps": {
+    "no_task": {
+      "tone": "warning",
+      "labelKey": "specs.gap.no_task.label",
+      "hintKey": "specs.gap.no_task.hint"
+    },
+    "no_run": {
+      "tone": "warning",
+      "labelKey": "specs.gap.no_run.label",
+      "hintKey": "specs.gap.no_run.hint"
+    },
+    "not_verified": {
+      "tone": "warning",
+      "labelKey": "specs.gap.not_verified.label",
+      "hintKey": "specs.gap.not_verified.hint"
+    },
+    "verification_failed": {
+      "tone": "danger",
+      "labelKey": "specs.gap.verification_failed.label",
+      "hintKey": "specs.gap.verification_failed.hint"
+    },
+    "task_not_done": {
+      "tone": "info",
+      "labelKey": "specs.gap.task_not_done.label",
+      "hintKey": "specs.gap.task_not_done.hint"
+    }
+  },
+  "gapFallbackTone": "warning",
+  "verification": {
+    "pass": {
+      "tone": "success",
+      "labelKey": "specs.verification.pass"
+    },
+    "fail": {
+      "tone": "danger",
+      "labelKey": "specs.verification.fail"
+    },
+    "unknown": {
+      "tone": "neutral",
+      "labelKey": "specs.verification.unknown"
+    }
+  },
+  "verificationFallbackTone": "neutral",
+  "issueCodes": {
+    "secretSuspect": "sdd.secret_suspect"
+  }
+}

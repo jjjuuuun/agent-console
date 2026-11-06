@@ -108,7 +108,7 @@ function Overview({ ctx, onSelectNode, onSelectEdge }: { ctx: TeamPanelContext; 
           </section>
         </>
       )}
-      <DelegationOverview graph={g} nodeTypes={ctx.nodeTypes} edgeTypes={ctx.edgeTypes} workspace={ctx.workspace} nested={ctx.nested} onSelectEdge={onSelectEdge ?? ((_edge, source) => onSelectNode(source))} onSelectNode={onSelectNode} />
+      <DelegationOverview graph={g} nodeTypes={ctx.nodeTypes} edgeTypes={ctx.edgeTypes} strategies={ctx.strategies} workspace={ctx.workspace} nested={ctx.nested} onSelectEdge={onSelectEdge ?? ((_edge, source) => onSelectNode(source))} onSelectNode={onSelectNode} />
       {[...overview.declared].map(([label, nodes]) => (
         <section key={label} aria-label={label}>
           <span className="lib-field-label">{label}</span>

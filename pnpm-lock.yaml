@@ -81,6 +81,9 @@ importers:
       '@agent-console/schema-form':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/schema-form
+      '@agent-console/sdd-view':
+        specifier: ^0.1.0
+        version: link:../../packages/ts/lib/sdd-view
       '@agent-console/text-editor':
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/text-editor

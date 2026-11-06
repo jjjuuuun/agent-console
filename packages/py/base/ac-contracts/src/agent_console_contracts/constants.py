@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.13.0"
+CONTRACTS_VERSION: Final = "0.13.1"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -35,10 +35,10 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.8.0",
+    "common": "1.9.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
-    "definitions": "1.5.0",
+    "definitions": "1.6.0",
     "runs": "1.7.0",
     "usage": "1.1.0",
     "projects": "3.1.0",
@@ -47,7 +47,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "imports": "1.1.0",
     "architecture": "1.0.0",
     "memory": "1.1.0",
-    "sdd": "1.0.0",
+    "sdd": "1.0.1",
     "modules": "1.4.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
@@ -62,7 +62,11 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 1.2.0(`LogSourceInfo.default_effective`),
 `runs` 1.7.0(`Run.labels`·`RunPage`), `chat` 1.3.0(`ConversationPage`, 대화 만들기 요청 모르는 키
 거부),
-`modules` 1.4.0(`ModuleInfo.description`·`label_display`, WS `sdd.changed`)."""
+`modules` 1.4.0(`ModuleInfo.description`·`label_display`, WS `sdd.changed`).
+0.13.1(계약 후속, 더하기만): `common` 1.9.0(문서 상수 `ErrorCodes.FAKE_SESSION_MISSING`,
+`KnownIssueCodes.RECORDS_SESSION_ARCHIVE_FAILED`·`RUN_MOVE_BUSY`), `definitions` 1.6.0
+(`SecretRuleSettings.weak_key_names`), `sdd` 1.0.1(`ParsedTask.issues` 설명 — X43 선택 메서드
+`task_issues`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -241,6 +245,12 @@ class ErrorCodes:
     """설정 `sdd.secret_scan = reject`에서 문서 본문·실행 입력에 비밀 의심 값이 있어 거부했다(HTTP
     422).
     값은 싣지 않는다. `details.document_id?`·`details.rules`."""
+
+    # ---- 0.13.1(5.7R.33y3 후속). HTTP 응답 코드가 아니다(아래 표에 없다).
+    FAKE_SESSION_MISSING: Final = "fake.session_missing"
+    """가짜 실행 백엔드(fake)가 이어 쓸 세션 기록 파일을 찾지 못해 실행이 실패했다
+    (`AgentResult.error`·Run 실패의 `ErrorInfo`). `details.session_id`. 실제 백엔드는 자기
+    코드를 쓴다."""
 
 
 HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
@@ -561,6 +571,15 @@ class KnownIssueCodes:
     `Issue.path` = 섹션 기준 경로."""
     SDD_AUTOMATION_SKIPPED: Final = "sdd.automation_skipped"
     """자동 진행이 연속 실패 상한을 넘은 작업을 건너뛰었다(info). `details.failures`."""
+
+    # ---- 0.13.1(5.7R.33y3 후속): 세션 보관·기록 옮기기. 오류 코드가 아니다.
+    RECORDS_SESSION_ARCHIVE_FAILED: Final = "records.session_archive_failed"
+    """실행이 끝난 뒤 백엔드 세션 기록을 프로젝트 기록 공간에 보관하지 못했다(info,
+    `ServerInfo.warnings`, 최근 실패를 하나로 묶음). 실행 결과에는 영향이 없다. `details.count` =
+    최근 실패 수, 나머지는 마지막 실패의 위치(`project_id`·`backend` 등, 내용·비밀 없음)."""
+    RUN_MOVE_BUSY: Final = "run.move_busy"
+    """기록 옮기기에서 끝나지 않은 Run이 있는 묶음이라 옮기지 않았다(`RecordsMoveResult`의 `failed`
+    항목 이슈). `details.id` = 루트 Run id."""
 
 
 class KnownSuggestionIds:

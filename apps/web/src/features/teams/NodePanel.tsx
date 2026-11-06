@@ -12,6 +12,8 @@ import { DraftNotice } from "./DraftNotice";
 import { ignoredFieldReasons, IgnoredValueClear } from "./ignoredFields";
 import { useDraftPreview } from "./useDraftPreview";
 import { useCanvasToast } from "./canvasToast";
+import { SessionWhere } from "./SessionWhere";
+import { incomingSessions, nodeSessionMode } from "./sessionView";
 import { teamMessages as t } from "./messages";
 import { attachmentErrorsAt } from "../../lib/attachmentProblems";
 import { diffNodeLayer, nodeLayerAttachments, ownAttachments, reorderLinkEdges, replaceNode, withLinkMode, withNodeOwnAttachments } from "./nodeResources";
@@ -66,6 +68,8 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
   const showRole = "role" in props;
   const showWhen = "delegate_when" in props && delegated;
   const toggleCtx = { nodeTypes: ctx.nodeTypes, edgeTypes: ctx.edgeTypes };
+  // 실행 위치: 들어오는 위임 연결의 세션 값이 모두 같은 세션이면 첫 줄로 알린다(별도 세션이면 줄 없음)
+  const sessionIn = nodeSessionMode(incomingSessions(node.id, ctx.graph, ctx.edgeTypes, ctx.strategies));
   const mine = issuesOfNode(ctx.issues, node.id, ctx.graph);
   const bindsLink = agent === undefined ? undefined : `${routePath(ROUTE_ROLES.agent)}/${encodeURIComponent(agent.id)}`;
   const layers = toFormLayers(eff.data);
@@ -92,6 +96,7 @@ function RoleTab({ ctx, node }: { ctx: TeamPanelContext; node: NodeSpec }) {
 
   return (
     <div className="lib-form">
+      <SessionWhere mode={sessionIn} strategies={ctx.strategies} {...(ctx.onSelectEdge === undefined ? {} : { onViewEdge: ctx.onSelectEdge })} />
       <Field label={t.node.label} hint={t.node.labelMax}>
         {(a) => <input {...a} data-node-label="" className="ac-input" value={node.label ?? ""} maxLength={120} disabled={ctx.disabled} onChange={(e) => ctx.onGraphChange(withNode(ctx.graph, node.id, { label: e.target.value }))} />}
       </Field>

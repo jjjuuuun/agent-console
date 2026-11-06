@@ -51,7 +51,8 @@ async function ready(h: Harness) {
 
 describe("채팅 진행 줄: 위임·반복·중첩 팀", () => {
   it("독립 위임 칩: 위임자 아래 들여 쓰고 별도 세션 배지, 연결 종류 제목", async () => {
-    const h = setup();
+    // 세션 칩은 연결의 방식 디스크립터가 준 값으로만 그린다(5.7R.34)
+    const h = setup({ listDelegationStrategies: async () => [{ id: "s", title: "방식", member_fields: [], max_depth: null, session: "separate" }] });
     mount(h);
     await ready(h);
     await emit(h, "r1", 1, "node.started", { status: "running", call: 0 }, ["n1", "n2"]);

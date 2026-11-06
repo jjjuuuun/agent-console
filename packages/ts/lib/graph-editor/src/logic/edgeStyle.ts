@@ -1,5 +1,9 @@
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor } from "@agent-console/contracts";
+import { KNOWN_DELEGATION_SESSIONS } from "@agent-console/contracts/constants";
 import { safeCssColor } from "./hints";
+
+/** 패턴 계산에 쓰는 위임 방식 속성: `id`와 (있으면) 실행 세션 값. 나머지 디스크립터 필드는 보지 않는다. */
+export type StrategyStyleInput = Pick<DelegationStrategyDescriptor, "id"> & { session?: string | null | undefined };
 
 /** 값이 어디서 왔는지: 디스크립터 `ui_hints`, 디스크립터 속성의 기본값, 내장 기본. */
 export type StyleSource = "hint" | "property" | "builtin";
@@ -36,7 +40,7 @@ const patternVar = (i: number): string => PATTERN_VARS[i] as string;
  * `ui_hints`만 본다. 순위: `ui_hints`(있는 키만) → 속성 기본값(처음 맞는 속성 하나) → 내장 기본(스타일시트).
  *
  * 속성 기본값: 실패 처리 = 실패 색 + 점선(`2 4`, 둥근 끝) + 경고 아이콘, 반복 = 반복 색 + 반복 아이콘 + 모양 `auto`,
- * 위임 = 유효 위임 방식 id의 정렬 순서 % 4 패턴. `ui_hints.dashed === true`는 패턴 `8 4`.
+ * 위임 = 유효 위임 방식의 `session` 값(별도 = 실선, 같은 = 긴 점선, 모르는 값 = 구별되는 패턴), 값이 없으면 방식 id의 정렬 순서 % 4 패턴(옛 폴백). `ui_hints.dashed === true`는 패턴 `8 4`.
  * `edgeType`이 undefined(알 수 없는 종류)면 속성을 모르므로 기본값을 적용하지 않는다.
  *
  * @param edgeType 연결 종류 디스크립터(없으면 내장 기본만).
@@ -45,7 +49,7 @@ const patternVar = (i: number): string => PATTERN_VARS[i] as string;
  */
 export function resolveEdgeStyle(
   edgeType: EdgeTypeDescriptor | undefined,
-  strategies: readonly Pick<DelegationStrategyDescriptor, "id">[] = [],
+  strategies: readonly StrategyStyleInput[] = [],
   hints: ResolveEdgeStyleHints = {},
 ): ResolvedEdgeStyle {
   const ui = edgeType?.ui_hints ?? undefined;
@@ -67,11 +71,18 @@ export function resolveEdgeStyle(
     property = { color: "var(--ac-edge-loop)", iconName: "repeat", defaultShape: "auto" };
   } else if (edgeType.invocation !== null && edgeType.invocation !== undefined) {
     const id = hints.strategyId ?? edgeType.invocation.strategy;
-    const order = [...new Set(strategies.map((s) => s.id))].sort();
-    const index = order.indexOf(id);
-    if (index >= 0) {
-      const n = index % EDGE_PATTERN_COUNT;
-      property = { dasharray: n === 0 ? undefined : patternVar(n), ...(n === 2 ? { linecap: "round" as const } : {}) };
+    const session = strategies.find((s) => s.id === id)?.session;
+    if (typeof session === "string" && session !== "") {
+      // 세션 값이 패턴을 정한다(5.7R.34, 방식 id 순서를 쓰지 않는다): 별도 = 실선, 같은 = 긴 점선, 모르는 값 = 구별되는 패턴
+      if (session === KNOWN_DELEGATION_SESSIONS.SAME) property = { dasharray: patternVar(1) };
+      else if (session !== KNOWN_DELEGATION_SESSIONS.SEPARATE) property = { dasharray: patternVar(3) };
+    } else {
+      const order = [...new Set(strategies.map((s) => s.id))].sort();
+      const index = order.indexOf(id);
+      if (index >= 0) {
+        const n = index % EDGE_PATTERN_COUNT;
+        property = { dasharray: n === 0 ? undefined : patternVar(n), ...(n === 2 ? { linecap: "round" as const } : {}) };
+      }
     }
   }
 

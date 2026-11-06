@@ -34,6 +34,7 @@ import { LogTaxonomySection } from "./sections/LogTaxonomySection";
 import { ArchitectureSettingsEditor } from "../architectureSettings";
 import { MemorySettingsEditor } from "../memorySettings";
 import { SETTINGS_SECTION as MEMORY_SECTION_KEY, MEMORY_ROLE } from "../memory";
+import { SDD_ROLE, SDD_SETTINGS_SECTION as SDD_SECTION_KEY } from "../sdd";
 
 /** 설정 화면의 섹션 목록(데이터). `keys`는 그 섹션이 편집하는 최상위 설정 키(필드 오류를 섹션에 배정할 때 쓴다). */
 export interface SectionDef {
@@ -68,6 +69,8 @@ export const SETTINGS_SECTIONS: readonly SectionDef[] = [
   { id: "architecture", titleKey: "architecture", descriptionKey: "architecture", keys: ["architecture"], group: "data", requires: [...DOCUMENT_REQUIRES, "architecture"] },
   // 메모리 설정(범위 종류·정리 규칙·비밀 처리)은 메모리 모듈이 켜져 있을 때만 있다(역할 `memory`).
   { id: "memory", titleKey: "memory", descriptionKey: "memory", keys: [MEMORY_SECTION_KEY], group: "data", requires: [...DOCUMENT_REQUIRES, MEMORY_ROLE] },
+  // 스펙(SDD) 설정(작업 문법·검증 출처·비밀 검사)은 스펙 모듈이 켜져 있을 때만 있다(역할 `sdd`). 폼은 계약 `SddSettings` 스키마가 그린다.
+  { id: "sdd", titleKey: "sdd", descriptionKey: "sdd", keys: [SDD_SECTION_KEY], group: "data", requires: [...DOCUMENT_REQUIRES, SDD_ROLE] },
   // 프로젝트 관리는 프로젝트 기능이 꺼져 있으면 섹션째 사라진다. 새 정의의 기본 범위(`projects` 설정)도 여기서 고친다.
   { id: "projects", titleKey: "projects", descriptionKey: "projects", keys: ["projects"], group: "data", requires: [...DOCUMENT_REQUIRES, ...PROJECT_REQUIRES] },
   { id: "versions-ui", titleKey: "versionsUi", descriptionKey: "versionsUi", keys: ["ui/versions"], group: "data", requires: [...DOCUMENT_REQUIRES, "versions"] },

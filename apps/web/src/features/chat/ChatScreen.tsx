@@ -17,7 +17,7 @@ import { chatKeys, useAgentList, useConversationList, useChatGraph, useGraphList
 import { chatMessages } from "./chatMessages";
 import { ConversationList } from "./ConversationList";
 import { chatPaths } from "./paths";
-import { filterConversations, lastUsedByGraph, pendingSinceOf, sortConversations, upsertConversation } from "./lib/conversations";
+import { filterConversations, lastUsedByGraph, pendingSinceOf, sortConversations, patchConversationCache } from "./lib/conversations";
 import { LAST_GRAPH_KEY } from "./lib/drafts";
 import { indexById } from "./lib/team";
 import { NewConversationDialog } from "./NewConversationDialog";
@@ -33,6 +33,8 @@ import { useImeGuard } from "../../lib/ime";
 const t = chatMessages;
 /** 목록에서 요약을 실시간으로 받을 대화 수(앞쪽 = 정렬 전 서버 순서의 최근 갱신순) */
 const WATCH_LIMIT = 30;
+/** 대화 갱신 알림 뒤 목록을 다시 읽기까지 모으는 시간(ms) */
+const CONVERSATION_REREAD_MS = 300;
 
 /** 채팅 화면(라우트 `/chat`, `/chat/:conversationId`): 대화 목록 + 열린 대화. 데이터는 훅이, 표현은 chat 패키지가 맡는다. */
 
@@ -43,14 +45,15 @@ export function ChatScreen() {
   const storage = useStorage();
   const actions = useConversationActions();
   const nowMs = useNow(true);
-  const conversations = useConversationList();
+  const [query, setQuery] = useState("");
+  const [includeArchived, setIncludeArchived] = useState(false);
+  // 보관 여부는 서버가 거른다(보관 포함이면 조건 없음). 제목 검색은 서버에 질의가 없어 읽은 목록 안에서만 한다.
+  const conversations = useConversationList(includeArchived ? {} : { archived: false });
   const graphs = useGraphList();
   const agents = useAgentList();
   const settings = useWorkspaceSettings();
   const pending = usePendingInteractions();
 
-  const [query, setQuery] = useState("");
-  const [includeArchived, setIncludeArchived] = useState(false);
   const [listOpen, setListOpen] = useState(true);
   const [focusToken, setFocusToken] = useState(0);
   const projects = useProjects();
@@ -87,10 +90,19 @@ export function ChatScreen() {
   const queryClient = useQueryClient();
   const watched = (conversations.data ?? []).slice(0, WATCH_LIMIT).map((c) => c.id).join(",");
   useEffect(() => {
+    // 갱신된 대화는 서버 목록에서 맨 앞으로 옮겨 가므로, 요약을 제자리에 반영한 뒤 짧게 모아 목록을 다시 읽는다.
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const subs = (watched === "" ? [] : watched.split(",")).map((id) =>
-      ws.subscribeConversation(id, (summary) => queryClient.setQueriesData<ConversationSummary[]>({ queryKey: chatKeys.conversations() }, (cur) => (cur ? upsertConversation(cur, summary) : cur))),
+      ws.subscribeConversation(id, (summary) => {
+        queryClient.setQueriesData({ queryKey: chatKeys.conversations() }, (cur: unknown) => (cur ? patchConversationCache(cur, summary) : cur));
+        clearTimeout(timer);
+        timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() }), CONVERSATION_REREAD_MS);
+      }),
     );
-    return () => subs.forEach((s) => s?.unsubscribe());
+    return () => {
+      clearTimeout(timer);
+      subs.forEach((s) => s?.unsubscribe());
+    };
   }, [ws, queryClient, watched]);
   const pendingKey = pending.items.map((i) => `${i.id}:${i.status}`).join(",");
   useEffect(() => {
@@ -98,9 +110,10 @@ export function ChatScreen() {
   }, [queryClient, pendingKey]);
   const sortValue = settings.data?.value.chat?.list_sort;
   const visible = useMemo(
-    () => sortConversations(filterConversations(conversations.data ?? [], { query, includeArchived }), sortValue, since),
-    [conversations.data, query, includeArchived, sortValue, since],
+    () => sortConversations(filterConversations(conversations.data ?? [], { query }), sortValue, since),
+    [conversations.data, query, sortValue, since],
   );
+  const sourceLabel = useCallback((source: string) => appMessages.common.recordSources[source] ?? source, []);
   const teamNames = useMemo(() => new Map((graphs.data ?? []).map((g) => [g.id, g.name])), [graphs.data]);
   const teamName = useCallback((graphId: string) => (graphs.data === undefined ? "…" : teamNames.get(graphId)), [graphs.data, teamNames]);
 
@@ -193,6 +206,9 @@ export function ChatScreen() {
           loading={conversations.isLoading}
           error={conversations.error && conversations.data === undefined ? describeError(conversations.error, t.list.loadFailed).message : null}
           onRetry={() => void conversations.refetch()}
+          paging={{ hasMore: conversations.hasMore, loading: conversations.loadingMore, onLoadMore: conversations.loadMore }}
+          sourceOf={conversations.sourceOf}
+          sourceLabel={sourceLabel}
           query={query}
           onQueryChange={setQuery}
           includeArchived={includeArchived}

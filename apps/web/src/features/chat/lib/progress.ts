@@ -1,6 +1,7 @@
-import type { EdgeTypeDescriptor, Graph } from "@agent-console/contracts";
+import { createElement, type ReactNode } from "react";
+import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph } from "@agent-console/contracts";
 import type { ProgressStep, StepAvatar } from "@agent-console/chat";
-import { delegationMessages as dm, formatRunOrdinal } from "../../delegation";
+import { SessionChip, delegationMessages as dm, edgeSessionOf, formatRunOrdinal } from "../../delegation";
 import type { LiveRun } from "./liveRun";
 import { resolveAvatar } from "../../library";
 import { agentOfNode, nodeName, type NamingContext } from "./team";
@@ -33,6 +34,8 @@ export interface ProgressInput {
   graph: Graph | undefined;
   kinds: ReadonlyMap<string, EdgeTypeDescriptor>;
   naming: NamingContext;
+  /** 위임 방식 목록. 주면 위임 단계의 세션 칩을 연결의 방식·종류 디스크립터의 세션 값으로만 그린다(값이 없으면 칩 없음). 없으면 이전 문구 */
+  strategies?: readonly DelegationStrategyDescriptor[];
   /** 단계 칩 링크(`/runs/:id#node=…`) 생성기. 없으면 링크 없음. */
   hrefFor?: (nodeId: string) => string;
   /** 사유가 붙은 건너뜀의 상태 문구(예: "건너뜀(이어 가기)") */
@@ -113,9 +116,16 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
       },
     });
   }
+  /** 위임 단계의 세션 칩 부품(서버가 준 값만). 목록을 모르면 undefined */
+  const sessionNode = (edge: EdgeSpec | undefined, delegator: string): ReactNode | undefined => {
+    if (input.strategies === undefined || edge === undefined) return undefined;
+    const value = edgeSessionOf(edge, kinds.get(edge.kind), input.strategies);
+    return value === undefined ? undefined : createElement(SessionChip, { value, delegatorLabel: name(delegator) });
+  };
   for (const s of live.subagents) {
     const edge = (graph?.edges ?? []).find((e) => e.source.node === s.delegator && e.target.node === s.target && kinds.get(e.kind)?.invocation != null);
     const kind = edge ? kinds.get(edge.kind) : undefined;
+    const subSession = sessionNode(edge, s.delegator);
     entries.push({
       seq: s.seq,
       step: {
@@ -128,6 +138,7 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
         ...(kind?.ui_hints?.dashed ? { methodDashed: true } : {}),
         ...(s.durationMs !== undefined ? { durationMs: s.durationMs } : {}),
         indent: base + 1,
+        ...(subSession !== undefined ? { badgeNode: subSession } : {}),
         ...(hrefFor ? { href: hrefFor(s.target) } : {}),
         ...target(s.target),
       },
@@ -140,6 +151,7 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
   for (const c of live.calls) {
     const edge = (graph?.edges ?? []).find((e) => e.source.node === c.delegator && e.target.node === c.target && kinds.get(e.kind)?.invocation != null);
     const kind = edge ? kinds.get(edge.kind) : undefined;
+    const callSession = sessionNode(edge, c.delegator);
     entries.push({
       seq: c.seq,
       step: {
@@ -152,7 +164,7 @@ export function buildProgressSteps(input: ProgressInput): ProgressStep[] {
         ...(kind?.ui_hints?.dashed ? { methodDashed: true } : {}),
         ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}),
         indent: base + Math.max(1, c.path.length - 1),
-        badge: dm.chat.separateSession,
+        ...(input.strategies === undefined ? { badge: dm.chat.separateSession } : callSession !== undefined ? { badgeNode: callSession } : {}),
         ...((callsPerTarget.get(c.target) ?? 0) > 1 ? { callLabel: formatRunOrdinal(c.call, "call") } : {}),
         ...(c.iteration > 0 ? { iterationLabel: formatRunOrdinal(c.iteration, "iteration") } : {}),
         ...(hrefFor ? { href: hrefFor(c.target) } : {}),

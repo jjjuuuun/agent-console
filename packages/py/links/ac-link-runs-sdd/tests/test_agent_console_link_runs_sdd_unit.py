@@ -18,7 +18,13 @@ from agent_console_link_runs_sdd import (
     start_issue,
 )
 from agent_console_link_runs_sdd.testing import FakePreflightError, FakeRuns
-from agent_console_sdd import AutomationControl, ProfileChecker, TaskIntegration, VerificationSource
+from agent_console_sdd import (
+    AutomationControl,
+    ProfileChecker,
+    TaskIntegration,
+    TaskIssueSource,
+    VerificationSource,
+)
 
 
 def _run(run_id: str, project: str | None, at: float, **labels: str) -> Run:
@@ -206,6 +212,7 @@ def test_protocols() -> None:
     )
     assert isinstance(integration, TaskIntegration)
     assert isinstance(integration, ProfileChecker)
+    assert isinstance(integration, TaskIssueSource)  # 계약 0.13.1 — 작업 이슈 선택 능력
     assert isinstance(integration, AutomationControl)  # 6R.16 — 자동 진행이 없으면 None을 낸다
     assert integration.automation is None
     assert integration.link_kinds == ("run",)

@@ -59,7 +59,8 @@ describe("실행 기록 목록", () => {
   });
 
   it("[응답 대기만] 단축 필터가 상태를 URL에 반영하고, 결과가 없으면 필터 지우기를 안내한다", async () => {
-    const { router } = mount("/runs", { listRuns: async () => runs });
+    // 상태 거르기는 서버(`runsPage` status 질의)가 한다
+    const { router } = mount("/runs", { runsPage: async (p?: { status?: string[] }) => ({ items: p?.status?.length ? runs.filter((r) => p.status!.includes(r.status)) : runs, next_cursor: null, source: "project" }) });
     await screen.findByRole("grid", { name: "실행 목록" });
     fireEvent.click(screen.getByRole("button", { name: "응답 대기만" }));
     await waitFor(() => expect(within(screen.getByRole("grid")).getAllByRole("row")).toHaveLength(2));
@@ -174,13 +175,14 @@ describe("실행 상세", () => {
   });
 
   it("위임 흐름 탭: 서브에이전트는 들여 쓴 자식 행, 방식 배지는 연결 종류 title, 상세에는 총 토큰만 안내", async () => {
-    mount("/runs/r1", detailOverrides());
+    // 세션 칩은 연결의 방식 디스크립터가 준 값으로만 그린다(5.7R.34)
+    mount("/runs/r1", detailOverrides({ listDelegationStrategies: async () => [{ id: "s", title: "방식", member_fields: [], max_depth: 1, session: "same" }] }));
     const tree = await screen.findByRole("tree", { name: "위임 흐름" });
     const items = within(tree).getAllByRole("treeitem");
     expect(items.length).toBe(3);
     // 5.2R.16: 방식·세션은 글자 칩이 아니라 아이콘(aria-label + 툴팁)이다
     expect(await within(tree).findByRole("img", { name: "부르기류" })).toBeTruthy();
-    expect(within(tree).getAllByRole("img", { name: "같은 세션" }).length).toBeGreaterThan(0);
+    expect(within(tree).getAllByRole("img", { name: /^같은 세션/ }).length).toBeGreaterThan(0);
     fireEvent.click(items[1]!);
     expect(await screen.findByText(/총 토큰 3,200만 제공됩니다/)).toBeTruthy();
     expect(screen.getByText("과제 설명", { exact: false })).toBeTruthy();

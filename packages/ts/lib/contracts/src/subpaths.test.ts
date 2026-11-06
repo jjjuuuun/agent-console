@@ -353,11 +353,14 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.13.0(6R.3): 하위 모듈 sdd 1.0.0, 라벨 표시·페이지 출처·위젯 이름", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.13.0");
-    expect(packageJson.version).toBe("0.13.0");
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.8.0", logs: "1.2.0", runs: "1.7.0", chat: "1.3.0", sdd: "1.0.0", modules: "1.4.0" });
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.13.0"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    const v0130 = { common: "1.8.0", logs: "1.2.0", runs: "1.7.0", chat: "1.3.0", sdd: "1.0.0", modules: "1.4.0" };
+    for (const [sub, version] of Object.entries(v0130)) {
+      expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0")).toBeGreaterThanOrEqual(ver(version));
+    }
     expect(sdd.CONTRACT_MODULE).toBe("sdd");
-    expect(sdd.CONTRACT_VERSION).toBe("1.0.0");
+    expect(sdd.CONTRACT_VERSION).toBe(CONTRACT_VERSIONS.sdd);
     expect(pkg.exports["./sdd"]).toBeDefined();
     expect(modulesOf["sdd"]).toEqual(
       expect.arrayContaining([
@@ -400,5 +403,17 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(HTTP_STATUS_BY_ERROR_CODE["sdd.template_exists"]).toBe(409);
     expect(HTTP_STATUS_BY_ERROR_CODE["sdd.gate_blocked"]).toBe(422);
     expect(KNOWN_ISSUE_CODES.SDD_STATUS_NOT_APPLIED).toBe("sdd.status_not_applied");
+  });
+
+  it("0.13.1(계약 후속): 비밀 규칙 weak_key_names, 문서 상수 — 더하기만", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.13.1");
+    expect(packageJson.version).toBe("0.13.1");
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.9.0", definitions: "1.6.0", sdd: "1.0.1" });
+    expectTypeOf<NonNullable<WorkspaceSettings["secrets"]>["weak_key_names"]>().toEqualTypeOf<string[] | null | undefined>();
+    expect(ERROR_CODES.FAKE_SESSION_MISSING).toBe("fake.session_missing");
+    expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)["fake.session_missing"]).toBeUndefined();
+    expect(KNOWN_ISSUE_CODES.RECORDS_SESSION_ARCHIVE_FAILED).toBe("records.session_archive_failed");
+    expect(KNOWN_ISSUE_CODES.RUN_MOVE_BUSY).toBe("run.move_busy");
+    expect(KNOWN_ISSUE_CODES.SDD_AUTOMATION_SKIPPED).toBe("sdd.automation_skipped");
   });
 });

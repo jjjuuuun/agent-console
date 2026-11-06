@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { RestClient } from "@agent-console/api-client";
-import type { Run } from "@agent-console/contracts";
+import type { ListRunsParams, RestClient, RunsPageParams } from "@agent-console/api-client";
+import type { Run, RunStatus } from "@agent-console/contracts";
 import { Button, ConfirmDialog, EmptyState, Icon, IconButton, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
 import { messages as appMessages } from "../../app/messages";
 import { queryKeys, useApiQuery } from "../../app/queries";
+import { useApiPagedQuery } from "../../app/pagedQuery";
+import { LoadMoreFooter } from "../../app/LoadMoreFooter";
 import { useNow } from "../../app/useNow";
 import { usePendingInteractions } from "../../shell/pending";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
@@ -23,7 +25,7 @@ import { RunStartDialog } from "./RunStartDialog";
 import { runStartMessages as startText } from "./runStartMessages";
 import { useRunLookups } from "./useRunLookups";
 import { runStatusLabels, runsMessages as t } from "./messages";
-import { DEFAULT_PERIOD, PERIOD_OPTIONS, RUN_LIST_LIMIT, RUN_LIST_POLL_MS, WAITING_RUN_STATUS } from "./runsConfig";
+import { DEFAULT_PERIOD, PERIOD_OPTIONS, RUN_LIST_LIMIT, RUN_LIST_POLL_MS, RUN_PAGE_SIZE, WAITING_RUN_STATUS } from "./runsConfig";
 import { activeCounts, filterRuns, inputSummary, isActiveRun } from "./runsLib";
 import "./runs.css";
 
@@ -101,20 +103,29 @@ export function RunsListScreen() {
   const firstRef = useRef<HTMLSelectElement>(null);
 
   const project = useProjectId();
-  const serverParams = useMemo(
+  // 서버가 거르는 조건: 프로젝트·팀 구성·상태(커서 페이지). 에이전트·대화·루트 거르기는 페이지 경로에 없어 옛 목록 질의를 쓴다(서버 몫, 보고 참고).
+  const legacy = filters.agent !== "" || filters.conversation !== "" || filters.root !== "";
+  const pageParams = useMemo(
     () => ({
-      limit: RUN_LIST_LIMIT,
+      limit: RUN_PAGE_SIZE,
       ...(project !== null ? { project } : {}),
       ...(filters.graph ? { graph_id: filters.graph } : {}),
+      ...(filters.statuses.length > 0 && !legacy ? { status: filters.statuses as RunStatus[] } : {}),
       ...(filters.agent ? { agent_id: filters.agent } : {}),
       ...(filters.conversation ? { conversation_id: filters.conversation } : {}),
       ...(filters.root ? { root: filters.root } : {}),
     }),
-    [project, filters.graph, filters.agent, filters.conversation, filters.root],
+    [project, filters.graph, filters.statuses, filters.agent, filters.conversation, filters.root, legacy],
   );
-  const runsQ = useApiQuery(queryKeys.list("runs", serverParams), (r) => r.listRuns(serverParams), {
-    refetchInterval: (q) => (q.state.data?.some((r) => isActiveRun(r.status)) ? RUN_LIST_POLL_MS : false),
-  });
+  const runsQ = useApiPagedQuery<Run>(
+    queryKeys.list("runs", pageParams),
+    (r, cursor) => {
+      if (!legacy) return r.runsPage({ ...pageParams, ...(cursor === null ? {} : { cursor }) } as RunsPageParams);
+      // 페이지 경로에 없는 거르기(에이전트·대화·루트)는 옛 목록 질의 한 번으로 읽는다(끝 페이지 하나).
+      return r.listRuns({ ...pageParams, limit: RUN_LIST_LIMIT } as ListRunsParams).then((items) => ({ items, next_cursor: null }));
+    },
+    { refetchInterval: (items) => (items?.some((r) => isActiveRun(r.status)) ? RUN_LIST_POLL_MS : false) },
+  );
   const lookups = useRunLookups();
   const handoffParams = useMemo(() => {
     const p: Record<string, string> = {};
@@ -131,7 +142,7 @@ export function RunsListScreen() {
     void qc.invalidateQueries({ queryKey: ["list", "runs"] });
   }, [pending.count, qc]);
 
-  const runs = runsQ.data;
+  const runs = runsQ.items;
   const anyActive = runs?.some((r) => isActiveRun(r.status)) ?? false;
   const nowMs = useNow(anyActive, 1000);
   const graphName = lookups.graphName;
@@ -144,18 +155,18 @@ export function RunsListScreen() {
     () =>
       filterRuns(
         runs ?? [],
-        { statuses: filters.statuses, period: filters.period, query: filters.query },
+        { statuses: legacy ? filters.statuses : [], period: filters.period, query: filters.query },
         nowMs / 1000,
         PERIOD_OPTIONS,
         (run) => [graphName(run.graph_id, run.project_id), conversationTitle(run.conversation_id), inputSummary(run.input)].filter(Boolean).join("\n"),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [runs, statusKey, filters.period, filters.query, lookups.graphs, lookups.conversations, minuteBucket],
+    [runs, legacy, statusKey, filters.period, filters.query, lookups.graphs, lookups.conversations, minuteBucket],
   );
   // 자식 실행(중첩 팀)은 기본으로 가린다. 서버 필터를 새로 만들지 않고 응답에서 거른다(D11)
   const isChildRun = (r: Run) => r.root_run_id != null && r.root_run_id !== r.id;
   const shown = useMemo(() => (filters.children ? visible : visible.filter((r) => !isChildRun(r))), [visible, filters.children]);
-  const onlyChildren = !filters.children && visible.length > 0 && shown.length === 0;
+  const onlyChildren = !filters.children && visible.length > 0 && shown.length === 0 && !runsQ.hasMore;
   const parentIds = useMemo(() => new Set((runs ?? []).map((r) => r.parent_run_id).filter((x): x is string => x != null)), [runs]);
   const counts = activeCounts(runs ?? [], WAITING_RUN_STATUS);
 
@@ -224,9 +235,10 @@ export function RunsListScreen() {
           onOpen={(r) => void navigate(runHrefs.run(r.id))}
           onCancel={setCancelTarget}
           hrefs={runHrefs}
+          sourceBreaks={runsQ.sourceBreaks}
           nested={{ isChild: isChildRun, hasChildren: (r) => parentIds.has(r.id), onShowChildren: (r) => setFilters({ ...filters, root: r.id, children: true }) }}
         />
-        {(runs ?? []).length >= RUN_LIST_LIMIT ? <p className="app-muted">{t.list.capped(RUN_LIST_LIMIT)}</p> : null}
+        {legacy && (runs ?? []).length >= RUN_LIST_LIMIT ? <p className="app-muted">{t.list.capped(RUN_LIST_LIMIT)}</p> : null}
       </>
     );
   }
@@ -287,6 +299,7 @@ export function RunsListScreen() {
           firstRef={firstRef}
         />
         {view === "handoffs" ? handoffBody : body}
+        {view === "list" ? <LoadMoreFooter hasMore={runsQ.hasMore} loading={runsQ.loadingMore} onLoadMore={runsQ.loadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} /> : null}
       </div>
       {startDialog !== null && canStartRun ? (
         <RunStartDialog

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { DelegationStrategyDescriptor, EdgeSpec, EdgeTypeDescriptor, Graph, GraphUiLayout, NodeSpec, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
+import type { EdgeSpec, EdgeTypeDescriptor, Graph, GraphUiLayout, NodeSpec, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
 import type { GraphEditorMessages } from "../messages";
 import { format } from "../messages";
 import { categoryColorVar } from "./color";
@@ -21,8 +21,8 @@ import type { EdgeShapeRegistry } from "../shapes/registry";
 import type { EdgeShapeDescriptor } from "../shapes/types";
 import { schedulingOf } from "./ops";
 import { deriveNodeBadges, deriveResourceChips, formatElapsed, isChipShape, nonExecutableNodeIds } from "./team";
-import type { NodeAvatar, BindSummary, ChipView, EdgeBadge, NodeRunBadge, NodeStateView } from "../types";
-import { resolveEdgeStyle } from "./edgeStyle";
+import type { NodeAvatar, BindSummary, ChipView, EdgeBadge, NodeAnnotation, NodeRunBadge, NodeStateView } from "../types";
+import { resolveEdgeStyle, type StrategyStyleInput } from "./edgeStyle";
 import type { IssueSummary } from "./issues";
 import { nodeAriaLabel } from "../components/NodeCard";
 import type { FlowEdge, FlowNode } from "../components/flow";
@@ -68,14 +68,19 @@ export interface FlowModelInput {
   nodeRunBadges?: Readonly<Record<string, NodeRunBadge>>;
   edgeBadges?: Readonly<Record<string, readonly EdgeBadge[]>>;
   edgeExtraChips?: Readonly<Record<string, readonly ChipView[]>>;
+  edgeLeadChips?: Readonly<Record<string, ChipView>>;
+  nodeAnnotations?: Readonly<Record<string, NodeAnnotation>>;
   bindSummaries?: Readonly<Record<string, BindSummary>>;
   nodeAvatars?: Readonly<Record<string, NodeAvatar>>;
-  delegationStrategies?: readonly Pick<DelegationStrategyDescriptor, "id">[];
+  delegationStrategies?: readonly StrategyStyleInput[];
   edgeStrategyIds?: Readonly<Record<string, string>>;
   renderIcon?: (name: string) => ReactNode;
   /** 반복 영역 윤곽을 그릴 노드 id(연결 선택 중에만 앱이 아닌 편집기가 계산해 넘긴다) */
   loopRegionNodes?: ReadonlySet<string>;
 }
+
+/** 노드 맨 아래 한 줄 칩이 더하는 높이(px) */
+export const FOOT_CHIP_H = 18;
 
 /** 정의 바인딩 카드가 더하는 높이 추정(본문 한 줄 + 배지 줄 + [열기] 줄). 실제 높이는 DOM 측정이 바로잡는다. */
 const BIND_META_H = 18;
@@ -155,7 +160,8 @@ export function buildFlowModel(i: FlowModelInput): FlowModel {
           hasSummary: state?.summary !== undefined || state?.errorSummary !== undefined,
         });
     const extraH = bind === undefined ? 0 : (bind.meta ? BIND_META_H : 0) + (bind.badges?.length ? BIND_BADGES_H : 0) + (bind.open ? BIND_OPEN_H : 0);
-    const size = extraH > 0 ? { ...base, height: base.height + extraH } : base;
+    const footH = i.nodeAnnotations?.[n.id]?.foot === undefined ? 0 : FOOT_CHIP_H;
+    const size = extraH + footH > 0 ? { ...base, height: base.height + extraH + footH } : base;
     return { d, info, spec, np, label, typeTitle, state, compact, size, bind };
   }
   const visible = gNodes.filter((n) => !hiddenIds.has(n.id));
@@ -250,6 +256,11 @@ export function buildFlowModel(i: FlowModelInput): FlowModel {
     if (compact) data.compact = true;
     if (d?.ui_hints?.shape === "stacked") data.stacked = true;
     if (bind !== undefined) data.bind = bind;
+    const annotation = i.nodeAnnotations?.[n.id];
+    if (annotation !== undefined) {
+      data.annotation = annotation;
+      if (i.renderIcon !== undefined) data.renderIcon = i.renderIcon;
+    }
     const runBadge = i.nodeRunBadges?.[n.id];
     if (runBadge !== undefined) data.runBadge = runBadge;
     if (i.loopRegionNodes?.has(n.id) === true) data.loopRegion = true;
@@ -284,7 +295,7 @@ export function buildFlowModel(i: FlowModelInput): FlowModel {
       focusable: true,
       initialWidth: size.width,
       initialHeight: size.height,
-      ariaLabel: nodeAriaLabel({ label, typeTitle, ...(state !== undefined ? { state } : {}), ...(data.issueCount !== undefined ? { issueCount: data.issueCount } : {}), ...(bind !== undefined ? { bind } : {}), ...(runBadge !== undefined ? { runBadge } : {}) }, i.messages),
+      ariaLabel: nodeAriaLabel({ label, typeTitle, ...(state !== undefined ? { state } : {}), ...(data.issueCount !== undefined ? { issueCount: data.issueCount } : {}), ...(bind !== undefined ? { bind } : {}), ...(runBadge !== undefined ? { runBadge } : {}), ...(annotation !== undefined ? { annotation } : {}) }, i.messages),
     };
   });
 
@@ -380,7 +391,9 @@ function toFlowEdge(
     data.countBadge = count;
     data.countText = format(i.messages.edgeCountBadge, { n: count });
   }
-  const chipTexts = [...(data.hintChips ?? []), ...(extra ?? []).map((c) => c.fullTitle ?? c.title), ...(badges ?? []).map((b) => b.ariaLabel)];
+  const lead = i.edgeLeadChips?.[e.id];
+  if (lead !== undefined) data.leadChip = lead;
+  const chipTexts = [...(lead === undefined ? [] : [lead.fullTitle ?? lead.title]), ...(data.hintChips ?? []), ...(extra ?? []).map((c) => c.fullTitle ?? c.title), ...(badges ?? []).map((b) => b.ariaLabel)];
   return {
     id: e.id,
     type: "ac-edge",

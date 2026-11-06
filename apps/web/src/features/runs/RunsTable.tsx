@@ -1,4 +1,5 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useRef, useState, type KeyboardEvent } from "react";
+import { messages as appMessages } from "../../app/messages";
 import { Link } from "react-router";
 import type { Run } from "@agent-console/contracts";
 import { StatusChip, Tag } from "@agent-console/ui";
@@ -20,10 +21,12 @@ export interface RunsTableProps {
   hrefs: { run(id: string): string; graph(id: string): string; conversation(id: string): string };
   /** 중첩 팀 자식 실행 표시: 자식 행(`↳`·`자식` 칩·`상위` 링크·`상위에 포함`)과 행 메뉴 항목. 없으면 일반 표 */
   nested?: { isChild(run: Run): boolean; hasChildren(run: Run): boolean; onShowChildren(run: Run): void };
+  /** 실행 id -> 그 행부터 목록 출처가 바뀐다는 새 출처 값. 그 행 앞에 구분선을 그린다 */
+  sourceBreaks?: ReadonlyMap<string, string>;
 }
 
 /** 실행 목록 표(`role="grid"`: ↑↓ 이동, Enter 열기, Shift+F10 행 메뉴, Ctrl+Shift+X 취소). 데이터·콜백은 props. */
-export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, onCancel, hrefs, nested }: RunsTableProps) {
+export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, onCancel, hrefs, nested, sourceBreaks }: RunsTableProps) {
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState<string | null>(null);
   const rows = useRef<(HTMLTableRowElement | null)[]>([]);
@@ -100,9 +103,15 @@ export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, o
           const summary = inputSummary(run.input, 60);
           const statusLabel = runStatusLabels[run.status] ?? run.status;
           const child = nested?.isChild(run) === true;
+          const breakSource = sourceBreaks?.get(run.id);
           return (
+            <Fragment key={run.id}>
+            {breakSource === undefined ? null : (
+              <tr className="runs-source-break">
+                <th scope="colgroup" colSpan={Object.keys(cols).length} className="app-source-break">{appMessages.common.recordSources[breakSource] ?? breakSource}</th>
+              </tr>
+            )}
             <tr
-              key={run.id}
               ref={(el) => {
                 rows.current[i] = el;
               }}
@@ -153,6 +162,7 @@ export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, o
                 />
               </td>
             </tr>
+            </Fragment>
           );
         })}
       </tbody>

@@ -6,6 +6,8 @@ import { messages as appMessages } from "../../app/messages";
 import { formatCount } from "../../lib/format";
 import { runsMessages as t } from "./messages";
 import { EVENT_PAGE_SIZE, TEXT_DELTA_EVENT } from "./runsConfig";
+import { NO_SESSION, sessionOfEvent, type RunSessions } from "./runSessions";
+import { SessionBadge } from "./RunSessionsChip";
 import { buildEventRows, collectPrefixes, isErrorEvent, summarizeActors, summarizeEvent, truncate, type EventRow } from "./runsLib";
 import { matchesTypePrefix } from "../../lib/typePrefix";
 
@@ -31,8 +33,28 @@ export interface AgentsTabProps {
   /** 이벤트 type 접두 필터 값을 밖(주소)이 정한다. 생략하면 이 탭이 상태를 가진다 */
   typePrefix?: string;
   onTypePrefixChange?(next: string): void;
+  /** 세션 구분(세션 id를 아는 실행이 있을 때만 준다): `에이전트별 | 세션별` 전환과 세션 행 */
+  sessions?: AgentsSessionsView;
   /** 이벤트 목록 위의 안내(활성 자식 실행의 이벤트는 각 실행 화면에서 본다) */
   topNote?: ReactNode;
+}
+
+/** 에이전트 탭 묶는 기준(URL `?group=`은 세션별일 때만 `session`). */
+export type GroupMode = "by-actor" | "by-session";
+
+export interface AgentsSessionsView {
+  data: RunSessions;
+  mode: GroupMode;
+  onModeChange(mode: GroupMode): void;
+  /** 고른 세션 id(`NO_SESSION` = 세션 정보 없음 묶음). 없으면 전체 */
+  selectedId: string | null;
+  onSelect(id: string | null): void;
+  /** 그래프의 `서브 m` 표식으로 열린 세션(하위 서브에이전트 행을 펼쳐 둔다) */
+  expandedId?: string | null | undefined;
+  /** 토큰·소요 서식 */
+  formatTokens(n: number | undefined): string;
+  formatSeconds(sec: number): string;
+  nowSec: number;
 }
 
 /** actor가 없는 이벤트(실행 전체에 관한 반복·자식 실행 이벤트)를 가리키는 필터 값. 에이전트 id가 아니라 이 화면이 정한 값이다. */
@@ -63,18 +85,22 @@ export function AgentsTab(p: AgentsTabProps) {
   const actors = useMemo(() => summarizeActors(p.events), [p.events]);
   const runWide = useMemo(() => p.events.filter((e) => !e.actor && summaryOf?.(e) !== undefined).length, [p.events, summaryOf]);
   const prefixes = useMemo(() => collectPrefixes(p.events), [p.events]);
+  const sessionView = p.sessions;
+  const bySession = sessionView?.mode === "by-session";
+  const sessionSel = bySession ? sessionView?.selectedId ?? null : null;
   const filtered = useMemo(() => {
     const q = text.trim().toLowerCase();
     return p.events.filter((e) => {
+      if (sessionSel !== null && sessionView !== undefined && (sessionOfEvent(sessionView.data, e)?.id ?? NO_SESSION) !== sessionSel) return false;
       if (p.actors.length > 0 && !p.actors.includes(e.actor ?? RUN_WIDE_ACTOR)) return false;
       if (!matchesTypePrefix(e.type, prefix)) return false;
       if (errorsOnly && !isErrorEvent(e)) return false;
       return q === "" || `${e.type} ${summaryOf?.(e) ?? summarizeEvent(e, 400)}`.toLowerCase().includes(q);
     });
-  }, [p.events, p.actors, prefix, errorsOnly, text, summaryOf]);
+  }, [p.events, p.actors, prefix, errorsOnly, text, summaryOf, sessionSel, sessionView]);
   const rows = useMemo(() => buildEventRows(filtered), [filtered]);
   const shown = rows.length > limit ? rows.slice(rows.length - limit) : rows;
-  const hasFilter = p.actors.length > 0 || prefix !== "" || errorsOnly || text !== "";
+  const hasFilter = p.actors.length > 0 || prefix !== "" || errorsOnly || text !== "" || sessionSel !== null;
 
   useEffect(() => {
     const el = scroller.current;
@@ -96,6 +122,7 @@ export function AgentsTab(p: AgentsTabProps) {
   };
   const clear = () => {
     p.onActorsChange([]);
+    sessionView?.onSelect(null);
     setPrefix("");
     setText("");
     setErrorsOnly(false);
@@ -112,6 +139,10 @@ export function AgentsTab(p: AgentsTabProps) {
   return (
     <div className="runs-agents">
       <nav className="runs-actors" aria-label={t.agents.listLabel}>
+        {sessionView !== undefined ? <GroupToggle view={sessionView} /> : null}
+        {bySession && sessionView !== undefined ? (
+          <SessionList view={sessionView} events={p.events} agentName={p.agentName} />
+        ) : (
         <ul role="listbox" aria-multiselectable="true" aria-label={t.agents.listLabel}>
           <li role="option" aria-selected={p.actors.length === 0}>
             <button type="button" onClick={() => toggleActor(null, false)}>
@@ -138,6 +169,7 @@ export function AgentsTab(p: AgentsTabProps) {
             );
           })}
         </ul>
+        )}
       </nav>
       <div className="runs-events">
         <div className="runs-events-tools">
@@ -202,5 +234,69 @@ function EventRowView({ row, start, agentName, summaryOf, open, onToggle }: { ro
       </button>
       {open ? <pre className="ac-pre runs-event-json app-wrap">{isText ? (row.text ?? "") : JSON.stringify({ seq: e.seq, node_path: e.node_path, payload: e.payload }, null, 2)}</pre> : null}
     </div>
+  );
+}
+
+/** `에이전트별 | 세션별` 전환(라디오 그룹, ←→ 이동). */
+function GroupToggle({ view }: { view: AgentsSessionsView }) {
+  const options = [
+    { value: "by-actor" as const, label: t.sessions.byAgent },
+    { value: "by-session" as const, label: t.sessions.bySession },
+  ];
+  return (
+    <fieldset className="runs-session-group" role="radiogroup" aria-label={t.sessions.groupBy}>
+      <legend className="ac-sr-only">{t.sessions.groupBy}</legend>
+      {options.map((o) => (
+        <label key={o.value}>
+          <input type="radio" name="runs-agents-group" value={o.value} checked={view.mode === o.value} onChange={() => view.onModeChange(o.value)} />
+          {o.label}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** 세션별 보기: 세션 행(번호 배지·이름·백엔드·토큰·소요)과 그 아래 들여쓴 서브에이전트 행. 세션 id를 모르는 이벤트는 맨 아래 묶음. */
+function SessionList({ view, events, agentName }: { view: AgentsSessionsView; events: readonly RunEvent[]; agentName(id: string): string }) {
+  const { data } = view;
+  const subsOf = useMemo(() => {
+    const out = new Map<string, Map<string, number>>();
+    for (const e of events) {
+      if (e.node_path.length < 2 || !e.actor) continue;
+      const s = sessionOfEvent(data, e);
+      if (s === undefined) continue;
+      const m = out.get(s.id) ?? new Map<string, number>();
+      m.set(e.actor, (m.get(e.actor) ?? 0) + 1);
+      out.set(s.id, m);
+    }
+    return out;
+  }, [events, data]);
+  const noInfo = useMemo(() => events.filter((e) => sessionOfEvent(data, e) === undefined).length, [events, data]);
+  const pick = (id: string) => view.onSelect(view.selectedId === id ? null : id);
+  return (
+    <ul role="listbox" aria-label={t.sessions.bySession} data-session-list="">
+      {data.list.map((s) => (
+        <li key={s.id} role="option" aria-selected={view.selectedId === s.id}>
+          <button type="button" className="runs-session-row" onClick={() => pick(s.id)}>
+            <SessionBadge session={s} />
+            <span className="ac-ellipsis" title={s.name}>{s.name}</span>
+            <span className="app-muted ac-num">{view.formatTokens(s.tokens)}</span>
+            <span className="app-muted ac-num">{s.startedAt === undefined ? "–" : view.formatSeconds((s.endedAt ?? view.nowSec) - s.startedAt)}</span>
+          </button>
+          {[...(subsOf.get(s.id) ?? [])].map(([actor]) => (
+            <div key={actor} className="runs-session-sub" data-expanded={view.expandedId === s.id ? "true" : undefined}>
+              <Tag>{t.agents.subagentChip}</Tag> {agentName(actor)}
+            </div>
+          ))}
+        </li>
+      ))}
+      {noInfo > 0 ? (
+        <li role="option" aria-selected={view.selectedId === NO_SESSION}>
+          <button type="button" className="runs-session-row" onClick={() => pick(NO_SESSION)}>
+            <span className="ac-ellipsis">{t.sessions.noInfo}</span> <span className="ac-num app-muted">({formatCount(noInfo)})</span>
+          </button>
+        </li>
+      ) : null}
+    </ul>
   );
 }

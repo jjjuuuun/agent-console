@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 계약 0.13.1: `MOVE_BUSY`가 계약 문서 상수 `KnownIssueCodes.RUN_MOVE_BUSY`를 쓴다(값 같음).
 - 6R.16: `RunService.host_id(project_id)`(이 앱이 그 공간 Run에 적는 `host_id`, 공간 없음·기록 공간 없음 = None) — 자동 진행이 실행 기록에서 자기 앱 Run만 고른다.
 
 - 6R.12: `GET /runs/page`(`RunPage`, `cursor`·`limit`·`project`·`root_only`·`status`(여러 번)·`graph_id`·`label=<키>=<값>`(여러 번 AND)·`source`), 기록 공간이 있으면 폴더 기록 끝 → 앱 DB 옛 기록 `source=app`으로 잇는 커서(Q14), `POST /runs` `labels`(루트 Run, `RunService.start_graph`·`start_run(labels=)`), `GET /runs/{id}/events?node=`, 옛 `GET /runs` OpenAPI deprecated, 400 `bad_request`(`InvalidCursor`·`RunQueryError`). `runs.reader`에 `page`·`descendants`(공간 자리 따라감).

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { Trace, TraceLink, TraceSpan } from "@agent-console/contracts";
-import { TraceTimeline, defaultTraceMessages, type GroupBadge, type LinkBadge, type MethodBadge, type SpanLabel, type TraceGroupInfo } from "@agent-console/trace-view";
+import { TraceTimeline, defaultTraceMessages, type GroupBadge, type LinkBadge, type MethodBadge, type SessionBadgeView, type SpanLabel, type TraceGroupInfo } from "@agent-console/trace-view";
 import { Button, Icon } from "@agent-console/ui";
 import { useStorage } from "../../app/StorageContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -25,6 +25,8 @@ export interface TraceTabProps {
   nowSec: number;
   labelFor(span: TraceSpan): SpanLabel;
   methodBadgeFor(span: TraceSpan): MethodBadge | undefined;
+  /** 세션 배지(공용 세션 칩). 주면 서버가 준 값만 쓰고 span 필드로 유추하지 않는다. 없으면 이전 판정 */
+  sessionBadgeFor?(span: TraceSpan): SessionBadgeView | null | undefined;
   /** 자식 실행 묶음 행의 제목·배지(팀 구성 이름 등). 없으면 `자식 실행 {짧은 id}` */
   groupBadgeFor?(group: TraceGroupInfo): GroupBadge | undefined;
   /** span 사이 화살표 칩(반복 연결 `↻`·순번). 없으면 칩 없음 */
@@ -130,6 +132,7 @@ export function TraceTab(p: TraceTabProps) {
         highlightNodeId={p.highlightNodeId}
         labelFor={p.labelFor}
         methodBadgeFor={p.methodBadgeFor}
+        {...(p.sessionBadgeFor ? { sessionBadgeFor: p.sessionBadgeFor } : {})}
         {...(p.groupBadgeFor ? { groupBadgeFor: p.groupBadgeFor } : {})}
         {...(p.linkBadgeFor ? { linkBadgeFor: p.linkBadgeFor } : {})}
         {...(p.onOpenChildRun ? { onOpenChildRun: p.onOpenChildRun } : {})}

@@ -227,6 +227,12 @@ describe("ProgressStrip: 중첩·위임 칩", () => {
     // 배지가 있는 들여 쓴 단계에는 '같은 세션' 안내를 붙이지 않는다
     expect(b.querySelector("[title]")).toBeNull();
   });
+  it("badgeNode가 있으면 배지 글자 대신 그 부품을 그리고 '같은 세션' 안내를 붙이지 않는다", () => {
+    render(<ProgressStrip steps={[st("a"), st("b", { indent: 1, badgeNode: <i data-testid="slot">임의 부품</i> })]} collapsed={false} onToggle={() => {}} />);
+    const b = document.querySelector('[data-step="b"]') as HTMLElement;
+    expect(b.querySelector('[data-part="badge"] [data-testid="slot"]')).toBeTruthy();
+    expect(b.querySelector("[title]")).toBeNull();
+  });
   it("5단계부터는 4단계 위치에 그린다", () => {
     render(<ProgressStrip steps={[st("a", { indent: 7 })]} collapsed={false} onToggle={() => {}} />);
     expect((document.querySelector('[data-step="a"]') as HTMLElement).style.getPropertyValue("--ac-depth")).toBe("4");

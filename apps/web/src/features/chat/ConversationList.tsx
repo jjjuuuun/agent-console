@@ -1,6 +1,7 @@
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ConversationSummary } from "@agent-console/contracts";
-import { Button, ListPane, StatusIcon } from "@agent-console/ui";
+import { Button, ListPane, StatusIcon, type ListPaneGroup } from "@agent-console/ui";
+import { LoadMoreFooter } from "../../app/LoadMoreFooter";
 import { messages as appMessages } from "../../app/messages";
 import { formatRelative } from "../../lib/format";
 import { ActionMenu, type ActionMenuItem } from "./ActionMenu";
@@ -33,6 +34,12 @@ export interface ConversationListProps {
   onOpenTeam: (c: ConversationSummary) => void;
   /** 목록 위쪽 추가 슬롯 */
   header?: ReactNode;
+  /** 서버가 더 줄 페이지가 있는가와 읽기(없으면 [더 불러오기]를 그리지 않는다) */
+  paging?: { hasMore: boolean; loading: boolean; onLoadMore(): void };
+  /** 대화 id -> 받은 페이지의 출처. 출처가 둘 이상 섞이면 출처별 묶음 머리로 나눈다 */
+  sourceOf?: ReadonlyMap<string, string>;
+  /** 출처 값 -> 묶음 머리 문구 */
+  sourceLabel?: (source: string) => string;
 }
 
 function statusOf(c: ConversationSummary): { status: string; label: string } | null {
@@ -49,6 +56,18 @@ function statusOf(c: ConversationSummary): { status: string; label: string } | n
 export function ConversationList(props: ConversationListProps) {
   const { conversations, selectedId, query } = props;
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const { sourceOf, sourceLabel } = props;
+  const groups = useMemo<ListPaneGroup<ConversationSummary>[] | undefined>(() => {
+    if (sourceOf === undefined || sourceOf.size === 0) return undefined;
+    const bySource = new Map<string, ConversationSummary[]>();
+    for (const c of conversations) {
+      const src = sourceOf.get(c.id) ?? "";
+      bySource.set(src, [...(bySource.get(src) ?? []), c]);
+    }
+    if (bySource.size < 2) return undefined;
+    return [...bySource].map(([key, items]) => ({ key, label: sourceLabel?.(key) ?? key, count: items.length, depth: 0, collapsed: collapsed.has(key), items }));
+  }, [conversations, sourceOf, sourceLabel, collapsed]);
 
   const byId = (id: string | undefined) => conversations.find((c) => c.id === id);
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -108,6 +127,7 @@ export function ConversationList(props: ConversationListProps) {
       </div>
       <ListPane
         items={conversations}
+        {...(groups ? { groups, onToggleGroup: (key: string, next: boolean) => setCollapsed((cur) => { const out = new Set(cur); if (next) out.add(key); else out.delete(key); return out; }) } : {})}
         selectedId={selectedId}
         onSelect={(id) => props.onSelect(id)}
         rowHeight={56}
@@ -145,6 +165,7 @@ export function ConversationList(props: ConversationListProps) {
           );
         }}
       />
+      {props.paging ? <LoadMoreFooter hasMore={props.paging.hasMore} loading={props.paging.loading} onLoadMore={props.paging.onLoadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} auto={false} /> : null}
     </div>
   );
 }

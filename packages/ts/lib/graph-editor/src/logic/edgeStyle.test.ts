@@ -73,3 +73,27 @@ describe("resolveEdgeStyle", () => {
     expect(a).toEqual(b);
   });
 });
+
+describe("resolveEdgeStyle: 세션 속성 패턴(5.7R.34)", () => {
+  const k = kind({ invocation: { strategy: "q-1" } });
+  const withSession = (session: string | null | undefined) => [{ id: "q-1", session }, { id: "q-0" }];
+  it("별도 = 실선, 같은 = 긴 점선(8 4), 모르는 값 = 구별되는 패턴", () => {
+    expect(resolveEdgeStyle(k, withSession("separate")).dasharray).toBeUndefined();
+    expect(resolveEdgeStyle(k, withSession("same")).dasharray).toBe("var(--ac-edge-pattern-1)");
+    expect(resolveEdgeStyle(k, withSession("x1")).dasharray).toBe("var(--ac-edge-pattern-3)");
+  });
+  it("방식 목록 순서·id가 달라도 세션 값이 같으면 패턴이 같다", () => {
+    const a = resolveEdgeStyle(kind({ invocation: { strategy: "zz" } }), [{ id: "zz", session: "same" }, { id: "aa", session: "separate" }]);
+    const b = resolveEdgeStyle(kind({ invocation: { strategy: "aa" } }), [{ id: "aa", session: "same" }, { id: "zz", session: "separate" }]);
+    expect(a.dasharray).toBe(b.dasharray);
+  });
+  it("session이 없거나 null이면 옛 id 순서 폴백", () => {
+    expect(resolveEdgeStyle(k, withSession(undefined)).dasharray).toBe("var(--ac-edge-pattern-1)"); // q-0, q-1 → 1번
+    expect(resolveEdgeStyle(k, withSession(null)).dasharray).toBe("var(--ac-edge-pattern-1)");
+  });
+  it("handles_failure·ui_hints.dashed가 여전히 세션 패턴을 이긴다", () => {
+    expect(resolveEdgeStyle(kind({ handles_failure: true, invocation: { strategy: "q-1" } }), withSession("same")).dasharray).toBe("var(--ac-edge-pattern-2)");
+    expect(resolveEdgeStyle(kind({ invocation: { strategy: "q-1" }, ui_hints: { dashed: true } }), withSession("separate")).dasharray).toBe("var(--ac-edge-pattern-1)");
+  });
+});
+

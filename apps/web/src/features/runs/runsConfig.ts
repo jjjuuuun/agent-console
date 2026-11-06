@@ -32,6 +32,8 @@ export const DEFAULT_PERIOD = "7d";
 
 /** 서버에 요청할 실행 목록 개수 상한. */
 export const RUN_LIST_LIMIT = 200;
+/** 커서 페이지 한 번에 읽는 실행 수 */
+export const RUN_PAGE_SIZE = 50;
 /** 활성 실행이 있을 때 목록을 다시 읽는 간격(ms). */
 export const RUN_LIST_POLL_MS = 5000;
 /** 이벤트가 오고 나서 trace·스냅샷을 다시 읽기까지의 디바운스(ms). */

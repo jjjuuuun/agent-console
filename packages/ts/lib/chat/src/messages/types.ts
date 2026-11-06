@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ChatReply, ChatTurn, Interaction, InteractionKindDescriptor, QueuedMessage } from "@agent-console/contracts";
 
 export type { ChatReply, ChatTurn, Interaction, InteractionKindDescriptor, QueuedMessage };
@@ -68,6 +69,8 @@ export interface ProgressStep {
   solo?: boolean;
   /** 칩 뒤 짧은 배지 문구(예: "별도 세션"). 앱이 `messages`/디스크립터에서 채운다. */
   badge?: string;
+  /** `badge` 대신 그릴 부품(앱의 공용 세션 칩 등). 있으면 `badge` 글자와 같은 자리에 그린다. 이 패키지는 내용을 모른다 */
+  badgeNode?: ReactNode;
   /** "2회차" 같은 회차 표기(앱이 번호를 +1 해서 만든 문구). */
   iterationLabel?: string;
   /** "호출 2" 같은 호출 표기. */

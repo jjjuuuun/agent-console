@@ -1,5 +1,5 @@
 /** 실행(Run) REST: 생성·조회·취소·추적·이벤트·위임 집계·이어 가기. */
-import type { CreateRunRequest, HandoffMatrix, ResumeOptions, Run, RunEvent, RunSnapshot, RunStatus, Trace } from "@agent-console/contracts";
+import type { CreateRunRequest, HandoffMatrix, ResumeOptions, Run, RunEvent, RunPage, RunSnapshot, RunStatus, Trace } from "@agent-console/contracts";
 import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, RecordsMoveRequest, RecordsMoveResult } from "@agent-console/contracts/projects";
 import { enc, query, type RestIo } from "../io";
 
@@ -18,6 +18,23 @@ export interface ListRunsParams {
   limit?: number;
 }
 
+/** GET `/runs/page` 질의(6R.12). 커서는 불투명 문자열이라 응답 `next_cursor`를 그대로 넘긴다. */
+export interface RunsPageParams {
+  cursor?: string | null;
+  /** 한 페이지 크기(서버 기본 50, 1~1000). */
+  limit?: number;
+  project?: string;
+  /** 루트 Run만. */
+  root_only?: boolean;
+  /** 여러 상태 = OR. */
+  status?: readonly RunStatus[];
+  graph_id?: string;
+  /** `<키>=<값>` 문자열(여러 개 = AND). */
+  label?: readonly string[];
+  /** 커서가 없을 때의 출처(기본 `project`). 커서에 든 출처가 우선한다. */
+  source?: string;
+}
+
 /** GET `/runs/handoffs` 필터. 실행 목록 필터와 같은 이름을 쓴다. */
 export type HandoffParams = ListRunsParams;
 
@@ -28,6 +45,8 @@ export interface ListRunEventsParams {
   type_prefix?: string;
   /** 이 seq 다음 이벤트만(서버 1R.14). 생략하면 처음부터. */
   since_seq?: number;
+  /** 이 노드 id가 `node_path`에 있는 이벤트만(하위 그래프 안 이벤트 포함, 서버 6R.12). */
+  node?: string;
 }
 
 export interface RunsClient {
@@ -39,6 +58,8 @@ export interface RunsClient {
   moveRunsToProject(request: RecordsMoveRequest): Promise<RecordsMoveResult>;
   createRun(request: CreateRunRequest): Promise<Run>;
   listRuns(params?: ListRunsParams): Promise<Run[]>;
+  /** 실행 목록 커서 페이지(`GET /runs/page`). `next_cursor`가 null이면 끝, 응답 `source`는 그 페이지의 출처. */
+  runsPage(params?: RunsPageParams): Promise<RunPage>;
   /** Run 스냅샷. `children`은 직접 자식 Run(만든 순, 서버가 채우면 늘 배열). */
   getRun(id: string): Promise<RunSnapshot>;
   cancelRun(id: string): Promise<Run>;
@@ -59,6 +80,7 @@ export function createRunsClient(io: RestIo): RunsClient {
     moveRunsToProject: (request) => io.request("POST", "/runs/move-to-project", { body: request }),
     createRun: (req) => io.request("POST", "/runs", { body: req }),
     listRuns: (params) => io.request("GET", `/runs${query(params)}`),
+    runsPage: (params) => io.request("GET", `/runs/page${query(params)}`),
     getRun: (id) => io.request("GET", `/runs/${enc(id)}`),
     cancelRun: (id) => io.request("POST", `/runs/${enc(id)}/cancel`),
     getRunTrace: (id) => io.request("GET", `/runs/${enc(id)}/trace`),

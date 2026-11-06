@@ -83,10 +83,10 @@ describe("대화 목록 정렬·필터", () => {
   it("갱신순만", () => {
     expect(sortConversations(list, "updated", since).map((c) => c.id)).toEqual(["new", "wait-late", "old", "wait-early"]);
   });
-  it("보관 제외·제목 검색·갱신 반영", () => {
+  it("제목 검색·갱신 반영(보관 거르기는 서버)", () => {
     const l = [conv({ id: "a", title: "로그인 화면" }), conv({ id: "b", title: "배포", archived: true })];
-    expect(filterConversations(l, { query: "", includeArchived: false }).map((c) => c.id)).toEqual(["a"]);
-    expect(filterConversations(l, { query: "배", includeArchived: true }).map((c) => c.id)).toEqual(["b"]);
+    expect(filterConversations(l, { query: "" }).map((c) => c.id)).toEqual(["a", "b"]);
+    expect(filterConversations(l, { query: "배" }).map((c) => c.id)).toEqual(["b"]);
     expect(upsertConversation(l, conv({ id: "a", title: "바뀜" })).find((c) => c.id === "a")?.title).toBe("바뀜");
     expect(upsertConversation(l, conv({ id: "z" }))[0]?.id).toBe("z");
   });

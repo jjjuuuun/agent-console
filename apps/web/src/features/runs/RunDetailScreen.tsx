@@ -3,7 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { ApiError } from "@agent-console/api-client";
 import type { Interaction, NodeRun, RunEvent, TraceLink, TraceSpan } from "@agent-console/contracts";
-import type { GroupBadge, LinkBadge, MethodBadge, SpanLabel, TraceGroupInfo } from "@agent-console/trace-view";
+import type { GroupBadge, LinkBadge, MethodBadge, SessionBadgeView, SpanLabel, TraceGroupInfo } from "@agent-console/trace-view";
 import type { NodeRunBadge } from "@agent-console/graph-editor";
 import { Badge, Banner, ConfirmDialog, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
@@ -15,7 +15,7 @@ import { useNow } from "../../app/useNow";
 import { formatClockTime, formatDuration, formatRelative } from "../../lib/format";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { usePageTitle } from "../../shell/titles";
-import { delegationMessages as dm, CONFIG_WIDGETS, conditionPayloadOf, deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, mapConditionOutcome, shortRunId, summarizeDelegationEvent, useConditionOperators, useRenderIcon } from "../delegation";
+import { delegationMessages as dm, CONFIG_WIDGETS, SessionChip, edgeSessionOf, sessionText, conditionPayloadOf, deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, mapConditionOutcome, shortRunId, summarizeDelegationEvent, useConditionOperators, useRenderIcon } from "../delegation";
 import { useDelegationStrategies } from "../settings";
 import { DEFINITION_KINDS, nodeAvatarsOf } from "../library";
 import { useApiQuery } from "../../app/queries";
@@ -35,15 +35,19 @@ import { NodeTab } from "./NodeTab";
 import { ObserveTab } from "./ObserveTab";
 import { RunGraphPane } from "./RunGraphPane";
 import { RunHeader } from "./RunHeader";
+import { RunSessionsChip } from "./RunSessionsChip";
+import { EMPTY_SESSIONS, deriveRunSessions } from "./runSessions";
+import { buildSessionAnnotations } from "./runSessionView";
 import { TraceTab } from "./TraceTab";
 import { runHrefs } from "./RunsListScreen";
 import { runStatusLabels, runsMessages as t } from "./messages";
-import { EDGE_SKIPPED_EVENT, EDGE_TRAVERSED_EVENT } from "./runsConfig";
+import { EDGE_SKIPPED_EVENT, EDGE_TRAVERSED_EVENT, SUBAGENT_STOP_EVENT } from "./runsConfig";
 import { useObservePrefixes } from "./useObservePrefixes";
 import { delegationEdgeFor, deriveRunOverlay, isActiveRun, latestNodeRuns, runDurationMs, summarizeEvent, waitSeconds, formatTokensShort, totalTokens } from "./runsLib";
 import { useInteractionRespond } from "../interactions";
 import { useRunLookups } from "./useRunLookups";
 import { useRunView } from "./useRunView";
+import { useRunNodeEvents } from "./useRunNodeEvents";
 import "./runs.css";
 
 // 세션 로그 탭은 로그 기능의 공개 API이며, 탭을 열 때만 내려받는다.
@@ -100,6 +104,9 @@ export function RunDetailScreen() {
   const nodeId = params.get("node");
   const spanId = params.get("span");
   const actorsParam = (params.get("actor") ?? "").split(",").filter((a) => a !== "");
+  // 노드 거르기는 서버가 한다(`events?node=`). 에이전트 탭은 [선택한 노드 이벤트만] 토글로 이 목록을 쓴다
+  const nodeScoped = useRunNodeEvents(id, nodeId, view.events[view.events.length - 1]?.seq);
+  const [nodeOnly, setNodeOnly] = useState(false);
 
   const edgeId = params.get("edge");
   // 채팅 진행 줄 칩이 `#node=`·`#edge=` 해시로 연다. 해시를 읽어 선택으로 바꾼다(한 번).
@@ -260,6 +267,20 @@ export function RunDetailScreen() {
     }
     return undefined;
   };
+  // 위임 흐름 탭 세션 배지: span이 가리키는 연결(링크의 edge_id, 없으면 같은 세션 위임 연결)의 세션 값을 서버 디스크립터에서 읽는다
+  const sessionBadgeFor = (span: TraceSpan): SessionBadgeView | undefined => {
+    if (span.interaction_id) return undefined;
+    const link = view.trace?.links?.find((l) => l.target === span.id);
+    const edge =
+      (link?.edge_id ? graph?.edges?.find((e) => e.id === link.edge_id) : undefined) ??
+      (span.parent_id && span.node_id ? delegationEdgeFor(graph?.edges ?? [], kindMap, span.node_id) : undefined);
+    if (edge === undefined) return undefined;
+    const value = edgeSessionOf(graph?.edges?.find((e) => e.id === edge.id) ?? {}, kindMap.get(edge.kind), delegationStrategies.data ?? []);
+    if (value === undefined) return undefined;
+    const parent = span.parent_id ? view.trace?.spans?.find((s) => s.id === span.parent_id) : undefined;
+    const delegator = parent?.node_id ? nodeLabel(parent.node_id) : nodeLabel(edge.source.node);
+    return { text: sessionText(value), node: <SessionChip value={value} delegatorLabel={delegator} variant="icon" /> };
+  };
   // 자식 실행(Run) 안 요청의 부모 노드 경로: 이 실행의 자식은 이 그래프의 노드 label, 더 깊은 단계는 그 단계 그래프를 몰라 노드 id를 쓴다
   const childPathOf = (runId: string): string[] => {
     const names: string[] = [];
@@ -391,6 +412,32 @@ export function RunDetailScreen() {
     [graph, lookups, tree.children, groups, visible, navigate],
   );
   const extraNodeBadges = useMemo(() => Object.fromEntries(Object.keys(overlay.handledNodes).map((n) => [n, [dm.run.handled]])), [overlay.handledNodes]);
+  // 세션 구분(5.7R.34): trace span 기준, 없으면 NodeRun의 backend_session_id. 세션 id를 아는 것이 없으면 칩·배지·세그먼트가 모두 없다
+  const sessions = useMemo(
+    () => (run === undefined ? EMPTY_SESSIONS : deriveRunSessions({ runId: id, nodeRuns: view.nodeRuns, spans: view.trace?.spans, events: view.events, labelOf: nodeLabel, subStopType: SUBAGENT_STOP_EVENT })),
+    [run, id, view.nodeRuns, view.trace, view.events, nodeLabel],
+  );
+  const [sessionPick, setSessionPick] = useState<string | null>(null);
+  const [sessionOpenFor, setSessionOpenFor] = useState<string | null>(null);
+  const groupBySession = params.get("group") === "session" && sessions.list.length > 0;
+  const sessionNotes = useMemo(
+    () =>
+      buildSessionAnnotations({
+        graph,
+        edgeTypes: lookups.edgeTypes,
+        strategies: delegationStrategies.data ?? [],
+        sessions,
+        nodeLabel,
+        selectedSessionId: sessionPick,
+        calledNodes: subagentNodes,
+        onOpenSubs: (node) => {
+          setSessionOpenFor(sessions.byNode.get(node)?.id ?? null);
+          setParam({ tab: "agents", group: "session" });
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setParam은 렌더마다 새 함수다
+    [graph, lookups.edgeTypes, delegationStrategies.data, sessions, nodeLabel, sessionPick, subagentNodes],
+  );
 
   useShortcuts([
     ...(tree.isChild && parentRun !== undefined ? [{ id: "runs.up", scope: "run-detail", keys: "u", titleKey: "shortcuts.runsParent", run: () => openRun(parentRun.id) }] : []),
@@ -468,9 +515,9 @@ export function RunDetailScreen() {
   const userWait = interactions.reduce((s, i) => s + waitSeconds(i, nowSec), 0);
   const conv = run.conversation_id;
   const idleSeconds = view.lastEventTs === undefined ? undefined : Math.max(0, nowSec - view.lastEventTs);
-  const nodeActors = nodeId === null ? [] : [...new Set(view.events.filter((e) => e.actor && e.node_path.includes(nodeId)).map((e) => e.actor as string))];
+  const nodeActors = nodeId === null ? [] : [...new Set(nodeScoped.events.filter((e) => e.actor).map((e) => e.actor as string))];
   const agentActors = actorsParam.length > 0 ? actorsParam : nodeActors;
-  const nodeEvents = nodeId === null ? [] : view.events.filter((e) => e.node_path.includes(nodeId));
+  const nodeEvents = nodeScoped.events;
   const firstTs = view.events[0]?.ts ?? run.started_at ?? undefined;
 
   const selectNodeFromGraph = (node: string | null) => {
@@ -609,6 +656,7 @@ export function RunDetailScreen() {
         nowSec={nowSec}
         labelFor={labelFor}
         methodBadgeFor={methodBadgeFor}
+        sessionBadgeFor={sessionBadgeFor}
         groupBadgeFor={groupBadgeFor}
         linkBadgeFor={linkBadgeFor}
         onOpenChildRun={(rid) => openRun(rid)}
@@ -635,7 +683,7 @@ export function RunDetailScreen() {
     ),
     agents: (
       <AgentsTab
-        events={view.events}
+        events={nodeOnly && nodeId !== null ? nodeScoped.events : view.events}
         status={view.eventsStatus}
         onRetry={view.reloadEvents}
         actors={agentActors}
@@ -644,16 +692,39 @@ export function RunDetailScreen() {
         onTypePrefixChange={(next) => setParam({ [TYPE_PREFIX_PARAM]: next === "" ? null : next })}
         agentName={lookups.agentName}
         isSubagent={(a) => subagentActors.has(a)}
+        {...(sessions.list.length > 0
+          ? {
+              sessions: {
+                data: sessions,
+                mode: groupBySession ? ("by-session" as const) : ("by-actor" as const),
+                onModeChange: (m: "by-actor" | "by-session") => setParam({ group: m === "by-session" ? "session" : null }),
+                selectedId: sessionPick,
+                onSelect: setSessionPick,
+                expandedId: sessionOpenFor,
+                formatTokens: (n: number | undefined) => (n === undefined ? "–" : formatTokensShort(n)),
+                formatSeconds: (s: number) => formatDuration(s * 1000),
+                nowSec,
+              },
+            }
+          : {})}
         startedAt={firstTs}
         running={active}
         summaryOf={summaryOf}
         actorNote={actorNote}
         topNote={
-          tree.active.length > 0 ? (
-            <p className="app-muted runs-note" role="status">
-              {dm.run.child.eventsNote(tree.active.length)} {childMenuNode}
-            </p>
-          ) : null
+          <>
+            {nodeId !== null ? (
+              <label className="app-check runs-node-only">
+                <input type="checkbox" checked={nodeOnly} onChange={(e) => setNodeOnly(e.target.checked)} />
+                {t.agents.nodeOnly(nodeLabel(nodeId))}
+              </label>
+            ) : null}
+            {tree.active.length > 0 ? (
+              <p className="app-muted runs-note" role="status">
+                {dm.run.child.eventsNote(tree.active.length)} {childMenuNode}
+              </p>
+            ) : null}
+          </>
         }
       />
     ),
@@ -739,6 +810,9 @@ export function RunDetailScreen() {
         waitingCount={pendingList.length}
         waitingSuffix={hasKids && pendingList.some((i) => i.run_id !== id) ? dm.run.child.includesChildren : undefined}
         hasSubagents={subagentNodes.size > 0}
+        {...(sessions.list.length > 0
+          ? { sessionsSlot: <RunSessionsChip sessions={sessions} selectedId={sessionPick} onSelect={setSessionPick} nowSec={nowSec} {...(logsPart.visible ? { logHref: (sid: string) => `/runs/${encodeURIComponent(id)}?tab=logs&session=${encodeURIComponent(sid)}` } : {})} /> }
+          : {})}
         {...(runningNode ? { runningNode: { id: runningNode.node_id, label: nodeLabel(runningNode.node_id) } } : {})}
         {...(failedNode ? { failedNode: { id: failedNode.node_id, label: nodeLabel(failedNode.node_id) } } : {})}
         onFocusNode={focusNode}
@@ -807,6 +881,7 @@ export function RunDetailScreen() {
               edgeExtraChips={edgeChips}
               bindSummaries={nestedSummaries}
               nodeAvatars={nodeAvatars}
+              nodeAnnotations={sessionNotes}
               delegationStrategies={delegationStrategies.data ?? []}
               edgeStrategyIds={strategyIds}
               renderIcon={renderIcon}

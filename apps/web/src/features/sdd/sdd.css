@@ -1,0 +1,70 @@
+/* 스펙(SDD) 화면 조립 스타일. 색·간격은 tokens.css의 --ac-* 변수만 쓴다. 표현 컴포넌트 모양은 @agent-console/sdd-view의 styles.css가 맡는다. */
+.sdd-screen { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.sdd-screen-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-3) var(--ac-space-4); overflow: auto; }
+.sdd-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); min-height: 40px; }
+.sdd-spacer { flex: 1; }
+.sdd-search { min-width: 220px; max-width: 360px; height: 32px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; }
+.sdd-input { height: 32px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); color: var(--ac-text); font: inherit; min-width: 0; width: 100%; }
+.sdd-input[aria-invalid="true"] { border-color: var(--ac-danger); }
+.sdd-mono { font-family: var(--ac-font-mono); }
+.sdd-filter { display: inline-flex; align-items: center; gap: var(--ac-space-1); }
+.sdd-filter .sdd-input { width: auto; }
+.sdd-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--ac-space-2); padding: var(--ac-space-6) var(--ac-space-4); text-align: center; }
+.sdd-banner-row { padding: 0 var(--ac-space-4); }
+.sdd-readonly-note { padding: var(--ac-space-2) var(--ac-space-3); border-left: 3px solid var(--ac-warning); background: var(--ac-warning-bg); color: var(--ac-text); border-radius: var(--ac-radius-md); }
+.sdd-subhead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-3); min-height: 36px; padding: 0 var(--ac-space-4); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-subhead .sdd-mono { max-width: 320px; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-inline { display: inline-flex; align-items: center; gap: var(--ac-space-2); }
+.sdd-progress { width: 120px; height: var(--ac-sdd-progress-h, 6px); accent-color: var(--ac-accent); }
+.sdd-badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: var(--ac-radius-full); background: var(--ac-surface-3); color: var(--ac-text); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); text-align: center; font-variant-numeric: tabular-nums; }
+.sdd-note { margin: 0; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-danger-note { margin: 0; color: var(--ac-danger); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-section-title { margin: 0 0 var(--ac-space-2); font-size: var(--ac-text-md); }
+.sdd-label { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); }
+
+/* 대화상자 폼 */
+.sdd-form { display: flex; flex-direction: column; gap: var(--ac-space-3); }
+.sdd-field { display: flex; flex-direction: column; gap: var(--ac-space-1); margin: 0; padding: 0; border: 0; min-width: 0; }
+.sdd-readonly { display: flex; flex-wrap: wrap; gap: var(--ac-space-2); align-items: baseline; padding: var(--ac-space-2); border: 1px dashed var(--ac-border-soft); border-radius: var(--ac-radius-md); }
+.sdd-radios { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.sdd-radio { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--ac-space-2); min-height: 52px; padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); cursor: pointer; }
+.sdd-radio[data-checked] { border-color: var(--ac-accent); background: var(--ac-accent-bg, var(--ac-surface-2)); }
+.sdd-radio-body { display: flex; flex-direction: column; min-width: 0; }
+.sdd-radio-title { font-weight: 600; }
+.sdd-warn-chip { padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-warning-bg); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-dialog-note { margin-right: auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-files { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.sdd-file { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--ac-space-2); min-height: 36px; }
+
+/* 문서 탭 */
+.sdd-docs { display: flex; gap: var(--ac-space-3); min-height: 0; flex: 1; }
+.sdd-docs-nav { flex: 0 0 var(--ac-sdd-nav-w, 240px); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.sdd-docs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.sdd-docs-foot { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+
+/* 작업 탭 */
+.sdd-tasks { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 0; flex: 1; }
+.sdd-task-table { flex: 1; min-height: 320px; }
+.sdd-issues { padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); }
+.sdd-multi { list-style: none; margin: 0; padding: var(--ac-space-2); display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 180px; max-height: 280px; overflow: auto; }
+
+/* 규칙 탭 */
+.sdd-rules { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 0; flex: 1; }
+.sdd-rules-body { display: flex; gap: var(--ac-space-4); min-height: 0; flex: 1; }
+.sdd-rules-nav { flex: 0 0 200px; }
+.sdd-rules-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sdd-rules-nav button { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); width: 100%; min-height: 32px; padding: 0 var(--ac-space-2); border: 0; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; text-align: left; cursor: pointer; }
+.sdd-rules-nav button[aria-current="true"] { background: var(--ac-accent-bg-strong, var(--ac-surface-3)); font-weight: 600; }
+.sdd-dot { padding: 0 6px; border-radius: var(--ac-radius-full); background: var(--ac-danger-bg); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.sdd-rules-form { flex: 1; min-width: 0; max-width: var(--ac-readable-w, 720px); }
+.sdd-issues-list, .sdd-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+@media (max-width: 1099px) { .sdd-docs-nav { flex-basis: 200px; } .sdd-rules-body { flex-direction: column; } .sdd-rules-nav { flex-basis: auto; } }
+
+/* 문서 틀 */
+.sdd-templates { display: flex; gap: var(--ac-space-4); min-height: 0; flex: 1; }
+.sdd-templates-list { flex: 0 0 var(--ac-listpane-w, 280px); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.sdd-templates-list ul { list-style: none; margin: 0; padding: 0; }
+.sdd-template-row { display: flex; flex-direction: column; width: 100%; min-height: 40px; padding: var(--ac-space-1) var(--ac-space-2); border: 0; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; text-align: left; cursor: pointer; }
+.sdd-template-row[aria-current="true"] { background: var(--ac-accent-bg-strong, var(--ac-surface-3)); }
+.sdd-templates-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.sdd-space-chip { padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-surface-3); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }

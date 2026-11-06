@@ -96,3 +96,21 @@
 .run-start-load-error { display: flex; align-items: center; gap: var(--ac-space-2); }
 .run-start-hint { margin-right: auto; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); align-self: center; }
 .run-start { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+
+/* ---- 세션 구분 표시 (screen-delegation.md §14.5) ---- */
+.runs-sessions { display: inline-flex; align-items: center; gap: var(--ac-space-2); }
+.runs-sessions-panel { width: 520px; max-width: calc(100vw - 32px); max-height: calc(32px * 9); overflow-y: auto; }
+.runs-sessions-table { width: 100%; border-collapse: collapse; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.runs-sessions-table th { text-align: left; font-weight: 500; color: var(--ac-text-muted); font-size: var(--ac-text-xs); padding: 0 var(--ac-space-2); line-height: var(--ac-lh-xs); }
+.runs-sessions-table td { height: 32px; padding: 0 var(--ac-space-2); max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.runs-sessions-table tbody tr { cursor: pointer; }
+.runs-sessions-table tbody tr:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: -2px; }
+.runs-sessions-table tbody tr[data-selected="true"] { background: var(--ac-surface-3); }
+.ses-badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 var(--ac-space-1); font-size: var(--ac-text-xs); font-weight: 600; font-variant-numeric: tabular-nums; border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); white-space: nowrap; line-height: var(--ac-lh-xs); }
+.runs-session-group { display: inline-flex; gap: var(--ac-space-1); border: 0; margin: 0; padding: 0; }
+.runs-session-group label { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); font-size: var(--ac-text-xs); cursor: pointer; line-height: var(--ac-lh-xs); }
+.runs-session-group label:has(input:checked) { background: var(--ac-surface-3); font-weight: 600; }
+.runs-session-group label:has(input:focus-visible) { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.runs-session-group input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.runs-session-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; width: 100%; text-align: left; }
+.runs-session-sub { margin-left: 16px; }

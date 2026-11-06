@@ -2,6 +2,12 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.13.1]
+- 계약 0.13.1(계약 후속 6R.15·6R.16·5.7R.33y2·5.7R.33y3). 더하기만 한다(새 필드는 모두 선택). 사내 의존 범위는 `^0.13.0` 그대로. `common` 1.9.0, `definitions` 1.6.0, `sdd` 1.0.1.
+- 새 선택 필드: `SecretRuleSettings.weak_key_names?: string[] | null`(null·생략 = 기본 데이터, 빈 목록 = 끔).
+- 새 상수: `ERROR_CODES.FAKE_SESSION_MISSING`(`fake.session_missing`), `KNOWN_ISSUE_CODES.RECORDS_SESSION_ARCHIVE_FAILED`(`records.session_archive_failed`)·`RUN_MOVE_BUSY`(`run.move_busy`). `SDD_AUTOMATION_SKIPPED`는 0.13.0부터 있다.
+- 설명만: `ParsedTask.issues`(작업 연동의 선택 메서드 `task_issues`가 낸 이슈도 담김).
+
 ## [0.13.0]
 - 계약 0.13.0(6R.3). 사내 의존 범위 `^0.13.0`. 새 하위 경로 **`@agent-console/contracts/sdd`**(1.0.0). `common` 1.8.0, `logs` 1.2.0, `runs` 1.7.0, `chat` 1.3.0, `modules` 1.4.0.
 - 새 타입: `sdd` 전부(`SpecTemplate`·`SpecDefinition`·`SpecRules`·`SpecView`·`ParsedTask`·`TaskPlan`·`TraceMatrix`·`SddInfo` 등), `LabelDisplay`·`LabelDisplayTarget`·`RecordSource`(common), `RunPage`(runs), `ConversationPage`(chat), `SddChangedMessage`(modules, `WsServerMessage` 유니온에 더함). 새 선택 필드: `Run.labels`, `CreateRunRequest.labels`, `ModuleInfo.description`·`label_display`, `LogSourceInfo.default_effective`.

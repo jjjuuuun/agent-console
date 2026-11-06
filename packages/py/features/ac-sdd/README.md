@@ -151,7 +151,9 @@ pip install agent-console-sdd
 - **X42 `VerificationSource`**: `id` + `async collect(VerificationContext) -> list[VerificationResult]`.
   파일을 읽는 출처는 `ctx.spec.files`(폴더 안만)만 쓴다.
 - **X43 `TaskIntegration`**: `id` + `async actions(ctx, task)`·`invoke(ctx, task, action, args)`·
-  `links(ctx, tasks)`(한 번에 모음). 선택 능력 `ProfileChecker.check_profile`, `AutomationControl`
+  `links(ctx, tasks)`(한 번에 모음). 선택 능력 `ProfileChecker.check_profile`,
+  `TaskIssueSource.task_issues(ctx, tasks) -> list[SpecIssue]`(동기, 작업 키별로 `ParsedTask.issues`에
+  더함 — 예: `sdd.status_not_applied`·`sdd.automation_skipped`), `AutomationControl`
   (`automation_state`·`control(op)`).
 - 예제 구현(테스트 가짜): `agent_console_sdd.testing.FakeVerificationSource`·`FakeTaskIntegration`.
 

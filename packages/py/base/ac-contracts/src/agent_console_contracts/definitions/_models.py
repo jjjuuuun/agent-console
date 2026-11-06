@@ -1377,7 +1377,10 @@ class UiPreferences(DefinitionModel):
 
 
 class SecretRuleSettings(DefinitionModel):
-    """비밀 값으로 의심할 규칙을 더합니다. 기본 규칙에 더하기만 하며 줄일 수는 없습니다."""
+    """비밀 값으로 의심할 규칙을 더합니다.
+
+    기본 규칙은 줄일 수 없고, 뜻이 넓은 키 이름 목록만 바꿀 수 있습니다.
+    """
 
     model_config = ConfigDict(title="비밀 규칙")
 
@@ -1401,6 +1404,19 @@ class SecretRuleSettings(DefinitionModel):
             tier="advanced",
             when="특정 형식의 토큰이 기록에 남는 것을 막고 싶을 때 더하세요.",
             example=["^sk-[A-Za-z0-9]{20,}$"],
+        ),
+    )
+    weak_key_names: list[str] | None = Field(
+        default=None,
+        title="뜻이 넓은 키 이름",
+        description=(
+            "이 이름만 걸린 값(예: input_key의 key)은 값이 비밀처럼 생겼을 때만 의심합니다. "
+            "비워 두면 기본 목록을 쓰고, 빈 목록이면 이름만으로 의심합니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            when="비밀이 아닌 키(예: sort_key)가 자꾸 비밀로 의심될 때 이름을 더하세요.",
+            example=["key"],
         ),
     )
     redact_suspected_in_logs: bool = Field(

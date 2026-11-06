@@ -72,9 +72,9 @@ describe("메모리 화면: 역할·배치", () => {
     expect(within(screen.getByRole("navigation", { name: "주 메뉴" })).getByRole("link", { name: "메모리" })).toBeTruthy();
   });
 
-  it("기본 라우트 데이터에 메모리가 묶음 '실행'의 채팅·실행 기록 다음에 있고 g m 이다", () => {
+  it("기본 라우트 데이터에 메모리가 묶음 '실행'의 채팅·실행 기록 다음에 있고(스펙이 그 뒤) g m 이다", () => {
     const run = DEFAULT_ROUTES.filter((r) => r.group === "run").map((r) => r.id);
-    expect(run).toEqual(["chat", "runs", "memory"]);
+    expect(run).toEqual(["chat", "runs", "memory", "specs"]);
     expect(DEFAULT_ROUTES.find((r) => r.id === "memory")).toMatchObject({ requires: ["memory"], gotoKey: "m", path: "/memory" });
   });
 

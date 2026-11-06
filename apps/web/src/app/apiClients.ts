@@ -9,6 +9,9 @@ import {
   createRestIo,
   createSpaceRestClient,
   type SpaceRestClient,
+  createSddClient,
+  type SddClient,
+  withSpace,
 } from "@agent-console/api-client";
 import { createProjectsClient, type ProjectsClient } from "@agent-console/projects";
 
@@ -32,6 +35,8 @@ export interface ApiClients {
   projects: ProjectsClient;
   /** 한 공간(공용 = null, 프로젝트 id)의 정의·메모리 클라이언트. 모든 요청에 `?project=<id>`가 붙는다 */
   space: (project: string | null) => SpaceRestClient;
+  /** 한 공간(단독 = null, 프로젝트 id)의 스펙(SDD) 클라이언트. 모든 요청에 `?project=<id>`가 붙는다 */
+  sdd: (project: string | null) => SddClient;
   ws: WsClient;
   meta: ClientMeta;
 }
@@ -80,6 +85,7 @@ export function createApiClients(options: CreateApiClientsOptions): ApiClients {
     rest: createRestClient({ ...common, fetch: guardedFetch }),
     projects: createProjectsClient(createRestIo({ ...common, fetch: guardedFetch })),
     space: (project) => createSpaceRestClient({ ...common, fetch: guardedFetch }, project),
+    sdd: (project) => createSddClient(withSpace(createRestIo({ ...common, fetch: guardedFetch }), project)),
     ws: createWsClient({
       ...common,
       noReconnectCloseCodes: WS_AUTH_CLOSE_CODES,

@@ -24,7 +24,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy import Connection, Engine
 
-from agent_console_contracts import Issue, RecordsMoveRequest, RecordsMoveResult
+from agent_console_contracts import Issue, KnownIssueCodes, RecordsMoveRequest, RecordsMoveResult
 from agent_console_store import (
     MoveDependent,
     MoveSpec,
@@ -37,7 +37,7 @@ from agent_console_store import (
 UNFINISHED = ("queued", "running", "paused", "waiting")
 """끝나지 않은 Run 상태(이 묶음은 옮기지 않는다)."""
 
-MOVE_BUSY = "run.move_busy"
+MOVE_BUSY: str = KnownIssueCodes.RUN_MOVE_BUSY
 MOVE_NOT_FOUND = "not_found"
 MOVE_FAILED = "run.move_failed"
 """``failed`` 이슈 코드: 실행 중 / 없는 id / 옮기다 실패(``details.id``)."""

@@ -561,3 +561,58 @@ describe("연결 종류 바꾸기(T)", () => {
       expect(calls).toHaveLength(0);
     }));
 });
+
+describe("세션 구분 표시 슬롯(5.7R.34)", () => {
+  const lead = { key: "ses", title: "별도 세션", fullTitle: "별도 세션", iconName: "git-fork" };
+  it("연결 앞 칩: 2행으로 쌓이고 앞 칩이 맨 앞이며 접근성 이름에 들어간다. iconOnly면 글자는 화면 밖", () =>
+    withLayout(async () => {
+      setup({ edgeLeadChips: { f1: lead, f2: { ...lead, iconOnly: true } }, renderIcon: (n) => <i data-ic={n} /> });
+      await settle();
+      const c1 = chipOf("f1")!;
+      expect(c1.getAttribute("data-stacked")).toBe("true");
+      const rows = c1.querySelectorAll(".ac-ge-edge-row");
+      expect(rows).toHaveLength(2);
+      expect(rows[1]!.firstElementChild!.getAttribute("data-lead")).toBe("true");
+      expect(rows[1]!.querySelector(".ac-ge-lead-text")!.textContent).toBe("별도 세션");
+      expect(rows[1]!.querySelector("[data-ic='git-fork']")).toBeTruthy();
+      expect(chipOf("f2")!.querySelector(".ac-ge-lead-text")).toBeNull();
+      expect(chipOf("f2")!.querySelector(".ac-ge-sr-only")!.textContent).toBe("별도 세션");
+      expect(edgeEl("f1").getAttribute("aria-label")).toContain("별도 세션");
+      expect(chipOf("b1")!.getAttribute("data-stacked")).toBeNull();
+    }));
+
+  it("앞 칩이 없으면 이전 DOM 그대로(쌓기 없음)", () =>
+    withLayout(async () => {
+      setup();
+      await settle();
+      expect(document.querySelector(".ac-ge-edge-rows")).toBeNull();
+    }));
+
+  it("노드 구분 표시: 띠 색·헤더 표식(앞→뒤)·맨 아래 칩, 표식 클릭", () =>
+    plain(async () => {
+      const onClick = vi.fn();
+      setup({
+        nodeAnnotations: {
+          w: {
+            stripColor: "var(--ac-session-1)",
+            lead: { key: "s", text: "S2", ariaLabel: "세션 2", dotColor: "var(--ac-session-1)" },
+            tags: [{ key: "sub", text: "서브 3", ariaLabel: "서브에이전트 3회", pulse: true, onClick }],
+            foot: { key: "f", title: "리더 세션 안", fullTitle: "리더 세션 안", iconName: "corner-down-right" },
+          },
+        },
+        renderIcon: (n) => <i data-ic={n} />,
+      });
+      await settle();
+      const card = nodeEl("w");
+      expect(card.querySelector(".ac-ge-node")!.getAttribute("data-annotated-strip")).toBe("true");
+      expect((card.querySelector(".ac-ge-node") as HTMLElement).style.getPropertyValue("--ac-ge-session-strip")).toBe("var(--ac-session-1)");
+      const tags = [...card.querySelectorAll(".ac-ge-tag")];
+      expect(tags.map((x) => x.textContent)).toEqual(["S2", "서브 3"]);
+      expect(card.querySelector(".ac-ge-foot")!.textContent).toBe("리더 세션 안");
+      expect(card.querySelector(".ac-ge-foot [data-ic]")).toBeTruthy();
+      fireEvent.click(tags[1]!);
+      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(nodeEl("r").querySelector(".ac-ge-tag, .ac-ge-foot")).toBeNull();
+    }));
+});
+

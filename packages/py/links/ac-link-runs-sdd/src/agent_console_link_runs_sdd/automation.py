@@ -38,6 +38,7 @@ from collections.abc import Callable, Coroutine, Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_console_contracts.constants import KnownIssueCodes
 from agent_console_contracts.sdd import (
     AutomationConfig,
     AutomationState,
@@ -55,9 +56,10 @@ from .reflect import StatusReflector, TrackedRun
 
 _log = logging.getLogger(__name__)
 
-AUTOMATION_SKIPPED = "sdd.automation_skipped"
+AUTOMATION_SKIPPED: str = KnownIssueCodes.SDD_AUTOMATION_SKIPPED
 """정보 이슈 코드: 자동 진행이 연속 실패 상한에 닿은 작업을 건너뛰었다(``details{failures,
-run_id?}``). 계약 ``KnownIssueCodes``에 아직 없다(열린 문자열)."""
+run_id?}``). 값은 계약 문서 상수 ``KnownIssueCodes.SDD_AUTOMATION_SKIPPED``
+(``sdd.automation_skipped``)."""
 
 OP_STOP = "stop"
 OP_RESUME = "resume"

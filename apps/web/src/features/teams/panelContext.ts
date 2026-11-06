@@ -1,6 +1,7 @@
 import type { Agent, DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, InteractionKindDescriptor, Issue, IssueSuggestion, NodeTypeDescriptor, ResourceSummary, ResourceTypeDescriptor, TeamPlanSummary, WorkspaceSettings } from "@agent-console/contracts";
 import type { NestedInfo } from "../delegation";
 import type { DraftPreviewResult } from "./useDraftPreview";
+import type { StrategiesStatus } from "./widgets/DelegationStrategyField";
 
 /** 오른쪽 패널들이 공유하는 읽기 전용 데이터와 편집 콜백. 서버·라우터를 모르고, 컨테이너(`TeamEditorPage`)가 채운다. */
 export interface TeamPanelContext {
@@ -19,6 +20,8 @@ export interface TeamPanelContext {
   resourceTypes: readonly ResourceTypeDescriptor[];
   interactionKinds: readonly InteractionKindDescriptor[];
   strategies: readonly DelegationStrategyDescriptor[];
+  /** 위임 방식 목록 읽기 상태(없으면 목록을 그대로 쓴다) */
+  strategiesStatus?: StrategiesStatus;
   /** 공통 설정(읽기 전용) */
   workspace: WorkspaceSettings | undefined;
   issues: readonly Issue[];
@@ -31,6 +34,8 @@ export interface TeamPanelContext {
   onGraphChange: (next: Graph) => void;
   /** 되돌리기 가능한 변경(토스트의 [되돌리기]가 이전 그래프로 돌린다) */
   onUndoableChange: (next: Graph, text: string) => void;
+  /** 연결을 골라 패널을 연다(노드 패널의 [연결 보기]). 없으면 단추가 숨는다 */
+  onSelectEdge?: (edgeId: string, sourceNodeId: string) => void;
   onApplySuggestion: (issue: Issue, suggestion: IssueSuggestion) => void;
   /** 이 노드의 번들 미리보기를 연다 */
   onPreviewBundle: (nodeId: string) => void;

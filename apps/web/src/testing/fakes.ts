@@ -3,10 +3,11 @@
  * 종류·이름 문자열은 임의 값이며 앱의 어떤 분기에도 쓰이지 않는다.
  */
 import { vi } from "vitest";
-import type { ConnectionStatus, RestClient, WsClient } from "@agent-console/api-client";
+import type { ConnectionStatus, RestClient, SddClient, WsClient } from "@agent-console/api-client";
 import { ApiError } from "@agent-console/api-client";
 import { CONTRACTS_VERSION, type Interaction, type WorkspaceSettings } from "@agent-console/contracts";
 import type { MemoryChanged } from "@agent-console/contracts/memory";
+import type { SddChanged } from "@agent-console/contracts/sdd";
 import type { ProjectsClient } from "@agent-console/projects";
 import type { ApiClients } from "../app/apiClients";
 
@@ -46,7 +47,18 @@ export function createFakeRest(overrides: Partial<Record<keyof RestClient, unkno
     listConversations: vi.fn(async () => []),
     listRuns: vi.fn(async () => []),
   };
-  return new Proxy({ ...base, ...overrides } as Record<string, unknown>, {
+  const merged = { ...base, ...overrides } as Record<string, unknown>;
+  // 커서 페이지 메서드는 따로 주지 않으면 같은 이름의 옛 목록 메서드 결과 한 페이지(끝)로 만든다.
+  for (const [page, list] of [["conversationsPage", "listConversations"], ["runsPage", "listRuns"]] as const) {
+    if (merged[page] === undefined) {
+      merged[page] = vi.fn(async (params?: Record<string, unknown>) => {
+        const rest = { ...params };
+        delete rest["cursor"];
+        return { items: await (merged[list] as (p?: unknown) => Promise<unknown[]>)(rest), next_cursor: null, source: "project" };
+      });
+    }
+  }
+  return new Proxy(merged, {
     get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)),
   }) as never;
 }
@@ -59,6 +71,8 @@ export interface FakeWs extends WsClient {
   emitLogs(count: number, sourceIds?: string[]): void;
   /** 메모리 변경 알림(`memory.changed`)을 구독자에게 보낸다 */
   emitMemory(changed: MemoryChanged): void;
+  /** 스펙 변경 알림(`sdd.changed`)을 구독자에게 보낸다 */
+  emitSdd(changed: SddChanged): void;
 }
 
 export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
@@ -67,6 +81,7 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
   const interactionListeners = new Set<(i: Interaction) => void>();
   const logListeners = new Set<(p: { count: number; source_ids?: string[] }) => void>();
   const memoryListeners = new Set<(c: MemoryChanged) => void>();
+  const sddListeners = new Set<(c: SddChanged) => void>();
   return {
     get status() {
       return status;
@@ -89,6 +104,10 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
       memoryListeners.add(handler);
       return { topic: "memory.changed", unsubscribe: () => memoryListeners.delete(handler) };
     },
+    subscribeSdd(handler: (c: SddChanged) => void) {
+      sddListeners.add(handler);
+      return { topic: "sdd.changed", unsubscribe: () => sddListeners.delete(handler) };
+    },
     subscribe: vi.fn(),
     subscribeRun: vi.fn(),
     subscribeConversation: vi.fn(),
@@ -103,6 +122,9 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
     emitMemory(changed: MemoryChanged) {
       memoryListeners.forEach((l) => l(changed));
     },
+    emitSdd(changed: SddChanged) {
+      sddListeners.forEach((l) => l(changed));
+    },
     emitLogs(count: number, sourceIds?: string[]) {
       logListeners.forEach((l) => l({ count, ...(sourceIds ? { source_ids: sourceIds } : {}) }));
     },
@@ -115,15 +137,23 @@ export function createFakeProjects(overrides: Partial<Record<keyof ProjectsClien
   return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
 }
 
-export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, projectsOverrides: Partial<Record<keyof ProjectsClient, unknown>> = {}) {
+/** 모든 메서드가 vi.fn인 가짜 스펙(SDD) 클라이언트. 덮어쓰지 않은 메서드는 undefined를 돌려준다. */
+export function createFakeSdd(overrides: Partial<Record<keyof SddClient, unknown>> = {}): SddClient {
+  const base: Record<string, unknown> = { ...overrides };
+  return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
+}
+
+export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, projectsOverrides: Partial<Record<keyof ProjectsClient, unknown>> = {}, sddOverrides: Partial<Record<keyof SddClient, unknown>> = {}) {
   const rest = createFakeRest(restOverrides);
   const ws = createFakeWs();
   const projects = createFakeProjects(projectsOverrides);
   // 공간 클라이언트: 기본은 빈 가짜지만 실행 그래프 조회(`getGraph`·`getGraphVersion`)는 공용과 같은 값을 돌려준다(실행 화면이 실행의 공간으로 조회하므로).
   const sharedGraphOverrides = Object.fromEntries((["getGraph", "getGraphVersion", "getGraphPlan"] as const).filter((k) => k in restOverrides).map((k) => [k, restOverrides[k]]));
   const space = vi.fn(() => createFakeRest(sharedGraphOverrides) as never);
-  const clients: ApiClients = { rest, projects, space, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
-  return { rest, ws, projects, space, clients };
+  const sddClient = createFakeSdd(sddOverrides);
+  const sdd = vi.fn(() => sddClient);
+  const clients: ApiClients = { rest, projects, space, sdd, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
+  return { rest, ws, projects, space, sdd, sddClient, clients };
 }
 
 export function versionConflict(): ApiError {

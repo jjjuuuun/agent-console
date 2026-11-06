@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { DelegationStrategyDescriptor, EdgeTypeDescriptor } from "@agent-console/contracts";
+import type { EdgeTypeDescriptor } from "@agent-console/contracts";
 import type { GraphEditorMessages } from "../messages";
 import { defaultMessages } from "../messages";
-import { resolveEdgeStyle } from "../logic/edgeStyle";
+import { resolveEdgeStyle, type StrategyStyleInput } from "../logic/edgeStyle";
 
 /** 후보 한 줄의 추가 정보(호출자가 새 연결의 상황에서 계산한다). */
 export interface EdgeKindCandidateInfo {
@@ -25,7 +25,7 @@ export interface EdgeKindDialogProps {
   /** 후보별 추가 정보. 키 = 종류 id */
   info?: Readonly<Record<string, EdgeKindCandidateInfo>>;
   /** 위임 방식 목록(선 패턴 계산용) */
-  delegationStrategies?: readonly Pick<DelegationStrategyDescriptor, "id">[];
+  delegationStrategies?: readonly StrategyStyleInput[];
   /** 아이콘 이름을 그리는 함수(없으면 글자) */
   renderIcon?: (name: string) => ReactNode;
   onConfirm: (kind: string) => void;

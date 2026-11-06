@@ -18,6 +18,8 @@ textarea { width: 100%; resize: vertical; }
 kbd, .app-mono, code { font-family: var(--ac-font-mono); font-size: var(--ac-text-code); }
 kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-sm); padding: 0 var(--ac-space-1); }
 .app-muted { color: var(--ac-text-muted); }
+.app-load-more { display: flex; justify-content: center; padding: var(--ac-space-2) 0; }
+.app-source-break { color: var(--ac-text-muted); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; padding: var(--ac-space-2) var(--ac-space-3); border-top: 1px solid var(--ac-border-soft); border-bottom: 1px solid var(--ac-border-soft); background: var(--ac-surface-2); text-align: left; }
 .app-wrap { word-break: break-word; overflow-wrap: anywhere; }
 .app-spacer { flex: 1 1 auto; }
 .app-pad { padding: var(--ac-space-4); }

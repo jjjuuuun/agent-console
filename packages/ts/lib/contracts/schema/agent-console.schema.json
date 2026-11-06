@@ -6,12 +6,12 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.13.0",
+    "CONTRACTS_VERSION": "0.13.1",
     "CONTRACT_VERSIONS": {
-      "common": "1.8.0",
+      "common": "1.9.0",
       "resources": "1.1.0",
       "logs": "1.2.0",
-      "definitions": "1.5.0",
+      "definitions": "1.6.0",
       "runs": "1.7.0",
       "usage": "1.1.0",
       "projects": "3.1.0",
@@ -20,7 +20,7 @@
       "imports": "1.1.0",
       "architecture": "1.0.0",
       "memory": "1.1.0",
-      "sdd": "1.0.0",
+      "sdd": "1.0.1",
       "modules": "1.4.0"
     },
     "USAGE_REPORT_PARTS": [
@@ -204,7 +204,8 @@
       "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
       "SDD_SPACES_UNAVAILABLE": "sdd.spaces_unavailable",
       "SDD_CONFIG_READONLY": "sdd.config_readonly",
-      "SDD_SECRET_REJECTED": "sdd.secret_rejected"
+      "SDD_SECRET_REJECTED": "sdd.secret_rejected",
+      "FAKE_SESSION_MISSING": "fake.session_missing"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
       "bad_request": 400,
@@ -360,7 +361,9 @@
       "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
       "SDD_SECRET_REJECTED": "sdd.secret_rejected",
       "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
-      "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped"
+      "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped",
+      "RECORDS_SESSION_ARCHIVE_FAILED": "records.session_archive_failed",
+      "RUN_MOVE_BUSY": "run.move_busy"
     },
     "KNOWN_SUGGESTION_IDS": {
       "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
@@ -18623,6 +18626,7 @@
           "type": "array"
         },
         "issues": {
+          "description": "작업 이슈: 파싱 이슈 + 작업 연동(X43)의 선택 메서드 `task_issues`가 낸 것(예: `sdd.status_not_applied`·`sdd.automation_skipped`).",
           "items": {
             "$ref": "#/$defs/SpecIssue"
           },
@@ -22140,7 +22144,7 @@
     },
     "SecretRuleSettings": {
       "additionalProperties": true,
-      "description": "비밀 값으로 의심할 규칙을 더합니다. 기본 규칙에 더하기만 하며 줄일 수는 없습니다.",
+      "description": "비밀 값으로 의심할 규칙을 더합니다.\n\n기본 규칙은 줄일 수 없고, 뜻이 넓은 키 이름 목록만 바꿀 수 있습니다.",
       "properties": {
         "extra_key_names": {
           "description": "이 이름(또는 이 단어가 든 이름)의 값을 비밀로 의심합니다.",
@@ -22170,6 +22174,29 @@
             ],
             "tier": "advanced",
             "when": "특정 형식의 토큰이 기록에 남는 것을 막고 싶을 때 더하세요."
+          }
+        },
+        "weak_key_names": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "이 이름만 걸린 값(예: input_key의 key)은 값이 비밀처럼 생겼을 때만 의심합니다. 비워 두면 기본 목록을 쓰고, 빈 목록이면 이름만으로 의심합니다.",
+          "title": "뜻이 넓은 키 이름",
+          "x-ui": {
+            "example": [
+              "key"
+            ],
+            "tier": "advanced",
+            "when": "비밀이 아닌 키(예: sort_key)가 자꾸 비밀로 의심될 때 이름을 더하세요."
           }
         },
         "redact_suspected_in_logs": {

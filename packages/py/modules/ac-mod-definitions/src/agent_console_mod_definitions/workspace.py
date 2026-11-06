@@ -2,8 +2,9 @@
 
 - ``workspace.settings`` 포트 = ``WorkspaceState.settings``: 저장 원문을 모델로 읽는다(파일이 없으면
   기본값). 버전 해시가 같으면 읽어 둔 모델을 다시 쓴다.
-- ``secrets.rules`` 포트 = ``WorkspaceState.rules``: 기본 규칙 + 설정 ``secrets.extra_*``
-  (설정 버전마다 한 번 만든다). 잘못된 추가 규칙(손으로 고친 파일)은 빼고 경고 로그.
+- ``secrets.rules`` 포트 = ``WorkspaceState.rules``: 기본 규칙 + 설정 ``secrets.extra_*``, 약한 키
+  이름은 설정 ``secrets.weak_key_names``(null = 기본 데이터, 설정 버전마다 한 번 만든다). 잘못된
+  추가 규칙·약한 이름(손으로 고친 파일)은 빼고 경고 로그.
 - ``SecretRuleCheck``: 공통 설정 저장 전 검사 — 사용자 규칙이 위험·잘못된 정규식이면 error
   (``secret.invalid_rule``, 패턴 원문은 메시지에 없음).
 """
@@ -35,6 +36,9 @@ INVALID_RULE = "secret.invalid_rule"
 SECRETS_POINTER = "/secrets"
 """공통 설정 문서에서 비밀 규칙 묶음의 위치."""
 
+WEAK_KEY_NAMES = "weak_key_names"
+"""설정 ``secrets``의 약한 키 이름 필드(``RuleProblem.field``와 같은 이름)."""
+
 
 def rule_problem_issues(problems: Iterable[RuleProblem]) -> list[Issue]:
     """사용자 규칙 문제 → 설정 문서 기준 error 이슈(패턴 원문은 메시지에 넣지 않는다)."""
@@ -50,16 +54,41 @@ def rule_problem_issues(problems: Iterable[RuleProblem]) -> list[Issue]:
 
 
 def settings_rule_issues(settings: SecretRuleSettings) -> list[Issue]:
-    """설정 ``secrets``의 사용자 규칙 검사(위험·잘못된 정규식, 빈 이름)."""
-    return rule_problem_issues(
-        check_extra_rules(settings.extra_key_names, settings.extra_value_patterns)
-    )
+    """설정 ``secrets``의 사용자 규칙 검사(위험·잘못된 정규식, 빈 이름, 약한 이름)."""
+    problems = check_extra_rules(settings.extra_key_names, settings.extra_value_patterns)
+    if settings.weak_key_names is not None:
+        problems += weak_name_problems(settings.weak_key_names)
+    return rule_problem_issues(problems)
+
+
+def weak_name_problems(names: Sequence[str]) -> list[RuleProblem]:
+    """약한 키 이름 목록의 문제(``RuleProblem.field`` = ``weak_key_names``, 설정 필드 이름)."""
+    try:
+        SecretRules(weak_key_names=names)
+    except InvalidSecretRuleError as exc:
+        return [p for p in exc.problems if p.field == WEAK_KEY_NAMES]
+    return []
+
+
+def _base_rules(weak_key_names: Sequence[str] | None) -> SecretRules:
+    """기본 규칙. 약한 키 이름을 주면(설정 ``secrets.weak_key_names``) 그 목록으로 바꾼다.
+
+    잘못된 이름은 빼고 경고 로그(위치만)."""
+    if weak_key_names is None:
+        return default_rules()
+    bad = {p.index for p in weak_name_problems(weak_key_names)}
+    if bad:
+        _log.warning("약한 키 이름 %d개가 잘못돼 빼고 씁니다(위치만: %s)", len(bad), sorted(bad))
+    return SecretRules(weak_key_names=[n for i, n in enumerate(weak_key_names) if i not in bad])
 
 
 def build_rules(settings: SecretRuleSettings) -> SecretRules:
-    """기본 규칙 + 사용자 추가분. 잘못된 추가분은 빼고 경고 로그(위치만)."""
+    """기본 규칙(약한 키 이름은 설정값, null이면 기본 데이터) + 사용자 추가분.
+
+    잘못된 추가분·약한 이름은 빼고 경고 로그(위치만)."""
+    base = _base_rules(settings.weak_key_names)
     try:
-        return default_rules().with_extra(
+        return base.with_extra(
             key_names=settings.extra_key_names, value_patterns=settings.extra_value_patterns
         )
     except InvalidSecretRuleError as exc:
@@ -73,7 +102,7 @@ def build_rules(settings: SecretRuleSettings) -> SecretRules:
             for i, p in enumerate(settings.extra_value_patterns)
             if ("extra_value_patterns", i) not in bad
         ]
-        return default_rules().with_extra(key_names=names, value_patterns=patterns)
+        return base.with_extra(key_names=names, value_patterns=patterns)
 
 
 class SecretRuleCheck:

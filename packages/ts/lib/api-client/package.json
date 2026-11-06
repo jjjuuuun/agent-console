@@ -89,6 +89,11 @@
       "types": "./dist/clients/memory.d.ts",
       "default": "./dist/clients/memory.js"
     },
+    "./sdd": {
+      "development": "./src/clients/sdd.ts",
+      "types": "./dist/clients/sdd.d.ts",
+      "default": "./dist/clients/sdd.js"
+    },
     "./projects": {
       "development": "./src/clients/projects.ts",
       "types": "./dist/clients/projects.d.ts",

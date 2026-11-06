@@ -20,6 +20,8 @@ export { resolveCycleLimit, type CycleLimit, type CycleLimitSource } from "./cyc
 export { deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, effectiveStrategyId, type EdgeChipContext } from "./edgeChips";
 export { buildBindSummary, deriveBindSummaries, nestedDefinitionList, nestedInfoOf, type BindSummaryContext, type NestedInfo } from "./bindSummary";
 export { conditionPayloadOf, isChildRunNotice, parseDelegationEvent, summarizeDelegationEvent, type DelegationEventView, type EventSummary, type EventSummaryContext } from "./eventSummaryMap";
+export { ATTRIBUTE_ROWS, attributeRows, attributeSummary, edgeSessionOf, hasAttributes, sessionOf, sessionText, sessionTip, type AttributeCell, type StrategyAttributeSource } from "./delegationAttributes";
+export { SESSION_ICONS, SessionChip, sessionChipView, type SessionChipProps } from "./SessionChip";
 export { DelegationSettings, delegatorStrategies, type DelegationSettingsProps } from "./DelegationSettings";
 export { shortRunId } from "./ids";
 export { retryFocus, type RetryFocusOptions } from "./focusRetry";

@@ -27,7 +27,7 @@ export type { EdgeKindCandidateInfo, EdgeKindDialogProps } from "./components/Ed
 
 // 독립 위임·반복 연결(5R.16): 디스크립터 속성만 보는 순수 함수
 export { EDGE_PATTERN_COUNT, resolveEdgeStyle } from "./logic/edgeStyle";
-export type { ResolveEdgeStyleHints, ResolvedEdgeStyle, StyleSource } from "./logic/edgeStyle";
+export type { ResolveEdgeStyleHints, ResolvedEdgeStyle, StrategyStyleInput, StyleSource } from "./logic/edgeStyle";
 export { closesFlowLoop, loopRegion } from "./logic/loops";
 export type { NewEdgeLike } from "./logic/loops";
 
@@ -218,6 +218,8 @@ export type {
 
 export type {
   BindSummary,
+  NodeAnnotation,
+  NodeTagView,
   NodeAvatar,
   ChangeMeta,
   ChangeReason,

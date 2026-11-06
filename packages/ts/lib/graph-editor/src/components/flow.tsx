@@ -65,6 +65,8 @@ export interface FlowEdgeData extends Record<string, unknown> {
   runBadges?: EdgeBadge[];
   /** 종류 이름(칩 줄 접근성 이름용) */
   kindTitle?: string;
+  /** 라벨 2행 맨 앞 칩(앱이 만든다). 있으면 라벨이 2행으로 쌓인다 */
+  leadChip?: ChipView;
 }
 export type FlowEdge = Edge<FlowEdgeData, "ac-edge">;
 
@@ -195,10 +197,11 @@ interface ChipDrag {
 }
 
 const MAX_VISIBLE_CHIPS = 4;
+const MAX_STACKED_CHIPS = 3;
 
 /** 칩 하나. `onActivate`가 있으면 단추(클릭·Enter·Space)이고, 연결 드래그로 번지지 않게 포인터 이벤트를 막는다. */
-function ChipShell({ chip, full, children }: { chip: ChipView; full: string; children: ReactNode }) {
-  const common = { className: "ac-ge-hint-chip", "data-tone": chip.tone ?? "neutral", "data-dashed": chip.dashed ? "true" : undefined, title: full };
+function ChipShell({ chip, full, children, lead }: { chip: ChipView; full: string; children: ReactNode; lead?: boolean }) {
+  const common = { className: "ac-ge-hint-chip", "data-tone": chip.tone ?? "neutral", "data-dashed": chip.dashed ? "true" : undefined, "data-lead": lead ? "true" : undefined, title: full };
   if (chip.onActivate === undefined) return <span {...common}>{children}</span>;
   return (
     <button
@@ -227,6 +230,22 @@ interface ChipEntry {
 /** 연결 칩 줄: 선언형 칩 문구 + 앱이 준 추가 칩을 한 덩어리로, 4개째까지 보이고 나머지는 `+N`(툴팁에 전체). */
 function buildChipEntries(data: FlowEdgeData | undefined): { shown: ChipEntry[]; hidden: ChipEntry[] } {
   const all: ChipEntry[] = [];
+  const lead = data?.leadChip;
+  if (lead !== undefined) {
+    const full = lead.fullTitle ?? lead.title;
+    const icon = lead.iconName !== undefined ? (data?.renderIcon?.(lead.iconName) ?? lead.iconText ?? null) : (lead.iconText ?? null);
+    const only = lead.iconOnly === true;
+    all.push({
+      key: `l:${lead.key}`,
+      text: full,
+      node: (
+        <ChipShell chip={lead} full={full} lead>
+          {icon !== null && icon !== undefined && icon !== false ? <span aria-hidden="true" className="ac-ge-chip-icon">{icon}</span> : null}
+          <span className={only ? "ac-ge-sr-only" : "ac-ge-lead-text"}>{lead.title}</span>
+        </ChipShell>
+      ),
+    });
+  }
   for (const c of data?.hintChips ?? []) {
     all.push({ key: `h:${c}`, text: c, node: <span className="ac-ge-hint-chip">{c}</span> });
   }
@@ -244,7 +263,9 @@ function buildChipEntries(data: FlowEdgeData | undefined): { shown: ChipEntry[];
       ),
     });
   }
-  return { shown: all.slice(0, MAX_VISIBLE_CHIPS), hidden: all.slice(MAX_VISIBLE_CHIPS) };
+  // 쌓인 라벨(앞 칩이 있을 때)은 3개까지 보이고 4개째부터 `+N`
+  const max = lead === undefined ? MAX_VISIBLE_CHIPS : MAX_STACKED_CHIPS;
+  return { shown: all.slice(0, max), hidden: all.slice(max) };
 }
 
 export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
@@ -381,24 +402,43 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
       }
     : {};
 
+  const stacked = data?.leadChip !== undefined;
   const chips = buildChipEntries(data);
   const iconNode: ReactNode =
     data?.iconName === undefined ? null : (data.renderIcon?.(data.iconName) ?? (data.iconFallback !== undefined && data.iconFallback !== "" ? data.iconFallback : null));
 
   // 새 데이터(아이콘·추가 칩·배지)가 없으면 이전과 글자 단위로 같은 DOM을 낸다(`flow.snapshot.test.tsx`)
-  const extended = iconNode !== null || (data?.extraChips?.length ?? 0) > 0 || (data?.runBadges?.length ?? 0) > 0;
-  const chipBody = (
+  const extended = iconNode !== null || stacked || (data?.extraChips?.length ?? 0) > 0 || (data?.runBadges?.length ?? 0) > 0;
+  const moreChip =
+    chips.hidden.length > 0 ? (
+      <span className="ac-ge-hint-chip" data-more="true" title={chips.hidden.map((c) => c.text).join(", ")}>
+        {format(edit?.messages.edgeChipsMore ?? "+{n}", { n: chips.hidden.length })}
+      </span>
+    ) : null;
+  const labelText = (
     <>
       {data?.invalid ? `${data.invalidText} ` : ""}
       {data?.label}
+    </>
+  );
+  // 앞 칩이 있으면 1행 = 종류 라벨, 2행 = 앞 칩 → 나머지 칩. 줌이 낮으면(CSS, 루트 `data-zoom-lod`) 종류 아이콘 + 앞 칩 아이콘만 한 줄
+  const chipBody = stacked ? (
+    <span className="ac-ge-edge-rows">
+      <span className="ac-ge-edge-row ac-ge-edge-row1">{labelText}</span>
+      <span className="ac-ge-edge-row ac-ge-edge-row2">
+        {chips.shown.map((c) => (
+          <Fragment key={c.key}>{c.node}</Fragment>
+        ))}
+        {moreChip}
+      </span>
+    </span>
+  ) : (
+    <>
+      {labelText}
       {chips.shown.map((c) => (
         <Fragment key={c.key}>{c.node}</Fragment>
       ))}
-      {chips.hidden.length > 0 && (
-        <span className="ac-ge-hint-chip" data-more="true" title={chips.hidden.map((c) => c.text).join(", ")}>
-          {format(edit?.messages.edgeChipsMore ?? "+{n}", { n: chips.hidden.length })}
-        </span>
-      )}
+      {moreChip}
     </>
   );
 
@@ -450,11 +490,13 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
             (data?.hintChips?.length ?? 0) > 0 ||
             (data?.extraChips?.length ?? 0) > 0 ||
             (data?.runBadges?.length ?? 0) > 0 ||
+            stacked ||
             data?.iconFromProperty === true
               ? "true"
               : undefined
           }
           data-wide={(data?.extraChips?.length ?? 0) > 0 || (data?.runBadges?.length ?? 0) > 0 ? "true" : undefined}
+          data-stacked={stacked ? "true" : undefined}
           data-edge-id={extended ? props.id : undefined}
           title={data?.label}
           {...chipHandlers}
@@ -469,7 +511,7 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
               {iconNode}
             </span>
           )}
-          {iconNode !== null ? <span className="ac-ge-chip-text">{chipBody}</span> : chipBody}
+          {iconNode !== null && !stacked ? <span className="ac-ge-chip-text">{chipBody}</span> : chipBody}
           {data?.runBadges?.map((b, i) => (
             <span key={i} className="ac-ge-run-badge" data-tone={b.tone ?? "neutral"} title={b.ariaLabel} aria-label={b.ariaLabel}>
               {b.text}

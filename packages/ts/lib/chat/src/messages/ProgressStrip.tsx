@@ -103,14 +103,16 @@ export function ProgressStrip({ steps, collapsed, onToggle, summary, onOpen, onO
                   {progressText ? ` · ${progressText}` : ""}
                   {kidsText ? ` · ${fill(m.childCurrent, { name: kidsText })}` : ""}
                 </span>
-                {step.badge ? (
+                {step.badgeNode !== undefined ? (
+                  <span data-part="badge">{step.badgeNode}</span>
+                ) : step.badge ? (
                   <span className="ac-badge" data-part="badge">
                     {step.badge}
                   </span>
                 ) : null}
               </>
             );
-            const tip = step.hint ?? (indent > 0 && !step.badge && !step.child ? m.sameSession : undefined);
+            const tip = step.hint ?? (indent > 0 && !step.badge && step.badgeNode === undefined && !step.child ? m.sameSession : undefined);
             const main = hasKids ? (
               <button type="button" className="ac-chat-row-main" aria-expanded={open} aria-label={fill(m.childToggle, { name })} title={tip} onClick={() => toggleStep(step.key, !open)}>
                 <ChatIcon name={open ? "chevron-down" : "chevron-right"} size={12} />

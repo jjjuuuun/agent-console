@@ -87,6 +87,19 @@ export const appIcons: Readonly<Record<string, IconComponent>> = {
       <path d="M5.5 6.5h5M5.5 9h5M5.5 11.5h3" />
     </>,
   ),
+  // 스펙: 문서 + 체크 줄 / 문서 틀: 점선 윤곽 문서(6R.20)
+  spec: svg(
+    <>
+      <path d="M4 2.5h6l2.5 2.5v8.5H4z" />
+      <path d="M6 7.5l1.2 1.2L9.8 6M6 11h4" />
+    </>,
+  ),
+  "spec-template": svg(
+    <>
+      <path d="M4 2.5h6l2.5 2.5v8.5H4z" strokeDasharray="2 1.6" />
+      <path d="M6 7.5h4M6 10h4" />
+    </>,
+  ),
   // 톱니: 닫힌 외곽선(이빨 8개) + 가운데 원. 해(방사형 선)와 실루엣이 달라야 한다.
   settings: svg(
     <>
@@ -153,6 +166,18 @@ export const appIcons: Readonly<Record<string, IconComponent>> = {
   "triangle-alert": svg(<path d="M8 2.2l6 10.6H2zM8 6.4v3M8 11.2h.01" />),
   filter: svg(<path d="M2.5 3.5h11L9.5 8.4v4.1l-3 1.5V8.4z" />),
   "corner-down-right": svg(<path d="M3 3v4.5a2 2 0 0 0 2 2h7M9.5 6.5 12.5 9.5 9.5 12.5" />),
+  // 세션 구분 표시(screen-delegation.md §14): 칩 아이콘. 별도 = 갈래, 같은 = 꺾인 화살표, 모르는 값 = 원
+  "git-fork": svg(
+    <>
+      <circle cx="4.5" cy="3.5" r="1.5" />
+      <circle cx="11.5" cy="3.5" r="1.5" />
+      <circle cx="8" cy="12.5" r="1.5" />
+      <path d="M4.5 5v1.5a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2V5M8 8.5V11" />
+    </>,
+  ),
+  circle: svg(<circle cx="8" cy="8" r="4.5" />),
+  list: svg(<path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01" />),
+  layers: svg(<path d="M8 2.5 14 6 8 9.5 2 6zM2.5 8.8 8 12l5.5-3.2" />),
   chevronRight: svg(<path d="M6 4l4 4-4 4" />),
   chevronUp: svg(<path d="M4 10l4-4 4 4" />),
   chevronDown: svg(<path d="M4 6l4 4 4-4" />),

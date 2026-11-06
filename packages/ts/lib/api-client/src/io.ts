@@ -72,12 +72,16 @@ export function ifMatch(hash: string | undefined): Headers | undefined {
   return hash === undefined ? undefined : { "If-Match": hash };
 }
 
-/** 값이 있는 키만 쿼리 문자열로(`?a=1&b=x`, 없으면 빈 문자열). */
+/** 값이 있는 키만 쿼리 문자열로(`?a=1&b=x`, 없으면 빈 문자열). 배열은 같은 키를 되풀이한다(`status=a&status=b`). */
 export function query(params: object | undefined): string {
   if (params === undefined) return "";
   const parts: string[] = [];
   for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
     if (v === undefined || v === null) continue;
+    if (Array.isArray(v)) {
+      for (const item of v) parts.push(`${enc(k)}=${enc(String(item))}`);
+      continue;
+    }
     parts.push(`${enc(k)}=${enc(String(v))}`);
   }
   return parts.length === 0 ? "" : `?${parts.join("&")}`;

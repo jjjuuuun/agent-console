@@ -32,10 +32,10 @@ export function sortConversations(list: readonly ConversationSummary[], sortValu
   return [...list].sort((a, b) => compare(a, b, since));
 }
 
-/** 제목 부분 일치(대소문자 무시)와 보관 포함 여부로 거른다. */
-export function filterConversations(list: readonly ConversationSummary[], opts: { query: string; includeArchived: boolean }): ConversationSummary[] {
+/** 제목 부분 일치(대소문자 무시)로 거른다. 보관·프로젝트는 서버가 거른다(6R.19). */
+export function filterConversations(list: readonly ConversationSummary[], opts: { query: string }): ConversationSummary[] {
   const q = opts.query.trim().toLowerCase();
-  return list.filter((c) => (opts.includeArchived || !c.archived) && (q === "" || (c.title ?? "").toLowerCase().includes(q)));
+  return list.filter((c) => q === "" || (c.title ?? "").toLowerCase().includes(q));
 }
 
 /** 요약 갱신을 목록에 반영(있으면 교체, 없으면 앞에 추가). */
@@ -58,4 +58,21 @@ export function pendingSinceOf(items: readonly { conversation_id?: string | null
     out.set(i.conversation_id, Math.min(out.get(i.conversation_id) ?? Infinity, i.created_at));
   }
   return out;
+}
+
+/**
+ * 질의 캐시 한 항목에 요약 갱신을 반영한다. 배열 목록(`upsertConversation`)과 커서 페이지 목록(`{ pages }`)을 모두 다룬다.
+ * 페이지 목록은 있던 자리에서 교체하고, 어느 페이지에도 없으면 첫 페이지 앞에 넣는다. 그 밖의 모양은 그대로 둔다.
+ */
+export function patchConversationCache<T>(cur: T, next: ConversationSummary): T {
+  if (Array.isArray(cur)) return upsertConversation(cur as ConversationSummary[], next) as T;
+  const data = cur as { pages?: { items?: readonly ConversationSummary[] }[] } | undefined;
+  if (data === undefined || data === null || !Array.isArray(data.pages)) return cur;
+  const has = data.pages.some((p) => p.items?.some((c) => c.id === next.id));
+  const pages = data.pages.map((p, i) => {
+    const items = p.items ?? [];
+    if (has) return items.some((c) => c.id === next.id) ? { ...p, items: items.map((c) => (c.id === next.id ? next : c)) } : p;
+    return i === 0 ? { ...p, items: [next, ...items] } : p;
+  });
+  return { ...data, pages } as T;
 }

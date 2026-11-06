@@ -3,6 +3,8 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 스펙(SDD) 클라이언트(6R.20, 서버 6R.13, 계약 `sdd` 1.0.0): 하위 경로 `sdd`(`createSddClient`, `SddClient`) — 스펙 목록·보기·저장·삭제, 문서 본문(`If-Match`·`If-None-Match: *`)·상태 전환, 작업 거르기·줄 고치기, 계획·추적·문법, 작업 동작·한꺼번에 시작, 자동 진행, 규칙 검사, 가져오기·내보내기, 문서 틀 목록·틀로 저장. 공간(`?project=`)은 `withSpace`로 묶는다. WS `subscribeSdd`(토픽 `sdd.changed`).
+- 목록 커서 페이지(6R.19, 서버 6R.12): `runsPage`(`GET /runs/page`, `RunsPageParams`)·`conversationsPage`(`GET /conversations/page`, `ConversationsPageParams`)와 이벤트 질의 `listRunEvents(id, { node })`. `query()`가 배열 값을 같은 키 되풀이(`status=a&status=b`)로 보낸다.
 - `previewImport`·`importResources`가 선택 인자 `ImportScope{project, target}`을, `planExport`·`downloadExportArchive`·`writeExport`가 `ExportScope{project, source}`를 받아 질의로 넘긴다(5.7R.33o, 서버 33i·33k). 생략하면 주소가 그대로다.
 - `projects`에 `resetProjectManifest`(`POST /projects/{id}/manifest/reset`)·`appendProjectGitignore`(`POST /projects/{id}/gitignore/append`) 추가(5.7R.33n).
 - 프로젝트 2(5.7R.33m, 계약 0.12.0): 하위 경로 `projects`(`createProjectsClient`) — 등록·조회·수정·해제, 폴더 확인·만들기·목록·고르는 방법·OS 선택 창(`pickFolder`의 `AbortSignal`), 복사 계획·적용, 옛 기록 계획. `RestIo.request`·`requestVersioned`가 `signal`을 받는다. `memory`에 `copyMemory`, `runs`·`chat`에 프로젝트별 개수·프로젝트에 넣기(`get…ProjectCounts`·`assign…ToProject`)와 목록 질의 `project`·`source`.

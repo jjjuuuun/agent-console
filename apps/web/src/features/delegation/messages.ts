@@ -211,4 +211,42 @@ export const delegationMessages = {
     childFailedAction: "자식 실행에서 원인 보기",
     stopNested: "진행 중인 중첩 팀 실행도 함께 중지됩니다.",
   },
+  /**
+   * 세션 구분 표시 문구(screen-delegation.md §14.9·§14.12). 값(`separate` 등)은 서버 데이터의 열린 문자열이고,
+   * 여기 없는 값은 화면이 원문(mono)으로 보인다. 방식·연결 종류 id는 이 표에 없다.
+   */
+  session: {
+    value: { separate: "별도 세션", same: "같은 세션" } as Readonly<Record<string, string>>,
+    tipSame: (delegator: string) => `${delegator} 세션 안에서 실행됩니다`,
+    tipSameNoDelegator: "위임자 세션 안에서 실행됩니다",
+    tipSeparate: "자기 세션을 따로 엽니다",
+    /** 세션 값이 없을 때 쓰지 않는다(칩 없음). 모르는 값은 원문 */
+    unknownTip: (value: string) => `세션 구분: ${value}`,
+  },
+  /** 속성 표: 행 순서는 `delegationAttributes.ts`의 `ATTRIBUTE_ROWS`가 정하고, 값 → 문구는 여기. */
+  attr: {
+    session: {
+      label: "실행 세션",
+      long: { separate: "대상이 자기 세션을 따로 엽니다", same: (delegator: string) => `${delegator} 세션 안에서 실행됩니다` },
+      short: { separate: "별도 세션", same: "같은 세션" },
+    },
+    max_depth: {
+      label: "위임 깊이",
+      long: { one: "1단계 — 대상은 다시 위임할 수 없습니다", n: (n: number) => `${n}단계까지`, none: "제한 없음(설정 ‘위임 깊이’ 한도까지)" },
+      short: { n: (n: number) => `깊이 ${n}`, none: "깊이 제한 없음" },
+    },
+    backend: {
+      label: "사용 백엔드",
+      long: { delegator: "위임자의 백엔드를 씁니다", target: "대상 자신의 백엔드를 씁니다" },
+      short: { delegator: "위임자 백엔드", target: "대상 백엔드" },
+    },
+    nestable: {
+      label: "중첩 위임",
+      long: { yes: "가능 — 대상이 다시 위임할 수 있습니다", no: "불가" },
+      short: { yes: "중첩 가능" },
+    },
+    empty: "방식 정보를 알 수 없습니다",
+    /** 위임자 이름을 모를 때 긴 문구에 들어가는 말 */
+    delegatorFallback: "위임자",
+  },
 };

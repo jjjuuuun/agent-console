@@ -1,13 +1,17 @@
 import { useMemo } from "react";
-import type { EdgeTypeDescriptor, Graph, NodeTypeDescriptor, WorkspaceSettings } from "@agent-console/contracts";
+import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeTypeDescriptor, WorkspaceSettings } from "@agent-console/contracts";
 import { delegationMessages as dm, numberAt, resolveCycleLimit, stringAt, DEFAULT_TEAM_CONVENTIONS } from "../delegation";
 import type { NestedInfo } from "../delegation";
+import { teamMessages } from "./messages";
+import { sessionSummary } from "./sessionView";
 import { nodeLabel } from "./teamsLogic";
 
 export interface DelegationOverviewProps {
   graph: Graph;
   nodeTypes: readonly NodeTypeDescriptor[];
   edgeTypes: readonly EdgeTypeDescriptor[];
+  /** 위임 방식 목록(세션 요약용, 없으면 요약 없음) */
+  strategies?: readonly DelegationStrategyDescriptor[];
   workspace: WorkspaceSettings | undefined;
   nested: { currentKind: string | undefined; infos: readonly NestedInfo[] | undefined; open: ((id: string) => void) | undefined } | undefined;
   onSelectEdge(edgeId: string, sourceNodeId: string): void;
@@ -18,7 +22,7 @@ export interface DelegationOverviewProps {
  * "개요" 탭 보강(screen-delegation.md 2.9): 반복 연결 목록(출발 → 도착, 한도 칩; 클릭하면 그 연결을 선택·이동)과 노드 실행 총량 안내,
  * 중첩된 팀 구성 목록([열기]). 반복 연결은 디스크립터 `cycle`, 중첩 노드는 `binds.kind`로 판정한다. 해당하는 것이 없으면 아무것도 그리지 않는다.
  */
-export function DelegationOverview({ graph, nodeTypes, edgeTypes, workspace, nested, onSelectEdge, onSelectNode }: DelegationOverviewProps) {
+export function DelegationOverview({ graph, nodeTypes, edgeTypes, strategies = [], workspace, nested, onSelectEdge, onSelectNode }: DelegationOverviewProps) {
   const kinds = useMemo(() => new Map(edgeTypes.map((e) => [e.id, e])), [edgeTypes]);
   const types = useMemo(() => new Map(nodeTypes.map((n) => [n.id, n])), [nodeTypes]);
   const nodes = graph.nodes ?? [];
@@ -28,10 +32,14 @@ export function DelegationOverview({ graph, nodeTypes, edgeTypes, workspace, nes
     const binds = types.get(n.type)?.binds;
     return binds != null && nested?.currentKind !== undefined && binds.kind === nested.currentKind;
   });
-  if (loops.length === 0 && nestedNodes.length === 0) return null;
+  const sessions = useMemo(() => sessionSummary(graph, nodeTypes, edgeTypes, strategies), [graph, nodeTypes, edgeTypes, strategies]);
+  if (loops.length === 0 && nestedNodes.length === 0 && sessions === undefined) return null;
   const total = numberAt(graph.settings, DEFAULT_TEAM_CONVENTIONS.settingsFlowMaxNodeRuns) ?? numberAt(workspace, DEFAULT_TEAM_CONVENTIONS.settingsFlowMaxNodeRuns);
   return (
     <>
+      {sessions !== undefined ? (
+        <p className="app-muted lib-field-note" data-session-summary="" role="status">{teamMessages.sessions.teamSummary(sessions.separate, sessions.same)}</p>
+      ) : null}
       {loops.length > 0 ? (
         <section aria-label={dm.nested.loopsTitle}>
           <span className="lib-field-label">{dm.nested.loopsTitle}</span>

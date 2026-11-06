@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { EdgeSpec } from "@agent-console/contracts";
 import { EdgeLayoutPanel, IssueSuggestionButtons, candidateEdgeKinds, edgeKindBadge, defaultMessages, type EdgeLayoutPanelProps } from "@agent-console/graph-editor";
 import { Banner, Button, ConfirmDialog } from "@agent-console/ui";
-import { configRelativePath, resolveCycleLimit, type ConfigIssue } from "../delegation";
+import { DEFAULT_TEAM_CONVENTIONS, configRelativePath, effectiveStrategyId, hasAttributes, resolveCycleLimit, type ConfigIssue } from "../delegation";
+import { setAt, unsetAt } from "../../lib/jsonPointer";
 import { issueMessage } from "../../lib/issues";
 import { EdgeConfigForm } from "./forms";
 import { teamMessages as t } from "./messages";
@@ -12,6 +13,7 @@ import { edgeKindOf, edgesOf, issuesOfEdge, latestById, nodeLabel, nodesOf, with
 /** 연결 패널: 출발→도착, 연결 종류 바꾸기, 종류의 `config_schema` 폼, "모양·경로"(편집기가 알려 준 값), 이 연결의 문제. 종류별 전용 화면은 없다. */
 export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: EdgeSpec; layout?: EdgeLayoutPanelProps | undefined }) {
   const [pending, setPending] = useState<string | null>(null);
+  const [descOpen, setDescOpen] = useState(false);
   const kind = edgeKindOf(edge, ctx.edgeTypes);
   const byId = new Map(nodesOf(ctx.graph).map((n) => [n.id, n]));
   const src = byId.get(edge.source.node);
@@ -28,6 +30,21 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
     return path === undefined || path === "" ? [] : [{ path, message: issue.message, severity: issue.severity === "error" ? ("error" as const) : ("warning" as const) }];
   });
   const cycleLimit = kind?.cycle == null ? undefined : resolveCycleLimit({ edgeConfig: edge.config, teamSettings: ctx.graph.settings, commonSettings: ctx.workspace, kindDefault: kind.cycle.max_iterations });
+  // 위임 연결: 유효 방식과 위임자 이름(동작 방식 블록·옵션 문구). 방식 id를 비교하지 않고 디스크립터 속성만 본다
+  const effectiveId = kind === undefined ? undefined : effectiveStrategyId(edge, kind);
+  const effective = effectiveId === undefined ? undefined : ctx.strategies.find((s) => s.id === effectiveId);
+  const behaviorBlock = effective !== undefined && hasAttributes(effective);
+  const delegatorName = src ? nodeLabel(src) : edge.source.node;
+  const pickStrategy = (id: string) => {
+    if (kind?.invocation == null) return;
+    const title = ctx.strategies.find((s) => s.id === id)?.title ?? id;
+    const pointer = DEFAULT_TEAM_CONVENTIONS.edgeStrategy;
+    // 종류 기본으로 돌아가면 덮어쓰기를 지운다
+    const nextConfig = (id === kind.invocation.strategy ? unsetAt(edge.config ?? {}, pointer) : setAt(edge.config ?? {}, pointer, id)) as Record<string, unknown>;
+    const next = { ...edge, config: nextConfig } as EdgeSpec;
+    if (Object.keys(nextConfig).length === 0) delete (next as { config?: unknown }).config;
+    ctx.onUndoableChange({ ...ctx.graph, edges: edgesOf(ctx.graph).map((e) => (e.id === edge.id ? next : e)) }, t.sessions.strategyChanged(title));
+  };
   const sourceLabels = { edge: t.nested.sourceEdge, teamSettings: t.nested.sourceTeam, commonSettings: t.nested.sourceCommon, kindDefault: t.nested.sourceKind } as const;
 
   const change = (id: string) => {
@@ -72,7 +89,16 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
             </select>
             {options.length <= 1 ? <span className="app-muted lib-field-note">{t.edge.noKinds}</span> : null}
           </label>
-          {kind.description ? <p className="app-muted lib-field-note">{kind.description}</p> : null}
+          {kind.description ? (
+            <>
+              <p className="app-muted lib-field-note ses-desc" data-clamped={behaviorBlock && !descOpen ? "true" : undefined}>{kind.description}</p>
+              {behaviorBlock ? (
+                <button type="button" className="app-link-btn" aria-expanded={descOpen} onClick={() => setDescOpen((v) => !v)}>
+                  {descOpen ? t.sessions.descLess : t.sessions.descMore}
+                </button>
+              ) : null}
+            </>
+          ) : null}
           {badge !== undefined && defaultMessages.kindBadgeLabels[badge] ? <span className="ac-tag">{defaultMessages.kindBadgeLabels[badge]}</span> : null}
           {kind.cycle != null ? <span className="ac-tag">{t.edge.cycleBadge}</span> : null}
           {kind.handles_failure === true ? <span className="ac-tag">{t.edge.failureBadge}</span> : null}
@@ -88,6 +114,9 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
             }}
             interactionKinds={ctx.interactionKinds}
             strategies={ctx.strategies}
+            {...(ctx.strategiesStatus === undefined ? {} : { strategiesStatus: ctx.strategiesStatus })}
+            delegatorLabel={delegatorName}
+            onPickStrategy={pickStrategy}
             issues={configIssues}
             disabled={ctx.disabled}
           />

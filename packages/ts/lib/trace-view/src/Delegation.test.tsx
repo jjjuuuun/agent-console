@@ -145,3 +145,23 @@ describe("isCallSpan", () => {
     expect(isCallSpan({ ...span("c", {}), invoked_by: ["x"] } as TraceSpan)).toBe(false);
   });
 });
+
+describe("TraceTimeline: 앱이 정하는 세션 배지(sessionBadgeFor)", () => {
+  const labelFor = (s: TraceSpan) => ({ title: s.node_id ?? s.id });
+  it("주면 span 필드로 같은/별도를 유추하지 않고 앱이 준 부품만 그린다(없으면 배지 없음)", () => {
+    render(
+      <TraceTimeline
+        trace={trace}
+        labelFor={labelFor}
+        sessionBadgeFor={(s) => (s.id === "callee-a" ? { text: "임의 세션 값", node: <i data-testid="slot">칩</i> } : undefined)}
+      />,
+    );
+    expect(screen.getAllByTestId("slot")).toHaveLength(1);
+    expect(document.querySelectorAll("[data-session-badge]")).toHaveLength(0);
+  });
+  it("생략하면 이전처럼 span 필드로 판정한 세션 아이콘이 그려진다", () => {
+    render(<TraceTimeline trace={trace} labelFor={labelFor} />);
+    expect(document.querySelectorAll("[data-session-badge]").length).toBeGreaterThan(0);
+  });
+});
+

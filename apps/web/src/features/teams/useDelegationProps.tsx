@@ -3,6 +3,7 @@ import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, GraphSumm
 import type { BindSummary, ChipView, DefinitionItem } from "@agent-console/graph-editor";
 import { CONFIG_WIDGETS, deriveAllEdgeChips, deriveBindSummaries, edgeStrategyIds, nestedDefinitionList, nestedInfoOf, useConditionOperators, useRenderIcon, type NestedInfo } from "../delegation";
 import { DEFINITION_KINDS } from "../library";
+import { edgeLeadChips, nodeFootAnnotations } from "./sessionView";
 import { usageCounts } from "./teamsLogic";
 
 export interface DelegationPropsInput {
@@ -27,6 +28,10 @@ export interface DelegationProps {
   edgeExtraChips: Record<string, ChipView[]>;
   edgeStrategyIds: Record<string, string>;
   bindSummaries: Record<string, BindSummary>;
+  /** 연결 라벨 2행 맨 앞 세션 칩(세션 속성이 있는 연결만) */
+  edgeLeadChips: Record<string, ChipView>;
+  /** 노드 카드 맨 아래 `{위임자} 세션 안` 칩 */
+  nodeAnnotations: Record<string, { foot: ChipView }>;
   /** 팔레트 "정의에서 만드는 노드"의 중첩 정의 목록. 키는 `binds.kind`가 지금 편집 종류인 하나 */
   nestedList: readonly DefinitionItem[] | undefined;
   nested: { currentKind: string | undefined; infos: readonly NestedInfo[] | undefined; kindTitle: string | undefined; open: ((id: string) => void) | undefined };
@@ -53,11 +58,13 @@ export function useDelegationProps(i: DelegationPropsInput): DelegationProps {
     () => (i.graph === undefined ? {} : deriveBindSummaries(i.graph.nodes ?? [], i.nodeTypes, { currentKind, currentId: i.graphId, infos, kindTitle, open: i.openNested })),
     [i.graph, i.nodeTypes, currentKind, i.graphId, infos, kindTitle, i.openNested],
   );
+  const leadChips = useMemo(() => (i.graph === undefined ? {} : edgeLeadChips(i.graph, i.edgeTypes, i.strategies)), [i.graph, i.edgeTypes, i.strategies]);
+  const nodeAnnotations = useMemo(() => (i.graph === undefined ? {} : nodeFootAnnotations(i.graph, i.edgeTypes, i.strategies)), [i.graph, i.edgeTypes, i.strategies]);
   const nestedList = useMemo(() => {
     if (infos === undefined || i.graph === undefined) return undefined;
     const counts = usageCounts(i.graph, i.nodeTypes);
     return nestedDefinitionList(infos, i.graphId, (id) => counts.get(`${currentKind}:${id}`) ?? 0);
   }, [infos, i.graph, i.nodeTypes, i.graphId, currentKind]);
   const nested = useMemo(() => ({ currentKind, infos, kindTitle, open: i.openNested }), [currentKind, infos, kindTitle, i.openNested]);
-  return { edgeExtraChips, edgeStrategyIds: strategyIds, bindSummaries, nestedList, nested, renderIcon };
+  return { edgeExtraChips, edgeStrategyIds: strategyIds, bindSummaries, edgeLeadChips: leadChips, nodeAnnotations, nestedList, nested, renderIcon };
 }

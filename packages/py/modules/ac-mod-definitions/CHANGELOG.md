@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 계약 0.13.1(5.7R.33y2 후속): 설정 `secrets.weak_key_names`(null = 기본 데이터 `DEFAULT_WEAK_KEY_NAMES`, 빈 목록 = 끔, 주면 그 목록)를 `build_rules`가 `SecretRules(weak_key_names=...)`로 넘긴다. 저장 전 검사가 잘못된 이름을 `secret.invalid_rule`(`/secrets/weak_key_names/<i>`)로 막고, 손으로 고친 파일의 잘못된 이름은 빼고 경고 로그(위치만). `weak_name_problems` 추가.
 - 6R.5: 선택 포트 `definitions.kind_contributions`(X44, `KIND_CONTRIBUTIONS` = 키트 `DEFINITION_KIND_CONTRIBUTIONS`). `library=True` 기여 종류를 라이브러리 저장소에 더한다(build 때 + 시작 훅에서 한 번 더, `register_contributed_kinds`·`DefinitionFileStore.contributed`). `library=False` 종류의 라이브러리 요청은 모르는 종류라 404. 기본 종류와 같은 이름의 기여는 경고 로그 후 건너뛴다. 기여가 없으면 종류 목록이 전과 같다.
 - 5.7R.33x: 선택 포트 `definitions.spaces`(공간 이름 → 정의 저장소, `ac-store.DefinitionSpaces`). 에이전트·팀 구성 경로가 `?project=<공간>`을 받는다(목록·조회·만들기·저장·삭제·복제). 포트가 없으면 `?project=` 요청은 409 `feature_unavailable`, 모르는 공간 404 `project.not_found`, 질의 없는 요청은 그대로 라이브러리. 공간 쓰기의 평문 비밀 거부는 422 `details.issues`(필드 위치), 쓰기 불가 폴더 409 `project.config_readonly`. 공간 목록의 `validation`은 null. `SavedDefinition.space`(기본 None) 추가. **깨는 변경**: `build_router(service)`의 `service`가 공간 이름 하나를 받는다(`Callable[[str | None], DefinitionService]`).
 - 5.2R.104: 프리셋 기능을 지웠다. 남은 설정 키 `presets`·`modules.options.mod-presets`를 `RemovedSetting`으로 선언해 호스트가 "프리셋 기능은 삭제되었습니다" 오류로 시작을 거부한다(`PRESETS_REMOVED_REASON`). 개발 의존 `agent-console-mod-presets`를 뺐다.

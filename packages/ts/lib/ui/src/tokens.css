@@ -18,6 +18,13 @@
   --ac-surface-3: #2d3240;
   --ac-border: #3a4152;
   --ac-border-strong: #7c869d;
+  /* 세션 구분 색(3px 띠·8px 점 전용, 글자색 금지; screen-delegation.md 14.8) */
+  --ac-session-0: #22d3ee;
+  --ac-session-1: #fbbf24;
+  --ac-session-2: #f472b6;
+  --ac-session-3: #4ade80;
+  --ac-session-4: #a78bfa;
+  --ac-session-5: #94a3b8;
   --ac-text: #eef0f6;
   --ac-text-muted: #b9c0d0;
   --ac-text-subtle: #98a1b6;
@@ -75,6 +82,13 @@
   --ac-surface-3: #ebe9e3;
   --ac-border: #d9d6ce;
   --ac-border-strong: #7d8290;
+  /* 세션 구분 색(3px 띠·8px 점 전용, 글자색 금지; screen-delegation.md 14.8) */
+  --ac-session-0: #0e7490;
+  --ac-session-1: #b45309;
+  --ac-session-2: #be185d;
+  --ac-session-3: #15803d;
+  --ac-session-4: #7c3aed;
+  --ac-session-5: #475569;
   --ac-text: #1a1d26;
   --ac-text-muted: #444b5c;
   --ac-text-subtle: #5d6578;
@@ -133,6 +147,13 @@
     --ac-surface-3: #ebe9e3;
     --ac-border: #d9d6ce;
     --ac-border-strong: #7d8290;
+    /* 세션 구분 색(3px 띠·8px 점 전용, 글자색 금지; screen-delegation.md 14.8) */
+    --ac-session-0: #0e7490;
+    --ac-session-1: #b45309;
+    --ac-session-2: #be185d;
+    --ac-session-3: #15803d;
+    --ac-session-4: #7c3aed;
+    --ac-session-5: #475569;
     --ac-text: #1a1d26;
     --ac-text-muted: #444b5c;
     --ac-text-subtle: #5d6578;

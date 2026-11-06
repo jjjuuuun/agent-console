@@ -29,7 +29,7 @@ def _ver(text: str) -> tuple[int, ...]:
 
 
 def test_contracts_version_is_at_least_0_12_2() -> None:
-    """0.12.2에서 정한 버전 이상이다(정확한 지금 값은 0.13.0 테스트가 고정한다)."""
+    """0.12.2에서 정한 버전 이상이다(정확한 지금 값은 0.13.1 테스트가 고정한다)."""
     assert _ver(CONTRACTS_VERSION) >= (0, 12, 2)
     constants = build_schema()["x-constants"]
     assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION

@@ -45,11 +45,16 @@ from agent_console_contracts.schema_help import contract_form_roots, lint_contra
 # ---------------------------------------------------------------- 버전
 
 
-def test_contracts_version_is_0_13_0() -> None:
-    assert CONTRACTS_VERSION == "0.13.0"
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_13_0() -> None:
+    """0.13.0에서 정한 버전 이상이다(정확한 지금 값은 0.13.1 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 13, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.13.0"
-    assert CONTRACT_VERSIONS == {
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0130 = {
         "common": "1.8.0",
         "resources": "1.1.0",
         "logs": "1.2.0",
@@ -65,6 +70,9 @@ def test_contracts_version_is_0_13_0() -> None:
         "sdd": "1.0.0",
         "modules": "1.4.0",
     }
+    assert set(CONTRACT_VERSIONS) == set(v0130)
+    for sub, version in v0130.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 def test_new_models_live_in_their_submodules() -> None:

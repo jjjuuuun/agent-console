@@ -5,7 +5,7 @@
 export const PACKAGE_NAME = "@agent-console/trace-view" as const;
 
 export { TraceTimeline } from "./TraceTimeline";
-export type { GroupBadge, LinkBadge, MethodBadge, SpanLabel, TraceTimelineProps } from "./TraceTimeline";
+export type { GroupBadge, LinkBadge, MethodBadge, SessionBadgeView, SpanLabel, TraceTimelineProps } from "./TraceTimeline";
 export { GROUP_SPAN_KIND, computeTimeScale, defaultExpandedGroups, flattenRows, compactCount, formatDuration, formatTailDuration, groupSpanId, isCallSpan, isChildRunSpan, isSameSession, isUserWait, niceTicks, spanOrdinals, visibleHandoffs } from "./layout";
 export type { FlattenOptions, Handoff, SpanOrdinal, TimeScale, TraceGroupInfo, TraceRow } from "./layout";
 export { defaultTraceMessages } from "./messages";

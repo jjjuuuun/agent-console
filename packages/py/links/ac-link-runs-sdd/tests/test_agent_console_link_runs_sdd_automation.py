@@ -416,3 +416,10 @@ async def test_automation_without_server_and_changed_notices() -> None:
     assert stopped is not None
     assert stopped.stopped_reason == "user"
     automation.close()
+
+
+def test_automation_skipped_code_is_contract_constant() -> None:
+    """건너뜀 이슈 코드는 계약 문서 상수다(계약 0.13.1 후속)."""
+    from agent_console_contracts.constants import KnownIssueCodes
+
+    assert AUTOMATION_SKIPPED == KnownIssueCodes.SDD_AUTOMATION_SKIPPED == "sdd.automation_skipped"

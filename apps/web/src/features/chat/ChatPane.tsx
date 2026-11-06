@@ -9,6 +9,7 @@ import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { FixButtons } from "../../app/fix";
 import { ConnectedBackendChooserCard, unresolvedBackendOf, useSaveDefaultBackend, type UnresolvedBackend } from "../backendChoice";
 import { describeError } from "../../app/errors";
+import { useDelegationStrategies } from "../settings";
 import { messages as appMessages } from "../../app/messages";
 import { useConnectionStatus } from "../../app/useConnectionStatus";
 import { useStorage } from "../../app/StorageContext";
@@ -88,6 +89,7 @@ export function ChatPane(props: ChatPaneProps) {
   const nodeTypes = useNodeTypeList();
   const agents = useAgentList();
   const kinds = useInteractionKindList();
+  const strategies = useDelegationStrategies();
   const settings = useWorkspaceSettings();
   const backendList = useBackendList();
   const queue = useQueueList(id);
@@ -100,7 +102,7 @@ export function ChatPane(props: ChatPaneProps) {
   const replyDisplay = typeof chat.reply_display === "string" ? chat.reply_display : "separate";
   const answerEnabled = chat.answer_with_composer !== false;
 
-  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? null, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, naming, interactions: cardPart.visible });
+  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? null, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
   const { turns } = feed;
   const notifyInfo = useCallback((text: string) => toast({ tone: "info", text }), [toast]);
   const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, notify: notifyInfo, messages: { failed: t.composer.answerFailed } });

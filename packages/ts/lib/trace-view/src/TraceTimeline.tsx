@@ -17,6 +17,12 @@ export interface MethodBadge {
   sessionText?: string;
 }
 
+/** 앱이 정하는 세션 배지(서버가 준 값만 반영한다). `text`는 접근성 이름·방식 글자, `node`는 아이콘 자리에 그릴 부품(공용 세션 칩). */
+export interface SessionBadgeView {
+  text: string;
+  node?: ReactNode;
+}
+
 /** 자식 Run 묶음 행의 제목·배지(앱이 팀 구성 이름 등을 채운다). */
 export interface GroupBadge {
   title: string;
@@ -46,6 +52,11 @@ export interface TraceTimelineProps {
   labelFor?: (span: TraceSpan) => SpanLabel;
   /** 방식 배지 문구(앱). 없으면 세션 배지만 보인다. */
   methodBadgeFor?: (span: TraceSpan) => MethodBadge | undefined;
+  /**
+   * 세션 배지를 앱이 정한다. 주면 span 필드로 같은/별도를 유추하지 않고 이 결과만 쓴다(`null`·`undefined` = 배지 없음).
+   * 생략하면 이전처럼 span 필드로 판정해 messages의 같은/별도 세션을 쓴다.
+   */
+  sessionBadgeFor?: (span: TraceSpan) => SessionBadgeView | null | undefined;
   /** 자식 Run 묶음 행의 제목·배지(앱). 없으면 `자식 실행 {짧은 id}`. */
   groupBadgeFor?: (group: TraceGroupInfo) => GroupBadge | undefined;
   /** span 사이 화살표 칩(앱). 없으면 칩 없음. */
@@ -299,7 +310,8 @@ export function TraceTimeline(props: TraceTimelineProps) {
             const badge = wait ? undefined : grp ? (baseLab as GroupBadge).badge ? { text: (baseLab as GroupBadge).badge as string } : undefined : methodBadgeFor?.(span);
             const call = !grp && isCallSpan(span);
             const same = !grp && !call && isSameSession(span, row.parentId ? byId.get(row.parentId) : span.parent_id ? byId.get(span.parent_id) : undefined);
-            const sessionText = wait || grp ? undefined : (badge?.sessionText ?? (same ? m.sameSession : m.separateSession));
+            const sessionView = wait || grp || props.sessionBadgeFor === undefined ? undefined : (props.sessionBadgeFor(span) ?? undefined);
+            const sessionText = wait || grp ? undefined : props.sessionBadgeFor !== undefined ? sessionView?.text : (badge?.sessionText ?? (same ? m.sameSession : m.separateSession));
             const collapsedNow = grp ? !row.expanded : collapsed.has(span.id);
             const start = span.started_at;
             const end = endOf(span);
@@ -346,10 +358,12 @@ export function TraceTimeline(props: TraceTimelineProps) {
                         </>
                       ) : null}
                       {sessionText
-                        ? renderTooltip(
-                            sessionText,
-                            <span className="ac-trace-icon ac-trace-session" role="img" aria-label={sessionText} data-session-badge={same ? "same" : "separate"} />,
-                          )
+                        ? sessionView?.node !== undefined
+                          ? sessionView.node
+                          : renderTooltip(
+                              sessionText,
+                              <span className="ac-trace-icon ac-trace-session" role="img" aria-label={sessionText} data-session-badge={same ? "same" : "separate"} />,
+                            )
                         : null}
                       {showMethodText ? (
                         methodText ? (

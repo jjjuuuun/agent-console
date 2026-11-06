@@ -13,10 +13,11 @@ import json
 import os
 from pathlib import Path
 
+from agent_console_contracts import ErrorCodes
 from agent_console_runtime import JsonlFolderSessionArchive, safe_name
 
-FAKE_SESSION_MISSING_CODE = "fake.session_missing"
-"""이어 쓸 세션 기록 파일이 없을 때 실패 코드."""
+FAKE_SESSION_MISSING_CODE: str = ErrorCodes.FAKE_SESSION_MISSING
+"""이어 쓸 세션 기록 파일이 없을 때 실패 코드(계약 문서 상수, ``fake.session_missing``)."""
 
 FAKE_SESSION_SUFFIX = ".jsonl"
 

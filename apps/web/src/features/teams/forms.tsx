@@ -10,6 +10,7 @@ import { CONFIG_FIELDS, CONFIG_WIDGETS, ConfigIssuesProvider, DEFAULT_TEAM_CONVE
 import { SETTINGS_FIELDS, SETTINGS_WIDGETS, CHOICE_SELECT_WIDGET, buildUserSettingsUi } from "../settings";
 import { teamMessages as t } from "./messages";
 import { CHOICE_MULTI_FIELD, ChoiceMultiField } from "./widgets/ChoiceMultiWidget";
+import { DELEGATION_STRATEGY_FIELD, DelegationStrategyField, type DelegationStrategyOptions, type StrategiesStatus } from "./widgets/DelegationStrategyField";
 import { REVIEW_DECISIONS_FIELD, ReviewDecisionsField, nextDecisionId } from "./widgets/ReviewDecisionsField";
 import { TEMPLATE_FIELD, TemplateField, parseVariables } from "./widgets/TemplateField";
 
@@ -22,7 +23,7 @@ const FIELDS: Record<string, ComponentType<SchemaFormFieldProps>> = {
 };
 
 /** 연결 설정 폼의 `ui:field` 표: 팀 위젯 + 앱 위젯 레지스트리(조건 목록 등). */
-const EDGE_FIELDS: Record<string, ComponentType<SchemaFormFieldProps>> = { ...FIELDS, ...CONFIG_FIELDS };
+const EDGE_FIELDS: Record<string, ComponentType<SchemaFormFieldProps>> = { ...FIELDS, ...CONFIG_FIELDS, [DELEGATION_STRATEGY_FIELD]: DelegationStrategyField };
 const NO_ISSUES: readonly ConfigIssue[] = [];
 
 type Obj = Record<string, unknown>;
@@ -197,6 +198,12 @@ export interface EdgeConfigFormProps {
   onChange: (next: Obj) => void;
   interactionKinds?: readonly InteractionKindDescriptor[];
   strategies?: readonly DelegationStrategyDescriptor[];
+  /** 방식 목록 읽기 상태(로딩 스켈레톤·오류 줄) */
+  strategiesStatus?: StrategiesStatus;
+  /** "동작 방식" 문구에 들어가는 위임자 이름 */
+  delegatorLabel?: string;
+  /** 비교표 열 머리로 방식을 바꿀 때(되돌리기를 앱이 붙인다) */
+  onPickStrategy?: (id: string) => void;
   errors?: FormError[];
   /** 서버 이슈(연결 config 기준 경로). 조건 목록처럼 중첩 값을 직접 그리는 위젯이 자기 행에 매단다 */
   issues?: readonly ConfigIssue[];
@@ -204,7 +211,7 @@ export interface EdgeConfigFormProps {
 }
 
 /** 연결 종류의 `config_schema`를 그대로 그리는 폼(종류별 전용 화면 없음). 종류가 말하는 선택지는 디스크립터 데이터로 채운다. */
-export function EdgeConfigForm({ kind, config, onChange, interactionKinds = [], strategies = [], errors, issues = NO_ISSUES, disabled }: EdgeConfigFormProps) {
+export function EdgeConfigForm({ kind, config, onChange, interactionKinds = [], strategies = [], strategiesStatus, delegatorLabel, onPickStrategy, errors, issues = NO_ISSUES, disabled }: EdgeConfigFormProps) {
   const schema = kind.config_schema as SchemaNode | undefined;
   const bridged = useMemo(() => {
     if (schema === undefined) return undefined;
@@ -217,12 +224,13 @@ export function EdgeConfigForm({ kind, config, onChange, interactionKinds = [], 
         "ui:options": { choices: (allowed as string[]).map((id) => ({ value: id, label: titles.get(id)?.title ?? id, ...(titles.get(id)?.description ? { hint: titles.get(id)?.description } : {}) })), emptyNote: t.edge.kindsEmpty },
       });
     }
-    if (kind.invocation != null && hasPath(schema, DEFAULT_TEAM_CONVENTIONS.edgeStrategy) && strategies.length > 0) {
-      out = put(out, DEFAULT_TEAM_CONVENTIONS.edgeStrategy, { "ui:widget": CHOICE_SELECT_WIDGET, "ui:options": { choices: strategies.map((s) => ({ value: s.id, label: s.title })), emptyLabel: t.review.kindDefault } });
+    if (kind.invocation != null && hasPath(schema, DEFAULT_TEAM_CONVENTIONS.edgeStrategy) && (strategies.length > 0 || strategiesStatus?.loading === true || strategiesStatus?.error === true)) {
+      const options: DelegationStrategyOptions = { strategies, defaultId: kind.invocation.strategy, ...(strategiesStatus === undefined ? {} : { status: strategiesStatus }), ...(delegatorLabel === undefined ? {} : { delegatorLabel }), ...(onPickStrategy === undefined ? {} : { onPickFromCompare: onPickStrategy }) };
+      out = put(out, DEFAULT_TEAM_CONVENTIONS.edgeStrategy, { "ui:field": DELEGATION_STRATEGY_FIELD, "ui:options": options });
     }
     // 서버 `ui_schema`의 위젯 이름(예: 조건 목록)을 앱이 아는 필드로 잇는다. 모르는 이름이 구조화 필드에 있으면 JSON 폴백
     return bridgeWidgetUi(deepMerge(kind.ui_schema ?? {}, out), schema, CONFIG_WIDGETS, Object.keys(WIDGETS));
-  }, [schema, kind, interactionKinds, strategies]);
+  }, [schema, kind, interactionKinds, strategies, strategiesStatus, delegatorLabel, onPickStrategy]);
   const ui = bridged?.uiSchema;
   const props = isObj(schema?.["properties"]) ? Object.keys(schema!["properties"] as Obj) : [];
   if (schema === undefined || props.length === 0) return <p className="app-muted">{t.edge.noSettings}</p>;

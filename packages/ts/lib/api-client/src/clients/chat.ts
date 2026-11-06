@@ -2,6 +2,7 @@
 import type {
   ChatTurn,
   Conversation,
+  ConversationPage,
   ConversationSummary,
   CreateConversationRequest,
   PostMessageRequest,
@@ -22,6 +23,13 @@ export interface ListConversationsParams {
   source?: string;
 }
 
+/** GET `/conversations/page` 질의(6R.12). 커서는 불투명 문자열이라 응답 `next_cursor`를 그대로 넘긴다. */
+export interface ConversationsPageParams extends ListConversationsParams {
+  cursor?: string | null;
+  /** 한 페이지 크기(서버 기본값을 따른다). */
+  limit?: number;
+}
+
 /** GET `/conversations/{id}/turns` 페이지 매김. */
 export interface ListTurnsParams {
   /** 이 턴(run_id) 앞의 것만. 서버가 정한 커서를 그대로 넘긴다. */
@@ -40,6 +48,8 @@ export interface ChatClient {
   /** 앱에 남은 옛 기록을 프로젝트 폴더의 기록 DB로 옮긴다(`select` project·null·ids). 같은 id는 `skipped`, 못 옮긴 것은 `failed`. */
   moveConversationsToProject(request: RecordsMoveRequest): Promise<RecordsMoveResult>;
   listConversations(params?: ListConversationsParams): Promise<ConversationSummary[]>;
+  /** 대화 커서 페이지(`GET /conversations/page`, 갱신 시각 내림차순). `next_cursor`가 null이면 끝. */
+  conversationsPage(params?: ConversationsPageParams): Promise<ConversationPage>;
   createConversation(request: CreateConversationRequest): Promise<Conversation>;
   getConversation(id: string): Promise<Conversation>;
   /** 이름·보관·팀 구성 전환(`graph_id`). */
@@ -65,6 +75,7 @@ export function createChatClient(io: RestIo): ChatClient {
     assignConversationsToProject: (request) => io.request("POST", "/conversations/assign-project", { body: request }),
     moveConversationsToProject: (request) => io.request("POST", "/conversations/move-to-project", { body: request }),
     listConversations: (params) => io.request("GET", `/conversations${query(params)}`),
+    conversationsPage: (params) => io.request("GET", `/conversations/page${query(params)}`),
     createConversation: (req) => io.request("POST", "/conversations", { body: req }),
     getConversation: (id) => io.request("GET", `/conversations/${enc(id)}`),
     updateConversation: (id, patch) => io.request("PATCH", `/conversations/${enc(id)}`, { body: patch }),

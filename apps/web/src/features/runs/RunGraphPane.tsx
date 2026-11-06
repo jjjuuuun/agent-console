@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { GraphEditor, type BindSummary, type NodeAvatar, type ChipView, type EdgeBadge, type NodeRunBadge, type Selection } from "@agent-console/graph-editor";
+import { GraphEditor, type BindSummary, type NodeAvatar, type NodeAnnotation, type ChipView, type EdgeBadge, type NodeRunBadge, type Selection } from "@agent-console/graph-editor";
 import type { DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
 import { Banner } from "@agent-console/ui";
 import { runsMessages as t } from "./messages";
@@ -27,6 +27,8 @@ export interface RunGraphPaneProps {
   bindSummaries?: Readonly<Record<string, BindSummary>>;
   /** 노드별 아바타(에이전트 표시 설정에서 해석한 결과) */
   nodeAvatars?: Readonly<Record<string, NodeAvatar>>;
+  /** 세션 구분 표시(왼쪽 띠·`S{n}`·`서브 m`·맨 아래 칩·강조) */
+  nodeAnnotations?: Readonly<Record<string, NodeAnnotation>>;
   delegationStrategies?: readonly Pick<DelegationStrategyDescriptor, "id">[];
   edgeStrategyIds?: Readonly<Record<string, string>>;
   renderIcon?: (name: string) => ReactNode;
@@ -83,6 +85,7 @@ export function RunGraphPane(p: RunGraphPaneProps) {
           {...(p.edgeExtraChips ? { edgeExtraChips: p.edgeExtraChips } : {})}
           {...(p.bindSummaries ? { bindSummaries: p.bindSummaries } : {})}
           {...(p.nodeAvatars ? { nodeAvatars: p.nodeAvatars } : {})}
+          {...(p.nodeAnnotations ? { nodeAnnotations: p.nodeAnnotations } : {})}
           {...(p.delegationStrategies ? { delegationStrategies: p.delegationStrategies } : {})}
           {...(p.edgeStrategyIds ? { edgeStrategyIds: p.edgeStrategyIds } : {})}
           {...(p.renderIcon ? { renderIcon: p.renderIcon } : {})}

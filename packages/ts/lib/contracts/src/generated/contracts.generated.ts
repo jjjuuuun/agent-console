@@ -8708,6 +8708,9 @@ export interface ParsedTask {
    * 이어진 항목(최근 순, 연동이 없으면 빈 값).
    */
   links?: TaskLink[];
+  /**
+   * 작업 이슈: 파싱 이슈 + 작업 연동(X43)의 선택 메서드 `task_issues`가 낸 것(예: `sdd.status_not_applied`·`sdd.automation_skipped`).
+   */
   issues?: SpecIssue[];
 }
 /**
@@ -9919,7 +9922,9 @@ export interface SddTaskChangedDetails {
   text?: string | null;
 }
 /**
- * 비밀 값으로 의심할 규칙을 더합니다. 기본 규칙에 더하기만 하며 줄일 수는 없습니다.
+ * 비밀 값으로 의심할 규칙을 더합니다.
+ *
+ * 기본 규칙은 줄일 수 없고, 뜻이 넓은 키 이름 목록만 바꿀 수 있습니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "SecretRuleSettings".
@@ -9933,6 +9938,10 @@ export interface SecretRuleSettings {
    * 값이 이 정규식과 맞으면 비밀로 의심합니다. 위험한 패턴은 저장할 때 거부됩니다.
    */
   extra_value_patterns?: string[];
+  /**
+   * 이 이름만 걸린 값(예: input_key의 key)은 값이 비밀처럼 생겼을 때만 의심합니다. 비워 두면 기본 목록을 쓰고, 빈 목록이면 이름만으로 의심합니다.
+   */
+  weak_key_names?: string[] | null;
   /**
    * 실행 기록·질문 응답을 저장하기 전에 비밀로 의심되는 값을 가립니다.
    */
@@ -11220,13 +11229,13 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.13.0" as const;
+export const CONTRACTS_VERSION = "0.13.1" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.8.0",
+  "common": "1.9.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
-  "definitions": "1.5.0",
+  "definitions": "1.6.0",
   "runs": "1.7.0",
   "usage": "1.1.0",
   "projects": "3.1.0",
@@ -11235,7 +11244,7 @@ export const CONTRACT_VERSIONS = {
   "imports": "1.1.0",
   "architecture": "1.0.0",
   "memory": "1.1.0",
-  "sdd": "1.0.0",
+  "sdd": "1.0.1",
   "modules": "1.4.0"
 } as const;
 
@@ -11434,7 +11443,8 @@ export const ERROR_CODES = {
   "SDD_ACTION_UNAVAILABLE": "sdd.action_unavailable",
   "SDD_SPACES_UNAVAILABLE": "sdd.spaces_unavailable",
   "SDD_CONFIG_READONLY": "sdd.config_readonly",
-  "SDD_SECRET_REJECTED": "sdd.secret_rejected"
+  "SDD_SECRET_REJECTED": "sdd.secret_rejected",
+  "FAKE_SESSION_MISSING": "fake.session_missing"
 } as const;
 
 export const HTTP_STATUS_BY_ERROR_CODE = {
@@ -11592,7 +11602,9 @@ export const KNOWN_ISSUE_CODES = {
   "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
   "SDD_SECRET_REJECTED": "sdd.secret_rejected",
   "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
-  "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped"
+  "SDD_AUTOMATION_SKIPPED": "sdd.automation_skipped",
+  "RECORDS_SESSION_ARCHIVE_FAILED": "records.session_archive_failed",
+  "RUN_MOVE_BUSY": "run.move_busy"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {

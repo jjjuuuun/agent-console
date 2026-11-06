@@ -72,3 +72,49 @@
 .dlg-crumb-wrap { display: inline-flex; align-items: flex-start; gap: var(--ac-space-1); }
 .dlg-crumb-fold { list-style: none; margin: 0; padding: var(--ac-space-1); display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 200px; max-width: 320px; }
 .dlg-crumb-fold li { display: flex; gap: var(--ac-space-2); align-items: baseline; min-width: 0; }
+
+/* ---- 세션 칩(screen-delegation.md §14.3): 중립색, 아이콘 모양·글자·테두리 모양으로 구분 ---- */
+.ses-chip { display: inline-flex; align-items: center; gap: 4px; box-sizing: border-box; flex-shrink: 0; height: 20px; padding: 0 6px; font: inherit; font-size: var(--ac-text-xs); font-weight: 500; line-height: 1; white-space: nowrap; color: var(--ac-text); background: transparent; border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-sm); }
+.ses-chip[data-session="same"] { background: var(--ac-surface-2); border-style: dashed; }
+.ses-chip[data-variant="icon"] { width: 20px; padding: 0; justify-content: center; }
+button.ses-chip { cursor: pointer; }
+button.ses-chip:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 2px; }
+.ses-chip svg { flex: none; }
+.ses-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+/* ---- 위임 방식 필드·동작 방식 블록·비교표 (screen-delegation.md §14.4.2) ---- */
+.ses-strategy { display: flex; flex-direction: column; gap: var(--ac-space-2); position: relative; min-width: 0; }
+.ses-select { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); width: 100%; text-align: left; cursor: pointer; }
+.ses-select:disabled { cursor: not-allowed; opacity: 0.6; }
+.ses-options { position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin: 2px 0 0; padding: var(--ac-space-1); list-style: none; max-height: 280px; overflow-y: auto; background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-popover, var(--ac-shadow-card)); }
+.ses-options > li { display: flex; flex-direction: column; justify-content: center; min-height: 44px; padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-sm); cursor: pointer; }
+.ses-options > li[data-active="true"] { background: var(--ac-surface-3); }
+.ses-options > li[aria-selected="true"] .ses-option-title::after { content: " ✓"; }
+.ses-option-title { font-size: var(--ac-text-sm); font-weight: 600; line-height: var(--ac-lh-sm); }
+.ses-option-sub { font-size: var(--ac-text-xs); color: var(--ac-text-muted); line-height: var(--ac-lh-xs); }
+.ses-skeleton { display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.ses-skeleton-row { height: 16px; border-radius: var(--ac-radius-sm); background: var(--ac-surface-3); }
+.ses-block { display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-3); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); min-width: 0; }
+.ses-block-title { margin: 0; font-size: var(--ac-text-xs); font-weight: 600; color: var(--ac-text-muted); line-height: var(--ac-lh-xs); }
+.ses-rows { margin: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.ses-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--ac-space-2); align-items: baseline; }
+.ses-row > dt { font-size: var(--ac-text-xs); color: var(--ac-text-muted); line-height: var(--ac-lh-xs); }
+.ses-row > dd { margin: 0; font-size: var(--ac-text-sm); overflow-wrap: anywhere; line-height: var(--ac-lh-sm); }
+.ses-compare { overflow-x: auto; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); background: var(--ac-surface-1); }
+.ses-compare table { border-collapse: collapse; font-size: var(--ac-text-xs); width: max-content; min-width: 100%; line-height: var(--ac-lh-xs); }
+.ses-compare th, .ses-compare td { padding: var(--ac-space-1) var(--ac-space-2); min-width: 120px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--ac-border); }
+.ses-compare th[data-current="true"] { border-bottom: 2px solid var(--ac-accent); }
+.ses-compare .ses-sticky { position: sticky; left: 0; min-width: 88px; width: 88px; background: var(--ac-surface-1); color: var(--ac-text-muted); font-weight: 400; }
+.ses-desc[data-clamped="true"] { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ---- 연결 범례 팝오버 (§14.4.5) ---- */
+.ses-legend { position: absolute; z-index: 6; bottom: 100%; right: 0; width: 320px; max-height: min(60vh, 420px); overflow-y: auto; margin-bottom: var(--ac-space-2); padding: var(--ac-space-3); background: var(--ac-surface-1); border: 1px solid var(--ac-border-strong); border-radius: var(--ac-radius-md); box-shadow: var(--ac-shadow-popover, var(--ac-shadow-card)); display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.ses-legend-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; font-size: var(--ac-text-sm); min-width: 0; line-height: var(--ac-lh-sm); }
+.ses-legend-row > .ses-legend-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ses-legend-sample { flex: none; width: 40px; height: 8px; }
+.ses-legend-sample line { stroke: var(--ac-edge, var(--ac-text-muted)); stroke-width: 2; }
+.ses-legend-wrap { position: relative; display: inline-block; }
+.ses-legend-list { list-style: none; margin: 0; padding: 0; }
+.ses-legend-hint { position: absolute; bottom: 100%; right: 0; margin-bottom: var(--ac-space-2); padding: var(--ac-space-1) var(--ac-space-2); white-space: nowrap; background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.ses-where { padding: var(--ac-space-2) var(--ac-space-3); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.ses-where-line { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); }

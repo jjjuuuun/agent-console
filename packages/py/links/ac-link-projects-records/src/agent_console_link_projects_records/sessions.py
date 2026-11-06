@@ -28,6 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from agent_console_contracts import (
     AgentSessionStartedPayload,
     Issue,
+    KnownIssueCodes,
     KnownSessionStates,
     RunEvent,
     x_ui,
@@ -51,8 +52,9 @@ RUN_END_EVENTS: frozenset[str] = frozenset(
     {"run.completed", "run.failed", "run.cancelled", "run.interrupted"}
 )
 """Run이 끝난 이벤트(남은 세션을 보관하고 정리한다)."""
-ARCHIVE_FAILED_CODE = "records.session_archive_failed"
-"""보관 실패 정보 이슈 코드(``server.warnings``)."""
+ARCHIVE_FAILED_CODE: str = KnownIssueCodes.RECORDS_SESSION_ARCHIVE_FAILED
+"""보관 실패 정보 이슈 코드(``server.warnings``, 계약 문서 상수
+``records.session_archive_failed``)."""
 NEWER_TOLERANCE_S = 0.001
 """보관 사본이 이 앱 원본보다 "새것"으로 볼 수정 시각 차이(초)."""
 

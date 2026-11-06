@@ -34,6 +34,7 @@ import { TeamBreadcrumb } from "./TeamBreadcrumb";
 import { openedFromState, parentState, readOpenedFrom } from "./openedFrom";
 import { BundlePreviewDialog } from "./BundlePreviewDialog";
 import { EdgePanel } from "./EdgePanel";
+import { EdgeLegend } from "./EdgeLegend";
 import { IssuesPanel } from "./IssuesPanel";
 import { NodePanel } from "./NodePanel";
 import { DuplicateTeamDialog, useStartChat } from "./TeamDialogs";
@@ -478,6 +479,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     resourceTypes: resourceTypes.data ?? [],
     interactionKinds: interactionKinds.data ?? [],
     strategies: strategies.data ?? [],
+    strategiesStatus: { loading: strategies.isLoading, error: strategies.isError, onRetry: () => void strategies.refetch() },
     workspace: workspace.data?.value,
     issues: validation.issues,
     plan,
@@ -485,6 +487,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     disabled: false,
     onGraphChange: change,
     onUndoableChange: undoable,
+    onSelectEdge: (edgeId, nodeId) => { setForceTeam(false); setPanelOpen(true); setFocus((cur) => ({ nodeId, edgeId, token: (cur?.token ?? 0) + 1 })); },
     onApplySuggestion: (issue, suggestion) => applySuggestion(issue, suggestion),
     onPreviewBundle: (nodeId) => setBundleNode(nodeId),
     navigateTo: (path) => void navigate(path),
@@ -837,6 +840,8 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                   definitionLists={definitionLists}
                   definitionKindTitles={kindTitles}
                   edgeExtraChips={delegation.edgeExtraChips}
+                  edgeLeadChips={delegation.edgeLeadChips}
+                  nodeAnnotations={delegation.nodeAnnotations}
                   bindSummaries={delegation.bindSummaries}
                   nodeAvatars={nodeAvatars}
                   delegationStrategies={strategies.data ?? NONE}
@@ -862,6 +867,13 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
                         onViewChange={setAddView}
                         onAction={onAddAction}
                         pickerProps={pickerPropsOf}
+                      />
+                      <EdgeLegend
+                        edges={(draft.edges ?? []) as readonly { id: string; kind: string; config?: Record<string, unknown> | undefined }[]}
+                        edgeTypes={edgeTypeList}
+                        strategies={strategies.data ?? NONE}
+                        renderIcon={delegation.renderIcon}
+                        onRetry={() => { void edgeTypes.refetch(); void strategies.refetch(); }}
                       />
                       {paletteInline ? null : (
                         <Button ref={paletteButton} size="sm" aria-pressed={paletteOpen} title={t.layout.paletteTitle} onClick={() => setPaletteOpen((v) => !v)}>

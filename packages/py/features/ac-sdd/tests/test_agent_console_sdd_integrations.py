@@ -11,6 +11,7 @@ from agent_console_sdd import (
     ProfileChecker,
     SpecContext,
     TaskIntegration,
+    TaskIssueSource,
     VerificationContext,
     VerificationSource,
     find_task,
@@ -69,6 +70,7 @@ async def test_fakes_satisfy_protocols_and_feed_trace() -> None:
     assert isinstance(source, VerificationSource)
     assert not isinstance(integration, ProfileChecker)
     assert not isinstance(integration, AutomationControl)
+    assert not isinstance(integration, TaskIssueSource)
 
     task = find_task(loaded.index, "1")
     assert task is not None
@@ -91,3 +93,18 @@ async def test_fakes_satisfy_protocols_and_feed_trace() -> None:
     assert [link.ref for link in rows["R1"].runs] == ["fake-1"]
     assert rows["R1"].gaps == ["task_not_done"]
     assert rows["R2"].gaps == ["no_task", "not_verified"]
+
+
+def test_task_issue_source_is_optional_capability() -> None:
+    """선택 능력 `TaskIssueSource`: `task_issues`만 있으면 만족한다(X43 연동에 덧붙임)."""
+    from collections.abc import Sequence
+
+    from agent_console_contracts.sdd import ParsedTask, SpecIssue
+
+    class WithIssues(FakeTaskIntegration):
+        def task_issues(self, ctx: SpecContext, tasks: Sequence[ParsedTask]) -> list[SpecIssue]:
+            return []
+
+    item = WithIssues()
+    assert isinstance(item, TaskIntegration)
+    assert isinstance(item, TaskIssueSource)

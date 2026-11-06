@@ -16,7 +16,7 @@ import { DEFINITION_KINDS, ROUTE_ROLES, routePath } from "../library";
 import { ProjectTargetPicker, startErrorView, targetPickerMessages as pm, useCopyDialog, useProjects, type StartErrorView, type TargetOption } from "../projects";
 import { GraphIssuesPreview, ValidationChip, blocksRun, hasEntry } from "../teams";
 import { chatMessages } from "./chatMessages";
-import { useConversationList } from "./chatData";
+import { CONVERSATION_PAGE_SIZE, chatKeys } from "./chatData";
 import { LAST_GRAPH_KEY } from "./lib/drafts";
 import { lastUsedByGraph } from "./lib/conversations";
 import { useConversationActions } from "./useConversationActions";
@@ -42,10 +42,9 @@ export interface NewConversationDialogProps {
  */
 export function NewConversationDialog(props: NewConversationDialogProps) {
   const p = useProjects();
-  const { space } = useApi();
+  const { rest, space } = useApi();
   const storage = useStorage();
   const actions = useConversationActions();
-  const conversations = useConversationList();
   const copy = useCopyDialog();
   const uid = useId();
   const ime = useImeGuard();
@@ -67,7 +66,14 @@ export function NewConversationDialog(props: NewConversationDialogProps) {
     enabled: projectId !== null,
     retry: false,
   });
-  const lastUsed = useMemo(() => lastUsedByGraph((conversations.data ?? []).filter((c) => c.project_id === projectId)), [conversations.data, projectId]);
+  // 고른 프로젝트의 최근 대화(서버가 `?project=`로 거른 첫 페이지)에서 팀 구성별 마지막 사용 시각을 구한다.
+  const recent = useQuery({
+    queryKey: [...chatKeys.conversations(projectId), "recent"] as const,
+    queryFn: () => rest.conversationsPage({ project: projectId as string, limit: CONVERSATION_PAGE_SIZE }),
+    enabled: projectId !== null,
+    retry: false,
+  });
+  const lastUsed = useMemo(() => lastUsedByGraph(recent.data?.items ?? []), [recent.data]);
 
   const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false });
   const startBlockRef = abilities?.start_chat.allowed === false ? abilities.start_chat.reason : null;

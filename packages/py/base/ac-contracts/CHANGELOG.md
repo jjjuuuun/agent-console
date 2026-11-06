@@ -1,5 +1,18 @@
 # 변경 기록
 
+## 0.13.1
+
+- 계약 0.13.1(계약 후속: 6R.15·6R.16·5.7R.33y2·5.7R.33y3). **더하기만** 한다: 새 필드는 선택이라 0.13.0 응답·설정이
+  그대로 읽힌다. 사내 의존 범위는 그대로 `>=0.13,<0.14`(TS `^0.13.0`, E-7 규칙). 하위 계약 버전: `common` 1.9.0,
+  `definitions` 1.6.0, `sdd` 1.0.1.
+- `definitions` 1.6.0: `SecretRuleSettings.weak_key_names: list[str] | None = None`(뜻이 넓은 키 이름, null = 패키지
+  기본 데이터 `DEFAULT_WEAK_KEY_NAMES`, 빈 목록 = 끔, 주면 그 목록으로 바꿈). `x-ui` tier advanced.
+- `common` 1.9.0(문서 상수): `ErrorCodes.FAKE_SESSION_MISSING`(`fake.session_missing`, 실행 실패 `ErrorInfo` —
+  HTTP 표에 없음), `KnownIssueCodes.RECORDS_SESSION_ARCHIVE_FAILED`(`records.session_archive_failed`, info)·
+  `RUN_MOVE_BUSY`(`run.move_busy`, 기록 옮기기 `failed` 항목). `SDD_AUTOMATION_SKIPPED`는 0.13.0에 이미 있다.
+- `sdd` 1.0.1(설명만): `ParsedTask.issues` = 파싱 이슈 + 작업 연동(X43) 선택 메서드 `task_issues`가 낸 이슈.
+  프로토콜은 `agent_console_sdd.TaskIssueSource`.
+
 ## 0.13.0
 
 - 계약 0.13.0(6R.3, design §6R.6·§6R.18 Q1~Q14). 새 하위 모듈은 minor로 올린다(0.10.0 `memory` 선례). 사내 의존 범위

@@ -79,14 +79,16 @@ export function isDefinitionPath(pathname: string, routes: readonly RouteDef[]):
   return routes.some((r) => isDefinitionRoute(r) && (pathname === r.path || pathname.startsWith(`${r.path}/`)));
 }
 
-/** 기본 라우트 9개. 이것도 데이터이며 사용자가 다르게 원하면 이 배열만 고친다. */
+/** 기본 라우트 11개. 이것도 데이터이며 사용자가 다르게 원하면 이 배열만 고친다. */
 export const DEFAULT_ROUTES: readonly RouteDef[] = [
   { id: "chat", serves: "conversations", requires: ["conversations"], path: "/chat", titleKey: "nav.chat", icon: "chat", badgeSource: "pendingInteractions", gotoKey: "c", position: "main", group: "run", home: true, projectScoped: true },
   { id: "teams", serves: "definition:graph", requires: ["definitions:graph"], path: "/teams", titleKey: "nav.teams", icon: "teams", badgeSource: null, gotoKey: "t", position: "main", group: "config", redirects: ["/graphs"] },
   { id: "agents", serves: "definition:agent", requires: ["definitions:agent"], path: "/agents", titleKey: "nav.agents", icon: "agents", badgeSource: null, gotoKey: "a", position: "main", group: "config" },
   { id: "resources", serves: "definition:resource", requires: ["definitions:resource"], path: "/resources", titleKey: "nav.resources", icon: "resources", badgeSource: null, gotoKey: "r", position: "main", group: "config" },
+  { id: "spec-templates", serves: "sdd:templates", requires: ["sdd"], path: "/spec-templates", titleKey: "nav.specTemplates", icon: "spec-template", badgeSource: null, gotoKey: null, position: "main", group: "config" },
   { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"], projectScoped: true },
   { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true, projectScoped: true },
+  { id: "specs", serves: "sdd", requires: ["sdd"], path: "/specs", titleKey: "nav.specs", icon: "spec", badgeSource: null, gotoKey: "e", position: "main", group: "run", projectScoped: true },
   { id: "usage", serves: "usage", requires: ["usage"], path: "/usage", titleKey: "nav.usage", icon: "usage", badgeSource: null, gotoKey: "u", position: "main", group: "observe" },
   { id: "logs", serves: "logs", requires: ["logs"], path: "/logs", titleKey: "nav.logs", icon: "logs", badgeSource: null, gotoKey: "l", position: "main", group: "observe", shortcutScopes: ["logs-session", "logs-search", "logs-dashboard"], projectShortcut: true, projectScoped: true },
   { id: "settings", serves: "settings", requires: [], path: "/settings", titleKey: "nav.settings", icon: "settings", badgeSource: null, gotoKey: "s", position: "bottom" },

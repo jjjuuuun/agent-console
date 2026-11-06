@@ -32,6 +32,7 @@ __all__ = [
     "ProfileChecker",
     "SpecContext",
     "TaskIntegration",
+    "TaskIssueSource",
     "VerificationContext",
     "VerificationSource",
 ]
@@ -85,7 +86,12 @@ class VerificationSource(Protocol):
 
 @runtime_checkable
 class TaskIntegration(Protocol):
-    """작업 연동(X43, 다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd)."""
+    """작업 연동(X43, 다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd).
+
+    선택 능력(따로 둔 프로토콜, 구현하면 쓴다): `ProfileChecker.check_profile`,
+    `TaskIssueSource.task_issues`(작업 이슈를 `ParsedTask.issues`에 더함), `AutomationControl`.
+    선택 속성 `link_kinds`(이어진 항목 종류, 예: `("run",)`)도 있다.
+    """
 
     @property
     def id(self) -> str:
@@ -112,6 +118,19 @@ class ProfileChecker(Protocol):
     """선택 능력: 실행 프로필 검사(예: 팀 구성이 공간에 있는지 → `sdd.profile_graph_missing`)."""
 
     async def check_profile(self, ctx: SpecContext, profile: RunProfile) -> list[SpecIssue]: ...
+
+
+@runtime_checkable
+class TaskIssueSource(Protocol):
+    """선택 능력: 작업 이슈(6R.15). 서버 모듈은 작업 목록·스펙 보기를 만들 때 부르고, 돌려준
+    이슈를 `task_key`가 같은 작업의 `ParsedTask.issues`에 더한다(`task_key`가 없는 이슈는 버린다).
+
+    예: 실행 결과를 상태에 반영하지 못함 `sdd.status_not_applied`, 자동 진행이 건너뜀
+    `sdd.automation_skipped`. 메모리에 둔 상태만 보는 빠른 동기 호출이어야 한다(외부 호출 금지).
+    예외를 내면 그 연동의 이슈만 빠진다.
+    """
+
+    def task_issues(self, ctx: SpecContext, tasks: Sequence[ParsedTask]) -> list[SpecIssue]: ...
 
 
 @runtime_checkable

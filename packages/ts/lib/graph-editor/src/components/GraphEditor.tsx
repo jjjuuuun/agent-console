@@ -513,6 +513,8 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
         ...(props.nodeRunBadges !== undefined ? { nodeRunBadges: props.nodeRunBadges } : {}),
         ...(props.edgeBadges !== undefined ? { edgeBadges: props.edgeBadges } : {}),
         ...(props.edgeExtraChips !== undefined ? { edgeExtraChips: props.edgeExtraChips } : {}),
+        ...(props.edgeLeadChips !== undefined ? { edgeLeadChips: props.edgeLeadChips } : {}),
+        ...(props.nodeAnnotations !== undefined ? { nodeAnnotations: props.nodeAnnotations } : {}),
         ...(props.bindSummaries !== undefined ? { bindSummaries: props.bindSummaries } : {}),
         ...(props.nodeAvatars !== undefined ? { nodeAvatars: props.nodeAvatars } : {}),
         ...(props.delegationStrategies !== undefined ? { delegationStrategies: props.delegationStrategies } : {}),
@@ -520,7 +522,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
         ...(props.renderIcon !== undefined ? { renderIcon: props.renderIcon } : {}),
         ...(regionNodes !== null ? { loopRegionNodes: regionNodes } : {}),
       }),
-    [graph, nodeTypes, edgeTypes, resolved, nodeStates, edgeStates, eff, overrides, readOnly, m, markerId, issueSummary, showResources, props.portLabels, nowMs, props.waitingNodes, props.edgeOrder, props.edgeCounts, props.nodeBadgesOverride, props.onOpenResources, edgeShapes, layoutDefaults, props.directions, props.nodeRunBadges, props.edgeBadges, props.edgeExtraChips, props.bindSummaries, props.nodeAvatars, props.delegationStrategies, props.edgeStrategyIds, props.renderIcon, regionNodes],
+    [graph, nodeTypes, edgeTypes, resolved, nodeStates, edgeStates, eff, overrides, readOnly, m, markerId, issueSummary, showResources, props.portLabels, nowMs, props.waitingNodes, props.edgeOrder, props.edgeCounts, props.nodeBadgesOverride, props.onOpenResources, edgeShapes, layoutDefaults, props.directions, props.nodeRunBadges, props.edgeBadges, props.edgeExtraChips, props.edgeLeadChips, props.nodeAnnotations, props.bindSummaries, props.nodeAvatars, props.delegationStrategies, props.edgeStrategyIds, props.renderIcon, regionNodes],
   );
 
   // React Flow는 노드 크기 측정 결과를 노드 객체에 요구한다(제어형이므로 직접 보관).

@@ -21,6 +21,7 @@
     "@agent-console/memory-view": "^0.1.0",
     "@agent-console/projects": "^0.1.0",
     "@agent-console/schema-form": "^0.1.0",
+    "@agent-console/sdd-view": "^0.1.0",
     "@agent-console/text-editor": "^0.1.0",
     "@agent-console/trace-view": "^0.1.0",
     "@agent-console/ui": "^0.1.0",

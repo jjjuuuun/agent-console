@@ -50,6 +50,7 @@ from agent_console_sdd import (
     SpecContext,
     SpecFiles,
     TaskIntegration,
+    TaskIssueSource,
     VerificationContext,
     VerificationSource,
 )
@@ -457,17 +458,16 @@ class SddService:
         )
 
     def task_issues(self, ctx: SpecContext, tasks: Sequence[ParsedTask]) -> list[SpecIssue]:
-        """연동의 선택 메서드 ``task_issues(ctx, tasks) -> list[SpecIssue]``가 낸 작업 이슈.
+        """연동의 선택 능력 ``TaskIssueSource.task_issues(ctx, tasks)``가 낸 작업 이슈.
 
-        예: 실행 결과를 상태에 반영하지 못함 ``sdd.status_not_applied``(6R.15). X43 프로토콜 밖
-        선택 능력이다(``link_kinds``와 같은 방식)."""
+        예: 실행 결과를 상태에 반영하지 못함 ``sdd.status_not_applied``(6R.15), 자동 진행 건너뜀
+        ``sdd.automation_skipped``(6R.16). 예외를 낸 연동의 이슈만 뺀다."""
         found: list[SpecIssue] = []
         for item in self.integrations():
-            method = getattr(item, "task_issues", None)
-            if not callable(method):
+            if not isinstance(item, TaskIssueSource):
                 continue
             try:
-                found.extend(i for i in method(ctx, tasks) if isinstance(i, SpecIssue))
+                found.extend(i for i in item.task_issues(ctx, tasks) if isinstance(i, SpecIssue))
             except Exception:
                 continue
         return found

@@ -272,6 +272,7 @@ console.log(routed.get("e1")?.fallback, routed.get("e1")?.path.d.startsWith("M")
 | `closesFlowLoop(graph, newEdge, edgeTypes)` | 순수. 새 연결이 흐름 순환을 닫는가(`scheduling = flow`만 검사) |
 | 연결 만들기 | 순환을 닫으면 `cycle`이 있는 종류가 기본 선택이고 나머지 흐름 종류는 비활성 행(사유 포함). 반복 후보가 없으면 `onConnectRejected` reason `cycle`. `EdgeKindDialog`의 `info` prop(`disabledReason`·`preferred`·`iconName`)과 순수 `planConnection` |
 | 연결 칩 | `edgeExtraChips`(앱이 계산한 조건 요약·회차 한도·방식 칩), 선언형 칩과 합쳐 4개까지 + `+N`, 접근성 이름 포함. `edgeBadges`는 실행 상세 배지. 줌 < 0.6이면 아이콘만. 아이콘 이름은 `renderIcon`이 그리고, 못 그리면 짧은 문자·제목 첫 글자 |
+| 앞 칩·노드 구분 표시 | `edgeLeadChips`(키 = 엣지 id): 연결 라벨이 2행으로 쌓이고 2행 맨 앞에 이 칩이 놓인다(칩 3개까지, 4개째부터 `+N`, `iconOnly`면 아이콘만, 줌 < 0.6이면 모두 아이콘만). `nodeAnnotations`(키 = 노드 id): 왼쪽 3px 띠(`stripColor`), 헤더 표식(`lead`·`tags`, 클릭·맥동), 카드 맨 아래 한 줄 칩(`foot`), `emphasis`(강조/흐리게). 편집기는 값의 뜻을 모르고 앱이 만든 데이터를 그리기만 한다. 위임 연결의 선 패턴은 `delegationStrategies[].session`이 정한다(별도 = 실선, `same` = 긴 점선, 모르는 값 = `8 3 2 3`, 값이 없으면 방식 id 순서 폴백) |
 | 반복 영역 강조 | 사이클 연결 하나를 선택하면 영역 노드에 윤곽(`--ac-loop-region`)과 aria-live 안내(읽기 전용에서도) |
 | 정의 바인딩 카드 | `bindSummaries`(부제·본문 한 줄·배지·`missing`·`open`). 노드 `Alt+Enter`와 [열기 ↗]. 편집기는 config 키를 읽지 않는다 |
 | `ui_hints.shape: "stacked"` | 겹친 카드(뒤 두 장). 모르는 값은 일반 카드. 자동 경로 장애물 +8px |

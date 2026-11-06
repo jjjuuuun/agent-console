@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode, Ref } from "react";
-import type { DelegationStrategyDescriptor, EdgeSpec, Issue, IssueSuggestion, EdgeTypeDescriptor, Graph, NodeSpec, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
+import type { EdgeSpec, Issue, IssueSuggestion, EdgeTypeDescriptor, Graph, NodeSpec, NodeTypeDescriptor, PortSpec } from "@agent-console/contracts";
 import type { GraphEditorMessages } from "./messages";
 import type { PortView } from "./logic/ports";
 import type { DirectionSides } from "./logic/layout";
+import type { StrategyStyleInput } from "./logic/edgeStyle";
 import type { EdgeShapeDescriptor } from "./shapes/types";
 import type { LayoutEngineDescriptor } from "./layout/types";
 import type { EdgeRouter } from "./logic/route";
@@ -123,6 +124,8 @@ export interface ChipView {
   tone?: "neutral" | "info" | "warning" | "danger";
   /** 점선 테두리(상속된 값 등) */
   dashed?: boolean;
+  /** 아이콘만 그린다(글자는 접근성 이름·툴팁에만). 좁은 칸·균일 축약용. 앱이 정한다 */
+  iconOnly?: boolean;
   /** 있으면 칩이 단추가 된다(클릭·Enter·Space). 연결 위 칩이면 누르는 쪽이 연결을 고르고 해당 필드로 포커스를 옮기는 일을 앱이 한다 */
   onActivate?: () => void;
 }
@@ -148,6 +151,32 @@ export interface BindSummary {
   missing?: boolean;
   /** 있으면 카드 하단 [열기 ↗] 단추와 노드 `Alt+Enter`가 이 동작을 부른다 */
   open?: { label: string; onOpen(): void; disabledReason?: string };
+}
+
+/** 노드 헤더에 붙는 작은 표식(예: 구분 번호, 호출 수). 색은 점·띠에만 쓰고 의미는 글자가 가진다. */
+export interface NodeTagView {
+  key: string;
+  text: string;
+  ariaLabel: string;
+  /** 앞에 그리는 8px 점의 CSS 색 */
+  dotColor?: string;
+  /** 호출 중 맥동(reduced-motion이면 색만) */
+  pulse?: boolean;
+  onClick?(): void;
+}
+
+/** 앱이 노드에 얹는 구분 표시: 왼쪽 띠, 헤더 표식, 카드 맨 아래 한 줄 칩. 편집기는 뜻을 모르고 그리기만 한다. */
+export interface NodeAnnotation {
+  /** 카드 왼쪽 가장자리 3px 띠의 CSS 색 */
+  stripColor?: string;
+  /** 헤더 배지 줄 맨 앞 표식 */
+  lead?: NodeTagView;
+  /** 헤더 표식(앞 표식 뒤) */
+  tags?: readonly NodeTagView[];
+  /** 카드 맨 아래 한 줄 칩. 줌이 낮으면 카드 모서리 아이콘으로 줄어든다 */
+  foot?: ChipView;
+  /** 강조(`on`: 윤곽) / 흐리게(`dim`). 앱이 고른 묶음(예: 한 세션의 노드들)을 보이게 한다 */
+  emphasis?: "on" | "dim";
 }
 
 /** 실행 상세용 노드 회차·호출 배지(`#3`, `×4`). 1개뿐인 노드에는 앱이 넘기지 않는다. */
@@ -327,12 +356,16 @@ export interface GraphEditorProps {
   edgeBadges?: Readonly<Record<string, readonly EdgeBadge[]>>;
   /** 앱이 계산한 연결 추가 칩(조건 요약·회차 한도·위임 방식). 키 = 엣지 id. 선언형 칩 뒤에 같은 덩어리로 붙고 접근성 이름에도 들어간다. 편집기는 연결 config 키를 읽지 않는다 */
   edgeExtraChips?: Readonly<Record<string, readonly ChipView[]>>;
+  /** 연결 라벨 2행 맨 앞에 놓는 칩(앞 칩이 잘리지 않는다). 키 = 엣지 id. `iconOnly`면 아이콘만, 줌 < 0.6이면 모두 아이콘만 */
+  edgeLeadChips?: Readonly<Record<string, ChipView>>;
+  /** 노드 구분 표시(띠·헤더 표식·맨 아래 칩). 키 = 노드 id */
+  nodeAnnotations?: Readonly<Record<string, NodeAnnotation>>;
   /** 정의를 바인딩한 노드의 카드 요약. 키 = 노드 id */
   bindSummaries?: Readonly<Record<string, BindSummary>>;
   /** 노드별 아바타(글자·색). 키 = 노드 id. 채팅 답변 머리와 같은 해석 결과를 앱이 넘긴다 */
   nodeAvatars?: Readonly<Record<string, NodeAvatar>>;
   /** 위임 방식 목록. 위임 연결의 선 패턴을 방식 id 정렬 순서로 정한다(`resolveEdgeStyle`) */
-  delegationStrategies?: readonly Pick<DelegationStrategyDescriptor, "id">[];
+  delegationStrategies?: readonly StrategyStyleInput[];
   /** 연결마다 유효한 위임 방식 id(연결 설정의 덮어쓰기 → 종류 기본을 앱이 계산). 키 = 엣지 id. 없으면 종류 기본 */
   edgeStrategyIds?: Readonly<Record<string, string>>;
   /** 아이콘 이름(`ChipView.iconName`·연결 스타일 아이콘)을 그리는 함수. 없거나 null을 돌려주면 짧은 아바타 문자·제목 첫 글자로 그린다 */

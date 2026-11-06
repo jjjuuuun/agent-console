@@ -36,7 +36,7 @@
     - ``SpecFiles``(프로토콜)·``SpecFileEntry``·``LocalSpecFiles``·``check_project_path``.
     - ``import_documents``·``export_documents``·``list_import_files``·``guess_title``.
     확장 지점: ``VerificationSource``(X42)·``TaskIntegration``(X43)·선택 능력 ``ProfileChecker``·
-    ``AutomationControl``, 맥락 ``SpecContext``·``VerificationContext``.
+    ``TaskIssueSource``·``AutomationControl``, 맥락 ``SpecContext``·``VerificationContext``.
     오류: ``SddError`` 하위(``code`` = 계약 오류 코드).
 """
 
@@ -73,6 +73,7 @@ from ._integrations import (
     ProfileChecker,
     SpecContext,
     TaskIntegration,
+    TaskIssueSource,
     VerificationContext,
     VerificationSource,
 )
@@ -154,6 +155,7 @@ __all__ = [
     "SyntaxLayer",
     "TaskChangedError",
     "TaskIntegration",
+    "TaskIssueSource",
     "TaskPatchError",
     "TemplateExistsError",
     "TransitionDeniedError",

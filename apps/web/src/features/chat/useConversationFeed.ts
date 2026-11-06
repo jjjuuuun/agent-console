@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import type { WsClient } from "@agent-console/api-client";
-import type { ChatTurn, ConversationSummary, EdgeTypeDescriptor, Graph, Interaction, RunEvent, TeamPlanSummary } from "@agent-console/contracts";
+import type { ChatTurn, ConversationSummary, DelegationStrategyDescriptor, EdgeTypeDescriptor, Graph, Interaction, RunEvent, TeamPlanSummary } from "@agent-console/contracts";
 import { chatPaths } from "./paths";
 import type { ProgressStep } from "@agent-console/chat";
 import { useApi } from "../../app/ApiContext";
@@ -9,7 +9,7 @@ import { useConnectionStatus } from "../../app/useConnectionStatus";
 import { useApiQuery } from "../../app/queries";
 import { chatKeys } from "./chatData";
 import { assembleTurns } from "./lib/assemble";
-import { upsertConversation } from "./lib/conversations";
+import { patchConversationCache } from "./lib/conversations";
 import { applyRunEvent, emptyLiveRun, foldRunEvents, hasReachedEnd, isActiveStatus, mergeLiveRuns, type LiveRun } from "./lib/liveRun";
 import { buildProgressSteps } from "./lib/progress";
 import { chatMessages } from "./chatMessages";
@@ -112,6 +112,8 @@ export interface FeedInput {
   /** 계획 요약(답변 자리). 아직 못 받았으면 undefined */
   plan: TeamPlanSummary | undefined;
   kinds: ReadonlyMap<string, EdgeTypeDescriptor>;
+  /** 위임 방식 목록(진행 줄의 세션 칩). 아직 못 읽었으면 생략 */
+  strategies?: readonly DelegationStrategyDescriptor[] | undefined;
   naming: NamingContext;
   /** 상호작용 구독 여부(연동 부분이 꺼졌으면 false, 기본 true) */
   interactions?: boolean;
@@ -147,7 +149,7 @@ export interface Feed {
  * - 진행 중인 턴은 `run:<id>`를 구독하고, 재접속하면 WS 클라이언트가 `since_seq`로 이어 받는다.
  * - 요약(`conversation:<id>`)이 바뀌면 턴·대기열을 다시 읽어 보정한다.
  */
-export function useConversationFeed({ conversationId, projectId = null, ws, graph, plan, kinds, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
+export function useConversationFeed({ conversationId, projectId = null, ws, graph, plan, kinds, strategies, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
   const { rest, space } = useApi();
   const queryClient = useQueryClient();
   const [older, setOlder] = useState<ChatTurn[]>([]);
@@ -170,7 +172,7 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
   // 요약 구독: 새 턴·상태·대기 수가 바뀌면 목록 캐시를 갱신하고 턴을 보정한다.
   useEffect(() => {
     const sub = ws.subscribeConversation(conversationId, (summary: ConversationSummary) => {
-      queryClient.setQueriesData<ConversationSummary[]>({ queryKey: chatKeys.conversations() }, (cur) => (cur ? upsertConversation(cur, summary) : cur));
+      queryClient.setQueriesData({ queryKey: chatKeys.conversations() }, (cur: unknown) => (cur ? patchConversationCache(cur, summary) : cur));
       refresh();
     });
     return () => sub?.unsubscribe();
@@ -292,6 +294,7 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
           live: lv,
           graph,
           kinds,
+          ...(strategies === undefined ? {} : { strategies }),
           naming,
           skippedWith: chatMessages.progress.skippedWith,
           runId: t.run_id,
@@ -304,7 +307,7 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
       }
     }
     return out;
-  }, [turns, live, graph, kinds, naming, childLive, childGraphs]);
+  }, [turns, live, graph, kinds, strategies, naming, childLive, childGraphs]);
 
   // 스트리밍은 진행 중인 마지막 턴의 것을, 스트림이 켜진 답변 노드 것만 보인다.
   const streaming = useMemo(() => {

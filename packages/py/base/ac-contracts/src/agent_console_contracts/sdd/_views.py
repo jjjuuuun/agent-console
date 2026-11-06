@@ -126,7 +126,13 @@ class ParsedTask(ContractModel):
     links: list[TaskLink] = Field(
         default_factory=list, description="이어진 항목(최근 순, 연동이 없으면 빈 값)."
     )
-    issues: list[SpecIssue] = Field(default_factory=list)
+    issues: list[SpecIssue] = Field(
+        default_factory=list,
+        description=(
+            "작업 이슈: 파싱 이슈 + 작업 연동(X43)의 선택 메서드 `task_issues`가 낸 것"
+            "(예: `sdd.status_not_applied`·`sdd.automation_skipped`)."
+        ),
+    )
 
 
 class SpecIndex(ContractModel):
