@@ -31,7 +31,7 @@ export function useRulesScreenOn(): boolean {
  * 공용 위키 규칙의 정의 종류 이름. 서버 설정으로 바뀌는 값이라 코드에 두지 않고, 공용 규칙 하나의 정의에서 읽는다.
  * 공용에 규칙이 없으면 가져올 것도 없으므로 `null`이다. 읽지 못하면(정의 모듈 꺼짐 등) `null`.
  */
-function useLibraryRulesKind(enabled: boolean): { kind: string | null; loading: boolean } {
+export function useLibraryRulesKind(enabled: boolean): { kind: string | null; loading: boolean } {
   const { wiki } = useApi();
   const q = useQuery({
     queryKey: ["wiki", "library-rules-kind"],

@@ -6,7 +6,13 @@
     "line": "line",
     "anchor": "anchor",
     "version": "v",
-    "side": "side"
+    "side": "side",
+    "center": "center",
+    "depth": "depth",
+    "severity": "sev",
+    "code": "code",
+    "query": "q",
+    "section": "section"
   },
   "tabs": [
     {
@@ -51,7 +57,9 @@
     "treeTitleMode": "ac.wiki.treemode",
     "pageView": "ac.wiki.pageview",
     "lastTemplate": "ac.wiki.lasttemplate.",
-    "secretDismissed": "ac.wiki.secret."
+    "secretDismissed": "ac.wiki.secret.",
+    "graphListOnly": "ac.wiki.graph.listonly",
+    "lastPage": "ac.wiki.lastpage."
   },
   "limits": {
     "liveDebounceMs": 300,
@@ -68,7 +76,8 @@
     "searchLimit": 20,
     "restoreToastMs": 8000,
     "splitViewportMin": 1360,
-    "bandMax": 2
+    "bandMax": 2,
+    "ruleCheckDebounceMs": 600
   },
   "importPolicies": [
     {
@@ -87,5 +96,54 @@
   ],
   "routeWords": {
     "history": "history"
+  },
+  "graph": {
+    "depths": [
+      1,
+      2,
+      3
+    ],
+    "defaultDepth": 1,
+    "all": "all"
+  },
+  "rulesScreen": {
+    "params": {
+      "rule": "rule",
+      "tab": "tab",
+      "section": "section",
+      "file": "file"
+    },
+    "tabs": [
+      {
+        "id": "rules",
+        "labelKey": "rules"
+      },
+      {
+        "id": "files",
+        "labelKey": "files"
+      },
+      {
+        "id": "versions",
+        "labelKey": "versions"
+      }
+    ],
+    "collection": "/wiki/rules",
+    "includeAdvanced": [
+      "syntax"
+    ],
+    "nameMax": 100,
+    "fileFields": {
+      "single": [
+        "instructions"
+      ],
+      "list": [
+        "page_templates"
+      ],
+      "fileKey": "file",
+      "labelKeys": [
+        "title",
+        "id"
+      ]
+    }
   }
 }

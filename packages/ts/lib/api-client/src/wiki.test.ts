@@ -129,6 +129,20 @@ describe("위키 REST", () => {
     expect(last(calls)).toMatchObject({ method: "POST", path: "/wiki/rules/check?project=p", body: { rules: { id: "r" } } });
   });
 
+  it("규칙 본문 파일 목록·쓰기·지우기는 정의 버전을 If-Match로 보내고 응답 ETag를 돌려준다", async () => {
+    const { io, calls } = server(() => ({ body: { rules: { id: "r" }, version_hash: "h2" }, headers: { ETag: '"h2"' } }));
+    const wiki = createWikiClient(withSpace(io, "p"));
+    await wiki.listWikiRulesFiles("r 1");
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/wiki/rules/r%201/files?project=p" });
+    const saved = await wiki.putWikiRulesFile("r", "a/b c.md", "본문", "h1");
+    expect(last(calls)).toMatchObject({ method: "PUT", path: "/wiki/rules/r/files/a/b%20c.md?project=p" });
+    expect(last(calls).headers["If-Match"]).toBe("h1");
+    expect(saved.version_hash).toBe("h2");
+    await wiki.deleteWikiRulesFile("r", "a.md", "h2");
+    expect(last(calls)).toMatchObject({ method: "DELETE", path: "/wiki/rules/r/files/a.md?project=p" });
+    expect(last(calls).headers["If-Match"]).toBe("h2");
+  });
+
   it("서버 오류는 ApiError로 코드와 상세가 그대로 온다", async () => {
     const { io } = server(() => ({ status: 404, body: { error: { code: "wiki.page_not_found", message: "없음", details: { path: "a", has_history: true } } } }));
     const err = await createWikiClient(io).getWikiPage("w", "a").catch((e: unknown) => e);

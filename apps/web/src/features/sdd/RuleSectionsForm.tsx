@@ -2,8 +2,9 @@
  * 섹션 목록 + 스키마 폼(규칙 편집의 공통 본문): 계약 JSON Schema(`x-ui`)에서 섹션을 만들고(`ruleSections`) 고른 섹션 하나를 `SchemaForm`으로 그린다.
  * 값·검사 이슈·선택 섹션은 props이고 서버를 모른다. 문서 틀 편집(`TemplateEditor`)이 쓴다.
  */
-import { useMemo, type ReactNode } from "react";
-import { SchemaForm, type FormError } from "@agent-console/schema-form";
+import "./sdd.css";
+import { useMemo, type ComponentType, type ReactNode } from "react";
+import { SchemaForm, type FormError, type SchemaFormFieldProps } from "@agent-console/schema-form";
 import type { SpecIssue } from "@agent-console/contracts/sdd";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { ConfigIssuesProvider } from "../delegation";
@@ -13,7 +14,8 @@ import { widgetUiSchema } from "./widgets/widgetUi";
 import { issueInSection, mergeSection, ruleSections, sectionValue, type RuleSection } from "./ruleSections";
 
 type Obj = Record<string, unknown>;
-const WIDGET_NAMES: ReadonlySet<string> = new Set(Object.keys(SDD_WIDGET_FIELDS));
+const NO_FIELDS: Readonly<Record<string, ComponentType<SchemaFormFieldProps>>> = {};
+const NO_NAMES: readonly string[] = [];
 const NO_ENV: SddWidgetEnv = { refs: {}, variables: [] };
 
 export interface RuleSectionsFormProps {
@@ -37,6 +39,10 @@ export interface RuleSectionsFormProps {
   sectionNote?: (section: RuleSection) => ReactNode;
   /** 섹션별 읽기 전용 추가 조건 */
   readonlyFor?: (section: RuleSection) => boolean;
+  /** 위젯 이름 → 필드 컴포넌트 추가(문서 틀 위젯 8종에 더한다. 같은 이름이면 이쪽이 이긴다). 다른 정의 종류가 자기 위젯을 꽂을 때 쓴다 */
+  extraFields?: Readonly<Record<string, ComponentType<SchemaFormFieldProps>>>;
+  /** 고급이어도 섹션으로 보일 최상위 속성 이름(`ruleSections`) */
+  includeAdvanced?: readonly string[];
 }
 
 const errorsFor = (issues: readonly SpecIssue[], section: RuleSection): FormError[] => {
@@ -46,10 +52,11 @@ const errorsFor = (issues: readonly SpecIssue[], section: RuleSection): FormErro
     .map((i) => ({ path: `/${key}${(i.path as string).slice(section.pointer.length)}`, message: i.message, severity: i.severity === "error" ? ("error" as const) : ("warning" as const) }));
 };
 
-export function RuleSectionsForm({ schema, value, onChange, issues, readonly, sectionId, onSectionChange, navLabel, idPrefix, widgetEnv = NO_ENV, formEpoch = 0, sectionNote, readonlyFor }: RuleSectionsFormProps) {
-  const sections = useMemo(() => ruleSections(schema), [schema]);
+export function RuleSectionsForm({ schema, value, onChange, issues, readonly, sectionId, onSectionChange, navLabel, idPrefix, widgetEnv = NO_ENV, formEpoch = 0, sectionNote, readonlyFor, extraFields = NO_FIELDS, includeAdvanced = NO_NAMES }: RuleSectionsFormProps) {
+  const sections = useMemo(() => ruleSections(schema, includeAdvanced), [schema, includeAdvanced]);
+  const fields = useMemo(() => ({ ...SDD_WIDGET_FIELDS, ...extraFields }), [extraFields]);
   const section = sections.find((s) => s.id === sectionId) ?? sections[0];
-  const sectionUi = useMemo(() => (section === undefined ? undefined : widgetUiSchema(section.schema, WIDGET_NAMES)), [section]);
+  const sectionUi = useMemo(() => (section === undefined ? undefined : widgetUiSchema(section.schema, new Set(Object.keys(fields)))), [section, fields]);
   if (section === undefined) return null;
   const sectionErrors = errorsFor(issues, section);
   return (
@@ -78,7 +85,7 @@ export function RuleSectionsForm({ schema, value, onChange, issues, readonly, se
               key={`${section.id}:${formEpoch}`}
               schema={section.schema}
               uiSchema={sectionUi}
-              customFields={SDD_WIDGET_FIELDS}
+              customFields={fields}
               value={sectionValue(value, section)}
               onChange={(next) => onChange(mergeSection(value, section, next))}
               errors={sectionErrors}

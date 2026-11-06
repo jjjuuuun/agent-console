@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r --workspace-concurrency=1 typecheck",
     "test": "vitest run",
     "deps": "depcruise packages/ts apps/web/src --config .dependency-cruiser.cjs",
+    "extdocs-check": "node scripts/extdocs-ts.mjs",
     "pkg-lint": "node scripts/pkgkit/pkg-lint.mjs",
     "pack:all": "node scripts/pkgkit/pack-all.mjs",
     "portability": "node scripts/pkgkit/portability.mjs",

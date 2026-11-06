@@ -86,6 +86,7 @@ export const DEFAULT_ROUTES: readonly RouteDef[] = [
   { id: "agents", serves: "definition:agent", requires: ["definitions:agent"], path: "/agents", titleKey: "nav.agents", icon: "agents", badgeSource: null, gotoKey: "a", position: "main", group: "config" },
   { id: "resources", serves: "definition:resource", requires: ["definitions:resource"], path: "/resources", titleKey: "nav.resources", icon: "resources", badgeSource: null, gotoKey: "r", position: "main", group: "config" },
   { id: "spec-templates", serves: "sdd:templates", requires: ["sdd"], path: "/spec-templates", titleKey: "nav.specTemplates", icon: "spec-template", badgeSource: null, gotoKey: null, position: "main", group: "config" },
+  { id: "wiki-rules", serves: "wiki:rules", requires: ["wiki:rules"], path: "/wiki-rules", titleKey: "nav.wikiRules", icon: "wiki-rules", badgeSource: null, gotoKey: null, position: "main", group: "config" },
   { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"], projectScoped: true },
   { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true, projectScoped: true },
   { id: "specs", serves: "sdd", requires: ["sdd"], path: "/specs", titleKey: "nav.specs", icon: "spec", badgeSource: null, gotoKey: "e", position: "main", group: "run", projectScoped: true },

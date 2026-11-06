@@ -58,9 +58,9 @@ export function useWikiInfo(): UseQueryResult<WikiInfo, Error> {
   return useQuery({ queryKey: wikiKeys.info(s.key), queryFn: () => s.client.getWikiInfo(), retry: false, staleTime: 30_000 });
 }
 
-export function useWikiList(): UseQueryResult<WikiSummary[], Error> {
+export function useWikiList(enabled = true): UseQueryResult<WikiSummary[], Error> {
   const s = useWikiSpace();
-  return useQuery({ queryKey: wikiKeys.list(s.key), queryFn: () => s.client.listWikis(), retry: false });
+  return useQuery({ queryKey: wikiKeys.list(s.key), queryFn: () => s.client.listWikis(), enabled, retry: false });
 }
 
 export function useWikiView(id: string): UseQueryResult<Versioned<WikiView>, Error> {

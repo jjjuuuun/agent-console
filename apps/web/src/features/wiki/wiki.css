@@ -130,3 +130,69 @@
   .wiki-card { border-color: ButtonText; }
   .wiki-card[data-preselected], .wiki-segment-btn[aria-selected="true"] { outline: 2px solid Highlight; }
 }
+
+/* 그래프 탭 (screen-wiki §7): 도구줄 + 캔버스 | 연결 목록 */
+.wiki-graph, .wiki-lint { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.wiki-graph-toolbar, .wiki-lint-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-3); min-height: 48px; padding: var(--ac-space-1) var(--ac-space-4); border-bottom: 1px solid var(--ac-border-soft); }
+.wiki-graph-toolbar .wiki-segment { padding: 0; border: 0; min-height: 0; }
+.wiki-graph-toolbar .wiki-segment-btn { flex: none; min-width: 32px; border-color: var(--ac-border); }
+.wiki-segment-btn[aria-pressed="true"] { background: var(--ac-accent-bg-strong); border-color: var(--ac-accent); }
+.wiki-segment-btn:disabled { opacity: 0.5; cursor: default; }
+.wiki-inline { display: inline-flex; align-items: center; gap: var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-select { width: auto; max-width: 240px; }
+.wiki-pick { width: 200px; }
+.wiki-graph-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-4); overflow: auto; }
+.wiki-graph-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--ac-wiki-graph-list-w); gap: var(--ac-space-3); }
+.wiki-graph-body[data-list-only] { grid-template-columns: minmax(0, 1fr); }
+.wiki-graph-canvas, .wiki-graph-list { min-width: 0; min-height: 240px; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); overflow: hidden; }
+.wiki-graph-list { min-height: 0; }
+@media (max-width: 1099px) {
+  .wiki-graph-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--ac-wiki-graph-h) minmax(240px, 1fr); }
+  .wiki-graph-body[data-list-only] { grid-template-rows: minmax(240px, 1fr); }
+}
+
+/* 점검 탭 (§8) */
+.wiki-lint-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); padding: var(--ac-space-2) var(--ac-space-4); }
+
+/* 규칙 탭 (§9): 섹션 목록 | 본문 */
+.wiki-rules { display: flex; gap: var(--ac-space-4); height: 100%; min-height: 0; padding: var(--ac-space-3) var(--ac-space-4); overflow: auto; }
+.wiki-rules-nav { flex: 0 0 var(--ac-wiki-rules-nav-w); position: sticky; top: 0; align-self: flex-start; }
+.wiki-rules-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.wiki-rules-nav button { width: 100%; min-height: 32px; padding: 0 var(--ac-space-2); border: 0; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; text-align: left; cursor: pointer; }
+.wiki-rules-nav button[aria-current="true"] { background: var(--ac-accent-bg-strong); font-weight: 600; }
+.wiki-rules-main { flex: 1; min-width: 0; max-width: var(--ac-readable-w, 720px); display: flex; flex-direction: column; gap: var(--ac-space-3); }
+.wiki-rules-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); min-height: 40px; }
+.wiki-rules-menu { display: none; }
+.wiki-rules-section { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.wiki-section-title { margin: 0; font-size: var(--ac-text-md); }
+.wiki-subtitle { margin: var(--ac-space-2) 0 var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.wiki-instructions { max-height: 320px; overflow: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wiki-table { width: 100%; border-collapse: collapse; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-table th, .wiki-table td { padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.wiki-table th { color: var(--ac-text-muted); font-weight: 600; }
+.wiki-issue-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-issue-lines li { padding-left: var(--ac-space-2); border-left: 3px solid var(--ac-warning); }
+.wiki-issue-lines li[data-tone="danger"] { border-left-color: var(--ac-danger); }
+.wiki-rulerefs { display: flex; flex-direction: column; gap: var(--ac-space-1); }
+@media (max-width: 1279px) {
+  .wiki-rules { flex-direction: column; }
+  .wiki-rules-nav { display: none; }
+  .wiki-rules-menu { display: inline-flex; }
+}
+
+/* 공용 구성 › 위키 규칙 (§10) */
+.wiki-rules-screen { display: flex; gap: var(--ac-space-4); min-height: 0; flex: 1; }
+.wiki-rules-list { flex: 0 0 var(--ac-listpane-w, 280px); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.wiki-rules-list ul { list-style: none; margin: 0; padding: 0; }
+.wiki-rules-item { display: flex; align-items: center; gap: var(--ac-space-1); min-height: var(--ac-row-h, 40px); }
+.wiki-rules-row { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: var(--ac-space-1) var(--ac-space-2); border: 0; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; text-align: left; cursor: pointer; }
+.wiki-rules-row[aria-current="true"] { background: var(--ac-accent-bg-strong); }
+.wiki-rules-row .app-muted { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-rules-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.wiki-rule-editor { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.wiki-check-chip { padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-warning-bg); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-check-chip[data-tone="danger"] { background: var(--ac-danger-bg); }
+.wiki-rule-links { list-style: none; margin: 0 0 var(--ac-space-2); padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.wiki-var-chips { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); margin-top: var(--ac-space-1); }
+.wiki-var-chip { padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); color: var(--ac-text); font: inherit; font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; }
+@media (max-width: 1099px) { .wiki-rules-screen { flex-direction: column; } .wiki-rules-list { flex-basis: auto; } }

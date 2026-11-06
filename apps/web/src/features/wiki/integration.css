@@ -1,0 +1,13 @@
+/* 위키 연결 부품(리소스 위젯·실행 칩·메모리 올리기). 토큰만 쓴다. */
+.wiki-refwidget { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
+.wiki-refwidget-input { width: 100%; font-family: var(--ac-font-mono); }
+.wiki-refwidget-note { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-runchanges { display: inline-flex; align-items: center; }
+.wiki-runchip { display: inline-flex; align-items: center; gap: var(--ac-space-1); min-height: var(--ac-control-sm); padding: 0 var(--ac-space-2); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-full); background: var(--ac-btn-bg); color: var(--ac-text); cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wiki-runchip:hover { background: var(--ac-surface-2); }
+.wiki-runchanges-panel { width: 420px; max-width: calc(100vw - 32px); padding: 0; }
+.wiki-runchange { display: flex; align-items: center; gap: var(--ac-space-2); padding: 0 var(--ac-space-3); box-sizing: border-box; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.wiki-runchange-wiki { flex: 0 1 30%; min-width: 0; }
+.wiki-runchange-path { flex: 1 1 auto; min-width: 0; font-family: var(--ac-font-mono); color: var(--ac-accent); }
+.wiki-runchange-time { flex: 0 0 auto; white-space: nowrap; }
+.wiki-promote-head { display: flex; flex-direction: column; gap: var(--ac-space-2); margin-bottom: var(--ac-space-2); }

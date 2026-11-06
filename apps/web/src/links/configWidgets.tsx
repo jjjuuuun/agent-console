@@ -5,6 +5,16 @@ import type { ConfigWidgetTable } from "../app/ConfigWidgets";
 // 위젯 본문은 처음 그릴 때 내려받는다(리소스 화면 번들에 메모리 설정 코드가 들어가지 않게).
 const ScopeKind = lazy(() => import("../features/memorySettings").then((m) => ({ default: m.ScopeKindWidget })));
 
+const WikiRef = lazy(() => import("../features/wiki").then((m) => ({ default: m.WikiRefWidget })));
+
+function LazyWikiRef(props: SchemaFormWidgetProps) {
+  return (
+    <Suspense fallback={<input id={props.id} aria-label={props.label} disabled readOnly value={typeof props.value === "string" ? props.value : ""} />}>
+      <WikiRef {...props} />
+    </Suspense>
+  );
+}
+
 function LazyScopeKind(props: SchemaFormWidgetProps) {
   return (
     <Suspense fallback={<input id={props.id} aria-label={props.label} disabled readOnly value={typeof props.value === "string" ? props.value : ""} />}>
@@ -19,4 +29,5 @@ function LazyScopeKind(props: SchemaFormWidgetProps) {
  */
 export const DEFAULT_CONFIG_WIDGETS: ConfigWidgetTable = {
   "memory-scope-kind": LazyScopeKind,
+  "wiki-ref": LazyWikiRef,
 };

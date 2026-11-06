@@ -4,7 +4,7 @@
  */
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useScrollCue } from "./useScrollCue";
-import { Banner, Button, Disclosure, Icon, IconButton, Menu, Popover, Spinner, StatusIcon } from "@agent-console/ui";
+import { Banner, Button, Disclosure, Icon, IconButton, Menu, Popover, Spinner, StatusIcon, type MenuItemDef } from "@agent-console/ui";
 import type { MemoryEntry, MemoryScopeKindInfo, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryEntryEditor, MemoryEntryMeta, scopeLabel, type MemoryEntryEditorHandle, type ScopeLabel } from "@agent-console/memory-view";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -44,6 +44,8 @@ export interface EntryDetailProps {
   onDirtyChange: (dirty: boolean) => void;
   onHistory: (entry: MemoryEntry, dirty: boolean) => void;
   onMove: (entry: MemoryEntry, dirty: boolean) => void;
+  /** 더보기 메뉴에 끼울 줄(다른 기능이 붙이는 동작). 기록 줄 바로 뒤에 들어간다 */
+  extraMenuItems?: ((entry: MemoryEntry) => MenuItemDef[]) | undefined;
   onArchive: (entry: MemoryEntry, archived: boolean) => Promise<MemoryEntry | null>;
   onDelete: (entry: MemoryEntry) => void;
   onPurge: (entry: MemoryEntry) => void;
@@ -54,7 +56,7 @@ export interface EntryDetailProps {
 }
 
 export function EntryDetail(props: EntryDetailProps) {
-  const { id, knownKey, kinds, ctx, limits, inFilter, closable, contentTypeSuggestions, onOpenRun, onClose, onDirtyChange, onHistory, onMove, onArchive, onDelete, onPurge, onRestore, onSaveAsNew } = props;
+  const { id, knownKey, kinds, ctx, limits, inFilter, closable, contentTypeSuggestions, onOpenRun, onClose, onDirtyChange, onHistory, onMove, extraMenuItems, onArchive, onDelete, onPurge, onRestore, onSaveAsNew } = props;
   const editor = useEntryEditor(id, t.detail.saveFailedNote);
   const storage = useStorage();
   const editorHandle = useRef<MemoryEntryEditorHandle>(null);
@@ -125,6 +127,7 @@ export function EntryDetail(props: EntryDetailProps) {
       items={[
         { id: "move", label: t.menu.move, disabled: deleted, onSelect: () => onMove(entry, dirty) },
         { id: "history", label: t.menu.history, onSelect: () => onHistory(entry, dirty) },
+        ...(extraMenuItems?.(entry) ?? []),
         {
           id: "archive",
           label: entry.archived === true ? t.menu.unarchive : t.menu.archive,

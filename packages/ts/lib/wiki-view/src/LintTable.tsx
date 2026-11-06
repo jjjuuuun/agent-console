@@ -1,6 +1,6 @@
 import type { WikiIssue } from "@agent-console/contracts/wiki";
 import { ToneChip } from "@agent-console/markdown-doc";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { resolveDisplay, severityRank, type WikiDisplay } from "./display";
 import { isComposingEvent, useDomId } from "./hooks";
 import { formatMessage, resolveMessages } from "./messages";
@@ -8,7 +8,18 @@ import { VirtualList } from "./VirtualList";
 
 export type LintSortKey = "severity" | "code" | "page";
 
+/** 거르기 상태(심각도 여럿·코드 하나·페이지 경로 조각). 호출자가 주소 등에 저장하려고 주고받는다. */
+export interface LintFilter {
+  severities: readonly string[];
+  code: string;
+  page: string;
+}
+
 export interface LintTableProps {
+  /** 처음 거르기 상태(예: 주소 인자). 이후는 표가 관리한다. */
+  initialFilter?: Partial<LintFilter>;
+  /** 거르기가 바뀔 때(처음 그릴 때는 부르지 않는다) */
+  onFilterChange?: (filter: LintFilter) => void;
   issues: readonly WikiIssue[];
   display?: WikiDisplay;
   /** 심각도 순서(앞이 심각). 모르는 값은 뒤. 예: 서버 어휘 `["error","warning","info"]`를 앱 데이터로 준다. */
@@ -45,13 +56,25 @@ const collator = new Intl.Collator("ko", { numeric: true });
  * 모르는 심각도·코드는 원문 + 중립 톤이다. 정렬은 심각도(순서는 prop)·코드·페이지. 모든 거르기·정렬은 클라이언트다.
  */
 export function LintTable({
-  issues, display, severityOrder = [], lineOf = defaultLine, ruleOf = defaultRule, onOpen, onContextMenu, notice, rowHeight = 32, height, messages, className,
+  initialFilter, onFilterChange, issues, display, severityOrder = [], lineOf = defaultLine, ruleOf = defaultRule, onOpen, onContextMenu, notice, rowHeight = 32, height, messages, className,
 }: LintTableProps) {
   const t = resolveMessages(messages);
   const base = useDomId();
-  const [sevFilter, setSevFilter] = useState<ReadonlySet<string>>(new Set());
-  const [codeFilter, setCodeFilter] = useState("");
-  const [pageFilter, setPageFilter] = useState("");
+  const [sevFilter, setSevFilter] = useState<ReadonlySet<string>>(() => new Set(initialFilter?.severities ?? []));
+  const [codeFilter, setCodeFilter] = useState(initialFilter?.code ?? "");
+  const [pageFilter, setPageFilter] = useState(initialFilter?.page ?? "");
+  const notify = useRef(onFilterChange);
+  const mounted = useRef(false);
+  useEffect(() => {
+    notify.current = onFilterChange;
+  });
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    notify.current?.({ severities: [...sevFilter], code: codeFilter, page: pageFilter });
+  }, [sevFilter, codeFilter, pageFilter]);
   const [sort, setSort] = useState<{ key: LintSortKey; dir: "asc" | "desc" }>({ key: "severity", dir: "asc" });
   const [active, setActive] = useState(0);
 

@@ -12,3 +12,7 @@ export { classifyWikiError, type WikiFailure } from "./wikiErrors";
 export type { WikiTabProps, WikiTabPanels, NewPagePrefill } from "./wikiTabs";
 export { useNewWikiDialog, useImportDialog, useExportDialog, useDeleteWikiDialog, useRulesScreenOn } from "./wikiDialogs";
 export { NewPageDialog, type NewPageDialogProps } from "./PageDialogs";
+export { WikiRefWidget } from "./WikiRefWidget";
+export { RunWikiChanges, changeCountText, type RunWikiChangesProps } from "./RunWikiChanges";
+export { usePromoteToWiki, titleFromContent, type PromoteSource, type PromoteToWiki } from "./usePromoteToWiki";
+export { wikiLinkMessages } from "./integrationMessages";

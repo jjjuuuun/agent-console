@@ -7,6 +7,7 @@
  * 쓰기 헤더: 있는 페이지를 고칠 때는 `expectedHash`(`If-Match`)가 필수(없으면 428), 새 페이지는 `createOnly`(`If-None-Match: *`).
  * 해시가 틀리면 412 `version_conflict`(+ `ETag`). 규칙 경고 등은 응답 헤더 `X-Console-Issues`가 `Versioned.issues`로 온다.
  */
+import type { ResourceFile } from "@agent-console/contracts";
 import type {
   EffectiveWikiSyntax,
   WikiChangePage,
@@ -88,6 +89,14 @@ export interface WikiWriteOptions {
   createOnly?: boolean;
 }
 
+/** 위키 규칙 본문 파일 읽기 결과. `version_hash` = 규칙 정의 버전(`ETag`, 다음 쓰기의 `If-Match`). 텍스트가 아니면 `text`가 null. */
+export interface WikiRulesFileContent {
+  text: string | null;
+  contentType: string;
+  size: number;
+  version_hash: string | undefined;
+}
+
 export interface WikiClient {
   /** 화면 정보: 페이지 폴더(`pages_root`)·능력(`capabilities`)·한도(`limits`). */
   getWikiInfo(): Promise<WikiInfo>;
@@ -147,6 +156,12 @@ export interface WikiClient {
   putWikiRules(id: string, body: WikiRulesDefinition, versionHash: string): Promise<Versioned<WikiRulesView>>;
   deleteWikiRules(id: string, versionHash?: string): Promise<void>;
   checkWikiRules(body: WikiRulesCheckRequest): Promise<WikiRulesCheckResult>;
+  /** 규칙 본문 폴더의 파일 목록(지침·페이지 틀, 경로 순). */
+  listWikiRulesFiles(id: string): Promise<ResourceFile[]>;
+  readWikiRulesFile(id: string, path: string): Promise<WikiRulesFileContent>;
+  /** 규칙 본문 파일 쓰기. `versionHash` = 규칙 정의 버전(`If-Match`). 응답 `version_hash`가 다음 쓰기의 `If-Match`다. 비밀 의심은 `issues`(`X-Console-Issues`). */
+  putWikiRulesFile(id: string, path: string, content: string | Uint8Array, versionHash: string, mediaType?: string): Promise<Versioned<WikiRulesView>>;
+  deleteWikiRulesFile(id: string, path: string, versionHash: string): Promise<Versioned<WikiRulesView>>;
 }
 
 const ZIP_TYPE = "application/zip";
@@ -211,5 +226,17 @@ export function createWikiClient(io: RestIo): WikiClient {
     putWikiRules: (id, body, hash) => io.requestVersioned("PUT", `/wiki/rules/${enc(id)}`, { body, ...withHeaders(ifMatch(hash)) }),
     deleteWikiRules: (id, hash) => io.request("DELETE", `/wiki/rules/${enc(id)}`, withHeaders(ifMatch(hash))),
     checkWikiRules: (body) => io.request("POST", "/wiki/rules/check", { body }),
+    listWikiRulesFiles: (id) => io.request("GET", `/wiki/rules/${enc(id)}/files`),
+    readWikiRulesFile: async (id, path) => {
+      const r = await io.requestBlob("GET", `/wiki/rules/${enc(id)}/files/${encodePath(path)}`, { headers: { Accept: "text/plain, application/octet-stream, */*" } });
+      const isText = r.contentType.toLowerCase().startsWith("text/");
+      return { text: isText ? await r.blob.text() : null, contentType: r.contentType, size: r.blob.size, version_hash: r.etag };
+    },
+    putWikiRulesFile: (id, path, content, hash, mediaType) =>
+      io.requestVersioned("PUT", `/wiki/rules/${enc(id)}/files/${encodePath(path)}`, {
+        ...(typeof content === "string" ? { text: content } : { bytes: content }),
+        headers: { "If-Match": hash, "Content-Type": mediaType ?? (typeof content === "string" ? "text/plain; charset=utf-8" : "application/octet-stream") },
+      }),
+    deleteWikiRulesFile: (id, path, hash) => io.requestVersioned("DELETE", `/wiki/rules/${enc(id)}/files/${encodePath(path)}`, { headers: { "If-Match": hash } }),
   };
 }

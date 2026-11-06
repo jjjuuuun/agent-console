@@ -363,6 +363,10 @@
   --ac-wiki-prose-max-w: 800px;
   --ac-wiki-graph-node-w: 168px;
   --ac-wiki-graph-node-h: 36px;
+  --ac-wiki-graph-list-w: 320px;
+  --ac-wiki-graph-gap: 48px;
+  --ac-wiki-graph-h: min(420px, 50vh);
+  --ac-wiki-rules-nav-w: 200px;
   --ac-wiki-search-w: 280px;
   --ac-wiki-search-w-focus: 360px;
   --ac-wiki-link-dash: 1px dashed var(--ac-danger);

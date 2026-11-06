@@ -493,6 +493,14 @@ describe("LintTable (수용 기준 22)", () => {
     expect(rows[0]!.textContent).toContain("no-secrets");
     expect(within(rows[0]!).getByText("12")).toBeTruthy();
   });
+  it("처음 거르기를 받아 시작하고, 바뀔 때만(처음 그릴 때는 아니다) 알린다", () => {
+    const onFilterChange = vi.fn();
+    render(<LintTable issues={sampleIssues()} severityOrder={order} initialFilter={{ code: "orphan" }} onFilterChange={onFilterChange} />);
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+    expect(onFilterChange).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("searchbox", { name: "페이지 경로 거르기" }), { target: { value: "zzz" } });
+    expect(onFilterChange).toHaveBeenLastCalledWith({ severities: [], code: "orphan", page: "zzz" });
+  });
   it("거르기 목록은 데이터에서: 심각도·코드·페이지, 결과 없음에서 지우기", () => {
     render(<LintTable issues={sampleIssues()} display={sampleDisplay()} severityOrder={order} />);
     expect(screen.getByRole("button", { name: /^purple/ })).toBeTruthy();

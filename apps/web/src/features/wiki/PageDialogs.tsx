@@ -3,7 +3,7 @@
  * 폼 그림은 `@agent-console/wiki-view`의 `NewPageForm`·`MovePageForm`이 맡고, 여기는 요청(틀 채우기·dry_run·쓰기)과 서버 오류를 화면 문구로 잇는 조립이다.
  * 위키 이름·경로·틀·규칙 id·메시지는 전부 서버 데이터다. 서버 문장은 가공하지 않고 그대로 보인다.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ConfirmDialog, Dialog } from "@agent-console/ui";
 import { MovePageForm, NewPageForm, type NewPageValue } from "@agent-console/wiki-view";
 import type { WikiBacklink, WikiMoveResult, WikiPageVersion } from "@agent-console/contracts/wiki";
@@ -38,9 +38,11 @@ export interface NewPageDialogProps {
   onWritten: (paths: readonly string[]) => void;
   onCreated: (path: string) => void;
   onOpenExisting: (path: string) => void;
+  /** 위키 이름 줄 아래에 끼우는 내용(예: 메모리에서 올릴 때의 안내·위키 고르기) */
+  header?: ReactNode;
 }
 
-export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existingPaths, directory, blockedReason, onWritten, onCreated, onOpenExisting }: NewPageDialogProps) {
+export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existingPaths, directory, blockedReason, onWritten, onCreated, onOpenExisting, header }: NewPageDialogProps) {
   const space = useWikiSpace();
   const templates = useWikiTemplates(wikiId, open);
   const prefilled = prefill?.content !== undefined && prefill.content !== "";
@@ -100,6 +102,7 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
       }}
     >
       <p className="app-muted wiki-hint">{m.newPage.wiki}: <strong>{wikiName}</strong></p>
+      {header}
       <NewPageForm
         value={value}
         onChange={(next) => {

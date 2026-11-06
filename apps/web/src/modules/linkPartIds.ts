@@ -22,4 +22,5 @@ export const LINK_PART_IDS = {
   teamsConditionOperators: "teams.condition-operators",
   runsTraceChildGroups: "runs.trace-child-groups",
   runsMemoryChips: "runs.memory-chips",
+  runsWikiChanges: "runs.wiki-changes",
 } as const;

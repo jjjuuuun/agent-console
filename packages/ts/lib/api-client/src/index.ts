@@ -55,6 +55,7 @@ export type {
   WikiGraphParams,
   WikiImportOptions,
   WikiImportPolicy,
+  WikiRulesFileContent,
   WikiWriteOptions,
 } from "./clients/wiki";
 export type { ResourceFileContent } from "./clients/resources";

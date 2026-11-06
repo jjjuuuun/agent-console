@@ -25,6 +25,7 @@ import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
 import { ROUTE_ROLES, routeIconNode, routePath, useRouteOn } from "../library";
 import { ProjectChip } from "../projects";
+import { titleFromContent, usePromoteToWiki } from "../wiki";
 import { ClearScopeDialog, PurgeDialog } from "./PurgeDialogs";
 import { EntryDetail, type EntryDetailHandle } from "./EntryDetail";
 import { HistoryDialog } from "./HistoryDialog";
@@ -40,7 +41,7 @@ import { useContainerWidth } from "./useContainerWidth";
 import { useLeaveGuard } from "./useLeaveGuard";
 import { useMemoryActions } from "./useMemoryActions";
 import { useMemoryContext } from "./useMemoryContext";
-import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryScopes } from "./useMemoryApi";
+import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryRest, useMemoryScopes } from "./useMemoryApi";
 import { useMemoryLive } from "./useMemoryLive";
 import "./memory.css";
 
@@ -242,11 +243,22 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const scopeSummary = view.scope === null ? undefined : allScopes.find((s) => sameScope(s.scope, view.scope));
   const settingsPath = `${routePath(ROUTE_ROLES.settings)}#${SETTINGS_SECTION}`;
 
+  // [위키에 올리기…]: 위키 화면 역할과 현재 프로젝트가 있을 때만 줄이 있다. 항목을 읽어 본문을 위키 새 페이지로 복사한다(원본은 그대로).
+  const promote = usePromoteToWiki();
+  const rest = useMemoryRest();
+  const promoteItems = (entry: MemoryEntry | MemoryEntrySummary): MenuItemDef[] => {
+    const item = promote.menuItem("promote", async () => {
+      const full = await rest.getMemoryEntry(entry.id, {});
+      return { title: titleFromContent(full.content), content: full.content };
+    });
+    return item === null ? [] : [{ ...item, disabled: item.disabled === true || (entry.deleted_at !== null && entry.deleted_at !== undefined) }];
+  };
   const entryMenuItems = (entry: MemoryEntry | MemoryEntrySummary, onDone?: () => void): MenuItemDef[] => {
     const deleted = entry.deleted_at !== null && entry.deleted_at !== undefined;
     return [
       { id: "move", label: t.menu.move, disabled: deleted, onSelect: () => setDialog({ kind: "move", entry, dirty: false }) },
       { id: "history", label: t.menu.history, onSelect: () => setDialog({ kind: "history", entry, dirty: false }) },
+      ...promoteItems(entry),
       { id: "archive", label: entry.archived === true ? t.menu.unarchive : t.menu.archive, icon: "archive", disabled: deleted, onSelect: () => void actions.archive(entry, entry.archived !== true).then(() => onDone?.()) },
       { id: "delete", label: t.menu.delete, disabled: deleted, onSelect: () => void actions.remove(entry) },
       { id: "purge", label: t.menu.purge, danger: true, onSelect: () => setDialog({ kind: "purge", entry }) },
@@ -418,6 +430,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
         onDirtyChange={setDetailDirty}
         onHistory={(entry, d) => setDialog({ kind: "history", entry, dirty: d })}
         onMove={(entry, d) => setDialog({ kind: "move", entry, dirty: d })}
+        extraMenuItems={promoteItems}
         onArchive={actions.archive}
         onDelete={(entry) => void actions.remove(entry)}
         onPurge={(entry) => setDialog({ kind: "purge", entry })}
@@ -579,6 +592,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
       {rowMenu !== null ? (
         <FloatingMenu anchor={rowMenu.anchor} label={t.menu.label(rowMenu.entry.key)} items={entryMenuItems(rowMenu.entry)} onClose={() => setRowMenu(null)} />
       ) : null}
+      {promote.dialog}
       {dialog?.kind === "move" ? (
         <MoveDialog
           entry={dialog.entry}

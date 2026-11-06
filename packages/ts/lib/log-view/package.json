@@ -6,7 +6,26 @@
   "license": "MIT",
   "type": "module",
   "agentConsole": {
-    "kind": "lib"
+    "kind": "lib",
+    "extensionPoints": {
+      "dashboard-widget": {
+        "title": "대시보드 위젯",
+        "area": "web",
+        "design_id": "X21",
+        "summary": "대시보드에 새 위젯 종류를 더한다",
+        "registration": {
+          "kind": "props",
+          "export": "@agent-console/log-view#DashboardGridProps"
+        },
+        "interface": [
+          "@agent-console/log-view#WidgetDescriptor",
+          "@agent-console/log-view#WidgetRenderProps",
+          "@agent-console/log-view#WidgetRegistry",
+          "@agent-console/log-view#createWidgetRegistry"
+        ],
+        "guide": "web.md#dashboard-widget"
+      }
+    }
   },
   "sideEffects": [
     "**/*.css"

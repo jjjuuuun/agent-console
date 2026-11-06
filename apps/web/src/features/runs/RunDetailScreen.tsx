@@ -58,6 +58,7 @@ const SessionLogsTab = lazy(() => import("../logs").then((m) => ({ default: m.Ru
 const ArchitectureTab = lazy(() => import("../logs").then((m) => ({ default: m.RunArchitectureTab })));
 // 요약 줄의 메모리 칩은 메모리-실행 연동이 있을 때만 내려받는다.
 const MemoryChips = lazy(() => import("../memory").then((m) => ({ default: m.RunMemoryChips })));
+const WikiChanges = lazy(() => import("../wiki").then((m) => ({ default: m.RunWikiChanges })));
 
 /** 검사 패널 탭 순서(Alt+번호). 이 목록이 탭 id의 유일한 원천이다. */
 export const INSPECTOR_TABS = ["trace", "agents", "observe", "interactions", "node", "logs", "architecture"] as const;
@@ -93,6 +94,7 @@ export function RunDetailScreen() {
   const logsPart = useLinkPart(LINK_PART_IDS.logsRunsTab);
   const archPart = useLinkPart(LINK_PART_IDS.runsArchitectureTab);
   const memoryPart = useLinkPart(LINK_PART_IDS.runsMemoryChips);
+  const wikiPart = useLinkPart(LINK_PART_IDS.runsWikiChanges);
   const view = useRunView(id, { trace: flowPart.visible });
   const observe = useObservePrefixes();
   const tabIds = useMemo(
@@ -832,11 +834,12 @@ export function RunDetailScreen() {
         cancelling={cancelBusy}
         disconnected={connection === "reconnecting" || connection === "closed"}
         idleSeconds={idleSeconds}
-        {...(memoryPart.visible
+        {...(memoryPart.visible || wikiPart.visible
           ? {
               extra: (
                 <Suspense fallback={null}>
-                  <MemoryChips runId={id} active={active} onOpenReads={(typePrefix) => setParam({ tab: "agents", [TYPE_PREFIX_PARAM]: typePrefix })} />
+                  {memoryPart.visible ? <MemoryChips runId={id} active={active} onOpenReads={(typePrefix) => setParam({ tab: "agents", [TYPE_PREFIX_PARAM]: typePrefix })} /> : null}
+                  {wikiPart.visible ? <WikiChanges runId={id} projectId={run.project_id ?? null} active={active} /> : null}
                 </Suspense>
               ),
             }

@@ -28,14 +28,17 @@ function wrap(root: SchemaNode, key: string, node: SchemaNode): SchemaNode {
   return { type: "object", properties: { [key]: node }, $defs: root["$defs"] };
 }
 
-/** `schema`(정의 모델 전체, `$defs` 포함)에서 섹션을 만든다. */
-export function ruleSections(schema: SchemaNode): RuleSection[] {
+/**
+ * `schema`(정의 모델 전체, `$defs` 포함)에서 섹션을 만든다.
+ * @param includeAdvanced 고급(`tier: advanced`)이어도 섹션으로 보일 최상위 속성 이름(데이터에서 온다). 기본은 없음.
+ */
+export function ruleSections(schema: SchemaNode, includeAdvanced: readonly string[] = []): RuleSection[] {
   const props = isNode(schema["properties"]) ? schema["properties"] : {};
   const out: { section: RuleSection; order: number }[] = [];
   Object.entries(props).forEach(([key, raw], index) => {
     if (!isNode(raw)) return;
     const node = resolveRef(raw, schema);
-    if (xui(node)["tier"] === "advanced") return;
+    if (xui(node)["tier"] === "advanced" && !includeAdvanced.includes(key)) return;
     const inner = unwrapNullable(node, schema).schema;
     const innerProps = inner["type"] === "object" && isNode(inner["properties"]) ? inner["properties"] : null;
     if (innerProps === null) {

@@ -112,6 +112,7 @@ export const messages = {
     specs: "스펙",
     specTemplates: "문서 틀",
     wiki: "위키",
+    wikiRules: "위키 규칙",
     usage: "사용량",
     logs: "로그",
     settings: "설정",

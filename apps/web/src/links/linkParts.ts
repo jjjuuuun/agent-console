@@ -42,5 +42,7 @@ export const DEFAULT_LINK_PARTS: readonly LinkPartDef[] = [
   { id: P.runsTraceChildGroups, requires: ["runs:trace"], onMissing: "hide" },
   // 실행 상세 요약 줄의 "메모리 쓰기 n · 읽기 m" 칩(screen-memory.md 12.2). 메모리-실행 연동 역할이 없으면 칩도 질의도 없다.
   { id: P.runsMemoryChips, requires: ["memory:runs"], onMissing: "hide" },
+  // 실행 상세 요약 줄의 "고친 위키 페이지 N" 칩(screen-wiki.md 11.2). 위키-실행 연동 역할이 없으면 칩도 질의도 없다.
+  { id: P.runsWikiChanges, requires: ["wiki:runs"], onMissing: "hide" },
   // 내보내기의 "의존 항목 자동 포함"(screens-v3.md 3)은 아직 화면에 없다. 생기면 `exports.dependencies`를 여기에 등록한다.
 ];

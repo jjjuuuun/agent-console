@@ -6,7 +6,25 @@
   "license": "MIT",
   "type": "module",
   "agentConsole": {
-    "kind": "lib"
+    "kind": "lib",
+    "extensionPoints": {
+      "architecture-cell-renderer": {
+        "title": "구조도 칸·연결 그리기",
+        "area": "web",
+        "design_id": "X24",
+        "summary": "구조도 칸 안쪽과 연결선 모양을 키로 바꾼다",
+        "registration": {
+          "kind": "props",
+          "export": "@agent-console/arch-view#ArchitectureDiagramProps"
+        },
+        "interface": [
+          "@agent-console/arch-view#CellRenderer",
+          "@agent-console/arch-view#CellRenderProps",
+          "@agent-console/arch-view#EdgeStyleSpec"
+        ],
+        "guide": "web.md#architecture-cell-renderer"
+      }
+    }
   },
   "sideEffects": [
     "**/*.css"

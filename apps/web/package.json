@@ -3,6 +3,57 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "agentConsole": {
+    "kind": "app",
+    "extensionPoints": {
+      "config-form-widget": {
+        "title": "설정 폼 위젯",
+        "area": "web",
+        "design_id": "X51",
+        "summary": "설정 스키마의 ui:widget 이름에 화면 컴포넌트를 연결한다",
+        "registration": {
+          "kind": "registry",
+          "name": "@agent-console/web/src/features/delegation/configWidgets.ts#CONFIG_WIDGETS"
+        },
+        "interface": [
+          "@agent-console/web/src/features/delegation/widgetRegistry#WidgetRegistry",
+          "@agent-console/web/src/features/delegation/widgetRegistry#ConfigWidget"
+        ],
+        "guide": "web.md#config-form-widget"
+      },
+      "screen-entry": {
+        "title": "화면 진입",
+        "area": "web",
+        "design_id": "X52",
+        "summary": "라우트 데이터 한 줄과 화면 연결로 새 화면을 사이드바에 넣는다",
+        "registration": {
+          "kind": "registry",
+          "name": "@agent-console/web/src/shell/routeConfig.ts#DEFAULT_ROUTES"
+        },
+        "interface": [
+          "@agent-console/web/src/shell/routeConfig.ts#RouteDef",
+          "@agent-console/web/src/shell/routes.tsx#PageTable",
+          "@agent-console/web/src/shell/routes.tsx#DEFAULT_PAGES"
+        ],
+        "guide": "web.md#screen-entry"
+      },
+      "interaction-renderer": {
+        "title": "상호작용 renderer",
+        "area": "web",
+        "design_id": "X53",
+        "summary": "상호작용 renderer 이름에 응답 화면 컴포넌트를 연결한다",
+        "registration": {
+          "kind": "props",
+          "export": "@agent-console/chat#defaultRenderers"
+        },
+        "interface": [
+          "@agent-console/chat#RendererComponent",
+          "@agent-console/chat#RendererProps"
+        ],
+        "guide": "web.md#interaction-renderer"
+      }
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",

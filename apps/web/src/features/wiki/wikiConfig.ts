@@ -33,6 +33,7 @@ export const WIKI_STORAGE = {
   treeTitleMode: data.storage.treeTitleMode,
   pageView: data.storage.pageView,
   lastTemplate: (wikiId: string) => `${data.storage.lastTemplate}${wikiId}`,
+  lastPage: (wikiId: string) => `${data.storage.lastPage}${wikiId}`,
   secretDismissed: (wikiId: string, path: string) => `${data.storage.secretDismissed}${wikiId}/${path}`,
 } as const;
 
@@ -89,3 +90,22 @@ export function importStatusDisplay(status: string): { tone: string; label: stri
 export function severityTone(severity: string): string {
   return (display.severities as Record<string, TableEntry | undefined>)[severity]?.tone ?? "neutral";
 }
+
+/** 그래프 탭 깊이 선택(데이터): 숫자 단계, 기본 단계, "전체"를 뜻하는 주소 값. 서버는 `depth` 숫자 하나를 받고 없으면 전체다. */
+export const WIKI_GRAPH = data.graph as { depths: readonly number[]; defaultDepth: number; all: string };
+export const GRAPH_LIST_ONLY_KEY: string = data.storage.graphListOnly;
+
+/** 공용 구성 › 위키 규칙 화면의 데이터(주소 인자·탭·REST 컬렉션·고급이어도 섹션으로 보일 속성). */
+export const WIKI_RULES_SCREEN = data.rulesScreen as {
+  params: { rule: string; tab: string; section: string; file: string };
+  tabs: readonly { id: "rules" | "files" | "versions"; labelKey: string }[];
+  collection: string;
+  includeAdvanced: readonly string[];
+  nameMax: number;
+  /** 본문 파일을 가리키는 규칙 문서 속성(데이터): 한 파일 참조 속성들, 파일 참조 목록 속성들, 참조 안의 파일 경로 키, 목록 항목의 표시 이름 후보 키 */
+  fileFields: { single: readonly string[]; list: readonly string[]; fileKey: string; labelKeys: readonly string[] };
+};
+export type WikiRulesTabId = (typeof WIKI_RULES_SCREEN.tabs)[number]["id"];
+
+/** 심각도 순서(앞이 심각): 표시 표(`wikiDisplay.json`)의 심각도 키 순서. 모르는 값은 표가 뒤로 보낸다. */
+export const SEVERITY_ORDER: readonly string[] = Object.keys(display.severities);

@@ -7,8 +7,8 @@ const custom: RouteDef[] = [
 ];
 
 describe("라우트 설정 데이터", () => {
-  it("기본 12개 항목, 첫 화면은 첫 main 항목", () => {
-    expect(DEFAULT_ROUTES).toHaveLength(12);
+  it("기본 13개 항목, 첫 화면은 첫 main 항목", () => {
+    expect(DEFAULT_ROUTES).toHaveLength(13);
     expect(homeRoute(DEFAULT_ROUTES)?.path).toBe("/chat");
   });
   it("첫 화면은 home 표시가 우선이고, 없으면 첫 main 항목", () => {

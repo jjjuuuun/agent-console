@@ -4,13 +4,14 @@
  * 선택한 탭·페이지·모드는 주소가 진실이다. 위키 이름·규칙 이름·폴더 경로는 서버 데이터다.
  */
 import "@agent-console/wiki-view/styles.css";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from "react-router";
 import { Banner, Button, ChipRow, ConfirmDialog, PageHeader, Tabs, useToast, type TabItem } from "@agent-console/ui";
 import { AuthorChip } from "@agent-console/wiki-view";
 import { ToneChip } from "@agent-console/markdown-doc";
 import type { WikiSummary } from "@agent-console/contracts/wiki";
 import { ErrorBlock } from "../../app/ErrorBlock";
+import { useStorage } from "../../app/StorageContext";
 import { useReportUnsaved } from "../../definition/unsaved";
 import { useNow } from "../../app/useNow";
 import { formatRelative } from "../../lib/format";
@@ -18,13 +19,16 @@ import { usePageTitle } from "../../shell/titles";
 import { GuardedButton, MenuButton } from "../../app/menuParts";
 import { ProjectChip } from "../projects";
 import { NewPageDialog } from "./PageDialogs";
+import { GraphTab } from "./GraphTab";
+import { LintTab } from "./LintTab";
 import { PageTab } from "./PageTab";
+import { RulesTab } from "./RulesTab";
 import { WikiSearch } from "./WikiSearch";
 import { FailureBlock, ListSkeleton } from "./parts";
 import { useDeleteWikiDialog, useExportDialog, useImportDialog, useNewWikiDialog } from "./wikiDialogs";
 import { ownWriteKey, useInvalidateWiki, useWikiList, useWikiLive, useWikiSpace, usePageList, useWikiView, type OwnWrites } from "./useWikiApi";
 import { useWikiContext } from "./useWikiContext";
-import { DEFAULT_TAB, WIKI_PARAMS, WIKI_TAB_DEFS, buildWikiDisplay, severityTone } from "./wikiConfig";
+import { DEFAULT_TAB, WIKI_PARAMS, WIKI_STORAGE, WIKI_TAB_DEFS, buildWikiDisplay, severityTone } from "./wikiConfig";
 import { wikiListPath, wikiPagePath, wikiPath } from "./wikiPaths";
 import { useWikiShortcuts } from "./wikiShortcuts";
 import type { NewPagePrefill, WikiTabPanels, WikiTabProps } from "./wikiTabs";
@@ -33,9 +37,12 @@ import "./wiki.css";
 
 const P = WIKI_PARAMS;
 
-/** 기본 탭 본문 등록 표. 그래프·점검·규칙 탭은 같은 모양의 컴포넌트를 `panels`로 더하면 탭 줄에 나온다(7R.20). */
+/** 기본 탭 본문 등록 표. 탭 줄의 순서·이름은 `wikiData.json`이 정하고, 같은 모양의 컴포넌트를 `panels`로 더하거나 바꾸면 탭 줄에 나온다. */
 export const DEFAULT_TAB_PANELS: WikiTabPanels = {
   page: PageTab,
+  graph: GraphTab,
+  lint: LintTab,
+  rules: RulesTab,
 };
 
 export interface WikiScreenProps {
@@ -102,6 +109,12 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
   const tabs = WIKI_TAB_DEFS.filter((t) => panels[t.id] !== undefined);
   const fromUrl = params.get(P.tab);
   const active = tabs.find((t) => t.id === fromUrl)?.id ?? tabs.find((t) => t.id === DEFAULT_TAB)?.id ?? tabs[0]?.id;
+  // 마지막으로 연 페이지를 기억한다(그래프 탭의 기본 중심 "현재 페이지")
+  const storage = useStorage();
+  const openedPath = active === DEFAULT_TAB ? params.get(P.path) : null;
+  useEffect(() => {
+    if (openedPath !== null && openedPath !== "") storage.set(WIKI_STORAGE.lastPage(wikiId), openedPath);
+  }, [storage, wikiId, openedPath]);
 
   const setParams: WikiTabProps["setParams"] = (next, options) => setSearch(next, { replace: options?.replace === true });
   const goTab: WikiTabProps["goTab"] = (tab, query = {}) => {

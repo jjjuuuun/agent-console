@@ -37,11 +37,13 @@ export function useWikiContext(): WikiContext {
   return useMemo(() => {
     const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false });
     const editBlocked = abilities?.edit.allowed === false ? abilities.edit.reason : null;
+    // 위키 정보(`writable === false`)는 프로젝트 목록보다 새 값이다: 폴더를 쓸 수 없으면 편집 막힘 이유와 같은 문구로 읽기 전용이 된다(null/생략 = 쓸 수 있다고 본다)
+    const infoBlocked = info?.writable === false;
     return {
       projectId,
       projectName: view?.project.name,
-      readOnly: editBlocked !== null,
-      readOnlyReason: editBlocked !== null ? text(editBlocked) : undefined,
+      readOnly: editBlocked !== null || infoBlocked,
+      readOnlyReason: editBlocked !== null ? text(editBlocked) : infoBlocked ? text("projects.blocked.edit") : undefined,
       recordsUnwritable: view?.records_writable === false,
       capabilities: { ...NONE, ...(info?.capabilities ?? {}) } as Required<WikiCapabilities>,
       limits: info?.limits,

@@ -25,10 +25,14 @@ export function wikiPagePath(id: string, path: string, query: Query = {}): strin
   return wikiPath(id, { [WIKI_PARAMS.path]: path, ...query });
 }
 
-/** 위키 규칙 화면 경로(그 역할을 맡은 라우트가 없으면 undefined). `id`가 있으면 그 규칙. */
-export function wikiRulesPath(id?: string): string | undefined {
+/**
+ * 위키 규칙 화면 경로(그 역할을 맡은 라우트가 없으면 undefined). `id`가 있으면 그 규칙, `projectId`가 있으면 그 프로젝트 사본(`?prj=`)을 연다.
+ */
+export function wikiRulesPath(id?: string, projectId?: string | null): string | undefined {
   const base = routeServing(DEFAULT_ROUTES, WIKI_RULES_ROLE)?.path;
-  return base === undefined ? undefined : id === undefined ? base : `${base}/${encodeURIComponent(id)}`;
+  if (base === undefined) return undefined;
+  const path = id === undefined ? base : `${base}/${encodeURIComponent(id)}`;
+  return projectId === undefined || projectId === null ? path : `${path}${queryString({ prj: projectId })}`;
 }
 
 /** 실행 상세 경로(실행 화면이 없으면 undefined). */
