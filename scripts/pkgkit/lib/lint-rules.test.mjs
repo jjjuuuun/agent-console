@@ -116,6 +116,8 @@ describe("규칙", () => {
 describe("도우미", () => {
   it("지정자 추출", () => {
     expect(extractSpecifiers('import a from "x";\nimport "y";\nconst z = await import("z");\nexport { q } from "w";\nrequire("v")').sort()).toEqual(["v", "w", "x", "y", "z"]);
+    // 회귀: 문자열 안의 경로 끝 `import"`와 `.importXxx(` 호출을 import로 읽지 않는다.
+    expect(extractSpecifiers('path: "/sdd/specs/import" });\nawait sdd.listImportFiles("docs/x");\nx.import("q"); a.require("r")')).toEqual([]);
   });
   it("패키지 이름", () => {
     expect(packageNameOf("@a/b/c")).toBe("@a/b");

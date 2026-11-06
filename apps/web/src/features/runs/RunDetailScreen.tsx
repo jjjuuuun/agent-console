@@ -18,7 +18,8 @@ import { usePageTitle } from "../../shell/titles";
 import { delegationMessages as dm, CONFIG_WIDGETS, SessionChip, edgeSessionOf, sessionText, conditionPayloadOf, deriveAllEdgeChips, deriveEdgeChips, edgeStrategyIds, mapConditionOutcome, shortRunId, summarizeDelegationEvent, useConditionOperators, useRenderIcon } from "../delegation";
 import { useDelegationStrategies } from "../settings";
 import { DEFINITION_KINDS, nodeAvatarsOf } from "../library";
-import { useApiQuery } from "../../app/queries";
+import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
+import { sessionBackendIds } from "./sessionBackends";
 import { AgentsTab } from "./AgentsTab";
 import { ChildRunsMenu, type ChildRunRow } from "./ChildRunsMenu";
 import { EdgeJudgementView } from "./EdgeJudgementView";
@@ -420,6 +421,12 @@ export function RunDetailScreen() {
   const [sessionPick, setSessionPick] = useState<string | null>(null);
   const [sessionOpenFor, setSessionOpenFor] = useState<string | null>(null);
   const groupBySession = params.get("group") === "session" && sessions.list.length > 0;
+  const workspaceSettings = useWorkspaceSettings();
+  const defaultBackend = workspaceSettings.data?.value.agent_defaults?.backend;
+  const sessionBackends = useMemo(
+    () => sessionBackendIds({ sessions, graph, nodeTypes: lookups.nodeTypes, agents: lookups.agents, defaultBackend }),
+    [sessions, graph, lookups.nodeTypes, lookups.agents, defaultBackend],
+  );
   const sessionNotes = useMemo(
     () =>
       buildSessionAnnotations({
@@ -811,7 +818,7 @@ export function RunDetailScreen() {
         waitingSuffix={hasKids && pendingList.some((i) => i.run_id !== id) ? dm.run.child.includesChildren : undefined}
         hasSubagents={subagentNodes.size > 0}
         {...(sessions.list.length > 0
-          ? { sessionsSlot: <RunSessionsChip sessions={sessions} selectedId={sessionPick} onSelect={setSessionPick} nowSec={nowSec} {...(logsPart.visible ? { logHref: (sid: string) => `/runs/${encodeURIComponent(id)}?tab=logs&session=${encodeURIComponent(sid)}` } : {})} /> }
+          ? { sessionsSlot: <RunSessionsChip sessions={sessions} selectedId={sessionPick} onSelect={setSessionPick} nowSec={nowSec} backendOf={(sid) => sessionBackends.get(sid)} {...(logsPart.visible ? { logHref: (sid: string) => `/runs/${encodeURIComponent(id)}?tab=logs&session=${encodeURIComponent(sid)}` } : {})} /> }
           : {})}
         {...(runningNode ? { runningNode: { id: runningNode.node_id, label: nodeLabel(runningNode.node_id) } } : {})}
         {...(failedNode ? { failedNode: { id: failedNode.node_id, label: nodeLabel(failedNode.node_id) } } : {})}

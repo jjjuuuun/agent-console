@@ -15,6 +15,8 @@ export interface RunSessionsChipProps {
   /** 이 시각(epoch 초) 기준 `+N초`로 세션 시작을 보인다. 없으면 첫 세션 시작 */
   originSec?: number | undefined;
   nowSec: number;
+  /** 세션 id → 백엔드 표시 이름. 모르는 세션은 `–`. 값이 추정이면 열 머리 툴팁이 그렇게 알린다 */
+  backendOf?: ((sessionId: string) => string | undefined) | undefined;
 }
 
 /** 세션 번호 배지: 색 점(8px) + `S{n}`. 색만으로 뜻을 전하지 않는다(번호가 같이 간다). */
@@ -29,9 +31,9 @@ export function SessionBadge({ session, className }: { session: Pick<SessionInfo
 
 /**
  * 실행 머리의 `세션 N개` 칩과 세션 목록 팝오버(열: 세션·이름·백엔드·시작·소요·서브·[로그 보기]). 세션 id를 아는 실행이 없으면 아무것도 그리지 않는다.
- * 행을 고르면 그래프가 그 세션의 노드를 강조한다(`Esc`로 해제). 백엔드 이름은 데이터에 없어 `–`로 보인다.
+ * 행을 고르면 그래프가 그 세션의 노드를 강조한다(`Esc`로 해제). 백엔드는 `backendOf`가 알려 줄 때만 mono로 보이고 모르면 `–`다.
  */
-export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, originSec, nowSec }: RunSessionsChipProps) {
+export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, originSec, nowSec, backendOf }: RunSessionsChipProps) {
   const [open, setOpen] = useState(false);
   const registry = useIconRegistry();
   if (sessions.list.length === 0) return null;
@@ -66,7 +68,7 @@ export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, origi
             <tr>
               <th scope="col">{t.sessions.col.session}</th>
               <th scope="col">{t.sessions.col.name}</th>
-              <th scope="col">{t.sessions.col.backend}</th>
+              <th scope="col" title={backendOf === undefined ? undefined : t.sessions.backendNote}>{t.sessions.col.backend}</th>
               <th scope="col">{t.sessions.col.start}</th>
               <th scope="col">{t.sessions.col.duration}</th>
               <th scope="col">{t.sessions.col.sub}</th>
@@ -86,7 +88,7 @@ export function RunSessionsChip({ sessions, selectedId, onSelect, logHref, origi
               >
                 <td><SessionBadge session={s} /></td>
                 <td className="ac-ellipsis" title={s.name}>{s.name}</td>
-                <td>–</td>
+                <td className="ac-ellipsis">{backendOf?.(s.id) ? <span className="lib-mono" title={t.sessions.backendNote}>{backendOf(s.id)}</span> : "–"}</td>
                 <td className="ac-num">{origin === undefined || s.startedAt === undefined ? "–" : t.sessions.relativeStart(formatDuration((s.startedAt - origin) * 1000))}</td>
                 <td className="ac-num">{s.startedAt === undefined ? "–" : formatDuration(((s.endedAt ?? nowSec) - s.startedAt) * 1000)}</td>
                 <td className="ac-num">{s.subCalls > 0 ? formatCount(s.subCalls) : "–"}</td>

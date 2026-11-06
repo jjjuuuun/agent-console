@@ -34,10 +34,10 @@ const INHOUSE_RANGE = /^(?:[\^~]\d+\.\d+\.\d+(?:-[\w.]+)?|>=\d+(?:\.\d+){0,2}\s*
 export function extractSpecifiers(source) {
   const out = new Set();
   const patterns = [
-    /\b(?:import|export)\s[^"'`;]*?\sfrom\s*["']([^"']+)["']/g,
-    /\bimport\s*["']([^"']+)["']/g,
-    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
-    /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /(?<![\w$./\-"'`])(?:import|export)\s[^"'`;]*?\sfrom\s*["']([^"']+)["']/g,
+    /(?<![\w$./\-"'`])import\s*["']([^"']+)["']/g,
+    /(?<![\w$./\-"'`])import\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /(?<![\w$./\-"'`])require\s*\(\s*["']([^"']+)["']\s*\)/g,
   ];
   for (const re of patterns) for (const m of source.matchAll(re)) out.add(m[1]);
   return [...out];

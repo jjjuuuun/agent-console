@@ -265,6 +265,7 @@ export const runsMessages = {
     log: "로그 보기",
     groupBy: "묶는 기준",
     byAgent: "에이전트별",
+    backendNote: "실행에 쓴 구성과 현재 에이전트 설정으로 구한 값입니다(그 뒤에 설정이 바뀌었으면 다를 수 있습니다)",
     bySession: "세션별",
     noInfo: "세션 정보 없음",
     badge: (n: number) => `S${n}`,

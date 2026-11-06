@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { EdgeSpec } from "@agent-console/contracts";
+import type { EdgeSpec, NodeTypeDescriptor } from "@agent-console/contracts";
 import { EdgeLayoutPanel, IssueSuggestionButtons, candidateEdgeKinds, edgeKindBadge, defaultMessages, type EdgeLayoutPanelProps } from "@agent-console/graph-editor";
-import { Banner, Button, ConfirmDialog } from "@agent-console/ui";
+import { Banner, Button, ConfirmDialog, useToast } from "@agent-console/ui";
 import { DEFAULT_TEAM_CONVENTIONS, configRelativePath, effectiveStrategyId, hasAttributes, resolveCycleLimit, type ConfigIssue } from "../delegation";
 import { setAt, unsetAt } from "../../lib/jsonPointer";
 import { issueMessage } from "../../lib/issues";
@@ -10,10 +10,19 @@ import { teamMessages as t } from "./messages";
 import type { TeamPanelContext } from "./panelContext";
 import { edgeKindOf, edgesOf, issuesOfEdge, latestById, nodeLabel, nodesOf, withEdge } from "./teamsLogic";
 
+/** 포트 표시 이름: 노드 타입 정적 포트의 `label`. 없으면 포트 id 원문(한글을 추측해 만들지 않는다). */
+function portTitle(types: readonly NodeTypeDescriptor[], typeId: string | undefined, dir: "inputs" | "outputs", port: string): { text: string; raw: boolean } {
+  const ports = types.find((d) => d.id === typeId)?.static_ports?.[dir] ?? [];
+  const label = ports.find((p) => p.name === port)?.label;
+  return label ? { text: label, raw: false } : { text: port, raw: true };
+}
+
 /** 연결 패널: 출발→도착, 연결 종류 바꾸기, 종류의 `config_schema` 폼, "모양·경로"(편집기가 알려 준 값), 이 연결의 문제. 종류별 전용 화면은 없다. */
 export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: EdgeSpec; layout?: EdgeLayoutPanelProps | undefined }) {
   const [pending, setPending] = useState<string | null>(null);
   const [descOpen, setDescOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const toast = useToast();
   const kind = edgeKindOf(edge, ctx.edgeTypes);
   const byId = new Map(nodesOf(ctx.graph).map((n) => [n.id, n]));
   const src = byId.get(edge.source.node);
@@ -45,6 +54,12 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
     if (Object.keys(nextConfig).length === 0) delete (next as { config?: unknown }).config;
     ctx.onUndoableChange({ ...ctx.graph, edges: edgesOf(ctx.graph).map((e) => (e.id === edge.id ? next : e)) }, t.sessions.strategyChanged(title));
   };
+  const schemaProps = (kind?.config_schema as { properties?: Record<string, unknown> } | undefined)?.properties;
+  const hasSettings = schemaProps !== undefined && schemaProps !== null && Object.keys(schemaProps).length > 0;
+  const fromPort = portTitle(ctx.nodeTypes, src?.type, "outputs", edge.source.port);
+  const toPort = portTitle(ctx.nodeTypes, tgt?.type, "inputs", edge.target.port);
+  const rawPorts = `${edge.source.port} → ${edge.target.port}`;
+  const copyPorts = () => void navigator.clipboard?.writeText(rawPorts).then(() => toast({ tone: "success", text: t.edge.portsCopied }));
   const sourceLabels = { edge: t.nested.sourceEdge, teamSettings: t.nested.sourceTeam, commonSettings: t.nested.sourceCommon, kindDefault: t.nested.sourceKind } as const;
 
   const change = (id: string) => {
@@ -71,7 +86,9 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
           {t.edge.delete}
         </Button>
       </header>
-      <p className="lib-mono app-muted">{edge.source.port} → {edge.target.port}</p>
+      <p className="team-edge-ports">
+        <span className={fromPort.raw ? "lib-mono" : undefined}>{fromPort.text}</span> → <span className={toPort.raw ? "lib-mono" : undefined}>{toPort.text}</span>
+      </p>
       {kind === undefined ? (
         <>
           <Banner tone="warning">{t.edge.kindUnknown(edge.kind)}</Banner>
@@ -99,11 +116,10 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
               ) : null}
             </>
           ) : null}
-          {badge !== undefined && defaultMessages.kindBadgeLabels[badge] ? <span className="ac-tag">{defaultMessages.kindBadgeLabels[badge]}</span> : null}
           {kind.cycle != null ? <span className="ac-tag">{t.edge.cycleBadge}</span> : null}
           {kind.handles_failure === true ? <span className="ac-tag">{t.edge.failureBadge}</span> : null}
-          <span className="lib-field-label">{t.edge.settings}</span>
-          <EdgeConfigForm
+          {hasSettings ? <span className="lib-field-label">{t.edge.settings}</span> : null}
+          {hasSettings ? <EdgeConfigForm
             key={edge.id + edge.kind}
             kind={kind}
             config={(edge.config ?? {}) as Record<string, unknown>}
@@ -119,12 +135,34 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
             onPickStrategy={pickStrategy}
             issues={configIssues}
             disabled={ctx.disabled}
-          />
+          /> : null}
           {cycleLimit === undefined ? null : (
             <p className="app-muted lib-field-note" role="status">
               {cycleLimit.value === undefined || cycleLimit.source === undefined ? t.nested.cycleLimitNone : t.nested.cycleLimitLine(cycleLimit.value, sourceLabels[cycleLimit.source])}
             </p>
           )}
+        </div>
+      )}
+      {kind === undefined ? null : (
+        <div className="team-edge-details" data-edge-details="">
+          <button type="button" className="app-link-btn" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((v) => !v)}>
+            {detailsOpen ? t.edge.detailsHide : t.edge.details}
+          </button>
+          {detailsOpen ? (
+            <dl className="team-edge-details-list">
+              <dt>{t.edge.portIds}</dt>
+              <dd>
+                <span className="lib-mono">{rawPorts}</span>{" "}
+                <button type="button" className="app-link-btn" onClick={copyPorts}>{t.edge.portsCopy}</button>
+              </dd>
+              {badge !== undefined && defaultMessages.kindBadgeLabels[badge] ? (
+                <>
+                  <dt>{t.edge.classLabel}</dt>
+                  <dd><span className="ac-tag">{defaultMessages.kindBadgeLabels[badge]}</span></dd>
+                </>
+              ) : null}
+            </dl>
+          ) : null}
         </div>
       )}
       {layout !== undefined ? <EdgeLayoutPanel {...layout} readOnly={ctx.disabled || layout.readOnly === true} /> : null}
