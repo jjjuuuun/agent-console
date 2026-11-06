@@ -37,6 +37,8 @@ export const SDD_LIMITS = {
   splitViewportMin: 1360,
   /** 문서 틀이 이 수 이상이면 검색 칸이 나온다 */
   templateSearchMin: 8,
+  /** 작업 동작 목록을 다시 묻지 않는 시간(ms, 같은 행 재열기는 캐시) */
+  actionsStaleMs: 30_000,
   /** 이름 최대 글자 수 */
   nameMax: 100,
   /** 목록 로딩 스켈레톤을 보이기 전 지연(ms) */
@@ -70,3 +72,12 @@ export function verificationDisplay(result: string): ToneDisplay {
 
 /** 문서 응답·저장 응답 이슈 중 이 앱이 따로 다루는 코드(`sddData.json`). 위치만 있고 값은 없다. */
 export const SECRET_SUSPECT_CODE: string = data.issueCodes.secretSuspect;
+
+/** 실행 상태(Run 상태 원문) → 톤. 문구는 앱 공용 실행 상태 표가 맡고, 모르는 상태는 중립(`sddData.json`). */
+export const RUN_STATUS_TONES: Readonly<Record<string, string>> = data.runStatusTones;
+/** 이 작업 수를 넘으면 계획 그래프를 자동으로 그리지 않고 글 목록을 권한다. */
+export const PLAN_GRAPH_AUTO_LIMIT: number = data.planGraphAutoLimit;
+/** 스펙 규칙의 자동 진행 필드 이름(계약 `AutomationConfig`, `sddData.json`). */
+export const AUTOMATION_FIELDS = data.automationRules;
+/** 자동 진행 조작 이름(서버 경로의 끝, `sddData.json`). */
+export const AUTOMATION_OPS: Readonly<{ stop: string; resume: string }> = data.automationOps;

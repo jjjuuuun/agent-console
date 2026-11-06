@@ -5,7 +5,7 @@
  * 노드 타입 id·백엔드 id는 비교하지 않는다. 정의에 묶이지 않은 노드나 해석되지 않는 세션은 결과에 없다.
  */
 import type { Agent, Graph, NodeSpec, NodeTypeDescriptor } from "@agent-console/contracts";
-import { effectiveBackendId } from "../backendChoice/effective";
+import { effectiveBackendId } from "../backendChoice";
 import type { RunSessions } from "./runSessions";
 
 export interface SessionBackendsInput {

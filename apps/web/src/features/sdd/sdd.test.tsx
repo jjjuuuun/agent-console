@@ -174,10 +174,10 @@ describe("스펙 목록: 읽기 전용·새 스펙", () => {
 });
 
 describe("스펙 상세: 탭·문서", () => {
-  it("탭 줄에는 등록된 탭만 있고(문서·작업·규칙), 주소 ?tab에 따라 본문이 바뀐다", async () => {
+  it("탭 줄에는 등록된 탭만 있고(문서·작업·계획·추적·규칙), 주소 ?tab에 따라 본문이 바뀐다", async () => {
     const { router } = setup("/specs/sp1?prj=p1");
     const tablist = await screen.findByRole("tablist", { name: "스펙 탭" }, LONG);
-    expect(within(tablist).getAllByRole("tab").map((t) => t.textContent?.replace(/\s*\d+$/, ""))).toEqual(["문서", "작업", "규칙"]);
+    expect(within(tablist).getAllByRole("tab").map((t) => t.textContent?.replace(/\s*\d+$/, ""))).toEqual(["문서", "작업", "계획", "추적", "규칙"]);
     fireEvent.click(within(tablist).getByRole("tab", { name: /작업/ }));
     await waitFor(() => expect(router.state.location.search).toContain("tab=tasks"), LONG);
   });

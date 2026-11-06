@@ -43,6 +43,8 @@ export interface RunHeaderProps {
   interruptedNote?: string | undefined;
   /** 노드 진행 뒤에 붙는 세션 칩 자리(`RunSessionsChip`). 세션 정보가 없으면 생략 */
   sessionsSlot?: ReactNode;
+  /** 세션 칩 뒤에 붙는 라벨 칩 자리(`RunLabelChips`). 라벨이 없으면 생략 */
+  labelsSlot?: ReactNode;
   /** 둘째 줄 끝에 붙는 칩 자리(다른 기능이 꽂는다, 예: 메모리 쓰기·읽기 칩) */
   extra?: ReactNode;
   /** 보조 줄 문구: 자식 실행 실패 요약, 실패 처리됨 등 */
@@ -102,6 +104,7 @@ export function RunHeader(p: RunHeaderProps) {
         {p.runningNode ? <button type="button" className="app-link-btn" onClick={() => p.onFocusNode(p.runningNode!.id)}>{t.detail.running(p.runningNode.label)}</button> : null}
         {showIdle ? <span>{t.detail.idle(Math.floor(p.idleSeconds!))}</span> : null}
         {p.childMenu}
+        {p.labelsSlot}
         {p.extra}
         {(p.notes ?? []).map((n) => (
           <span key={n.key} className="runs-header-note" data-tone={n.tone} role="status">

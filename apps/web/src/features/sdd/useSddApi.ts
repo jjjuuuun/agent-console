@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { ApiError, type ListSpecTasksParams, type SddClient, type Versioned } from "@agent-console/api-client";
-import type { EffectiveSyntax, ParsedTask, SddInfo, SpecDocumentContent, SpecSummary, SpecTemplateSummary, SpecView } from "@agent-console/contracts/sdd";
+import type { BulkActionsResult, EffectiveSyntax, ParsedTask, SddInfo, SpecDocumentContent, SpecSummary, SpecTemplateSummary, SpecView, TaskAction, TaskPlan, TraceMatrix } from "@agent-console/contracts/sdd";
 import { useApi } from "../../app/ApiContext";
 import { useProjectId } from "../../app/projectScope";
 import { SDD_LIMITS } from "./sddConfig";
@@ -18,6 +18,10 @@ export const sddKeys = {
   doc: (p: string, id: string, doc: string) => ["sdd", p, "spec", id, "doc", doc] as const,
   tasks: (p: string, id: string, filter: string) => ["sdd", p, "spec", id, "tasks", filter] as const,
   syntax: (p: string, id: string) => ["sdd", p, "spec", id, "syntax"] as const,
+  actions: (p: string, id: string, key: string) => ["sdd", p, "spec", id, "actions", key] as const,
+  bulkActions: (p: string, id: string, keys: string) => ["sdd", p, "spec", id, "bulk-actions", keys] as const,
+  plan: (p: string, id: string) => ["sdd", p, "spec", id, "plan"] as const,
+  trace: (p: string, id: string) => ["sdd", p, "spec", id, "trace"] as const,
   templates: (p: string) => ["sdd", p, "templates"] as const,
   importFiles: (p: string, path: string) => ["sdd", p, "import-files", path] as const,
 };
@@ -67,6 +71,36 @@ export function useSpecTasks(id: string, params: ListSpecTasksParams, enabled: b
 export function useSpecSyntax(id: string): UseQueryResult<EffectiveSyntax, Error> {
   const s = useSddSpace();
   return useQuery({ queryKey: sddKeys.syntax(s.key, id), queryFn: () => s.client.getSpecSyntax(id), retry: false });
+}
+
+/** 작업 하나에서 할 수 있는 연동 동작(행의 [실행 ▾]를 열 때 읽는다, 30초 캐시). */
+export function useTaskActions(id: string, key: string, enabled: boolean): UseQueryResult<TaskAction[], Error> {
+  const s = useSddSpace();
+  return useQuery({ queryKey: sddKeys.actions(s.key, id, key), queryFn: () => s.client.listTaskActions(id, key), enabled, retry: false, staleTime: SDD_LIMITS.actionsStaleMs });
+}
+
+/** 고른 작업들의 동작 합집합과 작업별 가능 동작(한꺼번에 시작 대화상자). */
+export function useBulkActions(id: string, keys: readonly string[], enabled: boolean): UseQueryResult<BulkActionsResult, Error> {
+  const s = useSddSpace();
+  return useQuery({
+    queryKey: sddKeys.bulkActions(s.key, id, keys.join("\u0000")),
+    queryFn: () => s.client.listBulkActions(id, { task_keys: keys as [string, ...string[]] }),
+    enabled: enabled && keys.length > 0,
+    retry: false,
+    staleTime: SDD_LIMITS.actionsStaleMs,
+  });
+}
+
+/** 계획(층·병목·막힘·순환). 서버가 계산한 값을 그대로 쓴다. */
+export function useSpecPlan(id: string, enabled: boolean): UseQueryResult<TaskPlan, Error> {
+  const s = useSddSpace();
+  return useQuery({ queryKey: sddKeys.plan(s.key, id), queryFn: () => s.client.getSpecPlan(id), enabled, retry: false, staleTime: 0 });
+}
+
+/** 요구 ↔ 작업 ↔ 실행 ↔ 검증 추적 표. */
+export function useSpecTrace(id: string, enabled: boolean): UseQueryResult<TraceMatrix, Error> {
+  const s = useSddSpace();
+  return useQuery({ queryKey: sddKeys.trace(s.key, id), queryFn: () => s.client.getSpecTrace(id), enabled, retry: false, staleTime: 0 });
 }
 
 /** 이 공간의 문서 틀 목록. */

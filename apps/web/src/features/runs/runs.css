@@ -114,3 +114,12 @@
 .runs-session-group input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .runs-session-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; width: 100%; text-align: left; }
 .runs-session-sub { margin-left: 16px; }
+
+/* 실행 머리 라벨 칩 */
+.runs-labels { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); }
+.runs-label-chip { display: inline-flex; align-items: center; max-width: var(--ac-chip-max-w, 280px); padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-surface-3); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.runs-label-seg { display: inline-flex; align-items: baseline; gap: var(--ac-space-1); min-width: 0; }
+.runs-label-title { color: var(--ac-text-subtle); }
+.runs-label-value { color: var(--ac-text); font-weight: 600; }
+.runs-labels-table { border-collapse: collapse; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.runs-labels-table th, .runs-labels-table td { padding: var(--ac-space-1) var(--ac-space-2); text-align: left; }

@@ -9,7 +9,9 @@
     "stage": "stage",
     "ready": "ready",
     "q": "q",
-    "section": "section"
+    "section": "section",
+    "gaps": "gaps",
+    "only": "only"
   },
   "tabs": [
     {
@@ -82,5 +84,26 @@
   "verificationFallbackTone": "neutral",
   "issueCodes": {
     "secretSuspect": "sdd.secret_suspect"
+  },
+  "runStatusTones": {
+    "queued": "neutral",
+    "running": "info",
+    "waiting": "warning",
+    "paused": "warning",
+    "completed": "success",
+    "failed": "danger",
+    "cancelled": "neutral",
+    "interrupted": "warning"
+  },
+  "planGraphAutoLimit": 400,
+  "automationRules": {
+    "key": "automation",
+    "enabled": "enabled",
+    "maxParallel": "max_parallel",
+    "maxFailures": "max_failures"
+  },
+  "automationOps": {
+    "stop": "stop",
+    "resume": "resume"
   }
 }

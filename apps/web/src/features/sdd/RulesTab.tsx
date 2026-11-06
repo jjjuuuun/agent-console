@@ -7,21 +7,24 @@ import { useNavigate } from "react-router";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES, getContractSchema } from "@agent-console/contracts";
 import { SchemaForm, type FormError } from "@agent-console/schema-form";
-import { Banner, Button, Disclosure, useToast } from "@agent-console/ui";
+import { Banner, Button, ConfirmDialog, Disclosure, useToast } from "@agent-console/ui";
 import { RulesSourceBadge } from "@agent-console/sdd-view";
 import type { SpecDefinition, SpecIssue } from "@agent-console/contracts/sdd";
 import type { SchemaNode } from "../../lib/schemaTools";
+import { AutomationBar } from "./AutomationBar";
 import { ListSkeleton } from "./parts";
-import { SDD_PARAMS } from "./sddConfig";
+import { AUTOMATION_FIELDS, AUTOMATION_OPS, SDD_PARAMS } from "./sddConfig";
 import { sddMessages as m, viewMessages } from "./messages";
 import { issueInSection, mergeSection, ruleSections, sectionValue, type RuleSection } from "./ruleSections";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import type { SddTabProps } from "./sddTabs";
+import { useAutomationControl } from "./useAutomation";
 import { useSddSpace, useSpecSyntax } from "./useSddApi";
 import { specTemplatesPath } from "./sddPaths";
 
 const P = SDD_PARAMS;
 type Obj = Record<string, unknown>;
+const numText = (v: unknown): string | undefined => (typeof v === "number" ? String(v) : undefined);
 
 const errorsFor = (issues: readonly SpecIssue[], section: RuleSection): FormError[] => {
   const key = section.path[section.path.length - 1] as string;
@@ -45,6 +48,8 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
   const [conflict, setConflict] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [saveTemplate, setSaveTemplate] = useState(false);
+  const [confirmAuto, setConfirmAuto] = useState<string | null>(null);
+  const automation = useAutomationControl(specId);
 
   const value = draft?.value ?? base;
   const dirty = draft !== null && JSON.stringify(draft.value) !== JSON.stringify(base);
@@ -101,12 +106,22 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
       setSaving(false);
     }
   };
+  /** 자동 진행을 새로 켜는 저장이면 먼저 확인을 받는다(비용이 사람 없이 시작될 수 있다) */
+  const autoOf = (def: Obj | undefined): Obj | undefined => ((def?.["rules"] as Obj | undefined)?.[AUTOMATION_FIELDS.key] as Obj | undefined);
+  const requestSave = (expected: string) => {
+    if (draft === null || readonly) return;
+    const enabling = autoOf(draft.value)?.[AUTOMATION_FIELDS.enabled] === true && autoOf(base)?.[AUTOMATION_FIELDS.enabled] !== true;
+    if (enabling) setConfirmAuto(expected);
+    else void save(expected);
+  };
   const overwrite = async () => {
     const fresh = await space.client.getSpec(specId);
     await save(fresh.version_hash ?? versionHash);
   };
 
   if (section === undefined) return <ListSkeleton rows={6} />;
+  const isAutomation = section.path.includes(AUTOMATION_FIELDS.key);
+  const autoValue = autoOf(value);
   const sectionIssueCount = (s: RuleSection) => issues.filter((i) => issueInSection(i.path, s)).length;
   const templatesOn = ctx.capabilities.templates && specTemplatesPath() !== undefined;
 
@@ -118,7 +133,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         {templatesOn ? <Button size="sm" onClick={() => setSaveTemplate(true)}>{m.rules.saveAsTemplate}</Button> : null}
         <span className="sdd-spacer" />
         <span className="app-muted" role="status">{saving ? m.rules.saving : dirty ? m.rules.unsaved : m.rules.saved}</span>
-        <Button size="sm" variant="primary" loading={saving} aria-disabled={!dirty || readonly || showConflict || undefined} title={readonly ? ctx.readOnlyReason : undefined} onClick={() => { if (dirty && !readonly && !showConflict) void save(draft?.baseHash ?? versionHash); }}>{m.rules.save}</Button>
+        <Button size="sm" variant="primary" loading={saving} aria-disabled={!dirty || readonly || showConflict || undefined} title={readonly ? ctx.readOnlyReason : undefined} onClick={() => { if (dirty && !readonly && !showConflict) requestSave(draft?.baseHash ?? versionHash); }}>{m.rules.save}</Button>
       </div>
       {readonly ? <Banner tone="warning" data-testid="sdd-rules-readonly">{m.rules.readonlyTop}</Banner> : null}
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
@@ -127,6 +142,16 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
           {m.rules.conflictBody}
         </Banner>
       ) : null}
+      {view.automation_state?.enabled === true && ctx.capabilities.automation ? (
+        <AutomationBar
+          state={view.automation_state}
+          busy={automation.busy}
+          blockedReason={readonly ? ctx.readOnlyReason : undefined}
+          onStop={() => void automation.control(AUTOMATION_OPS.stop)}
+          onResume={() => void automation.control(AUTOMATION_OPS.resume)}
+        />
+      ) : null}
+      {automation.error === null ? null : <Banner tone="danger">{automation.error}</Banner>}
       {issues.length > 0 ? (
         <Disclosure summary={m.rules.checkResult(errors, warnings)}>
           <ul className="sdd-issues-list">
@@ -152,13 +177,14 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         </nav>
         <div className="sdd-rules-form">
           <h3 className="sdd-section-title">{section.title}</h3>
+          {isAutomation && !ctx.capabilities.runs ? <p className="app-muted sdd-note" data-testid="sdd-automation-off">{m.automation.runsOff}</p> : null}
           <SchemaForm
             key={section.id}
             schema={section.schema}
             value={sectionValue(value, section)}
             onChange={(next) => edit(section, next)}
             errors={errorsFor(issues, section)}
-            readonly={readonly}
+            readonly={readonly || (isAutomation && !ctx.capabilities.runs)}
             idPrefix={`sdd-rules-${section.id.replace(/[^A-Za-z0-9_-]/g, "-")}`}
             rawJsonToggle={false}
           />
@@ -173,6 +199,16 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmAuto !== null}
+        title={m.automation.confirmTitle}
+        confirmLabel={m.automation.confirmOk}
+        cancelLabel={m.cancel}
+        onConfirm={() => { const expected = confirmAuto; setConfirmAuto(null); if (expected !== null) void save(expected); }}
+        onCancel={() => setConfirmAuto(null)}
+      >
+        {m.automation.confirmBody(numText(autoValue?.[AUTOMATION_FIELDS.maxParallel]), numText(autoValue?.[AUTOMATION_FIELDS.maxFailures]))}
+      </ConfirmDialog>
       {saveTemplate ? (
         <SaveTemplateDialog
           open

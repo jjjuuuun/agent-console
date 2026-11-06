@@ -17,12 +17,14 @@ import { usePageTitle } from "../../shell/titles";
 import { ProjectChip } from "../projects";
 import { DocumentsTab } from "./DocumentsTab";
 import { FailureBlock, GuardedButton, ListSkeleton, MenuButton } from "./parts";
+import { PlanTab } from "./PlanTab";
 import { RulesTab } from "./RulesTab";
 import { DEFAULT_TAB, SDD_PARAMS, SDD_STORAGE, SDD_TAB_DEFS } from "./sddConfig";
 import { SpecExportDialog } from "./SpecExportDialog";
 import { specsPath } from "./sddPaths";
 import type { SddTabPanels, SddTabProps } from "./sddTabs";
 import { TasksTab } from "./TasksTab";
+import { TraceTab } from "./TraceTab";
 import { useInvalidateSdd, useSddLive, useSddSpace, useSpecSyntax, useSpecView } from "./useSddApi";
 import { useSddContext } from "./useSddContext";
 import { sddMessages as m } from "./messages";
@@ -34,6 +36,8 @@ const P = SDD_PARAMS;
 export const DEFAULT_TAB_PANELS: SddTabPanels = {
   documents: DocumentsTab,
   tasks: TasksTab,
+  plan: PlanTab,
+  trace: TraceTab,
   rules: RulesTab,
 };
 

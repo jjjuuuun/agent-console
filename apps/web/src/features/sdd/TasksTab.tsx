@@ -10,11 +10,16 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { KNOWN_DOCUMENT_ROLES } from "@agent-console/contracts/constants";
 import { Banner, EmptyState, Switch, useToast } from "@agent-console/ui";
-import { GateNotice, TaskTable } from "@agent-console/sdd-view";
+import { TaskTable } from "@agent-console/sdd-view";
 import type { ParsedTask, SddGateBlockedDetails, SddTaskChangedDetails, TaskLink } from "@agent-console/contracts/sdd";
+import { messages as appMessages } from "../../app/messages";
 import { ROUTE_ROLES, routePath } from "../library";
-import { FailureBlock, ListSkeleton, MultiFilter, SearchBox } from "./parts";
-import { OPENABLE_LINK_KINDS, SDD_PARAMS } from "./sddConfig";
+import { BulkStartDialog } from "./BulkStartDialog";
+import { RunNoticeView } from "./RunNoticeView";
+import { FailureBlock, GuardedButton, ListSkeleton, MultiFilter, SearchBox } from "./parts";
+import { OPENABLE_LINK_KINDS, RUN_STATUS_TONES, SDD_PARAMS } from "./sddConfig";
+import { TaskActionsMenu } from "./TaskActionsMenu";
+import { useTaskRunner } from "./useTaskRunner";
 import { sddMessages as m, viewMessages } from "./messages";
 import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecSyntax, useSpecTasks } from "./useSddApi";
@@ -22,10 +27,13 @@ import { readTaskFilter, setList, taskQueryOf } from "./params";
 
 const P = SDD_PARAMS;
 
+/** 실행 칩의 상태 라벨·톤: 라벨은 앱 공용 실행 상태 표, 톤은 표시 데이터(`sddData.json`). 모르는 상태는 원문 + 중립. */
+const LINK_STATUSES = Object.entries(appMessages.runStatus).map(([id, label]) => ({ id, label, tone: RUN_STATUS_TONES[id] ?? null }));
+
 export interface TasksTabProps extends SddTabProps {
-  /** 행 오른쪽 동작 자리(예: 연동 동작 메뉴). 실행 연동이 꺼졌으면 주지 않는다 */
+  /** 행 오른쪽 동작 자리. 주지 않으면 연동 동작 메뉴(`TaskActionsMenu`)를 쓴다. 실행 연동이 꺼졌으면 그리지 않는다 */
   renderActions?: (task: ParsedTask) => ReactNode;
-  /** 도구줄 오른쪽 자리(예: 준비된 작업 한꺼번에 시작) */
+  /** 도구줄 오른쪽 자리(기본 [준비된 작업 시작…] 앞에 더해진다) */
   toolbarExtra?: ReactNode;
 }
 
@@ -38,6 +46,18 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
   const [conflicts, setConflicts] = useState<Readonly<Record<string, SddTaskChangedDetails>>>({});
   const [gate, setGate] = useState<SddGateBlockedDetails | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const runsOn = ctx.capabilities.runs;
+  const runner = useTaskRunner({
+    specId,
+    ctx,
+    onTaskChanged: (task, details) => {
+      setConflicts((c) => ({ ...c, [task.key]: details }));
+      toast({ tone: "warning", text: m.tasks.statusFail409(task.title ?? task.key), durationMs: 8000, action: { label: m.tasks.openInDoc, onClick: () => goTab("documents", { [P.doc]: task.document, [P.line]: String(task.line) }) } });
+      void tasksQ.refetch();
+      void refresh();
+    },
+  });
 
   const statuses = useMemo(() => (view.task_statuses ?? []).length > 0 ? view.task_statuses ?? [] : syntax.data?.statuses ?? [], [view.task_statuses, syntax.data]);
   const stages = view.index?.stages ?? [];
@@ -87,6 +107,10 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
     if (OPENABLE_LINK_KINDS.includes(link.kind)) void navigate(`${routePath(ROUTE_ROLES.runs)}/${encodeURIComponent(link.ref)}`);
   };
 
+  const doneIds = useMemo(() => new Set(statuses.filter((s) => s.done === true).map((s) => s.id)), [statuses]);
+  const readyTasks = useMemo(() => (view.index?.tasks ?? []).filter((x) => x.ready === true && !doneIds.has(x.status)), [view.index?.tasks, doneIds]);
+  const startBlocked = ctx.runBlockedReason ?? (ctx.readOnly ? ctx.readOnlyReason : undefined);
+
   const docTitles = useMemo(() => Object.fromEntries(docs.map((d) => [d.id, d.title])), [docs]);
   const openRules = () => goTab("rules");
 
@@ -118,10 +142,14 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
         <Switch checked={filter.ready} onChange={(on) => patch((p) => (on ? p.set(P.ready, "1") : p.delete(P.ready)))} label={m.tasks.readyOnly} onText={m.on} offText={m.off} />
         <span className="sdd-spacer" />
         {toolbarExtra}
+        {view.automation_state?.enabled === true ? <button type="button" className="sdd-auto-chip" onClick={openRules} data-testid="sdd-auto-chip">⟳ {m.automation.on}</button> : null}
+        {runsOn ? (
+          <GuardedButton blockedReason={readyTasks.length === 0 ? m.bulk.selectReady : startBlocked} onClick={() => setBulkOpen(true)}>{m.bulk.open}</GuardedButton>
+        ) : null}
         <span className="app-muted" role="status">{m.tasks.count(tasks.length)}</span>
       </div>
-      {!ctx.capabilities.runs ? <p className="app-muted sdd-note" data-testid="sdd-runs-off">{m.runsOff}</p> : null}
-      {gate === null ? null : <GateNotice details={gate} documentTitles={docTitles} onOpenDocument={(id) => goTab("documents", { [P.doc]: id })} onDismiss={() => setGate(null)} messages={viewMessages} />}
+      {!runsOn ? <p className="app-muted sdd-note" data-testid="sdd-runs-off">{m.runsOff}</p> : null}
+      <RunNoticeView runner={runner} extraGate={gate} onDismissExtra={() => setGate(null)} documentTitles={docTitles} onOpenDocument={(id) => goTab("documents", { [P.doc]: id })} onOpenRules={openRules} canImport={ctx.projectId !== null} />
       {failure === null ? null : <Banner tone="danger">{failure}</Banner>}
       {issues.length > 0 ? (
         <details className="sdd-issues">
@@ -151,16 +179,27 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
             onDismissConflict={(key) => setConflicts((c) => { const { [key]: _gone, ...rest } = c; void _gone; return rest; })}
             onOpenDocument={openDocument}
             documentTitles={docTitles}
-            showLinks={ctx.capabilities.runs}
+            showLinks={runsOn}
             openableKinds={OPENABLE_LINK_KINDS}
             onOpenLink={openLink}
-            {...(renderActions !== undefined && ctx.capabilities.runs ? { renderActions } : {})}
+            linkStatuses={LINK_STATUSES}
+            {...(runsOn
+              ? {
+                  renderActions:
+                    renderActions ??
+                    ((task: ParsedTask) => (
+                      <TaskActionsMenu specId={specId} task={task} busy={runner.busyKey === task.key} blockedReason={startBlocked} onRun={(tk, action) => void runner.run(tk, action)} onBlockedPick={runner.showIssue} />
+                    )),
+                }
+              : {})}
             expandedKey={params.get(P.task)}
             onExpandedChange={(key) => patch((p) => (key === null ? p.delete(P.task) : p.set(P.task, key)))}
             messages={viewMessages}
           />
         </div>
       )}
+      {bulkOpen ? <BulkStartDialog open onClose={() => setBulkOpen(false)} specId={specId} readyTasks={readyTasks} limit={ctx.info?.limits.max_bulk_start} blockedReason={startBlocked} /> : null}
+      {runner.dialog}
     </div>
   );
 }

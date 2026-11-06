@@ -36,7 +36,9 @@ import { NodeTab } from "./NodeTab";
 import { ObserveTab } from "./ObserveTab";
 import { RunGraphPane } from "./RunGraphPane";
 import { RunHeader } from "./RunHeader";
+import { RunLabelChips } from "./RunLabelChips";
 import { RunSessionsChip } from "./RunSessionsChip";
+import { useRunLabelChips } from "./useRunLabelChips";
 import { EMPTY_SESSIONS, deriveRunSessions } from "./runSessions";
 import { buildSessionAnnotations } from "./runSessionView";
 import { TraceTab } from "./TraceTab";
@@ -145,6 +147,7 @@ export function RunDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
 
   const run = view.run;
+  const labelChips = useRunLabelChips(run?.labels);
   const active = run !== undefined && isActiveRun(run.status);
   // 자식 실행(중첩 팀): 후손 목록·활성 자식 구독. 루트 실행이면 후손의 대기 요청을 이 실행의 목록에 더한다(screen-delegation 3.7).
   const hasKids = (view.children?.length ?? 0) > 0;
@@ -418,15 +421,15 @@ export function RunDetailScreen() {
     () => (run === undefined ? EMPTY_SESSIONS : deriveRunSessions({ runId: id, nodeRuns: view.nodeRuns, spans: view.trace?.spans, events: view.events, labelOf: nodeLabel, subStopType: SUBAGENT_STOP_EVENT })),
     [run, id, view.nodeRuns, view.trace, view.events, nodeLabel],
   );
-  const [sessionPick, setSessionPick] = useState<string | null>(null);
-  const [sessionOpenFor, setSessionOpenFor] = useState<string | null>(null);
-  const groupBySession = params.get("group") === "session" && sessions.list.length > 0;
   const workspaceSettings = useWorkspaceSettings();
   const defaultBackend = workspaceSettings.data?.value.agent_defaults?.backend;
   const sessionBackends = useMemo(
     () => sessionBackendIds({ sessions, graph, nodeTypes: lookups.nodeTypes, agents: lookups.agents, defaultBackend }),
     [sessions, graph, lookups.nodeTypes, lookups.agents, defaultBackend],
   );
+  const [sessionPick, setSessionPick] = useState<string | null>(null);
+  const [sessionOpenFor, setSessionOpenFor] = useState<string | null>(null);
+  const groupBySession = params.get("group") === "session" && sessions.list.length > 0;
   const sessionNotes = useMemo(
     () =>
       buildSessionAnnotations({
@@ -820,6 +823,7 @@ export function RunDetailScreen() {
         {...(sessions.list.length > 0
           ? { sessionsSlot: <RunSessionsChip sessions={sessions} selectedId={sessionPick} onSelect={setSessionPick} nowSec={nowSec} backendOf={(sid) => sessionBackends.get(sid)} {...(logsPart.visible ? { logHref: (sid: string) => `/runs/${encodeURIComponent(id)}?tab=logs&session=${encodeURIComponent(sid)}` } : {})} /> }
           : {})}
+        {...(labelChips.chips.length > 0 || Object.keys(labelChips.unmatched).length > 0 ? { labelsSlot: <RunLabelChips model={labelChips} /> } : {})}
         {...(runningNode ? { runningNode: { id: runningNode.node_id, label: nodeLabel(runningNode.node_id) } } : {})}
         {...(failedNode ? { failedNode: { id: failedNode.node_id, label: nodeLabel(failedNode.node_id) } } : {})}
         onFocusNode={focusNode}

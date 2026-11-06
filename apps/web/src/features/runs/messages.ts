@@ -255,6 +255,8 @@ export const runsMessages = {
     subTabs: "노드 세부",
     noEvents: "이 노드의 이벤트가 없습니다",
   },
+  /** 실행 머리 라벨 칩(screen-sdd §12.1) */
+  labels: { more: (n: number) => `라벨 ${n}`, tableKey: "키", tableValue: "값" },
   /** 세션 구분 표시(screen-delegation.md §14.5·§14.12) */
   sessions: {
     chip: (n: number) => `세션 ${n}개`,
@@ -263,9 +265,9 @@ export const runsMessages = {
     title: "세션 목록",
     col: { session: "세션", name: "이름", backend: "백엔드", start: "시작", duration: "소요", sub: "서브" },
     log: "로그 보기",
+    backendNote: "실행에 쓴 구성과 현재 에이전트 설정으로 구한 값입니다(그 뒤에 설정이 바뀌었으면 다를 수 있습니다)",
     groupBy: "묶는 기준",
     byAgent: "에이전트별",
-    backendNote: "실행에 쓴 구성과 현재 에이전트 설정으로 구한 값입니다(그 뒤에 설정이 바뀌었으면 다를 수 있습니다)",
     bySession: "세션별",
     noInfo: "세션 정보 없음",
     badge: (n: number) => `S${n}`,

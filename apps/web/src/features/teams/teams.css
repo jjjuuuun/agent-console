@@ -128,8 +128,8 @@
 .team-issue-bucket td { height: 32px; }
 .team-issue-fix { max-width: 22rem; }
 .team-ignored-list { list-style: none; margin: 0 0 var(--ac-space-2); padding: 0; font-size: 12px; display: flex; flex-direction: column; gap: var(--ac-space-1); }
-.team-edge-ports { margin: 0; font-size: var(--ac-text-sm); overflow-wrap: anywhere; }
+.team-edge-ports { margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); overflow-wrap: anywhere; }
 .team-edge-details { display: flex; flex-direction: column; gap: var(--ac-space-1); }
-.team-edge-details-list { display: grid; grid-template-columns: auto 1fr; gap: var(--ac-space-1) var(--ac-space-2); margin: 0; font-size: var(--ac-text-sm); }
+.team-edge-details-list { display: grid; grid-template-columns: auto 1fr; gap: var(--ac-space-1) var(--ac-space-2); margin: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .team-edge-details-list dt { color: var(--ac-text-muted); }
 .team-edge-details-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
