@@ -7,6 +7,7 @@ import type { ConversationSummary, Interaction } from "@agent-console/contracts"
 import { describeError } from "../../app/errors";
 import { messages as appMessages } from "../../app/messages";
 import { useApi } from "../../app/ApiContext";
+import { useProjectId } from "../../app/projectScope";
 import { useNow } from "../../app/useNow";
 import { usePendingInteractions } from "../../shell/pending";
 import { useRegisterCommands } from "../../shell/commands";
@@ -51,7 +52,8 @@ export function ChatScreen() {
   const debouncedQuery = useDebouncedValue(query);
   // 보관 여부와 제목 검색은 서버가 거른다(6R.19). 검색어가 바뀌면 첫 페이지부터 다시 읽는다.
   const conversations = useConversationList({ ...(includeArchived ? {} : { archived: false }), q: debouncedQuery });
-  const graphs = useGraphList();
+  const currentProject = useProjectId();
+  const graphs = useGraphList(true, currentProject);
   const agents = useAgentList();
   const settings = useWorkspaceSettings();
   const pending = usePendingInteractions();

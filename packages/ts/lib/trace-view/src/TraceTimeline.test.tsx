@@ -89,10 +89,11 @@ describe("TraceTimeline", () => {
   it("트리 구조·들여 쓰기·방식/세션 배지·접근성 이름", () => {
     render(<TraceTimeline trace={trace} labelFor={labelFor} methodBadgeFor={methodBadgeFor} />);
     expect(screen.getByRole("tree", { name: "위임 흐름" })).toBeTruthy();
-    const be = screen.getByRole("treeitem", { name: "이름-be, 임의 위임 방식 같은 세션, 완료, 18초" });
+    const be = screen.getByRole("treeitem", { name: /이름-be/ });
     expect(be.getAttribute("aria-level")).toBe("2");
-    const qa = screen.getByRole("treeitem", { name: /이름-qa, 임의 넘기기 별도 세션, 완료, 30초/ });
+    const qa = screen.getByRole("treeitem", { name: /이름-qa/ });
     expect(qa.getAttribute("aria-level")).toBe("1");
+    expect(qa.getAttribute("aria-label")).toBeNull(); // 보이는 글자가 곧 접근 이름(label-content-name-mismatch 방지)
     expect(qa.getAttribute("data-session")).toBe("separate");
     expect(be.querySelector('[data-session-badge="same"]')?.getAttribute("aria-label")).toBe("같은 세션");
     expect(be.textContent).not.toContain("같은 세션"); // 글자 칩은 쓰지 않는다(아이콘 + 툴팁)

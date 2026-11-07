@@ -595,16 +595,24 @@ def test_pinned_version_runs_from_space(tmp_path: Path) -> None:
 
 def test_link_off_keeps_project_id_but_no_layer(tmp_path: Path) -> None:
     # 기록 연동도 끈다: 켜져 있으면 실행 모듈이 등록되지 않은 프로젝트를 404로 막는다(33y2)
+    folder = _project_folder(tmp_path)
     with _client(tmp_path, disabled=(MODULE_ID,), records=False) as (client, _assembly):
         run, events = _run(client, "g1", "app")
         assert run["project_id"] == "app"
         assert _reply(events) == "라이브러리"  # 연동이 꺼지면 정의 출처·층 없이
         listed = client.get(f"{API}/runs", params={"project": "app"}).json()
         assert [r["id"] for r in listed] == [run["id"]]
-        body = client.get(
+        # 유효 설정은 ``?project=``의 정의 공간에서 읽는다(definitions-teams, 11/08 D5) — 공간이
+        # 있어야 200이다. 등록해도 이 연동이 꺼져 있으면 프로젝트 범위 층은 없다.
+        _register(client, folder)
+        response = client.get(
             f"{API}/graphs/g1/nodes/a/effective-settings", params={"project": "app"}
-        ).json()
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["value"].get("model") == "m-proj"  # 공간의 a1
         assert body["value"].get("working_directory") is None
+        assert "project" not in [layer["id"] for layer in body["layers"]]
 
 
 def test_projects_module_off_turns_link_off(tmp_path: Path) -> None:
@@ -629,8 +637,9 @@ def test_effective_settings_with_project(tmp_path: Path) -> None:
         assert ids.index("project") == ids.index("common") + 1  # 공통 바로 아래
         plain = client.get(url).json()
         assert "project" not in [layer["id"] for layer in plain["layers"]]
-        ghost = client.get(url, params={"project": "ghost"}).json()
-        assert [w["code"] for w in ghost["warnings"]] == ["project.unknown"]
+        # 모르는 프로젝트: 정의 공간이 없으므로 404(범위 층의 ``project.unknown`` 경고는 정의 공간
+        # 제공자가 없을 때만 응답에 닿는다 — 아래 단위 테스트가 본다)
+        _error(client.get(url, params={"project": "ghost"}), 404, "project.not_found")
 
 
 def test_ports_match_consumer_protocols(tmp_path: Path) -> None:

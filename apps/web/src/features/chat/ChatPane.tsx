@@ -83,7 +83,7 @@ export function ChatPane(props: ChatPaneProps) {
   const scope = useConversationScope(id);
   const project = scope.project;
   const conversation = useConversationDetail(id, project, scope.ready);
-  const graphs = useGraphList();
+  const graphs = useGraphList(scope.ready, project);
   const list = useConversationList();
   const graph = useChatGraph(conversation.data?.graph_id, conversation.data?.project_id ?? null);
   const plan = useChatPlan(conversation.data?.graph_id, conversation.data?.project_id ?? null);

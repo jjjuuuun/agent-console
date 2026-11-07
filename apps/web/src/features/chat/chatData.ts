@@ -54,7 +54,18 @@ export function useConversationList(options: { archived?: boolean; q?: string } 
   const { items, isPending, ...rest } = paged;
   return { ...rest, data: items as ConversationSummary[] | undefined, isLoading: isPending };
 }
-export const useGraphList = (enabled = true) => useApiQuery(chatKeys.graphs(), loaders.graphs, { enabled });
+/**
+ * 팀 구성 목록. project를 주면 그 프로젝트 공간(공용 + 프로젝트 전용)의 목록이고, 생략·null이면 공용 목록이다.
+ * 대화가 있는 공간으로 불러야 프로젝트 전용 팀이 "삭제된 팀"으로 보이지 않는다.
+ */
+export function useGraphList(enabled = true, project: string | null = null) {
+  const { rest, space } = useApi();
+  return useQuery({
+    queryKey: project === null ? chatKeys.graphs() : queryKeys.list("graphs", { project }),
+    queryFn: () => (project === null ? loaders.graphs(rest) : space(project).listGraphs()),
+    enabled,
+  });
+}
 export const useAgentList = (enabled = true) => useApiQuery(chatKeys.agents(), loaders.agents, { enabled });
 export const useEdgeTypeList = () => useApiQuery(queryKeys.descriptors("edge-types"), loaders.edgeTypes, { staleTime: 60_000 });
 export const useNodeTypeList = () => useApiQuery(queryKeys.descriptors("node-types"), loaders.nodeTypes, { staleTime: 60_000 });

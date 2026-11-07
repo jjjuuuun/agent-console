@@ -144,8 +144,7 @@ export function MemoryScopeTree({
           if (row.type === "all") {
             return (
               <div key={row.id} role="treeitem" aria-level={1} aria-selected={selected === null} data-row-id={row.id} tabIndex={tabIndex}
-                className="ac-mem-tree-row" data-selected={selected === null ? "" : undefined} onClick={() => { setFocusId(row.id); onSelect(null); }}
-                aria-label={`${m["scope.all"]}, ${formatMessage(m["scope.entries"] as string, { n: grouped.total })}`}>
+                className="ac-mem-tree-row" data-selected={selected === null ? "" : undefined} onClick={() => { setFocusId(row.id); onSelect(null); }}>
                 <span className="ac-mem-tree-label">{m["scope.all"]}</span>
                 {countCell(grouped.total)}
               </div>
@@ -153,7 +152,6 @@ export function MemoryScopeTree({
           }
           if (row.type === "kind") {
             const g = row.group;
-            const label = scopeLabel({ kind: g.kind, id: "" }, g.info, {}, g.state !== "unknown");
             const kindText = g.state === "unknown" ? g.kind : (g.info?.label ?? g.kind);
             const chips: string[] = [];
             if (g.state === "unknown") chips.push(m["scope.unknownKind"] as string);
@@ -165,8 +163,7 @@ export function MemoryScopeTree({
             return (
               <div key={row.id} role="treeitem" aria-level={1} aria-expanded={g.selfScope ? undefined : isOpen(g.kind)} aria-selected={g.selfScope ? isSel : undefined}
                 data-row-id={row.id} tabIndex={tabIndex} className="ac-mem-tree-row ac-mem-tree-kind" data-selected={isSel ? "" : undefined} data-state={g.state}
-                title={tip} onClick={() => { setFocusId(row.id); activate(row); }}
-                aria-label={[`${label.text}`, formatMessage(m["scope.entries"] as string, { n: g.entries }), ...chips].join(", ")}>
+                title={tip} onClick={() => { setFocusId(row.id); activate(row); }}>
                 {g.selfScope ? <span className="ac-mem-tree-twisty" aria-hidden="true" /> : <span className="ac-mem-tree-twisty" aria-hidden="true" data-open={isOpen(g.kind) ? "" : undefined} />}
                 {g.state === "unknown" ? <span className="ac-mem-icon ac-mem-icon-unknown" aria-hidden="true" /> : null}
                 <span className="ac-mem-tree-label" data-mono={g.state === "unknown" ? "" : undefined}>{kindText}</span>
@@ -178,13 +175,11 @@ export function MemoryScopeTree({
           const sel = sameScope(selected, row.scope.scope);
           const chips = [row.label.deleted ? (m["scope.deleted"] as string) : ""].filter(Boolean);
           const shownChips = allDeletedKinds.has(row.group.kind) ? [] : chips;
-          const stateLabel = row.group.state === "unknown" ? (m["scope.unknownKind"] as string) : row.group.state === "disabled" ? (m["scope.disabledKind"] as string) : "";
           const menuOpen = menuFor === row.id;
           return (
             <div key={row.id} role="treeitem" aria-level={2} aria-selected={sel} data-row-id={row.id} tabIndex={tabIndex}
               className="ac-mem-tree-row ac-mem-tree-scope" data-selected={sel ? "" : undefined}
-              title={row.label.text} onClick={() => { setFocusId(row.id); onSelect(row.scope.scope); }}
-              aria-label={[row.label.text, formatMessage(m["scope.entries"] as string, { n: row.scope.entries }), ...chips, ...(stateLabel ? [stateLabel] : [])].join(", ")}>
+              title={row.label.text} onClick={() => { setFocusId(row.id); onSelect(row.scope.scope); }}>
               <span className="ac-mem-tree-label" data-mono={row.label.mono ? "" : undefined}>
                 {row.label.parts.map((p, i) => (
                   <span key={i} className={p.mono ? "ac-mem-mono" : undefined}>{i > 0 ? " / " : ""}{p.text}</span>
@@ -192,6 +187,7 @@ export function MemoryScopeTree({
               </span>
               {shownChips.map((c) => <span key={c} className="ac-mem-chip" data-tone="warning"><span className="ac-mem-icon ac-mem-icon-unknown" aria-hidden="true" />{c}</span>)}
               {countCell(row.scope.entries)}
+              {row.group.state === "unknown" || row.group.state === "disabled" ? <span className="ac-sr-only">{row.group.state === "unknown" ? (m["scope.unknownKind"] as string) : (m["scope.disabledKind"] as string)}</span> : null}
               {hasMenu && row.group.state === "ok" ? (
                 <>
                   <button type="button" className="ac-mem-iconbtn ac-mem-tree-menu-btn" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls={menuOpen ? `${uid}-menu` : undefined}

@@ -49,33 +49,33 @@ describe("MemoryScopeTree (수용 기준 2·3)", () => {
     const onSelect = vi.fn();
     render(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={onSelect} />);
     const items = screen.getAllByRole("treeitem");
-    expect(items[0]?.getAttribute("aria-label")).toBe("모든 범위, 항목 155개");
-    const ledger = screen.getByRole("treeitem", { name: /^장부, 항목 12개/ });
+    expect(items[0]?.textContent).toBe("모든 범위155");
+    const ledger = screen.getByRole("treeitem", { name: /^장부\s*12/ });
     expect(ledger.getAttribute("aria-expanded")).toBeNull();
-    expect(screen.getByRole("treeitem", { name: /^책상, 항목 88개/ }).getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByRole("treeitem", { name: /^주간, 항목 2개/ })).toBeTruthy();
+    expect(screen.getByRole("treeitem", { name: /^책상\s*88/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("treeitem", { name: /^주간\s*2/ })).toBeTruthy();
     expect(screen.getByText("쓸 수 없는 범위")).toBeTruthy();
     const last = items[items.length - 1] as HTMLElement;
-    expect(last.getAttribute("aria-label")).toContain("알 수 없는 범위 종류");
+    expect(last.textContent).toContain("알 수 없는 범위 종류");
     fireEvent.click(ledger);
     expect(onSelect).toHaveBeenCalledWith({ kind: "ledger", id: "" });
-    fireEvent.click(screen.getByRole("treeitem", { name: /^g1, 항목 60개/ }));
+    fireEvent.click(screen.getByRole("treeitem", { name: /^g1\s*60/ }));
     expect(onSelect).toHaveBeenLastCalledWith({ kind: "desk", id: "g1" });
   });
   it("이름 풀기: 삭제됨 칩 / 풀이기 없으면 칩 없음", () => {
     const { rerender } = render(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={() => undefined}
       resolvers={{ graph_id: (v) => (v === "g1" ? { status: "named", name: "개발팀" } : { status: "deleted" }) }} />);
-    expect(screen.getByRole("treeitem", { name: /^개발팀, 항목 60개/ })).toBeTruthy();
-    expect(screen.getByRole("treeitem", { name: /^g2, 항목 28개, 삭제됨/ })).toBeTruthy();
+    expect(screen.getByRole("treeitem", { name: /^개발팀\s*60/ })).toBeTruthy();
+    expect(screen.getByRole("treeitem", { name: /^g2.*삭제됨.*28/ })).toBeTruthy();
     rerender(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={() => undefined} />);
     expect(screen.queryByText("삭제됨")).toBeNull();
   });
   it("같은 종류의 범위가 전부 삭제됨이면 종류 행에만 한 번 표시", () => {
     render(<MemoryScopeTree kinds={kinds} scopes={scopes} selected={null} onSelect={() => undefined} resolvers={{ graph_id: () => ({ status: "deleted" }) }} />);
-    const row = screen.getByRole("treeitem", { name: /^g1, 항목 60개/ });
+    const row = screen.getByRole("treeitem", { name: /^g1\s*60/ });
     expect(row.textContent).not.toContain("삭제됨");
-    expect(screen.getByRole("treeitem", { name: /^책상, 항목 88개/ }).textContent).toContain("삭제됨");
-    expect(screen.getByRole("treeitem", { name: /^책상, 항목 88개, 삭제됨/ })).toBeTruthy();
+    expect(screen.getByRole("treeitem", { name: /^책상.*88/ }).textContent).toContain("삭제됨");
+    expect(screen.getByRole("treeitem", { name: /^책상.*삭제됨.*88/ })).toBeTruthy();
   });
   it("접기·키보드·숨김 줄·메뉴", () => {
     const onShowHidden = vi.fn();
@@ -86,9 +86,9 @@ describe("MemoryScopeTree (수용 기준 2·3)", () => {
     expect(onShowHidden).toHaveBeenCalled();
     const desk = screen.getByRole("treeitem", { name: /^책상/ });
     fireEvent.click(desk);
-    expect(screen.queryByRole("treeitem", { name: /^g1, 항목 60개/ })).toBeNull();
+    expect(screen.queryByRole("treeitem", { name: /^g1\s*60/ })).toBeNull();
     fireEvent.click(desk);
-    const g1 = screen.getByRole("treeitem", { name: /^g1, 항목 60개/ });
+    const g1 = screen.getByRole("treeitem", { name: /^g1\s*60/ });
     expect(g1.getAttribute("aria-selected")).toBe("true");
     fireEvent.click(within(g1).getByRole("button", { name: "g1 범위 메뉴" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "이 범위로 새 항목" }));
@@ -97,7 +97,7 @@ describe("MemoryScopeTree (수용 기준 2·3)", () => {
   });
   it("범위가 없는 종류도 행이 있고 수는 0", () => {
     render(<MemoryScopeTree kinds={kinds} scopes={[]} selected={null} onSelect={() => undefined} />);
-    expect(screen.getByRole("treeitem", { name: /^주간, 항목 0개/ })).toBeTruthy();
+    expect(screen.getByRole("treeitem", { name: /^주간\s*0/ })).toBeTruthy();
   });
 });
 

@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { GroupHeader } from "./GroupHeader";
 import { joinClass } from "./Status";
 
@@ -35,8 +35,8 @@ export interface ListPaneProps<T> {
   onSelect: (id: string, item: T) => void;
   renderItem: (item: T, state: { selected: boolean }) => ReactNode;
   /**
-   * 행 오른쪽의 단추(⋯ 메뉴 등). option 안에 단추를 넣으면 nested-interactive 위반이므로,
-   * 주면 행을 `li[role=presentation]`로 감싸고 단추를 option 밖(형제)에 그린다.
+   * 행 오른쪽의 단추(⋯ 메뉴 등). option 안에 단추를 넣으면 nested-interactive, listbox 안에 두면
+   * aria-required-children 위반이므로, listbox 밖의 겹침 층에 각 행 높이에 맞춰 그린다(행 위치를 재서 맞춘다).
    */
   renderRowAction?: (item: T, state: { selected: boolean }) => ReactNode;
   /** 행 최소 높이(px). 기본은 토큰 `--ac-row-h`. */
@@ -107,6 +107,8 @@ export function ListPane<T>({
   const droppable = (key: string) => onGroupDrop !== undefined && (canDropOnGroup?.(key) ?? true);
   const listRef = useRef<HTMLUListElement>(null);
   const [focusKey, setFocusKey] = useState<string | undefined>(undefined);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [slots, setSlots] = useState<Record<string, { top: number; height: number }>>({});
   // 이동 순서(머리와 보이는 항목). 평면이면 id가 곧 키다.
   const entries: NavEntry<T>[] = [];
   if (groups === undefined) {
@@ -128,6 +130,33 @@ export function ListPane<T>({
     focusKey !== undefined && navKeys.includes(focusKey)
       ? focusKey
       : (entries.find((e) => e.kind === "row" && e.id === selectedId) ?? entries[0])?.navKey;
+
+  const hasActions = renderRowAction !== undefined;
+  // 행 단추 층의 위치: 각 행(li)의 위치·높이를 재서 겹침 층에 맞춘다(렌더마다 재고, 값이 바뀔 때만 상태를 바꾼다).
+  const measure = () => {
+    const box = scrollRef.current;
+    const list = listRef.current;
+    if (box === null || list === null) return;
+    const origin = box.getBoundingClientRect().top - box.scrollTop;
+    const next: Record<string, { top: number; height: number }> = {};
+    list.querySelectorAll<HTMLElement>("[data-action-key]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      next[el.dataset.actionKey!] = { top: Math.round(r.top - origin), height: Math.round(r.height) };
+    });
+    setSlots((prev) => {
+      const a = Object.keys(next);
+      return a.length === Object.keys(prev).length && a.every((k) => prev[k]?.top === next[k]!.top && prev[k]?.height === next[k]!.height) ? prev : next;
+    });
+  };
+  useLayoutEffect(() => {
+    if (!hasActions) return;
+    measure();
+    const list = listRef.current;
+    if (list === null || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    return () => ro.disconnect();
+  });
 
   const focusEntry = (navKey: string | undefined) => {
     if (navKey === undefined) return;
@@ -186,9 +215,8 @@ export function ListPane<T>({
     };
     if (renderRowAction !== undefined) {
       return (
-        <li key={e.navKey} role="presentation" className="ac-listpane-rowwrap" data-selected={selected ? "true" : undefined}>
+        <li key={e.navKey} role="presentation" className="ac-listpane-rowwrap" data-action-key={e.navKey} data-selected={selected ? "true" : undefined}>
           <div {...rowProps}>{renderItem(e.item!, { selected })}</div>
-          <div className="ac-listpane-rowaction">{renderRowAction(e.item!, { selected })}</div>
         </li>
       );
     }
@@ -233,7 +261,8 @@ export function ListPane<T>({
       ) : state === "empty" ? (
         <div className="ac-listpane-slot">{empty}</div>
       ) : (
-        <ul ref={listRef} role="listbox" aria-label={messages.listLabel} className="ac-listpane-list" onKeyDown={onKeyDown}>
+        <div ref={scrollRef} className="ac-listpane-scroll">
+        <ul ref={listRef} role="listbox" aria-label={messages.listLabel} className="ac-listpane-list" data-actions={hasActions ? "true" : undefined} onKeyDown={onKeyDown}>
           {groups === undefined
             ? entries.map((e, i) => renderRow(e, i))
             : (() => {
@@ -279,6 +308,16 @@ export function ListPane<T>({
                 });
               })()}
         </ul>
+        {hasActions ? (
+          <div className="ac-listpane-actions">
+            {entries.filter((e) => e.kind === "row" && slots[e.navKey] !== undefined).map((e) => (
+              <div key={e.navKey} className="ac-listpane-rowaction" style={{ top: slots[e.navKey]!.top, height: slots[e.navKey]!.height }}>
+                {renderRowAction(e.item!, { selected: e.id === selectedId })}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        </div>
       )}
     </div>
   );

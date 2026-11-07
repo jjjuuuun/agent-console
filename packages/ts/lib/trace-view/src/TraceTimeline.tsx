@@ -321,11 +321,6 @@ export function TraceTimeline(props: TraceTimelineProps) {
             const durText = dur != null ? formatDuration(dur, m.units) : "";
             const statusText = span.status ? (m.statusText[span.status] ?? span.status) : "";
             const nameText = wait ? m.userWait.replace("{duration}", durText) : lab.title;
-            const ariaName = (grp ? `${m.childRunLabel} ` : "") + m.rowLabel
-              .replace("{name}", nameText)
-              .replace("{method}", [badge?.text, sessionText].filter(Boolean).join(" "))
-              .replace("{status}", statusText)
-              .replace("{duration}", wait ? "" : durText);
             const isSelected = span.id === selectedSpanId;
             const isHighlighted = Boolean(highlightNodeId && span.node_id === highlightNodeId);
             const incoming = handoffs.find((h) => h.targetRow === i);
@@ -389,7 +384,6 @@ export function TraceTimeline(props: TraceTimelineProps) {
                 aria-level={row.depth + 1}
                 aria-selected={isSelected}
                 aria-expanded={row.hasChildren ? !collapsedNow : undefined}
-                aria-label={ariaName}
                 tabIndex={i === Math.min(focusIdx, rows.length - 1) ? 0 : -1}
                 data-span-id={span.id}
                 data-group={grp ? grp.runId : undefined}

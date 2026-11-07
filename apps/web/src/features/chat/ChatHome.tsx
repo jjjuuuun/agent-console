@@ -1,4 +1,5 @@
 import { Button, EmptyState } from "@agent-console/ui";
+import { useProjectId } from "../../app/projectScope";
 import { useHint } from "../../app/hints";
 import { routeIconNode, useRouteOn } from "../library";
 import { chatMessages } from "./chatMessages";
@@ -12,7 +13,8 @@ const te = chatMessages.empty;
 /** 대화를 고르지 않았을 때의 오른쪽 영역: 시작하기 카드(대화나 팀 구성이 없을 때) 또는 안내. 카드 내용은 공용 `StartGuide`다. */
 export function ChatHome({ onNew }: { onNew: () => void }) {
   const teamsOn = useRouteOn(ROUTE_ROLES.graph);
-  const graphs = useGraphList(teamsOn);
+  const project = useProjectId();
+  const graphs = useGraphList(teamsOn, project);
   const conversations = useConversationList();
   const hint = useHint("start.dismissed");
 

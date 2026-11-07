@@ -7,7 +7,8 @@ import { ApiProvider } from "../../app/ApiContext";
 import { createAppQueryClient } from "../../app/queries";
 import { AdoptProjectContext, CurrentProjectContext } from "../../app/projectScope";
 import { createFakeClients } from "../../testing/fakes";
-import { useConversationDetail, useConversationProject, useConversationScope } from "./chatData";
+import { useConversationDetail, useConversationProject, useConversationScope, useGraphList } from "./chatData";
+import { hasEntry } from "./lib/team";
 import { conversation } from "./testing/chatFakes";
 
 afterEach(cleanup);
@@ -95,5 +96,42 @@ describe("대화 상세의 프로젝트 문맥 (요청 11/07)", () => {
     const { result } = renderHook(() => useScopedDetail("c9"), { wrapper });
     await waitFor(() => expect(result.current.scope).toEqual({ project: "p1", ready: true }));
     expect(getConversation).toHaveBeenLastCalledWith("c9", "p1");
+  });
+});
+
+describe("팀 구성 목록의 프로젝트 공간 (재검사 D5)", () => {
+  const team = { id: "gp", name: "프로젝트 전용 팀", version_hash: "v", node_count: 1, edge_count: 0, entry_labels: ["a"], validation: null, saved_at: 1 };
+  function graphSetup(current: string | null) {
+    const listGraphs = vi.fn(async () => []);
+    const spaceList = vi.fn(async () => [team]);
+    const { clients } = createFakeClients({ listGraphs });
+    (clients.space as unknown) = vi.fn(() => ({ listGraphs: spaceList }));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={createAppQueryClient({ retry: false })}>
+        <ApiProvider clients={clients}>
+          <CurrentProjectContext.Provider value={current}>{children}</CurrentProjectContext.Provider>
+        </ApiProvider>
+      </QueryClientProvider>
+    );
+    return { listGraphs, spaceList, wrapper };
+  }
+
+  it("대화가 프로젝트 공간에 있으면 그 공간에서 팀을 읽어, 공간에만 있는 팀이 존재한다(삭제된 팀 아님)", async () => {
+    const { listGraphs, spaceList, wrapper } = graphSetup("p1");
+    const { result } = renderHook(() => useGraphList(true, "p1"), { wrapper });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(spaceList).toHaveBeenCalled();
+    expect(listGraphs).not.toHaveBeenCalled();
+    const found = result.current.data?.find((g) => g.id === "gp");
+    expect(found).toBeDefined();
+    expect(hasEntry(found!)).not.toBe(false);
+  });
+
+  it("project가 null이면 공용 목록을 읽는다", async () => {
+    const { listGraphs, spaceList, wrapper } = graphSetup(null);
+    const { result } = renderHook(() => useGraphList(true, null), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual([]));
+    expect(listGraphs).toHaveBeenCalled();
+    expect(spaceList).not.toHaveBeenCalled();
   });
 });

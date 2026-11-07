@@ -849,7 +849,11 @@ textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); 
 .ac-listpane-row { transition: var(--ac-trans-colors); }
 .ac-listpane-rowwrap { display: flex; align-items: center; list-style: none; border-radius: var(--ac-radius-sm); }
 .ac-listpane-rowwrap > .ac-listpane-row { flex: 1 1 auto; min-width: 0; }
-.ac-listpane-rowaction { flex: none; display: flex; align-items: center; }
+.ac-listpane-scroll { position: relative; flex: 1; min-height: 0; overflow-y: auto; }
+.ac-listpane-scroll > .ac-listpane-list { overflow: visible; }
+.ac-listpane-list[data-actions] .ac-listpane-rowwrap { padding-right: 32px; }
+.ac-listpane-actions { position: absolute; inset: 0 var(--ac-space-1) auto auto; width: 0; }
+.ac-listpane-rowaction { position: absolute; right: 0; display: flex; align-items: center; }
 .ac-listpane-rowwrap:hover { background: var(--ac-hover-bg); }
 .ac-listpane-rowwrap:has(> [aria-selected="true"]) { background: var(--ac-accent-bg-strong); }
 .ac-listpane-row:hover { background: var(--ac-hover-bg); }

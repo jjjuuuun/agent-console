@@ -124,7 +124,7 @@ export function IssuesPanel({ graph, validation, open, onToggle, onValidate, onF
   return (
     <section className="team-issues" aria-label={t.issues.region} data-open={open ? "true" : "false"} data-stale={phase === "failed" ? "true" : undefined}>
       <header className="team-issues-head">
-        <button type="button" className="app-link-btn team-issues-toggle" aria-expanded={open} aria-label={t.issues.toggle} onClick={onToggle}>
+        <button type="button" className="app-link-btn team-issues-toggle" aria-expanded={open} onClick={onToggle}>
           {open ? "▾" : "▸"} {t.issues.title(errors, warnings, infos)}
         </button>
         {!open && firstError !== undefined ? (

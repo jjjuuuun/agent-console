@@ -81,7 +81,7 @@ export function SpaceChip() {
       panelRole="dialog"
       panelLabel={label}
       renderTrigger={(tp) => (
-        <button {...tp} type="button" className="space-chip" data-space={space === null ? "library" : "project"} aria-label={space === null ? label : `${label} ${dir}`}>
+        <button {...tp} type="button" className="space-chip" data-space={space === null ? "library" : "project"}>
           <Icon name={space === null ? "library" : "folder"} size={14} />
           {space === null ? <span>{label}</span> : (
             <>

@@ -82,7 +82,7 @@ describe("TraceTimeline: 위임 호출·회차·자식 묶음", () => {
     );
     const row = () => document.querySelector('[data-group="child-run-1"]') as HTMLElement;
     expect(row().getAttribute("aria-expanded")).toBe("false");
-    expect(row().getAttribute("aria-label")).toContain("자식 실행 팀-child-run-1");
+    expect(row().textContent).toContain("팀-child-run-1");
     expect(document.querySelector('[data-span-id="c-top"]')).toBeNull();
     row().focus();
     fireEvent.keyDown(row(), { key: "Enter" });
