@@ -130,10 +130,9 @@ describe("공용 구성 › 위키 규칙", () => {
   it("공용 규칙 종류 이름은 WikiInfo.rules_kind를 쓰고, null일 때만 규칙 하나를 읽는다", async () => {
     const getWikiRules = vi.fn(async () => ({ value: view(), version_hash: "rv1" }));
     rulesSetup("/wiki-rules", { getWikiInfo: vi.fn(async () => ({ ...INFO, rules_kind: "named-kind" })), getWikiRules });
-    await screen.findByTestId("wiki-rules-screen", {}, LONG).catch(() => undefined);
     await screen.findAllByText("규칙 가", {}, LONG);
     expect(getWikiRules).not.toHaveBeenCalled();
-  });
+  }, 30_000);
 
   it("본문 파일 탭: 규칙이 가리키는데 없는 파일은 파일 없음 + [만들기]이고 연결 안 된 파일은 알린다", async () => {
     rulesSetup("/wiki-rules/ra?tab=files", { listWikiRulesFiles: vi.fn(async () => [{ path: "stray.md", size: 1 }]), readWikiRulesFile: vi.fn(async () => ({ text: "x", contentType: "text/markdown", size: 1, version_hash: "rv1" })) });

@@ -41,6 +41,9 @@ export function ServerSection() {
   // 로딩 상태는 열린 문자열이다(모르는 값도 그대로 보인다). 오류가 있거나, 상태 정보 없이 읽지 못한 항목만 경고로 묶는다
   const broken = plugins.filter((p) => p.error != null || (p.status === undefined && p.loaded === false));
   const pluginText = (p: (typeof plugins)[number]) => [p.name, p.status].filter(Boolean).join(" · ");
+  // 읽지 않았거나 등록 해제된 이유는 서버가 준 문장 그대로 보인다(없으면 표시하지 않는다)
+  const skippedReason = (p: (typeof plugins)[number]) => ((p.status === "skipped" || p.status === "disabled") && p.reason ? p.reason : null);
+  const warnings = data.warnings ?? [];
   // 종류(group)별로 묶는다. 묶음 이름·순서는 서버가 준 값의 첫 등장 순서다
   const pluginGroups = plugins.reduce<{ group: string; items: typeof plugins }[]>((acc, p) => {
     const group = p.group ?? "";
@@ -83,7 +86,15 @@ export function ServerSection() {
                   <td className="app-wrap">
                     <ul className="app-server-plugin-list">
                       {g.items.map((p) => (
-                        <li key={p.name}>{pluginText(p)}</li>
+                        <li key={p.name}>
+                          {pluginText(p)}
+                          {skippedReason(p) === null ? null : (
+                            <span className="app-muted" data-plugin-reason>
+                              {" — "}
+                              {t.pluginReason}: {skippedReason(p)}
+                            </span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </td>
@@ -99,6 +110,17 @@ export function ServerSection() {
             {broken.map((p) => (
               <li key={`${p.group}:${p.name}`}>
                 {p.name}: {p.error?.message ?? t.pluginError}
+              </li>
+            ))}
+          </ul>
+        </Banner>
+      ) : null}
+      {warnings.length > 0 ? (
+        <Banner tone="warning" title={t.serverWarnings}>
+          <ul>
+            {warnings.map((w, i) => (
+              <li key={`${w.code}:${i}`}>
+                {w.message} <span className="app-muted">({w.code})</span>
               </li>
             ))}
           </ul>

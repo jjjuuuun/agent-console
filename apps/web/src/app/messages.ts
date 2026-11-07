@@ -625,6 +625,8 @@ export const messages = {
       pluginGroup: (group: string) => `확장 지점 ${group}`,
       pluginError: "로딩 오류",
       pluginsErrors: "확장 로딩 오류",
+      pluginReason: "이유",
+      serverWarnings: "서버 경고",
       tokenHidden: "토큰은 어떤 경우에도 표시하지 않습니다.",
     },
     unset: "(지정 안 함)",
