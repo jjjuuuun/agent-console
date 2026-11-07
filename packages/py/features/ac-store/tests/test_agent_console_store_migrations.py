@@ -136,3 +136,33 @@ def test_0002_downgrade_and_reapply_keep_data_and_restore_projection(tmp_path: P
         context = MigrationContext.configure(conn, opts={"include_object": include_object})
         assert compare_metadata(context, metadata) == []
     engine.dispose()
+
+
+def test_concurrent_upgrades_in_threads_do_not_clobber_alembic_proxies(tmp_path: Path) -> None:
+    """alembic `command.*`는 모듈 전역 프록시를 쓴다. 다른 DB를 여러 스레드가 동시에 올려도
+    `KeyError: 'script'` 없이 모두 끝나야 한다(서버 재시작 때 시작 훅과 배경 작업이 겹친 회귀)."""
+    import threading
+
+    errors: list[BaseException] = []
+    barrier = threading.Barrier(6)
+
+    def work(i: int) -> None:
+        engine = create_sqlite_engine(tmp_path / f"c{i}.sqlite3")
+        try:
+            barrier.wait()
+            for _ in range(3):
+                upgrade(engine)
+                downgrade(engine)
+            upgrade(engine)
+            assert current_revision(engine) == "0003"
+        except BaseException as exc:  # 스레드 예외를 본 스레드로 모은다
+            errors.append(exc)
+        finally:
+            engine.dispose()
+
+    threads = [threading.Thread(target=work, args=(i,)) for i in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=120)
+    assert errors == []

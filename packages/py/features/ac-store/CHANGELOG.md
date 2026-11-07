@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 수정(요청 11/07): `migrate.upgrade`·`downgrade`·`upgrade_on`의 alembic `command.*` 호출을 프로세스 안 잠금 하나로 줄 세운다. alembic이 실행 중 모듈 전역 프록시(`context`·`op`)를 바꾸므로 여러 스레드가 동시에(다른 DB라도) 올리면 `KeyError: 'script'`로 실패했다(서버 재시작 때 모듈 시작 훅의 업그레이드와 배경 작업의 프로젝트 기록 DB 열기가 겹쳐 uvicorn 시작 실패 exit 3). 공개 API 변경 없음.
+
 - 6R.19 서버 후속: `RunRepository.page(conversation_id=, agent=, root_run_id=)`(`list`와 같은 뜻), 돌려주는 Run마다 `has_children`(직접 자식 유무, 페이지 행을 한 번에 셈 — 색인 `ix_runs_parent`, N+1 없음)을 채운다. 계약 0.13.2(`Run.has_children`). 더하기만, 표 변경 없음.
 
 - 6R.12: 이벤트 `EventRepository.list(node=)`(`node_path`에 그 노드 id가 있는 이벤트 — 첫 칸은 `node_id` 열 색인, 하위 그래프는 `json_each`), 출처 잇기 커서 `page_across_sources`·`SourcePage`·`encode_source_cursor`·`decode_source_cursor`(`<출처>.<저장소 커서>`, design §6R.18 Q14). 더하기만, 표 변경 없음.

@@ -8,8 +8,14 @@
   계보의 `upgrade`를 막지 않는다. 브랜치끼리는 서로의 리비전을 모른다(모듈 간 외래 키 금지).
 
 의존: alembic. 대안: `metadata.create_all`(되돌리기·이력 없음) -> 채택하지 않음.
+
+스레드: alembic `command.*`는 실행 동안 모듈 전역(`alembic.context`·`alembic.op` 프록시)을
+바꿨다가 지운다. 두 스레드가 동시에 부르면 한쪽이 다른 쪽 프록시를 지워 `KeyError: 'script'`로
+끝난다(서버 시작 훅의 `to_thread` 업그레이드와 배경 작업의 프로젝트 기록 DB 열기가 겹친 사례).
+그래서 이 모듈의 `command.*` 호출은 프로세스 안 잠금 하나로 줄 세운다(DB가 달라도).
 """
 
+import threading
 from pathlib import Path
 
 from alembic import command
@@ -19,6 +25,8 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine
 
 _SCRIPT_LOCATION = Path(__file__).parent / "migrations"
+_ALEMBIC_LOCK = threading.RLock()
+"""alembic 전역 프록시를 지키는 잠금(위 "스레드" 참고). 재진입 가능."""
 LEGACY_VERSION_TABLE = "alembic_version"
 """legacy 계보의 버전 테이블(0003까지 쓰던 이름 그대로 — 기존 DB 호환)."""
 
@@ -55,7 +63,7 @@ def upgrade(
         versions: 모듈 브랜치의 리비전 스크립트 폴더. None이면 legacy.
         version_table: 이 계보의 버전 테이블(모듈 브랜치는 `branch_version_table`).
     """
-    with engine.begin() as connection:
+    with _ALEMBIC_LOCK, engine.begin() as connection:
         command.upgrade(_config(connection, versions, version_table), revision)
 
 
@@ -67,7 +75,7 @@ def downgrade(
     version_table: str = LEGACY_VERSION_TABLE,
 ) -> None:
     """`revision`까지 되돌린다. 기본 `base`는 그 계보의 모든 변경 제거."""
-    with engine.begin() as connection:
+    with _ALEMBIC_LOCK, engine.begin() as connection:
         command.downgrade(_config(connection, versions, version_table), revision)
 
 
@@ -89,7 +97,8 @@ def upgrade_on(
 
     호출자가 먼저 `BEGIN IMMEDIATE`로 쓰기 잠금을 잡아 두면 여러 계보를 한 잠금 안에서 올린다.
     """
-    command.upgrade(_config(connection, versions, version_table), revision)
+    with _ALEMBIC_LOCK:
+        command.upgrade(_config(connection, versions, version_table), revision)
 
 
 def script_revisions(versions: Path | None = None) -> tuple[str | None, frozenset[str]]:
