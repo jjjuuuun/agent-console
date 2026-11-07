@@ -67,17 +67,25 @@ def _send(client: TestClient, cid: str, project: str, **body: Any) -> Any:
     )
 
 
-def _wait_turn(client: TestClient, cid: str, project: str, count: int) -> dict[str, Any]:
+def _wait_turn(client: TestClient, cid: str, project: str, sent: Any) -> dict[str, Any]:
+    """보낸 메시지가 시작한 턴(응답의 Run id)이 끝날 때까지 기다린다.
+
+    턴 목록의 "마지막"으로 고르지 않는다. 목록은 Run ``created_at``(벽시계) 순이라 시스템 시계가
+    뒤로 가면(WSL 시계 맞춤 등) 앞 앱의 턴이 뒤에 놓여 다른 턴을 볼 수 있다.
+    """
+    assert sent.status_code == 202, sent.text
+    run_id = sent.json()["id"]
     deadline = time.monotonic() + 20
     turns: list[dict[str, Any]] = []
     while time.monotonic() < deadline:
         turns = client.get(f"{API}/conversations/{cid}/turns?project={project}").json()
-        if len(turns) >= count and turns[-1]["status"] in TERMINAL:
+        mine = [t for t in turns if t["run_id"] == run_id]
+        if mine and mine[0]["status"] in TERMINAL:
             conv = client.get(f"{API}/conversations/{cid}?project={project}").json()
-            if conv["sessions"] or turns[-1]["status"] != "completed":
-                return turns[-1]
+            if conv["sessions"] or mine[0]["status"] != "completed":
+                return mine[0]
         time.sleep(0.05)
-    raise AssertionError(f"턴이 끝나지 않았다: {turns}")
+    raise AssertionError(f"턴 {run_id}이 끝나지 않았다: {turns}")
 
 
 def _wait_files(folder: Path, count: int) -> list[str]:
@@ -111,8 +119,7 @@ def test_archive_lets_another_app_continue_and_missing_needs_fresh(tmp_path: Pat
         created = client.post(f"{API}/conversations", json={"graph_id": "flow", "project_id": "p"})
         assert created.status_code == 201, created.text
         cid = created.json()["id"]
-        assert _send(client, cid, "p").status_code == 202
-        assert _wait_turn(client, cid, "p", 1)["status"] == "completed"
+        assert _wait_turn(client, cid, "p", _send(client, cid, "p"))["status"] == "completed"
         conv = client.get(f"{API}/conversations/{cid}?project=p").json()
         sids = {node: ref["session_id"] for node, ref in conv["sessions"].items()}
         assert set(sids) == {"a", "b"}
@@ -135,7 +142,7 @@ def test_archive_lets_another_app_continue_and_missing_needs_fresh(tmp_path: Pat
         assert {i["state"] for i in state["items"]} == {"archived"}
         sent = _send(client, cid, "p")
         assert sent.status_code == 202, sent.text
-        turn = _wait_turn(client, cid, "p", 2)
+        turn = _wait_turn(client, cid, "p", sent)
         assert turn["status"] == "completed"
         assert _chat_sessions(client, turn["run_id"], "p") == {"a": "archived", "b": "archived"}
         restored = sorted((tmp_path / "b" / "ws" / SESSION_DIR).rglob("*.jsonl"))
@@ -157,7 +164,7 @@ def test_archive_lets_another_app_continue_and_missing_needs_fresh(tmp_path: Pat
         assert error["details"] == {"conversation_id": cid, "node_ids": ["a", "b"]}
         fresh = _send(client, cid, "p", on_missing_session="fresh")
         assert fresh.status_code == 202, fresh.text
-        turn = _wait_turn(client, cid, "p", 3)
+        turn = _wait_turn(client, cid, "p", fresh)
         assert turn["status"] == "completed"
         assert _chat_sessions(client, turn["run_id"], "p") == {"a": "fresh", "b": "fresh"}
         assert client.get(f"{API}/conversations/{cid}/sessions?project=p").json()["continuable"]
@@ -171,8 +178,7 @@ def test_archive_off_writes_no_sessions_folder(tmp_path: Path) -> None:
         _seed(client, "p")
         created = client.post(f"{API}/conversations", json={"graph_id": "flow", "project_id": "p"})
         cid = created.json()["id"]
-        assert _send(client, cid, "p").status_code == 202
-        assert _wait_turn(client, cid, "p", 1)["status"] == "completed"
+        assert _wait_turn(client, cid, "p", _send(client, cid, "p"))["status"] == "completed"
         time.sleep(0.3)  # 보관 작업이 있었다면 끝났을 시간
     assert not (folder / ".agent-console" / "sessions").exists()
     with _app(tmp_path / "b", archive=False) as client:
