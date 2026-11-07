@@ -4,7 +4,9 @@
 
 - 필수: ``runs.reader``·``runs.events``. 구독: ``runs.event``(집계 캐시 표시).
 - 선택: ``projects.lookup``·``records.spaces`` — 둘 다 있으면 실행 이벤트 조회가 등록 프로젝트 기록
-  DB도 합친다(계정 창 = 계정 단위, 요청 11/07). 없으면 앱 기록만.
+  DB도 합친다(계정 창 = 계정 단위, 요청 11/07). 토큰 집계도 같은 프로젝트 기록 DB의 Run을
+  더한다(계정 전체 = 앱 + 등록 프로젝트, ``project_id``를 주면 그 프로젝트만, 요청 11/08).
+  없으면 앱 기록만.
 - 제공: ``usage.event_query``(실행 이벤트 조회), ``usage.token_rollups``(증분 캐시 토큰 집계).
 - 이 연동이 꺼지면 사용량 화면은 외부 출처(statusline 등)만 보이고 토큰 집계는 빈 목록이다.
 """
@@ -17,7 +19,7 @@ from agent_console_contracts import CONTRACT_VERSIONS
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_store import RecordsStores, SqliteStorage
 
-from .events import MergedEventQuery, project_event_sources
+from .events import MergedEventQuery, project_event_sources, project_rollup_sources
 from .ports import (
     PROJECTS_LOOKUP,
     RECORDS_SPACES,
@@ -68,9 +70,11 @@ class RunsUsageLink:
         cfg = ctx.settings
         if not isinstance(cfg, RunsUsageSettings):
             cfg = RunsUsageSettings()
-        rollups = IncrementalTokenRollups(runs, events)
         stores = RecordsStores(
             lambda: ctx.port(RECORDS_SPACES), SqliteStorage, prefix=cfg.records_space_prefix
+        )
+        rollups = IncrementalTokenRollups(
+            runs, events, extra=project_rollup_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores)
         )
         query = MergedEventQuery(
             events, project_event_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores)

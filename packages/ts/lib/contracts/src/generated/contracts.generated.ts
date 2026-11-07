@@ -4383,6 +4383,23 @@ export interface SessionRef {
   };
 }
 /**
+ * `GET /conversations/{id}/locate` 응답: 그 대화가 있는 기록 공간(1.4.0).
+ *
+ * 대화 단위 경로(`GET/PATCH/DELETE /conversations/{id}`·턴·메시지·대기열)에 `?project=`로 그대로
+ * 넘긴다. 서버는 이 프로세스에서 연 공간과 등록 프로젝트의 기록 DB(설치자 상한까지), 그리고 앱
+ * 기록을 찾는다. 대화 본문은 주지 않는다(범위를 고른 뒤 그 범위로 읽는다). 없으면 404
+ * `not_found`, 여러 곳이면 409 `conversation.ambiguous`.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "ConversationLocation".
+ */
+export interface ConversationLocation {
+  /**
+   * 대화가 있는 프로젝트 기록 공간의 등록 id. null = 앱 기록(`?project=` 없이 읽는다).
+   */
+  project_id?: string | null;
+}
+/**
  * `GET /conversations/page` 응답: 대화 목록 커서 페이지(1.3.0).
  *
  * 정렬은 `updated_at` 내림차순 + `id`. `next_cursor`를 다음 요청 `cursor=`로 넘긴다
@@ -13275,17 +13292,17 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.6" as const;
+export const CONTRACTS_VERSION = "0.14.7" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.12.0",
+  "common": "1.13.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
   "runs": "1.8.0",
   "usage": "1.1.0",
   "projects": "3.6.0",
-  "chat": "1.3.0",
+  "chat": "1.4.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
@@ -13484,6 +13501,7 @@ export const ERROR_CODES = {
   "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
   "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
   "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
+  "CONVERSATION_AMBIGUOUS": "conversation.ambiguous",
   "SDD_NOT_FOUND": "sdd.not_found",
   "SDD_DOCUMENT_MISSING": "sdd.document_missing",
   "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
@@ -13565,6 +13583,7 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "folders.dialog_timeout": 409,
   "project.records_unavailable": 409,
   "chat.session_unavailable": 409,
+  "conversation.ambiguous": 409,
   "sdd.not_found": 404,
   "sdd.document_missing": 404,
   "sdd.template_exists": 409,

@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_console_contracts import x_ui
 from agent_console_modkit import SeedSetting, SettingsCompat
 
+from .spaces import DEFAULT_LOCATE_LIMIT
+
 
 class ChatModuleSettings(BaseModel):
     """채팅 모듈 설정."""
@@ -23,6 +25,16 @@ class ChatModuleSettings(BaseModel):
         description=(
             "프로젝트 기록 DB 공간 이름 = 이 접두 + 프로젝트 id(기록 연동 설정 space_prefix를 "
             "이어받는다)."
+        ),
+        json_schema_extra=x_ui(tier="advanced"),
+    )
+    locate_max_projects: int = Field(
+        default=DEFAULT_LOCATE_LIMIT,
+        ge=0,
+        title="대화 위치 찾기 프로젝트 수 상한",
+        description=(
+            "주소로 바로 연 대화가 어느 프로젝트 기록에 있는지 찾을 때 읽는 등록 프로젝트 기록 DB "
+            "최대 개수(0 = 이 서버가 이미 연 프로젝트와 앱 기록만)."
         ),
         json_schema_extra=x_ui(tier="advanced"),
     )

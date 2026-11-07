@@ -73,6 +73,9 @@ export const usageMessages = {
   nestedNote: "중첩 팀의 자식 실행은 상위 실행에 포함되어 한 번만 집계됩니다.",
   rollup: {
     title: "토큰 집계",
+    /** 현재 프로젝트가 있을 때(R15.3): 합계는 이 프로젝트 것만, 5시간·주간 창은 계정 전체 */
+    titleProject: "이 프로젝트 토큰 집계",
+    scopeProject: "이 프로젝트의 실행 기록만 집계합니다. 위 5시간·주간 사용량 창은 프로젝트로 나누지 않고 계정 전체 기준입니다.",
     period: "기간",
     periods: { "today": "오늘", "7d": "7일", "30d": "30일" } as Record<string, string>,
     view: "보기",

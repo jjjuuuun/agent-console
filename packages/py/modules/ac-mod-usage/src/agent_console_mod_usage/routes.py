@@ -28,6 +28,16 @@ PartsQuery = Annotated[
     ),
 ]
 
+ProjectQuery = Annotated[
+    str | None,
+    Query(
+        description=(
+            "토큰 집계(`tokens`)를 이 프로젝트 id의 실행으로 좁힌다. 생략하면 계정 전체(앱 기록 + "
+            "등록 프로젝트 기록). 창 스냅샷은 계정 값이라 영향 없다."
+        )
+    ),
+]
+
 
 def build_router(service: Callable[[], UsageReportService]) -> APIRouter:
     """``/usage``·``/usage/sources`` 라우터.
@@ -38,11 +48,12 @@ def build_router(service: Callable[[], UsageReportService]) -> APIRouter:
     router = APIRouter()
 
     @router.get("/usage", response_model=UsageReport, responses=_ERRORS)
-    async def usage(parts: PartsQuery = None) -> UsageReport:
+    async def usage(parts: PartsQuery = None, project: ProjectQuery = None) -> UsageReport:
         """창 스냅샷(켜진 출처를 지금 수집, 관측값은 기록) + 플랫폼 실행분 토큰 집계(서버
         시간대). `parts=windows`만 요청하면 실행 기록을 읽지 않는다(셸 표시기용).
+        `project`를 주면 토큰 집계만 그 프로젝트 실행으로 좁힌다(창은 계정 전체).
         """
-        return await service().report(parse_parts(parts))
+        return await service().report(parse_parts(parts), project_id=project or None)
 
     @router.get("/usage/sources", response_model=list[UsageSourceInfo], responses=_ERRORS)
     async def usage_sources() -> list[UsageSourceInfo]:

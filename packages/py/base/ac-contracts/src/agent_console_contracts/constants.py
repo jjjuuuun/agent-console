@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.6"
+CONTRACTS_VERSION: Final = "0.14.7"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,14 +38,14 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.12.0",
+    "common": "1.13.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
     "definitions": "1.7.0",
     "runs": "1.8.0",
     "usage": "1.1.0",
     "projects": "3.6.0",
-    "chat": "1.3.0",
+    "chat": "1.4.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
@@ -94,7 +94,10 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 0.14.5(요청 11/07 후속, 더하기만): `projects` 3.5.0(`CopyKindInfo.deletable` — 종류 공통 항목 삭제
 경로 `DELETE /projects/copy/items/{kind}/{id}`로 지울 수 있는 종류).
 0.14.6(요청 11/07 후속, 더하기만): `projects` 3.6.0(`CopyItem.version` — 항목 버전, 종류 공통 삭제의
-`If-Match`에 그대로 쓴다)."""
+`If-Match`에 그대로 쓴다).
+0.14.7(요청 11/07 후속, 더하기만): `chat` 1.4.0(`ConversationLocation` —
+`GET /conversations/{id}/locate` 응답, 대화 id → 그 대화가 있는 기록 공간), `common` 1.13.0
+(`ErrorCodes.CONVERSATION_AMBIGUOUS` 409)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -243,6 +246,10 @@ class ErrorCodes:
     """이 앱에 대화의 백엔드 세션 기록이 없어 이어 갈 수 없다(HTTP 409, design §PI.4.6.4).
     `details` = `{conversation_id, node_ids}`. 다시 보낼 때 `on_missing_session: "fresh"`면 그
     노드는 새 세션으로 시작한다."""
+    CONVERSATION_AMBIGUOUS: Final = "conversation.ambiguous"
+    """같은 대화 id가 여러 기록 공간(프로젝트 기록 DB·앱 기록)에 있어 하나로 정할 수 없다(HTTP 409,
+    0.14.7, `GET /conversations/{id}/locate`). `details.project_ids` = 찾은 곳(null = 앱 기록).
+    `?project=`를 붙여 직접 고른다."""
 
     # ---- 6R(design §6R.6·§6R.18, 0.13.0): 스펙(SDD)
     SDD_NOT_FOUND: Final = "sdd.not_found"
@@ -369,6 +376,7 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.FOLDERS_DIALOG_TIMEOUT: 409,
     ErrorCodes.PROJECT_RECORDS_UNAVAILABLE: 409,
     ErrorCodes.CHAT_SESSION_UNAVAILABLE: 409,
+    ErrorCodes.CONVERSATION_AMBIGUOUS: 409,
     ErrorCodes.SDD_NOT_FOUND: 404,
     ErrorCodes.SDD_DOCUMENT_MISSING: 404,
     ErrorCodes.SDD_TEMPLATE_EXISTS: 409,

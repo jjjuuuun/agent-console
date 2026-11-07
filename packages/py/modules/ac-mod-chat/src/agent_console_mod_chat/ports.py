@@ -28,6 +28,11 @@
 - ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들. 있으면
   프로젝트 대화·대기열은 그 기록 DB에만 두고 ``?project=`` 경로는 거기서 읽는다(``spaces.py``).
   없으면 모든 대화가 호스트 DB(지금 동작).
+- ``projects.lookup``(요청 11/07 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``만
+  쓴다).
+  있으면 ``GET /conversations/{id}/locate``와 WS ``conversation:<id>``가 아직 열지 않은 프로젝트
+  기록 DB에서도 대화를 찾는다(``records.spaces``가 있을 때만, 상한 ``locate_max_projects``). 없으면
+  이 프로세스에서 연 공간과 앱 기록만 본다.
 - ``records.sessions``(5.7R.33y3, design §PI.4.6.4 X38): 대화 노드 세션 이어 가기 상태·복원
   (``agent_console_chat.SessionContinuity`` — ``state``·``prepare``, 보통
   ``link-projects-records``가 준다). 있으면 ``GET /conversations/{id}/sessions``가 상태를 보이고
@@ -69,6 +74,19 @@ class DefinitionLookup(Protocol):
     def get(self, kind: str, id: str) -> StoredLike: ...
 
 
+class ProjectLike(Protocol):
+    """등록 프로젝트 하나 중 이 모듈이 쓰는 부분(``agent_console_contracts.Project``가 만족)."""
+
+    @property
+    def id(self) -> str: ...
+
+
+class ProjectListing(Protocol):
+    """``projects.lookup`` 중 이 모듈이 쓰는 부분(등록 프로젝트 목록)."""
+
+    def list_projects(self) -> Sequence[ProjectLike]: ...
+
+
 class DefinitionSpaces(Protocol):
     """``definitions.spaces`` 모양: 공간 이름 → 정의 저장소(모르는 공간·열 수 없으면 예외)."""
 
@@ -108,6 +126,9 @@ RECORDS_SESSIONS: PortKey[SessionContinuity] = PortKey(
     "records.sessions", "대화 세션 이어 가기 상태·복원(X38)"
 )
 
+PROJECTS_LOOKUP: PortKey[ProjectListing] = PortKey("projects.lookup", "프로젝트 읽기")
+"""선택(요청 11/07 후속): 대화 위치 찾기가 볼 등록 프로젝트 id."""
+
 CONVERSATIONS_UPDATED: Topic[ConversationSummary] = Topic("conversations.updated")
 """대화 요약이 바뀔 때(새 턴·제목·상태·대기열·대기 상호작용 수)."""
 
@@ -122,12 +143,15 @@ __all__ = [
     "CONVERSATIONS_UPDATED",
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_SPACES",
+    "PROJECTS_LOOKUP",
     "RECORDS_SESSIONS",
     "RECORDS_SPACES",
     "SERVER_WARNINGS",
     "WORKSPACE_SETTINGS",
     "DefinitionLookup",
     "DefinitionSpaces",
+    "ProjectLike",
+    "ProjectListing",
     "StoredLike",
     "WarningSource",
     "WorkspaceSettingsReader",

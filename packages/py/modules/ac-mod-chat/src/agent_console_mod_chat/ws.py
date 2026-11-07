@@ -1,10 +1,15 @@
 """WS 토픽 ``conversation:<id>``(design §5.3, §R5.1): 구독 직후 현재 요약을 한 번 보내고, 이후 바뀔
 때마다 ``conversation.updated``(새 턴·제목·상태·대기열·대기 상호작용 수). 대화가 없으면
 ``not_found``.
+
+대화 id만 받으므로(구독에 ``?project=``가 없다) 서비스의 선택 메서드 ``service_of``가 그 대화를 가진
+공간을 찾는다. 아직 이 프로세스에서 열지 않은 프로젝트 기록 DB의 대화도 ``locate``로 찾는다(요청
+11/07 후속, 디스크를 읽으므로 작업 스레드에서).
 """
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from agent_console_chat import ChatService, ConversationNotFoundError
@@ -44,13 +49,15 @@ def topic_handlers(service: ChatService, *, hub: Hub[Any]) -> dict[str, WsTopicH
     대화 서비스에 선택 메서드 ``service_of``(대화 id → 그 대화를 가진 서비스, 프로젝트 기록 공간
     포함 - 5.7R.33y2)가 있으면 그것으로 찾는다."""
 
-    def owner(conversation_id: str) -> ChatService:
+    async def owner(conversation_id: str) -> ChatService:
         method = getattr(service, "service_of", None)
-        found: ChatService = method(conversation_id) if callable(method) else service
+        if not callable(method):
+            return service
+        found: ChatService = await asyncio.to_thread(method, conversation_id)
         return found
 
     async def handle(req: WsSubscribeRequest) -> WsForward | WsReject | None:
-        chat = owner(req.target)
+        chat = await owner(req.target)
         try:
             chat.get(req.target)
         except ConversationNotFoundError:

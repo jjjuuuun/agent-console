@@ -107,6 +107,8 @@ export interface FeedInput {
   conversationId: string;
   /** 대화가 속한 프로젝트(자식 구성 그래프를 그 공간에서 읽는다). 없으면 공용 */
   projectId?: string | null;
+  /** 거짓이면 턴을 아직 읽지 않는다(대화가 있는 기록 공간을 찾는 중). 기본 true */
+  ready?: boolean;
   ws: WsClient;
   graph: Graph | undefined;
   /** 계획 요약(답변 자리). 아직 못 받았으면 undefined */
@@ -149,13 +151,13 @@ export interface Feed {
  * - 진행 중인 턴은 `run:<id>`를 구독하고, 재접속하면 WS 클라이언트가 `since_seq`로 이어 받는다.
  * - 요약(`conversation:<id>`)이 바뀌면 턴·대기열을 다시 읽어 보정한다.
  */
-export function useConversationFeed({ conversationId, projectId = null, ws, graph, plan, kinds, strategies, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
+export function useConversationFeed({ conversationId, projectId = null, ready = true, ws, graph, plan, kinds, strategies, naming, interactions: interactionsEnabled = true }: FeedInput): Feed {
   const { rest, space } = useApi();
   const queryClient = useQueryClient();
   const [older, setOlder] = useState<ChatTurn[]>([]);
   const [moreBefore, setMoreBefore] = useState<boolean | undefined>(undefined);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const latest = useApiQuery(chatKeys.turns(conversationId, projectId), (r) => r.listTurns(conversationId, { limit: TURN_PAGE, project: projectId }));
+  const latest = useApiQuery(chatKeys.turns(conversationId, projectId), (r) => r.listTurns(conversationId, { limit: TURN_PAGE, project: projectId }), { enabled: ready });
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const refresh = useCallback(() => {
@@ -365,7 +367,7 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
     turns,
     delegators,
     nestedOrigin,
-    loading: latest.isLoading,
+    loading: latest.isLoading || !ready,
     error: latest.error,
     refetch: () => void latest.refetch(),
     loadOlder,

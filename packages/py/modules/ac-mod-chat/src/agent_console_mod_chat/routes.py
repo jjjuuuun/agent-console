@@ -4,6 +4,11 @@
   옛 ``GET /conversations``는 그대로 두고 OpenAPI ``deprecated``. 기록 공간이 있는 조립의
   ``?project=``는 폴더 기록(``source=project``)을 끝까지 읽은 뒤 앱 DB 옛 기록(``source=app``)을
   잇는다(Q14).
+- 대화 위치(요청 11/07 후속): ``GET /conversations/{id}/locate`` → ``ConversationLocation``
+  (그 대화가 있는 기록 공간, null = 앱 기록). 서비스에 선택 메서드 ``locate``가 있으면 그것(등록
+  프로젝트 기록 DB를 읽기만 한다), 없으면 호스트 대화가 있을 때 null. 대화 본문은 주지 않는다 -
+  웹은 이 값을 ``?project=``로 붙여 대화 단위 경로를 부른다(``?project=`` 없는 상세가 다른 공간을
+  대신 읽지 않는다).
 - 대화: ``GET/POST /conversations``, ``GET/PATCH/DELETE /conversations/{id}``,
   ``GET /conversations/{id}/turns``, ``POST /conversations/{id}/messages``,
   ``GET /conversations/{id}/sessions``(세션 이어 가기 상태, 5.7R.33y3)
@@ -35,6 +40,7 @@ from agent_console_contracts import (
     AssignProjectResult,
     ChatTurn,
     Conversation,
+    ConversationLocation,
     ConversationPage,
     ConversationSessions,
     ConversationSummary,
@@ -230,6 +236,24 @@ def build_router(
     @router.get("/conversations/{conversation_id}", response_model=Conversation, responses=errors())
     async def get_conversation(conversation_id: str, project: str | None = None) -> Conversation:
         return (await chat(project)).get(conversation_id)
+
+    @router.get(
+        "/conversations/{conversation_id}/locate",
+        response_model=ConversationLocation,
+        responses=errors(409),
+    )
+    async def locate_conversation(conversation_id: str) -> ConversationLocation:
+        """그 대화가 있는 기록 공간(``project_id``, null = 앱 기록).
+
+        없으면 404 ``not_found``, 여러 공간에 있으면 409 ``conversation.ambiguous``
+        (``details.project_ids``)."""
+        host = service()
+        method = getattr(host, "locate", None)
+        if callable(method):
+            project_id: str | None = await run_in_threadpool(method, conversation_id)
+            return ConversationLocation(project_id=project_id)
+        host.get(conversation_id)  # 없으면 404
+        return ConversationLocation(project_id=None)
 
     @router.patch(
         "/conversations/{conversation_id}", response_model=Conversation, responses=errors(409)

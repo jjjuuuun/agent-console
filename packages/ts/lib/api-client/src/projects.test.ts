@@ -221,6 +221,8 @@ describe("대화 단위 호출의 ?project= (요청 11/07)", () => {
     expect(last(calls).path).toBe("/conversations/c1?project=p1");
     await rest.getConversation("c1");
     expect(last(calls).path).toBe("/conversations/c1");
+    await rest.locateConversation("c/1");
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/conversations/c%2F1/locate" });
     await rest.updateConversation("c1", { title: "t" }, "p1");
     expect(last(calls)).toMatchObject({ method: "PATCH", path: "/conversations/c1?project=p1" });
     await rest.deleteConversation("c1", "p1");

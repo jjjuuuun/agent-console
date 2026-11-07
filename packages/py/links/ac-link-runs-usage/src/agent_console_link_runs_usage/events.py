@@ -6,6 +6,9 @@
 것을 본다.
 
 - ``MergedEventQuery``: 여러 이벤트 조회의 ``latest_by_type``을 ts 내림차순으로 합친다(순수).
+- ``project_readers``: 등록 프로젝트(보관 제외, 또는 한 프로젝트) → 기록 DB 저장소. 읽을 수 없는
+  공간은 경고 후 건너뛴다.
+- ``project_rollup_sources``: 같은 목록 → 토큰 집계 추가 출처(``usage.token_rollups``, 요청 11/08).
 - ``project_event_sources``: 등록 프로젝트 목록 + 기록 공간 → 프로젝트별 이벤트 조회. 프로젝트 목록
   이나 기록 공간이 없으면(``mod-projects``·``link-projects-records`` 꺼짐) 빈 목록이다. 읽을 수
   없는 공간(폴더 없음·깨짐·모르는 프로젝트)은 건너뛴다.
@@ -21,6 +24,8 @@ from typing import Any, Protocol
 
 from agent_console_contracts import RunEvent
 from agent_console_store import RecordsStores, RecordsUnavailable, SqliteStorage
+
+from .rollups import RollupSource
 
 _log = logging.getLogger(__name__)
 
@@ -83,6 +88,59 @@ class MergedEventQuery:
             _log.warning("프로젝트 기록 목록을 읽지 못했습니다", exc_info=True)
 
 
+def project_readers(
+    projects: Callable[[], ProjectListing | None],
+    stores: RecordsStores[SqliteStorage],
+    *,
+    only: str | None = None,
+) -> Iterator[tuple[str, SqliteStorage]]:
+    """등록 프로젝트의 기록 DB 저장소 ``(프로젝트 id, 저장소)``(부를 때마다 목록을 다시 읽는다).
+
+    Args:
+        projects: 지금 ``projects.lookup`` 포트(없으면 None → 아무것도 없음).
+        stores: ``records.spaces`` 위의 저장소 고르기(포트가 없으면 아무것도 없음).
+        only: 주면 그 프로젝트만(보관이어도 읽는다 — 사용자가 고른 프로젝트). None이면 보관 제외
+            전부.
+
+    읽을 수 없는 공간(폴더 없음·깨짐)은 경고하고 건너뛴다. 모르는 프로젝트·기록 DB 파일이 아직
+    없는 프로젝트는 조용히 건너뛴다.
+    """
+    listing = projects()
+    if listing is None or not stores.available:
+        return
+    for project in listing.list_projects():
+        if only is not None and project.id != only:
+            continue
+        if only is None and getattr(project, "archived", False):
+            continue
+        try:
+            reader = stores.reader(project.id)
+        except RecordsUnavailable as exc:
+            _log.warning("프로젝트 기록을 읽을 수 없어 건너뜁니다: %s (%s)", project.id, exc.reason)
+            continue
+        except LookupError:
+            continue  # 목록과 공간 사이에 지워진 프로젝트
+        if reader is not None:  # 기록 DB 파일이 아직 없다
+            yield project.id, reader
+
+
+def project_rollup_sources(
+    projects: Callable[[], ProjectListing | None],
+    stores: RecordsStores[SqliteStorage],
+) -> Callable[[str | None], Iterator[RollupSource]]:
+    """토큰 집계 추가 출처(``IncrementalTokenRollups(extra=)``): 등록 프로젝트 기록 DB마다 하나.
+
+    키는 ``stores.space_name(id)``(공간 이름 — 프로젝트마다 다르다). ``project_id``가 None이면 보관
+    제외 전부, 주면 그 프로젝트만.
+    """
+
+    def sources(project_id: str | None) -> Iterator[RollupSource]:
+        for pid, reader in project_readers(projects, stores, only=project_id):
+            yield RollupSource(stores.space_name(pid), reader.runs, reader.events)
+
+    return sources
+
+
 def project_event_sources(
     projects: Callable[[], ProjectListing | None],
     stores: RecordsStores[SqliteStorage],
@@ -95,18 +153,8 @@ def project_event_sources(
     """
 
     def sources() -> Iterator[LatestEvents]:
-        listing = projects()
-        if listing is None or not stores.available:
-            return
-        for project in listing.list_projects():
-            if getattr(project, "archived", False):
-                continue
-            try:
-                reader = stores.reader(project.id)
-            except (RecordsUnavailable, LookupError):
-                continue  # 폴더 없음·깨짐·모르는 프로젝트
-            if reader is not None:  # 기록 DB 파일이 아직 없다
-                yield reader.events
+        for _, reader in project_readers(projects, stores):
+            yield reader.events
 
     return sources
 
@@ -116,4 +164,6 @@ __all__ = [
     "MergedEventQuery",
     "ProjectListing",
     "project_event_sources",
+    "project_readers",
+    "project_rollup_sources",
 ]

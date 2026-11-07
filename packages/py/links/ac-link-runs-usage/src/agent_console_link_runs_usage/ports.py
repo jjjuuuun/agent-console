@@ -13,7 +13,8 @@
 
 - ``usage.event_query``: 실행 이벤트 조회(``MergedEventQuery`` — 앱 기록 ``runs.events`` + 등록
   프로젝트 기록 DB의 ``latest_by_type``을 ts 내림차순으로 합친 것, 사용량 출처 맥락).
-- ``usage.token_rollups``: 플랫폼 실행분 토큰 집계(``IncrementalTokenRollups``, 증분 캐시).
+- ``usage.token_rollups``: 플랫폼 실행분 토큰 집계(``IncrementalTokenRollups``, 증분 캐시 — 앱
+  기록 + 등록 프로젝트 기록 DB, ``rollups(project_id=)``면 그 프로젝트만, 요청 11/08).
 """
 
 from __future__ import annotations

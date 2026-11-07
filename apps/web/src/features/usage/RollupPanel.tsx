@@ -18,6 +18,10 @@ export interface RollupPanelProps {
   /** 차원 값 → 표시 이름 */
   nameOf(dimension: RollupDimension, value: string | null): string;
   loading?: boolean;
+  /** 제목 바꿈(생략하면 기본 제목) */
+  title?: string;
+  /** 제목 아래 범위 안내 한 줄(생략하면 없음) */
+  scopeNote?: string;
 }
 
 function dayLabel(value: string | null): string {
@@ -45,7 +49,7 @@ export function RollupPanel(p: RollupPanelProps) {
   return (
     <section className="usage-rollup" aria-labelledby="usage-rollup-title">
       <div className="usage-rollup-head">
-        <h2 id="usage-rollup-title" className="app-block-title">{t.rollup.title}</h2>
+        <h2 id="usage-rollup-title" className="app-block-title">{p.title ?? t.rollup.title}</h2>
         <label className="runs-filter">
           <span className="app-muted">{t.rollup.period}</span>
           <select value={p.period} onChange={(e) => p.onPeriodChange(e.target.value)}>
@@ -56,6 +60,7 @@ export function RollupPanel(p: RollupPanelProps) {
         </label>
         <Button size="sm" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>{asTable ? t.rollup.asBars : t.rollup.asTable}</Button>
       </div>
+      {p.scopeNote === undefined ? null : <p className="app-muted usage-rollup-scope">{p.scopeNote}</p>}
       <Tabs
         ariaLabel={t.rollup.view}
         activeId={p.view}

@@ -87,11 +87,15 @@ class UsageReportService:
     def usage(self) -> UsageService:
         return self._usage
 
-    async def report(self, parts: Iterable[str] | None = None) -> UsageReport:
+    async def report(
+        self, parts: Iterable[str] | None = None, *, project_id: str | None = None
+    ) -> UsageReport:
         """요청한 부분만 계산한 보고.
 
         Args:
             parts: 부분 이름(``parse_parts`` 결과 등). None이면 전부.
+            project_id: 토큰 집계를 그 프로젝트 실행만으로(None = 계정 전체). 창 스냅샷은 계정
+                값이라 나누지 않는다.
         """
         wanted = parse_parts(None) if parts is None else frozenset(parts)
         windows = None
@@ -102,7 +106,10 @@ class UsageReportService:
             rollups = []
             if self._rollups is not None:
                 provider = self._rollups
-                rows = await asyncio.to_thread(provider.rollups, limit=self._limit, tz=self._tz())
+                scope = {} if project_id is None else {"project_id": project_id}
+                rows = await asyncio.to_thread(
+                    provider.rollups, limit=self._limit, tz=self._tz(), **scope
+                )
                 rollups = list(rows)
         return UsageReport(windows=windows, rollups=rollups, generated_at=self._clock())
 

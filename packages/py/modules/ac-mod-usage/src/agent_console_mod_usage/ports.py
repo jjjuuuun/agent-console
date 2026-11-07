@@ -37,9 +37,12 @@ if TYPE_CHECKING:
 class TokenRollups(Protocol):
     """플랫폼 실행분 토큰 집계(소비자 쪽 프로토콜). 제공자는 실행 기록을 읽는다."""
 
-    def rollups(self, *, limit: int, tz: tzinfo) -> Sequence[TokenRollupRow]:
+    def rollups(
+        self, *, limit: int, tz: tzinfo, project_id: str | None = None
+    ) -> Sequence[TokenRollupRow]:
         """최근 Run ``limit``개 범위의 집계(일 단위는 ``tz`` 기준). 막히는 호출이어도 된다
-        (모듈이 스레드에서 부른다)."""
+        (모듈이 스레드에서 부른다). ``project_id``가 None이면 계정 전체(제공자가 아는 모든 기록),
+        주면 그 프로젝트 실행만이다(요청 11/08). 모듈은 ``project_id``가 있을 때만 넘긴다."""
         ...
 
 

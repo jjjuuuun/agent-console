@@ -8,6 +8,7 @@
 1.3.0(0.13.0, design §6R.9 L-19·§6R.18 Q14): 커서 페이지
 `ConversationPage{items, next_cursor, source}`. `CreateConversationRequest`는 모르는 키를 거부한다
 (`extra=forbid`, 예: `project` 오타가 조용히 무시되지 않게).
+1.4.0(0.14.7, 더하기만): 대화 위치 `ConversationLocation`(`GET /conversations/{id}/locate`).
 """
 
 from typing import Final, Literal
@@ -84,6 +85,23 @@ class ConversationPage(ContractModel):
     items: list[ConversationSummary] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, description="다음 페이지 커서. null = 끝.")
     source: RecordSource = Field(description="이 페이지의 기록 출처(project·app).")
+
+
+class ConversationLocation(ContractModel):
+    """`GET /conversations/{id}/locate` 응답: 그 대화가 있는 기록 공간(1.4.0).
+
+    대화 단위 경로(`GET/PATCH/DELETE /conversations/{id}`·턴·메시지·대기열)에 `?project=`로 그대로
+    넘긴다. 서버는 이 프로세스에서 연 공간과 등록 프로젝트의 기록 DB(설치자 상한까지), 그리고 앱
+    기록을 찾는다. 대화 본문은 주지 않는다(범위를 고른 뒤 그 범위로 읽는다). 없으면 404
+    `not_found`, 여러 곳이면 409 `conversation.ambiguous`.
+    """
+
+    project_id: str | None = Field(
+        default=None,
+        description=(
+            "대화가 있는 프로젝트 기록 공간의 등록 id. null = 앱 기록(`?project=` 없이 읽는다)."
+        ),
+    )
 
 
 class CreateConversationRequest(ContractModel):
@@ -243,6 +261,7 @@ __all__ = [
     "ChatReply",
     "ChatTurn",
     "Conversation",
+    "ConversationLocation",
     "ConversationPage",
     "ConversationSessions",
     "ConversationSummary",

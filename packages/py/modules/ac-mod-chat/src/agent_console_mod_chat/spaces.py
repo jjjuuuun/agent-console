@@ -15,6 +15,11 @@ DB(``records.sqlite3``)의 ``conversations``·``chat_queue``에만 둔다. 이 �
   연결(``connect``)·꺼내기 멈춤·정리는 공간 서비스에도 같이 간다.
 - 공간 대화의 ``conversation_busy``는 그 기록 DB의 끝나지 않은 턴 Run도 본다(다른 앱이 돌리는 턴,
   ``busy_elsewhere``).
+- 대화 위치 찾기(``locate``, 요청 11/07 후속): 대화 id → 그 대화가 있는 공간(등록 id, None = 호스트
+  DB). 이 프로세스에서 연 공간과 ``project_ids``(보통 ``projects.lookup``의 등록 id)의 기록 DB를
+  상한(``locate_limit``)까지 읽기만 한다(파일을 만들지 않고, 공간 서비스도 열지 않는다). 찾은 자리는
+  기억해 두고(상한 있음) 다음에는 그 자리만 다시 확인한다. WS ``conversation:<id>`` 구독은
+  ``service_of``가 이것으로 아직 열지 않은 공간의 대화도 찾는다.
 """
 
 from __future__ import annotations
@@ -23,19 +28,36 @@ import asyncio
 import builtins
 import concurrent.futures
 import logging
+import threading
+from collections import OrderedDict
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from agent_console_chat import ChatService
-from agent_console_contracts import Conversation
-from agent_console_store import RecordsStores, RecordsUnavailable
+from agent_console_chat import ChatError, ChatService, ConversationNotFoundError
+from agent_console_contracts import Conversation, ErrorCodes
+from agent_console_store import RecordsStores, RecordsUnavailable, StoreError
 
 from .storage import QueueCounts, QueuedItem, SqliteChatStorage
 
 UNFINISHED = ("queued", "running", "paused", "waiting")
 """끝나지 않은 Run 상태(다른 곳에서 도는 턴 판정)."""
 
+DEFAULT_LOCATE_LIMIT = 200
+"""``locate``가 읽는 등록 프로젝트 기록 DB 최대 개수 기본값(모듈 설정 ``locate_max_projects``)."""
+
+_LOCATED_CAP = 4096
+"""``locate``가 기억하는 대화 자리 최대 개수(오래된 것부터 잊는다)."""
+
 _log = logging.getLogger("agent_console_mod_chat")
+
+
+class ConversationAmbiguousError(ChatError):
+    """같은 대화 id가 여러 기록 공간에 있다(409 ``conversation.ambiguous``).
+
+    ``details.project_ids`` = 찾은 곳(None = 호스트 DB, 앱 기록).
+    """
+
+    code = ErrorCodes.CONVERSATION_AMBIGUOUS
 
 
 def chat_records(spaces: Callable[[], Any], *, prefix: str) -> RecordsStores[SqliteChatStorage]:
@@ -177,6 +199,9 @@ class SpacedChatService(ChatService):
     Args:
         records: 대화 저장소 고르기(``chat_records``). None이면 공간 없음(``for_project``는 자신).
         make: 공간 저장소 → 공간 대화 서비스(같은 팀 구성 조회·설정·알림을 쓴다).
+        project_ids: 대화 위치 찾기(``locate``)가 볼 공간 id 목록(부를 때마다, 보통 등록
+            프로젝트 id). None이면 이 프로세스에서 연 공간만 본다.
+        locate_limit: ``locate``가 ``project_ids``에서 읽는 최대 개수(0 = 연 공간만).
         args, kwargs: ``ChatService`` 인자(호스트 저장소).
     """
 
@@ -186,11 +211,17 @@ class SpacedChatService(ChatService):
         records: RecordsStores[SqliteChatStorage] | None = None,
         make: Callable[[SpaceConversations, SpaceQueue, Callable[[str], str | None]], ChatService]
         | None = None,
+        project_ids: Callable[[], Iterable[str]] | None = None,
+        locate_limit: int = DEFAULT_LOCATE_LIMIT,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._records = records
         self._make = make
+        self._project_ids = project_ids
+        self._locate_limit = max(0, locate_limit)
+        self._located: OrderedDict[str, str | None] = OrderedDict()
+        self._located_lock = threading.Lock()
         self._spaces: dict[str, ChatService] = {}
         self._links: dict[str, Any] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -319,7 +350,10 @@ class SpacedChatService(ChatService):
         future.add_done_callback(forget)
 
     def service_of(self, conversation_id: str) -> ChatService:
-        """그 대화를 가진 서비스(호스트 → 이 프로세스에서 연 공간 순, 없으면 호스트)."""
+        """그 대화를 가진 서비스(호스트 → 이 프로세스에서 연 공간 → ``locate`` 순, 없으면 호스트).
+
+        여러 곳에 있으면(``locate``가 모호) 호스트를 돌려준다(호출자가 ``get``으로 없음을 본다).
+        """
         if self._conversations.get(conversation_id) is not None:
             return self
         for service in self._spaces.values():
@@ -328,7 +362,94 @@ class SpacedChatService(ChatService):
             except Exception:
                 continue
             return service
-        return self
+        try:
+            project_id = self.locate(conversation_id)
+        except ChatError:
+            return self
+        return self.for_project(project_id)
+
+    def locate(self, conversation_id: str) -> str | None:
+        """그 대화가 있는 기록 공간(등록 id, None = 호스트 DB).
+
+        기억한 자리가 있으면 그 자리만 다시 확인한다. 없으면 이 프로세스에서 연 공간과
+        ``project_ids``(앞에서 ``locate_limit``개)의 기록 DB, 호스트 DB를 모두 읽어 하나로 정한다.
+        기록 DB 파일이 없거나 읽을 수 없는 공간은 건너뛴다(파일을 만들지 않는다).
+
+        Raises:
+            ConversationNotFoundError: 어디에도 없다.
+            ConversationAmbiguousError: 여러 곳에 있다(``details.project_ids``).
+        """
+        with self._located_lock:
+            known = conversation_id in self._located
+            remembered = self._located.get(conversation_id)
+        if known and self._has(remembered, conversation_id):
+            return remembered
+        found = [p for p in self._locate_candidates() if self._has(p, conversation_id)]
+        if not found:
+            self._forget(conversation_id)
+            raise ConversationNotFoundError(
+                f"대화 {conversation_id!r}가 없습니다", details={"id": conversation_id}
+            )
+        if len(found) > 1:
+            self._forget(conversation_id)
+            raise ConversationAmbiguousError(
+                f"대화 {conversation_id!r}가 여러 기록 공간에 있습니다",
+                details={"id": conversation_id, "project_ids": found},
+            )
+        place = found[0]
+        with self._located_lock:
+            self._located[conversation_id] = place
+            self._located.move_to_end(conversation_id)
+            while len(self._located) > _LOCATED_CAP:
+                self._located.popitem(last=False)
+        return place
+
+    def _locate_candidates(self) -> builtins.list[str | None]:
+        """찾을 자리: 연 공간 → 등록 id(상한까지, 중복 제외) → 호스트(None)."""
+        out: builtins.list[str | None] = []
+        if self.spaced:
+            seen: set[str] = set()
+            for project_id in builtins.list(self._spaces):
+                seen.add(project_id)
+                out.append(project_id)
+            listed = 0
+            if self._project_ids is not None and self._locate_limit > 0:
+                try:
+                    ids = builtins.list(self._project_ids())
+                except Exception:
+                    _log.exception("대화 위치 찾기: 프로젝트 목록을 읽지 못했습니다")
+                    ids = []
+                for project_id in ids:
+                    if not project_id or project_id in seen:
+                        continue
+                    if listed >= self._locate_limit:
+                        _log.info(
+                            "대화 위치 찾기: 프로젝트 %d개 중 %d개만 읽었습니다",
+                            len(ids),
+                            self._locate_limit,
+                        )
+                        break
+                    seen.add(project_id)
+                    out.append(project_id)
+                    listed += 1
+        out.append(None)
+        return out
+
+    def _has(self, place: str | None, conversation_id: str) -> bool:
+        """그 자리(None = 호스트)에 대화가 있나. 읽을 수 없으면 거짓."""
+        if place is None:
+            return self._conversations.get(conversation_id) is not None
+        if self._records is None:
+            return False
+        try:
+            store = self._records.reader(place)
+            return store is not None and store.conversations.get(conversation_id) is not None
+        except (RecordsUnavailable, StoreError, LookupError):
+            return False
+
+    def _forget(self, conversation_id: str) -> None:
+        with self._located_lock:
+            self._located.pop(conversation_id, None)
 
     def stop_dispatch(self) -> None:
         super().stop_dispatch()
@@ -350,7 +471,9 @@ class SpacedChatService(ChatService):
 
 
 __all__ = [
+    "DEFAULT_LOCATE_LIMIT",
     "UNFINISHED",
+    "ConversationAmbiguousError",
     "SpaceConversations",
     "SpaceQueue",
     "SpacedChatService",

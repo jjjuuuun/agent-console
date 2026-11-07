@@ -2,6 +2,7 @@
 import type {
   ChatTurn,
   Conversation,
+  ConversationLocation,
   ConversationPage,
   ConversationSummary,
   CreateConversationRequest,
@@ -60,6 +61,11 @@ export interface ChatClient {
   conversationsPage(params?: ConversationsPageParams): Promise<ConversationPage>;
   createConversation(request: CreateConversationRequest): Promise<Conversation>;
   getConversation(id: string, project?: ConversationSpace): Promise<Conversation>;
+  /**
+   * 대화가 있는 기록 공간(`GET /conversations/{id}/locate`, 계약 0.14.7). `project_id`를 대화 단위 호출의 `project`로 넘긴다(null = 앱 기록).
+   * 없으면 `ApiError` 404 `not_found`, 여러 공간에 있으면 409 `conversation.ambiguous`(`details.project_ids`). 옛 서버는 404/405.
+   */
+  locateConversation(id: string): Promise<ConversationLocation>;
   /** 이름·보관·팀 구성 전환(`graph_id`). */
   updateConversation(id: string, patch: UpdateConversationRequest, project?: ConversationSpace): Promise<Conversation>;
   deleteConversation(id: string, project?: ConversationSpace): Promise<void>;
@@ -86,6 +92,7 @@ export function createChatClient(io: RestIo): ChatClient {
     conversationsPage: (params) => io.request("GET", `/conversations/page${query(params)}`),
     createConversation: (req) => io.request("POST", "/conversations", { body: req }),
     getConversation: (id, project) => io.request("GET", at(`/conversations/${enc(id)}`, project)),
+    locateConversation: (id) => io.request("GET", `/conversations/${enc(id)}/locate`),
     updateConversation: (id, patch, project) => io.request("PATCH", at(`/conversations/${enc(id)}`, project), { body: patch }),
     deleteConversation: (id, project) => io.request("DELETE", at(`/conversations/${enc(id)}`, project)),
     listTurns: (id, params) => {

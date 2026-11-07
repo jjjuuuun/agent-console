@@ -9,6 +9,7 @@ export type {
   ChatReply,
   ChatTurn,
   Conversation,
+  ConversationLocation,
   ConversationPage,
   ConversationSessions,
   ConversationSummary,
@@ -22,4 +23,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "chat" as const;
-export const CONTRACT_VERSION = "1.3.0" as const;
+export const CONTRACT_VERSION = "1.4.0" as const;

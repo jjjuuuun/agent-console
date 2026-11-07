@@ -7,6 +7,7 @@ import { describeError } from "../../app/errors";
 import { lookupMessage, messages as appMessages } from "../../app/messages";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { queryKeys, useApiQuery, useWorkspaceSettings } from "../../app/queries";
+import { useProjectId } from "../../app/projectScope";
 import { useNow } from "../../app/useNow";
 import { formatRelative } from "../../lib/format";
 import { AccountWideNote, ProjectUsageSection } from "../projects";
@@ -29,7 +30,9 @@ const sourcesKey = USAGE_SOURCES_KEY;
 /** 사용량 화면(컨테이너): `/usage`·`/usage/sources`·공통 설정(`usage`)을 읽어 카드·집계·출처 패널에 나눠 준다. */
 export function UsageScreen() {
   const qc = useQueryClient();
-  const report = useApiQuery(usageKey, (rest) => rest.getUsage(), { refetchInterval: USAGE_POLL_MS });
+  // 토큰 합계는 현재 프로젝트 것만(R15.3). 프로젝트가 없거나 기능이 꺼졌으면 생략(전체). 창 스냅샷은 계정 값 그대로.
+  const projectId = useProjectId();
+  const report = useApiQuery([...usageKey, projectId], (rest) => (projectId === null ? rest.getUsage() : rest.getUsage(undefined, projectId)), { refetchInterval: USAGE_POLL_MS });
   const sources = useApiQuery(sourcesKey, (rest) => rest.listUsageSources(), { refetchInterval: USAGE_POLL_MS });
   // 플랫폼 실행분 토큰 집계는 사용량-실행 연동이 켜져 있을 때만 있다. 꺼졌으면 집계 자리에 안내 한 줄만 남고,
   // 집계 이름 표시에만 쓰던 목록(에이전트·팀 구성)도 부르지 않는다.
@@ -216,6 +219,8 @@ export function UsageScreen() {
           onPeriodChange={setPeriod}
           nameOf={nameOf}
           loading={report.isPending}
+          title={projectId === null ? undefined : t.rollup.titleProject}
+          scopeNote={projectId === null ? undefined : t.rollup.scopeProject}
         />
         </>
         )}

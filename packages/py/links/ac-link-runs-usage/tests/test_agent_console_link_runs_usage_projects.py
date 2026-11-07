@@ -7,20 +7,24 @@
 
 from __future__ import annotations
 
+import builtins
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import KnownRecordsUnavailableReasons, RunEvent
+from agent_console_contracts import KnownRecordsUnavailableReasons, NodeRun, Run, RunEvent, Usage
 from agent_console_link_runs_usage import (
     PROJECTS_LOOKUP,
     RECORDS_SPACES,
+    IncrementalTokenRollups,
     MergedEventQuery,
+    RollupSource,
     RunsUsageSettings,
     module,
 )
@@ -206,3 +210,193 @@ def test_settings_prefix_and_seed() -> None:
     seeds = module.descriptor.settings_compat
     assert seeds is not None
     assert [s.source for s in seeds.seeds] == ["modules.options.link-projects-records.space_prefix"]
+
+
+# --- 토큰 집계도 프로젝트 기록 DB를 합친다(요청 11/08) ---
+
+
+def _save_run(
+    storage: Any, run_id: str, *, graph: str, at: float, tokens: int, **extra: Any
+) -> None:
+    """완료된 루트 Run 하나(NodeRun 사용량 + 세션 시작 이벤트)."""
+    storage.runs.save(
+        Run(
+            id=run_id,
+            graph_id=graph,
+            graph_version="v",
+            status="completed",
+            input={},
+            origin="api",
+            created_at=at,
+            **extra,
+        )
+    )
+    storage.runs.save_node_run(
+        NodeRun(
+            run_id=run_id,
+            node_id="a",
+            status="succeeded",
+            started_at=at,
+            usage=Usage(input_tokens=tokens, output_tokens=0),
+        )
+    )
+    storage.events.append_many(
+        [
+            RunEvent(
+                event_id=f"{run_id}-s",
+                run_id=run_id,
+                seq=1,
+                ts=at,
+                node_path=["a"],
+                attempt=1,
+                actor="agent-x",
+                type="agent.session_started",
+                payload={"model": "m"},
+            )
+        ]
+    )
+
+
+def _project_db(tmp_path: Path, name: str, runs: list[tuple[str, float, int]]) -> RecordsDb:
+    db = open_records_db(tmp_path / name / "records.sqlite3", backup_dir=tmp_path / name / "bk")
+    store = SqliteStorage(db.writable_engine())
+    for run_id, at, tokens in runs:
+        _save_run(store, run_id, graph=name, at=at, tokens=tokens, project_id=name)
+    return db
+
+
+def _by_graph(rows: list[Any]) -> dict[str, int]:
+    found: dict[str, int] = {}
+    for row in rows:
+        graph = row["graph_id"] if isinstance(row, dict) else row.graph_id
+        usage_ = row["usage"] if isinstance(row, dict) else row.usage.model_dump()
+        found[graph] = found.get(graph, 0) + int(usage_["input_tokens"] or 0)
+    return found
+
+
+def _tokens(client: TestClient, **params: str) -> dict[str, int]:
+    body = client.get(f"{API}/usage", params={"parts": "tokens", **params}).json()
+    return _by_graph(body["rollups"])
+
+
+def test_token_rollups_include_project_records(tmp_path: Path) -> None:
+    """계정 전체 = 앱 + 등록 프로젝트(보관 제외, 읽을 수 없는 공간은 건너뜀), project면 그것만."""
+    host = InMemoryStorage()
+    _save_run(host, "h1", graph="app", at=1.0, tokens=1)
+    _save_run(host, "h-legacy", graph="legacy-p1", at=2.0, tokens=2, project_id="p1")
+    dbs: dict[str, RecordsDb | Exception] = {
+        "project:p1": _project_db(tmp_path, "p1", [("p1-a", 3.0, 10), ("p1-b", 4.0, 20)]),
+        "project:p2": _project_db(tmp_path, "p2", [("p2-a", 5.0, 100)]),
+        "project:old": _project_db(tmp_path, "old", [("old-a", 6.0, 1000)]),
+        "project:gone": RecordsUnavailable(KnownRecordsUnavailableReasons.FOLDER_MISSING),
+    }
+    spaces = _Spaces(dbs)
+    lookup = _Lookup(
+        [_Project("p1"), _Project("p2"), _Project("old", archived=True), _Project("gone")]
+    )
+    with _client(host, lookup, spaces) as client:
+        assert _tokens(client) == {"app": 1, "legacy-p1": 2, "p1": 30, "p2": 100}
+        assert _tokens(client, project="p1") == {"legacy-p1": 2, "p1": 30}
+        assert _tokens(client, project="p2") == {"p2": 100}
+        assert _tokens(client, project="nope") == {}
+        # 새로 등록한 프로젝트는 다음 집계부터, 보관하면 계정 전체에서 빠진다
+        lookup.projects[2] = _Project("old")
+        assert _tokens(client)["old"] == 1000
+        lookup.projects[1] = _Project("p2", archived=True)
+        assert "p2" not in _tokens(client)
+    for db in dbs.values():
+        if isinstance(db, RecordsDb):
+            db.close()
+
+
+@pytest.mark.parametrize("which", ["no-lookup", "no-spaces", "none"])
+def test_token_rollups_without_project_ports_only_app(tmp_path: Path, which: str) -> None:
+    host = InMemoryStorage()
+    _save_run(host, "h1", graph="app", at=1.0, tokens=1)
+    _save_run(host, "h2", graph="app-p1", at=2.0, tokens=2, project_id="p1")
+    db = _project_db(tmp_path, "p1", [("p1-a", 3.0, 10)])
+    lookup = None if which in ("no-lookup", "none") else _Lookup([_Project("p1")])
+    spaces = None if which in ("no-spaces", "none") else _Spaces({"project:p1": db})
+    with _client(host, lookup, spaces) as client:
+        assert _tokens(client) == {"app": 1, "app-p1": 2}
+        assert _tokens(client, project="p1") == {"app-p1": 2}  # 앱 기록의 그 프로젝트 Run
+    db.close()
+
+
+class _CountingEvents:
+    def __init__(self, inner: Any) -> None:
+        self.inner = inner
+        self.calls: list[tuple[str, int]] = []
+
+    def list(self, run_id: str, **kwargs: Any) -> list[RunEvent]:
+        self.calls.append((run_id, kwargs.get("since_seq", 0)))
+        found: list[RunEvent] = self.inner.list(run_id, **kwargs)
+        return found
+
+
+def test_rollup_cursors_are_kept_per_source() -> None:
+    """같은 run_id라도 출처마다 캐시·워터마크가 따로다. 증분은 바뀐 출처의 그 Run만 다시 읽는다."""
+    app, proj = InMemoryStorage(), InMemoryStorage()
+    _save_run(app, "same", graph="app", at=1.0, tokens=1)
+    _save_run(proj, "same", graph="proj", at=2.0, tokens=10)
+    app_events, proj_events = _CountingEvents(app.events), _CountingEvents(proj.events)
+    present = [True]
+
+    def extra(project_id: str | None) -> list[RollupSource]:
+        if not present[0] or project_id not in (None, "p"):
+            return []
+        return [RollupSource("project:p", proj.runs, proj_events)]
+
+    rollups = IncrementalTokenRollups(app.runs, app_events, extra=extra)
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC)) == {"app": 1, "proj": 10}
+    assert len(app_events.calls) == 2  # 형식 2개씩
+    assert len(proj_events.calls) == 2
+    app_events.calls.clear()
+    proj_events.calls.clear()
+    # 끝난 Run은 다시 읽지 않는다
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC)) == {"app": 1, "proj": 10}
+    assert app_events.calls == []
+    assert proj_events.calls == []
+    # 프로젝트 범위 집계 뒤에도 앱 캐시는 남는다
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC, project_id="p")) == {"proj": 10}
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC)) == {"app": 1, "proj": 10}
+    assert app_events.calls == []
+    assert proj_events.calls == []
+    # 출처가 사라지면(보관) 그 캐시를 버리고, 다시 나타나면 처음부터 읽는다
+    present[0] = False
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC)) == {"app": 1}
+    present[0] = True
+    assert _by_graph(rollups.rollups(limit=10, tz=UTC)) == {"app": 1, "proj": 10}
+    assert [since for _, since in proj_events.calls] == [0, 0]
+    assert app_events.calls == []
+
+
+def test_rollups_limit_spans_sources_and_broken_source_is_skipped() -> None:
+    app, proj = InMemoryStorage(), InMemoryStorage()
+    _save_run(app, "a1", graph="app", at=1.0, tokens=1)
+    _save_run(app, "a2", graph="app", at=4.0, tokens=1)
+    _save_run(proj, "p1", graph="proj", at=2.0, tokens=10)
+    _save_run(proj, "p2", graph="proj", at=3.0, tokens=10)
+
+    class Broken:
+        def list(self, **_k: Any) -> builtins.list[Run]:
+            raise RuntimeError("깨진 기록")
+
+        def list_node_runs(self, run_id: str) -> builtins.list[NodeRun]:
+            return []
+
+    def extra(project_id: str | None) -> list[RollupSource]:
+        return [
+            RollupSource("project:broken", Broken(), proj.events),
+            RollupSource("project:p", proj.runs, proj.events),
+        ]
+
+    rollups = IncrementalTokenRollups(app.runs, app.events, extra=extra)
+    # 최근 3개 = a2(4) · p2(3) · p1(2), a1은 범위 밖
+    assert _by_graph(rollups.rollups(limit=3, tz=UTC)) == {"app": 1, "proj": 20}
+
+    def failing(project_id: str | None) -> list[RollupSource]:
+        raise RuntimeError("목록 실패")
+
+    only_app = IncrementalTokenRollups(app.runs, app.events, extra=failing)
+    assert _by_graph(only_app.rollups(limit=10, tz=UTC)) == {"app": 2}

@@ -64,9 +64,13 @@ def _registries() -> _Registries:
 class _Rollups:
     def __init__(self) -> None:
         self.calls = 0
+        self.projects: list[str | None] = []
 
-    def rollups(self, *, limit: int, tz: tzinfo) -> Sequence[TokenRollupRow]:
+    def rollups(
+        self, *, limit: int, tz: tzinfo, project_id: str | None = None
+    ) -> Sequence[TokenRollupRow]:
         self.calls += 1
+        self.projects.append(project_id)
         return [TokenRollupRow(model="m", runs=limit, usage=Usage(total_tokens=limit))]
 
 
@@ -139,6 +143,17 @@ def test_windows_only_does_not_read_run_records(tmp_path: Path) -> None:
     [row] = SqliteUsageObservationRepository(db.engine).latest()
     assert (row.source, row.window, row.observed_at) == ("fake", "five_hour", FIXED.timestamp())
     db.close()
+
+
+def test_project_query_narrows_only_token_rollups() -> None:
+    """``?project=``는 토큰 집계에만 넘어간다(없으면 계정 전체 = 인자 없음, 요청 11/08)."""
+    rollups = _Rollups()
+    with _client(_providers(rollups)) as client:
+        body = client.get("/api/v1/usage", params={"project": "p1"}).json()
+        assert [w["window"] for w in body["windows"]] == ["five_hour"]
+        client.get("/api/v1/usage", params={"parts": "tokens"})
+        client.get("/api/v1/usage", params={"parts": "tokens", "project": ""})
+    assert rollups.projects == ["p1", None, None]
 
 
 def test_without_optional_ports_rollups_are_empty_and_test_only_source_is_off() -> None:

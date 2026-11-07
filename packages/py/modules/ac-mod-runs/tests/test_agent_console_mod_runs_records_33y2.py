@@ -358,3 +358,49 @@ def test_ten_thousand_events_write_time_vs_host(spaces: Spaces, tmp_path: Path) 
     assert host.events.last_seq("big") == 10_000
     assert space_s < host_s * 5 + 5  # 쓰기마다 리비전 재확인 비용이 크게 늘지 않는다
     host_engine.dispose()
+
+
+# ---- WS ``run:<id>``와 프로젝트 기록 DB(요청 11/07 후속) -------------------------------------
+def _ws_events(ws: Any, until_seq: int) -> list[int]:
+    seqs: list[int] = []
+    for _ in range(200):
+        message = ws.receive_json()
+        assert message["type"] == "run.event", message
+        seqs.append(int(message["payload"]["seq"]))
+        if seqs[-1] >= until_seq:
+            return seqs
+    raise AssertionError("이벤트가 끝나지 않았다")
+
+
+def test_ws_run_topic_reads_project_records_after_scoped_read(
+    tmp_path: Path, spaces: Spaces
+) -> None:
+    """이전 프로세스가 프로젝트 기록 DB에 남긴 Run: ``?project=`` 조회(웹이 먼저 하는 REST) 뒤
+    ``run:<id>`` 구독이 그 기록 DB 이벤트를 재생한다. 조회 전에는 앱 기록만 보므로 ``not_found``
+    (구독에는 프로젝트가 없다 - 웹은 REST 다음에 구독한다)."""
+    stored = SqliteStorage(spaces.open("project:pa").writable_engine())
+    stored.runs.save(_run("old", host="host-other", status="completed"))
+    stored.events.append_many([_event("old", 1), _event("old", 2)])
+    with _client(tmp_path, spaces) as client, client.websocket_connect(f"/ws?token={TOKEN}") as ws:
+        ws.send_json({"type": "subscribe", "payload": {"topic": "run:old"}})
+        error = ws.receive_json()
+        assert error["type"] == "error"
+        assert error["payload"]["code"] == "not_found"
+        assert client.get(f"{API}/runs/old?project=pa").status_code == 200
+        ws.send_json({"type": "subscribe", "payload": {"topic": "run:old"}})
+        assert _ws_events(ws, 2) == [1, 2]
+        ws.send_json({"type": "subscribe", "payload": {"topic": "run:old", "since_seq": 1}})
+        assert _ws_events(ws, 2) == [2]
+
+
+def test_ws_run_topic_for_project_run_started_here(tmp_path: Path, spaces: Spaces) -> None:
+    """이 프로세스에서 돈 프로젝트 Run은 조회 없이도 구독이 그 기록 DB 이벤트를 재생한다."""
+    with _client(tmp_path, spaces) as client:
+        snap = _finish(client, "pa")
+        run_id = snap["run"]["id"]
+        last = client.get(f"{API}/runs/{run_id}/events?project=pa").json()[-1]["seq"]
+        with client.websocket_connect(f"/ws?token={TOKEN}") as ws:
+            ws.send_json({"type": "subscribe", "payload": {"topic": f"run:{run_id}"}})
+            seqs = _ws_events(ws, last)
+        assert seqs == list(range(1, last + 1))
+    assert {r.id for r in _space_runs(spaces, "pa")} >= {run_id}

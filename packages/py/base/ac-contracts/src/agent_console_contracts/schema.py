@@ -193,6 +193,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     chat.Conversation,
     chat.ConversationSummary,
     chat.ConversationPage,
+    chat.ConversationLocation,
     chat.ChatTurn,
     chat.CreateConversationRequest,
     chat.UpdateConversationRequest,

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import type { RestClient } from "@agent-console/api-client";
 import { useShortcuts, useToast } from "@agent-console/ui";
 import { useWorkspaceSettings, useApiQuery } from "../../app/queries";
+import { useProjectId } from "../../app/projectScope";
 import { useDelayed } from "../../app/useDelayed";
 import { useNow } from "../../app/useNow";
 import { useMediaQuery } from "../../lib/useMediaQuery";
@@ -40,7 +41,8 @@ import {
 import { buildIndicatorItems, buildWindowGroups, sourceIndex, windowNameIndex, type IndicatorItem } from "./usageLib";
 import "./usage-indicator.css";
 
-const loadReport = (rest: RestClient) => rest.getUsage(INDICATOR_USAGE_PARTS);
+const loadReport = (rest: RestClient, projectId: string | null) =>
+  projectId === null ? rest.getUsage(INDICATOR_USAGE_PARTS) : rest.getUsage(INDICATOR_USAGE_PARTS, projectId);
 const loadSources = (rest: RestClient) => rest.listUsageSources();
 const NONE: readonly string[] = [];
 const NO_LABELS: Readonly<Record<string, string>> = {};
@@ -84,7 +86,8 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   const navigate = useNavigate();
   const location = useLocation();
   const settings = useWorkspaceSettings();
-  const report = useApiQuery(USAGE_WINDOWS_KEY, loadReport, { refetchInterval: USAGE_POLL_MS, meta: SILENT_META });
+  const projectId = useProjectId();
+  const report = useApiQuery([...USAGE_WINDOWS_KEY, projectId], (rest) => loadReport(rest, projectId), { refetchInterval: USAGE_POLL_MS, meta: SILENT_META });
   const sources = useApiQuery(USAGE_SOURCES_KEY, loadSources, { staleTime: INDICATOR_SOURCES_STALE_MS, meta: SILENT_META });
   const nowMs = useNow(true, INDICATOR_NOW_MS);
   const nowSec = nowMs / 1000;

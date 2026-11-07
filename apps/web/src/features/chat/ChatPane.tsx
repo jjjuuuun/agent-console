@@ -19,7 +19,7 @@ import { countHandled, failedChildOf, hasRunningChild } from "./lib/progress";
 import { usePageTitle } from "../../shell/titles";
 import { ChatHeader } from "./ChatHeader";
 import { useWorkspaceSettings } from "../../app/queries";
-import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationProject, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList } from "./chatData";
+import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationScope, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList } from "./chatData";
 import { chatMessages } from "./chatMessages";
 import { EmptyConversation } from "./EmptyViews";
 import { InteractionItem } from "./InteractionItem";
@@ -80,8 +80,9 @@ export function ChatPane(props: ChatPaneProps) {
   const sendPart = useLinkPart(LINK_PART_IDS.chatSend);
   const resumePart = useLinkPart(LINK_PART_IDS.chatResumeTurn);
 
-  const project = useConversationProject(id);
-  const conversation = useConversationDetail(id, project);
+  const scope = useConversationScope(id);
+  const project = scope.project;
+  const conversation = useConversationDetail(id, project, scope.ready);
   const graphs = useGraphList();
   const list = useConversationList();
   const graph = useChatGraph(conversation.data?.graph_id, conversation.data?.project_id ?? null);
@@ -93,7 +94,7 @@ export function ChatPane(props: ChatPaneProps) {
   const strategies = useDelegationStrategies();
   const settings = useWorkspaceSettings();
   const backendList = useBackendList();
-  const queue = useQueueList(id, project);
+  const queue = useQueueList(id, project, scope.ready);
 
   const kindMap = useMemo(() => indexById(edgeTypes.data), [edgeTypes.data]);
   const naming = useMemo<NamingContext>(() => ({ nodeTypes: indexById(nodeTypes.data), agents: indexById(agents.data) }), [nodeTypes.data, agents.data]);
@@ -103,7 +104,7 @@ export function ChatPane(props: ChatPaneProps) {
   const replyDisplay = typeof chat.reply_display === "string" ? chat.reply_display : "separate";
   const answerEnabled = chat.answer_with_composer !== false;
 
-  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? project, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
+  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? project, ready: scope.ready, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
   const { turns } = feed;
   const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, messages: { failed: t.composer.answerFailed } });
 
@@ -423,7 +424,8 @@ export function ChatPane(props: ChatPaneProps) {
   };
 
   // ---- 상태별 화면 ----
-  if (conversation.error instanceof ApiError && conversation.error.status === 404) {
+  // 다른 기록 공간을 찾는 동안에는(주소로 바로 연 다른 프로젝트 대화) 현재 프로젝트의 404를 "없음"으로 보이지 않는다
+  if (conversation.error instanceof ApiError && conversation.error.status === 404 && scope.ready) {
     return (
       <div className="chat-pane">
         <div className="app-empty">

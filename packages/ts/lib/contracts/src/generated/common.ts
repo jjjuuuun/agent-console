@@ -24,4 +24,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "common" as const;
-export const CONTRACT_VERSION = "1.12.0" as const;
+export const CONTRACT_VERSION = "1.13.0" as const;

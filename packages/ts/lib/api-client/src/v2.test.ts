@@ -90,6 +90,8 @@ describe("REST v2: 새 경로", () => {
     await rest.respondInteraction("r1", "i1", { answer: "예" });
     await rest.getUsage();
     await rest.getUsage(["windows"]);
+    await rest.getUsage(undefined, "prj 1");
+    await rest.getUsage(["rollups"], null);
     await rest.listUsageSources();
     await rest.listResources({ type: "instruction" });
     await rest.listResourceUsages("res");
@@ -130,6 +132,8 @@ describe("REST v2: 새 경로", () => {
       "POST /runs/r1/interactions/i1/respond",
       "GET /usage",
       "GET /usage?parts=windows",
+      "GET /usage?project=prj%201",
+      "GET /usage?parts=rollups",
       "GET /usage/sources",
       "GET /resources?type=instruction",
       "GET /resources/res/usages",

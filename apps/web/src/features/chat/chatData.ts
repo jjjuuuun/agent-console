@@ -21,6 +21,8 @@ export const chatKeys = {
   turns: (id: string, project?: string | null) => (project === undefined ? (["chat", "turns", id] as const) : (["chat", "turns", id, project] as const)),
   queue: (id: string, project?: string | null) => (project === undefined ? (["chat", "queue", id] as const) : (["chat", "queue", id, project] as const)),
   runEvents: (runId: string) => ["chat", "run-events", runId] as const,
+  /** 대화가 있는 기록 공간(`GET /conversations/{id}/locate`). */
+  locate: (id: string) => ["chat", "locate", id] as const,
 };
 
 const loaders = {
@@ -66,22 +68,46 @@ export function useChatGraph(graphId: string | undefined, projectId: string | nu
   return useQuery({ queryKey: chatKeys.graph(graphId ?? "", projectId), queryFn: () => space(projectId).getGraph(graphId as string), enabled: graphId !== undefined && graphId !== "", staleTime: 5_000 });
 }
 
+/** 대화가 속한 기록 공간을 알아낸 결과. `ready`가 거짓이면 다른 공간을 찾는 중이다(대화 단위 호출·없음 표시를 미룬다). */
+export interface ConversationScope {
+  /** 대화 단위 호출의 `?project=` 값(null = 붙이지 않음, 앱 기록). */
+  project: string | null;
+  ready: boolean;
+}
+
 /**
- * 대화 id가 속한 프로젝트(기록 DB). 현재 프로젝트가 있으면 그것, 모든 프로젝트 보기이면 읽어 둔 목록 항목의 `project_id`, 모르면 null(앱 저장소).
- * 서버는 대화 단위 REST에 `?project=`가 있어야 프로젝트 기록의 대화를 준다.
+ * 대화 id가 속한 기록 공간(프로젝트 기록 DB). 서버는 대화 단위 REST에 `?project=`가 있어야 프로젝트 기록의 대화를 준다.
+ * 1. 현재 범위 목록(대화 목록과 같은 질의 키라 따로 읽지 않는다)을 읽는 동안은 현재 프로젝트로 바로 부른다(지금까지의 동작).
+ * 2. 목록에 있으면 그 항목의 `project_id`(없으면 현재 프로젝트).
+ * 3. 목록에 없으면(첫 페이지 밖·다른 프로젝트의 대화를 주소로 바로 연 경우) 서버 `GET /conversations/{id}/locate`(계약 0.14.7)의
+ *    `project_id`. 찾는 동안은 `ready: false`.
+ * 4. 찾기가 실패하면(없음·여러 곳·옛 서버) 현재 프로젝트(없으면 null) - 상세 호출이 그 결과(404 등)를 보인다.
  */
-export function useConversationProject(id: string): string | null {
+export function useConversationScope(id: string): ConversationScope {
   const current = useProjectId();
-  const { items } = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(current, undefined), (rest, cursor) => loaders.conversationsPage(rest, current, undefined, cursor), { enabled: current === null });
-  return current ?? items?.find((c) => c.id === id)?.project_id ?? null;
+  const list = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(current, undefined), (rest, cursor) => loaders.conversationsPage(rest, current, undefined, cursor));
+  const listed = list.items?.find((c) => c.id === id);
+  const listDone = list.items !== undefined || list.isError;
+  const needLocate = listDone && listed === undefined && id !== "";
+  const located = useApiQuery(chatKeys.locate(id), (rest) => rest.locateConversation(id), { enabled: needLocate, retry: false, staleTime: 60_000 });
+  if (listed !== undefined) return { project: listed.project_id ?? current, ready: true };
+  if (!needLocate) return { project: current, ready: true };
+  if (located.data !== undefined) return { project: located.data.project_id ?? null, ready: true };
+  return { project: current, ready: located.isError };
 }
 
-export function useConversationDetail(id: string, project: string | null = null) {
-  return useApiQuery(chatKeys.conversation(id, project), (rest) => rest.getConversation(id, project));
+/** `useConversationScope`의 `project`만(찾는 중에는 현재 프로젝트). */
+export function useConversationProject(id: string): string | null {
+  return useConversationScope(id).project;
 }
 
-export function useQueueList(id: string, project: string | null = null) {
-  return useApiQuery(chatKeys.queue(id, project), (rest) => rest.listQueue(id, project));
+/** 대화 상세. `enabled`가 거짓이면 질의하지 않는다(읽어 둔 결과는 그대로). */
+export function useConversationDetail(id: string, project: string | null = null, enabled = true) {
+  return useApiQuery(chatKeys.conversation(id, project), (rest) => rest.getConversation(id, project), { enabled });
+}
+
+export function useQueueList(id: string, project: string | null = null, enabled = true) {
+  return useApiQuery(chatKeys.queue(id, project), (rest) => rest.listQueue(id, project), { enabled });
 }
 
 /** 대화 하나의 팀 구성 계획 요약(답변·입구 자리, `GET /graphs/{id}/plan`). id가 없으면 질의하지 않는다. */

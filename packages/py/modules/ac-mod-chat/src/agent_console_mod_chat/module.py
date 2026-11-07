@@ -5,7 +5,8 @@
 - 필수 포트 없음. 선택: ``chat.turn_launcher``·``chat.runs``·``chat.run_events``·
   ``chat.interactions``·``chat.turn_sessions``(실행 연결 — 보통 ``link-chat-runs``가 준다),
   ``definitions.lookup``, ``definitions.spaces``(프로젝트 대화의 팀 구성 = 그 공간에서만, 5.7R.33y),
-  ``workspace.settings``, ``records.sessions``(세션 이어 가기 상태·복원, 5.7R.33y3)(``ports.py``).
+  ``workspace.settings``, ``records.sessions``(세션 이어 가기 상태·복원, 5.7R.33y3),
+  ``projects.lookup``(대화 위치 찾기의 등록 프로젝트 id, 요청 11/07 후속)(``ports.py``).
 - 저장: 이 모듈이 소유한 ``conversations``·``chat_queue``(``storage/``)를 호스트 DB 핸들의 엔진
   위에 둔다. 마이그레이션 계보 ``chat``은 모듈이 켜질 때만 올라간다(테이블은 legacy 0002·0003이
   만들었다). DB가 없으면 메모리(경고 ``chat.storage_memory``). 선택 포트 ``records.spaces``가
@@ -42,6 +43,7 @@ from .ports import (
     CONVERSATIONS_UPDATED,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SPACES,
+    PROJECTS_LOOKUP,
     RECORDS_SESSIONS,
     RECORDS_SPACES,
     SERVER_WARNINGS,
@@ -89,6 +91,7 @@ class ChatModule:
             RECORDS_SPACES,
             CHAT_MOVE_HOOKS,
             RECORDS_SESSIONS,
+            PROJECTS_LOOKUP,
         ),
         settings_schema=ChatModuleSettings,
         settings_compat=SETTINGS_COMPAT,
@@ -135,6 +138,12 @@ class ChatModule:
         service_records = chat_records(
             lambda: ctx.port(RECORDS_SPACES), prefix=cfg.records_space_prefix
         )
+
+        def project_ids() -> list[str]:
+            """등록 프로젝트 id(``projects.lookup``가 없으면 빈 목록, 대화 위치 찾기용)."""
+            listing = ctx.port(PROJECTS_LOOKUP)
+            return [] if listing is None else [p.id for p in listing.list_projects()]
+
         service = SpacedChatService(
             storage.conversations,
             graphs,
@@ -143,6 +152,8 @@ class ChatModule:
             queue=storage.queue,
             records=service_records,
             make=make_space,
+            project_ids=project_ids,
+            locate_limit=cfg.locate_max_projects,
         )
 
         database = ctx.database
