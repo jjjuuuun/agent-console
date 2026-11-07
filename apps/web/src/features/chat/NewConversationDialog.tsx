@@ -97,7 +97,7 @@ export function NewConversationDialog(props: NewConversationDialogProps) {
           meta,
           blocked,
           reason: hasIssues ? <ValidationChip summary={g.validation as NonNullable<GraphSummary["validation"]>} /> : noEntry ? <span>{t.noEntry}</span> : undefined,
-          expanded: hasIssues ? <GraphIssuesPreview graph={g} /> : undefined,
+          expanded: hasIssues ? <GraphIssuesPreview graph={g} project={projectId} /> : undefined,
           editHref: projectId === null ? undefined : `${graphPath}/${encodeURIComponent(g.id)}?prj=${encodeURIComponent(projectId)}`,
         };
       }),

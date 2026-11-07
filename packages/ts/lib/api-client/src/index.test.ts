@@ -144,6 +144,7 @@ describe("REST", () => {
     await rest.createGraph(graph);
     await rest.validateGraph("g1");
     await rest.validateGraph("g1", graph);
+    await rest.validateGraph("g1", undefined, { project: "p 1" });
     await rest.listGraphVersions("g1");
     await rest.getGraphVersion("g1", "abc");
     await rest.createRun({ graph_id: "g1", input: {}, origin: "web" });
@@ -165,6 +166,7 @@ describe("REST", () => {
       "POST /graphs",
       "POST /graphs/g1/validate",
       "POST /graphs/g1/validate",
+      "POST /graphs/g1/validate?project=p%201",
       "GET /graphs/g1/versions",
       "GET /graphs/g1/versions/abc",
       "POST /runs",

@@ -269,7 +269,7 @@ export function ChatScreen() {
         busy={newBusy}
         error={newError}
         teamsPath={chatPaths.teams()}
-        renderIssues={(g) => <GraphIssuesPreview graph={g} />}
+        renderIssues={(g) => <GraphIssuesPreview graph={g} project={projects.currentProject?.id ?? null} />}
         onClose={() => setNewDialog(null)}
         onConfirm={startConversation}
       />

@@ -649,7 +649,7 @@ export function ChatPane(props: ChatPaneProps) {
         busy={teamBusy}
         error={teamError}
         teamsPath={chatPaths.teams()}
-        renderIssues={(g) => <GraphIssuesPreview graph={g} />}
+        renderIssues={(g) => <GraphIssuesPreview graph={g} project={project} />}
         onClose={() => setTeamDialog(false)}
         onConfirm={(graphId) => {
           setTeamBusy(true);

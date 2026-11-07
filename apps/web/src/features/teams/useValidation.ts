@@ -14,7 +14,7 @@ export interface ValidationState {
 
 /**
  * 팀 구성 초안을 서버에서 검증한다(`POST /graphs/{id}/validate`). 초안이 바뀌면 `delayMs` 뒤에 자동으로 다시 하고,
- * `validateNow`로 즉시 할 수 있다. 응답은 마지막 요청 것만 받는다. 이슈 코드는 해석하지 않는다.
+ * `validateNow`로 즉시 할 수 있다. 프로젝트 공간 안에서는 `rest`가 이미 `?project=`를 붙이므로(SpaceScope) 여기서 따로 넘기지 않는다. 응답은 마지막 요청 것만 받는다. 이슈 코드는 해석하지 않는다.
  */
 export function useValidation(graphId: string, graph: Graph | undefined, delayMs = VALIDATION_DEBOUNCE_MS): ValidationState & { validateNow: () => void } {
   const { rest } = useApi();

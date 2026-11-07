@@ -374,7 +374,7 @@ describe("검증 요약(계약 v3)과 계획 요약", () => {
     expect(await within(dialog).findByText("서버 문장 0 ***")).toBeTruthy();
     expect(within(dialog).getAllByText(/^서버 문장 \d \*\*\*/).length).toBe(5);
     expect(within(dialog).getByText("외 2건")).toBeTruthy();
-    expect(h.rest["validateGraph"]).toHaveBeenCalledWith("gb");
+    expect(h.rest["validateGraph"]).toHaveBeenCalledWith("gb", undefined, { project: null });
     // 경고만 있는 팀 구성은 칩만 달고 선택할 수 있다. validation이 null이면 칩이 없다
     const warn = within(dialog).getByRole("radio", { name: /경고 팀/ });
     expect(within(item("gw")).getByText(/경고 2건/)).toBeTruthy();

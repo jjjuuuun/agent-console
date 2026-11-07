@@ -44,8 +44,8 @@ export interface GraphsClient {
   getGraphPlan(id: string): Promise<TeamPlanSummary>;
   /** 저장하지 않은 초안의 계획 요약. */
   planDraftGraph(request: DraftGraphRequest): Promise<TeamPlanSummary>;
-  /** `graph`를 생략하면 저장된 그래프를 검증한다. */
-  validateGraph(id: string, graph?: Graph): Promise<Issue[]>;
+  /** `graph`를 생략하면 저장된 그래프를 검증한다. `opts.project`가 있으면 그 프로젝트 공간 기준(`?project=`)으로 검증한다. */
+  validateGraph(id: string, graph?: Graph, opts?: { project?: string | null }): Promise<Issue[]>;
   /** 버전 목록(`content` 없음). */
   listGraphVersions(id: string): Promise<DefinitionVersion[]>;
   /** 한 버전의 그래프 문서(`content`). 없으면 404. */
@@ -66,7 +66,7 @@ export function createGraphsClient(io: RestIo): GraphsClient {
     previewDraftBundle: (req) => io.request("POST", "/graphs/bundle-preview", { body: req }),
     getGraphPlan: (id) => io.request("GET", `/graphs/${enc(id)}/plan`),
     planDraftGraph: (req) => io.request("POST", "/graphs/plan", { body: req }),
-    validateGraph: (id, graph) => io.request("POST", `/graphs/${enc(id)}/validate`, graph === undefined ? {} : { body: graph }),
+    validateGraph: (id, graph, opts) => io.request("POST", `/graphs/${enc(id)}/validate${query({ project: opts?.project })}`, graph === undefined ? {} : { body: graph }),
     listGraphVersions: (id) => io.request("GET", `/graphs/${enc(id)}/versions`),
     getGraphVersion: (id, hash) => io.request("GET", `/graphs/${enc(id)}/versions/${enc(hash)}`),
   };
