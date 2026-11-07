@@ -66,6 +66,20 @@ describe("사용량 화면의 프로젝트 범위 (R15.3)", () => {
     expect(getUsage).toHaveBeenLastCalledWith(undefined, "p1");
   });
 
+  it("범위가 정해지기 전에 누른 [새로 고침]은 준비되는 즉시 보고서를 한 번만 조회한다", async () => {
+    const getUsage = vi.fn(async () => emptyReport);
+    const { clients } = createFakeClients({ getUsage, listUsageSources: async () => [] });
+    const qc = createAppQueryClient({ retry: false });
+    const view = render(tree(clients, qc, null, false));
+    fireEvent.click(screen.getByRole("button", { name: "새로 고침" }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getUsage).not.toHaveBeenCalled();
+    view.rerender(tree(clients, qc, "p1", true));
+    await waitFor(() => expect(getUsage).toHaveBeenCalledWith(undefined, "p1"));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getUsage).toHaveBeenCalledTimes(1);
+  });
+
   it("집계 패널은 주어진 제목과 범위 안내(이 프로젝트 / 계정 전체)를 보인다", () => {
     render(
       <RollupPanel

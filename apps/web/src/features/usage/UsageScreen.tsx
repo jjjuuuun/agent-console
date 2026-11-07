@@ -100,9 +100,18 @@ export function UsageScreen() {
     [report.data?.rollups, periodDays, dayKey],
   );
 
+  // 범위가 정해지기 전에 누른 새로 고침은 기억해 두었다가, 준비되는 즉시 보고서를 한 번 조회한다(진행 중 조회는 합친다).
+  const pendingRefresh = useRef(false);
+  const refetchReport = report.refetch;
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["usage"] });
+    if (!scopeReady) pendingRefresh.current = true;
   };
+  useEffect(() => {
+    if (!scopeReady || !pendingRefresh.current) return;
+    pendingRefresh.current = false;
+    void refetchReport({ cancelRefetch: false });
+  }, [scopeReady, refetchReport]);
   useShortcuts([{ id: "usage.refresh", scope: "usage", keys: "r", titleKey: "shortcuts.usageRefresh", run: refresh }]);
 
   const nameOf = (dim: RollupDimension, value: string | null): string => {
