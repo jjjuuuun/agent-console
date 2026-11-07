@@ -13,6 +13,17 @@ export const CURRENT_PROJECT_PARAM = "prj";
 export const CurrentProjectContext = createContext<string | null>(null);
 
 /**
+ * 현재 프로젝트가 정해졌는지(프로젝트 기능 여부·목록 로딩이 끝났는지). 기본 true(공급자 없음 = 정해질 것이 없음).
+ * 프로젝트 id를 질의 키·인자에 넣는 조회는 false인 동안 미뤄서, null -> 실제 id 전환으로 같은 조회가 두 번 나가지 않게 한다.
+ */
+export const ProjectScopeReadyContext = createContext<boolean>(true);
+
+/** `ProjectScopeReadyContext` 값. */
+export function useProjectScopeReady(): boolean {
+  return useContext(ProjectScopeReadyContext);
+}
+
+/**
  * 새 대화·실행에 찍을 프로젝트 id. 모든 프로젝트 보기이거나 프로젝트 기능이 꺼져 있으면 null.
  */
 export function useProjectId(): string | null {

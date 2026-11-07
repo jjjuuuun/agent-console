@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import type { RestClient } from "@agent-console/api-client";
 import { useShortcuts, useToast } from "@agent-console/ui";
 import { useWorkspaceSettings, useApiQuery } from "../../app/queries";
-import { useProjectId } from "../../app/projectScope";
+import { useProjectId, useProjectScopeReady } from "../../app/projectScope";
 import { useDelayed } from "../../app/useDelayed";
 import { useNow } from "../../app/useNow";
 import { useMediaQuery } from "../../lib/useMediaQuery";
@@ -87,7 +87,8 @@ function ActiveIndicator({ routes, usageRoute, cfg, layout, corner, host }: Acti
   const location = useLocation();
   const settings = useWorkspaceSettings();
   const projectId = useProjectId();
-  const report = useApiQuery([...USAGE_WINDOWS_KEY, projectId], (rest) => loadReport(rest, projectId), { refetchInterval: USAGE_POLL_MS, meta: SILENT_META });
+  const scopeReady = useProjectScopeReady();
+  const report = useApiQuery([...USAGE_WINDOWS_KEY, projectId], (rest) => loadReport(rest, projectId), { refetchInterval: USAGE_POLL_MS, meta: SILENT_META, enabled: scopeReady });
   const sources = useApiQuery(USAGE_SOURCES_KEY, loadSources, { staleTime: INDICATOR_SOURCES_STALE_MS, meta: SILENT_META });
   const nowMs = useNow(true, INDICATOR_NOW_MS);
   const nowSec = nowMs / 1000;

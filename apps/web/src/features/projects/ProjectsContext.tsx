@@ -16,7 +16,7 @@ import {
   type ScopeViewMode,
 } from "@agent-console/projects";
 import { useApi } from "../../app/ApiContext";
-import { CURRENT_PROJECT_PARAM, CurrentProjectContext } from "../../app/projectScope";
+import { CURRENT_PROJECT_PARAM, CurrentProjectContext, ProjectScopeReadyContext } from "../../app/projectScope";
 import { PROJECT_REQUIRES } from "../../app/requirements";
 import { useApiQuery } from "../../app/queries";
 import type { RestClient } from "@agent-console/api-client";
@@ -269,7 +269,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   );
   return (
     <ProjectsContext.Provider value={value}>
-      <CurrentProjectContext.Provider value={effective}>{children}</CurrentProjectContext.Provider>
+      <ProjectScopeReadyContext.Provider value={!value.loading}>
+        <CurrentProjectContext.Provider value={effective}>{children}</CurrentProjectContext.Provider>
+      </ProjectScopeReadyContext.Provider>
       {folderRequest === null ? null : (
         <ProjectFolderHost request={folderRequest} projects={views} refresh={refresh} openHome={openHome} onClose={() => setFolderRequest(null)} />
       )}
