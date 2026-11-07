@@ -105,8 +105,7 @@ export function ChatPane(props: ChatPaneProps) {
 
   const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? project, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
   const { turns } = feed;
-  const notifyInfo = useCallback((text: string) => toast({ tone: "info", text }), [toast]);
-  const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, notify: notifyInfo, messages: { failed: t.composer.answerFailed } });
+  const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, messages: { failed: t.composer.answerFailed } });
 
   // ---- 파생 값 ----
   const team = graphs.data?.find((g) => g.id === conversation.data?.graph_id);

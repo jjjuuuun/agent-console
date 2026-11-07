@@ -253,6 +253,80 @@ def test_child_run_uses_same_space(tmp_path: Path) -> None:
         assert _reply(events) == f"cwd={folder} model=m-proj"
 
 
+def _review_loop_graph() -> dict[str, Any]:
+    """you → 작성자 → 사람 검토, 반려하면 작성자에게 되돌아간다(최대 3회)."""
+
+    def link(edge_id: str, kind: str, src: str, dst: str, **config: Any) -> dict[str, Any]:
+        (s_node, s_port), (t_node, t_port) = src.split("."), dst.split(".")
+        return {
+            "id": edge_id,
+            "kind": kind,
+            "source": {"node": s_node, "port": s_port},
+            "target": {"node": t_node, "port": t_port},
+            "config": config,
+        }
+
+    decisions = [{"id": "approved", "label": "승인"}, {"id": "rejected", "label": "반려"}]
+    review = {"title": "검토", "decisions": decisions}
+    return {
+        "id": "loop",
+        "name": "loop",
+        "nodes": [
+            {"id": "you", "type": "user", "label": "나"},
+            {"id": "writer", "type": "agent", "label": "작성자", "config": {"agent_ref": "a1"}},
+            {"id": "review", "type": "user", "label": "검토", "config": {"review": review}},
+        ],
+        "edges": [
+            link("m1", "message", "you.says", "writer.in"),
+            link("h1", "handoff", "writer.out", "review.review"),
+            link("back", "loop", "review.rejected", "writer.in", max_iterations=3),
+            link("a1", "reply", "review.approved", "you.hears"),
+        ],
+    }
+
+
+def _answer_next(client: TestClient, run_id: str, done: set[str], decision: str) -> None:
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        found = client.get(f"{API}/runs/{run_id}/interactions", params={"project": "app"}).json()
+        fresh = [i for i in found if i["status"] == "pending" and i["id"] not in done]
+        if fresh:
+            done.add(fresh[0]["id"])
+            answered = client.post(
+                f"{API}/runs/{run_id}/interactions/{fresh[0]['id']}/respond",
+                json={"response": {"decision": decision}},
+            )
+            assert answered.status_code == 200, answered.text
+            return
+        time.sleep(0.02)
+    raise AssertionError("검토 요청이 오지 않았다")
+
+
+def test_project_snapshot_node_runs_follow_iteration_order(tmp_path: Path) -> None:
+    """프로젝트 기록의 ``GET /runs/{id}`` ``node_runs``는 앱 저장소와 같은 순서(시작 순 = 회차 순).
+
+    e2e 29(검토 반복)에서 [1,0,2]로 보고된 순서를 고정한다(요청 11/07).
+    """
+    folder = _project_folder(tmp_path)
+    _write(folder / CFG / "graphs", "loop", _review_loop_graph())
+    with _client(tmp_path) as (client, _assembly):
+        _register(client, folder)
+        created = _start(client, "loop", "app")
+        assert created.status_code == 202, created.text
+        run_id = created.json()["id"]
+        done: set[str] = set()
+        for decision in ("rejected", "rejected", "approved"):
+            _answer_next(client, run_id, done, decision)
+        run, _events = _wait(client, run_id)
+        assert run["status"] == "completed", run
+        for params in ({"project": "app"}, {}):
+            snap = client.get(f"{API}/runs/{run_id}", params=params).json()
+            rows = [(n["node_id"], n["iteration"]) for n in snap["node_runs"]]
+            assert rows == [(node, i) for i in range(3) for node in ("writer", "review")], params
+            starts = [n["started_at"] for n in snap["node_runs"]]
+            assert starts == sorted(starts)
+
+
 def test_required_project_on_by_default(tmp_path: Path) -> None:
     """0.3.0부터 기본 참(5.7R.33v 후속 ⑤): 설정 없이도 프로젝트 없는 실행을 막는다."""
     for options in (None, {MODULE_ID: {"require_project": True}}):

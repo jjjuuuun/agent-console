@@ -141,7 +141,8 @@ describe("열린 대화와 입력창 답변 모드", () => {
     mount(h);
     type(await composer(), "답");
     fireEvent.click(screen.getByRole("button", { name: "답하기" }));
-    expect((await screen.findAllByText(/이미 답했거나 닫힌 요청입니다/)).length).toBeGreaterThan(0);
+    // 안내는 한 곳에만 나온다(알림 중복 없음)
+    expect(await screen.findAllByText(/이미 답했거나 닫힌 요청입니다/)).toHaveLength(1);
     // 카드는 서버가 알려 준 현재 상태(답함)로 접힌다
     await waitFor(() => expect(screen.getByRole("group", { name: /답함|응답 대기|임의 질문/ }).getAttribute("data-card-state")).toBe("answered"));
     // 입력한 텍스트는 유지된다(재시도 가능)

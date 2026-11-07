@@ -2,7 +2,7 @@
 
 실행·사용량 연동 모듈. 실행 기록(`runs.reader`·`runs.events`)을 사용량 모듈(`mod-usage`)에 잇는다.
 
-- `usage.event_query`: 실행 이벤트 조회(사용량 출처 맥락 — 예: `run-events` 출처의 `usage.rate_limit`).
+- `usage.event_query`: 실행 이벤트 조회(사용량 출처 맥락 — 예: `run-events` 출처의 `usage.rate_limit`). `MergedEventQuery`가 앱 기록(`runs.events`)과 **등록 프로젝트(보관 제외)의 기록 DB**를 합쳐 ts 내림차순으로 준다. 계정 창(5시간·주간)은 계정 단위라 프로젝트를 나누지 않고, 프로젝트에서 돈 실행의 창 이벤트는 그 폴더 기록 DB에만 있기 때문이다. 선택 포트 `projects.lookup`·`records.spaces` 중 하나라도 없으면 앱 기록만 읽는다. 읽을 수 없는 공간(폴더 없음·깨짐)은 건너뛴다.
 - `usage.token_rollups`: 플랫폼 실행분 토큰 집계(`IncrementalTokenRollups`). Run마다 마지막으로 반영한 이벤트 seq(워터마크) 뒤만 읽고, 끝난 Run은 새 이벤트(`runs.event` 구독)가 생기기 전까지 다시 읽지 않는다. 메모리 캐시라 재시작하면 다시 계산한다. 기록이 줄어드는 작업(보존 정리) 뒤에는 `invalidate()`. 루트 Run만 센다(`ac-usage.counts_toward_usage`) — 중첩 팀의 자식 Run 사용량은 부른 부모 노드의 `usage`로 이미 루트에 들어 있다(이중 집계 방지).
 - 이 연동이 꺼지면 사용량 화면은 외부 출처(statusline 등)만 보이고 토큰 집계는 빈 목록이다(웹 역할 `usage:tokens`).
 
@@ -39,8 +39,12 @@ pip install agent-console-link-runs-usage
 | --- | --- | --- |
 | 필수 | `runs.reader` | `list(limit=)`·`list_node_runs(run_id)` |
 | 필수 | `runs.events` | `list(run_id, since_seq=, type_prefix=)`·`latest_by_type(...)` |
+| 선택 | `projects.lookup` | `list_projects()`(`id`·`archived`) |
+| 선택 | `records.spaces` | 공간 이름(`records_space_prefix` + 프로젝트 id) → 기록 DB 핸들 |
 | 구독 | `runs.event` | 이벤트가 생긴 Run 표시 |
-| 제공 | `usage.event_query` / `usage.token_rollups` | `runs.events` 그대로 / `IncrementalTokenRollups` |
+| 제공 | `usage.event_query` / `usage.token_rollups` | `MergedEventQuery`(앱 + 프로젝트 기록) / `IncrementalTokenRollups` |
+
+설정 `modules.options.link-runs-usage.records_space_prefix`(기본 `project:`, 값이 없으면 `link-projects-records.space_prefix`를 이어받음).
 
 ## 단독 실행
 
