@@ -376,6 +376,8 @@ class RunRepository(Protocol):
         conversation_id: str | None = None,
         agent: str | None = None,
         root_run_id: str | None = None,
+        since: float | None = None,
+        query: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         """커서 페이지(design §6R.2). `(items, next_cursor)`, 끝이면 `next_cursor`는 None.
 
@@ -384,6 +386,12 @@ class RunRepository(Protocol):
         `conversation_id`·`agent`·`root_run_id`는 `list`와 같은 뜻이다(6R.19: `agent` = 그
         에이전트가 `actor`로 남긴 이벤트가 있는 Run, `root_run_id` = 그 루트 아래 모든 자손, 루트
         자신은 제외).
+        `since`는 `created_at`이 그 값(epoch 초) 이상인 Run만이다(색인 `created_at`).
+        `query`는 부분 일치 검색어다(앞뒤 공백을 떼고 비면 거르지 않음): run `id`·`graph_id`·
+        `input`의 최상위 문자열 값 중 하나에 들어 있으면 남는다. 대소문자는 ASCII만 무시하고
+        (`run_page.fold_query`), `%`·`_`는 글자 그대로 찾는다. 이 조건은 색인을 쓰지 못하므로
+        정렬 색인을 따라 읽으며 `limit`개를 채우면 멈춘다(다른 조건과 함께 쓰면 그만큼 줄어든다).
+        팀 구성 이름·대화 제목처럼 다른 표·DB에 있는 값은 찾지 않는다(호출자 몫).
         돌려주는 Run마다 `has_children`(직접 자식 Run 유무)를 채운다. 페이지 행 전체를 한 번에 센다
         (행마다 되묻지 않는다).
         `cursor`는 이전

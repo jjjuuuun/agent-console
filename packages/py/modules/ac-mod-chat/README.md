@@ -7,6 +7,18 @@
 - 턴 실행·Run 조회·상호작용은 **선택 포트**로 받는다(보통 `link-chat-runs`가 준다). 없으면 대화·기록·대기열은 동작하고 메시지 전송만 409 `feature_unavailable{module: mod-chat, port: chat.turn_launcher}`이다. 정의 읽기(`definitions.lookup`)가 없으면 대화 만들기·팀 구성 바꾸기가 409다.
 - 저장소: 대화·대기열(`conversations`·`chat_queue`)은 이 모듈이 소유한다(`agent_console_mod_chat.storage`). 호스트의 DB 핸들(`BaseServices.database`, 예: `agent_console_store.SqliteDatabase`) 엔진 위에 만들고, 마이그레이션 계보 `chat`(패키지 데이터 `storage/migrations/versions`)은 모듈이 켜질 때만 올라간다. 테이블은 legacy 0002·0003이 만든 그대로다(변경 없음). 대화를 지우면 대기열도 같은 트랜잭션에서 지운다. DB가 없으면 메모리(경고 `chat.storage_memory`). **legacy는 다운그레이드하지 않는다** — 되돌릴 때는 `chat` 계보만 되돌린다.
 
+### 대화 목록 페이지 질의 (`GET /conversations/page`)
+
+정렬은 `updated_at`·`id` 내림차순. `next_cursor`를 다음 요청 `cursor=`로 넘기면 같은 조건으로 이어진다. 기록 공간이 있는 조립의 `?project=`는 폴더 기록을 끝까지 읽은 뒤 앱 DB 옛 기록으로 잇고, 두 출처 모두 같은 조건으로 거른다.
+
+| 질의 | 뜻 |
+| --- | --- |
+| `cursor` | 이전 응답의 `next_cursor`(불투명, 틀리면 400 `bad_request`) |
+| `limit` | 1~1000(기본 50) |
+| `project` · `source` | 그 프로젝트의 대화 · 기록 출처(`project` 기본, `app` = 앱 DB 옛 기록) |
+| `graph_id` · `archived` | 같음 비교 |
+| `q` | 제목 부분 일치(최대 200자, 넘으면 422, 앞뒤 공백 제거, 비면 무시, 대소문자 무시 `casefold`). 제목이 빈 대화는 맞지 않는다 |
+
 ## 설치
 
 ```bash

@@ -326,6 +326,10 @@ class CopyService:
     def items(self, ref: SpaceRef, kind: str | None = None) -> list[CopyItem]:
         """그 공간의 정의 목록(본문 없음, 종류 순 → 저장소 요약 순). ``kind``를 주면 그 종류만.
 
+        ``version``은 공간 저장소의 버전 해시다. 기본 종류도 기여 종류도 항목은 같은 공간 저장소에
+        있고, 기여의 ``delete`` 콜백도 같은 저장소 버전으로 ``If-Match``를 판정하므로
+        ``delete_item(expected_version=item.version)``에 그대로 쓴다.
+
         Raises:
             ProjectError: ``kind``가 이 공간의 복사 종류가 아니다(404 ``not_found``).
         """
@@ -352,6 +356,7 @@ class CopyService:
                     name=s.name,
                     description=s.description,
                     saved_at=s.saved_at,
+                    version=s.version_hash or None,
                 )
                 for s in summaries
             )

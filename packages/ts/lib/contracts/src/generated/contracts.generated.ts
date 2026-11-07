@@ -4602,6 +4602,10 @@ export interface CopyItem {
    * 마지막 저장 시각(유닉스 초, 모르면 null).
    */
   saved_at?: number | null;
+  /**
+   * (3.6.0) 항목의 지금 버전(그 공간 정의 저장소의 버전 해시). 종류 공통 삭제 `DELETE /projects/copy/items/{kind}/{id}`의 `If-Match`에 그대로 쓴다(다르면 412 `version_conflict`). null = 모름 또는 옛 서버(`If-Match` 없이 지운다).
+   */
+  version?: string | null;
 }
 /**
  * `GET /projects/copy/kinds` 항목: 한 공간에서 복사 대상으로 고를 수 있는 정의 종류 하나.
@@ -13271,7 +13275,7 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.5" as const;
+export const CONTRACTS_VERSION = "0.14.6" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.12.0",
@@ -13280,7 +13284,7 @@ export const CONTRACT_VERSIONS = {
   "definitions": "1.7.0",
   "runs": "1.8.0",
   "usage": "1.1.0",
-  "projects": "3.5.0",
+  "projects": "3.6.0",
   "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",

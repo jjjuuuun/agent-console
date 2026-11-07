@@ -51,3 +51,21 @@ def test_page_end_exact_and_filters() -> None:
     items, last = service.page(limit=1, archived=False)
     assert ([c.id for c in items], last) == (["a"], None)
     assert service.page(limit=0)[0] != []  # 1로 올린다
+
+
+def test_page_title_query_6r19() -> None:
+    """6R.19: ``query`` = 제목 부분 일치(``casefold``, 앞뒤 공백 무시), 커서와 함께."""
+    service, store = _service()
+    for i, title in enumerate(["Straße 계획", "", "STRASSE", "다른 것", "strasse 2"]):
+        store.save(_conv(f"c{i}", float(i), title=title))
+    seen: list[str] = []
+    after = None
+    while True:
+        items, after = service.page(after=after, limit=1, query="  strasse ")
+        seen += [c.id for c in items]
+        if after is None:
+            break
+    assert seen == ["c4", "c2", "c0"]
+    items, _ = service.page(limit=10, query="")
+    assert len(items) == 5
+    assert service.page(limit=10, query="계획")[0][0].id == "c0"

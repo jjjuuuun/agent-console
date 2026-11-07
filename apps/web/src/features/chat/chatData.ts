@@ -11,7 +11,7 @@ export const chatKeys = {
   /** 프로젝트를 주면 그 프로젝트 목록의 키, 생략하면 모든 대화 목록 키의 접두(무효화·일괄 갱신용). */
   conversations: (project?: string | null) => (project == null ? queryKeys.list("conversations") : queryKeys.list("conversations", { project })),
   /** 대화 목록 페이지(무한 질의) 키. `chatKeys.conversations()` 접두 아래라 한꺼번에 무효화된다. */
-  conversationPages: (project: string | null, archived: boolean | undefined) => queryKeys.list("conversations", { project, archived, paged: true }),
+  conversationPages: (project: string | null, archived: boolean | undefined, q = "") => queryKeys.list("conversations", { project, archived, paged: true, ...(q === "" ? {} : { q }) }),
   graphs: () => queryKeys.list("graphs"),
   agents: () => queryKeys.list("agents"),
   resources: () => queryKeys.list("resources"),
@@ -24,8 +24,8 @@ export const chatKeys = {
 };
 
 const loaders = {
-  conversationsPage: (rest: RestClient, project: string | null, archived: boolean | undefined, cursor: string | null) =>
-    rest.conversationsPage({ limit: CONVERSATION_PAGE_SIZE, ...(project === null ? {} : { project }), ...(archived === undefined ? {} : { archived }), ...(cursor === null ? {} : { cursor }) }),
+  conversationsPage: (rest: RestClient, project: string | null, archived: boolean | undefined, cursor: string | null, q = "") =>
+    rest.conversationsPage({ limit: CONVERSATION_PAGE_SIZE, ...(q === "" ? {} : { q }), ...(project === null ? {} : { project }), ...(archived === undefined ? {} : { archived }), ...(cursor === null ? {} : { cursor }) }),
   graphs: (rest: RestClient) => rest.listGraphs(),
   agents: (rest: RestClient) => rest.listAgents(),
   resources: (rest: RestClient) => rest.listResources(),
@@ -42,11 +42,13 @@ export const CONVERSATION_PAGE_SIZE = 50;
  * 현재 프로젝트의 대화 목록(서버 `?project=`·커서 페이지, 프로젝트 기능이 꺼져 있으면 모두).
  * `data`는 읽은 페이지를 이어 붙인 목록이고, `loadMore`로 다음 페이지를 읽는다. 프로젝트가 바뀌면 첫 페이지부터 다시 읽는다.
  * @param options.archived true/false = 서버가 보관 여부로 거른다, 생략 = 모두
+ * @param options.q 제목 부분 일치 검색어(서버가 거른다). 바뀌면 첫 페이지부터 다시 읽는다. 앞뒤 공백은 떼고 200자까지만 보낸다.
  */
-export function useConversationList(options: { archived?: boolean } = {}) {
+export function useConversationList(options: { archived?: boolean; q?: string } = {}) {
   const project = useProjectId();
   const archived = options.archived;
-  const paged = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(project, archived), (rest, cursor) => loaders.conversationsPage(rest, project, archived, cursor));
+  const q = (options.q ?? "").trim().slice(0, 200);
+  const paged = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(project, archived, q), (rest, cursor) => loaders.conversationsPage(rest, project, archived, cursor, q));
   const { items, isPending, ...rest } = paged;
   return { ...rest, data: items as ConversationSummary[] | undefined, isLoading: isPending };
 }

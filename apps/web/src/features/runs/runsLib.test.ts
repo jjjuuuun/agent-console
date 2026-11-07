@@ -8,7 +8,7 @@ import {
   collectPrefixes,
   deriveRunOverlay,
   filterFailedSpans,
-  filterRuns,
+  periodSince,
   formatTokensShort,
   interactionStats,
   mergeEvents,
@@ -23,14 +23,13 @@ import {
 const ev = (seq: number, type: string, extra: Partial<RunEvent> = {}): RunEvent => ({ event_id: `e${seq}`, run_id: "r1", seq, ts: 100 + seq, node_path: [], type, ...extra });
 const run = (id: string, status: string, createdAt: number, extra: Partial<Run> = {}): Run => ({ id, graph_id: "g1", graph_version: "v1", status: status as Run["status"], input: {}, origin: "api", created_at: createdAt, ...extra });
 
-describe("filterRuns", () => {
+describe("periodSince·활성 수", () => {
   const now = 1_000_000;
   const runs = [run("a", "running", now - 60, { input: { text: "로그인 화면 스펙" } }), run("b", "completed", now - 3 * 86400), run("c", "failed", now - 40 * 86400)];
-  it("기간·상태·검색을 클라이언트에서 거른다", () => {
-    expect(filterRuns(runs, { statuses: [], period: "7d", query: "" }, now, PERIOD_OPTIONS).map((r) => r.id)).toEqual(["a", "b"]);
-    expect(filterRuns(runs, { statuses: [], period: "all", query: "" }, now, PERIOD_OPTIONS)).toHaveLength(3);
-    expect(filterRuns(runs, { statuses: ["failed", "running"], period: "all", query: "" }, now, PERIOD_OPTIONS).map((r) => r.id)).toEqual(["a", "c"]);
-    expect(filterRuns(runs, { statuses: [], period: "all", query: "스펙" }, now, PERIOD_OPTIONS).map((r) => r.id)).toEqual(["a"]);
+  it("기간 선택지를 created_at 하한으로 바꾼다(제한 없음 = null)", () => {
+    expect(periodSince("7d", now, PERIOD_OPTIONS)).toBe(now - 7 * 86400);
+    expect(periodSince("all", now, PERIOD_OPTIONS)).toBeNull();
+    expect(periodSince("모름", now, PERIOD_OPTIONS)).toBeNull();
   });
   it("활성 수와 소요", () => {
     expect(activeCounts(runs, "waiting")).toEqual({ running: 1, waiting: 0 });

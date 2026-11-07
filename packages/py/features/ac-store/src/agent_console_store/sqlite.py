@@ -44,7 +44,14 @@ from .memory import (
 )
 from .migrate import upgrade
 from .project_assign import AssignCandidate
-from .run_page import clamp_limit, decode_cursor, encode_cursor
+from .run_page import (
+    LIKE_ESCAPE,
+    clamp_limit,
+    decode_cursor,
+    encode_cursor,
+    fold_query,
+    like_contains,
+)
 
 
 def create_sqlite_engine(
@@ -396,6 +403,8 @@ class SqliteRunRepository:
         conversation_id: str | None = None,
         agent: str | None = None,
         root_run_id: str | None = None,
+        since: float | None = None,
+        query: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         limit = clamp_limit(limit)
         c = self._runs.c
@@ -428,6 +437,25 @@ class SqliteRunRepository:
             else:
                 path = '$.labels."' + key.replace('"', '\\"') + '"'
                 stmt = stmt.where(sa.func.json_extract(c.doc, path) == value)
+        if since is not None:
+            stmt = stmt.where(c.created_at >= since)
+        needle = fold_query(query)
+        if needle is not None:
+            pattern = like_contains(needle)
+
+            def hit(expr: Any) -> Any:
+                return sa.func.lower(expr).like(pattern, escape=LIKE_ESCAPE)
+
+            # 입력 최상위 문자열 값(``json_each`` type = text). 색인을 쓰지 못하므로 정렬 색인을
+            # 따라 읽으며 limit을 채우면 멈춘다.
+            values = sa.func.json_each(c.doc, "$.input").table_valued("type", "value")
+            in_input = (
+                sa.select(sa.literal(1))
+                .select_from(values)
+                .where(values.c.type == "text", hit(values.c.value))
+                .exists()
+            )
+            stmt = stmt.where(sa.or_(hit(c.id), hit(c.graph_id), in_input))
         if cursor is not None:
             at, rid = decode_cursor(cursor)
             stmt = stmt.where(sa.tuple_(c.created_at, c.id) < sa.tuple_(at, rid))

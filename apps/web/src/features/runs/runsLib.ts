@@ -18,35 +18,15 @@ import {
 
 /** 실행 화면의 순수 로직(UI·네트워크 없음). 시각은 모두 epoch 초. */
 
-// ---------------------------------------------------------------- 목록 필터
+// ---------------------------------------------------------------- 목록 질의
 
-export interface RunFilterState {
-  /** 비어 있으면 전체. 목록은 Run 상태 어휘 그대로 */
-  statuses: readonly string[];
-  /** `PERIOD_OPTIONS`의 id */
-  period: string;
-  /** run id·대화 제목·팀 구성 이름 부분 일치(대소문자 무시) */
-  query: string;
-}
-
-/** 클라이언트 쪽 필터(서버는 팀 구성·에이전트·대화만 거른다). `titleOf`는 검색 대상 문자열을 더 주는 훅. */
-export function filterRuns(
-  runs: readonly Run[],
-  filter: RunFilterState,
-  nowSec: number,
-  periods: readonly PeriodOption[],
-  searchTextOf: (run: Run) => string = () => "",
-): Run[] {
-  const seconds = periods.find((p) => p.id === filter.period)?.seconds ?? null;
-  const since = seconds === null ? null : nowSec - seconds;
-  const q = filter.query.trim().toLowerCase();
-  return runs.filter((run) => {
-    if (filter.statuses.length > 0 && !filter.statuses.includes(run.status)) return false;
-    if (since !== null && run.created_at < since) return false;
-    if (q === "") return true;
-    const haystack = [run.id, inputSummary(run.input), searchTextOf(run)].join("\n").toLowerCase();
-    return haystack.includes(q);
-  });
+/**
+ * 기간 선택지의 `created_at` 하한(epoch 초). 제한 없음·모르는 id이면 null(질의에 넣지 않는다).
+ * 실제 거르기는 서버(`GET /runs/page?since=`)가 한다.
+ */
+export function periodSince(period: string, nowSec: number, periods: readonly PeriodOption[]): number | null {
+  const seconds = periods.find((p) => p.id === period)?.seconds ?? null;
+  return seconds === null ? null : Math.floor(nowSec - seconds);
 }
 
 /** 입력 객체에서 사람이 읽을 한 줄(첫 문자열 값). */

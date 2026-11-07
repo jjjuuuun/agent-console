@@ -1,7 +1,8 @@
 import { useState } from "react";
-import type { Agent } from "@agent-console/contracts";
+import type { Agent, Issue } from "@agent-console/contracts";
 import { useNavigate, useParams } from "react-router";
 import { EmptyState, Icon, PageHeader } from "@agent-console/ui";
+import { savedIssuesState } from "../../definition/savedIssuesState";
 import { describeError } from "../../app/errors";
 import { messages as m } from "../../app/messages";
 import { useRegisterCommands } from "../../shell/commands";
@@ -33,7 +34,10 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
   const scoped = useConfigTransfer(agents.data, { kind: DEFINITION_KINDS.agent, idOf: idOfAgent, nameOf: nameOfAgent });
 
   useRegisterCommands([{ id: "agents.new", titleKey: "palette.actions.libAgentNew", run: () => { setError(null); setCreating(true); } }]);
-  const go = (agentId: string) => void navigate(`${basePath}/${encodeURIComponent(agentId)}`);
+  const go = (agentId: string, issues?: readonly Issue[]) => {
+    const state = savedIssuesState(issues);
+    void navigate(`${basePath}/${encodeURIComponent(agentId)}`, state === undefined ? undefined : { state });
+  };
   const existing = new Set((agents.data ?? []).map((a) => a.id));
   const ask = (target: string, action: DetailRequest["action"]) => {
     setRequest({ id: target, action, token: (request?.token ?? 0) + 1 });
@@ -44,10 +48,10 @@ export function AgentsScreen({ basePath }: AgentsScreenProps) {
     setBusy(true);
     setError(null);
     try {
-      await rest.createAgent({ id: v.id, name: v.name, ...(role.trim() ? { role: role.trim() } : {}), ...(v.description ? { description: v.description } : {}), ...scope });
+      const saved = await rest.createAgentVersioned({ id: v.id, name: v.name, ...(role.trim() ? { role: role.trim() } : {}), ...(v.description ? { description: v.description } : {}), ...scope });
       await invalidate();
       setCreating(false);
-      go(v.id);
+      go(v.id, saved.issues);
     } catch (e) {
       setError(describeError(e, t.create.failed).message);
     } finally {

@@ -25,7 +25,7 @@ from agent_console_contracts import (
 
 from .errors import EventConflict, InteractionClosed, NotFound
 from .project_assign import AssignCandidate
-from .run_page import clamp_limit, decode_cursor, encode_cursor
+from .run_page import clamp_limit, decode_cursor, encode_cursor, fold_query, fold_text
 
 UNFINISHED_STATUSES: tuple[RunStatus, ...] = ("queued", "running", "paused", "waiting")
 """종료되지 않은 Run 상태(`interrupt_unfinished` 대상)."""
@@ -232,11 +232,14 @@ class InMemoryRunRepository:
         conversation_id: str | None = None,
         agent: str | None = None,
         root_run_id: str | None = None,
+        since: float | None = None,
+        query: str | None = None,
     ) -> tuple[builtins.list[Run], str | None]:
         limit = clamp_limit(limit)
         after = None if cursor is None else decode_cursor(cursor)
         statuses = None if status is None else set(status)
         wanted = dict(labels or {})
+        needle = fold_query(query)
         with self._s._lock:
             parents = {r.parent_run_id for r in self._s._runs.values() if r.parent_run_id}
             rows = [
@@ -253,6 +256,8 @@ class InMemoryRunRepository:
                 and (graph_id is None or r.graph_id == graph_id)
                 and (statuses is None or r.status in statuses)
                 and (not wanted or (r.root_run_id is None and wanted.items() <= r.labels.items()))
+                and (since is None or r.created_at >= since)
+                and (needle is None or _run_matches(r, needle))
                 and (after is None or (r.created_at, r.id) < after)
             ]
         rows.sort(key=lambda r: (r.created_at, r.id), reverse=True)
@@ -585,3 +590,9 @@ class InMemoryInteractionRepository:
                 if i.status == "pending" and cid is not None and (wanted is None or cid in wanted):
                     counts[cid] = counts.get(cid, 0) + 1
         return counts
+
+
+def _run_matches(run: Run, needle: str) -> bool:
+    """``RunRepository.page``의 ``query``: id·graph_id·입력 최상위 문자열 값 부분 일치."""
+    texts = [run.id, run.graph_id, *(v for v in run.input.values() if isinstance(v, str))]
+    return any(needle in fold_text(text) for text in texts)

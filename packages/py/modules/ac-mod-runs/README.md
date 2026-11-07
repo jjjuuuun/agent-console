@@ -14,6 +14,24 @@
 - 실행별 정의 출처: `runs.scopes` 항목의 선택 메서드 `run_definitions(project_id, graph_id)`(`RunDefinitionsScoper`)가 출처(`DefinitionSource` — `get`·`get_version`, 선택 `read_content`·`list_files`·`read_file`)를 주면 루트 그래프(현재·버전)·`graph_of_run`을 그 출처에서만 읽고(라이브러리로 넘어가지 않음), 노드 서비스 공급자에게 `RunEnvironment.definitions`, 노드·준비자·자식 Run에게 서비스 `RUN_DEFINITIONS`(`runs.definitions`)로 넘긴다. `ErrorInfo`를 돌려주면 Run을 만들지 않고 거부(`RunPreflightError`). `project_id`가 없거나 메서드가 없으면 지금 동작. `POST /runs`는 `RunService.start_graph`로 출처를 한 번만 정한다.
 - 자식 Run 점검: `runs.scopes` 항목의 선택 메서드 `check_child(graph, services, *, project_id)`(`RunChildScoper`)는 `project_id`가 있는 Run에서 자식 Run(중첩 팀)을 만들기 직전(팀 규칙 검사 전) 불린다. `ErrorInfo`를 돌려주면 같은 코드·문구·`details`의 차단 이슈로 자식 Run을 만들지 않는다(노드 실패 `validation_failed`, `details.issues[0].code`). 예외는 기록하고 건너뛴다.
 
+### 실행 목록 페이지 질의 (`GET /runs/page`)
+
+정렬은 `created_at`·`id` 내림차순, 조건은 모두 AND. `next_cursor`를 다음 요청 `cursor=`로 넘기면 같은 조건으로 이어진다. 기록 공간이 있는 조립의 `?project=`는 폴더 기록 DB를 끝까지 읽은 뒤 앱 DB 옛 기록으로 잇고, 두 출처 모두 같은 조건으로 거른다.
+
+| 질의 | 뜻 |
+| --- | --- |
+| `cursor` | 이전 응답의 `next_cursor`(불투명, 틀리면 400 `bad_request`, 출처가 `source`보다 우선) |
+| `limit` | 1~1000(기본 50) |
+| `project` · `source` | 그 프로젝트의 Run · 기록 출처(`project` 기본, `app` = 앱 DB 옛 기록) |
+| `root_only` | 루트 Run만(자식 숨김) |
+| `status` (여러 번) | 상태 OR |
+| `graph_id` · `conversation_id` | 같음 비교 |
+| `agent_id` | 그 에이전트가 actor로 남긴 이벤트가 있는 Run |
+| `root` | 그 루트 아래 모든 자손(루트 자신은 빠짐) |
+| `label=<키>=<값>` (여러 번) | 라벨 AND(루트 Run에만 있음) |
+| `since` | `created_at` 하한(epoch 초, 포함). 색인 `created_at`을 쓴다 |
+| `q` | 부분 일치 검색(최대 200자, 넘으면 422, 앞뒤 공백 제거, 비면 무시): run id·`graph_id`·입력 최상위 문자열 값. ASCII 대소문자 무시, `%`·`_`·`\`는 글자 그대로. 색인을 쓰지 못해 정렬 순서로 읽다가 `limit`을 채우면 멈춘다. 팀 구성 이름·대화 제목은 찾지 않는다(다른 기능·DB의 값이라 클라이언트 몫) |
+
 ## 설치
 
 ```bash

@@ -1,6 +1,6 @@
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@agent-console/api-client";
 import type { Agent } from "@agent-console/contracts";
@@ -12,6 +12,7 @@ import { messages as m } from "../../app/messages";
 import { useApiQuery } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
+import { readSavedIssues, savedIssuesState, useCarriedSaveIssues } from "../../definition/savedIssuesState";
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
@@ -40,6 +41,7 @@ export interface AgentDetailProps {
 export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { rest } = useApi();
   const queryClient = useQueryClient();
   const invalidateLists = useInvalidateLists();
@@ -48,6 +50,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
     load: (r) => loadAgent(r, id),
     save: (r, value, hash) => saveAgent(r, value, hash),
   });
+  const shownSaveIssues = useCarriedSaveIssues(editor.saveIssues, readSavedIssues(location.state));
   const effective = useApiQuery(["list", "agent-effective", id], (r) => r.getAgentEffectiveSettings(id));
   // 사용처 패널은 정의-팀 연동이 켜져 있을 때만 있다(꺼졌으면 탭도 조회도 없다).
   const usagePart = useLinkPart(LINK_PART_IDS.agentsUsagesPanel);
@@ -138,10 +141,11 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
     try {
       const copy = { ...draft, id: v.id, name: v.name } as Agent;
       if (v.description !== "") copy.description = v.description;
-      await rest.createAgent(copy);
+      const saved = await rest.createAgentVersioned(copy);
       await invalidateLists();
       setDialog(null);
-      void navigate(`${basePath}/${encodeURIComponent(v.id)}`);
+      const state = savedIssuesState(saved.issues);
+      void navigate(`${basePath}/${encodeURIComponent(v.id)}`, state === undefined ? undefined : { state });
     } catch (e) {
       setDialogError(describeError(e, lm.delete.failed).message);
     } finally {
@@ -220,7 +224,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       {editor.conflict === null ? null : (
         <ConflictBanner details={editor.conflict} busy={saving} onLoadServer={() => void editor.loadServerVersion()} onOverwrite={() => void editor.overwrite()} />
       )}
-      <SaveIssuesBanner issues={editor.saveIssues} />
+      <SaveIssuesBanner issues={shownSaveIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
       <Tabs lazy tabs={items} activeId={tab === "usages" && !usagePart.visible ? "settings" : tab} onChange={(next) => setTab(next as TabId)} ariaLabel={t.detail.tabsLabel} />
       {exportAction.dialog}

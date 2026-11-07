@@ -46,3 +46,61 @@ describe("실행 목록 서버 페이지", () => {
     await waitFor(() => expect(runsPage.mock.calls.some((c) => (c as unknown as [{ status?: string[] }])[0].status?.join() === "waiting")).toBe(true));
   });
 });
+
+describe("실행 목록 서버 질의(6R.19 잔여)", () => {
+  it("자식 숨김은 root_only 서버 질의, 자식 포함·에이전트·대화 거르기도 같은 페이지 경로로 보낸다", async () => {
+    const runsPage = vi.fn(async (p: Record<string, unknown>) => ({ items: [run(p["root_only"] === true ? "r1" : "r1")], next_cursor: null, source: "project" }));
+    const listRuns = vi.fn(async () => []);
+    mount({ runsPage, listRuns }, "/runs?children=1&conv=c1");
+    await screen.findByRole("grid", { name: "실행 목록" });
+    expect(runsPage.mock.calls[0]![0]).toMatchObject({ conversation_id: "c1" });
+    expect(runsPage.mock.calls[0]![0]).not.toHaveProperty("root_only");
+    expect(listRuns).not.toHaveBeenCalled();
+  });
+
+  it("기본은 root_only=true로 첫 페이지를 읽는다", async () => {
+    const runsPage = vi.fn(async (p: Record<string, unknown>) => ({ items: [run(p["root_only"] === true ? "r1" : "r1")], next_cursor: null, source: "project" }));
+    mount({ runsPage });
+    await screen.findByRole("grid", { name: "실행 목록" });
+    expect(runsPage.mock.calls[0]![0]).toMatchObject({ root_only: true });
+  });
+
+  it("거르기를 바꾸면 이어 붙인 페이지를 버리고 첫 페이지부터 다시 읽는다", async () => {
+    const runsPage = vi.fn(async (p: Record<string, unknown>) =>
+      p["cursor"] === undefined
+        ? { items: [run(p["root_only"] === true ? "r1" : "x1")], next_cursor: "project.AAA", source: "project" }
+        : { items: [run("r2")], next_cursor: null, source: "project" },
+    );
+    mount({ runsPage });
+    await screen.findByRole("grid", { name: "실행 목록" });
+    fireEvent.click(screen.getByRole("button", { name: "더 불러오기" }));
+    await waitFor(() => expect(document.querySelector("[data-run-id='r2']")).not.toBeNull());
+    fireEvent.click(screen.getByRole("checkbox", { name: "자식 실행 포함" }));
+    await waitFor(() => expect(document.querySelector("[data-run-id='x1']")).not.toBeNull());
+    expect(document.querySelector("[data-run-id='r2']")).toBeNull();
+    expect(runsPage.mock.calls.at(-1)![0]).not.toHaveProperty("cursor");
+  });
+
+  it("기본 기간(7일)은 since로, 검색어는 q로 서버에 보내고, 바꾸면 첫 페이지부터 다시 읽는다", async () => {
+    const runsPage = vi.fn(async (p: Record<string, unknown>) =>
+      p["cursor"] === undefined
+        ? { items: [run(p["q"] === "스펙" ? "m1" : "r1")], next_cursor: "project.AAA", source: "project" }
+        : { items: [run("r2")], next_cursor: null, source: "project" },
+    );
+    mount({ runsPage });
+    await screen.findByRole("grid", { name: "실행 목록" });
+    const first = runsPage.mock.calls[0]![0] as { since?: number };
+    expect(first).not.toHaveProperty("q");
+    expect(Math.abs((first.since ?? 0) - (Date.now() / 1000 - 7 * 86400))).toBeLessThan(60);
+    fireEvent.click(screen.getByRole("button", { name: "더 불러오기" }));
+    await waitFor(() => expect(document.querySelector("[data-run-id='r2']")).not.toBeNull());
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "스펙" } });
+    await waitFor(() => expect(document.querySelector("[data-run-id='m1']")).not.toBeNull());
+    expect(document.querySelector("[data-run-id='r2']")).toBeNull();
+    const last = runsPage.mock.calls.at(-1)![0];
+    expect(last).toMatchObject({ q: "스펙" });
+    expect(last).not.toHaveProperty("cursor");
+    fireEvent.change(screen.getByLabelText("시작"), { target: { value: "all" } });
+    await waitFor(() => expect(runsPage.mock.calls.at(-1)![0]).not.toHaveProperty("since"));
+  });
+});

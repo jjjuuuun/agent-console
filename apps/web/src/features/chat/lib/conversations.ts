@@ -32,12 +32,6 @@ export function sortConversations(list: readonly ConversationSummary[], sortValu
   return [...list].sort((a, b) => compare(a, b, since));
 }
 
-/** 제목 부분 일치(대소문자 무시)로 거른다. 보관·프로젝트는 서버가 거른다(6R.19). */
-export function filterConversations(list: readonly ConversationSummary[], opts: { query: string }): ConversationSummary[] {
-  const q = opts.query.trim().toLowerCase();
-  return list.filter((c) => q === "" || (c.title ?? "").toLowerCase().includes(q));
-}
-
 /** 요약 갱신을 목록에 반영(있으면 교체, 없으면 앞에 추가). */
 export function upsertConversation(list: readonly ConversationSummary[], next: ConversationSummary): ConversationSummary[] {
   return list.some((c) => c.id === next.id) ? list.map((c) => (c.id === next.id ? next : c)) : [next, ...list];

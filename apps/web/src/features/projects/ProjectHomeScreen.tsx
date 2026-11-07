@@ -151,8 +151,8 @@ export function ProjectHomeScreen() {
     setDeleting(null);
     if (row === null) return;
     try {
-      // 목록이 항목 버전을 주지 않으므로 If-Match 없이 지운다(버전을 알게 되면 opts.ifMatch로 넘긴다)
-      await rest.deleteCopyItem(id, row.kind, row.id);
+      // 목록이 준 항목 버전을 If-Match로 넘긴다(버전이 없으면 생략). 다른 곳에서 바뀌었으면 412
+      await rest.deleteCopyItem(id, row.kind, row.id, ...(row.version === undefined ? [] : [{ ifMatch: row.version }]));
       await queryClient.invalidateQueries({ queryKey: ["list"] });
       toast({ tone: "success", text: m.home.configDeleted(row.name) });
     } catch (e) {

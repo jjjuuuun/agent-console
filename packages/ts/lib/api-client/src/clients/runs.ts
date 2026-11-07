@@ -33,6 +33,15 @@ export interface RunsPageParams {
   label?: readonly string[];
   /** 커서가 없을 때의 출처(기본 `project`). 커서에 든 출처가 우선한다. */
   source?: string;
+  /** 그 에이전트가 actor로 남긴 이벤트가 있는 Run. */
+  agent_id?: string;
+  conversation_id?: string;
+  /** 그 루트 Run 아래 모든 자손(루트 자신은 빠짐). */
+  root?: string;
+  /** `created_at` 하한(epoch 초). 이 시각 이후에 만든 Run만. */
+  since?: number;
+  /** run id·graph_id·입력 최상위 문자열 부분 일치(ASCII 대소문자 무시, 서버 상한 200자). */
+  q?: string;
 }
 
 /** GET `/runs/handoffs` 필터. 실행 목록 필터와 같은 이름을 쓴다. */

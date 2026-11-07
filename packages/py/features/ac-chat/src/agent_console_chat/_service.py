@@ -299,6 +299,7 @@ class ChatService:
         graph_id: str | None = None,
         archived: bool | None = None,
         project_id: str | None = None,
+        query: str | None = None,
     ) -> tuple[builtins.list[ConversationSummary], tuple[float, str] | None]:
         """대화 요약 한 페이지(`updated_at`·`id` 내림차순, 6R.12 L-19).
 
@@ -309,6 +310,8 @@ class ChatService:
                 None = 처음.
             limit: 최대 개수(1 이상).
             graph_id, archived, project_id: `list`와 같은 거르기.
+            query: 제목 부분 일치 검색어(앞뒤 공백을 떼고 대소문자 무시 — `str.casefold`).
+                None이나 빈 문자열이면 거르지 않는다. 제목이 빈 대화는 맞지 않는다.
 
         Returns:
             (요약, 다음 페이지 기준) — 뒤에 더 있으면 이 페이지 마지막 대화의 (`updated_at`, `id`),
@@ -320,7 +323,13 @@ class ChatService:
         size = max(1, limit)
         extra = {"project_id": project_id} if project_id is not None else {}
         items = self._conversations.list(graph_id=graph_id, archived=archived, **extra)
-        rows = [c for c in items if after is None or (c.updated_at, c.id) < after]
+        needle = (query or "").strip().casefold()
+        rows = [
+            c
+            for c in items
+            if (after is None or (c.updated_at, c.id) < after)
+            and (not needle or needle in c.title.casefold())
+        ]
         rows.sort(key=lambda c: (c.updated_at, c.id), reverse=True)
         more = len(rows) > size
         rows = rows[:size]

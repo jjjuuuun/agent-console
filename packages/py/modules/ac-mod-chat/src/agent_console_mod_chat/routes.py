@@ -63,6 +63,8 @@ from .move import ConversationMover
 MAX_TURN_LIMIT = 500
 DEFAULT_CONVERSATION_PAGE_LIMIT = 50
 MAX_CONVERSATION_PAGE_LIMIT = 1000
+MAX_CONVERSATION_QUERY_LENGTH = 200
+"""``GET /conversations/page?q=`` 최대 글자 수(넘으면 422)."""
 
 SOURCE_APP: RecordSource = "app"
 """목록 ``?source=app``: 앱 DB 옛 기록(그 ``project_id``를 가진 대화, 읽기 전용 표시)."""
@@ -145,6 +147,7 @@ def build_router(
         archived: bool | None = None,
         project: str | None = None,
         source: RecordSource = "project",
+        q: Annotated[str | None, Query(max_length=MAX_CONVERSATION_QUERY_LENGTH)] = None,
     ) -> ConversationPage:
         """대화 요약 커서 페이지(``updated_at`` 내림차순 + ``id``).
 
@@ -152,6 +155,8 @@ def build_router(
         ``source``보다 우선). ``project`` = 그 프로젝트의 대화(서버가 거름). 기록 공간이 있는
         조립이면 폴더 기록을 끝까지 읽은 뒤 ``next_cursor``가 앱 DB 옛 기록(``source=app``)의
         처음을 가리킨다(없으면 null). 한 페이지는 한 출처에서만 나온다.
+        ``q`` = 제목 부분 일치(앞뒤 공백 제거·대소문자 무시, 비면 무시, 최대
+        ``MAX_CONVERSATION_QUERY_LENGTH``자, 넘으면 422). 두 출처 모두에 같은 조건이 걸린다.
         """
         host = service()
         scoped = await chat(project)
@@ -162,7 +167,12 @@ def build_router(
         ) -> tuple[list[ConversationSummary], str | None]:
             after = None if inner is None else decode_cursor(inner)
             items, last = target.page(
-                after=after, limit=size, graph_id=graph_id, archived=archived, project_id=project
+                after=after,
+                limit=size,
+                graph_id=graph_id,
+                archived=archived,
+                project_id=project,
+                query=q,
             )
             return items, (None if last is None else encode_cursor(*last))
 
@@ -323,4 +333,10 @@ def build_router(
     return router
 
 
-__all__ = ["MAX_TURN_LIMIT", "SOURCE_APP", "build_router", "errors"]
+__all__ = [
+    "MAX_CONVERSATION_QUERY_LENGTH",
+    "MAX_TURN_LIMIT",
+    "SOURCE_APP",
+    "build_router",
+    "errors",
+]

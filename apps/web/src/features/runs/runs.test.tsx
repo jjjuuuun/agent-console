@@ -60,7 +60,7 @@ describe("실행 기록 목록", () => {
 
   it("[응답 대기만] 단축 필터가 상태를 URL에 반영하고, 결과가 없으면 필터 지우기를 안내한다", async () => {
     // 상태 거르기는 서버(`runsPage` status 질의)가 한다
-    const { router } = mount("/runs", { runsPage: async (p?: { status?: string[] }) => ({ items: p?.status?.length ? runs.filter((r) => p.status!.includes(r.status)) : runs, next_cursor: null, source: "project" }) });
+    const { router } = mount("/runs", { runsPage: async (p?: { status?: string[]; q?: string }) => ({ items: runs.filter((r) => (!p?.status?.length || p.status.includes(r.status)) && (p?.q === undefined || r.id.includes(p.q))), next_cursor: null, source: "project" }) });
     await screen.findByRole("grid", { name: "실행 목록" });
     fireEvent.click(screen.getByRole("button", { name: "응답 대기만" }));
     await waitFor(() => expect(within(screen.getByRole("grid")).getAllByRole("row")).toHaveLength(2));

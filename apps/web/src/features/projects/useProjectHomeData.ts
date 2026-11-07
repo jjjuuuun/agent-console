@@ -20,6 +20,8 @@ export interface ConfigRow {
   href: string | undefined;
   /** 서버가 이 종류를 지울 수 있다고 알렸는가(`CopyKindInfo.deletable`, 옛 서버면 없음 = false) */
   deletable: boolean;
+  /** 항목 버전(`CopyItem.version`, 삭제 If-Match용). 서버가 주지 않으면 undefined */
+  version: string | undefined;
 }
 
 const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
@@ -85,6 +87,7 @@ export function useProjectConfig(view: ProjectView | undefined, enabled: boolean
         name: item.name !== undefined && item.name !== "" ? item.name : item.id,
         modifiedAt: item.saved_at ?? undefined,
         deletable: info.deletable === true,
+        version: item.version ?? undefined,
         href: path === undefined ? undefined : `${path}?prj=${encodeURIComponent(id)}`,
       });
     }

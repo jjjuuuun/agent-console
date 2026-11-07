@@ -476,7 +476,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
-    // 정확한 지금 값은 0.14.5 테스트가 고정한다
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.0"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0140 = { common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" };
@@ -533,7 +533,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.1(7R.13·7R.17 후속): WikiInfo.writable, wiki.update_unavailable, secret_scan 기본값 system reject", () => {
-    // 정확한 지금 값은 0.14.5 테스트가 고정한다
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.1"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0141 = { common: "1.11.0", wiki: "1.1.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -546,7 +546,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(defs["WikiSettings"]?.properties["secret_scan"]?.default).toEqual({ user: "warn", agent: "reject", system: "reject" });
   });
   it("0.14.2(7R.19~7R.21 서버 후속): rules_kind, 규칙 항목 글롭·경로·이름, 점검 부분 실패, 그래프 scheme_target", () => {
-    // 정확한 지금 값은 0.14.5 테스트가 고정한다
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.2"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0142 = { common: "1.12.0", wiki: "1.2.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -564,7 +564,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(constants.KNOWN_WIKI_LINT_CHECKS).toEqual({ LINT_RULES: "lint_rules", WRITE_RULES: "write_rules" });
   });
   it("0.14.3(plugins.disabled 후속): PluginInfo.reason", () => {
-    // 정확한 지금 값은 0.14.5 테스트가 고정한다
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.3"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.12.0", wiki: "1.2.0", modules: "1.6.0" });
@@ -572,7 +572,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<PluginInfo["reason"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.4(묶음 4b V1): CopyPlanItem.blocked·issues", () => {
-    // 정확한 지금 값은 0.14.5 테스트가 고정한다
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.4"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.4.0"));
@@ -580,10 +580,17 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<NonNullable<CopyPlanItem["issues"]>[number]["code"]>().toEqualTypeOf<string>();
   });
   it("0.14.5(요청 11/07 후속): CopyKindInfo.deletable", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.14.5");
-    expect(packageJson.version).toBe("0.14.5");
-    expect(CONTRACT_VERSIONS).toMatchObject({ projects: "3.5.0", modules: "1.6.0" });
-    expect(projects.CONTRACT_VERSION).toBe("3.5.0");
+    // 정확한 지금 값은 0.14.6 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.5"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.5.0"));
     expectTypeOf<CopyKindInfo["deletable"]>().toEqualTypeOf<boolean | undefined>();
+  });
+  it("0.14.6(요청 11/07 후속): CopyItem.version", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.14.6");
+    expect(packageJson.version).toBe("0.14.6");
+    expect(CONTRACT_VERSIONS).toMatchObject({ projects: "3.6.0", modules: "1.6.0" });
+    expect(projects.CONTRACT_VERSION).toBe("3.6.0");
+    expectTypeOf<CopyItem["version"]>().toEqualTypeOf<string | null | undefined>();
   });
 });

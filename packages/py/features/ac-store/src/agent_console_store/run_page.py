@@ -50,3 +50,48 @@ def decode_cursor(cursor: str) -> tuple[float, str]:
 def clamp_limit(limit: int) -> int:
     """1 이상 ``MAX_PAGE_LIMIT`` 이하로."""
     return max(1, min(limit, MAX_PAGE_LIMIT))
+
+
+_ASCII_FOLD = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def fold_query(text: str | None) -> str | None:
+    """검색어 ``q``를 비교용으로: 앞뒤 공백을 떼고 ASCII 대문자만 소문자로. 비면 None(거르지 않음).
+
+    SQLite ``lower``·``LIKE``가 ASCII만 접기 때문에 인메모리 구현도 같은 규칙을 쓴다(두 구현의
+    결과가 같게).
+
+    >>> fold_query("  Run-ABC ")
+    'run-abc'
+    >>> fold_query("Énorme") == "Énorme"
+    True
+    >>> fold_query("   ") is None
+    True
+    """
+    if text is None:
+        return None
+    folded = text.strip().translate(_ASCII_FOLD)
+    return folded or None
+
+
+def fold_text(text: str) -> str:
+    """대상 문자열을 ``fold_query``와 같은 규칙(ASCII만)으로 접는다."""
+    return text.translate(_ASCII_FOLD)
+
+
+LIKE_ESCAPE = "\\"
+"""``like_contains`` 패턴의 이스케이프 문자."""
+
+
+def like_contains(folded: str) -> str:
+    """부분 일치 ``LIKE`` 패턴. ``%``·``_``·이스케이프 문자를 글자 그대로 찾게 이스케이프한다.
+
+    >>> like_contains("50%_a\\\\b")
+    '%50\\\\%\\\\_a\\\\\\\\b%'
+    """
+    escaped = (
+        folded.replace(LIKE_ESCAPE, LIKE_ESCAPE * 2)
+        .replace("%", LIKE_ESCAPE + "%")
+        .replace("_", LIKE_ESCAPE + "_")
+    )
+    return f"%{escaped}%"

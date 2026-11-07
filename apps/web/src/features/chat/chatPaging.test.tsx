@@ -15,7 +15,7 @@ afterEach(cleanup);
 
 describe("대화 목록 서버 페이지", () => {
   function setup() {
-    const conversationsPage = vi.fn(async (p: { project?: string; cursor?: string }) => {
+    const conversationsPage = vi.fn(async (p: { project?: string; cursor?: string; q?: string }) => {
       if (p.project === "p2") return { items: [conversation({ id: "z1" })], next_cursor: null, source: "project" };
       return p.cursor === undefined
         ? { items: [conversation({ id: "a1" }), conversation({ id: "a2" })], next_cursor: "project.2", source: "project" }
@@ -42,6 +42,21 @@ describe("대화 목록 서버 페이지", () => {
     act(() => result.current.loadMore());
     await waitFor(() => expect(result.current.data?.map((c) => c.id)).toEqual(["a1", "a2", "a3"]));
     expect(conversationsPage.mock.calls[1]![0]).toMatchObject({ project: "p1", cursor: "project.2" });
+  });
+
+  it("검색어 q를 서버 질의로 보내고, 바꾸면 이어 붙인 목록을 버리고 첫 페이지부터 읽는다", async () => {
+    const { conversationsPage, wrapper } = setup();
+    const { result, rerender } = renderHook(({ q }: { q: string }) => useConversationList({ q }), { wrapper, initialProps: { q: "" } });
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+    expect(conversationsPage.mock.calls[0]![0]).not.toHaveProperty("q");
+    act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.data?.length).toBe(3));
+    rerender({ q: " 배포 " });
+    await waitFor(() => expect(conversationsPage.mock.calls.length).toBeGreaterThan(2));
+    const last = conversationsPage.mock.calls[conversationsPage.mock.calls.length - 1]![0];
+    expect(last).toMatchObject({ q: "배포" });
+    expect(last).not.toHaveProperty("cursor");
+    await waitFor(() => expect(result.current.data?.map((c) => c.id)).toEqual(["a1", "a2"]));
   });
 
   it("프로젝트를 바꾸면 이어 붙인 목록을 버리고 첫 페이지부터 읽는다", async () => {

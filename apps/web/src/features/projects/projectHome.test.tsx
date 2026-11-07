@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectView } from "@agent-console/contracts/projects";
+import { ApiError } from "@agent-console/api-client";
 import { mountApp } from "../../testing/screenHarness";
 import { createFakeClients } from "../../testing/fakes";
 import { DEFINITION_KINDS } from "../library";
@@ -322,6 +323,39 @@ describe("프로젝트 홈: 종류 공통 삭제 (요청 11/07 후속)", () => {
     const dlg = await screen.findByRole("dialog");
     fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
     await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));
+  });
+  const deleteWith = async (version: string | null | undefined, deleteCopyItem: ReturnType<typeof vi.fn>, listCopyItems = vi.fn(async (project: string | null, kind?: string) => (project === null ? [] : [{ kind, id: "d1", name: "기여 항목", ...(version === undefined ? {} : { version }) }]))) => {
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      deleteCopyItem,
+      listCopyKinds: vi.fn(async () => [{ kind: "qq-contributed", library: true, portable: true, title: "기여 문서", deletable: true }]),
+      listCopyItems,
+    });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByText("기여 항목");
+    fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
+    const dlg = await screen.findByRole("dialog");
+    fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
+  };
+  it("행에 version이 있으면 삭제가 If-Match(ifMatch)로 넘긴다", async () => {
+    const deleteCopyItem = vi.fn(async () => undefined);
+    await deleteWith("v7", deleteCopyItem);
+    await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1", { ifMatch: "v7" }));
+  });
+  it("version이 null이면 If-Match 없이 지운다", async () => {
+    const deleteCopyItem = vi.fn(async () => undefined);
+    await deleteWith(null, deleteCopyItem);
+    await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));
+  });
+  it("412면 목록을 다시 읽고 다시 읽었다는 안내를 띄운다", async () => {
+    const deleteCopyItem = vi.fn(async () => { throw new ApiError(412, { code: "version_conflict", message: "conflict" }); });
+    const listCopyItems = vi.fn(async (project: string | null, kind?: string) => (project === null ? [] : [{ kind, id: "d1", name: "기여 항목", version: "v7" }]));
+    await deleteWith("v7", deleteCopyItem, listCopyItems);
+    expect(await screen.findByText(/다시 읽었으니/)).toBeTruthy();
+    // 처음 읽기 1번 + 412 뒤 다시 읽기(목록 무효화)
+    await waitFor(() => expect(listCopyItems.mock.calls.filter(([project]) => project === "a").length).toBeGreaterThanOrEqual(2));
   });
   it("deletable 필드가 없는 옛 서버 응답이면 메뉴에 삭제가 없다", async () => {
     mount([view("a")], "/projects/a", {

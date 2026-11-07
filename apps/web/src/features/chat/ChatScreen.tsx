@@ -13,11 +13,12 @@ import { useRegisterCommands } from "../../shell/commands";
 import { ChatHome } from "./ChatHome";
 import { ChatPane } from "./ChatPane";
 import { useWorkspaceSettings } from "../../app/queries";
+import { useDebouncedValue } from "../../app/useDebouncedValue";
 import { chatKeys, useAgentList, useConversationList, useChatGraph, useGraphList } from "./chatData";
 import { chatMessages } from "./chatMessages";
 import { ConversationList } from "./ConversationList";
 import { chatPaths } from "./paths";
-import { filterConversations, lastUsedByGraph, pendingSinceOf, sortConversations, patchConversationCache } from "./lib/conversations";
+import { lastUsedByGraph, pendingSinceOf, sortConversations, patchConversationCache } from "./lib/conversations";
 import { LAST_GRAPH_KEY } from "./lib/drafts";
 import { indexById } from "./lib/team";
 import { NewConversationDialog } from "./NewConversationDialog";
@@ -47,8 +48,9 @@ export function ChatScreen() {
   const nowMs = useNow(true);
   const [query, setQuery] = useState("");
   const [includeArchived, setIncludeArchived] = useState(false);
-  // 보관 여부는 서버가 거른다(보관 포함이면 조건 없음). 제목 검색은 서버에 질의가 없어 읽은 목록 안에서만 한다.
-  const conversations = useConversationList(includeArchived ? {} : { archived: false });
+  const debouncedQuery = useDebouncedValue(query);
+  // 보관 여부와 제목 검색은 서버가 거른다(6R.19). 검색어가 바뀌면 첫 페이지부터 다시 읽는다.
+  const conversations = useConversationList({ ...(includeArchived ? {} : { archived: false }), q: debouncedQuery });
   const graphs = useGraphList();
   const agents = useAgentList();
   const settings = useWorkspaceSettings();
@@ -110,8 +112,8 @@ export function ChatScreen() {
   }, [queryClient, pendingKey]);
   const sortValue = settings.data?.value.chat?.list_sort;
   const visible = useMemo(
-    () => sortConversations(filterConversations(conversations.data ?? [], { query }), sortValue, since),
-    [conversations.data, query, sortValue, since],
+    () => sortConversations(conversations.data ?? [], sortValue, since),
+    [conversations.data, sortValue, since],
   );
   const sourceLabel = useCallback((source: string) => appMessages.common.recordSources[source] ?? source, []);
   const teamNames = useMemo(() => new Map((graphs.data ?? []).map((g) => [g.id, g.name])), [graphs.data]);
@@ -193,7 +195,7 @@ export function ChatScreen() {
   // 대화가 하나도 없고 아무 대화도 열지 않았으면 빈 목록 열을 접는다(화면 활용, 5.2R.21). 새 대화는 오른쪽 시작 카드가 맡는다.
   // 목록을 불러오는 동안은 접힘 여부를 모르므로 자리는 두고 보이지 않게 한다(0개면 접히며 깜빡이는 것을 막는다).
   const listLoading = conversationId === undefined && conversations.isLoading;
-  const listEmpty = conversationId === undefined && conversations.data !== undefined && conversations.data.length === 0;
+  const listEmpty = conversationId === undefined && conversations.data !== undefined && conversations.data.length === 0 && debouncedQuery.trim() === "";
   return (
     <div className="chat-screen" data-screen="chat" data-list={listOpen ? "open" : "closed"} data-empty={listEmpty ? "true" : undefined} data-loading={listLoading ? "true" : undefined}>
       <div className="ac-sr-only" role="status" aria-live="polite" aria-label={appMessages.pending.none}>{live}</div>

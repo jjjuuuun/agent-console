@@ -32,6 +32,8 @@ export interface ConversationsPageParams extends ListConversationsParams {
   cursor?: string | null;
   /** 한 페이지 크기(서버 기본값을 따른다). */
   limit?: number;
+  /** 제목 부분 일치(casefold, 서버 상한 200자). 생략·빈 문자열 = 거르지 않음. */
+  q?: string;
 }
 
 /** GET `/conversations/{id}/turns` 페이지 매김. */

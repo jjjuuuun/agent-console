@@ -245,22 +245,20 @@ describe("실행 상세: 자식 실행 이동", () => {
 
 describe("실행 기록: 자식 실행 포함 토글", () => {
   const rootRun = run("r1", "completed");
-  it("기본은 자식 실행을 가리고, 켜면 ↳·자식 칩·상위 링크·상위에 포함이 나온다", async () => {
-    const { router } = mount("/runs", { listRuns: async () => [rootRun, child] });
+  const pageOf = (all: Run[]) => vi.fn(async (p: { root_only?: boolean }) => ({ items: p.root_only === true ? all.filter((r) => r.root_run_id == null || r.root_run_id === r.id) : all, next_cursor: null, source: "project" }));
+  it("기본은 root_only 서버 질의로 자식 실행을 가리고, 켜면 ↳·자식 칩·상위 링크·상위에 포함이 나온다", async () => {
+    const runsPage = pageOf([rootRun, child]);
+    const { router } = mount("/runs", { runsPage });
     const grid = await screen.findByRole("grid", { name: "실행 목록" });
     expect(within(grid).getAllByRole("row")).toHaveLength(2);
+    expect(runsPage.mock.calls[0]![0]).toMatchObject({ root_only: true });
     fireEvent.click(screen.getByRole("checkbox", { name: "자식 실행 포함" }));
     await waitFor(() => expect(within(screen.getByRole("grid")).getAllByRole("row")).toHaveLength(3));
+    expect(runsPage.mock.calls.at(-1)![0]).not.toHaveProperty("root_only");
     expect(router.state.location.search).toContain("children=1");
     const childRow = document.querySelector<HTMLElement>("[data-run-id='c1abcdef']")!;
     expect(within(childRow).getByText("자식")).toBeTruthy();
     expect(within(childRow).getByRole("link", { name: "상위 r1" })).toBeTruthy();
     expect(within(childRow).getByText("상위에 포함")).toBeTruthy();
-  });
-  it("자식 실행만 있는 구간이면 안내와 [자식 실행 포함]", async () => {
-    mount("/runs", { listRuns: async () => [child] });
-    expect(await screen.findByText("자식 실행만 있는 구간입니다")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "자식 실행 포함" }));
-    expect(await screen.findByRole("grid", { name: "실행 목록" })).toBeTruthy();
   });
 });

@@ -461,3 +461,21 @@ describe("WS 토픽 conversation·interactions", () => {
     expect(sockets).toHaveLength(1);
   });
 });
+
+describe("페이지 질의: since·q (6R.19)", () => {
+  it("실행 페이지는 since·q를 쿼리로 보낸다", async () => {
+    const { rest, calls } = fakeServer(() => ({ body: { items: [], next_cursor: null, source: "project" } }));
+    await rest.runsPage({ since: 1000, q: "a b", limit: 10 });
+    const url = new URL(`http://h${calls[calls.length - 1]!.path}`);
+    expect(url.pathname).toBe("/runs/page");
+    expect(url.searchParams.get("since")).toBe("1000");
+    expect(url.searchParams.get("q")).toBe("a b");
+  });
+  it("대화 페이지는 q를 쿼리로 보낸다", async () => {
+    const { rest, calls } = fakeServer(() => ({ body: { items: [], next_cursor: null, source: "project" } }));
+    await rest.conversationsPage({ q: "배포", archived: false });
+    const url = new URL(`http://h${calls[calls.length - 1]!.path}`);
+    expect(url.pathname).toBe("/conversations/page");
+    expect(url.searchParams.get("q")).toBe("배포");
+  });
+});

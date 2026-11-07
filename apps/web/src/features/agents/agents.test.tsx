@@ -44,8 +44,8 @@ describe("에이전트 목록", () => {
   });
 
   it("새 에이전트는 이름·id·역할만으로 만든다", async () => {
-    const createAgent = vi.fn(async (a: { id: string }) => a);
-    const { clients: c } = clients({ createAgent });
+    const createAgent = vi.fn(async (a: { id: string }) => ({ value: a, version_hash: undefined }));
+    const { clients: c } = clients({ createAgentVersioned: createAgent, getAgentVersioned: vi.fn(async (id: string) => ({ value: { kind: "agent", id, name: id }, version_hash: "h" })) });
     mountApp(c, "/agents");
     fireEvent.click(await screen.findByRole("button", { name: /새 에이전트/ }));
     const dialog = await screen.findByRole("dialog");
@@ -53,6 +53,33 @@ describe("에이전트 목록", () => {
     fireEvent.change(within(dialog).getByLabelText("역할"), { target: { value: "검토" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "만들기" }));
     await waitFor(() => expect(createAgent).toHaveBeenCalledWith({ id: "my-agent", name: "My Agent", role: "검토" }));
+  });
+
+  it("새 에이전트를 만들면 상세에 저장 경고 띠가 보인다", async () => {
+    const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문 비밀이 저장되었습니다" }];
+    const createAgent = vi.fn(async (a: { id: string }) => ({ value: a, version_hash: undefined, issues }));
+    const { clients: c } = clients({ createAgentVersioned: createAgent, getAgentVersioned: vi.fn(async (id: string) => ({ value: { kind: "agent", id, name: id }, version_hash: "h" })) });
+    mountApp(c, "/agents");
+    fireEvent.click(await screen.findByRole("button", { name: /새 에이전트/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("이름"), { target: { value: "ag3" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "만들기" }));
+    expect(await screen.findByText("평문 비밀이 저장되었습니다")).toBeTruthy();
+  });
+
+  it("에이전트를 복제하면 새 상세에 저장 경고 띠가 보인다", async () => {
+    const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문 비밀이 저장되었습니다" }];
+    const createAgent = vi.fn(async (a: unknown) => ({ value: a, version_hash: undefined, issues }));
+    const { clients: c } = clients({ createAgentVersioned: createAgent, getAgentVersioned: vi.fn(async (id: string) => ({ value: agents.find((x) => x.id === id) ?? { kind: "agent", id, name: id }, version_hash: "h" })) });
+    mountApp(c, "/agents/ag1");
+    await screen.findByRole("heading", { name: "첫째 에이전트" });
+    fireEvent.click(screen.getByRole("button", { name: /더 보기|메뉴|작업/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "복제" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("이름"), { target: { value: "사본" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "복제" }));
+    await waitFor(() => expect(createAgent).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("평문 비밀이 저장되었습니다")).toBeTruthy();
   });
 });
 

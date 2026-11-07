@@ -20,6 +20,7 @@ type KindDelete = Callable[[str | None, str, str | None], None]
 """기여 종류 항목 하나 지우기 ``(공간, id, 기대 버전)``.
 
 공간은 프로젝트 등록 id(None = 라이브러리·단독 공간), 기대 버전은 ``If-Match``(None = 확인 안 함).
+기대 버전은 그 공간 정의 저장소의 버전 해시(종류 공통 목록 ``CopyItem.version``과 같은 값)다.
 제공 모듈의 자기 삭제 경로와 같은 일(알림·캐시 비우기 등)을 한다. 없는 항목·버전 불일치는 그
 모듈이 평소 내는 예외(예: ``agent_console_store.NotFound``·``VersionConflict``)를 그대로 던진다."""
 

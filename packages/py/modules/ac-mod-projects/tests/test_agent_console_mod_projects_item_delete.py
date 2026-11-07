@@ -215,3 +215,58 @@ def test_delete_errors(tmp_path: Path) -> None:
             "t1"
         ]
         assert calls == []
+
+
+def _listed(client: TestClient, kind: str, project: str | None = None) -> dict[str, Any]:
+    params = {"kind": kind} if project is None else {"kind": kind, "project": project}
+    return {i["id"]: i for i in client.get(ITEMS, params=params).json()}
+
+
+def test_listed_version_is_if_match_for_base_kind(tmp_path: Path) -> None:
+    """계약 0.14.6 ``CopyItem.version``: 목록 버전으로 ``If-Match`` → 204, 바뀐 뒤 옛 버전 → 412."""
+    assembly = _assembly(tmp_path, [])
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    stored = lib.create("agent", {"id": "a", "name": "에이", "backend": "fake-agent"})
+    lib.create("agent", {"id": "b", "name": "비", "backend": "fake-agent"})
+    with _client(assembly) as client:
+        listed = _listed(client, "agent")
+        assert listed["a"]["version"] == stored.version_hash
+        old = listed["b"]["version"]
+        assert isinstance(old, str)
+        assert old
+        lib.save("agent", {"id": "b", "name": "비2", "backend": "fake-agent"}, expected_version=old)
+
+        stale = client.delete(f"{ITEMS}/agent/b", headers={"If-Match": old})
+        assert stale.status_code == 412, stale.text
+        fresh = _listed(client, "agent")["b"]["version"]
+        assert fresh != old
+        assert client.delete(f"{ITEMS}/agent/b", headers={"If-Match": fresh}).status_code == 204
+        ok = client.delete(f"{ITEMS}/agent/a", headers={"If-Match": listed["a"]["version"]})
+        assert ok.status_code == 204, ok.text
+        assert _listed(client, "agent") == {}
+
+
+def test_listed_version_is_if_match_for_contributed_kind(tmp_path: Path) -> None:
+    """기여 종류도 목록 버전이 기여 ``delete``의 기대 버전으로 그대로 맞는다(412 → 204)."""
+    calls: list[tuple[str | None, str, str | None]] = []
+    assembly = _assembly(tmp_path, calls)
+    with _client(assembly) as client:
+        pid = _register(client, tmp_path / "work" / "pa")
+        spaces: Any = assembly.port(PROJECTS_SPACES)
+        store = spaces.open(pid).definitions
+        store.create("note", {"id": "n1", "name": "노트 하나"})
+        old = _listed(client, "note", pid)["n1"]["version"]
+        assert old == store.get("note", "n1").version_hash
+        store.save("note", {"id": "n1", "name": "노트 둘"}, expected_version=old)
+
+        stale = client.delete(
+            f"{ITEMS}/note/n1", params={"project": pid}, headers={"If-Match": old}
+        )
+        assert stale.status_code == 412, stale.text
+        fresh = _listed(client, "note", pid)["n1"]["version"]
+        gone = client.delete(
+            f"{ITEMS}/note/n1", params={"project": pid}, headers={"If-Match": fresh}
+        )
+        assert gone.status_code == 204, gone.text
+        assert calls == [(pid, "n1", old), (pid, "n1", fresh)]
+        assert _listed(client, "note", pid) == {}

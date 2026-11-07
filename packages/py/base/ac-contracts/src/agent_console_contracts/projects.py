@@ -10,6 +10,9 @@
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
 
+3.6.0(0.14.6, 더하기만): 복사 대화상자 항목의 버전 `CopyItem.version`(종류 공통 삭제의 `If-Match`에
+그대로 쓴다).
+
 3.5.0(0.14.5, 더하기만): 종류 공통 항목 삭제(`DELETE /projects/copy/items/{kind}/{id}?project=`)와
 그 종류가 이 경로로 지워지는지 `CopyKindInfo.deletable`.
 
@@ -764,6 +767,14 @@ class CopyItem(ContractModel):
     description: str = ""
     saved_at: float | None = Field(
         default=None, description="마지막 저장 시각(유닉스 초, 모르면 null)."
+    )
+    version: str | None = Field(
+        default=None,
+        description=(
+            "(3.6.0) 항목의 지금 버전(그 공간 정의 저장소의 버전 해시). 종류 공통 삭제 "
+            "`DELETE /projects/copy/items/{kind}/{id}`의 `If-Match`에 그대로 쓴다(다르면 412 "
+            "`version_conflict`). null = 모름 또는 옛 서버(`If-Match` 없이 지운다)."
+        ),
     )
 
 

@@ -109,6 +109,8 @@ DEFAULT_RUN_LIST_LIMIT = 200
 DEFAULT_RUN_PAGE_LIMIT = 50
 """``GET /runs/page`` 기본 ``limit``."""
 MAX_RUN_LIST_LIMIT = 1000
+MAX_RUN_QUERY_LENGTH = 200
+"""``GET /runs/page?q=`` 최대 글자 수(넘으면 422)."""
 MAX_ACTIVITY_LIMIT = 1000
 
 Limit = Annotated[int, Query(ge=1, le=MAX_RUN_LIST_LIMIT)]
@@ -251,6 +253,8 @@ def build_router(
         agent_id: str | None = None,
         conversation_id: str | None = None,
         root: str | None = None,
+        since: float | None = None,
+        q: Annotated[str | None, Query(max_length=MAX_RUN_QUERY_LENGTH)] = None,
     ) -> RunPage:
         """실행 목록 커서 페이지(``created_at`` 내림차순 + ``id``). 조건은 모두 AND.
 
@@ -261,6 +265,11 @@ def build_router(
         - ``agent_id``·``conversation_id``·``root``는 옛 ``GET /runs``와 같은 뜻이다(6R.19):
           ``agent_id`` = 그 에이전트가 actor로 남긴 이벤트가 있는 Run, ``root`` = 그 루트 Run 아래
           모든 자손(루트 자신은 빠짐).
+        - ``since`` = ``created_at``이 그 값(epoch 초) 이상인 Run(하한 포함).
+        - ``q`` = 부분 일치 검색(앞뒤 공백 제거, 비면 무시, 최대 ``MAX_RUN_QUERY_LENGTH``자):
+          run id·``graph_id``·입력 최상위 문자열 값. ASCII 대소문자 무시, ``%``·``_``는 글자
+          그대로. 팀 구성 이름·대화 제목은 찾지 않는다(다른 기능·DB의 값이라 클라이언트가 맡는다,
+          6R.19 결정).
         - 행마다 ``has_children``(직접 자식 Run 유무)를 채운다(페이지 행을 한 번에 센다).
         - ``project`` = 그 프로젝트의 Run. 기록 공간이 있는 조립이면 폴더 기록 DB를 끝까지 읽은 뒤
           ``next_cursor``가 앱 DB 옛 기록(``source=app``)의 처음을 가리킨다(옛 기록이 없으면 null).
@@ -277,6 +286,8 @@ def build_router(
             "agent": agent_id,
             "conversation_id": conversation_id,
             "root_run_id": root,
+            "since": since,
+            "query": q,
         }
         svc = service()
         spaced = project is not None and svc.records is not None and svc.records.spaced
@@ -755,6 +766,7 @@ __all__ = [
     "DEFAULT_RUN_PAGE_LIMIT",
     "LOGIN_INPUT_MAX_BYTES",
     "MAX_RUN_LIST_LIMIT",
+    "MAX_RUN_QUERY_LENGTH",
     "NO_STORE",
     "build_router",
     "errors",
