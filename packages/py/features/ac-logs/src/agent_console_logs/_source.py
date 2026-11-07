@@ -184,7 +184,7 @@ class LogSourceContext:
 
 @runtime_checkable
 class LogSource(Protocol):
-    """로그 출처(X5). 원본을 읽기만 한다."""
+    """로그 출처. 원본을 읽기만 한다."""
 
     @property
     def descriptor(self) -> LogSourceDescriptor:
@@ -233,7 +233,7 @@ class ScopedLogSource(Protocol):
 
 @runtime_checkable
 class LogClassifier(Protocol):
-    """로그 분류기(X6). 행 단위 무상태(F-7)."""
+    """로그 분류기. 행 단위 무상태."""
 
     @property
     def descriptor(self) -> LogClassifierDescriptor:

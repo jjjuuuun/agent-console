@@ -136,9 +136,9 @@ greeting = "my_plugin:GreetingType"
 `validate`는 `SchemaResourceType`이 `config_schema`로 검사한다(추가 검사는 `extra_issues`).
 `Contribution(slot, value, combine=None, fallback=None)`의 `combine`으로 이 기여만 다른 전략(예: `prepend`)을 쓸 수 있다.
 
-- **대체 칸**(`fallback`, 2R.12): 실행 백엔드가 `slot`을 받지 않으면(`accepted_slots`에 없음) 대신 쓸 기여.
+- **대체 칸**(`fallback`): 실행 백엔드가 `slot`을 받지 않으면(`accepted_slots`에 없음) 대신 쓸 기여.
   예: 경로 조건 지침(`rules`)을 못 받는 백엔드에는 일반 지침(`instructions`)으로. 바꾸면 info `resource.slot_fallback`.
-- **여러 파일 본문**(2R.12): 디스크립터 `content.multi_file=true`인 종류는 `contribute`의 `content`로 `{경로: 바이트}`
+- **여러 파일 본문**: 디스크립터 `content.multi_file=true`인 종류는 `contribute`의 `content`로 `{경로: 바이트}`
   (`ContentFiles`)를 받는다. 조회 객체가 선택 능력 `FileContentLookup.read_files(resource)`를 가져야 한다
   (`InMemoryResources`·`MaskedResources`·ac-nodes-core `FunctionResources(find, read, read_files)`). 없으면
   `resource.content_unreadable` 경고와 함께 `None`.
@@ -172,7 +172,7 @@ contributes:
 
 config 스키마에서 비밀 값이 들어갈 위치에 `x-secret: true`(상수 `SECRET_SCHEMA_KEY`)를 단다. 화면은 이 구조화
 힌트로 비밀 입력 칸(가림·`secret://` 참조 고르기)을 그린다 — description 문구로 추측하지 않는다.
-플러그인 종류와 선언형 종류 모두 같다. 2R.4부터 `SchemaResourceType.validate`가 이 위치의 평문(참조가 아닌 값)을
+플러그인 종류와 선언형 종류 모두 같다. `SchemaResourceType.validate`가 이 위치의 평문(참조가 아닌 값)을
 **일반 규칙으로 거부한다**(`find_schema_plain_secrets` → `resource.plain_secret` error, 값 없는 메시지). 선언형
 종류도 `pattern`을 따로 달 필요가 없다. 종류가 `extra_issues`로 같은 위치를 이미 보고하면 한 번만 낸다.
 
@@ -244,11 +244,11 @@ contributes:
 | `ruamel.yaml` | 선언형 종류 YAML 읽기(정의 저장과 같은 라이브러리) | PyYAML |
 | `pydantic` | 선언형 종류 형식 검사·계약 모델 | 손 검사 |
 | `ac-secret-rules`(사내) | 리소스가 없는 첨부 덮어쓰기의 비밀 의심 판정(서버·가져오기와 같은 규칙, 사용자 규칙 주입) | 계약 패키지 안 모듈(1R, 사용자 규칙을 넣을 수 없었음) |
-| `ac-text-template`(사내) | 선언형 종류의 안전 치환(`render_template`·`fill_value`, 이 패키지가 같은 이름으로 다시 내보낸다, 6R.4) | 이 패키지 안 사본(SDD 입력 틀과 같은 규칙을 두 곳에 두게 됨) |
+| `ac-text-template`(사내) | 선언형 종류의 안전 치환(`render_template`·`fill_value`, 이 패키지가 같은 이름으로 다시 내보낸다) | 이 패키지 안 사본(SDD 입력 틀과 같은 규칙을 두 곳에 두게 됨) |
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-resources`.
 

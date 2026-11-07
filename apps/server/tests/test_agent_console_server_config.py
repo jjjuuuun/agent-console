@@ -180,3 +180,27 @@ def test_runs_keys_are_rejected_and_env_goes_to_mod_runs(tmp_path: Path) -> None
     assert runs["working_directory"] == "from-env"
     assert runs["runtime"] == {"max_concurrency": "3"}
     assert "project_dir" not in from_env.modules.options.get("mod-imports", {})
+
+
+def test_plugins_disabled_from_file_and_env(tmp_path: Path) -> None:
+    (tmp_path / CONFIG_FILENAME).write_text(
+        "plugins:\n  enabled: [a, b]\n  disabled: [b]\n", encoding="utf-8"
+    )
+    from_file = load_settings(environ={}, cwd=tmp_path)
+    assert from_file.plugins.enabled == ["a", "b"]
+    assert from_file.plugins.disabled == ["b"]
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert load_settings(environ={}, cwd=empty).plugins.disabled == []
+    env = {"AGENT_CONSOLE_PLUGINS_DISABLED": "x, y"}
+    assert load_settings(environ=env, cwd=tmp_path).plugins.disabled == ["x", "y"]
+
+
+def test_plugin_settings_schema_has_help() -> None:
+    """설정 폼 도움말 규칙(라벨·설명·x-ui tier·예시)을 지킨다."""
+    from agent_console_contracts.schema_help import lint_schema_help
+    from agent_console_server._config import PluginSettings
+
+    schema = PluginSettings.model_json_schema()
+    assert lint_schema_help(schema) == []
+    assert schema["properties"]["disabled"]["title"]

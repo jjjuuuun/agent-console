@@ -50,7 +50,7 @@ effective_max_iterations(edge, descriptor, settings_value=None) -> int | None
   `resolve_ports(config)`를 감싼다. 없으면 동적 포트 노드는 `ports_unresolved` 경고 후 포트 검사 생략.
 - `cycle_edge(edge, edge_descriptor) -> bool`: 참이면 그 흐름 엣지는 사이클 검사에서 빠진다. 기본은 DAG만 허용.
   디스크립터 `scheduling`이 `flow`가 아닌 엣지(`none`·`entry`·`exit`)는 항상 사이클 계산에서 빠진다
-  (예: `사용자 → A →(답변) 사용자`는 순환이 아니다, design §R3.1).
+  (예: `사용자 → A →(답변) 사용자`는 순환이 아니다).
 - `validate_node(node, descriptor) -> Iterable[Issue]`: 스키마 외 의미 검증(스키마 통과 노드에만 호출).
 
 ### Issue code (`GraphIssueCodes`)
@@ -69,7 +69,7 @@ effective_max_iterations(edge, descriptor, settings_value=None) -> int | None
 | `unknown_port` | edge_id | error | `{end, node, port, available}` |
 | `cycle` | 그래프 | error | `{nodes: [...]}` (강한 연결 요소, 자기 루프 포함). `cycle_edge` 술어가 참인 연결은 빼고 계산. 술어를 주면 수정 제안이 붙는다(아래) |
 
-### 반복 영역 (design §5R.4)
+### 반복 영역
 
 - **사이클 연결** = 연결 종류 디스크립터에 `cycle`(`CyclePolicy`)이 있는 흐름 연결. 이름을 보지 않는다.
   `validate_graph(..., cycle_edge=descriptor_cycle_edge)`이면 흐름 사이클마다 사이클 연결이 하나 이상 있어야 한다(없으면 `cycle`).
@@ -113,7 +113,7 @@ effective_max_iterations(edge, descriptor, settings_value=None) -> int | None
 3. `nodes`·`edges`는 `id` 순으로 정렬(목록 순서 무관). 그 밖의 목록 순서는 유지.
 4. 정규 JSON(키 정렬, 공백 없는 구분자, UTF-8) → sha256 hex.
 
-### `schedule_view` (design §R3.1)
+### `schedule_view`
 
 엣지 디스크립터 `scheduling`(`flow`·`none`·`entry`·`exit`)과 노드 디스크립터 `executable`만으로 계산한다(이름을 모른다).
 
@@ -173,7 +173,7 @@ effective_max_iterations(edge, descriptor, settings_value=None) -> int | None
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-graph`.
 

@@ -1,6 +1,6 @@
 # agent-console-link-memory-runs
 
-Agent Console 메모리·실행 연동 모듈(`link-memory-runs`, design §5.7R.2·§5.7R.3). 에이전트에게 공유
+Agent Console 메모리·실행 연동 모듈(`link-memory-runs`). 에이전트에게 공유
 메모리 도구(검색·읽기·쓰기·지우기)를 준다. 실행 모듈(`mod-runs`)과 메모리 모듈(`mod-memory`)은 서로를
 모르고, 이 연동이 실행 범위(X26 `runs.scopes`)로 Run마다 에이전트 도구 공급자(X30 `TOOL_PROVIDERS`)를
 넣어 둘을 잇는다.

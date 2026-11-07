@@ -1,12 +1,12 @@
 # agent-console-link-runs-teams
 
-실행·팀 연동 모듈(design §3R.1.4 L4). 실행 모듈(`mod-runs`)에 팀 의미(`ac-teams`)를 잇는다.
+실행·팀 연동 모듈. 실행 모듈(`mod-runs`)에 팀 의미(`ac-teams`)를 잇는다.
 
 - `runs.preparers`: 엔진 검증 뒤 팀 규칙 검사(`validate_team`, 엔진 이슈와 같은 뜻은 `merge_validation`으로 뺌)와 실행 준비(`prepare_run` — 허용 상호작용·상호작용 대기 설정).
 - 사전 점검(`TeamRules.preflight`, `mod-runs`의 선택 메서드): 실행을 만들기 전에 실행 백엔드가 빈 노드(`ac-teams.resolve_backends`·`unresolved_backends`)가 있으면 422 `backend.unresolved`(`details` = `BackendUnresolvedDetails{nodes, options}`, `fix.actions` = [노드에서 지정]·[기본값으로 지정])를 낸다. Run·턴 기록이 남지 않는다. 문구·웹 라우트 역할·설정 섹션·초점은 `BackendFixTexts` 데이터(`TeamRules(fix_texts=)`)다. 자식 Run은 점검하지 않는다(노드 실패 `agent.no_backend`).
 - `runs.services`: 노드 서비스(`ac-nodes-core` 키 — 에이전트·리소스 조회, 공통 설정, 기본 백엔드, 작업 폴더, 실행 파일 폴더, 중첩 팀 조회 `TEAM_LOOKUP`).
-- 중첩 팀(design §5R.7): 팀 구성 읽기(`runs.starter`의 `load_graph(id, version_hash)`, 고정 버전 포함)로 노드 서비스 `TEAM_LOOKUP`과 팀 규칙의 중첩 검사(`team.recursive`·`team.nesting_exceeded`·`team.team_not_found`·`team.child_no_entry`)를 준다.
-- Run의 정의 출처(5.7R.33y): 실행 환경 `definitions`·노드 서비스 `RUN_DEFINITIONS`가 있으면 노드 서비스(`AGENT_LOOKUP`·`TEAM_LOOKUP`(고정 버전 포함)·`RESOURCE_LOOKUP`(본문·여러 파일))와 실행 전 검사·사전 점검이 그 출처 하나만 본다(`lookups_from(source) -> RunLookups`). 켜고 끄기(리소스·팀 구성 읽기 없음)는 지금과 같다.
+- 중첩 팀: 팀 구성 읽기(`runs.starter`의 `load_graph(id, version_hash)`, 고정 버전 포함)로 노드 서비스 `TEAM_LOOKUP`과 팀 규칙의 중첩 검사(`team.recursive`·`team.nesting_exceeded`·`team.team_not_found`·`team.child_no_entry`)를 준다.
+- Run의 정의 출처: 실행 환경 `definitions`·노드 서비스 `RUN_DEFINITIONS`가 있으면 노드 서비스(`AGENT_LOOKUP`·`TEAM_LOOKUP`(고정 버전 포함)·`RESOURCE_LOOKUP`(본문·여러 파일))와 실행 전 검사·사전 점검이 그 출처 하나만 본다(`lookups_from(source) -> RunLookups`). 켜고 끄기(리소스·팀 구성 읽기 없음)는 지금과 같다.
 - `graphs.validation`: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시, `definitions.saved` 구독으로도 버림).
 - 경로 `POST /graphs/{id}/validate`(본문 그래프 또는 저장본, 이슈가 있어도 200). 결과 = 엔진 검증 + 팀 규칙 + 선택 포트 `definitions.checks`(저장 전 정의 검사)의 경고·정보(예: `mod-projects`의 `project.shared_uses_project` + 제안 `project.move_to_shared`). 검사의 error는 저장 경로가 422로 거부하므로 붙이지 않고, 같은 코드·대상·path는 한 번만 낸다. 제공 모듈이 없으면 엔진 검증 + 팀 규칙만이다(`definition_check_issues`·`with_definition_checks`는 HTTP 없이도 쓴다).
 
@@ -44,7 +44,7 @@ True
 
 <!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
 
-### 해결 버튼 표(5.2R.5)
+### 해결 버튼 표
 
 검증 이슈·노드 실패 코드 → 해결 버튼(`Fix.actions`)은 데이터 `data/issue_fixes.json`이다(입구·답변 없음,
 백엔드 없음·모름, 알 수 없는 종류, 위임 깊이). `TeamRules`가 검증 이슈에 붙이고(`mod-runs` 선택 메서드

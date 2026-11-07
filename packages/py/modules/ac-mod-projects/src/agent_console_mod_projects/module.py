@@ -50,6 +50,7 @@ from .copying import CopyService
 from .definitions import DefinitionSnapshot, combine_references, contribution_references
 from .errors import ERROR_MAP
 from .folders import FolderDialogProvider, FolderPicker, FolderService, load_dialog_providers
+from .plugins import dialog_registry, registered_providers
 from .ports import (
     DEFINITIONS_LOOKUP,
     DEFINITIONS_REFERENCES,
@@ -90,6 +91,17 @@ WEB_ROLES: tuple[str, ...] = ("projects",)
 
 DEFAULT_WORKSPACE = Path(".agent-console")
 """호스트가 경로를 주지 않을 때(테스트 등) 쓰는 워크스페이스 폴더."""
+
+
+def _dialog_providers(registries: Any) -> list[FolderDialogProvider]:
+    """호스트 묶음에 읽힌 제공자(``plugins.enabled``·``plugins.disabled`` 적용됨).
+
+    묶음이 없으면(단독 조립) 설치된 것을 직접 읽는다.
+    """
+    registry = dialog_registry(registries) if registries is not None else None
+    if registry is None:
+        return load_dialog_providers()
+    return registered_providers(registry)
 
 
 def _version() -> str:
@@ -289,7 +301,11 @@ class ProjectsModule:
         picker = FolderPicker(
             settings=cfg.folder_dialog,
             runner=self._runner or SubprocessRunner(),
-            providers=(self._providers if self._providers is not None else load_dialog_providers()),
+            providers=(
+                self._providers
+                if self._providers is not None
+                else _dialog_providers(ctx.registries)
+            ),
             loopback=lambda: loopback,
             platform=self._platform or sys.platform,
             which=self._which or shutil.which,

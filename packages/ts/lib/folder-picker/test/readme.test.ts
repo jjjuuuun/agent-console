@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 // readme:start
 import { deriveCheckState, middleEllipsis } from "@agent-console/folder-picker";
 
-const short = middleEllipsis("/home/me/work/payments/services/api", 27);
+const short = middleEllipsis("/data/work/payments/services/api", 27);
 const state = deriveCheckState("/srv/app", {
   kind: "checked",
   check: { input: "/srv/app", path: "/srv/app", exists: true, is_dir: true, readable: true, writable: true, can_create: false },
@@ -12,7 +12,7 @@ const state = deriveCheckState("/srv/app", {
 // readme:end
 
 test("README 예제가 실제로 돈다", () => {
-  expect(short).toBe("/home/me/work…/services/api");
+  expect(short).toBe("/data/work…/services/api");
   expect(state.id).toBe("ok");
   expect(state.submittable).toBe(true);
 });

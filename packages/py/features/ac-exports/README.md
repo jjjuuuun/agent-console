@@ -13,7 +13,7 @@
   팀 구성이 쓰는 에이전트·리소스·자식 팀 구성은 카탈로그가 알려 준다(Agent Console 서버는
   `ac-teams.graph_dependencies`). `claude-dir`은 쓰는 정의 중 팀 구성(중첩 팀 노드의 자식)을 따라가 그 구성원도
   에이전트로 내보낸다(주 노드는 고른 팀 구성 것만, 순환은 한 번씩).
-- **쓰기 안전 규칙**(CLAUDE.md 안전 규칙):
+- **쓰기 안전 규칙**:
   - 기본은 보관 파일(zip) 응답 — 서버 디스크에 쓰지 않는다.
   - 폴더 쓰기는 설치자가 등록한 루트(`ExportRoot`) 아래 `subdir`에만. 경로 탈출·절대 경로·Windows 금지 이름,
     루트부터 대상까지의 심볼릭 링크·정션을 거부한다.
@@ -137,7 +137,7 @@ my-format = "my_pkg.export:my_exporter"
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-exports`.
 

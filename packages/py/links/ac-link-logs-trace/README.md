@@ -1,6 +1,6 @@
 # agent-console-link-logs-trace
 
-로그·추적 연동 모듈(design §4R.8 연동 표 둘째 행). 로그 색인(`logs.query`)의 세션 이벤트로
+로그·추적 연동 모듈. 로그 색인(`logs.query`)의 세션 이벤트로
 위임 흐름(`Trace`)을 만든다. 실행 기록의 흐름(`link-runs-trace`)과 같은 모양이라 웹은 같은 그림
 컴포넌트(`trace-view`)를 쓴다.
 

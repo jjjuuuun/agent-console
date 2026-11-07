@@ -1,6 +1,6 @@
 # agent-console-mod-memory
 
-공유 메모리 기능 모듈(`mod-memory`, design §5.7R.2·§5.7R.5.2·§5.7R.6). 기능 라이브러리
+공유 메모리 기능 모듈(`mod-memory`). 기능 라이브러리
 `agent-console-memory`(저장소·범위 종류·정리 규칙·내보내기/가져오기)를 서버에 꽂는다. 사람은 REST·웹
 화면으로 기록을 보고 고치고 지우며, 실행 연동(`link-memory-runs`)은 포트 `memory.service`로 에이전트
 도구를 만든다. 실행·로그를 모른다(메모리는 실행 없이도 쓴다).

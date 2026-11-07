@@ -24,3 +24,4 @@
 | [agent-console-example-usage](agent-console-example-usage/README.md) | python | `usage-source` 사용량 출처 | `uv pip install -e examples/extensions/agent-console-example-usage` |
 | [agent-console-example-wiki-check](agent-console-example-wiki-check/README.md) | python | `wiki-write-check` 위키 쓰기 검사 보탬 | `uv pip install -e examples/extensions/agent-console-example-wiki-check` |
 | [agent-console-example-wiki-search](agent-console-example-wiki-search/README.md) | python | `wiki-search-index` 위키 검색 색인 | `uv pip install -e examples/extensions/agent-console-example-wiki-search` |
+| [@agent-console/example-web](../web/agent-console-example-web/README.md) | ts | `architecture-cell-renderer` 구조도 칸·연결 그리기, `config-form-widget` 설정 폼 위젯, `dashboard-widget` 대시보드 위젯 | `pnpm --filter @agent-console/example-web test` |

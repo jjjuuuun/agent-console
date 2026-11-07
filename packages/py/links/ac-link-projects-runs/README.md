@@ -1,6 +1,6 @@
 # agent-console-link-projects-runs
 
-Agent Console 프로젝트·실행 연동 모듈(design §UX-P.5·§5.2R.6). 실행의 `project_id`(불투명 문자열)로
+Agent Console 프로젝트·실행 연동 모듈. 실행의 `project_id`(불투명 문자열)로
 프로젝트를 찾아 **프로젝트 설정 층**(작업 폴더 `working_directory` + 프로젝트 `settings`)을 공통 바로
 아래에 넣는다. 실행 모듈(`mod-runs`)과 프로젝트 모듈(`mod-projects`)은 서로를 모르고, 이 연동이 둘을
 잇는다.
@@ -11,7 +11,7 @@ Agent Console 프로젝트·실행 연동 모듈(design §UX-P.5·§5.2R.6). 실
   `project.not_imported`의 `in_library`만).
 - 제공: `runs.scopes`(실행 시작마다 노드 서비스 `SCOPE_LAYERS`에 프로젝트 층, 정의 출처
   `run_definitions`, 사전 점검 거부 `errors`), `settings.scope_layers`(유효 설정 경로 `?project=`).
-- 사전 점검(design §PI.4.5·§PI.5): `project.required`(422)·`project.not_found`(404)·
+- 사전 점검: `project.required`(422)·`project.not_found`(404)·
   `project.folder_missing`·`project.manifest_invalid`(409)·`project.not_imported`(422, `in_library`)·
   `project.records_unavailable`(409)·`project.outside_folder`(422, 경로·층·노드). 경로 필드는 스키마
   주석 `x-path`로만 찾고(에이전트 설정 + 유효 백엔드의 `backend_options` 스키마), 앱 workspace·상태

@@ -99,7 +99,7 @@ node 이 common 보다 /limits/network 을 넓힘: ('allow',)
 
 비교기는 `DEFAULT_WIDEN_CHECKS`(`subset`·`path_subset`·`order`)에 더해 `comparators=`로 넘길 수 있다.
 
-### 문서 비교(버전 비교, design §2R.9)
+### 문서 비교(버전 비교)
 
 ```python
 >>> from agent_console_settings import diff_digests, diff_documents
@@ -144,7 +144,7 @@ Pointer가 아님), 직접 구현(목록 정렬 알고리즘을 새로 써야 �
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-settings`.
 

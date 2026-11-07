@@ -10,7 +10,7 @@ from agent_console_contracts import ConditionOperatorDescriptor
 
 @runtime_checkable
 class ConditionOperator(Protocol):
-    """조건 연산자 하나(X22). 등록 key = `descriptor.id`.
+    """조건 연산자 하나. 등록 key = `descriptor.id`.
 
     `evaluate`는 판정만 한다(부작용 없음). 형식이 맞지 않거나 경로에 값이 없으면(`MISSING`)
     예외 대신 거짓을 돌려준다. 예외를 던지면 평가기가 그 항목을 거짓(`reason = "error"`)으로 둔다.

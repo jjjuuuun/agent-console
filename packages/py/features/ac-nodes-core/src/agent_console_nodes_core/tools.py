@@ -153,7 +153,7 @@ class MergedToolProvision(ToolProvision):
 
 @runtime_checkable
 class ToolProvider(Protocol):
-    """X30: agent 노드 실행마다 도구를 주는 공급자.
+    """agent 노드 실행마다 도구를 주는 공급자.
 
     `id`는 경고·이벤트에 쓰는 이름(사용자 도메인 아님). `provide`는 백엔드를 부르기 전에 노드마다
     한 번 불린다. 동기 함수이며 무거운 일(저장소 조회 등)은 도구 핸들러가 호출 때 한다.

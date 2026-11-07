@@ -2,7 +2,7 @@
 
 공유 메모리 표현 컴포넌트. 범위 나무, 항목 표(가상 목록), 본문 편집기, 항목 정보, 버전 목록·비교, 정리 미리보기와
 순수 함수(`groupScopes`·`scopeLabel`·`formatAuthor`·`visibleScopes`)를 낸다.
-API·저장소·`api-client`·`log-view`·`ui`를 모른다. 데이터와 콜백은 전부 props, 문구는 `messages`다. 화면 명세: `docs/design/screen-memory.md`.
+API·저장소·`api-client`·`log-view`·`ui`를 모른다. 데이터와 콜백은 전부 props, 문구는 `messages`다.
 
 - **범위 종류·범위 이름·도구 이름은 코드에 없다.** 서버가 준 범위 종류 목록(`label`·`id` 틀·`context_fields`)과 범위 요약만으로 그린다.
   프로젝트·팀을 알아보는 것도 종류 이름이 아니라 종류의 `context_fields`와 id 틀로 한다(`visibleScopes`). 이름을 바꿔도 결과가 같다.

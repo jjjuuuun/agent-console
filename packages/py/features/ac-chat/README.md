@@ -14,13 +14,13 @@
   붙이는지는 `TurnSessions` 규칙(`collect`·`prune`)이 정한다. 기본 `RootRunSessions`는 위 규칙(턴 Run 자기
   노드, 키 = 노드 id)이고, 중첩 실행(자식 Run)까지 이으려면 조립이 규칙을 주입한다(예:
   `agent-console-link-chat-runs`의 `LineageSessions` — 경로 키 `"<팀 노드>/<자식 노드>"`).
-- **턴 마무리 순서(5.2R.39)**: 답변(`run.reply` — 엔진이 Run 종료 상태보다 먼저 저장) → 세션 기록 → 끝난 상태
+- **턴 마무리 순서**: 답변(`run.reply` — 엔진이 Run 종료 상태보다 먼저 저장) → 세션 기록 → 끝난 상태
   공개 → 알림(`listener`). Run이 끝났어도 세션을 기록하기 전에는 `turns()`·`turn()`·요약 `last_status`가 그 턴을
   `running`(종료 시각 없음)으로 보인다. 그래서 끝난 상태가 보이는 턴에는 답변이 모두 들어 있다.
 - **대화 제목**: 설정 `chat.title`이 `first_message`면 첫 메시지 앞 `ChatOptions.title_chars`(기본 40)자, `manual`이면 비워 둔다.
 - **요약**: `ConversationSummary.last_status`·`queued`·`pending_interactions`. 바뀔 때마다 `listener`를 부른다(서버가 WS
   `conversation.updated`로 내보냄). 상호작용 상태가 바뀌면 앱이 `notify(conversation_id)`를 부른다.
-- **대기열 저장(design §2R.10)**: 대기열은 주입한 `QueueStore`에 있다(기본 `MemoryQueue`; 서버는
+- **대기열 저장**: 대기열은 주입한 `QueueStore`에 있다(기본 `MemoryQueue`; 서버는
   `agent_console_mod_chat.storage`의 대기열 저장소(SQLite)를 그대로 넘긴다). 실행 중 표시는 프로세스 메모리에 있다.
   - 재시작 뒤 `await apply_restart_policy()`(시작 시 한 번): 유효 설정 `chat.queue_after_restart`가
     `ask`(기본)면 모든 항목을 멈추고(`held`, 사유 `restart`), `run`이면 순서대로 실행, `drop`이면 지운다.
@@ -42,7 +42,7 @@
 | --- | --- | --- | --- |
 | `ConversationRepository`(필수) | `get`, `save`, `delete`, `list(graph_id=, archived=)` | 저장소 대화 리포지토리 | — |
 | `GraphLookup`(필수) | `get_graph(graph_id)` | 정의 저장소 위 함수 하나 | — |
-| `ProjectGraphLookup`(선택 능력, 5.7R.33y) | `get_project_graph(project_id, graph_id)` | 있으면 `project_id`가 있는 대화의 팀 구성은 그 프로젝트에서만 찾는다(가짜 `testing.MemoryProjectGraphs`) | 모든 대화가 `get_graph` |
+| `ProjectGraphLookup`(선택 능력) | `get_project_graph(project_id, graph_id)` | 있으면 `project_id`가 있는 대화의 팀 구성은 그 프로젝트에서만 찾는다(가짜 `testing.MemoryProjectGraphs`) | 모든 대화가 `get_graph` |
 | `TurnLauncher` | `async start_turn(TurnStart) -> TurnHandle`, `cancel(run_id, reason)` | `GraphRuntime`을 감싼 얇은 어댑터(`TurnStart.sessions`를 노드 서비스로, `conversation_id`·`origin`을 Run에) | 전송·이어 가기 `ChatFeatureUnavailableError`, 대기열은 꺼내지 않고 남긴다 |
 | `TurnHandle` | `run_id`, `run`, `async wait()` | `GraphRuntime.start()`의 `RunHandle` 그대로 | — |
 | `RunReader` | `get`, `list(conversation_id=, limit=)`(최신순) | 저장소 Run 리포지토리 | 턴 목록이 비고 마지막 상태는 null |
@@ -56,7 +56,7 @@
 조립 순서상 서비스를 먼저 만들고 실행 연결을 나중에 아는 조립기(서버 모듈)는 턴을 시작하기 전에
 `connect(launcher=, runs=, events=, interactions=, sessions=)`를 한 번 부른다(`can_send`로 전송 가능 여부를 본다).
 
-선택 연결 `SessionContinuity`(`state`·`prepare`, 5.7R.33y3): 주면 `ChatService.session_states(id)`가 노드별 이어 가기 상태
+선택 연결 `SessionContinuity`(`state`·`prepare`): 주면 `ChatService.session_states(id)`가 노드별 이어 가기 상태
 (`ConversationSessions`)를 보이고, 보내기 전에 기록이 없는 노드가 있으면 `SessionUnavailableError`(409 `chat.session_unavailable`,
 `details{conversation_id, node_ids}`), `on_missing_session: "fresh"`면 그 노드만 새 세션으로 시작한다. 보관 사본·옛 위치에서 복원한
 노드는 `TurnStart.session_notes`(`archived`·`relocatable`·`fresh`)로 실행기에 알린다. 예제 구현 `testing.MemoryContinuity`.
@@ -139,7 +139,7 @@ feature_unavailable {'dependency': 'launcher'}
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-chat`.
 

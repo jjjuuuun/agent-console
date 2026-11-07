@@ -1,6 +1,6 @@
 # agent-console-link-exports-teams
 
-Agent Console 내보내기 ↔ 팀 의미 연동 모듈(design §3R.1.4 L10, R1.2). `exports.dependencies`(정의가 쓰는 정의)를 제공해
+Agent Console 내보내기 ↔ 팀 의미 연동 모듈. `exports.dependencies`(정의가 쓰는 정의)를 제공해
 내보내기(`mod-exports`)가 팀 구성의 에이전트·리소스, 에이전트의 리소스를 함께 담게 한다.
 
 - 필수 포트: `definitions.lookup`. 선택: `workspace.settings`(공통 층 첨부도 의존에 넣는다). 경로 없음.

@@ -1,6 +1,6 @@
 # agent-console-mod-resources
 
-Agent Console 리소스 기능 모듈(design §3R.1.3, R12·R13.1). 리소스 라이브러리 경로와 리소스 종류·병합 전략 목록을
+Agent Console 리소스 기능 모듈. 리소스 라이브러리 경로와 리소스 종류·병합 전략 목록을
 서버에 꽂고, 다른 모듈이 쓰는 리소스 조회·종류 포트를 낸다.
 
 - 경로: `/resources`·`/resources/{id}`(CRUD, 종류 검사 error는 422), `/resources/{id}/content`(본문),
@@ -16,7 +16,7 @@ Agent Console 리소스 기능 모듈(design §3R.1.3, R12·R13.1). 리소스 �
   `default_content_file`, `reserved_file_names`(경고할 경로 칸 이름, 빈 목록이면 경고 없음).
 - 웹 역할: `definitions:resource`.
 
-공간(5.7R.33x): 선택 포트 `definitions.spaces`가 있으면 `/resources`·`/resources/{id}/…`가 `?project=<이름>`으로 그
+공간: 선택 포트 `definitions.spaces`가 있으면 `/resources`·`/resources/{id}/…`가 `?project=<이름>`으로 그
 공간 저장소를 쓴다(공간 목록의 `usage_count`는 null). 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404.
 
 ## 설치

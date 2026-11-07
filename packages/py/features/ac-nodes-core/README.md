@@ -20,7 +20,7 @@ uv pip install ./packages/py/features/ac-nodes-core    # 단독
 | 그룹 | 이름 | 객체 |
 | --- | --- | --- |
 | `agent_console.node_types` | `agent`, `user`, `resource` | `agent:AgentNode`, `user:UserNode`, `places:ResourceNode` |
-| `agent_console.node_types` | `team` | `team:TeamNode`(중첩 팀, design §5R.7) |
+| `agent_console.node_types` | `team` | `team:TeamNode`(중첩 팀) |
 | `agent_console.edge_types` | `subagent`, `delegate`, `handoff`, `data`, `uses`, `message`, `reply`, `ask_user` | `edges:*Edge` |
 | `agent_console.edge_types` | `loop` | `loops:LoopEdge` |
 | `agent_console.edge_types` | `when`, `on_error` | `conditional:WhenEdge`, `conditional:OnErrorEdge` |
@@ -36,7 +36,7 @@ uv pip install ./packages/py/features/ac-nodes-core    # 단독
 | `resource` | resource, `binds{resource, resource_ref}` | 출력 `provides` | `resource_ref` | `executable=false`. 연결된 에이전트의 노드 층 첨부(`ac-teams`) |
 | `team` | team, `binds{graph, team_ref}`, `ui_hints.shape = stacked` | 입력 `in`, 출력 `out` | `team_ref`, `version?`(정의 저장소 버전 해시, 생략 = 최신), `input_key?`, `reply?`(답변 label 목록), `reply_separator`(기본 빈 줄), `settings?`(자식 팀 층 덮어쓰기, `GraphSettings`) | 아래 "중첩 팀 실행" |
 
-### 중첩 팀 실행 (`team`, design §5R.7)
+### 중첩 팀 실행 (`team`)
 
 1. 서비스 `TEAM_LOOKUP`(`(id, 버전|None) -> Graph|None`)으로 팀 구성을 찾는다. 서비스가 없으면
    `team.lookup_unavailable`(메시지 `TEAM_LOOKUP_UNAVAILABLE_MESSAGE`), 없는 팀 구성·버전은 `team.team_not_found`.
@@ -62,13 +62,13 @@ capabilities.resource_slots)`, 파일 칸은 `<RUN_FILES_ROOT>/<run>/<node>/`에
 (`write_files`: base64 디코드, 폴더 밖·심볼릭 링크 거부, 부모 폴더는 칸마다 검사 후 생성. 이미 `{path, root?}`만
 있는 항목은 `path`·`root`가 그 실행 폴더 안일 때만 넘긴다 — 백엔드가 이 경로를 에이전트 접근 폴더(`add_dirs`)로
 열기 때문에 다른 플러그인이 임의 경로를 열지 못하게 한다. 첫 경로 칸 `_bundle`은 예약), 파일 칸이 아닌 칸의 항목이
-`files: [{name, content, …}]`를 가지면(skill·규칙 파일, 2R.12) `write_item_trees`가
+`files: [{name, content, …}]`를 가지면(skill·규칙 파일) `write_item_trees`가
 `<RUN_FILES_ROOT>/<run>/<node>/_bundle/<node>/<칸>/<항목 name>/`에 같은 규칙으로 쓰고 항목을
 `{…, root, tree_root, files: [{name, path, media_type?}]}`로 바꾼다(칸 이름은 모르고 모양만 본다. 트리 폴더 이름이
 노드 id라 백엔드가 이 폴더를 플러그인 폴더로 넘겨도 노드마다 이름이 다르다) → 5. 정의(식별) + 유효 설정, 비밀 참조 해석,
 프롬프트 = `assemble_prompt(in 값, prompt_template)`(변수 `{inputs}`·`{message}`·`{node}`). 요청을 만든 뒤 백엔드를 부르기 전에
 `agent.context_prepared`(`context_prepared_payload`: 묶음 출처의 리소스 id·종류·바이트 수·sha256과 조각 수 = 프롬프트
-입력 수, **본문 없음**, design §5.5R.1 C1)를 낸다, 세션 = `SESSIONS[node]`
+입력 수, **본문 없음**)를 낸다, 세션 = `SESSIONS[node]`
 (유효 `session`이 `fresh`면 없음, 백엔드가 다르면 없음), `interactions` = `session_grant(plan, node, 위임 방식)`
 → 6. 위임 대상(`invocation` 연결)이 있으면 대상을 위임 방식별로 묶고, 묶음마다 유효 설정·묶음·`describe_member`·
 방식 config(`delegation[방식 id]`)로 `DelegationPlan`을 만들어 `validate` → 방식이 하나면
@@ -76,7 +76,7 @@ capabilities.resource_slots)`, 파일 칸은 `<RUN_FILES_ROOT>/<run>/<node>/`에
 7. `out` = 응답 텍스트.
 묶음·리소스 문제는 `log.warning`(details `code`, 값 없음).
 
-합류: 프롬프트 입력은 엔진이 주는 엣지별 값 `ctx.incoming("in")`으로 만든다(design §4.3·§R3.2-4). 형식은 유효 설정(데이터)이다.
+합류: 프롬프트 입력은 엔진이 주는 엣지별 값 `ctx.incoming("in")`으로 만든다. 형식은 유효 설정(데이터)이다.
 
 | 설정 | 기본값(계약 `AgentSettings`) | 쓰임 |
 | --- | --- | --- |
@@ -100,13 +100,13 @@ capabilities.resource_slots)`, 파일 칸은 `<RUN_FILES_ROOT>/<run>/<node>/`에
 
 | `delegate` | none, invocation `host` | agent → agent | `delegates` → `delegated` | `strategy?`, `result?`(`text` 기본 \| `reply`) |
 
-`delegate`: 위 에이전트가 위임 도구로 아래 에이전트를 **자기 세션·백엔드·설정**으로 부른다(design §5R.6). 위임 방식
+`delegate`: 위 에이전트가 위임 도구로 아래 에이전트를 **자기 세션·백엔드·설정**으로 부른다. 위임 방식
 `host` 구현은 별도 패키지 `agent-console-delegation-host`다(이 패키지는 id 문자열만 디스크립터 데이터로 안다 —
 설치하지 않으면 팀 검증이 "등록되지 않은 위임 방식" 경고를 낸다). `result`는 대상이 돌려줄 결과 모양(그 방식이 읽는다).
 
 `message`: Run 입력에 키가 없으면 통과하지 않는다. `reply`: 출발 노드가 성공했을 때만 `Reply(text, label, order, final)`.
 
-### 반복 연결 `loop` (design §5R.4)
+### 반복 연결 `loop`
 
 | id | scheduling | connects | 기본 포트 | config |
 | --- | --- | --- | --- | --- |
@@ -117,7 +117,7 @@ capabilities.resource_slots)`, 파일 칸은 `<RUN_FILES_ROOT>/<run>/<node>/`에
 agent 노드의 다음 회차는 직전 회차 세션을 이어 쓰고(설정 `session: fresh`면 새 세션), 이어 쓸 때 프롬프트는 이번 회차에
 새로 들어온 값(예: 반려 사유)만 담는다(`Incoming.carried` 값은 뺀다). 새 세션이면 남아 있던 값도 다시 넣는다.
 
-### 조건·실패 연결 `when`·`on_error` (design §5R.5)
+### 조건·실패 연결 `when`·`on_error`
 
 | id | scheduling | connects | 기본 포트 | config |
 | --- | --- | --- | --- | --- |
@@ -134,12 +134,12 @@ agent 노드의 다음 회차는 직전 회차 세션을 이어 쓰고(설정 `s
 `conditions`에 `ui:widget: condition-list`·`ui:options.path_titles`(경로 → 제목)를 싣는다(데이터).
 근거의 실제 값(`actual`)은 가림 함수(`WhenEdge(redact=...)` 또는 `use_redactor`, `ac-conditions.RedactorConsumer`
 — 실행 모듈이 엔진 `secrets.redact`를 준다)를 건 **뒤에** 200자에서 자른다. 잘린 비밀 조각은 기록 단계의 가림이
-알아보지 못하기 때문이다(5.2R.43).
+알아보지 못하기 때문이다.
 
 `on_error`: 출발 노드가 `failed`일 때만 `{error: {code, message}, node_id}`를 넘긴다. 지나가면 엔진은 그 실패를
 처리됨으로 보고 Run을 `completed`로 끝낼 수 있다.
 
-## 사용자 중간 검토 (A → 사용자 → B, design §R14.6)
+## 사용자 중간 검토 (A → 사용자 → B)
 
 `review` 포트(보통 `handoff`)로 들어온 값을 내용으로 상호작용(`review.kind`, 기본 `review`)을 연다.
 payload `{content, decisions, title?, source_node?}`, 응답 스키마는 요청마다 `review_response_schema(결정 id)`
@@ -149,7 +149,7 @@ payload `{content, decisions, title?, source_node?}`, 응답 스키마는 요청
 결정 id가 고정 출력 포트(`says`)와 겹치면 검증 오류이고 포트가 되지 않는다. 입력 포트(`hears`·`asks`·`review`)와는
 이름 공간이 달라 결정 id로 써도 된다.
 
-## 상호작용 종류 (X15, design §R14.3)
+## 상호작용 종류
 
 | id | 요청 | 응답 | `free_text_path` | `expire_response` | renderer |
 | --- | --- | --- | --- | --- | --- |
@@ -166,7 +166,7 @@ agent 노드는 `session_grant(plan, node, 위임 방식)`(자신의 `ask_user` 
 `member_fields = [model, system_prompt, tools, disallowed_tools, resources]`, `max_depth=1`,
 `allows_outgoing_flow=false`, `requires_backend_capability="subagents"`, `member_interaction_kinds=["tool_permission"]`.
 `resources`를 넣은 이유: SDK `AgentDefinition`이 skills·mcpServers·prompt(지침)를 서브에이전트별로 받는다.
-files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 경고한다(design §R12.5).
+files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 경고한다.
 
 `run`: 위임자 요청에 `subagents = subagent_specs(members)`를 싣고 위임자 백엔드로 실행한다. 백엔드에 넘기는 sink는
 `ctx`를 감싸 `SubagentResultListener`(ac-runtime, `on_subagent_result(name, *, text, status, actor, tool_use_id)`)를 만족한다. 백엔드(claude-sdk·fake)가
@@ -176,11 +176,11 @@ files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 
 `composable=true`: `contribute(plan, ctx)`가 `DelegationContribution(subagents=…, wrap_sink=…)`(위 sink 감싸기)를
 돌려준다.
 
-저장 시점 정적 검사(design §5.2R.7): `declared_names`는 `{"subagent": [대상 노드 id]}`, `static_issues`는 빈 목록이다.
+저장 시점 정적 검사: `declared_names`는 `{"subagent": [대상 노드 id]}`, `static_issues`는 빈 목록이다.
 `agent` 노드의 `validate`는 이 노드가 위임자이면 등록된 위임 방식의 두 선택 메서드를 `ac-teams.delegation_static_issues`로
 부른다(엔진 검증 = 서버 저장 전 검사 경로). 합쳐 실행할 방식들의 이름 겹침은 실행 전에 `delegation.duplicate_<묶음>_names`로 나온다.
 
-## 혼합 위임 (design §5R.6)
+## 혼합 위임
 
 한 위임자의 대상이 여러 위임 방식(예: `subagent` 연결 + `delegate` 연결)에 걸치면, 모든 방식이 디스크립터
 `composable`이고 `contribute`가 있을 때만(`ComposableDelegation`) 합쳐 실행한다. 방식마다 필요한 백엔드 능력
@@ -193,7 +193,7 @@ files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 
 **주의:** 서브에이전트(대상 노드)의 답변은 `on_subagent_result` 알림을 주는 백엔드(claude-sdk·fake)에서만 나온다.
 알림을 주지 않는 백엔드에서는 대상 노드에서 나가는 `reply` 연결이 있어도 답변이 없다(위임자 답변은 정상).
 
-## 에이전트 도구 공급자 (X30, design §5.7R.3)
+## 에이전트 도구 공급자
 
 다른 기능이 agent 노드의 모델에게 도구를 주는 일반 확장 지점이다. agent 노드는 도구의 뜻을 모른다.
 공급자(`ToolProvider`: `id` + `provide(ctx) -> ToolProvision`)를 서비스 `TOOL_PROVIDERS`(목록)로 넣는다.
@@ -212,7 +212,7 @@ agent 노드 순서: 묶음 계산 → 공급자마다 `provide`(맥락 `ToolPro
 | `tools.backend_capability_missing` | 백엔드 `capabilities.host_tools`가 거짓 | 공급 도구를 모두 뺌, 실행은 계속 |
 | `tools.instructions_unsupported` | 공급자 지침이 있는데 백엔드 `capabilities.resource_slots`에 `instructions`가 없음 | 지침을 뺌(공급자마다 하나, details `provider`·`backend`), 도구·실행은 계속 |
 
-**공급자 지침**(7R.5): `ToolProvision.instructions`(글 목록, 기본 빈 값)는 요청 묶음 칸 `instructions` 끝에
+**공급자 지침**: `ToolProvision.instructions`(글 목록, 기본 빈 값)는 요청 묶음 칸 `instructions` 끝에
 공급자 순서로 붙는다. 백엔드는 이 칸을 에이전트 지침·리소스 지침 뒤에 이어 붙이므로 "유효 시스템 지침 뒤"가
 된다(공급자 id 머리는 붙이지 않는다). 출처는 `BundleSource(ref="tool_provider:<id>")`라
 `agent.context_prepared`에 `tool_provider:<id>` 항목(종류 `instructions`, 바이트 수·해시)으로 보인다.
@@ -342,7 +342,7 @@ True
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-nodes-core`.
 

@@ -61,7 +61,7 @@ class ArchiveFile:
 
 @runtime_checkable
 class SessionArchive(Protocol):
-    """백엔드 세션 기록 보관·복원(X38). 모든 메서드는 동기·파일 시스템만 쓴다(모델 호출 없음)."""
+    """백엔드 세션 기록 보관·복원. 모든 메서드는 동기·파일 시스템만 쓴다(모델 호출 없음)."""
 
     def files(self, session: SessionKey, *, cwd: str | Path) -> list[ArchiveFile] | None:
         """보관할 원본 파일. 이 앱에 그 세션이 없으면 None.

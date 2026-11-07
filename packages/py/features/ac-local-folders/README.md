@@ -9,7 +9,7 @@
   `MemoryFileSystem`(호스트와 무관하게 `posix`/`windows` 경로, 숨김 속성, 링크, 권한 없음을 흉내).
 - 폴더 내용은 돌려주지 않는다. `list_dirs`는 하위 폴더 이름·경로와 표시(`hidden`·`link`·`locked`)만,
   `check_folder`는 목록을 읽지 않는다.
-- POSIX 경로(`/home/…`)와 Windows 경로(`C:\…`, UNC, 드라이브 대소문자 무시)를 다룬다. 서버 방식과 다른
+- POSIX 경로(`/srv/…`)와 Windows 경로(드라이브 문자 경로, UNC, 드라이브 대소문자 무시)를 다룬다. 서버 방식과 다른
   경로를 넣으면 `problem="foreign_path"`(쓸 수 없음)이다. 다른 OS 경로로 바꿔 주지 않는다.
 - 숨김은 점 이름과 OS 숨김 속성(Windows)으로 판정한다. 그 밖에 이름으로 숨길 폴더와 시작 위치는
   데이터다(확장 지점 X34, `data/browse_defaults.json`, 기본 `hidden_names`는 빈 목록).
@@ -78,11 +78,11 @@
 >>> avail.selected.id
 'zenity'
 >>> def fake_runner(argv, *, env, timeout, cancel=None):   # 실제는 SubprocessRunner()
-...     return CommandOutcome(exit_code=0, stdout=b"/home/me/work/\n")
->>> fs = MemoryFileSystem().add_dir("/home/me/work")
+...     return CommandOutcome(exit_code=0, stdout=b"/srv/me/work/\n")
+>>> fs = MemoryFileSystem().add_dir("/srv/me/work")
 >>> result = run_dialog(avail.selected, runner=fake_runner, title="Project folder", fs=fs)
 >>> result.status, result.path
-('picked', '/home/me/work')
+('picked', '/srv/me/work')
 >>> probe_dialogs(specs, platform="linux", which=lambda name: None, environ={}).reason
 'missing_command'
 
@@ -107,22 +107,22 @@ pip install agent-console-local-folders
 >>> from agent_console_local_folders import (
 ...     MemoryFileSystem, check_folder, list_dirs, make_folder, default_roots)
 >>> fs = (MemoryFileSystem()                     # 실제 디스크는 LocalFileSystem()
-...       .add_dir("/home/me/work/app").add_dir("/home/me/.cache")
-...       .add_file("/home/me/notes.txt"))
->>> env = {"HOME": "/home/me"}
+...       .add_dir("/srv/me/work/app").add_dir("/srv/me/.cache")
+...       .add_file("/srv/me/notes.txt"))
+>>> env = {"HOME": "/srv/me"}
 >>> check = check_folder("~/work/app/", fs=fs, environ=env)
 >>> check.status, check.path
-('ok', '/home/me/work/app')
->>> check_folder("/home/me/new", fs=fs).status
+('ok', '/srv/me/work/app')
+>>> check_folder("/srv/me/new", fs=fs).status
 'missing'
->>> foreign = check_folder("C:\\Work\\me", fs=fs)    # POSIX 서버에 Windows 경로
+>>> foreign = check_folder("\\\\server\\work\\me", fs=fs)    # POSIX 서버에 Windows(UNC) 경로
 >>> foreign.status, foreign.problem
 ('invalid', 'foreign_path')
->>> listing = list_dirs("/home/me", fs=fs)        # 폴더 이름만, 숨김은 기본 숨김
+>>> listing = list_dirs("/srv/me", fs=fs)        # 폴더 이름만, 숨김은 기본 숨김
 >>> [e.name for e in listing.entries], listing.hidden_count, listing.parent
-(['work'], 1, '/home')
->>> make_folder("/home/me/work", name="new", fs=fs).path
-'/home/me/work/new'
+(['work'], 1, '/srv')
+>>> make_folder("/srv/me/work", name="new", fs=fs).path
+'/srv/me/work/new'
 >>> [(r.kind, r.label) for r in default_roots(env, fs=fs)]
 [('home', '~'), ('root', '/')]
 

@@ -1,6 +1,6 @@
 # agent-console-link-projects-memory
 
-프로젝트·메모리 연동 모듈(design §PI.4.3, K33-19). 프로젝트 폴더의 `<구성 폴더>/memory.sqlite3`를
+프로젝트·메모리 연동 모듈(K33-19). 프로젝트 폴더의 `<구성 폴더>/memory.sqlite3`를
 열어 메모리 모듈(`mod-memory`)의 공간(`memory.spaces`)으로 준다. 프로젝트 실행은 그 폴더 메모리만
 쓰고, 공용(라이브러리) 메모리는 `POST /memory/copy`로 복사해서 쓴다(복사 뒤 독립).
 

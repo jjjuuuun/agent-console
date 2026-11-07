@@ -13,10 +13,10 @@ uv pip install ./apps/cli     # 단독(서버·사용량 패키지도 함께 설
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
-| `typer` | 명령·옵션·도움말 | 확정 스택(CLAUDE.md). 타입 힌트로 옵션 선언, 환경변수 기본값 지원 | click 단독, argparse |
+| `typer` | 명령·옵션·도움말 | 타입 힌트로 옵션 선언, 환경변수 기본값 지원 | click 단독, argparse |
 | `agent-console-server` | `serve`(서버 `main`에 위임), 서버 설정에서 workspace 경로 읽기 | 한 번 설치로 `serve`까지(`uv tool install`, R10.1). `_server` 모듈에서만 지연 import(import-linter 예외 1개) | 하위 프로세스로 `python -m agent_console_server` 실행 |
 | `agent-console-usage` | `statusline` 파싱·파일 합치기·원자적 쓰기·상태 줄 | 서버 사용량 출처와 같은 파일 형식을 한 곳에서 | — |
-| `agent-console-logs` | `logs purge`의 `purge_index`·`open_existing_log_index` | 서버 API와 같은 비우기 의미를 한 곳에서(5.7R.6). 명령 안에서만 지연 import | 서버 API만 제공(서버가 꺼져 있으면 못 씀) |
+| `agent-console-logs` | `logs purge`의 `purge_index`·`open_existing_log_index` | 서버 API와 같은 비우기 의미를 한 곳에서. 명령 안에서만 지연 import | 서버 API만 제공(서버가 꺼져 있으면 못 씀) |
 
 ## 명령
 
@@ -104,4 +104,4 @@ uv run pytest apps/cli/tests
 - 단위: 노출 명령(`serve`·`statusline`·`logs`), `serve` 옵션이 서버 `main`으로 가서 설정에 반영됨(허용 출처·모듈 켜고 끄기·
   모듈 선언 옵션 포함), 설정 오류, `statusline`이 서버를 import하지 않음.
 - statusline: 파일 쓰기·상태 줄·잘못된 입력·옵션 오류·서버 설정 workspace 사용, `~/.claude`를 건드리지 않음.
-- logs purge(5.7R.6): 임시 색인 DB로만 — dry-run 기본·`--yes`로 지움·범위 조합·`--all` 요구·옵션 오류·없는 파일을 만들지 않음·서버 설정에서 위치(`index_path` → 서버 DB)·`--index`면 서버를 import하지 않음.
+- logs purge: 임시 색인 DB로만 — dry-run 기본·`--yes`로 지움·범위 조합·`--all` 요구·옵션 오류·없는 파일을 만들지 않음·서버 설정에서 위치(`index_path` → 서버 DB)·`--index`면 서버를 import하지 않음.

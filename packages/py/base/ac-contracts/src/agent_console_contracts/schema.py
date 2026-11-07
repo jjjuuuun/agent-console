@@ -525,6 +525,7 @@ def build_schema() -> dict[str, Any]:
             "KNOWN_WIKI_VERSION_OPS": _upper_constants(wiki.KnownWikiVersionOps),
             "KNOWN_WIKI_CHANGE_OPS": _upper_constants(wiki.KnownWikiChangeOps),
             "KNOWN_WIKI_LINT_CODES": _upper_constants(wiki.KnownWikiLintCodes),
+            "KNOWN_WIKI_LINT_CHECKS": _upper_constants(wiki.KnownWikiLintChecks),
             "KNOWN_WIKI_FRONT_MATTER_ROLES": _upper_constants(wiki.KnownWikiFrontMatterRoles),
             "KNOWN_WIKI_TITLE_SOURCES": _upper_constants(wiki.KnownWikiTitleSources),
             "KNOWN_WIKI_WRITE_ACTIONS": _upper_constants(wiki.KnownWikiWriteActions),

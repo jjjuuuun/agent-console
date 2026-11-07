@@ -4,7 +4,7 @@
 개발·테스트·E2E용. entry point `agent_console.backends:fake-agent`로 등록되고 표시 이름은 "가짜 에이전트(테스트용)"
 (`FAKE_BACKEND_TITLE`)다.
 
-**화면에서 기본 숨김(5.2R.105)**: 디스크립터가 `ui_hints.hidden: true`를 선언한다. 웹은 숨김 표시가 있는 백엔드를
+**화면에서 기본 숨김**: 디스크립터가 `ui_hints.hidden: true`를 선언한다. 웹은 숨김 표시가 있는 백엔드를
 실행 방식 선택지·설정 카드에서 빼고, 이미 이 백엔드를 지정한 정의는 그대로 실행한다. 설치자가 `mod-runs` 설정
 `show_hidden_backends: true`(환경변수 `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS=1`)를 켜면 서버가 숨김을 푼 디스크립터를
 낸다. 테스트·e2e·CI·`pnpm app`은 이 설정으로 켠다. 옛 id `fake`는 별칭 없이 없앴다(저장 데이터에 남아 있으면
@@ -33,7 +33,7 @@ uv pip install ./packages/py/features/ac-backend-fake-agent   # 단독
 `response`(`string.Template`: `$prompt`·`$agent_id`·`$agent_name`·`$model`·`$session_id`·`$bundle`·
 `$delegate_1`…), `structured`, `tool_calls`(`[{name, input, output, is_error}]`), `delegate`(아래),
 `ask`(아래), `observe`(아래), `fail`(`{code, message, after_chunks}`), `delay_ms`·`chunk_chars`(규칙별 덮어쓰기),
-`usage`(없으면 단어 수로 계산), `llm_duration_ms`(마지막 `agent.usage`의 `duration_ms`, 비우면 null — 5.5R.7 C2).
+`usage`(없으면 단어 수로 계산), `llm_duration_ms`(마지막 `agent.usage`의 `duration_ms`, 비우면 null).
 플랫폼 도구 호출(`host_tool_calls`)은 만든 호출 id를 `call_host_tool(tool_use_id=)`로 넘긴다.
 
 이벤트 순서: `agent.session_started` → `usage.rate_limit`*(설치자 설정) → 관측(start)* → (`agent.tool_call` →
@@ -56,7 +56,7 @@ rules:
     response: "정리: $delegate_1"
 ```
 
-위임 하나의 이벤트(claude-sdk와 같은 모양, design §R3.4):
+위임 하나의 이벤트(claude-sdk와 같은 모양):
 
 | 순서 | type | actor | node_path |
 | --- | --- | --- | --- |
@@ -76,7 +76,7 @@ rules:
   `status`는 `completed`면 `succeeded`, 아니면 `failed`. 위임 방식 `sdk-subagents`(nodes-core)가 이것으로
   대상의 답변을 낸다. 실패는 `log.warning`.
 
-### 플랫폼 도구 호출 흉내 (`host_tool_calls`, 5R.10, design §5R.6)
+### 플랫폼 도구 호출 흉내 (`host_tool_calls`)
 
 `capabilities.host_tools = true`. 규칙의 `host_tool_calls`가 요청의 `AgentRequest.host_tools`(ac-runtime `HostTool`)를
 위임(`delegate`) 다음에 순서대로 하나씩 부른다(결정적). 독립 위임(`host`) 테스트·E2E용이다.
@@ -99,7 +99,7 @@ rules:
   `when`이 맞지 않으면 `skipped`, 볼 결과가 없어도 `skipped`.
 - 요청에 없는 도구면 오류 결과(`UNKNOWN_HOST_TOOL_TEXT`). 핸들러 도중 실행 취소면 결과 이벤트 없이 `cancelled`.
 
-### 상호작용 흉내 (`ask`, design §R14.9)
+### 상호작용 흉내 (`ask`)
 
 ```yaml
 rules:
@@ -117,11 +117,11 @@ rules:
 - 위임(`delegate`) 다음, 응답 텍스트 전에 순서대로 `sink.request_input`을 연다.
 - **열 수 있는 조건**: sink가 `InteractivePort`이고 요청의 허용(`AgentRequest.interactions.kinds`)에 그 종류가
   있을 때만. 아니면 열지 않고 `log.warning` + `$answer_N` = `$answer_N_status` = `unavailable`
-  (연결이 없는 노드는 요청을 열지 못한다, §R14.2).
+  (연결이 없는 노드는 요청을 열지 못한다).
 - 결과: answered면 `$answer_N` = 응답 값, 만료·취소면 상태 문자열(`expired`·`cancelled`). Run이 취소되면
   `cancelled`로 끝난다. `capabilities.interactions = None`(종류 제한 없음).
 
-### hook·MCP 관측 흉내 (`observe`, design §2R.5·§8.3)
+### hook·MCP 관측 흉내 (`observe`)
 
 ```yaml
 default:
@@ -144,12 +144,12 @@ default:
 - payload 문자열은 응답과 같은 변수(`$prompt`, `$session_id`, `$agent_id` …)로 채운다. 규칙 도구 호출의 id는
   `$session_id:tool0`, `$session_id:tool1`…이라 MCP 호출 쌍을 도구 호출과 같은 `tool_use_id`로 맞출 수 있다.
 - `hook_events`(관측할 hook 이벤트 목록)는 fake가 해석하지 않는다(낼 이벤트는 규칙 데이터가 정한다).
-- 스위치는 `observe.collectors`(4R.8)도 읽는다(`observe_switch_on`): `collectors[<수집기 id>].enabled`가 bool이면 옛 키를
+- 스위치는 `observe.collectors`도 읽는다(`observe_switch_on`): `collectors[<수집기 id>].enabled`가 bool이면 옛 키를
   이긴다. 옛 키 → 수집기 id 대응표 `DEFAULT_OBSERVE_COLLECTORS`(`hooks` → `sdk-hooks`, `mcp` → `mcp-calls`, claude-sdk
   `LEGACY_OBSERVE_KEYS`와 같은 규칙)는 설치자 설정 `observe_collectors`로 바꾼다. 대응표에 없는 `when`은 그 이름을
   수집기 id로도 본다(`when: example.tool_count` → `collectors.example.tool_count.enabled`).
 
-### hook probe 기록 흉내 (`hook_probe`, 4R.9, design §4R.7)
+### hook probe 기록 흉내 (`hook_probe`)
 
 ```yaml
 default:
@@ -216,13 +216,13 @@ default:
 `capabilities`: streaming·tools·resume·cancel·subagents = true, `interactions = None`(제한 없음),
 `resource_slots` = 생성 인자(기본 알려진 칸 전부), `enforce`는 모두 false(아무것도 실행하지 않지만 강제하는 것도 없다).
 
-### 준비 상태·연결 테스트 (선택 능력, ux-overhaul §15.8)
+### 준비 상태·연결 테스트 (선택 능력)
 
 `capabilities.status`·`probe` = true. `status(ctx)`는 늘 `state: always_ready`(`FAKE_READY_STATE`), 톤 ok,
 `probe(ctx, timeout_s)`는 지연 없이 `ok: true, latency_ms: 0, details: {models: n}`(네트워크·키 없음).
 `probe_cost_note`는 "비용이 들지 않습니다". 대본 로그인(아래)을 켜면 상태는 메모리 로그인 여부를 따른다.
 
-### 대본 로그인 (선택 능력, 5.2R.83, ux-overhaul §15.9)
+### 대본 로그인 (선택 능력)
 
 e2e·웹 개발에서 Claude 구독 로그인 대화상자의 흐름 전체를 **PTY·네트워크·파일 없이** 재현한다. 설치자 설정
 `backends.fake-agent.login`(`FakeLoginScript`)을 주면 켜진다(기본 `null` = 능력 없음, 기본 카드에 로그인 버튼이 생기지 않게).
@@ -281,11 +281,11 @@ backends:
 | `observe_collectors` | `{hooks: sdk-hooks, mcp: mcp-calls}` | 옛 관측 키 → 수집기 id(`observe.collectors`가 옛 키를 이긴다) |
 | `hook_probe_folder` | `hook-probe` | 실행 폴더 아래 hook probe 기록 흉내 폴더 이름 |
 | `login` | `null` | 대본 로그인(`FakeLoginScript`, 위 "대본 로그인"). `{}`면 기본 대본 |
-| `echo_hooks` | `false` | 실행 묶음 `hooks` 칸 항목마다 `hook.started`·`hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}`를 낸다(명령은 실행하지 않음, `observe` 규칙 없이도, 2R.12). `hooks`를 받지 않게 설정했으면 내지 않는다 |
+| `echo_hooks` | `false` | 실행 묶음 `hooks` 칸 항목마다 `hook.started`·`hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}`를 낸다(명령은 실행하지 않음, `observe` 규칙 없이도). `hooks`를 받지 않게 설정했으면 내지 않는다 |
 
 모르는 키·잘못된 값은 `ValueError`(위치와 사유만, 값은 넣지 않는다). 형식 모델: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
 
-## 세션 기록 흉내 (X38, 5.7R.33y3)
+## 세션 기록 흉내
 
 설치자 설정 `session_dir`(상대 경로 = 앱 workspace 기준)을 주면 실행마다 `<폴더>/<cwd 키>/<세션>.jsonl`에 한 줄을 남기고, 이어
 쓰는 요청인데 파일이 없으면 `fake.session_missing`으로 실패한다(실제 백엔드가 세션 기록을 못 찾는 경우). `session_archive()`가
@@ -298,7 +298,7 @@ backends:
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-fake-agent`.
 

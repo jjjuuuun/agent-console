@@ -1,6 +1,6 @@
 # agent-console-link-projects-sdd
 
-프로젝트 폴더를 SDD 모듈의 **스펙 공간**으로 주는 연동 모듈이다(design §6R.3·§6R.4, R15.2·R15.6). 프로젝트
+프로젝트 폴더를 SDD 모듈의 **스펙 공간**으로 주는 연동 모듈이다. 프로젝트
 모듈(`mod-projects`)과 SDD 모듈(`mod-sdd`)은 서로를 모르고, 이 연동이 둘을 잇는다.
 
 - 필수 포트 `projects.spaces`(등록 id → 프로젝트 공간). 없으면 이 연동은 꺼진다.

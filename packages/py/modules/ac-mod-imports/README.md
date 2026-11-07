@@ -1,21 +1,21 @@
 # agent-console-mod-imports
 
-Agent Console 가져오기 기능 모듈(design §3R.1.3, §R11). 가져오기 라이브러리 `agent-console-imports`를 서버에 꽂는다.
+Agent Console 가져오기 기능 모듈. 가져오기 라이브러리 `agent-console-imports`를 서버에 꽂는다.
 프로젝트 폴더의 설정(`.claude/`·`CLAUDE.md`·`.mcp.json`)에서 정의를 **복사해** 가져온다. 원본은 읽기만 한다.
-사용자 전역 구성(`~/.claude/agents`·`~/.claude/settings.json` 등)은 읽지 않는다(5.7R.30b, 사용자 결정 2026-10-28:
+사용자 전역 구성(`~/.claude/agents`·`~/.claude/settings.json` 등)은 읽지 않는다(
 앱은 등록된 프로젝트 폴더와 자기 workspace 밖을 연동하지 않는다).
 
 - 경로: `GET /resources/import/sources`, `POST /resources/import/preview`(쓰기 없음), `POST /resources/import`.
 - 필수 포트: `definitions.store`(가져온 정의를 쓸 저장소). 선택 포트: `secrets.rules`(없으면 기본 의심 규칙),
-  `projects.folders`·`definitions.spaces`(5.7R.33k, 아래).
-- 프로젝트 조립(5.7R.33k, design §PI.5): `projects.folders`가 있으면 출처 = 질의 `?project=<등록 id>` 폴더의
+  `projects.folders`·`definitions.spaces`(아래).
+- 프로젝트 조립: `projects.folders`가 있으면 출처 = 질의 `?project=<등록 id>` 폴더의
   `.claude/`·`CLAUDE.md`·`.mcp.json`이고 `project_dir`는 쓰지 않는다. 저장 위치 = 질의 `target`
   (`project` 기본 → 그 프로젝트 공간 `definitions.spaces`, `library` → 공용 `definitions.store`).
   `project`가 없으면 폴더가 필요 없는 출처만 있고 `target=project`는 422 `project.required`, 등록 안 된 id는
   404 `project.not_found`. 포트가 없으면(모듈 단독) 아래 설정 그대로이고 `?project=`는 409 `feature_unavailable`.
-- 설정 `modules.options.mod-imports`(옛 최상위 `imports`는 4R.18부터 `settings.removed_key` 오류로 새 위치를 안내.
-  옛 `home`(사용자 `~/.claude` 출처)은 5.7R.30b에서 없앴고 남아 있으면 `settings.removed_key` 오류로 이유를 안내한다):
-  `project_dir`(비우면 호스트 `paths.base_dir` — 설정 파일 폴더. 4R.18부터 실행 모듈의 `working_directory`를
+- 설정 `modules.options.mod-imports`(옛 최상위 `imports`는 `settings.removed_key` 오류로 새 위치를 안내.
+  옛 `home`(사용자 `~/.claude` 출처)은 없앴고 남아 있으면 `settings.removed_key` 오류로 이유를 안내한다):
+  `project_dir`(비우면 호스트 `paths.base_dir` — 설정 파일 폴더. 실행 모듈의 `working_directory`를
   기본값으로 읽지 않는다. 작업 폴더의 `.claude/`를 가져오려면 이 값을 직접 준다), `options`(출처 공장 이름 → 옵션).
 - 웹 역할: `imports`.
 

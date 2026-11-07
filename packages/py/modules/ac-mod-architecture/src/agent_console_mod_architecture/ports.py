@@ -36,7 +36,7 @@ from agent_console_modkit import PortKey
 
 @runtime_checkable
 class ProfileCheck(Protocol):
-    """``architecture.profile_checks`` 포트 모양(X32): 프로필 검사 보탬.
+    """``architecture.profile_checks`` 포트 모양: 프로필 검사 보탬.
 
     예: 로그 연동이 목록 본문에 없는 조건 경로를 경고한다(M-4). 순수 함수여야 한다(같은
     프로필이면 같은 결과 — 카탈로그가 입력이 바뀔 때만 다시 부른다).

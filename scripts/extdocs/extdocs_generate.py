@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import string
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -130,9 +131,17 @@ class Generator:
         return values
 
     def sentence(self, decl: Declared, key: str) -> str:
+        """등록 종류별 문장. 틀이 목록이면 자리표시자가 다 채워지는 첫 틀(마지막은 무조건)."""
         templates = self.data.registration_templates
         tmpl = templates.get(decl.point.registration.kind) or templates["_default"]
-        return str(tmpl.get(key, templates["_default"].get(key, ""))).format_map(self._values(decl))
+        raw = tmpl.get(key, templates["_default"].get(key, ""))
+        choices = [str(c) for c in raw] if isinstance(raw, list) else [str(raw)]
+        values = self._values(decl)
+        for i, choice in enumerate(choices):
+            names = [f for _, f, _, _ in string.Formatter().parse(choice) if f]
+            if i == len(choices) - 1 or all(values[n] for n in names):
+                return choice.format_map(values)
+        return ""
 
     def doc_line(self, symbol: str) -> str:
         if not is_python_symbol(symbol):
@@ -168,9 +177,12 @@ class Generator:
                     readme = f"{ex.path.rstrip('/')}/README.md"
                     link = f"[{ex.path}]({_relpath(readme, doc_dir)})"
                 else:
-                    link = _code(ex.symbols) if ex.symbols else self._none()
-                note = f" — {ex.note}" if ex.note else ""
-                lines.append(f"  - {ex.kind}: {link}{note}")
+                    link = _code(ex.symbols) if ex.symbols else ""
+                if link and ex.note:
+                    text = f"{link} — {ex.note}"
+                else:
+                    text = link or ex.note or self._none()
+                lines.append(f"  - {ex.kind}: {text}")
         else:
             lines.append(f"- {self._heading('facts_example')}: {self._none()}")
         disable = self.sentence(decl, "disable")

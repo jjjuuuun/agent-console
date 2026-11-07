@@ -1,6 +1,6 @@
 # agent-console-link-wiki-runs
 
-Agent Console 위키·실행 연동 모듈(`link-wiki-runs`, design §7R.3·§7R.4). 에이전트에게 위키 도구(검색·
+Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게 위키 도구(검색·
 읽기·목록·링크·쓰기·옮기기·지우기)와 위키 규칙 지침을 준다. 실행 모듈(`mod-runs`)과 위키 모듈(`mod-wiki`)은
 서로를 모르고, 이 연동이 실행 범위(X26 `runs.scopes`)로 Run마다 에이전트 도구 공급자(X30
 `TOOL_PROVIDERS`)를 넣어 둘을 잇는다.

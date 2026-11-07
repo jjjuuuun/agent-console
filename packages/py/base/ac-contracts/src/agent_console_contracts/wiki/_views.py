@@ -75,6 +75,13 @@ class WikiInfo(ContractModel):
             "또는 알 수 없음(쓸 수 있다고 본다)."
         ),
     )
+    rules_kind: str | None = Field(
+        default=None,
+        description=(
+            "(1.2.0) 위키 규칙 정의 종류 이름(설치자 데이터, 기본 `wiki-rules`). 웹이 복사·리소스 "
+            "종류 목록에서 규칙 종류를 고를 때 쓴다(공용 규칙을 따로 읽지 않는다). null = 옛 서버."
+        ),
+    )
     issues: list[WikiIssue] = Field(
         default_factory=list,
         description="공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).",
@@ -281,6 +288,24 @@ class WikiRuleEntry(ContractModel):
     label: str = Field(default="", description="쓰기·점검 규칙의 안내 문장 또는 틀의 표시 이름.")
     action: str | None = Field(default=None, description="쓰기 규칙의 동작(그 밖은 null).")
     severity: str | None = Field(default=None, description="점검 규칙의 심각도(그 밖은 null).")
+    applies_to: list[str] | None = Field(
+        default=None,
+        description=(
+            "(1.2.0) 쓰기 규칙의 적용 경로 글롭(빈 목록 = 모든 페이지). 그 밖의 항목·옛 서버는 "
+            "null."
+        ),
+    )
+    path: str | None = Field(
+        default=None,
+        description="(1.2.0) 페이지 틀의 경로 틀(예 `decisions/{slug}`). 없거나 그 밖은 null.",
+    )
+    title: str | None = Field(
+        default=None,
+        description=(
+            "(1.2.0) 페이지 틀의 표시 이름 원문(비었으면 null — `label`은 id로 대신 채운다). "
+            "그 밖의 항목은 null."
+        ),
+    )
 
 
 class WikiRulesSummary(ContractModel):
@@ -442,6 +467,13 @@ class WikiGraphNode(ContractModel):
     broken: bool = Field(default=False, description="없는 페이지(끊긴 링크의 대상).")
     orphan: bool = Field(default=False, description="들어오는 링크가 없는 페이지.")
     scheme: str | None = Field(default=None, description="스킴 링크 대상이면 그 접두.")
+    scheme_target: LabelDisplayTarget | None = Field(
+        default=None,
+        description=(
+            "(1.2.0) 스킴 링크 대상이면 열 화면(`WikiLink.scheme_target`과 같은 모양, `id_from` = "
+            "풀린 id 값). 접두 뒤가 비었거나 페이지·끊긴 대상·옛 서버는 null."
+        ),
+    )
     home: bool = Field(default=False, description="위키의 첫 페이지.")
     depth: int | None = Field(default=None, ge=0, description="중심에서의 거리(전체 보기는 null).")
 
@@ -470,6 +502,25 @@ class WikiLintReport(ContractModel):
     pages: int = Field(default=0, ge=0, description="점검한 페이지 수.")
     generated_at: float = Field(default=0.0, description="점검한 시각(유닉스 초).")
     counts: dict[str, int] = Field(default_factory=dict, description="심각도 → 이슈 수.")
+    partial: bool = Field(
+        default=False,
+        description=(
+            "(1.2.0) 일부 페이지를 점검하지 못했다(그 페이지는 `skipped`, 나머지 결과는 그대로). "
+            "페이지마다 `wiki.lint_failed` 이슈도 하나씩 있다."
+        ),
+    )
+    skipped: list[str] = Field(
+        default_factory=list,
+        description="(1.2.0) 점검하지 못한 페이지 경로(경로 순). `pages`에는 들어 있다.",
+    )
+    enabled_checks: list[str] | None = Field(
+        default=None,
+        description=(
+            "(1.2.0) 이번 점검에서 켜진 점검 이름: 켜진 기본 점검(`KnownWikiLintCodes`, 문법 "
+            "`lint.builtin`) → 점검 규칙이 있으면 `lint_rules` → 쓰기 규칙 다시 보기가 켜졌으면 "
+            "`write_rules`(열린 문자열, `KnownWikiLintChecks`). null = 옛 서버."
+        ),
+    )
 
 
 # ---------------------------------------------------------------- WS

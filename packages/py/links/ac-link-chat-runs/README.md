@@ -1,6 +1,6 @@
 # agent-console-link-chat-runs
 
-채팅·실행 연동 모듈(design §3R.1.4 L1~L3). 채팅(`mod-chat`)과 실행(`mod-runs`)을 잇는다.
+채팅·실행 연동 모듈. 채팅(`mod-chat`)과 실행(`mod-runs`)을 잇는다.
 
 - **턴 시작**: `chat.turn_launcher` = `runs.starter.start_run(conversation_id=…)`. 대화가 이어 쓸 백엔드 세션은 노드 서비스 `SESSIONS`(`ac-nodes-core`)로 그 Run에만 넘긴다.
 - **조회**: `chat.runs`·`chat.run_events`(받은 실행 포트 그대로), `chat.interactions`(`RootInteractions` — 턴의 상호작용을 루트 Run 기준으로 모은다. 중첩 팀의 자식 Run 안에서 열린 요청도 같은 턴에 나온다. 상호작용 포트가 없으면 주지 않는다).
@@ -68,7 +68,7 @@ interrupted
 | 제공 | `chat.interactions` | `RootInteractions`(루트 기준) |
 | 제공 | `chat.turn_sessions` | `LineageSessions`(자식 Run 세션 = 경로 키) |
 | 제공(multi) | `runs.resume_handlers` | `ConversationResume` |
-| 선택 → 제공(multi) | `runs.move_hook` → `chat.move_hooks` | 받은 훅 그대로(5.7R.33j2): 옛 대화 옮기기 때 그 Run도 함께 |
+| 선택 → 제공(multi) | `runs.move_hook` → `chat.move_hooks` | 받은 훅 그대로: 옛 대화 옮기기 때 그 Run도 함께 |
 
 ## 단독 실행
 

@@ -15,13 +15,13 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
-| `claude-agent-sdk` (확인 버전 0.2.166, CLI 번들) | Claude Code 에이전트 실행 | design §7.4 결정: 훅 콜백·MCP·interrupt를 함께 쓰고 설치가 단순 | CLI `stream-json` 직접 구동(agent_bench 방식) 백엔드를 별도로 추가 |
-| `agent-console-registry` (사내) | 관측 수집기(X7) entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식(4R.8) | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
-| `agent-console-claude-format` (사내) | 세션 보관의 폴더 키 `project_key`(작업 폴더 → `projects/<키>`, 5.7R.33y3) | 로그 출처와 같은 함수 한 곳(복사 금지, design §PI.4.6.4). `ruamel.yaml`만 딸려 온다 | `agent-console-logs-claude` 의존(로그 색인 의존까지 끌려옴) / 규칙 복사 |
-| `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다(4R.9). 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
+| `claude-agent-sdk` (확인 버전 0.2.166, CLI 번들) | Claude Code 에이전트 실행 | 훅 콜백·MCP·interrupt를 함께 쓰고 설치가 단순 | CLI `stream-json` 직접 구동(agent_bench 방식) 백엔드를 별도로 추가 |
+| `agent-console-registry` (사내) | 관측 수집기(X7) entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식 | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
+| `agent-console-claude-format` (사내) | 세션 보관의 폴더 키 `project_key`(작업 폴더 → `projects/<키>`) | 로그 출처와 같은 함수 한 곳(복사 금지). `ruamel.yaml`만 딸려 온다 | `agent-console-logs-claude` 의존(로그 색인 의존까지 끌려옴) / 규칙 복사 |
+| `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다. 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
 
-| `agent-console-secret-rules` (사내) | 구독 로그인 화면 글자 규칙(사용자가 고치는 정규식)의 안전 검사(`ac-safe-regex`를 거침) | 사용자 정규식은 한 곳의 검사기를 거친다는 규칙(design §2R.4) | `re.compile` 그대로(위험한 정규식을 막지 못함) |
-| `agent-console-pty-session` (사내, **선택** 추가 기능 `login`) | `claude auth login`을 PTY로 띄워 화면 글자를 읽고 입력을 보냄(구독 로그인) | CLI 로그인 화면이 TTY를 요구한다. PTY·터미널 글자 해석을 한 패키지에 둔다(5.2R.81) | 사용자가 터미널에서 직접 `claude auth login`(앱 화면 로그인 없음) |
+| `agent-console-secret-rules` (사내) | 구독 로그인 화면 글자 규칙(사용자가 고치는 정규식)의 안전 검사(`ac-safe-regex`를 거침) | 사용자 정규식은 한 곳의 검사기를 거친다는 규칙 | `re.compile` 그대로(위험한 정규식을 막지 못함) |
+| `agent-console-pty-session` (사내, **선택** 추가 기능 `login`) | `claude auth login`을 PTY로 띄워 화면 글자를 읽고 입력을 보냄(구독 로그인) | CLI 로그인 화면이 TTY를 요구한다. PTY·터미널 글자 해석을 한 패키지에 둔다 | 사용자가 터미널에서 직접 `claude auth login`(앱 화면 로그인 없음) |
 
 `pip install "agent-console-backend-claude-sdk[hook-probe]"`로 함께 설치한다. 없으면 `observe.hook_probe`가 켜져도
 감싸지 않고 `log.warning`을 낸다(나머지는 그대로 동작). 서버 앱은 `[login]`을 함께 설치한다(구독 로그인 기본 켜짐).
@@ -86,17 +86,17 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 테스트는 `ClaudeSdkBackend(client_factory=...)`로 가짜 클라이언트를 주입한다(`agent_console_backend_claude_sdk.testing`
 의 `FakeSdkClient`, 공용 `agent_console_runtime.testing_sink`를 다시 내보낸 `ValidatingSink`·`ListeningSink`·`InteractiveSink`).
 
-## 인증 (§R13-10)
+## 인증
 
 | 방식 | 설정 | 동작 |
 | --- | --- | --- |
 | **본인 구독 로그인 자격(기본, 본인 책임)** | `auth: {mode: subscription}` (+ 선택 `oauth_token: secret://…`). `auth: {}`도 같다 | `ANTHROPIC_API_KEY`를 빈 값으로 덮어써 API 키가 끼어들지 않게 한다. 토큰을 주면 `CLAUDE_CODE_OAUTH_TOKEN`으로, 없으면 CLI가 앱 전용 자격 폴더(아래 "앱 전용 자격 폴더")의 로그인 자격을 읽는다 |
 | API 키(선택) | `auth: {mode: api_key, api_key: secret://anthropic_api_key}` | `ANTHROPIC_API_KEY`로 넘기고 `CLAUDE_CODE_OAUTH_TOKEN`은 비운다. 키가 없으면 실행하지 않는다(`auth_missing`) |
 
-- **기본은 구독(본인 책임), API 키도 선택 가능**(5.2R.79, 사용자 지시 F13). `ClaudeSdkAuth.mode` 기본값은
+- **기본은 구독(본인 책임), API 키도 선택 가능**. `ClaudeSdkAuth.mode` 기본값은
   `subscription`, 설치자 설정 `allow_subscription_auth` 기본값은 `true`, 상태 점검 `readiness.auth` 기본값도 구독이다.
   Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이 안내되므로, 구독 자격 사용은 본인 책임이고 아래 경고는 그대로 낸다.
-- **구독 방식은 설치자 설정 `allow_subscription_auth`(기본 `true`)가 켜져 있어야 동작한다**(3R.29, TM-2·E-13).
+- **구독 방식은 설치자 설정 `allow_subscription_auth`(기본 `true`)가 켜져 있어야 동작한다**.
   - 꺼짐(설치자가 `false`로 바꿨을 때): `validate_settings`가 error `backend.subscription_auth_disabled`(`AUTH_ISSUES.SUBSCRIPTION_DISABLED`)를
     내고, 문장은 `SUBSCRIPTION_AUTH_DISABLED_MESSAGE`("Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이
     안내됩니다. 본인 구독 자격으로 쓰려면 설치자 설정에서 allow_subscription_auth를 켜세요(본인 책임).")다.
@@ -105,14 +105,14 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
     문장(`SUBSCRIPTION_AUTH_WARNING`, 본인 책임 안내)으로 낸다.
   - 이 패키지에는 OAuth 토큰을 **받아 두거나 저장하는 경로가 없다.** 토큰은 사용자가 자기 비밀 저장소에 둔
     `secret://` 참조로만 읽어(해석기 `resolve`만 씀) CLI 하위 프로세스 env로 넘기고, 이벤트·결과·파일에 남기지 않는다.
-    다른 사람의 구독 자격을 연결하는 경로도 없다(team-mode-design TM-0). 테스트: `tests/…_subscription_3r29.py`.
+    다른 사람의 구독 자격을 연결하는 경로도 없다. 테스트: `tests/…_subscription_3r29.py`.
   - 5시간·주간 사용량(`usage.rate_limit`)은 구독 방식에서만 의미가 있다.
-- `auth`를 아예 비우면(`null`·키 없음) 예전처럼 `env`·환경 정책만 따른다(5.2R.79에서도 유지 — 서버 환경의
+- `auth`를 아예 비우면(`null`·키 없음) 예전처럼 `env`·환경 정책만 따른다(서버 환경의
   `ANTHROPIC_API_KEY`가 있으면 CLI가 그것을, 없으면 Claude Code 로그인을 쓴다. 구독 허용 검사·경고는 `auth`를
   적었을 때만 한다). 변수 이름은 `api_key_env`·`oauth_token_env`로 바꿀 수 있다.
 - `setting_sources` 기본값은 `["project"]`이고 `user`는 들어 있지 않다(사용자 `~/.claude` 설정 격리).
 
-### 앱 전용 자격 폴더 (5.7R.30·5.7R.30b, 사용자 결정 2026-10-28)
+### 앱 전용 자격 폴더
 
 구독 로그인은 **앱 하나에 로그인 하나**다. 자격은 `~/.claude`도 프로젝트(작업) 폴더도 아닌 **앱 workspace**(서버
 `--workspace`, 앱 데이터 폴더) 안 한 곳에 두고 모든 프로젝트·모든 실행이 함께 쓴다. 기본 `<workspace>/.state/claude`
@@ -121,7 +121,7 @@ PTY(`claude auth login`·`status`·`logout`) 하위 프로세스에 함께 넘�
 `subscription_login_required`("로그인 필요")다. **`~/.claude`(HOME)나 서버 환경의 `CLAUDE_CONFIG_DIR`로 대신하지 않는다.**
 앱은 자격 때문에 프로젝트 폴더에 아무것도 쓰지 않는다(`.gitignore` 줄도 workspace 쪽에만).
 
-> 5.7R.30(07edaa9)에서 만들어진 `<프로젝트>/.agent-console/claude`는 옮기거나 지우지 않는다. 새 위치에 자격이 없으므로
+> 이전 버전이 만든 `<프로젝트>/.agent-console/claude`는 옮기거나 지우지 않는다. 새 위치에 자격이 없으므로
 > 상태가 "로그인 필요"로 나온다 — **한 번 다시 로그인**하면 된다. 옛 폴더가 필요 없으면 직접 지운다.
 
 - 경로 해석은 한 곳이다: `ClaudeSdkBackend.credential_dir(person_id=None) -> Path | None`(공개) → `resolve_auth_dir`
@@ -170,7 +170,7 @@ True
 `tests/…_auth_dir_57r30.py`(있음·없음·권한 문제, 빈 HOME의 `~/.claude` 무시, workspace `.gitignore`, 프로젝트 폴더
 무변경, 프로젝트 A·B가 같은 폴더, `credential_dir` 사람별 틀, FakePty 로그인이 같은 폴더에 씀).
 
-### 상태 점검과 연결 테스트 (5.2R.68, ux-overhaul §15.8)
+### 상태 점검과 연결 테스트
 
 디스크립터가 `capabilities.status = true`·`capabilities.probe = true`를 선언하고 두 선택 메서드를 구현한다
 (`agent_console_runtime.StatusCapableBackend`·`ProbeCapableBackend`). 서버는 `BackendReadinessService`로 감싸
@@ -187,7 +187,7 @@ True
   | `auth_missing` | error | API 키 비밀이 없음(해결 버튼 "API 키 넣는 곳 보기") |
   | `subscription_disabled` | warn | 구독 방식인데 `allow_subscription_auth`가 꺼짐(해결 버튼 "설치자 설정 보기") |
   | `subscription_ready` | warn | 구독 방식이 켜져 있고 토큰 비밀 또는 로그인 파일이 있음("본인 책임" 문구를 `detail`에) |
-  | `subscription_login_required` | warn | 앱 전용 자격 폴더에 로그인 파일이 없음("로그인 필요", 5.7R.30). 이 폴더만 본다 |
+  | `subscription_login_required` | warn | 앱 전용 자격 폴더에 로그인 파일이 없음("로그인 필요"). 이 폴더만 본다 |
   | `subscription_unverified` | warn | 앱 전용 폴더를 끈 경우(`auth_dir.config_dir: null`) 로그인 파일(`readiness.subscription_files`)을 찾지 못함 |
 
   앱 전용 자격 폴더가 있으면 그 폴더의 `auth_dir.login_files`만 본다. 앱 전용 폴더를 끈 경우에만 아래 규칙이다.
@@ -221,8 +221,8 @@ True
 ...     allow_subscription_auth=True,
 ...     has_secret=lambda name: False,
 ...     cli_found=True,
-...     environ={"HOME": "/home/me"},
-...     path_exists=lambda path: path == "/home/me/.claude/.credentials.json",
+...     environ={"HOME": "/srv/me"},
+...     path_exists=lambda path: path == "/srv/me/.claude/.credentials.json",
 ... )
 >>> a.state, a.tone, a.probe_block
 ('subscription_ready', 'warn', None)
@@ -242,7 +242,7 @@ True
 테스트(`tests/…_readiness_52r68.py`)는 가짜 SDK 클라이언트만 쓰고, 상태 점검·거부된 연결 테스트에서 실제
 `ClaudeSDKClient` 생성 수가 0인지, 키 값(과 그 일부)이 응답·로그·예외 어디에도 없는지 확인한다.
 
-### 구독 로그인 (5.2R.82, ux-overhaul §15.9)
+### 구독 로그인
 
 앱 화면에서 Claude 구독 로그인을 시작하고 끝낸다(터미널을 열지 않는다). 서버가 `claude auth login`을 PTY 하위
 프로세스로 띄우고 화면 글자를 읽어 로그인 주소·코드 요청을 웹 대화상자로 중계한다. **로그인 자격은 Claude Code CLI가
@@ -250,7 +250,7 @@ True
 않는다.** 한 번 로그인하면 상태 점검·실행이 같은 폴더를 쓴다. 터미널의 Claude Code(`~/.claude`) 로그인과는 따로다.
 
 - 디스크립터: `capabilities.login = true`·`capabilities.logout = true`, `login_methods = [cli-login]`(문구·본인 책임
-  안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`(5.2R.80)다.
+  안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`다.
 - **능력이 없는 경우**: 설치자 설정 `login.enabled = false`, `allow_subscription_auth = false`, PTY를 쓸 수 없음(`[login]`
   미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다. `allow_subscription_auth =
   false`이면 `login_refusal()`(`LoginRefusalAware`)이 이유를 알려 로그인·로그아웃 요청이 `backend.login_unsupported`가
@@ -380,7 +380,7 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 위임 도구 결과마다(끝의 `agentId:` 줄 제거) 알린다. 위임 방식이 이것으로 대상 노드의 답변(`ctx.emit_replies`)을
 낸다. 백엔드는 노드 포트 이름을 모르므로 답변을 직접 내지 않는다.
 
-## 실행 묶음 (`AgentRequest.bundle`, §R12.5)
+## 실행 묶음 (`AgentRequest.bundle`)
 
 `capabilities.resource_slots = ["instructions", "files", "mcp_servers", "tools", "skills", "rules"]`(`RESOURCE_SLOTS`)
 + 설치자 `allow_command_hooks: true`일 때만 `hooks`. 꺼져 있으면 `slot_notes.hooks`(`HOOKS_DISABLED_NOTE`)로 이유를 알리고,
@@ -400,7 +400,7 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 사용자 프로젝트(cwd)·`~/.claude`에는 쓰지 않는다. skill·규칙 파일은 agent 노드가 실행 폴더(`<workspace>/.state/runs/<run>/<node>/_bundle/<node>/`)에
 쓴 것만 가리킨다. `setting_sources` 기본값(`["project"]`)은 skill 전달 때도 바꾸지 않는다.
 
-### hook probe 감싸기 (4R.9, design §4R.7, F-16)
+### hook probe 감싸기
 
 유효 관측 설정 `observe.hook_probe`가 `true`이면(기본 꺼짐) **이 백엔드가 전달하는** 명령형 hook(`hooks` 칸)을
 `agent-console-hook-probe`로 감싸 실행한다. probe는 원래 명령을 그대로 돌리고(입출력·종료 코드 동일) 기록
@@ -427,7 +427,7 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 
 ```
 
-## 실행 중 상호작용: 되묻기·도구 승인 (§R14.8)
+## 실행 중 상호작용: 되묻기·도구 승인
 
 `capabilities.interactions = ["question", "tool_permission"]`. 종류 이름은 연결표 데이터라 설치자 설정
 `interaction_kinds{question, tool_permission}`으로 바꿀 수 있다(엔진은 이름을 모른다).
@@ -466,7 +466,7 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 `RateLimitEvent` → `usage.rate_limit{window(rate_limit_type, 없으면 "unspecified"), status, utilization, resets_at,
 overage_status}`. 값을 지어내지 않는다(없으면 null).
 
-모델 호출 소요(design §5.5R.1 C2): `ResultMessage.duration_api_ms`(실행 전체의 모델 API 대기 합)를 마지막
+모델 호출 소요: `ResultMessage.duration_api_ms`(실행 전체의 모델 API 대기 합)를 마지막
 `agent.usage`의 `duration_ms`로 싣는다. 값이 없거나 음수면 null이다.
 
 ## 설치자 설정 (`ConfigurableBackend` 훅)
@@ -482,12 +482,12 @@ overage_status}`. 값을 지어내지 않는다(없으면 null).
 | `cancel_grace` | `5.0` | 취소 후 interrupt 대기(초) |
 | `interaction_kinds` | `{question: question, tool_permission: tool_permission}` | 여는 상호작용 종류 id(`capabilities.interactions`) |
 | `allow_command_hooks` | `false` | 명령형 hook(`hooks` 칸) 실행 허용. 꺼져 있으면 `hooks` 칸을 받지 않는다(경고에 이유) |
-| `allow_subscription_auth` | `true` | 본인 구독 로그인 자격(`auth.mode=subscription`) 허용(기본 구독, 본인 책임 — API 키도 선택 가능). `false`로 끄면 검증 error `backend.subscription_auth_disabled`·실행 거부, 켜져 있으면 강화된 경고(§인증) |
+| `allow_subscription_auth` | `true` | 본인 구독 로그인 자격(`auth.mode=subscription`) 허용(기본 구독, 본인 책임 — API 키도 선택 가능). `false`로 끄면 검증 error `backend.subscription_auth_disabled`·실행 거부, 켜져 있으면 강화된 경고 |
 | `hook_probe_command` | `null`(= `[현재 파이썬, -m, agent_console_hook_probe]`) | `observe.hook_probe`일 때 hook 명령을 감쌀 probe 실행 인자(아래 "hook probe 감싸기") |
 | `hook_probe_folder` | `hook-probe` | 노드 실행 폴더 아래 기록 폴더 이름(경로 구분자 없는 이름) |
-| `auth_dir` | `ClaudeSdkAuthDirOptions()`(`.state/claude`, 앱 workspace 기준) | 앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR`, §인증 "앱 전용 자격 폴더") |
-| `login` | `ClaudeSdkLoginOptions()`(켜짐) | 앱 화면 구독 로그인·로그아웃(§인증 "구독 로그인") |
-| `readiness` | `ClaudeSdkReadinessOptions()` | 상태 점검·연결 테스트가 볼 인증 방식(`auth`), `cli_path`, `subscription_files`, `probe_prompt`·`probe_model`·`probe_extra_args`, 문구 `texts`(§인증 "상태 점검과 연결 테스트") |
+| `auth_dir` | `ClaudeSdkAuthDirOptions()`(`.state/claude`, 앱 workspace 기준) | 앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR`, 위 "앱 전용 자격 폴더") |
+| `login` | `ClaudeSdkLoginOptions()`(켜짐) | 앱 화면 구독 로그인·로그아웃(위 "구독 로그인") |
+| `readiness` | `ClaudeSdkReadinessOptions()` | 상태 점검·연결 테스트가 볼 인증 방식(`auth`), `cli_path`, `subscription_files`, `probe_prompt`·`probe_model`·`probe_extra_args`, 문구 `texts`(위 "상태 점검과 연결 테스트") |
 
 `secrets`는 남은 `secret://` 해석과 raw 가리기에, `environ`은 환경 정책을 적용할 부모 환경으로 쓴다.
 모르는 키·잘못된 값은 `ValueError`(위치와 사유만). 형식 모델: `ClaudeSdkInstallOptions`.
@@ -505,9 +505,9 @@ overage_status}`. 값을 지어내지 않는다(없으면 null).
 `agents` 제외).
 모델 id는 코드에 없다 — `Agent.model`. `list_models()`는 생성 인자 `models`(설정 데이터, 기본 빈 목록).
 
-관측(`AgentRequest.observe` = 유효 `ObserveSettings`)은 아래 "관측 수집기(X7)"를 본다.
+관측(`AgentRequest.observe` = 유효 `ObserveSettings`)은 아래 "관측 수집기"를 본다.
 
-## 관측 수집기 (X7, `agent_console_backend_claude_sdk.collectors`, design §4R.3)
+## 관측 수집기 (`agent_console_backend_claude_sdk.collectors`)
 
 관측(hook·MCP 등)은 백엔드가 아니라 **수집기**가 한다. 백엔드는 수집기 이름을 모르고, 켜진 수집기에
 SDK 훅 콜백(`on_hook`)과 SDK 메시지(`on_message`, 번역 이벤트 뒤)를 넘긴다. 수집기가 `ctx.emit`으로 낸
@@ -518,7 +518,7 @@ SDK 훅 콜백(`on_hook`)과 SDK 메시지(`on_message`, 번역 이벤트 뒤)�
     (`include_hook_events`) → `hook.invoked|completed`(hook_type `settings`). 설정 `events`(콜백을 걸 훅
     이벤트, 기본 `DEFAULT_OBSERVED_HOOK_EVENTS`).
   - `mcp-calls`: `mcp.server_status`, `mcp.call_started|call_completed`(`duration_ms`는 주입 clock).
-  - payload 키는 design §8.3 표 그대로다.
+  - payload 키는 가짜 백엔드(`ac-backend-fake-agent`)의 관측 흉내와 같다.
 - 설정: `observe.collectors{id: {enabled?, config?}}`. 옛 키 `hooks`→`sdk-hooks.enabled`,
   `mcp`→`mcp-calls.enabled`, `hook_events`→`sdk-hooks.config.events`로 읽는다(대응표는 데이터
   `LEGACY_OBSERVE_KEYS`). 둘 다 있으면 `collectors`의 값 있는 칸이 이긴다(`config`는 통째로).
@@ -574,7 +574,7 @@ SDK 훅 콜백(`on_hook`)과 SDK 메시지(`on_message`, 번역 이벤트 뒤)�
 prompt-count = "my_pkg.collectors:PromptCount"
 ```
 
-## 실행 범위(§4.7)와 `capabilities.enforce`
+## 실행 범위와 `capabilities.enforce`
 
 - `commands: true` — 모든 도구 호출(서브에이전트 포함)에 거는 `PreToolUse` 훅이 입력의 명령 키를
   `limits.commands`로 검사(빈 목록 = 전부 거부, `"*"` = 전부 허용, 셸 연결·치환·리다이렉트 거부, 토큰 접두 일치).
@@ -596,7 +596,7 @@ prompt-count = "my_pkg.collectors:PromptCount"
   `log.warning` 이벤트를 낸다(`risky_option_warnings`). 권한 우회 모드에서는 Claude Code 권한 규칙과
   `can_use_tool`이 꺼지지만, 이 백엔드의 `PreToolUse` 실행 범위 검사(명령 + 파일 도구 경로)는 유지된다.
 
-## 플랫폼 도구 (`AgentRequest.host_tools`, 5R.10, design §5R.6)
+## 플랫폼 도구 (`AgentRequest.host_tools`)
 
 `capabilities.host_tools = true`. 위임 방식(예: 독립 위임 `host`)이 만든 `HostTool`(ac-runtime, 런타임 전용)을
 in-process SDK MCP 서버 하나로 묶어 모델에게 준다. 백엔드는 도구 이름·용도를 모른다.
@@ -629,9 +629,9 @@ JSON-RPC(`initialize` → `tools/call`)로 in-process 서버를 부른다(SDK �
 바뀌면 이 도우미만 고친다). 실호출 확인 항목은 아래 21~26.
 
 SDK 핸들러는 입력만 받아(MCP 요청의 `_meta`도 넘기지 않음) 도구 호출 id를 모른다. 그래서 위임 도구가 부른 대상
-NodeRun의 `tool_use_id`(design §5.5R.1 C7)는 이 백엔드에서 null이다.
+NodeRun의 `tool_use_id`는 이 백엔드에서 null이다.
 
-## 세션 기록 보관·복원 (X38, 5.7R.33y3)
+## 세션 기록 보관·복원
 
 `ClaudeSdkBackend.session_archive()`는 앱 전용 자격 폴더(`<workspace>/.state/claude`)가 있을 때만
 `projects/<키>/<세션>.jsonl`과 `<세션>/` 아래 파일을 다루는 `SessionArchive`를 준다(키 = `agent_console_claude_format.project_key`).
@@ -647,21 +647,21 @@ NodeRun의 `tool_use_id`(design §5.5R.1 C7)는 이 백엔드에서 null이다.
 5. 서브에이전트 도구 가용성: 세션 `tools`에 없는 내장 도구를 대상 `AgentDefinition.tools`만으로 쓸 수 있는지, 위임자 세션 사전 승인(`allowed_tools`) 없이 묻지 않는 모드에서 대상 호출이 허용되는지(기본은 사전 승인에 넣지 않고 경고, `subagent_tools_preapprove`로 켬).
 6. 환경변수 3개(`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`, `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS`)가 설치 CLI 버전에서 동작하는지.
 7. 빈 `ANTHROPIC_API_KEY=""`를 CLI가 "설정 안 됨"으로 보는지, `setting_sources`에 `user`가 없어도 구독 로그인 자격을 읽는지.
-8. `RateLimitEvent.utilization`이 경고 임계 전에는 비어 있는지(§R4.3).
+8. `RateLimitEvent.utilization`이 경고 임계 전에는 비어 있는지.
 
-skill·rule·hook 전달(2R.12) 미확인 항목(실호출 스모크 C1에서 확인, 단위 테스트는 가짜 SDK 클라이언트):
+skill·rule·hook 전달 미확인 항목(실호출 스모크에서 확인, 단위 테스트는 가짜 SDK 클라이언트):
 15. `plugins=[{type: local, path}]`로 넘긴 매니페스트 없는 폴더의 `skills/<name>/SKILL.md`가 skill로 잡히는지, 이름이
     `<폴더 이름>:<skill>`인지(문서: 매니페스트 선택, `--plugin-dir`면 폴더 이름이 플러그인 이름). 아니면 `skill_name_template`을 바꾼다.
 16. `tools`를 목록으로 줄 때 `Skill` 도구를 넣어야 skill을 쓸 수 있는지(`skills` 옵션은 `allowed_tools`만 채운다).
 17. `skills=[]`가 위임자 목록에서 서브에이전트 skill을 숨기면서 `AgentDefinition.skills`로 대상에는 보이는지.
 18. `rule_delivery=files`: `--add-dir` + `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`이 추가 폴더의 `.claude/rules/*.md`를 읽는지
     (문서상 예), `paths` 조건이 추가 폴더 기준인지 프로젝트 기준인지(프로젝트 경로와 맞지 않으면 조건부 규칙이 안 걸릴 수 있음). 이 환경변수는
-    다른 추가 폴더(limits.directories·files 폴더)의 CLAUDE.md도 읽게 한다.
+    다른 추가 폴더(limits.directories·files 폴더)의 `CLAUDE.md`도 읽게 한다.
 19. `hook_delivery=settings`: `settings` 인라인 JSON의 명령형 hook이 실행되는지, `setting_sources=["project"]`와 함께 쓰일 때 우선순위.
 20. 콜백의 `{"decision": "block", "reason"}`이 모든 이벤트에서 막기로 처리되는지(PreToolUse는 `permissionDecision`이 권장 형식),
     SDK `HookEvent`에 없는 이벤트 이름을 `hooks`에 넣었을 때 CLI 동작.
 
-플랫폼 도구(5R.10, design §R3.7 9) 미확인 항목(2R.C1 보류 목록, 단위 테스트는 SDK 목):
+플랫폼 도구 미확인 항목(단위 테스트는 SDK 목):
 21. `type: sdk` 서버가 `strict_mcp_config=true`·`setting_sources=["project"]`에서도 붙는지(init `mcp_servers` 상태).
 22. `allowed_tools`의 `mcp__<서버>__<도구>`가 `dontAsk`에서 묻지 않고 허용되는지, `tools` 목록을 줘도 MCP 도구가 보이는지.
 23. 전체 도구 이름이 64자를 넘을 때 CLI 동작(지금은 경고만).
@@ -669,7 +669,7 @@ skill·rule·hook 전달(2R.12) 미확인 항목(실호출 스모크 C1에서 �
 25. 같은 턴의 병렬 도구 호출이 핸들러를 동시에 부르는지(같은 대상 직렬은 엔진 몫).
 26. 오래 걸리는 핸들러(대상 실행 수 분)가 CLI의 MCP 도구 시간 제한(`MCP_TOOL_TIMEOUT` 등)에 걸리는지. 걸리면 `env`로 늘린다.
 
-상호작용(1R.30) 미확인 항목(스모크 `test_live_question_once`·`test_live_tool_permission_once`):
+상호작용 미확인 항목(스모크 `test_live_question_once`·`test_live_tool_permission_once`):
 9. `ClaudeSDKClient` + 항상 있는 `PreToolUse` 훅으로 `can_use_tool` 스트림이 유지되는지.
 10. 설치 버전(0.2.166)의 `ToolPermissionContext` 필드가 실제로 채워지는지(`title`·`display_name` 등).
 11. `agent_id`가 `TaskStartedMessage.task_id`와 같은 값인지.
@@ -679,7 +679,7 @@ skill·rule·hook 전달(2R.12) 미확인 항목(실호출 스모크 C1에서 �
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-claude-sdk`.
 

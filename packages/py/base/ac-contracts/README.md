@@ -11,7 +11,7 @@ Agent Console의 공용 타입·이벤트·DTO(Pydantic v2)와 JSON Schema 생�
 
 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- |
-| `pydantic>=2.9` | 런타임 검증과 JSON Schema를 같은 모델에서 얻는다(계약 단일 소스, design §5.7) | msgspec(더 빠르지만 JSON Schema·FastAPI 통합이 약함), dataclasses + jsonschema 직접 작성 |
+| `pydantic>=2.9` | 런타임 검증과 JSON Schema를 같은 모델에서 얻는다(계약 단일 소스) | msgspec(더 빠르지만 JSON Schema·FastAPI 통합이 약함), dataclasses + jsonschema 직접 작성 |
 
 ## 설치
 
@@ -22,7 +22,7 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 
 ## 공개 API 요지
 
-계약 버전 `CONTRACTS_VERSION` = 0.14.1(0.14.0 + `WikiInfo.writable`·문서 상수 `wiki.update_unavailable`·루트 공개 별칭 `Slug`, `WikiSettings.secret_scan` 기본값에 `system: reject`(보안 강화), `common` 1.11.0·`wiki` 1.1.0. 0.14.0은 새 하위 모듈 `wiki` 1.0.0 — 위키 규칙·위키·문법·접근 설정·페이지 보기·기록·검색·그래프·점검·이벤트, `CopyKindInfo.title`, `SpecTemplateSummary.kind`, 위젯 `wiki-ref`·`glob`, design §7R.7. 0.13.2는 0.13.1 + `Run.has_children` — 목록 페이지 행의 직접 자식 유무, `runs` 1.8.0, `GraphSummary.session_summary` — 팀 구성 목록 세션 집계, `definitions` 1.7.0, 가져오기 폴더 하위 폴더 `ImportFileListing.dirs`·문서 틀 만들기 `SpecTemplateCreateRequest`, `sdd` 1.1.0, 복사 종류·목록 `CopyKindInfo`·`CopyItem`, `projects` 3.2.0. 0.13.1은 0.13.0 + 비밀 규칙 `SecretRuleSettings.weak_key_names`·문서 상수 `fake.session_missing`·`records.session_archive_failed`·`run.move_busy`·`ParsedTask.issues` 설명. 0.13.0은 새 하위 모듈 `sdd` 1.0.0 — 스펙 기반 개발, `Run.labels`·커서 페이지 `RunPage`·`ConversationPage`, 라벨 표시 `LabelDisplay`, design §6R.6·§6R.18. 0.12.2는 디스크립터 화면 속성(세션·백엔드·중첩)·이슈 `hint`·`group`·`GraphPatch.unset_node_fields`, `docs/design/screen-delegation.md` §14·§15. 0.12.1은 기록 공간·폴더 확인 보강, design §PI.4.6·§PI.16. 0.12.0은 §PI.10. v10(0.11.0)도 §PI.10, v9는 §5.7R.5, v8은 §5.5R.2.4, v7은 §5.2R.3, v6은 §5R.9, v5는 §4R.9, v4는 §3R.3, v3는 §2R.2, v2는 §R9.3).
+계약 버전 `CONTRACTS_VERSION` = 0.14.2(0.14.1 + `WikiInfo.rules_kind`·`WikiRuleEntry.applies_to`·`path`·`title`·`WikiLintReport.partial`·`skipped`·`enabled_checks`·`WikiGraphNode.scheme_target`·문서 상수 `wiki.lint_failed`·`KnownWikiLintChecks`, `common` 1.12.0·`wiki` 1.2.0. 0.14.1은 0.14.0 + `WikiInfo.writable`·문서 상수 `wiki.update_unavailable`·루트 공개 별칭 `Slug`, `WikiSettings.secret_scan` 기본값에 `system: reject`(보안 강화), `common` 1.11.0·`wiki` 1.1.0. 0.14.0은 새 하위 모듈 `wiki` 1.0.0 — 위키 규칙·위키·문법·접근 설정·페이지 보기·기록·검색·그래프·점검·이벤트, `CopyKindInfo.title`, `SpecTemplateSummary.kind`, 위젯 `wiki-ref`·`glob`. 0.13.2는 0.13.1 + `Run.has_children` — 목록 페이지 행의 직접 자식 유무, `runs` 1.8.0, `GraphSummary.session_summary` — 팀 구성 목록 세션 집계, `definitions` 1.7.0, 가져오기 폴더 하위 폴더 `ImportFileListing.dirs`·문서 틀 만들기 `SpecTemplateCreateRequest`, `sdd` 1.1.0, 복사 종류·목록 `CopyKindInfo`·`CopyItem`, `projects` 3.2.0. 0.13.1은 0.13.0 + 비밀 규칙 `SecretRuleSettings.weak_key_names`·문서 상수 `fake.session_missing`·`records.session_archive_failed`·`run.move_busy`·`ParsedTask.issues` 설명. 0.13.0은 새 하위 모듈 `sdd` 1.0.0 — 스펙 기반 개발, `Run.labels`·커서 페이지 `RunPage`·`ConversationPage`, 라벨 표시 `LabelDisplay`. 0.12.2는 디스크립터 화면 속성(세션·백엔드·중첩)·이슈 `hint`·`group`·`GraphPatch.unset_node_fields`. 0.12.1은 기록 공간·폴더 확인 보강. 그 전 버전은 `CHANGELOG.md`).
 모델은 기능별 하위 모듈 `common`·`resources`·`logs`·`definitions`·`runs`·`usage`·`projects`·`chat`·`exports`·`imports`·`architecture`·`memory`·`sdd`·`wiki`·`modules`
 (`CONTRACT_SUBMODULES`, 버전 `CONTRACT_VERSIONS`)에 있고 루트가 전부를 다시 내보낸다. 기록은 `CHANGELOG.md`.
 
@@ -47,7 +47,7 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 | 로그(`logs`, 0.6.0) | 이벤트 `LogEvent`(`from` 별칭)·`LogDocumentRef`·`LogEventPage`·`LogEventDetail`·`LogEvidenceLink`, 출처·분류기 `LogSourceDescriptor`·`LogClassifierDescriptor`·`LogSourceInfo`·`LogSourceStatus`, 수집 `LogScanReport`·`LogSourceScanResult`, 세션 `LogSessionSummary`(`tokens: LogTokenTotals`·`project: LogProjectRef`·`thread_count`)·`LogTimeline`(`lanes: LogLane[]`), 토큰 표본 `TokenSample`(`LogEventDetail.usage`), 집계 `LogAggregateRequest`·`LogAggregateRow`·`LogQuerySchema`(`LogDimensionInfo`·`LogMetricInfo`·`LogFilterFieldInfo`), 보관본 `LogArchive`(v1), 설정 `LogSettings`(`WorkspaceSettings.logs`: `LogSourceSetting`·`LogTaxonomy`·`LogCategory`·`LogProjectSettings`·`LogProjectGroup`·`LogDashboard`·`LogWidget`·`LogWidgetQuery`) |
 | 이벤트 | `RunEvent`(일반형, 머리 `actor`), `KnownRunEvent`/`AnyKnownRunEvent`(판별 유니온), 타입별 `*Event`·`*Payload`(`run.reply`, `run.waiting`, `node.resumed`, `usage.rate_limit`, `interaction.requested·answered·closed`, 0.7.0 `edge.skipped`·`loop.iteration`·`loop.exhausted`·`run.child_started`·`run.child_finished` 포함, 0.9.0 `agent.context_prepared`(리소스 id·종류·크기·해시만, 본문 없음)·`node.*` `tool_use_id`·`agent.message`·`agent.usage` `duration_ms`, `edge.traversed`·`edge.skipped`의 `condition`), `parse_run_event()`, `KNOWN_RUN_EVENT_TYPES` |
 | WS | `WsClientMessage`, `WsServerMessage`(run.event·conversation.updated·interaction.updated·logs.ingested·error), 토픽은 서버 모듈이 정한다(기본: `run:`·`conversation:`·`interactions`·`logs`) |
-| REST | `ErrorResponse`, `BootstrapResponse`, `ResolvePortsRequest`, `CreateRunRequest`, `VersionedGraph`, `GraphSummary`, `DefinitionVersion`, `VersionConflictDetails`, `AppliedItemInfo`, `DefinitionReference`, `ServerInfo`, `PluginInfo`, `DuplicateGraphRequest`, `MergeStrategyInfo`(1R.14), v3: `GraphSummary.validation: GraphValidationSummary`, `ServerInfo.warnings`, `BundlePreview`, `TeamPlanSummary`·`EntrySlot`·`AnswerSlot`, `DraftGraphRequest`·`DraftNodeRequest`, `ResumeOptions`·`ResumeNodeOption`·`ResumeRunRequest`, `DefinitionDiff`·`DiffChange`·`ContentChange`·`RestoreVersionRequest` |
+| REST | `ErrorResponse`, `BootstrapResponse`, `ResolvePortsRequest`, `CreateRunRequest`, `VersionedGraph`, `GraphSummary`, `DefinitionVersion`, `VersionConflictDetails`, `AppliedItemInfo`, `DefinitionReference`, `ServerInfo`, `PluginInfo`, `DuplicateGraphRequest`, `MergeStrategyInfo`, v3: `GraphSummary.validation: GraphValidationSummary`, `ServerInfo.warnings`, `BundlePreview`, `TeamPlanSummary`·`EntrySlot`·`AnswerSlot`, `DraftGraphRequest`·`DraftNodeRequest`, `ResumeOptions`·`ResumeNodeOption`·`ResumeRunRequest`, `DefinitionDiff`·`DiffChange`·`ContentChange`·`RestoreVersionRequest` |
 | 내보내기(X8) | `ExporterDescriptor`, `ExportSelection`, `ExportRequest`, `ExportFile`, `ExportPlan`, `ExportRootInfo`, `ExportWriteRequest`, `ExportResult` |
 | 가져오기 | `ImportSourceDescriptor`, `ImportPreviewRequest`, `ImportPreview`, `ImportCandidate`, `ImportWarning`, `ImportRequest`, `ImportSelection`, `ImportResult` |
 | 상수 | `CONTRACTS_VERSION`, `LOG_EVENT_ORDERS`(asc·desc), `LOG_PROJECT_UNGROUPED`(`~ungrouped`), `ErrorCodes`(+ `conversation_busy`·`interaction_closed` = 409), `HTTP_STATUS_BY_ERROR_CODE`, `RUN_ORIGINS`(+ `chat`, `resume`) |
@@ -87,7 +87,7 @@ uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 �
 
 ### 비밀 의심 판정 규칙(옮김)
 
-v3(2R.4)부터 비밀 의심 판정은 계약 패키지가 아니라 `ac-secret-rules`(`agent_console_secret_rules`)에 있다.
+v3부터 비밀 의심 판정은 계약 패키지가 아니라 `ac-secret-rules`(`agent_console_secret_rules`)에 있다.
 계약에는 사용자 규칙 설정 모델 `SecretRuleSettings`(`WorkspaceSettings.secrets`)만 남는다.
 
 ## 최소 사용 예
@@ -135,16 +135,16 @@ False
 
 명령행: `python -m agent_console_contracts export <dir>` / `check <dir>`(다르면 exit 1).
 
-## 사용자 문구 금지 패턴(5.2R.5)
+## 사용자 문구 금지 패턴
 
-설계 문서 번호(`design §`·`§숫자`·`R숫자.숫자`)와 내부 노드 id(`'n1'` 꼴)는 사용자 문구에 넣지 않는다.
+설계 문서 인용·절 번호·요구사항 번호(`R숫자.숫자` 꼴)와 내부 노드 id(`'n1'` 꼴)는 사용자 문구에 넣지 않는다.
 규칙은 패키지 데이터 `data/user_text_rules.json` 한 곳이고, 생성 상수 `USER_TEXT_RULES`로 TS 테스트도 같은 값을
 읽는다. 범위(`scopes`)는 `description`(계약·디스크립터 설명)과 `messages`(서버·웹 사용자 문구)다.
 
 ```python
 >>> from agent_console_contracts.user_text import find_forbidden_text
->>> [v.rule for v in find_forbidden_text("자세한 것은 design §5 참고", scope="description")]
-['design-ref', 'section-number']
+>>> [v.rule for v in find_forbidden_text("자세한 것은 R3.1 참고", scope="description")]
+['requirement-id']
 >>> find_forbidden_text("'안내원'을(를) 실행할 백엔드가 정해지지 않았습니다.", scope="messages")
 []
 
@@ -206,7 +206,7 @@ Pydantic 모델이면 `x_ui()`를 `json_schema_extra`에 넣고, 손으로 쓴 �
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-contracts`.
 

@@ -1,6 +1,6 @@
 # agent-console-link-runs-trace
 
-실행·추적 연동 모듈(design §3R.1.4 L6). 실행 기록(`runs.reader`·`runs.events`)으로 위임 흐름(`ac-trace`)을 만든다.
+실행·추적 연동 모듈. 실행 기록(`runs.reader`·`runs.events`)으로 위임 흐름(`ac-trace`)을 만든다.
 
 - `GET /runs/{id}/trace`: span(노드·호출·위임·사용자 대기)과 넘김 화살표. 실행 당시 팀 구성(선택 포트 `definitions.lookup`의 버전 기록, 없으면 현재 정의)에서 연결 종류와 호출 연결(`call_edges` — 위임자·대상 쌍의 연결이 하나일 때)을 붙인다. 자식 Run(중첩 팀)은 직접 자식부터 재귀로 읽어 부른 노드 span 아래 묶음으로 붙인다(`run_id`). 호출 span의 위임 과제는 NodeRun 입력에서.
 - `GET /runs/handoffs`: 여러 실행의 "누가 누구에게 몇 번"(필터는 실행 목록과 같다). Run마다 자기 흐름만 센다(자식 Run은 목록에 따로 있어 두 번 세지 않는다).

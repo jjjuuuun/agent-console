@@ -1,9 +1,9 @@
 # agent-console-delegation-host
 
-독립 위임 방식 `host`(X12 위임 방식 플러그인, design §5R.6). 위임자 모델에게 **위임 도구** 하나(플랫폼
+독립 위임 방식 `host`(X12 위임 방식 플러그인). 위임자 모델에게 **위임 도구** 하나(플랫폼
 도구 `HostTool`)를 주고, 모델이 도구를 부르면 대상 노드를 엔진의 `ctx.invoke_node`로 **자기 NodeRun·세션·
 백엔드·모델·리소스**에서 실행해 그 결과를 도구 결과로 돌려준다. 백엔드가 도구 호출 id를 알려 주면
-(`HostTool.call_handler`) 대상 NodeRun의 `node.*` payload `tool_use_id`로 넘긴다(design §5.5R.1 C7). 대상은 다시 위임하거나(중첩) 자기
+(`HostTool.call_handler`) 대상 NodeRun의 `node.*` payload `tool_use_id`로 넘긴다. 대상은 다시 위임하거나(중첩) 자기
 `ask_user` 연결로 사용자에게 되물을 수 있다. 서버·웹·노드 플러그인 없이 엔진(`agent-console-runtime`)과
 계약만으로 쓴다.
 
@@ -11,7 +11,7 @@
   (`max_depth: null`), 대상의 나가는 흐름 연결 금지(`allows_outgoing_flow: false`), 대상의 모든 설정 필드
   적용(`member_fields` = `AgentSettings` 전체), 대상 되묻기 제한 없음, 위임자 백엔드 능력 `host_tools` 필요,
   `composable: true`(다른 composable 방식과 한 위임자에서 합쳐 실행), `shares_session: false`(대상은 자기
-  세션에서 돈다 — 대상의 상호작용 종류·대기 한도는 위임자 세션 grant에 더해지지 않는다, 5.2R.43).
+  세션에서 돈다 — 대상의 상호작용 종류·대기 한도는 위임자 세션 grant에 더해지지 않는다).
 - 도구 이름·파라미터 이름·모델에게 보이는 문구는 방식 config(`HostDelegationConfig`)의 **스키마 기본값**이다.
   위임자 노드의 방식별 config(예: 에이전트 노드 `delegation.host`)로 바꾼다. 코드에 이름별 분기는 없다.
 - 도구 입력 = `{<target_param>: 대상 노드 id(enum), <task_param>: 할 일}`. 할 일은 대상 노드 타입의 첫 입력
@@ -25,7 +25,7 @@
 - 혼합 위임: `contribute(plan, ctx)`는 백엔드를 부르지 않고 `DelegationContribution(host_tools=[도구])`만
   돌려준다. 노드는 방식마다 받은 것을 `merge_contributions`(ac-runtime)로 합친다(도구 이름 겹침 =
   `delegation.duplicate_host_tool_names`).
-- 저장 시점 정적 검사(design §5.2R.7): `static_issues(config, members)`는 연결 결과 모양
+- 저장 시점 정적 검사: `static_issues(config, members)`는 연결 결과 모양
   (`delegation.invalid_result_mode`, 엣지 이슈)과 스키마로 표현할 수 없는 config 규칙(대상·할 일 파라미터 이름이
   같음, `delegation.invalid_config`)을, `declared_names(config, members)`는 `{"host_tool": [도구 이름]}`을 돌려준다.
   config 스키마 위반·같은 대상 중복은 `ac-teams` 일반 규칙이 낸다.
@@ -36,7 +36,7 @@
   `invoke_node`). 노드 플러그인(`ac-nodes-core`)·팀(`ac-teams`)·백엔드는 모른다(import-linter 계약).
 - **pydantic**: 방식 config 검증과 JSON Schema(디스크립터 `config_schema`). 이미 계약 패키지가 쓴다.
 - 대안으로 위임 방식이 백엔드를 직접 불러 대상을 실행할 수 있지만, 노드 실행 규칙(설정·리소스·되묻기·
-  기록)을 두 벌 만들게 되어 택하지 않았다(design §5R.6 결정).
+  기록)을 두 벌 만들게 되어 택하지 않았다.
 
 ## 설치
 

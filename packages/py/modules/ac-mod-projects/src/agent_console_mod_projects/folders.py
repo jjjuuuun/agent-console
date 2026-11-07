@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from importlib.metadata import entry_points
 from typing import Any, Protocol, runtime_checkable
 
@@ -58,6 +58,7 @@ from agent_console_projects import (
     path_relation,
     suggest_project_id,
 )
+from agent_console_registry import excluded_reason
 
 from .errors import ProjectError
 from .settings import FolderDialogSettings
@@ -70,7 +71,7 @@ FOLDER_DIALOGS_GROUP = "agent_console.folder_dialogs"
 
 @runtime_checkable
 class FolderDialogProvider(Protocol):
-    """코드 선택 창 제공자(X35, entry point ``agent_console.folder_dialogs``).
+    """코드 선택 창 제공자(entry point ``agent_console.folder_dialogs``).
 
     ``pick``은 사용자가 고른 폴더 경로(취소면 None)를 돌려준다. ``cancel``이 켜지면 창을 닫고
     None을 돌려준다(요청이 끊김). 실패는 예외로 알린다(결과 ``failed``).
@@ -90,20 +91,40 @@ class FolderDialogProvider(Protocol):
     ) -> str | None: ...
 
 
-def load_dialog_providers(group: str = FOLDER_DIALOGS_GROUP) -> list[FolderDialogProvider]:
-    """설치된 코드 제공자(불러오지 못한 것은 기록하고 건너뜀)."""
+def as_folder_dialog_provider(value: Any) -> FolderDialogProvider:
+    """entry point 값(클래스면 인스턴스로 만든다)을 제공자로 검사한다.
+
+    Raises:
+        TypeError: ``FolderDialogProvider`` 모양(``id``·``available``·``pick``)이 아닐 때.
+    """
+    provider = value() if isinstance(value, type) else value
+    if not isinstance(provider, FolderDialogProvider):
+        raise TypeError("폴더 선택 창 제공자 모양(id·available·pick)이 아닙니다")
+    return provider
+
+
+def load_dialog_providers(
+    group: str = FOLDER_DIALOGS_GROUP,
+    *,
+    enabled: Collection[str] | None = None,
+    disabled: Collection[str] = (),
+) -> list[FolderDialogProvider]:
+    """설치된 코드 제공자(불러오지 못한 것은 기록하고 건너뜀). 단독 실행용.
+
+    서버에서는 호스트 플러그인 로더(``agent_console_mod_projects.plugins``)가 같은 그룹을 묶음에
+    읽고 모듈은 그 결과를 쓴다. 여기서는 같은 규칙(``enabled`` 안에서 ``disabled``를 뺀다)으로
+    이름을 거른다.
+    """
     out: list[FolderDialogProvider] = []
-    for ep in entry_points(group=group):
+    for ep in sorted(entry_points(group=group), key=lambda e: (e.name, e.value)):
+        if excluded_reason(ep.name, enabled, disabled) is not None:
+            continue
         try:
-            value = ep.load()
-            provider = value() if isinstance(value, type) else value
+            out.append(as_folder_dialog_provider(ep.load()))
+        except TypeError:
+            _log.warning("폴더 선택 창 제공자 모양이 아닙니다: %s", ep.name)
         except Exception:
             _log.exception("폴더 선택 창 제공자를 불러오지 못했습니다: %s", ep.name)
-            continue
-        if isinstance(provider, FolderDialogProvider):
-            out.append(provider)
-        else:
-            _log.warning("폴더 선택 창 제공자 모양이 아닙니다: %s", ep.name)
     return out
 
 
@@ -477,6 +498,7 @@ __all__ = [
     "FolderDialogProvider",
     "FolderPicker",
     "FolderService",
+    "as_folder_dialog_provider",
     "count_definitions",
     "load_dialog_providers",
 ]

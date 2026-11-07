@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any, Literal
@@ -27,11 +27,14 @@ class LoadReport:
     Attributes:
         source: 사람이 읽는 출처(예: ``"entry_point <group>:<name> (<value>)"``,
             ``"module <pkg.mod:attr>"``).
-        status: ``loaded`` | ``failed`` | ``skipped`` (``enabled`` 에서 제외되어 로드하지 않음) |
-            ``disabled`` (``register(target)`` 플러그인이 등록했지만 ``enabled`` 에 없어 해제함).
+        status: ``loaded`` | ``failed`` | ``skipped`` (``enabled`` 에 없거나 ``disabled`` 에 있어
+            로드하지 않음) | ``disabled`` (``register(target)`` 플러그인이 등록했지만 ``enabled`` 에
+            없거나 ``disabled`` 에 있어 해제함).
         key: 등록(시도)한 key. 경로를 해석하지 못하면 None.
         version: 등록된 버전(``loaded`` 일 때).
         error: 실패 사유 ``"<예외 타입>: <메시지>"`` (``failed`` 일 때).
+        reason: 사람이 읽는 이유(``skipped``·``disabled`` 일 때, 예: 어느 목록 때문인지).
+            없으면 None.
     """
 
     source: str
@@ -39,6 +42,7 @@ class LoadReport:
     key: str | None = None
     version: int | None = None
     error: str | None = None
+    reason: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -48,6 +52,27 @@ class LoadReport:
 
 def _describe(exc: BaseException) -> str:
     return f"{type(exc).__name__}: {exc}"
+
+
+REASON_NOT_ENABLED = "not in enabled"
+"""``skipped``·``disabled`` 이유: 허용 목록(``enabled``)에 없음."""
+
+REASON_DISABLED = "in disabled"
+"""``skipped``·``disabled`` 이유: 제외 목록(``disabled``)에 있음."""
+
+
+def excluded_reason(
+    name: str, enabled: Collection[str] | None, disabled: Collection[str] = ()
+) -> str | None:
+    """``name`` 을 빼야 하면 그 이유(``REASON_*``), 읽어도 되면 None.
+
+    ``enabled`` 가 있으면 그 안에서 ``disabled`` 를 뺀다(제외 목록이 이긴다).
+    """
+    if name in disabled:
+        return REASON_DISABLED
+    if enabled is not None and name not in enabled:
+        return REASON_NOT_ENABLED
+    return None
 
 
 def _register_loaded[T](
@@ -72,7 +97,8 @@ def load_entry_points[T](
     group: str,
     registry: Registry[T],
     *,
-    enabled: set[str] | None = None,
+    enabled: Collection[str] | None = None,
+    disabled: Collection[str] = (),
     validate: Callable[[Any], T] | None = None,
     version_of: Callable[[T], int] | None = None,
     entry_points: Iterable[importlib.metadata.EntryPoint] | None = None,
@@ -83,6 +109,7 @@ def load_entry_points[T](
         group: entry point 그룹 이름. 호출자가 정한다.
         registry: 등록 대상 레지스트리.
         enabled: 주어지면 이 이름들만 로드하고 나머지는 ``skipped`` 로 보고한다.
+        disabled: 이 이름들은 로드하지 않고 ``skipped`` 로 보고한다(``enabled`` 보다 우선).
         validate: 로드한 객체를 검사·변환해 ``T`` 를 돌려주는 함수. 예외를 던지면 ``failed``.
         version_of: 항목의 버전을 구하는 함수. 없으면 1.
         entry_points: 테스트·특수 환경용 주입. None이면
@@ -102,8 +129,9 @@ def load_entry_points[T](
         dist = getattr(ep, "dist", None)
         dist_part = f" [{dist.name} {dist.version}]" if dist is not None else ""
         source = f"entry_point {group}:{ep.name} ({ep.value}){dist_part}"
-        if enabled is not None and ep.name not in enabled:
-            reports.append(LoadReport(source=source, status="skipped", key=ep.name))
+        reason = excluded_reason(ep.name, enabled, disabled)
+        if reason is not None:
+            reports.append(LoadReport(source=source, status="skipped", key=ep.name, reason=reason))
             continue
         try:
             obj = ep.load()
@@ -196,14 +224,16 @@ def _snapshot(registries: Iterable[Registry[Any]]) -> tuple[dict[int, Registry[A
 def _disable_new(
     before: Snapshot,
     watch: Callable[[], Iterable[Registry[Any]]],
-    enabled: set[str],
+    enabled: Collection[str] | None,
+    disabled: Collection[str],
     source: str,
 ) -> list[LoadReport]:
-    """플러그인이 새로 등록·교체한 항목 중 ``enabled`` 에 없는 key를 되돌리고 보고서를 만든다."""
+    """플러그인이 새로 등록·교체한 항목 중 빼야 하는 key를 되돌리고 보고서를 만든다."""
     regs, after = _snapshot(watch())
     reports: list[LoadReport] = []
     for (rid, key, version), entry in after.items():
-        if key in enabled or before.get((rid, key, version)) is entry:
+        reason = excluded_reason(key, enabled, disabled)
+        if reason is None or before.get((rid, key, version)) is entry:
             continue
         registry = regs[rid]
         previous = before.get((rid, key, version))
@@ -216,6 +246,7 @@ def _disable_new(
                 status="disabled",
                 key=key,
                 version=version,
+                reason=reason,
             )
         )
     return reports
@@ -225,7 +256,8 @@ def load_plugins(
     paths: Iterable[str],
     target: object,
     *,
-    enabled: set[str] | None = None,
+    enabled: Collection[str] | None = None,
+    disabled: Collection[str] = (),
     watch: Callable[[], Iterable[Registry[Any]]] | None = None,
     import_module: ImportModule = importlib.import_module,
 ) -> list[LoadReport]:
@@ -244,6 +276,8 @@ def load_plugins(
         enabled: 주어지면 플러그인이 등록한 항목 중 key가 이 집합에 없는 것을 등록 직후
             해제하고(덮어쓴 경우 원래 항목 복원) ``disabled`` 보고서를 더한다.
             entry point 로더의 ``enabled`` 와 같은 이름 집합이다. ``watch`` 가 필요하다.
+        disabled: 플러그인이 등록한 항목 중 key가 여기 있는 것을 같은 방법으로 해제한다
+            (``enabled`` 보다 우선). ``watch`` 가 필요하다.
         watch: ``enabled`` 를 적용할 레지스트리 목록을 돌려주는 함수(플러그인 호출 전후에
             부른다 — 플러그인이 새로 만든 레지스트리도 잡도록).
         import_module: 모듈 import 함수 주입.
@@ -254,10 +288,11 @@ def load_plugins(
         한 플러그인이 중간에 실패하면 그 전까지 등록한 항목은 남는다(``enabled`` 는 적용).
 
     Raises:
-        ValueError: ``enabled`` 를 주고 ``watch`` 를 주지 않았을 때.
+        ValueError: ``enabled`` 나 ``disabled`` 를 주고 ``watch`` 를 주지 않았을 때.
     """
-    if enabled is not None and watch is None:
-        raise ValueError("enabled를 적용하려면 watch(레지스트리 목록)가 필요하다")
+    filtering = enabled is not None or bool(disabled)
+    if filtering and watch is None:
+        raise ValueError("enabled·disabled를 적용하려면 watch(레지스트리 목록)가 필요하다")
     reports: list[LoadReport] = []
     for path in paths:
         source = f"plugin {path}"
@@ -266,7 +301,7 @@ def load_plugins(
         except ValueError as exc:
             reports.append(LoadReport(source=source, status="failed", error=_describe(exc)))
             continue
-        before = _snapshot(watch())[1] if watch is not None and enabled is not None else {}
+        before = _snapshot(watch())[1] if watch is not None and filtering else {}
         try:
             obj = _import_target(module, attr, import_module)
             register = getattr(obj, "register", None)
@@ -282,6 +317,6 @@ def load_plugins(
             )
         else:
             reports.append(LoadReport(source=source, status="loaded", key=key))
-        if watch is not None and enabled is not None:
-            reports.extend(_disable_new(before, watch, enabled, source))
+        if watch is not None and filtering:
+            reports.extend(_disable_new(before, watch, enabled, disabled, source))
     return reports

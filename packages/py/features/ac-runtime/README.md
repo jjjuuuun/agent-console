@@ -60,12 +60,12 @@ completed
 
 ```
 
-**종료 공개 순서(5.2R.39)**: `RunHandle.run`이 종료 상태(`completed`·`failed`·`cancelled`·`interrupted`·parked
+**종료 공개 순서**: `RunHandle.run`이 종료 상태(`completed`·`failed`·`cancelled`·`interrupted`·parked
 `waiting`)를 보이면, 그 Run의 기록 — 답변(`run.reply`) 등 모든 이벤트, 최종 Run 저장, `run.<상태>` 이벤트 — 은
 이미 저장소에 저장되고 `event_sink`로 발행됐다. 종료 처리 중에는 직전 상태(`running` 등)를 보인다.
 
 `start(..., conversation_id=)`는 Run 메타(`Run.conversation_id`)다. 엔진은 의미를 모르고 기록만 하며, 그 Run의
-상호작용(`Interaction.conversation_id`)에 같은 값이 복사된다(채팅 어댑터가 채운다, 1R.14).
+상호작용(`Interaction.conversation_id`)에 같은 값이 복사된다(채팅 어댑터가 채운다).
 
 운영에서는 `agent_console_store`의 `SqliteStorage`/`InMemoryStorage`를 recorder로 넘긴다(구조적 타이핑).
 서버 시작 시 `recover_unfinished_runs(storage, sink=bus)`로 이전 프로세스의 Run을 `interrupted`로 정리한다
@@ -79,17 +79,17 @@ completed
 | X2 엣지 타입 | `EdgeType` | `descriptor`, `activates(NodeRunView, EdgeSpec) -> Activation \| Blocked \| None`. `Activation.condition`(근거 → `edge.traversed.condition`)·`warnings`(→ `log.warning`), `Blocked(reason, condition, warnings)` = dead-path + `edge.skipped`. 선택 능력 `EdgeValidator.validate_edge(edge, EdgeValidationContext)`(저장 전 의미 검사, `validate_graph_with`가 부름) |
 | X1 선택 훅 | `NODE_ACTOR_HOOK = "actor_of"` | `actor_of(config) -> str \| None`: 이 노드 자리의 에이전트 정의 id. 엔진이 그 노드의 `node.*`·`run.reply`·`ctx.emit` 이벤트 머리 `actor`에 쓴다 |
 | X1 선택 훅 | `NODE_NAME_HOOK = "display_name"` | `display_name(config, services) -> str \| None`: 노드에 `label`이 없을 때 사용자 문구에 쓸 이름(예: 묶인 에이전트 정의 이름). 실행 실패 요약·위임 거절 문구는 `node_display_name`(label → 이 훅 → 타입 `title`)으로 노드를 부르고 id는 `details.node_id`에 둔다. 실패 요약은 원인 `ErrorInfo.fix`를 그대로 잇는다 |
-| X3 실행 백엔드 | `ExecutionBackend` | `descriptor`, `async list_models()`, `async run(AgentRequest, BackendEventSink, CancelToken) -> AgentResult`. `AgentRequest.run_folder`(노드 실행 폴더, 산출물용·없으면 None)·`run_context`(`run_id`·`node_path`)는 노드가 채운다(4R.9 hook probe 기록 위치) |
+| X3 실행 백엔드 | `ExecutionBackend` | `descriptor`, `async list_models()`, `async run(AgentRequest, BackendEventSink, CancelToken) -> AgentResult`. `AgentRequest.run_folder`(노드 실행 폴더, 산출물용·없으면 None)·`run_context`(`run_id`·`node_path`)는 노드가 채운다(hook probe 기록 위치) |
 | X3 선택 sink 능력 | `SubagentResultListener` | `async on_subagent_result(name, *, text, status, actor, tool_use_id)`: 서브에이전트 호출 하나가 끝날 때마다. 백엔드는 `isinstance(sink, SubagentResultListener)`일 때만 알리고, 위임 방식이 sink를 감싸 대상 답변(`emit_replies`)을 낸다 |
-| X3 선택 훅 | `ConfigurableBackend` (`BACKEND_OPTIONS_HOOK = "from_options"`) | `classmethod from_options(options: Mapping, *, secrets: SecretResolver, environ: Mapping[str, str]) -> ExecutionBackend`. 앱 설정 `backends.<id>`로 다시 만들 수 있는 백엔드가 구현한다. 앱은 훅 유무만 보고, 키 해석은 백엔드 패키지가 한다(모르는 키는 `ValueError`). 훅이 키워드 `host`(`BACKEND_HOST_PARAM`)를 받으면 앱이 `BackendHostContext(workspace_dir=…)`를 넘긴다(`accepts_host_context`로 확인, 5.7R.30b — 앱 workspace = 앱이 관리하는 상대 경로·앱 하나에 하나인 구독 자격 폴더의 기준. 프로젝트 폴더는 넘기지 않는다) |
-| X3 선택 능력 | `StatusCapableBackend` / `ProbeCapableBackend` (디스크립터 `capabilities.status`·`probe`와 함께) | `async status(BackendCheckContext) -> BackendReadiness`(모델·네트워크 호출 금지, 빨리 끝남), `async probe(BackendCheckContext, timeout_s) -> BackendProbeResult`(가장 짧은 실제 호출 한 번, 실패는 `ok=false`+`reason`). `BackendCheckContext`는 `backend_id`·`clock`·`has_secret(name)`(존재만, 값 없음). 조회 서비스 `BackendReadinessService(backends, redact=, has_secret=, probe_timeout_max_s=)`: 능력 없으면 상태 `unknown`·probe는 `ProbeUnsupportedError`, 시간 상한·자르기, 같은 백엔드 동시 probe 합치기, 응답 글자 가림, 로그는 id·ok·reason·소요 시간만(ux-overhaul §15.8) |
-| X3 선택 능력(로그인) | `LoginCapableBackend` / `LogoutCapableBackend` (디스크립터 `capabilities.login`·`logout`, `login_methods`와 함께) | `async start_login(BackendLoginContext, method_id) -> LoginDriver`, `async logout(BackendLoginContext, method_id) -> BackendLogoutResult`. `LoginDriver`: `progress() -> LoginProgress`(phase·message·open_url·needs_code·code_label·accepts_keys·screen·warnings·reason·details·fixes), `async wait_changed(timeout)`, `async send_text`·`send_key`, `async cancel()`, `secrets_to_mask()`. 시작 거절은 `LoginRefusedError(code, message)`. 세션 서비스 `BackendLoginService(backends, redact=, environ=, timeout_default_s=, timeout_max_s=, heartbeat_s=, retain_s=, screen_max_lines=)`: 서버 전체 세션 하나(`LoginBusyError`), 시간 상한 → `expired`, 하트비트 끊김 → `cancelled`(reason `heartbeat`), 취소·`aclose`(종료 훅) 때 드라이버 `cancel`, 응답 가림(입력값과 그 5자 이상 조각 `mask_values` + 주입 `redact`), 로그는 세션 id·백엔드 id·방법·phase·reason·소요 시간만(ux-overhaul §15.9). 테스트 도우미 `agent_console_runtime.testing_login`(`ManualLoginDriver`·`LoginBackendStub`) |
+| X3 선택 훅 | `ConfigurableBackend` (`BACKEND_OPTIONS_HOOK = "from_options"`) | `classmethod from_options(options: Mapping, *, secrets: SecretResolver, environ: Mapping[str, str]) -> ExecutionBackend`. 앱 설정 `backends.<id>`로 다시 만들 수 있는 백엔드가 구현한다. 앱은 훅 유무만 보고, 키 해석은 백엔드 패키지가 한다(모르는 키는 `ValueError`). 훅이 키워드 `host`(`BACKEND_HOST_PARAM`)를 받으면 앱이 `BackendHostContext(workspace_dir=…)`를 넘긴다(`accepts_host_context`로 확인 — 앱 workspace = 앱이 관리하는 상대 경로·앱 하나에 하나인 구독 자격 폴더의 기준. 프로젝트 폴더는 넘기지 않는다) |
+| X3 선택 능력 | `StatusCapableBackend` / `ProbeCapableBackend` (디스크립터 `capabilities.status`·`probe`와 함께) | `async status(BackendCheckContext) -> BackendReadiness`(모델·네트워크 호출 금지, 빨리 끝남), `async probe(BackendCheckContext, timeout_s) -> BackendProbeResult`(가장 짧은 실제 호출 한 번, 실패는 `ok=false`+`reason`). `BackendCheckContext`는 `backend_id`·`clock`·`has_secret(name)`(존재만, 값 없음). 조회 서비스 `BackendReadinessService(backends, redact=, has_secret=, probe_timeout_max_s=)`: 능력 없으면 상태 `unknown`·probe는 `ProbeUnsupportedError`, 시간 상한·자르기, 같은 백엔드 동시 probe 합치기, 응답 글자 가림, 로그는 id·ok·reason·소요 시간만 |
+| X3 선택 능력(로그인) | `LoginCapableBackend` / `LogoutCapableBackend` (디스크립터 `capabilities.login`·`logout`, `login_methods`와 함께) | `async start_login(BackendLoginContext, method_id) -> LoginDriver`, `async logout(BackendLoginContext, method_id) -> BackendLogoutResult`. `LoginDriver`: `progress() -> LoginProgress`(phase·message·open_url·needs_code·code_label·accepts_keys·screen·warnings·reason·details·fixes), `async wait_changed(timeout)`, `async send_text`·`send_key`, `async cancel()`, `secrets_to_mask()`. 시작 거절은 `LoginRefusedError(code, message)`. 세션 서비스 `BackendLoginService(backends, redact=, environ=, timeout_default_s=, timeout_max_s=, heartbeat_s=, retain_s=, screen_max_lines=)`: 서버 전체 세션 하나(`LoginBusyError`), 시간 상한 → `expired`, 하트비트 끊김 → `cancelled`(reason `heartbeat`), 취소·`aclose`(종료 훅) 때 드라이버 `cancel`, 응답 가림(입력값과 그 5자 이상 조각 `mask_values` + 주입 `redact`), 로그는 세션 id·백엔드 id·방법·phase·reason·소요 시간만. 테스트 도우미 `agent_console_runtime.testing_login`(`ManualLoginDriver`·`LoginBackendStub`) |
 | X10 비밀 공급자 | `SecretProvider` | `get_secret(name) -> str \| None` (기본 구현 `EnvSecretProvider(environ)`) |
-| X12 위임 방식 | `DelegationStrategy` | `descriptor: DelegationStrategyDescriptor`, `validate(DelegationPlan) -> list[Issue]`, `async run(DelegationPlan, NodeContext) -> AgentResult`. 레지스트리 `registries.delegation_strategies`(= `extension(DELEGATION_STRATEGIES_EXTENSION)`), entry point `agent_console.delegation_strategies`. 선택 프로토콜 `ComposableDelegation`(`contribute(plan, ctx) -> DelegationContribution`, 디스크립터 `composable`): 노드가 여러 방식의 결과를 `merge_contributions`로 합치고 `apply_contribution`으로 요청에 더해 백엔드를 한 번 부른다(혼합 위임, design §5R.6). 저장 시점 선택 프로토콜(design §5.2R.7): `StaticDelegationChecks`(`static_issues(config, members) -> list[Issue]`, 스키마 밖 정적 규칙)·`DelegationNameDeclarer`(`declared_names(config, members) -> {묶음: [이름]}`, 묶음 예 `DelegationNameGroups`, 충돌 코드 `duplicate_names_code(묶음)`), 대상은 `DelegationMemberView`(정적 필드) |
+| X12 위임 방식 | `DelegationStrategy` | `descriptor: DelegationStrategyDescriptor`, `validate(DelegationPlan) -> list[Issue]`, `async run(DelegationPlan, NodeContext) -> AgentResult`. 레지스트리 `registries.delegation_strategies`(= `extension(DELEGATION_STRATEGIES_EXTENSION)`), entry point `agent_console.delegation_strategies`. 선택 프로토콜 `ComposableDelegation`(`contribute(plan, ctx) -> DelegationContribution`, 디스크립터 `composable`): 노드가 여러 방식의 결과를 `merge_contributions`로 합치고 `apply_contribution`으로 요청에 더해 백엔드를 한 번 부른다(혼합 위임). 저장 시점 선택 프로토콜: `StaticDelegationChecks`(`static_issues(config, members) -> list[Issue]`, 스키마 밖 정적 규칙)·`DelegationNameDeclarer`(`declared_names(config, members) -> {묶음: [이름]}`, 묶음 예 `DelegationNameGroups`, 충돌 코드 `duplicate_names_code(묶음)`), 대상은 `DelegationMemberView`(정적 필드) |
 | X15 상호작용 종류 | `InteractionKind` | `descriptor: InteractionKindDescriptor`(요청·응답 스키마, `expire_response`, 화면 힌트). 레지스트리 `registries.interaction_kinds`(= `extension(INTERACTION_KINDS_EXTENSION)`), entry point `agent_console.interaction_kinds`(`load_registries`가 로드, 디스크립터 객체를 가리켜도 `StaticInteractionKind`로 감싼다) |
 | 저장 | `RunRecorder` | `runs.save/save_node_run/list_node_runs/interrupt_unfinished`, `events.append/append_many/last_seq`, `interactions.save/get/close/close_pending`(`InteractionWriter`, `close`는 pending 조건부, 이미 닫혔으면 `code == "interaction_closed"`·`interaction` 속성이 있는 예외) |
 | 발행 | `EventSink` | `publish(event)` (막히지 않아야 함) |
-| 자식 Run 준비 | `ChildRunPreparer` | `(ChildRunRequest) -> ChildRunPreparation \| Awaitable[...]`. `GraphRuntime(child_preparer=)`(속성으로 바꿔 끼울 수 있음). 막으려면 `GraphValidationError` (design §5R.7) |
+| 자식 Run 준비 | `ChildRunPreparer` | `(ChildRunRequest) -> ChildRunPreparation \| Awaitable[...]`. `GraphRuntime(child_preparer=)`(속성으로 바꿔 끼울 수 있음). 막으려면 `GraphValidationError` |
 
 레지스트리 key는 디스크립터 `id`와 같아야 한다(`NodeSpec.type`·`EdgeSpec.kind`로 찾는다).
 runtime이 모르는 확장 지점(예: 플러그인이 정의한 분류기)은 `registries.extension("my_classifiers", validator=as_x)`로 담는다.
@@ -130,18 +130,18 @@ services = services.with_(SESSIONS, session_refs(conversation_sessions))
 - `services`: 앱 제공 서비스의 타입드 조회. 서비스를 쓰는 플러그인이 `ServiceKey[T]("name")`를 정의·공개하고 앱이 같은 키로 주입한다.
 - `secrets`: `resolve("secret://name")`, `resolve_refs(obj)`. 해석한 값은 이벤트·오류 메시지에서 `[REDACTED]`로 가려진다.
 
-### 플랫폼 도구 (`HostTool`, design §5R.6, 런타임 전용)
+### 플랫폼 도구 (`HostTool`, 런타임 전용)
 
 위임 방식이 모델에게 줄 도구를 만들어 `AgentRequest.host_tools`에 넣고, `capabilities.host_tools`를 선언한 백엔드가
 모델의 호출마다 `handler`를 부른다. 계약 타입이 아니며 `AgentRequest.model_dump()`에 나오지 않는다.
 
 - `HostTool(name, description, input_schema, handler, call_handler=None)`, `HostToolResult(text, is_error=False)`,
   `HostToolHandler = Callable[[dict], Awaitable[HostToolResult]]`,
-  `HostToolCallHandler = Callable[[dict, str | None], Awaitable[HostToolResult]]`(호출 id까지 받는 핸들러, 5.5R.7)
+  `HostToolCallHandler = Callable[[dict, str | None], Awaitable[HostToolResult]]`(호출 id까지 받는 핸들러)
 - 백엔드 공용: `await call_host_tool(tool, args, cancel=, tool_use_id=None)`(예외 → 오류 결과(형식 이름만), 실행 취소 →
   핸들러 취소 후 오류 결과, 바깥 취소는 그대로 전파. 도구에 `call_handler`가 있으면 그것을 백엔드가 아는 호출 id와 함께
   부른다), `duplicate_host_tool_names(tools)`, `object_input_schema(schema)`
-- 위임 도구 호출 id(design §5.5R.1 C7): `invoke_node(tool_use_id=)`로 넘기면 대상 NodeRun의 `node.*` payload
+- 위임 도구 호출 id: `invoke_node(tool_use_id=)`로 넘기면 대상 NodeRun의 `node.*` payload
   `tool_use_id`에 실려, 위임자의 도구 호출 이벤트와 대상 실행이 명시 id로 이어진다(모르면 null).
 
 ```python
@@ -155,7 +155,7 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-### 세션 기록 보관·복원 (X38, 5.7R.33y3, design §PI.4.6.4)
+### 세션 기록 보관·복원
 
 백엔드의 선택 메서드 `session_archive()`가 `SessionArchive`(`files`·`status`·`restore`)를 주면, 조립(연동 모듈)이 대화
 노드 세션 원본을 프로젝트 폴더에 보관하고 다른 앱에서 복원해 이어 간다. 상태 값은 계약 `KnownSessionStates`
@@ -190,7 +190,7 @@ HostToolResult(text='맡김: 검토', is_error=False)
 - 취소: `CancelToken`이 실행 중 노드에 전파(`on_cancel` 콜백) → `cancel_grace`초 뒤 남은 태스크 asyncio 취소 → 실행 중·대기열 노드 `cancelled`, 미도달 노드 `skipped`, Run `cancelled`.
 - 모든 기록은 Run별 한 줄로 직렬화되어 워커 스레드에서 실행되고, 연속 이벤트는 `append_many`로 묶어 **저장한 뒤 발행**한다.
 
-## 반복 — 사이클 연결 (design §5R.4)
+## 반복 — 사이클 연결
 
 엔진은 연결 이름을 모르고 연결 종류 디스크립터 `cycle`(사이클 연결)만 본다. 검증은 `validate_graph(cycle_edge=descriptor_cycle_edge)`:
 흐름 사이클마다 사이클 연결이 하나 이상 있어야 한다(없으면 `cycle`).
@@ -228,7 +228,7 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 호출 NodeRun — `ctx.invoke_node` (design §5R.6)
+## 호출 NodeRun — `ctx.invoke_node`
 
 위임 방식(X12, 예: 독립 위임 `host`)이 `invocation` 연결의 대상을 **자기 NodeRun**으로 실행할 때 쓴다.
 대상 노드 타입의 `execute`가 스케줄되는 노드와 같은 길(상호작용·이벤트·기록·취소)로 돈다. 엔진은 연결·방식 이름을 모른다.
@@ -264,7 +264,7 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 자식 Run — `ctx.run_child` (design §5R.7)
+## 자식 Run — `ctx.run_child`
 
 노드(예: 중첩 팀 노드)가 다른 그래프를 **자식 Run**으로 실행하고 결과를 기다린다. 엔진은 노드·팀 이름을 모른다.
 
@@ -306,7 +306,7 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 실행 중 상호작용 (live wait, design §R14.5)
+## 실행 중 상호작용 (live wait)
 
 ```python
 outcome = await ctx.request_input(
@@ -337,7 +337,7 @@ runtime.pending(run_id=None)  # 대기 목록(비밀 가린 저장본)
   노드가 대기 중에 끝남 → `cancelled(node_finished)`, 재시작 → `recover_unfinished_runs`가 `expired(interrupted)`.
 - 비밀: 저장·이벤트·`respond`/`pending`의 반환값은 가린 사본, 요청자(`InteractionOutcome.response`)는 원문.
 
-## 끊긴 실행 이어 가기 (design §2R.10)
+## 끊긴 실행 이어 가기
 
 - `GraphRuntime.start(graph, input, seed={노드: 입력}, resumed_from=원래_run_id, origin="resume")`:
   입구 주입 없이 seed 노드를 그 입력으로 시작한다. seed 노드의 상류(흐름 엣지를 거슬러 닿는 노드)는
@@ -348,7 +348,7 @@ runtime.pending(run_id=None)  # 대기 목록(비밀 가린 저장본)
   `rerunnable`), `resume_issues(options, node_ids)`, `resume_seed(node_runs, node_ids)`, `interrupted_status`.
 - `ResumeService(runs, events, graph_of=, node_types=, starter=)`: `options(run_id)`, `await resume(run_id,
   node_ids)`. 끊긴 Run이 아님·자식 Run(`root_run_id`가 있음 — 루트를 이어 가면 부른 노드가 자식을 새로
-  만든다, design §5R.11)·이미 이어 감(`runs.list(resumed_from=)`)·당시 팀 구성 없음은
+  만든다)·이미 이어 감(`runs.list(resumed_from=)`)·당시 팀 구성 없음은
   `RunNotResumableError`(409 `run_not_resumable`), 고를 수 없는 노드는 `GraphValidationError`(노드별 이슈).
   새 Run을 어떻게 시작할지(대화 턴인지 등)는 주입한 `starter`가 정한다.
 - 한계: 저장된 입력은 `NodeRun.inputs`(포트마다 첫 값)라 엣지별 값(`ctx.incoming`)은 비어 있다.
@@ -360,7 +360,7 @@ runtime.pending(run_id=None)  # 대기 목록(비밀 가린 저장본)
   (`RunJournal.save`/`event`)에서 해석한 값을 `[REDACTED]`로 가린 사본으로 저장·발행된다.
   `wait()`가 돌려주는 최종 Run도 가린 사본이다.
 - `SecretResolver(providers, *, min_redact_chars=4, extra_redact=None)`: `extra_redact(text) -> text`를 주면 해석한
-  비밀을 가린 뒤 모든 문자열에 한 번 더 건다(해석하지 않은 평문 토큰 가림, 2R.4). 엔진은 의심 규칙을 모른다 —
+  비밀을 가린 뒤 모든 문자열에 한 번 더 건다(해석하지 않은 평문 토큰 가림). 엔진은 의심 규칙을 모른다 —
   서버가 `ac-secret-rules`의 `redact_suspected`를 넣고, 워크스페이스 설정 `secrets.redact_suspected_in_logs`로 끈다.
 - `min_redact_chars`(기본 4)보다 짧은 비밀 값은 정상 텍스트를 훼손하므로 가리지 않는다. 대신 해석 시 그 **이름**으로
   경고 로그를 한 번 남긴다(값은 남기지 않는다).
@@ -388,7 +388,7 @@ runtime.pending(run_id=None)  # 대기 목록(비밀 가린 저장본)
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-runtime`.
 

@@ -157,8 +157,9 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
 준비자가 없으면(`link-runs-teams` 꺼짐) 엔진 검증만으로 실행하고 `GET /server-info`에 `team.rules_unavailable` 경고가 나온다.
 노드 서비스(`runs.services`, `link-runs-teams`): `AGENT_LOOKUP`, `WORKSPACE_SETTINGS`, `WORKING_DIRECTORY`,
 `RESOURCE_LOOKUP`(`resources.lookup` 포트), `RUN_FILES_ROOT = <workspace>/.state/runs`, `DEFAULT_BACKEND`.
-`plugins.modules`는 플러그인 로더 뒤에 같은 묶음으로 로드해(`load_host_plugins`) 각 레지스트리 검사기와 `plugins.enabled`를
-거친다(꺼진 key는 `disabled`).
+`plugins.modules`는 플러그인 로더 뒤에 같은 묶음으로 로드해(`load_host_plugins`) 각 레지스트리 검사기와 `plugins.enabled`·`plugins.disabled`를
+거친다(꺼진 key는 `disabled`). 뺀 항목의 보고에는 이유(`LoadReport.reason`)가 붙고, `plugins.disabled`에 있지만 어느 보고에도
+없는 이름은 `GET /server-info` `warnings`에 `plugins.config` 경고로 나온다.
 
 ## REST (`/api/v1`)
 
@@ -253,6 +254,7 @@ database: null                 # 기본 <workspace>/.state/console.sqlite3
 log_level: info
 plugins:
   enabled: null                # entry point 이름 목록(모든 그룹 공통). null = 설치된 것 전부
+  disabled: []                 # 뺄 이름(모든 그룹 공통, enabled보다 우선). 모르는 이름은 server-info 경고
   modules: []                  # 설치 안 한 플러그인 `pkg.mod:attr`(register(registries))
 security:
   token: null                  # 비우면 시작마다 무작위
@@ -284,7 +286,7 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
       source_timeout_seconds: 10
     mod-imports:
       home: null               # ~/.claude의 부모. 비우면 환경변수 HOME·USERPROFILE
-      project_dir: null        # 프로젝트 .claude/·.mcp.json 위치. 비우면 설정 파일 폴더(작업 폴더를 따라가지 않는다)
+      project_dir: null        # 프로젝트 `.claude/`·`.mcp.json` 위치. 비우면 설정 파일 폴더(작업 폴더를 따라가지 않는다)
       options: {}              # 출처 공장 이름 → 옵션(예: claude: {mapping: {...}})
     mod-exports:
       roots: []                # 폴더 쓰기 허용 루트 [{id, label, path}]. 비우면 보관 파일(zip)만
@@ -323,7 +325,7 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
 오류다(호스트 설정은 `extra="forbid"`).
 워크스페이스 `settings.yaml`에 남은 `console`·`default_entry`는 사용자 데이터라 모르는 키로 그대로 보존한다(오류 없음).
 
-환경변수(`AGENT_CONSOLE_` 접두어, 빈 값은 무시): `CONFIG`, `HOST`, `PORT`, `WORKSPACE`, `DATABASE`, `WORKING_DIRECTORY`, `LOG_LEVEL`, `TOKEN`, `WEB_DIR`, `MAX_CONCURRENCY`, `SECRET_ENV_PREFIX`, 불리언(1/true/yes/on) `ALLOW_REMOTE`·`SERVE_STATIC`·`OPEN`, 쉼표 목록 `PLUGINS_ENABLED`, `PLUGIN_MODULES`, `ALLOWED_HOSTS`, `ALLOWED_ORIGINS`(`WORKING_DIRECTORY`·`MAX_CONCURRENCY`는
+환경변수(`AGENT_CONSOLE_` 접두어, 빈 값은 무시): `CONFIG`, `HOST`, `PORT`, `WORKSPACE`, `DATABASE`, `WORKING_DIRECTORY`, `LOG_LEVEL`, `TOKEN`, `WEB_DIR`, `MAX_CONCURRENCY`, `SECRET_ENV_PREFIX`, 불리언(1/true/yes/on) `ALLOW_REMOTE`·`SERVE_STATIC`·`OPEN`, 쉼표 목록 `PLUGINS_ENABLED`, `PLUGINS_DISABLED`, `PLUGIN_MODULES`, `ALLOWED_HOSTS`, `ALLOWED_ORIGINS`(`WORKING_DIRECTORY`·`MAX_CONCURRENCY`는
 그것을 선언한 모듈의 `modules.options.<id>`로 들어간다 — 모듈의 `settings_compat` 선언).
 
 ## 단일 실행: 서버 하나로 API·WS·웹

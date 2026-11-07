@@ -62,10 +62,10 @@ props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonl
 - `onChange`는 **이 층의 값만** 돌려준다(상속 값 미포함). 지우면 문자열은 `""`, 그 외는 `null`로 남고 키는 유지된다.
 - 상태: `set`(편집 가능 + ↺), `inherited`(읽기 전용 스타일 + 덮어쓰기), `default`(읽기 전용 + 지정). 읽기 전용은 행의 `<fieldset disabled>`로 구현한다.
 - `Alt+Enter`: 포커스된 필드의 덮어쓰기/되돌리기 토글. 덮어쓰기 후 편집 가능해지면 입력으로 포커스가 이동한다.
-- `ui:widget: "checkboxes"`로 그린 enum 배열(`items.enum`)도 `x-ui.enum_labels`(배열 또는 `items` 쪽)를 라벨로 쓴다. 웹 리소스 폼은 5.7R.19부터 enum 배열 전체를 이 위젯으로 그린다.
+- `ui:widget: "checkboxes"`로 그린 enum 배열(`items.enum`)도 `x-ui.enum_labels`(배열 또는 `items` 쪽)를 라벨로 쓴다. 웹 리소스 폼은 enum 배열 전체를 이 위젯으로 그린다.
 - 배열은 통째로 하나의 값(교체 병합)이라 배지 하나이고 원소 출처(`/tags/0`)는 모아서 본다.
 
-## 스키마 `x-ui` 렌더 (5.2R.18)
+## 스키마 `x-ui` 렌더
 스키마의 `x-ui`(`tier`·`when`·`example`·`group`·`group_title`·`order`·`unit`·`enum_labels`(enum 값 → 화면 라벨))를 읽어 그린다. 필드 이름·종류 id는 코드에 없다.
 - 기본 필드 위, 고급 필드는 "고급 설정 (N)" 접힘 영역(펼침은 `advancedStorageKey`로 기억, 오류·`focusPath`가 있으면 자동 펼침, "지정 N" 칩).
 - 필드마다 필수 칩, 설명 한 줄, 단위 접미사, 예시(빈 칸일 때 클릭하면 채움), 기본값, "바꾸는 때"(고급은 항상, 기본은 i 버튼). `readOnly: true`는 텍스트 + 복사 버튼.
@@ -73,7 +73,7 @@ props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonl
 - `xui={false}`면 기존 rjsf 모양. 출처 표시와 함께 `compactProvenance`를 켜면 지정된 필드만 배지와 되돌리기 아이콘을 보이고, 나머지는 바로 편집(건드리면 이 층에 지정)한다.
 - 순수 함수 `readXUi`·`resolveTier`·`splitByTier`는 `src/xui.ts`(공개 export는 아님).
 
-## 폐기 예정 필드 (`deprecated: true`, 2R.8)
+## 폐기 예정 필드 (`deprecated: true`)
 - 스키마 속성에 `deprecated: true`가 있으면 **필드 이름을 모른 채** 일반 규칙으로 처리한다(`$defs` 참조 안쪽 포함, 배열 항목 안은 제외).
 - 값이 없으면 폼에서 뺀다(스키마와 `required`에서 제거, "숨김 N개" 안내도 두지 않는다). 값이 있으면 그리되 라벨에 `messages.deprecatedChip`, 설명에 `messages.deprecatedNote`를 붙인다. 값은 그대로 편집·삭제할 수 있다.
 

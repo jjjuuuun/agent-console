@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import build_notes, notes_tool
 from extdocs import SKIP_MESSAGE, main
 from extdocs_common import TOOL_DIR, Finding, SymbolResolver, collect, member_src_paths
-from extdocs_docs import check_links, public_lint, run_docs_checks
+from extdocs_docs import allowed_rules, check_links, expand_globs, public_lint, run_docs_checks
 from extdocs_generate import Generator, write_plan
 from extdocs_points import check_points
 from extdocs_testkit import Repo, tool_data
@@ -150,8 +151,18 @@ def test_broken_anchor_and_link_fail(documented: Repo) -> None:
     [
         ("자세한 내용은 [설계](../../specs/x/design.md)를 본다.", "public-internal-doc-link"),
         ("docs/design/ux.md 참고", "public-internal-doc-link"),
+        ("`../../specs/` 아래를 본다", "public-internal-doc-link"),
+        ("specs/agent-console/tasks.md 참고", "public-internal-doc-link"),
         ("규칙은 CLAUDE.md에 있다", "public-internal-config"),
         ("설정은 .claude/agents에 둔다", "public-internal-config"),
+        ("[규칙](../../CLAUDE.md)을 따른다", "public-internal-config"),
+        ("이 저장소의 `CLAUDE.md`를 따른다", "public-internal-config"),
+        ('# 환경 메모(CLAUDE.md "고정·환경 메모")', "public-internal-config"),
+        ("확장 지점 X14를 더한다", "public-design-id"),
+        ("포트 모양(X25): 문서", "public-design-id"),
+        ("요구사항 R8.6 참고", "public-design-id"),
+        ("결정 K33-19에 따라", "public-design-id"),
+        ("(R0·R10.4)", "public-design-id"),
         ("design §8R.2 참고", "public-design-section"),
         ("작업 5.2R.104에서 바뀌었다", "public-task-number"),
         ("작업 8R.4a에서 채운다", "public-task-number"),
@@ -175,6 +186,100 @@ def test_public_lint_clean_text(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert public_lint(tmp_path, [path], tool_data().lint_rules, warning=False) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # 제품이 읽고 쓰는 Claude Code 파일(파일 이름이 데이터)
+        "CLI 세션 `~/.claude/projects`(읽기 전용)",
+        "프로젝트 `.claude/` 설정을 가져온다",
+        "`CLAUDE.md`에 이어 붙인다",
+        ">>> plan.paths  # ['.claude/agents/pl.md']",
+        '"command": "./.claude/hooks/check.sh --strict"',
+        "path_exists=lambda p: p == '/srv/me/.claude/.credentials.json'",
+        "| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json` |",
+        "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1",
+        # API 경로·제품이 만드는 폴더
+        "`GET /sdd/specs/{id}`",
+        "demo specs/demo",
+        # 요구사항 id 모양의 예제 데이터(코드 안)
+        "`test_R1_login` → `R1`, `R10`·`R1.2` 안의 `R1`은 아님",
+        "k8s·X-ray·R2D2·0X1F",
+    ],
+)
+def test_public_lint_product_terms_pass(tmp_path: Path, line: str) -> None:
+    path = tmp_path / "doc.md"
+    path.write_text(f"# 제목\n\n{line}\n", encoding="utf-8")
+    assert public_lint(tmp_path, [path], tool_data().lint_rules, warning=False) == []
+
+
+def test_design_id_ignores_code_fences(tmp_path: Path) -> None:
+    path = tmp_path / "doc.md"
+    path.write_text(
+        '# 제목\n\n```python\nresult = ["R1", "X2"]\n```\n\n요구사항 R1을 본다.\n',
+        encoding="utf-8",
+    )
+    found = public_lint(tmp_path, [path], tool_data().lint_rules, warning=False)
+    assert [(f.code, f.where) for f in found] == [("public-design-id", "doc.md:7")]
+
+
+def test_allow_marker_skips_named_rule_on_that_line(tmp_path: Path) -> None:
+    path = tmp_path / "doc.md"
+    path.write_text(
+        "# 제목\n\n"
+        "내보내기는 CLAUDE.md를 쓴다. <!-- extdocs:allow internal-config -->\n"
+        "규칙은 CLAUDE.md에 있다. <!-- extdocs:allow design-id -->\n"
+        "작업 5.2R.3과 CLAUDE.md <!-- extdocs:allow internal-config, task-number -->\n",
+        encoding="utf-8",
+    )
+    found = public_lint(tmp_path, [path], tool_data().lint_rules, warning=False)
+    assert [(f.code, f.where) for f in found] == [("public-internal-config", "doc.md:4")]
+    assert allowed_rules("x <!-- extdocs:allow a b,c -->") == {"a", "b", "c"}
+
+
+def test_expand_globs_prunes_skipped_and_hidden_dirs(tmp_path: Path) -> None:
+    for rel in [
+        "packages/a/README.md",
+        "packages/a/node_modules/dep/README.md",
+        "packages/a/.venv/lib/README.md",
+        "packages/b/c/README.md",
+        "packages/b/c/notes.md",
+        "README.md",
+    ]:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text("x\n", encoding="utf-8")
+    found = expand_globs(tmp_path, ["packages/**/README.md", "README.md", "missing.md"])
+    assert [p.relative_to(tmp_path).as_posix() for p in found] == [
+        "README.md",
+        "packages/a/README.md",
+        "packages/b/c/README.md",
+    ]
+    assert expand_globs(tmp_path, ["packages/*/README.md"]) == [tmp_path / "packages/a/README.md"]
+
+
+DATA_POINT = """
+[tool.agent-console.extension-points.note-defaults]
+title = "노트 기본값"
+area = "memory"
+summary = "노트 기본값을 데이터로 바꾼다"
+registration = {{ kind = "data", path = "data/notes.json" }}
+example = {{ kind = "snippet", note = "사용자 설정 notes 데이터" }}
+guide = "memory.md#note-defaults"
+"""
+
+
+def test_generated_sentences_skip_empty_values(tmp_path: Path) -> None:
+    repo = Repo(tmp_path)
+    build_notes(repo, tool=notes_tool(repo) + DATA_POINT.format())
+    (repo.root / "docs/extending").mkdir(parents=True)
+    page = generate(repo, scaffold=True)["docs/extending/memory.md"]
+    section = page.split("extdocs:facts note-defaults")[1]
+    assert "- 등록: 패키지 데이터 `data/notes.json`를 쓴다." in section
+    assert "  - snippet: 사용자 설정 notes 데이터\n" in section
+    assert "끄는 키: ." not in page
+    assert "— —" not in page
+    assert "- 끄기·제거: 데이터를 지우면 그 항목만 빠진다." in section
 
 
 def test_public_lint_in_example_readme_fails(documented: Repo) -> None:

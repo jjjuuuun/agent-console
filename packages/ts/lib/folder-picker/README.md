@@ -17,14 +17,14 @@ peer: `react`·`react-dom` 19. 의존: `@tanstack/react-virtual`(찾아보기 �
 ```ts readme
 import { deriveCheckState, middleEllipsis } from "@agent-console/folder-picker";
 
-const short = middleEllipsis("/home/me/work/payments/services/api", 27);
+const short = middleEllipsis("/data/work/payments/services/api", 27);
 const state = deriveCheckState("/srv/app", {
   kind: "checked",
   check: { input: "/srv/app", path: "/srv/app", exists: true, is_dir: true, readable: true, writable: true, can_create: false },
 });
 ```
 
-`short`는 `"/home/me/work…/services/api"`, `state.id`는 `"ok"`(제출 가능)다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
+`short`는 `"/data/work…/services/api"`, `state.id`는 `"ok"`(제출 가능)다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
 
 화면은 컨테이너 하나로 쓴다.
 

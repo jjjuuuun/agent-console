@@ -2,6 +2,11 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.2]
+- 계약 0.14.2(7R.19·7R.20·7R.21 서버 후속). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `wiki` 1.2.0, `common` 1.12.0.
+- 새 선택 필드: `WikiInfo.rules_kind?: string | null`, `WikiRuleEntry.applies_to?`·`path?`·`title?`, `WikiLintReport.partial?`·`skipped?`·`enabled_checks?`, `WikiGraphNode.scheme_target?: LabelDisplayTarget | null`.
+- 새 상수: `KNOWN_ISSUE_CODES.WIKI_LINT_FAILED`(`wiki.lint_failed`), `KNOWN_WIKI_LINT_CHECKS`(생성 이름은 생성기를 따른다).
+
 ## [0.14.1]
 - 계약 0.14.1(7R.13·7R.17 계약 후속). 더하기와 기본값 변경. 사내 의존 범위는 `^0.14.0` 그대로. `wiki` 1.1.0, `common` 1.11.0.
 - **기본값 변경(보안 강화)**: 스키마 `WikiSettings.secret_scan` 기본값에 `system: "reject"`를 더했다(`{user: warn, agent: reject, system: reject}`). 웹 설정 폼의 기본 표시가 바뀐다.

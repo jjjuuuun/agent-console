@@ -3,7 +3,7 @@
 스펙(SDD) 표현 컴포넌트 모음: 스펙 목록, 문서 목록, 문서 편집기(편집 + 마크다운 미리보기), 작업 표(가상 목록·단계 묶음·상태 메뉴),
 계획 그래프(읽기 전용)·묶음 글, 요구-작업 추적 표, 관문 안내와 순수 함수.
 데이터와 콜백은 전부 props이고 API·저장소·`api-client`를 모른다. 상태·문서 종류·단계·톤 이름은 코드에 없고 서버가 준 데이터(`label`·`tone`)다.
-사내 의존은 `@agent-console/contracts`(타입만)와 `@agent-console/markdown-doc`뿐이다(문서 편집기·칩·출처 배지는 거기로 옮겼고 이 패키지가 같은 이름으로 다시 내보낸다, 7R.6). react 19는 peer다.
+사내 의존은 `@agent-console/contracts`(타입만)와 `@agent-console/markdown-doc`뿐이다(문서 편집기·칩·출처 배지는 거기로 옮겼고 이 패키지가 같은 이름으로 다시 내보낸다). react 19는 peer다.
 
 ## 최소 사용
 이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).

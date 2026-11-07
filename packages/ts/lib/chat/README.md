@@ -37,7 +37,7 @@ import "@agent-console/chat/styles.css";
 - 결정 버튼 모양: `ui_hints{color, icon, dashed}`. `color`는 `tokens.md` 5.5 토큰 이름만(`DECISION_COLOR_TOKENS`), 그 외는 무시.
 - `now`는 **epoch 초**(계약의 `created_at` 단위)로 주입한다.
 
-## 진행 줄 중첩 표시 (5R.16)
+## 진행 줄 중첩 표시
 `ProgressStep`의 선택 필드(전부 앱이 이벤트에서 만든 데이터이며 컴포넌트는 종류를 모른다): `indent`(0 이상 정수, 화면 최대 4단계 × `--ac-progress-indent`), `badge`("별도 세션" 등), `iterationLabel`/`callLabel`("2회차"/"호출 2"), `tone: "warning"`(글자 `▲` + 테두리), `hint`(툴팁), `child: {runId, href, nodeLabel, progress?}`, `children`.
 - `children`이 있는 칩은 칩 본문(`Enter`/`Space`, `aria-expanded`)으로 접고 편다. 기본 접힘, 접힌 칩은 `노드 2/5`(`child.progress`가 있을 때만)와 `현재: …`(실행 중인 후손)를 보인다. 자식 실행 링크는 행 끝의 `external-link` 아이콘 별도 링크(`child.href`, `onOpenChild`)다.
 - 제어: `expandedStepKeys` + `onStepToggle(key, expanded)`. 생략하면 내부 상태로 사용자의 선택을 유지한다.

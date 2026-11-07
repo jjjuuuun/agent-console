@@ -371,6 +371,14 @@ class KnownWikiLintCodes:
     DUPLICATE_TITLE: Final = "duplicate_title"
 
 
+class KnownWikiLintChecks:
+    """`WikiLintReport.enabled_checks`의 기본 점검 밖 이름(1.2.0). 기본 점검 이름은
+    `KnownWikiLintCodes`."""
+
+    LINT_RULES: Final = "lint_rules"
+    WRITE_RULES: Final = "write_rules"
+
+
 class KnownWikiFrontMatterRoles:
     """머리말 역할(문법 `front_matter.roles` 키) — 코드 개념 셋.
 
@@ -441,6 +449,7 @@ __all__ = [
     "KnownWikiImportStatuses",
     "KnownWikiLinkKinds",
     "KnownWikiLinkStatuses",
+    "KnownWikiLintChecks",
     "KnownWikiLintCodes",
     "KnownWikiResolvers",
     "KnownWikiRuleEntryKinds",

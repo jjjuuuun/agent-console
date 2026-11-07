@@ -138,9 +138,15 @@ class ReadmeSection:
 
 @dataclass(frozen=True)
 class LintRule:
+    """공개 가능 린트 규칙 하나(``public_lint.yaml``).
+
+    ``prose_only``이면 코드 펜스와 인라인 코드(백틱) 안은 보지 않는다(예제 데이터가 같은 모양일 때).
+    """
+
     id: str
     message: str
     pattern: re.Pattern[str]
+    prose_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -159,7 +165,7 @@ class ToolData:
     areas: tuple[Area, ...]
     readme_sections: tuple[ReadmeSection, ...]
     lint_rules: tuple[LintRule, ...]
-    registration_templates: Mapping[str, Mapping[str, str]]
+    registration_templates: Mapping[str, Mapping[str, str | list[str]]]
     text: Mapping[str, Any]
 
     def s(self, key: str) -> Any:
@@ -211,7 +217,12 @@ def load_data(tool_dir: Path = TOOL_DIR, config: Path | None = None) -> ToolData
             for s in sections_raw
         )
         rules = tuple(
-            LintRule(str(r["id"]), str(r["message"]), re.compile(str(r["pattern"])))
+            LintRule(
+                str(r["id"]),
+                str(r["message"]),
+                re.compile(str(r["pattern"])),
+                prose_only=bool(r.get("prose_only", False)),
+            )
             for r in lint_raw
         )
     except (KeyError, TypeError, re.error) as exc:

@@ -1,6 +1,6 @@
 # agent-console-wiki
 
-Agent Console 위키 핵심 라이브러리(design §7R). 서버·실행·프로젝트를 모르고, **페이지 원문(마크다운 파일)**과
+Agent Console 위키 핵심 라이브러리. 서버·실행·프로젝트를 모르고, **페이지 원문(마크다운 파일)**과
 계약 모델(`agent_console_contracts.wiki`), 주입한 페이지 파일 접근(`WikiPages`)만 다룬다.
 
 - **링크 문법은 데이터다.** 패키지 기본(`data/default_syntax.yaml` — `[[대상|라벨]]` 패턴, 상대 경로 마크다운
@@ -28,7 +28,7 @@ Agent Console 위키 핵심 라이브러리(design §7R). 서버·실행·프로
 
 - **markdown-it-py**(MIT, 활발, 이미 `ac-sdd`가 씀): CommonMark 블록 파서(코드 블록·HTML 블록·문단 경계·제목).
   인라인 파싱은 끈다 — 인라인 토큰은 원문 위치를 주지 않고, 켜면 페이지 2,000개(20MB)에 약 10초가 걸려
-  design §7R.14의 2초를 넘는다. 인라인 영역 안의 코드 조각·자동 링크·인라인 링크는 CommonMark 규칙 중 링크
+  목표인 2초를 넘는다. 인라인 영역 안의 코드 조각·자동 링크·인라인 링크는 CommonMark 규칙 중 링크
   위치에 필요한 것만 원문에서 읽는다(참조 링크 `[글][이름]`은 읽지 않는다). 대안: mistune(원문 위치 약함),
   정규식만(코드 블록 오판), `mdit-py-plugins` 위키 링크 플러그인(패턴이 고정 — R0 위반).
 - **ruamel.yaml**: 패키지 기본 문법 데이터와 페이지 머리말(safe 로드). 흔한 머리말(`키: 값`, `키: [값, 값]`)은
@@ -135,7 +135,7 @@ FTS5). 색인 파일 위치는 호출자가 준다(이 패키지는 고정하지
 
 시험: `WikiSearchContractTests`(`make_index`만 채우면 자기 색인을 같은 의미로 시험), `make_search_document`.
 
-## 저장소·규칙·점검·기록 (7R.8)
+## 저장소·규칙·점검·기록
 
 - **규칙 합치기** `merge_rules(위키의 rules, 문서들)`: 지침 본문은 순서대로 이어 붙이고(규칙 이름 머리 줄 틀 =
   패키지 데이터 `data/rules_text.yaml`), 쓰기·점검 규칙·페이지 틀은 이어 붙인다(같은 id는 앞의 것 +
@@ -185,7 +185,7 @@ no-temp [2]
 
 ```
 
-## SQLite 기록 저장소 (7R.11)
+## SQLite 기록 저장소
 
 `agent_console_wiki.sqlite.SqliteWikiHistory(path)`는 `WikiHistory`의 SQLite 구현이다(SQLAlchemy Core, 같은
 계약 묶음 통과). 표는 `wiki_page_versions`(버전 한 줄 — 본문 없음)와 `wiki_blobs`(해시마다 본문 한 행)이고,
@@ -206,7 +206,7 @@ no-temp [2]
 
 ```
 
-## 에이전트 도구 묶음 (7R.10)
+## 에이전트 도구 묶음
 
 `WikiToolkit(wikis, access=, author=, text=, on_event=, write_budget=)`은 런타임을 모르는 도구 묶음이다(메모리
 `MemoryToolkit`과 같은 모양). `specs()`가 접근 설정이 허용한 동작의 도구만 낸다.

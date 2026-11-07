@@ -1,12 +1,12 @@
 # agent-console-mod-sdd
 
-Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`, design §6R.3·§6R.7). `ac-sdd`(작업 문법·파싱·계획·추적·
+Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`). `ac-sdd`(작업 문법·파싱·계획·추적·
 스펙 저장소)를 서버에 붙인다. 실행·프로젝트를 모르고, 둘 다 연동 모듈이 포트로 붙인다.
 
 - REST `/sdd/*`(스펙 목록·만들기·보기·저장·삭제, 문서 본문·상태, 작업·고치기, 계획·추적·입력 변수·
   유효 문법, 작업 연동 동작·한꺼번에 시작·자동 진행, 틀로 저장, 폴더에서 가져오기·내보내기, 화면 정보
   `GET /sdd/info`). 모든 경로가 `?project=<공간 이름>`을 받는다.
-- 문서 틀 하나(6R.20a, `template_routes`): `POST /sdd/templates`(빈 틀), `GET·PUT·DELETE /sdd/templates/{id}`
+- 문서 틀 하나(`template_routes`): `POST /sdd/templates`(빈 틀), `GET·PUT·DELETE /sdd/templates/{id}`
   (`ETag`·`If-Match` = 정의 버전), 뼈대 파일 `…/files[/{path}]`, 버전 `…/versions…`·`…/restore`. 저장소는 틀
   목록과 같다(라이브러리 → 없으면 단독 루트, `?project=` = 그 공간). `variables`·`check`는 틀 id로 쓸 수 없다.
 - `GET /sdd/import/files?path=`: 그 폴더의 마크다운 파일과 바로 아래 하위 폴더(`dirs`, 숨김·링크·예약 제외).
@@ -23,7 +23,7 @@ Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`, design §6R.3·§6R.7). `ac-s
 - 확장 지점: 작업 연동 X43(`sdd.integrations`, 여러 제공자), 검증 결과 출처 X42
   (`sdd.verification_sources` 포트 + entry point `agent_console.sdd_verification_sources`, 플러그인
   출처는 사용자 설정으로 켠다). 화면 능력 `SddInfo.capabilities`는 포트 유무로 계산한다.
-- 실행 라벨 표시 규칙(§6R.18 Q10): 설치자 접두(`run_label_prefix`, 기본 `sdd.`)를 붙여
+- 실행 라벨 표시 규칙: 설치자 접두(`run_label_prefix`, 기본 `sdd.`)를 붙여
   `ModuleParts.label_display`로 낸다 → `GET /modules`의 `label_display`.
 - 파싱 캐시(공간·스펙·정의 버전·본문 해시·유효 문법 키, LRU)와 문서 본문 비밀 검사(`secret_scan`:
   off·warn·reject).

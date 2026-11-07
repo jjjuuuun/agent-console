@@ -2,7 +2,7 @@
 
 Agent Console SDD(스펙 기반 개발) 핵심 라이브러리. 서버·실행·프로젝트를 모르고, **마크다운 문서 문자열**과
 계약 모델(`agent_console_contracts.sdd`), 주입한 정의 저장소(`ac-store` `DefinitionStore`)·파일 접근
-(`SpecFiles`)만 다룬다(design §6R.1~§6R.1.6).
+(`SpecFiles`)만 다룬다.
 
 - **작업 문법은 데이터다.** 패키지 기본(`data/default_syntax.yaml`) → 사용자 설정 `sdd.syntax` → 스펙
   `rules.syntax`(+ `rules.task_statuses`) 순서로 덮어쓴다. None은 "상속", 빈 목록은 "이 층에서는 없음".
@@ -21,7 +21,7 @@ Agent Console SDD(스펙 기반 개발) 핵심 라이브러리. 서버·실행·
 
 - **markdown-it-py**(MIT, 활발): CommonMark 블록 파서. 토큰 `map`이 줄 범위를 줘서 원문 줄 고치기가 쉽다.
   인라인 파싱은 꺼서(블록 구조만) 큰 문서에서도 빠르다. 대안: mistune(줄 범위가 약함), 직접 줄 파서(코드 블록·
-  중첩 목록 예외가 많음). design §6R.10의 `mdit-py-plugins`(tasklists)는 쓰지 않는다 — 체크 칸 글자가 데이터
+  중첩 목록 예외가 많음). `mdit-py-plugins`(tasklists)는 쓰지 않는다 — 체크 칸 글자가 데이터
   (`~`·`?` 등)라 표준 tasklist(`[ ]`·`[x]`)만 아는 플러그인으로는 읽을 수 없어 머리 줄 분석이 어차피 필요하다.
 - **ruamel.yaml**: 패키지 기본 문법 데이터 읽기(저장소 전체가 쓰는 YAML 라이브러리).
 - 사내: `agent-console-contracts`(모델), `agent-console-safe-regex`(사용자 정규식),
@@ -165,7 +165,7 @@ pip install agent-console-sdd
 | --- | --- |
 | 작업 키 | 작업 id, 없으면 `@<문서 id>:<그 문서 안 순번>`. 같은 id가 또 나오면 뒤의 것은 위치 키 + `sdd.duplicate_task_id` |
 | 작업 문서·요구 문서 | 문서 `roles`에 `tasks`·`requirements`가 있는 것만 읽는다. 역할 없는 문서는 있는지·해시만 |
-| 범위 `a~b` | 문서 순서상 a부터 b까지 전부(의존·요구 모두). 끝 뒤의 낱말(`6R.11 전부`)은 첫 낱말로 찾는다 |
+| 범위 `a~b` | 문서 순서상 a부터 b까지 전부(의존·요구 모두). 끝 뒤의 낱말(`T11 전부`)은 첫 낱말로 찾는다 |
 | 모르는 의존 | 이슈만 내고 준비(`ready`)를 막지 않는다 |
 | 모르는 요구 | 요구 문서를 읽었을 때만 `sdd.unknown_requirement`(info) |
 | 상한 | `max_tasks`(스펙 전체), `timeout_ms`(문서 하나 — 넘으면 그 문서 작업·요구를 버림) |

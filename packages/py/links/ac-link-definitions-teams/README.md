@@ -1,6 +1,6 @@
 # agent-console-link-definitions-teams
 
-Agent Console 정의 ↔ 팀 의미 연동 모듈(design §3R.1.4 L9, R2·R13.5). 정의 저장소와 `ac-teams` 계산을 잇는다.
+Agent Console 정의 ↔ 팀 의미 연동 모듈. 정의 저장소와 `ac-teams` 계산을 잇는다.
 
 - 경로: `GET /agents/{id}/usages`·`GET /resources/{id}/usages`(붙은 곳), `GET /agents/{id}/effective-settings`,
   `GET /graphs/{id}/plan`·`POST /graphs/plan`(초안), `GET /graphs/{id}/nodes/{node}/effective-settings`·

@@ -8,6 +8,8 @@ from __future__ import annotations
 import doctest
 import glob
 import json
+import os
+import re
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -24,6 +26,7 @@ from extdocs_common import (
 from extdocs_generate import Generator
 from extdocs_md import (
     FACTS_RE,
+    INLINE_CODE_RE,
     TODO_MARK,
     anchors,
     fences,
@@ -45,13 +48,70 @@ def docs_present(root: Path, data: ToolData) -> bool:
     return (root / data.docs_dir).is_dir()
 
 
-def expand_globs(root: Path, patterns: Iterable[str]) -> list[Path]:
+DEFAULT_SKIP_DIRS = ("node_modules",)
+"""``glob_skip_dirs`` 설정이 없을 때 건너뛰는 폴더 이름."""
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    """``glob`` 패턴(``**``·``*``·``?``·``[...]``)을 ``/``로 나뉜 상대 경로 정규식으로 바꾼다."""
+    out = []
+    i = 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out.append("(?:[^/]+/)*")
+            i += 3
+        elif pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            out.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]")
+            i += 1
+        elif pattern[i] == "[" and "]" in pattern[i + 1 :]:
+            end = pattern.index("]", i + 1)
+            body = pattern[i + 1 : end].replace("\\", "\\\\")
+            out.append(f"[^{body[1:]}]" if body.startswith("!") else f"[{body}]")
+            i = end + 1
+        else:
+            out.append(re.escape(pattern[i]))
+            i += 1
+    return re.compile("".join(out) + r"\Z")
+
+
+def skip_dirs(data: ToolData) -> tuple[str, ...]:
+    """glob이 내려가지 않을 폴더 이름(설정 ``glob_skip_dirs``, 없으면 :data:`DEFAULT_SKIP_DIRS`)."""
+    return tuple(data.settings.get("glob_skip_dirs") or DEFAULT_SKIP_DIRS)
+
+
+def expand_globs(
+    root: Path, patterns: Iterable[str], skip_names: Iterable[str] = DEFAULT_SKIP_DIRS
+) -> list[Path]:
+    """저장소 상대 glob(``**`` 재귀)에 맞는 파일. 숨김 폴더와 ``skip_names`` 이름의 폴더는
+    내려가지 않는다(``node_modules``·가상 환경을 훑지 않아 느린 파일 시스템에서도 빠르다)."""
+    skip = set(skip_names)
     out: set[Path] = set()
     for pattern in patterns:
-        for hit in glob.glob(str(root / pattern), recursive=True):
-            p = Path(hit)
-            if p.is_file() and "node_modules" not in p.parts:
-                out.add(p)
+        parts = pattern.split("/")
+        base_parts: list[str] = []
+        for part in parts[:-1]:
+            if glob.has_magic(part):
+                break
+            base_parts.append(part)
+        base = root.joinpath(*base_parts)
+        if not glob.has_magic(pattern):
+            if (root / pattern).is_file():
+                out.add(root / pattern)
+            continue
+        regex = _glob_regex(pattern)
+        for current, dirs, files in os.walk(base):
+            dirs[:] = sorted(d for d in dirs if d not in skip and not d.startswith("."))
+            here = Path(current)
+            for name in files:
+                path = here / name
+                if regex.match(path.relative_to(root).as_posix()):
+                    out.add(path)
     return sorted(out)
 
 
@@ -224,19 +284,41 @@ def check_links(
 # ---------------------------------------------------------------- 공개 가능 린트
 
 
+ALLOW_RE = re.compile(r"extdocs:allow\s+([A-Za-z0-9_, -]+?)\s*(?:-->|$)")
+"""줄 단위 허용 표시: ``<!-- extdocs:allow internal-config -->``(규칙 id 여럿은 공백·쉼표로)."""
+
+
+def allowed_rules(line: str) -> set[str]:
+    """줄에 붙은 허용 표시가 끄는 규칙 id들."""
+    out: set[str] = set()
+    for m in ALLOW_RE.finditer(line):
+        out.update(part for part in re.split(r"[\s,]+", m.group(1)) if part)
+    return out
+
+
 def public_lint(
     root: Path, files: Sequence[Path], rules: Sequence[LintRule], *, warning: bool
 ) -> list[Finding]:
+    """공개 문서에 내부 참조가 남았는지 줄 단위로 본다.
+
+    규칙은 줄마다 첫 일치 하나만 알린다. 줄에 ``extdocs:allow <id>`` 표시가 있으면 그 규칙을
+    건너뛴다. ``prose_only`` 규칙은 코드 펜스·인라인 코드 밖 글만 본다.
+    """
     out: list[Finding] = []
     for path in files:
-        for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
+        for line in lines(path.read_text(encoding="utf-8")):
+            allow = allowed_rules(line.text)
+            prose = None if line.in_fence else INLINE_CODE_RE.sub(" ", line.text)
             for rule in rules:
-                m = rule.pattern.search(line)
+                if rule.id in allow:
+                    continue
+                target = (prose if rule.prose_only else line.text) or ""
+                m = rule.pattern.search(target)
                 if m:
                     out.append(
                         Finding(
                             f"public-{rule.id}",
-                            f"{_rel(root, path)}:{number}",
+                            f"{_rel(root, path)}:{line.number}",
                             f"{rule.message}: {m.group(0)!r}",
                             warning=warning,
                         )
@@ -352,10 +434,10 @@ def run_docs_checks(
     planned = Generator(col, facts, data, resolver).plan(root)
     findings += check_drift(root, planned)
     findings += check_guides(root, col, data)
-    doc_files = expand_globs(root, data.s("docs_globs") or [])
+    doc_files = expand_globs(root, data.s("docs_globs") or [], skip_dirs(data))
     area_pages = [root / data.docs_dir / a.file for a in data.areas]
     findings += check_links(root, doc_files, pending=area_pages)
-    lint_files = expand_globs(root, data.s("public_lint_globs") or [])
+    lint_files = expand_globs(root, data.s("public_lint_globs") or [], skip_dirs(data))
     findings += public_lint(root, lint_files, data.lint_rules, warning=False)
     findings += run_doctests(root, doc_files, resolver)
     findings += validate_snippets(root, doc_files, resolver)
@@ -365,6 +447,7 @@ def run_docs_checks(
 __all__ = [
     "BLOCKING_CODES",
     "VALIDATE_KEY",
+    "allowed_rules",
     "check_drift",
     "check_guides",
     "check_links",
@@ -373,5 +456,6 @@ __all__ = [
     "public_lint",
     "run_docs_checks",
     "run_doctests",
+    "skip_dirs",
     "validate_snippets",
 ]

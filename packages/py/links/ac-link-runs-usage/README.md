@@ -1,6 +1,6 @@
 # agent-console-link-runs-usage
 
-실행·사용량 연동 모듈(design §3R.1.4 L5·§3R.5). 실행 기록(`runs.reader`·`runs.events`)을 사용량 모듈(`mod-usage`)에 잇는다.
+실행·사용량 연동 모듈. 실행 기록(`runs.reader`·`runs.events`)을 사용량 모듈(`mod-usage`)에 잇는다.
 
 - `usage.event_query`: 실행 이벤트 조회(사용량 출처 맥락 — 예: `run-events` 출처의 `usage.rate_limit`).
 - `usage.token_rollups`: 플랫폼 실행분 토큰 집계(`IncrementalTokenRollups`). Run마다 마지막으로 반영한 이벤트 seq(워터마크) 뒤만 읽고, 끝난 Run은 새 이벤트(`runs.event` 구독)가 생기기 전까지 다시 읽지 않는다. 메모리 캐시라 재시작하면 다시 계산한다. 기록이 줄어드는 작업(보존 정리) 뒤에는 `invalidate()`. 루트 Run만 센다(`ac-usage.counts_toward_usage`) — 중첩 팀의 자식 Run 사용량은 부른 부모 노드의 `usage`로 이미 루트에 들어 있다(이중 집계 방지).

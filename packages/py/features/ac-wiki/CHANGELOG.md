@@ -32,3 +32,6 @@
   도구(`MemoryWikiPages`·`WikiPagesContractTests`).
 - 계약 0.14.1 후속(코드 변화 없음): `WikiSecretPolicy()` 기본 방식은 계약 `WikiSettings` 기본값을 읽으므로 이제
   `system`도 `reject`다(보안 강화). 위키 고치기 노드처럼 앱이 대신 쓰는 본문의 비밀 의심 값을 거부한다.
+- 계약 0.14.2 후속: 합친 규칙 항목에 `applies_to`·`path`·`title`, `lint()`가 페이지 하나의 실패를 건너뛰고
+  (`partial`·`skipped`·이슈 `wiki.lint_failed`) 켜진 점검 이름(`enabled_checks`)을 낸다, 그래프 스킴 칸에
+  `scheme_target`.

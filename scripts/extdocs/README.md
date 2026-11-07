@@ -98,15 +98,38 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 - `>>>`가 든 코드 펜스는 파일마다 같은 이름 공간으로 doctest한다(ELLIPSIS·NORMALIZE_WHITESPACE).
 - 데이터 조각은 펜스 정보 문자열로 모델을 지정한다: ` ```yaml extdocs:validate=agent_console_contracts.wiki:WikiRulesDefinition `. yaml·json·toml을 읽어 그 Pydantic 모델로 검증하고, 모르는 키를 보존하는 모델이면 남은 키(`model_extra`)도 실패로 본다.
 
+## 공개 가능 린트
+
+규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다.
+
+| 규칙 | 잡는 것 | 잡지 않는 것 |
+| --- | --- | --- |
+| `internal-doc-link` | 링크 대상 안의 `specs/`·`docs/design/`, `./`·`../` 상대 경로로 이어지는 것, 맨 앞에서 시작하는 `specs/<...>.md`·`docs/design/` | 앞에 경로 조각이 붙은 API 경로(`GET /sdd/specs/{id}`), `.md`가 아닌 제품 폴더(`specs/demo`) |
+| `internal-config` | 아래 "제품 파일과 개발 설정" | 같은 표 |
+| `design-section` | `§` | — |
+| `task-number` | 작업 번호(`5.2R.3`, `8R.4a`) | — |
+| `design-id` | 확장 지점·결정·요구사항 id(`X22`, `(X25)`, `R8.6`, `R0·R10.4`, `K33-19`). 코드 펜스·인라인 코드 밖 글만 본다(`prose_only`) | 코드 안 예제 데이터(`` `R1` ``, `requirement_ids=["R1"]`), 이름 일부(`test_R1_x`, `k8s`, `R2D2`, `0X1F`) |
+| `local-path`·`email` | 로컬 경로, 이메일 | — |
+
+**제품 파일과 개발 설정.** 앱은 Claude Code 파일(`~/.claude/projects`, `~/.claude/settings.json`, 프로젝트 `.claude/agents`, 내보낸 `CLAUDE.md`)을 읽고 쓴다. 이런 문장에서 파일 이름은 **데이터(제품 형식)**다. 반면 이 저장소를 만드는 개발용 `CLAUDE.md`·`.claude/agents`를 가리키는 문장은 공개 문서에 남으면 안 된다. 둘은 이렇게 가른다.
+
+- 개발 설정으로 본다(잡는다): 링크 대상(`[규칙](../../CLAUDE.md)`), "저장소(의) (루트) `CLAUDE.md`"처럼 이 저장소 것이라고 말함, 따옴표·백틱 없이 글 속에 맨이름으로 씀("규칙은 CLAUDE.md에 있다", 코드 주석 `# CLAUDE.md "고정·환경 메모"`).
+- 제품 형식으로 본다(통과): 백틱·따옴표로 감싼 파일 이름(`` `CLAUDE.md` ``, `'.claude/agents/pl.md'`), 경로 조각이 앞에 붙은 것(`~/.claude/…`, `${CLAUDE_CONFIG_DIR}/…`, `./.claude/hooks`, `*/.claude/rules`, `/srv/me/.claude/…`).
+- 그래서 공개 문서에서 제품 파일을 말할 때는 파일 이름을 백틱으로 감싼다(코드 블록 주석 안에서도).
+
+**줄 단위 허용.** 규칙이 맞지 않는 줄 하나는 그 줄에 `<!-- extdocs:allow <규칙 id> -->`를 달아 뺀다. id 여럿은 공백·쉼표로 잇는다(`<!-- extdocs:allow internal-config, task-number -->`). 표시는 그 줄의 그 규칙만 끈다. 규칙 자체를 고칠 수 있으면 표시보다 규칙을 고친다.
+
+**새 규칙.** `public_lint.yaml`에 `id`·`message`·`pattern`(선택 `prose_only: true`)을 더한다. 오류 코드는 `public-<id>`다.
+
 ## 데이터 파일
 
 | 파일 | 내용 |
 | --- | --- |
-| `extdocs.yaml` | 경로·대상 glob·코드 패턴·계약 표 기호·시간 상한 |
+| `extdocs.yaml` | 경로·대상 glob(`glob_skip_dirs` 폴더와 숨김 폴더는 내려가지 않는다)·코드 패턴·계약 표 기호·시간 상한 |
 | `areas.yaml` | 영역(id·제목·파일) — 새 영역은 한 줄 |
 | `readme_sections.yaml` | 예제 README 필수 절과 별칭 |
-| `public_lint.yaml` | 공개 가능 린트 규칙(정규식) |
-| `templates/registration.yaml` | 등록 종류별 "등록"·"끄기·제거" 문장 |
+| `public_lint.yaml` | 공개 가능 린트 규칙(정규식, `prose_only`) |
+| `templates/registration.yaml` | 등록 종류별 "등록"·"끄기·제거" 문장. 값이 목록이면 자리표시자가 다 채워지는 첫 문장(마지막은 무조건) — 빈 값으로 "끄는 키: ." 같은 문장이 나오지 않게 |
 | `templates/text.yaml` | 생성 파일 제목·머리말·표 머리·`extdocs:todo` 틀 |
 
 ## TS 쪽(`pnpm extdocs-check`)과의 경계

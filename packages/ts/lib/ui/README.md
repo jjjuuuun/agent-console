@@ -59,22 +59,22 @@ import { Button, IconButton, StatusChip, StatusIcon, Banner, ThemeProvider } fro
 
 ## 공개 API
 - 기본: `Button`, `IconButton`, `Spinner`, `StatusIcon`, `StatusChip`, `Badge`, `Tag`, `Banner`, `ThemeProvider`/`useTheme`.
-- v2(1R.18, 모두 제어형·문구는 props): `Sidebar`(`items`·`activeId`·`onNavigate`·`collapsed`·`messages`, 방향키 roving, 배지 `99+`; `groups` + 항목 `group`으로 묶음 제목·접힘 구분선, 항목이 없는 묶음은 안 그림(`groupSidebarItems`); `position:'bottom'` 항목과 `tools` 슬롯은 하단 도구줄에 아이콘으로, 접기 버튼은 도구줄 오른쪽 끝(`messages.toggle` = 고정 이름 + `aria-expanded`)), `Dialog`/`ConfirmDialog`(포커스 가둠·Esc·배경 inert·포커스 복귀, `danger`는 취소 기본 포커스), `ToastProvider`/`useToast`(오류 assertive, 액션 버튼 1개, `regionLabel`), `Tabs`(`←→ Home End`, `lazy`, 제어/비제어), `ProvenanceBadge`(색 슬롯 = `layer.index mod 6`, 텍스트 라벨 필수), `Gauge`(값 없음 상태, `role=meter`는 값이 있을 때만), `EmptyState`(`steps`, `secondaryAction`).
-- `Drawer({open,title,onClose,closeLabel,description?,actions?,width?=560,initialFocus?,testId?})`(5.2R.20): 오른쪽 모달 서랍. 머리(제목·닫기) / 스크롤 본문 / 하단 고정 `actions` 3행, Esc·Tab 순환·배경 inert·포커스 복귀(`Dialog`와 같은 모달 훅). 제어형이라 닫아도 호출자의 편집 상태는 그대로다. 문구는 모두 props.
-- 모달 훅(5R.21): `useModalBackdrop(open, backdropRef, { inert? })`(배경 inert + 포커스 복귀, `inert:false`는 비모달 패널), `trapTabKey(event, root)`(`Tab` 순환), `FOCUSABLE_SELECTOR`. `Dialog`와 앱의 드로어가 같이 쓴다.
-- 1R.32(제어형·문구는 props, 종류 이름 없음):
+- v2(모두 제어형·문구는 props): `Sidebar`(`items`·`activeId`·`onNavigate`·`collapsed`·`messages`, 방향키 roving, 배지 `99+`; `groups` + 항목 `group`으로 묶음 제목·접힘 구분선, 항목이 없는 묶음은 안 그림(`groupSidebarItems`); `position:'bottom'` 항목과 `tools` 슬롯은 하단 도구줄에 아이콘으로, 접기 버튼은 도구줄 오른쪽 끝(`messages.toggle` = 고정 이름 + `aria-expanded`)), `Dialog`/`ConfirmDialog`(포커스 가둠·Esc·배경 inert·포커스 복귀, `danger`는 취소 기본 포커스), `ToastProvider`/`useToast`(오류 assertive, 액션 버튼 1개, `regionLabel`), `Tabs`(`←→ Home End`, `lazy`, 제어/비제어), `ProvenanceBadge`(색 슬롯 = `layer.index mod 6`, 텍스트 라벨 필수), `Gauge`(값 없음 상태, `role=meter`는 값이 있을 때만), `EmptyState`(`steps`, `secondaryAction`).
+- `Drawer({open,title,onClose,closeLabel,description?,actions?,width?=560,initialFocus?,testId?})`: 오른쪽 모달 서랍. 머리(제목·닫기) / 스크롤 본문 / 하단 고정 `actions` 3행, Esc·Tab 순환·배경 inert·포커스 복귀(`Dialog`와 같은 모달 훅). 제어형이라 닫아도 호출자의 편집 상태는 그대로다. 문구는 모두 props.
+- 모달 훅: `useModalBackdrop(open, backdropRef, { inert? })`(배경 inert + 포커스 복귀, `inert:false`는 비모달 패널), `trapTabKey(event, root)`(`Tab` 순환), `FOCUSABLE_SELECTOR`. `Dialog`와 앱의 드로어가 같이 쓴다.
+- 제어형·문구는 props, 종류 이름 없음):
   - `PageHeader`(`title`, `breadcrumb`, `status`, `actions`; 제목 h1, 마지막 breadcrumb = `aria-current`).
   - `CommandPalette`(`open`, `onClose`, `groups: {id,title,items:{id,label,hint?,icon?,badge?,shortcut?,disabled?,run}[]}[]`, `query`, `onQueryChange`, `loading`, `messages`). `role=combobox`+`listbox`, `↑↓` 순환(비활성 건너뜀), `Enter` 실행, `Esc` 닫기, **한글 IME 조합 중 Enter·방향키 무시**, 열면 배경 inert·닫으면 포커스 복귀. 필터는 호출자 몫이며 `filterCommandGroups(groups, query, maxPerGroup?)` 헬퍼 제공. 항목 `run`은 팔레트가 닫은 뒤 호출한다.
-  - 단축키: `useKeyCombo(combo, handler, {platform})`, `matchKeyCombo`, `parseKeyCombo`, `formatKeyCombo`. 조합 문자열(`"Mod+K"`, `"Alt+J"`)은 **데이터**(웹 기본 표 + 사용자 설정 `ui.keybindings` 덮어쓰기)로 받는다. 수식키 일치는 정확 일치, IME 조합 중 무시. 전역 단축키 처리기는 아래 1R.33.
+  - 단축키: `useKeyCombo(combo, handler, {platform})`, `matchKeyCombo`, `parseKeyCombo`, `formatKeyCombo`. 조합 문자열(`"Mod+K"`, `"Alt+J"`)은 **데이터**(웹 기본 표 + 사용자 설정 `ui.keybindings` 덮어쓰기)로 받는다. 수식키 일치는 정확 일치, IME 조합 중 무시. 전역 단축키 처리기는 아래 단축키 관리 항목.
   - `ListPane<T>`(`items`, `getItemId?`, `selectedId`, `onSelect`, `renderItem`, `rowHeight?`, `loading/error/empty` 슬롯(오류 > 로딩 > 빈), `searchValue/onSearchChange`, `toolbar`, `messages`). `role=listbox`, `↑↓ Home End` 포커스 이동, `Enter/Space`/클릭 선택, 검색창 `↓`로 목록 진입.
   - `ListPane`의 `groups`(`ListPaneGroup[]`: key·label·title·count·depth·collapsed·items)와 `onToggleGroup(key, collapsed)`: 묶음 머리(`GroupHeader`, sticky·`aria-expanded`)와 `role=group` 항목. 머리도 `↑↓` 이동 대상, 머리에서 `←` 접기 `→` 펴기 `Enter/Space` 토글. 하위 묶음 숨김·계산은 호출자(예: `@agent-console/list-arrange`)가 한다. `ListViewMenu`: 묶는 기준·정렬 선택지를 `ListViewOption[]`로 받는 "보기" 메뉴(`menuitemradio`, 선택해도 열린 채, `open/onOpenChange`로 `G` 단축키 연결, 모두 접기/펼치기).
   - `AttachmentList`(`groups: {layer,items:Attachment[],editable}[]`, `modeOptions`(데이터), `renderRow`, `onReorder(layerId, orderedKeys)`, `onRemove`, `onModeChange`, `onAdd`, `messages`). 순서 변경은 위/아래 버튼(키보드 가능), 편집 불가 층은 읽기 전용.
   - `Disclosure`(`<details>` 기반, 제어/비제어, 요약 Enter/Space).
-  - `FileTree`(2R.15; `items: {path, trailing?, leading?}[]`, `view` tree/flat, `selected`, `onSelect`). `role=tree`, `↑↓ ←→ Home End Enter`, 폴더는 경로에서 만든다(도메인 무관).
+  - `FileTree`(`items: {path, trailing?, leading?}[]`, `view` tree/flat, `selected`, `onSelect`). `role=tree`, `↑↓ ←→ Home End Enter`, 폴더는 경로에서 만든다(도메인 무관).
   - `TrustBadge`(`trust: string` 열린 값, `label`). 스타일이 아는 등급은 색·아이콘·테두리 모양이 달라지고, 모르는 값은 중립 배지 + 원문(코드에 등급 목록 없음, CSS `[data-trust]`만).
   - 아이콘: `iconRegistry`(앱 고정 이름 `defaultIcons`: entry/exit/ask/override/inherit/lock/external-link/copy/eye/eye-off), `createIconRegistry`, `registerIcons(icons, base?)`(불변, 새 레지스트리 반환), `IconRegistryProvider`(`registry`/`icons`, 중첩 시 상위에 더함), `Icon({name,size,label,fallbackText})`. 모르는 이름은 `fallbackText` 첫 글자 아바타.
 
-- 5.2R.13 넘침 방지·아이콘 버튼 기반(ux-overhaul §3·§4, 모두 제어형·문구는 props·`min-width:0`+말줄임+툴팁):
+- 넘침 방지·아이콘 버튼 기반(모두 제어형·문구는 props·`min-width:0`+말줄임+툴팁):
   - `Dialog({open,title,onClose,children,actions?,size?: "sm"|"md"|"lg"|"xl",initialFocus?})`: 제목 / **스크롤 본문** / **하단 고정 `actions`** 3행 그리드(최대 높이 `--ac-dialog-max-h`, 폭 `--ac-dialog-w-*` 이하 94vw, 폭 < 480이면 버튼이 전체 폭 세로 쌓기). 버튼은 반드시 `actions`에 둔다(본문 안 버튼 줄 금지: 대시보드 템플릿 다이얼로그가 깨진 원인은 `actions` 없이 본문 안에 버튼 줄을 그려 `overflow:auto` 안에 잘렸기 때문). 본문의 `fieldset`은 테두리 없음, 라디오·체크 한 줄은 `<label class="ac-choice"><input/><span>라벨</span></label>`. `wide`는 `size="lg"` 별칭(사용 중단).
   - `Tabs`(+`moreLabel?`, `TabItem.title?`): 한 줄, 폭 `[--ac-tab-min-w, --ac-tab-max-w]`, 넘치면 오른쪽 "더 보기 ▾" 메뉴. **활성 탭은 항상 보임**, 키보드 ←→는 숨은 탭까지 이동하고 승격.
   - `ChipRow({chips: {id,label,title?,icon?,tone?,active?,onSelect?}[], ariaLabel, moreLabel?(n)})`: 한 줄, 칩 최대 `--ac-chip-max-w`, 넘치면 `+N` 버튼과 팝오버. `active` 칩은 항상 보임.
@@ -87,12 +87,12 @@ import { Button, IconButton, StatusChip, StatusIcon, Banner, ThemeProvider } fro
   - 기본 라벨(`moreLabel` "더 보기" 등)은 한국어 기본값이다. 다른 언어는 props로 넘긴다.
   - ESLint: `@agent-console/eslint-config/react`의 `agent-console/button-name`이 아이콘만 있는 `<button>`을 막는다.
 
-- 1R.33 단축키 관리(components.md 9.5, 도메인 무관 — 동작 id·핸들러·제목 키는 데이터):
+- 단축키 관리(도메인 무관 — 동작 id·핸들러·제목 키는 데이터):
   - `ShortcutProvider({defaults: ShortcutDef[], overrides?: Record<id, keys>, platform?, enabled?, onWarn?, target?})`, `ShortcutDef = {id, scope, keys, titleKey, modifierRequired?, run}`.
   - `useShortcuts(defs)`(화면이 등록/해제, 같은 id면 화면 정의가 이김, 최신 핸들러 호출), `useEffectiveShortcuts()`(도움말·설정 표, 변경 시 갱신), `useShortcutRegistry().getEffectiveKeys()` → `{id, scope, titleKey, keys, isDefault, conflict?}[]`, 순수 함수 `computeEffectiveKeys`.
   - 키 표기: `"Mod+K"`, `"?"`, 시퀀스는 공백(`"g c"`). `overrides`의 빈 문자열 = 비활성.
   - 규칙: 수식키(Ctrl/Meta/Alt) 없는 한 글자 키는 input·textarea·select·contenteditable·`[data-ac-editable]` 안에서 동작 안 함(수식키 조합은 동작). 시퀀스는 두 번째 키 1초 안(아니면, 또는 다른 키면 취소). IME 조합 중 무시. 같은 범위(global은 모든 범위와 겹침)의 중복 키는 `conflict`로 표시하고 `onWarn`(기본 console.warn, `null`이면 끔)으로 경고.
-  - Esc 레이어 스택은 이 패키지가 아니라 앱(1R.22) 몫이다.
+  - Esc 레이어 스택은 이 패키지가 아니라 앱 몫이다.
 
 ```tsx
 <Sidebar items={routes} activeId={active} onNavigate={go} collapsed={c} onCollapsedChange={setC}

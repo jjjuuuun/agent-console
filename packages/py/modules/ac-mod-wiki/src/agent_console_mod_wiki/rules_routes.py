@@ -9,10 +9,20 @@
 - ``GET·PUT·DELETE /wiki/rules/{id}``: ``WikiRulesView`` + ``ETag``(PUT ``If-Match`` 필수 428)
 - ``GET /wiki/rules/{id}/files``: ``ResourceFile[]``(본문 폴더 — 지침·페이지 틀)
 - ``GET·PUT·DELETE /wiki/rules/{id}/files/{path}``: 바이트 ↔ ``WikiRulesView`` + ``ETag``
+- ``GET /wiki/rules/{id}/versions[/{hash}]``: ``DefinitionVersion[]`` / ``DefinitionVersion``
+- ``GET /wiki/rules/{id}/versions/{hash}/files[/{path}]``: 그 버전의 본문 파일 목록·내용
+- ``POST /wiki/rules/{id}/versions/{hash}/restore``: ``DefinitionVersion`` + ``ETag``(0.14.2,
+  ``/sdd/templates/{id}/versions``·``mod-versions``와 같은 모양)
 
 ``ETag``·``If-Match`` = 정의 버전(본문 파일 해시 포함). 파일 본문은 사용자 설정
 ``wiki.secret_scan``의 사람(``user``) 방식을 따른다(reject = 422 ``wiki.secret_rejected``, warn =
 저장 + ``X-Console-Issues``). 저장 응답의 ``issues``는 규칙 검사 결과(저장은 막지 않는다).
+
+되돌리기는 그 버전의 정의·본문으로 **새 버전**을 저장한다(이력은 그대로). 규칙이 있으면
+``If-Match``(현재 버전) 필수(없음 428, 다름 412), 지운 규칙은 없이 되살린다. 그 버전의 본문 파일은
+파일 쓰기와 같은 사람(``user``) 비밀 검사를 거친다(reject = 422 ``wiki.secret_rejected``, warn =
+되돌림 + ``X-Console-Issues``). 공간 자기 규칙이면 쓸 수 있는 공간이어야 한다(409). 버전
+비교(diff)는 이 경로에 없다.
 """
 
 from __future__ import annotations
@@ -23,7 +33,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Request, Response
 from fastapi.responses import JSONResponse
 
-from agent_console_contracts import ErrorResponse, ResourceFile
+from agent_console_contracts import (
+    DefinitionVersion,
+    ErrorResponse,
+    ResourceFile,
+    RestoreVersionRequest,
+)
 from agent_console_contracts.wiki import (
     KnownWikiAuthorKinds,
     WikiRulesCheckRequest,
@@ -40,12 +55,15 @@ from agent_console_modkit.host import (
     if_match_version,
     with_issues,
 )
-from agent_console_store import StoredDefinition
+from agent_console_store import NotFound, StoredDefinition, VersionRequired
 from agent_console_wiki import WikiSecretRejectedError
 
 from .service import WikiScope, WikiService
 
 _ERROR_STATUSES = (400, 404, 409, 412, 422, 428, 500)
+
+RESTORE_MESSAGE = "restored from {hash}"
+"""되돌리기 버전 메시지 기본 문구(``mod-versions``·``/sdd/templates``와 같은 문구)."""
 
 
 def _errors() -> dict[int | str, dict[str, Any]]:
@@ -216,7 +234,126 @@ def build_rules_router(service: Callable[[], WikiService]) -> APIRouter:
         )
         return _view_json(svc, sc, stored)
 
+    # ------------------------------------------------------------ 버전
+
+    @router.get(
+        "/wiki/rules/{rule_id}/versions",
+        response_model=list[DefinitionVersion],
+        responses=_errors(),
+    )
+    def list_versions(rule_id: str, space: SpaceQuery = None) -> list[DefinitionVersion]:
+        """버전 목록(최신순, ``content`` 없음). 지운 규칙의 이력도 남아 있다."""
+        svc = service()
+        return svc.scope(space).rules_store.list_versions(svc.rules_kind.name, rule_id)
+
+    @router.get(
+        "/wiki/rules/{rule_id}/versions/{version_hash}",
+        response_model=DefinitionVersion,
+        responses=_errors(),
+    )
+    def get_version(rule_id: str, version_hash: str, space: SpaceQuery = None) -> DefinitionVersion:
+        """버전 하나(``content`` = 그 버전의 정의 원문). 없으면 404 ``not_found``."""
+        svc = service()
+        return svc.scope(space).rules_store.get_version(svc.rules_kind.name, rule_id, version_hash)
+
+    @router.get(
+        "/wiki/rules/{rule_id}/versions/{version_hash}/files",
+        response_model=list[ResourceFile],
+        responses=_errors(),
+    )
+    def list_version_files(
+        rule_id: str, version_hash: str, space: SpaceQuery = None
+    ) -> list[ResourceFile]:
+        """그 버전의 본문 파일(경로 순). 본문 스냅샷이 없으면 404."""
+        svc = service()
+        return svc.scope(space).rules_store.list_version_files(
+            svc.rules_kind.name, rule_id, version_hash
+        )
+
+    @router.get(
+        "/wiki/rules/{rule_id}/versions/{version_hash}/files/{file_path:path}",
+        response_class=Response,
+        responses={**_errors(), 200: {"content": {"application/octet-stream": {}}}},
+    )
+    def read_version_file(
+        rule_id: str, version_hash: str, file_path: str, space: SpaceQuery = None
+    ) -> Response:
+        """그 버전의 본문 파일 내용(텍스트 형식이면 ``text/plain``)."""
+        svc = service()
+        store = svc.scope(space).rules_store
+        kind = svc.rules_kind.name
+        data = store.read_version_file(kind, rule_id, version_hash, file_path)
+        media = next(
+            (
+                f.media_type
+                for f in store.list_version_files(kind, rule_id, version_hash)
+                if f.path == file_path
+            ),
+            None,
+        )
+        return attachment_response(data, media)
+
+    @router.post(
+        "/wiki/rules/{rule_id}/versions/{version_hash}/restore",
+        response_model=DefinitionVersion,
+        responses=_errors(),
+    )
+    def restore_version(
+        rule_id: str,
+        version_hash: str,
+        body: Annotated[RestoreVersionRequest | None, Body()] = None,
+        if_match: IfMatchHeader = None,
+        space: SpaceQuery = None,
+    ) -> JSONResponse:
+        """되돌리기 = 그 버전의 정의·본문으로 새 버전 저장. 응답 = 새 버전(``content`` 포함) +
+        ``ETag``(새 정의 버전)."""
+        svc = service()
+        sc = svc.scope(space)
+        if sc.own_rules:
+            svc.require_writable(sc)
+        store = sc.rules_store
+        kind = svc.rules_kind.name
+        store.get_version(kind, rule_id, version_hash)
+        policy = svc.secret_policy(svc.settings())
+        warnings: list[Any] = []
+        try:
+            files = store.list_version_files(kind, rule_id, version_hash)
+        except NotFound:
+            files = []
+        for file in files:
+            text = store.read_version_file(kind, rule_id, version_hash, file.path).decode(
+                "utf-8", errors="replace"
+            )
+            decision = policy.check(text, KnownWikiAuthorKinds.USER, page=file.path)
+            if decision.rejected:
+                lines = [n for i in decision.issues for n in i.details.get("lines", [])]
+                raise WikiSecretRejectedError(lines, issues=decision.issues)
+            warnings.extend(decision.issues)
+        expected = if_match_version(if_match)
+        try:
+            store.get(kind, rule_id)
+        except NotFound:
+            pass
+        else:
+            if expected is None:
+                raise VersionRequired(f"{kind}/{rule_id}: If-Match is required to restore")
+        message = body.message if body is not None and body.message else None
+        stored = store.restore_version(
+            kind,
+            rule_id,
+            version_hash,
+            expected_version=expected,
+            message=message or RESTORE_MESSAGE.format(hash=version_hash),
+        )
+        restored = store.get_version(kind, rule_id, stored.version_hash)
+        response = JSONResponse(
+            content=restored.model_dump(mode="json"),
+            headers={"ETag": etag(stored.version_hash)},
+        )
+        issues = [i.model_dump(mode="json", exclude_none=True) for i in warnings]
+        return with_issues(response, issues)
+
     return router
 
 
-__all__ = ["build_rules_router"]
+__all__ = ["RESTORE_MESSAGE", "build_rules_router"]

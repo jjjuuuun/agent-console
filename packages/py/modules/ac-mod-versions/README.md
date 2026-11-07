@@ -1,6 +1,6 @@
 # agent-console-mod-versions
 
-Agent Console 버전 기능 모듈(design §3R.1.3, R2.5, D3·E-16). 정의 버전 목록·비교·되돌리기 경로와 보존 개수를
+Agent Console 버전 기능 모듈. 정의 버전 목록·비교·되돌리기 경로와 보존 개수를
 서버에 꽂는다. 버전 기록 자체는 정의 저장소(`agent-console-store`)가 한다.
 
 - 경로(컬렉션마다, 기본 `/agents` `/graphs` `/resources` `/settings`): `…/{id}/versions`,
@@ -8,11 +8,11 @@ Agent Console 버전 기능 모듈(design §3R.1.3, R2.5, D3·E-16). 정의 버�
   `POST …/versions/{hash}/restore`(`If-Match` 필수, 없음 428·다름 412, 검사 error 422).
 - 필수 포트: `definitions.store`. 선택 포트: `definitions.checks`(여러 제공자 — 되돌리기 전 검사·비밀 위치),
   `secrets.rules`(없으면 기본 의심 규칙). 구독 토픽: `definitions.saved`(보존 개수 적용).
-- 설정 `modules.options.mod-versions`(옛 최상위 `versions`는 4R.18부터 `settings.removed_key` 오류로 새 위치를 안내): `max_per_definition`(정의마다 남길 버전 수,
+- 설정 `modules.options.mod-versions`(옛 최상위 `versions`는 `settings.removed_key` 오류로 새 위치를 안내): `max_per_definition`(정의마다 남길 버전 수,
   비우면 모두 — 저장할 때와 시작할 때 적용), `collections`(버전 경로 표), `secret_issue_codes`.
 - 웹 역할: `versions`.
 
-공간(5.7R.33x): 선택 포트 `definitions.spaces`가 있으면 모든 버전 경로가 `?project=<이름>`으로 그 공간의 버전 기록을
+공간: 선택 포트 `definitions.spaces`가 있으면 모든 버전 경로가 `?project=<이름>`으로 그 공간의 버전 기록을
 쓴다. `definitions.saved` 항목에 `space`가 있으면 보존 개수도 그 공간에 적용한다. 포트가 없으면 409
 `feature_unavailable`, 모르는 공간 404.
 

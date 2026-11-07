@@ -75,7 +75,7 @@ class MemoryWriteOutcome:
 
 @runtime_checkable
 class MemoryStore(Protocol):
-    """메모리 저장소(X31). 메서드는 동기이며 스레드 안전해야 한다."""
+    """메모리 저장소. 메서드는 동기이며 스레드 안전해야 한다."""
 
     policy: MemoryPolicy
     """쓰기 정책(한도·비밀 검사·버전 보관 수). 설정이 바뀌면 바꿔 끼운다."""

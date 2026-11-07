@@ -16,7 +16,7 @@ hook 명령을 감싸 **그대로 실행**하면서 입출력·결정·소요 �
   (입출력, cwd·matcher·context·세션 id·도구·에이전트·결정 사유·오류)는 `agent-console-secret-rules` 기본 규칙으로
   가린다. 스트림은 한도 뒤 4 KB(`CAPTURE_MARGIN_BYTES`)까지 잡아 먼저 가린 다음 한도로 자르므로, 경계에 걸친
   비밀도 남지 않는다(4 KB보다 긴 비밀 모양은 예외).
-- **opt-in이다(F-16).** 플랫폼은 `observe.hook_probe`가 켜졌을 때 자기가 전달하는 hook에만 붙인다(4R.9).
+- **opt-in이다.** 플랫폼은 `observe.hook_probe`가 켜졌을 때 자기가 전달하는 hook에만 붙인다.
   `.claude` 내보내기와 사용자 설정 파일은 고치지 않는다.
 - 패키지 루트와 실행 경로는 표준 라이브러리만 가져온다(기록할 때 secret-rules). hook마다 뜨는 프로세스라서다.
   출처·분류기는 하위 모듈 `agent_console_hook_probe.plugins`(`agent-console-logs` 사용)에 있다.
@@ -106,7 +106,7 @@ hook 명령 앞에 probe를 붙인다.
 "command": "agent-console-hook-probe --out ~/.agent-console/hook-probe -- './.claude/hooks/check.sh --strict'"
 // 또는 실행 형식(Claude Code `args` 형식)
 "command": "agent-console-hook-probe",
-"args": ["--out", "/home/me/.agent-console/hook-probe", "--exec", "--", "./.claude/hooks/check.sh", "--strict"]
+"args": ["--out", "/srv/me/.agent-console/hook-probe", "--exec", "--", "./.claude/hooks/check.sh", "--strict"]
 ```
 
 그다음 로그 설정에서 그 폴더를 출처 루트에 더한다: `logs.sources: [{id: hook-probe-jsonl, config: {roots:

@@ -1,7 +1,7 @@
 # @agent-console/arch-view
 
 관측 구조도 표현 컴포넌트. 서버가 좌표·라벨·지표까지 채워 준 `ArchitectureView`를 **영역·칸·연결(꺾은선)·라벨 칩**으로 그린다.
-API·저장소·`ui`·`log-view`·`api-client`를 모른다. 데이터와 콜백은 전부 props다. 화면 명세: `docs/design/screen-architecture.md`.
+API·저장소·`ui`·`log-view`·`api-client`를 모른다. 데이터와 콜백은 전부 props다.
 
 - 칸 종류·연결 종류·색은 코드에 없다. 모든 이름은 데이터이고, 모르는 `tone`·`style`은 중립 모양으로 그린다.
 - `value: null`은 어디서나 "–"/"수집 안 됨"이다. 합계·정렬·접근 이름에서도 0이 되지 않는다.
@@ -19,7 +19,7 @@ npm install ./agent-console-arch-view-0.1.0.tgz
 
 | 의존 | 왜 | 대안 |
 | --- | --- | --- |
-| `@xyflow/react` | 확대·이동·사용자 노드(칸·영역). 연결선은 `points`가 정한 꺾은선이라 `ViewportPortal` 위에 직접 그린다 | 손 SVG(§5.5R.4 대체안) |
+| `@xyflow/react` | 확대·이동·사용자 노드(칸·영역). 연결선은 `points`가 정한 꺾은선이라 `ViewportPortal` 위에 직접 그린다 | 손 SVG( 대체안) |
 | `@agent-console/contracts` | `ArchitectureView` 등 타입만 (`import type`) | — |
 
 ## 최소 사용
@@ -66,7 +66,7 @@ import { ArchitectureDiagram } from "@agent-console/arch-view";
 | `edgePath(points, from, to)` | `points`가 있으면 그대로, 없으면 두 칸 경계 사이 직선(6px 바깥) |
 | `formatMetric(metric, messages, opts)` | 지표 → 칸 글자·접근 이름·풀어 쓴 글자. 수집 안 됨은 "–" |
 | `checkLayout(view)` | 칸–칸, 연결–칸, 연결–연결, 칩–칩 겹침·교차 목록(순수 함수, 설정 미리보기에도 쓸 수 있음) |
-| 맞춤 `auto`(5.5R.20, 기본) | `autoFit`·`AUTO_CONTAIN_MIN`·prop `autoContainMin`: 폭 맞춤이 들어가면 폭, 아니면 전체 맞춤 배율이 기준(0.55) 이상일 때 전체, 미만이면 폭 맞춤 + 잘림 표시(하단 그라데이션·"아래 칸 n개 ↓" 칩·스크롤 표시). 캔버스 크기가 바뀔 때마다 다시 계산한다 |
+| 맞춤 `auto`(기본) | `autoFit`·`AUTO_CONTAIN_MIN`·prop `autoContainMin`: 폭 맞춤이 들어가면 폭, 아니면 전체 맞춤 배율이 기준(0.55) 이상일 때 전체, 미만이면 폭 맞춤 + 잘림 표시(하단 그라데이션·"아래 칸 n개 ↓" 칩·스크롤 표시). 캔버스 크기가 바뀔 때마다 다시 계산한다 |
 | `fitViewport`·`zoomAround`·`ensureVisible`·`nearestInDirection` | 맞춤·확대·최소 스크롤·방향키 이동 순수 함수 |
 | `@agent-console/arch-view/testing` | 예제 `ArchitectureView`(기본 프로필 좌표, 지표는 임시 값) |
 

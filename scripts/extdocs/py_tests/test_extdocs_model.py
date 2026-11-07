@@ -70,7 +70,7 @@ def test_data_files_load() -> None:
     data = load_data()
     assert data.areas
     assert data.readme_sections
-    assert len(data.lint_rules) == 6
+    assert len(data.lint_rules) == 7
     assert "_default" in data.registration_templates
 
 

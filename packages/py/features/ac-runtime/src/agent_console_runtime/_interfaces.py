@@ -98,7 +98,7 @@ class ValidationContext:
 
 @runtime_checkable
 class NodeType(Protocol):
-    """노드 타입(X1). 엔진은 이 인터페이스만 알고 구체 타입은 레지스트리에서 찾는다.
+    """노드 타입. 엔진은 이 인터페이스만 알고 구체 타입은 레지스트리에서 찾는다.
 
     - `resolve_ports(config)`: `descriptor.dynamic_ports`가 참일 때 실제 포트.
       고정 포트 타입은 `descriptor.static_ports`를 돌려주면 된다.
@@ -270,7 +270,7 @@ class Reply:
 
 @runtime_checkable
 class EdgeType(Protocol):
-    """엣지 타입(X2). 엔진은 디스크립터 `scheduling`에 따라 `activates`를 부른다.
+    """엣지 타입. 엔진은 디스크립터 `scheduling`에 따라 `activates`를 부른다.
 
     스케줄 종류별 동작(design §R3.1):
 
@@ -301,7 +301,7 @@ class EdgeValidationContext:
 
 @runtime_checkable
 class EdgeValidator(Protocol):
-    """선택 능력(X2): 엣지 config의 의미 검증(스키마 검사 뒤, 저장 전 검사).
+    """엣지 타입의 선택 능력: 엣지 config의 의미 검증(스키마 검사 뒤, 저장 전 검사).
 
     이슈의 `path`는 엣지 config 기준이다. `edge_id`를 비우면 엔진이 채운다. config가 스키마에
     맞지 않을 수도 있으므로(스키마 이슈는 따로 난다) 해석에 실패하면 빈 목록을 돌려준다.
@@ -446,7 +446,7 @@ class BackendEventSink(Protocol):
 
 @runtime_checkable
 class ExecutionBackend(Protocol):
-    """실행 백엔드 어댑터(X3)."""
+    """실행 백엔드 어댑터."""
 
     descriptor: BackendDescriptor
 
@@ -500,7 +500,7 @@ def accepts_host_context(hook: Callable[..., Any]) -> bool:
 
 @runtime_checkable
 class ConfigurableBackend(Protocol):
-    """설치자 설정(앱 설정의 `backends.<id>`)으로 다시 만들 수 있는 백엔드(X3 선택 훅).
+    """설치자 설정(앱 설정의 `backends.<id>`)으로 다시 만들 수 있는 백엔드(실행 백엔드 선택 훅).
 
     entry point는 인자 없이 만들어지므로, 생성 인자(모델 목록·환경 정책 등)가 필요한 백엔드는
     이 classmethod를 구현한다. 앱은 레지스트리에 등록된 백엔드에 이 훅이 있으면 호출해 교체할 뿐,
@@ -533,7 +533,7 @@ class ConfigurableBackend(Protocol):
 
 @runtime_checkable
 class SecretProvider(Protocol):
-    """비밀 값 공급자(X10). 이름에 해당하는 값이 없으면 None."""
+    """비밀 값 공급자. 이름에 해당하는 값이 없으면 None."""
 
     def get_secret(self, name: str) -> str | None: ...
 

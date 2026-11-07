@@ -118,7 +118,7 @@ class HistorySummary:
 
 @runtime_checkable
 class WikiHistory(Protocol):
-    """페이지 기록 저장소(X49). 메서드는 동기이며 스레드 안전해야 한다."""
+    """페이지 기록 저장소. 메서드는 동기이며 스레드 안전해야 한다."""
 
     def record(self, entries: Sequence[HistoryEntry]) -> list[WikiPageVersion]:
         """기록을 한 번에 남기고 새 버전들을 같은 순서로 돌려준다."""

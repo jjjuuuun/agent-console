@@ -1,6 +1,6 @@
 # agent-console-mod-wiki
 
-Agent Console 위키 서버 모듈(`mod-wiki`, design §7R.3·§7R.7). `ac-wiki`(문법·파싱·링크 해석·색인·저장소·
+Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크 해석·색인·저장소·
 규칙·점검·기록·검색·zip)를 서버에 붙인다. 실행·프로젝트를 모르고, 둘 다 연동 모듈이 포트로 붙인다.
 
 - REST `/wiki/*`: 화면 정보 `GET /wiki/info`(페이지 폴더·능력·한도), 위키 목록·만들기·보기·저장·지우기
@@ -9,7 +9,8 @@ Agent Console 위키 서버 모듈(`mod-wiki`, design §7R.3·§7R.7). `ac-wiki`
   `…/move`(링크 문자열만 고침), 기록 `…/history[/{version}]`·`…/restore`, 링크 넣기 `…/link-text`, 페이지 틀
   `…/templates[/{id}/render]`, 검색·그래프·점검·변경(`?op=`·`?author_run=`, 공간 전체 `GET /wiki/changes`)·
   유효 문법·외부 변경 다시 읽기 `…/scan`, zip `…/export`(`Content-Disposition`)·`…/import`. 위키 규칙
-  `/wiki/rules[/{id}[/files[/{path}]]]`·`POST /wiki/rules/check`(정의 모듈 없이도 동작). 모든 경로가
+  `/wiki/rules[/{id}[/files[/{path}]]]`·`POST /wiki/rules/check`·버전 `/wiki/rules/{id}/versions[/{hash}[/files[/{path}]]]`·
+  `POST …/versions/{hash}/restore`(정의 모듈 없이도 동작). 모든 경로가
   `?project=<공간 이름>`을 받는다.
 - WS 토픽 `wiki.changed`(본문 없음 — 화면은 다시 읽는다). 저장소는 알리지 않고 모듈이 결과를 보고 키트
   `LoopPublisher`로 낸다. 미리보기·`dry_run`은 알리지 않는다.

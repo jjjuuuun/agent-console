@@ -84,7 +84,7 @@ class CollectorContext:
 
 @runtime_checkable
 class ClaudeSdkCollector(Protocol):
-    """claude-sdk 관측 수집기(X7) 프로토콜.
+    """claude-sdk 관측 수집기 프로토콜.
 
     보통 `BaseClaudeSdkCollector`를 상속해 필요한 것만 고친다.
 

@@ -131,12 +131,12 @@ my-source = "my_pkg.usage:MySource"
   설정 오류 `validation_failed`)로 보고하고 다른 출처는 계속 돈다. 예외 문장은 응답에 싣지 않는다(형식 이름만).
 - `trust`는 열린 문자열이다. 알려진 값은 `agent_console_contracts.KnownUsageTrust`(문서 상수).
 - 설정 `usage.sources`에 적은 출처는 그 `enabled`를 따른다(사용자 값이 항상 우선). 적지 않은 출처는 디스크립터가
-  정한다: `auto_enable`이고 `test_only`가 아니면 켜짐 + 빈 설정, 아니면 꺼짐(`auto_enabled`, 5.2R.27). 그래서 빈
+  정한다: `auto_enable`이고 `test_only`가 아니면 켜짐 + 빈 설정, 아니면 꺼짐(`auto_enabled`). 그래서 빈
   설정에서도 값이 나오는 출처는 켜지고 시험용 출처는 적어야 켜진다. 외부 출처가 기본으로 켜지려면 `auto_enable=True`.
-- 선택 메서드(5.2R.27): `setup_values(ctx) -> {자리표시자: 값}`(연결 조각 채우기, 서비스 `setup_values`를 덮음),
+- 선택 메서드: `setup_values(ctx) -> {자리표시자: 값}`(연결 조각 채우기, 서비스 `setup_values`를 덮음),
   `received_at(ctx) -> float | None`(`UsageSourceInfo.last_received_at`. 없으면 받은 스냅샷의 가장 늦은 관측 시각).
 
-### 출처 설정 검증(`source_config_issues`, 4R.13 후속)
+### 출처 설정 검증(`source_config_issues`)
 
 수집과 같은 규칙(디스크립터 `config_schema`, jsonschema)으로 설정만 미리 본다. 저장 전 검사·서버 경고용이다.
 
@@ -160,7 +160,7 @@ my-source = "my_pkg.usage:MySource"
 
 ```
 
-### 레지스트리 밖 출처(`extra_sources`, 4R.13)
+### 레지스트리 밖 출처(`extra_sources`)
 
 `UsageService(..., extra_sources=)`는 entry point가 아닌 출처(다른 모듈이 포트로 준 런타임 출처 등)를 받는다.
 값은 `{id: 출처}` 또는 그것을 돌려주는 함수(부를 때마다 다시 읽는다)다.
@@ -190,26 +190,26 @@ my-source = "my_pkg.usage:MySource"
 
 ```python
 >>> from agent_console_usage import StatuslineFileSource, fill_setup_snippets
->>> values = {"output_path": "/home/me/agent-console/.state/usage/statusline.json",
-...           "agent_console_cmd": "/home/me/.local/bin/agent-console"}
+>>> values = {"output_path": "/srv/me/agent-console/.state/usage/statusline.json",
+...           "agent_console_cmd": "/srv/me/.local/bin/agent-console"}
 >>> for s in fill_setup_snippets(StatuslineFileSource.descriptor.setup_snippets, values):
 ...     print(f"[{s.title} · {s.shell or '공통'}]\n{s.text}\n")
 [상태 줄이 아직 없어요 · 공통]
 {
   "statusLine": {
     "type": "command",
-    "command": "/home/me/.local/bin/agent-console statusline --output /home/me/agent-console/.state/usage/statusline.json"
+    "command": "/srv/me/.local/bin/agent-console statusline --output /srv/me/agent-console/.state/usage/statusline.json"
   }
 }
 <BLANKLINE>
 [이미 다른 상태 줄 스크립트를 써요 · bash]
 # 기존 스크립트에서 입력을 변수에 담은 줄(예: input=$(cat)) 바로 아래에 붙입니다.
 # 입력을 변수에 담지 않는 스크립트라면 맨 위에 input=$(cat)을 넣고, 아래 명령들이 "$input"을 읽게 바꿉니다.
-printf '%s' "$input" | /home/me/.local/bin/agent-console statusline --output /home/me/agent-console/.state/usage/statusline.json >/dev/null 2>&1 || true
+printf '%s' "$input" | /srv/me/.local/bin/agent-console statusline --output /srv/me/agent-console/.state/usage/statusline.json >/dev/null 2>&1 || true
 <BLANKLINE>
 [이미 다른 상태 줄 스크립트를 써요 · powershell]
 # 기존 스크립트에서 입력을 변수에 담은 줄(예: $raw = $input | Out-String) 바로 아래에 붙입니다.
-$raw | & '/home/me/.local/bin/agent-console' statusline --output '/home/me/agent-console/.state/usage/statusline.json' | Out-Null
+$raw | & '/srv/me/.local/bin/agent-console' statusline --output '/srv/me/agent-console/.state/usage/statusline.json' | Out-Null
 <BLANKLINE>
 
 ```
@@ -225,7 +225,7 @@ $raw | & '/home/me/.local/bin/agent-console' statusline --output '/home/me/agent
 - `--output` 대신 `--config`를 쓰면 서버 설정을 읽느라 시작이 조금 느리다. 상태 줄은 자주 실행되므로 `--output`을 권장한다.
 - 입력 형식: <https://code.claude.com/docs/en/statusline>
 - 패키지 `__init__`은 이름을 처음 쓸 때 import한다(PEP 562). `agent_console_usage.statusline`만 import하면
-  계약(pydantic)·레지스트리를 읽지 않으므로 상태 줄 명령이 빨리 시작한다(1R.15, `tests/test_agent_console_usage_lazy_init.py`).
+  계약(pydantic)·레지스트리를 읽지 않으므로 상태 줄 명령이 빨리 시작한다(`tests/test_agent_console_usage_lazy_init.py`).
 
 ### 브리지 파일 형식(`format` = 1)
 
@@ -254,7 +254,7 @@ $raw | & '/home/me/.local/bin/agent-console' statusline --output '/home/me/agent
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-usage`.
 

@@ -129,7 +129,7 @@ class ExportCatalog(Protocol):
 
 @runtime_checkable
 class Exporter(Protocol):
-    """내보내기 형식(X8). `plan`은 **순수**하다: 카탈로그를 읽기만 하고 파일을 쓰지 않는다
+    """내보내기 형식. `plan`은 **순수**하다: 카탈로그를 읽기만 하고 파일을 쓰지 않는다
     (파일 내용을 만들어 돌려줄 뿐이다)."""
 
     @property

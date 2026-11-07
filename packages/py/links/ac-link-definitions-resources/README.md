@@ -1,6 +1,6 @@
 # agent-console-link-definitions-resources
 
-Agent Console 정의 ↔ 리소스 연동 모듈(design §3R.1.4 L8, R13.1). 저장 전 정의 검사(`definitions.checks`)를 제공한다.
+Agent Console 정의 ↔ 리소스 연동 모듈. 저장 전 정의 검사(`definitions.checks`)를 제공한다.
 
 - 리소스 정의: 그 종류의 검사(`ac-resources.validate_resource`, 이슈 path는 문서 기준 `/config/...`).
 - 에이전트·팀 구성·공통 설정: 리소스 첨부 `config_override`를 덮은 결과의 종류 검사(`x-secret` 평문 거부,

@@ -17,14 +17,14 @@
 
 | 구분 | 이름 | 모양 |
 | --- | --- | --- |
-| 제공 | `logs.query` | `LogQueryPort`(목록·목록 행(`iter_event_rows`, 모델 없는 JSON 행, 5.5R.36)·상세·세션·타임라인·집계·handoff·토큰 표본·분류 체계·질의 맥락) |
+| 제공 | `logs.query` | `LogQueryPort`(목록·목록 행(`iter_event_rows`, 모델 없는 JSON 행)·상세·세션·타임라인·집계·handoff·토큰 표본·분류 체계·질의 맥락) |
 | 제공 | `logs.ingest` | `LogIngestPort`(`add_runtime_source`·`request_scan(source_ids, ref_hint=)`·`scan`) |
 | 제공 | `server.warnings` | `logs.storage_memory`·`logs.redaction_unavailable`·`logs.source_failed`·`logs.unknown_classifier` |
 | 선택(multi) | `logs.sources` | `RuntimeLogSource`(`source`·`classifier` 속성, 예: `testing.RuntimeSource`) |
 | 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`logs.*`, `secrets.redact_suspected_in_logs`) |
 | 선택 | `secrets.rules` | `() -> SecretRules`(`redact_value`) |
-| 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(5.2R.27, 예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
-| 선택 | `projects.folders` | 앱에 등록된 프로젝트 폴더(`registered`·`archived`·`project_for`, 5.7R.30 후속·5.7R.33i). 범위는 등록 프로젝트 전체 하나이고, 범위를 아는 출처(`claude-code-jsonl`)는 이 폴더(하위 폴더 포함)의 기록만 읽는다. 보관 프로젝트는 새로 읽지 않지만 색인은 남긴다. 세션 `project_id`·필터 `project`·집계 차원 `project`는 `project_for(cwd)`(등록 id)다. 옛 묶기 설정 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`. 없으면 등록된 프로젝트 없음으로 보고 그 출처는 아무것도 읽지 않으며 경고 `logs.no_projects`("프로젝트를 먼저 만들거나 등록하세요"). 설정 `roots`에서 범위 밖 기록을 건너뛰면 `logs.out_of_scope`. 단독 실행에서 쓰려면 `--with mod-projects`, 테스트는 `testing.project_folders_module`. 출처는 호스트 경로 `workspace`(앱 workspace)도 맥락 `paths`로 받는다(`claude-code-jsonl`의 앱 실행 세션 루트 `workspace_roots`, 5.7R.30b) |
+| 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
+| 선택 | `projects.folders` | 앱에 등록된 프로젝트 폴더(`registered`·`archived`·`project_for`). 범위는 등록 프로젝트 전체 하나이고, 범위를 아는 출처(`claude-code-jsonl`)는 이 폴더(하위 폴더 포함)의 기록만 읽는다. 보관 프로젝트는 새로 읽지 않지만 색인은 남긴다. 세션 `project_id`·필터 `project`·집계 차원 `project`는 `project_for(cwd)`(등록 id)다. 옛 묶기 설정 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`. 없으면 등록된 프로젝트 없음으로 보고 그 출처는 아무것도 읽지 않으며 경고 `logs.no_projects`("프로젝트를 먼저 만들거나 등록하세요"). 설정 `roots`에서 범위 밖 기록을 건너뛰면 `logs.out_of_scope`. 단독 실행에서 쓰려면 `--with mod-projects`, 테스트는 `testing.project_folders_module`. 출처는 호스트 경로 `workspace`(앱 workspace)도 맥락 `paths`로 받는다(`claude-code-jsonl`의 앱 실행 세션 루트 `workspace_roots`) |
 | 선택(multi) | `logs.scope_kinds` | X27 `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
 | 선택(multi) | `logs.filter_predicates` | X28 `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
 | 토픽 | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
@@ -173,7 +173,7 @@ python -m agent_console_mod_logs [--with ID] [--config PATH] [--port 0] [--check
 
 ## 저장 계층
 
-- **계보 `logs`**: 패키지 데이터 `storage/migrations/versions/logs_0001_index.py`(테이블)·`logs_0002_scope_indexes.py`(`thread`·`run_id`·`session` + `seq` 색인, 5.5R.6), 버전 테이블 `alembic_version_logs`.
+- **계보 `logs`**: 패키지 데이터 `storage/migrations/versions/logs_0001_index.py`(테이블)·`logs_0002_scope_indexes.py`(`thread`·`run_id`·`session` + `seq` 색인), 버전 테이블 `alembic_version_logs`.
   모듈이 켜질 때만 올라가고, 되돌리기(`downgrade`)는 이 계보 단위로만 한다.
   `ac-store.MODULE_OWNED_TABLES`에는 넣지 않는다(F-2) — legacy 이관 전용 목록이다.
 - **색인 위치**: 기본은 호스트 DB(F-9). `index_path`를 주면 그 SQLite 파일에 같은 계보를 직접 올려 쓴다.
@@ -215,7 +215,7 @@ uv run mypy
 uv run pytest          # README.md의 doctest 포함
 ```
 
-## 출처 설정의 지운 키(5.7R.30b)
+## 출처 설정의 지운 키
 
 출처 설정 스키마가 `deprecated: true`로 표시한 키(예: `claude-code-jsonl`의 옛 `project_roots`)가 설정에 남아 있으면
 읽지 않고 정보 이슈 `logs.ignored_key`(`details.source`·`details.key`, `server.warnings`)를 낸다. 키 이름은 출처 스키마

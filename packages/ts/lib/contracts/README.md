@@ -1,7 +1,7 @@
 # @agent-console/contracts
 
 Python `agent_console_contracts`(Pydantic)에서 **생성된** TS 타입·상수와 계약 JSON Schema. 다른 TS 패키지에 의존하지 않는다.
-설계: design.md §5.5~§5.7.
+설계: design.md 
 
 - `schema/agent-console.schema.json` — 생성된 JSON Schema(2020-12, 모든 모델이 `$defs`에).
 - `src/generated/contracts.generated.ts` — 위 스키마에서 생성한 타입·상수. **직접 수정 금지.**
@@ -23,7 +23,7 @@ const version = CONTRACTS_VERSION;
 
 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- |
-| `json-schema-to-typescript`(dev) | JSON Schema → TS 타입 생성(design §7.2). 판별 유니온·`$defs`를 그대로 타입으로 만든다 | openapi-typescript(REST 경로 타입은 1.12의 OpenAPI가 생기면 추가 검토), quicktype |
+| `json-schema-to-typescript`(dev) | JSON Schema → TS 타입 생성(design ). 판별 유니온·`$defs`를 그대로 타입으로 만든다 | openapi-typescript(REST 경로 타입은 1.12의 OpenAPI가 생기면 추가 검토), quicktype |
 
 ## 생성
 

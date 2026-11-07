@@ -43,9 +43,9 @@ import "@agent-console/log-view/styles.css";
 | 영역 | 이름 |
 | --- | --- |
 | 컴포넌트 | `LogEventTable` `LogFilterBar` `CategoryChips` `LogEventDetail` `SessionList` `PlaybackBar` `LaneRibbon` `HandoffMatrixView` `DashboardGrid` `WidgetEditor` `TemplatePicker` `ColorSlotPicker` `UnknownWidget` `AggregateTable` |
-| 모양 옵션(5.7R.32) | `LogFilterBar`의 `savedPlacement`(`menu` 기본: 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역 / `button`: [★ ▾] 단추), `PlaybackBar`의 `settingsPlacement`(`popover` 기본: 속도·공백 건너뛰기가 [재생 설정 ▾] 안 / `inline`), `CategoryChips`의 `maxInline`(선택된 칩은 접혀도 보임) |
-| 빈 표(5.5R.20) | `LogEventTable`의 `emptyBelowHeader`를 켜면 행이 0개여도 표 머리를 그리고 `renderEmpty` 안내를 머리 아래에 놓는다 |
-| 명령형 API(5R.21) | `LogEventTable`·`LogEventDetail`는 `ref`로 `LogEventTableHandle`(`scrollToUid`·`focus`)·`LogEventDetailHandle`(`selectTabAt`·`focusTab`·`visibleTabs`)를 낸다. `onActivate`(표 Enter)·`activeTab`/`onActiveTabChange`(상세)·`onActiveChange`(`SessionList`)로 앱이 DOM을 읽거나 클릭하지 않는다 |
+| 모양 옵션 | `LogFilterBar`의 `savedPlacement`(`menu` 기본: 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역 / `button`: [★ ▾] 단추), `PlaybackBar`의 `settingsPlacement`(`popover` 기본: 속도·공백 건너뛰기가 [재생 설정 ▾] 안 / `inline`), `CategoryChips`의 `maxInline`(선택된 칩은 접혀도 보임) |
+| 빈 표 | `LogEventTable`의 `emptyBelowHeader`를 켜면 행이 0개여도 표 머리를 그리고 `renderEmpty` 안내를 머리 아래에 놓는다 |
+| 명령형 API | `LogEventTable`·`LogEventDetail`는 `ref`로 `LogEventTableHandle`(`scrollToUid`·`focus`)·`LogEventDetailHandle`(`selectTabAt`·`focusTab`·`visibleTabs`)를 낸다. `onActivate`(표 Enter)·`activeTab`/`onActiveTabChange`(상세)·`onActiveChange`(`SessionList`)로 앱이 DOM을 읽거나 클릭하지 않는다 |
 | 위젯 레지스트리(X21) | `WidgetDescriptor` `createWidgetRegistry` `builtinWidgets`(metric·bar·line·table) `validateQuery` |
 | 재생 | `sortEvents` `visibleThrough` `indexOfSeq` `seqAtIndex` `usePlayback`(가짜 `clock` 주입) `playbackDelay` `nextSpeed` `clipTraceAt` |
 | 필터·URL | `reservedParams` `splitSearchParams` `buildFilterQuery` `buildScreenSearch` `findReservedConflicts` `createLocalStorageSavedFilters` |
@@ -55,7 +55,7 @@ import "@agent-console/log-view/styles.css";
 
 - 위젯 종류를 더하려면 `WidgetDescriptor`를 만들어 `createWidgetRegistry(builtinWidgets, mine)`에 넘긴다. 목록에 `switch`가 없고, 레지스트리에 없는 `kind`는 `UnknownWidget`(설정 보존)으로 그린다.
 - 차트는 `charts/` 어댑터 안에서만 recharts를 쓰고 지연 로드한다. 로드 실패 시 위젯은 표로 대체된다. recharts 타입은 공개 API에 나오지 않는다.
-- 서식 함수: 이 저장소의 기존 포맷터(`apps/web/src/lib/format.ts`, `features/runs/runsLib.ts`)는 앱 안에 있어 패키지가 가져다 쓸 수 없으므로 같은 규칙(`screen-logs.md` §1.7)의 내장 구현을 둔다. 앱이 이미 가진 포맷터가 있으면 `formatters` prop으로 주입한다.
+- 서식 함수: 이 저장소의 기존 포맷터(`apps/web/src/lib/format.ts`, `features/runs/runsLib.ts`)는 앱 안에 있어 패키지가 가져다 쓸 수 없으므로 같은 규칙(`screen-logs.md` )의 내장 구현을 둔다. 앱이 이미 가진 포맷터가 있으면 `formatters` prop으로 주입한다.
 
 ## 새 의존
 | 무엇을 | 버전·라이선스 | 왜 | 대안 |

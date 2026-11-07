@@ -78,7 +78,7 @@ class DelegationPlan(BaseModel):
 
 @runtime_checkable
 class DelegationStrategy(Protocol):
-    """위임 방식(X12). 구현은 플러그인이 `agent_console.delegation_strategies`로 등록한다.
+    """위임 방식. 구현은 플러그인이 `agent_console.delegation_strategies`로 등록한다.
 
     - `descriptor`: 혼합 그래프 검증 규칙(`max_depth`, `allows_outgoing_flow`, `member_fields`,
       `member_interaction_kinds`)의 근거. 검증은 `ac-teams`가 이 값으로 계산한다.

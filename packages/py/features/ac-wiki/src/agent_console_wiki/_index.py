@@ -233,17 +233,24 @@ def page_facts(page: ParsedPage, *, links_out: int, broken_links: int) -> dict[s
     }
 
 
+def _scheme_target(item: IndexedLink) -> LabelDisplayTarget | None:
+    """스킴 링크의 열 화면(`WikiLink.scheme_target`·`WikiGraphNode.scheme_target`).
+
+    `id_from`은 풀린 id 값이다(계약 설명). 스킴 링크가 아니거나 접두 뒤가 비면 열 항목이 없어
+    None이다.
+    """
+    if item.scheme is None or not item.scheme_value:
+        return None
+    target = item.scheme.target
+    value = item.scheme_value
+    query = render_template(target.query, {"value": value}) if target.query else None
+    return LabelDisplayTarget(role=target.role, id_from=value, query=query)
+
+
 def _to_view(item: IndexedLink, page: ParsedPage) -> WikiLink:
     link = item.link
     u16 = page.utf16
-    scheme_target = None
-    if item.scheme is not None and item.scheme_value:
-        # 스킴 대상의 `id_from`은 풀린 id 값이다(계약 `WikiLink.scheme_target` 설명). 접두 뒤가 비면
-        # 열 항목이 없어 대상도 없다.
-        target = item.scheme.target
-        value = item.scheme_value
-        query = render_template(target.query, {"value": value}) if target.query else None
-        scheme_target = LabelDisplayTarget(role=target.role, id_from=value, query=query)
+    scheme_target = _scheme_target(item)
     return WikiLink(
         start=u16(link.start),
         end=u16(link.end),
@@ -464,6 +471,7 @@ def _node(index: WikiIndex, key: str, depth: int | None, via: IndexedLink | None
         title=via.link.label if via is not None else "",
         broken=scheme is None,
         scheme=scheme,
+        scheme_target=_scheme_target(via) if via is not None else None,
         depth=depth,
     )
 

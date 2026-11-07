@@ -51,7 +51,8 @@ RegistryEntry(key='echo', version=2, item='echo v2', source='')
 ```
 
 여러 레지스트리에 한꺼번에 등록하는 플러그인은 `obj.register(target)` 또는 `obj(target)`이다. `enabled`를 주면
-등록한 key 중 집합에 없는 것을 해제하고 `disabled`로 보고한다.
+등록한 key 중 집합에 없는 것을, `disabled`를 주면 그 집합에 있는 것을 해제하고 `disabled`로 보고한다
+(`enabled`가 있으면 그 안에서 `disabled`를 뺀다). 보고의 `reason`이 어느 목록 때문인지 알린다.
 
 ```python
 >>> reports = load_plugins(
@@ -63,6 +64,8 @@ RegistryEntry(key='echo', version=2, item='echo v2', source='')
 ... )
 >>> [(r.key, r.status) for r in reports]
 [('plugin', 'loaded'), ('lower', 'disabled')]
+>>> reports[1].reason
+'not in enabled'
 >>> [(e.key, e.version) for e in node_types.list()]  # key 오름차순, key별 최신(all_versions=True로 전체)
 [('echo', 2), ('upper', 1)]
 >>> try:
@@ -103,10 +106,11 @@ echo = "my_plugin.nodes:echo_node"
 | `Registry[T](name="registry", *, validator=None)` | `register(key, item, *, version=1, source="", replace=False) -> RegistryEntry[T]`, `unregister(key, version=None)`, `get(key, version=None) -> T`, `get_entry(key, version=None)`, `versions(key) -> list[int]`, `list(*, all_versions=False) -> list[RegistryEntry[T]]`, `validator`, `set_validator(v)`, `in`, `len` |
 | `Validator[T]` | `Callable[[Any], T]` — 거부는 예외, 통과한 값을 다시 넣어도 같은 값(멱등) |
 | `RegistryEntry[T]` | `key`, `version`, `item`, `source` (frozen) |
-| `load_entry_points(group, registry, *, enabled=None, validate=None, version_of=None, entry_points=None) -> list[LoadReport]` | `entry_points`로 테스트용 `EntryPoint` 목록 주입 가능 |
+| `load_entry_points(group, registry, *, enabled=None, disabled=(), validate=None, version_of=None, entry_points=None) -> list[LoadReport]` | `entry_points`로 테스트용 `EntryPoint` 목록 주입 가능. `disabled`는 `enabled`보다 우선 |
 | `load_modules(paths, registry, *, validate=None, version_of=None, import_module=importlib.import_module) -> list[LoadReport]` | |
-| `load_plugins(paths, target, *, enabled=None, watch=None, import_module=...) -> list[LoadReport]` | `target` 모양은 모른다. `enabled`는 `watch()`가 돌려준 레지스트리에 새로 들어온 key에 적용 |
-| `LoadReport` | `source`, `status`(`loaded`/`failed`/`skipped`/`disabled`), `key`, `version`, `error`, `ok` |
+| `load_plugins(paths, target, *, enabled=None, disabled=(), watch=None, import_module=...) -> list[LoadReport]` | `target` 모양은 모른다. `enabled`·`disabled`는 `watch()`가 돌려준 레지스트리에 새로 들어온 key에 적용 |
+| `excluded_reason(name, enabled, disabled=()) -> str \| None` | 뺄 이유(`REASON_DISABLED` = `"in disabled"`, `REASON_NOT_ENABLED` = `"not in enabled"`) 또는 None |
+| `LoadReport` | `source`, `status`(`loaded`/`failed`/`skipped`/`disabled`), `key`, `version`, `error`, `reason`(`skipped`·`disabled` 이유), `ok` |
 | 예외 | `RegistryError` ⊃ `DuplicateKeyError`, `InvalidExtensionError`(`TypeError` 하위), `UnknownExtensionError`(`KeyError` 하위) |
 
 ## 의존성
@@ -117,7 +121,7 @@ echo = "my_plugin.nodes:echo_node"
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-registry`.
 

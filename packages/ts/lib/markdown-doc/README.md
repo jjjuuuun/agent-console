@@ -6,7 +6,7 @@
 데이터와 콜백은 전부 props이고 API·저장소·`api-client`를 모른다. 상태·톤·출처 이름은 코드에 없고 호출자가 준 데이터다.
 사내 의존은 `@agent-console/contracts`(타입만)와 `@agent-console/text-editor`뿐이다. react 19는 peer다.
 
-공용 부품 위치(7R.6 결정): 칩·배지는 `ui`가 아니라 여기에 둔다. `ui`는 `sdd-view`가 쓰지 않는 의존이고(sdd-view는 `ui`를 import하지 않는다),
+공용 부품 위치: 칩·배지는 `ui`가 아니라 여기에 둔다. `ui`는 `sdd-view`가 쓰지 않는 의존이고(sdd-view는 `ui`를 import하지 않는다),
 `sdd-view`·`wiki-view`가 둘 다 이미 이 패키지에 의존하므로 새 의존 간선이 생기지 않는다. `sdd-view`는 같은 이름으로 다시 내보낸다.
 
 ## 설치

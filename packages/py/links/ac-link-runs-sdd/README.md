@@ -1,6 +1,6 @@
 # agent-console-link-runs-sdd
 
-스펙(`mod-sdd`)과 실행 기록(`mod-runs`)을 잇는 연동 모듈(`link-runs-sdd`, design §6R.1.5·§6R.1.6).
+스펙(`mod-sdd`)과 실행 기록(`mod-runs`)을 잇는 연동 모듈(`link-runs-sdd`).
 스펙 작업 문서의 작업을 실행 프로필(팀 구성 + 입력 틀)로 실행하고, 실행 결과를 작업 표시와 추적 표에
 반영한다.
 

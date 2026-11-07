@@ -1,6 +1,9 @@
 """계약 하위 모듈 `wiki`: 위키(design §7R, 0.14.0에서 1.0.0으로 시작).
 
 1.1.0(0.14.1): `WikiInfo.writable`, `WikiSettings.secret_scan` 기본값에 `system: reject`(보안 강화).
+1.2.0(0.14.2): `WikiInfo.rules_kind`, `WikiRuleEntry.applies_to`·`path`·`title`,
+`WikiLintReport.partial`·`skipped`·`enabled_checks`(`KnownWikiLintChecks`),
+`WikiGraphNode.scheme_target`.
 
 사용자 데이터(모르는 키 보존): 위키 `WikiDefinition`, 위키 규칙 `WikiRulesDefinition`
 (지침·쓰기 규칙·점검 규칙·페이지 틀·문법), 문법 `WikiSyntax`, 설정 섹션 `WikiSettings`, 리소스
@@ -26,6 +29,7 @@ from ._api import (
     KnownWikiImportStatuses,
     KnownWikiLinkKinds,
     KnownWikiLinkStatuses,
+    KnownWikiLintChecks,
     KnownWikiLintCodes,
     KnownWikiResolvers,
     KnownWikiRuleEntryKinds,
@@ -145,6 +149,7 @@ __all__ = [
     "KnownWikiImportStatuses",
     "KnownWikiLinkKinds",
     "KnownWikiLinkStatuses",
+    "KnownWikiLintChecks",
     "KnownWikiLintCodes",
     "KnownWikiResolvers",
     "KnownWikiRuleEntryKinds",

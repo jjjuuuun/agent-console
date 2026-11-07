@@ -3,12 +3,12 @@
 Agent Console 웹 앱(Vite + React 19, PWA). **패키지를 조립만 하는 얇은 층**이다: 표현 컴포넌트·스키마 폼은 `packages/ts/lib/*`의 것을 쓰고,
 이 앱은 (1) 부팅(서버 주소·토큰), (2) 데이터 연결 훅(TanStack Query), (3) 라우팅·셸, (4) 한글 문구만 가진다.
 노드 타입·연결 종류·리소스 종류·상호작용 종류·사용량 창·모델·로그 출처·로그 범주·위젯 종류·차원·지표 이름과 서버 모듈 id는 코드에 없다(서버 디스크립터/설정 데이터, `src/app/moduleIdsNoHardcoding.test.ts`가 모듈 id를 점검한다).
-로그 화면(`src/features/logs`, 4R.17)의 필터·열 이름은 데이터 파일 `logsData.json`, 기간·시간 상수·저장소 키는 `logsConfig.ts` 한 곳에 있다.
+로그 화면(`src/features/logs`)의 필터·열 이름은 데이터 파일 `logsData.json`, 기간·시간 상수·저장소 키는 `logsConfig.ts` 한 곳에 있다.
 `src/app/noHardcoding.test.ts`가 소스를 훑어 점검한다. 서버(API+WS)와 웹은 **별도 프로세스**다. 서버는 웹을 모른다.
 
 ## 실행
 ```bash
-pnpm app                                              # 루트: 서버 + 웹 미리보기를 함께 (1R.15)
+pnpm app                                              # 루트: 서버 + 웹 미리보기를 함께
 uv run agent-console serve                            # 서버만 (기본 127.0.0.1:8765)
 pnpm --filter @agent-console/web dev                  # 웹 개발 서버(Vite, HMR)
 pnpm --filter @agent-console/web build                # tsc + vite build -> apps/web/dist (PWA 포함)
@@ -45,10 +45,10 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 | --- | --- | --- |
 | `react` 19 · `react-dom` | 화면 | — |
 | `react-router` ^7 | 라우팅·이탈 보호(`useBlocker`)·메모리 라우터 테스트 | TanStack Router |
-| `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신(결정 §R13-11) | 직접 만든 `useAsync`(1R.22 전 방식) |
-| `pretendard` ^1.3.9 | 기본 글꼴 자체 호스팅(`src/styles/fonts.css`가 woff2를 가리킨다, 5.2R.53). CDN 없이 오프라인에서도 같은 글꼴 | 시스템 글꼴만 사용 |
+| `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신 | 직접 만든 `useAsync`(이전 방식) |
+| `pretendard` ^1.3.9 | 기본 글꼴 자체 호스팅(`src/styles/fonts.css`가 woff2를 가리킨다). CDN 없이 오프라인에서도 같은 글꼴 | 시스템 글꼴만 사용 |
 | `vite-plugin-pwa` ^2 + `workbox-window` (dev) | manifest·서비스 워커(워크박스) 생성, 설치 가능한 앱 | 수작업 manifest + 서비스 워커 |
-| `yaml` ^2 | 설정 › 구조도 프로필 YAML 읽기·쓰기(줄 번호 오류 포함, 5.5R.17) | `js-yaml`(오류 위치·주석 보존이 약함) |
+| `yaml` ^2 | 설정 › 구조도 프로필 YAML 읽기·쓰기(줄 번호 오류 포함) | `js-yaml`(오류 위치·주석 보존이 약함) |
 | `@agent-console/contracts` | 서버 계약 타입·JSON Schema(Pydantic에서 생성) | — |
 | `@agent-console/api-client` | REST·WebSocket 클라이언트 | — |
 | `@agent-console/ui` | 토큰·기본 컴포넌트(대화상자·탭·팝오버 등) | — |

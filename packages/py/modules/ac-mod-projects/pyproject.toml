@@ -12,6 +12,7 @@ dependencies = [
     "agent-console-local-folders>=0.1,<0.2",
     "agent-console-project-space>=0.1,<0.2",
     "agent-console-projects>=0.2,<0.3",
+    "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-store>=0.1,<0.2",
     "pydantic>=2.9",
@@ -20,6 +21,9 @@ dependencies = [
 
 [project.entry-points."agent_console.server_modules"]
 mod-projects = "agent_console_mod_projects.module:module"
+
+[project.entry-points."agent_console.host_plugin_loaders"]
+projects = "agent_console_mod_projects.plugins:load_plugins"
 
 [dependency-groups]
 dev = [

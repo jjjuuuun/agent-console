@@ -20,6 +20,9 @@ from ._ports import SECRET_REDACT, SERVER_ATTRIBUTES, SERVER_WARNINGS
 
 _log = logging.getLogger("agent_console_server")
 
+PLUGIN_CONFIG_WARNING = "plugins.config"
+"""`server-info` 경고 코드: 플러그인 설정(`plugins.*`) 경고."""
+
 
 def plugin_infos(
     reports: Sequence[tuple[str, LoadReport]], redact: Callable[[str], str]
@@ -59,10 +62,12 @@ def server_info(
     server_version: str,
     reports: Sequence[tuple[str, LoadReport]],
     assembly: Assembly,
+    plugin_warnings: Sequence[str] = (),
 ) -> ServerInfo:
     """`ServerInfo`(읽기 전용, 비밀 값 없음).
 
-    `security.expose_paths`가 꺼지면 workspace 경로를 뺀다.
+    `security.expose_paths`가 꺼지면 workspace 경로를 뺀다. `plugin_warnings`(플러그인 설정
+    경고, 예: `plugins.disabled`의 모르는 이름)는 `warnings`에 `plugins.config` 경고로 더한다.
     """
     attributes: dict[str, Any] = {
         "host": settings.host,
@@ -78,7 +83,10 @@ def server_info(
             _log.exception("서버 속성 제공자 실패")
     if settings.security.expose_paths:
         attributes["workspace"] = str(settings.workspace_path)
-    warnings: list[Issue] = []
+    warnings: list[Issue] = [
+        Issue(severity="warning", code=PLUGIN_CONFIG_WARNING, message=text)
+        for text in plugin_warnings
+    ]
     for warning_source in assembly.ports(SERVER_WARNINGS):
         try:
             warnings.extend(warning_source())
@@ -93,4 +101,4 @@ def server_info(
     )
 
 
-__all__ = ["plugin_infos", "redactor", "server_info"]
+__all__ = ["PLUGIN_CONFIG_WARNING", "plugin_infos", "redactor", "server_info"]

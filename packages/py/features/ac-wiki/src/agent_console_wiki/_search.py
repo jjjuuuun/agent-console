@@ -142,7 +142,7 @@ def search_document(parsed: ParsedPage, text: PageText) -> WikiSearchDocument:
 
 @runtime_checkable
 class WikiSearchIndex(Protocol):
-    """위키 검색 색인(X48). 스레드에서 불러도 안전해야 한다.
+    """위키 검색 색인. 스레드에서 불러도 안전해야 한다.
 
     구현은 `id`(백엔드 이름)와 `degraded`(느린 대체 방식인지)를 가진다.
     """

@@ -27,6 +27,7 @@ from pydantic import (
 )
 from ruamel.yaml import YAML
 
+from agent_console_contracts import x_ui
 from agent_console_modkit import (
     Module,
     ModulesConfig,
@@ -54,13 +55,34 @@ class _Section(BaseModel):
 
 
 class PluginSettings(_Section):
+    """설치된 플러그인 중 무엇을 읽을지 정합니다(모든 그룹에 같은 규칙)."""
+
     enabled: list[str] | None = Field(
         default=None,
-        description="로드할 entry point 이름(모든 그룹 공통). null이면 설치된 것 전부.",
+        title="읽을 플러그인",
+        description=(
+            "읽을 플러그인 이름 목록(허용 목록, 모든 그룹 공통). 비우면(null) 설치된 것 전부를 "
+            "읽는다. 목록을 적으면 기본 구현 이름도 함께 적어야 한다."
+        ),
+        json_schema_extra=x_ui(tier="advanced", example=["acme.relay", "acme.notify"]),
+    )
+    disabled: list[str] = Field(
+        default_factory=list,
+        title="끌 플러그인",
+        description=(
+            "읽지 않을 플러그인 이름 목록(제외 목록, 모든 그룹 공통). 읽을 플러그인 목록이 있으면 "
+            "그 안에서 뺀다. 모르는 이름은 경고만 남긴다."
+        ),
+        json_schema_extra=x_ui(tier="advanced", example=["acme.relay"]),
     )
     modules: list[str] = Field(
         default_factory=list,
-        description="설치하지 않은 플러그인 모듈 `pkg.mod:attr`(`register(registries)` 호출).",
+        title="설치하지 않은 플러그인 모듈",
+        description=(
+            "설치하지 않고 읽을 플러그인 모듈 `패키지.모듈:속성` 목록. 그 객체의 "
+            "`register(registries)`를 부른다."
+        ),
+        json_schema_extra=x_ui(tier="advanced", example=["my_plugins.nodes:plugin"]),
     )
 
 
@@ -323,6 +345,7 @@ def _env_overrides(environ: Mapping[str, str]) -> dict[str, Any]:
             put(path, value.lower() in ("1", "true", "yes", "on"))
     lists = {
         "PLUGINS_ENABLED": ("plugins", "enabled"),
+        "PLUGINS_DISABLED": ("plugins", "disabled"),
         "PLUGIN_MODULES": ("plugins", "modules"),
         "ALLOWED_HOSTS": ("security", "allowed_hosts"),
         "ALLOWED_ORIGINS": ("security", "allowed_origins"),

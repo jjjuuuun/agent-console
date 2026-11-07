@@ -1,5 +1,16 @@
 # 변경 기록
 
+## 0.14.2
+
+- 계약 0.14.2(7R.19·7R.20·7R.21 서버 후속). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS
+  `^0.14.0`) 그대로. 하위 계약 버전: `common` 1.12.0, `wiki` 1.2.0.
+- 새 선택 필드(`wiki` 1.2.0): `WikiInfo.rules_kind`(위키 규칙 정의 종류 이름, null = 옛 서버),
+  `WikiRuleEntry.applies_to`(쓰기 규칙 글롭)·`path`(페이지 틀 경로 틀)·`title`(페이지 틀 표시 이름 원문),
+  `WikiLintReport.partial`·`skipped`(점검하지 못한 페이지)·`enabled_checks`(켜진 점검 이름, null = 옛 서버),
+  `WikiGraphNode.scheme_target`(스킴 대상의 열 화면, `WikiLink.scheme_target`과 같은 모양).
+- 새 문서 상수: `KnownIssueCodes.WIKI_LINT_FAILED`(`wiki.lint_failed`, `common` 1.12.0),
+  `KnownWikiLintChecks`(`lint_rules`·`write_rules` — `enabled_checks`의 기본 점검 밖 이름).
+
 ## 0.14.1
 
 - 계약 0.14.1(7R.13·7R.17 계약 후속). 더하기와 기본값 변경이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

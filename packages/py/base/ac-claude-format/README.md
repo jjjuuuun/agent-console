@@ -33,7 +33,7 @@ uv pip install ./packages/py/base/ac-claude-format       # 단독(ruamel.yaml만
 ...     render_rule,
 ... )
 >>> md = "---\nname: reviewer\ndescription: 코드 검토\ntools: Read, Grep\n---\n\n변경을 검토한다.\n"
->>> agent = parse_agent_md(md, default_name="reviewer")  # 보통은 .claude/agents/<이름>.md 내용
+>>> agent = parse_agent_md(md, default_name="reviewer")  # 보통은 '.claude/agents/<이름>.md' 내용
 >>> agent.tools
 ['Read', 'Grep']
 >>> agent_document(agent)["system_prompt"]  # 에이전트 정의 문서(생략 = 상속)
@@ -72,7 +72,7 @@ True
 
 `project_key(folder, keep="", replacement="-")`: 작업 폴더 경로 → Claude Code `projects` 아래 폴더 이름
 (예: `/work/demo` → `-work-demo`). 로그 출처(`agent-console-logs-claude`, 다시 내보냄)와 실행 백엔드의 세션
-보관(`agent-console-backend-claude-sdk`, 5.7R.33y3)이 이 함수 하나를 쓴다. 파일을 건드리지 않는다.
+보관(`agent-console-backend-claude-sdk`)이 이 함수 하나를 쓴다. 파일을 건드리지 않는다.
 
 ## 데이터(코드에 고정하지 않는 것)
 
@@ -98,7 +98,7 @@ True
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-claude-format`.
 

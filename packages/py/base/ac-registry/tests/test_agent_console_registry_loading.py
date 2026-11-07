@@ -15,8 +15,11 @@ from typing import Any
 import pytest
 
 from agent_console_registry import (
+    REASON_DISABLED,
+    REASON_NOT_ENABLED,
     LoadReport,
     Registry,
+    excluded_reason,
     load_entry_points,
     load_modules,
     load_plugins,
@@ -118,6 +121,59 @@ def test_entry_points_enabled_filter_skips_others(plugin_module: str) -> None:
     assert by_key["other"].ok
     assert "other" not in reg
     assert "greeter" in reg
+
+
+def test_entry_points_disabled_skips_only_listed(plugin_module: str) -> None:
+    reg: Registry[Any] = Registry()
+    reports = load_entry_points(
+        "test.group",
+        reg,
+        disabled={"other"},
+        entry_points=[
+            _ep("greeter", f"{plugin_module}:greeter"),
+            _ep("other", f"{plugin_module}:other"),
+        ],
+    )
+    by_key = _by_key(reports)
+    assert by_key["greeter"].status == "loaded"
+    assert by_key["other"].status == "skipped"
+    assert by_key["other"].reason == REASON_DISABLED
+    assert "other" not in reg
+
+
+def test_entry_points_disabled_wins_over_enabled(plugin_module: str) -> None:
+    reg: Registry[Any] = Registry()
+    reports = load_entry_points(
+        "test.group",
+        reg,
+        enabled={"greeter", "other"},
+        disabled={"other"},
+        entry_points=[
+            _ep("greeter", f"{plugin_module}:greeter"),
+            _ep("other", f"{plugin_module}:other"),
+            _ep("third", f"{plugin_module}:other"),
+        ],
+    )
+    by_key = _by_key(reports)
+    assert by_key["greeter"].status == "loaded"
+    assert (by_key["other"].status, by_key["other"].reason) == ("skipped", REASON_DISABLED)
+    assert (by_key["third"].status, by_key["third"].reason) == ("skipped", REASON_NOT_ENABLED)
+
+
+@pytest.mark.parametrize(
+    ("enabled", "disabled", "expected"),
+    [
+        (None, (), None),
+        (None, ("a",), REASON_DISABLED),
+        ({"a"}, (), None),
+        ({"b"}, (), REASON_NOT_ENABLED),
+        ({"a"}, ("a",), REASON_DISABLED),
+    ],
+)
+def test_excluded_reason(
+    enabled: set[str] | None, disabled: tuple[str, ...], expected: str | None
+) -> None:
+    assert excluded_reason("a", enabled, disabled) == expected
 
 
 def test_entry_points_validate_and_version_of(plugin_module: str) -> None:
@@ -265,6 +321,34 @@ def test_load_plugins_calls_register_or_callable_and_reports_errors(plugin_modul
     assert "plugin failed" in (reports[2].error or "")
     assert "TypeError" in (reports[3].error or "")
     assert target == {"from_plugin": "registered", "from_function": "called", "partial": "yes"}
+
+
+def test_load_plugins_disabled_unregisters_listed_keys() -> None:
+    reg: Registry[Any] = Registry("nodes")
+
+    def register(target: Registry[Any]) -> None:
+        target.register("keep", 1)
+        target.register("drop", 2)
+
+    fake = ModuleType("virtual_two")
+    fake.plugin = register  # type: ignore[attr-defined]
+    reports = load_plugins(
+        ["virtual_two:plugin"],
+        reg,
+        disabled={"drop"},
+        watch=lambda: [reg],
+        import_module=lambda _: fake,
+    )
+    assert [(r.key, r.status, r.reason) for r in reports] == [
+        ("plugin", "loaded", None),
+        ("drop", "disabled", REASON_DISABLED),
+    ]
+    assert [e.key for e in reg.list()] == ["keep"]
+
+
+def test_load_plugins_disabled_requires_watch() -> None:
+    with pytest.raises(ValueError, match="watch"):
+        load_plugins([], target={}, disabled={"x"})
 
 
 # ---------------------------------------------------------------- 회귀 (QA 후속)

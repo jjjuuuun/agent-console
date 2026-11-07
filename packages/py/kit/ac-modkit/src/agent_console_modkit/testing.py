@@ -206,17 +206,17 @@ EXAMPLE_EXTENSION = "examples"
 """``example_plugin_loader``가 쓰는 이름 붙은 확장."""
 
 EXAMPLE_KEY = "example"
-"""``example_plugin_loader``가 등록하는 항목 key(``plugins.enabled``로 고를 수 있다)."""
+"""``example_plugin_loader``가 등록하는 항목 key(``plugins.enabled``·``disabled``로 고른다)."""
 
 
 def example_plugin_loader(ctx: PluginLoadContext) -> list[tuple[str, LoadReport]]:
     """플러그인 로더 예(entry point ``agent_console.host_plugin_loaders``).
 
     ``EXAMPLE_EXTENSION`` 확장에 ``{"workspace": …, "options": …}`` 항목 하나를 등록한다.
-    ``ctx.enabled``에 ``EXAMPLE_KEY``가 없으면 건너뛴다.
+    ``ctx.allows(EXAMPLE_KEY)``가 거짓이면 건너뛴다(entry point가 아닌 key는 ``allows``로 판정).
     """
     source = "example loader"
-    if ctx.enabled is not None and EXAMPLE_KEY not in ctx.enabled:
+    if not ctx.allows(EXAMPLE_KEY):
         return [(EXAMPLE_EXTENSION, LoadReport(source=source, status="skipped", key=EXAMPLE_KEY))]
     registry = ctx.registries.extension(EXAMPLE_EXTENSION)
     item = {

@@ -1,7 +1,6 @@
 # agent-console-link-projects-wiki
 
-프로젝트 폴더를 위키 모듈의 **위키 공간**으로 주는 연동 모듈이다(design §7R.3·§7R.4·§7R.13, R15.2·R15.6·
-R15.11·R9.1). 프로젝트 모듈(`mod-projects`)과 위키 모듈(`mod-wiki`)은 서로를 모르고, 이 연동이 둘을 잇는다.
+프로젝트 폴더를 위키 모듈의 **위키 공간**으로 주는 연동 모듈이다. 프로젝트 모듈(`mod-projects`)과 위키 모듈(`mod-wiki`)은 서로를 모르고, 이 연동이 둘을 잇는다.
 
 - 필수 포트 `projects.spaces`(등록 id → 프로젝트 공간). 없으면 이 연동은 꺼진다.
 - 제공 포트 `wiki.spaces`(`ProjectWikiSpaces`): `open(등록 id) -> ProjectWikiSpace{store, folder,
@@ -10,7 +9,7 @@ R15.11·R9.1). 프로젝트 모듈(`mod-projects`)과 위키 모듈(`mod-wiki`)�
   상태 폴더(`<구성 폴더>/.state/<index_dir>/`, 다시 만들 수 있는 캐시)에 들어간다. 같은 폴더를 다른 앱(다른
   workspace)에 등록해도 위키·페이지·규칙이 그대로이고, 기록 연동(`link-projects-records`)을 함께 켜면
   페이지 기록도 그 폴더의 기록 DB에 남아 그대로다.
-- **경로 지킴**(§PI.5): `ac-projects`의 `FolderGuard`(`link-projects-sdd`와 같은 규칙). 페이지 폴더가 구성
+- **경로 지킴**: `ac-projects`의 `FolderGuard`(`link-projects-sdd`와 같은 규칙). 페이지 폴더가 구성
   폴더의 예약 폴더(상태·세션 폴더, 정의 종류 폴더, 설정 `reserved_dirs`)와 겹치거나, 링크를 푼 페이지
   폴더·위키 폴더가 프로젝트 폴더 밖이면 열지 않는다(422 `folders.invalid_path`, 절대 경로는 싣지 않음).
   위키 폴더 안 페이지 경로는 `ac-wiki` `LocalWikiPages`가 지킨다.

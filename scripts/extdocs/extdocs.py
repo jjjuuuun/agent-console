@@ -33,7 +33,14 @@ from extdocs_common import (
     member_src_paths,
     report,
 )
-from extdocs_docs import BLOCKING_CODES, docs_present, expand_globs, public_lint, run_docs_checks
+from extdocs_docs import (
+    BLOCKING_CODES,
+    docs_present,
+    expand_globs,
+    public_lint,
+    run_docs_checks,
+    skip_dirs,
+)
 from extdocs_generate import Generator, write_plan
 from extdocs_model import schema_text
 from extdocs_points import SCHEMA_FILE, CodeFacts, check_points, code_points_summary
@@ -98,7 +105,7 @@ def run_docs(
 
 
 def run_report(root: Path, data: ToolData, patterns: Sequence[str]) -> int:
-    files = expand_globs(root, patterns or data.s("report_globs") or [])
+    files = expand_globs(root, patterns or data.s("report_globs") or [], skip_dirs(data))
     findings = public_lint(root, files, data.lint_rules, warning=True)
     print(f"extdocs-check --report: 파일 {len(files)}개")
     report(findings, [])

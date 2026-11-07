@@ -1,6 +1,6 @@
 # agent-console-link-logs-usage
 
-로그·사용량 연동 모듈(design §4R.8 연동 표 셋째 행, §R4.3 출처 C). 로그 색인(`mod-logs`의 `logs.query`)의
+로그·사용량 연동 모듈. 로그 색인(`mod-logs`의 `logs.query`)의
 응답별 토큰 표본으로 사용량 창을 **추정**하는 사용량 출처 `local-logs`(신뢰 등급 `estimated`)를
 `mod-usage`의 선택 multi 포트 `usage.sources`에 넣는다.
 
@@ -10,15 +10,15 @@
 - 계산은 `ac-logs`의 `block_windows`(ccusage 방식 블록: 첫 메시지 시각을 시 단위로 내림, 블록 길이 동안,
   그 뒤 메시지는 새 블록)와 `rolling_totals`(이동 창)다.
 - 표본은 로그 색인에 있는 것뿐이므로 앱에서는 **등록된 프로젝트의 세션만 센다**(로그 출처가 등록 프로젝트 폴더 키로만
-  수집한다, 5.7R.30·5.7R.30b). 등록되지 않은 폴더에서 쓴 사용량은 추정에 들어가지 않는다.
+  수집한다). 등록되지 않은 폴더에서 쓴 사용량은 추정에 들어가지 않는다.
 - **값을 지어내지 않는다.** 예산이 없으면 `used_ratio`는 null(한도 분모는 공개되지 않는다). 셀 토큰 종류가
   어느 표본에도 없으면 `used_tokens`는 null. 조회 범위에 표본이 없으면 창을 내지 않는다.
 - 표본 캐시는 `logs.ingested`(새 로그 색인) 구독으로 버린다(그 로그 출처를 읽는 항목만).
 - 이 연동이 꺼지면(또는 `mod-logs`·`mod-usage` 중 하나가 꺼지면) 사용량 출처 목록에 `local-logs`가 없다.
 - `local-logs`는 `auto_enable`이다(사용량 설정이 없어도 켜짐). 창 이름(`windows`)은 기본값 데이터의 창
-  `title`·`short_title`이다(5.2R.27).
+  `title`·`short_title`이다.
 
-## 이 PC에 있는 로그 출처 기본 켜기(5.2R.27)
+## 이 PC에 있는 로그 출처 기본 켜기
 
 `local-logs`는 로그 색인에 표본이 있어야 값이 나온다. Claude Code 세션 로그 출처(`claude-code-jsonl`)는 대화 원문을
 색인에 복사하므로 디스크립터 기본이 꺼짐이다. 이 연동은 **그 로그 폴더가 이 PC에 있으면** 그 출처를 읽기 전용 기본

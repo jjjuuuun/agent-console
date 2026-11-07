@@ -6,7 +6,7 @@
 등록된다. 서버·실행 엔진 없이 단독으로 쓴다.
 
 - 조건 데이터 모양은 계약 `ConditionSpec{all?, any?, negate?}`·`ConditionItem{path, op, value?}`, 근거는
-  `ConditionOutcome`(화면 명세 screen-delegation §12 S1 모양), 연산자 디스크립터는
+  `ConditionOutcome`(화면이 그대로 그리는 모양), 연산자 디스크립터는
   `ConditionOperatorDescriptor`다(모두 `agent-console-contracts`).
 - `all`은 모두 참, `any`는 하나라도 참, 둘 다 있으면 둘 다 만족. 둘 다 없거나 비면 참(저장 전 검사 warning).
   `negate`면 최종 결과를 뒤집는다. 근거를 위해 모든 항목을 평가한다.
@@ -86,7 +86,7 @@ False
 `necessary_items(spec, operators)`는 조건 묶음이 참이려면 반드시 참이어야 하는 "최상위 키 하나" 항목(`all`의
 항목, `any`가 하나뿐이면 그 항목)을 `(키, 항목 판정)`으로 낸다(`negate`면 없음). 항목 결과는 그 키 값에만
 달렸으므로, 같은 조건으로 많은 대상을 판정하는 쪽이 키 값별로 결과를 기억해 맞을 수 없는 조건을 미리 거를 수
-있다(`ac-architecture` `ProfileMatcher`, 5.5R.36).
+있다(`ac-architecture` `ProfileMatcher`).
 
 ```python
 >>> from agent_console_conditions import necessary_items

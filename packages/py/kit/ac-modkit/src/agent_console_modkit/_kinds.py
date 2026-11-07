@@ -14,7 +14,7 @@ from typing import Any
 from ._ports import PortKey
 
 type KindReferences = Callable[[Mapping[str, Any]], Iterable[tuple[str, str]]]
-"""기여 종류 문서 하나가 쓰는 정의의 ``(종류, id)``(복사 계획의 참조 닫힘, X25와 같은 뜻)."""
+"""기여 종류 문서 하나가 쓰는 정의의 ``(종류, id)``(복사 계획의 참조 닫힘)."""
 
 
 @dataclass(frozen=True)

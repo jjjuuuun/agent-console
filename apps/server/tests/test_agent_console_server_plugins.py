@@ -121,3 +121,53 @@ def test_module_plugin_respects_plugins_enabled(
         assert "local-usage" in usage_ids
         import_ids = {s["id"] for s in client.get(f"{API}/resources/import/sources").json()}
         assert "local-import" not in import_ids
+
+
+# ---------------------------------------------------------------- plugins.disabled (8R 후속)
+
+
+def test_plugins_disabled_turns_off_one_entry_point_only(tmp_path: Path) -> None:
+    """하나만 끄면 그 이름만 빠지고 나머지 기본 구현(노드·연결 종류)은 그대로다."""
+    settings = make_settings(tmp_path, plugins={"disabled": ["team"]})
+    with server(settings) as client:
+        node_ids = {d["id"] for d in client.get(f"{API}/node-types").json()}
+        assert "team" not in node_ids
+        assert "agent" in node_ids
+        assert client.get(f"{API}/edge-types").json()  # 연결 종류는 그대로
+        info = client.get(f"{API}/server-info").json()
+        team = [p for p in info["plugins"] if p["name"] == "team"]
+        assert team
+        assert all(p["status"] == "skipped" and p["error"] is None for p in team)
+        assert not [w for w in info["warnings"] if w["code"] == "plugins.config"]
+
+
+def test_plugins_disabled_with_enabled_and_module_plugins(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install(tmp_path, monkeypatch, "ac_server_test_module_plugin", _PLUGIN)
+    settings = make_settings(
+        tmp_path,
+        plugins={
+            "modules": ["ac_server_test_module_plugin:register"],
+            "enabled": ["local-usage", "local-import"],
+            "disabled": ["local-import"],
+        },
+    )
+    with server(settings) as client:
+        mine = {p["name"]: p for p in _plugins(client) if p["group"] == "plugins.modules"}
+        assert mine["local-import"]["status"] == "disabled"
+        assert mine["local-import"]["error"] is None
+        usage_ids = {s["descriptor"]["id"] for s in client.get(f"{API}/usage/sources").json()}
+        assert "local-usage" in usage_ids
+        import_ids = {s["id"] for s in client.get(f"{API}/resources/import/sources").json()}
+        assert "local-import" not in import_ids
+
+
+def test_plugins_disabled_unknown_name_is_server_warning(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path, plugins={"disabled": ["no-such-plugin-xyz"]})
+    with server(settings) as client:
+        info = client.get(f"{API}/server-info").json()
+        warnings = [w for w in info["warnings"] if w["code"] == "plugins.config"]
+        assert len(warnings) == 1
+        assert "no-such-plugin-xyz" in warnings[0]["message"]
+        assert client.get(f"{API}/node-types").json()  # 다른 것은 그대로

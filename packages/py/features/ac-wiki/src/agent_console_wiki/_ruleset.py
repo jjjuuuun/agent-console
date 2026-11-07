@@ -300,6 +300,7 @@ def merge_rules(
                     rule_id=rule_id,
                     label=rule.message,
                     action=rule.action,
+                    applies_to=list(rule.applies_to),
                 )
             )
         for i, lint_rule in enumerate(rules.lint_rules):
@@ -337,6 +338,8 @@ def merge_rules(
                     id=tpl.id,
                     rule_id=rule_id,
                     label=tpl.title or tpl.id,
+                    path=tpl.path or None,
+                    title=tpl.title or None,
                 )
             )
         out.syntax_layers.append((rule_id, rules.syntax))

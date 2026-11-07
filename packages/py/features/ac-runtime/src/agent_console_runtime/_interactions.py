@@ -51,7 +51,7 @@ class InteractionAnsweredBy:
 
 @runtime_checkable
 class InteractionKind(Protocol):
-    """상호작용 종류(X15). 엔진·서버·웹은 `descriptor`(요청·응답 스키마, 화면 힌트)만 본다."""
+    """상호작용 종류. 엔진·서버·웹은 `descriptor`(요청·응답 스키마, 화면 힌트)만 본다."""
 
     descriptor: InteractionKindDescriptor
 

@@ -15,7 +15,8 @@
     - 서버 없이 쓰는 부품: ``ProjectRepository``·``project_kind``·``ProjectManager``·
       ``ProjectSpaceCache``·``FolderService``·``FolderPicker``·``CopyService``
     - 확장 지점: 코드 선택 창 제공자 ``FolderDialogProvider``(entry point
-      ``agent_console.folder_dialogs``)
+      ``agent_console.folder_dialogs``, 호스트 플러그인 로더가 묶음의 확장
+      ``FOLDER_DIALOGS_EXTENSION``에 읽어 ``plugins.enabled``·``plugins.disabled``를 따른다)
     - (deprecated) 옛 범위 정리 ``ScopeService``·``DefinitionSnapshot``
     - 설정 ``ProjectModuleSettings``·``FolderDialogSettings``(``SETTINGS_COMPAT``)
 """
@@ -35,9 +36,11 @@ from .folders import (
     FolderDialogProvider,
     FolderPicker,
     FolderService,
+    as_folder_dialog_provider,
     load_dialog_providers,
 )
 from .module import MODULE_ID, WEB_ROLES, ProjectsModule, library_kinds, module
+from .plugins import FOLDER_DIALOGS_EXTENSION
 from .ports import (
     DEFINITIONS_LOOKUP,
     DEFINITIONS_REFERENCES,
@@ -71,6 +74,7 @@ __all__ = [
     "DEFINITIONS_SAVED",
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
+    "FOLDER_DIALOGS_EXTENSION",
     "FOLDER_DIALOGS_GROUP",
     "KIND_CONTRIBUTIONS",
     "MODULE_ID",
@@ -102,6 +106,7 @@ __all__ = [
     "ProjectSpaces",
     "ProjectsModule",
     "ScopeService",
+    "as_folder_dialog_provider",
     "combine_references",
     "contribution_references",
     "library_kinds",

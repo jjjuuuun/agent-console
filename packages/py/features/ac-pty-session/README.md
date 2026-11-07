@@ -2,8 +2,8 @@
 
 대화형 CLI(TTY가 있어야 입력을 받는 도구)를 PTY 하위 프로세스로 띄우고, 출력을 **줄 단위 화면**·**제어 시퀀스를 뺀
 원문 흐름**·**규칙 신호**로 읽는 라이브러리. 입력(글자·이름 붙은 키)을 보내고, 끝낼 때는 정중한 종료 뒤 유예가
-지나면 강제 종료한다. Agent Console에서는 Claude 구독 로그인(`claude auth login`) 중계에 쓴다(설계
-`docs/design/ux-overhaul.md` §15.9). 사내 패키지에 의존하지 않는다.
+지나면 강제 종료한다. Agent Console에서는 Claude 구독 로그인(`claude auth login`) 중계에 쓴다.
+사내 패키지에 의존하지 않는다.
 
 - **`PtySession`**: `spawn(argv, env, cwd, cols, rows)` · `write` · `send_key("enter")` · `screen_lines()` ·
   `text_since(offset)` · `links()` · `wait_changed(version, timeout)` · `wait_exit(timeout)` · `terminate(grace)`.

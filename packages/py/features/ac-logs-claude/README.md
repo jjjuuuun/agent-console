@@ -14,12 +14,12 @@ Claude Code 세션 기록(서브에이전트 포함)을 `agent-console-logs`의 
 - `thinking` 본문(과 서명)은 어디에도 저장하지 않는다. "내부 추론 본문 생략" 표시만 남는다.
 - 비밀 의심 값 가림은 수집기(`LogIngestor(redact=...)`)가 저장 직전에 건다.
 - 서버·웹 없이 쓴다. `agent_console_logs.LogRegistries().load()`가 entry point로 찾는다.
-- **앱에서는 등록된 프로젝트 폴더의 세션만 읽는다**(5.7R.30 후속, 사용자 원칙 "기능은 앱이 만들거나 등록한 프로젝트에
+- **앱에서는 등록된 프로젝트 폴더의 세션만 읽는다**(원칙 "기능은 앱이 만들거나 등록한 프로젝트에
   대해서만"). 수집기가 `LogIngestor(projects=...)`로 `ProjectFolders`(현재·등록된 프로젝트 폴더)를 주면 이 출처의
   `in_scope`가 `projects/<키>/…`의 키를 프로젝트 폴더 이름(`project_key`)과 맞춰 범위 밖 단위를 건너뛴다(메타 파일도
   읽지 않는다). 등록된 프로젝트가 없으면 아무것도 읽지 않는다(홈 전체를 읽는 대체 동작 없음). `roots`를 직접 적어도
   같은 필터가 걸린다. `projects`를 주지 않는 단독 사용은 예전처럼 루트 전체를 읽는다.
-- **기본으로 읽는 곳은 두 곳이다**(5.7R.30b, 사용자 결정 2026-10-28 "앱 하나에 로그인 하나"): (a) CLI 세션
+- **기본으로 읽는 곳은 두 곳이다**("앱 하나에 로그인 하나"): (a) CLI 세션
   `~/.claude/projects`(또는 `CLAUDE_CONFIG_DIR` 아래, 읽기 전용 — 앱이 `~/.claude`에서 읽는 유일한 예외), (b) 앱이
   실행한 세션 `<앱 workspace>/.state/claude/projects`(앱 전용 구독 자격 폴더 아래, `workspace_roots`). 둘 다 같은 범위
   필터(등록된 프로젝트 폴더 키)를 지난 것만 읽는다. 앱 workspace는 호스트 경로 `LogIngestor(paths={"workspace": …})`
@@ -36,7 +36,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | --- | --- | --- | --- |
 | `agent-console-logs` | 출처 기반 클래스 `JsonlFileSource`, 초안·약속 태그, 수집기 | X5·X6 확장 지점의 코어 | — |
 | `agent-console-contracts` | 디스크립터·`TokenSample`·`LogDocumentRef` | 계약 단일 소스 | — |
-| `agent-console-claude-format` | 폴더 키 `project_key`(5.7R.33y3부터 그쪽에 두고 여기서 다시 내보냄) | 실행 백엔드 세션 보관과 같은 함수 한 곳 | 함수 복사(규칙이 바뀌면 두 곳을 고쳐야 함) |
+| `agent-console-claude-format` | 폴더 키 `project_key`(그쪽에 두고 여기서 다시 내보냄) | 실행 백엔드 세션 보관과 같은 함수 한 곳 | 함수 복사(규칙이 바뀌면 두 곳을 고쳐야 함) |
 
 ## 최소 사용
 
@@ -84,10 +84,10 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 
 | 키 | 기본값 | 뜻 |
 | --- | --- | --- |
-| `project_scope` | (없음) | 읽지 않음(5.7R.33i, 남아 있으면 정보 `logs.ignored_key`). 범위는 늘 등록된 프로젝트 전체(하위 폴더 포함) |
+| `project_scope` | (없음) | 읽지 않음(남아 있으면 정보 `logs.ignored_key`). 범위는 늘 등록된 프로젝트 전체(하위 폴더 포함) |
 | `cwd_pointer` | `/cwd` | 세션 작업 폴더 JSON 포인터. 폴더 키가 등록 폴더 키와 같거나 그 하위처럼 보이면 이 cwd가 등록 폴더 안인지로 확정한다(키는 손실 변환) |
 | `cwd_peek_bytes` | `262144` | cwd를 찾으려고 파일 앞에서 읽는 최대 바이트 |
-| `workspace_roots` | `[".state/claude/projects"]` | 앱 실행 세션 폴더(앱 workspace 기준 상대 경로, 절대 경로 가능 — 앱 전용 구독 자격 폴더 아래). `roots`가 비었을 때만. 백엔드 `auth_dir.config_dir`를 바꾸면 함께 바꾼다. 5.7R.30의 `project_roots`(프로젝트 안 상대 경로)는 스키마에 `deprecated`로만 남아 읽지 않는다(값이 있으면 앱이 정보 이슈 `logs.ignored_key`) |
+| `workspace_roots` | `[".state/claude/projects"]` | 앱 실행 세션 폴더(앱 workspace 기준 상대 경로, 절대 경로 가능 — 앱 전용 구독 자격 폴더 아래). `roots`가 비었을 때만. 백엔드 `auth_dir.config_dir`를 바꾸면 함께 바꾼다. 옛 `project_roots`(프로젝트 안 상대 경로)는 스키마에 `deprecated`로만 남아 읽지 않는다(값이 있으면 앱이 정보 이슈 `logs.ignored_key`) |
 | `project_key_keep`·`project_key_replacement` | `""`·`-` | 작업 폴더 → `projects` 아래 폴더 이름 규칙(영문자·숫자·남길 글자 밖은 바꿈 글자로, 예: `/work/demo` → `-work-demo`). Claude Code가 문서로 정하지 않은 규칙이라 바뀌면 고친다 |
 | `roots` | `[]` | 읽을 `projects` 폴더 목록. 비면 아래 규칙(CLI 세션) + `workspace_roots`(앱 실행 세션). 적어도 범위 필터는 그대로 |
 | `config_dir_env`·`config_dir_subpath` | `CLAUDE_CONFIG_DIR`·`projects` | 주입된 환경에 이 변수가 있으면 그 아래 하위 경로 |
@@ -167,7 +167,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 | `attachment` `credential*`·`*secret*`·`*password*`·`*auth*` | 규칙 | 요약은 종류만("… (값은 요약에 넣지 않음)"). 비밀 가림(수집기 `redact`)과 별개인 최소 노출 |
 | 그 밖의 `attachment` | 규칙 | `context` "첨부 맥락 · {attachment.type}", 요약 = 종류 이름만(모르는 첨부의 본문을 목록에 내놓지 않음) |
 | `summary` | 규칙 | `context` "요약 · …" |
-| `custom-title`·`ai-title` | 규칙 | `custom-title`은 `other`, `ai-title`은 숨김 범주 `meta`(반복되는 자동 제목 — 타임라인 소음, 5R.19). 제목 = `customTitle`·`aiTitle` 값 그대로(세션 목록 제목으로 쓰이므로 접두어 없음), 요약 "세션 이름(/rename)"·"세션 제목(자동 생성)", 태그 `session_title` + 순위 태그 `session_title.renamed`·`session_title.generated`(아래 우선순위) |
+| `custom-title`·`ai-title` | 규칙 | `custom-title`은 `other`, `ai-title`은 숨김 범주 `meta`(반복되는 자동 제목 — 타임라인 소음). 제목 = `customTitle`·`aiTitle` 값 그대로(세션 목록 제목으로 쓰이므로 접두어 없음), 요약 "세션 이름(/rename)"·"세션 제목(자동 생성)", 태그 `session_title` + 순위 태그 `session_title.renamed`·`session_title.generated`(아래 우선순위) |
 | `agent-name` | 규칙 | `other` "에이전트 이름 · …" |
 | `permission-mode`·`mode` | 규칙 | `control`(에이전트 제어) "권한 모드 · {permissionMode}"·"모드 · {mode}" |
 | `atis-latch` | 규칙 | `meta`, 요약 "atis {값}"(스칼라일 때만, 아니면 종류) |
@@ -189,13 +189,13 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 바뀌면 `row_rules`나 `extra_row_rules`를 고치면 되고, 코드는 고칠 필요가 없다. 픽스처(`tests/data/claude_config`)는
 개인 정보가 없는 합성 파일이다.
 
-세션 제목 우선순위(5R.19): 이 분류기는 후보에 태그만 붙이고, 순위는 코어의 세션 제목 규칙 **데이터**
+세션 제목 우선순위: 이 분류기는 후보에 태그만 붙이고, 순위는 코어의 세션 제목 규칙 **데이터**
 (`agent-console-logs` `data/default_session_title_rules.yaml`, 모듈 옵션 `mod-logs.session_title_rules`)가 정한다.
 기본은 마지막 `session_title.renamed`(`custom-title`) > 마지막 `session_title.generated`(`ai-title`) > 첫
 `session_title`(사용자 입력, 명령 표시 등 `session_title_skip_prefixes` 제외)이다. 입력을 후보에서 빼려면
 `session_title_from_input: false`.
 
-숨김 범주 `meta`(5R.19): 형식 내부 기록(`ai-title` 반복·`queue-operation`·`atis-latch`·`cost-state`·`api-request*`·
+숨김 범주 `meta`: 형식 내부 기록(`ai-title` 반복·`queue-operation`·`atis-latch`·`cost-state`·`api-request*`·
 `file-history-*`)은 기본 분류 체계에서 `visible: false`인 `meta`로 보내 타임라인에서 숨긴다. 목록·검색·집계에는
 남는다. 보이게 하려면 설정 `logs.taxonomy.categories.meta.visible: true`, 범주를 바꾸려면 `row_rules`를 고친다.
 
@@ -204,7 +204,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 `trackingPath`·`snapshot.trackedFileBackups`)은 커뮤니티 형식 정리(2026-10-18 확인, 공식 문서 없음)를 따랐고,
 `mode` 행의 필드 이름은 확인하지 못했다. 그래서 전부 기본 규칙 데이터이며 형식이 바뀌면 데이터만 고친다.
 
-요청 본문 저장(5.5R.34): Claude Code `api-request-blob` 행에는 모델에 보낸 요청 본문 전체(대화·도구 결과·지침)가
+요청 본문 저장: Claude Code `api-request-blob` 행에는 모델에 보낸 요청 본문 전체(대화·도구 결과·지침)가
 들어 있다. 로그 색인에 같은 내용이 한 번 더 쌓이지 않도록 기본 규칙은 크기·해시만 남긴다. 원문을 다시 색인하려면
 같은 행에 맞는 규칙을 `extra_row_rules`에 넣는다(먼저 맞는 규칙이 이긴다, `store_raw` 기본값 `true`):
 
@@ -223,9 +223,9 @@ logs:
 
 설정 변경과 이미 색인된 이벤트: 분류기 설정(`document_kinds`·`row_rules`·`store_raw` 등)은 **바꾼 뒤 수집하는 행부터**
 적용된다. 색인은 같은 이벤트(같은 identity)를 다시 쓰지 않으므로, 이미 색인된 행은 다시 스캔해도 그대로다. 예를 들어
-문서 종류 기본값(`CLAUDE.md` → `rules`, 5.5R.7)이나 `api-request-blob` 원문 제외(5.5R.34)를 옛 이벤트에도 반영하려면
+문서 종류 기본값(`CLAUDE.md` → `rules`)이나 `api-request-blob` 원문 제외를 옛 이벤트에도 반영하려면
 그 범위의 색인을 비우고(purge) 다시 스캔한다. 그 전까지 옛 색인의 원문은 남는다(보존 기간
-`mod-logs.retention_days`가 지나면 지워진다). 분류 기본값이 바뀌면 purge 후 재스캔한다(5.7R.6, M-3):
+`mod-logs.retention_days`가 지나면 지워진다). 분류 기본값이 바뀌면 purge 후 재스캔한다:
 
 ```bash
 # 서버에서(dry_run이 기본이라 먼저 지울 행 수만 본다). 요청 본문 행의 기본 범주는 meta다.

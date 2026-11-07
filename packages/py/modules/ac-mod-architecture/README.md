@@ -1,6 +1,6 @@
 # agent-console-mod-architecture
 
-구조도 기능 모듈(`mod-architecture`, design §5.5R.3). 구조도 프로필을 패키지 기본 → X23 플러그인 →
+구조도 기능 모듈(`mod-architecture`). 구조도 프로필을 패키지 기본 → X23 플러그인 →
 사용자 설정(워크스페이스 설정 `architecture` 섹션) 순으로 합쳐 REST와 포트로 낸다.
 로그·실행을 모른다. 이벤트는 호출자가 넘긴다(단독 투영 본문, 또는 이 모듈의 포트를 쓰는 연동 모듈).
 

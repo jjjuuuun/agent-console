@@ -13,6 +13,11 @@
 읽는다. 로더를 모두 부른 뒤 설정 ``plugins.modules``의 ``register(registries)`` 플러그인을 같은
 묶음에 로드한다(검사기가 이미 붙어 있으므로 같은 검사를 거친다).
 
+켜고 끄기: 설정 ``plugins.enabled``(허용 목록, null = 전부)와 ``plugins.disabled``(제외 목록)는
+모든 그룹에 같은 규칙으로 걸린다. 허용 목록이 있으면 그 안에서 제외 목록을 뺀다. 로더는 둘을
+합친 결과를 ``PluginLoadContext.enabled``(읽을 entry point 이름)로 받으므로 로더 코드는 제외
+목록을 몰라도 된다. 뺀 항목의 보고에는 이유(``LoadReport.reason``)가 붙는다.
+
 비밀 해석: 환경변수(``env_secret_lookup``) 뒤에 묶음의 ``SECRET_PROVIDERS_REGISTRY`` 레지스트리
 항목(``get_secret(name) -> str | None``)을 순서대로 묻는다(``secret_lookup``).
 """
@@ -23,7 +28,7 @@ import importlib
 import importlib.metadata
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Protocol, runtime_checkable
@@ -50,6 +55,12 @@ PLUGIN_MODULES_REPORT_GROUP = "plugins.modules"
 HOST_EXTENSIONS_REPORT_GROUP = "host.extensions"
 """호스트 확장(공장·로더) 자체를 읽지 못했을 때 보고의 그룹 이름."""
 
+REASON_PLUGINS_DISABLED = "설정 plugins.disabled에 있음"
+"""``skipped``·``disabled`` 보고 이유: 제외 목록에 있다."""
+
+REASON_PLUGINS_NOT_ENABLED = "설정 plugins.enabled에 없음"
+"""``skipped``·``disabled`` 보고 이유: 허용 목록이 있고 거기 없다."""
+
 SECRET_PROVIDERS_REGISTRY = "secret_providers"
 """비밀 공급자 레지스트리 이름. 묶음의 같은 이름 속성(``Registry``) 또는 ``extension(이름)``."""
 
@@ -60,16 +71,32 @@ class PluginLoadContext:
 
     Attributes:
         registries: 레지스트리 묶음(``extension(name, validator=)``이 있다).
-        enabled: 설정 ``plugins.enabled``(None = 설치된 것 전부). entry point 이름 집합.
+        enabled: 읽을 entry point 이름 집합(None = 설치된 것 전부). ``load_entry_points``의
+            ``enabled``에 그대로 넘긴다. 설정 ``plugins.disabled``를 이미 뺀 값이다(허용 목록이
+            null이고 제외 목록만 있으면 설치된 entry point 이름 전부에서 뺀 집합).
         paths: 호스트 경로(선언형 플러그인 폴더 등). 없으면 None.
         options: 설치자 모듈 설정 원본(``modules.options``, 모듈 id → 값). 로더가 자기 모듈
             설정(예: 확장 이름)을 읽을 때 쓴다. 검증은 로더가 한다.
+        disabled: 설정 ``plugins.disabled``(제외 목록). ``enabled``에 이미 반영되어 있다.
+        allow_unlisted: True면 ``enabled``는 설정 허용 목록이 아니라 설치된 이름에서 계산한
+            값이다. entry point가 아닌 이름(로더가 정한 key)은 ``allows``로 판정한다.
     """
 
     registries: Any
     enabled: frozenset[str] | None = None
     paths: Paths | None = None
     options: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    disabled: frozenset[str] = frozenset()
+    allow_unlisted: bool = False
+
+    def allows(self, name: str) -> bool:
+        """이름 ``name``을 읽어도 되는지(entry point가 아닌 key를 쓰는 로더용).
+
+        제외 목록에 있으면 False. 허용 목록이 있으면 그 안에 있어야 한다.
+        """
+        if name in self.disabled:
+            return False
+        return self.enabled is None or self.allow_unlisted or name in self.enabled
 
 
 type PluginLoader = Callable[[PluginLoadContext], Iterable[tuple[str, LoadReport]]]
@@ -115,10 +142,12 @@ class HostPlugins:
     Attributes:
         registries: 레지스트리 묶음(``BaseServices.registries``).
         reports: ``(그룹, 보고)`` 목록(서버 정보의 플러그인 목록).
+        warnings: 설정 경고(예: ``plugins.disabled``의 모르는 이름). 사람이 읽는 문장.
     """
 
     registries: Any
     reports: list[tuple[str, LoadReport]] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def secret_providers(self) -> list[Any]:
@@ -170,9 +199,31 @@ def _first_factory(
     return chosen
 
 
+def _installed_names(
+    entry_points: Iterable[importlib.metadata.EntryPoint] | None,
+) -> frozenset[str]:
+    """설치된(또는 주입된) entry point 이름 전부(그룹 무관)."""
+    found = entry_points if entry_points is not None else importlib.metadata.entry_points()
+    return frozenset(ep.name for ep in found)
+
+
+def _with_reason(
+    report: LoadReport, requested: frozenset[str] | None, blocked: frozenset[str]
+) -> LoadReport:
+    """``skipped``·``disabled`` 보고에 설정 이름을 담은 이유를 붙인다."""
+    if report.status not in ("skipped", "disabled") or report.key is None:
+        return report
+    if report.key in blocked:
+        return replace(report, reason=REASON_PLUGINS_DISABLED)
+    if requested is not None and report.key not in requested:
+        return replace(report, reason=REASON_PLUGINS_NOT_ENABLED)
+    return report
+
+
 def load_host_plugins(
     *,
     enabled: Iterable[str] | None = None,
+    disabled: Iterable[str] = (),
     paths: Paths | None = None,
     modules: Sequence[str] = (),
     options: Mapping[str, Mapping[str, Any]] | None = None,
@@ -183,6 +234,9 @@ def load_host_plugins(
 
     Args:
         enabled: 로드할 entry point 이름(모든 그룹 공통, 설정 ``plugins.enabled``). None = 전부.
+        disabled: 로드하지 않을 이름(모든 그룹 공통, 설정 ``plugins.disabled``). ``enabled``보다
+            우선한다. ``plugins.modules`` 플러그인이 등록한 key에도 같은 규칙이 걸린다. 어느
+            보고에도 나오지 않는 이름은 ``HostPlugins.warnings``에 경고로 남긴다.
         paths: 호스트 경로(로더에 넘긴다).
         modules: ``register(registries)`` 플러그인 경로(설정 ``plugins.modules``).
         options: 모듈 설정 원본(``modules.options``, 로더에 넘긴다).
@@ -207,9 +261,19 @@ def load_host_plugins(
             registries = None
     if registries is None:
         registries = ExtensionRegistries()
-    allowed = frozenset(enabled) if enabled is not None else None
+    requested = frozenset(enabled) if enabled is not None else None
+    blocked = frozenset(disabled)
+    allowed = requested
+    if blocked:
+        universe = requested if requested is not None else _installed_names(entry_points)
+        allowed = universe - blocked
     context = PluginLoadContext(
-        registries=registries, enabled=allowed, paths=paths, options=dict(options or {})
+        registries=registries,
+        enabled=allowed,
+        paths=paths,
+        options=dict(options or {}),
+        disabled=blocked,
+        allow_unlisted=bool(blocked) and requested is None,
     )
     for ep in _entry_points(HOST_PLUGIN_LOADERS_GROUP, entry_points):
         try:
@@ -222,15 +286,26 @@ def load_host_plugins(
         for r in load_plugins(
             modules,
             registries,
-            enabled=set(allowed) if allowed is not None else None,
+            enabled=requested,
+            disabled=blocked,
             watch=registries.all,
             import_module=import_module,
         )
     )
+    reports = [(group, _with_reason(r, requested, blocked)) for group, r in reports]
     for _, report in reports:
         if not report.ok:
             _log.warning("플러그인 로드 실패: %s (%s)", report.source, report.error)
-    return HostPlugins(registries=registries, reports=reports)
+        elif report.reason is not None:
+            _log.info("플러그인 %s: %s (%s)", report.status, report.source, report.reason)
+    seen = {r.key for _, r in reports if r.key is not None}
+    warnings = [
+        f"plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함)"
+        for name in sorted(blocked - seen)
+    ]
+    for warning in warnings:
+        _log.warning("%s", warning)
+    return HostPlugins(registries=registries, reports=reports, warnings=warnings)
 
 
 def open_host_database(
@@ -306,6 +381,8 @@ __all__ = [
     "HOST_PLUGIN_LOADERS_GROUP",
     "HOST_REGISTRIES_GROUP",
     "PLUGIN_MODULES_REPORT_GROUP",
+    "REASON_PLUGINS_DISABLED",
+    "REASON_PLUGINS_NOT_ENABLED",
     "SECRET_PROVIDERS_REGISTRY",
     "ExtensionRegistries",
     "HostPlugins",

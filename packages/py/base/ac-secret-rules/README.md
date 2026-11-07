@@ -2,8 +2,8 @@
 
 평문 비밀로 **의심되는** 값을 찾고(`find_suspected`), 텍스트 안의 의심 부분을 가린다(`redact_suspected`).
 스키마를 모를 때 쓰는 휴리스틱이다. 스키마에 `x-secret`이 있으면 그쪽 검사가 우선이다.
-가림은 멱등이다: 이미 있는 가림 문자열(`mask`) 자리는 다시 가리지 않으므로 두 번 적용해도 결과가 같다(4R.22). 가림 문자열에 붙은 평문은 그대로 가린다.
-가림 문자열을 사이에 끼워 비밀의 뒤 조각을 남기는 입력도 막는다(5R.19): 텍스트에 가림 문자열이 있으면 그 자리를 값 글자로
+가림은 멱등이다: 이미 있는 가림 문자열(`mask`) 자리는 다시 가리지 않으므로 두 번 적용해도 결과가 같다. 가림 문자열에 붙은 평문은 그대로 가린다.
+가림 문자열을 사이에 끼워 비밀의 뒤 조각을 남기는 입력도 막는다: 텍스트에 가림 문자열이 있으면 그 자리를 값 글자로
 채운 사본도 함께 훑고, 가린 자리에 붙은 조각은 그 자리와 한 덩어리로 가린다(`password=[REDACTED]hunter2` →
 `password=[REDACTED]`). 대입 값의 닫는 괄호(`)`·`}`·`]`)는 뒤에 값 글자가 이어지면 값의 일부로 본다
 (`password=abc]hunter2` → `password=[REDACTED]`, `{password=abc}` → `{password=[REDACTED]}`). 비밀 규칙에
@@ -75,7 +75,7 @@ uv pip install ./packages/py/base/ac-safe-regex ./packages/py/base/ac-secret-rul
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-secret-rules`.
 

@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.1"
+CONTRACTS_VERSION: Final = "0.14.2"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,7 +38,7 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.11.0",
+    "common": "1.12.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
     "definitions": "1.7.0",
@@ -51,7 +51,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "architecture": "1.0.0",
     "memory": "1.1.0",
     "sdd": "1.2.0",
-    "wiki": "1.1.0",
+    "wiki": "1.2.0",
     "modules": "1.5.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
@@ -82,7 +82,11 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`).
 0.14.1(7R.13·7R.17 계약 후속, 더하기와 기본값 변경): `common` 1.11.0(문서 상수
 `KnownIssueCodes.WIKI_UPDATE_UNAVAILABLE`, 루트 공개 별칭 `Slug`), `wiki` 1.1.0(`WikiInfo.writable`,
-`WikiSettings.secret_scan` 기본값에 `system: reject` — 보안 강화)."""
+`WikiSettings.secret_scan` 기본값에 `system: reject` — 보안 강화).
+0.14.2(7R.19·7R.20·7R.21 서버 후속, 더하기만): `common` 1.12.0(문서 상수
+`KnownIssueCodes.WIKI_LINT_FAILED`), `wiki` 1.2.0(`WikiInfo.rules_kind`, `WikiRuleEntry.applies_to`·
+`path`·`title`, `WikiLintReport.partial`·`skipped`·`enabled_checks`, `KnownWikiLintChecks`,
+`WikiGraphNode.scheme_target`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -733,6 +737,10 @@ class KnownIssueCodes:
     WIKI_UPDATE_UNAVAILABLE: Final = "wiki.update_unavailable"
     """(0.14.1) 위키 고치기 노드(`wiki-update`)가 쓸 위키 서비스가 없다(위키 모듈 또는 위키·실행
     연동이 꺼짐). 그래프 검증 warning이고, 실행하면 노드는 skipped(이유 = 이 코드)다."""
+    WIKI_LINT_FAILED: Final = "wiki.lint_failed"
+    """(0.14.2) 위키 점검에서 페이지 하나를 점검하지 못했다(warning, 본문을 읽을 수 없음 등).
+    `page`, `details.reason` = 예외 종류 이름(값·경로 원문 없음). 그 페이지는
+    `WikiLintReport.skipped`에 있고 `partial`이 참이다."""
 
 
 class KnownSuggestionIds:

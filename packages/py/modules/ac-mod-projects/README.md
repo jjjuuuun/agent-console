@@ -1,6 +1,6 @@
 # agent-console-mod-projects
 
-Agent Console 프로젝트 기능 모듈(모듈 id `mod-projects`, design §PI).
+Agent Console 프로젝트 기능 모듈(모듈 id `mod-projects`).
 
 - 프로젝트 = 로컬 폴더 + 그 폴더 안 구성 사본(`<folder>/.agent-console/`). 앱 등록부
   (`<workspace>/projects/<id>.yaml`)에는 폴더·보관·라벨만, 이름·설명·프로젝트 층은 폴더 매니페스트
@@ -88,14 +88,16 @@ True
 | `definitions.spaces` | 제공(`open(project_id) -> DefinitionStore`) | — |
 | `definitions.lookup`·`definitions.store` | 선택(라이브러리) | 라이브러리가 낀 복사 409 `feature_unavailable`, 공간 종류 = `ac-store` 기본 |
 | `definitions.references`(여러) | 선택 | 복사 계획에 `project.references_unavailable` 정보 |
-| `definitions.kind_contributions`(여러, X44) | 선택(공간 종류에 기여 종류를 더함 — `library=False` 포함, 옮길 수 있는 것만. 기여의 `references`는 `definitions.references`와 합쳐 참조 닫힘에) | 공간 종류 = 라이브러리 종류(6R.5 전과 같음) |
+| `definitions.kind_contributions`(여러, X44) | 선택(공간 종류에 기여 종류를 더함 — `library=False` 포함, 옮길 수 있는 것만. 기여의 `references`는 `definitions.references`와 합쳐 참조 닫힘에) | 공간 종류 = 라이브러리 종류 |
 | `definitions.reference_rewriters`(여러) | 선택(이름 바꾸기 복사의 참조 고치기) | 참조는 그대로, 결과 항목에 정보 이슈 |
 | `records.spaces` | 선택(`ProjectView.records_*`) | `records_state=unavailable`·`reason=link_disabled` |
 | `secrets.rules` | 선택 | 기본 비밀 규칙 |
 
 확장 지점 X35: 코드 선택 창 제공자는 entry point `agent_console.folder_dialogs`
 (`FolderDialogProvider{id, available(environ), pick(*, initial, title, timeout, cancel)}`)로 더한다.
-데이터 제공자(명령 표)는 설정 `folder_dialog.providers`.
+호스트 플러그인 로더(`agent_console_mod_projects.plugins:load_plugins`, 확장 `FOLDER_DIALOGS_EXTENSION`)가 서버 시작 때
+읽으므로 다른 플러그인처럼 서버 설정 `plugins.enabled`·`plugins.disabled`를 따르고 `server-info`에 나온다. 묶음 없이
+조립하면 `load_dialog_providers(enabled=, disabled=)`로 직접 읽는다. 데이터 제공자(명령 표)는 설정 `folder_dialog.providers`.
 
 ## 설정 (`modules.options.mod-projects`)
 

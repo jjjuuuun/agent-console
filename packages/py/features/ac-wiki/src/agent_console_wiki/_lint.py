@@ -8,6 +8,8 @@
   판단 대상 `change.op=update`, 쓴 주체 = 그 페이지 마지막 기록의 쓴 주체(없으면 `external`),
   `before=null`. 걸리면 `wiki.rule_violation`(reject → error, warn → warning, 줄 번호). 앱 밖에서
   고친 파일의 규칙 위반이 여기서 보인다.
+- 부분 실패(0.14.2): 페이지 하나의 점검이 예외로 끝나면 그 페이지만 건너뛰고(`skipped`,
+  `wiki.lint_failed`) 나머지는 그대로 낸다.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from agent_console_contracts.definitions import IssueSeverity
 from agent_console_contracts.wiki import (
     KnownWikiAuthorKinds,
     KnownWikiChangeOps,
+    KnownWikiLintChecks,
     KnownWikiLintCodes,
     WikiAuthor,
     WikiIssue,
@@ -29,6 +32,7 @@ from agent_console_contracts.wiki import (
 )
 
 from ._index import WikiIndex
+from ._parse import ParsedPage
 from ._ruleset import EffectiveWikiRules, default_operator_map
 from ._subjects import lint_subject, write_subject
 from ._writecheck import CompiledWriteRules, check_write, compile_write_rules
@@ -80,7 +84,9 @@ def lint(
 
     Returns:
         `WikiLintReport`(이슈는 페이지 경로 순 → 기본 점검 → 점검 규칙 → 쓰기 규칙, `counts` =
-        심각도별 수).
+        심각도별 수, `enabled_checks` = 켜진 기본 점검 → `lint_rules` → `write_rules`). 페이지
+        하나를 점검하다 예외가 나면(본문 읽기 실패 등) 그 페이지 이슈는 버리고 `wiki.lint_failed`
+        하나를 남긴 뒤 다음 페이지로 간다(`skipped`·`partial`).
     """
     syntax = index.syntax
     ops = operators if operators is not None else default_operator_map()
@@ -110,12 +116,13 @@ def lint(
         compiled_write = None
     external = WikiAuthor(kind=KnownWikiAuthorKinds.EXTERNAL)
 
-    for path, page in index.pages.items():
+    def check_page(path: str, page: ParsedPage) -> list[WikiIssue]:
+        found: list[WikiIssue] = []
         if broken:
             for item in index.links.get(path, ()):
                 if not item.broken:
                     continue
-                issues.append(
+                found.append(
                     WikiIssue(
                         severity=broken,
                         code=f"wiki.{KnownWikiLintCodes.BROKEN_LINK}",
@@ -129,7 +136,7 @@ def lint(
                     )
                 )
         if orphan and path in index.orphans:
-            issues.append(
+            found.append(
                 WikiIssue(
                     severity=orphan,
                     code=f"wiki.{KnownWikiLintCodes.ORPHAN}",
@@ -139,7 +146,7 @@ def lint(
             )
         if dup and path in dup_groups:
             group = dup_groups[path]
-            issues.append(
+            found.append(
                 WikiIssue(
                     severity=dup,
                     code=f"wiki.{KnownWikiLintCodes.DUPLICATE_TITLE}",
@@ -149,7 +156,7 @@ def lint(
                 )
             )
         if not lint_rules and compiled_write is None:
-            continue
+            return found
         facts = index.facts(path)
         info = times.get(path, PageTimes())
         if lint_rules:
@@ -163,7 +170,7 @@ def lint(
             for sourced, holds in lint_rules:
                 if holds(subject):
                     rule = sourced.item
-                    issues.append(
+                    found.append(
                         WikiIssue(
                             severity=rule.severity,
                             code=KnownIssueCodes.WIKI_LINT_RULE,
@@ -184,11 +191,43 @@ def lint(
                 before=None,
             )
             decision = check_write(compiled_write, subject, content=content, rule_violation=True)
-            issues.extend(
+            found.extend(
                 i for i in decision.issues if i.code == KnownIssueCodes.WIKI_RULE_VIOLATION
+            )
+        return found
+
+    skipped: list[str] = []
+    for path, page in index.pages.items():
+        try:
+            issues.extend(check_page(path, page))
+        except Exception as exc:  # 한 페이지 실패가 점검 전체를 막지 않는다
+            # 그 페이지에서 모은 이슈는 버린다(반쯤 본 결과를 섞지 않는다). 사유는 예외 종류 이름만
+            # 남긴다(메시지에 경로·값 원문이 섞일 수 있다).
+            skipped.append(path)
+            issues.append(
+                WikiIssue(
+                    severity="warning",
+                    code=KnownIssueCodes.WIKI_LINT_FAILED,
+                    message="이 페이지를 점검하지 못했습니다.",
+                    page=path,
+                    details={"reason": type(exc).__name__},
+                )
             )
 
     counts: dict[str, int] = {}
     for issue in issues:
         counts[issue.severity] = counts.get(issue.severity, 0) + 1
-    return WikiLintReport(issues=issues, pages=len(index.pages), generated_at=now, counts=counts)
+    enabled = [name for name, severity in builtin.items() if severity]
+    if lint_rules:
+        enabled.append(KnownWikiLintChecks.LINT_RULES)
+    if compiled_write is not None and compiled_write.rules:
+        enabled.append(KnownWikiLintChecks.WRITE_RULES)
+    return WikiLintReport(
+        issues=issues,
+        pages=len(index.pages),
+        generated_at=now,
+        counts=counts,
+        partial=bool(skipped),
+        skipped=skipped,
+        enabled_checks=enabled,
+    )

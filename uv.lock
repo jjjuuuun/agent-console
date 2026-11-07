@@ -359,7 +359,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.14.1"
+version = "0.14.2"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -1990,6 +1990,7 @@ dependencies = [
     { name = "agent-console-modkit", extra = ["host"] },
     { name = "agent-console-project-space" },
     { name = "agent-console-projects" },
+    { name = "agent-console-registry" },
     { name = "agent-console-secret-rules" },
     { name = "agent-console-store" },
     { name = "fastapi" },
@@ -2012,6 +2013,7 @@ requires-dist = [
     { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
     { name = "agent-console-project-space", editable = "packages/py/features/ac-project-space" },
     { name = "agent-console-projects", editable = "packages/py/features/ac-projects" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "agent-console-store", editable = "packages/py/features/ac-store" },
     { name = "fastapi", specifier = ">=0.115" },

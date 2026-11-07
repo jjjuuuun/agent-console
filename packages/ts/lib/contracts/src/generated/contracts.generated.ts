@@ -11960,6 +11960,10 @@ export interface WikiGraphNode {
    */
   scheme?: string | null;
   /**
+   * (1.2.0) 스킴 링크 대상이면 열 화면(`WikiLink.scheme_target`과 같은 모양, `id_from` = 풀린 id 값). 접두 뒤가 비었거나 페이지·끊긴 대상·옛 서버는 null.
+   */
+  scheme_target?: LabelDisplayTarget | null;
+  /**
    * 위키의 첫 페이지.
    */
   home?: boolean;
@@ -12096,6 +12100,10 @@ export interface WikiInfo {
    * (1.1.0) 이 공간에 쓸 수 있나(공간 `config_writable`). false면 웹은 읽기 전용으로 그린다(쓰기는 409 `project.config_readonly`·`wiki.config_readonly`). null = 옛 서버 또는 알 수 없음(쓸 수 있다고 본다).
    */
   writable?: boolean | null;
+  /**
+   * (1.2.0) 위키 규칙 정의 종류 이름(설치자 데이터, 기본 `wiki-rules`). 웹이 복사·리소스 종류 목록에서 규칙 종류를 고를 때 쓴다(공용 규칙을 따로 읽지 않는다). null = 옛 서버.
+   */
+  rules_kind?: string | null;
   /**
    * 공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).
    */
@@ -12283,6 +12291,18 @@ export interface WikiLintReport {
   counts?: {
     [k: string]: number;
   };
+  /**
+   * (1.2.0) 일부 페이지를 점검하지 못했다(그 페이지는 `skipped`, 나머지 결과는 그대로). 페이지마다 `wiki.lint_failed` 이슈도 하나씩 있다.
+   */
+  partial?: boolean;
+  /**
+   * (1.2.0) 점검하지 못한 페이지 경로(경로 순). `pages`에는 들어 있다.
+   */
+  skipped?: string[];
+  /**
+   * (1.2.0) 이번 점검에서 켜진 점검 이름: 켜진 기본 점검(`KnownWikiLintCodes`, 문법 `lint.builtin`) → 점검 규칙이 있으면 `lint_rules` → 쓰기 규칙 다시 보기가 켜졌으면 `write_rules`(열린 문자열, `KnownWikiLintChecks`). null = 옛 서버.
+   */
+  enabled_checks?: string[] | null;
 }
 /**
  * 점검 규칙 하나입니다. 조건에 맞는 페이지를 점검 탭에 이슈로 보입니다.
@@ -12675,6 +12695,18 @@ export interface WikiRuleEntry {
    * 점검 규칙의 심각도(그 밖은 null).
    */
   severity?: string | null;
+  /**
+   * (1.2.0) 쓰기 규칙의 적용 경로 글롭(빈 목록 = 모든 페이지). 그 밖의 항목·옛 서버는 null.
+   */
+  applies_to?: string[] | null;
+  /**
+   * (1.2.0) 페이지 틀의 경로 틀(예 `decisions/{slug}`). 없거나 그 밖은 null.
+   */
+  path?: string | null;
+  /**
+   * (1.2.0) 페이지 틀의 표시 이름 원문(비었으면 null — `label`은 id로 대신 채운다). 그 밖의 항목은 null.
+   */
+  title?: string | null;
 }
 /**
  * 위키가 쓰는 위키 규칙 하나(순서대로).
@@ -13223,10 +13255,10 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.1" as const;
+export const CONTRACTS_VERSION = "0.14.2" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.11.0",
+  "common": "1.12.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
@@ -13239,7 +13271,7 @@ export const CONTRACT_VERSIONS = {
   "architecture": "1.0.0",
   "memory": "1.1.0",
   "sdd": "1.2.0",
-  "wiki": "1.1.0",
+  "wiki": "1.2.0",
   "modules": "1.5.0"
 } as const;
 
@@ -13667,7 +13699,8 @@ export const KNOWN_ISSUE_CODES = {
   "WIKI_RULE_VIOLATION": "wiki.rule_violation",
   "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
   "WIKI_SECRET_SUSPECT": "wiki.secret_suspect",
-  "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable"
+  "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable",
+  "WIKI_LINT_FAILED": "wiki.lint_failed"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {
@@ -13960,6 +13993,11 @@ export const KNOWN_WIKI_LINT_CODES = {
   "BROKEN_LINK": "broken_link",
   "ORPHAN": "orphan",
   "DUPLICATE_TITLE": "duplicate_title"
+} as const;
+
+export const KNOWN_WIKI_LINT_CHECKS = {
+  "LINT_RULES": "lint_rules",
+  "WRITE_RULES": "write_rules"
 } as const;
 
 export const KNOWN_WIKI_FRONT_MATTER_ROLES = {

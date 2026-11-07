@@ -1,6 +1,6 @@
 # agent-console-modkit
 
-서버 모듈 키트(design §3R.1.2, modularity §3.2·§3.9.4). 기능 모듈·연동 모듈이 따르는 인터페이스와
+서버 모듈 키트. 기능 모듈·연동 모듈이 따르는 인터페이스와
 조립기, 그리고 통합 서버·단독 실행이 함께 쓰는 HTTP 호스트를 담는다.
 
 - **기능·모듈·연동 이름을 모른다.** 포트·토픽은 이름 문자열로만 맞춘다(`PortKey("definitions.store")`).
@@ -112,7 +112,7 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 
 `/health`는 모듈 시작 훅이 끝난 뒤에만 200이다(그 전·종료 뒤 503 `not_ready`, `Assembly.running`).
 
-호스트 기본 서비스도 기능 이름 없이 만든다(3R.16). 설치된 패키지가 entry point로 레지스트리 묶음
+호스트 기본 서비스도 기능 이름 없이 만든다. 설치된 패키지가 entry point로 레지스트리 묶음
 공장(`agent_console.host_registries`)·플러그인 로더(`agent_console.host_plugin_loaders`)·DB 공장
 (`agent_console.host_database`)을 알리고, 호스트는 `load_host_plugins`·`open_host_database`로 쓴다.
 
@@ -123,8 +123,15 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 >>> plugins = load_host_plugins(entry_points=[loader], options={"example": {"a": 1}})
 >>> plugins.registries.extension("examples").get("example")
 {'workspace': None, 'options': {'a': 1}}
+>>> off = load_host_plugins(entry_points=[loader], disabled=["example"])  # 설정 plugins.disabled
+>>> [(r.status, r.reason) for _, r in off.reports]
+[('skipped', '설정 plugins.disabled에 있음')]
 
 ```
+
+`enabled`(허용 목록)와 `disabled`(제외 목록)는 모든 그룹에 같은 규칙이고, 허용 목록 안에서 제외 목록을 뺀다. 로더는
+합친 결과를 `PluginLoadContext.enabled`로 받고(entry point가 아닌 key는 `ctx.allows(name)`), 어느 보고에도 없는
+제외 이름은 `HostPlugins.warnings`에 남는다.
 
 지운 설정 키·환경변수·명령행 별칭·기본값은 모듈이 `ModuleDescriptor.settings_compat`(`SettingsCompat`)으로
 알린다. 옛 키를 읽어 옮기지는 않는다. 키를 옮기거나 지운 모듈은 `RemovedSetting(old, new=..., reason=...)`을
@@ -280,7 +287,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `BaseServices` / `Paths` | 호스트 기본 서비스 |
 | `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions, scopes=("app",))` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보 중 `scopes`에 `"app"`이 든 것만 build 직전에 `database.upgrade`로 올린다(다른 범위, 예: 프로젝트 기록 DB의 `"project"`는 그 DB를 여는 모듈이 `ModuleContext.active_migrations(scope)`로 읽어 올린다)(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
 | `load_installed_modules(group=MODULES_GROUP)` | entry point에서 모듈 읽기(ac-registry 로더) |
-| `load_host_plugins(*, enabled, paths, modules, options, entry_points)` → `HostPlugins` / `PluginLoadContext` / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` | 호스트 플러그인 레지스트리: 묶음 공장(`HOST_REGISTRIES_GROUP`, 이름 순 첫 번째, 없으면 `ExtensionRegistries`) → 로더(`HOST_PLUGIN_LOADERS_GROUP`, 이름 순) → `register(registries)` 플러그인. 실패는 보고 |
+| `load_host_plugins(*, enabled, disabled, paths, modules, options, entry_points)` → `HostPlugins`(`registries`·`reports`·`warnings`) / `PluginLoadContext`(`enabled`·`disabled`·`allows(name)`) / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` / `REASON_PLUGINS_DISABLED`·`REASON_PLUGINS_NOT_ENABLED` | 호스트 플러그인 레지스트리: 묶음 공장(`HOST_REGISTRIES_GROUP`, 이름 순 첫 번째, 없으면 `ExtensionRegistries`) → 로더(`HOST_PLUGIN_LOADERS_GROUP`, 이름 순) → `register(registries)` 플러그인. 실패는 보고, 뺀 항목은 이유(`reason`) |
 | `open_host_database(path)` | DB 공장(`HOST_DATABASE_GROUP`) → `DatabaseHandle`(없으면 None) |
 | `env_secret_lookup`·`secret_lookup`·`secret_providers_of`·`SECRET_PROVIDERS_REGISTRY` | 비밀 해석 사슬(환경변수 → 묶음의 비밀 공급자) |
 | `SettingsCompat`(`RemovedSetting`·`EnvSetting`·`FlagSetting`·`SeedSetting`) / `compat_of`·`removed_settings`·`env_settings`·`compat_flags`·`flag_settings`·`seed_settings` | 모듈이 선언하는 호스트 설정 호환(지운 키 거부, 환경변수·명령행·다른 설정 값 → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()`는 거부 문구(새 위치 안내) |

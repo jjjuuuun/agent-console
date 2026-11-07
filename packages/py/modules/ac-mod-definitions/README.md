@@ -1,6 +1,6 @@
 # agent-console-mod-definitions
 
-Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페이스의 정의(에이전트·팀 구성·리소스·공통 설정)
+Agent Console 정의 기능 모듈. 워크스페이스의 정의(에이전트·팀 구성·리소스·공통 설정)
 저장소와 CRUD 경로를 서버에 꽂고, 다른 모듈이 쓰는 포트와 저장 알림 토픽을 낸다.
 
 - 경로: `/agents`·`/agents/{id}`, `/graphs`·`/graphs/{id}`·`POST /graphs/{id}/duplicate`, `/settings`.
@@ -9,9 +9,9 @@ Agent Console 정의 기능 모듈(design §3R.1.3, R1.2·R13.1). 워크스페�
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
   `server.warnings`(평문 비밀 점검 `secret.plain_found`). 토픽 `definitions.saved{kind, id, version_hash}`.
 - 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`·
-  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소, 5.7R.33x),
+  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소),
   `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 X44 — 아래).
-- 종류 기여(X44, 6R.5): 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
+- 종류 기여: 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
   저장소에 더한다(build 때, 그리고 모든 build가 끝난 뒤 시작 훅에서 한 번 더). `library=False` 종류는 라이브러리에
   두지 않으므로 그 종류의 라이브러리 요청(예: 버전 경로)은 404이고, 프로젝트 공간에만 들어간다(공간 종류는
   `mod-projects`가 같은 포트에서 계산). 기본 종류와 같은 이름의 기여는 경고 로그를 남기고 건너뛴다. 기여의 참조

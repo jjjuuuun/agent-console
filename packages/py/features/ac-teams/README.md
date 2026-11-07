@@ -75,7 +75,7 @@ uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, g
 
 ```
 
-### 실행 묶음까지(1R.6 연결 순서)
+### 실행 묶음까지(연결 순서)
 
 ```python
 from agent_console_teams import node_bundle, node_settings
@@ -134,7 +134,7 @@ class MyHook:  # SettingsValidator 프로토콜
 불린다. `interaction.no_path` 이슈에 제안이 없으면 `details.kinds`를
 허용하는 상호작용 연결을 사용자 쪽 노드로 잇는 제안을 붙인다. 훅 예외는 `team.validator_failed` 경고가 된다.
 
-### 실행 경로(엔진 결과는 인자로, design §2R.1)
+### 실행 경로(엔진 결과는 인자로)
 
 엔진을 import하지 않는다. 앱(서버·CLI·테스트)은 아래 순서로 조립만 한다.
 
@@ -172,7 +172,7 @@ if not blockers:
   같은 뜻 표는 데이터 `{팀 코드: 엔진 코드 접두}`(기본 `team.agent_not_found` → `agent.not_found`). 다른 플러그인 조합이면 표를 넘긴다.
 - `team_rules_apply(engine, skip_prefixes=DEFAULT_TEAM_SKIP_PREFIXES)`: 엔진 error 코드가 `unknown`으로 시작하면 거짓.
 
-### 실행 백엔드 사전 점검(5.2R.4)
+### 실행 백엔드 사전 점검
 
 해결 순서는 설정 층 그대로다(노드 → 에이전트 → 팀 구성 → 공통 `agent_defaults.backend`·옛 `default_backend`
 → 인자 `default_backend`). 백엔드를 쓰는 노드는 디스크립터로 판단한다(에이전트 정의에 묶인 실행 가능 노드, 또는
@@ -186,7 +186,7 @@ resolved = resolve_backends(plan, agents=agents, workspace=ws)  # {node_id: back
 blocked = unresolved_backends(plan, resolved, agents=agents)  # [UnresolvedBackend(node_id, label)]
 ```
 
-### 화면 요약(design §2R.6, 2R.7)
+### 화면 요약
 
 ```python
 from agent_console_teams import bundle_preview, plan_summary, validation_summary
@@ -213,7 +213,7 @@ preview = bundle_preview(
 # (resource.slot_session_shared, 세션 주인 백엔드의 capabilities.subagent_slots에 없는 칸). x-secret 평문은 ***.
 ```
 
-- 백엔드 선택 훅 `PreviewNotes.preview_notes(effective, bundle) -> list[Issue]`(4R.9): `bundle_preview(..., notes={백엔드
+- 백엔드 선택 훅 `PreviewNotes.preview_notes(effective, bundle) -> list[Issue]`: `bundle_preview(..., notes={백엔드
   id: 훅})`를 주면 세션 주인 백엔드의 훅을 세션 주인 유효 설정·이 노드 묶음으로 불러 이슈를 뒤에 붙인다(예: claude-sdk
   `observe.hook_probe_wrapped` "hook 감싸기 켜짐"). `catalog_from_registries`가 훅을 가진 백엔드를
   `TeamCatalog.preview_notes`로 모은다. 훅 예외는 `team.validator_failed` 경고.
@@ -276,7 +276,7 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
 | `team.connects_mismatch` | error | 엣지 디스크립터 `connects` 역할이 맞지 않음 |
 | `team.agent_not_found` / `team.resource_not_found` | error / warning | `binds`로 묶인 정의가 없음(`agents`·`resources`를 줬을 때만) |
 | `team.mixed_invocation` | error | 흐름·입구로 받으면서 위임으로도 불림(반복을 닫는 사이클 연결은 세지 않음 — `flow.loop_invoked_only`) |
-| `team.mixed_strategies` | error | 한 노드의 위임 대상이 서로 다른 위임 방식이고 그중 디스크립터 `composable`이 거짓인(또는 모르는) 방식이 있음. 모두 `composable`이면 허용(혼합 위임, design §5R.6). `details.not_composable`. 제안: 그 연결을 합칠 수 있는 방식의 위임 연결 종류로 바꾸기(이미 쓰는 방식 우선, 엣지 config의 방식 덮어쓰기 키는 옮기지 않음) |
+| `team.mixed_strategies` | error | 한 노드의 위임 대상이 서로 다른 위임 방식이고 그중 디스크립터 `composable`이 거짓인(또는 모르는) 방식이 있음. 모두 `composable`이면 허용(혼합 위임). `details.not_composable`. 제안: 그 연결을 합칠 수 있는 방식의 위임 연결 종류로 바꾸기(이미 쓰는 방식 우선, 엣지 config의 방식 덮어쓰기 키는 옮기지 않음) |
 | `team.unknown_strategy` | warning | 등록되지 않은 위임 방식 |
 | `delegation.depth_exceeded` | error | 위임 깊이 > min(디스크립터 `max_depth`, 설정 `delegation.max_depth`). 방식 `max_depth: null`이면 설정만. `details.path` = 위임 경로. 상수 `DELEGATION_DEPTH_EXCEEDED` |
 | `team.delegation_cycle` | error | 위임 연결 순환 |
@@ -315,7 +315,7 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
 저장 전 검사)는 엔진 검증(`validate_graph_with` → `validate_edges`)과 팀 규칙(`graph_checks=False`)을 합치므로
 넘기지 않는다.
 
-위임 방식 고유 정적 검사(design §5.2R.7)도 같은 방식이다. 방식 객체의 선택 메서드 `static_issues(config, members)`·
+위임 방식 고유 정적 검사도 같은 방식이다. 방식 객체의 선택 메서드 `static_issues(config, members)`·
 `declared_names(config, members)`(ac-runtime `StaticDelegationChecks`·`DelegationNameDeclarer`, `members` =
 `DelegationTarget`)를 메서드 유무로만 부른다. 단독으로 쓸 때는 `validate_team(..., delegation_checks={방식 id: 방식 객체})`
 또는 `delegation_static_issues(plan, checks, delegators=, agents=)`, 서버는 엔진 검증(노드 타입 `validate`가 등록된
@@ -337,7 +337,7 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
   초과 시 동작 = 그 엣지의 `on_timeout`(없으면 처음 지정된 값). 둘 다 없으면 null(설정 `interaction.*`을 따름).
 - `session_grant(plan, 위임자, strategies)`: 위임자 grant + 위임 대상 grant(위임 방식 `member_interaction_kinds`로 거름).
   디스크립터 `shares_session`이 false인 방식(대상이 자기 세션에서 돈다, 예: `host`)의 대상은 종류도 대기 한도도
-  더하지 않는다(5.2R.43). `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`가 같은
+  더하지 않는다. `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`가 같은
   판단을 주고, `prepare_run(..., strategies=)`를 주면 엔진 대기 grant도 이 세션 단위다.
 
 ## 세션 집계
@@ -349,7 +349,7 @@ issues = attachment_issues(placed, types=resource_types, resources=lookup)
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-teams`.
 

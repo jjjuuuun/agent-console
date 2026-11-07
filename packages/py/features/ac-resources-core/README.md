@@ -1,6 +1,6 @@
 # agent-console-resources-core
 
-기본 리소스 종류 플러그인 7개(design §R12.3, §2R.8). `ac-resources`는 이 이름들을 모른다 —
+기본 리소스 종류 플러그인 7개. `ac-resources`는 이 이름들을 모른다 —
 이 패키지가 entry point `agent_console.resource_types`로 등록할 뿐이다. 이 패키지를 빼거나
 `load_resource_types(..., enabled={...})`에서 빼면 그 종류는 목록에서 사라지고, 그 종류의 첨부는
 `resource.unknown_type` 경고와 함께 묶음에서 빠진다(시스템은 그대로 동작).
@@ -112,7 +112,7 @@ True
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-resources-core`.
 

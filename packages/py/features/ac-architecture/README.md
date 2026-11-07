@@ -1,7 +1,7 @@
 # agent-console-architecture
 
 관측 구조도 순수 라이브러리. 로그 이벤트(계약 `LogEvent`)와 구조도 프로필(계약 `ArchitectureProfile`)을 받아
-칸·연결마다 횟수·오류·토큰·소요를 센 **그리기 완결형** `ArchitectureView`를 만든다(design §5.5R).
+칸·연결마다 횟수·오류·토큰·소요를 센 **그리기 완결형** `ArchitectureView`를 만든다.
 
 - 칸·연결·범주·도구·출처 이름은 코드에 없다. 무엇을 셀지(`when`, 조건 데이터), 어디에 그릴지(좌표), 어떤 출처가
   어떤 칸을 채우는지(`coverage`)는 전부 프로필 데이터다. 조건은 `agent-console-conditions`의 `ConditionSpec`.
@@ -26,7 +26,7 @@
 ## 기본 프로필
 
 패키지 기본 프로필 데이터는 `src/agent_console_architecture/data/default_architecture.yaml`의 프로필 하나
-`agent-architecture`다(칸 16·연결 21·영역 3, 좌표는 화면 명세 `docs/design/screen-architecture.md` §9).
+`agent-architecture`다(칸 16·연결 21·영역 3).
 기능이 동작하는 데 필요한 기본값일 뿐이고 사용자 데이터다:
 
 - 끄기: 설정 `architecture.include_defaults: false`(전부) 또는 `architecture.profiles.agent-architecture: null`(이 프로필만)
@@ -52,7 +52,7 @@
 
 ```
 
-수집이 이어지는 범위는 누적 집계에 새 이벤트만 더한다(5.5R.36).
+수집이 이어지는 범위는 누적 집계에 새 이벤트만 더한다.
 
 ```python
 >>> from agent_console_architecture import ArchitectureTally, ProfileMatcher

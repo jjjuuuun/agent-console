@@ -121,7 +121,7 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 - 단일 프로세스를 가정한다(프로세스 내부 RLock). 여러 프로세스가 같은 root에 동시에 쓰면 If-Match를 보장하지 않는다.
 - 인터페이스는 동기식이다. 호출이 짧은 로컬 쓰기라 asyncio 루프에서 직접 불러도 되고, 앱이 필요하면 스레드풀로 감싼다.
 - 오류는 `StoreError` 하위 예외이며 `.code`가 계약의 오류 코드(`not_found`, `already_exists`, `version_required`, `version_conflict`)와 같다.
-- 마이그레이션 계보(design §3R.1.7): `legacy`(0001~0003, 동결, 버전 테이블 `alembic_version`)와 모듈 계보
+- 마이그레이션 계보: `legacy`(0001~0003, 동결, 버전 테이블 `alembic_version`)와 모듈 계보
   (모듈 패키지의 `migrations/versions`, 버전 테이블 `alembic_version_<이름>`)는 서로 독립이다. `SqliteDatabase`
   (`open(path)`·`engine`·`upgrade(branches)`·`downgrade_branch`·`revision(name)`)가 legacy를 먼저 올린 뒤
   넘겨받은(켜진 모듈의) 계보만 올린다. 계보는 `name`·`versions` 속성만 있으면 된다(`MigrationBranchLike`).
@@ -130,10 +130,10 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
   **legacy는 다운그레이드하지 않는다**(동결). 되돌릴 때는 모듈 계보만 되돌린다(`downgrade_branch`).
   이유: legacy를 0002 이하로 내리면 모듈 소유 테이블(`usage_observations` 등)은 사라지지만 모듈 버전 테이블
   (`alembic_version_usage` 등)은 남아, 다음 시작 때 모듈 계보가 "이미 올라감"으로 보고 테이블을 다시 만들지 않는다.
-- 실행 기록 계보(design §5R.10): `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 표 정의와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다. 계보 없이 이 패키지만 쓰는 경로와 기존 DB의 행이 같은 정의를 쓰기 때문이다. 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
+- 실행 기록 계보: `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 표 정의와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다. 계보 없이 이 패키지만 쓰는 경로와 기존 DB의 행이 같은 정의를 쓰기 때문이다. 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
 - 마이그레이션: `upgrade(engine)`, `downgrade(engine, "base")`, `current_revision(engine)`. 기존 마이그레이션 파일은 고치지 않고 새로 추가한다.
 
-## 프로젝트 기록 DB 열기 (`open_records_db`, design §PI.4.6.2)
+## 프로젝트 기록 DB 열기 (`open_records_db`)
 
 폴더 안 SQLite 파일 하나를 **앱 DB와 같은 계보 사슬**(legacy + 넘겨받은 모듈 계보)로 맞춘다. 서버·모듈 없이 쓴다.
 파일이 없으면 만들지 않고(`absent`, 보기 = 빈 목록) 처음 쓸 때 `writable_engine()`이 만든다. 뒤처졌으면 쓰기 잠금 안에서
@@ -162,13 +162,13 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
 `backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
 
-## 앱 DB 기록 옮기기 (`RecordsMove`, design §PI.4.6.7, 5.7R.33j2)
+## 앱 DB 기록 옮기기 (`RecordsMove`)
 
 도메인을 모르는 표 단위 옮기기 도구다. 기본 표 + 딸린 표 + 묶음 id만 주면 두 엔진 사이에서
 복사(대상 한 트랜잭션, 같은 키는 건너뜀) → 확인(행 수·값) → 원본 삭제(원본 한 트랜잭션) 순서로 옮기고,
 실패하면 대상을 되돌린다(`run_moves`가 여러 작업을 한 흐름으로 묶는다). 모듈 docstring에 실행 가능한 예가 있다.
 
-## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`, 5.7R.33x)
+## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`)
 
 정의를 다루는 모듈은 요청의 공간 이름(REST `?project=<이름>`)으로 저장소를 고른다. 이름이 없으면 기본(라이브러리),
 제공자(`DefinitionSpaces.open(space)`)가 없는데 이름이 오면 `SpacesUnavailable`(409 `feature_unavailable` —
@@ -192,7 +192,7 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 ## 개발·재사용(단독)
 
-이 폴더는 독립 프로젝트다(design §3R.2). 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
+이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
 범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
 찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-store`.
 

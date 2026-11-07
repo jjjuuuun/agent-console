@@ -30,7 +30,7 @@ import "@agent-console/trace-view/styles.css";
 - 방식 배지 문구는 `methodBadgeFor`(앱이 연결 종류/위임 방식 `title` 전달). `now`는 epoch 초.
 - 키보드: `↑↓←→ Enter Home End + -`, 접근성 이름 "{이름}, {방식}, {상태}, {소요}".
 
-## 호출·회차·자식 실행 (5R.16)
+## 호출·회차·자식 실행
 종류 id는 비교하지 않고 span 필드로만 판정한다.
 - 호출 span(`call` 또는 `invoked_by`가 있는 span): 위임자 span 아래 들여 쓴 행 + 항상 "별도 세션" 배지, 과제 미리보기(`task_preview`)가 막대 안 한 줄.
 - 같은 노드에 회차(`iteration`)가 둘 이상(또는 1 이상)이면 이름 뒤 ` #n`, 호출이 둘 이상이면 ` · 호출 n`(번호는 값 + 1, 문구는 `messages.iterationSuffix`·`callSuffix`). `spanOrdinals`.
@@ -38,7 +38,7 @@ import "@agent-console/trace-view/styles.css";
 - 접힘은 제어형이 가능: `expandedGroupIds` + `onGroupToggle(runId, expanded)`. 생략하면 `defaultExpandedGroups`(끝나지 않은 span이 있으면 펼침, 끝났으면 접힘)로 시작하고 사용자의 선택을 화면이 유지한다.
 - 앱 주입: `groupBadgeFor(group)`(묶음 제목·부제·배지), `linkBadgeFor(link)`(span 사이 화살표 칩, 예: 반복 연결 `↻`).
 
-## 행 레이아웃 (5.2R.16, docs/design/ux-overhaul.md §4.4)
+## 행 레이아웃
 - 행은 CSS grid 한 벌(라벨 칸 / 막대 칸 / 수치 열). 요소는 자기 칸 밖으로 나가지 않고, 호버·선택은 배경색만 바꾼다. 컨테이너 쿼리로 좁은 패널(<560)·<640에서 부제·토큰·연결 칩을 숨긴다.
 - 방식·세션은 글자 칩이 아니라 아이콘: 방식 = `MethodBadge.iconName`(연결 종류 `ui_hints.icon`), 세션 = 점선(같은)/실선(별도) 원. 문구는 `aria-label`·`title`. `showMethodText`(+`onShowMethodTextChange`)를 켜면 부제 자리에 문구를 글자로 보인다.
 - 앱 주입(패키지는 `ui`를 import하지 않는다): `renderIcon(name, size)`, `renderTooltip(content, children)`(기본 = 글리프·`title`), `labelWidth`(px, 200~360으로 자름).

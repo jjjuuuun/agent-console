@@ -2,16 +2,27 @@
 # 쓸 수 있는 값: slug, title, kind, group, group_symbol, port, port_symbol, multi, path,
 #   settings(쉼표로 이은 설정 키), disable, export, name, package(선언한 배포 이름)
 # 모르는 kind는 `_default`를 쓴다(등록 종류 원문이 그대로 나온다).
+# 값이 목록이면 자리표시자가 모두 채워지는 첫 문장을 쓴다(마지막 문장은 무조건 — 빈 값이어도 쓴다).
 kinds:
   entry-point:
-    register: "entry point 그룹 `{group}`(상수 `{group_symbol}`)에 등록한다. 등록 이름 = id."
-    disable: "설정 `plugins.enabled`에서 빼거나 패키지를 제거하고 서버를 다시 시작한다."
+    register:
+      - "entry point 그룹 `{group}`(상수 `{group_symbol}`)에 등록한다. 등록 이름 = id."
+      - "entry point 그룹 `{group}`에 등록한다. 등록 이름 = id."
+    disable: "설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다."
   port:
-    register: "서버 모듈이 포트 `{port}`(기호 `{port_symbol}`, 다중 {multi})를 제공한다."
+    register:
+      - "서버 모듈이 포트 `{port}`(기호 `{port_symbol}`, 다중 {multi})를 제공한다."
+      - "서버 모듈이 포트 `{port}`(다중 {multi})를 제공한다."
     disable: "제공하는 모듈을 끄면(`modules.<id>.enabled: false`) 소비하는 쪽은 그 부분만 꺼진다."
   data:
-    register: "패키지 데이터 `{path}`를 설정({settings})으로 덮어쓴다."
-    disable: "끄는 키: {disable}."
+    register:
+      - "패키지 데이터 `{path}`를 설정({settings})으로 덮어쓴다."
+      - "패키지 데이터 `{path}`를 쓴다."
+      - "데이터 파일로 등록한다(코드 없음)."
+    disable:
+      - "끄는 키: {disable}."
+      - "설정({settings})을 지우면 패키지 데이터 기본값으로 돌아간다."
+      - "데이터를 지우면 그 항목만 빠진다."
   injection:
     register: "생성자·인자로 구현을 주입한다(인터페이스를 따르는 객체)."
     disable: "주입하지 않으면 기본 구현을 쓴다."

@@ -60,7 +60,7 @@ class ContributeContext:
 
 @runtime_checkable
 class ResourceType(Protocol):
-    """리소스 종류(X14). entry point `agent_console.resource_types` 또는 선언형 데이터로 등록한다.
+    """리소스 종류. entry point `agent_console.resource_types` 또는 선언형 데이터로 등록한다.
 
     구현은 순수해야 한다: 파일 쓰기·네트워크·비밀 해석을 하지 않는다. 비밀은 `secret://` 참조
     문자열 그대로 묶음에 넣고, 실제 값은 실행 백엔드가 비밀 공급자로 푼다.

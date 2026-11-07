@@ -264,7 +264,7 @@ class RunScoper(Protocol):
 
 @runtime_checkable
 class RunDefinitionsScoper(Protocol):
-    """``runs.scopes`` 항목의 **선택** 메서드: Run의 정의 조회 출처(X26).
+    """``runs.scopes`` 항목의 **선택** 메서드: Run의 정의 조회 출처.
 
     ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 Run 당시 그래프 조회
     (``graph_of_run``)에서 **그래프를 읽기 전에** 부른다(``scope_run``은 읽은 그래프를 받으므로

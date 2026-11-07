@@ -142,6 +142,7 @@ def create_app(
     )
     plugins = load_host_plugins(
         enabled=cfg.plugins.enabled,
+        disabled=cfg.plugins.disabled,
         paths=paths,
         modules=cfg.plugins.modules,
         options=cfg.modules.options,
@@ -201,7 +202,11 @@ def create_app(
                 assembly, hide_paths=not cfg.security.expose_paths
             ),
             info=lambda: server_info(
-                cfg, server_version=srv_version, reports=plugins.reports, assembly=assembly
+                cfg,
+                server_version=srv_version,
+                reports=plugins.reports,
+                assembly=assembly,
+                plugin_warnings=plugins.warnings,
             ),
         ),
         prefix=API_PREFIX,

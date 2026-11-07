@@ -71,7 +71,7 @@ class VerificationContext:
 
 @runtime_checkable
 class VerificationSource(Protocol):
-    """검증 결과 출처(X42). entry point `agent_console.sdd_verification_sources` 또는 다중 포트
+    """검증 결과 출처. entry point `agent_console.sdd_verification_sources` 또는 다중 포트
     `sdd.verification_sources`로 들어온다. 기본 구현은 `runs`(link-runs-sdd)."""
 
     @property
@@ -86,7 +86,7 @@ class VerificationSource(Protocol):
 
 @runtime_checkable
 class TaskIntegration(Protocol):
-    """작업 연동(X43, 다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd).
+    """작업 연동(다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd).
 
     선택 능력(따로 둔 프로토콜, 구현하면 쓴다): `ProfileChecker.check_profile`,
     `TaskIssueSource.task_issues`(작업 이슈를 `ParsedTask.issues`에 더함), `AutomationControl`.
