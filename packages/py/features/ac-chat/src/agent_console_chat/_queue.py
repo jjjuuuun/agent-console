@@ -36,6 +36,11 @@ class QueueEntry(Protocol):
         """재시작 등으로 멈춘 항목. 풀기 전에는 꺼내지 않는다."""
         ...
 
+    @property
+    def held_reason(self) -> str | None:
+        """멈춘 이유(예: `RESTART_HOLD_REASON`, 열린 문자열). 멈추지 않았으면 None."""
+        ...
+
 
 class QueueSize(Protocol):
     """대화의 대기열 규모."""

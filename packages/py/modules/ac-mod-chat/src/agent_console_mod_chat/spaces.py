@@ -10,6 +10,8 @@ DB(``records.sqlite3``)의 ``conversations``·``chat_queue``에만 둔다. 이 �
   멈춘 것(``other_host``)으로 보이며 꺼내지 않는다.
 - ``SpacedChatService``: 호스트 대화 서비스(``chat.conversations`` 포트 그대로) +
   ``for_project(id)``(그 공간의 대화 서비스, 처음이면 만들고 연결·재시작 대기열 정책을 적용).
+  요청 경로는 ``for_project_ready(id)``를 쓴다 - 재시작 정책 적용이 끝난 뒤에 서비스를 돌려줘서,
+  재시작 직후 첫 읽기도 정책이 적용된 대기열(예: ``ask`` = ``held``)을 본다.
   연결(``connect``)·꺼내기 멈춤·정리는 공간 서비스에도 같이 간다.
 - 공간 대화의 ``conversation_busy``는 그 기록 DB의 끝나지 않은 턴 Run도 본다(다른 앱이 돌리는 턴,
   ``busy_elsewhere``).
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import builtins
+import concurrent.futures
 import logging
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
@@ -192,6 +195,9 @@ class SpacedChatService(ChatService):
         self._links: dict[str, Any] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
         self._restart_tasks: set[asyncio.Task[None]] = set()
+        self._restart_pending: dict[
+            str, asyncio.Future[None] | concurrent.futures.Future[None]
+        ] = {}
 
     @property
     def spaced(self) -> bool:
@@ -241,6 +247,26 @@ class SpacedChatService(ChatService):
             self._schedule_restart(project_id, service)
         return service
 
+    async def for_project_ready(self, project_id: str | None) -> ChatService:
+        """``for_project``와 같되, 그 공간의 재시작 정책 적용이 끝날 때까지 기다린다.
+
+        공간 서비스는 처음 요청될 때 만들어지고 재시작 정책은 비동기로 적용되므로, 요청 경로는 이
+        메서드로 서비스를 받아야 재시작 직후 첫 응답도 정책이 적용된 상태를 본다. 정책 적용의
+        실패는 ``_schedule_restart``가 기록하고 삼킨다(여기서는 다시 던지지 않는다). 기다리던
+        요청이 취소돼도 정책 적용은 계속된다.
+        """
+        service = self.for_project(project_id)
+        if not project_id:
+            return service
+        pending = self._restart_pending.get(project_id)
+        if pending is None or pending.done():
+            return service
+        if isinstance(pending, concurrent.futures.Future):
+            await asyncio.shield(asyncio.wrap_future(pending))
+        elif pending.get_loop() is asyncio.get_running_loop():
+            await asyncio.shield(pending)
+        return service
+
     def _busy_reader(self, project_id: str) -> Callable[[str], str | None]:
         def busy(conversation_id: str) -> str | None:
             runs = self._links.get("runs")
@@ -269,16 +295,28 @@ class SpacedChatService(ChatService):
             if applied:
                 _log.info("프로젝트 %s의 대기열 %d개 대화를 처리했습니다", project_id, len(applied))
 
-        loop: asyncio.AbstractEventLoop | None
+        def forget(done: object) -> None:
+            if self._restart_pending.get(project_id) is done:
+                del self._restart_pending[project_id]
+
         try:
-            loop = asyncio.get_running_loop()
+            running = asyncio.get_running_loop()
         except RuntimeError:
-            loop = self._loop
-        if loop is None:
+            running = None
+        if running is not None:
+            task = running.create_task(apply())
+            self._restart_tasks.add(task)
+            task.add_done_callback(self._restart_tasks.discard)
+            self._restart_pending[project_id] = task
+            task.add_done_callback(forget)
             return
-        task = loop.create_task(apply())
-        self._restart_tasks.add(task)
-        task.add_done_callback(self._restart_tasks.discard)
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            return
+        # 루프 밖(워커 스레드)에서 처음 열렸으면 루프에 넘긴다(create_task는 스레드 안전 아님).
+        future = asyncio.run_coroutine_threadsafe(apply(), loop)
+        self._restart_pending[project_id] = future
+        future.add_done_callback(forget)
 
     def service_of(self, conversation_id: str) -> ChatService:
         """그 대화를 가진 서비스(호스트 → 이 프로세스에서 연 공간 순, 없으면 호스트)."""
@@ -300,6 +338,8 @@ class SpacedChatService(ChatService):
     async def aclose(self) -> None:
         for task in list(self._restart_tasks):
             task.cancel()
+        for pending in list(self._restart_pending.values()):
+            pending.cancel()
         for service in self._spaces.values():
             await service.aclose()
         await super().aclose()

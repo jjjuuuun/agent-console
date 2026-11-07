@@ -98,11 +98,21 @@ def build_router(
     """
     router = APIRouter()
 
-    def chat(project: str | None) -> ChatService:
-        """요청의 대화 서비스: 프로젝트 기록 공간이 있으면 그 공간의 서비스."""
+    async def chat(project: str | None) -> ChatService:
+        """요청의 대화 서비스: 프로젝트 기록 공간이 있으면 그 공간의 서비스.
+
+        선택 메서드 ``for_project_ready``가 있으면 그것을 기다린다(재시작 정책 적용이 끝난 뒤의
+        서비스 - 재시작 직후 첫 대기열 읽기도 정책이 적용된 상태).
+        """
         host = service()
+        if project is None:
+            return host
+        ready = getattr(host, "for_project_ready", None)
+        if callable(ready):
+            awaited: ChatService = await ready(project)
+            return awaited
         method = getattr(host, "for_project", None)
-        if project is None or not callable(method):
+        if not callable(method):
             return host
         found: ChatService = method(project)
         return found
@@ -122,7 +132,7 @@ def build_router(
         """대화 요약(최근 갱신순): 마지막 턴 상태·대기열 수·대기 중 상호작용 수.
         ``project`` = 그 프로젝트의 대화만(기록 공간이 있으면 그 기록 DB, 생략 = 모두),
         ``source=app`` = 그 ``project_id``를 가진 앱 DB 옛 기록."""
-        target = service() if source == SOURCE_APP else chat(project)
+        target = service() if source == SOURCE_APP else await chat(project)
         return target.list(graph_id=graph_id, archived=archived, project_id=project)
 
     @router.get("/conversations/page", response_model=ConversationPage, responses=errors())
@@ -144,7 +154,7 @@ def build_router(
         처음을 가리킨다(없으면 null). 한 페이지는 한 출처에서만 나온다.
         """
         host = service()
-        scoped = chat(project)
+        scoped = await chat(project)
         spaced = project is not None and scoped is not host
 
         def read_with(
@@ -205,11 +215,11 @@ def build_router(
     async def create_conversation(body: CreateConversationRequest) -> Conversation:
         """대화를 만든다. 팀 구성이 없으면 404, 팀 구성 조회를 쓸 수 없으면 409."""
         require_graphs()
-        return chat(body.project_id).create(body)
+        return (await chat(body.project_id)).create(body)
 
     @router.get("/conversations/{conversation_id}", response_model=Conversation, responses=errors())
     async def get_conversation(conversation_id: str, project: str | None = None) -> Conversation:
-        return chat(project).get(conversation_id)
+        return (await chat(project)).get(conversation_id)
 
     @router.patch(
         "/conversations/{conversation_id}", response_model=Conversation, responses=errors(409)
@@ -220,12 +230,12 @@ def build_router(
         """제목·보관·팀 구성 전환(`graph_id`, 새 팀 구성에 없는 노드의 세션은 버린다)."""
         if body.graph_id is not None:
             require_graphs()
-        return chat(project).update(conversation_id, body)
+        return (await chat(project)).update(conversation_id, body)
 
     @router.delete("/conversations/{conversation_id}", status_code=204, responses=errors())
     async def delete_conversation(conversation_id: str, project: str | None = None) -> Response:
         """대화를 지운다(실행 중 턴 취소, 대기열 버림). Run 기록은 남는다."""
-        chat(project).delete(conversation_id)
+        (await chat(project)).delete(conversation_id)
         return Response(status_code=204)
 
     @router.get(
@@ -238,7 +248,7 @@ def build_router(
         project: str | None = None,
     ) -> list[ChatTurn]:
         """턴 목록(오래된 순). `before` = 커서(턴의 `run_id`), 그 앞의 턴 중 최근 `limit`개."""
-        return chat(project).turns(conversation_id, before=before, limit=limit)
+        return (await chat(project)).turns(conversation_id, before=before, limit=limit)
 
     @router.get(
         "/conversations/{conversation_id}/sessions",
@@ -250,7 +260,7 @@ def build_router(
     ) -> ConversationSessions:
         """노드 세션을 이 앱에서 이어 갈 수 있나(design §PI.4.6.4). `continuable=false`면 보내기가
         409 `chat.session_unavailable`이다(`on_missing_session: "fresh"`로 새 세션 선택)."""
-        return chat(project).session_states(conversation_id)
+        return (await chat(project)).session_states(conversation_id)
 
     @router.post(
         "/conversations/{conversation_id}/messages",
@@ -270,7 +280,7 @@ def build_router(
         `queue` 정책에서는 그 뒤에 줄을 선다. 턴 실행기가 연결되지 않았으면 409
         `feature_unavailable`.
         """
-        target = chat(project)
+        target = await chat(project)
         result = await target.post_message(conversation_id, body)
         if isinstance(result, Run):
             # 시작하는 동안 대화가 지워졌으면 턴은 취소됐다(ac-chat) → 없는 대화로 알린다.
@@ -284,7 +294,7 @@ def build_router(
     )
     async def list_queue(conversation_id: str, project: str | None = None) -> list[QueuedMessage]:
         """대기열(1 = 다음 차례, `held` = 재시작으로 멈춘 항목)."""
-        return chat(project).queue(conversation_id)
+        return (await chat(project)).queue(conversation_id)
 
     @router.delete(
         "/conversations/{conversation_id}/queue/{queued_id}", status_code=204, responses=errors()
@@ -293,7 +303,7 @@ def build_router(
         conversation_id: str, queued_id: str, project: str | None = None
     ) -> Response:
         """대기열 항목 취소(204, 멈춘 항목 포함). 이미 실행됐거나 없으면 404."""
-        chat(project).cancel_queued(conversation_id, queued_id)
+        (await chat(project)).cancel_queued(conversation_id, queued_id)
         return Response(status_code=204)
 
     @router.post(
@@ -308,7 +318,7 @@ def build_router(
         (WS `conversation.updated`로 알린다). 앞에 멈춘 항목이 있으면 그것이 풀리거나 지워질 때까지
         기다린다. 이미 풀린 항목도 200. 없으면 404.
         """
-        return await chat(project).release_queued(conversation_id, queued_id)
+        return await (await chat(project)).release_queued(conversation_id, queued_id)
 
     return router
 

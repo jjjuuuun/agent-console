@@ -7,10 +7,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from agent_console_chat import ChatService
-from agent_console_chat.testing import MemoryGraphs
-from agent_console_contracts import CreateConversationRequest
+from agent_console_chat import RESTART_HOLD_REASON, ChatService
+from agent_console_chat.testing import FakeLauncher, MemoryEvents, MemoryGraphs, MemoryRuns
+from agent_console_contracts import Conversation, CreateConversationRequest
+from agent_console_mod_chat.routes import build_router
 from agent_console_mod_chat.spaces import SpacedChatService, chat_records
 from agent_console_mod_chat.storage import (
     BRANCH,
@@ -168,3 +171,64 @@ def test_without_port_for_project_is_host() -> None:
     service = _service(None)
     assert service.for_project("pa") is service
     assert not service.spaced
+
+
+# ---- 재시작 직후 첫 대기열 읽기(요청 11/07: 공간 서비스 지연 생성 경합) -------------------------
+def _seed_restart_queue(spaces: Spaces, project_id: str) -> None:
+    """이전 프로세스가 남긴 대화 하나 + 풀린 대기열 항목 하나(재시작 흉내)."""
+    stored = SqliteChatStorage(spaces.open(f"project:{project_id}").writable_engine())
+    stored.conversations.save(
+        Conversation(id="c1", graph_id="g", created_at=1.0, updated_at=1.0, project_id=project_id)
+    )
+    queue = stored.queue
+    queue.host_id = "host-mine"
+    queue.enqueue("q1", "c1", "남은 메시지", created_at=2.0)
+
+
+def _service_with_launcher(spaces: Spaces) -> SpacedChatService:
+    graphs = MemoryGraphs()
+    host = InMemoryChatStorage()
+    runs, events = MemoryRuns(), MemoryEvents()
+
+    def make(conversations: Any, queue: Any, busy: Any) -> ChatService:
+        return ChatService(conversations, graphs, queue=queue, busy_elsewhere=busy)
+
+    service = SpacedChatService(
+        host.conversations,
+        graphs,
+        queue=host.queue,
+        records=chat_records(lambda: spaces, prefix="project:"),
+        make=make,
+    )
+    service.connect(launcher=FakeLauncher(runs, events), runs=runs)  # 연결 = 공간 서비스에도
+    return service
+
+
+def test_first_queue_read_after_restart_is_held_via_route(spaces: Spaces) -> None:
+    """재시작 뒤 첫 ``GET …/queue?project=``가 정책(기본 ``ask``) 적용 뒤 상태 = ``held:true``."""
+    _seed_restart_queue(spaces, "pa")
+    service = _service_with_launcher(spaces)
+    app = FastAPI()
+    app.include_router(build_router(lambda: service))
+    with TestClient(app) as client:
+        reply = client.get("/conversations/c1/queue", params={"project": "pa"})
+    assert reply.status_code == 200
+    assert [(i["id"], i["held"], i["held_reason"]) for i in reply.json()] == [
+        ("q1", True, RESTART_HOLD_REASON)
+    ]
+
+
+async def test_for_project_ready_waits_for_restart_policy(spaces: Spaces) -> None:
+    _seed_restart_queue(spaces, "pa")
+    service = _service_with_launcher(spaces)
+    space = await service.for_project_ready("pa")
+    assert space is service.for_project("pa")
+    assert [(i.id, i.held, i.held_reason) for i in space.queue("c1")] == [
+        ("q1", True, RESTART_HOLD_REASON)
+    ]
+    stored = SqliteChatStorage(spaces.open("project:pa").db.engine).queue.get("q1")
+    assert stored is not None
+    assert stored.held_reason == RESTART_HOLD_REASON
+    assert await service.for_project_ready("pa") is space  # 두 번째는 기다릴 것 없이 같은 서비스
+    assert await service.for_project_ready(None) is service
+    await service.aclose()

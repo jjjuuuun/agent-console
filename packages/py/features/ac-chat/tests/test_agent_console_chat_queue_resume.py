@@ -153,6 +153,7 @@ async def test_restart_ask_holds_items_and_release_runs_them_in_order() -> None:
     queue = service.queue(conv)
     assert [(q.text, q.position, q.held) for q in queue] == [("둘", 1, True), ("셋", 2, True)]
     assert all(i.held_reason == RESTART_HOLD_REASON for i in world.queue.list(conv))
+    assert {q.held_reason for q in queue} == {RESTART_HOLD_REASON}  # 응답에도 이유가 나간다
     summary = service.summary(conv)
     assert (summary.queued, summary.held) == (2, 2)
     assert notified[-1].held == 2
@@ -161,7 +162,7 @@ async def test_restart_ask_holds_items_and_release_runs_them_in_order() -> None:
     # 새 메시지는 멈춘 항목 뒤에 선다(순서 보존)
     later = await _post(service, conv, "넷")
     assert isinstance(later, QueuedMessage)
-    assert (later.position, later.held) == (3, False)
+    assert (later.position, later.held, later.held_reason) == (3, False, None)
     assert launcher.started == []
 
     # 두 번째를 먼저 풀어도 맨 앞이 멈춰 있으면 기다린다

@@ -131,6 +131,7 @@ def _queued_message(item: QueueEntry, *, position: int | None = None) -> QueuedM
         position=position if position is not None else item.position,
         text=item.text,
         held=item.held,
+        held_reason=item.held_reason if item.held else None,
     )
 
 
