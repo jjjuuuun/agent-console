@@ -83,6 +83,12 @@ WEB_ROLES: tuple[str, ...] = ("sdd",)
 DEFAULT_WORKSPACE = Path(".agent-console")
 """호스트가 경로를 주지 않을 때(테스트 등) 쓰는 워크스페이스 폴더."""
 
+SPEC_KIND_TITLE = "스펙"
+"""스펙 정의 종류의 표시 이름(종류 기여 ``title`` → 복사 대화상자 ``CopyKindInfo.title``)."""
+
+TEMPLATE_KIND_TITLE = "문서 틀"
+"""문서 틀 정의 종류의 표시 이름(종류 기여 ``title``)."""
+
 DEFINITIONS_SAVED: Topic[Any] = Topic("definitions.saved")
 """정의 저장 알림 토픽(정의·프로젝트 모듈이 낸다, 항목 ``{kind, id, version_hash, space}``)."""
 
@@ -243,9 +249,15 @@ class SddModule:
         spec_kind, template_kind = kinds
         ctx.provide(SDD_SERVICE, service)
         ctx.provide(
-            KIND_CONTRIBUTIONS, KindContribution(template_kind, references=template_references)
+            KIND_CONTRIBUTIONS,
+            KindContribution(
+                template_kind, references=template_references, title=TEMPLATE_KIND_TITLE
+            ),
         )
-        ctx.provide(KIND_CONTRIBUTIONS, KindContribution(spec_kind, references=template_references))
+        ctx.provide(
+            KIND_CONTRIBUTIONS,
+            KindContribution(spec_kind, references=template_references, title=SPEC_KIND_TITLE),
+        )
 
         def warnings() -> list[Issue]:
             return service.warnings()

@@ -47,7 +47,12 @@ from agent_console_store import (
 )
 
 from .copying import CopyService
-from .definitions import DefinitionSnapshot, combine_references, contribution_references
+from .definitions import (
+    DefinitionSnapshot,
+    combine_references,
+    contribution_references,
+    contribution_titles,
+)
 from .errors import ERROR_MAP
 from .folders import FolderDialogProvider, FolderPicker, FolderService, load_dialog_providers
 from .plugins import dialog_registry, registered_providers
@@ -334,6 +339,7 @@ class ProjectsModule:
             ),
             messages=cfg.messages,
             kind_info=lambda: library_kinds(reader(), ctx.ports(KIND_CONTRIBUTIONS)),
+            kind_titles=lambda: contribution_titles(ctx.ports(KIND_CONTRIBUTIONS)),
         )
         snapshot = DefinitionSnapshot(
             reader, ttl=cfg.snapshot_ttl_seconds, skip_kinds=(PROJECT_KIND_NAME,)

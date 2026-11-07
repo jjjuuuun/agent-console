@@ -124,6 +124,31 @@ def test_cors_only_for_listed_origins() -> None:
         assert denied.status_code == 403
 
 
+def _header_set(value: str) -> set[str]:
+    return {h.strip().lower() for h in value.split(",")}
+
+
+def test_cors_preflight_allows_conditional_write_headers_and_exposes_download_name() -> None:
+    """웹이 보내는 조건부 헤더(`If-Match`, 새로 만들기 `If-None-Match: *`)가 preflight를 통과하고,
+    웹이 읽는 응답 헤더(ETag·이슈·내려받기 파일 이름)는 교차 출처에서도 노출된다(검증 11/07 B)."""
+    origin = "http://localhost:5173"
+    with TestClient(make_app(allowed_origins=[origin])) as c:
+        pre = c.options(
+            f"{API}/echo/c",
+            headers={
+                "origin": origin,
+                "access-control-request-method": "PUT",
+                "access-control-request-headers": "x-console-token,if-none-match,content-type",
+            },
+        )
+        assert pre.status_code == 204
+        allowed = _header_set(pre.headers["access-control-allow-headers"])
+        assert {"x-console-token", "if-match", "if-none-match", "content-type"} <= allowed
+        res = c.get(f"{API}/echo", params={"text": "hi"}, headers={"origin": origin})
+        exposed = _header_set(res.headers["access-control-expose-headers"])
+        assert {"etag", "x-console-issues", "content-disposition"} <= exposed
+
+
 def test_ws_auth_close_codes(client: TestClient) -> None:
     with pytest.raises(WebSocketDisconnect) as exc, client.websocket_connect("/ws") as ws:
         ws.receive_text()

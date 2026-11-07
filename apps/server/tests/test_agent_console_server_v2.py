@@ -379,6 +379,9 @@ def _cors_client(tmp_path: Path, origin: str) -> Any:
     )
 
 
+EXPOSED = "ETag, X-Console-Issues, Content-Disposition"
+
+
 def test_cors_allowed_origin_preflight_and_expose_etag(tmp_path: Path) -> None:
     origin = "http://localhost:5173"
     with _cors_client(tmp_path, origin) as client:
@@ -416,7 +419,7 @@ def test_cors_allowed_origin_preflight_and_expose_etag(tmp_path: Path) -> None:
         )
         assert boot.status_code == 200
         assert boot.headers["access-control-allow-origin"] == origin
-        assert boot.headers["access-control-expose-headers"] == "ETag, X-Console-Issues"
+        assert boot.headers["access-control-expose-headers"] == EXPOSED
         other = client.get(
             f"{API}/bootstrap",
             headers={"Origin": "http://evil.example", "Sec-Fetch-Site": "cross-site"},
@@ -430,7 +433,7 @@ def test_cors_allowed_origin_preflight_and_expose_etag(tmp_path: Path) -> None:
             headers={"Origin": origin, "X-Console-Token": token},
         )
         assert created.status_code == 201
-        assert created.headers["access-control-expose-headers"] == "ETag, X-Console-Issues"
+        assert created.headers["access-control-expose-headers"] == EXPOSED
         unauth = client.post(f"{API}/agents", json=agent_doc("z", "y"), headers={"Origin": origin})
         assert unauth.status_code == 401
         assert unauth.headers["access-control-allow-origin"] == origin  # 오류도 읽을 수 있게

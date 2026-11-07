@@ -63,8 +63,11 @@ DEFAULT_ERROR_STATUS: Mapping[str, int] = {
 모르는 코드는 400."""
 
 CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE"
-CORS_ALLOW_HEADERS = "X-Console-Token, If-Match, Content-Type"
-CORS_EXPOSE_HEADERS = "ETag, X-Console-Issues"
+CORS_ALLOW_HEADERS = "X-Console-Token, If-Match, If-None-Match, Content-Type"
+"""preflight가 허용하는 요청 헤더. 웹 클라이언트가 보내는 것(토큰, 조건부 쓰기 `If-Match`·새로
+만들기 `If-None-Match: *`, 본문 형식)."""
+CORS_EXPOSE_HEADERS = "ETag, X-Console-Issues, Content-Disposition"
+"""교차 출처 응답에서 브라우저가 읽게 하는 헤더(버전 해시, 경고 이슈, 내려받기 파일 이름)."""
 CORS_MAX_AGE = "600"
 
 SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (

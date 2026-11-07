@@ -13,8 +13,11 @@
   ``project.not_imported``, ``in_library``). 라이브러리로 넘어가 찾지 않는다(K33-18).
 - ``scope_run``의 거부 ``errors``(5.7R.33g): 프로젝트 없이 시작(422 ``project.required``), 기록
   DB를 쓸 수 없음(409 ``project.records_unavailable``, K33-34), 유효 설정의 경로가 폴더 밖(422
-  ``project.outside_folder``, §PI.5). Run 당시 그래프 보기(``graph_of_run``)는 ``run_definitions``만
-  부르므로 기록 DB를 쓸 수 없는 프로젝트의 지난 Run도 볼 수 있다.
+  ``project.outside_folder``, §PI.5 — 중첩 팀 자손 포함). Run 당시 그래프 보기
+  (``graph_of_run``)는 ``run_definitions``만 부르므로 기록 DB를 쓸 수 없는 프로젝트의 지난 Run도
+  볼 수 있다.
+- ``ProjectScope.check_child(graph, services, *, project_id)``(5.7R.33g 잔여, ``mod-runs``
+  ``RunChildScoper`` 선택 메서드): 자식 Run(중첩 팀)을 만들기 직전 같은 경로 지킴.
 
 층 위치(공통 바로 아래)는 ``ac-teams``가 정한다. 이 모듈은 층 값만 만든다.
 """
@@ -35,7 +38,7 @@ from agent_console_contracts import (
     Project,
     WorkspaceSettings,
 )
-from agent_console_nodes_core import AGENT_LOOKUP, SCOPE_LAYERS, WORKSPACE_SETTINGS
+from agent_console_nodes_core import AGENT_LOOKUP, SCOPE_LAYERS, TEAM_LOOKUP, WORKSPACE_SETTINGS
 from agent_console_projects import CODE_UNKNOWN, project_layer_value
 from agent_console_runtime import ServiceKey, Services
 from agent_console_teams import DEFAULT_CONVENTIONS, Layer, TeamCatalog
@@ -293,6 +296,17 @@ class ProjectScope:
         error = self._view_error(lookup, project_id, records=True)
         if error is not None:
             return [error]
+        return self._path_errors(lookup, graph, services, project_id, layers)
+
+    def _path_errors(
+        self,
+        lookup: ProjectLookup,
+        graph: Graph,
+        services: Services,
+        project_id: str,
+        layers: Sequence[Layer],
+    ) -> list[ErrorInfo]:
+        """경로 지킴(§PI.5): 그래프와 중첩 팀 자손의 유효 설정 경로가 폴더 밖이면 422 하나."""
         project = self._project(lookup, project_id)
         folder = project.folder if project is not None else None
         if not folder or self._catalog is None:
@@ -308,10 +322,30 @@ class ProjectScope:
             scope_layers=layers,
             placeholders={"workspace": folder},
             environ=self._environ,
+            find_team=services.get(TEAM_LOOKUP),
         )
         if paths:
             return [outside_folder_error(project_id, folder, paths, self._texts)]
         return []
+
+    def check_child(
+        self, graph: Graph, services: Services, *, project_id: str | None
+    ) -> Sequence[ErrorInfo]:
+        """``runs.scopes`` 선택 메서드(``RunChildScoper``, 5.7R.33g 잔여): 자식 Run(중첩 팀)을
+        만들기 직전 경로 지킴을 다시 한다.
+
+        시작 때 점검(``scope_run``)이 이미 자손까지 보지만, 고정하지 않은 자식 팀 구성은 실행 중
+        바뀔 수 있고 시작 때 읽지 못한 자식도 있을 수 있어 실제로 돌 그래프로 한 번 더 본다.
+        ``services``는 자식 Run이 물려받은 서비스(범위 층 = 루트 Run의 프로젝트 층)다. 프로젝트가
+        없거나(``project_id`` 없음) 읽을 수 없으면 빈 목록(지금 동작).
+        """
+        if not project_id:
+            return []
+        lookup = self._lookup()
+        if lookup is None:
+            return []
+        layers = tuple(services.get(SCOPE_LAYERS) or ())
+        return self._path_errors(lookup, graph, services, project_id, layers)
 
     def _unknown_issue(self, project_id: str) -> Issue:
         return Issue(

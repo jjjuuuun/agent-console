@@ -57,7 +57,7 @@ def _note_refs(doc: Mapping[str, Any]) -> list[tuple[str, str]]:
 
 CONTRIBUTIONS = (
     KindContribution(NOTE_TEMPLATE, references=_template_refs),
-    KindContribution(NOTE, references=_note_refs),
+    KindContribution(NOTE, references=_note_refs, title="노트"),
     KindContribution(PRIVATE),
 )
 
@@ -279,7 +279,7 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "kind": "note-template",
             "library": True,
             "portable": True,
-            "title": None,  # 계약 0.14.0 선택 필드(서술자가 이름을 주면 채운다)
+            "title": None,  # 기여가 표시 이름을 주지 않으면 null(화면은 종류 이름)
         }
         assert "note" not in by_kind  # library=False 종류는 라이브러리에 없다
         assert "settings" not in by_kind  # 싱글턴은 복사 대상이 아니다
@@ -300,7 +300,7 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "kind": "note",
             "library": False,
             "portable": True,
-            "title": None,
+            "title": "노트",  # 기여 ``title``(검증 11/07 B)
         }
         assert "private" not in project  # portable=False 기여는 프로젝트 공간에 없다
         assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []

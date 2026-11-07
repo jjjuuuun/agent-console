@@ -241,7 +241,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                 </button>
               </th>
               <th scope="col">{t.list.colLastRun}</th>
-              <th scope="col" aria-label={t.list.rowMenu} />
+              <th scope="col"><span className="ac-sr-only">{t.list.rowMenu}</span></th>
             </tr>
           </thead>
           <tbody>

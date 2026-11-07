@@ -72,6 +72,7 @@ from .ports import (
     DefinitionLookup,
     DefinitionSource,
     ResumeHandler,
+    RunChildScoper,
     RunDefinitionsScoper,
     RunEnvironment,
     RunIssueAnnotator,
@@ -443,6 +444,7 @@ class RunService:
         준비자가 정하지 않은 설정은 None이라 엔진이 부모 Run 값을 물려준다.
         """
         services = request.services
+        self._raise_child_scope(request)
         self._raise_blockers(request.graph, services)
         prep = self._prepare(request.graph, services)
         return ChildRunPreparation(
@@ -453,6 +455,39 @@ class RunService:
             checked=True,
             run_context=prep.context or None,
         )
+
+    def _raise_child_scope(self, request: ChildRunRequest) -> None:
+        """실행 범위 공급자의 자식 Run 점검(``RunChildScoper``, 5.7R.33g 잔여). ``project_id``가
+        없는 Run이면 부르지 않는다(지금 동작).
+
+        Raises:
+            GraphValidationError: 공급자가 오류를 돌려줬다(첫 오류 → 같은 코드의 차단 이슈).
+        """
+        project_id = request.parent.project_id
+        if not project_id:
+            return
+        for scoper in self._scopes():
+            if not isinstance(scoper, RunChildScoper):
+                continue
+            try:
+                errors = scoper.check_child(request.graph, request.services, project_id=project_id)
+            except Exception:
+                _log.exception("자식 Run 범위 점검 실패: %s", type(scoper).__name__)
+                continue
+            for error in errors or ():
+                if isinstance(error, ErrorInfo):
+                    raise GraphValidationError(
+                        [
+                            Issue(
+                                severity="error",
+                                code=error.code,
+                                message=error.message,
+                                details=dict(error.details or {}),
+                                fix=error.fix,
+                                blocks_run=True,
+                            )
+                        ]
+                    )
 
     # ------------------------------------------------------------ 실행
 

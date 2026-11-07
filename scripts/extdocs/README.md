@@ -8,9 +8,9 @@
 
 | poe 작업 | 직접 실행 | 하는 일 | `poe check` |
 | --- | --- | --- | --- |
-| `extpoints-check` | `python scripts/extdocs/extdocs.py points [--allow-missing [CAT ...]]` | 코드 ↔ 선언 대조(아래 "대조 항목"). 문서 없이 동작 | 포함(`--allow-missing`) |
+| `extpoints-check` | `python scripts/extdocs/extdocs.py points [--allow-missing [CAT ...]]` | 코드 ↔ 선언 대조(아래 "대조 항목"). 문서 없이 동작 | 포함 |
 | `extdocs` | `python scripts/extdocs/extdocs.py generate [--scaffold]` | `docs/extending/reference.md`, 문서 폴더 안 `extdocs:facts` 구간, `examples/extensions/README.md` 생성. `--scaffold`는 선언의 `guide`가 가리키는 절이 없으면 빈 틀(`extdocs:todo`)을 만든다 | — |
-| `extdocs-check` | `python scripts/extdocs/extdocs.py docs [--allow-missing [CAT ...]]` | 재생성 diff 0, 가이드 절 손글·생성 구간, `extdocs:todo` 없음, 상대 링크·앵커, 공개 가능 린트, `>>>` doctest, `extdocs:validate` 조각 검증. 문서 폴더가 없으면 "문서 폴더 없음 — 건너뜀"으로 0 종료 | 포함(`--allow-missing guides`) |
+| `extdocs-check` | `python scripts/extdocs/extdocs.py docs [--allow-missing [CAT ...]]` | 재생성 diff 0, 가이드 절 손글·생성 구간, `extdocs:todo` 없음, 상대 링크·앵커, 공개 가능 린트, `>>>` doctest, `extdocs:validate` 조각 검증. 문서 폴더가 없으면 "문서 폴더 없음 — 건너뜀"으로 0 종료 | 포함 |
 | — | `python scripts/extdocs/extdocs.py docs --report [GLOB ...]` | 공개 가능 린트만 경고로(기본 `report_globs` — 패키지·앱 README). 늘 0 종료 | — |
 | — | `python scripts/extdocs/extdocs.py schema [--check]` | `declaration.schema.json`을 모델에서 다시 쓴다(`points`가 드리프트를 잡는다) | — |
 | `extdocs-test` | `pytest -q -c scripts/extdocs/pytest.ini scripts/extdocs` | 도구 자체 mypy(strict)·테스트(임시 저장소) | 포함 |
@@ -91,7 +91,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 | `examples` | 예제가 없는 지점(`example-missing`), snippet 예제인데 절에 검증 조각이 없음(`snippet-missing`) |
 | `guides` | 가이드 파일·절·생성 구간 없음, 손글 없음, `extdocs:todo` 남음, 아직 쓰지 않은 영역 페이지(`areas.yaml`의 파일)로 가는 링크 |
 
-`--allow-missing`만 주면 세 범주 전부다. `poe check`는 지금 `extpoints-check`에 전부, `extdocs-check`에 `guides`를 준다. 선언 채우기가 끝나면 `extpoints-check`의 옵션을 떼고, 영역 가이드가 다 쓰이면 `extdocs-check`의 옵션을 뗀다.
+`--allow-missing`만 주면 세 범주 전부다. 선언·예제·가이드가 다 채워져 `poe check`는 이 옵션을 주지 않는다(8R.4b에서 뗐다). 새 영역을 단계적으로 채울 때 손으로 돌리는 용도로 남긴다.
 
 ## 문서 조각
 

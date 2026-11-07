@@ -84,6 +84,12 @@ WEB_ROLES: tuple[str, ...] = ("wiki", "wiki:rules")
 DEFAULT_WORKSPACE = Path(".agent-console")
 """호스트가 경로를 주지 않을 때(테스트 등) 쓰는 워크스페이스 폴더."""
 
+WIKI_KIND_TITLE = "위키"
+"""위키 정의 종류의 표시 이름(종류 기여 ``title`` → 복사 대화상자 ``CopyKindInfo.title``)."""
+
+RULES_KIND_TITLE = "위키 규칙"
+"""위키 규칙 정의 종류의 표시 이름(종류 기여 ``title``)."""
+
 _log = logging.getLogger("agent_console_mod_wiki")
 
 
@@ -297,10 +303,12 @@ class WikiModule:
         )
 
         ctx.provide(WIKI_SERVICE, service)
-        ctx.provide(KIND_CONTRIBUTIONS, KindContribution(rules_kind))
+        ctx.provide(KIND_CONTRIBUTIONS, KindContribution(rules_kind, title=RULES_KIND_TITLE))
         ctx.provide(
             KIND_CONTRIBUTIONS,
-            KindContribution(wiki_kind, references=wiki_references(rules_kind.name)),
+            KindContribution(
+                wiki_kind, references=wiki_references(rules_kind.name), title=WIKI_KIND_TITLE
+            ),
         )
 
         def warnings() -> list[Issue]:

@@ -17,7 +17,8 @@
     - 확장 지점 프로토콜: ``RunPreparer``(+ ``RunPreparation``, 선택 사전 점검 ``RunPreflight`` →
       ``RunPreflightError``, 선택 이슈 꾸미기 ``RunIssueAnnotator``)·``RunScoper``(+ ``RunScope``,
       요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34, 선택 메서드 ``RunDefinitionsScoper`` →
-      Run의 정의 조회 출처 ``DefinitionSource``·노드 서비스 키 ``RUN_DEFINITIONS``, 5.7R.33y)·
+      Run의 정의 조회 출처 ``DefinitionSource``·노드 서비스 키 ``RUN_DEFINITIONS``, 5.7R.33y, 선택
+      메서드 ``RunChildScoper`` → 자식 Run 점검, 5.7R.33g)·
       ``RunServiceProvider``(+ ``RunEnvironment``)·``ResumeHandler``.
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
       ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
@@ -90,6 +91,7 @@ from .ports import (
     DefinitionLookup,
     DefinitionSource,
     ResumeHandler,
+    RunChildScoper,
     RunDefinitionsScoper,
     RunEnvironment,
     RunIssueAnnotator,
@@ -162,6 +164,7 @@ __all__ = [
     "PortConfigError",
     "PublishingSink",
     "ResumeHandler",
+    "RunChildScoper",
     "RunDefinitionsScoper",
     "RunEnvironment",
     "RunIssueAnnotator",

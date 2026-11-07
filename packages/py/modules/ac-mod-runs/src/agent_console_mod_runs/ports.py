@@ -34,6 +34,9 @@
   출처**(그래프·에이전트·리소스·리소스 본문·팀 노드 고정 버전)를 정한다. 그래프를 읽기 전에 부른다.
   출처를 받은 Run은 노드 서비스 ``RUN_DEFINITIONS``와 실행 환경 ``RunEnvironment.definitions``로
   그 출처를 넘기고, 자식 Run은 서비스를 물려받아 같은 출처를 쓴다. 없으면 ``definitions.lookup``.
+  선택 메서드 ``check_child``(``RunChildScoper``, 5.7R.33g 잔여)가 있으면 ``project_id``가 있는
+  Run의 자식 Run(중첩 팀)을 만들기 직전에 부른다. 오류를 돌려주면 자식 Run을 만들지 않는다(노드
+  실패).
 - 선택 ``runs.resume_handlers``(여러 제공자): 이어 가기 처리기(``ResumeHandler``). 받는 처리기가
   없으면 일반 실행으로 새 Run을 시작한다.
 - 선택 ``workspace.settings``: 공통 설정(``secrets.redact_suspected_in_logs``).
@@ -287,6 +290,30 @@ class RunDefinitionsScoper(Protocol):
 
 
 @runtime_checkable
+class RunChildScoper(Protocol):
+    """``runs.scopes`` 항목의 **선택** 메서드: 자식 Run(중첩 팀) 점검.
+
+    ``project_id``가 있는 Run에서 노드가 자식 Run을 만들기 직전(``RunService.prepare_child``, 팀
+    규칙 검사보다 먼저) 부른다. 자식 Run은 ``scope_run``을 다시 부르지 않으므로(부모 서비스를
+    물려받음), 실제로 돌 자식 그래프로 범위 규칙(예: 프로젝트 폴더 밖 경로)을 다시 볼 때 쓴다.
+    오류를 돌려주면 첫 오류를 차단 이슈(같은 ``code``·``message``·``details``)로 바꿔 자식 Run을
+    만들지 않는다(노드는 ``child_invalid`` 실패, ``details.issues``). 예외는 기록하고 건너뛴다.
+    """
+
+    def check_child(
+        self, graph: Graph, services: Services, *, project_id: str | None
+    ) -> Sequence[ErrorInfo]:
+        """자식 Run을 막을 오류(없으면 빈 목록).
+
+        Args:
+            graph: 자식 Run으로 돌 그래프(덮어쓰기 적용 후).
+            services: 자식 Run에 넘길 서비스(부모 Run 서비스 + 노드가 더한 것).
+            project_id: 루트 Run의 ``Run.project_id``(자식은 부모 값을 받는다).
+        """
+        ...
+
+
+@runtime_checkable
 class ResumeHandler(Protocol):
     """``runs.resume_handlers`` 항목: 특정 Run의 이어 가기를 맡는다(예: 대화 턴)."""
 
@@ -394,6 +421,7 @@ __all__ = [
     "PreparationLike",
     "Redactor",
     "ResumeHandler",
+    "RunChildScoper",
     "RunDefinitionsScoper",
     "RunEnvironment",
     "RunIssueAnnotator",

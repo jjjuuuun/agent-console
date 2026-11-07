@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 
 from agent_console_contracts import (
     HTTP_STATUS_BY_ERROR_CODE,
+    Agent,
     Graph,
     Issue,
     Project,
@@ -45,7 +46,7 @@ from agent_console_link_projects_runs.testing import MemoryProjects, memory_proj
 from agent_console_link_runs_teams import module as runs_teams
 from agent_console_mod_definitions import module as definitions
 from agent_console_mod_projects import DEFINITIONS_SPACES, ProjectsModule
-from agent_console_mod_runs import RunDefinitionsScoper, RunScoper
+from agent_console_mod_runs import RunChildScoper, RunDefinitionsScoper, RunScoper
 from agent_console_mod_runs import module as runs
 from agent_console_modkit import (
     BaseServices,
@@ -55,9 +56,11 @@ from agent_console_modkit import (
     assemble,
 )
 from agent_console_modkit.host import SecurityPolicy, create_host_app
+from agent_console_nodes_core import AGENT_LOOKUP
 from agent_console_nodes_core import SCOPE_LAYERS as SCOPE_LAYERS_SERVICE
 from agent_console_runtime import Registries, Services, load_registries
 from agent_console_store import InMemoryVersionRepository
+from agent_console_teams import catalog_from_registries
 
 API = "/api/v1"
 TOKEN = "t" * 32
@@ -477,6 +480,102 @@ def test_outside_folder_reports_paths_and_layers(tmp_path: Path) -> None:
         assert [r["graph_id"] for r in listed] == ["inside"]
 
 
+def _nested_folder(tmp_path: Path) -> tuple[Path, str]:
+    """프로젝트 폴더 + 폴더 밖 경로를 쓰는 에이전트 ``wander``와 그 자식·손자 팀 구성."""
+    folder = _project_folder(tmp_path)
+    outside = str(tmp_path / "elsewhere")
+    space = folder / CFG
+    _write(space / "agents", "wander", _agent("wander", working_directory=outside))
+    _write(space / "graphs", "child-wander", _graph("child-wander", "wander"))
+    _write(space / "graphs", "nest-wander", _team_graph("nest-wander", "child-wander"))
+    _write(space / "graphs", "mid", _team_graph("mid", "child-wander"))
+    _write(space / "graphs", "deep", _team_graph("deep", "mid"))
+    return folder, outside
+
+
+def _paths(error: dict[str, Any]) -> set[tuple[str, str, str, str]]:
+    return {(p["pointer"], p["value"], p["layer"], p["node_id"]) for p in error["details"]["paths"]}
+
+
+def test_nested_team_outside_folder_blocked_at_start(tmp_path: Path) -> None:
+    """5.7R.33g 잔여: 중첩 팀(자식·손자) 안 에이전트의 유효 설정 경로도 시작 전에 막는다."""
+    folder, outside = _nested_folder(tmp_path)
+    with _client(tmp_path) as (client, _assembly):
+        _register(client, folder)
+        error = _error(_start(client, "nest-wander", "app"), 422, "project.outside_folder")
+        assert error["details"]["folder"] == str(folder)
+        assert _paths(error) == {("/working_directory", outside, "에이전트", "T/a")}
+        deep = _error(_start(client, "deep", "app"), 422, "project.outside_folder")
+        assert _paths(deep) == {("/working_directory", outside, "에이전트", "T/T/a")}
+        _no_runs(client, "app")
+        # 폴더 안 자식(기존 parent → child)은 그대로 돈다
+        run, _events = _run(client, "parent", "app")
+        assert run["status"] == "completed", run
+
+
+def test_nested_team_settings_override_is_guarded(tmp_path: Path) -> None:
+    """중첩 팀 노드의 팀 층 덮어쓰기(config ``settings``)로 넣은 경로도 본다."""
+    folder = _project_folder(tmp_path)
+    outside = str(tmp_path / "elsewhere")
+    graph = _team_graph("over", "child")
+    graph["nodes"][1]["config"]["settings"] = {"working_directory": outside}
+    _write(folder / CFG / "graphs", "over", graph)
+    with _client(tmp_path) as (client, _assembly):
+        _register(client, folder)
+        error = _error(_start(client, "over", "app"), 422, "project.outside_folder")
+        assert _paths(error) == {("/working_directory", outside, "팀 구성", "T/a")}
+        _no_runs(client, "app")
+
+
+def test_nested_team_pinned_version_is_guarded(tmp_path: Path) -> None:
+    """고정 버전 자식은 그 버전으로 본다: 옛 버전이 폴더 밖이면 막고, 최신(폴더 안)은 돈다."""
+    folder, outside = _nested_folder(tmp_path)
+    with _client(tmp_path) as (client, assembly):
+        _register(client, folder)
+        [spaces] = assembly.ports(DEFINITIONS_SPACES)
+        store = spaces.open("app")
+        first = store.create("graph", _graph("kid", "wander"))
+        store.save("graph", _graph("kid", "a1"), expected_version=first.version_hash)
+        pinned = _team_graph("pin-parent", "kid")
+        pinned["nodes"][1]["config"]["version"] = first.version_hash
+        store.create("graph", pinned)
+        store.create("graph", _team_graph("latest-parent", "kid"))
+        error = _error(_start(client, "pin-parent", "app"), 422, "project.outside_folder")
+        assert _paths(error) == {("/working_directory", outside, "에이전트", "T/a")}
+        run, events = _run(client, "latest-parent", "app")
+        assert run["status"] == "completed", run
+        assert _reply(events) == f"cwd={folder} model=m-proj"
+
+
+def test_nested_team_checked_again_when_child_starts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """시작 때 자식을 보지 못해도(예: 고정하지 않은 자식이 실행 중 바뀜) 자식 Run을 만들기 직전
+    ``check_child``가 막는다 — 자식 Run 없음, 노드 실패 ``details.issues``에 같은 코드."""
+    from agent_console_link_projects_runs import outside_paths_of_graph as real
+    from agent_console_link_projects_runs import scope as scope_module
+
+    def start_blind(graph: Graph, **kwargs: Any) -> Any:
+        if graph.id == "nest-wander":  # 시작 점검만 자식을 못 본 것처럼
+            kwargs["find_team"] = None
+        return real(graph, **kwargs)
+
+    monkeypatch.setattr(scope_module, "outside_paths_of_graph", start_blind)
+    folder, outside = _nested_folder(tmp_path)
+    with _client(tmp_path) as (client, _assembly):
+        _register(client, folder)
+        created = _start(client, "nest-wander", "app")
+        assert created.status_code == 202, created.text
+        run, events = _wait(client, created.json()["id"])
+        assert run["status"] == "failed", run
+        snap = client.get(f"{API}/runs/{run['id']}", params={"project": "app"}).json()
+        assert snap["children"] == []
+        [failed] = _of(events, "node.failed")
+        [issue] = failed["payload"]["error"]["details"]["issues"]
+        assert issue["code"] == "project.outside_folder"
+        assert [(p["value"], p["node_id"]) for p in issue["details"]["paths"]] == [(outside, "a")]
+
+
 def test_pinned_version_runs_from_space(tmp_path: Path) -> None:
     folder = _project_folder(tmp_path)
     with _client(tmp_path) as (client, assembly):
@@ -539,6 +638,7 @@ def test_ports_match_consumer_protocols(tmp_path: Path) -> None:
         [scoper] = assembly.ports(RUN_SCOPES)
         assert isinstance(scoper, RunScoper)
         assert isinstance(scoper, RunDefinitionsScoper)
+        assert isinstance(scoper, RunChildScoper)
         [source] = assembly.ports(SCOPE_LAYERS)
         assert hasattr(source, "scope_layers")
 
@@ -610,6 +710,65 @@ def test_lookup_missing_or_broken_is_ignored() -> None:
 
     [issue] = ProjectScope(lambda: Broken()).layers("app").warnings
     assert issue.code == "project.unknown"
+
+
+def test_check_child_unit() -> None:
+    registries = Registries()
+    load_registries(registries)
+    scope = _scope(catalog=lambda: catalog_from_registries(registries))
+    wander = Agent.model_validate(_agent("wander", working_directory="/elsewhere"))
+    inside = Agent.model_validate(_agent("inside", working_directory="sub"))
+    agents = {"wander": wander, "inside": inside}
+    layers = scope.layers("app").layers
+    services = Services({AGENT_LOOKUP: agents.get, SCOPE_LAYERS_SERVICE: tuple(layers)})
+    out = Graph.model_validate(_graph("g", "wander"))
+    [error] = scope.check_child(out, services, project_id="app")
+    assert error.code == "project.outside_folder"
+    assert [(p["value"], p["node_id"]) for p in error.details["paths"]] == [("/elsewhere", "a")]
+    ok = Graph.model_validate(_graph("g", "inside"))
+    assert list(scope.check_child(ok, services, project_id="app")) == []
+    assert list(scope.check_child(out, services, project_id=None)) == []
+    assert list(_scope().check_child(out, services, project_id="app")) == []  # 경로 지킴 없음
+
+
+def test_outside_paths_of_graph_nested_unit() -> None:
+    """중첩 팀: 자식·손자 노드 id 경로, 순환·없는 자식은 건너뜀, 조회 없으면 루트만."""
+    from agent_console_link_projects_runs import outside_paths_of_graph
+
+    registries = Registries()
+    load_registries(registries)
+    catalog = catalog_from_registries(registries)
+    wander = Agent.model_validate(_agent("wander", working_directory="/elsewhere"))
+    teams = {
+        "leaf": Graph.model_validate(_graph("leaf", "wander")),
+        "mid": Graph.model_validate(_team_graph("mid", "leaf")),
+        "loop": Graph.model_validate(_team_graph("loop", "loop")),
+    }
+    calls: list[tuple[str, str | None]] = []
+
+    def find_team(ref: str, version: str | None) -> Graph | None:
+        calls.append((ref, version))
+        if ref == "broken":
+            raise RuntimeError("고장")
+        return teams.get(ref)
+
+    def run(graph: dict[str, Any], **kw: Any) -> list[str | None]:
+        found = outside_paths_of_graph(
+            Graph.model_validate(graph),
+            catalog=catalog,
+            folder="/w/app",
+            find_agent={"wander": wander}.get,
+            **kw,
+        )
+        return [p.node_id for p in found]
+
+    assert run(_team_graph("root", "mid"), find_team=find_team) == ["T/T/a"]
+    assert run(_team_graph("root", "mid"), find_team=find_team, nested_separator=">") == ["T>T>a"]
+    assert run(_team_graph("root", "mid")) == []  # 조회 없음 = 루트 노드만
+    assert run(_team_graph("root", "loop"), find_team=find_team) == []  # 순환은 한 번만 보고 멈춤
+    assert run(_team_graph("root", "nope"), find_team=find_team) == []
+    assert run(_team_graph("root", "broken"), find_team=find_team) == []
+    assert ("loop", None) in calls
 
 
 class _Store:

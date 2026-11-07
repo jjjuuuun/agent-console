@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import random
+from typing import Any, cast
 
 import pytest
 
@@ -247,8 +248,10 @@ class _StallOnce:
 def _stall_once(pattern: SafePattern | None) -> SafePattern | None:
     if pattern is None:
         return None
-    fake = _StallOnce(pattern._compiled)  # 구현 대역 주입
-    return dataclasses.replace(pattern, _compiled=fake)  # type: ignore[arg-type]
+    # 구현 대역 주입. `regex` stub(types-regex) 유무에 따라 `_compiled` 타입이 달라지므로
+    # (저장소 안 = regex.Pattern, 격리 설치 = Any) ignore 대신 Any로 넘겨 양쪽 모두 통과시킨다.
+    fake = cast(Any, _StallOnce(pattern._compiled))
+    return dataclasses.replace(pattern, _compiled=fake)
 
 
 def test_seed_26_document_survives_foreign_cpu_timeout() -> None:

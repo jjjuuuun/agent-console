@@ -18,10 +18,13 @@ export interface EmptyStateProps {
   /** 완료된 단계의 보조 텍스트(스크린리더용, 예: "완료"). */
   doneLabel?: string;
   className?: string;
+  /** 제목 수준(2~6). 화면의 제목 계층에 맞춘다. 기본 2. */
+  headingLevel?: 2 | 3 | 4 | 5 | 6;
 }
 
 /** 빈 상태 안내. 문구·동작은 호출자가 넘긴다. */
-export function EmptyState({ icon, title, description, action, secondaryAction, steps, doneLabel, className }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, secondaryAction, steps, doneLabel, className, headingLevel = 2 }: EmptyStateProps) {
+  const Heading = `h${headingLevel}` as const;
   return (
     <div className={joinClass("ac-empty", className)}>
       {icon === undefined || icon === null ? null : (
@@ -31,7 +34,7 @@ export function EmptyState({ icon, title, description, action, secondaryAction, 
           <span className="ac-empty-dot ac-empty-dot-b" />
         </div>
       )}
-      <h3 className="ac-empty-title">{title}</h3>
+      <Heading className="ac-empty-title">{title}</Heading>
       {description === undefined ? null : <div className="ac-text">{description}</div>}
       {steps === undefined || steps.length === 0 ? null : (
         <ol className="ac-empty-steps">

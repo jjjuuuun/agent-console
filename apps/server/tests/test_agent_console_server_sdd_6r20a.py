@@ -77,6 +77,9 @@ def test_library_template_copies_to_project(tmp_path: Path) -> None:
         }
         assert template_kind in spec_kinds
         assert any(not v["library"] for v in spec_kinds.values())  # 스펙 종류(library=False)
+        # 기여 표시 이름(CopyKindInfo.title): SDD 모듈이 두 종류에 이름을 준다.
+        assert spec_kinds[template_kind]["title"]
+        assert all(v["title"] for v in spec_kinds.values() if not v["library"])
 
         assert _copy(client, template_kind, "shared", project) == ["copied"]
         listed = client.get(f"{T}?project={project}").json()

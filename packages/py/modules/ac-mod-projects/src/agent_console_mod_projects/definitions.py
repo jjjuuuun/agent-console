@@ -55,6 +55,22 @@ def combine_references(sources: Iterable[ReferenceSource]) -> References | None:
     return references
 
 
+def contribution_titles(contributions: Iterable[Any]) -> dict[str, str]:
+    """종류 기여(X44)의 표시 이름 ``{종류 이름: title}``(빈 ``title``은 빼고, 먼저 온 것 우선).
+
+    >>> from types import SimpleNamespace as C
+    >>> contribution_titles([C(kind=C(name="note"), title="노트"), C(kind=C(name="x"), title=None)])
+    {'note': '노트'}
+    """
+    out: dict[str, str] = {}
+    for item in contributions:
+        title = getattr(item, "title", None)
+        name = getattr(getattr(item, "kind", None), "name", None)
+        if isinstance(title, str) and title and isinstance(name, str):
+            out.setdefault(name, title)
+    return out
+
+
 def contribution_references(contributions: Iterable[Any]) -> list[ReferenceSource]:
     """종류 기여(X44)의 ``references``를 X25 모양 ``(kind, document)``로(그 종류 문서에만 적용).
 

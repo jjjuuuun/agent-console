@@ -798,6 +798,7 @@ class SpecRepository:
             out.append(
                 SpecTemplateSummary(
                     id=tpl.id,
+                    kind=self.template_kind,
                     name=tpl.name,
                     description=tpl.description,
                     documents=tpl.documents,

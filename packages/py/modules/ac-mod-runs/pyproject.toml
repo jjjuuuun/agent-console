@@ -76,7 +76,7 @@ area = "projects"
 design_id = "X26"
 summary = "Run마다 노드 서비스·경고·정의 출처·기록 공간을 더한다(예: 요청한 프로젝트의 공간)"
 registration = { kind = "port", port = "agent_console_mod_runs.ports:RUN_SCOPES" }
-interface = ["agent_console_mod_runs.ports:RunScoper", "agent_console_mod_runs.ports:RunScopeLike", "agent_console_mod_runs.ports:RunDefinitionsScoper"]
+interface = ["agent_console_mod_runs.ports:RunScoper", "agent_console_mod_runs.ports:RunScopeLike", "agent_console_mod_runs.ports:RunDefinitionsScoper", "agent_console_mod_runs.ports:RunChildScoper"]
 example = [
     { kind = "package", path = "examples/extensions/agent-console-example-link" },
     { kind = "reference", path = "packages/py/links/ac-link-projects-runs" },

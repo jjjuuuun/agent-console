@@ -177,6 +177,14 @@ describe("Tabs", () => {
     expect(onChange).toHaveBeenLastCalledWith("x");
     expect(screen.getByRole("tabpanel", { name: "하나" })).toBeTruthy();
   });
+  it("탭 id에 공백 등이 있어도 DOM id는 안전하고 aria-controls·labelledby가 이어진다", () => {
+    render(<Tabs tabs={[{ id: "상태 줄이 아직 없어요", label: "가", content: <p>a</p> }, { id: "b c", label: "나", content: <p>b</p> }]} ariaLabel="구역" />);
+    const tab = screen.getByRole("tab", { name: "가" });
+    expect(tab.id).not.toMatch(/\s/);
+    const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+    expect(panel?.getAttribute("role")).toBe("tabpanel");
+    expect(panel?.getAttribute("aria-labelledby")).toBe(tab.id);
+  });
   it("lazy: 선택 전 탭은 렌더하지 않는다", () => {
     render(<Tabs tabs={tabs} ariaLabel="구역" lazy />);
     expect(screen.queryByText("내용2")).toBeNull();
@@ -233,6 +241,12 @@ describe("Gauge", () => {
 });
 
 describe("EmptyState", () => {
+  it("제목 수준은 headingLevel로 정한다(기본 2)", () => {
+    const { rerender } = render(<EmptyState title="비었음" />);
+    expect(screen.getByRole("heading", { level: 2, name: "비었음" })).toBeTruthy();
+    rerender(<EmptyState title="비었음" headingLevel={4} />);
+    expect(screen.getByRole("heading", { level: 4, name: "비었음" })).toBeTruthy();
+  });
   it("제목·설명·액션·보조 액션·체크리스트", () => {
     render(
       <EmptyState

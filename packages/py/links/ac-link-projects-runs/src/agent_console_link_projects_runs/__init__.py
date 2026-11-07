@@ -8,10 +8,12 @@
       ``link-projects-runs``. 설정 ``ProjectsRunsSettings``(층 id·이름, 없는 프로젝트 문구).
     - ``ProjectScope``: HTTP 없이 쓰는 부품 — ``layers(project_id)``·``scope_run``(``runs.scopes``
       모양, 거부 ``errors``)·``run_definitions``(Run의 정의 출처 = 프로젝트 공간, 5.7R.33g)·
-      ``scope_layers``(``settings.scope_layers`` 모양). 결과 ``ScopeLayers``·``RunScopeResult``.
+      ``check_child``(자식 Run 직전 경로 지킴, ``mod-runs`` ``RunChildScoper``)·``scope_layers``
+      (``settings.scope_layers`` 모양). 결과 ``ScopeLayers``·``RunScopeResult``.
     - 사전 점검(``preflight``, 5.7R.33g): 오류 본문 ``required_error``·``unknown_error``·
       ``view_error``·``space_error``·``not_imported_error``·``outside_folder_error``, 경로 지킴
-      ``outside_paths_of_graph``, 문구 데이터 ``PreflightTexts``.
+      ``outside_paths_of_graph``(중첩 팀 자손 포함, ``TeamFinder``·``NESTED_NODE_SEPARATOR``), 문구
+      데이터 ``PreflightTexts``.
     - 포트(``ports``): 받음 ``PROJECTS_LOOKUP``(필수)·``DEFINITIONS_SPACES``·``DEFINITIONS_LOOKUP``
       (선택), 제공 ``RUN_SCOPES``·``SCOPE_LAYERS``.
     - ``testing``: ``MemoryProjects``·``memory_projects_module``(단독 실행·테스트).
@@ -31,7 +33,9 @@ from .ports import (
 )
 from .preflight import (
     DEFAULT_PREFLIGHT_TEXTS,
+    NESTED_NODE_SEPARATOR,
     PreflightTexts,
+    TeamFinder,
     not_imported_error,
     outside_folder_error,
     outside_paths_of_graph,
@@ -58,6 +62,7 @@ __all__ = [
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_SPACES",
     "MODULE_ID",
+    "NESTED_NODE_SEPARATOR",
     "PROJECTS_LOOKUP",
     "RUN_SCOPES",
     "SCOPE_LAYERS",
@@ -69,6 +74,7 @@ __all__ = [
     "ProjectsRunsSettings",
     "RunScopeResult",
     "ScopeLayers",
+    "TeamFinder",
     "module",
     "not_imported_error",
     "outside_folder_error",

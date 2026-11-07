@@ -14,7 +14,8 @@
 - ``not_imported_error``: 실행 대상이 프로젝트 공간에 없음(422 ``project.not_imported``,
   ``in_library``).
 - ``outside_paths_of_graph``: 노드마다 유효 설정의 ``x-path`` 값이 프로젝트 폴더 밖인 것(층
-  이름 포함). ``outside_folder_error``가 422 ``project.outside_folder`` 본문을 만든다.
+  이름 포함, 중첩 팀의 자식·손자 팀 구성 노드까지). ``outside_folder_error``가 422
+  ``project.outside_folder`` 본문을 만든다.
 
 문구·해결 버튼은 ``PreflightTexts`` **데이터**다(바꿔 넘길 수 있다).
 """
@@ -44,11 +45,20 @@ from agent_console_contracts import (
     WorkspaceSettings,
 )
 from agent_console_projects import outside_paths
-from agent_console_teams import Layer, TeamCatalog, agent_settings_schema, node_settings
+from agent_console_teams import (
+    Layer,
+    TeamCatalog,
+    TeamPlan,
+    agent_settings_schema,
+    node_settings,
+    with_team_settings,
+)
 
 __all__ = [
     "DEFAULT_PREFLIGHT_TEXTS",
+    "NESTED_NODE_SEPARATOR",
     "PreflightTexts",
+    "TeamFinder",
     "not_imported_error",
     "outside_folder_error",
     "outside_paths_of_graph",
@@ -291,6 +301,21 @@ def _layer_of(pointer: str, provenance: Mapping[str, str]) -> str | None:
     return best
 
 
+NESTED_NODE_SEPARATOR = "/"
+"""중첩 팀 안 노드 ``node_id``의 구분자: ``"<팀 노드>/<자식 노드>"``(대화 세션 경로 키 모양)."""
+
+TeamFinder = Callable[[str, str | None], Graph | None]
+"""팀 구성 id·고정 버전(None = 최신) → 팀 구성(노드 서비스 ``TEAM_LOOKUP`` 모양). 없으면 None 또는
+``LookupError``."""
+
+
+def _find_child(find_team: TeamFinder, ref: str, version: str | None) -> Graph | None:
+    try:
+        return find_team(ref, version)
+    except Exception:  # 없음·읽기 실패 — 실행 시 중첩 팀 노드가 같은 코드로 실패한다
+        return None
+
+
 def outside_paths_of_graph(
     graph: Graph,
     *,
@@ -302,15 +327,24 @@ def outside_paths_of_graph(
     scope_layers: Sequence[Layer] = (),
     placeholders: Mapping[str, str] | None = None,
     environ: Mapping[str, str] | None = None,
+    find_team: TeamFinder | None = None,
+    nested_separator: str = NESTED_NODE_SEPARATOR,
 ) -> list[OutsideFolderPath]:
     """에이전트 노드마다 **유효 설정**(층을 합친 값)의 ``x-path`` 값 중 ``folder``·``allowed`` 밖인
-    것.
+    것. 중첩 팀 노드가 있으면 그 자식 팀 구성(과 손자)의 에이전트 노드도 같은 규칙으로 본다.
 
     덮어써진 층 값은 보지 않는다(실제로 쓰이는 값만). 결과의 ``layer``는 그 값을 정한 층의 화면
-    이름(``EffectiveSettings.provenance``), ``node_id``는 노드. 에이전트 설정은 계약 스키마
-    (``AgentSettings``), ``backend_options``는 유효 백엔드의 ``config_schema``(``catalog``의
-    디스크립터)로 본다 — 필드 이름을 코드에 두지 않는다(K33-7). 해석할 수 없는 그래프면 빈
-    목록(엔진 검증이 맡는다).
+    이름(``EffectiveSettings.provenance``), ``node_id``는 노드(중첩 팀 안이면
+    ``"<팀 노드>/<자식 노드>"``). 에이전트 설정은 계약 스키마(``AgentSettings``),
+    ``backend_options``는 유효 백엔드의 ``config_schema``(``catalog``의 디스크립터)로 본다 — 필드
+    이름을 코드에 두지 않는다(K33-7). 해석할 수 없는 그래프면 빈 목록(엔진 검증이 맡는다).
+
+    중첩 팀(5.7R.33g 잔여): 자식 Run은 부모 Run의 서비스(범위 층 = 프로젝트 층·공통 설정·정의
+    출처)를 물려받으므로 같은 ``scope_layers``·``workspace``·``find_agent``로 본다. 자식 팀 구성의
+    팀 층은 중첩 팀 노드 config의 덮어쓰기(``TeamConventions.node_settings_key``,
+    ``with_team_settings``)를 적용한 값이다. 고정 버전(``TeamConventions.node_version_key``)은
+    ``find_team(ref, version)``으로 그 버전을 읽는다. 이미 경로에 있는 팀 구성(순환)·읽을 수 없는
+    자식·덮어쓰기가 틀린 자식은 건너뛴다(실행 시 엔진·노드가 막는다).
 
     Args:
         graph: 실행할 팀 구성.
@@ -322,62 +356,126 @@ def outside_paths_of_graph(
         scope_layers: 공통 바로 아래 범위 층(노드 서비스 ``SCOPE_LAYERS``, 프로젝트 층 포함).
         placeholders: 값 안 틀 바꾸기(예: ``{"workspace": folder}``).
         environ: ``~`` 펼치기용 환경.
+        find_team: 중첩 팀의 자식 팀 구성 읽기(노드 서비스 ``TEAM_LOOKUP``). None이면 루트 그래프의
+            노드만 본다.
+        nested_separator: 중첩 팀 안 노드 ``node_id``의 구분자.
     """
-    plan = catalog.try_plan(graph)
-    if plan is None:
-        return []
-    agents: dict[str, Agent] = {}
-    if find_agent is not None:
-        for ref in set(plan.agent_refs.values()):
-            found = find_agent(ref)
-            if found is not None:
-                agents[ref] = found
+    out: list[OutsideFolderPath] = []
+    allowed_dirs = tuple(allowed)
     schema = agent_settings_schema()
     schemas = {d.id: d.config_schema for d in catalog.backend_descriptors}
     env = dict(environ or {})
-    out: list[OutsideFolderPath] = []
-    for node_id in plan.agent_refs:
-        try:
-            resolved = node_settings(
-                plan,
-                node_id,
-                agents=agents,
-                workspace=workspace,
-                strategies=catalog.strategies,
-                scope_layers=scope_layers,
-            )
-        except Exception:  # 층 계산 실패는 검사기(엔진·팀 규칙)가 알린다
-            continue
-        effective = resolved.effective
-        labels = {layer.id: layer.label or layer.id for layer in effective.layers}
-        value = effective.value.model_dump(mode="json", exclude_none=True)
-        options = value.pop("backend_options", None)
-        found_paths = outside_paths(
-            value,
-            schema,
-            folder,
-            allowed,
-            placeholders=placeholders,
-            environ=env,
-            node_id=node_id,
-        )
-        backend = effective.value.backend
-        option_schema = schemas.get(backend) if backend else None
-        if isinstance(options, Mapping) and option_schema:
-            found_paths.extend(
-                outside_paths(
-                    options,
-                    option_schema,
-                    folder,
-                    allowed,
+
+    def visit(current: Graph, prefix: str, lineage: tuple[str, ...]) -> None:
+        plan = catalog.try_plan(current)
+        if plan is None:
+            return
+        agents: dict[str, Agent] = {}
+        if find_agent is not None:
+            for ref in set(plan.agent_refs.values()):
+                found = find_agent(ref)
+                if found is not None:
+                    agents[ref] = found
+        for node_id in plan.agent_refs:
+            out.extend(
+                _node_paths(
+                    plan,
+                    node_id,
+                    shown=prefix + node_id,
+                    agents=agents,
+                    catalog=catalog,
+                    schema=schema,
+                    schemas=schemas,
+                    folder=folder,
+                    allowed=allowed_dirs,
+                    workspace=workspace,
+                    scope_layers=scope_layers,
                     placeholders=placeholders,
-                    environ=env,
-                    node_id=node_id,
-                    pointer_prefix="/backend_options",
+                    env=env,
                 )
             )
-        for path in found_paths:
-            layer_id = _layer_of(path.pointer, effective.provenance)
-            label = labels.get(layer_id, layer_id) if layer_id is not None else None
-            out.append(path.model_copy(update={"layer": label}))
+        if find_team is None:
+            return
+        settings_key = plan.conventions.node_settings_key
+        nodes = {node.id: node for node in current.nodes}
+        for node_id, ref in plan.team_refs.items():
+            if ref in lineage:
+                continue  # 순환 — 엔진이 자식 Run을 만들지 않는다
+            child = _find_child(find_team, ref, plan.team_versions.get(node_id))
+            if child is None or child.id in lineage:
+                continue
+            node = nodes.get(node_id)
+            override = node.config.get(settings_key) if node is not None else None
+            if isinstance(override, Mapping) and override:
+                try:
+                    child = with_team_settings(child, override)
+                except Exception:  # 틀린 덮어쓰기 — 노드가 team.invalid_settings로 실패한다
+                    continue
+            visit(child, f"{prefix}{node_id}{nested_separator}", (*lineage, child.id))
+
+    visit(graph, "", (graph.id,))
+    return out
+
+
+def _node_paths(
+    plan: TeamPlan,
+    node_id: str,
+    *,
+    shown: str,
+    agents: Mapping[str, Agent],
+    catalog: TeamCatalog,
+    schema: Mapping[str, Any],
+    schemas: Mapping[str, Any],
+    folder: str,
+    allowed: Sequence[str],
+    workspace: WorkspaceSettings | None,
+    scope_layers: Sequence[Layer],
+    placeholders: Mapping[str, str] | None,
+    env: Mapping[str, str],
+) -> list[OutsideFolderPath]:
+    """노드 하나의 유효 설정에서 폴더 밖 경로(``node_id`` = ``shown``, ``layer`` = 층 화면 이름)."""
+    try:
+        resolved = node_settings(
+            plan,
+            node_id,
+            agents=agents,
+            workspace=workspace,
+            strategies=catalog.strategies,
+            scope_layers=scope_layers,
+        )
+    except Exception:  # 층 계산 실패는 검사기(엔진·팀 규칙)가 알린다
+        return []
+    effective = resolved.effective
+    labels = {layer.id: layer.label or layer.id for layer in effective.layers}
+    value = effective.value.model_dump(mode="json", exclude_none=True)
+    options = value.pop("backend_options", None)
+    found_paths = outside_paths(
+        value,
+        schema,
+        folder,
+        allowed,
+        placeholders=placeholders,
+        environ=env,
+        node_id=shown,
+    )
+    backend = effective.value.backend
+    option_schema = schemas.get(backend) if backend else None
+    if isinstance(options, Mapping) and option_schema:
+        found_paths.extend(
+            outside_paths(
+                options,
+                option_schema,
+                folder,
+                allowed,
+                placeholders=placeholders,
+                environ=env,
+                node_id=shown,
+                pointer_prefix="/backend_options",
+            )
+        )
+    out: list[OutsideFolderPath] = []
+    for path in found_paths:
+        layer_id = _layer_of(path.pointer, effective.provenance)
+        label = labels.get(layer_id, layer_id) if layer_id is not None else None
+        out.append(path.model_copy(update={"layer": label}))
     return out

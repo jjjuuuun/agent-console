@@ -5,6 +5,8 @@
 - 경고는 Run 이벤트 ``log.warning``(``details.code``)으로 남는다.
 - 준비자의 선택 속성 ``run_context``는 ``run.started`` payload에 실린다(자식 Run도 같다).
 - 범위 공급자가 없으면 지금과 같다(``project_id`` 기록만).
+- 5.7R.33g 잔여: 선택 메서드 ``check_child``(``RunChildScoper``)가 오류를 주면 자식 Run을 만들지
+  않는다(노드 실패 ``child_invalid``, ``details.issues``에 같은 코드).
 
 실행 모듈은 프로젝트를 모른다는 것을 테스트 서비스 키·테스트 타입으로 보인다.
 """
@@ -20,10 +22,11 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Graph, Issue
+from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, ErrorInfo, Graph, Issue
 from agent_console_mod_runs import (
     RUN_PREPARERS,
     RUN_SCOPES,
+    RunChildScoper,
     RunPreparation,
     RunScope,
     RunScoper,
@@ -215,3 +218,53 @@ def test_broken_scope_is_logged_and_skipped(tmp_path: Path) -> None:
         run_id = _finish(client, {"project_id": "p1"})
         assert client.get(f"{API}/runs/{run_id}").json()["run"]["status"] == "completed"
         assert preparer.seen[0] == ("parent", None)
+
+
+class _ChildScoper(_Scoper):
+    """자식 Run 점검: 본 그래프·서비스·project_id를 기록하고 ``block``이면 막는다."""
+
+    def __init__(self, *, block: bool) -> None:
+        super().__init__()
+        self.block = block
+        self.children: list[tuple[str, str | None, str | None]] = []
+
+    def check_child(
+        self, graph: Graph, services: Services, *, project_id: str | None
+    ) -> list[ErrorInfo]:
+        self.children.append((graph.id, services.get(SCOPE_KEY), project_id))
+        if not self.block:
+            return []
+        return [ErrorInfo(code="test.child_blocked", message="자식 막음", details={"why": "x"})]
+
+
+def test_child_scope_check_blocks_child_run(tmp_path: Path) -> None:
+    scoper = _ChildScoper(block=True)
+    assert isinstance(scoper, RunChildScoper)
+    with _client(tmp_path, _module("t-scope", RUN_SCOPES, scoper)) as client:
+        root_id = _finish(client, {"project_id": "p1"})
+        # 자식 그래프·물려받은 범위 서비스·루트 project_id로 불렀다
+        assert scoper.children == [("child", "scope:p1", "p1")]
+        snap = client.get(f"{API}/runs/{root_id}").json()
+        assert snap["run"]["status"] == "failed"
+        assert snap["children"] == []  # 자식 Run을 만들지 않았다
+        [failed] = _events(client, root_id, "node.failed")
+        error = failed["payload"]["error"]
+        [issue] = error["details"]["issues"]
+        assert (issue["code"], issue["message"], issue["details"]) == (
+            "test.child_blocked",
+            "자식 막음",
+            {"why": "x"},
+        )
+
+
+def test_child_scope_check_passes_or_skipped_without_project(tmp_path: Path) -> None:
+    scoper = _ChildScoper(block=False)
+    with _client(tmp_path, _module("t-scope", RUN_SCOPES, scoper)) as client:
+        root_id = _finish(client, {"project_id": "p1"})
+        assert client.get(f"{API}/runs/{root_id}").json()["run"]["status"] == "completed"
+        assert scoper.children == [("child", "scope:p1", "p1")]
+    blocker = _ChildScoper(block=True)
+    with _client(tmp_path / "b", _module("t-scope", RUN_SCOPES, blocker)) as client:
+        root_id = _finish(client, {})  # project_id 없음 → 부르지 않는다(지금 동작)
+        assert client.get(f"{API}/runs/{root_id}").json()["run"]["status"] == "completed"
+        assert blocker.children == []

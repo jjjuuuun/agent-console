@@ -177,7 +177,7 @@ export function MemoryEntryTable({
             {headerCell("version", m["table.version"] as string, "right")}
             {hasTags ? headerCell("tags", m["table.tags"] as string) : null}
           </div>
-          <div role="rowgroup" className="ac-mem-tbody" style={{ height: virtual.getTotalSize() }}>
+          <div role={entries.length > 0 ? "rowgroup" : "presentation"} className="ac-mem-tbody" style={{ height: virtual.getTotalSize() }}>
             {items.map((vi) => {
               const entry = entries[vi.index];
               if (!entry) return null;

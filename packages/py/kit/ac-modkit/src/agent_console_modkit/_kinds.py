@@ -26,6 +26,8 @@ class KindContribution[K]:
             둘지·프로젝트 공간에 옮길 수 있는지는 종류 값(``library``·``portable``)이 정한다.
         references: 그 종류 문서의 참조 추출(없으면 참조 없음). 예외는 소비자가 삼킨다.
         summary_fields: 목록 요약에 더 실을 최상위 문자열 필드(종류의 ``summary_fields``에 더한다).
+        title: 종류 표시 이름(사용자 언어). 복사 대화상자 종류 목록(``CopyKindInfo.title``)이 쓴다.
+            None이면 화면이 종류 이름을 그대로 보인다.
 
     >>> c = KindContribution("note", references=lambda doc: [("agent", doc["agent"])])
     >>> list(c.references({"agent": "rev"})) if c.references else []
@@ -35,6 +37,7 @@ class KindContribution[K]:
     kind: K
     references: KindReferences | None = None
     summary_fields: tuple[str, ...] = ()
+    title: str | None = None
 
 
 DEFINITION_KIND_CONTRIBUTIONS: PortKey[KindContribution[Any]] = PortKey(

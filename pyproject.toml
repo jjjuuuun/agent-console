@@ -187,11 +187,10 @@ mypy-package = { cmd = "mypy", cwd = "${path}", args = [
 pkgkit-test = { cmd = "pytest -q -c scripts/pkgkit/pytest.ini scripts/pkgkit", help = "pkgkit 도구 자체 테스트" }
 
 # ---------------------------------------------------------------- extdocs (확장 지점 대조·가이드 생성, scripts/extdocs/README.md)
-# 단계적 적용: 선언·예제·가이드가 다 채워지기 전에는 --allow-missing으로 "아직 없음"만 경고로 낮춘다.
-# extpoints-check의 --allow-missing은 선언 채우기(8R.4b)가 끝나면, extdocs-check의 것은 영역 가이드가 끝나면 뗀다.
-extpoints-check = { cmd = "python scripts/extdocs/extdocs.py --quiet points --allow-missing", help = "확장 지점 대조: 코드(그룹 상수·entry point·모듈 포트) ↔ 패키지 선언·기호·예제·README 절(문서 없이 동작)" }
+# 선언·예제·가이드가 다 채워져 "아직 없음"도 오류다(8R.4b에서 --allow-missing을 뗐다).
+extpoints-check = { cmd = "python scripts/extdocs/extdocs.py --quiet points", help = "확장 지점 대조: 코드(그룹 상수·entry point·모듈 포트) ↔ 패키지 선언·기호·예제·README 절(문서 없이 동작)" }
 extdocs = { cmd = "python scripts/extdocs/extdocs.py generate", help = "확장 가이드 생성: reference.md·영역 페이지 생성 구간·예제 색인 [--scaffold]" }
-extdocs-check = { cmd = "python scripts/extdocs/extdocs.py --quiet docs --allow-missing guides", help = "확장 가이드 드리프트: 재생성 diff 0·손글·링크·공개 가능 린트·doctest·조각 검증(문서 폴더 없으면 건너뜀)" }
+extdocs-check = { cmd = "python scripts/extdocs/extdocs.py --quiet docs", help = "확장 가이드 드리프트: 재생성 diff 0·손글·링크·공개 가능 린트·doctest·조각 검증(문서 폴더 없으면 건너뜀)" }
 extdocs-test = { sequence = [
     { cmd = "mypy --strict --warn-unreachable .", cwd = "scripts/extdocs" },
     { cmd = "pytest -q -c scripts/extdocs/pytest.ini scripts/extdocs" },

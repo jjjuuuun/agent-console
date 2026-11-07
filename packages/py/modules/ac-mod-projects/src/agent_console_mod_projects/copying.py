@@ -212,6 +212,8 @@ class CopyService:
         messages: 문구 바꾸기.
         kind_info: 아는 정의 종류(기본 종류 + 종류 기여 X44, ``library``·``portable`` 값). 복사
             대화상자 메타데이터(``kinds``·``items``)가 쓴다. 없으면 두 목록이 빈다.
+        kind_titles: 종류 표시 이름 ``{종류 이름: title}``(종류 기여의 ``title``). ``kinds``가
+            ``CopyKindInfo.title``로 싣고, 없는 종류는 null(화면이 종류 이름을 보인다).
     """
 
     def __init__(
@@ -226,9 +228,11 @@ class CopyService:
         unavailable: Callable[[], Exception],
         messages: Mapping[str, str] | None = None,
         kind_info: Callable[[], Sequence[DefinitionKind]] = lambda: (),
+        kind_titles: Callable[[], Mapping[str, str]] = lambda: {},
     ) -> None:
         self._library = library
         self._kind_info = kind_info
+        self._kind_titles = kind_titles
         self._spaces = spaces
         self._known = known
         self._references = references
@@ -273,13 +277,21 @@ class CopyService:
         """
         space = self.space(ref, target=False)
         info = {k.name: k for k in self._kind_info()}
+        titles = self._kind_titles()
         present = space.kinds if space.kinds is not None else tuple(space.store.kinds())
         out: list[CopyKindInfo] = []
         for name in present:
             kind = info.get(name)
             if kind is None or kind.is_singleton:
                 continue
-            out.append(CopyKindInfo(kind=name, library=kind.library, portable=kind.is_portable))
+            out.append(
+                CopyKindInfo(
+                    kind=name,
+                    library=kind.library,
+                    portable=kind.is_portable,
+                    title=titles.get(name) or None,
+                )
+            )
         return out
 
     def items(self, ref: SpaceRef, kind: str | None = None) -> list[CopyItem]:

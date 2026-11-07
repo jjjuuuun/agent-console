@@ -264,6 +264,8 @@ def test_save_as_template_policies_and_independence() -> None:
     assert local.template_id in repo.template_ids()
     summaries = {s.id: s for s in repo.template_summaries()}
     assert summaries["basic"].documents[0].id == "req"
+    # 계약 `SpecTemplateSummary.kind`: 그 공간의 문서 틀 종류 이름(검증 11/07 B).
+    assert {s.kind for s in summaries.values()} == {TEST_TEMPLATE_KIND}
 
 
 def test_pure_conversions() -> None:

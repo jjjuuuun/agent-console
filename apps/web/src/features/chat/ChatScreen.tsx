@@ -197,6 +197,7 @@ export function ChatScreen() {
   return (
     <div className="chat-screen" data-screen="chat" data-list={listOpen ? "open" : "closed"} data-empty={listEmpty ? "true" : undefined} data-loading={listLoading ? "true" : undefined}>
       <div className="ac-sr-only" role="status" aria-live="polite" aria-label={appMessages.pending.none}>{live}</div>
+      {conversationId === undefined ? <h1 className="ac-sr-only">{t.list.label}</h1> : null}
       <aside className="chat-list-pane" aria-label={t.list.label}>
         <ConversationList
           conversations={visible}

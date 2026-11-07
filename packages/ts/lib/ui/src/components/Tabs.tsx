@@ -55,6 +55,9 @@ export function Tabs({ tabs, activeId, onChange, ariaLabel, lazy = false, classN
     }
   });
 
+  // DOM id에는 호출자의 tab.id(제목 문자열일 수 있음)를 쓰지 않고 순번을 쓴다(공백 등 id 부적합 문자 방지).
+  const domKey = (id: string) => String(tabs.findIndex((t) => t.id === id));
+
   const select = (id: string) => {
     setVisited((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
     if (activeId === undefined) setInner(id);
@@ -90,9 +93,9 @@ export function Tabs({ tabs, activeId, onChange, ariaLabel, lazy = false, classN
               }}
               type="button"
               role="tab"
-              id={`${base}-tab-${tab.id}`}
+              id={`${base}-tab-${domKey(tab.id)}`}
               aria-selected={tab.id === current}
-              aria-controls={`${base}-panel-${tab.id}`}
+              aria-controls={`${base}-panel-${domKey(tab.id)}`}
               tabIndex={tab.id === current ? 0 : -1}
               disabled={tab.disabled}
               title={tab.title ?? (typeof tab.label === "string" ? tab.label : undefined)}
@@ -139,7 +142,7 @@ export function Tabs({ tabs, activeId, onChange, ariaLabel, lazy = false, classN
         const active = tab.id === current;
         const render = !lazy || active || visited.has(tab.id);
         return (
-          <div key={tab.id} role="tabpanel" id={`${base}-panel-${tab.id}`} aria-labelledby={`${base}-tab-${tab.id}`} hidden={!active} className="ac-tab-panel">
+          <div key={tab.id} role="tabpanel" id={`${base}-panel-${domKey(tab.id)}`} aria-labelledby={`${base}-tab-${domKey(tab.id)}`} hidden={!active} className="ac-tab-panel">
             {render ? tab.content : null}
           </div>
         );
