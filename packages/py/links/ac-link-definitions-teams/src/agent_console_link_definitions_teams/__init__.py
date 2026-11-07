@@ -28,6 +28,7 @@ from .ports import (
     DEFINITION_REFERENCES,
     DEFINITION_USAGES,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     GRAPH_ENTRY_LABELS,
     GRAPH_SESSION_SUMMARY,
     RESOURCE_TYPES,
@@ -45,11 +46,13 @@ from .ports import (
     ScopeLayersSource,
     SessionSummaries,
 )
+from .resources import StoreResourceLookup
 from .routes import build_router
 from .views import NodeNotFoundError, TeamViews, redact_values
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "DEFINITION_DEPENDENCIES",
     "DEFINITION_REFERENCES",
     "DEFINITION_USAGES",
@@ -74,6 +77,7 @@ __all__ = [
     "ScopeLayersLike",
     "ScopeLayersSource",
     "SessionSummaries",
+    "StoreResourceLookup",
     "TeamDocumentDependencies",
     "TeamViews",
     "build_router",

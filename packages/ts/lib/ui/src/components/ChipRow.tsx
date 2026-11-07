@@ -72,7 +72,7 @@ export function ChipRow({ chips, ariaLabel, moreLabel = defaultMoreLabel, classN
             panelLabel={moreLabel(hiddenChips.length)}
             align="end"
             renderTrigger={(props) => (
-              <button {...props} type="button" className="ac-chip ac-chip-more" aria-label={moreLabel(hiddenChips.length)} title={moreLabel(hiddenChips.length)}>
+              <button {...props} type="button" className="ac-chip ac-chip-more" aria-label={`+${hiddenChips.length} ${moreLabel(hiddenChips.length)}`} title={moreLabel(hiddenChips.length)}>
                 +{hiddenChips.length}
               </button>
             )}

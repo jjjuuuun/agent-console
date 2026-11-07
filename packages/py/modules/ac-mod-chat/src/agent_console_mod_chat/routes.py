@@ -27,7 +27,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Response
@@ -62,6 +62,7 @@ from agent_console_store import (
     decode_cursor,
     encode_cursor,
     page_across_sources,
+    to_project_counts,
 )
 
 from .move import ConversationMover
@@ -92,6 +93,7 @@ def build_router(
     require_graphs: Callable[[], None] = lambda: None,
     projects: Callable[[], ProjectAssignStore] | None = None,
     mover: Callable[[], ConversationMover] | None = None,
+    counts: Callable[[], Mapping[str | None, int]] | None = None,
 ) -> APIRouter:
     """대화·대기열 라우터.
 
@@ -103,6 +105,9 @@ def build_router(
             없으면 두 경로를 만들지 않는다.
         mover: 앱 DB 옛 대화 옮기기(``POST /conversations/move-to-project``).
             없으면 경로를 만들지 않는다.
+        counts: ``GET /conversations/project-counts``의 ``project_id``별 대화 수(예: 호스트 DB +
+            프로젝트 기록 DB, ``spaces.project_id_counts``). None이면 ``projects``의 개수(호스트
+            DB만).
     """
     router = APIRouter()
 
@@ -200,7 +205,10 @@ def build_router(
             "/conversations/project-counts", response_model=ProjectCounts, responses=errors()
         )
         async def conversation_project_counts() -> ProjectCounts:
-            """``project_id``별 대화 수(보관한 대화 포함, 프로젝트 없음 = ``no_project``)."""
+            """``project_id``별 대화 수(보관한 대화 포함, 프로젝트 없음 = ``no_project``). 프로젝트
+            기록 DB에 있는 대화도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때)."""
+            if counts is not None:
+                return to_project_counts(await run_in_threadpool(counts))
             return count_projects(projects())
 
         @router.post(

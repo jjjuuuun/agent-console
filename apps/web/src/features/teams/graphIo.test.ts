@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Graph } from "@agent-console/contracts";
 import { loadGraph, saveGraph } from "./graphIo";
 
+const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문" }];
 const raw = { kind: "graph", id: "g", name: "팀", nodes: [{ id: "n", type: "t", label: "L", config: { keep: null } }] } as unknown as Graph;
 
 describe("팀 구성 읽기·저장", () => {
@@ -13,9 +14,9 @@ describe("팀 구성 읽기·저장", () => {
   });
 
   it("저장은 If-Match로 보내고 보낸 문서를 기준으로 돌려준다", async () => {
-    const rest = { updateGraph: vi.fn(async () => ({ graph: raw, version_hash: "h2" })) };
+    const rest = { updateGraphVersioned: vi.fn(async () => ({ value: { graph: raw, version_hash: "h2" }, version_hash: "h2", issues })) };
     const doc = { id: "g", name: "새" } as Graph;
-    expect(await saveGraph(rest as never, doc, "h1")).toEqual({ value: doc, version_hash: "h2" });
-    expect(rest.updateGraph).toHaveBeenCalledWith("g", doc, "h1");
+    expect(await saveGraph(rest as never, doc, "h1")).toEqual({ value: doc, version_hash: "h2", issues });
+    expect(rest.updateGraphVersioned).toHaveBeenCalledWith("g", doc, "h1");
   });
 });

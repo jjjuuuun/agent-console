@@ -34,6 +34,11 @@ export interface ListPaneProps<T> {
   selectedId?: string;
   onSelect: (id: string, item: T) => void;
   renderItem: (item: T, state: { selected: boolean }) => ReactNode;
+  /**
+   * 행 오른쪽의 단추(⋯ 메뉴 등). option 안에 단추를 넣으면 nested-interactive 위반이므로,
+   * 주면 행을 `li[role=presentation]`로 감싸고 단추를 option 밖(형제)에 그린다.
+   */
+  renderRowAction?: (item: T, state: { selected: boolean }) => ReactNode;
   /** 행 최소 높이(px). 기본은 토큰 `--ac-row-h`. */
   rowHeight?: number;
   /** 로딩 중 슬롯(있으면 목록 대신 표시). */
@@ -83,6 +88,7 @@ export function ListPane<T>({
   selectedId,
   onSelect,
   renderItem,
+  renderRowAction,
   rowHeight,
   loading,
   error,
@@ -165,21 +171,29 @@ export function ListPane<T>({
   const renderRow = (e: NavEntry<T>, rowIndex: number) => {
     const id = e.id!;
     const selected = id === selectedId;
+    const rowProps = {
+      id: `${base}-${rowIndex}`,
+      role: "option",
+      "aria-selected": selected,
+      "data-row-id": id,
+      "data-nav-key": e.navKey,
+      "data-selected": selected ? "true" : undefined,
+      tabIndex: e.navKey === tabStop ? 0 : -1,
+      className: "ac-listpane-row",
+      style: rowHeight === undefined ? undefined : { minHeight: rowHeight },
+      onFocus: () => setFocusKey(e.navKey),
+      onClick: () => onSelect(id, e.item!),
+    };
+    if (renderRowAction !== undefined) {
+      return (
+        <li key={e.navKey} role="presentation" className="ac-listpane-rowwrap" data-selected={selected ? "true" : undefined}>
+          <div {...rowProps}>{renderItem(e.item!, { selected })}</div>
+          <div className="ac-listpane-rowaction">{renderRowAction(e.item!, { selected })}</div>
+        </li>
+      );
+    }
     return (
-      <li
-        key={e.navKey}
-        id={`${base}-${rowIndex}`}
-        role="option"
-        aria-selected={selected}
-        data-row-id={id}
-        data-nav-key={e.navKey}
-        data-selected={selected ? "true" : undefined}
-        tabIndex={e.navKey === tabStop ? 0 : -1}
-        className="ac-listpane-row"
-        style={rowHeight === undefined ? undefined : { minHeight: rowHeight }}
-        onFocus={() => setFocusKey(e.navKey)}
-        onClick={() => onSelect(id, e.item!)}
-      >
+      <li key={e.navKey} {...rowProps}>
         {renderItem(e.item!, { selected })}
       </li>
     );

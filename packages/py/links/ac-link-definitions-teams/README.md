@@ -14,7 +14,8 @@ Agent Console 정의 ↔ 팀 의미 연동 모듈. 정의 저장소와 `ac-teams
   `definitions.references`(여러 제공자 — 같은 계산의 참조 추출 함수 `(kind, doc) -> [(kind, id)]`,
   `TeamDocumentDependencies.references`. 프로젝트 범위 검사·옮기기 계획이 주입받는다).
 - 필수 포트: `definitions.lookup`. 선택: `workspace.settings`, `resources.lookup`·`resources.types`(없으면 빈 것),
-  `secrets.redact`(없으면 `secrets.rules`의 의심 값 가리기), `secrets.rules`.
+  `secrets.redact`(없으면 `secrets.rules`의 의심 값 가리기), `secrets.rules`, `settings.scope_layers`(유효 설정 `?project=`의 범위 층),
+  `definitions.spaces`(저장본을 읽는 경로가 `?project=`의 공간에서 팀 구성·에이전트·리소스를 읽는다 — 리소스는 그 공간 저장소 위의 `StoreResourceLookup`, `resources.lookup`이 없으면 빈 조회. 없으면 라이브러리).
 - 디스크립터: 호스트 기본 서비스 `registries`(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다(`catalog_from_registries`).
 - 웹 역할(`WEB_ROLES`): `definitions:teams` — 팀 구성 편집기의 초안 미리보기(`POST /graphs/plan`·`effective-settings`·`bundle-preview`)와 에이전트 사용처 패널(`GET /agents/{id}/usages`)이 이 역할로 켜진다.
 - 꺼지면: 위 경로는 404(웹이 해당 패널을 숨김), 목록의 입구 이름·세션 집계·사용 수는 null.

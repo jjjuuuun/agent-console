@@ -5,14 +5,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "../../app/ApiContext";
 import { createAppQueryClient } from "../../app/queries";
-import { CurrentProjectContext } from "../../app/projectScope";
+import { AdoptProjectContext, CurrentProjectContext } from "../../app/projectScope";
 import { createFakeClients } from "../../testing/fakes";
 import { useConversationDetail, useConversationProject, useConversationScope } from "./chatData";
 import { conversation } from "./testing/chatFakes";
 
 afterEach(cleanup);
 
-function setup(current: string | null, locate: (id: string) => Promise<unknown> = async () => ({ project_id: null })) {
+function setup(current: string | null, locate: (id: string) => Promise<unknown> = async () => ({ project_id: null }), adopt?: (id: string) => void) {
   const getConversation = vi.fn(async (id: string) => conversation({ id }));
   // 현재 범위 목록: 프로젝트를 고르면 그 프로젝트 대화(c1), 모든 프로젝트이면 p7의 c1
   const conversationsPage = vi.fn(async (params?: { project?: string }) => ({ items: [conversation({ id: "c1", project_id: params?.project ?? "p7" })], next_cursor: null, source: "project" }));
@@ -21,7 +21,9 @@ function setup(current: string | null, locate: (id: string) => Promise<unknown> 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={createAppQueryClient({ retry: false })}>
       <ApiProvider clients={clients}>
-        <CurrentProjectContext.Provider value={current}>{children}</CurrentProjectContext.Provider>
+        <CurrentProjectContext.Provider value={current}>
+          <AdoptProjectContext.Provider value={adopt}>{children}</AdoptProjectContext.Provider>
+        </CurrentProjectContext.Provider>
       </ApiProvider>
     </QueryClientProvider>
   );
@@ -60,6 +62,23 @@ describe("대화 상세의 프로젝트 문맥 (요청 11/07)", () => {
     await waitFor(() => expect(result.current.scope).toEqual({ project: "p3", ready: true }));
     await waitFor(() => expect(getConversation).toHaveBeenLastCalledWith("c9", "p3"));
     await waitFor(() => expect(result.current.detail.data?.id).toBe("c9"));
+  });
+
+  it("찾은 프로젝트가 현재와 다르면 현재 프로젝트를 그쪽으로 한 번 바꾼다 (검증 11/08 D4)", async () => {
+    const adopt = vi.fn();
+    const { wrapper } = setup("p1", async () => ({ project_id: "p3" }), adopt);
+    const { rerender } = renderHook(() => useScopedDetail("c9"), { wrapper });
+    await waitFor(() => expect(adopt).toHaveBeenCalledWith("p3"));
+    rerender();
+    expect(adopt).toHaveBeenCalledTimes(1);
+  });
+
+  it("목록에 있는 대화나 같은 프로젝트면 바꾸지 않는다", async () => {
+    const adopt = vi.fn();
+    const { wrapper } = setup("p1", async () => ({ project_id: "p1" }), adopt);
+    const { result } = renderHook(() => useScopedDetail("c9"), { wrapper });
+    await waitFor(() => expect(result.current.scope.ready).toBe(true));
+    expect(adopt).not.toHaveBeenCalled();
   });
 
   it("찾은 곳이 앱 기록(null)이면 ?project= 없이 부른다", async () => {

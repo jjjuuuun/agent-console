@@ -23,7 +23,7 @@ import { summarizeEntries } from "./teamsLogic";
 import { summaryFromServer } from "./sessionView";
 import { DEFAULT_DIRECTION, teamGroupDefs, teamSortDefs, type SortDirection } from "./arrange";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
-import { blocksRun, ValidationChip } from "./ValidationChip";
+import { blocksRun, ValidationChip, validationChipOf } from "./ValidationChip";
 import "./teams.css";
 
 const idOfGraph = (g: GraphSummary) => g.id;
@@ -280,7 +280,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
                     <div className="team-name-line">
                       <Link to={`${basePath}/${encodeURIComponent(g.id)}`} className="ac-ellipsis team-name-link" title={g.name} onClick={(e) => { if (scoped.intercept(g.id)) e.preventDefault(); }}>{g.name}</Link>
                       {scoped.rowExtra(g)}
-                      <Link to={`${basePath}/${encodeURIComponent(g.id)}`} className="team-vchip-link" onClick={(e) => e.stopPropagation()}>{validationPart.visible ? <ValidationChip summary={g.validation} /> : null}</Link>
+                      {validationPart.visible && validationChipOf(g.validation) !== undefined ? <Link to={`${basePath}/${encodeURIComponent(g.id)}`} className="team-vchip-link" onClick={(e) => e.stopPropagation()}><ValidationChip summary={g.validation} /></Link> : null}
                     </div>
                     {sessionSum === undefined ? null : <div className="app-muted lib-field-note team-session-summary" data-session-summary="">{t.sessions.teamSummary(sessionSum.separate, sessionSum.same)}</div>}
                   </td>

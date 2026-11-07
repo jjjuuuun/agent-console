@@ -91,7 +91,7 @@ describe("ChipRow +N", () => {
   it("넘치면 숨기고 +N 팝오버에 숨은 칩 전체를 담는다. 칩은 title로 전체 값", () => {
     mockLayout(200, 60);
     render(<ChipRow chips={chips} ariaLabel="팀" moreLabel={(n) => `숨은 ${n}개`} />);
-    const more = screen.getByRole("button", { name: "숨은 2개" });
+    const more = screen.getByRole("button", { name: "+2 숨은 2개" });
     expect(more.textContent).toBe("+2");
     fireEvent.click(more);
     const pop = screen.getByRole("dialog", { name: "숨은 2개" });

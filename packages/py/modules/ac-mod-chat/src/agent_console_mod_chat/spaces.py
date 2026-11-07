@@ -20,6 +20,8 @@ DB(``records.sqlite3``)의 ``conversations``·``chat_queue``에만 둔다. 이 �
   상한(``locate_limit``)까지 읽기만 한다(파일을 만들지 않고, 공간 서비스도 열지 않는다). 찾은 자리는
   기억해 두고(상한 있음) 다음에는 그 자리만 다시 확인한다. WS ``conversation:<id>`` 구독은
   ``service_of``가 이것으로 아직 열지 않은 공간의 대화도 찾는다.
+- 프로젝트별 대화 수(``project_id_counts``, 요청 11/08 후속): 호스트 DB 개수 + 주어진 공간 id의
+  기록 DB 대화 수(읽기만, 파일을 만들지 않는다). ``GET /conversations/project-counts``가 쓴다.
 """
 
 from __future__ import annotations
@@ -64,6 +66,32 @@ def chat_records(spaces: Callable[[], Any], *, prefix: str) -> RecordsStores[Sql
     대기열의 ``host_id``는 ``SpaceQueue``가 핸들에서 받아 넘긴다.
     """
     return RecordsStores(spaces, SqliteChatStorage, prefix=prefix)
+
+
+def project_id_counts(
+    host: Mapping[str | None, int],
+    records: RecordsStores[SqliteChatStorage] | None,
+    project_ids: Iterable[str] = (),
+) -> dict[str | None, int]:
+    """대화의 ``project_id``별 개수: 호스트 DB 개수(``host``) + 각 공간(``project_ids``)의 기록 DB.
+
+    공간 기록 DB의 대화(보관 포함)는 그 공간의 id로 센다. 기록 공간이 없으면 ``host`` 그대로다.
+    기록 DB 파일이 없거나 읽을 수 없는 공간·모르는 공간은 건너뛴다(파일을 만들지 않는다).
+    """
+    counts: dict[str | None, int] = dict(host)
+    if records is None or not records.available:
+        return counts
+    for project_id in dict.fromkeys(project_ids):
+        try:
+            store = records.reader(project_id)
+            found = {} if store is None else store.conversations.project_id_counts()
+        except (RecordsUnavailable, StoreError, LookupError):
+            _log.debug("기록 DB의 대화를 셀 수 없음: %s", project_id, exc_info=True)
+            continue
+        total = sum(int(n) for n in found.values())
+        if total:
+            counts[project_id] = counts.get(project_id, 0) + total
+    return counts
 
 
 class SpaceConversations:
@@ -432,4 +460,5 @@ __all__ = [
     "SpaceQueue",
     "SpacedChatService",
     "chat_records",
+    "project_id_counts",
 ]

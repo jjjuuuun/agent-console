@@ -68,6 +68,21 @@ describe("REST", () => {
     expect(JSON.parse(calls[0]?.init.body as string)).toEqual(graph);
   });
 
+  it("updateGraphVersioned는 If-Match를 보내고 저장 경고(X-Console-Issues)를 issues로 돌려준다", async () => {
+    const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문" }];
+    const calls: Call[] = [];
+    const fn: FetchLike = (url, init = {}) => {
+      calls.push({ url, init });
+      return Promise.resolve(new Response(JSON.stringify({ graph, version_hash: "h2" }), { status: 200, headers: { ETag: '"h2"', "X-Console-Issues": JSON.stringify(issues) } }));
+    };
+    const rest = createRestClient({ baseUrl: "http://h", fetch: fn });
+    const out = await rest.updateGraphVersioned("g1", graph, "h1");
+    expect(out.issues).toEqual(issues);
+    expect(out.value.version_hash).toBe("h2");
+    expect(headersOf(calls[0]!)["If-Match"]).toBe("h1");
+    expect(calls[0]?.init.method).toBe("PUT");
+  });
+
   it("412는 ApiError로 던지고 versionConflict를 노출한다", async () => {
     const details = { current_version_hash: "h9", saved_at: 5, node_count: 2, edge_count: 1 };
     const { fn } = fakeFetch(() => ({

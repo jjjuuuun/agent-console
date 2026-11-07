@@ -45,7 +45,7 @@ function clientsFor(graphs: Record<string, Graph>, extra: Record<string, unknown
     listGraphs: vi.fn(async () => Object.values(graphs).map((g) => summary(g.id, g.name))),
     getGraph: vi.fn(async (id: string) => ({ graph: graphs[id], version_hash: `h-${id}`, saved_at: 1 })),
     validateGraph: vi.fn(async () => []),
-    updateGraph: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
+    updateGraphVersioned: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
     getGraphPlan: vi.fn(async () => ({ entries: [{ edge_id: "x1", node_id: "a1" }], answers: [], grants: {} })),
     planDraftGraph: vi.fn(async () => ({ entries: [{ edge_id: "x1", node_id: "a1" }], answers: [], grants: {} })),
     getNodeEffectiveSettings: vi.fn(async () => ({ value: {}, provenance: {}, layers: [] })),
@@ -98,7 +98,7 @@ describe("중첩 노드 카드·열기·돌아오기", () => {
     expect(router.state.location.pathname).toBe("/teams/tm1");
     fireEvent.click(within(card).getByRole("button", { name: "열기" }));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "저장하고 열기" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(router.state.location.pathname).toBe("/teams/tm2"));
   });
 
@@ -112,7 +112,7 @@ describe("중첩 노드 카드·열기·돌아오기", () => {
     fireEvent.click(within(card).getByRole("button", { name: "열기" }));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "저장 안 하고 열기" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/teams/tm2"));
-    expect(r.updateGraph).not.toHaveBeenCalled();
+    expect(r.updateGraphVersioned).not.toHaveBeenCalled();
   });
 
   it("정의 없음·자기 자신은 [열기]가 없거나 경고 배지가 붙는다", async () => {

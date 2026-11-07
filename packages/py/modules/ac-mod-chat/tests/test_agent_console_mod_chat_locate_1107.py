@@ -27,6 +27,7 @@ from agent_console_mod_chat.spaces import (
     ConversationAmbiguousError,
     SpacedChatService,
     chat_records,
+    project_id_counts,
 )
 from agent_console_mod_chat.storage import BRANCH, InMemoryChatStorage, SqliteChatStorage
 from agent_console_modkit import BaseServices, Module, ModuleContext, ModuleParts, Paths, assemble
@@ -340,3 +341,56 @@ def test_ws_without_projects_port_still_finds_opened_space(
         assert client.get(f"{API}/conversations/c1", params={"project": "pb"}).status_code == 200
         ws.send_json({"type": "subscribe", "payload": {"topic": "conversation:c1"}})
         assert ws.receive_json()["type"] == "conversation.updated"
+
+
+# ---- 프로젝트별 대화 수(요청 11/08 후속) -------------------------------------------
+
+
+def test_project_counts_include_project_records(spaces: Spaces) -> None:
+    """호스트 개수 + 공간 기록 DB 대화 수(그 공간 id로). 파일 없는·모르는 공간은 건너뛴다."""
+    _seed(spaces, "pb", "c1")
+    _seed(spaces, "pb", "c2")
+    records = chat_records(lambda: spaces, prefix="project:")
+    counts = project_id_counts({None: 1, "pb": 1}, records, ["pa", "pb", "gone"])
+    assert counts == {None: 1, "pb": 3}
+    assert not spaces.file("pa").exists()
+    assert project_id_counts({"pb": 1}, None, ["pb"]) == {"pb": 1}
+
+
+class _ArchivedListing(Listing):
+    def __init__(self, ids: Sequence[str], archived: Sequence[str]) -> None:
+        super().__init__(ids)
+        self.archived = set(archived)
+
+    def list_projects(self) -> list[Any]:
+        return [SimpleNamespace(id=i, archived=i in self.archived) for i in self.ids]
+
+
+def test_rest_project_counts_include_project_records(
+    tmp_path: Path, spaces: Spaces, app_db: SqliteDatabase
+) -> None:
+    """``GET /conversations/project-counts``: 보관하지 않은 등록 프로젝트의 기록 DB도 센다."""
+    _seed(spaces, "pa", "a1")
+    _seed(spaces, "pb", "b1")
+    _seed(spaces, "pb", "b2")
+    SqliteChatStorage(app_db.engine).conversations.save(_conv("c-app", None))
+    extra = [
+        _provider("t-records", RECORDS_SPACES, spaces),
+        _provider("t-projects", PROJECTS_LOOKUP, _ArchivedListing(IDS, archived=["pa"])),
+    ]
+    with _client(tmp_path, extra, app_db) as client:
+        found = client.get(f"{API}/conversations/project-counts")
+        assert found.status_code == 200, found.text
+        assert found.json() == {"total": 3, "no_project": 1, "by_project": {"pb": 2}}
+    assert not spaces.file("pc").exists()
+
+
+def test_rest_project_counts_without_listing_app_only(
+    tmp_path: Path, spaces: Spaces, app_db: SqliteDatabase
+) -> None:
+    _seed(spaces, "pb", "b1")
+    SqliteChatStorage(app_db.engine).conversations.save(_conv("c-app", "p1"))
+    extra = [_provider("t-records", RECORDS_SPACES, spaces)]
+    with _client(tmp_path, extra, app_db) as client:
+        body = client.get(f"{API}/conversations/project-counts").json()
+        assert body == {"total": 1, "no_project": 0, "by_project": {"p1": 1}}

@@ -5,7 +5,8 @@
   ``runs.event``(저장된 이벤트마다)·``interactions.updated``. WS ``run:<id>``·``interactions``.
 - 필수: ``definitions.lookup``(실행할 팀 구성). 선택: ``runs.preparers``·``runs.services``·
   ``runs.scopes``·``runs.resume_handlers``·``workspace.settings``·``secrets.rules``·
-  ``projects.lookup``(실행 위치 찾기의 등록 프로젝트 id, 요청 11/08 후속)(``ports.py``).
+  ``projects.lookup``(실행 위치 찾기의 등록 프로젝트 id, 요청 11/08 후속 ·
+  ``GET /runs/project-counts``가 셀 보관하지 않은 프로젝트의 기록 DB)(``ports.py``).
 - 저장: 호스트 DB 핸들의 legacy 테이블(``runs``·``node_runs``·``run_events``·``interactions``),
   없으면 메모리(경고 ``runs.storage_memory``). 선택 포트 ``records.spaces``가 있으면
   ``project_id``가 있는 Run은 그 프로젝트 기록 DB에만 쓴다(5.7R.33y2, ``records.py``) - 시작 전에
@@ -249,6 +250,13 @@ class RunsModule:
             listing = ctx.port(PROJECTS_LOOKUP)
             return [] if listing is None else [p.id for p in listing.list_projects()]
 
+        def active_project_ids() -> list[str]:
+            """보관하지 않은 등록 프로젝트 id(실행 수 세기용, ``projects.lookup`` 없음 = 빈 것)."""
+            listing = ctx.port(PROJECTS_LOOKUP)
+            if listing is None:
+                return []
+            return [p.id for p in listing.list_projects() if not getattr(p, "archived", False)]
+
         recorder = SpaceRecorder(
             host_recorder,
             records,
@@ -396,6 +404,7 @@ class RunsModule:
                     lambda: interactions,
                     runs=lambda: recorder.runs,
                     projects=lambda: host_recorder.runs,
+                    counts=lambda: recorder.project_id_counts(active_project_ids()),
                     mover=(lambda: mover) if not in_memory else None,
                     events=lambda: recorder.events,
                     activity_limit=cfg.activity_limit,

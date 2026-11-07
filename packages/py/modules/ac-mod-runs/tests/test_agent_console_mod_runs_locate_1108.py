@@ -381,3 +381,104 @@ def test_service_locate_errors(spaces: Spaces) -> None:
     with pytest.raises(RunAmbiguousError) as caught:
         RunService.locate(service, "dup")  # type: ignore[arg-type]
     assert caught.value.project_ids == ["pa", "pb"]
+
+
+# ---- 프로젝트별 실행 수(검증 11/08 D6) -------------------------------------------
+
+
+def _child(run_id: str, project_id: str, root: str) -> Run:
+    return _run(run_id, project_id).model_copy(update={"root_run_id": root, "parent_run_id": root})
+
+
+def test_project_counts_include_project_records(spaces: Spaces) -> None:
+    """호스트 DB + 프로젝트 기록 DB의 루트 Run(자식 제외). 파일 없는 공간은 만들지 않는다."""
+    _seed(spaces, "pb", "r1")
+    _seed(spaces, "pb", "r2")
+    SqliteStorage(spaces.open("project:pb").writable_engine()).runs.save(_child("c1", "pb", "r1"))
+    recorder, host = _recorder(spaces)
+    host.runs.save(_run("r-app", None))
+    host.runs.save(_run("r-old", "pb"))  # 기록 공간 전에 앱 DB에 남은 Run
+    counts = recorder.project_id_counts(["pa", "pb", "gone"])
+    assert counts == {None: 1, "pb": 3}
+    assert not spaces.file("pa").exists()
+
+
+def test_project_counts_without_records_port_host_only() -> None:
+    host = InMemoryStorage()
+    host.runs.save(_run("r-app", "p1"))
+    recorder = SpaceRecorder(host, None)
+    assert recorder.project_id_counts(["p1", "p2"]) == {"p1": 1}
+
+
+class _ArchivedListing(Listing):
+    def __init__(self, ids: Sequence[str], archived: Sequence[str]) -> None:
+        super().__init__(ids)
+        self.archived = set(archived)
+
+    def list_projects(self) -> list[Any]:
+        return [SimpleNamespace(id=i, archived=i in self.archived) for i in self.ids]
+
+
+def test_rest_project_counts_include_project_records(tmp_path: Path, spaces: Spaces) -> None:
+    """``GET /runs/project-counts``: 보관하지 않은 등록 프로젝트의 기록 DB도 센다."""
+    _seed(spaces, "pa", "a1")
+    _seed(spaces, "pb", "b1")
+    _seed(spaces, "pb", "b2")
+    with _client(tmp_path, spaces, _ArchivedListing(IDS, archived=["pa"])) as client:
+        found = client.get(f"{API}/runs/project-counts")
+        assert found.status_code == 200, found.text
+        assert found.json() == {"total": 2, "no_project": 0, "by_project": {"pb": 2}}
+
+
+def test_rest_project_counts_without_listing_host_only(tmp_path: Path, spaces: Spaces) -> None:
+    _seed(spaces, "pb", "b1")
+    with _client(tmp_path, spaces, None) as client:
+        body = client.get(f"{API}/runs/project-counts").json()
+        assert body == {"total": 0, "no_project": 0, "by_project": {}}
+
+
+# ---- 에이전트 활동의 ?project=(요청 11/08 후속) ------------------------------------
+
+
+def _actor_event(run_id: str, seq: int, actor: str) -> RunEvent:
+    return _event(run_id, seq).model_copy(update={"actor": actor})
+
+
+def test_space_reader_events_by_actor(spaces: Spaces) -> None:
+    """그 공간 기록 DB에서 actor 이벤트를 최신순으로. 파일이 없는 공간은 빈 목록(만들지 않음)."""
+    _seed(spaces, "pb", "r1")
+    stored = SqliteStorage(spaces.open("project:pb").writable_engine())
+    stored.events.append_many([_actor_event("r1", 1, "pl"), _actor_event("r1", 2, "pl")])
+    recorder, host = _recorder(spaces)
+    host.events.append(_actor_event("r-app", 1, "pl"))
+    found = recorder.for_project("pb").events_by_actor("pl", limit=10)
+    assert [(e.run_id, e.seq) for e in found] == [("r1", 2), ("r1", 1)]
+    assert recorder.for_project("pa").events_by_actor("pl") == []
+    assert not spaces.file("pa").exists()
+
+
+def test_rest_agent_activity_reads_project_records(tmp_path: Path, spaces: Spaces) -> None:
+    """``GET /agents/{id}/activity?project=``: 그 프로젝트 기록 DB, 없으면 앱 DB, 모르면 404."""
+    _seed(spaces, "pb", "r1")
+    stored = SqliteStorage(spaces.open("project:pb").writable_engine())
+    stored.events.append_many([_actor_event("r1", 1, "pl"), _actor_event("r1", 2, "other")])
+    with _client(tmp_path, spaces, Listing(IDS)) as client:
+        found = client.get(f"{API}/agents/pl/activity", params={"project": "pb"})
+        assert found.status_code == 200, found.text
+        assert [(e["run_id"], e["seq"]) for e in found.json()] == [("r1", 1)]
+        app = client.get(f"{API}/agents/pl/activity")
+        assert app.status_code == 200
+        assert app.json() == []  # 앱 DB에는 없다
+        empty = client.get(f"{API}/agents/pl/activity", params={"project": "pa"})
+        assert empty.json() == []
+        assert not spaces.file("pa").exists()
+        unknown = client.get(f"{API}/agents/pl/activity", params={"project": "gone"})
+        assert unknown.status_code == 404
+        assert unknown.json()["error"]["code"] == "project.not_found"
+
+
+def test_rest_agent_activity_without_records_port_uses_app(tmp_path: Path) -> None:
+    with _client(tmp_path, None, None) as client:
+        found = client.get(f"{API}/agents/pl/activity", params={"project": "pb"})
+        assert found.status_code == 200, found.text
+        assert found.json() == []

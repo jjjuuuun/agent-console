@@ -6,6 +6,9 @@
 - 유효 설정 경로는 선택 질의 ``project``(범위 id)를 받는다. 범위 층 공급자
   (``settings.scope_layers``, 예: link-projects-runs)가 있으면 그 층을 공통 바로 아래에 끼운다
   (없으면 무시).
+- 저장된 정의를 읽는 경로(사용처·유효 설정·실행 계획·묶음 미리보기, 초안의 에이전트 읽기 포함)는
+  같은 ``?project=``의 공간(``definitions.spaces``)에서 읽는다(검증 11/08 D5 — 공간에만 있는 팀
+  구성도 200). 제공자가 없으면 라이브러리, 모르는 공간은 404 ``project.not_found``.
 - ``GET /graphs/{id}/plan``·``POST /graphs/plan``(초안) → ``TeamPlanSummary``
 - ``GET /graphs/{id}/nodes/{node}/effective-settings``·``POST /graphs/effective-settings``(초안)
 - ``GET /graphs/{id}/nodes/{node}/bundle-preview``·``POST /graphs/bundle-preview``(초안)
@@ -16,7 +19,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
 
@@ -30,18 +33,23 @@ from agent_console_contracts import (
     Graph,
     TeamPlanSummary,
 )
+from agent_console_modkit.host import SPACE_QUERY
 from agent_console_store import AGENT_KIND, GRAPH_KIND, RESOURCE_KIND
 
 from .views import TeamViews
 
 _ERROR_STATUSES = (400, 401, 403, 404, 413, 422, 500)
 
-_PROJECT = Query(
-    default=None,
-    description=(
-        "범위 id(예: 프로젝트 id). 범위 층 공급자가 있으면 공통 바로 아래에 그 층을 끼운다."
+ProjectQuery = Annotated[
+    str | None,
+    Query(
+        alias=SPACE_QUERY,
+        description=(
+            "공간·범위 id(예: 프로젝트 등록 id). 저장된 정의를 그 공간(definitions.spaces)에서 "
+            "읽고, 범위 층 공급자가 있으면 공통 바로 아래에 그 층을 끼운다. 제공자가 없으면 무시."
+        ),
     ),
-)
+]
 
 
 def errors(*extra: int) -> dict[int | str, dict[str, Any]]:
@@ -59,9 +67,11 @@ def build_router(views: Callable[[], TeamViews]) -> APIRouter:
     @router.get(
         "/agents/{agent_id}/usages", response_model=list[DefinitionReference], responses=errors()
     )
-    async def agent_usages(agent_id: str) -> list[DefinitionReference]:
+    async def agent_usages(
+        agent_id: str, project: ProjectQuery = None
+    ) -> list[DefinitionReference]:
         """이 에이전트를 쓰는 팀 구성(노드 id 목록). 에이전트가 없으면 404."""
-        v = views()
+        v = views().in_space(project)
         v.lookup.get(agent_kind, agent_id)
         return v.references(agent_kind, agent_id)
 
@@ -70,9 +80,11 @@ def build_router(views: Callable[[], TeamViews]) -> APIRouter:
         response_model=list[DefinitionReference],
         responses=errors(),
     )
-    async def resource_usages(resource_id: str) -> list[DefinitionReference]:
+    async def resource_usages(
+        resource_id: str, project: ProjectQuery = None
+    ) -> list[DefinitionReference]:
         """붙은 곳: 리소스 노드, 팀 구성·노드·에이전트·공통 층 첨부. 리소스가 없으면 404."""
-        v = views()
+        v = views().in_space(project)
         v.lookup.get(resource_kind, resource_id)
         return v.references(resource_kind, resource_id)
 
@@ -83,14 +95,15 @@ def build_router(views: Callable[[], TeamViews]) -> APIRouter:
         response_model=EffectiveSettings,
         responses=errors(),
     )
-    async def agent_effective(agent_id: str, project: str | None = _PROJECT) -> EffectiveSettings:
+    async def agent_effective(agent_id: str, project: ProjectQuery = None) -> EffectiveSettings:
         """팀 구성 밖 유효 설정(공통 → [범위 층] → 에이전트)과 출처. ``x-secret`` 평문은 가린다."""
-        return views().agent_effective(agent_id, scope=project)
+        return views().in_space(project).agent_effective(agent_id, scope=project)
 
     @router.get("/graphs/{graph_id}/plan", response_model=TeamPlanSummary, responses=errors())
-    async def get_plan(graph_id: str) -> TeamPlanSummary:
-        """저장된 팀 구성의 실행 계획 요약(입구·답변 자리·노드별 허용 상호작용)."""
-        v = views()
+    async def get_plan(graph_id: str, project: ProjectQuery = None) -> TeamPlanSummary:
+        """저장된 팀 구성(``?project=``면 그 공간)의 실행 계획 요약(입구·답변 자리·노드별 허용
+        상호작용)."""
+        v = views().in_space(project)
         return v.plan_summary(v.model(graph_kind, graph_id, Graph))
 
     @router.post("/graphs/plan", response_model=TeamPlanSummary, responses=errors())
@@ -104,33 +117,35 @@ def build_router(views: Callable[[], TeamViews]) -> APIRouter:
         responses=errors(),
     )
     async def node_effective(
-        graph_id: str, node_id: str, project: str | None = _PROJECT
+        graph_id: str, node_id: str, project: ProjectQuery = None
     ) -> EffectiveSettings:
         """저장된 팀 구성 안 노드의 유효 설정(4층 + 리소스 연결)·출처·경고(``x-secret`` 가림)."""
-        v = views()
+        v = views().in_space(project)
         return v.node_effective(v.model(graph_kind, graph_id, Graph), node_id, scope=project)
 
     @router.post("/graphs/effective-settings", response_model=EffectiveSettings, responses=errors())
     async def draft_effective(
-        body: DraftNodeRequest, project: str | None = _PROJECT
+        body: DraftNodeRequest, project: ProjectQuery = None
     ) -> EffectiveSettings:
         """초안 그래프 안 노드의 유효 설정(저장하지 않는다, 가림은 저장본과 같다)."""
-        return views().node_effective(body.graph, body.node_id, scope=project)
+        return views().in_space(project).node_effective(body.graph, body.node_id, scope=project)
 
     @router.get(
         "/graphs/{graph_id}/nodes/{node_id}/bundle-preview",
         response_model=BundlePreview,
         responses=errors(),
     )
-    async def node_bundle(graph_id: str, node_id: str) -> BundlePreview:
+    async def node_bundle(
+        graph_id: str, node_id: str, project: ProjectQuery = None
+    ) -> BundlePreview:
         """실행 묶음 미리보기 + 경고. 비밀 참조는 그대로, 해석한 값과 ``x-secret`` 평문은 가린다."""
-        v = views()
+        v = views().in_space(project)
         return v.node_bundle(v.model(graph_kind, graph_id, Graph), node_id)
 
     @router.post("/graphs/bundle-preview", response_model=BundlePreview, responses=errors())
-    async def draft_bundle(body: DraftNodeRequest) -> BundlePreview:
+    async def draft_bundle(body: DraftNodeRequest, project: ProjectQuery = None) -> BundlePreview:
         """초안 그래프 안 노드의 실행 묶음 미리보기(저장하지 않는다, 가림은 저장본과 같다)."""
-        return views().node_bundle(body.graph, body.node_id)
+        return views().in_space(project).node_bundle(body.graph, body.node_id)
 
     return router
 

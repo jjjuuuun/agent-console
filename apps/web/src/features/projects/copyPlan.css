@@ -21,7 +21,9 @@
 .cpd-plan-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); flex-wrap: wrap; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .cpd-plan-row { display: flex; flex-direction: column; gap: var(--ac-space-1); padding: var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); min-height: var(--ac-copy-row-h, 52px); box-sizing: border-box; }
 .cpd-plan-row[data-invalid="true"] { outline: 1px solid var(--ac-warning); outline-offset: -1px; }
-.cpd-plan-row[data-skipped="true"] .cpd-item { opacity: 0.6; }
+/* 흐림은 opacity가 아니라 글자색 토큰으로(칩 대비 4.5:1 유지) */
+.cpd-plan-row[data-skipped="true"] .cpd-item { color: var(--ac-text-muted); }
+.cpd-plan-row[data-skipped="true"] .cpd-item .prj-kind-chip { color: var(--ac-text); }
 .cpd-plan-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 168px; align-items: center; gap: var(--ac-space-2); min-width: 0; }
 .cpd-plan-row[data-result] .cpd-plan-main { grid-template-columns: minmax(0, 1fr) auto auto; }
 .cpd-item { min-width: 0; }

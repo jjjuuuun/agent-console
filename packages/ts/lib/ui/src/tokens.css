@@ -847,6 +847,11 @@ textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); 
 .ac-listpane-slot { padding: var(--ac-space-4); color: var(--ac-text-muted); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .ac-listpane-row { display: flex; align-items: center; box-sizing: border-box; min-height: var(--ac-row-h); padding: 0 var(--ac-space-2); border-left: 2px solid transparent; border-radius: var(--ac-radius-sm); cursor: pointer; }
 .ac-listpane-row { transition: var(--ac-trans-colors); }
+.ac-listpane-rowwrap { display: flex; align-items: center; list-style: none; border-radius: var(--ac-radius-sm); }
+.ac-listpane-rowwrap > .ac-listpane-row { flex: 1 1 auto; min-width: 0; }
+.ac-listpane-rowaction { flex: none; display: flex; align-items: center; }
+.ac-listpane-rowwrap:hover { background: var(--ac-hover-bg); }
+.ac-listpane-rowwrap:has(> [aria-selected="true"]) { background: var(--ac-accent-bg-strong); }
 .ac-listpane-row:hover { background: var(--ac-hover-bg); }
 .ac-listpane-row[aria-selected="true"] { background: var(--ac-accent-bg-strong); }
 .ac-listpane-row[aria-selected="true"] svg { color: var(--ac-accent); }

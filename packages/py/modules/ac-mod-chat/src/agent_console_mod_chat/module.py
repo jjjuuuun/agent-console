@@ -6,7 +6,8 @@
   ``chat.interactions``·``chat.turn_sessions``(실행 연결 — 보통 ``link-chat-runs``가 준다),
   ``definitions.lookup``, ``definitions.spaces``(프로젝트 대화의 팀 구성 = 그 공간에서만, 5.7R.33y),
   ``workspace.settings``, ``records.sessions``(세션 이어 가기 상태·복원, 5.7R.33y3),
-  ``projects.lookup``(대화 위치 찾기의 등록 프로젝트 id, 요청 11/07 후속)(``ports.py``).
+  ``projects.lookup``(대화 위치 찾기의 등록 프로젝트 id, 요청 11/07 후속 ·
+  ``GET /conversations/project-counts``가 셀 보관하지 않은 프로젝트의 기록 DB)(``ports.py``).
 - 저장: 이 모듈이 소유한 ``conversations``·``chat_queue``(``storage/``)를 호스트 DB 핸들의 엔진
   위에 둔다. 마이그레이션 계보 ``chat``은 모듈이 켜질 때만 올라간다(테이블은 legacy 0002·0003이
   만들었다). DB가 없으면 메모리(경고 ``chat.storage_memory``). 선택 포트 ``records.spaces``가
@@ -51,7 +52,13 @@ from .ports import (
 )
 from .routes import build_router
 from .settings import SETTINGS_COMPAT, ChatModuleSettings
-from .spaces import SpaceConversations, SpacedChatService, SpaceQueue, chat_records
+from .spaces import (
+    SpaceConversations,
+    SpacedChatService,
+    SpaceQueue,
+    chat_records,
+    project_id_counts,
+)
 from .storage import BRANCH, memory_storage_warning, open_chat_storage
 from .ws import conversation_topic, topic_handlers, updated_message
 
@@ -144,6 +151,19 @@ class ChatModule:
             listing = ctx.port(PROJECTS_LOOKUP)
             return [] if listing is None else [p.id for p in listing.list_projects()]
 
+        def active_project_ids() -> list[str]:
+            """보관하지 않은 등록 프로젝트 id(대화 수 세기용, ``projects.lookup`` 없음 = 빈 것)."""
+            listing = ctx.port(PROJECTS_LOOKUP)
+            if listing is None:
+                return []
+            return [p.id for p in listing.list_projects() if not getattr(p, "archived", False)]
+
+        def conversation_counts() -> dict[str | None, int]:
+            """``GET /conversations/project-counts``: 호스트 DB + 보관 아닌 프로젝트 기록 DB."""
+            return project_id_counts(
+                storage.projects.project_id_counts(), service_records, active_project_ids()
+            )
+
         service = SpacedChatService(
             storage.conversations,
             graphs,
@@ -195,6 +215,7 @@ class ChatModule:
                     require_graphs=require_graphs,
                     projects=lambda: storage.projects,
                     mover=(lambda: mover) if database is not None else None,
+                    counts=conversation_counts,
                 )
             ],
             ws_topics=topic_handlers(service, hub=hub),

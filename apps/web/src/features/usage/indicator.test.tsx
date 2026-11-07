@@ -101,7 +101,7 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("사이드바가 접히면 레일 모양(숫자 + 막대만, 이름은 aria-label·툴팁)이고 aria-label은 그대로다", async () => {
     mount({}, {}, "/chat", undefined, "1");
-    const link = await findIndicatorLink(/^사용량: win-1 사용 63%/);
+    const link = await findIndicatorLink(/^63%[^사]*사용량: win-1 사용 63%/);
     expect(indicator()!.getAttribute("data-layout")).toBe("rail");
     expect(indicator()!.querySelector(".usage-ind-rail-name")).toBeNull();
     expect(indicator()!.querySelector(".usage-ind-rail-value")!.textContent).toBe("63%");

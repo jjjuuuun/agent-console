@@ -4,7 +4,7 @@
 
 - 필수: ``definitions.lookup``. 선택: ``workspace.settings``·``resources.lookup``·
   ``resources.types``·``secrets.redact``·``secrets.rules``·``settings.scope_layers``(유효 설정
-  ``?project=``의 범위 층, 5.2R.34).
+  ``?project=``의 범위 층, 5.2R.34)·``definitions.spaces``(저장본 경로 ``?project=``의 정의 공간).
 - 제공: ``graphs.entry_labels``(팀 구성 목록 입구 이름), ``graphs.session_summary``(목록 세션 집계),
   ``definitions.usages``(리소스 목록
   ``usage_count``), ``definitions.dependencies``(문서가 쓰는 정의 — 쓰는 정의 먼저 쓰기),
@@ -30,6 +30,7 @@ from .ports import (
     DEFINITION_REFERENCES,
     DEFINITION_USAGES,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     GRAPH_ENTRY_LABELS,
     GRAPH_SESSION_SUMMARY,
     RESOURCE_TYPES,
@@ -82,6 +83,7 @@ class DefinitionsTeamsLink:
             SECRET_REDACT,
             SECRET_RULES,
             SCOPE_LAYERS,
+            DEFINITIONS_SPACES,
         ),
         contracts={"definitions": CONTRACT_VERSIONS["definitions"]},
         web_roles=WEB_ROLES,
@@ -110,6 +112,7 @@ class DefinitionsTeamsLink:
             types=lambda: ctx.port(RESOURCE_TYPES),
             redact=redactor,
             scopes=lambda: ctx.ports(SCOPE_LAYERS),
+            spaces=lambda: ctx.port(DEFINITIONS_SPACES),
         )
         ctx.provide(GRAPH_ENTRY_LABELS, views)
         ctx.provide(GRAPH_SESSION_SUMMARY, views)

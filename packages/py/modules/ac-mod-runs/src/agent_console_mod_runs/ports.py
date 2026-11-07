@@ -44,10 +44,11 @@
 - 선택 ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들
   (``agent_console_store.RecordsSpaces``). 있으면 ``project_id``가 있는 Run은 그 기록 DB에만 쓰고
   ``?project=`` 조회는 거기서 읽는다. 없으면 호스트 DB.
-- 선택 ``projects.lookup``(요청 11/08 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``만
-  쓴다). 있으면 ``GET /runs/{id}/locate``와 WS ``run:<id>``가 아직 열지 않은 프로젝트 기록 DB에서도
-  Run을 찾는다(``records.spaces``가 있을 때만, 상한 ``locate_max_projects``). 없으면 이 프로세스가
-  아는 공간과 앱 기록만 본다.
+- 선택 ``projects.lookup``(요청 11/08 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``와
+  있으면 ``archived``를 쓴다). 있으면 ``GET /runs/{id}/locate``와 WS ``run:<id>``가 아직 열지 않은
+  프로젝트 기록 DB에서도 Run을 찾는다(``records.spaces``가 있을 때만, 상한
+  ``locate_max_projects``). 없으면 이 프로세스가 아는 공간과 앱 기록만 본다.
+  ``GET /runs/project-counts``는 보관하지 않은 프로젝트의 기록 DB도 센다(검증 11/08 D6).
 """
 
 from __future__ import annotations

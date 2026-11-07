@@ -57,7 +57,7 @@ describe("구성 화면의 공간(?prj=)", () => {
     expect(screen.queryByText("공용 팀")).toBeNull();
     expect(space).toHaveBeenCalledWith("a");
     expect(spaceGraphs).toHaveBeenCalled();
-    expect(chip().getAttribute("aria-label")).toBe("프로젝트: 프로젝트 a");
+    expect(chip().getAttribute("aria-label")).toMatch(/^프로젝트: 프로젝트 a/);
     expect(chip().getAttribute("data-space")).toBe("project");
     expect(screen.getByText("이 프로젝트의 사본입니다. 수정은 공용 구성에 영향을 주지 않습니다.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "← 프로젝트 a 홈" })).toBeTruthy();

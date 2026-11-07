@@ -10,6 +10,10 @@
 - 선택 ``settings.scope_layers``(여러 제공자, 5.2R.34): 범위 id(예: 프로젝트 id) → 공통 바로 아래에
   끼울 설정 층·경고(``ScopeLayersSource``). 유효 설정 경로의 ``?project=``가 이것을 쓴다. 없으면
   ``project``를 무시한다(층 없음).
+- 선택 ``definitions.spaces``(검증 11/08 D5): 공간 이름(``?project=``) → 그 공간의 정의 저장소
+  (``agent_console_store.DefinitionSpaces``). 저장된 팀 구성·에이전트를 읽는 경로(실행 계획·유효
+  설정·묶음 미리보기·사용처)가 ``?project=``의 공간에서 읽는다. 없으면 라이브러리
+  (``definitions.lookup``).
 
 제공:
 - ``graphs.entry_labels``: 팀 구성 입구 노드 표시 이름(``mod-definitions`` 목록).
@@ -37,6 +41,7 @@ from agent_console_modkit import PortKey
 from agent_console_registry import Registry
 from agent_console_resources import ResourceLookup, ResourceType
 from agent_console_secret_rules import SecretRules
+from agent_console_store import DEFINITIONS_SPACES_PORT, DefinitionSpaces
 from agent_console_teams import DefinitionDependency, Layer
 
 
@@ -128,12 +133,16 @@ DEFINITION_DEPENDENCIES: PortKey[DocumentDependencies] = PortKey(
 DEFINITION_REFERENCES: PortKey[DocumentReferences] = PortKey(
     "definitions.references", "정의 문서의 참조 추출(X25)", multi=True
 )
+DEFINITIONS_SPACES: PortKey[DefinitionSpaces] = PortKey(
+    DEFINITIONS_SPACES_PORT, "공간 이름 → 정의 저장소"
+)
 SCOPE_LAYERS: PortKey[ScopeLayersSource] = PortKey(
     "settings.scope_layers", "범위 id → 설정 층(예: 프로젝트 층)", multi=True
 )
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "DEFINITION_DEPENDENCIES",
     "DEFINITION_REFERENCES",
     "DEFINITION_USAGES",

@@ -25,7 +25,7 @@ function editorClients(over: Record<string, unknown> = {}) {
     listGraphs: vi.fn(async () => [{ id: "tm1", name: "임의 팀", labels: [], version_hash: "h1", saved_at: 1, node_count: 2, edge_count: 1, entry_labels: [] }]),
     getGraph: vi.fn(async () => ({ graph, version_hash: "h1", saved_at: 1 })),
     validateGraph: vi.fn(async () => []),
-    updateGraph: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
+    updateGraphVersioned: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
     resolvePorts: vi.fn(async () => ({ inputs: [], outputs: [] })),
     getGraphPlan: vi.fn(async () => ({ entries: [], answers: [], grants: {} })),
     planDraftGraph: vi.fn(async () => ({ entries: [], answers: [], grants: {} })),
@@ -45,8 +45,8 @@ describe("팀 편집 화면: 노드 [배치] 탭", () => {
     fireEvent.click(await screen.findByRole("button", { name: "아래" }));
     expect(screen.getByText("저장 안 됨")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as Sent;
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as Sent;
     expect(sent.nodes.find((n) => n.id === "a1")!.layout).toEqual({ direction: "tb" });
     expect(sent.nodes.find((n) => n.id === "h1")).not.toHaveProperty("layout");
     expect(sent.ui).toEqual({ viewport: { x: 12, y: 34, zoom: 1.5 } });
@@ -60,8 +60,8 @@ describe("팀 편집 화면: 노드 [배치] 탭", () => {
     fireEvent.click(await screen.findByRole("button", { name: "왼쪽" }));
     fireEvent.click(screen.getByRole("button", { name: "이 방향을 그래프 기본으로" }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as Sent;
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as Sent;
     expect(sent.ui).toEqual({ viewport: { x: 12, y: 34, zoom: 1.5 }, layout: { direction: "rl" } });
   });
 
@@ -125,8 +125,8 @@ describe("팀 편집 화면: 연결 패널 모양·경로", () => {
       const shape = await screen.findByLabelText("모양");
       fireEvent.change(shape, { target: { value: "step" } });
       fireEvent.click(screen.getByRole("button", { name: "저장" }));
-      await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-      const sent = r.updateGraph.mock.calls[0]![1] as { edges: { id: string; layout?: unknown }[] };
+      await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+      const sent = r.updateGraphVersioned.mock.calls[0]![1] as { edges: { id: string; layout?: unknown }[] };
       expect(sent.edges.find((e) => e.id === "x1")!.layout).toEqual({ shape: "step" });
     }));
 });

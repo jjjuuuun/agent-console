@@ -16,7 +16,7 @@ import {
   type ScopeViewMode,
 } from "@agent-console/projects";
 import { useApi } from "../../app/ApiContext";
-import { CURRENT_PROJECT_PARAM, CurrentProjectContext, ProjectScopeReadyContext } from "../../app/projectScope";
+import { AdoptProjectContext, CURRENT_PROJECT_PARAM, CurrentProjectContext, ProjectScopeReadyContext } from "../../app/projectScope";
 import { PROJECT_REQUIRES } from "../../app/requirements";
 import { useApiQuery } from "../../app/queries";
 import type { RestClient } from "@agent-console/api-client";
@@ -27,6 +27,7 @@ import { DEFAULT_ROUTES, isDefinitionPath } from "../../shell/routeConfig";
 import { useModules, useRequires } from "../../modules";
 import { useToast } from "@agent-console/ui";
 import { folderHomeMessages } from "./folderHomeMessages";
+import { projectMessages } from "./messages";
 import { UnregisterDialog } from "./UnregisterDialog";
 import { regionProjects } from "./projectRegionLib";
 import { ProjectFolderHost, type FolderRequest } from "./ProjectFolderHost";
@@ -238,6 +239,15 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     });
   };
   const knownIds = useMemo(() => projects.map((p) => p.id), [projects]);
+  // 주소로 다른 프로젝트의 대화·실행을 열었을 때 현재 프로젝트를 그쪽으로 바꾸고 한 번 알린다(주소 `?prj=`는 위 효과가 replace로 맞춘다)
+  const adopt = useCallback(
+    (id: string) => {
+      if (!enabled || !knownIds.includes(id)) return;
+      setCurrent(id);
+      toast({ tone: "info", text: projectMessages.switcher.adoptedToast(names.get(id) ?? id) });
+    },
+    [enabled, knownIds, setCurrent, toast, names],
+  );
 
   const value = useMemo<ProjectsValue>(
     () => ({
@@ -270,7 +280,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   return (
     <ProjectsContext.Provider value={value}>
       <ProjectScopeReadyContext.Provider value={!value.loading}>
-        <CurrentProjectContext.Provider value={effective}>{children}</CurrentProjectContext.Provider>
+        <CurrentProjectContext.Provider value={effective}>
+          <AdoptProjectContext.Provider value={adopt}>{children}</AdoptProjectContext.Provider>
+        </CurrentProjectContext.Provider>
       </ProjectScopeReadyContext.Provider>
       {folderRequest === null ? null : (
         <ProjectFolderHost request={folderRequest} projects={views} refresh={refresh} openHome={openHome} onClose={() => setFolderRequest(null)} />

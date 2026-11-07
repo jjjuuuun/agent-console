@@ -188,6 +188,27 @@ class SpaceRecorder:
         """그 프로젝트에 묶인 읽기(``get``·``list``·``list_node_runs``·이벤트·상호작용)."""
         return SpaceReader(self, project_id)
 
+    def project_id_counts(self, project_ids: Iterable[str] = ()) -> dict[str | None, int]:
+        """루트 Run의 ``project_id``별 개수: 호스트 DB + 각 공간(``project_ids``)의 기록 DB.
+
+        공간 기록 DB의 루트 Run은 그 공간의 id로 센다. 기록 공간 포트가 없으면 호스트 DB만 센다.
+        기록 DB 파일이 없거나 읽을 수 없는 공간·모르는 공간은 건너뛴다(파일을 만들지 않는다).
+        """
+        counts: dict[str | None, int] = dict(self.host.runs.project_id_counts())
+        if not self.spaced or self.records is None:
+            return counts
+        for project_id in dict.fromkeys(project_ids):
+            try:
+                store = self.records.reader(project_id)
+                found = {} if store is None else store.runs.project_id_counts()
+            except (RecordsUnavailable, StoreError, LookupError):
+                _log.debug("기록 DB를 셀 수 없음: %s", project_id, exc_info=True)
+                continue
+            total = sum(int(n) for n in found.values())
+            if total:
+                counts[project_id] = counts.get(project_id, 0) + total
+        return counts
+
     def locate(self, run_id: str) -> builtins.list[str | None]:
         """그 Run이 있는 자리 목록(None = 호스트 DB, 빈 목록 = 없음, 둘 이상 = 모호).
 
@@ -619,6 +640,12 @@ class SpaceReader:
     def interactions(self, **filters: Any) -> builtins.list[Interaction]:
         store = self._store()
         return [] if store is None else list(store.interactions.list(**filters))
+
+    def events_by_actor(self, actor: str, **filters: Any) -> builtins.list[RunEvent]:
+        """그 자리에서 한 에이전트(actor)가 낸 이벤트, Run을 가로질러 최신순
+        (``EventRepository.list_by_actor`` 인자). 공간 파일이 없으면 빈 목록."""
+        store = self._store()
+        return [] if store is None else list(store.events.list_by_actor(actor, **filters))
 
     @property
     def storage(self) -> Any | None:

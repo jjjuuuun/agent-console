@@ -24,6 +24,7 @@ export const projectMessages = {
     unknownName: (id: string) => id,
     triggerLabel: (name: string, hint?: string) => (hint === undefined ? `프로젝트: ${name}` : `프로젝트: ${name} (${hint})`),
     switchedToast: (name: string) => `프로젝트: ${name}`,
+    adoptedToast: (name: string) => `프로젝트 ${name}(으)로 전환했습니다`,
     switchedAllToast: "모든 프로젝트 보기",
     shortcutTitle: "프로젝트 전환",
   },

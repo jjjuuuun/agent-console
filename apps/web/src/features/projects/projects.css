@@ -171,10 +171,7 @@
 @container (min-width: 1000px) { .prj-cards { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; } }
 .prj-banners { display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .prj-banner-note { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
-.prj-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
-.prj-table th { text-align: left; font-weight: 600; color: var(--ac-text-muted); font-size: var(--ac-text-xs); padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); line-height: var(--ac-lh-xs); }
 .prj-table th:nth-child(2) { width: 112px; } .prj-table th:nth-child(3) { width: 112px; } .prj-table th:nth-child(4) { width: 40px; }
-.prj-table td { padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); height: var(--ac-row-h-dense, 32px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .prj-cell-name a { display: block; color: var(--ac-accent-text, var(--ac-accent)); }
 .prj-kind-chip { display: inline-block; max-width: 100%; padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); font-size: var(--ac-text-xs); line-height: 18px; vertical-align: middle; }
 .prj-row-more { width: 24px; height: 24px; border: 0; border-radius: var(--ac-radius-sm); background: none; color: var(--ac-text-muted); cursor: pointer; font: inherit; }
@@ -223,8 +220,11 @@ a.prj-activity-row:focus-visible { outline: 2px solid var(--ac-focus-ring, var(-
 
 /* 설정 › 프로젝트 (screen-projects §8) */
 .prj-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--ac-text-sm, 13px); line-height: 20px; }
-.prj-table th { text-align: left; font-weight: 600; color: var(--ac-text-muted); padding: 6px 8px; border-bottom: 1px solid var(--ac-border-soft); }
-.prj-table td { padding: 6px 8px; border-bottom: 1px solid var(--ac-border-soft); min-width: 0; overflow: hidden; }
+.prj-table th { text-align: left; font-weight: 600; color: var(--ac-text-muted); font-size: var(--ac-text-xs); padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); line-height: var(--ac-lh-xs); }
+.prj-table th:nth-child(2) { width: 112px; } .prj-table th:nth-child(3) { width: 112px; } .prj-table th:nth-child(4) { width: 40px; }
+.prj-table td { padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); height: var(--ac-row-h-dense, 32px); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* 행 메뉴(⋯) 칸은 자르지 않는다: 팝오버가 칸 밖으로 펼쳐진다 */
+.prj-table td:has(.prj-row-more) { overflow: visible; }
 .prj-table .prj-col-name { width: 160px; }
 .prj-table .prj-col-status { width: 112px; }
 .prj-table .prj-col-actions { width: 280px; text-align: right; }

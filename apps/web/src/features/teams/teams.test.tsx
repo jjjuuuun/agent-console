@@ -132,7 +132,7 @@ function editorClients(extra: Record<string, unknown> = {}, issues: unknown[] = 
     listGraphs: vi.fn(async () => [summary({ id: "tm1", name: "임의 팀", entry_labels: ["일꾼"] })]),
     getGraph: vi.fn(async () => ({ graph, version_hash: "h1", saved_at: 1 })),
     validateGraph: vi.fn(async () => issues),
-    updateGraph: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
+    updateGraphVersioned: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
     listResources: vi.fn(async () => [{ id: "rs1", type: "rt-doc", name: "공용 문서", version_hash: "r1", usage_count: 0 }]),
     ...extra,
   });
@@ -148,17 +148,17 @@ describe("팀 구성 편집기: 검증 이슈·제안·저장", () => {
     expect(screen.getByText("저장됨")).toBeTruthy();
     fireEvent.click(within(issues).getByRole("button", { name: "일꾼 → 나 답변으로 연결" }));
     await waitFor(() => expect(screen.getByText("저장 안 됨")).toBeTruthy());
-    expect(r.updateGraph).not.toHaveBeenCalled();
+    expect(r.updateGraphVersioned).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalledTimes(1));
-    const [, sent, hash] = r.updateGraph.mock.calls[0]!;
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalledTimes(1));
+    const [, sent, hash] = r.updateGraphVersioned.mock.calls[0]!;
     expect(hash).toBe("h1");
     expect((sent as { edges: { id: string; kind: string }[] }).edges.map((e) => e.id)).toEqual(["x1", "x2"]);
     expect(await screen.findByText("저장됨")).toBeTruthy();
   });
 
   it("버전 충돌(412)이면 충돌 배너가 뜨고 저장이 막힌다", async () => {
-    const { clients } = editorClients({ updateGraph: vi.fn(async () => { throw versionConflict(); }) });
+    const { clients } = editorClients({ updateGraphVersioned: vi.fn(async () => { throw versionConflict(); }) });
     mountApp(clients, "/teams/tm1");
     const issues = await screen.findByRole("region", { name: "검증 이슈" });
     fireEvent.click(await within(issues).findByRole("button", { name: "일꾼 → 나 답변으로 연결" }));
@@ -201,8 +201,8 @@ describe("팀 구성 편집기: 노드·연결 패널", () => {
     fireEvent.change(role, { target: { value: "" } });
     fireEvent.change(screen.getByLabelText("이름", { selector: "input" }), { target: { value: "새 이름" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { nodes: { id: string; label: string; config: Record<string, unknown> }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { nodes: { id: string; label: string; config: Record<string, unknown> }[] };
     const node = sent.nodes.find((n) => n.id === "a1")!;
     expect(node.label).toBe("새 이름");
     expect(node.config).toEqual({ ref: "ag1" });
@@ -214,8 +214,8 @@ describe("팀 구성 편집기: 노드·연결 패널", () => {
     fireEvent.click(await screen.findByLabelText(/^노드 일꾼/));
     fireEvent.click(await screen.findByRole("switch", { name: "답변" }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { edges: { kind: string; source: { node: string; port: string }; target: { node: string; port: string } }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { edges: { kind: string; source: { node: string; port: string }; target: { node: string; port: string } }[] };
     expect(sent.edges.at(-1)).toMatchObject({ kind: "e-out", source: { node: "a1", port: "o1" }, target: { node: "h1", port: "hears" } });
   });
 
@@ -227,8 +227,8 @@ describe("팀 구성 편집기: 노드·연결 패널", () => {
     expect(await screen.findByText("점검")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "검토 사용" }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { nodes: { id: string; config: { check: { options: { id: string }[] } } }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { nodes: { id: string; config: { check: { options: { id: string }[] } } }[] };
     expect(sent.nodes.find((n) => n.id === "h1")!.config.check.options).toEqual([{ id: "d1" }]);
   });
 
@@ -243,8 +243,8 @@ describe("팀 구성 편집기: 노드·연결 패널", () => {
     fireEvent.click(within(nodeLayer).getByRole("button", { name: "+ 리소스 붙이기" }));
     fireEvent.click(await screen.findByRole("button", { name: "공용 문서 붙이기" }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { nodes: { id: string; type: string; config: Record<string, unknown> }[]; edges: { kind: string; source: { port: string }; target: { node: string; port: string } }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { nodes: { id: string; type: string; config: Record<string, unknown> }[]; edges: { kind: string; source: { port: string }; target: { node: string; port: string } }[] };
     const asset = sent.nodes.find((n) => n.type === "t-asset")!;
     expect(asset.config).toEqual({ asset_ref: "rs1" });
     expect(sent.edges.at(-1)).toMatchObject({ kind: "e-attach", source: { port: "provide" }, target: { node: "a1", port: "i2" } });
@@ -263,8 +263,8 @@ describe("팀 구성 편집기: 노드·연결 패널", () => {
     fireEvent.click(within(dialog).getByRole("radio", { name: /붙임 둘째/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: "연결" }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { edges: { kind: string }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { edges: { kind: string }[] };
     expect(sent.edges.at(-1)?.kind).toBe("e-attach-b");
   });
 });

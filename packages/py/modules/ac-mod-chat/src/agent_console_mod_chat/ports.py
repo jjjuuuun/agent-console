@@ -28,11 +28,12 @@
 - ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들. 있으면
   프로젝트 대화·대기열은 그 기록 DB에만 두고 ``?project=`` 경로는 거기서 읽는다(``spaces.py``).
   없으면 모든 대화가 호스트 DB(지금 동작).
-- ``projects.lookup``(요청 11/07 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``만
-  쓴다).
+- ``projects.lookup``(요청 11/07 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``와
+  있으면 ``archived``를 쓴다).
   있으면 ``GET /conversations/{id}/locate``와 WS ``conversation:<id>``가 아직 열지 않은 프로젝트
   기록 DB에서도 대화를 찾는다(``records.spaces``가 있을 때만, 상한 ``locate_max_projects``). 없으면
-  이 프로세스에서 연 공간과 앱 기록만 본다.
+  이 프로세스에서 연 공간과 앱 기록만 본다. ``GET /conversations/project-counts``는 보관하지 않은
+  프로젝트의 기록 DB 대화도 센다(요청 11/08 후속).
 - ``records.sessions``(5.7R.33y3, design §PI.4.6.4 X38): 대화 노드 세션 이어 가기 상태·복원
   (``agent_console_chat.SessionContinuity`` — ``state``·``prepare``, 보통
   ``link-projects-records``가 준다). 있으면 ``GET /conversations/{id}/sessions``가 상태를 보이고

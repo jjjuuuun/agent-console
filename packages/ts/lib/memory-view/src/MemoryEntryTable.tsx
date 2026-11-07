@@ -247,8 +247,9 @@ export function MemoryEntryTable({
               );
             })}
           </div>
-          {entries.length === 0 && !loading ? emptyContent ?? <div className="ac-mem-empty">{m["table.empty"]}</div> : null}
         </div>
+        {/* 빈 안내는 grid 밖에 둔다: grid의 자식은 row·rowgroup뿐이어야 한다(aria-required-children) */}
+        {entries.length === 0 && !loading ? emptyContent ?? <div className="ac-mem-empty">{m["table.empty"]}</div> : null}
       </div>
       <div className="ac-mem-statusline" role="status">
         {loading ? <span>{m["table.loading"]}</span> : <span>{summaryText} · {order}</span>}

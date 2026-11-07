@@ -22,7 +22,7 @@ function editorRest(overrides: Record<string, unknown> = {}, withDefaultBackend 
     listGraphs: vi.fn(async () => [{ id: "tm1", name: "임의 팀", labels: [], version_hash: "h1", saved_at: 1, node_count: 2, edge_count: 1, entry_labels: ["일꾼"] }]),
     getGraph: vi.fn(async () => ({ graph: sampleGraph(), version_hash: "h1", saved_at: 1 })),
     validateGraph: vi.fn(async () => []),
-    updateGraph: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
+    updateGraphVersioned: vi.fn(async (_id: string, g: unknown) => ({ graph: g, version_hash: "h2" })),
     resolvePorts: vi.fn(async () => ({ inputs: [], outputs: [] })),
     getGraphPlan: vi.fn(async () => ({ entries: [{ edge_id: "x1", node_id: "a1" }], answers: [], grants: {} })),
     planDraftGraph: vi.fn(async () => ({ entries: [{ edge_id: "x1", node_id: "a1" }], answers: [], grants: {} })),
@@ -67,10 +67,10 @@ describe("팀 편집기 [+ 추가] 메뉴", () => {
     expect(within(list).getByText("이미 1개")).toBeTruthy(); // ag1은 이미 노드가 있다
     fireEvent.click(within(list).getByRole("option", { name: /둘째 에이전트/ }));
     expect(await screen.findByText("저장 안 됨")).toBeTruthy();
-    expect(r.updateGraph).not.toHaveBeenCalled();
+    expect(r.updateGraphVersioned).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalledTimes(1));
-    const sent = r.updateGraph.mock.calls[0]![1] as { nodes: { type: string; config?: { ref?: string } }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalledTimes(1));
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { nodes: { type: string; config?: { ref?: string } }[] };
     expect(sent.nodes).toHaveLength(3);
     expect(sent.nodes.at(-1)).toMatchObject({ type: "t-actor", config: { ref: "ag2" } });
   });
@@ -85,8 +85,8 @@ describe("팀 편집기 [+ 추가] 메뉴", () => {
     fireEvent.click(within(list).getByRole("option", { name: /공용 문서/ }));
     await waitFor(() => expect(screen.getByText("저장 안 됨")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalledTimes(1));
-    const sent = r.updateGraph.mock.calls[0]![1] as { settings?: { resources?: { ref: string }[] } };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalledTimes(1));
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { settings?: { resources?: { ref: string }[] } };
     expect(sent.settings?.resources).toEqual([{ ref: "rs1" }]);
   });
 });
@@ -109,10 +109,10 @@ describe("CreateDefinitionDrawer", () => {
     expect(createAgent.mock.calls[0]![0]).toMatchObject({ id: "my-planner", name: "My Planner", role: "설계" });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "새 행위자" })).toBeNull());
     expect(await screen.findByText("저장 안 됨")).toBeTruthy();
-    expect(r.updateGraph).not.toHaveBeenCalled();
+    expect(r.updateGraphVersioned).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(r.updateGraph).toHaveBeenCalled());
-    const sent = r.updateGraph.mock.calls[0]![1] as { nodes: { config?: { ref?: string } }[] };
+    await waitFor(() => expect(r.updateGraphVersioned).toHaveBeenCalled());
+    const sent = r.updateGraphVersioned.mock.calls[0]![1] as { nodes: { config?: { ref?: string } }[] };
     expect(sent.nodes.at(-1)?.config?.ref).toBe("my-planner");
   });
 
@@ -180,7 +180,7 @@ describe("CreateDefinitionDrawer", () => {
     expect(createResource.mock.calls[0]![0]).toMatchObject({ name: "새 문서" });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "새 자산" })).toBeNull());
     expect(await screen.findByText("저장 안 됨")).toBeTruthy();
-    expect(r.updateGraph).not.toHaveBeenCalled();
+    expect(r.updateGraphVersioned).not.toHaveBeenCalled();
   });
 });
 

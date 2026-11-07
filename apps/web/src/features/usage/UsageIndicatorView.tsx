@@ -197,6 +197,8 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
   }
   // 이름을 내용에서 얻을 수 있는가: 레일은 값 글자만, 로딩은 글자가 없다
   const nameFromContent = p.layout !== "rail" && p.status !== "loading";
+  // 레일은 보이는 글자(값)가 이름의 시작에 와야 한다(WCAG 2.5.3 / label-content-name-mismatch)
+  const railLead = p.layout === "rail" && p.status !== "loading" && p.status !== "error-empty" && p.status !== "empty" ? railItems.map((i) => itemRailValue(i, p.valueMode)).join(" ") : "";
   const { "aria-describedby": extraDescribedBy, ...restLink } = (p.linkProps ?? {}) as Record<string, unknown>;
   const describedBy = [nameFromContent ? spokenId : undefined, typeof extraDescribedBy === "string" ? extraDescribedBy : undefined].filter((v) => v !== undefined).join(" ");
   return (
@@ -204,7 +206,7 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
       <a
         className="usage-ind-link"
         href={unlinked && p.setupHref !== undefined ? p.setupHref : p.href}
-        {...(nameFromContent ? {} : { "aria-label": p.ariaLabel })}
+        {...(nameFromContent ? {} : { "aria-label": railLead === "" ? p.ariaLabel : `${railLead} ${p.ariaLabel}` })}
         {...(describedBy === "" ? {} : { "aria-describedby": describedBy })}
         aria-busy={p.status === "loading" ? "true" : undefined}
         {...(p.current ? { "aria-current": "page" as const } : {})}

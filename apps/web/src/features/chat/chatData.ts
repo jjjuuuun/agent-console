@@ -2,7 +2,7 @@ import type { RestClient } from "@agent-console/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useApi } from "../../app/ApiContext";
 import { queryKeys, useApiQuery } from "../../app/queries";
-import { useProjectId } from "../../app/projectScope";
+import { useAdoptLocatedProject, useProjectId } from "../../app/projectScope";
 import { useApiPagedQuery } from "../../app/pagedQuery";
 import type { ConversationSummary } from "@agent-console/contracts";
 
@@ -90,6 +90,8 @@ export function useConversationScope(id: string): ConversationScope {
   const listDone = list.items !== undefined || list.isError;
   const needLocate = listDone && listed === undefined && id !== "";
   const located = useApiQuery(chatKeys.locate(id), (rest) => rest.locateConversation(id), { enabled: needLocate, retry: false, staleTime: 60_000 });
+  // 주소로 다른 프로젝트의 대화를 열었으면 현재 프로젝트를 그 프로젝트로 바꾼다(칩·목록·주소 `prj`가 어긋나지 않게)
+  useAdoptLocatedProject(listed === undefined ? located.data?.project_id : undefined);
   if (listed !== undefined) return { project: listed.project_id ?? current, ready: true };
   if (!needLocate) return { project: current, ready: true };
   if (located.data !== undefined) return { project: located.data.project_id ?? null, ready: true };

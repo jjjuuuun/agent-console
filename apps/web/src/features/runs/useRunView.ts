@@ -5,7 +5,7 @@ import type { Graph, Interaction, NodeRun, RecordSource, Run, RunEvent, Trace } 
 import { useApi } from "../../app/ApiContext";
 import { useQuery } from "@tanstack/react-query";
 import { useApiQuery } from "../../app/queries";
-import { useProjectId } from "../../app/projectScope";
+import { useAdoptLocatedProject, useProjectId } from "../../app/projectScope";
 import { INTERACTION_EVENT_PREFIX, RUN_REFETCH_DEBOUNCE_MS, SNAPSHOT_EVENT_PREFIXES } from "./runsConfig";
 import { isActiveRun, lastSeqOf, mergeEvents } from "./runsLib";
 
@@ -144,6 +144,8 @@ export function useRunView(
   const firstNotFound = isNotFound(firstSnapshot.error) && runId !== "";
   const located = useApiQuery(locateKey(runId), (r) => r.locateRun(runId), { enabled: firstNotFound, retry: false, staleTime: 60_000 });
   const scope = chooseRunScope(first, firstNotFound, located.data, located.isError);
+  // 주소로 다른 프로젝트의 실행을 열었으면 현재 프로젝트를 그 프로젝트로 바꾼다(사이드바·목록·칩·주소 `prj` 일치)
+  useAdoptLocatedProject(firstNotFound ? located.data?.project_id : undefined);
   const moved = scope.project !== first;
   const movedSnapshot = useApiQuery(snapshotKey(runId, scope.project), (r) => r.getRun(runId, scope.project), { enabled: moved, refetchInterval });
   const snapshot = moved ? movedSnapshot : firstSnapshot;

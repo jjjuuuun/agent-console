@@ -16,7 +16,7 @@ export async function loadAgent(rest: RestClient, id: string): Promise<Versioned
 /** 저장하고, 서버가 저장한 것은 보낸 문서와 같으므로(지정한 필드만) 그대로 돌려준다. */
 export async function saveAgent(rest: RestClient, agent: Agent, versionHash: string | undefined): Promise<Versioned<Agent>> {
   const saved = await rest.updateAgentVersioned(agent.id, agent, versionHash);
-  return { value: agent, version_hash: saved.version_hash };
+  return { value: agent, version_hash: saved.version_hash, issues: saved.issues };
 }
 
 /** 에이전트 문서에서 설정 필드만(`hide`에 든 키는 제외). */

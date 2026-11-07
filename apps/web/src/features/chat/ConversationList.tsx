@@ -160,10 +160,10 @@ export function ConversationList(props: ConversationListProps) {
                   {c.archived ? <span className="chat-chip">{t.archivedChip}</span> : null}
                 </div>
               </div>
-              <ActionMenu label={t.rowMenu(title)} items={menuItems(c)} size="sm" open={menuFor === c.id} onOpenChange={(open) => setMenuFor(open ? c.id : null)} />
             </div>
           );
         }}
+        renderRowAction={(c) => <ActionMenu label={t.rowMenu(c.title || t.untitled)} items={menuItems(c)} size="sm" open={menuFor === c.id} onOpenChange={(open) => setMenuFor(open ? c.id : null)} />}
       />
       {props.paging ? <LoadMoreFooter hasMore={props.paging.hasMore} loading={props.paging.loading} onLoadMore={props.paging.onLoadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} auto={false} /> : null}
     </div>

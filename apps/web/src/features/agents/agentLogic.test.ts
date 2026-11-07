@@ -26,6 +26,15 @@ describe("에이전트 저장 원문", () => {
   });
 });
 
+describe("저장 경고", () => {
+  it("저장 응답의 issues(평문 비밀 등)를 버리지 않고 돌려준다", async () => {
+    const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문" }];
+    const rest = { updateAgentVersioned: vi.fn(async () => ({ value: {}, version_hash: "h2", issues })) };
+    const saved = await saveAgent(rest as never, { id: "a1", name: "에이" } as Agent, "h1");
+    expect(saved.issues).toEqual(issues);
+  });
+});
+
 describe("설정 필드 분리", () => {
   it("설정 폼 값만 뽑고 다시 합쳐도 식별 필드·숨긴 필드를 잃지 않는다", () => {
     const agent = { ...dense, model: "m", resources: [{ ref: "r" }] } as unknown as Agent;

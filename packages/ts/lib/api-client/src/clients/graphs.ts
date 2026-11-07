@@ -32,6 +32,8 @@ export interface GraphsClient {
    * 다른 곳에서 먼저 저장했으면 `ApiError`(status 412, `versionConflict` 노출).
    */
   updateGraph(id: string, graph: Graph, versionHash: string): Promise<VersionedGraph>;
+  /** `updateGraph`와 같되 저장 경고(`X-Console-Issues`, 평문 비밀 등)를 `issues`로 함께 돌려준다. 412면 `ApiError.versionConflict`. */
+  updateGraphVersioned(id: string, graph: Graph, versionHash: string): Promise<Versioned<VersionedGraph>>;
   deleteGraph(id: string): Promise<void>;
   /** 팀 구성 복제(서버에서). 응답은 새 그래프(`VersionedGraph`, 임시 가정). */
   duplicateGraph(id: string, target: { id: string; name: string }): Promise<VersionedGraph>;
@@ -63,6 +65,7 @@ export function createGraphsClient(io: RestIo): GraphsClient {
     createGraphVersioned: (graph) => io.requestVersioned("POST", "/graphs", { body: graph }),
     getGraph: (id) => io.request("GET", `/graphs/${enc(id)}`),
     updateGraph: (id, graph, versionHash) => io.request("PUT", `/graphs/${enc(id)}`, { body: graph, headers: { "If-Match": versionHash } }),
+    updateGraphVersioned: (id, graph, versionHash) => io.requestVersioned("PUT", `/graphs/${enc(id)}`, { body: graph, headers: { "If-Match": versionHash } }),
     deleteGraph: (id) => io.request("DELETE", `/graphs/${enc(id)}`),
     duplicateGraph: (id, target) => io.request("POST", `/graphs/${enc(id)}/duplicate`, { body: target }),
     duplicateGraphVersioned: (id, target) => io.requestVersioned("POST", `/graphs/${enc(id)}/duplicate`, { body: target }),

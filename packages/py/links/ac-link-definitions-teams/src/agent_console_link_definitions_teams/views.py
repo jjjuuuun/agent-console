@@ -30,7 +30,14 @@ from agent_console_resources import (
     ResourceType,
     new_resource_types,
 )
-from agent_console_store import AGENT_KIND, GRAPH_KIND, RESOURCE_KIND, StoreError
+from agent_console_store import (
+    AGENT_KIND,
+    GRAPH_KIND,
+    RESOURCE_KIND,
+    DefinitionSpaces,
+    SpaceStores,
+    StoreError,
+)
 from agent_console_teams import (
     Layer,
     NodeSettings,
@@ -48,6 +55,7 @@ from agent_console_teams import (
 )
 
 from .ports import DefinitionLookup, Redactor, ScopeLayersSource
+from .resources import StoreResourceLookup
 
 
 class NodeNotFoundError(LookupError):
@@ -81,6 +89,8 @@ class TeamViews:
         redact: 응답 문자열 가림 함수.
         scopes: 지금 범위 층 공급자 목록(``settings.scope_layers``). 유효 설정의 ``scope``
             인자(예: 프로젝트 id)를 층으로 바꾼다. 없으면 범위를 무시한다.
+        spaces: 지금 정의 공간 제공자(``definitions.spaces``, 공간 이름 → 정의 저장소).
+            ``in_space``가 그 공간의 정의를 읽는다. 없으면 공간을 무시한다(늘 ``lookup``).
     """
 
     def __init__(
@@ -93,6 +103,7 @@ class TeamViews:
         types: Callable[[], Registry[ResourceType] | None] = lambda: None,
         redact: Callable[[], Redactor] = lambda: lambda text: text,
         scopes: Callable[[], Sequence[ScopeLayersSource]] = list,
+        spaces: Callable[[], DefinitionSpaces | None] = lambda: None,
     ) -> None:
         self.lookup = lookup
         self._catalog = catalog
@@ -101,8 +112,45 @@ class TeamViews:
         self._types = types
         self._redact = redact
         self._scopes = scopes
+        self._spaces = spaces
         self._empty_types: Registry[ResourceType] = new_resource_types()
         self._empty_resources = InMemoryResources()
+
+    # ------------------------------------------------------------ 공간
+
+    def in_space(self, space: str | None) -> TeamViews:
+        """그 공간(예: 프로젝트)의 정의·리소스를 읽는 계산 묶음(다른 재료는 같다).
+
+        리소스(유효 설정의 리소스 연결·묶음 미리보기 본문)는 그 공간 저장소에서 읽는다
+        (``StoreResourceLookup``). ``resources.lookup``이 없으면(리소스 기능 꺼짐) 빈 조회 그대로다.
+
+        공간 이름이 없거나 ``definitions.spaces`` 제공자가 없으면 자기 자신(``lookup``)이다.
+
+        Raises:
+            agent_console_store.UnknownSpace: 제공자가 모르는 공간(``project.not_found``).
+            agent_console_store.StoreError: 제공자가 그 공간을 열 수 없다.
+        """
+        provider = self._spaces()
+        if not space or provider is None:
+            return self
+        stores: SpaceStores[Any] = SpaceStores(self.lookup, lambda: provider)
+        store: DefinitionLookup = stores.get(space)
+        # 리소스도 그 공간 저장소에서 읽는다(리소스 기능이 꺼져 있으면 그대로 빈 조회).
+        space_resources = StoreResourceLookup(store)
+
+        def resources() -> ResourceLookup | None:
+            return space_resources if self._resources() is not None else None
+
+        return TeamViews(
+            store,
+            catalog=self._catalog,
+            workspace=self._workspace,
+            resources=resources,
+            types=self._types,
+            redact=self._redact,
+            scopes=self._scopes,
+            spaces=self._spaces,
+        )
 
     # ------------------------------------------------------------ 재료
 

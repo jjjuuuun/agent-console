@@ -25,7 +25,7 @@
   ``observe_event_prefixes``, 기본 = 패키지 데이터 ``data/observe_event_prefixes.json``)
 - 자식 Run(design §5R.7·§5R.11): ``GET /runs?root=<id>``(그 루트 아래 모든 자손),
   ``GET /runs/{id}``의 ``children``(직접 자식, 만든 순). 취소는 엔진이 자식에 전파한다.
-- 에이전트 활동: ``GET /agents/{id}/activity``
+- 에이전트 활동: ``GET /agents/{id}/activity``(``?project=`` = 그 프로젝트 기록 DB)
 - 프로젝트 기록 DB(5.7R.33y2, design §PI.4.6.3·.5·.7): Run 경로는 ``?project=<등록 id>``를 받는다.
   기록 공간 포트가 있으면 그 프로젝트 기록 DB에서 읽고(파일이 없으면 빈 목록), 없으면 호스트 DB에서
   ``project_id``로 거른다. 목록 ``?source=app`` = 그 ``project_id``를 가진 앱 DB 옛 기록(읽기 전용
@@ -38,7 +38,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
@@ -90,6 +90,7 @@ from agent_console_store import (
     assign_project,
     count_projects,
     page_across_sources,
+    to_project_counts,
 )
 
 from .errors import (
@@ -166,6 +167,7 @@ def build_router(
     observe_event_prefixes: Sequence[str] = DEFAULT_OBSERVE_EVENT_PREFIXES,
     projects: Callable[[], ProjectAssignStore] | None = None,
     mover: Callable[[], RunMover] | None = None,
+    counts: Callable[[], Mapping[str | None, int]] | None = None,
 ) -> APIRouter:
     """실행 모듈 라우터.
 
@@ -180,6 +182,9 @@ def build_router(
         projects: 프로젝트 넣기·개수 포트(``project_id``를 가진 Run 저장소).
             None이면 두 경로를 붙이지 않는다.
         mover: 앱 DB 옛 기록 옮기기(``POST /runs/move-to-project``). None이면 경로를 붙이지 않는다.
+        counts: ``GET /runs/project-counts``의 ``project_id``별 루트 Run 수(예: 호스트 DB + 프로젝트
+            기록 DB, ``SpaceRecorder.project_id_counts``). None이면 ``projects``의 개수(호스트
+            DB만).
         observe_event_prefixes: ``GET /observe-event-prefixes``가 내는 관측 탭 이벤트 type 접두어
             (기본 = 패키지 기본 데이터, 빈 목록 = 관측 탭 끔).
     """
@@ -320,7 +325,10 @@ def build_router(
         # 고정 경로는 ``/runs/{run_id}``보다 먼저 등록한다.
         @router.get("/runs/project-counts", response_model=ProjectCounts, responses=errors())
         async def run_project_counts() -> ProjectCounts:
-            """``project_id``별 루트 Run 수(자식 제외, 프로젝트 없음 = ``no_project``)."""
+            """``project_id``별 루트 Run 수(자식 제외, 프로젝트 없음 = ``no_project``). 프로젝트
+            기록 DB에 있는 Run도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때)."""
+            if counts is not None:
+                return to_project_counts(await run_in_threadpool(counts))
             return count_projects(projects())
 
         @router.post("/runs/assign-project", response_model=AssignProjectResult, responses=errors())
@@ -571,9 +579,15 @@ def build_router(
     async def agent_activity(
         agent_id: str,
         limit: Annotated[int, Query(ge=1, le=MAX_ACTIVITY_LIMIT)] = activity_limit,
+        project: str | None = None,
     ) -> list[RunEvent]:
         """이 에이전트(actor)가 낸 최근 이벤트, 실행을 가로질러 최신순
-        (묶음은 화면이 ``run_id``로)."""
+        (묶음은 화면이 ``run_id``로). ``project`` = 그 프로젝트 기록 DB에서 읽는다(기록 공간이
+        있는 조립, 파일이 없으면 빈 목록, 모르는 프로젝트 404). 기록 공간이 없으면 앱 DB."""
+        svc = service()
+        if project is not None and svc.records is not None and svc.records.spaced:
+            reader = svc.records.for_project(project)
+            return await run_in_threadpool(reader.events_by_actor, agent_id, limit=limit)
         found: list[RunEvent] = events().list_by_actor(agent_id, limit=limit)
         return found
 

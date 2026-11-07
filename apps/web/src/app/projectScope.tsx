@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 
 /**
  * 현재 프로젝트를 담는 주소 쿼리 이름. 로그 필터 `project`(로그 묶음 id)와 이름이 겹치면 안 되므로 따로 둔다.
@@ -33,4 +33,26 @@ export function useProjectId(): string | null {
 /** `project_id` 필드 조각(공용이면 빈 객체). 본문에 `...projectBody(id)`로 펼친다. */
 export function projectBody(id: string | null): { project_id?: string } {
   return id === null ? {} : { project_id: id };
+}
+
+/**
+ * 주소로 다른 프로젝트의 대화·실행을 연 뒤 현재 프로젝트를 그쪽으로 바꾸는 함수를 알리는 컨텍스트
+ * (프로젝트 기능이 공급, 없으면 undefined = 바꿀 프로젝트가 없음). 기능 폴더 사이 import 없이 쓰게 한다.
+ */
+export const AdoptProjectContext = createContext<((id: string) => void) | undefined>(undefined);
+
+/**
+ * 찾기(locate)로 알게 된 프로젝트(`located`)가 현재 프로젝트와 다르면 현재 프로젝트를 그쪽으로 바꾼다
+ * (주소 `?prj=`는 프로젝트 기능이 history replace로 맞춘다). 같은 프로젝트로는 한 번만 바꾸므로
+ * 사용자가 나중에 직접 다른 프로젝트를 고르면 되돌리지 않는다.
+ */
+export function useAdoptLocatedProject(located: string | null | undefined): void {
+  const current = useProjectId();
+  const adopt = useContext(AdoptProjectContext);
+  const done = useRef<string | null>(null);
+  useEffect(() => {
+    if (adopt === undefined || located === undefined || located === null || located === current || done.current === located) return;
+    done.current = located;
+    adopt(located);
+  }, [adopt, located, current]);
 }
