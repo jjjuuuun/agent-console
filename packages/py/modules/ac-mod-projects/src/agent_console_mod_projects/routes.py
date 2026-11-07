@@ -14,6 +14,7 @@
 | ``POST /projects/copy/apply`` | ``CopyApplyRequest`` → ``CopyApplyResult`` |
 | ``GET /projects/copy/kinds?project=`` | → ``CopyKindInfo[]``(그 공간의 복사 종류, 6R.20a) |
 | ``GET /projects/copy/items?project=&kind=`` | → ``CopyItem[]``(그 공간의 정의 목록) |
+| ``DELETE /projects/copy/items/{kind}/{id}?project=`` | (+``If-Match``) → 204(종류 공통 삭제) |
 | ``GET /projects/folders?path=&hidden=`` | → ``FolderListing`` |
 | ``POST /projects/folders/check`` | ``FolderCheckRequest`` → ``FolderCheck`` |
 | ``GET /projects/folders/capabilities`` | → ``FolderCapabilities`` |
@@ -190,6 +191,21 @@ def build_router(services: Services) -> APIRouter:
         ref = _space_ref(space)
         items = await asyncio.to_thread(s.copies().items, ref, kind)
         return JSONResponse([i.model_dump(mode="json") for i in items])
+
+    @router.delete("/projects/copy/items/{kind}/{item_id}", status_code=204, responses=errors(412))
+    async def delete_item(
+        kind: str, item_id: str, space: SpaceQuery = None, if_match: IfMatchHeader = None
+    ) -> Response:
+        """그 공간의 항목 하나를 지운다(204, 종류 공통). ``CopyKindInfo.deletable``이 참인 종류만
+        (아니면 400 ``bad_request`` ``details.reason = not_deletable``). 없는 종류·항목은 404, 쓸 수
+        없는 프로젝트 폴더는 409 ``project.config_readonly``, ``If-Match`` 불일치는 412. 참조 검사는
+        종류별 삭제 경로처럼 하지 않는다."""
+        ref = _space_ref(space)
+        expected = if_match_version(if_match)
+        await asyncio.to_thread(
+            lambda: s.copies().delete_item(ref, kind, item_id, expected_version=expected)
+        )
+        return Response(status_code=204)
 
     # ---------------------------------------------------------------- (deprecated) 옛 범위
 

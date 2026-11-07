@@ -503,6 +503,31 @@ class SddService:
         except ValidationError:
             return []
 
+    # ------------------------------------------------------------ 삭제
+    def delete_spec(
+        self, space: str | None, spec_id: str, *, expected_version: str | None = None
+    ) -> None:
+        """스펙 삭제(정의와 본문 파일, 실행 기록은 그대로) + ``sdd.changed`` ``deleted``.
+
+        ``DELETE /sdd/specs/{id}``와 종류 공통 삭제(종류 기여 ``delete``)가 함께 쓴다.
+
+        Raises:
+            SpecNotFoundError: 없다(404). 버전 불일치는 ``VersionConflict``(412).
+        """
+        sc = self.scope(space)
+        sc.repository.delete(spec_id, expected_version=expected_version)
+        self.notify(sc.name, spec_id, deleted=True)
+
+    def delete_template(
+        self, space: str | None, template_id: str, *, expected_version: str | None = None
+    ) -> None:
+        """문서 틀 삭제(정의와 본문 파일, 이미 만든 스펙에는 영향 없음).
+
+        Raises:
+            SpecNotFoundError: 없다(404). 버전 불일치는 ``VersionConflict``(412).
+        """
+        self.scope(space).repository.delete_template(template_id, expected_version=expected_version)
+
     # ------------------------------------------------------------ 알림
     def notify(
         self,

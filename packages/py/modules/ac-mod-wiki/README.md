@@ -94,7 +94,7 @@ notes [('other', 'broken')]
 | 포트 | 방향 | 모양 |
 | --- | --- | --- |
 | `wiki.service` | 제공 | `WikiServicePort`: `settings()`·`wiki_ids(space)`·`repository(space, wiki)`·`tool_targets(space)`·`notify(space, wiki, paths)` (+ 구현 `WikiService`의 `scope(space)`) |
-| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references)` 두 개 |
+| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references, title, delete)` 두 개(`delete` = 자기 삭제 경로와 같은 일, 종류 공통 삭제가 부른다) |
 | `server.warnings` | 제공(여러) | 설정 형식 문제·설치되지 않은 쓰기 검사 |
 | `wiki.spaces` | 선택 | `WikiSpaces.open(space) -> WikiSpace{store, config_writable, pages_root[, pages_dir, config_dir, index_dir]}` |
 | `records.spaces` | 선택 | `agent_console_store.RecordsSpaces`(공간 이름 = `records_space_prefix` + 프로젝트 id) |

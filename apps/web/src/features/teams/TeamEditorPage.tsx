@@ -17,6 +17,8 @@ import { messages as m } from "../../app/messages";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
 import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
+import { resolveNodePath } from "../../lib/nodePath";
+import { readSavedIssues, savedIssuesState, useCarriedSaveIssues } from "../../definition/savedIssuesState";
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
@@ -96,6 +98,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const now = useNow(true, 30_000);
   // 중첩 팀 [열기]로 들어왔으면 부모 정보(브레드크럼·U 키). 주소 직접 입력·새로고침이면 없다.
   const openedFrom = readOpenedFrom(location.state);
+  const carriedIssues = readSavedIssues(location.state);
+  // 서랍에서 방금 만든 정의의 저장 경고(이 팀 저장 경고와 따로 보인다)
+  const [createdIssues, setCreatedIssues] = useState<readonly Issue[]>([]);
   const [nav, setNav] = useState<{ path: string; state?: unknown } | null>(null);
   const [leaving, setLeaving] = useState(false);
 
@@ -104,6 +109,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     load: (r) => loadGraph(r, id),
     save: (r, value, hash) => saveGraph(r, value, hash),
   });
+  const shownSaveIssues = useCarriedSaveIssues(editor.saveIssues, carriedIssues);
   const nodeTypes = useNodeTypes();
   const edgeTypes = useEdgeTypes();
   const agents = useAgentList();
@@ -128,6 +134,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const fixTarget = useFixTarget();
   const [fixFocusPath, setFixFocusPath] = useState<string | null>(null);
   const [fixDone, setFixDone] = useState(false);
+  const [fixNote, setFixNote] = useState<string | null>(null);
   const [pageTab, setPageTab] = useState<PageTab>(() => (params.get("tab") === "versions" ? "versions" : "edit"));
   const [selection, setSelection] = useState<Selection>({ nodeIds: [], edgeIds: [] });
   const [nodeTab, setNodeTab] = useState("role");
@@ -189,12 +196,17 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   // 렌더 중 상태 조정(한 번): 팀 구성을 읽은 뒤 해당 노드가 있으면 고르고 [설정] 탭으로 간다.
   if (!fixDone && fixNodeId !== null && draftNodes !== undefined) {
     setFixDone(true);
-    if (draftNodes.some((n) => n.id === fixNodeId)) {
+    // 서버가 중첩 팀 경로형 id(`T/a`)를 줄 수 있다: 루트에 있는 첫 조각(팀 노드)을 고르고 나머지 경로는 문구로 알린다
+    const hit = resolveNodePath(fixNodeId, (nid) => draftNodes.some((n) => n.id === nid));
+    if (hit === undefined) {
+      setFixNote(t.add.nodeMissingNote(fixNodeId));
+    } else {
+      if (hit.rest !== "") setFixNote(t.add.nestedNodeNote(hit.nodeId, hit.rest));
       setForceTeam(false);
       setPanelOpen(true);
-      setNodeTab("settings");
-      setFocus((cur) => ({ nodeId: fixNodeId, token: (cur?.token ?? 0) + 1 }));
-      if (fixFocus !== null) setFixFocusPath(fixFocus);
+      setNodeTab(hit.rest === "" ? "settings" : "role");
+      setFocus((cur) => ({ nodeId: hit.nodeId, token: (cur?.token ?? 0) + 1 }));
+      if (fixFocus !== null && hit.rest === "") setFixFocusPath(fixFocus);
     }
   }
 
@@ -635,6 +647,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     const before = draft;
     const result = applyDefinition(created.kind, { id: created.id, name: created.name }, created.attach);
     setCreating(null);
+    setCreatedIssues(created.issues ?? []);
     if (created.bodyFailed === true) toast({ tone: "warning", text: t.add.createdBodyFailed(created.name) });
     else if (result === "none") toast({ tone: "success", text: t.add.createdOnly(created.name) });
     else if (result === "node" && attachNode !== undefined) toast({ tone: "success", text: t.add.attachedNode(created.name, attachNode.label), action: { label: t.node.undo, onClick: () => editor.setDraft(before) } });
@@ -768,7 +781,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
           onOverwrite={() => void editor.overwrite()}
         />
       )}
-      <SaveIssuesBanner issues={editor.saveIssues} />
+      {fixNote === null ? null : <Banner tone="info">{fixNote}</Banner>}
+      <SaveIssuesBanner issues={shownSaveIssues} />
+      <SaveIssuesBanner issues={createdIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
       {chat.error ? <Banner tone="danger">{chat.error}</Banner> : null}
       <HintBanner id="teams" satisfied={overview !== undefined && startConditionsMet(overview)}><HintOneLine short={t.layout.hintShort} full={t.editor.hint} /></HintBanner>
@@ -951,7 +966,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
 
       {exportAction.dialog}
       {dialog === "duplicate" ? (
-        <DuplicateTeamDialog sourceId={id} sourceName={draft.name} existingIds={new Set()} onClose={() => setDialog(null)} onCreated={(newId) => { setDialog(null); void navigate(`${basePath}/${encodeURIComponent(newId)}`); }} />
+        <DuplicateTeamDialog sourceId={id} sourceName={draft.name} existingIds={new Set()} onClose={() => setDialog(null)} onCreated={(newId, issues) => { setDialog(null); const state = savedIssuesState(issues); void navigate(`${basePath}/${encodeURIComponent(newId)}`, state === undefined ? undefined : { state }); }} />
       ) : null}
       {dialog === "delete" ? (
         <DeleteDialog

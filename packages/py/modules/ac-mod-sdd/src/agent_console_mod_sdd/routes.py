@@ -309,10 +309,7 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
         spec_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
     ) -> Response:
         """삭제(정의와 본문 파일, 실행 기록은 그대로)."""
-        svc = service()
-        sc = svc.scope(space)
-        sc.repository.delete(spec_id, expected_version=if_match_version(if_match))
-        svc.notify(sc.name, spec_id, deleted=True)
+        service().delete_spec(space, spec_id, expected_version=if_match_version(if_match))
         return Response(status_code=204)
 
     @router.post("/sdd/specs/{spec_id}/check", response_model=RulesCheckResult, responses=errors())

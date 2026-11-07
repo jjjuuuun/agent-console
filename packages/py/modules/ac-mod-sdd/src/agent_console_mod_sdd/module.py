@@ -251,12 +251,24 @@ class SddModule:
         ctx.provide(
             KIND_CONTRIBUTIONS,
             KindContribution(
-                template_kind, references=template_references, title=TEMPLATE_KIND_TITLE
+                template_kind,
+                references=template_references,
+                title=TEMPLATE_KIND_TITLE,
+                delete=lambda space, item_id, expected: service.delete_template(
+                    space, item_id, expected_version=expected
+                ),
             ),
         )
         ctx.provide(
             KIND_CONTRIBUTIONS,
-            KindContribution(spec_kind, references=template_references, title=SPEC_KIND_TITLE),
+            KindContribution(
+                spec_kind,
+                references=template_references,
+                title=SPEC_KIND_TITLE,
+                delete=lambda space, item_id, expected: service.delete_spec(
+                    space, item_id, expected_version=expected
+                ),
+            ),
         )
 
         def warnings() -> list[Issue]:

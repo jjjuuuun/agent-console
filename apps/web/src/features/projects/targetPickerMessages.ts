@@ -66,6 +66,8 @@ export const targetPickerMessages = {
     recordsBusy: "다른 앱이 기록 파일을 쓰고 있어 시작하지 못했습니다",
     retry: "다시 시도",
     configReadonly: "이 폴더에는 쓸 수 없어 구성을 가져오거나 고치지 못했습니다",
+    /** 중첩 팀 안 노드라면 팀 노드 아래 경로를 덧붙인다 */
+    outsideFolderAt: (nodePath: string) => ` — 노드 경로 ${nodePath}`,
     outsideFolder: (path: string, layer: string) => `‘${path}’는 프로젝트 폴더 밖입니다${layer === "" ? "" : ` (출처: ${layer})`}`,
     openSettings: "설정 열기",
     dismiss: "취소",

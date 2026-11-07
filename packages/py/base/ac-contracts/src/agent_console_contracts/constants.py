@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.4"
+CONTRACTS_VERSION: Final = "0.14.5"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -44,7 +44,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "definitions": "1.7.0",
     "runs": "1.8.0",
     "usage": "1.1.0",
-    "projects": "3.4.0",
+    "projects": "3.5.0",
     "chat": "1.3.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
@@ -90,7 +90,9 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 0.14.3(plugins.disabled 후속, 더하기만): `modules` 1.6.0(`PluginInfo.reason` — skipped·disabled
 플러그인의 끈 이유).
 0.14.4(묶음 4b V1, 더하기만): `projects` 3.4.0(`CopyPlanItem.blocked`·`issues` — 복사 계획이 대상
-공간이 거절할 항목(평문 비밀 `secret.plain_found`)을 적용 전에 알린다)."""
+공간이 거절할 항목(평문 비밀 `secret.plain_found`)을 적용 전에 알린다).
+0.14.5(요청 11/07 후속, 더하기만): `projects` 3.5.0(`CopyKindInfo.deletable` — 종류 공통 항목 삭제
+경로 `DELETE /projects/copy/items/{kind}/{id}`로 지울 수 있는 종류)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,

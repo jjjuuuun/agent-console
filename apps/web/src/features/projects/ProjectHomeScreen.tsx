@@ -24,7 +24,7 @@ import { RecentActivityCard } from "./RecentActivityCard";
 import { SETTINGS_PROJECTS_HASH } from "./sectionId";
 import { NEW_PARAM } from "./newParam";
 import { useCopyDialog } from "./useCopyDialog";
-import { KIND_DELETERS, useProjectActivity, useProjectConfig, type ConfigRow } from "./useProjectHomeData";
+import { useProjectActivity, useProjectConfig, type ConfigRow } from "./useProjectHomeData";
 
 const text = createProjectsText();
 const STATUS_ICON: Readonly<Record<string, string>> = {
@@ -72,7 +72,7 @@ function LoginLine() {
 export function ProjectHomeScreen() {
   const { id = "" } = useParams();
   const p = useProjects();
-  const { rest, space } = useApi();
+  const { rest } = useApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
@@ -141,7 +141,7 @@ export function ProjectHomeScreen() {
         ...(saveBlock === undefined ? {} : { disabled: true, title: saveBlock }),
         onSelect: () => copyDialog.open({ direction: "save", project: id, start: "plan", items: [{ kind: row.kind, id: row.id }] }),
       },
-      ...(Object.hasOwn(KIND_DELETERS, row.kind)
+      ...(row.deletable
         ? [{ id: "delete", label: m.home.configDelete, danger: true, ...(editBlock === undefined ? {} : { disabled: true, title: editBlock }), onSelect: () => setDeleting(row) }]
         : []),
     ];
@@ -151,11 +151,14 @@ export function ProjectHomeScreen() {
     setDeleting(null);
     if (row === null) return;
     try {
-      await (KIND_DELETERS[row.kind] as NonNullable<(typeof KIND_DELETERS)[string]>)(space(id), row.id);
+      // 목록이 항목 버전을 주지 않으므로 If-Match 없이 지운다(버전을 알게 되면 opts.ifMatch로 넘긴다)
+      await rest.deleteCopyItem(id, row.kind, row.id);
       await queryClient.invalidateQueries({ queryKey: ["list"] });
       toast({ tone: "success", text: m.home.configDeleted(row.name) });
     } catch (e) {
-      toast({ tone: "danger", text: describeError(e, m.home.configDeleteFailed).message });
+      const view = describeError(e, m.home.configDeleteFailed);
+      if (view.status === 412) await queryClient.invalidateQueries({ queryKey: ["list"] });
+      toast({ tone: "danger", text: view.status === 412 ? m.home.configDeleteConflict : view.message });
     }
   };
 

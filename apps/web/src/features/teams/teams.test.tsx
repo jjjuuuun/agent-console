@@ -57,8 +57,8 @@ describe("팀 구성 목록", () => {
   });
 
   it("새 팀 구성은 속성으로 찾은 사용자 노드 하나로 시작한다(타입 이름 비교 없음)", async () => {
-    const createGraph = vi.fn(async (g: { id: string }) => ({ graph: g, version_hash: "n1" }));
-    const { clients } = rest({ listGraphs: vi.fn(async () => graphs), createGraph });
+    const createGraph = vi.fn(async (g: { id: string }) => ({ value: { graph: g, version_hash: "n1" }, version_hash: "n1" }));
+    const { clients } = rest({ listGraphs: vi.fn(async () => graphs), createGraphVersioned: createGraph });
     mountApp(clients, "/teams");
     await screen.findByRole("grid", { name: "팀 구성 목록" });
     fireEvent.click(screen.getByRole("button", { name: /새 팀 구성/ }));
@@ -88,9 +88,9 @@ describe("팀 구성 목록", () => {
   });
 
   it("복제는 서버 복제 API로, 삭제는 이 팀으로 만든 대화 수를 안내한다", async () => {
-    const duplicateGraph = vi.fn(async (_id: string, t: { id: string }) => ({ graph: { id: t.id }, version_hash: "d1" }));
+    const duplicateGraph = vi.fn(async (_id: string, t: { id: string }) => ({ value: { graph: { id: t.id }, version_hash: "d1" }, version_hash: "d1" }));
     const deleteGraph = vi.fn(async () => undefined);
-    const { clients } = rest({ listGraphs: vi.fn(async () => graphs), duplicateGraph, deleteGraph, listConversations: vi.fn(async () => [{ id: "c1" }, { id: "c2" }]) });
+    const { clients } = rest({ listGraphs: vi.fn(async () => graphs), duplicateGraphVersioned: duplicateGraph, deleteGraph, listConversations: vi.fn(async () => [{ id: "c1" }, { id: "c2" }]) });
     mountApp(clients, "/teams");
     const grid = await screen.findByRole("grid", { name: "팀 구성 목록" });
     fireEvent.click(within(within(grid).getAllByRole("row")[1]!).getByRole("button", { name: /행 메뉴/ }));

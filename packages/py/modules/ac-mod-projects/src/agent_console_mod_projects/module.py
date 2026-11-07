@@ -50,6 +50,7 @@ from .copying import CopyService
 from .definitions import (
     DefinitionSnapshot,
     combine_references,
+    contribution_deleters,
     contribution_references,
     contribution_titles,
 )
@@ -340,6 +341,7 @@ class ProjectsModule:
             messages=cfg.messages,
             kind_info=lambda: library_kinds(reader(), ctx.ports(KIND_CONTRIBUTIONS)),
             kind_titles=lambda: contribution_titles(ctx.ports(KIND_CONTRIBUTIONS)),
+            kind_deleters=lambda: contribution_deleters(ctx.ports(KIND_CONTRIBUTIONS)),
         )
         snapshot = DefinitionSnapshot(
             reader, ttl=cfg.snapshot_ttl_seconds, skip_kinds=(PROJECT_KIND_NAME,)

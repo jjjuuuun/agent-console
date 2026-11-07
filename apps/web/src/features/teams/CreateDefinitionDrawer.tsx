@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "@agent-console/api-client";
-import type { ResourceTypeDescriptor } from "@agent-console/contracts";
+import type { Issue, ResourceTypeDescriptor } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
@@ -24,6 +24,8 @@ export interface CreatedDefinition {
   attach: AttachTarget;
   /** 정의는 만들었지만 본문 저장에 실패했다(리소스) */
   bodyFailed?: boolean;
+  /** 서버가 만들며 경고한 이슈(`X-Console-Issues`, 평문 비밀 등). 호출자가 `SaveIssuesBanner`로 보인다 */
+  issues?: readonly Issue[];
 }
 
 export interface CreateDefinitionDrawerProps {
@@ -65,9 +67,9 @@ function AgentDrawer({ kind, kindTitle, existingIds, onCreated, onClose }: Creat
     setFieldErrors([]);
     try {
       const body = draft.toBody();
-      await rest.createAgent(body);
+      const saved = await rest.createAgentVersioned(body);
       await invalidate();
-      onCreated({ kind, id: body.id, name: body.name, attach: "none" });
+      onCreated({ kind, id: body.id, name: body.name, attach: "none", ...(saved.issues === undefined ? {} : { issues: saved.issues }) });
     } catch (e) {
       setError(describeError(e, t.drawer.failed).message);
       setFieldErrors(e instanceof ApiError && e.status === 422 ? issuesToFormErrors(e.details["issues"]) : []);
@@ -110,7 +112,7 @@ function ResourceDrawer({ kind, kindTitle, existingIds, resourceTypes, attachNod
     try {
       const outcome = await createResourceDoc(rest, doc, resourceTypes);
       await invalidate();
-      onCreated({ kind, id: outcome.resource.id, name: outcome.resource.name, attach: target, ...(outcome.bodyError === undefined ? {} : { bodyFailed: true }) });
+      onCreated({ kind, id: outcome.resource.id, name: outcome.resource.name, attach: target, ...(outcome.bodyError === undefined ? {} : { bodyFailed: true }), ...(outcome.issues === undefined ? {} : { issues: outcome.issues }) });
     } catch (e) {
       setError(describeError(e, t.drawer.failed).message);
       setFieldErrors(e instanceof ApiError && e.status === 422 ? issuesToFormErrors(e.details["issues"]) : []);

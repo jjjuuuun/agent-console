@@ -4629,6 +4629,10 @@ export interface CopyKindInfo {
    * 종류 표시 이름(3.3.0, 사용자 언어). 종류를 기여한 모듈의 서술자가 준다. null = 서버가 모름(화면은 종류 이름을 그대로 보인다).
    */
   title?: string | null;
+  /**
+   * (3.5.0) 이 공간에서 종류 공통 삭제 경로 `DELETE /projects/copy/items/{kind}/{id}`로 항목을 지울 수 있다. 기본 종류(라이브러리 저장소 종류)는 true, 기여 종류는 기여 모듈이 삭제 수단을 주면 true. false = 수단 없음(그 기능 화면에서만 지운다) 또는 옛 서버.
+   */
+  deletable?: boolean;
 }
 /**
  * `POST /projects/copy/plan` 응답(저장하지 않음).
@@ -13267,7 +13271,7 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.4" as const;
+export const CONTRACTS_VERSION = "0.14.5" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.12.0",
@@ -13276,7 +13280,7 @@ export const CONTRACT_VERSIONS = {
   "definitions": "1.7.0",
   "runs": "1.8.0",
   "usage": "1.1.0",
-  "projects": "3.4.0",
+  "projects": "3.5.0",
   "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",

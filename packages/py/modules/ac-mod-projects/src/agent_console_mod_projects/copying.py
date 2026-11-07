@@ -16,6 +16,10 @@
   안전망으로 남는다.
 - 문구의 ``${target}``은 대상 공간 이름(공용 구성 / 따옴표 친 프로젝트 이름,
   ``copy_target_label``).
+- 종류 공통 항목 삭제(``delete_item``): 기본 종류(종류 기여가 아닌 것)는 공간 저장소에서 바로
+  지우고, 기여 종류는 기여의 ``delete`` 콜백(제공 모듈의 자기 삭제 경로와 같은 일)을 부른다.
+  콜백이 없는 기여 종류는 지울 수 없다(``CopyKindInfo.deletable`` false). 참조 검사는 하지
+  않는다(종류별 삭제 경로와 같은 규칙 — 참조하던 쪽은 다음 검증에서 이슈로 보인다).
 """
 
 from __future__ import annotations
@@ -73,6 +77,10 @@ from .errors import ProjectError
 from .spaces import ProjectSpaceCache
 
 type DefinitionId = tuple[str, str]
+
+type ItemDelete = Callable[[str | None, str, str | None], None]
+"""기여 종류 항목 지우기 ``(공간 = 프로젝트 id | None, id, 기대 버전 | None)``(키트
+``KindDelete``와 같은 모양)."""
 
 LIBRARY_LABEL = "library"
 """라이브러리 공간 표시 이름(버전 기록 메시지)."""
@@ -222,6 +230,9 @@ class CopyService:
             대화상자 메타데이터(``kinds``·``items``)가 쓴다. 없으면 두 목록이 빈다.
         kind_titles: 종류 표시 이름 ``{종류 이름: title}``(종류 기여의 ``title``). ``kinds``가
             ``CopyKindInfo.title``로 싣고, 없는 종류는 null(화면이 종류 이름을 보인다).
+        kind_deleters: 기여 종류의 삭제 수단 ``{종류 이름: 콜백 | None}``(종류 기여의 ``delete``).
+            None 값 = 그 종류는 종류 공통 경로로 지울 수 없다. 여기 없는 종류(기본 종류)는 공간
+            저장소에서 바로 지운다.
     """
 
     def __init__(
@@ -237,10 +248,12 @@ class CopyService:
         messages: Mapping[str, str] | None = None,
         kind_info: Callable[[], Sequence[DefinitionKind]] = lambda: (),
         kind_titles: Callable[[], Mapping[str, str]] = lambda: {},
+        kind_deleters: Callable[[], Mapping[str, ItemDelete | None]] = lambda: {},
     ) -> None:
         self._library = library
         self._kind_info = kind_info
         self._kind_titles = kind_titles
+        self._kind_deleters = kind_deleters
         self._spaces = spaces
         self._known = known
         self._references = references
@@ -287,9 +300,12 @@ class CopyService:
         ``library``·``portable``은 종류 값 그대로라 화면이 방향(공용 → 프로젝트는 ``portable``,
         프로젝트 → 공용은 ``library``)으로 거른다. 종류 이름을 모르는 화면도 같은 목록을 쓴다.
         """
-        space = self.space(ref, target=False)
+        return self._kinds(self.space(ref, target=False))
+
+    def _kinds(self, space: Space) -> list[CopyKindInfo]:
         info = {k.name: k for k in self._kind_info()}
         titles = self._kind_titles()
+        deleters = self._kind_deleters()
         present = space.kinds if space.kinds is not None else tuple(space.store.kinds())
         out: list[CopyKindInfo] = []
         for name in present:
@@ -302,6 +318,7 @@ class CopyService:
                     library=kind.library,
                     portable=kind.is_portable,
                     title=titles.get(name) or None,
+                    deletable=name not in deleters or deleters[name] is not None,
                 )
             )
         return out
@@ -339,6 +356,48 @@ class CopyService:
                 for s in summaries
             )
         return out
+
+    def delete_item(
+        self, ref: SpaceRef, kind: str, item_id: str, *, expected_version: str | None = None
+    ) -> None:
+        """그 공간의 항목 하나를 종류 공통으로 지운다.
+
+        Args:
+            ref: 공간(``project_id`` None = 라이브러리).
+            kind: 정의 종류(``kinds``에 있는 것).
+            item_id: 항목 id.
+            expected_version: ``If-Match``(None = 확인 안 함).
+
+        Raises:
+            ProjectError: 모르는 공간(404 ``project.not_found``)·이 공간에 없는 종류(404
+                ``not_found``)·지울 수 없는 종류(400 ``bad_request``, ``details.reason``
+                ``not_deletable``).
+            NotFound: 항목이 없다(404).
+            ConfigReadonly: 프로젝트 구성 폴더에 쓸 수 없다(409).
+            VersionConflict: ``expected_version``이 지금 버전과 다르다(412).
+        """
+        space = self.space(ref, target=False)
+        info = next((k for k in self._kinds(space) if k.kind == kind), None)
+        if info is None:
+            raise ProjectError(
+                ErrorCodes.NOT_FOUND,
+                f"이 공간에 없는 종류입니다: {kind}",
+                {"kind": kind},
+            )
+        if not info.deletable:
+            raise ProjectError(
+                ErrorCodes.BAD_REQUEST,
+                f"이 종류는 여기서 지울 수 없습니다: {kind}",
+                {"kind": kind, "reason": "not_deletable"},
+            )
+        space.store.get(kind, item_id)  # 없으면 NotFound(404), 잘못된 id는 InvalidIdentifier
+        if not space.writable:
+            raise ConfigReadonly("the project folder is read-only")
+        deleter = self._kind_deleters().get(kind)
+        if deleter is None:
+            space.store.delete(kind, item_id, expected_version=expected_version)
+        else:
+            deleter(ref.project_id, item_id, expected_version)
 
     def _pair(self, source: SpaceRef, target: SpaceRef) -> tuple[Space, Space]:
         if source.project_id == target.project_id:
@@ -542,6 +601,7 @@ __all__ = [
     "LIBRARY_LABEL",
     "Body",
     "CopyService",
+    "ItemDelete",
     "Space",
     "combine_rewriters",
     "read_body",

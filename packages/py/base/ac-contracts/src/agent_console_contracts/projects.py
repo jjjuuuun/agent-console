@@ -10,6 +10,9 @@
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
 
+3.5.0(0.14.5, 더하기만): 종류 공통 항목 삭제(`DELETE /projects/copy/items/{kind}/{id}?project=`)와
+그 종류가 이 경로로 지워지는지 `CopyKindInfo.deletable`.
+
 3.4.0(0.14.4, 더하기만): 복사 계획 항목의 막힘 `CopyPlanItem.blocked`와 항목 이슈
 `CopyPlanItem.issues`(대상 공간이 거절할 평문 비밀 `secret.plain_found`, 값 없음).
 
@@ -739,6 +742,15 @@ class CopyKindInfo(ContractModel):
         description=(
             "종류 표시 이름(3.3.0, 사용자 언어). 종류를 기여한 모듈의 서술자가 준다. null = 서버가 "
             "모름(화면은 종류 이름을 그대로 보인다)."
+        ),
+    )
+    deletable: bool = Field(
+        default=False,
+        description=(
+            "(3.5.0) 이 공간에서 종류 공통 삭제 경로 `DELETE /projects/copy/items/{kind}/{id}`로 "
+            "항목을 지울 수 있다. 기본 종류(라이브러리 저장소 종류)는 true, 기여 종류는 기여 "
+            "모듈이 삭제 수단을 주면 true. false = 수단 없음(그 기능 화면에서만 지운다) 또는 옛 "
+            "서버."
         ),
     )
 

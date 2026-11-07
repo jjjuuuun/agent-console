@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import type { SpaceRestClient } from "@agent-console/api-client";
 import type { CopyKindInfo, ProjectView } from "@agent-console/contracts/projects";
 import { useApi } from "../../app/ApiContext";
 import { lookupMessage } from "../../app/messages";
 import { DEFAULT_ROUTES, routeServing } from "../../shell/routeConfig";
-import { DEFINITION_KINDS, ROUTE_ROLES, definitionPath, useRouteOn } from "../library";
+import { ROUTE_ROLES, definitionPath, useRouteOn } from "../library";
 import { mergeActivity, type ActivityRow } from "./projectHomeLib";
 
 /** 구성 표의 한 행. 종류 이름은 코드에 없다(`kind`는 서버가 준 문자열, 제목은 라우트 데이터에서). */
@@ -19,14 +18,9 @@ export interface ConfigRow {
   modifiedAt: number | undefined;
   /** 편집 화면 주소(`?prj=`). 이 종류의 편집 화면이 없으면 undefined */
   href: string | undefined;
+  /** 서버가 이 종류를 지울 수 있다고 알렸는가(`CopyKindInfo.deletable`, 옛 서버면 없음 = false) */
+  deletable: boolean;
 }
-
-/** 종류별 삭제(데이터 표): 정의 종류 -> 공간 클라이언트로 하나 지우는 함수. 표에 없는 종류는 행 메뉴에 삭제가 없다. */
-export const KIND_DELETERS: Readonly<Record<string, (c: SpaceRestClient, id: string) => Promise<void>>> = {
-  ...(DEFINITION_KINDS.agent === undefined ? {} : { [DEFINITION_KINDS.agent]: (c: SpaceRestClient, id: string) => c.deleteAgent(id) }),
-  ...(DEFINITION_KINDS.graph === undefined ? {} : { [DEFINITION_KINDS.graph]: (c: SpaceRestClient, id: string) => c.deleteGraph(id) }),
-  ...(DEFINITION_KINDS.resource === undefined ? {} : { [DEFINITION_KINDS.resource]: (c: SpaceRestClient, id: string) => c.deleteResource(id) }),
-};
 
 const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
 
@@ -90,6 +84,7 @@ export function useProjectConfig(view: ProjectView | undefined, enabled: boolean
         id: item.id,
         name: item.name !== undefined && item.name !== "" ? item.name : item.id,
         modifiedAt: item.saved_at ?? undefined,
+        deletable: info.deletable === true,
         href: path === undefined ? undefined : `${path}?prj=${encodeURIComponent(id)}`,
       });
     }

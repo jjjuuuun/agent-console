@@ -147,9 +147,7 @@ def build_template_router(service: Callable[[], SddService]) -> APIRouter:
         template_id: str, if_match: IfMatchHeader = None, space: SpaceQuery = None
     ) -> Response:
         """삭제(정의와 본문 파일). 이미 만든 스펙에는 영향이 없다. ``If-Match``는 선택."""
-        scope(space).repository.delete_template(
-            template_id, expected_version=if_match_version(if_match)
-        )
+        service().delete_template(space, template_id, expected_version=if_match_version(if_match))
         return Response(status_code=204)
 
     @router.get(

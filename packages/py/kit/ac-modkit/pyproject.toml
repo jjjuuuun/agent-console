@@ -91,7 +91,11 @@ area = "host"
 design_id = "X44"
 summary = "서버 모듈이 새 정의 종류(검증·참조·프로젝트 공간 포함 여부)를 정의 저장소에 더한다"
 registration = { kind = "port", port = "agent_console_modkit:DEFINITION_KIND_CONTRIBUTIONS" }
-interface = ["agent_console_modkit:KindContribution", "agent_console_modkit:KindReferences"]
+interface = [
+    "agent_console_modkit:KindContribution",
+    "agent_console_modkit:KindReferences",
+    "agent_console_modkit:KindDelete",
+]
 example = { kind = "package", path = "examples/extensions/agent-console-example-module" }
 guide = "host.md"
 

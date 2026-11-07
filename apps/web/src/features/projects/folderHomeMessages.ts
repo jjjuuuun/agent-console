@@ -177,6 +177,7 @@ export const folderHomeMessages = {
     configDeleteTitle: (name: string) => `‘${name}’ 삭제`,
     configDeleteBody: "이 프로젝트의 사본만 지워집니다. 공용 구성에는 영향이 없습니다.",
     configDeleteFailed: "삭제하지 못했습니다",
+    configDeleteConflict: "다른 곳에서 바뀌었습니다. 목록을 다시 읽었으니 확인한 뒤 다시 삭제하세요",
     configDeleted: (name: string) => `‘${name}’을(를) 삭제했습니다`,
     activityTitle: "최근 활동",
     activityChat: "채팅",

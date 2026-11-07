@@ -242,6 +242,8 @@ export interface CreateResourceOutcome {
   resource: Resource;
   /** 정의는 만들었지만 본문(텍스트·파일)을 저장하다 실패했다. 정의는 이미 있으므로 다시 만들면 안 된다 */
   bodyError?: unknown;
+  /** 서버가 만들며 경고한 이슈(`X-Console-Issues`). 없으면 undefined */
+  issues?: readonly Issue[];
 }
 
 /**
@@ -252,12 +254,13 @@ export async function createResourceDoc(rest: RestClient, doc: ResourceDoc, desc
   const created = await rest.createResource(doc.resource);
   const resource = created.value;
   const emptyBody = doc.text === "" || (doc.text === null && (doc.files ?? []).length === 0);
-  if (emptyBody) return { resource };
+  const issues = created.issues === undefined ? {} : { issues: created.issues };
+  if (emptyBody) return { resource, ...issues };
   try {
     await saveResource(rest, { ...doc, resource, origin: { resource, text: doc.text === null ? null : "", files: doc.files == null ? doc.files : [] } }, created.version_hash, descriptors);
-    return { resource };
+    return { resource, ...issues };
   } catch (e) {
-    return { resource, bodyError: e };
+    return { resource, bodyError: e, ...issues };
   }
 }
 

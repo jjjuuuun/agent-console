@@ -78,6 +78,11 @@ export interface ProjectsClient {
   listCopyKinds(project: string | null): Promise<CopyKindInfo[]>;
   /** 한 공간의 정의 목록(본문 없음). `kind`를 생략하면 복사 종류 전부, 모르는 종류는 404. */
   listCopyItems(project: string | null, kind?: string): Promise<CopyItem[]>;
+  /**
+   * 프로젝트 사본의 정의 하나를 지운다(종류 공통, `CopyKindInfo.deletable`인 종류만). `opts.ifMatch`를 주면 `If-Match`로 보낸다.
+   * 오류: 404 `project.not_found`·`not_found`, 400 `bad_request`(details.reason `not_deletable`), 409 `project.config_readonly`, 412 `version_conflict`.
+   */
+  deleteCopyItem(projectId: string, kind: string, itemId: string, opts?: { ifMatch?: string }): Promise<void>;
 }
 
 export function createProjectsClient(io: RestIo): ProjectsClient {
@@ -109,5 +114,7 @@ export function createProjectsClient(io: RestIo): ProjectsClient {
     planLegacyCopy: (id) => io.request("POST", `/projects/${enc(id)}/legacy/plan`),
     listCopyKinds: (project) => io.request("GET", `/projects/copy/kinds${query({ project: project ?? undefined })}`),
     listCopyItems: (project, kind) => io.request("GET", `/projects/copy/items${query({ project: project ?? undefined, kind })}`),
+    deleteCopyItem: (projectId, kind, itemId, opts = {}) =>
+      io.request("DELETE", `/projects/copy/items/${enc(kind)}/${enc(itemId)}${query({ project: projectId })}`, withHeaders(ifMatch(opts.ifMatch))),
   };
 }

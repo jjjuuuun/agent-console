@@ -198,6 +198,22 @@ describe("복사 종류·항목 (6R.20a)", () => {
   });
 });
 
+describe("프로젝트 사본 항목 삭제 (요청 11/07 후속)", () => {
+  it("DELETE /projects/copy/items/{kind}/{id}?project= — 경로 인코딩과 선택 If-Match", async () => {
+    const calls: { url: string; method: string; ifMatch: string | undefined }[] = [];
+    const fetch: FetchLike = (url, init) => {
+      const h = new Headers((init as RequestInit | undefined)?.headers);
+      calls.push({ url: url.replace("http://h/api/v1", ""), method: String((init as RequestInit | undefined)?.method), ifMatch: h.get("If-Match") ?? undefined });
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
+    const rest = createRestClient({ baseUrl: "http://h", token: "T", fetch });
+    await rest.deleteCopyItem("p 1", "zz-kind", "a/b");
+    await rest.deleteCopyItem("p1", "zz-kind", "x", { ifMatch: "h1" });
+    expect(calls[0]).toEqual({ url: "/projects/copy/items/zz-kind/a%2Fb?project=p%201", method: "DELETE", ifMatch: undefined });
+    expect(calls[1]).toEqual({ url: "/projects/copy/items/zz-kind/x?project=p1", method: "DELETE", ifMatch: "h1" });
+  });
+});
+
 describe("대화 단위 호출의 ?project= (요청 11/07)", () => {
   it("project를 주면 상세·수정·삭제·턴·보내기·대기열 경로에 붙고, 생략하면 주소가 그대로다", async () => {
     const { rest, calls } = server(() => ({ body: { id: "c1" } }));

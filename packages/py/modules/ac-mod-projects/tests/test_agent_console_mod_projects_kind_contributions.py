@@ -285,6 +285,7 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "library": True,
             "portable": True,
             "title": None,  # 기여가 표시 이름을 주지 않으면 null(화면은 종류 이름)
+            "deletable": False,  # 기여가 삭제 수단(``delete``)을 주지 않음
         }
         assert "note" not in by_kind  # library=False 종류는 라이브러리에 없다
         assert "settings" not in by_kind  # 싱글턴은 복사 대상이 아니다
@@ -306,6 +307,7 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "library": False,
             "portable": True,
             "title": "노트",  # 기여 ``title``(검증 11/07 B)
+            "deletable": False,
         }
         assert "private" not in project  # portable=False 기여는 프로젝트 공간에 없다
         assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []

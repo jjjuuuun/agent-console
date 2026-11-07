@@ -6,6 +6,8 @@ export interface AgentsClient {
   listAgents(): Promise<Agent[]>;
   getAgent(id: string): Promise<Agent>;
   createAgent(agent: Agent): Promise<Agent>;
+  /** `createAgent`와 같되 저장 경고(`issues`)를 함께 돌려준다. */
+  createAgentVersioned(agent: Agent): Promise<Versioned<Agent>>;
   /** `versionHash`를 주면 `If-Match`로 보낸다(선택). */
   updateAgent(id: string, agent: Agent, versionHash?: string): Promise<Agent>;
   deleteAgent(id: string, versionHash?: string): Promise<void>;
@@ -25,6 +27,7 @@ export function createAgentsClient(io: RestIo): AgentsClient {
     listAgents: () => io.request("GET", "/agents"),
     getAgent: (id) => io.request("GET", `/agents/${enc(id)}`),
     createAgent: (agent) => io.request("POST", "/agents", { body: agent }),
+    createAgentVersioned: (agent) => io.requestVersioned("POST", "/agents", { body: agent }),
     updateAgent: (id, agent, hash) => io.request("PUT", `/agents/${enc(id)}`, { body: agent, ...withHeaders(ifMatch(hash)) }),
     deleteAgent: (id, hash) => io.request("DELETE", `/agents/${enc(id)}`, withHeaders(ifMatch(hash))),
     getAgentVersioned: (id) => io.requestVersioned("GET", `/agents/${enc(id)}`),

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { GraphSummary } from "@agent-console/contracts";
+import type { GraphSummary, Issue } from "@agent-console/contracts";
 import { Button, EmptyState, GroupHeader, Icon, PageHeader, StatusChip } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { ErrorBlock } from "../../app/ErrorBlock";
@@ -16,6 +16,7 @@ import { useRegisterCommands } from "../../shell/commands";
 import { StartGuide } from "../start";
 import { SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { ExportDialog, exportMessages } from "../exports";
+import { savedIssuesState } from "../../definition/savedIssuesState";
 import { DuplicateTeamDialog, NewTeamDialog, RenameTeamDialog, useStartChat } from "./TeamDialogs";
 import { teamMessages as t } from "./messages";
 import { summarizeEntries } from "./teamsLogic";
@@ -153,7 +154,10 @@ export function TeamListPage({ basePath }: { basePath: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 타입 참조만 `view`를 쓴다
   }, [view.paneGroups, rows]);
 
-  const open = (id: string) => void navigate(`${basePath}/${encodeURIComponent(id)}`);
+  const open = (id: string, issues?: readonly Issue[]) => {
+    const state = savedIssuesState(issues);
+    void navigate(`${basePath}/${encodeURIComponent(id)}`, state === undefined ? undefined : { state });
+  };
   // 선택 모드에서는 행을 열지 않고 선택을 토글한다
   const openRow = (id: string) => {
     if (!scoped.intercept(id)) open(id);
@@ -342,12 +346,12 @@ export function TeamListPage({ basePath }: { basePath: string }) {
         {body}
       </div>
       {dialog?.kind === "new" ? (
-        <NewTeamDialog graphs={list} nodeTypes={nodeTypes.data ?? []} edgeTypes={edgeTypes.data ?? []} onClose={() => setDialog(null)} onCreated={(id) => { setDialog(null); open(id); }} />
+        <NewTeamDialog graphs={list} nodeTypes={nodeTypes.data ?? []} edgeTypes={edgeTypes.data ?? []} onClose={() => setDialog(null)} onCreated={(id, issues) => { setDialog(null); open(id, issues); }} />
       ) : null}
       {scoped.dialog}
       {dialog?.kind === "rename" ? <RenameTeamDialog graph={dialog.graph} onClose={() => setDialog(null)} onDone={() => setDialog(null)} /> : null}
       {dialog?.kind === "duplicate" ? (
-        <DuplicateTeamDialog sourceId={dialog.graph.id} sourceName={dialog.graph.name} existingIds={new Set(list.map((g) => g.id))} onClose={() => setDialog(null)} onCreated={(id) => { setDialog(null); open(id); }} />
+        <DuplicateTeamDialog sourceId={dialog.graph.id} sourceName={dialog.graph.name} existingIds={new Set(list.map((g) => g.id))} onClose={() => setDialog(null)} onCreated={(id, issues) => { setDialog(null); open(id, issues); }} />
       ) : null}
       {dialog?.kind === "export" && DEFINITION_KINDS.graph !== undefined ? <ExportDialog initialItems={[{ kind: DEFINITION_KINDS.graph, id: dialog.graph.id }]} onClose={() => setDialog(null)} /> : null}
       <ListEditDialogs<GraphSummary> moving={moving} labeling={labeling} onCloseMove={() => setMoving(undefined)} onCloseLabels={() => setLabeling(undefined)} items={list} edits={edits} messages={t.arrange} />

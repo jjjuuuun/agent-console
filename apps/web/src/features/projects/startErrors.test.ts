@@ -37,6 +37,12 @@ describe("startErrorView: 시작 오류 → 배너·해결 버튼 표 (screen-pr
     expect(startErrorView(err("project.records_unavailable", { reason: "weird" }))?.tone).toBe("danger");
   });
 
+  it("outside_folder의 중첩 팀 경로 node_id는 첫 조각을 head로, 나머지를 rest로 풀고 문구에 경로를 보인다", () => {
+    const v = startErrorView(err("project.outside_folder", { paths: [{ value: "/etc/x", resolved: "/etc/x", pointer: "/p", layer: "사용자", node_id: "T/T/a" }] }));
+    expect(v?.node).toEqual({ id: "T/T/a", head: "T", rest: "T/a" });
+    expect(v?.message).toContain("T/T/a");
+  });
+
   it("알려지지 않은 오류와 ApiError가 아닌 값은 null(호출자가 서버 메시지를 그대로 보인다)", () => {
     expect(startErrorView(err("something_else"))).toBeNull();
     expect(startErrorView(new Error("x"))).toBeNull();

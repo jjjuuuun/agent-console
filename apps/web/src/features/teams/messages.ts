@@ -400,6 +400,8 @@ export const teamMessages = {
     attachedTeam: (res: string) => `‘${res}’을(를) 팀 공용에 붙였습니다`,
     createdNode: (name: string) => `‘${name}’을(를) 만들고 추가했습니다 · 되돌리면 팀에서만 빠지고 정의는 남습니다`,
     createdOnly: (name: string) => `‘${name}’을(를) 만들었습니다`,
+    nestedNodeNote: (head: string, rest: string) => `이 문제는 중첩 팀 ‘${head}’ 안의 ${rest}에 있습니다. 중첩 팀을 열어 확인하세요.`,
+    nodeMissingNote: (id: string) => `노드 ‘${id}’를 이 팀 구성에서 찾지 못했습니다.`,
     createdBodyFailed: (name: string) => `‘${name}’은(는) 만들었지만 내용을 저장하지 못했습니다. 리소스 화면에서 이어서 고치세요.`,
     nodeLimit: "이 노드에는 리소스를 붙일 수 없습니다",
   },

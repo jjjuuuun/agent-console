@@ -93,8 +93,8 @@ describe("팀 편집기 [+ 추가] 메뉴", () => {
 
 describe("CreateDefinitionDrawer", () => {
   it("에이전트 전체 폼으로 만들면 목록 갱신 → 노드 추가 → 서랍 닫힘, 팀은 저장하지 않는다", async () => {
-    const createAgent = vi.fn(async (a: unknown) => a);
-    const { clients, rest: r } = editorRest({ createAgent });
+    const createAgent = vi.fn(async (a: unknown) => ({ value: a, version_hash: undefined }));
+    const { clients, rest: r } = editorRest({ createAgentVersioned: createAgent });
     mountApp(clients, "/teams/tm1");
     const menu = await openAddMenu();
     fireEvent.click(within(menu).getByRole("menuitem", { name: /새 행위자/ }));
@@ -116,11 +116,24 @@ describe("CreateDefinitionDrawer", () => {
     expect(sent.nodes.at(-1)?.config?.ref).toBe("my-planner");
   });
 
+  it("서랍에서 만든 정의의 저장 경고(X-Console-Issues)를 팀 편집기 위쪽 띠로 보인다", async () => {
+    const issues = [{ severity: "warning", code: "secret.plain_found", path: "/env/KEY", message: "평문 비밀이 저장되었습니다" }];
+    const createAgent = vi.fn(async (a: unknown) => ({ value: a, version_hash: undefined, issues }));
+    const { clients } = editorRest({ createAgentVersioned: createAgent });
+    mountApp(clients, "/teams/tm1");
+    const menu = await openAddMenu();
+    fireEvent.click(within(menu).getByRole("menuitem", { name: /새 행위자/ }));
+    const drawer = await screen.findByRole("dialog", { name: "새 행위자" });
+    fireEvent.change(within(drawer).getByLabelText("이름"), { target: { value: "Secret Holder" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "만들고 팀에 추가" }));
+    expect(await screen.findByText(/평문 비밀이 저장되었습니다/)).toBeTruthy();
+  });
+
   it("정의 생성이 실패하면 서랍을 닫지 않고 원인을 보이며, 팀 초안은 그대로다", async () => {
     const createAgent = vi.fn(async () => {
       throw new Error("이미 있는 id");
     });
-    const { clients } = editorRest({ createAgent });
+    const { clients } = editorRest({ createAgentVersioned: createAgent });
     mountApp(clients, "/teams/tm1");
     const menu = await openAddMenu();
     fireEvent.click(within(menu).getByRole("menuitem", { name: /새 행위자/ }));

@@ -11,7 +11,7 @@ import type {
   TeamPlanSummary,
   VersionedGraph,
 } from "@agent-console/contracts";
-import { enc, query, type RestIo } from "../io";
+import { enc, query, type RestIo, type Versioned } from "../io";
 
 /** `listGraphs` 질의. */
 export interface ListGraphsParams {
@@ -24,6 +24,8 @@ export interface GraphsClient {
   listGraphs(params?: ListGraphsParams): Promise<GraphSummary[]>;
   /** 같은 id가 있으면 `already_exists`(409). */
   createGraph(graph: Graph): Promise<VersionedGraph>;
+  /** `createGraph`와 같되 저장 경고(`X-Console-Issues`)를 `issues`로 함께 돌려준다. */
+  createGraphVersioned(graph: Graph): Promise<Versioned<VersionedGraph>>;
   getGraph(id: string): Promise<VersionedGraph>;
   /**
    * 그래프 저장. `versionHash`(마지막으로 받은 `version_hash`)를 `If-Match`로 보낸다.
@@ -33,6 +35,8 @@ export interface GraphsClient {
   deleteGraph(id: string): Promise<void>;
   /** 팀 구성 복제(서버에서). 응답은 새 그래프(`VersionedGraph`, 임시 가정). */
   duplicateGraph(id: string, target: { id: string; name: string }): Promise<VersionedGraph>;
+  /** `duplicateGraph`와 같되 저장 경고를 `issues`로 함께 돌려준다. */
+  duplicateGraphVersioned(id: string, target: { id: string; name: string }): Promise<Versioned<VersionedGraph>>;
   getNodeEffectiveSettings(graphId: string, nodeId: string): Promise<EffectiveSettings>;
   /** 그 노드가 실행 때 받을 실행 묶음 미리보기와 묶음 경고(`BundlePreview`). */
   getNodeBundlePreview(graphId: string, nodeId: string): Promise<BundlePreview>;
@@ -56,10 +60,12 @@ export function createGraphsClient(io: RestIo): GraphsClient {
   return {
     listGraphs: (params) => io.request("GET", `/graphs${query(params)}`),
     createGraph: (graph) => io.request("POST", "/graphs", { body: graph }),
+    createGraphVersioned: (graph) => io.requestVersioned("POST", "/graphs", { body: graph }),
     getGraph: (id) => io.request("GET", `/graphs/${enc(id)}`),
     updateGraph: (id, graph, versionHash) => io.request("PUT", `/graphs/${enc(id)}`, { body: graph, headers: { "If-Match": versionHash } }),
     deleteGraph: (id) => io.request("DELETE", `/graphs/${enc(id)}`),
     duplicateGraph: (id, target) => io.request("POST", `/graphs/${enc(id)}/duplicate`, { body: target }),
+    duplicateGraphVersioned: (id, target) => io.requestVersioned("POST", `/graphs/${enc(id)}/duplicate`, { body: target }),
     getNodeEffectiveSettings: (g, n) => io.request("GET", `/graphs/${enc(g)}/nodes/${enc(n)}/effective-settings`),
     getNodeBundlePreview: (g, n) => io.request("GET", `/graphs/${enc(g)}/nodes/${enc(n)}/bundle-preview`),
     previewDraftEffectiveSettings: (req) => io.request("POST", "/graphs/effective-settings", { body: req }),

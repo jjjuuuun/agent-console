@@ -77,7 +77,7 @@ demo specs/demo
 | 포트 | 방향 | 모양 |
 | --- | --- | --- |
 | `sdd.service` | 제공 | `SddServicePort`: `label_key(name)`·`secret_findings(text)`·`secret_mode()`·`notify(space, spec_id)` (+ 구현 `SddService`의 `scope(space)`·`context(scope, loaded)`) |
-| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references)` 두 개 |
+| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references, title, delete)` 두 개(`delete` = 자기 삭제 경로와 같은 일, 종류 공통 삭제가 부른다) |
 | `server.warnings` | 제공(여러) | 사용자 설정 형식 문제 |
 | `sdd.spaces` | 선택 | `SddSpaces.open(name) -> SddSpace{store, files, config_writable, config_dir?, max_content_bytes?}` |
 | `sdd.integrations` | 선택(여러) | `agent_console_sdd.TaskIntegration` (+ 선택 속성 `link_kinds`, 능력 `ProfileChecker`·`AutomationControl`) |

@@ -51,7 +51,7 @@ function mount(views: ProjectView[], path: string, extra: Record<string, unknown
   const made = createFakeClients({
     listModules: vi.fn(async () => MODULES),
     listProjects: vi.fn(async () => views),
-    listCopyKinds: vi.fn(async () => [{ kind: DEFINITION_KINDS.agent, library: true, portable: true }]),
+    listCopyKinds: vi.fn(async () => [{ kind: DEFINITION_KINDS.agent, library: true, portable: true, deletable: true }]),
     listCopyItems: vi.fn(async (project: string | null, kind?: string) => (project !== null && kind === DEFINITION_KINDS.agent ? [{ kind, id: "pl", name: "기획 에이전트" }] : [])),
     ...extra,
   });
@@ -239,7 +239,7 @@ describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => 
     mount([view("a")], "/projects/a", {
       listConversations: vi.fn(async () => []),
       listRuns: vi.fn(async () => []),
-      listCopyKinds: vi.fn(async () => [{ kind: "zz-kind", library: true, portable: true }, { kind: DEFINITION_KINDS.agent, library: true, portable: true }]),
+      listCopyKinds: vi.fn(async () => [{ kind: "zz-kind", library: true, portable: true }, { kind: DEFINITION_KINDS.agent, library: true, portable: true, deletable: true }]),
       listCopyItems: vi.fn(async (project: string | null, kind?: string) => {
         if (kind === "zz-kind") return project === null ? [{ kind, id: "lib-agent", name: "공용 에이전트" }] : [];
         return project === null ? [] : [{ kind, id: "pl", name: "기획 에이전트" }];
@@ -275,12 +275,12 @@ describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => 
 });
 
 describe("프로젝트 홈: 구성 표는 서버 종류 목록으로 (V5)", () => {
-  it("코드에 없는 임의 이름의 기여 종류(제목 포함)가 표에 나오고, 삭제 경로를 모르는 종류는 행 메뉴에 삭제가 없다", async () => {
+  it("코드에 없는 임의 이름의 기여 종류(제목 포함)가 표에 나오고, deletable이 아닌 종류는 행 메뉴에 삭제가 없다", async () => {
     mount([view("a")], "/projects/a", {
       listConversations: vi.fn(async () => []),
       listRuns: vi.fn(async () => []),
       listCopyKinds: vi.fn(async () => [
-        { kind: DEFINITION_KINDS.agent, library: true, portable: true },
+        { kind: DEFINITION_KINDS.agent, library: true, portable: true, deletable: true },
         { kind: "qq-contributed", library: true, portable: true, title: "기여 문서" },
         { kind: "qq-untitled", library: false, portable: true, title: null },
         { kind: "qq-library-only", library: true, portable: false },
@@ -301,6 +301,38 @@ describe("프로젝트 홈: 구성 표는 서버 종류 목록으로 (V5)", () =
     expect(within(config).queryByText("보이면 안 됨")).toBeNull();
     fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
     expect(await screen.findByRole("menuitem", { name: "공용에 저장…" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "삭제" })).toBeNull();
+  });
+});
+
+describe("프로젝트 홈: 종류 공통 삭제 (요청 11/07 후속)", () => {
+  it("deletable인 기여 종류 행 삭제는 확인 뒤 deleteCopyItem(프로젝트, 종류, id)을 부른다", async () => {
+    const deleteCopyItem = vi.fn(async () => undefined);
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      deleteCopyItem,
+      listCopyKinds: vi.fn(async () => [{ kind: "qq-contributed", library: true, portable: true, title: "기여 문서", deletable: true }]),
+      listCopyItems: vi.fn(async (project: string | null, kind?: string) => (project === null ? [] : [{ kind, id: "d1", name: "기여 항목" }])),
+    });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByText("기여 항목");
+    fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
+    const dlg = await screen.findByRole("dialog");
+    fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
+    await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));
+  });
+  it("deletable 필드가 없는 옛 서버 응답이면 메뉴에 삭제가 없다", async () => {
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      listCopyKinds: vi.fn(async () => [{ kind: DEFINITION_KINDS.agent, library: true, portable: true }]),
+    });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByRole("link", { name: "기획 에이전트" });
+    fireEvent.click(within(config).getByRole("button", { name: "기획 에이전트 작업" }));
+    await screen.findByRole("menuitem", { name: "공용에 저장…" });
     expect(screen.queryByRole("menuitem", { name: "삭제" })).toBeNull();
   });
 });

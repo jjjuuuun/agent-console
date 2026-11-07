@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { EdgeTypeDescriptor, GraphSummary, NodeTypeDescriptor } from "@agent-console/contracts";
+import type { EdgeTypeDescriptor, GraphSummary, Issue, NodeTypeDescriptor } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
@@ -16,7 +16,8 @@ export interface NewTeamDialogProps {
   edgeTypes: readonly EdgeTypeDescriptor[];
   onClose: () => void;
   /** 만든 뒤(편집기로 이동 등) */
-  onCreated: (id: string) => void;
+  /** 만들기에 성공했다. `issues`는 서버의 저장 경고(평문 비밀 등, 없으면 undefined) */
+  onCreated: (id: string, issues?: readonly Issue[]) => void;
 }
 
 /** 새 팀 구성: 이름·id·설명 + 시작 방식(사용자 노드 하나 / 빈 / 복제). 사용자 노드 타입은 속성으로 찾는다. */
@@ -38,15 +39,16 @@ export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated
   const submit = async (v: NewDefinitionValues) => {
     setBusy(true);
     setError(null);
+    let issues: readonly Issue[] | undefined;
     try {
       if (start === "clone") {
-        await rest.duplicateGraph(cloneId, { id: v.id, name: v.name });
+        issues = (await rest.duplicateGraphVersioned(cloneId, { id: v.id, name: v.name })).issues;
       } else {
         const startNode = start === "node" ? userTypes.find((x) => x.id === userTypeId) : undefined;
-        await rest.createGraph({ ...starterGraph({ id: v.id, name: v.name, ...(v.description ? { description: v.description } : {}), ...(startNode ? { startNode } : {}) }), ...scope.patch });
+        issues = (await rest.createGraphVersioned({ ...starterGraph({ id: v.id, name: v.name, ...(v.description ? { description: v.description } : {}), ...(startNode ? { startNode } : {}) }), ...scope.patch })).issues;
       }
       await invalidate();
-      onCreated(v.id);
+      onCreated(v.id, issues);
     } catch (e) {
       setError(describeError(e, t.create.failed).message);
       setBusy(false);
@@ -152,7 +154,8 @@ export interface DuplicateTeamDialogProps {
   sourceName: string;
   existingIds: ReadonlySet<string>;
   onClose: () => void;
-  onCreated: (id: string) => void;
+  /** 만들기에 성공했다. `issues`는 서버의 저장 경고(평문 비밀 등, 없으면 undefined) */
+  onCreated: (id: string, issues?: readonly Issue[]) => void;
 }
 
 /** 복제: 새 이름·id를 받아 `POST /graphs/{id}/duplicate`. */
@@ -165,9 +168,9 @@ export function DuplicateTeamDialog({ sourceId, sourceName, existingIds, onClose
     setBusy(true);
     setError(null);
     try {
-      await rest.duplicateGraph(sourceId, { id: v.id, name: v.name });
+      const saved = await rest.duplicateGraphVersioned(sourceId, { id: v.id, name: v.name });
       await invalidate();
-      onCreated(v.id);
+      onCreated(v.id, saved.issues);
     } catch (e) {
       setError(describeError(e, t.duplicate.failed).message);
       setBusy(false);

@@ -303,11 +303,25 @@ class WikiModule:
         )
 
         ctx.provide(WIKI_SERVICE, service)
-        ctx.provide(KIND_CONTRIBUTIONS, KindContribution(rules_kind, title=RULES_KIND_TITLE))
         ctx.provide(
             KIND_CONTRIBUTIONS,
             KindContribution(
-                wiki_kind, references=wiki_references(rules_kind.name), title=WIKI_KIND_TITLE
+                rules_kind,
+                title=RULES_KIND_TITLE,
+                delete=lambda space, item_id, expected: service.delete_rules(
+                    service.scope(space), item_id, expected=expected
+                ),
+            ),
+        )
+        ctx.provide(
+            KIND_CONTRIBUTIONS,
+            KindContribution(
+                wiki_kind,
+                references=wiki_references(rules_kind.name),
+                title=WIKI_KIND_TITLE,
+                delete=lambda space, item_id, expected: service.delete_wiki(
+                    service.scope(space), item_id, expected=expected
+                ),
             ),
         )
 

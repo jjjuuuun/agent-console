@@ -71,6 +71,28 @@ def contribution_titles(contributions: Iterable[Any]) -> dict[str, str]:
     return out
 
 
+def contribution_deleters(
+    contributions: Iterable[Any],
+) -> dict[str, Callable[[str | None, str, str | None], None] | None]:
+    """종류 기여(X44)의 삭제 수단 ``{종류 이름: delete | None}``(먼저 온 것 우선).
+
+    None 값 = 그 종류는 종류 공통 경로로 지울 수 없다(기여가 ``delete``를 주지 않음).
+
+    >>> from types import SimpleNamespace as C
+    >>> out = contribution_deleters([C(kind=C(name="a"), delete=print), C(kind=C(name="b"))])
+    >>> sorted(out), out["b"]
+    (['a', 'b'], None)
+    """
+    out: dict[str, Callable[[str | None, str, str | None], None] | None] = {}
+    for item in contributions:
+        name = getattr(getattr(item, "kind", None), "name", None)
+        if not isinstance(name, str) or name in out:
+            continue
+        delete = getattr(item, "delete", None)
+        out[name] = delete if callable(delete) else None
+    return out
+
+
 def contribution_references(contributions: Iterable[Any]) -> list[ReferenceSource]:
     """종류 기여(X44)의 ``references``를 X25 모양 ``(kind, document)``로(그 종류 문서에만 적용).
 
@@ -149,4 +171,10 @@ class DefinitionSnapshot:
             self._generation += 1
 
 
-__all__ = ["DefinitionSnapshot", "ReferenceSource", "combine_references", "read_definitions"]
+__all__ = [
+    "DefinitionSnapshot",
+    "ReferenceSource",
+    "combine_references",
+    "contribution_deleters",
+    "read_definitions",
+]
