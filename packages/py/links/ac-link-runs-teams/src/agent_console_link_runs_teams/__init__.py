@@ -13,7 +13,9 @@
       검증 이슈·노드 실패 해결 버튼 표 ``IssueFixes``(기본 데이터 ``DEFAULT_ISSUE_FIXES``,
       ``load_issue_fixes``, 설치자 옵션 ``RunsTeamsLinkSettings.issue_fixes_file``·
       ``issue_fixes_of``),
-      ``ValidationSummaries``(목록 검증 요약), ``GraphValidationCache``·``workspace_revision``.
+      ``ValidationSummaries``(목록 검증 요약, 공간 목록 ``space_summaries`` — ``runs.starter``의
+      선택 메서드 ``ProjectRunChecker.check_project``), ``GraphValidationCache``·
+      ``workspace_revision``.
     - Run의 정의 조회 출처(5.7R.33y): ``lookups_from``(출처 하나 → ``RunLookups`` 에이전트·팀 구성·
       리소스 조회), 노드 서비스 키 ``RUN_DEFINITIONS``, 출처 모양 ``DefinitionSource``.
     - ``build_router``: ``POST /graphs/{id}/validate``(엔진 + 팀 규칙 + 저장 전 정의 검사의
@@ -45,6 +47,7 @@ from .ports import (
     DefinitionCheck,
     DefinitionLookup,
     DefinitionSource,
+    ProjectRunChecker,
     RunChecker,
 )
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
@@ -77,6 +80,7 @@ __all__ = [
     "DefinitionSource",
     "GraphValidationCache",
     "IssueFixes",
+    "ProjectRunChecker",
     "RunChecker",
     "RunLookups",
     "RunsTeamsLink",

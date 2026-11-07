@@ -82,7 +82,7 @@ pip install agent-console-mod-runs
 
 | 방향 | 포트 | 모양 |
 | --- | --- | --- |
-| 제공 | `runs.starter` | `RunService`(`start_run`·`check`·`engine_issues`·`load_graph`·`cancel`·`current_run`·`shutdown`·`resume`) |
+| 제공 | `runs.starter` | `RunService`(`start_run`·`check`·`check_project`·`engine_issues`·`load_graph`·`cancel`·`current_run`·`shutdown`·`resume`) |
 | 제공 | `runs.reader` / `runs.events` | 저장소 Run·이벤트 리포지토리(읽기) |
 | 제공 | `interactions.port` | `InteractionService`(`list`·`get`·`pending`·`respond`) |
 | 제공 | `secrets.redact` | `(str) -> str` |

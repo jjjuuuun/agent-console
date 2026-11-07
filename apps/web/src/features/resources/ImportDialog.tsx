@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ImportCandidate, ImportPreview, ImportResult } from "@agent-console/contracts";
 import { Banner, Button, Dialog, Tag } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
+import { useProjectId } from "../../app/projectScope";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
 import { formatCount } from "../../lib/format";
@@ -34,7 +35,8 @@ function sizeText(size: number | null | undefined): string {
 export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
   const { rest } = useApi();
   const invalidate = useInvalidateLists();
-  const sources = useImportSources();
+  const projectId = useProjectId();
+  const sources = useImportSources(projectId);
   const types = useResourceTypes();
   const [step, setStep] = useState<Step>("source");
   const [sourceId, setSourceId] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
     body.current?.focus();
   }, [step]);
 
+  const scopeArg = projectId === null ? [] : ([{ project: projectId }] as const);
   const source = (sources.data ?? []).find((s) => s.id === sourceId);
   const typeTitle = (id: string | null | undefined) => (types.data ?? []).find((x) => x.id === id);
   const candidates = preview.status === "ready" ? (preview.preview.candidates ?? []) : [];
@@ -66,7 +69,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
     setPolicies({});
     setKindFilter(null);
     try {
-      const got = await rest.previewImport({ source: id });
+      const got = await rest.previewImport({ source: id }, ...scopeArg);
       setPreview({ status: "ready", preview: got });
     } catch (e) {
       setPreview({ status: "error", message: describeError(e, t.import.scanFailed).message });
@@ -78,7 +81,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
     setBusy(true);
     setImportError(null);
     try {
-      const done = await rest.importResources({ source: sourceId, items: buildImportItems(candidates, selected, policies) });
+      const done = await rest.importResources({ source: sourceId, items: buildImportItems(candidates, selected, policies) }, ...scopeArg);
       setResult(done);
       setStep("result");
       await invalidate();
@@ -172,7 +175,7 @@ export function ImportDialog({ onClose, onShowImported }: ImportDialogProps) {
           ) : sources.isError ? (
             <ErrorBlock title={t.import.sourcesFailed} message={sources.error.message} retryLabel={lm.retry} onRetry={() => void sources.refetch()} />
           ) : (sources.data ?? []).length === 0 ? (
-            <p className="app-muted">{t.import.noSources}</p>
+            <p className="app-muted">{t.import.noSources}{projectId === null ? `. ${t.import.noSourcesPickProject}` : ""}</p>
           ) : (
             <div role="radiogroup" aria-label={t.import.steps.source} className="res-card-grid">
               {(sources.data ?? []).map((s) => (

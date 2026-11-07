@@ -6,7 +6,7 @@ import { useProjectId } from "../../app/projectScope";
 import { useApiPagedQuery } from "../../app/pagedQuery";
 import type { ConversationSummary } from "@agent-console/contracts";
 
-/** 채팅 화면이 쓰는 질의 키. 쓰기 뒤에는 `["list"]` 접두로 한꺼번에 무효화한다(목록 키 규칙). */
+/** 채팅 화면이 쓰는 질의 키(대화 단위 키는 project를 생략하면 접두 키 = 무효화용). 쓰기 뒤에는 `["list"]` 접두로 한꺼번에 무효화한다(목록 키 규칙). */
 export const chatKeys = {
   /** 프로젝트를 주면 그 프로젝트 목록의 키, 생략하면 모든 대화 목록 키의 접두(무효화·일괄 갱신용). */
   conversations: (project?: string | null) => (project == null ? queryKeys.list("conversations") : queryKeys.list("conversations", { project })),
@@ -17,9 +17,9 @@ export const chatKeys = {
   resources: () => queryKeys.list("resources"),
   graph: (id: string, project: string | null = null) => ["graph", id, project] as const,
   plan: (id: string, project: string | null = null) => queryKeys.list("graph-plan", { id, project }),
-  conversation: (id: string) => ["chat", "conversation", id] as const,
-  turns: (id: string) => ["chat", "turns", id] as const,
-  queue: (id: string) => ["chat", "queue", id] as const,
+  conversation: (id: string, project?: string | null) => (project === undefined ? (["chat", "conversation", id] as const) : (["chat", "conversation", id, project] as const)),
+  turns: (id: string, project?: string | null) => (project === undefined ? (["chat", "turns", id] as const) : (["chat", "turns", id, project] as const)),
+  queue: (id: string, project?: string | null) => (project === undefined ? (["chat", "queue", id] as const) : (["chat", "queue", id, project] as const)),
   runEvents: (runId: string) => ["chat", "run-events", runId] as const,
 };
 
@@ -64,12 +64,22 @@ export function useChatGraph(graphId: string | undefined, projectId: string | nu
   return useQuery({ queryKey: chatKeys.graph(graphId ?? "", projectId), queryFn: () => space(projectId).getGraph(graphId as string), enabled: graphId !== undefined && graphId !== "", staleTime: 5_000 });
 }
 
-export function useConversationDetail(id: string) {
-  return useApiQuery(chatKeys.conversation(id), (rest) => rest.getConversation(id));
+/**
+ * 대화 id가 속한 프로젝트(기록 DB). 현재 프로젝트가 있으면 그것, 모든 프로젝트 보기이면 읽어 둔 목록 항목의 `project_id`, 모르면 null(앱 저장소).
+ * 서버는 대화 단위 REST에 `?project=`가 있어야 프로젝트 기록의 대화를 준다.
+ */
+export function useConversationProject(id: string): string | null {
+  const current = useProjectId();
+  const { items } = useApiPagedQuery<ConversationSummary>(chatKeys.conversationPages(current, undefined), (rest, cursor) => loaders.conversationsPage(rest, current, undefined, cursor), { enabled: current === null });
+  return current ?? items?.find((c) => c.id === id)?.project_id ?? null;
 }
 
-export function useQueueList(id: string) {
-  return useApiQuery(chatKeys.queue(id), (rest) => rest.listQueue(id));
+export function useConversationDetail(id: string, project: string | null = null) {
+  return useApiQuery(chatKeys.conversation(id, project), (rest) => rest.getConversation(id, project));
+}
+
+export function useQueueList(id: string, project: string | null = null) {
+  return useApiQuery(chatKeys.queue(id, project), (rest) => rest.listQueue(id, project));
 }
 
 /** 대화 하나의 팀 구성 계획 요약(답변·입구 자리, `GET /graphs/{id}/plan`). id가 없으면 질의하지 않는다. */

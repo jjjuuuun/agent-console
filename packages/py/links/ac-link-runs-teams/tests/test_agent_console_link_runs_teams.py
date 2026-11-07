@@ -17,19 +17,20 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import Graph
+from agent_console_contracts import Graph, Issue
 from agent_console_link_runs_teams import (
     GRAPH_VALIDATION,
     RUN_PREPARERS,
     RUN_SERVICES,
     DefinitionLookup,
+    ProjectRunChecker,
     RunChecker,
     TeamRules,
     ValidationSummaries,
     module,
 )
 from agent_console_link_runs_teams.testing import local_runs_module
-from agent_console_mod_definitions import GraphValidationSource
+from agent_console_mod_definitions import GraphValidationSource, SpaceGraphValidationSource
 from agent_console_mod_definitions import module as definitions
 from agent_console_mod_runs import RUNS_STARTER, RunPreparer, RunServiceProvider
 from agent_console_mod_runs import module as runs
@@ -37,6 +38,7 @@ from agent_console_modkit import Assembly, BaseServices, ModulesConfig, Paths, a
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_nodes_core import AGENT_LOOKUP, TEAM_LOOKUP, WORKING_DIRECTORY
 from agent_console_runtime import Registries, load_registries
+from agent_console_store import DEFAULT_KINDS, InMemoryDefinitionStore
 
 API = "/api/v1"
 TOKEN = "t" * 32
@@ -127,13 +129,17 @@ def test_port_contracts_with_runs_and_definitions(tmp_path: Path) -> None:
         assert isinstance(summaries, ValidationSummaries)
         assert isinstance(summaries, GraphValidationSource)
         as_source: GraphValidationSource = summaries
+        assert isinstance(summaries, SpaceGraphValidationSource)
+        as_space_source: SpaceGraphValidationSource = summaries
         starter = assembly.port(RUNS_STARTER)
         assert isinstance(starter, RunChecker)
+        assert isinstance(starter, ProjectRunChecker)  # mod-runs의 check_project
         assert isinstance(preparer.lookup, DefinitionLookup)
         assert preparer is provider
         assert callable(as_preparer.prepare)
         assert callable(as_provider.services)
         assert as_source.summaries([]) == {}
+        assert as_space_source.space_summaries("p", []) == {}
 
 
 def test_rules_check_prepare_and_services(tmp_path: Path) -> None:
@@ -235,6 +241,11 @@ def test_standalone_local_runs_module(tmp_path: Path) -> None:
         body = Graph.model_validate(_graph("draft", "nobody")).model_dump(mode="json")
         codes = {i["code"] for i in client.post(f"{API}/graphs/x/validate", json=body).json()}
         assert codes & {"agent.not_found", "team.agent_not_found"}
+        # 프로젝트 기준 검증(check_project)이 없는 실행 모듈이면 ?project=는 409
+        refused = client.post(f"{API}/graphs/x/validate?project=p1", json=body)
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["error"]["code"] == "feature_unavailable"
+        assert refused.json()["error"]["details"]["port"] == "runs.starter"
 
 
 def _calls(func: object) -> set[str]:
@@ -365,3 +376,52 @@ def test_nested_team_without_link_fails_with_lookup_unavailable(tmp_path: Path) 
         assert snap["run"]["status"] == "failed"
         error = _node_run(snap, "T")["error"]
         assert error["code"] == "team.lookup_unavailable"
+
+
+def test_space_summaries_use_project_check_and_space_cache() -> None:
+    """공간 목록 요약: ``check_project``(실행 시작과 같은 출처·범위)로 계산, 공간 지문으로 캐시."""
+    calls: list[tuple[str, str]] = []
+
+    class _Checker:
+        def check(self, graph: Graph) -> list[Any]:
+            raise AssertionError("공간 요약은 라이브러리 검사를 부르지 않는다")
+
+        def load_graph(self, graph_id: str, version_hash: str | None = None) -> Graph:
+            raise AssertionError("공간 요약은 라이브러리에서 읽지 않는다")
+
+        def check_project(self, graph_id: str, project_id: str) -> list[Issue]:
+            calls.append((project_id, graph_id))
+            if graph_id == "gone":
+                raise LookupError(graph_id)
+            return [Issue(severity="error", code="cycle", message="순환")]
+
+    checker = _Checker()
+    assert isinstance(checker, ProjectRunChecker)
+    space = InMemoryDefinitionStore(DEFAULT_KINDS)
+    space.create("graph", {"id": "g", "name": "g", "nodes": [], "edges": []})
+    summaries = ValidationSummaries(checker, InMemoryDefinitionStore(DEFAULT_KINDS))
+    found = summaries.space_summaries("p1", ["g", "gone"], lookup=space)
+    summary = found["g"]
+    assert summary is not None
+    assert summary.blocks_run is True
+    assert summary.codes == ["cycle"]
+    assert found["gone"] is None
+    summaries.space_summaries("p1", ["g"], lookup=space)
+    assert calls == [("p1", "g"), ("p1", "gone")]  # 같은 개정이면 다시 계산하지 않는다
+    summaries.space_summaries("p2", ["g"], lookup=space)
+    assert calls[-1] == ("p2", "g")  # 공간마다 따로
+    space.create("agent", {"id": "a", "name": "A", "system_prompt": "x"})
+    summaries.space_summaries("p1", ["g"], lookup=space)
+    assert calls[-1] == ("p1", "g")  # 공간 정의가 바뀌면 다시
+
+
+def test_space_summaries_null_without_project_check() -> None:
+    class _Checker:
+        def check(self, graph: Graph) -> list[Any]:
+            raise AssertionError("부르지 않는다")
+
+        def load_graph(self, graph_id: str, version_hash: str | None = None) -> Graph:
+            raise AssertionError("부르지 않는다")
+
+    summaries = ValidationSummaries(_Checker(), object())
+    assert summaries.space_summaries("p1", ["g"]) == {"g": None}

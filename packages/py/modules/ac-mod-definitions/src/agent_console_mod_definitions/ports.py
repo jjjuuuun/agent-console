@@ -17,6 +17,9 @@
 
 - ``definitions.checks``(여러 제공자): 저장 전 검사(``DefinitionCheck``). 없으면 모델 검증만.
 - ``graphs.validation``: 팀 구성 목록의 검증 요약(``GraphValidationSource``). 없으면 ``null``.
+  공간(``?project=``) 목록은 제공자의 선택 메서드 ``space_summaries``
+  (``SpaceGraphValidationSource``)로 계산한다. 그 메서드가 없으면 ``null``(라이브러리 기준
+  ``summaries``는 부르지 않는다).
 - ``graphs.entry_labels``: 팀 구성 목록의 입구 이름(``GraphEntryLabels``). 없으면 ``null``.
 - ``graphs.session_summary``: 팀 구성 목록의 세션 집계(``GraphSessionSummarySource``, 6R.20k).
   없으면 ``null``(위임 방식 등 디스크립터를 아는 연동이 계산한다 — 이 모듈은 세션 값의 뜻을 모른다).
@@ -63,6 +66,26 @@ class GraphValidationSource(Protocol):
     def summaries(
         self, graph_ids: Sequence[str]
     ) -> Mapping[str, GraphValidationSummary | None]: ...
+
+
+@runtime_checkable
+class SpaceGraphValidationSource(Protocol):
+    """``graphs.validation`` 제공자의 **선택** 메서드: 공간(``?project=``) 목록의 검증 요약.
+
+    공간 이름은 이 모듈이 뜻을 모르는 불투명 문자열이다(제공자가 실행의 ``project_id`` 등으로 쓴다).
+    """
+
+    def space_summaries(
+        self, space: str, graph_ids: Sequence[str], *, lookup: Any = None
+    ) -> Mapping[str, GraphValidationSummary | None]:
+        """그 공간의 팀 구성 요약(계산할 수 없는 그래프는 None).
+
+        Args:
+            space: 공간 이름.
+            graph_ids: 그 공간 저장소의 팀 구성 id.
+            lookup: 그 공간의 정의 저장소(캐시 개정 지문 재료로 써도 된다).
+        """
+        ...
 
 
 @runtime_checkable
@@ -147,6 +170,7 @@ __all__ = [
     "GraphValidationSource",
     "SavedDefinition",
     "SecretRulesReader",
+    "SpaceGraphValidationSource",
     "WarningSource",
     "WorkspaceSettingsReader",
 ]

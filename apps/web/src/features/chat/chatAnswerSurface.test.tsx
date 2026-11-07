@@ -51,7 +51,7 @@ describe("되묻기 답 입력칸은 한 곳 (5.7R.40)", () => {
     expect(input.getAttribute("placeholder")).toBe("새 메시지 (질문은 위 카드에서 답하세요)");
     type(input, "다른 일");
     fireEvent.click(screen.getByRole("button", { name: "전송" }));
-    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "다른 일" }));
+    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "다른 일" }, null));
     expect(h.rest["respondInteraction"]).not.toHaveBeenCalled();
   });
 
@@ -138,7 +138,7 @@ describe("되묻기 답 입력칸은 한 곳 (5.7R.40)", () => {
     expect(strip.getAttribute("data-answer-mode")).toBe("answer");
     type(input, "이번만 메시지");
     fireEvent.keyDown(input, { key: "Enter", ctrlKey: true, shiftKey: true });
-    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "이번만 메시지" }));
+    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "이번만 메시지" }, null));
     expect(h.rest["respondInteraction"]).not.toHaveBeenCalled();
     expect(screen.getByTestId("answer-strip").getAttribute("data-answer-mode")).toBe("answer");
   });

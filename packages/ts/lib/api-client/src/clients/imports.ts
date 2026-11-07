@@ -12,14 +12,14 @@ export interface ImportScope {
 
 export interface ImportsClient {
   /** 가져오기 출처 목록(디스크립터). */
-  listImportSources(): Promise<ImportSourceDescriptor[]>;
+  listImportSources(scope?: Pick<ImportScope, "project">): Promise<ImportSourceDescriptor[]>;
   previewImport(request: ImportPreviewRequest, scope?: ImportScope): Promise<ImportPreview>;
   importResources(request: ImportRequest, scope?: ImportScope): Promise<ImportResult>;
 }
 
 export function createImportsClient(io: RestIo): ImportsClient {
   return {
-    listImportSources: () => io.request("GET", "/resources/import/sources"),
+    listImportSources: (scope) => io.request("GET", `/resources/import/sources${query({ project: scope?.project })}`),
     previewImport: (req, scope) => io.request("POST", `/resources/import/preview${query({ project: scope?.project, target: scope?.target })}`, { body: req }),
     importResources: (req, scope) => io.request("POST", `/resources/import${query({ project: scope?.project, target: scope?.target })}`, { body: req }),
   };

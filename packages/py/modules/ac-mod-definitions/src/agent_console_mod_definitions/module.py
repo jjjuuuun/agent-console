@@ -7,10 +7,10 @@
   ``graphs.entry_labels``·``graphs.session_summary``(팀 구성 목록의 검증 요약·입구 이름·세션 집계,
   없으면 null),
   ``definitions.spaces``(공간 이름 → 정의 저장소 — 에이전트·팀 구성 경로의 ``?project=``. 공간
-  목록의 검증 요약은 null: 검증 제공자가 라이브러리를 본다), ``definitions.kind_contributions``
-  (여러 제공자, X44 — ``library=True`` 기여 종류를 라이브러리 저장소에 더한다. build 때 한 번,
-  모든 모듈 build가 끝난 뒤 시작 훅에서 한 번 더 읽는다. ``library=False`` 종류는 라이브러리에
-  두지 않아 그 종류 요청은 404).
+  목록의 검증 요약은 검증 제공자의 선택 메서드 ``space_summaries``, 없으면 null),
+  ``definitions.kind_contributions``(여러 제공자, X44 — ``library=True`` 기여 종류를 라이브러리
+  저장소에 더한다. build 때 한 번, 모든 모듈 build가 끝난 뒤 시작 훅에서 한 번 더 읽는다.
+  ``library=False`` 종류는 라이브러리에 두지 않아 그 종류 요청은 404).
 - 저장소: 워크스페이스 폴더(``BaseServices.paths.workspace``)의 YAML. 버전 기록은 호스트 DB 핸들
   (``BaseServices.database``)의 legacy 테이블, 없으면 메모리(``server.warnings``에
   ``definitions.versions_memory`` 경고). 시작 때 legacy 계보를 올리고(멱등)
@@ -185,8 +185,10 @@ class DefinitionsModule:
             return DefinitionService(
                 stores.get(space),
                 checks=lambda: ctx.ports(DEFINITION_CHECKS),
+                validation=lambda: ctx.port(GRAPH_VALIDATION),
                 entry_labels=lambda: ctx.port(GRAPH_ENTRY_LABELS),
                 session_summary=lambda: ctx.port(GRAPH_SESSION_SUMMARY),
+                space=space,
             )
 
         database = ctx.database

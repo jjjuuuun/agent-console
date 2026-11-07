@@ -6,7 +6,8 @@
   ``resources.types``·``definitions.checks``(검증 경로에 저장 전 검사의 경고·정보를 붙인다 — 예:
   ``mod-projects``의 범위 경고. 제공자가 없으면 엔진 검증 + 팀 규칙만).
 - 제공: ``runs.preparers``(팀 규칙 검사·실행 준비), ``runs.services``(노드 서비스),
-  ``graphs.validation``(목록 검증 요약). 경로: ``POST /graphs/{id}/validate``.
+  ``graphs.validation``(목록 검증 요약). 경로: ``POST /graphs/{id}/validate``(선택 ``?project=`` —
+  그 프로젝트 실행 기준, ``runs.starter``의 ``check_project``가 없으면 409 ``feature_unavailable``).
 - 구독: ``definitions.saved`` → 검증 요약 캐시 버리기.
 - 디스크립터: 호스트 기본 서비스 ``registries``(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다.
 - 중첩 팀(design §5R.7): 노드 서비스 ``TEAM_LOOKUP``(팀 구성 읽기 = ``runs.starter``의
@@ -94,7 +95,15 @@ class RunsTeamsLink:
         ctx.provide(GRAPH_VALIDATION, summaries)
         ctx.subscribe(DEFINITIONS_SAVED, summaries.invalidate)
         return ModuleParts(
-            routers=[build_router(lambda: checker, lambda: ctx.ports(DEFINITION_CHECKS))]
+            routers=[
+                build_router(
+                    lambda: checker,
+                    lambda: ctx.ports(DEFINITION_CHECKS),
+                    project_unavailable=lambda: ctx.unavailable(
+                        RUNS_STARTER, "실행 모듈이 프로젝트 기준 검증을 지원하지 않습니다"
+                    ),
+                )
+            ]
         )
 
 

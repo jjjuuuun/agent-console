@@ -197,3 +197,27 @@ describe("복사 종류·항목 (6R.20a)", () => {
     expect(calls).toEqual(["/projects/copy/kinds", "/projects/copy/kinds?project=p%201", "/projects/copy/items?kind=zz-kind", "/projects/copy/items?project=p%201"]);
   });
 });
+
+describe("대화 단위 호출의 ?project= (요청 11/07)", () => {
+  it("project를 주면 상세·수정·삭제·턴·보내기·대기열 경로에 붙고, 생략하면 주소가 그대로다", async () => {
+    const { rest, calls } = server(() => ({ body: { id: "c1" } }));
+    await rest.getConversation("c1", "p1");
+    expect(last(calls).path).toBe("/conversations/c1?project=p1");
+    await rest.getConversation("c1");
+    expect(last(calls).path).toBe("/conversations/c1");
+    await rest.updateConversation("c1", { title: "t" }, "p1");
+    expect(last(calls)).toMatchObject({ method: "PATCH", path: "/conversations/c1?project=p1" });
+    await rest.deleteConversation("c1", "p1");
+    expect(last(calls)).toMatchObject({ method: "DELETE", path: "/conversations/c1?project=p1" });
+    await rest.listTurns("c1", { limit: 5, project: "p1" });
+    expect(last(calls).path).toBe("/conversations/c1/turns?limit=5&project=p1");
+    await rest.postMessage("c1", { text: "x" }, "p1");
+    expect(last(calls).path).toBe("/conversations/c1/messages?project=p1");
+    await rest.listQueue("c1", "p1");
+    expect(last(calls).path).toBe("/conversations/c1/queue?project=p1");
+    await rest.cancelQueuedMessage("c1", "q1", "p1");
+    expect(last(calls).path).toBe("/conversations/c1/queue/q1?project=p1");
+    await rest.releaseQueuedMessage("c1", "q1", "p1");
+    expect(last(calls).path).toBe("/conversations/c1/queue/q1/release?project=p1");
+  });
+});

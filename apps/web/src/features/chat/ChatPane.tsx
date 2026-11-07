@@ -19,7 +19,7 @@ import { countHandled, failedChildOf, hasRunningChild } from "./lib/progress";
 import { usePageTitle } from "../../shell/titles";
 import { ChatHeader } from "./ChatHeader";
 import { useWorkspaceSettings } from "../../app/queries";
-import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList } from "./chatData";
+import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationProject, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList } from "./chatData";
 import { chatMessages } from "./chatMessages";
 import { EmptyConversation } from "./EmptyViews";
 import { InteractionItem } from "./InteractionItem";
@@ -80,7 +80,8 @@ export function ChatPane(props: ChatPaneProps) {
   const sendPart = useLinkPart(LINK_PART_IDS.chatSend);
   const resumePart = useLinkPart(LINK_PART_IDS.chatResumeTurn);
 
-  const conversation = useConversationDetail(id);
+  const project = useConversationProject(id);
+  const conversation = useConversationDetail(id, project);
   const graphs = useGraphList();
   const list = useConversationList();
   const graph = useChatGraph(conversation.data?.graph_id, conversation.data?.project_id ?? null);
@@ -92,7 +93,7 @@ export function ChatPane(props: ChatPaneProps) {
   const strategies = useDelegationStrategies();
   const settings = useWorkspaceSettings();
   const backendList = useBackendList();
-  const queue = useQueueList(id);
+  const queue = useQueueList(id, project);
 
   const kindMap = useMemo(() => indexById(edgeTypes.data), [edgeTypes.data]);
   const naming = useMemo<NamingContext>(() => ({ nodeTypes: indexById(nodeTypes.data), agents: indexById(agents.data) }), [nodeTypes.data, agents.data]);
@@ -102,7 +103,7 @@ export function ChatPane(props: ChatPaneProps) {
   const replyDisplay = typeof chat.reply_display === "string" ? chat.reply_display : "separate";
   const answerEnabled = chat.answer_with_composer !== false;
 
-  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? null, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
+  const feed = useConversationFeed({ conversationId: id, projectId: conversation.data?.project_id ?? project, ws, graph: graph.data?.graph, plan: plan.data, kinds: kindMap, strategies: strategies.data, naming, interactions: cardPart.visible });
   const { turns } = feed;
   const notifyInfo = useCallback((text: string) => toast({ tone: "info", text }), [toast]);
   const respondState = useInteractionRespond({ applyInteraction: feed.applyInteraction, refresh: feed.refresh, notify: notifyInfo, messages: { failed: t.composer.answerFailed } });
@@ -224,12 +225,12 @@ export function ChatPane(props: ChatPaneProps) {
     feed.refresh();
     return ok;
   };
-  const releaseQueued = (keys: readonly string[]) => void runQueued(keys, (k) => rest.releaseQueuedMessage(id, k));
-  const cancelQueued = (keys: readonly string[]) => void runQueued(keys, (k) => rest.cancelQueuedMessage(id, k));
+  const releaseQueued = (keys: readonly string[]) => void runQueued(keys, (k) => rest.releaseQueuedMessage(id, k, project));
+  const cancelQueued = (keys: readonly string[]) => void runQueued(keys, (k) => rest.cancelQueuedMessage(id, k, project));
   const recallQueued = (key: string) => {
     const row = queuedRows.find((q) => q.key === key);
     if (row === undefined) return;
-    void runQueued([key], (k) => rest.cancelQueuedMessage(id, k)).then((ok) => {
+    void runQueued([key], (k) => rest.cancelQueuedMessage(id, k, project)).then((ok) => {
       if (!ok) return;
       setText((cur) => (cur.trim() === "" ? row.text : `${cur}\n${row.text}`));
       setTimeout(() => composer.current?.focus(), 0);
@@ -253,13 +254,13 @@ export function ChatPane(props: ChatPaneProps) {
   };
 
   const post = async (body: string) => {
-    const res = await rest.postMessage(id, { text: body });
+    const res = await rest.postMessage(id, { text: body }, project);
     if ("queued" in res) {
       toast({ tone: "info", text: t.composer.queuedToast(res.queued.position) });
       void queryClient.invalidateQueries({ queryKey: chatKeys.queue(id) });
     } else if (res.run.status === "cancelled") {
       // 시작하는 동안 대화가 지워졌을 수 있다(서버는 404로 알리지만 취소된 Run만 돌려주는 경로도 확인한다).
-      await rest.getConversation(id);
+      await rest.getConversation(id, project);
     }
     feed.refresh();
   };
@@ -476,7 +477,7 @@ export function ChatPane(props: ChatPaneProps) {
         title={title}
         renaming={renaming}
         onRenamingChange={setRenaming}
-        onRename={(next) => void guarded(() => actions.rename(id, next), appMessages.common.requestFailed)}
+        onRename={(next) => void guarded(() => actions.rename(id, next, project), appMessages.common.requestFailed)}
         teamName={teamMissing ? undefined : team?.name}
         teamHref={team ? chatPaths.team(team.id) : undefined}
         runHref={lastRunId ? chatPaths.run(lastRunId) : undefined}
@@ -488,7 +489,7 @@ export function ChatPane(props: ChatPaneProps) {
         moreMenu={[
           { id: "rename", label: t.menu.rename, onSelect: () => setRenaming(true) },
           { id: "same-team", label: t.menu.sameTeamNew, disabled: team === undefined, onSelect: () => conversation.data && props.onNewWithTeam(conversation.data.graph_id) },
-          { id: "archive", label: archived ? t.menu.unarchive : t.menu.archive, onSelect: () => void guarded(() => actions.setArchived(id, !archived), appMessages.common.requestFailed) },
+          { id: "archive", label: archived ? t.menu.unarchive : t.menu.archive, onSelect: () => void guarded(() => actions.setArchived(id, !archived, project), appMessages.common.requestFailed) },
           { id: "runs", label: t.menu.runsFilter, onSelect: () => void navigate(chatPaths.runsOfConversation(id)) },
           { id: "delete", label: t.menu.delete, danger: true, onSelect: () => setConfirmDelete(true) },
         ]}
@@ -583,7 +584,7 @@ export function ChatPane(props: ChatPaneProps) {
             tone="warning"
             actions={
               archived && !teamMissing && !noEntry ? (
-                <Button size="sm" onClick={() => void guarded(() => actions.setArchived(id, false), appMessages.common.requestFailed)}>{t.composer.unarchive}</Button>
+                <Button size="sm" onClick={() => void guarded(() => actions.setArchived(id, false, project), appMessages.common.requestFailed)}>{t.composer.unarchive}</Button>
               ) : noEntry && team ? (
                 <Link className="ac-btn" data-variant="secondary" data-size="sm" to={chatPaths.team(team.id)}>{t.composer.editTeam}</Link>
               ) : undefined
@@ -654,7 +655,7 @@ export function ChatPane(props: ChatPaneProps) {
           setTeamBusy(true);
           setTeamError(null);
           actions
-            .switchTeam(id, graphId)
+            .switchTeam(id, graphId, project)
             .then(() => {
               setTeamDialog(false);
               toast({ tone: "success", text: t.switchTeam.switchedToast(graphs.data?.find((g) => g.id === graphId)?.name ?? graphId) });
@@ -673,7 +674,7 @@ export function ChatPane(props: ChatPaneProps) {
         onConfirm={() => {
           setConfirmDelete(false);
           void guarded(async () => {
-            await actions.remove(id);
+            await actions.remove(id, project);
             props.onGone();
           }, appMessages.common.requestFailed);
         }}

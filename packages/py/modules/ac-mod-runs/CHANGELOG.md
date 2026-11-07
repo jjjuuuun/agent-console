@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 요청 11/07 후속: `check_project(..., graph=)` — 저장본 대신 초안 그래프를 같은 출처·범위로 검사.
+- 요청 11/07: `RunService.check_project(graph_id, project_id)` — 그 프로젝트에서 실행할 때와 같은 정의 출처(`definitions_for`)·실행 범위(`scope`)로 검증(공간 팀 구성 목록 검증 요약이 쓴다).
 - 6R.19 서버 후속: `GET /runs/page`에 `agent_id`·`conversation_id`·`root`(옛 `GET /runs`와 같은 뜻), 행마다 `has_children`(계약 0.13.2 `Run.has_children`). 커서·출처 잇기 규칙 그대로.
 - 계약 0.13.1: `MOVE_BUSY`가 계약 문서 상수 `KnownIssueCodes.RUN_MOVE_BUSY`를 쓴다(값 같음).
 - 6R.16: `RunService.host_id(project_id)`(이 앱이 그 공간 Run에 적는 `host_id`, 공간 없음·기록 공간 없음 = None) — 자동 진행이 실행 기록에서 자기 앱 Run만 고른다.

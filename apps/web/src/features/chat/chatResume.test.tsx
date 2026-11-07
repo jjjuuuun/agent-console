@@ -74,7 +74,7 @@ describe("재시작 뒤 멈춘 대기열", () => {
     expect(await screen.findByText(/멈춤 #1/)).toBeTruthy();
     const row = screen.getByText("첫째 메시지").closest("[data-queued]") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "실행" }));
-    await waitFor(() => expect(release).toHaveBeenCalledWith("c1", "q1"));
+    await waitFor(() => expect(release).toHaveBeenCalledWith("c1", "q1", null));
     expect(await screen.findByText("대기열 #1")).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/대기열 1건이 멈춰 있습니다/)).toBeTruthy());
   });
@@ -84,13 +84,13 @@ describe("재시작 뒤 멈춘 대기열", () => {
     mount(h);
     const row = (await screen.findByText("첫째 메시지")).closest("[data-queued]") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "입력창으로 가져오기" }));
-    await waitFor(() => expect(cancel).toHaveBeenCalledWith("c1", "q1"));
+    await waitFor(() => expect(cancel).toHaveBeenCalledWith("c1", "q1", null));
     await waitFor(() => expect((screen.getByLabelText("메시지 입력") as HTMLTextAreaElement).value).toBe("첫째 메시지"));
     fireEvent.click(screen.getByRole("button", { name: "모두 취소" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("멈춘 1건을 지웁니다");
     fireEvent.click(within(dialog).getByRole("button", { name: "모두 지우기" }));
-    await waitFor(() => expect(cancel).toHaveBeenCalledWith("c1", "q2"));
+    await waitFor(() => expect(cancel).toHaveBeenCalledWith("c1", "q2", null));
     await waitFor(() => expect(screen.queryByText(/멈춰 있습니다/)).toBeNull());
   });
 

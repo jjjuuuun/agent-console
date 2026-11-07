@@ -221,7 +221,7 @@ export function ChatScreen() {
             setRenameTarget(c);
             setRenameText(c.title ?? "");
           }}
-          onToggleArchive={(c) => void guarded(() => actions.setArchived(c.id, !c.archived))}
+          onToggleArchive={(c) => void guarded(() => actions.setArchived(c.id, !c.archived, c.project_id))}
           onDelete={setDeleteTarget}
           onOpenTeam={(c) => void navigate(chatPaths.team(c.graph_id))}
         />
@@ -285,7 +285,7 @@ export function ChatScreen() {
               onClick={() => {
                 const target = renameTarget;
                 setRenameTarget(null);
-                if (target) void guarded(() => actions.rename(target.id, renameText.trim()));
+                if (target) void guarded(() => actions.rename(target.id, renameText.trim(), target.project_id));
               }}
             >
               {t.rename.save}
@@ -306,7 +306,7 @@ export function ChatScreen() {
                 e.preventDefault();
                 const target = renameTarget;
                 setRenameTarget(null);
-                if (target) void guarded(() => actions.rename(target.id, renameText.trim()));
+                if (target) void guarded(() => actions.rename(target.id, renameText.trim(), target.project_id));
               }
             }}
           />
@@ -324,7 +324,7 @@ export function ChatScreen() {
           setDeleteTarget(null);
           if (!target) return;
           void guarded(async () => {
-            await actions.remove(target.id);
+            await actions.remove(target.id, target.project_id);
             if (target.id === conversationId) goTo(undefined);
           });
         }}

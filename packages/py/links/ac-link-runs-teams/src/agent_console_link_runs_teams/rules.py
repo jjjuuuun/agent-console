@@ -65,7 +65,14 @@ from agent_console_teams import (
 
 from .cache import GraphValidationCache, workspace_revision
 from .fixes import DEFAULT_ISSUE_FIXES, IssueFixes
-from .ports import RUN_DEFINITIONS, DefinitionLookup, DefinitionSource, GraphLoader, RunChecker
+from .ports import (
+    RUN_DEFINITIONS,
+    DefinitionLookup,
+    DefinitionSource,
+    GraphLoader,
+    ProjectRunChecker,
+    RunChecker,
+)
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
 from .sources import RunLookups, lookups_from
 
@@ -362,6 +369,9 @@ def _scope_layers(services: Services) -> Sequence[Layer]:
 class ValidationSummaries:
     """``graphs.validation``: 팀 구성 목록 검증 요약(엔진 + 팀 규칙, 워크스페이스 개정 캐시).
 
+    공간(``?project=``) 목록은 ``space_summaries``: ``checker``가 선택 메서드 ``check_project``
+    (``ProjectRunChecker``)를 가지면 실행 시작과 같은 출처·범위로 검사하고, 없으면 전부 None이다.
+
     Args:
         checker: 실행 검증(``runs.starter``).
         lookup: 정의 저장소(개정 지문 재료).
@@ -371,6 +381,7 @@ class ValidationSummaries:
         self._checker = checker
         self._lookup = lookup
         self._cache = GraphValidationCache()
+        self._space_caches: dict[str, GraphValidationCache] = {}
         self._generation = 0
         self._lock = threading.Lock()
 
@@ -378,10 +389,14 @@ class ValidationSummaries:
         """캐시를 버린다(``definitions.saved`` 구독)."""
         with self._lock:
             self._generation += 1
+            spaces = list(self._space_caches.values())
         self._cache.clear()
+        for cache in spaces:
+            cache.clear()
 
-    def revision(self) -> str:
-        fingerprint = workspace_revision(self._lookup)
+    def revision(self, lookup: Any = None) -> str:
+        """정의 개정 지문(``lookup`` 기본 = 라이브러리 저장소). 지문 재료가 없으면 세대 번호."""
+        fingerprint = workspace_revision(self._lookup if lookup is None else lookup)
         if fingerprint is not None:
             return fingerprint
         with self._lock:
@@ -389,6 +404,35 @@ class ValidationSummaries:
 
     def summaries(self, graph_ids: Sequence[str]) -> dict[str, GraphValidationSummary | None]:
         return self._cache.summaries(self.revision(), list(graph_ids), self.compute)
+
+    def space_summaries(
+        self, space: str, graph_ids: Sequence[str], *, lookup: Any = None
+    ) -> dict[str, GraphValidationSummary | None]:
+        """공간(프로젝트) 목록의 요약. 공간 이름 = 실행의 ``project_id``.
+
+        Args:
+            space: 공간 이름(``?project=`` 값).
+            graph_ids: 그 공간의 팀 구성 id.
+            lookup: 그 공간의 정의 저장소(개정 지문 재료). 없으면 세대 번호(``definitions.saved``)로
+                캐시한다.
+        """
+        ids = list(graph_ids)
+        checker = self._checker
+        if not isinstance(checker, ProjectRunChecker):
+            return dict.fromkeys(ids)
+        with self._lock:
+            cache = self._space_caches.setdefault(space, GraphValidationCache())
+        revision = self.revision(lookup) if lookup is not None else f"generation:{self._generation}"
+
+        def compute(graph_id: str) -> GraphValidationSummary | None:
+            try:
+                issues = checker.check_project(graph_id, space)
+            except Exception:
+                _log.debug("공간 팀 구성 검증 요약 없음: %s/%s", space, graph_id, exc_info=True)
+                return None
+            return validation_summary(issues)
+
+        return cache.summaries(revision, ids, compute)
 
     def compute(self, graph_id: str) -> GraphValidationSummary | None:
         """그래프 하나의 요약(읽을 수 없거나 계산이 실패하면 None)."""

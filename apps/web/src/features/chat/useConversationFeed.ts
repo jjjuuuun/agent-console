@@ -155,7 +155,7 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
   const [older, setOlder] = useState<ChatTurn[]>([]);
   const [moreBefore, setMoreBefore] = useState<boolean | undefined>(undefined);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const latest = useApiQuery(chatKeys.turns(conversationId), (r) => r.listTurns(conversationId, { limit: TURN_PAGE }));
+  const latest = useApiQuery(chatKeys.turns(conversationId, projectId), (r) => r.listTurns(conversationId, { limit: TURN_PAGE, project: projectId }));
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const refresh = useCallback(() => {
@@ -198,14 +198,14 @@ export function useConversationFeed({ conversationId, projectId = null, ws, grap
     if (!first || loadingOlder) return;
     setLoadingOlder(true);
     rest
-      .listTurns(conversationId, { before: first.run_id, limit: TURN_PAGE })
+      .listTurns(conversationId, { before: first.run_id, limit: TURN_PAGE, project: projectId })
       .then((page) => {
         setOlder((cur) => [...page, ...cur]);
         setMoreBefore(page.length >= TURN_PAGE);
       })
       .catch(() => setMoreBefore(false))
       .finally(() => setLoadingOlder(false));
-  }, [rest, conversationId, serverTurns, loadingOlder]);
+  }, [rest, conversationId, projectId, serverTurns, loadingOlder]);
 
   const turnRunIds = useMemo(() => new Set(serverTurns.map((t) => t.run_id)), [serverTurns]);
   const interactions = useInteractionStore(ws, conversationId, interactionsEnabled, turnRunIds);

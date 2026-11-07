@@ -44,6 +44,7 @@ from .ports import (
     GraphSessionSummarySource,
     GraphValidationSource,
     SavedDefinition,
+    SpaceGraphValidationSource,
 )
 from .routes import build_router
 from .service import DefinitionService
@@ -96,6 +97,7 @@ __all__ = [
     "PlainSecretScan",
     "SavedDefinition",
     "SecretRuleCheck",
+    "SpaceGraphValidationSource",
     "WorkspaceState",
     "build_router",
     "build_rules",

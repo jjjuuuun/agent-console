@@ -32,6 +32,7 @@ from .ports import (
     GraphEntryLabels,
     GraphSessionSummarySource,
     GraphValidationSource,
+    SpaceGraphValidationSource,
 )
 
 _log = logging.getLogger("agent_console_mod_definitions")
@@ -46,6 +47,8 @@ class DefinitionService:
         validation: 팀 구성 목록 검증 요약 제공자(없으면 None → 요약 null).
         entry_labels: 팀 구성 입구 이름 제공자(없으면 None → 이름 null).
         session_summary: 팀 구성 세션 집계 제공자(없으면 None → 집계 null).
+        space: 이 서비스가 쓰는 공간 이름(None = 라이브러리). 공간이면 검증 요약은 제공자의 선택
+            메서드 ``space_summaries``로만 계산한다(없으면 null).
     """
 
     def __init__(
@@ -56,8 +59,10 @@ class DefinitionService:
         validation: Callable[[], GraphValidationSource | None] = lambda: None,
         entry_labels: Callable[[], GraphEntryLabels | None] = lambda: None,
         session_summary: Callable[[], GraphSessionSummarySource | None] = lambda: None,
+        space: str | None = None,
     ) -> None:
         self.store = store
+        self.space = space
         self._checks = checks
         self._validation = validation
         self._entry_labels = entry_labels
@@ -99,8 +104,12 @@ class DefinitionService:
         validations: Mapping[str, GraphValidationSummary | None] = {}
         source = self._validation() if validate else None
         if source is not None:
+            ids = [s.id for s in summaries]
             try:
-                validations = source.summaries([s.id for s in summaries])
+                if self.space is None:
+                    validations = source.summaries(ids)
+                elif isinstance(source, SpaceGraphValidationSource):
+                    validations = source.space_summaries(self.space, ids, lookup=self.store)
             except Exception:
                 _log.exception("팀 구성 검증 요약 실패")
         labeler = self._entry_labels()

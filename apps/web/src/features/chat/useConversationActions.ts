@@ -13,7 +13,7 @@ export function useConversationActions() {
 
   const settle = useCallback(
     (conversation?: Conversation) => {
-      if (conversation) queryClient.setQueryData(chatKeys.conversation(conversation.id), conversation);
+      if (conversation) queryClient.setQueryData(chatKeys.conversation(conversation.id, conversation.project_id ?? null), conversation);
       void queryClient.invalidateQueries({ queryKey: ["list"] });
       void queryClient.invalidateQueries({ queryKey: ["chat"] });
     },
@@ -28,11 +28,12 @@ export function useConversationActions() {
         settle(created);
         return created;
       },
-      rename: async (id: string, title: string): Promise<void> => settle(await rest.updateConversation(id, { title })),
-      setArchived: async (id: string, archived: boolean): Promise<void> => settle(await rest.updateConversation(id, { archived })),
-      switchTeam: async (id: string, graphId: string): Promise<void> => settle(await rest.updateConversation(id, { graph_id: graphId })),
-      remove: async (id: string): Promise<void> => {
-        await rest.deleteConversation(id);
+      /** 아래 `project`는 대화가 있는 프로젝트(기록 DB). 서버가 `?project=`를 요구한다. */
+      rename: async (id: string, title: string, project?: string | null): Promise<void> => settle(await rest.updateConversation(id, { title }, project)),
+      setArchived: async (id: string, archived: boolean, project?: string | null): Promise<void> => settle(await rest.updateConversation(id, { archived }, project)),
+      switchTeam: async (id: string, graphId: string, project?: string | null): Promise<void> => settle(await rest.updateConversation(id, { graph_id: graphId }, project)),
+      remove: async (id: string, project?: string | null): Promise<void> => {
+        await rest.deleteConversation(id, project);
         queryClient.removeQueries({ queryKey: chatKeys.conversation(id) });
         settle();
       },

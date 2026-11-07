@@ -65,7 +65,7 @@ export function StartCard({ onNew, onDismiss }: StartCardProps) {
         <Button size="sm" variant="ghost" onClick={onDismiss}>{startMessages.close}</Button>
       </div>
       <p className="app-muted">{startMessages.description}</p>
-      <StartGuide {...(onNew ? { actionOverrides: { talk: onNew } } : {})} />
+      <StartGuide {...(onNew ? { actionOverrides: { talk: onNew, chat: onNew } } : {})} />
     </section>
   );
 }

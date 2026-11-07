@@ -161,6 +161,7 @@ export const resourceMessages = {
     steps: { source: "출처 고르기", items: "항목 고르기", result: "결과" },
     readOnlyNote: "원본 파일은 읽기만 하고 수정하지 않습니다. 선택한 항목은 이 workspace에 복사됩니다.",
     noSources: "가져올 수 있는 출처가 없습니다",
+    noSourcesPickProject: "프로젝트를 쓰고 있다면 사이드바에서 프로젝트를 고르세요. 프로젝트 폴더의 출처가 나타납니다.",
     sourcesFailed: "출처 목록을 불러오지 못했습니다",
     unavailable: "사용할 수 없음",
     path: "경로",

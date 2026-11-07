@@ -7,8 +7,8 @@
 - `runs.services`: 노드 서비스(`ac-nodes-core` 키 — 에이전트·리소스 조회, 공통 설정, 기본 백엔드, 작업 폴더, 실행 파일 폴더, 중첩 팀 조회 `TEAM_LOOKUP`).
 - 중첩 팀: 팀 구성 읽기(`runs.starter`의 `load_graph(id, version_hash)`, 고정 버전 포함)로 노드 서비스 `TEAM_LOOKUP`과 팀 규칙의 중첩 검사(`team.recursive`·`team.nesting_exceeded`·`team.team_not_found`·`team.child_no_entry`)를 준다.
 - Run의 정의 출처: 실행 환경 `definitions`·노드 서비스 `RUN_DEFINITIONS`가 있으면 노드 서비스(`AGENT_LOOKUP`·`TEAM_LOOKUP`(고정 버전 포함)·`RESOURCE_LOOKUP`(본문·여러 파일))와 실행 전 검사·사전 점검이 그 출처 하나만 본다(`lookups_from(source) -> RunLookups`). 켜고 끄기(리소스·팀 구성 읽기 없음)는 지금과 같다.
-- `graphs.validation`: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시, `definitions.saved` 구독으로도 버림).
-- 경로 `POST /graphs/{id}/validate`(본문 그래프 또는 저장본, 이슈가 있어도 200). 결과 = 엔진 검증 + 팀 규칙 + 선택 포트 `definitions.checks`(저장 전 정의 검사)의 경고·정보(예: `mod-projects`의 `project.shared_uses_project` + 제안 `project.move_to_shared`). 검사의 error는 저장 경로가 422로 거부하므로 붙이지 않고, 같은 코드·대상·path는 한 번만 낸다. 제공 모듈이 없으면 엔진 검증 + 팀 규칙만이다(`definition_check_issues`·`with_definition_checks`는 HTTP 없이도 쓴다).
+- `graphs.validation`: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시, `definitions.saved` 구독으로도 버림). 공간(`?project=`) 목록은 선택 메서드 `space_summaries(space, ids, lookup=)` — `runs.starter`가 선택 메서드 `check_project(graph_id, project_id)`(`ProjectRunChecker`, 실행 시작과 같은 정의 출처·실행 범위)를 가질 때만 계산하고, 없으면 null.
+- 경로 `POST /graphs/{id}/validate`(본문 그래프 또는 저장본, 이슈가 있어도 200). 결과 = 엔진 검증 + 팀 규칙 + 선택 포트 `definitions.checks`(저장 전 정의 검사)의 경고·정보(예: `mod-projects`의 `project.shared_uses_project` + 제안 `project.move_to_shared`). 검사의 error는 저장 경로가 422로 거부하므로 붙이지 않고, 같은 코드·대상·path는 한 번만 낸다. 제공 모듈이 없으면 엔진 검증 + 팀 규칙만이다(`definition_check_issues`·`with_definition_checks`는 HTTP 없이도 쓴다). 선택 질의 `?project=<id>`를 주면 그 프로젝트에서 실행할 때 기준이다(`runs.starter`의 `check_project`·`load_graph(project_id=)` — 그 공간의 정의·실행 범위, 공간에만 있는 구성도 읽는다). 그 메서드가 없으면 409 `feature_unavailable`, 출처 공급자가 막으면 그 오류(예: 공간에 없는 구성 422 `project.not_imported`).
 
 이 연동이 꺼지면 실행은 엔진 검증만으로 하고(`mod-runs`가 `team.rules_unavailable` 경고), 목록 검증 요약은 null, 검증 경로는 404다. 에이전트 노드도 에이전트 조회 서비스가 없어 `agent.lookup_unavailable`로, 중첩 팀 노드는 팀 구성 조회가 없어 `team.lookup_unavailable`로 실패한다.
 
@@ -76,7 +76,7 @@ True
 | 선택 | `workspace.settings` / `resources.lookup` / `resources.types` | 공통 설정 / 리소스 조회 / 리소스 종류 |
 | 선택(여러 제공자) | `definitions.checks` | `issues(kind, document) -> Sequence[Issue]`(검증 경로에 경고·정보를 붙인다) |
 | 제공(multi) | `runs.preparers` / `runs.services` | `TeamRules`(노드 서비스에 중첩 팀 조회 `TEAM_LOOKUP` 포함, 팀 규칙에 중첩 검사) |
-| 제공 | `graphs.validation` | `ValidationSummaries.summaries(graph_ids)` |
+| 제공 | `graphs.validation` | `ValidationSummaries.summaries(graph_ids)`, 선택 `space_summaries(space, graph_ids, lookup=)` |
 | 구독 | `definitions.saved` | 검증 요약 캐시 버리기 |
 
 ## 단독 실행

@@ -20,7 +20,9 @@
   상호작용 설정).
 - ``runs.services``: 노드 서비스(``ac-nodes-core`` 키 — 에이전트·리소스 조회, 공통 설정,
   기본 백엔드, 작업 폴더, 실행 파일 폴더).
-- ``graphs.validation``: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시).
+- ``graphs.validation``: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시). 선택 메서드
+  ``space_summaries``: 공간(``?project=``) 목록 요약(``runs.starter``의 선택 메서드
+  ``check_project``가 있을 때, 공간 저장소 지문 캐시).
 """
 
 from __future__ import annotations
@@ -84,6 +86,29 @@ class RunChecker(Protocol):
 
 
 @runtime_checkable
+class ProjectRunChecker(Protocol):
+    """``runs.starter``의 **선택** 메서드: 프로젝트(``Run.project_id``)에서 실행할 때의 검증.
+
+    실행 시작과 같은 정의 출처·실행 범위로 검사한다(``mod-runs`` ``RunService.check_project``).
+    없으면 공간 목록 검증 요약은 null이고 검증 경로의 ``?project=``는 409
+    ``feature_unavailable``이다.
+    """
+
+    def check_project(
+        self, graph_id: str, project_id: str, *, graph: Graph | None = None
+    ) -> list[Issue]:
+        """그 프로젝트에서 읽은 팀 구성(``graph``를 주면 그 초안)의 검증 이슈(읽지 못하거나
+        막히면 제공 모듈의 예외 — 그 모듈의 오류 맵이 HTTP 상태로 바꾼다)."""
+        ...
+
+    def load_graph(
+        self, graph_id: str, version_hash: str | None = None, *, project_id: str | None = None
+    ) -> Graph:
+        """저장된 팀 구성. ``project_id``가 있으면 그 프로젝트 실행의 정의 출처에서 읽는다."""
+        ...
+
+
+@runtime_checkable
 class ValidationSource(Protocol):
     """``graphs.validation`` 모양."""
 
@@ -136,6 +161,7 @@ __all__ = [
     "DefinitionLookup",
     "DefinitionSource",
     "GraphLoader",
+    "ProjectRunChecker",
     "RunChecker",
     "SavedLike",
     "StoredLike",

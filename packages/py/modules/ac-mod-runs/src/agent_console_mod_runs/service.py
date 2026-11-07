@@ -334,6 +334,26 @@ class RunService:
         """저장 전·후 검증: 엔진 검증 + 준비자 검사(이슈가 있어도 돌려준다)."""
         return self._issues(graph, self.current_services(), strict=False)
 
+    def check_project(
+        self, graph_id: str, project_id: str, *, graph: Graph | None = None
+    ) -> list[Issue]:
+        """그 프로젝트(``Run.project_id``)에서 실행할 때의 검증: 실행 시작과 같은 정의 출처
+        (``definitions_for``)에서 그래프를 읽고, 같은 실행 범위 서비스(``scope``)로 엔진 검증 +
+        준비자 검사를 한다(이슈가 있어도 돌려준다, 범위 경고는 넣지 않는다).
+
+        Args:
+            graph: 저장본 대신 검사할 그래프(편집 초안). 정의 출처는 그대로 ``graph_id``로 정한다.
+
+        Raises:
+            DefinitionReadError: 그 출처에서 그래프를 읽지 못했다(``graph``를 주면 읽지 않는다).
+            RunPreflightError: 정의 출처·실행 범위 공급자가 막았다(실행도 막힌다).
+        """
+        source = self.definitions_for(project_id, graph_id)
+        if graph is None:
+            graph = self._read_graph(source or self._lookup, graph_id, None)
+        services, _warnings = self.scope(graph, self.current_services(source), project_id)
+        return self._issues(graph, services, strict=False)
+
     def _raise_blockers(self, graph: Graph, services: Services) -> None:
         blockers = [i for i in self._issues(graph, services, strict=True) if blocks_run(i)]
         if blockers:

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 요청 11/07 후속: `POST /graphs/{id}/validate`가 선택 `?project=`를 받는다(그 프로젝트 실행 기준, `ProjectRunChecker.check_project(graph_id, project_id, graph=)`·`load_graph(project_id=)`). 없으면 409 `feature_unavailable`(`build_router(project_unavailable=)`).
+- 요청 11/07: 공간(`?project=`) 팀 구성 목록 검증 요약 `ValidationSummaries.space_summaries`(공간별 지문 캐시). `runs.starter`의 선택 메서드 `ProjectRunChecker.check_project`가 있을 때만 계산한다.
 - 5.2R.106 후속: 설치자 옵션 스키마 `RunsTeamsLinkSettings`(`issue_fixes_file` — 해결 버튼 표 교체, 빈 표 파일 = 끄기)와 `issue_fixes_of`. 모듈이 `TeamRules(issue_fixes=)`에 넘긴다.
 - 5.2R.43: 준비(`prepare`)가 위임 방식 디스크립터를 `prepare_run(strategies=)`로 넘겨 엔진 대기 grant가 세션 단위(`shares_session` 반영)다.
 - 5.2R.34: 노드 서비스 `SCOPE_LAYERS`를 사전 점검·준비에 반영. 준비 결과 `TeamRunPreparation.run_context`에 Run 유효 작업

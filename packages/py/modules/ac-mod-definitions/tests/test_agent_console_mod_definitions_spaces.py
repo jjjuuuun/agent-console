@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Issue
+from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, GraphValidationSummary, Issue
 from agent_console_mod_definitions import DEFINITIONS_SPACES, module
 from agent_console_mod_definitions.store import definition_kinds
 from agent_console_modkit import Assembly, BaseServices, ModuleContext, Paths, assemble
@@ -245,7 +245,9 @@ def test_copied_folder_keeps_version_history(tmp_path: Path, spaces: FolderSpace
         again.close()
 
 
-def test_space_graph_list_has_no_validation(tmp_path: Path, spaces: FolderSpaces) -> None:
+def test_space_graph_list_without_space_method_has_no_validation(
+    tmp_path: Path, spaces: FolderSpaces
+) -> None:
     from agent_console_mod_definitions import GRAPH_VALIDATION
 
     class Validation:
@@ -261,6 +263,54 @@ def test_space_graph_list_has_no_validation(tmp_path: Path, spaces: FolderSpaces
         client.post(f"{API}/graphs?project=pa", json=GRAPH)
         [row] = client.get(f"{API}/graphs?project=pa").json()
         assert row["validation"] is None
+
+
+def test_space_graph_list_fills_validation_from_space_method(
+    tmp_path: Path, spaces: FolderSpaces
+) -> None:
+    """요청 11/07: 공간 목록도 공용 목록처럼 ``validation`` 요약을 채운다(제공자의 공간 요약)."""
+    from agent_console_mod_definitions import GRAPH_VALIDATION, SpaceGraphValidationSource
+
+    seen: list[tuple[str, list[str], object]] = []
+
+    class Validation:
+        def summaries(self, graph_ids: Any) -> Mapping[str, Any]:
+            return dict.fromkeys(graph_ids, GraphValidationSummary(blocks_run=False))
+
+        def space_summaries(
+            self, space: str, graph_ids: Any, *, lookup: Any = None
+        ) -> Mapping[str, Any]:
+            seen.append((space, list(graph_ids), lookup))
+            return {
+                g: GraphValidationSummary(blocks_run=True, error_count=1, codes=["cycle"])
+                for g in graph_ids
+            }
+
+    assert isinstance(Validation(), SpaceGraphValidationSource)
+    validation = fake_module(
+        "validation",
+        provides=[GRAPH_VALIDATION],
+        on_build=lambda ctx: ctx.provide(GRAPH_VALIDATION, Validation()),
+    )
+    with _client(_assembly(tmp_path, _spaces_module(spaces), validation)) as client:
+        client.post(f"{API}/graphs?project=pa", json=GRAPH)
+        client.post(f"{API}/graphs", json=GRAPH)
+        [row] = client.get(f"{API}/graphs?project=pa").json()
+        assert row["validation"] == {
+            "blocks_run": True,
+            "error_count": 1,
+            "warning_count": 0,
+            "codes": ["cycle"],
+        }
+        [(space, ids, lookup)] = seen
+        assert (space, ids) == ("pa", ["g1"])
+        assert lookup is spaces.open("pa")  # 그 공간 저장소(개정 지문 재료)
+        [lib] = client.get(f"{API}/graphs").json()
+        assert lib["validation"]["blocks_run"] is False  # 라이브러리 목록은 그대로
+        assert len(seen) == 1
+        unchecked = client.get(f"{API}/graphs?project=pa&validate=false").json()
+        assert unchecked[0]["validation"] is None
+        assert len(seen) == 1
 
 
 def test_openapi_lists_project_query(tmp_path: Path) -> None:

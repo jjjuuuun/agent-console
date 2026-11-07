@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from agent_console_contracts import (
@@ -36,9 +37,12 @@ from agent_console_mod_runs import (
     RUN_SCOPES,
     RUN_SERVICES,
     RUNS_STARTER,
+    DefinitionReadError,
     RunDefinitionsScoper,
     RunEnvironment,
+    RunPreflightError,
     RunPreparation,
+    RunScope,
     RunScoper,
     module,
 )
@@ -342,3 +346,36 @@ def test_last_provider_wins(tmp_path: Path) -> None:
     ) as client:
         _finish(client, {"graph_id": "project-only", "project_id": "p1"})
         assert preparer.seen[0] == ("project-only", "other")
+
+
+def test_check_project_uses_run_source_and_scope(tmp_path: Path) -> None:
+    """``check_project``: 실행 시작과 같은 출처에서 읽고 준비자 검사도 그 출처·범위로 한다."""
+    library, project = _setup()
+    scope_key = ServiceKey[str]("test.scope")
+    checked: list[tuple[str, str | None, str | None]] = []
+
+    @dataclass
+    class ScopedScoper(_Scoper):
+        def scope_run(self, graph: Graph, services: Services, *, project_id: str | None) -> Any:
+            return RunScope(services={scope_key: project_id or ""})
+
+    class Checking(_Preparer):
+        def check(
+            self, graph: Graph, engine_issues: Sequence[Issue], services: Services, *, strict: bool
+        ) -> list[Issue]:
+            source = services.get(RUN_DEFINITIONS)
+            checked.append((graph.id, getattr(source, "name", None), services.get(scope_key)))
+            return [Issue(severity="error", code="t.blocked", message="막힘")]
+
+    grabbed: list[Any] = []
+    scoper = ScopedScoper({"p1": project})
+    with _assembly(tmp_path, library, scoper, Checking(), _grab(grabbed)):
+        [service] = grabbed
+        issues = service.check_project("project-only", "p1")
+        assert "t.blocked" in [i.code for i in issues]
+        assert checked == [("project-only", "project", "p1")]
+        assert library.calls == []
+        with pytest.raises(DefinitionReadError):
+            service.check_project("library-only", "p1")  # 출처에 없다(라이브러리로 안 넘어감)
+        with pytest.raises(RunPreflightError):
+            service.check_project("shared", "blocked")

@@ -118,7 +118,7 @@ describe("열린 대화와 입력창 답변 모드", () => {
     expect((await screen.findByTestId("answer-strip")).getAttribute("data-answer-mode")).toBe("message");
     type(await composer(), "다음 작업");
     fireEvent.click(screen.getByRole("button", { name: "전송" }));
-    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "다음 작업" }));
+    await waitFor(() => expect(h.rest["postMessage"]).toHaveBeenCalledWith("c1", { text: "다음 작업" }, null));
     expect(h.rest["respondInteraction"]).not.toHaveBeenCalled();
   });
 
@@ -216,7 +216,7 @@ describe("메시지 전송과 대기열", () => {
     expect(await screen.findByText("보관된 대화입니다.")).toBeTruthy();
     expect(((await composer()) as HTMLTextAreaElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "보관 해제" }));
-    await waitFor(() => expect(h.rest["updateConversation"]).toHaveBeenCalledWith("c1", { archived: false }));
+    await waitFor(() => expect(h.rest["updateConversation"]).toHaveBeenCalledWith("c1", { archived: false }, null));
   });
 
   it("입구 없는 팀 구성이면 비활성 + 팀 구성 편집 링크", async () => {
@@ -334,7 +334,7 @@ describe("팀 구성 전환", () => {
     expect(within(dialog).getByText(/새 팀 구성에 없는 노드의 세션은 이어 쓰지 않습니다/)).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("radio", { name: /팀 셋/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: "바꾸기" }));
-    await waitFor(() => expect(h.rest["updateConversation"]).toHaveBeenCalledWith("c1", { graph_id: "g3" }));
+    await waitFor(() => expect(h.rest["updateConversation"]).toHaveBeenCalledWith("c1", { graph_id: "g3" }, null));
   });
 
   it("실행 중이면 전환 메뉴가 비활성이다", async () => {

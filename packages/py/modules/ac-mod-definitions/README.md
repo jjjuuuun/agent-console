@@ -9,7 +9,7 @@ Agent Console 정의 기능 모듈. 워크스페이스의 정의(에이전트·�
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
   `server.warnings`(평문 비밀 점검 `secret.plain_found`). 토픽 `definitions.saved{kind, id, version_hash}`.
 - 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`·
-  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소),
+  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null. 공간 목록의 검증 요약은 제공자의 선택 메서드 `space_summaries`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소),
   `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 — 아래).
 - 종류 기여: 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
   저장소에 더한다(build 때, 그리고 모든 build가 끝난 뒤 시작 훅에서 한 번 더). `library=False` 종류는 라이브러리에

@@ -63,7 +63,7 @@ describe("백엔드 해결 카드(채팅)", () => {
     fireEvent.click(submit);
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(put).toHaveBeenCalledWith(expect.objectContaining({ agent_defaults: { backend: "b-fake" } }), "s1");
-    expect(post).toHaveBeenLastCalledWith("c1", { text: "안녕" });
+    expect(post).toHaveBeenLastCalledWith("c1", { text: "안녕" }, null);
     await waitFor(() => expect(screen.queryByTestId("backend-chooser")).toBeNull());
   });
 

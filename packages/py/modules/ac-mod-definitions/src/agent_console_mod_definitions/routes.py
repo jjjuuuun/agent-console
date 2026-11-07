@@ -133,7 +133,8 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         space: SpaceQuery = None,
     ) -> list[GraphSummary]:
         """목록(본문 없음). ``entry_labels`` = 입구 노드 표시 이름, ``validation`` = 검증 요약.
-        제공하는 모듈이 꺼져 있으면 둘 다 null. 공간(``?project=``) 목록의 ``validation``은 null."""
+        제공하는 모듈이 꺼져 있으면 둘 다 null. 공간(``?project=``) 목록의 ``validation``은 그
+        공간에서 실행할 때 기준이다(제공자가 공간 요약을 지원하지 않으면 null)."""
         return service(space).graph_summaries(validate=validate)
 
     @router.post("/graphs", response_model=VersionedGraph, status_code=201, responses=errors(409))
