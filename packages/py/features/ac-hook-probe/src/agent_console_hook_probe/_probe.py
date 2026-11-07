@@ -33,6 +33,15 @@ SPAWN_FAILED_EXIT_CODE = 127
 
 _CHUNK = 65536
 
+_SIGNAL_POLL_SECONDS = 0.1
+"""메인 스레드가 기다리다 깨어나 대기 중인 Python 신호 처리기를 돌리는 최대 간격.
+
+Python 신호 처리기는 메인 스레드가 바이트코드로 돌아올 때만 돈다. 메인 스레드가 `waitpid` 같은
+무기한 시스템 호출에 막 들어가려는 순간(또는 다른 스레드에) 신호가 오면 C 처리기는 표시만 하고
+`EINTR`이 나지 않아, 그 호출이 끝날 때(자식 종료)까지 전달·유예 강제 종료가 미뤄진다. 그래서 무기한
+대기는 보조 스레드에 맡기고 메인 스레드는 이 간격으로 깨어나며 기다린다.
+"""
+
 
 @dataclass(frozen=True, slots=True)
 class ProbeIO:
@@ -95,8 +104,8 @@ def _start_without_signals(thread: threading.Thread, signums: Sequence[int], os_
     """`signums`를 막은 채로 스레드를 시작한다(새 스레드는 시작한 스레드의 마스크를 물려받는다).
 
     프로세스로 온 신호는 커널이 아무 스레드에나 줄 수 있다. 보조 스레드가 받으면 C 처리기는 표시만
-    하고, 메인 스레드는 `waitpid`에서 깨지 않아 Python 처리기(그룹 전달)가 자식이 끝날 때까지
-    돌지 않는다. 보조 스레드에서 막아 두면 신호는 항상 메인 스레드로 간다.
+    하고 메인 스레드는 다음 `_SIGNAL_POLL_SECONDS` 깨어남까지 Python 처리기(그룹 전달)를 돌리지
+    않는다. 보조 스레드에서 막아 두면 신호가 메인 스레드로 가서 그 대기 없이 바로 처리된다.
     """
     if os_name == "nt" or not hasattr(signal, "pthread_sigmask") or not signums:
         thread.start()
@@ -106,6 +115,16 @@ def _start_without_signals(thread: threading.Thread, signums: Sequence[int], os_
         thread.start()
     finally:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
+def _wait_child(proc: subprocess.Popen[bytes]) -> None:
+    proc.wait()
+
+
+def _join(thread: threading.Thread, poll_seconds: float) -> None:
+    """`thread`가 끝날 때까지 기다리되 `poll_seconds`마다 깨어나 신호 처리기가 돌 틈을 준다."""
+    while thread.is_alive():
+        thread.join(poll_seconds)
 
 
 @dataclass(slots=True)
@@ -222,13 +241,17 @@ def run_probe(
         threading.Thread(target=_pump_out, args=(proc.stdout, io.stdout, stdout_cap), daemon=True),
         threading.Thread(target=_pump_out, args=(proc.stderr, io.stderr, stderr_cap), daemon=True),
     ]
+    waiter = threading.Thread(target=_wait_child, args=(proc,), daemon=True)
     quiet = forwarder.signals() if handle_signals else []
-    for thread in (feeder, *readers):
+    for thread in (feeder, *readers, waiter):
         _start_without_signals(thread, quiet, os_name)
     try:
-        returncode = proc.wait()
+        _join(waiter, _SIGNAL_POLL_SECONDS)  # 메인이 waitpid에 막히면 신호 처리기가 늦게 돈다
+        returncode = proc.returncode
+        if returncode is None:  # 대기 스레드가 예외로 끝났다(보통 없음)
+            returncode = proc.wait()
         for reader in readers:
-            reader.join()
+            _join(reader, _SIGNAL_POLL_SECONDS)  # 손자가 파이프를 쥐고 있어도 신호를 전달한다
         feeder.join(timeout=0.5)  # 보통 이미 끝났다(stdin EOF). 안 끝났으면 기다리지 않는다.
     finally:
         forwarder.cancel()

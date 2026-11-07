@@ -6,6 +6,7 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -80,12 +81,60 @@ def test_stubborn_child_group_is_killed_after_grace(tmp_path: Path, probe_argv: 
     assert time.monotonic() - started < 20
 
 
+_DEFERRED_SIGNAL_SCRIPT = """
+import json, os, signal, subprocess, sys, threading, time
+from agent_console_hook_probe import ProbeIO, run_probe
+
+spawned = threading.Event()
+
+def foreign():  # 처리기 설치 전에 만든 스레드라 종료 신호를 막지 않는다
+    spawned.wait()
+    time.sleep(0.3)
+    signal.pthread_kill(threading.get_ident(), signal.SIGTERM)  # C 처리기는 이 스레드에서 돈다
+
+threading.Thread(target=foreign, daemon=True).start()
+
+def popen(*args, **kwargs):
+    proc = subprocess.Popen(*args, **kwargs)
+    spawned.set()
+    return proc
+
+null = os.open(os.devnull, os.O_RDONLY)
+started = time.monotonic()
+outcome = run_probe(["/bin/sh", "-c", "exec sleep 30"], io=ProbeIO(null, 1, 2), popen=popen)
+print(json.dumps({"signal": outcome.signal, "forwarded": outcome.forwarded_signal,
+                  "seconds": time.monotonic() - started}))
+"""
+
+
+@pytest.mark.skipif(not hasattr(signal, "pthread_kill"), reason="스레드 지정 신호")
+def test_signal_noted_while_main_is_blocked_is_still_forwarded_promptly(tmp_path: Path) -> None:
+    """C 처리기가 메인 스레드를 깨우지 못한 신호도 곧바로 전달된다(공개 CI 30초 시간 초과 회귀).
+
+    Python 신호 처리기는 메인 스레드에서만 돈다. 메인 스레드가 `waitpid`에 막 들어가려는 순간(또는
+    다른 스레드에) 신호가 오면 `EINTR`이 나지 않아, 예전 구현은 자식이 끝날 때까지 전달도 유예 강제
+    종료도 하지 않았다(`echo ready; exec sleep 60`이 60초를 다 잤다). 여기서는 신호를 막지 않은 다른
+    스레드로 보내 같은 상태를 결정적으로 만든다.
+    """
+    done = subprocess.run(
+        [sys.executable, "-c", _DEFERRED_SIGNAL_SCRIPT],
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr.decode(errors="replace")
+    result = json.loads(done.stdout.decode().strip().splitlines()[-1])
+    assert result["forwarded"] == signal.SIGTERM
+    assert result["signal"] == signal.SIGTERM  # 자식이 전달받은 신호로 끝났다(30초 sleep 전에)
+    assert result["seconds"] < 10
+
+
 @pytest.mark.skipif(not Path("/proc/self/task").is_dir(), reason="/proc 스레드 상태(Linux)")
 def test_helper_threads_block_forwarded_signals(tmp_path: Path) -> None:
     """중계 스레드는 종료 신호를 막는다 → 신호가 늘 메인 스레드로 가서 처리기가 바로 돈다.
 
-    보조 스레드가 신호를 받으면 메인 스레드가 `waitpid`에서 깨지 않아 그룹 전달이 자식 종료까지
-    미뤄졌다(부하가 큰 환경에서 위 SIGTERM 테스트가 30초 시간 초과로 실패하던 원인).
+    보조 스레드가 신호를 받으면 메인 스레드는 다음 주기 깨어남까지 처리기를 돌리지 않는다(무기한
+    대기는 하지 않으므로 늦어도 그 간격 안에는 처리된다). 막아 두면 그 지연도 없다.
     """
     me = os.getpid()
     command = f"sleep 0.3; for f in /proc/{me}/task/*/status; do echo $f; grep SigBlk $f; done"
