@@ -11,6 +11,7 @@ import { describeError } from "../../app/errors";
 import { messages as m } from "../../app/messages";
 import { useApiQuery } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
+import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
@@ -219,6 +220,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       {editor.conflict === null ? null : (
         <ConflictBanner details={editor.conflict} busy={saving} onLoadServer={() => void editor.loadServerVersion()} onOverwrite={() => void editor.overwrite()} />
       )}
+      <SaveIssuesBanner issues={editor.saveIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
       <Tabs lazy tabs={items} activeId={tab === "usages" && !usagePart.visible ? "settings" : tab} onChange={(next) => setTab(next as TabId)} ariaLabel={t.detail.tabsLabel} />
       {exportAction.dialog}

@@ -101,9 +101,10 @@ def build_router(service: Callable[[str | None], ResourceService]) -> APIRouter:
         422 ``validation_failed``. warning·info는 저장하고 ``X-Console-Issues`` 헤더로 싣는다."""
         svc = service(space)
         issues = svc.check(resource)
+        stored = svc.store.create(svc.kind, resource)
         return with_issues(
-            resource_response(svc.store.create(svc.kind, resource), status_code=201),
-            _issue_dicts(issues),
+            resource_response(stored, status_code=201),
+            _issue_dicts(svc.saved_issues(issues, stored)),
         )
 
     @router.get("/resources/{resource_id}", response_model=Resource, responses=errors())
@@ -126,7 +127,8 @@ def build_router(service: Callable[[str | None], ResourceService]) -> APIRouter:
         svc = service(space)
         issues = svc.check(resource)
         stored = svc.store.save(svc.kind, resource, expected_version=if_match_version(if_match))
-        return with_issues(resource_response(stored), _issue_dicts(issues))
+        shown = svc.saved_issues(issues, stored)
+        return with_issues(resource_response(stored), _issue_dicts(shown))
 
     @router.delete("/resources/{resource_id}", status_code=204, responses=errors(412))
     async def delete_resource(

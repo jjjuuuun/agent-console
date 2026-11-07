@@ -12,7 +12,7 @@
 - 시작할 때 **가장 먼저** 이전 프로세스의 미종료 Run을 끊김으로 정리한다(`recover_unfinished_runs`).
 - 엔진은 노드 타입·팀 의미를 모른다. 팀 규칙은 `runs.preparers`, 노드 서비스는 `runs.services`, 대화 턴 이어 가기 같은 특수 경로는 `runs.resume_handlers`로 받는다(모두 여러 제공자 포트, 없으면 그 부분만 꺼진다).
 - 실행별 정의 출처: `runs.scopes` 항목의 선택 메서드 `run_definitions(project_id, graph_id)`(`RunDefinitionsScoper`)가 출처(`DefinitionSource` — `get`·`get_version`, 선택 `read_content`·`list_files`·`read_file`)를 주면 루트 그래프(현재·버전)·`graph_of_run`을 그 출처에서만 읽고(라이브러리로 넘어가지 않음), 노드 서비스 공급자에게 `RunEnvironment.definitions`, 노드·준비자·자식 Run에게 서비스 `RUN_DEFINITIONS`(`runs.definitions`)로 넘긴다. `ErrorInfo`를 돌려주면 Run을 만들지 않고 거부(`RunPreflightError`). `project_id`가 없거나 메서드가 없으면 지금 동작. `POST /runs`는 `RunService.start_graph`로 출처를 한 번만 정한다.
-- 자식 Run 점검: `runs.scopes` 항목의 선택 메서드 `check_child(graph, services, *, project_id)`(`RunChildScoper`)는 `project_id`가 있는 Run에서 자식 Run(중첩 팀)을 만들기 직전(팀 규칙 검사 전) 불린다. `ErrorInfo`를 돌려주면 같은 코드·문구·`details`의 차단 이슈로 자식 Run을 만들지 않는다(노드 실패 `child_invalid`, `details.issues`). 예외는 기록하고 건너뛴다.
+- 자식 Run 점검: `runs.scopes` 항목의 선택 메서드 `check_child(graph, services, *, project_id)`(`RunChildScoper`)는 `project_id`가 있는 Run에서 자식 Run(중첩 팀)을 만들기 직전(팀 규칙 검사 전) 불린다. `ErrorInfo`를 돌려주면 같은 코드·문구·`details`의 차단 이슈로 자식 Run을 만들지 않는다(노드 실패 `validation_failed`, `details.issues[0].code`). 예외는 기록하고 건너뛴다.
 
 ## 설치
 

@@ -2,6 +2,10 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.4]
+- 계약 0.14.4(묶음 4b V1). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `projects` 3.4.0.
+- 새 선택 필드: `CopyPlanItem.blocked?: boolean`(적용할 수 없는 항목, 참이면 `default_action` = skip), `CopyPlanItem.issues?: Issue[]`(항목 이슈, 예: error `secret.plain_found`, 값 없음).
+
 ## [0.14.3]
 - 계약 0.14.3(plugins.disabled 후속). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `modules` 1.6.0.
 - 새 선택 필드: `PluginInfo.reason?: string | null`(skipped·disabled 플러그인의 끈 이유). `status` 설명에 `plugins.disabled`.

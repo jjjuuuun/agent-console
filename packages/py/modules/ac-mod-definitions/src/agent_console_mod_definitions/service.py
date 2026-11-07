@@ -49,6 +49,8 @@ class DefinitionService:
         session_summary: 팀 구성 세션 집계 제공자(없으면 None → 집계 null).
         space: 이 서비스가 쓰는 공간 이름(None = 라이브러리). 공간이면 검증 요약은 제공자의 선택
             메서드 ``space_summaries``로만 계산한다(없으면 null).
+        save_warnings: 저장한 정의 하나의 응답 경고 ``(kind, id, document) -> 이슈``(예: 평문 비밀
+            ``secret.plain_found``). 기본 = 경고 없음.
     """
 
     def __init__(
@@ -60,9 +62,13 @@ class DefinitionService:
         entry_labels: Callable[[], GraphEntryLabels | None] = lambda: None,
         session_summary: Callable[[], GraphSessionSummarySource | None] = lambda: None,
         space: str | None = None,
+        save_warnings: Callable[[str, str, Mapping[str, Any]], Sequence[Issue]] = (
+            lambda _k, _i, _d: ()
+        ),
     ) -> None:
         self.store = store
         self.space = space
+        self._save_warnings = save_warnings
         self._checks = checks
         self._validation = validation
         self._entry_labels = entry_labels
@@ -80,6 +86,17 @@ class DefinitionService:
     def check(self, kind: str, document: Mapping[str, Any] | BaseModel, what: str) -> None:
         """검사에 error가 있으면 ``DefinitionRejectedError``(422)."""
         reject_errors(self.issues(kind, document), what)
+
+    def saved_warnings(self, stored: StoredDefinition) -> list[Issue]:
+        """저장한 정의의 응답 경고(값 없음).
+
+        경고 함수가 실패하면 기록하고 빈 목록(저장은 이미 끝났다).
+        """
+        try:
+            return list(self._save_warnings(stored.kind, stored.id, stored.document))
+        except Exception:
+            _log.exception("저장 응답 경고 계산 실패: %s/%s", stored.kind, stored.id)
+            return []
 
     def documents(self, kind: str, model: type[BaseModel]) -> list[dict[str, Any]]:
         """한 종류의 저장 원문 사본 전부(id 순). 읽을 수 없거나 ``model``에 맞지 않으면 뺀다."""

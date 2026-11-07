@@ -62,6 +62,7 @@ export function WikiSearch({ wikiId, pages, onOpen, inputRef }: WikiSearchProps)
         inputRef={inputRef}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 120)}
+        role="combobox"
         aria={{ "aria-controls": open ? listId : undefined, "aria-expanded": open, "aria-activedescendant": open ? optionsId : undefined, "aria-autocomplete": "list" }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {

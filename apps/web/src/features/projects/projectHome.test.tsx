@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectView } from "@agent-console/contracts/projects";
 import { mountApp } from "../../testing/screenHarness";
-import { createFakeClients, createFakeRest } from "../../testing/fakes";
+import { createFakeClients } from "../../testing/fakes";
 import { DEFINITION_KINDS } from "../library";
 import { MAX_VISIBLE_BANNERS, problemBanners, manifestPath, mergeActivity, relativeTime } from "./projectHomeLib";
 
@@ -47,8 +47,14 @@ async function clickAddFolder() {
 }
 
 function mount(views: ProjectView[], path: string, extra: Record<string, unknown> = {}) {
-  const made = createFakeClients({ listModules: vi.fn(async () => MODULES), listProjects: vi.fn(async () => views), ...extra });
-  made.space.mockReturnValue(createFakeRest({ listAgents: vi.fn(async () => [{ id: "pl", name: "기획 에이전트" }]) }) as never);
+  // 구성 표의 종류·항목은 서버가 준다(`/projects/copy/kinds`·`/items`). 기본: 프로젝트 사본에 에이전트 하나
+  const made = createFakeClients({
+    listModules: vi.fn(async () => MODULES),
+    listProjects: vi.fn(async () => views),
+    listCopyKinds: vi.fn(async () => [{ kind: DEFINITION_KINDS.agent, library: true, portable: true }]),
+    listCopyItems: vi.fn(async (project: string | null, kind?: string) => (project !== null && kind === DEFINITION_KINDS.agent ? [{ kind, id: "pl", name: "기획 에이전트" }] : [])),
+    ...extra,
+  });
   const app = mountApp(made.clients, path);
   return { ...made, ...app };
 }
@@ -56,20 +62,20 @@ function mount(views: ProjectView[], path: string, extra: Record<string, unknown
 describe("projectHomeLib", () => {
   it("배너 순서: 폴더 문제 → 기록 → 설정 파일 → 읽기 전용 → 안내, 같은 원인의 기록 배너는 접는다", () => {
     const v = view("a", { status: "folder_missing", records_state: "unavailable", records_issue: { severity: "error", code: "x", message: "m", details: { reason: "folder_missing" } } });
-    expect(problemBanners(v, "구성").map((b) => b.kind)).toEqual(["folder"]);
+    expect(problemBanners(v).map((b) => b.kind)).toEqual(["folder"]);
     const bad = view("a", { status: "manifest_invalid", records_state: "newer", issues: [{ severity: "info", code: "project.gitignore_outdated", message: "g" }, { severity: "info", code: "project.network_fs", message: "n" }] });
-    expect(problemBanners(bad, "구성").map((b) => b.kind)).toEqual(["records", "manifest", "gitignore", "network"]);
+    expect(problemBanners(bad).map((b) => b.kind)).toEqual(["records", "manifest", "gitignore", "network"]);
     expect(MAX_VISIBLE_BANNERS).toBe(3);
   });
   it("모르는 status는 일반 경고 하나, 보관은 안내 한 줄", () => {
-    const u = problemBanners(view("a", { status: "weird" as never, status_detail: "이유" }), "구성");
+    const u = problemBanners(view("a", { status: "weird" as never, status_detail: "이유" }));
     expect(u).toHaveLength(1);
     expect(u[0]).toMatchObject({ tone: "warning", title: "프로젝트 상태: weird", body: "이유" });
-    expect(problemBanners(view("a", {}, { archived: true }), "구성").map((b) => b.kind)).toEqual(["archived"]);
+    expect(problemBanners(view("a", {}, { archived: true })).map((b) => b.kind)).toEqual(["archived"]);
   });
   it("읽기 전용 폴더 배너는 ready + config_writable=false에서만", () => {
-    expect(problemBanners(view("a", { config_writable: false }), "구성").map((b) => b.kind)).toEqual(["readonly"]);
-    expect(problemBanners(view("a"), "구성")).toEqual([]);
+    expect(problemBanners(view("a", { config_writable: false })).map((b) => b.kind)).toEqual(["readonly"]);
+    expect(problemBanners(view("a"))).toEqual([]);
   });
   it("설정 파일 경로·상대 시간·활동 합치기", () => {
     expect(manifestPath(view("a"))).toBe("/home/me/work/a/.cfg-dir/project.yaml");
@@ -230,13 +236,15 @@ describe("폴더 추가 진입점", () => {
 describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => {
   it("[공용에서 가져오기…]가 복사 계획 대화상자를 고르기 단계로 열고, 구성 표 행 메뉴에 [공용에 저장…]이 있다", async () => {
     // 복사 대화상자의 종류·항목은 서버가 준다(`GET /projects/copy/kinds`·`/items`): 종류 이름은 임의 값이다
-    const { space } = mount([view("a")], "/projects/a", {
+    mount([view("a")], "/projects/a", {
       listConversations: vi.fn(async () => []),
       listRuns: vi.fn(async () => []),
-      listCopyKinds: vi.fn(async () => [{ kind: "zz-kind", library: true, portable: true }]),
-      listCopyItems: vi.fn(async (project: string | null) => (project === null ? [{ kind: "zz-kind", id: "lib-agent", name: "공용 에이전트" }] : [])),
+      listCopyKinds: vi.fn(async () => [{ kind: "zz-kind", library: true, portable: true }, { kind: DEFINITION_KINDS.agent, library: true, portable: true }]),
+      listCopyItems: vi.fn(async (project: string | null, kind?: string) => {
+        if (kind === "zz-kind") return project === null ? [{ kind, id: "lib-agent", name: "공용 에이전트" }] : [];
+        return project === null ? [] : [{ kind, id: "pl", name: "기획 에이전트" }];
+      }),
     });
-    space.mockImplementation(((id: string | null) => createFakeRest({ listAgents: vi.fn(async () => (id === null ? [{ id: "lib-agent", name: "공용 에이전트" }] : [{ id: "pl", name: "기획 에이전트" }])) })) as never);
     const config = await screen.findByTestId("project-config-card");
     await within(config).findByRole("link", { name: "기획 에이전트" });
     fireEvent.click(within(config).getByRole("button", { name: "공용에서 가져오기…" }));
@@ -266,3 +274,51 @@ describe("프로젝트 홈: 공용에서 가져오기·행 메뉴 (33o)", () => 
   });
 });
 
+describe("프로젝트 홈: 구성 표는 서버 종류 목록으로 (V5)", () => {
+  it("코드에 없는 임의 이름의 기여 종류(제목 포함)가 표에 나오고, 삭제 경로를 모르는 종류는 행 메뉴에 삭제가 없다", async () => {
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      listCopyKinds: vi.fn(async () => [
+        { kind: DEFINITION_KINDS.agent, library: true, portable: true },
+        { kind: "qq-contributed", library: true, portable: true, title: "기여 문서" },
+        { kind: "qq-untitled", library: false, portable: true, title: null },
+        { kind: "qq-library-only", library: true, portable: false },
+      ]),
+      listCopyItems: vi.fn(async (project: string | null, kind?: string) => {
+        if (project === null) return [];
+        if (kind === "qq-contributed") return [{ kind, id: "d1", name: "기여 항목" }];
+        if (kind === "qq-untitled") return [{ kind, id: "u1" }];
+        if (kind === "qq-library-only") return [{ kind, id: "nope", name: "보이면 안 됨" }];
+        return [{ kind, id: "pl", name: "기획 에이전트" }];
+      }),
+    });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByText("기여 항목");
+    expect(within(config).getByText("기여 문서")).toBeTruthy();
+    expect(within(config).getByText("u1")).toBeTruthy();
+    expect(within(config).getByText("qq-untitled")).toBeTruthy();
+    expect(within(config).queryByText("보이면 안 됨")).toBeNull();
+    fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
+    expect(await screen.findByRole("menuitem", { name: "공용에 저장…" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "삭제" })).toBeNull();
+  });
+});
+
+describe("프로젝트 홈: {dir}을 모를 때 짝 문장 (V4)", () => {
+  it("config_dir이 없으면 읽기 전용 배너에 대체 글자('구성 폴더')를 {dir}에 끼우지 않는다", () => {
+    const [b] = problemBanners(view("a", { config_writable: false, config_dir: null }));
+    expect(b?.body).toContain("이 폴더 안에 프로젝트 구성 폴더를 쓸 수 없어");
+    expect(b?.body).not.toContain("폴더 폴더");
+    const [named] = problemBanners(view("a", { config_writable: false, config_dir: ".cfg-dir" }));
+    expect(named?.body).toContain("이 폴더에 .cfg-dir 폴더를");
+  });
+  it("설정 파일 오류·폴더 없음·.gitignore 배너도 config_dir 없이 짝 문장", () => {
+    const v = view("a", { status: "manifest_invalid", config_dir: null, issues: [{ severity: "info", code: "project.gitignore_outdated", message: "g" }] });
+    const bodies = problemBanners(v).map((b) => `${b.title} ${b.body}`).join("\n");
+    expect(bodies).not.toContain("undefined");
+    expect(bodies).not.toContain("구성 폴더/");
+    const missing = problemBanners(view("a", { status: "folder_missing", config_dir: null }));
+    expect(missing[0]?.body).toContain("폴더 안의 프로젝트 구성 폴더에 있어");
+  });
+});

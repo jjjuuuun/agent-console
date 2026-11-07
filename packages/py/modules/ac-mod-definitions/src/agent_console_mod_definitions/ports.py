@@ -9,6 +9,9 @@
 - ``definitions.checks``(여러 제공자): 이 모듈은 공통 설정의 비밀 규칙 검사(위험한 정규식)를 낸다.
 - ``server.warnings``(여러 제공자): ``() -> Sequence[Issue]`` — 저장된 정의의 평문 비밀 의심
   (``secret.plain_found``, 정의 저장 때 무효화되는 캐시).
+- ``definitions.save_warnings``: ``(kind, id, document) -> Sequence[Issue]`` — 저장한 정의 하나의
+  응답 경고(평문 비밀 ``secret.plain_found`` warning, 값 없음). 이 모듈의 에이전트·팀 구성
+  저장 응답과 리소스 모듈의 저장 응답이 ``X-Console-Issues`` 헤더로 싣는다(저장은 허용).
 - 토픽 ``definitions.saved``: ``SavedDefinition{kind, id, version_hash, space}``
   (저장·되돌리기·본문 쓰기마다). ``space``는 저장소 공간 이름(None = 라이브러리). 공간 저장소의
   알림은 ``definitions.spaces`` 제공자가 같은 토픽에 ``space``를 담아 낸다(33x).
@@ -125,6 +128,9 @@ type SecretRulesReader = Callable[[], SecretRules]
 type WarningSource = Callable[[], Sequence[Issue]]
 """``server.warnings`` 포트 모양(``GET /server-info``의 ``warnings``에 더해진다)."""
 
+type SaveWarnings = Callable[[str, str, Mapping[str, Any]], Sequence[Issue]]
+"""``definitions.save_warnings`` 포트 모양: ``(kind, id, 저장한 문서) -> 경고``(값 없음)."""
+
 DEFINITIONS_STORE: PortKey[FileDefinitionStore] = PortKey("definitions.store", "정의 저장소")
 DEFINITIONS_LOOKUP: PortKey[FileDefinitionStore] = PortKey("definitions.lookup", "정의 읽기")
 WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
@@ -136,6 +142,9 @@ DEFINITION_CHECKS: PortKey[DefinitionCheck] = PortKey(
 )
 SERVER_WARNINGS: PortKey[WarningSource] = PortKey(
     "server.warnings", "서버 정보 경고(평문 비밀 점검 등)", multi=True
+)
+DEFINITION_SAVE_WARNINGS: PortKey[SaveWarnings] = PortKey(
+    "definitions.save_warnings", "저장 응답 경고(평문 비밀)"
 )
 GRAPH_VALIDATION: PortKey[GraphValidationSource] = PortKey(
     "graphs.validation", "팀 구성 목록 검증 요약"
@@ -157,6 +166,7 @@ __all__ = [
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
+    "DEFINITION_SAVE_WARNINGS",
     "GRAPH_ENTRY_LABELS",
     "GRAPH_SESSION_SUMMARY",
     "GRAPH_VALIDATION",
@@ -168,6 +178,7 @@ __all__ = [
     "GraphEntryLabels",
     "GraphSessionSummarySource",
     "GraphValidationSource",
+    "SaveWarnings",
     "SavedDefinition",
     "SecretRulesReader",
     "SpaceGraphValidationSource",

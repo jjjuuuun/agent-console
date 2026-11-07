@@ -172,7 +172,11 @@ export function projectAbilities(view: ProjectStateInput, options: AbilityOption
   return out;
 }
 
-/** 구성 폴더 이름 문구(`{dir}`)에 넣을 값. 서버가 준 값이 없으면 `fallback`(메시지 `projects.dir_fallback`의 글자). */
+/**
+ * 구성 폴더 이름 문구(`{dir}`)에 넣을 값. 서버가 준 값이 없으면 `fallback`(메시지 `projects.dir_fallback`의 글자).
+ *
+ * @deprecated 다음 메이저에서 메시지 `projects.dir_fallback`과 함께 제거한다. 대신 짝 문장 `*_unknown`을 쓴다.
+ */
 export function configDirLabel(dir: string | null | undefined, fallback: string): string {
   return dir === undefined || dir === null || dir.trim() === "" ? fallback : dir;
 }

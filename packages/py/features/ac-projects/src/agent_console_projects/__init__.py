@@ -5,7 +5,8 @@
   `registration_id`·`folder_slug`).
 - 합치기: 등록부 + 매니페스트 → `Project`(`merge_project`·`split_project`·`initial_manifest`·
   `combined_version`·`ignored_key_issues`).
-- 공간 사이 복사: `copy_plan`·`skip_warnings`·`apply_decisions`·`apply_renames`.
+- 공간 사이 복사: `copy_plan`(대상 이름 `copy_target_label`, 평문 비밀 막힘 `PlainSecretCheck`)·
+  `skip_warnings`·`apply_decisions`·`apply_renames`.
 - 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33), 폴더 안 파일 접근
   `FolderGuard`·`normalize_reserved`·`relative_inside`(예약 경로·링크를 푼 실제 경로, §PI.5).
 - 옛 데이터: `legacy_items`·`legacy_counts`·`without_scope_field`, 프로젝트 층 값
@@ -26,13 +27,20 @@ from ._copy import (
     CODE_COPY_SKIP_BREAKS_REFERENCE,
     CODE_COPY_SOURCE_MISSING,
     CODE_COPY_UNKNOWN_ACTION,
+    CODE_SECRET_PLAIN_FOUND,
+    COPY_TARGET_LIBRARY,
+    COPY_TARGET_PROJECT,
     DEFAULT_COPY_MESSAGES,
+    DEFAULT_TARGET_LABEL,
     CopyDecision,
+    PlainFinding,
+    PlainSecretCheck,
     RewriteReferences,
     SourceDefinition,
     apply_decisions,
     apply_renames,
     copy_plan,
+    copy_target_label,
     renames_of,
     skip_warnings,
 )
@@ -113,10 +121,14 @@ __all__ = [
     "CODE_COPY_UNKNOWN_ACTION",
     "CODE_CROSS_PROJECT",
     "CODE_REFERENCES_UNAVAILABLE",
+    "CODE_SECRET_PLAIN_FOUND",
     "CODE_SHARED_USES_PROJECT",
     "CODE_UNKNOWN",
+    "COPY_TARGET_LIBRARY",
+    "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
     "DEFAULT_MESSAGES",
+    "DEFAULT_TARGET_LABEL",
     "FALLBACK_PREFIX",
     "LEGACY_SCOPE_FIELD",
     "MANIFEST_KEYS",
@@ -131,6 +143,8 @@ __all__ = [
     "PathField",
     "PathRelation",
     "PathRules",
+    "PlainFinding",
+    "PlainSecretCheck",
     "ProjectFolder",
     "ProjectFolderSet",
     "ProjectLike",
@@ -148,6 +162,7 @@ __all__ = [
     "conflict_error_code",
     "conflict_status",
     "copy_plan",
+    "copy_target_label",
     "delete_plan",
     "effective_scope",
     "folder_conflicts",

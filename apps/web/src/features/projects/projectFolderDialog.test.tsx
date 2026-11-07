@@ -120,6 +120,23 @@ describe("ProjectFolderDialog add", () => {
     expect(onSubmit).toHaveBeenCalledWith({ kind: "add", folder: "/home/me/work/payments", name: "payments", id: "payments", description: undefined, adopted: null, manifestInvalid: false });
   });
 
+  it("프로젝트 0개 첫 열기(config_dir을 아직 모름)에는 {dir} 없는 짝 문장, 확인 응답 뒤에는 실제 이름(고정폭)", async () => {
+    const api = fakeApi({ "/w/app": fc("/w/app", { config_dir: ".real-dir" }) }, { configDir: undefined });
+    render(<ProjectFolderDialog mode="add" api={api} onSubmit={async () => undefined} onClose={() => undefined} />);
+    const dlg = screen.getByRole("dialog");
+    expect(dlg.textContent).toContain("이 폴더 안에 프로젝트 구성 폴더를 만들어 구성과 메모리를 저장합니다");
+    expect(dlg.textContent).not.toContain("폴더 폴더");
+    expect(dlg.textContent).not.toContain("구성 폴더 폴더");
+    expect(dlg.querySelector("code")).toBeNull();
+    await typePath("/w/app");
+    expect(within(dlg).getByText(".real-dir").tagName).toBe("CODE");
+    expect(dlg.textContent).toContain("이 폴더에 .real-dir 폴더를 만들어");
+  });
+  it("경로 다시 지정 안내도 config_dir을 모르면 짝 문장", () => {
+    const api = fakeApi({}, { configDir: undefined });
+    render(<ProjectFolderDialog mode="repath" api={api} target={{ id: "p", name: "P", folder: "/w/old" }} onSubmit={async () => undefined} onClose={() => undefined} />);
+    expect(screen.getByRole("dialog").textContent).toContain("폴더 안의 프로젝트 구성 폴더에 있습니다");
+  });
   it("직접 고친 이름은 다른 폴더를 골라도 덮어쓰지 않는다", async () => {
     setup();
     await typePath("/w/a");

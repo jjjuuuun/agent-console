@@ -20,7 +20,7 @@ Agent Console 프로젝트·실행 연동 모듈. 실행의 `project_id`(불투�
   중첩 팀의 자식·손자 팀 구성 노드까지 시작 전에 본다(노드 서비스 `TEAM_LOOKUP`, 고정 버전·노드의
   팀 층 덮어쓰기 반영, `node_id` = `"<팀 노드>/<자식 노드>"`). 자식 Run을 만들기 직전에도 실제로 돌
   자식 그래프로 한 번 더 본다(`check_child` — `mod-runs` `RunChildScoper`, 막히면 자식 Run 없이 노드
-  실패 `child_invalid`, `details.issues`에 `project.outside_folder`).
+  실패 `validation_failed`, `details.issues[0].code`에 `project.outside_folder`).
 - 이 연동을 끄면: `project_id` 기록·거르기는 그대로, 프로젝트 층·정의 출처·사전 점검만 빠진다.
 - 설정 `modules.options.link-projects-runs`: `layer_id`(기본 `project`), `layer_label`(기본
   `프로젝트`), `unknown_message`(`string.Template`, 변수 `project`), `require_project`(기본 참, 0.3.0부터 — 프로젝트 없이 시작하는 실행·대화 턴은 422 `project.required`. 프로젝트 없는 실행을 쓰려면 `false`로 준다. `ProjectScope(require_project=)` 생성자 기본은 그대로 거짓).

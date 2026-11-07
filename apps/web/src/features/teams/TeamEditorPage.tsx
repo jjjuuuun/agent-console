@@ -16,6 +16,7 @@ import { useStorage } from "../../app/StorageContext";
 import { messages as m } from "../../app/messages";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { ConflictBanner } from "../../definition/ConflictBanner";
+import { SaveIssuesBanner } from "../../definition/SaveIssuesBanner";
 import { SaveStatus } from "../../definition/SaveStatus";
 import { UnsavedGuard } from "../../definition/unsaved";
 import { useDefinitionEditor } from "../../definition/useDefinitionEditor";
@@ -767,6 +768,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
           onOverwrite={() => void editor.overwrite()}
         />
       )}
+      <SaveIssuesBanner issues={editor.saveIssues} />
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
       {chat.error ? <Banner tone="danger">{chat.error}</Banner> : null}
       <HintBanner id="teams" satisfied={overview !== undefined && startConditionsMet(overview)}><HintOneLine short={t.layout.hintShort} full={t.editor.hint} /></HintBanner>

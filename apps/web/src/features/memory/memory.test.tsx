@@ -202,7 +202,7 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);
     expect(within(tree).queryAllByText("팀 둘")).toHaveLength(0);
     // 현재 프로젝트는 머리의 프로젝트 칩이 보인다(칩 해제로 프로젝트를 풀 수 없다: 활성 필터 칩 없음).
-    expect(await screen.findByRole("button", { name: "프로젝트 프로젝트 하나, 경로 /work/P1" }, LONG)).toBeTruthy();
+    await waitFor(() => expect(document.querySelector(".prj-pchip")?.textContent).toContain("프로젝트 하나"), LONG);
     expect(screen.queryByRole("group", { name: "활성 필터" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
     await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);

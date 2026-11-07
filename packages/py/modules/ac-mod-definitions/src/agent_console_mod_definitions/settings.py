@@ -8,6 +8,8 @@ from agent_console_contracts import x_ui
 from agent_console_modkit import RemovedSetting, SettingsCompat
 from agent_console_store import DEFAULT_MAX_CONTENT_BYTES
 
+from .plain_scan import SAVE_SECRET_MESSAGE
+
 DEFAULT_PLAIN_SECRET_ISSUE_CODES: tuple[str, ...] = (
     "resource.plain_secret",
     "resource.override_secret_suspected",
@@ -35,6 +37,16 @@ class DefinitionModuleSettings(BaseModel):
         json_schema_extra=x_ui(tier="advanced"),
         default_factory=lambda: list(DEFAULT_PLAIN_SECRET_ISSUE_CODES),
         description="저장 전 검사 문제 중 평문 비밀 경고로 옮길 코드.",
+    )
+    plain_secret_save_message: str = Field(
+        title="저장 때 평문 비밀 경고 문구",
+        json_schema_extra=x_ui(tier="advanced"),
+        default=SAVE_SECRET_MESSAGE,
+        min_length=1,
+        description=(
+            "공용 구성에 비밀처럼 보이는 평문이 든 정의를 저장할 때 응답 경고에 보일 문구. 저장은 "
+            "되지만 프로젝트로 복사·실행할 때 막힌다는 안내다."
+        ),
     )
 
 

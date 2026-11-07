@@ -57,12 +57,14 @@ export interface DebouncedInputProps {
   onBlur?: () => void;
   /** 접근성 속성(결과 목록을 가리키는 `aria-activedescendant` 등) */
   aria?: Readonly<Record<string, string | boolean | undefined>>;
+  /** 입력 역할: 기본 `searchbox`. 결과 목록을 펼치는 입력(`aria-expanded`)은 `combobox`를 준다 */
+  role?: "searchbox" | "combobox";
   /** 입력 중 글자가 바뀔 때마다 알림(즉시) */
   onText?: (text: string) => void;
 }
 
 /** 입력이 멈춘 뒤 `onCommit`을 부르는 검색 칸. 한글 조합 중에는 보내지 않고, 밖에서 값이 바뀌면 따라간다. */
-export function DebouncedInput({ value, onCommit, label, placeholder, delayMs = WIKI_LIMITS.searchDebounceMs, className, inputRef, onKeyDown, onFocus, onBlur, aria, onText }: DebouncedInputProps) {
+export function DebouncedInput({ value, onCommit, label, placeholder, delayMs = WIKI_LIMITS.searchDebounceMs, className, inputRef, onKeyDown, onFocus, onBlur, aria, onText, role = "searchbox" }: DebouncedInputProps) {
   const [text, setText] = useState(value);
   const [seen, setSeen] = useState(value);
   const composing = useRef(false);
@@ -85,7 +87,7 @@ export function DebouncedInput({ value, onCommit, label, placeholder, delayMs = 
     <input
       ref={inputRef}
       type="search"
-      role="searchbox"
+      role={role}
       className={className ?? "wiki-search"}
       aria-label={label}
       placeholder={placeholder ?? label}

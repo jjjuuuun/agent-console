@@ -41,6 +41,8 @@ export const folderHomeMessages = {
     repathSuggestApply: "이 경로 사용",
     repathNoteConfig:
       "이 프로젝트의 구성·메모리·채팅·실행 기록은 폴더 안의 {dir} 폴더에 있습니다. 새 경로의 폴더에 {dir} 폴더가 없으면 구성이 비어 보이고 지난 기록도 보이지 않습니다. 폴더를 옮겼다면 {dir} 폴더도 함께 옮겼는지 확인하세요.",
+    repathNoteConfigUnknown:
+      "이 프로젝트의 구성·메모리·채팅·실행 기록은 폴더 안의 프로젝트 구성 폴더에 있습니다. 새 경로의 폴더에 그 구성 폴더가 없으면 구성이 비어 보이고 지난 기록도 보이지 않습니다. 폴더를 옮겼다면 구성 폴더도 함께 옮겼는지 확인하세요.",
     repathNoteLogs: "이전 경로에서 열린 Claude Code 로그 세션은 새 경로에 속하지 않으면 이 프로젝트에서 보이지 않을 수 있습니다.",
     repathNoteAdopt: (name: string, n: number) => `이 폴더의 프로젝트 구성(‘${name}’ · 구성 ${n}개)을 이 프로젝트가 쓰게 됩니다.`,
     repathSubmit: "경로 바꾸기",
@@ -55,6 +57,8 @@ export const folderHomeMessages = {
   unregister: {
     title: (name: string) => `‘${name}’ 등록 해제`,
     bodyBefore: "프로젝트 폴더",
+    bodyAfterUnknown:
+      "폴더 안의 프로젝트 구성과 채팅·실행 기록도 그대로 남아, 같은 폴더를 다시 등록하면(이 앱이든 다른 앱이든) 그대로 보입니다. 이 앱에서는 설정 › 프로젝트의 ‘등록 해제된 프로젝트’에서 읽기 전용으로 볼 수 있습니다.",
     bodyAfter: (dir: string) =>
       `폴더 안의 프로젝트 구성과 채팅·실행 기록(${dir})도 그대로 남아, 같은 폴더를 다시 등록하면(이 앱이든 다른 앱이든) 그대로 보입니다. 이 앱에서는 설정 › 프로젝트의 ‘등록 해제된 프로젝트’에서 읽기 전용으로 볼 수 있습니다.`,
     submit: "등록 해제",
@@ -73,6 +77,8 @@ export const folderHomeMessages = {
     missingTitle: "폴더를 찾을 수 없습니다",
     missingBody: (path: string, dir: string) =>
       `${path} 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안(${dir})에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
+    missingBodyUnknown: (path: string) =>
+      `${path} 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안의 프로젝트 구성 폴더에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
     notDirTitle: "경로가 폴더가 아닙니다",
     notDirBody: (path: string) => `${path}는 파일이거나 폴더가 아닙니다.`,
     noAccessTitle: "폴더에 접근할 수 없습니다",
@@ -85,11 +91,15 @@ export const folderHomeMessages = {
     manifestTitle: "프로젝트 설정 파일을 읽을 수 없습니다",
     manifestBody: (dir: string, detail: string | null) =>
       `${dir}/project.yaml을 읽지 못했습니다${detail === null ? "" : `: ${detail}`}. 기록과 로그는 그대로 볼 수 있고, 새 채팅·실행과 구성 가져오기는 설정 파일을 고치기 전까지 막힙니다. 파일을 직접 고치거나 새로 만들 수 있습니다.`,
+    manifestBodyUnknown: (detail: string | null) =>
+      `프로젝트 설정 파일(project.yaml)을 읽지 못했습니다${detail === null ? "" : `: ${detail}`}. 기록과 로그는 그대로 볼 수 있고, 새 채팅·실행과 구성 가져오기는 설정 파일을 고치기 전까지 막힙니다. 파일을 직접 고치거나 새로 만들 수 있습니다.`,
     manifestCopyPath: "설정 파일 경로 복사",
     manifestRecreate: "설정 파일 다시 만들기…",
     manifestRecreateTitle: "설정 파일 다시 만들기",
     manifestRecreateBody:
       "기존 설정 파일은 지우지 않고 {dir} 안의 백업 폴더로 옮깁니다(이동한 전체 경로는 끝난 뒤에 알려 드립니다). 이름·설명만 채운 새 파일을 만듭니다. 구성 사본, 메모리, 채팅·실행 기록은 건드리지 않습니다. 프로젝트 층 설정은 비워집니다.",
+    manifestRecreateBodyUnknown:
+      "기존 설정 파일은 지우지 않고 프로젝트 구성 폴더 안의 백업 폴더로 옮깁니다(이동한 전체 경로는 끝난 뒤에 알려 드립니다). 이름·설명만 채운 새 파일을 만듭니다. 구성 사본, 메모리, 채팅·실행 기록은 건드리지 않습니다. 프로젝트 층 설정은 비워집니다.",
     manifestRecreateSubmit: "다시 만들기",
     manifestRecreateBusy: "만드는 중…",
     manifestRecreated: (path: string) => `설정 파일을 다시 만들었습니다. 이전 파일은 ${path}에 보관했습니다`,
@@ -98,6 +108,8 @@ export const folderHomeMessages = {
     readonlyTitle: "읽기 전용 폴더입니다",
     readonlyBody: (dir: string) =>
       `이 폴더에 ${dir} 폴더를 쓸 수 없어 구성을 가져오거나 고칠 수 없고, 대화·실행 기록도 저장할 수 없어 채팅·실행을 시작할 수 없습니다(보기·로그는 됩니다). 폴더의 쓰기 권한을 고친 뒤 [다시 확인]하세요.`,
+    readonlyBodyUnknown:
+      "이 폴더 안에 프로젝트 구성 폴더를 쓸 수 없어 구성을 가져오거나 고칠 수 없고, 대화·실행 기록도 저장할 수 없어 채팅·실행을 시작할 수 없습니다(보기·로그는 됩니다). 폴더의 쓰기 권한을 고친 뒤 [다시 확인]하세요.",
     recordsNewerTitle: "더 새 버전의 앱이 이 폴더의 기록을 만들었습니다",
     recordsNewerBody: "기록은 읽을 수 있지만 이 앱에서는 새 채팅·실행을 시작할 수 없습니다. 앱을 업데이트하세요.",
     recordsUnknown: "기록을 지금 쓸 수 없습니다",
@@ -105,6 +117,7 @@ export const folderHomeMessages = {
     recordsCopyBackup: "백업 경로 복사",
     recordsRetry: "다시 시도",
     gitignoreOutdated: (dir: string) => `${dir}/.gitignore가 이전 버전이라 기록 파일·세션 보관 폴더가 git에서 제외되지 않을 수 있습니다.`,
+    gitignoreOutdatedUnknown: ".gitignore가 이전 버전이라 기록 파일·세션 보관 폴더가 git에서 제외되지 않을 수 있습니다.",
     gitignoreAppend: ".gitignore 덧붙이기",
     gitignoreAppended: ".gitignore에 빠진 줄을 덧붙였습니다",
     gitignoreFailed: ".gitignore를 고치지 못했습니다",
@@ -156,6 +169,7 @@ export const folderHomeMessages = {
     configEmptyTitle: "이 프로젝트에는 구성이 없습니다",
     configEmptyBody: "공용 구성에서 가져오거나 이 프로젝트에서 새로 만드세요. 구성은 이 폴더 안에 저장되어 폴더만 있으면 따로 동작합니다.",
     configUnreadable: "폴더를 찾을 수 없어 구성을 읽을 수 없습니다",
+    configKindsLoadFailed: "구성 종류 목록을 불러오지 못했습니다",
     configLoadFailed: (kind: string) => `${kind} 목록을 불러오지 못했습니다`,
     configRowMenu: (name: string) => `${name} 작업`,
     configOpen: "열기",

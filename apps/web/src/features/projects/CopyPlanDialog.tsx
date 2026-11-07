@@ -47,7 +47,8 @@ export interface CopyPlanDialogProps {
   submitStyle?: "default" | "run";
   /** 프로젝트 쪽 표시: 제목의 이름과 안내 문구의 폴더 */
   projectName: string;
-  projectDir: string;
+  /** 서버가 준 구성 폴더 이름. 모르면 생략(짝 문장 `*_unknown`을 쓴다) */
+  projectDir?: string | undefined;
   source: SpaceRef;
   target: SpaceRef;
   initialStep: "pick" | "plan";
@@ -245,8 +246,8 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
     return text({ key: "copy.plan.reason_referenced", params: { by } });
   };
 
-  const setSelection = (item: { kind: string; id: string }, action: string | null) =>
-    setSelections((cur) => selectAction(cur, item, action, takenFor(item)));
+  const setSelection = (item: { kind: string; id: string; blocked?: boolean | undefined }, action: string | null) =>
+    item.blocked === true ? undefined : setSelections((cur) => selectAction(cur, item, action, takenFor(item)));
   const setNewId = (item: { kind: string; id: string }, newId: string) =>
     setSelections((cur) => {
       const next = new Map(cur);
@@ -278,7 +279,9 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
           <p className="cpd-intro app-muted">
             {direction === "save"
               ? text({ key: "copy.save.intro", params: { name: props.projectName } })
-              : text({ key: "copy.import.intro", params: { name: props.projectName, dir: props.projectDir } })}
+              : props.projectDir === undefined
+                ? text({ key: "copy.import.intro_unknown", params: { name: props.projectName } })
+                : text({ key: "copy.import.intro", params: { name: props.projectName, dir: props.projectDir } })}
           </p>
           <div className="cpd-filter">
             <input
@@ -375,8 +378,12 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
               <ul className="cpd-plan" aria-label={title}>
                 {items.map((item) => {
                   const key = copyItemKey(item);
-                  const sel = selections.get(key) ?? { action: defaultActionFor(item) };
-                  const choices = actionChoicesFor(item);
+                  const blocked = item.blocked === true;
+                  const sel = blocked ? { action: SKIP } : (selections.get(key) ?? { action: defaultActionFor(item) });
+                  const allChoices = actionChoicesFor(item);
+                  // 막힌 항목은 건너뛰기만 보인다(복사·덮어쓰기·새 이름으로 바꿀 수 없다)
+                  const choices = blocked ? allChoices.filter((c) => c.action === SKIP) : allChoices;
+                  const blockedReasons = blocked ? (item.issues ?? []).filter((i) => i.severity === "error").map((i) => i.message) : [];
                   const skipped = sel.action === SKIP;
                   const needsChoice = sel.action === null;
                   const taken = takenFor(item);
@@ -385,14 +392,14 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                   const warn = warnings.find((w) => copyItemKey(w.item) === key);
                   const name = item.name !== undefined && item.name !== "" ? item.name : item.id;
                   return (
-                    <li key={key} className="cpd-plan-row" data-invalid={needsChoice ? "true" : undefined} data-skipped={skipped ? "true" : undefined}>
+                    <li key={key} className="cpd-plan-row" data-invalid={needsChoice ? "true" : undefined} data-skipped={skipped ? "true" : undefined} data-blocked={blocked ? "true" : undefined}>
                       <div className="cpd-plan-main">
                         <input
                           type="checkbox"
                           className="cpd-include"
                           aria-label={text({ key: "copy.plan.include_row", params: { name } })}
                           checked={!skipped}
-                          disabled={busy}
+                          disabled={busy || blocked}
                           onChange={(e) => setSelection(item, e.target.checked ? defaultActionFor(item) : SKIP)}
                         />
                         <div className="cpd-item">
@@ -408,13 +415,19 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                           aria-label={`${name}: ${text({ key: "copy.plan.col_action" })}`}
                           aria-invalid={needsChoice ? true : undefined}
                           value={sel.action ?? ""}
-                          disabled={busy}
+                          disabled={busy || blocked}
                           onChange={(e) => setSelection(item, e.target.value === "" ? null : e.target.value)}
                         >
                           {needsChoice ? <option value="">{text({ key: "copy.action.choose" })}</option> : null}
                           {choices.map((c) => <option key={c.action} value={c.action}>{text(c.label)}</option>)}
                         </select>
                       </div>
+                      {blocked ? (
+                        <div className="cpd-note cpd-danger" role="note">
+                          <strong>{text({ key: "copy.plan.blocked" })}</strong>
+                          {blockedReasons.map((r, n) => <span key={n}> {r}</span>)}
+                        </div>
+                      ) : null}
                       {sel.action === OVERWRITE ? (
                         <p className="cpd-note cpd-danger">{text({ key: libraryTarget ? "copy.plan.overwrite_warn_library" : "copy.plan.overwrite_warn" })}</p>
                       ) : null}

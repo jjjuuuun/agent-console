@@ -7,7 +7,7 @@ export interface UnregisterDialogProps {
   /** 전체 경로(줄임 없음). 미지정이면 null */
   folder: string | null;
   /** 구성 폴더 이름(`{dir}`) */
-  configDir: string;
+  configDir?: string | undefined;
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }
@@ -54,7 +54,7 @@ export function UnregisterDialog({ name, folder, configDir, onConfirm, onClose }
       <p>
         {m.unregister.bodyBefore}
         {folder === null ? null : <> (<span className="ac-mono-wrap">{folder}</span>)</>}
-        {BODY_AFTER} {m.unregister.bodyAfter(configDir)}
+        {BODY_AFTER} {configDir === undefined ? m.unregister.bodyAfterUnknown : m.unregister.bodyAfter(configDir)}
       </p>
       {error === null ? null : <Banner tone="danger">{error}</Banner>}
     </Dialog>

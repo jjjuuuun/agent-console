@@ -15,7 +15,12 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Issue
-from agent_console_mod_resources import DEFINITION_CHECKS, DefinitionCheck, module
+from agent_console_mod_resources import (
+    DEFINITION_CHECKS,
+    DEFINITION_SAVE_WARNINGS,
+    DefinitionCheck,
+    module,
+)
 from agent_console_mod_resources.testing import local_definitions_module
 from agent_console_modkit import Assembly, BaseServices, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
@@ -126,3 +131,67 @@ def test_broken_check_skipped_and_duplicates_once(tmp_path: Path) -> None:
         created = client.post(f"{API}/resources", json=_with("warning"))
         assert created.status_code == 201
         assert len(json.loads(created.headers["x-console-issues"])) == 1
+
+
+# ------------------------------------------------------------ 저장 응답 경고(묶음 4b V1)
+
+
+def _save_warnings(*, broken: bool = False) -> Any:
+    """``definitions.save_warnings`` 대역: 설명이 "plain"이면 그 위치 경고(값 없음)."""
+    calls: list[tuple[str, str]] = []
+
+    def warn(kind: str, item_id: str, document: Mapping[str, Any]) -> Sequence[Issue]:
+        calls.append((kind, item_id))
+        if broken:
+            raise RuntimeError("경고 계산 실패")
+        if document.get("description") != "plain":
+            return []
+        return [
+            Issue(
+                severity="warning",
+                code="secret.plain_found",
+                message="평문",
+                path="/description",
+                details={"kind": kind, "id": item_id},
+            )
+        ]
+
+    def build(ctx: Any) -> None:
+        ctx.provide(DEFINITION_SAVE_WARNINGS, warn)
+
+    return fake_module("save-warnings", provides=[DEFINITION_SAVE_WARNINGS], on_build=build), calls
+
+
+def test_save_warnings_are_added_to_header(tmp_path: Path) -> None:
+    provider, calls = _save_warnings()
+    with _client(_assembly(tmp_path, provider, _provider(_Check()))) as client:
+        created = client.post(f"{API}/resources", json={**_with("warning"), "description": "plain"})
+        assert created.status_code == 201
+        issues = json.loads(created.headers["x-console-issues"])
+        assert [(i["code"], i["path"]) for i in issues] == [
+            ("test.flag", "/name"),
+            ("secret.plain_found", "/description"),
+        ]
+        etag = created.headers["etag"]
+        saved = client.put(
+            f"{API}/resources/review",
+            json={**SKILL, "description": "plain"},
+            headers={"If-Match": etag},
+        )
+        assert saved.status_code == 200
+        assert [i["code"] for i in json.loads(saved.headers["x-console-issues"])] == [
+            "secret.plain_found"
+        ]
+        clean = client.put(
+            f"{API}/resources/review", json=SKILL, headers={"If-Match": saved.headers["etag"]}
+        )
+        assert "x-console-issues" not in clean.headers
+    assert calls == [("resource", "review")] * 3
+
+
+def test_broken_save_warnings_do_not_fail_save(tmp_path: Path) -> None:
+    provider, _calls = _save_warnings(broken=True)
+    with _client(_assembly(tmp_path, provider)) as client:
+        created = client.post(f"{API}/resources", json={**SKILL, "description": "plain"})
+        assert created.status_code == 201
+        assert "x-console-issues" not in created.headers

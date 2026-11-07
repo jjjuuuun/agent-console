@@ -44,6 +44,22 @@ function mount(settings: WorkspaceSettings = {}, overrides: Record<string, unkno
 const indicator = () => document.querySelector(".usage-ind");
 const withIndicator = (over: Record<string, unknown>): WorkspaceSettings => ({ ui: { usage_indicator: over } } as WorkspaceSettings);
 
+/** 표시기 링크의 풀어 읽는 문장: 레일·로딩은 `aria-label`, 보이는 글자가 있는 모양은 `aria-describedby`가 가리키는 숨은 문장(이름은 보이는 글자에서 나온다) */
+function spoken(link: Element): string {
+  const label = link.getAttribute("aria-label");
+  if (label !== null) return label;
+  return (link.getAttribute("aria-describedby") ?? "").split(/\s+/).map((id) => document.getElementById(id)).find((e) => e?.hasAttribute("data-usage-spoken"))?.textContent ?? "";
+}
+
+/** 풀어 읽는 문장이 `re`와 맞는 표시기 링크를 기다려 찾는다 */
+async function findIndicatorLink(re: RegExp): Promise<HTMLAnchorElement> {
+  return waitFor(() => {
+    const hit = [...document.querySelectorAll<HTMLAnchorElement>("a.usage-ind-link")].find((a) => re.test(spoken(a)));
+    if (hit === undefined) throw new Error(`표시기 링크 없음: ${String(re)}`);
+    return hit;
+  }, { timeout: 5000 });
+}
+
 describe("사용량 표시기: 기본 설정", () => {
   it("스키마 기본값에서 읽은 설정이 적용된다(코드에 복사한 값이 없다)", () => {
     expect(resolveIndicatorSettings(undefined)).toMatchObject({ enabled: true, placement: "sidebar-bottom", windows: [], max_items: 2, fields: ["label", "value", "gauge"], value_mode: "used", color_rules: [{ at: 0, tone: "success" }, { at: 0.7, tone: "warning" }, { at: 0.9, tone: "danger" }], hide_when_empty: false, also_in_title: false });
@@ -52,14 +68,14 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("사이드바 푸터에 앞 2개 창이 보이고 주 메뉴 nav 밖이며 탭 정지는 링크 1개다", async () => {
     mount();
-    const link = await screen.findByRole("link", { name: /^사용량: win-1 사용 63%, 초기화까지 2시간 1\d분\. win-3 사용 10%\./ });
+    const link = await findIndicatorLink(/^사용량: win-1 사용 63%, 초기화까지 2시간 1\d분\. win-3 사용 10%\./);
     const nav = screen.getByRole("navigation", { name: "주 메뉴" });
     expect(nav.contains(link)).toBe(false);
     expect(nav.textContent).not.toMatch(/63%/);
     expect(link.getAttribute("href")).toBe("/usage");
     // 상태만 주는 창(win-2)은 사이드바에 없고, 값이 있는 창만 앞에서 max_items(기본 2)개
-    expect(link.getAttribute("aria-label")).not.toMatch(/win-2|weird|사용률 정보 없음/);
-    expect(link.getAttribute("aria-label")).toMatch(/눌러서 사용량 화면 열기$/);
+    expect(spoken(link)).not.toMatch(/win-2|weird|사용률 정보 없음/);
+    expect(spoken(link)).toMatch(/눌러서 사용량 화면 열기$/);
     expect(indicator()!.closest(".ac-sidebar-footer")).not.toBeNull();
     expect(indicator()!.querySelectorAll("a, button, [tabindex]").length).toBe(1);
     expect(indicator()!.querySelector(".ac-gauge")!.closest('[aria-hidden="true"]')).not.toBeNull();
@@ -67,13 +83,13 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("클릭하면 사용량 화면으로 이동한다(경로는 라우트 설정에서)", async () => {
     const { router } = mount();
-    fireEvent.click(await screen.findByRole("link", { name: /^사용량:/ }));
+    fireEvent.click(await findIndicatorLink(/^사용량:/));
     await waitFor(() => expect(router.state.location.pathname).toBe("/usage"));
   });
 
   it("사용량 화면에서는 aria-current이고 보고 요청은 표시기(창만)와 화면(전체) 각 한 번이고 출처 요청은 합쳐진다", async () => {
     const { rest } = mount({}, {}, "/usage");
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
+    const link = await findIndicatorLink(/^사용량:/);
     expect(link.getAttribute("aria-current")).toBe("page");
     await screen.findByRole("heading", { name: "사용량", level: 1 });
     // 표시기는 창 부분만(`parts=windows`), 화면은 전체 보고를 따로 읽는다(응답 모양이 달라 캐시 키를 나눴다). 각각 한 번.
@@ -85,7 +101,7 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("사이드바가 접히면 레일 모양(숫자 + 막대만, 이름은 aria-label·툴팁)이고 aria-label은 그대로다", async () => {
     mount({}, {}, "/chat", undefined, "1");
-    const link = await screen.findByRole("link", { name: /^사용량: win-1 사용 63%/ });
+    const link = await findIndicatorLink(/^사용량: win-1 사용 63%/);
     expect(indicator()!.getAttribute("data-layout")).toBe("rail");
     expect(indicator()!.querySelector(".usage-ind-rail-name")).toBeNull();
     expect(indicator()!.querySelector(".usage-ind-rail-value")!.textContent).toBe("63%");
@@ -94,19 +110,19 @@ describe("사용량 표시기: 기본 설정", () => {
 
   it("호버하지 않아도 값은 aria-label에 있고, 포커스하면 비대화형 요약 팝오버가 열리며 Esc로 닫힌다", async () => {
     mount();
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
+    const link = await findIndicatorLink(/^사용량:/);
     fireEvent.focus(link);
     const pop = await screen.findByRole("group", { name: "사용량" });
     expect(within(pop).getByText("63% 사용됨")).toBeTruthy();
     expect(within(pop).getByText("win-3")).toBeTruthy(); // 표시 대상이 아니어도 관측된 창은 팝오버에 있다
-    expect(link.getAttribute("aria-describedby")).toBe(pop.id);
+    expect(link.getAttribute("aria-describedby")).toContain(pop.id);
     fireEvent.keyDown(document.body, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("group", { name: "사용량" })).toBeNull());
   });
 
   it("Alt+U로 요약을 낭독 영역에 알린다", async () => {
     mount();
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     fireEvent.keyDown(document.body, { key: "u", altKey: true });
     await waitFor(() => expect(indicator()!.querySelector('[aria-live="polite"]')!.textContent).toMatch(/win-1 사용 63%/));
   });
@@ -118,7 +134,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
 
   it("기본 색 규칙은 계약 데이터에서 온다: 63%는 success 톤, 글리프 없음, 퍼센트 글자색은 톤이 아니다", async () => {
     mount();
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     const item = document.querySelector<HTMLElement>('.usage-ind-item[data-tone="success"]')!;
     expect(item).not.toBeNull();
     expect(item.style.getPropertyValue("--ac-gauge-fill")).toBe("var(--ac-success)");
@@ -131,7 +147,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
       { source: "src-a", window: "win-1", used_ratio: 0.75, observed_at: now - 30 },
       { source: "src-a", window: "win-2", used_ratio: 0.93, observed_at: now - 30 },
     ]));
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     const [a, b] = rows().map((r) => r.querySelector(".usage-ind-value")!.textContent);
     expect(a).toBe("75% 사용됨▲");
     expect(b).toBe("93% 사용됨✕");
@@ -150,7 +166,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
 
   it("사이드바 항목은 제목·'N% 사용됨'·막대·초기화 시각만 있다(신뢰·관측 시각·상태 없음)", async () => {
     mount();
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     const item = document.querySelector<HTMLElement>(".usage-ind-simple")!;
     expect(Array.from(item.children).map((c) => c.className.split(" ")[0])).toEqual(["usage-ind-head", "usage-ind-bar", "usage-ind-sub"]);
     expect(item.querySelector(".usage-ind-label")!.textContent).toBe("win-1");
@@ -162,7 +178,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
   it("추정 출처의 값은 툴팁에 추정(로컬 로그)을 적는다(사이드바 글자에는 ~를 붙이지 않는다)", async () => {
     const est: UsageSourceInfo[] = [{ descriptor: { id: "src-a", title: "로컬", trust: "estimated" }, enabled: true }];
     mount({}, { ...miniReport([{ source: "src-a", window: "win-1", used_ratio: 0.42, observed_at: now - 30 }]), listUsageSources: vi.fn(async () => est) });
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     await waitFor(() => expect(rows()[0]!.querySelector(".usage-ind-value")!.textContent).toBe("42% 사용됨"));
     expect(document.querySelector(".usage-ind-item")!.getAttribute("title")).toMatch(/추정\(로컬 로그\)/);
   });
@@ -170,11 +186,11 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
   it("모든 창이 값이 없고 구독 연결 출처가 있으면 한 줄 안내가 #setup으로 이어진다. 없으면 안내가 없다", async () => {
     const needs: UsageSourceInfo[] = [{ descriptor: { id: "src-a", title: "공식", trust: "official", needs_setup: true }, enabled: true }];
     mount({}, { ...miniReport([{ source: "src-a", window: "win-1", status: "idle", observed_at: now - 30 }]), listUsageSources: vi.fn(async () => needs) });
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
+    const link = await findIndicatorLink(/^사용량:/);
     await waitFor(() => expect(link.getAttribute("href")).toBe("/usage#setup"));
     expect(indicator()!.textContent).toMatch(/사용률 미연결/);
     expect(indicator()!.textContent).not.toMatch(/연결 방법|›/); // 줄 전체가 링크다(따로 강조된 글자 없음)
-    expect(link.getAttribute("aria-label")).toMatch(/상태 줄을 연결/);
+    expect(spoken(link)).toMatch(/상태 줄을 연결/);
     expect(document.querySelector(".ac-gauge")).toBeNull();
   });
 
@@ -190,7 +206,7 @@ describe("사용량 표시기: 미니 모양(5.2R.57)", () => {
 
 describe("사용량 표시기: 컨텍스트 메뉴", () => {
   const openByContext = async () => {
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
+    const link = await findIndicatorLink(/^사용량:/);
     fireEvent.contextMenu(link, { clientX: 20, clientY: 30 });
     return { link, menu: await screen.findByRole("menu", { name: "사용량 표시기 메뉴" }) };
   };
@@ -204,7 +220,7 @@ describe("사용량 표시기: 컨텍스트 메뉴", () => {
 
   it("Shift+F10과 ContextMenu 키로도 열리고, 방향키로 이동하며 Esc로 닫고 링크로 돌아온다", async () => {
     mount();
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
+    const link = await findIndicatorLink(/^사용량:/);
     link.focus();
     fireEvent.keyDown(link, { key: "F10", shiftKey: true });
     const menu = await screen.findByRole("menu", { name: "사용량 표시기 메뉴" });
@@ -234,7 +250,7 @@ describe("사용량 표시기: 컨텍스트 메뉴", () => {
 
   it("[지금 새로 고침]은 직전 조회가 5초 안이면 무시하고 안내, 지나면 다시 조회하며 연타는 한 번만", async () => {
     const { rest } = mount();
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     const calls = () => (rest.getUsage as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
     const before = calls();
     let { menu } = await openByContext();
@@ -278,7 +294,7 @@ describe("사용량 표시기: 플로팅 칩 +N", () => {
     const restore = withMatchMedia(false);
     try {
       mount(withIndicator({ placement: "float-bottom-right", max_items: 3 }));
-      await screen.findByRole("link", { name: /^사용량:/ });
+      await findIndicatorLink(/^사용량:/);
       expect(indicator()!.querySelectorAll(".usage-ind-chip-item").length).toBe(3);
       expect(indicator()!.querySelector(".usage-ind-chip-more")).toBeNull();
     } finally {
@@ -290,13 +306,13 @@ describe("사용량 표시기: 플로팅 칩 +N", () => {
     const restore = withMatchMedia(true);
     try {
       mount(withIndicator({ placement: "float-bottom-right", max_items: 3 }));
-      const link = await screen.findByRole("link", { name: /^사용량:/ });
+      const link = await findIndicatorLink(/^사용량:/);
       await waitFor(() => expect(indicator()!.querySelectorAll(".usage-ind-chip-item").length).toBe(1));
       const more = indicator()!.querySelector(".usage-ind-chip-more")!;
       expect(more.textContent).toBe("+2");
       expect(more.getAttribute("title")).toMatch(/win-2/);
       expect(more.getAttribute("title")).toMatch(/win-3/);
-      expect(link.getAttribute("aria-label")).toMatch(/win-3/);
+      expect(spoken(link)).toMatch(/win-3/);
     } finally {
       restore();
     }
@@ -306,8 +322,8 @@ describe("사용량 표시기: 플로팅 칩 +N", () => {
 describe("사용량 표시기: 설정", () => {
   it("남은 양/사용한 양, 항목 선택, 창 지정", async () => {
     mount(withIndicator({ value_mode: "used", windows: ["win-3", "win-x"], fields: ["label", "value"] }));
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
-    expect(link.getAttribute("aria-label")).toMatch(/^사용량: win-3 사용 10%\. 눌러서/);
+    const link = await findIndicatorLink(/^사용량:/);
+    expect(spoken(link)).toMatch(/^사용량: win-3 사용 10%\. 눌러서/);
     // 사이드바 항목은 `fields` 설정과 상관없이 제목·값·막대·초기화 시각 고정(fields는 칩 모양에만 적용)
     expect(indicator()!.querySelector(".ac-gauge")).not.toBeNull();
     expect(indicator()!.textContent).toContain("10% 사용됨");
@@ -316,28 +332,28 @@ describe("사용량 표시기: 설정", () => {
 
   it("색 규칙이 적용되면 아이콘과 문장을 함께 쓴다(색 단독 아님)", async () => {
     mount(withIndicator({ value_mode: "used", color_rules: [{ at: 0.5, tone: "warning" }, { at: 0.95, tone: "danger" }] }));
-    const link = await screen.findByRole("link", { name: /^사용량:/ });
-    expect(link.getAttribute("aria-label")).toMatch(/규칙 적용: 경고\(사용률 50% 이상\)/);
+    const link = await findIndicatorLink(/^사용량:/);
+    expect(spoken(link)).toMatch(/규칙 적용: 경고\(사용률 50% 이상\)/);
     expect(indicator()!.querySelector(".usage-ind-tone")!.textContent).toBe("▲");
     expect(indicator()!.querySelectorAll(".usage-ind-tone").length).toBe(1);
   });
 
   it("모르는 tone/field/placement는 오류 없이 대체된다", async () => {
     mount(withIndicator({ placement: "nowhere", fields: ["label", "wat", "value"], color_rules: [{ at: 0.1, tone: "no-such-tone" }] }));
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     expect(indicator()!.closest(".ac-sidebar-footer")).not.toBeNull();
     expect(indicator()!.querySelector(".usage-ind-tone")).toBeNull();
   });
 
   it("sidebar-top 배치는 로고 줄 아래(헤더), float 배치는 사이드바 밖 본문 쪽에 한 곳만 보인다", async () => {
     const top = mount(withIndicator({ placement: "sidebar-top" }));
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     expect(document.querySelectorAll(".usage-ind").length).toBe(1);
     expect(indicator()!.closest(".ac-sidebar-header")).not.toBeNull();
     cleanup();
     void top;
     mount(withIndicator({ placement: "float-bottom-left" }));
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     expect(document.querySelectorAll(".usage-ind").length).toBe(1);
     expect(indicator()!.closest(".ac-sidebar")).toBeNull();
     expect(indicator()!.getAttribute("data-corner")).toBe("bottom-left");
@@ -362,7 +378,7 @@ describe("사용량 표시기: 설정", () => {
     await waitFor(() => expect(document.title).toMatch(/ · Agent Console · win-1 63%$/));
     cleanup();
     mount();
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     expect(document.title).not.toMatch(/win-1/);
   });
 });
@@ -402,7 +418,7 @@ describe("사용량 표시기: 서버 실패와 토스트", () => {
     });
     const onBackgroundError = vi.fn();
     const { queryClient } = mount({}, { getUsage }, "/chat", onBackgroundError);
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     fail = true;
     for (let i = 0; i < 3; i += 1) await act(async () => void (await queryClient.invalidateQueries({ queryKey: ["usage"] })));
     expect(getUsage.mock.calls.length).toBeGreaterThan(3);
@@ -420,7 +436,7 @@ describe("사용량 표시기: 서버 실패와 토스트", () => {
     const onBackgroundError = vi.fn();
     const { queryClient } = mount({}, { getUsage }, "/usage", onBackgroundError);
     await screen.findByRole("heading", { name: "사용량", level: 1 });
-    await screen.findByRole("link", { name: /^사용량:/ });
+    await findIndicatorLink(/^사용량:/);
     fail = true;
     await act(async () => void (await queryClient.invalidateQueries({ queryKey: ["usage"] })));
     await waitFor(() => expect(onBackgroundError).toHaveBeenCalled());
@@ -432,7 +448,7 @@ describe("사용량 표시기: 서버 실패와 토스트", () => {
     });
     const onBackgroundError = vi.fn();
     mount({}, { getUsage }, "/chat", onBackgroundError);
-    const link = await screen.findByRole("link", { name: /사용량을 불러오지 못했습니다/ });
+    const link = await findIndicatorLink(/사용량을 불러오지 못했습니다/);
     expect(link.textContent).toContain("사용량을 불러오지 못했습니다");
     expect(onBackgroundError).not.toHaveBeenCalled();
   });

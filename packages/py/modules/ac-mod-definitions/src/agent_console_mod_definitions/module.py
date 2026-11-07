@@ -1,7 +1,8 @@
 """서버 모듈 정의(entry point ``agent_console.server_modules``의 ``mod-definitions``).
 
 - 제공: ``definitions.store``·``definitions.lookup``(같은 저장소)·``workspace.settings``·
-  ``secrets.rules``·``definitions.checks``(공통 설정 비밀 규칙 검사)·``server.warnings``(평문 점검).
+  ``secrets.rules``·``definitions.checks``(공통 설정 비밀 규칙 검사)·``server.warnings``(평문 점검)·
+  ``definitions.save_warnings``(저장 응답의 평문 비밀 경고 — 리소스 모듈도 쓴다).
   토픽 ``definitions.saved``를 낸다(저장마다, 저장소 쓰기 잠금 안 동기 호출, 구독자 예외 격리).
 - 선택: ``definitions.checks``(여러 제공자 — 저장 전 검사), ``graphs.validation``·
   ``graphs.entry_labels``·``graphs.session_summary``(팀 구성 목록의 검증 요약·입구 이름·세션 집계,
@@ -22,18 +23,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_store import DefinitionStore, SpaceStores
 
 from .errors import ERROR_MAP
-from .plain_scan import PlainSecretScan, scan_store
+from .plain_scan import PlainSecretScan, save_secret_warnings, scan_store
 from .ports import (
     DEFINITION_CHECKS,
+    DEFINITION_SAVE_WARNINGS,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SAVED,
     DEFINITIONS_SPACES,
@@ -103,6 +106,7 @@ class DefinitionsModule:
             SECRET_RULES,
             DEFINITION_CHECKS,
             SERVER_WARNINGS,
+            DEFINITION_SAVE_WARNINGS,
         ),
         optional=(
             DEFINITION_CHECKS,
@@ -158,6 +162,14 @@ class DefinitionsModule:
         ctx.provide(WORKSPACE_SETTINGS, state.settings)
         ctx.provide(SECRET_RULES, state.rules)
         ctx.provide(DEFINITION_CHECKS, SecretRuleCheck())
+        save_message = cfg.plain_secret_save_message
+
+        def save_warnings(kind: str, item_id: str, document: Mapping[str, Any]) -> list[Issue]:
+            return save_secret_warnings(
+                kind, item_id, document, state.rules(), message=save_message
+            )
+
+        ctx.provide(DEFINITION_SAVE_WARNINGS, save_warnings)
         in_memory = ctx.database is None
 
         def warnings() -> list[Issue]:
@@ -174,6 +186,7 @@ class DefinitionsModule:
             validation=lambda: ctx.port(GRAPH_VALIDATION),
             entry_labels=lambda: ctx.port(GRAPH_ENTRY_LABELS),
             session_summary=lambda: ctx.port(GRAPH_SESSION_SUMMARY),
+            save_warnings=save_warnings,
         )
         stores: SpaceStores[DefinitionStore] = SpaceStores(
             store, lambda: ctx.port(DEFINITIONS_SPACES)
@@ -189,6 +202,7 @@ class DefinitionsModule:
                 entry_labels=lambda: ctx.port(GRAPH_ENTRY_LABELS),
                 session_summary=lambda: ctx.port(GRAPH_SESSION_SUMMARY),
                 space=space,
+                save_warnings=save_warnings,
             )
 
         database = ctx.database

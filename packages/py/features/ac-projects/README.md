@@ -26,7 +26,8 @@
 | `split_project`·`initial_manifest`·`legacy_manifest_values` | 저장할 값 나누기, 처음 매니페스트, 옛 값 옮기기 |
 | `combined_version(reg, manifest)` | 두 파일 버전을 합친 `If-Match` 값 |
 | `ignored_key_issues(doc)` | 옛 키(`uses`·`import_mode`·`log_projects`) → 정보 이슈 `settings.ignored_key` |
-| `copy_plan(requested, source_docs, target_index, *, references)` | 공간 사이 복사 계획(참조 닫힘·`target_state`·기본 동작·순환·빠진 참조 경고) |
+| `copy_plan(requested, source_docs, target_index, *, references, target_label, plain_secrets)` | 공간 사이 복사 계획(참조 닫힘·`target_state`·기본 동작·순환·빠진 참조 경고). `plain_secrets`(대상 공간의 쓰기 검사와 같은 판정, 주입)에 걸린 항목은 막힘(`blocked`, 기본 동작 skip, error `secret.plain_found` — 값 없음) |
+| `copy_target_label(project_name, *, messages)` | 문구의 `${target}`(공용 구성 / 프로젝트 ‘이름’, 문구 표 데이터) |
 | `skip_warnings(plan, actions, *, target_index)` | 빼는 참조 때문에 실행 전에 막힐 정의 |
 | `apply_decisions(items, *, source_index, target_index)` | 적용 판정(바뀐 항목만 `conflict`) |
 | `apply_renames(docs, renames, *, rewrite_references)` | 새 id + 묶음 안 참조 고치기 |
@@ -69,6 +70,16 @@ pip install agent-console-projects
 >>> plan = copy_plan([("graph", "team")], lib, {("agent", "coder"): "a1"}, references=refs)
 >>> [(i.id, i.target_state, i.default_action) for i in plan.items]
 [('team', 'absent', 'copy'), ('coder', 'identical', 'reuse')]
+>>> from types import SimpleNamespace
+>>> def plain(kind, doc):  # 주입하는 판정(서버에서는 대상 공간의 비밀 규칙 scan_secrets)
+...     return [SimpleNamespace(path="/api_key", reason="key_name")] if "api_key" in doc else []
+>>> leaky = {("agent", "a"): SourceDefinition({"id": "a", "api_key": "plain-value"}, "v1")}
+>>> plan = copy_plan([("agent", "a")], leaky, {}, references=None, plain_secrets=plain)
+>>> item = plan.items[0]
+>>> item.blocked, item.default_action, [(i.code, i.path) for i in item.issues]
+(True, 'skip', [('secret.plain_found', '/api_key')])
+>>> "plain-value" in plan.model_dump_json()
+False
 >>> schema = {"properties": {"cwd": {"x-path": "directory"}}}
 >>> [p.resolved for p in outside_paths({"cwd": "../x"}, schema, "/w/pay", flavor="posix")]
 ['/w/x']

@@ -57,6 +57,8 @@ export const defaultMessages = {
   // `{dir}`(앱이 `configDir`로 준 폴더 이름)는 고정폭 글자로 그려진다. `configDir`가 없으면 위 문구를 쓴다.
   "folder.check.readonly_config": "이 폴더에 {dir} 폴더를 만들 수 없어 구성을 가져오거나 고칠 수 없습니다(보기·로그는 됩니다). 에이전트가 이 폴더에 파일을 쓰는 작업도 실패할 수 있습니다.",
   "folder.check.creates_dir": "이 폴더에 {dir} 폴더를 만들어 프로젝트 구성과 메모리를 저장합니다. 폴더의 다른 파일은 바꾸지 않습니다.",
+  // `configDir`를 모를 때 쓰는 짝 문장(`{dir}` 없음, 고정폭 없음). 대체 글자를 `{dir}`에 끼우지 않는다. 쓰기 불가 문구는 `folder.check.readonly`가 짝이다.
+  "folder.check.creates_dir_unknown": "이 폴더 안에 프로젝트 구성 폴더를 만들어 구성과 메모리를 저장합니다. 폴더의 다른 파일은 바꾸지 않습니다.",
   "folder.check.manifest_found": "이 폴더에 프로젝트 구성이 이미 있습니다{detail}. 그대로 불러옵니다.",
   "folder.check.manifest_detail_name": ": ‘{name}’",
   "folder.check.manifest_detail_count": " · 구성 {n}개",

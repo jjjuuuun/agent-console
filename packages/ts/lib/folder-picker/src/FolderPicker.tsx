@@ -35,7 +35,7 @@ export interface FolderPickerProps {
   capabilities?: FolderCapabilitiesData | null;
   /** OS 선택 창 콜백(서버 API는 모른다). 없으면 [폴더 선택…]이 찾아보기 패널을 연다. */
   onPickNative?: FolderPickFn;
-  /** 앱이 프로젝트 구성을 담는 폴더 이름. 주면 "이 폴더에 {dir} 폴더를 만듭니다" 줄과 `{dir}` 문구를 쓴다(고정폭). */
+  /** 앱이 프로젝트 구성을 담는 폴더 이름. 주면 "이 폴더에 {dir} 폴더를 만듭니다" 줄과 `{dir}` 문구를 쓴다(고정폭). 없으면 `{dir}` 없는 짝 문장(`*_unknown`)을 쓴다. */
   configDir?: string;
   /** 문구 덮어쓰기(키는 `defaultMessages`). */
   messages?: MessageOverrides;
@@ -406,7 +406,9 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
         </div>
       </div>
 
-      {configDir && !hideCreatesDir ? <p className="ac-fp-help ac-fp-creates">{withDir(t("folder.check.creates_dir"), configDir)}</p> : null}
+      {!hideCreatesDir ? (
+        <p className="ac-fp-help ac-fp-creates">{configDir ? withDir(t("folder.check.creates_dir"), configDir) : t("folder.check.creates_dir_unknown")}</p>
+      ) : null}
       <FolderCheckResult
         id={`${id}-result`}
         state={state}

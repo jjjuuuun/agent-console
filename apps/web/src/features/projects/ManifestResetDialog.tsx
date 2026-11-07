@@ -7,7 +7,7 @@ export interface ManifestResetDialogProps {
   name: string;
   description: string;
   /** 구성 폴더 이름(`{dir}`) */
-  configDir: string;
+  configDir?: string | undefined;
   /** 쓸 수 없는 폴더면 이유 문구(버튼 `aria-disabled`) */
   blockedReason?: string | undefined;
   /** 제출. 예외를 던지면 대화상자 안에 오류를 보인다(성공·"이미 정상" 안내 토스트는 호출한 쪽이 낸다). */
@@ -60,7 +60,7 @@ export function ManifestResetDialog({ name: initialName, description: initialDes
       }
     >
       <div className="prj-fd">
-        <p className="prj-fd-intro">{withCode(m.problem.manifestRecreateBody, configDir)}</p>
+        <p className="prj-fd-intro">{configDir === undefined ? m.problem.manifestRecreateBodyUnknown : withCode(m.problem.manifestRecreateBody, configDir)}</p>
         <div className="prj-fd-field">
           <label htmlFor={`${uid}-name`}>{m.dialog.name} *</label>
           <input id={`${uid}-name`} className="ac-input" value={name} disabled={busy} aria-required="true" onChange={(e) => setName(e.target.value)} />

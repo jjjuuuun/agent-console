@@ -8,6 +8,7 @@
       ``mod-definitions``.
     - 포트·토픽(``ports``): ``DEFINITIONS_STORE``·``DEFINITIONS_LOOKUP``·``WORKSPACE_SETTINGS``·
       ``SECRET_RULES``·``DEFINITION_CHECKS``(multi)·``SERVER_WARNINGS``(multi)·
+      ``DEFINITION_SAVE_WARNINGS``(저장 응답 평문 비밀 경고)·
       ``GRAPH_VALIDATION``·``GRAPH_ENTRY_LABELS``·``GRAPH_SESSION_SUMMARY``(세션 집계)·
       ``DEFINITIONS_SPACES``(선택, 공간 이름 → 저장소)·
       ``KIND_CONTRIBUTIONS``(선택 multi, 정의 종류 기여 X44)·
@@ -15,7 +16,8 @@
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
       ``register_contributed_kinds``(종류 기여 → 라이브러리 저장소에 등록),
       ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``PlainSecretScan``·
-      ``scan_store``·``plain_secret_warnings``(평문 점검), ``DefinitionService``.
+      ``scan_store``·``plain_secret_warnings``(평문 점검), ``save_secret_warnings``(저장 응답 경고),
+      ``DefinitionService``.
     - ``build_router``: FastAPI 라우터(접두 없음, ``service(space)`` 공장).
       ``ERROR_MAP``: 모듈 오류 맵.
     - ``DefinitionModuleSettings``: 설치자 설정(``modules.options.mod-definitions``).
@@ -25,9 +27,16 @@ from __future__ import annotations
 
 from .errors import ERROR_MAP, DefinitionRejectedError, IdMismatchError
 from .module import MODULE_ID, VERSIONS_MEMORY, WEB_ROLES, DefinitionsModule, module
-from .plain_scan import PlainSecretScan, plain_secret_warnings, scan_store
+from .plain_scan import (
+    SAVE_SECRET_MESSAGE,
+    PlainSecretScan,
+    plain_secret_warnings,
+    save_secret_warnings,
+    scan_store,
+)
 from .ports import (
     DEFINITION_CHECKS,
+    DEFINITION_SAVE_WARNINGS,
     DEFINITIONS_LOOKUP,
     DEFINITIONS_SAVED,
     DEFINITIONS_SPACES,
@@ -44,6 +53,7 @@ from .ports import (
     GraphSessionSummarySource,
     GraphValidationSource,
     SavedDefinition,
+    SaveWarnings,
     SpaceGraphValidationSource,
 )
 from .routes import build_router
@@ -71,6 +81,7 @@ __all__ = [
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
+    "DEFINITION_SAVE_WARNINGS",
     "ERROR_MAP",
     "GRAPH_ENTRY_LABELS",
     "GRAPH_SESSION_SUMMARY",
@@ -78,6 +89,7 @@ __all__ = [
     "INVALID_RULE",
     "KIND_CONTRIBUTIONS",
     "MODULE_ID",
+    "SAVE_SECRET_MESSAGE",
     "SECRET_RULES",
     "SERVER_WARNINGS",
     "VERSIONS_MEMORY",
@@ -95,6 +107,7 @@ __all__ = [
     "IdMismatchError",
     "LazyVersionRepository",
     "PlainSecretScan",
+    "SaveWarnings",
     "SavedDefinition",
     "SecretRuleCheck",
     "SpaceGraphValidationSource",
@@ -106,6 +119,7 @@ __all__ = [
     "module",
     "plain_secret_warnings",
     "register_contributed_kinds",
+    "save_secret_warnings",
     "scan_store",
     "settings_rule_issues",
 ]

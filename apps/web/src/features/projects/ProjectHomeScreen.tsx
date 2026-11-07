@@ -101,8 +101,7 @@ export function ProjectHomeScreen() {
   const config = useProjectConfig(view, view !== undefined && !unreadable && view.project.archived !== true);
   const recordsUnreadable = view?.records_state === "unavailable";
   const activity = useProjectActivity(id, view !== undefined && !recordsUnreadable && view.status !== "folder_unset");
-  const dirFallback = text("projects.dir_fallback");
-  const banners = useMemo(() => (view === undefined ? [] : problemBanners(view, dirFallback)), [view, dirFallback]);
+  const banners = useMemo(() => (view === undefined ? [] : problemBanners(view)), [view]);
 
   if (p.loadFailed) {
     return (
@@ -379,7 +378,7 @@ export function ProjectHomeScreen() {
         <ManifestResetDialog
           name={view.project.name}
           description={view.project.description ?? ""}
-          configDir={view.config_dir ?? dirFallback}
+          {...(view.config_dir ? { configDir: view.config_dir } : {})}
           blockedReason={view.config_writable === false ? text("projects.blocked.edit") : undefined}
           onSubmit={submitReset}
           onClose={() => setResetOpen(false)}

@@ -1,6 +1,6 @@
 import type { WikiGraph } from "@agent-console/contracts/wiki";
 import {
-  Background, BaseEdge, Controls, EdgeLabelRenderer, Handle, Position, ReactFlow, ReactFlowProvider, useInternalNode,
+  Background, BaseEdge, Controls, EdgeLabelRenderer, Handle, Position, ReactFlow, ReactFlowProvider, useInternalNode, useNodesInitialized, useReactFlow,
   type Edge, type EdgeProps, type Node, type NodeProps,
 } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
@@ -13,6 +13,18 @@ import { formatMessage, resolveMessages } from "./messages";
 
 type GraphNode = Node<GraphNodeData & { domId: string; focused: boolean }, "wiki-node">;
 type GraphEdge = Edge<GraphEdgeData, "wiki-edge">;
+
+/** 배치가 끝나거나 노드가 새로 측정되면 화면에 맞춘다(첫 fitView는 배치 전 좌표로 끝나 노드를 잘라 보이게 한다). ReactFlow 자식으로 둔다. */
+function RefitOnLayout({ token, maxZoom }: { token: unknown; maxZoom: number }) {
+  const rf = useReactFlow();
+  const ready = useNodesInitialized();
+  useEffect(() => {
+    // 새 노드 좌표가 React Flow 저장소에 반영된 다음 프레임에 맞춘다
+    const timer = setTimeout(() => void rf.fitView({ maxZoom, duration: 0 }), 50);
+    return () => clearTimeout(timer);
+  }, [rf, ready, token, maxZoom]);
+  return null;
+}
 
 function WikiNodeView({ data, selected }: NodeProps<GraphNode>) {
   const kind = data.broken ? "broken" : data.scheme ? "scheme" : data.orphan ? "orphan" : "page";
@@ -245,6 +257,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
           if (found) onOpen?.(found.data);
         }}
       >
+        <RefitOnLayout token={placed?.source === flow ? placed : failed} maxZoom={flow.nodes.length > 200 ? 0.6 : 1.5} />
         <Background />
         <Controls showInteractive={false} />
       </ReactFlow>

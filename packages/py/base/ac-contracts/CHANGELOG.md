@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 0.14.4
+
+- 계약 0.14.4(묶음 4b V1, 평문 비밀 복사 막힘 미리 알림). 더하기만이라 patch, 사내 의존 범위
+  `>=0.14,<0.15`(TS `^0.14.0`) 그대로. 하위 계약 버전: `projects` 3.4.0.
+- 새 선택 필드(`projects` 3.4.0): `CopyPlanItem.blocked`(적용할 수 없는 항목 — 참이면 `default_action`은
+  skip), `CopyPlanItem.issues`(항목 이슈, 예: error `secret.plain_found` `details{kind, id, path, reason}`,
+  값 없음). 적용 422는 그대로 남는다.
+
 ## 0.14.3
 
 - 계약 0.14.3(plugins.disabled 후속). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

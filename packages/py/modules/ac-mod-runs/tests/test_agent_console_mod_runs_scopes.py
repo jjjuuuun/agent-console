@@ -6,7 +6,7 @@
 - 준비자의 선택 속성 ``run_context``는 ``run.started`` payload에 실린다(자식 Run도 같다).
 - 범위 공급자가 없으면 지금과 같다(``project_id`` 기록만).
 - 5.7R.33g 잔여: 선택 메서드 ``check_child``(``RunChildScoper``)가 오류를 주면 자식 Run을 만들지
-  않는다(노드 실패 ``child_invalid``, ``details.issues``에 같은 코드).
+  않는다(노드 실패 ``validation_failed``, ``details.issues``에 같은 코드).
 
 실행 모듈은 프로젝트를 모른다는 것을 테스트 서비스 키·테스트 타입으로 보인다.
 """

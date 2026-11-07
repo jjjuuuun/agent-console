@@ -297,7 +297,7 @@ class RunChildScoper(Protocol):
     규칙 검사보다 먼저) 부른다. 자식 Run은 ``scope_run``을 다시 부르지 않으므로(부모 서비스를
     물려받음), 실제로 돌 자식 그래프로 범위 규칙(예: 프로젝트 폴더 밖 경로)을 다시 볼 때 쓴다.
     오류를 돌려주면 첫 오류를 차단 이슈(같은 ``code``·``message``·``details``)로 바꿔 자식 Run을
-    만들지 않는다(노드는 ``child_invalid`` 실패, ``details.issues``). 예외는 기록하고 건너뛴다.
+    만들지 않는다(노드는 ``validation_failed`` 실패, ``details.issues``). 예외는 기록하고 건너뛴다.
     """
 
     def check_child(

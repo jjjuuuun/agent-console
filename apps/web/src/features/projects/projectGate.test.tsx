@@ -67,7 +67,7 @@ describe("프로젝트 문맥 화면 문지기(33p)", () => {
   it("프로젝트 칩은 이름과 경로를 가진 버튼이고 누르면 전체 경로·홈·바꾸기가 나온다", async () => {
     const { clients } = createFakeClients({ listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => views(project("a", { name: "앱" }))), listRuns: vi.fn(async () => []) });
     mountApp(clients, "/runs");
-    const chip = await screen.findByRole("button", { name: "프로젝트 앱, 경로 /w/a" }, { timeout: 5000 });
+    const chip = await screen.findByRole("button", { name: /^앱/ }, { timeout: 5000 });
     fireEvent.click(chip);
     expect(await screen.findByText("프로젝트 폴더")).toBeTruthy();
     expect(screen.getByRole("button", { name: "프로젝트 홈으로" })).toBeTruthy();

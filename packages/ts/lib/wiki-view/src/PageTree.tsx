@@ -199,7 +199,7 @@ export function PageTree({
                     <span className="ac-wk-twisty" data-open={row.expanded || undefined} aria-hidden="true" />
                     <span className="ac-wk-icon" data-icon="folder" aria-hidden="true" />
                     <span className="ac-wk-ellipsis ac-wk-grow">{row.name}</span>
-                    {!row.expanded ? <span className="ac-wk-muted ac-wk-num" aria-hidden="true">{row.count}</span> : null}
+                    {!row.expanded ? <span className="ac-wk-muted ac-wk-num ac-wk-count" data-count={row.count} aria-hidden="true" /> : null}
                   </>
                 ) : (
                   <>
@@ -210,7 +210,7 @@ export function PageTree({
                     {broken > 0 ? (
                       <span className="ac-wk-state" data-tone="danger" aria-hidden="true">
                         <span className="ac-wk-icon" data-icon="link-broken" />
-                        {broken}
+                        <span className="ac-wk-count" data-count={broken} />
                       </span>
                     ) : null}
                     {dirty ? <span className="ac-wk-dot" aria-hidden="true" /> : null}

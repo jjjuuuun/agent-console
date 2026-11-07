@@ -63,6 +63,7 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-ports = [
+    { port = "definitions.save_warnings", reason = "정의 모듈이 저장 응답의 평문 비밀 경고 계산을 리소스 모듈에 주는 모듈 사이 통로(구현은 이 모듈 하나)" },
     { port = "definitions.lookup", reason = "정의 모듈이 다른 기능 모듈·연동에 주는 정의 읽기 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
     { port = "definitions.store", reason = "정의 모듈이 다른 기능 모듈에 주는 정의 저장소 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
     { port = "definitions.spaces", reason = "프로젝트 모듈이 공간 이름 → 정의 저장소를 기능 모듈에 주는 모듈 사이 통로" },

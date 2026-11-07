@@ -11,6 +11,11 @@
 - 리소스 본문 파일(여러 파일·단일 본문)도 함께 복사한다.
 - 쓰기 전에 대상 공간의 비밀 규칙으로 모든 문서를 검사하고, 하나라도 걸리면 아무것도 쓰지 않고
   422(``SecretRejected``, 위치만).
+- 계획도 같은 판정(``scan_secrets`` + 대상 공간 비밀 규칙)을 미리 돌려 걸린 항목을 막힘
+  (``CopyPlanItem.blocked``, error ``secret.plain_found``, 값 없음)으로 싣는다. 적용 422는
+  안전망으로 남는다.
+- 문구의 ``${target}``은 대상 공간 이름(공용 구성 / 따옴표 친 프로젝트 이름,
+  ``copy_target_label``).
 """
 
 from __future__ import annotations
@@ -48,6 +53,7 @@ from agent_console_projects import (
     apply_decisions,
     apply_renames,
     copy_plan,
+    copy_target_label,
     legacy_items,
     renames_of,
     without_scope_field,
@@ -81,6 +87,8 @@ class Space:
     kinds: tuple[str, ...] | None
     rules: SecretRules
     writable: bool = True
+    project_name: str | None = None
+    """프로젝트 표시 이름(문구의 ``${target}``). None = 라이브러리."""
 
 
 class _LazySource(Mapping[DefinitionId, SourceDefinition]):
@@ -257,14 +265,18 @@ class CopyService:
                 {"project_id": ref.project_id},
             )
         space = self._spaces.open(ref.project_id)
+        name = ref.project_id
         if target:
-            read_manifest(space)  # 깨졌으면 409 project.manifest_invalid
+            record = read_manifest(space)  # 깨졌으면 409 project.manifest_invalid
+            if record is not None and record.manifest.name:
+                name = record.manifest.name
         return Space(
             f"project:{ref.project_id}",
             space.definitions,
             space.portable_kinds,
             space.secret_rules,
             space.config_writable,
+            name,
         )
 
     # ------------------------------------------------------------ 종류·목록(복사 대화상자)
@@ -336,7 +348,7 @@ class CopyService:
     # ------------------------------------------------------------ 계획
 
     def plan(self, request: CopyPlanRequest) -> CopyPlan:
-        """복사 계획(아무것도 쓰지 않음)."""
+        """복사 계획(아무것도 쓰지 않음). 대상 공간이 거절할 평문 비밀이 있는 항목은 막힘."""
         src, dst = self._pair(request.source, request.target)
         return self._plan(src, dst, request.items, request.include_references)
 
@@ -349,6 +361,12 @@ class CopyService:
     ) -> CopyPlan:
         source_index = space_index(src.store, src.kinds)
         target_index = space_index(dst.store, dst.kinds)
+        rules = dst.rules
+
+        def plain(_kind: str, document: Mapping[str, Any]) -> list[SecretFinding]:
+            # 적용(``_scan``)과 같은 문서(옛 범위 필드를 뺀 사본)·같은 규칙으로 판정한다.
+            return scan_secrets(rules, without_scope_field(document))
+
         return copy_plan(
             items,
             _LazySource(src.store, source_index),
@@ -357,6 +375,8 @@ class CopyService:
             include_references=include_references,
             kinds=dst.kinds if dst.kinds is not None else dst.store.kinds(),
             messages=self._messages,
+            target_label=copy_target_label(dst.project_name, messages=self._messages),
+            plain_secrets=plain,
         )
 
     def legacy_plan(self, project_id: str) -> CopyPlan:

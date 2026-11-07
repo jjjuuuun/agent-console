@@ -307,14 +307,16 @@ describe("선택 흐름 상태", () => {
 });
 
 describe("구성 폴더(configDir)와 기존 구성 안내", () => {
-  it("configDir가 있으면 만들 폴더 한 줄을 보이고, 없으면 보이지 않는다", async () => {
+  it("configDir가 있으면 만들 폴더 한 줄(고정폭 이름), 없으면 {dir} 없는 짝 문장(고정폭 없음)", async () => {
     const { rerender } = render(<Harness initial="/srv/app" configDir=".cfg" />);
     await flush(0);
     const line = document.querySelector(".ac-fp-creates")!;
     expect(line.textContent).toContain(".cfg 폴더를 만들어");
     expect(line.querySelector("code")!.textContent).toBe(".cfg");
     rerender(<Harness initial="/srv/app" />);
-    expect(document.querySelector(".ac-fp-creates")).toBeNull();
+    const unknown = document.querySelector(".ac-fp-creates")!;
+    expect(unknown.textContent).toContain("이 폴더 안에 프로젝트 구성 폴더를 만들어");
+    expect(unknown.querySelector("code")).toBeNull();
   });
   it("manifest_found: 안내 줄(이름·개수)을 보이고 만들 폴더 줄은 숨긴다. 필드가 없으면 안내가 없다", async () => {
     const withManifest = async () => checked({ path: "/srv/app", manifest: { name: "payments", count: 3 } });

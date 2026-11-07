@@ -3,7 +3,8 @@
 - 필수: ``definitions.store``. 선택: ``definitions.spaces``(``?project=`` 공간 저장소),
   ``definitions.usages``(목록 ``usage_count``, 없으면 null),
   ``definitions.checks``(여러 제공자 — 만들기·저장 때 error 422, warning·info는
-  ``X-Console-Issues`` 헤더).
+  ``X-Console-Issues`` 헤더), ``definitions.save_warnings``(저장한 문서의 평문 비밀 경고를 같은
+  헤더에 더한다).
 - 제공: ``resources.lookup``(정의·본문·여러 파일 조회), ``resources.types``(종류 레지스트리).
 - 종류 레지스트리: 호스트 기본 서비스 ``registries``의 ``resource_types`` 확장(호스트가 플러그인 +
   선언형을 로드). 호스트가 주지 않으면(단독 실행) entry point와 워크스페이스 선언형 폴더를 읽는다.
@@ -22,6 +23,7 @@ from .errors import ERROR_MAP
 from .lookup import StoreResources, resource_types_of
 from .ports import (
     DEFINITION_CHECKS,
+    DEFINITION_SAVE_WARNINGS,
     DEFINITION_USAGES,
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
@@ -55,7 +57,12 @@ class ResourcesModule:
         description="에이전트가 쓰는 리소스(지침·스킬 같은 파일)를 모아 관리한다",
         provides=(RESOURCES_LOOKUP, RESOURCE_TYPES),
         requires=(DEFINITIONS_STORE,),
-        optional=(DEFINITION_USAGES, DEFINITION_CHECKS, DEFINITIONS_SPACES),
+        optional=(
+            DEFINITION_USAGES,
+            DEFINITION_CHECKS,
+            DEFINITIONS_SPACES,
+            DEFINITION_SAVE_WARNINGS,
+        ),
         settings_schema=ResourceModuleSettings,
         contracts={"resources": CONTRACT_VERSIONS["resources"]},
         web_roles=WEB_ROLES,
@@ -78,6 +85,7 @@ class ResourcesModule:
             default_content_file=cfg.default_content_file,
             reserved_file_names=cfg.reserved_file_names,
             checks=lambda: ctx.ports(DEFINITION_CHECKS),
+            save_warnings=lambda: ctx.port(DEFINITION_SAVE_WARNINGS),
         )
         stores: SpaceStores[DefinitionStore] = SpaceStores(
             store, lambda: ctx.port(DEFINITIONS_SPACES)
@@ -94,6 +102,7 @@ class ResourcesModule:
                 default_content_file=cfg.default_content_file,
                 reserved_file_names=cfg.reserved_file_names,
                 checks=lambda: ctx.ports(DEFINITION_CHECKS),
+                save_warnings=lambda: ctx.port(DEFINITION_SAVE_WARNINGS),
             )
 
         ctx.provide(RESOURCES_LOOKUP, StoreResources(store))

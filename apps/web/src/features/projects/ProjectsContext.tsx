@@ -9,7 +9,6 @@ import {
   filterByScope,
   readProjectParam,
   writeProjectParam,
-  createProjectsText,
   type CurrentProject,
   type CurrentProjectStore,
   type ProjectsClient,
@@ -37,7 +36,6 @@ export function projectHomePath(id: string): string {
   return `/projects/${encodeURIComponent(id)}`;
 }
 
-const dirFallback = createProjectsText()("projects.dir_fallback");
 const loadProjects = (rest: RestClient): Promise<ProjectView[]> => rest.listProjects();
 
 /** 목록 질의 키(`["list", …]` 아래라 쓰기 뒤 다른 목록과 함께 갱신된다). */
@@ -279,7 +277,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         <UnregisterDialog
           name={unregisterView.project.name}
           folder={unregisterView.project.folder}
-          configDir={unregisterView.config_dir ?? dirFallback}
+          {...(unregisterView.config_dir ? { configDir: unregisterView.config_dir } : {})}
           onClose={() => setUnregistering(null)}
           onConfirm={unregister}
         />

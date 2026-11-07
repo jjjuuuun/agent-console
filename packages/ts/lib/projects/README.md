@@ -9,6 +9,7 @@
 - 현재 프로젝트: `createCurrentProjectStore`(주소 `?project=`와 브라우저 저장, 저장소·주소는 주입)
 - 옮기기 계획: `mergeMovePlans`·`selectMoves`·`moveTargetOfIssue`
 - 프로젝트 2: 상태 문구·색조 `statusInfo`, 상태별 할 수 있는 일과 막힌 이유 `projectAbilities`(표는 데이터), 공간 칩·질의 `spaceLabel`·`spaceParam`, 복사 계획 도우미(`initialSelections`·`canSubmit`·`skipWarnings`·`buildApplyRequest`·`summarizeResult` …), 폴더 선택 어댑터(`folderCheckOutcome`·`folderPickOutcome`: 계약 → `@agent-console/folder-picker`가 받는 모양), 문구 표 `DEFAULT_PROJECT_MESSAGES`·`createProjectsText`
+- `configDirLabel`은 deprecated(다음 메이저에서 메시지 `projects.dir_fallback`과 함께 제거, 대신 짝 문장 `*_unknown` 사용).
 - (deprecated, 33p·33t에서 삭제) REST: `createProjectsClient`(전송은 주입, `@agent-console/api-client`의 `RestIo`가 맞는다)
 
 의존은 `@agent-console/contracts`뿐이다(타입과, 값은 상수 진입점 `@agent-console/contracts/constants`의 이슈 코드·제안 id·상태·복사 동작 상수만). 종류 이름·프로젝트 목록·문구를 코드에 고정하지 않는다.

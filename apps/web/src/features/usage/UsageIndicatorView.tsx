@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Gauge } from "@agent-console/ui";
 import { itemFlags, itemRailValue, itemValueText } from "./indicatorText";
 import { usageIndicatorMessages as t, usageMessages as u } from "./messages";
@@ -24,7 +24,10 @@ export interface UsageIndicatorViewProps {
   href: string;
   /** 지금 이동할 화면에 이미 있는가 */
   current?: boolean;
-  /** 링크 `aria-label`(앱이 만들어 넘긴다) */
+  /**
+   * 링크를 풀어 읽는 한 문장(앱이 만들어 넘긴다). 보이는 글자가 있는 모양(블록·칩)에서는 링크 이름이 보이는 글자(내용)에서 나오고
+   * (보이는 글자가 이름에 들어 있어야 한다, WCAG 2.5.3), 이 문장은 `aria-describedby`로 붙는다. 보이는 글자가 없는 모양(레일·로딩)은 `aria-label`로 쓴다.
+   */
   ariaLabel: string;
   /** 출처 id → 표시 정보(신뢰 요소용) */
   sourceInfo?: (id: string) => { title: string; trust: string };
@@ -165,6 +168,7 @@ function ChipBody({ items, fields, mode, maxItems }: { items: readonly Indicator
  * 링크 하나(탭 정지 1개)이며 값은 `aria-label`로 읽히고 게이지는 `aria-hidden`이다.
  */
 export function UsageIndicatorView(p: UsageIndicatorViewProps) {
+  const spokenId = useId();
   let body: ReactNode;
   const unlinked = p.layout === "block" && (p.status === "ready" || p.status === "empty") && p.setupHref !== undefined && !p.items.some((i) => i.kind === "ratio");
   // 접힘 레일에는 값이 있는 창만 그린다(빈 타일 금지). 보일 것이 없으면 아무것도 그리지 않는다.
@@ -191,21 +195,27 @@ export function UsageIndicatorView(p: UsageIndicatorViewProps) {
     const rows = p.items.filter((i) => i.observed && i.kind === "ratio");
     body = rows.length === 0 ? <div className="usage-ind-msg">{t.noData}</div> : rows.map((i) => <ItemBlock key={i.window} item={i} mode={p.valueMode} nowMs={p.nowMs} sourceInfo={p.sourceInfo} />);
   }
+  // 이름을 내용에서 얻을 수 있는가: 레일은 값 글자만, 로딩은 글자가 없다
+  const nameFromContent = p.layout !== "rail" && p.status !== "loading";
+  const { "aria-describedby": extraDescribedBy, ...restLink } = (p.linkProps ?? {}) as Record<string, unknown>;
+  const describedBy = [nameFromContent ? spokenId : undefined, typeof extraDescribedBy === "string" ? extraDescribedBy : undefined].filter((v) => v !== undefined).join(" ");
   return (
     <div className="usage-ind" data-layout={p.layout} data-host={p.host} data-corner={p.corner} data-status={p.status} data-error={p.hasError ? "true" : undefined}>
       <a
         className="usage-ind-link"
         href={unlinked && p.setupHref !== undefined ? p.setupHref : p.href}
-        aria-label={p.ariaLabel}
+        {...(nameFromContent ? {} : { "aria-label": p.ariaLabel })}
+        {...(describedBy === "" ? {} : { "aria-describedby": describedBy })}
         aria-busy={p.status === "loading" ? "true" : undefined}
         {...(p.current ? { "aria-current": "page" as const } : {})}
         onClick={p.onActivate}
-        {...p.linkProps}
+        {...restLink}
       >
         {body}
         {p.hasError ? <span className="usage-ind-err" aria-hidden="true" title={t.loadFailed}>!</span> : null}
         {p.example ? <span className="usage-ind-example">{t.example}</span> : null}
       </a>
+      {nameFromContent ? <span id={spokenId} hidden data-usage-spoken="">{p.ariaLabel}</span> : null}
       {p.children}
     </div>
   );

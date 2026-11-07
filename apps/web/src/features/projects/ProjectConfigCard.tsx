@@ -78,8 +78,8 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
       ) : (
         <>
           {p.failed.map((f) => (
-            <p key={f.kind} className="prj-row-error" role="alert">
-              {m.home.configLoadFailed(f.title)} <Button size="sm" variant="ghost" onClick={() => p.onRetry(f.kind)}>{m.home.retry}</Button>
+            <p key={f.kind === "" ? "(kinds)" : f.kind} className="prj-row-error" role="alert">
+              {f.kind === "" ? m.home.configKindsLoadFailed : m.home.configLoadFailed(f.title)} <Button size="sm" variant="ghost" onClick={() => p.onRetry(f.kind)}>{m.home.retry}</Button>
             </p>
           ))}
           <table className="prj-table">

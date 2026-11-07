@@ -155,7 +155,7 @@ export function WikiListScreen() {
                 <button type="button" className="app-link-btn" onClick={() => setQ("")}>{m.list.clearSearch}</button>
               </div>
             ) : (
-              <ul className="wiki-cards" role="listbox" aria-label={m.title} data-testid="wiki-cards">
+              <ul className="wiki-cards" aria-label={m.title} data-testid="wiki-cards">
                 {shown.map((w, i) => {
                   const rules = w.rules ?? [];
                   const broken = w.broken_links ?? 0;
@@ -166,10 +166,8 @@ export function WikiListScreen() {
                           if (el === null) refs.current.delete(w.id);
                           else refs.current.set(w.id, el);
                         }}
-                        role="option"
+                        role="button"
                         tabIndex={i === 0 || w.id === preselected ? 0 : -1}
-                        aria-selected={w.id === preselected}
-                        aria-label={wikiName(w)}
                         className="wiki-card"
                         data-preselected={w.id === preselected || undefined}
                         onClick={() => open(w)}

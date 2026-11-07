@@ -4677,6 +4677,14 @@ export interface CopyPlanItem {
    * 기본 동작(`KnownCopyActions`). null = 사용자가 골라야 한다(대상 내용이 다름).
    */
   default_action?: string | null;
+  /**
+   * (3.4.0) 적용할 수 없는 항목(예: 대상 공간이 거절할 평문 비밀이 있음). 참이면 `default_action`은 skip이고 이유는 `issues`의 error다. 그대로 적용을 요청하면 서버가 거절한다(예: 422 `secret.plain_found`).
+   */
+  blocked?: boolean;
+  /**
+   * (3.4.0) 이 항목의 이슈(예: error `secret.plain_found` — `path` = 정의 문서 기준 JSON Pointer, `details{kind, id, path, reason}`, 값 없음). 계획 전체 경고는 `CopyPlan.warnings`.
+   */
+  issues?: Issue[];
 }
 /**
  * 정의 하나를 가리키는 키(종류 이름 + id). 표시 이름은 선택.
@@ -13259,7 +13267,7 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.3" as const;
+export const CONTRACTS_VERSION = "0.14.4" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.12.0",
@@ -13268,7 +13276,7 @@ export const CONTRACT_VERSIONS = {
   "definitions": "1.7.0",
   "runs": "1.8.0",
   "usage": "1.1.0",
-  "projects": "3.3.0",
+  "projects": "3.4.0",
   "chat": "1.3.0",
   "exports": "1.0.0",
   "imports": "1.1.0",

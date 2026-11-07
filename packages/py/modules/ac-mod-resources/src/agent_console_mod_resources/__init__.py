@@ -6,9 +6,9 @@
 공개 API:
     - ``module``(``ResourcesModule``): entry point ``agent_console.server_modules``의
       ``mod-resources``.
-    - 포트(``ports``): ``DEFINITIONS_STORE``(필수)·``DEFINITION_USAGES``·``DEFINITION_CHECKS``
-      (선택)·``RESOURCES_LOOKUP``·``RESOURCE_TYPES``(제공), 프로토콜 ``DefinitionUsages``·
-      ``DefinitionCheck``·``ResourceStore``.
+    - 포트(``ports``): ``DEFINITIONS_STORE``(필수)·``DEFINITION_USAGES``·``DEFINITION_CHECKS``·
+      ``DEFINITION_SAVE_WARNINGS``(선택)·``RESOURCES_LOOKUP``·``RESOURCE_TYPES``(제공), 프로토콜
+      ``DefinitionUsages``·``DefinitionCheck``·``ResourceStore``·``SaveWarnings``.
     - HTTP 없이 쓰는 부품: ``ResourceService``, ``StoreResources``(저장소 위 ``ResourceLookup``),
       ``resource_types_of``, ``resource_issues``·``merge_strategies``.
     - ``build_router``: FastAPI 라우터(접두 없음). ``ERROR_MAP``: 모듈 오류 맵.
@@ -22,6 +22,7 @@ from .lookup import StoreResources, resource_types_of
 from .module import MODULE_ID, WEB_ROLES, ResourcesModule, module
 from .ports import (
     DEFINITION_CHECKS,
+    DEFINITION_SAVE_WARNINGS,
     DEFINITION_USAGES,
     DEFINITIONS_SPACES,
     DEFINITIONS_STORE,
@@ -30,6 +31,7 @@ from .ports import (
     DefinitionCheck,
     DefinitionUsages,
     ResourceStore,
+    SaveWarnings,
 )
 from .routes import build_router
 from .service import ResourceService, merge_strategies, resource_document_path, resource_issues
@@ -41,6 +43,7 @@ __all__ = [
     "DEFINITIONS_SPACES",
     "DEFINITIONS_STORE",
     "DEFINITION_CHECKS",
+    "DEFINITION_SAVE_WARNINGS",
     "DEFINITION_USAGES",
     "ERROR_MAP",
     "MODULE_ID",
@@ -56,6 +59,7 @@ __all__ = [
     "ResourceService",
     "ResourceStore",
     "ResourcesModule",
+    "SaveWarnings",
     "StoreResources",
     "build_router",
     "merge_strategies",

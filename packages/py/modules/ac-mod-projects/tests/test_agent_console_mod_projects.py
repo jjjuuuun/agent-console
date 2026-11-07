@@ -738,6 +738,77 @@ def test_copy_refuses_plain_secret(tmp_path: Path, work: Path) -> None:
     assert not (app / CFG / "agents").exists()
 
 
+def test_copy_plan_blocks_plain_secret_before_apply(tmp_path: Path, work: Path) -> None:
+    """묶음 4b V1: 계획이 적용 422를 미리 알린다(값 없음), 막힌 항목을 빼면 적용 성공."""
+    secret = "abcd1234efgh5678"
+    app = _folder(work, "app")
+    assembly = _assembly(tmp_path)
+    lib = _library(assembly)
+    lib.create(
+        "agent",
+        {"id": "s", "name": "s", "backend": "fake-agent", "attributes": {"API_KEY": secret}},
+    )
+    lib.create("agent", {"id": "ok", "name": "ok", "backend": "fake-agent"})
+    lib.create(
+        "graph",
+        {
+            "id": "team",
+            "name": "팀",
+            "nodes": [],
+            "edges": [],
+            "uses": [["agent", "s"], ["agent", "ok"]],
+        },
+    )
+    with _client(assembly) as client:
+        registered = _register(client, app)
+        plan = _plan(client, "app", [{"kind": "graph", "id": "team"}])
+        assert secret not in json.dumps(plan)
+        rows = {i["id"]: i for i in plan["items"]}
+        blocked = rows["s"]
+        assert blocked["blocked"] is True
+        assert blocked["default_action"] == "skip"
+        [issue] = blocked["issues"]
+        assert issue["severity"] == "error"
+        assert issue["code"] == KnownIssueCodes.SECRET_PLAIN_FOUND
+        assert issue["path"] == "/attributes/API_KEY"
+        assert issue["details"]["kind"] == "agent"
+        assert issue["details"]["id"] == "s"
+        assert issue["details"]["path"] == "/attributes/API_KEY"
+        assert issue["details"]["reason"]
+        assert f"프로젝트 \u2018{registered['project']['name']}\u2019" in issue["message"]
+        assert rows["team"]["blocked"] is False
+        assert rows["team"]["issues"] == []
+        assert rows["ok"]["blocked"] is False
+        # 막힌 항목을 빼서 그것을 쓰는 팀이 실행 전에 막힌다는 경고
+        assert "project.copy_skip_breaks_reference" in [w["code"] for w in plan["warnings"]]
+        # 기본 동작 그대로 적용(막힌 항목 skip) = 성공
+        result = _apply_all(client, plan, "app")
+        assert {i["id"]: i["status"] for i in result["items"]} == {
+            "team": "copied",
+            "s": "skipped",
+            "ok": "copied",
+        }
+        # 막힌 항목을 억지로 copy하면 적용 422(안전망)는 그대로
+        forced = client.post(
+            f"{API}/projects/copy/apply",
+            json={
+                "source": {"project_id": None},
+                "target": {"project_id": "app"},
+                "items": [
+                    {
+                        "kind": "agent",
+                        "id": "s",
+                        "action": "copy",
+                        "source_version": blocked["source_version"],
+                    }
+                ],
+            },
+        )
+        assert forced.status_code == 422
+        assert secret not in forced.text
+    assert not (app / CFG / "agents" / "s.yaml").exists()
+
+
 def test_copy_errors(tmp_path: Path, work: Path) -> None:
     app = _folder(work, "app")
     with _client(_assembly(tmp_path)) as client:

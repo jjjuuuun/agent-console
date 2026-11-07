@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "@agent-console/api-client";
 import { FolderPicker, createTranslate, middleEllipsis, type FolderCheckState, type FolderSelectPhase, IDLE_STATE } from "@agent-console/folder-picker";
-import { createProjectsText, folderErrorOutcome } from "@agent-console/projects";
+import { folderErrorOutcome } from "@agent-console/projects";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
 import { folderHomeMessages as m } from "./folderHomeMessages";
 import { canSubmitAdd, canSubmitRepath, suggestionFor } from "./projectFolderLib";
 import type { FolderApi } from "./useFolderApi";
 
 const fpText = createTranslate();
-const dirFallback = createProjectsText()("projects.dir_fallback");
 
 /** 제출 값. 호출한 쪽(호스트)이 서버 호출·토스트·이동을 맡는다. */
 export type FolderSubmit =
@@ -97,8 +96,8 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
 
   const info = api.lastCheckFor(state.check?.path ?? state.forInput);
   const suggestion = useMemo(() => suggestionFor(state, info), [state, info]);
-  // 선택 전에는 마지막으로 받은 `config_dir`, 그것도 없으면 대체 문구(`projects.dir_fallback`)로 "{dir} 폴더를 만듭니다" 줄을 채운다
-  const dir = info?.config_dir ?? target?.configDir ?? api.configDir ?? dirFallback;
+  // 선택 전에는 마지막으로 받은 `config_dir`, 그것도 없으면 모름(undefined) — `{dir}` 없는 짝 문장을 쓴다
+  const dir = info?.config_dir ?? target?.configDir ?? api.configDir ?? undefined;
 
   // 확인이 통과한 경로마다 고치지 않은 이름·id·설명만 새 제안으로 바꾼다
   const filledFor = useRef<string | null>(null);
@@ -227,7 +226,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
           roots={api.roots}
           capabilities={api.capabilities}
           {...(api.pickNative === undefined ? {} : { onPickNative: api.pickNative })}
-          configDir={dir}
+          {...(dir ? { configDir: dir } : {})}
           {...(!add && target?.folder ? { excludeProjectId: target.id, currentFolder: target.folder } : {})}
           disabled={busy}
           autoFocus
@@ -243,7 +242,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
         {adoptNote}
         {!add ? (
           <Banner tone="info" role="status">
-            {fpWithDir(m.dialog.repathNoteConfig, dir ?? "")} {m.dialog.repathNoteLogs}
+            {dir ? fpWithDir(m.dialog.repathNoteConfig, dir) : m.dialog.repathNoteConfigUnknown} {m.dialog.repathNoteLogs}
           </Banner>
         ) : null}
 

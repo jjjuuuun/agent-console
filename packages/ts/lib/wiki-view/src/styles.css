@@ -46,6 +46,8 @@
 .ac-wk-mono { font-family: var(--ac-font-mono); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); overflow-wrap: anywhere; }
 .ac-wk-muted { color: var(--ac-text-muted); }
 .ac-wk-num { font-variant-numeric: tabular-nums; }
+/* 줄 이름(aria-label)이 설명하는 숫자: 글자가 아니라 생성 내용이라 접근성 이름 검사의 '보이는 글자'에 들지 않는다(WCAG 2.5.3) */
+.ac-wk-count::after { content: attr(data-count); }
 .ac-wk-right { text-align: right; justify-content: flex-end; }
 .ac-wk-grow { flex: 1; min-width: 0; }
 .ac-wk-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
@@ -154,7 +156,18 @@
 /* 그래프 */
 .ac-wk-graph { display: flex; flex-direction: column; min-height: 240px; }
 .ac-wk-graph:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: -2px; }
-.ac-wk-graph .react-flow { flex: 1; min-height: 0; }
+.ac-wk-graph .react-flow {
+  flex: 1; min-height: 0; background: var(--ac-bg);
+  /* React Flow 컨트롤(확대·축소·맞춤)을 테마 토큰으로: 다크에서도 아이콘이 보인다 */
+  --xy-controls-button-background-color: var(--ac-surface-2);
+  --xy-controls-button-background-color-hover: var(--ac-hover-bg, var(--ac-surface-3));
+  --xy-controls-button-color: var(--ac-text);
+  --xy-controls-button-color-hover: var(--ac-text);
+  --xy-controls-button-border-color: var(--ac-border);
+  --xy-background-pattern-dots-color: var(--ac-border);
+}
+.ac-wk-graph .react-flow__controls-button { background: var(--ac-surface-2); color: var(--ac-text); border-bottom: 1px solid var(--ac-border); }
+.ac-wk-graph .react-flow__controls-button svg { fill: currentColor; }
 .ac-wk-gnode { display: flex; align-items: center; gap: 6px; width: var(--ac-wk-node-w); height: var(--ac-wk-node-h); padding: 0 10px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); color: var(--ac-text); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .ac-wk-gnode[data-center] { border: 2px solid var(--ac-accent); background: var(--ac-accent-bg); }
 .ac-wk-gnode[data-kind="broken"] { border: 1px dashed var(--ac-danger); }

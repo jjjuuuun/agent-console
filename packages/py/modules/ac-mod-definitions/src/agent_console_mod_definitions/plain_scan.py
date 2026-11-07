@@ -26,6 +26,58 @@ from .ports import DefinitionCheck
 
 PLAIN_SECRET_MESSAGE = "평문 비밀로 의심되는 값이 있습니다. secret:// 참조로 바꾸세요"
 
+SAVE_SECRET_MESSAGE = (
+    "비밀처럼 보이는 평문이 있어 프로젝트로 복사하거나 프로젝트에서 실행할 수 없습니다. "
+    "비밀 저장소에 넣고 secret:// 참조로 바꾸세요"
+)
+"""저장 응답 경고(``save_secret_warnings``)의 기본 문구.
+
+설정 ``plain_secret_save_message``로 바꾼다."""
+
+
+def save_secret_warnings(
+    kind: str,
+    item_id: str,
+    document: Mapping[str, Any],
+    rules: SecretRules,
+    *,
+    message: str = SAVE_SECRET_MESSAGE,
+) -> list[Issue]:
+    """저장한 정의 하나의 평문 비밀 경고(``secret.plain_found`` warning, 값 없음).
+
+    판정은 프로젝트 공간 쓰기 검사와 같다(문서 전체 ``SecretRules.find_suspected``). 공용 저장은
+    허용하고, 프로젝트로 복사·실행하면 막힌다는 것을 저장 응답에서 미리 알린다.
+
+    Returns:
+        위치마다 이슈 하나(``path`` = 문서 기준 JSON Pointer, ``details{kind, id, path, reason}``).
+
+    >>> from agent_console_secret_rules import default_rules
+    >>> [(i.code, i.path, i.details["reason"]) for i in save_secret_warnings(
+    ...     "agent", "a", {"id": "a", "api_key": "plain"}, default_rules())]
+    [('secret.plain_found', '/api_key', 'key_name')]
+    """
+    out: list[Issue] = []
+    seen: set[str] = set()
+    for finding in rules.find_suspected(dict(document)):
+        if finding.path in seen:
+            continue
+        seen.add(finding.path)
+        out.append(
+            Issue(
+                severity="warning",
+                code=KnownIssueCodes.SECRET_PLAIN_FOUND,
+                message=message,
+                path=finding.path or None,
+                details={
+                    "kind": kind,
+                    "id": item_id,
+                    "path": finding.path,
+                    "reason": finding.reason,
+                },
+            )
+        )
+    return out
+
 
 def plain_secret_warnings(
     kind: str,
@@ -121,4 +173,11 @@ class PlainSecretScan:
             self._cached = None
 
 
-__all__ = ["PLAIN_SECRET_MESSAGE", "PlainSecretScan", "plain_secret_warnings", "scan_store"]
+__all__ = [
+    "PLAIN_SECRET_MESSAGE",
+    "SAVE_SECRET_MESSAGE",
+    "PlainSecretScan",
+    "plain_secret_warnings",
+    "save_secret_warnings",
+    "scan_store",
+]

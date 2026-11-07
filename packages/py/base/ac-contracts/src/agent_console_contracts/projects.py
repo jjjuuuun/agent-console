@@ -10,6 +10,9 @@
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
 
+3.4.0(0.14.4, 더하기만): 복사 계획 항목의 막힘 `CopyPlanItem.blocked`와 항목 이슈
+`CopyPlanItem.issues`(대상 공간이 거절할 평문 비밀 `secret.plain_found`, 값 없음).
+
 3.0에 더한 것(3.1.0, 더하기만 — design §PI.4.6·§PI.16):
 - 프로젝트 기록 DB 상태 `ProjectView.records_state`·`records_writable`·`records_issue`
   (`KnownProjectRecordsStates`), 쓸 수 없는 이유 `ProjectRecordsUnavailableDetails`
@@ -638,6 +641,22 @@ class CopyPlanItem(ContractModel):
     default_action: str | None = Field(
         default=None,
         description="기본 동작(`KnownCopyActions`). null = 사용자가 골라야 한다(대상 내용이 다름).",
+    )
+    blocked: bool = Field(
+        default=False,
+        description=(
+            "(3.4.0) 적용할 수 없는 항목(예: 대상 공간이 거절할 평문 비밀이 있음). 참이면 "
+            "`default_action`은 skip이고 이유는 `issues`의 error다. 그대로 적용을 요청하면 서버가 "
+            "거절한다(예: 422 `secret.plain_found`)."
+        ),
+    )
+    issues: list[Issue] = Field(
+        default_factory=list,
+        description=(
+            "(3.4.0) 이 항목의 이슈(예: error `secret.plain_found` — `path` = 정의 문서 기준 JSON "
+            "Pointer, `details{kind, id, path, reason}`, 값 없음). 계획 전체 경고는 "
+            "`CopyPlan.warnings`."
+        ),
     )
 
 

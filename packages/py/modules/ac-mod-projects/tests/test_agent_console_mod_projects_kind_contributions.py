@@ -241,6 +241,11 @@ def test_copy_with_contributed_kinds(tmp_path: Path) -> None:
         back = _plan(client, "pa", None, [("note", "n1")])
         assert back["items"] == []
         assert [w["code"] for w in back["warnings"]] == ["project.copy_kind_not_portable"]
+        # 방향 중립 문구: 대상(공용 구성)을 이름으로 말한다(묶음 4b V3).
+        assert back["warnings"][0]["message"] == (
+            "note/n1은(는) 공용 구성에 둘 수 없는 종류라 뺐습니다."
+        )
+        assert back["warnings"][0]["details"] == {"kind": "note", "id": "n1"}
         assert not (tmp_path / "ws" / "notes").exists()
 
 

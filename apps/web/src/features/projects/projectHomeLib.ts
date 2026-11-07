@@ -27,10 +27,10 @@ const FOLDER_PROBLEMS: ReadonlySet<string> = new Set([
   KNOWN_PROJECT_STATUSES.FOLDER_CONFLICT,
 ]);
 
-/** 구성 폴더 이름(`{dir}`). 서버 값이 없으면 호출한 쪽이 준 대체 문구. */
-function dirOf(view: ProjectView, fallback: string): string {
+/** 구성 폴더 이름(`{dir}`). 서버 값이 없으면 undefined(그때는 `{dir}` 없는 짝 문장을 쓴다). */
+function dirOf(view: ProjectView): string | undefined {
   const d = view.config_dir;
-  return d === undefined || d === null || d.trim() === "" ? fallback : d;
+  return d === undefined || d === null || d.trim() === "" ? undefined : d;
 }
 
 /** 기록 배너의 이유별 제목. 모르는 이유는 서버 메시지 원문. */
@@ -41,11 +41,11 @@ function recordsReasonTitle(view: ProjectView): string {
 }
 
 /** 폴더 문제 배너(상태 → 제목·본문·버튼, screen-projects §6.1 표). */
-function folderBanner(view: ProjectView, dirFallback: string): BannerSpec | null {
+function folderBanner(view: ProjectView): BannerSpec | null {
   const path = view.project.folder ?? "";
   switch (view.status) {
     case KNOWN_PROJECT_STATUSES.FOLDER_MISSING:
-      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.missingTitle, body: m.problem.missingBody(path, dirOf(view, dirFallback)), actions: ["repath", "recheck", "unregister"] };
+      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.missingTitle, body: (dirOf(view) === undefined ? m.problem.missingBodyUnknown(path) : m.problem.missingBody(path, dirOf(view) as string)), actions: ["repath", "recheck", "unregister"] };
     case KNOWN_PROJECT_STATUSES.NOT_A_DIRECTORY:
       return { id: "folder", kind: "folder", tone: "danger", title: m.problem.notDirTitle, body: m.problem.notDirBody(path), actions: ["repath", "recheck", "unregister"] };
     case KNOWN_PROJECT_STATUSES.NO_ACCESS:
@@ -64,13 +64,13 @@ function folderBanner(view: ProjectView, dirFallback: string): BannerSpec | null
  * 폴더 문제 → 기록 상태 → 설정 파일 오류 → 읽기 전용 → 안내 줄(.gitignore 오래됨·네트워크 드라이브).
  * 모르는 `status`는 일반 경고 하나. 같은 원인(폴더 없음)의 기록 배너는 따로 그리지 않는다. 보관된 프로젝트는 안내 한 줄뿐이다.
  */
-export function problemBanners(view: ProjectView, dirFallback: string): BannerSpec[] {
+export function problemBanners(view: ProjectView): BannerSpec[] {
   if (view.project.archived === true) {
     return [{ id: "archived", kind: "archived", tone: "info", title: m.problem.archivedNote, body: "", actions: ["reregister"] }];
   }
   const out: BannerSpec[] = [];
   const known = FOLDER_PROBLEMS.has(view.status) || view.status === KNOWN_PROJECT_STATUSES.READY || view.status === KNOWN_PROJECT_STATUSES.MANIFEST_INVALID;
-  const folder = folderBanner(view, dirFallback);
+  const folder = folderBanner(view);
   if (folder !== null) out.push(folder);
   else if (!known) {
     out.push({ id: "folder", kind: "folder", tone: "warning", title: m.problem.unknownTitle(view.status), body: view.status_detail ?? "", actions: ["recheck", "repath", "unregister"] });
@@ -107,17 +107,17 @@ export function problemBanners(view: ProjectView, dirFallback: string): BannerSp
       kind: "manifest",
       tone: "danger",
       title: m.problem.manifestTitle,
-      body: m.problem.manifestBody(dirOf(view, dirFallback), view.status_detail ?? null),
+      body: (dirOf(view) === undefined ? m.problem.manifestBodyUnknown(view.status_detail ?? null) : m.problem.manifestBody(dirOf(view) as string, view.status_detail ?? null)),
       actions: ["recheck", "copyManifestPath", "recreateManifest"],
     });
   }
   if (view.status === KNOWN_PROJECT_STATUSES.READY && view.config_writable === false) {
-    out.push({ id: "readonly", kind: "readonly", tone: "warning", title: m.problem.readonlyTitle, body: m.problem.readonlyBody(dirOf(view, dirFallback)), actions: ["recheck", "repath"] });
+    out.push({ id: "readonly", kind: "readonly", tone: "warning", title: m.problem.readonlyTitle, body: (dirOf(view) === undefined ? m.problem.readonlyBodyUnknown : m.problem.readonlyBody(dirOf(view) as string)), actions: ["recheck", "repath"] });
   }
 
   for (const issue of view.issues ?? []) {
     if (issue.code === "project.gitignore_outdated") {
-      out.push({ id: "gitignore", kind: "gitignore", tone: "info", title: m.problem.gitignoreOutdated(dirOf(view, dirFallback)), body: "", actions: ["appendGitignore"] });
+      out.push({ id: "gitignore", kind: "gitignore", tone: "info", title: (dirOf(view) === undefined ? m.problem.gitignoreOutdatedUnknown : m.problem.gitignoreOutdated(dirOf(view) as string)), body: "", actions: ["appendGitignore"] });
     } else if (issue.code === "project.network_fs") {
       out.push({ id: "network", kind: "network", tone: "info", title: m.problem.networkFs, body: "", actions: [] });
     }

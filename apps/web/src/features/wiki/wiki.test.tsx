@@ -47,8 +47,8 @@ describe("위키 목록 /wiki", () => {
 
   it("위키가 1개여도 목록이다: 자동 이동 없이 그 카드가 미리 선택되고 Enter로 열린다", async () => {
     const { router } = setup("/wiki?prj=p1", { wikis: [wikiSummary()] });
-    const card = await screen.findByRole("option", { name: "노트" }, LONG);
-    expect(card.getAttribute("aria-selected")).toBe("true");
+    const card = await screen.findByTestId("wiki-cards", {}, LONG).then((l) => l.querySelector<HTMLElement>(".wiki-card")!);
+    expect(card.getAttribute("data-preselected")).toBe("true");
     expect(router.state.location.pathname).toBe("/wiki");
     expect(router.state.location.search).not.toContain("all");
     fireEvent.keyDown(card, { key: "Enter" });
@@ -57,9 +57,10 @@ describe("위키 목록 /wiki", () => {
 
   it("위키가 여럿이면 선택 표시 없이 이름 순으로 보인다", async () => {
     setup("/wiki?prj=p1", { wikis: [wikiSummary({ id: "w2", name: "나" }), wikiSummary({ id: "w1", name: "가" })] });
-    const cards = await screen.findAllByRole("option", {}, LONG);
-    expect(cards.map((c) => c.getAttribute("aria-label"))).toEqual(["가", "나"]);
-    expect(cards.every((c) => c.getAttribute("aria-selected") === "false")).toBe(true);
+    const list = await screen.findByTestId("wiki-cards", {}, LONG);
+    const cards = [...list.querySelectorAll<HTMLElement>(".wiki-card")];
+    expect(cards.map((c) => c.querySelector(".wiki-card-name")?.textContent)).toEqual(["가", "나"]);
+    expect(cards.every((c) => c.getAttribute("data-preselected") === null)).toBe(true);
   });
 
   it("프로젝트가 0개면 본문 전체가 NoProjectState 하나로 바뀌고 [새 위키…]도 없다", async () => {

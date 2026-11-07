@@ -24,7 +24,7 @@ from agent_console_resources import (
 from agent_console_store import RESOURCE_KIND, SCOPE_FIELD, StoredDefinition
 
 from .errors import NOT_MULTI_FILE, RESERVED_FILE_NAME, ResourceRejectedError
-from .ports import DefinitionCheck, DefinitionUsages, ResourceStore
+from .ports import DefinitionCheck, DefinitionUsages, ResourceStore, SaveWarnings
 
 _log = logging.getLogger("agent_console_mod_resources")
 
@@ -69,6 +69,8 @@ class ResourceService:
         reserved_file_names: 여러 파일 본문 경로에 있으면 경고할 이름(대소문자 무시).
         checks: 지금 저장 전 정의 검사 목록(``definitions.checks``, 부를 때마다 — 늦게 켜진
             제공자도 보인다). 없으면 종류 검사만 한다.
+        save_warnings: 저장 응답 경고 제공자(``definitions.save_warnings``, 부를 때마다). 없으면
+            None → 검사 이슈만.
     """
 
     def __init__(
@@ -82,9 +84,11 @@ class ResourceService:
         kind: str = RESOURCE_KIND.name,
         reserved_file_names: Iterable[str] = (),
         checks: Callable[[], Sequence[DefinitionCheck]] = lambda: (),
+        save_warnings: Callable[[], SaveWarnings | None] = lambda: None,
     ) -> None:
         self.store = store
         self._checks = checks
+        self._save_warnings = save_warnings
         self.types = types
         self.kind = kind
         self._usages = usages
@@ -119,6 +123,24 @@ class ResourceService:
                 seen.add(key)
                 found.append(issue)
         return found
+
+    def saved_issues(self, issues: Sequence[Issue], stored: StoredDefinition) -> list[Issue]:
+        """저장 응답에 실을 이슈: 검사 이슈 + 저장한 문서의 경고(같은 코드·path는 한 번).
+
+        경고 제공자가 없거나 실패하면 검사 이슈만(저장은 이미 끝났다, 실패는 기록).
+        """
+        out = list(issues)
+        source = self._save_warnings()
+        if source is None:
+            return out
+        try:
+            extra = list(source(stored.kind, stored.id, stored.document))
+        except Exception:
+            _log.exception("저장 응답 경고 계산 실패(리소스): %s", stored.id)
+            return out
+        seen = {(i.code, i.path) for i in out}
+        out.extend(i for i in extra if (i.code, i.path) not in seen)
+        return out
 
     def check(self, resource: Resource) -> list[Issue]:
         """검사에 error가 있으면 ``ResourceRejectedError``(422). 아니면 저장은 하되 보일 이슈

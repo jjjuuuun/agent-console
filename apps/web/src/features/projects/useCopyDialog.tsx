@@ -69,7 +69,7 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
   const homeHref = libraryHome();
   if (view === undefined) return null;
   const name = view.project.name;
-  const dir = view.config_dir ?? text("projects.dir_fallback");
+  const dir = view.config_dir != null && view.config_dir.trim() !== "" ? view.config_dir : undefined;
 
   const applied = (o: CopyOutcome) => {
     void queryClient.invalidateQueries({ queryKey: ["list"] });
@@ -92,7 +92,7 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
       direction={request.direction}
       {...(request.submitStyle === undefined ? {} : { submitStyle: request.submitStyle })}
       projectName={name}
-      projectDir={dir}
+      {...(dir === undefined ? {} : { projectDir: dir })}
       source={toSpaceRef(toProject ? null : request.project)}
       target={toSpaceRef(toProject ? request.project : null)}
       initialStep={request.start}

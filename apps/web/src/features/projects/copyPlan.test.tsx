@@ -205,3 +205,24 @@ describe("CopyPlanDialog: 결과", () => {
     expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
   });
 });
+
+describe("CopyPlanDialog: 막힌 항목", () => {
+  it("blocked 항목은 선택·처리가 비활성이고 이유(issue message)를 보이며 복사로 바꿀 수 없다", async () => {
+    const blockedItem = planItem({
+      kind: "k1",
+      id: "review-team",
+      default_action: "skip",
+      blocked: true,
+      issues: [{ severity: "error", code: "secret.plain_found", path: "/env/KEY", message: "평문 비밀이 들어 있습니다" }],
+    });
+    setup({ initialStep: "plan", initialItems: [{ kind: "k1", id: "review-team" }] }, { items: [blockedItem] });
+    expect(await screen.findByText("평문 비밀이 들어 있습니다")).toBeTruthy();
+    expect(screen.getByText("가져올 수 없어 건너뜁니다.")).toBeTruthy();
+    const box = screen.getByRole("checkbox", { name: /review-team/ }) as HTMLInputElement;
+    expect(box.disabled).toBe(true);
+    expect(box.checked).toBe(false);
+    const sel = screen.getByRole("combobox", { name: /review-team/ }) as HTMLSelectElement;
+    expect(sel.disabled).toBe(true);
+    expect([...sel.options].map((o) => o.value)).toEqual(["skip"]);
+  });
+});

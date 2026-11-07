@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button, Icon, Popover, middleEllipsis } from "@agent-console/ui";
 import type { ProjectView } from "@agent-console/contracts/projects";
 import { createProjectsText, statusInfo } from "@agent-console/projects";
@@ -22,6 +22,7 @@ export interface ProjectChipViewProps {
 /** 프로젝트 칩 표현(screen-projects §7.1): 이름 + 경로, 클릭하면 전체 경로·홈·바꾸기 팝오버. 데이터와 콜백은 props. */
 export function ProjectChipView({ name, folder, problem, archived, onOpenHome, onSwitch, onCopy }: ProjectChipViewProps) {
   const [open, setOpen] = useState(false);
+  const fullId = useId();
   return (
     <Popover
       open={open}
@@ -31,10 +32,12 @@ export function ProjectChipView({ name, folder, problem, archived, onOpenHome, o
       className="prj-pchip-wrap"
       panelClassName="prj-pchip-panel"
       renderTrigger={(trigger) => (
-        <button type="button" {...trigger} className="prj-pchip" data-problem={problem === undefined ? undefined : "true"} aria-label={m.chip.aria(name, folder)} title={problem ?? folder}>
+        <button type="button" {...trigger} className="prj-pchip" data-problem={problem === undefined ? undefined : "true"} aria-describedby={fullId} title={problem ?? folder}>
           <Icon name="folder" size={14} />
           <span className="prj-pchip-name ac-ellipsis">{name}</span>
-          <span className="prj-pchip-path ac-ellipsis" aria-hidden="true">{middleEllipsis(folder, 14, 22)}</span>
+          <span className="prj-pchip-path ac-ellipsis">{middleEllipsis(folder, 14, 22)}</span>
+          {/* 접근성 이름은 보이는 글자(이름 + 줄인 경로)에서 나오고(WCAG 2.5.3), 전체 경로는 설명으로 붙는다 */}
+          <span id={fullId} hidden>{m.chip.aria(name, folder)}</span>
         </button>
       )}
     >

@@ -9,6 +9,8 @@
 - `apply_renames`: rename 항목의 id를 바꾸고 묶음 안 참조를 새 id로 고친다
   (`rewrite_references` 주입).
 - `skip_warnings`: 빼는(skip) 참조 항목 때문에 실행 전에 막힐 정의 경고.
+- `copy_target_label`: 문구의 `${target}`(대상 공간 표시 이름 — 공용 구성 / 따옴표 친
+  프로젝트 이름).
 
 정의 종류 이름을 모른다. 사본에 원본 id·버전·시각을 쓰지 않는다(완전 독립, 결정 B) — 이 모듈은
 문서에 아무 메타도 더하지 않는다.
@@ -21,7 +23,7 @@ import string
 from collections import deque
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Protocol
 
 from agent_console_contracts import (
     CopyApplyItem,
@@ -47,13 +49,20 @@ __all__ = [
     "CODE_COPY_SKIP_BREAKS_REFERENCE",
     "CODE_COPY_SOURCE_MISSING",
     "CODE_COPY_UNKNOWN_ACTION",
+    "CODE_SECRET_PLAIN_FOUND",
+    "COPY_TARGET_LIBRARY",
+    "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
+    "DEFAULT_TARGET_LABEL",
     "CopyDecision",
+    "PlainFinding",
+    "PlainSecretCheck",
     "RewriteReferences",
     "SourceDefinition",
     "apply_decisions",
     "apply_renames",
     "copy_plan",
+    "copy_target_label",
     "renames_of",
     "skip_warnings",
 ]
@@ -73,6 +82,14 @@ CODE_COPY_SKIP_BREAKS_REFERENCE: Final = "project.copy_skip_breaks_reference"
 """빼는 참조 항목이 대상에 없어 그것을 쓰는 정의가 실행 전에 막힌다(warning)."""
 CODE_COPY_UNKNOWN_ACTION: Final = "project.copy_unknown_action"
 """모르는 동작(항목 결과 skipped)."""
+CODE_SECRET_PLAIN_FOUND: Final = KnownIssueCodes.SECRET_PLAIN_FOUND
+"""대상 공간이 거절할 평문 비밀(항목 error, 값 없음). 그 항목은 막힘(`blocked`)이다."""
+COPY_TARGET_LIBRARY: Final = "project.copy_target.library"
+"""문구 표 키: 대상이 공용 구성(라이브러리)일 때 `${target}`."""
+COPY_TARGET_PROJECT: Final = "project.copy_target.project"
+"""문구 표 키: 대상이 프로젝트일 때 `${target}`(변수 `name` = 프로젝트 이름)."""
+DEFAULT_TARGET_LABEL: Final = "대상 공간"
+"""`copy_plan`의 `target_label` 기본값(부르는 쪽이 대상을 알려 주지 않을 때)."""
 
 DEFAULT_COPY_MESSAGES: Mapping[str, str] = {
     CODE_COPY_SOURCE_MISSING: "${item}이(가) 원본에 없어 계획에서 뺐습니다.",
@@ -80,16 +97,57 @@ DEFAULT_COPY_MESSAGES: Mapping[str, str] = {
         "${source}이(가) 쓰는 ${ref}이(가) 원본에도 대상에도 없습니다. 복사해도 실행 전에 막힙니다."
     ),
     CODE_COPY_REFERENCE_CYCLE: "서로 참조하는 정의가 있습니다: ${cycle}. 함께 복사합니다.",
-    CODE_COPY_KIND_NOT_PORTABLE: "${item}은(는) 프로젝트로 옮길 수 없는 종류라 뺐습니다.",
+    CODE_COPY_KIND_NOT_PORTABLE: "${item}은(는) ${target}에 둘 수 없는 종류라 뺐습니다.",
+    CODE_SECRET_PLAIN_FOUND: (
+        "${item}의 ${path}에 비밀처럼 보이는 평문이 있어 ${target}에 둘 수 없습니다. "
+        "비밀 저장소에 넣고 secret:// 참조로 바꾸세요."
+    ),
     CODE_COPY_SKIP_BREAKS_REFERENCE: "${source}은(는) ${ref}이(가) 없어 실행 전에 막힙니다.",
     CODE_COPY_CONFLICT: "${item}이(가) 계획 뒤에 바뀌어 적용하지 않았습니다(${reason}).",
     CODE_COPY_UNKNOWN_ACTION: "${item}: 알 수 없는 동작 ${action}이라 건너뜁니다.",
     KnownIssueCodes.PROJECT_REFERENCES_UNAVAILABLE: (
         "참조를 알 수 없어 함께 가져올 항목을 찾지 못했습니다. 고른 항목만 복사합니다."
     ),
+    COPY_TARGET_LIBRARY: "공용 구성",
+    COPY_TARGET_PROJECT: "프로젝트 \u2018${name}\u2019",
 }
-"""기본 문구(코드 → `string.Template`). 변수 item·source·ref·cycle·reason·action.
-`messages=`로 바꾼다."""
+"""기본 문구(코드 → `string.Template`). 변수 item·source·ref·cycle·reason·action·target·path,
+대상 이름 틀(`COPY_TARGET_*`)은 name. `messages=`로 바꾼다."""
+
+
+class PlainFinding(Protocol):
+    """평문 비밀 의심 위치 하나(값 없음). `agent_console_secret_rules.Finding`이 만족한다."""
+
+    @property
+    def path(self) -> str: ...
+
+    @property
+    def reason(self) -> str: ...
+
+
+type PlainSecretCheck = Callable[[str, Mapping[str, Any]], Iterable[PlainFinding]]
+"""대상 공간이 쓸 때 거절할 평문 비밀 위치 `check(kind, document) -> [위치]`(주입).
+
+부르는 쪽은 대상 공간의 쓰기 검사와 **같은 판정**을 넣는다(예: `scan_secrets(rules, doc)`).
+`path`는 정의 문서 기준 JSON Pointer다."""
+
+
+def copy_target_label(
+    project_name: str | None, *, messages: Mapping[str, str] | None = None
+) -> str:
+    """문구의 `${target}`: None이면 공용 구성, 아니면 따옴표 친 프로젝트 이름(문구 표 데이터).
+
+    >>> copy_target_label(None)
+    '공용 구성'
+    >>> copy_target_label("결제") == "프로젝트 \u2018결제\u2019"
+    True
+    >>> copy_target_label("결제", messages={COPY_TARGET_PROJECT: "${name} 폴더"})
+    '결제 폴더'
+    """
+    if project_name is None:
+        return _say(messages, COPY_TARGET_LIBRARY)
+    return _say(messages, COPY_TARGET_PROJECT, name=project_name)
+
 
 type RewriteReferences = Callable[
     [str, Mapping[str, Any], Mapping[DefinitionId, str]], Mapping[str, Any]
@@ -214,6 +272,8 @@ def copy_plan(
     include_references: bool = True,
     kinds: Collection[str] | None = None,
     messages: Mapping[str, str] | None = None,
+    target_label: str = DEFAULT_TARGET_LABEL,
+    plain_secrets: PlainSecretCheck | None = None,
 ) -> CopyPlan:
     """복사 계획(아무것도 쓰지 않음, `POST /projects/copy/plan`).
 
@@ -226,11 +286,17 @@ def copy_plan(
             요청한 것만 넣고, 빠진 참조가 대상에도 없으면 skip과 같은 경고를 낸다.
         kinds: 대상 공간에 둘 수 있는 종류(옮길 수 있는 종류). None = 거르지 않음.
         messages: 문구 바꾸기(코드 → 틀).
+        target_label: 문구의 `${target}`(대상 공간 표시 이름, `copy_target_label`로 만든다).
+        plain_secrets: 대상 공간이 거절할 평문 비밀 판정(`PlainSecretCheck`). 걸린 항목은 막힘
+            (`blocked`, `default_action` skip, 위치마다 error `secret.plain_found`
+            `details{kind, id, path, reason}` — 값 없음). None = 보지 않음.
 
     Returns:
         `CopyPlan` — 항목 순서는 요청 순 → 참조로 들어온 순(너비 우선). 항목마다 `reason`
         (requested·referenced), `referenced_by`(계획 안에서 이 항목을 쓰는 정의), `target_state`,
-        `target_version`, `default_action`(absent → copy, identical → reuse, different → None).
+        `target_version`, `default_action`(absent → copy, identical → reuse, different → None,
+        막힘 → skip). 막힌 항목 때문에 그것을 쓰는 정의가 실행 전에 막히면 `warnings`에
+        `project.copy_skip_breaks_reference`를 더한다.
 
     >>> docs = {("graph", "team"): SourceDefinition({"id": "team", "uses": ["a"]}, "g1"),
     ...         ("agent", "a"): SourceDefinition({"id": "a", "name": "에이"}, "a1")}
@@ -262,6 +328,7 @@ def copy_plan(
                     "warning",
                     {"kind": key[0], "id": key[1]},
                     item=_label(key),
+                    target=target_label,
                 ),
             )
             return False
@@ -358,12 +425,16 @@ def copy_plan(
         src = source_docs[key]
         name = src.name or src.document.get("name") or ""
         target_version = target_index.get(key)
+        action: str | None
         if target_version is None:
             state, action = KnownCopyTargetStates.ABSENT, KnownCopyActions.COPY
         elif target_version == src.version:
             state, action = KnownCopyTargetStates.IDENTICAL, KnownCopyActions.REUSE
         else:
             state, action = KnownCopyTargetStates.DIFFERENT, None
+        blocking = _plain_issues(key, src.document, plain_secrets, messages, target_label)
+        if blocking:
+            action = KnownCopyActions.SKIP
         items.append(
             CopyPlanItem(
                 kind=key[0],
@@ -375,9 +446,56 @@ def copy_plan(
                 target_state=state,
                 target_version=target_version,
                 default_action=action,
+                blocked=bool(blocking),
+                issues=blocking,
             )
         )
-    return CopyPlan(items=items, warnings=warnings)
+    plan = CopyPlan(items=items, warnings=warnings)
+    blocked = {(i.kind, i.id): KnownCopyActions.SKIP for i in items if i.blocked}
+    if blocked:
+        plan.warnings.extend(
+            skip_warnings(plan, blocked, target_index=target_index, messages=messages)
+        )
+    return plan
+
+
+def _plain_issues(
+    key: DefinitionId,
+    document: Mapping[str, Any],
+    check: PlainSecretCheck | None,
+    messages: Mapping[str, str] | None,
+    target_label: str,
+) -> list[Issue]:
+    """항목 하나의 막힘 이슈(위치마다 error `secret.plain_found`, 값 없음)."""
+    if check is None:
+        return []
+    out: list[Issue] = []
+    seen: set[str] = set()
+    for finding in check(key[0], document):
+        if finding.path in seen:
+            continue
+        seen.add(finding.path)
+        out.append(
+            Issue(
+                severity="error",
+                code=CODE_SECRET_PLAIN_FOUND,
+                message=_say(
+                    messages,
+                    CODE_SECRET_PLAIN_FOUND,
+                    item=_label(key),
+                    path=finding.path or "/",
+                    target=target_label,
+                ),
+                path=finding.path or None,
+                details={
+                    "kind": key[0],
+                    "id": key[1],
+                    "path": finding.path,
+                    "reason": finding.reason,
+                },
+            )
+        )
+    return out
 
 
 def skip_warnings(

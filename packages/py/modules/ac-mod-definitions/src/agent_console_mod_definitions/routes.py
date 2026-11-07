@@ -12,6 +12,10 @@
 에이전트·팀 구성 경로는 질의 ``?project=<공간 이름>``을 받는다(``definitions.spaces`` 포트가 그
 공간의 저장소를 준다, 없으면 409 ``feature_unavailable``, 모르는 공간 404 ``project.not_found``).
 질의가 없으면 라이브러리. 공통 설정은 공간에 들어가지 않는 종류라 받지 않는다.
+
+에이전트·팀 구성 만들기·저장·복제 응답은 저장한 문서의 경고(평문 비밀 ``secret.plain_found``
+warning, 값 없음)를 ``X-Console-Issues`` 헤더로 싣는다(저장은 허용, 프로젝트로 복사·실행할 때
+막힌다는 미리 알림).
 """
 
 from __future__ import annotations
@@ -33,7 +37,13 @@ from agent_console_contracts import (
     VersionedGraph,
     WorkspaceSettings,
 )
-from agent_console_modkit.host import IfMatchHeader, SpaceQuery, if_match_version, json_with_etag
+from agent_console_modkit.host import (
+    IfMatchHeader,
+    SpaceQuery,
+    if_match_version,
+    json_with_etag,
+    with_issues,
+)
 from agent_console_store import AGENT_KIND, GRAPH_KIND, SETTINGS_KIND, NotFound, StoredDefinition
 
 from .errors import IdMismatchError
@@ -75,6 +85,14 @@ def versioned_graph(stored: StoredDefinition, *, status_code: int = 200) -> JSON
     return json_with_etag(body, version=stored.version_hash, status_code=status_code)
 
 
+def with_saved_warnings(
+    response: JSONResponse, svc: DefinitionService, stored: StoredDefinition
+) -> JSONResponse:
+    """저장 응답에 저장한 문서의 경고(``X-Console-Issues``)를 싣는다(없으면 그대로)."""
+    issues = [i.model_dump(mode="json", exclude_none=True) for i in svc.saved_warnings(stored)]
+    return with_issues(response, issues)
+
+
 def same_id(path_id: str, body_id: str, what: str) -> None:
     if path_id != body_id:
         raise IdMismatchError(path_id, body_id, what)
@@ -97,7 +115,8 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         """만들기. 저장 전 검사에 error가 있으면 422. 응답은 저장 원문(201, ``ETag``)."""
         svc = service(space)
         svc.check(agent, body, AGENT_LABEL)
-        return definition_response(svc.store.create(agent, body), Agent, status_code=201)
+        stored = svc.store.create(agent, body)
+        return with_saved_warnings(definition_response(stored, Agent, status_code=201), svc, stored)
 
     @router.get("/agents/{agent_id}", response_model=Agent, responses=errors())
     async def get_agent(agent_id: str, space: SpaceQuery = None) -> JSONResponse:
@@ -113,7 +132,7 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         svc = service(space)
         svc.check(agent, body, AGENT_LABEL)
         stored = svc.store.save(agent, body, expected_version=if_match_version(if_match))
-        return definition_response(stored, Agent)
+        return with_saved_warnings(definition_response(stored, Agent), svc, stored)
 
     @router.delete("/agents/{agent_id}", status_code=204, responses=errors(412))
     async def delete_agent(
@@ -142,7 +161,8 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         """만들기. 저장 전 검사에 error가 있으면 422. 응답 ``graph``는 저장 원문(201)."""
         svc = service(space)
         svc.check(graph_kind, body, GRAPH_LABEL)
-        return versioned_graph(svc.store.create(graph_kind, body), status_code=201)
+        stored = svc.store.create(graph_kind, body)
+        return with_saved_warnings(versioned_graph(stored, status_code=201), svc, stored)
 
     @router.get("/graphs/{graph_id}", response_model=VersionedGraph, responses=errors())
     async def get_graph(graph_id: str, space: SpaceQuery = None) -> JSONResponse:
@@ -158,7 +178,7 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         svc = service(space)
         svc.check(graph_kind, body, GRAPH_LABEL)
         stored = svc.store.save(graph_kind, body, expected_version=if_match_version(if_match))
-        return versioned_graph(stored)
+        return with_saved_warnings(versioned_graph(stored), svc, stored)
 
     @router.delete("/graphs/{graph_id}", status_code=204, responses=errors(412))
     async def delete_graph(
@@ -179,14 +199,14 @@ def build_router(service: Callable[[str | None], DefinitionService]) -> APIRoute
         graph_id: str, body: DuplicateGraphRequest, space: SpaceQuery = None
     ) -> JSONResponse:
         """서버에서 복제한다(같은 공간 안). 새 id가 이미 있으면 409 ``already_exists``."""
-        store = service(space).store
-        source = store.get(graph_kind, graph_id).document
-        stored = store.create(
+        svc = service(space)
+        source = svc.store.get(graph_kind, graph_id).document
+        stored = svc.store.create(
             graph_kind,
             {**source, "id": body.id, "name": body.name},
             message=f"{graph_id}에서 복제",
         )
-        return versioned_graph(stored, status_code=201)
+        return with_saved_warnings(versioned_graph(stored, status_code=201), svc, stored)
 
     # ------------------------------------------------------------ 공통 설정
 
