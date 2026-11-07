@@ -91,6 +91,23 @@ def _group_kwargs(os_name: str) -> dict[str, Any]:
     return {"start_new_session": True}
 
 
+def _start_without_signals(thread: threading.Thread, signums: Sequence[int], os_name: str) -> None:
+    """`signums`를 막은 채로 스레드를 시작한다(새 스레드는 시작한 스레드의 마스크를 물려받는다).
+
+    프로세스로 온 신호는 커널이 아무 스레드에나 줄 수 있다. 보조 스레드가 받으면 C 처리기는 표시만
+    하고, 메인 스레드는 `waitpid`에서 깨지 않아 Python 처리기(그룹 전달)가 자식이 끝날 때까지
+    돌지 않는다. 보조 스레드에서 막아 두면 신호는 항상 메인 스레드로 간다.
+    """
+    if os_name == "nt" or not hasattr(signal, "pthread_sigmask") or not signums:
+        thread.start()
+        return
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, signums)
+    try:
+        thread.start()
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
 @dataclass(slots=True)
 class _Forwarder:
     """받은 종료 신호를 자식 그룹에 전달하고, 유예 뒤 강제 종료한다."""
@@ -116,7 +133,7 @@ class _Forwarder:
         if self._timer is None:
             self._timer = threading.Timer(self.grace_seconds, self._kill)
             self._timer.daemon = True
-            self._timer.start()
+            _start_without_signals(self._timer, self.signals(), self.os_name)
 
     def _send(self, signum: int) -> None:
         try:
@@ -205,9 +222,9 @@ def run_probe(
         threading.Thread(target=_pump_out, args=(proc.stdout, io.stdout, stdout_cap), daemon=True),
         threading.Thread(target=_pump_out, args=(proc.stderr, io.stderr, stderr_cap), daemon=True),
     ]
-    feeder.start()
-    for reader in readers:
-        reader.start()
+    quiet = forwarder.signals() if handle_signals else []
+    for thread in (feeder, *readers):
+        _start_without_signals(thread, quiet, os_name)
     try:
         returncode = proc.wait()
         for reader in readers:

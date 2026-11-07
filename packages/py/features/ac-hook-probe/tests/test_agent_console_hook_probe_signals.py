@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from agent_console_hook_probe import ProbeIO, run_probe
+
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="POSIX 신호·프로세스 그룹")
 
 
@@ -76,3 +78,29 @@ def test_stubborn_child_group_is_killed_after_grace(tmp_path: Path, probe_argv: 
     code = proc.wait(timeout=30)
     assert code == -signal.SIGKILL  # 유예(2초) 뒤 그룹 강제 종료 → 같은 신호로 끝남
     assert time.monotonic() - started < 20
+
+
+@pytest.mark.skipif(not Path("/proc/self/task").is_dir(), reason="/proc 스레드 상태(Linux)")
+def test_helper_threads_block_forwarded_signals(tmp_path: Path) -> None:
+    """중계 스레드는 종료 신호를 막는다 → 신호가 늘 메인 스레드로 가서 처리기가 바로 돈다.
+
+    보조 스레드가 신호를 받으면 메인 스레드가 `waitpid`에서 깨지 않아 그룹 전달이 자식 종료까지
+    미뤄졌다(부하가 큰 환경에서 위 SIGTERM 테스트가 30초 시간 초과로 실패하던 원인).
+    """
+    me = os.getpid()
+    command = f"sleep 0.3; for f in /proc/{me}/task/*/status; do echo $f; grep SigBlk $f; done"
+    out, err, stdin = tmp_path / "out", tmp_path / "err", tmp_path / "in"
+    stdin.write_bytes(b"")
+    with stdin.open("rb") as i, out.open("w+b") as o, err.open("w+b") as e:
+        outcome = run_probe(
+            ["/bin/sh", "-c", command], io=ProbeIO(i.fileno(), o.fileno(), e.fileno())
+        )
+    assert outcome.exit_code == 0
+    lines = out.read_text().splitlines()
+    blocked: dict[int, bool] = {}
+    for path, mask in zip(lines[::2], lines[1::2], strict=True):
+        tid = int(path.split("/")[-2])
+        blocked[tid] = bool(int(mask.split()[1], 16) >> (signal.SIGTERM - 1) & 1)
+    assert blocked[me] is False  # 메인 스레드는 받는다
+    assert sum(blocked.values()) >= 2  # stdout·stderr 중계 스레드는 막는다
+    assert not signal.pthread_sigmask(signal.SIG_BLOCK, []) & {signal.SIGTERM}  # 마스크 복원

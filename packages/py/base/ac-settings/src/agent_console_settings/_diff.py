@@ -24,7 +24,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-import jsonpatch  # type: ignore[import-untyped]
+import jsonpatch
 
 from agent_console_settings._pointer import (
     MISSING,

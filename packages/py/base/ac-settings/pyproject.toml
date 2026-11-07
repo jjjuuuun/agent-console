@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "jsonpatch>=1.33",
+    "jsonpatch>=1.44",
 ]
 
 [dependency-groups]

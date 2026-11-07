@@ -199,6 +199,9 @@ export function TeamListPage({ basePath }: { basePath: string }) {
   const arrow = (key: SortKey) => (sortKey === key ? (dirs[key] === "asc" ? "▲" : "▼") : "");
   const list = graphs.data ?? [];
 
+  const openNew = () => setDialog({ kind: "new" });
+  const emptyList = !graphs.isLoading && !graphs.isError && list.length === 0;
+
   let body;
   if (graphs.isLoading) {
     body = <Skeleton rows={6} />;
@@ -210,7 +213,7 @@ export function TeamListPage({ basePath }: { basePath: string }) {
         icon={<Icon name="teams" size={24} />}
         title={t.list.empty}
         description={t.list.emptyBody}
-        secondaryAction={<StartGuide actionOverrides={{ create: () => setDialog({ kind: "new" }) }} />}
+        secondaryAction={<StartGuide actionOverrides={{ create: openNew, library: openNew }} />}
       />
     );
   } else if (rows.length === 0) {
@@ -327,12 +330,10 @@ export function TeamListPage({ basePath }: { basePath: string }) {
         title={m.nav.teams}
         status={<SpaceChip />}
         actions={
-          !graphs.isLoading && !graphs.isError && list.length === 0 ? undefined : (
           <>
-            <input ref={searchRef} type="search" className="ac-input team-search" aria-label={t.list.search} placeholder={t.list.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} />
-            <Button variant="primary" onClick={() => setDialog({ kind: "new" })} title="N">+ {t.list.new}</Button>
+            {emptyList ? null : <input ref={searchRef} type="search" className="ac-input team-search" aria-label={t.list.search} placeholder={t.list.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} />}
+            <Button variant="primary" onClick={openNew} title="N">+ {t.list.new}</Button>
           </>
-          )
         }
       />
       <SpaceNote />

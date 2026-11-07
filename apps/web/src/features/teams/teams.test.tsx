@@ -116,6 +116,14 @@ describe("팀 구성 목록", () => {
     expect(await screen.findByRole("list", { name: "시작 순서" })).toBeTruthy();
     expect(screen.queryByText(/먼저 에이전트가 필요합니다/)).toBeNull();
   });
+
+  it("빈 목록에서도 헤더에 + 새 팀 구성 버튼이 정확히 하나 보이고 누르면 새 팀 대화상자가 열린다", async () => {
+    const { clients } = rest({ listGraphs: vi.fn(async () => []), listAgents: vi.fn(async () => []) });
+    mountApp(clients, "/teams");
+    await screen.findByText("팀 구성이 아직 없습니다");
+    fireEvent.click(screen.getByRole("button", { name: "+ 새 팀 구성" }));
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+  });
 });
 
 function editorClients(extra: Record<string, unknown> = {}, issues: unknown[] = [replySuggestion]) {
