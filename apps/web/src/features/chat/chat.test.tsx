@@ -132,6 +132,21 @@ describe("열린 대화와 입력창 답변 모드", () => {
     expect((await composer()).getAttribute("placeholder")).toBe("새 메시지 (대기 중인 질문 2건은 각 카드에서 답하세요)");
   });
 
+  it("답하기가 진짜 실패(500)하면 입력창 안내는 danger 톤이다", async () => {
+    const h = createHarness({
+      respondInteraction: async () => {
+        throw new ApiError(500, { code: "internal", message: "서버 오류" });
+      },
+    });
+    mount(h);
+    type(await composer(), "답");
+    fireEvent.click(screen.getByRole("button", { name: "답하기" }));
+    const danger = () => screen.queryAllByRole("status").find((el) => (el.getAttribute("style") ?? "").includes("--ac-danger"));
+    await waitFor(() => expect(danger()).toBeDefined());
+    const notice = danger();
+    expect(notice!.getAttribute("style")).not.toContain("--ac-info");
+  });
+
   it("이미 답한 요청(409)이면 안내하고 서버 상태를 반영한다", async () => {
     const h = createHarness({
       respondInteraction: async () => {
@@ -142,7 +157,11 @@ describe("열린 대화와 입력창 답변 모드", () => {
     type(await composer(), "답");
     fireEvent.click(screen.getByRole("button", { name: "답하기" }));
     // 안내는 한 곳에만 나온다(알림 중복 없음)
-    expect(await screen.findAllByText(/이미 답했거나 닫힌 요청입니다/)).toHaveLength(1);
+    const notice = await screen.findAllByText(/이미 답했거나 닫힌 요청입니다/);
+    expect(notice).toHaveLength(1);
+    // 닫힌 요청 안내는 info 톤(screen-chat §10.4), danger가 아니다
+    expect(notice[0]!.getAttribute("style")).toContain("--ac-info");
+    expect(notice[0]!.getAttribute("style")).not.toContain("--ac-danger");
     // 카드는 서버가 알려 준 현재 상태(답함)로 접힌다
     await waitFor(() => expect(screen.getByRole("group", { name: /답함|응답 대기|임의 질문/ }).getAttribute("data-card-state")).toBe("answered"));
     // 입력한 텍스트는 유지된다(재시도 가능)

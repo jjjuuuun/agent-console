@@ -315,7 +315,9 @@ export function ChatPane(props: ChatPaneProps) {
         setChooserError(undefined);
       } else {
         const view = describeError(e, target !== null && mode === ANSWER_MODES.answer && !asMessage ? t.composer.answerFailed : t.composer.sendFailed);
-        setNotice({ tone: "danger", text: view.message, fix: view.fix });
+        // 닫힌 요청(409 interaction_closed)은 실패가 아니라 상태 안내다(screen-chat §10.4: info 줄). 진짜 실패만 danger.
+        const closedCause = e instanceof Error && e.cause instanceof ApiError && e.cause.isInteractionClosed;
+        setNotice({ tone: closedCause || (e instanceof ApiError && e.isInteractionClosed) ? "info" : "danger", text: view.message, fix: view.fix });
       }
     } finally {
       setSending(false);

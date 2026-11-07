@@ -131,14 +131,18 @@ def test_runs_and_conversations_go_to_each_project_records_db(tmp_path: Path) ->
         cid = conv.json()["id"]
         sent = client.post(f"{API}/conversations/{cid}/messages?project=pb", json={"text": "안녕"})
         assert sent.status_code == 202, sent.text
+        # 턴은 보낸 Run id로 찾는다(목록 순서는 벽시계 created_at 순이라 시계가 뒤로 가면 흔들린다).
+        run_id = sent.json()["id"]
         deadline = time.monotonic() + 15
+        mine: list[dict[str, Any]] = []
         while time.monotonic() < deadline:
             turns = client.get(f"{API}/conversations/{cid}/turns?project=pb").json()
-            if turns and turns[-1]["status"] in TERMINAL:
+            mine = [t for t in turns if t["run_id"] == run_id]
+            if mine and mine[0]["status"] in TERMINAL:
                 break
             time.sleep(0.05)
-        assert turns
-        assert turns[-1]["status"] == "completed"
+        assert mine, turns
+        assert mine[0]["status"] == "completed"
         listed = client.get(f"{API}/conversations?project=pb").json()
         assert [c["id"] for c in listed] == [cid]
         assert client.get(f"{API}/conversations?project=pa").json() == []

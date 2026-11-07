@@ -107,11 +107,13 @@ def test_child_run_requests_belong_to_root_turn(tmp_path: Path) -> None:
 
         def turn_with_request() -> Any:
             turns = client.get(f"{API}/conversations/{conv['id']}/turns").json()
-            return turns if turns and turns[-1]["interactions"] else None
+            # 보낸 Run id로 턴을 찾는다(목록은 벽시계 created_at 순이라 시계 역행에 흔들린다).
+            mine = [t for t in turns if t["run_id"] == root_id]
+            return turns if mine and mine[0]["interactions"] else None
 
         turns = _until(turn_with_request)
         assert [t["run_id"] for t in turns] == [root_id]  # 자식 Run은 턴이 아니다
-        [asked] = turns[-1]["interactions"]
+        [asked] = turns[0]["interactions"]
         assert asked["root_run_id"] == root_id
         assert asked["run_id"] != root_id
         assert asked["conversation_id"] == conv["id"]

@@ -92,14 +92,17 @@ def test_message_starts_engine_turn(tmp_path: Path) -> None:
         assert run["origin"] == "chat"
         deadline = time.monotonic() + 10
         turns: list[Any] = []
+        mine: list[Any] = []
         while time.monotonic() < deadline:
             turns = client.get(f"{API}/conversations/{conv['id']}/turns").json()
-            if turns and turns[-1]["status"] in TERMINAL:
+            # 보낸 Run id로 턴을 찾는다(목록은 벽시계 created_at 순이라 시계 역행에 흔들린다).
+            mine = [t for t in turns if t["run_id"] == run["id"]]
+            if mine and mine[0]["status"] in TERMINAL:
                 break
             time.sleep(0.02)
         # 노드 서비스(link-runs-teams)가 없어 에이전트 노드는 실패하지만, 턴은 엔진 Run이다
         assert [t["run_id"] for t in turns] == [run["id"]]
-        assert turns[-1]["status"] in TERMINAL
+        assert mine[0]["status"] in TERMINAL
         assert client.get(f"{API}/runs/{run['id']}").status_code == 200
 
 

@@ -54,8 +54,12 @@ def test_conversation_turns_and_run_meta(tmp_path: Path) -> None:
         wait_run(client, second.json()["id"])
 
         turns = client.get(f"{API}/conversations/{conv['id']}/turns").json()
-        assert [t["user_text"] for t in turns] == ["안녕", "두 번째"]
-        assert turns[0]["replies"][0]["text"] == "에코: 안녕"
+        # 목록은 벽시계 created_at 순이라 시계가 뒤로 가면 순서가 뒤집힌다. 턴은 Run id로 고른다.
+        by_run = {t["run_id"]: t for t in turns}
+        assert set(by_run) == {run["id"], second.json()["id"]}
+        assert by_run[run["id"]]["user_text"] == "안녕"
+        assert by_run[second.json()["id"]]["user_text"] == "두 번째"
+        assert by_run[run["id"]]["replies"][0]["text"] == "에코: 안녕"
         older = client.get(
             f"{API}/conversations/{conv['id']}/turns", params={"before": turns[1]["run_id"]}
         ).json()

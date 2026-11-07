@@ -125,12 +125,14 @@ def test_review_wait_restart_resume_reopens_review_and_runs_downstream(tmp_path:
         assert statuses == {"pl": "skipped", "rv": "succeeded", "be": "succeeded"}
         assert _node_events(client, new["id"], "node.skipped")["pl"]["reason"] == "resumed"
 
+        # 턴은 Run id로 고른다(목록은 벽시계 created_at 순이라 시계가 뒤로 가면 순서가 뒤집힌다).
         turns = client.get(f"{API}/conversations/{conv['id']}/turns").json()
-        assert [(t["run_id"], t["resumed_from"]) for t in turns] == [
-            (first["id"], None),
-            (new["id"], first["id"]),
-        ]
-        assert "구현: " in turns[-1]["replies"][0]["text"]
+        by_run = {t["run_id"]: t for t in turns}
+        assert {run_id: t["resumed_from"] for run_id, t in by_run.items()} == {
+            first["id"]: None,
+            new["id"]: first["id"],
+        }
+        assert "구현: " in by_run[new["id"]]["replies"][0]["text"]
         listed = client.get(f"{API}/runs", params={"conversation_id": conv["id"]}).json()
         assert {r["id"] for r in listed} == {first["id"], new["id"]}
 
@@ -233,7 +235,8 @@ def test_queue_survives_restart_held_then_release_and_cancel(tmp_path: Path) -> 
                 (t := client.get(f"{API}/conversations/{conv}/turns").json()) and len(t) == 2 and t
             )
         )
-        assert turns[-1]["user_text"] == "둘"
+        # 순서(created_at)가 아니라 내용으로 본다: 시계 역행 시 새 턴이 앞에 놓일 수 있다.
+        assert sorted(t["user_text"] for t in turns) == sorted(["묻기 하나", "둘"])
         assert [(q["text"], q["held"]) for q in _queue(client, conv)] == [("셋", True)]
         # 취소(기존 DELETE), 없는 항목 404
         assert (
@@ -257,7 +260,8 @@ def test_queue_after_restart_drop_and_run_modes(tmp_path: Path) -> None:
                 (t := client.get(f"{API}/conversations/{conv}/turns").json()) and len(t) == 3 and t
             )
         )
-        assert [t["user_text"] for t in turns] == ["묻기 하나", "둘", "셋"]
+        # 목록 순서는 벽시계 created_at 순이라 시계 역행에 흔들린다. 실행된 메시지 집합만 본다.
+        assert sorted(t["user_text"] for t in turns) == sorted(["묻기 하나", "둘", "셋"])
         assert _queue(client, conv) == []
         doc = client.get(f"{API}/settings").json()
         doc["chat"]["queue_after_restart"] = "drop"

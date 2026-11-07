@@ -277,9 +277,12 @@ async def test_resume_turn_starts_new_run_in_same_conversation() -> None:
     assert turn.conversation_id == conv
     assert resumed.resumed_from == interrupted.id
     assert service.get(conv).last_run_id == resumed.id
-    turns = service.turns(conv)
-    assert [t.resumed_from for t in turns] == [None, interrupted.id]
-    assert turns[-1].user_text == "하나"
+    turns = {t.run_id: t for t in service.turns(conv)}  # 순서가 아니라 Run id로 고른다
+    assert {k: t.resumed_from for k, t in turns.items()} == {
+        interrupted.id: None,
+        resumed.id: interrupted.id,
+    }
+    assert turns[resumed.id].user_text == "하나"
 
     with pytest.raises(ConversationBusyError):  # 실행 중에는 다시 이어 가지 않는다
         await service.resume_turn(interrupted.id, graph=graph, seed={"rv": {}})

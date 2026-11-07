@@ -58,7 +58,9 @@ def test_chat_module_and_link_are_active_with_roles(tmp_path: Path) -> None:
 
         def done() -> Any:
             turns = client.get(f"{API}/conversations/{conv['id']}/turns").json()
-            return turns and turns[-1]["status"] not in ("queued", "running", "waiting")
+            # 보낸 Run id로 턴을 찾는다(목록은 벽시계 created_at 순이라 시계 역행에 흔들린다).
+            mine = [t for t in turns if t["run_id"] == run.json()["id"]]
+            return mine and mine[0]["status"] not in ("queued", "running", "waiting")
 
         wait_for(done)
 
