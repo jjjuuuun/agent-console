@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -160,12 +161,39 @@ def test_author_queries_use_indexes(tmp_path: Path) -> None:
         assert "ix_wiki_page_versions_author_root" in plan
 
 
+def _strict() -> bool:
+    return os.environ.get("AGENT_CONSOLE_PERF", "") == "strict"
+
+
 def test_list_1000_versions_fast(tmp_path: Path) -> None:
-    with SqliteWikiHistory(tmp_path / "f.sqlite3") as h:
+    """페이지 기록 1,000개 목록: 색인으로 읽고(결정적), 가장 빠른 실행이 상한 안.
+
+    공유 CI 러너에서는 벽시계가 흔들리므로 기본 상한은 1초(전 행 정렬·N+1 질의 같은 회귀를 잡는 선),
+    `AGENT_CONSOLE_PERF=strict`일 때만 설계 목표 100ms를 단언한다(다른 성능 테스트와 같은 방식).
+    """
+    path = tmp_path / "f.sqlite3"
+    with SqliteWikiHistory(path) as h:
         h.record([entry("a", "update", f"v{n}".encode(), float(n)) for n in range(1000)])
-        start = time.perf_counter()
-        page = h.list("w", "a")
-        elapsed = time.perf_counter() - start
+        best = float("inf")
+        page = None
+        for _ in range(5):
+            start = time.perf_counter()
+            page = h.list("w", "a")
+            best = min(best, time.perf_counter() - start)
+        assert page is not None
         assert len(page.items) == 1000
-        assert elapsed < 0.1
+        assert [v.version for v in page.items[:2]] == [1000, 999]
         assert len(h.summaries("w")) == 1
+    with sqlite3.connect(path) as con:
+        plan = " ".join(
+            str(r[3])
+            for r in con.execute(
+                "explain query plan select * from wiki_page_versions "
+                "where wiki_id = ? and path = ? order by version desc",
+                ("w", "a"),
+            )
+        )
+    assert "ux_wiki_page_versions_key" in plan, plan
+    assert "TEMP B-TREE" not in plan, plan
+    limit = 0.1 if _strict() else 1.0
+    assert best < limit, f"list 1000 versions {best * 1000:.0f}ms >= {limit * 1000:.0f}ms"
