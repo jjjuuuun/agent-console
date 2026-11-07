@@ -85,7 +85,7 @@ describe("메모리 화면: 역할·배치", () => {
     expect(within(tree).getByText("책상")).toBeTruthy();
     await grid();
     expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.not.objectContaining({ scopes: expect.anything() }));
-    fireEvent.click(within(tree).getByRole("treeitem", { name: "g1, 항목 60개" }));
+    fireEvent.click(within(tree).getByRole("treeitem", { name: /^g1\s*60/ }));
     await waitFor(() => expect(router.state.location.search).toContain("scope=desk%3Ag1"), LONG);
     await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.objectContaining({ scopes: [{ kind: "desk", id: "g1" }] })), LONG);
   });
