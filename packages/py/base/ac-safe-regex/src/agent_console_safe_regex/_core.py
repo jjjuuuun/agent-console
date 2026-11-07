@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterable, Mapping
+import time
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 
 import regex
@@ -16,6 +17,18 @@ DEFAULT_MAX_INPUT_CHARS = 4096
 
 DEFAULT_TIMEOUT_SECONDS = 0.1
 """매치 1회의 시간 제한 기본값(초)."""
+
+_MAX_ATTEMPTS = 3
+"""시간 초과가 이 스레드의 일이 아니었을 때 다시 해 보는 최대 횟수(첫 시도 포함)."""
+
+_OWN_CPU_SHARE = 0.5
+"""시간 초과를 진짜로 보는 기준: 그 시도에서 이 스레드가 쓴 CPU 시간이 timeout의 이 비율 이상.
+
+`regex`의 timeout은 C ``clock()``(Linux에서는 프로세스 전체 CPU 시간)으로 잰다. 같은 프로세스의
+다른 스레드가 CPU를 쓰는 동안 매치 스레드가 밀려 있으면 몇 µs짜리 매치도 시간 초과가 난다(느린 CI
+러너에서 정상 문서를 통째로 못 읽은 원인). 폭주 매치는 자기 스레드 CPU를 쓰므로 이 기준으로 가르고,
+남의 CPU 때문에 난 초과는 ``_MAX_ATTEMPTS`` 까지 다시 한다. 그래도 계속 나면 초과로 본다(상한 유지).
+"""
 
 
 class UnsafeRegexError(ValueError):
@@ -92,28 +105,39 @@ class SafePattern:
             RegexTimeoutError: 시간 제한 초과.
         """
         target = text[: self.max_input_chars]
-        try:
-            found = self._compiled.finditer(target, overlapped=overlapped, timeout=self.timeout)
-            return [_wrap(m) for m in found]
-        except TimeoutError as exc:
-            raise RegexTimeoutError(
-                f"정규식 매치가 시간 제한({self.timeout}초)을 넘었다: {self.source[:80]!r}"
-            ) from exc
+        return self._timed(
+            lambda: [
+                _wrap(m)
+                for m in self._compiled.finditer(
+                    target, overlapped=overlapped, concurrent=False, timeout=self.timeout
+                )
+            ]
+        )
 
     def _run(self, text: str, *, anchored: bool) -> SafeMatch | None:
         target = text[: self.max_input_chars]
-        try:
-            if anchored:
-                m = self._compiled.match(target, timeout=self.timeout)
-            else:
-                m = self._compiled.search(target, timeout=self.timeout)
-        except TimeoutError as exc:
-            raise RegexTimeoutError(
-                f"정규식 매치가 시간 제한({self.timeout}초)을 넘었다: {self.source[:80]!r}"
-            ) from exc
+        run = self._compiled.match if anchored else self._compiled.search
+        m = self._timed(lambda: run(target, concurrent=False, timeout=self.timeout))
         if m is None:
             return None
         return _wrap(m)
+
+    def _timed[T](self, call: Callable[[], T]) -> T:
+        """``call`` 을 시간 제한 안에서 실행한다. 남의 CPU로 난 초과는 다시 한다(`_OWN_CPU_SHARE`).
+
+        ``concurrent=False`` 로 매치 중 GIL을 놓지 않아 다른 Python 스레드가 끼어들지 않게 한다.
+        """
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            started = time.thread_time()
+            try:
+                return call()
+            except TimeoutError as exc:
+                own = time.thread_time() - started
+                if own >= self.timeout * _OWN_CPU_SHARE or attempt == _MAX_ATTEMPTS:
+                    raise RegexTimeoutError(
+                        f"정규식 매치가 시간 제한({self.timeout}초)을 넘었다: {self.source[:80]!r}"
+                    ) from exc
+        raise AssertionError("unreachable")  # pragma: no cover
 
 
 def _wrap(m: regex.Match[str]) -> SafeMatch:

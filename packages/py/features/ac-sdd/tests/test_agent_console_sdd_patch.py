@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import dataclasses
 import random
 
 import pytest
 
+from agent_console_contracts.constants import KnownIssueCodes
 from agent_console_contracts.sdd import SpecRules, SpecSyntax
+from agent_console_safe_regex import SafePattern
 from agent_console_sdd import (
     TaskChangedError,
     TaskPatchError,
@@ -159,6 +162,8 @@ def test_parse_patch_parse_property(seed: int) -> None:
     rng = random.Random(seed)
     text = _random_doc(rng)
     before = _index(text)
+    # 시간 초과로 문서를 버렸다면 아래 비교가 빈 목록으로 깨지므로 원인을 먼저 드러낸다.
+    assert not [i for i in before.issues if i.code == KnownIssueCodes.SDD_PARSE_TIMEOUT]
     if not before.tasks:
         return
     target = rng.choice(before.tasks)
@@ -179,6 +184,7 @@ def test_parse_patch_parse_property(seed: int) -> None:
     assert b[: len(b) - len(b.lstrip(" \t"))] == a[: len(a) - len(a.lstrip(" \t"))]  # 들여쓰기
 
     after = _index(out)
+    assert not [i for i in after.issues if i.code == KnownIssueCodes.SDD_PARSE_TIMEOUT]
     assert [t.key for t in after.tasks] == [t.key for t in before.tasks]
     for old, new in zip(before.tasks, after.tasks, strict=True):
         if old.key != target.key:
@@ -201,3 +207,69 @@ def test_parse_patch_parse_property(seed: int) -> None:
             else:
                 expected[name] = value
         assert new.fields == expected
+
+
+# ---------------------------------------------------------------- 공개 CI 회귀: 시드 26이 빈 목록
+
+_SEED_26_KEYS = [
+    "1.1", "2.1", "3.1", "4.0", "6.0", "8.2", "9.2", "10.2", "11.1", "12.3", "13.2", "14.2",
+    "15.2", "16.1", "17.2", "18.1", "19.1", "20.2",
+]  # fmt: skip
+"""시드 26 문서의 작업 키(공개 CI 실패 메시지의 기대 목록과 같다 — 무작위가 아니라 고정)."""
+
+
+class _StallOnce:
+    """정규식 매치를 처음 한 번 CPU를 쓰지 않고 시간 초과로 끝낸다.
+
+    `regex`의 timeout은 프로세스 전체 CPU로 재서, 공개 CI처럼 다른 스레드가 바쁜 프로세스에서는
+    몇 µs짜리 매치도 시간 초과가 났다. 그러면 `parse_spec`이 문서 전체를 `sdd.parse_timeout`으로
+    버려 작업 목록이 빈 채로 돌아왔다(test_parse_patch_parse_property[26]).
+    """
+
+    def __init__(self, inner: object) -> None:
+        self._inner = inner
+        self.stalled = False
+
+    def __getattr__(self, name: str) -> object:
+        target = getattr(self._inner, name)
+        if name not in {"match", "search", "finditer"}:
+            return target
+
+        def call(*args: object, **kwargs: object) -> object:
+            if not self.stalled:
+                self.stalled = True
+                raise TimeoutError("regex timed out")
+            return target(*args, **kwargs)
+
+        return call
+
+
+def _stall_once(pattern: SafePattern | None) -> SafePattern | None:
+    if pattern is None:
+        return None
+    fake = _StallOnce(pattern._compiled)  # 구현 대역 주입
+    return dataclasses.replace(pattern, _compiled=fake)  # type: ignore[arg-type]
+
+
+def test_seed_26_document_survives_foreign_cpu_timeout() -> None:
+    text = _random_doc(random.Random(26))
+    assert [t.key for t in _index(text).tasks] == _SEED_26_KEYS
+    stalled = dataclasses.replace(
+        SYNTAX,
+        id_pattern=_stall_once(SYNTAX.id_pattern),
+        field_pattern=_stall_once(SYNTAX.field_pattern),
+    )
+    index = parse_spec(sample_spec(*DOCS), {"t.md": text}, stalled)
+    assert not [i for i in index.issues if i.code == KnownIssueCodes.SDD_PARSE_TIMEOUT]
+    assert [t.key for t in index.tasks] == _SEED_26_KEYS
+
+
+def test_real_regex_timeout_drops_document_with_issue() -> None:
+    """같은 증상(빈 목록)의 정상 경로: 정규식이 자기 CPU로 상한을 넘으면 문서를 버리고 알린다."""
+    text = _random_doc(random.Random(26))
+    tiny = compile_syntax(effective_syntax(RULES), regex_timeout=1e-9)
+    index = parse_spec(sample_spec(*DOCS), {"t.md": text}, tiny)
+    assert index.tasks == []
+    assert [i.code for i in index.issues if i.code == KnownIssueCodes.SDD_PARSE_TIMEOUT] == [
+        KnownIssueCodes.SDD_PARSE_TIMEOUT
+    ]

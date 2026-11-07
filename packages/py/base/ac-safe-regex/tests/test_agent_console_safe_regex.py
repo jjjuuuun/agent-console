@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+import random
 import threading
 import time
 from collections.abc import Callable
@@ -11,6 +13,7 @@ import pytest
 from agent_console_safe_regex import (
     RegexTimeoutError,
     SafeMatch,
+    SafePattern,
     UnsafeRegexError,
     check_user_regex,
     compile_user_regex,
@@ -155,3 +158,97 @@ def test_finditer_times_out_on_whole_scan() -> None:
     # 대안이 반복되지 않아 검증은 통과하지만, 매치 실패가 매우 많은 입력은 시간 제한에 걸릴 수 있다.
     result, _ = run_bounded(lambda: pat.finditer("ab" * 2_000_000))
     assert isinstance(result, (list, RegexTimeoutError))
+
+
+# ---------------------------------------------------------------- 남의 CPU로 난 시간 초과(CI 회귀)
+
+
+class _StallingPattern:
+    """``regex`` 패턴을 감싸 처음 ``stalls`` 번은 CPU를 쓰지 않고 시간 초과를 낸다.
+
+    `regex`의 timeout은 프로세스 전체 CPU(``clock()``)로 재므로, 다른 스레드가 바쁜 동안 매치
+    스레드가 밀리면 짧은 매치도 시간 초과가 난다. 그 상황을 결정적으로 흉내 낸다.
+    """
+
+    def __init__(self, inner: object, stalls: int) -> None:
+        self._inner = inner
+        self.stalls = stalls
+        self.calls = 0
+        self.kwargs: list[dict[str, object]] = []
+
+    def __getattr__(self, name: str) -> object:
+        target = getattr(self._inner, name)
+        if name not in {"match", "search", "finditer"}:
+            return target
+
+        def call(*args: object, **kwargs: object) -> object:
+            self.calls += 1
+            self.kwargs.append(kwargs)
+            if self.stalls > 0:
+                self.stalls -= 1
+                raise TimeoutError("regex timed out")
+            return target(*args, **kwargs)
+
+        return call
+
+
+def _stalling(pattern: str, stalls: int) -> tuple[SafePattern, _StallingPattern]:
+    pat = compile_user_regex(pattern)
+    fake = _StallingPattern(pat._compiled, stalls)  # 구현 대역 주입
+    return dataclasses.replace(pat, _compiled=fake), fake  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("method", ["match", "search", "finditer"])
+def test_timeout_from_other_threads_cpu_is_retried(method: str) -> None:
+    pat, fake = _stalling(r"(?P<id>\d+)", stalls=2)
+    result = getattr(pat, method)("12 34")
+    found = result if isinstance(result, list) else [result]
+    assert found
+    assert found[0] is not None
+    assert found[0].group("id") == "12"
+    assert fake.calls == 3
+    assert all(kw.get("concurrent") is False for kw in fake.kwargs)  # 매치 중 GIL 유지
+
+
+def test_persistent_foreign_timeout_still_raises() -> None:
+    pat, fake = _stalling(r"\d+", stalls=10)
+    with pytest.raises(RegexTimeoutError):
+        pat.search("12")
+    assert fake.calls == 3  # 상한: 시도 횟수 제한
+
+
+def test_own_cpu_timeout_is_not_retried() -> None:
+    pat = compile_user_regex(r"(\w|a)*\d", timeout=0.02)
+    start = time.perf_counter()
+    result, _ = run_bounded(lambda: pat.search(EVIL_INPUT))
+    assert isinstance(result, RegexTimeoutError)
+    assert time.perf_counter() - start < 2.0
+
+
+def test_short_match_survives_gil_holding_thread() -> None:
+    """GIL을 오래 쥐는 다른 스레드가 있어도 짧은 매치는 시간 초과가 나지 않는다.
+
+    예전에는 `regex`가 매치 시작에 GIL을 놓았다가 다시 잡으면서 그 사이 다른 스레드의 긴 C 호출을
+    기다렸고, 그 CPU 시간이 프로세스 ``clock()`` 에 더해져 몇 µs짜리 매치가 시간 초과로 끝났다
+    (공개 CI에서 정상 작업 문서를 통째로 못 읽은 원인). 지금은 매치 중 GIL을 놓지 않는다.
+    """
+    stop = threading.Event()
+    big = [random.random() for _ in range(1_000_000)]
+
+    def hog() -> None:
+        while not stop.is_set():
+            sorted(big)  # GIL을 쥔 채 수백 ms 걸리는 C 호출
+
+    thread = threading.Thread(target=hog, daemon=True)
+    thread.start()
+    try:
+        pat = compile_user_regex(r"^\s*-\s+\[(?P<m>.)\]\s+(?P<id>[\d.]+)", timeout=0.1)
+        line = "  - [x] 12.3 제목 [owner: a] [req: R1, R2]"
+        deadline = time.perf_counter() + 1.0
+        while time.perf_counter() < deadline:
+            m = pat.search(line)
+            assert m is not None
+            assert m.group("id") == "12.3"
+    finally:
+        stop.set()
+        thread.join()
