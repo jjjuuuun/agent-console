@@ -95,6 +95,8 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
   const report = lintQ.data;
   const issues = report?.issues ?? [];
   const generated = report?.generated_at;
+  const skipped = report?.partial === true ? (report.skipped ?? []) : [];
+  const enabledNames = (report?.enabled_checks ?? []).map((name) => display.codes?.[name]?.label ?? t.checkNames[name] ?? name);
   const menuIssue = menu?.issue;
   const menuRule = menuIssue === undefined ? null : ruleOf(menuIssue);
 
@@ -137,6 +139,21 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
         {typeof generated === "number" ? <span className="app-muted" title={String(generated)}>{t.lastChecked(formatRelative(generated, now))}</span> : null}
         {typeof report?.pages === "number" ? <span className="app-muted">{t.pages(report.pages)}</span> : null}
       </div>
+      {report?.enabled_checks == null || enabledNames.length === 0 ? null : <p className="app-muted wiki-lint-enabled" data-testid="wiki-lint-enabled">{t.enabledChecks(enabledNames.join(", "))}</p>}
+      {report?.partial !== true ? null : (
+        <Banner tone="warning" data-testid="wiki-lint-partial">
+          <span>{t.partial}{skipped.length > 0 ? ` · ${t.partialCount(skipped.length)}` : ""}</span>
+          {skipped.length === 0 ? null : (
+            <ul className="wiki-lint-skipped">
+              {skipped.map((path) => (
+                <li key={path}>
+                  <button type="button" className="app-link-btn wiki-mono" aria-label={t.openSkipped(path)} onClick={() => goTab("page", { [P.path]: path })}>{path}</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Banner>
+      )}
       <div className="wiki-lint-body">{body}</div>
       {menu === null || menuIssue === undefined ? null : (
         <AnchoredMenu

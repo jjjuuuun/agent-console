@@ -2,10 +2,10 @@
 
 Claude Code 세션 기록(서브에이전트 포함)을 `agent-console-logs`의 정규화 이벤트로 읽는 플러그인.
 
-- X5 출처 `claude-code-jsonl`(`ClaudeCodeJsonlSource`): Claude Code `projects` 폴더에서 세션 파일,
+- 출처 `claude-code-jsonl`(`ClaudeCodeJsonlSource`): Claude Code `projects` 폴더에서 세션 파일,
   `<세션>/subagents/**/agent-*.jsonl`, 그 옆 메타 파일(`.meta.json`)을 찾아 증분으로 읽는다.
   **기본 꺼짐**(F-5): 대화 원문이 색인으로 복사되므로 사용자가 켠다.
-- X6 분류기 `claude-code`(`ClaudeCodeClassifier`): **행 단위 무상태**(F-7). 응답 묶기·호출 짝·소요
+- 분류기 `claude-code`(`ClaudeCodeClassifier`): **행 단위 무상태**(F-7). 응답 묶기·호출 짝·소요
   시간은 질의 때 `message_id`·`call_id`로 계산한다.
 - 위임·파일 변경·문서 읽기 도구 이름, 문서 종류, MCP 도구 이름 패턴, 범주 id, 태그, hook 등 행 대응은
   **전부 설정 데이터**다(F-6, `data/classifier_config.schema.json`의 기본값). 코드에 도구 이름 목록이 없다.
@@ -34,7 +34,7 @@ uv pip install ./packages/py/features/ac-logs-claude    # 단독(logs·contracts
 
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
-| `agent-console-logs` | 출처 기반 클래스 `JsonlFileSource`, 초안·약속 태그, 수집기 | X5·X6 확장 지점의 코어 | — |
+| `agent-console-logs` | 출처 기반 클래스 `JsonlFileSource`, 초안·약속 태그, 수집기 | 확장 지점의 코어 | — |
 | `agent-console-contracts` | 디스크립터·`TokenSample`·`LogDocumentRef` | 계약 단일 소스 | — |
 | `agent-console-claude-format` | 폴더 키 `project_key`(그쪽에 두고 여기서 다시 내보냄) | 실행 백엔드 세션 보관과 같은 함수 한 곳 | 함수 복사(규칙이 바뀌면 두 곳을 고쳐야 함) |
 
@@ -251,9 +251,9 @@ agent-console logs purge --config agent-console.yaml --source claude-code-jsonl 
 
 | 이름 | 용도 |
 | --- | --- |
-| `ClaudeCodeJsonlSource` | X5 출처(`JsonlFileSource` 상속, `default_roots`·`ref_meta`, 범위 `in_scope`·`allowed_keys`) |
+| `ClaudeCodeJsonlSource` | 출처(`JsonlFileSource` 상속, `default_roots`·`ref_meta`, 범위 `in_scope`·`allowed_keys`) |
 | `project_key(folder, keep=, replacement=)` | 작업 폴더 → Claude Code `projects` 아래 폴더 이름 |
-| `ClaudeCodeClassifier` | X6 분류기 |
+| `ClaudeCodeClassifier` | 분류기 |
 | `source_config_schema()`·`classifier_config_schema()` | 설정 스키마(기본값 포함, 사본) |
 | `compile_mcp_pattern(pattern)`·`McpPatternError` | MCP 이름 틀 → 매처(자리 표시 검사) |
 | `summary_text(detail, items)` | 요약 평문 뽑기(설정 `summaries`와 같은 규칙: 포인터 또는 틀) |

@@ -100,6 +100,26 @@ describe("그래프 탭", () => {
     expect(new URLSearchParams(router.state.location.search).get("tab")).toBe("page");
   });
 
+  it("스킴 노드는 scheme_target이 있고 그 역할 화면이 켜져 있을 때만 열린다", async () => {
+    const graph: WikiGraph = {
+      nodes: [
+        { path: "a/one", title: "하나" },
+        { path: "run:r-1", title: "실행", scheme: "run", scheme_target: { role: "runs", id_from: "r-1", query: "tab={value}" } },
+        { path: "x:y", title: "표 없음", scheme: "x" },
+      ],
+      edges: [],
+      truncated: false,
+    };
+    const modules = [{ id: "m-any", kind: "k", version: "0.0.1", status: "active", web_roles: ["wiki", "projects", "settings", "runs"] }];
+    const { router } = setup(base("graph", "&center=a/one"), fixture({ modules, wiki: { getWikiGraph: vi.fn(async () => graph) } }));
+    await screen.findByTestId("graph-stub", {}, LONG);
+    fireEvent.click(screen.getByRole("button", { name: "열기 x:y" }));
+    expect(router.state.location.pathname).toBe("/wiki/w1");
+    fireEvent.click(screen.getByRole("button", { name: "열기 run:r-1" }));
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/\/r-1$/), LONG);
+    expect(router.state.location.search).toBe("?tab=r-1&prj=p1");
+  });
+
   it("중심 페이지가 없으면 전체로 되돌리고 안내한다", async () => {
     const getWikiGraph = vi.fn(async (_w: string, q?: { center?: string }) => (q?.center === undefined ? GRAPH : { nodes: [{ path: "x", broken: true }], edges: [], truncated: false }));
     setup(base("graph", "&center=nope"), fixture({ wiki: { getWikiGraph } }));
@@ -187,6 +207,28 @@ describe("점검 탭", () => {
     expect(await screen.findByTestId("wiki-lint-none-enabled", {}, LONG)).toBeTruthy();
   });
 
+  it("partial이면 점검하지 못했다는 띠와 skipped 페이지 링크가 나오고, 누르면 그 페이지로 간다", async () => {
+    const { router } = setup(base("lint"), fixture({ wiki: { getWikiLint: vi.fn(async () => ({ ...REPORT, partial: true, skipped: ["a/bad", "z/x"] })) } }));
+    const band = await screen.findByTestId("wiki-lint-partial", {}, LONG);
+    expect(band.textContent).toContain("일부 페이지를 점검하지 못했습니다");
+    expect(band.textContent).toContain("점검하지 못한 페이지 2개");
+    fireEvent.click(within(band).getByRole("button", { name: "점검하지 못한 페이지 열기: a/bad" }));
+    await waitFor(() => expect(new URLSearchParams(router.state.location.search).get("path")).toBe("a/bad"), LONG);
+  });
+
+  it("partial이 아니면 띠가 없고, enabled_checks는 이름을 계약 상수·표시 표에서 찾아 문장으로 보인다", async () => {
+    setup(base("lint"), fixture({ wiki: { getWikiLint: vi.fn(async () => ({ ...REPORT, partial: false, enabled_checks: ["broken_link", "lint_rules", "write_rules", "zz_new"] })) } }));
+    const line = await screen.findByTestId("wiki-lint-enabled", {}, LONG);
+    expect(line.textContent).toMatch(/^켜진 점검: .+, 점검 규칙, 쓰기 규칙 다시 보기, zz_new$/);
+    expect(screen.queryByTestId("wiki-lint-partial")).toBeNull();
+  });
+
+  it("enabled_checks가 null(옛 서버)이면 문장을 지어내지 않는다", async () => {
+    setup(base("lint"), fixture({ wiki: { getWikiLint: vi.fn(async () => ({ ...REPORT, enabled_checks: null })) } }));
+    await screen.findByRole("grid", {}, LONG);
+    expect(screen.queryByTestId("wiki-lint-enabled")).toBeNull();
+  });
+
   it("문법이 없어도 다른 이슈는 보이고 표 위에 링크 점검 안내가 붙는다", async () => {
     setup(base("lint"), fixture({ syntax: { syntax: { links: [] }, sources: {}, empty: true }, wiki: { getWikiLint: vi.fn(async () => REPORT) } }));
     expect(await screen.findByTestId("wiki-lint-nosyntax", {}, LONG)).toBeTruthy();
@@ -269,6 +311,33 @@ describe("규칙 탭", () => {
     expect(screen.getByText("금지된 글")).toBeTruthy();
     expect(screen.getByText("zap")).toBeTruthy();
     expect(screen.getByRole("table", { name: "쓰기 규칙" })).toBeTruthy();
+  });
+
+  it("합친 규칙 표에 applies_to·경로 틀·표시 이름 열이 있고 null 칸은 비어 있다", async () => {
+    const view = rulesView(["ra"]);
+    const entries = [
+      { kind: "write", id: "w-all", rule_id: "ra", label: "전부", action: "reject", applies_to: [] },
+      { kind: "write", id: "w-glob", rule_id: "ra", label: "글롭", action: "reject", applies_to: ["a/**", "b/*.md"] },
+      { kind: "write", id: "w-old", rule_id: "ra", label: "옛 서버", action: "reject", applies_to: null },
+      { kind: "template", id: "t-1", rule_id: "ra", label: "t-1", path: "d/{slug}", title: "결정" },
+      { kind: "template", id: "t-2", rule_id: "ra", label: "t-2", path: null, title: null },
+    ];
+    setup(base("rules"), { ...rulesFixture(["ra"]), view: { ...view, rules: { ...view.rules, entries } as never } });
+    const write = await screen.findByRole("table", { name: "쓰기 규칙" }, LONG);
+    expect(within(write).getByRole("columnheader", { name: "적용 경로" })).toBeTruthy();
+    const rowOf = (t: HTMLElement, id: string) => within(t).getAllByText(id)[0]!.closest("tr") as HTMLElement;
+    expect(within(rowOf(write, "w-all")).getByText("모든 페이지")).toBeTruthy();
+    expect(within(rowOf(write, "w-glob")).getByText("a/**, b/*.md")).toBeTruthy();
+    expect(within(rowOf(write, "w-old")).queryByText("모든 페이지")).toBeNull();
+    const tpl = screen.getByRole("table", { name: "페이지 틀" });
+    expect(within(tpl).getByRole("columnheader", { name: "경로 틀" })).toBeTruthy();
+    expect(within(tpl).getByRole("columnheader", { name: "표시 이름" })).toBeTruthy();
+    expect(within(rowOf(tpl, "t-1")).getByText("d/{slug}")).toBeTruthy();
+    expect(within(rowOf(tpl, "t-1")).getByText("결정")).toBeTruthy();
+    const empty = rowOf(tpl, "t-2").querySelectorAll("td");
+    expect(empty[1]?.textContent).toBe("t-2");
+    expect(empty[2]?.textContent).toBe("");
+    expect(empty[3]?.textContent).toBe("");
   });
 
   it("스키마의 x-ui.enum_tones·enum_labels가 동작 칩의 톤·라벨이 된다", async () => {

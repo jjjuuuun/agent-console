@@ -1,11 +1,11 @@
 # agent-console-mod-logs
 
-로그 기능 모듈(`mod-logs`). 로그 출처(X5)·분류기(X6) 플러그인으로 로그를 모아 색인하고(배경·수동 수집),
+로그 기능 모듈(`mod-logs`). 로그 출처·분류기 플러그인으로 로그를 모아 색인하고(배경·수동 수집),
 `/logs…` REST와 WS 토픽 `logs`로 질의·알림을 낸다.
 
 - **기능 이름·출처 이름을 모른다.** 출처·분류기는 호스트 레지스트리 묶음(`log_sources`·`log_classifiers`)에서
   오고, 그 묶음은 이 패키지의 호스트 플러그인 로더(entry point `agent_console.host_plugin_loaders` = `logs`)가
-  entry point X5·X6으로 채운다. 묶음이 없으면(단독 실행) entry point에서 직접 읽는다.
+  entry point로 채운다. 묶음이 없으면(단독 실행) entry point에서 직접 읽는다.
 - **혼자 켜진다.** 필수 포트가 없다. 선택 포트가 없으면 그 부분만 꺼진다.
   - `workspace.settings` 없음 → 기본 설정(출처 디스크립터 `default_enabled`, 기본 분류 체계)
   - `secrets.rules` 없음 → 색인을 가리지 않고 `logs.redaction_unavailable` 경고
@@ -25,8 +25,8 @@
 | 선택 | `secrets.rules` | `() -> SecretRules`(`redact_value`) |
 | 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
 | 선택 | `projects.folders` | 앱에 등록된 프로젝트 폴더(`registered`·`archived`·`project_for`). 범위는 등록 프로젝트 전체 하나이고, 범위를 아는 출처(`claude-code-jsonl`)는 이 폴더(하위 폴더 포함)의 기록만 읽는다. 보관 프로젝트는 새로 읽지 않지만 색인은 남긴다. 세션 `project_id`·필터 `project`·집계 차원 `project`는 `project_for(cwd)`(등록 id)다. 옛 묶기 설정 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`. 없으면 등록된 프로젝트 없음으로 보고 그 출처는 아무것도 읽지 않으며 경고 `logs.no_projects`("프로젝트를 먼저 만들거나 등록하세요"). 설정 `roots`에서 범위 밖 기록을 건너뛰면 `logs.out_of_scope`. 단독 실행에서 쓰려면 `--with mod-projects`, 테스트는 `testing.project_folders_module`. 출처는 호스트 경로 `workspace`(앱 workspace)도 맥락 `paths`로 받는다(`claude-code-jsonl`의 앱 실행 세션 루트 `workspace_roots`) |
-| 선택(multi) | `logs.scope_kinds` | X27 `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
-| 선택(multi) | `logs.filter_predicates` | X28 `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
+| 선택(multi) | `logs.scope_kinds` | `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
+| 선택(multi) | `logs.filter_predicates` | `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
 | 토픽 | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
 | WS | `logs` | `logs.ingested` 메시지 |
 | 웹 역할 | `logs` | 로그 화면 |
@@ -202,7 +202,7 @@ open_log_storage(None).kind  # DB도 경로도 없으면 "memory"
 | `plugins.load_plugins`·`plugins.bundle_registries` | 호스트 플러그인 로더 |
 | `standalone.main` | 단독 실행 진입점 |
 | `storage.BRANCH`·`open_log_storage`·`LogStorage` | 계보·색인 열기 |
-| `testing.local_settings_module`·`static_settings_module`·`runtime_sources_module`·`RuntimeSource`·`query_extensions_module`(X27·X28 등록 흉내) | 단독 실행·테스트용 모듈 |
+| `testing.local_settings_module`·`static_settings_module`·`runtime_sources_module`·`RuntimeSource`·`query_extensions_module`(등록 흉내) | 단독 실행·테스트용 모듈 |
 
 ## 개발·재사용
 

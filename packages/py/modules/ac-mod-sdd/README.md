@@ -11,7 +11,7 @@ Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`). `ac-sdd`(작업 문법·파�
   목록과 같다(라이브러리 → 없으면 단독 루트, `?project=` = 그 공간). `variables`·`check`는 틀 id로 쓸 수 없다.
 - `GET /sdd/import/files?path=`: 그 폴더의 마크다운 파일과 바로 아래 하위 폴더(`dirs`, 숨김·링크·예약 제외).
 - WS 토픽 `sdd.changed`(본문 없음 — 화면은 다시 읽는다).
-- 정의 종류 기여(X44, `definitions.kind_contributions`): 문서 틀(라이브러리·프로젝트, 실행 프로필의
+- 정의 종류 기여(`definitions.kind_contributions`): 문서 틀(라이브러리·프로젝트, 실행 프로필의
   팀 구성 참조 추출)과 스펙(`library=False`). 종류 이름·폴더 이름은 설치자 옵션(기본값은 패키지 데이터
   `data/defaults.json`).
 - 사용자 설정 섹션 `sdd`(`include_default_syntax`·`syntax`·`secret_scan`·`verification_sources`).
@@ -20,7 +20,7 @@ Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`). `ac-sdd`(작업 문법·파�
   (`standalone_root`, 기본 워크스페이스 안 `sdd/`). 이름이 왔는데 연동이 없으면 409
   `sdd.spaces_unavailable`(앱 workspace에 대신 만들지 않는다). 공간 이름이 없는 문서 틀 요청은 앱
   라이브러리(`definitions.store`)를 읽고, 라이브러리가 없으면 단독 루트의 틀을 읽는다.
-- 확장 지점: 작업 연동 X43(`sdd.integrations`, 여러 제공자), 검증 결과 출처 X42
+- 확장 지점: 작업 연동(`sdd.integrations`, 여러 제공자), 검증 결과 출처
   (`sdd.verification_sources` 포트 + entry point `agent_console.sdd_verification_sources`, 플러그인
   출처는 사용자 설정으로 켠다). 화면 능력 `SddInfo.capabilities`는 포트 유무로 계산한다.
 - 실행 라벨 표시 규칙: 설치자 접두(`run_label_prefix`, 기본 `sdd.`)를 붙여

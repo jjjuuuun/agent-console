@@ -3,6 +3,8 @@
  * `@agent-console/wiki-view` 기본값을 쓰고 여기에는 탭 조립(도구줄·상태·안내)의 문구만 둔다.
  * 위키 이름·페이지 경로·규칙 id·점검 코드·문법 값은 없다(서버 데이터).
  */
+import { KNOWN_WIKI_LINT_CHECKS } from "@agent-console/contracts/constants";
+
 export const wikiTabMessages = {
   graph: {
     toolbar: "그래프 도구줄",
@@ -41,6 +43,14 @@ export const wikiTabMessages = {
     noneEnabled: "켜진 점검이 없습니다. 규칙 탭에서 점검 규칙을 더하거나 문법 설정에서 기본 점검을 켜세요.",
     noSyntax: "링크 문법이 없어 링크 점검은 하지 않습니다",
     partial: "일부 페이지를 점검하지 못했습니다",
+    partialCount: (n: number) => `점검하지 못한 페이지 ${n}개`,
+    openSkipped: (path: string) => `점검하지 못한 페이지 열기: ${path}`,
+    enabledChecks: (names: string) => `켜진 점검: ${names}`,
+    /** 켜진 점검 이름 표(계약 상수 `KNOWN_WIKI_LINT_CHECKS` 값 → 문구). 기본 점검 코드는 앱 표시 표(`WikiDisplay.codes`)가 이름을 준다. */
+    checkNames: {
+      [KNOWN_WIKI_LINT_CHECKS.LINT_RULES]: "점검 규칙",
+      [KNOWN_WIKI_LINT_CHECKS.WRITE_RULES]: "쓰기 규칙 다시 보기",
+    } as Readonly<Record<string, string>>,
     partialWith: (messages: string) => `일부 페이지를 점검하지 못했습니다 (${messages})`,
     openRule: "규칙 열기",
     openPage: "열기",
@@ -75,7 +85,8 @@ export const wikiTabMessages = {
     instructionsCopied: "지침을 복사했습니다",
     mergedNone: "규칙이 없어 비어 있습니다",
     table: { write: "쓰기 규칙", lint: "점검 규칙", template: "페이지 틀" } as Readonly<Record<string, string>>,
-    col: { id: "규칙 id", appliesTo: "적용 경로", action: "동작", message: "메시지", source: "출처", severity: "심각도", name: "이름", pathTemplate: "경로 틀" },
+    col: { id: "규칙 id", appliesTo: "적용 경로", action: "동작", message: "메시지", source: "출처", severity: "심각도", name: "이름", pathTemplate: "경로 틀", title: "표시 이름" } as Readonly<Record<string, string>>,
+    appliesAll: "모든 페이지",
     openRule: "규칙 열기",
     syntaxOpenSettings: "설정에서 보기",
     syntaxDefault: "패키지 기본값 — 설정에서 끌 수 있습니다",

@@ -40,3 +40,22 @@ export function runPath(runId: string): string | undefined {
   const base = routeServing(DEFAULT_ROUTES, RUNS_ROLE)?.path;
   return base === undefined ? undefined : `${base}/${encodeURIComponent(runId)}`;
 }
+
+/** 스킴 대상 열 화면(`LabelDisplayTarget`)의 모양. 링크(`WikiLink.scheme_target`)와 그래프 노드가 같다. */
+export interface SchemeTargetLike {
+  role: string;
+  id_from: string;
+  query?: string | null | undefined;
+}
+
+/**
+ * 스킴 대상 → 앱 경로. 역할을 맡은 라우트가 없거나 꺼져 있으면(`routeOn`이 false) undefined.
+ * `id`가 빈 문자열이면 그 화면의 목록 경로를 돌려준다. `query`의 `{value}`는 id로 바꾼다.
+ */
+export function schemeTargetHref(target: SchemeTargetLike, id: string, routeOn: (role: string) => boolean): string | undefined {
+  const base = routeServing(DEFAULT_ROUTES, target.role)?.path;
+  if (base === undefined || !routeOn(target.role)) return undefined;
+  if (id === "") return base;
+  const q = target.query === undefined || target.query === null || target.query === "" ? "" : `?${target.query.replace(/\{value\}/g, encodeURIComponent(id))}`;
+  return `${base}/${encodeURIComponent(id)}${q}`;
+}

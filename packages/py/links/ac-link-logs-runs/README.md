@@ -5,7 +5,7 @@
 - 런타임 출처 `platform-runs`(포트 `logs.sources`, 기본 켜짐): 이 콘솔의 실행 이벤트(RunEvent)를 Claude Code 세션 로그와 같은 정규화 이벤트로 색인한다. Run마다 마지막으로 읽은 이벤트 seq(워터마크) 뒤만 읽는다. 실행 기록은 읽기만 한다.
   - 분류기 `platform-run-event`(레지스트리 없이 출처가 직접 지정): 형식 → 범주·필드 대응표는 **데이터**다. 기본값 = 패키지 데이터 `run_event_map.yaml`, 덮어쓰기 = 설정 `logs.sources[id=platform-runs].config.event_map`(키별로 통째로). 대응표에 없는 형식은 범주 `other`.
   - 세션: 대응표의 `session_from` 규칙 이벤트(기본 `agent.session_started`)가 알린 세션 id를 그 노드와 하위 노드(서브에이전트) 이벤트에 붙이고, 없으면 NodeRun `backend_session_id`를 쓴다. 이벤트의 `session`과 `correlation.session`이 된다.
-  - hook·MCP(R8.4): 수집기(X7)가 낸 `hook.*`·`mcp.*` 이벤트가 범주 `hook`·`mcp`로 보인다. MCP 호출은 `tool_use_id` 짝(시작·완료)으로, `hook.finished`처럼 소요 시간만 실린 이벤트는 대응표 `duration_ms`로 시작(근거 `inferred`)·끝 두 이벤트를 내어 타임라인에 소요 시간이 붙는다.
+  - hook·MCP: 수집기가 낸 `hook.*`·`mcp.*` 이벤트가 범주 `hook`·`mcp`로 보인다. MCP 호출은 `tool_use_id` 짝(시작·완료)으로, `hook.finished`처럼 소요 시간만 실린 이벤트는 대응표 `duration_ms`로 시작(근거 `inferred`)·끝 두 이벤트를 내어 타임라인에 소요 시간이 붙는다.
   - 토큰: 기본 대응표는 `agent.usage`를 토큰 표본으로 쓰지 않는다(같은 세션을 Claude Code 세션 로그 출처로도 읽으면 두 번 세어진다). 쓰려면 대응표에 `usage` 포인터를 넣는다(아래 "실행 단위 토큰").
   - 구조도 재료: 맥락 구성 `agent.context_prepared`(범주 `context`, 리소스 id·종류·바이트 수·해시만), 모델 호출 소요(`agent.usage`의 `duration_ms`가 있으면 시작·끝 두 이벤트), MCP 서버 근거 `correlation.mcp_server`, 위임 호출 id 근거 `correlation.tool_use_id`(호출 NodeRun의 `node.*`). `node.started`의 `from`·`to`·`via`는 위임 호출(payload `call`)일 때만 채운다(조건부 값).
   - 메모리: 메모리 도구 호출 `memory.*`(`link-memory-runs`)는 범주 `memory`, 문서 표지 `{kind: memory, path: <범위 종류>/<범위 id>/<키>, action: read·written·removed·searched}`(범위를 모르는 호출은 표지 없음), 근거 `tool_use_id`·`memory_scope`. 설정 `event_map`에 `"memory.*": {}`를 적으면 꺼져 범주 `other`가 된다.

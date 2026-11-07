@@ -28,8 +28,8 @@ export function useRulesScreenOn(): boolean {
 }
 
 /**
- * 공용 위키 규칙의 정의 종류 이름. 서버 설정으로 바뀌는 값이라 코드에 두지 않고, 공용 규칙 하나의 정의에서 읽는다.
- * 공용에 규칙이 없으면 가져올 것도 없으므로 `null`이다. 읽지 못하면(정의 모듈 꺼짐 등) `null`.
+ * 공용 위키 규칙의 정의 종류 이름. 서버 설정으로 바뀌는 값이라 코드에 두지 않고 `WikiInfo.rules_kind`에서 읽는다.
+ * `rules_kind`가 null(옛 서버)일 때만 공용 규칙 하나의 정의에서 읽는 대체 경로를 쓰고, 그때 규칙이 없으면 `null`이다. 읽지 못하면(정의 모듈 꺼짐 등) `null`.
  */
 export function useLibraryRulesKind(enabled: boolean): { kind: string | null; loading: boolean } {
   const { wiki } = useApi();
@@ -40,6 +40,9 @@ export function useLibraryRulesKind(enabled: boolean): { kind: string | null; lo
     meta: { silentBackgroundError: true },
     queryFn: async (): Promise<string | null> => {
       const library = wiki(null);
+      // 서버가 종류 이름을 주면(`rules_kind`) 그것을 쓰고, null(옛 서버)·읽기 실패일 때만 규칙 하나를 읽어 알아낸다.
+      const named = await library.getWikiInfo().then((i) => i.rules_kind ?? null, () => null);
+      if (named !== null && named !== "") return named;
       const first = (await library.listWikiRules())[0];
       if (first === undefined) return null;
       return (await library.getWikiRules(first.id)).value.rules.kind;

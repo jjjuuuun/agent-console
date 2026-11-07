@@ -23,7 +23,7 @@ uv pip install ./packages/py/features/ac-store
 | --- | --- | --- |
 | `sqlalchemy>=2` (Core) | 이벤트·Run 기록을 SQLite에 쓰되 DB를 바꾸거나 테스트 구현으로 교체하기 쉽게 한다. ORM 없이 Core만 쓴다. | 표준 `sqlite3` 직접 사용(agent_bench 방식, 의존 적지만 스키마 이력·이식성이 약함) |
 | `alembic>=1.13` | 스키마 변경 이력과 롤백(되돌릴 수 있는 마이그레이션). 코드로 적용한다(`upgrade(engine)`). | `metadata.create_all`(이력·롤백 없음), 직접 만든 버전 테이블 |
-| `ruamel.yaml>=0.18` | 사용자가 손으로 고친 YAML의 주석·키 순서를 저장 후에도 보존(R0.4 왕복). | PyYAML(주석 소실), JSON 파일(사람이 고치기 불편) |
+| `ruamel.yaml>=0.18` | 사용자가 손으로 고친 YAML의 주석·키 순서를 저장 후에도 보존(왕복). | PyYAML(주석 소실), JSON 파일(사람이 고치기 불편) |
 
 ## 최소 사용 예
 

@@ -16,7 +16,7 @@ import * as memory from "@agent-console/contracts/memory";
 import type { MemoryEventPayload, MemoryScopeRef } from "@agent-console/contracts/memory";
 import type { LogEvent, LogLane, LogSettings, LogTimeline, LogWidget } from "@agent-console/contracts/logs";
 import * as modules from "@agent-console/contracts/modules";
-import type { LogsIngestedMessage, ModuleInfo } from "@agent-console/contracts/modules";
+import type { LogsIngestedMessage, ModuleInfo, PluginInfo } from "@agent-console/contracts/modules";
 import * as projects from "@agent-console/contracts/projects";
 import type {
   DefinitionMove,
@@ -476,7 +476,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
-    // 정확한 지금 값은 0.14.2 테스트가 고정한다
+    // 정확한 지금 값은 0.14.3 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.0"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0140 = { common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" };
@@ -533,7 +533,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.1(7R.13·7R.17 후속): WikiInfo.writable, wiki.update_unavailable, secret_scan 기본값 system reject", () => {
-    // 정확한 지금 값은 0.14.2 테스트가 고정한다
+    // 정확한 지금 값은 0.14.3 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.1"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0141 = { common: "1.11.0", wiki: "1.1.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -546,9 +546,13 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(defs["WikiSettings"]?.properties["secret_scan"]?.default).toEqual({ user: "warn", agent: "reject", system: "reject" });
   });
   it("0.14.2(7R.19~7R.21 서버 후속): rules_kind, 규칙 항목 글롭·경로·이름, 점검 부분 실패, 그래프 scheme_target", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.14.2");
-    expect(packageJson.version).toBe("0.14.2");
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.12.0", wiki: "1.2.0", sdd: "1.2.0", modules: "1.5.0" });
+    // 정확한 지금 값은 0.14.3 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.2"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    const v0142 = { common: "1.12.0", wiki: "1.2.0", sdd: "1.2.0", modules: "1.5.0" };
+    for (const [sub, version] of Object.entries(v0142)) {
+      expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0")).toBeGreaterThanOrEqual(ver(version));
+    }
     expect(wiki.CONTRACT_VERSION).toBe("1.2.0");
     expectTypeOf<WikiInfo["rules_kind"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<WikiRuleEntry["applies_to"]>().toEqualTypeOf<string[] | null | undefined>();
@@ -558,5 +562,12 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<WikiGraphNode["scheme_target"]>().toEqualTypeOf<LabelDisplayTarget | null | undefined>();
     expect(KNOWN_ISSUE_CODES.WIKI_LINT_FAILED).toBe("wiki.lint_failed");
     expect(constants.KNOWN_WIKI_LINT_CHECKS).toEqual({ LINT_RULES: "lint_rules", WRITE_RULES: "write_rules" });
+  });
+  it("0.14.3(plugins.disabled 후속): PluginInfo.reason", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.14.3");
+    expect(packageJson.version).toBe("0.14.3");
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.12.0", wiki: "1.2.0", modules: "1.6.0" });
+    expect(modules.CONTRACT_VERSION).toBe("1.6.0");
+    expectTypeOf<PluginInfo["reason"]>().toEqualTypeOf<string | null | undefined>();
   });
 });

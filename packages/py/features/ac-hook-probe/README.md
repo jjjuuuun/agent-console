@@ -31,7 +31,7 @@ pip install --find-links <wheelhouse> agent-console-hook-probe   # 단독(사내
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `agent-console-secret-rules` | 기록 전 비밀 의심 가림 | 플랫폼 전체가 같은 규칙을 쓴다 | 자체 정규식 |
-| `agent-console-logs` | 출처(`JsonlFileSource` 상속)·분류기 프로토콜 | X5·X6 확장 지점 | — |
+| `agent-console-logs` | 출처(`JsonlFileSource` 상속)·분류기 프로토콜 | 확장 지점 | — |
 | `agent-console-contracts` | 출처·분류기 디스크립터 | 계약 단일 소스 | — |
 
 ## 최소 사용
@@ -132,8 +132,8 @@ hook 명령 앞에 probe를 붙인다.
 
 | id | 종류 | 설정 |
 | --- | --- | --- |
-| `hook-probe-jsonl` | X5 출처(`JsonlFileSource` 상속), **기본 켜짐**(이미 플랫폼 데이터) | `roots`(비우면 호스트 `paths["state"]/runs`), `include`(기본 `**/hook-probe/*.jsonl`), `exclude`, `run_layout`(기본 참: 경로 `<run>/<노드…>/hook-probe/<파일>`에서 run_id·node_path) |
-| `hook-probe` | X6 분류기 | `category`(기본 `hook`), `error_category`(기본 `error`: 막지 않는 오류·실행 실패), `actor`(기본 `hook`), `probe_basis`(기본 `hook_probe`) |
+| `hook-probe-jsonl` | 출처(`JsonlFileSource` 상속), **기본 켜짐**(이미 플랫폼 데이터) | `roots`(비우면 호스트 `paths["state"]/runs`), `include`(기본 `**/hook-probe/*.jsonl`), `exclude`, `run_layout`(기본 참: 경로 `<run>/<노드…>/hook-probe/<파일>`에서 run_id·node_path) |
+| `hook-probe` | 분류기 | `category`(기본 `hook`), `error_category`(기본 `error`: 막지 않는 오류·실행 실패), `actor`(기본 `hook`), `probe_basis`(기본 `hook_probe`) |
 
 기록 한 줄 → 이벤트 둘(`start`·`complete`, 같은 `call_id` = `probe_id`라 색인이 소요 시간을 계산).
 `correlation.call_id = tool_use_id`로 같은 도구 호출의 다른 출처 이벤트(Claude Code 세션·플랫폼 실행)와 이어진다.

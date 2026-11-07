@@ -2,12 +2,12 @@
 
 로그 분석 코어. 여러 도구의 로그를 같은 구조(정규화 이벤트)로 모으고 질의한다.
 
-- **출처·분류기는 확장 지점이다.** 로그 출처(X5, entry point `agent_console.log_sources`)와
-  분류기(X6, `agent_console.log_classifiers`)를 등록해 쓴다. 기본 제공 `normalized-v1`·`mapped-jsonl`도
+- **출처·분류기는 확장 지점이다.** 로그 출처(entry point `agent_console.log_sources`)와
+  분류기(`agent_console.log_classifiers`)를 등록해 쓴다. 기본 제공 `normalized-v1`·`mapped-jsonl`도
   entry point로 들어오는 첫 구현이다. 특정 도구 형식(Claude Code 등)은 이 패키지가 모른다.
 - **원본은 읽기만 한다.** 출처는 파일을 주입된 `open_read`로만 연다. 이 패키지에는 원본 쓰기 경로가 없다.
 - **분류기는 행 단위 무상태다**(F-7). 응답 묶기·호출 짝·소요 시간은 질의 때 명시 id로 계산한다.
-- **토큰은 응답당 한 번 센다**(F-8, R8.1). (출처, thread, message_id)마다 output이 가장 큰 표본 하나다.
+- **토큰은 응답당 한 번 센다**(F-8). (출처, thread, message_id)마다 output이 가장 큰 표본 하나다.
 - **범주 이름을 코드가 해석하지 않는다.** 표시 이름·숨김·오류(`tone: danger`, F-25)는 분류 체계 데이터
   (`data/default_taxonomy.yaml` + 설정 `logs.taxonomy`)다. 분류 체계를 비워도 동작한다.
   기본 분류 체계에는 숨김 범주 `meta`(`visible: false`, 형식 내부 기록 — 타임라인에서만 숨김)가 있다.
@@ -28,7 +28,7 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `agent-console-contracts` | `LogEvent`·`TokenSample`·`LogSettings`·디스크립터·DTO | 계약 단일 소스 | — |
-| `agent-console-registry` | X5·X6 레지스트리·entry point 로딩 | 모든 확장 지점이 같은 등록 방식 | — |
+| `agent-console-registry` | 레지스트리·entry point 로딩 | 모든 확장 지점이 같은 등록 방식 | — |
 | `jsonschema` | 출처·분류기 설정을 `config_schema`로 검증하고 기본값 채움 | 워크스페이스에서 이미 쓰는 검증기 | pydantic 동적 모델 |
 | `ruamel-yaml` | 기본 분류 체계(YAML 패키지 데이터) 읽기 | 워크스페이스 YAML 표준 | PyYAML |
 | `sqlalchemy` | SQLite 색인(`agent_console_logs.sqlite`, Core) | 워크스페이스 저장소 표준, 서버 DB 핸들의 엔진을 그대로 받는다 | 표준 `sqlite3` 직접 사용(스키마 공유·이식성 약함) |
@@ -90,10 +90,10 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 | 행 읽기 | `query_event_rows(index, flt, ctx) -> LogEventRowPage`(`rows`·`next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)`(끝까지, 쪽마다 `on_page(행 수)`), `page_rows(read, flt, on_page=)`(쪽 읽기 함수 → 행), 선택 능력 `LogEventRowReader`(`query_event_rows`·`iter_event_rows` 메서드, 메모리·SQLite 색인이 가진다), `event_row(event)`, `complete_event_row(data, seq=)`, 형식 `LogEventRow`·`PageCallback` |
 | SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `open_existing_log_index(path)`(있는 색인만, 파일·테이블을 만들지 않음), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
 | 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
-| 질의 확장(X27·X28) | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`), 행 기준 미리 거르기(선택) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck` |
+| 질의 확장 | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`), 행 기준 미리 거르기(선택) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck` |
 | 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `git_worktree_root`(옛 묶기 `group_projects`·`resolve_project`는 삭제 — 세션 프로젝트는 `QueryContext.project_for`), `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
 | 보관본 | `build_archive`(`LogArchive` v1: 필터 범위·`max_events`·`max_bytes`·`redact`, `ARCHIVE_VERSION`·`DEFAULT_ARCHIVE_MAX_EVENTS`·`DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive`(스크립트 없는 HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
-| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(X27·X28 예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.PurgeContractTests`(비우기 의미), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
+| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.PurgeContractTests`(비우기 의미), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
 
 ## SQLite 색인
 
@@ -171,7 +171,7 @@ True
 
 ```
 
-## 질의 확장: 범위 종류(X27)·필터 확장(X28)
+## 질의 확장: 범위 종류·필터 확장
 
 필터 `scope=<종류>:<값>`과 확장 필터 이름은 등록으로 들어온다. `LogQueryExtensions`가 필터를 읽고
 (`parse`), 질의 전에 풀어(`refine`) 질의 맥락에 세션·run_id 합집합(`QueryContext.scope`)과 이벤트 판정

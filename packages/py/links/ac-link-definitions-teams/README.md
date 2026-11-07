@@ -11,7 +11,7 @@ Agent Console 정의 ↔ 팀 의미 연동 모듈. 정의 저장소와 `ac-teams
   `definitions.dependencies`(문서가 쓰는 정의 `TeamDocumentDependencies` — 팀 구성 → 에이전트·리소스·자식 팀 구성,
   에이전트 → 리소스. 여러 정의를 한꺼번에 쓸 때 쓰는 정의부터 쓰는 순서를 정하는 데 쓴다. 지금 기본 모듈 중
   소비자는 없다),
-  `definitions.references`(X25, 여러 제공자 — 같은 계산의 참조 추출 함수 `(kind, doc) -> [(kind, id)]`,
+  `definitions.references`(여러 제공자 — 같은 계산의 참조 추출 함수 `(kind, doc) -> [(kind, id)]`,
   `TeamDocumentDependencies.references`. 프로젝트 범위 검사·옮기기 계획이 주입받는다).
 - 필수 포트: `definitions.lookup`. 선택: `workspace.settings`, `resources.lookup`·`resources.types`(없으면 빈 것),
   `secrets.redact`(없으면 `secrets.rules`의 의심 값 가리기), `secrets.rules`.

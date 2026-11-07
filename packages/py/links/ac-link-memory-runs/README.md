@@ -2,7 +2,7 @@
 
 Agent Console 메모리·실행 연동 모듈(`link-memory-runs`). 에이전트에게 공유
 메모리 도구(검색·읽기·쓰기·지우기)를 준다. 실행 모듈(`mod-runs`)과 메모리 모듈(`mod-memory`)은 서로를
-모르고, 이 연동이 실행 범위(X26 `runs.scopes`)로 Run마다 에이전트 도구 공급자(X30 `TOOL_PROVIDERS`)를
+모르고, 이 연동이 실행 범위(`runs.scopes`)로 Run마다 에이전트 도구 공급자(`TOOL_PROVIDERS`)를
 넣어 둘을 잇는다.
 
 | 무엇 | 내용 |
@@ -22,13 +22,13 @@ Agent Console 메모리·실행 연동 모듈(`link-memory-runs`). 에이전트�
   구성(중첩 팀이면 자식 팀), `root_graph_id`·`project_id`는 루트 Run 값이다. 에이전트가 범위 id를 고를 수 없다.
 - **실행당 쓰기 한도**는 Run 하나(자식 Run 포함)의 모든 에이전트가 함께 쓴다.
 - **끄기**: `mod-memory`나 이 연동이 꺼지면 실행은 그대로 끝나고, 메모리 리소스를 붙인 노드마다 "백엔드가
-  적용하지 못한 칸" 경고(R13.5, `resource.slot_unsupported`)가 1건 난다. 리소스 종류는 이 패키지가 설치돼
+  적용하지 못한 칸" 경고(`resource.slot_unsupported`)가 1건 난다. 리소스 종류는 이 패키지가 설치돼
   있으면 연동을 꺼도 등록돼 있다(리소스를 만들 수는 있다).
 - 메모리 내용은 다른 에이전트에게 지시처럼 읽힐 수 있다(보안 경계가 아니다). 쓰기 권한을 리소스로 좁힌다.
 
 ## 의존성: 무엇을 / 왜 / 대안
 
-- 사내: `agent-console-memory`(도구 묶음·범위 종류), `agent-console-nodes-core`(X30 공급자 프로토콜·서비스
+- 사내: `agent-console-memory`(도구 묶음·범위 종류), `agent-console-nodes-core`(공급자 프로토콜·서비스
   키), `agent-console-runtime`(`HostTool`), `agent-console-resources`(리소스 종류 베이스),
   `agent-console-store`(정의 종류 이름 `resource`), `agent-console-modkit`(모듈).
 - 외부: pydantic, ruamel.yaml(디스크립터 데이터). 새 외부 의존 없음.

@@ -6,12 +6,12 @@
 
 | 하는 일 | 어떻게 |
 | --- | --- |
-| 작업 동작(X43 `sdd.integrations`, 연동 id 기본 `runs`) | 스펙 규칙 `run_profiles`마다 동작 하나. `when`이 맞지 않는 작업에는 내지 않는다. `run` 관문이 막으면 `disabled`(`sdd.gate_blocked`) |
+| 작업 동작(`sdd.integrations`, 연동 id 기본 `runs`) | 스펙 규칙 `run_profiles`마다 동작 하나. `when`이 맞지 않는 작업에는 내지 않는다. `run` 관문이 막으면 `disabled`(`sdd.gate_blocked`) |
 | 실행 | `when` → `run` 관문 → 입력 틀 치환 → 비밀 검사(`sdd.secret_scan`) → 라벨 상한 → `runs.starter.start_graph(graph, input, origin="sdd", project_id=공간 이름, labels)` |
 | 실행 라벨 | `<접두>spec`·`<접두>task`·`<접두>profile`·`<접두>purpose`(접두 = `mod-sdd.run_label_prefix`, 기본 `sdd.`) |
 | 결과 반영 | `runs.event` 상태 이벤트 → 실행 프로필 `status_on[결과 이름]`이 있으면 작업 머리 줄 하나만 고친다(`by: run`). 실행 중에 그 줄이 바뀌었거나 `task_status` 관문이 막으면 고치지 않고 정보 이슈 `sdd.status_not_applied`(`details.reason`·`gate_id`) |
 | 실행 연결 | `runs.reader.page(labels={<접두>spec: id}, root_only=True)`를 상한까지 → `TaskLink{kind: run}`(상태·시각·토큰 합) |
-| 검증 출처(X42 `sdd.verification_sources`, id 기본 `runs`) | `verification.purposes` 목적 실행 → `result_map`으로 바꾼 `VerificationResult` |
+| 검증 출처(`sdd.verification_sources`, id 기본 `runs`) | `verification.purposes` 목적 실행 → `result_map`으로 바꾼 `VerificationResult` |
 | 프로필 검사 | 그 공간에 팀 구성이 없으면 `sdd.profile_graph_missing`(`details.in_library`) |
 
 실행 상태 → 결과 이름(`status_on`·`result_map`이 쓰는 이름) 표, 반영할 이벤트 종류, 연동·출처 이름,

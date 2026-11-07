@@ -5,7 +5,7 @@
 
 - 칸·연결·범주·도구·출처 이름은 코드에 없다. 무엇을 셀지(`when`, 조건 데이터), 어디에 그릴지(좌표), 어떤 출처가
   어떤 칸을 채우는지(`coverage`)는 전부 프로필 데이터다. 조건은 `agent-console-conditions`의 `ConditionSpec`.
-- 연결은 그 전달을 기록한 이벤트 하나가 조건에 맞을 때만 센다. 시간상 이웃은 잇지 않는다(R8.6).
+- 연결은 그 전달을 기록한 이벤트 하나가 조건에 맞을 때만 센다. 시간상 이웃은 잇지 않는다.
   순서로만 아는 연결(`kind: structural`)은 지표가 없다.
 - 지표 상태는 `observed`(0 포함)·`inferred`(추정)·`not_collected`(값 null)다. **null을 0으로 채우지 않는다**.
 - 서버·웹·로그 색인 없이 단독으로 쓴다. `agent-console-logs`를 모른다: 오류 범주·출처 종류·토큰 표본은 인자다.
@@ -20,7 +20,7 @@
 | 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`events` = `LogEvent` 또는 그 JSON 행, `matches` = 미리 판정한 결과, 반복 투영 캐시용) |
 | 증분 투영 | `ArchitectureTally(profile, *, profile_id)`: `add_event(event, match)`·`add_row(row, match)`로 새 이벤트만 더하고 `view(source_kinds=, tokens=, notes=)`로 그린다(같은 이벤트를 한 번에 투영한 결과와 같다. 출처 종류는 `view` 인자라 바뀌어도 다시 세지 않는다. 소요 합은 `math.fsum`) |
 | 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`·`parse_arch` |
-| 플러그인(X23) | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
+| 플러그인 | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
 | 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML), `load_sample(name)`(수집 결과 표본: 이벤트·토큰·출처 종류, `SAMPLES`) |
 
 ## 기본 프로필
@@ -72,8 +72,8 @@ True
 ## 의존성: 무엇을 / 왜 / 대안
 
 - **ruamel.yaml**: 프로필 문서(YAML) 읽기. 저장소 표준 YAML 도구(확정 스택)라 새 의존이 아니다. 대안: PyYAML.
-- 사내: `agent-console-contracts`(모델), `agent-console-conditions`(조건 평가·검사, X22 연산자),
-  `agent-console-registry`(X23 플러그인 로딩).
+- 사내: `agent-console-contracts`(모델), `agent-console-conditions`(조건 평가·검사, 연산자 확장),
+  `agent-console-registry`(플러그인 로딩).
 
 ## 설치
 
@@ -124,7 +124,7 @@ pip install agent-console-architecture
 
 ```
 
-칸을 누르면 이벤트 표를 거를 판정 함수가 같은 수를 고른다(R8.8).
+칸을 누르면 이벤트 표를 거를 판정 함수가 같은 수를 고른다.
 
 ```python
 >>> keep = selector_predicate(profiles["flow"], work.selector, profile_id="flow", operators=operators)

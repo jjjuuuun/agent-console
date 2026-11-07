@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.2"
+CONTRACTS_VERSION: Final = "0.14.3"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -52,7 +52,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "memory": "1.1.0",
     "sdd": "1.2.0",
     "wiki": "1.2.0",
-    "modules": "1.5.0",
+    "modules": "1.6.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
@@ -86,7 +86,9 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 0.14.2(7R.19·7R.20·7R.21 서버 후속, 더하기만): `common` 1.12.0(문서 상수
 `KnownIssueCodes.WIKI_LINT_FAILED`), `wiki` 1.2.0(`WikiInfo.rules_kind`, `WikiRuleEntry.applies_to`·
 `path`·`title`, `WikiLintReport.partial`·`skipped`·`enabled_checks`, `KnownWikiLintChecks`,
-`WikiGraphNode.scheme_target`)."""
+`WikiGraphNode.scheme_target`).
+0.14.3(plugins.disabled 후속, 더하기만): `modules` 1.6.0(`PluginInfo.reason` — skipped·disabled
+플러그인의 끈 이유)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,

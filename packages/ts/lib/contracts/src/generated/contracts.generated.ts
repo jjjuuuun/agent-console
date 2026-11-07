@@ -9147,9 +9147,13 @@ export interface PluginInfo {
   group?: string | null;
   loaded?: boolean;
   /**
-   * 로딩 상태(열린 문자열). 알려진 값: loaded, failed(error 있음), skipped(설정 `plugins.enabled`에 없어 읽지 않음), disabled(읽었지만 `plugins.enabled`에 없는 항목이라 등록 해제). 화면은 모르는 값을 그대로 보인다.
+   * 로딩 상태(열린 문자열). 알려진 값: loaded, failed(error 있음), skipped(설정 `plugins.enabled`에 없거나 `plugins.disabled`에 있어 읽지 않음), disabled(읽었지만 `plugins.enabled`에 없거나 `plugins.disabled`에 있는 항목이라 등록 해제). 이유는 `reason`. 화면은 모르는 값을 그대로 보인다.
    */
   status?: string;
+  /**
+   * (0.14.3) 상태 이유(사람이 읽는 문장, 예: 어느 설정 목록 때문에 뺐는지). skipped·disabled일 때 채운다. null = 이유 없음 또는 옛 서버. 비밀 값은 담지 않는다.
+   */
+  reason?: string | null;
   error?: ErrorInfo | null;
 }
 /**
@@ -13255,7 +13259,7 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.2" as const;
+export const CONTRACTS_VERSION = "0.14.3" as const;
 
 export const CONTRACT_VERSIONS = {
   "common": "1.12.0",
@@ -13272,7 +13276,7 @@ export const CONTRACT_VERSIONS = {
   "memory": "1.1.0",
   "sdd": "1.2.0",
   "wiki": "1.2.0",
-  "modules": "1.5.0"
+  "modules": "1.6.0"
 } as const;
 
 export const USAGE_REPORT_PARTS = [

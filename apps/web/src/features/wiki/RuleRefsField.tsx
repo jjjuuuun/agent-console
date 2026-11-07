@@ -4,10 +4,13 @@
  */
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
-import { RuleListEditor, type RuleSummary } from "@agent-console/wiki-view";
+import { RuleListEditor, type RuleListChange, type RuleSummary } from "@agent-console/wiki-view";
 import type { WikiRuleRef } from "@agent-console/contracts/wiki";
 import { sectionDomId } from "./rulesSections";
 import { wikiTabMessages } from "./tabMessages";
+
+/** 목록에서 규칙을 뺀 변경(`RuleListChange` 판별 값, 타입이 값을 검사한다) */
+const REMOVED: RuleListChange["type"] = "remove";
 
 export interface RuleRefsEnv {
   /** 서버가 합친 규칙 줄(이름·누락 표시). 아직 저장하지 않은 id는 여기 없다 */
@@ -54,7 +57,7 @@ export function RuleRefsField({ value, onChange, label, disabled, readonly }: Sc
         available={available}
         onChange={(next, change) => {
           onChange(next);
-          if (change.type === "remove") env.onRemoved?.(() => onChange(ids));
+          if (change.type === REMOVED) env.onRemoved?.(() => onChange(ids));
         }}
         {...(env.onOpen === undefined ? {} : { onOpen: env.onOpen })}
         {...(env.onImport === undefined ? {} : { onImport: env.onImport })}

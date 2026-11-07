@@ -1,7 +1,7 @@
 # agent-console-nodes-core
 
 기본 노드 타입(`agent`, `user`, `resource`), 연결 종류(`subagent`, `handoff`(+이전 이름 `data`), `uses`,
-`message`, `reply`), 위임 방식 `sdk-subagents`(X12) 플러그인. 엔진(`agent-console-runtime`)과
+`message`, `reply`), 위임 방식 `sdk-subagents` 플러그인. 엔진(`agent-console-runtime`)과
 팀 구성 의미(`agent-console-teams`)는 이 이름들을 모른다. 이 패키지가 entry point로 등록할 뿐이고
 판단은 디스크립터 속성(`role`·`executable`·`binds`·`scheduling`·`invocation`·`connects`)으로 한다.
 
@@ -128,7 +128,7 @@ agent 노드의 다음 회차는 직전 회차 세션을 이어 쓰고(설정 `s
 `condition_subject` = `{output?, structured?, status, iteration, error?}`(`path`는 JSON Pointer, 예 `/output`·
 `/structured/verdict`·`/iteration`). 참이면 포트 값을 넘기고 근거를 `edge.traversed.condition`에, 거짓이면
 `Blocked(reason="condition_false")`로 `edge.skipped{reason, condition}`을 남긴다. 연산자는 `ac-conditions`
-레지스트리(X22)에서 오고(생략하면 설치된 entry point, `WhenEdge(operators=...)`로 주입), 모르는 연산자 항목은
+레지스트리에서 오고(생략하면 설치된 entry point, `WhenEdge(operators=...)`로 주입), 모르는 연산자 항목은
 거짓 + `log.warning`(`details.code = condition.unknown_operator`)이다. 저장 전 검사(`EdgeValidator.validate_edge`)는
 `condition_issues`를 config 경로 `/conditions/...`로 낸다. 편집 화면용으로 경로 필드에 스키마 `examples`, `ui_schema`
 `conditions`에 `ui:widget: condition-list`·`ui:options.path_titles`(경로 → 제목)를 싣는다(데이터).
@@ -197,7 +197,7 @@ files·hooks 칸은 세션 공유라 백엔드가 위임자 쪽으로 합치고 
 
 다른 기능이 agent 노드의 모델에게 도구를 주는 일반 확장 지점이다. agent 노드는 도구의 뜻을 모른다.
 공급자(`ToolProvider`: `id` + `provide(ctx) -> ToolProvision`)를 서비스 `TOOL_PROVIDERS`(목록)로 넣는다.
-Run마다 `start(services=...)`로 넣으며(통합 서버에서는 실행 범위 포트 X26 `runs.scopes` 항목이 넣는다),
+Run마다 `start(services=...)`로 넣으며(통합 서버에서는 실행 범위 포트 `runs.scopes` 항목이 넣는다),
 자식 Run(중첩 팀)은 부모 서비스를 물려받는다. 서비스가 없거나 비면 지금 실행과 같다.
 
 agent 노드 순서: 묶음 계산 → 공급자마다 `provide`(맥락 `ToolProvisionContext`: run·루트 run·팀 구성·노드·
@@ -358,4 +358,4 @@ uv run pytest packages/py/features/ac-nodes-core/tests
 ```
 
 설치 메타데이터의 entry point만 로드하고 fake 백엔드로 계층·순차·병렬(join all)·혼합·팀원 입구·중간 답변,
-설정 층·세션·허용 상호작용·리소스 묶음(파일 기록), 연결 종류를 다른 id로 등록해도 같은 실행(R0)을 확인한다.
+설정 층·세션·허용 상호작용·리소스 묶음(파일 기록), 연결 종류를 다른 id로 등록해도 같은 실행을 확인한다.

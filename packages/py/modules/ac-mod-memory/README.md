@@ -15,7 +15,7 @@
 | 저장 | 계보 `memory`(`memory_0001`, 버전 표 `alembic_version_memory`, 범위 `app`·`memory` — 프로젝트 메모리 DB를 여는 연동이 범위 `memory`로 찾아 올린다). 기본은 호스트 DB 파일, 옵션 `store_path`면 그 파일(같은 계보를 올림), DB가 없으면 프로세스 메모리 + 경고 |
 | 설치자 옵션 | `modules.options.mod-memory.{store_path, retention_interval_seconds, full_text_search, busy_timeout_seconds, max_entry_bytes, max_entries_per_scope, max_total_bytes, max_key_chars, max_tags, max_tag_chars, preview_chars, max_page_size, max_tag_list, max_search_results, max_import_archive_bytes, max_import_files, max_import_file_bytes, max_import_total_bytes}` |
 | 사용자 설정 | 워크스페이스 설정 `memory`(계약 `MemorySettings`: `include_default_scope_kinds`, `scope_kinds`, `secrets`, `max_versions_per_entry`, `retention.rules`). 깨진 부분만 빼고 쓰고 경고로 알린다 |
-| 플러그인(X29) | entry point `agent_console.memory_scope_kinds`. 호스트 플러그인 로더(`agent_console.host_plugin_loaders`의 `memory`)가 호스트 묶음의 `memory_scope_kinds` 확장에 읽는다 |
+| 플러그인 | entry point `agent_console.memory_scope_kinds`. 호스트 플러그인 로더(`agent_console.host_plugin_loaders`의 `memory`)가 호스트 묶음의 `memory_scope_kinds` 확장에 읽는다 |
 | 웹 역할 | `memory`(메모리 화면·사이드바 항목·설정 "메모리" 섹션 데이터가 이 역할을 요구한다) |
 
 - 범위 종류·태그·키 이름은 전부 데이터다. 빈 워크스페이스에서는 패키지 기본 범위 종류만 있고 기록은 0개다.
@@ -27,8 +27,8 @@
 
 ## 의존성: 무엇을 / 왜 / 대안
 
-- 사내: `agent-console-memory`(저장소·검색·정리·내보내기), `agent-console-conditions`(정리 규칙 연산자
-  X22), `agent-console-modkit`(모듈·호스트), `agent-console-registry`(X29 레지스트리),
+- 사내: `agent-console-memory`(저장소·검색·정리·내보내기), `agent-console-conditions`(정리
+  규칙 연산자), `agent-console-modkit`(모듈·호스트), `agent-console-registry`(레지스트리),
   `agent-console-store`(계보 실행·호스트 DB·단독 실행의 `settings.yaml` 읽기).
 - 외부: FastAPI·pydantic(서버 모듈 공통), SQLAlchemy·Alembic(계보 `memory`). 새 외부 의존 없음.
 

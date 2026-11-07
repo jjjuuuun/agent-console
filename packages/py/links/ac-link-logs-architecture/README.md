@@ -6,7 +6,7 @@
 - `GET /logs/architecture?<로그 필터>&profile=` → `ArchitectureView`(그리기 완결형 구조도).
   로그 필터는 `GET /logs/schema`의 filters 그대로다(`session`·`thread`·`scope`·`max_seq` 등).
 - `GET /logs/events/{uid}/architecture?profile=` → `ArchitectureMembership`(그 이벤트가 맞은 칸·연결·묶음).
-- 필터 확장(X28) `arch`·`arch_group`·`arch_sources`: 구조도 결과의 `selector`를 이벤트 목록 질의에
+- 필터 확장 `arch`·`arch_group`·`arch_sources`: 구조도 결과의 `selector`를 이벤트 목록 질의에
   그대로 더한다. 같은 범위 필터와 결과의 `max_seq`를 함께 넘기면 표 전체 수 = 그 칸의 `count`다.
 - 웹 역할 `logs:architecture`. 이 연동이 꺼지면 경로가 404이고 `arch`는 모르는 필터(422)다. 로그·
   구조도 모듈은 그대로 동작한다.
@@ -97,8 +97,8 @@ pip install agent-console-link-logs-architecture
 | --- | --- | --- |
 | 필수 | `logs.query` | `query_context`·`parse_filter`·`events`(키셋 쪽, `with_total`)·`event`·`token_samples`, 있으면 `iter_event_rows`(선택 능력 `LogRowReader`) |
 | 필수 | `architecture.catalog` | `catalog() -> ProfileCatalog`·`operators()`·`max_scope_events` |
-| 제공 | `logs.filter_predicates`(X28) | `ArchitectureFilter`(`arch`·`arch_group`·`arch_sources`) |
-| 제공 | `architecture.profile_checks`(X32) | `UnlistedPathCheck` — 프로필 조건 경로가 `unlisted_paths` 접두 아래면 warning `architecture.condition_path_unlisted`(M-4). 받는 쪽 `mod-architecture`가 목록 `issues`·상세 `problems`·`POST /architecture/profiles/check`에 더한다 |
+| 제공 | `logs.filter_predicates` | `ArchitectureFilter`(`arch`·`arch_group`·`arch_sources`) |
+| 제공 | `architecture.profile_checks` | `UnlistedPathCheck` — 프로필 조건 경로가 `unlisted_paths` 접두 아래면 warning `architecture.condition_path_unlisted`(M-4). 받는 쪽 `mod-architecture`가 목록 `issues`·상세 `problems`·`POST /architecture/profiles/check`에 더한다 |
 
 설정 `modules.options.link-logs-architecture`:
 

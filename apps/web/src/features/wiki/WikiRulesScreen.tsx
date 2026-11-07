@@ -50,7 +50,7 @@ function WikiRulesBody() {
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
   const items = useMemo(() => [...(list.data ?? [])].sort((a, b) => nameOf(a).localeCompare(nameOf(b), "ko")), [list.data]);
-  const kind = useWikiRulesKind(space.client, space.key, items[0]?.id, items.length > 0);
+  const kind = useWikiRulesKind(space.client, space.key, items[0]?.id, items.length > 0, space.info?.rules_kind);
   const transfer = useConfigTransfer(items, { kind, idOf, nameOf });
   const shown = q.trim() === "" ? items : items.filter((x) => `${nameOf(x)} ${x.id}`.toLowerCase().includes(q.trim().toLowerCase()));
   const selected = items.find((x) => x.id === picked);

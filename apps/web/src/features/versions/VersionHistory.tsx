@@ -14,7 +14,7 @@ import { DiffTable } from "./DiffTable";
 import { RestoreDialog, type RestoreIssue } from "./RestoreDialog";
 import { VersionList } from "./VersionList";
 import { versionMessages as t } from "./messages";
-import { useVersionDiff, useVersionDoc, useVersionFiles, useVersionList, versionKeys } from "./useVersionData";
+import { type VersionSource, useVersionDiff, useVersionDoc, useVersionFiles, useVersionList, versionKeys } from "./useVersionData";
 import { compareTarget, diffTotals, isSameDiff, readIssues, readablePath, sizeOfFile, type CompareMode, type ReadablePathOptions } from "./versionsLogic";
 import "./versions.css";
 
@@ -31,6 +31,8 @@ export interface VersionHistoryProps {
   onRestored?: (result: { value: DefinitionVersion; version_hash: string | undefined }) => void;
   /** false면 비교(변경 표·본문 비교)를 그리지 않고 목록·원문 보기·되돌리기만 한다(서버가 비교를 주지 않는 종류). 기본 true */
   compare?: boolean;
+  /** 프로젝트 사본 공간 id(요청에 `?project=`가 붙는다). 생략·null = 공용(공간 인자 없음) */
+  space?: string | null;
 }
 
 function hash8Of(hash: string | undefined): string {
@@ -41,12 +43,14 @@ function hash8Of(hash: string | undefined): string {
  * 버전 탭 본문(정의 종류 공통): 목록 + 비교(필드 변경 표·본문 텍스트 비교) + 되돌리기(확인·토스트 [실행 취소]).
  * 서버 호출은 `base` 경로로만 한다. 비밀 값은 서버가 가린 그대로 보이고, 412는 충돌 배너, 422는 서버 이슈를 다이얼로그에 보인다.
  */
-export function VersionHistory({ base, currentHash, dirty = false, pathOptions, onRestored, compare = true }: VersionHistoryProps) {
-  const { rest } = useApi();
+export function VersionHistory({ base, currentHash, dirty = false, pathOptions, onRestored, compare = true, space }: VersionHistoryProps) {
+  const api = useApi();
+  const rest = useMemo(() => (space === undefined || space === null ? api.rest : api.space(space)), [api, space]);
+  const src = useMemo(() => ({ client: rest, scope: space ?? "" }), [rest, space]);
   const toast = useToast();
   const queryClient = useQueryClient();
   const now = useNow(true, 30_000);
-  const list = useVersionList(base);
+  const list = useVersionList(base, src);
   const versions = useMemo(() => list.data ?? [], [list.data]);
 
   const [mode, setMode] = useState<CompareMode>("current");
@@ -60,12 +64,12 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
 
   const serverCurrent = currentHash ?? versions[0]?.version_hash;
   const target = useMemo(() => (compare ? compareTarget(versions, checked, mode) : undefined), [compare, versions, checked, mode]);
-  const diff = useVersionDiff(base, target?.from, target?.to);
-  const fromDoc = useVersionDoc(base, diff.data?.from_hash);
-  const toDoc = useVersionDoc(base, diff.data?.to_hash);
+  const diff = useVersionDiff(base, target?.from, target?.to, src);
+  const fromDoc = useVersionDoc(base, diff.data?.from_hash, src);
+  const toDoc = useVersionDoc(base, diff.data?.to_hash, src);
   const hasContent = (diff.data?.content_changes ?? []).length > 0;
-  const fromFiles = useVersionFiles(base, diff.data?.from_hash, hasContent);
-  const toFiles = useVersionFiles(base, diff.data?.to_hash, hasContent);
+  const fromFiles = useVersionFiles(base, diff.data?.from_hash, hasContent, src);
+  const toFiles = useVersionFiles(base, diff.data?.to_hash, hasContent, src);
 
   const readable = useCallback(
     (change: DiffChange) => {
@@ -94,7 +98,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
   };
 
   const isCurrentTarget = target !== undefined && target.to === undefined && target.from !== serverCurrent;
-  const restoreSummaryDiff = useVersionDiff(base, restoreFor ?? undefined, undefined, compare && restoreFor !== null);
+  const restoreSummaryDiff = useVersionDiff(base, restoreFor ?? undefined, undefined, src, compare && restoreFor !== null);
   const summary = !compare ? null : restoreSummaryDiff.data === undefined ? undefined : diffTotals(restoreSummaryDiff.data);
 
   const closeRestore = () => {
@@ -105,10 +109,10 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
 
   const finish = useCallback(
     async (result: { value: DefinitionVersion; version_hash: string | undefined }) => {
-      await queryClient.invalidateQueries({ queryKey: versionKeys.all(base) });
+      await queryClient.invalidateQueries({ queryKey: versionKeys.all(base, src.scope) });
       onRestored?.(result);
     },
-    [queryClient, base, onRestored],
+    [queryClient, base, src.scope, onRestored],
   );
 
   const restore = async (hash: string, message: string, ifMatch: string | undefined) => {
@@ -200,7 +204,7 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
           busy={busy}
           onLoadServer={() => {
             setConflict(null);
-            void queryClient.invalidateQueries({ queryKey: versionKeys.all(base) });
+            void queryClient.invalidateQueries({ queryKey: versionKeys.all(base, src.scope) });
           }}
           onOverwrite={() => void restore(conflict.hash, conflict.message, conflict.details.current_version_hash)}
         />
@@ -290,13 +294,13 @@ export function VersionHistory({ base, currentHash, dirty = false, pathOptions, 
           onCancel={closeRestore}
         />
       )}
-      {rawVersion === undefined ? null : <RawVersionDialog base={base} version={rawVersion} onClose={() => setRawFor(null)} />}
+      {rawVersion === undefined ? null : <RawVersionDialog base={base} version={rawVersion} src={src} onClose={() => setRawFor(null)} />}
     </div>
   );
 }
 
-function RawVersionDialog({ base, version, onClose }: { base: string; version: DefinitionVersion; onClose: () => void }) {
-  const doc = useVersionDoc(base, version.version_hash);
+function RawVersionDialog({ base, version, src, onClose }: { base: string; version: DefinitionVersion; src: VersionSource; onClose: () => void }) {
+  const doc = useVersionDoc(base, version.version_hash, src);
   return (
     <Dialog open wide title={t.raw.title(shortId(version.version_hash))} onClose={onClose} actions={<Button onClick={onClose}>{t.raw.close}</Button>}>
       {doc.isLoading ? <p className="app-muted">{t.raw.loading}</p> : null}

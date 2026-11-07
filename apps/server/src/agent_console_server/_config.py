@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from pydantic import (
     BaseModel,
@@ -222,8 +222,8 @@ class ServerSettings(_Section):
     @model_validator(mode="wrap")
     @classmethod
     def _reject_removed_and_seed(
-        cls, data: Any, handler: ModelWrapValidatorHandler[ServerSettings], info: ValidationInfo
-    ) -> ServerSettings:
+        cls, data: Any, handler: ModelWrapValidatorHandler[Self], info: ValidationInfo
+    ) -> Self:
         if isinstance(data, dict):
             compat = _compat_from(info)
             removed = removed_keys(data, compat)

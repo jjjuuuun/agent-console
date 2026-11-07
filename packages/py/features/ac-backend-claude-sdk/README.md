@@ -1,6 +1,6 @@
 # agent-console-backend-claude-sdk
 
-Claude Agent SDK(`claude-agent-sdk`, `ClaudeSDKClient`) 실행 백엔드 어댑터(X3).
+Claude Agent SDK(`claude-agent-sdk`, `ClaudeSDKClient`) 실행 백엔드 어댑터.
 entry point `agent_console.backends:claude-agent-sdk`.
 
 ## 설치
@@ -16,7 +16,7 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `claude-agent-sdk` (확인 버전 0.2.166, CLI 번들) | Claude Code 에이전트 실행 | 훅 콜백·MCP·interrupt를 함께 쓰고 설치가 단순 | CLI `stream-json` 직접 구동(agent_bench 방식) 백엔드를 별도로 추가 |
-| `agent-console-registry` (사내) | 관측 수집기(X7) entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식 | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
+| `agent-console-registry` (사내) | 관측 수집기 entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식 | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
 | `agent-console-claude-format` (사내) | 세션 보관의 폴더 키 `project_key`(작업 폴더 → `projects/<키>`) | 로그 출처와 같은 함수 한 곳(복사 금지). `ruamel.yaml`만 딸려 온다 | `agent-console-logs-claude` 의존(로그 색인 의존까지 끌려옴) / 규칙 복사 |
 | `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다. 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
 
@@ -338,7 +338,7 @@ uv run agent-console serve --open       # 127.0.0.1:8765, 작업 폴더 = 설정
 화면 문구가 맞지 않으면(CLI 버전 변화) 대화상자의 "CLI 화면 보기"로 화면을 보고 `login.rules`를 고친다. 판정은
 `claude auth status`라 규칙이 틀려도 거짓 성공은 없다.
 
-## 서브에이전트 (`AgentRequest.subagents`, X12 `sdk-subagents`)
+## 서브에이전트 (`AgentRequest.subagents`, 위임 방식 `sdk-subagents`)
 
 `capabilities.subagents = true`. 위임 방식(nodes-core `sdk-subagents`)이 채운 `SubagentSpec` 목록을
 `ClaudeAgentOptions.agents={이름: AgentDefinition}`로 바꾸고 위임 도구(`delegation_tool`, 기본 `Agent`)를

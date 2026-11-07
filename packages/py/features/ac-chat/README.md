@@ -8,7 +8,7 @@
 - **실행 중 새 메시지**: 유효 설정 `chat.busy_policy`(공통 → 팀 구성)가 `queue`면 대기열에 넣고 앞 턴이 끝나면 실행,
   `reject`면 `ConversationBusyError`(409 `conversation_busy`). 응답 대기(`waiting`) 중인 턴도 실행 중이다.
   대기열 항목은 `cancel_queued`로 취소한다.
-- **세션 이어 쓰기(R4.6)**: 턴이 끝나면 노드별 마지막 `agent.session_started`(`node_path == [노드]`)를 대화 `sessions`에
+- **세션 이어 쓰기**: 턴이 끝나면 노드별 마지막 `agent.session_started`(`node_path == [노드]`)를 대화 `sessions`에
   저장하고 다음 턴 `TurnStart.sessions`로 넘긴다. 쓸지 말지는 노드의 `session` 정책이 정한다.
   팀 구성을 바꾸면(`update(graph_id=)`) 새 팀 구성에 없는 노드의 세션은 버린다. 무엇을 모으고 키를 어떻게
   붙이는지는 `TurnSessions` 규칙(`collect`·`prune`)이 정한다. 기본 `RootRunSessions`는 위 규칙(턴 Run 자기

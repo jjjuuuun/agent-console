@@ -10,11 +10,12 @@ import { LinkGraph, LinkList, type GraphNodeData } from "@agent-console/wiki-vie
 import { ToneChip } from "@agent-console/markdown-doc";
 import type { WikiGraph, WikiGraphNode } from "@agent-console/contracts/wiki";
 import { useStorage } from "../../app/StorageContext";
-import { ROUTE_ROLES, routePath } from "../library";
+import { ROUTE_ROLES, routePath, useRoutesOn } from "../library";
 import { FailureBlock, ListSkeleton } from "./parts";
 import { useWikiGraph } from "./useWikiTabsApi";
 import { usePageList, useWikiSyntax } from "./useWikiApi";
 import { GRAPH_LIST_ONLY_KEY, WIKI_GRAPH, WIKI_PARAMS, WIKI_STORAGE } from "./wikiConfig";
+import { schemeTargetHref } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
 import { classifyWikiError } from "./wikiErrors";
 import { wikiMessages as m } from "./messages";
@@ -43,6 +44,7 @@ export function filterGraph(graph: WikiGraph, showBroken: boolean, showOrphan: b
 
 export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasTab, openNewPage, ctx }: WikiTabProps) {
   const navigate = useNavigate();
+  const routeOn = useRoutesOn();
   const storage = useStorage();
   const idBase = useId();
   const syntaxQ = useWikiSyntax(wikiId);
@@ -93,7 +95,13 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
       if (!ctx.readOnly) openNewPage({ path: node.path });
       return;
     }
-    if (node.scheme) return;
+    if (node.scheme) {
+      // 스킴 칸: 서버가 `scheme_target`을 주고 그 역할의 화면이 켜져 있을 때만 연다(`id_from` = 풀린 id 값). 아니면 열지 않는다.
+      const target = (q.data?.nodes ?? []).find((n) => n.path === node.path)?.scheme_target;
+      const href = target === undefined || target === null ? undefined : schemeTargetHref(target, target.id_from, routeOn);
+      if (href !== undefined) void navigate(href);
+      return;
+    }
     goTab("page", { [P.path]: node.path });
   };
   const centerNode = (path: string) => {

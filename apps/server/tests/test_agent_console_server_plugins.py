@@ -117,6 +117,8 @@ def test_module_plugin_respects_plugins_enabled(
         assert mine["register"]["loaded"] is True
         assert mine["local-import"]["loaded"] is False
         assert mine["local-import"]["error"] is None  # 꺼진 것은 오류가 아니다
+        assert "plugins.enabled" in str(mine["local-import"]["reason"])  # 끈 이유(0.14.3)
+        assert mine["register"]["reason"] is None
         usage_ids = {s["descriptor"]["id"] for s in client.get(f"{API}/usage/sources").json()}
         assert "local-usage" in usage_ids
         import_ids = {s["id"] for s in client.get(f"{API}/resources/import/sources").json()}
@@ -138,6 +140,7 @@ def test_plugins_disabled_turns_off_one_entry_point_only(tmp_path: Path) -> None
         team = [p for p in info["plugins"] if p["name"] == "team"]
         assert team
         assert all(p["status"] == "skipped" and p["error"] is None for p in team)
+        assert all("plugins.disabled" in str(p["reason"]) for p in team)  # 끈 이유(0.14.3)
         assert not [w for w in info["warnings"] if w["code"] == "plugins.config"]
 
 
@@ -157,6 +160,7 @@ def test_plugins_disabled_with_enabled_and_module_plugins(
         mine = {p["name"]: p for p in _plugins(client) if p["group"] == "plugins.modules"}
         assert mine["local-import"]["status"] == "disabled"
         assert mine["local-import"]["error"] is None
+        assert "plugins.disabled" in str(mine["local-import"]["reason"])
         usage_ids = {s["descriptor"]["id"] for s in client.get(f"{API}/usage/sources").json()}
         assert "local-usage" in usage_ids
         import_ids = {s["id"] for s in client.get(f"{API}/resources/import/sources").json()}

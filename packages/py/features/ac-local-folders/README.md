@@ -12,7 +12,7 @@
 - POSIX 경로(`/srv/…`)와 Windows 경로(드라이브 문자 경로, UNC, 드라이브 대소문자 무시)를 다룬다. 서버 방식과 다른
   경로를 넣으면 `problem="foreign_path"`(쓸 수 없음)이다. 다른 OS 경로로 바꿔 주지 않는다.
 - 숨김은 점 이름과 OS 숨김 속성(Windows)으로 판정한다. 그 밖에 이름으로 숨길 폴더와 시작 위치는
-  데이터다(확장 지점 X34, `data/browse_defaults.json`, 기본 `hidden_names`는 빈 목록).
+  데이터다(확장 지점, `data/browse_defaults.json`, 기본 `hidden_names`는 빈 목록).
   `load_browse_defaults(dict)`로 바꿔 넘긴다.
 - 프로젝트 등록부를 모른다. 이미 등록됨·겹침·자기 자신 제외(`exclude_project_id`)·이전 경로와 같음은
   `check.path`를 받아 `ac-projects`/`ac-mod-projects`가 판단한다.
@@ -35,7 +35,7 @@
 시간 상한은 항목 사이에서 확인한다. OS 호출 하나가 멈추는 느린 마운트(네트워크 드라이브 등)는 끊을 수
 없으므로, 서버는 이 함수들을 스레드에서 부르고 바깥에서 시간 상한을 건다.
 
-## 네이티브 폴더 선택 창(X35)
+## 네이티브 폴더 선택 창
 
 서버가 OS의 폴더 선택 창을 띄워 사용자가 고른 **절대 경로**를 얻는다. OS별 명령은 코드가 아니라
 **데이터**(`data/folder_dialogs.json`)이고, 공통 실행기 하나가 표를 실행한다.

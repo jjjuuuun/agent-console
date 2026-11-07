@@ -60,7 +60,7 @@ pip install agent-console-link-logs-usage
 | 의존성 | 무엇을 | 왜 | 대안 |
 | --- | --- | --- | --- |
 | `agent-console-logs` | `LogFilter`·`parse_log_filter`·`block_windows`·`rolling_totals` | 창 계산·필터 해석을 로그 코어와 같게 | 직접 구현(중복) |
-| `agent-console-usage` | `UsageSource` 프로토콜·`UsageSourceContext` | 사용량 출처(X13) 모양 | — |
+| `agent-console-usage` | `UsageSource` 프로토콜·`UsageSourceContext` | 사용량 출처 모양 | — |
 | (개발) `agent-console-logs-claude` | 실제 Claude Code 로그 출처로 자동 켜기·첫 조회 확인(가짜 홈) | 실제 출처의 기본 루트 규칙까지 검증 | 합성 출처(경로 규칙을 검증하지 못함) |
 
 ## 최소 사용

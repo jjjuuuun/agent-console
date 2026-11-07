@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 0.14.3
+
+- 계약 0.14.3(plugins.disabled 후속). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS
+  `^0.14.0`) 그대로. 하위 계약 버전: `modules` 1.6.0.
+- 새 선택 필드(`modules` 1.6.0): `PluginInfo.reason`(skipped·disabled 플러그인의 끈 이유, 사람이 읽는
+  문장, null = 이유 없음 또는 옛 서버). `PluginInfo.status` 설명에 `plugins.disabled`를 더했다.
+
 ## 0.14.2
 
 - 계약 0.14.2(7R.19·7R.20·7R.21 서버 후속). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

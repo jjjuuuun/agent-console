@@ -18,7 +18,6 @@ import { useNow } from "../../app/useNow";
 import { getAt } from "../../lib/jsonPointer";
 import { formatDateTime, formatRelative } from "../../lib/format";
 import { useMediaQuery } from "../../lib/useMediaQuery";
-import { DEFAULT_ROUTES, routeServing } from "../../shell/routeConfig";
 import { useRoutesOn } from "../library";
 import { Bands, type BandItem } from "./Bands";
 import { LinkPicker } from "./LinkPicker";
@@ -32,7 +31,7 @@ import { usePagePreview } from "./usePagePreview";
 import { usePageSaver } from "./usePageSave";
 import { VIEW_MODES, WIKI_LIMITS, WIKI_PARAMS, WIKI_STORAGE, SIDE_TAB_DEFS, type PageViewMode } from "./wikiConfig";
 import { classifyWikiError, failureDetail } from "./wikiErrors";
-import { wikiPagePath, runPath } from "./wikiPaths";
+import { wikiPagePath, runPath, schemeTargetHref } from "./wikiPaths";
 import { useWikiShortcuts } from "./wikiShortcuts";
 import type { WikiTabProps } from "./wikiTabs";
 import { editorMessages, wikiMessages as m } from "./messages";
@@ -344,13 +343,9 @@ export function PageTab(props: WikiTabProps) {
   const schemeHref = (link: WikiLink): string | undefined => {
     const t = link.scheme_target;
     if (t === undefined || t === null) return undefined;
-    const base = routeServing(DEFAULT_ROUTES, t.role)?.path;
-    if (base === undefined || !routeOn(t.role)) return undefined;
     const raw = t.id_from.startsWith("/") ? getAt(link, t.id_from) : (link as unknown as Record<string, unknown>)[t.id_from];
     const id = typeof raw === "string" && raw !== "" ? raw : link.target ?? "";
-    if (id === "") return base;
-    const q = t.query === undefined || t.query === null || t.query === "" ? "" : `?${t.query.replace(/\{value\}/g, encodeURIComponent(id))}`;
-    return `${base}/${encodeURIComponent(id)}${q}`;
+    return schemeTargetHref(t, id, routeOn);
   };
   const createFromLink = (link: WikiLink, suggested?: string) => {
     const target = suggested ?? link.suggested_path ?? link.target ?? "";

@@ -18,10 +18,15 @@ from agent_console_contracts.schema import build_schema
 LIMITS = {"max_page_bytes": 1, "max_pages": 1, "graph_max_nodes": 1}
 
 
-def test_contracts_version_is_0_14_2() -> None:
-    assert CONTRACTS_VERSION == "0.14.2"
-    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == "0.14.2"
-    assert CONTRACT_VERSIONS == {
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_14_2() -> None:
+    """0.14.2에서 정한 버전 이상이다(정확한 지금 값은 0.14.3 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 14, 2)
+    assert build_schema()["x-constants"]["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0142 = {
         "common": "1.12.0",
         "resources": "1.1.0",
         "logs": "1.2.0",
@@ -38,6 +43,9 @@ def test_contracts_version_is_0_14_2() -> None:
         "wiki": "1.2.0",
         "modules": "1.5.0",
     }
+    assert set(CONTRACT_VERSIONS) == set(v0142)
+    for sub, version in v0142.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 
 
 def test_old_responses_still_read() -> None:

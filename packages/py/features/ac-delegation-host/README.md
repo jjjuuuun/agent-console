@@ -1,6 +1,6 @@
 # agent-console-delegation-host
 
-독립 위임 방식 `host`(X12 위임 방식 플러그인). 위임자 모델에게 **위임 도구** 하나(플랫폼
+독립 위임 방식 `host`(위임 방식 플러그인). 위임자 모델에게 **위임 도구** 하나(플랫폼
 도구 `HostTool`)를 주고, 모델이 도구를 부르면 대상 노드를 엔진의 `ctx.invoke_node`로 **자기 NodeRun·세션·
 백엔드·모델·리소스**에서 실행해 그 결과를 도구 결과로 돌려준다. 백엔드가 도구 호출 id를 알려 주면
 (`HostTool.call_handler`) 대상 NodeRun의 `node.*` payload `tool_use_id`로 넘긴다. 대상은 다시 위임하거나(중첩) 자기
@@ -32,7 +32,7 @@
 
 ## 의존성: 무엇을 / 왜 / 대안
 
-- 사내: `agent-console-contracts`(디스크립터·이슈 모델), `agent-console-runtime`(X12 프로토콜·`HostTool`·
+- 사내: `agent-console-contracts`(디스크립터·이슈 모델), `agent-console-runtime`(프로토콜·`HostTool`·
   `invoke_node`). 노드 플러그인(`ac-nodes-core`)·팀(`ac-teams`)·백엔드는 모른다(import-linter 계약).
 - **pydantic**: 방식 config 검증과 JSON Schema(디스크립터 `config_schema`). 이미 계약 패키지가 쓴다.
 - 대안으로 위임 방식이 백엔드를 직접 불러 대상을 실행할 수 있지만, 노드 실행 규칙(설정·리소스·되묻기·

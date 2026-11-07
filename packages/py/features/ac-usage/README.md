@@ -1,6 +1,6 @@
 # agent-console-usage
 
-사용량 출처 확장 지점(X13)과 수집 서비스, Claude Code statusLine 브리지, 플랫폼 실행분 토큰 집계.
+사용량 출처 확장 지점과 수집 서비스, Claude Code statusLine 브리지, 플랫폼 실행분 토큰 집계.
 
 - **값을 지어내지 않는다.** 출처가 주지 않은 사용률·초기화 시각·상태는 `None`이다. 초기화 시각이 지난
   창은 현재 값에서 뺀다(초기화 뒤 사용률은 알 수 없다).
@@ -105,7 +105,7 @@ statusLine 브리지(서버 없이):
 
 ```
 
-## 확장 지점 X13 `UsageSource`
+## 확장 지점 `UsageSource`
 
 ```python
 class UsageSource(Protocol):

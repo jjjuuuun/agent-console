@@ -27,6 +27,7 @@ PLUGIN_CONFIG_WARNING = "plugins.config"
 def plugin_infos(
     reports: Sequence[tuple[str, LoadReport]], redact: Callable[[str], str]
 ) -> list[PluginInfo]:
+    """로딩 보고를 `PluginInfo` 목록으로(오류 메시지·이유는 `redact`로 가린다)."""
     infos: list[PluginInfo] = []
     for group, report in reports:
         error = (
@@ -40,6 +41,7 @@ def plugin_infos(
                 group=group,
                 loaded=report.status == "loaded",
                 status=report.status,
+                reason=redact(report.reason) if report.reason else None,
                 error=error,
             )
         )

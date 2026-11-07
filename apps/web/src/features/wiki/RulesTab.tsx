@@ -36,6 +36,17 @@ const FIELDS = { [RULE_REFS]: RuleRefsField } as const;
 
 const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.code === ERROR_CODES.VERSION_CONFLICT || e.status === 412);
 
+/** 종류별 추가 열: 서버가 항목에 싣는 값(null이면 빈 칸). 빈 `applies_to` 목록은 "모든 페이지". */
+const EXTRA_COLUMNS: Readonly<Record<string, readonly { key: "appliesTo" | "pathTemplate" | "title"; mono: boolean; cell: (e: WikiRuleEntry) => string }[]>> = {
+  [KNOWN_WIKI_RULE_ENTRY_KINDS.WRITE]: [
+    { key: "appliesTo", mono: true, cell: (e) => (e.applies_to === undefined || e.applies_to === null ? "" : e.applies_to.length === 0 ? t.appliesAll : e.applies_to.join(", ")) },
+  ],
+  [KNOWN_WIKI_RULE_ENTRY_KINDS.TEMPLATE]: [
+    { key: "pathTemplate", mono: true, cell: (e) => e.path ?? "" },
+    { key: "title", mono: false, cell: (e) => e.title ?? "" },
+  ],
+};
+
 export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setParams, refresh, reportDirty }: WikiTabProps) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -174,6 +185,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
   const table = (kind: string, withValue: boolean) => {
     const rows = byKind(kind);
     if (rows.length === 0) return null;
+    const extras = EXTRA_COLUMNS[kind] ?? [];
     return (
       <section key={kind} aria-label={t.table[kind] ?? kind}>
         <h4 className="wiki-subtitle">{t.table[kind] ?? kind}</h4>
@@ -183,6 +195,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
               <th scope="col">{t.col.id}</th>
               {withValue ? <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.LINT ? t.col.severity : t.col.action}</th> : null}
               <th scope="col">{kind === KNOWN_WIKI_RULE_ENTRY_KINDS.TEMPLATE ? t.col.name : t.col.message}</th>
+              {extras.map((c) => <th key={c.key} scope="col">{t.col[c.key]}</th>)}
               <th scope="col">{t.col.source}</th>
             </tr>
           </thead>
@@ -192,6 +205,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
                 <td className="wiki-mono">{e.id}</td>
                 {withValue ? <td>{actionChip(e)}</td> : null}
                 <td>{e.label ?? ""}</td>
+                {extras.map((c) => <td key={c.key} className={c.mono ? "wiki-mono" : undefined}>{c.cell(e)}</td>)}
                 <td>{sourceCell(e.rule_id)}</td>
               </tr>
             ))}

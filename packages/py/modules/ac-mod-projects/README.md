@@ -68,7 +68,7 @@ True
 | `POST /projects/{id}/legacy/plan` | → `CopyPlan`(라이브러리의 옛 `project` 필드 정의 → 이 공간) | 404, 409 `feature_unavailable` |
 | `POST /projects/copy/plan` | `CopyPlanRequest` → `CopyPlan` | 400 같은 공간, 404 `project.not_found`, 409 `feature_unavailable`·`project.manifest_invalid` |
 | `POST /projects/copy/apply` | `CopyApplyRequest` → `CopyApplyResult`(바뀐 항목만 `conflict`) | 위 + 409 `project.config_readonly`, 422 비밀(아무것도 쓰지 않음) |
-| `GET /projects/copy/kinds?project=` | → `CopyKindInfo[]`(그 공간의 복사 종류 + `library`·`portable`, 기본 + X44 기여 종류) | 404 `project.not_found`, 409 `feature_unavailable`(공용인데 정의 모듈 없음) |
+| `GET /projects/copy/kinds?project=` | → `CopyKindInfo[]`(그 공간의 복사 종류 + `library`·`portable`, 기본 + 기여 종류) | 404 `project.not_found`, 409 `feature_unavailable`(공용인데 정의 모듈 없음) |
 | `GET /projects/copy/items?project=&kind=` | → `CopyItem[]`(그 공간의 정의 목록, 본문 없음) | 위 + 404 `not_found`(이 공간의 복사 종류가 아님) |
 | `GET /projects/folders?path=&hidden=` | → `FolderListing`(폴더 이름만) | 403 `folders.remote_disabled`, 4xx `folders.*` |
 | `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck`(겹침·기존 구성 개수·`suggested_id`·`config_dir`) | 403 |
@@ -88,12 +88,12 @@ True
 | `definitions.spaces` | 제공(`open(project_id) -> DefinitionStore`) | — |
 | `definitions.lookup`·`definitions.store` | 선택(라이브러리) | 라이브러리가 낀 복사 409 `feature_unavailable`, 공간 종류 = `ac-store` 기본 |
 | `definitions.references`(여러) | 선택 | 복사 계획에 `project.references_unavailable` 정보 |
-| `definitions.kind_contributions`(여러, X44) | 선택(공간 종류에 기여 종류를 더함 — `library=False` 포함, 옮길 수 있는 것만. 기여의 `references`는 `definitions.references`와 합쳐 참조 닫힘에) | 공간 종류 = 라이브러리 종류 |
+| `definitions.kind_contributions`(여러) | 선택(공간 종류에 기여 종류를 더함 — `library=False` 포함, 옮길 수 있는 것만. 기여의 `references`는 `definitions.references`와 합쳐 참조 닫힘에) | 공간 종류 = 라이브러리 종류 |
 | `definitions.reference_rewriters`(여러) | 선택(이름 바꾸기 복사의 참조 고치기) | 참조는 그대로, 결과 항목에 정보 이슈 |
 | `records.spaces` | 선택(`ProjectView.records_*`) | `records_state=unavailable`·`reason=link_disabled` |
 | `secrets.rules` | 선택 | 기본 비밀 규칙 |
 
-확장 지점 X35: 코드 선택 창 제공자는 entry point `agent_console.folder_dialogs`
+확장 지점(폴더 선택 창): 코드 선택 창 제공자는 entry point `agent_console.folder_dialogs`
 (`FolderDialogProvider{id, available(environ), pick(*, initial, title, timeout, cancel)}`)로 더한다.
 호스트 플러그인 로더(`agent_console_mod_projects.plugins:load_plugins`, 확장 `FOLDER_DIALOGS_EXTENSION`)가 서버 시작 때
 읽으므로 다른 플러그인처럼 서버 설정 `plugins.enabled`·`plugins.disabled`를 따르고 `server-info`에 나온다. 묶음 없이

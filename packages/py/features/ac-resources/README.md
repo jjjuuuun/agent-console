@@ -1,6 +1,6 @@
 # agent-console-resources
 
-리소스 종류(X14) 등록과 **실행 묶음(ResourceBundle) 조립**. 종류 이름·칸 이름은 이 패키지에 없다.
+리소스 종류 등록과 **실행 묶음(ResourceBundle) 조립**. 종류 이름·칸 이름은 이 패키지에 없다.
 
 - **종류 등록**: entry point `agent_console.resource_types`, 명시 모듈 목록, 또는 **선언형 데이터**
   (`<workspace>/resource-types/*.yaml`, 코드 없음). 등록 key = 리소스 정의의 `type`.

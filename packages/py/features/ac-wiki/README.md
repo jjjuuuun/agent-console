@@ -30,7 +30,7 @@ Agent Console 위키 핵심 라이브러리. 서버·실행·프로젝트를 모
   인라인 파싱은 끈다 — 인라인 토큰은 원문 위치를 주지 않고, 켜면 페이지 2,000개(20MB)에 약 10초가 걸려
   목표인 2초를 넘는다. 인라인 영역 안의 코드 조각·자동 링크·인라인 링크는 CommonMark 규칙 중 링크
   위치에 필요한 것만 원문에서 읽는다(참조 링크 `[글][이름]`은 읽지 않는다). 대안: mistune(원문 위치 약함),
-  정규식만(코드 블록 오판), `mdit-py-plugins` 위키 링크 플러그인(패턴이 고정 — R0 위반).
+  정규식만(코드 블록 오판), `mdit-py-plugins` 위키 링크 플러그인(패턴이 고정이라 사용자가 바꿀 수 없음).
 - **ruamel.yaml**: 패키지 기본 문법 데이터와 페이지 머리말(safe 로드). 흔한 머리말(`키: 값`, `키: [값, 값]`)은
   YAML 읽기와 결과가 같은 빠른 길로 읽는다(평이한 글자만, 숫자·참거짓·날짜처럼 읽힐 수 있는 값은 YAML로).
 - 사내: `agent-console-contracts`(모델·이슈 코드), `agent-console-safe-regex`(사용자 링크 패턴 — 시간·길이
@@ -99,7 +99,7 @@ pip install agent-console-wiki
 시험 도구 `agent_console_wiki.testing`: `MemoryWikiPages`(메모리 페이지 파일), `WikiPagesContractTests`
 (자기 `WikiPages` 구현을 같은 의미로 시험하는 계약 묶음 — pytest 필요).
 
-## 검색 색인 (X48)
+## 검색 색인
 
 색인은 **다시 만들 수 있는 캐시**다(페이지 파일이 진실). 프로토콜 `WikiSearchIndex`(`update`·`remove`·
 `rebuild`·`search`·`hashes`)와 두 구현: `ScanSearchIndex`(메모리에서 훑기, `scan`)와 하위 모듈
@@ -144,10 +144,10 @@ FTS5). 색인 파일 위치는 호출자가 준다(이 패키지는 고정하지
   폴더는 호출자 데이터). 저장 전 검사 `check_rules`(정규식·글롭·조건·모르는 동작·늘 거부·틀 파일·틀 변수).
 - **쓰기 판단** `check_write`: `applies_to` 글롭 → `when` → `require`·`deny_patterns`(맞은 줄 번호) → `reject`
   /`warn`(모르는 값 = warn + `wiki.unknown_action`). 비밀 검사 `WikiSecretPolicy`(쓴 주체 종류별 off·warn·
-  reject, 기본값 = 계약 `WikiSettings`), 보탬 검사 X50 `WikiWriteCheck`.
+  reject, 기본값 = 계약 `WikiSettings`), 보탬 검사 `WikiWriteCheck`.
 - **점검** `lint`: 기본 점검 셋(심각도·끄기는 문법 데이터) + 점검 규칙 + 쓰기 규칙 다시 보기(`wiki.rule_violation`,
   `lint.write_rules: false`로 끔).
-- **기록** X49 `WikiHistory`(`record`·`list`·`get`·`read`·`latest`·`summaries`·`changes`·`prune`),
+- **기록** `WikiHistory`(`record`·`list`·`get`·`read`·`latest`·`summaries`·`changes`·`prune`),
   `InMemoryWikiHistory`, 계약 묶음 `testing.WikiHistoryContractTests`(SQLite 구현 `sqlite.SqliteWikiHistory`는 아래).
 - **저장소** `WikiRepository`: 쓰기(`if_hash`·새 페이지만·크기·개수 한도)·미리보기(파일·기록·색인 불변)·
   옮기기(백링크 링크 문자열만 고침, 그사이 바뀐 페이지는 `conflicts`)·지우기·되돌리기·외부 변경 `scan`
@@ -229,7 +229,7 @@ no-temp [2]
   WikiEventPayload)`, type `wiki.<op>`)에는 본문·검색어 원문이 없다(크기·해시만).
 - **쓰기 한도**: `write_budget`(`take() -> bool`, 기본 구현 `WriteBudget(limit)`)을 write·move·delete가 하나씩
   쓴다. 실행 하나에 하나를 만들어 여러 묶음이 함께 쓴다.
-- **지침**: `instructions()`(= `wiki_instructions(access, targets)`)가 X30 `ToolProvision.instructions`에 넣을 글을
+- **지침**: `instructions()`(= `wiki_instructions(access, targets)`)가 `ToolProvision.instructions`에 넣을 글을
   만든다 — 위키마다 합친 규칙 지침(`include_rules_instructions`)과 경로 안내(`path_hint`, `WikiToolTarget.name`·
   `pages_dir`로 채움, `pages_dir`가 없는데 틀이 쓰면 안내 없음). 같은 글은 한 번.
 

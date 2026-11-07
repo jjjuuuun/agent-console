@@ -1,6 +1,6 @@
 # agent-console-backend-fake-agent
 
-모델 없이 **설정 데이터대로** 에이전트 실행(응답·도구·위임·되묻기·훅·실패·지연)을 흉내 내는 실행 백엔드(X3).
+모델 없이 **설정 데이터대로** 에이전트 실행(응답·도구·위임·되묻기·훅·실패·지연)을 흉내 내는 실행 백엔드.
 개발·테스트·E2E용. entry point `agent_console.backends:fake-agent`로 등록되고 표시 이름은 "가짜 에이전트(테스트용)"
 (`FAKE_BACKEND_TITLE`)다.
 

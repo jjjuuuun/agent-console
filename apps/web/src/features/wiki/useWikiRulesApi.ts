@@ -90,9 +90,10 @@ export function useWikiRuleFiles(space: WikiRulesSpace, id: string): UseQueryRes
 
 /**
  * 위키 규칙의 정의 종류 이름. 계약 스키마에는 이름이 없고(설치자 데이터) 규칙 원문의 `kind`만 알려 주므로 규칙 하나를 읽어 얻는다.
- * 규칙이 하나도 없으면 undefined — 복사할 규칙도 없다.
+ * `named`(`WikiInfo.rules_kind`)가 있으면 그것을 쓰고 읽지 않는다. null·생략(옛 서버)일 때만 규칙을 읽는 대체 경로다. 규칙이 하나도 없으면 undefined.
  */
-export function useWikiRulesKind(client: WikiClient, key: string, sampleId: string | undefined, enabled: boolean): string | undefined {
+export function useWikiRulesKind(client: WikiClient, key: string, sampleId: string | undefined, enabled: boolean, named?: string | null): string | undefined {
+  const known = named === undefined || named === null || named === "" ? undefined : named;
   const q = useQuery({
     queryKey: [...wikiKeys.rules(key), "kind", sampleId ?? ""] as const,
     queryFn: async (): Promise<string | null> => {
@@ -101,9 +102,9 @@ export function useWikiRulesKind(client: WikiClient, key: string, sampleId: stri
       const read = await client.getWikiRules(id);
       return read.value.rules.kind === "" ? null : read.value.rules.kind;
     },
-    enabled,
+    enabled: enabled && known === undefined,
     retry: false,
     staleTime: 60_000,
   });
-  return q.data ?? undefined;
+  return known ?? q.data ?? undefined;
 }

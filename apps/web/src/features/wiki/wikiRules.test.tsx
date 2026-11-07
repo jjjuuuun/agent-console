@@ -109,6 +109,32 @@ describe("공용 구성 › 위키 규칙", () => {
     expect(await screen.findByTestId("wiki-rule-conflict", {}, LONG)).toBeTruthy();
   });
 
+  it("버전 탭: /wiki/rules 경로로 목록을 읽고 ?project= 공간 클라이언트로 되돌린다", async () => {
+    const versions = [
+      { kind: "k-rules", id: "ra", version_hash: "hash-new-0001", saved_at: 1_700_000_100 },
+      { kind: "k-rules", id: "ra", version_hash: "hash-old-0002", saved_at: 1_700_000_000 },
+    ];
+    const listDefinitionVersions = vi.fn(async () => versions);
+    const restoreDefinitionVersion = vi.fn(async () => ({ value: versions[1], version_hash: "hash-new-0003" }));
+    const { clients } = rulesSetup("/wiki-rules/ra?tab=versions&prj=p1");
+    (clients.space as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({ listDefinitionVersions, restoreDefinitionVersion }));
+    await waitFor(() => expect(listDefinitionVersions).toHaveBeenCalledWith("/wiki/rules/ra"), LONG);
+    expect(clients.space as unknown).toHaveBeenCalledWith("p1");
+    fireEvent.click(await screen.findByRole("button", { name: /버전 메뉴 hash-old/ }, LONG));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "되돌리기…" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    fireEvent.click(within(dialog).getByRole("button", { name: "되돌리기" }));
+    await waitFor(() => expect(restoreDefinitionVersion).toHaveBeenCalledWith("/wiki/rules/ra", "hash-old-0002", {}, "rv1"), LONG);
+  });
+
+  it("공용 규칙 종류 이름은 WikiInfo.rules_kind를 쓰고, null일 때만 규칙 하나를 읽는다", async () => {
+    const getWikiRules = vi.fn(async () => ({ value: view(), version_hash: "rv1" }));
+    rulesSetup("/wiki-rules", { getWikiInfo: vi.fn(async () => ({ ...INFO, rules_kind: "named-kind" })), getWikiRules });
+    await screen.findByTestId("wiki-rules-screen", {}, LONG).catch(() => undefined);
+    await screen.findAllByText("규칙 가", {}, LONG);
+    expect(getWikiRules).not.toHaveBeenCalled();
+  });
+
   it("본문 파일 탭: 규칙이 가리키는데 없는 파일은 파일 없음 + [만들기]이고 연결 안 된 파일은 알린다", async () => {
     rulesSetup("/wiki-rules/ra?tab=files", { listWikiRulesFiles: vi.fn(async () => [{ path: "stray.md", size: 1 }]), readWikiRulesFile: vi.fn(async () => ({ text: "x", contentType: "text/markdown", size: 1, version_hash: "rv1" })) });
     expect((await screen.findAllByText("파일 없음", {}, LONG)).length).toBe(2);

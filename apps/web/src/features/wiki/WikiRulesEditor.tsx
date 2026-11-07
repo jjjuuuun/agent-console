@@ -20,7 +20,7 @@ import { VersionHistory } from "../versions";
 import { FailureBlock, ListSkeleton } from "./parts";
 import { WIKI_RULE_WIDGET_FIELDS } from "./ruleWidgets";
 import { WikiRuleFilesPanel, type RuleFileLink } from "./WikiRuleFilesPanel";
-import { classifyWikiError } from "./wikiErrors";
+import { classifyWikiError, type WikiFailure } from "./wikiErrors";
 import { useInvalidateWiki } from "./useWikiApi";
 import { useWikiRuleFiles, useWikiRulesView, type WikiRulesSpace } from "./useWikiRulesApi";
 import { WIKI_LIMITS, WIKI_RULES_SCREEN, type WikiRulesTabId } from "./wikiConfig";
@@ -29,6 +29,11 @@ import { wikiRulesMessages as t } from "./rulesScreenMessages";
 type Obj = Record<string, unknown>;
 const P = WIKI_RULES_SCREEN.params;
 const isConflict = (e: unknown): boolean => e instanceof ApiError && (e.code === ERROR_CODES.VERSION_CONFLICT || e.status === 412);
+/** 실패에 서버 메시지가 있으면 그 문구(종류마다 있거나 없다), 없거나 비었으면 undefined */
+const failureMessage = (kind: WikiFailure): string | undefined => {
+  const rec = kind as WikiFailure & { message?: unknown };
+  return typeof rec.message === "string" && rec.message !== "" ? rec.message : undefined;
+};
 const asSpecIssue = (i: WikiIssue): SpecIssue => i as unknown as SpecIssue;
 
 /** 규칙 문서가 가리키는 본문 파일(한 파일 참조들 먼저, 그 다음 목록 항목의 파일). 어느 속성이 파일을 가리키는지는 데이터(`wikiData.json`)다. */
@@ -218,7 +223,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       if (isConflict(e)) setConflict(true);
       else {
         const kind = classifyWikiError(e, t.editor.saveFailed);
-        setFailure(kind.kind === "unavailable" || kind.kind === "notFound" ? t.editor.saveFailed : "message" in kind && kind.message !== "" ? kind.message : t.editor.saveFailed);
+        setFailure(kind.kind === "unavailable" || kind.kind === "notFound" ? t.editor.saveFailed : failureMessage(kind) ?? t.editor.saveFailed);
       }
       setBaseHash(hash);
     } finally {
@@ -301,6 +306,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
           currentHash={serverHash}
           dirty={dirty}
           compare={false}
+          space={space.projectId}
           onRestored={() => {
             discard();
             void invalidate();
@@ -382,7 +388,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
           </ul>
         </Disclosure>
       )}
-      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t.tabs["label"] ?? ""} lazy />
+      <Tabs tabs={items} activeId={active} onChange={(next) => setParam(P.tab, next)} ariaLabel={t.tabsLabel} lazy />
       <ConfirmDialog open={confirmDelete} title={t.delete.title(name)} confirmLabel={t.delete.confirm} cancelLabel={t.delete.cancel} danger onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)}>
         <p>{t.delete.body}</p>
         {usedBy.length > 0 ? <p data-testid="wiki-rule-delete-usedby">{t.delete.usedBy(usedBy.length)}: {usedNames}</p> : space.projectId === null ? <p className="app-muted">{t.delete.library}</p> : null}

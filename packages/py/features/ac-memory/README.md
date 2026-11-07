@@ -5,13 +5,13 @@
 실행 엔진·에이전트 노드·로그 패키지는 모른다(import-linter로 막는다). 그래서 Agent Console 서버 없이
 다른 에이전트 프레임워크(SDK 직접 사용, MCP 서버)에서도 그대로 쓴다.
 
-- **저장소(X31)**: `MemoryStore` 프로토콜과 `InMemoryMemoryStore`.
+- **저장소**: `MemoryStore` 프로토콜과 `InMemoryMemoryStore`.
   - 쓰기마다 버전이 오르고 기록이 남는다.
   - `if_version`으로 충돌을 알린다.
   - 같은 항목에 대한 쓰기는 줄을 선다.
   - 지우기는 표시만 하고, 완전 삭제(`purge`)는 버전까지 지운다.
   - SQLite 구현은 하위 모듈 `sqlite`(`open_sqlite_memory_store`, 아래 "SQLite 저장소")다. 새 구현은 `testing.contract.MemoryStoreContractTests`를 상속해 같은 의미를 확인한다.
-- **범위 종류(X29)**: 어떤 범위를 무엇이라 부르고 범위 id를 어떻게 정할지는 데이터다.
+- **범위 종류**: 어떤 범위를 무엇이라 부르고 범위 id를 어떻게 정할지는 데이터다.
   - 패키지 기본 데이터는 `data/default_scope_kinds.yaml`(종류 3개)다.
   - 사용자 설정에서 끄거나(`include_default_scope_kinds: false`) 바꾸거나 더한다.
   - 범위 id는 접근 맥락의 `{/포인터}` 틀로 계산한다. 맥락 필드는 계약 `MemoryAccessContext`가 정한다.
@@ -38,7 +38,7 @@ pip install "agent-console-memory[sqlite]"  # + 하위 모듈 `sqlite`(SQLite �
 # 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> "agent-console-memory[sqlite]"
 ```
 
-의존: `agent-console-contracts`(모델), `agent-console-conditions`(틀의 JSON 포인터), `agent-console-secret-rules`(비밀 판정 기본값), `agent-console-registry`(X29 로더), `agent-console-safe-zip`(zip 가져오기 안전 규칙 — 위키 가져오기와 한 벌), `ruamel-yaml`(패키지 기본 데이터 읽기). extra `sqlite`: `sqlalchemy`(하위 모듈 `sqlite`의 표 정의와 질의). 최상위 `agent_console_memory`는 sqlalchemy 없이 import된다. SQLite 저장소를 쓰는 소비자(예: 서버 모듈)는 `agent-console-memory[sqlite]`에 의존한다.
+의존: `agent-console-contracts`(모델), `agent-console-conditions`(틀의 JSON 포인터), `agent-console-secret-rules`(비밀 판정 기본값), `agent-console-registry`(로더), `agent-console-safe-zip`(zip 가져오기 안전 규칙 — 위키 가져오기와 한 벌), `ruamel-yaml`(패키지 기본 데이터 읽기). extra `sqlite`: `sqlalchemy`(하위 모듈 `sqlite`의 표 정의와 질의). 최상위 `agent_console_memory`는 sqlalchemy 없이 import된다. SQLite 저장소를 쓰는 소비자(예: 서버 모듈)는 `agent-console-memory[sqlite]`에 의존한다.
 - `ruamel-yaml`은 무엇: YAML 읽기. 왜: 저장소 표준 YAML 라이브러리(정의 저장과 같다). 대안: JSON 데이터 파일(주석을 못 단다).
 - `sqlalchemy`는 무엇: SQLite 표 정의(`MetaData`)와 Core 질의. 왜: 서버 마이그레이션(Alembic)이 같은 표 정의와 비교할 수 있고 저장소 표준 접근 방식이다. 대안: 표준 `sqlite3` 직접 사용(의존이 없지만 마이그레이션 비교용 표 정의를 따로 둬야 한다).
 
@@ -213,17 +213,17 @@ server = create_sdk_mcp_server("memory", tools=[to_sdk_tool(s) for s in kit.spec
 
 ## 확장 지점
 
-| # | 무엇 | 방법 |
-| --- | --- | --- |
-| X29 | 범위 종류 | 데이터: `merge_scope_kinds(user={id: {label, description, id 틀}})`(id 단위로 통째로 바꿈, null = 끔). 계산: entry point `agent_console.memory_scope_kinds` = 인자 없는 함수 → `MemoryScopeKind` 목록(`resolver=`) 또는 `{id: 데이터}`. `load_scope_kind_plugins(new_scope_kind_registry())` → `plugin_scope_kinds(registry)` → `merge_scope_kinds(plugins=...)` |
-| X31 | 저장소 | `MemoryStore` 프로토콜 구현을 주입한다. 쓰기 전에 `prepare_write(policy, ...)`를 부르고 `testing.contract.MemoryStoreContractTests`로 같은 의미를 확인한다 |
-| — | 비밀 판정 | `MemorySecretGuard(scanner=<SecretScanner 구현>, mode="reject"\|"redact")`. 사용자 규칙은 `SecretRulesScanner(rules=default_rules().with_extra(...))` |
-| — | 도구 문구 | `MemoryToolkit(text=ToolText.from_mapping(...))` |
+| 무엇 | 방법 |
+| --- | --- |
+| 범위 종류 | 데이터: `merge_scope_kinds(user={id: {label, description, id 틀}})`(id 단위로 통째로 바꿈, null = 끔). 계산: entry point `agent_console.memory_scope_kinds` = 인자 없는 함수 → `MemoryScopeKind` 목록(`resolver=`) 또는 `{id: 데이터}`. `load_scope_kind_plugins(new_scope_kind_registry())` → `plugin_scope_kinds(registry)` → `merge_scope_kinds(plugins=...)` |
+| 저장소 | `MemoryStore` 프로토콜 구현을 주입한다. 쓰기 전에 `prepare_write(policy, ...)`를 부르고 `testing.contract.MemoryStoreContractTests`로 같은 의미를 확인한다 |
+| 비밀 판정 | `MemorySecretGuard(scanner=<SecretScanner 구현>, mode="reject"\|"redact")`. 사용자 규칙은 `SecretRulesScanner(rules=default_rules().with_extra(...))` |
+| 도구 문구 | `MemoryToolkit(text=ToolText.from_mapping(...))` |
 
 ## 직접 만든 부분(무엇 / 왜 / 대안)
 
 - 무엇: 저장소·버전·범위 계산·도구 묶음.
-- 무엇: 정리 규칙 실행(계획·적용)과 마크다운 zip 형식. 조건 판정은 `ac-conditions`를, zip·YAML은 표준 `zipfile`·`ruamel-yaml`을 쓴다(새 의존 없음). 대안: 정리를 SQL로 직접 — 조건이 사용자 데이터(X22 연산자 확장)라 SQL로 옮길 수 없다. 내보내기 형식으로 JSON 한 파일 — 사람이 읽고 git에 두기 어렵다.
+- 무엇: 정리 규칙 실행(계획·적용)과 마크다운 zip 형식. 조건 판정은 `ac-conditions`를, zip·YAML은 표준 `zipfile`·`ruamel-yaml`을 쓴다(새 의존 없음). 대안: 정리를 SQL로 직접 — 조건이 사용자 데이터(연산자 확장)라 SQL로 옮길 수 없다. 내보내기 형식으로 JSON 한 파일 — 사람이 읽고 git에 두기 어렵다.
 - 왜: 키 단위 명시 기록, 버전, 쓴 주체(실행·노드), 범위 격리가 필요하다. 사람이 고치는 모델이라 LLM 추출 없이 결정적이어야 한다.
 - 대안: mem0(LLM 추출·벡터 저장소 필요), MCP memory 서버(범위·버전 없음).
 

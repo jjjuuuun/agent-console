@@ -2,8 +2,8 @@
 
 Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게 위키 도구(검색·
 읽기·목록·링크·쓰기·옮기기·지우기)와 위키 규칙 지침을 준다. 실행 모듈(`mod-runs`)과 위키 모듈(`mod-wiki`)은
-서로를 모르고, 이 연동이 실행 범위(X26 `runs.scopes`)로 Run마다 에이전트 도구 공급자(X30
-`TOOL_PROVIDERS`)를 넣어 둘을 잇는다.
+서로를 모르고, 이 연동이 실행 범위(`runs.scopes`)로 Run마다 에이전트 도구 공급자
+(`TOOL_PROVIDERS`)를 넣어 둘을 잇는다.
 
 | 무엇 | 내용 |
 | --- | --- |
@@ -33,7 +33,7 @@ Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게
 - **저장 전 검사**는 저장하는 공간을 모른다. 단독 공간과(`projects.lookup`이 있으면) 모든 프로젝트 공간의 위키
   어디에도 없는 id만 경고한다.
 - **끄기**: `mod-wiki`나 이 연동이 꺼지면 실행은 그대로 끝나고, 위키 리소스를 붙인 노드마다 "백엔드가 적용하지
-  못한 칸" 경고(R13.5, `resource.slot_unsupported`)가 1건 난다. 이 연동이 꺼지면 위키 화면의
+  못한 칸" 경고(`resource.slot_unsupported`)가 1건 난다. 이 연동이 꺼지면 위키 화면의
   `capabilities.runs`가 거짓이다. 리소스 종류는 이 패키지가 설치돼 있으면 연동을 꺼도 등록돼 있다.
 - 위키 내용은 다른 에이전트에게 지시처럼 읽힐 수 있다(보안 경계가 아니다). 결과 머리 줄이 "참고 문서"임을
   알리고, 쓰기 권한은 리소스로, 내용은 위키 규칙(쓰기 규칙)으로 좁힌다. 파일을 직접 고치는 에이전트는 막지
@@ -49,8 +49,8 @@ Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게
   `{input}` + 줄바꿈)·`page_template`(페이지가 없을 때 쓸 위키 규칙 페이지 틀 id)·`title`(그 틀 제목)·`message`
   (기록 메모). 틀은 `ac-text-template`(`{이름}`만 치환)이고 변수는 `input`(앞 노드 값, 글이 아니면 JSON)·`node_id`·
   `run_id`·`graph_id`·`date`·`time`, 앞 노드 값이 객체면 그 최상위 키도 변수다.
-- **쓰기**: `ac-wiki` `compose_write`(위키 도구 `write`와 같은 방식) → `WikiRepository.write`. 쓰기 규칙·쓰기 검사
-  (X50)·비밀 검사·기록·검색 색인은 저장소 몫이다. 쓴 주체 = `WikiAuthor{kind: system, label: 노드 id, node_id,
+- **쓰기**: `ac-wiki` `compose_write`(위키 도구 `write`와 같은 방식) → `WikiRepository.write`. 쓰기 규칙·쓰기 검사·
+비밀 검사·기록·검색 색인은 저장소 몫이다. 쓴 주체 = `WikiAuthor{kind: system, label: 노드 id, node_id,
   node_path, run_id, root_run_id, graph_id}`. 위키 공간 = 이 Run의 `project_id`(없으면 단독 공간).
 - **결과**: 성공이면 출력 `out` = `{wiki, path, sha256, version, created, changed}`(본문 없음)와 RunEvent
   `wiki.write`(도구 호출과 같은 `WikiEventPayload`), 바뀌었으면 `notify`. 규칙 거부·비밀 거부·경로·절 없음·공간에
@@ -87,7 +87,7 @@ Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게
 
 ## 의존성: 무엇을 / 왜 / 대안
 
-- 사내: `agent-console-wiki`(도구 묶음 `WikiToolkit`·쓰기 한도), `agent-console-nodes-core`(X30 공급자
+- 사내: `agent-console-wiki`(도구 묶음 `WikiToolkit`·쓰기 한도), `agent-console-nodes-core`(공급자
   프로토콜·서비스 키), `agent-console-runtime`(`HostTool`), `agent-console-resources`(리소스 종류 베이스),
   `agent-console-store`(정의 종류 이름 `resource`), `agent-console-modkit`(모듈),
   `agent-console-text-template`(`wiki-update` 노드의 틀 치환 — 같은 틀 규칙을 SDD·리소스 종류도 쓴다. 대안 Jinja2는

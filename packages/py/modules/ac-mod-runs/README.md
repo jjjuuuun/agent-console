@@ -4,7 +4,7 @@
 
 - 경로: `POST/GET /runs`(`?root=` = 그 루트 아래 모든 자식 Run), `GET /runs/{id}`(`children` = 직접 자식, 만든 순), `POST /runs/{id}/cancel`(자식 Run에도 전파), `GET /runs/{id}/events`, 상호작용(`/runs/{id}/interactions…`, `GET /interactions`(`?root=` = 루트와 자식 Run의 것)), 이어 가기(`/runs/{id}/resume-options`, `POST /runs/{id}/resume` — 자식 Run은 409, 루트를 이어 간다), 디스크립터(`/node-types`·`/edge-types`·`/backends`·`/delegation-strategies`·`/interaction-kinds`·`/condition-operators`), 관측 탭 이벤트 접두어(`GET /observe-event-prefixes`), `GET /agents/{id}/activity`.
 - 자식 Run(중첩 팀, `ctx.run_child`): 엔진 자식 Run 준비자(`GraphRuntime.child_preparer`)에 `RunService.prepare_child`를 꽂아 일반 Run과 같은 준비자(`runs.preparers`) 검사·준비를 거친다. 서비스는 부모 Run 것(+ 노드가 더한 것)을 쓴다.
-- 조건 연산자(X22): 호스트 플러그인 로더가 `agent_console.condition_operators`를 묶음의 이름 붙은 레지스트리 `condition_operators`에 읽고(보고 그룹 같은 이름), 모듈이 연산자를 쓰는 노드·엣지 종류(`ac-conditions.OperatorConsumer`)에 그 레지스트리를 준다. 그래서 `plugins.enabled`로 끈 연산자는 목록·저장 전 검사·실행 판정에서 함께 빠진다.
+- 조건 연산자: 호스트 플러그인 로더가 `agent_console.condition_operators`를 묶음의 이름 붙은 레지스트리 `condition_operators`에 읽고(보고 그룹 같은 이름), 모듈이 연산자를 쓰는 노드·엣지 종류(`ac-conditions.OperatorConsumer`)에 그 레지스트리를 준다. 그래서 `plugins.enabled`로 끈 연산자는 목록·저장 전 검사·실행 판정에서 함께 빠진다.
 - 판정 근거 가림: 비밀 해석기를 만든 뒤 판정 근거를 만드는 노드·엣지 종류(`ac-conditions.RedactorConsumer`)에
   `secrets.redact`를 준다(`plugins.bind_redactor`). 근거는 자르기 전에 가려진다.
 - WS 토픽: `run:<id>`(이벤트 재생 → 실시간), `interactions`(대기 상호작용).

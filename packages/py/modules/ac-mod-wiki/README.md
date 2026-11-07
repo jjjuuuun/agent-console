@@ -14,7 +14,7 @@ Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크
   `?project=<공간 이름>`을 받는다.
 - WS 토픽 `wiki.changed`(본문 없음 — 화면은 다시 읽는다). 저장소는 알리지 않고 모듈이 결과를 보고 키트
   `LoopPublisher`로 낸다. 미리보기·`dry_run`은 알리지 않는다.
-- 정의 종류 기여(X44): 위키 규칙(라이브러리·프로젝트, 여러 본문 파일 — 지침·페이지 틀)과 위키
+- 정의 종류 기여: 위키 규칙(라이브러리·프로젝트, 여러 본문 파일 — 지침·페이지 틀)과 위키
   (`library=False`, 참조 추출 `rules` → 위키 규칙). 종류 이름·폴더 이름은 설치자 옵션(기본값은 패키지
   데이터 `data/defaults.json`).
 - 사용자 설정 섹션 `wiki`(`include_default_syntax`·`syntax`·`secret_scan`·`max_versions_per_page`·
@@ -24,13 +24,13 @@ Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크
   (`standalone_root`, 기본 워크스페이스 안 `wiki/`). 이름이 왔는데 연동이 없으면 409
   `wiki.spaces_unavailable`. 단독 공간의 위키 규칙은 앱 라이브러리(`definitions.store`에 규칙 종류가
   있을 때)를 읽고, 없으면 단독 루트를 읽는다.
-- 기록(X49): 계보 `wiki`(리비전은 `ac-wiki.sqlite`가 소유, 범위 `app`·`project`). 단독 공간 = 호스트 DB
+- 기록: 계보 `wiki`(리비전은 `ac-wiki.sqlite`가 소유, 범위 `app`·`project`). 단독 공간 = 호스트 DB
   (메모리 DB이거나 DB가 없으면 프로세스 메모리), 프로젝트 공간 = `records.spaces`의 그 폴더 기록 DB(없으면
   기록 없음 — 호스트 DB에 대신 쓰지 않는다).
-- 검색(X48): 사용자 `search_backend` → 설치자 `search.backend`(기본 `sqlite-fts`) → `search.fallback`
+- 검색: 사용자 `search_backend` → 설치자 `search.backend`(기본 `sqlite-fts`) → `search.fallback`
   (기본 `scan`). 색인 파일은 프로젝트 공간이면 공간이 준 `index_dir`, 단독이면 호스트 상태 폴더
   `wiki-index/`. 대체 방식이면 `GET /wiki/info`에 `wiki.search_degraded`.
-- 쓰기 검사(X50): 포트 `wiki.write_checks`(늘 켜짐, 설정 `enabled: false`로 끔) + entry point
+- 쓰기 검사: 포트 `wiki.write_checks`(늘 켜짐, 설정 `enabled: false`로 끔) + entry point
   `agent_console.wiki_write_checks`(설정 `wiki.write_checks[{id, enabled, options}]`로 켬, 값 = 검사 객체
   또는 옵션을 받는 공장).
 - 능력 `WikiInfo.capabilities`는 포트 유무로 계산한다(`runs` = `wiki.integrations`에 `runs`를 낸 연동).
@@ -44,7 +44,7 @@ REST — 파일을 직접 고친 것은 다음 읽기·`scan`에서 `external` �
 
 - 사내: `agent-console-wiki[sqlite]`(위키 핵심·SQLite 기록·FTS5 색인), `agent-console-store`(정의
   저장소·버전·기록 DB 모양), `agent-console-conditions`(쓰기·점검 규칙 연산자), `agent-console-registry`
-  (X48·X50 플러그인), `agent-console-secret-rules`(본문·정의 비밀 검사), `agent-console-safe-zip`(zip 상한),
+  (플러그인), `agent-console-secret-rules`(본문·정의 비밀 검사), `agent-console-safe-zip`(zip 상한),
   `agent-console-modkit[host]`(모듈·호스트). 새 외부 의존 없음(FastAPI·pydantic은 다른 모듈과 같다).
 
 ## 설치

@@ -18,7 +18,8 @@ export const wikiRulesMessages = {
   picked: "왼쪽에서 규칙을 고르면 여기서 고칠 수 있습니다.",
   loadFailed: "위키 규칙을 불러오지 못했습니다",
   off: { title: "위키 기능을 쓸 수 없습니다", body: "위키 기능이 꺼져 있어 규칙 목록을 불러올 수 없습니다." },
-  tabs: { label: "위키 규칙 탭", rules: "규칙", files: "본문 파일", versions: "버전" } as Readonly<Record<string, string>>,
+  tabsLabel: "위키 규칙 탭",
+  tabs: { rules: "규칙", files: "본문 파일", versions: "버전" } as Readonly<Record<string, string>>,
   usedBy: (names: string) => `이 규칙을 쓰는 위키: ${names}`,
   toast: { created: (name: string) => `‘${name}’ 규칙을 만들었습니다`, deleted: (name: string) => `‘${name}’ 규칙을 지웠습니다` },
   newDialog: {
