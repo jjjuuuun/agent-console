@@ -112,6 +112,7 @@ from .source_page import (
     encode_source_cursor,
     page_across_sources,
 )
+from .space_locate import DEFAULT_LOCATE_LIMIT, DEFAULT_LOCATE_REMEMBER, SpaceLocator
 from .spaces import (
     DEFINITIONS_SPACES_PORT,
     DefinitionSpaces,
@@ -126,6 +127,8 @@ from .yaml_io import atomic_write_bytes, dump_yaml, load_yaml_text, merge_into, 
 __all__ = [
     "AGENT_KIND",
     "DEFAULT_KINDS",
+    "DEFAULT_LOCATE_LIMIT",
+    "DEFAULT_LOCATE_REMEMBER",
     "DEFAULT_MAX_CONTENT_BYTES",
     "DEFINITIONS_SPACES_PORT",
     "GRAPH_KIND",
@@ -183,6 +186,7 @@ __all__ = [
     "RecordsVersionRepository",
     "RunRepository",
     "SourcePage",
+    "SpaceLocator",
     "SpaceStores",
     "SpacesUnavailable",
     "SqliteDatabase",

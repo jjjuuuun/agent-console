@@ -1,6 +1,7 @@
 """런타임 엔티티(design §2.3): Run, NodeRun, RunSnapshot, 커서 페이지 RunPage(1.7.0).
 
 1.8.0: `Run.has_children`(목록 페이지 행의 직접 자식 유무).
+1.9.0: 실행 위치 `RunLocation`(`GET /runs/{id}/locate`).
 """
 
 from collections.abc import Mapping
@@ -188,6 +189,23 @@ class RunPage(ContractModel):
     items: list[Run] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, description="다음 페이지 커서. null = 끝.")
     source: RecordSource = Field(description="이 페이지의 기록 출처(project·app).")
+
+
+class RunLocation(ContractModel):
+    """`GET /runs/{id}/locate` 응답: 그 Run이 있는 기록 공간(1.9.0).
+
+    Run 단위 경로(`GET /runs/{id}`·이벤트·상호작용·이어 가기·취소)에 `?project=`로 그대로 넘긴다.
+    서버는 이 프로세스가 아는 공간과 등록 프로젝트의 기록 DB(설치자 상한까지), 그리고 앱 기록을
+    찾는다. Run 본문은 주지 않는다(범위를 고른 뒤 그 범위로 읽는다). 없으면 404 `not_found`, 여러
+    곳이면 409 `run.ambiguous`.
+    """
+
+    project_id: str | None = Field(
+        default=None,
+        description=(
+            "Run이 있는 프로젝트 기록 공간의 등록 id. null = 앱 기록(`?project=` 없이 읽는다)."
+        ),
+    )
 
 
 class WaitInfo(ContractModel):

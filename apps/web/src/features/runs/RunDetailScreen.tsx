@@ -49,7 +49,7 @@ import { useObservePrefixes } from "./useObservePrefixes";
 import { delegationEdgeFor, deriveRunOverlay, isActiveRun, latestNodeRuns, runDurationMs, summarizeEvent, waitSeconds, formatTokensShort, totalTokens } from "./runsLib";
 import { useInteractionRespond } from "../interactions";
 import { useRunLookups } from "./useRunLookups";
-import { useRunView } from "./useRunView";
+import { runOpenState, runProjectHint, useRunView } from "./useRunView";
 import { useRunNodeEvents } from "./useRunNodeEvents";
 import "./runs.css";
 
@@ -95,7 +95,9 @@ export function RunDetailScreen() {
   const archPart = useLinkPart(LINK_PART_IDS.runsArchitectureTab);
   const memoryPart = useLinkPart(LINK_PART_IDS.runsMemoryChips);
   const wikiPart = useLinkPart(LINK_PART_IDS.runsWikiChanges);
-  const view = useRunView(id, { trace: flowPart.visible });
+  // 목록에서 열었으면 그 항목의 기록 공간으로 먼저 부른다(없으면 현재 프로젝트, 404면 서버가 위치를 찾는다)
+  const location = useLocation();
+  const view = useRunView(id, { trace: flowPart.visible, project: runProjectHint(location.state) });
   const observe = useObservePrefixes();
   const tabIds = useMemo(
     () => INSPECTOR_TABS.filter((tabId) => (tabId !== TRACE_TAB || flowPart.visible) && (tabId !== LOGS_TAB || logsPart.visible) && (tabId !== OBSERVE_TAB || observe.enabled) && (tabId !== ARCH_TAB || archPart.visible)),
@@ -115,7 +117,6 @@ export function RunDetailScreen() {
 
   const edgeId = params.get("edge");
   // 채팅 진행 줄 칩이 `#node=`·`#edge=` 해시로 연다. 해시를 읽어 선택으로 바꾼다(한 번).
-  const location = useLocation();
   const hashApplied = useRef("");
   useEffect(() => {
     if (location.hash === "" || hashApplied.current === location.hash) return;
@@ -309,7 +310,8 @@ export function RunDetailScreen() {
     return r === undefined ? undefined : lookups.graphName(r.graph_id, r.project_id);
   };
   const runHref = (runId: string, extra = "") => `/runs/${encodeURIComponent(runId)}${extra}`;
-  const openRun = (runId: string, extra = "") => void navigate(runHref(runId, extra));
+  // 자식·부모 Run은 같은 기록 공간에 있다
+  const openRun = (runId: string, extra = "") => void navigate(runHref(runId, extra), run === undefined ? undefined : { state: runOpenState(run) });
 
   // ---- 응답 / 취소
   const reloadAllInteractions = () => {
@@ -413,9 +415,9 @@ export function RunDetailScreen() {
         teamName: (gid) => lookups.graphName(gid) ?? gid,
         statusLabel: (st) => runStatusLabels[st] ?? st,
         shortId: shortRunId,
-        onOpen: (rid) => void navigate(`/runs/${encodeURIComponent(rid)}`),
+        onOpen: (rid) => void navigate(`/runs/${encodeURIComponent(rid)}`, run === undefined ? undefined : { state: runOpenState(run) }),
       }),
-    [graph, lookups, tree.children, groups, visible, navigate],
+    [graph, lookups, tree.children, groups, visible, navigate, run],
   );
   const extraNodeBadges = useMemo(() => Object.fromEntries(Object.keys(overlay.handledNodes).map((n) => [n, [dm.run.handled]])), [overlay.handledNodes]);
   // 세션 구분(5.7R.34): trace span 기준, 없으면 NodeRun의 backend_session_id. 세션 id를 아는 것이 없으면 칩·배지·세그먼트가 모두 없다

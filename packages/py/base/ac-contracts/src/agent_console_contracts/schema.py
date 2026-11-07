@@ -181,6 +181,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     # 런타임
     runs.Run,
     runs.RunPage,
+    runs.RunLocation,
     runs.NodeRun,
     runs.RunSnapshot,
     runs.WaitInfo,

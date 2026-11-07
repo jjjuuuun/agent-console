@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- 요청 11/08 후속: 대화 위치 찾기(`SpacedChatService.locate`)의 후보·기억 정책을 `agent_console_store.SpaceLocator`로 옮겼다(실행 위치 찾기와 공유). 동작·설정·`DEFAULT_LOCATE_LIMIT` 이름은 같다.
 - 요청 11/07 후속: `GET /conversations/{id}/locate`(`ConversationLocation`, 계약 0.14.7) — 대화 id → 그 대화가 있는 기록 공간(이 프로세스에서 연 공간 + 선택 포트 `projects.lookup`의 등록 프로젝트 기록 DB를 상한 `locate_max_projects`(기본 200)까지 읽기만, 앱 기록 = null). 없으면 404, 여러 곳이면 409 `conversation.ambiguous`(`ConversationAmbiguousError`). 상세 `GET /conversations/{id}`는 그대로(`?project=` 없이 다른 공간을 대신 읽지 않음). WS `conversation:<id>`도 `service_of` → `locate`로 아직 열지 않은 프로젝트 기록 DB의 대화를 찾는다(작업 스레드에서). 새 모듈 설정 `locate_max_projects`.
 - 6R.12: `GET /conversations/page`(`ConversationPage`, `cursor`·`limit`·`graph_id`·`archived`·`project`·`source`, 폴더 기록 끝 → `source=app` 잇기, Q14), 옛 `GET /conversations` OpenAPI deprecated, `InvalidCursor` → 400 `bad_request`.
 

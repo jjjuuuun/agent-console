@@ -8,6 +8,8 @@
 - ``ResumeError`` → 그 ``code``(``not_found``·``run_not_resumable`` 등)와 ``details``. 자식 Run
   거절(``details.root_run_id``)이면 ``fix`` = [맨 위 실행 열기](역할 ``runs``, id = 루트 Run) —
   문구·역할은 ``ChildResumeFix`` 데이터(``error_map(child_resume=)``).
+- ``RunAmbiguousError``(같은 Run id가 여러 기록 공간에 있음, 요청 11/08 후속) → 409
+  ``run.ambiguous``(``details.id``·``details.project_ids``).
 - ``RunNotFoundError``·``NodeTypeNotFoundError``·``BackendNotFoundError``·``UnknownBackendError`` →
   ``not_found``.
 - ``ProbeUnsupportedError``(백엔드가 연결 테스트 능력이 없음) → 409 ``backend.probe_unsupported``
@@ -71,6 +73,28 @@ class RunNotFoundError(LookupError):
     def __init__(self, run_id: str) -> None:
         super().__init__(f"Run {run_id}이(가) 없습니다")
         self.run_id = run_id
+
+
+class RunAmbiguousError(Exception):
+    """같은 Run id가 여러 기록 공간에 있다(409 ``run.ambiguous``).
+
+    ``project_ids`` = 찾은 곳(None = 호스트 DB, 앱 기록).
+    """
+
+    def __init__(self, run_id: str, project_ids: Iterable[str | None]) -> None:
+        super().__init__(f"Run {run_id}이(가) 여러 기록 공간에 있습니다")
+        self.run_id = run_id
+        self.project_ids = list(project_ids)
+
+
+def _run_ambiguous(exc: Exception) -> ErrorReply:
+    if not isinstance(exc, RunAmbiguousError):  # pragma: no cover
+        return ErrorReply(code=ErrorCodes.RUN_AMBIGUOUS)
+    return ErrorReply(
+        code=ErrorCodes.RUN_AMBIGUOUS,
+        message="같은 실행이 여러 기록 공간에 있습니다. 프로젝트를 골라 여세요",
+        details={"id": exc.run_id, "project_ids": exc.project_ids},
+    )
 
 
 class NodeTypeNotFoundError(LookupError):
@@ -440,6 +464,7 @@ _BASE_ERROR_MAP: dict[type[Exception], ErrorMapping] = {
     UnknownInteractionError: _unknown_interaction,
     InteractionClosedError: _closed,
     RunNotFoundError: ErrorCodes.NOT_FOUND,
+    RunAmbiguousError: _run_ambiguous,
     NodeTypeNotFoundError: ErrorCodes.NOT_FOUND,
     BackendNotFoundError: ErrorCodes.NOT_FOUND,
     UnknownBackendError: ErrorCodes.NOT_FOUND,
@@ -472,6 +497,7 @@ __all__ = [
     "LoginPayloadTooLargeError",
     "NodeTypeNotFoundError",
     "PortConfigError",
+    "RunAmbiguousError",
     "RunNotFoundError",
     "RunPreflightError",
     "RunQueryError",

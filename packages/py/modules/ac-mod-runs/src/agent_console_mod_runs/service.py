@@ -65,7 +65,13 @@ from agent_console_runtime import (
 )
 from agent_console_store import NotFound, RecordsUnavailable, StoreError, UnknownSpace
 
-from .errors import DefinitionReadError, RunPreflightError, issues_from_errors
+from .errors import (
+    DefinitionReadError,
+    RunAmbiguousError,
+    RunNotFoundError,
+    RunPreflightError,
+    issues_from_errors,
+)
 from .plugins import condition_operators
 from .ports import (
     RUN_DEFINITIONS,
@@ -671,6 +677,33 @@ class RunService:
             return found_in
         found: Run | None = self._runs.get(run_id)
         return found
+
+    def locate(self, run_id: str) -> str | None:
+        """그 Run이 있는 기록 공간(등록 id, None = 호스트 DB·앱 기록, 요청 11/08 후속).
+
+        실행 중이면 손잡이의 ``project_id``(기록 공간이 있을 때만). 아니면 ``records``의 위치
+        찾기(이 프로세스가 아는 공간 → 등록 프로젝트 기록 DB(상한까지) → 호스트 DB, 읽기만).
+        기록 공간이 없으면 호스트 DB에 있을 때 None.
+
+        Raises:
+            RunNotFoundError: 어디에도 없다.
+            RunAmbiguousError: 여러 곳에 있다(``project_ids``).
+        """
+        records = self.records
+        handle = self.runtime.get(run_id)
+        if handle is not None:
+            spaced = records is not None and records.spaced
+            return handle.run.project_id if spaced else None
+        if records is None:
+            if self._runs.get(run_id) is None:
+                raise RunNotFoundError(run_id)
+            return None
+        found = records.locate(run_id)
+        if not found:
+            raise RunNotFoundError(run_id)
+        if len(found) > 1:
+            raise RunAmbiguousError(run_id, found)
+        return found[0]
 
     def resume_for(self, project_id: str | None) -> ResumeService:
         """그 프로젝트 공간의 Run을 이어 가는 서비스(없으면 호스트 기본 ``resume``)."""

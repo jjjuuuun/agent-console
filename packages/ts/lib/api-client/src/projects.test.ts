@@ -214,6 +214,25 @@ describe("프로젝트 사본 항목 삭제 (요청 11/07 후속)", () => {
   });
 });
 
+describe("Run 단위 호출의 ?project=·위치 찾기 (요청 11/08)", () => {
+  it("project를 주면 상세·이벤트·상호작용 경로에 붙고, 생략하면 주소가 그대로다", async () => {
+    const { rest, calls } = server(() => ({ body: { project_id: "p1" } }));
+    await rest.getRun("r1", "p 1");
+    expect(last(calls).path).toBe("/runs/r1?project=p%201");
+    await rest.getRun("r1", null);
+    expect(last(calls).path).toBe("/runs/r1");
+    await rest.listRunEvents("r1", { since_seq: 3, project: "p1" });
+    expect(last(calls).path).toBe("/runs/r1/events?since_seq=3&project=p1");
+    await rest.listRunInteractions("r1", "p1");
+    expect(last(calls).path).toBe("/runs/r1/interactions?project=p1");
+    await rest.listRunInteractions("r1");
+    expect(last(calls).path).toBe("/runs/r1/interactions");
+    const found = await rest.locateRun("r/1");
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/runs/r%2F1/locate" });
+    expect(found.project_id).toBe("p1");
+  });
+});
+
 describe("대화 단위 호출의 ?project= (요청 11/07)", () => {
   it("project를 주면 상세·수정·삭제·턴·보내기·대기열 경로에 붙고, 생략하면 주소가 그대로다", async () => {
     const { rest, calls } = server(() => ({ body: { id: "c1" } }));

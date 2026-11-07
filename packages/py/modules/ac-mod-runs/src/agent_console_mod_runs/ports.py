@@ -44,6 +44,10 @@
 - 선택 ``records.spaces``(5.7R.33y2): 공간 이름(접두 + ``project_id``) → 프로젝트 기록 DB 핸들
   (``agent_console_store.RecordsSpaces``). 있으면 ``project_id``가 있는 Run은 그 기록 DB에만 쓰고
   ``?project=`` 조회는 거기서 읽는다. 없으면 호스트 DB.
+- 선택 ``projects.lookup``(요청 11/08 후속): 등록 프로젝트 목록(``list_projects`` - 항목의 ``id``만
+  쓴다). 있으면 ``GET /runs/{id}/locate``와 WS ``run:<id>``가 아직 열지 않은 프로젝트 기록 DB에서도
+  Run을 찾는다(``records.spaces``가 있을 때만, 상한 ``locate_max_projects``). 없으면 이 프로세스가
+  아는 공간과 앱 기록만 본다.
 """
 
 from __future__ import annotations
@@ -326,6 +330,19 @@ class ResumeHandler(Protocol):
         ...
 
 
+class ProjectLike(Protocol):
+    """등록 프로젝트 하나 중 이 모듈이 쓰는 부분(``agent_console_contracts.Project``가 만족)."""
+
+    @property
+    def id(self) -> str: ...
+
+
+class ProjectListing(Protocol):
+    """``projects.lookup`` 중 이 모듈이 쓰는 부분(등록 프로젝트 목록)."""
+
+    def list_projects(self) -> Sequence[ProjectLike]: ...
+
+
 type WorkspaceSettingsReader = Callable[[], WorkspaceSettings]
 """``workspace.settings`` 포트 모양."""
 
@@ -378,6 +395,9 @@ RECORDS_SPACES: PortKey[RecordsSpaces] = PortKey(
 """선택(5.7R.33y2): 있으면 ``project_id``가 있는 Run은 그 프로젝트 기록 DB에 쓴다(보통
 ``link-projects-records``가 준다). 없으면 호스트 DB(기능 단독)."""
 
+PROJECTS_LOOKUP: PortKey[ProjectListing] = PortKey("projects.lookup", "프로젝트 읽기")
+"""선택(요청 11/08 후속): 실행 위치 찾기가 볼 등록 프로젝트 id."""
+
 RUNS_MOVE: PortKey[Any] = PortKey("runs.move_hook", "대화 옮기기에 거는 Run 옮기기 훅")
 """제공(5.7R.33j2): 대화를 프로젝트 기록 DB로 옮길 때 그 대화의 Run을 같은 작업으로 옮기는 훅
 (``ConversationRunMove`` - ``busy``·``prepare``). 보통 ``link-chat-runs``가 받아 대화 모듈의
@@ -398,6 +418,7 @@ __all__ = [
     "DEFINITIONS_LOOKUP",
     "INTERACTIONS_PORT",
     "INTERACTIONS_UPDATED",
+    "PROJECTS_LOOKUP",
     "RECORDS_SPACES",
     "RESUME_HANDLERS",
     "RUNS_EVENT",
@@ -419,6 +440,8 @@ __all__ = [
     "DefinitionLookup",
     "DefinitionSource",
     "PreparationLike",
+    "ProjectLike",
+    "ProjectListing",
     "Redactor",
     "ResumeHandler",
     "RunChildScoper",

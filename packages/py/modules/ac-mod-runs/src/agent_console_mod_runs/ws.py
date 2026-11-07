@@ -1,7 +1,9 @@
 """WS 토픽 처리기(design §5.3, §R14.4): ``run:<id>``·``interactions``.
 
-- ``run:<id>``: 버스 구독을 먼저 연 뒤 저장소에서 ``since_seq`` 다음을 재생하고, seq로 중복을
-  버린다.
+- ``run:<id>``: 구독에 ``?project=``가 없으므로, 이 프로세스가 모르는 Run이면 서비스의 위치
+  찾기(``RunService.locate``, 등록 프로젝트 기록 DB를 읽기만, 작업 스레드에서)로 자리를 찾아
+  기억한 뒤 그 자리에서 읽는다(요청 11/08 후속). 버스 구독을 먼저 연 뒤 저장소에서
+  ``since_seq`` 다음을 재생하고, seq로 중복을 버린다.
   실시간 이벤트에 빈 seq가 보이면(느린 구독자라 버려짐) 저장소에서 메운다(저장 후 발행 원칙).
 - ``interactions``(전역): 허브 구독을 먼저 연 뒤 현재 대기 목록을 ``interaction.updated``로 하나씩
   보내고, 이후 상태가 바뀔 때마다 보낸다(재구독하면 대기 목록을 다시 보낸다).
@@ -9,6 +11,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from agent_console_contracts import (
@@ -28,6 +31,7 @@ from agent_console_modkit import (
 )
 from agent_console_runtime import InMemoryEventBus
 
+from .errors import RunAmbiguousError, RunNotFoundError
 from .interactions import INTERACTIONS_TOPIC, InteractionService
 from .service import RunService
 
@@ -47,7 +51,7 @@ def topic_handlers(
 
     async def run_topic(req: WsSubscribeRequest) -> WsForward | WsReject | None:
         run_id = req.target
-        if service.current_run(run_id) is None:
+        if service.current_run(run_id) is None and not await _located(service, run_id):
             return WsReject(ErrorCodes.NOT_FOUND, f"Run이 없습니다: {run_id}")
 
         async def forward(send: WsSend) -> None:
@@ -62,6 +66,15 @@ def topic_handlers(
         return forward
 
     return {f"{RUN_TOPIC}:": run_topic, INTERACTIONS_TOPIC: interactions_topic}
+
+
+async def _located(service: RunService, run_id: str) -> bool:
+    """위치 찾기로 그 Run의 자리를 찾아 기억했나(없음·모호 = 거짓, 디스크를 읽어 작업 스레드)."""
+    try:
+        await asyncio.to_thread(service.locate, run_id)
+    except (RunNotFoundError, RunAmbiguousError):
+        return False
+    return service.current_run(run_id) is not None
 
 
 async def _forward_run(

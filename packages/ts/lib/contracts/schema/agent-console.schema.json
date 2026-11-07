@@ -6,13 +6,13 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.14.7",
+    "CONTRACTS_VERSION": "0.14.8",
     "CONTRACT_VERSIONS": {
-      "common": "1.13.0",
+      "common": "1.14.0",
       "resources": "1.1.0",
       "logs": "1.2.0",
       "definitions": "1.7.0",
-      "runs": "1.8.0",
+      "runs": "1.9.0",
       "usage": "1.1.0",
       "projects": "3.6.0",
       "chat": "1.4.0",
@@ -200,6 +200,7 @@
       "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
       "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
       "CONVERSATION_AMBIGUOUS": "conversation.ambiguous",
+      "RUN_AMBIGUOUS": "run.ambiguous",
       "SDD_NOT_FOUND": "sdd.not_found",
       "SDD_DOCUMENT_MISSING": "sdd.document_missing",
       "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
@@ -281,6 +282,7 @@
       "project.records_unavailable": 409,
       "chat.session_unavailable": 409,
       "conversation.ambiguous": 409,
+      "run.ambiguous": 409,
       "sdd.not_found": 404,
       "sdd.document_missing": 404,
       "sdd.template_exists": 409,
@@ -1026,6 +1028,7 @@
       "RunChildStartedPayload",
       "RunEvent",
       "RunLifecycleEvent",
+      "RunLocation",
       "RunPage",
       "RunReplyEvent",
       "RunReplyPayload",
@@ -21871,6 +21874,25 @@
         "payload"
       ],
       "title": "RunLifecycleEvent",
+      "type": "object"
+    },
+    "RunLocation": {
+      "description": "`GET /runs/{id}/locate` 응답: 그 Run이 있는 기록 공간(1.9.0).\n\nRun 단위 경로(`GET /runs/{id}`·이벤트·상호작용·이어 가기·취소)에 `?project=`로 그대로 넘긴다.\n서버는 이 프로세스가 아는 공간과 등록 프로젝트의 기록 DB(설치자 상한까지), 그리고 앱 기록을\n찾는다. Run 본문은 주지 않는다(범위를 고른 뒤 그 범위로 읽는다). 없으면 404 `not_found`, 여러\n곳이면 409 `run.ambiguous`.",
+      "properties": {
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Run이 있는 프로젝트 기록 공간의 등록 id. null = 앱 기록(`?project=` 없이 읽는다)."
+        }
+      },
+      "title": "RunLocation",
       "type": "object"
     },
     "RunPage": {

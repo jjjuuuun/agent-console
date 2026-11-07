@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- 요청 11/08 후속: `GET /runs/{id}/locate`(`RunLocation`, 계약 0.14.8) — Run id → 그 Run이 있는 기록 공간(이 프로세스가 아는 공간 + 선택 포트 `projects.lookup`의 등록 프로젝트 기록 DB를 상한 `locate_max_projects`(기본 200)까지 읽기만, 앱 기록 = null, 실행 중이면 손잡이의 `project_id`). 없으면 404, 여러 곳이면 409 `run.ambiguous`(`RunAmbiguousError`). 찾은 공간은 `run_id` 자리로 기억한다(`SpaceRecorder.locate`, `agent_console_store.SpaceLocator` - 대화와 같은 정책). WS `run:<id>`도 모르는 Run이면 `RunService.locate`로 찾는다(작업 스레드에서). 새 모듈 설정 `locate_max_projects`, 새 공개 이름 `PROJECTS_LOOKUP`·`RunAmbiguousError`. 표 변경 없음.
 - 요청 11/07 후속: `check_project(..., graph=)` — 저장본 대신 초안 그래프를 같은 출처·범위로 검사.
 - 요청 11/07: `RunService.check_project(graph_id, project_id)` — 그 프로젝트에서 실행할 때와 같은 정의 출처(`definitions_for`)·실행 범위(`scope`)로 검증(공간 팀 구성 목록 검증 요약이 쓴다).
 - 6R.19 서버 후속: `GET /runs/page`에 `agent_id`·`conversation_id`·`root`(옛 `GET /runs`와 같은 뜻), 행마다 `has_children`(계약 0.13.2 `Run.has_children`). 커서·출처 잇기 규칙 그대로.

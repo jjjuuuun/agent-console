@@ -1,7 +1,12 @@
 /** 실행(Run) REST: 생성·조회·취소·추적·이벤트·위임 집계·이어 가기. */
 import type { CreateRunRequest, HandoffMatrix, ResumeOptions, Run, RunEvent, RunPage, RunSnapshot, RunStatus, Trace } from "@agent-console/contracts";
+import type { RunLocation } from "@agent-console/contracts/runs";
 import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, RecordsMoveRequest, RecordsMoveResult } from "@agent-console/contracts/projects";
-import { enc, query, type RestIo } from "../io";
+import { enc, query, SPACE_PARAM, withQueryParam, type RestIo } from "../io";
+
+/** Run 단위 호출의 기록 공간(`?project=`). null·undefined·빈 문자열 = 붙이지 않음(앱 기록 또는 서버가 아는 자리). */
+export type RunSpace = string | null | undefined;
+const at = (path: string, project: RunSpace): string => (project === null || project === undefined || project === "" ? path : withQueryParam(path, SPACE_PARAM, project));
 
 /** GET `/runs` 필터(§R9.5). 값이 없는 키는 보내지 않는다. */
 export interface ListRunsParams {
@@ -56,6 +61,8 @@ export interface ListRunEventsParams {
   since_seq?: number;
   /** 이 노드 id가 `node_path`에 있는 이벤트만(하위 그래프 안 이벤트 포함, 서버 6R.12). */
   node?: string;
+  /** 그 Run이 있는 기록 공간(`?project=`, `locateRun`의 `project_id`). 생략 = 앱 기록 또는 서버가 아는 자리. */
+  project?: string;
 }
 
 export interface RunsClient {
@@ -69,8 +76,16 @@ export interface RunsClient {
   listRuns(params?: ListRunsParams): Promise<Run[]>;
   /** 실행 목록 커서 페이지(`GET /runs/page`). `next_cursor`가 null이면 끝, 응답 `source`는 그 페이지의 출처. */
   runsPage(params?: RunsPageParams): Promise<RunPage>;
-  /** Run 스냅샷. `children`은 직접 자식 Run(만든 순, 서버가 채우면 늘 배열). */
-  getRun(id: string): Promise<RunSnapshot>;
+  /**
+   * Run 스냅샷. `children`은 직접 자식 Run(만든 순, 서버가 채우면 늘 배열).
+   * `project` = 그 Run이 있는 기록 공간(`?project=`). 없는 공간이면 `ApiError` 404 — `locateRun`으로 찾는다.
+   */
+  getRun(id: string, project?: RunSpace): Promise<RunSnapshot>;
+  /**
+   * Run이 있는 기록 공간(`GET /runs/{id}/locate`, 계약 0.14.8). `project_id`를 Run 단위 호출의 `project`로 넘긴다(null = 앱 기록).
+   * 없으면 `ApiError` 404 `not_found`, 여러 공간에 있으면 409 `run.ambiguous`(`details.project_ids`). 옛 서버는 404/405.
+   */
+  locateRun(id: string): Promise<RunLocation>;
   cancelRun(id: string): Promise<Run>;
   getRunTrace(id: string): Promise<Trace>;
   listRunEvents(id: string, params?: ListRunEventsParams): Promise<RunEvent[]>;
@@ -90,7 +105,8 @@ export function createRunsClient(io: RestIo): RunsClient {
     createRun: (req) => io.request("POST", "/runs", { body: req }),
     listRuns: (params) => io.request("GET", `/runs${query(params)}`),
     runsPage: (params) => io.request("GET", `/runs/page${query(params)}`),
-    getRun: (id) => io.request("GET", `/runs/${enc(id)}`),
+    getRun: (id, project) => io.request("GET", at(`/runs/${enc(id)}`, project)),
+    locateRun: (id) => io.request("GET", `/runs/${enc(id)}/locate`),
     cancelRun: (id) => io.request("POST", `/runs/${enc(id)}/cancel`),
     getRunTrace: (id) => io.request("GET", `/runs/${enc(id)}/trace`),
     listRunEvents: (id, params) => io.request("GET", `/runs/${enc(id)}/events${query(params)}`),

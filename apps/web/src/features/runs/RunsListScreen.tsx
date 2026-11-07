@@ -25,6 +25,7 @@ import { RunsTable } from "./RunsTable";
 import { RunStartDialog } from "./RunStartDialog";
 import { runStartMessages as startText } from "./runStartMessages";
 import { useRunLookups } from "./useRunLookups";
+import { runOpenState } from "./useRunView";
 import { runStatusLabels, runsMessages as t } from "./messages";
 import { DEFAULT_PERIOD, PERIOD_OPTIONS, RUN_LIST_POLL_MS, RUN_PAGE_SIZE, WAITING_RUN_STATUS } from "./runsConfig";
 import { activeCounts, isActiveRun, periodSince } from "./runsLib";
@@ -219,7 +220,7 @@ export function RunsListScreen() {
           nowMs={nowMs}
           graphName={graphName}
           conversationTitle={conversationTitle}
-          onOpen={(r) => void navigate(runHrefs.run(r.id))}
+          onOpen={(r) => void navigate(runHrefs.run(r.id), { state: runOpenState(r, runsQ.sourceOf.get(r.id)) })}
           onCancel={setCancelTarget}
           hrefs={runHrefs}
           sourceBreaks={runsQ.sourceBreaks}

@@ -1,6 +1,6 @@
 /** 상호작용(되묻기) REST. */
 import type { Interaction, InteractionStatus } from "@agent-console/contracts";
-import { enc, query, type RestIo } from "../io";
+import { enc, query, SPACE_PARAM, withQueryParam, type RestIo } from "../io";
 
 /** GET `/interactions` 필터. `status: "pending"`이면 대기 목록. */
 export interface ListInteractionsParams {
@@ -13,7 +13,8 @@ export interface ListInteractionsParams {
 
 export interface InteractionsClient {
   listInteractions(params?: ListInteractionsParams): Promise<Interaction[]>;
-  listRunInteractions(runId: string): Promise<Interaction[]>;
+  /** 그 Run의 상호작용. `project` = 그 Run이 있는 기록 공간(`?project=`, 생략 = 앱 기록 또는 서버가 아는 자리). */
+  listRunInteractions(runId: string, project?: string | null): Promise<Interaction[]>;
   /**
    * 상호작용에 응답한다. 이미 닫혔으면 `ApiError`(409 `interaction_closed`, `isInteractionClosed`로 구분),
    * 응답이 `response_schema`에 안 맞으면 422 `validation_failed`.
@@ -24,7 +25,10 @@ export interface InteractionsClient {
 export function createInteractionsClient(io: RestIo): InteractionsClient {
   return {
     listInteractions: (params) => io.request("GET", `/interactions${query(params)}`),
-    listRunInteractions: (runId) => io.request("GET", `/runs/${enc(runId)}/interactions`),
+    listRunInteractions: (runId, project) => {
+      const path = `/runs/${enc(runId)}/interactions`;
+      return io.request("GET", project === null || project === undefined || project === "" ? path : withQueryParam(path, SPACE_PARAM, project));
+    },
     respondInteraction: (runId, interactionId, response) =>
       io.request("POST", `/runs/${enc(runId)}/interactions/${enc(interactionId)}/respond`, { body: { response } }),
   };

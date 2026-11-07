@@ -168,6 +168,21 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 복사(대상 한 트랜잭션, 같은 키는 건너뜀) → 확인(행 수·값) → 원본 삭제(원본 한 트랜잭션) 순서로 옮기고,
 실패하면 대상을 되돌린다(`run_moves`가 여러 작업을 한 흐름으로 묶는다). 모듈 docstring에 실행 가능한 예가 있다.
 
+## 기록 id로 공간 찾기 (`SpaceLocator`)
+
+호스트 DB와 프로젝트 기록 DB에 나뉘어 저장되는 기록(대화·실행)을 id 하나로 찾는다. 기록 종류는 모르고 "그 자리에
+그 id가 있나"(`has`)만 받는다. 아는 공간 → 등록 공간 id(상한 `limit`) → 호스트(None) 순으로 보고, 하나에서 찾으면
+기억해 다음에는 그 자리만 다시 확인한다. 없음·모호의 해석(404·409)은 호출자 몫이다.
+
+```python
+>>> from agent_console_store import SpaceLocator
+>>> rows = {None: {"a"}, "p1": {"b"}, "p2": {"b"}}
+>>> loc = SpaceLocator(lambda place, key: key in rows[place], project_ids=lambda: ["p1", "p2"])
+>>> loc.find("a"), loc.find("b"), loc.find("z")
+([None], ['p1', 'p2'], [])
+
+```
+
 ## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`)
 
 정의를 다루는 모듈은 요청의 공간 이름(REST `?project=<이름>`)으로 저장소를 고른다. 이름이 없으면 기본(라이브러리),

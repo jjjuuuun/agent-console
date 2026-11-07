@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_console_contracts import x_ui
 from agent_console_modkit import EnvSetting, RemovedSetting, SeedSetting, SettingsCompat
+from agent_console_store import DEFAULT_LOCATE_LIMIT
 
 DEFAULT_RUN_FILES_DIR = Path("runs")
 """실행 묶음 파일 폴더(상태 폴더 기준 상대 경로)."""
@@ -209,6 +210,16 @@ class RunsModuleSettings(BaseModel):
             "이어받는다)."
         ),
         json_schema_extra=x_ui(tier="advanced"),
+    )
+    locate_max_projects: int = Field(
+        default=DEFAULT_LOCATE_LIMIT,
+        ge=0,
+        title="실행 위치 찾기 프로젝트 수 상한",
+        description=(
+            "주소로 바로 연 실행이 어느 프로젝트 기록에 있는지 찾을 때 읽는 등록 프로젝트 기록 DB "
+            "최대 개수(0 = 이 서버가 이미 아는 프로젝트와 앱 기록만)."
+        ),
+        json_schema_extra=x_ui(tier="advanced", unit="개"),
     )
     observe_event_prefixes: list[str] | None = Field(
         default=None,

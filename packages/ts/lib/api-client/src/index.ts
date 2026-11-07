@@ -31,6 +31,7 @@ export type {
   PostMessageResult,
   RestClient,
   RestClientOptions,
+  RunSpace,
   RunsPageParams,
   Versioned,
 } from "./rest";

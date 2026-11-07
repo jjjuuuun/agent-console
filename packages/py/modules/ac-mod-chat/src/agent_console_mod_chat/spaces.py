@@ -28,25 +28,23 @@ import asyncio
 import builtins
 import concurrent.futures
 import logging
-import threading
-from collections import OrderedDict
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from agent_console_chat import ChatError, ChatService, ConversationNotFoundError
 from agent_console_contracts import Conversation, ErrorCodes
-from agent_console_store import RecordsStores, RecordsUnavailable, StoreError
+from agent_console_store import (
+    DEFAULT_LOCATE_LIMIT,
+    RecordsStores,
+    RecordsUnavailable,
+    SpaceLocator,
+    StoreError,
+)
 
 from .storage import QueueCounts, QueuedItem, SqliteChatStorage
 
 UNFINISHED = ("queued", "running", "paused", "waiting")
 """끝나지 않은 Run 상태(다른 곳에서 도는 턴 판정)."""
-
-DEFAULT_LOCATE_LIMIT = 200
-"""``locate``가 읽는 등록 프로젝트 기록 DB 최대 개수 기본값(모듈 설정 ``locate_max_projects``)."""
-
-_LOCATED_CAP = 4096
-"""``locate``가 기억하는 대화 자리 최대 개수(오래된 것부터 잊는다)."""
 
 _log = logging.getLogger("agent_console_mod_chat")
 
@@ -218,10 +216,14 @@ class SpacedChatService(ChatService):
         super().__init__(*args, **kwargs)
         self._records = records
         self._make = make
-        self._project_ids = project_ids
-        self._locate_limit = max(0, locate_limit)
-        self._located: OrderedDict[str, str | None] = OrderedDict()
-        self._located_lock = threading.Lock()
+        self._locator = SpaceLocator(
+            self._has,
+            opened=lambda: builtins.list(self._spaces),
+            project_ids=project_ids,
+            limit=locate_limit,
+            spaced=lambda: self.spaced,
+            label="대화",
+        )
         self._spaces: dict[str, ChatService] = {}
         self._links: dict[str, Any] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -379,61 +381,17 @@ class SpacedChatService(ChatService):
             ConversationNotFoundError: 어디에도 없다.
             ConversationAmbiguousError: 여러 곳에 있다(``details.project_ids``).
         """
-        with self._located_lock:
-            known = conversation_id in self._located
-            remembered = self._located.get(conversation_id)
-        if known and self._has(remembered, conversation_id):
-            return remembered
-        found = [p for p in self._locate_candidates() if self._has(p, conversation_id)]
+        found = self._locator.find(conversation_id)
         if not found:
-            self._forget(conversation_id)
             raise ConversationNotFoundError(
                 f"대화 {conversation_id!r}가 없습니다", details={"id": conversation_id}
             )
         if len(found) > 1:
-            self._forget(conversation_id)
             raise ConversationAmbiguousError(
                 f"대화 {conversation_id!r}가 여러 기록 공간에 있습니다",
                 details={"id": conversation_id, "project_ids": found},
             )
-        place = found[0]
-        with self._located_lock:
-            self._located[conversation_id] = place
-            self._located.move_to_end(conversation_id)
-            while len(self._located) > _LOCATED_CAP:
-                self._located.popitem(last=False)
-        return place
-
-    def _locate_candidates(self) -> builtins.list[str | None]:
-        """찾을 자리: 연 공간 → 등록 id(상한까지, 중복 제외) → 호스트(None)."""
-        out: builtins.list[str | None] = []
-        if self.spaced:
-            seen: set[str] = set()
-            for project_id in builtins.list(self._spaces):
-                seen.add(project_id)
-                out.append(project_id)
-            listed = 0
-            if self._project_ids is not None and self._locate_limit > 0:
-                try:
-                    ids = builtins.list(self._project_ids())
-                except Exception:
-                    _log.exception("대화 위치 찾기: 프로젝트 목록을 읽지 못했습니다")
-                    ids = []
-                for project_id in ids:
-                    if not project_id or project_id in seen:
-                        continue
-                    if listed >= self._locate_limit:
-                        _log.info(
-                            "대화 위치 찾기: 프로젝트 %d개 중 %d개만 읽었습니다",
-                            len(ids),
-                            self._locate_limit,
-                        )
-                        break
-                    seen.add(project_id)
-                    out.append(project_id)
-                    listed += 1
-        out.append(None)
-        return out
+        return found[0]
 
     def _has(self, place: str | None, conversation_id: str) -> bool:
         """그 자리(None = 호스트)에 대화가 있나. 읽을 수 없으면 거짓."""
@@ -446,10 +404,6 @@ class SpacedChatService(ChatService):
             return store is not None and store.conversations.get(conversation_id) is not None
         except (RecordsUnavailable, StoreError, LookupError):
             return False
-
-    def _forget(self, conversation_id: str) -> None:
-        with self._located_lock:
-            self._located.pop(conversation_id, None)
 
     def stop_dispatch(self) -> None:
         super().stop_dispatch()

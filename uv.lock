@@ -359,7 +359,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.14.7"
+version = "0.14.8"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },

@@ -280,16 +280,17 @@ describe("실행 상세", () => {
 
   it("실시간 이벤트(WS): 마지막 seq 이후부터 구독하고, 같은 seq는 한 번만 적용하며 새 이벤트가 그래프 상태에 반영된다", async () => {
     const handlers: Array<(e: RunEvent) => void> = [];
-    const subscribeRun = vi.fn((_id: string, h: (e: RunEvent) => void) => {
-      handlers.push(h);
+    // 상세 화면의 이벤트 구독(이어 받기 seq가 있는 구독)만 모은다. 다른 부분(메모리 칩 등)도 같은 토픽을 구독할 수 있다
+    const subscribeRun = vi.fn((_id: string, h: (e: RunEvent) => void, opts?: { sinceSeq?: number }) => {
+      if (opts !== undefined) handlers.push(h);
       return { topic: "run:r1", unsubscribe: vi.fn() };
     });
     mount("/runs/r1", detailOverrides(), ({ ws }) => {
       ws.subscribeRun = subscribeRun as never;
     });
     const graph = await screen.findByTestId("graph");
-    await waitFor(() => expect(subscribeRun).toHaveBeenCalled());
-    expect((subscribeRun.mock.calls[0] as unknown[])[2]).toEqual({ sinceSeq: 8 });
+    await waitFor(() => expect(handlers).toHaveLength(1));
+    expect(subscribeRun.mock.calls.map((c) => (c as unknown[])[2]).filter((o) => o !== undefined)).toEqual([{ sinceSeq: 8 }]);
     const counts = () => JSON.parse(graph.getAttribute("data-props") ?? "{}").edgeCounts["e-call"];
     expect(counts()).toBe(2);
     const started = ev(9, "agent.subagent_started", { actor: "pl", node_path: ["n-lead"], payload: { name: "n-sub" } });
@@ -297,6 +298,51 @@ describe("실행 상세", () => {
     await waitFor(() => expect(counts()).toBe(3));
     act(() => handlers[0]!(started));
     expect(counts()).toBe(3);
+  });
+});
+
+describe("실행 상세의 기록 공간(요청 11/08)", () => {
+  const snapshotIn = (where: string | null) =>
+    vi.fn(async (_id: string, project?: string | null) => {
+      if ((project ?? null) !== where) {
+        const { ApiError } = await import("@agent-console/api-client");
+        throw new ApiError(404, { code: "not_found", message: "없음" });
+      }
+      return { run: run("r1", "completed", { project_id: where ?? undefined, ended_at: now }), node_runs: [], last_seq: 1 };
+    });
+
+  it("현재 범위에서 404면 위치를 찾아 그 프로젝트로 상세·이벤트·상호작용을 부른다(주소로 바로 연 실행)", async () => {
+    const getRun = snapshotIn("pb");
+    const locateRun = vi.fn(async () => ({ project_id: "pb" }));
+    const listRunEvents = vi.fn(async () => [ev(1, "run.started")]);
+    const listRunInteractions = vi.fn(async () => []);
+    mount("/runs/r1", detailOverrides({ getRun, locateRun, listRunEvents, listRunInteractions }));
+    await waitFor(() => expect(getRun).toHaveBeenCalledWith("r1", "pb"));
+    expect(getRun).toHaveBeenCalledWith("r1", null);
+    expect(locateRun).toHaveBeenCalledWith("r1");
+    await waitFor(() => expect(listRunEvents).toHaveBeenCalledWith("r1", { project: "pb" }));
+    await waitFor(() => expect(listRunInteractions).toHaveBeenCalledWith("r1", "pb"));
+    expect(listRunEvents).not.toHaveBeenCalledWith("r1", undefined);
+    expect(screen.queryByText("실행을 찾을 수 없습니다", { selector: "h2" })).toBeNull();
+  });
+
+  it("어디에도 없으면(찾기 404) 없음 안내", async () => {
+    const getRun = snapshotIn("pz");
+    mount("/runs/r1", detailOverrides({ getRun }));
+    expect(await screen.findByText("실행을 찾을 수 없습니다", { selector: "h2" })).toBeTruthy();
+  });
+
+  it("목록에서 열면 그 항목의 project_id로 바로 부르고 위치를 찾지 않는다", async () => {
+    const getRun = snapshotIn("pa");
+    const locateRun = vi.fn(async () => ({ project_id: "pa" }));
+    const item = run("r1", "completed", { project_id: "pa", ended_at: now });
+    mount("/runs", detailOverrides({ listRuns: async () => [item], getRun, locateRun }));
+    const table = await screen.findByRole("grid", { name: "실행 목록" });
+    const row = within(table).getAllByRole("row")[1]!;
+    fireEvent.doubleClick(row);
+    await waitFor(() => expect(getRun).toHaveBeenCalledWith("r1", "pa"));
+    expect(getRun).not.toHaveBeenCalledWith("r1", null);
+    expect(locateRun).not.toHaveBeenCalled();
   });
 });
 

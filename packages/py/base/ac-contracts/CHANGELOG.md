@@ -1,5 +1,15 @@
 # 변경 기록
 
+## 0.14.8
+
+- 계약 0.14.8(요청 11/08 후속, 실행 위치 찾기). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS
+  `^0.14.0`) 그대로. 하위 계약 버전: `runs` 1.9.0, `common` 1.14.0.
+- 새 모델(`runs` 1.9.0): `RunLocation{project_id}` — `GET /runs/{id}/locate` 응답(그 Run이 있는 기록
+  공간, null = 앱 기록). 주소로 바로 연 실행 상세의 `?project=`를 알아낼 때 쓴다. 대화의
+  `ConversationLocation`과 모양은 같지만 하위 계약끼리 의존하지 않게 따로 둔다.
+- 새 오류 코드(`common` 1.14.0): `ErrorCodes.RUN_AMBIGUOUS`(`run.ambiguous`, 409,
+  `details.project_ids`) — 같은 Run id가 여러 기록 공간에 있다.
+
 ## 0.14.7
 
 - 계약 0.14.7(요청 11/07 후속, 대화 위치 찾기). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

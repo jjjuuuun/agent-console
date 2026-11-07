@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 실행 위치 찾기(요청 11/08 후속, 계약 `runs` 1.9.0·0.14.8): `RunsClient.locateRun(id)`(`GET /runs/{id}/locate` → `RunLocation{project_id}`, 없으면 404, 여러 기록 공간이면 409 `run.ambiguous`). Run 단위 호출의 기록 공간: `getRun(id, project?)`, `ListRunEventsParams.project`, `listRunInteractions(runId, project?)`(`?project=`, 생략하면 주소 그대로). 타입 `RunSpace`.
 - 대화 위치 찾기(요청 11/07 후속, 계약 `chat` 1.4.0·0.14.7): `ChatClient.locateConversation(id)`(`GET /conversations/{id}/locate` → `ConversationLocation{project_id}`). 없으면 404, 여러 기록 공간이면 409 `conversation.ambiguous`.
 - 위키 클라이언트(7R.19, 서버 7R.12, 계약 `wiki` 1.0.0): 하위 경로 `wiki`(`createWikiClient`, `WikiClient`) — 위키 목록·보기·저장·삭제, 페이지 목록·보기·쓰기(`If-Match`·`If-None-Match: *`)·미리보기·이름 바꾸기(`dry_run`)·지우기, 기록(목록·버전 본문 text·되돌리기), 링크 넣기 글자·페이지 틀, 검색·그래프·점검·최근 변경·유효 문법·다시 읽기, zip 내보내기(POST)·가져오기(본문 zip, `policy`·`dry_run`), 위키 규칙 목록·단건·저장·삭제·검사. 공간(`?project=`)은 `withSpace`로 묶는다. WS `subscribeWiki`(토픽 `wiki.changed`).
 - 문서 틀 단건 REST(6R.20b, 서버 6R.20a, 계약 `sdd` 1.1.0): `SddClient`에 `createSpecTemplate`·`getSpecTemplate`·`putSpecTemplate`(`If-Match`)·`deleteSpecTemplate`·`listSpecTemplateVariables`·뼈대 파일 `listSpecTemplateFiles`·`readSpecTemplateFile`·`putSpecTemplateFile`·`deleteSpecTemplateFile`. 버전 기록은 기존 `versions` 클라이언트에 경로 `/sdd/templates/{id}`를 주면 된다.

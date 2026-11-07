@@ -1,6 +1,7 @@
 """REST 경로(접두 없음, 호스트가 ``/api/v1`` 아래 붙인다, design §5.2·§R14.4·§2R.10).
 
 - 실행: ``POST/GET /runs``, ``GET /runs/{id}``, ``POST /runs/{id}/cancel``,
+  ``GET /runs/{id}/locate``(``RunLocation`` - 그 Run이 있는 기록 공간, 요청 11/08 후속),
   ``GET /runs/{id}/events``(``node=`` 서버 거르기, 6R.12)
 - 실행 목록 커서 페이지(6R.12, B-11·L-19): ``GET /runs/page``(``RunPage``). 옛 ``GET /runs``는
   그대로 두고 OpenAPI ``deprecated``. 프로젝트 기록 공간이 있는 조립에서 ``?project=``는 폴더 기록
@@ -77,6 +78,7 @@ from agent_console_contracts import (
     ResumeRunRequest,
     Run,
     RunEvent,
+    RunLocation,
     RunPage,
     RunSnapshot,
     RunStatus,
@@ -369,6 +371,18 @@ def build_router(
             last_seq=events().last_seq(run_id),
             children=children,
         )
+
+    @router.get("/runs/{run_id}/locate", response_model=RunLocation, responses=errors(409))
+    async def locate_run(run_id: str) -> RunLocation:
+        """그 Run이 있는 기록 공간(``project_id``, null = 앱 기록 — ``?project=`` 없이 읽는다).
+
+        주소로 바로 연 실행 상세가 Run 단위 경로에 붙일 ``?project=``를 알아낼 때 쓴다. Run 본문은
+        주지 않는다(``?project=`` 없는 상세가 다른 공간을 대신 읽지 않는다). 이 프로세스가 아는
+        공간·등록 프로젝트 기록 DB(설치자 상한 ``locate_max_projects``까지)·앱 기록을 읽기만
+        한다. 없으면 404 ``not_found``, 여러 공간에 있으면 409 ``run.ambiguous``
+        (``details.project_ids``)."""
+        project_id = await run_in_threadpool(service().locate, run_id)
+        return RunLocation(project_id=project_id)
 
     @router.post("/runs/{run_id}/mark-interrupted", response_model=Run, responses=errors(409))
     async def mark_interrupted(run_id: str, project: str | None = None) -> Run:

@@ -27,7 +27,7 @@ import { createRestIo, type RestClientOptions } from "./transport";
 export type { FetchLike, RestClientOptions } from "./transport";
 export type { Versioned } from "./io";
 export type { ListGraphsParams } from "./clients/graphs";
-export type { HandoffParams, ListRunEventsParams, ListRunsParams, RunsPageParams } from "./clients/runs";
+export type { HandoffParams, ListRunEventsParams, ListRunsParams, RunSpace, RunsPageParams } from "./clients/runs";
 export type { ConversationsPageParams, ListConversationsParams, ListTurnsParams, PostMessageResult } from "./clients/chat";
 export type { ListInteractionsParams } from "./clients/interactions";
 export type { LogArchiveFormat, LogArchiveParams, LogQueryParams } from "./clients/logs";

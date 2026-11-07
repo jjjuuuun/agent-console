@@ -15,6 +15,11 @@
 - 읽기 쪽(``runs.reader``·``runs.events``·상호작용)도 같은 객체다: 이 프로세스가 아는 ``run_id``
   (쓴 적이 있거나 ``?project=`` 조회로 본 Run)는 그 자리에서, 모르면 호스트 DB에서 읽는다.
   ``list(project_id=...)``는 그 공간에서 읽는다. 공간에 묶인 읽기는 ``for_project(id)``.
+- 위치 찾기(``locate``, 요청 11/08 후속): ``run_id`` → 그 Run이 있는 자리(등록 id, None = 호스트
+  DB). 이 프로세스가 아는 공간과 ``project_ids``(보통 ``projects.lookup``의 등록 id)의 기록 DB를
+  상한(``locate_limit``)까지 읽기만 한다(``agent_console_store.SpaceLocator``, 대화와 같은 정책).
+  찾은 공간은 ``run_id`` 자리로 기억해 뒤따르는 ``run_id`` 조회(``?project=`` 없는 상세·이벤트,
+  WS ``run:<id>``)가 그 공간을 본다.
 - 재시작 복구(``recover_space``): 공간을 이 프로세스에서 처음 열 때 **자기 host_id**의 끝나지 않은
   Run 중 지금 돌고 있지 않은 것만 ``interrupted``로 바꾼다(다른 앱의 Run은 건드리지 않는다).
 """
@@ -43,7 +48,14 @@ from agent_console_contracts import (
     RunStatus,
 )
 from agent_console_runtime import recover_unfinished_runs
-from agent_console_store import RecordsStores, RecordsUnavailable, SqliteStorage
+from agent_console_store import (
+    DEFAULT_LOCATE_LIMIT,
+    RecordsStores,
+    RecordsUnavailable,
+    SpaceLocator,
+    SqliteStorage,
+    StoreError,
+)
 
 UNFINISHED: tuple[RunStatus, ...] = ("queued", "running", "paused", "waiting")
 """끝나지 않은 Run 상태(재시작 복구·다른 앱 표시 대상)."""
@@ -97,6 +109,12 @@ class _Places:
         with self._lock:
             return self._interactions.get(interaction_id)
 
+    def projects(self) -> list[str]:
+        """기억한 Run 자리의 프로젝트 id(최근 것부터, 중복 없음)."""
+        with self._lock:
+            values = list(reversed(self._runs.values()))
+        return list(dict.fromkeys(values))
+
 
 class SpaceRecorder:
     """엔진 저장 묶음 + 실행 기록 읽기(호스트 DB 또는 프로젝트 기록 DB로 나눈다).
@@ -106,6 +124,9 @@ class SpaceRecorder:
         records: 기록 공간 저장소 고르기(``space_records``). None이면 늘 호스트(기능 단독).
         on_lost: 그 Run의 기록 DB를 잃었을 때 한 번(``run_id``, 이유). 워커 스레드에서 불린다.
         remember: 기억할 ``run_id`` 최대 개수.
+        project_ids: 위치 찾기(``locate``)가 볼 공간 id 목록(부를 때마다, 보통 등록 프로젝트 id).
+            None이면 이 프로세스가 아는 공간만 본다.
+        locate_limit: ``locate``가 ``project_ids``에서 읽는 최대 개수(0 = 아는 공간만).
     """
 
     def __init__(
@@ -115,6 +136,8 @@ class SpaceRecorder:
         *,
         on_lost: Callable[[str, str], None] = lambda _run, _reason: None,
         remember: int = 20_000,
+        project_ids: Callable[[], Iterable[str]] | None = None,
+        locate_limit: int = DEFAULT_LOCATE_LIMIT,
     ) -> None:
         self.host = host
         self.records = records
@@ -126,6 +149,14 @@ class SpaceRecorder:
         self.runs = _Runs(self)
         self.events = _Events(self)
         self.interactions = _Interactions(self)
+        self._locator = SpaceLocator(
+            self._has_run,
+            opened=self._places.projects,
+            project_ids=project_ids,
+            limit=locate_limit,
+            spaced=lambda: self.spaced,
+            label="실행",
+        )
 
     # ---- 자리 ---------------------------------------------------------------
 
@@ -156,6 +187,29 @@ class SpaceRecorder:
     def for_project(self, project_id: str | None) -> SpaceReader:
         """그 프로젝트에 묶인 읽기(``get``·``list``·``list_node_runs``·이벤트·상호작용)."""
         return SpaceReader(self, project_id)
+
+    def locate(self, run_id: str) -> builtins.list[str | None]:
+        """그 Run이 있는 자리 목록(None = 호스트 DB, 빈 목록 = 없음, 둘 이상 = 모호).
+
+        기록 DB 파일이 없거나 읽을 수 없는 공간은 건너뛴다(파일을 만들지 않는다). 공간 하나에서
+        찾으면 그 자리를 기억한다(``project_of_run``·``?project=`` 없는 ``run_id`` 조회가 그 공간).
+        """
+        found = self._locator.find(run_id)
+        if len(found) == 1 and found[0] is not None:
+            self._places.put_run(run_id, found[0])
+        return found
+
+    def _has_run(self, place: str | None, run_id: str) -> bool:
+        """그 자리(None = 호스트)에 그 Run이 있나. 읽을 수 없으면 거짓."""
+        if place is None:
+            return self.host.runs.get(run_id) is not None
+        if self.records is None:
+            return False
+        try:
+            store = self.records.reader(place)
+            return store is not None and store.runs.get(run_id) is not None
+        except (RecordsUnavailable, StoreError, LookupError):
+            return False
 
     def _read_at(self, run_id: str) -> Any | None:
         project_id = self._places.run(run_id)

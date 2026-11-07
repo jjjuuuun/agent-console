@@ -64,7 +64,7 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_mod_projects.ports:PROJECTS_LOOKUP", reason = "프로젝트 모듈이 연동 모듈에 주는 읽기 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_projects.ports:PROJECTS_LOOKUP", reason = "프로젝트 모듈이 연동 모듈과 기능 모듈(대화·실행의 위치 찾기 등)에 주는 읽기 통로(구현은 이 모듈 하나)" },
     { port = "agent_console_mod_projects.ports:PROJECT_FOLDERS", reason = "등록된 프로젝트 폴더를 다른 기능 모듈에 주는 통로(구현은 이 모듈 하나)" },
     { port = "agent_console_mod_projects.ports:PROJECTS_SPACES", reason = "프로젝트 공간을 연동 모듈에 여는 통로(구현은 이 모듈 하나)" },
 ]

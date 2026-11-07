@@ -4,7 +4,8 @@
   ``server.warnings``·``server.attributes``·``runs.session_archive``(X38). 토픽
   ``runs.event``(저장된 이벤트마다)·``interactions.updated``. WS ``run:<id>``·``interactions``.
 - 필수: ``definitions.lookup``(실행할 팀 구성). 선택: ``runs.preparers``·``runs.services``·
-  ``runs.scopes``·``runs.resume_handlers``·``workspace.settings``·``secrets.rules``(``ports.py``).
+  ``runs.scopes``·``runs.resume_handlers``·``workspace.settings``·``secrets.rules``·
+  ``projects.lookup``(실행 위치 찾기의 등록 프로젝트 id, 요청 11/08 후속)(``ports.py``).
 - 저장: 호스트 DB 핸들의 legacy 테이블(``runs``·``node_runs``·``run_events``·``interactions``),
   없으면 메모리(경고 ``runs.storage_memory``). 선택 포트 ``records.spaces``가 있으면
   ``project_id``가 있는 Run은 그 프로젝트 기록 DB에만 쓴다(5.7R.33y2, ``records.py``) - 시작 전에
@@ -66,6 +67,7 @@ from .ports import (
     DEFINITIONS_LOOKUP,
     INTERACTIONS_PORT,
     INTERACTIONS_UPDATED,
+    PROJECTS_LOOKUP,
     RECORDS_SPACES,
     RESUME_HANDLERS,
     RUN_PREPARERS,
@@ -194,6 +196,7 @@ class RunsModule:
             WORKSPACE_SETTINGS,
             SECRET_RULES,
             RECORDS_SPACES,
+            PROJECTS_LOOKUP,
         ),
         settings_schema=RunsModuleSettings,
         settings_compat=SETTINGS_COMPAT,
@@ -241,7 +244,18 @@ class RunsModule:
                 service_ref[0].cancel, run_id, f"project.records_unavailable: {reason}"
             )
 
-        recorder = SpaceRecorder(host_recorder, records, on_lost=on_lost)
+        def project_ids() -> list[str]:
+            """등록 프로젝트 id(``projects.lookup``가 없으면 빈 목록, 실행 위치 찾기용)."""
+            listing = ctx.port(PROJECTS_LOOKUP)
+            return [] if listing is None else [p.id for p in listing.list_projects()]
+
+        recorder = SpaceRecorder(
+            host_recorder,
+            records,
+            on_lost=on_lost,
+            project_ids=project_ids,
+            locate_limit=cfg.locate_max_projects,
+        )
         bus = InMemoryEventBus(maxsize=cfg.runtime.event_queue_size)
         redaction = SuspectedRedaction(
             lambda: ctx.port(WORKSPACE_SETTINGS), lambda: ctx.port(SECRET_RULES)

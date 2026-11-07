@@ -51,6 +51,10 @@ export function createFakeRest(overrides: Partial<Record<keyof RestClient, unkno
     locateConversation: vi.fn(async (id: string) => {
       throw new ApiError(404, { code: "not_found", message: `대화 ${id}가 없습니다` });
     }),
+    // 실행 위치 찾기: 기본은 "모름"(404) - 화면은 현재 프로젝트로 받은 결과(404 등)를 그대로 보인다
+    locateRun: vi.fn(async (id: string) => {
+      throw new ApiError(404, { code: "not_found", message: `Run ${id}이(가) 없습니다` });
+    }),
   };
   const merged = { ...base, ...overrides } as Record<string, unknown>;
   // 커서 페이지 메서드는 따로 주지 않으면 같은 이름의 옛 목록 메서드 결과 한 페이지(끝)로 만든다.
