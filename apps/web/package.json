@@ -19,6 +19,10 @@
           "@agent-console/web/src/features/delegation/widgetRegistry#WidgetRegistry",
           "@agent-console/web/src/features/delegation/widgetRegistry#ConfigWidget"
         ],
+        "example": {
+          "kind": "package",
+          "path": "examples/web/agent-console-example-web"
+        },
         "guide": "web.md#config-form-widget"
       },
       "screen-entry": {
@@ -35,6 +39,10 @@
           "@agent-console/web/src/shell/routes.tsx#PageTable",
           "@agent-console/web/src/shell/routes.tsx#DEFAULT_PAGES"
         ],
+        "example": {
+          "kind": "reference",
+          "path": "apps/web"
+        },
         "guide": "web.md#screen-entry"
       },
       "interaction-renderer": {
@@ -50,6 +58,10 @@
           "@agent-console/chat#RendererComponent",
           "@agent-console/chat#RendererProps"
         ],
+        "example": {
+          "kind": "reference",
+          "path": "packages/ts/lib/chat"
+        },
         "guide": "web.md#interaction-renderer"
       }
     }

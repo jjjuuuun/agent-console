@@ -23,6 +23,10 @@
           "@agent-console/log-view#WidgetRegistry",
           "@agent-console/log-view#createWidgetRegistry"
         ],
+        "example": {
+          "kind": "package",
+          "path": "examples/web/agent-console-example-web"
+        },
         "guide": "web.md#dashboard-widget"
       }
     }

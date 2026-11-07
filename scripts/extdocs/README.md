@@ -89,7 +89,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 | --- | --- |
 | `declarations` | 선언 없는 그룹·포트(`group-undeclared`·`port-undeclared`), 예제가 가리키는데 선언 없는 지점(`example-point-undeclared`) |
 | `examples` | 예제가 없는 지점(`example-missing`), snippet 예제인데 절에 검증 조각이 없음(`snippet-missing`) |
-| `guides` | 가이드 파일·절·생성 구간 없음, 손글 없음, `extdocs:todo` 남음 |
+| `guides` | 가이드 파일·절·생성 구간 없음, 손글 없음, `extdocs:todo` 남음, 아직 쓰지 않은 영역 페이지(`areas.yaml`의 파일)로 가는 링크 |
 
 `--allow-missing`만 주면 세 범주 전부다. `poe check`는 지금 `extpoints-check`에 전부, `extdocs-check`에 `guides`를 준다. 선언 채우기가 끝나면 `extpoints-check`의 옵션을 떼고, 영역 가이드가 다 쓰이면 `extdocs-check`의 옵션을 뗀다.
 

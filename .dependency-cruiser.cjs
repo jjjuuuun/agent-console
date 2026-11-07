@@ -175,6 +175,13 @@ module.exports = {
       to: { path: "^apps/web/src/links/" },
     },
     {
+      name: "no-import-of-examples",
+      comment: "examples/web/* 예제는 가져다 쓰는 사람이 복사해 가는 견본이다. 앱·패키지는 이 예제를 import하지 않는다(앱 번들에 예제가 섞이지 않는다).",
+      severity: "error",
+      from: { path: "^(packages/ts|apps)/" },
+      to: { path: "(^|/)examples/web/|node_modules/@agent-console/example-web(/|$)" },
+    },
+    {
       name: "not-to-unresolvable",
       comment: "해석할 수 없는 import(오타·누락된 의존)는 오류.",
       severity: "error",

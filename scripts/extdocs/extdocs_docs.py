@@ -175,8 +175,17 @@ def _has_checked_snippet(section: str) -> bool:
 # ---------------------------------------------------------------- 링크·앵커
 
 
-def check_links(root: Path, files: Sequence[Path]) -> list[Finding]:
+def check_links(
+    root: Path, files: Sequence[Path], *, pending: Iterable[Path] = ()
+) -> list[Finding]:
+    """문서 안 상대 링크·앵커를 푼다.
+
+    ``pending``: 아직 쓰지 않았을 수 있는 영역 페이지 경로(``areas.yaml``의 파일). 그 파일로 가는
+    링크가 깨지면 "아직 채우지 않음"(``guides``)으로 본다 — 지도·공통 가이드가 영역 페이지보다 먼저
+    생겨도 ``--allow-missing guides``에서 경고로 낮아진다. 그 밖의 깨진 링크는 늘 오류다.
+    """
     out: list[Finding] = []
+    later = {p.resolve() for p in pending}
     anchor_cache: dict[Path, set[str]] = {}
 
     def anchors_of(path: Path) -> set[str]:
@@ -194,7 +203,13 @@ def check_links(root: Path, files: Sequence[Path]) -> list[Finding]:
             dest = path if not file_part else (path.parent / file_part)
             where = f"{_rel(root, path)}:{link.line}"
             if not dest.exists():
-                out.append(Finding("link-broken", where, f"대상이 없습니다: {target}"))
+                missing = "guides" if dest.resolve() in later else None
+                note = " — 아직 쓰지 않은 영역 페이지" if missing else ""
+                out.append(
+                    Finding(
+                        "link-broken", where, f"대상이 없습니다: {target}{note}", missing=missing
+                    )
+                )
                 continue
             if (
                 anchor
@@ -249,6 +264,8 @@ def run_doctests(root: Path, files: Sequence[Path], resolver: SymbolResolver) ->
             messages: list[str] = []
             with resolver.paths():
                 runner.run(test, out=messages.append, clear_globs=False)
+            # DocTest는 globs를 복사해 쓴다. 다음 블록이 앞 블록의 이름을 보게 되돌려 담는다.
+            globs.update(test.globs)
             if runner.failures:
                 detail = "".join(messages).strip().splitlines()
                 out.append(
@@ -336,7 +353,8 @@ def run_docs_checks(
     findings += check_drift(root, planned)
     findings += check_guides(root, col, data)
     doc_files = expand_globs(root, data.s("docs_globs") or [])
-    findings += check_links(root, doc_files)
+    area_pages = [root / data.docs_dir / a.file for a in data.areas]
+    findings += check_links(root, doc_files, pending=area_pages)
     lint_files = expand_globs(root, data.s("public_lint_globs") or [])
     findings += public_lint(root, lint_files, data.lint_rules, warning=False)
     findings += run_doctests(root, doc_files, resolver)

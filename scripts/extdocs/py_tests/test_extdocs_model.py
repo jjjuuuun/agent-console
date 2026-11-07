@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from pathlib import Path
 
 import pytest
 from extdocs_common import TOOL_DIR, load_data
@@ -99,3 +100,21 @@ def test_section_and_hand_text() -> None:
     replaced = replace_facts(text, {"one": "- y\n"})
     assert "- y\n<!-- /extdocs:facts -->" in replaced
     assert "- x" not in replaced
+
+
+def test_first_doc_line_reads_type_alias_attribute_docstring(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``type X = ...`` 별칭은 "Type alias." 대신 정의 뒤 문자열의 첫 줄을 쓴다."""
+    import importlib
+
+    from extdocs_common import first_doc_line
+
+    (tmp_path / "alias_doc_mod.py").write_text(
+        'type Documented = int\n"""설치자 옵션 → 형식.\n\n자세히."""\n\ntype Bare = str\n',
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    mod = importlib.import_module("alias_doc_mod")
+    assert first_doc_line(mod.Documented) == "설치자 옵션 → 형식."
+    assert first_doc_line(mod.Bare) == ""

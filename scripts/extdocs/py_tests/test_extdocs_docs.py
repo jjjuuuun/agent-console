@@ -264,3 +264,28 @@ def test_links_skip_code(tmp_path: Path) -> None:
     path = tmp_path / "a.md"
     path.write_text("# A\n\n```md\n[x](missing.md)\n```\n\n`[y](nope.md)`\n", encoding="utf-8")
     assert check_links(tmp_path, [path]) == []
+
+
+def test_link_to_unwritten_area_page_is_guides_category(documented: Repo) -> None:
+    """지도가 영역 페이지보다 먼저 생겨도 --allow-missing guides에서 경고, 다른 깨진 링크는 오류."""
+    page = documented.root / "docs/extending/README.md"
+    area_file = tool_data().areas[0].file
+    page.write_text(f"# 지도\n\n[영역]({area_file})\n", encoding="utf-8")
+    findings = [f for f in docs_check(documented) if f.code == "link-broken"]
+    assert [f.missing for f in findings] == ["guides"]
+    assert errors(findings) == ["link-broken"]
+    assert errors(findings, ("guides",)) == []
+    page.write_text("# 지도\n\n[없음](no-such-page.md)\n", encoding="utf-8")
+    assert errors(docs_check(documented), ("guides",)).count("link-broken") == 1
+
+
+def test_doctest_blocks_share_names_within_a_file(tmp_path: Path) -> None:
+    """한 파일의 ``>>>`` 블록은 같은 이름 공간이다(앞 블록에서 만든 이름을 뒤 블록이 쓴다)."""
+    from extdocs_docs import run_doctests
+
+    page = tmp_path / "a.md"
+    page.write_text(
+        "# A\n\n```python\n>>> base = 40\n\n```\n\n글\n\n```python\n>>> base + 2\n42\n\n```\n",
+        encoding="utf-8",
+    )
+    assert run_doctests(tmp_path, [page], SymbolResolver([])) == []

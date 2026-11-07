@@ -148,7 +148,7 @@ class Exporter(Protocol):
 
 
 type ExporterFactory = Callable[[Mapping[str, Any]], Exporter]
-"""설치자 옵션(`exports.options.<형식>`) → 형식.
+"""설치자 옵션(`modules.options.mod-exports.options.<형식>`) → 형식.
 
 entry point `agent_console.exporters`가 가리키는 것이다.
 """

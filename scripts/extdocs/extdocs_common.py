@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import glob
 import importlib
+import itertools
 import json
 import re
 import sys
@@ -575,8 +576,34 @@ class SymbolResolver:
         return obj
 
 
+def _alias_doc(obj: Any) -> str | None:
+    """``type X = ...`` 별칭의 속성 독스트링(정의 바로 뒤 문자열). 별칭이 아니면 None.
+
+    ``TypeAliasType.__doc__``는 늘 "Type alias."라서 정의 모듈 소스에서 읽는다.
+    """
+    if type(obj).__name__ != "TypeAliasType":
+        return None
+    try:
+        source = Path(str(sys.modules[obj.__module__].__file__)).read_text(encoding="utf-8")
+        body = ast.parse(source).body
+    except (KeyError, OSError, SyntaxError, TypeError, ValueError):
+        return ""
+    for node, after in itertools.pairwise(body):
+        if (
+            isinstance(node, ast.TypeAlias)
+            and isinstance(node.name, ast.Name)
+            and node.name.id == obj.__name__
+            and isinstance(after, ast.Expr)
+            and isinstance(after.value, ast.Constant)
+            and isinstance(after.value.value, str)
+        ):
+            return after.value.value
+    return ""
+
+
 def first_doc_line(obj: Any) -> str:
-    doc = getattr(obj, "__doc__", None)
+    alias = _alias_doc(obj)
+    doc = alias if alias is not None else getattr(obj, "__doc__", None)
     if not isinstance(doc, str) or isinstance(obj, (str, int, float, tuple, dict, list)):
         return ""
     for line in doc.strip().splitlines():

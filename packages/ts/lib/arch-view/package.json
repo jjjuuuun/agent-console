@@ -22,6 +22,10 @@
           "@agent-console/arch-view#CellRenderProps",
           "@agent-console/arch-view#EdgeStyleSpec"
         ],
+        "example": {
+          "kind": "package",
+          "path": "examples/web/agent-console-example-web"
+        },
         "guide": "web.md#architecture-cell-renderer"
       }
     }

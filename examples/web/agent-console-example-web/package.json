@@ -1,0 +1,67 @@
+{
+  "name": "@agent-console/example-web",
+  "version": "0.1.0",
+  "description": "웹 확장 예제: 대시보드 위젯·구조도 칸 그리기·설정 폼 위젯 각 하나",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "agentConsole": {
+    "kind": "lib",
+    "example": {
+      "points": [
+        "dashboard-widget",
+        "architecture-cell-renderer",
+        "config-form-widget"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@agent-console/arch-view": "^0.1.0",
+    "@agent-console/contracts": "^0.14.0",
+    "@agent-console/eslint-config": "^0.1.0",
+    "@agent-console/log-view": "^0.1.0",
+    "@agent-console/schema-form": "^0.1.0",
+    "@agent-console/tsconfig": "^0.1.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "axe-core": "^4.11.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "happy-dom": "^21.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "@agent-console/arch-view": "^0.1.0",
+    "@agent-console/log-view": "^0.1.0",
+    "@agent-console/schema-form": "^0.1.0",
+    "react": "^19.0.0"
+  }
+}
