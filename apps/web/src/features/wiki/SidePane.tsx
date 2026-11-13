@@ -80,7 +80,7 @@ export function SidePane(p: SidePaneProps) {
             <ul className="wiki-backlinks" aria-label={m.side.tabs["backlinks"]}>
               {backlinks.map((b) => (
                 <li key={b.path}>
-                  <button type="button" className="wiki-backlink-row" aria-label={m.side.open(b.title !== undefined && b.title !== "" ? b.title : b.path)} onClick={() => p.onOpenPage(b.path)}>
+                  <button type="button" className="wiki-backlink-row" onClick={() => p.onOpenPage(b.path)}>
                     <span className="wiki-backlink-title ac-ellipsis">{b.title !== undefined && b.title !== "" ? b.title : b.path}</span>
                     <span className="wiki-backlink-path ac-mono-wrap ac-ellipsis app-muted">{b.path}</span>
                     {b.count !== undefined && b.count >= 2 ? <span className="wiki-backlink-count app-muted">{m.side.count(b.count)}</span> : null}

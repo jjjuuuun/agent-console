@@ -299,7 +299,6 @@ export const wikiMessages = {
     tabs: { backlinks: "백링크", outlinks: "나가는 링크", history: "기록" } as Readonly<Record<string, string>>,
     backlinksNone: "이 페이지를 가리키는 링크가 없습니다",
     orphan: "고아 페이지",
-    open: (title: string) => `‘${title}’ 열기`,
     count: (n: number) => `×${n}`,
     drawer: "페이지 패널",
   },

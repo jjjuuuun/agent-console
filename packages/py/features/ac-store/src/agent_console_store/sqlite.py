@@ -435,8 +435,15 @@ class SqliteRunRepository:
                     )
                 )
             else:
-                path = '$.labels."' + key.replace('"', '\\"') + '"'
-                stmt = stmt.where(sa.func.json_extract(c.doc, path) == value)
+                # 키를 JSON 경로에 넣으면 따옴표·역슬래시가 든 키를 SQLite가 찾지 못한다.
+                # `json_each`의 key·value 열을 바인드 매개변수와 비교한다.
+                pairs = sa.func.json_each(c.doc, "$.labels").table_valued("key", "value")
+                stmt = stmt.where(
+                    sa.select(sa.literal(1))
+                    .select_from(pairs)
+                    .where(pairs.c.key == key, pairs.c.value == value)
+                    .exists()
+                )
         if since is not None:
             stmt = stmt.where(c.created_at >= since)
         needle = fold_query(query)
