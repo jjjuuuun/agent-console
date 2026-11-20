@@ -70,6 +70,7 @@ from .migrate import (
     upgrade_on,
 )
 from .observed import ObservedVersionRepository, VersionRecorded
+from .open_cache import CacheShut, OpenCache
 from .project_assign import (
     AssignCandidate,
     AssignPlan,
@@ -142,6 +143,7 @@ __all__ = [
     "AssignCandidate",
     "AssignPlan",
     "BaseDefinitionStore",
+    "CacheShut",
     "ContentTooLarge",
     "DefinitionCorrupt",
     "DefinitionKind",
@@ -173,6 +175,7 @@ __all__ = [
     "MoveVerifyError",
     "NotFound",
     "ObservedVersionRepository",
+    "OpenCache",
     "ProjectAssignStore",
     "RecordsAbsent",
     "RecordsDb",

@@ -1,11 +1,12 @@
 import type { ParsedTask, TaskPlan } from "@agent-console/contracts/sdd";
-import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, type Edge, type Node, type NodeProps } from "@xyflow/react";
+import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, useStore, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { statusTone, type StatusLike } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
 import { applyPositions, createElkPlanLayout, planToFlow, PLAN_DEFAULTS, type PlanFlowOptions, type PlanLayoutEngine, type PlanNodeData } from "./plan";
 import { ToneChip } from "@agent-console/markdown-doc";
 
+const PLAN_PAD = 24;
 type PlanNode = Node<PlanNodeData & { statusLabel: string; statusTone: string; ariaText: string }, "sdd-plan-node">;
 
 function PlanNodeView({ data, selected }: NodeProps<PlanNode>) {
@@ -39,11 +40,13 @@ export interface PlanGraphProps {
   selectedKey?: string | null;
   onSelect?: (taskKey: string) => void;
   height?: number | "fill";
+  /** 첫 화면에서 허용하는 가장 작은 줌(글자가 읽히는 크기). 이보다 작아야 다 들어오는 그래프는 이 줌으로 시작 노드부터 보여 준다. 기본 1(노드 글자 12px) */
+  readableZoom?: number;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
 
-function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", messages, className }: PlanGraphProps) {
+function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", readableZoom = 1, messages, className }: PlanGraphProps) {
   const text = resolveMessages(messages);
   const base = useMemo(() => planToFlow(plan, tasks, options), [plan, tasks, options]);
   const defaultEngine = useMemo(() => createElkPlanLayout(), []);
@@ -75,14 +78,26 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
 
   const flow = placed && placed.source === base ? applyPositions(base, placed.positions) : base;
   const layouting = base.nodes.length > 0 && !(placed && placed.source === base) && failed !== base;
-  const { fitView } = useReactFlow();
+  const { fitView, getNodesBounds, getNodes, setViewport } = useReactFlow();
+  const viewW = useStore((st) => st.width);
+  const viewH = useStore((st) => st.height);
   const laidOut = !layouting && base.nodes.length > 0;
   // 첫 `fitView`는 배치 전(전부 원점) 좌표로 맞춰져 캔버스가 비어 보인다. 배치(또는 실패 대체 배치)가 끝난 뒤 다시 맞춘다.
   useEffect(() => {
     if (!laidOut) return;
-    const id = setTimeout(() => void fitView({ duration: 0 }), 0);
+    const id = setTimeout(() => {
+      // 영역에 다 들어오면 전체를 맞추고, 그러면 글자가 안 읽히는 크기(readableZoom 미만)가 되는 큰 그래프는
+      // 읽히는 줌으로 두고 시작 노드(왼쪽 위)부터 보여 준다. 나머지는 끌어서 이동·확대/축소로 본다(양 끝이 잘려 보이지 않게).
+      void fitView({ duration: 0, minZoom: readableZoom, maxZoom: 1.5 }).then(() => {
+        if (viewW <= 0 || viewH <= 0) return;
+        const b = getNodesBounds(getNodes());
+        const fits = b.width * readableZoom <= viewW - 2 * PLAN_PAD && b.height * readableZoom <= viewH - 2 * PLAN_PAD;
+        if (fits) return;
+        void setViewport({ x: PLAN_PAD - b.x * readableZoom, y: PLAN_PAD - b.y * readableZoom, zoom: readableZoom }, { duration: 0 });
+      });
+    }, 0);
     return () => clearTimeout(id);
-  }, [laidOut, flow, fitView]);
+  }, [laidOut, flow, fitView, getNodesBounds, getNodes, setViewport, viewW, viewH, readableZoom]);
 
   const nodes = useMemo<PlanNode[]>(
     () =>

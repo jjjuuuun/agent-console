@@ -809,7 +809,7 @@ textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); 
 
 .ac-pageheader { container-type: inline-size; position: sticky; top: 0; z-index: var(--ac-z-header); display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-3); box-sizing: border-box; height: var(--ac-pageheader-h); padding: 0 var(--ac-space-4); background: var(--ac-surface-1); border-bottom: 1px solid var(--ac-border-soft); }
 .ac-pageheader-main { display: flex; align-items: center; gap: var(--ac-space-3); min-width: 0; flex: 1; }
-.ac-pageheader-title { margin: 0; font-size: var(--ac-text-xl); line-height: var(--ac-lh-xl); font-weight: var(--ac-fw-strong); min-width: 0; flex: 0 1 auto; max-width: var(--ac-header-title-max); }
+.ac-pageheader-title { margin: 0; font-size: var(--ac-text-xl); line-height: var(--ac-lh-xl); font-weight: var(--ac-fw-strong); min-width: min(6ch, 100%); flex: 0 1 auto; max-width: var(--ac-header-title-max); }
 .ac-pageheader-status { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
 .ac-pageheader-actions { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; }
 .ac-pageheader-secondary { display: flex; align-items: center; gap: var(--ac-space-1); }
@@ -1053,3 +1053,15 @@ button.ac-chip:focus-visible { outline: 2px solid var(--ac-accent); outline-offs
   .ac-banner { border: 1px solid ButtonText; }
   .ac-sidebar-item[aria-current="page"], .ac-listpane-row[aria-selected="true"], .ac-palette-item[data-active="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
+
+/* React Flow 컨트롤·배경을 테마 토큰으로(그래프 화면 공용): 다크에서도 컨트롤 아이콘이 보인다 */
+div.react-flow {
+  --xy-controls-button-background-color: var(--ac-surface-2);
+  --xy-controls-button-background-color-hover: var(--ac-hover-bg, var(--ac-surface-3));
+  --xy-controls-button-color: var(--ac-text);
+  --xy-controls-button-color-hover: var(--ac-text);
+  --xy-controls-button-border-color: var(--ac-border);
+  --xy-background-pattern-dots-color: var(--ac-border);
+}
+.react-flow .react-flow__controls-button { background: var(--ac-surface-2); color: var(--ac-text); border-bottom: 1px solid var(--ac-border); }
+.react-flow .react-flow__controls-button svg { fill: currentColor; }

@@ -95,7 +95,7 @@ class ProjectsRecordsLink:
         ctx.subscribe(RUNS_EVENT, SessionArchiver(sessions, lambda: ctx.port(RUNS_READER)))
 
         async def stop() -> None:
-            pool.close_all()
+            pool.shutdown()  # 뒤늦은 열기(배경 수집 스레드)가 새 연결을 남기지 않게
 
         return ModuleParts(shutdown=[stop])
 

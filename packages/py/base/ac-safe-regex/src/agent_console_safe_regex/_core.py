@@ -105,9 +105,10 @@ class SafePattern:
             RegexTimeoutError: 시간 제한 초과.
         """
         target = text[: self.max_input_chars]
+        groups = self._compiled.groupindex
         return self._timed(
             lambda: [
-                _wrap(m)
+                _wrap(m, groups)
                 for m in self._compiled.finditer(
                     target, overlapped=overlapped, concurrent=False, timeout=self.timeout
                 )
@@ -120,7 +121,7 @@ class SafePattern:
         m = self._timed(lambda: run(target, concurrent=False, timeout=self.timeout))
         if m is None:
             return None
-        return _wrap(m)
+        return _wrap(m, self._compiled.groupindex)
 
     def _timed[T](self, call: Callable[[], T]) -> T:
         """``call`` 을 시간 제한 안에서 실행한다. 남의 CPU로 난 초과는 다시 한다(`_OWN_CPU_SHARE`).
@@ -140,14 +141,24 @@ class SafePattern:
         raise AssertionError("unreachable")  # pragma: no cover
 
 
-def _wrap(m: regex.Match[str]) -> SafeMatch:
+def _wrap(m: regex.Match[str], groups: Mapping[str, int]) -> SafeMatch:
+    # `regs`(묶음 번호별 위치) 한 번으로 위치·값을 만든다(묶음마다 `span`·`groupdict`를 부르는
+    # 것보다 빠르다). `regex`는 같은 이름 묶음이 한 번호를 함께 쓰므로 `span(name)`·`group(name)`과
+    # 같다.
+    regs = m.regs
+    source = m.string
     spans: dict[str, tuple[int, int] | None] = {}
-    for name in m.re.groupindex:
-        start, end = m.span(name)
-        spans[name] = None if start < 0 else (start, end)
-    return SafeMatch(
-        start=m.start(), end=m.end(), text=m.group(0), named=m.groupdict(), spans=spans
-    )
+    named: dict[str, str | None] = {}
+    for name, index in groups.items():
+        span = regs[index]
+        if span[0] < 0:
+            spans[name] = None
+            named[name] = None
+        else:
+            spans[name] = span
+            named[name] = source[span[0] : span[1]]
+    start, end = regs[0]
+    return SafeMatch(start=start, end=end, text=source[start:end], named=named, spans=spans)
 
 
 # ---------------------------------------------------------------- 위험 패턴 휴리스틱

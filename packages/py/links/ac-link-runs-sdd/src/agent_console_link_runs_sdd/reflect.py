@@ -1,4 +1,5 @@
-"""실행 결과 → 작업 상태 반영(design §6R.1.5 "결과 반영", §6R.18 Q12, K6R-5·K6R-6).
+"""실행 결과 → 작업 상태·문서 상태 반영(design §6R.1.5 "결과 반영", §6R.18 Q12, K6R-5·K6R-6,
+§6R.12 뒤 7행 "실행도 허용").
 
 이 연동이 시작한 루트 Run만 따라간다(``track``). 상태 반영 이벤트(설치자 옵션 ``status_events``)가
 오면 그 Run 상태를 결과 이름(``run_outcomes``)으로 바꾸고, **그때의 스펙 규칙**에서 실행 프로필을
@@ -10,6 +11,13 @@
 이슈 ``sdd.status_not_applied``(``details.reason``, 관문이면 ``details.gate_id``)를 그 작업에
 남긴다.
 같은 작업이 나중에 반영되면 지운다. 이슈는 메모리에만 있다(실행 결과는 라벨로 늘 보인다).
+
+같은 사건에서 프로필 ``document_state_on[결과]``(없으면 ``[실행 상태]``)가 있으면 그 문서 상태를
+``change_document_state(by="run", run_id=<루트 Run>)``로 바꾼다(전환 규칙·``document_state`` 관문
+검사 그대로). 작업 줄 반영과 서로 독립이다 — 하나가 막혀도 다른 하나는 시도한다(작업 줄 먼저).
+이미 그 상태면 아무것도 하지 않는다. 막히면(전환 거부·관문·문서 없음·쓸 수 없음) 고치지 않고 정보
+이슈 ``sdd.document_state_not_applied``(``details{document_id, to, reason, gate_id?}``)를 그 작업에
+남긴다. 비우면 문서 상태를 바꾸지 않는다.
 
 이벤트 처리는 동기다(파일 쓰기 한 번 — 상태 이벤트는 실행마다 몇 개뿐). 시작 요청이 끝나기 전에 온
 이벤트는 잠깐 모았다가 ``track`` 때 다시 적용한다.
@@ -25,8 +33,17 @@ from typing import Any
 
 from agent_console_contracts import RunEvent
 from agent_console_contracts.constants import KnownIssueCodes
-from agent_console_contracts.sdd import KnownTransitionActors, SpecIssue
-from agent_console_sdd import GateBlockedError, TaskChangedError, find_task
+from agent_console_contracts.sdd import KnownTransitionActors, RunProfile, SpecIssue
+from agent_console_sdd import (
+    GateBlockedError,
+    LoadedSpec,
+    SpecNotFoundError,
+    SpecRepository,
+    TaskChangedError,
+    TransitionDeniedError,
+    effective_document_state,
+    find_task,
+)
 
 from .ports import SddServicePort
 
@@ -38,6 +55,16 @@ REASON_GATE_BLOCKED = "gate_blocked"
 """``details.reason``: ``task_status`` 관문이 막았다(``details.gate_id``)."""
 REASON_ERROR = "error"
 """``details.reason``: 그 밖에 고치지 못했다(``details.code`` = 예외 코드)."""
+REASON_TRANSITION_DENIED = "transition_denied"
+"""``details.reason``(문서 상태): 전환 규칙에 실행(``by: run``)이 할 수 있는 그 전환이 없다."""
+REASON_DOCUMENT_NOT_FOUND = "document_not_found"
+"""``details.reason``(문서 상태): 그 문서가 스펙 문서 목록에 없다."""
+
+ISSUE_STATUS = "status"
+"""이슈 종류: 작업 상태 반영(``sdd.status_not_applied``)."""
+ISSUE_DOCUMENT = "document"
+"""이슈 종류: 문서 상태 반영(``sdd.document_state_not_applied``)."""
+_ISSUE_KINDS = (ISSUE_STATUS, ISSUE_DOCUMENT)
 
 _MAX_EARLY_EVENTS = 256
 
@@ -93,7 +120,7 @@ class StatusReflector:
         self._finished = frozenset(finished_statuses)
         self._max_issues = max(1, max_issues)
         self._runs: dict[str, TrackedRun] = {}
-        self._issues: OrderedDict[tuple[str | None, str, str], SpecIssue] = OrderedDict()
+        self._issues: OrderedDict[tuple[str | None, str, str, str], SpecIssue] = OrderedDict()
         self._starting = 0
         self._early: OrderedDict[str, list[RunEvent]] = OrderedDict()
         self._early_count = 0
@@ -140,23 +167,24 @@ class StatusReflector:
 
     # ------------------------------------------------------------ 이슈
     def issues(self, space: str | None, spec_id: str, keys: Iterable[str]) -> list[SpecIssue]:
-        """그 작업들에 남은 ``sdd.status_not_applied`` 이슈."""
+        """그 작업들에 남은 ``sdd.status_not_applied``·``sdd.document_state_not_applied`` 이슈."""
         out: list[SpecIssue] = []
         for key in keys:
-            found = self._issues.get((space, spec_id, key))
-            if found is not None:
-                out.append(found)
+            for kind in _ISSUE_KINDS:
+                found = self._issues.get((space, spec_id, key, kind))
+                if found is not None:
+                    out.append(found)
         return out
 
-    def _remember(self, run: TrackedRun, issue: SpecIssue) -> None:
-        key = (run.space, run.spec_id, run.task_key)
+    def _remember(self, run: TrackedRun, issue: SpecIssue, kind: str = ISSUE_STATUS) -> None:
+        key = (run.space, run.spec_id, run.task_key, kind)
         self._issues.pop(key, None)
         self._issues[key] = issue
         while len(self._issues) > self._max_issues:
             self._issues.popitem(last=False)
 
-    def _forget(self, run: TrackedRun) -> None:
-        self._issues.pop((run.space, run.spec_id, run.task_key), None)
+    def _forget(self, run: TrackedRun, kind: str = ISSUE_STATUS) -> None:
+        self._issues.pop((run.space, run.spec_id, run.task_key, kind), None)
 
     # ------------------------------------------------------------ 이벤트
     def on_event(self, event: RunEvent) -> None:
@@ -213,9 +241,23 @@ class StatusReflector:
         )
         if profile is None:
             return
-        target = profile.status_on.get(outcome)
-        if target is None and outcome != status:
-            target = profile.status_on.get(status)
+        # 작업 줄과 문서 상태는 서로 독립(하나가 막혀도 다른 하나는 시도한다).
+        try:
+            self._reflect_task(run, outcome, status, repo, loaded, profile)
+        except Exception:  # pragma: no cover - 방어
+            _log.exception("작업 상태 반영 실패: %s", run.run_id)
+        self._reflect_document(run, outcome, status, repo, loaded, profile)
+
+    def _reflect_task(
+        self,
+        run: TrackedRun,
+        outcome: str,
+        status: str,
+        repo: SpecRepository,
+        loaded: LoadedSpec,
+        profile: RunProfile,
+    ) -> None:
+        target = _pick(profile.status_on, outcome, status)
         if not target:
             return  # status_on 비움 = 상태를 바꾸지 않는다(K6R-6)
         task = find_task(loaded.index, run.task_key)
@@ -244,6 +286,95 @@ class StatusReflector:
             self._forget(run)
             self._sdd.notify(run.space, run.spec_id, version_hash=result.version_hash)
 
+    def _reflect_document(
+        self,
+        run: TrackedRun,
+        outcome: str,
+        status: str,
+        repo: SpecRepository,
+        loaded: LoadedSpec,
+        profile: RunProfile,
+    ) -> None:
+        change = _pick(profile.document_state_on, outcome, status)
+        if change is None:
+            return  # document_state_on 비움 = 문서 상태를 바꾸지 않는다
+        doc = next((d for d in loaded.spec.documents if d.id == change.document), None)
+        if doc is None:
+            self._doc_not_applied(
+                run, outcome, change.document, change.to, REASON_DOCUMENT_NOT_FOUND
+            )
+            return
+        if effective_document_state(loaded.spec.rules, doc.state) == change.to:
+            self._forget(run, ISSUE_DOCUMENT)
+            return  # 이미 그 상태(같은 상태로의 전환 규칙이 없어도 이슈를 내지 않는다)
+        try:
+            stored = repo.change_document_state(
+                run.spec_id,
+                change.document,
+                change.to,
+                by=KnownTransitionActors.RUN,
+                run_id=run.run_id,
+            )
+        except TransitionDeniedError:
+            self._doc_not_applied(
+                run, outcome, change.document, change.to, REASON_TRANSITION_DENIED
+            )
+        except GateBlockedError as exc:
+            self._doc_not_applied(
+                run,
+                outcome,
+                change.document,
+                change.to,
+                REASON_GATE_BLOCKED,
+                gate_id=exc.blocked.gate_id,
+            )
+        except SpecNotFoundError:
+            self._doc_not_applied(
+                run, outcome, change.document, change.to, REASON_DOCUMENT_NOT_FOUND
+            )
+        except Exception as exc:
+            self._doc_not_applied(
+                run, outcome, change.document, change.to, REASON_ERROR, code=_code(exc)
+            )
+        else:
+            self._forget(run, ISSUE_DOCUMENT)
+            self._sdd.notify(run.space, run.spec_id, version_hash=stored.version_hash)
+
+    def _doc_not_applied(
+        self,
+        run: TrackedRun,
+        outcome: str,
+        document_id: str,
+        to: str,
+        reason: str,
+        *,
+        gate_id: str | None = None,
+        code: str | None = None,
+    ) -> None:
+        details: dict[str, Any] = {
+            "document_id": document_id,
+            "to": to,
+            "reason": reason,
+            "run_id": run.run_id,
+            "outcome": outcome,
+        }
+        if gate_id is not None:
+            details["gate_id"] = gate_id
+        if code is not None:
+            details["code"] = code
+        self._remember(
+            run,
+            SpecIssue(
+                severity="info",
+                code=KnownIssueCodes.SDD_DOCUMENT_STATE_NOT_APPLIED,
+                message=_DOC_MESSAGES.get(reason, _DOC_MESSAGES[REASON_ERROR]),
+                task_key=run.task_key,
+                details=details,
+            ),
+            ISSUE_DOCUMENT,
+        )
+        self._notify_quietly(run)
+
     def _not_applied(
         self,
         run: TrackedRun,
@@ -271,6 +402,9 @@ class StatusReflector:
                 details=details,
             ),
         )
+        self._notify_quietly(run)
+
+    def _notify_quietly(self, run: TrackedRun) -> None:
         try:
             self._sdd.notify(run.space, run.spec_id)
         except Exception:  # pragma: no cover - 알림 실패는 무시
@@ -284,15 +418,37 @@ _MESSAGES: dict[str, str] = {
 }
 
 
+_DOC_MESSAGES: dict[str, str] = {
+    REASON_TRANSITION_DENIED: (
+        "전환 규칙이 실행의 그 전환을 허용하지 않아 문서 상태를 바꾸지 않았습니다."
+    ),
+    REASON_GATE_BLOCKED: "관문이 막아 실행 결과로 문서 상태를 바꾸지 않았습니다.",
+    REASON_DOCUMENT_NOT_FOUND: "그 문서가 스펙에 없어 실행 결과로 문서 상태를 바꾸지 않았습니다.",
+    REASON_ERROR: "스펙을 고칠 수 없어 실행 결과로 문서 상태를 바꾸지 않았습니다.",
+}
+
+
+def _pick[V](table: Mapping[str, V], outcome: str, status: str) -> V | None:
+    """결과 이름으로 먼저, 없으면 실행 상태 이름으로 찾는다(``status_on``과 같은 규칙)."""
+    found = table.get(outcome)
+    if found is None and outcome != status:
+        found = table.get(status)
+    return found
+
+
 def _code(exc: BaseException) -> str:
     code = getattr(exc, "code", None)
     return code if isinstance(code, str) and code else "internal"
 
 
 __all__ = [
+    "ISSUE_DOCUMENT",
+    "ISSUE_STATUS",
+    "REASON_DOCUMENT_NOT_FOUND",
     "REASON_ERROR",
     "REASON_GATE_BLOCKED",
     "REASON_TASK_CHANGED",
+    "REASON_TRANSITION_DENIED",
     "RunListener",
     "StatusReflector",
     "TrackedRun",

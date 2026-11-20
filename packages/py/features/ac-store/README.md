@@ -162,6 +162,23 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
 `backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
 
+## 열린 자원 캐시 (`OpenCache`)
+
+프로젝트 공간 풀(기록 DB·메모리 DB)이 같이 쓰는 이름 → 열린 값 캐시. 오래 안 쓴 순서·유휴(`idle`)·
+상한(`over`, 빼서 돌려주고 닫기는 호출자)·`drop`·`clear`, 그리고 `shutdown()`(모두 닫고 그 뒤
+`put`은 `CacheShut`) - 서버 종료 뒤 늦게 온 열기가 연결을 남기지 않게 한다.
+
+```python
+>>> from agent_console_store import OpenCache
+>>> closed = []
+>>> cache = OpenCache(closed.append)
+>>> cache.put("p1", "handle-1")
+>>> cache.shutdown()
+>>> closed, cache.shut
+(['handle-1'], True)
+
+```
+
 ## 앱 DB 기록 옮기기 (`RecordsMove`)
 
 도메인을 모르는 표 단위 옮기기 도구다. 기본 표 + 딸린 표 + 묶음 id만 주면 두 엔진 사이에서

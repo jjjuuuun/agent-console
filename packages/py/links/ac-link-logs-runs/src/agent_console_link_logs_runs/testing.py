@@ -84,9 +84,10 @@ class MemoryRuns:
         conversation_id: str | None = None,
         agent: str | None = None,
         parent_run_id: str | None = None,
+        project_id: str | None = None,
         limit: int | None = None,
     ) -> builtins.list[Run]:
-        """최신 생성순(``agent``는 보지 않는다)."""
+        """최신 생성순(``agent``는 보지 않는다, ``project_id`` = Run의 ``project_id`` 열)."""
         wanted = set(status) if status is not None else None
         rows = [
             r
@@ -95,6 +96,7 @@ class MemoryRuns:
             and (wanted is None or r.status in wanted)
             and (conversation_id is None or r.conversation_id == conversation_id)
             and (parent_run_id is None or r.parent_run_id == parent_run_id)
+            and (project_id is None or r.project_id == project_id)
         ]
         rows.sort(key=lambda r: r.created_at, reverse=True)
         return rows[:limit] if limit is not None else rows
@@ -140,10 +142,12 @@ def run_record(
     status: RunStatus = "completed",
     created_at: float = 1.0,
     parent_run_id: str | None = None,
+    project_id: str | None = None,
 ) -> Run:
     """짧은 Run(그래프 ``g``, 입력 없음, ``parent_run_id``를 주면 자식 Run)."""
     return Run(
         parent_run_id=parent_run_id,
+        project_id=project_id,
         id=run_id,
         graph_id="g",
         graph_version="v",

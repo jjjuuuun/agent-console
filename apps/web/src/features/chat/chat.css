@@ -44,7 +44,7 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
 
 /* 채팅 영역 */
 .chat-pane { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; position: relative; }
-.chat-header { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; height: var(--ac-pageheader-h); box-sizing: border-box; padding: 0 var(--ac-space-4); border-bottom: 1px solid var(--ac-border); background: var(--ac-surface-1); }
+.chat-header { container-type: inline-size; display: flex; align-items: center; gap: var(--ac-space-2); flex: none; height: var(--ac-pageheader-h); box-sizing: border-box; padding: 0 var(--ac-space-4); border-bottom: 1px solid var(--ac-border); background: var(--ac-surface-1); }
 .chat-title { min-width: 0; flex: 0 1 auto; max-width: var(--ac-header-title-max); background: none; border: 0; padding: 0 var(--ac-space-1); color: var(--ac-text); cursor: text; text-align: left; border-radius: var(--ac-radius-sm); }
 .chat-title h1 { margin: 0; font-size: var(--ac-text-lg); font-weight: 600; }
 .chat-title:hover { background: var(--ac-surface-3); }

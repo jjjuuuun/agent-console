@@ -4,7 +4,8 @@
     - ``module``(``LogsRunsLink``): entry point ``agent_console.server_modules``의
       ``link-logs-runs``.
     - 포트(``ports``): 받음 ``LOGS_INGEST``·``LOGS_QUERY``·``RUNS_READER``·``RUNS_EVENTS``(필수),
-      구독 ``RUNS_EVENT``, 제공 ``LOG_SOURCES``.
+      선택 ``PROJECTS_LOOKUP``(등록 프로젝트 공간의 실행도 수집), 구독 ``RUNS_EVENT``, 제공
+      ``LOG_SOURCES``.
     - HTTP 없이 쓰는 부품: ``PlatformRunsSource``·``PlatformRunsClassifier``(``platform_runs``로
       한 쌍), 대응표 ``EventMap``(``load_default_event_map`` — 패키지 데이터
       ``run_event_map.yaml``), ``ScanDebouncer``, ``RunLogs``(``/runs/{id}/logs`` 계산),
@@ -38,12 +39,14 @@ from .ports import (
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_QUERY,
+    PROJECTS_LOOKUP,
     RUNS_EVENT,
     RUNS_EVENTS,
     RUNS_READER,
     EventReader,
     LogIngestLike,
     LogQueryLike,
+    ProjectListing,
     RunReader,
     RuntimeLogSource,
 )
@@ -80,6 +83,7 @@ __all__ = [
     "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
     "MODULE_ID",
+    "PROJECTS_LOOKUP",
     "RULE_SCHEMA",
     "RUNS_EVENT",
     "RUNS_EVENTS",
@@ -99,6 +103,7 @@ __all__ = [
     "PlatformRunsClassifier",
     "PlatformRunsLogSource",
     "PlatformRunsSource",
+    "ProjectListing",
     "RunLogs",
     "RunNotFoundError",
     "RunReader",

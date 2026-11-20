@@ -35,7 +35,11 @@
     "archived": "archived",
     "deleted": "deleted",
     "sort": "sort",
-    "sortOrder": "order"
+    "sortOrder": "order",
+    "store": "store"
+  },
+  "storeValues": {
+    "library": "library"
   },
   "runChips": {
     "typePrefix": "memory.",

@@ -26,6 +26,7 @@ from agent_console_contracts.sdd import (
 )
 
 from ._errors import GateBlockedError
+from ._syntax import effective_document_state
 
 __all__ = [
     "GateBlock",
@@ -89,7 +90,10 @@ def gate_context(
     """
     ctx: dict[str, Any] = {
         "spec": {"id": spec.id, "name": spec.name},
-        "documents": {d.id: {"state": d.state, "title": d.title} for d in spec.documents},
+        "documents": {
+            d.id: {"state": effective_document_state(spec.rules, d.state), "title": d.title}
+            for d in spec.documents
+        },
     }
     if task is not None:
         ctx["task"] = {

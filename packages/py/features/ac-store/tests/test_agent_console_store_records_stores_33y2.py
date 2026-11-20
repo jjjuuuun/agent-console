@@ -157,3 +157,102 @@ def test_on_open_exception_does_not_break_open(spaces: Spaces) -> None:
 
     stores = RecordsStores(lambda: spaces, SqliteStorage, on_open=hook)
     assert stores.reader("p1") is None
+
+
+def test_other_thread_waits_for_on_open_hook(spaces: Spaces) -> None:
+    """훅(재시작 복구)이 도는 동안 같은 공간을 여는 다른 스레드는 끝날 때까지 기다린다.
+
+    회귀(11/20): 시작 직후 로그 수집이 공간을 먼저 열어 복구하는 사이 첫 요청이 기다리지 않고
+    복구 전 상태(`running`)를 읽었다.
+    """
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+    order: list[str] = []
+
+    def hook(project_id: str) -> bool:
+        started.set()
+        assert stores.reader(project_id) is None  # 훅 안에서 다시 열기는 기다리지 않는다
+        release.wait(5)
+        order.append("hook-done")
+        return True
+
+    stores = RecordsStores(lambda: spaces, SqliteStorage, on_open=hook)
+    first = threading.Thread(target=stores.reader, args=("p1",))
+    first.start()
+    assert started.wait(5)
+
+    def second() -> None:
+        stores.reader("p1")
+        order.append("second-read")
+
+    other = threading.Thread(target=second)
+    other.start()
+    other.join(0.2)
+    assert other.is_alive()  # 훅이 끝나기 전에는 읽지 않는다
+    release.set()
+    first.join(5)
+    other.join(5)
+    assert order == ["hook-done", "second-read"]
+
+
+def test_waiter_retries_hook_when_owner_did_not_finish(spaces: Spaces) -> None:
+    """먼저 연 스레드의 훅이 거짓이면, 기다리던 스레드가 이어서 다시 부른다."""
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    def hook(project_id: str) -> bool:
+        calls.append(threading.current_thread().name)
+        if len(calls) == 1:
+            started.set()
+            release.wait(5)
+            return False
+        return True
+
+    stores = RecordsStores(lambda: spaces, SqliteStorage, on_open=hook)
+    first = threading.Thread(target=stores.reader, args=("p1",), name="first")
+    first.start()
+    assert started.wait(5)
+    other = threading.Thread(target=stores.reader, args=("p1",), name="other")
+    other.start()
+    release.set()
+    first.join(5)
+    other.join(5)
+    assert calls == ["first", "other"]
+
+
+def test_wait_for_hook_is_bounded(spaces: Spaces) -> None:
+    """훅이 멈춰도 다른 스레드는 `open_wait`가 지나면 기다리지 않고 연다."""
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def hook(project_id: str) -> bool:
+        started.set()
+        release.wait(5)
+        return True
+
+    stores = RecordsStores(lambda: spaces, SqliteStorage, on_open=hook, open_wait=0.05)
+    first = threading.Thread(target=stores.reader, args=("p1",))
+    first.start()
+    try:
+        assert started.wait(5)
+        assert stores.reader("p1") is None  # 기다림 상한 뒤 그냥 연다
+    finally:
+        release.set()
+        first.join(5)
+
+
+def test_closed_db_read_is_not_reported_as_corrupt(tmp_path: Path) -> None:
+    """닫힌 기록 DB를 읽으면 깨짐(`corrupt`)이 아니라 닫힘 이유(`folder_missing`)."""
+    db = open_records_db(tmp_path / "records.sqlite3", backup_dir=tmp_path / "backups")
+    db.writable_engine()
+    db.close()
+    with pytest.raises(RecordsUnavailable) as caught:
+        db.read_engine()
+    assert caught.value.reason == "folder_missing"

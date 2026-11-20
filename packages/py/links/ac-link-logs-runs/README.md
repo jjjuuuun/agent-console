@@ -5,6 +5,7 @@
 - 런타임 출처 `platform-runs`(포트 `logs.sources`, 기본 켜짐): 이 콘솔의 실행 이벤트(RunEvent)를 Claude Code 세션 로그와 같은 정규화 이벤트로 색인한다. Run마다 마지막으로 읽은 이벤트 seq(워터마크) 뒤만 읽는다. 실행 기록은 읽기만 한다.
   - 분류기 `platform-run-event`(레지스트리 없이 출처가 직접 지정): 형식 → 범주·필드 대응표는 **데이터**다. 기본값 = 패키지 데이터 `run_event_map.yaml`, 덮어쓰기 = 설정 `logs.sources[id=platform-runs].config.event_map`(키별로 통째로). 대응표에 없는 형식은 범주 `other`.
   - 세션: 대응표의 `session_from` 규칙 이벤트(기본 `agent.session_started`)가 알린 세션 id를 그 노드와 하위 노드(서브에이전트) 이벤트에 붙이고, 없으면 NodeRun `backend_session_id`를 쓴다. 이벤트의 `session`과 `correlation.session`이 된다.
+  - 프로젝트 공간(폴더 기록 DB): 선택 포트 `projects.lookup`이 있으면 공용(앱 기록) Run과 함께 등록 프로젝트(보관 포함)마다 그 공간의 Run(`runs.reader.list(project_id=)`, 공간 찾기·열기는 `mod-runs`가 `records.spaces`로 한다)도 읽는다. 세션 `project_id`는 색인 질의가 이벤트 `cwd`(프로젝트 실행의 작업 폴더 = 프로젝트 폴더)로 붙이므로 `?project=<id>`로 걸러진다. 공간 하나를 읽지 못하면 그 공간만 건너뛴다. 프로젝트 모듈이 꺼지면 공용 실행만 읽는다. 부품만 쓸 때는 `platform_runs(runs, events, project_ids=lambda: [...])`.
   - hook·MCP: 수집기가 낸 `hook.*`·`mcp.*` 이벤트가 범주 `hook`·`mcp`로 보인다. MCP 호출은 `tool_use_id` 짝(시작·완료)으로, `hook.finished`처럼 소요 시간만 실린 이벤트는 대응표 `duration_ms`로 시작(근거 `inferred`)·끝 두 이벤트를 내어 타임라인에 소요 시간이 붙는다.
   - 토큰: 기본 대응표는 `agent.usage`를 토큰 표본으로 쓰지 않는다(같은 세션을 Claude Code 세션 로그 출처로도 읽으면 두 번 세어진다). 쓰려면 대응표에 `usage` 포인터를 넣는다(아래 "실행 단위 토큰").
   - 구조도 재료: 맥락 구성 `agent.context_prepared`(범주 `context`, 리소스 id·종류·바이트 수·해시만), 모델 호출 소요(`agent.usage`의 `duration_ms`가 있으면 시작·끝 두 이벤트), MCP 서버 근거 `correlation.mcp_server`, 위임 호출 id 근거 `correlation.tool_use_id`(호출 NodeRun의 `node.*`). `node.started`의 `from`·`to`·`via`는 위임 호출(payload `call`)일 때만 채운다(조건부 값).
@@ -150,13 +151,14 @@ logs:
 | --- | --- | --- |
 | 필수 | `logs.ingest` | `request_scan(source_ids, ref_hint=)` |
 | 필수 | `logs.query` | `events(flt, with_total=)`·`aggregate(request)` |
-| 필수 | `runs.reader` | `get(run_id)`·`list(parent_run_id=, limit=)`·`list_node_runs(run_id)` |
+| 필수 | `runs.reader` | `get(run_id)`·`list(parent_run_id=, project_id=, limit=)`·`list_node_runs(run_id)`(선택 `for_project(id)`·`descendants(root)`) |
 | 필수 | `runs.events` | `list(run_id, since_seq=, limit=)`·`last_seq(run_id)` |
+| 선택 | `projects.lookup` | `list_projects()`(항목의 `id`) — 있으면 등록 프로젝트 공간의 실행도 수집 |
 | 구독 | `runs.event` | 그 Run 수집 예약(디바운스) |
 | 제공 | `logs.sources` | `PlatformRunsLogSource(source, classifier)` |
 | 제공 | `logs.scope_kinds` | `RunScopeKind`(`id`·`resolve(value) -> LogScope`) — `run`·`run-tree` |
 
-설치자 옵션(`modules.options.link-logs-runs`): `debounce_seconds`(1.0, 0 = 바로). 출처 설정(사용자 데이터 `logs.sources[id=platform-runs].config`): `max_runs`(200, 수집 때 살펴볼 최근 Run 수), `event_map`.
+설치자 옵션(`modules.options.link-logs-runs`): `debounce_seconds`(1.0, 0 = 바로). 출처 설정(사용자 데이터 `logs.sources[id=platform-runs].config`): `max_runs`(200, 수집 때 살펴볼 최근 Run 수 — 공용 기록과 프로젝트 공간마다 따로), `event_map`.
 
 출처 상태의 `pending_bytes`는 이 출처에서 "아직 읽지 않은 이벤트 수"다(단위가 Run 안 seq라서).
 

@@ -3,6 +3,9 @@
 실행 기록(``mod-runs``)과 로그(``mod-logs``)를 잇는다.
 
 - 필수: ``logs.ingest``·``logs.query``·``runs.reader``·``runs.events``.
+- 선택: ``projects.lookup`` — 있으면 등록 프로젝트(보관 포함) 공간의 실행도 수집한다(5.7R.33i·33u2,
+  세션 ``project_id``는 작업 폴더로 붙어 ``?project=``로 걸러진다). 없으면(프로젝트 모듈 끔) 공용
+  실행만 수집한다.
 - 제공: ``logs.sources``에 런타임 출처 ``platform-runs``(분류기 ``platform-run-event``),
   ``logs.scope_kinds``에 범위 종류 ``run``·``run-tree``(X27, ``scope=run:<id>``·``run-tree:<id>``).
 - 구독: ``runs.event`` → 그 Run의 수집을 예약한다(디바운스, 옵션 ``debounce_seconds``).
@@ -27,6 +30,7 @@ from .ports import (
     LOG_SOURCES,
     LOGS_INGEST,
     LOGS_QUERY,
+    PROJECTS_LOOKUP,
     RUNS_EVENT,
     RUNS_EVENTS,
     RUNS_READER,
@@ -81,6 +85,7 @@ class LogsRunsLink:
         description="앱에서 한 실행의 기록을 로그 화면에서도 보게 한다",
         provides=(LOG_SOURCES, LOG_SCOPE_KINDS),
         requires=(LOGS_INGEST, LOGS_QUERY, RUNS_READER, RUNS_EVENTS),
+        optional=(PROJECTS_LOOKUP,),
         settings_schema=LogsRunsSettings,
         contracts={"logs": CONTRACT_VERSIONS["logs"], "runs": CONTRACT_VERSIONS["runs"]},
         web_roles=WEB_ROLES,
@@ -94,7 +99,16 @@ class LogsRunsLink:
         query = ctx.port(LOGS_QUERY)
         if runs is None or events is None or ingest is None or query is None:
             raise RuntimeError("logs.*·runs.* 포트가 없습니다")  # pragma: no cover - 조립기가 보장
-        item = platform_runs(runs, events)
+
+        def project_ids() -> list[str]:
+            """등록 프로젝트 id(보관 포함 — 색인은 보관 프로젝트 세션도 남긴다).
+
+            포트가 없으면(프로젝트 모듈 끔) 빈 목록 — 공용 실행만 읽는다.
+            """
+            listing = ctx.port(PROJECTS_LOOKUP)
+            return [] if listing is None else [str(p.id) for p in listing.list_projects()]
+
+        item = platform_runs(runs, events, project_ids=project_ids)
         source_id = item.source.descriptor.id
         ctx.provide(LOG_SOURCES, item)
 

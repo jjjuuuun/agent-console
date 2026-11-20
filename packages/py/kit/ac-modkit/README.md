@@ -284,6 +284,7 @@ python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--
 | `EventBus` | `subscribe`(해제 함수 반환)·`publish`(막히지 않음)·`deliver`(기다림)·`drain`·`errors` |
 | `Hub[T]` | WS 토픽 문자열 팬아웃(느린 구독자는 버림·`dropped`) |
 | `LoopPublisher[T](publish, *, key=None)` | 다른 스레드에서 온 알림을 `bind(loop)`한 이벤트 루프 스레드로 옮겨 `publish`를 부른다. `key`가 같은 알림이 바로 이어지면 한 번만(키 None = 그 알림은 검사 안 함), 바인드 전·`bind(None)` 뒤는 바로 부름, 바인드한 루프가 닫혔으면 버림(`dropped`) |
+| `WorkGate` / `DEFAULT_WORK_WAIT` | 배경 스레드 작업 수 세기 + 닫힘. `run(fn, stopped=None)`(닫힌 뒤에는 `stopped()`), `close()`·`reopen()`·`closed`·`busy`, `wait_idle(timeout)`, `await close_and_wait(timeout)`. 배경 작업이 취소되거나 종료 훅이 자원을 닫기 전에 진행 중인 스레드 작업을 기다린다 |
 | `BaseServices` / `Paths` | 호스트 기본 서비스 |
 | `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions, scopes=("app",))` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보 중 `scopes`에 `"app"`이 든 것만 build 직전에 `database.upgrade`로 올린다(다른 범위, 예: 프로젝트 기록 DB의 `"project"`는 그 DB를 여는 모듈이 `ModuleContext.active_migrations(scope)`로 읽어 올린다)(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
 | `load_installed_modules(group=MODULES_GROUP)` | entry point에서 모듈 읽기(ac-registry 로더) |

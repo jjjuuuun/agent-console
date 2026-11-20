@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { isCovered, readWorkspacePatterns } from "./workspace.mjs";
+import { isCovered, patternRoots, readWorkspacePatterns } from "./workspace.mjs";
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "coverage", ".turbo", ".vite"]);
 const TEXT_FILE = /(?:\.(?:[cm]?[jt]sx?|json|md|css|ya?ml|txt)|\/LICENSE|^LICENSE|\.gitignore)$/;
@@ -42,7 +42,8 @@ export function inferKind(relDir, packageJson = null) {
 /**
  * 워크스페이스 패턴에 맞는 패키지 폴더를 찾는다.
  * @param {string} root 저장소 루트
- * @param {{under?: string}} [options] under: 이 접두사 아래 패턴만 본다(기본 `packages/ts/`)
+ * @param {{under?: string}} [options] under: 이 접두사 아래 패턴만 본다(기본 `packages/ts/`).
+ *   `""`이면 워크스페이스 전체(패턴마다 고정 폴더에서 시작하고, 없는 폴더는 건너뛴다)
  * @returns {{relDir: string, dir: string, name: string, version: string, packageJson: Record<string, any>}[]}
  */
 export function discoverPackages(root, options = {}) {
@@ -51,20 +52,26 @@ export function discoverPackages(root, options = {}) {
   if (!existsSync(wsFile)) throw new Error(`pnpm-workspace.yaml이 없다: ${root} (--root로 저장소 루트를 지정한다)`);
   const patterns = readWorkspacePatterns(readFileSync(wsFile, "utf8"));
   const found = [];
-  const walk = (rel, depth) => {
-    if (depth > 4) return;
+  const visit = (rel, depth) => {
+    if (depth > 5) return;
+    if (rel && isCovered(patterns, rel) && rel.startsWith(under) && existsSync(join(root, rel, "package.json"))) {
+      const packageJson = JSON.parse(readFileSync(join(root, rel, "package.json"), "utf8"));
+      found.push({ relDir: rel, dir: join(root, rel), name: packageJson.name, version: packageJson.version, packageJson });
+      return;
+    }
     for (const entry of readdirSync(join(root, rel), { withFileTypes: true })) {
       if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) continue;
       const next = rel ? `${rel}/${entry.name}` : entry.name;
-      if (isCovered(patterns, next) && next.startsWith(under) && existsSync(join(root, next, "package.json"))) {
-        const packageJson = JSON.parse(readFileSync(join(root, next, "package.json"), "utf8"));
-        found.push({ relDir: next, dir: join(root, next), name: packageJson.name, version: packageJson.version, packageJson });
-      } else if (statSync(join(root, next)).isDirectory()) walk(next, depth + 1);
+      if (statSync(join(root, next)).isDirectory()) visit(next, depth + 1);
     }
   };
-  const start = under.replace(/\/$/, "");
-  if (!existsSync(join(root, start))) throw new Error(`패키지 폴더가 없다: ${start} (--under로 바꿀 수 있다)`);
-  walk(start, 0);
+  if (under === "") {
+    for (const start of patternRoots(patterns)) if (existsSync(join(root, start))) visit(start, 0);
+  } else {
+    const start = under.replace(/\/$/, "");
+    if (!existsSync(join(root, start))) throw new Error(`패키지 폴더가 없다: ${start} (--under로 바꿀 수 있다)`);
+    visit(start, 0);
+  }
   return found.sort((a, b) => a.relDir.localeCompare(b.relDir));
 }
 

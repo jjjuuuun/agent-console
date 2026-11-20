@@ -82,6 +82,16 @@ export const memorySettingsMessages = {
     /** 주기 문구의 단위 틀(0인 단위는 빼고 이어 붙인다) */
     unit: { hour: (n: number) => `${n}시간`, minute: (n: number) => `${n}분`, second: (n: number) => `${n}초` },
     autoOn: (every: string) => `자동 실행: ${every}마다`,
+    /** 대상 요약 꼬리: 자동 실행이 도는 저장소 */
+    autoTargets: { library: "공용", projects: (n: number) => `프로젝트 ${n}개`, none: "자동 정리 대상 없음" },
+    auto: {
+      title: "자동 정리 대상",
+      on: "켜짐",
+      off: "꺼짐",
+      noProjects: "등록한 프로젝트가 없습니다.",
+      notRegistered: "(등록 없음)",
+    },
+    target: "대상 저장소",
     autoOff: "자동 실행 꺼짐 — [지금 적용]으로만 실행됩니다",
     autoDelete: (every: string) => `지우기 규칙은 ${every}마다 자동으로 적용됩니다. 규칙을 바꿀 때 먼저 미리보기로 대상을 확인하세요.`,
     editorNew: "정리 규칙 추가",
@@ -92,6 +102,7 @@ export const memorySettingsMessages = {
     previewTitle: "정리 미리보기",
     blocked: {
       unsaved: "먼저 저장하세요.",
+      targetChanged: "대상 저장소가 바뀌었습니다. 다시 미리보기하세요.",
       stale: "규칙이 바뀌었습니다. 다시 미리보기하세요.",
       none: "미리보기를 먼저 하세요.",
       empty: "정리할 대상이 없습니다.",

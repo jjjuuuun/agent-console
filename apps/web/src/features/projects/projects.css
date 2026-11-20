@@ -201,7 +201,8 @@ a.prj-activity-row:focus-visible { outline: 2px solid var(--ac-focus-ring, var(-
 .prj-pchip[data-problem="true"] { border-color: var(--ac-warning, currentColor); }
 .prj-pchip-name { font-weight: 600; max-width: 140px; }
 .prj-pchip-path { font-family: var(--ac-font-mono); color: var(--ac-text-muted); max-width: 240px; }
-@container (max-width: 879px) { .prj-pchip-path { display: none; } }
+/* 경로 칸은 머리가 넉넉할 때만(머리 제목·다른 버튼이 우선). 전체 경로는 팝오버·title에 있다 */
+@container (max-width: 1179px) { .prj-pchip .prj-pchip-path { display: none; } }
 @container (max-width: 599px) { .prj-pchip-name { max-width: 96px; } }
 .prj-pchip-panel { width: 360px; max-width: 92vw; }
 .prj-pchip-body { display: flex; flex-direction: column; gap: 6px; padding: var(--ac-space-3, 12px); font-size: 13px; }

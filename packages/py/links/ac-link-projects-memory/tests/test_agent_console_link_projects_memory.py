@@ -107,6 +107,51 @@ def test_open_creates_db_in_folder_and_context_is_folder_id(tmp_path: Path) -> N
     assert pool.open_spaces() == []
 
 
+def _open_fds(path: Path) -> int:
+    """이 프로세스가 연 ``path``(와 ``-wal``·``-shm``) 파일 설명자 수(리눅스 ``/proc``)."""
+    names = {str(path), f"{path}-wal", f"{path}-shm"}
+    count = 0
+    for fd in Path("/proc/self/fd").iterdir():
+        try:
+            if str(fd.readlink()) in names:
+                count += 1
+        except OSError:
+            continue
+    return count
+
+
+def test_shutdown_refuses_late_opens_and_leaves_no_connections(tmp_path: Path) -> None:
+    """서버 종료(``shutdown``) 뒤 늦게 온 열기는 ``MemoryDbUnavailable`` - 파일을 열지 않는다.
+
+    회귀(11/20): 종료 뒤에도 끝나지 않은 배경 자동 정리 스레드가 공간을 새로 열 수 있었다.
+    """
+    folder = _project(tmp_path, "a", "folder-a")
+    pool = _pool(FolderSpaces({"reg-1": folder}))
+    space = pool.open("reg-1")
+    space.store.write(MemoryScopeRef(kind="notes", id=""), "k", "본문", author=user_author())
+    pool.shutdown()
+    pool.shutdown()  # 여러 번 불러도 된다
+    assert pool.is_shut
+    assert pool.open_spaces() == []
+    with pytest.raises(MemoryDbUnavailable) as caught:
+        pool.open("reg-1")
+    assert caught.value.code == ErrorCodes.FEATURE_UNAVAILABLE
+    assert pool.existing() == []
+    assert pool.open_spaces() == []
+    if Path("/proc/self/fd").is_dir():
+        assert _open_fds(space.path) == 0
+
+
+def test_close_all_keeps_pool_reusable(tmp_path: Path) -> None:
+    """``close_all``은 닫기만 한다(다음 열기는 다시 연다) - 종료는 ``shutdown``."""
+    folder = _project(tmp_path, "a", "folder-a")
+    pool = _pool(FolderSpaces({"reg-1": folder}))
+    first = pool.open("reg-1")
+    pool.close_all()
+    assert pool.open("reg-1") is not first
+    pool.shutdown()
+
+
 def test_context_field_is_setting_and_falls_back_to_registered_id(tmp_path: Path) -> None:
     folder = tmp_path / "plain"
     folder.mkdir()  # 매니페스트 없음

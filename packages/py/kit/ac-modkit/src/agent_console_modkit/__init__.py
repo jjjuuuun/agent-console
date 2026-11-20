@@ -9,6 +9,8 @@
     - ``assemble(modules, config, base=)`` → ``Assembly``(위상 정렬·상태 5종·bindings·multi 목록).
     - ``ModulesConfig`` / ``ModuleState`` / ``ModuleReport``: 설정·상태·보고.
     - ``EventBus``: 모듈 이벤트 버스(구독자 예외 격리). ``Hub``: WS 토픽 팬아웃.
+    - ``WorkGate``: 배경 스레드 작업 수 세기 + 닫힘(종료 훅이 ``close_and_wait``로 진행 중인
+      작업을 기다린 뒤 자원을 닫는다), ``DEFAULT_WORK_WAIT``.
     - ``LoopPublisher[T](publish, key=None)``: 다른 스레드 알림 → 바인드한 이벤트 루프
       (같은 키 연속은 한 번, 루프가 닫힌 뒤에는 버림, 7R.4).
     - ``BaseServices`` / ``Paths``: 호스트 기본 서비스.
@@ -121,8 +123,10 @@ from ._options import (
 from ._ports import PortKey, Topic
 from ._publisher import LoopPublisher
 from ._services import BaseServices, Paths, utc_now
+from ._work import DEFAULT_WORK_WAIT, WorkGate
 
 __all__ = [
+    "DEFAULT_WORK_WAIT",
     "DEFINITION_KIND_CONTRIBUTIONS",
     "FEATURE_UNAVAILABLE",
     "HOST_DATABASE_GROUP",
@@ -179,6 +183,7 @@ __all__ = [
     "SettingsCompat",
     "Topic",
     "UndeclaredPortError",
+    "WorkGate",
     "WsForward",
     "WsReject",
     "WsSend",

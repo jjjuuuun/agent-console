@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any
@@ -27,6 +28,8 @@ from .ports import MemorySpaces
 
 if TYPE_CHECKING:
     from .service import MemoryService
+
+_log = logging.getLogger(__name__)
 
 
 class MemorySpaceError(Exception):
@@ -133,6 +136,28 @@ class MemorySpaceServices:
             service.space_name = space
             self._cache[space] = (store, service)
             return service
+
+    def existing(self) -> list[str]:
+        """자동 정리 대상이 될 수 있는 공간 이름(제공자의 선택 메서드 ``existing()``, 5.7R.46).
+
+        제공자가 없거나 메서드가 없으면 빈 목록. 메서드가 실패하면 기록하고 빈 목록. 같은 이름은
+        한 번만, 제공자가 준 순서대로. 이 호출은 공간을 열지 않는다(무엇을 확인하는지는 제공자가
+        정한다 — 예: 메모리 파일이 이미 있는 프로젝트만).
+        """
+        provider = self._provider()
+        listing = getattr(provider, "existing", None) if provider is not None else None
+        if not callable(listing):
+            return []
+        try:
+            names = list(listing())
+        except Exception:
+            _log.warning("메모리 공간 목록을 읽지 못해 공용 메모리만 다룹니다", exc_info=True)
+            return []
+        out: list[str] = []
+        for name in names:
+            if isinstance(name, str) and name and name not in out:
+                out.append(name)
+        return out
 
     def forget(self, space: str) -> None:
         """캐시에서 뺀다(다음 ``get``이 새 서비스를 만든다)."""

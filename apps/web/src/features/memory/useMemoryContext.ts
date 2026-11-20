@@ -10,6 +10,7 @@ import { queryKeys, useApiQuery } from "../../app/queries";
 import { LOOKUP_REQUIRES } from "../../app/requirements";
 import { useRequires } from "../../modules";
 import { useProjects } from "../projects";
+import { useMemoryProject } from "./useMemoryApi";
 
 const NAME_FIELDS = { agent: "agent_id" } as const;
 
@@ -41,7 +42,7 @@ export function useMemoryContext(): MemoryContext {
   const graphs = useApiQuery(queryKeys.list("graphs"), (rest) => rest.listGraphs(), { enabled: graphsOn, meta: { silentBackgroundError: true } });
   const agents = useApiQuery(queryKeys.list("agents"), (rest) => rest.listAgents(), { enabled: agentsOn, meta: { silentBackgroundError: true } });
 
-  const project = projects.enabled ? projects.current : null;
+  const project = useMemoryProject();
   const graphList = graphs.data;
   const visibleGraphs = useMemo(() => (graphList === undefined ? [] : projects.filter(graphList, (g) => g.project)), [graphList, projects]);
   const graphIds = useMemo(() => visibleGraphs.map((g) => g.id), [visibleGraphs]);

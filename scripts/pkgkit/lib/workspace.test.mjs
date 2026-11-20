@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inHouseClosure, isCovered, isInHouse, matchesPattern, readWorkspacePatterns, tarballName } from "./workspace.mjs";
+import { inHouseClosure, isCovered, isInHouse, matchesPattern, patternRoots, readWorkspacePatterns, tarballName } from "./workspace.mjs";
 
 describe("패턴", () => {
   it("pnpm-workspace.yaml 목록을 읽는다", () => {
@@ -18,6 +18,16 @@ describe("패턴", () => {
     const p = { include: ["a/*"], exclude: ["a/x"] };
     expect(isCovered(p, "a/y")).toBe(true);
     expect(isCovered(p, "a/x")).toBe(false);
+  });
+  it("패턴마다 glob 앞 고정 폴더를 시작점으로 돌려주고 겹친 것은 뺀다", () => {
+    expect(patternRoots({ include: ["packages/ts/config/*", "packages/ts/lib/*", "apps/web", "examples/web/*"] })).toEqual([
+      "apps/web",
+      "examples/web",
+      "packages/ts/config",
+      "packages/ts/lib",
+    ]);
+    expect(patternRoots({ include: ["packages/**", "packages/ts/*"] })).toEqual(["packages"]);
+    expect(patternRoots({ include: ["*", "libs/*"] })).toEqual([""]);
   });
 });
 

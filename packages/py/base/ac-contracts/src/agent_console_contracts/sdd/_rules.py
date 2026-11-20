@@ -33,7 +33,7 @@ type AutomationScope = Literal["stage", "spec"]
 
 
 class TaskStatusSpec(DefinitionModel):
-    """작업 상태 하나입니다. 작업 줄의 체크 칸 글자로 상태를 구분합니다."""
+    """작업 상태 하나입니다. 작업 줄의 체크 칸 글자(또는 줄 머리 낱말)로 상태를 구분합니다."""
 
     # 보기 응답의 풀린 라벨은 `TaskStatusInfo`(label 필수). 여기 label은 생략 가능(= id).
 
@@ -56,7 +56,10 @@ class TaskStatusSpec(DefinitionModel):
     )
     marker: str | list[str] = Field(
         title="체크 칸 글자",
-        description="작업 줄 대괄호 안의 글자입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).",
+        description=(
+            "작업 줄 대괄호 안의 글자(줄 머리 상태를 쓰면 그 낱말)입니다. 여러 개면 처음 것으로 "
+            "씁니다(예: x와 X)."
+        ),
         json_schema_extra=x_ui(
             tier="basic",
             when="문서에서 이 상태를 다른 글자로 적고 싶을 때 바꾸세요.",
@@ -151,6 +154,42 @@ class TaskSyntax(DefinitionModel):
         title="작업 깊이",
         description="몇 단계까지 들여쓴 체크 칸을 작업으로 볼지입니다. 비우면 모두 봅니다.",
         json_schema_extra=x_ui(tier="advanced", example=2),
+    )
+    # 1.3.0(0.14.9, 6R.31): 줄 머리 낱말 상태와 고쳐 쓰기 모양. 생략(None) = 앞 층 → 패키지 기본.
+    # status_pattern: 머리 줄 본문(목록 표시 뒤)에서 찾고 이름 묶음 status의 글자를
+    # statuses[].marker와 비교한다. list_item = checkbox와 함께 주면 체크 칸이 먼저(문법 검사 경고
+    # sdd.status_pattern_ignored). 패키지 기본 문법에는 넣지 않는다.
+    # status_format: 상태 없는 줄에 넣는 모양(ac-sdd 기본 "{marker} "). field_format: 없는 필드를
+    # 덧붙이는 모양(ac-sdd 기본 = patch_task 인자 기본값, 인자를 주면 인자 우선).
+    status_pattern: str | None = Field(
+        default=None,
+        title="줄 머리 상태 찾기",
+        description=(
+            "체크 칸 대신 줄 머리 낱말(예: TODO)로 상태를 읽는 정규식입니다. status 이름의 묶음을 "
+            "씁니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example=r"^(?P<status>TODO|DOING|DONE):?\s+",
+            widget=KnownUiWidgets.REGEX,
+        ),
+    )
+    status_format: str | None = Field(
+        default=None,
+        title="상태 넣는 모양",
+        description=(
+            "상태 낱말이 없는 작업 줄에 상태를 넣을 때 본문 맨 앞에 붙이는 모양입니다. {marker}가 "
+            "상태 글자입니다."
+        ),
+        json_schema_extra=x_ui(tier="advanced", example="{marker}: "),
+    )
+    field_format: str | None = Field(
+        default=None,
+        title="필드 덧붙이는 모양",
+        description=(
+            "작업 줄에 없는 필드를 덧붙일 때의 모양입니다. {key}가 필드 이름, {value}가 값입니다."
+        ),
+        json_schema_extra=x_ui(tier="advanced", example="[{key}: {value}]"),
     )
 
 
@@ -353,6 +392,36 @@ class SpecGate(DefinitionModel):
     )
 
 
+class DocumentStateOnRun(DefinitionModel):
+    """실행 결과에 따라 바꿀 문서와 상태입니다. 바꿀 수 없으면 그대로 두고 안내를 남깁니다."""
+
+    # 1.3.0(0.14.9, 6R.31). link-runs-sdd가 status_on과 같은 사건에서 by = run으로 전환을 시도한다
+    # (전환 규칙·관문 검사 그대로). 막히면 바꾸지 않고 정보 이슈 sdd.document_state_not_applied.
+    # 이름이 DocumentStateChange가 아닌 까닭: 그 이름은 문서 상태 전환 REST 요청이 이미 쓴다.
+
+    document: Slug = Field(
+        title="문서",
+        description="상태를 바꿀 문서의 id입니다. 이 스펙의 문서 목록에 있어야 합니다.",
+        json_schema_extra=x_ui(
+            tier="basic",
+            when="실행이 끝나면 다른 문서의 상태를 바꾸고 싶을 때 고르세요.",
+            example="design",
+            order=1,
+        ),
+    )
+    to: NonEmptyStr = Field(
+        title="바꿀 상태",
+        description="이 문서 상태로 바꿉니다. 실행이 할 수 있는 전환이 규칙에 있어야 합니다.",
+        json_schema_extra=x_ui(
+            tier="basic",
+            when="실행 결과로 옮길 문서 상태를 바꿀 때 고르세요.",
+            example="review",
+            widget=KnownUiWidgets.STATE_REF,
+            order=2,
+        ),
+    )
+
+
 class RunProfile(DefinitionModel):
     """실행 프로필 하나입니다. 작업을 어느 팀 구성에 어떤 입력으로 맡길지 정합니다."""
 
@@ -424,6 +493,18 @@ class RunProfile(DefinitionModel):
             when="실행이 끝나면 작업 표시를 자동으로 바꾸고 싶을 때 고치세요.",
             example={"started": "doing", "succeeded": "review"},
             widget=KnownUiWidgets.STATUS_REF,
+        ),
+    )
+    document_state_on: dict[str, DocumentStateOnRun] = Field(
+        default_factory=dict,
+        title="결과에 따른 문서 상태",
+        description=(
+            "실행 상태(예: succeeded) → 바꿀 문서와 상태입니다. 비우면 문서 상태를 바꾸지 않습니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            when="실행이 끝나면 설계 문서를 검토 중으로 옮기는 식으로 쓰고 싶을 때 고치세요.",
+            example={"succeeded": {"document": "design", "to": "review"}},
         ),
     )
 

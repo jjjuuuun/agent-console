@@ -2,6 +2,10 @@
 
 사용자 정규식은 모두 `ac-safe-regex`로 컴파일한다(시간·길이 상한). 컴파일할 수 없는 정규식은
 `sdd.invalid_pattern` 이슈를 내고 그 규칙만 없는 것으로 본다.
+
+작업 상태는 체크 칸 글자(`- [x]`)나, 문법에 `status_pattern`이 있으면 줄 머리 낱말(`- TODO:`)로
+읽는다(6R.32). 줄 머리 낱말은 체크 칸이 없는 줄에서만 찾고, 맞은 범위를 뗀 나머지에서 id·필드·제목을
+읽는다.
 """
 
 from __future__ import annotations
@@ -24,8 +28,11 @@ from agent_console_safe_regex import (
     compile_user_regex,
 )
 
+from ._syntax import package_task_format
+
 __all__ = [
     "KNOWN_LIST_ITEMS",
+    "STATUS_GROUP",
     "CompiledSyntax",
     "FieldSpan",
     "HeadLine",
@@ -43,6 +50,10 @@ _LINE = re.compile(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+\Z")
 _EOL = "\r\n"
 _LIST_MARKER = re.compile(r"[ \t]*(?:([-+*])|(\d{1,9})[.)])(?:[ \t]+|\Z)")
 _SPACE = " \t"
+STATUS_GROUP = "status"
+"""`TaskSyntax.status_pattern`의 이름 묶음(코드 개념): 맞은 글자가 작업 상태 표시 문자다."""
+_IGNORED_NO_GROUP = "no_status_group"
+_IGNORED_CHECKBOX = "checkbox"
 
 
 def split_lines(text: str) -> list[str]:
@@ -80,7 +91,10 @@ class HeadLine:
         kind: `bullet` 또는 `ordered`(목록 항목이 아니면 None).
         marker_end: 목록 표시(`- `·`1. `) 끝 위치.
         checkbox: 체크 칸 안 글자 위치 (시작, 끝). 없으면 None.
-        marker: 체크 칸 안 글자(없으면 None).
+        marker: 체크 칸 안 글자 또는 줄 머리 상태 낱말(없으면 None).
+        body_start: 본문 맨 앞 위치(목록 표시·체크 칸·뒤 공백 다음). 상태 없는 줄에 상태 낱말을
+            넣는 곳이다.
+        status_span: 줄 머리 상태 낱말(`status` 묶음) 위치 (시작, 끝). 없으면 None.
         id: 작업 id(없으면 None), id_span: 그 위치.
         title: 체크 칸·id·필드를 뺀 제목.
         fields: 필드 목록(줄 순서).
@@ -96,6 +110,8 @@ class HeadLine:
     id_span: tuple[int, int] | None = None
     title: str = ""
     fields: tuple[FieldSpan, ...] = ()
+    body_start: int = 0
+    status_span: tuple[int, int] | None = None
 
 
 @dataclass(slots=True)
@@ -119,6 +135,9 @@ class CompiledSyntax:
     requirement_patterns: list[SafePattern]
     stage_levels: frozenset[int]
     stage_pattern: SafePattern | None
+    status_pattern: SafePattern | None
+    status_format: str | None
+    field_format: str | None
     empty: bool
     issues: list[SpecIssue] = field(default_factory=list)
 
@@ -171,8 +190,11 @@ def compile_syntax(
         regex_timeout: 정규식 매치 1회 시간 상한(초).
 
     Returns:
-        `CompiledSyntax`. `issues`에는 `sdd.invalid_pattern`(정규식·작업 줄 모양)과
-        `sdd.duplicate_status_marker`(두 상태가 같은 표시 문자)가 들어간다.
+        `CompiledSyntax`. `issues`에는 `sdd.invalid_pattern`(정규식·작업 줄 모양),
+        `sdd.duplicate_status_marker`(두 상태가 같은 표시 문자),
+        `sdd.status_pattern_ignored`(warning — 줄 머리 상태 정규식에 `status` 묶음이 없거나
+        작업 줄 모양이 체크 칸이라 쓰지 않음, `details.reason`)가 들어간다.
+        `status_format`·`field_format`은 문법 층이 모두 비우면 패키지 기본 데이터 값이다.
     """
     issues: list[SpecIssue] = []
     task = syntax.syntax.task
@@ -219,6 +241,9 @@ def compile_syntax(
         if compiled is not None:
             req_patterns.append(compiled)
     stage_pattern = _compile(stage.pattern if stage else None, "/stage/pattern", ("id",), t, issues)
+    status_pattern = _status_pattern(task.status_pattern if task else None, list_item, t, issues)
+    status_format = task.status_format if task else None
+    field_format = task.field_format if task else None
 
     roles = dict((task.roles if task else None) or {})
     return CompiledSyntax(
@@ -239,16 +264,58 @@ def compile_syntax(
         requirement_patterns=req_patterns,
         stage_levels=frozenset((stage.heading_levels if stage else None) or ()),
         stage_pattern=stage_pattern,
+        status_pattern=status_pattern,
+        status_format=status_format
+        if status_format is not None
+        else package_task_format("status_format"),
+        field_format=field_format
+        if field_format is not None
+        else package_task_format("field_format"),
         empty=syntax.empty or list_item is None,
         issues=issues,
     )
+
+
+def _status_pattern(
+    pattern: str | None, list_item: str | None, timeout: float, issues: list[SpecIssue]
+) -> SafePattern | None:
+    path = "/task/status_pattern"
+    compiled = _compile(pattern, path, (), timeout, issues)
+    if compiled is None:
+        return None
+    reason: str | None = None
+    message = ""
+    if STATUS_GROUP not in compiled.group_names:
+        reason = _IGNORED_NO_GROUP
+        message = "줄 머리 상태 정규식에 status 이름의 묶음이 없어 쓰지 않습니다."
+    elif list_item == "checkbox":
+        reason = _IGNORED_CHECKBOX
+        message = (
+            "작업 줄 모양이 체크 칸이라 체크 칸으로 상태를 읽고 "
+            "줄 머리 상태 정규식은 쓰지 않습니다."
+        )
+    if reason is None:
+        return compiled
+    issues.append(
+        _issue(
+            KnownIssueCodes.SDD_STATUS_PATTERN_IGNORED,
+            message,
+            severity="warning",
+            path=path,
+            details={"reason": reason},
+        )
+    )
+    return None
 
 
 def analyze_head(line: str, syntax: CompiledSyntax, *, require_checkbox: bool = False) -> HeadLine:
     """작업 머리 줄 하나를 나눈다(목록 표시·체크 칸·id·필드·제목). 줄바꿈은 따로 둔다.
 
     목록 항목 줄이 아니면 `kind`가 None이다. `require_checkbox`면 체크 칸이 없는 줄은 id·필드를
-    읽지 않고 바로 돌려준다(`checkbox`가 None). 정규식 시간 초과는 `RegexTimeoutError`로 올린다.
+    읽지 않고 바로 돌려준다(`checkbox`가 None). 체크 칸이 없고 문법에 줄 머리 상태 정규식이
+    있으면 본문에서 그 정규식을 찾아 `status` 묶음을 `marker`로 삼고, 맞은 범위 전체를 뗀
+    나머지에서 id·필드·제목을 읽는다(위치는 늘 원래 줄 기준). 정규식 시간 초과는
+    `RegexTimeoutError`로 올린다.
     """
     text = line.rstrip(_EOL)
     eol = line[len(text) :]
@@ -269,44 +336,70 @@ def analyze_head(line: str, syntax: CompiledSyntax, *, require_checkbox: bool = 
         return HeadLine(text=text, eol=eol, kind=kind, marker_end=m.end())
     while pos < len(text) and text[pos] in _SPACE:
         pos += 1
-    rest_start = pos
-    rest = text[pos:]
+    body_start = pos
 
+    # 줄 머리 상태 낱말: 정규식이 맞은 범위를 떼고 나머지(rest)에서 id·필드·제목을 읽는다.
+    # rest 위치 i → 줄 위치는 떼어 낸 곳(`cut`, rest 기준) 뒤라면 떼어 낸 길이(`shift`)만큼 민다:
+    # 시작 위치는 i >= cut, 끝 위치는 i > cut일 때. 떼어 낸 곳에 걸친(a < cut < b) id·필드는 원래
+    # 줄에서 이어진 글자가 아니므로 읽지 않는다. 떼어 낸 곳이 없으면 cut은 rest 길이보다 커서
+    # 세 조건이 모두 거짓이다(작업 줄마다 부르므로 함수 대신 식으로 쓴다).
+    status_span: tuple[int, int] | None = None
+    shift = 0
+    rest = text[pos:]
+    cut = len(rest) + 1
+    if checkbox is None and syntax.status_pattern is not None and rest:
+        sm = syntax.status_pattern.search(rest)
+        group = sm.span(STATUS_GROUP) if sm is not None else None
+        if sm is not None and group is not None and group[1] > group[0]:
+            status_span = (pos + group[0], pos + group[1])
+            marker = rest[group[0] : group[1]]
+            cut, shift = sm.start, sm.end - sm.start
+            rest = rest[: sm.start] + rest[sm.end :]
+
+    base = len(rest) - len(rest.lstrip(_SPACE))
     task_id: str | None = None
     id_span: tuple[int, int] | None = None
-    if syntax.id_pattern is not None and rest:
-        im = syntax.id_pattern.search(rest)
+    if syntax.id_pattern is not None and base < len(rest):
+        im = syntax.id_pattern.search(rest[base:])
         if im is not None:
             span = im.span("id")
             if span is not None and span[1] > span[0]:
-                task_id = im.group("id")
-                id_span = (rest_start + span[0], rest_start + span[1])
-                rest_start += im.end
-                rest = text[rest_start:]
+                a, b = base + span[0], base + span[1]
+                if not a < cut < b:
+                    task_id = im.group("id")
+                    id_span = (
+                        pos + a + (shift if a >= cut else 0),
+                        pos + b + (shift if b > cut else 0),
+                    )
+                    base += im.end
 
+    sub = rest[base:]
     fields: list[FieldSpan] = []
-    title = rest
-    if syntax.field_pattern is not None and rest:
+    title = sub
+    if syntax.field_pattern is not None and sub:
         pieces: list[str] = []
         last = 0
-        for fm in syntax.field_pattern.finditer(rest):
+        at = pos + base  # sub 위치 → 줄 위치(떼어 낸 곳 앞)
+        sub_cut = cut - base  # sub 기준 떼어 낸 곳
+        for fm in syntax.field_pattern.finditer(sub):
             ks = fm.span("key")
             vs = fm.span("value")
-            if ks is None or vs is None:
+            fs, fe = fm.start, fm.end
+            if ks is None or vs is None or fs < sub_cut < fe:
                 continue
             fields.append(
                 FieldSpan(
-                    key=rest[ks[0] : ks[1]],
-                    value=rest[vs[0] : vs[1]].strip(),
-                    start=rest_start + fm.start,
-                    end=rest_start + fm.end,
-                    value_start=rest_start + vs[0],
-                    value_end=rest_start + vs[1],
+                    key=sub[ks[0] : ks[1]],
+                    value=sub[vs[0] : vs[1]].strip(),
+                    start=at + fs + (shift if fs >= sub_cut else 0),
+                    end=at + fe + (shift if fe > sub_cut else 0),
+                    value_start=at + vs[0] + (shift if vs[0] >= sub_cut else 0),
+                    value_end=at + vs[1] + (shift if vs[1] > sub_cut else 0),
                 )
             )
-            pieces.append(rest[last : fm.start])
-            last = fm.end
-        pieces.append(rest[last:])
+            pieces.append(sub[last:fs])
+            last = fe
+        pieces.append(sub[last:])
         title = "".join(pieces)
     return HeadLine(
         text=text,
@@ -319,4 +412,6 @@ def analyze_head(line: str, syntax: CompiledSyntax, *, require_checkbox: bool = 
         id_span=id_span,
         title=" ".join(title.split()),
         fields=tuple(fields),
+        body_start=body_start,
+        status_span=status_span,
     )

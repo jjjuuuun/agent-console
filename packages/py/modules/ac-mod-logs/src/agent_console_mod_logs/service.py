@@ -8,6 +8,8 @@
 - 보존: ``retention_days``가 있으면 수집 뒤 그보다 오래된 이벤트를 지운다(색인만, 원본은 그대로).
 - 비우기(M-3): ``purge``는 수집과 같은 잠금 안에서 ``purge_index``를 부른다(수집 중인 커서 쓰기와
   섞이지 않게).
+- 멈춤: ``stop()``은 진행 중인 스레드 수집·비우기가 끝나기를 기다린다(상한 ``stop_wait``). 그 뒤
+  색인을 닫아도 수집 스레드가 닫힌 자원을 쓰지 않는다. 멈춘 뒤 새 수집은 빈 보고다.
 - 알림: 새 이벤트가 있으면 ``on_ingested(LogsIngestedPayload)``를 부른다(모듈이 토픽·WS로 보낸다).
 - 질의: 지금 설정(``logs.taxonomy``)과 등록 프로젝트(``projects`` → 세션 ``project_id``)로 질의
   맥락을 만들어 색인에 묻는다. 옛 묶기 설정 ``logs.projects``는 읽지 않는다(정보
@@ -80,9 +82,13 @@ from agent_console_logs import (
     query_context,
     read_only_open,
 )
+from agent_console_modkit import DEFAULT_WORK_WAIT, WorkGate
 
 from .errors import LogPurgeUnsupportedError
 from .settings import DEFAULT_MAX_DETAIL_BYTES, DEFAULT_TIMELINE_LIMIT
+
+DEFAULT_STOP_WAIT = DEFAULT_WORK_WAIT
+"""``LogsService.stop()``이 진행 중인 스레드 수집을 기다리는 최대 초."""
 
 _log = logging.getLogger("agent_console_mod_logs")
 
@@ -160,6 +166,8 @@ class LogsService:
         filter_predicates: 지금 등록된 필터 확장(X28)을 돌려주는 함수(질의마다 부른다).
         source_defaults: 다른 쪽이 정한 출처 기본 켜기(출처 id → bool)를 돌려주는 함수. 출처
             목록의 ``default_effective``에만 쓴다(``enabled`` 반영은 ``settings``가 이미 한다).
+        stop_wait: ``stop()``이 진행 중인 스레드 수집·비우기를 기다리는 최대 초(넘으면 경고 후
+            멈춘다).
     """
 
     def __init__(
@@ -188,8 +196,11 @@ class LogsService:
         filter_predicates: Callable[[], Iterable[LogFilterExtension]] = tuple,
         projects: Callable[[], ProjectFolders | None] | None = None,
         source_defaults: Callable[[], Mapping[str, bool]] = dict,
+        stop_wait: float = DEFAULT_STOP_WAIT,
     ) -> None:
         self._index = index
+        self._stop_wait = stop_wait
+        self._work = WorkGate()
         self._source_defaults = source_defaults
         self._registries = registries
         self._settings = settings
@@ -465,18 +476,33 @@ class LogsService:
         """이벤트 루프에 붙인다(모듈 시작 훅). 시작 전에 쌓인 수집 요청을 처리한다."""
         self._loop = loop or asyncio.get_running_loop()
         self._scan_lock = asyncio.Lock()
+        self._work.reopen()
         self._kick()
 
     async def stop(self) -> None:
-        """예약 처리 작업을 멈춘다(진행 중인 스레드 수집은 끝까지 간다)."""
+        """예약 처리 작업을 멈추고, 진행 중인 스레드 수집·비우기가 끝나기를 기다린다.
+
+        멈춘 뒤에는 새 스레드 수집을 시작하지 않는다(빈 보고). 기다림 상한은 ``stop_wait``다.
+        색인을 닫기 전에 부르면 수집 스레드가 닫힌 색인·다른 모듈 자원을 쓰지 않는다.
+        """
+        self._work.close()
         task, self._drain = self._drain, None
         if task is not None and not task.done():
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        if not await self._work.close_and_wait(self._stop_wait):
+            _log.warning("로그 수집 스레드가 %.0f초 안에 끝나지 않았습니다", self._stop_wait)
         self._loop = None
 
     def _scan_sync(self, key: frozenset[str] | None) -> LogScanReport:
+        return self._work.run(lambda: self._scan_now(key), self._empty_report)
+
+    def _empty_report(self) -> LogScanReport:
+        now = self._clock()
+        return LogScanReport(started_at=now, finished_at=now)
+
+    def _scan_now(self, key: frozenset[str] | None) -> LogScanReport:
         settings = self._settings()
         refresh = getattr(self._redact, "refresh", None)
         if callable(refresh):
@@ -575,14 +601,24 @@ class LogsService:
                 _log.exception("예약된 로그 수집 실패")
 
     async def run_periodic(self, interval: float, *, startup: bool) -> None:
-        """배경 수집: ``startup``이면 바로 한 번, 그 뒤 ``interval``초마다(0이면 반복 없음)."""
-        if startup:
-            await self._safe_scan()
-        if interval <= 0:
-            return
-        while True:
-            await asyncio.sleep(interval)
-            await self._safe_scan()
+        """배경 수집: ``startup``이면 바로 한 번, 그 뒤 ``interval``초마다(0이면 반복 없음).
+
+        취소되면(서버 종료) 새 수집을 막고 진행 중인 스레드 수집이 끝나기를 기다린 뒤 취소를 다시
+        던진다 - 조립기는 종료 훅보다 배경 작업 취소를 먼저 하므로, 다른 모듈(기록 공간 등)이 닫히기
+        전에 수집이 끝난다.
+        """
+        try:
+            if startup:
+                await self._safe_scan()
+            if interval <= 0:
+                return
+            while True:
+                await asyncio.sleep(interval)
+                await self._safe_scan()
+        except asyncio.CancelledError:
+            # 배경 작업 취소(서버 종료) = 다른 모듈 종료 훅보다 먼저 수집 스레드를 끝낸다.
+            await self._work.close_and_wait(self._stop_wait)
+            raise
 
     async def _safe_scan(self) -> None:
         try:
@@ -615,13 +651,15 @@ class LogsService:
             self._scan_lock = asyncio.Lock()
         async with self._scan_lock:
             result = await asyncio.to_thread(
-                purge_index,
-                self._index,
-                sources=sources,
-                categories=categories,
-                before=before,
-                rescan=rescan,
-                dry_run=dry_run,
+                self._work.run,
+                lambda: purge_index(
+                    self._index,
+                    sources=sources,
+                    categories=categories,
+                    before=before,
+                    rescan=rescan,
+                    dry_run=dry_run,
+                ),
             )
         if not dry_run and result.events:
             _log.info("로그 색인에서 이벤트 %d개를 지웠습니다(비우기)", result.events)

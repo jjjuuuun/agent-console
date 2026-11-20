@@ -380,8 +380,12 @@ class RecordsDb:
 
     @property
     def engine(self) -> Engine:
-        """상태에 맞는 엔진(`newer`·읽기 전용이면 `mode=ro`). 파일이 없으면 `RecordsAbsent`."""
+        """상태에 맞는 엔진(`newer`·읽기 전용이면 `mode=ro`). 파일이 없으면 `RecordsAbsent`.
+
+        닫은 뒤에는 `RecordsUnavailable`(`folder_missing`, 쓰기와 같은 이유 - 깨짐으로 보지 않는다).
+        """
         with self._lock:
+            self._check_open()
             self._revive()
             engine = self._engine
             if engine is None:

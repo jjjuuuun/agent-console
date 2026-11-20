@@ -1,5 +1,16 @@
 # 변경 기록
 
+## Unreleased
+
+- 수정(11/20): 자동 정리가 서버 종료와 겹치면 기다리거나 남은 저장소를 하지 않고 끝난다. `run_retention_cycle(should_stop=)`·`RetentionCycleResult.stopped`, `run_retention_periodically(gate=, stop_wait=)`(취소되면 `WorkGate`를 닫고 하던 저장소가 끝나기를 기다린 뒤 취소를 다시 던짐 — 조립기가 종료 훅보다 먼저 하므로 공간 풀·저장소가 닫히기 전에 끝남), 종료 훅도 정리 스레드를 기다린 뒤 저장소를 닫는다.
+
+- 5.7R.46: 서버 자동 정리가 공용 다음에 `memory.spaces` 제공자의 선택 메서드 `existing()`이 준 공간도
+  돈다(대상 = 사용자 설정 `memory.retention.auto`, 공간마다 실패는 로그 + 건너뜀, 규칙이 없으면
+  아무것도 열지 않음). `run_retention_cycle`·`RetentionCycleResult`·`retention_targets`,
+  `MemorySpaceServices.existing()`·`MemoryService.existing_spaces()`, 포트 모양
+  `MemorySpacesListing`. 설정 해석: `retention.auto`는 칸마다 검증(틀린 칸은
+  `memory.settings_invalid` + 기본값, 규칙은 그대로).
+
 ## 0.1.0
 
 - 처음 만듦(scripts/pkgkit 템플릿 `module`).

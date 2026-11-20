@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- 11/20: `OpenCache[V]`·`CacheShut`(이름 → 열린 값 캐시: 오래 안 쓴 순서·유휴·상한·`shutdown()` 뒤 넣기 거부). 프로젝트 기록·메모리 공간 풀이 같이 쓴다. 더하기만, 표 변경 없음.
+
+- 수정(11/20): `RecordsStores`의 처음 열기 훅(`on_open`, 재시작 복구)이 도는 동안 같은 공간을 여는 다른 스레드는 끝날 때까지 기다린다(상한 `open_wait`, 기본 `DEFAULT_OPEN_WAIT` 30초, 훅 안 같은 스레드 재진입은 기다리지 않음, 먼저 연 쪽 훅이 거짓이면 기다린 쪽이 다시 부름). 시작 직후 로그 수집이 공간을 먼저 열면 첫 요청이 복구 전 상태(`running`)를 읽었다. 닫힌 `RecordsDb`의 `engine`·`read_engine`은 `corrupt` 대신 `folder_missing`(쓰기와 같은 이유). 더하기만, 표 변경 없음.
+
 - 요청 11/08 후속: `SpaceLocator`(기록 id → 그 기록이 있는 공간: 아는 공간 → 등록 공간 id(상한) → 호스트, 찾은 자리 기억), `DEFAULT_LOCATE_LIMIT`·`DEFAULT_LOCATE_REMEMBER`. 대화(`mod-chat`)·실행(`mod-runs`) 위치 찾기가 같이 쓴다. 더하기만, 표 변경 없음.
 
 - 수정(요청 11/07): `migrate.upgrade`·`downgrade`·`upgrade_on`의 alembic `command.*` 호출을 프로세스 안 잠금 하나로 줄 세운다. alembic이 실행 중 모듈 전역 프록시(`context`·`op`)를 바꾸므로 여러 스레드가 동시에(다른 DB라도) 올리면 `KeyError: 'script'`로 실패했다(서버 재시작 때 모듈 시작 훅의 업그레이드와 배경 작업의 프로젝트 기록 DB 열기가 겹쳐 uvicorn 시작 실패 exit 3). 공개 API 변경 없음.

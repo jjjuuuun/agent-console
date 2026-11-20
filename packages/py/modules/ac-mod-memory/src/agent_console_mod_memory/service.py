@@ -391,6 +391,10 @@ class MemoryService:
             return self.spaces.library if self.spaces.library is not None else self
         return self.spaces.get(name)
 
+    def existing_spaces(self) -> list[str]:
+        """자동 정리가 돌 수 있는 공간 이름(공간 고르기·제공자 선택 메서드가 없으면 빈 목록)."""
+        return self.spaces.existing() if self.spaces is not None else []
+
     def copy(self, request: MemoryCopyRequest) -> MemoryCopyResult:
         """``POST /memory/copy``: 공간 사이 복사(쓴 주체 = 사용자, 복사 뒤 독립, 출처 기록 없음).
 

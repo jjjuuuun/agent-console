@@ -40,14 +40,19 @@ def notes_module() -> Module | None:
 
 
 def _modules(*, with_notes: bool) -> list[Module]:
+    """서버에 넘길 모듈 목록. 설치된 모듈(entry point)에서 이 시험이 고르는 모듈은 빼고 다시 넣는다.
+
+    ``with_notes=False``면 노트 모듈 예제가 같은 환경에 설치되어 있어도(README 설치 절차)
+    목록에서 뺀다. 설치 여부와 상관없이 "노트 모듈 없음" 조건이 된다.
+    """
     extra: list[Module] = [module]
     notes = notes_module() if with_notes else None
     if with_notes:
         if notes is None:
             pytest.skip("이웃 예제 agent-console-example-module이 없다(저장소 밖 복사)")
         extra.insert(0, notes)
-    ids = {m.descriptor.id for m in extra}
-    return [m for m in installed_modules() if m.descriptor.id not in ids] + extra
+    excluded = {m.descriptor.id for m in extra} | ({NOTES_ID} if not with_notes else set())
+    return [m for m in installed_modules() if m.descriptor.id not in excluded] + extra
 
 
 @contextmanager

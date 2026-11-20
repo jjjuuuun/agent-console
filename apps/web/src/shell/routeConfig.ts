@@ -44,6 +44,11 @@ export interface RouteDef {
    */
   projectScoped?: boolean;
   /**
+   * `projectScoped` 화면이 프로젝트 0개일 때의 동작. `"state"`(기본) = 본문 전체를 `NoProjectState`로 바꾼다. `"pass"` = 문지기가 막지 않고
+   * 화면이 공용 저장소로 스스로 동작하며 안내와 [폴더 추가]를 단다(메모리, screen-memory §1.3). 화면 코드는 라우트 id를 모른다.
+   */
+  projectNone?: "state" | "pass";
+  /**
    * 이 화면이 켜져 있으려면 서버에서 켜져 있어야 하는 모듈 id 또는 역할(모두 만족해야 한다, 비면 항상 켜짐).
    * 만족하지 못하면 사이드바·빠른 이동·`g` 단축키에서 빠지고, 주소로 들어오면 안내 화면이 나온다.
    * 모듈이 바뀌어도 화면 규칙이 안 바뀌도록 모듈 id보다 역할을 쓰는 것이 좋다(`docs/design/screen-modules.md` 1.3).
@@ -88,7 +93,7 @@ export const DEFAULT_ROUTES: readonly RouteDef[] = [
   { id: "spec-templates", serves: "sdd:templates", requires: ["sdd"], path: "/spec-templates", titleKey: "nav.specTemplates", icon: "spec-template", badgeSource: null, gotoKey: null, position: "main", group: "config" },
   { id: "wiki-rules", serves: "wiki:rules", requires: ["wiki:rules"], path: "/wiki-rules", titleKey: "nav.wikiRules", icon: "wiki-rules", badgeSource: null, gotoKey: null, position: "main", group: "config" },
   { id: "runs", serves: "runs", requires: ["runs"], path: "/runs", titleKey: "nav.runs", icon: "runs", badgeSource: null, gotoKey: "h", position: "main", group: "run", shortcutScopes: ["run-detail"], projectScoped: true },
-  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true, projectScoped: true },
+  { id: "memory", serves: "memory", requires: ["memory"], path: "/memory", titleKey: "nav.memory", icon: "memory", badgeSource: null, gotoKey: "m", position: "main", group: "run", projectShortcut: true, projectScoped: true, projectNone: "pass" },
   { id: "specs", serves: "sdd", requires: ["sdd"], path: "/specs", titleKey: "nav.specs", icon: "spec", badgeSource: null, gotoKey: "e", position: "main", group: "run", projectScoped: true },
   { id: "wiki", serves: "wiki", requires: ["wiki"], path: "/wiki", titleKey: "nav.wiki", icon: "wiki", badgeSource: null, gotoKey: "w", position: "main", group: "run", projectScoped: true },
   { id: "usage", serves: "usage", requires: ["usage"], path: "/usage", titleKey: "nav.usage", icon: "usage", badgeSource: null, gotoKey: "u", position: "main", group: "observe" },

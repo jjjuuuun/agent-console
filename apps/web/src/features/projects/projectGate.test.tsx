@@ -12,8 +12,8 @@ const mod = (id: string, roles: string[]) => ({ id, kind: "k", version: "0.0.1",
 const modules = [mod("m", ["conversations", "runs", "logs", "memory", "projects", "settings", "definitions:graph"])];
 
 describe("프로젝트 문맥 화면 문지기(33p)", () => {
-  it("프로젝트가 0개면 채팅·실행·로그·메모리 본문 전체가 NoProjectState 하나로 바뀌고 액션·필터가 없다", async () => {
-    for (const path of ["/chat", "/runs", "/logs/sessions", "/memory"]) {
+  it("프로젝트가 0개면 채팅·실행·로그 본문 전체가 NoProjectState 하나로 바뀌고 액션·필터가 없다", async () => {
+    for (const path of ["/chat", "/runs", "/logs/sessions"]) {
       const { clients } = createFakeClients({ listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => []) });
       const view = mountApp(clients, path);
       const none = await screen.findByTestId("no-project-state", {}, { timeout: 5000 });
@@ -22,6 +22,13 @@ describe("프로젝트 문맥 화면 문지기(33p)", () => {
       expect(screen.queryByText("프로젝트 없이도 모든 기능을 쓸 수 있습니다")).toBeNull();
       view.unmount();
     }
+  });
+
+  it("메모리는 라우트 데이터(projectNone)에 따라 문지기가 막지 않는다: 프로젝트 0개에서도 NoProjectState 없이 화면이 열린다", async () => {
+    const { clients } = createFakeClients({ listModules: vi.fn(async () => modules), listProjects: vi.fn(async () => []) });
+    mountApp(clients, "/memory");
+    expect(await screen.findByText(/프로젝트가 없어 공용 메모리를 보고 있습니다/, {}, { timeout: 15_000 })).toBeTruthy();
+    expect(screen.queryByTestId("no-project-state")).toBeNull();
   });
 
   it("목록 조회가 실패하면 0개로 단정하지 않고 오류 블록과 다시 시도를 보인다", async () => {

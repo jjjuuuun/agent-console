@@ -3,14 +3,14 @@
 ``records.spaces`` 포트의 구현(``RecordsSpaces``). 프로젝트를 모르는 소비 모듈은
 공간 이름 문자열만 넘긴다.
 공간은 그 프로세스에서 **처음 쓸 때** 열고 계보를 맞춘다(서버 시작 때 열지 않는다).
+``shutdown()``(서버 종료) 뒤에는 새로 열지 않는다. 늦게 온 열기(예: 끝나지 않은 배경 수집 스레드)는
+``link_disabled`` 핸들을 받아 연결이 남지 않는다.
 """
 
 from __future__ import annotations
 
 import logging
-import threading
 import time
-from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +21,7 @@ from sqlalchemy import Engine
 from agent_console_project_space import FolderMissing, SpaceError
 from agent_console_store import (
     MigrationBranchLike,
+    OpenCache,
     RecordsDb,
     RecordsHandle,
     RecordsState,
@@ -37,6 +38,8 @@ from .spool import RecordsSpool
 
 _log = logging.getLogger(__name__)
 _UNAVAILABLE = "unavailable"
+_SHUT = "link_disabled"
+"""``shutdown()`` 뒤 열기의 이유(연동이 꺼진 것과 같다 - 계약에 새 값을 더하지 않는다)."""
 
 
 class UnknownSpace(LookupError):  # noqa: N818 - 조회 실패 계열(LookupError)로 둔다
@@ -92,6 +95,8 @@ class SpaceRecords:
     def state(self) -> RecordsState:
         if self._failure is not None:
             return self._failure
+        if self._pool.is_shut:  # 종료 전에 받은 핸들(그 DB는 닫혔다)
+            return RecordsState(_UNAVAILABLE, _SHUT, False)
         if self._folder is not None and not self._pool.folder_exists(self._folder):
             return RecordsState(_UNAVAILABLE, "folder_missing", False)
         assert self._db is not None
@@ -99,7 +104,7 @@ class SpaceRecords:
 
     def _guard(self) -> RecordsDb:
         st = self.state
-        if self._db is None or st.reason == "folder_missing":
+        if self._db is None or st.reason in ("folder_missing", _SHUT):
             raise RecordsUnavailable(st.reason or "folder_missing", backup_path=st.backup_path)
         return self._db
 
@@ -128,7 +133,6 @@ class _Entry:
     handle: SpaceRecords
     db: RecordsDb
     path: Path
-    last_used: float
 
 
 class RecordsSpacePool:
@@ -168,12 +172,11 @@ class RecordsSpacePool:
         self.spool = spool
         self._options = options
         self._appliers = dict(appliers) if appliers is not None else default_appliers()
-        self._clock = clock
         self._wall_clock = wall_clock
         self.folder_exists = folder_exists
         self._network_fs = network_fs
-        self._entries: OrderedDict[str, _Entry] = OrderedDict()
-        self._lock = threading.RLock()
+        self._entries: OpenCache[_Entry] = OpenCache(lambda e: e.db.close(), clock=clock)
+        self._lock = self._entries.lock
 
     # ---- RecordsSpaces -------------------------------------------------------
 
@@ -188,6 +191,8 @@ class RecordsSpacePool:
         """
         project_id = self._project_id(space)
         with self._lock:
+            if self._entries.shut:
+                return self._failed(space, project_id, RecordsState(_UNAVAILABLE, _SHUT, False))
             self._sweep()
             found = self._resolve(project_id)
             if isinstance(found, RecordsState):
@@ -200,10 +205,8 @@ class RecordsSpacePool:
                 entry = None
             if entry is None:
                 entry = self._make(space, project_id, found)
-                self._entries[space] = entry
+                self._entries.put(space, entry)
                 self._replay(project_id, entry.db)
-            entry.last_used = self._clock()
-            self._entries.move_to_end(space)
             self._enforce_cap()
             return entry.handle
 
@@ -218,7 +221,7 @@ class RecordsSpacePool:
             found = self._resolve(project_id)
             if isinstance(found, RecordsState):
                 return found
-            entry = self._entries.get(space)
+            entry = self._entries.peek(space)
             if entry is not None and entry.path == found.records_db_path:
                 return entry.handle.state
             return inspect_records(
@@ -235,15 +238,22 @@ class RecordsSpacePool:
             self._drop(space)
 
     def close_all(self) -> None:
-        """열린 핸들을 모두 닫는다(서버 종료)."""
-        with self._lock:
-            for space in list(self._entries):
-                self._drop(space)
+        """열린 핸들을 모두 닫는다(다음 ``open``은 다시 연다)."""
+        self._entries.clear()
+
+    def shutdown(self) -> None:
+        """서버 종료: 열린 핸들을 모두 닫고, 그 뒤 ``open``은 ``link_disabled`` 핸들을 준다
+        (파일을 열지 않는다). 여러 번 불러도 된다."""
+        self._entries.shutdown()
+
+    @property
+    def is_shut(self) -> bool:
+        """``shutdown()``을 불렀나."""
+        return self._entries.shut
 
     def open_spaces(self) -> list[str]:
         """지금 열려 있는 공간 이름(최근에 쓴 순서의 반대, 점검용)."""
-        with self._lock:
-            return list(self._entries)
+        return self._entries.names()
 
     # ---- 내부 ----------------------------------------------------------------
 
@@ -299,7 +309,7 @@ class RecordsSpacePool:
             failure=None,
             host_id=self._host_id,
         )
-        return _Entry(handle, db, found.records_db_path, self._clock())
+        return _Entry(handle, db, found.records_db_path)
 
     def _failed(self, space: str, project_id: str, state: RecordsState) -> SpaceRecords:
         return SpaceRecords(
@@ -320,22 +330,14 @@ class RecordsSpacePool:
             _log.warning("records spool replay failed (%s): %s", project_id, type(error).__name__)
 
     def _drop(self, space: str) -> None:
-        entry = self._entries.pop(space, None)
-        if entry is not None:
-            entry.db.close()
+        self._entries.drop(space)
 
     def _sweep(self) -> None:
-        idle = self._options.idle_close_seconds
-        if idle <= 0:
-            return
-        now = self._clock()
-        for entry in self._entries.values():
-            if now - entry.last_used >= idle:
-                entry.db.suspend()
+        for _, entry in self._entries.idle(self._options.idle_close_seconds):
+            entry.db.suspend()
 
     def _enforce_cap(self) -> None:
-        while len(self._entries) > self._options.max_open:
-            _, entry = self._entries.popitem(last=False)
+        for _, entry in self._entries.over(self._options.max_open):
             entry.db.suspend()  # 들고 있는 쪽이 다시 쓰면 살아난다(닫지 않는다)
 
 

@@ -13,7 +13,11 @@ export const SETTINGS_KEYS = {
   secrets: "secrets",
   retention: "retention",
   rules: "rules",
+  auto: "auto",
 } as const;
+
+/** `MemoryRetentionAuto` 안의 키(계약 필드 이름) */
+export const AUTO_KEYS = { library: "library", projects: "projects", exclude: "exclude_projects" } as const;
 
 /** 위젯 이름(`x-ui.widget`). 스키마에 이 이름이 있으면 그 필드를 해당 위젯으로 그린다 */
 export const WIDGETS = {

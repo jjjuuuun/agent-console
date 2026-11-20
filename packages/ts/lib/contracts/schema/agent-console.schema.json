@@ -6,9 +6,9 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.14.8",
+    "CONTRACTS_VERSION": "0.14.9",
     "CONTRACT_VERSIONS": {
-      "common": "1.14.0",
+      "common": "1.15.0",
       "resources": "1.1.0",
       "logs": "1.2.0",
       "definitions": "1.7.0",
@@ -19,8 +19,8 @@
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
-      "memory": "1.1.0",
-      "sdd": "1.2.0",
+      "memory": "1.2.0",
+      "sdd": "1.3.0",
       "wiki": "1.2.0",
       "modules": "1.6.0"
     },
@@ -389,6 +389,8 @@
       "SDD_PROFILE_GRAPH_MISSING": "sdd.profile_graph_missing",
       "SDD_UNKNOWN_PROFILE": "sdd.unknown_profile",
       "SDD_STATUS_NOT_APPLIED": "sdd.status_not_applied",
+      "SDD_STATUS_PATTERN_IGNORED": "sdd.status_pattern_ignored",
+      "SDD_DOCUMENT_STATE_NOT_APPLIED": "sdd.document_state_not_applied",
       "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
       "SDD_SECRET_REJECTED": "sdd.secret_rejected",
       "SDD_SETTINGS_INVALID": "sdd.settings_invalid",
@@ -1193,6 +1195,7 @@
       "MemoryImportProblem",
       "MemoryImportResult",
       "MemoryMoveRequest",
+      "MemoryRetentionAuto",
       "MemoryRetentionCondition",
       "MemoryRetentionConditionItem",
       "MemoryRetentionPlan",
@@ -1230,6 +1233,7 @@
       "DocumentStateChange",
       "DocumentStateInfo",
       "DocumentStateOnEdit",
+      "DocumentStateOnRun",
       "DocumentStateSpec",
       "EffectiveSyntax",
       "ImportDir",
@@ -8788,6 +8792,43 @@
         "to"
       ],
       "title": "DocumentStateOnEdit",
+      "type": "object"
+    },
+    "DocumentStateOnRun": {
+      "additionalProperties": true,
+      "description": "실행 결과에 따라 바꿀 문서와 상태입니다. 바꿀 수 없으면 그대로 두고 안내를 남깁니다.",
+      "properties": {
+        "document": {
+          "description": "상태를 바꿀 문서의 id입니다. 이 스펙의 문서 목록에 있어야 합니다.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+          "title": "문서",
+          "type": "string",
+          "x-ui": {
+            "example": "design",
+            "order": 1,
+            "tier": "basic",
+            "when": "실행이 끝나면 다른 문서의 상태를 바꾸고 싶을 때 고르세요."
+          }
+        },
+        "to": {
+          "description": "이 문서 상태로 바꿉니다. 실행이 할 수 있는 전환이 규칙에 있어야 합니다.",
+          "minLength": 1,
+          "title": "바꿀 상태",
+          "type": "string",
+          "x-ui": {
+            "example": "review",
+            "order": 2,
+            "tier": "basic",
+            "when": "실행 결과로 옮길 문서 상태를 바꿀 때 고르세요.",
+            "widget": "state-ref"
+          }
+        }
+      },
+      "required": [
+        "document",
+        "to"
+      ],
+      "title": "DocumentStateOnRun",
       "type": "object"
     },
     "DocumentStateSpec": {
@@ -16575,6 +16616,51 @@
       "title": "MemoryMoveRequest",
       "type": "object"
     },
+    "MemoryRetentionAuto": {
+      "additionalProperties": true,
+      "description": "서버가 주기마다 정리 규칙을 돌릴 메모리 저장소입니다. 규칙이 없으면 지우지 않습니다.",
+      "properties": {
+        "library": {
+          "default": true,
+          "description": "켜면 공용 메모리 저장소를 자동으로 정리합니다.",
+          "title": "공용 메모리",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "공용 메모리는 손으로만 정리하고 싶을 때 끄세요."
+          }
+        },
+        "projects": {
+          "default": true,
+          "description": "켜면 등록한 프로젝트 가운데 메모리를 이미 쓰는 곳도 자동으로 정리합니다. 파일을 새로 만들지 않습니다.",
+          "title": "프로젝트 메모리",
+          "type": "boolean",
+          "x-ui": {
+            "tier": "basic",
+            "when": "프로젝트 메모리는 손으로만 정리하고 싶을 때 끄세요."
+          }
+        },
+        "exclude_projects": {
+          "default": [],
+          "description": "자동 정리에서 뺄 프로젝트입니다. 등록한 프로젝트의 id를 적습니다.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "뺄 프로젝트",
+          "type": "array",
+          "x-ui": {
+            "example": [
+              "my-app"
+            ],
+            "tier": "basic",
+            "when": "몇몇 프로젝트만 자동 정리에서 빼고 싶을 때 더하세요."
+          }
+        }
+      },
+      "title": "자동 정리 대상",
+      "type": "object"
+    },
     "MemoryRetentionCondition": {
       "additionalProperties": true,
       "description": "정리할 기록을 고르는 조건입니다.\n\n'모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 합니다. 조건이 하나도 없으면 모든 기록이\n맞으므로 규칙을 쓰지 않습니다. '결과 뒤집기'를 켜면 결과를 반대로 씁니다.",
@@ -16947,6 +17033,15 @@
           "x-ui": {
             "tier": "basic",
             "when": "쌓인 기록을 자동으로 정리하고 싶을 때 더하세요."
+          }
+        },
+        "auto": {
+          "$ref": "#/$defs/MemoryRetentionAuto",
+          "description": "서버가 주기마다 규칙을 돌릴 저장소입니다. 비우면 공용과 프로젝트 모두입니다.",
+          "title": "자동 정리할 곳",
+          "x-ui": {
+            "tier": "basic",
+            "when": "자동 정리를 공용이나 일부 프로젝트에만 돌리고 싶을 때 고치세요."
           }
         }
       },
@@ -22032,6 +22127,24 @@
             "when": "실행이 끝나면 작업 표시를 자동으로 바꾸고 싶을 때 고치세요.",
             "widget": "status-ref"
           }
+        },
+        "document_state_on": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DocumentStateOnRun"
+          },
+          "description": "실행 상태(예: succeeded) → 바꿀 문서와 상태입니다. 비우면 문서 상태를 바꾸지 않습니다.",
+          "title": "결과에 따른 문서 상태",
+          "type": "object",
+          "x-ui": {
+            "example": {
+              "succeeded": {
+                "document": "design",
+                "to": "review"
+              }
+            },
+            "tier": "advanced",
+            "when": "실행이 끝나면 설계 문서를 검토 중으로 옮기는 식으로 쓰고 싶을 때 고치세요."
+          }
         }
       },
       "required": [
@@ -24890,7 +25003,7 @@
     },
     "TaskStatusSpec": {
       "additionalProperties": true,
-      "description": "작업 상태 하나입니다. 작업 줄의 체크 칸 글자로 상태를 구분합니다.",
+      "description": "작업 상태 하나입니다. 작업 줄의 체크 칸 글자(또는 줄 머리 낱말)로 상태를 구분합니다.",
       "properties": {
         "id": {
           "description": "상태를 가리키는 이름입니다. 실행 결과 반영과 관문 조건이 이 이름을 씁니다.",
@@ -24934,7 +25047,7 @@
               "type": "array"
             }
           ],
-          "description": "작업 줄 대괄호 안의 글자입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).",
+          "description": "작업 줄 대괄호 안의 글자(줄 머리 상태를 쓰면 그 낱말)입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).",
           "title": "체크 칸 글자",
           "x-ui": {
             "example": "~",
@@ -25168,6 +25281,58 @@
           "title": "작업 깊이",
           "x-ui": {
             "example": 2,
+            "tier": "advanced"
+          }
+        },
+        "status_pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "체크 칸 대신 줄 머리 낱말(예: TODO)로 상태를 읽는 정규식입니다. status 이름의 묶음을 씁니다.",
+          "title": "줄 머리 상태 찾기",
+          "x-ui": {
+            "example": "^(?P<status>TODO|DOING|DONE):?\\s+",
+            "tier": "advanced",
+            "widget": "regex"
+          }
+        },
+        "status_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "상태 낱말이 없는 작업 줄에 상태를 넣을 때 본문 맨 앞에 붙이는 모양입니다. {marker}가 상태 글자입니다.",
+          "title": "상태 넣는 모양",
+          "x-ui": {
+            "example": "{marker}: ",
+            "tier": "advanced"
+          }
+        },
+        "field_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "작업 줄에 없는 필드를 덧붙일 때의 모양입니다. {key}가 필드 이름, {value}가 값입니다.",
+          "title": "필드 덧붙이는 모양",
+          "x-ui": {
+            "example": "[{key}: {value}]",
             "tier": "advanced"
           }
         }

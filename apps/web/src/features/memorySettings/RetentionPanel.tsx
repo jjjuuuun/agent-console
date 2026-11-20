@@ -4,6 +4,7 @@ import type { Issue } from "@agent-console/contracts";
 import type { MemoryRetentionPlan, MemoryRetentionResult, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { RetentionPreview } from "@agent-console/memory-view";
 import { Banner, Button, ConfirmDialog, Icon } from "@agent-console/ui";
+import { AutoTargets, type AutoTargetsProps } from "./AutoTargets";
 import { RuleEditorDialog } from "./RuleEditorDialog";
 import { RULE_ACTIONS, RULE_FIELDS } from "./memorySettingsConfig";
 import { memorySettingsMessages as t } from "./messages";
@@ -34,7 +35,16 @@ export interface RetentionPanelProps {
   apply: () => Promise<MemoryRetentionResult>;
   scopeText: (scope: MemoryScopeRef) => string;
   /** 적용 결과의 [메모리에서 보기] 링크(정리가 남긴 쓴 주체 필터). 메모리 화면이 없으면 null */
-  resultHref: string | null;
+  resultHref: (targetId: string) => string | null;
+  /**
+   * 미리보기·적용 대상 저장소(`screen-memory` §10.6.3). 선택지가 2개 이상이면 선택 컨트롤, 1개면 글자만, 생략하면 그리지 않는다.
+   * 규칙은 하나이고 어느 저장소에 미리보기·적용할지만 고른다. 값(`id`)은 호출한 쪽의 것이고 이 컴포넌트는 뜻을 모른다.
+   */
+  target?: { value: string; /** 비교·결과 링크에 쓰는 실제 저장소 키(생략하면 value). 고른 값과 별개로, 현재 프로젝트가 바뀌면 같이 바뀌어야 한다 */ key?: string; options: readonly { id: string; label: string }[]; onChange: (id: string) => void };
+  /** 자동 정리 대상 세 칸(생략하면 그리지 않는다) */
+  autoTargets?: AutoTargetsProps;
+  /** 자동 실행 상태 줄 뒤에 붙이는 설명(예: 자동 정리가 어느 저장소만 다루는지). 없으면 붙이지 않는다 */
+  autoNote?: string | undefined;
   onApplied?: () => void;
   disabled?: boolean;
   checkDelayMs?: number;
@@ -47,7 +57,10 @@ export function RetentionPanel(p: RetentionPanelProps) {
   const [editor, setEditor] = useState<Editor>(null);
   const [confirm, setConfirm] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [done, setDone] = useState<{ result: MemoryRetentionResult; at: number } | null>(null);
+  const [done, setDone] = useState<{ result: MemoryRetentionResult; at: number; target: string } | null>(null);
+  /** 미리보기를 한 대상(대상이 바뀌면 그 미리보기로 적용하지 못하게 막는다) */
+  const [previewedTarget, setPreviewedTarget] = useState<string | null>(null);
+  const targetValue = p.target === undefined ? null : (p.target.key ?? p.target.value);
   const [applyError, setApplyError] = useState(false);
   const preview = useRetentionPreview(p.plan);
   const key = ruleKey(p.rules);
@@ -56,7 +69,7 @@ export function RetentionPanel(p: RetentionPanelProps) {
   const items = preview.state.plan?.items ?? [];
   const archives = items.filter((i) => i.action === RULE_ACTIONS.archive).length;
   const deletes = items.filter((i) => i.action === RULE_ACTIONS.delete).length;
-  const reason = p.dirty ? t.retention.blocked.unsaved : preview.state.plan === null ? t.retention.blocked.none : preview.state.key !== key ? t.retention.blocked.stale : count === 0 ? t.retention.blocked.empty : null;
+  const reason = p.dirty ? t.retention.blocked.unsaved : preview.state.plan === null ? t.retention.blocked.none : previewedTarget !== targetValue ? t.retention.blocked.targetChanged : preview.state.key !== key ? t.retention.blocked.stale : count === 0 ? t.retention.blocked.empty : null;
   const hasDelete = p.rules.some((r) => actionOf(r) === RULE_ACTIONS.delete);
   const savedDelete = p.savedRules.some((r) => actionOf(r) === RULE_ACTIONS.delete);
 
@@ -74,7 +87,7 @@ export function RetentionPanel(p: RetentionPanelProps) {
     setApplyError(false);
     p.apply().then(
       (result) => {
-        setDone({ result, at: Math.floor(Date.now() / 1000) });
+        setDone({ result, at: Math.floor(Date.now() / 1000), target: targetValue ?? "" });
         setApplying(false);
         preview.reset();
         p.onApplied?.();
@@ -86,6 +99,7 @@ export function RetentionPanel(p: RetentionPanelProps) {
     );
   };
   const failed = done?.result.issues ?? [];
+  const resultLink = done === null ? null : p.resultHref(done.target);
   return (
     <section className="memset-panel" aria-label={t.retention.label} data-testid="memset-retention">
       <div className="memset-listhead">
@@ -132,16 +146,31 @@ export function RetentionPanel(p: RetentionPanelProps) {
           })}
         </ol>
       )}
-      <p className="memset-note app-muted">{p.everyText === null ? t.retention.autoOff : t.retention.autoOn(p.everyText)}</p>
+      <p className="memset-note app-muted">{p.everyText === null ? t.retention.autoOff : `${t.retention.autoOn(p.everyText)}${p.autoNote ?? ""}`}</p>
+      {p.autoTargets === undefined ? null : <AutoTargets {...p.autoTargets} />}
       {p.everyText !== null && savedDelete ? <Banner tone="warning">{t.retention.autoDelete(p.everyText)}</Banner> : null}
       <div className="memset-preview" aria-label={t.retention.previewTitle} role="group">
+        {p.target === undefined ? null : (
+          <div className="memset-target" data-testid="memset-retention-target">
+            {p.target.options.length > 1 ? (
+              <>
+                <label htmlFor="memset-retention-target" className="memset-target-label">{t.retention.target}</label>
+                <select id="memset-retention-target" className="memset-target-select" value={p.target.value} onChange={(e) => p.target?.onChange(e.target.value)}>
+                  {p.target.options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </>
+            ) : (
+              <span><span className="memset-target-label">{t.retention.target}</span> <strong>{p.target.options[0]?.label ?? ""}</strong></span>
+            )}
+          </div>
+        )}
         <RetentionPreview
           plan={preview.state.plan}
           ruleCount={p.rules.length}
           loading={preview.state.loading}
           error={preview.state.error}
           previewedAt={preview.state.at}
-          onPreview={() => preview.preview([...p.rules])}
+          onPreview={() => { setPreviewedTarget(targetValue); preview.preview([...p.rules]); }}
           onApply={() => setConfirm(true)}
           canApply={reason === null && !applying}
           applyBlockedReason={reason}
@@ -151,7 +180,7 @@ export function RetentionPanel(p: RetentionPanelProps) {
         />
         {applyError ? <p className="memset-warn" role="alert">{t.retention.applyFailed}</p> : null}
         {failed.length > 0 ? <div><p className="memset-note">{t.retention.failedIssues}</p><IssueList issues={failed} label={t.retention.failedIssues} /></div> : null}
-        {done !== null && p.resultHref !== null ? <Link className="memset-link" to={p.resultHref}>{t.retention.viewInMemory} <Icon name="external-link" /></Link> : null}
+        {done !== null && resultLink !== null ? <Link className="memset-link" to={resultLink}>{t.retention.viewInMemory} <Icon name="external-link" /></Link> : null}
       </div>
       {editor === null ? null : (
         <RuleEditorDialog

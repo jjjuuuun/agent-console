@@ -71,7 +71,7 @@ from ._gates import gate_context, require_gates
 from ._ids import slug_id, unique_id
 from ._parse import find_task, parse_spec
 from ._patch import TaskChangedError, patch_task
-from ._syntax import document_state_infos, effective_syntax
+from ._syntax import document_state_infos, effective_document_state, effective_syntax
 from ._templates import blank_documents, instantiate, spec_to_template
 
 __all__ = [
@@ -319,13 +319,14 @@ class SpecRepository:
         infos = {s.id: s for s in document_state_infos(spec.rules.document_states)}
         docs: list[SpecDocumentSummary] = []
         for d in spec.documents:
-            info: DocumentStateInfo | None = infos.get(d.state) if d.state else None
+            state = effective_document_state(spec.rules, d.state)
+            info: DocumentStateInfo | None = infos.get(state) if state else None
             docs.append(
                 SpecDocumentSummary(
                     id=d.id,
                     title=d.title,
-                    state=d.state,
-                    state_label=info.label if info else d.state,
+                    state=state,
+                    state_label=info.label if info else state,
                     tone=info.tone if info else None,
                 )
             )
@@ -523,7 +524,7 @@ class SpecRepository:
     def _apply_on_edit(self, stored: StoredSpec, doc_id: str, by: str) -> StoredSpec:
         spec = stored.spec
         doc = self._document(spec, doc_id)
-        state = doc.state or spec.rules.initial_document_state
+        state = effective_document_state(spec.rules, doc.state)
         target = None
         for s in spec.rules.document_states or ():
             if s.id == state and s.on_edit is not None:
@@ -575,9 +576,10 @@ class SpecRepository:
     ) -> StoredSpec:
         """문서 상태를 바꾼다(정의 저장 — 버전 기록이 승인 이력이 된다).
 
-        전환 규칙: `transitions` 중 `from`이 지금 상태(없으면 `initial_document_state`)이거나
-        `*`이고
-        `to`가 같은 것. 없으면, 또는 있어도 `by`에 그 쪽이 없으면 `TransitionDeniedError`. 그다음
+        전환 규칙: `transitions` 중 `from`이 지금 상태(`effective_document_state` — 적힌 값 → 처음
+        문서 상태 → 목록 첫 번째 → 없음)이거나 `*`이고
+        `to`가 같은 것. 없으면, 또는 있어도 `by`에 그 쪽이 없으면, 또는 `to`가 `document_states`에
+        없으면(목록을 비운 스펙 = 상태 없음이면 항상) `TransitionDeniedError`. 그다음
         `document_state` 관문을 평가한다(맥락 `change = {document, from, to, by}`, 막히면
         `GateBlockedError`).
 
@@ -597,13 +599,16 @@ class SpecRepository:
                 )
             spec = stored.spec
             doc = self._document(spec, doc_id)
-            current = doc.state or spec.rules.initial_document_state
+            current = effective_document_state(spec.rules, doc.state)
+            declared = {s.id for s in spec.rules.document_states or ()}
             matches = [
                 t
                 for t in spec.rules.transitions or ()
                 if t.to == to and (t.from_ == _ANY_STATE or t.from_ == current)
             ]
-            if not any(by in t.by for t in matches):
+            # 목록에 없는 상태로는 바꾸지 않는다 — 목록을 비운 스펙(= 상태 없음)에 전환이 남아
+            # 있어도 거부(규칙 검사 `sdd.unknown_state`와 같은 기준).
+            if to not in declared or not any(by in t.by for t in matches):
                 raise TransitionDeniedError(doc_id, current, to, by)
             require_gates(
                 spec.rules,

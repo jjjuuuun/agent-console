@@ -76,3 +76,27 @@ describe("scope·종류 표식·폴더 오류", () => {
     expect(() => lintWorkspace(root)).toThrow("패키지 폴더가 없다");
   });
 });
+
+import { planPortability, portabilityTargets } from "./lib/plans.mjs";
+
+describe("워크스페이스 전체 찾기(portability, 8R.22)", () => {
+  const put = (rel, pkg) => {
+    mkdirSync(join(root, rel), { recursive: true });
+    writeFileSync(join(root, rel, "package.json"), JSON.stringify({ version: "0.1.0", ...pkg }));
+  };
+  it("under \"\"는 패턴마다 고정 폴더에서 찾아 예제를 넣고, 예제의 사내 의존이 닫힘에서 풀린다", () => {
+    writeFileSync(join(root, "pnpm-workspace.yaml"), 'packages:\n  - "packages/ts/lib/*"\n  - "apps/web"\n  - "examples/web/*"\n  - "missing/*"\n');
+    put("packages/ts/lib/ui", { name: "@agent-console/ui", agentConsole: { kind: "lib" } });
+    put("apps/web", { name: "@agent-console/web", agentConsole: { kind: "app" }, dependencies: { "@agent-console/ui": "^0.1.0" } });
+    put("examples/web/example-web", { name: "@agent-console/example-web", agentConsole: { kind: "lib" }, devDependencies: { "@agent-console/ui": "^0.1.0" } });
+    put("specs/not-member", { name: "@agent-console/not-member" });
+    const ws = discoverPackages(root, { under: "" });
+    expect(ws.map((p) => p.relDir)).toEqual(["apps/web", "examples/web/example-web", "packages/ts/lib/ui"]);
+    // 기본 범위(packages/ts/)는 그대로다(pkg-lint가 쓴다).
+    expect(discoverPackages(root).map((p) => p.relDir)).toEqual(["packages/ts/lib/ui"]);
+    const [example] = portabilityTargets(ws, { under: "examples/web/" });
+    const plan = planPortability({ pkg: example, workspace: ws, npmDir: "/n" });
+    expect(plan.missing).toEqual([]);
+    expect(plan.rewritten.devDependencies["@agent-console/ui"]).toBe("file:/n/agent-console-ui-0.1.0.tgz");
+  });
+});

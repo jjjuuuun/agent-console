@@ -371,6 +371,49 @@ class MemoryRetentionRule(DefinitionModel):
     )
 
 
+class MemoryRetentionAuto(DefinitionModel):
+    """서버가 주기마다 정리 규칙을 돌릴 메모리 저장소입니다. 규칙이 없으면 지우지 않습니다."""
+
+    # 1.2.0(0.14.9, 6R.31·5.7R.46). 생략 = 이 기본값(공용·프로젝트 모두 켬, 뺄 프로젝트 없음).
+    # 프로젝트 = memory.spaces 제공자의 선택 메서드 existing()이 주는 공간(메모리 파일이 이미 있는
+    # 켜진 등록만). 제공자가 없으면 공용만. 주기가 0이면(설치자 옵션) 전부 끔.
+
+    model_config = ConfigDict(title="자동 정리 대상")
+
+    library: bool = Field(
+        default=True,
+        title="공용 메모리",
+        description="켜면 공용 메모리 저장소를 자동으로 정리합니다.",
+        json_schema_extra=x_ui(
+            tier="basic", when="공용 메모리는 손으로만 정리하고 싶을 때 끄세요."
+        ),
+    )
+    projects: bool = Field(
+        default=True,
+        title="프로젝트 메모리",
+        description=(
+            "켜면 등록한 프로젝트 가운데 메모리를 이미 쓰는 곳도 자동으로 정리합니다. 파일을 새로 "
+            "만들지 않습니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="basic", when="프로젝트 메모리는 손으로만 정리하고 싶을 때 끄세요."
+        ),
+    )
+    exclude_projects: list[NonEmptyStr] = Field(
+        default_factory=list,
+        title="뺄 프로젝트",
+        description="자동 정리에서 뺄 프로젝트입니다. 등록한 프로젝트의 id를 적습니다.",
+        json_schema_extra={
+            "default": [],
+            **x_ui(
+                tier="basic",
+                when="몇몇 프로젝트만 자동 정리에서 빼고 싶을 때 더하세요.",
+                example=["my-app"],
+            ),
+        },
+    )
+
+
 class MemoryRetentionSettings(DefinitionModel):
     """오래된 기록을 정리하는 규칙 묶음입니다. 비어 있으면 아무것도 자동으로 정리하지 않습니다."""
 
@@ -384,6 +427,15 @@ class MemoryRetentionSettings(DefinitionModel):
             "default": [],
             **x_ui(tier="basic", when="쌓인 기록을 자동으로 정리하고 싶을 때 더하세요."),
         },
+    )
+    auto: MemoryRetentionAuto = Field(
+        default_factory=MemoryRetentionAuto,
+        title="자동 정리할 곳",
+        description="서버가 주기마다 규칙을 돌릴 저장소입니다. 비우면 공용과 프로젝트 모두입니다.",
+        # 저장은 exclude_unset이라 생략하면 원문에 넣지 않는다(생략 = MemoryRetentionAuto 기본값).
+        json_schema_extra=x_ui(
+            tier="basic", when="자동 정리를 공용이나 일부 프로젝트에만 돌리고 싶을 때 고치세요."
+        ),
     )
 
 

@@ -9,6 +9,9 @@
 흐름의 이름·단계·문서 종류·상태·역할은 전부 사용자 데이터이고 계약은 아무 이름도 모른다. 코드 개념은
 작업 필드 역할 셋(`KnownTaskFieldRoles`)뿐이다.
 
+1.3.0(0.14.9): 줄 머리 상태 문법 `TaskSyntax.status_pattern`·`status_format`·`field_format`,
+실행 결과로 문서 상태 바꾸기 `RunProfile.document_state_on`(`DocumentStateOnRun`).
+
 의존: `common`, `runs`(`ConditionSpec`), `definitions`(`Issue`). `chat`·`exports`·`imports`·
 `architecture`·`memory`와 같은 층이고 서로 모른다. TS: `@agent-console/contracts/sdd`.
 """
@@ -55,6 +58,7 @@ from ._rules import (
     AutomationConfig,
     AutomationScope,
     DocumentStateOnEdit,
+    DocumentStateOnRun,
     DocumentStateSpec,
     RequirementSyntax,
     RunProfile,
@@ -122,6 +126,7 @@ __all__ = [
     "DocumentStateChange",
     "DocumentStateInfo",
     "DocumentStateOnEdit",
+    "DocumentStateOnRun",
     "DocumentStateSpec",
     "EffectiveSyntax",
     "ImportDir",

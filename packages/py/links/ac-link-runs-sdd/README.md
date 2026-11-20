@@ -10,14 +10,15 @@
 | 실행 | `when` → `run` 관문 → 입력 틀 치환 → 비밀 검사(`sdd.secret_scan`) → 라벨 상한 → `runs.starter.start_graph(graph, input, origin="sdd", project_id=공간 이름, labels)` |
 | 실행 라벨 | `<접두>spec`·`<접두>task`·`<접두>profile`·`<접두>purpose`(접두 = `mod-sdd.run_label_prefix`, 기본 `sdd.`) |
 | 결과 반영 | `runs.event` 상태 이벤트 → 실행 프로필 `status_on[결과 이름]`이 있으면 작업 머리 줄 하나만 고친다(`by: run`). 실행 중에 그 줄이 바뀌었거나 `task_status` 관문이 막으면 고치지 않고 정보 이슈 `sdd.status_not_applied`(`details.reason`·`gate_id`) |
+| 문서 상태 반영 | 같은 사건에서 실행 프로필 `document_state_on[결과 이름]`(`{document, to}`)이 있으면 `change_document_state(by="run", run_id=<루트 Run>)` — 전환 규칙·`document_state` 관문 그대로. 작업 줄 반영과 독립(하나가 막혀도 다른 하나는 시도). 이미 그 상태면 그대로. 전환 거부·관문·문서 없음·쓸 수 없음이면 고치지 않고 정보 이슈 `sdd.document_state_not_applied`(`details{document_id, to, reason, gate_id?}`). 비우면 바꾸지 않는다. REST 상태 요청은 늘 `by: human`(본문의 `by`를 받지 않음) |
 | 실행 연결 | `runs.reader.page(labels={<접두>spec: id}, root_only=True)`를 상한까지 → `TaskLink{kind: run}`(상태·시각·토큰 합) |
 | 검증 출처(`sdd.verification_sources`, id 기본 `runs`) | `verification.purposes` 목적 실행 → `result_map`으로 바꾼 `VerificationResult` |
 | 프로필 검사 | 그 공간에 팀 구성이 없으면 `sdd.profile_graph_missing`(`details.in_library`) |
 
 실행 상태 → 결과 이름(`status_on`·`result_map`이 쓰는 이름) 표, 반영할 이벤트 종류, 연동·출처 이름,
 `origin`, 읽기 한도는 설치자 옵션 `modules.options.link-runs-sdd`이고 기본값은 패키지 데이터
-`data/defaults.json`이다(`running → started`, `completed → succeeded` 등). `status_on`·`result_map`에
-실행 상태 이름(`completed`)을 직접 써도 맞는다.
+`data/defaults.json`이다(`running → started`, `completed → succeeded` 등). `status_on`·
+`document_state_on`·`result_map`에 실행 상태 이름(`completed`)을 직접 써도 맞는다.
 
 이 연동이나 `mod-runs`가 꺼지면 `capabilities.runs=false`이고 실행 버튼·실행 칩·검증 열이 없다.
 문서·작업·계획·추적(요구 ↔ 작업)은 그대로 동작한다.
@@ -85,4 +86,5 @@ uv sync                # 개발 의존(dev 그룹) 포함
 uv run ruff check .
 uv run mypy
 uv run pytest          # README.md의 doctest 포함
+AGENT_CONSOLE_PERF=strict uv run pytest -k perf   # 벽시계 단언(한가한 장비에서)
 ```

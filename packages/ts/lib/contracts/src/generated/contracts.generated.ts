@@ -5058,6 +5058,23 @@ export interface DocumentStateOnEdit {
   [k: string]: unknown;
 }
 /**
+ * 실행 결과에 따라 바꿀 문서와 상태입니다. 바꿀 수 없으면 그대로 두고 안내를 남깁니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "DocumentStateOnRun".
+ */
+export interface DocumentStateOnRun {
+  /**
+   * 상태를 바꿀 문서의 id입니다. 이 스펙의 문서 목록에 있어야 합니다.
+   */
+  document: string;
+  /**
+   * 이 문서 상태로 바꿉니다. 실행이 할 수 있는 전환이 규칙에 있어야 합니다.
+   */
+  to: string;
+  [k: string]: unknown;
+}
+/**
  * 문서 상태 하나입니다(예: 초안, 검토 중, 승인됨).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -5634,10 +5651,22 @@ export interface TaskSyntax {
    * 몇 단계까지 들여쓴 체크 칸을 작업으로 볼지입니다. 비우면 모두 봅니다.
    */
   max_depth?: number | null;
+  /**
+   * 체크 칸 대신 줄 머리 낱말(예: TODO)로 상태를 읽는 정규식입니다. status 이름의 묶음을 씁니다.
+   */
+  status_pattern?: string | null;
+  /**
+   * 상태 낱말이 없는 작업 줄에 상태를 넣을 때 본문 맨 앞에 붙이는 모양입니다. {marker}가 상태 글자입니다.
+   */
+  status_format?: string | null;
+  /**
+   * 작업 줄에 없는 필드를 덧붙일 때의 모양입니다. {key}가 필드 이름, {value}가 값입니다.
+   */
+  field_format?: string | null;
   [k: string]: unknown;
 }
 /**
- * 작업 상태 하나입니다. 작업 줄의 체크 칸 글자로 상태를 구분합니다.
+ * 작업 상태 하나입니다. 작업 줄의 체크 칸 글자(또는 줄 머리 낱말)로 상태를 구분합니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "TaskStatusSpec".
@@ -5652,7 +5681,7 @@ export interface TaskStatusSpec {
    */
   label?: string | null;
   /**
-   * 작업 줄 대괄호 안의 글자입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).
+   * 작업 줄 대괄호 안의 글자(줄 머리 상태를 쓰면 그 낱말)입니다. 여러 개면 처음 것으로 씁니다(예: x와 X).
    */
   marker: string | string[];
   /**
@@ -8216,6 +8245,27 @@ export interface MemoryMoveRequest {
   to_key?: string | null;
 }
 /**
+ * 서버가 주기마다 정리 규칙을 돌릴 메모리 저장소입니다. 규칙이 없으면 지우지 않습니다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "MemoryRetentionAuto".
+ */
+export interface MemoryRetentionAuto {
+  /**
+   * 켜면 공용 메모리 저장소를 자동으로 정리합니다.
+   */
+  library?: boolean;
+  /**
+   * 켜면 등록한 프로젝트 가운데 메모리를 이미 쓰는 곳도 자동으로 정리합니다. 파일을 새로 만들지 않습니다.
+   */
+  projects?: boolean;
+  /**
+   * 자동 정리에서 뺄 프로젝트입니다. 등록한 프로젝트의 id를 적습니다.
+   */
+  exclude_projects?: string[];
+  [k: string]: unknown;
+}
+/**
  * 정리할 기록을 고르는 조건입니다.
  *
  * '모두 참'과 '하나라도 참'을 함께 쓰면 둘 다 맞아야 합니다. 조건이 하나도 없으면 모든 기록이
@@ -8381,6 +8431,7 @@ export interface MemoryRetentionSettings {
    * 위에서부터 처음 맞는 규칙 하나를 씁니다.
    */
   rules?: MemoryRetentionRule[];
+  auto?: MemoryRetentionAuto;
   [k: string]: unknown;
 }
 /**
@@ -10033,6 +10084,12 @@ export interface RunProfile {
    */
   status_on?: {
     [k: string]: string;
+  };
+  /**
+   * 실행 상태(예: succeeded) → 바꿀 문서와 상태입니다. 비우면 문서 상태를 바꾸지 않습니다.
+   */
+  document_state_on?: {
+    [k: string]: DocumentStateOnRun;
   };
   [k: string]: unknown;
 }
@@ -13309,10 +13366,10 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.8" as const;
+export const CONTRACTS_VERSION = "0.14.9" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.14.0",
+  "common": "1.15.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
@@ -13323,8 +13380,8 @@ export const CONTRACT_VERSIONS = {
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
-  "memory": "1.1.0",
-  "sdd": "1.2.0",
+  "memory": "1.2.0",
+  "sdd": "1.3.0",
   "wiki": "1.2.0",
   "modules": "1.6.0"
 } as const;
@@ -13710,6 +13767,8 @@ export const KNOWN_ISSUE_CODES = {
   "SDD_PROFILE_GRAPH_MISSING": "sdd.profile_graph_missing",
   "SDD_UNKNOWN_PROFILE": "sdd.unknown_profile",
   "SDD_STATUS_NOT_APPLIED": "sdd.status_not_applied",
+  "SDD_STATUS_PATTERN_IGNORED": "sdd.status_pattern_ignored",
+  "SDD_DOCUMENT_STATE_NOT_APPLIED": "sdd.document_state_not_applied",
   "SDD_SECRET_SUSPECT": "sdd.secret_suspect",
   "SDD_SECRET_REJECTED": "sdd.secret_rejected",
   "SDD_SETTINGS_INVALID": "sdd.settings_invalid",

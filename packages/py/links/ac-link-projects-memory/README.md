@@ -11,6 +11,14 @@
   계보 이름은 없다.
 - 캐시: `max_open_spaces`(기본 8)·`idle_close_seconds`(기본 300) — 프로젝트 공간·기록 DB 캐시와 같은
   기본값.
+- 선택 포트 `projects.lookup`: 있으면 `memory.spaces`의 선택 메서드 `existing()`이 등록
+  목록에서 보관되지 않았고·폴더가 있고·구성 폴더에 쓸 수 있고·`memory.sqlite3`가 **이미 있는**
+  프로젝트만 준다(아무것도 만들거나 열지 않음). `mod-memory`의 서버 자동 정리가 공용 다음에 이
+  프로젝트들을 정리한다. 이 연동의 설치자 옵션은 없다 — 대상은 사용자 설정
+  `memory.retention.auto{library, projects, exclude_projects}`, 주기는
+  `modules.options.mod-memory.retention_interval_seconds`(0 = 전부 끔). 프로젝트 메모리 자동 정리만
+  끄려면 `memory.retention.auto.projects: false`, 이 연동을 끄면(`--disable-module
+  link-projects-memory`) 프로젝트 메모리 자체가 없어지고 자동 정리는 공용만 돈다.
 - 쓸 수 없는 폴더에 파일이 없으면 만들지 않고 409 `project.config_readonly`. 네트워크 드라이브면
   (`journal: auto`) `DELETE` 저널. 사용자 안내 이슈 `project.network_fs`는 프로젝트 목록이 낸다.
 
@@ -50,7 +58,12 @@ pip install agent-console-link-projects-memory
 >>> space.store.write(MemoryScopeRef(kind="notes", id=""), "k", "본문",
 ...                   author=user_author()).entry.version
 1
->>> pool.close_all()
+>>> pool.shutdown()  # 서버 종료: 닫고, 그 뒤 열기는 파일을 열지 않는다
+>>> pool.open_spaces(), pool.is_shut
+([], True)
+>>> ProjectMemoryPool(lambda: FolderSpaces({"p1": folder}), lambda: [],
+...                   listing=lambda: FolderSpaces({"p1": folder})).existing()
+['p1']
 
 ```
 

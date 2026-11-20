@@ -1,11 +1,12 @@
 """작업 상태 바꾸기 = 그 작업 머리 줄 하나 고치기(design §6R.1.4 K6R-5).
 
-체크 칸 글자와 `[키: 값]` 필드 값만 바꾸고, 나머지 바이트(줄바꿈 종류·들여쓰기·뒤 공백·다른 줄)는
-그대로 둔다. 충돌은 머리 줄 해시로 판단한다.
+체크 칸 글자(또는 줄 머리 상태 낱말, `status` 묶음 범위)와 `[키: 값]` 필드 값만 바꾸고, 나머지
+바이트(줄바꿈 종류·들여쓰기·뒤 공백·다른 줄)는 그대로 둔다. 충돌은 머리 줄 해시로 판단한다.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -24,9 +25,17 @@ from ._compiled import (
 __all__ = ["DEFAULT_FIELD_FORMAT", "TaskChangedError", "TaskPatchError", "patch_task"]
 
 DEFAULT_FIELD_FORMAT = "[{key}: {value}]"
-"""없는 필드를 머리 줄 끝에 덧붙일 때의 모양(기본 문법의 필드 모양과 짝)."""
+"""없는 필드를 머리 줄 끝에 덧붙일 때의 모양(기본 문법의 필드 모양과 짝). 문법 `field_format`과
+패키지 기본 데이터가 모두 없을 때만 쓴다(값은 패키지 기본 데이터와 같다)."""
 
 _SPACE = " \t"
+_SLOT = re.compile(r"\{(\w+)\}")
+
+
+def _fill(template: str, values: Mapping[str, str]) -> str:
+    """`{이름}` 자리만 바꾼다(모르는 이름·다른 중괄호는 글자 그대로 — 사용자 데이터라 `str.format`을
+    쓰지 않는다)."""
+    return _SLOT.sub(lambda m: values.get(m.group(1), m.group(0)), template)
 
 
 class TaskPatchError(ValueError):
@@ -75,7 +84,7 @@ def patch_task(
     syntax: EffectiveSyntax | CompiledSyntax,
     status: str | None = None,
     fields: Mapping[str, str | None] | None = None,
-    field_format: str = DEFAULT_FIELD_FORMAT,
+    field_format: str | None = None,
 ) -> str:
     """작업 머리 줄의 상태 표시 문자와 필드만 바꾼 새 원문을 돌려준다.
 
@@ -84,12 +93,14 @@ def patch_task(
         task: 그 원문(또는 같은 머리 줄의 이전 원문)을 파싱한 작업. `line`·`line_hash`로 줄을
             찾는다.
         syntax: 파싱에 쓴 유효 문법(또는 컴파일한 것).
-        status: 바꿀 작업 상태 id(None = 그대로). 그 상태의 첫 표시 문자를 쓴다. 체크 칸이 없는
-            목록 항목이면 목록 표시 뒤에 `[글자] `를 넣는다.
+        status: 바꿀 작업 상태 id(None = 그대로). 그 상태의 첫 표시 문자를 쓴다. 체크 칸이나 줄 머리
+            상태 낱말이 있으면 그 범위(`status` 묶음)만 바꾼다. 둘 다 없는 줄은, 문법에 줄 머리 상태
+            정규식이 있으면 본문 맨 앞에 문법 `status_format`(`{marker}`)을, 없으면 목록 표시 뒤에
+            `[글자] `를 넣는다.
         fields: 필드 이름 → 새 값(None = 필드 지우기). 없는 필드는 머리 줄 끝(뒤 공백 앞)에
-            `field_format`으로 덧붙인다. 같은 이름이 여럿이면 처음 것만 바꾼다.
-        field_format: 덧붙일 필드 모양(`{key}`·`{value}`). 결과가 문법의 필드 정규식으로 다시
-            읽히지 않으면 거부한다.
+            덧붙일 필드 모양으로 덧붙인다. 같은 이름이 여럿이면 처음 것만 바꾼다.
+        field_format: 덧붙일 필드 모양(`{key}`·`{value}`). None이면 문법 `field_format`(비면 패키지
+            기본 데이터). 결과가 문법의 필드 정규식으로 다시 읽히지 않으면 거부한다.
 
     Returns:
         고친 원문. 바뀐 것이 없으면 `text` 그대로.
@@ -134,12 +145,18 @@ def patch_task(
                 {"ref": status},
             )
         marker = info.markers[0]
-        if head.checkbox is not None:
+        span = head.checkbox or head.status_span
+        if span is not None:
             if head.marker != marker and compiled.marker_to_status.get(head.marker or "") != status:
-                edits.append((head.checkbox[0], head.checkbox[1], marker))
+                edits.append((span[0], span[1], marker))
+        elif compiled.status_pattern is not None:
+            insert = _fill(compiled.status_format or "", {"marker": marker})
+            edits.append((head.body_start, head.body_start, insert))
         else:
             edits.append((head.marker_end, head.marker_end, f"[{marker}] "))
 
+    if field_format is None:
+        field_format = compiled.field_format or DEFAULT_FIELD_FORMAT
     appended: list[str] = []
     for key, value in (fields or {}).items():
         existing = next((f for f in head.fields if f.key == key), None)
@@ -147,7 +164,7 @@ def patch_task(
             _check_value(key, value)
         if existing is None:
             if value is not None:
-                appended.append(field_format.format(key=key, value=value))
+                appended.append(_fill(field_format, {"key": key, "value": value}))
             continue
         if value is None:
             start = existing.start
@@ -165,7 +182,7 @@ def patch_task(
     new_line = head.text
     for start, end, repl in sorted(edits, key=lambda e: (e[0], e[1]), reverse=True):
         new_line = new_line[:start] + repl + new_line[end:]
-    _verify(new_line, compiled, status=status, fields=fields or {})
+    _verify(new_line, compiled, status=status, marker=head.marker, fields=fields or {})
     lines[idx] = new_line + head.eol
     return "".join(lines)
 
@@ -175,9 +192,17 @@ def _verify(
     syntax: CompiledSyntax,
     *,
     status: str | None,
+    marker: str | None,
     fields: Mapping[str, str | None],
 ) -> None:
     head: HeadLine = analyze_head(new_line, syntax)
+    if status is None and head.marker != marker:
+        # 필드만 고쳤는데 상태 표시를 다시 읽지 못함(예: 줄 끝 상태 정규식 뒤에 필드를 덧붙임).
+        raise TaskPatchError(
+            ErrorCodes.VALIDATION_FAILED,
+            "고친 줄에서 작업 상태를 그대로 다시 읽을 수 없습니다.",
+            {"reason": "status_lost"},
+        )
     if status is not None:
         got = syntax.marker_to_status.get(head.marker or "") if head.marker is not None else None
         if got != status:

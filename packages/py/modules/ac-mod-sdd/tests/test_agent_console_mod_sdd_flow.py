@@ -186,6 +186,37 @@ def test_document_missing_is_not_created_by_read(standalone: tuple[TestClient, P
     assert exists.status_code == 409
 
 
+def test_stateless_spec_state_change_is_denied(
+    standalone: tuple[TestClient, Path], kit: Any
+) -> None:
+    """§6R.12 점검표 7행 "승인 없음": 상태 목록이 없는 스펙(틀 없이 만든 것, 상태 목록만 비우고
+    전환이 남은 틀에서 만든 것)의 상태 전환은 403 ``sdd.transition_denied``이고 파일은 그대로다."""
+    client, root = standalone
+    leftover = dict(
+        kit.TEMPLATE,
+        id="leftover",
+        rules={"transitions": [{"from": "*", "to": "approved", "by": ["human"]}]},
+    )
+    kit.write_template(kit.spec_store(root), leftover)
+    blank = client.post(f"{API}/sdd/specs", json={"name": "Blank"}).json()
+    made = client.post(f"{API}/sdd/specs", json={"name": "Left", "template": "leftover"})
+    assert made.status_code == 201, made.text
+    for view in (blank, made.json()):
+        spec_id = view["spec"]["id"]
+        assert view["document_states"] == []
+        doc_id = view["spec"]["documents"][-1]["id"]
+        spec_file = root / "specs" / f"{spec_id}.yaml"
+        before = spec_file.read_bytes()
+        denied = client.post(
+            f"{API}/sdd/specs/{spec_id}/documents/{doc_id}/state", json={"to": "approved"}
+        )
+        assert denied.status_code == 403, denied.text
+        assert denied.json()["error"]["code"] == "sdd.transition_denied"
+        assert spec_file.read_bytes() == before
+        again = client.get(f"{API}/sdd/specs/{spec_id}").json()
+        assert all(d.get("state") is None for d in again["spec"]["documents"])
+
+
 def test_template_check_reports_broken_rules(standalone: tuple[TestClient, Path]) -> None:
     client, _root = standalone
     body = {
@@ -199,3 +230,30 @@ def test_template_check_reports_broken_rules(standalone: tuple[TestClient, Path]
     broken = client.post(f"{API}/sdd/templates/check", json={"rules": {"gates": "nope"}})
     assert broken.status_code == 200
     assert broken.json()["issues"]
+
+
+def test_rest_state_change_is_always_by_human(
+    standalone: tuple[TestClient, Path], kit: Any
+) -> None:
+    """6R.34: REST 상태 요청은 `by`·`run_id`를 받지 않는다(외부 호출자가 실행인 척 못 함)."""
+    client, root = standalone
+    template = {
+        **kit.TEMPLATE,
+        "rules": {
+            **kit.TEMPLATE["rules"],
+            "transitions": [{"from": "draft", "to": "approved", "by": ["run"]}],
+        },
+    }
+    kit.write_template(kit.spec_store(root), template)
+    made = client.post(f"{API}/sdd/specs", json={"name": "S", "template": "flow"})
+    assert made.status_code == 201, made.text
+    # 실행만 할 수 있는 전환은 본문에 by=run을 넣어도 사람 요청이라 거부된다
+    denied = client.post(
+        f"{API}/sdd/specs/s/documents/design/state",
+        json={"to": "approved", "by": "run", "run_id": "r-fake"},
+    )
+    assert denied.status_code == 403, denied.text
+    assert denied.json()["error"]["details"]["by"] == "human"
+    stored = kit.spec_store(root).get("spec", "s").document
+    design = next(d for d in stored["documents"] if d["id"] == "design")
+    assert "state_changed" not in design

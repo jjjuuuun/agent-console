@@ -241,6 +241,15 @@ export const memoryMessages = {
     loading: "서버 버전을 불러오는 중…",
     loadFailed: "서버 버전을 불러오지 못했습니다",
   },
+  store: {
+    label: "메모리 저장소",
+    menuLabel: "메모리 저장소 고르기",
+    project: (name: string) => `이 프로젝트: ${name}`,
+    library: "공용",
+    libraryNote: "공용 메모리입니다. 프로젝트 실행은 이 메모리를 직접 쓰지 않고, 프로젝트로 복사한 것을 씁니다.",
+    noProjectNote: "프로젝트가 없어 공용 메모리를 보고 있습니다. 프로젝트 실행은 프로젝트 폴더의 메모리를 씁니다.",
+    addFolder: "폴더 추가",
+  },
   leave: { title: "저장하지 않은 변경이 있습니다.", cancel: "취소", discard: "버리고 이동", save: "저장하고 이동", body: "이동하면 편집 중인 내용이 사라질 수 있습니다." },
   state: {
     errorList: "메모리 목록을 불러오지 못했습니다",

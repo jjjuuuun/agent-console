@@ -8,9 +8,11 @@
     - ``module``(``MemoryModule``): entry point ``agent_console.server_modules``의 ``mod-memory``.
     - 포트(``ports``): 제공 ``MEMORY_SERVICE``(``MemoryServicePort``)·``SERVER_WARNINGS``,
       받음(선택) ``WORKSPACE_SETTINGS``·``MEMORY_SPACES``(5.7R.33z, ``MemorySpaces``·
-      ``MemorySpaceLike``).
+      ``MemorySpaceLike``, 선택 메서드 ``MemorySpacesListing``).
     - 공간(5.7R.33z): ``MemorySpaceServices``(공간 이름 → 서비스), 오류 ``MemorySpaceError``·
       ``MemorySpacesUnavailable``·``UnknownMemorySpace``, 메모리 DB 범위 ``MEMORY_DB_SCOPE``.
+    - 자동 정리(5.7R.46): ``run_retention_cycle``(한 주기 — 공용 → 메모리가 있는 공간,
+      대상 = 사용자 설정 ``memory.retention.auto``)·``RetentionCycleResult``·``retention_targets``.
     - HTTP 없이 쓰는 부품: ``MemoryService``(서비스), ``open_memory_storage``(저장소 열기·계보
       ``BRANCH``), ``ObservedMemoryStore``·``observe``(변경 알림 감싸개), ``parse_memory_settings``·
       ``section_of``(설정 섹션 읽기), ``MemoryModuleSettings``(설치자 옵션).
@@ -33,7 +35,9 @@ from .ports import (
     MemoryServicePort,
     MemorySpaceLike,
     MemorySpaces,
+    MemorySpacesListing,
 )
+from .retention import RetentionCycleResult, retention_targets, run_retention_cycle
 from .routes import build_router
 from .service import USER_AUTHOR, MemoryService
 from .settings import MemoryModuleSettings
@@ -76,9 +80,11 @@ __all__ = [
     "MemorySpaceLike",
     "MemorySpaceServices",
     "MemorySpaces",
+    "MemorySpacesListing",
     "MemorySpacesUnavailable",
     "MemoryStorage",
     "ObservedMemoryStore",
+    "RetentionCycleResult",
     "UnknownMemorySpace",
     "VersionRequiredError",
     "build_router",
@@ -88,6 +94,8 @@ __all__ = [
     "observe",
     "open_memory_storage",
     "parse_memory_settings",
+    "retention_targets",
+    "run_retention_cycle",
     "section_of",
     "storage_memory_warning",
     "topic_handlers",

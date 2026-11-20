@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PORTABILITY_ENV, formatResultTable, planPackAll, planPortability, rewriteForPortability } from "./plans.mjs";
+import { PORTABILITY_ENV, decidePack, formatResultTable, planPackAll, planPortability, portabilityTargets, rewriteForPortability } from "./plans.mjs";
 
 const ws = [
   { name: "@agent-console/ui", version: "0.1.0", packageJson: { name: "@agent-console/ui", scripts: { build: "x", test: "y" }, dependencies: { "@agent-console/contracts": "^0.4.0" }, peerDependencies: { "@agent-console/tsconfig": "^0.1.0", react: "^19" } } },
@@ -37,6 +37,28 @@ describe("planPortability", () => {
   it("원본 package.json은 바꾸지 않는다", () => {
     rewriteForPortability(ws[0].packageJson, { "@agent-console/contracts": "/x.tgz" });
     expect(ws[0].packageJson.dependencies["@agent-console/contracts"]).toBe("^0.4.0");
+  });
+});
+
+describe("portabilityTargets", () => {
+  const member = (relDir, kind) => ({ name: `@agent-console/${relDir.split("/").pop()}`, relDir, packageJson: kind ? { agentConsole: { kind } } : {} });
+  const all = [member("apps/web", "app"), member("examples/web/example-web", "lib"), member("packages/ts/config/tsconfig", "config"), member("packages/ts/lib/ui")];
+  it("앱만 빼고 예제·표식 없는 패키지는 넣는다", () => {
+    expect(portabilityTargets(all).map((p) => p.relDir)).toEqual(["examples/web/example-web", "packages/ts/config/tsconfig", "packages/ts/lib/ui"]);
+  });
+  it("under로 좁힌다", () => {
+    expect(portabilityTargets(all, { under: "examples/web/" }).map((p) => p.relDir)).toEqual(["examples/web/example-web"]);
+  });
+});
+
+describe("decidePack", () => {
+  const plans = [{ tarballs: { a: "/n/a.tgz", b: "/n/b.tgz" } }, { tarballs: { b: "/n/b.tgz" } }];
+  it("필요한 tarball이 없을 때만 pack하고 없는 것을 한 번씩 알린다", () => {
+    expect(decidePack({ plans, exists: (f) => f === "/n/a.tgz" })).toEqual({ pack: true, absent: ["/n/b.tgz"] });
+    expect(decidePack({ plans, exists: () => true })).toEqual({ pack: false, absent: [] });
+  });
+  it("force(--pack)면 다 있어도 pack한다", () => {
+    expect(decidePack({ plans, exists: () => true, force: true }).pack).toBe(true);
   });
 });
 

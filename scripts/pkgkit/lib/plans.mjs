@@ -85,6 +85,28 @@ export function planPortability({ pkg, workspace, npmDir, sep = "/", prefixes })
 }
 
 /**
+ * 이식성 검사 대상을 고른다. 워크스페이스 멤버 가운데 앱(`agentConsole.kind`가 `app`)을 뺀 전부가 대상이다
+ * (Python `poe portability`가 workspace members에서 앱을 빼는 것과 같다). 예제 패키지도 멤버면 들어간다.
+ * @param {{name: string, relDir: string, packageJson: Record<string, any>}[]} workspace 워크스페이스 패키지 전부
+ * @param {{under?: string}} [options] under: 폴더 접두사로 좁힌다(기본 `""` = 전부)
+ * @returns {typeof workspace}
+ */
+export function portabilityTargets(workspace, options = {}) {
+  const under = options.under ?? "";
+  return workspace.filter((p) => p.packageJson?.agentConsole?.kind !== "app" && p.relDir.startsWith(under));
+}
+
+/**
+ * 검사 전에 tarball을 다시 만들지(pack:all) 정한다. `force`(`--pack`)이면 늘, 아니면 필요한 tarball이 하나라도 없을 때만.
+ * @param {{plans: {tarballs: Record<string, string>}[], exists: (path: string) => boolean, force?: boolean}} args
+ * @returns {{pack: boolean, absent: string[]}} absent: 지금 없는 tarball 경로(중복 제거, 정렬)
+ */
+export function decidePack({ plans, exists, force = false }) {
+  const absent = [...new Set(plans.flatMap((p) => Object.values(p.tarballs)))].filter((f) => !exists(f)).sort();
+  return { pack: force || absent.length > 0, absent };
+}
+
+/**
  * 결과 표 문자열.
  * @param {{name: string, ok: boolean, failedStep?: string, note?: string}[]} rows
  * @returns {string}

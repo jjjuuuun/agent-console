@@ -137,7 +137,7 @@ function RouteLayout({ route, routes }: { route: RouteDef; routes: readonly Rout
   return (
     <RouteGate requires={route.requires ?? []} screenTitle={lookupMessage(route.titleKey)} modulesHref={modulesHref(routes) ?? "/"} home={home === undefined ? undefined : { title: lookupMessage(home.titleKey), path: home.path }}>
       {route.projectScoped === true ? (
-        <ProjectGate title={lookupMessage(route.titleKey)} libraryHref={routeServing(routes, ROUTE_ROLES.graph)?.path}>
+        <ProjectGate title={lookupMessage(route.titleKey)} none={route.projectNone} libraryHref={routeServing(routes, ROUTE_ROLES.graph)?.path}>
           <Outlet />
         </ProjectGate>
       ) : isDefinitionRoute(route) ? (

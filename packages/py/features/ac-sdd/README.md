@@ -16,6 +16,9 @@ Agent Console SDD(스펙 기반 개발) 핵심 라이브러리. 서버·실행·
   뿐이다. 어느 필드가 그 역할인지는 문법 `roles` 데이터다. 상태·필드·단계·문서 이름은 모두 데이터다.
 - **상태 바꾸기 = 줄 하나 고치기.** `patch_task`는 그 작업 머리 줄의 체크 칸 글자와 필드 값만 바꾸고 다른
   바이트(줄바꿈 종류·들여쓰기·뒤 공백·다른 줄)는 그대로 둔다. 충돌은 머리 줄 해시(`line_hash`)로 판단한다.
+- **줄 머리 낱말 상태**(체크 칸 대신 `- TODO: 결제`): 문법에 `task: {list_item: bullet, status_pattern:
+  '^(?P<status>TODO|DONE):\s+', status_format: '{marker}: ', statuses: [{id: todo, marker: TODO}, {id: done,
+  marker: DONE, done: true}]}`처럼 데이터만 준다(기본 문법에는 없음, 체크 칸 모양과 함께 주면 체크 칸이 먼저).
 
 ## 의존성: 무엇을 / 왜 / 대안
 
@@ -76,7 +79,7 @@ pip install agent-console-sdd
 `SpecIssue`(문서·줄·작업 키·코드, 값 원문 없음)로 `index.issues`에 모두 모이고, 작업 하나에 걸린 것은 그 작업
 `issues`에도 들어간다. 코드: `sdd.duplicate_task_id`·`unknown_dependency`·`dependency_cycle`·
 `unknown_status_marker`·`range_unresolved`·`unknown_requirement`·`document_missing`·`parse_timeout`·
-`too_many_tasks`·`syntax_missing`·`invalid_pattern`·`duplicate_status_marker`.
+`too_many_tasks`·`syntax_missing`·`invalid_pattern`·`duplicate_status_marker`·`status_pattern_ignored`.
 
 ## 계획·추적·관문 (서버 없이)
 

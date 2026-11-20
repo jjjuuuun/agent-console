@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConditionSpec, Issue } from "@agent-console/contracts";
 import { getContractSchema } from "@agent-console/contracts";
@@ -13,13 +13,16 @@ import { useModule } from "../../modules";
 import { sameValue } from "../architectureSettings";
 import { summarizeConditions, useConditionOperators } from "../delegation";
 import { ROUTE_ROLES, routePath, useRouteOn } from "../library";
-import { IMPORTED_AUTHOR_KIND, MEMORY_PARAMS, MEMORY_ROLE, memoryKeys, useMemoryContext, useMemoryKinds, useMemoryScopes } from "../memory";
+import { CURRENT_PROJECT_PARAM } from "../../app/projectScope";
+import { IMPORTED_AUTHOR_KIND, MEMORY_PARAMS, MEMORY_ROLE, MEMORY_STORE_LIBRARY, memoryKeys, memoryMessages, useMemoryClient, useMemoryContext, useMemoryKinds, useMemoryScopes, useMemoryStoreState } from "../memory";
+import { useProjects } from "../projects";
 import { LimitsBlock } from "./LimitsBlock";
 import { conditionFieldOf } from "./RuleEditorDialog";
 import { RetentionPanel } from "./RetentionPanel";
 import { ScopeKindsPanel } from "./ScopeKindsPanel";
 import { CHOICE_CARDS_WIDGET, ChoiceCardsWidget, SWITCH_WIDGET, SwitchWidget } from "./SchemaWidgets";
 import { buildKindRows, entriesByKind } from "./kindRows";
+import { readAuto } from "./AutoTargets";
 import { LIMITS, SETTINGS_KEYS, WIDGETS } from "./memorySettingsConfig";
 import { useDebouncedCheck } from "./useDebouncedCheck";
 
@@ -27,6 +30,11 @@ type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const asObj = (v: unknown): Obj => (isObj(v) ? v : {});
 const asList = (v: unknown): Obj[] => (Array.isArray(v) ? v.filter(isObj) : []);
+/** 정리 대상 선택지의 값(화면 상태, 서버 어휘 아님) */
+const TARGET_PROJECT = "current";
+const TARGET_LIBRARY = "library";
+/** 실제 저장소 키(비교·결과 링크용). 프로젝트는 접두 + id, 공용은 TARGET_LIBRARY */
+const STORE_KEY_PROJECT = "project:";
 const escapePointer = (s: string) => s.replace(/~/g, "~0").replace(/\//g, "~1");
 
 export interface MemorySettingsEditorProps {
@@ -122,9 +130,15 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
   const kindsQ = useMemoryKinds();
   const scopesQ = useMemoryScopes();
   const options = useInstallerOptions();
+  // 정리 미리보기·적용의 대상 저장소(기본 = 현재 프로젝트, 프로젝트가 없거나 기능이 꺼져 있으면 공용 고정). 메모리 화면과 같은 훅으로 정한다.
+  const [wantLibrary, setWantLibrary] = useState(false);
+  const store = useMemoryStoreState(wantLibrary);
+  const targetRest = useMemoryClient(store.project);
   const ctxData = useMemoryContext();
   const memoryOn = useRouteOn(ROUTE_ROLES.memory);
   const operators = useConditionOperators();
+  const projectsCtx = useProjects();
+  const autoSchema = useMemo(() => asObj(getContractSchema("MemoryRetentionAuto") as unknown), []);
 
   // 저장된 설정이 바뀌면(저장·되돌리기) 서버 병합 목록을 다시 읽는다.
   const savedKey = JSON.stringify(savedObj);
@@ -183,6 +197,16 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
     },
     [kindsQ.data, ctxData.resolvers],
   );
+  // 자동 정리 대상(프로젝트 기능이 꺼져 있으면 프로젝트 칸 없음)
+  const registeredProjects = projectsCtx.enabled ? projectsCtx.projects.filter((p) => p.archived !== true).map((p) => ({ id: p.id, name: projectsCtx.names.get(p.id) ?? p.id })) : null;
+  const autoSummary = (() => {
+    const m = memorySettingsMessages.retention.autoTargets;
+    const a = readAuto(asObj(retention[SETTINGS_KEYS.auto]), autoSchema);
+    const n = registeredProjects === null || !a.projects ? 0 : registeredProjects.filter((p) => !a.exclude.includes(p.id)).length;
+    const parts = [...(a.library ? [m.library] : []), ...(registeredProjects !== null && a.projects ? [m.projects(n)] : [])];
+    if (parts.length === 0) return ` · ${m.none}`;
+    return registeredProjects === null && a.library ? undefined : ` · ${parts.join("·")}`;
+  })();
   const whenKey = conditionFieldOf(ruleSchema);
   const checkWith = (patch: Obj) => rest.checkMemorySettings({ ...draft, ...patch });
   const kindsCtx: Ctx["kinds"] = {
@@ -216,10 +240,33 @@ export function MemorySettingsEditor({ value, saved, dirty, onChange, errors, di
       return s.empty ? "" : s.text;
     },
     check: (rules) => checkWith({ [SETTINGS_KEYS.retention]: { ...retention, [SETTINGS_KEYS.rules]: rules } }),
-    plan: (rules) => rest.planMemoryRetention({ rules, limit: LIMITS.planLimit }),
-    apply: () => rest.applyMemoryRetention(),
+    plan: (rules) => targetRest.planMemoryRetention({ rules, limit: LIMITS.planLimit }),
+    apply: () => targetRest.applyMemoryRetention(),
+    // 프로젝트 기능이 꺼져 있으면 고를 것이 없으므로 대상 줄을 그리지 않는다(공용 고정)
+    ...(!store.projectsOn ? {} : { target: {
+      value: store.library ? TARGET_LIBRARY : TARGET_PROJECT,
+      key: store.project === null ? TARGET_LIBRARY : `${STORE_KEY_PROJECT}${store.project}`,
+      options: store.canChoose
+        ? [{ id: TARGET_PROJECT, label: memoryMessages.store.project(store.currentName ?? "") }, { id: TARGET_LIBRARY, label: memoryMessages.store.library }]
+        : [{ id: TARGET_LIBRARY, label: memoryMessages.store.library }],
+      onChange: (id) => setWantLibrary(id === TARGET_LIBRARY),
+    } }),
+    autoTargets: {
+      value: asObj(retention[SETTINGS_KEYS.auto]),
+      schema: autoSchema,
+      projects: registeredProjects,
+      onChange: (next) => onChange({ ...draft, [SETTINGS_KEYS.retention]: { ...retention, [SETTINGS_KEYS.auto]: next } }),
+      ...(disabled === undefined ? {} : { disabled }),
+    },
+    autoNote: autoSummary,
     scopeText,
-    resultHref: memoryOn ? `${routePath(ROUTE_ROLES.memory)}?${MEMORY_PARAMS.authorKind}=${encodeURIComponent(IMPORTED_AUTHOR_KIND)}` : null,
+    resultHref: (target) => {
+      if (!memoryOn) return null;
+      const qs = new URLSearchParams({ [MEMORY_PARAMS.authorKind]: IMPORTED_AUTHOR_KIND });
+      if (target.startsWith(STORE_KEY_PROJECT)) qs.set(CURRENT_PROJECT_PARAM, target.slice(STORE_KEY_PROJECT.length));
+      else if (store.projectsOn) qs.set(MEMORY_PARAMS.store, MEMORY_STORE_LIBRARY);
+      return `${routePath(ROUTE_ROLES.memory)}?${qs.toString()}`;
+    },
     onApplied: () => void qc.invalidateQueries({ queryKey: memoryKeys.root }),
     ...(disabled === undefined ? {} : { disabled }),
     ...(checkDelayMs === undefined ? {} : { checkDelayMs }),

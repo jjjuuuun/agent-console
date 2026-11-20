@@ -9,9 +9,9 @@ import type { MemoryEntry, MemoryEntryPage, MemoryEntrySummary, MemoryScopeKindL
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { useModule } from "../../modules";
-import { useProjects } from "../projects";
 import { LIMIT_OPTION_KEYS, MEMORY_LIMITS, MEMORY_ROLE, SETTINGS_SECTION } from "./memoryConfig";
 import { sortParams, type MemoryViewState } from "./memoryUrl";
+import { useMemoryStore } from "./useMemoryStore";
 
 export const memoryKeys = {
   root: ["memory"] as const,
@@ -26,12 +26,11 @@ export const memoryKeys = {
 };
 
 /**
- * 메모리를 보는 공간의 프로젝트 id. 프로젝트 기능이 켜져 있고 현재 프로젝트가 있으면 그 프로젝트 폴더의 메모리 저장소(`?project=`),
- * 아니면 null(앱 DB = 공용). 질의 키에 넣어 공간마다 캐시를 따로 둔다.
+ * 메모리를 보는 저장소의 프로젝트 id(null = 공용). 판단은 `useMemoryStore`(주소 `store=library`·프로젝트 목록) 한 곳이 한다.
+ * 질의 키에 넣어 저장소마다 캐시를 따로 둔다.
  */
 export function useMemoryProject(): string | null {
-  const projects = useProjects();
-  return projects.enabled ? projects.current : null;
+  return useMemoryStore().project;
 }
 
 /** 현재 공간의 메모리 질의. 키 뒤에 공간 표지를 붙인다(무효화는 앞쪽 `["memory"]` 그대로). */
@@ -181,11 +180,15 @@ export function useInvalidateMemory(): () => Promise<void> {
   return useCallback(() => qc.invalidateQueries({ queryKey: memoryKeys.root }), [qc]);
 }
 
-/** 호출 함수에 주입할 REST 클라이언트(훅 밖 비동기 동작이 쓴다). */
-export function useMemoryRest(): MemoryClient {
+/** 저장소(프로젝트 id, null = 공용)에 맞는 REST 클라이언트. 설정 › 정리 대상처럼 주소가 아닌 선택도 이것을 쓴다. */
+export function useMemoryClient(project: string | null): MemoryClient {
   const { rest, space } = useApi();
-  const project = useMemoryProject();
   return useMemo(() => (project === null ? rest : space(project)), [rest, space, project]);
+}
+
+/** 호출 함수에 주입할 REST 클라이언트(훅 밖 비동기 동작이 쓴다). 지금 화면의 저장소를 읽는다. */
+export function useMemoryRest(): MemoryClient {
+  return useMemoryClient(useMemoryProject());
 }
 
 export function isApiError(e: unknown, code: string): e is ApiError {

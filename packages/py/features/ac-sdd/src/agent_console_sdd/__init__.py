@@ -9,13 +9,16 @@
       값마다 출처).
     - ``effective_syntax(rules, settings, *, default=None)``: 기본 → 설정 → 스펙 세 층.
     - ``status_infos(statuses)``·``document_state_infos(states)``: 라벨을 푼 보기(라벨 없으면 id).
+    - ``effective_document_state(rules, state)``: 문서 유효 상태(적힌 값 → 처음 문서 상태 → 목록
+      첫 번째 → 없음).
     - ``compile_syntax(syntax) -> CompiledSyntax``: 정규식 컴파일(`ac-safe-regex`)과 문법 이슈.
     파싱
     - ``parse_spec(spec, files, syntax, *, max_tasks, timeout_ms, clock) -> SpecIndex``.
     - ``find_task(index, key)``, ``task_key(document_id, ordinal)``, ``line_hash(line)``,
       ``split_lines(text)``, ``analyze_head(line, syntax) -> HeadLine``(머리 줄 분석).
     줄 고치기(design §6R.1.4)
-    - ``patch_task(text, task, *, syntax, status, fields, field_format) -> str``.
+    - ``patch_task(text, task, *, syntax, status, fields, field_format) -> str``(체크 칸 글자 또는
+      줄 머리 상태 낱말 `status_pattern`, 상태 없는 줄은 `status_format`, 필드는 `field_format`).
     - 예외 ``TaskPatchError``(ValueError, ``code``·``details``), ``TaskChangedError``(줄 해시 다름).
     계획·추적(design §6R.1.6)
     - ``plan(index, syntax) -> TaskPlan``(위상 층·병목·순환, ``task_weight``),
@@ -94,6 +97,7 @@ from ._syntax import (
     DEFAULT_SYNTAX_RESOURCE,
     SyntaxLayer,
     document_state_infos,
+    effective_document_state,
     effective_syntax,
     load_default_syntax,
     merge_syntax,
@@ -171,6 +175,7 @@ __all__ = [
     "dependency_cycles",
     "document_state_infos",
     "document_variable",
+    "effective_document_state",
     "effective_syntax",
     "evaluate_gates",
     "export_documents",

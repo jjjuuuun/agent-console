@@ -9,7 +9,9 @@
   `RecordsUnavailable`(409, `project_id`를 채운다).
 - 같은 엔진이면 저장소 묶음을 다시 쓴다(저장소가 만들 때 열 유무를 한 번 보므로 매번 만들지 않는다).
 - 그 공간을 이 프로세스에서 처음 열면 `on_open(project_id)`를 한 번 부른다(재시작 복구 자리,
-  §PI.4.6.5). 거짓을 돌려주거나 예외가 나면 다음 열기 때 다시 부른다.
+  §PI.4.6.5). 거짓을 돌려주거나 예외가 나면 다음 열기 때 다시 부른다. 훅이 도는 동안 같은 공간을
+  여는 **다른 스레드는 훅이 끝날 때까지 기다린다**(예: 시작 직후 로그 수집이 먼저 열었을 때 첫
+  요청이 복구 전 상태를 읽지 않게). 훅 안에서 같은 스레드가 다시 열면 기다리지 않는다.
 
 포트가 없으면 `available`이 거짓이다. 소비 모듈은 그때 호스트 DB(기능 단독)를 쓴다.
 """
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections import OrderedDict
 from collections.abc import Callable
 
@@ -31,6 +34,8 @@ from .spaces import UnknownSpace
 _log = logging.getLogger(__name__)
 _MADE_CAP = 64
 """엔진별 저장소 묶음을 들고 있는 최대 개수(공간 캐시 상한보다 넉넉히)."""
+DEFAULT_OPEN_WAIT = 30.0
+"""다른 스레드의 `on_open`이 끝나기를 기다리는 최대 초(넘으면 경고 후 그냥 연다)."""
 
 
 class RecordsStores[S]:
@@ -41,6 +46,8 @@ class RecordsStores[S]:
         make: 엔진 → 저장소 묶음(예: `SqliteStorage`).
         prefix: 공간 이름 접두(공간 이름 = 접두 + 프로젝트 id).
         on_open: 그 공간을 이 프로세스에서 처음 열 때 부르는 함수(참 = 끝남).
+        open_wait: 다른 스레드의 `on_open`을 기다리는 최대 초(넘으면 경고를 남기고 기다리지 않고
+            연다 - 훅이 멈춰도 읽기가 영원히 막히지 않게).
 
     >>> import tempfile
     >>> from pathlib import Path
@@ -69,15 +76,19 @@ class RecordsStores[S]:
         *,
         prefix: str = "project:",
         on_open: Callable[[str], bool] | None = None,
+        open_wait: float = DEFAULT_OPEN_WAIT,
     ) -> None:
         self._spaces = spaces
         self._make = make
         self.prefix = prefix
         self._on_open = on_open
+        self._open_wait = open_wait
         self._made: OrderedDict[int, tuple[Engine, S]] = OrderedDict()
         self._opened: set[str] = set()
-        self._opening: set[str] = set()
+        self._opening: dict[str, int] = {}
+        """훅이 도는 공간 → 그 훅을 부른 스레드 id."""
         self._lock = threading.RLock()
+        self._opened_cond = threading.Condition(self._lock)
 
     @property
     def available(self) -> bool:
@@ -158,20 +169,36 @@ class RecordsStores[S]:
     def _first_open(self, project_id: str) -> None:
         if self._on_open is None:
             return
-        with self._lock:
-            if project_id in self._opened or project_id in self._opening:
-                return
-            self._opening.add(project_id)
+        me = threading.get_ident()
+        with self._opened_cond:
+            deadline: float | None = None
+            while True:
+                if project_id in self._opened:
+                    return
+                owner = self._opening.get(project_id)
+                if owner is None:
+                    break
+                if owner == me:  # 훅 안에서 같은 공간을 다시 연다
+                    return
+                if deadline is None:
+                    deadline = time.monotonic() + self._open_wait
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    _log.warning("records space open hook still running: %s", project_id)
+                    return
+                self._opened_cond.wait(remaining)
+            self._opening[project_id] = me
         done = False
         try:
             done = bool(self._on_open(project_id))
         except Exception:
             _log.exception("records space open hook failed: %s", project_id)
         finally:
-            with self._lock:
-                self._opening.discard(project_id)
+            with self._opened_cond:
+                self._opening.pop(project_id, None)
                 if done:
                     self._opened.add(project_id)
+                self._opened_cond.notify_all()
 
 
 def _with_project(exc: RecordsUnavailable, project_id: str) -> RecordsUnavailable:

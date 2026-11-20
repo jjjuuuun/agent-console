@@ -10,8 +10,10 @@
       ``link-projects-memory``. 설정 ``ProjectsMemorySettings``.
     - ``ProjectMemoryPool``: HTTP 없이 쓰는 부품 - ``open(space) -> ProjectMemorySpace``
       (``store``·``context``·``path``)·``close``·``close_all``. 열린 저장소 캐시(상한·유휴 닫기).
+      ``existing()``(5.7R.46): 메모리 파일이 이미 있는 켜진 등록 id(서버 자동 정리 대상).
     - ``migrate_memory_db(path, branches)``·``folder_id(space)``·``MemoryDbUnavailable``.
-    - 포트(``ports``): 받음 ``PROJECTS_SPACES``(필수), 제공 ``MEMORY_SPACES``.
+    - 포트(``ports``): 받음 ``PROJECTS_SPACES``(필수)·``PROJECTS_LOOKUP``(선택), 제공
+      ``MEMORY_SPACES``.
     - ``testing``: ``FolderSpaces``·``folder_spaces_module``(단독 실행·테스트).
 """
 
@@ -26,15 +28,24 @@ from .pool import (
     folder_id,
     migrate_memory_db,
 )
-from .ports import MEMORY_SPACES, PROJECTS_SPACES, ProjectSpaces, SpaceLike
+from .ports import (
+    MEMORY_SPACES,
+    PROJECTS_LOOKUP,
+    PROJECTS_SPACES,
+    ProjectListing,
+    ProjectSpaces,
+    SpaceLike,
+)
 from .settings import ProjectsMemorySettings
 
 __all__ = [
     "MEMORY_SPACES",
     "MODULE_ID",
+    "PROJECTS_LOOKUP",
     "PROJECTS_SPACES",
     "MemoryDbUnavailable",
     "PoolOptions",
+    "ProjectListing",
     "ProjectMemoryPool",
     "ProjectMemorySpace",
     "ProjectSpaces",

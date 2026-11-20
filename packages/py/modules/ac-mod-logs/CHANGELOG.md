@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- 수정(11/20 후속): 수집 기다림을 `agent_console_modkit.WorkGate`로 옮겼다(`DEFAULT_STOP_WAIT` = `DEFAULT_WORK_WAIT`). `run_periodic`이 취소되면(서버 종료) 새 수집을 막고 진행 중인 스레드 수집을 기다린 뒤 취소를 다시 던진다 — 조립기가 종료 훅보다 먼저 하므로 기록 공간 풀이 닫히기 전에 끝난다.
+
+- 수정(11/20): `LogsService.stop()`이 진행 중인 스레드 수집·비우기가 끝나기를 기다린다(상한 `stop_wait`, 기본 `DEFAULT_STOP_WAIT` 30초, 넘으면 경고). 멈춘 뒤 새 수집은 출처를 부르지 않는 빈 보고, `start()`가 다시 연다. 모듈 종료 훅이 색인을 닫기 전에 수집 스레드가 끝난다.
+
 - 5.7R.33i: `projects.folders` 값 모양 `ProjectFoldersLike` = `registered`·`archived_folders`·`project_for`(옛 `current` 삭제). 질의 맥락에 `project_for`(질의마다 캐시) → 세션 `project_id`·필터 `project=<등록 id>`·집계 차원 `project`·`token_samples`(로그 기반 사용량). 옛 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`(`details.key = logs.projects`). `testing.project_folders_module(registered, archived)`(id → 폴더 또는 목록)·`StaticProjectFolders`.
 
 - 5.7R.13(5.7R.6 후속): `POST /logs/index/purge` 본문 `all` — 범위 없이 실제로 지우려면 `all: true`가 필요(없으면 422). 비우기를 지원하지 않는 색인은 400 `logs.purge_unsupported`(`LogPurgeUnsupportedError`).

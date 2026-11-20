@@ -120,3 +120,6 @@
   .mem-tool[data-active] { border-color: Highlight; }
   .mem-split { background: ButtonText; }
 }
+/* 저장소 칩: 기본 모양은 구성 화면의 공간 칩(.space-chip)을 쓰고, 프로젝트 저장소일 때만 강조한다 */
+.mem-store-chip[data-memory-store="current"] { background: var(--ac-accent-bg); color: var(--ac-text); border-color: var(--ac-accent); }
+.mem-store-chip[data-memory-store="current"] svg:first-child { color: var(--ac-accent); }

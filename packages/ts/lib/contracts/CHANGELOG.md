@@ -2,6 +2,11 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.9]
+- 계약 0.14.9(6R.31). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `sdd` 1.3.0, `memory` 1.2.0, `common` 1.15.0.
+- 새 선택 필드: `TaskSyntax.status_pattern?`·`status_format?`·`field_format?: string | null`, `RunProfile.document_state_on?: Record<string, DocumentStateOnRun>`(새 타입 `DocumentStateOnRun{document, to}`), `MemoryRetentionSettings.auto?: MemoryRetentionAuto`(`library?`·`projects?: boolean`, `exclude_projects?: string[]`).
+- 새 상수: `KNOWN_ISSUE_CODES.SDD_STATUS_PATTERN_IGNORED`(`sdd.status_pattern_ignored`), `KNOWN_ISSUE_CODES.SDD_DOCUMENT_STATE_NOT_APPLIED`(`sdd.document_state_not_applied`).
+
 ## [0.14.4]
 - 계약 0.14.4(묶음 4b V1). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `projects` 3.4.0.
 - 새 선택 필드: `CopyPlanItem.blocked?: boolean`(적용할 수 없는 항목, 참이면 `default_action` = skip), `CopyPlanItem.issues?: Issue[]`(항목 이슈, 예: error `secret.plain_found`, 값 없음).

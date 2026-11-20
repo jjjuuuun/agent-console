@@ -177,6 +177,91 @@ def test_transitions_by_and_on_edit() -> None:
     assert after.state_changed.by == "agent"
 
 
+def _add_template(repo: Any, template_id: str, rules: dict[str, Any] | None) -> None:
+    doc: dict[str, Any] = {k: v for k, v in TEMPLATE.items() if k != "rules"}
+    doc["id"] = template_id
+    if rules is not None:
+        doc["rules"] = rules
+    repo.store.create(TEST_TEMPLATE_KIND, doc)
+
+
+def test_transition_by_run_when_rules_allow_it() -> None:
+    """§6R.12 점검표 7행 "실행도 허용": `by`에 `run`을 넣으면 실행 쪽도 승인한다(데이터만)."""
+    repo = _repo()
+    _add_template(
+        repo,
+        "run-ok",
+        {
+            "document_states": [{"id": "draft"}, {"id": "review"}, {"id": "approved"}],
+            "initial_document_state": "draft",
+            "transitions": [
+                {"from": "draft", "to": "review", "by": ["human"]},
+                {"from": "review", "to": "approved", "by": ["human", "run"]},
+            ],
+        },
+    )
+    spec_id = repo.create(name="s", template="run-ok").id
+    # 같은 규칙 안에서도 `by`에 없는 쪽은 막힌다(draft → review는 사람만, 에이전트는 어디에도 없음).
+    with pytest.raises(TransitionDeniedError) as run_denied:
+        repo.change_document_state(spec_id, "design", "review", by="run")
+    assert run_denied.value.details == {
+        "document_id": "design",
+        "from": "draft",
+        "to": "review",
+        "by": "run",
+    }
+    repo.change_document_state(spec_id, "design", "review", by="human")
+    with pytest.raises(TransitionDeniedError):
+        repo.change_document_state(spec_id, "design", "approved", by="agent")
+
+    stored = repo.change_document_state(spec_id, "design", "approved", by="run", run_id="r-9")
+    doc = stored.spec.documents[1]
+    assert doc.state == "approved"
+    assert doc.state_changed is not None
+    assert (doc.state_changed.by, doc.state_changed.run_id) == ("run", "r-9")
+    latest = repo.store.list_versions(TEST_SPEC_KIND, spec_id)[0]
+    assert latest.message == "문서 상태: design → approved (run)"
+    # 사람도 그대로 승인할 수 있다(다른 문서).
+    repo.change_document_state(spec_id, "req", "review", by="human")
+    by_human = repo.change_document_state(spec_id, "req", "approved", by="human")
+    assert by_human.spec.documents[0].state == "approved"
+
+
+def test_stateless_spec_refuses_every_transition() -> None:
+    """§6R.12 점검표 7행 "승인 없음": `document_states`를 비운 스펙은 상태를 쓰지 않는다 — 어느
+    쪽이 요청해도 전환은 `TransitionDeniedError`이고 정의·버전은 그대로다."""
+    repo = _repo()
+    blank_id = repo.create(name="blank", id="blank").id  # 틀 없이 = 규칙 비움
+    _add_template(repo, "no-states", {})
+    # 상태 목록은 비웠지만 전환이 남은 규칙(규칙 검사는 `sdd.unknown_state`로 알린다).
+    _add_template(
+        repo,
+        "leftover",
+        {"transitions": [{"from": "*", "to": "approved", "by": ["human", "run", "agent"]}]},
+    )
+    leftover_id = repo.create(name="leftover", template="leftover").id
+    cases = [
+        (blank_id, blank_documents()[0].id),
+        (repo.create(name="no-states", template="no-states").id, "design"),
+        (leftover_id, "design"),
+    ]
+    assert any(i.code == "sdd.unknown_state" for i in repo.view(leftover_id).issues)
+    for spec_id, doc_id in cases:
+        before = repo.get(spec_id)
+        assert repo.view(spec_id).document_states == []
+        assert all(d.state is None for d in before.spec.documents)
+        for by in ("human", "run", "agent"):
+            with pytest.raises(TransitionDeniedError) as denied:
+                repo.change_document_state(spec_id, doc_id, "approved", by=by)
+            assert denied.value.details["from"] is None
+        after = repo.get(spec_id)
+        assert after.version_hash == before.version_hash
+        assert after.document == before.document
+        # 본문을 고쳐도 상태가 생기지 않는다(on_edit 없음).
+        stored, _ = repo.write_document(spec_id, doc_id, "바뀐 본문\n")
+        assert all(d.state is None for d in stored.spec.documents)
+
+
 def test_task_patch_line_hash_rules() -> None:
     repo = _repo()
     spec_id = repo.create(name="s", template="basic").id

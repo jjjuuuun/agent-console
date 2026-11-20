@@ -31,6 +31,8 @@ interface Fixture {
   entries?: MemoryEntrySummary[];
   rest?: Record<string, unknown>;
   projects?: { id: string; name: string }[];
+  /** 프로젝트 저장소(`?project=`) 클라이언트로 쓸 가짜. 없으면 공용과 같은 가짜를 쓴다 */
+  spaceRest?: Record<string, unknown>;
 }
 
 function setup(path: string, f: Fixture = {}) {
@@ -53,7 +55,7 @@ function setup(path: string, f: Fixture = {}) {
     },
   );
   // 프로젝트를 고르면 메모리 요청은 그 공간 클라이언트(`?project=`)로 간다. 이 시험에서는 공간 클라이언트도 같은 가짜를 쓴다.
-  vi.mocked(clients.space).mockImplementation(() => rest as never);
+  vi.mocked(clients.space).mockImplementation(() => (f.spaceRest ?? rest) as never);
   const view = mountApp(clients, path);
   return { ...view, clients, ws, rest };
 }
@@ -206,7 +208,7 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);
     expect(within(tree).queryAllByText("팀 둘")).toHaveLength(0);
     // 현재 프로젝트는 머리의 프로젝트 칩이 보인다(칩 해제로 프로젝트를 풀 수 없다: 활성 필터 칩 없음).
-    await waitFor(() => expect(document.querySelector(".prj-pchip")?.textContent).toContain("프로젝트 하나"), LONG);
+    await waitFor(() => expect(document.querySelector(".space-chip")?.textContent).toContain("프로젝트 하나"), LONG);
     expect(screen.queryByRole("group", { name: "활성 필터" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
     await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);
@@ -219,6 +221,155 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     const tree = await screen.findByRole("tree", { name: "메모리 범위 나무" }, LONG);
     expect(await within(tree).findByText("서랍", {}, LONG)).toBeTruthy();
     expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull();
+  });
+});
+
+describe("메모리 화면: 보는 저장소(이 프로젝트 / 공용, §1.3)", () => {
+  const PROJECT_MODULES = async () => [mod(["memory", "projects"])];
+  const projects = [{ id: "P1", name: "프로젝트 하나" }, { id: "P2", name: "프로젝트 둘" }];
+  const libraryEntries = makeEntries(3);
+  /** 프로젝트 저장소와 공용 저장소가 서로 다른 항목 수를 돌려주는 가짜(캐시가 섞이면 수로 드러난다) */
+  function twoStores(path: string, extra: Fixture = {}) {
+    const projectEntries = makeEntries(2);
+    const space = createFakeClients({
+      listMemoryScopeKinds: vi.fn(async () => ({ kinds: sampleKinds(), include_defaults: false })),
+      listMemoryScopes: vi.fn(async () => sampleScopes()),
+      listMemoryEntries: vi.fn(async () => ({ items: projectEntries, next_cursor: null, total: projectEntries.length })),
+      listMemoryTags: vi.fn(async () => ({ tags: [], truncated: false })),
+      getMemoryEntry: vi.fn(async (id: string) => full(projectEntries.find((x) => x.id === id) ?? projectEntries[0]!)),
+    }).rest as unknown as Record<string, unknown>;
+    const view = setup(path, { entries: libraryEntries, projects, spaceRest: space, rest: { listModules: vi.fn(PROJECT_MODULES) }, ...extra });
+    return { ...view, space };
+  }
+  const chip = () => document.querySelector<HTMLElement>("[data-memory-store]");
+  const pickStore = async (name: string) => {
+    const button = await waitFor(() => {
+      const c = chip();
+      if (c === null || c.tagName !== "BUTTON") throw new Error("칩 없음");
+      return c;
+    }, LONG);
+    fireEvent.click(button);
+    fireEvent.click(await screen.findByRole("menuitem", { name }));
+  };
+
+  it("프로젝트 ≥ 1: 첫 화면은 현재 프로젝트 저장소를 읽고, 칩 [공용]은 주소 store=library·project 없는 요청·안내 줄을 만든다. 뒤로 가기로 돌아온다", async () => {
+    const { router, rest, space, clients } = twoStores("/memory?prj=P1");
+    await waitFor(() => expect(space["listMemoryEntries"]).toHaveBeenCalled(), LONG);
+    expect(clients.space).toHaveBeenCalledWith("P1");
+    expect(rest.listMemoryEntries).not.toHaveBeenCalled();
+    await waitFor(() => expect(chip()?.textContent).toContain("이 프로젝트: 프로젝트 하나"), LONG);
+    expect(screen.queryByText(/공용 메모리입니다/)).toBeNull();
+    await waitFor(() => expect(rowNames()).toHaveLength(2), LONG);
+    await pickStore("공용");
+    await waitFor(() => expect(router.state.location.search).toContain("store=library"), LONG);
+    expect(router.state.location.search).toContain("prj=P1");
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalled(), LONG);
+    expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.not.objectContaining({ project: expect.anything() }));
+    expect(await screen.findByText(/공용 메모리입니다/, {}, LONG)).toBeTruthy();
+    await waitFor(() => expect(rowNames()).toHaveLength(3), LONG);
+    await act(async () => { await router.navigate(-1); });
+    await waitFor(() => expect(router.state.location.search).not.toContain("store="), LONG);
+    // 저장소마다 질의 캐시가 따로다: 공용의 3개가 프로젝트 보기에 섞이지 않는다
+    await waitFor(() => expect(rowNames()).toHaveLength(2), LONG);
+    expect(screen.queryByText(/공용 메모리입니다/)).toBeNull();
+  });
+
+  it("프로젝트 ≥ 1: 프로젝트·공용 두 보기 모두 머리에 ProjectChip(팝오버에 전체 경로·복사·홈·바꾸기)이 있고, 저장소 칩에는 경로가 없다", async () => {
+    twoStores("/memory?prj=P1");
+    const pchip = async () => (await waitFor(() => {
+      const b = document.querySelector<HTMLElement>(".prj-pchip");
+      if (b === null) throw new Error("칩 없음");
+      return b;
+    }, LONG));
+    const order = () => Array.from(document.querySelectorAll("[data-memory-store], .prj-pchip")).map((e) => (e.classList.contains("prj-pchip") ? "project" : "store"));
+    await pchip();
+    await waitFor(() => expect(chip()).not.toBeNull(), LONG);
+    expect(order()).toEqual(["project", "store"]);
+    expect(chip()?.textContent).not.toContain("/work/P1");
+    fireEvent.click(await pchip());
+    const panel = await screen.findByRole("dialog", {}, LONG);
+    expect(panel.textContent).toContain("/work/P1");
+    expect(within(panel).getByRole("button", { name: "복사" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "프로젝트 홈으로" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: /프로젝트 바꾸기/ })).toBeTruthy();
+    fireEvent.keyDown(panel, { key: "Escape" });
+    await pickStore("공용");
+    await waitFor(() => expect(chip()?.textContent).toBe("공용"), LONG);
+    expect(await pchip()).toBeTruthy();
+    expect(order()).toEqual(["project", "store"]);
+  });
+
+  it("프로젝트 0개: ProjectChip이 없다", async () => {
+    setup("/memory", { projects: [], rest: { listModules: vi.fn(PROJECT_MODULES) } });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(document.querySelector(".prj-pchip")).toBeNull();
+  });
+
+  it("공용 보기에서 [새 항목]을 저장하면 쓰기 요청이 공용 클라이언트로 가고 프로젝트 저장소 클라이언트는 쓰지 않는다", async () => {
+    const created = full(makeEntries(1)[0]!);
+    const createLib = vi.fn(async () => created);
+    const { space } = twoStores("/memory?prj=P1&store=library&scope=desk%3Ag1", { rest: { listModules: vi.fn(PROJECT_MODULES), createMemoryEntry: createLib } });
+    const createSpace = vi.fn(async () => created);
+    space["createMemoryEntry"] = createSpace;
+    await waitFor(() => expect(chip()?.textContent).toBe("공용"), LONG);
+    fireEvent.click((await screen.findAllByRole("button", { name: "새 항목" }, LONG))[0]!);
+    const key = await screen.findByLabelText("키", {}, LONG);
+    fireEvent.change(key, { target: { value: "공용/새키" } });
+    const submit = within(await screen.findByRole("form", { name: "새 항목" }, LONG)).getByRole("button", { name: "만들기" }) as HTMLButtonElement;
+    await waitFor(() => expect(submit.disabled).toBe(false), LONG);
+    fireEvent.click(submit);
+    await waitFor(() => expect(createLib).toHaveBeenCalledTimes(1), LONG);
+    expect(createLib).toHaveBeenCalledWith(expect.objectContaining({ key: "공용/새키" }));
+    expect(createSpace).not.toHaveBeenCalled();
+  });
+
+  it("store=library 주소로 바로 열면 공용이고, 사이드바에서 프로젝트를 바꿔도(?prj=) 공용이 유지된다", async () => {
+    const { router, rest, space, clients } = twoStores("/memory?prj=P1&store=library");
+    await waitFor(() => expect(rest.listMemoryEntries).toHaveBeenCalled(), LONG);
+    await waitFor(() => expect(rowNames()).toHaveLength(3), LONG);
+    expect(space["listMemoryEntries"]).not.toHaveBeenCalled();
+    await waitFor(() => expect(chip()?.textContent).toContain("공용"), LONG);
+    await act(async () => { await router.navigate("/memory?prj=P2&store=library"); });
+    await waitFor(() => expect(router.state.location.search).toContain("prj=P2"), LONG);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(clients.space).not.toHaveBeenCalled();
+    expect(rowNames()).toHaveLength(3);
+  });
+
+  it("프로젝트 0개: NoProjectState 없이 공용 목록 + 안내 + [폴더 추가], 칩은 [공용] 글자만", async () => {
+    setup("/memory", { projects: [], rest: { listModules: vi.fn(PROJECT_MODULES) } });
+    await grid();
+    expect(await screen.findByText(/프로젝트가 없어 공용 메모리를 보고 있습니다/, {}, LONG)).toBeTruthy();
+    expect(screen.queryByTestId("no-project-state")).toBeNull();
+    expect(screen.getByRole("button", { name: "폴더 추가" })).toBeTruthy();
+    expect(chip()?.tagName).toBe("SPAN");
+    expect(chip()?.textContent).toContain("공용");
+    expect(rowNames()).toHaveLength(3);
+  });
+
+  it("프로젝트 기능이 꺼져 있으면 칩도 안내도 없고 store 인자는 무시한다", async () => {
+    const { rest } = setup("/memory?store=library");
+    await grid();
+    expect(chip()).toBeNull();
+    expect(screen.queryByText(/공용 메모리입니다/)).toBeNull();
+    expect(rest.listMemoryEntries).toHaveBeenCalledWith(expect.not.objectContaining({ project: expect.anything() }));
+  });
+
+  it("저장 안 된 변경이 있으면 저장소를 바꾸기 전에 이탈 확인을 띄운다. 취소하면 그대로, 버리면 바뀐다", async () => {
+    const { router } = twoStores("/memory?prj=P1&entry=e1");
+    fireEvent.click(await screen.findByText("정보", {}, LONG));
+    const tagInput = await screen.findByRole("textbox", { name: "태그 추가" }, LONG);
+    fireEvent.change(tagInput, { target: { value: "임시" } });
+    fireEvent.keyDown(tagInput, { key: "Enter" });
+    await pickStore("공용");
+    const dialog = await screen.findByRole("dialog", { name: "저장하지 않은 변경이 있습니다." });
+    expect(document.activeElement?.textContent).toBe("취소");
+    fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    expect(router.state.location.search).not.toContain("store=");
+    await pickStore("공용");
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "저장하지 않은 변경이 있습니다." })).getByRole("button", { name: "버리고 이동" }));
+    await waitFor(() => expect(router.state.location.search).toContain("store=library"), LONG);
+    expect(router.state.location.search).not.toContain("entry=");
   });
 });
 

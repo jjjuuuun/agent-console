@@ -19,8 +19,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+from agent_console_link_projects_records import RECORDS_SPACES
 from agent_console_server.testing import (
     API,
     agent_doc,
@@ -29,6 +31,7 @@ from agent_console_server.testing import (
     server,
     team_graph,
 )
+from agent_console_store import RecordsUnavailable
 
 TERMINAL = {"completed", "failed", "cancelled", "interrupted"}
 
@@ -213,6 +216,42 @@ def test_restart_recovery_only_touches_own_host_runs(tmp_path: Path) -> None:
         assert snap["run"]["status"] == "interrupted"
         missing = client.post(f"{API}/runs/nope/mark-interrupted?project=pb")
         assert missing.status_code == 404
+
+
+def test_no_records_connection_survives_server_stop(tmp_path: Path) -> None:
+    """서버를 끈 뒤 프로젝트 기록 DB를 연 파일 설명자가 남지 않는다(리눅스 ``/proc``).
+
+    회귀(11/20): 종료 순서상 기록 공간 풀이 먼저 닫힌 뒤에도 배경 로그 수집 스레드가 공간을 새로
+    열어 연결이 남았다. 풀은 종료 뒤 열기를 거부하고, 로그 수집은 멈출 때 스레드를 기다린다.
+    """
+    proc = Path("/proc/self/fd")
+    if not proc.is_dir():
+        pytest.skip("/proc 없음")
+    folder = tmp_path / "E"
+    folder.mkdir()
+    with _app(tmp_path) as client:
+        register_project(client, "pe", folder)
+        _seed(client, "pe")
+        _wait(client, _start(client, "pe"), "pe")
+    with _app(tmp_path) as client:  # 재시작: 시작 수집이 공간을 먼저 연다
+        _wait(client, _start(client, "pe"), "pe")
+        client.post(f"{API}/logs/scan")
+        pool = client.app.state.assembly.port(RECORDS_SPACES)  # type: ignore[attr-defined]
+    # 종료 뒤 늦게 온 열기(끝나지 않은 배경 수집 스레드 흉내)는 파일을 열지 않는다.
+    late = pool.open("project:pe")
+    with pytest.raises(RecordsUnavailable) as caught:
+        late.read_engine()
+    assert caught.value.reason == "link_disabled"
+    db = _records(folder)
+    names = {str(db), f"{db}-wal", f"{db}-shm"}
+    held = []
+    for fd in proc.iterdir():
+        try:
+            if str(fd.readlink()) in names:
+                held.append(fd.name)
+        except OSError:
+            continue
+    assert held == []
 
 
 def test_newer_records_db_refuses_new_runs_but_reads(tmp_path: Path) -> None:

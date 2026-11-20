@@ -14,6 +14,10 @@ task:
   none_values: ['—', '-', '']
   roles: {depends: dependencies, req: requirements, owner: assignee}
   body: nested
+  # 줄 고치기 모양(6R.32). 상태 없는 줄에 상태 낱말을 넣는 모양은 `status_pattern`을 준 문법에서만 쓴다
+  # (기본 문법에는 `status_pattern`이 없어 체크 칸 목록 그대로). 문법 층이 모두 비우면 이 값을 쓴다.
+  status_format: '{marker} '
+  field_format: '[{key}: {value}]'
 requirement:
   patterns:
     - '^\*\*(?P<id>[A-Z][A-Za-z]*\d[\w.]*)\*\*'

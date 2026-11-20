@@ -9,6 +9,10 @@
   ``mod-projects``가 준다. 없으면 이 연동은 꺼지고 프로젝트 메모리가 없다(메모리 화면은
   라이브러리만, 프로젝트 실행의 메모리 도구는 ``scope_unavailable``).
 
+- 선택 ``projects.lookup``(``ProjectListing`` — ``list_projects()`` 항목의 ``id``·``archived``,
+  5.7R.46): 있으면 ``memory.spaces``의 ``existing()``이 등록 목록에서 메모리 파일이 이미 있는
+  프로젝트를 고른다(서버 자동 정리 대상). 없으면 ``existing()``은 빈 목록(자동 정리는 공용만).
+
 제공:
 
 - ``memory.spaces``: 공간 이름(프로젝트 등록 id, REST ``?project=``와 같은 값) → 그 폴더의
@@ -18,6 +22,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -59,7 +64,24 @@ class ProjectSpaces(Protocol):
         ...
 
 
+@runtime_checkable
+class ProjectListing(Protocol):
+    """``projects.lookup`` 중 쓰는 부분(항목의 ``id``·``archived``만 본다)."""
+
+    def list_projects(self) -> Sequence[Any]:
+        """모든 프로젝트(보관 포함)."""
+        ...
+
+
 PROJECTS_SPACES: PortKey[ProjectSpaces] = PortKey("projects.spaces", "프로젝트 공간 열기")
+PROJECTS_LOOKUP: PortKey[ProjectListing] = PortKey("projects.lookup", "프로젝트 읽기")
 MEMORY_SPACES: PortKey[Any] = PortKey("memory.spaces", "공간 이름 → 메모리 저장소")
 
-__all__ = ["MEMORY_SPACES", "PROJECTS_SPACES", "ProjectSpaces", "SpaceLike"]
+__all__ = [
+    "MEMORY_SPACES",
+    "PROJECTS_LOOKUP",
+    "PROJECTS_SPACES",
+    "ProjectListing",
+    "ProjectSpaces",
+    "SpaceLike",
+]

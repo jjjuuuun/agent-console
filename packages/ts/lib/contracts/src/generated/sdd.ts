@@ -16,6 +16,7 @@ export type {
   DocumentStateChange,
   DocumentStateInfo,
   DocumentStateOnEdit,
+  DocumentStateOnRun,
   DocumentStateSpec,
   EffectiveSyntax,
   ImportDir,
@@ -91,4 +92,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "sdd" as const;
-export const CONTRACT_VERSION = "1.2.0" as const;
+export const CONTRACT_VERSION = "1.3.0" as const;

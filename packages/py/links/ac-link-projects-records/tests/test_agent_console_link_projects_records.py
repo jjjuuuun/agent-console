@@ -233,6 +233,56 @@ def test_view_does_not_create_files_and_state_is_absent(tmp_path: Path) -> None:
     pool.close_all()
 
 
+def _open_fds(path: Path) -> int:
+    """이 프로세스가 연 ``path``(와 ``-wal``·``-shm``) 파일 설명자 수(리눅스 ``/proc``)."""
+    names = {str(path), f"{path}-wal", f"{path}-shm"}
+    count = 0
+    for fd in Path("/proc/self/fd").iterdir():
+        try:
+            if str(fd.readlink()) in names:
+                count += 1
+        except OSError:
+            continue
+    return count
+
+
+def test_shutdown_refuses_late_opens_and_leaves_no_connections(tmp_path: Path) -> None:
+    """서버 종료(``shutdown``) 뒤 늦게 온 열기는 ``link_disabled`` 핸들 - 파일을 열지 않는다.
+
+    회귀(11/20): 종료 뒤에도 끝나지 않은 로그 수집 스레드가 공간을 새로 열어 연결이 남았다.
+    """
+    folder = _folder(tmp_path)
+    pool = _pool(tmp_path, FolderSpaces({"a": folder}), [RUNS_BRANCH])
+    early = pool.open("project:a")
+    with early.writable_engine().connect() as conn:
+        conn.exec_driver_sql("select 1")
+    db = folder / ".agent-console" / "records.sqlite3"
+    pool.shutdown()
+    pool.shutdown()  # 여러 번 불러도 된다
+    assert pool.open_spaces() == []
+    late = pool.open("project:a")
+    assert late.state.reason == "link_disabled"
+    for handle in (late, early):  # 종료 전에 받은 핸들도 같은 이유
+        with pytest.raises(RecordsUnavailable) as caught:
+            handle.read_engine()
+        assert caught.value.reason == "link_disabled"
+        with pytest.raises(RecordsUnavailable):
+            handle.writable_engine()
+    assert pool.open_spaces() == []
+    if Path("/proc/self/fd").is_dir():
+        assert _open_fds(db) == 0
+
+
+def test_close_all_keeps_pool_reusable(tmp_path: Path) -> None:
+    """``close_all``은 닫기만 한다(다음 열기는 다시 연다) - 종료는 ``shutdown``."""
+    folder = _folder(tmp_path)
+    pool = _pool(tmp_path, FolderSpaces({"a": folder}), [RUNS_BRANCH])
+    pool.open("project:a").writable_engine()
+    pool.close_all()
+    assert pool.open("project:a").read_engine() is not None
+    pool.shutdown()
+
+
 def test_state_peek_does_not_open_or_migrate(tmp_path: Path) -> None:
     folder = _folder(tmp_path)
     pool = _pool(tmp_path, FolderSpaces({"a": folder}), [RUNS_BRANCH])

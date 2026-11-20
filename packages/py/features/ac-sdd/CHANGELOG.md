@@ -22,3 +22,19 @@
   예약 폴더 제외, 이름 순, 각각 `limit`까지 — 넘으면 `truncated`).
 - 6R.20a: `SpecRepository.create_template`(빈 틀, `taken` = 피할 id)·`save_template`(`If-Match`)·
   `delete_template` — 틀 저장소(`template_store`)에 쓴다.
+- 6R.32: 줄 머리 낱말 상태 — 문법 `task.status_pattern`(이름 묶음 `status`)이 있으면 체크 칸 없는 작업
+  줄의 상태를 그 낱말로 읽고(맞은 범위를 떼고 id·필드·제목), `patch_task`는 `status` 묶음 범위만 바꾸거나
+  상태 없는 줄 본문 앞에 `task.status_format`을 넣는다. 필드 덧붙이는 모양은 `task.field_format`(인자
+  `field_format`을 주면 인자 우선, 기본값 None = 문법). 두 모양의 기본값은 패키지 데이터
+  (`"{marker} "`·`"[{key}: {value}]"`)이고 `{이름}` 자리만 바꾼다(`str.format` 아님). 문법 검사 경고
+  `sdd.status_pattern_ignored`(`no_status_group`·`checkbox`). 필드만 고친 줄에서 상태를 다시 읽지 못하면
+  `validation_failed`(`details.reason = status_lost`). `HeadLine.body_start`·`status_span`,
+  `CompiledSyntax.status_pattern`·`status_format`·`field_format`. 기본 문법 동작은 그대로다.
+- 6R.34: 규칙 검사가 실행 프로필 `document_state_on`을 본다 — 모르는 문서 `sdd.not_found`(문서 목록을 줄
+  때만)·모르는 상태 `sdd.unknown_state`(error), `by`에 `run`이 든 그 상태 전환이 없음
+  `sdd.transition_denied`(warning).
+- 성능(§6R.14 `parse_spec` 300ms, 6R.10): 파싱 동안 순환 GC를 멈추고 끝나면 되돌린다(이미 꺼져 있으면
+  두고, 예외에도 되돌림 — markdown-it 토큰이 한꺼번에 살아 있어 전체 힙 GC가 시간의 약 4분의 1을
+  썼다), 머리 줄 분석의 위치 계산을 함수 대신 식으로, 한 줄 본문은 `textwrap.dedent` 대신 앞 공백·탭
+  제거(결과 같음), 요구 문서의 빈 줄은 정규식을 돌리지 않음, 토큰 루프에서 하는 일 없는 토큰을 먼저
+  거름. 400KB·작업 3,000개 약 315ms → 약 210ms. 출력은 그대로다.

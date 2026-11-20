@@ -1,16 +1,19 @@
 """스펙 문서 파싱: 마크다운 원문 → `SpecIndex`(작업·필드·역할·범위 의존·요구 id·단계).
 
-블록 구조(목록·제목·코드 블록·인용·줄 범위)는 markdown-it-py가 정하고, 작업 머리 줄 안의 체크 칸·
-id·필드는 `analyze_head`가 줄 단위로 읽는다(줄 고치기와 같은 분석). 코드 블록·인용 안의 목록은
-작업이 아니다. 작업 목록은 저장하지 않는 보기다(design §6R.1.3 K6R-3).
+블록 구조(목록·제목·코드 블록·인용·줄 범위)는 markdown-it-py가 정하고, 작업 머리 줄 안의
+체크 칸(또는 줄 머리 상태 낱말)·id·필드는 `analyze_head`가 줄 단위로 읽는다(줄 고치기와 같은
+분석). 코드 블록·인용 안의 목록은 작업이 아니다. 작업 목록은 저장하지 않는 보기다
+(design §6R.1.3 K6R-3).
 """
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import textwrap
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -50,6 +53,28 @@ type SpecFileContent = str | bytes | None
 """문서 본문 하나: 글(str), 원문 바이트(UTF-8), 없음(None = 파일 없음)."""
 
 _CHECK_EVERY = 64
+_SPACE_TAB = " \t"
+
+# 토큰 루프에서 아무것도 하지 않는 종류(가장 흔한 토큰이라 비교 사슬 전에 거른다).
+_PASSIVE_TOKENS = frozenset({"paragraph_open", "paragraph_close", "inline", "heading_close", "hr"})
+
+
+@contextmanager
+def _gc_paused() -> Iterator[None]:
+    """파싱 동안 순환 GC를 멈추고 들어올 때 상태로 되돌린다.
+
+    markdown-it 토큰(문서 400KB에 4만 개 남짓)이 한꺼번에 살아 있어 세대 GC가 전체 힙을 두세 번
+    훑는다(파싱 시간의 약 4분의 1). 토큰은 순환 참조가 없어 참조 수로 풀리므로 멈춰도 쓰레기가
+    쌓이지 않는다. 이미 꺼져 있었으면 건드리지 않는다.
+    """
+    if not gc.isenabled():
+        yield
+        return
+    gc.disable()
+    try:
+        yield
+    finally:
+        gc.enable()
 
 
 @cache
@@ -152,6 +177,8 @@ def _parse_document(
 
     for i, tok in enumerate(tokens):
         ttype = tok.type
+        if ttype in _PASSIVE_TOKENS:
+            continue
         if ttype == "blockquote_open":
             quote_depth += 1
         elif ttype == "blockquote_close":
@@ -212,11 +239,11 @@ def _parse_document(
             if head.marker is not None:
                 known = syntax.marker_to_status.get(head.marker)
                 if known is None:
+                    what = "체크 칸 글자" if head.checkbox is not None else "줄 머리 상태"
                     issues.append(
                         _issue(
                             KnownIssueCodes.SDD_UNKNOWN_STATUS_MARKER,
-                            f"체크 칸 글자 '{head.marker}'는 어느 작업 상태에도 없어 첫 상태로 "
-                            "봅니다.",
+                            f"{what} '{head.marker}'는 어느 작업 상태에도 없어 첫 상태로 봅니다.",
                             document=doc.id,
                             line=start + 1,
                             details={"marker": head.marker},
@@ -225,7 +252,10 @@ def _parse_document(
                 else:
                     status = known
             body = ""
-            if syntax.body and end > start + 1:
+            if syntax.body and end == start + 2:
+                # 한 줄이면 `textwrap.dedent`(앞의 공백·탭 제거)와 같다
+                body = lines[start + 1].rstrip("\r\n").lstrip(_SPACE_TAB)
+            elif syntax.body and end > start + 2:
                 body_lines = [ln.rstrip("\r\n") for ln in lines[start + 1 : end]]
                 body = textwrap.dedent("\n".join(body_lines)).strip("\n")
             raw = _RawTask(
@@ -248,6 +278,8 @@ def _parse_document(
                 continue
             clock.check()
             content = ln.rstrip("\r\n")
+            if not content:
+                continue  # 빈 줄에서 맞아도 id가 빈 글자라 요구가 아니다
             for pattern in syntax.requirement_patterns:
                 rm = pattern.search(content)
                 if rm is None:
@@ -264,10 +296,16 @@ def _parse_document(
 
 
 def _split_values(value: str, syntax: CompiledSyntax) -> list[str]:
-    if value.strip() in syntax.none_values:
+    none_values = syntax.none_values
+    if value.strip() in none_values:
         return []
     parts = value.split(syntax.list_separator) if syntax.list_separator else [value]
-    return [p.strip() for p in parts if p.strip() not in syntax.none_values and p.strip()]
+    out: list[str] = []
+    for part in parts:
+        item = part.strip()
+        if item and item not in none_values:
+            out.append(item)
+    return out
 
 
 def _lookup(item: str, table: Mapping[str, int]) -> int | None:
@@ -328,7 +366,24 @@ def parse_spec(
     Returns:
         `SpecIndex`. `issues`는 문법 이슈와 문서·작업 이슈 전부이고, 작업 하나에 걸린 이슈는 그
         작업의 `issues`에도 들어간다. 작업 순서 = 문서 순서 → 줄 순서.
+
+    파싱하는 동안 순환 GC를 잠시 멈추고 끝나면 되돌린다(큰 문서에서 GC가 시간의 큰 몫을 쓴다).
     """
+    with _gc_paused():
+        return _parse_spec(
+            spec, files, syntax, max_tasks=max_tasks, timeout_ms=timeout_ms, clock=clock
+        )
+
+
+def _parse_spec(
+    spec: SpecDefinition | SpecTemplate | Sequence[SpecDocument],
+    files: Mapping[str, SpecFileContent],
+    syntax: EffectiveSyntax | CompiledSyntax,
+    *,
+    max_tasks: int | None,
+    timeout_ms: float | None,
+    clock: Callable[[], float],
+) -> SpecIndex:
     compiled = syntax if isinstance(syntax, CompiledSyntax) else compile_syntax(syntax)
     issues: list[SpecIssue] = list(compiled.issues)
     documents: list[ParsedDocument] = []

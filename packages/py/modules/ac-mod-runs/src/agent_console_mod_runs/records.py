@@ -19,7 +19,9 @@
   DB). 이 프로세스가 아는 공간과 ``project_ids``(보통 ``projects.lookup``의 등록 id)의 기록 DB를
   상한(``locate_limit``)까지 읽기만 한다(``agent_console_store.SpaceLocator``, 대화와 같은 정책).
   찾은 공간은 ``run_id`` 자리로 기억해 뒤따르는 ``run_id`` 조회(``?project=`` 없는 상세·이벤트,
-  WS ``run:<id>``)가 그 공간을 본다.
+  WS ``run:<id>``)가 그 공간을 본다. ``runs.reader``의 ``get(run_id)``도 자리를 모르고 호스트 DB에
+  없으면 같은 위치 찾기를 쓴다(재시작 직후 ``/runs/{id}/logs``·로그 범위 ``run:<id>`` 등, 5.7R.33i
+  후속). 찾은 공간이 하나일 때만 그 Run을 돌려준다(여럿이면 None — 모호함은 ``locate``가 알린다).
 - 재시작 복구(``recover_space``): 공간을 이 프로세스에서 처음 열 때 **자기 host_id**의 끝나지 않은
   Run 중 지금 돌고 있지 않은 것만 ``interrupted``로 바꾼다(다른 앱의 Run은 건드리지 않는다).
 """
@@ -220,6 +222,20 @@ class SpaceRecorder:
             self._places.put_run(run_id, found[0])
         return found
 
+    def find_run(self, run_id: str) -> Run | None:
+        """자리를 모르는 Run을 위치 찾기(``locate``)로 찾아 읽는다(공간 하나에서 찾았을 때만).
+
+        기록 공간 포트가 없으면(기능 단독) None. 호스트 DB는 호출자가 이미 봤다고 본다.
+        """
+        if not self.spaced:
+            return None
+        found = self.locate(run_id)
+        if len(found) != 1 or found[0] is None:
+            return None
+        store = self._read_at(run_id)
+        run: Run | None = None if store is None else store.runs.get(run_id)
+        return run
+
     def _has_run(self, place: str | None, run_id: str) -> bool:
         """그 자리(None = 호스트)에 그 Run이 있나. 읽을 수 없으면 거짓."""
         if place is None:
@@ -339,8 +355,11 @@ class _Runs:
         return found
 
     def get(self, run_id: str) -> Run | None:
+        """그 Run(아는 자리 → 호스트 DB → 위치 찾기로 모르는 공간). 없으면 None."""
         store = self._o._read_at(run_id)
         found: Run | None = None if store is None else store.runs.get(run_id)
+        if found is None and self._o.project_of_run(run_id) is None:
+            found = self._o.find_run(run_id)
         return found
 
     def list(self, **filters: Any) -> builtins.list[Run]:

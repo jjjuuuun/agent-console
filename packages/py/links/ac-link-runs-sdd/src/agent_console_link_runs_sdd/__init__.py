@@ -5,8 +5,8 @@
       ``links``·``check_profile``·``task_issues``). ``link_kinds = ("run",)``.
     - ``RunsVerificationSource``: 검증 출처 X42 ``runs``(검증 목적 실행 → ``VerificationResult``).
     - ``StatusReflector``·``TrackedRun``: 실행 상태 이벤트 → 실행 프로필 ``status_on`` 반영(작업
-      머리
-      줄 하나, 줄 해시 충돌 규칙). 반영 뒤 알림 ``add_listener``(자동 진행 자리).
+      머리 줄 하나, 줄 해시 충돌 규칙)과 ``document_state_on`` 반영(문서 상태 ``by: run``, 6R.34).
+      반영 뒤 알림 ``add_listener``(자동 진행 자리).
     - ``SpecAutomation``: 자동 진행(스펙 규칙 ``automation``, 기본 꺼짐 — 실행이 끝날 때마다 준비된
       작업 시작, 연속 실패 건너뜀, 단계 끝 멈춤, 멈춤·다시 시작, 자기 ``host_id`` 실행만 셈).
       ``RunsTaskIntegration.automation_state``·``control``(``AutomationControl``)로 낸다.
@@ -25,9 +25,13 @@ from .integration import SECRET_REJECT, RunsTaskIntegration, start_issue
 from .module import MODULE_ID, RunsSddLink, module
 from .records import labeled_runs, run_time
 from .reflect import (
+    ISSUE_DOCUMENT,
+    ISSUE_STATUS,
+    REASON_DOCUMENT_NOT_FOUND,
     REASON_ERROR,
     REASON_GATE_BLOCKED,
     REASON_TASK_CHANGED,
+    REASON_TRANSITION_DENIED,
     RunListener,
     StatusReflector,
     TrackedRun,
@@ -37,12 +41,16 @@ from .verification import RunsVerificationSource
 
 __all__ = [
     "AUTOMATION_SKIPPED",
+    "ISSUE_DOCUMENT",
+    "ISSUE_STATUS",
     "MODULE_ID",
     "OP_RESUME",
     "OP_STOP",
+    "REASON_DOCUMENT_NOT_FOUND",
     "REASON_ERROR",
     "REASON_GATE_BLOCKED",
     "REASON_TASK_CHANGED",
+    "REASON_TRANSITION_DENIED",
     "SECRET_REJECT",
     "RunListener",
     "RunsSddLink",

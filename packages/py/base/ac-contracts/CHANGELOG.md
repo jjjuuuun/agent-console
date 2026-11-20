@@ -1,5 +1,22 @@
 # 변경 기록
 
+## 0.14.9
+
+- 계약 0.14.9(6R.31, 6R.24 점검 후속·5.7R.46). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS
+  `^0.14.0`) 그대로. 새 필드는 모두 선택이고 생략하면 지금 동작이다(0.14.8 문서가 그대로 읽힌다).
+  하위 계약 버전: `sdd` 1.3.0, `memory` 1.2.0, `common` 1.15.0.
+- 작업 문법(`sdd` 1.3.0): `TaskSyntax.status_pattern`(줄 머리 낱말로 상태 읽기, 이름 묶음 `status`),
+  `status_format`(상태 없는 줄에 넣는 모양), `field_format`(필드 덧붙이는 모양). 동작은 6R.32.
+- 실행 프로필(`sdd` 1.3.0): `RunProfile.document_state_on: dict[실행 상태, DocumentStateOnRun{document,
+  to}]` — 실행 결과로 문서 상태 바꾸기(동작은 6R.34). 이름이 설계 메모의 `DocumentStateChange`가
+  아닌 것은 그 이름을 문서 상태 전환 REST 요청이 이미 쓰기 때문이다(`DocumentStateOnEdit`와 짝).
+- 메모리 설정(`memory` 1.2.0): `MemoryRetentionSettings.auto` = `MemoryRetentionAuto{library: true,
+  projects: true, exclude_projects: []}` — 서버 자동 정리 대상(동작은 5.7R.46).
+- 새 문서 상수(`common` 1.15.0): `KnownIssueCodes.SDD_STATUS_PATTERN_IGNORED`
+  (`sdd.status_pattern_ignored`, 문법 검사 경고 — `status` 묶음 없음·체크 칸과 함께 씀),
+  `KnownIssueCodes.SDD_DOCUMENT_STATE_NOT_APPLIED`(`sdd.document_state_not_applied`, info).
+  `SDD_UNKNOWN_STATUS_MARKER` 설명에 줄 머리 낱말을 더했다.
+
 ## 0.14.8
 
 - 계약 0.14.8(요청 11/08 후속, 실행 위치 찾기). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

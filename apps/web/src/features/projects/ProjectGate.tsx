@@ -26,6 +26,8 @@ export interface ProjectGateProps {
   title: string;
   /** 공용 구성 화면 주소(없으면 링크 버튼 없음) */
   libraryHref?: string | undefined;
+  /** 프로젝트 0개일 때: `"state"`(기본) = `NoProjectState`로 대체, `"pass"` = 화면을 그대로 그린다(화면이 공용으로 동작) */
+  none?: "state" | "pass" | undefined;
   children: ReactNode;
 }
 
@@ -34,10 +36,10 @@ export interface ProjectGateProps {
  * (필터·탭·화면 액션 없음, `PageHeader`는 제목만). 로딩은 스켈레톤, 조회 실패는 `ErrorBlock` + 다시 시도.
  * 기능 이름을 모르므로 어떤 화면이든 감쌀 수 있다.
  */
-export function ProjectGate({ title, libraryHref, children }: ProjectGateProps) {
+export function ProjectGate({ title, libraryHref, none, children }: ProjectGateProps) {
   const p = useProjects();
   const state = useProjectGateState();
-  if (state === "off" || state === "ready") return <>{children}</>;
+  if (state === "off" || state === "ready" || (state === "none" && none === "pass")) return <>{children}</>;
   let body: ReactNode;
   if (state === "loading") {
     body = (

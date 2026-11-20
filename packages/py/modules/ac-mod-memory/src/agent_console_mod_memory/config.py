@@ -3,7 +3,8 @@
 공통 설정 모델(``WorkspaceSettings``)은 이 섹션을 필드로 두지 않고 모르는 키로 보존한다. 이 모듈이
 원문을 꺼내 ``MemorySettings``로 해석한다. 깨진 부분만 빼고 쓴다(설정 파일을 손으로 고쳐 깨뜨려도
 메모리 화면과 에이전트 도구는 동작해야 한다): 최상위 키는 키마다, 범위 종류는 id마다, 정리 규칙은
-규칙마다 따로 검증하고 틀린 것은 빼고 문제(``memory.settings_invalid``)로 알린다.
+규칙마다, 자동 정리 대상(``retention.auto``)은 칸마다 따로 검증하고 틀린 것은 빼고
+문제(``memory.settings_invalid``)로 알린다.
 """
 
 from __future__ import annotations
@@ -15,7 +16,11 @@ from pydantic import ValidationError
 
 from agent_console_contracts import Issue
 from agent_console_contracts.constants import KnownIssueCodes
-from agent_console_contracts.memory import MemoryRetentionRule, MemorySettings
+from agent_console_contracts.memory import (
+    MemoryRetentionAuto,
+    MemoryRetentionRule,
+    MemorySettings,
+)
 from agent_console_memory import check_scope_kinds
 
 SECTION_KEY: Final = "memory"
@@ -24,6 +29,7 @@ SECTION_KEY: Final = "memory"
 _SCOPE_KINDS: Final = "scope_kinds"
 _RETENTION: Final = "retention"
 _RULES: Final = "rules"
+_AUTO: Final = "auto"
 
 type Severity = Literal["error", "warning"]
 
@@ -148,6 +154,35 @@ def _scope_kinds(value: Any, where: str, severity: Severity, issues: list[Issue]
     return {k: v for k, v in value.items() if str(k) not in broken}
 
 
+def _auto(value: Any, where: str, severity: Severity, issues: list[Issue]) -> Any:
+    """자동 정리 대상(``retention.auto``): 칸마다 검증하고 틀린 칸은 빼서 기본값을 쓴다.
+
+    None = 생략(기본값). 객체가 아니면 통째로 기본값. 돌려준 값이 None이면 키를 넣지 않는다.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        issues.append(_issue(where, "자동 정리 대상이 객체가 아니어서 기본값을 씁니다", severity))
+        return None
+    kept: dict[str, Any] = {}
+    for key, body in value.items():
+        name = str(key)
+        try:
+            MemoryRetentionAuto.model_validate({name: body})
+        except ValidationError as exc:
+            issues.append(
+                _issue(
+                    f"{where}/{escape_pointer(name)}",
+                    f"자동 정리 대상 {name!r} 값이 형식에 맞지 않아 기본값을 씁니다",
+                    severity,
+                    len(exc.errors()),
+                )
+            )
+            continue
+        kept[name] = body
+    return kept
+
+
 def _retention(
     value: Any, where: str, severity: Severity, issues: list[Issue], *, rule_issues: bool
 ) -> Any:
@@ -159,6 +194,11 @@ def _retention(
     kept: dict[str, Any] = {}
     for key, body in value.items():
         name = str(key)
+        if name == _AUTO:
+            auto = _auto(body, f"{where}/{_AUTO}", severity, issues)
+            if auto is not None:
+                kept[name] = auto
+            continue
         if name != _RULES:
             kept[name] = body
             continue

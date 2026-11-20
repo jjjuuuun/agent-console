@@ -65,4 +65,5 @@ pnpm --filter @agent-console/example-web typecheck
 
 위젯은 `DashboardGrid`, 칸 그리기는 `ArchitectureDiagram`, 설정 폼 위젯은 `SchemaForm`에 실제로 등록해 그린다.
 모르는 값(null, 맞지 않는 옵션·`view` 키·배열이 아닌 값)과 접근성(axe 0건)을 함께 확인한다.
-저장소 밖 복사 검사: `pnpm portability --package @agent-console/example-web`.
+저장소 밖 복사 검사(저장소 루트에서): `pnpm portability --package @agent-console/example-web`.
+사내 의존 tarball(`dist/npm`)이 없으면 도구가 `pnpm pack:all`을 먼저 돌린다. 사내 패키지 소스를 고친 뒤에는 `--pack`을 붙인다.

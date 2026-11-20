@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,8 @@ import { makeEntries } from "@agent-console/memory-view/testing";
 import { RunMemoryChips } from "../memory";
 import { buildKindRows, entriesByKind, kindActions } from "./kindRows";
 import { ScopeKindWidget } from "./ScopeKindWidget";
+import { AutoTargets } from "./AutoTargets";
+import { getContractSchema } from "@agent-console/contracts";
 
 afterEach(cleanup);
 vi.setConfig({ testTimeout: 40_000 });
@@ -273,5 +275,152 @@ describe("실행 요약 칩", () => {
     cleanup();
     view(Array.from({ length: 205 }, (_, i) => ev(i, "memory.write")));
     expect(await screen.findByRole("link", { name: "메모리 쓰기 200+" }, LONG)).toBeTruthy();
+  });
+});
+
+function renderAuto(value: Record<string, unknown>, onChange: (v: Record<string, unknown>) => void, projects: { id: string; name: string }[] | null = [{ id: "P1", name: "프로젝트 하나" }]) {
+  const schema = getContractSchema("MemoryRetentionAuto") as unknown as Record<string, unknown>;
+  const el = (v: Record<string, unknown>) => <AutoTargets value={v} schema={schema} projects={projects} onChange={onChange} />;
+  const view = render(el(value));
+  return { rerender: (v: Record<string, unknown>) => view.rerender(el(v)) };
+}
+
+describe("정리 대상 저장소(§10.6.3, 5.7R.45)", () => {
+  const RULES = { memory: { retention: { rules: [RULE] } } };
+  const plan = { count: 1, excluded_pinned: 0, items: [{ entry_id: "e1", scope: { kind: "k-mine", id: "p1" }, key: "메모/임시", version: 1, rule: "r-old", action: "archive" as const, updated_at: 1, bytes: 10 }] };
+  const stores = () => ({
+    planMemoryRetention: vi.fn(async () => plan),
+    applyMemoryRetention: vi.fn(async () => ({ archived: 1, deleted: 0, skipped: 0 })),
+  });
+  /** 공용(기본 클라이언트)과 프로젝트 저장소(`space`) 가짜를 따로 둔다 */
+  function mountStores(roles: string[], projects: { id: string; name: string }[], path = "/settings#memory") {
+    const shared = stores();
+    const inProject = stores();
+    const { clients, rest } = createFakeClients({
+      listModules: vi.fn(async () => [mod("m-s", ["settings"]), mod("m-mem", ["memory"]), ...(roles.includes("projects") ? [mod("m-p", ["projects"])] : [])]),
+      getSettingsVersioned: vi.fn(async () => ({ value: RULES, version_hash: "s1" })),
+      listMemoryScopeKinds: vi.fn(async () => ({ kinds: KINDS, include_defaults: true })),
+      listMemoryScopes: vi.fn(async () => SCOPES),
+      checkMemorySettings: vi.fn(async () => []),
+      getModuleOptions: vi.fn(async () => ({ module_id: "m-mem", values: { max_entry_bytes: 65_536, retention_interval_seconds: 3600 } })),
+      listProjects: vi.fn(async () => projects.map((p) => ({ project: { ...p, folder: `/work/${p.id}` }, status: "ready", config_writable: true, kinds: [], records_writable: true, config_dir: ".cfg" }))),
+      ...shared,
+    });
+    vi.mocked(clients.space).mockImplementation(() => ({ ...rest, ...inProject }) as never);
+    const view = mountApp(clients, path);
+    return { ...view, shared, inProject, clients };
+  }
+  const runPreview = async (panel: HTMLElement) => {
+    fireEvent.click(within(panel).getByRole("button", { name: /^(다시 )?미리보기$/ }));
+    await within(panel).findByRole("table", { name: "정리 대상 표" }, LONG);
+  };
+
+  it("프로젝트 ≥ 1: 대상 기본은 현재 프로젝트이고 plan·apply가 그 저장소로 간다. 대상을 바꾸면 적용이 꺼지고, 공용으로 다시 미리보기해 적용하면 결과 링크가 store=library다", async () => {
+    const { shared, inProject } = mountStores(["projects"], [{ id: "P1", name: "프로젝트 하나" }]);
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    const select = (await within(panel).findByRole("combobox", { name: "대상 저장소" }, LONG)) as HTMLSelectElement;
+    expect(select.selectedOptions[0]?.textContent).toBe("이 프로젝트: 프로젝트 하나");
+    expect(within(panel).getByText("자동 실행: 1시간마다 · 공용·프로젝트 1개")).toBeTruthy();
+    await runPreview(panel);
+    expect(inProject.planMemoryRetention).toHaveBeenCalled();
+    expect(shared.planMemoryRetention).not.toHaveBeenCalled();
+    const apply = () => within(panel).getByRole("button", { name: "지금 적용" }) as HTMLButtonElement;
+    expect(apply().disabled).toBe(false);
+    fireEvent.change(select, { target: { value: "library" } });
+    await waitFor(() => expect(apply().disabled).toBe(true));
+    expect(within(panel).getByText("대상 저장소가 바뀌었습니다. 다시 미리보기하세요.")).toBeTruthy();
+    await runPreview(panel);
+    await waitFor(() => expect(shared.planMemoryRetention).toHaveBeenCalled());
+    await waitFor(() => expect(apply().disabled).toBe(false));
+    fireEvent.click(apply());
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "적용" }));
+    await waitFor(() => expect(shared.applyMemoryRetention).toHaveBeenCalledTimes(1));
+    expect(inProject.applyMemoryRetention).not.toHaveBeenCalled();
+    const link = (await within(panel).findByRole("link", { name: /메모리에서 보기/ }, LONG)) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toContain("store=library");
+    expect(link.getAttribute("href")).toContain("author_kind=system");
+  });
+
+  it("설정 화면에 머문 채 현재 프로젝트를 P1→P2로 바꾸면 P1 미리보기로는 적용이 꺼지고(targetChanged), 다시 미리보기하면 P2 저장소로 가며 결과 링크는 적용한 쪽 prj다", async () => {
+    const { router, clients, inProject } = mountStores(["projects"], [{ id: "P1", name: "프로젝트 하나" }, { id: "P2", name: "프로젝트 둘" }], "/settings?prj=P1#memory");
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    await runPreview(panel);
+    const apply = () => within(panel).getByRole("button", { name: "지금 적용" }) as HTMLButtonElement;
+    expect(apply().disabled).toBe(false);
+    await act(async () => { await router.navigate("/settings?prj=P2#memory"); });
+    await waitFor(() => expect(apply().disabled).toBe(true), LONG);
+    expect(within(panel).getByText("대상 저장소가 바뀌었습니다. 다시 미리보기하세요.")).toBeTruthy();
+    expect(inProject.applyMemoryRetention).not.toHaveBeenCalled();
+    await runPreview(panel);
+    await waitFor(() => expect(clients.space).toHaveBeenCalledWith("P2"), LONG);
+    await waitFor(() => expect(apply().disabled).toBe(false), LONG);
+    fireEvent.click(apply());
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "적용" }));
+    await waitFor(() => expect(inProject.applyMemoryRetention).toHaveBeenCalledTimes(1));
+    const link = (await within(panel).findByRole("link", { name: /메모리에서 보기/ }, LONG)) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toContain("prj=P2");
+    expect(link.getAttribute("href")).not.toContain("store=");
+  });
+
+  it("프로젝트 저장소에 적용하면 결과 링크에 store 인자가 없다", async () => {
+    const { inProject } = mountStores(["projects"], [{ id: "P1", name: "프로젝트 하나" }]);
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    await runPreview(panel);
+    fireEvent.click(within(panel).getByRole("button", { name: "지금 적용" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "적용" }));
+    await waitFor(() => expect(inProject.applyMemoryRetention).toHaveBeenCalledTimes(1));
+    const link = (await within(panel).findByRole("link", { name: /메모리에서 보기/ }, LONG)) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).not.toContain("store=");
+  });
+
+  it("프로젝트 0개: 선택 컨트롤 없이 `공용` 글자만, 공용 저장소로 호출한다", async () => {
+    const { shared, inProject } = mountStores(["projects"], []);
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    await waitFor(() => expect(within(panel).getByTestId("memset-retention-target").textContent).toContain("공용"));
+    expect(within(panel).queryByRole("combobox", { name: "대상 저장소" })).toBeNull();
+    await runPreview(panel);
+    expect(shared.planMemoryRetention).toHaveBeenCalled();
+    expect(inProject.planMemoryRetention).not.toHaveBeenCalled();
+  });
+
+  it("자동 정리 대상 세 칸: 생략 = 기본값 표시(원문에 안 넣음), 왕복 저장, 없는 id는 '등록 없음', 요약 문구가 바뀐다", async () => {
+    const onChange = vi.fn();
+    const { rerender } = renderAuto({}, onChange);
+    const box = screen.getByTestId("memset-auto");
+    expect((within(box).getByRole("checkbox", { name: "프로젝트 하나" }) as HTMLInputElement).checked).toBe(false);
+    expect(within(box).getAllByRole("switch").map((el) => el.getAttribute("aria-checked"))).toEqual(["true", "true"]);
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(within(box).getByRole("checkbox", { name: "프로젝트 하나" }));
+    expect(onChange).toHaveBeenLastCalledWith({ exclude_projects: ["P1"] });
+    fireEvent.click(within(box).getByRole("switch", { name: "공용 메모리" }));
+    expect(onChange).toHaveBeenLastCalledWith({ library: false });
+    rerender({ library: false, projects: true, exclude_projects: ["P1", "gone"] });
+    expect(within(screen.getByTestId("memset-auto")).getByText("(등록 없음)")).toBeTruthy();
+    expect((within(screen.getByTestId("memset-auto")).getByRole("checkbox", { name: /gone/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(screen.getByTestId("memset-auto")).getByRole("checkbox", { name: /gone/ }));
+    expect(onChange).toHaveBeenLastCalledWith({ library: false, projects: true, exclude_projects: ["P1"] });
+  });
+
+  it("프로젝트 기능 꺼짐: 프로젝트 칸이 없고 공용 칸만 보인다", () => {
+    renderAuto({}, vi.fn(), null);
+    const box = screen.getByTestId("memset-auto");
+    expect(within(box).getAllByRole("switch")).toHaveLength(1);
+    expect(within(box).queryByRole("checkbox")).toBeNull();
+  });
+
+  it("설정 화면 요약: 뺄 프로젝트를 반영한 대상 수가 보인다", async () => {
+    mountStores(["projects"], [{ id: "P1", name: "프로젝트 하나" }, { id: "P2", name: "프로젝트 둘" }], "/settings#memory");
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    expect(await within(panel).findByText("자동 실행: 1시간마다 · 공용·프로젝트 2개", {}, LONG)).toBeTruthy();
+    expect(within(panel).queryByText(/공용 메모리만/)).toBeNull();
+  });
+
+  it("프로젝트 기능이 꺼져 있으면 공용 고정이고 '공용 메모리만' 문구가 없다", async () => {
+    mountStores([], []);
+    const panel = await screen.findByTestId("memset-retention", {}, LONG);
+    expect(within(panel).queryByRole("combobox", { name: "대상 저장소" })).toBeNull();
+    expect(within(panel).getByText("자동 실행: 1시간마다")).toBeTruthy();
+    expect(within(panel).queryByText(/공용 메모리만/)).toBeNull();
+    expect(within(panel).queryByTestId("memset-retention-target")).toBeNull();
   });
 });

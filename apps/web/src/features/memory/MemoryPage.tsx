@@ -24,7 +24,8 @@ import { queryKeys, useApiQuery } from "../../app/queries";
 import { useStorage } from "../../app/StorageContext";
 import { usePageTitle } from "../../shell/titles";
 import { ROUTE_ROLES, routeIconNode, routePath, useRouteOn } from "../library";
-import { ProjectChip } from "../projects";
+import { ProjectChip, useProjects } from "../projects";
+import { HintBanner } from "../../app/hints";
 import { titleFromContent, usePromoteToWiki } from "../wiki";
 import { ClearScopeDialog, PurgeDialog } from "./PurgeDialogs";
 import { EntryDetail, type EntryDetailHandle } from "./EntryDetail";
@@ -34,13 +35,15 @@ import { MoveDialog } from "./MoveDialog";
 import { NewEntryForm } from "./NewEntryForm";
 import { FloatingMenu, PaneSeparator, ScopeSummaryPanel } from "./MemoryParts";
 import { MemoryToolbar } from "./MemoryToolbar";
-import { IMPORTED_AUTHOR_KIND, MEMORY_LIMITS, MEMORY_STORAGE, SETTINGS_SECTION, SORT_KEYS_BY_COLUMN, WARNING_CODES, WARNING_PREFIX } from "./memoryConfig";
+import { IMPORTED_AUTHOR_KIND, MEMORY_LIMITS, MEMORY_PARAMS, MEMORY_STORAGE, MEMORY_STORE_LIBRARY, SETTINGS_SECTION, SORT_KEYS_BY_COLUMN, WARNING_CODES, WARNING_PREFIX } from "./memoryConfig";
 import { hasFilters, parseView, scopeParam, writeView, type MemoryViewState } from "./memoryUrl";
 import { memoryMessages as t } from "./messages";
 import { useContainerWidth } from "./useContainerWidth";
 import { useLeaveGuard } from "./useLeaveGuard";
 import { useMemoryActions } from "./useMemoryActions";
 import { useMemoryContext } from "./useMemoryContext";
+import { MemoryStoreChip } from "./MemoryStoreChip";
+import { useMemoryStore } from "./useMemoryStore";
 import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryRest, useMemoryScopes } from "./useMemoryApi";
 import { useMemoryLive } from "./useMemoryLive";
 import "./memory.css";
@@ -150,6 +153,27 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
       detailRef.current?.discard();
       setNewDirty(false);
     },
+  );
+
+  // ---- 보는 저장소(§1.3): 공용 선택은 주소 `store=library`(history push). 저장 안 된 변경이 있으면 바꾸기 전에 확인한다 ----
+  const store = useMemoryStore();
+  const projects = useProjects();
+  const selectStore = useCallback(
+    (library: boolean) => {
+      if (library === store.library) return;
+      guard(() => {
+        setCreating(null);
+        setPendingChanges(0);
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete(MEMORY_PARAMS.entry);
+          if (library) next.set(MEMORY_PARAMS.store, MEMORY_STORE_LIBRARY);
+          else next.delete(MEMORY_PARAMS.store);
+          return next;
+        });
+      });
+    },
+    [guard, setParams, store.library],
   );
 
   const focusEditorSoon = () => {
@@ -454,6 +478,7 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const headerActions = (
     <>
       <ProjectChip />
+      {store.projectsOn ? <MemoryStoreChip library={store.library} project={store.canChoose ? { name: store.currentName ?? "" } : null} onSelect={selectStore} /> : null}
       <Button variant="primary" icon={<Icon name="plus" />} onClick={() => startCreate()} disabled={noKinds}>{t.actions.new}</Button>
       <Popover
         open={exportOpen}
@@ -484,6 +509,13 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
         <Banner tone="warning" className="mem-banner" actions={<Button size="sm" disabled={total === 0} onClick={() => void actions.exportScope(null)}>{t.actions.export}</Button>}>
           {t.storageMemory}
         </Banner>
+      ) : null}
+      {store.noProjects ? (
+        <Banner tone="info" className="mem-banner" data-memory-store-note="none" actions={<Button size="sm" onClick={() => projects.requestAddFolder()}>{t.store.addFolder}</Button>}>
+          {t.store.noProjectNote}
+        </Banner>
+      ) : store.canChoose && store.library ? (
+        <HintBanner id="memory.store.library">{t.store.libraryNote}</HintBanner>
       ) : null}
       {otherWarnings.map((w) => <Banner key={w.code} tone="warning" className="mem-banner">{w.message}</Banner>)}
       {noKinds ? null : (

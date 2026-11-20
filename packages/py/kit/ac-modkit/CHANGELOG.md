@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- 11/20: `WorkGate`·`DEFAULT_WORK_WAIT` — 배경 스레드 작업 수 세기 + 닫힘(`run`·`close`·`reopen`·`wait_idle`·`close_and_wait`). 배경 작업 취소·종료 훅이 진행 중인 스레드 작업을 기다리게 한다(`mod-logs` 수집·`mod-memory` 자동 정리가 쓴다).
+
 - 7R.4: `LoopPublisher[T](publish, *, key=None)` — 다른 스레드 알림을 바인드한 이벤트 루프로 옮기는 발행기(같은 키 연속 한 번, 바인드한 루프가 닫힌 뒤에는 버리고 `dropped`를 센다). `mod-memory` `LoopPublisher`·`mod-sdd` `ChangePublisher`를 합쳐 올렸다.
 - 6R.5: 정의 종류 기여(X44) `KindContribution[K]{kind, references?, summary_fields}`·`KindReferences`와 여러 제공자 포트 `DEFINITION_KIND_CONTRIBUTIONS`(`definitions.kind_contributions`). 키트는 종류 값의 타입을 모른다(매개변수).
 - 5.7R.33x: `host.SpaceQuery`·`SPACE_QUERY`(저장 공간 질의 `?project=`, 라우트 매개변수 형식).

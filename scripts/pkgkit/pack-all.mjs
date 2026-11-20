@@ -12,6 +12,21 @@ export const USAGE = `사용: node scripts/pkgkit/pack-all.mjs [--root DIR] [--o
   --out DIR    tarball 폴더 (기본 ${DEFAULT_NPM_DIR}, 루트 기준)
   --dry-run    실행하지 않고 명령만 출력`;
 
+/**
+ * pack:all 계획을 차례로 실행한다(출력은 그대로 보인다). portability가 tarball을 스스로 준비할 때도 쓴다.
+ * @param {{root: string, outDir?: string, dryRun?: boolean, log?: (line: string) => void}} args root·outDir는 절대 경로
+ * @returns {{ok: boolean, failedStep?: string, status?: number}}
+ */
+export function runPackAll({ root, outDir, dryRun = false, log = console.log }) {
+  for (const step of planPackAll({ outDir: outDir ?? resolve(root, DEFAULT_NPM_DIR) })) {
+    log(`> ${step.cmd} ${step.args.join(" ")}`);
+    if (dryRun) continue;
+    const r = spawnSync(step.cmd, step.args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+    if (r.status !== 0) return { ok: false, failedStep: step.label, status: r.status ?? 1 };
+  }
+  return { ok: true };
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const argv = process.argv.slice(2);
   const opt = { root: ".", out: DEFAULT_NPM_DIR, dryRun: false };
@@ -28,13 +43,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
   }
   const root = resolve(opt.root);
-  for (const step of planPackAll({ outDir: resolve(root, opt.out) })) {
-    console.log(`> ${step.cmd} ${step.args.join(" ")}`);
-    if (opt.dryRun) continue;
-    const r = spawnSync(step.cmd, step.args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
-    if (r.status !== 0) {
-      console.error(`pack:all: ${step.label} 단계 실패`);
-      process.exit(r.status ?? 1);
-    }
+  const r = runPackAll({ root, outDir: resolve(root, opt.out), dryRun: opt.dryRun });
+  if (!r.ok) {
+    console.error(`pack:all: ${r.failedStep} 단계 실패`);
+    process.exit(r.status ?? 1);
   }
 }

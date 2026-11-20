@@ -1,10 +1,10 @@
 """규칙 검사(`POST /sdd/templates/check`·`/sdd/specs/{id}/check`, 저장 때 경고), design §6R.1.1.
 
 검사 항목: 작업 문법(정규식·작업 줄 모양·표시 문자 중복 — `compile_syntax` 재사용), 관문·프로필 조건
-(`ac-conditions` `condition_issues`), 모르는 문서 상태·작업 상태 참조, 입력 틀의 모르는 변수, 공간에
-없는
-팀 구성(목록을 줄 때만), 자동 진행의 모르는 프로필. 규칙이 계약 모양이 아니어도 422 없이 이슈로
-돌려준다.
+(`ac-conditions` `condition_issues`), 모르는 문서 상태·작업 상태 참조(실행 프로필
+`document_state_on`의 모르는 문서·상태, 실행이 할 수 있는 전환이 없는 대상 포함), 입력 틀의 모르는
+변수, 공간에 없는 팀 구성(목록을 줄 때만), 자동 진행의 모르는 프로필. 규칙이 계약 모양이 아니어도
+422 없이 이슈로 돌려준다.
 """
 
 from __future__ import annotations
@@ -18,7 +18,9 @@ from agent_console_conditions import ConditionOperator, condition_issues
 from agent_console_contracts.constants import ErrorCodes, KnownIssueCodes
 from agent_console_contracts.definitions import Issue
 from agent_console_contracts.sdd import (
+    DocumentStateOnRun,
     KnownSyntaxSources,
+    KnownTransitionActors,
     SddSettings,
     SpecDocument,
     SpecIssue,
@@ -104,6 +106,62 @@ def _syntax_issues(
         out.append(
             issue.model_copy(update={"path": path, "details": {**issue.details, "source": source}})
         )
+    return out
+
+
+def _document_state_on_issues(
+    model: SpecRules,
+    table: Mapping[str, DocumentStateOnRun],
+    docs: Sequence[SpecDocument],
+    base: str,
+) -> list[SpecIssue]:
+    """실행 프로필 `document_state_on` 검사(6R.34).
+
+    - 문서 목록에 없는 문서(목록을 줬을 때만) → `sdd.not_found`(error, `details{kind: document,
+      id}`).
+    - 문서 상태 목록에 없는 상태 → `sdd.unknown_state`(error, `details.ref`).
+    - `by`에 실행(`run`)이 든 전환 중 `to`가 그 상태인 것이 없음 → `sdd.transition_denied`
+      (warning — 실행이 끝나도 바뀌지 않는다. `details{document_id, to, by}`).
+    """
+    states = {s.id for s in model.document_states or ()}
+    doc_ids = {d.id for d in docs}
+    run_targets = {
+        t.to for t in model.transitions or () if KnownTransitionActors.RUN in (t.by or ())
+    }
+    out: list[SpecIssue] = []
+    for run_status, change in table.items():
+        path = f"{base}/document_state_on/{run_status}"
+        if docs and change.document not in doc_ids:
+            out.append(
+                _issue(
+                    ErrorCodes.SDD_NOT_FOUND,
+                    "실행 결과에 따른 문서 상태가 문서 목록에 없는 문서를 가리킵니다.",
+                    f"{path}/document",
+                    kind="document",
+                    id=change.document,
+                )
+            )
+        if change.to not in states:
+            out.append(
+                _issue(
+                    KnownIssueCodes.SDD_UNKNOWN_STATE,
+                    "실행 결과에 따른 문서 상태가 문서 상태 목록에 없습니다.",
+                    f"{path}/to",
+                    ref=change.to,
+                )
+            )
+        elif change.to not in run_targets:
+            out.append(
+                _issue(
+                    ErrorCodes.SDD_TRANSITION_DENIED,
+                    "실행이 이 문서 상태로 바꾸는 전환 규칙이 없어 실행이 끝나도 바뀌지 않습니다.",
+                    f"{path}/to",
+                    severity="warning",
+                    document_id=change.document,
+                    to=change.to,
+                    by=KnownTransitionActors.RUN,
+                )
+            )
     return out
 
 
@@ -196,6 +254,7 @@ def check_rules(
                         ref=task_status,
                     )
                 )
+        issues.extend(_document_state_on_issues(model, profile.document_state_on, docs, base))
         for name in sorted(template_variables(profile.input)):
             if name in known_vars or name.startswith(FIELD_VARIABLE_PREFIX):
                 continue

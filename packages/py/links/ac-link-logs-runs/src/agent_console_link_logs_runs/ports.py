@@ -7,6 +7,9 @@
 - 필수 ``runs.reader``: Run·NodeRun 조회(``RunReader`` — ``get``·``list``·``list_node_runs``).
 - 필수 ``runs.events``: 실행 이벤트 조회(``EventReader`` — ``list``·``last_seq``).
 - 토픽 ``runs.event``(구독): 이벤트가 생긴 Run의 수집을 예약한다(디바운스).
+- 선택 ``projects.lookup``(``ProjectListing`` — ``list_projects()`` 항목의 ``id``): 있으면 수집이
+  등록 프로젝트 공간의 실행도 읽는다(``runs.reader``의 ``list(project_id=)``, 5.7R.33i·33u2). 없으면
+  공용(앱 기록) 실행만 읽는다.
 
 제공:
 
@@ -19,8 +22,8 @@
 from __future__ import annotations
 
 import builtins
-from collections.abc import Collection, Iterable
-from typing import Protocol, runtime_checkable
+from collections.abc import Collection, Iterable, Sequence
+from typing import Any, Protocol, runtime_checkable
 
 from agent_console_contracts import NodeRun, Run, RunEvent, RunStatus
 from agent_console_contracts.logs import LogAggregateRequest, LogAggregateRow, LogEventPage
@@ -42,14 +45,18 @@ class RunReader(Protocol):
         conversation_id: str | None = None,
         agent: str | None = None,
         parent_run_id: str | None = None,
+        project_id: str | None = None,
         limit: int | None = None,
     ) -> builtins.list[Run]:
-        """최신 생성순. ``parent_run_id`` = 그 Run의 직접 자식만(범위 ``run-tree``)."""
+        """최신 생성순. ``parent_run_id`` = 그 Run의 직접 자식만(범위 ``run-tree``).
+        ``project_id`` = 그 프로젝트 공간의 Run(``projects.lookup``이 있을 때만 준다)."""
         ...
 
     # 선택 메서드(있으면 ``run-tree``가 씀): ``descendants(root_run_id) -> list[Run]``
     # — 그 루트 아래 모든 자손을 한 번에(``RunRepository.descendants``).
     # 없으면 ``list(parent_run_id=)``로 따라간다.
+    # 선택 메서드(있으면 출처가 씀): ``for_project(project_id)`` — 그 공간에 묶인 읽기
+    # (``list_node_runs``, 이벤트 쪽은 ``list``·``last_seq``). 없으면 ``run_id``로 읽는다.
 
     def list_node_runs(self, run_id: str) -> builtins.list[NodeRun]: ...
 
@@ -98,6 +105,13 @@ class RuntimeLogSource(Protocol):
     def classifier(self) -> LogClassifier: ...
 
 
+@runtime_checkable
+class ProjectListing(Protocol):
+    """``projects.lookup`` 중 쓰는 부분(항목의 ``id``만 본다)."""
+
+    def list_projects(self) -> Sequence[Any]: ...
+
+
 class EventLike(Protocol):
     """``runs.event`` 항목 중 쓰는 부분."""
 
@@ -115,6 +129,7 @@ LOG_SOURCES: PortKey[RuntimeLogSource] = PortKey(
 LOG_SCOPE_KINDS: PortKey[LogScopeKind] = PortKey(
     "logs.scope_kinds", "로그 범위 종류(X27, scope=<종류>:<값>)", multi=True
 )
+PROJECTS_LOOKUP: PortKey[ProjectListing] = PortKey("projects.lookup", "프로젝트 읽기")
 RUNS_EVENT: Topic[EventLike] = Topic("runs.event")
 """저장된 실행 이벤트(전부). 이 연동은 ``run_id``만 본다."""
 
@@ -123,6 +138,7 @@ __all__ = [
     "LOGS_QUERY",
     "LOG_SCOPE_KINDS",
     "LOG_SOURCES",
+    "PROJECTS_LOOKUP",
     "RUNS_EVENT",
     "RUNS_EVENTS",
     "RUNS_READER",
@@ -130,6 +146,7 @@ __all__ = [
     "EventReader",
     "LogIngestLike",
     "LogQueryLike",
+    "ProjectListing",
     "RunReader",
     "RuntimeLogSource",
 ]

@@ -102,6 +102,46 @@ def test_rule_problems_are_reported() -> None:
     assert unknown_var.details == {"name": "mystery"}
 
 
+def test_document_state_on_checks() -> None:
+    """6R.34: `document_state_on`의 모르는 문서·상태(error), 실행 전환 없는 대상(warning)."""
+    rules: dict[str, Any] = {
+        "document_states": [{"id": "draft"}, {"id": "review"}, {"id": "approved"}],
+        "transitions": [
+            {"from": "draft", "to": "review", "by": ["human", "run"]},
+            {"from": "review", "to": "approved", "by": ["human"]},
+        ],
+        "run_profiles": [
+            {
+                "id": "p",
+                "title": "프로필",
+                "graph": "team",
+                "document_state_on": {
+                    "succeeded": {"document": "design", "to": "review"},
+                    "failed": {"document": "ghost-doc", "to": "nope"},
+                    "cancelled": {"document": "design", "to": "approved"},
+                },
+            }
+        ],
+    }
+    issues = check_rules(rules, operators=OPERATORS, documents=DOCS)
+    codes = _codes(issues)
+    base = "/run_profiles/0/document_state_on"
+    assert ("sdd.not_found", f"{base}/failed/document") in codes
+    assert ("sdd.unknown_state", f"{base}/failed/to") in codes
+    assert ("sdd.transition_denied", f"{base}/cancelled/to") in codes
+    assert not [c for c in codes if c[1] and c[1].startswith(f"{base}/succeeded")]
+    denied = next(i for i in issues if i.code == "sdd.transition_denied")
+    assert denied.severity == "warning"
+    assert denied.details == {"document_id": "design", "to": "approved", "by": "run"}
+    missing = next(i for i in issues if i.code == "sdd.not_found")
+    assert missing.severity == "error"
+    assert missing.details == {"kind": "document", "id": "ghost-doc"}
+    # 문서 목록을 주지 않으면 문서 id는 검사하지 않는다(상태는 검사)
+    no_docs = _codes(check_rules(rules, operators=OPERATORS))
+    assert not [c for c in no_docs if c[0] == "sdd.not_found"]
+    assert ("sdd.unknown_state", f"{base}/failed/to") in no_docs
+
+
 def test_broken_rules_become_issues_not_exceptions() -> None:
     issues = check_rules({"transitions": "not-a-list"}, operators=OPERATORS)
     assert issues

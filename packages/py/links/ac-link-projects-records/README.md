@@ -49,7 +49,9 @@ pip install agent-console-link-projects-records
 >>> _ = handle.writable_engine()  # 처음 쓸 때 만든다
 >>> handle.state.state, (root / "app" / ".agent-console" / "records.sqlite3").exists()
 ('ready', True)
->>> pool.close_all()
+>>> pool.shutdown()  # 서버 종료: 닫고, 그 뒤 열기는 파일을 열지 않는다
+>>> pool.open("project:app").state.reason
+'link_disabled'
 
 ```
 

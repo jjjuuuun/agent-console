@@ -8,8 +8,8 @@
 
 from __future__ import annotations
 
-from agent_console_contracts.sdd import VerificationRef, VerificationResult
-from agent_console_sdd import VerificationContext, find_task
+from agent_console_contracts.sdd import ParsedTask, VerificationRef, VerificationResult
+from agent_console_sdd import VerificationContext
 
 from .integration import RunsTaskIntegration
 from .ports import LABEL_PROFILE, LABEL_PURPOSE, LABEL_TASK
@@ -41,11 +41,15 @@ class RunsVerificationSource:
         profile_label = sdd.label_key(LABEL_PROFILE)
         titles = {p.id: p.title for p in spec_ctx.spec.rules.run_profiles or ()}
         outcome_of = self.integration.reflector.outcome_of
+        # 작업 키 → 작업(앞의 것, `find_task`와 같음)을 한 번 만든다(실행마다 작업 목록을 훑지 않음)
+        tasks: dict[str, ParsedTask] = {}
+        for t in spec_ctx.index.tasks:
+            tasks.setdefault(t.key, t)
         out: list[VerificationResult] = []
         for purpose in dict.fromkeys(config.purposes):
             for run in self.integration.spec_runs(spec_ctx, {purpose_label: purpose}):
                 key = run.labels.get(task_label)
-                task = find_task(spec_ctx.index, key) if key else None
+                task = tasks.get(key) if key else None
                 outcome = outcome_of(run.status)
                 status = config.result_map.get(outcome) or config.result_map.get(run.status)
                 profile = run.labels.get(profile_label)

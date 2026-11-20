@@ -11,16 +11,26 @@
 | WS | 토픽 `memory.changed`(메시지 `memory.changed`, 본문 없음 — 범위·키·id·버전·동작·쓴 주체 종류) |
 | 오류 | `not_found`(404), `already_exists`(409, `details.entry_id`), `version_conflict`(412, `details.current_version`), `version_required`(428), `feature_unavailable`(409, 공간 제공자 없음)·`project.not_found`(404)·제공자 예외 `code`(예: `project.folder_missing`), `memory.invalid_key`·`memory.too_large`·`memory.secret_rejected`(422, 값·본문 조각 없음), `validation_failed`(422, 틀린 질의·zip 아님) |
 | 제공 포트 | `memory.service`(모양 `MemoryServicePort`: `store`·`catalog()`·`settings()`·`limits`·`toolkit(access, context, ...)`), `server.warnings`(`memory.storage_memory`·`memory.search_fallback`·`memory.settings_invalid`) |
-| 선택 포트 | `workspace.settings`(사용자 설정 `memory` 섹션. 없으면 기본값), `memory.spaces`(공간 이름 → `{store, context}`, `link-projects-memory`가 준다. 없으면 라이브러리만) |
+| 선택 포트 | `workspace.settings`(사용자 설정 `memory` 섹션. 없으면 기본값), `memory.spaces`(공간 이름 → `{store, context}`, `link-projects-memory`가 준다. 없으면 라이브러리만. 선택 메서드 `existing() -> list[str]`이 있으면 자동 정리가 그 공간도 돈다) |
 | 저장 | 계보 `memory`(`memory_0001`, 버전 표 `alembic_version_memory`, 범위 `app`·`memory` — 프로젝트 메모리 DB를 여는 연동이 범위 `memory`로 찾아 올린다). 기본은 호스트 DB 파일, 옵션 `store_path`면 그 파일(같은 계보를 올림), DB가 없으면 프로세스 메모리 + 경고 |
 | 설치자 옵션 | `modules.options.mod-memory.{store_path, retention_interval_seconds, full_text_search, busy_timeout_seconds, max_entry_bytes, max_entries_per_scope, max_total_bytes, max_key_chars, max_tags, max_tag_chars, preview_chars, max_page_size, max_tag_list, max_search_results, max_import_archive_bytes, max_import_files, max_import_file_bytes, max_import_total_bytes}` |
-| 사용자 설정 | 워크스페이스 설정 `memory`(계약 `MemorySettings`: `include_default_scope_kinds`, `scope_kinds`, `secrets`, `max_versions_per_entry`, `retention.rules`). 깨진 부분만 빼고 쓰고 경고로 알린다 |
+| 사용자 설정 | 워크스페이스 설정 `memory`(계약 `MemorySettings`: `include_default_scope_kinds`, `scope_kinds`, `secrets`, `max_versions_per_entry`, `retention.rules`, `retention.auto{library, projects, exclude_projects}`). 깨진 부분만 빼고 쓰고 경고로 알린다 |
 | 플러그인 | entry point `agent_console.memory_scope_kinds`. 호스트 플러그인 로더(`agent_console.host_plugin_loaders`의 `memory`)가 호스트 묶음의 `memory_scope_kinds` 확장에 읽는다 |
 | 웹 역할 | `memory`(메모리 화면·사이드바 항목·설정 "메모리" 섹션 데이터가 이 역할을 요구한다) |
 
 - 범위 종류·태그·키 이름은 전부 데이터다. 빈 워크스페이스에서는 패키지 기본 범위 종류만 있고 기록은 0개다.
 - 정리 규칙의 패키지 기본은 빈 목록이다(아무것도 자동으로 지우거나 보관하지 않는다). 자동 정리는
   `retention_interval_seconds`(기본 3600, 0 = 끔)마다 저장된 규칙만 적용한다.
+- 자동 정리 대상은 사용자 설정 `memory.retention.auto`로 고른다. 생략하면
+  `{library: true, projects: true, exclude_projects: []}`(공용과 프로젝트 모두). 한 주기는 공용 →
+  `memory.spaces` 제공자의 `existing()`이 준 공간 차례이고(`link-projects-memory`는 메모리 파일이 이미
+  있는 켜진 등록만 준다 — 파일을 새로 만들지 않음), 공간마다 실패는 로그만 남기고 건너뛴다. 결과
+  버전의 쓴 주체는 `system`(`label` = 규칙 id).
+  - 끄는 법: 전부 끄기 = 설치자 옵션 `modules.options.mod-memory.retention_interval_seconds: 0`.
+    공용만 끄기 = `memory.retention.auto.library: false`, 프로젝트 모두 끄기 =
+    `memory.retention.auto.projects: false`, 일부만 빼기 = `memory.retention.auto.exclude_projects:
+    [<등록 id>, ...]`. `link-projects-memory`를 끄면 공용만 돈다.
+  - HTTP 없이: `run_retention_cycle(service)` → `RetentionCycleResult{results, failed}`.
 - 메모리 내용은 다른 에이전트에게 지시처럼 읽힐 수 있다(보안 경계가 아니다). 쓰기 권한은 리소스 `memory`의
   접근 설정으로 좁히고, 사람이 화면에서 바로잡는다.
 - 모듈을 끄면 위 경로가 404이고 계보를 올리지 않는다(다른 DB 모듈도 끄면 DB 파일이 생기지 않는다).

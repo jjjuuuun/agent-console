@@ -15,11 +15,13 @@ from functools import cache
 from importlib import resources
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from ruamel.yaml import YAML
 
-from agent_console_contracts.sdd import SpecDefinition, SpecDocument, SpecTemplate
+from agent_console_contracts.sdd import SpecDefinition, SpecDocument, SpecRules, SpecTemplate
 from agent_console_store import DefinitionKind
+
+from ._syntax import effective_document_state
 
 __all__ = [
     "BLANK_SPEC_RESOURCE",
@@ -118,8 +120,13 @@ def _assemble(
 
 def _initial_state(raw: Mapping[str, Any]) -> str | None:
     rules = raw.get("rules")
-    value = rules.get("initial_document_state") if isinstance(rules, Mapping) else None
-    return value if isinstance(value, str) and value else None
+    if not isinstance(rules, Mapping):
+        return None
+    try:
+        model = SpecRules.model_validate(rules)
+    except ValidationError:
+        return None  # 깨진 규칙은 결과 검증(`SpecDraft.spec()`)이 알린다
+    return effective_document_state(model)
 
 
 def instantiate(
@@ -133,9 +140,10 @@ def instantiate(
 ) -> SpecDraft:
     """문서 틀 → 새 스펙(복사, 이후 틀과 독립).
 
-    틀의 문서 목록·규칙·설명·라벨·속성과 본문 파일을 그대로 복사한다. 문서 상태는 비우고 규칙에
-    처음 문서 상태(`initial_document_state`)가 있으면 그 값으로 둔다. 틀에 본문이 없는 문서는 빈
-    파일로 만든다. 틀 id·버전은 결과에 쓰지 않는다.
+    틀의 문서 목록·규칙·설명·라벨·속성과 본문 파일을 그대로 복사한다. 문서 상태는 비우고 처음 상태
+    (`effective_document_state` — 규칙의 `initial_document_state`, 없으면 문서 상태 목록의 첫
+    번째)가 있으면 그 값으로 둔다(목록을 비운 규칙 = 상태 없음). 틀에 본문이 없는 문서는 빈 파일로
+    만든다. 틀 id·버전은 결과에 쓰지 않는다.
 
     Args:
         template: 문서 틀(모델 또는 저장된 문서 dict — 모르는 키 보존).

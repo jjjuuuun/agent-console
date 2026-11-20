@@ -10,7 +10,7 @@
 | --- | --- |
 | `pkg-lint.mjs` | `workspace:`·상대 `extends`·패키지 밖 경로/import·`exports` 규칙(development→src, default→dist)·스크립트·필수 파일·선언하지 않은 의존·다른 패키지 내부 직접 참조·README `ts readme` 블록 ↔ `test/readme.test.ts` 구간 일치 |
 | `pack-all.mjs` | `pnpm -r --if-present build` 뒤 `pnpm -r pack --pack-destination dist/npm` |
-| `portability.mjs` | 패키지를 임시 폴더로 복사 → 사내 의존을 `dist/npm` tarball(`file:` + `overrides`)로 바꿈 → `npm install` → build·typecheck·test → 결과 표 |
+| `portability.mjs` | 대상은 pnpm 워크스페이스 멤버에서 앱(`agentConsole.kind: "app"`)을 뺀 전부(`examples/web/` 예제 포함, `--under`로 좁힘). 필요한 tarball이 없으면 `pack:all`을 먼저 돌린다(`--pack`이면 늘) → 패키지를 임시 폴더로 복사 → 사내 의존을 `dist/npm` tarball(`file:` + `overrides`)로 바꿈 → `npm install` → build·typecheck·test → 결과 표 |
 | `new-package.mjs` | 템플릿으로 새 패키지 생성. 루트 파일은 고치지 않는다 |
 | `lib/*.mjs` | 순수 함수: `lint-rules`·`readme-sync`·`plans`·`scaffold`·`template`·`workspace` (`fsutil`만 파일을 읽는다) |
 | `templates/ts/` | `common/` + `lib/` 또는 `config/` 층. 파일은 `.tmpl`, 자리표시자는 `{{키}}`, `package.patch.json`은 package.json에 합쳐진다 |
@@ -20,7 +20,7 @@
 ```sh
 node scripts/pkgkit/pkg-lint.mjs [--package NAME] [--json]
 node scripts/pkgkit/pack-all.mjs [--dry-run]
-node scripts/pkgkit/portability.mjs [--package NAME] [--keep]     # 먼저 pack-all
+node scripts/pkgkit/portability.mjs [--package NAME] [--under PREFIX] [--pack] [--keep]   # tarball이 없으면 pack-all을 먼저
 node scripts/pkgkit/new-package.mjs --kind lib|config [--dom] [--scope @scope] NAME
 ```
 

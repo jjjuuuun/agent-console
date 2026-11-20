@@ -33,9 +33,11 @@ __all__ = [
     "DEFAULT_SYNTAX_RESOURCE",
     "SyntaxLayer",
     "document_state_infos",
+    "effective_document_state",
     "effective_syntax",
     "load_default_syntax",
     "merge_syntax",
+    "package_task_format",
     "status_infos",
 ]
 
@@ -56,6 +58,17 @@ def _read_default_text() -> str:
 def _default_document() -> Mapping[str, Any]:
     data = YAML(typ="safe").load(_read_default_text())
     return data if isinstance(data, dict) else {}
+
+
+def package_task_format(key: str) -> str | None:
+    """패키지 기본 문법의 줄 고치기 모양(`task.status_format`·`task.field_format`) 하나.
+
+    문법 층이 모두 그 키를 비웠을 때(기본 문법을 끈 경우 포함) `compile_syntax`가 쓰는 값이다. 값은
+    코드가 아니라 패키지 데이터(`data/default_syntax.yaml`)에 있다. 없거나 글자가 아니면 None.
+    """
+    task = _default_document().get("task")
+    value = task.get(key) if isinstance(task, dict) else None
+    return value if isinstance(value, str) else None
 
 
 def load_default_syntax() -> SpecSyntax:
@@ -180,6 +193,44 @@ def status_infos(statuses: Iterable[TaskStatusSpec] | None) -> list[TaskStatusIn
             )
         )
     return out
+
+
+def effective_document_state(rules: SpecRules | None, state: str | None = None) -> str | None:
+    """문서의 유효 상태(지금 상태, design §6R.12 "문서 상태 생략").
+
+    계약 설명 그대로 앞에서부터 처음 있는 값: 문서에 적힌 상태(`state`) → 규칙의 처음 문서 상태
+    (`initial_document_state`) → 문서 상태 목록(`document_states`)의 첫 번째 → 없음(None). 상태
+    목록을 비운 스펙은 목록에서 고를 것이 없으므로 (적힌 값이 없으면) 상태 없음이다. 값이 목록에
+    있는지는 보지 않는다(전환 검사·규칙 검사가 따로 본다).
+
+    전환 검사·`on_edit`·관문 맥락 `documents.<id>.state`·요약 상태·틀에서 만들기가 모두 이 함수를
+    쓴다.
+
+    Args:
+        rules: 스펙(또는 틀) 규칙. None이면 규칙 없음.
+        state: 문서에 적힌 상태(`SpecDocument.state`). None·빈 문자열이면 생략으로 본다.
+
+    Returns:
+        상태 id 또는 None(상태 없음).
+
+    >>> from agent_console_contracts.sdd import SpecRules
+    >>> rules = SpecRules.model_validate({"document_states": [{"id": "draft"}, {"id": "done"}]})
+    >>> effective_document_state(rules)
+    'draft'
+    >>> effective_document_state(rules, "done")
+    'done'
+    >>> effective_document_state(SpecRules()) is None
+    True
+    """
+    if state:
+        return state
+    if rules is None:
+        return None
+    if rules.initial_document_state:
+        return rules.initial_document_state
+    for spec in rules.document_states or ():
+        return spec.id
+    return None
 
 
 def document_state_infos(states: Iterable[DocumentStateSpec] | None) -> list[DocumentStateInfo]:

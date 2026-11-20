@@ -63,6 +63,25 @@ export function isCovered(patterns, relDir) {
   return patterns.include.some((p) => matchesPattern(p, relDir)) && !patterns.exclude.some((p) => matchesPattern(p, relDir));
 }
 
+/**
+ * 포함 패턴마다 glob 앞의 고정 폴더(예: `examples/web/*` → `examples/web`, `apps/web` → `apps/web`)를 돌려준다.
+ * 폴더를 찾을 때 저장소 전체 대신 이 폴더들만 훑기 위한 시작점이다. 다른 시작점 안에 든 것은 뺀다.
+ * @param {{include: string[]}} patterns
+ * @returns {string[]} 정렬된 `/` 구분 상대 경로(패턴이 glob으로 시작하면 `""` = 루트)
+ */
+export function patternRoots(patterns) {
+  const roots = patterns.include.map((p) => {
+    const fixed = [];
+    for (const part of p.replace(/\/+$/, "").split("/")) {
+      if (part.includes("*")) break;
+      fixed.push(part);
+    }
+    return fixed.join("/");
+  });
+  const unique = [...new Set(roots)].sort();
+  return unique.filter((r) => !unique.some((o) => o !== r && (o === "" || r.startsWith(`${o}/`))));
+}
+
 const DEP_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 
 /**

@@ -87,12 +87,12 @@ export function PlanTab({ specId, view, ctx, goTab }: SddTabProps) {
         <aside className="sdd-plan-side" aria-label={m.plan.bundles}>
           {critical.length > 0 ? (
             <section aria-label={m.plan.bottleneck}>
-              <h3 className="sdd-section-title">{m.plan.bottleneck}</h3>
+              <h2 className="sdd-section-title">{m.plan.bottleneck}</h2>
               <p data-testid="sdd-plan-critical">{m.plan.bottleneckLine(critical.join(" → "), critical.length)}</p>
             </section>
           ) : null}
           <section aria-label={m.plan.ready}>
-            <h3 className="sdd-section-title">{m.plan.ready} ({ready.length})</h3>
+            <h2 className="sdd-section-title">{m.plan.ready} ({ready.length})</h2>
             <ul className="sdd-plan-list">
               {ready.map((t) => (
                 <li key={t.key}>
@@ -104,7 +104,7 @@ export function PlanTab({ specId, view, ctx, goTab }: SddTabProps) {
           </section>
           <PlanBundles plan={plan ?? {}} tasks={remaining} onSelect={openTask} messages={viewMessages} />
           <section aria-label={m.plan.blocked}>
-            <h3 className="sdd-section-title">{m.plan.blocked} ({blocked.length})</h3>
+            <h2 className="sdd-section-title">{m.plan.blocked} ({blocked.length})</h2>
             <ul className="sdd-plan-list">
               {blocked.map((t) => {
                 const waiting = (t.dependencies ?? []).filter((d) => {

@@ -234,3 +234,66 @@ def test_runs_module_off_turns_link_off(tmp_path: Path) -> None:
         assert info["capabilities"]["verification"] is False
         tasks = client.get(f"{API}/sdd/specs/s/tasks").json()
         assert all(t["links"] == [] for t in tasks)
+
+
+def test_document_state_on_changes_state_by_run(tmp_path: Path) -> None:
+    """6R.34: 프로필 ``document_state_on`` — 실행이 끝나면 ``by: run``·``run_id``로 문서 상태를
+    바꾸고, 실행이 할 수 없는 전환이면 그대로 두고 정보 이슈를 남긴다."""
+    with server(make_settings(tmp_path, options=NO_PROJECT_GATE)) as client:
+        seed(client)
+        _make_spec(client, None)
+        view = client.get(f"{API}/sdd/specs/s").json()
+        body = view["spec"]
+        rules = {
+            **body["rules"],
+            "document_states": [*RULES["document_states"], {"id": "review"}],
+            "transitions": [
+                *RULES["transitions"],
+                {"from": "approved", "to": "review", "by": ["run"]},
+            ],
+            "gates": [],
+            "run_profiles": [
+                {
+                    **RULES["run_profiles"][0],
+                    "document_state_on": {"succeeded": {"document": "design", "to": "review"}},
+                },
+                {
+                    **RULES["run_profiles"][1],
+                    "document_state_on": {"succeeded": {"document": "req", "to": "review"}},
+                },
+            ],
+        }
+        saved = client.put(
+            f"{API}/sdd/specs/s",
+            json={**body, "rules": rules},
+            headers={"If-Match": f'"{view["version_hash"]}"'},
+        )
+        assert saved.status_code == 200, saved.text
+        run_id = _run_task(client, None, "1.1", "impl")["run_id"]
+
+        def design() -> dict[str, Any]:
+            docs = client.get(f"{API}/sdd/specs/s").json()["spec"]["documents"]
+            found: dict[str, Any] = next(d for d in docs if d["id"] == "design")
+            return found
+
+        wait_for(lambda: design().get("state") == "review", timeout=10)
+        changed = design()["state_changed"]
+        assert (changed["by"], changed["run_id"]) == ("run", run_id)
+        # 요구 문서는 draft → review 전환이 없어 그대로 + 정보 이슈
+        _run_task(client, None, "1.2", "verify")
+        wait_for(
+            lambda: any(
+                i["code"] == "sdd.document_state_not_applied"
+                for i in _task(client, None, "1.2")["issues"]
+            ),
+            timeout=10,
+        )
+        [issue] = [
+            i
+            for i in _task(client, None, "1.2")["issues"]
+            if i["code"] == "sdd.document_state_not_applied"
+        ]
+        assert issue["details"]["reason"] == "transition_denied"
+        assert issue["details"]["document_id"] == "req"
+        docs = client.get(f"{API}/sdd/specs/s").json()["spec"]["documents"]
+        assert next(d for d in docs if d["id"] == "req").get("state") in (None, "draft")

@@ -9,18 +9,26 @@
 - 분류기: 행 단위 무상태(F-7). 대응표(``event_map``)의 규칙으로 초안을 만든다. 대응표 덮어쓰기는
   출처 설정 ``event_map``에서 ``SourceRef.meta``로 넘어온다(분류기에 넘길 맥락).
 - 실행 기록은 읽기만 한다(포트 ``runs.reader``·``runs.events``).
+- 프로젝트 공간(5.7R.33i·33u2): ``project_ids``(보통 ``projects.lookup``의 등록 id)를 주면
+  공용(앱 기록) Run과 함께 각 공간의 Run(``runs.reader.list(project_id=)``)도 단위로 만든다.
+  그 단위의 ``SourceRef.meta.project``에 등록 id를 두고, 읽을 때 읽기 객체에 ``for_project``가
+  있으면 그 공간에 묶어 읽는다(없으면 ``run_id``로 — ``mod-runs``는 목록으로 본 Run의 자리를
+  기억한다). 공간을 찾고 여는 일은 ``runs.reader``(``mod-runs``의 ``records.spaces`` 위 읽기)가
+  한다. 세션 ``project_id``는 색인 질의가 이벤트 ``cwd``(Run 작업 폴더 = 프로젝트 폴더)로
+  붙인다. ``project_ids``가 없으면 공용만.
 """
 
 from __future__ import annotations
 
 import builtins
 import json
+import logging
 import threading
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
-from agent_console_contracts import NodeRun, RunEvent, x_ui
+from agent_console_contracts import NodeRun, Run, RunEvent, x_ui
 from agent_console_contracts.logs import (
     LogClassifierDescriptor,
     LogDocumentRef,
@@ -91,6 +99,10 @@ CWD_STATE = "cwd"
 META_SESSION = "session"
 META_CWD = "cwd"
 META_EVENT_MAP = "event_map"
+META_PROJECT = "project"
+"""``SourceRef.meta`` 키: 그 Run이 있는 프로젝트 공간(등록 id). 없으면 공용(앱 기록)."""
+
+_log = logging.getLogger("agent_console_link_logs_runs")
 
 TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed", "cancelled", "interrupted"})
 """더 이벤트가 생기지 않는 Run 상태(마지막 seq 캐시용, 계약 ``RunStatus``의 종료 값)."""
@@ -103,7 +115,10 @@ SOURCE_SCHEMA: dict[str, Any] = {
             "minimum": 1,
             "default": DEFAULT_MAX_RUNS,
             "title": "최근 실행 수",
-            "description": "수집 때 살펴볼 최근 Run 수(오래된 Run은 이미 색인된 것만 남는다).",
+            "description": (
+                "수집 때 살펴볼 최근 Run 수. 공용 기록과 프로젝트 공간마다 따로 센다"
+                "(오래된 Run은 이미 색인된 것만 남는다)."
+            ),
             **x_ui(tier="advanced"),
         },
         "event_map": {**EVENT_MAP_SCHEMA, "default": {}, **x_ui(tier="advanced")},
@@ -144,6 +159,8 @@ class PlatformRunsSource:
         event_map: 기본 대응표(없으면 패키지 데이터). 세션을 알리는 규칙(``session_from``)을 본다.
         source_id: 출처 id.
         page_size: 한 번에 읽는 이벤트 수.
+        project_ids: 수집 때마다 부르는 프로젝트 공간 id 목록(보통 등록 프로젝트 id). None이면
+            공용(앱 기록) Run만 읽는다. 공간 하나를 읽지 못하면 그 공간만 건너뛴다.
     """
 
     def __init__(
@@ -154,6 +171,7 @@ class PlatformRunsSource:
         event_map: EventMap | None = None,
         source_id: str = SOURCE_ID,
         page_size: int = DEFAULT_PAGE_SIZE,
+        project_ids: Callable[[], Iterable[str]] | None = None,
     ) -> None:
         if page_size <= 0:
             raise ValueError("page_size는 0보다 커야 합니다")
@@ -161,6 +179,7 @@ class PlatformRunsSource:
         self._events = events
         self._map = event_map if event_map is not None else load_default_event_map()
         self._page = page_size
+        self._project_ids = project_ids
         self._finished: dict[str, int] = {}
         self._lock = threading.Lock()
         self.descriptor = LogSourceDescriptor(
@@ -189,22 +208,53 @@ class PlatformRunsSource:
             else:
                 self._finished.pop(run_id, None)
 
+    def _places(self, limit: int) -> builtins.list[tuple[str | None, Run]]:
+        """(공간, Run) — 공용 최근 ``limit``개 + 공간마다 최근 ``limit``개, 오래된 것부터."""
+        found: builtins.list[tuple[str | None, Run]] = [
+            (None, run) for run in reversed(self._runs.list(limit=limit))
+        ]
+        if self._project_ids is None:
+            return found
+        seen = {run.id for _, run in found}
+        try:
+            project_ids = list(dict.fromkeys(self._project_ids()))
+        except Exception:
+            _log.warning("프로젝트 목록을 읽지 못해 공용 실행만 수집합니다", exc_info=True)
+            return found
+        for project_id in project_ids:
+            try:
+                runs = self._runs.list(project_id=project_id, limit=limit)
+            except Exception:
+                _log.warning("프로젝트 %s의 실행 기록을 읽지 못했습니다", project_id, exc_info=True)
+                continue
+            for run in reversed(runs):
+                if run.id not in seen:  # 공간 포트가 없으면 공용 기록의 같은 Run이 온다
+                    seen.add(run.id)
+                    found.append((project_id, run))
+        found.sort(key=lambda item: item[1].created_at)  # 안정 정렬: 공용만이면 순서 그대로
+        return found
+
+    def _bound_events(self, project_id: str | None) -> EventReader:
+        found: EventReader = _bound(self._events, project_id)
+        return found
+
     def discover(self, ctx: LogSourceContext) -> Iterable[SourceRef]:
-        """최근 Run(설정 ``max_runs``개)을 오래된 것부터. ``size`` = 마지막 seq."""
+        """최근 Run(설정 ``max_runs``개, 공용·공간마다)을 오래된 것부터. ``size`` = 마지막 seq."""
         limit = ctx.config.get("max_runs")
-        runs = self._runs.list(limit=limit if isinstance(limit, int) else DEFAULT_MAX_RUNS)
+        places = self._places(limit if isinstance(limit, int) else DEFAULT_MAX_RUNS)
         overrides = overrides_of(ctx.config.get(META_EVENT_MAP))
         meta: dict[str, JsonValue] = {META_EVENT_MAP: overrides} if overrides else {}
         refs: list[SourceRef] = []
-        for run in reversed(runs):
+        for project_id, run in places:
             with self._lock:
                 last = self._finished.get(run.id)
             if last is None:
-                last = self._events.last_seq(run.id)
+                last = self._bound_events(project_id).last_seq(run.id)
                 if run.status in TERMINAL_STATUSES:
                     with self._lock:
                         self._finished[run.id] = last
-            refs.append(SourceRef(ref=run.id, size=last, mtime=None, meta=meta))
+            ref_meta = meta if project_id is None else {**meta, META_PROJECT: project_id}
+            refs.append(SourceRef(ref=run.id, size=last, mtime=None, meta=ref_meta))
         return refs
 
     def read(
@@ -220,13 +270,16 @@ class PlatformRunsSource:
         )
         cwd_raw = cursor.state.get(CWD_STATE)
         cwd = cwd_raw if isinstance(cwd_raw, str) else ""
-        node_sessions = _node_sessions(self._runs.list_node_runs(ref.ref))
+        place = ref.meta.get(META_PROJECT)
+        project_id = place if isinstance(place, str) and place else None
+        events = self._bound_events(project_id)
+        node_sessions = _node_sessions(_bound(self._runs, project_id).list_node_runs(ref.ref))
         offset = cursor.offset
         used = 0
         records: list[RawRecord] = []
         exhausted = False
         while not exhausted and used < budget:
-            page = self._events.list(ref.ref, since_seq=offset, limit=self._page)
+            page = events.list(ref.ref, since_seq=offset, limit=self._page)
             for event in page:
                 data = event.model_dump(mode="json")
                 path = [str(p) for p in event.node_path]
@@ -264,6 +317,14 @@ class PlatformRunsSource:
             read_bytes=used,
             exhausted=exhausted,
         )
+
+
+def _bound(reader: Any, project_id: str | None) -> Any:
+    """그 공간에 묶인 읽기(선택 메서드 ``for_project``가 있으면), 아니면 그대로."""
+    if project_id is None:
+        return reader
+    bind = getattr(reader, "for_project", None)
+    return bind(project_id) if callable(bind) else reader
 
 
 def _node_sessions(node_runs: Sequence[NodeRun]) -> dict[str, str]:
@@ -481,12 +542,18 @@ def platform_runs(
     event_map: EventMap | None = None,
     source_id: str = SOURCE_ID,
     page_size: int = DEFAULT_PAGE_SIZE,
+    project_ids: Callable[[], Iterable[str]] | None = None,
 ) -> PlatformRunsLogSource:
-    """출처와 분류기를 같은 기본 대응표로 만든다."""
+    """출처와 분류기를 같은 기본 대응표로 만든다(``project_ids``: ``PlatformRunsSource`` 참고)."""
     found = event_map if event_map is not None else load_default_event_map()
     return PlatformRunsLogSource(
         source=PlatformRunsSource(
-            runs, events, event_map=found, source_id=source_id, page_size=page_size
+            runs,
+            events,
+            event_map=found,
+            source_id=source_id,
+            page_size=page_size,
+            project_ids=project_ids,
         ),
         classifier=PlatformRunsClassifier(found),
     )

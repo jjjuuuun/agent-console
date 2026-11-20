@@ -21,6 +21,8 @@
   요청은 409 ``feature_unavailable``이고, 메모리 서비스의 ``space(name)``도 같은 예외를 낸다(실행
   연동은 그 실행의 메모리 도구를 ``scope_unavailable``로 둔다). 범위 종류·설정·한도는 공간과
   무관하게 앱 설정 하나다.
+  선택 메서드 ``existing() -> list[str]``(5.7R.46, ``MemorySpacesListing``): 서버 자동 정리가 돌
+  공간 이름(파일을 새로 만들지 않고 열 수 있는 것). 없으면 자동 정리는 공용만 돈다.
 
 실행·로그 포트는 쓰지 않는다(메모리는 실행 없이도 사람이 쓴다).
 """
@@ -119,6 +121,18 @@ class MemorySpaces(Protocol):
         ...
 
 
+@runtime_checkable
+class MemorySpacesListing(Protocol):
+    """``memory.spaces`` 제공자의 **선택** 메서드(5.7R.46): 자동 정리가 돌 공간 이름."""
+
+    def existing(self) -> list[str]:
+        """메모리가 이미 있는 공간 이름(공간을 열거나 파일을 만들지 않고 판단한다).
+
+        자동 정리(``retention_interval_seconds``)가 공용 다음에 차례로 연다. 없으면 공용만 돈다.
+        """
+        ...
+
+
 type WorkspaceSettingsReader = Callable[[], Any]
 """지금 워크스페이스 설정을 돌려주는 함수(``workspace.settings`` 포트 모양)."""
 
@@ -145,6 +159,7 @@ __all__ = [
     "MemoryServicePort",
     "MemorySpaceLike",
     "MemorySpaces",
+    "MemorySpacesListing",
     "WarningSource",
     "WorkspaceSettingsReader",
 ]

@@ -153,6 +153,32 @@ def test_finditer_returns_all_matches_with_group_spans() -> None:
     assert found[0].span("missing") is None
 
 
+@pytest.mark.parametrize(
+    ("pattern", "text"),
+    [
+        (r"(?P<a>x)|(?P<a>y)(?P<b>z)?", "-yz"),  # 같은 이름 묶음(regex는 한 번호를 함께 씀)
+        (r"(?P<a>x)|(?P<a>y)(?P<b>z)?", "-x"),  # 참여하지 않은 묶음
+        (r"(?:(?P<a>\w)-)+(?P<end>\d)", "a-b-c-1"),  # 반복 묶음은 마지막 매치
+        (r"(?P<e>)(?P<w>\w+)", " ok"),  # 빈 매치 묶음
+    ],
+)
+def test_match_groups_agree_with_regex_library(pattern: str, text: str) -> None:
+    import regex
+
+    raw = regex.compile(pattern, regex.VERSION0).search(text)
+    assert raw is not None
+    for found in (
+        compile_user_regex(pattern).search(text),
+        compile_user_regex(pattern).finditer(text)[0],
+    ):
+        assert found is not None
+        assert (found.start, found.end, found.text) == (raw.start(), raw.end(), raw.group(0))
+        assert dict(found.named) == raw.groupdict()
+        for name in raw.re.groupindex:
+            want = raw.span(name)
+            assert found.span(name) == (None if want[0] < 0 else want)
+
+
 def test_finditer_times_out_on_whole_scan() -> None:
     pat = compile_user_regex(r"(?:a|aa)c", timeout=0.01, max_input_chars=10_000_000)
     # 대안이 반복되지 않아 검증은 통과하지만, 매치 실패가 매우 많은 입력은 시간 제한에 걸릴 수 있다.

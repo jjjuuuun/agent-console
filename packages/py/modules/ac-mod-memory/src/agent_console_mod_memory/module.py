@@ -12,7 +12,9 @@
   옵션 ``store_path``면 그 파일에 같은 계보를 올리고, 없으면 호스트 DB 파일, DB가 없으면 메모리(경고
   ``memory.storage_memory``).
 - 정리 스케줄: ``retention_interval_seconds``마다 저장된 정리 규칙을 적용한다(0 = 끔, 규칙이 없으면
-  아무것도 하지 않는다).
+  아무것도 하지 않는다). 대상은 사용자 설정 ``memory.retention.auto``(공용, 그리고
+  ``memory.spaces`` 제공자의 선택 메서드 ``existing()``이 준 공간 — 5.7R.46). 제공자가 없으면
+  공용만.
 - 범위 종류 플러그인(X29): 호스트 묶음의 ``memory_scope_kinds`` 확장(``plugins.load_plugins``가
   채운다). 묶음이 없으면(단독 실행) entry point에서 직접 읽는다.
 - 조건 연산자(X22, 정리 규칙): 호스트 묶음의 ``condition_operators`` 확장(비어 있으면 설치된
@@ -40,13 +42,20 @@ from agent_console_conditions import (
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
 from agent_console_contracts.memory import MemoryChanged
 from agent_console_memory import MemoryPolicy, MemoryStore
-from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
+from agent_console_modkit import (
+    DEFAULT_WORK_WAIT,
+    ModuleContext,
+    ModuleDescriptor,
+    ModuleParts,
+    WorkGate,
+)
 from agent_console_registry import Registry
 
 from .config import section_of
 from .errors import ERROR_MAP
 from .plugins import plugin_kinds, scope_kind_registry
 from .ports import MEMORY_SERVICE, MEMORY_SPACES, SERVER_WARNINGS, WORKSPACE_SETTINGS
+from .retention import RetentionCycleResult, run_retention_cycle
 from .routes import build_router
 from .service import MemoryService
 from .settings import MemoryModuleSettings
@@ -92,17 +101,41 @@ def operators_of(registries: Any) -> Callable[[], Mapping[str, ConditionOperator
     return lambda: found
 
 
-async def run_retention_periodically(service: MemoryService, interval: float) -> None:
-    """``interval``초마다 저장된 정리 규칙을 적용한다(규칙이 없으면 건너뜀, 실패는 로그만)."""
-    while True:
-        await asyncio.sleep(interval)
-        try:
-            if service.has_retention_rules():
-                await asyncio.to_thread(service.apply_retention)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            _log.exception("메모리 자동 정리 실패")
+async def run_retention_periodically(
+    service: MemoryService,
+    interval: float,
+    *,
+    gate: WorkGate | None = None,
+    stop_wait: float = DEFAULT_WORK_WAIT,
+) -> None:
+    """``interval``초마다 자동 정리 한 주기(``run_retention_cycle``)를 돈다.
+
+    대상은 사용자 설정 ``memory.retention.auto``(공용 → 메모리가 있는 공간). 규칙이 없으면 아무것도
+    열지 않고, 공간마다 실패는 로그만 남기고 건너뛴다. 한 주기가 끝나야 다음 주기를 기다린다(동시에
+    두 번 돌지 않음).
+
+    취소되면(서버 종료) ``gate``를 닫아 남은 공간을 하지 않게 하고(빈·부분 결과), 하던 공간이
+    끝나기를 최대 ``stop_wait``초 기다린 뒤 취소를 다시 던진다. 조립기는 종료 훅보다 배경 작업
+    취소를 먼저 하므로, 메모리 공간 풀·저장소가 닫히기 전에 정리 스레드가 끝난다.
+    """
+    work = gate if gate is not None else WorkGate()
+
+    def cycle() -> RetentionCycleResult:
+        return run_retention_cycle(service, should_stop=lambda: work.closed)
+
+    try:
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                await asyncio.to_thread(work.run, cycle, RetentionCycleResult)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _log.exception("메모리 자동 정리 실패")
+    except asyncio.CancelledError:
+        if not await work.close_and_wait(stop_wait):
+            _log.warning("메모리 자동 정리 스레드가 %.0f초 안에 끝나지 않았습니다", stop_wait)
+        raise
 
 
 class MemoryModule:
@@ -197,17 +230,25 @@ class MemoryModule:
         ctx.provide(MEMORY_SERVICE, service)
         ctx.provide(SERVER_WARNINGS, warnings)
 
+        retention_gate = WorkGate()
+
         async def start() -> None:
+            retention_gate.reopen()
             publisher.bind(asyncio.get_running_loop())
 
         async def stop() -> None:
+            # 정리 스레드가 저장소를 쓰는 동안 닫지 않는다
+            if not await retention_gate.close_and_wait():
+                _log.warning("메모리 자동 정리 스레드가 끝나지 않은 채 저장소를 닫습니다")
             publisher.bind(None)
             storage.close()
 
         background: list[Callable[[], Awaitable[None]]] = []
         if cfg.retention_interval_seconds > 0:
             interval = cfg.retention_interval_seconds
-            background.append(lambda: run_retention_periodically(service, interval))
+            background.append(
+                lambda: run_retention_periodically(service, interval, gate=retention_gate)
+            )
 
         return ModuleParts(
             routers=[build_router(lambda: service)],

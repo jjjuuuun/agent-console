@@ -49,6 +49,9 @@ export const MEMORY_STORAGE = {
 /** 주소 인자 이름(`memoryData.json`). 선택은 URL이 진실이다. */
 export const MEMORY_PARAMS: Readonly<Record<keyof typeof data.params, string>> = data.params;
 
+/** 주소 인자 `store`의 값: 보는 저장소가 공용(라이브러리)이다. 인자가 없으면 현재 프로젝트 저장소(screen-memory §1.3). */
+export const MEMORY_STORE_LIBRARY: string = data.storeValues.library;
+
 /** 서버가 받는 정렬 값(계약). 열 머리는 이 중 열이 있는 것만 누를 수 있다. */
 export const ENTRY_SORTS: readonly string[] = MEMORY_ENTRY_SORTS;
 /** 표 열 → 서버 정렬 값. 쓴 주체·고정·태그 열은 정렬 대상이 아니다. */

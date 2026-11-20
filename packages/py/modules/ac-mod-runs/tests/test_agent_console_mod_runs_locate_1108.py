@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Graph, Run, RunEvent
+from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Graph, NodeRun, Run, RunEvent
 from agent_console_mod_runs import (
     DEFINITIONS_LOOKUP,
     PROJECTS_LOOKUP,
@@ -482,3 +482,72 @@ def test_rest_agent_activity_without_records_port_uses_app(tmp_path: Path) -> No
         found = client.get(f"{API}/agents/pl/activity", params={"project": "pb"})
         assert found.status_code == 200, found.text
         assert found.json() == []
+
+
+# ---- 재시작 직후 run id 조회(5.7R.33i 후속) -----------------------------------------
+
+
+def _seed_with_node(spaces: Spaces, project_id: str, run_id: str) -> None:
+    _seed(spaces, project_id, run_id, events=2)
+    stored = SqliteStorage(spaces.open(f"project:{project_id}").writable_engine())
+    stored.runs.save_node_run(
+        NodeRun(run_id=run_id, node_id="A", status="succeeded", backend_session_id="s1")
+    )
+    spaces.opened.clear()
+
+
+def test_get_finds_unknown_project_run_after_restart(spaces: Spaces) -> None:
+    """재시작 직후 ``runs.reader.get``이 모르는 공간의 Run을 위치 찾기로 찾는다."""
+    _seed_with_node(spaces, "pb", "r1")
+    recorder, host = _recorder(spaces)  # 새 프로세스: 그 공간을 아직 모른다
+    host.runs.save(_run("r-app", None))
+    found = recorder.runs.get("r1")
+    assert found is not None
+    assert found.project_id == "pb"
+    assert recorder.project_of_run("r1") == "pb"
+    assert [n.backend_session_id for n in recorder.runs.list_node_runs("r1")] == ["s1"]
+    assert [e.seq for e in recorder.events.list("r1")] == [1, 2]
+    assert recorder.events.last_seq("r1") == 2
+    app_run = recorder.runs.get("r-app")  # 호스트 DB Run은 공간을 열지 않는다
+    assert app_run is not None
+    assert app_run.project_id is None
+    spaces.opened.clear()
+    assert recorder.runs.get("nope") is None
+    assert not spaces.file("pa").exists()
+    assert not spaces.file("pc").exists()
+
+
+def test_get_ambiguous_or_unlisted_is_none(spaces: Spaces) -> None:
+    _seed(spaces, "pa", "dup")
+    _seed(spaces, "pc", "dup")
+    _seed(spaces, "pc", "r3")
+    recorder, _ = _recorder(spaces)
+    assert recorder.runs.get("dup") is None  # 모호함은 locate(409)가 알린다
+    # 프로젝트 모듈이 꺼짐(등록 목록 없음): 모르는 공간은 읽지 않는다(R0)
+    unlisted, _ = _recorder(spaces, ids=None)
+    assert unlisted.runs.get("r3") is None
+
+
+def test_get_without_records_port_host_only() -> None:
+    host = InMemoryStorage()
+    host.runs.save(_run("r-app", "p1"))
+    recorder = SpaceRecorder(host, None, project_ids=lambda: ["p1"])
+    found = recorder.runs.get("r-app")
+    assert found is not None
+    assert recorder.runs.get("nope") is None
+
+
+def test_rest_detail_finds_unknown_project_run(tmp_path: Path, spaces: Spaces) -> None:
+    """재시작 직후 ``?project=`` 없는 ``GET /runs/{id}``·``/events``가 등록 프로젝트 기록 DB의
+    Run을 찾는다. 프로젝트 목록이 없으면(프로젝트 모듈 끔) 404 그대로."""
+    _seed(spaces, "pb", "old", events=2)
+    with _client(tmp_path, spaces, Listing(IDS)) as client:
+        detail = client.get(f"{API}/runs/old")
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["run"]["project_id"] == "pb"
+        events = client.get(f"{API}/runs/old/events")
+        assert events.status_code == 200, events.text
+        assert [e["seq"] for e in events.json()] == [1, 2]
+        assert client.get(f"{API}/runs/nope").status_code == 404
+    with _client(tmp_path / "off", spaces, None) as client:
+        assert client.get(f"{API}/runs/old").status_code == 404

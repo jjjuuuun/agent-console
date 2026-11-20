@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.8"
+CONTRACTS_VERSION: Final = "0.14.9"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,7 +38,7 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.14.0",
+    "common": "1.15.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
     "definitions": "1.7.0",
@@ -49,8 +49,8 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
-    "memory": "1.1.0",
-    "sdd": "1.2.0",
+    "memory": "1.2.0",
+    "sdd": "1.3.0",
     "wiki": "1.2.0",
     "modules": "1.6.0",
 }
@@ -99,7 +99,13 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
 `GET /conversations/{id}/locate` 응답, 대화 id → 그 대화가 있는 기록 공간), `common` 1.13.0
 (`ErrorCodes.CONVERSATION_AMBIGUOUS` 409).
 0.14.8(요청 11/08 후속, 더하기만): `runs` 1.9.0(`RunLocation` — `GET /runs/{id}/locate` 응답,
-Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMBIGUOUS` 409)."""
+Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMBIGUOUS` 409).
+0.14.9(6R.31, 더하기만 — 생략 = 지금 동작): `sdd` 1.3.0(`TaskSyntax.status_pattern`·`status_format`·
+`field_format` — 줄 머리 낱말 상태와 고쳐 쓰기 모양, `RunProfile.document_state_on` =
+`DocumentStateOnRun{document, to}` — 실행 결과로 문서 상태 바꾸기), `memory` 1.2.0
+(`MemoryRetentionSettings.auto` = `MemoryRetentionAuto{library, projects, exclude_projects}` — 서버
+자동 정리 대상), `common` 1.15.0(문서 상수 `KnownIssueCodes.SDD_DOCUMENT_STATE_NOT_APPLIED`·
+`SDD_STATUS_PATTERN_IGNORED`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -623,7 +629,8 @@ class KnownIssueCodes:
     SDD_DEPENDENCY_CYCLE: Final = "sdd.dependency_cycle"
     """순환 의존. `details.cycle` = 작업 키 목록."""
     SDD_UNKNOWN_STATUS_MARKER: Final = "sdd.unknown_status_marker"
-    """체크 칸 글자가 어느 작업 상태에도 없다(그 작업은 첫 상태로 본다)."""
+    """체크 칸 글자(또는 줄 머리 상태 정규식 `status` 묶음에 맞은 낱말, 1.15.0)가 어느 작업 상태에도
+    없다(그 작업은 첫 상태로 본다)."""
     SDD_RANGE_UNRESOLVED: Final = "sdd.range_unresolved"
     """의존 범위(`a~b`)의 끝을 문서에서 찾지 못했다."""
     SDD_UNKNOWN_REQUIREMENT: Final = "sdd.unknown_requirement"
@@ -652,6 +659,15 @@ class KnownIssueCodes:
     SDD_STATUS_NOT_APPLIED: Final = "sdd.status_not_applied"
     """실행이 끝났지만 프로필 `status_on`대로 작업 상태를 바꾸지 못했다(info, 폴더 없음·쓸 수 없음·
     줄 바뀜·관문). `details.run_id`·`details.gate_id?`."""
+    # ---- 1.15.0(0.14.9, 6R.31): 줄 머리 상태 문법·실행 결과로 문서 상태 바꾸기
+    SDD_STATUS_PATTERN_IGNORED: Final = "sdd.status_pattern_ignored"
+    """작업 문법의 줄 머리 상태 정규식(`TaskSyntax.status_pattern`)을 쓰지 않는다(warning, 문법
+    검사). `details.reason` = `no_status_group`(이름 묶음 `status`가 없음) 또는 `checkbox`(작업 줄
+    모양이 체크 칸이라 체크 칸이 먼저). `Issue.path` = 규칙 기준 위치."""
+    SDD_DOCUMENT_STATE_NOT_APPLIED: Final = "sdd.document_state_not_applied"
+    """실행이 끝났지만 프로필 `document_state_on`대로 문서 상태를 바꾸지 못해 그대로 두었다(info,
+    전환 거부·관문·문서 없음·폴더 없음·쓸 수 없음, 그 작업 보기에 낸다).
+    `details{document_id, to, reason, gate_id?}`."""
     SDD_SECRET_SUSPECT: Final = "sdd.secret_suspect"
     """문서 본문에 비밀 의심 값이 있다(info, `sdd.secret_scan = warn`). 위치(`line`)만, 값 없음."""
     SDD_SECRET_REJECTED: Final = "sdd.secret_rejected"

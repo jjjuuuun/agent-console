@@ -20,6 +20,7 @@ export type {
   MemoryImportProblem,
   MemoryImportResult,
   MemoryMoveRequest,
+  MemoryRetentionAuto,
   MemoryRetentionCondition,
   MemoryRetentionConditionItem,
   MemoryRetentionPlan,
@@ -48,4 +49,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "memory" as const;
-export const CONTRACT_VERSION = "1.1.0" as const;
+export const CONTRACT_VERSION = "1.2.0" as const;
