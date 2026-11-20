@@ -86,7 +86,7 @@ describe("DocumentNav·DocumentStateChip", () => {
   it("문서와 상태 칩, 선택, 상태 없는 문서는 칩 없음", () => {
     const onSelect = vi.fn();
     render(<DocumentNav documents={sampleDocuments()} selectedId="d-req" onSelect={onSelect} />);
-    expect(screen.getByRole("button", { name: "요구, 상태: 초안" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("button", { name: /^요구\s*초안$/ }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("button", { name: "메모" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "메모" }));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: "d-note" }));
@@ -118,7 +118,7 @@ describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () =
 
   it("Space는 행 선택을 토글하고 Esc는 펼침 → 선택 해제 순서로 하나만 닫는다", () => {
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} selectable />);
-    const row = screen.getByRole("button", { name: /^작업 T2, 상태/ });
+    const row = screen.getByRole("button", { name: /작업 T2$/ });
     row.focus();
     fireEvent.keyDown(row, { key: " " });
     expect((screen.getByRole("checkbox", { name: "작업 T2 선택" }) as HTMLInputElement).checked).toBe(true);
@@ -139,7 +139,7 @@ describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () =
   it("단계 접힘: 모두 끝난 단계는 처음부터 접히고, 바꾼 것만 onCollapsedChange로 알린다", () => {
     const onCollapsedChange = vi.fn();
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} onCollapsedChange={onCollapsedChange} />);
-    fireEvent.click(screen.getByRole("button", { name: /2단계 단계 접기·펼치기/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^2단계/ }));
     expect(onCollapsedChange).toHaveBeenCalledWith({ st2: true });
   });
 
@@ -156,7 +156,7 @@ describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () =
       />,
     );
     expect(screen.getByText("행 안내").closest('[data-sdd-task-key="T2"]')).not.toBeNull();
-    const row = screen.getByRole("button", { name: /^작업 T3, 상태/ });
+    const row = screen.getByRole("button", { name: /작업 T3$/ });
     row.focus();
     expect(handle.current?.activeTaskKey()).toBe("T3");
     act(() => handle.current?.openRowMenu("T3"));
@@ -171,6 +171,36 @@ describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () =
     render(<TaskTable ref={handle} tasks={sampleTasks()} statuses={statuses} onStatusChange={() => undefined} />);
     act(() => handle.current?.openStatusMenu("T2"));
     expect(screen.getByRole("menu")).toBeTruthy();
+  });
+});
+
+describe("접근 이름은 보이는 글자에서 나온다 (axe label-content-name-mismatch)", () => {
+  const statuses = sampleStatuses();
+  it("문서 탭·단계·작업 제목·요구 버튼에 aria-label이 없다", () => {
+    const a = render(<DocumentNav documents={sampleDocuments()} />);
+    expect(a.container.querySelectorAll("button.ac-sdd-docnav-item[aria-label]")).toHaveLength(0);
+    a.unmount();
+    const b = render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
+    expect(b.container.querySelectorAll(".ac-sdd-stage[aria-label], .ac-sdd-task-title[aria-label]")).toHaveLength(0);
+    b.unmount();
+    const c = render(<TraceMatrix matrix={sampleTrace()} onOpenRequirement={() => undefined} />);
+    expect(c.container.querySelectorAll(".ac-sdd-trace-req[aria-label]")).toHaveLength(0);
+  });
+  it("끝난 작업 행에는 준비·막힘 칩이 없다", () => {
+    const open = sampleTasks()[1]!;
+    const finished = { ...open, key: "DONE1", id: "DONE1", status: "done", ready: false };
+    const { container } = render(<TaskTable tasks={[finished, { ...open, ready: false }]} statuses={[{ id: "done", label: "끝", done: true }, ...statuses]} />);
+    const doneRow = container.querySelector("[data-sdd-task-key='DONE1']")!;
+    expect(doneRow).toBeTruthy();
+    expect(within(doneRow as HTMLElement).queryByText("막힘")).toBeNull();
+    expect(within(container.querySelector(`[data-sdd-task-key='${open.key}']`) as HTMLElement).getByText("막힘")).toBeTruthy();
+  });
+  it("실행 칩은 상태 + 상대 시각이고 실행 id는 툴팁에만 있다", () => {
+    const at = Date.now() / 1000 - 300;
+    const t = { ...sampleTasks()[1]!, links: [{ integration: "i", kind: "run", ref: "f8b534a5-aaaa-bbbb", status: "done", at }] };
+    render(<TaskTable tasks={[t]} statuses={statuses} linkStatuses={[{ id: "done", label: "완료", done: true }]} />);
+    expect(screen.getByText(/^완료 · /)).toBeTruthy();
+    expect(screen.queryByText(/f8b534a5/)).toBeNull();
   });
 });
 
@@ -190,13 +220,13 @@ describe("TaskTable", () => {
   });
   it("단계 묶음과 상태 라벨(데이터)을 그린다", () => {
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
-    expect(screen.getByRole("button", { name: /1단계 단계 접기·펼치기, 1\/2/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^1단계\s*1\/2/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: "작업 T1의 상태 바꾸기: 끝" })).toBeTruthy();
     expect(screen.getByText("단계 없음")).toBeTruthy();
   });
   it("단계 접기", () => {
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
-    fireEvent.click(screen.getByRole("button", { name: /^1단계 단계 접기·펼치기/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^1단계/ }));
     expect(screen.queryByText("작업 T1")).toBeNull();
     expect(screen.getByText("작업 T3")).toBeTruthy();
   });
@@ -232,10 +262,10 @@ describe("TaskTable", () => {
   it("행 펼침은 하나만, 상세에 문서·요구·의존", () => {
     const onOpenDocument = vi.fn();
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} documentTitles={{ "d-tasks": "작업 문서" }} onOpenDocument={onOpenDocument} />);
-    fireEvent.click(screen.getByRole("button", { name: /^작업 T2, 상태 열림/ }));
+    fireEvent.click(screen.getByRole("button", { name: /작업 T2$/ }));
     expect(screen.getByText("R1")).toBeTruthy();
     expect(screen.getByText(/작업 문서 · 3번째 줄/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^작업 T4, 상태 진행/ }));
+    fireEvent.click(screen.getByRole("button", { name: /작업 T4$/ }));
     expect(screen.queryByText("R1")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "문서에서 열기" }));
     expect(onOpenDocument).toHaveBeenCalledWith(expect.objectContaining({ key: "T4" }));
@@ -243,13 +273,13 @@ describe("TaskTable", () => {
   it("실행 칩: 열 수 있는 종류만 버튼, showLinks=false면 연결 열이 없다", () => {
     const onOpenLink = vi.fn();
     const { rerender } = render(<TaskTable tasks={sampleTasks()} statuses={statuses} openableKinds={["k-run"]} onOpenLink={onOpenLink} />);
-    fireEvent.click(screen.getByRole("button", { name: "run-1 열기" }));
+    fireEvent.click(document.querySelector<HTMLElement>("button.ac-sdd-chip-button[title='run-1']")!);
     expect(onOpenLink).toHaveBeenCalledWith(expect.objectContaining({ ref: "run-1" }));
     rerender(<TaskTable tasks={sampleTasks()} statuses={statuses} showLinks={false} />);
     expect(screen.queryByText(/run-1/)).toBeNull();
     rerender(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
-    expect(screen.getByText("run-1, ok")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "run-1 열기" })).toBeNull();
+    expect(document.querySelector("span[title='run-1']")?.textContent).toMatch(/^ok/);
+    expect(document.querySelector("button.ac-sdd-chip-button[title='run-1']")).toBeNull();
   });
   it("동작 자리(renderActions)를 행마다 그린다", () => {
     render(<TaskTable tasks={sampleTasks().slice(0, 2)} statuses={statuses} renderActions={(t) => <button type="button">동작 {t.key}</button>} />);
@@ -263,10 +293,10 @@ describe("TaskTable", () => {
   });
   it("화살표 키로 이웃 줄에 포커스", () => {
     render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
-    const first = screen.getByRole("button", { name: /^작업 T1, 상태 끝/ });
+    const first = screen.getByRole("button", { name: /작업 T1$/ });
     first.focus();
     fireEvent.keyDown(first, { key: "ArrowDown" });
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^작업 T2, 상태 열림/ }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /작업 T2$/ }));
   });
 });
 
@@ -369,7 +399,7 @@ describe("TraceMatrix", () => {
     const onOpenLink = vi.fn();
     const { rerender } = render(<TraceMatrix matrix={sampleTrace()} onOpenTask={onOpenTask} onOpenRequirement={onOpenRequirement} onOpenLink={onOpenLink} openableKinds={["k-run"]} />);
     fireEvent.click(screen.getByRole("button", { name: "T2 작업 열기" }));
-    fireEvent.click(screen.getByRole("button", { name: "R1 요구 열기" }));
+    fireEvent.click(screen.getByRole("button", { name: /^R1\b/ }));
     fireEvent.click(screen.getByRole("button", { name: "run-1" }));
     expect(onOpenTask).toHaveBeenCalledWith("T2", expect.objectContaining({ id: "R1" }));
     expect(onOpenRequirement).toHaveBeenCalledWith(expect.objectContaining({ id: "R1" }));

@@ -1,3 +1,4 @@
+import type { SafeStorage } from "../../app/storage";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@agent-console/api-client";
@@ -51,6 +52,15 @@ describe("그래프 탭", () => {
     expect(stub.getAttribute("data-center")).toBe("a/one");
     expect(wiki.getWikiGraph).toHaveBeenCalledWith("w1", { center: "a/one", depth: 1 });
     expect(screen.getByText("노드 3개")).toBeTruthy();
+  });
+
+  it("주소에 path가 있으면 직전에 연 페이지(저장값)가 아니라 그 path가 중심이다(depth=all 포함)", async () => {
+    const storage = { get: (k: string) => (k.includes("w1") ? "a/two" : null), set: () => undefined, remove: () => undefined } as unknown as SafeStorage;
+    const getWikiGraph = vi.fn(async () => GRAPH);
+    setup(base("graph", "&path=a/one&depth=all"), fixture({ storage, wiki: { getWikiGraph } }));
+    const stub = await screen.findByTestId("graph-stub", {}, LONG);
+    expect(stub.getAttribute("data-center")).toBe("a/one");
+    expect(getWikiGraph).toHaveBeenCalledWith("w1", { center: "a/one", depth: undefined });
   });
 
   it("잘렸으면 서버 총 개수로 안내하고, 총 개수가 없으면 지어내지 않는다", async () => {

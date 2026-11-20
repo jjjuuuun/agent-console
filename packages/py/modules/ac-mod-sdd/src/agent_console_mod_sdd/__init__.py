@@ -6,7 +6,8 @@
 파싱 캐시, 문서 본문 비밀 검사. 실행·프로젝트를 모른다.
 
 공개 API:
-    - ``module``(entry point 값)·``SddModule``·``MODULE_ID``·``WEB_ROLES``
+    - ``module``(entry point 값)·``SddModule``·``MODULE_ID``·``WEB_ROLES``, 버전 기록 → 스펙 알림
+      콜백 ``spec_recorded``
     - ``SddService``(포트 ``sdd.service``)·``SddScope``·``SddPorts``
     - 포트: ``SDD_SERVICE``·``SDD_SPACES``·``SDD_INTEGRATIONS``·``SDD_VERIFICATION_SOURCES``,
       모양 ``SddSpace``·``SddSpaces``·``SddServicePort``, 라벨 이름 ``LABEL_*``
@@ -19,7 +20,14 @@ from __future__ import annotations
 from .cache import CachedSpecRepository, ParseCache, syntax_fingerprint
 from .config import SECTION_KEY, parse_sdd_settings, section_of
 from .errors import ERROR_MAP, SddRequestError, SpaceError
-from .module import MODULE_ID, WEB_ROLES, SddModule, module, template_references
+from .module import (
+    MODULE_ID,
+    WEB_ROLES,
+    SddModule,
+    module,
+    spec_recorded,
+    template_references,
+)
 from .plugins import (
     VERIFICATION_SOURCES_EXTENSION,
     VERIFICATION_SOURCES_GROUP,
@@ -83,6 +91,7 @@ __all__ = [
     "parse_sdd_settings",
     "scan_text",
     "section_of",
+    "spec_recorded",
     "syntax_fingerprint",
     "template_references",
 ]

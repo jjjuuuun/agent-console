@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import { Button, Dialog } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { MemoryVersionDiff, MemoryVersionList, type VersionCompareTarget } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { useStorage } from "../../app/StorageContext";
 import { useToast } from "@agent-console/ui";
@@ -15,6 +14,7 @@ import { MEMORY_STORAGE } from "./memoryConfig";
 import { memoryMessages as t } from "./messages";
 import { useInvalidateMemory, useMemoryVersion, useMemoryVersions } from "./useMemoryApi";
 import type { MemoryContext } from "./useMemoryContext";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface HistoryDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -29,7 +29,7 @@ export interface HistoryDialogProps {
 }
 
 export function HistoryDialog({ entry, ctx, labelOf, dirty, maxVersions, onClose, onRestored }: HistoryDialogProps) {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const toast = useToast();
   const invalidate = useInvalidateMemory();
   const storage = useStorage();

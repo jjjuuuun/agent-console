@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
+import stat
 from pathlib import Path
 
 import pytest
@@ -102,3 +104,37 @@ def test_newer_records_db_blocks_definition_write_before_any_file(folder: Path) 
         space.definitions.create("agent", sample_agent("a2"))
     assert not (folder / ".agent-console" / "agents" / "a2.yaml").exists()
     newer.close()
+
+
+def _lock(folder: Path) -> list[Path]:
+    locked = [p for p in (folder, *folder.rglob("*")) if p.is_dir()]
+    for d in locked:
+        d.chmod(d.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+    return locked
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root는 쓰기 권한 검사를 통과한다")
+def test_folder_turned_read_only_after_open_raises_config_readonly(folder: Path) -> None:
+    """5.7R.33n: 열 때 쓸 수 있던 공간도 실제 쓰기·삭제가 권한 오류면 `ConfigReadonly`(409)다."""
+    space = open_space(folder)
+    assert space.config_writable
+    space.definitions.create("agent", sample_agent())
+    current = space.definitions.get("agent", "a1")
+    before = snapshot_tree(folder)
+    locked = _lock(folder)
+    try:
+        with pytest.raises(ConfigReadonly) as caught:
+            space.definitions.create("agent", sample_agent("a2"))
+        assert store_error_body(caught.value).code == "project.config_readonly"
+        assert str(folder) not in str(caught.value)
+        with pytest.raises(ConfigReadonly):
+            space.definitions.save(
+                "agent", sample_agent(name="둘"), expected_version=current.version_hash
+            )
+        with pytest.raises(ConfigReadonly):
+            space.definitions.delete("agent", "a1")
+    finally:
+        for d in locked:
+            d.chmod(d.stat().st_mode | stat.S_IWUSR)
+    assert snapshot_tree(folder) == before
+    assert space.definitions.get("agent", "a1").version_hash == current.version_hash

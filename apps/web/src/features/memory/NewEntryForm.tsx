@@ -8,7 +8,6 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryEntry, MemoryScopeKindInfo, MemoryScopeRef, MemoryScopeSummary, MemorySecretRejectedDetails } from "@agent-console/contracts/memory";
 import { MemoryEntryEditor, keyErrorText, secretRejectedField, validateKey, type MemoryEntryEditorHandle } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { isImeKeyEvent } from "../../lib/ime";
 import { memoryMessages as t } from "./messages";
@@ -16,6 +15,7 @@ import { viewMessages } from "./format";
 import { pickOf, pickedScope, ScopePicker, type ScopePickerState } from "./ScopePicker";
 import { SecretBand } from "./SecretBand";
 import { useMemoryContext } from "./useMemoryContext";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface NewEntryFormProps {
   /** 처음 채울 범위(지금 보는 범위). 없으면 비워 둔다 */
@@ -36,7 +36,7 @@ export interface NewEntryFormProps {
 }
 
 export function NewEntryForm({ initialScope, initialContent = "", kinds, scopes, labelOf, maxBytes, onCreated, onOpenExisting, onCancel, onDirtyChange }: NewEntryFormProps) {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const ctx = useMemoryContext();
   const uid = useId();
   const [pick, setPick] = useState<ScopePickerState>(() => pickOf(initialScope));

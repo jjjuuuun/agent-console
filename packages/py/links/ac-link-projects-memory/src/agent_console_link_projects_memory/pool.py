@@ -80,6 +80,9 @@ class PoolOptions:
     context_field: str = "project_id"
 
 
+_DEFAULT_OPTIONS = PoolOptions()
+
+
 @dataclass
 class _Entry:
     space: ProjectMemorySpace
@@ -137,7 +140,7 @@ class ProjectMemoryPool:
         spaces: Callable[[], ProjectSpaces | None],
         branches: Callable[[], Sequence[MigrationBranchLike]],
         *,
-        options: PoolOptions = PoolOptions(),  # noqa: B008 - 불변 값
+        options: PoolOptions = _DEFAULT_OPTIONS,
         clock: Callable[[], float] = time.monotonic,
         network_fs: Callable[[Path], bool] = is_network_fs,
         folder_id_of: Callable[[Any], str | None] = folder_id,

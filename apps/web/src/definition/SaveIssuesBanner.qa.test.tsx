@@ -13,7 +13,15 @@ describe("SaveIssuesBanner", () => {
     render(<SaveIssuesBanner issues={[{ severity: "warning", code: "a", message: "첫째", path: "/files/.git/x" }, { severity: "warning", code: "a", message: "둘째" }] as never} />);
     const region = screen.getByRole("status", { name: "저장 경고" });
     expect(region.querySelectorAll("li").length).toBe(2);
-    expect(region.textContent).toContain(".git/x");
+    expect(region.textContent).toContain("files › .git › x");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("readablePath", () => {
+  it("숫자 칸은 n번째로, 키는 그대로 이어 보인다", async () => {
+    const { readablePath } = await import("./SaveIssuesBanner");
+    expect(readablePath("/config/wikis/1/wiki")).toBe("config › wikis › 2번째 › wiki");
+    expect(readablePath("")).toBe("");
   });
 });

@@ -92,7 +92,7 @@ describe("리소스 목록 폴더·라벨(5.2R.63 후속)", () => {
 
   it("폴더별로 묶으면 폴더 머리가 보인다", async () => {
     mountApp(clients().clients, "/resources");
-    const listbox = await screen.findByRole("listbox", { name: "리소스 목록" });
+    const listbox = await screen.findByRole("group", { name: "리소스 목록" });
     fireEvent.click(screen.getByRole("button", { name: /종류별/ }));
     fireEvent.click(screen.getByRole("menuitemradio", { name: /^폴더/ }));
     expect(Array.from(listbox.querySelectorAll(".ac-grouphead")).map((h) => h.textContent)).toEqual(["공통(1)", "(폴더 없음)(1)"]);
@@ -103,7 +103,7 @@ describe("리소스 목록 폴더·라벨(5.2R.63 후속)", () => {
     const getResource = vi.fn(async () => ({ value: full, version_hash: "R1" }));
     const updateResource = vi.fn(async (_id: string, r: unknown) => ({ value: r, version_hash: "R2" }));
     mountApp(clients({ getResource, updateResource }).clients, "/resources");
-    const listbox = await screen.findByRole("listbox", { name: "리소스 목록" });
+    const listbox = await screen.findByRole("group", { name: "리소스 목록" });
     const opt = within(listbox).getByText("문서 둘").closest<HTMLElement>("[role=option]")!;
     fireEvent.click(opt);
     fireEvent.keyDown(document.body, { key: "m" });

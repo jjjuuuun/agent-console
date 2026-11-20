@@ -37,3 +37,14 @@ export function joinList(items: readonly string[], separator = ", "): string {
 export function taskTitle(task: { key: string; id?: string | null; title?: string }): string {
   return task.title && task.title !== "" ? task.title : task.id && task.id !== "" ? task.id : task.key;
 }
+
+/** 시각(Unix epoch 초) → "3분 전" 같은 상대 시각. 해석할 수 없으면 빈 문자열. `now`는 주입(테스트·시계). */
+export function relativeTime(at: number | null | undefined, now: number = Date.now(), locale?: string): string {
+  if (at === null || at === undefined || !Number.isFinite(at)) return "";
+  const t = at * 1000;
+  const sec = Math.round((t - now) / 1000);
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [["day", 86400], ["hour", 3600], ["minute", 60]];
+  const fmt = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  for (const [unit, size] of units) if (Math.abs(sec) >= size) return fmt.format(Math.round(sec / size), unit);
+  return fmt.format(sec, "second");
+}

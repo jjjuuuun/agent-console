@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import errno
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict, Unpack
@@ -66,7 +68,8 @@ class ProjectSpace:
         sessions_dir: 세션 기록 보관 폴더 경로.
         state_dir: 이 폴더용 캐시·임시 파일 폴더 경로.
         portable_kinds: 공간에 들어가는 종류 이름.
-        config_writable: 구성 폴더에 쓸 수 있나. 아니면 정의·매니페스트 쓰기는 `ConfigReadonly`.
+        config_writable: 구성 폴더에 쓸 수 있나(열 때 판정). 아니면 정의·매니페스트 쓰기는
+            `ConfigReadonly`. 연 뒤 읽기 전용이 된 폴더도 정의 쓰기·삭제는 `ConfigReadonly`다.
     """
 
     folder: Path
@@ -139,6 +142,46 @@ def _make_guard(
     return guard
 
 
+_READONLY_ERRNOS = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
+"""쓰기 거부로 보는 OS 오류 번호(권한 없음·읽기 전용 파일 시스템)."""
+
+
+@contextmanager
+def _readonly_errors(kind: DefinitionKind, id: str) -> Iterator[None]:
+    """쓰기 거부 OS 오류 -> `ConfigReadonly`(409). 다른 오류는 그대로 둔다. 경로는 싣지 않는다."""
+    try:
+        yield
+    except OSError as exc:
+        if exc.errno not in _READONLY_ERRNOS:
+            raise
+        raise ConfigReadonly(f"{kind.name}/{id}: the project folder is read-only") from exc
+
+
+class _SpaceDefinitionStore(FileDefinitionStore):
+    """구성 폴더의 정의 저장소. 파일 쓰기·지우기가 권한 오류로 실패하면 `ConfigReadonly`다.
+
+    `config_writable`은 공간을 열 때의 판정이라, 연 뒤 폴더가 읽기 전용이 되면 쓰기 전 검사를
+    지나 실제 파일 쓰기에서 실패한다. 그 실패를 모든 쓰기 경로(만들기·저장·본문·삭제·복원) 공통으로
+    여기서 바꾼다.
+    """
+
+    def _write(self, kind: DefinitionKind, id: str, document: dict[str, Any]) -> None:
+        with _readonly_errors(kind, id):
+            super()._write(kind, id, document)
+
+    def _remove(self, kind: DefinitionKind, id: str) -> bool:
+        with _readonly_errors(kind, id):
+            return super()._remove(kind, id)
+
+    def _write_body(self, kind: DefinitionKind, id: str, file: str, data: bytes) -> None:
+        with _readonly_errors(kind, id):
+            super()._write_body(kind, id, file, data)
+
+    def _remove_body(self, kind: DefinitionKind, id: str, file: str) -> None:
+        with _readonly_errors(kind, id):
+            super()._remove_body(kind, id, file)
+
+
 def build_space(
     folder: Path, *, writable: bool | None = None, **options: Unpack[SpaceOptions]
 ) -> ProjectSpace:
@@ -160,7 +203,7 @@ def build_space(
     kinds = portable_kinds(options.get("kinds", DEFAULT_KINDS))
     max_bytes = options.get("max_content_bytes", DEFAULT_MAX_CONTENT_BYTES)
     versions = options.get("versions")
-    store = FileDefinitionStore(
+    store = _SpaceDefinitionStore(
         root,
         kinds,
         versions=versions,

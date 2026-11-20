@@ -65,6 +65,8 @@
 .ac-sdd-vlist { position: relative; width: 100%; }
 .ac-sdd-vrow { position: absolute; top: 0; left: 0; width: 100%; }
 .ac-sdd-vrow-auto { height: auto; }
+/* 행마다 transform으로 쌓임 맥락이 생기므로, 메뉴가 열린(포커스가 있는) 행을 다음 행 위로 올린다. */
+.ac-sdd-vrow:focus-within, .ac-sdd-vrow:has([aria-expanded="true"]) { z-index: 20; }
 
 /* 스펙 목록 */
 .ac-sdd-spec { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(120px, 1fr) minmax(140px, 2fr) auto; align-items: center; gap: 12px; width: 100%; height: 100%; padding: 0 12px; border: 0; border-bottom: 1px solid var(--ac-border-soft); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -129,3 +131,4 @@
 .ac-sdd-trace-req { display: flex; gap: 6px; min-width: 0; }
 .ac-sdd-trace-tasks, .ac-sdd-trace-runs, .ac-sdd-trace-gaps { display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; overflow: hidden; }
 .ac-sdd-trace-row[data-gaps] { background: var(--ac-warning-bg); }
+.ac-sdd-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

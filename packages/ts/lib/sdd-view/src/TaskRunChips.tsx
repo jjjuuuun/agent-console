@@ -1,5 +1,5 @@
 import type { TaskLink } from "@agent-console/contracts/sdd";
-import { statusTone } from "./display";
+import { relativeTime, statusTone } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
 import { ToneChip } from "@agent-console/markdown-doc";
 
@@ -26,15 +26,18 @@ export function TaskRunChips({ links, openableKinds = [], onOpen, statuses, max 
     <span className="ac-sdd-links">
       {shown.map((link) => {
         const st = link.status ? statusTone(link.status, statuses) : null;
-        const label = st ? formatMessage(text["tasks.runChip"], { ref: link.ref, status: st.label }) : link.ref;
+        // 명세 §7.3: 상태 칩 + 상대 시각. 실행 id(ref)는 툴팁에 둔다. 상태를 모르면 ref 원문.
+        const ago = relativeTime(link.at);
+        const label = st ? (ago !== "" ? `${st.label} · ${ago}` : st.label) : link.ref;
+        const tip = formatMessage(text["tasks.runChip.title"], { ref: link.ref });
         const key = `${link.integration}:${link.kind}:${link.ref}`;
         const openable = onOpen !== undefined && openableKinds.includes(link.kind);
         return openable ? (
-          <button key={key} type="button" className="ac-sdd-chip-button" aria-label={formatMessage(text["tasks.runChip.open"], { ref: link.ref })} title={label} onClick={() => onOpen(link)}>
+          <button key={key} type="button" className="ac-sdd-chip-button" title={tip} onClick={() => onOpen(link)}>
             <ToneChip label={label} tone={st?.tone} />
           </button>
         ) : (
-          <ToneChip key={key} label={label} tone={st?.tone} />
+          <ToneChip key={key} label={label} tone={st?.tone} title={tip} />
         );
       })}
       {rest > 0 ? <span className="ac-sdd-field ac-sdd-num">{formatMessage(text["tasks.moreFields"], { n: rest })}</span> : null}

@@ -22,6 +22,7 @@ from extdocs_common import (
     SymbolError,
     SymbolResolver,
     ToolData,
+    rel,
 )
 from extdocs_generate import Generator
 from extdocs_md import (
@@ -134,6 +135,31 @@ def check_drift(root: Path, planned: Mapping[str, str]) -> list[Finding]:
                     key,
                     "생성 문서 낡음 — `uv run poe extdocs`로 다시 만든다"
                     + ("(파일 없음)" if current is None else ""),
+                )
+            )
+    return out
+
+
+# ---------------------------------------------------------------- 영역 페이지
+
+
+def check_area_pages(root: Path, data: ToolData, *, tool_dir: Path) -> list[Finding]:
+    """``areas.yaml``의 영역마다 문서 폴더에 그 파일이 있는지.
+
+    선언이 없는 영역이나 파일 이름을 잘못 적은 영역도 잡는다(가이드 절 검사는 선언이 가리키는
+    파일만 본다). 아직 쓰지 않은 페이지일 수 있으므로 ``guides`` 범주다.
+    """
+    out: list[Finding] = []
+    areas_file = rel(root, tool_dir / "areas.yaml")
+    for area in data.areas:
+        page = root / data.docs_dir / area.file
+        if not page.is_file():
+            out.append(
+                Finding(
+                    "area-page-missing",
+                    f"{areas_file} [{area.id}]",
+                    f"영역 페이지 파일이 없습니다: {data.docs_dir}/{area.file}",
+                    missing="guides",
                 )
             )
     return out
@@ -433,6 +459,7 @@ def run_docs_checks(
     findings = [f for f in point_findings if f.code in BLOCKING_CODES]
     planned = Generator(col, facts, data, resolver).plan(root)
     findings += check_drift(root, planned)
+    findings += check_area_pages(root, data, tool_dir=tool_dir)
     findings += check_guides(root, col, data)
     doc_files = expand_globs(root, data.s("docs_globs") or [], skip_dirs(data))
     area_pages = [root / data.docs_dir / a.file for a in data.areas]
@@ -448,6 +475,7 @@ __all__ = [
     "BLOCKING_CODES",
     "VALIDATE_KEY",
     "allowed_rules",
+    "check_area_pages",
     "check_drift",
     "check_guides",
     "check_links",

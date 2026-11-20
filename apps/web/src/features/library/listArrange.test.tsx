@@ -43,7 +43,7 @@ describe("리소스 목록 보기(5.2R.63)", () => {
 
   it("기본은 종류별 묶음이고 머리에 디스크립터 제목이 보이며 접힘을 기억한다", async () => {
     mountApp(clients().clients, "/resources");
-    const listbox = await screen.findByRole("listbox", { name: "리소스 목록" });
+    const listbox = await screen.findByRole("group", { name: "리소스 목록" });
     const heads = Array.from(listbox.querySelectorAll<HTMLElement>(".ac-grouphead"));
     expect(heads.map((h) => h.textContent)).toEqual(["문서종류(2)", "설정종류(1)"]);
     expect(screen.getByRole("button", { name: /종류별 · 이름순/ })).toBeTruthy();

@@ -232,7 +232,6 @@ export function TaskTable(props: TaskTableProps) {
           data-rowfocus-host=""
           data-sdd-rowfocus=""
           aria-expanded={!isCollapsed}
-          aria-label={`${formatMessage(text["tasks.stage.toggle"], { stage: title })}, ${formatMessage(text["tasks.stage.progress"], { done: group.done, total: group.total })}`}
           onKeyDown={(e) => {
             if (e.key === "ArrowRight" && isCollapsed) setStageCollapsed(group.key, false);
             else if (e.key === "ArrowLeft" && !isCollapsed) setStageCollapsed(group.key, true);
@@ -254,7 +253,8 @@ export function TaskTable(props: TaskTableProps) {
     const shown = statusTone(task.status, statuses);
     const open = expanded === task.key;
     const conflict = conflicts?.[task.key];
-    const readiness = task.ready ? text["tasks.ready"] : text["tasks.blocked"];
+    // 끝난 작업은 준비/막힘 칩이 없다(명세 §7.3).
+    const readiness = shown.done ? "" : task.ready ? text["tasks.ready"] : text["tasks.blocked"];
     const issues = task.issues ?? [];
     const notice = renderRowNotice?.(task);
     const menu = menuKey === task.key && rowMenuItems ? rowMenuItems(task) : null;
@@ -265,6 +265,7 @@ export function TaskTable(props: TaskTableProps) {
     return (
       <div className="ac-sdd-task" data-sdd-task-key={task.key} data-ready={task.ready ? "" : undefined} data-open={open || undefined} data-selected={selected.has(task.key) || undefined}>
         <div className="ac-sdd-task-line">
+          <span id={`ac-sdd-rowdesc-${task.key}`} className="ac-sdd-sr-only">{formatMessage(text["tasks.rowState"], { status: shown.label, readiness: readiness !== "" ? `, ${readiness}` : "" })}</span>
           {selectable ? (
             <input
               type="checkbox"
@@ -279,7 +280,7 @@ export function TaskTable(props: TaskTableProps) {
             className="ac-sdd-task-title"
             data-sdd-rowfocus=""
             aria-expanded={open}
-            aria-label={`${formatMessage(text["tasks.row"], { title, status: shown.label, readiness })}. ${open ? text["tasks.collapse"] : text["tasks.expand"]}`}
+            aria-describedby={`ac-sdd-rowdesc-${task.key}`}
             onKeyDown={(e) => {
               if (e.target !== e.currentTarget) return;
               if (selectable && e.key === " " && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -316,7 +317,7 @@ export function TaskTable(props: TaskTableProps) {
               {...(onStatusChange ? { onSelect: (id: string) => onStatusChange(task, id) } : {})}
               messages={text}
             />
-            <ToneChip label={readiness} tone={task.ready ? "info" : "neutral"} />
+            {readiness !== "" ? <ToneChip label={readiness} tone={task.ready ? "info" : "neutral"} /> : null}
           </span>
           <TaskFieldChips fields={task.fields} messages={text} />
           {showLinks ? <TaskRunChips links={task.links} {...(openableKinds ? { openableKinds } : {})} {...(onOpenLink ? { onOpen: onOpenLink } : {})} {...(linkStatuses ? { statuses: linkStatuses } : {})} messages={text} /> : null}

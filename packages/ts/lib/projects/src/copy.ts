@@ -48,25 +48,35 @@ export type CopySelections = ReadonlyMap<string, CopySelection>;
 /** 동작 선택지 하나(드롭다운 항목). */
 export interface CopyActionChoice {
   action: string;
-  /** 문구 키(`copy.action.…`). */
+  /** 문구 키(`copy.action.…`). 기본은 가져오기(공용 → 프로젝트) 방향의 문구다. */
   label: MessageRef;
+  /** 복사 방향(`save`·`move` 등)별 문구. 없는 방향은 `label`을 쓴다. */
+  labelByDirection?: Readonly<Record<string, MessageRef>>;
 }
+
+/** 방향에 맞는 선택지 문구(없으면 기본 문구). */
+export function choiceLabel(choice: CopyActionChoice, direction: string): MessageRef {
+  return choice.labelByDirection?.[direction] ?? choice.label;
+}
+
+const SKIP_BY_DIRECTION = { save: { key: "copy.action.skip.save" }, move: { key: "copy.action.skip.move" } } as const;
+const SKIP_KEEP_BY_DIRECTION = { save: { key: "copy.action.skip_keep.save" }, move: { key: "copy.action.skip_keep.move" } } as const;
 
 /** 대상 상태 → 선택지(§5.1 표). 바꾸려면 이 표만 고친다. */
 export const COPY_ACTION_CHOICES: Readonly<Record<string, readonly CopyActionChoice[]>> = {
   [S.ABSENT]: [
     { action: A.COPY, label: { key: "copy.action.copy" } },
-    { action: A.SKIP, label: { key: "copy.action.skip" } },
+    { action: A.SKIP, label: { key: "copy.action.skip" }, labelByDirection: SKIP_BY_DIRECTION },
   ],
   [S.IDENTICAL]: [
     { action: A.REUSE, label: { key: "copy.action.reuse" } },
     { action: A.RENAME, label: { key: "copy.action.rename" } },
-    { action: A.SKIP, label: { key: "copy.action.skip" } },
+    { action: A.SKIP, label: { key: "copy.action.skip" }, labelByDirection: SKIP_BY_DIRECTION },
   ],
   [S.DIFFERENT]: [
     { action: A.OVERWRITE, label: { key: "copy.action.overwrite" } },
     { action: A.RENAME, label: { key: "copy.action.rename" } },
-    { action: A.SKIP, label: { key: "copy.action.skip_keep" } },
+    { action: A.SKIP, label: { key: "copy.action.skip_keep" }, labelByDirection: SKIP_KEEP_BY_DIRECTION },
   ],
 };
 

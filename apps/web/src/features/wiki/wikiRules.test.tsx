@@ -64,8 +64,22 @@ describe("공용 구성 › 위키 규칙", () => {
     expect(await within(dialog).findByText("이름을 적으세요")).toBeTruthy();
     fireEvent.change(within(dialog).getByLabelText(/^이름/), { target: { value: "새 규칙" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "만들기" }));
-    await waitFor(() => expect(createWikiRules).toHaveBeenCalledWith({ name: "새 규칙" }), LONG);
+    await waitFor(() => expect(createWikiRules).toHaveBeenCalledWith({ name: "새 규칙", id: "k-rules" }), LONG);
     await waitFor(() => expect(router.state.location.pathname).toBe("/wiki-rules/rn"), LONG);
+  });
+
+  it("새 위키 규칙: 한글 이름이면 id를 rules_kind 기준으로 미리 보여 주고 겹치면 -2를 붙이며 직접 고칠 수 있다", async () => {
+    const created = view({ rules: { ...RULE, id: "mine", name: "한글" } as never });
+    const createWikiRules = vi.fn(async () => ({ value: created, version_hash: "rv0" }));
+    rulesSetup("/wiki-rules", { getWikiInfo: vi.fn(async () => ({ ...INFO, rules_kind: "named-kind" })), createWikiRules });
+    fireEvent.click(await screen.findByRole("button", { name: "새 위키 규칙" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    fireEvent.change(within(dialog).getByLabelText(/^이름/), { target: { value: "한글" } });
+    const idInput = within(dialog).getByLabelText("id") as HTMLInputElement;
+    expect(idInput.value).toBe("named-kind");
+    fireEvent.change(idInput, { target: { value: "mine" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "만들기" }));
+    await waitFor(() => expect(createWikiRules).toHaveBeenCalledWith({ name: "한글", id: "mine" }), LONG);
   });
 
   it("규칙 탭의 스키마 폼에서 고치면 저장 안 됨이 되고 저장은 If-Match(정의 버전)로 PUT 한다", async () => {

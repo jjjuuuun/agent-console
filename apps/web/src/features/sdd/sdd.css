@@ -45,6 +45,9 @@
 /* 작업 탭 */
 .sdd-tasks { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 0; flex: 1; }
 .sdd-task-table { flex: 1; min-height: 320px; }
+/* 작업 탭: 가상 목록이 자기 스크롤 영역(.ac-sdd-scroll)을 쓰도록, 탭 패널까지 높이를 이어 준다(화면 본문이 스크롤하면 가상화가 동작하지 않는다). */
+.sdd-screen-body > .ac-tabs:has(> .ac-tab-panel:not([hidden]) > .sdd-tasks) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sdd-screen-body > .ac-tabs > .ac-tab-panel:not([hidden]):has(> .sdd-tasks) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sdd-issues { padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); }
 .sdd-multi { list-style: none; margin: 0; padding: var(--ac-space-2); display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 180px; max-height: 280px; overflow: auto; }
 

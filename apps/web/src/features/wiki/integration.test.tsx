@@ -221,6 +221,7 @@ describe("메모리 화면 항목 메뉴", () => {
       {},
       { listWikis: vi.fn(async () => [W("a1", "첫 위키")]), listWikiPages: vi.fn(async () => ({ items: [], truncated: false })), listWikiTemplates: vi.fn(async () => []), getWikiInfo: vi.fn(async () => ({ pages_root: ".cfg/wikis" })) },
     );
+    vi.mocked(clients.space).mockImplementation(() => rest as never);
     mountApp(clients, "/memory?prj=p1&entry=e1");
     fireEvent.click(within(await screen.findByRole("region", { name: "k-one" }, LONG)).getByRole("button", { name: "더 보기" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "위키에 올리기…" }, LONG));

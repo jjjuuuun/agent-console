@@ -7,11 +7,11 @@ import { Banner, Button, Choice, Dialog, Icon, StatusIcon } from "@agent-console
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryImportProblem, MemoryImportResult } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { sizeMessages } from "./format";
 import { DEFAULT_IMPORT_POLICY, IMPORT_POLICIES } from "./memoryConfig";
 import { memoryMessages as t } from "./messages";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface ImportDialogProps {
   onClose: () => void;
@@ -43,7 +43,7 @@ function ProblemList({ problems }: { problems: readonly MemoryImportProblem[] })
 }
 
 export function ImportDialog({ onClose, onViewImported, onImported }: ImportDialogProps) {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const [file, setFile] = useState<File | null>(null);
   const [policy, setPolicy] = useState(DEFAULT_IMPORT_POLICY);
   const [preview, setPreview] = useState<Preview | null>(null);

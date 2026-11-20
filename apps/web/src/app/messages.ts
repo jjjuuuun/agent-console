@@ -1,5 +1,6 @@
 import type { ConnectionStatus } from "@agent-console/api-client";
 import type { ThemeChoice } from "@agent-console/ui";
+import { ERROR_CODES } from "@agent-console/contracts";
 import { objectParticle } from "../lib/korean";
 
 /**
@@ -8,6 +9,10 @@ import { objectParticle } from "../lib/korean";
  * 다른 언어를 지원하게 되면 이 객체를 컨텍스트로 바꾼다.
  */
 export const messages = {
+  /** 서버 오류 코드별 사람이 읽는 문구(영문 서버 원문 대신 보인다). 코드는 `ERROR_CODES`에서 읽는다. */
+  errorByCode: {
+    [ERROR_CODES.PROJECT_CONFIG_READONLY]: "이 폴더에는 쓸 수 없어 구성을 가져오거나 고치거나 지우지 못했습니다",
+  } as Readonly<Record<string, string>>,
   app: { name: "Agent Console", mainLabel: "본문", booting: "서버에 연결하는 중…", skipToMain: "본문으로 건너뛰기" },
   boot: {
     /** 서버가 켜지는 중 자동 재시도 상태: 연결되면 저절로 열린다 */
@@ -357,7 +362,7 @@ export const messages = {
     savedToast: "저장했습니다",
     missingVersion: "저장 정보가 없습니다. 새로고침하세요.",
     /** 저장은 됐지만 서버가 경고한 이슈(`X-Console-Issues`) */
-    issues: { title: "저장했지만 확인할 경고가 있습니다", region: "저장 경고", at: (path: string) => `(${path})` },
+    issues: { title: "저장했지만 확인할 경고가 있습니다", region: "저장 경고", at: (path: string) => `(${path})`, pathSeparator: " › ", pathIndex: (n: number) => `${n}번째` },
     conflict: {
       region: "저장 충돌",
       title: "다른 곳에서 먼저 수정되었습니다",

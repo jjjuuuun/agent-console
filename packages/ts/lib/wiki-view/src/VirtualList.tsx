@@ -85,12 +85,15 @@ export function VirtualList<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex]);
   const style: CSSProperties = { overflow: "auto", position: "relative", minHeight: 0, ...(height !== undefined ? { height } : { height: "100%" }), ...(maxHeight !== undefined ? { maxHeight } : {}) };
+  // 활성 행이 가상화로 DOM에 없으면 가리킬 id가 없으므로 속성을 뺀다(`aria-valid-attr-value`). 다시 그려지면 돌아온다.
+  const virtualItems = v.getVirtualItems();
+  const activeRendered = activeIndex === null || activeIndex === undefined || activeIndex < 0 || virtualItems.some((vi) => vi.index === activeIndex);
   return (
     <div
       ref={scrollRef}
       role={role}
       aria-label={ariaLabel}
-      aria-activedescendant={activeDescendant}
+      aria-activedescendant={activeRendered ? activeDescendant : undefined}
       aria-multiselectable={ariaMultiselectable}
       aria-busy={ariaBusy || undefined}
       aria-rowcount={role === "grid" || role === "treegrid" ? items.length : undefined}
@@ -101,7 +104,7 @@ export function VirtualList<T>({
       onFocus={onFocus}
     >
       <div style={{ height: v.getTotalSize(), position: "relative", width: "100%" }} role="presentation">
-        {v.getVirtualItems().map((vi) => {
+        {virtualItems.map((vi) => {
           const item = items[vi.index];
           if (item === undefined) return null;
           return (

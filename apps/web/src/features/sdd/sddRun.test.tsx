@@ -245,13 +245,13 @@ describe("작업 탭: 필드 거르기·단축키·인라인 안내 (6R.20i)", (
 
   it("행에 포커스가 있으면 S는 상태 메뉴, O는 문서에서 열기를 한다(입력창 밖)", async () => {
     const { router } = setup("/specs/sp1?prj=p1&tab=tasks");
-    const row = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    const row = await screen.findByRole("button", { name: /작업 T1$/ }, LONG);
     row.focus();
     fireEvent.keyDown(row, { key: "s" });
     expect(await screen.findByRole("menu", {}, LONG)).toBeTruthy();
     cleanup();
     const second = setup("/specs/sp1?prj=p1&tab=tasks");
-    const r2 = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    const r2 = await screen.findByRole("button", { name: /작업 T1$/ }, LONG);
     r2.focus();
     fireEvent.keyDown(r2, { key: "o" });
     await waitFor(() => expect(second.router.state.location.search).toContain("tab=documents"), LONG);
@@ -260,7 +260,7 @@ describe("작업 탭: 필드 거르기·단축키·인라인 안내 (6R.20i)", (
 
   it("Shift+F10은 행 컨텍스트 메뉴(상태·실행·문서에서 열기·키 복사)를 연다", async () => {
     setup("/specs/sp1?prj=p1&tab=tasks");
-    const row = await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
+    const row = await screen.findByRole("button", { name: /작업 T1$/ }, LONG);
     row.focus();
     fireEvent.keyDown(row, { key: "F10", shiftKey: true });
     const menu = await screen.findByRole("menu", { name: "작업 T1 메뉴" }, LONG);
@@ -283,16 +283,16 @@ describe("작업 탭: 필드 거르기·단축키·인라인 안내 (6R.20i)", (
       index: { tasks: [task("T1", "s-open", { stage: { id: "g1", title: "단계 하나" } as ParsedTask["stage"] }), task("T3", "s-end", { stage: { id: "g2", title: "단계 둘" } as ParsedTask["stage"] })], stages: [{ id: "g1", title: "단계 하나", document: "d-tasks", line: 1 }, { id: "g2", title: "단계 둘", document: "d-tasks", line: 3 }] },
     });
     setup("/specs/sp1?prj=p1&tab=tasks", { view }, storage);
-    await screen.findByRole("button", { name: /^작업 T1, 상태/ }, LONG);
-    expect(screen.queryByRole("button", { name: /^작업 T3, 상태/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /단계 하나 단계 접기·펼치기/ }));
-    expect(screen.queryByRole("button", { name: /^작업 T1, 상태/ })).toBeNull();
+    await screen.findByRole("button", { name: /작업 T1$/ }, LONG);
+    expect(screen.queryByRole("button", { name: /작업 T3$/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^단계 하나/ }));
+    expect(screen.queryByRole("button", { name: /작업 T1$/ })).toBeNull();
     expect(JSON.parse(store.get("ac.sdd.stage.sp1") ?? "{}")).toEqual({ g1: true });
     // 다시 열면 복원된다
     cleanup();
     setup("/specs/sp1?prj=p1&tab=tasks", { view }, storage);
-    await screen.findByRole("button", { name: /단계 하나 단계 접기·펼치기/ }, LONG);
-    expect(screen.queryByRole("button", { name: /^작업 T1, 상태/ })).toBeNull();
+    await screen.findByRole("button", { name: /^단계 하나/ }, LONG);
+    expect(screen.queryByRole("button", { name: /작업 T1$/ })).toBeNull();
   });
 });
 

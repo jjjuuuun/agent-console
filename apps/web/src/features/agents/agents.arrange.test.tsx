@@ -68,7 +68,7 @@ describe("에이전트 목록 묶기(화면)", () => {
     ];
     const { clients: c } = clients(list);
     mountApp(c, "/agents");
-    const listbox = await screen.findByRole("listbox", { name: "에이전트 목록" });
+    const listbox = await screen.findByRole("group", { name: "에이전트 목록" });
     const heads = Array.from(listbox.querySelectorAll<HTMLElement>(".ac-grouphead"));
     expect(heads.map((h) => h.textContent)).toEqual(["개발팀(1)", "백엔드(1)", "(폴더 없음)(1)"]);
     fireEvent.click(heads[0]!);
@@ -81,7 +81,7 @@ describe("에이전트 목록 묶기(화면)", () => {
     const updateAgentVersioned = vi.fn(async (_id: string, a: unknown) => ({ value: a, version_hash: "h2" }));
     const { clients: c } = clients(list, { updateAgentVersioned });
     mountApp(c, "/agents/a");
-    const listbox = await screen.findByRole("listbox", { name: "에이전트 목록" });
+    const listbox = await screen.findByRole("group", { name: "에이전트 목록" });
     await waitFor(() => expect(within(listbox).getByText("에이전트-a")).toBeTruthy());
     fireEvent.keyDown(document.body, { key: "m" });
     const dialog = await screen.findByRole("dialog", { name: "폴더로 이동" });

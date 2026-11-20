@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from conftest import build_notes, notes_tool
 from extdocs import SKIP_MESSAGE, main
-from extdocs_common import TOOL_DIR, Finding, SymbolResolver, collect, member_src_paths
+from extdocs_common import TOOL_DIR, Area, Finding, SymbolResolver, collect, member_src_paths
 from extdocs_docs import allowed_rules, check_links, expand_globs, public_lint, run_docs_checks
 from extdocs_generate import Generator, write_plan
 from extdocs_points import check_points
@@ -58,11 +59,20 @@ def fill_guides(repo: Repo) -> Path:
     return page
 
 
+def write_area_pages(repo: Repo) -> None:
+    """``areas.yaml``의 영역 페이지 중 아직 없는 것을 제목만 있는 파일로 만든다."""
+    for area in tool_data().areas:
+        page = repo.root / "docs/extending" / area.file
+        if not page.exists():
+            page.write_text(f"# {area.title}\n", encoding="utf-8")
+
+
 @pytest.fixture
 def documented(repo: Repo) -> Repo:
     (repo.root / "docs/extending").mkdir(parents=True)
     generate(repo, scaffold=True)
     fill_guides(repo)
+    write_area_pages(repo)
     generate(repo)
     return repo
 
@@ -375,10 +385,11 @@ def test_link_to_unwritten_area_page_is_guides_category(documented: Repo) -> Non
     """지도가 영역 페이지보다 먼저 생겨도 --allow-missing guides에서 경고, 다른 깨진 링크는 오류."""
     page = documented.root / "docs/extending/README.md"
     area_file = tool_data().areas[0].file
+    (documented.root / "docs/extending" / area_file).unlink()
     page.write_text(f"# 지도\n\n[영역]({area_file})\n", encoding="utf-8")
-    findings = [f for f in docs_check(documented) if f.code == "link-broken"]
-    assert [f.missing for f in findings] == ["guides"]
-    assert errors(findings) == ["link-broken"]
+    findings = [f for f in docs_check(documented) if f.code in ("link-broken", "area-page-missing")]
+    assert [f.missing for f in findings] == ["guides", "guides"]
+    assert errors(findings) == ["area-page-missing", "link-broken"]
     assert errors(findings, ("guides",)) == []
     page.write_text("# 지도\n\n[없음](no-such-page.md)\n", encoding="utf-8")
     assert errors(docs_check(documented), ("guides",)).count("link-broken") == 1
@@ -394,3 +405,30 @@ def test_doctest_blocks_share_names_within_a_file(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert run_doctests(tmp_path, [page], SymbolResolver([])) == []
+
+
+def test_area_page_file_must_exist(documented: Repo) -> None:
+    """areas.yaml의 ``file``이 문서 폴더에 없으면 오류(선언이 없는 영역도), guides에서 경고."""
+    area = tool_data().areas[0]
+    assert "area-page-missing" not in errors(docs_check(documented))
+    (documented.root / "docs/extending" / area.file).unlink()
+    findings = [f for f in docs_check(documented) if f.code == "area-page-missing"]
+    assert len(findings) == 1
+    assert findings[0].where.endswith(f"areas.yaml [{area.id}]")
+    assert f"docs/extending/{area.file}" in findings[0].message
+    assert errors(findings) == ["area-page-missing"]
+    assert errors(findings, ("guides",)) == []
+
+
+def test_area_with_wrong_file_name_fails(documented: Repo) -> None:
+    """``file``을 없는 이름으로 바꾸면(문서는 그대로) 검사가 잡는다."""
+    base = tool_data()
+    areas = (Area(base.areas[0].id, base.areas[0].title, "no-such-area.md"), *base.areas[1:])
+    data = replace(base, areas=areas)
+    col = collect(documented.root, data)
+    resolver = SymbolResolver(member_src_paths(col.members))
+    findings = run_docs_checks(documented.root, col, data, resolver, tool_dir=TOOL_DIR)
+    missing = [f for f in findings if f.code == "area-page-missing"]
+    assert [f.message for f in missing] == [
+        "영역 페이지 파일이 없습니다: docs/extending/no-such-area.md"
+    ]

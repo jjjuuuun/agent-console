@@ -52,6 +52,10 @@ class ProbeIO:
     stderr: int = 2
 
 
+DEFAULT_IO = ProbeIO()
+"""기본 중계 대상(표준 입출력 0·1·2). 불변이라 기본 인자로 함께 쓴다."""
+
+
 def _write_all(fd: int, data: bytes) -> bool:
     view = memoryview(data)
     try:
@@ -183,7 +187,7 @@ class _Forwarder:
 def run_probe(
     invocation: Sequence[str] | str,
     *,
-    io: ProbeIO = ProbeIO(),  # noqa: B008 - 불변 값
+    io: ProbeIO = DEFAULT_IO,
     capture_bytes: int = DEFAULT_CAPTURE_BYTES,
     grace_seconds: float = DEFAULT_GRACE_SECONDS,
     handle_signals: bool = True,

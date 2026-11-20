@@ -38,6 +38,17 @@ describe("TextEditor", () => {
     expect(viewOf(container).state.readOnly).toBe(true);
   });
 
+  it("내용 영역에 tab 순서를 줘 스크롤 영역에 키보드가 닿는다(읽기 전용은 aria-readonly)(axe scrollable-region-focusable)", () => {
+    const { container, rerender } = render(<TextEditor value="a" readOnly ariaLabel="x" />);
+    const content = container.querySelector(".cm-content") as HTMLElement;
+    expect(content.getAttribute("tabindex")).toBe("0");
+    expect(content.getAttribute("aria-readonly")).toBe("true");
+    rerender(<TextEditor value="a" ariaLabel="x" />);
+    const editable = container.querySelector(".cm-content") as HTMLElement;
+    expect(editable.hasAttribute("aria-readonly")).toBe(false);
+    expect(editable.getAttribute("tabindex")).toBe("0");
+  });
+
   it("maxBytes 초과면 읽기 전용이 되고 onTooLarge에 바이트 수를 알린다(한글은 3바이트)", () => {
     const onTooLarge = vi.fn();
     const { container } = render(<TextEditor value="가나다" maxBytes={8} onTooLarge={onTooLarge} ariaLabel="x" messages={{ tooLarge: "너무 큼" }} />);

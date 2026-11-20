@@ -47,14 +47,16 @@ describe("GroupHeader", () => {
 });
 
 describe("ListPane groups", () => {
-  it("머리·group·항목 구조, 선택은 모든 사본에 켜짐", () => {
+  it("머리 단추는 listbox 밖(바깥 group + 묶음마다 listbox), 선택은 모든 사본에 켜짐", () => {
     render(<Harness />);
-    expect(screen.getByRole("listbox", { name: "목록" })).toBeTruthy();
+    const outer = screen.getByRole("group", { name: "목록" });
+    expect(outer.querySelector(":scope > li > ul[role=listbox]")).not.toBeNull();
+    for (const lb of screen.getAllByRole("listbox")) expect(lb.querySelector("button")).toBeNull();
     const heads = screen.getAllByRole("button");
     expect(heads.map((h) => h.getAttribute("aria-expanded"))).toEqual(["true", "true", "true"]);
     const selected = screen.getAllByRole("option").filter((o) => o.getAttribute("aria-selected") === "true");
     expect(selected).toHaveLength(2);
-    const group = screen.getAllByRole("group")[0]!;
+    const group = screen.getAllByRole("listbox")[0]!;
     expect(group.getAttribute("aria-labelledby")).toBe(heads[0]!.id);
     expect(heads[0]!.getAttribute("aria-controls")).toBe(group.id);
   });
@@ -89,6 +91,28 @@ describe("ListPane groups", () => {
     expect(document.activeElement?.textContent).toBe("다");
     fireEvent.keyDown(document.activeElement!, { key: "Home" });
     expect(document.activeElement).toBe(head);
+  });
+  it("제어 문자가 든 묶음 키(라벨 없음)도 ↓·↑·Home·End로 오간다", () => {
+    const gs: ListPaneGroup<Row>[] = [
+      { key: "\u0000none", label: undefined, depth: 0, count: 1, collapsed: false, items: [c] },
+      { key: "라벨", label: "라벨", depth: 0, count: 2, collapsed: false, items: [a, b] },
+    ];
+    render(<ListPane items={[]} groups={gs} onSelect={() => {}} renderItem={(r) => r.name} messages={msgs} />);
+    const heads = screen.getAllByRole("button").filter((el) => el.hasAttribute("aria-expanded"));
+    heads[1]!.focus();
+    fireEvent.keyDown(document.activeElement!, { key: "Home" });
+    expect(document.activeElement).toBe(heads[0]);
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toBe("다");
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowUp" });
+    expect(document.activeElement).toBe(heads[0]);
+    fireEvent.keyDown(document.activeElement!, { key: "End" });
+    expect(document.activeElement?.textContent).toBe("나");
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowUp" });
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowUp" });
+    expect(document.activeElement).toBe(heads[1]);
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowUp" });
+    expect(document.activeElement?.textContent).toBe("다");
   });
   it("Tab 정지점은 하나(roving)", () => {
     render(<Harness />);

@@ -2,11 +2,11 @@
 import { useRef, useState } from "react";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef, MemoryScopeSummary } from "@agent-console/contracts/memory";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { relativeTime } from "./format";
 import { MEMORY_LIMITS } from "./memoryConfig";
 import { memoryMessages as t } from "./messages";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface PurgeDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -55,7 +55,7 @@ type Phase = { step: 1 } | { step: 2 } | { step: 3; done: number; total: number;
 
 /** 범위의 항목을 차례로 완전 삭제한다(지운 항목·보관 포함). 중간에 [중지]할 수 있고 실패는 사유 목록으로 남긴다. */
 export function ClearScopeDialog({ scope, summary, label, onClose, onDone }: ClearScopeDialogProps) {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const [phase, setPhase] = useState<Phase>({ step: 1 });
   const [typed, setTyped] = useState("");
   const stop = useRef(false);

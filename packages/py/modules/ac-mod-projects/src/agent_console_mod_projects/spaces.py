@@ -3,7 +3,9 @@
 공간 하나 = 등록 폴더의 ``<config_dir>/``(``ac-project-space.open_space``). 여는 것은 쓰기가 없고
 파일 핸들도 잡지 않지만, 정의 저장소의 버전 기록소(주입이 없으면 메모리)를 공간과 함께 들고 있으므로
 캐시한다. 상한(최근에 쓴 것부터 남김)과 유휴 시간이 지나면 뺀다(시간은 다음 접근 때 본다 — 타이머
-스레드 없음). 폴더가 바뀌거나(경로 다시 지정) 종류·구성 폴더 이름이 바뀌면 새로 연다.
+스레드 없음). 폴더가 바뀌거나(경로 다시 지정) 종류·구성 폴더 이름이 바뀌면 새로 연다. 연 뒤
+구성 폴더의 쓰기 가능 여부가 바뀌면(``chmod`` 등) 같은 버전 기록소로 다시 열어 ``config_writable``이
+지금 상태를 따르게 한다.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from agent_console_project_space import (
     ProjectSpace,
     open_space,
 )
-from agent_console_store import DefinitionStore, VersionRepository
+from agent_console_store import DefinitionStore, InMemoryVersionRepository, VersionRepository
 
 type FolderResolver = Callable[[str], str | None]
 """등록 id → 정규화한 폴더(지정 안 됨 = None). 모르는 id는 ``LookupError``."""
@@ -37,6 +39,7 @@ class _Entry:
     key: tuple[Any, ...]
     space: ProjectSpace
     used: float
+    versions: VersionRepository
 
 
 class ProjectSpaceCache:
@@ -85,6 +88,7 @@ class ProjectSpaceCache:
         kinds = tuple(getattr(k, "name", k) for k in options.get("kinds", ()))
         key = (folder, options.get("config_dir"), kinds, id(options.get("layout")))
         now = self._clock()
+        reuse: VersionRepository | None = None
         with self._lock:
             self._expire(now)
             entry = self._entries.get(project_id)
@@ -92,17 +96,23 @@ class ProjectSpaceCache:
                 if not Path(folder).is_dir():
                     self._entries.pop(project_id, None)
                     raise FolderMissing(f"project folder is missing: {Path(folder).name}")
-                entry.used = now
-                self._entries.move_to_end(project_id)
-                return entry.space
-        if self._versions is not None:
+                space = entry.space
+                if space.files.is_writable(space.root) == space.config_writable:
+                    entry.used = now
+                    self._entries.move_to_end(project_id)
+                    return space
+                reuse = entry.versions  # 쓰기 가능 여부만 바뀜: 버전 기록은 이어 쓴다
+        repo = reuse
+        if repo is None and self._versions is not None:
             root = Path(folder) / str(options.get("config_dir", DEFAULT_CONFIG_DIR))
             repo = self._versions(project_id, root)
-            if repo is not None:
-                options["versions"] = repo
+        if repo is None:
+            repo = options.get("versions")
+        versions: VersionRepository = repo if repo is not None else InMemoryVersionRepository()
+        options["versions"] = versions
         space = open_space(folder, **options)
         with self._lock:
-            self._entries[project_id] = _Entry(key, space, now)
+            self._entries[project_id] = _Entry(key, space, now, versions)
             self._entries.move_to_end(project_id)
             while len(self._entries) > self._max_open:
                 self._entries.popitem(last=False)

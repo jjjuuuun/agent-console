@@ -20,7 +20,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, NoReturn
 
-from ._probe import SPAWN_FAILED_EXIT_CODE, ProbeIO, run_probe
+from ._probe import DEFAULT_IO, SPAWN_FAILED_EXIT_CODE, ProbeIO, run_probe
 from ._record import (
     DEFAULT_CAPTURE_BYTES,
     ProbeOutcome,
@@ -106,7 +106,7 @@ def _reraise_signal(signum: int) -> None:  # pragma: no cover - 프로세스를 
 def main(
     argv: Sequence[str] | None = None,
     *,
-    io: ProbeIO = ProbeIO(),  # noqa: B008 - 불변 값
+    io: ProbeIO = DEFAULT_IO,
     handle_signals: bool = True,
     redactor: Callable[[], Callable[[Any], Any]] = default_redactor,
     reraise_signal: Callable[[int], None] = _reraise_signal,

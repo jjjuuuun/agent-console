@@ -3,12 +3,13 @@
  * 질의 키는 `["memory", 종류, …]` — 실시간 변경·쓰기 뒤 `["memory"]` 한 번으로 무효화한다.
  */
 import { useCallback, useMemo } from "react";
-import { keepPreviousData, useInfiniteQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { ApiError, memoryScopeText, type ListMemoryEntriesParams, type RestClient } from "@agent-console/api-client";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
+import { ApiError, memoryScopeText, type ListMemoryEntriesParams, type MemoryClient } from "@agent-console/api-client";
 import type { MemoryEntry, MemoryEntryPage, MemoryEntrySummary, MemoryScopeKindList, MemoryScopeRef, MemoryScopeSummary, MemoryTagList, MemoryVersion, MemoryVersionSummary } from "@agent-console/contracts/memory";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery, useWorkspaceSettings } from "../../app/queries";
 import { useModule } from "../../modules";
+import { useProjects } from "../projects";
 import { LIMIT_OPTION_KEYS, MEMORY_LIMITS, MEMORY_ROLE, SETTINGS_SECTION } from "./memoryConfig";
 import { sortParams, type MemoryViewState } from "./memoryUrl";
 
@@ -24,17 +25,37 @@ export const memoryKeys = {
   limits: (moduleId: string) => ["memory", "limits", moduleId] as const,
 };
 
+/**
+ * 메모리를 보는 공간의 프로젝트 id. 프로젝트 기능이 켜져 있고 현재 프로젝트가 있으면 그 프로젝트 폴더의 메모리 저장소(`?project=`),
+ * 아니면 null(앱 DB = 공용). 질의 키에 넣어 공간마다 캐시를 따로 둔다.
+ */
+export function useMemoryProject(): string | null {
+  const projects = useProjects();
+  return projects.enabled ? projects.current : null;
+}
+
+/** 현재 공간의 메모리 질의. 키 뒤에 공간 표지를 붙인다(무효화는 앞쪽 `["memory"]` 그대로). */
+function useMemoryQuery<T>(
+  key: readonly unknown[],
+  load: (rest: MemoryClient) => Promise<T>,
+  options: Omit<UseQueryOptions<T, Error>, "queryKey" | "queryFn"> = {},
+): UseQueryResult<T, Error> {
+  const rest = useMemoryRest();
+  const project = useMemoryProject();
+  return useQuery<T, Error>({ queryKey: [...key, "space", project], queryFn: () => load(rest), ...options });
+}
+
 export function useMemoryKinds(): UseQueryResult<MemoryScopeKindList, Error> {
-  return useApiQuery(memoryKeys.kinds(), (rest) => rest.listMemoryScopeKinds());
+  return useMemoryQuery(memoryKeys.kinds(), (rest) => rest.listMemoryScopeKinds());
 }
 
 export function useMemoryScopes(): UseQueryResult<MemoryScopeSummary[], Error> {
-  return useApiQuery(memoryKeys.scopes(), (rest) => rest.listMemoryScopes());
+  return useMemoryQuery(memoryKeys.scopes(), (rest) => rest.listMemoryScopes());
 }
 
 /** 서버 태그 목록(팝오버를 열 때만 부른다). 현재 범위·보관 포함 필터를 그대로 넘긴다. */
 export function useMemoryTags(scope: MemoryScopeRef | null, includeArchived: boolean, enabled: boolean): UseQueryResult<MemoryTagList, Error> {
-  return useApiQuery(
+  return useMemoryQuery(
     memoryKeys.tags(scope, includeArchived),
     (rest) => rest.listMemoryTags({ ...(scope === null ? {} : { scopes: [scope] }), includeArchived }),
     { enabled, staleTime: 0, meta: { silentBackgroundError: true } },
@@ -70,11 +91,12 @@ export interface EntryList {
 
 /** 항목 목록(커서 쪽 넘김). 정렬은 서버가 하고 화면은 다시 정렬하지 않는다. 쪽을 이어 붙일 때 같은 id는 한 번만 둔다. */
 export function useMemoryEntries(view: MemoryViewState, q: string): EntryList {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
+  const project = useMemoryProject();
   const params = useMemo(() => entriesParams(view, q), [view, q]);
   const key = JSON.stringify(params);
   const query = useInfiniteQuery<MemoryEntryPage, Error, { pages: MemoryEntryPage[] }, readonly unknown[], string | null>({
-    queryKey: memoryKeys.entries(key),
+    queryKey: [...memoryKeys.entries(key), "space", project],
     queryFn: ({ pageParam }) => rest.listMemoryEntries({ ...params, cursor: pageParam }),
     initialPageParam: null,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
@@ -112,15 +134,15 @@ export function useMemoryEntries(view: MemoryViewState, q: string): EntryList {
 }
 
 export function useMemoryEntry(id: string | null, includeDeleted: boolean): UseQueryResult<MemoryEntry, Error> {
-  return useApiQuery(memoryKeys.entry(id ?? ""), (rest) => rest.getMemoryEntry(id ?? "", { includeDeleted }), { enabled: id !== null, retry: false, staleTime: 0 });
+  return useMemoryQuery(memoryKeys.entry(id ?? ""), (rest) => rest.getMemoryEntry(id ?? "", { includeDeleted }), { enabled: id !== null, retry: false, staleTime: 0 });
 }
 
 export function useMemoryVersions(id: string | null, enabled: boolean): UseQueryResult<MemoryVersionSummary[], Error> {
-  return useApiQuery(memoryKeys.versions(id ?? ""), (rest) => rest.listMemoryVersions(id ?? ""), { enabled: enabled && id !== null, staleTime: 0 });
+  return useMemoryQuery(memoryKeys.versions(id ?? ""), (rest) => rest.listMemoryVersions(id ?? ""), { enabled: enabled && id !== null, staleTime: 0 });
 }
 
 export function useMemoryVersion(id: string | null, version: number | null): UseQueryResult<MemoryVersion, Error> {
-  return useApiQuery(memoryKeys.version(id ?? "", version ?? 0), (rest) => rest.getMemoryVersion(id ?? "", version ?? 0), {
+  return useMemoryQuery(memoryKeys.version(id ?? "", version ?? 0), (rest) => rest.getMemoryVersion(id ?? "", version ?? 0), {
     enabled: id !== null && version !== null,
     staleTime: Infinity,
   });
@@ -160,8 +182,10 @@ export function useInvalidateMemory(): () => Promise<void> {
 }
 
 /** 호출 함수에 주입할 REST 클라이언트(훅 밖 비동기 동작이 쓴다). */
-export function useMemoryRest(): RestClient {
-  return useApi().rest;
+export function useMemoryRest(): MemoryClient {
+  const { rest, space } = useApi();
+  const project = useMemoryProject();
+  return useMemo(() => (project === null ? rest : space(project)), [rest, space, project]);
 }
 
 export function isApiError(e: unknown, code: string): e is ApiError {

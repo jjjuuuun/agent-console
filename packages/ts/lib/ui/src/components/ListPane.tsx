@@ -77,7 +77,8 @@ function defaultGetId(item: unknown): string {
 }
 
 /**
- * 마스터 목록 패널(제어형). `role=listbox`, 한 개의 Tab 정지점(roving), `↑↓ Home End`로 포커스 이동,
+ * 마스터 목록 패널(제어형). `role=listbox`(묶음이 있으면 묶음 머리 단추가 listbox 안에 올 수 없으므로 바깥은 `role=group` 이름 `listLabel`이고
+ * 묶음마다 머리 아래에 `listbox`가 하나씩 있다), 한 개의 Tab 정지점(roving), `↑↓ Home End`로 포커스 이동,
  * `Enter`/`Space`/클릭으로 선택. 검색 입력에서 `↓`를 누르면 목록으로 이동한다. 크기 조절은 호출자(SplitPane 등)가 한다.
  */
 export function ListPane<T>({
@@ -161,7 +162,14 @@ export function ListPane<T>({
   const focusEntry = (navKey: string | undefined) => {
     if (navKey === undefined) return;
     setFocusKey(navKey);
-    listRef.current?.querySelector<HTMLElement>(`[data-nav-key="${CSS.escape(navKey)}"]`)?.focus();
+    // navKey에 제어 문자가 있을 수 있어 선택자 문자열 대신 속성값을 직접 비교한다.
+    const nodes = listRef.current?.querySelectorAll<HTMLElement>("[data-nav-key]") ?? [];
+    for (const node of nodes) {
+      if (node.dataset.navKey === navKey) {
+        node.focus();
+        break;
+      }
+    }
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
@@ -262,7 +270,7 @@ export function ListPane<T>({
         <div className="ac-listpane-slot">{empty}</div>
       ) : (
         <div ref={scrollRef} className="ac-listpane-scroll">
-        <ul ref={listRef} role="listbox" aria-label={messages.listLabel} className="ac-listpane-list" data-actions={hasActions ? "true" : undefined} onKeyDown={onKeyDown}>
+        <ul ref={listRef} role={groups === undefined ? "listbox" : "group"} aria-label={messages.listLabel} className="ac-listpane-list" data-actions={hasActions ? "true" : undefined} onKeyDown={onKeyDown}>
           {groups === undefined
             ? entries.map((e, i) => renderRow(e, i))
             : (() => {
@@ -296,7 +304,7 @@ export function ListPane<T>({
                         />
                       </div>
                       {shown ? (
-                        <ul id={bodyId} role="group" aria-labelledby={headId} className="ac-listpane-group" style={{ "--ac-group-depth": Math.min(g.depth, 3) } as CSSProperties}>
+                        <ul id={bodyId} role="listbox" aria-labelledby={headId} className="ac-listpane-group" style={{ "--ac-group-depth": Math.min(g.depth, 3) } as CSSProperties}>
                           {g.items.map((item) => {
                             const id = getItemId(item);
                             return renderRow({ navKey: `r\u001f${g.key}\u001f${id}`, kind: "row", id, item }, rowIndex++);

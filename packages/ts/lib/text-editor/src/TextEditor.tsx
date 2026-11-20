@@ -195,8 +195,12 @@ export function TextEditor({
         "aria-label": ariaLabel,
         ...(tooLarge && text.tooLarge ? { "aria-description": text.tooLarge } : {}),
         "data-ac-editable": "",
+        // 스크롤 영역(.cm-scroller)은 tabindex=-1이라 axe가 "초점을 받는 내용"을 따로 찾는다. 내용 영역에 tab 순서를 명시해 키보드가 닿게 한다
+        // (읽기 전용은 contenteditable이 없어 더욱 필요하다).
+        tabindex: "0",
+        ...(locked ? { "aria-readonly": "true" } : {}),
       }),
-    [ariaLabel, tooLarge, text.tooLarge],
+    [ariaLabel, tooLarge, text.tooLarge, locked],
   );
 
   // 최초 생성 (value 이후 변경은 아래 효과들이 반영)

@@ -247,6 +247,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
         nodesFocusable={false}
         edgesFocusable={false}
         elementsSelectable
+        zoomOnDoubleClick={false}
         fitView
         fitViewOptions={{ maxZoom: flow.nodes.length > 200 ? 0.6 : 1.5 }}
         minZoom={0.05}

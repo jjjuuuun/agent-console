@@ -55,6 +55,9 @@ class PoolOptions:
     journal: str = "auto"
 
 
+_DEFAULT_OPTIONS = PoolOptions()
+
+
 class SpaceRecords:
     """공간 하나의 기록 DB 핸들(``RecordsHandle``). 풀이 만든다.
 
@@ -152,7 +155,7 @@ class RecordsSpacePool:
         *,
         host_id: str,
         spool: RecordsSpool,
-        options: PoolOptions = PoolOptions(),  # noqa: B008 - 불변 값
+        options: PoolOptions = _DEFAULT_OPTIONS,
         appliers: Mapping[str, Applier] | None = None,
         clock: Callable[[], float] = time.monotonic,
         wall_clock: Callable[[], float] = time.time,

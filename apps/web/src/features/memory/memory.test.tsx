@@ -52,6 +52,8 @@ function setup(path: string, f: Fixture = {}) {
       ...f.rest,
     },
   );
+  // 프로젝트를 고르면 메모리 요청은 그 공간 클라이언트(`?project=`)로 간다. 이 시험에서는 공간 클라이언트도 같은 가짜를 쓴다.
+  vi.mocked(clients.space).mockImplementation(() => rest as never);
   const view = mountApp(clients, path);
   return { ...view, clients, ws, rest };
 }
@@ -193,10 +195,12 @@ describe("메모리 화면: 상태", () => {
 
 describe("메모리 화면: 프로젝트 전환기", () => {
   it("프로젝트를 고르면 그 프로젝트·보이는 팀 구성의 범위만 나무에 남고 숨긴 수가 나온다", async () => {
-    setup("/memory?prj=P1", {
+    const { clients } = setup("/memory?prj=P1", {
       projects: [{ id: "P1", name: "프로젝트 하나" }, { id: "P2", name: "프로젝트 둘" }],
       rest: { listGraphs: vi.fn(async () => [{ id: "g1", name: "팀 하나", project: "P1" }, { id: "g2", name: "팀 둘", project: "P2" }]), listModules: vi.fn(async () => [mod(["memory", "projects", "definitions:graph"])]) },
     });
+    // 5.7R.37: 현재 프로젝트를 고르면 메모리는 그 프로젝트 공간(`?project=`) 클라이언트로 읽는다
+    await waitFor(() => expect(clients.space).toHaveBeenCalledWith("P1"), LONG);
     const tree = await screen.findByRole("tree", { name: "메모리 범위 나무" }, LONG);
     expect(await screen.findByText("다른 프로젝트 범위 6개 숨김", {}, LONG)).toBeTruthy();
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);

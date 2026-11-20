@@ -1,4 +1,4 @@
-import Form from "@rjsf/core";
+import Form, { getDefaultRegistry } from "@rjsf/core";
 import { TranslatableString, deepEquals, getDefaultFormState } from "@rjsf/utils";
 import type { FieldProps, RJSFSchema, UiSchema as RjsfUiSchema, WidgetProps } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
@@ -143,6 +143,14 @@ class FormBoundary extends Component<{ fallback: ReactNode; children: ReactNode 
   }
 }
 
+const DefaultWrapIfAdditional = getDefaultRegistry().templates.WrapIfAdditionalTemplate;
+
+/**
+ * 모르는 키(additionalProperties)의 이름 칸에 늘 보이는 라벨을 단다. 값을 원시 JSON 편집기(`ui:field`)로 그리면 폼 엔진이
+ * 라벨을 숨겨 이름 칸이 이름 없는 입력이 되므로(접근성), 기본 템플릿에 `displayLabel`을 켜서 넘긴다.
+ */
+const keyLabeledAdditional: typeof DefaultWrapIfAdditional = (props) => <DefaultWrapIfAdditional {...props} displayLabel />;
+
 /**
  * JSON Schema(+uiSchema)로 입력 폼을 그린다. 제어형이며 API·앱·전역 상태를 모른다.
  * 스타일은 `@agent-console/schema-form/styles.css`(CSS 변수 `--ac-*` 사용)를 앱이 한 번 로드한다.
@@ -209,6 +217,7 @@ export function SchemaForm(props: SchemaFormProps) {
   const provEnabled = provenance !== undefined || disabledPaths !== undefined;
   const templates = useMemo(
     () => ({
+      WrapIfAdditionalTemplate: keyLabeledAdditional,
       ButtonTemplates: buttonTemplates(messages),
       ...(provEnabled ? { FieldTemplate: ProvenanceFieldTemplate } : xui ? { FieldTemplate: XUiFieldTemplate } : {}),
       ...(xui ? { ObjectFieldTemplate: XUiObjectFieldTemplate } : {}),

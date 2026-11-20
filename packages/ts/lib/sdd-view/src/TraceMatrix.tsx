@@ -102,7 +102,7 @@ export function TraceMatrix(props: TraceMatrixProps) {
                 aria-label={formatMessage(text["trace.row"], { id: row.id, tasks: tasks.length, gaps: gaps.length > 0 ? gaps.join(", ") : text["trace.noGaps"] })}
               >
                 {onOpenRequirement ? (
-                  <button type="button" className="ac-sdd-link ac-sdd-trace-req" aria-label={formatMessage(text["trace.openRequirement"], { id: row.id })} onClick={() => onOpenRequirement(row)}>
+                  <button type="button" className="ac-sdd-link ac-sdd-trace-req" onClick={() => onOpenRequirement(row)}>
                     <span className="ac-sdd-mono">{row.id}</span> <span className="ac-sdd-ellipsis">{row.title}</span>
                   </button>
                 ) : (

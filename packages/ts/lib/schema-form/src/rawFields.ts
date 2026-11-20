@@ -35,6 +35,11 @@ function walk(raw: unknown, root: Obj, depth: number, top: boolean): Obj {
       if (Object.keys(child).length > 0) out[k] = child;
     }
   }
+  // 정해진 필드 말고 "모르는 키"도 받는 객체(`additionalProperties: true`, 예: 손으로 고친 정의의 남는 키): 그 값의 모양을 모르므로
+  // 폼 엔진이 추측한 스키마(배열이면 `items` 없음 → 영어 오류) 대신 원시 JSON 편집기로 그린다.
+  if (includesType(s.type, "object") && typeof s.properties === "object" && s.properties !== null && s.additionalProperties === true) {
+    out.additionalProperties = { "ui:field": RAW_JSON_FIELD };
+  }
   if (includesType(s.type, "array") && s.items !== undefined && !Array.isArray(s.items)) {
     const child = walk(s.items, root, depth + 1, false);
     if (Object.keys(child).length > 0) out.items = child;

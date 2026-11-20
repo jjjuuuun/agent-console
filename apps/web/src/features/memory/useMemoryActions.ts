@@ -6,13 +6,13 @@ import { useCallback, useMemo } from "react";
 import { useToast } from "@agent-console/ui";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeRef } from "@agent-console/contracts/memory";
 import { formatBytes } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { saveBlob } from "../../lib/download";
 import { MEMORY_LIMITS } from "./memoryConfig";
 import { memoryMessages as t } from "./messages";
 import { useInvalidateMemory } from "./useMemoryApi";
 import { sizeMessages } from "./format";
+import { useMemoryRest } from "./useMemoryApi";
 
 type Target = Pick<MemoryEntry | MemoryEntrySummary, "id" | "version">;
 
@@ -25,7 +25,7 @@ export interface MemoryActions {
 }
 
 export function useMemoryActions(): MemoryActions {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const toast = useToast();
   const invalidate = useInvalidateMemory();
 

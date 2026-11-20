@@ -34,6 +34,8 @@ export const wikiTabMessages = {
     openRules: "규칙 열기",
     openSettings: "설정에서 보기",
     schemeNoTarget: "다른 기능으로 가는 링크입니다",
+    schemeOff: "연결된 기능이 꺼져 있습니다",
+    createBlocked: "끊긴 대상 페이지를 만들 수 없습니다",
   },
   lint: {
     toolbar: "점검 도구줄",

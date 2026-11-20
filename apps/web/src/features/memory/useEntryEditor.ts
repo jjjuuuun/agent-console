@@ -9,9 +9,9 @@ import { ApiError, memoryConflictVersion } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts/constants";
 import type { MemoryEntry, MemorySecretRejectedDetails, MemoryUpdateRequest } from "@agent-console/contracts/memory";
 import { secretRejectedField, type EntrySaveState, type MemoryMetaDraft } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { memoryKeys, useMemoryEntry } from "./useMemoryApi";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface EntryDraft extends MemoryMetaDraft {
   content: string;
@@ -93,7 +93,7 @@ export function patchOf(from: MemoryEntry, draft: EntryDraft): MemoryUpdateReque
 }
 
 export function useEntryEditor(id: string, fallbackMessage: string): EntryEditor {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const qc = useQueryClient();
   const query = useMemoryEntry(id, true);
   const server = query.data ?? null;

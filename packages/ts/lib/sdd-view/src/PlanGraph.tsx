@@ -1,5 +1,5 @@
 import type { ParsedTask, TaskPlan } from "@agent-console/contracts/sdd";
-import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, type Edge, type Node, type NodeProps } from "@xyflow/react";
+import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { statusTone, type StatusLike } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
@@ -75,6 +75,14 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
 
   const flow = placed && placed.source === base ? applyPositions(base, placed.positions) : base;
   const layouting = base.nodes.length > 0 && !(placed && placed.source === base) && failed !== base;
+  const { fitView } = useReactFlow();
+  const laidOut = !layouting && base.nodes.length > 0;
+  // 첫 `fitView`는 배치 전(전부 원점) 좌표로 맞춰져 캔버스가 비어 보인다. 배치(또는 실패 대체 배치)가 끝난 뒤 다시 맞춘다.
+  useEffect(() => {
+    if (!laidOut) return;
+    const id = setTimeout(() => void fitView({ duration: 0 }), 0);
+    return () => clearTimeout(id);
+  }, [laidOut, flow, fitView]);
 
   const nodes = useMemo<PlanNode[]>(
     () =>
@@ -135,7 +143,7 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
         elementsSelectable
         nodesFocusable
         fitView
-        minZoom={0.1}
+        minZoom={0.4} maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
         onNodeClick={(_e, node) => onSelect?.(node.id)}
         aria-label={text["plan.graph"]}

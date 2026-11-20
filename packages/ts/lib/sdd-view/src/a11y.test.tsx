@@ -42,7 +42,7 @@ describe("접근성 (axe 0건)", () => {
   });
   it("작업 표(펼침·상태 메뉴 열림·충돌·문법 없음·빈 상태)", async () => {
     const { container, unmount } = render(<TaskTable tasks={sampleTasks()} statuses={sampleStatuses()} conflicts={{ T2: { task_key: "T2", text: "줄" } }} onStatusChange={() => undefined} />);
-    fireEvent.click(screen.getByRole("button", { name: /^작업 T2, 상태 열림/ }));
+    fireEvent.click(screen.getByRole("button", { name: /작업 T2$/ }));
     fireEvent.click(screen.getByRole("button", { name: "작업 T4의 상태 바꾸기: 진행" }));
     expect(await violations(container)).toEqual([]);
     unmount();

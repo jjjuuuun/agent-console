@@ -185,3 +185,16 @@ describe("결과", () => {
     expect(merged.items!.map((i) => [i.id, i.target_state])).toEqual([["team", "absent"], ["pl", "absent"], ["guide", "identical"], ["rev", "identical"]]);
   });
 });
+
+describe("방향에 맞는 선택지 문구", () => {
+  test("건너뛰기 문구는 가져오기가 기본이고 저장·옮기기는 방향 문구다", async () => {
+    const { choiceLabel } = await import("@agent-console/projects");
+    const different = actionChoicesFor({ target_state: "different" });
+    const skip = different.find((c) => c.action === "skip")!;
+    expect(choiceLabel(skip, "import").key).toBe("copy.action.skip_keep");
+    expect(choiceLabel(skip, "save").key).toBe("copy.action.skip_keep.save");
+    expect(choiceLabel(skip, "move").key).toBe("copy.action.skip_keep.move");
+    const text = createProjectsText();
+    expect(text(choiceLabel(skip, "save"))).not.toContain("이 프로젝트의 것");
+  });
+});

@@ -42,7 +42,7 @@ describe("리소스 목록", () => {
     expect(await within(group).findByRole("button", { name: /설정종류 1/ })).toBeTruthy();
     expect(await within(group).findByRole("button", { name: /rt-gone 1/ })).toBeTruthy();
     fireEvent.click(within(group).getByRole("button", { name: /설정종류/ }));
-    const list = await screen.findByRole("listbox", { name: "리소스 목록" });
+    const list = await screen.findByRole("group", { name: "리소스 목록" });
     await waitFor(() => expect(within(list).getAllByRole("option")).toHaveLength(1));
   });
 

@@ -1,5 +1,5 @@
 import type { SpecDocumentSummary } from "@agent-console/contracts/sdd";
-import { formatMessage, resolveMessages } from "./messages";
+import { resolveMessages } from "./messages";
 import { DocumentStateChip } from "@agent-console/markdown-doc";
 
 export interface DocumentNavProps {
@@ -33,7 +33,6 @@ export function DocumentNav({ documents, selectedId, onSelect, messages, classNa
                 className="ac-sdd-docnav-item"
                 data-selected={selected || undefined}
                 aria-current={selected ? "page" : undefined}
-                aria-label={doc.state ? `${title}, ${formatMessage(text["docs.state"], { state: doc.state_label ?? doc.state })}` : title}
                 onClick={() => onSelect?.(doc)}
               >
                 <span className="ac-sdd-ellipsis">{title}</span>

@@ -5,7 +5,7 @@
  */
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router";
-import { Banner, Button, EmptyState } from "@agent-console/ui";
+import { Banner, Button, EmptyState, useToast } from "@agent-console/ui";
 import { LinkGraph, LinkList, type GraphNodeData } from "@agent-console/wiki-view";
 import { ToneChip } from "@agent-console/markdown-doc";
 import type { WikiGraph, WikiGraphNode } from "@agent-console/contracts/wiki";
@@ -47,6 +47,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const routeOn = useRoutesOn();
   const storage = useStorage();
   const idBase = useId();
+  const toast = useToast();
   const syntaxQ = useWikiSyntax(wikiId);
   const pagesQ = usePageList(wikiId);
   const [selected, setSelected] = useState<string | null>(null);
@@ -63,7 +64,9 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const mode = centerParam === null ? CURRENT : centerParam === "" ? ALL : PICK;
   const lastPage = storage.get(WIKI_STORAGE.lastPage(wikiId));
   const home = view.wiki.home;
-  const currentPath = lastPage ?? (typeof home === "string" && home !== "" ? home : undefined);
+  // 주소의 path가 항상 우선이다(직전에 연 페이지를 기억한 값은 주소에 path가 없을 때만 쓴다).
+  const urlPath = params.get(P.path);
+  const currentPath = (urlPath !== null && urlPath !== "" ? urlPath : undefined) ?? lastPage ?? (typeof home === "string" && home !== "" ? home : undefined);
   const wanted = mode === ALL ? undefined : mode === PICK ? (centerParam ?? undefined) : currentPath;
   const depthParam = params.get(P.depth);
   const depth = depthParam === WIKI_GRAPH.all ? undefined : WIKI_GRAPH.depths.includes(Number(depthParam)) ? Number(depthParam) : WIKI_GRAPH.defaultDepth;
@@ -92,14 +95,17 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
 
   const openNode = (node: Pick<GraphNodeData, "path" | "broken" | "scheme">) => {
     if (node.broken) {
-      if (!ctx.readOnly) openNewPage({ path: node.path });
+      // 끊긴 대상: 만들기 대화상자(§6.5). 읽기 전용이면 이유를 알린다(조용히 끝내지 않는다).
+      if (ctx.readOnly) toast({ tone: "info", text: ctx.readOnlyReason ?? g.createBlocked });
+      else openNewPage({ path: node.path });
       return;
     }
     if (node.scheme) {
-      // 스킴 칸: 서버가 `scheme_target`을 주고 그 역할의 화면이 켜져 있을 때만 연다(`id_from` = 풀린 id 값). 아니면 열지 않는다.
+      // 스킴 칸: 서버가 `scheme_target`을 주고 그 역할의 화면이 켜져 있을 때만 연다(`id_from` = 풀린 id 값). 아니면 이유를 알린다.
       const target = (q.data?.nodes ?? []).find((n) => n.path === node.path)?.scheme_target;
       const href = target === undefined || target === null ? undefined : schemeTargetHref(target, target.id_from, routeOn);
       if (href !== undefined) void navigate(href);
+      else toast({ tone: "info", text: target === undefined || target === null ? g.schemeNoTarget : g.schemeOff });
       return;
     }
     goTab("page", { [P.path]: node.path });

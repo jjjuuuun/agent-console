@@ -1,5 +1,5 @@
 # 문서 영역(영역 페이지 하나 = 파일 하나). 순서 = reference.md 표 순서.
-# 새 영역: 여기 한 줄 + 문서 폴더에 그 파일. 선언의 `area` 값은 이 id 중 하나여야 한다.
+# 새 영역: 여기 한 줄 + 문서 폴더에 그 파일(없으면 extdocs-check의 area-page-missing). 선언의 `area` 값은 이 id 중 하나여야 한다.
 areas:
   - {id: graph, title: 그래프·실행, file: graph.md}
   - {id: backends, title: 실행 백엔드, file: backends.md}

@@ -7,12 +7,12 @@ import { Button, Dialog } from "@agent-console/ui";
 import { ApiError } from "@agent-console/api-client";
 import type { MemoryEntry, MemoryEntrySummary, MemoryScopeKindInfo, MemoryScopeRef, MemoryScopeSummary } from "@agent-console/contracts/memory";
 import { keyErrorText, sameScope, validateKey } from "@agent-console/memory-view";
-import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
 import { viewMessages } from "./format";
 import { memoryMessages as t } from "./messages";
 import { pickOf, pickedScope, ScopePicker, type ScopePickerState } from "./ScopePicker";
 import { useMemoryContext } from "./useMemoryContext";
+import { useMemoryRest } from "./useMemoryApi";
 
 export interface MoveDialogProps {
   entry: MemoryEntry | MemoryEntrySummary;
@@ -26,7 +26,7 @@ export interface MoveDialogProps {
 }
 
 export function MoveDialog({ entry, kinds, scopes, labelOf, dirty, onClose, onMoved }: MoveDialogProps) {
-  const { rest } = useApi();
+  const rest = useMemoryRest();
   const ctx = useMemoryContext();
   const uid = useId();
   const keyRef = useRef<HTMLInputElement>(null);

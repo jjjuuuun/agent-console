@@ -77,6 +77,7 @@ export {
   COPY_REASON_REQUESTED,
   SLUG_PATTERN,
   actionChoicesFor,
+  choiceLabel,
   buildApplyRequest,
   canSubmit,
   copyItemKey,

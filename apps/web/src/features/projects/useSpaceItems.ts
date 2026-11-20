@@ -17,6 +17,8 @@ export interface SpaceItems {
   loading: boolean;
   failed: boolean;
   retry: () => void;
+  /** 종류 이름 → 서버가 준 표시 이름(`CopyKindInfo.title`). 후보 목록에 없는 종류(연결로 따라온 항목)의 칩에 쓴다. 서버가 모르면(null) 라우트 제목·원문. */
+  kindTitles: Readonly<Record<string, string>>;
 }
 
 /** 복사 방향을 가르는 종류 플래그(서버 `CopyKindInfo`의 불리언 필드 이름). `portable` = 프로젝트에 둘 수 있음, `library` = 공용에 둘 수 있음 */
@@ -37,7 +39,10 @@ export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled:
     retry: false,
     meta: { silentBackgroundError: true },
   });
-  const kinds = (kindsQuery.data ?? []).filter((k) => k[flag]).map((k) => k.kind);
+  const kindInfos = (kindsQuery.data ?? []).filter((k) => k[flag]);
+  const kinds = kindInfos.map((k) => k.kind);
+  const kindTitles: Record<string, string> = {};
+  for (const k of kindInfos) kindTitles[k.kind] = k.title !== undefined && k.title !== null && k.title !== "" ? k.title : kindTitle(k.kind);
   const queries = useQueries({
     queries: kinds.map((kind) => ({
       queryKey: ["list", "space-items", space ?? "", kind] as const,
@@ -49,10 +54,11 @@ export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled:
   });
   const items: SpaceItem[] = [];
   kinds.forEach((kind, i) => {
-    for (const x of queries[i]?.data ?? []) items.push({ kind, kindTitle: kindTitle(kind), id: x.id, name: x.name !== undefined && x.name !== "" ? x.name : x.id, description: x.description === "" ? undefined : x.description });
+    for (const x of queries[i]?.data ?? []) items.push({ kind, kindTitle: kindTitles[kind] ?? kind, id: x.id, name: x.name !== undefined && x.name !== "" ? x.name : x.id, description: x.description === "" ? undefined : x.description });
   });
   return {
     items,
+    kindTitles,
     loading: enabled && (kindsQuery.isPending || queries.some((q) => q.isPending)),
     failed: kindsQuery.isError || queries.some((q) => q.isError),
     retry: () => {

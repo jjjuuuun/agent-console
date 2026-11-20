@@ -10,7 +10,11 @@
   받아 다른 길로 저장된 스펙도 알린다.
 - 저장: 공간 이름이 없는 요청은 단독 루트(설치자 옵션 ``standalone_root``, 기본 워크스페이스 안
   패키지 데이터 폴더 이름)의 정의 저장소. 버전 기록은 호스트 DB(legacy 표, 없으면 메모리). 폴더는
-  처음 쓸 때 만든다.
+  처음 쓸 때 만든다. 버전 기록소를 ``ObservedVersionRepository``로 감싸, 스펙 종류 기록(앱 쓰기와
+  읽을 때의 "외부 변경 감지")마다 ``sdd.changed``(공간 null)를 낸다 — 프로젝트 공간이
+  ``definitions.saved``로 받는 것과 같은 시점(6R.30). 앱 쓰기 뒤 알림과 겹치면 ``ChangePublisher``가
+  한 번만 내고, 버전을 둘 남기는 만들기는 ``SddService.own_write`` 안에서 해 쓰기 뒤 한 건만 낸다
+  (공간 저장소의 ``definitions.saved``도 같다).
 - 검증 출처 플러그인(X42): 호스트 묶음의 ``sdd_verification_sources``
   확장(``plugins.load_plugins``가
   채운다). 사용자 설정 ``sdd.verification_sources``로 켠다.
@@ -21,6 +25,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable, Iterable, Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -53,6 +58,8 @@ from agent_console_store import (
     DefinitionKind,
     FileDefinitionStore,
     LazyVersionRepository,
+    ObservedVersionRepository,
+    VersionRecorded,
     versions_for,
 )
 
@@ -74,6 +81,8 @@ from .secrets import SecretRejectedError, document_issues
 from .service import SddPorts, SddService
 from .settings import SETTINGS_COMPAT, SddModuleSettings, package_defaults
 from .ws import SDD_TOPIC, ChangePublisher, changed_message, topic_handlers
+
+_log = logging.getLogger("agent_console_mod_sdd")
 
 MODULE_ID = "mod-sdd"
 WEB_ROLES: tuple[str, ...] = ("sdd",)
@@ -132,6 +141,29 @@ def open_versions(database: Any | None) -> Any:
     if database is not None:
         database.upgrade()
     return versions_for(database)
+
+
+def spec_recorded(spec_kind: str, notify: Callable[[str, str], None]) -> VersionRecorded:
+    """버전 기록 콜백(``ObservedVersionRepository``용): 스펙 종류 기록이면 ``notify(id, hash)``.
+
+    알림 실패는 기록·읽기를 막지 않는다(경고 로그만 — 기록은 이미 끝났다).
+
+    >>> seen = []
+    >>> recorded = spec_recorded("spec", lambda i, h: seen.append((i, h)))
+    >>> recorded("spec", "a", "v1"); recorded("spec-template", "t", "v2")
+    >>> seen
+    [('a', 'v1')]
+    """
+
+    def recorded(kind: str, item_id: str, version_hash: str) -> None:
+        if kind != spec_kind:
+            return
+        try:
+            notify(item_id, version_hash)
+        except Exception:
+            _log.warning("스펙 변경 알림 실패: %s/%s", kind, item_id, exc_info=True)
+
+    return recorded
 
 
 def standalone_root(cfg: SddModuleSettings, ctx: ModuleContext) -> Path:
@@ -203,10 +235,19 @@ class SddModule:
                 found = None
             return found if isinstance(found, SecretRules) else default_rules()
 
+        service_ref: list[SddService] = []
+
+        def standalone_changed(spec_id: str, version_hash: str) -> None:
+            if service_ref:
+                service_ref[0].on_recorded(spec_id, version_hash)
+
         store = FileDefinitionStore(
             standalone_root(cfg, ctx),
             kinds,
-            versions=LazyVersionRepository(lambda: open_versions(ctx.database)),
+            versions=ObservedVersionRepository(
+                LazyVersionRepository(lambda: open_versions(ctx.database)),
+                spec_recorded(kinds[0].name, standalone_changed),
+            ),
             max_content_bytes=DEFAULT_MAX_CONTENT_BYTES,
             write_guard=yaml_guard(secret_rules),
         )
@@ -245,6 +286,7 @@ class SddModule:
             ),
             standalone_max_bytes=DEFAULT_MAX_CONTENT_BYTES,
         )
+        service_ref.append(service)
 
         spec_kind, template_kind = kinds
         ctx.provide(SDD_SERVICE, service)
@@ -305,6 +347,7 @@ __all__ = [
     "SddModule",
     "module",
     "operators_of",
+    "spec_recorded",
     "standalone_root",
     "template_references",
 ]

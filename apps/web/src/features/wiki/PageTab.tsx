@@ -552,7 +552,8 @@ export function PageTab(props: WikiTabProps) {
       <div
         className="wiki-edit-wrap"
         onKeyDown={(e) => {
-          if (e.key === "Escape" && !e.nativeEvent.isComposing && !e.defaultPrevented) closeEdit();
+          // 편집기 안의 Esc는 편집기(Esc 후 Tab으로 빠져나가기)가 쓴다. 편집기 밖에서만 편집을 닫는다.
+          if (e.key === "Escape" && !e.nativeEvent.isComposing && !e.defaultPrevented && !(e.target instanceof HTMLElement && e.target.closest(".cm-editor"))) closeEdit();
         }}
       >
         <DocumentEditor

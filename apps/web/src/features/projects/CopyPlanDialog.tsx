@@ -3,6 +3,7 @@ import type { CopyApplyItemResult, CopyApplyRequest, CopyApplyResult, CopyPlan, 
 import type { DefinitionKey, SpaceRef } from "@agent-console/contracts";
 import {
   actionChoicesFor,
+  choiceLabel,
   buildApplyRequest,
   canSubmit,
   copyItemKey,
@@ -56,6 +57,8 @@ export interface CopyPlanDialogProps {
   initialItems?: readonly DefinitionKey[];
   /** 고르기 단계 목록(원본 공간의 정의) */
   candidates: readonly SpaceItem[];
+  /** 종류 이름 → 표시 이름. 후보에 없는 종류(함께 가져오는 항목)의 칩에 쓴다. 없으면 종류 원문. */
+  kindTitles?: Readonly<Record<string, string>>;
   candidatesLoading?: boolean;
   candidatesFailed?: boolean;
   onCandidatesRetry?: () => void;
@@ -196,6 +199,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
     runPlan(keys, false);
   };
 
+  const kindLabel = (kind: string): string => props.candidates.find((c) => c.kind === kind)?.kindTitle ?? props.kindTitles?.[kind] ?? kind;
   const title = text({ key: `copy.${direction}.title`, params: { name: props.projectName } });
   const submitKey = props.submitStyle === "run" ? "copy.submit.run" : `copy.submit.${direction}`;
   const resultSummary = summarizeResult({ items: [...results.values()] });
@@ -405,7 +409,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                         <div className="cpd-item">
                           <div className="cpd-item-name">
                             <strong className="ac-ellipsis" title={name}>{name}</strong>
-                            <span className="prj-kind-chip">{props.candidates.find((c) => c.kind === item.kind)?.kindTitle ?? item.kind}</span>
+                            <span className="prj-kind-chip">{kindLabel(item.kind)}</span>
                           </div>
                           <div className="cpd-item-reason app-muted ac-ellipsis">{reasonText(item)}</div>
                         </div>
@@ -419,7 +423,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                           onChange={(e) => setSelection(item, e.target.value === "" ? null : e.target.value)}
                         >
                           {needsChoice ? <option value="">{text({ key: "copy.action.choose" })}</option> : null}
-                          {choices.map((c) => <option key={c.action} value={c.action}>{text(c.label)}</option>)}
+                          {choices.map((c) => <option key={c.action} value={c.action}>{text(choiceLabel(c, direction))}</option>)}
                         </select>
                       </div>
                       {blocked ? (
@@ -472,7 +476,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                   <div className="cpd-item">
                     <div className="cpd-item-name">
                       <strong className="ac-ellipsis" title={r.id}>{planned.get(copyItemKey(r))?.name || r.id}</strong>
-                      <span className="prj-kind-chip">{props.candidates.find((c) => c.kind === r.kind)?.kindTitle ?? r.kind}</span>
+                      <span className="prj-kind-chip">{kindLabel(r.kind)}</span>
                     </div>
                   </div>
                   <span className="cpd-result-status" data-kind={r.rowKind}>

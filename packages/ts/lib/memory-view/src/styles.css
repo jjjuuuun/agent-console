@@ -128,10 +128,11 @@ button.ac-mem-chip { cursor: pointer; }
 .ac-mem-td { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; padding: 0 var(--ac-space-2); overflow: hidden; white-space: nowrap; }
 .ac-mem-td-key { flex-direction: column; align-items: stretch; justify-content: center; gap: 0; }
 .ac-mem-keyline { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; }
-.ac-mem-key { flex: 0 1 auto; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
+.ac-mem-key { display: flex; flex: 0 1 auto; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .ac-mem-key[data-struck] { text-decoration: line-through; }
-.ac-mem-key-head { color: var(--ac-text-muted); }
-.ac-mem-key-last { font-weight: 600; }
+/* 긴 키: 마지막 마디는 남기고 앞부분(head)부터 말줄임한다. */
+.ac-mem-key-head { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ac-text-muted); }
+.ac-mem-key-last { flex: 0 0 auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .ac-mem-subline { font-size: var(--ac-text-xs); line-height: 20px; color: var(--ac-text-subtle); }
 .ac-mem-subline-scope { margin-left: var(--ac-space-2); }
 .ac-mem-td-author { gap: var(--ac-space-1); }

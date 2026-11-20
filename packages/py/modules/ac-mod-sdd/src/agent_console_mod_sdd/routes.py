@@ -225,12 +225,13 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
         """만들기(같은 공간의 문서 틀 복사 또는 빈 스펙)."""
         svc = service()
         sc = svc.scope(space)
-        stored = sc.repository.create(
-            name=body.name,
-            id=body.id,
-            template=body.template,
-            description=body.description or None,
-        )
+        with svc.own_write():  # 정의 + 본문 = 버전 둘, 알림은 아래 한 건
+            stored = sc.repository.create(
+                name=body.name,
+                id=body.id,
+                template=body.template,
+                description=body.description or None,
+            )
         svc.notify(sc.name, stored.id, version_hash=stored.version_hash)
         view = await svc.view(sc, stored.id)
         return _json(view, version=view.version_hash, status_code=201)
@@ -242,9 +243,10 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
         sc = svc.scope(space)
         files = _files_of(sc)
         got = import_documents(files, body.files, reserved=sc.reserved)
-        stored = sc.repository.create(
-            name=body.name, id=body.id, documents=got.documents, contents=got.contents
-        )
+        with svc.own_write():
+            stored = sc.repository.create(
+                name=body.name, id=body.id, documents=got.documents, contents=got.contents
+            )
         svc.notify(sc.name, stored.id, version_hash=stored.version_hash)
         view = await svc.view(sc, stored.id)
         return _json(view, version=view.version_hash, status_code=201)

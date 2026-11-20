@@ -179,6 +179,17 @@ describe("위키 화면: 링크·목록", () => {
 describe("위키 화면: 편집·저장", () => {
   const editor = async () => screen.findByRole("textbox", { name: /편집기/ }, LONG);
 
+  it("편집기 안의 Esc는 편집을 닫지 않고(Esc 후 Tab 탈출용), 편집기 밖의 Esc는 편집을 닫는다", async () => {
+    setup(`${READ}&mode=edit`, { page: PAGES });
+    const box = await editor();
+    box.classList.add("cm-editor");
+    fireEvent.keyDown(box, { key: "Escape" });
+    expect(screen.queryByRole("textbox", { name: /편집기/ })).not.toBeNull();
+    box.classList.remove("cm-editor");
+    fireEvent.keyDown(box, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: /편집기/ })).toBeNull(), LONG);
+  });
+
   it("새 페이지는 If-None-Match: *, 있는 페이지는 If-Match(본문 해시)로 저장한다", async () => {
     const put = vi.fn(async (_w: string, p: string, body: { content: string }) => ({ value: pageView(p, body.content), version_hash: "h-new" }));
     const { wiki } = setup(`${READ}&mode=edit`, { page: PAGES, wiki: { putWikiPage: put } });

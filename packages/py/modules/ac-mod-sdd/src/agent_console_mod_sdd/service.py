@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import asyncio
 import posixpath
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
@@ -134,6 +136,7 @@ class SddService:
         self.ports = ports or SddPorts()
         self.cache = ParseCache(options.parse_cache_entries)
         self._standalone_max = standalone_max_bytes
+        self._own_write: ContextVar[bool] = ContextVar(f"sdd_own_write_{id(self)}", default=False)
 
     # ------------------------------------------------------------ 설정·규칙
     def settings_and_issues(self) -> tuple[SddSettings, list[Issue]]:
@@ -553,9 +556,30 @@ class SddService:
             )
         )
 
+    @contextmanager
+    def own_write(self) -> Iterator[None]:
+        """모듈 자신의 쓰기 구간. 이 안에서 남은 버전 기록은 알리지 않는다(단독 루트
+        ``on_recorded``, 공간 저장소가 같은 문맥에서 동기로 낸 ``definitions.saved`` ``on_saved``)
+        — 쓰기 뒤 ``notify`` 한 번이 대신한다. 버전을 둘 남기는 쓰기(만들기 = 정의 + 본문)가 알림
+        두 건이 되지 않게 한다. 같은 실행 문맥(요청) 안에서만 걸린다(다른 길의 저장은 그대로)."""
+        token = self._own_write.set(True)
+        try:
+            yield
+        finally:
+            self._own_write.reset(token)
+
+    def on_recorded(self, spec_id: str, version_hash: str) -> None:
+        """단독 루트 저장소의 스펙 버전 기록(앱 쓰기·읽을 때 "외부 변경 감지") → ``sdd.changed``
+        (공간 null, 6R.30). ``own_write`` 구간 안이면 건너뛴다. 앱 쓰기 뒤 알림과 같은 버전이면
+        ``ChangePublisher``가 한 번만 낸다."""
+        if self._own_write.get():
+            return
+        self.notify(None, spec_id, version_hash=version_hash)
+
     def on_saved(self, item: Any) -> None:
-        """정의 저장 알림(``definitions.saved``) → 스펙 종류면 ``sdd.changed``."""
-        if getattr(item, "kind", None) != self.spec_kind.name:
+        """정의 저장 알림(``definitions.saved``) → 스펙 종류면 ``sdd.changed``. ``own_write`` 구간
+        안이면 건너뛴다(모듈 쓰기 뒤 알림이 대신한다)."""
+        if self._own_write.get() or getattr(item, "kind", None) != self.spec_kind.name:
             return
         spec_id = getattr(item, "id", None)
         if not isinstance(spec_id, str) or not spec_id:
