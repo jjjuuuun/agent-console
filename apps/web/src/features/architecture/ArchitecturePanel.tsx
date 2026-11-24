@@ -10,6 +10,7 @@ import { ArchitectureBreadcrumb } from "./ArchitectureBreadcrumb";
 import { ArchitectureEmpty } from "./ArchitectureEmpty";
 import { archMessages as t } from "./messages";
 import type { ArchitectureController } from "./useArchitectureController";
+import { messages as appMessages } from "../../app/messages";
 
 export interface ArchitecturePanelProps {
   controller: ArchitectureController;
@@ -139,7 +140,7 @@ export function ArchitecturePanel(p: ArchitecturePanelProps) {
             </button>
           </span>
         ) : null}
-        {p.live === true && c.updatedAt !== null ? <span className="arch-live">{t.status.liveUpdated(new Date(c.updatedAt).toLocaleTimeString("ko-KR"))}</span> : null}
+        {p.live === true && c.updatedAt !== null ? <span className="arch-live">{t.status.liveUpdated(new Date(c.updatedAt).toLocaleTimeString(appMessages.locale))}</span> : null}
         {c.refreshing ? <span className="app-muted">{t.status.refreshing}</span> : null}
       </div>
       {unavailableOpen && unavailable.length > 0 ? (

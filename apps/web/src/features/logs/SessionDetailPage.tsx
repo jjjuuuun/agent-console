@@ -55,6 +55,7 @@ import { useFilterOptions } from "./useFilterOptions";
 import { useLogUrlState, useSelectedUid } from "./useLogFilterState";
 import { logKeys, useLogSchema, useLogSources, useLogTaxonomyView, useLogTimeline, useLogTrace } from "./useLogsApi";
 import { useLogScan } from "./useLogScan";
+import { messages as appMessages } from "../../app/messages";
 
 const FIELDS = buildFilterFields();
 const NO_PARAMS = {} as const;
@@ -348,7 +349,7 @@ export function SessionDetailPage() {
   const archCount = observedValue(arch.target?.count);
   const archOthers = hasActiveFilter(url.filter) || errorsOnly || !atEnd;
   const hasHiddenCategories = hiddenIds.length > 0;
-  const summaryText = [summary?.project ? summary.project.label || summary.project.id : null, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString("ko-KR")}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
+  const summaryText = [summary?.project ? summary.project.label || summary.project.id : null, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString(appMessages.locale)}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
   const emptyRows = rows.length === 0;
   const detailOpen = selectedUid !== null;
   const durationMs = summary?.first_time != null && summary?.last_time != null ? Math.max(0, (summary.last_time - summary.first_time) * 1000) : null;
@@ -478,7 +479,7 @@ export function SessionDetailPage() {
               ) : (
                 <span className="logs-summary ac-ellipsis" title={summaryText}>
                   <span className="logs-summary-project">{summary.project ? `${summary.project.label || summary.project.id} · ` : null}</span>
-                  {`${t.detail.events} ${(summary.events ?? all.length).toLocaleString("ko-KR")} · ${t.detail.errors} ${errorCount}`}
+                  {`${t.detail.events} ${(summary.events ?? all.length).toLocaleString(appMessages.locale)} · ${t.detail.errors} ${errorCount}`}
                 </span>
               )}
               <span className="logs-spacer" />

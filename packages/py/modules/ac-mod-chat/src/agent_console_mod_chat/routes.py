@@ -4,6 +4,9 @@
   옛 ``GET /conversations``는 그대로 두고 OpenAPI ``deprecated``. 기록 공간이 있는 조립의
   ``?project=``는 폴더 기록(``source=project``)을 끝까지 읽은 뒤 앱 DB 옛 기록(``source=app``)을
   잇는다(Q14).
+- 프로젝트별 대화 수: ``GET /conversations/project-counts``(``ProjectCounts``, 앱 DB + 보관하지
+  않은 등록 프로젝트 기록 DB). ``?source=app`` = 앱 DB만(설정 > 프로젝트의 "앱에 남은 기록",
+  5.7R.33p).
 - 대화 위치(요청 11/07 후속): ``GET /conversations/{id}/locate`` → ``ConversationLocation``
   (그 대화가 있는 기록 공간, null = 앱 기록). 서비스에 선택 메서드 ``locate``가 있으면 그것(등록
   프로젝트 기록 DB를 읽기만 한다), 없으면 호스트 대화가 있을 때 null. 대화 본문은 주지 않는다 -
@@ -28,7 +31,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query, Response
 from fastapi.concurrency import run_in_threadpool
@@ -76,6 +79,8 @@ MAX_CONVERSATION_QUERY_LENGTH = 200
 SOURCE_APP: RecordSource = "app"
 """목록 ``?source=app``: 앱 DB 옛 기록(그 ``project_id``를 가진 대화, 읽기 전용 표시)."""
 ConversationSource = RecordSource
+CountsSource = Literal["app"]
+"""``GET /conversations/project-counts?source=``: ``app`` = 앱 DB만(생략 = 앱 DB + 기록 DB)."""
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse} for status in (400, 401, 403, 404, 413, 422, 500)
@@ -106,8 +111,8 @@ def build_router(
         mover: 앱 DB 옛 대화 옮기기(``POST /conversations/move-to-project``).
             없으면 경로를 만들지 않는다.
         counts: ``GET /conversations/project-counts``의 ``project_id``별 대화 수(예: 호스트 DB +
-            프로젝트 기록 DB, ``spaces.project_id_counts``). None이면 ``projects``의 개수(호스트
-            DB만).
+            프로젝트 기록 DB, ``spaces.project_id_counts``). None이거나 ``?source=app``이면
+            ``projects``의 개수(호스트 DB만).
     """
     router = APIRouter()
 
@@ -204,10 +209,13 @@ def build_router(
         @router.get(
             "/conversations/project-counts", response_model=ProjectCounts, responses=errors()
         )
-        async def conversation_project_counts() -> ProjectCounts:
+        async def conversation_project_counts(
+            source: CountsSource | None = None,
+        ) -> ProjectCounts:
             """``project_id``별 대화 수(보관한 대화 포함, 프로젝트 없음 = ``no_project``). 프로젝트
-            기록 DB에 있는 대화도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때)."""
-            if counts is not None:
+            기록 DB에 있는 대화도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때).
+            ``?source=app``이면 앱(호스트) DB의 대화만 센다(프로젝트 기록 DB는 읽지 않는다)."""
+            if counts is not None and source != SOURCE_APP:
                 return to_project_counts(await run_in_threadpool(counts))
             return count_projects(projects())
 

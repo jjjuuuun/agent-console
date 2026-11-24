@@ -9,6 +9,8 @@ import { objectParticle } from "../lib/korean";
  * 다른 언어를 지원하게 되면 이 객체를 컨텍스트로 바꾼다.
  */
 export const messages = {
+  /** 날짜·시각·숫자·정렬에 쓰는 언어(BCP 47). 문구와 같은 곳에서 정한다. */
+  locale: "ko",
   /** 서버 오류 코드별 사람이 읽는 문구(영문 서버 원문 대신 보인다). 코드는 `ERROR_CODES`에서 읽는다. */
   errorByCode: {
     [ERROR_CODES.PROJECT_CONFIG_READONLY]: "이 폴더에는 쓸 수 없어 구성을 가져오거나 고치거나 지우지 못했습니다",
@@ -131,7 +133,7 @@ export const messages = {
     logs: "로그",
     settings: "설정",
     /** 사이드바 묶음 제목(`RouteGroupDef.titleKey`) */
-    groups: { config: "구성", run: "실행", observe: "관측" },
+    groups: { config: "공용 구성", run: "실행", observe: "관측" },
     disabledToast: (title: string) => `‘${title}’ 기능이 꺼져 있습니다`,
     loadingItems: "메뉴를 불러오는 중",
   },

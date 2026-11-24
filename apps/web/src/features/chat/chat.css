@@ -95,4 +95,13 @@ a.chat-chip:hover { background: var(--ac-surface-3); }
   .chat-composer { --ac-composer-max-h: 120px; }
 }
 
-.chat-list-project { margin: 0; padding: 4px var(--ac-space-3, 12px); font-size: 12px; font-weight: 600; }
+.chat-list-project { margin: 0; padding: 4px var(--ac-space-3, 12px); min-width: 0; overflow: hidden; }
+.chat-list-project .prj-pchip-wrap, .chat-list-project .prj-pchip { max-width: 100%; }
+.chat-list-project .prj-pchip-path { display: none; } /* 좁은 목록 열: 이름만(경로는 칩 팝오버) */
+
+/* 세션 기록 없음 배너: 대화 목록 위 고정 영역(스크롤과 함께 움직이지 않는다) */
+.chat-session-banner { flex: none; width: 100%; max-width: var(--ac-chat-col-w, 820px); margin: 0 auto; box-sizing: border-box; padding: var(--ac-space-2) var(--ac-space-4) 0; }
+.chat-session-items { margin: var(--ac-space-1) 0; padding-left: var(--ac-space-4); }
+.chat-session-chip { font-size: 12px; color: var(--ac-text-muted); }
+.chat-session-chip[data-state="missing"] { font-weight: 600; color: var(--ac-text); }
+.chat-session-info { font-size: 12px; color: var(--ac-text-muted); }

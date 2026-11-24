@@ -2,7 +2,7 @@
 import type { CreateRunRequest, HandoffMatrix, ResumeOptions, Run, RunEvent, RunPage, RunSnapshot, RunStatus, Trace } from "@agent-console/contracts";
 import type { RunLocation } from "@agent-console/contracts/runs";
 import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, RecordsMoveRequest, RecordsMoveResult } from "@agent-console/contracts/projects";
-import { enc, query, SPACE_PARAM, withQueryParam, type RestIo } from "../io";
+import { enc, query, SPACE_PARAM, withQueryParam, type ProjectCountsParams, type RestIo } from "../io";
 
 /** Run 단위 호출의 기록 공간(`?project=`). null·undefined·빈 문자열 = 붙이지 않음(앱 기록 또는 서버가 아는 자리). */
 export type RunSpace = string | null | undefined;
@@ -66,8 +66,8 @@ export interface ListRunEventsParams {
 }
 
 export interface RunsClient {
-  /** `project_id`별 루트 Run 수(`ProjectCounts`: 전체·프로젝트 없음·프로젝트별). */
-  getRunProjectCounts(): Promise<ProjectCounts>;
+  /** `project_id`별 루트 Run 수(`ProjectCounts`: 전체·프로젝트 없음·프로젝트별). `{ source: "app" }` = 앱 DB의 Run만. */
+  getRunProjectCounts(params?: ProjectCountsParams): Promise<ProjectCounts>;
   /** Run을 프로젝트에 넣는다(`ids` 또는 `from_null`). 못 옮긴 것은 결과 `skipped`에 이유와 함께. */
   assignRunsToProject(request: AssignProjectRequest): Promise<AssignProjectResult>;
   /** 앱에 남은 옛 기록을 프로젝트 폴더의 기록 DB로 옮긴다(`select` project·null·ids). 같은 id는 `skipped`, 못 옮긴 것은 `failed`. */
@@ -99,7 +99,7 @@ export interface RunsClient {
 
 export function createRunsClient(io: RestIo): RunsClient {
   return {
-    getRunProjectCounts: () => io.request("GET", "/runs/project-counts"),
+    getRunProjectCounts: (params) => io.request("GET", `/runs/project-counts${query(params)}`),
     assignRunsToProject: (request) => io.request("POST", "/runs/assign-project", { body: request }),
     moveRunsToProject: (request) => io.request("POST", "/runs/move-to-project", { body: request }),
     createRun: (req) => io.request("POST", "/runs", { body: req }),

@@ -28,7 +28,7 @@
 .ac-lv-nowrap { white-space: nowrap; flex: none; }
 .ac-lv-cell .ac-lv-chiprow { flex-wrap: nowrap; overflow: hidden; }
 .ac-lv-cell .ac-lv-chip { flex: 0 1 auto; min-width: 0; }
-[data-tone="danger"] { color: var(--ac-danger, #f26b6b); }
+[class*="ac-lv-"][data-tone="danger"] { color: var(--ac-danger, #f26b6b); }
 
 /* 버튼·입력(공용 UI 패키지를 쓰지 않을 때의 기본 모양) */
 .ac-lv-btn, .ac-lv-iconbtn, .ac-lv-togglechip { font: inherit; color: inherit; background: var(--lv-surface-2, transparent); border: 1px solid var(--lv-border, #2a313c); border-radius: var(--lv-radius, 4px); padding: 2px 8px; cursor: pointer; min-height: 24px; }

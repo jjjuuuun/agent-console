@@ -23,6 +23,9 @@ const t = scopeMessages.settings;
 const text = createProjectsText();
 const dismissedKey = (feature: string) => `ac.legacy.dismissed.${feature}`;
 
+/** 이 섹션의 개수는 모두 "이 앱에 저장된 기록"이다: 앱 DB만 센다(폴더 기록 DB는 프로젝트 화면 몫). */
+const APP_ONLY = { source: "app" } as const;
+
 /** 앱 기록이 있는 기능 하나: 개수 조회·넣기·폴더로 옮기기 호출과 제목을 얻는 라우트 역할(제목은 라우트 데이터). */
 interface RecordFeature {
   key: string;
@@ -33,8 +36,8 @@ interface RecordFeature {
 }
 /** 순서가 중요하다: 채팅(대화가 자기 실행을 먼저 가져간다) → 실행. */
 const RECORD_FEATURES: readonly RecordFeature[] = [
-  { key: "conversations", role: "conversations", counts: (r) => r.getConversationProjectCounts(), assign: (r, q) => r.assignConversationsToProject(q), move: (r, q) => r.moveConversationsToProject(q) },
-  { key: "runs", role: "runs", counts: (r) => r.getRunProjectCounts(), assign: (r, q) => r.assignRunsToProject(q), move: (r, q) => r.moveRunsToProject(q) },
+  { key: "conversations", role: "conversations", counts: (r) => r.getConversationProjectCounts(APP_ONLY), assign: (r, q) => r.assignConversationsToProject(q), move: (r, q) => r.moveConversationsToProject(q) },
+  { key: "runs", role: "runs", counts: (r) => r.getRunProjectCounts(APP_ONLY), assign: (r, q) => r.assignRunsToProject(q), move: (r, q) => r.moveRunsToProject(q) },
 ];
 
 function featureLabel(f: RecordFeature): string {
@@ -231,7 +234,9 @@ function ProjectsSectionBody() {
 
   const assignTargets: AssignTarget[] = active.map((v) => {
     const info = statusInfo(v);
-    return { id: v.project.id, name: v.project.name, folder: v.project.folder ?? "", problem: info.profile === "ready" || info.profile === "ready_readonly" ? undefined : text(info.label) };
+    // 폴더 문제는 상태 이름, 읽기 전용 폴더(기록을 쓸 수 없음)는 막힘 이유를 보이고 고를 수 없게 한다
+    const problem = info.profile !== "ready" && info.profile !== "ready_readonly" ? text(info.label) : v.records_writable === false || info.profile === "ready_readonly" ? t.recordsMoveBlocked : undefined;
+    return { id: v.project.id, name: v.project.name, folder: v.project.folder ?? "", problem };
   });
 
   const moveItems = async (id: string) => {

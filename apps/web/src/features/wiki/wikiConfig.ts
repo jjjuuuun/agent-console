@@ -3,6 +3,7 @@
  * 위키 이름·페이지 경로·링크 패턴·머리말 키·규칙 id·쓰기 규칙 동작 이름은 이 파일에도 없다(서버 데이터).
  * 기록 동작·쓴 주체 종류·링크 상태·점검 코드·가져오기 상태는 계약이 이름 붙인 문서 상수에 문구·톤을 붙인 표(`wikiDisplay.json`)로만 안다.
  */
+import { KNOWN_ISSUE_CODES, KNOWN_WIKI_LINT_CODES } from "@agent-console/contracts/constants";
 import type { DisplayEntry, WikiDisplay } from "@agent-console/wiki-view";
 import data from "./wikiData.json";
 import display from "./wikiDisplay.json";
@@ -75,8 +76,22 @@ export function buildWikiDisplay(): WikiDisplay {
     authorKinds: table(display.authorKinds, d.authors),
     linkStatuses: table(display.linkStatuses, d.links),
     severities: table(display.severities, d.severities),
-    codes: table(display.codes, d.codes, d.codeHints),
+    codes: withIssueNamespace(table(display.codes, d.codes, d.codeHints)),
   };
+}
+
+/**
+ * 점검 코드 표의 키는 계약 어휘(`KNOWN_WIKI_LINT_CODES`: `broken_link` …)이고, 서버 이슈의 `code`는 그 앞에 이슈 이름공간이 붙는다(`KNOWN_ISSUE_CODES.WIKI_BROKEN_LINK`).
+ * 이름공간은 두 상수의 차이에서 읽어(코드에 글자를 박지 않는다) 이름 붙은 키도 같은 항목으로 보이게 한다. 켜진 점검 이름(`enabled_checks`)은 이름공간 없는 키를 쓴다.
+ */
+function withIssueNamespace(codes: Readonly<Record<string, DisplayEntry>>): Readonly<Record<string, DisplayEntry>> {
+  const full: string = KNOWN_ISSUE_CODES.WIKI_BROKEN_LINK;
+  const bare: string = KNOWN_WIKI_LINT_CODES.BROKEN_LINK;
+  if (!full.endsWith(bare) || full.length === bare.length) return codes;
+  const namespace = full.slice(0, full.length - bare.length);
+  const out: Record<string, DisplayEntry> = { ...codes };
+  for (const [key, entry] of Object.entries(codes)) out[`${namespace}${key}`] = entry;
+  return out;
 }
 
 /** 가져오기 결과 상태(열린 문자열) → 톤·문구. 모르는 값은 중립 + 원문. */

@@ -8,7 +8,7 @@ import { runsMessages as t } from "./messages";
 import { EVENT_PAGE_SIZE, TEXT_DELTA_EVENT } from "./runsConfig";
 import { NO_SESSION, sessionOfEvent, type RunSessions } from "./runSessions";
 import { SessionBadge } from "./RunSessionsChip";
-import { buildEventRows, collectPrefixes, isErrorEvent, summarizeActors, summarizeEvent, truncate, type EventRow } from "./runsLib";
+import { buildEventRows, collectPrefixes, isErrorEvent, summarizeActors, summarizeEvent, type EventRow } from "./runsLib";
 import { matchesTypePrefix } from "../../lib/typePrefix";
 
 export interface AgentsTabProps {
@@ -143,15 +143,15 @@ export function AgentsTab(p: AgentsTabProps) {
         {bySession && sessionView !== undefined ? (
           <SessionList view={sessionView} events={p.events} agentName={p.agentName} />
         ) : (
-        <ul role="listbox" aria-multiselectable="true" aria-label={t.agents.listLabel}>
-          <li role="option" aria-selected={p.actors.length === 0}>
-            <button type="button" onClick={() => toggleActor(null, false)}>
+        <ul aria-label={t.agents.listLabel}>
+          <li>
+            <button type="button" aria-pressed={p.actors.length === 0} onClick={() => toggleActor(null, false)}>
               {t.agents.all} <span className="ac-num app-muted">({formatCount(p.events.length)})</span>
             </button>
           </li>
           {runWide > 0 ? (
-            <li role="option" aria-selected={p.actors.includes(RUN_WIDE_ACTOR)}>
-              <button type="button" onClick={(e) => toggleActor(RUN_WIDE_ACTOR, e.ctrlKey || e.metaKey)}>
+            <li>
+              <button type="button" aria-pressed={p.actors.includes(RUN_WIDE_ACTOR)} onClick={(e) => toggleActor(RUN_WIDE_ACTOR, e.ctrlKey || e.metaKey)}>
                 {t.agents.runWide} <span className="ac-num app-muted">({formatCount(runWide)})</span>
               </button>
             </li>
@@ -159,8 +159,8 @@ export function AgentsTab(p: AgentsTabProps) {
           {actors.map((a) => {
             const sub = p.isSubagent(a.actor);
             return (
-              <li key={a.actor} role="option" aria-selected={p.actors.includes(a.actor)} className={sub ? "runs-actor-sub" : undefined}>
-                <button type="button" onClick={(e) => toggleActor(a.actor, e.ctrlKey || e.metaKey)}>
+              <li key={a.actor} className={sub ? "runs-actor-sub" : undefined}>
+                <button type="button" aria-pressed={p.actors.includes(a.actor)} onClick={(e) => toggleActor(a.actor, e.ctrlKey || e.metaKey)}>
                   <span className="ac-ellipsis">{p.agentName(a.actor)}{p.actorNote?.(a.actor) ? ` ${p.actorNote(a.actor)}` : ""}</span> <span className="ac-num app-muted">({formatCount(a.count)})</span>
                 </button>
                 {sub ? <Tag title={t.agents.totalOnlyTitle}>{t.agents.subagentChip}</Tag> : null}
@@ -226,7 +226,7 @@ function EventRowView({ row, start, agentName, summaryOf, open, onToggle }: { ro
   const summary = isText ? t.agents.textRow((row.text ?? "").length) : (summaryOf?.(e) ?? summarizeEvent(e));
   return (
     <div role="listitem" className="runs-event" data-error={isErrorEvent(e) ? "true" : undefined}>
-      <button type="button" className="runs-event-line" aria-expanded={open} aria-label={`${e.type} ${truncate(summary, 80)}`} onClick={onToggle}>
+      <button type="button" className="runs-event-line" aria-expanded={open} onClick={onToggle}>
         <span className="ac-num app-muted">{relTime(e.ts, start)}</span>
         <Tag>{e.actor ? agentName(e.actor) : t.agents.system}</Tag>
         <code className="app-mono ac-ellipsis">{e.type}</code>
@@ -274,10 +274,10 @@ function SessionList({ view, events, agentName }: { view: AgentsSessionsView; ev
   const noInfo = useMemo(() => events.filter((e) => sessionOfEvent(data, e) === undefined).length, [events, data]);
   const pick = (id: string) => view.onSelect(view.selectedId === id ? null : id);
   return (
-    <ul role="listbox" aria-label={t.sessions.bySession} data-session-list="">
+    <ul aria-label={t.sessions.bySession} data-session-list="">
       {data.list.map((s) => (
-        <li key={s.id} role="option" aria-selected={view.selectedId === s.id}>
-          <button type="button" className="runs-session-row" onClick={() => pick(s.id)}>
+        <li key={s.id}>
+          <button type="button" className="runs-session-row" aria-pressed={view.selectedId === s.id} onClick={() => pick(s.id)}>
             <SessionBadge session={s} />
             <span className="ac-ellipsis" title={s.name}>{s.name}</span>
             <span className="app-muted ac-num">{view.formatTokens(s.tokens)}</span>
@@ -291,8 +291,8 @@ function SessionList({ view, events, agentName }: { view: AgentsSessionsView; ev
         </li>
       ))}
       {noInfo > 0 ? (
-        <li role="option" aria-selected={view.selectedId === NO_SESSION}>
-          <button type="button" className="runs-session-row" onClick={() => pick(NO_SESSION)}>
+        <li>
+          <button type="button" className="runs-session-row" aria-pressed={view.selectedId === NO_SESSION} onClick={() => pick(NO_SESSION)}>
             <span className="ac-ellipsis">{t.sessions.noInfo}</span> <span className="ac-num app-muted">({formatCount(noInfo)})</span>
           </button>
         </li>

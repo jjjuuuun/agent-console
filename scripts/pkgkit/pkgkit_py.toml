@@ -20,6 +20,18 @@ initial_version = "0.1.0"
 # 라이선스(MIT). uv_build가 받는 SPDX 표기 + LICENSE 파일(license-files)
 license = "MIT"
 
+# 확장 예제(워크스페이스 멤버가 아닌 Python 패키지 폴더). glob은 저장소 루트 기준이고, `pyproject.toml`이
+# 있는 폴더만 예제로 본다(없는 폴더는 `poe examples`가 실패로 알린다). `poe examples`(examples_check.py)와
+# `poe portability`가 이 glob으로 예제를 찾는다. 예제 목록을 손으로 적지 않는다.
+[examples]
+roots = ["examples/extensions/*"]
+# `poe examples`가 예제 폴더마다 그 폴더를 작업 폴더로 돌리는 명령(설치하지 않고 폴더 자기 설정으로).
+# 단계 이름은 명령의 첫 낱말이다.
+steps = [["mypy"], ["pytest", "-q"]]
+# `poe portability`를 --package 없이 돌릴 때 예제도 넣을지(--package로는 늘 고를 수 있다).
+# 명령행 `--examples`·`--no-examples`가 이 값을 덮는다. TS `pnpm portability`가 examples/web을 넣는 것과 맞춘다.
+portability_default = true
+
 # 템플릿 자리표시자로 쓰는 값. 템플릿(kind.toml 포함)의 `{{키}}`로 들어간다.
 # dist_prefix·import_prefix·license도 같은 이름으로 쓸 수 있다.
 [python.template_values]

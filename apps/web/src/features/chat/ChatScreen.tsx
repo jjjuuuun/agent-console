@@ -1,4 +1,4 @@
-import { NEW_PARAM, useProjects } from "../projects";
+import { NEW_PARAM, ProjectChip, ProjectRecordsNotice, useProjectRecordsState, useProjects, useStartBlockReason } from "../projects";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -61,6 +61,8 @@ export function ChatScreen() {
   const [listOpen, setListOpen] = useState(true);
   const [focusToken, setFocusToken] = useState(0);
   const projects = useProjects();
+  const recordsState = useProjectRecordsState();
+  const startBlock = useStartBlockReason("start_chat");
   const [searchParams, setSearchParams] = useSearchParams();
   // 프로젝트 홈의 [채팅 시작]이 `?new=1`을 붙여 오면 처음부터 새 대화 대화상자가 열려 있다(아래 효과가 질의를 지운다)
   const [newDialog, setNewDialog] = useState<{ preselected?: string; project?: string } | null>(() => {
@@ -195,9 +197,10 @@ export function ChatScreen() {
   };
 
   // 대화가 하나도 없고 아무 대화도 열지 않았으면 빈 목록 열을 접는다(화면 활용, 5.2R.21). 새 대화는 오른쪽 시작 카드가 맡는다.
+  // 프로젝트가 막혀 있으면(읽기 전용 등) 접지 않는다: 프로젝트 칩·안내·비활성 [새 대화]와 이유가 보여야 한다.
   // 목록을 불러오는 동안은 접힘 여부를 모르므로 자리는 두고 보이지 않게 한다(0개면 접히며 깜빡이는 것을 막는다).
   const listLoading = conversationId === undefined && conversations.isLoading;
-  const listEmpty = conversationId === undefined && conversations.data !== undefined && conversations.data.length === 0 && debouncedQuery.trim() === "";
+  const listEmpty = conversationId === undefined && conversations.data !== undefined && conversations.data.length === 0 && debouncedQuery.trim() === "" && startBlock === null && recordsState.banners.length === 0;
   return (
     <div className="chat-screen" data-screen="chat" data-list={listOpen ? "open" : "closed"} data-empty={listEmpty ? "true" : undefined} data-loading={listLoading ? "true" : undefined}>
       <div className="ac-sr-only" role="status" aria-live="polite" aria-label={appMessages.pending.none}>{live}</div>
@@ -205,12 +208,12 @@ export function ChatScreen() {
       <aside className="chat-list-pane" aria-label={t.list.label}>
         <ConversationList
           conversations={visible}
-          header={projects.enabled && projects.currentProject !== undefined ? <p className="chat-list-project ac-ellipsis app-muted" title={projects.currentProject.folder ?? undefined}>{projects.currentProject.name}</p> : null}
+          header={projects.enabled && projects.currentProject !== undefined && conversationId === undefined ? <div className="chat-list-project"><ProjectChip /></div> : null}
           totalCount={conversations.data?.length ?? 0}
           selectedId={conversationId}
           loading={conversations.isLoading}
-          error={conversations.error && conversations.data === undefined ? describeError(conversations.error, t.list.loadFailed).message : null}
-          onRetry={() => void conversations.refetch()}
+          error={conversations.error && conversations.data === undefined ? (recordsState.blocking ? (recordsState.banners[0]?.title ?? t.list.loadFailed) : describeError(conversations.error, t.list.loadFailed).message) : null}
+          {...(recordsState.blocking ? {} : { onRetry: () => void conversations.refetch() })}
           paging={{ hasMore: conversations.hasMore, loading: conversations.loadingMore, onLoadMore: conversations.loadMore }}
           sourceOf={conversations.sourceOf}
           sourceLabel={sourceLabel}
@@ -222,6 +225,7 @@ export function ChatScreen() {
           nowMs={nowMs}
           onSelect={(id) => goTo(id)}
           onNew={() => openNew()}
+          newBlockedReason={startBlock}
           onRename={(c) => {
             setRenameTarget(c);
             setRenameText(c.title ?? "");
@@ -232,8 +236,9 @@ export function ChatScreen() {
         />
       </aside>
       <section className="chat-main" aria-label={t.title}>
+        <ProjectRecordsNotice banners={recordsState.banners} />
         {conversationId === undefined ? (
-          <ChatHome onNew={() => openNew()} />
+          <ChatHome onNew={() => openNew()} blockedReason={startBlock} />
         ) : (
           <ChatPane
             key={conversationId}

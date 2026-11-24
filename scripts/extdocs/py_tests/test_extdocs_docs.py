@@ -298,6 +298,15 @@ def test_public_lint_in_example_readme_fails(documented: Repo) -> None:
     assert errors(docs_check(documented)) == ["public-design-section"]
 
 
+def test_public_lint_in_root_readme_fails(documented: Repo) -> None:
+    """루트 README도 공개 가능 린트 대상이다(저장소 설정 ``public_lint_globs``, 8R 검토 F-6)."""
+    readme = documented.root / "README.md"
+    readme.write_text("# 제품\n\n설치는 아래를 따른다.\n", encoding="utf-8")
+    assert errors(docs_check(documented)) == []
+    readme.write_text("# 제품\n\n작업 5.2R.3에서 바꿨다.\n", encoding="utf-8")
+    assert errors(docs_check(documented)) == ["public-task-number"]
+
+
 def test_report_mode_only_warns(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     (tmp_path / "README.md").write_text("design §1\n", encoding="utf-8")
     assert main(["--root", str(tmp_path), "docs", "--report", "README.md"]) == 0

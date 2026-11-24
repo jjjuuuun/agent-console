@@ -3,6 +3,9 @@
  * 상태 이름·막힘 이유 문구는 `@agent-console/projects`의 `createProjectsText()`가 가진다. 구성 폴더 이름은 `{dir}` 자리표시로 받는다.
  * 모듈·기능·구성 종류 이름을 문구에 고정하지 않는다.
  */
+/** 폴더 이름(`.agent-console` 등)이 문장 중간에서 하이픈 자리로 갈라지지 않게 하이픈을 줄바꿈 없는 하이픈으로 바꾼다. */
+const noBreak = (name: string): string => name.replace(/-/g, "\u2011");
+
 export const folderHomeMessages = {
   menu: {
     label: (name: string) => `${name} 메뉴`,
@@ -75,22 +78,22 @@ export const folderHomeMessages = {
     found: "폴더를 다시 찾았습니다",
     writableAgain: "쓸 수 있게 되었습니다",
     missingTitle: "폴더를 찾을 수 없습니다",
-    missingBody: (path: string, dir: string) =>
-      `${path} 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안(${dir})에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
-    missingBodyUnknown: (path: string) =>
-      `${path} 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안의 프로젝트 구성 폴더에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
+    missingBody: (dir: string) =>
+      `이 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안(${noBreak(dir)})에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
+    missingBodyUnknown: () =>
+      `이 폴더가 없습니다. 이동했거나 이름을 바꿨거나 드라이브가 연결되지 않았을 수 있습니다. 채팅·실행 기록과 구성은 폴더 안의 프로젝트 구성 폴더에 있어 폴더를 다시 찾을 때까지 볼 수 없고, 새 채팅·실행도 막힙니다. 기록은 지워지지 않습니다.`,
     notDirTitle: "경로가 폴더가 아닙니다",
-    notDirBody: (path: string) => `${path}는 파일이거나 폴더가 아닙니다.`,
+    notDirBody: () => "이 경로는 파일이거나 폴더가 아닙니다.",
     noAccessTitle: "폴더에 접근할 수 없습니다",
-    noAccessBody: (path: string) => `서버를 실행한 계정에 ${path} 폴더의 읽기 권한이 없습니다. 권한을 고친 뒤 [다시 확인]하거나 다른 경로로 바꾸세요.`,
+    noAccessBody: () => `서버를 실행한 계정에 이 폴더의 읽기 권한이 없습니다. 권한을 고친 뒤 [다시 확인]하거나 다른 경로로 바꾸세요.`,
     unsetTitle: "폴더가 지정되지 않았습니다",
     unsetBody: "이전 버전에서 만든 프로젝트라 폴더가 없습니다. 폴더를 지정해야 채팅·실행을 쓸 수 있습니다.",
     conflictTitle: "다른 프로젝트와 폴더가 겹칩니다",
-    conflictBody: (path: string) => `${path}가 다른 프로젝트와 같거나 겹칩니다. 이전 버전에서 생긴 상태이며, 하나를 정리해야 둘 다 쓸 수 있습니다.`,
+    conflictBody: () => `이 폴더가 다른 프로젝트와 같거나 겹칩니다. 이전 버전에서 생긴 상태이며, 하나를 정리해야 둘 다 쓸 수 있습니다.`,
     unknownTitle: (status: string) => `프로젝트 상태: ${status}`,
     manifestTitle: "프로젝트 설정 파일을 읽을 수 없습니다",
     manifestBody: (dir: string, detail: string | null) =>
-      `${dir}/project.yaml을 읽지 못했습니다${detail === null ? "" : `: ${detail}`}. 기록과 로그는 그대로 볼 수 있고, 새 채팅·실행과 구성 가져오기는 설정 파일을 고치기 전까지 막힙니다. 파일을 직접 고치거나 새로 만들 수 있습니다.`,
+      `${noBreak(dir)}/project.yaml을 읽지 못했습니다${detail === null ? "" : `: ${detail}`}. 기록과 로그는 그대로 볼 수 있고, 새 채팅·실행과 구성 가져오기는 설정 파일을 고치기 전까지 막힙니다. 파일을 직접 고치거나 새로 만들 수 있습니다.`,
     manifestBodyUnknown: (detail: string | null) =>
       `프로젝트 설정 파일(project.yaml)을 읽지 못했습니다${detail === null ? "" : `: ${detail}`}. 기록과 로그는 그대로 볼 수 있고, 새 채팅·실행과 구성 가져오기는 설정 파일을 고치기 전까지 막힙니다. 파일을 직접 고치거나 새로 만들 수 있습니다.`,
     manifestCopyPath: "설정 파일 경로 복사",
@@ -107,7 +110,7 @@ export const folderHomeMessages = {
     manifestRecreateFailed: "설정 파일을 다시 만들지 못했습니다",
     readonlyTitle: "읽기 전용 폴더입니다",
     readonlyBody: (dir: string) =>
-      `이 폴더에 ${dir} 폴더를 쓸 수 없어 구성을 가져오거나 고칠 수 없고, 대화·실행 기록도 저장할 수 없어 채팅·실행을 시작할 수 없습니다(보기·로그는 됩니다). 폴더의 쓰기 권한을 고친 뒤 [다시 확인]하세요.`,
+      `이 폴더에 ${noBreak(dir)} 폴더를 쓸 수 없어 구성을 가져오거나 고칠 수 없고, 대화·실행 기록도 저장할 수 없어 채팅·실행을 시작할 수 없습니다(보기·로그는 됩니다). 폴더의 쓰기 권한을 고친 뒤 [다시 확인]하세요.`,
     readonlyBodyUnknown:
       "이 폴더 안에 프로젝트 구성 폴더를 쓸 수 없어 구성을 가져오거나 고칠 수 없고, 대화·실행 기록도 저장할 수 없어 채팅·실행을 시작할 수 없습니다(보기·로그는 됩니다). 폴더의 쓰기 권한을 고친 뒤 [다시 확인]하세요.",
     recordsNewerTitle: "더 새 버전의 앱이 이 폴더의 기록을 만들었습니다",
@@ -116,7 +119,7 @@ export const folderHomeMessages = {
     recordsCopyPath: "기록 파일 경로 복사",
     recordsCopyBackup: "백업 경로 복사",
     recordsRetry: "다시 시도",
-    gitignoreOutdated: (dir: string) => `${dir}/.gitignore가 이전 버전이라 기록 파일·세션 보관 폴더가 git에서 제외되지 않을 수 있습니다.`,
+    gitignoreOutdated: (dir: string) => `${noBreak(dir)}/.gitignore가 이전 버전이라 기록 파일·세션 보관 폴더가 git에서 제외되지 않을 수 있습니다.`,
     gitignoreOutdatedUnknown: ".gitignore가 이전 버전이라 기록 파일·세션 보관 폴더가 git에서 제외되지 않을 수 있습니다.",
     gitignoreAppend: ".gitignore 덧붙이기",
     gitignoreAppended: ".gitignore에 빠진 줄을 덧붙였습니다",

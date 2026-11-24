@@ -430,6 +430,20 @@ def test_rest_project_counts_include_project_records(tmp_path: Path, spaces: Spa
         assert found.json() == {"total": 2, "no_project": 0, "by_project": {"pb": 2}}
 
 
+def test_rest_project_counts_source_app_host_only(tmp_path: Path, spaces: Spaces) -> None:
+    """``?source=app``: 앱 DB만 센다(프로젝트 기록 DB는 읽지 않는다, 5.7R.33p). 다른 값은 422."""
+    _seed(spaces, "pb", "b1")
+    _seed(spaces, "pb", "b2")
+    with _client(tmp_path, spaces, _ArchivedListing(IDS, archived=[])) as client:
+        found = client.get(f"{API}/runs/project-counts", params={"source": "app"})
+        assert found.status_code == 200, found.text
+        assert found.json() == {"total": 0, "no_project": 0, "by_project": {}}
+        merged = client.get(f"{API}/runs/project-counts").json()
+        assert merged["by_project"] == {"pb": 2}
+        bad = client.get(f"{API}/runs/project-counts", params={"source": "project"})
+        assert bad.status_code == 422
+
+
 def test_rest_project_counts_without_listing_host_only(tmp_path: Path, spaces: Spaces) -> None:
     _seed(spaces, "pb", "b1")
     with _client(tmp_path, spaces, None) as client:

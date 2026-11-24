@@ -165,7 +165,7 @@ describe("에이전트 탭 세션별 보기(R0)", () => {
   it("세그먼트로 전환하고 세션 행·서브 행·세션 정보 없음 묶음을 보인다", () => {
     const { onModeChange, onSelect } = mount("by-session");
     expect(screen.getByRole("radiogroup", { name: "묶는 기준" })).toBeTruthy();
-    const list = screen.getByRole("listbox", { name: "세션별" });
+    const list = screen.getByRole("list", { name: "세션별" });
     expect(within(list).getByText("노드-L")).toBeTruthy();
     expect(within(list).getByText("에이전트 ag-sub")).toBeTruthy();
     fireEvent.click(within(list).getByText(/세션 정보 없음/));

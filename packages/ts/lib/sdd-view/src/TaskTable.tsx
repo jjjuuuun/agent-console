@@ -84,6 +84,8 @@ export interface TaskTableProps {
   /** 앱의 단축키 처리기가 행 동작을 부르는 손잡이 */
   ref?: Ref<TaskTableHandle>;
   height?: number | "fill";
+  /** 상대 시각 locale(BCP 47). 실행 칩에 전달. */
+  locale?: string;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
@@ -95,7 +97,7 @@ export interface TaskTableProps {
 export function TaskTable(props: TaskTableProps) {
   const {
     tasks, statuses, stages, syntaxEmpty = false, onOpenRules, readOnly = false, blockedReason, onStatusChange, conflicts, onDismissConflict, onOpenDocument,
-    documentTitles, showLinks = true, openableKinds, onOpenLink, linkStatuses, renderActions, expandedKey, onExpandedChange, height = "fill", messages, className,
+    documentTitles, showLinks = true, openableKinds, onOpenLink, linkStatuses, renderActions, expandedKey, onExpandedChange, height = "fill", locale, messages, className,
     selectable = false, selectedKeys, onSelectedChange, collapsedOverrides, onCollapsedChange, renderRowNotice, rowMenuItems, ref,
   } = props;
   const text = resolveMessages(messages);
@@ -324,7 +326,7 @@ export function TaskTable(props: TaskTableProps) {
           </span>
           <span className="ac-sdd-task-cell" data-col="ready">{readiness !== "" ? <ToneChip label={readiness} tone={task.ready ? "info" : "neutral"} /> : null}</span>
           <span className="ac-sdd-task-cell" data-col="fields"><TaskFieldChips fields={task.fields} max={2} messages={text} /></span>
-          {showLinks ? <span className="ac-sdd-task-cell" data-col="links"><TaskRunChips links={task.links} max={2} {...(openableKinds ? { openableKinds } : {})} {...(onOpenLink ? { onOpen: onOpenLink } : {})} {...(linkStatuses ? { statuses: linkStatuses } : {})} messages={text} /></span> : null}
+          {showLinks ? <span className="ac-sdd-task-cell" data-col="links"><TaskRunChips links={task.links} max={2} {...(locale ? { locale } : {})} {...(openableKinds ? { openableKinds } : {})} {...(onOpenLink ? { onOpen: onOpenLink } : {})} {...(linkStatuses ? { statuses: linkStatuses } : {})} messages={text} /></span> : null}
           {renderActions ? <span className="ac-sdd-task-actions" data-col="actions" data-sdd-trigger="actions">{renderActions(task)}</span> : null}
         </div>
         {notice != null ? <div className="ac-sdd-row-notice" data-sdd-row-notice="">{notice}</div> : null}

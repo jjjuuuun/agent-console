@@ -11,7 +11,7 @@ import { ROUTE_ROLES } from "./paths";
 const te = chatMessages.empty;
 
 /** 대화를 고르지 않았을 때의 오른쪽 영역: 시작하기 카드(대화나 팀 구성이 없을 때) 또는 안내. 카드 내용은 공용 `StartGuide`다. */
-export function ChatHome({ onNew }: { onNew: () => void }) {
+export function ChatHome({ onNew, blockedReason }: { onNew: () => void; blockedReason?: string | null | undefined }) {
   const teamsOn = useRouteOn(ROUTE_ROLES.graph);
   const project = useProjectId();
   const graphs = useGraphList(teamsOn, project);
@@ -31,7 +31,7 @@ export function ChatHome({ onNew }: { onNew: () => void }) {
           icon={routeIconNode(ROUTE_ROLES.conversations)}
           title={te.selectOrStart}
           description={te.selectOrStartBody}
-          action={<Button variant="primary" onClick={onNew}>{te.startNew}</Button>}
+          action={<Button variant="primary" onClick={() => blockedReason == null && onNew()} {...(blockedReason == null ? {} : { "aria-disabled": true, title: blockedReason })}>{te.startNew}</Button>}
         />
       )}
     </div>

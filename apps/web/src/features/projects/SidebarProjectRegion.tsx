@@ -31,6 +31,9 @@ const FOLDER_ICONS: Readonly<Record<string, string>> = {
   folder_conflict: "folder-alert",
   manifest_invalid: "folder-alert",
 };
+/** 폴더 상태는 정상이지만 쓸 수 없는 행의 표식(색만으로 구분하지 않도록 아이콘 모양도 다르게). 읽기 전용 폴더·더 새 버전 기록 */
+const READONLY_ICON = "folder-lock";
+const NEWER_RECORDS_ICON = "folder-alert";
 const TONE_OF: Readonly<Record<StatusTone, "ok" | "neutral" | "warning" | "danger">> = { ok: "ok", neutral: "neutral", warning: "warning", danger: "danger" };
 
 /** 영역 접힘 저장 키(명세 screen-projects §2.2). 값 `"1"` = 접힘. */
@@ -55,11 +58,20 @@ export function SidebarProjectRegion({ rail }: SidebarProjectRegionProps) {
     () =>
       regionViews(p.views).map((v) => {
         const info = statusInfo(v);
+        const ready = v.status === "ready" && v.project.archived !== true;
+        const newer = ready && v.records_state === "newer";
+        const base = { icon: FOLDER_ICONS[v.status] ?? (v.status === "ready" ? "folder" : "folder-alert"), tone: TONE_OF[info.tone], label: text(info.label), plain: info.plain };
+        const status =
+          ready && info.profile === "ready_readonly"
+            ? { ...base, icon: READONLY_ICON }
+            : newer
+              ? { icon: NEWER_RECORDS_ICON, tone: "warning" as const, label: m.problem.recordsNewerTitle, plain: false }
+              : base;
         return {
           id: v.project.id,
           name: v.project.name,
           folder: v.project.folder ?? null,
-          status: { icon: FOLDER_ICONS[v.status] ?? (v.status === "ready" ? "folder" : "folder-alert"), tone: TONE_OF[info.tone], label: text(info.label), plain: info.plain },
+          status,
         };
       }),
     [p.views],

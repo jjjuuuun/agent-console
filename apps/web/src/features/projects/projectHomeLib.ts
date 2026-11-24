@@ -2,6 +2,7 @@ import type { ProjectView } from "@agent-console/contracts/projects";
 import type { ConversationSummary, Run } from "@agent-console/contracts";
 import { KNOWN_PROJECT_STATUSES } from "@agent-console/contracts/constants";
 import { folderHomeMessages as m } from "./folderHomeMessages";
+import { messages as appMessages } from "../../app/messages";
 
 /** 배너 한 개의 종류. 같은 종류는 한 화면에 하나뿐이다. */
 export type BannerKind = "folder" | "records" | "manifest" | "readonly" | "gitignore" | "network" | "archived";
@@ -42,18 +43,17 @@ function recordsReasonTitle(view: ProjectView): string {
 
 /** 폴더 문제 배너(상태 → 제목·본문·버튼, screen-projects §6.1 표). */
 function folderBanner(view: ProjectView): BannerSpec | null {
-  const path = view.project.folder ?? "";
   switch (view.status) {
     case KNOWN_PROJECT_STATUSES.FOLDER_MISSING:
-      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.missingTitle, body: (dirOf(view) === undefined ? m.problem.missingBodyUnknown(path) : m.problem.missingBody(path, dirOf(view) as string)), actions: ["repath", "recheck", "unregister"] };
+      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.missingTitle, body: (dirOf(view) === undefined ? m.problem.missingBodyUnknown() : m.problem.missingBody(dirOf(view) as string)), actions: ["repath", "recheck", "unregister"] };
     case KNOWN_PROJECT_STATUSES.NOT_A_DIRECTORY:
-      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.notDirTitle, body: m.problem.notDirBody(path), actions: ["repath", "recheck", "unregister"] };
+      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.notDirTitle, body: m.problem.notDirBody(), actions: ["repath", "recheck", "unregister"] };
     case KNOWN_PROJECT_STATUSES.NO_ACCESS:
-      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.noAccessTitle, body: m.problem.noAccessBody(path), actions: ["recheck", "repath", "unregister"] };
+      return { id: "folder", kind: "folder", tone: "danger", title: m.problem.noAccessTitle, body: m.problem.noAccessBody(), actions: ["recheck", "repath", "unregister"] };
     case KNOWN_PROJECT_STATUSES.FOLDER_UNSET:
       return { id: "folder", kind: "folder", tone: "warning", title: m.problem.unsetTitle, body: m.problem.unsetBody, actions: ["setFolder", "unregister"] };
     case KNOWN_PROJECT_STATUSES.FOLDER_CONFLICT:
-      return { id: "folder", kind: "folder", tone: "warning", title: m.problem.conflictTitle, body: m.problem.conflictBody(path), actions: ["repath", "unregister"] };
+      return { id: "folder", kind: "folder", tone: "warning", title: m.problem.conflictTitle, body: m.problem.conflictBody(), actions: ["repath", "unregister"] };
     default:
       return null;
   }
@@ -150,7 +150,7 @@ export function relativeTime(nowMs: number, epochSeconds: number | null | undefi
   if (diff < 3600) return m.home.relative.minutes(Math.max(1, Math.round(diff / 60)));
   if (diff < 86400) return m.home.relative.hours(Math.round(diff / 3600));
   if (diff < 86400 * 30) return m.home.relative.days(Math.round(diff / 86400));
-  return new Date(epochSeconds * 1000).toLocaleDateString("ko");
+  return new Date(epochSeconds * 1000).toLocaleDateString(appMessages.locale);
 }
 
 /** 최근 활동 한 줄(채팅·실행을 합친 목록). */

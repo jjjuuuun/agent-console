@@ -20,7 +20,7 @@ export { LinkGraph } from "./LinkGraph";
 export type { LinkGraphProps } from "./LinkGraph";
 export { LinkList } from "./LinkList";
 export type { LinkListProps } from "./LinkList";
-export { LintTable } from "./LintTable";
+export { LintTable, issuePage } from "./LintTable";
 export type { LintFilter, LintSortKey, LintTableProps } from "./LintTable";
 export { SearchResults, searchOptionId } from "./SearchResults";
 export type { SearchResultsHandle, SearchResultsProps } from "./SearchResults";

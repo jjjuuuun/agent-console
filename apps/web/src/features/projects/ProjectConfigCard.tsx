@@ -5,6 +5,7 @@ import { MenuPopover } from "./MenuPopover";
 import { folderHomeMessages as m } from "./folderHomeMessages";
 import { relativeTime } from "./projectHomeLib";
 import type { ConfigRow } from "./useProjectHomeData";
+import { messages as appMessages } from "../../app/messages";
 
 export interface ProjectConfigCardProps {
   rows: readonly ConfigRow[];
@@ -96,7 +97,7 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
                 <tr key={r.key} data-highlight={p.highlightKey === r.key ? "true" : undefined}>
                   <td className="prj-cell-name">{r.href === undefined ? <span className="ac-ellipsis" title={r.name}>{r.name}</span> : <Link className="ac-ellipsis" to={r.href} title={r.name}>{r.name}</Link>}</td>
                   <td><span className="prj-kind-chip ac-ellipsis" title={r.kindTitle}>{r.kindTitle}</span></td>
-                  <td className="app-muted" title={r.modifiedAt === undefined ? undefined : new Date(r.modifiedAt * 1000).toLocaleString("ko")}>{relativeTime(p.nowMs, r.modifiedAt)}</td>
+                  <td className="app-muted" title={r.modifiedAt === undefined ? undefined : new Date(r.modifiedAt * 1000).toLocaleString(appMessages.locale)}>{relativeTime(p.nowMs, r.modifiedAt)}</td>
                   <td>
                     {p.rowMenu === undefined && r.href === undefined ? null : (
                       <MenuPopover

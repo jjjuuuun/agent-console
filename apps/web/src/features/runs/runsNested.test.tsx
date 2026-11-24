@@ -179,7 +179,7 @@ describe("실행 상세: 회차·반복·실패 처리·자식 실행", () => {
     expect(screen.getByText(/↻ 반복 한도 도달 \(한도 2회\)/)).toBeTruthy();
     expect(await screen.findByText("▣ 자식 실행 시작 · 자식 팀 · c1abcd")).toBeTruthy();
     // 실행 전체 항목(actor가 없는 이벤트)
-    expect(screen.getByRole("button", { name: /실행 전체/ })).toBeTruthy();
+    expect(within(screen.getByRole("list", { name: "에이전트 목록" })).getByRole("button", { name: /실행 전체/ })).toBeTruthy();
   });
 });
 

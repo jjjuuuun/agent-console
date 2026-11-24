@@ -2,7 +2,7 @@ import * as React from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { WikiLink } from "@agent-console/contracts/wiki";
+import type { WikiIssue, WikiLink } from "@agent-console/contracts/wiki";
 import { AuthorChip, OpChip } from "./Chips";
 import { HistoryDiff } from "./HistoryDiff";
 import { LinkGraph } from "./LinkGraph";
@@ -492,6 +492,16 @@ describe("LintTable (수용 기준 22)", () => {
     // 줄·규칙 열
     expect(rows[0]!.textContent).toContain("no-secrets");
     expect(within(rows[0]!).getByText("12")).toBeTruthy();
+  });
+  it("서버 이슈 모양(`page`·`line`·`rule_id`)을 페이지·줄·규칙 열로 읽고 페이지 거르기에 쓴다", () => {
+    const serverShaped: WikiIssue[] = [{ severity: "error", code: "wiki.rule_violation", message: "금지 패턴", page: "docs/alpha", line: 7, rule_id: "no-temp" }];
+    render(<LintTable issues={serverShaped} severityOrder={order} />);
+    const row = screen.getAllByRole("row")[1]!;
+    expect(within(row).getByText("docs/alpha")).toBeTruthy();
+    expect(within(row).getByText("7")).toBeTruthy();
+    expect(within(row).getByText("no-temp")).toBeTruthy();
+    fireEvent.change(screen.getByRole("searchbox", { name: "페이지 경로 거르기" }), { target: { value: "ALPHA" } });
+    expect(screen.getAllByRole("row")).toHaveLength(2);
   });
   it("처음 거르기를 받아 시작하고, 바뀔 때만(처음 그릴 때는 아니다) 알린다", () => {
     const onFilterChange = vi.fn();

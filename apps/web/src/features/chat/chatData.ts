@@ -20,6 +20,7 @@ export const chatKeys = {
   conversation: (id: string, project?: string | null) => (project === undefined ? (["chat", "conversation", id] as const) : (["chat", "conversation", id, project] as const)),
   turns: (id: string, project?: string | null) => (project === undefined ? (["chat", "turns", id] as const) : (["chat", "turns", id, project] as const)),
   queue: (id: string, project?: string | null) => (project === undefined ? (["chat", "queue", id] as const) : (["chat", "queue", id, project] as const)),
+  sessions: (id: string, project?: string | null) => ["chat", "sessions", id, project ?? null] as const,
   runEvents: (runId: string) => ["chat", "run-events", runId] as const,
   /** 대화가 있는 기록 공간(`GET /conversations/{id}/locate`). */
   locate: (id: string) => ["chat", "locate", id] as const,
@@ -127,4 +128,9 @@ export function useQueueList(id: string, project: string | null = null, enabled 
 export function useChatPlan(graphId: string | undefined, projectId: string | null = null) {
   const { space } = useApi();
   return useQuery({ queryKey: chatKeys.plan(graphId ?? "", projectId), queryFn: () => space(projectId).getGraphPlan(graphId as string), enabled: graphId !== undefined && graphId !== "", staleTime: 5_000 });
+}
+
+/** 대화 이어 가기 상태(`GET /conversations/{id}/sessions`). 요청 중·실패는 `data`가 없고 화면은 아무것도 막지 않는다(서버가 전송 때 409로 막는다). */
+export function useConversationSessions(id: string, project: string | null, enabled = true) {
+  return useApiQuery(chatKeys.sessions(id, project), (rest) => rest.getConversationSessions(id, project), { enabled, retry: false });
 }

@@ -19,6 +19,10 @@
 | `graph_id` · `archived` | 같음 비교 |
 | `q` | 제목 부분 일치(최대 200자, 넘으면 422, 앞뒤 공백 제거, 비면 무시, 대소문자 무시 `casefold`). 제목이 빈 대화는 맞지 않는다 |
 
+### 프로젝트별 대화 수 (`GET /conversations/project-counts`)
+
+`ProjectCounts`(전체·프로젝트 없음·프로젝트별 대화 수). 기록 공간이 있는 조립이면 앱 DB와 보관하지 않은 등록 프로젝트의 기록 DB를 합쳐 센다. `?source=app`이면 앱 DB만 센다(앱에 남은 기록 표시용).
+
 ## 설치
 
 ```bash

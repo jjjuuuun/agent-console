@@ -167,14 +167,14 @@ export function Sidebar({ items, activeId, onNavigate, collapsed, onCollapsedCha
       "data-size": "md",
       "aria-label": item.label,
       "aria-current": item.id === activeId ? ("page" as const) : undefined,
-      title: item.tooltip ?? item.label,
     };
     const glyph = <span aria-hidden="true">{item.icon ?? Array.from(item.label)[0]}</span>;
+    // 다른 도구 단추와 같게 CSS 툴팁(호버 지연 + 키보드 포커스 즉시). 접근성 이름은 aria-label이 맡는다.
+    const withTip = (node: ReactNode) => <Tooltip key={item.id} placement="top" align="start" content={item.tooltip ?? item.label}>{node}</Tooltip>;
     return item.href === undefined ? (
-      <button key={item.id} type="button" {...common} onClick={() => onNavigate(item.id)}>{glyph}</button>
-    ) : (
+      withTip(<button type="button" {...common} onClick={() => onNavigate(item.id)}>{glyph}</button>)
+    ) : withTip(
       <a
-        key={item.id}
         href={item.href}
         {...common}
         onClick={(event) => {
@@ -184,7 +184,7 @@ export function Sidebar({ items, activeId, onNavigate, collapsed, onCollapsedCha
         }}
       >
         {glyph}
-      </a>
+      </a>,
     );
   };
 

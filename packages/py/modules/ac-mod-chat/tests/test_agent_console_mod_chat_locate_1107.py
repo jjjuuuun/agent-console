@@ -385,6 +385,29 @@ def test_rest_project_counts_include_project_records(
     assert not spaces.file("pc").exists()
 
 
+def test_rest_project_counts_source_app_host_only(
+    tmp_path: Path, spaces: Spaces, app_db: SqliteDatabase
+) -> None:
+    """``?source=app``: 앱 DB의 대화만 센다(프로젝트 기록 DB는 읽지 않는다, 5.7R.33p)."""
+    _seed(spaces, "pb", "b1")
+    _seed(spaces, "pb", "b2")
+    host = SqliteChatStorage(app_db.engine).conversations
+    host.save(_conv("c-app", None))
+    host.save(_conv("c-old", "pb"))  # 기록 공간 전에 앱 DB에 남은 대화
+    extra = [
+        _provider("t-records", RECORDS_SPACES, spaces),
+        _provider("t-projects", PROJECTS_LOOKUP, _ArchivedListing(IDS, archived=[])),
+    ]
+    with _client(tmp_path, extra, app_db) as client:
+        found = client.get(f"{API}/conversations/project-counts", params={"source": "app"})
+        assert found.status_code == 200, found.text
+        assert found.json() == {"total": 2, "no_project": 1, "by_project": {"pb": 1}}
+        merged = client.get(f"{API}/conversations/project-counts").json()
+        assert merged["by_project"] == {"pb": 3}
+        bad = client.get(f"{API}/conversations/project-counts", params={"source": "project"})
+        assert bad.status_code == 422
+
+
 def test_rest_project_counts_without_listing_app_only(
     tmp_path: Path, spaces: Spaces, app_db: SqliteDatabase
 ) -> None:

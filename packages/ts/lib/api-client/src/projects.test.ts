@@ -120,6 +120,10 @@ describe("프로젝트 2 REST", () => {
     expect(last(calls)).toMatchObject({ method: "POST", path: "/runs/assign-project", body: { to: "p1", from_null: true } });
     await rest.getConversationProjectCounts();
     expect(last(calls)).toMatchObject({ method: "GET", path: "/conversations/project-counts" });
+    await rest.getRunProjectCounts({ source: "app" });
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/runs/project-counts?source=app" });
+    await rest.getConversationProjectCounts({ source: "app" });
+    expect(last(calls)).toMatchObject({ method: "GET", path: "/conversations/project-counts?source=app" });
     await rest.assignConversationsToProject({ to: "p1", ids: ["c1"] });
     expect(last(calls)).toMatchObject({ method: "POST", path: "/conversations/assign-project", body: { to: "p1", ids: ["c1"] } });
   });

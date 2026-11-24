@@ -21,7 +21,7 @@ describe("설정 화면: 섹션 하나씩", () => {
   it("묶음 제목 아래 목록이 나오고 본문에는 선택한 섹션 하나만 있다", async () => {
     mountApp(createFakeClients().clients, "/settings#chat");
     const nav = await screen.findByRole("navigation", { name: "설정 섹션" });
-    for (const g of ["자주 쓰는", "실행 기본값", "데이터", "시스템"]) expect(await within(nav).findByRole("heading", { name: g })).toBeTruthy();
+    for (const g of ["자주 쓰는", "실행 기본값", "데이터", "시스템"]) expect(await within(nav).findByRole("button", { name: g })).toBeTruthy();
     expect(await screen.findByRole("region", { name: "채팅" })).toBeTruthy();
     expect(document.querySelectorAll(".app-settings-section")).toHaveLength(1);
     expect(within(nav).getByRole("link", { name: "채팅" }).getAttribute("aria-current")).toBe("location");

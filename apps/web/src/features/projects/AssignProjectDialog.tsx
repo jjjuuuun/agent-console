@@ -51,7 +51,7 @@ export function AssignProjectDialog({ feature, count, targets, directDefault, bu
             <input type="radio" name={name} value={x.id} checked={picked === x.id} disabled={x.problem !== undefined} onChange={() => setPicked(x.id)} />
             <span className="prj-assign-text">
               <span className="ac-ellipsis"><strong>{x.name}</strong> {x.recommended === true ? <span className="app-muted">{t.assignRecommended}</span> : null}</span>
-              <span className="ac-ellipsis app-muted prj-mono" title={x.folder}>{x.folder}</span>
+              <span className="app-muted prj-mono prj-wrap" title={x.folder}>{x.folder}</span>
               {x.problem === undefined ? null : <span className="app-muted">{x.problem}</span>}
             </span>
           </label>

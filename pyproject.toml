@@ -123,45 +123,9 @@ check = { sequence = [
     "extpoints-check", "extdocs-check", "extdocs-test", "test", "examples",
 ], help = "lint → typecheck → imports → pkg-lint → schema-help-lint → extpoints-check → extdocs-check → extdocs-test → test → examples" }
 schema-help-lint = { cmd = "python scripts/schema_help_lint.py --quiet", help = "설정 폼 도움말 린트: 계약·번들 플러그인 스키마의 설명·x-ui.tier·예시(번들 = 오류, 외부 = 경고)" }
-# 확장 예제(워크스페이스 멤버가 아님, P8): 예제 폴더 자기 설정으로 mypy·pytest(설치하지 않고 src 경로).
-examples = { sequence = [
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-architecture" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-architecture" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-backend" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-backend" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-collector" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-collector" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-condition" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-condition" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-delegation" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-delegation" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-edges" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-edges" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-interactions" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-interactions" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-link" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-link" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-log-source" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-log-source" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-memory-scope" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-memory-scope" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-module" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-module" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-nodes" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-nodes" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-secret-provider" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-secret-provider" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-sdd-junit" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-sdd-junit" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-usage" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-usage" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-transfer" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-transfer" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-wiki-check" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-wiki-check" },
-    { cmd = "mypy", cwd = "examples/extensions/agent-console-example-wiki-search" },
-    { cmd = "pytest -q", cwd = "examples/extensions/agent-console-example-wiki-search" },
-], help = "확장 예제(examples/extensions/*)를 각 폴더 설정으로 mypy·pytest" }
+# 확장 예제(워크스페이스 멤버가 아님): 예제 폴더 자기 설정으로 mypy·pytest(설치하지 않고 src 경로).
+# 예제 목록은 손으로 적지 않는다. scripts/pkgkit/pkgkit_py.toml [examples] roots glob으로 찾는다.
+examples = { cmd = "python scripts/pkgkit/examples_check.py", help = "확장 예제([examples] roots, 기본 examples/extensions/*)를 각 폴더 설정으로 mypy·pytest [--package NAME] [--list]" }
 fmt = { sequence = [
     { cmd = "ruff check --fix ." },
     { cmd = "ruff format ." },

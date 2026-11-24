@@ -148,6 +148,25 @@ export const chatMessages = {
   progress: {
     skippedWith: (reason: string) => `건너뜀(${(({ resumed: "이어 가기" }) as Record<string, string>)[reason] ?? reason})`,
   },
+  /** 세션 이어 가기(screen-projects §4.6.4). 상태 값은 열린 문자열이라 모르는 값은 원문을 쓴다. */
+  session: {
+    title: "이 앱에는 이 대화의 세션 기록이 없습니다",
+    body: "대화 내용은 읽을 수 있습니다. 이어서 보내려면 이전 맥락 없이 새 세션으로 계속하거나 새 대화를 시작하세요.",
+    bodyPartial: (n: number) => `대화 내용은 읽을 수 있습니다. 이어서 보내면 맥락이 없는 노드 ${n}개만 새 세션으로 시작합니다. 새 대화를 시작할 수도 있습니다.`,
+    continueFresh: "새 세션으로 계속",
+    newConversation: "새 대화",
+    details: "자세히",
+    detailsLabel: "노드별 세션 상태",
+    settingsLink: "세션 기록 보관 설정",
+    armed: "다음 메시지는 이전 맥락 없이 새 세션으로 시작합니다.",
+    cancel: "취소",
+    blocked: "세션 기록이 없어 보낼 수 없습니다. 위에서 선택하세요",
+    relocatable: "프로젝트 폴더 경로가 바뀌어 세션 기록을 옮긴 뒤 이어 갑니다.",
+    archived: "이 폴더에 보관된 세션 기록으로 이어 갑니다.",
+    archivedTurn: "이 폴더에 보관된 세션 기록으로 이어 갑니다",
+    freshStarted: "이전 맥락 없이 새 세션으로 시작했습니다",
+    state: { available: "이어 갈 수 있음", relocatable: "경로가 바뀜 — 옮겨서 이어 감", archived: "폴더 보관 사본으로 이어 감", missing: "세션 기록 없음", not_applicable: "이어 가기 없음" } as Record<string, string>,
+  },
   resume: {
     interruptedBanner: "서버가 다시 시작되거나 종료되어 이 턴이 중단되었습니다.",
     button: "이 지점부터 다시 실행",

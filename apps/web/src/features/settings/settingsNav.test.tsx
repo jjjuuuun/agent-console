@@ -46,11 +46,11 @@ describe("설정 섹션 검색·묶음 접기", () => {
   it("검색어로 일치하는 섹션만 남고 빈 묶음은 숨겨지며, 일치 0이면 안내 한 줄", async () => {
     mount();
     const n = await nav();
-    expect(within(n).getByRole("heading", { name: "시스템" })).toBeTruthy();
+    expect(within(n).getByRole("button", { name: "시스템" })).toBeTruthy();
     fireEvent.change(search(), { target: { value: "서버 정보" } });
     expect(within(n).getByRole("link", { name: "서버 정보" })).toBeTruthy();
     expect(within(n).queryByRole("link", { name: "채팅" })).toBeNull();
-    expect(within(n).queryByRole("heading", { name: "자주 쓰는" })).toBeNull();
+    expect(within(n).queryByRole("button", { name: "자주 쓰는" })).toBeNull();
     fireEvent.change(search(), { target: { value: "없는검색어zzqq" } });
     expect(within(n).getByText("일치하는 섹션 없음")).toBeTruthy();
     expect(within(n).queryAllByRole("link")).toHaveLength(0);
@@ -63,7 +63,8 @@ describe("설정 섹션 검색·묶음 접기", () => {
     const word = fieldTexts(root, ["chat"]).find((t) => t.length >= 2 && !["채팅"].includes(t));
     expect(word).toBeTruthy();
     fireEvent.change(search(), { target: { value: word as string } });
-    expect(within(n).getByRole("link", { name: "채팅" })).toBeTruthy();
+    // 필드 글은 스키마를 받은 뒤에야 색인되므로(부하에서 늦을 수 있다) 일치가 나타날 때까지 기다린다.
+    expect(await within(n).findByRole("link", { name: "채팅" }, LONG)).toBeTruthy();
   });
 
   it("`/`로 검색 칸에 포커스, Esc로 비운다, Enter는 첫 일치 섹션으로 간다", async () => {

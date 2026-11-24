@@ -12,11 +12,13 @@ export interface TaskRunChipsProps {
   statuses?: readonly { id: string; label?: string | null; tone?: string | null; done?: boolean }[];
   /** 보일 칩 수 상한(넘으면 `+n`). 기본 3 */
   max?: number;
+  /** 상대 시각 locale(BCP 47). 앱이 넘긴다. 없으면 브라우저 기본. */
+  locale?: string;
   messages?: Readonly<Record<string, string>>;
 }
 
 /** 작업에 이어진 실행 칩 줄. 종류·상태 이름은 데이터이고 모르는 종류는 `ref` 원문의 일반 칩이다. */
-export function TaskRunChips({ links, openableKinds = [], onOpen, statuses, max = 3, messages }: TaskRunChipsProps) {
+export function TaskRunChips({ links, openableKinds = [], onOpen, statuses, max = 3, locale, messages }: TaskRunChipsProps) {
   const text = resolveMessages(messages);
   const all = links ?? [];
   if (all.length === 0) return null;
@@ -27,7 +29,7 @@ export function TaskRunChips({ links, openableKinds = [], onOpen, statuses, max 
       {shown.map((link) => {
         const st = link.status ? statusTone(link.status, statuses) : null;
         // 명세 §7.3: 상태 칩 + 상대 시각. 실행 id(ref)는 툴팁에 둔다. 상태를 모르면 ref 원문.
-        const ago = relativeTime(link.at);
+        const ago = relativeTime(link.at, undefined, locale);
         const label = st ? (ago !== "" ? `${st.label} · ${ago}` : st.label) : link.ref;
         const tip = formatMessage(text["tasks.runChip.title"], { ref: link.ref });
         const key = `${link.integration}:${link.kind}:${link.ref}`;

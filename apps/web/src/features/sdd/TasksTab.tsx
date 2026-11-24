@@ -248,6 +248,7 @@ export function TasksTab({ specId, view, ctx, params, setParams, goTab, ownHashe
             openableKinds={OPENABLE_LINK_KINDS}
             onOpenLink={openLink}
             linkStatuses={LINK_STATUSES}
+            locale={appMessages.locale}
             {...(runsOn
               ? {
                   renderActions:

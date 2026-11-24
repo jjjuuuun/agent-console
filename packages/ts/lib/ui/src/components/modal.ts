@@ -1,4 +1,4 @@
-import { useEffect, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 
 /** 포커스를 받을 수 있는 요소 선택자(모달 안 `Tab` 순환·첫 포커스에 쓴다). */
 export const FOCUSABLE_SELECTOR =
@@ -18,10 +18,14 @@ export interface UseModalBackdropOptions {
  */
 export function useModalBackdrop(open: boolean, backdropRef: RefObject<HTMLElement | null>, options: UseModalBackdropOptions = {}): void {
   const makeInert = options.inert ?? true;
+  // 열린 채 마운트되면 첫 렌더에서 트리거를 잡는다: 모달 안 자식의 autoFocus가 부모 효과보다 먼저 돌아 효과 안에서는 이미 모달 안으로 포커스가 옮겨 있다.
+  const [mountOpener] = useState<HTMLElement | null>(() => (open && typeof document !== "undefined" && document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null));
   useEffect(() => {
     if (!open) return;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const backdrop = backdropRef.current;
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // 포커스가 이미 모달 안으로 옮겨 와 있을 때만(자식 autoFocus) 마운트 때 잡아 둔 트리거를 쓴다. 다시 열린 경우는 지금 포커스가 트리거다.
+    const previous = mountOpener !== null && active !== null && backdrop?.contains(active) === true ? mountOpener : active;
     const changed: Element[] = [];
     if (makeInert) {
       for (const el of Array.from(document.body.children)) {
@@ -35,7 +39,7 @@ export function useModalBackdrop(open: boolean, backdropRef: RefObject<HTMLEleme
       // inert가 풀린 뒤에야 트리거로 포커스를 돌려줄 수 있다.
       if (previous?.isConnected) previous.focus();
     };
-  }, [open, backdropRef, makeInert]);
+  }, [open, backdropRef, makeInert, mountOpener]);
 }
 
 /**

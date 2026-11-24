@@ -190,8 +190,8 @@ describe("실행 상세", () => {
 
   it("에이전트 탭: actor 목록(서브에이전트 칩), 텍스트 조각 합침, actor 필터가 URL에 남는다", async () => {
     const { router } = mount("/runs/r1?tab=agents", detailOverrides());
-    const list = await screen.findByRole("listbox", { name: "에이전트 목록" });
-    expect(within(list).getAllByRole("option").length).toBe(3);
+    const list = await screen.findByRole("list", { name: "에이전트 목록" });
+    expect(within(list).getAllByRole("listitem").length).toBe(3);
     expect(await screen.findByText("텍스트 2자")).toBeTruthy();
     fireEvent.click(within(list).getByRole("button", { name: /백엔드 리더/ }));
     await waitFor(() => expect(router.state.location.search).toContain("actor=be"));

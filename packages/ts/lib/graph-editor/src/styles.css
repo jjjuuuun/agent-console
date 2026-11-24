@@ -150,7 +150,7 @@
 /* 연결 칩 단추(`onActivate`)가 연결선 SVG에 가려 클릭을 못 받지 않게 라벨 층을 연결선 위로 둔다. 라벨 상자만 포인터를 받는다(`pointer-events: all`) */
 .ac-ge-root .react-flow__edgelabel-renderer { z-index: 4; }
 .ac-ge-edge-chip {
-  position: absolute; max-width: 120px; box-sizing: border-box; padding: 0 var(--ac-space-2); pointer-events: all;
+  position: absolute; width: max-content; max-width: 120px; box-sizing: border-box; padding: 0 var(--ac-space-2); pointer-events: all;
   font-size: var(--ac-text-xs); line-height: 18px; color: var(--ac-text);
   background: var(--ac-surface-1); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm);
 }
@@ -478,7 +478,7 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 .ac-ge-offscreen--beside-toggle { margin-right: calc(var(--ac-space-2) * 2 + 28px); }
 
 /* ---- 세션 구분 표시 (screen-delegation.md §14, 5.7R.34): 편집기는 앱이 준 칩·띠·표식을 그리기만 한다 ---- */
-.ac-ge-edge-chip[data-stacked="true"] { max-width: var(--ac-edge-chip-max-w, 280px); padding-top: 1px; padding-bottom: 1px; }
+.ac-ge-edge-chip[data-stacked="true"] { display: flex; align-items: center; max-width: var(--ac-edge-chip-max-w, 280px); padding-top: 1px; padding-bottom: 1px; }
 .ac-ge-edge-rows { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ac-ge-edge-row { display: flex; align-items: center; gap: var(--ac-space-1); min-width: 0; white-space: nowrap; }
 .ac-ge-edge-row1 { max-width: 168px; overflow: hidden; text-overflow: ellipsis; display: block; }

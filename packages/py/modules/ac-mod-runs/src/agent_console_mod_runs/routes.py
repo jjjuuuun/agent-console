@@ -7,6 +7,8 @@
   그대로 두고 OpenAPI ``deprecated``. 프로젝트 기록 공간이 있는 조립에서 ``?project=``는 폴더 기록
   (``source=project``)을 끝까지 읽은 뒤 앱 DB 옛 기록(``source=app``)을 잇는다(Q14, 두 DB를 섞지
   않음). 커서 = ``<출처>.<저장소 커서>``(``agent_console_store.page_across_sources``).
+- 프로젝트별 루트 Run 수: ``GET /runs/project-counts``(``ProjectCounts``, 앱 DB + 보관하지 않은
+  등록 프로젝트 기록 DB). ``?source=app`` = 앱 DB만(설정 > 프로젝트의 "앱에 남은 기록", 5.7R.33p).
 - 상호작용: ``GET /runs/{id}/interactions``, ``POST /runs/{id}/interactions/{iid}/respond``,
   ``GET /interactions``
 - 이어 가기: ``GET /runs/{id}/resume-options``, ``POST /runs/{id}/resume``
@@ -39,7 +41,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
@@ -123,6 +125,8 @@ SOURCE_APP: RecordSource = "app"
 """목록 ``?source=app``: 앱 DB 옛 기록(그 ``project_id``를 가진 행, 읽기 전용 표시)."""
 RunSource = RecordSource
 """목록 출처(기본 ``project`` = 그 프로젝트 기록 DB, design §PI.4.6.8). 계약 ``RecordSource``."""
+CountsSource = Literal["app"]
+"""``GET /runs/project-counts?source=``: ``app`` = 앱 DB만(생략 = 앱 DB + 프로젝트 기록 DB)."""
 
 
 def parse_label_filters(values: Sequence[str] | None) -> dict[str, str]:
@@ -183,8 +187,8 @@ def build_router(
             None이면 두 경로를 붙이지 않는다.
         mover: 앱 DB 옛 기록 옮기기(``POST /runs/move-to-project``). None이면 경로를 붙이지 않는다.
         counts: ``GET /runs/project-counts``의 ``project_id``별 루트 Run 수(예: 호스트 DB + 프로젝트
-            기록 DB, ``SpaceRecorder.project_id_counts``). None이면 ``projects``의 개수(호스트
-            DB만).
+            기록 DB, ``SpaceRecorder.project_id_counts``). None이거나 ``?source=app``이면
+            ``projects``의 개수(호스트 DB만).
         observe_event_prefixes: ``GET /observe-event-prefixes``가 내는 관측 탭 이벤트 type 접두어
             (기본 = 패키지 기본 데이터, 빈 목록 = 관측 탭 끔).
     """
@@ -324,10 +328,11 @@ def build_router(
     if projects is not None:
         # 고정 경로는 ``/runs/{run_id}``보다 먼저 등록한다.
         @router.get("/runs/project-counts", response_model=ProjectCounts, responses=errors())
-        async def run_project_counts() -> ProjectCounts:
+        async def run_project_counts(source: CountsSource | None = None) -> ProjectCounts:
             """``project_id``별 루트 Run 수(자식 제외, 프로젝트 없음 = ``no_project``). 프로젝트
-            기록 DB에 있는 Run도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때)."""
-            if counts is not None:
+            기록 DB에 있는 Run도 센다(보관하지 않은 등록 프로젝트, 기록 공간이 있을 때).
+            ``?source=app``이면 앱(호스트) DB의 Run만 센다(프로젝트 기록 DB는 읽지 않는다)."""
+            if counts is not None and source != SOURCE_APP:
                 return to_project_counts(await run_in_threadpool(counts))
             return count_projects(projects())
 

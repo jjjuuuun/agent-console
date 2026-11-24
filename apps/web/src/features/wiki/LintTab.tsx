@@ -6,7 +6,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { Banner, Button, useToast } from "@agent-console/ui";
-import { LintTable, type LintFilter } from "@agent-console/wiki-view";
+import { LintTable, issuePage, type LintFilter } from "@agent-console/wiki-view";
 import type { WikiIssue } from "@agent-console/contracts/wiki";
 import { useNow } from "../../app/useNow";
 import { formatRelative } from "../../lib/format";
@@ -45,17 +45,18 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
 
   const openIssue = useCallback(
     (issue: WikiIssue, line: number | null) => {
-      if (issue.path === undefined || issue.path === null || issue.path === "") return;
-      goTab("page", { [P.path]: issue.path, ...(line === null ? {} : { [P.line]: String(line) }) });
+      const page = issuePage(issue);
+      if (page === null) return;
+      goTab("page", { [P.path]: page, ...(line === null ? {} : { [P.line]: String(line) }) });
     },
     [goTab],
   );
   const ruleOf = (issue: WikiIssue): string | null => {
-    const id = issue.details?.["rule_id"];
+    const id = issue.rule_id ?? issue.details?.["rule_id"];
     return typeof id === "string" && id !== "" ? id : null;
   };
   const lineOf = (issue: WikiIssue): number | null => {
-    const v = issue.details?.["line"];
+    const v = issue.line ?? issue.details?.["line"];
     return typeof v === "number" && Number.isFinite(v) ? v : null;
   };
 
@@ -162,13 +163,13 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
           label={t.menu}
           onClose={() => setMenu(null)}
           items={[
-            { id: "open", label: t.openPage, disabled: menuIssue.path === undefined || menuIssue.path === null, onSelect: () => openIssue(menuIssue, lineOf(menuIssue)) },
+            { id: "open", label: t.openPage, disabled: issuePage(menuIssue) === null, onSelect: () => openIssue(menuIssue, lineOf(menuIssue)) },
             {
               id: "copy",
               label: t.copyPath,
-              disabled: menuIssue.path === undefined || menuIssue.path === null,
+              disabled: issuePage(menuIssue) === null,
               onSelect: () => {
-                void navigator.clipboard?.writeText(menuIssue.path ?? "");
+                void navigator.clipboard?.writeText(issuePage(menuIssue) ?? "");
                 toast({ tone: "success", text: t.copied });
               },
             },

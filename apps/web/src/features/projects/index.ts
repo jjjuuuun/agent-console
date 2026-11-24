@@ -37,3 +37,4 @@ export { startErrorView, type StartErrorView, type StartFix } from "./startError
 export { targetPickerMessages } from "./targetPickerMessages";
 export { NEW_PARAM } from "./newParam";
 export { useSpaceItems, type CopyKindFlag, type SpaceItem } from "./useSpaceItems";
+export { ProjectRecordsNotice, useProjectRecordsState, useStartBlockReason, type ProjectRecordsState } from "./ProjectRecordsNotice";

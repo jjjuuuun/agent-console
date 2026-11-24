@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router";
+import { MiddleEllipsisPath } from "@agent-console/folder-picker";
 import { Banner, Button, Disclosure, Icon, Menu, Popover, Tag, type MenuItemDef } from "@agent-console/ui";
 import { useState } from "react";
 import { scopeMessages } from "./scopeMessages";
@@ -71,7 +72,7 @@ export function ProjectsTable({ rows, onRepath, onUnregister }: ProjectsTablePro
         {rows.map((r) => (
           <tr key={r.id}>
             <td className="prj-col-name"><Link data-prj-row="" className="ac-ellipsis" to={r.href} title={r.name}>{r.name}</Link></td>
-            <td><span className="prj-mono ac-ellipsis" title={r.folder}>{r.folder}</span></td>
+            <td><MiddleEllipsisPath path={r.folder} className="prj-mono" /></td>
             <td className="prj-col-status">
               {r.plain ? <span className="app-muted">{t.ok}</span> : <Tag data-tone={r.statusTone}>{r.statusLabel}</Tag>}
             </td>

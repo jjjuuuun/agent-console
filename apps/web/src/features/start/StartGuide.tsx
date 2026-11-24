@@ -21,7 +21,8 @@ export function StartGuide({ actionOverrides, layout = "column" }: StartGuidePro
   const g = useStartGuide();
   const steps: StepGuideStep[] = g.steps.map((s) => {
     const o = actionOverrides?.[s.id];
-    if (o === undefined) return s;
+    // 전제가 안 끝나 버튼이 없는 단계(`to`·`onAction` 없음)에는 동작을 붙이지 않는다(버튼이 새로 생기지 않게)
+    if (o === undefined || (s.to === undefined && s.onAction === undefined)) return s;
     const { to: _to, ...rest } = s;
     void _to;
     return { ...rest, onAction: o };

@@ -3,7 +3,7 @@ import { MiddleEllipsisPath } from "@agent-console/folder-picker";
 import { Button, Icon, Popover, type MenuItemDef } from "@agent-console/ui";
 import { RowContextMenu } from "./RowContextMenu";
 import { projectMessages as t } from "./messages";
-import { projectInitial } from "./projectRegionLib";
+import { TYPE_AHEAD_RESET_MS, projectInitial, typeAheadChar, typeAheadIndex } from "./projectRegionLib";
 
 /** 영역이 그리는 프로젝트 한 줄에 필요한 값(계약 `Project`의 부분집합이라 어떤 출처도 넣을 수 있다). */
 export interface RegionProject {
@@ -94,7 +94,10 @@ function Row({ project, current, page, onSelect, popover, onMenu }: RowProps) {
   );
 }
 
-/** 목록 키보드: ↑↓·Home·End로 같은 목록(이벤트가 붙은 요소) 안의 항목 사이 이동. */
+/** 목록별 type-ahead 입력 버퍼(요소가 사라지면 함께 사라진다). */
+const typeAheadBuffers = new WeakMap<HTMLElement, { text: string; at: number }>();
+
+/** 목록 키보드: ↑↓·Home·End로 같은 목록(이벤트가 붙은 요소) 안의 항목 사이 이동, 글자 입력은 이름 앞글자로 이동(type-ahead, 명세 §2.6). */
 function listKeyDown(e: KeyboardEvent<HTMLElement>) {
   const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>(".prj-row"));
   const i = items.indexOf(document.activeElement as HTMLElement);
@@ -103,6 +106,20 @@ function listKeyDown(e: KeyboardEvent<HTMLElement>) {
   else if (e.key === "ArrowUp") next = i <= 0 ? 0 : i - 1;
   else if (e.key === "Home") next = 0;
   else if (e.key === "End") next = items.length - 1;
+  const typed = next === undefined ? typeAheadChar({ key: e.key, code: e.code, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, isComposing: e.nativeEvent.isComposing }) : undefined;
+  if (typed !== undefined) {
+    const buf = typeAheadBuffers.get(e.currentTarget) ?? { text: "", at: 0 };
+    const now = Date.now();
+    buf.text = now - buf.at > TYPE_AHEAD_RESET_MS ? typed : buf.text + typed;
+    buf.at = now;
+    typeAheadBuffers.set(e.currentTarget, buf);
+    const hit = typeAheadIndex(items.map((x) => x.querySelector(".prj-row-name")?.textContent ?? ""), i, buf.text);
+    if (hit >= 0) {
+      e.preventDefault();
+      items[hit]?.focus();
+    }
+    return;
+  }
   if (next === undefined) return;
   e.preventDefault();
   items[next]?.focus();
@@ -138,7 +155,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
 
   if (p.rail) {
     return (
-      <section className="prj-region" data-rail="true" aria-label={t.region.label}>
+      <section className="prj-region" data-rail="true" aria-label={t.region.toggleLabel}>
         <Popover
           open={railOpen}
           onOpenChange={setRailOpen}
@@ -201,7 +218,7 @@ export function ProjectRegion(p: ProjectRegionProps) {
   );
 
   return (
-    <section className="prj-region" aria-labelledby={headId} data-collapsed={p.collapsed ? "true" : "false"}>
+    <section className="prj-region" aria-label={t.region.toggleLabel} data-collapsed={p.collapsed ? "true" : "false"}>
       <div className="prj-head">
         <button
           type="button"

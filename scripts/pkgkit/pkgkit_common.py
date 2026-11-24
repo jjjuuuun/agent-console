@@ -54,6 +54,12 @@ class Config:
     drift_ignore_keys: Mapping[str, list[str]]
     template_values: Mapping[str, str] = field(default_factory=dict)
     readme_doctest_heading: str = "최소 사용"
+    example_roots: tuple[str, ...] = ()
+    """확장 예제 폴더 glob(``[examples] roots``, 저장소 루트 기준)."""
+    example_steps: tuple[tuple[str, ...], ...] = ()
+    """``poe examples``가 예제 폴더마다 돌리는 명령(``[examples] steps``)."""
+    portability_examples: bool = False
+    """``--package`` 없는 ``portability``에 예제도 넣을지(``[examples] portability_default``)."""
 
     @property
     def template_vars(self) -> dict[str, str]:
@@ -98,6 +104,12 @@ def parse_config(data: Mapping[str, Any]) -> Config:
             raise PkgkitError("python.internal_ranges.default가 필요합니다")
         il = data.get("importlinter", {})
         lint = data.get("pkg_lint", {})
+        ex = data.get("examples", {})
+        steps = ex.get("steps", [])
+        if not all(
+            isinstance(st, list) and st and all(isinstance(a, str) for a in st) for st in steps
+        ):
+            raise PkgkitError("examples.steps는 명령(문자열 목록)의 목록이어야 합니다")
         return Config(
             dist_prefix=py["dist_prefix"],
             import_prefix=py["import_prefix"],
@@ -118,6 +130,9 @@ def parse_config(data: Mapping[str, Any]) -> Config:
             drift_ignore_keys={k: list(v) for k, v in lint.get("drift_ignore_keys", {}).items()},
             template_values={str(k): str(v) for k, v in py.get("template_values", {}).items()},
             readme_doctest_heading=str(lint.get("readme_doctest_heading", "최소 사용")),
+            example_roots=tuple(str(g) for g in ex.get("roots", [])),
+            example_steps=tuple(tuple(st) for st in steps),
+            portability_examples=bool(ex.get("portability_default", False)),
         )
     except KeyError as exc:
         raise PkgkitError(f"pkgkit 설정에 키가 없습니다: {exc}") from exc
@@ -433,6 +448,32 @@ def discover(
     return [
         load_package(p, root, cfg, kind_folders) for p in expand_members(root, members, exclude)
     ]
+
+
+EXAMPLE_KIND = "example"
+"""확장 예제의 :attr:`PyPackage.kind`(템플릿 종류가 아니다)."""
+
+
+def example_folders(root: Path, cfg: Config) -> tuple[list[Path], list[Path]]:
+    """``[examples] roots`` glob에 걸린 폴더를 (``pyproject.toml`` 있음, 없음)으로 나눈다.
+
+    숨김 폴더와 ``__pycache__``는 보지 않는다. 둘 다 경로 순, 중복 없음.
+    """
+    found: dict[Path, None] = {}
+    for pattern in cfg.example_roots:
+        for p in sorted(glob.glob(str(root / pattern))):
+            path = Path(p).resolve()
+            if path.is_dir() and not path.name.startswith(".") and path.name != "__pycache__":
+                found[path] = None
+    with_project = [p for p in found if (p / "pyproject.toml").is_file()]
+    without = [p for p in found if not (p / "pyproject.toml").is_file()]
+    return with_project, without
+
+
+def discover_examples(root: Path, cfg: Config) -> list[PyPackage]:
+    """확장 예제 패키지(워크스페이스 멤버가 아님)를 찾는다. ``kind``는 :data:`EXAMPLE_KIND`."""
+    folders, _ = example_folders(root, cfg)
+    return [dataclasses.replace(load_package(p, root, cfg, {}), kind=EXAMPLE_KIND) for p in folders]
 
 
 def select(packages: Iterable[PyPackage], names: Iterable[str]) -> list[PyPackage]:

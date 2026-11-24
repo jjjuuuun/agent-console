@@ -104,7 +104,7 @@ export function SettingsNav({ groups, active, onPick, query, onQueryChange, sear
         const locked = searching || g.items.some((it) => it.id === active);
         return (
           <div key={g.group} className="app-settings-navgroup">
-            <h3 id={`settings-group-${g.group}`} className="app-settings-grouptitle">
+            <div id={`settings-group-${g.group}`} className="app-settings-grouptitle">
               <button
                 type="button"
                 className="app-settings-grouptoggle"
@@ -120,7 +120,7 @@ export function SettingsNav({ groups, active, onPick, query, onQueryChange, sear
                 <Icon name="chevron-down" size={12} className="app-settings-chev" />
                 {g.title}
               </button>
-            </h3>
+            </div>
             <ul id={`settings-group-list-${g.group}`} aria-labelledby={`settings-group-${g.group}`} hidden={!open}>
               {g.items.map((it) => (
                 <li key={it.id}>

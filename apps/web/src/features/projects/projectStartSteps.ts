@@ -22,6 +22,8 @@ export interface ProjectStartStepDef {
   role?: string | undefined;
   /** 단계가 건너뛸 수 있는지: 처음부터 끝나 있으면 "건너뜀" 문구 */
   doneHint?: string;
+  /** 이 단계 버튼이 막히는 동작(프로젝트 능력표의 열 이름). 막혀 있으면 `blocked[ability]`의 이유가 버튼에 붙는다 */
+  ability?: string;
 }
 
 /**
@@ -31,8 +33,8 @@ export interface ProjectStartStepDef {
 export const PROJECT_START_STEPS: readonly ProjectStartStepDef[] = [
   { id: "folder", done: (c) => (c.projects ?? 0) > 0, needs: [] },
   { id: "library", done: (c) => (c.libraryTeams ?? 0) > 0, needs: [], doneHint: folderHomeMessages.steps.library.done },
-  { id: "import", done: (c) => (c.projectTeams ?? 0) > 0, needs: ["folder"] },
-  { id: "chat", done: (c) => (c.projectConversations ?? 0) > 0, needs: ["folder", "import"] },
+  { id: "import", done: (c) => (c.projectTeams ?? 0) > 0, needs: ["folder"], ability: "copy_in" },
+  { id: "chat", done: (c) => (c.projectConversations ?? 0) > 0, needs: ["folder", "import"], ability: "start_chat" },
 ];
 
 /** 단계 하나의 버튼 동작: 경로 이동(`to`)이나 콜백(`onAction`). 없으면 버튼을 그리지 않는다. */
@@ -53,6 +55,8 @@ export function buildProjectStartSteps(args: {
   actions: Readonly<Record<string, ProjectStartAction | undefined>>;
   defs?: readonly ProjectStartStepDef[];
   text?: typeof folderHomeMessages.steps;
+  /** 능력 이름 → 막힌 이유 문구(막혀 있지 않으면 없음·null) */
+  blocked?: Readonly<Record<string, string | null | undefined>>;
 }): StepGuideStep[] {
   const text = args.text ?? folderHomeMessages.steps;
   const defs = args.defs ?? PROJECT_START_STEPS;
@@ -74,6 +78,7 @@ export function buildProjectStartSteps(args: {
         ...(hint === undefined ? {} : { hint }),
         ...(!done && ready && action !== undefined ? { ...(action.to === undefined ? {} : { to: action.to }), ...(action.onAction === undefined ? {} : { onAction: action.onAction }) } : {}),
         ...(t?.action === undefined ? {} : { actionLabel: t.action }),
+        ...(!done && ready && action !== undefined && d.ability !== undefined && args.blocked?.[d.ability] ? { disabledReason: args.blocked[d.ability] as string } : {}),
       };
     });
 }

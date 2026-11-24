@@ -53,7 +53,7 @@ describe("팀 구성: 버전 탭과 내보내기", () => {
     const grid = await screen.findByRole("grid", { name: "팀 구성 목록" });
     fireEvent.click(within(grid).getByRole("button", { name: /행 메뉴/ }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "버전 목록" }));
-    expect(await screen.findByRole("listbox", { name: "버전 목록" })).toBeTruthy();
+    expect(await screen.findByRole("list", { name: "버전 목록" })).toBeTruthy();
     expect(rest.listDefinitionVersions).toHaveBeenCalledWith("/graphs/tm1");
     expect(screen.getAllByRole("tab", { name: "버전" })[0]!.getAttribute("aria-selected")).toBe("true");
   });
@@ -61,7 +61,7 @@ describe("팀 구성: 버전 탭과 내보내기", () => {
   it("편집기 헤더 탭 [버전]: 되돌리기 뒤 초안을 버리고 팀 구성을 다시 읽는다", async () => {
     const { clients: c, rest } = clients();
     mountApp(c, "/teams/tm1?tab=versions");
-    await screen.findByRole("listbox", { name: "버전 목록" });
+    await screen.findByRole("list", { name: "버전 목록" });
     fireEvent.click(await screen.findByRole("button", { name: "되돌리기…" }));
     const dialog = await screen.findByRole("dialog", { name: "버전 prev1111로 되돌리기" });
     const before = rest.getGraph.mock.calls.length;
@@ -93,7 +93,7 @@ describe("설정: 버전 기록 섹션", () => {
     await waitFor(() => {
       expect(within(nav).getByRole("link", { name: "버전 기록" }).getAttribute("aria-current")).toBe("location");
     });
-    expect(await screen.findByRole("listbox", { name: "버전 목록" })).toBeTruthy();
+    expect(await screen.findByRole("list", { name: "버전 목록" })).toBeTruthy();
     expect(rest.listDefinitionVersions).toHaveBeenCalledWith("/settings");
   });
 });

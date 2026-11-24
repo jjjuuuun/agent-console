@@ -24,9 +24,9 @@ export interface LintTableProps {
   display?: WikiDisplay;
   /** 심각도 순서(앞이 심각). 모르는 값은 뒤. 예: 서버 어휘 `["error","warning","info"]`를 앱 데이터로 준다. */
   severityOrder?: readonly string[];
-  /** 이슈의 줄 번호. 기본은 `details.line`(숫자). */
+  /** 이슈의 줄 번호. 기본은 `line`, 없으면 `details.line`(숫자). */
   lineOf?: (issue: WikiIssue) => number | null;
-  /** 이슈를 만든 규칙 id. 기본은 `details.rule_id`(문자열). 없으면 "–". */
+  /** 이슈를 만든 규칙 id. 기본은 `rule_id`, 없으면 `details.rule_id`(문자열). 없으면 "–". */
   ruleOf?: (issue: WikiIssue) => string | null;
   /** 행 클릭·Enter: 그 페이지(+줄)를 연다. */
   onOpen?: (issue: WikiIssue, line: number | null) => void;
@@ -40,12 +40,17 @@ export interface LintTableProps {
   className?: string;
 }
 
+/** 이슈가 걸린 페이지 경로. 서버 이슈는 `page`에 담고(`path`는 JSON 포인터), 옛 모양(`path`에 페이지 경로)도 읽는다. */
+export function issuePage(issue: WikiIssue): string | null {
+  const v = issue.page ?? issue.path;
+  return typeof v === "string" && v !== "" ? v : null;
+}
 function defaultLine(issue: WikiIssue): number | null {
-  const v = issue.details?.["line"];
+  const v = issue.line ?? issue.details?.["line"];
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 function defaultRule(issue: WikiIssue): string | null {
-  const v = issue.details?.["rule_id"];
+  const v = issue.rule_id ?? issue.details?.["rule_id"];
   return typeof v === "string" && v !== "" ? v : null;
 }
 
@@ -89,10 +94,10 @@ export function LintTable({
   const rows = useMemo(() => {
     const needle = pageFilter.trim().toLowerCase();
     const filtered = issues.filter(
-      (i) => (sevFilter.size === 0 || sevFilter.has(i.severity)) && (codeFilter === "" || i.code === codeFilter) && (needle === "" || (i.path ?? "").toLowerCase().includes(needle)),
+      (i) => (sevFilter.size === 0 || sevFilter.has(i.severity)) && (codeFilter === "" || i.code === codeFilter) && (needle === "" || (issuePage(i) ?? "").toLowerCase().includes(needle)),
     );
     const dir = sort.dir === "asc" ? 1 : -1;
-    const cmpPage = (a: WikiIssue, b: WikiIssue) => collator.compare(a.path ?? "", b.path ?? "");
+    const cmpPage = (a: WikiIssue, b: WikiIssue) => collator.compare(issuePage(a) ?? "", issuePage(b) ?? "");
     return [...filtered].sort((a, b) => {
       const c =
         sort.key === "severity"
@@ -221,7 +226,7 @@ export function LintTable({
             role="rowgroup"
             ariaLabel={t["lint.label"] ?? ""}
             activeIndex={shown}
-            getKey={(r, i) => `${r.code}:${r.path ?? ""}:${i}`}
+            getKey={(r, i) => `${r.code}:${issuePage(r) ?? ""}:${i}`}
             renderRow={(issue, ctx) => {
               const sev = resolveDisplay(display?.severities, issue.severity);
               const code = resolveDisplay(display?.codes, issue.code);
@@ -247,7 +252,7 @@ export function LintTable({
                 >
                   <div role="gridcell" className="ac-wk-cell"><ToneChip label={sev.label} tone={sev.tone} /></div>
                   <div role="gridcell" className={`ac-wk-cell ac-wk-ellipsis${code.known ? "" : " ac-wk-mono"}`} title={`${issue.code}${code.hint ? `\n${code.hint}` : ""}`}>{code.label}</div>
-                  <div role="gridcell" className="ac-wk-cell ac-wk-ellipsis ac-wk-mono" title={issue.path ?? undefined}>{issue.path ?? "–"}</div>
+                  <div role="gridcell" className="ac-wk-cell ac-wk-ellipsis ac-wk-mono" title={issuePage(issue) ?? undefined}>{issuePage(issue) ?? "–"}</div>
                   <div role="gridcell" className="ac-wk-cell ac-wk-right ac-wk-num">{line ?? "–"}</div>
                   <div role="gridcell" className="ac-wk-cell ac-wk-ellipsis" title={issue.message}>{issue.message}</div>
                   <div role="gridcell" className="ac-wk-cell ac-wk-ellipsis ac-wk-mono" title={rule ?? undefined}>{rule ?? "–"}</div>

@@ -62,7 +62,7 @@ describe("ProjectSwitcher(표현)", () => {
 
 /** 사이드바 프로젝트 영역(펼침 또는 레일)을 기다린다. */
 async function findRegion() {
-  return screen.findByRole("region", { name: "프로젝트" });
+  return screen.findByRole("region", { name: "프로젝트 영역" });
 }
 async function clickAdd() {
   const region = await findRegion();
@@ -173,7 +173,7 @@ describe("설정 > 프로젝트 섹션", () => {
     mountApp(clients, "/settings#projects");
     const table = await screen.findByRole("table", { name: "등록된 프로젝트" });
     expect(within(table).getByRole("link", { name: "앱" }).getAttribute("href")).toContain("/projects/a");
-    expect(within(table).getByText("/w/app")).toBeTruthy();
+    expect(within(table).getAllByText("/w/app").length).toBeGreaterThan(0); // 가운데 줄임 표시 + 전체 경로(스크린리더용)
     expect(within(table).getByRole("button", { name: /경로 다시 지정/ })).toBeTruthy();
     expect(within(table).getByRole("button", { name: /등록 해제/ })).toBeTruthy();
     expect(screen.queryByLabelText("작업 폴더")).toBeNull();
@@ -183,16 +183,21 @@ describe("설정 > 프로젝트 섹션", () => {
   it("앱에 남은 기록은 채팅 → 실행 순서로 select=project, remove_source 기본 켜짐으로 옮긴다", async () => {
     const a = project("a", { name: "앱", folder: "/w/app" });
     const calls: string[] = [];
+    const chatCounts = vi.fn(async () => counts(0, { a: 3 }));
+    const runCounts = vi.fn(async () => counts(0, { a: 2 }));
     const { clients } = createFakeClients({
       listModules: vi.fn(async () => modules),
       listProjects: vi.fn(async () => views(a)),
-      getConversationProjectCounts: vi.fn(async () => counts(0, { a: 3 })),
-      getRunProjectCounts: vi.fn(async () => counts(0, { a: 2 })),
+      getConversationProjectCounts: chatCounts,
+      getRunProjectCounts: runCounts,
       moveConversationsToProject: vi.fn(async (r: unknown) => { calls.push(`chat:${JSON.stringify(r)}`); return { moved: 3 }; }),
       moveRunsToProject: vi.fn(async (r: unknown) => { calls.push(`run:${JSON.stringify(r)}`); return { moved: 2 }; }),
     });
     mountApp(clients, "/settings#projects");
     fireEvent.click(await screen.findByRole("button", { name: /앱 프로젝트 폴더로 옮기기/ }));
+    // "앱에 남은 기록"은 앱 DB 개수만 쓴다(폴더 기록 DB를 합치지 않는다, 5.7R.33p)
+    expect(chatCounts).toHaveBeenCalledWith({ source: "app" });
+    expect(runCounts).toHaveBeenCalledWith({ source: "app" });
     const dialog = await screen.findByRole("dialog", { name: /이전 기록을 프로젝트 폴더로 옮기기/ });
     expect((within(dialog).getByRole("checkbox", { name: /옮긴 뒤 앱에서 지우기/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(dialog).getByRole("button", { name: "옮기기 (5)" }));
@@ -219,6 +224,23 @@ describe("설정 > 프로젝트 섹션", () => {
     fireEvent.click(within(dialog).getByRole("radio", { name: /앱/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: "넣기" }));
     await waitFor(() => expect(move).toHaveBeenCalledWith({ project_id: "a", select: "null", remove_source: true }));
+  });
+
+  it("이전 기록 넣기 대상에서 기록을 쓸 수 없는 읽기 전용 폴더는 고를 수 없고 이유가 보인다", async () => {
+    const a = project("a", { name: "앱", folder: "/w/app" });
+    const ro = project("ro", { name: "읽기 전용", folder: "/w/ro" });
+    const { clients } = createFakeClients({
+      listModules: vi.fn(async () => modules),
+      listProjects: vi.fn(async () => views(a, ro).map((v) => (v.project.id === "ro" ? { ...v, config_writable: false, records_writable: false } : v))),
+      getConversationProjectCounts: vi.fn(async () => counts(4)),
+      getRunProjectCounts: vi.fn(async () => counts(0)),
+    });
+    mountApp(clients, "/settings#projects");
+    fireEvent.click((await screen.findAllByRole("button", { name: /프로젝트에 넣기/ }))[0] as HTMLElement);
+    const dialog = await screen.findByRole("dialog", { name: /이전 기록 4건을 프로젝트에 넣기/ });
+    expect((within(dialog).getByRole("radio", { name: /읽기 전용/ }) as HTMLInputElement).disabled).toBe(true);
+    expect((within(dialog).getByRole("radio", { name: /앱/ }) as HTMLInputElement).disabled).toBe(false);
+    expect(within(dialog).getByText(/기록을 저장할 수 없습니다/)).toBeTruthy();
   });
 
   it("[그대로 두기]는 그 기능의 안내를 접고 [숨긴 안내 보기]로 다시 연다", async () => {

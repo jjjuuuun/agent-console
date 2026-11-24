@@ -348,6 +348,17 @@ describe("StepGuide·QuickStartRow (5.2R.10)", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("disabledReason이 있으면 버튼이 aria-disabled + 이유 툴팁이고 눌러도 동작하지 않는다", async () => {
+    const { StepGuide } = await import("./index");
+    const onAction = vi.fn();
+    render(<StepGuide messages={{ stepsLabel: "순서", go: "가기", done: "완료" }} steps={[{ id: "b", label: "둘", done: false, onAction, disabledReason: "쓸 수 없습니다" }]} />);
+    const btn = screen.getByRole("button", { name: "가기" });
+    expect(btn.getAttribute("aria-disabled")).toBe("true");
+    expect(btn.getAttribute("title")).toBe("쓸 수 없습니다");
+    fireEvent.click(btn);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("QuickStartRow: 항목 0개면 비어 있고, 시작 버튼이 id를 넘긴다", async () => {
     const { QuickStartRow } = await import("./index");
     const onStart = vi.fn();

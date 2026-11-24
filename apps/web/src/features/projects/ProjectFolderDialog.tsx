@@ -230,6 +230,7 @@ export function ProjectFolderDialog({ mode, target, api, onSubmit, onClose, onOp
           {...(!add && target?.folder ? { excludeProjectId: target.id, currentFolder: target.folder } : {})}
           disabled={busy}
           autoFocus
+          required
           onStateChange={setState}
           onSelectPhaseChange={setPhase}
           onSubmit={() => void submit()}

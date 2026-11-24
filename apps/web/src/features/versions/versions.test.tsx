@@ -53,14 +53,14 @@ function clients(extra: Record<string, unknown> = {}) {
 async function openTab(extra: Record<string, unknown> = {}) {
   const c = clients(extra);
   mountApp(c.clients, "/agents/ag1?tab=versions");
-  await screen.findByRole("listbox", { name: "버전 목록" });
+  await screen.findByRole("list", { name: "버전 목록" });
   return c;
 }
 
 describe("버전 탭: 목록과 비교", () => {
   it("?tab=versions로 열면 버전 탭이 선택되고 목록에 해시 앞 8자·현재 칩·메시지가 보인다", async () => {
     const { rest } = await openTab();
-    const options = within(screen.getByRole("listbox", { name: "버전 목록" })).getAllByRole("option");
+    const options = within(screen.getByRole("list", { name: "버전 목록" })).getAllByRole("listitem");
     expect(options).toHaveLength(3);
     expect(options[0]!.textContent).toContain("cur00000");
     expect(options[0]!.textContent).toContain("현재");
@@ -119,7 +119,7 @@ describe("버전 탭: 목록과 비교", () => {
     const c = clients({ listDefinitionVersions: vi.fn(async () => [versions[0]]) });
     mountApp(c.clients, "/agents/ag1?tab=versions");
     expect(await screen.findByText("이전 버전이 없습니다. 저장할 때마다 버전이 쌓입니다.")).toBeTruthy();
-    expect(screen.queryByRole("listbox", { name: "버전 목록" })).toBeNull();
+    expect(screen.queryByRole("list", { name: "버전 목록" })).toBeNull();
   });
 
   it("두 버전이 같으면 안내, 비교 실패면 오류 블록과 [다시 시도](목록은 유지)", async () => {
@@ -135,12 +135,12 @@ describe("버전 탭: 목록과 비교", () => {
     mountApp(b, "/agents/ag1?tab=versions");
     expect(await screen.findByText("비교하지 못했습니다")).toBeTruthy();
     expect(screen.getByText("정의가 지워졌습니다")).toBeTruthy();
-    expect(screen.getByRole("listbox", { name: "버전 목록" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "버전 목록" })).toBeTruthy();
   });
 
   it("목록 키보드: ↑↓ 이동, Space 선택, R 되돌리기 열기", async () => {
     await openTab();
-    const options = within(screen.getByRole("listbox", { name: "버전 목록" })).getAllByRole("option");
+    const options = within(screen.getByRole("list", { name: "버전 목록" })).getAllByRole("listitem");
     options[0]!.focus();
     fireEvent.keyDown(options[0]!, { key: "ArrowDown" });
     expect(document.activeElement).toBe(options[1]);

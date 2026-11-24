@@ -19,8 +19,10 @@ import { countHandled, failedChildOf, hasRunningChild } from "./lib/progress";
 import { usePageTitle } from "../../shell/titles";
 import { ChatHeader } from "./ChatHeader";
 import { useWorkspaceSettings } from "../../app/queries";
-import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationScope, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList } from "./chatData";
+import { chatKeys, useAgentList, useBackendList, useChatGraph, useChatPlan, useConversationDetail, useConversationScope, useEdgeTypeList, useGraphList, useInteractionKindList, useNodeTypeList, useQueueList, useConversationSessions } from "./chatData";
 import { chatMessages } from "./chatMessages";
+import { SessionMissingBanner } from "./SessionMissingBanner";
+import { sessionViewOf } from "./lib/sessions";
 import { EmptyConversation } from "./EmptyViews";
 import { InteractionItem } from "./InteractionItem";
 import { badgeOfBackend, effectiveBackendId } from "./lib/backendBadge";
@@ -30,7 +32,7 @@ import { resolveChatSettings } from "./lib/chatSettings";
 import { lastUsedByGraph } from "./lib/conversations";
 import { readDraft, writeDraft } from "./lib/drafts";
 import { isActiveStatus } from "./lib/liveRun";
-import { agentOfNode, hasEntry, indexById, summarizeTeam, type NamingContext } from "./lib/team";
+import { agentOfNode, hasEntry, indexById, nodeName, summarizeTeam, type NamingContext } from "./lib/team";
 import { chatPaths } from "./paths";
 import { TeamPickerDialog } from "./TeamPickerDialog";
 import { ResumeDialog } from "./ResumeDialog";
@@ -98,6 +100,8 @@ export function ChatPane(props: ChatPaneProps) {
   const settings = useWorkspaceSettings();
   const backendList = useBackendList();
   const queue = useQueueList(id, project, scope.ready);
+  const sessions = useConversationSessions(id, project, scope.ready && conversation.data !== undefined);
+  const sessionView = sessionViewOf(sessions.data);
 
   const kindMap = useMemo(() => indexById(edgeTypes.data), [edgeTypes.data]);
   const naming = useMemo<NamingContext>(() => ({ nodeTypes: indexById(nodeTypes.data), agents: indexById(agents.data) }), [nodeTypes.data, agents.data]);
@@ -245,7 +249,11 @@ export function ChatPane(props: ChatPaneProps) {
   // ---- 끊긴 턴 이어 가기 ----
   const offerResume = chat.offer_resume;
   const [resumeFor, setResumeFor] = useState<string | null>(null);
+  // 이 화면에서 보낸 턴의 세션 안내(서버가 턴에 안내를 싣지 않으므로 보낸 쪽이 기억한다. 새로 고치면 사라진다)
+  const [sessionNotes, setSessionNotes] = useState<Record<string, "fresh" | "archived">>({});
   const renderTurnNotice = (turn: { run_id: string; status: string }) => {
+    const sessionNote = sessionNotes[turn.run_id];
+    if (sessionNote !== undefined && turn.status !== "interrupted") return <div className="chat-session-info" role="status">{sessionNote === "fresh" ? t.session.freshStarted : t.session.archivedTurn}</div>;
     if (turn.status !== "interrupted") return null;
     if (isResumed(turn.run_id, turns)) return <div className="app-muted" role="status">{t.resume.resumedLine}</div>;
     if (!canOfferResume(turn, turns, offerResume)) return null;
@@ -258,8 +266,22 @@ export function ChatPane(props: ChatPaneProps) {
     );
   };
 
+  // "새 세션으로 계속" 모드: 다음 전송 한 번만 on_missing_session=fresh로 보낸다(저장하지 않고 대화를 떠나면 풀린다)
+  const [armedFor, setArmedFor] = useState<string | null>(null);
+  const armed = armedFor === id && sessionView.blocked;
+  const [raced, setRaced] = useState(false);
+  useEffect(() => setRaced(false), [id]);
   const post = async (body: string) => {
-    const res = await rest.postMessage(id, { text: body }, project);
+    const fresh = armed;
+    const res = await rest.postMessage(id, { text: body, ...(fresh ? { on_missing_session: "fresh" as const } : {}) }, project);
+    if (fresh || sessionView.info === "archived") {
+      const runId = "queued" in res ? undefined : res.run.id;
+      if (runId !== undefined) setSessionNotes((cur) => ({ ...cur, [runId]: fresh ? "fresh" : "archived" }));
+    }
+    if (fresh) {
+      setArmedFor(null);
+      void queryClient.invalidateQueries({ queryKey: chatKeys.sessions(id, project) });
+    }
     if ("queued" in res) {
       toast({ tone: "info", text: t.composer.queuedToast(res.queued.position) });
       void queryClient.invalidateQueries({ queryKey: chatKeys.queue(id) });
@@ -312,7 +334,12 @@ export function ChatPane(props: ChatPaneProps) {
       setText("");
     } catch (e) {
       if (e instanceof ApiError && e.isConversationBusy) setRejectedAt(turnMark(activeTurn ?? turns[turns.length - 1]));
-      else if (e instanceof ApiError && e.status === 404) {
+      else if (e instanceof ApiError && e.code === "chat.session_unavailable") {
+        // 경쟁 상태: 보내지 않은 것으로 되돌리고(입력 유지) 같은 배너를 띄운다
+        setRaced(true);
+        setArmedFor(null);
+        void sessions.refetch();
+      } else if (e instanceof ApiError && e.status === 404) {
         toast({ tone: "info", text: t.conversation.deleted });
         props.onGone();
       } else if (unresolvedBackendOf(e) !== undefined) {
@@ -517,6 +544,27 @@ export function ChatPane(props: ChatPaneProps) {
           <span data-testid="backend-badge-note" title={t.composer.backendBadgeNote(teamBadge)}>{t.composer.backendBadgeNote(teamBadge)}</span>
         </Banner>
       ) : null}
+      {sessionView.blocked ? (
+        <SessionMissingBanner
+          texts={{ ...t.session, stateLabel: (st) => t.session.state[st] ?? st }}
+          items={sessionView.items}
+          missingCount={sessionView.missingCount}
+          partial={sessionView.partial}
+          armed={armed}
+          assertive={raced}
+          onArm={() => {
+            setArmedFor(id);
+            setTimeout(() => composer.current?.focus(), 0);
+          }}
+          onCancel={() => {
+            setArmedFor(null);
+            setTimeout(() => document.querySelector<HTMLElement>("[data-session-arm]")?.focus(), 0);
+          }}
+          onNewConversation={() => conversation.data && props.onNewWithTeam(conversation.data.graph_id)}
+          nodeLabel={(nodeId) => nodeName(graph.data?.graph.nodes?.find((n) => n.id === nodeId), nodeId, naming)}
+          settingsLink={<Link className="chat-session-info" to={`${chatPaths.settings()}#projects/session-archive`}>{t.session.settingsLink}</Link>}
+        />
+      ) : null}
       {feed.error && turns.length === 0 ? (
         <ErrorBlock title={t.conversation.turnsLoadFailed} message={describeError(feed.error, t.conversation.turnsLoadFailed).message} retryLabel={appMessages.common.retry} onRetry={feed.refetch} />
       ) : feed.loading ? (
@@ -626,8 +674,8 @@ export function ChatPane(props: ChatPaneProps) {
           onSend={() => void send(false)}
           sendKey={typeof chat.send_key === "string" ? chat.send_key : undefined}
           disabled={inputDisabled}
-          sendDisabled={!connected || sendPart.disabled}
-          {...(!connected ? { sendHint: t.composer.disconnected } : sendPart.note !== undefined ? { sendHint: sendPart.note } : {})}
+          sendDisabled={!connected || sendPart.disabled || (sessionView.blocked && !armed)}
+          {...(!connected ? { sendHint: t.composer.disconnected } : sessionView.blocked && !armed ? { sendHint: t.session.blocked } : sendPart.note !== undefined ? { sendHint: sendPart.note } : {})}
           sending={sending}
           {...(composerNotice ? { busyNotice: composerNotice } : {})}
           {...(pending.length === 1 && target === null ? { placeholderHint: t.answer.placeholderCard } : pending.length >= 2 ? { placeholderHint: t.answer.placeholderCards(pending.length) } : {})}
@@ -642,6 +690,7 @@ export function ChatPane(props: ChatPaneProps) {
           onEscape={focusMessages}
           autoFocus
         />
+        {sessionView.info !== undefined ? <div className="chat-session-info" role="status">{sessionView.info === "archived" ? t.session.archived : t.session.relocatable}</div> : null}
       </div>
       <TeamPickerDialog
         open={teamDialog}

@@ -28,6 +28,8 @@ export interface ConversationListProps {
   nowMs: number;
   onSelect: (id: string) => void;
   onNew: () => void;
+  /** 값이 있으면 [새 대화]가 aria-disabled이고 이 문구가 이유(툴팁)다 */
+  newBlockedReason?: string | null | undefined;
   onRename: (c: ConversationSummary) => void;
   onToggleArchive: (c: ConversationSummary) => void;
   onDelete: (c: ConversationSummary) => void;
@@ -118,7 +120,7 @@ export function ConversationList(props: ConversationListProps) {
   return (
     <div className="chat-list" onKeyDown={onKeyDown}>
       <div className="chat-list-head">
-        <Button variant="primary" onClick={props.onNew} title="N">{`+ ${t.new}`}</Button>
+        <Button variant="primary" onClick={() => props.newBlockedReason == null && props.onNew()} title={props.newBlockedReason ?? "N"} {...(props.newBlockedReason == null ? {} : { "aria-disabled": true })}>{`+ ${t.new}`}</Button>
         <label className="app-check">
           <input type="checkbox" checked={props.includeArchived} onChange={(e) => props.onIncludeArchivedChange(e.target.checked)} />
           {t.includeArchived}

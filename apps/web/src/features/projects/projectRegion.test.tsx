@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectRegion, type ProjectRegionProps } from "./ProjectRegion";
-import { parseCollapsed, projectInitial, regionProjects } from "./projectRegionLib";
+import { parseCollapsed, projectInitial, regionProjects, typeAheadChar, typeAheadIndex } from "./projectRegionLib";
 
 afterEach(cleanup);
 
@@ -61,6 +61,14 @@ describe("ProjectRegion", () => {
     fireEvent.click(screen.getByRole("menuitemradio", { name: /docs-site/ }));
     expect(onSelect).toHaveBeenCalledWith("b");
   });
+  it("레일 팝오버: 글자를 치면 이름이 그 글자로 시작하는 항목으로 포커스가 간다(type-ahead)", () => {
+    render(<ProjectRegion {...props({ rail: true })} />);
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트: payments" }));
+    const first = screen.getByRole("menuitemradio", { name: /payments/ });
+    first.focus();
+    fireEvent.keyDown(first, { key: "d" });
+    expect(document.activeElement).toBe(screen.getByRole("menuitemradio", { name: /docs-site/ }));
+  });
 });
 
 describe("projectRegionLib", () => {
@@ -77,5 +85,20 @@ describe("projectRegionLib", () => {
     expect(projectInitial("")).toBe("·");
     expect(parseCollapsed("1")).toBe(true);
     expect(parseCollapsed(null)).toBe(false);
+  });
+  it("type-ahead: 한 글자는 다음 항목부터, 여러 글자는 지금 항목부터, 한글 자모도 맞는다", () => {
+    const names = ["빈 프로젝트", "새 기록", "읽기 전용", "e2e"];
+    expect(typeAheadIndex(names, 0, "e")).toBe(3);
+    expect(typeAheadIndex(names, 3, "e")).toBe(3);
+    expect(typeAheadIndex(names, 0, "ㅇ")).toBe(2);
+    expect(typeAheadIndex(names, 0, "ㅅㅐ")).toBe(1);
+    expect(typeAheadIndex(names, 0, "z")).toBe(-1);
+  });
+  it("한글 입력기가 켜져 있으면(key=Process) 물리 키를 두벌식 자모로 바꿔 쓴다", () => {
+    const base = { ctrlKey: false, metaKey: false, altKey: false, isComposing: true };
+    expect(typeAheadChar({ ...base, key: "Process", code: "KeyD" })).toBe("ㅇ");
+    expect(typeAheadChar({ ...base, key: "Process", code: "Enter" })).toBeUndefined();
+    expect(typeAheadChar({ ...base, isComposing: false, key: "e", code: "KeyE" })).toBe("e");
+    expect(typeAheadChar({ ...base, isComposing: false, key: "e", code: "KeyE", ctrlKey: true })).toBeUndefined();
   });
 });

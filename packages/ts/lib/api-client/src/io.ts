@@ -119,6 +119,14 @@ export function filenameFromDisposition(value: string | null): string | undefine
 /** 질의 인자 `project`의 이름(정의·메모리·대화·실행 REST 공통, design §PI.10). */
 export const SPACE_PARAM = "project";
 
+/**
+ * 기록 개수(`GET /runs/project-counts`·`GET /conversations/project-counts`) 질의.
+ * `source: "app"` = 앱 DB에 저장된 기록만 센다. 생략하면 앱 DB + 보관하지 않은 등록 프로젝트의 기록 DB.
+ */
+export interface ProjectCountsParams {
+  source?: "app";
+}
+
 /** 경로에 질의 하나를 더한다(`?`가 있으면 `&`). 이미 같은 이름이 있으면 그대로 둔다. */
 export function withQueryParam(path: string, name: string, value: string): string {
   const q = path.indexOf("?");

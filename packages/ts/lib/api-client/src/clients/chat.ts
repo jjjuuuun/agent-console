@@ -4,6 +4,7 @@ import type {
   Conversation,
   ConversationLocation,
   ConversationPage,
+  ConversationSessions,
   ConversationSummary,
   CreateConversationRequest,
   PostMessageRequest,
@@ -12,7 +13,7 @@ import type {
   UpdateConversationRequest,
 } from "@agent-console/contracts";
 import type { AssignProjectRequest, AssignProjectResult, ProjectCounts, RecordsMoveRequest, RecordsMoveResult } from "@agent-console/contracts/projects";
-import { enc, query, SPACE_PARAM, withQueryParam, type RestIo } from "../io";
+import { enc, query, SPACE_PARAM, withQueryParam, type ProjectCountsParams, type RestIo } from "../io";
 
 /** 대화 단위 호출의 공간 인자: 프로젝트 id를 주면 `?project=<id>`가 붙는다(생략·null·빈 문자열 = 붙지 않음, 하위 호환). */
 export type ConversationSpace = string | null | undefined;
@@ -50,8 +51,8 @@ export interface ListTurnsParams {
 export type PostMessageResult = { run: Run } | { queued: QueuedMessage };
 
 export interface ChatClient {
-  /** `project_id`별 대화 수(보관한 대화 포함. `ProjectCounts`). */
-  getConversationProjectCounts(): Promise<ProjectCounts>;
+  /** `project_id`별 대화 수(보관한 대화 포함. `ProjectCounts`). `{ source: "app" }` = 앱 DB의 대화만. */
+  getConversationProjectCounts(params?: ProjectCountsParams): Promise<ProjectCounts>;
   /** 대화를 프로젝트에 넣는다(`ids` 또는 `from_null`). 못 옮긴 것은 결과 `skipped`에 이유와 함께. */
   assignConversationsToProject(request: AssignProjectRequest): Promise<AssignProjectResult>;
   /** 앱에 남은 옛 기록을 프로젝트 폴더의 기록 DB로 옮긴다(`select` project·null·ids). 같은 id는 `skipped`, 못 옮긴 것은 `failed`. */
@@ -66,6 +67,11 @@ export interface ChatClient {
    * 없으면 `ApiError` 404 `not_found`, 여러 공간에 있으면 409 `conversation.ambiguous`(`details.project_ids`). 옛 서버는 404/405.
    */
   locateConversation(id: string): Promise<ConversationLocation>;
+  /**
+   * 대화 이어 가기 상태(`GET /conversations/{id}/sessions`). `continuable`이 false면 보내기 전에 새 세션으로 계속할지 골라야 한다
+   * (`postMessage`의 `on_missing_session: "fresh"`).
+   */
+  getConversationSessions(id: string, project?: ConversationSpace): Promise<ConversationSessions>;
   /** 이름·보관·팀 구성 전환(`graph_id`). */
   updateConversation(id: string, patch: UpdateConversationRequest, project?: ConversationSpace): Promise<Conversation>;
   deleteConversation(id: string, project?: ConversationSpace): Promise<void>;
@@ -85,13 +91,14 @@ export interface ChatClient {
 
 export function createChatClient(io: RestIo): ChatClient {
   return {
-    getConversationProjectCounts: () => io.request("GET", "/conversations/project-counts"),
+    getConversationProjectCounts: (params) => io.request("GET", `/conversations/project-counts${query(params)}`),
     assignConversationsToProject: (request) => io.request("POST", "/conversations/assign-project", { body: request }),
     moveConversationsToProject: (request) => io.request("POST", "/conversations/move-to-project", { body: request }),
     listConversations: (params) => io.request("GET", `/conversations${query(params)}`),
     conversationsPage: (params) => io.request("GET", `/conversations/page${query(params)}`),
     createConversation: (req) => io.request("POST", "/conversations", { body: req }),
     getConversation: (id, project) => io.request("GET", at(`/conversations/${enc(id)}`, project)),
+    getConversationSessions: (id, project) => io.request("GET", at(`/conversations/${enc(id)}/sessions`, project)),
     locateConversation: (id) => io.request("GET", `/conversations/${enc(id)}/locate`),
     updateConversation: (id, patch, project) => io.request("PATCH", at(`/conversations/${enc(id)}`, project), { body: patch }),
     deleteConversation: (id, project) => io.request("DELETE", at(`/conversations/${enc(id)}`, project)),

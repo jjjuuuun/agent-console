@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@agent-console/api-client";
-import { KNOWN_WIKI_AUTHOR_KINDS, KNOWN_WIKI_IMPORT_STATUSES, KNOWN_WIKI_LINK_STATUSES, KNOWN_WIKI_LINT_CODES, KNOWN_WIKI_VERSION_OPS } from "@agent-console/contracts/constants";
+import { KNOWN_ISSUE_CODES, KNOWN_WIKI_AUTHOR_KINDS, KNOWN_WIKI_IMPORT_STATUSES, KNOWN_WIKI_LINK_STATUSES, KNOWN_WIKI_LINT_CODES, KNOWN_WIKI_VERSION_OPS } from "@agent-console/contracts/constants";
 import { authorLabel, resolveDisplay } from "@agent-console/wiki-view";
 import data from "./wikiData.json";
 import display from "./wikiDisplay.json";
@@ -43,6 +43,13 @@ describe("표시 표(wikiDisplay.json)", () => {
     expect(Object.keys(display.linkStatuses).sort()).toEqual(values(KNOWN_WIKI_LINK_STATUSES).sort());
     expect(Object.keys(display.codes).sort()).toEqual(values(KNOWN_WIKI_LINT_CODES).sort());
     expect(Object.keys(display.importStatuses).sort()).toEqual(values(KNOWN_WIKI_IMPORT_STATUSES).sort());
+  });
+  it("점검 코드 표는 서버 이슈 코드(이름공간이 붙은 코드)로도 같은 항목을 찾는다", () => {
+    const d = buildWikiDisplay();
+    expect(resolveDisplay(d.codes, KNOWN_ISSUE_CODES.WIKI_BROKEN_LINK)).toMatchObject({ label: "끊긴 링크", known: true });
+    expect(resolveDisplay(d.codes, KNOWN_WIKI_LINT_CODES.ORPHAN)).toMatchObject({ label: "고아 페이지", known: true });
+    expect(resolveDisplay(d.codes, KNOWN_ISSUE_CODES.WIKI_ORPHAN)).toMatchObject({ label: "고아 페이지", known: true });
+    expect(resolveDisplay(d.codes, "wiki.rule_violation")).toMatchObject({ label: "wiki.rule_violation", known: false });
   });
   it("모르는 동작·종류·상태는 원문 + 중립으로 떨어진다", () => {
     const d = buildWikiDisplay();

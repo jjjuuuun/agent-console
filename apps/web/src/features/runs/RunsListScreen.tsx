@@ -16,7 +16,7 @@ import { useDebouncedValue } from "../../app/useDebouncedValue";
 import { usePendingInteractions } from "../../shell/pending";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { HandoffMatrixView } from "./HandoffMatrixView";
-import { NEW_PARAM, ProjectChip, useProjects } from "../projects";
+import { NEW_PARAM, ProjectChip, ProjectRecordsNotice, useProjectRecordsState, useProjects } from "../projects";
 import { useRegisterCommands } from "../../shell/commands";
 import { useProjectId } from "../../app/projectScope";
 import { ROUTE_ROLES, routeIconNode, routePath } from "../library";
@@ -84,6 +84,7 @@ export function RunsListScreen() {
   const [cancelTarget, setCancelTarget] = useState<Run | null>(null);
   // 프로젝트 홈의 [실행…]이 `?new=1&prj=`를 붙여 오면 처음부터 새 실행 대화상자가 열려 있다(아래 효과가 질의를 지운다)
   const projects = useProjects();
+  const recordsState = useProjectRecordsState();
   const [startDialog, setStartDialog] = useState<{ project?: string } | null>(() => {
     if (params.get(NEW_PARAM) !== "1") return null;
     const prj = params.get("prj");
@@ -205,6 +206,8 @@ export function RunsListScreen() {
         {Array.from({ length: 8 }, (_, i) => <div key={i} className="app-skeleton-row" />)}
       </div>
     );
+  } else if (runsQ.isError && runs === undefined && recordsState.blocking) {
+    body = null; // 폴더·기록 상태 띠가 이유와 해결 단추를 보인다
   } else if (runsQ.isError && runs === undefined) {
     const e = describeError(runsQ.error, t.list.loadFailed);
     body = <ErrorBlock title={t.list.loadFailed} message={e.message} details={errorDetails(e)} detailsLabel={appMessages.common.details} retryLabel={appMessages.common.retry} onRetry={() => void runsQ.refetch()} />;
@@ -285,6 +288,7 @@ export function RunsListScreen() {
           searchRef={searchRef}
           firstRef={firstRef}
         />
+        <ProjectRecordsNotice banners={recordsState.banners} />
         {view === "handoffs" ? handoffBody : body}
         {view === "list" ? <LoadMoreFooter hasMore={runsQ.hasMore} loading={runsQ.loadingMore} onLoadMore={runsQ.loadMore} label={appMessages.common.loadMore} loadingLabel={appMessages.common.loadingMore} /> : null}
       </div>

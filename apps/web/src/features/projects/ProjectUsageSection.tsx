@@ -2,6 +2,7 @@ import { queryKeys, useApiQuery } from "../../app/queries";
 import { ProjectChip } from "./ProjectChip";
 import { useProjects } from "./ProjectsContext";
 import { scopeMessages } from "./scopeMessages";
+import { messages as appMessages } from "../../app/messages";
 
 /**
  * 사용량 화면의 "이 프로젝트" 구역(screen-projects §7.5): 계정 창과 별도로 현재 프로젝트의 실행 수를 보인다.
@@ -19,7 +20,7 @@ export function ProjectUsageSection() {
       <h2 id="prj-usage-title" className="prj-usage-title">{scopeMessages.usage.title}</h2>
       <ProjectChip />
       <dl className="prj-usage-stats">
-        <div><dt>{scopeMessages.usage.runs}</dt><dd>{counts.data === undefined ? "–" : runs.toLocaleString("ko-KR")}</dd></div>
+        <div><dt>{scopeMessages.usage.runs}</dt><dd>{counts.data === undefined ? "–" : runs.toLocaleString(appMessages.locale)}</dd></div>
       </dl>
     </section>
   );

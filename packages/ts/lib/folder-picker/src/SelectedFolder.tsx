@@ -10,6 +10,8 @@ export interface SelectedFolderProps {
   path: string;
   /** 위 제목을 가린다. */
   hideLabel?: boolean;
+  /** 필수 입력 표시(제목 뒤에 ` *`). */
+  required?: boolean;
   /** 제목 문구(기본 `folder.path.label`). */
   label?: string;
   /** 클립보드에 쓰는 함수(기본 `navigator.clipboard.writeText`, 없으면 [복사]를 그리지 않는다). */
@@ -19,7 +21,7 @@ export interface SelectedFolderProps {
 const COPIED_MS = 1500;
 
 /** 선택한 폴더 상자: 선택 전에는 점선 자리, 선택하면 폴더 아이콘 + 전체 경로(줄바꿈) + [복사]. 최소 높이가 같아 아래가 움직이지 않는다. */
-export function SelectedFolder({ id, t, path, hideLabel, label, copy }: SelectedFolderProps): ReactElement {
+export function SelectedFolder({ id, t, path, hideLabel, required, label, copy }: SelectedFolderProps): ReactElement {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -36,7 +38,7 @@ export function SelectedFolder({ id, t, path, hideLabel, label, copy }: Selected
   };
   return (
     <>
-      <div id={labelId} className={hideLabel ? "ac-fp-sr" : "ac-fp-label"}>{label ?? t("folder.path.label")}</div>
+      <div id={labelId} className={hideLabel ? "ac-fp-sr" : "ac-fp-label"}>{label ?? t("folder.path.label")}{required === true ? " *" : ""}</div>
       <div className="ac-fp-selected" role="group" aria-labelledby={labelId} data-filled={filled ? "true" : "false"}>
         {filled ? (
           <>

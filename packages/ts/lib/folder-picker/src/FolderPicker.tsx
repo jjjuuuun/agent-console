@@ -66,6 +66,8 @@ export interface FolderPickerProps {
   /** "경로를 직접 입력"을 처음부터 펼친다. 기본 접힘. */
   defaultManualOpen?: boolean;
   hideLabel?: boolean;
+  /** 제목 뒤에 필수 표시(` *`)를 붙인다. */
+  required?: boolean;
   /** 직접 입력 디바운스(ms). 선택한 경로는 늘 즉시 확인한다. 기본 300. */
   debounceMs?: number;
   /** 대기가 이 시간(ms)을 넘으면 [앱 안에서 찾아보기]를 보인다. 기본 30000. */
@@ -83,7 +85,7 @@ export interface FolderPickerProps {
 export function FolderPicker(props: FolderPickerProps): ReactElement {
   const {
     id, value, onValueChange, check, list, createFolder, roots, rootPath, rootLabel, capabilities, onPickNative, configDir, messages, excludeProjectId, currentFolder, disabled,
-    onStateChange, onSelectPhaseChange, onSubmit, onOpenProject, onPicked, pickRef, inputRef, autoFocus, defaultManualOpen = false, hideLabel, debounceMs,
+    onStateChange, onSelectPhaseChange, onSubmit, onOpenProject, onPicked, pickRef, inputRef, autoFocus, defaultManualOpen = false, hideLabel, required, debounceMs,
     waitingEscapeMs = 30000, cancelledNoticeMs = 3000, copy,
   } = props;
   const t = useMemo(() => createTranslate(messages), [messages]);
@@ -327,7 +329,7 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
 
   return (
     <div className="ac-fp-root ac-fp-picker" onKeyDown={onRootKeyDown} data-select-phase={phase}>
-      <SelectedFolder id={id} t={t} path={value} hideLabel={hideLabel} copy={copy} />
+      <SelectedFolder id={id} t={t} path={value} hideLabel={hideLabel} {...(required === undefined ? {} : { required })} copy={copy} />
       <div className="ac-fp-pickrow">
         <button
           ref={pickBtn}

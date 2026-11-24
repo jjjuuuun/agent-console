@@ -1,6 +1,6 @@
 /** React Flow 어댑터(이 파일과 GraphEditor.tsx만 @xyflow/react를 import한다). */
 import { ARROW_GAP, buildEdgePath } from "../logic/edgePath";
-import { Fragment, memo, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Handle, Position, useStore, useUpdateNodeInternals } from "@xyflow/react";
 import type { Edge, EdgeProps, Node, NodeProps } from "@xyflow/react";
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
@@ -11,7 +11,7 @@ import { MAX_WAYPOINTS } from "../logic/edgePath";
 import { RESET_LABEL_PATCH, insertIndexFor, insertWaypoint, nearestLabelT, nearestOnSegments, snapLabelT } from "../logic/edgeLayoutOps";
 import { format } from "../messages";
 import { EdgeEditContext } from "./edgeEdit";
-import { EdgeRouteContext } from "./routeContext";
+import { EdgeLabelSpreadContext, EdgeRouteContext } from "./routeContext";
 import { routeFallbackAttrs } from "../logic/route";
 import { PortEditContext } from "./portEdit";
 import { usePortMove } from "./usePortMove";
@@ -273,12 +273,13 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
   const edit = useContext(EdgeEditContext);
   const shape = data?.shape ?? FALLBACK_SHAPE;
   const routes = useContext(EdgeRouteContext);
+  const spread = useContext(EdgeLabelSpreadContext);
   const canEdit = edit !== null && edit.editable && selected === true;
   const pathMode = canEdit && edit.pathEditEdgeId === props.id;
   const [draft, setDraft] = useState<EdgeDraft | null>(null);
   const chipDrag = useRef<ChipDrag | null>(null);
   const wps = draft?.waypoints ?? data?.waypoints ?? null;
-  const labelT = draft?.labelT ?? data?.labelT ?? 0.5;
+  const labelT = draft?.labelT ?? data?.labelT ?? spread?.spread.get(props.id) ?? 0.5;
   const labelOffset = draft?.labelOffset ?? data?.labelOffset;
   // 자동 경로: 편집기가 모든 엣지를 한 번에 계산한 결과를 쓴다. 경유점을 끄는 중(draft)이거나 아직 계산 전이면 임시 모양
   const routed = shape.route !== undefined && routes !== null && draft?.waypoints === undefined ? routes.get(props.id) : undefined;
@@ -403,6 +404,52 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
     : {};
 
   const stacked = data?.leadChip !== undefined;
+  const badged =
+    data?.orderBadge !== undefined ||
+    data?.countBadge !== undefined ||
+    (data?.hintChips?.length ?? 0) > 0 ||
+    (data?.extraChips?.length ?? 0) > 0 ||
+    (data?.runBadges?.length ?? 0) > 0 ||
+    stacked ||
+    data?.iconFromProperty === true;
+  // 라벨 겹침 풀기: 경로와 지정 여부가 바뀔 때만 편집기에 알린다
+  const pinned = data?.labelT !== undefined || data?.labelOffset !== undefined;
+  const visibleChip = badged || selected === true;
+  const pinT = data?.labelT ?? 0.5;
+  const pinX = data?.labelOffset?.x;
+  const pinY = data?.labelOffset?.y;
+  const report = spread?.report;
+  // 라벨 실제 크기를 재서 겹침 계산에 쓴다(칩 폭·줄 수는 내용·줌에 따라 달라진다)
+  const [chipEl, setChipEl] = useState<HTMLDivElement | null>(null);
+  const [chipSize, setChipSize] = useState<{ width: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = chipEl;
+    if (el === null) return;
+    const measure = () => {
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      setChipSize((c) => (c !== null && c.width === width && c.height === height ? c : { width, height }));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [chipEl]);
+  const sizeW = chipSize?.width;
+  const sizeH = chipSize?.height;
+  useEffect(() => {
+    if (report === undefined) return;
+    const offset = pinX === undefined && pinY === undefined ? undefined : { x: pinX ?? 0, y: pinY ?? 0 };
+    report(
+      props.id,
+      { id: props.id, labelAt: result.labelAt, visible: visibleChip, ...(sizeW === undefined || sizeH === undefined || sizeW === 0 ? {} : { size: { width: sizeW, height: sizeH } }), ...(pinned ? { fixed: { t: pinT, offset } } : {}) },
+      `${path}|${visibleChip}|${pinned}|${pinT}|${pinX}|${pinY}|${sizeW}x${sizeH}`,
+    );
+    // `result`는 렌더마다 새로 만들어지지만 내용은 `path`로 정해지므로 `path`가 같으면 다시 알리지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report, props.id, path, visibleChip, pinned, pinT, pinX, pinY, sizeW, sizeH]);
+  useEffect(() => (report === undefined ? undefined : () => report(props.id, null, "")), [report, props.id]);
   const chips = buildChipEntries(data);
   const iconNode: ReactNode =
     data?.iconName === undefined ? null : (data.renderIcon?.(data.iconName) ?? (data.iconFallback !== undefined && data.iconFallback !== "" ? data.iconFallback : null));
@@ -479,22 +526,13 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
           />
         )}
         <div
+          ref={setChipEl}
           className={canEdit ? "ac-ge-edge-chip ac-ellipsis nodrag nopan" : "ac-ge-edge-chip ac-ellipsis"}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           data-selected={selected ? "true" : undefined}
           data-invalid={data?.invalid ? "true" : undefined}
           data-edge-state={data?.state}
-          data-badged={
-            data?.orderBadge !== undefined ||
-            data?.countBadge !== undefined ||
-            (data?.hintChips?.length ?? 0) > 0 ||
-            (data?.extraChips?.length ?? 0) > 0 ||
-            (data?.runBadges?.length ?? 0) > 0 ||
-            stacked ||
-            data?.iconFromProperty === true
-              ? "true"
-              : undefined
-          }
+          data-badged={badged ? "true" : undefined}
           data-wide={(data?.extraChips?.length ?? 0) > 0 || (data?.runBadges?.length ?? 0) > 0 ? "true" : undefined}
           data-stacked={stacked ? "true" : undefined}
           data-edge-id={extended ? props.id : undefined}

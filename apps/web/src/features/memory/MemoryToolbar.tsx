@@ -10,6 +10,7 @@ import { AUTHOR_KIND_FILTERS, ENTRY_SORTS, MEMORY_LIMITS } from "./memoryConfig"
 import { memoryMessages as t } from "./messages";
 import { useMemoryTags } from "./useMemoryApi";
 import type { MemoryViewState } from "./memoryUrl";
+import { messages as appMessages } from "../../app/messages";
 
 export interface MemoryToolbarProps {
   view: MemoryViewState;
@@ -134,7 +135,7 @@ function TagPopover({ view, onChange }: Pick<MemoryToolbarProps, "view" | "onCha
             {shown.map((x) => (
               <li key={x.tag}>
                 <Choice checked={view.tag === x.tag} onChange={() => pick(view.tag === x.tag ? null : x.tag)}>
-                  <span className="ac-ellipsis" title={x.tag}>{x.tag}</span> <span className="mem-muted">{x.entries.toLocaleString("ko-KR")}</span>
+                  <span className="ac-ellipsis" title={x.tag}>{x.tag}</span> <span className="mem-muted">{x.entries.toLocaleString(appMessages.locale)}</span>
                 </Choice>
               </li>
             ))}

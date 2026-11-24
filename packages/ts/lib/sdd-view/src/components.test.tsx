@@ -7,6 +7,7 @@ import { PlanBundles } from "./PlanBundles";
 import { PlanGraph } from "./PlanGraph";
 import { SpecList } from "./SpecList";
 import { TaskTable, type TaskTableHandle } from "./TaskTable";
+import { TaskRunChips } from "./TaskRunChips";
 import { TaskStatusMenu } from "./TaskStatusMenu";
 import { TraceMatrix } from "./TraceMatrix";
 import { DocumentStateChip } from "@agent-console/markdown-doc";
@@ -502,5 +503,14 @@ describe("GateNotice", () => {
     rerender(<GateNotice details={{ gate_id: "g1" }} />);
     expect(screen.getByText("g1 관문 조건을 만족하지 않습니다.")).toBeTruthy();
     expect(screen.queryByText("확인할 문서")).toBeNull();
+  });
+});
+
+describe("TaskRunChips: locale 주입 (6R.21)", () => {
+  it("locale=ko면 한국어 상대 시각", () => {
+    const at = Math.floor(Date.now() / 1000) - 8;
+    render(<TaskRunChips links={[{ integration: "runs", kind: "run", ref: "r1", status: "done", at } as never]} statuses={[{ id: "done", label: "완료" }]} locale="ko" />);
+    expect(document.body.textContent).toMatch(/전/);
+    expect(document.body.textContent).not.toMatch(/ago/);
   });
 });

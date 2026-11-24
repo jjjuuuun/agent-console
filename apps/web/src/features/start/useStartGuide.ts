@@ -3,7 +3,7 @@ import type { StepGuideStep } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
 import { useApiQuery, queryKeys } from "../../app/queries";
 import { useQuery } from "@tanstack/react-query";
-import { buildProjectStartSteps, projectHomePath, useProjects } from "../projects";
+import { buildProjectStartSteps, projectHomePath, useProjects, useStartBlockReason } from "../projects";
 import { ROUTE_ROLES, routePath, useGraphList, useRoutesOn } from "../library";
 import { buildStartSteps } from "./startSteps";
 
@@ -27,6 +27,8 @@ export function useStartGuide(): StartGuide {
   const p = useProjects();
   const { rest, space } = useApi();
   const current = p.current;
+  const blockCopyIn = useStartBlockReason("copy_in");
+  const blockChat = useStartBlockReason("start_chat");
   const projectTeams = useQuery({
     queryKey: ["list", "start", "project-teams", current],
     queryFn: () => space(current).listGraphs(),
@@ -52,6 +54,7 @@ export function useStartGuide(): StartGuide {
         projectTeams: current === null ? 0 : projectTeams.data?.length,
         projectConversations: current === null ? 0 : projectChats.data?.length,
       },
+      blocked: { copy_in: blockCopyIn, start_chat: blockChat },
       actions: {
         folder: { onAction: () => p.requestAddFolder() },
         ...(isOn(graphRole) ? { library: { to: routePath(graphRole) } } : {}),
@@ -59,7 +62,7 @@ export function useStartGuide(): StartGuide {
         ...(isOn(ROUTE_ROLES.conversations) ? { chat: { to: routePath(ROUTE_ROLES.conversations) } } : {}),
       },
     });
-  }, [p, graphs.data, projectTeams.data, projectChats.data, current, isOn]);
+  }, [p, graphs.data, projectTeams.data, projectChats.data, current, isOn, blockCopyIn, blockChat]);
 
   const steps = useMemo(
     () =>

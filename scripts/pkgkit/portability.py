@@ -17,11 +17,17 @@ uv는 기본 인덱스(PyPI)를 가장 낮은 순위로 두고 처음 찾은 인
 ``--wheels`` 없이 돌릴 때 휠 모음의 휠이 패키지 소스(``pyproject.toml``·``README.md``·``src/``)보다
 오래되었으면 경고한다.
 
+대상은 워크스페이스 멤버(앱 제외)다. ``--package``는 확장 예제(워크스페이스 멤버가 아님,
+``pkgkit_py.toml`` ``[examples] roots``)도 고를 수 있다. ``--package`` 없이 돌릴 때 예제를 넣을지는
+``[examples] portability_default``(저장소 기본 = 넣음)가 정하고 ``--examples``·``--no-examples``가
+덮는다. 예제는 템플릿 종류가 아니라 ``run-check`` 단계가 없다.
+
 계획 계산(:func:`plan_package`)은 순수 함수다. 실행기(:class:`Runner`)는 주입할 수 있다.
 
 사용::
 
-    python scripts/pkgkit/portability.py [--root .] [--package NAME ...] [--wheels] [--no-index]
+    python scripts/pkgkit/portability.py [--root .] [--package NAME ...] [--[no-]examples]
+                                         [--wheels] [--no-index]
                                          [--reuse-uv-cache | --uv-cache-dir DIR]
                                          [--keep] [--python 3.12] [--dry-run] [--timeout 900]
 """
@@ -46,6 +52,7 @@ from pkgkit_common import (
     PkgkitError,
     PyPackage,
     discover,
+    discover_examples,
     import_name_of,
     load_config,
     load_kinds,
@@ -202,6 +209,25 @@ def plan_package(
         pyproject_suffix=suffix,
         missing_wheels=tuple(missing_wheels(internal_requirements(pkg, cfg), wheel_files)),
     )
+
+
+def choose_targets(
+    packages: Sequence[PyPackage],
+    examples: Sequence[PyPackage],
+    names: Sequence[str],
+    *,
+    with_examples: bool,
+) -> list[PyPackage]:
+    """검사 대상(순수). ``names``가 있으면 패키지·예제 모두에서 고른다.
+
+    ``names``가 비면 워크스페이스 패키지 전부, ``with_examples``면 예제도 뒤에 붙인다.
+
+    Raises:
+        PkgkitError: 패키지에도 예제에도 없는 이름.
+    """
+    if names:
+        return select([*packages, *examples], names)
+    return [*packages, *examples] if with_examples else list(packages)
 
 
 def portability_env(
@@ -370,6 +396,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=Path.cwd(), help="저장소 루트(기본: 현재 폴더)")
     ap.add_argument("--config", type=Path, default=None, help="pkgkit_py.toml 경로")
     ap.add_argument("--package", action="append", default=[], help="이 패키지만(여러 번 가능)")
+    ap.add_argument(
+        "--examples",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="--package 없이 돌릴 때 확장 예제([examples] roots)를 넣을지(기본: 설정 "
+        "[examples] portability_default)",
+    )
     ap.add_argument("--wheelhouse", type=Path, default=None, help="휠 모음(기본: 설정 wheelhouse)")
     ap.add_argument(
         "--wheels", action="store_true", help="먼저 휠 모음을 다시 만든다(wheels --clean)"
@@ -393,7 +426,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         kinds = load_kinds(templates_dir(root, cfg), cfg.template_vars)
         discovered = discover(root, cfg, kinds)
         packages = [p for p in discovered if not p.is_app]
-        targets = select(packages, args.package)
+        examples = discover_examples(root, cfg)
+        targets = choose_targets(
+            packages,
+            examples,
+            args.package,
+            with_examples=cfg.portability_examples if args.examples is None else args.examples,
+        )
     except PkgkitError as exc:
         print(f"오류: {exc}", file=sys.stderr)
         return 2

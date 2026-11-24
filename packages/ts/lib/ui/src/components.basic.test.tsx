@@ -46,7 +46,7 @@ describe("Sidebar", () => {
     const tools = within(screen.getByRole("group", { name: "도구" }));
     const tool = tools.getByRole("button", { name: "다" });
     expect(tool.textContent).toBe("");
-    expect(tool.getAttribute("title")).toBe("다");
+    expect(tool.closest(".ac-tip-host")?.querySelector(".ac-tip")?.textContent).toBe("다");
     expect(within(screen.getByRole("navigation", { name: "주 메뉴" })).queryByText("다")).toBeNull();
     fireEvent.click(tool);
     expect(onNavigate).toHaveBeenCalledWith("c");

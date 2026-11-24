@@ -41,15 +41,29 @@ export function CheckboxFieldWidget(p: WidgetProps) {
 function withEnumLabels(name: "SelectWidget" | "RadioWidget" | "CheckboxesWidget") {
   return function LabeledEnumWidget(p: WidgetProps) {
     const Base = getDefaultRegistry().widgets[name] as ComponentType<WidgetProps>;
-    // 배열 enum(체크박스 묶음)은 배열 쪽 x-ui를 먼저, 없으면 items 쪽 x-ui를 본다.
-    const items = (p.schema as { items?: unknown }).items;
-    const itemSchema = items !== null && typeof items === "object" && !Array.isArray(items) ? (items as typeof p.schema) : undefined;
-    const labels = readXUi(p.schema).enumLabels ?? (itemSchema === undefined ? undefined : readXUi(itemSchema).enumLabels);
-    const opts = p.options.enumOptions;
-    if (labels === undefined || opts === undefined) return <Base {...p} />;
-    const mapped = opts.map((o) => ({ ...o, label: labels[String(o.value)] ?? o.label }));
-    return <Base {...p} options={{ ...p.options, enumOptions: mapped }} />;
+    // anyOf·oneOf 분기 선택기(id가 `__anyof_select`·`__oneof_select`로 끝남)는 폼 엔진이 라벨을 그리지 않아(필드 행 라벨은 부모 id를 가리킴)
+    // 이름 없는 select가 된다. 화면에는 보이지 않는 라벨로 이름을 이어 준다.
+    if (name === "SelectWidget" && /__(any|one)of_select$/.test(p.id) && typeof p.label === "string" && p.label !== "") {
+      return (
+        <>
+          <label htmlFor={p.id} className="ac-sr-only">{p.label}</label>
+          <LabeledEnumInner Base={Base} p={p} />
+        </>
+      );
+    }
+    return <LabeledEnumInner Base={Base} p={p} />;
   };
+}
+
+function LabeledEnumInner({ Base, p }: { Base: ComponentType<WidgetProps>; p: WidgetProps }) {
+  // 배열 enum(체크박스 묶음)은 배열 쪽 x-ui를 먼저, 없으면 items 쪽 x-ui를 본다.
+  const items = (p.schema as { items?: unknown }).items;
+  const itemSchema = items !== null && typeof items === "object" && !Array.isArray(items) ? (items as typeof p.schema) : undefined;
+  const labels = readXUi(p.schema).enumLabels ?? (itemSchema === undefined ? undefined : readXUi(itemSchema).enumLabels);
+  const opts = p.options.enumOptions;
+  if (labels === undefined || opts === undefined) return <Base {...p} />;
+  const mapped = opts.map((o) => ({ ...o, label: labels[String(o.value)] ?? o.label }));
+  return <Base {...p} options={{ ...p.options, enumOptions: mapped }} />;
 }
 export const LabeledSelectWidget = withEnumLabels("SelectWidget");
 export const LabeledRadioWidget = withEnumLabels("RadioWidget");

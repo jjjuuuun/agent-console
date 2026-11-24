@@ -92,7 +92,7 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
           ))}
         </div>
       ) : null}
-      <div role="listbox" aria-label={t.list.label} aria-multiselectable="true" className="ver-list">
+      <div role="list" aria-label={t.list.label} className="ver-list">
         {visible.map((v, i) => {
           const hash8 = shortId(v.version_hash);
           const isCurrent = i === 0;
@@ -104,8 +104,7 @@ export function VersionList({ versions, now, checked, mode, onModeChange, onTogg
                 if (el) rows.current.set(v.version_hash, el);
                 else rows.current.delete(v.version_hash);
               }}
-              role="option"
-              aria-selected={isChecked}
+              role="listitem"
               tabIndex={i === activeAt ? 0 : -1}
               className="ver-item"
               data-checked={isChecked ? "true" : undefined}

@@ -37,7 +37,7 @@ export type {
 } from "./rest";
 export type { TokenSource } from "./token";
 export { definitionBase, encodePath, filenameFromDisposition, ISSUES_HEADER, parseIssuesHeader, SPACE_PARAM, withQueryParam, withSpace } from "./io";
-export type { BlobResponse, RestIo } from "./io";
+export type { BlobResponse, ProjectCountsParams, RestIo } from "./io";
 export { createRestIo } from "./transport";
 export type { ExportArchive, ExportScope } from "./clients/exports";
 export type { ImportScope } from "./clients/imports";

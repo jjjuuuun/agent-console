@@ -77,7 +77,10 @@ import { TeamSharedBar } from "./TeamSharedBar";
 import { EdgeTroubleChip } from "./EdgeTroubleChip";
 import { useEdgeTrouble } from "./useEdgeTrouble";
 import { useAutoRoutes } from "./useAutoRoutes";
-import { EdgeRouteContext } from "./routeContext";
+import { EdgeLabelSpreadContext, EdgeRouteContext } from "./routeContext";
+import type { EdgeLabelSpread } from "./routeContext";
+import { spreadLabels, type ObstacleRect } from "../logic/labelSpread";
+import type { SpreadInput } from "../logic/labelSpread";
 import { overrideEdgeShape } from "./viewOverride";
 import { createAStarRouter } from "../logic/route";
 import type { EdgeRouter } from "../logic/route";
@@ -594,6 +597,40 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     });
   }, [overriddenEdges, readOnly, flowNodes]);
   const routes = useAutoRoutes({ edges: viewEdges, getRouter });
+  // 같은 노드에서 갈라지는 연결선의 라벨이 겹치면 경로를 따라 옮겨 푼다(사용자가 위치를 정한 라벨은 그대로). 연결선이 경로를 알려 온다
+  const spreadInputs = useRef(new Map<string, { input: SpreadInput; key: string }>());
+  const [spread, setSpread] = useState<ReadonlyMap<string, number>>(() => new Map());
+  const spreadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spreadObstacles = useRef<readonly ObstacleRect[]>([]);
+  const scheduleSpread = useCallback(() => {
+    if (spreadTimer.current !== null) return;
+    spreadTimer.current = setTimeout(() => {
+      spreadTimer.current = null;
+      const next = spreadLabels([...spreadInputs.current.values()].map((v) => v.input), undefined, spreadObstacles.current);
+      setSpread((cur) => (cur.size === next.size && [...next].every(([k, v]) => cur.get(k) === v) ? cur : next));
+    }, 0);
+  }, []);
+  const reportSpread = useCallback<EdgeLabelSpread["report"]>((id, input, key) => {
+    const have = spreadInputs.current.get(id);
+    if (input === null) {
+      if (have === undefined) return;
+      spreadInputs.current.delete(id);
+    } else {
+      if (have?.key === key) return;
+      spreadInputs.current.set(id, { input, key });
+    }
+    scheduleSpread();
+  }, [scheduleSpread]);
+  // 노드를 피해 라벨 자리를 고르므로, 노드 위치·크기가 바뀌면 다시 푼다
+  const obstacleKey = flowNodes.map((n) => `${Math.round(n.position.x)},${Math.round(n.position.y)},${Math.round(n.measured?.width ?? n.initialWidth ?? 0)},${Math.round(n.measured?.height ?? n.initialHeight ?? 0)}`).join(";");
+  useEffect(() => {
+    spreadObstacles.current = flowNodes.map((n) => ({ x: n.position.x, y: n.position.y, width: n.measured?.width ?? n.initialWidth ?? 0, height: n.measured?.height ?? n.initialHeight ?? 0 }));
+    scheduleSpread();
+    // `obstacleKey`가 노드 사각형의 내용을 대표한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [obstacleKey, scheduleSpread]);
+  const spreadApi = useMemo<EdgeLabelSpread>(() => ({ spread, report: reportSpread }), [spread, reportSpread]);
+  useEffect(() => () => { if (spreadTimer.current !== null) clearTimeout(spreadTimer.current); }, []);
   const tidy = useTidy({
     getRouter,
     graph,
@@ -1616,6 +1653,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
         <EdgeEditContext.Provider value={editApi}>
         <PortEditContext.Provider value={portEditApi}>
         <EdgeRouteContext.Provider value={routes}>
+        <EdgeLabelSpreadContext.Provider value={spreadApi}>
         <div className="ac-ge-flow">
           {activeView !== null && (
             <div className="ac-ge-view-chip" role="status">
@@ -1752,7 +1790,28 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
             </Panel>
           )}
         </ReactFlow>
+        {/* 알림은 캔버스(흐름 영역) 안 위쪽에 둔다: 팀 공유 줄 같은 위쪽 막대가 있어도 도구줄 아래로 내려앉는다 */}
+        {toast !== null && (
+          <div className="ac-ge-toast" role="status">
+            <span className="ac-ge-toast-text ac-ellipsis">{toast.text}</span>
+            {undoAvailable && toast.undo !== undefined && (
+              <button
+                type="button"
+                className="ac-ge-btn ac-ge-btn--primary"
+                onClick={() => {
+                  if (toast.undo === undefined) return;
+                  const restored = toast.undo.viaHistory === true ? history.undo(graph) : null;
+                  onChange?.(restored ?? toast.undo.previous, { reason: "undo", previous: graph });
+                  setToast(null);
+                }}
+              >
+                {m.undo}
+              </button>
+            )}
+          </div>
+        )}
         </div>
+        </EdgeLabelSpreadContext.Provider>
         </EdgeRouteContext.Provider>
         </PortEditContext.Provider>
         </EdgeEditContext.Provider>
@@ -1785,25 +1844,6 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
             }}
             onClose={closeMenu}
           />
-        )}
-        {toast !== null && (
-          <div className="ac-ge-toast" role="status">
-            <span className="ac-ge-toast-text ac-ellipsis">{toast.text}</span>
-            {undoAvailable && toast.undo !== undefined && (
-              <button
-                type="button"
-                className="ac-ge-btn ac-ge-btn--primary"
-                onClick={() => {
-                  if (toast.undo === undefined) return;
-                  const restored = toast.undo.viaHistory === true ? history.undo(graph) : null;
-                  onChange?.(restored ?? toast.undo.previous, { reason: "undo", previous: graph });
-                  setToast(null);
-                }}
-              >
-                {m.undo}
-              </button>
-            )}
-          </div>
         )}
       </div>
       {panel !== null && <aside className="ac-ge-panel">{panel}</aside>}

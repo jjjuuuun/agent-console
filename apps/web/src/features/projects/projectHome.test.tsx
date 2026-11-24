@@ -26,7 +26,7 @@ const view = (id: string, over: Partial<ProjectView> = {}, project: Partial<Proj
 
 /** 사이드바 영역(펼침이면 항목 버튼, 레일이면 팝오버 메뉴 항목)에서 프로젝트 행을 찾는다. */
 async function findRow(name: RegExp): Promise<HTMLElement> {
-  const region = await screen.findByRole("region", { name: "프로젝트" });
+  const region = await screen.findByRole("region", { name: "프로젝트 영역" });
   await waitFor(() => expect(region.querySelector(".prj-rail-btn, .prj-row")).not.toBeNull());
   const rail = region.querySelector<HTMLElement>(".prj-rail-btn");
   if (rail !== null) {
@@ -37,7 +37,7 @@ async function findRow(name: RegExp): Promise<HTMLElement> {
 }
 /** [폴더 추가]를 누른다(레일이면 팝오버 메뉴 항목). */
 async function clickAddFolder() {
-  const region = await screen.findByRole("region", { name: "프로젝트" });
+  const region = await screen.findByRole("region", { name: "프로젝트 영역" });
   const rail = region.querySelector<HTMLElement>(".prj-rail-btn");
   if (rail !== null) {
     fireEvent.click(rail);
@@ -377,7 +377,7 @@ describe("프로젝트 홈: {dir}을 모를 때 짝 문장 (V4)", () => {
     expect(b?.body).toContain("이 폴더 안에 프로젝트 구성 폴더를 쓸 수 없어");
     expect(b?.body).not.toContain("폴더 폴더");
     const [named] = problemBanners(view("a", { config_writable: false, config_dir: ".cfg-dir" }));
-    expect(named?.body).toContain("이 폴더에 .cfg-dir 폴더를");
+    expect(named?.body.replace(/\u2011/g, "-")).toContain("이 폴더에 .cfg-dir 폴더를");
   });
   it("설정 파일 오류·폴더 없음·.gitignore 배너도 config_dir 없이 짝 문장", () => {
     const v = view("a", { status: "manifest_invalid", config_dir: null, issues: [{ severity: "info", code: "project.gitignore_outdated", message: "g" }] });

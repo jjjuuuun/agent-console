@@ -152,7 +152,7 @@ describe("앱 셸", () => {
     const links = within(nav).getAllByRole("link");
     expect(links.map((l) => l.querySelector(".ac-sidebar-label")?.textContent)).toEqual(["팀 구성", "에이전트", "리소스", "문서 틀", "위키 규칙", "채팅", "실행 기록", "메모리", "스펙", "위키", "사용량", "로그"]);
     // 묶음 제목은 라우트의 group + 묶음 데이터에서 온다
-    expect(within(nav).getByRole("list", { name: "구성" })).toBeTruthy();
+    expect(within(nav).getByRole("list", { name: "공용 구성" })).toBeTruthy();
     expect(within(nav).getByRole("list", { name: "실행" })).toBeTruthy();
     expect(within(nav).getByRole("list", { name: "관측" })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: "에이전트" }).getAttribute("aria-current")).toBe("page");
@@ -198,7 +198,7 @@ describe("앱 셸", () => {
     const nav = await screen.findByRole("navigation", { name: "주 메뉴" });
     await waitFor(() => expect(within(nav).getAllByRole("link").map((l) => l.querySelector(".ac-sidebar-label")?.textContent)).toEqual(["채팅", "실행 기록"]));
     expect(within(nav).getByRole("list", { name: "실행" })).toBeTruthy();
-    expect(within(nav).queryByText("구성")).toBeNull();
+    expect(within(nav).queryByText("공용 구성")).toBeNull();
     expect(within(nav).queryByText("관측")).toBeNull();
   });
 
