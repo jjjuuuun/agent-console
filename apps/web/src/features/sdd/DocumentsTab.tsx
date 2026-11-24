@@ -13,7 +13,7 @@ import type { SddGateBlockedDetails, SpecDocumentSummary } from "@agent-console/
 import { useMediaQuery } from "../../lib/useMediaQuery";
 import { useStorage } from "../../app/StorageContext";
 import { SDD_PARAMS, SDD_STORAGE, HUMAN_ACTOR, SDD_LIMITS, SECRET_SUSPECT_CODE } from "./sddConfig";
-import { useDocShortcuts } from "./docShortcuts";
+import { useDocShortcuts, useSaveShortcut } from "./docShortcuts";
 import { sddMessages as m, viewMessages } from "./messages";
 import type { SddTabProps } from "./sddTabs";
 import { sddKeys, useSddSpace, useSpecDocument } from "./useSddApi";
@@ -205,6 +205,10 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
     prevDoc: () => moveDoc(-1),
     nextDoc: () => moveDoc(1),
     gotoLine: () => editorRef.current?.openGoToLine(),
+  });
+  // 편집기 밖(목록·도구줄)에서도 저장한다. 저장 가능 조건은 편집기 안 Ctrl+S와 같다(수정됨·읽기 전용 아님·충돌 아님·저장 중 아님).
+  useSaveShortcut(() => {
+    if (dirty && !ctx.readOnly && conflicts[docId ?? ""] !== true && !saving) void save(draft?.baseHash ?? serverHash);
   });
   const lineParam = Number(params.get(P.line));
   const initialLine = Number.isInteger(lineParam) && lineParam > 0 ? lineParam : undefined;

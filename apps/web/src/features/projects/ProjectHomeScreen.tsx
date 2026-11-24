@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDialog, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
@@ -19,6 +19,7 @@ import { MenuPopover } from "./MenuPopover";
 import { ProjectConfigCard } from "./ProjectConfigCard";
 import { ProjectProblemBanner } from "./ProjectProblemBanner";
 import { configUnreadable, manifestPath, problemBanners, type BannerAction, type BannerSpec } from "./projectHomeLib";
+import { useProjectRunsBlocked } from "./useProjectRunsBlocked";
 import { useProjects } from "./ProjectsContext";
 import { RecentActivityCard } from "./RecentActivityCard";
 import { SETTINGS_PROJECTS_HASH } from "./sectionId";
@@ -102,6 +103,8 @@ export function ProjectHomeScreen() {
   const recordsUnreadable = view?.records_state === "unavailable";
   const activity = useProjectActivity(id, view !== undefined && !recordsUnreadable && view.status !== "folder_unset");
   const banners = useMemo(() => (view === undefined ? [] : problemBanners(view)), [view]);
+  const blockedId = useId();
+  const runsBlocked = useProjectRunsBlocked();
 
   if (p.loadFailed) {
     return (
@@ -126,7 +129,9 @@ export function ProjectHomeScreen() {
 
   const archived = view.project.archived === true;
   const info = statusInfo(view);
-  const abilities = projectAbilities(view, { recordsWritable: view.records_writable !== false });
+  const abilities = projectAbilities(view, { recordsWritable: view.records_writable !== false, runsScoped: !runsBlocked.blocked, runsBlockedMessage: runsBlocked.message });
+  // 대화 만들기는 연동과 상관없이 된다(막는 것은 턴 보내기 — 채팅 화면). 실행 시작만 연동 신호로 막는다.
+  const chatAbilities = projectAbilities(view, { recordsWritable: view.records_writable !== false });
   const folder = view.project.folder ?? "";
   const withPrj = (path: string) => `${path}?prj=${encodeURIComponent(id)}`;
   const reason = (a: keyof typeof abilities) => (abilities[a].allowed || abilities[a].reason === null ? undefined : text(abilities[a].reason));
@@ -264,7 +269,7 @@ export function ProjectHomeScreen() {
     ]),
   ];
 
-  const startBlock = archived ? text("projects.blocked.archived") : reason("start_chat");
+  const startBlock = archived ? text("projects.blocked.archived") : (chatAbilities.start_chat.allowed || chatAbilities.start_chat.reason === null ? undefined : text(chatAbilities.start_chat.reason));
   const runBlock = archived ? text("projects.blocked.archived") : reason("start_run");
   const gate = (href: string | undefined, blocked: string | undefined) => (e: React.MouseEvent) => {
     if (blocked !== undefined || href === undefined) e.preventDefault();
@@ -290,6 +295,7 @@ export function ProjectHomeScreen() {
               data-variant="primary"
               data-size="md"
               aria-disabled={startBlock !== undefined ? "true" : undefined}
+              aria-describedby={startBlock !== undefined ? blockedId : undefined}
               title={startBlock}
               onClick={gate(chatPath, startBlock)}
             >
@@ -303,6 +309,7 @@ export function ProjectHomeScreen() {
               data-variant="secondary"
               data-size="md"
               aria-disabled={runBlock !== undefined ? "true" : undefined}
+              aria-describedby={runBlock !== undefined ? blockedId : undefined}
               title={runBlock}
               onClick={gate(startRunPath, runBlock)}
             >
@@ -312,7 +319,10 @@ export function ProjectHomeScreen() {
           <MenuPopover label={m.home.more} triggerLabel={m.home.more} triggerClassName="prj-more-btn" items={headerMenu}>⋯</MenuPopover>
         </div>
       </div>
-      {startBlock !== undefined || runBlock !== undefined ? <p className="prj-blocked-reason app-muted" data-testid="project-blocked-reason">{startBlock ?? runBlock}</p> : null}
+      {startBlock !== undefined || runBlock !== undefined ? (
+        // 문제 배너가 이유를 이미 말하면 머리 문장은 화면에서 숨기고(같은 말 3중 반복 방지), 막힌 단추의 aria-describedby 대상으로만 남긴다
+        <p id={blockedId} className={banners.length > 0 ? "ac-sr-only" : "prj-blocked-reason app-muted"} data-testid="project-blocked-reason">{startBlock ?? runBlock}</p>
+      ) : null}
       {folder === "" ? (
         <p className="prj-path" data-unset="true">{m.home.folderUnset}</p>
       ) : (

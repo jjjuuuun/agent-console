@@ -136,10 +136,18 @@ export interface ProjectAbility {
 export interface AbilityOptions {
   /** 프로젝트 기록 DB를 쓸 수 있는가(33c3 이후 `records_writable`). false면 시작·편집·옮기기 같은 쓰기가 막힌다. 생략 = true. */
   recordsWritable?: boolean | undefined;
+  /**
+   * 프로젝트 실행 범위 연동이 있는가(서버 신호). false면 `start_run`·`start_chat`이 막힌다. 생략 = true.
+   * 신호를 읽는 일은 앱의 몫이고, 이 표는 값만 받는다.
+   */
+  runsScoped?: boolean | undefined;
+  /** `runsScoped: false`일 때 이유로 보일 서버 문구. 없으면 기본 문구(`projects.blocked.runs_unscoped`). */
+  runsBlockedMessage?: string | undefined;
   /** 표를 바꾸고 싶을 때(테스트·확장). */
   table?: Readonly<Record<AbilityProfile, ReadonlySet<ProjectAction>>> | undefined;
 }
 
+const RUN_ACTIONS: ReadonlySet<ProjectAction> = new Set(["start_chat", "start_run"]);
 const RECORD_WRITES: ReadonlySet<ProjectAction> = new Set(["start_chat", "start_run", "edit", "copy_in", "memory_write"]);
 
 /** 막힌 동작의 이유. 프로필이 이유를 덮어쓰는 경우(설정 파일 오류·보관·읽기 전용 시작)를 처리한다. */
@@ -165,6 +173,11 @@ export function projectAbilities(view: ProjectStateInput, options: AbilityOption
     if (allowed && options.recordsWritable === false && RECORD_WRITES.has(action)) {
       allowed = false;
       reason = { key: "projects.blocked.records_readonly" };
+    }
+    if (allowed && options.runsScoped === false && RUN_ACTIONS.has(action)) {
+      allowed = false;
+      const message = options.runsBlockedMessage;
+      reason = message === undefined || message === "" ? { key: "projects.blocked.runs_unscoped" } : { key: "projects.blocked.server_message", params: { message } };
     }
     if (!allowed && reason === null) reason = reasonFor(action, profile, view.status);
     out[action] = { allowed, reason: allowed ? null : reason };

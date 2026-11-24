@@ -143,6 +143,7 @@ entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재
   지난 실행의 `example_notes.read` 이벤트, 설정 `modules.options.link-example-notes-runs`(서버는 시작하고 경고).
 
 설치하지 않고 리소스 종류만 쓰려면 설정 `plugins.modules`에 `agent_console_example_link.resource_type:register`를 넣는다.
+설치했다면 넣지 않는다(entry point가 이미 등록하므로 같은 key가 두 번 등록되어 그 플러그인이 실패한다).
 
 ## 테스트
 
@@ -161,5 +162,6 @@ uv run --project ../../.. python -m pytest
   설치자 상한, 리소스 없음 → 도구·지침 없음, 포트 없음 → 칸 경고 1건, 프로젝트 Run은 그 공간만, 없는 공간 → 도구
   오류·실행 계속, 이벤트에 본문 없음.
 - `tests/test_assembly.py`(테스트 호스트 + 대역): 모두 켜짐 → 읽기, 노트 모듈 끔·실행 모듈 끔 → 이 연동만 `unsatisfied`.
-- `tests/test_server.py`(통합 서버 + 진짜 노트 모듈): REST로 쓴 노트를 에이전트가 읽음, 노트 모듈 없는 서버·실행
+- `tests/test_server.py`(통합 서버 + 진짜 노트 모듈, 리소스 종류는 설치했으면 entry point·아니면 `plugins.modules`):
+  REST로 쓴 노트를 에이전트가 읽음·실패한 플러그인 없음, 노트 모듈 없는 서버·실행
   모듈 없는 서버가 시작하고 이 연동만 `unsatisfied`.

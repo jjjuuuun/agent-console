@@ -3,7 +3,7 @@
  * 항목 하나를 그리는 일은 `renderItem`이 한다(정규식 칸, 값 고르기, 입력 틀 칸). 모양은 스키마 타입에서 정하고 모르면 값 모양을 본다.
  * 서버 이슈는 `ConfigIssuesProvider`로 들어온 것 중 이 필드 아래 것을 항목 옆(경로 `/<번호|이름>`) 또는 필드 아래에 보인다.
  */
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { SchemaFormFieldProps } from "@agent-console/schema-form";
 import { Button } from "@agent-console/ui";
 import { resolveRef, unwrapNullable, type SchemaNode } from "../../../lib/schemaTools";
@@ -67,7 +67,21 @@ export interface ShapedFieldProps {
 
 const segEscape = (s: string) => s.replace(/~/g, "~0").replace(/\//g, "~1");
 
+/** 폼 템플릿이 이 위젯 자신의 필드 라벨을 이미 그렸는지 본다(가장 가까운 필드 껍데기 기준 — 바깥 필드가 그렸어도 안쪽 필드가 안 그렸으면 여기 제목이 라벨이다). */
+function useOwnLabelDrawn() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const host = el.parentElement?.closest(".rjsf-field, .ac-sf-field, .ac-sf-prov-row");
+    if (host?.hasAttribute("data-label-drawn")) el.setAttribute("data-label-drawn", "");
+    else el.removeAttribute("data-label-drawn");
+  });
+  return ref;
+}
+
 export function ShapedField({ field, renderItem, itemNote, footer }: ShapedFieldProps) {
+  const wrapRef = useOwnLabelDrawn();
   const { id, value, onChange, label, disabled, readonly } = field;
   const locked = disabled || readonly;
   const root = rootOf(field);
@@ -97,7 +111,7 @@ export function ShapedField({ field, renderItem, itemNote, footer }: ShapedField
   };
 
   return (
-    <div className="sdd-w-field" {...(shape === "scalar" ? {} : { role: "group", "aria-label": label })}>
+    <div className="sdd-w-field" ref={wrapRef} {...(shape === "scalar" ? {} : { role: "group", "aria-label": label })}>
       <span className="sdd-w-label" aria-hidden={shape === "scalar" || undefined}>{label}</span>
       {shape === "scalar"
         ? (

@@ -24,6 +24,8 @@ export const DEFAULT_PROJECT_MESSAGES = {
   "projects.blocked.records_newer": "더 새 버전의 앱이 이 폴더의 기록을 만들어 이 앱에서는 시작할 수 없습니다. 앱을 업데이트하세요",
   "projects.blocked.records_unavailable": "이 폴더의 기록 파일을 쓸 수 없어 시작할 수 없습니다",
   "projects.blocked.records_move": "기록을 저장할 수 없는 폴더라 옮길 수 없습니다",
+  "projects.blocked.runs_unscoped": "프로젝트 실행 연동이 꺼져 있어 프로젝트에서 실행할 수 없습니다",
+  "projects.blocked.server_message": "{message}",
   "projects.blocked.archived": "등록 해제된 프로젝트의 기록은 읽기만 가능합니다",
   "projects.blocked.copy_in": "폴더를 쓸 수 없어 구성을 가져올 수 없습니다",
   "projects.blocked.edit": "폴더를 쓸 수 없어 이 프로젝트의 구성을 고칠 수 없습니다",

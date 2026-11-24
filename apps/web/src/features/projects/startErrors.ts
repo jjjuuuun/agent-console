@@ -1,6 +1,7 @@
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { NODE_PATH_SEPARATOR } from "../../lib/nodePath";
+import { RUNS_BLOCK_PORTS } from "./runsBlockPorts";
 import { targetPickerMessages as m } from "./targetPickerMessages";
 
 /** 시작 오류 배너가 붙이는 해결 버튼 종류. 화면이 이 값을 보고 동작을 연결한다(서버가 준 `fix`는 따로 그대로 그린다). */
@@ -71,6 +72,9 @@ export function startErrorView(error: unknown, nameOf: (kind: string | undefined
       const base = m.error.outsideFolder(str(first?.["value"]) ?? "", str(first?.["layer"]) ?? "");
       return { tone: "danger", message: node !== undefined && node.rest !== "" ? base + m.error.outsideFolderAt(node.id) : base, fix: "openSettings", ...(node === undefined ? {} : { node }) };
     }
+    case ERROR_CODES.FEATURE_UNAVAILABLE:
+      // 프로젝트 실행 범위 연동이 꺼짐: 오류가 아니라 안내(서버 문구 그대로, 해결 버튼 없음)
+      return RUNS_BLOCK_PORTS.has(str(d["port"]) ?? "") ? { tone: "info", message: error.message, fix: "none" } : null;
     default:
       return FOLDER_CODES.has(error.code) ? { tone: "danger", message: m.error.folderUnusable, fix: "repath" } : null;
   }

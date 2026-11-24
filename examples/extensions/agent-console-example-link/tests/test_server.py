@@ -1,7 +1,9 @@
 """통합 서버(agent-console-server — 기본 모듈 전부) + 노트 모듈 예제 + 이 연동.
 
-설치 대신 ``create_app(modules=[*installed_modules(), ...])``로 모듈을 더하고, 리소스 종류는 설정
-``plugins.modules``(``register(registries)``)로 등록한다. 노트 모듈은 이웃 예제
+설치 대신 ``create_app(modules=[*installed_modules(), ...])``로 모듈을 더하고, 리소스 종류는
+설치하지 않았으면 설정 ``plugins.modules``(``register(registries)``)로 등록한다. 설치했으면
+entry point가 이미 등록하므로 다시 부르지 않는다(같은 key를 두 번 등록하면 그 플러그인이
+실패한다). 노트 모듈은 이웃 예제
 (``agent-console-example-module``)다. 저장소 밖에 이 폴더만 복사하면 그 모듈이 없어 진짜 모듈을 쓰는
 시험은 건너뛴다(대역으로 같은 것을 보는 시험은 ``test_assembly.py``).
 """
@@ -9,6 +11,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
@@ -20,6 +23,7 @@ from notes_helpers import of, run_team, slot_warnings, write_workspace
 
 from agent_console_example_link import MODULE_ID, module
 from agent_console_modkit import Module
+from agent_console_resources import RESOURCE_TYPES_GROUP
 from agent_console_server import create_app, installed_modules, load_settings
 from agent_console_server.testing import register_project
 
@@ -27,6 +31,15 @@ API = "/api/v1"
 TOKEN = "test-token-0123456789abcdef"
 NOTES_MODULE = "agent_console_example_module"
 NOTES_ID = "mod-example-notes"
+RESOURCE_TYPE_PLUGIN = "agent_console_example_link.resource_type:register"
+RESOURCE_TYPE_ID = "example-notes"
+
+
+def _resource_type_installed() -> bool:
+    """이 패키지가 설치되어 entry point로 리소스 종류를 알리는지(설치하지 않고 돌리면 False)."""
+    package = RESOURCE_TYPE_PLUGIN.split(".", 1)[0]
+    found = importlib.metadata.entry_points(group=RESOURCE_TYPES_GROUP, name=RESOURCE_TYPE_ID)
+    return any(ep.value.split(".", 1)[0] == package for ep in found)
 
 
 def notes_module() -> Module | None:
@@ -65,7 +78,7 @@ def _server(
     environ = {"CLAUDE_CONFIG_DIR": str(tmp_path / "claude")}  # 실제 ~/.claude를 읽지 않게
     overrides: dict[str, Any] = {
         "security": {"allowed_hosts": ["testserver"]},
-        "plugins": {"modules": ["agent_console_example_link.resource_type:register"]},
+        "plugins": {"modules": [] if _resource_type_installed() else [RESOURCE_TYPE_PLUGIN]},
         # 프로젝트 폴더 없이 실행한다(기본은 프로젝트를 고른 실행만 허용).
         "modules": {
             "disabled": list(disabled),
@@ -94,7 +107,9 @@ def test_full_server_agent_reads_notes_written_over_rest(tmp_path: Path) -> None
     with _server(tmp_path) as client:
         assert _states(client)[MODULE_ID]["status"] == "active"
         types = {t["id"] for t in client.get(f"{API}/resource-types").json()}
-        assert "example-notes" in types
+        assert RESOURCE_TYPE_ID in types
+        plugins = client.get(f"{API}/server-info").json()["plugins"]
+        assert [p for p in plugins if p["status"] == "failed"] == []  # 중복 등록 없음
         # 프로젝트 없는 실행 = 앱 공간 노트(다른 공간 노트는 보이지 않는다)
         (tmp_path / "proj").mkdir()
         register_project(client, "p1", tmp_path / "proj")

@@ -47,7 +47,8 @@ class XUiKeys:
     모르면 기본 폼으로 그린다. 알려진 이름은 문서 상수 `KnownUiWidgets`."""
     ITEM_TITLE: Final = "itemTitle"
     """목록 필드에서 항목 카드 머리로 쓸 값의 위치(항목 기준 JSON Pointer, 예: `/title`, 1.8.0).
-    없거나 그 값이 비면 화면은 순번을 보인다."""
+    공백으로 여러 개를 이으면(예: `/label /id`) 앞에서부터 처음 비지 않은 값을 쓴다.
+    없거나 그 값이 비면 화면은 목록 제목에 순번을 붙여 보인다."""
     VARIABLES: Final = "variables"
     """틀 문장 필드에서 쓸 수 있는 변수 목록(1.10.0). 값 = `[{name, description}]`.
     화면은 자동 완성·도움말로 보인다(틀 엔진은 서버 한 곳)."""
@@ -122,8 +123,9 @@ def x_ui(
     """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-ui": {...}}`를 만든다.
 
     인자: 넘긴 것만 담는다(`enum_labels` = 선택지 값별 라벨, `widget` = 화면 위젯 이름,
-    `item_title` = 목록 항목 카드 머리 값의 위치(`itemTitle`), `variables` = 틀 변수
-    `[{name, description}]`, `enum_tones` = 선택지 값별 톤, `example`은 None도 값으로 담는다).
+    `item_title` = 목록 항목 카드 머리 값의 위치(`itemTitle`, 공백으로 여러 개),
+    `variables` = 틀 변수 `[{name, description}]`, `enum_tones` = 선택지 값별 톤,
+    `example`은 None도 값으로 담는다).
     다른 확장 키(`x-merge` 등)와 함께
     쓰려면 `{**x_ui(tier="advanced"), "x-merge": "replace"}`처럼 합친다.
     반환: 새 dict(호출마다 새 객체).

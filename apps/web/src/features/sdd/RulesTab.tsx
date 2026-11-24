@@ -11,6 +11,7 @@ import { RulesSourceBadge } from "@agent-console/sdd-view";
 import type { SpecDefinition, SpecIssue } from "@agent-console/contracts/sdd";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { AutomationBar } from "./AutomationBar";
+import { useSaveShortcut } from "./docShortcuts";
 import { ListSkeleton } from "./parts";
 import { AUTOMATION_FIELDS, AUTOMATION_OPS, SDD_LIMITS, SDD_PARAMS, SYNTAX_FIELDS } from "./sddConfig";
 import { RuleSectionsForm } from "./RuleSectionsForm";
@@ -131,6 +132,11 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
     const fresh = await space.client.getSpec(specId);
     await save(fresh.version_hash ?? versionHash);
   };
+
+  // Ctrl+S: 도구줄 `저장` 버튼과 같은 조건으로 저장하고 브라우저 저장 창을 막는다.
+  useSaveShortcut(() => {
+    if (dirty && !readonly && !showConflict && !saving) void save(draft?.baseHash ?? versionHash);
+  });
 
   if (section === undefined) return <ListSkeleton rows={6} />;
   const automationOff = (s: { path: readonly string[] }) => s.path.includes(AUTOMATION_FIELDS.key) && !ctx.capabilities.runs;

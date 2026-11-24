@@ -25,7 +25,7 @@ const view = (id: string, over: Partial<ProjectView> = {}): ProjectView =>
   }) as ProjectView;
 const graph = (id: string, name = id) => ({ id, name, version_hash: "v", node_count: 3, edge_count: 2, entry_labels: ["입구"], validation: null });
 
-function mount(path: string, opts: { views?: ProjectView[]; inputs?: PortDef[]; createRun?: (b: unknown) => Promise<unknown> } = {}) {
+function mount(path: string, opts: { views?: ProjectView[]; inputs?: PortDef[]; createRun?: (b: unknown) => Promise<unknown>; runsOff?: boolean } = {}) {
   const createRun = vi.fn(opts.createRun ?? (async () => ({ id: "r-new", graph_id: "g1", graph_version: "v", status: "queued", input: {}, origin: "web", created_at: 1 })));
   const made = createFakeClients({
     listModules: vi.fn(async () => MODULES),
@@ -33,6 +33,9 @@ function mount(path: string, opts: { views?: ProjectView[]; inputs?: PortDef[]; 
     listRuns: vi.fn(async () => []),
     listConversations: vi.fn(async () => []),
     createRun,
+    ...(opts.runsOff === true
+      ? { getServerInfo: vi.fn(async () => ({ server_version: "9", contracts_version: "1", plugins: [], attributes: {}, warnings: [{ severity: "warning", code: "feature_unavailable", message: "프로젝트 실행 연동이 꺼져 있습니다", details: { module: "m", port: "runs.scopes" } }] })) }
+      : {}),
   });
   made.space.mockImplementation((() =>
     createFakeRest({
@@ -100,6 +103,23 @@ describe("새 실행 대화상자(프로젝트 홈의 [실행…] → /runs?new=
     expect((await within(dialog).findAllByText("이 폴더에 쓸 수 없어 대화·실행 기록을 저장할 수 없습니다")).length).toBeGreaterThan(0);
     fireEvent.click(start);
     expect(createRun).not.toHaveBeenCalled();
+  });
+
+  it("실행 연동 꺼짐 경고가 있으면 [실행 시작]이 aria-disabled + 서버 문구 이유이고 POST /runs가 나가지 않는다", async () => {
+    const { createRun } = mount("/runs?prj=a&new=1", { inputs: [], runsOff: true });
+    const dialog = await screen.findByRole("dialog", { name: "새 실행" });
+    const start = within(dialog).getByRole("button", { name: "실행 시작" });
+    await waitFor(() => expect(start.getAttribute("aria-disabled")).toBe("true"));
+    expect((await within(dialog).findAllByText("프로젝트 실행 연동이 꺼져 있습니다")).length).toBeGreaterThan(0);
+    fireEvent.click(start);
+    expect(createRun).not.toHaveBeenCalled();
+  });
+
+  it("경고가 없으면 [실행 시작]이 켜져 있다", async () => {
+    mount("/runs?prj=a&new=1", { inputs: [] });
+    const dialog = await screen.findByRole("dialog", { name: "새 실행" });
+    const start = within(dialog).getByRole("button", { name: "실행 시작" });
+    await waitFor(() => expect(start.getAttribute("aria-disabled")).toBeNull());
   });
 
   it("서버 422 not_imported(in_library) → [가져와서 실행] 배너, 입력은 유지된다", async () => {

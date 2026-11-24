@@ -12,7 +12,7 @@ import { useApi } from "../../app/ApiContext";
 import { useStorage } from "../../app/StorageContext";
 import { useGraphLoginGate } from "../backendChoice";
 import { DEFINITION_KINDS, ROUTE_ROLES, routePath } from "../library";
-import { ProjectTargetPicker, startErrorView, targetPickerMessages as pm, useCopyDialog, useProjects, type StartErrorView, type TargetOption } from "../projects";
+import { ProjectTargetPicker, startErrorView, targetPickerMessages as pm, useCopyDialog, useProjectRunsBlocked, useProjects, type StartErrorView, type TargetOption } from "../projects";
 import { GraphIssuesPreview, ValidationChip, blocksRun, hasEntry } from "../teams";
 import { RunInputForm } from "./RunInputForm";
 import { buildRunInput, initialInputValues, inputIssues, serverInputErrors } from "./runInputLib";
@@ -70,7 +70,8 @@ export function RunStartDialog(props: RunStartDialogProps) {
     retry: false,
   });
 
-  const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false });
+  const runsBlocked = useProjectRunsBlocked();
+  const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false, runsScoped: !runsBlocked.blocked, runsBlockedMessage: runsBlocked.message });
   const startBlockRef = abilities?.start_run.allowed === false ? abilities.start_run.reason : null;
   const info = view === undefined ? undefined : statusInfo(view);
 

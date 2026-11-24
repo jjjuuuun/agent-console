@@ -75,6 +75,10 @@ class _ProjectDefinitions:
         self.calls.append((project_id, graph_id))
         return self.source if project_id == PROJECT else None
 
+    def accepts_project(self, project_id: str) -> bool:
+        """``link-projects-runs`` 대신 프로젝트 범위를 맡는다(5.7R.33t1 - 맡는 쪽이 없으면 막힘)."""
+        return True
+
 
 def _scope_module(scoper: _ProjectDefinitions) -> Module:
     def build(ctx: ModuleContext) -> ModuleParts:

@@ -120,7 +120,7 @@ export function ConversationList(props: ConversationListProps) {
   return (
     <div className="chat-list" onKeyDown={onKeyDown}>
       <div className="chat-list-head">
-        <Button variant="primary" onClick={() => props.newBlockedReason == null && props.onNew()} title={props.newBlockedReason ?? "N"} {...(props.newBlockedReason == null ? {} : { "aria-disabled": true })}>{`+ ${t.new}`}</Button>
+        <Button variant="primary" onClick={() => props.newBlockedReason == null && props.onNew()} title="N" disabledReason={props.newBlockedReason ?? undefined}>{`+ ${t.new}`}</Button>
         <label className="app-check">
           <input type="checkbox" checked={props.includeArchived} onChange={(e) => props.onIncludeArchivedChange(e.target.checked)} />
           {t.includeArchived}

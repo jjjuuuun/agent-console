@@ -1,5 +1,11 @@
 # 변경 기록
 
+## 미출시
+
+- 5.7R.33t1: `ProjectScope.accepts_project(project_id)`(`mod-runs` `RunProjectScoper`) — 프로젝트 읽기가 있으면
+  참. 이 연동이 꺼진 조립(프로젝트 기능은 켜짐)에서는 `mod-runs`가 `project_id`를 붙인 실행·대화 턴을 409
+  `feature_unavailable`(`details.port = "runs.scopes"`)로 막는다(K33-10). 계약 변경 없음.
+
 ## 0.3.0
 
 - **깨는 변경**(5.7R.33v 후속 ⑤): 설정 `require_project` 기본값을 참으로 바꿨다. 프로젝트 모듈이 켜진 조립에서

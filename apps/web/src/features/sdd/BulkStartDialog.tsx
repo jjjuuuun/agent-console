@@ -50,7 +50,9 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
   const current = usable.find((a) => actionId(a) === actionKey) ?? usable[0];
   const overLimit = limit !== undefined && chosen.length > limit;
   const blocked = (blockedReason !== undefined && blockedReason !== "") || chosen.length === 0 || current === undefined || overLimit;
-  const titleOf = (key: string) => readyTasks.find((t) => t.key === key)?.title ?? key;
+  // 시작하면 준비 목록에서 빠지므로, 시작 때의 제목을 따로 보관해 결과 줄에서 쓴다.
+  const [titles, setTitles] = useState<ReadonlyMap<string, string | undefined>>(new Map());
+  const titleOf = (key: string) => titles.get(key) ?? readyTasks.find((t) => t.key === key)?.title ?? key;
 
   const toggle = (key: string, on: boolean) => {
     const next = new Set(selected);
@@ -63,6 +65,7 @@ export function BulkStartDialog({ open, onClose, specId, readyTasks, skippedTask
     if (blocked || current === undefined || busy) return;
     setBusy(true);
     setError(null);
+    setTitles(new Map(readyTasks.map((t) => [t.key, t.title] as const)));
     try {
       const res = await space.client.bulkStartTasks(specId, { task_keys: chosen as [string, ...string[]], action: { integration: current.integration, id: current.id } });
       const items = res.items ?? [];

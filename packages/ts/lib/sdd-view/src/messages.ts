@@ -79,6 +79,12 @@ export const defaultMessages = {
   "tasks.rowMenu": "{title} 메뉴",
   // 계획
   "plan.graph": "작업 계획 그래프",
+  "plan.controls": "그래프 조작",
+  "plan.zoomIn": "확대",
+  "plan.zoomOut": "축소",
+  "plan.fitView": "화면에 맞춤",
+  "plan.interactive": "상호작용 잠금 전환",
+  "plan.nodeHint": "Enter 또는 Space로 작업을 선택합니다.",
   "plan.empty": "계획할 작업이 없습니다",
   "plan.layout": "배치를 계산하는 중…",
   "plan.layoutFailed": "자동 배치를 쓸 수 없어 층별로 놓았습니다",

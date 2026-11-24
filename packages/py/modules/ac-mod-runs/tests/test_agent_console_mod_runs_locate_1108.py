@@ -24,6 +24,7 @@ from agent_console_mod_runs import (
     DEFINITIONS_LOOKUP,
     PROJECTS_LOOKUP,
     RECORDS_SPACES,
+    RUN_SCOPES,
     RunAmbiguousError,
     RunNotFoundError,
     RunService,
@@ -117,6 +118,17 @@ class Listing:
 
     def list_projects(self) -> list[Any]:
         return [SimpleNamespace(id=i) for i in self.ids]
+
+
+class AcceptAll:
+    """``runs.scopes`` 가짜: 모든 ``project_id``의 범위를 맡는다(5.7R.33t1 — 프로젝트 기능이 있는
+    조립에서 맡는 공급자가 없으면 프로젝트 실행이 막힌다)."""
+
+    def scope_run(self, graph: Graph, services: Any, *, project_id: str | None) -> None:
+        return None
+
+    def accepts_project(self, project_id: str) -> bool:
+        return True
 
 
 @pytest.fixture
@@ -274,6 +286,7 @@ def _client(tmp_path: Path, spaces: Spaces | None, listing: Listing | None) -> I
         modules.append(_provider("t-records", RECORDS_SPACES, spaces))
     if listing is not None:
         modules.append(_provider("t-projects", PROJECTS_LOOKUP, listing))
+        modules.append(_provider("t-scope", RUN_SCOPES, AcceptAll()))
     assembly = assemble(modules, base=base)
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
     app = create_host_app(assembly, policy=policy, error_status=HTTP_STATUS_BY_ERROR_CODE)

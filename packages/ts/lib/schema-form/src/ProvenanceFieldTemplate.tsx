@@ -309,7 +309,7 @@ function Row(p: FieldTemplateProps & { ctx: ProvenanceContextValue; path: (strin
   const rawDesc = p.rawDescription ?? (typeof (p.schema as Record<string, unknown>)["description"] === "string" ? ((p.schema as Record<string, unknown>)["description"] as string) : undefined);
   const descNode = xctx && objectValued ? null : xctx ? <FieldDescription text={rawDesc === undefined ? undefined : humanizeEnumText(rawDesc, readXUi(p.schema).enumLabels)} /> : null;
   return (
-    <div {...common} data-readonly={readOnlyLeaf || undefined} data-own-label={ownLabel || undefined}>
+    <div {...common} data-readonly={readOnlyLeaf || undefined} data-own-label={ownLabel || undefined} data-label-drawn={ownLabel || undefined}>
       {header}
       {xctx ? null : p.description}
       <fieldset className="ac-sf-prov-body" disabled={readOnlyLeaf || undefined}>

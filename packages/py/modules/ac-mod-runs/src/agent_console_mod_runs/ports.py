@@ -37,6 +37,10 @@
   선택 메서드 ``check_child``(``RunChildScoper``, 5.7R.33g 잔여)가 있으면 ``project_id``가 있는
   Run의 자식 Run(중첩 팀)을 만들기 직전에 부른다. 오류를 돌려주면 자식 Run을 만들지 않는다(노드
   실패).
+  선택 메서드 ``accepts_project``(``RunProjectScoper``, 5.7R.33t1)는 그 ``project_id``의 범위(작업
+  폴더·사전 점검·정의 출처)를 이 공급자가 맡는지 알린다. 프로젝트 기능(선택 포트
+  ``projects.lookup``)이 있는데 맡는 공급자가 없으면 설정 ``unscoped_project_runs``대로 막는다
+  (기본 409 ``feature_unavailable``, ``details.port = "runs.scopes"``).
 - 선택 ``runs.resume_handlers``(여러 제공자): 이어 가기 처리기(``ResumeHandler``). 받는 처리기가
   없으면 일반 실행으로 새 Run을 시작한다.
 - 선택 ``workspace.settings``: 공통 설정(``secrets.redact_suspected_in_logs``).
@@ -48,7 +52,9 @@
   있으면 ``archived``를 쓴다). 있으면 ``GET /runs/{id}/locate``와 WS ``run:<id>``가 아직 열지 않은
   프로젝트 기록 DB에서도 Run을 찾는다(``records.spaces``가 있을 때만, 상한
   ``locate_max_projects``). 없으면 이 프로세스가 아는 공간과 앱 기록만 본다.
-  ``GET /runs/project-counts``는 보관하지 않은 프로젝트의 기록 DB도 센다(검증 11/08 D6).
+  ``GET /runs/project-counts``는 보관하지 않은 프로젝트의 기록 DB도 센다(검증 11/08 D6). 이 포트가
+  있으면 "프로젝트 기능이 켜짐"으로 보고, ``project_id``를 맡는 ``runs.scopes`` 공급자가 없는 실행을
+  설정 ``unscoped_project_runs``대로 막는다(5.7R.33t1).
 """
 
 from __future__ import annotations
@@ -319,6 +325,26 @@ class RunChildScoper(Protocol):
 
 
 @runtime_checkable
+class RunProjectScoper(Protocol):
+    """``runs.scopes`` 항목의 **선택** 메서드: 프로젝트 범위를 맡는가.
+
+    ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 프로젝트 기준 검증에서 **정의
+    출처를 정하기 전에** 부른다. 프로젝트 기능(``projects.lookup``)이 켜진 조립에서 참을 돌려주는
+    공급자가 하나도 없으면(예: 프로젝트·실행 연동이 꺼짐) 실행 모듈은 그 실행을 프로젝트 폴더·점검
+    없이 돌리지 않고 설정 ``unscoped_project_runs``대로 막는다. 예외는 기록하고 "맡지 않음"으로
+    본다.
+    """
+
+    def accepts_project(self, project_id: str) -> bool:
+        """이 공급자가 그 ``project_id``의 실행 범위를 맡는가(모르는 id를 404로 거부하는 것도 맡음).
+
+        Args:
+            project_id: 요청의 ``Run.project_id``(불투명 문자열, 비지 않음).
+        """
+        ...
+
+
+@runtime_checkable
 class ResumeHandler(Protocol):
     """``runs.resume_handlers`` 항목: 특정 Run의 이어 가기를 맡는다(예: 대화 턴)."""
 
@@ -397,7 +423,8 @@ RECORDS_SPACES: PortKey[RecordsSpaces] = PortKey(
 ``link-projects-records``가 준다). 없으면 호스트 DB(기능 단독)."""
 
 PROJECTS_LOOKUP: PortKey[ProjectListing] = PortKey("projects.lookup", "프로젝트 읽기")
-"""선택(요청 11/08 후속): 실행 위치 찾기가 볼 등록 프로젝트 id."""
+"""선택(요청 11/08 후속): 실행 위치 찾기가 볼 등록 프로젝트 id. 있으면 프로젝트 기능이 켜진 조립으로
+보고 맡는 범위 없는 프로젝트 실행을 막는다(5.7R.33t1)."""
 
 RUNS_MOVE: PortKey[Any] = PortKey("runs.move_hook", "대화 옮기기에 거는 Run 옮기기 훅")
 """제공(5.7R.33j2): 대화를 프로젝트 기록 DB로 옮길 때 그 대화의 Run을 같은 작업으로 옮기는 훅
@@ -452,6 +479,7 @@ __all__ = [
     "RunPreflight",
     "RunPreparation",
     "RunPreparer",
+    "RunProjectScoper",
     "RunScope",
     "RunScopeLike",
     "RunScoper",

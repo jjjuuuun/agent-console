@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import { useId, type ButtonHTMLAttributes, type MouseEvent, type ReactNode, type Ref } from "react";
 import { joinClass } from "./Status";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -11,14 +11,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   /** 라벨 앞 아이콘(장식). */
   icon?: ReactNode;
+  /**
+   * 지금 누를 수 없는 이유. 있으면 `aria-disabled`로 남아 포커스는 받고(`disabled`가 아님), 클릭은 무시하며,
+   * 이유는 툴팁(`title`)과 `aria-describedby`로 이어진 숨은 글자로 전달한다.
+   */
+  disabledReason?: string | undefined;
   ref?: Ref<HTMLButtonElement>;
 }
 
 /** 기본 버튼. 라벨은 children으로 받는다(문구는 호출자가 messages로 전달). */
-export function Button({ variant = "secondary", size = "md", loading = false, icon, disabled, children, className, type = "button", ...rest }: ButtonProps) {
+export function Button({ variant = "secondary", size = "md", loading = false, icon, disabled, children, className, type = "button", disabledReason, onClick, ...rest }: ButtonProps) {
+  const reasonId = useId();
+  const blocked = disabledReason !== undefined && disabledReason !== "";
   return (
     <button
       {...rest}
+      {...(blocked ? { "aria-disabled": true, title: disabledReason, "aria-describedby": [rest["aria-describedby"], reasonId].filter(Boolean).join(" ") } : {})}
+      onClick={blocked ? (e: MouseEvent<HTMLButtonElement>) => e.preventDefault() : onClick}
       type={type}
       className={joinClass("ac-btn", className)}
       data-variant={variant}
@@ -30,6 +39,7 @@ export function Button({ variant = "secondary", size = "md", loading = false, ic
       {icon === undefined ? null : <span className="ac-btn-icon" aria-hidden="true">{icon}</span>}
       <span className="ac-btn-label ac-ellipsis">{children}</span>
       {loading ? <Spinner /> : null}
+      {blocked ? <span id={reasonId} className="ac-sr-only" aria-hidden="true">{disabledReason}</span> : null}
     </button>
   );
 }

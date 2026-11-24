@@ -41,8 +41,7 @@ export function ProjectConfigCard(p: ProjectConfigCardProps) {
     <Button
       size="sm"
       variant={primary ? "primary" : "secondary"}
-      aria-disabled={blocked !== undefined ? "true" : undefined}
-      title={blocked}
+      disabledReason={blocked}
       onClick={() => {
         if (blocked !== undefined) return;
         p.onImport?.();

@@ -1,6 +1,9 @@
 /* 규칙 폼 x-ui 위젯 (screen-sdd §10.2) */
 .sdd-w-field { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; }
 .sdd-w-label { font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); font-weight: 600; }
+/* 폼 템플릿이 이미 라벨을 그린 필드(위젯·목록)는 위젯 안 제목을 또 보이지 않는다(접근 이름은 입력의 aria-label·묶음의 aria-label이 맡는다) */
+/* 가장 가까운 필드 껍데기가 라벨을 그렸을 때만(ShapedField가 자기 위치를 보고 표시한다) — 중첩 위젯 제목은 남는다 */
+.sdd-w-field[data-label-drawn] > .sdd-w-label { display: none; }
 .sdd-w-line { display: flex; align-items: flex-start; gap: var(--ac-space-2); }
 .sdd-w-row { flex: 1; min-width: 0; }
 .sdd-w-row-main { display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; flex: 1; }

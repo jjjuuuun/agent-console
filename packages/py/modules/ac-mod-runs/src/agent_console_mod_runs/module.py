@@ -7,6 +7,11 @@
   ``runs.scopes``·``runs.resume_handlers``·``workspace.settings``·``secrets.rules``·
   ``projects.lookup``(실행 위치 찾기의 등록 프로젝트 id, 요청 11/08 후속 ·
   ``GET /runs/project-counts``가 셀 보관하지 않은 프로젝트의 기록 DB)(``ports.py``).
+- 맡는 범위 없는 프로젝트 실행(5.7R.33t1): ``projects.lookup``이 있는데 ``project_id``를 맡는
+  ``runs.scopes`` 공급자(``accepts_project``)가 없으면 설정 ``unscoped_project_runs``대로
+  막는다(기본 409 ``feature_unavailable``, ``details.port = "runs.scopes"``). 막는 동안은
+  ``server.warnings``에 같은 코드의 경고를 낸다(화면이 시작 단추를 막는다).
+  ``projects.lookup``이 없으면 단독 실행 그대로.
 - 저장: 호스트 DB 핸들의 legacy 테이블(``runs``·``node_runs``·``run_events``·``interactions``),
   없으면 메모리(경고 ``runs.storage_memory``). 선택 포트 ``records.spaces``가 있으면
   ``project_id``가 있는 Run은 그 프로젝트 기록 DB에만 쓴다(5.7R.33y2, ``records.py``) - 시작 전에
@@ -87,6 +92,7 @@ from .ports import (
     WORKSPACE_SETTINGS,
     RunEnvironment,
 )
+from .project_scope import unscoped_project_policy, unscoped_project_warning
 from .readiness import build_login_service, build_readiness_service
 from .records import SpaceRecorder, recover_space, space_records
 from .redaction import SuspectedRedaction
@@ -338,6 +344,11 @@ class RunsModule:
             resume_origin=cfg.resume_origin,
             shutdown_timeout=cfg.runtime.shutdown_timeout,
             records=recorder,
+            unscoped_project=unscoped_project_policy(
+                cfg.unscoped_project_runs,
+                projects_on=lambda: ctx.port(PROJECTS_LOOKUP) is not None,
+                module_id=MODULE_ID,
+            ),
         )
         service_ref.append(service)
         active_ids.append(runtime.active_run_ids)
@@ -348,6 +359,14 @@ class RunsModule:
                 found.append(team_rules_warning())
             if in_memory:
                 found.append(memory_storage_warning())
+            if (
+                cfg.unscoped_project_runs.policy == "reject"
+                and ctx.port(PROJECTS_LOOKUP) is not None
+                and not service.has_project_scope
+            ):
+                found.append(
+                    unscoped_project_warning(cfg.unscoped_project_runs, module_id=MODULE_ID)
+                )
             return found
 
         ctx.provide(RUNS_STARTER, service)

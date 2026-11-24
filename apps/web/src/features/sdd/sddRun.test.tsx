@@ -186,6 +186,25 @@ describe("작업 탭: 준비된 작업 한꺼번에 시작", () => {
     expect(within(dialog).getByText("1개 중 0개를 시작했습니다")).toBeTruthy();
   });
 
+  it("시작한 작업은 준비 목록에서 빠져도 결과 줄에 제목이 남는다 (H1)", async () => {
+    let started = false;
+    const view = specView({ index: { tasks: [task("T1"), task("T4"), task("T3", "s-end")], stages: [] } });
+    const list = vi.fn(async () => (started ? [task("T1", "s-end", { ready: false }), task("T4"), task("T3", "s-end")] : (view.index?.tasks ?? [])));
+    const start = vi.fn(async () => {
+      started = true;
+      return { items: [{ task_key: "T1", status: "started", run_id: "r1" }, { task_key: "T4", status: "failed", issue: { severity: "error", code: "x", message: "막힘 이유" } }] };
+    });
+    const bulk = vi.fn(async () => ({ actions: [ACTION_A], per_task: {} }));
+    setup("/specs/sp1?prj=p1&tab=tasks", { view, sdd: { listSpecTasks: list, listBulkActions: bulk, bulkStartTasks: start } });
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T1 선택" }, LONG));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "작업 T4 선택" }, LONG));
+    fireEvent.click(await screen.findByRole("button", { name: "준비된 작업 시작…" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    fireEvent.click(await within(dialog).findByRole("button", { name: /^시작 \(/ }, LONG));
+    expect(await within(dialog).findByText("막힘 이유", {}, LONG)).toBeTruthy();
+    expect(within(dialog).getByText("작업 T1")).toBeTruthy();
+  });
+
   it("준비된 작업이 없으면 버튼이 aria-disabled이다", async () => {
     const view = specView({ index: { tasks: [task("T1", "s-open", { ready: false })], stages: [] } });
     setup("/specs/sp1?prj=p1&tab=tasks", { view });

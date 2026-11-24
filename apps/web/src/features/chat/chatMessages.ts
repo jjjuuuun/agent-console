@@ -120,6 +120,7 @@ export const chatMessages = {
     archived: "보관된 대화입니다.",
     unarchive: "보관 해제",
     disconnected: "연결을 복구하는 중",
+    runsBlocked: "프로젝트 실행 연동이 꺼져 있어 이 대화의 메시지를 보낼 수 없습니다",
     rejectBusy: "이전 작업이 끝나야 보낼 수 있습니다. (설정: 실행 중에는 새 메시지를 받지 않음)",
     viewSettings: "설정 보기 →",
     queued: (n: number) => `앞 작업이 끝나면 이어서 처리됩니다 (${n}건 대기)`,

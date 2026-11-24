@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { createProjectsText, projectAbilities } from "@agent-console/projects";
 import type { SddCapabilities, SddInfo } from "@agent-console/contracts/sdd";
 import { useProjectId } from "../../app/projectScope";
-import { useProjects } from "../projects";
+import { useProjectRunsBlocked, useProjects } from "../projects";
 import { useSddInfo } from "./useSddApi";
 
 const text = createProjectsText();
@@ -31,9 +31,10 @@ export function useSddContext(): SddContext {
   const projectId = useProjectId();
   const projects = useProjects();
   const info = useSddInfo().data;
+  const runsBlocked = useProjectRunsBlocked();
   const view = projectId === null ? undefined : projects.views.find((v) => v.project.id === projectId);
   return useMemo(() => {
-    const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false });
+    const abilities = view === undefined ? undefined : projectAbilities(view, { recordsWritable: view.records_writable !== false, runsScoped: !runsBlocked.blocked, runsBlockedMessage: runsBlocked.message });
     const editBlocked = abilities?.edit.allowed === false ? abilities.edit.reason : null;
     const infoReadonly = info?.writable === false;
     const runBlocked = abilities?.start_run.allowed === false ? abilities.start_run.reason : null;
@@ -47,5 +48,5 @@ export function useSddContext(): SddContext {
       info,
       specRoot: info?.spec_root,
     };
-  }, [projectId, view, info]);
+  }, [projectId, view, info, runsBlocked]);
 }

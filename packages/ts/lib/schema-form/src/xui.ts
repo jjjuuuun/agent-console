@@ -1,6 +1,6 @@
 /**
  * 스키마 확장 `x-ui`(필드 표시 힌트)를 읽는 순수 함수. 필드 이름·종류 id를 모른다.
- * `x-ui` 키: tier(basic|advanced)·when·example·group·group_title·order·unit·enum_labels. 없으면 tier 폴백 규칙을 쓴다.
+ * `x-ui` 키: tier(basic|advanced)·when·example·group·group_title·order·unit·enum_labels·itemTitle. 없으면 tier 폴백 규칙을 쓴다.
  */
 type Obj = Record<string, unknown>;
 
@@ -17,6 +17,8 @@ export interface XUi {
   unit?: string;
   /** enum 값 → 화면 라벨(`oneOf`의 `title`이 없는 단순 `enum`용) */
   enumLabels?: Record<string, string>;
+  /** 목록 항목 카드 머리 값의 위치(항목 기준 JSON Pointer). 공백으로 여러 개를 이으면 처음 비지 않은 값을 쓴다 */
+  itemTitle?: string[];
 }
 
 const MAX_DEPTH = 8;
@@ -61,6 +63,11 @@ export function readXUi(node: unknown): XUi {
   if (typeof raw["group_title"] === "string" && raw["group_title"]) out.groupTitle = raw["group_title"];
   if (typeof raw["order"] === "number") out.order = raw["order"];
   if (typeof raw["unit"] === "string" && raw["unit"]) out.unit = raw["unit"];
+  const itemTitle = raw["itemTitle"];
+  if (typeof itemTitle === "string") {
+    const pointers = itemTitle.split(/\s+/).filter((x) => x.startsWith("/"));
+    if (pointers.length > 0) out.itemTitle = pointers;
+  }
   const labels = raw["enum_labels"];
   if (isObj(labels)) {
     const entries = Object.entries(labels).filter((e): e is [string, string] => typeof e[1] === "string" && e[1] !== "");

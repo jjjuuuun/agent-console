@@ -107,6 +107,15 @@ describe("문서 탭: 단축키·줄 이동", () => {
     await waitFor(() => expect(router.state.location.search).toContain("doc=d-req"), LONG);
   });
 
+  it("Ctrl+S는 편집기 밖(도구줄 버튼)에 포커스가 있어도 저장하고 브라우저 저장 창을 막는다", async () => {
+    const { sdd } = setup(DOCS);
+    fireEvent.change(await editor(), { target: { value: "# d-req 고침" } });
+    const btn = await screen.findByRole("button", { name: "변경 비교" });
+    btn.focus();
+    expect(fireEvent.keyDown(btn, { key: "s", ctrlKey: true })).toBe(false);
+    await waitFor(() => expect(sdd.putSpecDocument).toHaveBeenCalledTimes(1), LONG);
+  });
+
   it("IME 조합 중 키는 무시한다", async () => {
     setup(DOCS);
     await editor();

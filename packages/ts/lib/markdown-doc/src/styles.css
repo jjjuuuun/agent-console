@@ -58,7 +58,10 @@
 
 /* 편집기 */
 .ac-md-editor { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
-.ac-md-editor-bar { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.ac-md-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 36px; }
+/* 단추·상태는 줄어들거나 줄바꿈되지 않는다. 자리가 모자라면 도구줄이 다음 줄로 넘어간다 */
+.ac-md-editor-bar > :not(.ac-md-ellipsis):not(.ac-md-spacer) { flex: none; white-space: nowrap; }
+.ac-md-editor-bar > .ac-md-ellipsis { flex: 0 1 auto; min-width: 8ch; }
 .ac-md-editor-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; color: var(--ac-text-muted); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 .ac-md-editor-title { font-weight: 600; max-width: 24ch; }
 .ac-md-editor-body { display: grid; flex: 1; min-height: 240px; gap: 8px; grid-template-columns: 1fr; }

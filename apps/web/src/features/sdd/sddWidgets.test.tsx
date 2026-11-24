@@ -7,6 +7,7 @@ import { SchemaForm } from "@agent-console/schema-form";
 import { ConfigIssuesProvider, type ConfigIssue } from "../delegation";
 import { WIDGET_REF_SOURCES } from "./sddConfig";
 import { SDD_WIDGET_FIELDS } from "./widgets/fields";
+import { ShapedField } from "./widgets/ShapedField";
 import { SddWidgetEnvProvider, type SddWidgetEnv } from "./widgets/SddWidgetEnv";
 import { widgetUiSchema } from "./widgets/widgetUi";
 import type { SchemaNode } from "../../lib/schemaTools";
@@ -194,5 +195,22 @@ describe("condition 위젯", () => {
     render(<Host schema={schema} initial={{ list: [{ req: {} }, { req: {} }] }} />);
     const pointers = screen.getAllByTestId("cond").map((e) => e.getAttribute("data-pointer"));
     expect(pointers).toEqual(["/list/0/req", "/list/1/req"]);
+  });
+});
+
+describe("위젯 라벨 중복 숨김은 가장 가까운 필드 기준(회귀: 중첩 위젯 라벨)", () => {
+  const field = { id: "x", value: ["a"], onChange: () => {}, label: "팀 구성", schema: { type: "array" }, options: {}, disabled: false, readonly: false } as never;
+  const item = () => <span>item</span>;
+  it("바로 위 필드가 라벨을 그렸으면 표시(data-label-drawn)를 달고, 바깥만 그렸으면 달지 않는다", async () => {
+    const { container } = render(
+      <div className="ac-sf-field" data-label-drawn="true">
+        <div className="rjsf-field" data-testid="inner"><ShapedField field={field} renderItem={item} /></div>
+        <div className="ac-sf-field" data-label-drawn="true" data-testid="own"><ShapedField field={field} renderItem={item} /></div>
+      </div>,
+    );
+    const inner = container.querySelector('[data-testid="inner"] .sdd-w-field')!;
+    const own = container.querySelector('[data-testid="own"] .sdd-w-field')!;
+    expect(inner.hasAttribute("data-label-drawn")).toBe(false);
+    expect(own.hasAttribute("data-label-drawn")).toBe(true);
   });
 });

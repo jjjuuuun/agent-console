@@ -1,5 +1,6 @@
 import type { GraphSummary } from "@agent-console/contracts";
 import { useApiQuery } from "../../app/queries";
+import { startErrorView } from "../projects";
 import { IssuePreview } from "./ValidationChip";
 
 /**
@@ -8,6 +9,9 @@ import { IssuePreview } from "./ValidationChip";
  */
 export function GraphIssuesPreview({ graph, project }: { graph: GraphSummary; project?: string | null }) {
   const q = useApiQuery(["graph-issues", project ?? "", graph.id, graph.version_hash ?? ""], (rest) => rest.validateGraph(graph.id, undefined, { project }), { staleTime: 0, retry: false });
+  // 프로젝트 기준 검증이 실행 연동 꺼짐(409)이면 실패 대신 서버 문구를 안내로 보인다
+  const notice = q.isError ? startErrorView(q.error) : null;
+  if (notice !== null && notice.tone === "info") return <p className="app-muted" role="status" data-testid="graph-issues-notice">{notice.message}</p>;
   return (
     <IssuePreview
       issues={q.data}

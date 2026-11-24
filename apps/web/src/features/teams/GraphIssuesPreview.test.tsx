@@ -1,6 +1,7 @@
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { GraphSummary } from "@agent-console/contracts";
+import { ApiError } from "@agent-console/api-client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "../../app/ApiContext";
 import { createAppQueryClient } from "../../app/queries";
@@ -33,5 +34,20 @@ describe("GraphIssuesPreview", () => {
   it("project가 없으면 옵션 값이 비어 있다(하위 호환)", async () => {
     const validate = mount();
     await waitFor(() => expect(validate).toHaveBeenCalledWith("g1", undefined, { project: undefined }));
+  });
+  it("프로젝트 기준 검증이 409 feature_unavailable(runs.scopes)이면 깨지지 않고 서버 문구를 안내로 보인다", async () => {
+    const { clients } = createFakeClients();
+    (clients.rest as unknown as Record<string, unknown>)["validateGraph"] = vi.fn(async () => {
+      throw new ApiError(409, { code: "feature_unavailable", message: "프로젝트 실행 연동이 꺼져 있습니다", details: { module: "m", port: "runs.scopes" } });
+    });
+    render(
+      <QueryClientProvider client={createAppQueryClient({ retry: false })}>
+        <ApiProvider clients={clients}>
+          <GraphIssuesPreview graph={graph} project="p1" />
+        </ApiProvider>
+      </QueryClientProvider>,
+    );
+    expect((await screen.findByTestId("graph-issues-notice")).textContent).toBe("프로젝트 실행 연동이 꺼져 있습니다");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

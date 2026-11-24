@@ -14,8 +14,10 @@
 - 프로젝트 층 = ``project_layer_value``(프로젝트 ``settings``의 지정한 필드 +
   ``working_directory`` = 프로젝트 ``folder``).
   위치는 공통 바로 아래(``ac-teams`` ``scope_layers``). 자식 Run은 부모(루트) Run의 층을 물려받는다.
-- 이 연동이 꺼지면: 실행·대화의 ``project_id`` 기록·거르기는 그대로이고, 실행에 프로젝트 층(작업
-  폴더·설정)만 들어가지 않는다.
+- 이 연동이 꺼지면(5.7R.33t1, K33-10): 프로젝트 범위를 맡는 공급자(``accepts_project``)가 없어진다.
+  ``mod-projects``가 켜진 조립이면 ``mod-runs``가 ``project_id``를 붙인 실행·대화 턴을 409
+  ``feature_unavailable``(``details.port = "runs.scopes"``)로 막는다(설정
+  ``mod-runs.unscoped_project_runs``). 프로젝트 없는 실행은 그대로다.
 """
 
 from __future__ import annotations

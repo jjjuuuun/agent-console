@@ -119,7 +119,7 @@ export function XUiFieldTemplate(p: FieldTemplateProps) {
     setHelpOpen((o) => !o);
   };
   return (
-    <div className={[p.classNames, "ac-sf-field"].filter(Boolean).join(" ")} style={p.style} data-tier={resolveTier(schema, !!p.required, root)} data-own-label={ownLabel || undefined} onKeyDown={onKeyDown}>
+    <div className={[p.classNames, "ac-sf-field"].filter(Boolean).join(" ")} style={p.style} data-tier={resolveTier(schema, !!p.required, root)} data-own-label={ownLabel || undefined} data-label-drawn={(ownLabel && !!p.label) || undefined} onKeyDown={onKeyDown}>
       {labelNode || p.required ? (
         <div className="ac-sf-labelrow ac-sf-help-host" data-help={(helpable && labelNode !== null) || undefined}>
           {labelNode}
@@ -244,6 +244,46 @@ function AdvancedDisclosure(props: { entries: SplitEntry<Prop>[]; setCount: numb
   );
 }
 
+/** 스키마에서 값 위치(`path`)의 노드를 찾는다(`$ref`·`allOf` 래퍼는 풀고, 못 찾으면 undefined). */
+function schemaAt(root: unknown, path: readonly (string | number)[]): Record<string, unknown> | undefined {
+  let cur: Record<string, unknown> | undefined = resolveNode(root, root);
+  for (const seg of path) {
+    if (cur === undefined) return undefined;
+    const next: unknown = typeof seg === "number" ? cur["items"] : (cur["properties"] as Record<string, unknown> | undefined)?.[seg];
+    if (next === undefined || next === null || typeof next !== "object") return undefined;
+    cur = resolveNode(next, root);
+  }
+  return cur;
+}
+
+function valueAt(data: unknown, pointer: string): unknown {
+  let cur: unknown = data;
+  for (const seg of parsePointer(pointer)) {
+    if (typeof cur !== "object" || cur === null) return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur;
+}
+
+/**
+ * 목록 항목(객체) 카드의 머리 글. 목록 필드의 `x-ui.itemTitle`(항목 기준 JSON Pointer, 공백으로 여러 개) 중 처음 비지 않은 값,
+ * 없으면 목록 제목 + 순번("작업 상태 1"). 목록 항목이 아니면 undefined(기본 제목을 쓴다). 필드 이름을 보지 않는 일반 규칙이다.
+ */
+export function arrayItemTitle(root: unknown, path: readonly (string | number)[], item: unknown, m: SchemaFormMessages): string | undefined {
+  const index = path[path.length - 1];
+  if (typeof index !== "number") return undefined;
+  // `x-ui`는 목록 필드 노드에 있다. `$ref`를 풀면 형제 키가 합쳐지므로 resolveNode가 돌려주는 노드에서 읽는다.
+  const parent = schemaAt(root, path.slice(0, -1));
+  if (parent === undefined || (parent["type"] !== "array" && !(Array.isArray(parent["type"]) && parent["type"].includes("array")))) return undefined;
+  for (const pointer of readXUi(parent).itemTitle ?? []) {
+    const v = valueAt(item, pointer);
+    if (typeof v === "string" && v.trim() !== "") return v;
+    if (typeof v === "number") return String(v);
+  }
+  const base = typeof parent["title"] === "string" && parent["title"] !== "" ? parent["title"] : m.itemTitle;
+  return `${base} ${index + 1}`;
+}
+
 /**
  * 최상위 객체의 속성을 기본/고급으로 나눈다. 고급이 없거나 기본이 없으면 기본 템플릿 그대로.
  * 기본 필드는 기본 템플릿 안에(제목·설명 유지), 고급은 그 아래 접는 영역에 둔다.
@@ -251,7 +291,18 @@ function AdvancedDisclosure(props: { entries: SplitEntry<Prop>[]; setCount: numb
 export function XUiObjectFieldTemplate(p: ObjectFieldTemplateProps) {
   const ctx = useContext(XUiContext);
   const Default = getDefaultRegistry().templates.ObjectFieldTemplate;
-  const isRoot = (p.fieldPathId.path as unknown[]).length === 0;
+  const path = p.fieldPathId.path as (string | number)[];
+  const isRoot = path.length === 0;
+  if (ctx && !isRoot) {
+    // 목록 항목 카드: 스키마 클래스 이름 대신 항목 이름(`x-ui.itemTitle` 값) 또는 목록 제목 + 순번을 머리로 쓴다.
+    const title = arrayItemTitle(p.registry.rootSchema, path, p.formData, ctx.messages);
+    if (title !== undefined) return <Default {...p} title={title} required={false} />;
+  }
+  if (ctx && !isRoot && !path.some((seg) => typeof seg === "number")) {
+    // 바깥 필드 행이 설명을 그리는 필드(`isXUiLeaf`: 선언한 속성이 없고 `type`이 `"object"` 하나가 아닌 객체, 예: 비울 수 있는 이름 → 값 표)는 기본 객체 템플릿이 또 그리지 않게 한다.
+    const own = schemaAt(p.registry.rootSchema, path);
+    if (own !== undefined && own["type"] !== "object" && !(typeof own["properties"] === "object" && own["properties"] !== null)) return <Default {...p} description={undefined} />;
+  }
   if (!ctx || !isRoot) return <Default {...p} />;
   const root = p.registry.rootSchema;
   const visible = p.properties.filter((x) => !x.hidden);

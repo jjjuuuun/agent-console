@@ -81,6 +81,9 @@ plugins:
     - agent_console_example_secret_provider:register
 ```
 
+설치했다면 넣지 않는다. entry point가 이미 `example-file`을 등록하므로 같은 key가 두 번 등록되어 그 플러그인이
+`failed`로 남는다.
+
 ## 설정 예
 
 ```bash
@@ -144,5 +147,6 @@ uv run --project ../../.. python -m pytest
   로그·`repr`·`SecretNotFoundError` 문장에 없음**, 크기 상한, 경로 미설정.
 - `tests/test_engine.py`: 엔진 시험 노드가 해석한 값을 이벤트·결과·오류에 넣어도 **저장된 Run·NodeRun·이벤트에 값이
   없음**(`[REDACTED]`), 환경변수가 파일보다 먼저.
-- `tests/test_server.py`: 통합 서버(`plugins.modules`로 등록) — 팀 실행에서 참조가 이 파일 값으로 풀려 쓰이지만
+- `tests/test_server.py`: 통합 서버(설치하지 않았으면 `plugins.modules`로, 설치했으면 entry point로만 등록 — 둘을 함께
+  쓰면 같은 key가 두 번 등록되어 플러그인이 실패한다) — 팀 실행에서 참조가 이 파일 값으로 풀려 쓰이지만
   **응답 이벤트·실행 상태·`/server-info`·로그에 값이 없음**, 파일이 없으면 서버는 시작하고 그 노드만 실패·경고만.

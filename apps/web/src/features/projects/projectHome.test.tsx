@@ -124,6 +124,10 @@ describe("프로젝트 홈 /projects/:id", () => {
     const start = screen.getByRole("link", { name: "채팅 시작" });
     expect(start.getAttribute("aria-disabled")).toBe("true");
     expect(start.getAttribute("title")).toBe("폴더를 쓸 수 없어 새 채팅을 시작할 수 없습니다");
+    // 막힌 시작 단추의 이유는 aria-describedby로 이어진다. 배너가 같은 말을 하므로 머리 문장은 화면에서 숨긴다(5.7R.49)
+    const reason = document.getElementById(start.getAttribute("aria-describedby") ?? "");
+    expect(reason?.textContent).toBe("폴더를 쓸 수 없어 새 채팅을 시작할 수 없습니다");
+    expect(reason?.classList.contains("ac-sr-only")).toBe(true);
     expect(screen.getByText("폴더를 찾을 수 없어 구성을 읽을 수 없습니다")).toBeTruthy();
     fireEvent.click(within(banners).getByRole("button", { name: "경로 다시 지정" }));
     expect(await screen.findByRole("dialog", { name: "경로 다시 지정 — 프로젝트 a" })).toBeTruthy();

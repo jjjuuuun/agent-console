@@ -16,7 +16,7 @@ export interface StepGuideStep {
   onAction?: () => void;
   /** 버튼 글자(없으면 `messages.go`) */
   actionLabel?: string;
-  /** 지금 이 단계를 할 수 없는 이유. 있으면 버튼이 aria-disabled로 남고 이유가 툴팁(title)과 숨은 글자로 붙는다 */
+  /** 지금 이 단계를 할 수 없는 이유. 있으면 버튼이 aria-disabled로 남고 이유가 툴팁(title)과 `aria-describedby`로 이어진 숨은 글자로 붙는다 */
   disabledReason?: string;
 }
 
@@ -55,7 +55,7 @@ export function StepGuide({ steps, messages, renderLink, layout = "column", clas
         let action: ReactNode = null;
         if (!s.done) {
           if (s.disabledReason !== undefined) {
-            action = <Button size="sm" variant={i === currentIndex ? "primary" : "secondary"} aria-disabled={true} title={s.disabledReason} data-step-action={s.id}>{label}</Button>;
+            action = <Button size="sm" variant={i === currentIndex ? "primary" : "secondary"} disabledReason={s.disabledReason} data-step-action={s.id}>{label}</Button>;
           } else if (s.onAction) action = <Button size="sm" variant={i === currentIndex ? "primary" : "secondary"} onClick={s.onAction} data-step-action={s.id}>{label}</Button>;
           else if (s.to !== undefined) {
             action = renderLink

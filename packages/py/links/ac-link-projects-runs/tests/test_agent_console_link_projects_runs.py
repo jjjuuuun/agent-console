@@ -593,15 +593,18 @@ def test_pinned_version_runs_from_space(tmp_path: Path) -> None:
         assert _reply(now) == f"cwd={folder} model=m-proj"
 
 
-def test_link_off_keeps_project_id_but_no_layer(tmp_path: Path) -> None:
+def test_link_off_blocks_project_runs_but_no_layer(tmp_path: Path) -> None:
     # 기록 연동도 끈다: 켜져 있으면 실행 모듈이 등록되지 않은 프로젝트를 404로 막는다(33y2)
     folder = _project_folder(tmp_path)
     with _client(tmp_path, disabled=(MODULE_ID,), records=False) as (client, _assembly):
-        run, events = _run(client, "g1", "app")
-        assert run["project_id"] == "app"
-        assert _reply(events) == "라이브러리"  # 연동이 꺼지면 정의 출처·층 없이
-        listed = client.get(f"{API}/runs", params={"project": "app"}).json()
-        assert [r["id"] for r in listed] == [run["id"]]
+        # 5.7R.33t1(K33-10): 프로젝트 기능이 켜진 조립에서 이 연동이 꺼지면 프로젝트를 붙인 실행은
+        # 정의 출처·층·점검 없이 돌지 않고 409로 막힌다(Run 없음). 프로젝트 없는 실행은 그대로.
+        blocked = _start(client, "g1", "app")
+        assert blocked.status_code == 409, blocked.text
+        error = blocked.json()["error"]
+        assert error["code"] == "feature_unavailable"
+        assert error["details"]["port"] == "runs.scopes"
+        assert client.get(f"{API}/runs", params={"project": "app"}).json() == []
         # 유효 설정은 ``?project=``의 정의 공간에서 읽는다(definitions-teams, 11/08 D5) — 공간이
         # 있어야 200이다. 등록해도 이 연동이 꺼져 있으면 프로젝트 범위 층은 없다.
         _register(client, folder)

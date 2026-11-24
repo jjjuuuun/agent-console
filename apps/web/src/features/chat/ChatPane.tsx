@@ -42,7 +42,7 @@ import { useConversationActions } from "./useConversationActions";
 import { useConversationFeed } from "./useConversationFeed";
 import { useInteractionRespond } from "../interactions";
 import { useConversationList } from "./chatData";
-import { ProjectChip } from "../projects";
+import { ProjectChip, useProjectRunsBlocked } from "../projects";
 import { useQueryClient } from "@tanstack/react-query";
 
 const t = chatMessages;
@@ -88,6 +88,10 @@ export function ChatPane(props: ChatPaneProps) {
   const scope = useConversationScope(id);
   const project = scope.project;
   const conversation = useConversationDetail(id, project, scope.ready);
+  const runsBlockedSignal = useProjectRunsBlocked();
+  // 프로젝트 대화의 턴은 프로젝트 폴더 안에서 돌아야 하므로 실행 연동이 꺼지면 보내지 못한다(대화 보기·만들기는 된다)
+  const runsBlocked = runsBlockedSignal.blocked && (conversation.data?.project_id ?? null) !== null;
+  const runsBlockedText = runsBlockedSignal.message ?? t.composer.runsBlocked;
   const graphs = useGraphList(scope.ready, project);
   const list = useConversationList();
   const graph = useChatGraph(conversation.data?.graph_id, conversation.data?.project_id ?? null);
@@ -654,6 +658,7 @@ export function ChatPane(props: ChatPaneProps) {
             {t.composer.noAnswerBanner}
           </Banner>
         ) : null}
+        {runsBlocked ? <Banner tone="warning">{runsBlockedText}</Banner> : null}
         {sendPart.off && sendPart.note !== undefined ? <Banner tone="warning">{sendPart.note}</Banner> : null}
         {rejectBusy ? (
           <Banner tone="info" actions={<Link className="ac-btn" data-variant="secondary" data-size="sm" to={`${chatPaths.settings()}#chat`}>{t.composer.viewSettings}</Link>}>
@@ -674,8 +679,8 @@ export function ChatPane(props: ChatPaneProps) {
           onSend={() => void send(false)}
           sendKey={typeof chat.send_key === "string" ? chat.send_key : undefined}
           disabled={inputDisabled}
-          sendDisabled={!connected || sendPart.disabled || (sessionView.blocked && !armed)}
-          {...(!connected ? { sendHint: t.composer.disconnected } : sessionView.blocked && !armed ? { sendHint: t.session.blocked } : sendPart.note !== undefined ? { sendHint: sendPart.note } : {})}
+          sendDisabled={!connected || runsBlocked || sendPart.disabled || (sessionView.blocked && !armed)}
+          {...(!connected ? { sendHint: t.composer.disconnected } : runsBlocked ? { sendHint: runsBlockedText } : sessionView.blocked && !armed ? { sendHint: t.session.blocked } : sendPart.note !== undefined ? { sendHint: sendPart.note } : {})}
           sending={sending}
           {...(composerNotice ? { busyNotice: composerNotice } : {})}
           {...(pending.length === 1 && target === null ? { placeholderHint: t.answer.placeholderCard } : pending.length >= 2 ? { placeholderHint: t.answer.placeholderCards(pending.length) } : {})}

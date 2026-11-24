@@ -17,6 +17,11 @@
 Run은 그 프로젝트 기록 DB에 쓴다. 시작 전에 그 기록 DB를 쓸 수 있는지 확인하고(못 쓰면 409
 ``project.records_unavailable``, 모르는 프로젝트 404 ``project.not_found`` - Run을 만들지 않는다,
 앱 DB로 대신 쓰지 않는다), 조회·이어 가기·[끊긴 것으로 표시]는 ``project_id``로 그 공간을 본다.
+
+맡는 범위 없는 프로젝트 실행(5.7R.33t1): ``project_id``가 있는데 그 값을 맡는 실행 범위 공급자
+(``RunProjectScoper.accepts_project``)가 없으면 ``unscoped_project``(조립이 정한 정책)에 묻는다.
+오류를 돌려주면 정의 출처를 정하기 전에 막는다(Run을 만들지 않는다). 실행 모듈은 프로젝트를
+모르고, "프로젝트 기능이 있나"와 문구는 조립(모듈 설정·선택 포트)이 정한다.
 """
 
 from __future__ import annotations
@@ -84,6 +89,7 @@ from .ports import (
     RunIssueAnnotator,
     RunPreflight,
     RunPreparer,
+    RunProjectScoper,
     RunScoper,
     RunServiceProvider,
 )
@@ -135,6 +141,8 @@ class RunService:
         resume_origin: 처리기가 맡지 않은 이어 가기 Run의 ``origin``.
         shutdown_timeout: 종료 때 실행 중 Run 정리를 기다리는 최대 초.
         records: 기록 자리(``SpaceRecorder``, 엔진에 넘긴 것과 같은 객체). None이면 ``runs``만 본다.
+        unscoped_project: ``project_id``를 맡는 실행 범위 공급자가 없을 때 막을 오류를 돌려주는
+            함수(``project_id`` → ``ErrorInfo``, None = 그대로 실행). 기본은 늘 None(단독 사용).
     """
 
     def __init__(
@@ -153,6 +161,7 @@ class RunService:
         resume_origin: str = "resume",
         shutdown_timeout: float = 10.0,
         records: SpaceRecorder | None = None,
+        unscoped_project: Callable[[str], ErrorInfo | None] = lambda _project_id: None,
     ) -> None:
         self.runtime = runtime
         self.records = records
@@ -167,6 +176,7 @@ class RunService:
         self._before_use = before_use
         self._resume_origin = resume_origin
         self._shutdown_timeout = shutdown_timeout
+        self._unscoped_project = unscoped_project
         self._closed: asyncio.Future[bool] | None = None
         self.recovered: list[str] = []
         """시작 때 정리한 이전 프로세스의 Run id(``recover_unfinished_runs``)."""
@@ -186,16 +196,51 @@ class RunService:
 
     # ------------------------------------------------------------ 정의
 
+    def accepts_project(self, project_id: str) -> bool:
+        """그 ``project_id``의 실행 범위를 맡는 공급자(``RunProjectScoper``)가 있나(예외는 기록하고
+        "맡지 않음")."""
+        for scoper in self._scopes():
+            if not isinstance(scoper, RunProjectScoper):
+                continue
+            try:
+                if scoper.accepts_project(project_id):
+                    return True
+            except Exception:
+                _log.exception("프로젝트 범위 확인 실패: %s", type(scoper).__name__)
+        return False
+
+    @property
+    def has_project_scope(self) -> bool:
+        """프로젝트 범위를 맡을 수 있는 공급자(``RunProjectScoper``)가 하나라도 있나."""
+        return any(isinstance(scoper, RunProjectScoper) for scoper in self._scopes())
+
+    def unscoped_project_error(self, project_id: str | None) -> ErrorInfo | None:
+        """``project_id``를 맡는 범위 공급자가 없어 막을 오류(없거나 정책이 허용하면 None)."""
+        if not project_id:
+            return None
+        error = self._unscoped_project(project_id)
+        if error is None or self.accepts_project(project_id):
+            return None
+        return error
+
     def definitions_for(self, project_id: str | None, graph_id: str) -> DefinitionSource | None:
         """Run의 정의 조회 출처(``runs.scopes``의 선택 메서드 ``run_definitions``, 뒤 공급자가
         이긴다).
 
         None이면 ``project_id``가 없거나 정한 공급자가 없다(``definitions.lookup``을 쓴다). 공급자
-        예외는 기록하고 건너뛴다.
+        예외는 기록하고 건너뛴다. 실행 시작·프로젝트 기준 검증·``load_graph``가 이 경로로 온다.
 
         Raises:
-            RunPreflightError: 공급자가 오류 본문을 돌려줬다(Run을 만들지 않는다).
+            RunPreflightError: 맡는 범위가 없는 프로젝트 실행(``unscoped_project_error``, 기본 409
+                ``feature_unavailable``)이거나 공급자가 오류 본문을 돌려줬다(Run을 만들지 않는다).
         """
+        unscoped = self.unscoped_project_error(project_id)
+        if unscoped is not None:
+            raise RunPreflightError(unscoped)
+        return self._definitions(project_id, graph_id)
+
+    def _definitions(self, project_id: str | None, graph_id: str) -> DefinitionSource | None:
+        """``definitions_for``에서 범위 지킴을 뺀 것(지난 Run의 그래프 보기용)."""
         if not project_id:
             return None
         found: DefinitionSource | None = None
@@ -252,10 +297,11 @@ class RunService:
     def graph_of_run(self, run: Run) -> Graph | None:
         """Run 당시 팀 구성(버전 이력). 이력에 없으면 현재 정의가 같은 버전일 때만 그것을 쓴다.
 
-        Run에 ``project_id``가 있으면 그 Run의 정의 출처(``definitions_for``)에서 찾는다.
+        Run에 ``project_id``가 있으면 그 Run의 정의 출처(``definitions_for``)에서 찾는다. 지난 기록
+        보기라 맡는 범위 없는 프로젝트도 막지 않는다(그때는 ``definitions.lookup``).
         """
         try:
-            scoped = self.definitions_for(run.project_id, run.graph_id)
+            scoped = self._definitions(run.project_id, run.graph_id)
         except RunPreflightError:
             return None
         source = scoped or self._lookup

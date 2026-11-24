@@ -140,7 +140,9 @@
 .ac-sdd-plan-node[data-critical] { border-width: 2px; border-color: var(--ac-accent); }
 .ac-sdd-plan-node[data-cycle] { border-color: var(--ac-danger); border-width: 2px; }
 .ac-sdd-plan-node[data-selected] { background: var(--ac-accent-bg); }
-.ac-sdd-plan-node[data-dim] { opacity: 0.3; }
+/* 흐리게: 투명도로 글자 대비를 깎지 않고, 배경·테두리를 낮추고 칩을 회색으로 둔다(글자는 토큰 대비 그대로) */
+.ac-sdd-plan-node[data-dim] { background: var(--ac-bg); border-color: var(--ac-border); border-width: 1px; color: var(--ac-text-muted); }
+.ac-sdd-plan-node[data-dim] .ac-sdd-plan-node-top > * { filter: grayscale(1); }
 .ac-sdd-plan-node-top { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ac-sdd-plan-node-key { font-weight: 600; flex: none; }
 .ac-sdd-plan-layer-head { display: flex; align-items: center; gap: 8px; width: var(--ac-sdd-plan-node-w); height: 20px; color: var(--ac-text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }

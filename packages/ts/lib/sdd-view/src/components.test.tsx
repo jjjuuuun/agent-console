@@ -384,6 +384,17 @@ describe("PlanGraph·PlanBundles", () => {
     });
     expect(container.querySelectorAll("[data-dim]").length).toBeGreaterThan(0);
   });
+  it("확대·축소·맞춤 단추 이름이 메시지 표의 한국어다 (H6)", async () => {
+    const engine = vi.fn(async () => ({ T1: { x: 0, y: 40 }, T5: { x: 0, y: 100 }, T2: { x: 240, y: 40 } }));
+    render(<PlanGraph plan={samplePlan()} tasks={sampleTasks()} statuses={sampleStatuses()} engine={engine} height={400} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "확대" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "축소" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "화면에 맞춤" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Fit View|Zoom In/ })).toBeNull();
+  });
   it("배치 엔진이 실패하면 층별 배치로 남고 안내한다", async () => {
     render(<PlanGraph plan={samplePlan()} tasks={sampleTasks()} engine={async () => { throw new Error("x"); }} />);
     await act(async () => {

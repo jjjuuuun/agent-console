@@ -26,6 +26,11 @@ describe("startErrorView: 시작 오류 → 배너·해결 버튼 표 (screen-pr
     expect(v?.message).not.toBe("");
   });
 
+  it("실행 연동 꺼짐(feature_unavailable, runs.scopes)은 서버 문구를 info 안내로 푼다", () => {
+    expect(startErrorView(err("feature_unavailable", { module: "mod-x", port: "runs.scopes" }))).toEqual({ tone: "info", message: "서버 메시지", fix: "none" });
+    expect(startErrorView(err("feature_unavailable", { module: "mod-x", port: "other.port" }))).toBeNull();
+  });
+
   it("not_imported는 대상 종류·id·in_library를 돌려주고 이름은 호출자가 찾는다", () => {
     const v = startErrorView(err("project.not_imported", { project_id: "a", kind: "k", id: "g1", in_library: true }), (_k, id) => `이름-${id}`);
     expect(v?.message).toContain("이름-g1");

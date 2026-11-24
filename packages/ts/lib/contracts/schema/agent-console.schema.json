@@ -23874,7 +23874,7 @@
           "description": "작업 상태와 체크 칸 글자입니다. 비우면 작업 문법의 상태를 씁니다.",
           "title": "작업 상태",
           "x-ui": {
-            "itemTitle": "/label",
+            "itemTitle": "/label /id",
             "order": 3,
             "tier": "basic",
             "when": "진행 중·검증 대기 같은 상태를 더할 때 고치세요."
@@ -25038,12 +25038,14 @@
         "marker": {
           "anyOf": [
             {
+              "title": "글자 하나",
               "type": "string"
             },
             {
               "items": {
                 "type": "string"
               },
+              "title": "글자 여러 개",
               "type": "array"
             }
           ],
@@ -25129,7 +25131,7 @@
           "description": "체크 칸 글자와 상태의 짝입니다. 규칙의 작업 상태가 있으면 그쪽이 먼저입니다.",
           "title": "작업 상태",
           "x-ui": {
-            "itemTitle": "/label",
+            "itemTitle": "/label /id",
             "tier": "advanced"
           }
         },

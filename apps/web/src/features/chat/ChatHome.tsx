@@ -31,7 +31,7 @@ export function ChatHome({ onNew, blockedReason }: { onNew: () => void; blockedR
           icon={routeIconNode(ROUTE_ROLES.conversations)}
           title={te.selectOrStart}
           description={te.selectOrStartBody}
-          action={<Button variant="primary" onClick={() => blockedReason == null && onNew()} {...(blockedReason == null ? {} : { "aria-disabled": true, title: blockedReason })}>{te.startNew}</Button>}
+          action={<Button variant="primary" onClick={() => blockedReason == null && onNew()} disabledReason={blockedReason ?? undefined}>{te.startNew}</Button>}
         />
       )}
     </div>

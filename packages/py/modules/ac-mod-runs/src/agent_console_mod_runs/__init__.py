@@ -18,7 +18,8 @@
       ``RunPreflightError``, 선택 이슈 꾸미기 ``RunIssueAnnotator``)·``RunScoper``(+ ``RunScope``,
       요청 ``project_id`` → 이 Run의 서비스·경고, 5.2R.34, 선택 메서드 ``RunDefinitionsScoper`` →
       Run의 정의 조회 출처 ``DefinitionSource``·노드 서비스 키 ``RUN_DEFINITIONS``, 5.7R.33y, 선택
-      메서드 ``RunChildScoper`` → 자식 Run 점검, 5.7R.33g)·
+      메서드 ``RunChildScoper`` → 자식 Run 점검, 5.7R.33g, 선택 메서드 ``RunProjectScoper`` → 그
+      ``project_id``의 범위를 맡는가, 5.7R.33t1)·
       ``RunServiceProvider``(+ ``RunEnvironment``)·``ResumeHandler``.
     - HTTP 없이 쓰는 부품: ``RunService``(검증·시작·취소·이어 가기·종료)·``InteractionService``·
       ``configure_backends``·``reveal_hidden_backends``(설정 ``show_hidden_backends``, 개발·테스트용
@@ -27,6 +28,9 @@
       이어 가기 거절 버튼 데이터 ``ChildResumeFix`` — 기본은 패키지 데이터
       ``data/issue_fixes.json``, ``load_child_resume_fix``·``child_resume_fix_of``),
       설정 ``RunsModuleSettings``.
+    - 맡는 범위 없는 프로젝트 실행 정책(5.7R.33t1): 설정 ``UnscopedProjectRuns``
+      (``unscoped_project_runs``)·``unscoped_project_policy``(``RunService(unscoped_project=)``)·
+      ``unscoped_project_warning``·``UNSCOPED_PROJECT_PORT``.
     - 관측 탭 이벤트 접두어 데이터(5.5R.13): ``DEFAULT_OBSERVE_EVENT_PREFIXES``·
       ``load_observe_event_prefixes``·``observe_event_prefixes_of``.
 """
@@ -100,11 +104,13 @@ from .ports import (
     RunPreflight,
     RunPreparation,
     RunPreparer,
+    RunProjectScoper,
     RunScope,
     RunScopeLike,
     RunScoper,
     RunServiceProvider,
 )
+from .project_scope import UNSCOPED_PROJECT_PORT, unscoped_project_policy, unscoped_project_warning
 from .records import (
     SpaceEvents,
     SpaceInteractions,
@@ -117,7 +123,7 @@ from .records import (
 from .redaction import SuspectedRedaction
 from .routes import build_router
 from .service import TEAM_RULES_UNAVAILABLE, RunService, blocks_run, team_rules_warning
-from .settings import RunsModuleSettings, RuntimeOptions
+from .settings import RunsModuleSettings, RuntimeOptions, UnscopedProjectRuns
 from .storage import STORAGE_MEMORY, open_recorder
 from .ws import RUN_TOPIC, topic_handlers
 
@@ -152,6 +158,7 @@ __all__ = [
     "SERVER_WARNINGS",
     "STORAGE_MEMORY",
     "TEAM_RULES_UNAVAILABLE",
+    "UNSCOPED_PROJECT_PORT",
     "WEB_ROLES",
     "WORKSPACE_SETTINGS",
     "BackendNotFoundError",
@@ -178,6 +185,7 @@ __all__ = [
     "RunPreflightError",
     "RunPreparation",
     "RunPreparer",
+    "RunProjectScoper",
     "RunScope",
     "RunScopeLike",
     "RunScoper",
@@ -191,6 +199,7 @@ __all__ = [
     "SpaceReader",
     "SpaceRecorder",
     "SuspectedRedaction",
+    "UnscopedProjectRuns",
     "blocks_run",
     "build_router",
     "build_secret_resolver",
@@ -208,4 +217,6 @@ __all__ = [
     "space_records",
     "team_rules_warning",
     "topic_handlers",
+    "unscoped_project_policy",
+    "unscoped_project_warning",
 ]

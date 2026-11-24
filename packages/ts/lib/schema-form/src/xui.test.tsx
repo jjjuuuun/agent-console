@@ -327,3 +327,19 @@ describe("불리언·enum·속성 추가 단추 (F11)", () => {
     expect(screen.queryByRole("button", { name: "항목 추가" })).toBeNull();
   });
 });
+
+describe("이름 → 값 표 필드의 설명은 한 번만 (회귀)", () => {
+  it("속성 없는 객체 필드의 설명이 두 번 그려지지 않는다", () => {
+    const s: JsonSchema = {
+      type: "object",
+      properties: {
+        alpha: { type: "string", title: "알파" },
+        tbl: { type: "object", title: "대응표", description: "이름 → 값 대응표 설명", additionalProperties: { type: "string" } },
+        opt: { anyOf: [{ type: "object", additionalProperties: { type: "string" } }, { type: "null" }], title: "선택 표", description: "선택 표 설명", default: null },
+      },
+    };
+    const { container } = render(<SchemaForm schema={s} value={{ tbl: { a: "1" }, opt: { b: "2" } }} onChange={() => undefined} />);
+    expect(container.textContent?.split("이름 → 값 대응표 설명").length).toBe(2);
+    expect(container.textContent?.split("선택 표 설명").length).toBe(2);
+  });
+});

@@ -200,6 +200,8 @@ describe("상태별 렌더", () => {
     const { readFileSync } = await import("node:fs");
     const css = readFileSync(`${__dirname}/styles.css`, "utf-8");
     expect(/\.ac-fp-result\s*\{[^}]*min-height:\s*44px/.test(css)).toBe(true);
+    // 고르기 전(idle)에는 자리를 잡지 않는다
+    expect(/\.ac-fp-result\[data-group="idle"\]\s*\{[^}]*min-height:\s*0/.test(css)).toBe(true);
     render(<Harness check={async () => checked()} />);
     expect(result()).toBeTruthy();
   });
@@ -304,6 +306,13 @@ describe("찾아보기 패널", () => {
     fireEvent.click(screen.getByRole("button", { name: "이 폴더 선택" }));
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(onPicked.mock.calls[0]![0]).toBe("/srv");
+  });
+  it("찾아서 고르면 `경로를 직접 입력` 칸을 접는다(펼쳐 둔 상태였어도)", async () => {
+    await open(async (r) => checked({ path: r.path }));
+    const toggle = screen.getByRole("button", { name: "경로를 직접 입력" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "이 폴더 선택" }));
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
   });
   it("새 폴더: Enter로 만들고 그 안으로 들어간다. 잘못된 이름·서버 거절은 행 아래에 보인다", async () => {
     const createFolder = vi.fn(async (r: { parent: string; name: string }) => (r.name === "dup" ? { ok: false as const, code: "exists" } : { ok: true as const, path: `${r.parent}/${r.name}` }));

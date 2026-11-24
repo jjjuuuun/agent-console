@@ -27,6 +27,12 @@ export interface SchemaFormMessages {
   moveDown: string;
   copyItem: string;
   itemTitle: string;
+  /** 제목 없는 `anyOf`/`oneOf` 선택지의 대체 이름(값 종류별). 스키마가 `title`을 주면 그것이 먼저다. */
+  kindString: string;
+  kindNumber: string;
+  kindBoolean: string;
+  kindArray: string;
+  kindObject: string;
   emptyArray: string;
   rawJsonToggle: string;
   formViewToggle: string;

@@ -355,6 +355,8 @@ describe("StepGuide·QuickStartRow (5.2R.10)", () => {
     const btn = screen.getByRole("button", { name: "가기" });
     expect(btn.getAttribute("aria-disabled")).toBe("true");
     expect(btn.getAttribute("title")).toBe("쓸 수 없습니다");
+    // aria-describedby가 숨은 글자를 가리킨다(이름에는 섞이지 않는다)
+    expect(document.getElementById(btn.getAttribute("aria-describedby") ?? "")?.textContent).toBe("쓸 수 없습니다");
     fireEvent.click(btn);
     expect(onAction).not.toHaveBeenCalled();
   });

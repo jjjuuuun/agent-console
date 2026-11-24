@@ -1,5 +1,7 @@
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getContractSchema } from "@agent-console/contracts";
+import { RuleSectionsForm } from "./RuleSectionsForm";
 import { LONG, setup } from "./sddTestSetup";
 
 afterEach(() => {
@@ -67,5 +69,45 @@ describe("규칙 탭: 자동 진행 켜기 확인", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "켜기" }));
     expect(await screen.findByText("저장 안 됨", {}, LONG)).toBeTruthy();
     expect((screen.getByRole("checkbox", { name: "켜기" }) as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe("규칙 탭: Ctrl+S", () => {
+  it("도구줄 버튼에 포커스가 있어도 저장하고 브라우저 저장 창을 막는다", async () => {
+    const { sdd } = setup(RULES);
+    const name = (await screen.findByLabelText("이름", {}, LONG)) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "새 이름" } });
+    expect(await screen.findByText("저장 안 됨", {}, LONG)).toBeTruthy();
+    const check = screen.getByRole("button", { name: "규칙 검사" });
+    check.focus();
+    const notPrevented = fireEvent.keyDown(check, { key: "s", ctrlKey: true });
+    expect(notPrevented).toBe(false);
+    await vi.waitFor(() => expect(sdd.putSpec).toHaveBeenCalledTimes(1), LONG);
+  });
+
+  it("수정이 없으면 저장 호출 없이 브라우저 저장 창만 막는다", async () => {
+    const { sdd } = setup(RULES);
+    await screen.findByLabelText("이름", {}, LONG);
+    const check = screen.getByRole("button", { name: "규칙 검사" });
+    expect(fireEvent.keyDown(check, { key: "s", ctrlKey: true })).toBe(false);
+    expect(sdd.putSpec).not.toHaveBeenCalled();
+  });
+});
+
+describe("규칙 폼: 작업 상태 카드", () => {
+  it("스키마 클래스 이름·영어 키 이름·option N 대신 항목 이름과 한국어 선택지를 보인다", () => {
+    const schema = getContractSchema("SpecDefinition") as never;
+    const value = { rules: { task_statuses: [{ id: "doing", marker: "~" }, { id: "wait", label: "대기", marker: ["w", "W"] }, { marker: " " }] } };
+    const { container } = render(
+      <RuleSectionsForm schema={schema} value={value as never} onChange={() => {}} issues={[]} readonly={false} sectionId="rules/task_statuses" onSectionChange={() => {}} navLabel="섹션" idPrefix="t" />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("TaskStatusSpec");
+    expect(text).not.toMatch(/option \d/i);
+    expect(text).not.toMatch(/\bmarker\b/);
+    const legends = [...container.querySelectorAll("legend")].map((l) => l.textContent);
+    expect(legends).toEqual(expect.arrayContaining(["doing", "대기", "작업 상태 3"]));
+    const kinds = [...container.querySelectorAll("select option")].map((o) => o.textContent);
+    expect(kinds).toEqual(expect.arrayContaining(["글자 하나", "글자 여러 개"]));
   });
 });

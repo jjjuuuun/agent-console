@@ -7,6 +7,7 @@ import type { ComponentType, ReactNode } from "react";
 import { mergeErrorSchemas, parsePointer, toErrorSchema, translateErrors } from "./errors";
 import type { ErrorNode } from "./errors";
 import { resolveMessages } from "./messages";
+import { titleUntitledBranches } from "./branchTitles";
 import { collapseEmptyNullable, normalizeNullable, nullableUiSchema } from "./nullable";
 import { buttonTemplates } from "./buttons";
 import { ProvenanceContext, ProvenanceFieldTemplate } from "./ProvenanceFieldTemplate";
@@ -177,7 +178,7 @@ export function SchemaForm(props: SchemaFormProps) {
     compactProvenance = false,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
-  const baseSchema = useMemo(() => normalizeNullable(props.schema), [props.schema]);
+  const baseSchema = useMemo(() => titleUntitledBranches(normalizeNullable(props.schema), messages), [props.schema, messages]);
   // `deprecated: true` 필드: 값이 없으면 빼고, 있으면 칩·안내를 단다(일반 규칙, 필드 이름 비교 없음).
   const depValue = props.provenance !== undefined && props.effectiveValue !== undefined ? deepMerge(props.effectiveValue, value) : value;
   const nextDep = typeof baseSchema === "object" && baseSchema !== null ? applyDeprecated(baseSchema as Record<string, unknown>, depValue, messages) : undefined;

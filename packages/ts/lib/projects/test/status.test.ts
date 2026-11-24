@@ -97,6 +97,15 @@ describe("능력 표 (§6.0)", () => {
     expect(a.collect_logs.allowed).toBe(true);
   });
 
+  test("실행 범위 연동이 없다는 신호(runsScoped:false)는 시작 두 동작만 서버 문구와 함께 막는다", () => {
+    const a = projectAbilities(view("ready"), { runsScoped: false, runsBlockedMessage: "연동 꺼짐" });
+    expect(a.start_run).toEqual({ allowed: false, reason: { key: "projects.blocked.server_message", params: { message: "연동 꺼짐" } } });
+    expect(a.start_chat.allowed).toBe(false);
+    expect(a.edit.allowed).toBe(true);
+    expect(projectAbilities(view("ready"), { runsScoped: false }).start_run.reason).toEqual({ key: "projects.blocked.runs_unscoped" });
+    expect(projectAbilities(view("ready"), { runsScoped: true }).start_run.allowed).toBe(true);
+  });
+
   test("모르는 상태는 보수적으로 막고 상태 원문을 이유에 넣는다", () => {
     const a = projectAbilities(view("brand_new"));
     expect(a.start_chat.reason).toEqual({ key: "projects.status.blocked_reason", params: { status: "brand_new" } });

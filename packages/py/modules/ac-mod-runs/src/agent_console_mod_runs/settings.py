@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -111,6 +111,43 @@ class BackendLoginOptions(BaseModel):
         title="로그인 화면 줄 수",
         description="문제 해결용으로 보여 주는 로그인 과정 화면의 마지막 줄 수.",
         json_schema_extra=x_ui(tier="advanced", unit="줄"),
+    )
+
+
+DEFAULT_UNSCOPED_PROJECT_MESSAGE = (
+    "프로젝트·실행 연동이 꺼져 있어 프로젝트에서 실행을 시작하지 않았습니다. "
+    "연동을 켜면 프로젝트 폴더와 그 구성으로 실행합니다."
+)
+"""``unscoped_project_runs.message`` 기본 문구(설정으로 바꾼다)."""
+
+
+# 5.7R.33t1: 프로젝트 기능 = 선택 포트 ``projects.lookup``이 있다. 맡는 연동 = ``runs.scopes``
+# 항목 중 ``accepts_project``가 참인 것(``RunProjectScoper``). 프로젝트 기능이 없거나
+# ``project_id``가 없는 실행에는 쓰지 않는다(단독 실행).
+class UnscopedProjectRuns(BaseModel):
+    """프로젝트 기능은 켜져 있는데 프로젝트·실행 연동이 꺼졌을 때의 처리."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy: Literal["reject", "allow"] = Field(
+        default="reject",
+        title="연동 없는 프로젝트 실행",
+        description=(
+            "막기 = 프로젝트를 붙인 실행·대화를 시작하지 않는다(프로젝트 폴더 밖에서 돌지 않게). "
+            "허용 = 프로젝트 폴더·점검 없이 실행한다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            enum_labels={"reject": "막기", "allow": "허용"},
+            when="실행 연동 없이 프로젝트를 이름표로만 쓰는 조립에서 허용으로 바꿉니다.",
+        ),
+    )
+    message: str = Field(
+        default=DEFAULT_UNSCOPED_PROJECT_MESSAGE,
+        min_length=1,
+        title="막을 때 안내 문구",
+        description="막은 실행의 오류 문구이자 서버 정보 경고 문구.",
+        json_schema_extra=x_ui(tier="advanced"),
     )
 
 
@@ -234,6 +271,15 @@ class RunsModuleSettings(BaseModel):
             when="새 관측 수집기가 다른 접두어로 이벤트를 낼 때 더하거나, 관측 탭을 끌 때.",
         ),
     )
+    unscoped_project_runs: UnscopedProjectRuns = Field(
+        default_factory=UnscopedProjectRuns,
+        title="연동 없는 프로젝트 실행",
+        description=(
+            "프로젝트 기능은 켜져 있는데 프로젝트·실행 연동이 꺼졌을 때, 프로젝트를 붙인 실행을 "
+            "막을지와 안내 문구."
+        ),
+        json_schema_extra=x_ui(tier="advanced"),
+    )
 
     issue_fixes_file: Path | None = Field(
         default=None,
@@ -291,8 +337,10 @@ SETTINGS_COMPAT = SettingsCompat(
 
 __all__ = [
     "DEFAULT_RUN_FILES_DIR",
+    "DEFAULT_UNSCOPED_PROJECT_MESSAGE",
     "SETTINGS_COMPAT",
     "BackendLoginOptions",
     "RunsModuleSettings",
     "RuntimeOptions",
+    "UnscopedProjectRuns",
 ]

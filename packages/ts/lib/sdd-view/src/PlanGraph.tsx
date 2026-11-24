@@ -1,6 +1,6 @@
 import type { ParsedTask, TaskPlan } from "@agent-console/contracts/sdd";
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, useStore, type Edge, type Node, type NodeProps } from "@xyflow/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { statusTone, type StatusLike } from "./display";
 import { formatMessage, resolveMessages } from "./messages";
 import { applyPositions, createElkPlanLayout, planToFlow, PLAN_DEFAULTS, type PlanFlowOptions, type PlanLayoutEngine, type PlanNodeData } from "./plan";
@@ -57,13 +57,15 @@ export interface PlanGraphProps {
   height?: number | "fill";
   /** 첫 화면에서 허용하는 가장 작은 줌(글자가 읽히는 크기). 이보다 작아야 다 들어오는 그래프는 이 줌으로 시작 노드부터 보여 준다. 기본 1(노드 글자 12px) */
   readableZoom?: number;
+  /** 사용자가 줄일 수 있는 가장 작은 줌의 기준. 그래프 전체가 이보다 작아야 들어오면 맞춤이 잘리지 않도록 더 낮춘다. 기본 0.4 */
+  minZoom?: number;
   /** 병목이 아닌 노드·연결을 흐리게 한다(병목만 강조). 스위치는 앱이 도구줄에 둔다 */
   onlyCritical?: boolean;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
 
-function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", readableZoom = 1, onlyCritical = false, messages, className }: PlanGraphProps) {
+function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", readableZoom = 1, minZoom: minZoomBase = 0.4, onlyCritical = false, messages, className }: PlanGraphProps) {
   const text = resolveMessages(messages);
   const base = useMemo(() => planToFlow(plan, tasks, options), [plan, tasks, options]);
   const defaultEngine = useMemo(() => createElkPlanLayout(), []);
@@ -99,10 +101,46 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
   const viewW = useStore((st) => st.width);
   const viewH = useStore((st) => st.height);
   const laidOut = !layouting && base.nodes.length > 0;
+  // 사용자가 줌·이동·맞춤을 만졌으면 그 뒤 레이아웃·크기 변화로 자동 맞춤을 다시 하지 않는다(계획이 바뀌면 다시 자동).
+  const touched = useRef(false);
+  // 다시 불러와 같은 작업이 새 객체로 오는 것은 계획이 바뀐 것이 아니다 — 작업 키 목록이 바뀔 때만 다시 자동으로 맞춘다.
+  const planSignature = useMemo(() => base.nodes.map((n) => n.id).join("\u0000"), [base]);
+  useEffect(() => {
+    touched.current = false;
+  }, [planSignature]);
+  const markTouched = () => {
+    touched.current = true;
+  };
+  // 그래프 전체가 다 들어오는 줌이 기본 최소 줌보다 작으면 최소 줌을 낮춰 맞춤이 양 끝을 자르지 않게 한다.
+  const minZoom = useMemo(() => {
+    if (!laidOut || viewW <= 0 || viewH <= 0 || flow.nodes.length === 0) return minZoomBase;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const n of flow.nodes) {
+      x0 = Math.min(x0, n.position.x);
+      y0 = Math.min(y0, n.position.y - 28);
+      x1 = Math.max(x1, n.position.x + (n.width ?? 0));
+      y1 = Math.max(y1, n.position.y + (n.height ?? 0));
+    }
+    const fit = Math.min(Math.max(viewW - 2 * PLAN_PAD, 1) / Math.max(x1 - x0, 1), Math.max(viewH - 2 * PLAN_PAD, 1) / Math.max(y1 - y0, 1));
+    return Math.max(0.02, Math.min(minZoomBase, fit * 0.8));
+  }, [laidOut, flow, viewW, viewH, minZoomBase]);
+  const flowLabels = useMemo(
+    () => ({
+      "controls.ariaLabel": text["plan.controls"],
+      "controls.zoomIn.ariaLabel": text["plan.zoomIn"],
+      "controls.zoomOut.ariaLabel": text["plan.zoomOut"],
+      "controls.fitView.ariaLabel": text["plan.fitView"],
+      "controls.interactive.ariaLabel": text["plan.interactive"],
+      "node.a11yDescription.default": text["plan.nodeHint"],
+      "node.a11yDescription.keyboardDisabled": text["plan.nodeHint"],
+    }),
+    [text],
+  );
   // 첫 `fitView`는 배치 전(전부 원점) 좌표로 맞춰져 캔버스가 비어 보인다. 배치(또는 실패 대체 배치)가 끝난 뒤 다시 맞춘다.
   useEffect(() => {
-    if (!laidOut) return;
+    if (!laidOut || touched.current) return;
     const id = setTimeout(() => {
+      if (touched.current) return;
       // 영역에 다 들어오면 전체를 맞추고, 그러면 글자가 안 읽히는 크기(readableZoom 미만)가 되는 큰 그래프는
       // 읽히는 줌으로 두고 시작 노드(왼쪽 위)부터 보여 준다. 나머지는 끌어서 이동·확대/축소로 본다(양 끝이 잘려 보이지 않게).
       void fitView({ duration: 0, minZoom: readableZoom, maxZoom: 1.5 }).then(() => {
@@ -198,13 +236,15 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
         elementsSelectable
         nodesFocusable
         fitView
-        minZoom={0.4} maxZoom={1.5}
+        minZoom={minZoom} maxZoom={1.5}
+        ariaLabelConfig={flowLabels}
+        onMoveStart={(e) => { if (e) markTouched(); }}
         proOptions={{ hideAttribution: true }}
         onNodeClick={(_e, node) => onSelect?.(node.id)}
         aria-label={text["plan.graph"]}
       >
         <Background />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false} onZoomIn={markTouched} onZoomOut={markTouched} onFitView={markTouched} />
       </ReactFlow>
     </div>
   );

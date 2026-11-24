@@ -249,6 +249,7 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
         const st = given ? adopt(path, given) : await checkNow(path);
         if (my !== pickSeq.current) return;
         setPhase("picked");
+        setManualOpen(false); // 찾아서 골랐으면 직접 입력 칸은 다시 접는다(5.7R.49)
         pickBtn.current?.focus();
         onPicked?.(path, st);
         return;
@@ -316,6 +317,13 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
       closeBrowse();
     }
   };
+
+  // 찾아보기 패널이 열리면 하단 고정 단추 줄 뒤에 가리지 않게 보이는 자리로 스크롤한다(가까운 쪽 가장자리, 5.7R.49)
+  const openSeq = open?.seq;
+  useEffect(() => {
+    if (openSeq === undefined) return;
+    document.getElementById(`${id}-browser`)?.scrollIntoView?.({ block: "nearest" });
+  }, [openSeq, id]);
 
   const hasSelection = value.trim() !== "";
   const browseId = `${id}-browser`;
@@ -439,6 +447,7 @@ export function FolderPicker(props: FolderPickerProps): ReactElement {
             setOpen(null);
             pickBtn.current?.focus();
             setPhase("picked");
+            setManualOpen(false); // 찾아서 골랐으면 직접 입력 칸은 다시 접는다(5.7R.49)
             onPicked?.(path, state);
           }}
           onClose={closeBrowse}

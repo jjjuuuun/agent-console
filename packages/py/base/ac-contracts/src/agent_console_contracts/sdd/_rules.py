@@ -11,7 +11,7 @@
 그래서 목록·객체 필드의 기본값은 빈 값이 아니라 None이다(빈 목록 = "이 스펙에서는 없음").
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field
 
@@ -54,7 +54,9 @@ class TaskStatusSpec(DefinitionModel):
             example="진행 중",
         ),
     )
-    marker: str | list[str] = Field(
+    marker: (
+        Annotated[str, Field(title="글자 하나")] | Annotated[list[str], Field(title="글자 여러 개")]
+    ) = Field(
         title="체크 칸 글자",
         description=(
             "작업 줄 대괄호 안의 글자(줄 머리 상태를 쓰면 그 낱말)입니다. 여러 개면 처음 것으로 "
@@ -94,7 +96,7 @@ class TaskSyntax(DefinitionModel):
         default=None,
         title="작업 상태",
         description="체크 칸 글자와 상태의 짝입니다. 규칙의 작업 상태가 있으면 그쪽이 먼저입니다.",
-        json_schema_extra=x_ui(tier="advanced", item_title="/label"),
+        json_schema_extra=x_ui(tier="advanced", item_title="/label /id"),
     )
     id_pattern: str | None = Field(
         default=None,
@@ -628,7 +630,7 @@ class SpecRules(DefinitionModel):
         json_schema_extra=x_ui(
             tier="basic",
             when="진행 중·검증 대기 같은 상태를 더할 때 고치세요.",
-            item_title="/label",
+            item_title="/label /id",
             order=3,
         ),
     )

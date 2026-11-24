@@ -18,6 +18,8 @@
   볼 수 있다.
 - ``ProjectScope.check_child(graph, services, *, project_id)``(5.7R.33g 잔여, ``mod-runs``
   ``RunChildScoper`` 선택 메서드): 자식 Run(중첩 팀)을 만들기 직전 같은 경로 지킴.
+- ``ProjectScope.accepts_project(project_id)``(5.7R.33t1, ``mod-runs`` ``RunProjectScoper`` 선택
+  메서드): 프로젝트 읽기가 있으면 참. 이 연동이 없으면 실행 모듈이 프로젝트 실행을 막는다.
 
 층 위치(공통 바로 아래)는 ``ac-teams``가 정한다. 이 모듈은 층 값만 만든다.
 """
@@ -210,6 +212,14 @@ class ProjectScope:
     def scope_layers(self, scope_id: str) -> ScopeLayers:
         """``settings.scope_layers``: 범위 id(= 프로젝트 id) → 층·경고."""
         return self.layers(scope_id)
+
+    def accepts_project(self, project_id: str) -> bool:
+        """``mod-runs`` ``RunProjectScoper``(5.7R.33t1): 프로젝트 읽기(``projects.lookup``)가 있으면
+        모든 ``project_id``를 맡는다(모르는 id도 ``run_definitions``·``scope_run``이 404로 거부).
+
+        이 연동이 꺼지면 맡는 공급자가 없어져 실행 모듈이 프로젝트 실행을 막는다(K33-10).
+        """
+        return self._lookup() is not None
 
     def run_definitions(self, project_id: str, graph_id: str) -> Any:
         """X26 ``run_definitions``: Run의 정의 조회 출처 = 그 프로젝트 공간의 정의 저장소.

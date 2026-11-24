@@ -78,6 +78,8 @@
 
 /* 확인 결과: 최소 44px로 자리를 잡아 상태가 바뀌어도 아래가 움직이지 않는다 */
 .ac-fp-result { min-height: 44px; margin-bottom: var(--ac-space-2); }
+/* 아직 고르지 않은 처음 상태에는 자리를 잡지 않는다(대화상자 아래 빈 공간 약 70px 제거). 값이 들어오면 그때부터 잡는다. */
+.ac-fp-result[data-group="idle"] { min-height: 0; margin-bottom: 0; }
 .ac-fp-banner {
   display: flex; align-items: flex-start; gap: var(--ac-space-2); min-height: 44px; padding: var(--ac-space-2) var(--ac-space-3);
   border-left: 3px solid var(--ac-info); border-radius: var(--ac-radius-sm); background: var(--ac-info-bg);
@@ -107,7 +109,7 @@
 .ac-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 /* 찾아보기 패널 */
-.ac-fp-browser { position: relative; display: flex; flex-direction: column; margin-top: var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
+.ac-fp-browser { scroll-margin-bottom: var(--ac-space-3); position: relative; display: flex; flex-direction: column; margin-top: var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-1); }
 .ac-fp-browser-head { display: flex; align-items: center; gap: var(--ac-space-3); min-height: 40px; padding: var(--ac-space-1) var(--ac-space-2); border-bottom: 1px solid var(--ac-border-soft); }
 .ac-fp-nav { flex: 1; min-width: 0; }
 .ac-fp-crumbs { display: flex; align-items: center; flex-wrap: nowrap; gap: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }

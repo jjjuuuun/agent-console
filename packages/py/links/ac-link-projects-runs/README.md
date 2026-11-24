@@ -21,7 +21,12 @@ Agent Console 프로젝트·실행 연동 모듈. 실행의 `project_id`(불투�
   팀 층 덮어쓰기 반영, `node_id` = `"<팀 노드>/<자식 노드>"`). 자식 Run을 만들기 직전에도 실제로 돌
   자식 그래프로 한 번 더 본다(`check_child` — `mod-runs` `RunChildScoper`, 막히면 자식 Run 없이 노드
   실패 `validation_failed`, `details.issues[0].code`에 `project.outside_folder`).
-- 이 연동을 끄면: `project_id` 기록·거르기는 그대로, 프로젝트 층·정의 출처·사전 점검만 빠진다.
+- 프로젝트 범위를 맡는다는 표시: `accepts_project(project_id)`(`mod-runs` `RunProjectScoper`) — 프로젝트
+  읽기가 있으면 참.
+- 이 연동을 끄면: 맡는 공급자가 없어져, `mod-projects`가 켜진 조립에서는 `mod-runs`가 `project_id`를
+  붙인 실행·대화 턴을 409 `feature_unavailable`(`details.port = "runs.scopes"`)로 막는다(프로젝트 폴더
+  밖에서 돌지 않게, 정책·문구는 `mod-runs` 설정 `unscoped_project_runs`). 프로젝트 없는 실행과
+  `mod-projects`가 없는 조립은 그대로 단독 실행된다.
 - 설정 `modules.options.link-projects-runs`: `layer_id`(기본 `project`), `layer_label`(기본
   `프로젝트`), `unknown_message`(`string.Template`, 변수 `project`), `require_project`(기본 참, 0.3.0부터 — 프로젝트 없이 시작하는 실행·대화 턴은 422 `project.required`. 프로젝트 없는 실행을 쓰려면 `false`로 준다. `ProjectScope(require_project=)` 생성자 기본은 그대로 거짓).
 

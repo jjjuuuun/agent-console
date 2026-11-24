@@ -25,6 +25,13 @@
   color: var(--ac-text, inherit);
   margin-bottom: var(--ac-space-1, 4px);
 }
+/* 선택지(anyOf/oneOf) 가지 안쪽 필드의 제목은 바깥 라벨·선택기와 같은 말이라 눈에는 숨기고 접근 이름만 남긴다 */
+.ac-schema-form .panel-body > .form-group > label.control-label,
+.ac-schema-form .panel-body > .form-group > fieldset > legend {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+/* 그룹(객체·목록) 제목에 붙은 안내문과 그 아래 첫 제목·필드 사이는 토큰 간격으로 띄워 구분한다 */
+.ac-schema-form legend + .field-description { margin-bottom: var(--ac-space-3, 12px); }
 .ac-schema-form .required { color: var(--ac-danger, #c4302b); margin-left: 2px; }
 .ac-schema-form .field-description,
 .ac-schema-form .help-block,

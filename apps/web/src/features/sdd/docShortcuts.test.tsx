@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ShortcutProvider, computeEffectiveKeys, type ShortcutDef } from "@agent-console/ui";
 import { DEFAULT_ROUTES, gotoShortcuts } from "../../shell/routeConfig";
 import { PROJECT_SHORTCUT_DEFS } from "../projects";
-import { DOC_SHORTCUT_DEFS, DOC_SHORTCUT_SCOPE, buildDocShortcuts, useDocShortcuts, type DocShortcutAction } from "./docShortcuts";
+import { DOC_SHORTCUT_DEFS, DOC_SHORTCUT_SCOPE, buildDocShortcuts, useDocShortcuts, useSaveShortcut, type DocShortcutAction } from "./docShortcuts";
 import { TASK_SHORTCUT_DEFS, TASK_SHORTCUT_SCOPE } from "./taskShortcuts";
 
 afterEach(cleanup);
@@ -92,5 +92,52 @@ describe("문서 탭 단축키 동작", () => {
     expect(modeEdit).not.toHaveBeenCalled();
     fireEvent.keyDown(getByLabelText("편집기"), { key: "1", altKey: true });
     expect(modeEdit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Ctrl+S 저장(편집기 밖 포함)", () => {
+  function SaveHost({ onSave, enabled = true, withDialog = false }: { onSave: () => void; enabled?: boolean; withDialog?: boolean }) {
+    useSaveShortcut(onSave, enabled);
+    return (
+      <div>
+        <button type="button">목록 행</button>
+        <textarea aria-label="편집기" />
+        {withDialog ? <div role="dialog" aria-modal="true" aria-label="대화상자" /> : null}
+      </div>
+    );
+  }
+
+  it("목록 행·도구줄 버튼에 포커스가 있어도 저장하고 브라우저 저장 창을 막는다", () => {
+    const onSave = vi.fn();
+    const { getByText } = render(<SaveHost onSave={onSave} />);
+    const notPrevented = fireEvent.keyDown(getByText("목록 행"), { key: "s", ctrlKey: true });
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(notPrevented).toBe(false);
+    fireEvent.keyDown(getByText("목록 행"), { key: "S", metaKey: true });
+    expect(onSave).toHaveBeenCalledTimes(2);
+  });
+
+  it("편집기가 이미 처리한 키는 다시 저장하지 않는다", () => {
+    const onSave = vi.fn();
+    const { getByLabelText } = render(<SaveHost onSave={onSave} />);
+    const editor = getByLabelText("편집기");
+    editor.addEventListener("keydown", (e) => e.preventDefault());
+    fireEvent.keyDown(editor, { key: "s", ctrlKey: true });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("IME 조합 중·대화상자 열림·다른 수식키·꺼짐이면 무시하고 브라우저 창도 막지 않는다", () => {
+    const onSave = vi.fn();
+    const a = render(<SaveHost onSave={onSave} />);
+    fireEvent.keyDown(a.getByText("목록 행"), { key: "s", ctrlKey: true, isComposing: true });
+    fireEvent.keyDown(a.getByText("목록 행"), { key: "s", ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(a.getByText("목록 행"), { key: "s" });
+    a.unmount();
+    const b = render(<SaveHost onSave={onSave} withDialog />);
+    expect(fireEvent.keyDown(b.getByText("목록 행"), { key: "s", ctrlKey: true })).toBe(true);
+    b.unmount();
+    const c = render(<SaveHost onSave={onSave} enabled={false} />);
+    fireEvent.keyDown(c.getByText("목록 행"), { key: "s", ctrlKey: true });
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

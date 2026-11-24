@@ -6,6 +6,8 @@
 - 경로 지킴: 설정 경로가 프로젝트 폴더 밖이면 422 ``project.outside_folder``, 안쪽이면 202.
 - 등록하지 않은 폴더는 실행·기록 뒤에도 파일이 그대로다. 프로젝트 없는 실행은 422.
 - ``link-projects-*``·``mod-projects``를 끄면 그 기능만 409이고 공용으로 새지 않는다.
+- ``link-projects-runs``를 끄면 프로젝트를 붙인 실행·대화 턴은 409 ``feature_unavailable``
+  (5.7R.33t1, K33-10), 프로젝트 없는 실행은 202.
 - 비루프백 서버의 폴더 API 403은 0.0.0.0 바인딩을 하지 않는 안전 규칙상 여기서 확인하지 않고
   단위 테스트 ``test_remote_bind_blocks_folders``(ac-mod-projects)를 근거로 한다.
 """
@@ -185,3 +187,69 @@ def test_runs_link_off_runs_standalone(tmp_path: Path) -> None:
         _seed(client, None)
         response = _run(client, "flow", None)
         assert response.status_code == 202, response.text
+
+
+def _scope_warnings(client: TestClient) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = client.get(f"{API}/server-info").json()["warnings"]
+    return [
+        w
+        for w in warnings
+        if w["code"] == "feature_unavailable" and w.get("details", {}).get("port") == "runs.scopes"
+    ]
+
+
+def test_runs_link_off_blocks_project_runs_and_turns(tmp_path: Path) -> None:
+    """5.7R.33t1(K33-10): 프로젝트가 있는 조립에서 실행 연동을 끄면 프로젝트 실행·대화 턴은 409."""
+    folder = tmp_path / "A"
+    folder.mkdir()
+    with server(make_settings(tmp_path, modules={"disabled": ["link-projects-runs"]})) as client:
+        register_project(client, "pa", folder)
+        _seed(client, "pa")
+        _seed(
+            client, None
+        )  # 같은 id가 라이브러리에도 있다 - 고치기 전에는 이것으로 서버 폴더에서 돌았다
+        assert len(_scope_warnings(client)) == 1  # 화면이 시작 단추를 막는 신호
+
+        blocked = _run(client, "flow", "pa")
+        assert blocked.status_code == 409, blocked.text
+        error = blocked.json()["error"]
+        assert error["code"] == "feature_unavailable"
+        assert error["details"]["port"] == "runs.scopes"
+        assert error["details"]["project_id"] == "pa"
+
+        # 대화 턴도 같은 이유로 막힌다(대화 자체는 프로젝트 기록에 만들 수 있다)
+        conv = client.post(
+            f"{API}/conversations", json={"graph_id": "flow", "project_id": "pa", "title": "t"}
+        )
+        assert conv.status_code == 201, conv.text
+        cid = conv.json()["id"]
+        sent = client.post(f"{API}/conversations/{cid}/messages?project=pa", json={"text": "안녕"})
+        assert sent.status_code == 409, sent.text
+        assert sent.json()["error"]["code"] == "feature_unavailable"
+        assert client.get(f"{API}/conversations/{cid}/turns?project=pa").json() == []
+
+        # 프로젝트 기준 검증도 같은 오류(실행할 수 없는 프로젝트)
+        checked = client.post(f"{API}/graphs/flow/validate?project=pa")
+        assert checked.status_code == 409, checked.text
+
+        # Run은 어디에도 없다(프로젝트 기록·앱 DB 모두)
+        assert _ids(client, "/runs", "pa") == []
+        assert client.get(f"{API}/runs?project=pa&source=app").json() == []
+        assert _ids(client, "/runs", None) == []
+
+        # 프로젝트 없는 단독 실행은 그대로
+        assert _run(client, "flow", None).status_code == 202
+        outside = [p for p in _snapshot(folder) if not p.startswith(".agent-console")]
+        assert outside == []
+
+
+def test_runs_link_on_keeps_project_runs(tmp_path: Path) -> None:
+    folder = tmp_path / "A"
+    folder.mkdir()
+    with server(make_settings(tmp_path)) as client:
+        register_project(client, "pa", folder)
+        _seed(client, "pa")
+        assert _scope_warnings(client) == []
+        response = _run(client, "flow", "pa")
+        assert response.status_code == 202, response.text
+        assert _wait(client, response.json()["id"], "pa")["run"]["project_id"] == "pa"
