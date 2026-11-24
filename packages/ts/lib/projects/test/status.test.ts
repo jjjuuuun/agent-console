@@ -4,6 +4,7 @@ import {
   ABILITY_TABLE,
   DEFAULT_PROJECT_MESSAGES,
   PROJECT_ACTIONS,
+  PROJECT_CONTEXT_RETIRED_TERMS,
   RETIRED_TERMS,
   configDirLabel,
   createProjectsText,
@@ -141,6 +142,9 @@ describe("메시지 표", () => {
     for (const [key, value] of Object.entries(DEFAULT_PROJECT_MESSAGES)) {
       for (const term of RETIRED_TERMS) expect(value, `${key}: ${term}`).not.toContain(term);
     }
+  });
+  test("프로젝트 맥락 폐기어는 폐기어 목록의 일부다", () => {
+    for (const term of PROJECT_CONTEXT_RETIRED_TERMS) expect(RETIRED_TERMS).toContain(term);
   });
   test("덮어쓰기와 모르는 키", () => {
     const text = createProjectsText({ "space.library": "라이브러리" });

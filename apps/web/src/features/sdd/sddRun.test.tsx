@@ -124,6 +124,15 @@ describe("작업 탭: 실행 동작", () => {
     await waitFor(() => expect(router.state.location.search).toContain("doc=d-req"), LONG);
   });
 
+  it("관문이 막은 동작 항목(aria-disabled)을 누르면 서버가 준 문구가 관문 안내로 나온다", async () => {
+    const gated: TaskAction = { integration: "i-x", id: "a-3", label: "관문 프로필", disabled: { severity: "error", code: "sdd.gate_blocked", message: "설계 승인 전", details: { gate_id: "g3", document_ids: ["d-req"] } } };
+    setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { listTaskActions: vi.fn(async () => [gated]) } });
+    const menu = await openMenu();
+    fireEvent.click(await within(menu).findByRole("menuitem", { name: /관문 프로필/ }, LONG));
+    expect(await screen.findByText("관문이 막고 있습니다", {}, LONG)).toBeTruthy();
+    expect(screen.getAllByText("설계 승인 전").length).toBeGreaterThan(0);
+  });
+
   it("200 응답의 blocked 결과도 관문 안내로 보인다", async () => {
     const run = vi.fn(async () => ({ task_key: "T1", status: "blocked", issue: { severity: "error", code: "sdd.gate_blocked", message: "결과로 온 관문 문구", details: { gate_id: "g2" } } }));
     setup("/specs/sp1?prj=p1&tab=tasks", { sdd: { runTaskAction: run } });

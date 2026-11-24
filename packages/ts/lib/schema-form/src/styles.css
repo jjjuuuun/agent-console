@@ -237,7 +237,13 @@ p.ac-sf-example { font-family: var(--ac-font-mono, ui-monospace, monospace); }
 
 /* --- 도움말 말풍선(라벨 호버·포커스) · 불리언 한 줄 · 속성 추가 단추 글자 (F10/F11) --- */
 .ac-sf-help-host { position: relative; }
-.ac-sf-help-host[data-help] .ac-sf-help-target { text-decoration: underline dotted; text-decoration-color: var(--ac-text-subtle, var(--ac-text-muted, currentColor)); text-underline-offset: 3px; text-decoration-thickness: 1px; cursor: help; }
+/* 도움말이 있는 라벨: 밑줄(링크·약어처럼 보임) 대신 라벨 뒤 작은 "?" 원으로 표시한다. 글자는 읽히지 않게(alt 빈 문자열) */
+.ac-sf-help-host[data-help] .ac-sf-help-target { cursor: help; }
+.ac-sf-help-host[data-help] .ac-sf-help-target::after {
+  content: "?" / ""; display: inline-block; box-sizing: border-box; width: 14px; height: 14px; margin-inline-start: 6px; vertical-align: 1px;
+  border: 1px solid var(--ac-text-subtle, var(--ac-text-muted, currentColor)); border-radius: 50%;
+  color: var(--ac-text-subtle, var(--ac-text-muted, currentColor)); font-size: 10px; font-weight: 600; line-height: 12px; text-align: center; text-decoration: none;
+}
 .ac-sf-tip {
   position: absolute; z-index: var(--ac-z-popover, 30); left: 0; bottom: calc(100% + 4px);
   display: flex; flex-direction: column; gap: 2px; width: max-content; max-width: min(320px, 80vw);
@@ -259,3 +265,9 @@ p.ac-sf-example { font-family: var(--ac-font-mono, ui-monospace, monospace); }
 .ac-schema-form .ac-sf-choice > input { margin: 6px 0 0; width: 16px; height: 16px; min-height: 0; padding: 0; }
 .ac-sf-choice-text { min-width: 0; font-size: var(--ac-text-sm, 13px); font-weight: 600; line-height: 20px; padding: 4px 0; overflow-wrap: anywhere; word-break: keep-all; }
 .ac-schema-form button.ac-sf-iconbtn:has(.ac-sf-iconbtn-text) { display: inline-flex; align-items: center; gap: var(--ac-space-1, 4px); }
+
+/* 체크박스 묶음 머리의 "모두 선택 · 모두 해제" 텍스트 버튼 */
+.ac-sf-checkgroup-actions { display: flex; gap: var(--ac-space-3); margin-bottom: var(--ac-space-1); }
+.ac-schema-form button.ac-sf-linkbtn { padding: 0; border: 0; background: none; color: var(--ac-accent); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); text-decoration: underline; cursor: pointer; min-height: 0; height: auto; box-shadow: none; }
+.ac-schema-form button.ac-sf-linkbtn:hover:not(:disabled) { background: none; }
+.ac-schema-form button.ac-sf-linkbtn:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; border-radius: var(--ac-radius-sm); }

@@ -114,6 +114,8 @@ function WikiRulesBody() {
                   <button type="button" className="wiki-rules-row" aria-current={x.id === picked ? "true" : undefined} onClick={() => select(x.id)}>
                     <span className="ac-ellipsis"><strong>{nameOf(x)}</strong></span>
                     <span className="app-muted">{t.rowSub(x.counts?.write ?? 0, x.counts?.lint ?? 0, x.counts?.templates ?? 0)}</span>
+                    {x.description !== undefined && x.description !== "" ? <span className="app-muted ac-ellipsis" title={x.description}>{x.description}</span> : null}
+                    <span className="app-muted ac-mono-wrap ac-ellipsis wiki-mono" title={x.id}>{x.id}</span>
                   </button>
                   {action === null ? null : (
                     <Button size="sm" aria-disabled={action.disabled === true || undefined} title={action.title} aria-label={`${action.label}: ${nameOf(x)}`} onClick={() => { if (action.disabled !== true) action.onSelect(); }}>

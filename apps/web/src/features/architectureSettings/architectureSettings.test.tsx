@@ -9,6 +9,7 @@ import { ApiProvider } from "../../app/ApiContext";
 import { createAppQueryClient } from "../../app/queries";
 import { QueryClientProvider } from "@tanstack/react-query";
 import "./index";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 const LONG = { timeout: 15_000 };
@@ -24,6 +25,9 @@ const profileList: ArchitectureProfileList = {
   include_defaults: true,
 };
 const issue = (severity: Issue["severity"], message: string, path?: string): Issue => ({ severity, code: "x", message, ...(path ? { path } : {}) });
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("ProfileEditor: 저장 전 검사", () => {
   const body = (check: () => Promise<{ issues: Issue[] }>, over: Partial<Parameters<typeof ProfileEditor>[0]> = {}) => (

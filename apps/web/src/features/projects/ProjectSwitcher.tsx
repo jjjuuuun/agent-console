@@ -30,7 +30,7 @@ function initialOf(project: Project | undefined): string {
 
 /**
  * 프로젝트 전환기(표현 전용): 트리거 + 검색 + 목록 + [+ 새 프로젝트…]·[관리…].
- * 데이터와 콜백은 props다. 프로젝트가 0개면 [프로젝트 만들기] 버튼 하나만 그린다.
+ * 데이터와 콜백은 props다. 프로젝트가 0개면 [폴더 추가] 버튼 하나만 그린다.
  * 키보드: 트리거 ↓ 또는 Enter로 열기, 목록 ↑↓·Home·End 이동, Enter 선택, Esc 닫기(트리거로 포커스 복귀).
  */
 export function ProjectSwitcher({ projects, current, onSelect, onCreate, onManage, collapsed = false, shortcutHint, open: openProp, onOpenChange }: ProjectSwitcherProps) {

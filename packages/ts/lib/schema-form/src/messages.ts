@@ -35,6 +35,8 @@ export const DEFAULT_MESSAGES: SchemaFormMessages = {
   itemRemoved: "항목이 삭제되었습니다",
   yes: "켜짐",
   no: "꺼짐",
+  selectAll: "모두 선택",
+  clearAll: "모두 해제",
   overrideHere: "이 층에서 덮어쓰기",
   inheritBack: "상속으로 되돌리기",
   setHere: "이 층에서 지정",

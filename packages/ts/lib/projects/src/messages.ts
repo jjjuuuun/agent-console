@@ -131,7 +131,7 @@ export const DEFAULT_PROJECT_MESSAGES = {
 
 export type ProjectMessageKey = keyof typeof DEFAULT_PROJECT_MESSAGES;
 
-/** 화면 문구에 쓰지 않는 말(U-16). 5.7R.35 정적 검사가 읽는 데이터이며, 이 패키지 테스트는 기본 문구가 이 말을 쓰지 않는지 확인한다. */
+/** 화면 문구에 쓰지 않는 말(U-16). 5.7R.35 정적 검사(이 패키지 테스트·앱 메시지 표 검사)가 읽는 데이터다. */
 export const RETIRED_TERMS: readonly string[] = [
   "작업 폴더",
   "작업 경로",
@@ -143,6 +143,12 @@ export const RETIRED_TERMS: readonly string[] = [
   "가져온 구성",
   "원본 없음",
 ];
+
+/**
+ * `RETIRED_TERMS` 가운데 프로젝트 문구에서만 폐기어인 말. 다른 기능에서는 일반 뜻(켜짐·목록에서 제거)으로 쓰이므로,
+ * 앱 전체 메시지 표를 보는 정적 검사는 이 말을 프로젝트 기능 문구에만 적용한다. 데이터라 바꿀 수 있다.
+ */
+export const PROJECT_CONTEXT_RETIRED_TERMS: readonly string[] = ["사용 중", "빼기"];
 
 export type MessageParams = Readonly<Record<string, string | number>>;
 

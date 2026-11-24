@@ -12,7 +12,7 @@ import { describeError } from "../../app/errors";
 import { useDelegationStrategies } from "../settings";
 import { messages as appMessages } from "../../app/messages";
 import { useConnectionStatus } from "../../app/useConnectionStatus";
-import { useStorage } from "../../app/StorageContext";
+import { useSessionStorage, useStorage } from "../../app/StorageContext";
 import { LINK_PART_IDS, useLinkPart } from "../../modules";
 import { delegationMessages as dm } from "../delegation";
 import { countHandled, failedChildOf, hasRunningChild } from "./lib/progress";
@@ -62,6 +62,9 @@ export interface ChatPaneProps {
 const NO_PROGRESS: Record<string, never[]> = {};
 
 type Notice = { text: string; tone: "info" | "warning" | "danger"; fix?: Fix | undefined };
+
+/** 백엔드 안내 띠를 이 탭 세션 동안 숨긴 표시(세션 저장소 키) */
+const badgeNoteKey = "chat.backendNote.hiddenForSession";
 
 /** 열린 대화 하나(컨테이너): 데이터·실시간 연결을 조립하고 `@agent-console/chat`의 표현 컴포넌트에 넘긴다. */
 export function ChatPane(props: ChatPaneProps) {
@@ -133,8 +136,10 @@ export function ChatPane(props: ChatPaneProps) {
     }
     return undefined;
   }, [graph.data, naming, backendById, defaultBackend, teamBackend]);
-  const badgeNoteKey = `chat.backendNote.dismissed`;
-  const [badgeNoteDismissed, setBadgeNoteDismissed] = useState(() => storage.get(badgeNoteKey) === "1");
+  const tabStorage = useSessionStorage();
+  const [badgeNoteDismissed, setBadgeNoteDismissed] = useState(() => tabStorage.get(badgeNoteKey) === "1");
+  // 같은 탭의 다른 대화로 옮겨도 숨김을 유지한다(컴포넌트가 재사용되어도 저장소 값을 다시 읽는다).
+  useEffect(() => setBadgeNoteDismissed(tabStorage.get(badgeNoteKey) === "1"), [tabStorage, id]);
   const [changingBackend, setChangingBackend] = useState(false);
   const labelOf = useCallback(
     (i: Interaction) => {
@@ -505,7 +510,7 @@ export function ChatPane(props: ChatPaneProps) {
           actions={
             <>
               <Button size="sm" onClick={() => { setChooserError(undefined); setChangingBackend(true); }}>{t.composer.backendChange}</Button>
-              <Button size="sm" variant="ghost" aria-label={t.composer.dismissNote} onClick={() => { storage.set(badgeNoteKey, "1"); setBadgeNoteDismissed(true); }}>×</Button>
+              <Button size="sm" variant="ghost" onClick={() => { tabStorage.set(badgeNoteKey, "1"); setBadgeNoteDismissed(true); }}>{t.composer.hideNoteForSession}</Button>
             </>
           }
         >

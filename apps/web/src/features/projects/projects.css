@@ -59,9 +59,6 @@
 .prj-manage-body { min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .prj-edit-head, .prj-edit-actions { display: flex; align-items: center; gap: var(--ac-space-2); flex-wrap: wrap; }
 .prj-edit-actions { justify-content: space-between; }
-.prj-issue { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ac-space-2); }
-.prj-issue > span { flex: 1 1 16rem; min-width: 0; }
-.prj-issue > .ac-btn { flex: none; }
 
 /* 첫 프로젝트 안내 */
 .prj-guide { border: 1px solid var(--ac-border); border-radius: var(--ac-radius-md); background: var(--ac-surface-2); padding: var(--ac-space-3); display: flex; flex-direction: column; gap: var(--ac-space-2); }

@@ -105,6 +105,9 @@
     "interrupted": "warning"
   },
   "planGraphAutoLimit": 400,
+  "syntaxRules": {
+    "key": "syntax"
+  },
   "automationRules": {
     "key": "automation",
     "enabled": "enabled",

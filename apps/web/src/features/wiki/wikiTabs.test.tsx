@@ -65,7 +65,7 @@ describe("그래프 탭", () => {
 
   it("잘렸으면 서버 총 개수로 안내하고, 총 개수가 없으면 지어내지 않는다", async () => {
     const first = setup(base("graph"), fixture({ wiki: { getWikiGraph: vi.fn(async () => ({ ...GRAPH, truncated: true, total: 900 })) } }));
-    expect(await screen.findByText("900개 중 3개만 보입니다", {}, LONG)).toBeTruthy();
+    expect(await screen.findByText("노드 900개 중 3개만 보입니다", {}, LONG)).toBeTruthy();
     first.unmount();
     cleanup();
     setup(base("graph"), fixture({ wiki: { getWikiGraph: vi.fn(async () => ({ ...GRAPH, truncated: true })) } }));

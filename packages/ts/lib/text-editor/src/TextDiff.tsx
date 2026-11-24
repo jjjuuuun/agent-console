@@ -1,22 +1,15 @@
 import { goToNextChunk, goToPreviousChunk, MergeView, unifiedMergeView } from "@codemirror/merge";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { TextDiffMessagesContext, type TextDiffMessages } from "./diffMessages";
 import { resolveLanguage } from "./languages";
 import { editorHighlight, editorTheme } from "./theme";
 
 /** 비교 보기 방식. `auto`는 폭이 `unifiedBelow`px 미만이면 통합, 아니면 나란히. */
 export type TextDiffMode = "split" | "unified" | "auto";
 
-export interface TextDiffMessages {
-  /** 접힌 구간 안내. `$`는 줄 수로 바뀐다. 예: "변경 없는 $줄 — 펼치기" */
-  unchangedLines: string;
-  /** 도구 줄의 보기 전환 라벨 */
-  split: string;
-  unified: string;
-  /** 도구 줄 접근성 이름 */
-  toolbar: string;
-}
+export type { TextDiffMessages };
 
 export interface TextDiffProps {
   /** 이전(왼쪽) 내용 */
@@ -50,6 +43,8 @@ const DEFAULT_MESSAGES: TextDiffMessages = {
   split: "Side by side",
   unified: "Unified",
   toolbar: "Diff view",
+  before: "before",
+  after: "after",
 };
 
 const chunkKeys = keymap.of([
@@ -91,7 +86,8 @@ export function TextDiff({
   messages,
   className,
 }: TextDiffProps) {
-  const text = { ...DEFAULT_MESSAGES, ...messages };
+  const injected = useContext(TextDiffMessagesContext);
+  const text = { ...DEFAULT_MESSAGES, ...injected, ...messages };
   const host = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
   const [picked, setPicked] = useState<{ forMode: TextDiffMode; value: "split" | "unified" } | null>(null);
@@ -131,8 +127,8 @@ export function TextDiff({
     let destroy: () => void;
     if (effective === "split") {
       const view = new MergeView({
-        a: { doc: before, extensions: sideExtensions(language, `${ariaLabel} (before)`, phrases) },
-        b: { doc: after, extensions: sideExtensions(language, `${ariaLabel} (after)`, phrases) },
+        a: { doc: before, extensions: sideExtensions(language, `${ariaLabel} (${text.before})`, phrases) },
+        b: { doc: after, extensions: sideExtensions(language, `${ariaLabel} (${text.after})`, phrases) },
         parent,
         gutter: true,
         highlightChanges: true,
@@ -160,7 +156,7 @@ export function TextDiff({
     }
     return destroy;
     // 메시지 객체는 매 렌더 새로 만들어지므로 문자열만 의존한다.
-  }, [before, after, language, ariaLabel, effective, context, text.unchangedLines]);
+  }, [before, after, language, ariaLabel, effective, context, text.unchangedLines, text.before, text.after]);
 
   // 접힌 구간("변경 없는 N줄")은 라이브러리가 클릭 전용 div로 그린다. 키보드로도 펼치도록 버튼 역할·탭 정지·Enter/Space를 입힌다.
   useEffect(() => {

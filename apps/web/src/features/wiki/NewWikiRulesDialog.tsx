@@ -38,6 +38,9 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
   const missing = name.trim() === "";
   const defId = useDefinitionId(name, existingIds, fallbackId ?? t.fallbackId);
 
+  // id가 규칙에 안 맞거나 겹치면 제출이 막힌다: disabled 대신 aria-disabled + 칸 아래 오류 문장 연결
+  const idBlocked = defId.problem !== undefined;
+
   const submit = async () => {
     setTouched(true);
     if (busy || missing || defId.invalid) return;
@@ -63,7 +66,7 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
       actions={
         <>
           <Button onClick={close} disabled={busy}>{t.cancel}</Button>
-          <Button variant="primary" loading={busy} onClick={() => void submit()}>{busy ? t.creating : t.create}</Button>
+          <Button variant="primary" loading={busy} aria-disabled={idBlocked || undefined} aria-describedby={idBlocked ? `${uid}-idnote` : undefined} onClick={() => void submit()}>{busy ? t.creating : t.create}</Button>
         </>
       }
     >
@@ -86,7 +89,7 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
           />
           {touched && missing ? <span className="app-field-error" role="alert">{t.needName}</span> : null}
         </label>
-        <DefinitionIdField id={defId.id} problem={defId.problem} onChange={defId.setId} inputId={`${uid}-id`} />
+        <DefinitionIdField id={defId.id} problem={defId.problem} onChange={defId.setId} inputId={`${uid}-id`} noteId={`${uid}-idnote`} />
         <Disclosure summary={t.advanced}>
           <label className="wiki-field" htmlFor={`${uid}-desc`}>
             <span className="wiki-label">{t.description}</span>

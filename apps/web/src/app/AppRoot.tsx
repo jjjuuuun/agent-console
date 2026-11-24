@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { RouterProvider, type createBrowserRouter } from "react-router";
+import { TextDiffMessagesProvider } from "@agent-console/text-editor/messages";
 import { IconRegistryProvider, THEME_CYCLE, ThemeProvider, ToastProvider, useToast, type ThemeChoice } from "@agent-console/ui";
 import { ApiProvider } from "./ApiContext";
 import { DEFAULT_CONFIG_WIDGETS, DEFAULT_LINK_PARTS } from "../links";
@@ -15,8 +16,8 @@ import { describeError } from "./errors";
 import { appIcons } from "./icons";
 import { messages as m } from "./messages";
 import { createAppQueryClient } from "./queries";
-import { appStorage, type SafeStorage } from "./storage";
-import { StorageProvider } from "./StorageContext";
+import { appSessionStorage, appStorage, type SafeStorage } from "./storage";
+import { SessionStorageProvider, StorageProvider } from "./StorageContext";
 import { ThemeColorSync } from "./themeColor";
 import { useDelayed } from "./useDelayed";
 
@@ -43,6 +44,8 @@ export interface AppRootProps {
   configWidgets?: ConfigWidgetTable;
   router: ReturnType<typeof createBrowserRouter>;
   storage?: SafeStorage;
+  /** 탭 세션 범위 저장소(생략 = sessionStorage). 테스트는 메모리 저장소. */
+  sessionStorage?: SafeStorage;
   /** 새로고침 동작(테스트 주입) */
   onReload?: () => void;
   /** 질의 클라이언트(테스트 주입). 생략하면 앱 기본 */
@@ -82,7 +85,7 @@ function createSignalBus() {
 }
 
 /** 앱 부팅(주소·토큰 획득) -> 테마·질의·토스트·API 컨텍스트 -> 라우터. */
-export function AppRoot({ createClients, router, storage = appStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY }: AppRootProps) {
+export function AppRoot({ createClients, router, storage = appStorage, sessionStorage: tabStorage = appSessionStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY }: AppRootProps) {
   const [bootRetry] = useState(bootRetryProp); // 정책은 마운트 때 한 번 고정(인라인 객체가 효과를 다시 돌리지 않게)
   const [attempt, setAttempt] = useState(0);
   const [boot, setBoot] = useState<Boot | null>(null);
@@ -141,7 +144,9 @@ export function AppRoot({ createClients, router, storage = appStorage, onReload 
     <ThemeProvider theme={theme} onThemeChange={onThemeChange}>
       <ThemeColorSync />
       <IconRegistryProvider icons={appIcons}>
-        <StorageProvider storage={storage}>{children}</StorageProvider>
+        <TextDiffMessagesProvider messages={m.textDiff}>
+          <StorageProvider storage={storage}><SessionStorageProvider storage={tabStorage}>{children}</SessionStorageProvider></StorageProvider>
+        </TextDiffMessagesProvider>
       </IconRegistryProvider>
     </ThemeProvider>
   );

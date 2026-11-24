@@ -7,6 +7,8 @@
  */
 @import "@agent-console/markdown-doc/styles.css";
 
+/* 아이콘 마스크 변수는 칩처럼 `.ac-wk-root` 밖(앱 머리·카드)에서도 쓰이므로 :root에도 둔다. */
+:root,
 .ac-wk-root {
   --ac-wk-tree-row-h: var(--ac-wiki-tree-row-h, 28px);
   --ac-wk-prose-max-w: var(--ac-wiki-prose-max-w, 800px);
@@ -169,6 +171,8 @@
 .ac-wk-handle { opacity: 0; pointer-events: none; width: 1px; height: 1px; min-width: 0; min-height: 0; }
 .ac-wk-gedge { color: var(--ac-edge, var(--ac-border-strong)); }
 .ac-wk-gedge .react-flow__edge-path { stroke: var(--ac-edge, var(--ac-border-strong)); stroke-width: 1.5; fill: none; }
+.ac-wk-garrow { fill: var(--ac-edge, var(--ac-border-strong)); }
+.ac-wk-garrow[data-center] { fill: var(--ac-edge-selected, var(--ac-accent)); }
 .ac-wk-gedge[data-center] { color: var(--ac-edge-selected, var(--ac-accent)); }
 .ac-wk-gedge[data-center] .react-flow__edge-path { stroke: var(--ac-edge-selected, var(--ac-accent)); stroke-width: 2.5; }
 .ac-wk-gcount { position: absolute; padding: 0 4px; border: 1px solid var(--ac-border); border-radius: 4px; background: var(--ac-surface-1); font-size: 12px; line-height: 16px; pointer-events: none; }

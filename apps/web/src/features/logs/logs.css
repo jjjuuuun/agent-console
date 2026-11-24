@@ -214,3 +214,7 @@
 .logs-viewrow .logs-segments { margin-right: var(--ac-space-1); }
 /* 헤더 [⋯] 메뉴가 바로 아래 탭 줄(같은 sticky 층)에 가려지지 않게 헤더를 한 층 올린다 */
 .logs-frame .ac-pageheader { z-index: calc(var(--ac-z-header, 10) + 1); }
+/* 출처 카드 제목줄: 텍스트 칩 대신 자물쇠 아이콘·지정됨 점(5.7R.42) */
+.logs-source-icon { display: inline-flex; align-items: center; color: var(--ac-text-muted); }
+.logs-source-dot { display: inline-block; width: 6px; height: 6px; border-radius: var(--ac-radius-full); background: var(--ac-accent); }
+.logs-source-default { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }

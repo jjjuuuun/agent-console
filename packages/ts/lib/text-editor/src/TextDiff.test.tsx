@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TextDiff } from "./index";
+import { TextDiff, TextDiffMessagesProvider } from "./index";
 
 afterEach(cleanup);
 
@@ -81,5 +81,15 @@ describe("TextDiff", () => {
     rerender(<TextDiff before="x" after="zzz" ariaLabel="t" mode="split" />);
     expect(container.querySelectorAll(".cm-content")[1]?.textContent).toContain("zzz");
     expect(container.querySelectorAll(".cm-mergeView")).toHaveLength(1);
+  });
+
+  it("공급자가 준 문구를 기본으로 쓰고 prop이 우선한다", () => {
+    render(
+      <TextDiffMessagesProvider messages={{ split: "나란히(공급)", unified: "통합(공급)" }}>
+        <TextDiff before={BEFORE} after={AFTER} ariaLabel="본문 비교" mode="split" messages={{ unified: "통합(prop)" }} />
+      </TextDiffMessagesProvider>,
+    );
+    expect(screen.getByRole("button", { name: "나란히(공급)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "통합(prop)" })).toBeTruthy();
   });
 });

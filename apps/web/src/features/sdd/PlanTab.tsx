@@ -4,7 +4,7 @@
  * 작업이 많으면(`PLAN_GRAPH_AUTO_LIMIT`) 그래프를 자동으로 그리지 않고 글 목록을 권한다.
  */
 import { useMemo, useState } from "react";
-import { Banner, Button, EmptyState } from "@agent-console/ui";
+import { Banner, Button, EmptyState, Switch } from "@agent-console/ui";
 import { PlanBundles, PlanGraph } from "@agent-console/sdd-view";
 import type { ParsedTask } from "@agent-console/contracts/sdd";
 import { ListSkeleton, FailureBlock } from "./parts";
@@ -25,6 +25,7 @@ export function PlanTab({ specId, view, ctx, goTab }: SddTabProps) {
   const runner = useTaskRunner({ specId, ctx });
   const [selected, setSelected] = useState<string | null>(null);
   const [drawBig, setDrawBig] = useState(false);
+  const [onlyCritical, setOnlyCritical] = useState(false);
 
   const tasks = useMemo(() => view.index?.tasks ?? [], [view.index?.tasks]);
   const statuses = useMemo(() => view.task_statuses ?? [], [view.task_statuses]);
@@ -32,10 +33,10 @@ export function PlanTab({ specId, view, ctx, goTab }: SddTabProps) {
   const doneIds = useMemo(() => new Set(statuses.filter((s) => s.done === true).map((s) => s.id)), [statuses]);
   const plan = planQ.data;
 
-  const inPlan = useMemo(() => new Set([...(plan?.layers ?? []).flat(), ...(plan?.ready ?? []), ...(plan?.blocked ?? []), ...(plan?.cycles ?? []).flat()]), [plan]);
-  const hiddenDone = tasks.filter((t) => doneIds.has(t.status) && !inPlan.has(t.key)).length;
   const cycleKeys = useMemo(() => new Set((plan?.cycles ?? []).flat()), [plan]);
   const remaining = tasks.filter((t) => !doneIds.has(t.status));
+  // 그래프는 끝나지 않은 작업만 그린다. 그리지 않은 완료 작업 수를 도구줄에 알린다
+  const hiddenDone = tasks.length - remaining.length;
   const docTitles = useMemo(() => Object.fromEntries((view.spec.documents ?? []).map((d) => [d.id, d.title])), [view.spec.documents]);
   const openRules = () => goTab("rules");
   const openTask = (key: string) => goTab("tasks", { [P.task]: key });
@@ -66,22 +67,24 @@ export function PlanTab({ specId, view, ctx, goTab }: SddTabProps) {
       {cycleKeys.size > 0 ? <Banner tone="danger" data-testid="sdd-plan-cycles">{m.plan.cycleBar(cycleKeys.size)}</Banner> : null}
       <div className="sdd-plan-body">
         <div className="sdd-plan-graph">
-          <div className="sdd-toolbar">
-            {hiddenDone > 0 ? <span className="app-muted sdd-note">{m.plan.hiddenDone(hiddenDone)}</span> : null}
+          <div className="sdd-toolbar" role="group" aria-label={m.plan.graphLabel}>
+            <Switch checked={onlyCritical} onChange={setOnlyCritical} label={m.plan.onlyCritical} onText={m.on} offText={m.off} />
             {pick === undefined ? null : (
               <span className="sdd-inline" role="status">
                 <span>{m.plan.selected(pick.title ?? pick.key)}</span>
                 <Button size="sm" onClick={() => openTask(pick.key)}>{m.plan.openTask}</Button>
               </span>
             )}
+            <span className="sdd-spacer" />
+            {hiddenDone > 0 ? <span className="app-muted sdd-note" data-testid="sdd-plan-hidden-done">{m.plan.hiddenDone(hiddenDone)}</span> : null}
           </div>
           {tooBig ? (
             <div className="sdd-state" data-testid="sdd-plan-toobig">
               <p role="status">{m.plan.tooBig(remaining.length)}</p>
-              <Button size="sm" onClick={() => setDrawBig(true)}>{m.plan.drawAnyway}</Button>
+              <Button size="sm" onClick={() => { setDrawBig(true); setOnlyCritical(true); }}>{m.plan.drawAnyway}</Button>
             </div>
           ) : (
-            <PlanGraph plan={plan ?? {}} tasks={remaining} statuses={statuses} selectedKey={selected} onSelect={setSelected} height={420} messages={viewMessages} />
+            <PlanGraph plan={plan ?? {}} tasks={remaining} statuses={statuses} selectedKey={selected} onSelect={setSelected} height={420} onlyCritical={onlyCritical} messages={viewMessages} />
           )}
         </div>
         <aside className="sdd-plan-side" aria-label={m.plan.bundles}>

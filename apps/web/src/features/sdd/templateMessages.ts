@@ -10,7 +10,7 @@ export const templateMessages = {
     body: "문서 틀은 스펙을 만들 때 문서 목록과 규칙을 채워 줍니다. 직접 만들거나 프로젝트의 문서에서 ‘틀로 저장’하세요.",
     hint: "위쪽의 [새 문서 틀]로 만들 수 있습니다.",
   },
-  list: { modified: (when: string) => `수정 ${when}`, rowActions: "문서 틀 동작" },
+  list: { count: (n: number) => `문서 틀 ${n}개`, modified: (when: string) => `수정 ${when}`, rowActions: "문서 틀 동작" },
   create: {
     title: "새 문서 틀",
     name: "이름",

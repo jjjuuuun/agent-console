@@ -15,6 +15,7 @@ import { buildKindRows, entriesByKind, kindActions } from "./kindRows";
 import { ScopeKindWidget } from "./ScopeKindWidget";
 import { AutoTargets } from "./AutoTargets";
 import { getContractSchema } from "@agent-console/contracts";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 vi.setConfig({ testTimeout: 40_000 });
@@ -47,6 +48,9 @@ function mount(modules: ModuleInfo[], settings: Record<string, unknown> = {}, re
   return r;
 }
 const MEM = [mod("m-s", ["settings"]), mod("m-mem", ["memory"])];
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("kindRows(순수 함수)", () => {
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);

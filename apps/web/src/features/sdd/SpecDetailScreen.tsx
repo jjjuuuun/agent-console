@@ -176,7 +176,12 @@ export function SpecDetailScreen({ panels = DEFAULT_TAB_PANELS }: SpecDetailScre
     <div className="app-screen-frame sdd-screen">
       <PageHeader
         title={specName}
-        status={<Link to={specsPath()} className="app-back">← {m.back}</Link>}
+        leading={
+          <nav className="sdd-crumb" aria-label={m.head.crumbLabel}>
+            <Link to={specsPath()} className="app-back">← {m.back}</Link>
+            <span className="ac-breadcrumb-sep" aria-hidden="true">/</span>
+          </nav>
+        }
         actions={
           <>
             <ProjectChip />

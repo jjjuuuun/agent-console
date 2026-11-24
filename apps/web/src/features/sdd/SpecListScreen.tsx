@@ -78,7 +78,8 @@ export function SpecListScreen() {
   const [states, setStates] = useState<ReadonlySet<string>>(new Set());
   const [readyOnly, setReadyOnly] = useState(false);
   const templates = useSpecTemplates(dialog?.kind === "new");
-  const libraryImport = useLibraryTemplateImport(dialog?.kind === "new");
+  const [importedTemplate, setImportedTemplate] = useState<string | null>(null);
+  const libraryImport = useLibraryTemplateImport(dialog?.kind === "new", setImportedTemplate);
   const specs = useMemo(() => list.data ?? [], [list.data]);
   const stateOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -165,7 +166,7 @@ export function SpecListScreen() {
             <>
               <ProjectChip />
               <GuardedButton blockedReason={writeBlock} onClick={() => setDialog({ kind: "import", name: "" })}>{m.list.import}</GuardedButton>
-              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => setDialog({ kind: "new", name: "" })}>{m.list.new}</GuardedButton>
+              <GuardedButton variant="primary" blockedReason={writeBlock} onClick={() => { setImportedTemplate(null); setDialog({ kind: "new", name: "" }); }}>{m.list.new}</GuardedButton>
             </>
           )
         }
@@ -235,6 +236,7 @@ export function SpecListScreen() {
           initialTemplate={storage.get(SDD_STORAGE.lastTemplate(ctx.projectId))}
           initialName={dialog.name}
           templatesHref={templatesHref}
+          {...(importedTemplate === null ? {} : { selectTemplate: importedTemplate })}
           blockedReason={writeBlock}
           onTemplateChosen={(id) => (id === null ? storage.remove(SDD_STORAGE.lastTemplate(ctx.projectId)) : storage.set(SDD_STORAGE.lastTemplate(ctx.projectId), id))}
           onImport={(name) => setDialog({ kind: "import", name })}

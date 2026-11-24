@@ -6,4 +6,5 @@ export type { TextEditorHandle, TextEditorMessages, TextMark, TextEditorProps, T
 export { jsonParseError, resolveLanguage } from "./languages";
 export type { EditorLanguage } from "./languages";
 export { TextDiff } from "./TextDiff";
+export { TextDiffMessagesProvider } from "./diffMessages";
 export type { TextDiffMessages, TextDiffMode, TextDiffProps } from "./TextDiff";

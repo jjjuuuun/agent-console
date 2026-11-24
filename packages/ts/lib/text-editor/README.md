@@ -63,6 +63,7 @@ import { TextDiff } from "@agent-console/text-editor";
 - 두 문자열만 받는다(저장·API를 모른다). `F3` / `Shift+F3` = 다음/이전 변경 블록(편집기 포커스 시). 줄 번호·`--ac-font-mono`.
 - 도구 줄(`showToolbar`)의 전환 버튼은 `aria-pressed`. 접힌 구간은 `@codemirror/merge`의 클릭 위젯이다(키보드로는 펼칠 수 없음 — 접지 않으려면 `context={-1}`).
 - 공개 API 추가: `TextDiff`, 타입 `TextDiffProps`/`TextDiffMessages`/`TextDiffMode`.
+- 기본 문구는 영어다. 앱은 `TextDiffMessagesProvider`(가벼운 부분 경로 `@agent-console/text-editor/messages`, CodeMirror를 끌어오지 않는다)를 루트에 한 번 두어 자기 언어 문구를 주입한다. 개별 `messages` prop이 우선한다.
 
 ## 의존성 (무엇을 / 왜 / 대안)
 - `@codemirror/state`·`view`·`commands`·`language`: 편집기 코어 — 가볍고 IME 처리가 성숙함. 대안: Monaco(무거움), textarea(구문 강조·확장 부족).

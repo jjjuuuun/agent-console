@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InlineMarkdown, SchemaForm, type UiSchema } from "@agent-console/schema-form";
-import { Button, ConfirmDialog, Disclosure, StatusChip, useToast } from "@agent-console/ui";
+import { Button, ConfirmDialog, Disclosure, Icon, StatusChip, useToast } from "@agent-console/ui";
 import type { LogSourceInfo, LogSourceSetting, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
 import { messages as m } from "../../../../app/messages";
@@ -24,12 +24,16 @@ export interface LogsSourcesBlockProps extends SectionEditProps {
 }
 
 /**
- * 출처의 켜짐 값: 설정에 `enabled`가 있으면 그 값, 없으면 "기본값"이다. 기본값은 서버가 준 유효 값(`info.enabled`,
- * 이 PC에 로그가 있어 자동으로 켜진 것 포함)을 불러올 때 한 번 기억해 둔 것(`baseline`)이고, 모르면 디스크립터 `default_enabled`다.
- * (저장된 설정에 이미 `enabled`가 있었다면 `info.enabled`는 기본값이 아니라 그 값이라 기억하지 않는다.)
+ * 설정에 `enabled`가 없을 때의 값(= [↺ 기본값으로]가 돌아가는 값). 읽는 순서: 서버가 준 `default_effective`(자동 켜기 반영) →
+ * 필드 없는 옛 응답이면 불러올 때 기억한 값(`baseline`) → 디스크립터 `default_enabled`.
  */
+export function defaultEnabled(info: LogSourceInfo, baseline?: ReadonlyMap<string, boolean>): boolean {
+  return info.default_effective ?? baseline?.get(info.descriptor.id) ?? info.descriptor.default_enabled ?? false;
+}
+
+/** 출처의 켜짐 값: 설정에 `enabled`가 있으면 그 값, 없으면 `defaultEnabled`. */
 export function effectiveEnabled(info: LogSourceInfo, s: LogSourceSetting | undefined, baseline?: ReadonlyMap<string, boolean>): boolean {
-  return s?.enabled ?? baseline?.get(info.descriptor.id) ?? info.descriptor.default_enabled ?? false;
+  return s?.enabled ?? defaultEnabled(info, baseline);
 }
 
 /** 수집 출처: 서버 디스크립터 카드(스위치·상태·[지금 수집]·설정 폼). 출처 이름을 코드에 두지 않는다. */
@@ -60,7 +64,8 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
     // id만 남은 항목(= 아무것도 지정하지 않음)은 없앤다
     setSources(list.filter((s) => s.id !== id || Object.keys(s).some((k) => k !== "id")));
   };
-  const needsConfirm = (info: LogSourceInfo) => info.descriptor.reads_paths === true && info.descriptor.default_enabled !== true;
+  // 확인 대화상자: 원본을 읽는 출처를, 기본값이 꺼짐일 때 켤 때만(기본값 = 위 `defaultEnabled`와 같은 값)
+  const needsConfirm = (info: LogSourceInfo) => info.descriptor.reads_paths === true && !defaultEnabled(info, baseline);
   const setEnabled = (info: LogSourceInfo, on: boolean) => {
     update(info.descriptor.id, (c) => ({ ...c, enabled: on }));
     if (on) setOpen((cur) => new Set(cur).add(info.descriptor.id));
@@ -122,7 +127,8 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
               const setting = settings.find((s) => s.id === d.id);
               const index = settings.findIndex((s) => s.id === d.id);
               const enabled = effectiveEnabled(info, setting, baseline);
-              const autoOn = setting?.enabled === undefined && d.default_enabled !== true && (baseline.get(d.id) ?? info.enabled) === true;
+              const defaultOn = defaultEnabled(info, baseline);
+              const autoOn = defaultOn && d.default_enabled !== true;
               const unsaved = enabled !== info.enabled;
               const expanded = open.has(d.id) || focusSource === d.id;
               const view = describeSourceStatus({ info, enabled, dirty: unsaved, scanning: scanningId === d.id, nowMs });
@@ -139,13 +145,11 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                     <strong className="ac-ellipsis" title={d.title}>{d.title}</strong>
                     <code className="logs-mono app-muted">{d.id}</code>
                     <span className="logs-spacer" />
-                    {d.reads_paths === true ? <span className="logs-chip" title={t.settings.sources.readOnlyTip}>🔒 {t.settings.sources.readOnlyChip}</span> : null}
-                    {setting?.enabled === undefined ? (
-                      <span className="logs-chip" title={autoOn ? t.settings.sources.autoOnTip : undefined}>{autoOn ? t.settings.sources.autoOn : (d.default_enabled ?? false) ? t.settings.sources.defaultOn : t.settings.sources.defaultOff}</span>
-                    ) : (
+                    {d.reads_paths === true ? <span className="logs-source-icon" role="img" title={t.settings.sources.readOnlyTip} aria-label={t.settings.sources.readOnlyTip}><Icon name="lock" size={14} /></span> : null}
+                    {setting?.enabled === undefined ? null : (
                       <>
-                        <span className="logs-chip">{t.settings.sources.specified}</span>
-                        <Button size="sm" variant="ghost" aria-label={`${d.title} ${t.settings.sources.resetDefault}`} disabled={disabled} onClick={() => reset(info)}>↺</Button>
+                        <span className="logs-source-dot" role="img" title={t.settings.sources.specified} aria-label={t.settings.sources.specified} />
+                        <Button size="sm" variant="ghost" aria-label={`${d.title} ${t.settings.sources.resetDefault}`} title={t.settings.sources.resetDefault} disabled={disabled} onClick={() => reset(info)}>↺</Button>
                       </>
                     )}
                     <label className="app-check logs-switch">
@@ -160,6 +164,9 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                       {t.settings.sources.switchLabel}
                     </label>
                   </div>
+                  {setting?.enabled === undefined ? (
+                    <p className="app-muted logs-source-default" data-testid="source-default" title={autoOn ? t.settings.sources.autoOnTip : undefined}>{autoOn ? t.settings.sources.autoOn : defaultOn ? t.settings.sources.defaultOn : t.settings.sources.defaultOff}</p>
+                  ) : null}
                   {d.description ? <p className={`app-muted app-wrap ${expanded ? "" : "logs-clamp-2"}`}><InlineMarkdown text={d.description} /></p> : null}
                   <div className="logs-source-status" data-kind={view.kind}>
                     <span className="app-muted">{view.kind === "off" ? null : "상태"}</span>

@@ -170,6 +170,7 @@ export const wikiMessages = {
     issuesOpen: "규칙 탭 보기",
     editInfo: "이름·설명 고치기",
     switchLabel: "위키 전환",
+    crumbLabel: "위치",
     more: "위키 더보기",
     list: "위키 목록 보기",
     importZip: "가져오기(zip)…",

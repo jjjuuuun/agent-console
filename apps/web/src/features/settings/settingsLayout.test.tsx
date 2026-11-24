@@ -8,10 +8,14 @@ import { mountApp } from "../../testing/screenHarness";
 import { ModulesSectionView } from "./sections/ModulesSection";
 import { ModuleOptionsReadOnly } from "./sections/ModuleOptionsPanel";
 import { moduleCommandSnippet } from "./modulesView";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 
 const mod = (id: string, status: string, extra: Partial<ModuleInfo> = {}): ModuleInfo => ({ id, kind: "k", version: "1.0.0", status, web_roles: [], provides: [], ...extra });
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("설정 화면: 섹션 하나씩", () => {
   it("묶음 제목 아래 목록이 나오고 본문에는 선택한 섹션 하나만 있다", async () => {

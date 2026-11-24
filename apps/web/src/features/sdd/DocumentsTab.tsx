@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import { Banner, Button, ConfirmDialog, useToast } from "@agent-console/ui";
+import type { TextEditorStatus } from "@agent-console/text-editor";
 import { DocumentEditor, DocumentNav, EDITOR_VIEW_MODES, GateNotice, type DocumentEditorHandle, type EditorViewMode } from "@agent-console/sdd-view";
 import type { SddGateBlockedDetails, SpecDocumentSummary } from "@agent-console/contracts/sdd";
 import { useMediaQuery } from "../../lib/useMediaQuery";
@@ -52,6 +53,7 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
   const storage = useStorage();
   const editorRef = useRef<DocumentEditorHandle>(null);
   const [confirm, setConfirm] = useState<"reload" | "overwrite" | null>(null);
+  const [cursor, setCursor] = useState<TextEditorStatus | null>(null);
   // 보기 방식: 사람이 고른 값(저장)이 있으면 그것, 없으면 넓을 때 나란히·좁을 때 편집. 나란히는 넓은 화면에서만 쓴다.
   const [pickedMode, setPickedMode] = useState<EditorViewMode | null>(() => {
     const stored = storage.get(SDD_STORAGE.docView);
@@ -207,6 +209,8 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
   const lineParam = Number(params.get(P.line));
   const initialLine = Number.isInteger(lineParam) && lineParam > 0 ? lineParam : undefined;
 
+  const docTasks = (view.index?.tasks ?? []).filter((t) => t.document === docId).length;
+  const docIssues = (view.index?.issues ?? []).filter((i) => i.document === docId).length;
   const secret = (docQ.data?.value.issues ?? []).filter((i) => i.code === SECRET_SUSPECT_CODE);
 
   if (docs.length === 0) {
@@ -261,6 +265,14 @@ export function DocumentsTab({ specId, view, ctx, params, setParams, goTab, ownH
             issues={secret.length > 0 ? secret : []}
             {...(typeof ctx.info?.limits.max_doc_bytes === "number" ? { maxBytes: ctx.info.limits.max_doc_bytes } : {})}
             toolbarExtra={transitionMenu}
+            onStatus={setCursor}
+            statusBar={
+              <>
+                {cursor === null ? null : <span>{m.doc.statusLine(cursor.line, cursor.col, cursor.chars)}</span>}
+                {docTasks > 0 ? <span>· {m.doc.statusTasks(docTasks)}</span> : null}
+                {docIssues > 0 ? <span>· {m.doc.statusIssues(docIssues)}</span> : null}
+              </>
+            }
             messages={viewMessages}
           />
         ) : null}

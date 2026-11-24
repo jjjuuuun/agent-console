@@ -206,9 +206,14 @@ export function WikiScreen({ panels = DEFAULT_TAB_PANELS }: WikiScreenProps) {
     <div className="app-screen-frame wiki-screen">
       <PageHeader
         title={name}
+        leading={
+          <nav className="wiki-crumb" aria-label={m.header.crumbLabel}>
+            <Link to={wikiListPath()} className="app-back">← {m.back}</Link>
+            <span className="ac-breadcrumb-sep" aria-hidden="true">/</span>
+          </nav>
+        }
         status={
           <span className="wiki-crumb">
-            <Link to={wikiListPath()} className="app-back">← {m.back}</Link>
             <MenuButton
               label={<><span aria-hidden="true">▾</span><span className="ac-sr-only">{m.header.switchLabel}</span></>}
               panelLabel={m.header.switchLabel}

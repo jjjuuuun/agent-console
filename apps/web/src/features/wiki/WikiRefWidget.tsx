@@ -58,6 +58,15 @@ export function WikiRefWidget({ id, value, onChange, onBlur, label, required, di
           ))}
         </datalist>
       ) : null}
+      {!library && wikis.length > 0 && !(disabled || readonly) ? (
+        <span className="wiki-refwidget-picks" role="group" aria-label={t.widget.listLabel}>
+          {wikis.map((w) => (
+            <button key={w.id} type="button" className="wiki-refwidget-pick" aria-pressed={w.id === text} title={w.id} onClick={() => onChange(w.id)}>
+              {t.widget.option(w.name ?? "", w.id)}
+            </button>
+          ))}
+        </span>
+      ) : null}
       {library && wikis.length > 0 && projectName !== undefined ? <span className="wiki-refwidget-note app-muted">{t.widget.suggestions(projectName, wikis.map((w) => w.id))}</span> : null}
       {library ? <span className="wiki-refwidget-note app-muted">{t.widget.libraryNote}</span> : null}
       {list.isError ? <span className="wiki-refwidget-note app-muted">{t.widget.loadFailed}</span> : null}

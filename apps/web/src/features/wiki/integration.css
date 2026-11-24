@@ -11,3 +11,8 @@
 .wiki-runchange-path { flex: 1 1 auto; min-width: 0; font-family: var(--ac-font-mono); color: var(--ac-accent); }
 .wiki-runchange-time { flex: 0 0 auto; white-space: nowrap; }
 .wiki-promote-head { display: flex; flex-direction: column; gap: var(--ac-space-2); margin-bottom: var(--ac-space-2); }
+.wiki-refwidget-picks { display: flex; flex-wrap: wrap; gap: var(--ac-space-1); }
+.wiki-refwidget-pick { max-width: 100%; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-full); background: var(--ac-surface-2); color: var(--ac-text); font: inherit; font-size: var(--ac-text-xs); line-height: var(--ac-badge-h, 20px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.wiki-refwidget-pick:hover { background: var(--ac-hover-bg); }
+.wiki-refwidget-pick[aria-pressed="true"] { border-color: var(--ac-accent); background: var(--ac-accent-bg); }
+.wiki-refwidget-pick:focus-visible { outline: 2px solid var(--ac-focus-ring); outline-offset: 1px; }

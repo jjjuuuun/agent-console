@@ -51,6 +51,17 @@ export function createSafeStorage(storage: Storage | null = browserStorage()): S
 
 export const appStorage: SafeStorage = createSafeStorage();
 
+function tabStorage(): Storage | null {
+  try {
+    return globalThis.sessionStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 브라우저 탭 세션 범위 저장소(sessionStorage 래퍼). 앱을 새로 열면 비어 있다. */
+export const appSessionStorage: SafeStorage = createSafeStorage(tabStorage());
+
 /** JSON 값을 읽는다. 없거나 깨졌으면 `fallback`. */
 export function readJson<T>(storage: SafeStorage, key: string, fallback: T): T {
   const raw = storage.get(key);

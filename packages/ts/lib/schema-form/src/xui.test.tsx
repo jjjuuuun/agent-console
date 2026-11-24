@@ -298,6 +298,21 @@ describe("불리언·enum·속성 추가 단추 (F11)", () => {
     expect(screen.getByRole("checkbox", { name: "쓰기" })).toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: "read" })).toBeNull();
   });
+  it("체크박스 묶음에 모두 선택·모두 해제가 있고 읽기 전용이면 숨는다", () => {
+    const arr: JsonSchema = {
+      type: "object",
+      properties: { access: { type: "array", title: "허용할 일", uniqueItems: true, items: { type: "string", enum: ["read", "write", "x"] }, "x-ui": { tier: "basic", enum_labels: { read: "읽기", write: "쓰기", x: "엑스" } } } },
+    };
+    const onChange = vi.fn();
+    const { unmount } = render(<SchemaForm schema={arr} value={{ access: ["read"] }} uiSchema={{ access: { "ui:widget": "checkboxes" } }} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "모두 선택" }));
+    expect(onChange).toHaveBeenLastCalledWith({ access: ["read", "write", "x"] });
+    fireEvent.click(screen.getByRole("button", { name: "모두 해제" }));
+    expect(onChange).toHaveBeenLastCalledWith({ access: [] });
+    unmount();
+    render(<SchemaForm schema={arr} value={{ access: ["read"] }} uiSchema={{ access: { "ui:widget": "checkboxes" } }} readonly />);
+    expect(screen.queryByRole("button", { name: "모두 선택" })).toBeNull();
+  });
   it("설명 문장의 enum 원시 값은 괄호째 지우거나 라벨로 바꾼다(F11)", () => {
     const labels = { ask: "물어보기", run: "실행하기" };
     expect(humanizeEnumText("물어볼지(ask) 실행할지(run) 정합니다.", labels)).toBe("물어볼지 실행할지 정합니다.");

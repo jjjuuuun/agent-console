@@ -39,15 +39,19 @@
 /* 문서 탭 */
 .sdd-docs { display: flex; gap: var(--ac-space-3); min-height: 0; flex: 1; }
 .sdd-docs-nav { flex: 0 0 var(--ac-sdd-nav-w, 240px); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
-.sdd-docs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+.sdd-docs-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--ac-space-2); }
+/* 편집기가 문서 탭의 남은 높이를 채운다(위 띠·아래 상태 줄은 제 높이) */
+.sdd-docs-main > .ac-md-editor { flex: 1; height: auto; min-height: 0; }
+.sdd-docs-main .ac-md-editor-body { min-height: 0; }
+.sdd-docs-main .ac-md-editor-pane { display: flex; flex-direction: column; }
 .sdd-docs-foot { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
 
 /* 작업 탭 */
 .sdd-tasks { display: flex; flex-direction: column; gap: var(--ac-space-2); min-height: 0; flex: 1; }
 .sdd-task-table { flex: 1; min-height: 320px; }
 /* 작업 탭: 가상 목록이 자기 스크롤 영역(.ac-sdd-scroll)을 쓰도록, 탭 패널까지 높이를 이어 준다(화면 본문이 스크롤하면 가상화가 동작하지 않는다). */
-.sdd-screen-body > .ac-tabs:has(> .ac-tab-panel:not([hidden]) > .sdd-tasks) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.sdd-screen-body > .ac-tabs > .ac-tab-panel:not([hidden]):has(> .sdd-tasks) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sdd-screen-body > .ac-tabs:has(> .ac-tab-panel:not([hidden]) > :is(.sdd-tasks, .sdd-docs)) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sdd-screen-body > .ac-tabs > .ac-tab-panel:not([hidden]):has(> :is(.sdd-tasks, .sdd-docs)) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sdd-issues { padding: var(--ac-space-1) var(--ac-space-2); border: 1px solid var(--ac-border-soft); border-radius: var(--ac-radius-md); }
 .sdd-multi { list-style: none; margin: 0; padding: var(--ac-space-2); display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 180px; max-height: 280px; overflow: auto; }
 
@@ -59,9 +63,11 @@
 .sdd-rules-nav button { display: flex; align-items: center; justify-content: space-between; gap: var(--ac-space-2); width: 100%; min-height: 32px; padding: 0 var(--ac-space-2); border: 0; border-radius: var(--ac-radius-md); background: transparent; color: var(--ac-text); font: inherit; text-align: left; cursor: pointer; }
 .sdd-rules-nav button[aria-current="true"] { background: var(--ac-accent-bg-strong, var(--ac-surface-3)); font-weight: 600; }
 .sdd-dot { padding: 0 6px; border-radius: var(--ac-radius-full); background: var(--ac-danger-bg); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
-.sdd-rules-form { flex: 1; min-width: 0; max-width: var(--ac-readable-w, 720px); }
+.sdd-rules-form { position: relative; flex: 1; min-width: 0; max-width: var(--ac-readable-w, 720px); }
 .sdd-issues-list, .sdd-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ac-space-1); }
 @media (max-width: 1099px) { .sdd-docs-nav { flex-basis: 200px; } .sdd-rules-body { flex-direction: column; } .sdd-rules-nav { flex-basis: auto; } }
+.sdd-rules-select { display: inline-flex; align-items: center; gap: var(--ac-space-2); align-self: flex-start; }
+.sdd-rules-select .sdd-input { width: auto; min-width: 200px; }
 
 /* 문서 틀 */
 .sdd-templates { display: flex; gap: var(--ac-space-4); min-height: 0; flex: 1; }
@@ -81,7 +87,13 @@
 .sdd-action-item:hover, .sdd-action-item:focus-visible { background: var(--ac-surface-3); }
 .sdd-action-item[aria-disabled="true"] { color: var(--ac-text-muted); cursor: default; }
 .sdd-action-reason { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); white-space: normal; }
-.sdd-bulk-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; }
+.sdd-bulk-row { display: flex; align-items: center; gap: var(--ac-space-2); min-height: 32px; min-width: 0; }
+/* 작업 목록 행: 체크·키·제목이 한 줄(제목만 줄임표). .ac-choice의 2열 격자에서 제목이 아래 줄로 밀리지 않게 한다 */
+.sdd-bulk-row .ac-choice { display: flex; align-items: center; gap: var(--ac-space-2); width: 100%; }
+.sdd-bulk-row .ac-choice > input { margin: 0; flex: none; }
+.sdd-bulk-row .ac-choice > .sdd-mono { flex: none; }
+.sdd-bulk-row .ac-choice > .ac-ellipsis { flex: 1; min-width: 0; padding: 0; }
+.sdd-bulk-row > .ac-ellipsis { flex: 1 1 auto; min-width: 0; }
 .sdd-auto-chip { height: 24px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-info); border-radius: var(--ac-radius-full); background: var(--ac-info-bg); color: var(--ac-text); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); cursor: pointer; }
 .sdd-automation { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); padding: var(--ac-space-1) var(--ac-space-3); border-left: 3px solid var(--ac-info); border-radius: var(--ac-radius-md); background: var(--ac-info-bg); }
 .sdd-automation[data-running] { border-left-color: var(--ac-success); }
@@ -98,7 +110,7 @@
 .sdd-detail-list { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--ac-space-1) var(--ac-space-3); margin: 0 0 var(--ac-space-2); }
 .sdd-detail-list dt { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); }
 .sdd-detail-list dd { margin: 0; min-width: 0; }
-@media (max-width: 1099px) { .sdd-plan-body { flex-direction: column; } .sdd-plan-side { flex-basis: auto; } }
+@media (max-width: 1099px) { .sdd-plan-body { flex-direction: column; } .sdd-plan-side { flex-basis: auto; } .sdd-plan-side .ac-sdd-bundles { width: 100%; } }
 
 /* 작업 탭 필드 거르기 (6R.20i) */
 .sdd-field-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-1); }
@@ -106,3 +118,11 @@
 .sdd-field-values { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 220px; }
 .sdd-browse { height: 240px; display: flex; flex-direction: column; }
 .sdd-browse > .ac-fp-browser { flex: 1; min-height: 0; margin-top: 0; }
+.sdd-crumb { display: inline-flex; align-items: center; gap: var(--ac-space-2); }
+
+/* 문서 틀 빈 목록: 목록 패널은 남기고 개수만 알린다. 프로젝트 사본 안내 띠(`.space-note`)는 본문과 같은 안쪽 여백에 맞춘다(12 -> 16px) */
+.sdd-templates-count { margin: 0; padding: var(--ac-space-1) 0; }
+.sdd-screen > .space-note { padding-inline: var(--ac-space-4); }
+
+/* 눈에는 숨기고 보조 기술에는 남긴다(규칙 섹션 제목: 폼의 첫 라벨·접힘 제목과 같은 말이라 중복) */
+.sdd-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

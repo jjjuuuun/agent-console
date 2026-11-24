@@ -87,6 +87,8 @@ export const SECRET_SUSPECT_CODE: string = data.issueCodes.secretSuspect;
 export const RUN_STATUS_TONES: Readonly<Record<string, string>> = data.runStatusTones;
 /** 이 작업 수를 넘으면 계획 그래프를 자동으로 그리지 않고 글 목록을 권한다. */
 export const PLAN_GRAPH_AUTO_LIMIT: number = data.planGraphAutoLimit;
+/** 스펙 규칙의 작업 문법 필드 이름(계약 `SpecRules.syntax`, `sddData.json`). 이 섹션 안에 값 출처를 보인다. */
+export const SYNTAX_FIELDS: Readonly<{ key: string }> = data.syntaxRules;
 /** 스펙 규칙의 자동 진행 필드 이름(계약 `AutomationConfig`, `sddData.json`). */
 export const AUTOMATION_FIELDS = data.automationRules;
 /** 자동 진행 조작 이름(서버 경로의 끝, `sddData.json`). */

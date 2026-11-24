@@ -12,7 +12,7 @@ import type { SpecDefinition, SpecIssue } from "@agent-console/contracts/sdd";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { AutomationBar } from "./AutomationBar";
 import { ListSkeleton } from "./parts";
-import { AUTOMATION_FIELDS, AUTOMATION_OPS, SDD_LIMITS, SDD_PARAMS } from "./sddConfig";
+import { AUTOMATION_FIELDS, AUTOMATION_OPS, SDD_LIMITS, SDD_PARAMS, SYNTAX_FIELDS } from "./sddConfig";
 import { RuleSectionsForm } from "./RuleSectionsForm";
 import { useSddWidgetData } from "./widgets/SddWidgetEnv";
 import { sddMessages as m, viewMessages } from "./messages";
@@ -70,6 +70,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
   const wanted = params.get(P.section);
   const section = sections.find((s) => s.id === wanted) ?? sections[0];
   const readonly = ctx.readOnly;
+  const syntaxSources = Object.entries(syntax.data?.sources ?? {});
 
   const select = (id: string) => {
     const next = new URLSearchParams(params);
@@ -182,17 +183,21 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
         widgetEnv={widgetEnv}
         formEpoch={formEpoch}
         readonlyFor={automationOff}
-        sectionNote={(s) => (automationOff(s) ? <p className="app-muted sdd-note" data-testid="sdd-automation-off">{m.automation.runsOff}</p> : null)}
+        sectionNote={(s) =>
+          automationOff(s) ? (
+            <p className="app-muted sdd-note" data-testid="sdd-automation-off">{m.automation.runsOff}</p>
+          ) : s.path.includes(SYNTAX_FIELDS.key) && syntaxSources.length > 0 ? (
+            // 값 출처(기본·설정·이 스펙)는 작업 문법 섹션 안에 둔다(screen-sdd §10.2)
+            <Disclosure summary={m.rules.syntaxSource}>
+              <ul className="sdd-sources">
+                {syntaxSources.map(([key, source]) => (
+                  <li key={key}><span className="sdd-mono">{key}</span> <RulesSourceBadge source={source} messages={viewMessages} /></li>
+                ))}
+              </ul>
+            </Disclosure>
+          ) : null
+        }
       />
-      {syntax.data === undefined || Object.keys(syntax.data.sources ?? {}).length === 0 ? null : (
-        <Disclosure summary={m.rules.syntaxSource}>
-          <ul className="sdd-sources">
-            {Object.entries(syntax.data.sources ?? {}).map(([key, source]) => (
-              <li key={key}><span className="sdd-mono">{key}</span> <RulesSourceBadge source={source} messages={viewMessages} /></li>
-            ))}
-          </ul>
-        </Disclosure>
-      )}
       <ConfirmDialog
         open={pendingAuto !== null}
         title={m.automation.confirmTitle}

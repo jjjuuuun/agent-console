@@ -41,6 +41,7 @@ describe("규칙 탭: 편집 중 자동 검사(600ms 디바운스)", () => {
 
 describe("규칙 탭: 자동 진행 켜기 확인", () => {
   const openAutomation = async () => {
+    (window as unknown as { happyDOM: { setViewport(v: { width: number; height: number }): void } }).happyDOM.setViewport({ width: 1280, height: 800 });
     const navEl = await screen.findByRole("navigation", { name: "섹션" }, LONG);
     fireEvent.click(within(navEl).getByRole("button", { name: /자동 진행/ }));
     return screen.findByRole("checkbox", { name: "켜기" }, LONG);

@@ -165,6 +165,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
                 onOpen={openNode}
                 onCenter={centerNode}
                 height="fill"
+                hideTruncatedNotice
                 {...(gap === undefined ? {} : { gap })}
               />
             </div>

@@ -47,7 +47,7 @@ describe("SpecList", () => {
     expect(screen.getByText("sp2")).toBeTruthy();
     expect(screen.getByRole("progressbar", { name: "작업 1/5" })).toBeTruthy();
     expect(screen.getByText("초안")).toBeTruthy();
-    expect(screen.getByText("지금 단계: 1단계")).toBeTruthy();
+    expect(screen.getByText("1단계")).toBeTruthy();
     fireEvent.click(screen.getByText("sp2"));
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: "sp2" }));
     expect(screen.getByText("결제").closest("button")?.getAttribute("aria-current")).toBe("true");
@@ -64,9 +64,29 @@ describe("SpecList 정렬·행 메뉴", () => {
     fireEvent.click(screen.getByRole("button", { name: "이름" }));
     expect(onSortChange).toHaveBeenCalledWith("name");
   });
-  it("정렬 열이 없으면 머리 줄이 없다", () => {
+  it("정렬 열이 없어도 열 머리는 있고 누를 수 있는 정렬 단추만 없다 (S1)", () => {
     render(<SpecList specs={sampleSpecs()} />);
-    expect(screen.queryByRole("columnheader")).toBeNull();
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["이름", "진행", "지금 단계", "문서 상태", "준비", "갱신"]);
+    expect(screen.queryByRole("button", { name: "이름" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "이름" }).hasAttribute("aria-sort")).toBe(false);
+  });
+  it("같은 문서 상태는 한 칩에 개수로 합친다 (S1)", () => {
+    const docs = [
+      { id: "a", title: "a", state: "g-draft", state_label: "초안", tone: "neutral" },
+      { id: "b", title: "b", state: "g-draft", state_label: "초안", tone: "neutral" },
+      { id: "c", title: "c", state: "g-draft", state_label: "초안", tone: "neutral" },
+      { id: "d", title: "d", state: "g-ok", state_label: "승인", tone: "success" },
+    ];
+    render(<SpecList specs={[{ id: "sp9", name: "합침", documents: docs }]} />);
+    expect(screen.getByText("초안 3")).toBeTruthy();
+    expect(screen.getByText("승인")).toBeTruthy();
+    expect(screen.queryAllByText("초안")).toHaveLength(0);
+  });
+  it("우클릭하면 행 메뉴 단추를 연다(⋯는 평소 숨김) (S1)", () => {
+    const onMenu = vi.fn();
+    render(<SpecList specs={sampleSpecs()} renderRowMenu={(s) => <button type="button" aria-label={`${s.id} 메뉴`} onClick={() => onMenu(s.id)}>⋯</button>} />);
+    fireEvent.contextMenu(screen.getByText("sp2").closest("li") as HTMLElement);
+    expect(onMenu).toHaveBeenCalledWith("sp2");
   });
   it("행 메뉴 slot은 행 버튼 밖에 있어 눌러도 열기가 호출되지 않는다", () => {
     const onOpen = vi.fn();
@@ -129,6 +149,17 @@ describe("TaskTable: 선택·접힘·인라인 안내·손잡이 (6R.20i)", () =
     expect(screen.getByText("1개 선택")).toBeTruthy();
     fireEvent.keyDown(row, { key: "Escape" });
     expect(screen.queryByText("1개 선택")).toBeNull();
+  });
+
+  it("표 머리가 있고 연결·동작 열은 쓸 때만 있다 (S2)", () => {
+    const { container, rerender } = render(<TaskTable tasks={sampleTasks()} statuses={statuses} />);
+    const head = () => Array.from(container.querySelectorAll(".ac-sdd-task-head > .ac-sdd-colhead")).map((h) => h.textContent);
+    expect(head()).toEqual(["작업", "상태", "준비", "필드", "실행"]);
+    rerender(<TaskTable tasks={sampleTasks()} statuses={statuses} showLinks={false} renderActions={() => <button type="button">실행</button>} />);
+    expect(head()).toEqual(["작업", "상태", "준비", "필드", "동작"]);
+    // 머리와 모든 행이 같은 열 격자를 쓴다
+    const grid = (el: Element | null) => (el as HTMLElement | null)?.style.gridTemplateColumns;
+    expect(grid(container.querySelector(".ac-sdd-task-head"))).toBe(grid(container.querySelector(".ac-sdd-task-line")));
   });
 
   it("selectable이 아니면 체크박스가 없다", () => {
@@ -335,6 +366,23 @@ describe("PlanGraph·PlanBundles", () => {
     expect(names).toContain("작업 T2, 2번째 묶음, 병목, 준비됨");
     expect(container.querySelector(".ac-sdd-plan-node[data-critical]")).toBeTruthy();
   });
+  it("열 머리 라벨(묶음 n·병목 순번), 노드 첫 줄 키, 병목만 강조 흐림 (S9)", async () => {
+    const engine = vi.fn(async () => ({ T1: { x: 0, y: 40 }, T5: { x: 0, y: 100 }, T2: { x: 240, y: 40 } }));
+    const { container, rerender } = render(<PlanGraph plan={samplePlan()} tasks={sampleTasks()} statuses={sampleStatuses()} engine={engine} height={400} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const heads = Array.from(container.querySelectorAll(".ac-sdd-plan-layer-head")).map((h) => h.textContent);
+    expect(heads).toContain("묶음 1병목 1/3");
+    expect(heads).toContain("묶음 2병목 2/3");
+    expect(container.querySelector(".ac-sdd-plan-node-key")?.textContent).toMatch(/^T\d$/);
+    expect(container.querySelectorAll("[data-dim]")).toHaveLength(0);
+    rerender(<PlanGraph plan={samplePlan()} tasks={sampleTasks()} statuses={sampleStatuses()} engine={engine} height={400} onlyCritical />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(container.querySelectorAll("[data-dim]").length).toBeGreaterThan(0);
+  });
   it("배치 엔진이 실패하면 층별 배치로 남고 안내한다", async () => {
     render(<PlanGraph plan={samplePlan()} tasks={sampleTasks()} engine={async () => { throw new Error("x"); }} />);
     await act(async () => {
@@ -356,7 +404,7 @@ describe("PlanGraph·PlanBundles", () => {
     const onSelect = vi.fn();
     const { rerender } = render(<PlanBundles plan={{ ...samplePlan(), cycles: [["T3", "T4"]] }} tasks={sampleTasks()} onSelect={onSelect} />);
     expect(screen.getByText("묶음 2")).toBeTruthy();
-    expect(screen.getAllByText("2개 작업을 동시에 할 수 있습니다")).toHaveLength(2);
+    expect(screen.getAllByText("· 2개 작업을 동시에 할 수 있습니다")).toHaveLength(2);
     expect(screen.getAllByText(/병목/).length).toBeGreaterThan(0);
     expect(screen.getByRole("alert").textContent).toContain("T3 → T4");
     fireEvent.click(screen.getByRole("button", { name: "작업 T2" }));
@@ -386,12 +434,25 @@ describe("TraceMatrix", () => {
     expect(screen.getByText("검증 없음")).toBeTruthy();
     expect(screen.getByText("요구 없는 작업 1")).toBeTruthy();
   });
+  it("표 머리와 고정 열, 빈 곳 칩은 2개까지 + 나머지 개수, 행 배경 표시는 없다 (S3)", () => {
+    const matrix = sampleTrace();
+    matrix.rows = [{ id: "R9", title: "많은 빈 곳", document: "d-req", line: 1, tasks: [], runs: [], verification: null, gaps: ["g1", "g2", "g3", "g4"] }];
+    const { container } = render(<TraceMatrix matrix={matrix} />);
+    expect(Array.from(container.querySelectorAll(".ac-sdd-trace-head > .ac-sdd-colhead")).map((h) => h.textContent)).toEqual(["요구", "작업", "실행", "검증", "빈 곳"]);
+    expect(container.querySelector(".ac-sdd-trace-gaps")?.children).toHaveLength(3);
+    expect(screen.getByText("+2")).toBeTruthy();
+  });
   it("빈 곳만 보기 거르기", () => {
     render(<TraceMatrix matrix={sampleTrace()} />);
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     fireEvent.click(screen.getByRole("checkbox", { name: "빈 곳만 보기" }));
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByText("R2")).toBeTruthy();
+  });
+  it("showGapsToggle=false면 표 안 체크박스가 없고 onlyGaps로만 거른다", () => {
+    render(<TraceMatrix matrix={sampleTrace()} showGapsToggle={false} onlyGaps />);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
   it("요구·작업·실행으로 이동하는 콜백, 연동이 꺼진 열은 숨김", () => {
     const onOpenTask = vi.fn();

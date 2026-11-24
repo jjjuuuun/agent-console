@@ -61,7 +61,9 @@ describe("사용량 화면의 프로젝트 범위 (R15.3)", () => {
     const qc = createAppQueryClient({ retry: false });
     render(tree(clients, qc, "p1"));
     await waitFor(() => expect(getUsage).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole("button", { name: "새로 고침" }));
+    const btn = screen.getByRole("button", { name: "새로 고침" });
+    expect(btn.textContent?.trim()).toBe(""); // 글자 버튼이 아니라 아이콘 버튼
+    fireEvent.click(btn);
     await waitFor(() => expect(getUsage).toHaveBeenCalledTimes(2));
     expect(getUsage).toHaveBeenLastCalledWith(undefined, "p1");
   });

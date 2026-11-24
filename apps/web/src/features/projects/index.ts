@@ -16,7 +16,7 @@ export { SelectMark, SelectionToolbar, useListSelection, useProjectMove } from "
 export { PROJECT_SHORTCUT_DEFS } from "./shortcuts";
 export { PROJECTS_SECTION_ID, SETTINGS_PROJECTS_HASH } from "./sectionId";
 export { projectMessages } from "./messages";
-export { ScopeIssuesList, useMoveIssueToShared, type MoveIssueToShared } from "./ScopeIssues";
+export { useMoveIssueToShared, type MoveIssueToShared } from "./ScopeIssues";
 export { AccountWideNote } from "./AccountAndLogs";
 export { ProjectUsageSection } from "./ProjectUsageSection";
 export { projectBody, useProjectId } from "./useProjectId";

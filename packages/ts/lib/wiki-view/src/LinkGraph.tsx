@@ -14,15 +14,27 @@ import { formatMessage, resolveMessages } from "./messages";
 type GraphNode = Node<GraphNodeData & { domId: string; focused: boolean }, "wiki-node">;
 type GraphEdge = Edge<GraphEdgeData, "wiki-edge">;
 
-/** 배치가 끝나거나 노드가 새로 측정되면 화면에 맞춘다(첫 fitView는 배치 전 좌표로 끝나 노드를 잘라 보이게 한다). ReactFlow 자식으로 둔다. */
-function RefitOnLayout({ token, maxZoom }: { token: unknown; maxZoom: number }) {
+/**
+ * 배치가 끝나거나 노드가 새로 측정되면 화면에 맞춘다(첫 fitView는 배치 전 좌표로 끝나 노드를 잘라 보이게 한다). ReactFlow 자식으로 둔다.
+ * 다 맞추면 `readableZoom`보다 작아지는 큰 그래프는 그 배율로 `focusId` 노드(중심 또는 첫 노드)를 화면 가운데에 두고 시작한다(글자가 읽히는 쪽 우선).
+ */
+function RefitOnLayout({ token, maxZoom, readableZoom, focusId }: { token: unknown; maxZoom: number; readableZoom: number; focusId: string | null }) {
   const rf = useReactFlow();
   const ready = useNodesInitialized();
   useEffect(() => {
     // 새 노드 좌표가 React Flow 저장소에 반영된 다음 프레임에 맞춘다
-    const timer = setTimeout(() => void rf.fitView({ maxZoom, duration: 0 }), 50);
+    const timer = setTimeout(() => {
+      void rf.fitView({ maxZoom, duration: 0 }).then(() => {
+        if (rf.getZoom() >= readableZoom - 1e-6) return;
+        const n = focusId === null ? undefined : rf.getInternalNode(focusId);
+        if (!n) return;
+        const w = n.measured.width ?? 0;
+        const h = n.measured.height ?? 0;
+        void rf.setCenter(n.internals.positionAbsolute.x + w / 2, n.internals.positionAbsolute.y + h / 2, { zoom: readableZoom, duration: 0 });
+      });
+    }, 50);
     return () => clearTimeout(timer);
-  }, [rf, ready, token, maxZoom]);
+  }, [rf, ready, token, maxZoom, readableZoom, focusId]);
   return null;
 }
 
@@ -60,8 +72,8 @@ function WikiEdgeView({ id, source, target, data }: EdgeProps<GraphEdge>) {
   return (
     <>
       <defs>
-        <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+        <marker id={markerId} viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto">
+          <path className="ac-wk-garrow" data-center={data.touchesCenter || undefined} d="M 0 0 L 10 5 L 0 10 z" />
         </marker>
       </defs>
       <g className="ac-wk-gedge" data-center={data.touchesCenter || undefined}>
@@ -99,13 +111,19 @@ export interface LinkGraphProps {
   /** 노드 이름(접근성) 만들기: 제목·경로 외에 상태 글을 붙인다 */
   ariaLabelOf?: NonNullable<GraphFlowOptions["ariaLabelOf"]>;
   height?: number | "fill";
+  /** 처음 맞춤의 최대 배율(기본 1: 노드가 명세 크기보다 커 보이지 않게) */
+  maxZoom?: number;
+  /** 전체를 맞추면 이 배율보다 작아지는 큰 그래프는 이 배율로 중심 노드부터 보인다(기본 0.8). */
+  readableZoom?: number;
+  /** true면 `truncated` 안내 띠를 그리지 않는다(호출자가 도구줄·목록에서 한 번만 안내할 때) */
+  hideTruncatedNotice?: boolean;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
 
 const ARROWS: Readonly<Record<string, ArrowDirection>> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
 
-function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, engine, nodeWidth, nodeHeight, gap, ariaLabelOf, height = "fill", messages, className }: LinkGraphProps) {
+function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, engine, nodeWidth, nodeHeight, gap, ariaLabelOf, height = "fill", maxZoom = 1, readableZoom = 0.8, hideTruncatedNotice = false, messages, className }: LinkGraphProps) {
   const t = resolveMessages(messages);
   const base = useDomId();
   const w = nodeWidth ?? GRAPH_DEFAULTS.nodeWidth;
@@ -232,7 +250,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
       }}
     >
       {failed === flow ? <p className="ac-wk-banner" data-tone="info" role="status">{t["graph.layoutFailed"]}</p> : null}
-      {graph.truncated ? (
+      {graph.truncated && !hideTruncatedNotice ? (
         <p className="ac-wk-banner" data-tone="info" role="status">
           {graph.total !== null && graph.total !== undefined ? formatMessage(t["graph.truncated.total"], { total: graph.total, n: flow.nodes.length }) : t["graph.truncated"]}
         </p>
@@ -249,8 +267,8 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
         elementsSelectable
         zoomOnDoubleClick={false}
         fitView
-        fitViewOptions={{ maxZoom: flow.nodes.length > 200 ? 0.6 : 1.5 }}
-        minZoom={0.05}
+        fitViewOptions={{ maxZoom }}
+        minZoom={0.1}
         proOptions={{ hideAttribution: true }}
         onNodeClick={(_e, node) => onSelect?.(node.id)}
         onNodeDoubleClick={(_e, node) => {
@@ -258,7 +276,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
           if (found) onOpen?.(found.data);
         }}
       >
-        <RefitOnLayout token={placed?.source === flow ? placed : failed} maxZoom={flow.nodes.length > 200 ? 0.6 : 1.5} />
+        <RefitOnLayout token={placed?.source === flow ? placed : failed} maxZoom={maxZoom} readableZoom={readableZoom} focusId={firstId} />
         <Background />
         <Controls showInteractive={false} />
       </ReactFlow>

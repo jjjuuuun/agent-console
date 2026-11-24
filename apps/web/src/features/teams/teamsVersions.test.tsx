@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeClients } from "../../testing/fakes";
 import { mountApp } from "../../testing/screenHarness";
 import { agents, edgeTypes, nodeTypes, resourceTypes, sampleGraph } from "../../testing/teamFixtures";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 configure({ asyncUtilTimeout: 10_000 });
@@ -41,6 +42,9 @@ function clients(extra: Record<string, unknown> = {}) {
     ...extra,
   });
 }
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("팀 구성: 버전 탭과 내보내기", () => {
   it("목록 행 메뉴의 [버전 목록]은 편집기의 버전 탭으로 이동한다(읽기 전용 다이얼로그 없음)", async () => {

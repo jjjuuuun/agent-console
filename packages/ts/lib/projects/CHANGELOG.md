@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 폐기어 데이터 `PROJECT_CONTEXT_RETIRED_TERMS`를 더했다(`RETIRED_TERMS` 중 프로젝트 문구에서만 폐기어인 말, 5.7R.35). 앱 메시지 표 검사가 다른 기능 문구에는 이 말을 적용하지 않는다.
 - `configDirLabel`·메시지 `projects.dir_fallback`을 deprecated로 표시했다(쓰는 곳 0건). 다음 메이저에서 함께 제거하며, 대신 짝 문장 `*_unknown`을 쓴다.
 - 문구 표에 복사 계획 대화상자·공간 칩 키를 더했다(`copy.import.*`·`copy.plan.*`·`copy.result.*`·`copy.submit.*`·`space.view_*`, 5.7R.33o). 도우미 함수는 그대로다.
 - `folderCheckData`가 `FolderCheck.existing`(found·invalid)을 folder-picker의 `manifest{name,count,valid}`로 옮긴다(5.7R.33n, 33m 후속).

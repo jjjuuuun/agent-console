@@ -113,7 +113,7 @@ describe("theme-color", () => {
   });
 
   it("index.html의 메타 값과 렌더 전 스크립트 색이 THEME_COLORS와 같다", () => {
-    const html = readFileSync(join(process.cwd(), "apps/web/index.html"), "utf8");
+    const html = readFileSync(join(import.meta.dirname, "../../index.html"), "utf8");
     expect(html).toContain(`content="${THEME_COLORS.dark}" media="(prefers-color-scheme: dark)"`);
     expect(html).toContain(`content="${THEME_COLORS.light}" media="(prefers-color-scheme: light)"`);
     expect(html).toContain(`"light" ? "${THEME_COLORS.light}" : "${THEME_COLORS.dark}"`);

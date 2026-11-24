@@ -100,7 +100,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 
 ## 공개 가능 린트
 
-규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다.
+규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다. 패키지·앱 README(`packages/**/README.md`·`apps/*/README.md`·`apps/web/src/**/README.md`)는 정리가 끝나 `public_lint_globs`에 들어 있다(새 설계 id·작업 번호는 오류). 테스트 안내인 `apps/web/e2e/README.md`는 대상 밖이다.
 
 | 규칙 | 잡는 것 | 잡지 않는 것 |
 | --- | --- | --- |

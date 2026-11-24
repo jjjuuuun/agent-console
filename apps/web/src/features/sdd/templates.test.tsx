@@ -162,4 +162,36 @@ describe("새 스펙 대화상자: 공용에서 가져오기 (6R.20c)", () => {
     expect(within(copy).queryByRole("checkbox", { name: "다른 종류 항목" })).toBeNull();
     expect((rest as unknown as { listCopyKinds: ReturnType<typeof vi.fn> }).listCopyKinds).toHaveBeenCalledWith(null);
   });
+  it("틀을 복사하면 열려 있던 대화상자의 목록이 갱신되고 가져온 틀이 자동으로 선택된다(6R.20c)", async () => {
+    const projectTemplates: SpecTemplateSummary[] = [summary("t0", "기존 틀")];
+    const applyCopy = vi.fn(async (r: { items: { kind: string; id: string }[] }) => {
+      projectTemplates.push(summary("lib-tpl", "공용 틀"));
+      return { items: r.items.map((i) => ({ kind: i.kind, id: i.id, status: "copied" })) };
+    });
+    const planCopy = vi.fn(async () => ({ items: [{ kind: "k-x", id: "lib-tpl", name: "공용 틀", reason: "requested", source_version: "v", target_state: "absent", default_action: "copy" }] }));
+    setup("/specs?prj=p1", {
+      sdd: { listSpecTemplates: vi.fn(async () => [...projectTemplates]) },
+      rest: {
+        listCopyKinds: vi.fn(async () => [{ kind: "k-x", library: true, portable: true }]),
+        listCopyItems: vi.fn(async () => [{ kind: "k-x", id: "lib-tpl", name: "공용 틀" }]),
+        planCopy,
+        applyCopy,
+      },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "새 스펙…" }, LONG));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByRole("radio", { name: /기존 틀/ }, LONG)).toBeTruthy(); // 처음엔 기존 틀뿐이고 아무것도 고르지 않았다
+    expect(within(dialog).queryByRole("radio", { name: /공용 틀/ })).toBeNull();
+    fireEvent.click(await within(dialog).findByRole("button", { name: /공용에서 가져오기/ }, LONG));
+    const copy = await screen.findByRole("dialog", { name: /공용에서 가져오기 —/ }, LONG);
+    fireEvent.click(await within(copy).findByRole("checkbox", { name: "공용 틀" }, LONG));
+    fireEvent.click(within(copy).getByRole("button", { name: "다음" }));
+    fireEvent.click(await within(copy).findByRole("button", { name: "가져오기 (1)" }, LONG));
+    await waitFor(() => expect(applyCopy).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /공용에서 가져오기 —/ })).toBeNull(), LONG);
+    // 새 스펙 대화상자: 목록에 가져온 틀이 생기고 라디오가 선택돼 있다
+    const radio = await within(dialog).findByRole("radio", { name: /공용 틀/ }, LONG);
+    await waitFor(() => expect((radio as HTMLInputElement).checked).toBe(true));
+    expect(((await within(dialog).findByRole("radio", { name: /기존 틀/ })) as HTMLInputElement).checked).toBe(false);
+  }, 60_000);
 });

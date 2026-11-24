@@ -2,7 +2,7 @@
  * 새 스펙 대화상자(screen-sdd §4.1): 이름 + 문서 틀 라디오(빈 스펙은 마지막 고정) + 고급(id). 틀 목록·폴더 줄·제출은 모두 props다.
  * 틀 이름·문서 이름은 서버 데이터이고, 틀이 0개면 "빈 스펙"만 남는다. 한글 조합 중 Enter는 제출하지 않는다.
  */
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
 import type { SpecCreateRequest, SpecTemplateSummary } from "@agent-console/contracts/sdd";
 import { describeError } from "../../app/errors";
@@ -22,6 +22,8 @@ export interface NewSpecDialogProps {
   templatesLoading?: boolean;
   /** 처음 선택할 틀 id(마지막으로 쓴 틀). 목록에 없으면 빈 스펙 */
   initialTemplate?: string | null;
+  /** 이 값이 바뀌면(공용에서 가져온 틀 id) 목록에 나타나는 즉시 그 틀을 고른다 */
+  selectTemplate?: string | null | undefined;
   /** 처음 이름(가져오기 대화상자에서 넘어올 때) */
   initialName?: string;
   /** 문서 틀 화면 주소(있으면 안내에 링크) */
@@ -41,12 +43,19 @@ export interface NewSpecDialogProps {
 const collator = new Intl.Collator("ko");
 
 export function NewSpecDialog(props: NewSpecDialogProps) {
-  const { open, onClose, folder, specRoot, templates, templatesLoading = false, initialTemplate = null, initialName = "", templatesHref, blockedReason, onSubmit, onImport, onImportFromLibrary, onTemplateChosen } = props;
+  const { open, onClose, folder, specRoot, templates, templatesLoading = false, initialTemplate = null, initialName = "", selectTemplate = null, templatesHref, blockedReason, onSubmit, onImport, onImportFromLibrary, onTemplateChosen } = props;
   const sorted = useMemo(() => [...templates].sort((a, b) => collator.compare(a.name ?? a.id, b.name ?? b.id)), [templates]);
   const [name, setName] = useState(initialName);
   const [id, setId] = useState("");
   const [pick, setPick] = useState<string | null>(initialTemplate !== null && templates.some((t) => t.id === initialTemplate) ? initialTemplate : null);
   const [query, setQuery] = useState("");
+  const appliedSelect = useRef<string | null>(null);
+  useEffect(() => {
+    // 같은 요청은 한 번만 적용한다(목록을 다시 읽어도 사용자가 고른 틀을 덮어쓰지 않는다)
+    if (selectTemplate === null || appliedSelect.current === selectTemplate || !templates.some((t) => t.id === selectTemplate)) return;
+    appliedSelect.current = selectTemplate;
+    setPick(selectTemplate);
+  }, [selectTemplate, templates]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);

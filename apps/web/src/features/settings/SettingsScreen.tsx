@@ -1,13 +1,18 @@
 import { useFixTarget } from "../../app/fix";
-import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import type { WorkspaceSettings } from "@agent-console/contracts";
+import { getContractSchema, type WorkspaceSettings } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { Banner, Button, Dialog, PageHeader, Spinner, useShortcuts, useToast } from "@agent-console/ui";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { DOCUMENT_REQUIRES, PROJECT_REQUIRES } from "../../app/requirements";
 import { useModuleList, useModules, useRequires, useRequiresPartition } from "../../modules";
+import { useStorage } from "../../app/StorageContext";
+import type { SchemaNode } from "../../lib/schemaTools";
+import { SettingsNav } from "./SettingsNav";
+import { fieldTexts, filterSections } from "./sectionSearch";
+import { useCollapsedGroups, useNarrowViewport } from "./useSettingsNavState";
 import { countModules } from "./modulesView";
 import { countSectionChanges, groupSections, sectionIdFromHash } from "./sectionState";
 import { describeError } from "../../app/errors";
@@ -47,6 +52,11 @@ export interface SectionDef {
   group: string;
   /** 이 섹션이 있으려면 서버에서 켜져 있어야 하는 모듈 id 또는 역할(모두 만족해야 한다, 비면 항상 있음). 꺼지면 목록과 본문에서 사라진다 */
   requires?: readonly string[];
+  /** 메시지 표에 없는 섹션(모듈이 선언한 새 섹션)의 제목·설명. 있으면 `titleKey`·`descriptionKey`보다 우선한다 */
+  title?: string;
+  description?: string;
+  /** 검색에 더 걸릴 글자(스키마에서 읽을 수 없는 필드 라벨 등) */
+  searchTerms?: readonly string[];
 }
 
 export const SETTINGS_SECTIONS: readonly SectionDef[] = [
@@ -84,8 +94,8 @@ export const SETTINGS_SECTIONS: readonly SectionDef[] = [
 /** 설정 화면에서 기능 모듈 섹션의 앵커 id */
 const MODULES_SECTION_ID = "modules";
 
-const sectionTitle = (d: SectionDef) => (m.settings.sections as Record<string, string>)[d.titleKey] ?? d.id;
-const sectionDescription = (d: SectionDef) => (m.settings.sectionDescription as Record<string, string>)[d.descriptionKey];
+const sectionTitle = (d: SectionDef) => d.title ?? (m.settings.sections as Record<string, string>)[d.titleKey] ?? d.id;
+const sectionDescription = (d: SectionDef) => d.description ?? (m.settings.sectionDescription as Record<string, string>)[d.descriptionKey];
 
 /** 서버가 준 필드 오류를 섹션별로 나눈다. `agent_defaults` 아래 오류는 공통 폼 기준 경로로 바꾼다. */
 export function errorsForSection(def: SectionDef, errors: readonly FormError[]): FormError[] {
@@ -98,13 +108,15 @@ export function errorsForSection(def: SectionDef, errors: readonly FormError[]):
 export interface SettingsScreenProps {
   /** 본문을 다른 기능이 그리는 섹션(섹션 id -> 렌더러). 설정 기능이 그 기능을 import하지 않게 앱 조립 층이 준다 */
   sectionRenderers?: Readonly<Record<string, () => ReactNode>>;
+  /** 섹션 목록(생략 = `SETTINGS_SECTIONS`). 모듈이 선언한 섹션은 여기에 더해 넘기면 코드 수정 없이 목록·검색·드롭다운에 나온다 */
+  sections?: readonly SectionDef[];
 }
 
-export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
+export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS }: SettingsScreenProps) {
   const toast = useToast();
   const queryClient = useQueryClient();
   // 서버 모듈이 꺼서 쓸 수 없는 섹션은 목록과 본문에서 사라진다. 설정 문서 기능이 꺼지면 폼·저장 줄도 사라진다.
-  const { met: shownSections } = useRequiresPartition(SETTINGS_SECTIONS);
+  const { met: shownSections } = useRequiresPartition(sections);
   const documentPhase = useRequires(DOCUMENT_REQUIRES).phase;
   const documentOn = documentPhase !== "unmet";
   // 설정 문서는 기능이 켜진 것이 확인된 뒤에만 읽는다(목록 확인 중에는 부르지 않는다).
@@ -151,6 +163,21 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
     });
   };
   useShortcuts([{ id: "settings.save", scope: "settings", keys: "Mod+S", titleKey: "shortcuts.save", modifierRequired: true, run: onSave }]);
+
+  const groupTitle = (g: string) => (m.settings.groups as Record<string, string>)[g] ?? g;
+  const storage = useStorage();
+  const { collapsed, toggle: toggleGroup } = useCollapsedGroups(storage);
+  const narrow = useNarrowViewport();
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  useShortcuts([{ id: "settings.search", scope: "settings", keys: "/", titleKey: "shortcuts.settingsSearch", run: () => searchRef.current?.focus() }]);
+  // 검색 대상 = 섹션 제목·설명 + 그 섹션 필드의 라벨·설명(스키마). 섹션 이름·필드 이름은 코드에 두지 않는다.
+  const rootSchema = useMemo(() => getContractSchema("WorkspaceSettings") as SchemaNode, []);
+  const searchable = useMemo(
+    () => shownSections.map((def) => ({ def, id: def.id, group: def.group, texts: [sectionTitle(def), sectionDescription(def) ?? "", ...fieldTexts(rootSchema, def.keys), ...(def.searchTerms ?? [])] })),
+    [shownSections, rootSchema],
+  );
+  const matched = useMemo(() => filterSections(searchable, query), [searchable, query]);
 
   if (documentOn && editor.status === "error") {
     const view = describeError(editor.error, m.settings.loadFailed);
@@ -250,16 +277,29 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
     setPicked(id);
   };
   const changeCount = (def: SectionDef) => (editor.base === undefined || editor.draft === undefined ? 0 : countSectionChanges(def.keys, editor.base, editor.draft));
-  const navGroups = groupSections(shownSections);
-  const groupTitle = (g: string) => (m.settings.groups as Record<string, string>)[g] ?? g;
-  const onNavKey = (e: KeyboardEvent<HTMLElement>) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-    const links = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("a"));
-    const i = links.indexOf(document.activeElement as HTMLElement);
-    if (i < 0) return;
-    e.preventDefault();
-    links[(i + (e.key === "ArrowDown" ? 1 : -1) + links.length) % links.length]?.focus();
-  };
+  const visible = narrow ? searchable.filter((s) => s.id === active || matched.includes(s)) : matched;
+  const navGroups = groupSections(visible).map((g) => ({
+    group: g.group,
+    title: groupTitle(g.group),
+    items: g.items.map((s) => {
+      const def = s.def;
+      const failed = errorsForSection(def, editor.fieldErrors).length > 0;
+      const changed = changeCount(def);
+      return {
+        id: def.id,
+        title: sectionTitle(def),
+        marks: (
+          <>
+            {failed ? <span className="app-sev" data-severity="error" aria-label={m.settings.sectionNavError}> ●</span> : null}
+            {changed > 0 ? <span className="app-settings-changed" role="img" title={m.settings.changedDot} aria-label={m.settings.changedDot} /> : null}
+            {def.id === MODULES_SECTION_ID && counts.problems > 0 ? (
+              <span className="app-sev" data-severity={counts.hasFailed ? "error" : "warning"} role="img" aria-label={m.modules.dotLabel}> ●</span>
+            ) : null}
+          </>
+        ),
+      };
+    }),
+  }));
 
   return (
     <div className="app-screen-frame" data-screen="settings">
@@ -293,39 +333,8 @@ export function SettingsScreen({ sectionRenderers }: SettingsScreenProps) {
         <ConflictBanner details={editor.conflict} busy={editor.savePhase === "saving"} onLoadServer={() => void editor.loadServerVersion()} onOverwrite={() => void editor.overwrite()} />
       )}
       {editor.saveError !== null && editor.fieldErrors.length === 0 ? <Banner tone="danger">{editor.saveError}</Banner> : null}
-      <div className="app-settings-layout">
-        <nav className="app-settings-nav" aria-label={m.settings.sectionNav} onKeyDown={onNavKey}>
-          {navGroups.map((g) => (
-            <div key={g.group} className="app-settings-navgroup">
-              <h3 id={`settings-group-${g.group}`} className="app-settings-grouptitle">{groupTitle(g.group)}</h3>
-              <ul aria-labelledby={`settings-group-${g.group}`}>
-                {g.items.map((def) => {
-                  const failed = errorsForSection(def, editor.fieldErrors).length > 0;
-                  const changed = changeCount(def);
-                  return (
-                    <li key={def.id}>
-                      <a
-                        href={`#${def.id}`}
-                        aria-current={active === def.id ? "location" : undefined}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          goTo(def.id);
-                        }}
-                      >
-                        {sectionTitle(def)}
-                        {failed ? <span className="app-sev" data-severity="error" aria-label={m.settings.sectionNavError}> ●</span> : null}
-                        {changed > 0 ? <span className="app-settings-changed" role="img" title={m.settings.changedDot} aria-label={m.settings.changedDot} /> : null}
-                        {def.id === MODULES_SECTION_ID && counts.problems > 0 ? (
-                          <span className="app-sev" data-severity={counts.hasFailed ? "error" : "warning"} role="img" aria-label={m.modules.dotLabel}> ●</span>
-                        ) : null}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
+      <div className="app-settings-layout" data-narrow={narrow ? "true" : undefined}>
+        <SettingsNav groups={navGroups} active={active} onPick={goTo} query={query} onQueryChange={setQuery} searchRef={searchRef} collapsed={collapsed} onToggleGroup={toggleGroup} narrow={narrow} />
         <div className="app-settings-body">
           {ready && editor.versionHash === undefined ? <Banner tone="info">{m.settings.emptyHint}</Banner> : null}
           {activeDef === undefined ? null : (

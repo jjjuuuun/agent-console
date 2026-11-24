@@ -1,5 +1,5 @@
 import type { Issue } from "@agent-console/contracts/definitions";
-import { TextDiff, TextEditor, type TextEditorHandle, type TextMark } from "@agent-console/text-editor";
+import { TextDiff, TextEditor, type TextEditorHandle, type TextEditorStatus, type TextMark } from "@agent-console/text-editor";
 import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
 import { MarkdownPreview, type MarkdownPreviewProps } from "./MarkdownPreview";
 import { formatMessage, resolveMessages } from "./messages";
@@ -81,6 +81,8 @@ export interface DocumentEditorProps {
   marks?: readonly TextMark[];
   /** 도구줄 아래, 점검 목록 위에 끼우는 띠 자리(충돌·규칙 거부 같은 앱 띠). */
   banners?: ReactNode;
+  /** 커서 줄·칸·글자 수가 바뀔 때(상태 줄을 앱이 그릴 때 쓴다) */
+  onStatus?: (status: TextEditorStatus) => void;
   /** 편집기 아래 상태 줄 자리(줄·칸·글자 수, 링크 수 같은 앱 정보). */
   statusBar?: ReactNode;
   /** 미리보기 훅(링크 그리기·원문 바꾸기·주소 허용). 그대로 `MarkdownPreview`에 넘긴다. */
@@ -97,7 +99,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   const {
     document, value, onChange, onSave, dirty = false, saving = false, readOnly = false, readOnlyReason, missing = false, onCreateMissing, conflict = false,
     onReload, onOverwrite, onCopyMine, compare, defaultCompareOpen = false, externalChange = false, initialLine, mode: controlledMode, onModeChange, handleRef,
-    issues = [], marks, banners, statusBar, language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, previewHooks, messages, className,
+    issues = [], marks, banners, statusBar, onStatus, language = "markdown", maxBytes, defaultMode = "split", toolbarExtra, previewHooks, messages, className,
   } = props;
   const text = resolveMessages(messages);
   const [innerMode, setInnerMode] = useState<EditorViewMode>(defaultMode);
@@ -196,7 +198,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
             ))}
           </div>
         ) : null}
-        {compare ? (
+        {compare && !conflict && !externalChange ? (
           <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
             {text["editor.compare"]}
           </button>
@@ -222,6 +224,11 @@ export function DocumentEditor(props: DocumentEditorProps) {
         <div className="ac-md-banner" data-tone="warning" role="alert">
           <strong>{text["editor.conflict.title"]}</strong> {text["editor.conflict.body"]}
           <span className="ac-md-banner-actions">
+            {compare ? (
+              <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
+                {text["editor.compare"]}
+              </button>
+            ) : null}
             {onReload ? (
               <button type="button" className="ac-md-btn" onClick={onReload}>
                 {text["editor.conflict.reload"]}
@@ -230,11 +237,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
             {onOverwrite ? (
               <button type="button" className="ac-md-btn" onClick={onOverwrite} disabled={locked}>
                 {text["editor.conflict.overwrite"]}
-              </button>
-            ) : null}
-            {compare ? (
-              <button type="button" className="ac-md-btn" aria-pressed={comparing} onClick={() => setComparing((v) => !v)}>
-                {text["editor.compare"]}
               </button>
             ) : null}
             {onCopyMine ? (
@@ -308,7 +310,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
           {compare.before === value ? (
             <p className="ac-md-muted" role="status">{text["editor.compare.same"]}</p>
           ) : (
-            <TextDiff before={compare.before} after={value} language={language} ariaLabel={text["editor.compare"] ?? ""} maxHeight={320} />
+            <TextDiff
+              before={compare.before}
+              after={value}
+              language={language}
+              ariaLabel={text["editor.compare"] ?? ""}
+              maxHeight={320}
+              messages={{ split: text["editor.diff.split"] ?? "", unified: text["editor.diff.unified"] ?? "", toolbar: text["editor.diff.toolbar"] ?? "", unchangedLines: text["editor.diff.unchanged"] ?? "" }}
+            />
           )}
         </div>
       ) : null}
@@ -342,6 +351,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
               {...(maxBytes !== undefined ? { maxBytes } : {})}
               {...(marks ? { marks } : {})}
               onCompositionChange={setComposing}
+              {...(onStatus ? { onStatus } : {})}
               handleRef={handle}
               messages={{ tooLarge: text["editor.tooLarge"] ?? "" }}
             />

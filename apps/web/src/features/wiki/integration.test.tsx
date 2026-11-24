@@ -68,6 +68,14 @@ describe("wiki-ref 위젯", () => {
     expect(onChange).toHaveBeenCalledWith("zz");
   });
 
+  it("프로젝트 사본이면 위키 제안 버튼이 보이고 누르면 그 id가 값이 된다", async () => {
+    const onChange = vi.fn();
+    harness(<WikiRefWidget {...props} value="" onChange={onChange} />, { at: "/resources/r1?prj=p9", wiki: { listWikis: vi.fn(async () => [W("a1", "첫째"), W("b2")]) } });
+    const pick = await screen.findByRole("button", { name: "첫째 (a1)" }, LONG);
+    fireEvent.click(pick);
+    expect(onChange).toHaveBeenCalledWith("a1");
+  });
+
   it("공용 리소스(주소에 ?prj= 없음)는 직접 입력 + 안내이고, 현재 프로젝트가 있으면 그 위키를 제안한다. 필수가 아니면 비우기 = null", async () => {
     const onChange = vi.fn();
     const { clients } = harness(<WikiRefWidget {...props} required={false} value="a1" onChange={onChange} />, { project: "p1", wiki: { listWikis: vi.fn(async () => [W("a1")]) } });

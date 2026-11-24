@@ -44,7 +44,7 @@ props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonl
 `rawJsonToggle`, `messages`(한국어 기본값 부분 덮어쓰기), `className`.
 해석할 수 없는 스키마(`true`, `{}`)나 렌더 예외는 원시 JSON 편집기로 대체된다.
 
-## 출처 표시(선택, R12.3)
+## 출처 표시(선택)
 설정 층(공통/팀/에이전트/노드 등)이 겹치는 값을 편집할 때 쓴다. `provenance` 또는 `disabledPaths`를 주면 켜지고, 없으면 위 동작 그대로다.
 층 id·이름은 코드에 없으며 `layers`(낮은 우선순위가 앞) 데이터로만 받는다. 경로는 모두 JSON Pointer다.
 

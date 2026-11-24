@@ -11,6 +11,7 @@ import { ConfigIssuesProvider } from "../delegation";
 import { SDD_WIDGET_FIELDS } from "./widgets/fields";
 import { SddWidgetEnvProvider, type SddWidgetEnv } from "./widgets/SddWidgetEnv";
 import { widgetUiSchema } from "./widgets/widgetUi";
+import { useMediaQuery } from "../../lib/useMediaQuery";
 import { issueInSection, mergeSection, ruleSections, sectionValue, type RuleSection } from "./ruleSections";
 
 type Obj = Record<string, unknown>;
@@ -57,10 +58,23 @@ export function RuleSectionsForm({ schema, value, onChange, issues, readonly, se
   const fields = useMemo(() => ({ ...SDD_WIDGET_FIELDS, ...extraFields }), [extraFields]);
   const section = sections.find((s) => s.id === sectionId) ?? sections[0];
   const sectionUi = useMemo(() => (section === undefined ? undefined : widgetUiSchema(section.schema, new Set(Object.keys(fields)))), [section, fields]);
+  const narrow = useMediaQuery("(max-width: 1099px)");
   if (section === undefined) return null;
   const sectionErrors = errorsFor(issues, section);
   return (
     <div className="sdd-rules-body">
+      {narrow ? (
+        // 좁으면(안쪽 폭 < 1100) 섹션 목록은 폼 위 한 줄짜리 `[섹션 ▾]` 선택이다(폼이 첫 화면 밖으로 밀리지 않게)
+        <label className="sdd-rules-select">
+          <span className="app-muted">{navLabel}</span>
+          <select className="sdd-input" value={section.id} onChange={(e) => onSectionChange(e.target.value)}>
+            {sections.map((s) => {
+              const n = issues.filter((i) => issueInSection(i.path, s)).length;
+              return <option key={s.id} value={s.id}>{n > 0 ? `${s.title} (${n})` : s.title}</option>;
+            })}
+          </select>
+        </label>
+      ) : (
       <nav className="sdd-rules-nav" aria-label={navLabel}>
         <ul>
           {sections.map((s) => {
@@ -76,8 +90,10 @@ export function RuleSectionsForm({ schema, value, onChange, issues, readonly, se
           })}
         </ul>
       </nav>
+      )}
       <div className="sdd-rules-form">
-        <h3 className="sdd-section-title">{section.title}</h3>
+        {/* 섹션 제목은 제목 줄·목록에 이미 있고 폼의 첫 라벨·접힘 제목과 같은 말이라 눈에는 숨기고 제목 구조(스크린리더)만 남긴다 */}
+        <h2 className="sdd-section-title sdd-sr-only">{section.title}</h2>
         {sectionNote?.(section)}
         <SddWidgetEnvProvider env={widgetEnv}>
           <ConfigIssuesProvider issues={sectionErrors}>

@@ -134,6 +134,7 @@ export function TraceTab({ specId, view, ctx, params, setParams, goTab }: SddTab
             onOpenTask={(key) => openTask(key)}
             onOpenRequirement={(row) => patch((p) => p.set(P.req, row.id))}
             onlyGaps={only}
+            showGapsToggle={false}
             onOnlyGapsChange={(on) => patch((p) => (on ? p.set(P.only, "1") : p.delete(P.only)))}
             messages={viewMessages}
           />

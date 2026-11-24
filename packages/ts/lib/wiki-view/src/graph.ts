@@ -97,7 +97,8 @@ export function graphToFlow(graph: WikiGraph, options: GraphFlowOptions = {}): {
           count: e.count ?? 1,
           touchesCenter: center !== null && (e.from === center || e.to === center),
           paired,
-          bend: paired ? (e.from < e.to ? 1 : -1) : 0,
+          // 법선이 진행 방향 기준이라 두 방향 모두 +1이면 서로 반대쪽으로 휘어 겹치지 않는다
+          bend: paired ? 1 : 0,
         },
       };
     })

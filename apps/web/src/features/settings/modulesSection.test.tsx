@@ -6,6 +6,7 @@ import { createFakeClients } from "../../testing/fakes";
 import { mountApp } from "../../testing/screenHarness";
 import type { ModulesState } from "../../modules";
 import { ModulesSectionView } from "./sections/ModulesSection";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 
@@ -27,6 +28,9 @@ function view(state: ModulesState, extra: Partial<Parameters<typeof ModulesSecti
   );
   return { onRefresh };
 }
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("설정의 기능 모듈 섹션", () => {
   it("요약 줄과 상태별 개수, 문제 행이 그룹 맨 위에 오고 접힌 문제 행에 이유가 한 줄 보인다", () => {

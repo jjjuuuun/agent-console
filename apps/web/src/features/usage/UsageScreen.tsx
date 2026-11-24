@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router";
-import { Banner, Button, Disclosure, EmptyState, PageHeader, useShortcuts } from "@agent-console/ui";
+import { Banner, Disclosure, EmptyState, Icon, IconButton, PageHeader, useShortcuts } from "@agent-console/ui";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
 import { lookupMessage, messages as appMessages } from "../../app/messages";
@@ -127,7 +127,7 @@ export function UsageScreen() {
     <PageHeader
       title={t.title}
       status={<><AccountWideNote /><span className="app-muted" aria-live="polite">{fetching ? t.refreshing : updated === undefined ? "" : t.lastUpdated(formatRelative(updated, nowMs))}</span></>}
-      actions={<Button size="sm" loading={fetching && !report.isPending} onClick={refresh}>{t.refresh}</Button>}
+      actions={<IconButton size="sm" label={t.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={fetching && !report.isPending ? "true" : undefined} onClick={refresh} />}
     />
   );
 

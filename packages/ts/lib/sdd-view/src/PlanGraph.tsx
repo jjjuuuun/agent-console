@@ -7,7 +7,8 @@ import { applyPositions, createElkPlanLayout, planToFlow, PLAN_DEFAULTS, type Pl
 import { ToneChip } from "@agent-console/markdown-doc";
 
 const PLAN_PAD = 24;
-type PlanNode = Node<PlanNodeData & { statusLabel: string; statusTone: string; ariaText: string }, "sdd-plan-node">;
+type PlanNode = Node<PlanNodeData & { statusLabel: string; statusTone: string; ariaText: string; readyLabel: string; dim: boolean }, "sdd-plan-node">;
+type PlanLayerHead = Node<{ label: string; badge: string }, "sdd-plan-layer">;
 
 function PlanNodeView({ data, selected }: NodeProps<PlanNode>) {
   return (
@@ -18,16 +19,30 @@ function PlanNodeView({ data, selected }: NodeProps<PlanNode>) {
       data-blocked={data.blocked || undefined}
       data-cycle={data.cycle || undefined}
       data-selected={selected || undefined}
+      data-dim={data.dim || undefined}
       title={data.title}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />
+      <span className="ac-sdd-plan-node-top">
+        <span className="ac-sdd-mono ac-sdd-plan-node-key">{data.key}</span>
+        <ToneChip label={data.statusLabel} tone={data.statusTone} />
+        {data.ready ? <ToneChip label={data.readyLabel} tone="info" /> : null}
+      </span>
       <span className="ac-sdd-ellipsis">{data.title}</span>
-      <ToneChip label={data.statusLabel} tone={data.statusTone} />
       <Handle type="source" position={Position.Right} isConnectable={false} />
     </div>
   );
 }
-const nodeTypes = { "sdd-plan-node": PlanNodeView };
+/** 열 머리 라벨("묶음 n" + 병목 순번 배지). 노드 위 한 줄, 선택·포커스되지 않는다. */
+function PlanLayerHeadView({ data }: NodeProps<PlanLayerHead>) {
+  return (
+    <div className="ac-sdd-plan-layer-head" aria-hidden="true">
+      <span>{data.label}</span>
+      {data.badge !== "" ? <span className="ac-sdd-plan-layer-badge">{data.badge}</span> : null}
+    </div>
+  );
+}
+const nodeTypes = { "sdd-plan-node": PlanNodeView, "sdd-plan-layer": PlanLayerHeadView };
 
 export interface PlanGraphProps {
   plan: TaskPlan;
@@ -42,11 +57,13 @@ export interface PlanGraphProps {
   height?: number | "fill";
   /** 첫 화면에서 허용하는 가장 작은 줌(글자가 읽히는 크기). 이보다 작아야 다 들어오는 그래프는 이 줌으로 시작 노드부터 보여 준다. 기본 1(노드 글자 12px) */
   readableZoom?: number;
+  /** 병목이 아닌 노드·연결을 흐리게 한다(병목만 강조). 스위치는 앱이 도구줄에 둔다 */
+  onlyCritical?: boolean;
   messages?: Readonly<Record<string, string>>;
   className?: string;
 }
 
-function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", readableZoom = 1, messages, className }: PlanGraphProps) {
+function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, onSelect, height = "fill", readableZoom = 1, onlyCritical = false, messages, className }: PlanGraphProps) {
   const text = resolveMessages(messages);
   const base = useMemo(() => planToFlow(plan, tasks, options), [plan, tasks, options]);
   const defaultEngine = useMemo(() => createElkPlanLayout(), []);
@@ -99,26 +116,47 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
     return () => clearTimeout(id);
   }, [laidOut, flow, fitView, getNodesBounds, getNodes, setViewport, viewW, viewH, readableZoom]);
 
-  const nodes = useMemo<PlanNode[]>(
-    () =>
-      flow.nodes.map((n) => {
-        const st = statusTone(n.data.status, statuses);
-        const flags = [n.data.critical ? text["plan.critical"] : "", n.data.ready ? text["plan.ready"] : "", n.data.blocked ? text["plan.blocked"] : "", n.data.cycle ? text["plan.cycle"] : ""]
-          .filter((s) => s !== "")
-          .join(", ");
-        return {
-          id: n.id,
-          type: "sdd-plan-node",
-          position: n.position,
-          width: n.width,
-          height: n.height,
-          selected: n.id === selectedKey,
-          ariaLabel: formatMessage(text["plan.node"], { title: n.data.title, layer: n.data.layer + 1, flags: flags || st.label }),
-          data: { ...n.data, statusLabel: st.label, statusTone: st.tone, ariaText: n.data.title },
-        };
-      }),
-    [flow, statuses, selectedKey, text],
-  );
+  const planCritical = plan.critical_path;
+  const nodes = useMemo<Array<PlanNode | PlanLayerHead>>(() => {
+    const criticalPath = planCritical ?? [];
+    const items: PlanNode[] = flow.nodes.map((n) => {
+      const st = statusTone(n.data.status, statuses);
+      const flags = [n.data.critical ? text["plan.critical"] : "", n.data.ready ? text["plan.ready"] : "", n.data.blocked ? text["plan.blocked"] : "", n.data.cycle ? text["plan.cycle"] : ""]
+        .filter((s) => s !== "")
+        .join(", ");
+      return {
+        id: n.id,
+        type: "sdd-plan-node",
+        position: n.position,
+        width: n.width,
+        height: n.height,
+        selected: n.id === selectedKey,
+        ariaLabel: formatMessage(text["plan.node"], { title: n.data.title, layer: n.data.layer + 1, flags: flags || st.label }),
+        data: { ...n.data, statusLabel: st.label, statusTone: st.tone, ariaText: n.data.title, readyLabel: text["plan.ready"], dim: onlyCritical && !n.data.critical },
+      };
+    });
+    // 열 머리: 같은 묶음(layer) 노드들의 왼쪽 위 좌표 위에 둔다
+    const heads = new Map<number, { x: number; y: number; badge: string }>();
+    for (const n of flow.nodes) {
+      const h = heads.get(n.data.layer) ?? { x: n.position.x, y: n.position.y, badge: "" };
+      h.x = Math.min(h.x, n.position.x);
+      h.y = Math.min(h.y, n.position.y);
+      const at = criticalPath.indexOf(n.id);
+      if (at >= 0 && h.badge === "") h.badge = formatMessage(text["plan.criticalBadge"], { n: at + 1, total: criticalPath.length });
+      heads.set(n.data.layer, h);
+    }
+    const headNodes: PlanLayerHead[] = [...heads.entries()].map(([layer, h]) => ({
+      id: `ac-sdd-layer-${layer}`,
+      type: "sdd-plan-layer",
+      position: { x: h.x, y: h.y - 28 },
+      selectable: false,
+      draggable: false,
+      focusable: false,
+      connectable: false,
+      data: { label: formatMessage(text["plan.layerHead"], { n: layer + 1 }), badge: h.badge },
+    }));
+    return [...headNodes, ...items];
+  }, [flow, statuses, selectedKey, text, onlyCritical, planCritical]);
   const edges = useMemo<Edge[]>(
     () =>
       flow.edges.map((e) => ({
@@ -126,10 +164,12 @@ function InnerPlanGraph({ plan, tasks, statuses, engine, options, selectedKey, o
         source: e.source,
         target: e.target,
         className: e.critical ? "ac-sdd-plan-edge ac-sdd-plan-edge-critical" : "ac-sdd-plan-edge",
-        markerEnd: { type: MarkerType.ArrowClosed },
+        // 화살촉은 선 색과 같은 색(fill=stroke). 색은 선 CSS와 같은 토큰을 쓴다
+        markerEnd: { type: MarkerType.ArrowClosed, color: e.critical ? "var(--ac-accent)" : "var(--ac-border-strong)" },
+        ...(onlyCritical && !e.critical ? { style: { opacity: 0.3 } } : {}),
         focusable: false,
       })),
-    [flow],
+    [flow, onlyCritical],
   );
 
   const root = `ac-sdd-root ac-sdd-plan${className ? ` ${className}` : ""}`;

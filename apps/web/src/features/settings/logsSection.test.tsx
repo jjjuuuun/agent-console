@@ -4,12 +4,13 @@ import { ApiError } from "@agent-console/api-client";
 import type { LogSourceInfo, UsageSourceInfo, WorkspaceSettings } from "@agent-console/contracts";
 import { createFakeClients } from "../../testing/fakes";
 import { mountApp } from "../../testing/screenHarness";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 const LONG = { timeout: 15_000 };
 
 // 출처·범주 이름은 임의 값이다(앱은 이 이름을 모른다).
-const src = (id: string, over: { reads?: boolean; def?: boolean; enabled?: boolean; status?: LogSourceInfo["status"] } = {}): LogSourceInfo => ({
+const src = (id: string, over: { reads?: boolean; def?: boolean; enabled?: boolean; eff?: boolean; status?: LogSourceInfo["status"] } = {}): LogSourceInfo => ({
   descriptor: {
     id,
     title: `출처-${id}`,
@@ -22,6 +23,7 @@ const src = (id: string, over: { reads?: boolean; def?: boolean; enabled?: boole
   },
   enabled: over.enabled ?? false,
   origin: "plugin",
+  ...(over.eff === undefined ? {} : { default_effective: over.eff }),
   ...(over.status ? { status: over.status } : {}),
 });
 
@@ -39,6 +41,9 @@ function mount(sources: LogSourceInfo[], settings: WorkspaceSettings = {}, rest:
   mountApp(clients, `/settings#${section}`);
   return clients;
 }
+
+// 섹션 목록은 1100px 미만이면 드롭다운이다. 이 파일은 넓은 화면의 목록을 확인한다.
+withViewportWidth(1440);
 
 describe("설정: 로그 출처", () => {
   it("읽는 출처를 켜면 확인 다이얼로그가 뜨고 취소하면 설정이 바뀌지 않으며, 확인하면 저장 전 상태로 켜진다", async () => {
@@ -148,7 +153,7 @@ describe("설정: 로그 출처 자동 켜짐(서버가 이 PC의 로그를 보�
     const sw = within(card).getByRole("checkbox", { name: /켜기/ }) as HTMLInputElement;
     fireEvent.click(sw);
     await waitFor(() => expect(sw.checked).toBe(false));
-    expect(card.textContent).toContain("지정됨");
+    expect(within(card).getByRole("img", { name: "지정됨" })).toBeTruthy();
     expect(card.textContent).toContain("저장하면 적용됩니다");
     fireEvent.click(within(card).getByRole("button", { name: /기본/ }));
     await waitFor(() => expect(sw.checked).toBe(true));
@@ -160,5 +165,80 @@ describe("설정: 로그 출처 자동 켜짐(서버가 이 PC의 로그를 보�
     const card = await cardOf();
     expect((within(card).getByRole("checkbox", { name: /켜기/ }) as HTMLInputElement).checked).toBe(false);
     expect(card.textContent).not.toContain("자동 켜짐");
+  });
+});
+
+describe("설정: 로그 출처 카드 제목줄(텍스트 칩 0개)", () => {
+  const head = (card: HTMLElement) => card.querySelector(".logs-source-head") as HTMLElement;
+  const cardOf = async (id: string) => (await screen.findByText(`출처-${id}`, {}, LONG)).closest("[data-source-card]") as HTMLElement;
+  const READ_ONLY = "이 앱은 이 출처의 원본 파일을 열어 읽기만 하며 수정·이동·삭제하지 않습니다.";
+
+  it("reads_paths 참이면 자물쇠 아이콘 하나(툴팁·이름은 읽기 전용 설명), 거짓이면 없다 — 칩 글자는 없다", async () => {
+    mount([src("r", { reads: true }), src("w", { reads: false })]);
+    const r = await cardOf("r");
+    expect(within(head(r)).getByRole("img", { name: READ_ONLY }).getAttribute("title")).toBe(READ_ONLY);
+    expect(head(r).querySelector(".logs-chip")).toBeNull();
+    expect(head(r).textContent).not.toContain("읽기만 함");
+    const w = await cardOf("w");
+    expect(within(head(w)).queryByRole("img", { name: READ_ONLY })).toBeNull();
+  });
+
+  it("값을 지정하면 점 + [↺]가 제목줄에, 생략하면 기본값 문구가 제목줄이 아니라 보조 줄에 있다", async () => {
+    mount([src("a", { def: true, enabled: true }), src("b")], { logs: { sources: [{ id: "b", enabled: true }] } });
+    const a = await cardOf("a");
+    expect(within(a).getByTestId("source-default").textContent).toBe("기본값: 켜짐");
+    expect(head(a).textContent).not.toContain("기본값");
+    expect(within(head(a)).queryByRole("img", { name: "지정됨" })).toBeNull();
+    expect(within(head(a)).queryByRole("button", { name: /기본/ })).toBeNull();
+    const b = await cardOf("b");
+    expect(within(head(b)).getByRole("img", { name: "지정됨" }).getAttribute("title")).toBe("지정됨");
+    expect(within(head(b)).getByRole("button", { name: /기본/ })).toBeTruthy();
+    expect(within(b).queryByTestId("source-default")).toBeNull();
+    expect(head(b).querySelector(".logs-chip")).toBeNull();
+  });
+});
+
+describe("설정: 로그 출처 ↺ 기본값 = default_effective(6R.8a)", () => {
+  const cardOf = async (id: string) => (await screen.findByText(`출처-${id}`, {}, LONG)).closest("[data-source-card]") as HTMLElement;
+  const sw = (card: HTMLElement) => within(card).getByRole("checkbox", { name: /켜기/ }) as HTMLInputElement;
+
+  it("① 저장된 enabled:false + default_effective:true(디스크립터 기본 꺼짐) → ↺ → 켜짐·자동 켜짐·저장 전 변경", async () => {
+    mount([src("a", { reads: true, enabled: false, eff: true })], { logs: { sources: [{ id: "a", enabled: false }] } });
+    const card = await cardOf("a");
+    expect(sw(card).checked).toBe(false);
+    fireEvent.click(within(card).getByRole("button", { name: /기본/ }));
+    await waitFor(() => expect(sw(card).checked).toBe(true));
+    expect(within(card).getByTestId("source-default").textContent).toBe("기본값: 자동 켜짐");
+    expect(card.textContent).toContain("저장하면 적용됩니다");
+  });
+
+  it("② 저장된 enabled:true + default_effective:false → ↺ → 꺼짐·기본값: 꺼짐", async () => {
+    mount([src("b", { def: true, enabled: true, eff: false })], { logs: { sources: [{ id: "b", enabled: true }] } });
+    const card = await cardOf("b");
+    expect(sw(card).checked).toBe(true);
+    fireEvent.click(within(card).getByRole("button", { name: /기본/ }));
+    await waitFor(() => expect(sw(card).checked).toBe(false));
+    expect(within(card).getByTestId("source-default").textContent).toBe("기본값: 꺼짐");
+  });
+
+  it("③ default_effective가 없는 옛 응답은 디스크립터 기본으로 동작한다", async () => {
+    mount([src("c", { def: true, enabled: true })], { logs: { sources: [{ id: "c", enabled: false }] } });
+    const card = await cardOf("c");
+    fireEvent.click(within(card).getByRole("button", { name: /기본/ }));
+    await waitFor(() => expect(sw(card).checked).toBe(true));
+    expect(within(card).getByTestId("source-default").textContent).toBe("기본값: 켜짐");
+  });
+
+  it("④ 요약 줄 켜짐 수와 확인 대화상자가 같은 유효 값을 쓴다", async () => {
+    // 설정이 없고 자동 켜짐(default_effective)인 출처 + 설정이 꺼짐인 출처: 켜짐 1·꺼짐 1
+    mount([src("x", { reads: true, enabled: true, eff: true }), src("y", { reads: true, enabled: false, eff: true })], { logs: { sources: [{ id: "y", enabled: false }] } });
+    const x = await cardOf("x");
+    expect(screen.getByText(/켜짐 1/)).toBeTruthy();
+    // 기본값이 이미 켜짐이면 다시 켤 때 확인 없이 바로 켜진다
+    const y = await cardOf("y");
+    fireEvent.click(sw(y));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(sw(y).checked).toBe(true));
+    void x;
   });
 });

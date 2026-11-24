@@ -166,6 +166,10 @@ export function TaskTable(props: TaskTableProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 손잡이는 DOM만 읽고 rowMenuItems 유무만 본다
     [rowMenuItems === undefined],
   );
+  // 머리와 모든 행이 같은 열 격자를 쓴다(열 폭 고정, 칩 x 위치가 행마다 같다). 연결·동작 열은 쓸 때만 있다.
+  const gridStyle = {
+    gridTemplateColumns: [selectable ? "20px" : "", "minmax(160px, 1fr)", "var(--ac-sdd-col-status, 112px)", "var(--ac-sdd-col-ready, 80px)", "var(--ac-sdd-col-fields, 208px)", showLinks ? "var(--ac-sdd-col-runs, 140px)" : "", renderActions ? "var(--ac-sdd-col-actions, 96px)" : ""].filter((c) => c !== "").join(" "),
+  };
   const root = `ac-sdd-root${className ? ` ${className}` : ""}`;
 
   if (syntaxEmpty) {
@@ -264,7 +268,7 @@ export function TaskTable(props: TaskTableProps) {
     };
     return (
       <div className="ac-sdd-task" data-sdd-task-key={task.key} data-ready={task.ready ? "" : undefined} data-open={open || undefined} data-selected={selected.has(task.key) || undefined}>
-        <div className="ac-sdd-task-line">
+        <div className="ac-sdd-task-line" style={gridStyle}>
           <span id={`ac-sdd-rowdesc-${task.key}`} className="ac-sdd-sr-only">{formatMessage(text["tasks.rowState"], { status: shown.label, readiness: readiness !== "" ? `, ${readiness}` : "" })}</span>
           {selectable ? (
             <input
@@ -307,7 +311,7 @@ export function TaskTable(props: TaskTableProps) {
             {task.id ? <span className="ac-sdd-mono ac-sdd-muted">{task.id}</span> : null}
             <span className="ac-sdd-ellipsis">{title}</span>
           </button>
-          <span className="ac-sdd-task-cell">
+          <span className="ac-sdd-task-cell" data-col="status">
             <TaskStatusMenu
               status={task.status}
               statuses={statuses}
@@ -317,11 +321,11 @@ export function TaskTable(props: TaskTableProps) {
               {...(onStatusChange ? { onSelect: (id: string) => onStatusChange(task, id) } : {})}
               messages={text}
             />
-            {readiness !== "" ? <ToneChip label={readiness} tone={task.ready ? "info" : "neutral"} /> : null}
           </span>
-          <TaskFieldChips fields={task.fields} messages={text} />
-          {showLinks ? <TaskRunChips links={task.links} {...(openableKinds ? { openableKinds } : {})} {...(onOpenLink ? { onOpen: onOpenLink } : {})} {...(linkStatuses ? { statuses: linkStatuses } : {})} messages={text} /> : null}
-          {renderActions ? <span className="ac-sdd-task-actions" data-sdd-trigger="actions">{renderActions(task)}</span> : null}
+          <span className="ac-sdd-task-cell" data-col="ready">{readiness !== "" ? <ToneChip label={readiness} tone={task.ready ? "info" : "neutral"} /> : null}</span>
+          <span className="ac-sdd-task-cell" data-col="fields"><TaskFieldChips fields={task.fields} max={2} messages={text} /></span>
+          {showLinks ? <span className="ac-sdd-task-cell" data-col="links"><TaskRunChips links={task.links} max={2} {...(openableKinds ? { openableKinds } : {})} {...(onOpenLink ? { onOpen: onOpenLink } : {})} {...(linkStatuses ? { statuses: linkStatuses } : {})} messages={text} /></span> : null}
+          {renderActions ? <span className="ac-sdd-task-actions" data-col="actions" data-sdd-trigger="actions">{renderActions(task)}</span> : null}
         </div>
         {notice != null ? <div className="ac-sdd-row-notice" data-sdd-row-notice="">{notice}</div> : null}
         {menu ? (
@@ -412,8 +416,8 @@ export function TaskTable(props: TaskTableProps) {
 
   return (
     <div ref={scrollRef} className={`${root} ac-sdd-scroll`} style={{ height: height === "fill" ? "100%" : height }}>
-      {selectable ? (
-        <div className="ac-sdd-selbar" data-sdd-selbar="">
+      <div className="ac-sdd-selbar ac-sdd-task-head" style={gridStyle} data-sdd-selbar="">
+        {selectable ? (
           <input
             type="checkbox"
             className="ac-sdd-check"
@@ -422,14 +426,24 @@ export function TaskTable(props: TaskTableProps) {
             aria-label={text["tasks.select.all"]}
             onChange={(e) => selectAllReady(e.target.checked)}
           />
-          <span className="ac-sdd-muted">{selectedCount > 0 ? formatMessage(text["tasks.select.count"], { n: selectedCount }) : text["tasks.select.all"]}</span>
+        ) : null}
+        <span className="ac-sdd-colhead">
+          {selectedCount > 0 ? formatMessage(text["tasks.select.count"], { n: selectedCount }) : text["tasks.col.title"]}
           {selectedCount > 0 ? (
-            <button type="button" className="ac-sdd-link" onClick={() => setSelected(new Set())}>
-              {text["tasks.select.clear"]}
-            </button>
+            <>
+              {" "}
+              <button type="button" className="ac-sdd-link" onClick={() => setSelected(new Set())}>
+                {text["tasks.select.clear"]}
+              </button>
+            </>
           ) : null}
-        </div>
-      ) : null}
+        </span>
+        <span className="ac-sdd-colhead">{text["tasks.col.status"]}</span>
+        <span className="ac-sdd-colhead">{text["tasks.col.ready"]}</span>
+        <span className="ac-sdd-colhead">{text["tasks.col.fields"]}</span>
+        {showLinks ? <span className="ac-sdd-colhead">{text["tasks.col.runs"]}</span> : null}
+        {renderActions ? <span className="ac-sdd-colhead ac-sdd-sr-only">{text["tasks.col.actions"]}</span> : null}
+      </div>
       <ul className="ac-sdd-vlist" role="list" aria-label={text["tasks.table"]} style={{ height: virtual.getTotalSize() }}>
         {virtual.getVirtualItems().map((item) => {
           const row = rows[item.index] as TaskRow;

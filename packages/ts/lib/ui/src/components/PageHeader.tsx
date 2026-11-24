@@ -7,6 +7,8 @@ import { joinClass } from "./Status";
 export interface PageHeaderProps {
   title: string;
   breadcrumb?: readonly { label: string; href?: string }[];
+  /** 제목 앞 슬롯(라우터 링크 같은 사용자 정의 상위 이동). `breadcrumb`와 함께 쓰면 breadcrumb 뒤, 제목 앞이다. */
+  leading?: ReactNode;
   /** 저장 상태 등 제목 옆 슬롯. */
   status?: ReactNode;
   /** 오른쪽 액션 슬롯(주 액션: 항상 보인다). */
@@ -24,7 +26,7 @@ export interface PageHeaderProps {
 }
 
 /** 화면 상단 고정 헤더(48px). 제목은 `h1`. 마지막 breadcrumb 항목이 현재 위치(`aria-current`). */
-export function PageHeader({ title, breadcrumb, status, actions, secondaryActions = [], moreLabel = "더 보기", breadcrumbLabel, className }: PageHeaderProps) {
+export function PageHeader({ title, breadcrumb, leading, status, actions, secondaryActions = [], moreLabel = "더 보기", breadcrumbLabel, className }: PageHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasCrumbs = breadcrumb !== undefined && breadcrumb.length > 0;
   return (
@@ -45,6 +47,7 @@ export function PageHeader({ title, breadcrumb, status, actions, secondaryAction
             </ol>
           </nav>
         ) : null}
+        {leading === undefined ? null : <div className="ac-pageheader-leading">{leading}</div>}
         <h1 className="ac-pageheader-title ac-ellipsis" title={title}>{title}</h1>
         {status === undefined ? null : <div className="ac-pageheader-status">{status}</div>}
       </div>

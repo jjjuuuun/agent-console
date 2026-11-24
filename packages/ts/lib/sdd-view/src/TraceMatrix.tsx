@@ -7,6 +7,8 @@ import { filterTraceRows, gapLabelKey, hasGaps, verificationLabelKey } from "./t
 import { ToneChip } from "@agent-console/markdown-doc";
 
 export const TRACE_ROW_HEIGHT = 32;
+/** 빈 곳 칩을 한 줄에 보이는 수(넘으면 `+N`, 전부는 툴팁) */
+const TRACE_GAP_CHIPS = 2;
 
 export interface TraceMatrixProps {
   matrix: TraceMatrixData;
@@ -25,6 +27,8 @@ export interface TraceMatrixProps {
   /** 빈 곳만 보기(제어형). 없으면 안에서 관리 */
   onlyGaps?: boolean;
   onOnlyGapsChange?: (value: boolean) => void;
+  /** 표 안의 `빈 곳만 보기` 체크박스를 그린다. 기본 true. 앱이 도구줄에 같은 스위치를 두면 false로 끄고 `onlyGaps`만 넘긴다. */
+  showGapsToggle?: boolean;
   height?: number | "fill";
   messages?: Readonly<Record<string, string>>;
   className?: string;
@@ -34,7 +38,7 @@ export interface TraceMatrixProps {
 export function TraceMatrix(props: TraceMatrixProps) {
   const {
     matrix, gapDisplay, verificationDisplay, onOpenTask, onOpenRequirement, showRuns = true, showVerification = true, openableKinds = [], onOpenLink,
-    onlyGaps, onOnlyGapsChange, height = "fill", messages, className,
+    onlyGaps, onOnlyGapsChange, showGapsToggle = true, height = "fill", messages, className,
   } = props;
   const text = resolveMessages(messages);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -59,6 +63,10 @@ export function TraceMatrix(props: TraceMatrixProps) {
       </div>
     );
   }
+  // 머리와 행이 같은 열 격자를 쓴다(열 폭 고정). 실행·검증 열은 연동·출처가 있을 때만 있다.
+  const gridStyle = {
+    gridTemplateColumns: ["minmax(200px, 1fr)", "var(--ac-sdd-trace-col-tasks, 160px)", showRuns ? "var(--ac-sdd-trace-col-runs, 140px)" : "", showVerification ? "var(--ac-sdd-trace-col-ver, 112px)" : "", "var(--ac-sdd-trace-col-gaps, 200px)"].filter((c) => c !== "").join(" "),
+  };
   const gapChip = (code: string) => {
     const d = codeDisplay(code, gapDisplay, "warning", messageOr(text, gapLabelKey(code), code));
     return <ToneChip key={code} label={d.label} tone={d.tone} title={d.hint ?? d.label} />;
@@ -66,7 +74,9 @@ export function TraceMatrix(props: TraceMatrixProps) {
 
   return (
     <div className={`${root} ac-sdd-trace`} style={{ height: height === "fill" ? "100%" : height }}>
+      {showGapsToggle || orphanNotes.length > 0 ? (
       <div className="ac-sdd-toolbar">
+        {showGapsToggle ? (
         <label className="ac-sdd-check">
           <input
             type="checkbox"
@@ -78,11 +88,20 @@ export function TraceMatrix(props: TraceMatrixProps) {
           />
           {text["trace.filter.gaps"]}
         </label>
+        ) : null}
         {orphanNotes.length > 0 ? (
           <span className="ac-sdd-muted" role="status" title={text["trace.orphans"]}>
             {orphanNotes.join(" · ")}
           </span>
         ) : null}
+      </div>
+      ) : null}
+      <div className="ac-sdd-trace-head ac-sdd-trace-grid" style={gridStyle} role="presentation">
+        <span className="ac-sdd-colhead">{text["trace.col.requirement"]}</span>
+        <span className="ac-sdd-colhead">{text["trace.col.tasks"]}</span>
+        {showRuns ? <span className="ac-sdd-colhead">{text["trace.col.runs"]}</span> : null}
+        {showVerification ? <span className="ac-sdd-colhead">{text["trace.col.verification"]}</span> : null}
+        <span className="ac-sdd-colhead">{text["trace.col.gaps"]}</span>
       </div>
       <div ref={scrollRef} className="ac-sdd-scroll" style={{ flex: 1 }}>
         <ul className="ac-sdd-vlist" role="list" aria-label={text["trace.table"]} style={{ height: virtual.getTotalSize() }}>
@@ -94,9 +113,9 @@ export function TraceMatrix(props: TraceMatrixProps) {
             return (
               <li
                 key={row.id}
-                className="ac-sdd-vrow ac-sdd-trace-row"
+                className="ac-sdd-vrow ac-sdd-trace-row ac-sdd-trace-grid"
                 data-gaps={hasGaps(row) || undefined}
-                style={{ transform: `translateY(${item.start}px)`, height: TRACE_ROW_HEIGHT }}
+                style={{ ...gridStyle, transform: `translateY(${item.start}px)`, height: TRACE_ROW_HEIGHT }}
                 aria-setsize={rows.length}
                 aria-posinset={item.index + 1}
                 aria-label={formatMessage(text["trace.row"], { id: row.id, tasks: tasks.length, gaps: gaps.length > 0 ? gaps.join(", ") : text["trace.noGaps"] })}
@@ -136,7 +155,14 @@ export function TraceMatrix(props: TraceMatrixProps) {
                   </span>
                 ) : null}
                 {showVerification ? <span className="ac-sdd-trace-ver">{v ? <ToneChip label={v.label} tone={v.tone} /> : <span className="ac-sdd-muted">{text["trace.noVerification"]}</span>}</span> : null}
-                <span className="ac-sdd-trace-gaps">{gaps.map(gapChip)}</span>
+                <span className="ac-sdd-trace-gaps">
+                  {gaps.slice(0, TRACE_GAP_CHIPS).map(gapChip)}
+                  {gaps.length > TRACE_GAP_CHIPS ? (
+                    <span className="ac-sdd-field ac-sdd-num" title={gaps.slice(TRACE_GAP_CHIPS).map((c) => codeDisplay(c, gapDisplay, "warning", messageOr(text, gapLabelKey(c), c)).label).join("\n")}>
+                      {formatMessage(text["tasks.moreFields"], { n: gaps.length - TRACE_GAP_CHIPS })}
+                    </span>
+                  ) : null}
+                </span>
               </li>
             );
           })}

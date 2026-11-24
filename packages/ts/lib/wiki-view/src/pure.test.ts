@@ -131,7 +131,9 @@ describe("그래프 순수 함수", () => {
     const ab = a.edges.find((e) => e.source === "a" && e.target === "b")!;
     const ba = a.edges.find((e) => e.source === "b" && e.target === "a")!;
     expect(ab.data).toMatchObject({ paired: true, count: 3, touchesCenter: true });
-    expect(ab.data.bend).toBe(-ba.data.bend);
+    // 법선이 진행 방향 기준이라 두 방향 모두 같은 부호여야 반대쪽으로 갈라진다
+    expect(ab.data.bend).toBe(ba.data.bend);
+    expect(ab.data.bend).not.toBe(0);
     expect(a.edges.find((e) => e.target === "d")?.data).toMatchObject({ paired: false, bend: 0, touchesCenter: false });
   });
   it("모르는 노드를 가리키는 엣지와 중복 노드는 버린다", () => {
@@ -176,6 +178,10 @@ describe("그래프 순수 함수", () => {
     expect(bent.path).toContain("Q");
     expect(edgeGeometry(a, b, -1).mid.y).toBeLessThan(20 + 1e-9 + 100);
     expect(bent.mid.y).not.toBe(straight.mid.y);
+    // 양방향 쌍(같은 bend)은 서로 반대쪽으로 휘어 겹치지 않는다
+    const back = edgeGeometry(b, a, 1);
+    expect(Math.sign(back.mid.y - 20)).toBe(-Math.sign(bent.mid.y - 20));
+    expect(Math.abs(back.mid.y - bent.mid.y)).toBeGreaterThan(8);
   });
 });
 
@@ -205,5 +211,16 @@ describe("표시 표 — 열린 문자열", () => {
     expect(formatRelative(SAMPLE_NOW - 7200, SAMPLE_NOW, defaultMessages)).toBe("2시간 전");
     expect(formatRelative(SAMPLE_NOW - 86_400 * 3, SAMPLE_NOW, defaultMessages)).toBe("3일 전");
     expect(formatRelative(SAMPLE_NOW + 50, SAMPLE_NOW, defaultMessages)).toBe("방금");
+  });
+});
+
+describe("styles.css 범위", () => {
+  it("아이콘 마스크 변수는 .ac-wk-root 밖(머리·카드의 칩)에서도 정의된다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(import.meta.dirname, "styles.css"), "utf8");
+    const block = css.slice(css.indexOf(":root,"), css.indexOf("}", css.indexOf(":root,")));
+    expect(block).toContain(".ac-wk-root");
+    for (const name of ["user", "agent", "system", "external", "neutral"]) expect(block).toContain(`--ac-wk-i-${name}:`);
   });
 });

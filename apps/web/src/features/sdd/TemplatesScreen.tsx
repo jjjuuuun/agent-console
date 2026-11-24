@@ -7,7 +7,7 @@ import "@agent-console/sdd-view/styles.css";
 import { useCallback, useMemo, useState } from "react";
 import { useBlocker, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDialog, EmptyState, PageHeader, useToast } from "@agent-console/ui";
+import { Button, ConfirmDialog, EmptyState, Icon, PageHeader, useToast } from "@agent-console/ui";
 import type { SpecTemplateCreateRequest, SpecTemplateSummary } from "@agent-console/contracts/sdd";
 import { useReportUnsaved } from "../../definition/unsaved";
 import { usePageTitle } from "../../shell/titles";
@@ -93,8 +93,16 @@ function TemplatesBody() {
   else if (list.isError) body = <FailureBlock error={list.error} title={m.templates.loadFailed} onRetry={() => void list.refetch()} />;
   else if (items.length === 0) {
     body = (
-      <div className="sdd-state" data-testid="sdd-templates-empty">
-        <EmptyState title={t.empty.title} description={`${t.empty.body} ${t.empty.hint}`} />
+      // 목록 패널은 그대로 두고(항목 0개) 오른쪽 상세 자리에 빈 상태를 보인다: 문서 틀이 생기면 같은 틀로 이어진다
+      <div className="sdd-templates">
+        <div className="sdd-templates-list">
+          <p className="app-muted sdd-templates-count" role="status">{t.list.count(0)}</p>
+        </div>
+        <div className="sdd-templates-detail">
+          <div className="sdd-state" data-testid="sdd-templates-empty">
+            <EmptyState icon={<Icon name="spec" size={40} />} title={t.empty.title} description={`${t.empty.body} ${t.empty.hint}`} />
+          </div>
+        </div>
       </div>
     );
   } else {

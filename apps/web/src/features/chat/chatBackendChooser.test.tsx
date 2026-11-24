@@ -23,9 +23,9 @@ const unresolved = () =>
     fix: { actions: [{ label: "기본값으로 지정", target: { role: "settings", section: "common" }, focus: "/backend" }] },
   });
 
-function mount(h: ReturnType<typeof createHarness>) {
+function mount(h: ReturnType<typeof createHarness>, tab = createSafeStorage(null), local = createSafeStorage(null)) {
   const router = createMemoryRouter(buildAppRoutes({ platform: "other" }), { initialEntries: ["/chat/c1"] });
-  render(<AppRoot createClients={async () => h.clients} router={router} storage={createSafeStorage(null)} queryClient={createAppQueryClient({ retry: false })} />);
+  render(<AppRoot createClients={async () => h.clients} router={router} storage={local} sessionStorage={tab} queryClient={createAppQueryClient({ retry: false })} />);
   return router;
 }
 
@@ -103,5 +103,29 @@ describe("백엔드 해결 카드(채팅)", () => {
     const card = await screen.findByTestId("backend-chooser");
     expect(within(card).getByText("지금 쓰는 실행 백엔드를 바꿉니다.")).toBeTruthy();
     expect(card.textContent).not.toContain("정해지지 않았습니다");
+  });
+
+  it("안내 띠는 [이 앱 세션 동안 숨기기]로 숨기고 다른 대화에서도 없으며, 세션 저장소가 비면 다시 보이고 옛 영구 키는 읽지 않는다", async () => {
+    const mk = () =>
+      createHarness({
+        listTurns: async () => [turn({ status: "completed", interactions: [], replies: [{ edge_id: "ed2", node_id: "n1", agent_id: "ag-1", final: true, text: "되돌림" }] })],
+        getConversation: async (id: string) => conversation({ id }),
+        getSettingsVersioned: async () => ({ value: { chat: { send_key: "enter" }, agent_defaults: { backend: "b-fake" } }, version_hash: "s1" }),
+        listBackends: async () => OPTIONS,
+      });
+    const tab = createSafeStorage(null);
+    const mem = new Map<string, string>([["chat.backendNote.dismissed", "1"]]);
+    const local = { get: (k: string) => mem.get(k) ?? null, set: (k: string, v: string) => void mem.set(k, v), remove: (k: string) => void mem.delete(k), keys: () => [...mem.keys()] };
+    const router = mount(mk(), tab, local);
+    expect(await screen.findByTestId("backend-badge-note")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "백엔드 바꾸기" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 앱 세션 동안 숨기기" }));
+    expect(screen.queryByTestId("backend-badge-note")).toBeNull();
+    await router.navigate("/chat/c2");
+    await screen.findAllByTestId("reply-badge");
+    expect(screen.queryByTestId("backend-badge-note")).toBeNull();
+    cleanup();
+    mount(mk(), createSafeStorage(null), local);
+    expect(await screen.findByTestId("backend-badge-note")).toBeTruthy();
   });
 });

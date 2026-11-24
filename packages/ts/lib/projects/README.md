@@ -8,7 +8,7 @@
 - 로그 필터: `logFilterFor`(프로젝트 id → 로그 필터 `project=<id>`, `LogSessionSummary.project_id` 기준)
 - 현재 프로젝트: `createCurrentProjectStore`(주소 `?project=`와 브라우저 저장, 저장소·주소는 주입)
 - 옮기기 계획: `mergeMovePlans`·`selectMoves`·`moveTargetOfIssue`
-- 프로젝트 2: 상태 문구·색조 `statusInfo`, 상태별 할 수 있는 일과 막힌 이유 `projectAbilities`(표는 데이터), 공간 칩·질의 `spaceLabel`·`spaceParam`, 복사 계획 도우미(`initialSelections`·`canSubmit`·`skipWarnings`·`buildApplyRequest`·`summarizeResult` …), 폴더 선택 어댑터(`folderCheckOutcome`·`folderPickOutcome`: 계약 → `@agent-console/folder-picker`가 받는 모양), 문구 표 `DEFAULT_PROJECT_MESSAGES`·`createProjectsText`
+- 프로젝트 2: 상태 문구·색조 `statusInfo`, 상태별 할 수 있는 일과 막힌 이유 `projectAbilities`(표는 데이터), 공간 칩·질의 `spaceLabel`·`spaceParam`, 복사 계획 도우미(`initialSelections`·`canSubmit`·`skipWarnings`·`buildApplyRequest`·`summarizeResult` …), 폴더 선택 어댑터(`folderCheckOutcome`·`folderPickOutcome`: 계약 → `@agent-console/folder-picker`가 받는 모양), 문구 표 `DEFAULT_PROJECT_MESSAGES`·`createProjectsText`, 화면 문구에 쓰지 않는 말 `RETIRED_TERMS`(그중 프로젝트 문구에서만 막는 말 `PROJECT_CONTEXT_RETIRED_TERMS`, 둘 다 데이터)
 - `configDirLabel`은 deprecated(다음 메이저에서 메시지 `projects.dir_fallback`과 함께 제거, 대신 짝 문장 `*_unknown` 사용).
 - (deprecated, 33p·33t에서 삭제) REST: `createProjectsClient`(전송은 주입, `@agent-console/api-client`의 `RestIo`가 맞는다)
 

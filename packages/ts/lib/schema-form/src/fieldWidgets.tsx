@@ -1,6 +1,7 @@
 import { getDefaultRegistry } from "@rjsf/core";
 import type { WidgetProps } from "@rjsf/utils";
 import { useContext, type ComponentType } from "react";
+import { DEFAULT_MESSAGES } from "./messages";
 import { FieldHelpTip, hasFieldHelp } from "./FieldHelp";
 import { XUiContext } from "./XUiParts";
 import { readXUi } from "./xui";
@@ -52,4 +53,22 @@ function withEnumLabels(name: "SelectWidget" | "RadioWidget" | "CheckboxesWidget
 }
 export const LabeledSelectWidget = withEnumLabels("SelectWidget");
 export const LabeledRadioWidget = withEnumLabels("RadioWidget");
-export const LabeledCheckboxesWidget = withEnumLabels("CheckboxesWidget");
+const LabeledCheckboxesBase = withEnumLabels("CheckboxesWidget");
+/** 체크박스 묶음 + "모두 선택 · 모두 해제" 텍스트 버튼(읽기 전용·비활성이면 숨김). 선택 가능한 값이 둘 이상일 때만 보인다. */
+export function LabeledCheckboxesWidget(p: WidgetProps) {
+  const ctx = useContext(XUiContext);
+  const m = ctx?.messages ?? DEFAULT_MESSAGES;
+  const opts = p.options.enumOptions ?? [];
+  const editable = !p.disabled && !p.readonly;
+  return (
+    <div className="ac-sf-checkgroup">
+      {editable && opts.length > 1 ? (
+        <div className="ac-sf-checkgroup-actions">
+          <button type="button" className="ac-sf-linkbtn" onClick={() => p.onChange(opts.map((o) => o.value))}>{m.selectAll}</button>
+          <button type="button" className="ac-sf-linkbtn" onClick={() => p.onChange([])}>{m.clearAll}</button>
+        </div>
+      ) : null}
+      <LabeledCheckboxesBase {...p} />
+    </div>
+  );
+}

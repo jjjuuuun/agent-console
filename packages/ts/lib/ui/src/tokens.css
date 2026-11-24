@@ -811,6 +811,8 @@ textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); 
 .ac-pageheader-main { display: flex; align-items: center; gap: var(--ac-space-3); min-width: 0; flex: 1; }
 .ac-pageheader-title { margin: 0; font-size: var(--ac-text-xl); line-height: var(--ac-lh-xl); font-weight: var(--ac-fw-strong); min-width: min(6ch, 100%); flex: 0 1 auto; max-width: var(--ac-header-title-max); }
 .ac-pageheader-status { flex: none; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
+.ac-pageheader-leading { flex: none; margin-right: calc(-1 * var(--ac-space-2)); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
+.ac-pageheader-leading + .ac-pageheader-title + .ac-pageheader-status { margin-left: calc(-1 * var(--ac-space-2)); }
 .ac-pageheader-actions { display: flex; align-items: center; gap: var(--ac-space-2); flex: none; }
 .ac-pageheader-secondary { display: flex; align-items: center; gap: var(--ac-space-1); }
 .ac-pageheader-more { display: none; }

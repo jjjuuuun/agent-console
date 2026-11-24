@@ -4,6 +4,7 @@ import type { Project, ProjectView } from "@agent-console/contracts/projects";
 import { mountApp } from "../../testing/screenHarness";
 import { createFakeClients } from "../../testing/fakes";
 import { ProjectSwitcher } from "./ProjectSwitcher";
+import { withViewportWidth } from "../../testing/viewport";
 
 afterEach(cleanup);
 
@@ -14,10 +15,10 @@ const mod = (id: string, roles: string[]) => ({ id, kind: "k", version: "0.0.1",
 const conv = (id: string, project_id: string | null) => ({ id, graph_id: "g1", title: `대화-${id}`, created_at: 1, updated_at: 1, project_id });
 
 describe("ProjectSwitcher(표현)", () => {
-  it("프로젝트가 0개면 [프로젝트 만들기] 버튼 하나만 그린다", () => {
+  it("프로젝트가 0개면 [폴더 추가] 버튼 하나만 그린다", () => {
     const onCreate = vi.fn();
     render(<ProjectSwitcher projects={[]} current={null} onSelect={() => {}} onCreate={onCreate} />);
-    fireEvent.click(screen.getByRole("button", { name: "프로젝트 만들기" }));
+    fireEvent.click(screen.getByRole("button", { name: "폴더 추가" }));
     expect(onCreate).toHaveBeenCalled();
     expect(screen.queryByRole("listbox")).toBeNull();
   });
@@ -145,6 +146,9 @@ describe("앱 안의 프로젝트 UI", () => {
 });
 
 describe("설정 > 프로젝트 섹션", () => {
+  // 섹션 목록은 1100px 미만이면 드롭다운이다. 여기서는 넓은 화면의 목록을 확인한다.
+  withViewportWidth(1440);
+
   const modules = [mod("m-set", ["settings", "projects"])];
 
   it("프로젝트 역할이 있을 때만 섹션이 생기고, 없으면 목록에서 사라진다", async () => {

@@ -18,8 +18,11 @@ export interface LibraryTemplateImport {
   dialog: ReactNode;
 }
 
-/** @param enabled false면 문서 틀 종류를 읽지 않는다(새 스펙 대화상자가 닫혀 있을 때) */
-export function useLibraryTemplateImport(enabled = true): LibraryTemplateImport {
+/**
+ * @param enabled false면 문서 틀 종류를 읽지 않는다(새 스펙 대화상자가 닫혀 있을 때)
+ * @param onImported 복사로 쓸 수 있게 된 첫 틀 id(새 이름이면 새 id). 호출자가 그 틀을 고른 상태로 둔다
+ */
+export function useLibraryTemplateImport(enabled = true, onImported?: (templateId: string) => void): LibraryTemplateImport {
   const ctx = useSddContext();
   const copy = useCopyDialog();
   const invalidate = useInvalidateSdd();
@@ -32,7 +35,11 @@ export function useLibraryTemplateImport(enabled = true): LibraryTemplateImport 
     available,
     open: () => {
       if (project === null || kind === undefined) return;
-      copy.open({ direction: "import", project, start: "pick", onlyKinds: [kind], onApplied: () => void invalidate() });
+      copy.open({ direction: "import", project, start: "pick", onlyKinds: [kind], onApplied: (o) => {
+          void invalidate();
+          if (o.first !== null && o.first.kind === kind) onImported?.(o.first.id);
+        },
+      });
     },
     dialog: copy.dialog,
   };

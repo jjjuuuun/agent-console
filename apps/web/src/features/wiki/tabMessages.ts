@@ -22,7 +22,7 @@ export const wikiTabMessages = {
     listOnly: "목록만",
     fit: "맞추기",
     count: (n: number) => `노드 ${n}개`,
-    truncated: (n: number, total: number) => `${total}개 중 ${n}개만 보입니다`,
+    truncated: (n: number, total: number) => `노드 ${total}개 중 ${n}개만 보입니다`,
     truncatedNoTotal: "일부만 보입니다. 깊이를 줄이세요",
     empty: "그래프에 그릴 페이지가 없습니다",
     noLinks: "이 위키에는 페이지 사이 링크가 없습니다",

@@ -299,3 +299,21 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 
 /* 6R.8(L-18): 대화상자·서랍 안의 백엔드 카드는 바깥 테두리를 겹쳐 그리지 않는다(이중 테두리 방지) */
 .ac-dialog .app-backend-card, .ac-drawer .app-backend-card { border: 0; border-left: 3px solid var(--ac-accent); box-shadow: none; background: transparent; padding: var(--ac-space-2) var(--ac-space-3); }
+
+/* 설정 섹션 목록: 검색·묶음 접기·좁은 폭 드롭다운(5.7R.42). 좁은 폭 기준은 --app-settings-narrow-below 하나(JS가 읽어 data-narrow로 내려 준다) */
+:root { --app-settings-narrow-below: 1100px; }
+.app-settings-navtop { display: flex; flex-direction: column; gap: var(--ac-space-2); margin-bottom: var(--ac-space-3); }
+.app-settings-search { position: relative; display: flex; align-items: center; }
+.app-settings-search .ac-input { width: 100%; padding-right: 28px; }
+.app-settings-search-key { line-height: var(--ac-lh-xs); position: absolute; right: var(--ac-space-2); font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 0 4px; pointer-events: none; }
+.app-settings-nomatch { margin: 0; padding: 0 var(--ac-space-2); }
+.app-settings-grouptoggle { display: flex; align-items: center; gap: var(--ac-space-1); width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+.app-settings-grouptoggle:focus-visible { outline: 2px solid var(--ac-focus-ring, var(--ac-accent)); outline-offset: 1px; border-radius: var(--ac-radius-sm); }
+.app-settings-grouptoggle[data-open="false"] .app-settings-chev { transform: rotate(-90deg); }
+.app-settings-layout[data-narrow="true"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+.app-settings-layout[data-narrow="true"] .app-settings-nav { border-right: 0; border-bottom: 1px solid var(--ac-border); overflow: visible; }
+.app-settings-layout[data-narrow="true"] .app-settings-navtop { flex-direction: row; margin-bottom: 0; }
+.app-settings-layout[data-narrow="true"] .app-settings-search { flex: 1 1 0; min-width: 0; }
+.app-settings-layout[data-narrow="true"] .app-settings-picker { flex: 1 1 0; min-width: 0; }
+.app-settings-layout[data-narrow="true"] .app-settings-section { max-width: none; }
+.app-settings-nav ul[hidden] { display: none; }

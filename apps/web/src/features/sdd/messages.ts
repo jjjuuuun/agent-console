@@ -61,6 +61,7 @@ export const sddMessages = {
     rowMenu: (name: string) => `${name} 동작`,
   },
   head: {
+    crumbLabel: "스펙 위치",
     export: "내보내기…",
     more: "더 보기",
     rename: "이름 바꾸기…",
@@ -138,6 +139,9 @@ export const sddMessages = {
   rename: { title: "이름 바꾸기", name: "이름", submit: "바꾸기" },
   doc: {
     navLabel: "문서",
+    statusLine: (line: number, col: number, chars: number) => `줄 ${line}:${col} · ${chars.toLocaleString("ko-KR")}자`,
+    statusTasks: (n: number) => `작업 ${n}개`,
+    statusIssues: (n: number) => `⚠ 이슈 ${n}`,
     listFooter: "문서 목록은 규칙 탭에서 고칩니다",
     openRules: "규칙 열기",
     noDocs: "문서가 없습니다",

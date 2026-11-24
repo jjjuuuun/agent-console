@@ -23,6 +23,11 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./messages": {
+      "development": "./src/diffMessages.tsx",
+      "types": "./dist/diffMessages.d.ts",
+      "default": "./dist/diffMessages.js"
     }
   },
   "scripts": {

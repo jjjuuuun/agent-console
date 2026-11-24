@@ -106,6 +106,15 @@ export const messages = {
     no: "아니오",
     none: "없음",
   },
+  /** 텍스트 비교(`TextDiff`) 기본 문구. 앱 루트에서 한 번 주입한다(개별 화면이 따로 주면 그쪽이 우선). */
+  textDiff: {
+    unchangedLines: "변경 없는 $줄 — 펼치기",
+    split: "나란히",
+    unified: "통합",
+    toolbar: "비교 보기 방식",
+    before: "이전",
+    after: "이후",
+  },
   nav: {
     label: "주 메뉴",
     chat: "채팅",
@@ -189,6 +198,7 @@ export const messages = {
     helpOpen: "단축키 도움말",
     projectSwitch: "프로젝트 전환기 열기",
     runsSearch: "실행 검색",
+    settingsSearch: "설정 섹션 검색",
     runsFilters: "실행 필터로 이동",
     runsNew: "새 실행 시작",
     runsTab1: "위임 흐름 탭",
@@ -445,6 +455,15 @@ export const messages = {
     savedNextRun: "저장 직후 실행 중인 작업에는 영향이 없고 다음 실행부터 적용됩니다.",
     emptyHint: "아직 설정을 저장하지 않았습니다. 기본값으로 동작합니다.",
     sectionNav: "설정 섹션",
+    /** 섹션 검색(목록 맨 위)·묶음 접기·좁은 폭 드롭다운 */
+    nav: {
+      searchLabel: "설정 섹션 검색",
+      searchPlaceholder: "섹션 검색",
+      searchHint: "/",
+      noMatch: "일치하는 섹션 없음",
+      groupToggle: (title: string, open: boolean) => `${title} 묶음 ${open ? "접기" : "펴기"}`,
+      picker: "섹션 이동",
+    },
     /** 왼쪽 목록의 묶음 제목(`SectionDef.group`의 키) */
     groups: { frequent: "자주 쓰는", defaults: "실행 기본값", data: "데이터", system: "시스템" },
     changes: (n: number) => `저장되지 않은 변경 ${n}`,

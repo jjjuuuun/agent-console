@@ -52,9 +52,10 @@ docs_globs:
 public_lint_globs:
   - docs/extending/**/*.md
   - examples/**/README.md
-  # Python 패키지·CLI README(설계 id 정리 끝, TS·웹 README는 정리 후 더한다)
-  - packages/py/**/README.md
-  - apps/cli/README.md
+  # 패키지·앱 README(설계 id·작업 번호 정리 끝). apps/web/e2e/README.md는 테스트 안내라 대상 밖
+  - packages/**/README.md
+  - apps/*/README.md
+  - apps/web/src/**/README.md
 # glob이 내려가지 않을 폴더 이름(숨김 폴더는 늘 건너뛴다)
 glob_skip_dirs:
   - node_modules

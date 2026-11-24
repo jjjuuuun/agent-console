@@ -111,7 +111,7 @@ export const chatMessages = {
     backendBadgeNote: (badge: string) => `${badge} 백엔드로 동작 중입니다. 실제 모델을 쓰려면 백엔드를 바꾸세요.`,
     backendChange: "백엔드 바꾸기",
     backendChanged: "기본 백엔드를 바꿨습니다.",
-    dismissNote: "안내 닫기",
+    hideNoteForSession: "이 앱 세션 동안 숨기기",
     noEntryBanner: "이 팀 구성에는 사용자 메시지 입구가 없어 대화를 시작할 수 없습니다.",
     noAnswerBanner: "이 팀은 답변 연결이 없어 결과가 채팅에 나오지 않습니다.",
     connectInTeam: "팀 구성에서 연결하기",

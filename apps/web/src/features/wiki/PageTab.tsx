@@ -9,9 +9,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDialog, useToast } from "@agent-console/ui";
 import { KNOWN_ISSUE_CODES } from "@agent-console/contracts/constants";
 import { DocumentEditor, type DocumentEditorHandle, type EditorViewMode } from "@agent-console/markdown-doc";
-import { HistoryDiff, PageView, WIKI_LINK_HREF_PREFIX, linkMarks, linkifySource, wikiUrlTransform, type HistoryDiffBase, type PageViewHandle, type TreeTitleMode } from "@agent-console/wiki-view";
+import { AuthorChip, HistoryDiff, PageView, WIKI_LINK_HREF_PREFIX, linkMarks, linkifySource, wikiUrlTransform, type HistoryDiffBase, type PageViewHandle, type TreeTitleMode, type WikiDisplay } from "@agent-console/wiki-view";
 import type { Issue } from "@agent-console/contracts";
-import type { WikiChange, WikiLink, WikiPageVersion, WikiPageView } from "@agent-console/contracts/wiki";
+import type { WikiAuthor, WikiChange, WikiLink, WikiPageVersion, WikiPageView } from "@agent-console/contracts/wiki";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { useStorage } from "../../app/StorageContext";
 import { useNow } from "../../app/useNow";
@@ -767,8 +767,7 @@ export function PageTab(props: WikiTabProps) {
   );
 }
 
-function RecentPages({ pages, now, display, onOpen }: { pages: readonly { path: string; title?: string; updated_at?: number | null }[]; now: number; display: unknown; onOpen: (path: string) => void }) {
-  void display;
+function RecentPages({ pages, now, display, onOpen }: { pages: readonly { path: string; title?: string; updated_at?: number | null; updated_by?: WikiAuthor | null }[]; now: number; display: WikiDisplay | undefined; onOpen: (path: string) => void }) {
   const recent = [...pages].filter((p) => typeof p.updated_at === "number").sort((a, b) => (b.updated_at ?? 0) - (a.updated_at ?? 0)).slice(0, WIKI_LIMITS.recentPages);
   if (recent.length === 0) return null;
   return (
@@ -776,9 +775,10 @@ function RecentPages({ pages, now, display, onOpen }: { pages: readonly { path: 
       <strong>{m.page.noneRecent}</strong>
       <ul>
         {recent.map((p) => (
-          <li key={p.path}>
-            <button type="button" className="app-link-btn" onClick={() => onOpen(p.path)}>{p.title !== undefined && p.title !== "" ? p.title : lastSegment(p.path)}</button>{" "}
-            <span className="app-muted">{formatRelative(p.updated_at, now)}</span>
+          <li key={p.path} className="wiki-recent-pages-row">
+            <button type="button" className="app-link-btn ac-ellipsis" onClick={() => onOpen(p.path)}>{p.title !== undefined && p.title !== "" ? p.title : lastSegment(p.path)}</button>
+            <span className="app-muted wiki-recent-pages-time">{formatRelative(p.updated_at, now)}</span>
+            {p.updated_by ? <AuthorChip author={p.updated_by} {...(display ? { display } : {})} size="dense" /> : null}
           </li>
         ))}
       </ul>

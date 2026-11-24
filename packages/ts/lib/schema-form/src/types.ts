@@ -55,6 +55,9 @@ export interface SchemaFormMessages {
   itemRemoved: string;
   yes: string;
   no: string;
+  /** 여러 개 고르는 체크박스 묶음의 전체 선택·해제 링크 */
+  selectAll: string;
+  clearAll: string;
   /** 출처 표시(선택 prop `provenance` 사용 시) */
   overrideHere: string;
   inheritBack: string;

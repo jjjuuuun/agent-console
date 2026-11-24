@@ -27,17 +27,20 @@ export interface DefinitionIdFieldProps {
   onChange: (next: string) => void;
   /** 입력 요소 id(라벨 연결·포커스). 생략하면 자동 */
   inputId?: string;
+  /** 도움말·오류 요소 id. 제출 버튼이 `aria-describedby`로 이유를 가리킬 때 넘긴다(생략하면 자동) */
+  noteId?: string;
 }
 
 /** id 입력 한 줄: 라벨, 입력, 도움말 또는 오류(`role=alert`). */
-export function DefinitionIdField({ id, problem, onChange, inputId }: DefinitionIdFieldProps) {
+export function DefinitionIdField({ id, problem, onChange, inputId, noteId }: DefinitionIdFieldProps) {
   const uid = useId();
   const input = inputId ?? `${uid}-id`;
+  const note = noteId ?? `${uid}-id-note`;
   return (
     <div className="lib-field">
       <label htmlFor={input}>{t.newDialog.id}</label>
-      <input id={input} className="ac-input ac-mono" value={id} onChange={(e) => onChange(e.target.value)} aria-invalid={problem !== undefined} aria-describedby={`${uid}-id-note`} />
-      <span id={`${uid}-id-note`} className={problem ? "lib-field-error" : "app-muted lib-field-note"} role={problem ? "alert" : undefined}>
+      <input id={input} className="ac-input ac-mono" value={id} onChange={(e) => onChange(e.target.value)} aria-invalid={problem !== undefined} aria-describedby={note} />
+      <span id={note} className={problem ? "lib-field-error" : "app-muted lib-field-note"} role={problem ? "alert" : undefined}>
         {problem ? t.newDialog.idErrors[problem] : t.newDialog.idHint}
       </span>
     </div>

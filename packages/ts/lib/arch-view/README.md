@@ -70,7 +70,7 @@ import { ArchitectureDiagram } from "@agent-console/arch-view";
 | `fitViewport`·`zoomAround`·`ensureVisible`·`nearestInDirection` | 맞춤·확대·최소 스크롤·방향키 이동 순수 함수 |
 | `@agent-console/arch-view/testing` | 예제 `ArchitectureView`(기본 프로필 좌표, 지표는 임시 값) |
 
-## 확장 지점 (X24)
+## 확장 지점
 데이터에 쓰인 `tone`·`style`·`view`·지표 이름은 열린 문자열이다. 코드는 이름을 모르고 아래 대응표로만 바꾼다.
 값은 **CSS 색이 아니라 토큰 변수 이름**(`--ac-…`)만 받으며, 그 밖의 값(`#ff0000` 등)은 중립 모양으로 그린다.
 

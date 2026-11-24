@@ -6,7 +6,10 @@ import type { EffectiveSyntax, ParsedTask, SddInfo, SpecSummary, SpecView } from
 import { createFakeClients } from "../../testing/fakes";
 import { mountApp } from "../../testing/screenHarness";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setViewportWidth(1024);
+});
 
 const LONG = { timeout: 15_000 };
 // 상태·문서·단계 이름은 모두 임의 값이다. 화면 코드는 이 이름을 모른다.
@@ -288,8 +291,20 @@ describe("스펙 상세: 작업 탭", () => {
   });
 });
 
+/** happy-dom 창 폭을 바꾼다(기본 1024). 규칙 탭 섹션 목록은 폭 1100 미만이면 선택 상자가 된다 */
+const setViewportWidth = (width: number) => (window as unknown as { happyDOM: { setViewport(v: { width: number; height: number }): void } }).happyDOM.setViewport({ width, height: 800 });
+
 describe("스펙 상세: 규칙 탭", () => {
+  it("좁은 화면(1100 미만)에서는 섹션 목록이 폼 위 `섹션` 선택 상자가 된다", async () => {
+    setViewportWidth(1024);
+    setup("/specs/sp1?prj=p1&tab=rules");
+    const select = (await screen.findByRole("combobox", { name: "섹션" }, LONG)) as HTMLSelectElement;
+    expect(select.options.length).toBeGreaterThan(3);
+    expect(screen.queryByRole("navigation", { name: "섹션" })).toBeNull();
+  });
+
   it("섹션 목록은 스키마(제목)에서 나오고, 규칙 검사는 현재 값으로 POST한다", async () => {
+    setViewportWidth(1280);
     const check = vi.fn(async () => ({ issues: [{ severity: "error", code: "x", message: "서버가 준 문장", path: "/rules/gates/0" }] }));
     const { sdd } = setup("/specs/sp1?prj=p1&tab=rules", { sdd: { checkSpec: check } });
     const navEl = await screen.findByRole("navigation", { name: "섹션" }, LONG);
