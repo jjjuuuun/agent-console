@@ -216,12 +216,15 @@ def definition_kinds(
     template_kind: str,
     template_directory: str,
     summary_fields: Sequence[str] = (),
+    template_reserved_ids: Sequence[str] = (),
 ) -> tuple[DefinitionKind, DefinitionKind]:
     """스펙·문서 틀 정의 종류(`ac-store` `DefinitionKind`)를 만든다. 이름·폴더는 호출자 데이터.
 
     둘 다 여러 파일 본문(`multi_file`, 본문 폴더 = 문서 파일들), 저장은 `If-Match` 필수, 옮길 수
     있음.
     스펙은 `library=False`(프로젝트·단독 공간에만, design §6R.3 X36), 문서 틀은 라이브러리에도 둔다.
+    `template_reserved_ids`는 문서 틀 id로 쓸 수 없는 말(`DefinitionKind.reserved_ids`, 예: REST
+    고정 경로 어휘) — 복사 계획이 읽어 새 id를 제안한다.
 
     Returns:
         (스펙 종류, 문서 틀 종류).
@@ -236,6 +239,10 @@ def definition_kinds(
         name=spec_kind, directory=spec_directory, model=SpecDefinition, library=False, **common
     )
     template = DefinitionKind(
-        name=template_kind, directory=template_directory, model=SpecTemplate, **common
+        name=template_kind,
+        directory=template_directory,
+        model=SpecTemplate,
+        reserved_ids=tuple(template_reserved_ids),
+        **common,
     )
     return spec, template

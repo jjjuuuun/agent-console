@@ -482,7 +482,7 @@ export function TraceTimeline(props: TraceTimelineProps) {
                         data-trace-bar="true"
                         data-status={wait ? "waiting" : barStatus(span)}
                         data-running={span.ended_at == null && running ? "true" : undefined}
-                        style={{ left: `${left}%`, width: `max(${width}%, 4px)` }}
+                        style={{ left: `min(${left}%, calc(100% - 4px))`, width: `max(${width}%, 4px)` }}
                       >
                         {call && span.task_preview ? (
                           <span aria-hidden="true" data-task-preview="true" className="ac-ellipsis ac-trace-task">

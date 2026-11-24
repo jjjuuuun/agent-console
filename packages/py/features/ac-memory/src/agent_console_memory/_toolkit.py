@@ -10,10 +10,8 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import inspect
 import re
-import threading
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
@@ -35,6 +33,7 @@ from agent_console_contracts.memory import (
     MemoryEventPayload,
     MemoryScopeRef,
 )
+from agent_console_write_budget import WriteBudgetLike
 
 from ._access import allowed, default_scope_kind, scope_kinds_for
 from ._errors import (
@@ -45,6 +44,7 @@ from ._errors import (
     TooLargeError,
     VersionConflictError,
 )
+from ._query_hash import QueryHasher, query_hasher
 from ._scope_kinds import ScopeKindCatalog
 from ._store import MemoryQuery, MemoryStore
 
@@ -143,23 +143,6 @@ class ToolSpec:
     call: ToolCall = field(compare=False)
 
 
-class WriteBudget:
-    """쓰기 횟수 한도(실행 하나에 여러 도구 묶음이 함께 쓴다). None = 한도 없음. 스레드 안전."""
-
-    def __init__(self, limit: int | None) -> None:
-        self.limit = limit
-        self.used = 0
-        self._lock = threading.Lock()
-
-    def take(self) -> bool:
-        """한 번 쓴다. 남은 횟수가 없으면 False."""
-        with self._lock:
-            if self.limit is not None and self.used >= self.limit:
-                return False
-            self.used += 1
-            return True
-
-
 def agent_author(context: MemoryAccessContext) -> MemoryAuthor:
     """맥락 → 에이전트 쓴 주체(빈 값은 None)."""
     return MemoryAuthor(
@@ -199,10 +182,6 @@ class _ToolError(Exception):
         self.status = status
         self.code = code
         self.values = values
-
-
-def _sha(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _string(args: Mapping[str, Any], name: str, *, required: bool) -> str | None:
@@ -246,6 +225,8 @@ class MemoryToolkit:
         text: 도구 문구. 없으면 `load_tool_text()`.
         on_event: 호출마다 `(type, payload)`를 받는 쪽(선택).
         write_budget: 쓰기 횟수 한도(실행 단위로 공유, 선택).
+        query_hash: 검색 이벤트의 검색어 해셔(`query_hasher`, None = 이 묶음만의 무작위 솔트
+            HMAC). 서버는 프로세스 하나에 하나를 만들어 넘긴다.
         max_search_results: 검색 결과 최대 수(입력 `limit`의 상한).
         timer: 처리 시간 측정 시계(초).
     """
@@ -260,7 +241,8 @@ class MemoryToolkit:
         author: MemoryAuthor | None = None,
         text: ToolText | None = None,
         on_event: EventSink | None = None,
-        write_budget: WriteBudget | None = None,
+        write_budget: WriteBudgetLike | None = None,
+        query_hash: QueryHasher | None = None,
         max_search_results: int = 20,
         timer: Callable[[], float] = time.perf_counter,
     ) -> None:
@@ -272,6 +254,7 @@ class MemoryToolkit:
         self.text = text if text is not None else load_tool_text()
         self.on_event = on_event
         self.write_budget = write_budget
+        self.query_hash: QueryHasher = query_hash if query_hash is not None else query_hasher()
         self.max_search_results = max(1, max_search_results)
         self._timer = timer
 
@@ -465,7 +448,10 @@ class MemoryToolkit:
         limit = _integer(args, "limit") or self.max_search_results
         limit = min(max(limit, 1), self.max_search_results)
         if query:
-            payload.update(query_chars=len(query), query_sha256=_sha(query))
+            payload["query_chars"] = len(query)
+            digest = self.query_hash(query)
+            if digest is not None:
+                payload["query_sha256"] = digest
         scope = self._scope("search", args, values)
         payload["scope"] = scope
         page = await self._store_call(

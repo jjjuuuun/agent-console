@@ -118,6 +118,7 @@ export const defaultMessages = {
   "move.rewrite": "이 페이지를 가리키는 링크도 고치기",
   "move.rewrite.hint": "링크 글자 부분만 바뀌고 나머지 서식은 그대로입니다.",
   "move.pages": "바뀔 페이지",
+  "move.same": "새 경로가 현재와 같습니다. 다른 경로를 입력하면 바뀔 페이지를 보여 드립니다.",
   "move.loading": "불러오는 중…",
   "move.totals": "페이지 {pages} · 링크 {links}곳",
   "move.count": "{n}곳",

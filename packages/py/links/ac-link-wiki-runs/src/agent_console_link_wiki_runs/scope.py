@@ -14,7 +14,7 @@ from typing import Any
 from agent_console_contracts import Graph, Issue
 from agent_console_nodes_core import AGENT_LOOKUP, TOOL_PROVIDERS
 from agent_console_runtime import ServiceKey, Services
-from agent_console_wiki import WikiToolText, WriteBudget
+from agent_console_wiki import QueryHasher, WikiToolText, WriteBudget, query_hasher
 
 from .ports import WikiServiceLike
 from .provider import DEFAULT_PROVIDER_ID, AgentLookup, WikiToolProvider
@@ -40,6 +40,8 @@ class WikiRunScope:
         max_writes_per_run: 실행 하나의 쓰기 한도(쓰기·옮기기·지우기, None = 없음).
         text: 도구 문구(없으면 ``ac-wiki`` 기본 데이터).
         provider_id: 공급자 id.
+        query_hash: 서비스에 ``query_hash``가 없을 때 쓸 검색어 해셔. None이면 이 범위가 무작위 솔트
+            해셔 하나를 만들어 모든 Run이 함께 쓴다(같은 프로세스 안에서 같은 검색어 = 같은 값).
     """
 
     def __init__(
@@ -50,8 +52,10 @@ class WikiRunScope:
         max_writes_per_run: int | None = None,
         text: WikiToolText | None = None,
         provider_id: str = DEFAULT_PROVIDER_ID,
+        query_hash: QueryHasher | None = None,
     ) -> None:
         self._service = service
+        self.query_hash: QueryHasher = query_hash if query_hash is not None else query_hasher()
         self.slot = slot
         self.max_writes_per_run = max_writes_per_run
         self.text = text
@@ -69,6 +73,7 @@ class WikiRunScope:
             agent_lookup=agent_lookup,
             write_budget=WriteBudget(self.max_writes_per_run),
             text=self.text,
+            query_hash=self.query_hash,
         )
 
     def scope_run(

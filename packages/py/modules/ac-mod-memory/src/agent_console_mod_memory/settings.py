@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -153,6 +154,35 @@ class MemoryModuleSettings(BaseModel):
             unit="개",
             group="tools",
             when="에이전트가 한 번에 더 많은 기록을 훑어야 할 때 늘리세요.",
+        ),
+    )
+    query_hash: Literal["hmac", "sha256", "off"] = Field(
+        default="hmac",
+        title="검색어 해시 방식",
+        description=(
+            "에이전트 메모리 검색 이벤트에 남길 검색어 해시. 솔트 HMAC은 원문을 짐작하기 어렵고, "
+            "sha256은 설치를 넘어 같은 값이며, 끄면 글자 수만 남는다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            group="tools",
+            enum_labels={"hmac": "솔트 HMAC", "sha256": "솔트 없는 sha256", "off": "끔"},
+            when="다른 도구와 검색어 해시를 맞춰야 하거나 아예 남기지 않으려면 바꾸세요.",
+        ),
+    )
+    query_hash_salt_env: str | None = Field(
+        default=None,
+        min_length=1,
+        title="검색어 해시 솔트 환경변수",
+        description=(
+            "솔트 HMAC의 솔트를 읽을 환경변수 이름(값은 설정에 두지 않는다). 비우거나 그 변수가 "
+            "비어 있으면 서버를 켤 때마다 새 무작위 솔트를 쓴다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            group="tools",
+            example="AGENT_CONSOLE_MEMORY_QUERY_SALT",
+            when="서버를 다시 켠 뒤에도 같은 검색어를 같은 값으로 묶어 보고 싶을 때 정하세요.",
         ),
     )
     max_import_archive_bytes: int = Field(

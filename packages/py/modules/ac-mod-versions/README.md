@@ -6,7 +6,7 @@ Agent Console 버전 기능 모듈. 정의 버전 목록·비교·되돌리기 �
 - 경로(컬렉션마다, 기본 `/agents` `/graphs` `/resources` `/settings`): `…/{id}/versions`,
   `…/versions/{hash}`, `…/versions/{a}/diff[/{b}]`, `…/versions/{hash}/files[/{path}]`,
   `POST …/versions/{hash}/restore`(`If-Match` 필수, 없음 428·다름 412, 검사 error 422).
-- 필수 포트: `definitions.store`. 선택 포트: `definitions.checks`(여러 제공자 — 되돌리기 전 검사·비밀 위치),
+- 필수 포트: `definitions.store`. 선택 포트: `definitions.checks`(여러 제공자 — 되돌리기 전 검사·비밀 위치, 공간 `?project=`는 선택 메서드 `space_issues`),
   `secrets.rules`(없으면 기본 의심 규칙). 구독 토픽: `definitions.saved`(보존 개수 적용).
 - 설정 `modules.options.mod-versions`(옛 최상위 `versions`는 `settings.removed_key` 오류로 새 위치를 안내): `max_per_definition`(정의마다 남길 버전 수,
   비우면 모두 — 저장할 때와 시작할 때 적용), `collections`(버전 경로 표), `secret_issue_codes`.

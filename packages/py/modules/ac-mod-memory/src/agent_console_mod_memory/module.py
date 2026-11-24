@@ -41,7 +41,7 @@ from agent_console_conditions import (
 )
 from agent_console_contracts import CONTRACT_VERSIONS, Issue
 from agent_console_contracts.memory import MemoryChanged
-from agent_console_memory import MemoryPolicy, MemoryStore
+from agent_console_memory import MemoryPolicy, MemoryStore, QueryHasher, query_hasher_from_env
 from agent_console_modkit import (
     DEFAULT_WORK_WAIT,
     ModuleContext,
@@ -138,6 +138,14 @@ async def run_retention_periodically(
         raise
 
 
+def search_query_hasher(cfg: MemoryModuleSettings, environ: Mapping[str, str]) -> QueryHasher:
+    """설치자 설정 → 검색어 해셔(``query_hash``, 솔트는 ``query_hash_salt_env`` 환경변수).
+
+    솔트 값은 로그·응답에 내지 않는다. 변수가 없거나 비면 무작위 솔트(서버를 켤 때마다 바뀐다).
+    """
+    return query_hasher_from_env(cfg.query_hash, salt_env=cfg.query_hash_salt_env, environ=environ)
+
+
 class MemoryModule:
     """공유 메모리 기능 모듈."""
 
@@ -188,6 +196,8 @@ class MemoryModule:
             return section_of(reader()) if reader is not None else None
 
         spaces_ref: list[MemorySpaceServices] = []
+        # 검색어 해셔는 프로세스 하나에 하나(라이브러리·공간 서비스가 같은 솔트를 쓴다)
+        hasher = search_query_hasher(cfg, ctx.environ)
 
         def make_service(
             store: MemoryStore,
@@ -206,6 +216,7 @@ class MemoryModule:
                 max_page_size=cfg.max_page_size,
                 max_tag_list=cfg.max_tag_list,
                 max_search_results=cfg.max_search_results,
+                query_hash=hasher,
                 context_overrides=context,
                 spaces=spaces_ref[0] if spaces_ref else None,
                 space_name=name,
@@ -270,4 +281,5 @@ __all__ = [
     "module",
     "operators_of",
     "run_retention_periodically",
+    "search_query_hasher",
 ]

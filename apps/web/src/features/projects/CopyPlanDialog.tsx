@@ -12,6 +12,8 @@ import {
   firstUsableRequested,
   initialSelections,
   selectAction,
+  reservedIdSuggestions,
+  COPY_WARNING_RESERVED_ID,
   skipWarnings,
   summarizeResult,
   summarizeSelections,
@@ -163,6 +165,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
   const sums = plan === null ? null : summarizeSelections(plan, selections);
   const submit = plan === null ? { allowed: false, reason: "empty" as const } : canSubmit(plan, selections, takenFor);
   const warnings = plan === null ? [] : skipWarnings(plan, selections);
+  const reservedSuggested = useMemo(() => (plan === null ? new Map<string, string>() : reservedIdSuggestions(plan)), [plan]);
   const unsetCount = sums?.unset ?? 0;
 
   const goPlan = () => {
@@ -251,7 +254,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
   };
 
   const setSelection = (item: { kind: string; id: string; blocked?: boolean | undefined }, action: string | null) =>
-    item.blocked === true ? undefined : setSelections((cur) => selectAction(cur, item, action, takenFor(item)));
+    item.blocked === true ? undefined : setSelections((cur) => selectAction(cur, item, action, takenFor(item), reservedSuggested.get(copyItemKey(item))));
   const setNewId = (item: { kind: string; id: string }, newId: string) =>
     setSelections((cur) => {
       const next = new Map(cur);
@@ -378,7 +381,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                 </Choice>
               </div>
               {includeRefs ? null : <Banner tone="info">{text({ key: "copy.plan.refs_off_note" })}</Banner>}
-              {(plan?.warnings ?? []).map((w, n) => <Banner key={`${w.code}:${n}`} tone="warning">{w.message}</Banner>)}
+              {(plan?.warnings ?? []).filter((w) => w.code !== COPY_WARNING_RESERVED_ID).map((w, n) => <Banner key={`${w.code}:${n}`} tone="warning">{w.message}</Banner>)}
               <ul className="cpd-plan" aria-label={title}>
                 {items.map((item) => {
                   const key = copyItemKey(item);
@@ -449,6 +452,9 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                           </label>
                           {idProblem === null ? <span className="cpd-note app-muted">{text({ key: "copy.plan.new_id_help" })}</span> : <span className="cpd-note cpd-danger">{text({ key: `copy.plan.new_id_${idProblem}` })}</span>}
                         </div>
+                      ) : null}
+                      {reservedSuggested.has(key) ? (
+                        <p className="cpd-note cpd-warning" role="note">{text({ key: "copy.reserved_id", params: { id: item.id, suggested: reservedSuggested.get(key) || sel.newId || "" } })}</p>
                       ) : null}
                       {skipped && warn !== undefined ? <p className="cpd-note cpd-warning">{text(warn.message)}</p> : null}
                     </li>

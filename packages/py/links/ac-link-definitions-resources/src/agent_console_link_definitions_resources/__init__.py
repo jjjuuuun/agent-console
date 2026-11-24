@@ -7,9 +7,10 @@
 공개 API:
     - ``module``(``DefinitionsResourcesLink``): entry point ``agent_console.server_modules``의
       ``link-definitions-resources``.
-    - ``DefinitionChecker``: HTTP·서버 없이 쓰는 검사. ``LookupResources``·
-      ``resource_document_path``.
-    - 포트(``ports``): 받는 포트 4개와 제공 포트 ``DEFINITION_CHECKS``, 소비자 쪽 프로토콜.
+    - ``DefinitionChecker``: HTTP·서버 없이 쓰는 검사(``issues``, 공간 기준 ``space_issues``).
+      ``LookupResources``·``resource_document_path``.
+    - 포트(``ports``): 받는 포트 5개와 제공 포트 ``DEFINITION_CHECKS``, 소비자 쪽 프로토콜
+      (``SpaceDefinitionCheck`` = 공간 기준 검사 선택 능력).
 """
 
 from __future__ import annotations
@@ -19,15 +20,18 @@ from .module import MODULE_ID, DefinitionsResourcesLink, module
 from .ports import (
     DEFINITION_CHECKS,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
     SECRET_RULES,
     DefinitionCheck,
     DefinitionLookup,
+    SpaceDefinitionCheck,
 )
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
+    "DEFINITIONS_SPACES",
     "DEFINITION_CHECKS",
     "MODULE_ID",
     "RESOURCES_LOOKUP",
@@ -38,6 +42,7 @@ __all__ = [
     "DefinitionLookup",
     "DefinitionsResourcesLink",
     "LookupResources",
+    "SpaceDefinitionCheck",
     "module",
     "resource_document_path",
 ]

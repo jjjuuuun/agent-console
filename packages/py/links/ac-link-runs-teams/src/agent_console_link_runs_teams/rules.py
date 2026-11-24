@@ -41,6 +41,7 @@ from agent_console_nodes_core import (
     SCOPE_LAYERS,
     TEAM_LOOKUP,
     WORKING_DIRECTORY,
+    resolve_working_directory,
 )
 from agent_console_nodes_core import WORKSPACE_SETTINGS as WORKSPACE_SETTINGS_SERVICE
 from agent_console_registry import Registry
@@ -344,12 +345,14 @@ class TeamRules:
 
     def run_working_directory(self, graph: Graph, services: Services) -> str | None:
         """Run의 유효 작업 폴더: 팀 구성 수준 설정(공통 → 범위 층(``SCOPE_LAYERS``) → 팀 구성)의
-        ``working_directory``, 없으면 노드 서비스 ``WORKING_DIRECTORY``(서버 작업 폴더). 노드마다
-        다른 값(에이전트·노드 층)은 노드가 정한다 — 이것은 Run 하나의 기준 값이다."""
+        ``working_directory``, 없으면 노드 서비스 ``WORKING_DIRECTORY``(서버 작업 폴더). 상대
+        경로면 ``WORKING_DIRECTORY`` 기준으로 잇는다(``resolve_working_directory``, 노드와 같은
+        규칙). 노드마다 다른 값(에이전트·노드 층)은 노드가 정한다 — 이것은 Run 하나의 기준
+        값이다."""
         value = team_settings(
             graph, self.workspace, scope_layers=_scope_layers(services)
         ).effective.value.working_directory
-        return value or services.get(WORKING_DIRECTORY) or None
+        return resolve_working_directory(value, services.get(WORKING_DIRECTORY))
 
 
 @dataclass(frozen=True)

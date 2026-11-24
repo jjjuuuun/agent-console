@@ -37,7 +37,7 @@ from agent_console_contracts import Issue
 from agent_console_contracts.wiki import WikiSettings
 from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey
 from agent_console_store import RECORDS_SPACES_PORT, DefinitionStore, RecordsSpaces
-from agent_console_wiki import WikiRepository, WikiToolTarget, WikiWriteCheck
+from agent_console_wiki import QueryHasher, WikiRepository, WikiToolTarget, WikiWriteCheck
 
 INTEGRATION_RUNS: Final = "runs"
 """``WikiIntegration.capabilities`` 값: 에이전트 쓰기(실행 연동). ``WikiCapabilities.runs``와 같은
@@ -63,7 +63,8 @@ class WikiSpace(Protocol):
     - ``config_dir``: 정의 저장소 폴더(폴더 기준 상대 경로). 기본 빈 문자열.
     - ``index_dir``: 검색 색인 파일을 둘 폴더(절대 경로, 다시 만들 수 있는 캐시 — 예:
       ``<구성 폴더>/.state/wiki-index``). 없으면 색인을 메모리에만 둔다.
-    - ``folder``: 폴더 절대 경로. 이 모듈은 쓰지 않는다(응답·로그에 절대 경로를 싣지 않는다).
+    - ``folder``: 폴더 절대 경로. 위키 폴더가 이 안에 있어야 하는 기준으로만 쓴다
+      (``LocalWikiPages(within=)`` — 열기 전 링크 바꿔치기 막기). 응답·로그에는 싣지 않는다.
     """
 
     @property
@@ -105,6 +106,12 @@ class WikiIntegration(Protocol):
 @runtime_checkable
 class WikiServicePort(Protocol):
     """``wiki.service`` 포트 모양(소비자는 같은 모양을 자기 쪽에 선언해 쓴다)."""
+
+    @property
+    def query_hash(self) -> QueryHasher:
+        """에이전트 위키 검색 이벤트의 검색어 해셔(설치자 ``query_hash``, 서비스 하나에 하나 —
+        실행 연동이 도구 묶음에 넘긴다. 솔트 값은 내지 않는다)."""
+        ...
 
     def settings(self) -> WikiSettings:
         """지금 사용자 설정 ``wiki``(깨진 부분은 뺀 값)."""

@@ -267,7 +267,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
         ) : null}
 
         <section id={sectionDomId("info")} aria-label={t.sections.info} className="wiki-rules-section">
-          <h3 className="wiki-section-title">{t.sections.info}</h3>
+          <h2 className="wiki-section-title">{t.sections.info}</h2>
           <RuleRefsProvider env={env}>
             <SchemaForm
               key={epoch}
@@ -290,7 +290,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
         </section>
 
         <section id={sectionDomId("instructions")} aria-label={t.sections.instructions} className="wiki-rules-section">
-          <h3 className="wiki-section-title">{t.sections.instructions}</h3>
+          <h2 className="wiki-section-title">{t.sections.instructions}</h2>
           {ctx.capabilities.runs ? null : <Banner tone="info" data-testid="wiki-rules-runs-off">{t.instructionsRunsOff}</Banner>}
           {instructions === "" ? (
             <p className="app-muted">{t.instructionsNone}</p>
@@ -306,7 +306,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
         </section>
 
         <section id={sectionDomId("merged")} aria-label={t.sections.merged} className="wiki-rules-section">
-          <h3 className="wiki-section-title">{t.sections.merged}</h3>
+          <h2 className="wiki-section-title">{t.sections.merged}</h2>
           {entries.length === 0 ? <p className="app-muted">{t.mergedNone}</p> : (
             <>
               {table(KNOWN_WIKI_RULE_ENTRY_KINDS.WRITE, true)}
@@ -317,7 +317,7 @@ export function RulesTab({ wikiId, view, versionHash, summary, ctx, params, setP
         </section>
 
         <section id={sectionDomId("syntax")} aria-label={t.sections.syntax} className="wiki-rules-section">
-          <h3 className="wiki-section-title">{t.sections.syntax}</h3>
+          <h2 className="wiki-section-title">{t.sections.syntax}</h2>
           {syntaxQ.isPending ? <ListSkeleton rows={3} /> : syntaxQ.isError || syntax === undefined ? (
             <FailureBlock error={syntaxQ.error} title={t.syntaxLoadFailed} onRetry={() => void syntaxQ.refetch()} />
           ) : (

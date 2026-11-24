@@ -19,6 +19,8 @@
 받음(모두 선택 — 없으면 그 부분만 꺼진다):
 
 - ``definitions.checks``(여러 제공자): 저장 전 검사(``DefinitionCheck``). 없으면 모델 검증만.
+  공간(``?project=``) 저장은 검사의 선택 메서드 ``space_issues``(``SpaceDefinitionCheck``)로 한다
+  (그 공간 기준 — 예: 첨부 리소스를 그 공간에서만 찾는다). 그 메서드가 없는 검사는 ``issues``.
 - ``graphs.validation``: 팀 구성 목록의 검증 요약(``GraphValidationSource``). 없으면 ``null``.
   공간(``?project=``) 목록은 제공자의 선택 메서드 ``space_summaries``
   (``SpaceGraphValidationSource``)로 계산한다. 그 메서드가 없으면 ``null``(라이브러리 기준
@@ -60,6 +62,15 @@ class DefinitionCheck(Protocol):
     """저장 전 정의 검사 하나. 이슈 path는 문서 기준 JSON Pointer, 메시지에 값이 없다."""
 
     def issues(self, kind: str, document: Mapping[str, Any]) -> Sequence[Issue]: ...
+
+
+@runtime_checkable
+class SpaceDefinitionCheck(Protocol):
+    """저장 전 정의 검사의 선택 능력: 공간(``?project=``)에 저장할 때의 검사(같은 이슈 모양)."""
+
+    def space_issues(
+        self, space: str, kind: str, document: Mapping[str, Any]
+    ) -> Sequence[Issue]: ...
 
 
 @runtime_checkable
@@ -181,6 +192,7 @@ __all__ = [
     "SaveWarnings",
     "SavedDefinition",
     "SecretRulesReader",
+    "SpaceDefinitionCheck",
     "SpaceGraphValidationSource",
     "WarningSource",
     "WorkspaceSettingsReader",

@@ -441,6 +441,7 @@ class CopyService:
             messages=self._messages,
             target_label=copy_target_label(dst.project_name, messages=self._messages),
             plain_secrets=plain,
+            reserved_ids={k.name: k.reserved_ids for k in self._kind_info() if k.reserved_ids},
         )
 
     def legacy_plan(self, project_id: str) -> CopyPlan:

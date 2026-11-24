@@ -2,6 +2,11 @@
 
 ## 미출시
 
+- FU.4: 경로 지킴의 틀 표를 `ac-nodes-core.path_placeholders`로 바꿨다 — 실행(agent 노드 `resolve_paths`)과
+  같은 표·같은 기준(프로젝트 폴더)이라 검사한 경로와 백엔드가 받는 `limits.directories`가 같다.
+- FU.4: `scope_run`이 프로젝트 실행에 노드 서비스 `WORKING_DIRECTORY` = 프로젝트 폴더를 넣는다(상대
+  `working_directory`가 경로 지킴과 같은 기준 — 폴더 기준으로 풀린다, 자식·손자 Run도 물려받음). 중첩 팀 실행의
+  작업 폴더·자격 경로 비전달 통합 테스트.
 - 5.7R.33t1: `ProjectScope.accepts_project(project_id)`(`mod-runs` `RunProjectScoper`) — 프로젝트 읽기가 있으면
   참. 이 연동이 꺼진 조립(프로젝트 기능은 켜짐)에서는 `mod-runs`가 `project_id`를 붙인 실행·대화 턴을 409
   `feature_unavailable`(`details.port = "runs.scopes"`)로 막는다(K33-10). 계약 변경 없음.

@@ -62,10 +62,10 @@ describe("noHardcoding", () => {
     const text = readFileSync(join(SRC, "widgets", "registry.ts"), "utf8") + readFileSync(join(SRC, "DashboardGrid.tsx"), "utf8");
     expect(text).not.toMatch(/switch\s*\(\s*[\w.]*kind/);
   });
-  it("다른 사내 UI 패키지를 import하지 않는다(contracts 타입만)", () => {
+  it("다른 사내 UI 패키지를 import하지 않는다(contracts 타입과 가상 목록 훅 virtual-rows만)", () => {
     for (const f of files) {
       const imports = [...readFileSync(f, "utf8").matchAll(/from\s+["'](@agent-console\/[^"']+)["']/g)].map((m) => m[1] as string);
-      for (const i of imports) expect(i.startsWith("@agent-console/contracts")).toBe(true);
+      for (const i of imports) expect(i.startsWith("@agent-console/contracts") || i === "@agent-console/virtual-rows").toBe(true);
     }
   });
 });

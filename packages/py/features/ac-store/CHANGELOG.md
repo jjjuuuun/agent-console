@@ -2,6 +2,11 @@
 
 ## 미출시
 
+- FU.11: 여러 Run 묶어 읽기 `RunRepository.list_node_runs_many(run_ids)`·`EventRepository.list_many(since, type_prefixes=)`(Run id → 결과, 없는 Run은 키 없음, Run마다 부른 `list_node_runs`·`list`와 같은 결과). SQLite는 Run `RUN_BATCH_SIZE`(200)개마다 질의 한 번(사용량 토큰 집계 N+1 방지). 더하기만, 표 변경 없음.
+
+- FU.5: `slug_id`·`unique_id`·`SLUG_MAX_CHARS`(이름 → 새 정의 id, `ac-sdd`·`mod-wiki` 사본을 옮김, 규칙 그대로).
+  `DefinitionKind.reserved_ids`(그 종류 id로 쓰면 안 되는 말, 저장소는 보지 않음 — FU.6 복사 계획이 읽는다). 표 변경 없음.
+
 - 11/20: `OpenCache[V]`·`CacheShut`(이름 → 열린 값 캐시: 오래 안 쓴 순서·유휴·상한·`shutdown()` 뒤 넣기 거부). 프로젝트 기록·메모리 공간 풀이 같이 쓴다. 더하기만, 표 변경 없음.
 
 - 수정(11/20): `RecordsStores`의 처음 열기 훅(`on_open`, 재시작 복구)이 도는 동안 같은 공간을 여는 다른 스레드는 끝날 때까지 기다린다(상한 `open_wait`, 기본 `DEFAULT_OPEN_WAIT` 30초, 훅 안 같은 스레드 재진입은 기다리지 않음, 먼저 연 쪽 훅이 거짓이면 기다린 쪽이 다시 부름). 시작 직후 로그 수집이 공간을 먼저 열면 첫 요청이 복구 전 상태(`running`)를 읽었다. 닫힌 `RecordsDb`의 `engine`·`read_engine`은 `corrupt` 대신 `folder_missing`(쓰기와 같은 이유). 더하기만, 표 변경 없음.

@@ -55,6 +55,8 @@ from agent_console_store import (
     NotFound,
     StoredDefinition,
     VersionConflict,
+    slug_id,
+    unique_id,
 )
 
 from ._check import check_rules
@@ -68,7 +70,6 @@ from ._errors import (
     TransitionDeniedError,
 )
 from ._gates import gate_context, require_gates
-from ._ids import slug_id, unique_id
 from ._parse import find_task, parse_spec
 from ._patch import TaskChangedError, patch_task
 from ._syntax import document_state_infos, effective_document_state, effective_syntax

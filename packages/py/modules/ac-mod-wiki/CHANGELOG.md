@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 미출시
+
+- FU.12: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트 환경변수 이름) —
+  에이전트 위키 검색 이벤트 `query_sha256`. 기본이 솔트 없는 sha256에서 서버를 켤 때마다 무작위 솔트 HMAC으로
+  바뀌었다. `WikiService(query_hash=)`·`WikiService.query_hash`, `search_query_hasher(cfg, environ)`.
+- FU.5: `unique_id`는 `agent_console_store.unique_id`를 다시 내보낸다(사본 삭제, 규칙 그대로).
+
 ## 0.1.0
 
 - 처음 만듦(scripts/pkgkit 템플릿 `module`).
@@ -11,3 +18,6 @@
 - 계약 0.14.2 후속: 위키 규칙 버전 경로 `GET /wiki/rules/{id}/versions[/{hash}]`·`…/versions/{hash}/files[/{path}]`·
   `POST …/versions/{hash}/restore`(`/sdd/templates`와 같은 모양, 본문 파일 비밀 검사·읽기 전용 공간 409),
   `GET /wiki/info`가 `rules_kind`를 채운다.
+- FU.1: 위키 폴더를 `LocalWikiPages(within=)`로 연다(프로젝트 = 공간 `folder`, 단독 = 단독 루트 폴더 —
+  `WikiService(standalone_boundary=)`). 기준 폴더는 만들지 않는다. 공간을
+  연 뒤 위키 폴더가 밖을 가리키는 링크로 바뀌어도 밖을 읽거나 쓰지 않는다.

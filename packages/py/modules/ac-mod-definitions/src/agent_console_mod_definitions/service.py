@@ -32,6 +32,7 @@ from .ports import (
     GraphEntryLabels,
     GraphSessionSummarySource,
     GraphValidationSource,
+    SpaceDefinitionCheck,
     SpaceGraphValidationSource,
 )
 
@@ -48,7 +49,8 @@ class DefinitionService:
         entry_labels: 팀 구성 입구 이름 제공자(없으면 None → 이름 null).
         session_summary: 팀 구성 세션 집계 제공자(없으면 None → 집계 null).
         space: 이 서비스가 쓰는 공간 이름(None = 라이브러리). 공간이면 검증 요약은 제공자의 선택
-            메서드 ``space_summaries``로만 계산한다(없으면 null).
+            메서드 ``space_summaries``로만 계산하고(없으면 null), 저장 전 검사는 검사의 선택
+            메서드 ``space_issues``가 있으면 그것으로 한다(없으면 ``issues``).
         save_warnings: 저장한 정의 하나의 응답 경고 ``(kind, id, document) -> 이슈``(예: 평문 비밀
             ``secret.plain_found``). 기본 = 경고 없음.
     """
@@ -75,13 +77,20 @@ class DefinitionService:
         self._session_summary = session_summary
 
     def issues(self, kind: str, document: Mapping[str, Any] | BaseModel) -> list[Issue]:
-        """저장 전 검사 이슈 전부(검사가 없으면 빈 목록)."""
+        """저장 전 검사 이슈 전부(검사가 없으면 빈 목록). 공간 서비스면 공간 기준 검사."""
         doc: Mapping[str, Any] = (
             document.model_dump(mode="json", exclude_unset=True)
             if isinstance(document, BaseModel)
             else document
         )
-        return [i for check in self._checks() for i in check.issues(kind, doc)]
+        return [i for check in self._checks() for i in self._check_issues(check, kind, doc)]
+
+    def _check_issues(
+        self, check: DefinitionCheck, kind: str, doc: Mapping[str, Any]
+    ) -> Sequence[Issue]:
+        if self.space and isinstance(check, SpaceDefinitionCheck):
+            return check.space_issues(self.space, kind, doc)
+        return check.issues(kind, doc)
 
     def check(self, kind: str, document: Mapping[str, Any] | BaseModel, what: str) -> None:
         """검사에 error가 있으면 ``DefinitionRejectedError``(422)."""

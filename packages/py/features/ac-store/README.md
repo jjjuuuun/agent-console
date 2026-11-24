@@ -108,6 +108,20 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 `DefinitionKind.library`(기본 참)가 거짓인 종류는 라이브러리 공간(앱 workspace)에 두지 않고 프로젝트·단독 공간에만 둔다.
 저장소는 이 값을 보지 않으며, 라이브러리 저장소를 여는 쪽이 그 종류를 빼고 연다(그 종류 요청은 `NotFound`).
 `kind.with_summary_fields(*fields)`는 목록 요약 필드를 더한 사본이다.
+`DefinitionKind.reserved_ids`(기본 빈 값)는 그 종류 id로 쓰면 안 되는 말이다(대소문자 무시, 예: 같은 깊이의 고정 REST 경로
+`/<종류>/check`와 겹치는 id). 저장소는 이 값을 보지 않는다. 만들기·복사 계획처럼 id를 정하는 쪽이 읽어 피하거나 새 id를 제안한다.
+
+이름만 받고 id를 정해야 할 때는 `slug_id(name, fallback=)`·`unique_id(name, taken, fallback=)`를 쓴다(악센트 떼기, 허용 밖
+글자 묶음 → `-`, 소문자, 120자, 겹치면 `-2`·`-3`…, 대소문자 무시).
+
+```python
+>>> from agent_console_store import slug_id, unique_id
+>>> slug_id("Project Notes", fallback="wiki"), unique_id("Project Notes", ["project-notes"], fallback="wiki")
+('project-notes', 'project-notes-2')
+>>> unique_id("프로젝트", [], fallback="wiki")
+'wiki'
+
+```
 
 쓰기 전 검사는 `write_guard`로 주입한다(`FileDefinitionStore(..., write_guard=fn)`). `fn(kind, id, document, files)`가
 예외를 던지면 문서·본문·버전 기록 어느 것도 쓰지 않는다(`ac-project-space`의 비밀 검사가 이것을 쓴다).

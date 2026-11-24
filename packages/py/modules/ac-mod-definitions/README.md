@@ -10,7 +10,7 @@ Agent Console 정의 기능 모듈. 워크스페이스의 정의(에이전트·�
   `server.warnings`(평문 비밀 점검 `secret.plain_found`), `definitions.save_warnings`(저장한 정의 하나의
   평문 비밀 경고 — 에이전트·팀 구성 만들기·저장·복제 응답의 `X-Console-Issues` 헤더에 싣고 리소스 모듈도
   같은 계산을 쓴다. 저장은 허용, 문구는 설정 `plain_secret_save_message`). 토픽 `definitions.saved{kind, id, version_hash}`.
-- 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422), `graphs.validation`·`graphs.entry_labels`·
+- 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422. 공간 저장 `?project=`는 검사의 선택 메서드 `space_issues`, 없으면 `issues`), `graphs.validation`·`graphs.entry_labels`·
   `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null. 공간 목록의 검증 요약은 제공자의 선택 메서드 `space_summaries`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소),
   `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 — 아래).
 - 종류 기여: 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리

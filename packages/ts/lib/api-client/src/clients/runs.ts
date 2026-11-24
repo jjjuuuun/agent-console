@@ -87,7 +87,7 @@ export interface RunsClient {
    */
   locateRun(id: string): Promise<RunLocation>;
   cancelRun(id: string): Promise<Run>;
-  getRunTrace(id: string): Promise<Trace>;
+  getRunTrace(id: string, options?: { project?: RunSpace }): Promise<Trace>;
   listRunEvents(id: string, params?: ListRunEventsParams): Promise<RunEvent[]>;
   /** 여러 실행의 위임·넘기기 집계. */
   getHandoffs(params?: HandoffParams): Promise<HandoffMatrix>;
@@ -108,7 +108,7 @@ export function createRunsClient(io: RestIo): RunsClient {
     getRun: (id, project) => io.request("GET", at(`/runs/${enc(id)}`, project)),
     locateRun: (id) => io.request("GET", `/runs/${enc(id)}/locate`),
     cancelRun: (id) => io.request("POST", `/runs/${enc(id)}/cancel`),
-    getRunTrace: (id) => io.request("GET", `/runs/${enc(id)}/trace`),
+    getRunTrace: (id, options) => io.request("GET", at(`/runs/${enc(id)}/trace`, options?.project)),
     listRunEvents: (id, params) => io.request("GET", `/runs/${enc(id)}/events${query(params)}`),
     getHandoffs: (params) => io.request("GET", `/runs/handoffs${query(params)}`),
     getResumeOptions: (runId) => io.request("GET", `/runs/${enc(runId)}/resume-options`),

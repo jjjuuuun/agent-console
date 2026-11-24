@@ -39,6 +39,7 @@ from agent_console_contracts import (
     KnownIssueCodes,
 )
 
+from ._identity import registration_id
 from ._model import DefinitionId, References
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "CODE_COPY_KIND_NOT_PORTABLE",
     "CODE_COPY_REFERENCE_CYCLE",
     "CODE_COPY_REFERENCE_MISSING",
+    "CODE_COPY_RESERVED_ID",
     "CODE_COPY_SKIP_BREAKS_REFERENCE",
     "CODE_COPY_SOURCE_MISSING",
     "CODE_COPY_UNKNOWN_ACTION",
@@ -80,6 +82,10 @@ CODE_COPY_KIND_NOT_PORTABLE: Final = "project.copy_kind_not_portable"
 """대상 공간에 둘 수 없는 종류(warning, 계획에서 뺌)."""
 CODE_COPY_SKIP_BREAKS_REFERENCE: Final = "project.copy_skip_breaks_reference"
 """빼는 참조 항목이 대상에 없어 그것을 쓰는 정의가 실행 전에 막힌다(warning)."""
+CODE_COPY_RESERVED_ID: Final = "project.copy_reserved_id"
+"""항목 id가 그 종류의 예약어(`reserved_ids`, 예: 같은 깊이의 고정 REST 경로)라 대상 공간에서 그
+id로 열 수 없다(warning). `details{kind, id, reserved, suggested_id}`, 쓰는 항목의 기본 동작은
+rename(대상에 없음) 또는 고르기(내용이 다름)다."""
 CODE_COPY_UNKNOWN_ACTION: Final = "project.copy_unknown_action"
 """모르는 동작(항목 결과 skipped)."""
 CODE_SECRET_PLAIN_FOUND: Final = KnownIssueCodes.SECRET_PLAIN_FOUND
@@ -105,14 +111,18 @@ DEFAULT_COPY_MESSAGES: Mapping[str, str] = {
     CODE_COPY_SKIP_BREAKS_REFERENCE: "${source}은(는) ${ref}이(가) 없어 실행 전에 막힙니다.",
     CODE_COPY_CONFLICT: "${item}이(가) 계획 뒤에 바뀌어 적용하지 않았습니다(${reason}).",
     CODE_COPY_UNKNOWN_ACTION: "${item}: 알 수 없는 동작 ${action}이라 건너뜁니다.",
+    CODE_COPY_RESERVED_ID: (
+        "${item}의 id \u2018${id}\u2019는 이 종류의 경로 이름과 겹쳐 ${target}에서 열 수 없습니다. "
+        "새 id \u2018${suggested}\u2019로 바꿔 복사하세요."
+    ),
     KnownIssueCodes.PROJECT_REFERENCES_UNAVAILABLE: (
         "참조를 알 수 없어 함께 가져올 항목을 찾지 못했습니다. 고른 항목만 복사합니다."
     ),
     COPY_TARGET_LIBRARY: "공용 구성",
     COPY_TARGET_PROJECT: "프로젝트 \u2018${name}\u2019",
 }
-"""기본 문구(코드 → `string.Template`). 변수 item·source·ref·cycle·reason·action·target·path,
-대상 이름 틀(`COPY_TARGET_*`)은 name. `messages=`로 바꾼다."""
+"""기본 문구(코드 → `string.Template`). 변수 item·source·ref·cycle·reason·action·target·path·
+id·suggested, 대상 이름 틀(`COPY_TARGET_*`)은 name. `messages=`로 바꾼다."""
 
 
 class PlainFinding(Protocol):
@@ -274,6 +284,7 @@ def copy_plan(
     messages: Mapping[str, str] | None = None,
     target_label: str = DEFAULT_TARGET_LABEL,
     plain_secrets: PlainSecretCheck | None = None,
+    reserved_ids: Mapping[str, Collection[str]] | None = None,
 ) -> CopyPlan:
     """복사 계획(아무것도 쓰지 않음, `POST /projects/copy/plan`).
 
@@ -290,6 +301,11 @@ def copy_plan(
         plain_secrets: 대상 공간이 거절할 평문 비밀 판정(`PlainSecretCheck`). 걸린 항목은 막힘
             (`blocked`, `default_action` skip, 위치마다 error `secret.plain_found`
             `details{kind, id, path, reason}` — 값 없음). None = 보지 않음.
+        reserved_ids: 종류 → 그 종류 id로 쓰면 안 되는 말(대소문자 무시, 정의 종류 데이터
+            `DefinitionKind.reserved_ids`). 대상에 그 id로 쓰게 되는 항목(대상에 없음·내용이 다름)은
+            `warnings`에 `project.copy_reserved_id`(`details.suggested_id` = 대상·예약어·다른 제안과
+            겹치지 않는 `<id>-2`…)를 더하고, 대상에 없으면 기본 동작을 rename으로 한다. None = 보지
+            않음.
 
     Returns:
         `CopyPlan` — 항목 순서는 요청 순 → 참조로 들어온 순(너비 우선). 항목마다 `reason`
@@ -420,6 +436,10 @@ def copy_plan(
             )
         )
 
+    reserved = {
+        kind: {w.casefold() for w in words} for kind, words in (reserved_ids or {}).items() if words
+    }
+    suggested: dict[DefinitionId, str] = {}
     items: list[CopyPlanItem] = []
     for key in order:
         src = source_docs[key]
@@ -433,6 +453,31 @@ def copy_plan(
         else:
             state, action = KnownCopyTargetStates.DIFFERENT, None
         blocking = _plain_issues(key, src.document, plain_secrets, messages, target_label)
+        words = reserved.get(key[0], set())
+        if key[1].casefold() in words and state != KnownCopyTargetStates.IDENTICAL:
+            taken = [i for k, i in target_index if k == key[0]]
+            taken += [i for (k, _), i in suggested.items() if k == key[0]]
+            new_id = registration_id(key[1], [*taken, *words])
+            suggested[key] = new_id
+            warnings.append(
+                _issue(
+                    messages,
+                    CODE_COPY_RESERVED_ID,
+                    "warning",
+                    {
+                        "kind": key[0],
+                        "id": key[1],
+                        "reserved": sorted(reserved_ids[key[0]] if reserved_ids else ()),
+                        "suggested_id": new_id,
+                    },
+                    item=_label(key),
+                    id=key[1],
+                    suggested=new_id,
+                    target=target_label,
+                )
+            )
+            if state == KnownCopyTargetStates.ABSENT:
+                action = KnownCopyActions.RENAME
         if blocking:
             action = KnownCopyActions.SKIP
         items.append(

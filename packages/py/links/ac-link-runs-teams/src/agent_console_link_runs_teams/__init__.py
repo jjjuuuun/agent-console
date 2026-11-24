@@ -19,7 +19,8 @@
     - Run의 정의 조회 출처(5.7R.33y): ``lookups_from``(출처 하나 → ``RunLookups`` 에이전트·팀 구성·
       리소스 조회), 노드 서비스 키 ``RUN_DEFINITIONS``, 출처 모양 ``DefinitionSource``.
     - ``build_router``: ``POST /graphs/{id}/validate``(엔진 + 팀 규칙 + 저장 전 정의 검사의
-      경고·정보 — ``definition_check_issues``·``with_definition_checks``).
+      경고·정보 — ``definition_check_issues``·``with_definition_checks``. ``?project=``면 검사의
+      선택 메서드 ``SpaceDefinitionCheck.space_issues``로 그 공간 기준).
 """
 
 from __future__ import annotations
@@ -49,6 +50,7 @@ from .ports import (
     DefinitionSource,
     ProjectRunChecker,
     RunChecker,
+    SpaceDefinitionCheck,
 )
 from .preflight import DEFAULT_BACKEND_FIX_TEXTS, BackendFixTexts, backend_unresolved_error
 from .routes import build_router
@@ -85,6 +87,7 @@ __all__ = [
     "RunLookups",
     "RunsTeamsLink",
     "RunsTeamsLinkSettings",
+    "SpaceDefinitionCheck",
     "TeamRules",
     "TeamRunPreparation",
     "ValidationSummaries",

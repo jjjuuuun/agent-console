@@ -16,6 +16,8 @@ export interface SyntaxValueTreeProps {
   /** 문구 덮어쓰기 */
   messages?: Readonly<Record<string, string>>;
   className?: string;
+  /** 키 제목의 제목 수준(h2~h6). 놓인 곳의 바로 위 제목보다 하나 아래로 맞춘다(기본 3). */
+  headingLevel?: 2 | 3 | 4 | 5 | 6;
 }
 
 /** JSON 포인터 한 조각 이스케이프 */
@@ -34,7 +36,8 @@ function Scalar({ v }: { v: unknown }): ReactNode {
  * 출처는 `sources`의 JSON 포인터(`/키`, 더 구체적인 포인터가 있으면 그 하위 항목에도 배지)이고 값은 서버 열린 문자열이다
  * (모르는 출처는 원문). 이 컴포넌트는 값을 편집하지 않는다.
  */
-export function SyntaxValueTree({ syntax, display, titles, onOpenSource, messages, className }: SyntaxValueTreeProps) {
+export function SyntaxValueTree({ syntax, display, titles, onOpenSource, messages, className, headingLevel = 3 }: SyntaxValueTreeProps) {
+  const Heading = `h${headingLevel}` as const;
   const t = resolveMessages(messages);
   const value = (syntax?.syntax ?? {}) as Record<string, unknown>;
   const sources = syntax?.sources ?? {};
@@ -109,7 +112,7 @@ export function SyntaxValueTree({ syntax, display, titles, onOpenSource, message
         return (
           <section key={k} className="ac-wk-syntax-block" aria-label={titles?.[k] ?? k}>
             <header className="ac-wk-inline">
-              <h4 className="ac-wk-grow">{titles?.[k] ?? k}</h4>
+              <Heading className="ac-wk-grow">{titles?.[k] ?? k}</Heading>
               {src !== undefined ? badgeFor(src) : null}
             </header>
             {walk(value[k], pointer, src)}

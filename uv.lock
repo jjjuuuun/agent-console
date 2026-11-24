@@ -61,9 +61,11 @@ members = [
     "agent-console-mod-wiki",
     "agent-console-modkit",
     "agent-console-nodes-core",
+    "agent-console-path-glob",
     "agent-console-project-space",
     "agent-console-projects",
     "agent-console-pty-session",
+    "agent-console-query-hash",
     "agent-console-registry",
     "agent-console-resources",
     "agent-console-resources-core",
@@ -81,6 +83,7 @@ members = [
     "agent-console-usage",
     "agent-console-wiki",
     "agent-console-workspace",
+    "agent-console-write-budget",
 ]
 
 [[package]]
@@ -1533,6 +1536,7 @@ version = "0.1.0"
 source = { editable = "packages/py/features/ac-logs" }
 dependencies = [
     { name = "agent-console-contracts" },
+    { name = "agent-console-path-glob" },
     { name = "agent-console-registry" },
     { name = "jsonschema" },
     { name = "pydantic" },
@@ -1552,6 +1556,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-path-glob", editable = "packages/py/base/ac-path-glob" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "pydantic", specifier = ">=2.9" },
@@ -1608,9 +1613,11 @@ source = { editable = "packages/py/features/ac-memory" }
 dependencies = [
     { name = "agent-console-conditions" },
     { name = "agent-console-contracts" },
+    { name = "agent-console-query-hash" },
     { name = "agent-console-registry" },
     { name = "agent-console-safe-zip" },
     { name = "agent-console-secret-rules" },
+    { name = "agent-console-write-budget" },
     { name = "ruamel-yaml" },
 ]
 
@@ -1632,9 +1639,11 @@ dev = [
 requires-dist = [
     { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-query-hash", editable = "packages/py/base/ac-query-hash" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-safe-zip", editable = "packages/py/base/ac-safe-zip" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
+    { name = "agent-console-write-budget", editable = "packages/py/base/ac-write-budget" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "sqlalchemy", marker = "extra == 'sqlite'", specifier = ">=2.0" },
 ]
@@ -2423,6 +2432,29 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-path-glob"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-path-glob" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-project-space"
 version = "0.1.0"
 source = { editable = "packages/py/features/ac-project-space" }
@@ -2513,6 +2545,29 @@ requires-dist = [
     { name = "pywinpty", marker = "sys_platform == 'win32' and extra == 'windows'", specifier = ">=2.0,<4" },
 ]
 provides-extras = ["windows"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-query-hash"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-query-hash" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3116,12 +3171,15 @@ source = { editable = "packages/py/features/ac-wiki" }
 dependencies = [
     { name = "agent-console-conditions" },
     { name = "agent-console-contracts" },
+    { name = "agent-console-path-glob" },
+    { name = "agent-console-query-hash" },
     { name = "agent-console-registry" },
     { name = "agent-console-safe-regex" },
     { name = "agent-console-safe-zip" },
     { name = "agent-console-secret-rules" },
     { name = "agent-console-store" },
     { name = "agent-console-text-template" },
+    { name = "agent-console-write-budget" },
     { name = "markdown-it-py" },
     { name = "ruamel-yaml" },
 ]
@@ -3144,12 +3202,15 @@ dev = [
 requires-dist = [
     { name = "agent-console-conditions", editable = "packages/py/base/ac-conditions" },
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-path-glob", editable = "packages/py/base/ac-path-glob" },
+    { name = "agent-console-query-hash", editable = "packages/py/base/ac-query-hash" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-safe-regex", editable = "packages/py/base/ac-safe-regex" },
     { name = "agent-console-safe-zip", editable = "packages/py/base/ac-safe-zip" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
     { name = "agent-console-store", editable = "packages/py/features/ac-store" },
     { name = "agent-console-text-template", editable = "packages/py/base/ac-text-template" },
+    { name = "agent-console-write-budget", editable = "packages/py/base/ac-write-budget" },
     { name = "alembic", marker = "extra == 'sqlite'", specifier = ">=1.13" },
     { name = "markdown-it-py", specifier = ">=3.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
@@ -3194,6 +3255,29 @@ dev = [
     { name = "ruff", specifier = ">=0.6" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-regex", specifier = ">=2026.9.29.20261005" },
+]
+
+[[package]]
+name = "agent-console-write-budget"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-write-budget" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
 ]
 
 [[package]]

@@ -66,6 +66,18 @@
       "description": "실제 숫자가 기대 숫자보다 작거나 같다.",
       "value_schema": {"type": "number"},
       "applies_to": ["number", "integer"]
+    },
+    {
+      "id": "any_item",
+      "title": "항목 중 하나라도 맞음",
+      "description": "목록의 항목 중 하나라도 적은 필드가 모두 맞는다. 값은 {항목 안 경로: [허용 값, …]}이다(예: {\"/kind\": [\"skill\", \"spec\"]}). 경로 \"\"는 항목 자체다.",
+      "value_schema": {
+        "type": "object",
+        "minProperties": 1,
+        "propertyNames": {"pattern": "^(/.*)?$"},
+        "additionalProperties": {"type": "array"}
+      },
+      "applies_to": ["array"]
     }
   ]
 }

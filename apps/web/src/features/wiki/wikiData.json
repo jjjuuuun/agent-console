@@ -104,7 +104,8 @@
       3
     ],
     "defaultDepth": 1,
-    "all": "all"
+    "all": "all",
+    "bigNodes": 200
   },
   "rulesScreen": {
     "params": {

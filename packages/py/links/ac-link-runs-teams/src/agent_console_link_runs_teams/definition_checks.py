@@ -2,6 +2,7 @@
 
 저장 전 검사의 error는 저장 경로가 422로 거부하므로 검증 결과에는 경고·정보만 붙인다(기본). 어떤
 검사가 있는지(프로젝트 범위 경고 등)는 모른다 — 제공 모듈이 꺼져 있으면 붙일 것이 없을 뿐이다.
+공간(``?project=``) 기준 검증이면 검사의 선택 메서드 ``space_issues``를 부른다(없으면 ``issues``).
 FastAPI를 모른다.
 """
 
@@ -13,7 +14,7 @@ from collections.abc import Callable, Collection, Sequence
 from agent_console_contracts import Graph, Issue, IssueSeverity
 from agent_console_store import GRAPH_KIND
 
-from .ports import DefinitionCheck
+from .ports import DefinitionCheck, SpaceDefinitionCheck
 
 _log = logging.getLogger("agent_console_link_runs_teams")
 
@@ -32,6 +33,7 @@ def definition_check_issues(
     existing: Sequence[Issue] = (),
     kind: str = GRAPH_KIND.name,
     severities: Collection[IssueSeverity] = DEFAULT_CHECK_SEVERITIES,
+    space: str | None = None,
 ) -> list[Issue]:
     """팀 구성 문서 하나에 대한 저장 전 검사 이슈(``severities``만, ``existing``과 겹치면 뺀다).
 
@@ -41,6 +43,8 @@ def definition_check_issues(
         existing: 이미 낸 이슈(엔진·팀 규칙). 같은 코드·대상·path의 이슈는 다시 내지 않는다.
         kind: 정의 종류 이름(기본 팀 구성 종류).
         severities: 붙일 심각도.
+        space: 공간 이름(예: 프로젝트 id). 있으면 ``space_issues``가 있는 검사는 그 공간 기준으로
+            부른다(첨부 리소스를 그 공간에서만 찾는 등). None(기본) = 라이브러리 기준 ``issues``.
 
     Returns:
         붙일 이슈(검사 순서). 검사 하나가 예외를 내면 기록하고 그 검사만 건너뛴다.
@@ -52,7 +56,10 @@ def definition_check_issues(
     out: list[Issue] = []
     for check in checks:
         try:
-            found = list(check.issues(kind, document))
+            if space and isinstance(check, SpaceDefinitionCheck):
+                found = list(check.space_issues(space, kind, document))
+            else:
+                found = list(check.issues(kind, document))
         except Exception:  # 제공 모듈의 오류 타입을 모른다 — 검증 경로는 계속 응답한다
             _log.exception("저장 전 정의 검사 실패(검증 경로): %s", type(check).__name__)
             continue
@@ -68,9 +75,12 @@ def with_definition_checks(
     graph: Graph,
     issues: Sequence[Issue],
     checks: Callable[[], Sequence[DefinitionCheck]],
+    *,
+    space: str | None = None,
 ) -> list[Issue]:
-    """``issues`` 뒤에 저장 전 검사의 경고·정보를 붙인 목록(``definition_check_issues``)."""
-    return [*issues, *definition_check_issues(graph, checks(), existing=issues)]
+    """``issues`` 뒤에 저장 전 검사의 경고·정보를 붙인 목록(``definition_check_issues``,
+    ``space``가 있으면 그 공간 기준)."""
+    return [*issues, *definition_check_issues(graph, checks(), existing=issues, space=space)]
 
 
 __all__ = ["DEFAULT_CHECK_SEVERITIES", "definition_check_issues", "with_definition_checks"]

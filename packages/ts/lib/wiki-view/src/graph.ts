@@ -146,8 +146,67 @@ export function createElkGraphLayout(load?: () => Promise<ElkLike>): GraphLayout
     });
     const positions: Record<string, { x: number; y: number }> = {};
     for (const c of out.children ?? []) positions[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
-    return positions;
+    // stress는 노드 크기를 무시해 노드가 많으면 겹친다. 겹침이 있을 때만 격자 칸으로 풀어 준다.
+    return removeOverlaps(input.nodes, positions, input.gap);
   };
+}
+
+/** 두 사각형이 `margin`보다 가깝게 겹치는가. */
+function overlaps(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }, margin: number): boolean {
+  return a.x < b.x + b.w + margin && b.x < a.x + a.w + margin && a.y < b.y + b.h + margin && b.y < a.y + a.h + margin;
+}
+
+/**
+ * 배치에서 겹친 노드를 푼다(결정론적). 겹침이 없으면 입력을 그대로 돌려준다. 있으면 노드를 (y, x, id) 순으로 훑으며
+ * 원래 위치에 가장 가까운 빈 격자 칸(칸 크기 = 가장 큰 노드 + 간격의 절반)에 놓는다. 위치 순서·대략의 모양은 유지된다.
+ * 노드가 `maxNodes`(기본 5000)를 넘으면 검사 비용 때문에 손대지 않는다.
+ */
+export function removeOverlaps(
+  nodes: ReadonlyArray<{ id: string; width: number; height: number }>,
+  positions: Record<string, { x: number; y: number }>,
+  gap: number,
+  maxNodes = 5000,
+): Record<string, { x: number; y: number }> {
+  if (nodes.length < 2 || nodes.length > maxNodes) return positions;
+  const margin = Math.max(0, gap / 4);
+  const boxes = nodes.map((n) => ({ id: n.id, x: positions[n.id]?.x ?? 0, y: positions[n.id]?.y ?? 0, w: n.width, h: n.height }));
+  let any = false;
+  for (let i = 0; i < boxes.length && !any; i += 1) {
+    for (let j = i + 1; j < boxes.length; j += 1) {
+      if (overlaps(boxes[i] as (typeof boxes)[number], boxes[j] as (typeof boxes)[number], margin)) {
+        any = true;
+        break;
+      }
+    }
+  }
+  if (!any) return positions;
+  const cw = Math.max(...boxes.map((b) => b.w)) + margin * 2;
+  const ch = Math.max(...boxes.map((b) => b.h)) + margin * 2;
+  const taken = new Set<string>();
+  const out: Record<string, { x: number; y: number }> = { ...positions };
+  const order = [...boxes].sort((a, b) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const b of order) {
+    const cx = Math.round(b.x / cw);
+    const cy = Math.round(b.y / ch);
+    let best: { col: number; row: number } | null = null;
+    // 가까운 고리부터 찾고, 같은 고리 안에서는 원래 위치와의 거리가 가장 짧은 칸(같으면 위·왼쪽)
+    for (let r = 0; best === null; r += 1) {
+      let bestD = Infinity;
+      for (let dy = -r; dy <= r; dy += 1) {
+        for (let dx = -r; dx <= r; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || taken.has(`${cx + dx},${cy + dy}`)) continue;
+          const d = Math.hypot((cx + dx) * cw - b.x, (cy + dy) * ch - b.y);
+          if (d < bestD) {
+            bestD = d;
+            best = { col: cx + dx, row: cy + dy };
+          }
+        }
+      }
+    }
+    taken.add(`${best.col},${best.row}`);
+    out[b.id] = { x: best.col * cw, y: best.row * ch };
+  }
+  return out;
 }
 
 /** 배치를 못 쓸 때의 격자 배치(결정론적). */

@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- FU.5: `merge_access`가 `agent_console_nodes_core.merge_access_layers`로 합친 뒤 검증만 한다(위키 연동과 같은 규칙, 동작 그대로).
+
 ## 0.1.0
 
 - 처음 만듦(scripts/pkgkit 템플릿 `link`, 5.7R.15).

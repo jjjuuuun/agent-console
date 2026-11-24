@@ -24,6 +24,7 @@ from agent_console_mod_sdd import (
 )
 from agent_console_mod_sdd.plugins import load_source_plugins, new_source_registry, plugin_sources
 from agent_console_mod_sdd.standalone import main
+from agent_console_mod_sdd.template_routes import TEMPLATE_ROUTE_WORDS
 from agent_console_mod_sdd.testing import library_module
 from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, ModulesConfig, Topic
 from agent_console_modkit.host import HostSettings
@@ -43,6 +44,9 @@ def test_kind_contributions_and_references(tmp_path: Path, kit: Any) -> None:
     assert kinds["spec"].portable is True
     assert kinds["spec-template"].library is True
     assert kinds["spec-template"].multi_file is True
+    # FU.6: 틀 종류 데이터가 경로 예약어를 싣는다(복사 계획이 읽어 새 id를 제안한다)
+    assert kinds["spec-template"].reserved_ids == TEMPLATE_ROUTE_WORDS
+    assert kinds["spec"].reserved_ids == ()
     doc = {"rules": {"run_profiles": [{"graph": "a"}, {"graph": "a"}, {"graph": "b"}, {}]}}
     assert list(template_references(doc)) == [("graph", "a"), ("graph", "b")]
     assert list(template_references({"rules": None})) == []

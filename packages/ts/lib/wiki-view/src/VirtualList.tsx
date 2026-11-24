@@ -68,6 +68,7 @@ export function VirtualList<T>({
   const v = useVirtualRows({
     count: items.length,
     rowHeight: heightOf,
+    measureKey: heightOf,
     scrollRef,
     ...(overscan !== undefined ? { overscan } : {}),
     ...(fallbackHeight !== undefined ? { fallbackHeight } : {}),

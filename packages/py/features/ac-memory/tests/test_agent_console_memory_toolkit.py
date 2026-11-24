@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from dataclasses import replace
 from typing import Any
@@ -24,6 +25,7 @@ from agent_console_memory import (
     WriteBudget,
     load_tool_text,
     merge_scope_kinds,
+    query_hasher,
 )
 from agent_console_memory.testing import FakeClock, sample_context, sample_scope_kinds
 
@@ -305,3 +307,29 @@ async def test_sync_event_sink_and_unknown_op() -> None:
     assert seen == ["memory.search"]
     with pytest.raises(ValueError, match="모르는 동작"):
         await kit.call("explode", {})
+
+
+async def test_search_event_query_hash_modes_fu6() -> None:
+    plain = hashlib.sha256(QUERY.encode()).hexdigest()
+    salted = query_hasher("hmac", salt=b"salt")
+    kits = {
+        "default": _kit()[0],
+        "hmac": _kit(query_hash=salted)[0],
+        "sha256": _kit(query_hash=query_hasher("sha256"))[0],
+        "off": _kit(query_hash=query_hasher("off"))[0],
+    }
+    got: dict[str, MemoryEventPayload] = {}
+    for name, kit in kits.items():
+        events: list[MemoryEventPayload] = []
+
+        async def sink(_t: str, payload: MemoryEventPayload, events: list[Any] = events) -> None:
+            events.append(payload)
+
+        kit.on_event = sink
+        await kit.call("search", {"query": QUERY})
+        got[name] = events[-1]
+    assert got["default"].query_sha256 not in (None, plain)
+    assert got["hmac"].query_sha256 == salted(QUERY)
+    assert got["sha256"].query_sha256 == plain
+    assert got["off"].query_sha256 is None
+    assert all(p.query_chars == len(QUERY) for p in got.values())

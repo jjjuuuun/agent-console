@@ -12,7 +12,7 @@
       (``modules.options.mod-versions``).
     - 포트·토픽: ``DEFINITIONS_STORE``(필수)·``DEFINITION_CHECKS``(선택, multi)·``SECRET_RULES``
       (선택)·``DEFINITIONS_SAVED``(구독), 프로토콜 ``VersionStore``·``DefinitionCheck``·
-      ``SavedDefinition``.
+      ``SpaceDefinitionCheck``(공간 기준 검사 선택 능력)·``SavedDefinition``.
     - ``testing.local_definitions_module``: 단독 실행·테스트용 ``definitions.store`` 제공 모듈.
 """
 
@@ -29,6 +29,7 @@ from .ports import (
     DefinitionCheck,
     SavedDefinition,
     SecretRulesReader,
+    SpaceDefinitionCheck,
     VersionStore,
 )
 from .routes import build_router
@@ -57,6 +58,7 @@ __all__ = [
     "RestoreRejectedError",
     "SavedDefinition",
     "SecretRulesReader",
+    "SpaceDefinitionCheck",
     "VersionModuleSettings",
     "VersionService",
     "VersionStore",

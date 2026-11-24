@@ -73,6 +73,18 @@ class DefinitionCheck(Protocol):
 
 
 @runtime_checkable
+class SpaceDefinitionCheck(Protocol):
+    """``definitions.checks``의 선택 능력: 공간(``?project=``) 기준 검사(같은 이슈 모양).
+
+    공간 기준 검증은 이 메서드가 있으면 그것을, 없으면 ``issues``를 부른다.
+    """
+
+    def space_issues(
+        self, space: str, kind: str, document: Mapping[str, Any]
+    ) -> Sequence[Issue]: ...
+
+
+@runtime_checkable
 class RunChecker(Protocol):
     """``runs.starter``에서 쓰는 부분."""
 
@@ -164,6 +176,7 @@ __all__ = [
     "ProjectRunChecker",
     "RunChecker",
     "SavedLike",
+    "SpaceDefinitionCheck",
     "StoredLike",
     "ValidationSource",
     "VersionLike",

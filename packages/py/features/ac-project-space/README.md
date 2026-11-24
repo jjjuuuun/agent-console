@@ -10,7 +10,8 @@
 - 비밀처럼 보이는 값은 저장하지 않는다(`SecretRejected`, 값 없이 위치만). 정의에는 `secret://<이름>` 참조만 둔다.
 - 충돌 감지는 정의 저장소와 같은 If-Match(`expected_version`)다. 매니페스트도 같다.
 - 종류 이름·폴더 이름·파일 이름은 코드에 없다. 종류는 `DefinitionKind`(`portable`인 것만 공간에 들어간다),
-  이름은 `config_dir`·`SpaceLayout` 인자다. `.gitignore` 틀은 패키지 데이터 `data/gitignore.template`이다.
+  이름은 `config_dir`·`SpaceLayout` 인자다. `.gitignore` 틀은 패키지 데이터 `data/gitignore.template`이다. 틀의 이름 자리(`{records_file}`·
+  `{sessions_dir}`·`{memory_file}`·`{state_dir}`)는 공간 배치로 채운다(`render_gitignore_template`).
 - 파일 시스템은 `SpaceFiles`로 주입한다(기본 `LocalFiles`). 정의 저장소 자체는 `FileDefinitionStore`라서
   그 root는 로컬 경로다.
 - 기록 DB(`records.sqlite3`)·메모리 DB 경로만 알려 준다(`records_db_path`·`memory_db_path`). 파일은 만들지 않는다. 기록 DB를 여는 일은 `ac-store`의 `open_records_db`가 한다(이 패키지는 경로만 안다).

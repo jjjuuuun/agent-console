@@ -16,6 +16,7 @@
   "scan_interval_seconds": 0,
   "summary_cache_entries": 256,
   "max_search_results": 100,
+  "query_hash": "hmac",
   "max_changes_page": 200,
   "search": {"backend": "sqlite-fts", "fallback": "scan", "tokenizer": "trigram"},
   "export_limits": {

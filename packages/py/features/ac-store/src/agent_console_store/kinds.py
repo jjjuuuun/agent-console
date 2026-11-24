@@ -43,6 +43,9 @@ class DefinitionKind:
             둔다(예: 프로젝트마다 따로인 문서, design §6R.3 X36). 저장소는 이 값을 보지 않는다 —
             라이브러리 저장소를 여는 쪽이 `library=False` 종류를 빼고 연다(그 종류의 라이브러리
             요청은 모르는 종류라 `NotFound`).
+        reserved_ids: 이 종류 id로 쓰면 안 되는 말(대소문자 무시). 예: 같은 깊이의 고정 REST
+            경로(`/<종류>/check`)와 겹쳐 그 id의 GET이 가려지는 말. 저장소는 이 값을 보지 않는다 —
+            만들기·복사 계획처럼 id를 정하는 쪽이 읽어 피하거나 새 id를 제안한다.
     """
 
     name: str
@@ -57,6 +60,7 @@ class DefinitionKind:
     summary_fields: tuple[str, ...] = ()
     portable: bool = True
     library: bool = True
+    reserved_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.content_field is not None and self.singleton_file is not None:

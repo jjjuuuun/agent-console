@@ -5,7 +5,7 @@
 - 위키 서비스가 없으면 칸을 소비하지 않는다(백엔드가 적용하지 못한 칸 경고 R13.5가 그대로 난다).
 - 칸에 쌓인 첨부(층 순서 = 먼 층 → 가까운 층)를 ``merge_access``로 합친다: 위키마다 가까운 층의
   허용 동작, 나머지 키(기본 위키·도구 이름·경로 안내·머리 줄 등)도 가까운 층이 정한 값(메모리
-  ``merge_access``와 같은 규칙).
+  ``merge_access``와 같은 규칙, 공용 ``agent_console_nodes_core.merge_access_layers``).
 - 위키는 **그 실행 공간의 위키만**(루트 Run의 ``project_id`` → 그 프로젝트 공간, 없으면 단독 공간,
   ``wiki.service`` ``tool_targets``). 접근 설정에 있는데 공간에 없는 위키가 있으면 경고 1건
   (``wiki.wiki_unavailable``)을 내고 도구는 그대로 준다(그 위키 호출은 사유 코드로 실패).
@@ -13,14 +13,15 @@
 - 쓴 주체 = ``WikiAuthor{kind: agent, agent_id, node_id, node_path, run_id, root_run_id, graph_id,
   label}``. ``label``은 실행 시점 에이전트 정의 ``name``(없으면 null) — 기록에 그대로 남는다.
 - 도구 호출마다 RunEvent ``wiki.<op>``(payload = 계약 ``WikiEventPayload``, 본문·검색어 원문 없음)를
-  이 노드 이름으로 낸다. 성공한 쓰기·옮기기·지우기 뒤에는 ``wiki.service.notify``(WS
+  이 노드 이름으로 낸다. 검색어 해시는 서비스의 ``query_hash``(``QueryHashSource``, 설치자 설정)를,
+  없으면 공급자가 받은 해셔를 쓴다. 성공한 쓰기·옮기기·지우기 뒤에는 ``wiki.service.notify``(WS
   ``wiki.changed``).
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, Final
 
 from pydantic import ValidationError
@@ -33,9 +34,10 @@ from agent_console_contracts.wiki import (
     WikiAuthor,
     WikiEventPayload,
 )
-from agent_console_nodes_core import ToolProvision, ToolProvisionContext
+from agent_console_nodes_core import ToolProvision, ToolProvisionContext, merge_access_layers
 from agent_console_runtime import HostTool, HostToolResult
 from agent_console_wiki import (
+    QueryHasher,
     WikiToolkit,
     WikiToolSpec,
     WikiToolTarget,
@@ -43,7 +45,7 @@ from agent_console_wiki import (
     WikiWriteBudget,
 )
 
-from .ports import WikiServiceLike
+from .ports import QueryHashSource, WikiServiceLike
 
 __all__ = [
     "DEFAULT_PROVIDER_ID",
@@ -56,6 +58,7 @@ __all__ = [
     "event_payload",
     "merge_access",
     "open_targets",
+    "service_query_hash",
     "unavailable_issue",
 ]
 
@@ -65,7 +68,7 @@ DEFAULT_PROVIDER_ID: Final = "link-wiki-runs"
 """공급자 id(경고 details ``provider``, 지침 출처 ``tool_provider:<id>``)."""
 
 _WIKIS: Final = "wikis"
-_TOOLS: Final = "tools"
+_WIKI_KEY: Final = "wiki"
 _MUTATING: Final = frozenset({"write", "move", "delete"})
 _DELETE: Final = "delete"
 _OK: Final = "ok"
@@ -84,39 +87,10 @@ class WikiRunsCodes:
 # ---------------------------------------------------------------- 층 합치기
 
 
-def _configs(items: Any) -> list[Mapping[str, Any]]:
-    """칸 값(항목 목록) → 접근 설정 원문 목록(층 순서). 항목 모양이 아니면 건너뛴다."""
-    if not isinstance(items, Sequence) or isinstance(items, str | bytes):
-        return []
-    out: list[Mapping[str, Any]] = []
-    for item in items:
-        if isinstance(item, Mapping):
-            config = item.get("config")
-            if isinstance(config, Mapping):
-                out.append(config)
-    return out
-
-
-def _wiki_map(config: Mapping[str, Any]) -> dict[str, list[Any]]:
-    """한 첨부 안의 위키 id → 허용 동작(같은 위키가 여러 번이면 합친다 — 도구 묶음과 같은 뜻)."""
-    found: dict[str, list[Any]] = {}
-    raw = config.get(_WIKIS)
-    if not isinstance(raw, Sequence) or isinstance(raw, str | bytes):
-        return found
-    for entry in raw:
-        if not isinstance(entry, Mapping) or not isinstance(entry.get("wiki"), str):
-            continue
-        ops = entry.get("access")
-        acc = found.setdefault(entry["wiki"], [])
-        if ops is None:  # 생략 = 계약 기본값
-            ops = WikiAccessEntry.model_fields["access"].get_default(call_default_factory=True)
-        if isinstance(ops, Sequence) and not isinstance(ops, str | bytes):
-            acc.extend(o for o in ops if o not in acc)
-    return found
-
-
 def merge_access(items: Any) -> tuple[WikiAccessConfig | None, list[Issue]]:
     """칸에 쌓인 첨부들(먼 층 → 가까운 층)을 접근 설정 하나로 합친다.
+
+    규칙은 ``agent_console_nodes_core.merge_access_layers``(메모리 연동과 같은 규칙)다.
 
     - 위키마다 가장 가까운 층(뒤 항목)의 허용 동작을 쓴다. 순서는 가까운 층의 위키가 먼저.
     - ``tools``는 동작마다, 나머지 최상위 키는 키마다 가장 가까운 층이 정한 값을 쓴다.
@@ -130,26 +104,14 @@ def merge_access(items: Any) -> tuple[WikiAccessConfig | None, list[Issue]]:
     >>> [(w.wiki, w.access) for w in access.wikis], access.tools.read.name, issues
     ([('notes', ['read', 'write']), ('specs', ['read'])], 'notes_read', [])
     """
-    configs = _configs(items)
-    if not configs:
+    merged = merge_access_layers(
+        items,
+        entries_key=_WIKIS,
+        entry_key=_WIKI_KEY,
+        default_ops=WikiAccessEntry.model_fields["access"].get_default(call_default_factory=True),
+    )
+    if merged is None:
         return None, []
-    merged: dict[str, Any] = {}
-    tools: dict[str, Any] = {}
-    wikis: dict[str, list[Any]] = {}
-    for config in reversed(configs):  # 가까운 층부터: 먼저 정한 값이 이긴다
-        for key, value in config.items():
-            if key == _WIKIS:
-                continue
-            if key == _TOOLS and isinstance(value, Mapping):
-                for op, tool in value.items():
-                    tools.setdefault(str(op), tool)
-                continue
-            merged.setdefault(str(key), value)
-        for wiki, ops in _wiki_map(config).items():
-            wikis.setdefault(wiki, ops)
-    merged[_WIKIS] = [{"wiki": wiki, "access": ops} for wiki, ops in wikis.items()]
-    if tools:
-        merged[_TOOLS] = tools
     try:
         return WikiAccessConfig.model_validate(merged), []
     except ValidationError as exc:
@@ -253,6 +215,17 @@ def open_targets(
         return {}, reason
 
 
+def service_query_hash(service: object) -> QueryHasher | None:
+    """서비스의 검색어 해셔(선택 속성 ``query_hash``, ``QueryHashSource``).
+
+    없거나 부를 수 없으면 None.
+    """
+    if not isinstance(service, QueryHashSource):
+        return None
+    hasher = service.query_hash
+    return hasher if callable(hasher) else None
+
+
 class WikiToolProvider:
     """X30 ``ToolProvider``: 위키 칸이 있는 노드에 위키 도구와 지침을 준다.
 
@@ -264,6 +237,8 @@ class WikiToolProvider:
         agent_lookup: 에이전트 정의 읽기(쓴 주체 ``label``). 없으면 ``label`` 없음.
         write_budget: 실행 하나의 쓰기 한도(이 공급자가 만든 도구 묶음이 모두 함께 쓴다).
         text: 도구 문구(없으면 ``ac-wiki`` 기본 데이터).
+        query_hash: 서비스에 ``query_hash``가 없을 때 쓸 검색어 해셔(None = 도구 묶음마다 무작위
+            솔트).
     """
 
     def __init__(
@@ -276,8 +251,10 @@ class WikiToolProvider:
         agent_lookup: AgentLookup | None = None,
         write_budget: WikiWriteBudget | None = None,
         text: WikiToolText | None = None,
+        query_hash: QueryHasher | None = None,
     ) -> None:
         self.id = id
+        self.query_hash = query_hash
         self.slot = slot
         self.project_id = project_id or None
         self.agent_lookup = agent_lookup
@@ -320,6 +297,7 @@ class WikiToolProvider:
             text=self._text,
             on_event=on_event,
             write_budget=self.write_budget,
+            query_hash=service_query_hash(service) or self.query_hash,
         )
         missing = kit.unavailable()
         if missing:

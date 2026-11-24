@@ -1,43 +1,16 @@
 """페이지 경로 글롭(`orphan_ignore`·쓰기 규칙 `applies_to`).
 
-규칙은 `ac-logs`의 경로 글롭과 같다(`*`·`?`는 `/`를 넘지 않음, `**/`는 0개 이상 폴더, 끝 `/**`는 그
-폴더 자신과 하위). 대소문자 무시는 문법 `case_insensitive`를 따른다. 페이지 경로는 확장자가 없다.
+규칙은 `agent-console-path-glob`이다(`ac-logs`의 경로 글롭과 같다: `*`·`?`는 `/`를
+넘지 않음, `**/`는 0개 이상 폴더, 끝 `/**`는 그 폴더 자신과 하위). 대소문자 무시는 문법
+`case_insensitive`를 따른다. 페이지 경로는 확장자가 없다. 형식 검사(`check_glob`)는 위키
+규칙이라 여기 둔다.
 """
 
 from __future__ import annotations
 
-import re
-from functools import lru_cache
+from agent_console_path_glob import glob_match as _glob_match
 
 __all__ = ["check_glob", "glob_match"]
-
-
-@lru_cache(maxsize=1024)
-def _compile(pattern: str, case_insensitive: bool) -> re.Pattern[str]:
-    out: list[str] = []
-    i = 0
-    while i < len(pattern):
-        ch = pattern[i]
-        if pattern.startswith("/**", i) and i + 3 == len(pattern):
-            out.append("(?:/.*)?")
-            i += 3
-        elif pattern.startswith("**/", i):
-            out.append("(?:.*/)?")
-            i += 3
-        elif pattern.startswith("**", i):
-            out.append(".*")
-            i += 2
-        elif ch == "*":
-            out.append("[^/]*")
-            i += 1
-        elif ch == "?":
-            out.append("[^/]")
-            i += 1
-        else:
-            out.append(re.escape(ch))
-            i += 1
-    flags = re.DOTALL | (re.IGNORECASE if case_insensitive else 0)
-    return re.compile("".join(out) + r"\Z", flags)
 
 
 def check_glob(pattern: object) -> str | None:
@@ -60,4 +33,4 @@ def glob_match(pattern: str, path: str, *, case_insensitive: bool = False) -> bo
     """페이지 경로가 글롭에 맞는지. 형식이 틀린 글롭(`check_glob`)은 늘 거짓이다."""
     if check_glob(pattern) is not None:
         return False
-    return _compile(pattern, case_insensitive).match(path) is not None
+    return _glob_match(pattern, path, case_insensitive=case_insensitive)

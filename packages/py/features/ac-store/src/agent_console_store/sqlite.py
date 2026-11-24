@@ -580,6 +580,20 @@ class SqliteRunRepository:
         with self._engine.connect() as conn:
             return [NodeRun.model_validate_json(d) for d in conn.execute(stmt).scalars()]
 
+    def list_node_runs_many(self, run_ids: Iterable[str]) -> dict[str, builtins.list[NodeRun]]:
+        c = self._node_runs.c
+        order = [c.run_id, c.started_at.is_(None), c.started_at, c.node_id, c.attempt, c.iteration]
+        if self._lineage:
+            order.append(self._node_runs.c.call)
+        found: dict[str, builtins.list[NodeRun]] = {}
+        with self._engine.connect() as conn:
+            for chunk in _chunks(list(dict.fromkeys(run_ids)), RUN_BATCH_SIZE):
+                stmt = sa.select(c.doc).where(c.run_id.in_(chunk)).order_by(*order)
+                for doc in conn.execute(stmt).scalars():
+                    node_run = NodeRun.model_validate_json(doc)
+                    found.setdefault(node_run.run_id, []).append(node_run)
+        return found
+
     def interrupt_unfinished(
         self, *, ended_at: float, error: ErrorInfo | None = None
     ) -> builtins.list[str]:
@@ -612,21 +626,28 @@ class SqliteRunRepository:
         return result.rowcount > 0
 
 
-def _chunks(items: builtins.list[str], size: int = 500) -> Iterator[builtins.list[str]]:
+def _chunks[T](items: builtins.list[T], size: int = 500) -> Iterator[builtins.list[T]]:
     """SQLite 변수 개수 한도를 피해 `IN` 목록을 나눈다."""
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
 
-def _with_type_prefix(stmt: sa.Select[Any], prefix: str | None) -> sa.Select[Any]:
-    """`type`이 `prefix`로 시작하는 행만. LIKE는 대소문자를 가리지 않아 범위 비교를 쓴다
-    (인덱스도 탄다)."""
-    if not prefix:
-        return stmt
+def _type_prefix_cond(prefix: str) -> sa.ColumnElement[bool]:
+    """`type`이 `prefix`(비어 있지 않음)로 시작한다. LIKE는 대소문자를 가리지 않아 범위 비교를
+    쓴다(인덱스도 탄다)."""
     column = t.run_events.c.type
     upper = prefix[:-1] + chr(ord(prefix[-1]) + 1) if ord(prefix[-1]) < 0x10FFFF else None
-    stmt = stmt.where(column >= prefix)
-    return stmt if upper is None else stmt.where(column < upper)
+    return column >= prefix if upper is None else sa.and_(column >= prefix, column < upper)
+
+
+def _with_type_prefix(stmt: sa.Select[Any], prefix: str | None) -> sa.Select[Any]:
+    """`type`이 `prefix`로 시작하는 행만(비면 거르지 않음)."""
+    return stmt.where(_type_prefix_cond(prefix)) if prefix else stmt
+
+
+RUN_BATCH_SIZE = 200
+"""묶음 읽기(`list_node_runs_many`·`list_many`)의 질의 한 번에 넣는 Run id 수(SQLite 변수·식 깊이
+한도 안)."""
 
 
 def _in_node_path(node: str) -> sa.ColumnElement[bool]:
@@ -699,6 +720,30 @@ class SqliteEventRepository:
             stmt = stmt.limit(limit)
         with self._engine.connect() as conn:
             return [RunEvent.model_validate_json(b) for b in conn.execute(stmt).scalars()]
+
+    def list_many(
+        self, since: Mapping[str, int], *, type_prefixes: Sequence[str] = ()
+    ) -> dict[str, builtins.list[RunEvent]]:
+        c = t.run_events.c
+        prefixes = [p for p in dict.fromkeys(type_prefixes) if p]
+        found: dict[str, builtins.list[RunEvent]] = {}
+        with self._engine.connect() as conn:
+            for chunk in _chunks(list(since.items()), RUN_BATCH_SIZE):
+                fresh = [run_id for run_id, after in chunk if after <= 0]
+                terms: list[sa.ColumnElement[bool]] = [
+                    sa.and_(c.run_id == run_id, c.seq > after)
+                    for run_id, after in chunk
+                    if after > 0
+                ]
+                if fresh:
+                    terms.append(sa.and_(c.run_id.in_(fresh), c.seq > 0))
+                stmt = sa.select(c.body).where(sa.or_(*terms))
+                if prefixes:
+                    stmt = stmt.where(sa.or_(*(_type_prefix_cond(p) for p in prefixes)))
+                for body in conn.execute(stmt.order_by(c.run_id, c.seq)).scalars():
+                    event = RunEvent.model_validate_json(body)
+                    found.setdefault(event.run_id, []).append(event)
+        return found
 
     def _newest(self, stmt: sa.Select[Any], limit: int | None) -> builtins.list[RunEvent]:
         c = t.run_events.c

@@ -8,7 +8,10 @@ Agent Console 정의 ↔ 리소스 연동 모듈. 저장 전 정의 검사(`defi
 - 이 검사는 정의 저장 경로·버전 되돌리기의 저장 전 검사와 `/server-info` 평문 점검(정의 모듈이
   검사의 평문 이슈를 모은다)에 쓰인다.
 - 필수 포트: `definitions.lookup`·`resources.types`. 선택: `resources.lookup`(없으면 `definitions.lookup`으로 찾음),
-  `secrets.rules`. 경로 없음.
+  `secrets.rules`, `definitions.spaces`. 경로 없음.
+- 공간(예: 프로젝트 `?project=`)에 저장할 때의 검사는 선택 메서드 `space_issues(space, kind, document)`다.
+  첨부 `ref`는 그 공간 저장소의 리소스만 보고 라이브러리(`resources.lookup`)로 넘어가 찾지 않는다.
+  소비자(정의·버전 모듈, 검증 경로)는 이 메서드가 있으면 그것을, 없으면 `issues`를 부른다.
 - 꺼지면: 정의는 리소스 검사 없이 저장된다(정의 모듈이 시작 때 경고 로그).
 
 ## 설치
@@ -33,6 +36,11 @@ pip install agent-console-link-definitions-resources
 [('warning', '/resources/0/ref'), ('error', '/resources/0/config_override/token')]
 >>> checker.issues("agent", {"id": "b", "name": "b"})
 []
+>>> spaced = DefinitionChecker(
+...     types=new_resource_types, resources=InMemoryResources, plan_of=lambda graph: None,
+...     space_resources=lambda space: InMemoryResources())
+>>> [(i.severity, i.path) for i in spaced.space_issues("p1", "agent", agent)]
+[('warning', '/resources/0/ref'), ('error', '/resources/0/config_override/token')]
 
 ```
 

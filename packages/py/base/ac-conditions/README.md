@@ -2,7 +2,7 @@
 
 선언형 조건(JSON Pointer + 연산자)을 판단 대상(JSON)에 적용해 **결과와 근거**를 내고, 저장 전 검사 이슈를
 만드는 작은 라이브러리. 조건 연산자는 확장 지점(entry point `agent_console.condition_operators`)으로
-들어오며, 기본 연산자 10개(`eq`·`ne`·`in`·`contains`·`matches`·`exists`·`gt`·`gte`·`lt`·`lte`)도 같은 길로
+들어오며, 기본 연산자 11개(`eq`·`ne`·`in`·`contains`·`matches`·`exists`·`gt`·`gte`·`lt`·`lte`·`any_item`)도 같은 길로
 등록된다. 서버·실행 엔진 없이 단독으로 쓴다.
 
 - 조건 데이터 모양은 계약 `ConditionSpec{all?, any?, negate?}`·`ConditionItem{path, op, value?}`, 근거는
@@ -48,7 +48,7 @@ pip install agent-console-conditions
 >>> from agent_console_conditions import condition_issues, default_operators, evaluate_conditions
 >>> from agent_console_contracts import ConditionSpec
 
->>> operators, reports = default_operators()  # 설치된 entry point에서(기본 10개 포함)
+>>> operators, reports = default_operators()  # 설치된 entry point에서(기본 11개 포함)
 >>> spec = ConditionSpec.model_validate(
 ...     {"all": [{"path": "/output", "op": "contains", "value": "PASS"},
 ...              {"path": "/iteration", "op": "lt", "value": 3}]}
@@ -80,7 +80,7 @@ False
 ```
 
 연산자는 선택 능력 `CompilableOperator.compile_expected(expected)`로 기대 값을 묶은 판정 함수(`actual → bool`,
-`MISSING`도 받음)를 낼 수 있다. 기본 10개는 모두 가진다. 능력이 없거나 None을 돌려주거나 만들다 예외가 나면
+`MISSING`도 받음)를 낼 수 있다. 기본 11개는 모두 가진다. 능력이 없거나 None을 돌려주거나 만들다 예외가 나면
 빠른 경로도 그 항목만 `evaluate(actual, expected)`로 판정한다(결과가 같아야 한다).
 
 `necessary_items(spec, operators)`는 조건 묶음이 참이려면 반드시 참이어야 하는 "최상위 키 하나" 항목(`all`의

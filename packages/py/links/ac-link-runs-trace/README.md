@@ -4,6 +4,7 @@
 
 - `GET /runs/{id}/trace`: span(노드·호출·위임·사용자 대기)과 넘김 화살표. 실행 당시 팀 구성(선택 포트 `definitions.lookup`의 버전 기록, 없으면 현재 정의)에서 연결 종류와 호출 연결(`call_edges` — 위임자·대상 쌍의 연결이 하나일 때)을 붙인다. 자식 Run(중첩 팀)은 직접 자식부터 재귀로 읽어 부른 노드 span 아래 묶음으로 붙인다(`run_id`). 호출 span의 위임 과제는 NodeRun 입력에서.
 - `GET /runs/handoffs`: 여러 실행의 "누가 누구에게 몇 번"(필터는 실행 목록과 같다). Run마다 자기 흐름만 센다(자식 Run은 목록에 따로 있어 두 번 세지 않는다).
+- 두 경로 모두 선택 `?project=<id>`: 그 프로젝트 기록에서만 읽는다(`runs.reader`·`runs.events`의 선택 메서드 `for_project`, 없으면 Run의 `project_id`로 거른다 — 실행 목록 `GET /runs?project=`와 같은 정책). 모르는 프로젝트는 404 `project.not_found`. 질의가 없으면 넘김 집계는 호스트 기록, 흐름은 실행 기록이 찾은 자리다. `project_id`가 있는 Run의 당시 팀 구성은 선택 포트 `definitions.spaces`의 그 공간 저장소에서만 읽는다(못 열면 연결 종류 없이 — 라이브러리로 넘어가지 않는다).
 - 이 연동이 꺼지면 경로가 404이고, 웹은 실행 상세의 흐름 탭·넘김 보기를 숨긴다(웹 역할 `runs:trace`).
 
 ## 설치
@@ -29,6 +30,9 @@ HTTP 없이 `TraceViews`로 실행 기록에서 흐름을 만든다.
 'r1'
 >>> views.handoffs(graph_id=None, conversation_id=None, agent_id=None, status=None, limit=10).runs
 1
+>>> views.in_project("p1").handoffs(
+...     graph_id=None, conversation_id=None, agent_id=None, status=None, limit=10).runs
+0
 
 ```
 
@@ -38,9 +42,10 @@ HTTP 없이 `TraceViews`로 실행 기록에서 흐름을 만든다.
 
 | 방향 | 포트 | 모양 |
 | --- | --- | --- |
-| 필수 | `runs.reader` | `get(run_id)`·`list(graph_id=, status=, conversation_id=, agent=, parent_run_id=, limit=)`·`list_node_runs(run_id)` |
-| 필수 | `runs.events` | `list(run_id, since_seq=)` |
+| 필수 | `runs.reader` | `get(run_id)`·`list(graph_id=, status=, conversation_id=, agent=, parent_run_id=, project_id=, limit=)`·`list_node_runs(run_id)`, 선택 `for_project(id)` |
+| 필수 | `runs.events` | `list(run_id, since_seq=)`, 선택 `for_project(id)` |
 | 선택 | `definitions.lookup` | `get_version(kind, id, hash).content`·`get(kind, id).document` |
+| 선택 | `definitions.spaces` | `open(space)` → 정의 저장소(`ac-store.DefinitionSpaces`) |
 
 ## 단독 실행
 

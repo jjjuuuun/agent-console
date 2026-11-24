@@ -98,6 +98,26 @@ describe("위키 목록 /wiki", () => {
   });
 });
 
+describe("위키 화면 낮은 결함 (FU.7 N3·N5)", () => {
+  it("N3 새 위키: 쓸 수 있는 규칙이 있는데 하나도 더하지 않았으면 한 줄 안내가 보이고 '체크' 표현은 없다", async () => {
+    setup("/wiki?prj=p1", { wikis: [], wiki: { listWikiRules: vi.fn(async () => [{ id: "r1", name: "규칙1" }, { id: "r2", name: "규칙2" }]) } });
+    fireEvent.click(await screen.findByRole("button", { name: "새 위키…" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    const hint = await within(dialog).findByTestId("wiki-new-rules-not-chosen", {}, LONG);
+    expect(hint.textContent).toContain("규칙 2개");
+    expect(within(dialog).getByText(/규칙을 더하지 않으면 규칙 없는 위키가 됩니다/)).toBeTruthy();
+    expect(within(dialog).queryByText(/체크하지 않으면/)).toBeNull();
+  });
+
+  it("N5 폴더·설정 문제(409 config_readonly): 효과 없는 [다시 시도] 대신 안내와 [프로젝트 설정 열기]가 있다", async () => {
+    setup("/wiki?prj=p1", { wiki: { listWikis: vi.fn(async () => { throw apiError(409, "project.config_readonly"); }) } });
+    expect(await screen.findByText(/다시 시도해도 같은 결과입니다/, {}, LONG)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /다시 시도/ })).toBeNull();
+    const link = screen.queryByRole("link", { name: "프로젝트 설정 열기" });
+    if (link !== null) expect(link.getAttribute("href")).toContain("#");
+  });
+});
+
 describe("위키 화면: 페이지 탭 상태", () => {
   it("페이지 0개: 안내와 첫 사용 순서가 보이고, 첫 페이지를 미리 정하지 않는다", async () => {
     setup("/wiki/w1?prj=p1", { pages: { items: [], truncated: false } });

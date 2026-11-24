@@ -15,16 +15,23 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, GraphValidationSummary, Issue
-from agent_console_mod_definitions import DEFINITIONS_SPACES, module
+from agent_console_mod_definitions import (
+    DEFINITIONS_SPACES,
+    DefinitionService,
+    SpaceDefinitionCheck,
+    module,
+)
 from agent_console_mod_definitions.store import definition_kinds
 from agent_console_modkit import Assembly, BaseServices, ModuleContext, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_modkit.testing import fake_module
 from agent_console_store import (
+    DEFAULT_KINDS,
     DefinitionKind,
     DefinitionSpaces,
     DefinitionStore,
     FileDefinitionStore,
+    InMemoryDefinitionStore,
     RecordsDb,
     RecordsVersionRepository,
     StoreError,
@@ -318,3 +325,27 @@ def test_openapi_lists_project_query(tmp_path: Path) -> None:
         schema = client.app.openapi()  # type: ignore[attr-defined]
         params = schema["paths"][f"{API}/agents/{{agent_id}}"]["get"]["parameters"]
         assert any(p["name"] == "project" and p["in"] == "query" for p in params)
+
+
+class _Recording:
+    """저장 전 검사 예제: 부른 메서드를 이슈 코드로 돌려준다(``space_issues``는 선택)."""
+
+    def issues(self, kind: str, document: Mapping[str, Any]) -> list[Issue]:
+        return [Issue(severity="warning", code="lib", message=kind)]
+
+
+class _SpaceRecording(_Recording):
+    def space_issues(self, space: str, kind: str, document: Mapping[str, Any]) -> list[Issue]:
+        return [Issue(severity="warning", code=f"space:{space}", message=kind)]
+
+
+def test_space_service_uses_space_checks_when_offered() -> None:
+    """FU.3: 공간 저장은 검사의 선택 메서드 ``space_issues``(없으면 ``issues``)로 검사한다."""
+    checks = [_Recording(), _SpaceRecording()]
+    store = InMemoryDefinitionStore(DEFAULT_KINDS)
+    assert isinstance(checks[1], SpaceDefinitionCheck)
+    assert not isinstance(checks[0], SpaceDefinitionCheck)
+    library = DefinitionService(store, checks=lambda: checks)
+    assert [i.code for i in library.issues("agent", AGENT)] == ["lib", "lib"]
+    spaced = DefinitionService(store, checks=lambda: checks, space="p1")
+    assert [i.code for i in spaced.issues("agent", AGENT)] == ["lib", "space:p1"]

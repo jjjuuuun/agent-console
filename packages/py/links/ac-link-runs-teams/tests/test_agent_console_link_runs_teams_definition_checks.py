@@ -18,8 +18,10 @@ from agent_console_contracts import Graph, Issue, IssueSuggestion, KnownSuggesti
 from agent_console_link_runs_teams import (
     DEFINITION_CHECKS,
     DefinitionCheck,
+    SpaceDefinitionCheck,
     definition_check_issues,
     module,
+    with_definition_checks,
 )
 from agent_console_link_runs_teams.testing import local_runs_module
 from agent_console_modkit import (
@@ -158,6 +160,29 @@ def test_definition_check_issues_dedupes_and_filters() -> None:
     assert definition_check_issues(graph, []) == []
     errors_too = definition_check_issues(graph, [check], severities={"error"})
     assert [i.code for i in errors_too] == ["x.error"]
+
+
+class SpaceAwareCheck:
+    """공간 기준 검사(선택 메서드 ``space_issues``)를 주는 검사."""
+
+    def issues(self, kind: str, document: Mapping[str, Any]) -> Sequence[Issue]:
+        return [Issue(severity="warning", code="lib", message="라이브러리 기준")]
+
+    def space_issues(self, space: str, kind: str, document: Mapping[str, Any]) -> Sequence[Issue]:
+        return [Issue(severity="warning", code=f"space.{space}", message="공간 기준")]
+
+
+def test_definition_check_issues_space_uses_space_method_when_offered() -> None:
+    """FU.3: ``space``가 있으면 ``space_issues``가 있는 검사는 그 공간 기준, 없으면 ``issues``."""
+    graph = Graph.model_validate(_graph("g"))
+    aware = SpaceAwareCheck()
+    assert isinstance(aware, SpaceDefinitionCheck)
+    assert not isinstance(ScopeLikeCheck(), SpaceDefinitionCheck)
+    assert [i.code for i in definition_check_issues(graph, [aware])] == ["lib"]
+    spaced = definition_check_issues(graph, [aware, ScopeLikeCheck()], space="p1")
+    assert [i.code for i in spaced] == ["space.p1", "project.shared_uses_project", "x.info"]
+    joined = with_definition_checks(graph, [], lambda: [aware], space="p1")
+    assert [i.code for i in joined] == ["space.p1"]
 
 
 @pytest.mark.parametrize("check", [ScopeLikeCheck(), BrokenCheck()])

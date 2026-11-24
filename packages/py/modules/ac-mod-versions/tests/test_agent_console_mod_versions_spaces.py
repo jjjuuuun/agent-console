@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE
-from agent_console_mod_versions import DEFINITIONS_SAVED, DEFINITIONS_SPACES, module
+from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Issue
+from agent_console_mod_versions import (
+    DEFINITION_CHECKS,
+    DEFINITIONS_SAVED,
+    DEFINITIONS_SPACES,
+    SpaceDefinitionCheck,
+    module,
+)
 from agent_console_mod_versions.testing import local_definitions_module
 from agent_console_modkit import Assembly, ModuleContext, ModulesConfig, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
@@ -45,7 +52,9 @@ def _client(assembly: Assembly) -> TestClient:
     return client
 
 
-def _setup(tmp_path: Path, **options: Any) -> tuple[Assembly, dict[str, FileDefinitionStore]]:
+def _setup(
+    tmp_path: Path, extra: Sequence[Any] = (), **options: Any
+) -> tuple[Assembly, dict[str, FileDefinitionStore]]:
     made: dict[str, FileDefinitionStore] = {}
 
     def build(ctx: ModuleContext) -> None:
@@ -62,7 +71,7 @@ def _setup(tmp_path: Path, **options: Any) -> tuple[Assembly, dict[str, FileDefi
     spaces = fake_module("spaces", provides=[DEFINITIONS_SPACES], on_build=build)
     config = ModulesConfig(options={"mod-versions": options}) if options else None
     assembly = assemble(
-        [module, local_definitions_module(workspace=tmp_path / "ws"), spaces], config
+        [module, local_definitions_module(workspace=tmp_path / "ws"), spaces, *extra], config
     )
     return assembly, made
 
@@ -111,3 +120,40 @@ def test_space_saved_items_trim_that_space(tmp_path: Path) -> None:
     versions = space.list_versions("agent", "a")
     assert len(versions) == 2
     assert versions[0].version_hash == current.version_hash
+
+
+class _SpaceOnlyCheck:
+    """저장 전 검사 예제: 라이브러리 기준은 통과, 공간 기준(``space_issues``)은 거부한다."""
+
+    def __init__(self) -> None:
+        self.spaces: list[str] = []
+
+    def issues(self, kind: str, document: Mapping[str, Any]) -> list[Issue]:
+        return []
+
+    def space_issues(self, space: str, kind: str, document: Mapping[str, Any]) -> list[Issue]:
+        self.spaces.append(space)
+        return [Issue(severity="error", code="space.refused", message="공간 기준 거부")]
+
+
+def test_space_restore_uses_space_checks(tmp_path: Path) -> None:
+    """FU.3: 공간 되돌리기는 검사의 선택 메서드 ``space_issues``(그 공간 기준)로 검사한다."""
+    check = _SpaceOnlyCheck()
+    assert isinstance(check, SpaceDefinitionCheck)
+    checks = fake_module(
+        "checks",
+        provides=[DEFINITION_CHECKS],
+        on_build=lambda ctx: ctx.provide(DEFINITION_CHECKS, check),
+    )
+    assembly, made = _setup(tmp_path, extra=[checks])
+    space = made["pa"]
+    first = space.create("agent", _agent("하나"))
+    second = space.save("agent", _agent("둘"), expected_version=first.version_hash)
+    with _client(assembly) as client:
+        refused = client.post(
+            f"/api/v1/agents/a/versions/{first.version_hash}/restore?project=pa",
+            headers={"If-Match": f'"{second.version_hash}"'},
+        )
+        assert refused.status_code == 422, refused.text
+    assert check.spaces == ["pa"]
+    assert space.get("agent", "a").document["name"] == "둘"

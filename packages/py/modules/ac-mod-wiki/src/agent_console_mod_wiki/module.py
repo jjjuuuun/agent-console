@@ -54,7 +54,12 @@ from agent_console_store import (
     LazyVersionRepository,
     versions_for,
 )
-from agent_console_wiki import WikiSecretRejectedError, definition_kinds
+from agent_console_wiki import (
+    QueryHasher,
+    WikiSecretRejectedError,
+    definition_kinds,
+    query_hasher_from_env,
+)
 
 from .errors import ERROR_MAP
 from .history import BRANCH, open_host_history
@@ -157,6 +162,14 @@ def standalone_index_dir(ctx: ModuleContext) -> Path | None:
     if paths is None:
         return None
     return paths.state / str(package_defaults()["index_dir"])
+
+
+def search_query_hasher(cfg: WikiModuleSettings, environ: Mapping[str, str]) -> QueryHasher:
+    """설치자 설정 → 에이전트 위키 검색어 해셔(``query_hash``, 솔트는 ``query_hash_salt_env``).
+
+    솔트 값은 로그·응답에 내지 않는다. 변수가 없거나 비면 무작위 솔트(서버를 켤 때마다 바뀐다).
+    """
+    return query_hasher_from_env(cfg.query_hash, salt_env=cfg.query_hash_salt_env, environ=environ)
 
 
 def yaml_guard(rules: Callable[[], SecretRules]) -> Callable[..., None]:
@@ -285,6 +298,7 @@ class WikiModule:
             kinds=kinds,
             standalone_pages=root / cfg.pages_dir,
             standalone_index=standalone_index_dir(ctx),
+            standalone_boundary=root,
             host_history=history,
             search=search_registry(ctx.registries),
             write_check_plugins=write_check_registry(ctx.registries),
@@ -300,6 +314,8 @@ class WikiModule:
                 publish=publisher,
             ),
             clock=now,
+            # 검색어 해셔는 서비스 하나에 하나(실행 연동이 도구 묶음마다 같은 것을 넘긴다)
+            query_hash=search_query_hasher(cfg, ctx.environ),
         )
 
         ctx.provide(WIKI_SERVICE, service)
@@ -368,6 +384,7 @@ __all__ = [
     "open_standalone_once",
     "operators_of",
     "scan_periodically",
+    "search_query_hasher",
     "standalone_index_dir",
     "standalone_root",
     "wiki_references",

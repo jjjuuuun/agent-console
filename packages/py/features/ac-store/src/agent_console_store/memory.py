@@ -321,6 +321,14 @@ class InMemoryRunRepository:
         )
         return [n.model_copy(deep=True) for n in rows]
 
+    def list_node_runs_many(self, run_ids: Iterable[str]) -> dict[str, builtins.list[NodeRun]]:
+        found: dict[str, builtins.list[NodeRun]] = {}
+        for run_id in dict.fromkeys(run_ids):
+            rows = self.list_node_runs(run_id)
+            if rows:
+                found[run_id] = rows
+        return found
+
     def interrupt_unfinished(
         self, *, ended_at: float, error: ErrorInfo | None = None
     ) -> builtins.list[str]:
@@ -393,6 +401,22 @@ class InMemoryEventRepository:
                 and (node is None or node in e.node_path)
             ]
         return [e.model_copy(deep=True) for e in rows[:limit]]
+
+    def list_many(
+        self, since: Mapping[str, int], *, type_prefixes: Sequence[str] = ()
+    ) -> dict[str, builtins.list[RunEvent]]:
+        prefixes = tuple(p for p in type_prefixes if p)
+        found: dict[str, builtins.list[RunEvent]] = {}
+        with self._s._lock:
+            for run_id, after in since.items():
+                rows = [
+                    e.model_copy(deep=True)
+                    for s, e in sorted(self._s._events.get(run_id, {}).items())
+                    if s > after and (not prefixes or e.type.startswith(prefixes))
+                ]
+                if rows:
+                    found[run_id] = rows
+        return found
 
     def _newest(
         self,

@@ -55,6 +55,7 @@ export const DEFAULT_PROJECT_MESSAGES = {
   "copy.action.skip_keep.save": "저장하지 않기(공용의 것을 씀)",
   "copy.action.skip_keep.move": "옮기지 않기(공용의 것을 씀)",
   "copy.action.choose": "선택하세요",
+  "copy.reserved_id": "‘{id}’은(는) 예약된 이름이라 문제가 될 수 있습니다. 새 이름 ‘{suggested}’(으)로 추가하기를 권합니다.",
   "copy.skip_warn": "‘{by}’은(는) {id}가 없어 실행 전에 막힙니다",
   "copy.status.copied": "복사함",
   "copy.status.reused": "그대로 씀",

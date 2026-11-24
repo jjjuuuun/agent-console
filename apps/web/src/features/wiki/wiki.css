@@ -173,7 +173,7 @@
 .wiki-rules-main { flex: 1; min-width: 0; max-width: var(--ac-readable-w, 720px); display: flex; flex-direction: column; gap: var(--ac-space-3); }
 .wiki-rules-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ac-space-2); min-height: 40px; }
 .wiki-rules-menu { display: none; }
-.wiki-rules-section { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.wiki-rules-section { scroll-margin-top: var(--ac-space-4, 16px); display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
 .wiki-section-title { margin: 0; font-size: var(--ac-text-md); }
 .wiki-subtitle { margin: var(--ac-space-2) 0 var(--ac-space-1); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .wiki-instructions { max-height: 320px; overflow: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

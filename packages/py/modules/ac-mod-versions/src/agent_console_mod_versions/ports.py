@@ -45,6 +45,15 @@ class DefinitionCheck(Protocol):
 
 
 @runtime_checkable
+class SpaceDefinitionCheck(Protocol):
+    """저장 전 정의 검사의 선택 능력: 공간(``?project=``)에 저장할 때의 검사(같은 이슈 모양)."""
+
+    def space_issues(
+        self, space: str, kind: str, document: Mapping[str, Any]
+    ) -> Sequence[Issue]: ...
+
+
+@runtime_checkable
 class SavedDefinition(Protocol):
     """``definitions.saved`` 토픽 항목(정의 하나가 새 버전으로 저장됨).
 
@@ -84,5 +93,6 @@ __all__ = [
     "DefinitionCheck",
     "SavedDefinition",
     "SecretRulesReader",
+    "SpaceDefinitionCheck",
     "VersionStore",
 ]

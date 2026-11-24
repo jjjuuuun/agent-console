@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -151,12 +151,15 @@ def _client(
     disabled: tuple[str, ...] = (),
     records: bool = True,
     options: dict[str, Any] | None = None,
+    environ: dict[str, str] | None = None,
+    on_started: Callable[[Registries], None] | None = None,
 ) -> Iterator[tuple[TestClient, Any]]:
     registries = Registries()
     load_registries(registries)
     base = BaseServices(
         paths=Paths(base_dir=tmp_path, workspace=_library(tmp_path), state=tmp_path / "state"),
         registries=registries,
+        environ=environ or {},
     )
     config = ModulesConfig(disabled=list(disabled), options=options or {})
     projects = ProjectsModule(versions=lambda _pid, _root: InMemoryVersionRepository())
@@ -167,6 +170,8 @@ def _client(
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
     app = create_host_app(assembly, policy=policy, error_status=HTTP_STATUS_BY_ERROR_CODE)
     with TestClient(app) as client:
+        if on_started is not None:  # 시작 훅이 백엔드 설정(from_options)을 마친 레지스트리
+            on_started(registries)
         client.headers["X-Console-Token"] = TOKEN
         yield client, assembly
 
@@ -574,6 +579,146 @@ def test_nested_team_checked_again_when_child_starts(
         [issue] = failed["payload"]["error"]["details"]["issues"]
         assert issue["code"] == "project.outside_folder"
         assert [(p["value"], p["node_id"]) for p in issue["details"]["paths"]] == [(outside, "a")]
+
+
+class _RecordingBackend:
+    """설정을 마친 백엔드를 감싸 받은 ``AgentRequest``를 JSON으로 남긴다(그 밖 속성은 안쪽으로)."""
+
+    def __init__(self, inner: Any) -> None:
+        self.inner = inner
+        self.descriptor = inner.descriptor
+        self.requests: list[dict[str, Any]] = []
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)
+
+    async def list_models(self) -> Any:
+        return await self.inner.list_models()
+
+    async def run(self, req: Any, sink: Any, cancel: Any) -> Any:
+        self.requests.append(req.model_dump(mode="json"))
+        return await self.inner.run(req, sink, cancel)
+
+
+def _run_tree(client: TestClient, run_id: str) -> list[dict[str, Any]]:
+    """Run과 그 자손 Run의 (스냅숏, 이벤트) — 프로젝트 기록에서 읽는다."""
+    out: list[dict[str, Any]] = []
+    pending = [run_id]
+    while pending:
+        current = pending.pop()
+        snap = client.get(f"{API}/runs/{current}", params={"project": "app"}).json()
+        events = client.get(f"{API}/runs/{current}/events", params={"project": "app"}).json()
+        out.append({"snapshot": snap, "events": events})
+        pending.extend(child["id"] for child in snap.get("children") or [])
+    return out
+
+
+def test_nested_team_keeps_cwd_inside_and_never_passes_credential_paths(tmp_path: Path) -> None:
+    """FU.4: 중첩 팀(자식·손자) 실행의 작업 폴더는 프로젝트 폴더 안이고, 앱 자격 폴더
+    (``CLAUDE_CONFIG_DIR``·백엔드 설정 폴더)의 경로·파일은 하위 에이전트 요청·이벤트·Run 기록·
+    프로젝트 폴더 어디에도 들어가지 않는다(K33-11, fake 백엔드)."""
+    folder = _project_folder(tmp_path)
+    space = folder / CFG
+    (folder / "sub").mkdir()
+    _write(space / "agents", "a-sub", _agent("a-sub", working_directory="sub"))
+    _write(space / "graphs", "child-sub", _graph("child-sub", "a-sub"))
+    _write(space / "graphs", "parent-sub", _team_graph("parent-sub", "child-sub"))
+    _write(space / "graphs", "deep-ok", _team_graph("deep-ok", "parent"))  # 손자까지
+    # 앱 자격 폴더(앱 workspace 상태 폴더 안): 자격 파일 + 백엔드 세션 기록 폴더
+    marker = "cred-zq7x"
+    secret = "CREDENTIAL-SECRET-zq7x"
+    cred = tmp_path / "ws" / ".state" / f"claude-{marker}"
+    cred.mkdir(parents=True)
+    (cred / ".credentials.json").write_text(json.dumps({"token": secret}), "utf-8")
+    environ = {"HOME": str(tmp_path / "home"), "CLAUDE_CONFIG_DIR": str(cred)}
+    options = {"mod-runs": {"backends": {"fake-agent": {"session_dir": str(cred)}}}}
+    recorders: list[_RecordingBackend] = []
+
+    def wrap(registries: Registries) -> None:
+        entry = registries.backends.get_entry("fake-agent")
+        recorder = _RecordingBackend(entry.item)
+        recorders.append(recorder)
+        registries.backends.register(
+            "fake-agent", recorder, version=entry.version, source=entry.source, replace=True
+        )
+
+    with _client(tmp_path, options=options, environ=environ, on_started=wrap) as (client, _a):
+        _register(client, folder)
+        trees: list[list[dict[str, Any]]] = []
+        for graph_id, expected_cwd in (
+            ("parent", folder),
+            ("deep-ok", folder),
+            ("parent-sub", folder / "sub"),
+        ):
+            run, events = _run(client, graph_id, "app")
+            assert run["status"] == "completed", (graph_id, run)
+            assert _reply(events) == f"cwd={expected_cwd} model=" + (
+                "m-proj" if graph_id != "parent-sub" else ""
+            ), graph_id
+            trees.append(_run_tree(client, run["id"]))
+        assert [len(tree) for tree in trees] == [2, 3, 2]  # 자식 1·손자까지 2·자식 1
+        _no_runs(client)  # 앱 DB에는 Run이 없다(프로젝트 기록에만)
+
+    [recorder] = recorders
+    assert len(recorder.requests) == 3
+    real_folder = folder.resolve()
+    for req in recorder.requests:
+        # 작업 폴더·허용 폴더가 프로젝트 폴더 밖으로 나가지 않는다
+        assert Path(req["cwd"]).resolve().is_relative_to(real_folder), req["cwd"]
+        for allowed in (req.get("limits") or {}).get("directories") or []:
+            assert Path(allowed).resolve().is_relative_to(real_folder), allowed
+    for tree in trees:  # Run 하나의 기준 작업 폴더(run.started)도 폴더 안
+        for item in tree:
+            for started in _of(item["events"], "run.started"):
+                cwd = started["payload"].get("cwd")
+                assert cwd is None or Path(cwd).resolve().is_relative_to(real_folder), cwd
+    for where, blob in (
+        ("에이전트 요청", json.dumps(recorder.requests, ensure_ascii=False)),
+        ("Run 기록·이벤트", json.dumps(trees, ensure_ascii=False)),
+    ):
+        for needle in (marker, secret, "CLAUDE_CONFIG_DIR", ".credentials.json"):
+            assert needle not in blob, (where, needle)
+    # 프로젝트 폴더: 자격 파일·자격 폴더가 없고, 어느 파일에도 자격 경로·값이 없다
+    names = [p.relative_to(folder).as_posix() for p in folder.rglob("*")]
+    assert not [n for n in names if n.endswith(".credentials.json") or "/claude/" in f"/{n}/"]
+    for path in folder.rglob("*"):
+        if path.is_file():
+            data = path.read_bytes()
+            for needle in (marker, secret):
+                assert needle.encode() not in data, (path.relative_to(folder), needle)
+
+
+def test_limits_directories_placeholder_is_resolved_before_backend(tmp_path: Path) -> None:
+    """경로 지킴이 통과시킨 ``{workspace}``·상대 허용 폴더는 백엔드 요청에서도 프로젝트 폴더
+    기준 실제 경로여야 한다(틀이 그대로 SDK ``add_dirs``로 가면 의미가 달라진다)."""
+    folder = _project_folder(tmp_path)
+    _write(
+        folder / CFG / "agents",
+        "lim",
+        _agent("lim", limits={"directories": ["{workspace}/src", "docs"]}),
+    )
+    _write(folder / CFG / "graphs", "lim", _graph("lim", "lim"))
+    recorders: list[_RecordingBackend] = []
+
+    def wrap(registries: Registries) -> None:
+        entry = registries.backends.get_entry("fake-agent")
+        recorder = _RecordingBackend(entry.item)
+        recorders.append(recorder)
+        registries.backends.register(
+            "fake-agent", recorder, version=entry.version, source=entry.source, replace=True
+        )
+
+    with _client(tmp_path, on_started=wrap) as (client, _a):
+        _register(client, folder)
+        run, _events = _run(client, "lim", "app")
+        assert run["status"] == "completed", run
+    [req] = recorders[0].requests
+    directories = req["limits"]["directories"]
+    assert all("{" not in d for d in directories), directories
+    assert all(Path(d).is_absolute() for d in directories), directories
+    # 경로 지킴과 같은 기준: 틀·상대 경로 모두 프로젝트 폴더 기준
+    assert directories == [str(folder / "src"), str(folder / "docs")], directories
+    assert req["agent"]["limits"]["directories"] == directories
 
 
 def test_pinned_version_runs_from_space(tmp_path: Path) -> None:

@@ -48,6 +48,7 @@ from agent_console_contracts import (
     ErrorInfo,
     Issue,
     KnownResourceSlots,
+    Limits,
     NodeTypeDescriptor,
     PortDef,
     PortSpec,
@@ -132,6 +133,8 @@ from .services import (
     WORKING_DIRECTORY,
     WORKSPACE_SETTINGS,
     AgentLookup,
+    resolve_paths,
+    resolve_working_directory,
 )
 from .tools import (
     MergedToolProvision,
@@ -523,11 +526,15 @@ class AgentNode:
         sourced = provision.sourced_instructions()
         bundle = attach_instructions(bundle, sourced)
         provided = list(provision.host_tools)
+        base = ctx.services.get(WORKING_DIRECTORY)
+        limits = _run_limits(resolved.limits, base)
+        if limits is not resolved.limits:
+            resolved = resolved.model_copy(update={"limits": limits})
         request = AgentRequest(
             agent=resolved,
             prompt=prompt,
-            cwd=settings.working_directory or ctx.services.get(WORKING_DIRECTORY),
-            limits=resolved.limits,
+            cwd=resolve_working_directory(settings.working_directory, base),
+            limits=limits,
             session=session,
             bundle=bundle,
             interactions=session_grant(plan, ctx.node.id, run.strategies) or ctx.interaction_grant,
@@ -720,6 +727,17 @@ def _definition(base: Agent, settings: AgentSettings, backend_id: str) -> Agent 
             f"에이전트 정의가 유효하지 않습니다: {exc.error_count()}개 오류",
             errors=validation_errors(exc),
         )
+
+
+def _run_limits(limits: Limits | None, base: str | None) -> Limits | None:
+    """백엔드에 넘길 실행 범위: 허용 디렉터리의 틀·상대 경로를 `base`(``WORKING_DIRECTORY``) 기준
+    실제 경로로 푼다(``resolve_paths`` — 경로 지킴과 같은 표·기준). 바꿀 것이 없으면 같은 객체."""
+    if limits is None or not limits.directories:
+        return limits
+    directories = resolve_paths(limits.directories, base)
+    if directories == limits.directories:
+        return limits
+    return limits.model_copy(update={"directories": directories})
 
 
 def _session(ctx: NodeContext, settings: AgentSettings, backend_id: str) -> SessionRef | None:

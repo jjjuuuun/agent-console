@@ -23,6 +23,8 @@ Agent Console 위키 핵심 라이브러리. 서버·실행·프로젝트를 모
 - **경로 지킴**(`LocalWikiPages`): `..`·절대·드라이브·역슬래시·제어 문자·Windows 금지 문자·예약 이름·숨김
   (`.`로 시작) 거부, 심볼릭 링크·정션은 읽지도 쓰지도 않고 실제 경로가 폴더 안인지 한 번 더 본다. 쓰기는 같은
   폴더 임시 파일 + 원자적 바꾸기.
+  디렉터리 fd(`openat`)를 쓸 수 없는 OS(Windows)의 경로 방식 쓰기는 바꾸기 직전에 경로를 다시 검사하지만,
+  그 검사와 `os.replace` 사이의 좁은 틈에 폴더가 링크로 바뀌는 경쟁은 구조상 막지 못한다(fd 방식은 이 틈이 없다).
 
 ## 의존성: 무엇을 / 왜 / 대안
 
@@ -208,7 +210,7 @@ no-temp [2]
 
 ## 에이전트 도구 묶음
 
-`WikiToolkit(wikis, access=, author=, text=, on_event=, write_budget=)`은 런타임을 모르는 도구 묶음이다(메모리
+`WikiToolkit(wikis, access=, author=, text=, on_event=, write_budget=, query_hash=)`은 런타임을 모르는 도구 묶음이다(메모리
 `MemoryToolkit`과 같은 모양). `specs()`가 접근 설정이 허용한 동작의 도구만 낸다.
 
 - **도구 7개**: `search(query, wiki?, prefix?, tags?, limit?)`·`read(path, wiki?, section?)`·`list(prefix?, wiki?,
@@ -227,8 +229,13 @@ no-temp [2]
   줄)·`rate_limited`·`invalid_path`·`validation_failed`(입력 형식).
 - **결과**는 `repository.secrets.redact`로 가린 뒤 `max_result_chars`로 자른다. **이벤트**(`on_event(type,
   WikiEventPayload)`, type `wiki.<op>`)에는 본문·검색어 원문이 없다(크기·해시만).
-- **쓰기 한도**: `write_budget`(`take() -> bool`, 기본 구현 `WriteBudget(limit)`)을 write·move·delete가 하나씩
-  쓴다. 실행 하나에 하나를 만들어 여러 묶음이 함께 쓴다.
+- **검색어 해시**(`query_sha256`): `query_hash=query_hasher(mode, salt=)`(공용 `agent-console-query-hash`를 다시
+  내보낸 것으로 메모리 도구 묶음과 같은 규칙). 기본은 솔트 HMAC-SHA256(솔트를 주지 않으면 묶음을 만들 때 무작위 —
+  짧은 검색어도 사전 대입으로 되찾기 어렵다), `sha256`은 솔트 없는 값, `off`는 해시를 싣지 않는다(글자 수만).
+  실행을 넘어 같은 값이 필요하면 쓰는 쪽이 해셔 하나를 만들어 여러 묶음에 넘긴다.
+- **쓰기 한도**: `write_budget`(`take() -> bool`, 기본 구현 `WriteBudget(limit)` — `agent-console-write-budget`을 다시
+  내보낸 것으로 메모리 도구 묶음과 같은 객체)을 write·move·delete가 하나씩 쓴다. 실행 하나에 하나를 만들어 여러 묶음이
+  함께 쓴다.
 - **지침**: `instructions()`(= `wiki_instructions(access, targets)`)가 `ToolProvision.instructions`에 넣을 글을
   만든다 — 위키마다 합친 규칙 지침(`include_rules_instructions`)과 경로 안내(`path_hint`, `WikiToolTarget.name`·
   `pages_dir`로 채움, `pages_dir`가 없는데 틀이 쓰면 안내 없음). 같은 글은 한 번.

@@ -7,7 +7,9 @@
 
 - 필수 ``wiki.service``: 위키 서비스(``WikiServiceLike`` — ``tool_targets(space)``·
   ``notify(...)``·``wiki_ids(space)``). ``mod-wiki``가 준다. 없으면 이 연동은 꺼진다(실행은 위키
-  도구 없이, 위키 칸은 백엔드가 적용하지 못한 칸 경고 R13.5).
+  도구 없이, 위키 칸은 백엔드가 적용하지 못한 칸 경고 R13.5). 선택 속성 ``query_hash``
+  (``QueryHashSource`` — 검색어 해셔)가 있으면 도구 묶음에 그대로 넘기고, 없으면 이 연동이 만든
+  무작위 솔트 해셔 하나를 쓴다.
 - 선택 ``projects.lookup``: 프로젝트 목록(``list_projects()`` → ``id`` 속성). 있으면 저장 전 검사가
   모든 프로젝트 공간의 위키 id도 안다(없으면 단독 공간만).
 
@@ -30,7 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final, Protocol, runtime_checkable
 
 from agent_console_modkit import PortKey
-from agent_console_wiki import WikiToolTarget
+from agent_console_wiki import QueryHasher, WikiToolTarget
 
 INTEGRATION_RUNS: Final = "runs"
 """``wiki.integrations`` 능력 이름: 에이전트 쓰기(실행 연동). ``mod-wiki``의 같은 이름 상수와 같은
@@ -59,6 +61,16 @@ class WikiServiceLike(Protocol):
         external: bool = False,
     ) -> None:
         """WS ``wiki.changed``(저장소로 직접 쓴 뒤)."""
+        ...
+
+
+@runtime_checkable
+class QueryHashSource(Protocol):
+    """``wiki.service``의 선택 부분: 에이전트 위키 검색 이벤트의 검색어 해셔(설치자 설정)."""
+
+    @property
+    def query_hash(self) -> QueryHasher:
+        """검색어 → 16진수 해시(None = 싣지 않음)."""
         ...
 
 
@@ -95,6 +107,7 @@ __all__ = [
     "WIKI_INTEGRATIONS",
     "WIKI_SERVICE",
     "ProjectLookupLike",
+    "QueryHashSource",
     "WikiRunsIntegration",
     "WikiServiceLike",
 ]

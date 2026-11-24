@@ -104,4 +104,5 @@ const conversations = await chat.listConversations({ archived: false });
 
 ## 프로젝트와 공간
 - `projects` 클라이언트(`createProjectsClient`, `createRestClient`에도 합쳐져 있다): `listProjects`·`getProject`·`createProject`·`updateProject`·`unregisterProject`(DELETE = 서버가 보관), 설정 파일 `resetProjectManifest`(`status == manifest_invalid`일 때만, 백업 경로 `backup_path`)·`appendProjectGitignore`, 폴더 `checkFolder`·`createFolder`·`listFolders`·`getFolderCapabilities`·`pickFolder(request, {signal})`(abort하면 서버가 창을 닫는다), 공간 사이 복사 `planCopy`·`applyCopy`, 옛 기록 `planLegacyCopy`. 기록 개수·프로젝트에 넣기는 `runs`(`getRunProjectCounts`·`assignRunsToProject`)와 `chat`, 메모리 복사는 `memory`(`copyMemory`)에 있다(기능끼리 import하지 않는다).
+- Run 위임 흐름·넘김: `getRunTrace(id, { project })`와 `getHandoffs({ project })`는 선택 `project`(`?project=`, 없는 프로젝트는 404 `project.not_found`)를 붙인다. 생략하면 공용 기록 그대로다.
 - 공간 인자: 정의·메모리 REST는 `?project=<id>`로 프로젝트 폴더의 사본 저장소를 고른다(없으면 공용). 기능 클라이언트는 공간을 모르고, 전송을 `withSpace(io, "payments")`로 감싸거나 `createSpaceRestClient(options, "payments")`로 정의·버전·메모리 묶음을 얻는다. `null`·생략이면 요청 주소가 달라지지 않는다.

@@ -34,6 +34,10 @@ Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크
   `agent_console.wiki_write_checks`(설정 `wiki.write_checks[{id, enabled, options}]`로 켬, 값 = 검사 객체
   또는 옵션을 받는 공장).
 - 능력 `WikiInfo.capabilities`는 포트 유무로 계산한다(`runs` = `wiki.integrations`에 `runs`를 낸 연동).
+- 검색어 해시: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트를 읽을 환경변수
+  이름, 값은 설정에 두지 않는다 — 없거나 비면 서버를 켤 때마다 무작위). 서비스 하나에 해셔 하나
+  (`WikiService.query_hash`, `search_query_hasher(cfg, environ)`)를 두고 실행 연동이 에이전트 위키 검색 이벤트
+  `query_sha256`에 쓴다. 메모리 모듈과 같은 변수를 쓸지는 각 모듈 설정으로 정한다.
 
 코드에 고정된 것: 머리말 역할·기본 점검·링크 대상 찾기의 뜻(`ac-wiki`), 쓰기 규칙을 거는 길(도구·화면·
 REST — 파일을 직접 고친 것은 다음 읽기·`scan`에서 `external` 기록과 점검의 규칙 위반으로 보인다), 원본 =

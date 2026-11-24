@@ -81,7 +81,7 @@ def _rules_text() -> Mapping[str, Any]:
 
 
 def default_operator_map() -> dict[str, ConditionOperator]:
-    """기본 조건 연산자(`ac-conditions` 기본 10개, entry point 없이) id → 연산자. 서버 조립은
+    """기본 조건 연산자(`ac-conditions` 기본 연산자, entry point 없이) id → 연산자. 서버 조립은
     설정으로 끄고 더한 연산자 레지스트리를 넘긴다."""
     return {op.descriptor.id: op for op in builtin_operators()}
 
@@ -471,7 +471,7 @@ def check_rules(
             issues.append(
                 _issue(
                     KnownIssueCodes.WIKI_ALWAYS_REJECTS,
-                    "조건이 없어 모든 쓰기를 거부합니다. '걸 쓰기' 조건을 적으세요.",
+                    "조건이 없어 모든 쓰기를 거부합니다. '적용할 쓰기' 조건을 적으세요.",
                     severity="error",
                     path=f"{base}/when",
                     rule_id=rule.id,

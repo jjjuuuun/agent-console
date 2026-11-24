@@ -214,6 +214,55 @@ def test_user_gitignore_is_kept_and_append_only_adds(tmp_path: Path, work: Path)
         ]
 
 
+def test_gitignore_follows_records_file_and_sessions_dir(tmp_path: Path, work: Path) -> None:
+    """FU.2: 틀·빠진 줄 점검이 설정한 기록 DB 파일·세션 보관 폴더 이름을 따른다."""
+    app = _folder(work, "app")
+    renamed = {"records_file": "rec.db", "sessions_dir": "arc"}
+    with _client(_assembly(tmp_path, options=renamed)) as client:
+        view = _register(client, app)
+        text = (app / CFG / ".gitignore").read_text("utf-8")
+        lines = {t.strip() for t in text.splitlines()}
+        assert {"/rec.db", "/rec.db-*", "/arc/"} <= lines
+        assert not {"/records.sqlite3", "/sessions/"} & lines
+        assert not [
+            i for i in view["issues"] if i["code"] == KnownIssueCodes.PROJECT_GITIGNORE_OUTDATED
+        ]
+    # 기본 이름으로 다시 열면 기본 이름 줄이 빠졌다고 알린다(하드코딩된 이름이 아님)
+    with _client(_assembly(tmp_path)) as client:
+        view = client.get(f"{API}/projects/app").json()
+        outdated = [
+            i for i in view["issues"] if i["code"] == KnownIssueCodes.PROJECT_GITIGNORE_OUTDATED
+        ]
+        assert outdated
+        assert outdated[0]["details"]["lines"] == [
+            "/records.sqlite3",
+            "/records.sqlite3-*",
+            "/sessions/",
+        ]
+
+
+def test_sessions_dir_seeds_from_records_link_setting() -> None:
+    from agent_console_mod_projects.settings import SETTINGS_COMPAT, ProjectModuleSettings
+    from agent_console_modkit import seed_settings
+
+    data = {
+        "modules": {"options": {"link-projects-records": {"session_archive": {"dir": "archive"}}}}
+    }
+    seeded = seed_settings(data, {"mod-projects": SETTINGS_COMPAT})
+    options = seeded["modules"]["options"]["mod-projects"]
+    assert ProjectModuleSettings.model_validate(options).sessions_dir == "archive"
+    explicit = {
+        "modules": {
+            "options": {
+                "mod-projects": {"sessions_dir": "mine"},
+                "link-projects-records": {"session_archive": {"dir": "archive"}},
+            }
+        }
+    }
+    seeded = seed_settings(explicit, {"mod-projects": SETTINGS_COMPAT})
+    assert seeded["modules"]["options"]["mod-projects"]["sessions_dir"] == "mine"
+
+
 def test_adopt_manifest_and_worktree_gets_suffix(tmp_path: Path, work: Path) -> None:
     one = _folder(work, "wt-1")
     two = _folder(work, "wt-2")

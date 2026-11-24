@@ -418,6 +418,14 @@ class RunRepository(Protocol):
         """시작 시각, node_id, attempt, iteration 순(시작 전은 뒤)."""
         ...
 
+    def list_node_runs_many(self, run_ids: Iterable[str]) -> dict[str, builtins.list[NodeRun]]:
+        """여러 Run의 NodeRun을 묶어 읽는다(Run마다 되묻지 않는다, 집계 N+1 방지).
+
+        값은 Run마다 `list_node_runs`와 같은 순서다. NodeRun이 없는 Run은 키가 없다. SQLite는
+        Run id `RUN_BATCH_SIZE`개마다 질의 한 번이다.
+        """
+        ...
+
     def interrupt_unfinished(
         self, *, ended_at: float, error: ErrorInfo | None = None
     ) -> builtins.list[str]:
@@ -459,6 +467,21 @@ class EventRepository(Protocol):
 
         `actor`는 정확히 같은 값, `type_prefix`는 `type`이 그 문자열로 시작하는 것(대소문자 구분).
         `node`는 `node_path`에 그 노드 id가 있는 이벤트(하위 그래프 안 이벤트 포함, 6R.12 M-9).
+        """
+        ...
+
+    def list_many(
+        self, since: Mapping[str, int], *, type_prefixes: Sequence[str] = ()
+    ) -> dict[str, builtins.list[RunEvent]]:
+        """여러 Run의 이벤트를 묶어 읽는다(Run마다 되묻지 않는다, 집계 N+1 방지).
+
+        Args:
+            since: Run id → 그 Run에서 이미 읽은 마지막 seq(`seq > since[run_id]`만, 0 = 처음부터).
+            type_prefixes: `type`이 이 중 하나로 시작하는 이벤트만(대소문자 구분). 비면 전부.
+
+        Returns:
+            Run id → seq 오름차순 이벤트. 맞는 이벤트가 없는 Run은 키가 없다. SQLite는 Run
+            `RUN_BATCH_SIZE`개마다 질의 한 번이다.
         """
         ...
 

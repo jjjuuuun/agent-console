@@ -23,6 +23,12 @@ const A = KNOWN_COPY_ACTIONS;
 const S = KNOWN_COPY_TARGET_STATES;
 const R = KNOWN_COPY_STATUSES;
 
+/**
+ * 서버가 복사 계획 `warnings`에 싣는 "예약어 id" 경고 코드. 대상에서 그 id를 쓰게 되는 항목에 붙고
+ * `details{kind, id, reserved, suggested_id}`를 갖는다. 기본 동작은 새 이름(rename)이고 `suggested_id`가 미리 채울 id다.
+ */
+export const COPY_WARNING_RESERVED_ID = "project.copy_reserved_id";
+
 /** 항목 이유: 사용자가 고른 것. 그 밖(`referenced` 등)은 함께 가져오는 연결 항목. */
 export const COPY_REASON_REQUESTED = "requested";
 
@@ -66,6 +72,7 @@ const SKIP_KEEP_BY_DIRECTION = { save: { key: "copy.action.skip_keep.save" }, mo
 export const COPY_ACTION_CHOICES: Readonly<Record<string, readonly CopyActionChoice[]>> = {
   [S.ABSENT]: [
     { action: A.COPY, label: { key: "copy.action.copy" } },
+    { action: A.RENAME, label: { key: "copy.action.rename" } },
     { action: A.SKIP, label: { key: "copy.action.skip" }, labelByDirection: SKIP_BY_DIRECTION },
   ],
   [S.IDENTICAL]: [
@@ -103,26 +110,51 @@ export function defaultActionFor(item: Pick<CopyPlanItem, "target_state" | "defa
   return null;
 }
 
-/** 계획 전체의 초기 선택(항목마다 `defaultActionFor`). */
-export function initialSelections(plan: Pick<CopyPlan, "items">): Map<string, CopySelection> {
-  const out = new Map<string, CopySelection>();
-  for (const item of itemsOf(plan)) out.set(copyItemKey(item), { action: defaultActionFor(item) });
+/** 예약어 경고(`COPY_WARNING_RESERVED_ID`)가 붙은 항목 → 서버가 제안한 새 id. 제안이 없는 경고는 빈 문자열. */
+export function reservedIdSuggestions(plan: Pick<CopyPlan, "warnings">): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const w of plan.warnings ?? []) {
+    if (w.code !== COPY_WARNING_RESERVED_ID) continue;
+    const d = w.details ?? {};
+    if (typeof d.kind !== "string" || typeof d.id !== "string") continue;
+    out.set(copyItemKey({ kind: d.kind, id: d.id }), typeof d.suggested_id === "string" ? d.suggested_id : "");
+  }
   return out;
 }
 
-/** 선택을 바꾼 새 표를 돌려준다(원본 유지). `rename`을 처음 고르면 `taken`을 피한 제안 id를 채운다. */
+/** 계획 전체의 초기 선택(항목마다 `defaultActionFor`). 새 이름이 기본이면 서버 제안 id(`details.suggested_id`)를 미리 채운다. */
+export function initialSelections(plan: Pick<CopyPlan, "items"> & Partial<Pick<CopyPlan, "warnings">>): Map<string, CopySelection> {
+  const out = new Map<string, CopySelection>();
+  const suggested = reservedIdSuggestions({ warnings: plan.warnings });
+  const used: string[] = [];
+  for (const item of itemsOf(plan)) {
+    const key = copyItemKey(item);
+    const action = defaultActionFor(item);
+    if (action === A.RENAME) {
+      const newId = suggested.get(key) || suggestRename(item.id, used);
+      used.push(newId);
+      out.set(key, { action, newId });
+    } else {
+      out.set(key, { action });
+    }
+  }
+  return out;
+}
+
+/** 선택을 바꾼 새 표를 돌려준다(원본 유지). `rename`을 처음 고르면 서버 제안 `suggestedId`(없으면 `taken`을 피한 제안 id)를 채운다. */
 export function selectAction(
   selections: CopySelections,
   item: Pick<CopyPlanItem, "kind" | "id">,
   action: string | null,
   taken: Iterable<string> = [],
+  suggestedId?: string,
 ): Map<string, CopySelection> {
   const next = new Map(selections);
   const key = copyItemKey(item);
   const prev = next.get(key);
   if (action === A.RENAME) {
     const used = [...taken, ...[...next.values()].flatMap((s) => (s.newId === undefined ? [] : [s.newId]))];
-    next.set(key, { action, newId: prev?.newId ?? suggestRename(item.id, used) });
+    next.set(key, { action, newId: prev?.newId ?? (suggestedId !== undefined && suggestedId !== "" ? suggestedId : suggestRename(item.id, used)) });
   } else {
     next.set(key, { action });
   }

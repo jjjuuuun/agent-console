@@ -45,6 +45,8 @@
 
 from __future__ import annotations
 
+from agent_console_store import slug_id, unique_id
+
 from ._check import check_rules
 from ._compiled import (
     KNOWN_LIST_ITEMS,
@@ -70,7 +72,6 @@ from ._errors import (
 from ._files import LocalSpecFiles, SpecFileEntry, SpecFiles, check_project_path
 from ._gates import GateBlock, evaluate_gates, gate_context, gate_documents, require_gates
 from ._graphs import dependency_cycles
-from ._ids import slug_id, unique_id
 from ._integrations import (
     AutomationControl,
     ProfileChecker,

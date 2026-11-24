@@ -107,7 +107,7 @@ export function severityTone(severity: string): string {
 }
 
 /** 그래프 탭 깊이 선택(데이터): 숫자 단계, 기본 단계, "전체"를 뜻하는 주소 값. 서버는 `depth` 숫자 하나를 받고 없으면 전체다. */
-export const WIKI_GRAPH = data.graph as { depths: readonly number[]; defaultDepth: number; all: string };
+export const WIKI_GRAPH = data.graph as { depths: readonly number[]; defaultDepth: number; all: string; /** 이보다 페이지·노드가 많으면 큰 그래프(처음엔 한 페이지 주변만, 안내 칩) */ bigNodes: number };
 export const GRAPH_LIST_ONLY_KEY: string = data.storage.graphListOnly;
 
 /** 공용 구성 › 위키 규칙 화면의 데이터(주소 인자·탭·REST 컬렉션·고급이어도 섹션으로 보일 속성). */

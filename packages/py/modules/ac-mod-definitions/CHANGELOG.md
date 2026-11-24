@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- FU.3: 공간(`?project=`) 저장 전 검사는 검사의 선택 메서드 `space_issues(space, kind, document)`(`SpaceDefinitionCheck`)를 부른다. 없는 검사는 지금처럼 `issues`.
 - 요청 11/07: 공간(`?project=`) 팀 구성 목록도 `validation` 요약을 채운다. `graphs.validation` 제공자의 선택 메서드 `space_summaries(space, graph_ids, lookup=)`(`SpaceGraphValidationSource`)를 부르고, 없으면 지금처럼 null(라이브러리 `summaries`는 부르지 않는다). `DefinitionService(space=)` 선택 인자.
 - 6R.20k(계약 0.13.2): 선택 포트 `graphs.session_summary`(`GraphSessionSummarySource.session_summary(graph)`, `GRAPH_SESSION_SUMMARY`). 있으면 `GET /graphs` 행의 `session_summary`를 채운다(라이브러리·공간 목록 모두). 없거나 제공자가 예외를 내면 null. `DefinitionService(session_summary=)` 선택 인자.
 - 계약 0.13.1(5.7R.33y2 후속): 설정 `secrets.weak_key_names`(null = 기본 데이터 `DEFAULT_WEAK_KEY_NAMES`, 빈 목록 = 끔, 주면 그 목록)를 `build_rules`가 `SecretRules(weak_key_names=...)`로 넘긴다. 저장 전 검사가 잘못된 이름을 `secret.invalid_rule`(`/secrets/weak_key_names/<i>`)로 막고, 손으로 고친 파일의 잘못된 이름은 빼고 경고 로그(위치만). `weak_name_problems` 추가.

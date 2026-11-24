@@ -5,6 +5,7 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { useDelayed } from "../../app/useDelayed";
 import { isImeKeyEvent } from "../../lib/ime";
 import { ROUTE_ROLES, routePath } from "../library";
+import { SETTINGS_PROJECTS_HASH } from "../projects";
 import { WIKI_LIMITS } from "./wikiConfig";
 import { classifyWikiError, failureDetail } from "./wikiErrors";
 import { wikiMessages as m } from "./messages";
@@ -29,6 +30,16 @@ export function FailureBlock({ error, title, onRetry, backTo }: { error: unknown
   const failure = classifyWikiError(error, title);
   if (failure.kind === "unavailable") return <UnavailableState />;
   if (failure.kind === "notFound") return <ErrorBlock title={m.notFound}>{backTo}</ErrorBlock>;
+  if (failure.kind === "problem") {
+    // 폴더·설정 문제는 다시 시도로 풀리지 않는다: 원인 설명과 프로젝트 설정 링크를 둔다
+    const settings = routePath(ROUTE_ROLES.settings);
+    return (
+      <ErrorBlock title={title} message={failure.message}>
+        <p className="app-muted">{m.problem.hint}</p>
+        {settings === "/" ? null : <a className="app-link-btn" href={`${settings}${SETTINGS_PROJECTS_HASH}`}>{m.problem.openSettings}</a>}
+      </ErrorBlock>
+    );
+  }
   return <ErrorBlock title={title} message={failureDetail(failure)} {...(onRetry === undefined ? {} : { onRetry, retryLabel: m.retry })} />;
 }
 

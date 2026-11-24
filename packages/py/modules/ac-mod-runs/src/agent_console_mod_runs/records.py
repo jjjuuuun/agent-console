@@ -35,7 +35,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
-from collections.abc import Callable, Collection, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from typing import Any
 
 from agent_console_contracts import (
@@ -257,6 +257,18 @@ class SpaceRecorder:
         except (RecordsUnavailable, LookupError):
             return None
 
+    def _read_grouped(self, run_ids: Iterable[str]) -> builtins.list[tuple[Any, list[str]]]:
+        """``run_id``들을 읽을 자리(``_read_at``)마다 묶는다. 읽을 수 없는 자리의 Run은 뺀다."""
+        groups: dict[str | None, list[str]] = {}
+        for run_id in dict.fromkeys(run_ids):
+            groups.setdefault(self._places.run(run_id), []).append(run_id)
+        found: list[tuple[Any, list[str]]] = []
+        for project_id, ids in groups.items():
+            store = self._read_at(ids[0]) if project_id is not None else self.host
+            if store is not None:
+                found.append((store, ids))
+        return found
+
     # ---- 쓰기 ---------------------------------------------------------------
 
     def _write(
@@ -344,6 +356,14 @@ class _Runs:
     def list_node_runs(self, run_id: str) -> builtins.list[NodeRun]:
         store = self._o._read_at(run_id)
         return [] if store is None else list(store.runs.list_node_runs(run_id))
+
+    def list_node_runs_many(self, run_ids: Iterable[str]) -> dict[str, builtins.list[NodeRun]]:
+        """여러 Run의 NodeRun(``RunRepository.list_node_runs_many``). Run의 자리(호스트·공간)마다
+        묶어 한 번씩 읽는다."""
+        found: dict[str, builtins.list[NodeRun]] = {}
+        for store, ids in self._o._read_grouped(run_ids):
+            found.update(store.runs.list_node_runs_many(ids))
+        return found
 
     def interrupt_unfinished(
         self, *, ended_at: float, error: ErrorInfo | None = None
@@ -434,6 +454,18 @@ class _Events:
     def list(self, run_id: str, **filters: Any) -> builtins.list[RunEvent]:
         store = self._o._read_at(run_id)
         return [] if store is None else list(store.events.list(run_id, **filters))
+
+    def list_many(
+        self, since: Mapping[str, int], *, type_prefixes: Sequence[str] = ()
+    ) -> dict[str, builtins.list[RunEvent]]:
+        """여러 Run의 이벤트(``EventRepository.list_many``). Run의 자리(호스트·공간)마다 묶어 한
+        번씩 읽는다."""
+        found: dict[str, builtins.list[RunEvent]] = {}
+        for store, ids in self._o._read_grouped(since):
+            found.update(
+                store.events.list_many({i: since[i] for i in ids}, type_prefixes=type_prefixes)
+            )
+        return found
 
     def for_project(self, project_id: str | None) -> SpaceEvents:
         """그 프로젝트에 묶인 이벤트 읽기(``list``·``last_seq``)."""

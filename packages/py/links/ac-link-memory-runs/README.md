@@ -17,7 +17,8 @@ Agent Console 메모리·실행 연동 모듈(`link-memory-runs`). 에이전트�
 - **opt-in**: 리소스 `memory`를 붙인 에이전트만 도구를 받는다. 도구 이름·설명·결과 머리 줄·범위별 권한은
   리소스 config(데이터)다. `delete` 도구는 지우기를 허용한 범위가 있을 때만 준다.
 - **층**: 같은 칸에 여러 첨부(공통 → 팀 구성 → 에이전트 → 노드)가 있으면 범위 종류마다 가까운 층의
-  허용 동작을 쓴다. 나머지 키(기본 범위·도구 이름 등)도 가까운 층이 정한 값이 이긴다(`merge_access`).
+  허용 동작을 쓴다. 나머지 키(기본 범위·도구 이름 등)도 가까운 층이 정한 값이 이긴다(`merge_access`,
+  규칙은 위키 연동과 같은 `agent_console_nodes_core.merge_access_layers`).
 - **범위 id**는 맥락(`MemoryAccessContext`)에서 계산한다. `graph_id`는 그 노드를 실행한 Run의 팀
   구성(중첩 팀이면 자식 팀), `root_graph_id`·`project_id`는 루트 Run 값이다. 에이전트가 범위 id를 고를 수 없다.
 - **실행당 쓰기 한도**는 Run 하나(자식 Run 포함)의 모든 에이전트가 함께 쓴다.

@@ -38,7 +38,10 @@
       ``safe_relative_name``, ``safe_part``, ``ITEM_FILES_KEY``, ``ITEM_TREES_DIR``
     - 앱이 주입하는 서비스 키: ``AGENT_LOOKUP``(``AgentLookup``), ``WORKSPACE_SETTINGS``,
       ``DEFAULT_BACKEND``, ``ERROR_FIXES``(``ErrorFixer``, 노드 실패 해결 버튼),
-      ``WORKING_DIRECTORY``, ``SCOPE_LAYERS``, ``RESOURCE_LOOKUP``, ``RUN_FILES_ROOT``,
+      ``WORKING_DIRECTORY``(상대 ``working_directory``의 기준 — ``resolve_working_directory``,
+      ``limits.directories``의 틀·상대 경로 기준 — ``resolve_paths``·``path_placeholders``·
+      ``WORKSPACE_PLACEHOLDER``),
+      ``SCOPE_LAYERS``, ``RESOURCE_LOOKUP``, ``RUN_FILES_ROOT``,
       ``SESSIONS``, ``TEAM_LOOKUP``(중첩 팀 조회), 레지스트리 이름 ``RESOURCE_TYPES_EXTENSION``,
       어댑터 ``FunctionResources``
     - 에이전트 도구 공급자(X30, design §5.7R.3): 서비스 키 ``TOOL_PROVIDERS``, 프로토콜
@@ -141,9 +144,13 @@ from agent_console_nodes_core.services import (
     TEAM_LOOKUP,
     TOOL_PROVIDERS,
     WORKING_DIRECTORY,
+    WORKSPACE_PLACEHOLDER,
     WORKSPACE_SETTINGS,
     AgentLookup,
     ErrorFixer,
+    path_placeholders,
+    resolve_paths,
+    resolve_working_directory,
 )
 from agent_console_nodes_core.team import (
     SESSION_PATH_SEPARATOR,
@@ -155,6 +162,9 @@ from agent_console_nodes_core.team import (
     session_path_key,
 )
 from agent_console_nodes_core.tools import (
+    ACCESS_CONFIG_FIELD,
+    ACCESS_OPS_FIELD,
+    ACCESS_TOOLS_FIELD,
     INSTRUCTION_SOURCE_PREFIX,
     MergedToolProvision,
     ToolEmit,
@@ -165,11 +175,15 @@ from agent_console_nodes_core.tools import (
     attach_instructions,
     drop_taken,
     instruction_source,
+    merge_access_layers,
     provide_tools,
 )
 from agent_console_nodes_core.user import ReviewConfig, UserNode, UserNodeConfig
 
 __all__ = [
+    "ACCESS_CONFIG_FIELD",
+    "ACCESS_OPS_FIELD",
+    "ACCESS_TOOLS_FIELD",
     "AGENT_LOOKUP",
     "AGENT_LOOKUP_UNAVAILABLE_MESSAGE",
     "AGENT_ROLE",
@@ -213,6 +227,7 @@ __all__ = [
     "TOOL_PROVIDERS",
     "USER_ROLE",
     "WORKING_DIRECTORY",
+    "WORKSPACE_PLACEHOLDER",
     "WORKSPACE_SETTINGS",
     "AgentLookup",
     "AgentNode",
@@ -264,8 +279,12 @@ __all__ = [
     "context_prepared_payload",
     "drop_taken",
     "instruction_source",
+    "merge_access_layers",
+    "path_placeholders",
     "pick_replies",
     "provide_tools",
+    "resolve_paths",
+    "resolve_working_directory",
     "review_response_schema",
     "run_folder",
     "safe_part",

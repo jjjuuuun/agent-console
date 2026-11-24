@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { WikiLink } from "@agent-console/contracts/wiki";
 import { authorLabel, resolveDisplay, severityRank } from "./display";
 import { formatRelative } from "./format";
-import { createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, nearestNode } from "./graph";
+import { createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, nearestNode, removeOverlaps } from "./graph";
 import { escapeLinkText, linkifySource, linkLabel, linkMarks, parseLinkHref, usableLinks } from "./linkify";
 import { splitByMarks } from "./marks";
 import { defaultMessages } from "./messages";
@@ -153,6 +153,22 @@ describe("그래프 순수 함수", () => {
     expect(sent.layoutOptions["elk.algorithm"]).toBe("stress");
     expect(sent.layoutOptions["elk.randomSeed"]).toBe("1");
     expect(sent.layoutOptions["elk.spacing.nodeNode"]).toBe("48");
+  });
+  it("겹친 배치는 칸으로 풀고(겹침 0, 결정론적), 겹침이 없으면 그대로 둔다", () => {
+    const nodes = Array.from({ length: 60 }, (_, i) => ({ id: `n${i}`, width: 168, height: 36 }));
+    const crowded = Object.fromEntries(nodes.map((n, i) => [n.id, { x: (i % 7) * 40, y: Math.floor(i / 7) * 10 }]));
+    const a = removeOverlaps(nodes, crowded, 48);
+    expect(removeOverlaps(nodes, crowded, 48)).toEqual(a);
+    const ids = Object.keys(a);
+    for (let i = 0; i < ids.length; i += 1) {
+      for (let j = i + 1; j < ids.length; j += 1) {
+        const p = a[ids[i]!]!;
+        const q = a[ids[j]!]!;
+        expect(Math.abs(p.x - q.x) >= 168 || Math.abs(p.y - q.y) >= 36).toBe(true);
+      }
+    }
+    const spread = { n0: { x: 0, y: 0 }, n1: { x: 500, y: 0 } };
+    expect(removeOverlaps(nodes.slice(0, 2), spread, 48)).toBe(spread);
   });
   it("격자 배치는 결정론적", () => {
     const nodes = [1, 2, 3, 4, 5].map((i) => ({ id: String(i), width: 10, height: 10 }));

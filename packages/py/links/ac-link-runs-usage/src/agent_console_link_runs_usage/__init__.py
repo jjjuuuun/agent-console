@@ -6,7 +6,9 @@
     - 포트(``ports``): 받음 ``RUNS_READER``·``RUNS_EVENTS``, 선택 ``PROJECTS_LOOKUP``·
       ``RECORDS_SPACES``, 구독 ``RUNS_EVENT``, 제공 ``USAGE_EVENT_QUERY``·``USAGE_TOKEN_ROLLUPS``.
     - HTTP 없이 쓰는 부품: ``IncrementalTokenRollups``·``RollupSource``(증분 캐시 토큰 집계, 출처별
-      커서), ``MergedEventQuery``·``project_event_sources``(앱 + 프로젝트 기록 이벤트 합친 조회),
+      커서, 받는 모양 ``AppRunSource``·선택 능력 ``AppScopedRuns``·``BatchEvents``·
+      ``BatchNodeRuns``),
+      ``MergedEventQuery``·``project_event_sources``(앱 + 프로젝트 기록 이벤트 합친 조회),
       ``project_readers``·``project_rollup_sources``(등록 프로젝트 기록 DB 고르기).
     - 설정 ``RunsUsageSettings``(``records_space_prefix``).
 """
@@ -33,6 +35,10 @@ from .rollups import (
     APP_SOURCE_KEY,
     FINISHED_RUN_STATUSES,
     USAGE_EVENT_TYPES,
+    AppRunSource,
+    AppScopedRuns,
+    BatchEvents,
+    BatchNodeRuns,
     IncrementalTokenRollups,
     RollupSource,
 )
@@ -51,6 +57,10 @@ __all__ = [
     "USAGE_EVENT_TYPES",
     "USAGE_TOKEN_ROLLUPS",
     "WEB_ROLES",
+    "AppRunSource",
+    "AppScopedRuns",
+    "BatchEvents",
+    "BatchNodeRuns",
     "IncrementalTokenRollups",
     "MergedEventQuery",
     "RollupSource",

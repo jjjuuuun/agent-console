@@ -40,7 +40,14 @@ from agent_console_contracts import (
     Project,
     WorkspaceSettings,
 )
-from agent_console_nodes_core import AGENT_LOOKUP, SCOPE_LAYERS, TEAM_LOOKUP, WORKSPACE_SETTINGS
+from agent_console_nodes_core import (
+    AGENT_LOOKUP,
+    SCOPE_LAYERS,
+    TEAM_LOOKUP,
+    WORKING_DIRECTORY,
+    WORKSPACE_SETTINGS,
+    path_placeholders,
+)
 from agent_console_projects import CODE_UNKNOWN, project_layer_value
 from agent_console_runtime import ServiceKey, Services
 from agent_console_teams import DEFAULT_CONVENTIONS, Layer, TeamCatalog
@@ -103,6 +110,15 @@ class RunScopeResult:
 
 def _not_found(exc: Exception) -> bool:
     return isinstance(exc, LookupError) or getattr(exc, "code", None) == "not_found"
+
+
+def _layer_folder(layers: Sequence[Layer]) -> str | None:
+    """프로젝트 층 값의 ``working_directory``(프로젝트 폴더). 없으면 None."""
+    for layer in reversed(layers):
+        folder = (layer.value or {}).get("working_directory")
+        if isinstance(folder, str) and folder:
+            return folder
+    return None
 
 
 class ProjectScope:
@@ -274,7 +290,8 @@ class ProjectScope:
     def scope_run(
         self, graph: Graph, services: Services, *, project_id: str | None
     ) -> RunScopeResult | None:
-        """``runs.scopes``: 이 Run의 노드 서비스 ``SCOPE_LAYERS``(프로젝트 층)·경고·거부.
+        """``runs.scopes``: 이 Run의 노드 서비스 ``SCOPE_LAYERS``(프로젝트 층)·``WORKING_DIRECTORY``
+        (프로젝트 폴더 — 상대 ``working_directory``의 기준)·경고·거부.
 
         프로젝트가 없으면(``project_id`` 없음) ``require_project``일 때 거부 ``project.required``,
         아니면 None. 없는 프로젝트면 경고만(층 없이 — 프로젝트 읽기가 있으면 ``run_definitions``가
@@ -291,11 +308,13 @@ class ProjectScope:
         existing = tuple(services.get(SCOPE_LAYERS) or ())
         layers = (*existing, *found.layers)
         errors = self._start_errors(graph, services, project_id, layers)
-        return RunScopeResult(
-            services={SCOPE_LAYERS: layers},
-            warnings=list(found.warnings),
-            errors=errors,
-        )
+        given: dict[ServiceKey[Any], Any] = {SCOPE_LAYERS: layers}
+        folder = _layer_folder(found.layers)
+        if folder:
+            # 상대 working_directory의 기준 = 프로젝트 폴더(경로 지킴과 같은 기준, FU.4). 자식 Run은
+            # 부모 서비스를 물려받아 같은 기준을 쓴다.
+            given[WORKING_DIRECTORY] = folder
+        return RunScopeResult(services=given, warnings=list(found.warnings), errors=errors)
 
     def _start_errors(
         self, graph: Graph, services: Services, project_id: str, layers: Sequence[Layer]
@@ -330,7 +349,8 @@ class ProjectScope:
             find_agent=services.get(AGENT_LOOKUP),
             workspace=workspace if isinstance(workspace, WorkspaceSettings) else None,
             scope_layers=layers,
-            placeholders={"workspace": folder},
+            # 실행(agent 노드 ``resolve_paths``)과 같은 틀 표 — 검사한 경로 = 백엔드가 받는 경로
+            placeholders=path_placeholders(folder),
             environ=self._environ,
             find_team=services.get(TEAM_LOOKUP),
         )

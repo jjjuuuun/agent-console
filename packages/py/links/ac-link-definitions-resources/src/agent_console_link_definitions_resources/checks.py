@@ -3,6 +3,9 @@
 검사 로직은 패키지에 있다(``ac-resources.validate_resource``, ``ac-teams.attachment_issues``).
 여기서는 정의 종류별로 어느 검사를 부를지 고르고, 이슈 path를 요청 문서 기준으로 맞춘다.
 공통 설정의 비밀 규칙 정규식 검사는 ``mod-definitions``가 따로 낸다.
+
+공간(예: 프로젝트) 저장 기준 검사는 ``space_issues``다. 첨부 ``ref``는 그 공간 저장소의 리소스만
+보고 라이브러리(``resources.lookup``)로 넘어가 찾지 않는다.
 """
 
 from __future__ import annotations
@@ -17,7 +20,14 @@ from agent_console_contracts import Agent, Graph, Issue, Resource, WorkspaceSett
 from agent_console_registry import Registry
 from agent_console_resources import Content, ResourceLookup, ResourceType, validate_resource
 from agent_console_secret_rules import SecretRules
-from agent_console_store import AGENT_KIND, GRAPH_KIND, RESOURCE_KIND, SETTINGS_KIND, StoreError
+from agent_console_store import (
+    AGENT_KIND,
+    GRAPH_KIND,
+    RESOURCE_KIND,
+    SETTINGS_KIND,
+    SpacesUnavailable,
+    StoreError,
+)
 from agent_console_teams import (
     TeamPlan,
     agent_attachments,
@@ -39,8 +49,20 @@ def resource_document_path(path: str | None) -> str:
     return RESOURCE_CONFIG_POINTER + (path if path.startswith("/") else "/" + path)
 
 
+_MISSING = (StoreError, ValidationError, LookupError, OSError)
+"""리소스 정의를 "없음"으로 볼 읽기 실패."""
+
+
 class LookupResources:
-    """``definitions.lookup`` 위의 ``ResourceLookup``(``resources.lookup``이 없을 때)."""
+    """정의 저장소(``get``) 위의 ``ResourceLookup``.
+
+    ``resources.lookup``이 없을 때 ``definitions.lookup``을, 공간 기준 검사에서는 그 공간 저장소를
+    감싼다. 없거나 읽을 수 없는 정의는 None이다(다른 출처로 넘어가 찾지 않는다).
+
+    >>> from agent_console_store import DEFAULT_KINDS, InMemoryDefinitionStore
+    >>> LookupResources(InMemoryDefinitionStore(DEFAULT_KINDS)).get_resource("ghost") is None
+    True
+    """
 
     def __init__(self, lookup: DefinitionLookup, kind: str = RESOURCE_KIND.name) -> None:
         self._lookup = lookup
@@ -49,7 +71,7 @@ class LookupResources:
     def get_resource(self, ref: str) -> Resource | None:
         try:
             return Resource.model_validate(self._lookup.get(self._kind, ref).document)
-        except (StoreError, ValidationError):
+        except _MISSING:
             return None
 
     def read_content(self, resource: Resource) -> Content:
@@ -62,19 +84,46 @@ class DefinitionChecker:
 
     Attributes:
         types: 지금 리소스 종류 레지스트리.
-        resources: 지금 리소스 조회(첨부 ``ref``).
+        resources: 지금 리소스 조회(첨부 ``ref``, 라이브러리 기준).
         plan_of: 팀 구성 → ``TeamPlan``(리소스 연결 해석). 해석할 수 없으면 None(연결 검사 생략).
         secret_rules: 지금 비밀 의심 규칙(없으면 기본).
+        space_resources: 공간 이름 → 그 공간의 리소스 조회(``space_issues``). 없으면(기본)
+            ``space_issues``가 ``SpacesUnavailable``을 낸다. 모르는 공간은 제공자의 예외
+            (``UnknownSpace`` 등)를 그대로 낸다.
     """
 
     types: Callable[[], Registry[ResourceType]]
     resources: Callable[[], ResourceLookup]
     plan_of: Callable[[Graph], TeamPlan | None]
     secret_rules: Callable[[], SecretRules | None] = field(default=lambda: None)
+    space_resources: Callable[[str], ResourceLookup] | None = None
 
     def issues(self, kind: str, document: Mapping[str, Any] | BaseModel) -> list[Issue]:
-        """``kind`` 정의 문서의 검사 이슈(path = 문서 기준). 모델에 맞지 않는 문서는 빈 목록
-        (모델 검증은 저장소가 따로 한다)."""
+        """``kind`` 정의 문서의 검사 이슈(path = 문서 기준, 첨부는 ``resources``로 푼다). 모델에
+        맞지 않는 문서는 빈 목록(모델 검증은 저장소가 따로 한다)."""
+        return self._issues(kind, document, self.resources)
+
+    def space_issues(
+        self, space: str, kind: str, document: Mapping[str, Any] | BaseModel
+    ) -> list[Issue]:
+        """공간 ``space``에 저장할 때의 검사 이슈. ``issues``와 같고 첨부 ``ref``만 그 공간의
+        리소스로 푼다(라이브러리로 넘어가 찾지 않는다).
+
+        Raises:
+            agent_console_store.SpacesUnavailable: ``space_resources``가 없다.
+            Exception: ``space_resources``가 그 공간을 열지 못할 때 낸 예외(``UnknownSpace`` 등).
+        """
+        found = self.space_resources
+        if found is None:
+            raise SpacesUnavailable()
+        return self._issues(kind, document, lambda: found(space))
+
+    def _issues(
+        self,
+        kind: str,
+        document: Mapping[str, Any] | BaseModel,
+        resources: Callable[[], ResourceLookup],
+    ) -> list[Issue]:
         try:
             if kind == RESOURCE_KIND.name:
                 resource = _model(Resource, document)
@@ -96,7 +145,7 @@ class DefinitionChecker:
         return attachment_issues(
             placed,
             types=self.types(),
-            resources=self.resources(),
+            resources=resources(),
             secret_rules=self.secret_rules(),
         )
 

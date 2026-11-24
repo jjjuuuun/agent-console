@@ -11,7 +11,7 @@ export default [
         {
           patterns: [
             {
-              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*"],
+              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/virtual-rows"],
               message: "log-view는 contracts 타입만 import한다. 다른 사내 패키지는 슬롯 props로 받는다(F-19).",
             },
             {

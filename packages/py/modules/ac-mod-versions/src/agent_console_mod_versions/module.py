@@ -70,20 +70,21 @@ class VersionsModule:
             store, lambda: ctx.port(DEFINITIONS_SPACES), cast=_version_store
         )
 
-        def make(target: VersionStore) -> VersionService:
+        def make(target: VersionStore, space: str | None = None) -> VersionService:
             return VersionService(
                 target,
                 checks=lambda: ctx.ports(DEFINITION_CHECKS),
                 rules=ctx.port(SECRET_RULES),
                 secret_issue_codes=cfg.secret_issue_codes,
                 max_per_definition=cfg.max_per_definition,
-                spaces=lambda space: make(stores.get(space)),
+                spaces=lambda name: make(stores.get(name), name),
+                space=space,
             )
 
         service = make(store)
 
         def service_for(space: str | None) -> VersionService:
-            return service if not space else make(stores.get(space))
+            return service if not space else make(stores.get(space), space)
 
         startup: list[Callable[[], Awaitable[None]]] = []
         if cfg.max_per_definition is not None:

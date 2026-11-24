@@ -74,9 +74,11 @@ describe("REST v2: 새 경로", () => {
     await rest.previewDraftBundle({ graph: { id: "g", name: "g" } as never, node_id: "n" });
     await rest.listRuns({ graph_id: "g", conversation_id: "c", agent_id: "a", status: "waiting", limit: 3 });
     await rest.getRunTrace("r1");
+    await rest.getRunTrace("r1", { project: "p1" });
     await rest.listRunEvents("r1", { actor: "pl", type_prefix: "hook." });
     await rest.getHandoffs();
     await rest.getHandoffs({ graph_id: "g" });
+    await rest.getHandoffs({ project: "p1" });
     await rest.listConversations({ graph_id: "g", archived: false });
     await rest.createConversation({ graph_id: "g", title: "t" });
     await rest.getConversation("c");
@@ -116,9 +118,11 @@ describe("REST v2: 새 경로", () => {
       "POST /graphs/bundle-preview",
       "GET /runs?graph_id=g&conversation_id=c&agent_id=a&status=waiting&limit=3",
       "GET /runs/r1/trace",
+      "GET /runs/r1/trace?project=p1",
       "GET /runs/r1/events?actor=pl&type_prefix=hook.",
       "GET /runs/handoffs",
       "GET /runs/handoffs?graph_id=g",
+      "GET /runs/handoffs?project=p1",
       "GET /conversations?graph_id=g&archived=false",
       "POST /conversations",
       "GET /conversations/c",
@@ -143,10 +147,10 @@ describe("REST v2: 새 경로", () => {
     ]);
     const body = (i: number) => calls[i]?.body;
     expect(body(7)).toEqual({ id: "g2", name: "복제" });
-    expect(body(23)).toEqual({ graph_id: "g2" });
+    expect(body(25)).toEqual({ graph_id: "g2" });
     expect(body(13)).toEqual({ graph: { id: "g", name: "g" }, node_id: "n" });
     expect(body(14)).toEqual({ graph: { id: "g", name: "g" }, node_id: "n" });
-    expect(body(30)).toEqual({ response: { answer: "예" } });
+    expect(body(32)).toEqual({ response: { answer: "예" } });
     expect(calls.every((c) => c.headers["X-Console-Token"] === "T")).toBe(true);
   });
 

@@ -80,6 +80,7 @@ from .routes import build_router
 from .secrets import SecretRejectedError, document_issues
 from .service import SddPorts, SddService
 from .settings import SETTINGS_COMPAT, SddModuleSettings, package_defaults
+from .template_routes import TEMPLATE_ROUTE_WORDS
 from .ws import SDD_TOPIC, ChangePublisher, changed_message, topic_handlers
 
 _log = logging.getLogger("agent_console_mod_sdd")
@@ -225,6 +226,7 @@ class SddModule:
             spec_directory=cfg.spec_dir,
             template_kind=cfg.template_kind,
             template_directory=cfg.template_dir,
+            template_reserved_ids=TEMPLATE_ROUTE_WORDS,
         )
 
         def secret_rules() -> SecretRules:

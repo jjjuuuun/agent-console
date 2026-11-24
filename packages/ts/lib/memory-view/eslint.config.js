@@ -12,7 +12,7 @@ export default [
         {
           patterns: [
             {
-              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/text-editor"],
+              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/text-editor", "!@agent-console/virtual-rows"],
               message: "memory-view는 contracts 타입과 text-editor만 import한다. 나머지는 props로 받는다.",
             },
             {

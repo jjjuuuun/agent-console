@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- FU.2: `.gitignore` 틀에 이름 자리(`{state_dir}`·`{memory_file}`·`{records_file}`·`{sessions_dir}`)를 두고
+  `init_space`·`missing_gitignore_lines`·`append_gitignore`가 공간 배치(`SpaceLayout`)로 채운다. 새 공개
+  `render_gitignore_template(template, layout)`·`GITIGNORE_FIELDS`, `default_gitignore_template(layout=None)`
+  (생략하면 기본 배치로 채운 텍스트 — 전과 같은 결과).
 - 7R.13: `testing.FolderSpaces`(등록 id → 폴더 목록으로 `open_space`)를 `link-projects-sdd`에서 옮겨 왔다(`link-projects-wiki`도 쓴다).
 
 ## 0.1.0

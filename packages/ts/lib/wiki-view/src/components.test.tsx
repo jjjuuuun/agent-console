@@ -677,6 +677,11 @@ describe("MovePageForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "이름 바꾸기" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
+  it("새 경로가 현재와 같으면 빈 소제목 대신 안내 한 줄", () => {
+    render(<MovePageForm {...base} to="a" />);
+    expect(screen.getByTestId("wk-move-same").textContent).toContain("현재와 같습니다");
+    expect(screen.queryByText("바뀔 페이지")).toBeNull();
+  });
   it("충돌 페이지는 닫지 않고 목록에 남고 [열기]", () => {
     const onOpenPage = vi.fn();
     render(<MovePageForm {...base} result={{ ...preview, moved: true, conflicts: ["y/skip"] }} onOpenPage={onOpenPage} />);

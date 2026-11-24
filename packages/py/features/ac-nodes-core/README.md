@@ -330,7 +330,7 @@ True
 | `AGENT_LOOKUP` | `ServiceKey[Callable[[str], Agent \| None]]` | agent 노드 실패(`agent.lookup_unavailable`), 검증 생략 |
 | `WORKSPACE_SETTINGS` | `ServiceKey[WorkspaceSettings]` | 공통 층 비어 있음 |
 | `DEFAULT_BACKEND` | `ServiceKey[str]` | 모든 층이 비면 실패(`agent.no_backend`) |
-| `WORKING_DIRECTORY` | `ServiceKey[str]` | 유효 `working_directory`도 없으면 `cwd=None` |
+| `WORKING_DIRECTORY` | `ServiceKey[str]` | 유효 `working_directory`도 없으면 `cwd=None`. 있으면 상대 `working_directory`와 `limits.directories`의 `{workspace}`·상대 경로를 이 폴더 기준 실제 경로로 푼다(`resolve_working_directory`·`resolve_paths`, 틀 표 `path_placeholders`). 없으면 값 그대로 |
 | `RESOURCE_LOOKUP` | `ServiceKey[ResourceLookup]` | 붙은 리소스 미전달 + 경고(`agent.resources_unavailable`) |
 | `RUN_FILES_ROOT` | `ServiceKey[str]` | 파일 칸 미전달 + 경고(`files.unavailable`) |
 | `SESSIONS` | `ServiceKey[Mapping[str, SessionRef]]` | 새 세션 |

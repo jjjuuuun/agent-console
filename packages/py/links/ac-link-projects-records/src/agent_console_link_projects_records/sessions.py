@@ -79,8 +79,8 @@ class SessionArchiveSettings(BaseModel):
         pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
         title="보관 폴더 이름",
         description=(
-            "프로젝트 구성 폴더(.agent-console) 안 보관 폴더 이름. 기본 sessions는 구성 폴더의 "
-            ".gitignore가 제외한다. 바꾸면 git 제외 줄도 직접 더한다."
+            "프로젝트 구성 폴더(.agent-console) 안 보관 폴더 이름. 구성 폴더의 .gitignore 틀이 이 "
+            "이름을 따르고, 빠진 줄은 프로젝트 목록이 알린다."
         ),
         json_schema_extra=x_ui(tier="advanced"),
     )

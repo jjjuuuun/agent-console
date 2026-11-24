@@ -66,6 +66,7 @@ from agent_console_memory import (
     MemoryStoreError,
     MemoryToolkit,
     MemoryTransferLimits,
+    QueryHasher,
     RetentionRuleSet,
     ScopeKindCatalog,
     SecretRulesScanner,
@@ -79,6 +80,7 @@ from agent_console_memory import (
     iter_entries,
     load_default_scope_kinds,
     merge_scope_kinds,
+    query_hasher,
     retention_plan,
     write_markdown_archive,
 )
@@ -172,6 +174,8 @@ class MemoryService:
         max_page_size: 목록·정리 미리보기 한 번의 최대 항목 수.
         max_tag_list: 태그 목록 최대 수.
         max_search_results: 에이전트 검색 도구 한 번의 최대 결과 수.
+        query_hash: 검색 이벤트의 검색어 해셔(``query_hasher``). None이면 이 서비스가 하나를 만든다
+            (무작위 솔트 HMAC). 공간 서비스끼리 같은 값을 넘기면 같은 검색어가 같은 해시다.
         default_scope_kinds: 패키지 기본 범위 종류 데이터를 돌려주는 함수(기본
             ``load_default_scope_kinds``, 처음 한 번 읽는다).
         context_overrides: 도구 접근 맥락에 덮어쓸 값(필드 이름 → 값, 공간 서비스용).
@@ -197,6 +201,7 @@ class MemoryService:
         max_page_size: int = 200,
         max_tag_list: int = 500,
         max_search_results: int = 20,
+        query_hash: QueryHasher | None = None,
         default_scope_kinds: Callable[[], Mapping[str, Any]] = load_default_scope_kinds,
         context_overrides: Mapping[str, str] | None = None,
         spaces: MemorySpaceServices | None = None,
@@ -217,6 +222,7 @@ class MemoryService:
         self.max_page_size = max(1, max_page_size)
         self.max_tag_list = max(1, max_tag_list)
         self.max_search_results = max(1, max_search_results)
+        self.query_hash: QueryHasher = query_hash if query_hash is not None else query_hasher()
         self._default_reader = default_scope_kinds
         self._defaults: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
@@ -362,6 +368,7 @@ class MemoryService:
             text=text,
             on_event=on_event,
             write_budget=write_budget,
+            query_hash=self.query_hash,
             max_search_results=self.max_search_results,
         )
 

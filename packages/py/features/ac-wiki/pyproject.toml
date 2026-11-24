@@ -15,6 +15,9 @@ dependencies = [
     "agent-console-store>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
+    "agent-console-path-glob>=0.1,<0.2",
+    "agent-console-write-budget>=0.1,<0.2",
+    "agent-console-query-hash>=0.1,<0.2",
     "markdown-it-py>=3.0",
     "ruamel-yaml>=0.18",
 ]

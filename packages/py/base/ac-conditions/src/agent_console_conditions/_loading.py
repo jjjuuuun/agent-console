@@ -45,7 +45,7 @@ def load_condition_operators(
 ) -> list[LoadReport]:
     """entry point 그룹 `agent_console.condition_operators`를 `registry`에 로드한다.
 
-    기본 연산자 10개도 이 패키지의 entry point로 같은 길을 탄다(특별 취급 없음).
+    기본 연산자 11개도 이 패키지의 entry point로 같은 길을 탄다(특별 취급 없음).
 
     Args:
         registry: 대상 레지스트리(보통 `new_operator_registry()`).

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- FU.11: `runs.reader.list_node_runs_many`·`runs.events.list_many`(저장소 묶어 읽기) — Run의 자리(호스트·이 프로세스가 아는 공간)마다 묶어 한 번씩 읽는다. 읽을 수 없는 자리(`RecordsUnavailable`)의 Run은 뺀다. 표 변경 없음.
 - 5.7R.33t1: 맡는 범위 없는 프로젝트 실행 막기(K33-10). `runs.scopes` 선택 메서드 `accepts_project`(`RunProjectScoper`), 선택 포트 `projects.lookup`이 있는데 맡는 공급자가 없으면 실행 시작·대화 턴·이어 가기·프로젝트 기준 검증(`definitions_for`·`load_graph(project_id=)`·`check_project`)을 409 `feature_unavailable`(`details = {module, port: "runs.scopes", project_id}`)로 막고 Run을 만들지 않는다. 막는 동안 `server.warnings`에 같은 코드·`details.port`의 경고. 새 설정 `unscoped_project_runs`(`policy` reject·allow, `message`), 새 공개 이름 `RunProjectScoper`·`UnscopedProjectRuns`·`unscoped_project_policy`·`unscoped_project_warning`·`UNSCOPED_PROJECT_PORT`, `RunService(unscoped_project=)`·`accepts_project`·`has_project_scope`·`unscoped_project_error`. `graph_of_run`은 막지 않는다. 계약·표 변경 없음.
 - 5.7R.33p: `GET /runs/project-counts?source=app` — 앱(호스트) DB의 루트 Run만 센다(프로젝트 기록 DB는 읽지 않는다). 생략하면 지금처럼 앱 DB + 보관하지 않은 등록 프로젝트 기록 DB. 다른 값은 422. 계약 변경 없음.
 - 요청 11/08 후속: `GET /runs/{id}/locate`(`RunLocation`, 계약 0.14.8) — Run id → 그 Run이 있는 기록 공간(이 프로세스가 아는 공간 + 선택 포트 `projects.lookup`의 등록 프로젝트 기록 DB를 상한 `locate_max_projects`(기본 200)까지 읽기만, 앱 기록 = null, 실행 중이면 손잡이의 `project_id`). 없으면 404, 여러 곳이면 409 `run.ambiguous`(`RunAmbiguousError`). 찾은 공간은 `run_id` 자리로 기억한다(`SpaceRecorder.locate`, `agent_console_store.SpaceLocator` - 대화와 같은 정책). WS `run:<id>`도 모르는 Run이면 `RunService.locate`로 찾는다(작업 스레드에서). 새 모듈 설정 `locate_max_projects`, 새 공개 이름 `PROJECTS_LOOKUP`·`RunAmbiguousError`. 표 변경 없음.

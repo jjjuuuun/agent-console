@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- FU.5: 경로 글롭을 기반 패키지 `agent-console-path-glob`으로 옮겼다(`glob_match`·규칙 그대로, 새 의존).
+
 - 7R.15: 기본 분류 체계 데이터에 범주 `wiki`(라벨 `위키`만, `order`에는 넣지 않음).
 - 6R.9(M-1): 확장 판정 행 기준 미리 거르기(선택 능력) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck`. SQLite 색인은 `ac_row_ok`로 열 값에 먼저 묻고 모르는 행만 본문을 읽는다(결과 같음). `testing.FieldFilter(row_check=True)` 예제.
 - 6R.9(M-15): SQLite 값 목록 IN이 500개를 넘으면 `json_each` 부분 질의(바인드 변수 1개) — 값 40,000개도 기본 변수 한도(32,766) 아래. `category`·`agent`/`from`/`to` 필터도 같은 경로.

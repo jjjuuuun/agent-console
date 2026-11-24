@@ -3,7 +3,7 @@
 결과 = 엔진 검증 + 팀 규칙(``runs.starter``) + 저장 전 정의 검사(``definitions.checks``)의
 경고·정보. 질의 ``?project=<id>``를 주면 그 프로젝트에서 실행할 때 기준이다(``runs.starter``의
 선택 메서드 ``check_project`` — 실행 시작과 같은 정의 출처·실행 범위, 공간에만 있는 구성도 읽는다).
-그 메서드가 없으면 409 ``feature_unavailable``.
+그 메서드가 없으면 409 ``feature_unavailable``. 저장 전 검사도 그 공간 기준(``space_issues``)이다.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def build_router(
                 raise project_unavailable()
             target = graph or check.load_graph(graph_id, project_id=space)
             issues = check.check_project(graph_id, space, graph=target)
-            return with_definition_checks(target, issues, checks)
+            return with_definition_checks(target, issues, checks, space=space)
         target = graph or check.load_graph(graph_id)
         return with_definition_checks(target, check.check(target), checks)
 

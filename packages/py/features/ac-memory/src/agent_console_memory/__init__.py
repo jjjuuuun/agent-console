@@ -6,7 +6,8 @@
 
 공개 API:
     - 저장소(X31): ``MemoryStore`` 프로토콜, ``InMemoryMemoryStore``, ``MemoryQuery``,
-      ``MemoryWriteOutcome``, ``WriteMode``.
+      ``MemoryWriteOutcome``, ``WriteMode``. 처음 쓸 때 여는 감싸개
+      ``DeferredMemoryStore``(보기만으로 파일을 만들지 않기).
     - 쓰기 정책: ``MemoryPolicy``·``MemoryLimits``, 비밀 검사 주입 ``SecretScanner``·
       ``SecretRulesScanner``·``MemorySecretGuard``, ``prepare_write``·``content_digest``,
       키 규칙 ``check_key``·``check_tags``.
@@ -21,7 +22,8 @@
     - 접근: ``allowed``, ``scope_kinds_for``, ``granted_ops``, ``default_scope_kind``.
     - 도구 묶음: ``MemoryToolkit``, ``ToolSpec``, ``ToolOutcome``, ``ToolText``,
       ``load_tool_text``, ``WriteBudget``, ``agent_author``, ``format_author``, ``format_time``,
-      ``fill``.
+      ``fill``. 검색어 해시(공용 ``agent_console_query_hash`` 다시 내보냄): ``query_hasher``·
+      ``query_hasher_from_env``·``QueryHasher``·``QueryHashModes``·``QUERY_HASH_MODES``.
     - 오류: ``MemoryStoreError``, ``InvalidKeyError``, ``EntryNotFoundError``,
       ``EntryExistsError``, ``VersionConflictError``, ``TooLargeError``, ``SecretRejectedError``.
     - 정리 규칙(design §5.7R.1.4, 기본 규칙 없음): ``retention_plan``·``apply_retention``,
@@ -45,6 +47,8 @@
     - 테스트 도구: 하위 모듈 ``testing``(가짜 시계·표본), ``testing.contract``(저장소 계약 묶음).
 """
 
+from agent_console_write_budget import WriteBudget
+
 from ._access import allowed, default_scope_kind, granted_ops, scope_kinds_for
 from ._copy import (
     DEFAULT_COPY_RENAME_FORMAT,
@@ -53,6 +57,7 @@ from ._copy import (
     matches_filter,
     remap_scope,
 )
+from ._deferred import DeferredMemoryStore
 from ._errors import (
     EntryExistsError,
     EntryNotFoundError,
@@ -82,6 +87,13 @@ from ._policy import (
     check_secret_field,
     content_digest,
     prepare_write,
+)
+from ._query_hash import (
+    QUERY_HASH_MODES,
+    QueryHasher,
+    QueryHashModes,
+    query_hasher,
+    query_hasher_from_env,
 )
 from ._retention import (
     RETENTION_SUBJECT_FIELDS,
@@ -129,7 +141,6 @@ from ._toolkit import (
     ToolOutcome,
     ToolSpec,
     ToolText,
-    WriteBudget,
     agent_author,
     fill,
     format_author,
@@ -159,9 +170,11 @@ __all__ = [
     "KEY_SEPARATOR",
     "MEMORY_SCOPE_KINDS_EXTENSION",
     "MEMORY_SCOPE_KINDS_GROUP",
+    "QUERY_HASH_MODES",
     "RETENTION_SUBJECT_FIELDS",
     "TOOL_TEXT_RESOURCE",
     "CompiledRetentionRule",
+    "DeferredMemoryStore",
     "EntryExistsError",
     "EntryHead",
     "EntryNotFoundError",
@@ -183,6 +196,8 @@ __all__ = [
     "MemoryTransferLimits",
     "MemoryWriteOutcome",
     "PreparedWrite",
+    "QueryHashModes",
+    "QueryHasher",
     "RetentionRuleSet",
     "ScannedEntry",
     "ScopeKindCatalog",
@@ -239,6 +254,8 @@ __all__ = [
     "parse_markdown",
     "plugin_scope_kinds",
     "prepare_write",
+    "query_hasher",
+    "query_hasher_from_env",
     "remap_scope",
     "render_markdown",
     "render_template",

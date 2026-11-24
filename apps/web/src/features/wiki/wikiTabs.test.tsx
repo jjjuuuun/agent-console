@@ -54,6 +54,16 @@ describe("그래프 탭", () => {
     expect(screen.getByText("노드 3개")).toBeTruthy();
   });
 
+  it("큰 위키에 현재 페이지·첫 페이지가 없으면 전체 대신 목록의 첫 페이지 주변만 묻고 안내한다, 노드가 많으면 큰 그래프 칩", async () => {
+    const getWikiGraph = vi.fn(async () => ({ ...GRAPH, nodes: [{ path: "a/one", title: "one" }, ...Array.from({ length: 200 }, (_, i) => ({ path: `p${i}`, title: `p${i}` }))], edges: [] }));
+    const pages = { items: [{ path: "a/one", title: "one", tags: [], aliases: [], bytes: 1, updated_at: 1 }], truncated: false };
+    setup(base("graph"), fixture({ wikis: [wikiSummary({ pages: 500 })], pages, wiki: { getWikiGraph } }));
+    expect(await screen.findByTestId("wiki-graph-big-fallback", {}, LONG)).toBeTruthy();
+    expect(getWikiGraph).toHaveBeenCalledTimes(1);
+    expect(getWikiGraph).toHaveBeenCalledWith("w1", { center: "a/one", depth: 1 });
+    expect(screen.getByText("큰 그래프")).toBeTruthy();
+  });
+
   it("주소에 path가 있으면 직전에 연 페이지(저장값)가 아니라 그 path가 중심이다(depth=all 포함)", async () => {
     const storage = { get: (k: string) => (k.includes("w1") ? "a/two" : null), set: () => undefined, remove: () => undefined } as unknown as SafeStorage;
     const getWikiGraph = vi.fn(async () => GRAPH);

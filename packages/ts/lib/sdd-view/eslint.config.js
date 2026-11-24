@@ -12,7 +12,7 @@ export default [
         {
           patterns: [
             {
-              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/markdown-doc"],
+              group: ["@agent-console/*", "!@agent-console/contracts", "!@agent-console/contracts/*", "!@agent-console/markdown-doc", "!@agent-console/virtual-rows"],
               message: "sdd-view는 contracts 타입과 markdown-doc만 import한다. 나머지는 props로 받는다.",
             },
             {

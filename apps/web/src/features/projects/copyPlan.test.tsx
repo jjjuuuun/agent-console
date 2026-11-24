@@ -157,6 +157,23 @@ describe("CopyPlanDialog: 계획", () => {
     expect(failing.applyCopy).not.toHaveBeenCalled();
   });
 
+  it("예약어 id 경고: 새 이름이 기본이고 서버 제안 id가 미리 채워지며, 없음 항목도 새 이름을 고를 수 있다", async () => {
+    const warn = { severity: "warning" as const, code: "project.copy_reserved_id", message: "서버 문구", details: { kind: "k1", id: "new", reserved: "new", suggested_id: "new-2" } };
+    const { applyCopy } = setup(
+      { initialStep: "plan", initialItems: [{ kind: "k1", id: "new" }] },
+      { items: [planItem({ kind: "k1", id: "new", default_action: "rename" })], warnings: [warn] },
+    );
+    const input = (await screen.findByLabelText("새 이름(id)")) as HTMLInputElement;
+    expect(input.value).toBe("new-2");
+    expect(screen.queryByText("서버 문구")).toBeNull();
+    expect(screen.getByText(/예약된 이름/)).toBeTruthy();
+    const select = screen.getByLabelText(/처리/) as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["copy", "rename", "skip"]);
+    fireEvent.click(screen.getByRole("button", { name: /가져오기 \(1\)/ }));
+    await waitFor(() => expect(applyCopy).toHaveBeenCalled());
+    expect(applyCopy.mock.calls[0]?.[0]?.items[0]).toMatchObject({ action: "rename", new_id: "new-2" });
+  });
+
   it("옛 전용 구성 옮기기: remove_source 체크가 기본 켜짐이고 요청에 실린다", async () => {
     const { applyCopy } = setup({ direction: "move", removeSourceDefault: true, initialStep: "plan", initialItems: [{ kind: "k1", id: "a" }] }, { items: [planItem({ kind: "k1", id: "a" })] });
     const box = (await screen.findByRole("checkbox", { name: "복사한 뒤 공용에서 지우기" })) as HTMLInputElement;

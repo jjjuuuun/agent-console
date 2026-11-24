@@ -102,7 +102,9 @@ True
 
 ## 설정 (`modules.options.mod-projects`)
 
-- `directory`(등록부 폴더), `config_dir`(기본 `.agent-console`), `records_file`(기록 DB 파일 이름)
+- `directory`(등록부 폴더), `config_dir`(기본 `.agent-console`), `records_file`(기록 DB 파일 이름),
+  `sessions_dir`(세션 보관 폴더 이름 — 비우면 `link-projects-records.session_archive.dir`를 이어받음).
+  `.gitignore` 틀과 `project.gitignore_outdated` 점검은 이 이름들을 따른다
 - `status_timeout_seconds`(기본 2), `browse_roots`, `allow_remote_browse`(기본 끔),
   `server_host`(서버 `host`를 이어받음), `case_insensitive_paths`(예 `/mnt/?`)
 - `folder_dialog`: `mode`(auto·off)·`providers`·`include_default_providers`·`timeout_seconds`(기본 300)

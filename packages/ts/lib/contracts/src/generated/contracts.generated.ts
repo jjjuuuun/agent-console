@@ -8184,7 +8184,7 @@ export interface MemoryEventPayload {
    */
   query_chars?: number | null;
   /**
-   * 검색어 sha256(16진수).
+   * 검색어 해시(16진수 64자). 기본은 솔트 HMAC-SHA256(솔트를 모르면 원문을 짐작하기 어렵다)이고, 설치자 설정으로 솔트 없는 sha256으로 바꾸거나 끌 수 있다(끄면 없음).
    */
   query_sha256?: string | null;
   /**
@@ -12012,7 +12012,7 @@ export interface WikiEventPayload {
    */
   query_chars?: number | null;
   /**
-   * 검색어 sha256(16진수).
+   * 검색어 해시(16진수 64자). 기본은 솔트 HMAC-SHA256(솔트를 모르면 원문을 짐작하기 어렵다)이고, 설치자 설정으로 솔트 없는 sha256으로 바꾸거나 끌 수 있다(끄면 없음).
    */
   query_sha256?: string | null;
   /**
@@ -12949,11 +12949,11 @@ export interface WikiWriteRule {
    */
   id: string;
   /**
-   * 이 경로 모양의 페이지에만 겁니다(예: decisions/**). 비우면 모든 페이지입니다.
+   * 이 경로 모양에 맞는 페이지에만 규칙을 적용합니다(예: decisions/**). 비우면 모든 페이지에 적용합니다.
    */
   applies_to?: string[];
   /**
-   * 이 조건이 맞는 쓰기에만 겁니다. 비우면 모든 쓰기입니다.
+   * 이 조건이 맞는 쓰기에만 규칙을 적용합니다. 비우면 모든 쓰기에 적용합니다.
    */
   when?: WikiWriteCondition | null;
   /**
@@ -12975,18 +12975,18 @@ export interface WikiWriteRule {
   [k: string]: unknown;
 }
 /**
- * 쓰기 규칙을 걸 쓰기를 고르는 조건입니다. 비우면 모든 쓰기에 겁니다.
+ * 쓰기 규칙을 적용할 쓰기를 고르는 조건입니다. 비우면 모든 쓰기에 적용합니다.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "WikiWriteCondition".
  */
 export interface WikiWriteCondition {
   /**
-   * 여기 적은 조건이 모두 맞는 쓰기에만 겁니다.
+   * 여기 적은 조건이 모두 맞는 쓰기에만 적용합니다.
    */
   all?: WikiWriteConditionItem[] | null;
   /**
-   * 여기 적은 조건 중 하나만 맞아도 겁니다.
+   * 여기 적은 조건 중 하나만 맞아도 적용합니다.
    */
   any?: WikiWriteConditionItem[] | null;
   /**

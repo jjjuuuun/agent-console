@@ -15,7 +15,7 @@ from agent_console_secret_rules import SecretRules, default_rules
 from agent_console_settings import MISSING, diff_digests, diff_documents
 from agent_console_store import NotFound, StoredDefinition, VersionRequired
 
-from .ports import DefinitionCheck, SavedDefinition, VersionStore
+from .ports import DefinitionCheck, SavedDefinition, SpaceDefinitionCheck, VersionStore
 from .settings import DEFAULT_SECRET_ISSUE_CODES
 
 _log = logging.getLogger("agent_console_mod_versions")
@@ -50,6 +50,8 @@ class VersionService:
         max_per_definition: 정의마다 남길 버전 수(None = 모두).
         spaces: 공간 이름 → 그 공간의 서비스(``definitions.saved``의 ``space`` 항목용). 없으면 공간
             항목은 건너뛴다.
+        space: 이 서비스가 쓰는 공간 이름(None = 라이브러리). 공간이면 저장 전 검사는 검사의 선택
+            메서드 ``space_issues``가 있으면 그것으로 한다(없으면 ``issues``).
     """
 
     def __init__(
@@ -61,8 +63,10 @@ class VersionService:
         secret_issue_codes: Collection[str] = DEFAULT_SECRET_ISSUE_CODES,
         max_per_definition: int | None = None,
         spaces: Callable[[str], VersionService] | None = None,
+        space: str | None = None,
     ) -> None:
         self.store = store
+        self.space = space
         self._spaces = spaces
         self._checks = checks
         self._rules = rules or default_rules
@@ -72,8 +76,15 @@ class VersionService:
     # ------------------------------------------------------------ 검사
 
     def issues(self, kind: str, document: Mapping[str, Any]) -> list[Issue]:
-        """저장 전 검사 이슈(제공자 전부)."""
-        return [i for c in self._checks() for i in c.issues(kind, document)]
+        """저장 전 검사 이슈(제공자 전부). 공간 서비스면 공간 기준 검사."""
+        return [i for c in self._checks() for i in self._check_issues(c, kind, document)]
+
+    def _check_issues(
+        self, check: DefinitionCheck, kind: str, document: Mapping[str, Any]
+    ) -> Sequence[Issue]:
+        if self.space and isinstance(check, SpaceDefinitionCheck):
+            return check.space_issues(self.space, kind, document)
+        return check.issues(kind, document)
 
     def secret_paths(self, kind: str, document: Mapping[str, Any]) -> list[str]:
         """정의 문서의 비밀 위치(문서 기준 JSON Pointer): 평문 이슈 + 의심 규칙."""

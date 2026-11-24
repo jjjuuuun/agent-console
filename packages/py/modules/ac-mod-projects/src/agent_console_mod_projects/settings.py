@@ -85,6 +85,13 @@ class ProjectModuleSettings(BaseModel):
         "(records.sqlite3).",
         json_schema_extra=x_ui(tier="advanced", example="records.sqlite3"),
     )
+    sessions_dir: str | None = Field(
+        default=None,
+        title="세션 보관 폴더 이름",
+        description="프로젝트 구성 폴더 안 대화 원본 보관 폴더 이름. git 제외 줄이 따른다. 비우면 "
+        "기록 연동의 보관 폴더 이름을 이어받는다(기본 sessions).",
+        json_schema_extra=x_ui(tier="advanced", example="sessions"),
+    )
     messages: dict[str, str] = Field(
         title="문구 바꾸기",
         json_schema_extra=x_ui(tier="advanced"),
@@ -179,10 +186,12 @@ SETTINGS_COMPAT = SettingsCompat(
     seeds=(
         SeedSetting("server_host", "host"),
         SeedSetting("records_space_prefix", "modules.options.link-projects-records.space_prefix"),
+        SeedSetting("sessions_dir", "modules.options.link-projects-records.session_archive.dir"),
     ),
 )
 """다른 설정 값을 기본값으로 이어받는다(값이 없을 때만): 서버 바인딩 주소, 기록 연동의 공간 이름
-접두. 실행 모듈 작업 폴더는 5.7R.33i부터 이어받지 않는다(옛 로그 범위 current 삭제)."""
+접두, 기록 연동의 세션 보관 폴더 이름(`.gitignore` 틀이 따라가게). 실행 모듈 작업 폴더는
+5.7R.33i부터 이어받지 않는다(옛 로그 범위 current 삭제)."""
 
 
 __all__ = [

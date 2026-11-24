@@ -7,7 +7,7 @@ Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게
 
 | 무엇 | 내용 |
 | --- | --- |
-| 받는 포트 | 필수 `wiki.service`(`mod-wiki` — `tool_targets`·`notify`·`wiki_ids`). 없으면 이 연동은 꺼진다. 선택 `projects.lookup`(저장 전 검사가 프로젝트 공간 위키 id도 본다) |
+| 받는 포트 | 필수 `wiki.service`(`mod-wiki` — `tool_targets`·`notify`·`wiki_ids`, 선택 속성 `query_hash` = 검색어 해셔, 없으면 이 연동이 무작위 솔트 해셔 하나를 쓴다). 없으면 이 연동은 꺼진다. 선택 `projects.lookup`(저장 전 검사가 프로젝트 공간 위키 id도 본다) |
 | 주는 포트 | `runs.scopes`(Run마다 위키 도구 공급자), `definitions.checks`(모르는 위키 id → warning `wiki.unknown_wiki`), `wiki.integrations`(`{runs}` → 위키 화면 `capabilities.runs`) |
 | 리소스 종류 | `wiki`(entry point `agent_console.resource_types`, 패키지 데이터 `data/wiki_resource_type.yaml`, 설정 스키마 = 계약 `WikiAccessConfig`, 위키 칸은 `x-ui` 위젯 `wiki-ref`) |
 | 실행 이벤트 | 도구 호출마다 `wiki.read`·`wiki.search`·`wiki.list`·`wiki.links`·`wiki.write`·`wiki.move`·`wiki.delete`(payload = 계약 `WikiEventPayload`: 위키·경로·상태·사유 코드·버전·바이트 수·해시·규칙 id·결과 수·검색어 길이·해시·도구 이름·`tool_use_id`·처리 시간. **본문·검색어 원문 없음**) |
@@ -20,7 +20,7 @@ Agent Console 위키·실행 연동 모듈(`link-wiki-runs`). 에이전트에게
   리소스 config(데이터)다. 허용한 위키가 없는 동작의 도구는 나오지 않는다.
 - **층**: 같은 칸에 여러 첨부(공통 → 팀 구성 → 에이전트 → 노드)가 있으면 위키마다 가까운 층의 허용 동작을
   쓴다. 나머지 키(기본 위키·도구 이름·경로 안내 등)도 가까운 층이 정한 값이 이긴다(`merge_access`, 메모리
-  연동과 같은 규칙).
+  연동과 같은 규칙 `agent_console_nodes_core.merge_access_layers`).
 - **어느 위키인가**: 그 실행 공간의 위키만이다. 루트 Run의 `project_id`가 있으면 그 프로젝트 공간, 없으면
   단독 공간. 리소스가 가리킨 위키가 그 공간에 없으면 도구는 그대로 주고 그 위키 호출은
   `wiki.wiki_unavailable`이며, 그 노드에 경고(`wiki.wiki_unavailable`, details `wikis`) 1건이 붙는다.

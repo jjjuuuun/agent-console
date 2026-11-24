@@ -17,7 +17,9 @@ runtime은 정의 저장소·설정·파일 시스템 위치를 모른다. 이 �
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Mapping, Sequence
+from pathlib import PurePath, PureWindowsPath
 from typing import Final
 
 from agent_console_contracts import Agent, Fix, Graph, WorkspaceSettings
@@ -49,7 +51,74 @@ DEFAULT_BACKEND: Final = ServiceKey[str]("nodes_core.default_backend")
 """모든 설정 층이 백엔드를 비웠을 때 쓸 백엔드 id(마지막 기본값)."""
 
 WORKING_DIRECTORY: Final = ServiceKey[str]("nodes_core.working_directory")
-"""유효 설정 `working_directory`가 비었을 때 `AgentRequest.cwd`(예: 서버 작업 폴더). 없으면 None."""
+"""유효 설정 `working_directory`가 비었을 때 `AgentRequest.cwd`(예: 서버 작업 폴더, 프로젝트
+실행이면 프로젝트 폴더). 설정 값이 상대 경로면 이 폴더 기준으로 잇는다
+(`resolve_working_directory`). 없으면 None(상대 경로는 그대로)."""
+
+
+def resolve_working_directory(value: str | None, base: str | None) -> str | None:
+    """에이전트 작업 폴더: 설정 값이 비면 `base`, 상대 경로면 `base` 기준으로 이은 정규화 경로.
+
+    절대 경로·`~`로 시작하는 값·드라이브가 있는 값은 그대로 둔다. `base`가 없으면 값 그대로다.
+    실행 범위(예: 프로젝트 경로 지킴)가 상대 경로를 그 폴더 기준으로 검사하므로, 실행 때도 같은
+    기준으로 풀어 백엔드가 프로세스 작업 폴더 기준으로 읽지 않게 한다.
+
+    >>> resolve_working_directory("sub", "/w/app")
+    '/w/app/sub'
+    >>> resolve_working_directory(None, "/w/app"), resolve_working_directory("/x", "/w/app")
+    ('/w/app', '/x')
+    >>> resolve_working_directory("sub", None)
+    'sub'
+    """
+    if not value:
+        return base or None
+    if not base or value.startswith("~") or PurePath(value).is_absolute():
+        return value
+    if PureWindowsPath(value).drive or PureWindowsPath(value).root:
+        return value
+    return os.path.normpath(os.path.join(base, value))
+
+
+WORKSPACE_PLACEHOLDER: Final = "workspace"
+"""경로 값 안 틀 `{workspace}`의 이름(계약 `Limits.directories` 설명이 약속하는 틀). 값은 기준 폴더
+(`WORKING_DIRECTORY` — 프로젝트 실행이면 프로젝트 폴더)다. 틀 표는 `path_placeholders` 한 곳에서
+만든다 — 실행(`resolve_paths`)과 경로 지킴(예: link-projects-runs)이 같은 표를 쓴다."""
+
+
+def path_placeholders(base: str | None) -> dict[str, str]:
+    """경로 값 안 `{이름}` 틀 표(이름 → 바꿀 글자). 기준 폴더가 없으면 빈 표(틀은 그대로 남는다).
+
+    >>> path_placeholders("/w/app"), path_placeholders(None)
+    ({'workspace': '/w/app'}, {})
+    """
+    return {WORKSPACE_PLACEHOLDER: base} if base else {}
+
+
+def resolve_paths(values: Sequence[str], base: str | None) -> list[str]:
+    """경로 목록(예: `limits.directories`)을 실행 때 쓸 경로로: 틀(`path_placeholders`)을 바꾸고
+    상대 경로는 `base` 기준으로 잇는다(`resolve_working_directory`와 같은 규칙).
+
+    경로 지킴이 같은 표·같은 기준으로 검사하므로 백엔드가 받는 경로는 검사한 경로와 같다. 빈 값은
+    뺀다. `base`가 없으면 값 그대로(틀도 그대로)다.
+
+    >>> resolve_paths(["{workspace}/src", "docs", "/abs", " "], "/w/app")
+    ['/w/app/src', '/w/app/docs', '/abs']
+    >>> resolve_paths(["{workspace}", "docs"], None)
+    ['{workspace}', 'docs']
+    """
+    table = path_placeholders(base)
+    out: list[str] = []
+    for raw in values:
+        text = raw.strip()
+        if not text:
+            continue
+        filled = text
+        for name, replacement in table.items():
+            filled = filled.replace("{" + name + "}", replacement)
+        resolved = resolve_working_directory(filled, base) or filled
+        out.append(os.path.normpath(resolved) if filled != text else resolved)
+    return out
+
 
 SCOPE_LAYERS: Final = ServiceKey[Sequence[Layer]]("nodes_core.scope_layers")
 """설정 층의 공통 바로 아래에 끼울 층(`ac-teams` `scope_layers`, 예: 프로젝트 층의 작업 폴더·설정).

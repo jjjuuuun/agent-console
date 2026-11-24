@@ -1,6 +1,20 @@
 # 변경 기록
 
+## 미출시
+
+- FU.12: `WikiToolkit(query_hash=)` — 검색 이벤트 `query_sha256`의 기본이 솔트 없는 sha256에서 묶음마다 무작위 솔트
+  HMAC-SHA256으로 바뀌었다(`query_hasher("sha256")`으로 옛 값, `off`면 싣지 않음). `query_hasher`·
+  `query_hasher_from_env`·`QueryHasher`·`QueryHashModes`·`QUERY_HASH_MODES`는 `agent-console-query-hash`를 다시
+  내보낸 것.
+- FU.5: 페이지 글롭은 `agent-console-path-glob`, 쓰기 한도 `WriteBudget`은 `agent-console-write-budget`을 쓴다(다시 내보냄,
+  `WikiWriteBudget` = `WriteBudgetLike`). 동작 그대로.
+
 ## 0.1.0
+
+- FU.1: `LocalWikiPages`가 링크 바꿔치기(TOCTOU — 검사한 뒤 열기 전에 폴더가 링크로 바뀜)를 막는다. 디렉터리 fd를
+  쓸 수 있는 OS는 한 칸씩 `O_NOFOLLOW`로 열어 내려가 그 fd 기준으로 읽기·쓰기·지우기·옮기기·목록을 하고, Windows는
+  연 뒤 다시 확인한다(링크·실제 경로 + `fstat` 동일성). 새 선택 인자 `within`(루트가 들어 있어야 하는 기준 폴더 —
+  루트가 그 안을 가리키는 링크인 것은 된다). 루트 자체가 링크면 목록도 따라간다(읽기·쓰기와 같게).
 
 - 에이전트 도구 묶음(7R.10): `WikiToolkit`(도구 7개 — search·read(절)·list·links·write(replace·append·section·
   template)·move·delete, 위키별 접근·`wiki.denied`·`wiki_unavailable`, 사유 코드, 본문 없는 이벤트, 결과 가림·

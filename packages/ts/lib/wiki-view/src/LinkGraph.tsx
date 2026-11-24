@@ -1,6 +1,6 @@
 import type { WikiGraph } from "@agent-console/contracts/wiki";
 import {
-  Background, BaseEdge, Controls, EdgeLabelRenderer, Handle, Position, ReactFlow, ReactFlowProvider, useInternalNode, useNodesInitialized, useReactFlow,
+  Background, BaseEdge, Controls, EdgeLabelRenderer, Handle, Position, ReactFlow, ReactFlowProvider, useInternalNode, useNodesInitialized, useReactFlow, useStore,
   type Edge, type EdgeProps, type Node, type NodeProps,
 } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
@@ -21,7 +21,10 @@ type GraphEdge = Edge<GraphEdgeData, "wiki-edge">;
 function RefitOnLayout({ token, maxZoom, readableZoom, focusId }: { token: unknown; maxZoom: number; readableZoom: number; focusId: string | null }) {
   const rf = useReactFlow();
   const ready = useNodesInitialized();
+  // 캔버스 크기(0이면 아직 레이아웃 전이라 맞출 수 없다). 크기가 정해지거나 바뀌면 다시 맞춘다.
+  const size = useStore((st) => `${st.width}x${st.height}`);
   useEffect(() => {
+    if (/(^|x)0(x|$)/.test(size)) return;
     // 새 노드 좌표가 React Flow 저장소에 반영된 다음 프레임에 맞춘다
     const timer = setTimeout(() => {
       void rf.fitView({ maxZoom, duration: 0 }).then(() => {
@@ -34,7 +37,7 @@ function RefitOnLayout({ token, maxZoom, readableZoom, focusId }: { token: unkno
       });
     }, 50);
     return () => clearTimeout(timer);
-  }, [rf, ready, token, maxZoom, readableZoom, focusId]);
+  }, [rf, ready, token, maxZoom, readableZoom, focusId, size]);
   return null;
 }
 

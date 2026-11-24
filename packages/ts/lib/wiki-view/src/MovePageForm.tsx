@@ -91,6 +91,8 @@ export function MovePageForm({
         <p className="ac-wk-banner" data-tone="warning" role="status">
           {formatMessage(t["move.willBreak"], { pages: totals.pages, links: totals.links })}
         </p>
+      ) : same && !result ? (
+        <p className="ac-wk-muted ac-wk-hint" role="status" data-testid="wk-move-same">{t["move.same"]}</p>
       ) : (
         <div className="ac-wk-move-list" aria-busy={previewLoading || undefined}>
           <p className="ac-wk-inline ac-wk-muted" role="status">

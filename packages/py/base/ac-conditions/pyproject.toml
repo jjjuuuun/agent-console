@@ -26,6 +26,7 @@ gt = "agent_console_conditions.builtin:GT"
 gte = "agent_console_conditions.builtin:GTE"
 lt = "agent_console_conditions.builtin:LT"
 lte = "agent_console_conditions.builtin:LTE"
+any_item = "agent_console_conditions.builtin:ANY_ITEM"
 
 [dependency-groups]
 dev = [

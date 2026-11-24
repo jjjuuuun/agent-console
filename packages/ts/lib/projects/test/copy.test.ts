@@ -12,6 +12,7 @@ import {
   initialSelections,
   itemsNeedingChoice,
   mergeReplan,
+  reservedIdSuggestions,
   selectAction,
   skipWarnings,
   suggestRename,
@@ -53,13 +54,31 @@ describe("기본 동작", () => {
   });
 
   test("선택지: 상태별 표, 모르는 상태는 내용이 다름과 같다", () => {
-    expect(actionChoicesFor({ target_state: "absent" }).map((c) => c.action)).toEqual(["copy", "skip"]);
+    expect(actionChoicesFor({ target_state: "absent" }).map((c) => c.action)).toEqual(["copy", "rename", "skip"]);
     expect(actionChoicesFor({ target_state: "identical" }).map((c) => c.action)).toEqual(["reuse", "rename", "skip"]);
     const different = actionChoicesFor({ target_state: "different" });
     expect(different.map((c) => c.action)).toEqual(["overwrite", "rename", "skip"]);
     expect(actionChoicesFor({ target_state: "?" })).toEqual(different);
     expect(different[2]?.label.key).toBe("copy.action.skip_keep");
     expect(targetStateLabel("?")).toEqual({ key: "copy.state.different" });
+  });
+});
+
+describe("예약어 id 경고", () => {
+  const warned: CopyPlan = {
+    items: [item({ id: "new", target_state: "absent", default_action: "rename" }), item({ id: "ok", target_state: "absent", default_action: "copy" })],
+    warnings: [{ severity: "warning", code: "project.copy_reserved_id", message: "m", details: { kind: "k1", id: "new", reserved: "new", suggested_id: "new-2" } }],
+  };
+  test("서버 기본 rename은 선택지에 있어 유지되고 suggested_id가 미리 채워진다", () => {
+    const sel = initialSelections(warned);
+    expect(sel.get(copyItemKey({ kind: "k1", id: "new" }))).toEqual({ action: "rename", newId: "new-2" });
+    expect(sel.get(copyItemKey({ kind: "k1", id: "ok" }))).toEqual({ action: "copy" });
+  });
+  test("복사로 바꿨다가 새 이름을 고르면 서버 제안을 쓴다", () => {
+    const sug = reservedIdSuggestions(warned);
+    const back = selectAction(initialSelections(warned), { kind: "k1", id: "new" }, "copy");
+    const again = selectAction(back, { kind: "k1", id: "new" }, "rename", [], sug.get(copyItemKey({ kind: "k1", id: "new" })));
+    expect(again.get(copyItemKey({ kind: "k1", id: "new" }))?.newId).toBe("new-2");
   });
 });
 

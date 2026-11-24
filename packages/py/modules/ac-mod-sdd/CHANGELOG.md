@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- FU.6: 문서 틀 종류 데이터가 경로 예약어(`TEMPLATE_ROUTE_WORDS`)를 `DefinitionKind.reserved_ids`로 싣는다(복사 계획이 새 id를 제안).
+
 ## 0.1.0
 
 - 처음 만듦(6R.13, scripts/pkgkit 템플릿 `module`): REST `/sdd/*`·WS `sdd.changed`, 정의 종류 기여

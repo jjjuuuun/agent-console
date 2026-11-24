@@ -3,7 +3,7 @@
 조건은 표현식 언어가 아니라 데이터다(계약 `ConditionSpec{all?, any?, negate?}` +
 `ConditionItem{path, op, value?}`). 이 패키지는 조건을 판단 대상(JSON)에 적용하고 근거
 (`ConditionOutcome`)를 만들며, 저장 전 검사 이슈를 낸다. 연산자 이름은 모른다 — 모든 연산자는
-레지스트리(entry point `agent_console.condition_operators`)로 들어오고, 기본 10개(`builtin`)도 같은
+레지스트리(entry point `agent_console.condition_operators`)로 들어오고, 기본 11개(`builtin`)도 같은
 길로 등록된다. 서버·엔진 없이 단독으로 쓸 수 있다.
 
 공개 API:

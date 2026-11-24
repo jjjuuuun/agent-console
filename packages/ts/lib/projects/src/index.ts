@@ -76,6 +76,8 @@ export type { SpaceId, SpaceKind, SpaceLabel } from "./space";
 export {
   COPY_ACTION_CHOICES,
   COPY_REASON_REQUESTED,
+  COPY_WARNING_RESERVED_ID,
+  reservedIdSuggestions,
   SLUG_PATTERN,
   actionChoicesFor,
   choiceLabel,

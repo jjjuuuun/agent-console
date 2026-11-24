@@ -9,7 +9,7 @@ from typing import Literal, Unpack
 from agent_console_contracts import ProjectManifest
 
 from ._errors import ManifestInvalid
-from ._gitignore import default_gitignore_template
+from ._gitignore import default_gitignore_template, render_gitignore_template
 from ._manifest import ManifestRecord, read_manifest, write_manifest
 from ._space import ProjectSpace, SpaceOptions, build_space
 
@@ -61,7 +61,8 @@ def init_space(
     Args:
         folder: 프로젝트 폴더.
         manifest: 매니페스트가 없을 때 쓸 내용(폴더 id·이름 등).
-        gitignore_template: `.gitignore` 틀. 생략하면 패키지 데이터 `gitignore.template`.
+        gitignore_template: `.gitignore` 틀. 생략하면 패키지 데이터 `gitignore.template`. 이름
+            자리(`{records_file}` 등)는 공간 배치로 채운다(`render_gitignore_template`).
         **options: `SpaceOptions`.
 
     Raises:
@@ -94,7 +95,11 @@ def init_space(
         has_file = True  # 읽을 수 없는 파일은 건드리지 않는다
     if not has_file:
         if space.config_writable:
-            template = gitignore_template or default_gitignore_template()
+            template = (
+                render_gitignore_template(gitignore_template, space.layout)
+                if gitignore_template
+                else default_gitignore_template(space.layout)
+            )
             try:
                 created = space.files.create_bytes(space.gitignore_path, template.encode("utf-8"))
                 git_state = "created" if created else "adopted"

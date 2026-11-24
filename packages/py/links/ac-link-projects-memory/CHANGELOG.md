@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- FU.2: `memory.sqlite3`가 없으면 보기(GET 목록·검색·범위·태그)만으로 만들지 않는다 — 저장소를
+  `DeferredMemoryStore`로 주고 첫 쓰기 때 만들고 계보를 올린다. 파일이 생긴 뒤 다시 열면 SQLite 저장소
+  그대로 준다. 계보가 없으면 전처럼 열 때 `MemoryDbUnavailable`.
+
 - 수정(11/20): `ProjectMemoryPool.shutdown()`(모듈 종료 훅이 부름) — 닫고 그 뒤 `open`은 `MemoryDbUnavailable`(파일을 열지 않음), `existing()`은 빈 목록, `is_shut`. 캐시는 `agent_console_store.OpenCache`(기록 공간 풀과 공용). `close_all()`은 닫기만 한다(다시 열 수 있음).
 
 - 5.7R.46: 선택 포트 `projects.lookup`, `ProjectMemoryPool.existing()`(`memory.spaces` 선택 메서드 —

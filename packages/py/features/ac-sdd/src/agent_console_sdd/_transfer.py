@@ -19,10 +19,10 @@ from agent_console_contracts.sdd import (
     SpecDocument,
     SpecExportResult,
 )
+from agent_console_store import unique_id
 
 from ._errors import SpecPathError
 from ._files import SpecFiles, check_project_path
-from ._ids import unique_id
 
 __all__ = [
     "DEFAULT_IMPORT_LIMIT",

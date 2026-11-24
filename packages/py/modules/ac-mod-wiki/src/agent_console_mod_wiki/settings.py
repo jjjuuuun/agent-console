@@ -12,7 +12,7 @@ import json
 from functools import cache
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -263,6 +263,33 @@ class WikiModuleSettings(BaseModel):
         title="검색 결과 수 상한",
         description="검색 한 번에 돌려줄 최대 결과 수.",
         json_schema_extra=x_ui(tier="advanced", unit="개"),
+    )
+    query_hash: Literal["hmac", "sha256", "off"] = Field(
+        default=_D["query_hash"],
+        title="검색어 해시 방식",
+        description=(
+            "에이전트 위키 검색 이벤트에 남길 검색어 해시. 솔트 HMAC은 원문을 짐작하기 어렵고, "
+            "sha256은 설치를 넘어 같은 값이며, 끄면 글자 수만 남는다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            enum_labels={"hmac": "솔트 HMAC", "sha256": "솔트 없는 sha256", "off": "끔"},
+            when="다른 도구와 검색어 해시를 맞춰야 하거나 아예 남기지 않으려면 바꾸세요.",
+        ),
+    )
+    query_hash_salt_env: str | None = Field(
+        default=None,
+        min_length=1,
+        title="검색어 해시 솔트 환경변수",
+        description=(
+            "솔트 HMAC의 솔트를 읽을 환경변수 이름(값은 설정에 두지 않는다). 비우거나 그 변수가 "
+            "비어 있으면 서버를 켤 때마다 새 무작위 솔트를 쓴다. 메모리와 같은 변수를 써도 된다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example="AGENT_CONSOLE_WIKI_QUERY_SALT",
+            when="서버를 다시 켠 뒤에도 같은 검색어를 같은 값으로 묶어 보고 싶을 때 정하세요.",
+        ),
     )
     max_changes_page: int = Field(
         default=_D["max_changes_page"],

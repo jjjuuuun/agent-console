@@ -18,8 +18,9 @@ export default [
                 "!@agent-console/contracts/*",
                 "!@agent-console/markdown-doc",
                 "!@agent-console/text-editor",
+                "!@agent-console/virtual-rows",
               ],
-              message: "wiki-view는 contracts·markdown-doc·text-editor만 import한다. 나머지(api-client 등)는 props로 받는다.",
+              message: "wiki-view는 contracts·markdown-doc·text-editor·virtual-rows만 import한다. 나머지(api-client 등)는 props로 받는다.",
             },
             {
               regex: "^@agent-console/contracts($|/(?!constants$))",

@@ -228,7 +228,16 @@ class ProjectsModule:
         fs = self._fs or LocalFileSystem()
         environ: Mapping[str, str] = ctx.environ
         rules = load_path_rules({"case_insensitive": list(cfg.case_insensitive_paths)})
-        layout = SpaceLayout(records_file=cfg.records_file) if cfg.records_file else SpaceLayout()
+        layout = SpaceLayout(
+            **{
+                name: value
+                for name, value in (
+                    ("records_file", cfg.records_file),
+                    ("sessions_dir", cfg.sessions_dir),
+                )
+                if value
+            }
+        )
 
         def library() -> Any:
             return ctx.port(DEFINITIONS_STORE)

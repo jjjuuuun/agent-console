@@ -134,6 +134,8 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
             <p className="app-field-error" role="alert">{m.newWiki.rulesFailed}</p>
           ) : rules !== undefined && rules.length === 0 && chosen.length === 0 ? (
             <p className="app-muted" data-testid="wiki-new-rules-none">{m.newWiki.rulesNone}</p>
+          ) : rules !== undefined && rules.length > 0 && chosen.length === 0 ? (
+            <p className="app-muted wiki-hint" data-testid="wiki-new-rules-not-chosen">{m.newWiki.rulesNotChosen(rules.length)}</p>
           ) : null}
           <RuleListEditor
             value={value}

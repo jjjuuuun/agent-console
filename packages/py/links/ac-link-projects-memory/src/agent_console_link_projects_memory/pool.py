@@ -3,6 +3,8 @@
 
 - 처음 열 때 파일에 메모리 계보(켜진 모듈 중 ``migration_scope`` 범위를 선언한 것)를 올리고
   ``ac-memory`` SQLite 저장소로 붙는다. 앱 DB와 같은 구현·같은 표이고 경로만 다르다(§PI.4.3).
+  ``memory.sqlite3``가 아직 없으면 보기(목록·검색·태그)만으로는 만들지 않는다: 저장소가
+  ``DeferredMemoryStore``라 빈 메모리로 답하고, 첫 쓰기 때 파일을 만들고 계보를 올린다(FU.2).
 - 열린 저장소 캐시: 상한 ``max_open``(오래 안 쓴 것부터 닫음), 유휴 ``idle_close_seconds``(다음
   접근 때 판정), 폴더를 다시 지정해 경로가 바뀌면 새로 연다.
 - 맥락 바꾸기: ``{context_field: 폴더 id}``(매니페스트 ``id``, 없거나 읽지 못하면 등록 id).
@@ -19,6 +21,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -27,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_console_contracts import ErrorCodes
-from agent_console_memory import MemoryStore
+from agent_console_memory import DeferredMemoryStore, MemoryStore
 from agent_console_memory.sqlite import SqliteMemoryStore, open_sqlite_memory_store
 from agent_console_project_space import (
     ConfigReadonly,
@@ -90,7 +93,7 @@ _DEFAULT_OPTIONS = PoolOptions()
 @dataclass
 class _Entry:
     space: ProjectMemorySpace
-    stores: list[SqliteMemoryStore] = field(default_factory=list)
+    stores: list[SqliteMemoryStore | DeferredMemoryStore] = field(default_factory=list)
 
 
 def _close_entry(entry: _Entry) -> None:
@@ -194,6 +197,11 @@ class ProjectMemoryPool:
             if entry is None:
                 entry = self._make(space, found, path)
                 self._entries.put(space, entry)
+            else:
+                settled = self._settle(entry)
+                if settled is not entry:
+                    entry = settled
+                    self._entries.put(space, entry)
             self._enforce_cap()
             return entry.space
 
@@ -255,19 +263,38 @@ class ProjectMemoryPool:
         except OSError:
             return "WAL"
 
-    def _make(self, space: str, found: SpaceLike, path: Path) -> _Entry:
-        if not path.exists() and not found.config_writable:
-            raise ConfigReadonly("프로젝트 구성 폴더에 쓸 수 없어 메모리 DB를 만들 수 없습니다")
-        migrate_memory_db(path, list(self._branches()))
-        store = open_sqlite_memory_store(
+    def _open_store(self, path: Path, branches: Sequence[MigrationBranchLike]) -> SqliteMemoryStore:
+        migrate_memory_db(path, branches)
+        return open_sqlite_memory_store(
             path,
             use_fts=None if self._options.use_fts else False,
             busy_timeout_seconds=self._options.busy_timeout,
             journal=self._journal(path),
         )
+
+    def _make(self, space: str, found: SpaceLike, path: Path) -> _Entry:
         context_id = self._folder_id_of(found) or space
         context = {self._options.context_field: context_id}
-        return _Entry(ProjectMemorySpace(store, context, path), [store])
+        branches = list(self._branches())
+        if path.exists():
+            store = self._open_store(path, branches)
+            return _Entry(ProjectMemorySpace(store, context, path), [store])
+        if not found.config_writable:
+            raise ConfigReadonly("프로젝트 구성 폴더에 쓸 수 없어 메모리 DB를 만들 수 없습니다")
+        if not branches:
+            raise MemoryDbUnavailable("메모리 DB 계보가 없습니다(메모리 모듈이 꺼졌나요?)")
+        # 파일이 없으면 보기(목록·검색)만으로 만들지 않는다: 첫 쓰기 때 계보를 올리고 연다.
+        deferred = DeferredMemoryStore(
+            lambda: self._open_store(path, branches), exists=path.is_file
+        )
+        return _Entry(ProjectMemorySpace(deferred, context, path), [deferred])
+
+    def _settle(self, entry: _Entry) -> _Entry:
+        """첫 쓰기로 파일이 생긴 미룬 저장소를 연 저장소로 바꾼다(선택 능력이 그대로 보이게)."""
+        store = entry.space.store
+        if isinstance(store, DeferredMemoryStore) and store.opened is not None:
+            return _Entry(dataclasses.replace(entry.space, store=store.opened), entry.stores)
+        return entry
 
     def _drop(self, space: str) -> None:
         self._entries.drop(space)

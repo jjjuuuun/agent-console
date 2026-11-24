@@ -1,4 +1,4 @@
-"""기본 조건 연산자 10개(X22의 첫 플러그인, design §5R.3).
+"""기본 조건 연산자 11개(X22의 첫 플러그인, design §5R.3).
 
 디스크립터(제목·설명·값 스키마·`applies_to`)는 데이터 파일 `data/builtin_operators.json`에 있고,
 이 모듈은 같은 id의 비교 동작만 가진다. 등록은 다른 플러그인과 같은 길(entry point
@@ -30,7 +30,7 @@ from agent_console_safe_regex import (
 )
 
 from ._protocol import ActualPredicate
-from ._values import MISSING, is_number, json_equal, json_type
+from ._values import MISSING, compile_pointer, is_number, json_equal, json_type
 
 _DATA_FILE: Final = "builtin_operators.json"
 
@@ -186,6 +186,37 @@ def _in_fast(expected: Any) -> ActualPredicate:
     return check
 
 
+def _item_checks(expected: Any) -> list[tuple[Callable[[Any], Any], ActualPredicate]] | None:
+    """`any_item` 기대 값 → (항목 안 경로 꺼내기, 허용 값 판정) 목록. 형식이 틀리면 None."""
+    if json_type(expected) != "object" or not expected:
+        return None
+    checks: list[tuple[Callable[[Any], Any], ActualPredicate]] = []
+    for pointer, allowed in expected.items():
+        if not isinstance(pointer, str) or json_type(allowed) != "array":
+            return None
+        if pointer and not pointer.startswith("/"):
+            return None
+        checks.append((compile_pointer(pointer), _in_fast(allowed)))
+    return checks
+
+
+def _any_item_fast(expected: Any) -> ActualPredicate:
+    checks = _item_checks(expected)
+    if checks is None:
+        return _never
+
+    def check(actual: Any) -> bool:
+        if json_type(actual) != "array":
+            return False
+        return any(all(ok(value_of(item)) for value_of, ok in checks) for item in actual)
+
+    return check
+
+
+def _any_item(actual: Any, expected: Any) -> bool:
+    return _any_item_fast(expected)(actual)
+
+
 class ExistsOperator(_Operator):
     """`exists`: 경로에 값이 있으면 참(null 포함). 기대 값은 쓰지 않는다."""
 
@@ -283,11 +314,12 @@ LT: Final = _Operator("lt", _numeric(operator.lt), _numeric_fast(operator.lt))
 """`lt`: 숫자 <."""
 LTE: Final = _Operator("lte", _numeric(operator.le), _numeric_fast(operator.le))
 """`lte`: 숫자 <=."""
+ANY_ITEM: Final = _Operator("any_item", _any_item, _any_item_fast)
+"""`any_item`: 목록 항목 중 하나라도 `{항목 안 경로: [허용 값…]}`이 모두 맞는다."""
 
 
 def builtin_operators() -> list[_Operator]:
-    """기본 연산자 10개(entry point 없이 바로 쓰고 싶을 때). 순서 = 데이터 파일 순서."""
-    by_id = {
-        op.descriptor.id: op for op in (EQ, NE, IN, CONTAINS, MATCHES, EXISTS, GT, GTE, LT, LTE)
-    }
+    """기본 연산자 11개(entry point 없이 바로 쓰고 싶을 때). 순서 = 데이터 파일 순서."""
+    every = (EQ, NE, IN, CONTAINS, MATCHES, EXISTS, GT, GTE, LT, LTE, ANY_ITEM)
+    by_id = {op.descriptor.id: op for op in every}
     return [by_id[i] for i in builtin_descriptors() if i in by_id]

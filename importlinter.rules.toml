@@ -108,6 +108,24 @@ source_modules = ["agent_console_text_template"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
+name = "path-glob은 다른 agent_console 패키지에 의존하지 않는다 (순수 경로 글롭 — logs·wiki가 같은 규칙을 쓴다)"
+type = "forbidden"
+source_modules = ["agent_console_path_glob"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
+name = "write-budget은 다른 agent_console 패키지에 의존하지 않는다 (실행당 쓰기 횟수 한도 — memory·wiki 도구 묶음이 함께 쓴다)"
+type = "forbidden"
+source_modules = ["agent_console_write_budget"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
+name = "query-hash는 다른 agent_console 패키지에 의존하지 않는다 (검색어 해시 — memory·wiki 도구 묶음이 함께 쓴다)"
+type = "forbidden"
+source_modules = ["agent_console_query_hash"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
 name = "sdd는 contracts, safe-regex, conditions, text-template, store에만 의존 (실행·프로젝트·런타임을 모른다 — 문서 문자열만 받는다, design §6R.3)"
 type = "forbidden"
 source_modules = ["agent_console_sdd"]
@@ -115,10 +133,10 @@ forbidden_modules = ["@all", "!agent_console_sdd", "!agent_console_contracts", "
 allow_indirect_imports = true
 
 [[contracts]]
-name = "wiki는 contracts, store, conditions, safe-regex, safe-zip(zip 가져오기), text-template, secret-rules, registry(검색 색인 플러그인 로더)에만 의존 (실행·에이전트 노드·프로젝트·메모리·SDD를 모른다 — 페이지 원문만 받는다, design §7R.3)"
+name = "wiki는 contracts, store, conditions, safe-regex, safe-zip(zip 가져오기), text-template, secret-rules, registry(검색 색인 플러그인 로더), path-glob, write-budget, query-hash에만 의존 (실행·에이전트 노드·프로젝트·메모리·SDD를 모른다 — 페이지 원문만 받는다, design §7R.3)"
 type = "forbidden"
 source_modules = ["agent_console_wiki"]
-forbidden_modules = ["@all", "!agent_console_wiki", "!agent_console_contracts", "!agent_console_store", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_text_template", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip"]
+forbidden_modules = ["@all", "!agent_console_wiki", "!agent_console_contracts", "!agent_console_store", "!agent_console_conditions", "!agent_console_safe_regex", "!agent_console_text_template", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip", "!agent_console_path_glob", "!agent_console_write_budget", "!agent_console_query_hash"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -168,10 +186,10 @@ forbidden_modules = ["@all", "!agent_console_architecture", "!agent_console_cont
 allow_indirect_imports = true
 
 [[contracts]]
-name = "memory는 contracts, conditions, secret-rules, registry, safe-zip, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
+name = "memory는 contracts, conditions, secret-rules, registry, safe-zip, write-budget, query-hash, sqlalchemy(SQLite 저장소 구현)에만 의존 (실행 엔진·에이전트 노드·로그를 모른다 — 도구 묶음은 런타임 무관, design §5.7R.2)"
 type = "forbidden"
 source_modules = ["agent_console_memory"]
-forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip", "!sqlalchemy"]
+forbidden_modules = ["@all", "!agent_console_memory", "!agent_console_contracts", "!agent_console_conditions", "!agent_console_secret_rules", "!agent_console_registry", "!agent_console_safe_zip", "!agent_console_write_budget", "!agent_console_query_hash", "!sqlalchemy"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -352,16 +370,16 @@ allow_indirect_imports = true
 unmatched_ignore_imports_alerting = "none"
 
 [[contracts]]
-name = "logs는 contracts, registry에만 의존 (도구 형식·저장소·서버 계층을 모른다, design §4R.1)"
+name = "logs는 contracts, registry, path-glob에만 의존 (도구 형식·저장소·서버 계층을 모른다, design §4R.1)"
 type = "forbidden"
 source_modules = ["agent_console_logs"]
-forbidden_modules = ["@all", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry"]
+forbidden_modules = ["@all", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry", "!agent_console_path_glob"]
 
 [[contracts]]
-name = "logs-claude는 logs, contracts, claude-format(폴더 키 규칙)에만 의존 (포맷 플러그인, 서버·저장소를 모른다, design §4R.1)"
+name = "logs-claude는 logs, contracts, claude-format(폴더 키 규칙)에만 의존 (포맷 플러그인, 서버·저장소를 모른다, design §4R.1 — logs를 거친 registry·path-glob은 허용)"
 type = "forbidden"
 source_modules = ["agent_console_logs_claude"]
-forbidden_modules = ["@all", "!agent_console_logs_claude", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry", "!agent_console_claude_format"]
+forbidden_modules = ["@all", "!agent_console_logs_claude", "!agent_console_logs", "!agent_console_contracts", "!agent_console_registry", "!agent_console_claude_format", "!agent_console_path_glob"]
 
 [[contracts]]
 name = "hook-probe는 logs, contracts, registry, secret-rules에만 의존 (design §4R.7)"

@@ -410,23 +410,25 @@ class WikiWriteConditionItem(ConditionItem):
 
 
 class WikiWriteCondition(ConditionSpec):
-    """쓰기 규칙을 걸 쓰기를 고르는 조건입니다. 비우면 모든 쓰기에 겁니다."""
+    """쓰기 규칙을 적용할 쓰기를 고르는 조건입니다. 비우면 모든 쓰기에 적용합니다."""
 
     model_config = ConfigDict(title="쓰기 조건")
 
     all: list[WikiWriteConditionItem] | None = Field(  # type: ignore[assignment]
         default=None,
         title="모두 참",
-        description="여기 적은 조건이 모두 맞는 쓰기에만 겁니다.",
+        description="여기 적은 조건이 모두 맞는 쓰기에만 적용합니다.",
         json_schema_extra=x_ui(
-            tier="basic", when="여러 조건이 모두 맞을 때만 걸고 싶을 때 더하세요."
+            tier="basic", when="여러 조건이 모두 맞을 때만 적용하고 싶을 때 더하세요."
         ),
     )
     any: list[WikiWriteConditionItem] | None = Field(  # type: ignore[assignment]
         default=None,
         title="하나라도 참",
-        description="여기 적은 조건 중 하나만 맞아도 겁니다.",
-        json_schema_extra=x_ui(tier="basic", when="조건 중 하나만 맞아도 걸고 싶을 때 더하세요."),
+        description="여기 적은 조건 중 하나만 맞아도 적용합니다.",
+        json_schema_extra=x_ui(
+            tier="basic", when="조건 중 하나만 맞아도 적용하고 싶을 때 더하세요."
+        ),
     )
 
 
@@ -611,13 +613,16 @@ class WikiWriteRule(DefinitionModel):
     )
     applies_to: list[str] = Field(
         default_factory=list,
-        title="걸 페이지",
-        description="이 경로 모양의 페이지에만 겁니다(예: decisions/**). 비우면 모든 페이지입니다.",
+        title="적용할 페이지",
+        description=(
+            "이 경로 모양에 맞는 페이지에만 규칙을 적용합니다(예: decisions/**). "
+            "비우면 모든 페이지에 적용합니다."
+        ),
         json_schema_extra={
             "default": [],
             **x_ui(
                 tier="basic",
-                when="일부 폴더의 페이지에만 규칙을 걸고 싶을 때 적으세요.",
+                when="일부 폴더의 페이지에만 규칙을 적용하고 싶을 때 적으세요.",
                 example=["decisions/**"],
                 widget=KnownUiWidgets.GLOB,
             ),
@@ -625,11 +630,11 @@ class WikiWriteRule(DefinitionModel):
     )
     when: WikiWriteCondition | None = Field(
         default=None,
-        title="걸 쓰기",
-        description="이 조건이 맞는 쓰기에만 겁니다. 비우면 모든 쓰기입니다.",
+        title="적용할 쓰기",
+        description="이 조건이 맞는 쓰기에만 규칙을 적용합니다. 비우면 모든 쓰기에 적용합니다.",
         json_schema_extra=x_ui(
             tier="basic",
-            when="에이전트의 쓰기나 지우기에만 걸고 싶을 때 적으세요.",
+            when="에이전트의 쓰기나 지우기에만 적용하고 싶을 때 적으세요.",
             widget=KnownUiWidgets.CONDITION,
         ),
     )

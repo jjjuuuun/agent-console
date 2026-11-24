@@ -5,7 +5,8 @@
 실행 엔진·에이전트 노드·로그 패키지는 모른다(import-linter로 막는다). 그래서 Agent Console 서버 없이
 다른 에이전트 프레임워크(SDK 직접 사용, MCP 서버)에서도 그대로 쓴다.
 
-- **저장소**: `MemoryStore` 프로토콜과 `InMemoryMemoryStore`.
+- **저장소**: `MemoryStore` 프로토콜과 `InMemoryMemoryStore`. `DeferredMemoryStore(open_store, exists=)`는
+  저장소가 없으면 읽기를 빈 메모리로 답하고 첫 `write`에서 연다(보기만으로 파일을 만들지 않기).
   - 쓰기마다 버전이 오르고 기록이 남는다.
   - `if_version`으로 충돌을 알린다.
   - 같은 항목에 대한 쓰기는 줄을 선다.
@@ -23,6 +24,9 @@
   - 매개변수 설명·결과 문구는 `data/tool_text.yaml`이며 `text=`로 바꾼다.
   - 실패는 예외가 아니라 `is_error` 결과와 사유 코드(`memory.denied`·`not_found`·`conflict`·`too_large`·`secret_rejected`·`rate_limited`·`scope_unavailable`·`invalid_key`)다.
   - 호출마다 이벤트 `memory.<op>`를 낸다. payload(`MemoryEventPayload`)에는 **본문·검색어 원문이 없다**. 크기와 해시만 싣는다.
+    검색어 해시(`query_sha256`)는 `MemoryToolkit(query_hash=query_hasher(mode, salt=))`로 정한다(해셔는 공용 `agent-console-query-hash`를 다시 내보낸 것으로 위키와 같다). 기본은 솔트 HMAC-SHA256
+    (솔트를 주지 않으면 해셔를 만들 때 무작위 — 짧은 검색어도 사전 대입으로 되찾기 어렵다), `sha256`은 솔트 없는 옛 값,
+    `off`는 해시를 싣지 않는다.
 - **비밀 검사(주입)**: 모든 쓰기는 키·태그·본문을 `SecretScanner`로 본다.
   - 기본 판정기는 `ac-secret-rules` 기본 규칙이고, 기본 방식은 `reject`(거부)다.
   - `redact`는 본문·태그를 가리고 저장한다. 키에서 의심 값이 나오면 방식과 상관없이 거부한다.

@@ -172,7 +172,7 @@ describe("공용 구성 › 위키 규칙", () => {
     expect(await screen.findByTestId("wiki-rule-readonly", {}, LONG)).toBeTruthy();
   });
 
-  it("스키마 x-ui 위젯: 걸 페이지는 글롭 칸(mono + 도움말), 경로 틀에는 스키마가 준 변수 칩이 붙는다", async () => {
+  it("스키마 x-ui 위젯: 적용할 페이지는 글롭 칸(mono + 도움말), 경로 틀에는 스키마가 준 변수 칩이 붙는다", async () => {
     rulesSetup("/wiki-rules/ra?section=write_rules");
     expect(await screen.findAllByText("확장자 없는 페이지 경로 기준", {}, LONG)).toBeTruthy();
     cleanup();

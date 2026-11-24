@@ -4,7 +4,8 @@
 
 - `usage.event_query`: 실행 이벤트 조회(사용량 출처 맥락 — 예: `run-events` 출처의 `usage.rate_limit`). `MergedEventQuery`가 앱 기록(`runs.events`)과 **등록 프로젝트(보관 제외)의 기록 DB**를 합쳐 ts 내림차순으로 준다. 계정 창(5시간·주간)은 계정 단위라 프로젝트를 나누지 않고, 프로젝트에서 돈 실행의 창 이벤트는 그 폴더 기록 DB에만 있기 때문이다. 선택 포트 `projects.lookup`·`records.spaces` 중 하나라도 없으면 앱 기록만 읽는다. 읽을 수 없는 공간(폴더 없음·깨짐)은 건너뛴다.
 - `usage.token_rollups`: 플랫폼 실행분 토큰 집계(`IncrementalTokenRollups`). Run마다 마지막으로 반영한 이벤트 seq(워터마크) 뒤만 읽고, 끝난 Run은 새 이벤트(`runs.event` 구독)가 생기기 전까지 다시 읽지 않는다. 메모리 캐시라 재시작하면 다시 계산한다. 기록이 줄어드는 작업(보존 정리) 뒤에는 `invalidate()`. 루트 Run만 센다(`ac-usage.counts_toward_usage`) — 중첩 팀의 자식 Run 사용량은 부른 부모 노드의 `usage`로 이미 루트에 들어 있다(이중 집계 방지).
-- 토큰 집계 출처(요청 11/08): 앱 기록 + 선택 `projects.lookup`·`records.spaces`가 있으면 등록 프로젝트 기록 DB마다 하나(`project_rollup_sources`, 보관 제외, 읽을 수 없는 공간은 경고 후 건너뜀). 캐시·워터마크는 `(출처 키, run_id)`로 따로 둔다. `rollups(project_id=None)`은 계정 전체(출처마다 최근 `limit`개를 생성 시각순으로 합쳐 `limit`개), `project_id`를 주면 그 프로젝트 기록 + 앱 기록 중 `Run.project_id`가 같은 옛 Run만(`GET /usage?project=`). 포트가 없으면 앱 기록만.
+- 토큰 집계 출처(요청 11/08): 앱 기록 + 선택 `projects.lookup`·`records.spaces`가 있으면 등록 프로젝트 기록 DB마다 하나(`project_rollup_sources`, 보관 제외, 읽을 수 없는 공간은 경고 후 건너뜀). 캐시·워터마크는 `(출처 키, run_id)`로 따로 둔다. `rollups(project_id=None)`은 계정 전체(출처마다 최근 `limit`개를 생성 시각순으로 합쳐 `limit`개), `project_id`를 주면 그 프로젝트 기록 + 앱 기록 중 `Run.project_id`가 같은 옛 Run만(`GET /usage?project=`). 앱 기록의 옛 Run은 저장소 조건(`list(project_id=, root_only=True, limit=)`)으로 그 프로젝트의 최근 `limit`개를 바로 읽으므로 다른 실행이 많아도 빠지지 않는다. `runs.reader`에 선택 메서드 `for_project(None)`(앱 기록만 읽기)이 있으면 그것으로 읽는다. 포트가 없으면 앱 기록만.
+- 질의 수: 다시 읽을 Run(처음·끝나지 않음·새 이벤트)은 출처마다 묶어 읽는다. `runs.reader.list_node_runs_many`·`runs.events.list_many`가 있으면 처음 집계도 출처마다 Run 목록·이벤트·NodeRun 질의 하나씩이고(저장소 `RUN_BATCH_SIZE`개마다), 없으면 Run마다 읽는다(결과는 같다). 출처(프로젝트 기록 DB)마다 질의가 따로 드는 것은 DB 파일이 따로이기 때문이다.
 - 이 연동이 꺼지면 사용량 화면은 외부 출처(statusline 등)만 보이고 토큰 집계는 빈 목록이다(웹 역할 `usage:tokens`).
 
 ## 설치
@@ -38,8 +39,8 @@ pip install agent-console-link-runs-usage
 
 | 방향 | 포트 | 모양 |
 | --- | --- | --- |
-| 필수 | `runs.reader` | `list(limit=)`·`list_node_runs(run_id)` |
-| 필수 | `runs.events` | `list(run_id, since_seq=, type_prefix=)`·`latest_by_type(...)` |
+| 필수 | `runs.reader` | `list(root_only=, limit=, project_id=)`·`list_node_runs(run_id)`, 선택 `list_node_runs_many(run_ids)`·`for_project(None)`(앱 기록만) |
+| 필수 | `runs.events` | `list(run_id, since_seq=, type_prefix=)`·`latest_by_type(...)`, 선택 `list_many(since, type_prefixes=)` |
 | 선택 | `projects.lookup` | `list_projects()`(`id`·`archived`) |
 | 선택 | `records.spaces` | 공간 이름(`records_space_prefix` + 프로젝트 id) → 기록 DB 핸들 |
 | 구독 | `runs.event` | 이벤트가 생긴 Run 표시 |

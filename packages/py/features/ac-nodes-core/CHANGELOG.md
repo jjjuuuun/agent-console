@@ -2,6 +2,15 @@
 
 ## 미출시
 
+- FU.5: `merge_access_layers(items, *, entries_key, entry_key, default_ops)`와 키 상수 `ACCESS_CONFIG_FIELD`·`ACCESS_TOOLS_FIELD`·
+  `ACCESS_OPS_FIELD` — 도구 공급자(메모리·위키 연동)가 칸의 접근 설정 첨부를 같은 규칙으로 합친다(두 연동의 사본을 옮김).
+
+- FU.4: `resolve_paths(values, base)`·`path_placeholders(base)`·`WORKSPACE_PLACEHOLDER` — agent 노드가
+  `limits.directories`의 틀(`{workspace}`)·상대 경로를 `WORKING_DIRECTORY` 기준 실제 경로로 풀어 `AgentRequest.limits`
+  (와 `agent.limits`)에 넘긴다(전에는 틀 그대로 백엔드 `add_dirs`·도구 검사로 갔다). 기준이 없으면 그대로.
+- FU.4: `resolve_working_directory(value, base)` — 상대 `working_directory`를 노드 서비스 `WORKING_DIRECTORY`
+  기준으로 잇는다(절대·`~`·드라이브는 그대로). agent 노드의 `AgentRequest.cwd`가 이 규칙을 쓴다(전에는 상대
+  경로를 그대로 넘겨 백엔드가 서버 프로세스 작업 폴더 기준으로 읽었다).
 - 5.2R.94(잔해 정리): `__init__` docstring·README의 2R.20 노드 삭제 이력 문장을 이 기록으로 옮겼다. 코드 변경 없음.
 - 5.2R.43: `WhenEdge(redact=)`·`use_redactor(redact)`(`ac-conditions.RedactorConsumer`) — 판정 근거를 자르기 전에 가린다. `sdk-subagents` 디스크립터 `shares_session=True` 명시.
 - 5.2R.34: 서비스 키 `SCOPE_LAYERS`(`nodes_core.scope_layers`) — agent 노드 유효 설정에 공통 바로 아래 범위 층(예: 프로젝트

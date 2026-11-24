@@ -9,16 +9,36 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import Run, RunEvent
-from agent_console_link_runs_trace import EventReader, RunReader, TraceViews, module
+from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE, Run, RunEvent
+from agent_console_link_runs_trace import (
+    EventReader,
+    ProjectEventReader,
+    ProjectRunReader,
+    RunReader,
+    TraceViews,
+    module,
+)
 from agent_console_link_runs_trace.testing import local_runs_module
 from agent_console_mod_runs import RUNS_EVENTS, RUNS_READER
 from agent_console_mod_runs import module as runs
 from agent_console_mod_runs.testing import local_definitions_module
-from agent_console_modkit import Assembly, BaseServices, ModulesConfig, Paths, assemble
+from agent_console_modkit import (
+    Assembly,
+    BaseServices,
+    ModuleContext,
+    ModulesConfig,
+    Paths,
+    assemble,
+)
 from agent_console_modkit.host import SecurityPolicy, create_host_app
+from agent_console_modkit.testing import fake_module
 from agent_console_runtime import Registries
-from agent_console_store import DEFAULT_KINDS, FileDefinitionStore, InMemoryStorage
+from agent_console_store import (
+    DEFAULT_KINDS,
+    FileDefinitionStore,
+    InMemoryStorage,
+    UnknownSpace,
+)
 
 API = "/api/v1"
 TOKEN = "t" * 32
@@ -75,7 +95,8 @@ def _client(
     )
     assembly = assemble(list(modules), config, base=base)
     policy = SecurityPolicy.for_bind("127.0.0.1", 0, token=TOKEN, allowed_hosts=["testserver"])
-    with TestClient(create_host_app(assembly, policy=policy)) as client:
+    app = create_host_app(assembly, policy=policy, error_status=HTTP_STATUS_BY_ERROR_CODE)
+    with TestClient(app) as client:
         client.headers["X-Console-Token"] = TOKEN
         yield client, assembly
 
@@ -238,3 +259,136 @@ def test_call_edges_only_for_unique_pairs() -> None:
         }
     )
     assert call_edges(graph) == {("a", "b"): "e1"}
+
+
+# ---------------------------------------------------------------- 프로젝트 기준(FU.3)
+
+
+def _project_storage(project_id: str | None = "p1") -> InMemoryStorage:
+    storage = _storage()
+    run = storage.runs.get(RUN)
+    assert run is not None
+    storage.runs.save(run.model_copy(update={"project_id": project_id}))
+    return storage
+
+
+def _graph_store(root: Path, kind: str) -> FileDefinitionStore:
+    store = FileDefinitionStore(root, DEFAULT_KINDS)
+    edge = {
+        "id": "h1",
+        "source": {"node": "pl", "port": "out"},
+        "target": {"node": "qa", "port": "in"},
+        "kind": kind,
+    }
+    nodes = [{"id": "pl", "type": "agent"}, {"id": "qa", "type": "agent"}]
+    store.create("graph", {"id": "flow", "name": "flow", "nodes": nodes, "edges": [edge]})
+    return store
+
+
+def test_project_query_filters_by_project_id_without_for_project(tmp_path: Path) -> None:
+    """``for_project``가 없는 실행 기록(기능 단독)은 Run의 ``project_id``로 거른다."""
+    storage = _project_storage("p1")
+    assert not isinstance(storage.runs, ProjectRunReader)
+    with _client(tmp_path, local_runs_module(storage=storage), module) as (client, _a):
+        assert client.get(f"{API}/runs/handoffs?project=p1").json()["runs"] == 1
+        assert client.get(f"{API}/runs/handoffs?project=p2").json()["runs"] == 0
+        assert client.get(f"{API}/runs/handoffs").json()["runs"] == 1  # 지금 동작(전체)
+        assert client.get(f"{API}/runs/{RUN}/trace?project=p1").status_code == 200
+        other = client.get(f"{API}/runs/{RUN}/trace?project=p2")
+        assert other.status_code == 404
+        assert other.json()["error"]["code"] == "not_found"
+
+
+class _SpacedRuns:
+    """``for_project``가 있는 실행 기록 예제: 공간 이름 → 저장 묶음(모르면 ``UnknownSpace``)."""
+
+    def __init__(self, host: InMemoryStorage, spaces: dict[str, InMemoryStorage]) -> None:
+        self.host = host
+        self.spaces = spaces
+        self.runs = _Bound(self, lambda s: s.runs)
+        self.events = _Bound(self, lambda s: s.events)
+
+    def at(self, project_id: str | None) -> InMemoryStorage:
+        if project_id is None:
+            return self.host
+        if project_id not in self.spaces:
+            raise UnknownSpace(project_id)
+        return self.spaces[project_id]
+
+
+class _Bound:
+    def __init__(self, owner: _SpacedRuns, pick: Any) -> None:
+        self._owner = owner
+        self._pick = pick
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._pick(self._owner.host), name)
+
+    def for_project(self, project_id: str | None) -> Any:
+        return _Lazy(lambda: self._pick(self._owner.at(project_id)))
+
+
+class _Lazy:
+    """읽을 때 공간을 연다(모르는 공간은 읽을 때 ``UnknownSpace``)."""
+
+    def __init__(self, open_: Any) -> None:
+        self._open = open_
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._open(), name)
+
+
+def _spaced_module(spaced: _SpacedRuns) -> Any:
+    def build(ctx: ModuleContext) -> None:
+        ctx.provide(RUNS_READER, spaced.runs)
+        ctx.provide(RUNS_EVENTS, spaced.events)
+
+    return fake_module("spaced-runs", provides=[RUNS_READER, RUNS_EVENTS], on_build=build)
+
+
+def test_project_query_reads_that_space_and_unknown_is_404(tmp_path: Path) -> None:
+    spaced = _SpacedRuns(InMemoryStorage(), {"p1": _project_storage("p1"), "p2": InMemoryStorage()})
+    assert isinstance(spaced.runs, ProjectRunReader)
+    assert isinstance(spaced.events, ProjectEventReader)
+    with _client(tmp_path, _spaced_module(spaced), module) as (client, _a):
+        assert client.get(f"{API}/runs/handoffs").json()["runs"] == 0  # 호스트 기록
+        found = client.get(f"{API}/runs/handoffs?project=p1").json()
+        assert found["runs"] == 1
+        assert found["cells"]
+        assert client.get(f"{API}/runs/handoffs?project=p2").json()["runs"] == 0
+        trace = client.get(f"{API}/runs/{RUN}/trace?project=p1")
+        assert trace.status_code == 200
+        assert [lk["edge_id"] for lk in trace.json()["links"]] == ["h1"]
+        assert client.get(f"{API}/runs/{RUN}/trace?project=p2").status_code == 404
+        for path in (f"/runs/{RUN}/trace?project=ghost", "/runs/handoffs?project=ghost"):
+            ghost = client.get(f"{API}{path}")
+            assert ghost.status_code == 404
+            assert ghost.json()["error"]["code"] == "project.not_found"
+            assert ghost.json()["error"]["details"] == {"project_id": "ghost"}
+
+
+def test_project_run_graph_comes_only_from_its_space(tmp_path: Path) -> None:
+    """프로젝트 Run의 당시 팀 구성은 그 공간에서만 읽는다(못 열면 종류 없이, 라이브러리로 안 감)."""
+    library = _graph_store(tmp_path / "lib", "handoff")
+    space = _graph_store(tmp_path / "p1", "delegate")
+    storage = _project_storage("p1")
+
+    def spaces(name: str) -> Any:
+        if name != "p1":
+            raise UnknownSpace(name)
+        return space
+
+    views = TraceViews(storage.runs, storage.events, history=lambda: library, space_history=spaces)
+    assert views.trace(views.require_run(RUN)).links[0].kind == "delegate"
+    moved = _project_storage("archived")
+    views = TraceViews(moved.runs, moved.events, history=lambda: library, space_history=spaces)
+    assert views.trace(views.require_run(RUN)).links[0].kind is None
+    # 공간 정의 읽기가 없으면(기능 단독) 라이브러리 — project_id는 이름표뿐이다.
+    alone = TraceViews(moved.runs, moved.events, history=lambda: library)
+    assert alone.trace(alone.require_run(RUN)).links[0].kind == "handoff"
+
+
+def test_runs_module_readers_offer_for_project(tmp_path: Path) -> None:
+    with _client(tmp_path, runs, local_definitions_module(), module) as (_c, assembly):
+        assert isinstance(assembly.port(RUNS_READER), ProjectRunReader)
+        assert isinstance(assembly.port(RUNS_EVENTS), ProjectEventReader)

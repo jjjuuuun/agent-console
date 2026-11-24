@@ -62,9 +62,9 @@ CONTRIBUTIONS = (
 )
 
 
-def _contributor() -> Any:
+def _contributor(items: Sequence[KindContribution[Any]] = CONTRIBUTIONS) -> Any:
     def build(ctx: ModuleContext) -> None:
-        for item in CONTRIBUTIONS:
+        for item in items:
             ctx.provide(KIND_CONTRIBUTIONS, item)
 
     return fake_module("kinds", kind="testing", provides=[KIND_CONTRIBUTIONS], on_build=build)
@@ -92,13 +92,18 @@ def _library_module(root: Path) -> Any:
     )
 
 
-def _assembly(tmp_path: Path, *, contributions: bool) -> Assembly:
+def _assembly(
+    tmp_path: Path,
+    *,
+    contributions: bool,
+    items: Sequence[KindContribution[Any]] = CONTRIBUTIONS,
+) -> Assembly:
     mods: list[Any] = [
         ProjectsModule(dialog_providers=[], platform="linux", which=lambda _n: None),
         _library_module(tmp_path / "ws"),
     ]
     if contributions:
-        mods.append(_contributor())
+        mods.append(_contributor(items))
     base = BaseServices(
         environ={"HOME": str(tmp_path)},
         paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
@@ -313,3 +318,53 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
         assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []
         assert client.get(f"{API}/projects/copy/kinds?project=zz").status_code == 404
         assert client.get(f"{API}/projects/copy/kinds?project=..").status_code == 404
+
+
+def test_copy_plan_suggests_rename_for_reserved_ids(tmp_path: Path) -> None:
+    """FU.6: 기여 종류 데이터의 예약어 id(``reserved_ids``)로 들어오는 항목은 새 id를 제안한다."""
+    guarded = DefinitionKind(
+        name="guarded", directory="guarded", reserved_ids=("check", "variables")
+    )
+    assembly = _assembly(
+        tmp_path, contributions=True, items=(*CONTRIBUTIONS, KindContribution(guarded))
+    )
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    lib.create("guarded", {"id": "check", "name": "체크"})
+    lib.create("guarded", {"id": "plain", "name": "보통"})
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        plan = _plan(client, None, "pa", [("guarded", "check"), ("guarded", "plain")])
+        actions = {i["id"]: i["default_action"] for i in plan["items"]}
+        assert actions == {"check": "rename", "plain": "copy"}
+        found = [w for w in plan["warnings"] if w["code"] == "project.copy_reserved_id"]
+        assert [w["details"] for w in found] == [
+            {
+                "kind": "guarded",
+                "id": "check",
+                "reserved": ["check", "variables"],
+                "suggested_id": "check-2",
+            }
+        ]
+        assert "check-2" in found[0]["message"]
+        assert "프로젝트" in found[0]["message"]
+        items = [
+            {
+                "kind": i["kind"],
+                "id": i["id"],
+                "action": i["default_action"],
+                "source_version": i["source_version"],
+                "target_version": i["target_version"],
+                **({"new_id": "check-2"} if i["default_action"] == "rename" else {}),
+            }
+            for i in plan["items"]
+        ]
+        response = client.post(
+            f"{API}/projects/copy/apply",
+            json={"source": {"project_id": None}, "target": {"project_id": "pa"}, "items": items},
+        )
+        assert response.status_code == 200, response.text
+        assert [i["status"] for i in response.json()["items"]] == ["renamed", "copied"]
+        spaces = assembly.port(PROJECTS_SPACES)
+        assert spaces is not None
+        pa = spaces.open("pa").definitions
+        assert sorted(pa.list_ids("guarded")) == ["check-2", "plain"]

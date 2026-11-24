@@ -2,6 +2,9 @@
 
 ## 미출시
 
+- FU.3: `?project=` 검증의 저장 전 검사는 검사의 선택 메서드 `space_issues`(`SpaceDefinitionCheck`, 그 공간 기준 — 첨부 리소스를 그 공간에서만 찾는 등)를 부른다. 없으면 `issues`. `definition_check_issues(space=)`·`with_definition_checks(space=)` 선택 인자.
+- FU.4: `TeamRules.run_working_directory`가 상대 경로를 `WORKING_DIRECTORY` 기준으로 잇는다
+  (`resolve_working_directory`, 노드와 같은 규칙).
 - 요청 11/07 후속: `POST /graphs/{id}/validate`가 선택 `?project=`를 받는다(그 프로젝트 실행 기준, `ProjectRunChecker.check_project(graph_id, project_id, graph=)`·`load_graph(project_id=)`). 없으면 409 `feature_unavailable`(`build_router(project_unavailable=)`).
 - 요청 11/07: 공간(`?project=`) 팀 구성 목록 검증 요약 `ValidationSummaries.space_summaries`(공간별 지문 캐시). `runs.starter`의 선택 메서드 `ProjectRunChecker.check_project`가 있을 때만 계산한다.
 - 5.2R.106 후속: 설치자 옵션 스키마 `RunsTeamsLinkSettings`(`issue_fixes_file` — 해결 버튼 표 교체, 빈 표 파일 = 끄기)와 `issue_fixes_of`. 모듈이 `TeamRules(issue_fixes=)`에 넘긴다.

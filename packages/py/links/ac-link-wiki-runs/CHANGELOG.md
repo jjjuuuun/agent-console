@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 미출시
+
+- FU.12: 위키 도구 묶음에 검색어 해셔를 넘긴다 — 서비스의 선택 속성 `query_hash`(`QueryHashSource`,
+  `service_query_hash`)가 먼저, 없으면 `WikiRunScope(query_hash=)`(기본: 범위 하나에 무작위 솔트 해셔 하나).
+  `WikiToolProvider(query_hash=)`.
+- FU.5: `merge_access`가 `agent_console_nodes_core.merge_access_layers`로 합친 뒤 검증만 한다(메모리 연동과 같은 규칙, 동작 그대로).
+
 ## 0.1.0
 
 - 처음 만듦(scripts/pkgkit 템플릿 `link`, 7R.14).

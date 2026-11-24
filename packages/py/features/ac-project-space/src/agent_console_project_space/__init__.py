@@ -18,7 +18,13 @@ from ._errors import (
     UnsafeConfigDir,
 )
 from ._files import LocalFiles, SpaceFiles
-from ._gitignore import append_gitignore, default_gitignore_template, missing_gitignore_lines
+from ._gitignore import (
+    GITIGNORE_FIELDS,
+    append_gitignore,
+    default_gitignore_template,
+    missing_gitignore_lines,
+    render_gitignore_template,
+)
 from ._init import GitignoreState, InitResult, ManifestState, init_space
 from ._layout import DEFAULT_CONFIG_DIR, SpaceLayout
 from ._manifest import ManifestRecord, read_manifest, reset_manifest, write_manifest
@@ -26,6 +32,7 @@ from ._space import ProjectSpace, SpaceOptions, open_space, portable_kinds, scan
 
 __all__ = [
     "DEFAULT_CONFIG_DIR",
+    "GITIGNORE_FIELDS",
     "ConfigReadonly",
     "FolderMissing",
     "GitignoreState",
@@ -49,6 +56,7 @@ __all__ = [
     "open_space",
     "portable_kinds",
     "read_manifest",
+    "render_gitignore_template",
     "reset_manifest",
     "scan_secrets",
     "write_manifest",

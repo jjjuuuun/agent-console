@@ -314,7 +314,13 @@ class MemoryEventPayload(ContractModel):
     sha256: str | None = Field(default=None, description="본문 sha256(16진수).")
     results: int | None = Field(default=None, ge=0, description="검색 결과 수.")
     query_chars: int | None = Field(default=None, ge=0, description="검색어 글자 수.")
-    query_sha256: str | None = Field(default=None, description="검색어 sha256(16진수).")
+    query_sha256: str | None = Field(
+        default=None,
+        description=(
+            "검색어 해시(16진수 64자). 기본은 솔트 HMAC-SHA256(솔트를 모르면 원문을 짐작하기 "
+            "어렵다)이고, 설치자 설정으로 솔트 없는 sha256으로 바꾸거나 끌 수 있다(끄면 없음)."
+        ),
+    )
     tool: str | None = Field(default=None, description="사용자가 정한 도구 이름.")
     tool_use_id: str | None = Field(default=None, description="모델의 도구 호출 id.")
     duration_ms: float | None = Field(default=None, ge=0, description="처리 시간(ms).")

@@ -231,3 +231,62 @@ def test_append_gitignore_refuses_readonly_and_creates_when_absent(folder) -> No
     ro_space = dataclasses.replace(open_space(other), config_writable=False)
     with pytest.raises(ConfigReadonly):
         append_gitignore(ro_space)
+
+
+# ---- FU.2: 틀이 배치(기록 DB 파일·세션 보관 폴더 이름)를 따라간다 ------------------------------
+
+
+def test_gitignore_follows_layout_names(folder: Path, manifest: ProjectManifest) -> None:
+    from agent_console_project_space import (
+        SpaceLayout,
+        append_gitignore,
+        missing_gitignore_lines,
+        render_gitignore_template,
+    )
+
+    layout = SpaceLayout(records_file="rec.db", sessions_dir="archive")
+    result = init_space(folder, manifest=manifest, layout=layout)
+    text = result.space.gitignore_path.read_text(encoding="utf-8")
+    lines = [t for t in (x.strip() for x in text.splitlines()) if t.startswith("/")]
+    assert {"/rec.db", "/rec.db-*", "/archive/"} <= set(lines)
+    assert not {"/records.sqlite3", "/sessions/"} & set(lines)
+    assert "{" not in text
+    assert missing_gitignore_lines(result.space) == []
+
+    # 기본 이름으로 만든 .gitignore를 다른 배치로 열면 새 이름의 줄이 빠졌다고 알린다
+    other = folder.parent / "other"
+    other.mkdir()
+    init_space(other, manifest=manifest)
+    moved = open_space(other, layout=layout)
+    assert missing_gitignore_lines(moved) == ["/rec.db", "/rec.db-*", "/archive/"]
+    assert append_gitignore(moved) == ["/rec.db", "/rec.db-*", "/archive/"]
+    assert missing_gitignore_lines(moved) == []
+
+    # 사용자 틀의 이름 자리도 채운다. gitignore 특수 문자는 글자 그대로 읽히게 이스케이프한다
+    assert render_gitignore_template(
+        "/{records_file}\n", SpaceLayout(records_file="a*[b]?.db")
+    ) == ("/a\\*\\[b]\\?.db\n")
+    assert render_gitignore_template("/{unknown}\n") == "/{unknown}\n"
+
+
+def test_renamed_layout_is_ignored_by_git(folder: Path, manifest: ProjectManifest) -> None:
+    from agent_console_project_space import SpaceLayout
+
+    if _git(folder, "--version").returncode != 0:
+        pytest.skip("git is not available")
+    assert _git(folder, "init", "-q").returncode == 0
+    init_space(
+        folder, manifest=manifest, layout=SpaceLayout(records_file="rec.db", sessions_dir="arc")
+    )
+    for name, ignored in (
+        ("rec.db", True),
+        ("rec.db-wal", True),
+        ("arc/claude/s.jsonl", True),
+        ("records.sqlite3", False),
+        ("sessions/x.jsonl", False),
+    ):
+        path = folder / ".agent-console" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x")
+        code = _git(folder, "check-ignore", "-q", f".agent-console/{name}").returncode
+        assert code == (0 if ignored else 1), name

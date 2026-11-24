@@ -58,7 +58,7 @@
   "dependencies": {
     "@agent-console/contracts": "^0.14.0",
     "@agent-console/text-editor": "^0.1.0",
-    "@tanstack/react-virtual": "^3.14.21"
+    "@agent-console/virtual-rows": "^0.1.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

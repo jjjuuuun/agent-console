@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- FU.5: `slug_id`·`unique_id`는 `agent_console_store`의 것을 다시 내보낸다(`_ids` 사본 삭제, 규칙 그대로).
+
 ## 0.1.0
 
 - 처음 만듦(6R.10): 패키지 기본 작업 문법 데이터 `data/default_syntax.yaml`, `load_default_syntax`·

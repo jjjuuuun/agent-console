@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from agent_console_contracts import SpaceRef
 from agent_console_contracts.wiki import WikiChanged
@@ -176,3 +179,40 @@ def test_change_publisher_drops_repeats() -> None:
     assert len(seen) == 2
     assert change_key(one) == (None, "w", ("a",), False, False)
     assert changed_message(one).type == "wiki.changed"
+
+
+def test_wiki_folder_swapped_to_outside_link_after_open(
+    tmp_path: Path, kit: Any, database: Any
+) -> None:
+    """공간을 연 뒤 위키 폴더가 프로젝트 밖을 가리키는 링크로 바뀌어도 밖을 읽거나 쓰지
+    않는다(FU.1)."""
+    a = tmp_path / "A"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "p.md").write_text("SECRET\n", encoding="utf-8")
+    spaces = spaces_module({"pa": _space(a, folder=a)})
+    assembly = kit.make_assembly(tmp_path, spaces, database=database)
+    with kit.client_for(assembly) as client:
+        kit.make_rules(client, "pr", project="pa")
+        made = client.post(
+            f"{API}/wiki/wikis", json={"name": "notes", "rules": ["pr"]}, params={"project": "pa"}
+        )
+        assert made.status_code == 201, made.text
+        kit.write_page(client, "notes", "p", "# p\n", project="pa")
+        folder = a / ".agent-console" / "wiki-pages" / "notes"
+        os.rename(folder, folder.with_name("notes-moved"))
+        try:
+            folder.symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pytest.skip("이 환경은 심볼릭 링크를 만들 수 없다")
+        read = client.get(f"{API}/wiki/wikis/notes/pages/p", params={"project": "pa"})
+        assert read.status_code != 200
+        assert "SECRET" not in read.text
+        wrote = client.put(
+            f"{API}/wiki/wikis/notes/pages/q",
+            json={"content": "# q\n"},
+            headers={"If-None-Match": "*"},
+            params={"project": "pa"},
+        )
+        assert wrote.status_code >= 400
+    assert sorted(os.listdir(outside)) == ["p.md"]

@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable
 from typing import Any, Final
 
 from pydantic import ValidationError
@@ -25,7 +25,7 @@ from agent_console_contracts.memory import (
     MemoryScopeAccess,
 )
 from agent_console_memory import ToolSpec, ToolText, WriteBudget
-from agent_console_nodes_core import ToolProvision, ToolProvisionContext
+from agent_console_nodes_core import ToolProvision, ToolProvisionContext, merge_access_layers
 from agent_console_runtime import HostTool, HostToolResult
 
 from .ports import MemoryServiceLike
@@ -44,7 +44,7 @@ DEFAULT_PROVIDER_ID: Final = "link-memory-runs"
 """공급자 id(경고 details ``provider``)."""
 
 _SCOPES: Final = "scopes"
-_TOOLS: Final = "tools"
+_SCOPE_KEY: Final = "kind"
 
 
 class MemoryRunsCodes:
@@ -54,39 +54,10 @@ class MemoryRunsCodes:
     """칸의 접근 설정을 합친 결과가 ``MemoryAccessConfig`` 형식이 아니다(도구를 주지 않는다)."""
 
 
-def _configs(items: Any) -> list[Mapping[str, Any]]:
-    """칸 값(항목 목록) → 접근 설정 원문 목록(층 순서). 항목 모양이 아니면 건너뛴다."""
-    if not isinstance(items, Sequence) or isinstance(items, str | bytes):
-        return []
-    out: list[Mapping[str, Any]] = []
-    for item in items:
-        if isinstance(item, Mapping):
-            config = item.get("config")
-            if isinstance(config, Mapping):
-                out.append(config)
-    return out
-
-
-def _scope_map(config: Mapping[str, Any]) -> dict[str, list[Any]]:
-    """한 첨부 안의 범위 종류 → 허용 동작(같은 종류가 여러 번이면 합친다, ``allowed``와 같은 뜻)."""
-    found: dict[str, list[Any]] = {}
-    raw = config.get(_SCOPES)
-    if not isinstance(raw, Sequence) or isinstance(raw, str | bytes):
-        return found
-    for entry in raw:
-        if not isinstance(entry, Mapping) or not isinstance(entry.get("kind"), str):
-            continue
-        ops = entry.get("access")
-        acc = found.setdefault(entry["kind"], [])
-        if ops is None:  # 생략 = 계약 기본값
-            ops = MemoryScopeAccess.model_fields["access"].get_default(call_default_factory=True)
-        if isinstance(ops, Sequence) and not isinstance(ops, str | bytes):
-            acc.extend(o for o in ops if o not in acc)
-    return found
-
-
 def merge_access(items: Any) -> tuple[MemoryAccessConfig | None, list[Issue]]:
     """칸에 쌓인 첨부들(먼 층 → 가까운 층)을 접근 설정 하나로 합친다.
+
+    규칙은 ``agent_console_nodes_core.merge_access_layers``(위키 연동과 같은 규칙)다.
 
     - 범위 종류마다 가장 가까운 층(뒤 항목)의 허용 동작을 쓴다. 순서는 가까운 층의 범위가 먼저.
     - ``tools``는 동작마다, 나머지 최상위 키는 키마다 가장 가까운 층이 정한 값을 쓴다.
@@ -100,26 +71,14 @@ def merge_access(items: Any) -> tuple[MemoryAccessConfig | None, list[Issue]]:
     >>> [(s.kind, s.access) for s in access.scopes], access.tools.read.name, issues
     ([('team', ['read', 'write']), ('shared', ['read'])], 'team_read', [])
     """
-    configs = _configs(items)
-    if not configs:
+    merged = merge_access_layers(
+        items,
+        entries_key=_SCOPES,
+        entry_key=_SCOPE_KEY,
+        default_ops=MemoryScopeAccess.model_fields["access"].get_default(call_default_factory=True),
+    )
+    if merged is None:
         return None, []
-    merged: dict[str, Any] = {}
-    tools: dict[str, Any] = {}
-    scopes: dict[str, list[Any]] = {}
-    for config in reversed(configs):  # 가까운 층부터: 먼저 정한 값이 이긴다
-        for key, value in config.items():
-            if key == _SCOPES:
-                continue
-            if key == _TOOLS and isinstance(value, Mapping):
-                for op, tool in value.items():
-                    tools.setdefault(str(op), tool)
-                continue
-            merged.setdefault(str(key), value)
-        for kind, ops in _scope_map(config).items():
-            scopes.setdefault(kind, ops)
-    merged[_SCOPES] = [{"kind": kind, "access": ops} for kind, ops in scopes.items()]
-    if tools:
-        merged[_TOOLS] = tools
     try:
         return MemoryAccessConfig.model_validate(merged), []
     except ValidationError as exc:

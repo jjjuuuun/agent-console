@@ -54,6 +54,7 @@ from .ports import (
     GraphValidationSource,
     SavedDefinition,
     SaveWarnings,
+    SpaceDefinitionCheck,
     SpaceGraphValidationSource,
 )
 from .routes import build_router
@@ -110,6 +111,7 @@ __all__ = [
     "SaveWarnings",
     "SavedDefinition",
     "SecretRuleCheck",
+    "SpaceDefinitionCheck",
     "SpaceGraphValidationSource",
     "WorkspaceState",
     "build_router",

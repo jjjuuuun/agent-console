@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- FU.6: 복사 계획이 기여 종류의 `reserved_ids`를 `copy_plan(reserved_ids=)`로 넘긴다(예약어 id 항목에 새 id 제안).
+
+- FU.2: 설정 `sessions_dir`(세션 보관 폴더 이름, `link-projects-records.session_archive.dir`를 이어받음) —
+  `records_file`과 함께 공간 배치로 넘겨 `.gitignore` 틀·`project.gitignore_outdated` 점검이 설정한 이름을 따른다.
 - 6R.5: 선택 포트 `definitions.kind_contributions`(X44, `KIND_CONTRIBUTIONS`). 공간 종류 = 라이브러리 종류 + 기여 종류(`library=False` 포함) 중 옮길 수 있는 것 — `library_kinds(store, contributions=())`. 기여의 `references`를 `definitions.references`와 합쳐 복사 계획·범위 검사에 쓴다(`contribution_references`). 기여가 없으면 종류·복사 결과가 전과 같다.
 - 5.7R.33i: `projects.folders`에 보관 폴더(`archived`). 옛 로그 범위 `current`용 `ProjectManager(working_directory=)`와 `working_directory` 이어받기(SeedSetting)를 지웠다. 설정 `working_directory`는 남지만 읽지 않는다(스키마 `deprecated`).
 - 6R.20a(6R.20c 입력): 복사 대화상자 메타데이터 `GET /projects/copy/kinds?project=`(`CopyKindInfo[]` — 그 공간의

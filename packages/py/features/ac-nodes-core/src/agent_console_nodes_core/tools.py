@@ -23,6 +23,7 @@ agent 노드 순서(`AgentNode`):
     - ``ToolProvider``(프로토콜), ``ToolProvisionContext``, ``ToolProvision``
     - ``provide_tools``(공급자 여럿 부르기·격리·합치기 → ``MergedToolProvision``),
       ``drop_taken``(이미 쓴 이름 빼기)
+    - 접근 설정 층 합치기: ``merge_access_layers``(공급자들이 같은 규칙으로 칸의 첨부를 합친다)
     - 지침: ``attach_instructions``(묶음 칸 끝에 붙이기), ``instruction_source``(출처 ref),
       ``INSTRUCTION_SOURCE_PREFIX``
     - 경고 코드 ``ToolProviderCodes``
@@ -44,6 +45,9 @@ from agent_console_contracts import (
 from agent_console_runtime import CancelToken, HostTool
 
 __all__ = [
+    "ACCESS_CONFIG_FIELD",
+    "ACCESS_OPS_FIELD",
+    "ACCESS_TOOLS_FIELD",
     "INSTRUCTION_SOURCE_PREFIX",
     "MergedToolProvision",
     "ToolEmit",
@@ -54,6 +58,7 @@ __all__ = [
     "attach_instructions",
     "drop_taken",
     "instruction_source",
+    "merge_access_layers",
     "provide_tools",
 ]
 
@@ -330,3 +335,102 @@ def drop_taken(
         names.add(tool.name)
         kept.append(tool)
     return kept, issues
+
+
+ACCESS_CONFIG_FIELD: Final = "config"
+"""묶음 칸 항목(첨부 하나)에서 접근 설정 원문을 담은 키."""
+ACCESS_TOOLS_FIELD: Final = "tools"
+"""접근 설정에서 동작별 도구 이름·설명을 담은 키(동작마다 가까운 층이 이긴다)."""
+ACCESS_OPS_FIELD: Final = "access"
+"""접근 설정 항목 하나의 허용 동작 목록 키."""
+
+
+def _layer_configs(items: Any) -> list[Mapping[str, Any]]:
+    """칸 값(항목 목록) → 접근 설정 원문 목록(층 순서). 항목 모양이 아니면 건너뛴다."""
+    if not isinstance(items, Sequence) or isinstance(items, str | bytes):
+        return []
+    out: list[Mapping[str, Any]] = []
+    for item in items:
+        if isinstance(item, Mapping):
+            config = item.get(ACCESS_CONFIG_FIELD)
+            if isinstance(config, Mapping):
+                out.append(config)
+    return out
+
+
+def _entry_map(
+    config: Mapping[str, Any], entries_key: str, entry_key: str, default_ops: Sequence[Any]
+) -> dict[str, list[Any]]:
+    """한 첨부 안의 대상 id → 허용 동작(같은 대상이 여러 번이면 합친다)."""
+    found: dict[str, list[Any]] = {}
+    raw = config.get(entries_key)
+    if not isinstance(raw, Sequence) or isinstance(raw, str | bytes):
+        return found
+    for entry in raw:
+        if not isinstance(entry, Mapping) or not isinstance(entry.get(entry_key), str):
+            continue
+        ops = entry.get(ACCESS_OPS_FIELD)
+        acc = found.setdefault(entry[entry_key], [])
+        if ops is None:  # 생략 = 기본 허용 동작
+            ops = default_ops
+        if isinstance(ops, Sequence) and not isinstance(ops, str | bytes):
+            acc.extend(o for o in ops if o not in acc)
+    return found
+
+
+def merge_access_layers(
+    items: Any, *, entries_key: str, entry_key: str, default_ops: Sequence[Any]
+) -> dict[str, Any] | None:
+    """칸에 쌓인 접근 설정 첨부들(먼 층 → 가까운 층)을 원문 하나로 합친다(검증은 부르는 쪽).
+
+    도구 공급자(메모리·위키 등)가 같은 규칙으로 층을 합치게 하는 공용 함수다. 첨부 하나는
+    `{config: {<entries_key>: [{<entry_key>: id, access: [...]}, ...], tools: {...}, ...}}`
+    모양이다.
+
+    - 대상(`entry_key` 값)마다 가장 가까운 층(뒤 항목)의 허용 동작을 쓴다. 한 층 안에 같은 대상이
+      여러 번이면 동작을 합친다. `access`를 생략하면 `default_ops`. 순서는 가까운 층의 대상이 먼저.
+    - `tools`는 동작마다, 나머지 최상위 키는 키마다 가장 가까운 층이 정한 값을 쓴다.
+    - 모양이 틀린 항목·대상은 건너뛴다(형식 검사는 부르는 쪽 모델이 한다).
+
+    Args:
+        items: 칸 값(첨부 목록, 층 순서).
+        entries_key: 대상 목록 키(예: 메모리 `scopes`, 위키 `wikis`).
+        entry_key: 대상 항목의 id 키(예: `kind`, `wiki`).
+        default_ops: `access` 생략 때의 허용 동작.
+
+    Returns:
+        합친 원문(`entries_key` 목록은 늘 있다). 첨부가 없으면 None.
+
+    >>> far = {"config": {"wikis": [{"wiki": "notes", "access": ["read"]},
+    ...                             {"wiki": "specs"}],
+    ...                   "tools": {"read": {"name": "notes_read"}}, "header": "far"}}
+    >>> near = {"config": {"wikis": [{"wiki": "notes", "access": ["read", "write"]}],
+    ...                    "header": "near"}}
+    >>> merge_access_layers([far, near], entries_key="wikis", entry_key="wiki",
+    ...                     default_ops=["read"])  # doctest: +NORMALIZE_WHITESPACE
+    {'header': 'near', 'wikis': [{'wiki': 'notes', 'access': ['read', 'write']},
+     {'wiki': 'specs', 'access': ['read']}], 'tools': {'read': {'name': 'notes_read'}}}
+    """
+    configs = _layer_configs(items)
+    if not configs:
+        return None
+    merged: dict[str, Any] = {}
+    tools: dict[str, Any] = {}
+    entries: dict[str, list[Any]] = {}
+    for config in reversed(configs):  # 가까운 층부터: 먼저 정한 값이 이긴다
+        for key, value in config.items():
+            if key == entries_key:
+                continue
+            if key == ACCESS_TOOLS_FIELD and isinstance(value, Mapping):
+                for op, tool in value.items():
+                    tools.setdefault(str(op), tool)
+                continue
+            merged.setdefault(str(key), value)
+        for target, ops in _entry_map(config, entries_key, entry_key, default_ops).items():
+            entries.setdefault(target, ops)
+    merged[entries_key] = [
+        {entry_key: target, ACCESS_OPS_FIELD: ops} for target, ops in entries.items()
+    ]
+    if tools:
+        merged[ACCESS_TOOLS_FIELD] = tools
+    return merged

@@ -67,11 +67,17 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   // 주소의 path가 항상 우선이다(직전에 연 페이지를 기억한 값은 주소에 path가 없을 때만 쓴다).
   const urlPath = params.get(P.path);
   const currentPath = (urlPath !== null && urlPath !== "" ? urlPath : undefined) ?? lastPage ?? (typeof home === "string" && home !== "" ? home : undefined);
-  const wanted = mode === ALL ? undefined : mode === PICK ? (centerParam ?? undefined) : currentPath;
+  // 현재 페이지도 첫 페이지도 없는데 위키가 크면 전체(수백 개) 대신 목록의 첫 페이지 주변만 보인다. 목록이 올 때까지 그래프를 묻지 않는다.
+  const bigWiki = (summary?.pages ?? 0) > WIKI_GRAPH.bigNodes;
+  const needFallback = mode === CURRENT && currentPath === undefined && bigWiki;
+  const waitingFallback = needFallback && pagesQ.isPending;
+  const fallbackPath = needFallback ? pagesQ.data?.items?.[0]?.path : undefined;
+  const effectiveCurrent = currentPath ?? fallbackPath;
+  const wanted = mode === ALL ? undefined : mode === PICK ? (centerParam ?? undefined) : effectiveCurrent;
   const depthParam = params.get(P.depth);
   const depth = depthParam === WIKI_GRAPH.all ? undefined : WIKI_GRAPH.depths.includes(Number(depthParam)) ? Number(depthParam) : WIKI_GRAPH.defaultDepth;
 
-  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : depth }, !noSyntax);
+  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : depth }, !noSyntax && !waitingFallback);
   const firstMissing =
     wanted !== undefined &&
     ((firstQ.data !== undefined && !(firstQ.data.nodes ?? []).some((n) => n.path === wanted && n.broken !== true)) || (firstQ.isError && classifyWikiError(firstQ.error, "").kind === "pageNotFound"));
@@ -153,6 +159,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
     body = (
       <>
         {firstMissing && wanted !== undefined ? <Banner tone="info" data-testid="wiki-graph-center-missing">{g.centerMissing(wanted)}</Banner> : null}
+        {fallbackPath !== undefined && !firstMissing ? <Banner tone="info" data-testid="wiki-graph-big-fallback">{g.bigFallback(fallbackPath)}</Banner> : null}
         {noLinks ? <Banner tone="info">{g.noLinks}</Banner> : null}
         <div className="wiki-graph-body" data-list-only={listOnly || undefined}>
           {listOnly ? null : (
@@ -211,7 +218,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
                 else if (centerParam === null || centerParam === "") setPicking(true);
               }}
             >
-              <option value={CURRENT}>{g.centerCurrent}{currentPath === undefined ? "" : ` · ${currentPath}`}</option>
+              <option value={CURRENT}>{g.centerCurrent}{effectiveCurrent === undefined ? "" : ` · ${effectiveCurrent}`}</option>
               <option value={ALL}>{g.centerAll}</option>
               <option value={PICK}>{mode === PICK && centerParam !== null ? centerParam : g.centerPick}</option>
             </select>
@@ -247,6 +254,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
           <label className="wiki-inline"><input type="checkbox" checked={listOnly} onChange={(e) => setListOnly(e.target.checked)} />{g.listOnly}</label>
           <span className="wiki-spacer" />
           {nodeCount === undefined ? null : <span className="app-muted" role="status">{g.count(nodeCount)}</span>}
+          {nodeCount !== undefined && nodeCount > WIKI_GRAPH.bigNodes ? <ToneChip tone="info" label={g.big} title={g.bigTitle} /> : null}
           {truncated ? <ToneChip tone="warning" label={typeof total === "number" && nodeCount !== undefined ? g.truncated(nodeCount, total) : g.truncatedNoTotal} /> : null}
         </div>
       )}

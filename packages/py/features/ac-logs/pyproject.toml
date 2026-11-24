@@ -9,6 +9,7 @@ license-files = ["LICENSE"]
 dependencies = [
     "agent-console-contracts>=0.14,<0.15",
     "agent-console-registry>=0.1,<0.2",
+    "agent-console-path-glob>=0.1,<0.2",
     "pydantic>=2.9",
     "jsonschema>=4.23",
     "ruamel-yaml>=0.18",

@@ -32,6 +32,8 @@ from agent_console_link_projects_memory import (
     module,
 )
 from agent_console_link_projects_memory.testing import FolderSpaces, folder_spaces_module
+from agent_console_memory import MemoryQuery
+from agent_console_memory.sqlite import SqliteMemoryStore
 from agent_console_memory.testing import user_author
 from agent_console_mod_memory import MEMORY_SERVICE, MemoryService
 from agent_console_mod_memory import module as memory_module
@@ -88,13 +90,16 @@ class _Clock:
 # ---- 묶음 단위 --------------------------------------------------------------------------
 
 
-def test_open_creates_db_in_folder_and_context_is_folder_id(tmp_path: Path) -> None:
+def test_open_defers_db_until_first_write_and_context_is_folder_id(tmp_path: Path) -> None:
     folder = _project(tmp_path, "a", "folder-a")
     pool = _pool(FolderSpaces({"reg-1": folder}))
     space = pool.open("reg-1")
     try:
         assert space.path == folder / ".agent-console" / "memory.sqlite3"
-        assert space.path.is_file()
+        # 보기만으로는 파일을 만들지 않는다(FU.2): 목록·범위·태그는 빈 메모리가 답한다
+        assert space.store.search(MemoryQuery()).items == []
+        assert space.store.list_scopes() == []
+        assert not space.path.exists()
         # 등록 id ≠ 폴더 id: 맥락은 폴더 id
         assert space.context == {"project_id": "folder-a"}
         assert pool.open("reg-1") is space  # 캐시
@@ -102,6 +107,11 @@ def test_open_creates_db_in_folder_and_context_is_folder_id(tmp_path: Path) -> N
             MemoryScopeRef(kind="notes", id=""), "k", "본문", author=user_author()
         )
         assert written.entry.version == 1
+        assert space.path.is_file()
+        # 파일이 생긴 뒤 다시 열면 SQLite 저장소 그대로(선택 능력이 보인다)
+        settled = pool.open("reg-1")
+        assert isinstance(settled.store, SqliteMemoryStore)
+        assert [e.key for e in settled.store.search(MemoryQuery()).items] == ["k"]
     finally:
         pool.close_all()
     assert pool.open_spaces() == []
@@ -283,6 +293,33 @@ def _app_rows(database: SqliteDatabase) -> int:
 def _file_rows(path: Path) -> int:
     with sqlite3.connect(path) as conn:
         return int(conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0])
+
+
+def test_rest_reads_do_not_create_folder_db(tmp_path: Path, database: SqliteDatabase) -> None:
+    """메모리 화면 GET(목록·검색·범위·태그·없는 항목)은 ``memory.sqlite3``를 만들지 않는다(FU.2)."""
+    folder = _project(tmp_path, "a", "folder-a")
+    assembly = _assemble(database, {"reg-1": folder})
+    db_file = folder / ".agent-console" / "memory.sqlite3"
+    before = sorted(p.name for p in db_file.parent.iterdir())
+    with _client(assembly) as client:
+        for path in (
+            "/memory/entries?project=reg-1",
+            "/memory/entries?project=reg-1&q=hello",
+            "/memory/scopes?project=reg-1",
+            "/memory/tags?project=reg-1",
+        ):
+            res = client.get(f"{API}{path}")
+            assert res.status_code == 200, (path, res.text)
+        assert client.get(f"{API}/memory/entries/nope?project=reg-1").status_code == 404
+        assert not db_file.exists()
+        assert sorted(p.name for p in db_file.parent.iterdir()) == before
+        body = {"scope": {"kind": "notes", "id": ""}, "key": "k", "content": "본문"}
+        created = client.post(f"{API}/memory/entries?project=reg-1", json=body)
+        assert created.status_code == 201, created.text
+        assert db_file.is_file()
+        assert _file_rows(db_file) == 1
+        listed = client.get(f"{API}/memory/entries?project=reg-1").json()["items"]
+        assert [e["key"] for e in listed] == ["k"]
 
 
 def test_rest_project_query_uses_folder_db_only(tmp_path: Path, database: SqliteDatabase) -> None:

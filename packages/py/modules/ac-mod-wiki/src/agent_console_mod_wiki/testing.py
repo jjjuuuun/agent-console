@@ -91,7 +91,8 @@ class SimpleWikiSpace:
     Attributes:
         store: 그 공간의 정의 저장소. pages_root: 페이지 폴더의 부모(절대 경로).
         config_writable: 쓸 수 있나. config_dir: 저장소 폴더(폴더 기준 상대 경로).
-        index_dir: 검색 색인 폴더(None = 메모리).
+        index_dir: 검색 색인 폴더(None = 메모리). folder: 폴더 절대 경로(None = 위키 폴더 자체가
+        기준 — 주면 위키 폴더가 그 안에 있어야 한다).
     """
 
     store: DefinitionStore
@@ -99,6 +100,7 @@ class SimpleWikiSpace:
     config_writable: bool = True
     config_dir: str = ""
     index_dir: Path | None = None
+    folder: Path | None = None
 
 
 class SimpleWikiSpaces:

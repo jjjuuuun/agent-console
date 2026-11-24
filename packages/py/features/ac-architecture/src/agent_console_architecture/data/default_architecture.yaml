@@ -83,7 +83,8 @@ profiles:
         when:
           any:
             - {path: /category, op: in, value: [document, skill, spec, agents_md]}
-            - {path: /documents/0/kind, op: in, value: [spec, skill, agents_md, instructions]}
+            # 문서 목록의 어느 항목이든(규칙이 첫 문서여도 뒤의 skill 등을 센다)
+            - {path: /documents, op: any_item, value: {/kind: [spec, skill, agents_md, instructions]}}
       context:
         label: Context builder
         description: 모델 입력 준비

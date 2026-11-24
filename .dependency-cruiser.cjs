@@ -11,17 +11,17 @@ module.exports = {
       from: { path: "^packages/ts/lib/([^/]+)/", pathNot: "^packages/ts/lib/(memory-view|sdd-view|markdown-doc|wiki-view)/" },
       to: {
         path: "^packages/ts/lib/([^/]+)/",
-        pathNot: ["^packages/ts/lib/$1/", "^packages/ts/lib/contracts/"],
+        pathNot: ["^packages/ts/lib/$1/", "^packages/ts/lib/contracts/", "^packages/ts/lib/virtual-rows/"],
       },
     },
     {
       name: "memory-view-allowed-deps",
-      comment: "memory-view(공유 메모리 표현)는 사내 패키지 중 contracts(타입만)와 text-editor(편집기·비교, design §5.7R.2 표)만 import한다. api-client·log-view·ui 등은 import하지 않고 연결은 props로 받는다(5.7R.17). 위 no-cross-package-deps에서 이 패키지만 빼고 여기서 대신 허용 범위를 정한다.",
+      comment: "memory-view(공유 메모리 표현)는 사내 패키지 중 contracts(타입만)와 text-editor(편집기·비교, design §5.7R.2 표)와 virtual-rows(가상 목록 훅)만 import한다. api-client·log-view·ui 등은 import하지 않고 연결은 props로 받는다(5.7R.17). 위 no-cross-package-deps에서 이 패키지만 빼고 여기서 대신 허용 범위를 정한다.",
       severity: "error",
       from: { path: "^packages/ts/lib/memory-view/src/" },
       to: {
         path: "^packages/ts/(lib|config)/",
-        pathNot: ["^packages/ts/lib/memory-view/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/"],
+        pathNot: ["^packages/ts/lib/memory-view/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/", "^packages/ts/lib/virtual-rows/"],
       },
     },
     {
@@ -55,7 +55,7 @@ module.exports = {
       from: { path: "^packages/ts/lib/wiki-view/src/" },
       to: {
         path: "^packages/ts/(lib|config)/",
-        pathNot: ["^packages/ts/lib/wiki-view/", "^packages/ts/lib/markdown-doc/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/"],
+        pathNot: ["^packages/ts/lib/wiki-view/", "^packages/ts/lib/markdown-doc/", "^packages/ts/lib/text-editor/", "^packages/ts/lib/contracts/", "^packages/ts/lib/virtual-rows/"],
       },
     },
     {
@@ -76,7 +76,7 @@ module.exports = {
       from: { path: "^packages/ts/lib/sdd-view/src/" },
       to: {
         path: "^packages/ts/(lib|config)/",
-        pathNot: ["^packages/ts/lib/sdd-view/", "^packages/ts/lib/markdown-doc/", "^packages/ts/lib/contracts/"],
+        pathNot: ["^packages/ts/lib/sdd-view/", "^packages/ts/lib/markdown-doc/", "^packages/ts/lib/contracts/", "^packages/ts/lib/virtual-rows/"],
       },
     },
     {
@@ -91,7 +91,7 @@ module.exports = {
       comment: "log-view는 사내 패키지 중 contracts(타입)만 import한다. ui·trace-view·schema-form·text-editor는 슬롯 props로 받는다(design §4R.1, F-19).",
       severity: "error",
       from: { path: "^packages/ts/lib/log-view/src/" },
-      to: { path: "^packages/ts/(lib|config)/", pathNot: ["^packages/ts/lib/log-view/", "^packages/ts/lib/contracts/"] },
+      to: { path: "^packages/ts/(lib|config)/", pathNot: ["^packages/ts/lib/log-view/", "^packages/ts/lib/contracts/", "^packages/ts/lib/virtual-rows/"] },
     },
     {
       name: "log-view-contracts-types-only",

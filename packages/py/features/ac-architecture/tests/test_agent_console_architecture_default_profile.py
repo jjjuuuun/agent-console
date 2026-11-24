@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 
 from agent_console_architecture import (
+    ProfileMatcher,
     load_default_profiles,
     merge_profiles,
     profile_issues,
@@ -27,6 +28,7 @@ from agent_console_contracts.architecture import (
     ArchitectureSettings,
     ArchitectureView,
 )
+from agent_console_contracts.logs import LogDocumentRef, LogEvent
 
 Ops = dict[str, ConditionOperator]
 
@@ -476,3 +478,29 @@ def test_renamed_ids_give_same_counts(profile: ArchitectureProfile, operators: O
     assert [{k: m.value for k, m in e.metrics.items()} for e in base.edges] == [
         {k: m.value for k, m in e.metrics.items()} for e in other.edges
     ]
+
+
+@pytest.mark.parametrize(
+    ("documents", "want"),
+    [
+        ([("rules", "house-rules"), ("skill", "review")], {"rules", "instructions"}),
+        ([("rules", "a"), ("rules", "b"), ("spec", "s")], {"rules", "instructions"}),
+        ([("skill", "review")], {"instructions"}),
+        ([("rules", "house-rules")], {"rules"}),
+        ([("memory", "m")], set()),
+    ],
+)
+def test_instructions_counts_any_document_fu6(
+    profile: ArchitectureProfile, operators: Ops, documents: list[tuple[str, str]], want: set[str]
+) -> None:
+    """FU.6: 규칙과 skill이 함께 붙은 맥락 구성은 Rules와 Instructions 둘 다 센다(5.7R.7 한계)."""
+    event = LogEvent(
+        uid="u1",
+        seq=1,
+        source="platform",
+        observed_at=0.0,
+        category="context",
+        documents=[LogDocumentRef(kind=k, path=p, action="read") for k, p in documents],
+    )
+    cells = set(ProfileMatcher(profile, operators).match(event).cells)
+    assert cells & {"rules", "instructions"} == want

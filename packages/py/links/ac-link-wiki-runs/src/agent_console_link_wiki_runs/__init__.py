@@ -12,7 +12,8 @@
       ``load_wiki_resource_type``, ``wiki_slot``, ``access_item``.
     - 도구 공급자(X30): ``WikiToolProvider``, ``merge_access``(층 합치기), ``author_for``,
       ``agent_label``, ``open_targets``, ``as_host_tool``, ``event_payload``, ``unavailable_issue``,
-      경고 코드 ``WikiRunsCodes``.
+      ``service_query_hash``(서비스의 선택 검색어 해셔 ``QueryHashSource``), 경고 코드
+      ``WikiRunsCodes``.
     - 실행 범위(X26): ``WikiRunScope``·``RunScopeResult``.
     - 노드 종류 ``wiki-update``(X2, entry point ``agent_console.node_types``): ``WikiUpdateNode``·
       ``WikiUpdateConfig``·``WikiNodeServices``(``runs.services``)·``WIKI_UPDATE_SERVICE``·
@@ -36,6 +37,7 @@ from .ports import (
     WIKI_INTEGRATIONS,
     WIKI_SERVICE,
     ProjectLookupLike,
+    QueryHashSource,
     WikiRunsIntegration,
     WikiServiceLike,
 )
@@ -50,6 +52,7 @@ from .provider import (
     event_payload,
     merge_access,
     open_targets,
+    service_query_hash,
     unavailable_issue,
 )
 from .resource_type import (
@@ -91,6 +94,7 @@ __all__ = [
     "WIKI_UPDATE_VARIABLES",
     "AgentLookup",
     "ProjectLookupLike",
+    "QueryHashSource",
     "RunScopeResult",
     "WikiNodeServices",
     "WikiResourceCheck",
@@ -116,6 +120,7 @@ __all__ = [
     "module",
     "open_targets",
     "render_values",
+    "service_query_hash",
     "system_author",
     "unavailable_issue",
     "wiki_slot",

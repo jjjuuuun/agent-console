@@ -2,9 +2,12 @@
 
 정의(``mod-definitions``)와 리소스(``mod-resources``)를 잇는다(design §3R.1.4 L8).
 
-- 필수: ``definitions.lookup``·``resources.types``. 선택: ``resources.lookup``·``secrets.rules``.
+- 필수: ``definitions.lookup``·``resources.types``. 선택: ``resources.lookup``·``secrets.rules``·
+  ``definitions.spaces``(공간 기준 검사가 그 공간 저장소의 리소스를 본다).
 - 제공: ``definitions.checks``(리소스 종류 검사·첨부 검사·``x-secret`` 평문 거부). 정의 저장 전
-  검사와 ``/server-info`` 평문 점검(정의 모듈이 이 검사의 평문 이슈를 모은다)에 쓰인다.
+  검사와 ``/server-info`` 평문 점검(정의 모듈이 이 검사의 평문 이슈를 모은다)에 쓰인다. 공간
+  저장(``?project=``)의 소비자는 선택 메서드 ``space_issues``를 부른다 — 첨부 ``ref``는 그 공간의
+  리소스만 보고 라이브러리로 넘어가 찾지 않는다.
 - 디스크립터(리소스 연결 해석): 호스트 기본 서비스 ``registries``를 요청마다 읽는다.
 - 이 연동이 꺼지면: 정의는 리소스 검사 없이 저장된다(정의 모듈의 모델 검증·비밀 규칙 검사는 남음).
 """
@@ -12,16 +15,19 @@
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 
 from agent_console_contracts import CONTRACT_VERSIONS, Graph
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
 from agent_console_resources import ResourceLookup
+from agent_console_store import SpaceStores
 from agent_console_teams import TeamPlan, catalog_from_registries
 
 from .checks import DefinitionChecker, LookupResources
 from .ports import (
     DEFINITION_CHECKS,
     DEFINITIONS_LOOKUP,
+    DEFINITIONS_SPACES,
     RESOURCE_TYPES,
     RESOURCES_LOOKUP,
     SECRET_RULES,
@@ -48,7 +54,7 @@ class DefinitionsResourcesLink:
         description="구성을 저장하기 전에 붙인 리소스가 맞는지 검사한다",
         provides=(DEFINITION_CHECKS,),
         requires=(DEFINITIONS_LOOKUP, RESOURCE_TYPES),
-        optional=(RESOURCES_LOOKUP, SECRET_RULES),
+        optional=(RESOURCES_LOOKUP, SECRET_RULES, DEFINITIONS_SPACES),
         contracts={"resources": CONTRACT_VERSIONS["resources"]},
     )
 
@@ -62,6 +68,13 @@ class DefinitionsResourcesLink:
         def resources() -> ResourceLookup:
             return ctx.port(RESOURCES_LOOKUP) or fallback
 
+        stores: SpaceStores[Any] = SpaceStores(lookup, lambda: ctx.port(DEFINITIONS_SPACES))
+
+        def space_resources(space: str) -> ResourceLookup:
+            # 그 공간 저장소의 리소스만 본다(없거나 읽을 수 없으면 "없음", 라이브러리로 넘어가지
+            # 않는다). 제공자가 없으면 SpacesUnavailable, 모르는 공간은 UnknownSpace.
+            return LookupResources(stores.get(space))
+
         def plan_of(graph: Graph) -> TeamPlan | None:
             return catalog_from_registries(ctx.registries).try_plan(graph)
 
@@ -72,6 +85,7 @@ class DefinitionsResourcesLink:
                 resources=resources,
                 plan_of=plan_of,
                 secret_rules=lambda: r() if (r := ctx.port(SECRET_RULES)) else None,
+                space_resources=space_resources,
             ),
         )
         return ModuleParts()

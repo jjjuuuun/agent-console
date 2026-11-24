@@ -153,8 +153,8 @@ export function useRunView(
   const run = snapshot.data?.run;
   // 이벤트·상호작용은 그 공간에서 스냅샷을 받은 뒤에 읽는다(다른 공간을 찾는 중에 404를 받지 않게, 서버도 그 자리를 기억한다)
   const hasRun = run !== undefined;
-  // 위임 흐름은 Run 단위 경로에 공간이 없어 서버가 아는 자리(스냅샷 조회가 기억)를 쓴다 - 스냅샷 다음에 읽는다
-  const trace = useApiQuery(traceKey(runId), (r) => r.getRunTrace(runId), { enabled: (options.trace ?? true) && hasRun });
+  // 위임 흐름도 그 실행이 있는 공간(`?project=`)으로 읽는다 - 스냅샷 다음에 읽는다
+  const trace = useApiQuery([...traceKey(runId), project], (r) => r.getRunTrace(runId, { project }), { enabled: (options.trace ?? true) && hasRun });
   const interactions = useApiQuery([...interactionsKey(runId), project], (r) => r.listRunInteractions(runId, project), { enabled: hasRun });
   const graph = useRunGraph(run);
 

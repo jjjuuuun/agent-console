@@ -28,10 +28,12 @@
     기록(X49): 프로토콜 ``WikiHistory``·``HistoryEntry``·``InMemoryWikiHistory``
     저장소: ``WikiRepository(pages, wiki_id=, syntax=, rules=, history=, search=, checks=, secrets=,
         limits=, clock=)``(읽기·쓰기·미리보기·옮기기·지우기·되돌리기·외부 변경 ``scan``·점검)
-    도구 묶음: ``WikiToolkit(wikis, access=, author=, text=, on_event=, write_budget=).specs()``
-        (런타임을 모름, 도구 7개·사유 코드·본문 없는 이벤트), 지침 ``WikiToolkit.instructions()``·
-        ``wiki_instructions``, 접근 판단 ``wiki_allowed``·``wikis_for``·``default_wiki``, 문구
-        ``load_tool_text``(``data/tool_text.yaml``)
+    도구 묶음: ``WikiToolkit(wikis, access=, author=, text=, on_event=, write_budget=,
+        query_hash=).specs()``(런타임을 모름, 도구 7개·사유 코드·본문 없는 이벤트), 지침
+        ``WikiToolkit.instructions()``·``wiki_instructions``, 접근 판단 ``wiki_allowed``·
+        ``wikis_for``·``default_wiki``, 문구 ``load_tool_text``(``data/tool_text.yaml``).
+    검색어 해시(공용 ``agent_console_query_hash`` 다시 내보냄): ``query_hasher``·
+        ``query_hasher_from_env``·``QueryHasher``·``QueryHashModes``·``QUERY_HASH_MODES``
     zip: ``export_zip(repository)``·``import_zip(repository, data, policy=, dry_run=)``
     페이지 파일: 프로토콜 ``WikiPages``·``LocalWikiPages(root, reserved=)``·``read_pages``,
         경로 ``check_page_path``·``page_path_for_file``·``file_for_page``
@@ -45,6 +47,14 @@
 """
 
 from __future__ import annotations
+
+from agent_console_query_hash import (
+    QUERY_HASH_MODES,
+    QueryHasher,
+    QueryHashModes,
+    query_hasher,
+    query_hasher_from_env,
+)
 
 from ._compiled import (
     KNOWN_LINK_KINDS,
@@ -165,6 +175,7 @@ __all__ = [
     "KNOWN_LINK_KINDS",
     "KNOWN_RESOLVERS",
     "KNOWN_TITLE_SOURCES",
+    "QUERY_HASH_MODES",
     "RULES_CONTENT_FIELD",
     "SEARCH_INDEX_GROUP",
     "TOOL_TEXT_RESOURCE",
@@ -186,6 +197,8 @@ __all__ = [
     "ParseCache",
     "ParsedLink",
     "ParsedPage",
+    "QueryHashModes",
+    "QueryHasher",
     "RewriteResult",
     "RulesDocument",
     "ScanSearchIndex",
@@ -265,6 +278,8 @@ __all__ = [
     "page_facts",
     "page_path_for_file",
     "parse_page",
+    "query_hasher",
+    "query_hasher_from_env",
     "query_terms",
     "read_pages",
     "register_builtin_search",

@@ -1,4 +1,4 @@
-"""기본 연산자 10개: 참·거짓·경계·형식 불일치(= 거짓)·값 없음(MISSING)."""
+"""기본 연산자 11개: 참·거짓·경계·형식 불일치(= 거짓)·값 없음(MISSING)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from agent_console_safe_regex import UnsafeRegexError
 OPS = {op.descriptor.id: op for op in builtin_operators()}
 
 
-def test_ten_builtin_operators_from_data() -> None:
+def test_builtin_operators_from_data() -> None:
     assert list(OPS) == [
         "eq",
         "ne",
@@ -25,6 +25,7 @@ def test_ten_builtin_operators_from_data() -> None:
         "gte",
         "lt",
         "lte",
+        "any_item",
     ]
     assert list(builtin_descriptors()) == list(OPS)
     assert all(op.descriptor.title for op in OPS.values())
@@ -107,3 +108,50 @@ def test_matches_input_limit_and_cache() -> None:
     assert op.evaluate("abX", "X") is True
     assert op.evaluate("abY", "Y") is True  # 캐시 크기 1에서 교체
     assert op.evaluate("abX", "X") is True
+
+
+ITEMS = [{"kind": "rules", "path": "a"}, {"kind": "skill", "path": "b", "tags": ["x"]}]
+
+
+@pytest.mark.parametrize(
+    ("actual", "expected", "want"),
+    [
+        (ITEMS, {"/kind": ["skill", "spec"]}, True),
+        (ITEMS, {"/kind": ["spec"]}, False),
+        (ITEMS, {"/kind": ["rules"], "/path": ["a"]}, True),
+        (ITEMS, {"/kind": ["rules"], "/path": ["b"]}, False),  # 한 항목에서 모두 맞아야 한다
+        (ITEMS, {"/tags": [["x"]]}, True),
+        (ITEMS, {"/missing": [None]}, False),
+        (["a", "b"], {"": ["b"]}, True),
+        ([1, 2], {"": [2.0]}, True),
+        ([], {"/kind": ["skill"]}, False),
+        ("skill", {"": ["skill"]}, False),  # 목록이 아니면 거짓
+        ({"kind": "skill"}, {"/kind": ["skill"]}, False),
+        (ITEMS, {}, False),  # 형식이 틀린 기대 값은 거짓
+        (ITEMS, {"/kind": "skill"}, False),
+        (ITEMS, {"kind": ["skill"]}, False),
+        (ITEMS, ["skill"], False),
+    ],
+)
+def test_any_item(actual: Any, expected: Any, want: bool) -> None:
+    op = OPS["any_item"]
+    assert op.evaluate(actual, expected) is want
+    assert op.compile_expected(expected)(actual) is want
+
+
+def test_any_item_value_schema_rejects_bad_values() -> None:
+    from agent_console_conditions import condition_issues
+    from agent_console_contracts import ConditionSpec
+
+    spec = ConditionSpec.model_validate(
+        {
+            "all": [
+                {"path": "/documents", "op": "any_item", "value": {"/kind": ["skill"]}},
+                {"path": "/documents", "op": "any_item", "value": {"kind": ["skill"]}},
+                {"path": "/documents", "op": "any_item", "value": {}},
+                {"path": "/documents", "op": "any_item", "value": {"/kind": "skill"}},
+            ]
+        }
+    )
+    bad = [i.path for i in condition_issues(spec, OPS) if i.severity == "error"]
+    assert bad == ["/all/1/value", "/all/2/value", "/all/3/value"]

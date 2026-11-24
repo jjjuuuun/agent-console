@@ -21,15 +21,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import hashlib
 import inspect
-import threading
 import time
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.resources import files
-from typing import Any, Final, Protocol
+from typing import Any, Final
 
 from ruamel.yaml import YAML
 
@@ -44,7 +42,9 @@ from agent_console_contracts.wiki import (
     WikiHeading,
     WikiIssue,
 )
+from agent_console_query_hash import QueryHasher, query_hasher
 from agent_console_text_template import render_template, template_variables
+from agent_console_write_budget import WriteBudget, WriteBudgetLike
 
 from ._errors import (
     WikiConflictError,
@@ -401,34 +401,9 @@ class WikiToolSpec:
     call: WikiToolCall = field(compare=False)
 
 
-class WikiWriteBudget(Protocol):
-    """쓰기 횟수 한도(실행 하나가 함께 쓴다). `take()`가 거짓이면 `wiki.rate_limited`."""
-
-    def take(self) -> bool:
-        """한 번 쓴다. 남은 횟수가 없으면 False."""
-        ...
-
-
-class WriteBudget:
-    """`WikiWriteBudget` 기본 구현. None = 한도 없음. 스레드 안전.
-
-    >>> b = WriteBudget(1)
-    >>> b.take(), b.take()
-    (True, False)
-    """
-
-    def __init__(self, limit: int | None) -> None:
-        self.limit = limit
-        self.used = 0
-        self._lock = threading.Lock()
-
-    def take(self) -> bool:
-        """한 번 쓴다. 남은 횟수가 없으면 False."""
-        with self._lock:
-            if self.limit is not None and self.used >= self.limit:
-                return False
-            self.used += 1
-            return True
+WikiWriteBudget = WriteBudgetLike
+"""쓰기 횟수 한도(실행 하나가 함께 쓴다, `agent-console-write-budget`). `take()`가 거짓이면
+`wiki.rate_limited`. 기본 구현은 `WriteBudget`(같은 패키지에서 다시 내보낸다)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -549,10 +524,6 @@ def _boolean(args: Mapping[str, Any], name: str, default: bool) -> bool:
     return value
 
 
-def _sha(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8", errors="surrogatepass")).hexdigest()
-
-
 def _lines(lines: Sequence[int]) -> str:
     return ", ".join(str(n) for n in lines)
 
@@ -657,6 +628,9 @@ class WikiToolkit:
         write_budget: 쓰기 횟수 한도(write·move·delete가 하나씩 쓴다, 실행 단위로 공유, 선택).
         max_search_results: 검색 결과 최대 수(입력 `limit`의 상한).
         max_list_results: 목록 최대 수(입력 `limit`의 상한).
+        query_hash: 검색 이벤트의 검색어 해셔(`query_hasher`). None이면 이 묶음만의 무작위 솔트
+            HMAC-SHA256 — 실행을 넘어 같은 값이 필요하면 쓰는 쪽(서버 모듈)이 하나를 만들어 넘긴다.
+            해셔가 None을 돌려주면(`off`) 이벤트에 `query_sha256`을 싣지 않는다.
         timer: 처리 시간 측정 시계(초).
     """
 
@@ -671,6 +645,7 @@ class WikiToolkit:
         write_budget: WikiWriteBudget | None = None,
         max_search_results: int = 20,
         max_list_results: int = 200,
+        query_hash: QueryHasher | None = None,
         timer: Callable[[], float] = time.perf_counter,
     ) -> None:
         if isinstance(wikis, Mapping):
@@ -685,6 +660,7 @@ class WikiToolkit:
         self.write_budget = write_budget
         self.max_search_results = max(1, max_search_results)
         self.max_list_results = max(1, max_list_results)
+        self.query_hash: QueryHasher = query_hash if query_hash is not None else query_hasher()
         self._timer = timer
 
     # ---- 대상 ----------------------------------------------------------------------------
@@ -936,7 +912,10 @@ class WikiToolkit:
         limit = min(
             max(_integer(args, "limit") or self.max_search_results, 1), self.max_search_results
         )
-        payload.update(query_chars=len(query), query_sha256=_sha(query))
+        payload["query_chars"] = len(query)
+        digest = self.query_hash(query)
+        if digest is not None:
+            payload["query_sha256"] = digest
         result = await self._run(lambda: repo.search(query, prefix=prefix, tags=tags, limit=limit))
         payload["results"] = len(result.items)
         if not result.items:

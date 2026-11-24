@@ -9,6 +9,9 @@
   `{project_id: 폴더 id}`(매니페스트 `id`)라 다른 앱에서 등록 id가 달라도 같은 범위 id가 된다.
 - 계보: 켜진 모듈 중 범위 `memory`(설정 `migration_scope`)를 선언한 계보를 파일에 올린다. 코드에
   계보 이름은 없다.
+- 늦게 만들기: `memory.sqlite3`가 아직 없으면 보기(목록·검색·범위·태그)만으로는 만들지 않는다.
+  저장소는 `ac-memory` `DeferredMemoryStore`라 빈 메모리로 답하고, 첫 쓰기 때 파일을 만들고 계보를
+  올린다. 파일이 없고 구성 폴더에 쓸 수 없으면 전처럼 열 때 `ConfigReadonly`다.
 - 캐시: `max_open_spaces`(기본 8)·`idle_close_seconds`(기본 300) — 프로젝트 공간·기록 DB 캐시와 같은
   기본값.
 - 선택 포트 `projects.lookup`: 있으면 `memory.spaces`의 선택 메서드 `existing()`이 등록

@@ -1,7 +1,7 @@
 """agent-console-store: 저장소 인터페이스와 구현.
 
 - 정의(graph, agent, settings, ...): `DefinitionStore` -> `FileDefinitionStore`(YAML),
-  `InMemoryDefinitionStore`
+  `InMemoryDefinitionStore`, 이름 → 새 정의 id `slug_id`·`unique_id`
 - 버전 이력: `VersionRepository` (SQLite 또는 메모리), 기록 알림 감싸개 `ObservedVersionRepository`
 - 실행 기록: `RunRepository`, `EventRepository`,
   상호작용 `InteractionRepository`
@@ -37,6 +37,7 @@ from .errors import (
 from .file_store import FileDefinitionStore
 from .graphs import list_graph_summaries, to_versioned_graph
 from .hashing import HashFn, canonical_json, default_hash
+from .ids import SLUG_MAX_CHARS, slug_id, unique_id
 from .interfaces import (
     DefinitionStore,
     DefinitionSummary,
@@ -122,7 +123,7 @@ from .spaces import (
     SpacesUnavailable,
     UnknownSpace,
 )
-from .sqlite import SqliteStorage, create_sqlite_engine, open_sqlite
+from .sqlite import RUN_BATCH_SIZE, SqliteStorage, create_sqlite_engine, open_sqlite
 from .yaml_io import atomic_write_bytes, dump_yaml, load_yaml_text, merge_into, to_plain, wrap_value
 
 __all__ = [
@@ -137,8 +138,10 @@ __all__ = [
     "MAX_PAGE_LIMIT",
     "RECORDS_SPACES_PORT",
     "RESOURCE_KIND",
+    "RUN_BATCH_SIZE",
     "SCOPE_FIELD",
     "SETTINGS_KIND",
+    "SLUG_MAX_CHARS",
     "AlreadyExists",
     "AssignCandidate",
     "AssignPlan",
@@ -233,10 +236,12 @@ __all__ = [
     "plan_assignment",
     "run_moves",
     "script_revisions",
+    "slug_id",
     "store_error_body",
     "to_plain",
     "to_project_counts",
     "to_versioned_graph",
+    "unique_id",
     "upgrade",
     "upgrade_on",
     "versions_for",

@@ -18,6 +18,9 @@
 - 검색 색인: 사용자 ``search_backend`` → 설치자 ``search.backend`` → 설치자 ``search.fallback``.
   파일 위치는 공간의 ``index_dir``(프로젝트) 또는 호스트 상태 폴더(단독), 없으면 메모리.
 - 요약(``WikiSummary``)은 무거운 점검을 포함하므로 (저장소, 페이지 파일 크기·시각) 키로 캐시한다.
+- 검색어 해셔(``query_hash``): 서비스 하나에 하나(설치자 ``query_hash``·``query_hash_salt_env``).
+  실행 연동이 에이전트 위키 도구 묶음에 넘긴다 — 같은 서버 안에서는 실행을 넘어 같은 검색어가 같은
+  값이다. 솔트 값은 로그·응답·설정에 내지 않는다.
 
 실행·프로젝트를 모른다. 공간 이름은 불투명 문자열이다.
 """
@@ -27,10 +30,8 @@ from __future__ import annotations
 import contextlib
 import json
 import posixpath
-import re
 import threading
 import time
-import unicodedata
 from collections import OrderedDict
 from collections.abc import Callable, Collection, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -65,9 +66,16 @@ from agent_console_contracts.wiki import (
 )
 from agent_console_registry import Registry
 from agent_console_secret_rules import SecretRules, default_rules
-from agent_console_store import DefinitionKind, DefinitionStore, NotFound, StoredDefinition
+from agent_console_store import (
+    DefinitionKind,
+    DefinitionStore,
+    NotFound,
+    StoredDefinition,
+    unique_id,
+)
 from agent_console_wiki import (
     LocalWikiPages,
+    QueryHasher,
     SearchIndexFactory,
     SecretScan,
     WikiHistory,
@@ -83,6 +91,7 @@ from agent_console_wiki import (
     effective_syntax,
     load_wiki_rules,
     merge_rules,
+    query_hasher,
 )
 
 from .config import parse_wiki_settings, section_of, settings_issue
@@ -98,30 +107,6 @@ _USER = WikiAuthor(kind=KnownWikiAuthorKinds.USER)
 def user_author() -> WikiAuthor:
     """REST·화면 쓰기의 쓴 주체(사람). 1인 로컬이라 ``label``은 비운다(§7R.18 Q13)."""
     return _USER.model_copy()
-
-
-_BAD_ID = re.compile(r"[^A-Za-z0-9_-]+")
-_MAX_ID = 120
-
-
-def unique_id(name: str, taken: Collection[str], *, fallback: str) -> str:
-    """이름에서 정의 id(``[A-Za-z0-9][A-Za-z0-9_-]*``)를 만든다. 남는 글자가 없으면 ``fallback``,
-    겹치면 ``-2``·``-3``…(대소문자 무시).
-
-    >>> unique_id("Project Notes", ["project-notes"], fallback="wiki")
-    'project-notes-2'
-    >>> unique_id("프로젝트 노트", [], fallback="wiki")
-    'wiki'
-    """
-    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    base = _BAD_ID.sub("-", ascii_name).strip("-_").lower()[:_MAX_ID].strip("-_") or fallback
-    folded = {t.casefold() for t in taken}
-    if base.casefold() not in folded:
-        return base
-    n = 2
-    while f"{base}-{n}".casefold() in folded:
-        n += 1
-    return f"{base}-{n}"
 
 
 @dataclass(frozen=True)
@@ -140,6 +125,9 @@ class WikiScope:
         history: 기록 저장소(없으면 None).
         index_dir: 검색 색인 파일 폴더(없으면 메모리).
         key: 캐시 키(단독 = 빈 문자열).
+        boundary: 위키 폴더가 들어 있어야 하는 기준 폴더(프로젝트 = 프로젝트 폴더, 단독 = 단독
+            루트 폴더). ``LocalWikiPages(within=)``로 넘겨 링크 바꿔치기를 막는다(기준 폴더는 만들지
+            않는다). None이면 위키 폴더 자체가 기준이다.
     """
 
     name: str | None
@@ -153,6 +141,7 @@ class WikiScope:
     history: WikiHistory | None
     index_dir: Path | None
     key: str
+    boundary: Path | None = None
 
 
 @dataclass
@@ -225,11 +214,15 @@ class WikiService:
         kinds: (위키 종류, 위키 규칙 종류).
         standalone_pages: 단독 공간 페이지 폴더의 부모(절대 경로).
         standalone_index: 단독 공간 검색 색인 폴더(None = 메모리).
+        standalone_boundary: 단독 공간 위키 폴더가 들어 있어야 하는 기준 폴더(예: 단독 루트 —
+            위키 정의를 저장할 때 생긴다). None이면 위키 폴더 자체가 기준이다.
         host_history: 단독 공간 기록 저장소(None = 기록 없음).
         search: 검색 색인 공장 레지스트리(X48).
         write_check_plugins: 쓰기 검사 공장 레지스트리(X50 플러그인).
         ports: 바깥 의존.
         clock: 시계(유닉스 초).
+        query_hash: 에이전트 위키 검색 이벤트의 검색어 해셔(``query_hasher``). None이면 이 서비스가
+            무작위 솔트 HMAC 하나를 만든다(서버 모듈은 설치자 설정으로 만들어 넘긴다).
     """
 
     def __init__(
@@ -240,17 +233,21 @@ class WikiService:
         kinds: tuple[DefinitionKind, DefinitionKind],
         standalone_pages: Path,
         standalone_index: Path | None = None,
+        standalone_boundary: Path | None = None,
         host_history: WikiHistory | None = None,
         search: Registry[SearchIndexFactory] | None = None,
         write_check_plugins: Registry[WriteCheckFactory] | None = None,
         ports: WikiPorts | None = None,
         clock: Callable[[], float] = time.time,
+        query_hash: QueryHasher | None = None,
     ) -> None:
         self.options = options
+        self.query_hash: QueryHasher = query_hash if query_hash is not None else query_hasher()
         self.standalone = standalone
         self.wiki_kind, self.rules_kind = kinds
         self.standalone_pages = standalone_pages
         self.standalone_index = standalone_index
+        self.standalone_boundary = standalone_boundary
         self.host_history = host_history
         self.search_factories = search
         self.write_check_plugins = write_check_plugins
@@ -423,6 +420,7 @@ class WikiService:
             else self.options.pages_dir
         )
         index_dir = getattr(opened, "index_dir", None)
+        folder = getattr(opened, "folder", None)
         return WikiScope(
             name=space,
             store=opened.store,
@@ -435,6 +433,7 @@ class WikiService:
             history=self._records_history(space),
             index_dir=Path(index_dir) if index_dir else None,
             key=space,
+            boundary=Path(folder) if folder else None,
         )
 
     def _standalone_scope(self) -> WikiScope:
@@ -451,6 +450,7 @@ class WikiService:
             history=self.host_history,
             index_dir=self.standalone_index,
             key="",
+            boundary=self.standalone_boundary,
         )
 
     @staticmethod
@@ -597,6 +597,7 @@ class WikiService:
             tuple(id(c) for c in checks),
             id(scope.history),
             str(scope.pages_root),
+            str(scope.boundary),
             id(scope.rules_store),
         )
         key = (scope.key, wiki_id)
@@ -609,7 +610,7 @@ class WikiService:
         syntax = compile_syntax(effective_syntax(settings, rules=merged.syntax_layers))
         search, _fresh = self._search_index(scope, wiki_id, settings, syntax.case_insensitive)
         repo = WikiRepository(
-            LocalWikiPages(scope.pages_root / wiki.id),
+            LocalWikiPages(scope.pages_root / wiki.id, within=scope.boundary),
             wiki_id=wiki.id,
             syntax=syntax,
             rules=merged,
