@@ -11,7 +11,14 @@ import logging
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from agent_console_contracts import CONTRACTS_VERSION, ErrorInfo, Issue, PluginInfo, ServerInfo
+from agent_console_contracts import (
+    CONTRACTS_VERSION,
+    ErrorInfo,
+    Issue,
+    PluginInfo,
+    PluginOptionsView,
+    ServerInfo,
+)
 from agent_console_modkit import Assembly
 from agent_console_registry import LoadReport
 
@@ -65,11 +72,13 @@ def server_info(
     reports: Sequence[tuple[str, LoadReport]],
     assembly: Assembly,
     plugin_warnings: Sequence[str] = (),
+    plugin_options: Sequence[PluginOptionsView] = (),
 ) -> ServerInfo:
     """`ServerInfo`(읽기 전용, 비밀 값 없음).
 
     `security.expose_paths`가 꺼지면 workspace 경로를 뺀다. `plugin_warnings`(플러그인 설정
     경고, 예: `plugins.disabled`의 모르는 이름)는 `warnings`에 `plugins.config` 경고로 더한다.
+    `plugin_options`(설정을 선언한 플러그인의 가린 옵션 보기)는 그대로 싣는다.
     """
     attributes: dict[str, Any] = {
         "host": settings.host,
@@ -100,6 +109,7 @@ def server_info(
         plugins=plugin_infos(reports, redactor(assembly)),
         attributes=attributes,
         warnings=warnings,
+        plugin_options=list(plugin_options),
     )
 
 

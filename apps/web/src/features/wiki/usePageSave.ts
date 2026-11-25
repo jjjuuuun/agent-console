@@ -10,6 +10,7 @@ import type { Versioned } from "@agent-console/api-client";
 import { classifyWikiError, type WikiFailure } from "./wikiErrors";
 import { ownWriteKey, useWikiSpace, wikiKeys, type OwnWrites } from "./useWikiApi";
 import { wikiMessages as m } from "./messages";
+import { localizeIssue } from "../../app/wikiIssueMessages";
 
 export interface SaveOutcome {
   /** 저장은 됐지만 경고할 이슈(규칙 경고·비밀 의심) */
@@ -45,7 +46,7 @@ export function usePageSaver(wikiId: string, ownWrites: { readonly current: OwnW
       ownWrites.current.set(ownWriteKey(wikiId, path), Date.now());
       qc.setQueryData(wikiKeys.page(space.key, wikiId, path), saved);
       setFailure(null);
-      setWarnings(saved.issues ?? []);
+      setWarnings((saved.issues ?? []).map(localizeIssue));
       onWritten();
     },
     [ownWrites, wikiId, qc, space.key, onWritten],

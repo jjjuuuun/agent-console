@@ -45,6 +45,22 @@ class LookupExportCatalog:
         except _MISSING:
             return {}
 
+    def content(self, kind: str, id: str) -> bytes | None:
+        """한 파일 본문. 여러 파일 본문 종류(``list_files``가 되는 종류)는 None(본문은 files)."""
+        lookup = self._lookup
+        try:
+            lookup.list_files(kind, id)
+        except (StoreError, KeyError):
+            return None  # 없는 정의·잘못된 id
+        except ValueError:
+            pass  # 여러 파일 본문 종류가 아니다 → 한 파일 본문을 읽는다
+        else:
+            return None
+        try:
+            return lookup.read_content(kind, id)
+        except _MISSING:
+            return None
+
     def dependencies(self, kind: str, id: str) -> Sequence[DependencyLike]:
         if self._dependencies is None:
             return []

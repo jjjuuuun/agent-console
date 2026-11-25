@@ -18,7 +18,12 @@
   "max_search_results": 100,
   "query_hash": "hmac",
   "max_changes_page": 200,
-  "search": {"backend": "sqlite-fts", "fallback": "scan", "tokenizer": "trigram"},
+  "search": {
+    "backend": "sqlite-fts",
+    "fallback": "scan",
+    "tokenizer": "trigram",
+    "index_options": {}
+  },
   "export_limits": {
     "max_archive_bytes": 67108864,
     "max_files": 50000,

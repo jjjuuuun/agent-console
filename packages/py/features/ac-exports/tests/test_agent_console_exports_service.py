@@ -54,6 +54,9 @@ class Catalog:
     def files(self, kind: str, id: str) -> Mapping[str, bytes]:
         return {}
 
+    def content(self, kind: str, id: str) -> bytes | None:
+        return None
+
     def dependencies(self, kind: str, id: str) -> Sequence[Any]:
         return []
 

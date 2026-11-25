@@ -2,7 +2,7 @@
 
 - 포트 ``projects.folders``가 있는 조립: 루트 = 등록 폴더(id = 등록 id), 설치자 ``roots``는 쓰지
   않는다. 등록 안 된 루트·프로젝트는 404, 루트 밖 ``subdir``는 422. 원본은 ``?project=`` 공간(기본)
-  또는 ``source=library``.
+  또는 ``source=library``. 공간 원본의 함께 쓰는 정의는 그 공간 저장소 기준(``for_lookup``, FU.22).
 - 포트가 없는 조립(모듈 단독): 설치자 ``roots``와 라이브러리 그대로.
 """
 
@@ -17,7 +17,13 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE
-from agent_console_mod_exports import DEFINITIONS_SPACES, PROJECT_FOLDERS, module
+from agent_console_mod_exports import (
+    DEFINITIONS_SPACES,
+    EXPORT_DEPENDENCIES,
+    PROJECT_FOLDERS,
+    ScopedExportDependencies,
+    module,
+)
 from agent_console_mod_exports.testing import local_definitions_module
 from agent_console_modkit import Assembly, BaseServices, ModuleParts, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
@@ -170,3 +176,96 @@ def test_module_starts_alone_with_optional_ports_missing() -> None:
     [report] = [r for r in assembly.report if r.id == "mod-exports"]
     assert report.state.value == "active"
     assert set(module.descriptor.optional) >= {PROJECT_FOLDERS, DEFINITIONS_SPACES}
+
+
+RULE = {"type": "rule", "name": "규칙", "config": {"paths": ["src/**"], "text": "먼저"}}
+
+
+@dataclass(frozen=True)
+class _Dep:
+    kind: str
+    id: str
+    node_id: str | None = None
+    shared: bool = False
+    mode: str = "add"
+    config_override: dict[str, Any] | None = None
+
+
+class _AgentResources:
+    """에이전트 → ``resources[].ref`` (읽는 저장소를 기록한다)."""
+
+    def __init__(self, lookup: Any, seen: list[Any]) -> None:
+        self.lookup = lookup
+        self.seen = seen
+
+    def dependencies(self, kind: str, id: str) -> list[_Dep]:
+        self.seen.append(self.lookup)
+        if kind != "agent":
+            return []
+        doc = self.lookup.get(kind, id).document
+        return [_Dep("resource", r["ref"]) for r in doc.get("resources", [])]
+
+    def for_lookup(self, lookup: Any) -> _AgentResources:
+        return _AgentResources(lookup, self.seen)
+
+
+def _deps_module(deps: Any) -> Any:
+    return fake_module(
+        "fake-deps",
+        kind="testing",
+        provides=[EXPORT_DEPENDENCIES],
+        on_build=lambda ctx: ctx.provide(EXPORT_DEPENDENCIES, deps),
+    )
+
+
+def _plan_paths(client: TestClient, **params: str) -> set[str]:
+    res = client.post(f"{API}/plan", params=params, json=REQUEST)
+    assert res.status_code == 200, res.text
+    return {f["path"] for f in res.json()["files"]}
+
+
+def test_project_space_export_follows_dependencies_in_that_space(tmp_path: Path) -> None:
+    """FU.22: 프로젝트 공간 원본은 그 공간 저장소 기준 의존 계산(``for_lookup``)을 쓴다."""
+    library = FileDefinitionStore(tmp_path / "ws", DEFAULT_KINDS)
+    library.create("agent", {**LIB_AGENT, "resources": [{"ref": "lib-only"}]})
+    library.create("resource", {**RULE, "id": "lib-only"})
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    spaces = _Spaces({"a": a, "b": b})
+    space = spaces.open("a")
+    space.create("agent", {**PRJ_AGENT, "resources": [{"ref": "style"}]})
+    space.create("resource", {**RULE, "id": "style"})
+    seen: list[Any] = []
+    deps = _AgentResources(library, seen)
+    assert isinstance(deps, ScopedExportDependencies)
+    assembly = _assembly(tmp_path, _projects_module({"a": a, "b": b}, spaces), _deps_module(deps))
+    with _client(assembly) as client:
+        in_space = _plan_paths(client, project="a")
+        assert any("style" in p for p in in_space), in_space  # 공간의 리소스가 따라온다
+        assert not any("lib-only" in p for p in in_space)  # 공용으로 넘어가 찾지 않는다
+        assert seen
+        assert all(lookup is space for lookup in seen)
+        seen.clear()
+        _plan_paths(client, project="a", source="library")
+        assert seen
+        assert all(lookup is library for lookup in seen)
+
+
+def test_project_space_without_for_lookup_exports_only_selected(tmp_path: Path) -> None:
+    """``for_lookup``이 없는 의존 계산은 공간 원본에 쓰지 않는다(라이브러리 기준을 섞지 않음)."""
+    a, b, spaces = _setup(tmp_path)
+
+    class _LibraryOnly:
+        calls = 0
+
+        def dependencies(self, kind: str, id: str) -> list[_Dep]:
+            _LibraryOnly.calls += 1
+            return [_Dep("resource", "lib-only")]
+
+    deps = _LibraryOnly()
+    assert not isinstance(deps, ScopedExportDependencies)
+    assembly = _assembly(tmp_path, _projects_module({"a": a, "b": b}, spaces), _deps_module(deps))
+    with _client(assembly) as client:
+        _plan_paths(client, project="a")
+        assert _LibraryOnly.calls == 0

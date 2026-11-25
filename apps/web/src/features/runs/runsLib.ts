@@ -394,7 +394,7 @@ export interface ObserveRow {
 }
 
 /** 관측 이벤트(`prefixes`로 시작하는 type) → 표 행. payload 키 어휘는 `eventPayloadKeys.json`(데이터)이고 `duration_ms`는 계약 필드다. */
-export function buildObserveRows(events: readonly RunEvent[], prefixes: readonly string[]): ObserveRow[] {
+export function buildObserveRows(events: readonly RunEvent[], prefixes: readonly string[], describe?: (event: RunEvent) => string | undefined): ObserveRow[] {
   return events
     .filter((e) => prefixes.some((p) => e.type.startsWith(p)))
     .map((event) => {
@@ -407,7 +407,7 @@ export function buildObserveRows(events: readonly RunEvent[], prefixes: readonly
         kind: bits.join(" · "),
         ...(duration !== undefined ? { durationMs: duration } : {}),
         error: isErrorEvent(event),
-        summary: summarizeEvent(event),
+        summary: describe?.(event) ?? summarizeEvent(event),
       };
     });
 }

@@ -21,6 +21,7 @@ export type {
   ModuleOptionsView,
   ModuleStatus,
   PluginInfo,
+  PluginOptionsView,
   RunEventMessage,
   SddChangedMessage,
   ServerInfo,
@@ -34,4 +35,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "modules" as const;
-export const CONTRACT_VERSION = "1.6.0" as const;
+export const CONTRACT_VERSION = "1.7.0" as const;

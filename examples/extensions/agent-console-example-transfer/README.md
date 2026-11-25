@@ -6,7 +6,9 @@
 
 형식 `example-json`
 - **내보내기**: 고른 정의(+ 함께 쓰는 정의 — 팀 구성의 에이전트·리소스 등)를 파일 하나(`agent-console-bundle.json`)에
-  담는다. 정의 원문은 그대로, 본문 파일은 글이면 `text`, 바이너리면 `base64`로 담는다. 정의 종류를 가리지 않는다.
+  담는다. 정의 원문은 그대로, 본문은 글이면 `text`, 바이너리면 `base64`로 담는다. 여러 파일 본문(카탈로그 `files`)은
+  `files`에, 한 파일 본문(카탈로그 `content` — 문서의 본문 필드가 파일 하나를 가리키는 종류)은 `content`에 담는다.
+  정의 종류를 가리지 않는다.
 - **가져오기**: 프로젝트(작업) 폴더의 같은 이름 파일을 읽어 후보로 보인다. 원본 파일은 읽기만 한다.
 - **형식 이름·필드 이름·파일 이름은 옵션 데이터**다(기본값 `data/defaults.json`). 설치자 설정으로 바꾼다.
 - **비밀 값은 파일에 들어가지 않는다**: 비밀 참조(`secret://이름`)는 참조로 담기고, 평문으로 의심되는 값은 내보내기
@@ -76,6 +78,9 @@
    않는다(`import.skipped_link`). 없는 파일은 빈 결과다.
 4. **틀린 파일·항목은 경고로**: 예외 대신 경고(`example_transfer.*`, 위치만)를 남기고 맞는 항목만 후보로 낸다.
 5. **형식 id = entry point 이름 = 디스크립터 id**: 다르면 내보내기 로더가 경고 후 건너뛴다.
+6. **본문은 카탈로그가 주는 두 길로 읽는다**: 여러 파일 본문은 `catalog.files(kind, id)`, 한 파일 본문은
+   `catalog.content(kind, id)`. 어느 쪽인지는 종류가 정하므로 형식은 종류를 몰라도 된다. 가져오기에서는 같은 두 값을
+   `ImportItem.files`·`ImportItem.content`로 넘긴다.
 
 ## 등록
 
@@ -91,6 +96,17 @@
 
 서버 시작 때 내보내기·가져오기 서버 모듈의 호스트 플러그인 로더가 이 그룹을 읽는다. 가져오기 출처는 프로젝트(작업)
 폴더가 정해진 요청에서만 만들어진다(`ImportSourceContext.project_dir`). 홈 폴더 같은 다른 곳은 읽지 않는다.
+
+설치하지 않고 쓰려면 서버 설정 `plugins.modules`에 등록 함수를 적는다(두 공장이 같은 레지스트리에 들어간다):
+
+```yaml
+plugins:
+  modules:
+    - agent_console_example_transfer:register
+```
+
+설치했다면 넣지 않는다. entry point가 이미 `example-json`을 등록하므로 같은 key가 두 번 등록되어 그 플러그인이
+`failed`로 남는다.
 
 ## 설정 예
 
@@ -118,7 +134,7 @@ modules:
 | --- | --- | --- |
 | `file_name` | `agent-console-bundle.json` | 내보낼 파일 이름 = 가져올 때 프로젝트 폴더에서 찾을 파일(상대 경로, `..` 금지) |
 | `format_name`·`format_version` | `agent-console-example-bundle`·`1` | 파일의 형식 표지(다르면 가져오지 않음, `example_transfer.unknown_format`) |
-| `fields` | `format`·`version`·`definitions`·`kind`·`id`·`document`·`files`·`text`·`base64` | 파일 안 필드 이름(같은 층에서 겹치면 거부) |
+| `fields` | `format`·`version`·`definitions`·`kind`·`id`·`document`·`files`·`content`·`text`·`base64` | 파일 안 필드 이름(같은 층에서 겹치면 거부) |
 | `name_field`·`type_field` | `name`·`type` | 가져오기 미리보기의 이름·리소스 종류로 쓸 정의 필드 |
 | `drop_fields` | 없음 | 내보낼 때 정의에서 뺄 최상위 필드 |
 | `max_file_bytes` | 10MiB | 가져올 때 읽을 최대 크기 |
@@ -158,6 +174,10 @@ uv run --project ../../.. python -m pytest
 
 - `tests/test_round_trip.py`: 실제 정의 저장소(파일 workspace)에 에이전트·리소스(글·바이너리 본문)를 두고 → 허용 폴더에
   내보내기 → **빈 workspace로 가져오기 → 같은 정의·같은 본문**, 다시 가져오면 새 이름(원본 파일 그대로), 비밀 참조는
-  그대로·평문 값은 파일에도 가져온 정의에도 없음.
+  그대로·평문 값은 파일에도 가져온 정의에도 없음. 한 파일 본문 종류도 본문까지 왕복.
 - `tests/test_agent_console_example_transfer.py`: entry point 선언, 라이브러리 로더로 로드, 틀린 옵션은 그 형식만 빠짐,
-  필드·형식 이름 옵션, 글·바이너리 본문, 틀린 파일·항목 경고, 없는 의존 경고, 링크·폴더 밖 거부, 크기 상한.
+  필드·형식 이름 옵션, 글·바이너리 본문(여러 파일·한 파일), 틀린 파일·항목 경고, 없는 의존 경고, 링크·폴더 밖 거부,
+  크기 상한.
+- `tests/test_server.py`: 통합 서버(설치하지 않았으면 `plugins.modules`로, 설치했으면 entry point로만 등록) — 등록
+  프로젝트 A의 에이전트 하나만 골라 REST로 프로젝트 B 폴더에 내보내면 그 에이전트가 쓰는 리소스(글·바이너리 본문)도
+  A 공간에서 찾아 함께 담기고, B에서 가져오면 같은 정의·같은 본문, 비밀 참조 그대로, 원본 파일 그대로.

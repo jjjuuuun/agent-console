@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- FU.13: 거꾸로 참조 `find_referrers(target, documents, references, *, messages=)` → `ReferrerScan(keys, checked, warnings)`. 같은 공간에서 정의 하나를 쓰는 정의를 주입한 참조 추출(X25)로 찾는다(삭제 확인 창의 "쓰는 구성"). 참조 추출이 없으면 문서를 읽지 않고 info `project.references_unavailable`(문구 키 `REFERRERS_UNAVAILABLE_MESSAGE`, 기본 `DEFAULT_REFERRER_MESSAGES`).
+
 - FU.6: `copy_plan(reserved_ids=)` — 종류의 예약어 id로 대상에 쓰게 되는 항목에 경고 `project.copy_reserved_id`
   (`CODE_COPY_RESERVED_ID`, `details.suggested_id`), 대상에 없으면 기본 동작 rename. 문구는 `messages=`로 바꾼다.
 

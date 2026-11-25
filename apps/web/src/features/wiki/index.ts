@@ -8,6 +8,7 @@ export { wikiMessages } from "./messages";
 export { wikiListPath, wikiPath, wikiPagePath, wikiRulesPath } from "./wikiPaths";
 export { wikiKeys, useWikiSpace, useWikiInfo, useWikiList, useWikiView, usePageList, usePage, useWikiLive, useInvalidateWiki } from "./useWikiApi";
 export { useWikiContext, type WikiContext } from "./useWikiContext";
+export { wikiIssueTexts, wikiIssueText, localizeIssue, wikiEventSummary } from "../../app/wikiIssueMessages";
 export { classifyWikiError, type WikiFailure } from "./wikiErrors";
 export type { WikiTabProps, WikiTabPanels, NewPagePrefill } from "./wikiTabs";
 export { useNewWikiDialog, useImportDialog, useExportDialog, useDeleteWikiDialog, useRulesScreenOn } from "./wikiDialogs";

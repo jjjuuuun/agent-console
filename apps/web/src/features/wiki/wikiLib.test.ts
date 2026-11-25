@@ -8,6 +8,7 @@ import data from "./wikiData.json";
 import display from "./wikiDisplay.json";
 import { buildWikiDisplay, importStatusDisplay, severityTone } from "./wikiConfig";
 import { classifyWikiError } from "./wikiErrors";
+import { localizeIssue, wikiEventSummary, wikiIssueText } from "../../app/wikiIssueMessages";
 import { routeWordOf } from "./PageDialogs";
 import { filterWikis } from "./WikiListScreen";
 import { lintBadge } from "./WikiScreen";
@@ -108,5 +109,19 @@ describe("noHardcoding: 위키 화면 코드", () => {
   it("위키 이름·페이지 경로 예시가 문구 표에 없다", () => {
     const text = readFileSync(join(dir, "messages.ts"), "utf8");
     expect(text).not.toMatch(/decisions\/|notes\/|payments/);
+  });
+});
+
+
+describe("위키 이슈 코드 문구 표(FU.20)", () => {
+  it("알려진 코드는 표 문구, 모르는 코드는 서버 message", () => {
+    expect(wikiIssueText(KNOWN_ISSUE_CODES.WIKI_REDACTED_CONTENT, "원문")).toContain("가린 비밀 표시");
+    expect(wikiIssueText("wiki.something_new", "서버 문장")).toBe("서버 문장");
+    expect(localizeIssue({ code: KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE, message: "x", severity: "warning" }).message).toContain("제목 출처");
+    expect(localizeIssue({ code: "other", message: "x" }).message).toBe("x");
+  });
+  it("실행 이벤트 요약은 사유 코드가 표에 있을 때만 바꾼다", () => {
+    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" })).toContain("가린 줄을 직접 고치세요");
+    expect(wikiEventSummary({ op: "write", status: "secret_rejected", code: "wiki.secret_rejected" })).toBeUndefined();
   });
 });

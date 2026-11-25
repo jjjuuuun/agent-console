@@ -25,6 +25,10 @@
     - 호스트 기본 서비스 확장 지점(3R.16): ``load_host_plugins``(레지스트리 묶음 공장·플러그인 로더
       entry point + ``register(registries)`` 플러그인), ``open_host_database``(DB 공장 entry point),
       ``env_secret_lookup``·``secret_lookup``(비밀 해석 사슬), ``PluginLoadContext``.
+    - 비밀 공급자 설정 훅(X10 설정): ``ConfigurableSecretProvider``(``options_schema``·
+      ``from_options``), ``configure_secret_providers``(설정 ``secrets.providers.<key>``로 다시
+      만들기) → ``SecretProviderSetup``·``SecretProviderOptions``, ``SecretProviderOptionsError``,
+      ``schema_defaults``, ``secret_provider_registry``.
     - 설정 호환 선언: ``SettingsCompat``(``RemovedSetting``·``EnvSetting``·``FlagSetting``·
       ``SeedSetting``)과 적용 함수 ``removed_settings``·``env_settings``·``flag_settings``·
       ``seed_settings``.
@@ -96,6 +100,7 @@ from ._hostext import (
     load_host_plugins,
     open_host_database,
     secret_lookup,
+    secret_provider_registry,
     secret_providers_of,
 )
 from ._hub import Hub, HubSubscription
@@ -122,6 +127,17 @@ from ._options import (
 )
 from ._ports import PortKey, Topic
 from ._publisher import LoopPublisher
+from ._secret_options import (
+    SECRET_PROVIDER_OPTIONS_HOOK,
+    SECRET_PROVIDER_SCHEMA_HOOK,
+    SECRET_PROVIDERS_SETTINGS_KEY,
+    ConfigurableSecretProvider,
+    SecretProviderOptions,
+    SecretProviderOptionsError,
+    SecretProviderSetup,
+    configure_secret_providers,
+    schema_defaults,
+)
 from ._services import BaseServices, Paths, utc_now
 from ._work import DEFAULT_WORK_WAIT, WorkGate
 
@@ -142,10 +158,14 @@ __all__ = [
     "REASON_PLUGINS_DISABLED",
     "REASON_PLUGINS_NOT_ENABLED",
     "SECRET_PROVIDERS_REGISTRY",
+    "SECRET_PROVIDERS_SETTINGS_KEY",
+    "SECRET_PROVIDER_OPTIONS_HOOK",
+    "SECRET_PROVIDER_SCHEMA_HOOK",
     "SECRET_SCHEMA_KEY",
     "Assembly",
     "BaseServices",
     "CompatFlag",
+    "ConfigurableSecretProvider",
     "DatabaseHandle",
     "EnvSetting",
     "ErrorMapper",
@@ -179,6 +199,9 @@ __all__ = [
     "RegistryBundle",
     "RemovedSetting",
     "SecretPathFinder",
+    "SecretProviderOptions",
+    "SecretProviderOptionsError",
+    "SecretProviderSetup",
     "SeedSetting",
     "SettingsCompat",
     "Topic",
@@ -193,6 +216,7 @@ __all__ = [
     "assemble",
     "compat_flags",
     "compat_of",
+    "configure_secret_providers",
     "default_paths",
     "env_secret_lookup",
     "env_settings",
@@ -204,7 +228,9 @@ __all__ = [
     "open_host_database",
     "read_module_options",
     "removed_settings",
+    "schema_defaults",
     "secret_lookup",
+    "secret_provider_registry",
     "secret_providers_of",
     "seed_settings",
     "utc_now",

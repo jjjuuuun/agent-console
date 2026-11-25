@@ -4,6 +4,7 @@ import type { RunEvent } from "@agent-console/contracts";
 import { Button } from "@agent-console/ui";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import { messages as appMessages } from "../../app/messages";
+import { wikiEventSummary } from "../../app/wikiIssueMessages";
 import { runsMessages as t } from "./messages";
 import { buildObserveRows, formatMs, observeStats, type ObserveRow } from "./runsLib";
 
@@ -28,7 +29,7 @@ export function ObserveTab(p: ObserveTabProps) {
   const [actor, setActor] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
 
-  const all = useMemo(() => buildObserveRows(p.events, p.prefixes), [p.events, p.prefixes]);
+  const all = useMemo(() => buildObserveRows(p.events, p.prefixes, (e) => wikiEventSummary(e.payload)), [p.events, p.prefixes]);
   const present = useMemo(() => [...new Set(all.map((r) => r.prefix))], [all]);
   const actors = useMemo(() => [...new Set(all.map((r) => r.event.actor ?? "").filter((a) => a !== ""))], [all]);
   const rows = useMemo(() => all.filter((r) => (prefix === "" || r.prefix === prefix) && (!errorsOnly || r.error) && (actor === "" || r.event.actor === actor)), [all, prefix, errorsOnly, actor]);

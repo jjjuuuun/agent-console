@@ -7,7 +7,7 @@
 2. 위키 정의의 규칙 → ``load_wiki_rules`` → ``merge_rules``.
 3. ``effective_syntax(settings, rules=merged.syntax_layers)`` → ``compile_syntax``.
 4. 공간·위키마다 ``WikiRepository``를 캐시한다. 위키 정의·규칙 버전·사용자 설정·쓰기 검사·기록
-   저장소가 바뀌면 다시 만든다(검색 색인 객체는 옵션이 같으면 이어 쓴다).
+   저장소·비밀 의심 규칙이 바뀌면 다시 만든다(검색 색인 객체는 옵션이 같으면 이어 쓴다).
 
 - 공간: 요청의 공간 이름(``?project=``) → ``WikiScope``. 이름이 없으면 단독 루트
   (``standalone_root``).
@@ -17,6 +17,7 @@
 - 기록: 단독 = 호스트 DB(없으면 메모리), 프로젝트 = ``records.spaces``의 기록 DB(없으면 기록 없음).
 - 검색 색인: 사용자 ``search_backend`` → 설치자 ``search.backend`` → 설치자 ``search.fallback``.
   파일 위치는 공간의 ``index_dir``(프로젝트) 또는 호스트 상태 폴더(단독), 없으면 메모리.
+  공장 옵션에 지금 비밀 의심 규칙의 가리기(``redact``)·서명(``redact_signature``)을 넘긴다.
 - 요약(``WikiSummary``)은 무거운 점검을 포함하므로 (저장소, 페이지 파일 크기·시각) 키로 캐시한다.
 - 검색어 해셔(``query_hash``): 서비스 하나에 하나(설치자 ``query_hash``·``query_hash_salt_env``).
   실행 연동이 에이전트 위키 도구 묶음에 넘긴다 — 같은 서버 안에서는 실행을 넘어 같은 검색어가 같은
@@ -28,6 +29,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import posixpath
 import threading
@@ -157,6 +159,24 @@ class WikiPorts:
     secret_rules: Callable[[], SecretRules | None] = lambda: None
     operators: Callable[[], Mapping[str, ConditionOperator]] | None = None
     publish: Callable[[WikiChanged], None] = lambda _payload: None
+
+
+def secret_rules_signature(rules: SecretRules) -> str:
+    """비밀 의심 규칙이 바뀌었는지 알아보는 서명(규칙 목록·가림 표시의 sha256, 값은 담지 않는다).
+
+    색인 공장 옵션 ``redact_signature``로 넘긴다. 다르면 파일 색인이 가린 본문을 다시 짓는다.
+    참조 판정 함수(``is_reference``)는 서명에 들어가지 않는다.
+    """
+    data = {
+        "key_names": list(rules.key_names),
+        "value_patterns": list(rules.value_patterns),
+        "name_exceptions": sorted(rules.name_exceptions),
+        "weak_key_names": list(rules.weak_key_names),
+        "weak_value_patterns": list(rules.weak_value_patterns),
+        "mask": rules.mask,
+    }
+    text = json.dumps(data, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 class LiveSecretScanner:
@@ -545,18 +565,30 @@ class WikiService:
                 return name, registry.get(name)
         return None, None
 
-    def _search_options(self, case_insensitive: bool) -> dict[str, Any]:
+    def _search_options(self, backend: str | None, case_insensitive: bool) -> dict[str, Any]:
+        """색인 공장 옵션: 설치자 ``search``(``tokenizer`` + 그 방식의 ``index_options``) 위에
+        앱이 정하는 값(위키 문법의 대소문자 무시·검색 결과 상한·지금 비밀 의심 규칙의 가리기
+        ``redact``와 그 규칙 서명 ``redact_signature``)을 덮는다."""
+        rules = self.secret_rules()
         return {
-            "tokenizer": self.options.search.tokenizer,
+            **self.options.search.factory_options(backend),
             "case_insensitive": case_insensitive,
             "max_results": self.options.max_search_results,
+            "redact": rules.redact_suspected,
+            "redact_signature": secret_rules_signature(rules),
         }
 
     def _search_index(
         self, scope: WikiScope, wiki_id: str, settings: WikiSettings, case_insensitive: bool
     ) -> tuple[WikiSearchIndex | None, bool]:
         used, factory = self._search_factory(settings)
-        options_key = (used, self.options.search.tokenizer, case_insensitive, str(scope.index_dir))
+        factory_options = self._search_options(used, case_insensitive)
+        keyed = {k: v for k, v in factory_options.items() if k != "redact"}  # 서명이 대신한다
+        options_key = (
+            used,
+            json.dumps(keyed, sort_keys=True, default=str),
+            str(scope.index_dir),
+        )
         key = (scope.key, wiki_id)
         with self._lock:
             slot = self.state.indexes.get(key)
@@ -572,7 +604,7 @@ class WikiService:
                 else None
             )
             try:
-                index = factory(root, self._search_options(case_insensitive))
+                index = factory(root, factory_options)
             except Exception:
                 index = None
         with self._lock:
@@ -599,6 +631,7 @@ class WikiService:
             str(scope.pages_root),
             str(scope.boundary),
             id(scope.rules_store),
+            secret_rules_signature(self.secret_rules()),  # 색인 가리기 규칙이 바뀌면 다시 짓는다
         )
         key = (scope.key, wiki_id)
         with self._lock:
@@ -772,7 +805,7 @@ class WikiService:
         degraded = used != wanted
         if factory is not None and not degraded:
             try:
-                probe = factory(None, self._search_options(True))
+                probe = factory(None, self._search_options(used, True))
                 degraded = bool(getattr(probe, "degraded", False))
                 close_history(probe)
             except Exception:
@@ -1043,6 +1076,7 @@ __all__ = [
     "WikiScope",
     "WikiService",
     "WikiServiceState",
+    "secret_rules_signature",
     "unique_id",
     "user_author",
 ]

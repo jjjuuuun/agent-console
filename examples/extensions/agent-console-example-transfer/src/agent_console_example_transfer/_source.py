@@ -60,6 +60,14 @@ def _mask_at(data: Any, pointer: str, mask: str) -> bool:
     return False
 
 
+def _utf8(data: bytes) -> str | None:
+    """UTF-8 글이면 그 글, 바이너리면 None(가리기 대상이 아님)."""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
 class JsonBundleSource:
     """묶음 파일 하나를 읽는 출처.
 
@@ -154,6 +162,11 @@ class JsonBundleSource:
             if cleaned != text:
                 files[path] = cleaned.encode("utf-8")
                 masked.append(f"/{fmt.fields.files}/{_escape(path)}")
+        content = entry.content
+        single = _utf8(content) if content is not None else None
+        if single is not None and (cleaned := rules.redact_suspected(single)) != single:
+            content = cleaned.encode("utf-8")
+            masked.append(f"/{fmt.fields.content}")
         warnings = (
             [
                 ImportWarning(
@@ -165,9 +178,10 @@ class JsonBundleSource:
             if masked
             else []
         )
-        canonical = json.dumps(
-            {"document": document, "files": sorted(files)}, sort_keys=True, ensure_ascii=False
-        ).encode("utf-8")
+        shape: dict[str, Any] = {"document": document, "files": sorted(files)}
+        if content is not None:  # 한 파일 본문이 없으면 전과 같은 해시
+            shape["content"] = hashlib.sha256(content).hexdigest()
+        canonical = json.dumps(shape, sort_keys=True, ensure_ascii=False).encode("utf-8")
         name = document.get(fmt.name_field)
         rtype = document.get(fmt.type_field)
         candidate = ImportCandidate(
@@ -177,11 +191,13 @@ class JsonBundleSource:
             resource_type=rtype if isinstance(rtype, str) and rtype else None,
             name=name if isinstance(name, str) and name else entry.id,
             suggested_id=entry.id,
-            size=len(canonical) + sum(len(b) for b in files.values()),
+            size=len(canonical) + sum(len(b) for b in files.values()) + len(content or b""),
             content_hash=hashlib.sha256(canonical).hexdigest(),
             warnings=warnings,
         )
-        return ImportItem(candidate=candidate, document=document, files=files or None)
+        return ImportItem(
+            candidate=candidate, document=document, content=content, files=files or None
+        )
 
 
 def json_bundle_sources(ctx: ImportSourceContext) -> list[JsonBundleSource]:

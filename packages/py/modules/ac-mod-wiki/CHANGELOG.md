@@ -2,6 +2,12 @@
 
 ## 미출시
 
+- FU.23: 색인 공장 옵션에 지금 비밀 의심 규칙(`secrets.rules`, 사용자 규칙 포함)의 가리기 `redact`와 서명
+  `redact_signature`(`service.secret_rules_signature`)를 넘긴다(전에는 색인 구현이 기본 규칙으로만 가렸다). 규칙이
+  바뀌면 저장소·색인을 다시 짓는다. 색인 캐시 키에는 함수 대신 서명이 들어간다.
+- FU.19: 설치자 옵션 `search.index_options`(검색 방식 이름 → 그 방식이 받는 옵션, 예: `token_pattern`). 고른
+  방식의 옵션을 색인 공장에 넘긴다(전에는 `tokenizer`·`case_insensitive`·`max_results`만 넘겼다). 앱 값
+  `case_insensitive`·`max_results`는 덮이지 않는다. `WikiSearchOptions.factory_options(backend)`.
 - FU.12: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트 환경변수 이름) —
   에이전트 위키 검색 이벤트 `query_sha256`. 기본이 솔트 없는 sha256에서 서버를 켤 때마다 무작위 솔트 HMAC으로
   바뀌었다. `WikiService(query_hash=)`·`WikiService.query_hash`, `search_query_hasher(cfg, environ)`.

@@ -14,6 +14,7 @@
     - 내보내기: ``JsonBundleExporter``, 공장 ``json_bundle_exporter(options)``,
       요청 옵션 ``OPTIONS_SCHEMA``
     - 가져오기: ``JsonBundleSource``, 공장 ``json_bundle_sources(ctx)``
+    - 설치 없이 쓰기: ``register(registries)``(서버 설정 ``plugins.modules``)
 """
 
 from agent_console_example_transfer._exporter import (
@@ -32,6 +33,7 @@ from agent_console_example_transfer._format import (
     load_format,
     read_bundle,
 )
+from agent_console_example_transfer._plugin import register
 from agent_console_example_transfer._source import JsonBundleSource, json_bundle_sources
 
 __all__ = [
@@ -49,4 +51,5 @@ __all__ = [
     "json_bundle_sources",
     "load_format",
     "read_bundle",
+    "register",
 ]

@@ -310,6 +310,56 @@ describe("프로젝트 홈: 구성 표는 서버 종류 목록으로 (V5)", () =
   });
 });
 
+describe("프로젝트 홈: 삭제 전 거꾸로 참조 (FU.16)", () => {
+  const open = async (listCopyItemReferences: ReturnType<typeof vi.fn>, deleteCopyItem = vi.fn(async () => undefined)) => {
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      deleteCopyItem,
+      listCopyItemReferences,
+      listCopyKinds: vi.fn(async () => [{ kind: "qq-contributed", library: true, portable: true, title: "기여 문서", deletable: true }, { kind: "zz-team", library: true, portable: true, title: "팀", deletable: true }]),
+      listCopyItems: vi.fn(async (project: string | null, kind?: string) => (project === null || kind !== "qq-contributed" ? [] : [{ kind, id: "d1", name: "기여 항목" }])),
+    });
+    const config = await screen.findByTestId("project-config-card");
+    await within(config).findByText("기여 항목");
+    fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
+    return screen.findByRole("dialog");
+  };
+  it("쓰는 곳 목록을 보여 주고 이해했습니다 체크 전에는 삭제가 막힌다", async () => {
+    const refs = vi.fn(async () => ({ items: [{ kind: "zz-team", id: "t1", name: "개발팀" }, { kind: "zz-team", id: "t2", name: "" }], checked: true }));
+    const dlg = await open(refs);
+    await within(dlg).findByText("개발팀 (팀)");
+    expect(within(dlg).getByText("t2 (팀)")).toBeTruthy();
+    expect(refs).toHaveBeenCalledWith("a", "qq-contributed", "d1");
+    expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(within(dlg).getByRole("checkbox", { name: "이해했습니다" }));
+    expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false);
+  });
+  it("checked=false면 첫 경고 문구를 안내로 보이고 삭제는 막지 않는다", async () => {
+    const refs = vi.fn(async () => ({ items: [], checked: false, warnings: [{ severity: "info", code: "project.references_unavailable", message: "쓰는 곳을 검사할 수 없습니다" }] }));
+    const dlg = await open(refs);
+    await within(dlg).findByText(/쓰는 곳을 검사할 수 없습니다/);
+    expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false);
+  });
+  it("조회 중에는 삭제 단추가 막히고 확인 중 문구가 보이며, 끝나면 풀린다", async () => {
+    let done: (v: { items: never[]; checked: boolean }) => void = () => undefined;
+    const dlg = await open(vi.fn(() => new Promise<{ items: never[]; checked: boolean }>((r) => { done = r; })));
+    expect(within(dlg).getByText("쓰는 곳 확인 중…")).toBeTruthy();
+    expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(true);
+    done({ items: [], checked: true });
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
+  });
+  it("조회가 실패하면 목록 없이 지금처럼 삭제할 수 있다", async () => {
+    const deleteCopyItem = vi.fn(async () => undefined);
+    const dlg = await open(vi.fn(async () => { throw new Error("404"); }), deleteCopyItem);
+    expect(within(dlg).queryByRole("checkbox")).toBeNull();
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
+    fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
+    await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));
+  });
+});
+
 describe("프로젝트 홈: 종류 공통 삭제 (요청 11/07 후속)", () => {
   it("deletable인 기여 종류 행 삭제는 확인 뒤 deleteCopyItem(프로젝트, 종류, id)을 부른다", async () => {
     const deleteCopyItem = vi.fn(async () => undefined);
@@ -325,6 +375,7 @@ describe("프로젝트 홈: 종류 공통 삭제 (요청 11/07 후속)", () => {
     fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
     const dlg = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
     fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
     await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));
   });
@@ -341,6 +392,7 @@ describe("프로젝트 홈: 종류 공통 삭제 (요청 11/07 후속)", () => {
     fireEvent.click(within(config).getByRole("button", { name: "기여 항목 작업" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
     const dlg = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
     fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
   };
   it("행에 version이 있으면 삭제가 If-Match(ifMatch)로 넘긴다", async () => {

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- FU.18: `DefinitionKind.title`(종류 표시 이름, 기본 None, 저장소는 보지 않음). 기본 종류 `graph`·`agent`·`resource`·`settings`가 값을 가진다. 더하기만, 표 변경 없음.
+
 - FU.11: 여러 Run 묶어 읽기 `RunRepository.list_node_runs_many(run_ids)`·`EventRepository.list_many(since, type_prefixes=)`(Run id → 결과, 없는 Run은 키 없음, Run마다 부른 `list_node_runs`·`list`와 같은 결과). SQLite는 Run `RUN_BATCH_SIZE`(200)개마다 질의 한 번(사용량 토큰 집계 N+1 방지). 더하기만, 표 변경 없음.
 
 - FU.5: `slug_id`·`unique_id`·`SLUG_MAX_CHARS`(이름 → 새 정의 id, `ac-sdd`·`mod-wiki` 사본을 옮김, 규칙 그대로).

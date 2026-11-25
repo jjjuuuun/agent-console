@@ -9,7 +9,7 @@
   entry point `agent_console.exporters`로 등록한다. 서비스는 형식 이름을 모른다.
 - **기본 형식(첫 구현)**: `claude-dir` — Claude Code 프로젝트 산출물(`.claude/agents`, `.claude/skills`,
   `.claude/rules`, `.claude/settings.json`, `CLAUDE.md`, `.mcp.json`). 변환은 `ac-claude-format`.
-- **정의는 읽기만 한다.** 앱이 `ExportCatalog`(`document`·`files`·`dependencies`)를 넘긴다.
+- **정의는 읽기만 한다.** 앱이 `ExportCatalog`(`document`·여러 파일 본문 `files`·한 파일 본문 `content`·`dependencies`)를 넘긴다.
   팀 구성이 쓰는 에이전트·리소스·자식 팀 구성은 카탈로그가 알려 준다(Agent Console 서버는
   `ac-teams.graph_dependencies`). `claude-dir`은 쓰는 정의 중 팀 구성(중첩 팀 노드의 자식)을 따라가 그 구성원도
   에이전트로 내보낸다(주 노드는 고른 팀 구성 것만, 순환은 한 번씩).

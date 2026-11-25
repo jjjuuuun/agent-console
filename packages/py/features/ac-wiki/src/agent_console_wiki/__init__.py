@@ -22,7 +22,8 @@
     규칙: ``merge_rules(rule_ids, documents) -> EffectiveWikiRules``(지침 이어 붙임·항목 출처),
         ``check_rules(document)``, ``load_wiki_rules(store, ids, kind=)``, ``definition_kinds(...)``
     쓰기 판단: ``check_write(rules, subject, content=)``·``compile_write_rules``, 비밀
-        ``WikiSecretPolicy``, X50 ``WikiWriteCheck``
+        ``WikiSecretPolicy``(가린 표시 다시 쓰기 ``reused_redactions``·``redaction_marks``), X50
+        ``WikiWriteCheck``
     점검: ``lint(index, rules, now=, times=, read=) -> WikiLintReport``
     틀: ``render_page_template(template, content, title=, values=, today=)``·``slugify``
     기록(X49): 프로토콜 ``WikiHistory``·``HistoryEntry``·``InMemoryWikiHistory``
@@ -41,7 +42,9 @@
         ``WikiPageExistsError``·``WikiLinkInsertUnavailableError``·``WikiConflictError``·
         ``WikiTooLargeError``·``WikiRuleRejectedError``·``WikiSecretRejectedError``·
         ``WikiHistoryUnavailableError``·``WikiVersionNotFoundError``·``WikiTemplateNotFoundError``·
-        ``WikiZipFormatError``
+        ``WikiRedactedContentError``·``WikiZipFormatError``
+    코드: ``WikiIssueCodes``(계약 ``KnownIssueCodes``의 별칭 — ``wiki.unknown_title_source``·
+        ``wiki.redacted_content``)
     시험: 하위 모듈 ``testing``(``MemoryWikiPages``·``WikiPagesContractTests``·
         ``WikiSearchContractTests``·``WikiHistoryContractTests``·``FakeClock``)
 """
@@ -56,6 +59,7 @@ from agent_console_query_hash import (
     query_hasher_from_env,
 )
 
+from ._codes import WikiIssueCodes
 from ._compiled import (
     KNOWN_LINK_KINDS,
     KNOWN_RESOLVERS,
@@ -72,6 +76,7 @@ from ._errors import (
     WikiPageExistsError,
     WikiPageNotFoundError,
     WikiPathError,
+    WikiRedactedContentError,
     WikiRuleRejectedError,
     WikiSecretRejectedError,
     WikiSectionNotFoundError,
@@ -167,6 +172,7 @@ from ._writecheck import (
     WriteDecision,
     check_write,
     compile_write_rules,
+    redaction_marks,
     run_write_checks,
 )
 
@@ -216,11 +222,13 @@ __all__ = [
     "WikiHistory",
     "WikiHistoryUnavailableError",
     "WikiIndex",
+    "WikiIssueCodes",
     "WikiLinkInsertUnavailableError",
     "WikiPageExistsError",
     "WikiPageNotFoundError",
     "WikiPages",
     "WikiPathError",
+    "WikiRedactedContentError",
     "WikiRepository",
     "WikiRepositoryLimits",
     "WikiRuleRejectedError",
@@ -282,6 +290,7 @@ __all__ = [
     "query_hasher_from_env",
     "query_terms",
     "read_pages",
+    "redaction_marks",
     "register_builtin_search",
     "render_link_text",
     "render_page_template",

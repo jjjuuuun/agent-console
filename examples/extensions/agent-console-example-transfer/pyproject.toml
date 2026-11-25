@@ -28,14 +28,16 @@ dependencies = [
 [tool.agent-console.example]
 points = ["exporter", "import-source"]
 
-# 개발 의존: 왕복 시험이 실제 정의 저장소(파일 workspace)를 쓴다.
+# 개발 의존: 왕복 시험이 실제 정의 저장소(파일 workspace)를 쓰고, 통합 서버 시험이 서버를 조립한다.
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
+    "httpx>=0.27",
     "agent-console-store>=0.1,<0.2",
+    "agent-console-server>=0.1,<0.2",
 ]
 
 [build-system]

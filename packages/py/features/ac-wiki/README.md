@@ -86,16 +86,22 @@ pip install agent-console-wiki
 `{"links": [{"id": "paren", "kind": "pattern", "pattern": "\\(\\((?P<target>[^)]+)\\)\\)", "resolve": ["path"]}]}`
 이면 `((대상))`이 링크다. 패턴에는 `target` 묶음이 있어야 하고 `label`·`anchor` 묶음은 선택이다.
 
+마크다운 링크 규칙(`kind: markdown`)은 인라인 링크 `[글](경로.md)`와 참조 링크(`[글][이름]`·`[이름][]`·`[이름]` +
+정의 `[이름]: 경로.md`)를 모두 읽는다. 참조 링크는 정의가 있는 이름만 링크이고(이름 비교는 CommonMark 규칙), 대상
+위치는 정의 줄의 경로다. 코드 블록·인라인 코드 안의 글과 이미지(`![그림][이름]`)는 링크가 아니다.
+
 이름 바꾸기: `rewrite_links(text, index.links[page], page=page, old="guide", new="docs/guide", syntax=syntax)`
 가 그 페이지 본문의 링크 대상만 고친다(`page == old`면 옮기는 페이지 자신의 상대 링크를 새 위치 기준으로).
+참조 링크는 정의 줄의 경로를 고치고, 정의 하나를 여러 링크가 써도 한 번만 고친다.
 링크 넣기: `render_link_text(syntax, from_page=..., target=..., label=...)`(규칙 `insert` 틀, 없으면
 `WikiLinkInsertUnavailableError`). 검색 강조: `search_marks(snippet, query)`(UTF-16 범위).
 판단 대상(쓰기·점검 규칙 조건이 읽는 값): `index.facts(path)`·`write_subject`·`lint_subject` — 모양은 계약
 `WIKI_WRITE_SUBJECT_PATHS`·`WIKI_LINT_SUBJECT_PATHS`와 같다.
 
 이슈는 `WikiIssue`(페이지 `page`·줄 `line`·규칙 `rule_id`, 값 원문 없음): `wiki.front_matter_invalid`·
-`parse_timeout`·`link_pattern_invalid`·`unknown_link_kind`·`syntax_missing`·`duplicate_rule_id`·
-`invalid_glob`·`home_missing`·`too_many_pages`·`too_large`. 오류는 `WikiError.code`(`wiki.invalid_path`·
+`parse_timeout`·`link_pattern_invalid`·`unknown_link_kind`·`unknown_title_source`·`syntax_missing`·
+`duplicate_rule_id`·`invalid_glob`·`home_missing`·`too_many_pages`·`too_large`. 코드 값은 계약 `KnownIssueCodes`
+이고, `WikiIssueCodes`(`UNKNOWN_TITLE_SOURCE`·`REDACTED_CONTENT`)는 그 별칭이다. 오류는 `WikiError.code`(`wiki.invalid_path`·
 `page_not_found`·`page_exists`·`link_insert_unavailable`).
 
 시험 도구 `agent_console_wiki.testing`: `MemoryWikiPages`(메모리 페이지 파일), `WikiPagesContractTests`
@@ -226,8 +232,12 @@ no-temp [2]
   제목 줄을 두고 그 절 본문만 바꾼다.
 - **실패**는 예외가 아니라 `is_error` + 사유 코드: `wiki.denied`·`wiki_unavailable`·`page_not_found`·`not_found`
   (절)·`template_missing`·`conflict`·`page_exists`·`too_large`·`secret_rejected`·`rule_rejected`(규칙 id·메시지·
-  줄)·`rate_limited`·`invalid_path`·`validation_failed`(입력 형식).
-- **결과**는 `repository.secrets.redact`로 가린 뒤 `max_result_chars`로 자른다. **이벤트**(`on_event(type,
+  줄)·`rate_limited`·`invalid_path`·`validation_failed`(입력 형식)·`redacted_content`(아래).
+- **결과**는 `repository.secrets.redact`로 가린 뒤 `max_result_chars`로 자른다. 읽은 본문에 가린 곳이 있으면 결과
+  맨 앞에 안내 줄(문구 `read_redacted`, 비우면 넣지 않음)을 붙인다. 가린 본문을 그대로 다시 쓰면 실제 비밀이 가린
+  표시로 바뀌므로, 기존 페이지 쓰기에서 새 본문에 가린 표시가 원문보다 많이 들어 있으면 `wiki.redacted_content`
+  (이벤트 상태 `secret_rejected`, 값 없이 줄 번호만)로 막는다(`compose_write`가 판단 — `wiki-update` 노드도 같음).
+  가린 줄을 지우는 쓰기·다른 절 고치기·새 페이지는 막지 않는다. **이벤트**(`on_event(type,
   WikiEventPayload)`, type `wiki.<op>`)에는 본문·검색어 원문이 없다(크기·해시만).
 - **검색어 해시**(`query_sha256`): `query_hash=query_hasher(mode, salt=)`(공용 `agent-console-query-hash`를 다시
   내보낸 것으로 메모리 도구 묶음과 같은 규칙). 기본은 솔트 HMAC-SHA256(솔트를 주지 않으면 묶음을 만들 때 무작위 —

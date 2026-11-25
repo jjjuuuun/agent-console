@@ -8,6 +8,7 @@ import type {
   CopyApplyRequest,
   CopyApplyResult,
   CopyItem,
+  CopyItemReferences,
   CopyKindInfo,
   CopyPlan,
   CopyPlanRequest,
@@ -83,6 +84,11 @@ export interface ProjectsClient {
    * 오류: 404 `project.not_found`·`not_found`, 400 `bad_request`(details.reason `not_deletable`), 409 `project.config_readonly`, 412 `version_conflict`.
    */
   deleteCopyItem(projectId: string, kind: string, itemId: string, opts?: { ifMatch?: string }): Promise<void>;
+  /**
+   * 이 정의를 참조하는 같은 공간의 정의(삭제 전 확인용, 종류 공통). `projectId`가 null이면 공용 공간(`?project=` 생략).
+   * `checked === false`면 검사 수단이 없다는 뜻이라 `items`가 비어도 '쓰는 곳 없음'이 아니다. 모르는 종류·항목은 404.
+   */
+  listCopyItemReferences(projectId: string | null, kind: string, itemId: string): Promise<CopyItemReferences>;
 }
 
 export function createProjectsClient(io: RestIo): ProjectsClient {
@@ -116,5 +122,7 @@ export function createProjectsClient(io: RestIo): ProjectsClient {
     listCopyItems: (project, kind) => io.request("GET", `/projects/copy/items${query({ project: project ?? undefined, kind })}`),
     deleteCopyItem: (projectId, kind, itemId, opts = {}) =>
       io.request("DELETE", `/projects/copy/items/${enc(kind)}/${enc(itemId)}${query({ project: projectId })}`, withHeaders(ifMatch(opts.ifMatch))),
+    listCopyItemReferences: (projectId, kind, itemId) =>
+      io.request("GET", `/projects/copy/items/${enc(kind)}/${enc(itemId)}/references${query({ project: projectId ?? undefined })}`),
   };
 }

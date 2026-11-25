@@ -119,7 +119,16 @@ class ExportCatalog(Protocol):
         ...
 
     def files(self, kind: str, id: str) -> Mapping[str, bytes]:
-        """본문 파일들(경로 → 내용). 본문이 없으면 빈 매핑."""
+        """여러 파일 본문(경로 → 내용, 본문 폴더를 쓰는 종류). 없으면 빈 매핑."""
+        ...
+
+    def content(self, kind: str, id: str) -> bytes | None:
+        """한 파일 본문(문서의 본문 필드가 가리키는 파일 하나를 쓰는 종류). 없으면 None.
+
+        여러 파일 본문 종류는 늘 None이다(그 본문은 `files`). 어느 쪽인지는 종류가 정하고
+        형식은 모른다 — 둘 다 읽어 있는 쪽을 담으면 된다(가져오기 `ImportItem.content`·
+        `files`와 짝).
+        """
         ...
 
     def dependencies(self, kind: str, id: str) -> Sequence[DependencyLike]:

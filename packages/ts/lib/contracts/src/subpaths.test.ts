@@ -16,7 +16,13 @@ import * as memory from "@agent-console/contracts/memory";
 import type { MemoryEventPayload, MemoryScopeRef } from "@agent-console/contracts/memory";
 import type { LogEvent, LogLane, LogSettings, LogTimeline, LogWidget } from "@agent-console/contracts/logs";
 import * as modules from "@agent-console/contracts/modules";
-import type { LogsIngestedMessage, ModuleInfo, PluginInfo } from "@agent-console/contracts/modules";
+import type {
+  LogsIngestedMessage,
+  ModuleInfo,
+  PluginInfo,
+  PluginOptionsView,
+  ServerInfo,
+} from "@agent-console/contracts/modules";
 import * as projects from "@agent-console/contracts/projects";
 import type {
   DefinitionMove,
@@ -24,6 +30,7 @@ import type {
   FolderCheckRequest,
   CopyApplyItem,
   CopyItem,
+  CopyItemReferences,
   CopyKindInfo,
   CopyPlanItem,
   FolderPickResult,
@@ -480,7 +487,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.0"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0140 = { common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" };
@@ -537,7 +544,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.1(7R.13·7R.17 후속): WikiInfo.writable, wiki.update_unavailable, secret_scan 기본값 system reject", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.1"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0141 = { common: "1.11.0", wiki: "1.1.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -550,7 +557,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(defs["WikiSettings"]?.properties["secret_scan"]?.default).toEqual({ user: "warn", agent: "reject", system: "reject" });
   });
   it("0.14.2(7R.19~7R.21 서버 후속): rules_kind, 규칙 항목 글롭·경로·이름, 점검 부분 실패, 그래프 scheme_target", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.2"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0142 = { common: "1.12.0", wiki: "1.2.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -568,16 +575,16 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(constants.KNOWN_WIKI_LINT_CHECKS).toEqual({ LINT_RULES: "lint_rules", WRITE_RULES: "write_rules" });
   });
   it("0.14.3(plugins.disabled 후속): PluginInfo.reason", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.3"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.12.0"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ wiki: "1.2.0", modules: "1.6.0" });
-    expect(modules.CONTRACT_VERSION).toBe("1.6.0");
+    expect(CONTRACT_VERSIONS).toMatchObject({ wiki: "1.2.0" });
+    expect(ver(modules.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.6.0"));
     expectTypeOf<PluginInfo["reason"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.4(묶음 4b V1): CopyPlanItem.blocked·issues", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.4"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.4.0"));
@@ -585,32 +592,34 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<NonNullable<CopyPlanItem["issues"]>[number]["code"]>().toEqualTypeOf<string>();
   });
   it("0.14.5(요청 11/07 후속): CopyKindInfo.deletable", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.5"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.5.0"));
     expectTypeOf<CopyKindInfo["deletable"]>().toEqualTypeOf<boolean | undefined>();
   });
   it("0.14.6(요청 11/07 후속): CopyItem.version", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.6"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ projects: "3.6.0", modules: "1.6.0" });
-    expect(projects.CONTRACT_VERSION).toBe("3.6.0");
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.6.0"));
+    expect(ver(projects.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("3.6.0"));
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["modules"] ?? "0")).toBeGreaterThanOrEqual(ver("1.6.0"));
     expectTypeOf<CopyItem["version"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.7(요청 11/07 후속): ConversationLocation, conversation.ambiguous", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.7"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.13.0"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ chat: "1.4.0", projects: "3.6.0" });
+    expect(CONTRACT_VERSIONS).toMatchObject({ chat: "1.4.0" });
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.6.0"));
     expect(chat.CONTRACT_VERSION).toBe("1.4.0");
     expect(ERROR_CODES.CONVERSATION_AMBIGUOUS).toBe("conversation.ambiguous");
     expectTypeOf<ConversationLocation["project_id"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.8(요청 11/08 후속): RunLocation, run.ambiguous", () => {
-    // 정확한 지금 값은 0.14.9 테스트가 고정한다
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.8"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.14.0"));
@@ -619,9 +628,11 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<RunLocation["project_id"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.9(6R.31): 줄 머리 상태 문법, document_state_on, 메모리 자동 정리 대상", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.14.9");
-    expect(packageJson.version).toBe("0.14.9");
-    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0", memory: "1.2.0", common: "1.15.0", runs: "1.9.0" });
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.9"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0", memory: "1.2.0", runs: "1.9.0" });
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
     expect(sdd.CONTRACT_VERSION).toBe("1.3.0");
     expect(memory.CONTRACT_VERSION).toBe("1.2.0");
     expect(KNOWN_ISSUE_CODES.SDD_STATUS_PATTERN_IGNORED).toBe("sdd.status_pattern_ignored");
@@ -635,5 +646,36 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<MemoryRetentionAuto["exclude_projects"]>().toEqualTypeOf<string[] | undefined>();
     const old: SddRunProfile = { id: "p", title: "구현", graph: "g" };
     expect(old.document_state_on).toBeUndefined();
+  });
+  it("0.14.10(FU.13): CopyItemReferences — 종류 공통 거꾸로 참조", () => {
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.10"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(CONTRACT_VERSIONS).toMatchObject({ projects: "3.7.0", sdd: "1.3.0", memory: "1.2.0" });
+    expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
+    expect(projects.CONTRACT_VERSION).toBe("3.7.0");
+    expectTypeOf<CopyItemReferences["items"]>().toEqualTypeOf<CopyItem[] | undefined>();
+    expectTypeOf<CopyItemReferences["checked"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<NonNullable<CopyItemReferences["warnings"]>[number]["code"]>().toEqualTypeOf<string>();
+    const empty: CopyItemReferences = {};
+    expect(empty.items).toBeUndefined();
+  });
+  it("0.14.11(FU.17): 위키 이슈 코드 wiki.unknown_title_source·wiki.redacted_content", () => {
+    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.11"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.16.0", projects: "3.7.0", wiki: "1.2.0" });
+    expect(KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE).toBe("wiki.unknown_title_source");
+    expect(KNOWN_ISSUE_CODES.WIKI_REDACTED_CONTENT).toBe("wiki.redacted_content");
+  });
+  it("0.14.12(FU.19): PluginOptionsView·ServerInfo.plugin_options — 플러그인 설정 보기", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.14.12");
+    expect(packageJson.version).toBe("0.14.12");
+    expect(CONTRACT_VERSIONS).toMatchObject({ modules: "1.7.0", common: "1.16.0" });
+    expect(modules.CONTRACT_VERSION).toBe("1.7.0");
+    expectTypeOf<PluginOptionsView["settings_key"]>().toEqualTypeOf<string>();
+    expectTypeOf<NonNullable<ServerInfo["plugin_options"]>[number]>().toEqualTypeOf<PluginOptionsView>();
+    const old: ServerInfo = { server_version: "1", contracts_version: "0.14.11" };
+    expect(old.plugin_options).toBeUndefined();
   });
 });

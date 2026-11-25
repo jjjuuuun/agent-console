@@ -308,7 +308,8 @@ class _Build:
         files = self.catalog.files(self.m.resource_kind, use.id)
         if isinstance(file, str) and file in files:
             return _text(files[file])
-        return None
+        single = self.catalog.content(self.m.resource_kind, use.id)  # 한 파일 본문 종류
+        return _text(single) if single is not None else None
 
     def _text_of(self, doc: Mapping[str, Any], config: Mapping[str, Any], use: _Use) -> str:
         body = self._body(doc, use)

@@ -76,6 +76,30 @@ class WikiSearchOptions(BaseModel):
             when="검색 구현이 다른 나누기 방식을 받을 때만 바꾸세요.",
         ),
     )
+    index_options: dict[str, dict[str, Any]] = Field(
+        default_factory=lambda: json.loads(json.dumps(_D["search"]["index_options"])),
+        title="검색 방식별 옵션",
+        description=(
+            "검색 방식 이름 → 그 방식이 받는 옵션(키는 검색 구현이 정한다, 예: token_pattern). "
+            "쓰는 방식의 옵션만 넘긴다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example={"example-inverted": {"token_pattern": "[\\w-]+"}},
+            when=(
+                "설치한 검색 구현이 낱말 규칙 같은 추가 옵션을 받을 때 정하세요. 대소문자 무시·"
+                "결과 수 상한은 앱이 정해 바뀌지 않습니다."
+            ),
+        ),
+    )
+
+    def factory_options(self, backend: str | None) -> dict[str, Any]:
+        """``backend`` 색인 공장에 넘길 설치자 옵션(``tokenizer`` + 그 방식의 ``index_options``).
+
+        앱이 정하는 키(``case_insensitive``·``max_results``)는 호출자가 이 위에 덮어쓴다.
+        """
+        extra = self.index_options.get(backend, {}) if backend else {}
+        return {"tokenizer": self.tokenizer, **extra}
 
 
 class WikiExportLimits(BaseModel):

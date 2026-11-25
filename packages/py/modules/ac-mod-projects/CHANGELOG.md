@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- FU.18: 복사 종류 목록 `CopyKindInfo.title`이 종류 기여 `title`이 없으면 종류 데이터 `DefinitionKind.title`을 쓴다(기본 종류도 이름이 나온다, 둘 다 없으면 null).
+
+- FU.13: 종류 공통 거꾸로 참조 `GET /projects/copy/items/{kind}/{id}/references?project=` → `CopyItemReferences`(계약 0.14.10) — 같은 공간의 정의를 읽어 `definitions.references`·종류 기여 `references`(순수 규칙 `find_referrers`, `ac-projects`)로 이 항목을 쓰는 정의를 찾는다. 삭제 확인 창의 "쓰는 구성" 목록에 쓴다. 참조 추출이 없으면 `checked` false. `CopyService.item_references`.
+
 - FU.6: 복사 계획이 기여 종류의 `reserved_ids`를 `copy_plan(reserved_ids=)`로 넘긴다(예약어 id 항목에 새 id 제안).
 
 - FU.2: 설정 `sessions_dir`(세션 보관 폴더 이름, `link-projects-records.session_archive.dir`를 이어받음) —

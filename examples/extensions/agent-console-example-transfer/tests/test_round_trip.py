@@ -53,6 +53,19 @@ class StoreCatalog:
             return {}
         return {f.path: self._store.read_file(kind, id, f.path) for f in listed}
 
+    def content(self, kind: str, id: str) -> bytes | None:
+        try:
+            self._store.list_files(kind, id)
+            return None  # 여러 파일 본문 종류
+        except ValueError:
+            pass
+        except (StoreError, KeyError):
+            return None
+        try:
+            return self._store.read_content(kind, id)
+        except (StoreError, KeyError, ValueError):
+            return None
+
     def dependencies(self, kind: str, id: str) -> Sequence[MemoryDependency]:
         return self._uses.get((kind, id), [])
 
@@ -147,3 +160,40 @@ def test_round_trip_keeps_references_and_drops_plaintext(tmp_path: Path) -> None
     env = store.documents[("resource", "tools")]["config"]["env"]
     assert env["OTHER_TOKEN"] == "secret://other_token"
     assert env["API_TOKEN"] != PLAIN
+
+
+def test_round_trip_single_file_body_kind(tmp_path: Path) -> None:
+    """한 파일 본문 종류(문서의 본문 필드가 파일 하나를 가리킴)도 본문까지 왕복한다.
+
+    이 예제는 종류를 모른다 — 카탈로그 `content`가 준 본문을 담고, 가져오기는
+    `ImportItem.content`로 쓴다.
+    """
+    from agent_console_store import DEFAULT_KINDS, DefinitionKind
+
+    note = DefinitionKind(name="note", directory="notes", content_field="content")
+    kinds = (*DEFAULT_KINDS, note)
+    source = FileDefinitionStore(tmp_path / "ws-a", kinds)
+    source.create("note", {"id": "n1", "title": "메모", "content": {"file": "body.md"}})
+    source.write_content("note", "n1", "# 메모 본문\n".encode())
+    out = tmp_path / "exports"
+    out.mkdir()
+    service = ExportService(
+        {FORMAT_ID: json_bundle_exporter({})},
+        StoreCatalog(source, {}),
+        writer=FolderWriter([ExportRoot("out", out)]),
+    )
+    service.write(
+        ExportWriteRequest(
+            exporter=FORMAT_ID,
+            items=[ExportSelection(kind="note", id="n1")],
+            root="out",
+            subdir="project",
+        )
+    )
+    written = (out / "project" / "agent-console-bundle.json").read_text(encoding="utf-8")
+    assert "# 메모 본문" in written
+
+    target = FileDefinitionStore(tmp_path / "ws-b", kinds)
+    assert _import(out / "project", target) == [("note", "n1", "created")]
+    assert target.get("note", "n1").document == source.get("note", "n1").document
+    assert target.read_content("note", "n1") == "# 메모 본문\n".encode()

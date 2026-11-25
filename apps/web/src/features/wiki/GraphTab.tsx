@@ -77,7 +77,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const depthParam = params.get(P.depth);
   const depth = depthParam === WIKI_GRAPH.all ? undefined : WIKI_GRAPH.depths.includes(Number(depthParam)) ? Number(depthParam) : WIKI_GRAPH.defaultDepth;
 
-  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : depth }, !noSyntax && !waitingFallback);
+  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : (depth ?? WIKI_GRAPH.allDepth) }, !noSyntax && !waitingFallback);
   const firstMissing =
     wanted !== undefined &&
     ((firstQ.data !== undefined && !(firstQ.data.nodes ?? []).some((n) => n.path === wanted && n.broken !== true)) || (firstQ.isError && classifyWikiError(firstQ.error, "").kind === "pageNotFound"));

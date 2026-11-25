@@ -139,3 +139,27 @@ def test_unknown_backend_falls_back_with_warning(tmp_path: Path, client_of: Any)
     assert found["backend"] != "example-removed"
     info = client.get(f"{API}/wiki/info").json()
     assert "wiki.search_degraded" in {i["code"] for i in info["issues"]}
+
+
+def test_installer_index_options_set_the_token_pattern(tmp_path: Path, client_of: Any) -> None:
+    """설치자 `search.index_options.<이 방식>`의 `token_pattern`이 이 색인에 닿는다.
+
+    라틴 글자만 낱말로 뽑게 하면 한글 낱말은 색인에 없어 찾지 못하고, 라틴 낱말은 찾는다.
+    """
+    installer = {
+        "search": {
+            "backend": BACKEND_ID,
+            "index_options": {BACKEND_ID: {"token_pattern": "[A-Za-z]+"}},
+        }
+    }
+    client = client_of(_assembly(tmp_path, installer=installer))
+    res = client.put(
+        f"{API}/wiki/wikis/w/pages/c",
+        json={"content": "# 셋째\nlatin 낱말\n"},
+        headers={"If-None-Match": "*"},
+    )
+    assert res.status_code == 201
+    assert _search(client, "역색인")["items"] == []
+    found = _search(client, "latin")
+    assert found["backend"] == BACKEND_ID
+    assert [h["path"] for h in found["items"]] == ["c"]

@@ -74,3 +74,12 @@ def test_contributed_kinds_library_only() -> None:
 
 def test_no_contributions_is_empty() -> None:
     assert contributed_kinds([]) == []
+
+
+def test_builtin_kinds_have_titles_fu18() -> None:
+    """FU.18: 기본 종류는 종류 데이터에 표시 이름을 둔다(사본·요약 필드 사본에도 남는다)."""
+    assert all(k.title for k in DEFAULT_KINDS)
+    assert GRAPH_KIND.with_summary_fields("status").title == GRAPH_KIND.title
+    assert NOTE.title is None  # 주지 않으면 None(화면은 종류 이름)
+    titled = DefinitionKind(name="memo", directory="memos", title="메모")
+    assert [k.title for k in contributed_kinds([Contribution(titled)])] == ["메모"]

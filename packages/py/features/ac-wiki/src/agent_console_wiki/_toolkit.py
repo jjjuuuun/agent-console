@@ -13,7 +13,9 @@
 - 모든 동작은 `WikiRepository` 메서드로 한다(쓰기 규칙·비밀 검사·기록·색인은 저장소 몫).
   append·section·template 쓰기는 툴킷이 본문을 만든 뒤 `write(if_hash=)`로 부른다.
 - 결과는 텍스트(비밀 가림 `repository.secrets.redact` 뒤 `max_result_chars`로 자름), 실패는
-  예외가 아니라 `is_error` + 사유 코드.
+  예외가 아니라 `is_error` + 사유 코드. 읽기 결과에 가린 곳이 있으면 맨 앞에 안내 줄
+  (`read_redacted`)을 붙이고, 가린 표시를 새로 담은 쓰기는 `wiki.redacted_content`로 막는다
+  (`compose_write`).
 - 이벤트 payload(`WikiEventPayload`)에는 **본문·검색어 원문을 싣지 않는다**(크기·해시만).
 """
 
@@ -52,6 +54,7 @@ from ._errors import (
     WikiPageExistsError,
     WikiPageNotFoundError,
     WikiPathError,
+    WikiRedactedContentError,
     WikiRuleRejectedError,
     WikiSecretRejectedError,
     WikiSectionNotFoundError,
@@ -301,6 +304,9 @@ def compose_write(
     - `append`: 지금 본문 끝에 `content`(줄을 맞춰 붙임, 페이지가 없으면 `content`로 만든다).
     - `section`: 제목 `section`의 절 본문을 `content`로 바꾼다(제목 줄·다른 절은 그대로).
 
+    기존 페이지를 고칠 때는 새 본문에 읽을 때 가린 비밀 자리 표시(`repo.secrets.redact`)가 새로
+    들어갔는지 본다 — 가린 본문을 그대로 다시 쓰면 실제 비밀이 가린 표시로 바뀌기 때문이다.
+
     Args:
         repo: 위키 저장소. path: 페이지 경로. content: 쓸 글(틀만 쓰면 None).
         mode: `WIKI_WRITE_MODES` 중 하나. section: 절 제목(`section` 방식에서 필수).
@@ -311,6 +317,7 @@ def compose_write(
         WikiConflictError: `if_hash`가 지금 본문과 다름. WikiPageExistsError: 틀인데 이미 있음.
         WikiPageNotFoundError: `section` 방식인데 페이지가 없음. WikiSectionNotFoundError: 절 없음.
         WikiTemplateNotFoundError: 틀 없음.
+        WikiRedactedContentError: 새 본문에 가린 비밀 자리 표시가 새로 들어 있음.
 
     >>> from agent_console_wiki import compile_syntax, effective_syntax
     >>> from agent_console_wiki.testing import MemoryWikiPages
@@ -335,20 +342,30 @@ def compose_write(
         body = _append(rendered.content, content) if content else rendered.content
         return PageComposition(body, create_only=True)
     assert content is not None
-    if mode == "replace":
-        return PageComposition(content, if_hash=if_hash)
     if current is None:
         if mode == "section":
             raise WikiPageNotFoundError(path, has_history=repo.has_history(path))
+        if mode == "replace":
+            return PageComposition(content, if_hash=if_hash)
         return PageComposition(content, create_only=True)
     text = current.text
-    if mode == "append":
-        return PageComposition(_append(text, content), if_hash=current.content_hash)
-    headings = parse_page(current.path, current.data, repo.syntax).headings
-    span = section_span(text, headings, section or "")
-    if span is None:
-        raise WikiSectionNotFoundError(path, section or "")
-    return PageComposition(replace_section(text, span, content), if_hash=current.content_hash)
+    if mode == "replace":
+        body = content
+        plan = PageComposition(body, if_hash=if_hash)
+    elif mode == "append":
+        body = _append(text, content)
+        plan = PageComposition(body, if_hash=current.content_hash)
+    else:
+        headings = parse_page(current.path, current.data, repo.syntax).headings
+        span = section_span(text, headings, section or "")
+        if span is None:
+            raise WikiSectionNotFoundError(path, section or "")
+        body = replace_section(text, span, content)
+        plan = PageComposition(body, if_hash=current.content_hash)
+    lines = repo.secrets.reused_redactions(text, body)
+    if lines:
+        raise WikiRedactedContentError(path, lines)
+    return plan
 
 
 # ---------------------------------------------------------------- 스펙·결과
@@ -555,6 +572,8 @@ def _map_error(exc: BaseException) -> _ToolError:
         failure.rule_ids = list(dict.fromkeys(i.rule_id or i.code for i in exc.issues))
         return failure
     if isinstance(exc, WikiSecretRejectedError):
+        return _ToolError("secret_rejected", exc.code, lines=_lines(exc.lines))
+    if isinstance(exc, WikiRedactedContentError):
         return _ToolError("secret_rejected", exc.code, lines=_lines(exc.lines))
     if isinstance(exc, WikiPathError):
         return _ToolError("invalid_path", exc.code)
@@ -805,7 +824,12 @@ class WikiToolkit:
         if repo is not None:
             # 가리기 실패는 결과를 막지 않는다(본문은 이미 저장소 규칙을 통과)
             with contextlib.suppress(Exception):
-                text = repo.secrets.redact(text)
+                shown = repo.secrets.redact(text)
+                if op == "read" and not is_error and shown != text:
+                    # 가린 본문을 통째로 다시 쓰지 않게 앞에 알린다(잘려도 남게 맨 앞)
+                    notice = self.text.line("read_redacted", {})
+                    shown = f"{notice}\n{shown}" if notice else shown
+                text = shown
         payload["status"] = status
         payload["code"] = code
         payload["duration_ms"] = max(0.0, (self._timer() - started) * 1000)

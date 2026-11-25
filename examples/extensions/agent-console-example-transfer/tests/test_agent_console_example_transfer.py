@@ -120,6 +120,30 @@ def test_files_keep_text_and_binary() -> None:
     assert entries[0].files == files
 
 
+@pytest.mark.parametrize("body", ["# 본문\n".encode(), bytes([0, 255, 7])])
+def test_single_file_body_keeps_text_and_binary(body: bytes) -> None:
+    fmt = load_format()
+    data = dump_bundle([BundleEntry("note", "n", {"id": "n"}, content=body)], fmt)
+    item = json.loads(data)["definitions"][0]
+    assert "files" not in item
+    assert set(item["content"]) == ({"text"} if body.startswith(b"#") else {"base64"})
+    entries, warnings = read_bundle(data, fmt)
+    assert (entries[0].content, entries[0].files, warnings) == (body, {}, [])
+    # 항목에 없으면 None(여러 파일 본문만 있는 항목·본문 없는 항목)
+    plain = dump_bundle([BundleEntry("agent", "a", {"id": "a"})], fmt)
+    assert read_bundle(plain, fmt)[0][0].content is None
+
+
+def test_exporter_takes_single_file_body_from_catalog_content() -> None:
+    catalog = MemoryCatalog().add("note", {"id": "n"}, content=b"one file")
+    service = ExportService({FORMAT_ID: json_bundle_exporter({})}, catalog)
+    output = service.output(
+        ExportRequest(exporter=FORMAT_ID, items=[ExportSelection(kind="note", id="n")])
+    )
+    (entry,) = read_bundle(output.files[0].data, load_format())[0]
+    assert entry.content == b"one file"
+
+
 @pytest.mark.parametrize(
     ("raw", "code"),
     [
@@ -152,6 +176,7 @@ def test_bad_and_duplicate_entries_are_skipped() -> None:
             {"kind": "agent", "document": {}},
             {"kind": "agent", "id": "b", "document": {}, "files": {"x": {"base64": "!!"}}},
             "not an object",
+            {"kind": "note", "id": "c", "document": {}, "content": {"text": 1}},
         ],
     }
     entries, warnings = read_bundle(json.dumps(top).encode(), fmt)
@@ -161,6 +186,7 @@ def test_bad_and_duplicate_entries_are_skipped() -> None:
         (TransferIssueCodes.INVALID_ENTRY, ["/definitions/2"]),
         (TransferIssueCodes.INVALID_ENTRY, ["/definitions/3"]),
         (TransferIssueCodes.INVALID_ENTRY, ["/definitions/4"]),
+        (TransferIssueCodes.INVALID_ENTRY, ["/definitions/5"]),
     ]
 
 
@@ -246,3 +272,15 @@ def test_source_without_file_or_too_large(tmp_path: Path) -> None:
     assert source.scan().warnings == []
     (tmp_path / fmt.file_name).write_bytes(b"x" * 11)
     assert [w.code for w in source.scan().warnings] == [TransferIssueCodes.TOO_LARGE]
+
+
+def test_source_masks_plaintext_in_single_file_body(tmp_path: Path) -> None:
+    fmt = load_format()
+    body = f"api_key = {PLAIN}\n".encode()
+    data = dump_bundle([BundleEntry("note", "n", {"id": "n"}, content=body)], fmt)
+    (tmp_path / fmt.file_name).write_bytes(data)
+    (source,) = json_bundle_sources(ImportSourceContext(project_dir=tmp_path))
+    (item,) = source.scan().items
+    assert item.content is not None
+    assert PLAIN.encode() not in item.content
+    assert item.candidate.warnings[0].keys == ["/content"]

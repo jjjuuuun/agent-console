@@ -31,9 +31,11 @@ from agent_console_modkit import (
     HostPlugins,
     Module,
     Paths,
+    SecretProviderOptionsError,
     SettingsCompat,
     assemble,
     compat_flags,
+    configure_secret_providers,
     default_paths,
     env_secret_lookup,
     flag_settings,
@@ -63,7 +65,7 @@ from ._config import (
 )
 from ._errors import register_error_handlers
 from ._launch import Opener, build_opener, start_ready_watch
-from ._module_options import module_options_payload
+from ._module_options import module_options_payload, plugin_options_payload
 from ._modules import apply_module_flags, module_info
 from ._openapi import build_openapi
 from ._rest_host import build_host_router
@@ -120,11 +122,15 @@ def create_app(
         여기서 한 번 로드해 모든 모듈에 기본 서비스 `registries`로 넘긴다
         (`agent_console_modkit.load_host_plugins` — 묶음 공장·로더는 설치된 패키지가 알린다).
         비밀 해석 함수(환경변수 `secrets.env_prefix` → 플러그인 비밀 공급자)는 기본 서비스
-        `secret_resolver`, DB 핸들(`open_host_database`)은 `database`로 넘긴다.
+        `secret_resolver`, DB 핸들(`open_host_database`)은 `database`로 넘긴다. 그 전에 설정
+        `secrets.providers.<key>`가 있는 비밀 공급자를 그 공급자의 설정 훅으로 다시 만든다
+        (`agent_console_modkit.configure_secret_providers`, 보기 = `GET /server-info`의
+        `plugin_options`).
         `GET /health`는 모듈 시작 훅이 끝난 뒤에만 200이다(그 전·종료 중은 503 `not_ready`).
 
     Raises:
-        ConfigError: 루프백이 아닌 주소인데 `security.allow_remote`가 꺼져 있을 때.
+        ConfigError: 루프백이 아닌 주소인데 `security.allow_remote`가 꺼져 있을 때, 비밀 공급자
+            설정 훅이 `secrets.providers` 값을 거부했을 때(메시지에 값은 없다).
     """
     cfg = settings or load_settings(environ=environ)
     if not cfg.is_loopback and not cfg.security.allow_remote:
@@ -147,6 +153,14 @@ def create_app(
         modules=cfg.plugins.modules,
         options=cfg.modules.options,
     )
+    # 설정 훅이 있는 비밀 공급자를 설정 값으로 다시 만든다 — 비밀 조회 사슬(기본 서비스)보다 먼저.
+    try:
+        secret_setup = configure_secret_providers(
+            plugins.registries, cfg.secrets.providers, environ=env, base_dir=cfg.base_dir
+        )
+    except SecretProviderOptionsError as exc:
+        raise ConfigError(str(exc)) from None
+    plugin_warnings = [*plugins.warnings, *secret_setup.warnings]
     chosen = installed_modules() if modules is None else list(modules)
     assembly = assemble(chosen, cfg.modules, base=_base_services(cfg, env, plugins, paths))
     for warning in assembly.warnings:
@@ -185,6 +199,9 @@ def create_app(
     app.state.assembly = assembly
 
     redact = redactor(assembly)
+    plugin_options = plugin_options_payload(
+        secret_setup, assembly, hide_paths=not cfg.security.expose_paths
+    )
 
     # 호스트 수준 처리기를 먼저 걸고 모듈 오류 맵을 뒤에 건다: 같은 예외 형식이면 모듈 것이 이긴다.
     register_error_handlers(app, redact)
@@ -206,7 +223,8 @@ def create_app(
                 server_version=srv_version,
                 reports=plugins.reports,
                 assembly=assembly,
-                plugin_warnings=plugins.warnings,
+                plugin_warnings=plugin_warnings,
+                plugin_options=plugin_options(),
             ),
         ),
         prefix=API_PREFIX,

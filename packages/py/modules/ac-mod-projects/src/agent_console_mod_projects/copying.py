@@ -20,6 +20,9 @@
   지우고, 기여 종류는 기여의 ``delete`` 콜백(제공 모듈의 자기 삭제 경로와 같은 일)을 부른다.
   콜백이 없는 기여 종류는 지울 수 없다(``CopyKindInfo.deletable`` false). 참조 검사는 하지
   않는다(종류별 삭제 경로와 같은 규칙 — 참조하던 쪽은 다음 검증에서 이슈로 보인다).
+- 거꾸로 참조(``item_references``, FU.13): 삭제 확인 창에 "이 항목을 쓰는 구성"을 보이도록 같은
+  공간의 정의를 하나씩 읽어 주입한 참조 추출(X25 + 종류 기여 ``references``)에 넣는다(순수 규칙
+  ``find_referrers``). 종류 이름·참조 필드를 모른다. 참조 추출이 없으면 ``checked`` false.
 """
 
 from __future__ import annotations
@@ -33,6 +36,7 @@ from agent_console_contracts import (
     CopyApplyRequest,
     CopyApplyResult,
     CopyItem,
+    CopyItemReferences,
     CopyKindInfo,
     CopyPlan,
     CopyPlanRequest,
@@ -58,6 +62,7 @@ from agent_console_projects import (
     apply_renames,
     copy_plan,
     copy_target_label,
+    find_referrers,
     legacy_items,
     renames_of,
     without_scope_field,
@@ -229,7 +234,8 @@ class CopyService:
         kind_info: 아는 정의 종류(기본 종류 + 종류 기여 X44, ``library``·``portable`` 값). 복사
             대화상자 메타데이터(``kinds``·``items``)가 쓴다. 없으면 두 목록이 빈다.
         kind_titles: 종류 표시 이름 ``{종류 이름: title}``(종류 기여의 ``title``). ``kinds``가
-            ``CopyKindInfo.title``로 싣고, 없는 종류는 null(화면이 종류 이름을 보인다).
+            ``CopyKindInfo.title``로 싣는다. 여기 없는 종류(기본 종류 등)는 ``kind_info`` 종류의
+            ``DefinitionKind.title``을 쓰고, 그것도 없으면 null(화면이 종류 이름을 보인다).
         kind_deleters: 기여 종류의 삭제 수단 ``{종류 이름: 콜백 | None}``(종류 기여의 ``delete``).
             None 값 = 그 종류는 종류 공통 경로로 지울 수 없다. 여기 없는 종류(기본 종류)는 공간
             저장소에서 바로 지운다.
@@ -317,7 +323,7 @@ class CopyService:
                     kind=name,
                     library=kind.library,
                     portable=kind.is_portable,
-                    title=titles.get(name) or None,
+                    title=titles.get(name) or kind.title or None,
                     deletable=name not in deleters or deleters[name] is not None,
                 )
             )
@@ -362,6 +368,63 @@ class CopyService:
             )
         return out
 
+    def item_references(self, ref: SpaceRef, kind: str, item_id: str) -> CopyItemReferences:
+        """같은 공간에서 이 항목을 쓰는 정의(삭제 확인 창의 "쓰는 구성", 종류 공통).
+
+        그 공간의 모든 종류(싱글턴 포함, 저장소 순서)의 정의를 읽어 참조 추출에 넣는다. 읽을 수
+        없는 정의는 건너뛴다. 다른 공간은 보지 않는다(사본은 독립).
+
+        Raises:
+            ProjectError: 모르는 공간(404 ``project.not_found``)·이 공간의 복사 종류가 아님(404
+                ``not_found``).
+            NotFound: 항목이 없다(404).
+        """
+        space = self.space(ref, target=False)
+        if not any(k.kind == kind for k in self._kinds(space)):
+            raise ProjectError(
+                ErrorCodes.NOT_FOUND,
+                f"이 공간에 없는 종류입니다: {kind}",
+                {"kind": kind},
+            )
+        space.store.get(kind, item_id)  # 없으면 NotFound(404)
+        store = space.store
+        read: dict[DefinitionId, CopyItem] = {}
+
+        def documents() -> Iterator[tuple[DefinitionId, Mapping[str, Any]]]:
+            allowed = set(space.kinds) if space.kinds is not None else None
+            for name in store.kinds():
+                if allowed is not None and name not in allowed:
+                    continue
+                try:
+                    ids = store.list_ids(name)
+                except StoreError:
+                    continue
+                for def_id in ids:
+                    try:
+                        stored = store.get(name, def_id)
+                    except (StoreError, ValueError):
+                        continue
+                    doc = stored.document
+                    title, about = doc.get("name"), doc.get("description")
+                    read[(name, def_id)] = CopyItem(
+                        kind=name,
+                        id=def_id,
+                        name=title if isinstance(title, str) else "",
+                        description=about if isinstance(about, str) else "",
+                        saved_at=stored.saved_at,
+                        version=stored.version_hash or None,
+                    )
+                    yield (name, def_id), doc
+
+        scan = find_referrers(
+            (kind, item_id), documents(), self._references(), messages=self._messages
+        )
+        return CopyItemReferences(
+            items=[read[key] for key in scan.keys],
+            checked=scan.checked,
+            warnings=list(scan.warnings),
+        )
+
     def delete_item(
         self, ref: SpaceRef, kind: str, item_id: str, *, expected_version: str | None = None
     ) -> None:
@@ -377,8 +440,8 @@ class CopyService:
             ProjectError: 모르는 공간(404 ``project.not_found``)·이 공간에 없는 종류(404
                 ``not_found``)·지울 수 없는 종류(400 ``bad_request``, ``details.reason``
                 ``not_deletable``).
+            ConfigReadonly: 프로젝트 구성 폴더에 쓸 수 없다(409, 항목이 있는지 보기 전에 판정).
             NotFound: 항목이 없다(404).
-            ConfigReadonly: 프로젝트 구성 폴더에 쓸 수 없다(409).
             VersionConflict: ``expected_version``이 지금 버전과 다르다(412).
         """
         space = self.space(ref, target=False)
@@ -395,9 +458,11 @@ class CopyService:
                 f"이 종류는 여기서 지울 수 없습니다: {kind}",
                 {"kind": kind, "reason": "not_deletable"},
             )
-        space.store.get(kind, item_id)  # 없으면 NotFound(404), 잘못된 id는 InvalidIdentifier
         if not space.writable:
+            # 쓰기 불가를 먼저 본다: 읽기 전용 폴더는 항목을 읽는 것조차 실패할 수 있어(기록 DB를
+            # 열 수 없음 등) 그 오류 대신 화면이 아는 409 ``project.config_readonly``를 낸다.
             raise ConfigReadonly("the project folder is read-only")
+        space.store.get(kind, item_id)  # 없으면 NotFound(404), 잘못된 id는 InvalidIdentifier
         deleter = self._kind_deleters().get(kind)
         if deleter is None:
             space.store.delete(kind, item_id, expected_version=expected_version)

@@ -128,6 +128,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     projects.CopyApplyResult,
     projects.CopyKindInfo,
     projects.CopyItem,
+    projects.CopyItemReferences,
     projects.FolderCapabilities,
     projects.FolderPickRequest,
     projects.FolderPickResult,
@@ -369,6 +370,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     modules.ModuleInfo,
     modules.FeatureUnavailableDetails,
     modules.ModuleOptionsView,
+    modules.PluginOptionsView,
     # WS
     modules.WsClientMessage,
     modules.WsServerMessage,

@@ -7,6 +7,7 @@
   `combined_version`·`ignored_key_issues`).
 - 공간 사이 복사: `copy_plan`(대상 이름 `copy_target_label`, 평문 비밀 막힘 `PlainSecretCheck`)·
   `skip_warnings`·`apply_decisions`·`apply_renames`.
+- 거꾸로 참조: `find_referrers`(한 공간에서 정의 하나를 쓰는 정의, 참조 추출 주입 — 삭제 확인 창).
 - 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33), 폴더 안 파일 접근
   `FolderGuard`·`normalize_reserved`·`relative_inside`(예약 경로·링크를 푼 실제 경로, §PI.5).
 - 옛 데이터: `legacy_items`·`legacy_counts`·`without_scope_field`, 프로젝트 층 값
@@ -85,6 +86,12 @@ from ._paths import (
     path_relation,
     resolve_folder,
 )
+from ._referrers import (
+    DEFAULT_REFERRER_MESSAGES,
+    REFERRERS_UNAVAILABLE_MESSAGE,
+    ReferrerScan,
+    find_referrers,
+)
 from ._registry import (
     ProjectLike,
     ProjectStatusResult,
@@ -130,12 +137,14 @@ __all__ = [
     "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
     "DEFAULT_MESSAGES",
+    "DEFAULT_REFERRER_MESSAGES",
     "DEFAULT_TARGET_LABEL",
     "FALLBACK_PREFIX",
     "LEGACY_SCOPE_FIELD",
     "MANIFEST_KEYS",
     "MAX_ID_LENGTH",
     "MOVE_TO_SHARED_SUGGESTION",
+    "REFERRERS_UNAVAILABLE_MESSAGE",
     "REGISTRATION_KEYS",
     "CaseRule",
     "CopyDecision",
@@ -152,6 +161,7 @@ __all__ = [
     "ProjectLike",
     "ProjectStatusResult",
     "References",
+    "ReferrerScan",
     "RegisteredFolder",
     "RewriteReferences",
     "ScopedDefinition",
@@ -167,6 +177,7 @@ __all__ = [
     "copy_target_label",
     "delete_plan",
     "effective_scope",
+    "find_referrers",
     "folder_conflicts",
     "folder_key",
     "folder_slug",

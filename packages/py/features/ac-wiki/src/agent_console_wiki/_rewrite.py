@@ -2,7 +2,8 @@
 
 렌더러로 다시 쓰지 않는다(사용자 서식·줄바꿈 종류·탭이 바뀌지 않게, design §7R.10). 경로(`path`)나
 상대 경로(`relative_path`)로 찾은 링크만 고친다 — 제목·별칭으로 찾은 링크는 옮긴 뒤에도 그대로
-이어진다.
+이어진다. 참조 링크(`[글][이름]`)는 정의 줄(`[이름]: 경로`)의 경로를 고치고, 같은 정의를 쓰는 링크가
+여럿이어도 그 자리는 한 번만 고친다.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ class RewriteResult:
 
     Attributes:
         text: 고친 본문.
-        count: 고친 링크 수.
+        count: 고친 링크 수(같은 참조 정의를 쓰는 링크는 하나씩 센다).
         skipped: 원문이 색인과 달라(그사이 바뀜) 건너뛴 링크 수.
     """
 
@@ -86,7 +87,8 @@ def rewrite_links(
     """
     moved_self = page == old
     page_after = new if moved_self else page
-    edits: list[tuple[int, int, str]] = []
+    edits: dict[tuple[int, int], str] = {}
+    count = 0
     skipped = 0
     for item in links:
         link = item.link
@@ -114,14 +116,16 @@ def rewrite_links(
             angle=angle,
         )
         if replacement != original:
-            edits.append((link.target_start, link.target_end, replacement))
+            # 참조 링크 여럿이 정의 하나를 같이 쓰면 같은 자리다 — 한 번만 고친다.
+            edits.setdefault((link.target_start, link.target_end), replacement)
+            count += 1
     if not edits:
         return RewriteResult(text=text, count=0, skipped=skipped)
     parts: list[str] = []
     cursor = 0
-    for start, end, replacement in sorted(edits):
+    for (start, end), replacement in sorted(edits.items()):
         parts.append(text[cursor:start])
         parts.append(replacement)
         cursor = end
     parts.append(text[cursor:])
-    return RewriteResult(text="".join(parts), count=len(edits), skipped=skipped)
+    return RewriteResult(text="".join(parts), count=count, skipped=skipped)

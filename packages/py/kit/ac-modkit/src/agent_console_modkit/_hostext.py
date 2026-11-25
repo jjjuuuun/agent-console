@@ -332,13 +332,19 @@ def open_host_database(
     return handle
 
 
-def secret_providers_of(registries: Any) -> list[Any]:
-    """묶음의 비밀 공급자 항목(``get_secret``이 있는 것만, 등록 순)."""
+def secret_provider_registry(registries: Any) -> Registry[Any] | None:
+    """묶음의 비밀 공급자 레지스트리(같은 이름 속성 또는 ``extension(이름)``). 없으면 None."""
     registry = getattr(registries, SECRET_PROVIDERS_REGISTRY, None)
     if not isinstance(registry, Registry):
         extension = getattr(registries, "extension", None)
         registry = extension(SECRET_PROVIDERS_REGISTRY) if callable(extension) else None
-    if not isinstance(registry, Registry):
+    return registry if isinstance(registry, Registry) else None
+
+
+def secret_providers_of(registries: Any) -> list[Any]:
+    """묶음의 비밀 공급자 항목(``get_secret``이 있는 것만, 등록 순)."""
+    registry = secret_provider_registry(registries)
+    if registry is None:
         return []
     return [e.item for e in registry.list() if callable(getattr(e.item, "get_secret", None))]
 
@@ -393,5 +399,6 @@ __all__ = [
     "load_host_plugins",
     "open_host_database",
     "secret_lookup",
+    "secret_provider_registry",
     "secret_providers_of",
 ]

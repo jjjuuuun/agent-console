@@ -2,6 +2,19 @@
 
 ## 미출시
 
+- FU.17: `WikiIssueCodes.UNKNOWN_TITLE_SOURCE`·`REDACTED_CONTENT`가 계약 0.14.11(`common` 1.16.0)
+  `KnownIssueCodes.WIKI_UNKNOWN_TITLE_SOURCE`·`WIKI_REDACTED_CONTENT`의 별칭이 되었다(값·공개 이름 그대로).
+  이벤트 상태 `WikiEventStatus`는 그대로(`secret_rejected` + 사유 코드).
+- FU.14: 마크다운 링크 규칙이 참조 링크(`[글][이름]`·`[이름][]`·`[이름]` + 정의 `[이름]: 경로`)도 읽는다 — 그래프·
+  백링크·이름 바꾸기(정의 줄 경로를 한 번만 고침)에 들어간다. `ParsedLink.reference`(정의 이름 키), 내부
+  `scan_inline(text, references)`.
+- FU.14: 문법 `title_sources`의 모르는 값에 warning `wiki.unknown_title_source`(`/title_sources/<i>`, 규칙 검사에도
+  `/syntax/...`로). 전에는 이슈 없이 건너뛰었다.
+- FU.14: 가린 본문 다시 쓰기 막기 — `compose_write`가 기존 페이지의 새 본문에 가린 비밀 표시가 새로 들어 있으면
+  `WikiRedactedContentError`(`wiki.redacted_content`, `details.lines`)를 던지고, 도구는 같은 사유 코드(이벤트 상태
+  `secret_rejected`)로 돌려준다. 읽기 결과에 가린 곳이 있으면 안내 줄(`tool_text.yaml` `read_redacted`). 새 공개
+  `WikiSecretPolicy.reused_redactions`·`redaction_marks`·`WikiIssueCodes`(계약 후보 코드).
+
 - FU.12: `WikiToolkit(query_hash=)` — 검색 이벤트 `query_sha256`의 기본이 솔트 없는 sha256에서 묶음마다 무작위 솔트
   HMAC-SHA256으로 바뀌었다(`query_hasher("sha256")`으로 옛 값, `off`면 싣지 않음). `query_hasher`·
   `query_hasher_from_env`·`QueryHasher`·`QueryHashModes`·`QUERY_HASH_MODES`는 `agent-console-query-hash`를 다시

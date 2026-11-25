@@ -31,6 +31,7 @@
 | `skip_warnings(plan, actions, *, target_index)` | 빼는 참조 때문에 실행 전에 막힐 정의 |
 | `apply_decisions(items, *, source_index, target_index)` | 적용 판정(바뀐 항목만 `conflict`) |
 | `apply_renames(docs, renames, *, rewrite_references)` | 새 id + 묶음 안 참조 고치기 |
+| `find_referrers(target, documents, references, *, messages)` | 거꾸로 참조: 같은 공간에서 `target`을 쓰는 정의(참조 추출 주입, 종류 이름을 모름). 참조 추출이 없으면 `checked` False + info `project.references_unavailable` |
 | `path_fields(schema, value)`·`outside_paths(value, schema, root, allowed)` | `x-path` 값 찾기, 프로젝트 폴더 밖 경로 |
 | `FolderGuard(folder, *, reserved, realpath)`·`normalize_reserved`·`relative_inside` | 폴더 안 파일 접근의 경로 지킴: 예약 경로(대소문자 무시)·링크를 푼 실제 경로가 폴더 안인지. 경로 문자열 검사는 호출자 몫 |
 | `legacy_items`·`legacy_counts`·`without_scope_field` | 옛 프로젝트 전용 정의(`project` 필드) 해석 |

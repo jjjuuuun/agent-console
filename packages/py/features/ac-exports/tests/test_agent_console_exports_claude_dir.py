@@ -36,6 +36,7 @@ class Dep:
 class FakeCatalog:
     docs: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
     bodies: dict[tuple[str, str], dict[str, bytes]] = field(default_factory=dict)
+    contents: dict[tuple[str, str], bytes] = field(default_factory=dict)
     deps: dict[tuple[str, str], list[Dep]] = field(default_factory=dict)
 
     def document(self, kind: str, id: str) -> Mapping[str, Any] | None:
@@ -43,6 +44,9 @@ class FakeCatalog:
 
     def files(self, kind: str, id: str) -> Mapping[str, bytes]:
         return self.bodies.get((kind, id), {})
+
+    def content(self, kind: str, id: str) -> bytes | None:
+        return self.contents.get((kind, id))
 
     def dependencies(self, kind: str, id: str) -> Sequence[Dep]:
         return self.deps.get((kind, id), [])
@@ -299,3 +303,12 @@ def test_hook_probe_setting_does_not_change_exported_hook_commands() -> None:
     for text in (*files_of(agent_out).values(), *files.values()):
         assert "hook_probe" not in text
         assert "hook-probe" not in text
+
+
+def test_single_file_body_comes_from_catalog_content() -> None:
+    """리소스 종류가 한 파일 본문이면(카탈로그 ``files``가 빔) ``content``에서 본문을 읽는다."""
+    c = catalog()
+    c.bodies.pop(("resource", "style"))
+    c.contents[("resource", "style")] = "한 파일 본문\n".encode()
+    out = ClaudeDirExporter().plan([ExportSelection(kind="agent", id="rev")], c, {})
+    assert "한 파일 본문" in files_of(out)[".claude/rules/style.md"]

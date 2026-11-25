@@ -40,7 +40,7 @@ describe("설정의 기능 모듈 섹션", () => {
     expect(screen.getByRole("radio", { name: "시작 실패 1" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "충돌 0" })).toBeTruthy();
     const rows = screen.getAllByRole("treeitem").filter((el) => el.getAttribute("aria-level") === "2");
-    expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual(["m-bad, 연결 부족", "m-ok, 켜짐", "m-fail, 시작 실패", "m-off, 꺼짐"]);
+    expect(rows.map((r) => r.querySelector("code")?.textContent)).toEqual(["m-bad", "m-ok", "m-fail", "m-off"]);
     expect(screen.getByText("필요한 연결: port.missing")).toBeTruthy();
     expect(screen.getByText("시작 실패 이유")).toBeTruthy();
   });
@@ -60,12 +60,12 @@ describe("설정의 기능 모듈 섹션", () => {
     expect(screen.getByText("일치하는 모듈이 없습니다")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "필터 지우기" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "모듈 검색" }), { target: { value: "port.one" } });
-    expect(screen.getAllByRole("treeitem").filter((el) => el.getAttribute("aria-level") === "2").map((r) => r.getAttribute("aria-label"))).toEqual(["m-ok, 켜짐"]);
+    expect(screen.getAllByRole("treeitem").filter((el) => el.getAttribute("aria-level") === "2").map((r) => r.querySelector("code")?.textContent)).toEqual(["m-ok"]);
   });
 
   it("행을 펼치면 버전·계약·제공 연결·영향받는 화면과 부분이 보인다(켜진 모듈의 화면은 링크)", () => {
     view({ phase: "ready", modules: MODULES });
-    fireEvent.click(screen.getByRole("treeitem", { name: "m-ok, 켜짐" }));
+    fireEvent.click(screen.getByRole("treeitem", { name: /^m-ok\b/ }));
     expect(screen.getByText("1.2.3", { selector: "dd" })).toBeTruthy();
     expect(screen.getByText("c-x 1.0.0")).toBeTruthy();
     expect(screen.getByText("port.one", { selector: "code" })).toBeTruthy();
@@ -142,5 +142,17 @@ describe("설정 화면의 섹션과 모듈", () => {
     const nav = await screen.findByRole("navigation", { name: "설정 섹션" });
     const link = await within(nav).findByRole("link", { name: /기능 모듈/ });
     await waitFor(() => expect(within(link).getByRole("img", { name: "문제가 있는 기능 모듈이 있습니다" })).toBeTruthy());
+  });
+
+  it("확장 옵션 묶음: 값·설정됨·YAML 조각 복사를 읽기 전용으로 보이고, 빈 목록이면 그리지 않는다", () => {
+    const item = { extension: "ext-a", name: "prov-x", settings_key: "sec.providers.prov-x", configured: true, values: { path: "/p" }, schema: { type: "object", properties: { path: { type: "string", title: "경로" } } }, yaml_snippet: "sec:\n  providers:\n    prov-x:\n      path: /p" };
+    view({ phase: "ready", modules: MODULES }, { pluginOptions: [] });
+    expect(screen.queryByText(/확장 옵션/)).toBeNull();
+    cleanup();
+    view({ phase: "ready", modules: MODULES }, { pluginOptions: [item] });
+    expect(screen.getByRole("heading", { name: /확장 옵션/ })).toBeTruthy();
+    expect(screen.getByText("sec.providers.prov-x")).toBeTruthy();
+    expect(screen.getByText(/설정됨/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "YAML 조각 복사" })).toBeTruthy();
   });
 });

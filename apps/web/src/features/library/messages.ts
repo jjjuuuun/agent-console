@@ -30,6 +30,7 @@ export const libraryMessages = {
     action: "삭제",
     usedBy: (n: number) => `이 항목을 쓰는 곳 ${n}개`,
     understood: "이해했습니다",
+    checking: "쓰는 곳 확인 중…",
     failed: "삭제하지 못했습니다",
   },
   picker: {

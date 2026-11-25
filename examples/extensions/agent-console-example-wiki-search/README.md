@@ -87,6 +87,9 @@ modules:
         backend: example-inverted
         fallback: scan          # 못 쓸 때 대신 쓸 방식(비우면 색인 없이)
         tokenizer: whitespace   # 이 예제는 data/defaults.json의 이름 표에서 낱말 규칙을 고른다
+        index_options:          # 검색 방식 이름 → 그 방식만 받는 옵션
+          example-inverted:
+            token_pattern: "[\\w-]+"   # 낱말 정규식을 직접 준다(tokenizer보다 먼저)
 ```
 
 | 옵션 | 기본(`data/defaults.json`) | 뜻 |
@@ -96,8 +99,9 @@ modules:
 | `case_insensitive` | `true` | 대소문자 무시(mod-wiki가 위키 문법 값으로 채움) |
 | `max_results`·`max_terms`·`max_term_chars`·`max_body_chars`·`snippet_chars` | 위키 라이브러리 기본 | 검색 상한 |
 
-mod-wiki가 넘기는 옵션은 `tokenizer`·`case_insensitive`·`max_results`다. `token_pattern` 같은 나머지는 이 예제를 직접
-만들어(`make_index({...})`) 쓸 때 받는다.
+mod-wiki는 `tokenizer`와 고른 방식의 `search.index_options.<방식>`(위 예의 `token_pattern` 등)을 넘기고, 그 위에
+`case_insensitive`(위키 문법 값)·`max_results`(설치자 `max_search_results`)를 덮어 넘긴다. 앞의 두 값은
+`index_options`로 바꿀 수 없다. 서버 없이 쓸 때는 `make_index({...})`에 같은 옵션을 준다.
 
 ## 설치·제거
 
@@ -134,6 +138,6 @@ uv run --project ../../.. python -m pytest
   않음, 강조 범위, 지운 문서의 낱말 표 정리, 낱말 규칙 옵션, 틀린 `token_pattern` 거부.
 - `tests/test_mod_wiki_assembly.py`: 테스트 호스트 + `mod-wiki` 조립 — 사용자 `search_backend`·설치자
   `search.backend`로 고르면 검색이 이 색인으로 동작, 새 페이지도 찾음, 고르지 않으면 기본 방식, 없는 이름이면
-  대체 방식 + `wiki.search_degraded`.
+  대체 방식 + `wiki.search_degraded`, 설치자 `search.index_options`의 `token_pattern`이 색인에 닿음.
 
 자기 색인을 만들 때도 같은 방식으로 `WikiSearchContractTests`를 상속해 `make_index`만 채운다.

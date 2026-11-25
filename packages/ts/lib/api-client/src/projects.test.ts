@@ -216,6 +216,18 @@ describe("프로젝트 사본 항목 삭제 (요청 11/07 후속)", () => {
     expect(calls[0]).toEqual({ url: "/projects/copy/items/zz-kind/a%2Fb?project=p%201", method: "DELETE", ifMatch: undefined });
     expect(calls[1]).toEqual({ url: "/projects/copy/items/zz-kind/x?project=p1", method: "DELETE", ifMatch: "h1" });
   });
+  it("listCopyItemReferences: 종류·id를 인코딩하고 project가 null이면 ?project=를 생략한다", async () => {
+    const urls: string[] = [];
+    const fetch: typeof globalThis.fetch = (input) => {
+      urls.push(String(input));
+      return Promise.resolve(new Response(JSON.stringify({ items: [], checked: true }), { status: 200, headers: { "content-type": "application/json" } }));
+    };
+    const rest = createRestClient({ baseUrl: "http://h", token: "T", fetch });
+    await rest.listCopyItemReferences("p 1", "zz-kind", "a/b");
+    await rest.listCopyItemReferences(null, "zz-kind", "x");
+    expect(urls[0]).toContain("/projects/copy/items/zz-kind/a%2Fb/references?project=p%201");
+    expect(urls[1]).toMatch(/\/projects\/copy\/items\/zz-kind\/x\/references$/);
+  });
 });
 
 describe("Run 단위 호출의 ?project=·위치 찾기 (요청 11/08)", () => {

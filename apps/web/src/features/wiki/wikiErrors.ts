@@ -2,6 +2,7 @@ import { ApiError } from "@agent-console/api-client";
 import { ERROR_CODES } from "@agent-console/contracts";
 import type { WikiPageNotFoundDetails, WikiRuleRejectedDetails } from "@agent-console/contracts/wiki";
 import { wikiMessages as m } from "./messages";
+import { wikiIssueText } from "../../app/wikiIssueMessages";
 
 /** 위키 요청 실패를 화면이 다루는 종류로 나눈 것. 서버 코드는 화면에 노출하지 않는다. */
 export type WikiFailure =
@@ -88,7 +89,7 @@ export function classifyWikiError(error: unknown, fallback: string): WikiFailure
     case ERROR_CODES.PROJECT_NOT_FOUND:
       return { kind: "problem", message: m.problem.notFound };
     default:
-      return { kind: "generic", message, code: error.code };
+      return { kind: "generic", message: wikiIssueText(error.code, message), code: error.code };
   }
 }
 

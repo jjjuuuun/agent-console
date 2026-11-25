@@ -9,7 +9,8 @@
       ``plan(items, catalog, options) -> ExportOutput``),
       ``ExporterFactory``(설치자 옵션 → 형식), ``EXPORTERS_GROUP``, ``EXPORTERS_EXTENSION``,
       산출물 ``ExportOutput``·``OutputFile``, 이슈 코드 ``ExportIssueCodes``
-    - 주입 프로토콜: ``ExportCatalog``(``document``·``files``·``dependencies``), ``DependencyLike``
+    - 주입 프로토콜: ``ExportCatalog``(``document``·``files``·``content``·``dependencies``),
+      ``DependencyLike``
     - 로딩: ``new_exporter_factories``, ``load_exporter_factories``, ``build_exporters``,
       ``as_exporter_factory``, ``as_exporter``
     - 서비스: ``ExportService(exporters, catalog, *, writer, secret_rules)`` —

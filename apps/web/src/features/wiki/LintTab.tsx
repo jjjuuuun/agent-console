@@ -18,6 +18,7 @@ import { SEVERITY_ORDER, WIKI_PARAMS } from "./wikiConfig";
 import { wikiRulesPath } from "./wikiPaths";
 import type { WikiTabProps } from "./wikiTabs";
 import { wikiMessages as m } from "./messages";
+import { localizeIssue } from "../../app/wikiIssueMessages";
 import { wikiTabMessages } from "./tabMessages";
 
 const t = wikiTabMessages.lint;
@@ -111,7 +112,7 @@ export function LintTab({ wikiId, view, ctx, display, params, setParams, goTab, 
   } else {
     body = (
       <LintTable
-        issues={issues}
+        issues={issues.map(localizeIssue)}
         display={display}
         severityOrder={SEVERITY_ORDER}
         lineOf={lineOf}

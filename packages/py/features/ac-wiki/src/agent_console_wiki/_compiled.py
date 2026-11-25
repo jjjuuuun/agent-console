@@ -2,7 +2,8 @@
 
 사용자 정규식은 모두 `ac-safe-regex`로 컴파일한다(시간·길이 상한). 쓸 수 없는 링크 패턴은
 `wiki.link_pattern_invalid`(error)를 내고 그 링크 규칙만 뺀다. 모르는 `kind`·`resolve` 값은
-`wiki.unknown_link_kind`(warning)를 내고 그 규칙·값만 건너뛴다. `orphan_ignore`의 틀린 글롭은
+`wiki.unknown_link_kind`(warning)를 내고 그 규칙·값만 건너뛴다. 모르는 `title_sources` 값은
+`wiki.unknown_title_source`(warning)를 내고 그 값만 건너뛴다. `orphan_ignore`의 틀린 글롭은
 `wiki.invalid_glob`.
 """
 
@@ -29,6 +30,7 @@ from agent_console_safe_regex import (
     compile_user_regex,
 )
 
+from ._codes import WikiIssueCodes
 from ._glob import check_glob
 
 __all__ = [
@@ -56,14 +58,13 @@ KNOWN_RESOLVERS: frozenset[str] = frozenset(
 )
 """링크 대상 찾기 방법(코드 개념 넷). 순서·사용 여부는 데이터."""
 
-KNOWN_TITLE_SOURCES: frozenset[str] = frozenset(
-    {
-        KnownWikiTitleSources.FRONT_MATTER,
-        KnownWikiTitleSources.FIRST_HEADING,
-        KnownWikiTitleSources.FILE_NAME,
-    }
+_TITLE_SOURCE_ORDER: tuple[str, ...] = (
+    KnownWikiTitleSources.FRONT_MATTER,
+    KnownWikiTitleSources.FIRST_HEADING,
+    KnownWikiTitleSources.FILE_NAME,
 )
-"""제목 출처(코드 개념 셋). 모르는 값은 건너뛴다."""
+KNOWN_TITLE_SOURCES: frozenset[str] = frozenset(_TITLE_SOURCE_ORDER)
+"""제목 출처(코드 개념 셋). 모르는 값은 `wiki.unknown_title_source` 이슈를 내고 건너뛴다."""
 
 DEFAULT_MAX_INPUT_CHARS = 4_000_000
 """링크 패턴이 한 번에 훑는 글자 수 상한(문단 하나 기준이라 넉넉하다)."""
@@ -256,9 +257,22 @@ def compile_syntax(
             KnownWikiFrontMatterRoles.ALIASES,
         )
     }
-    title_sources = tuple(
-        dict.fromkeys(s for s in data.title_sources or () if s in KNOWN_TITLE_SOURCES)
-    )
+    known_sources: list[str] = []
+    for k, source in enumerate(data.title_sources or ()):
+        if source in KNOWN_TITLE_SOURCES:
+            known_sources.append(source)
+            continue
+        issues.append(
+            _issue(
+                WikiIssueCodes.UNKNOWN_TITLE_SOURCE,
+                f"제목 출처 '{source}'를 몰라 건너뜁니다"
+                f"({'·'.join(_TITLE_SOURCE_ORDER)} 중에서 고르세요).",
+                severity="warning",
+                path=f"/title_sources/{k}",
+                value=source,
+            )
+        )
+    title_sources = tuple(dict.fromkeys(known_sources))
     extensions = tuple(dict.fromkeys(e for e in data.page_extensions or () if e))
     schemes = tuple(sorted(data.schemes or (), key=lambda s: len(s.prefix), reverse=True))
 

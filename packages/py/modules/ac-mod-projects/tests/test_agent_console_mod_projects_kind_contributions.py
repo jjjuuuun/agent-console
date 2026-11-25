@@ -320,6 +320,32 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
         assert client.get(f"{API}/projects/copy/kinds?project=..").status_code == 404
 
 
+def test_copy_kinds_titles_for_builtin_kinds_fu18(tmp_path: Path) -> None:
+    """FU.18: 기본 종류도 ``CopyKindInfo.title``을 채운다(종류 데이터 ``DefinitionKind.title``).
+
+    기여의 ``title``이 종류 데이터보다 먼저이고, 둘 다 없으면 null이다. 프로젝트 모듈은 종류
+    이름·문구를 모른다(기대값도 종류 데이터에서 읽는다).
+    """
+    titled = DefinitionKind(name="memo", directory="memos", title="메모")
+    both = DefinitionKind(name="memo2", directory="memos2", title="종류 이름")
+    items = (*CONTRIBUTIONS, KindContribution(titled), KindContribution(both, title="기여 이름"))
+    assembly = _assembly(tmp_path, contributions=True, items=items)
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        for query in ("", "?project=pa"):
+            got = {
+                k["kind"]: k["title"]
+                for k in client.get(f"{API}/projects/copy/kinds{query}").json()
+            }
+            builtin = {k.name: k.title for k in DEFAULT_KINDS if not k.is_singleton}
+            assert builtin
+            assert all(builtin.values())
+            assert {name: got[name] for name in builtin} == builtin
+            assert got["memo"] == "메모"  # 기여 title 없음 → 종류 데이터
+            assert got["memo2"] == "기여 이름"  # 기여 title이 먼저
+            assert got["note-template"] is None  # 둘 다 없음 → null
+
+
 def test_copy_plan_suggests_rename_for_reserved_ids(tmp_path: Path) -> None:
     """FU.6: 기여 종류 데이터의 예약어 id(``reserved_ids``)로 들어오는 항목은 새 id를 제안한다."""
     guarded = DefinitionKind(

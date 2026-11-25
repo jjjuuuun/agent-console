@@ -14,6 +14,7 @@ export type {
   CopyApplyRequest,
   CopyApplyResult,
   CopyItem,
+  CopyItemReferences,
   CopyKindInfo,
   CopyPlan,
   CopyPlanItem,
@@ -56,4 +57,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "projects" as const;
-export const CONTRACT_VERSION = "3.6.0" as const;
+export const CONTRACT_VERSION = "3.7.0" as const;

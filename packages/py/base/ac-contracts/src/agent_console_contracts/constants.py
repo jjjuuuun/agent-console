@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.9"
+CONTRACTS_VERSION: Final = "0.14.12"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,13 +38,13 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.15.0",
+    "common": "1.16.0",
     "resources": "1.1.0",
     "logs": "1.2.0",
     "definitions": "1.7.0",
     "runs": "1.9.0",
     "usage": "1.1.0",
-    "projects": "3.6.0",
+    "projects": "3.7.0",
     "chat": "1.4.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
@@ -52,7 +52,7 @@ CONTRACT_VERSIONS: Final[dict[str, str]] = {
     "memory": "1.2.0",
     "sdd": "1.3.0",
     "wiki": "1.2.0",
-    "modules": "1.6.0",
+    "modules": "1.7.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
 모듈은 쓰는 하위 모듈 버전을 `ModuleInfo.contracts`로 낸다. 0.5.0에서 1.0.0으로 시작했다
@@ -105,7 +105,13 @@ Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMB
 `DocumentStateOnRun{document, to}` — 실행 결과로 문서 상태 바꾸기), `memory` 1.2.0
 (`MemoryRetentionSettings.auto` = `MemoryRetentionAuto{library, projects, exclude_projects}` — 서버
 자동 정리 대상), `common` 1.15.0(문서 상수 `KnownIssueCodes.SDD_DOCUMENT_STATE_NOT_APPLIED`·
-`SDD_STATUS_PATTERN_IGNORED`)."""
+`SDD_STATUS_PATTERN_IGNORED`).
+0.14.10(FU.13, 더하기만): `projects` 3.7.0(`CopyItemReferences` —
+`GET /projects/copy/items/{kind}/{id}/references` 응답, 같은 공간에서 이 항목을 쓰는 정의).
+0.14.11(FU.17, 더하기만): `common` 1.16.0(문서 상수 `KnownIssueCodes.WIKI_UNKNOWN_TITLE_SOURCE`·
+`WIKI_REDACTED_CONTENT` — 위키 문법의 모르는 제목 출처, 가린 비밀 자리 표시가 든 쓰기 거부 사유).
+0.14.12(FU.19, 더하기만): `modules` 1.7.0(`PluginOptionsView`·`ServerInfo.plugin_options` — 설정을
+선언한 플러그인(비밀 값 공급자 등)의 스키마·가린 지금 값·설정 자리)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -780,6 +786,15 @@ class KnownIssueCodes:
     """(0.14.2) 위키 점검에서 페이지 하나를 점검하지 못했다(warning, 본문을 읽을 수 없음 등).
     `page`, `details.reason` = 예외 종류 이름(값·경로 원문 없음). 그 페이지는
     `WikiLintReport.skipped`에 있고 `partial`이 참이다."""
+    # ---- 1.16.0(0.14.11, FU.17): 위키 문법·쓰기 후속
+    WIKI_UNKNOWN_TITLE_SOURCE: Final = "wiki.unknown_title_source"
+    """문법 `title_sources`에 모르는 값이 있어 그 값만 건너뛰었다(warning, 문법 컴파일·규칙 검사).
+    `Issue.path` = `/title_sources/<i>`, `details.value`."""
+    WIKI_REDACTED_CONTENT: Final = "wiki.redacted_content"
+    """쓸 본문에 읽을 때 가린 비밀 자리 표시가 새로 들어 있어 쓰지 않았다(도구·쓰기 조합의 사유
+    코드 — 쓰면 실제 비밀이 가린 표시로 바뀐다). 도구 결과 상태는 닫힌 어휘 `WikiEventStatus`의
+    `secret_rejected` 그대로이고 사유를 이 코드로 가른다. `details.lines`(새 본문 줄 번호,
+    값 없음)."""
 
 
 class KnownSuggestionIds:

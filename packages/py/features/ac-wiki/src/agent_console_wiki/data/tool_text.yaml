@@ -24,6 +24,8 @@ inputs:
 read_meta: "content_hash: {hash}"
 # 절만 읽었을 때 머리 줄 다음 줄. {section}
 read_section: "(절: {section})"
+# 읽은 본문에 비밀을 가린 곳이 있을 때 결과 맨 앞 줄. 비우면 넣지 않는다.
+read_redacted: "(비밀로 보이는 값을 가려 보였습니다. 가린 자리 표시를 그대로 다시 쓰면 실제 값이 지워지므로 쓰기가 막힙니다. 가린 줄은 두고 다른 절만 고치거나(mode=section·append) 사람에게 맡기세요.)"
 # 검색 결과 한 줄. {wiki} {path} {title} {snippet} {score}
 search_item: "- {wiki}:{path} · {title}\n  {snippet}"
 search_empty: 찾은 페이지가 없습니다.
@@ -69,6 +71,7 @@ errors:
   wiki.page_exists: "{wiki}:{path} 페이지가 이미 있습니다."
   wiki.too_large: "한도를 넘었습니다({limit})."
   wiki.secret_rejected: "비밀로 보이는 값이 있어 쓰지 않았습니다(줄 {lines}). 값을 빼고 다시 쓰세요."
+  wiki.redacted_content: "읽을 때 가린 비밀 자리 표시가 본문에 들어 있어 쓰지 않았습니다(줄 {lines}). 그대로 쓰면 실제 값이 지워집니다. 가린 줄은 두고 다른 절만 고치거나(mode=section·append) 사람에게 맡기세요."
   wiki.rule_rejected: "위키 규칙 '{rule_id}'가 거부했습니다: {message} (줄 {lines})"
   wiki.rate_limited: "이 실행에서 쓸 수 있는 횟수를 넘었습니다."
   wiki.invalid_path: "'{path}'는 페이지 경로로 쓸 수 없습니다."

@@ -44,6 +44,7 @@ from agent_console_safe_regex import UnsafeRegexError, check_user_regex
 from agent_console_store import DefinitionStore, NotFound
 from agent_console_text_template import render_template, template_variables
 
+from ._codes import WikiIssueCodes
 from ._compiled import compile_syntax
 from ._glob import check_glob
 from ._syntax import merge_syntax
@@ -69,6 +70,7 @@ _SYNTAX_CODES = frozenset(
         KnownIssueCodes.WIKI_UNKNOWN_LINK_KIND,
         KnownIssueCodes.WIKI_INVALID_GLOB,
         KnownIssueCodes.WIKI_DUPLICATE_RULE_ID,
+        WikiIssueCodes.UNKNOWN_TITLE_SOURCE,
     }
 )
 

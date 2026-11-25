@@ -11,6 +11,8 @@ from typing import Any
 from agent_console_contracts.constants import ErrorCodes, KnownIssueCodes
 from agent_console_contracts.wiki import WikiIssue, WikiRuleRejectedDetails
 
+from ._codes import WikiIssueCodes
+
 __all__ = [
     "WikiConflictError",
     "WikiError",
@@ -19,6 +21,7 @@ __all__ = [
     "WikiPageExistsError",
     "WikiPageNotFoundError",
     "WikiPathError",
+    "WikiRedactedContentError",
     "WikiRuleRejectedError",
     "WikiSecretRejectedError",
     "WikiSectionNotFoundError",
@@ -206,6 +209,28 @@ class WikiSecretRejectedError(WikiError):
                 "issues": [i.model_dump(mode="json") for i in issues or []],
             },
         )
+        self.lines = list(lines)
+
+
+class WikiRedactedContentError(WikiError):
+    """쓸 본문에 읽을 때 가린 비밀 자리 표시가 새로 들어 있다(`wiki.redacted_content`).
+
+    에이전트는 비밀을 가린 본문을 읽는다. 그 글을 그대로 통째로 다시 쓰면 실제 비밀이 가린 표시로
+    바뀌므로 쓰기 전에 막는다. 값은 싣지 않고 새 본문의 줄 번호만.
+
+    Attributes:
+        path: 페이지 경로.
+        lines: 가린 표시가 새로 들어간 줄 번호(1부터, 새 본문 기준).
+    """
+
+    code = WikiIssueCodes.REDACTED_CONTENT
+
+    def __init__(self, path: str, lines: list[int]) -> None:
+        super().__init__(
+            "읽을 때 가린 비밀 자리 표시가 본문에 들어 있어 쓰지 않았습니다.",
+            details={"path": path, "lines": list(lines)},
+        )
+        self.path = path
         self.lines = list(lines)
 
 

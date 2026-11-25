@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import threading
 from dataclasses import dataclass
@@ -252,6 +253,31 @@ def test_read_only_folder_absent_and_existing(tmp_path: Path, branch: Branch) ->
     with pytest.raises(RecordsUnavailable):
         ro.writable_engine()
     ro.close()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root는 쓰기 권한 검사를 통과한다")
+def test_chmod_read_only_folder_opens_wal_db_immutable(tmp_path: Path, branch: Branch) -> None:
+    seed = _db(tmp_path, branch)
+    with seed.writable_engine().begin() as conn:
+        conn.exec_driver_sql("INSERT INTO probe_items DEFAULT VALUES")
+    seed.close()
+    folder = tmp_path / "proj"
+    for f in folder.glob("*.sqlite3-*"):
+        f.unlink()  # 처음부터 -shm이 없는 상태
+    mode = folder.stat().st_mode
+    folder.chmod(0o555)
+    try:
+        ro = open_records_db(folder / "records.sqlite3", [branch], backup_dir=folder / "b")
+        assert ro.state.state == "ready"
+        assert ro.state.reason == "readonly"
+        engine = ro.read_engine()
+        assert engine is not None
+        with engine.connect() as conn:
+            assert conn.exec_driver_sql("SELECT count(*) FROM probe_items").scalar() == 1
+        ro.close()
+        assert not list(folder.glob("*.sqlite3-*"))
+    finally:
+        folder.chmod(mode)
 
 
 def test_read_only_folder_with_behind_db_is_not_upgraded(tmp_path: Path, branch: Branch) -> None:

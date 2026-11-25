@@ -5,6 +5,7 @@ Agent Console 내보내기 ↔ 팀 의미 연동 모듈. `exports.dependencies`(
 
 - 필수 포트: `definitions.lookup`. 선택: `workspace.settings`(공통 층 첨부도 의존에 넣는다). 경로 없음.
 - 팀 구성은 호스트 기본 서비스 `registries`의 디스크립터로 해석한다.
+- 프로젝트 공간에서 내보낼 때: `for_lookup(공간 저장소)`로 같은 계산을 그 공간 기준으로 만든다(공용에서 찾지 않음).
 - 꺼지면: 내보내기는 의존 자동 포함 없이 고른 항목만 내보낸다.
 
 ## 설치
@@ -24,6 +25,10 @@ pip install agent-console-link-exports-teams
 >>> deps = TeamExportDependencies(store)
 >>> [(d.kind, d.id) for d in deps.dependencies("agent", "alice")]
 [('resource', 'doc')]
+>>> space = InMemoryDefinitionStore()  # 다른 저장소(프로젝트 공간) 기준
+>>> _ = space.create("agent", {"id": "alice", "name": "A", "resources": [{"ref": "notes"}]})
+>>> [(d.kind, d.id) for d in deps.for_lookup(space).dependencies("agent", "alice")]
+[('resource', 'notes')]
 
 ```
 

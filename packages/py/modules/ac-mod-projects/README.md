@@ -71,6 +71,7 @@ True
 | `GET /projects/copy/kinds?project=` | → `CopyKindInfo[]`(그 공간의 복사 종류 + `library`·`portable`·`deletable`, 기본 + 기여 종류) | 404 `project.not_found`, 409 `feature_unavailable`(공용인데 정의 모듈 없음) |
 | `GET /projects/copy/items?project=&kind=` | → `CopyItem[]`(그 공간의 정의 목록, 본문 없음) | 위 + 404 `not_found`(이 공간의 복사 종류가 아님) |
 | `DELETE /projects/copy/items/{kind}/{id}?project=` (+`If-Match` 선택) | → 204(종류 공통 삭제 — 기본 종류는 공간 저장소에서, 기여 종류는 기여의 `delete` 콜백으로. 참조 검사 없음) | 위 + 404(없는 종류·항목), 400 `bad_request` `details.reason=not_deletable`(`CopyKindInfo.deletable` false), 409 `project.config_readonly`, 412 `version_conflict` |
+| `GET /projects/copy/items/{kind}/{id}/references?project=` | → `CopyItemReferences`(같은 공간에서 이 항목을 쓰는 정의 — 삭제 확인 창. 종류 이름을 모르고 `definitions.references`·기여 `references`로 찾는다. 참조 추출이 없으면 `checked` false + info `project.references_unavailable`) | 위 + 404(이 공간의 복사 종류가 아님·없는 항목) |
 | `GET /projects/folders?path=&hidden=` | → `FolderListing`(폴더 이름만) | 403 `folders.remote_disabled`, 4xx `folders.*` |
 | `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck`(겹침·기존 구성 개수·`suggested_id`·`config_dir`) | 403 |
 | `GET /projects/folders/capabilities` | → `FolderCapabilities` | — |

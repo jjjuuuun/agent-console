@@ -8,7 +8,8 @@
 - 파일 한 개의 `KEY=VALUE` 줄을 읽는다. 빈 줄·주석(`#`) 줄은 무시하고, 값 안의 `=`는 그대로, 값 양끝의 같은
   따옴표 한 쌍은 벗긴다. 같은 이름은 뒤 줄이 이긴다. 이름이 없으면 대문자 이름으로 한 번 더 찾는다(환경변수 공급자와
   같은 규칙).
-- **파일 경로는 설정**이다: 환경변수 `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE`(이름은 패키지 데이터 `path_env`).
+- **파일 경로는 설정**이다: 서버 설정 `secrets.providers.example-file.path`(설정 훅), 없으면 환경변수
+  `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE`(이름은 패키지 데이터 `path_env`).
 - 파일이 바뀌면 다음 조회 때 다시 읽는다(재시작 불필요). 파일이 없거나 읽을 수 없으면 **값을 주지 않고 경고만** 남긴다.
 - **값은 밖으로 나가지 않는다**: 로그·예외·`repr`에는 파일 경로·줄 번호·이름 개수만 나간다(이름도 로그에 넣지 않는다).
   실행 기록·응답 이벤트에서는 엔진이 해석한 값을 `[REDACTED]`로 가린다.
@@ -59,6 +60,8 @@ True
 4. **외부 의존은 주입한다**: 경로는 `FileSecretProvider(path)`가 받는다. 프로세스 환경을 읽는 것은 entry point 값인
    `EnvFileSecretProvider`(인자 없이 불린다)뿐이고, 시험에서는 `EnvFileSecretProvider(environ)`로 넘긴다.
 5. **스레드 안전**: 엔진은 여러 실행에서 동시에 부를 수 있다.
+6. **설치자 설정은 설정 훅으로 받는다**(선택): 클래스에 classmethod 두 개를 두면 서버가 설정
+   `secrets.providers.<key>`를 넘긴다(아래 "설정 훅").
 
 ## 등록
 
@@ -108,9 +111,51 @@ EXAMPLE_TOKEN=여기에-실제-값
 | `upper_fallback` | `true` | 이름이 없으면 대문자 이름으로 다시 찾음 |
 | `max_file_bytes` | 64KiB | 이보다 큰 파일은 읽지 않음 |
 
-entry point는 인자 없이 불리므로 서버 설정 파일로 옵션을 넘기는 길은 없다. 줄 규칙을 바꾸려면 이 패키지를 고쳐
-쓰거나(패키지 데이터) `FileSecretProvider(path, settings=load_settings({...}))`를 직접 등록하는 작은 `register` 함수를
-`plugins.modules`로 쓴다.
+## 설정 훅
+
+entry point는 인자 없이 불린다. 설치자 설정이 필요한 공급자는 클래스에 classmethod 두 개를 둔다
+(`agent_console_modkit.ConfigurableSecretProvider` 모양, 상속·import 불필요):
+
+- `options_schema() -> dict`: 옵션 JSON Schema(기본값 = `properties.*.default`). 서버가 `GET /api/v1/server-info`의
+  `plugin_options`에 스키마·지금 값(기본값을 채우고 비밀·경로는 가림)·설정 자리·YAML 조각을 싣는다.
+- `from_options(options, *, environ, base_dir) -> 공급자`: 서버 설정 `secrets.providers.<key>` 값으로 새 공급자를 만든다.
+  `base_dir`은 설정 파일 폴더(상대 경로 기준), `environ`은 서버 환경이다. 틀린 값이면 `ValueError`(키 이름만) →
+  서버가 시작을 거부한다(설정 오류).
+
+서버는 설정이 **있는** 공급자만 훅으로 다시 만든다. 설정이 없으면 entry point가 만든 그대로다(이 예제는 환경변수
+경로). 모르는 key에 둔 설정·훅이 없는 공급자에 둔 설정은 서버 경고(`plugins.config`)만 남긴다.
+
+```yaml
+secrets:
+  providers:
+    example-file:
+      path: ./secrets.env        # 상대 경로 = 설정 파일 폴더 기준. 비우면 환경변수 경로
+      comment_prefixes: ["#", ";"]
+```
+
+설정에는 파일 **위치**와 줄 규칙만 둔다. 비밀 값 자체는 설정 파일에 쓰지 않는다.
+
+```python
+>>> from agent_console_example_secret_provider import EnvFileSecretProvider, PATH_OPTION
+>>> schema = EnvFileSecretProvider.options_schema()
+>>> schema["properties"][PATH_OPTION]["format"], schema["properties"]["max_file_bytes"]["default"]
+('path', 65536)
+>>> made = EnvFileSecretProvider.from_options(
+...     {PATH_OPTION: "secrets.env"}, environ={}, base_dir=Path("conf")
+... )
+>>> made.path == Path("conf") / "secrets.env"
+True
+>>> EnvFileSecretProvider.from_options({"token": "x"}, environ={}, base_dir=None)
+Traceback (most recent call last):
+...
+ValueError: 비밀 파일 설정이 잘못됐습니다: token
+
+```
+
+<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+
+줄 규칙을 코드에서 바꿀 때는 `FileSecretProvider(path, settings=load_settings({...}))`를 직접 등록하는 작은 `register`
+함수를 `plugins.modules`로 쓸 수도 있다.
 
 ## 설치·제거
 
@@ -144,9 +189,12 @@ uv run --project ../../.. python -m pytest
 
 - `tests/test_agent_console_example_secret_provider.py`: entry point 선언, 레지스트리 로더로 로드, `register`, 줄 규칙
   (옵션 데이터), 대문자 대체, 파일 없음 = 경고 한 번 → 파일이 생기면 재시작 없이 읽음, 바뀐 파일 다시 읽기, **값·이름이
-  로그·`repr`·`SecretNotFoundError` 문장에 없음**, 크기 상한, 경로 미설정.
+  로그·`repr`·`SecretNotFoundError` 문장에 없음**, 크기 상한, 경로 미설정(처음 쓸 때 경고 한 번), 설정 훅(스키마·기본값,
+  상대 경로 = 설정 파일 폴더, 경로 없으면 환경변수, 틀린 옵션은 키 이름만).
 - `tests/test_engine.py`: 엔진 시험 노드가 해석한 값을 이벤트·결과·오류에 넣어도 **저장된 Run·NodeRun·이벤트에 값이
   없음**(`[REDACTED]`), 환경변수가 파일보다 먼저.
 - `tests/test_server.py`: 통합 서버(설치하지 않았으면 `plugins.modules`로, 설치했으면 entry point로만 등록 — 둘을 함께
   쓰면 같은 key가 두 번 등록되어 플러그인이 실패한다) — 팀 실행에서 참조가 이 파일 값으로 풀려 쓰이지만
   **응답 이벤트·실행 상태·`/server-info`·로그에 값이 없음**, 파일이 없으면 서버는 시작하고 그 노드만 실패·경고만.
+  설치자 설정 `secrets.providers.example-file`로 경로를 주면 환경변수 없이 그 파일을 읽고 `plugin_options`에 보기가
+  나옴, 틀린 옵션이면 시작 거부(키 이름만), 모르는 공급자 설정은 서버 경고.

@@ -25,6 +25,7 @@ import { useInvalidateWiki } from "./useWikiApi";
 import { useWikiRuleFiles, useWikiRulesView, type WikiRulesSpace } from "./useWikiRulesApi";
 import { WIKI_LIMITS, WIKI_RULES_SCREEN, type WikiRulesTabId } from "./wikiConfig";
 import { wikiRulesMessages as t } from "./rulesScreenMessages";
+import { localizeIssue } from "../../app/wikiIssueMessages";
 
 type Obj = Record<string, unknown>;
 const P = WIKI_RULES_SCREEN.params;
@@ -34,7 +35,7 @@ const failureMessage = (kind: WikiFailure): string | undefined => {
   const rec = kind as WikiFailure & { message?: unknown };
   return typeof rec.message === "string" && rec.message !== "" ? rec.message : undefined;
 };
-const asSpecIssue = (i: WikiIssue): SpecIssue => i as unknown as SpecIssue;
+const asSpecIssue = (i: WikiIssue): SpecIssue => localizeIssue(i) as unknown as SpecIssue;
 
 /** 규칙 문서가 가리키는 본문 파일(한 파일 참조들 먼저, 그 다음 목록 항목의 파일). 어느 속성이 파일을 가리키는지는 데이터(`wikiData.json`)다. */
 export function ruleFileLinks(def: Readonly<Obj>, fields: typeof WIKI_RULES_SCREEN.fileFields = WIKI_RULES_SCREEN.fileFields): RuleFileLink[] {
@@ -180,7 +181,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       if (rulesDirty && rulesDraft !== null) {
         const saved = await space.client.putWikiRules(id, rulesDraft as unknown as WikiRulesDefinition, hash);
         hash = saved.version_hash ?? hash;
-        warns.push(...(saved.issues ?? []));
+        warns.push(...(saved.issues ?? []).map(localizeIssue));
         setRulesDraft(null);
       }
       if (filesDraft !== null && filesDirty) {
@@ -189,7 +190,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
           try {
             const saved = await space.client.putWikiRulesFile(id, f.path, f.bytes ?? f.text ?? "", hash, f.mediaType);
             hash = saved.version_hash ?? hash;
-            warns.push(...(saved.issues ?? []));
+            warns.push(...(saved.issues ?? []).map(localizeIssue));
           } catch (e) {
             if (isConflict(e) || (e instanceof ApiError && e.status === 428)) throw e;
             errors[f.path] = e instanceof Error && e.message !== "" ? e.message : t.editor.saveFailed;
@@ -363,7 +364,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       {warnings.length === 0 ? null : (
         <Banner tone="warning" actions={<Button size="sm" onClick={() => setWarnings([])}>{t.editor.dismiss}</Button>}>
           {t.editor.savedWithIssues}
-          <ul className="wiki-issue-lines">{warnings.map((w, i) => <li key={`${w.code}:${i}`}>{w.message}</li>)}</ul>
+          <ul className="wiki-issue-lines">{warnings.map((w, i) => <li key={`${w.code}:${i}`}>{localizeIssue(w).message}</li>)}</ul>
         </Banner>
       )}
       {showConflict ? (
@@ -384,7 +385,7 @@ export function WikiRulesEditor({ space, id, params, setParams, onDirtyChange, o
       {issues.length === 0 ? null : (
         <Disclosure summary={t.editor.issuesFold(warnCount, errorCount)}>
           <ul className="wiki-issue-lines" data-testid="wiki-rule-issues">
-            {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{i.message}{i.path ? <span className="app-muted wiki-mono"> {i.path}</span> : null}</li>)}
+            {issues.map((i, idx) => <li key={`${i.code}:${i.path ?? ""}:${idx}`} data-tone={i.severity === "error" ? "danger" : "warning"}>{localizeIssue(i).message}{i.path ? <span className="app-muted wiki-mono"> {i.path}</span> : null}</li>)}
           </ul>
         </Disclosure>
       )}

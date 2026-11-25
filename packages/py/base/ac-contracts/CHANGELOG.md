@@ -1,5 +1,33 @@
 # 변경 기록
 
+## 0.14.12
+
+- 계약 0.14.12(FU.19). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`) 그대로.
+  하위 계약 버전: `modules` 1.7.0.
+- 새 모델(`modules` 1.7.0): `PluginOptionsView{extension, name, settings_key, schema, values, configured,
+  yaml_snippet}` — 호스트가 직접 설정하는 플러그인(비밀 값 공급자 X10)의 옵션 읽기 전용 보기(플러그인이 선언한
+  스키마, 기본값을 채우고 가린 지금 값, 설정 파일 자리). `ServerInfo.plugin_options: list[PluginOptionsView]`
+  (기본 빈 목록 — 옛 응답이 그대로 읽힌다).
+
+## 0.14.11
+
+- 계약 0.14.11(FU.17). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`) 그대로.
+  하위 계약 버전: `common` 1.16.0.
+- 새 문서 상수(`common` 1.16.0): `KnownIssueCodes.WIKI_UNKNOWN_TITLE_SOURCE` = `wiki.unknown_title_source`(warning —
+  위키 문법 `title_sources`의 모르는 값을 건너뜀, `Issue.path` = `/title_sources/<i>`, `details.value`),
+  `KnownIssueCodes.WIKI_REDACTED_CONTENT` = `wiki.redacted_content`(읽을 때 가린 비밀 자리 표시가 든 본문 쓰기 거부
+  사유, `details.lines`). 이벤트 상태 `WikiEventStatus`는 넓히지 않는다 — 이 거부는 `secret_rejected` + 사유 코드다.
+  스키마 `x-constants.KNOWN_ISSUE_CODES`(TS `KNOWN_ISSUE_CODES`)에도 나온다.
+
+## 0.14.10
+
+- 계약 0.14.10(FU.13). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`) 그대로.
+  하위 계약 버전: `projects` 3.7.0.
+- 새 모델(`projects` 3.7.0): `CopyItemReferences{items: CopyItem[], checked, warnings}` — 종류 공통 거꾸로
+  참조 `GET /projects/copy/items/{kind}/{id}/references` 응답(같은 공간에서 이 항목을 쓰는 정의). 서버는
+  종류 이름·참조 필드를 모르고 등록된 참조 추출(X25·종류 기여 `references`)로 찾는다. `checked` false =
+  검사 수단 없음(info `project.references_unavailable`).
+
 ## 0.14.9
 
 - 계약 0.14.9(6R.31, 6R.24 점검 후속·5.7R.46). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS

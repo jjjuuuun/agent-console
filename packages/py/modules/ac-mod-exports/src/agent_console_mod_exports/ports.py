@@ -3,7 +3,8 @@
 - 필수 ``definitions.lookup``: 정의 읽기(``DefinitionLookup`` — ``agent_console_store``
   ``DefinitionStore``가 만족). 내보낼 정의 원문·본문 파일을 읽는다.
 - 선택 ``exports.dependencies``: 정의가 쓰는 정의(``ExportDependencies``). 없으면 고른 항목만
-  내보낸다(의존 자동 포함 없음).
+  내보낸다(의존 자동 포함 없음). 값이 ``for_lookup(lookup)``(``ScopedExportDependencies``)도 가지면
+  프로젝트 공간에서 내보낼 때 그 공간 저장소 기준 계산을 받아 쓴다. 없으면 공간 원본은 고른 항목만.
 - 선택 ``secrets.rules``: 지금 비밀 의심 규칙(``() -> SecretRules``). 없으면 기본 규칙.
 - 선택 ``projects.folders``(5.7R.33k): 등록 프로젝트 폴더(``entries``의 id·폴더). 있으면 폴더 쓰기
   대상 = 등록 폴더(루트 id = 등록 id)이고 설치자 ``roots``는 쓰지 않는다.
@@ -41,12 +42,28 @@ class DefinitionLookup(Protocol):
 
     def read_file(self, kind: str, id: str, path: str) -> bytes: ...
 
+    def read_content(self, kind: str, id: str) -> bytes | None: ...
+
 
 @runtime_checkable
 class ExportDependencies(Protocol):
     """정의 하나가 쓰는 정의(팀 구성 → 에이전트·리소스, 에이전트 → 리소스)."""
 
     def dependencies(self, kind: str, id: str) -> Sequence[DependencyLike]: ...
+
+
+@runtime_checkable
+class ScopedExportDependencies(ExportDependencies, Protocol):
+    """다른 정의 저장소 기준으로 같은 계산을 만들 수 있는 의존 계산(선택 모양).
+
+    ``exports.dependencies`` 값이 이 모양이면 프로젝트 공간에서 내보낼 때
+    ``for_lookup(공간 저장소)``를 불러 그 공간에서만 쓰는 정의를 찾는다(공용 라이브러리로 넘어가지
+    않는다).
+    """
+
+    def for_lookup(self, lookup: DefinitionLookup) -> ExportDependencies:
+        """``lookup``에서 정의를 읽는 같은 의존 계산."""
+        ...
 
 
 type SecretRulesReader = Callable[[], SecretRules]
@@ -73,6 +90,7 @@ __all__ = [
     "DefinitionLookup",
     "ExportDependencies",
     "FileLike",
+    "ScopedExportDependencies",
     "SecretRulesReader",
     "StoredLike",
 ]

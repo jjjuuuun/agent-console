@@ -2,21 +2,24 @@
 
 블록 구조는 markdown-it-py(인라인 파싱 끔)가 정하고, 링크는 인라인 영역(문단·제목) 원문에서만
 찾는다. 코드 블록·HTML 블록·인라인 코드 안의 글은 링크가 아니다. 패턴 링크는 문법 데이터
-정규식(`ac-safe-regex`), 마크다운 링크는 상대 경로이고 확장자가 페이지 확장자인 인라인 링크다. 링크
-대상 해석은 `build_index`가 한다(여기서는 원문만).
+정규식(`ac-safe-regex`), 마크다운 링크는 상대 경로이고 확장자가 페이지 확장자인 인라인 링크·참조
+링크(`[글][이름]` + 정의 `[이름]: 경로`)다. 참조 링크의 대상 위치는 정의 줄의 경로다(이름 바꾸기가
+그 자리를 고친다). 링크 대상 해석은 `build_index`가 한다(여기서는 원문만).
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
 
 from markdown_it import MarkdownIt
+from markdown_it.common.utils import unescapeAll
 
 from agent_console_contracts.constants import KnownIssueCodes
 from agent_console_contracts.wiki import (
@@ -31,7 +34,7 @@ from agent_console_safe_regex import RegexTimeoutError
 
 from ._compiled import CompiledLinkRule, CompiledWikiSyntax, compile_syntax
 from ._frontmatter import read_front_matter
-from ._inline import InlineScan, scan_inline
+from ._inline import InlineScan, LinkReference, _destination, reference_key, scan_inline
 from ._paths import split_extension
 from ._text import Utf16Map, line_of, line_starts
 
@@ -39,6 +42,9 @@ __all__ = ["PageText", "ParsedLink", "ParsedPage", "decode_page", "parse_page"]
 
 type PageText = str | bytes
 """페이지 원문: 글(str) 또는 UTF-8 바이트."""
+
+_DEF_LABEL = re.compile(r"\[((?:[^\[\]\\]|\\.)*)\]:")
+_DEF_PREFIX = re.compile(r"[ \t]*(?:>[ \t]?)*[ \t]*")
 
 _URL_SCHEME = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -61,8 +67,10 @@ class ParsedLink:
         label: 링크 글자(패턴 `label` 묶음 → 없으면 대상, 마크다운은 링크 글자 → 비면 대상 원문).
         anchor: 절 이름(`#` 뒤), 없으면 None.
         line: 링크가 시작하는 줄(1부터).
-        target_start: 이름 바꾸기에서 바꿀 대상 원문 시작(없으면 None).
+        target_start: 이름 바꾸기에서 바꿀 대상 원문 시작(없으면 None). 참조 링크는 정의 줄의 경로
+            위치라 같은 정의를 쓰는 링크끼리 같다.
         target_end: 그 끝.
+        reference: 참조 링크면 정의 이름 키(CommonMark 규칙으로 맞춘 이름), 아니면 None.
     """
 
     start: int
@@ -77,6 +85,7 @@ class ParsedLink:
     line: int
     target_start: int | None = None
     target_end: int | None = None
+    reference: str | None = None
 
 
 @dataclass(slots=True)
@@ -237,6 +246,8 @@ def _markdown_links(
     out: list[ParsedLink] = []
     for link in scan.links:
         dest = link.dest
+        # 인라인 링크 대상 위치는 이 영역 기준, 참조 링크는 정의 위치(본문 전체 기준) 그대로다.
+        dest_base = 0 if link.reference is not None else base
         scheme = next((s for s in syntax.schemes if dest.startswith(s.prefix)), None)
         label = link.label.strip()
         if scheme is not None:
@@ -252,6 +263,7 @@ def _markdown_links(
                     label=label or dest,
                     anchor=None,
                     line=line_of(starts, base + link.start),
+                    reference=link.reference,
                 )
             )
             continue
@@ -267,7 +279,7 @@ def _markdown_links(
         path = urllib.parse.unquote(raw_path)
         if not path or split_extension(path, syntax.page_extensions) is None:
             continue
-        t_start = base + link.dest_start
+        t_start = dest_base + link.dest_start
         out.append(
             ParsedLink(
                 start=base + link.start,
@@ -282,8 +294,56 @@ def _markdown_links(
                 line=line_of(starts, base + link.start),
                 target_start=t_start,
                 target_end=t_start + len(raw_path),
+                reference=link.reference,
             )
         )
+    return out
+
+
+def _references(
+    content: str,
+    found: Mapping[str, Any],
+    first_line: int,
+    starts: list[int],
+) -> dict[str, LinkReference]:
+    """블록 파서가 찾은 참조 정의(`env["references"]`) → 이름 키별 정의 원문 위치(본문 전체 기준).
+
+    markdown-it-py는 정의의 줄 범위(`map`)와 고친 대상(`href`)만 준다. 그 줄 범위 원문에서 이름이
+    같은 `[이름]:`을 찾아 대상 원문 위치를 읽고, 읽은 대상이 `href`와 같을 때만 쓴다(인용 블록 안
+    여러 줄 정의처럼 위치를 정확히 못 읽으면 그 정의는 뺀다 — 링크가 아닌 글로 남는다).
+    """
+    md = _markdown()
+    last = len(starts)
+    out: dict[str, LinkReference] = {}
+    for key, info in found.items():
+        span = info.get("map") if isinstance(info, Mapping) else None
+        if not span:
+            continue
+        l0, l1 = first_line + span[0], first_line + span[1]
+        a = starts[l0] if l0 < last else len(content)
+        b = starts[l1] if l1 < last else len(content)
+        for m in _DEF_LABEL.finditer(content, a, b):
+            if reference_key(m.group(1)) != key:
+                continue
+            pos = m.end()
+            while pos < b and content[pos] in " \t":
+                pos += 1
+            if pos < b and content[pos] in "\r\n":
+                pos += 2 if content.startswith("\r\n", pos) else 1
+                prefix = content[content.rfind("\n", a, m.start()) + 1 : m.start()]
+                if ">" in prefix:
+                    lead = _DEF_PREFIX.match(content, pos)
+                    pos = lead.end() if lead else pos
+                else:
+                    while pos < b and content[pos] in " \t":
+                        pos += 1
+            dest = _destination(content, pos, b)
+            if dest is not None:
+                d_start, d_end, _ = dest
+                raw = content[d_start:d_end]
+                if md.normalizeLink(unescapeAll(raw)) == info.get("href"):
+                    out[key] = LinkReference(raw, d_start, d_end)
+            break
     return out
 
 
@@ -327,7 +387,8 @@ def parse_page(
     body_start = front.body_start
     first_line = front.body_line - 1  # 0부터
 
-    tokens = _markdown().parse(content[body_start:])
+    env: dict[str, Any] = {}
+    tokens = _markdown().parse(content[body_start:], env)
     headings: list[WikiHeading] = []
     units: list[tuple[int, int]] = []
     pending_heading: int | None = None
@@ -383,11 +444,17 @@ def parse_page(
     links: list[ParsedLink] = []
     if compiled.links and units:
         deadline = _Deadline(clock, timeout_ms)
+        found_refs = env.get("references")
+        references = (
+            _references(content, found_refs, first_line, starts)
+            if found_refs and any(r.kind == KnownWikiLinkKinds.MARKDOWN for r in compiled.links)
+            else {}
+        )
         try:
             for a, b in units:
                 deadline.check()
                 unit = content[a:b]
-                scan = scan_inline(unit)
+                scan = scan_inline(unit, references)
                 taken: list[tuple[int, int]] = []
                 found: list[ParsedLink] = []
                 for rule in compiled.links:

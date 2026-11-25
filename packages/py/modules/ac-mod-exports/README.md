@@ -8,8 +8,9 @@ Agent Console 내보내기 기능 모듈. 내보내기 라이브러리 `agent-co
   `secrets.rules`(없으면 기본 의심 규칙), `projects.folders`·`definitions.spaces`(아래).
 - 프로젝트 조립: `projects.folders`가 있으면 폴더 쓰기 루트 = 등록 프로젝트 폴더(루트 id =
   등록 id)이고 설치자 `roots`는 쓰지 않는다. 내보낼 원본 = 질의 `?project=` 공간(기본) 또는 `source=library`(공용),
-  `project`가 없으면 공용. 등록 안 된 id 404 `project.not_found`. zip 내려받기는 그대로. 프로젝트 공간 원본에는
-  `exports.dependencies`(공용 기준 계산)를 쓰지 않는다(고른 항목만).
+  `project`가 없으면 공용. 등록 안 된 id 404 `project.not_found`. zip 내려받기는 그대로. 프로젝트 공간 원본의
+  함께 쓰는 정의는 그 공간 저장소에서만 찾는다: `exports.dependencies` 값이 `for_lookup(lookup)`
+  (`ScopedExportDependencies`)도 가지면 공간 저장소로 만든 계산을 쓰고, 없으면 고른 항목만(공용 기준 계산을 섞지 않음).
 - 설정 `modules.options.mod-exports`(옛 최상위 `exports`는 `settings.removed_key` 오류로 새 위치를 안내): `roots`·`home`·
   `protected_in_home`·`protected`·`options`·`expose_paths`. 상대 경로는 `base_dir` 기준.
 - 웹 역할: `exports`.

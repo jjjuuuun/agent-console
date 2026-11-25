@@ -4625,6 +4625,30 @@ export interface CopyItem {
   version?: string | null;
 }
 /**
+ * (3.7.0) 같은 공간에서 이 항목을 쓰는 정의(`GET /projects/copy/items/{kind}/{id}/references`).
+ *
+ * 삭제 확인 창의 "이 구성을 쓰는 구성" 목록이다. 서버는 종류 이름·참조 필드를 모르고, 등록된 참조
+ * 추출(정의 연동의 X25, 종류 기여의 `references`)로 그 공간의 정의를 하나씩 본다. 다른 공간(공용 ↔
+ * 프로젝트)의 정의는 보지 않는다 — 사본은 독립이다.
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "CopyItemReferences".
+ */
+export interface CopyItemReferences {
+  /**
+   * 이 항목을 참조하는 같은 공간의 정의(저장소 종류 순 → 저장소 순서, 대상 자신 제외). `version`은 그 정의의 버전이다.
+   */
+  items?: CopyItem[];
+  /**
+   * 참조 추출이 있어 검사했다. false = 검사 수단이 없다(예: 정의 연동이 꺼짐) — `items`가 비어도 '쓰는 곳 없음'이 아니며 `warnings`에 info `project.references_unavailable`.
+   */
+  checked?: boolean;
+  /**
+   * 검사 이슈(위치 없음).
+   */
+  warnings?: Issue[];
+}
+/**
  * `GET /projects/copy/kinds` 항목: 한 공간에서 복사 대상으로 고를 수 있는 정의 종류 하나.
  *
  * 종류 이름은 서버가 아는 정의 종류(기본 종류 + 기능 모듈의 종류 기여 X44) 그대로다. 화면은 이
@@ -9241,6 +9265,48 @@ export interface PluginInfo {
   error?: ErrorInfo | null;
 }
 /**
+ * 플러그인 하나의 설치자 옵션 읽기 전용 보기(1.7.0, 0.14.12): 플러그인이 선언한 스키마와
+ * 지금 값. 호스트가 직접 설정하는 확장(예: 비밀 값 공급자)에만 있다. 모듈 옵션 보기
+ * (`ModuleOptionsView`)와 같은 모양이고, 설정 파일에서만 바꾼다(쓰기 API 없음).
+ *
+ * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
+ * via the `definition` "PluginOptionsView".
+ */
+export interface PluginOptionsView {
+  /**
+   * 확장 지점 레지스트리 이름(열린 문자열, 예: secret_providers).
+   */
+  extension: string;
+  /**
+   * 플러그인 key(등록 이름 = `PluginInfo.name`).
+   */
+  name: string;
+  /**
+   * 설정 파일에서 이 옵션을 두는 자리(점 경로, 예: secrets.providers.<name>).
+   */
+  settings_key: string;
+  /**
+   * 옵션 JSON Schema(플러그인이 선언). null = 스키마를 내지 않음.
+   */
+  schema?: {
+    [k: string]: unknown;
+  } | null;
+  /**
+   * 지금 값(스키마 기본값 포함). 비밀로 보이는 값·경로(설정에 따라)는 가려 있다.
+   */
+  values?: {
+    [k: string]: unknown;
+  };
+  /**
+   * 설정 파일에 이 플러그인의 옵션이 있어 그 값으로 만들었는지.
+   */
+  configured?: boolean;
+  /**
+   * 설정 파일에 붙일 YAML 조각(가린 값은 주석, 들여쓰기 포함).
+   */
+  yaml_snippet?: string;
+}
+/**
  * `POST /conversations/{id}/messages` 요청. 응답은 `Run`(202) 또는 `QueuedMessage`(202).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -10395,6 +10461,10 @@ export interface ServerInfo {
    * 워크스페이스 점검 경고(예: 평문 비밀 의심). 값은 담지 않는다.
    */
   warnings?: Issue[];
+  /**
+   * (0.14.12) 설정을 선언한 플러그인의 옵션 보기(예: 비밀 값 공급자). 없으면 빈 목록 (옛 서버 포함).
+   */
+  plugin_options?: PluginOptionsView[];
 }
 /**
  * 정의 파일 옆 본문 폴더의 대표 파일입니다.
@@ -13366,16 +13436,16 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.9" as const;
+export const CONTRACTS_VERSION = "0.14.12" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.15.0",
+  "common": "1.16.0",
   "resources": "1.1.0",
   "logs": "1.2.0",
   "definitions": "1.7.0",
   "runs": "1.9.0",
   "usage": "1.1.0",
-  "projects": "3.6.0",
+  "projects": "3.7.0",
   "chat": "1.4.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
@@ -13383,7 +13453,7 @@ export const CONTRACT_VERSIONS = {
   "memory": "1.2.0",
   "sdd": "1.3.0",
   "wiki": "1.2.0",
-  "modules": "1.6.0"
+  "modules": "1.7.0"
 } as const;
 
 export const USAGE_REPORT_PARTS = [
@@ -13817,7 +13887,9 @@ export const KNOWN_ISSUE_CODES = {
   "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
   "WIKI_SECRET_SUSPECT": "wiki.secret_suspect",
   "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable",
-  "WIKI_LINT_FAILED": "wiki.lint_failed"
+  "WIKI_LINT_FAILED": "wiki.lint_failed",
+  "WIKI_UNKNOWN_TITLE_SOURCE": "wiki.unknown_title_source",
+  "WIKI_REDACTED_CONTENT": "wiki.redacted_content"
 } as const;
 
 export const KNOWN_SUGGESTION_IDS = {

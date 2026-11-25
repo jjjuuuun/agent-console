@@ -5,6 +5,9 @@
 - 팀 실행: 에이전트의 `backend_options`에 둔 비밀 참조가 이 파일의 값으로 풀려 가짜
   백엔드가 답에 그대로 쓰지만, 저장·응답 이벤트에는 가려져 나온다.
 - `/server-info`·로그에 값이 없다. 파일이 없어도 서버는 시작하고 경고만 남는다.
+- 설치자 설정 `secrets.providers.example-file`(설정 훅): 파일 경로를 환경변수 없이 설정으로 주면 그
+  파일을 읽는다(상대 경로 = 설정 파일 폴더). `/server-info`의 `plugin_options`에 스키마·지금 값이
+  보이고, 틀린 옵션이면 서버가 시작을 거부한다(오류에 키 이름만).
 """
 
 from __future__ import annotations
@@ -21,9 +24,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_console_example_secret_provider import PROVIDER_ID, default_settings_data
+from agent_console_example_secret_provider import (
+    PATH_OPTION,
+    PROVIDER_ID,
+    default_settings_data,
+)
 from agent_console_runtime import SECRET_PROVIDERS_GROUP
-from agent_console_server import create_app, load_settings
+from agent_console_server import ConfigError, create_app, load_settings
 from agent_console_server.testing import register_project
 
 API = "/api/v1"
@@ -84,8 +91,7 @@ def _isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(default_settings_data()["path_env"], str(tmp_path / "secrets.env"))
 
 
-@contextmanager
-def _server(tmp_path: Path) -> Iterator[TestClient]:
+def _app(tmp_path: Path, providers: dict[str, Any] | None = None) -> Any:
     config = tmp_path / "agent-console.yaml"
     config.write_text("workspace: ws\n", encoding="utf-8")
     environ = {"CLAUDE_CONFIG_DIR": str(tmp_path / "claude")}
@@ -94,8 +100,15 @@ def _server(tmp_path: Path) -> Iterator[TestClient]:
         # 설치했으면 entry point가 이미 등록한다 — 같은 `register`를 또 부르면 중복 key로 실패한다.
         "plugins": {"modules": [] if _installed() else [PLUGIN]},
     }
+    if providers is not None:
+        overrides["secrets"] = {"providers": providers}
     settings = load_settings(config, environ=environ, overrides=overrides)
-    app = create_app(settings, environ=environ, token=TOKEN)
+    return create_app(settings, environ=environ, token=TOKEN)
+
+
+@contextmanager
+def _server(tmp_path: Path, providers: dict[str, Any] | None = None) -> Iterator[TestClient]:
+    app = _app(tmp_path, providers)
     with TestClient(app) as client:
         client.headers["X-Console-Token"] = TOKEN
         yield client
@@ -165,3 +178,50 @@ def test_missing_file_only_warns(tmp_path: Path, caplog: pytest.LogCaptureFixtur
         assert snap["run"]["status"] == "failed"
         assert "secrets.env" not in json.dumps(snap)
     assert any("비밀 파일이 없습니다" in r.getMessage() for r in caplog.records)
+
+
+def test_installer_setting_gives_the_path_without_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.delenv(default_settings_data()["path_env"])  # 경로는 설정에서만 온다
+    (tmp_path / "local.env").write_text(f"EXAMPLE_TOKEN={VALUE}\n", encoding="utf-8")
+    providers = {PROVIDER_ID: {PATH_OPTION: "local.env", "comment_prefixes": [";"]}}
+    with caplog.at_level(logging.DEBUG), _server(tmp_path, providers) as client:
+        info = client.get(f"{API}/server-info")
+        assert info.status_code == 200
+        (view,) = [v for v in info.json()["plugin_options"] if v["name"] == PROVIDER_ID]
+        assert view["extension"] == "secret_providers"
+        assert view["settings_key"] == f"secrets.providers.{PROVIDER_ID}"
+        assert view["configured"] is True
+        assert view["values"][PATH_OPTION] == "local.env"  # 경로 표시가 켜져 있으면 보인다
+        assert view["values"]["comment_prefixes"] == [";"]
+        assert view["values"]["max_file_bytes"] == default_settings_data()["max_file_bytes"]
+        assert view["schema"]["properties"][PATH_OPTION]["format"] == "path"
+        assert "secrets:\n  providers:\n" in view["yaml_snippet"]
+
+        _seed(client, tmp_path)
+        snap = _wait(client, _start(client))
+        assert snap["run"]["status"] == "completed", snap  # 설정의 파일에서 값을 찾았다
+        shown = info.text + json.dumps(snap)
+    assert VALUE not in shown
+    assert VALUE not in "\n".join(r.getMessage() for r in caplog.records)
+    assert not any("경로가 설정되지 않아" in r.getMessage() for r in caplog.records)
+
+
+def test_bad_installer_setting_refuses_to_start(tmp_path: Path) -> None:
+    providers = {PROVIDER_ID: {"token": VALUE}}
+    with pytest.raises(ConfigError) as caught:
+        _app(tmp_path, providers)
+    text = str(caught.value)
+    assert f"secrets.providers.{PROVIDER_ID}" in text
+    assert "token" in text
+    assert VALUE not in text
+
+
+def test_setting_for_unknown_provider_is_a_server_warning(tmp_path: Path) -> None:
+    with _server(tmp_path, {"not-installed": {"x": 1}}) as client:
+        info = client.get(f"{API}/server-info").json()
+    texts = [w["message"] for w in info["warnings"] if w["code"] == "plugins.config"]
+    assert any("'not-installed'" in t for t in texts)
+    (view,) = [v for v in info["plugin_options"] if v["name"] == PROVIDER_ID]
+    assert view["configured"] is False  # 설정이 없으면 entry point가 만든 그대로(환경변수 경로)

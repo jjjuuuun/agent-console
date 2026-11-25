@@ -16,6 +16,7 @@ X50 `WikiWriteCheck`.
 
 from __future__ import annotations
 
+import difflib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -54,6 +55,7 @@ __all__ = [
     "WriteDecision",
     "check_write",
     "compile_write_rules",
+    "redaction_marks",
     "run_write_checks",
 ]
 
@@ -396,6 +398,71 @@ class WikiSecretPolicy:
     def redact(self, text: str) -> str:
         """조각·도구 결과용 가림."""
         return self.scanner.redact(text)
+
+    def reused_redactions(self, current: str, new: str) -> list[int]:
+        """`current`를 가려 보인 글의 가린 표시가 `new`에 새로 들어간 줄 번호(없으면 빈 목록).
+
+        가린 표시는 판정기 종류를 모르고 찾는다: `redact(current)`와 `current`를 줄 단위로 견줘 바뀐
+        덩어리에서 앞뒤 같은 글자를 뗀 조각(`redaction_marks`)이다. 조각 하나라도 `new`에 `current`
+        보다 많이 나오면 그 줄들을 돌려준다. 가릴 것이 없는 본문이면 늘 빈 목록이다. 가리기가
+        실패하면(주입한 판정기 오류) 빈 목록이다 — 그때 도구 결과도 가리지 못해 원문이 보였다.
+        """
+        if not new:
+            return []
+        try:
+            shown = self.redact(current)
+        except Exception:  # 판정기 하나의 오류가 쓰기를 막지 않게(가린 표시도 없었다)
+            return []
+        marks = redaction_marks(current, shown)
+        bad = [m for m in marks if new.count(m) > current.count(m)]
+        lines: set[int] = set()
+        for mark in bad:
+            at = new.find(mark)
+            while at != -1:
+                lines.add(new.count("\n", 0, at) + 1)
+                at = new.find(mark, at + len(mark))
+        return sorted(lines)
+
+
+def redaction_marks(original: str, shown: str) -> tuple[str, ...]:
+    """가린 글 `shown`에 있고 원문 `original`의 그 자리에는 없던 조각(가린 표시)들.
+
+    줄 수가 같으면 같은 번호 줄끼리, 다르면(여러 줄 비밀·전체 가림) `difflib`로 줄을 맞춘 뒤 바뀐
+    덩어리마다 앞뒤 같은 글자를 뗀 `shown` 쪽 가운데를 조각으로 본다. 한 줄에 가린 곳이 여럿이면 그
+    사이 글자까지 한 조각이다.
+
+    >>> redaction_marks("key: sk-1234\\nok\\n", "key: [가림]\\nok\\n")
+    ('[가림]',)
+    >>> redaction_marks("같음", "같음")
+    ()
+    """
+    if original == shown:
+        return ()
+    a = original.splitlines(keepends=True)
+    b = shown.splitlines(keepends=True)
+    if len(a) == len(b):
+        pairs = [(x, y) for x, y in zip(a, b, strict=True) if x != y]
+    else:
+        matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
+        pairs = [
+            ("".join(a[i1:i2]), "".join(b[j1:j2]))
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes()
+            if tag != "equal"
+        ]
+    out: list[str] = []
+    for old, new in pairs:
+        room = min(len(old), len(new))
+        head = 0
+        while head < room and old[head] == new[head]:
+            head += 1
+        room -= head
+        tail = 0
+        while tail < room and old[-1 - tail] == new[-1 - tail]:
+            tail += 1
+        fragment = new[head : len(new) - tail]
+        if fragment.strip() and fragment not in out:
+            out.append(fragment)
+    return tuple(out)
 
 
 # ---------------------------------------------------------------- X50

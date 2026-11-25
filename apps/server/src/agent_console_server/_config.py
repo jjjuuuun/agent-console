@@ -116,6 +116,22 @@ class SecretSettings(_Section):
         default="", description="`secret://name` → 환경변수 `<env_prefix>name`(없으면 대문자)."
     )
     min_redact_chars: int = Field(default=4, ge=1)
+    providers: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        title="비밀 공급자별 옵션",
+        description=(
+            "비밀 공급자 이름 → 그 공급자가 받는 옵션(키는 공급자가 정한다, 예: 비밀 파일 위치). "
+            "비밀 값은 쓰지 않는다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            example={"example-file": {"path": "./secrets.env"}},
+            when=(
+                "설치한 비밀 공급자가 파일 위치 같은 설정을 받을 때 정하세요. 설정 훅이 있는 "
+                "공급자만 이 값으로 다시 만듭니다."
+            ),
+        ),
+    )
 
 
 class WebOpenSettings(_Section):

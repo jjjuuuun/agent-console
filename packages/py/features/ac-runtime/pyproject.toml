@@ -120,6 +120,7 @@ area = "backends"
 design_id = "X10"
 summary = "환경변수 다음에 비밀 값을 찾을 곳(파일·비밀 저장소)을 더한다"
 registration = { kind = "entry-point", group = "agent_console_runtime:SECRET_PROVIDERS_GROUP" }
-interface = ["agent_console_runtime:SecretProvider"]
+interface = ["agent_console_runtime:SecretProvider", "agent_console_modkit:ConfigurableSecretProvider"]
+settings = ["secrets.providers"]
 example = { kind = "package", path = "examples/extensions/agent-console-example-secret-provider" }
 guide = "backends.md"

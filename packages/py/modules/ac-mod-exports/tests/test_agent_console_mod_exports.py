@@ -154,3 +154,28 @@ def test_requires_lookup_and_disabled_is_404(tmp_path: Path) -> None:
     )
     with _client(off) as client:
         assert client.get("/api/v1/exporters").status_code == 404
+
+
+def test_catalog_reads_single_file_body_apart_from_multi_file(tmp_path: Path) -> None:
+    """``content``는 한 파일 본문 종류만 읽고, 여러 파일 본문 종류는 ``files``로만 읽는다."""
+    from agent_console_store import DefinitionKind
+
+    note = DefinitionKind(name="note", directory="notes", content_field="content")
+    store = FileDefinitionStore(tmp_path / "ws", (*DEFAULT_KINDS, note))
+    store.create("note", {"id": "n1", "content": {"file": "body.md"}})
+    store.write_content("note", "n1", "# 메모\n".encode())
+    created = store.create(
+        "resource", {"id": "r1", "type": "skill", "name": "R", "content": {"file": "a.md"}}
+    )
+    store.write_files(
+        "resource", "r1", {"a.md": b"A", "b.md": b"B"}, expected_version=created.version_hash
+    )
+    store.create("agent", AGENT)
+    catalog = LookupExportCatalog(store)
+
+    assert catalog.content("note", "n1") == "# 메모\n".encode()
+    assert catalog.files("note", "n1") == {}
+    assert catalog.content("resource", "r1") is None  # 본문은 files 쪽
+    assert dict(catalog.files("resource", "r1")) == {"a.md": b"A", "b.md": b"B"}
+    assert catalog.content("agent", "rev") is None  # 본문이 없는 종류
+    assert catalog.content("note", "ghost") is None  # 없는 정의

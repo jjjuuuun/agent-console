@@ -355,3 +355,119 @@ def test_no_hardcoded_names_in_source() -> None:
         if hit:
             found[path.name] = hit
     assert found == {}
+
+
+def test_installer_index_options_reach_the_chosen_factory(tmp_path: Path, kit: Any) -> None:
+    """설치자 ``search.index_options.<방식>``은 그 방식의 색인 공장에만 간다(키 뜻은 구현이 정한다).
+
+    ``tokenizer``는 덮어쓸 수 있고, 앱이 정하는 ``case_insensitive``·``max_results``는
+    덮이지 않는다.
+    """
+    from agent_console_mod_wiki.plugins import SEARCH_EXTENSION
+    from agent_console_mod_wiki.testing import static_settings_module
+    from agent_console_modkit import BaseServices, ExtensionRegistries, Paths, assemble
+    from agent_console_wiki import ScanSearchIndex
+
+    seen: list[dict[str, Any]] = []
+
+    def capture(root: Path | None, options: Any) -> ScanSearchIndex:
+        seen.append(dict(options))
+        return ScanSearchIndex()
+
+    registries = ExtensionRegistries()
+    registries.extension(SEARCH_EXTENSION).register("captured", capture)
+    installer = {
+        "max_search_results": 7,
+        "search": {
+            "backend": "captured",
+            "index_options": {
+                "captured": {
+                    "token_pattern": r"[\w-]+",
+                    "tokenizer": "word",
+                    "case_insensitive": False,
+                    "max_results": 999,
+                },
+                "other": {"token_pattern": "x"},
+            },
+        },
+    }
+    base = BaseServices(
+        paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
+        registries=registries,
+    )
+    assembly = assemble(
+        [module, static_settings_module({})],
+        ModulesConfig(options={"mod-wiki": installer}),
+        base=base,
+    )
+    with kit.client_for(assembly) as client:
+        client.post(f"{API}/wiki/wikis", json={"name": "w"})
+        kit.write_page(client, "w", "p", "# 위키 낱말\n")
+        found = client.get(f"{API}/wiki/wikis/w/search", params={"q": "낱말"}).json()
+    assert [h["path"] for h in found["items"]] == ["p"]  # 고른 공장이 만든 색인으로 찾는다
+    assert seen, "색인 공장이 불리지 않았다"
+    for options in seen:
+        assert options["token_pattern"] == r"[\w-]+"
+        assert options["tokenizer"] == "word"
+        assert options["max_results"] == 7  # 앱 값이 이긴다
+        assert options["case_insensitive"] is True  # 위키 문법 기본값(앱 값)
+    assert all(o.get("token_pattern") != "x" for o in seen)  # 다른 방식의 옵션은 가지 않는다
+
+
+@pytest.mark.parametrize("backend", ["scan", "sqlite-fts"])
+def test_search_snippets_hide_values_caught_by_user_secret_rules(
+    tmp_path: Path, kit: Any, backend: str
+) -> None:
+    """FU.23: 색인 공장에 지금 비밀 의심 규칙(``secrets.rules``)의 가리기가 간다.
+
+    사용자 규칙으로만 잡히는 값은 기본 규칙으로는 그대로 보이고, 사용자 규칙을 더하면 검색
+    스니펫·제목에서 가려진다(규칙이 바뀌면 색인을 다시 짓는다).
+    """
+    from agent_console_mod_wiki.ports import SECRET_RULES
+    from agent_console_modkit.testing import fake_module
+    from agent_console_secret_rules import default_rules
+
+    value = "CORP-482913"
+    current = {"rules": default_rules()}
+    provider = fake_module(
+        "fake-secret-rules",
+        kind="testing",
+        provides=[SECRET_RULES],
+        on_build=lambda ctx: ctx.provide(SECRET_RULES, lambda: current["rules"]),
+    )
+    assembly = kit.make_assembly(tmp_path, provider, options={"search": {"backend": backend}})
+
+    def snippets(client: Any) -> str:
+        found = client.get(f"{API}/wiki/wikis/w/search", params={"q": "사내번호"}).json()
+        assert [h["path"] for h in found["items"]] == ["p"], found
+        return json.dumps(found["items"], ensure_ascii=False)
+
+    with kit.client_for(assembly) as client:
+        client.post(f"{API}/wiki/wikis", json={"name": "w"})
+        kit.write_page(client, "w", "p", f"# 사내번호 {value}\n\n사내번호는 {value} 이다.\n")
+        assert value in snippets(client)  # 기본 규칙은 이 모양을 모른다(대조군)
+
+        current["rules"] = default_rules().with_extra(value_patterns=[r"CORP-[0-9]{6}"])
+        hidden = snippets(client)
+        assert value not in hidden
+        assert current["rules"].mask in hidden
+
+
+def test_secret_rules_signature_changes_with_rules() -> None:
+    from agent_console_mod_wiki.service import secret_rules_signature
+    from agent_console_secret_rules import default_rules
+
+    base = default_rules()
+    assert secret_rules_signature(base) == secret_rules_signature(default_rules())
+    extra = base.with_extra(value_patterns=[r"CORP-[0-9]{6}"])
+    assert secret_rules_signature(extra) != secret_rules_signature(base)
+    assert "CORP" not in secret_rules_signature(extra)  # 규칙 글은 담지 않는다(해시)
+
+
+def test_index_options_default_is_empty_and_tokenizer_only() -> None:
+    from agent_console_mod_wiki.settings import WikiSearchOptions
+
+    opts = WikiSearchOptions()
+    assert opts.index_options == {}
+    assert opts.factory_options("scan") == {"tokenizer": opts.tokenizer}
+    assert opts.factory_options(None) == {"tokenizer": opts.tokenizer}

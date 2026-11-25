@@ -6,6 +6,9 @@
   (다음 공급자·`SecretNotFoundError`로 이어진다).
 - 파일이 바뀌면(수정 시각·크기) 다음 조회 때 다시 읽는다. 서버 재시작이 필요 없다.
 - 줄 규칙(주석 표시·이름 모양·따옴표·대문자 대체·크기 상한)은 옵션 데이터(`data/defaults.json`).
+- 설치자 설정(서버 설정 `secrets.providers.example-file`)은 설정 훅
+  `options_schema`·`from_options`로 받는다: 파일 경로(`path`, 상대 경로는 설정 파일 폴더
+  기준)와 줄 규칙. 설정이 없으면 경로를 환경변수(`path_env`)에서 읽는다.
 """
 
 from __future__ import annotations
@@ -23,18 +26,23 @@ from typing import Any, Final
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 __all__ = [
+    "PATH_OPTION",
     "PROVIDER_ID",
     "EnvFileSecretProvider",
     "FileSecretProvider",
     "SecretFileSettings",
     "default_settings_data",
     "load_settings",
+    "options_schema",
     "parse_secret_lines",
     "register",
 ]
 
 PROVIDER_ID: Final = "example-file"
 """공급자 key = entry point 이름(`plugins.enabled`가 이 이름으로 고른다)."""
+
+PATH_OPTION: Final = "path"
+"""설치자 설정에서 비밀 파일 경로를 주는 키(줄 규칙 키와 함께 `secrets.providers.<key>` 아래)."""
 
 _log = logging.getLogger("agent_console_example_secret_provider")
 
@@ -53,12 +61,28 @@ class SecretFileSettings(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    path_env: str = Field(min_length=1)
-    comment_prefixes: tuple[str, ...] = ()
-    name_pattern: str = Field(min_length=1)
-    strip_quotes: bool = True
-    upper_fallback: bool = True
-    max_file_bytes: int = Field(ge=1)
+    path_env: str = Field(
+        min_length=1,
+        title="경로 환경변수",
+        description="파일 경로(path)를 설정하지 않았을 때 경로를 읽을 환경변수 이름.",
+    )
+    comment_prefixes: tuple[str, ...] = Field(
+        default=(), title="주석 표시", description="이 문자열로 시작하는 줄은 주석으로 본다."
+    )
+    name_pattern: str = Field(
+        min_length=1, title="이름 규칙", description="이름 정규식(맞지 않는 줄은 건너뛴다)."
+    )
+    strip_quotes: bool = Field(
+        default=True, title="따옴표 벗기기", description="값 양끝의 같은 따옴표 한 쌍을 벗긴다."
+    )
+    upper_fallback: bool = Field(
+        default=True,
+        title="대문자로 다시 찾기",
+        description="이름이 없으면 대문자 이름으로 한 번 더 찾는다.",
+    )
+    max_file_bytes: int = Field(
+        ge=1, title="파일 크기 상한", description="이보다 큰 파일은 읽지 않는다(바이트)."
+    )
 
     @field_validator("name_pattern")
     @classmethod
@@ -82,6 +106,34 @@ def default_settings_data() -> dict[str, Any]:
     raw = package_files("agent_console_example_secret_provider").joinpath("data/defaults.json")
     data: dict[str, Any] = json.loads(raw.read_text(encoding="utf-8"))
     return data
+
+
+def options_schema() -> dict[str, Any]:
+    """설치자 설정 JSON Schema(경로 `path` + 줄 규칙, 기본값 = 패키지 데이터).
+
+    `path`는 `format: path`라 서버가 경로 표시를 끄면(`security.expose_paths: false`) 설정 보기에서
+    가린다. 값(비밀)은 설정에 들어가지 않으므로 비밀 필드는 없다.
+    """
+    schema = SecretFileSettings.model_json_schema()
+    props: dict[str, Any] = schema["properties"]
+    for key, value in default_settings_data().items():
+        if key in props:
+            props[key]["default"] = value
+    schema.pop("required", None)
+    schema["properties"] = {
+        PATH_OPTION: {
+            "type": "string",
+            "minLength": 1,
+            "format": "path",
+            "title": "비밀 파일",
+            "description": (
+                "KEY=VALUE 줄을 읽을 파일. 상대 경로는 설정 파일 폴더 기준. 비우면 "
+                "경로 환경변수(path_env)에서 읽는다."
+            ),
+        },
+        **props,
+    }
+    return schema
 
 
 def load_settings(options: Mapping[str, Any] | None = None) -> SecretFileSettings:
@@ -206,7 +258,8 @@ class EnvFileSecretProvider(FileSecretProvider):
     """경로를 환경변수(`settings.path_env`)에서 받는 공급자 — entry point 값.
 
     entry point는 인자 없이 부른다. 그래서 이 클래스만 프로세스 환경을 읽는다(조립 가장자리).
-    시험·다른 앱에서는 `environ`을 넘긴다.
+    시험·다른 앱에서는 `environ`을 넘긴다. 서버 설정 `secrets.providers.example-file`이 있으면
+    서버가 설정 훅(`from_options`)으로 다시 만든다.
 
     Args:
         environ: 읽을 환경. None이면 프로세스 환경(`os.environ`).
@@ -223,12 +276,51 @@ class EnvFileSecretProvider(FileSecretProvider):
         env = os.environ if environ is None else environ
         raw = env.get(cfg.path_env, "").strip()
         super().__init__(Path(raw).expanduser() if raw else None, settings=cfg)
-        if not raw:
-            _log.warning(
+        self._path_env = cfg.path_env
+
+    def _refresh(self) -> None:
+        if self.path is None:  # 처음 쓸 때 한 번만 알린다(설정 훅으로 바뀌기 전에 알리지 않게)
+            self._warn_once(
+                "unset",
                 "비밀 파일 경로가 설정되지 않아 이 공급자(%s)는 값을 주지 않습니다(환경변수 %s)",
                 PROVIDER_ID,
-                cfg.path_env,
+                self._path_env,
             )
+            return
+        super()._refresh()
+
+    @classmethod
+    def options_schema(cls) -> dict[str, Any]:
+        """설정 훅: 설치자 설정 스키마(`options_schema()`)."""
+        return options_schema()
+
+    @classmethod
+    def from_options(
+        cls,
+        options: Mapping[str, Any],
+        *,
+        environ: Mapping[str, str],
+        base_dir: Path | None = None,
+    ) -> FileSecretProvider:
+        """설정 훅: 설치자 설정(`secrets.providers.example-file`)으로 공급자를 만든다.
+
+        `path`가 있으면 그 파일(상대 경로는 `base_dir` 기준), 없으면 `environ`의 경로 환경변수.
+        나머지 키는 줄 규칙(`load_settings`)이다.
+
+        Raises:
+            ValueError: 모르는 키·틀린 값(키 이름만 메시지에 넣는다).
+        """
+        opts = dict(options)
+        raw = opts.pop(PATH_OPTION, None)
+        if raw is not None and (not isinstance(raw, str) or not raw.strip()):
+            raise ValueError(f"비밀 파일 설정이 잘못됐습니다: {PATH_OPTION}")
+        settings = load_settings(opts)
+        if raw is None:
+            return cls(environ, settings=settings)
+        path = Path(raw.strip()).expanduser()
+        if not path.is_absolute() and base_dir is not None:
+            path = base_dir / path
+        return FileSecretProvider(path, settings=settings)
 
 
 def register(registries: Any) -> None:

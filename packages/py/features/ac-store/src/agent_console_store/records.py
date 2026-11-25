@@ -249,15 +249,42 @@ def _verdict(
     return "behind" if behind else "same"
 
 
-def _ro_uri(path: Path) -> str:
-    return path.resolve().as_uri() + "?mode=ro"
+def _ro_uri(path: Path, *, immutable: bool = False) -> str:
+    return path.resolve().as_uri() + ("?mode=ro&immutable=1" if immutable else "?mode=ro")
+
+
+def _connect_ro(
+    path: Path, timeout: float, *, check_same_thread: bool = True
+) -> sqlite3.Connection:
+    """읽기 전용 연결. 쓰기 금지 폴더의 WAL DB는 `-shm`을 만들 수 없어 `mode=ro`가 실패한다.
+
+    그때만(폴더에 쓸 수 없을 때) `immutable=1`로 다시 연다. 이 앱은 그 폴더에 쓰지 않지만 다른
+    프로세스가 쓰는 중이면 WAL의 최신 내용이 안 보이거나 일관성이 깨질 수 있다(읽기 전용 보기용).
+    """
+    conn = sqlite3.connect(
+        _ro_uri(path), uri=True, timeout=timeout, check_same_thread=check_same_thread
+    )
+    try:
+        conn.execute("SELECT count(*) FROM sqlite_master").fetchone()
+        return conn
+    except sqlite3.OperationalError:
+        conn.close()
+        if can_write_path(path):
+            raise
+    conn = sqlite3.connect(
+        _ro_uri(path, immutable=True),
+        uri=True,
+        timeout=timeout,
+        check_same_thread=check_same_thread,
+    )
+    return conn
 
 
 def _read_revisions_ro(
     path: Path, tables: Mapping[str, str], timeout: float
 ) -> dict[str, str | None]:
     """`mode=ro`로 버전 표를 읽는다(파일을 만들거나 고치지 않는다)."""
-    conn = sqlite3.connect(_ro_uri(path), uri=True, timeout=timeout)
+    conn = _connect_ro(path, timeout)
     try:
         return _revisions(lambda sql, p: conn.execute(sql, p).fetchall(), tables)
     finally:
@@ -565,11 +592,11 @@ class RecordsDb:
         return create_sqlite_engine(self.path, journal_mode=self._journal, timeout=self._timeout)
 
     def _ro_engine(self) -> Engine:
-        uri = _ro_uri(self.path)
+        path = self.path
         timeout = self._timeout
 
         def connect() -> sqlite3.Connection:
-            return sqlite3.connect(uri, uri=True, check_same_thread=False, timeout=timeout)
+            return _connect_ro(path, timeout, check_same_thread=False)
 
         return sa.create_engine("sqlite://", creator=connect, poolclass=sa.pool.QueuePool)
 

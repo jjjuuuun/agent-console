@@ -46,6 +46,9 @@ class DefinitionKind:
         reserved_ids: 이 종류 id로 쓰면 안 되는 말(대소문자 무시). 예: 같은 깊이의 고정 REST
             경로(`/<종류>/check`)와 겹쳐 그 id의 GET이 가려지는 말. 저장소는 이 값을 보지 않는다 —
             만들기·복사 계획처럼 id를 정하는 쪽이 읽어 피하거나 새 id를 제안한다.
+        title: 종류 표시 이름(사용자 언어, 예: 복사 대화상자·구성 표의 종류 열). None이면 화면이
+            종류 이름을 그대로 보인다. 저장소는 이 값을 보지 않는다. 종류 기여(X44)의 ``title``이
+            있으면 그것이 먼저다.
     """
 
     name: str
@@ -61,6 +64,7 @@ class DefinitionKind:
     portable: bool = True
     library: bool = True
     reserved_ids: tuple[str, ...] = ()
+    title: str | None = None
 
     def __post_init__(self) -> None:
         if self.content_field is not None and self.singleton_file is not None:
@@ -97,12 +101,21 @@ GRAPH_KIND = DefinitionKind(
     require_version=True,
     count_fields=("nodes", "edges"),
     summary_fields=(SCOPE_FIELD,),
+    title="팀 구성",
 )
 AGENT_KIND = DefinitionKind(
-    name="agent", directory="agents", model=Agent, summary_fields=(SCOPE_FIELD,)
+    name="agent",
+    directory="agents",
+    model=Agent,
+    summary_fields=(SCOPE_FIELD,),
+    title="에이전트",
 )
 SETTINGS_KIND = DefinitionKind(
-    name="settings", model=WorkspaceSettings, singleton_file="settings.yaml", portable=False
+    name="settings",
+    model=WorkspaceSettings,
+    singleton_file="settings.yaml",
+    portable=False,
+    title="워크스페이스 설정",
 )
 RESOURCE_KIND = DefinitionKind(
     name="resource",
@@ -112,6 +125,7 @@ RESOURCE_KIND = DefinitionKind(
     content_field="content",
     multi_file=True,
     summary_fields=("type", SCOPE_FIELD),
+    title="리소스",
 )
 """리소스(design §R12.1, §2R.3): `resources/<id>.yaml` + 본문 `resources/<id>/` 아래 파일들."""
 

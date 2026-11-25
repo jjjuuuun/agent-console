@@ -18,11 +18,12 @@ from agent_console_link_exports_teams import (
 from agent_console_link_exports_teams.testing import local_definitions_module
 from agent_console_mod_definitions import DEFINITIONS_STORE
 from agent_console_mod_definitions import module as definitions
-from agent_console_mod_exports import ExportDependencies
+from agent_console_mod_exports import ExportDependencies, ScopedExportDependencies
 from agent_console_mod_exports import module as exports
 from agent_console_modkit import Assembly, BaseServices, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
 from agent_console_registry import Registry
+from agent_console_store import InMemoryDefinitionStore
 from agent_console_teams.testing import Kit
 
 TOKEN = "t" * 32
@@ -101,6 +102,28 @@ def test_port_contracts_and_direct_use(tmp_path: Path) -> None:
     assert isinstance(deps, ExportDependencies)
     assert [(d.kind, d.id) for d in deps.dependencies("agent", "alice")] == [("resource", "doc")]
     assert deps.dependencies("resource", "doc") == []
+
+
+def test_for_lookup_reads_only_the_given_store(tmp_path: Path) -> None:
+    """FU.22: 프로젝트 공간 기준 계산 — 같은 디스크립터로 그 저장소에서만 찾는다."""
+    deps = _assembly(tmp_path).port(EXPORT_DEPENDENCIES)
+    seen_by_exports: object = deps  # mod-exports가 공간 원본에 쓰는 모양
+    assert isinstance(seen_by_exports, ScopedExportDependencies)
+    assert isinstance(deps, TeamExportDependencies)
+    space = InMemoryDefinitionStore()
+    space.create("agent", {"id": "alice", "name": "사본", "resources": [{"ref": "notes"}]})
+    scoped = deps.for_lookup(space)
+    assert [(d.kind, d.id) for d in scoped.dependencies("agent", "alice")] == [
+        ("resource", "notes")
+    ]
+    graph = KIT.graph(
+        [KIT.person(), KIT.worker("a", "alice")], [KIT.edge("e1", "entry", "me", "a")]
+    )
+    space.create("graph", graph.model_dump(mode="json", exclude_none=True))
+    found = {(d.kind, d.id) for d in scoped.dependencies("graph", graph.id)}
+    assert ("agent", "alice") in found  # 팀 구성 해석은 같은 디스크립터
+    # 원래 계산은 그대로 라이브러리 기준
+    assert [(d.kind, d.id) for d in deps.dependencies("agent", "alice")] == [("resource", "doc")]
 
 
 def test_standalone_provider(tmp_path: Path) -> None:

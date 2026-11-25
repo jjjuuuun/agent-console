@@ -5,6 +5,7 @@
 1.4.0(0.13.0): `ModuleInfo.description`·`label_display`(`common.LabelDisplay`), WS `sdd.changed`.
 1.5.0(0.14.0): WS `wiki.changed`.
 1.6.0(0.14.3): `PluginInfo.reason`(skipped·disabled 플러그인의 끈 이유).
+1.7.0(0.14.12): `PluginOptionsView`·`ServerInfo.plugin_options`(설정을 선언한 플러그인의 옵션 보기).
 """
 
 from ._host import (
@@ -15,6 +16,7 @@ from ._host import (
     ModuleOptionsView,
     ModuleStatus,
     PluginInfo,
+    PluginOptionsView,
     ServerInfo,
 )
 from ._ws import (
@@ -53,6 +55,7 @@ __all__ = [
     "ModuleOptionsView",
     "ModuleStatus",
     "PluginInfo",
+    "PluginOptionsView",
     "RunEventMessage",
     "SddChangedMessage",
     "ServerInfo",

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router";
-import type { ModuleInfo } from "@agent-console/contracts";
+import type { ModuleInfo, PluginOptionsView } from "@agent-console/contracts";
 import { Banner, Button, EmptyState, Icon } from "@agent-console/ui";
 import { lookupMessage, messages as m } from "../../../app/messages";
 import { ModuleStatusChip, moduleAffects, MODULE_STATUS, moduleStatusLabel, useLinkPartDefs, useModules, type ModulesState } from "../../../modules";
 import { DEFAULT_ROUTES } from "../../../shell/routeConfig";
 import { CopyButton } from "../CopyButton";
 import { countModules, FILTER_STATUSES, groupModules, moduleCommandSnippet, showsReasonCollapsed, type StatusFilter } from "../modulesView";
-import { ModuleOptionsPanel } from "./ModuleOptionsPanel";
+import { ModuleOptionsPanel, PluginOptionsGroup } from "./ModuleOptionsPanel";
+import { useServerInfo } from "../settingsData";
 import { Skeleton } from "../Skeleton";
 
 const t = m.modules;
@@ -33,6 +34,8 @@ export interface ModulesSectionViewProps {
   parts: readonly PartRef[];
   /** 펼친 모듈 행에 모듈 옵션(읽기 전용)을 그리는 함수. 없으면 옵션 줄이 없다(데이터 연결은 컨테이너 몫) */
   renderOptions?: (mod: ModuleInfo) => ReactNode;
+  /** 확장(플러그인) 설치자 옵션. 없거나 빈 목록이면 묶음을 그리지 않는다 */
+  pluginOptions?: readonly PluginOptionsView[] | undefined;
 }
 
 const kindLabel = (kind: string) => (m.moduleKind as Record<string, string>)[kind] ?? kind;
@@ -132,7 +135,7 @@ function Detail({ mod, screens, parts, renderOptions }: { mod: ModuleInfo; scree
  * 설정의 "기능 모듈" 섹션(읽기 전용): 서버에 설치된 기능과 연동의 상태·이유를 보인다.
  * 켜고 끄는 스위치는 없다(설치자가 설정 파일로 한다). 데이터와 콜백은 props로 받는 표현 컴포넌트다.
  */
-export function ModulesSectionView({ state, refetching, onRefresh, screens, parts, renderOptions }: ModulesSectionViewProps) {
+export function ModulesSectionView({ state, refetching, onRefresh, screens, parts, renderOptions, pluginOptions }: ModulesSectionViewProps) {
   const modules = useMemo(() => (state.phase === "ready" ? state.modules : []), [state]);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [text, setText] = useState("");
@@ -377,7 +380,6 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
                             role="treeitem"
                             aria-level={2}
                             aria-expanded={open}
-                            aria-label={`${mod.id}, ${moduleStatusLabel(mod.status)}`}
                             data-nav-key={rKey}
                             tabIndex={activeKey === rKey ? 0 : -1}
                             className="app-mod-row"
@@ -407,6 +409,7 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
           })}
         </ul>
       )}
+      <PluginOptionsGroup items={pluginOptions ?? []} />
     </div>
   );
 }
@@ -416,6 +419,7 @@ export function ModulesSection() {
   const { state, refetch, refetching } = useModules();
   const partDefs = useLinkPartDefs();
   const screens = useMemo<ScreenRef[]>(() => DEFAULT_ROUTES.map((r) => ({ title: lookupMessage(r.titleKey), path: r.path, requires: r.requires ?? [] })), []);
+  const info = useServerInfo();
   const parts = useMemo<PartRef[]>(() => partDefs.map((p) => ({ id: p.id, requires: p.requires })), [partDefs]);
-  return <ModulesSectionView state={state} refetching={refetching} onRefresh={() => void refetch()} screens={screens} parts={parts} renderOptions={(mod) => <ModuleOptionsPanel id={mod.id} />} />;
+  return <ModulesSectionView state={state} refetching={refetching} onRefresh={() => void refetch()} screens={screens} parts={parts} renderOptions={(mod) => <ModuleOptionsPanel id={mod.id} />} pluginOptions={info.data?.plugin_options} />;
 }

@@ -15,6 +15,7 @@
 | ``GET /projects/copy/kinds?project=`` | → ``CopyKindInfo[]``(그 공간의 복사 종류, 6R.20a) |
 | ``GET /projects/copy/items?project=&kind=`` | → ``CopyItem[]``(그 공간의 정의 목록) |
 | ``DELETE /projects/copy/items/{kind}/{id}?project=`` | (+``If-Match``) → 204(종류 공통 삭제) |
+| ``GET /projects/copy/items/{kind}/{id}/references?project=`` | → ``CopyItemReferences`` |
 | ``GET /projects/folders?path=&hidden=`` | → ``FolderListing`` |
 | ``POST /projects/folders/check`` | ``FolderCheckRequest`` → ``FolderCheck`` |
 | ``GET /projects/folders/capabilities`` | → ``FolderCapabilities`` |
@@ -37,6 +38,7 @@ from agent_console_contracts import (
     CopyApplyRequest,
     CopyApplyResult,
     CopyItem,
+    CopyItemReferences,
     CopyKindInfo,
     CopyPlan,
     CopyPlanRequest,
@@ -192,14 +194,28 @@ def build_router(services: Services) -> APIRouter:
         items = await asyncio.to_thread(s.copies().items, ref, kind)
         return JSONResponse([i.model_dump(mode="json") for i in items])
 
+    @router.get(
+        "/projects/copy/items/{kind}/{item_id}/references",
+        response_model=CopyItemReferences,
+        responses=errors(),
+    )
+    async def item_references(kind: str, item_id: str, space: SpaceQuery = None) -> JSONResponse:
+        """같은 공간에서 이 항목을 쓰는 정의(삭제 확인 창, 종류 공통). 종류는
+        ``/projects/copy/kinds``의 것만(아니면 404), 항목이 없으면 404. 참조 추출이 없으면
+        ``checked`` false와 info ``project.references_unavailable``."""
+        ref = _space_ref(space)
+        found = await asyncio.to_thread(s.copies().item_references, ref, kind, item_id)
+        return _json(found)
+
     @router.delete("/projects/copy/items/{kind}/{item_id}", status_code=204, responses=errors(412))
     async def delete_item(
         kind: str, item_id: str, space: SpaceQuery = None, if_match: IfMatchHeader = None
     ) -> Response:
         """그 공간의 항목 하나를 지운다(204, 종류 공통). ``CopyKindInfo.deletable``이 참인 종류만
         (아니면 400 ``bad_request`` ``details.reason = not_deletable``). 없는 종류·항목은 404, 쓸 수
-        없는 프로젝트 폴더는 409 ``project.config_readonly``, ``If-Match`` 불일치는 412. 참조 검사는
-        종류별 삭제 경로처럼 하지 않는다."""
+        없는 프로젝트 폴더는 409 ``project.config_readonly``(항목 확인보다 먼저), ``If-Match``
+        불일치는 412. 참조 검사는 종류별 삭제 경로처럼 하지 않는다(쓰는 곳은 ``…/references``로
+        미리 본다)."""
         ref = _space_ref(space)
         expected = if_match_version(if_match)
         await asyncio.to_thread(

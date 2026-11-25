@@ -29,7 +29,11 @@ Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크
   기록 없음 — 호스트 DB에 대신 쓰지 않는다).
 - 검색: 사용자 `search_backend` → 설치자 `search.backend`(기본 `sqlite-fts`) → `search.fallback`
   (기본 `scan`). 색인 파일은 프로젝트 공간이면 공간이 준 `index_dir`, 단독이면 호스트 상태 폴더
-  `wiki-index/`. 대체 방식이면 `GET /wiki/info`에 `wiki.search_degraded`.
+  `wiki-index/`. 대체 방식이면 `GET /wiki/info`에 `wiki.search_degraded`. 색인 공장 옵션 = 설치자
+  `search.tokenizer` + 고른 방식의 `search.index_options.<방식>`(키는 검색 구현이 정한다, 예: `token_pattern`) 위에
+  앱 값 `case_insensitive`(위키 문법)·`max_results`(`max_search_results`)·`redact`(포트 `secrets.rules`의 지금 비밀
+  의심 규칙 — 사용자 규칙 포함 — 의 가리기, 없으면 기본 규칙)·`redact_signature`(그 규칙 서명)를 덮은 것. 규칙이 바뀌면
+  저장소와 색인을 다시 짓는다.
 - 쓰기 검사: 포트 `wiki.write_checks`(늘 켜짐, 설정 `enabled: false`로 끔) + entry point
   `agent_console.wiki_write_checks`(설정 `wiki.write_checks[{id, enabled, options}]`로 켬, 값 = 검사 객체
   또는 옵션을 받는 공장).

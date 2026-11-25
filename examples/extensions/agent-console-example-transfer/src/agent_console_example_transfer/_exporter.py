@@ -66,7 +66,10 @@ class JsonBundleExporter:
         catalog: ExportCatalog,
         options: Mapping[str, Any],
     ) -> ExportOutput:
-        """고른 정의 → 파일 하나(`file_name`). 함께 쓰는 정의는 고른 정의 뒤에 한 번씩 담는다."""
+        """고른 정의 → 파일 하나(`file_name`). 함께 쓰는 정의는 고른 정의 뒤에 한 번씩 담는다.
+
+        본문은 카탈로그가 주는 대로 담는다: 여러 파일 본문(`files`)과 한 파일 본문(`content`).
+        """
         include = options.get("include_dependencies", True) is not False
         entries: list[BundleEntry] = []
         warnings: list[Issue] = []
@@ -89,7 +92,15 @@ class JsonBundleExporter:
                 )
                 continue
             kept = {k: v for k, v in document.items() if k not in self._fmt.drop_fields}
-            entries.append(BundleEntry(kind, ident, kept, dict(catalog.files(kind, ident))))
+            entries.append(
+                BundleEntry(
+                    kind,
+                    ident,
+                    kept,
+                    dict(catalog.files(kind, ident)),
+                    catalog.content(kind, ident),  # 한 파일 본문 종류(없으면 None)
+                )
+            )
             if include:
                 stack.extend((d.kind, d.id) for d in reversed(catalog.dependencies(kind, ident)))
         data = dump_bundle(entries, self._fmt)

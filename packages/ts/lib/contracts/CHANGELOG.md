@@ -2,6 +2,18 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.14.12]
+- 계약 0.14.12(FU.19). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `modules` 1.7.0.
+- 새 타입: `PluginOptionsView{extension, name, settings_key, schema?, values?, configured?, yaml_snippet?}` — 설정을 선언한 플러그인(비밀 값 공급자 등)의 옵션 읽기 전용 보기. `ServerInfo.plugin_options?: PluginOptionsView[]`(생략 = 빈 목록).
+
+## [0.14.11]
+- 계약 0.14.11(FU.17). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `common` 1.16.0.
+- 새 상수: `KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE`(`wiki.unknown_title_source`)·`WIKI_REDACTED_CONTENT`(`wiki.redacted_content`). 위키 이벤트 상태 `WikiEventStatus`는 그대로(가린 본문 거부 = `secret_rejected` + 사유 코드).
+
+## [0.14.10]
+- 계약 0.14.10(FU.13). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `projects` 3.7.0.
+- 새 타입: `CopyItemReferences{items?: CopyItem[], checked?: boolean, warnings?: Issue[]}` — `GET /projects/copy/items/{kind}/{id}/references` 응답(같은 공간에서 이 항목을 쓰는 정의).
+
 ## [0.14.9]
 - 계약 0.14.9(6R.31). 더하기만. 사내 의존 범위는 `^0.14.0` 그대로. `sdd` 1.3.0, `memory` 1.2.0, `common` 1.15.0.
 - 새 선택 필드: `TaskSyntax.status_pattern?`·`status_format?`·`field_format?: string | null`, `RunProfile.document_state_on?: Record<string, DocumentStateOnRun>`(새 타입 `DocumentStateOnRun{document, to}`), `MemoryRetentionSettings.auto?: MemoryRetentionAuto`(`library?`·`projects?: boolean`, `exclude_projects?: string[]`).

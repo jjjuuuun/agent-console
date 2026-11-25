@@ -12,11 +12,13 @@ from pathlib import Path
 import pytest
 
 from agent_console_example_secret_provider import (
+    PATH_OPTION,
     PROVIDER_ID,
     EnvFileSecretProvider,
     FileSecretProvider,
     default_settings_data,
     load_settings,
+    options_schema,
     parse_secret_lines,
     register,
 )
@@ -169,9 +171,12 @@ def test_too_large_file_is_not_read(tmp_path: Path, caplog: pytest.LogCaptureFix
 def test_env_provider_without_path_gives_nothing(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING):
         provider = EnvFileSecretProvider({})
-    assert provider.path is None
-    assert provider.get_secret("EXAMPLE_TOKEN") is None
+        assert _all_logs(caplog) == ""  # 만들 때는 알리지 않는다(설정 훅이 곧 바꿀 수 있다)
+        assert provider.path is None
+        assert provider.get_secret("EXAMPLE_TOKEN") is None
+        assert provider.get_secret("OTHER") is None
     assert ENV in _all_logs(caplog)
+    assert len(caplog.records) == 1  # 처음 쓸 때 한 번만
 
 
 def test_env_provider_reads_injected_environment(tmp_path: Path) -> None:
@@ -179,3 +184,47 @@ def test_env_provider_reads_injected_environment(tmp_path: Path) -> None:
     provider = EnvFileSecretProvider({ENV: str(path)})
     assert provider.path == path
     assert provider.get_secret("EXAMPLE_TOKEN") == VALUE
+
+
+def test_options_schema_declares_path_and_package_defaults() -> None:
+    schema = options_schema()
+    assert EnvFileSecretProvider.options_schema() == schema
+    props = schema["properties"]
+    assert next(iter(props)) == PATH_OPTION
+    assert props[PATH_OPTION]["format"] == "path"  # 경로 표시를 끄면 설정 보기에서 가린다
+    assert "default" not in props[PATH_OPTION]
+    for key, value in default_settings_data().items():
+        assert props[key]["default"] == value
+    assert "required" not in schema
+    assert schema.get("additionalProperties") is False
+
+
+def test_from_options_reads_the_configured_file(tmp_path: Path) -> None:
+    (tmp_path / "conf").mkdir()
+    _file(tmp_path / "conf", f"example_token={VALUE}\n")
+    provider = EnvFileSecretProvider.from_options(
+        {PATH_OPTION: "secrets.env", "upper_fallback": False},
+        environ={},
+        base_dir=tmp_path / "conf",
+    )
+    assert isinstance(provider, SecretProvider)
+    assert provider.path == tmp_path / "conf" / "secrets.env"  # 상대 경로 = 설정 파일 폴더 기준
+    assert provider.get_secret("example_token") == VALUE
+    assert provider.get_secret("EXAMPLE_TOKEN") is None  # 대문자 대체를 끈 설정
+
+
+def test_from_options_without_path_uses_the_environment(tmp_path: Path) -> None:
+    path = _file(tmp_path, f"EXAMPLE_TOKEN={VALUE}\n")
+    provider = EnvFileSecretProvider.from_options({}, environ={ENV: str(path)}, base_dir=None)
+    assert provider.path == path
+    assert provider.get_secret("EXAMPLE_TOKEN") == VALUE
+
+
+@pytest.mark.parametrize(
+    ("options", "key"),
+    [({"token": VALUE}, "token"), ({PATH_OPTION: ""}, PATH_OPTION), ({"max_file_bytes": 0}, "max")],
+)
+def test_from_options_rejects_bad_options_by_key_only(options: dict[str, object], key: str) -> None:
+    with pytest.raises(ValueError, match=key) as caught:
+        EnvFileSecretProvider.from_options(options, environ={}, base_dir=None)
+    assert VALUE not in str(caught.value)

@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDialog, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
+import { Button, EmptyState, Icon, IconButton, useToast, type MenuItemDef } from "@agent-console/ui";
 import { createProjectsText, projectAbilities, statusInfo } from "@agent-console/projects";
 import { ApiError } from "@agent-console/api-client";
 import { useApi } from "../../app/ApiContext";
@@ -9,10 +9,10 @@ import { ErrorBlock } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
 import { useDelayed } from "../../app/useDelayed";
 import { useNow } from "../../app/useNow";
-import { lookupMessage, messages as appMessages } from "../../app/messages";
+import { lookupMessage } from "../../app/messages";
 import { DEFAULT_ROUTES } from "../../shell/routeConfig";
 import { useBackendReadiness } from "../backendReadiness";
-import { ROUTE_ROLES, routePath, useRoutesOn } from "../library";
+import { DeleteDialog, ROUTE_ROLES, routePath, useRoutesOn } from "../library";
 import { folderHomeMessages as m } from "./folderHomeMessages";
 import { ManifestResetDialog } from "./ManifestResetDialog";
 import { MenuPopover } from "./MenuPopover";
@@ -87,6 +87,30 @@ export function ProjectHomeScreen() {
   const copyDialog = useCopyDialog();
   const [highlight, setHighlight] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<ConfigRow | null>(null);
+  // 삭제 확인 창을 열 때 이 정의를 쓰는 곳을 서버에 묻는다(조회 실패·옛 서버면 목록 없이 지금처럼)
+  const refsQuery = useQuery({
+    queryKey: ["list", "copy-item-references", id, deleting?.kind ?? "", deleting?.id ?? ""] as const,
+    queryFn: () => rest.listCopyItemReferences(id, deleting?.kind ?? "", deleting?.id ?? ""),
+    enabled: deleting !== null,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    meta: { silentBackgroundError: true },
+  });
+  const kindTitles = useQuery({
+    queryKey: ["list", "project-config-kinds", id] as const,
+    queryFn: async () => (await rest.listCopyKinds(id)) ?? [],
+    enabled: deleting !== null,
+    retry: false,
+    meta: { silentBackgroundError: true },
+  }).data;
+  const refs = refsQuery.isSuccess ? refsQuery.data : undefined;
+  const refNames = (refs?.items ?? []).map((i) => {
+    const title = kindTitles?.find((k) => k.kind === i.kind)?.title;
+    const name = i.name || i.id;
+    return title ? `${name} (${title})` : name;
+  });
+  const refsUnchecked = refs?.checked === false ? refs.warnings?.[0]?.message : undefined;
   useEffect(() => {
     if (highlight === undefined) return;
     const t = setTimeout(() => setHighlight(undefined), 1500);
@@ -159,6 +183,7 @@ export function ProjectHomeScreen() {
       // 목록이 준 항목 버전을 If-Match로 넘긴다(버전이 없으면 생략). 다른 곳에서 바뀌었으면 412
       await rest.deleteCopyItem(id, row.kind, row.id, ...(row.version === undefined ? [] : [{ ifMatch: row.version }]));
       await queryClient.invalidateQueries({ queryKey: ["list"] });
+      await queryClient.invalidateQueries({ queryKey: ["list", "copy-item-references"] });
       toast({ tone: "success", text: m.home.configDeleted(row.name) });
     } catch (e) {
       const view = describeError(e, m.home.configDeleteFailed);
@@ -376,17 +401,17 @@ export function ProjectHomeScreen() {
         </div>
       )}
       {copyDialog.dialog}
-      <ConfirmDialog
-        open={deleting !== null}
-        title={deleting === null ? "" : m.home.configDeleteTitle(deleting.name)}
-        confirmLabel={m.home.configDelete}
-        cancelLabel={appMessages.common.cancel}
-        danger
-        onConfirm={() => void removeConfigRow()}
-        onCancel={() => setDeleting(null)}
-      >
-        {m.home.configDeleteBody}
-      </ConfirmDialog>
+      {deleting !== null ? (
+        <DeleteDialog
+          open
+          name={deleting.name}
+          references={refNames}
+          checking={refsQuery.isPending}
+          note={refsUnchecked ? `${m.home.configDeleteBody} ${refsUnchecked}` : m.home.configDeleteBody}
+          onConfirm={() => void removeConfigRow()}
+          onCancel={() => setDeleting(null)}
+        />
+      ) : null}
       {resetOpen ? (
         <ManifestResetDialog
           name={view.project.name}

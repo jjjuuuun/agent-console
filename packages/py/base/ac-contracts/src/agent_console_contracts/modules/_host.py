@@ -137,6 +137,36 @@ class PluginInfo(ContractModel):
     error: ErrorInfo | None = None
 
 
+class PluginOptionsView(ContractModel):
+    """플러그인 하나의 설치자 옵션 읽기 전용 보기(1.7.0, 0.14.12): 플러그인이 선언한 스키마와
+    지금 값. 호스트가 직접 설정하는 확장(예: 비밀 값 공급자)에만 있다. 모듈 옵션 보기
+    (`ModuleOptionsView`)와 같은 모양이고, 설정 파일에서만 바꾼다(쓰기 API 없음).
+    """
+
+    extension: NonEmptyStr = Field(
+        description="확장 지점 레지스트리 이름(열린 문자열, 예: secret_providers)."
+    )
+    name: NonEmptyStr = Field(description="플러그인 key(등록 이름 = `PluginInfo.name`).")
+    settings_key: NonEmptyStr = Field(
+        description="설정 파일에서 이 옵션을 두는 자리(점 경로, 예: secrets.providers.<name>)."
+    )
+    schema_: JsonObject | None = Field(
+        default=None,
+        alias="schema",
+        description="옵션 JSON Schema(플러그인이 선언). null = 스키마를 내지 않음.",
+    )
+    values: JsonObject = Field(
+        default_factory=dict,
+        description="지금 값(스키마 기본값 포함). 비밀로 보이는 값·경로(설정에 따라)는 가려 있다.",
+    )
+    configured: bool = Field(
+        default=False, description="설정 파일에 이 플러그인의 옵션이 있어 그 값으로 만들었는지."
+    )
+    yaml_snippet: str = Field(
+        default="", description="설정 파일에 붙일 YAML 조각(가린 값은 주석, 들여쓰기 포함)."
+    )
+
+
 class ServerInfo(ContractModel):
     """`GET /server-info` 응답(읽기 전용). 설치자 설정 값 중 비밀이 아닌 것만."""
 
@@ -147,4 +177,11 @@ class ServerInfo(ContractModel):
     warnings: list[Issue] = Field(
         default_factory=list,
         description="워크스페이스 점검 경고(예: 평문 비밀 의심). 값은 담지 않는다.",
+    )
+    plugin_options: list[PluginOptionsView] = Field(
+        default_factory=list,
+        description=(
+            "(0.14.12) 설정을 선언한 플러그인의 옵션 보기(예: 비밀 값 공급자). 없으면 빈 목록 "
+            "(옛 서버 포함)."
+        ),
     )

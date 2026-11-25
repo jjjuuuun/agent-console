@@ -4,7 +4,10 @@
 
     {"format": "<format_name>", "version": 1,
      "definitions": [{"kind": "...", "id": "...", "document": {...},
-                      "files": {"<경로>": {"text": "..."} | {"base64": "..."}}}]}
+                      "files": {"<경로>": {"text": "..."} | {"base64": "..."}},
+                      "content": {"text": "..."} | {"base64": "..."}}]}
+
+`files`는 여러 파일 본문 종류, `content`는 한 파일 본문 종류의 본문이다(있는 것만 담는다).
 
 필드 이름·형식 이름·파일 이름은 코드에 두지 않는다. 기본값은 패키지 데이터, 바꾸려면
 설치자 옵션(`exports.options.example-json`·가져오기 출처 옵션)에 같은 키로 덮어쓴다.
@@ -70,7 +73,8 @@ class BundleFields(BaseModel):
     kind: str = Field(min_length=1, description="항목: 정의 종류 필드.")
     id: str = Field(min_length=1, description="항목: 정의 id 필드.")
     document: str = Field(min_length=1, description="항목: 정의 원문 필드.")
-    files: str = Field(min_length=1, description="항목: 본문 파일(경로 → 내용) 필드.")
+    files: str = Field(min_length=1, description="항목: 여러 파일 본문(경로 → 내용) 필드.")
+    content: str = Field(min_length=1, description="항목: 한 파일 본문 필드.")
     text: str = Field(min_length=1, description="본문 파일: UTF-8 글 필드.")
     base64: str = Field(min_length=1, description="본문 파일: 바이너리(base64) 필드.")
 
@@ -78,7 +82,7 @@ class BundleFields(BaseModel):
     def _distinct(self) -> BundleFields:
         for group in (
             (self.format, self.version, self.items),
-            (self.kind, self.id, self.document, self.files),
+            (self.kind, self.id, self.document, self.files, self.content),
             (self.text, self.base64),
         ):
             if len(set(group)) != len(group):
@@ -164,13 +168,15 @@ class BundleEntry:
         kind: 정의 종류 이름(저장소 kind — 이 예제는 종류를 모른다, 받은 그대로).
         id: 정의 id.
         document: 정의 원문.
-        files: 본문 파일(경로 → 내용). 본문이 없으면 빈 매핑.
+        files: 여러 파일 본문(경로 → 내용). 본문이 없으면 빈 매핑.
+        content: 한 파일 본문(문서의 본문 필드가 가리키는 파일 하나). 없으면 None.
     """
 
     kind: str
     id: str
     document: Mapping[str, Any]
     files: Mapping[str, bytes] = field(default_factory=dict)
+    content: bytes | None = None
 
 
 def _encode_file(data: bytes, fields: BundleFields) -> dict[str, str]:
@@ -188,6 +194,8 @@ def dump_bundle(entries: Sequence[BundleEntry], fmt: BundleFormat) -> bytes:
         item: dict[str, Any] = {f.kind: entry.kind, f.id: entry.id, f.document: entry.document}
         if entry.files:
             item[f.files] = {p: _encode_file(entry.files[p], f) for p in sorted(entry.files)}
+        if entry.content is not None:
+            item[f.content] = _encode_file(entry.content, f)
         items.append(item)
     data = {f.format: fmt.format_name, f.version: fmt.format_version, f.items: items}
     return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -197,6 +205,21 @@ def _warning(code: str, message: str, *keys: str) -> ImportWarning:
     return ImportWarning(code=code, message=message, keys=list(keys))
 
 
+def _decode_body(body: Any, fields: BundleFields) -> bytes | None:
+    """`{text}` 또는 `{base64}` 하나 → 내용. 모양이 틀리면 None."""
+    if not isinstance(body, Mapping):
+        return None
+    text, b64 = body.get(fields.text), body.get(fields.base64)
+    if isinstance(text, str) and b64 is None:
+        return text.encode("utf-8")
+    if isinstance(b64, str) and text is None:
+        try:
+            return base64.b64decode(b64, validate=True)
+        except (binascii.Error, ValueError):
+            return None
+    return None
+
+
 def _decode_files(raw: Any, fields: BundleFields) -> dict[str, bytes] | None:
     if raw is None:
         return {}
@@ -204,18 +227,10 @@ def _decode_files(raw: Any, fields: BundleFields) -> dict[str, bytes] | None:
         return None
     out: dict[str, bytes] = {}
     for path, body in raw.items():
-        if not isinstance(path, str) or not path or not isinstance(body, Mapping):
+        data = _decode_body(body, fields)
+        if not isinstance(path, str) or not path or data is None:
             return None
-        text, b64 = body.get(fields.text), body.get(fields.base64)
-        if isinstance(text, str) and b64 is None:
-            out[path] = text.encode("utf-8")
-        elif isinstance(b64, str) and text is None:
-            try:
-                out[path] = base64.b64decode(b64, validate=True)
-            except (binascii.Error, ValueError):
-                return None
-        else:
-            return None
+        out[path] = data
     return out
 
 
@@ -254,6 +269,8 @@ def read_bundle(data: bytes, fmt: BundleFormat) -> tuple[list[BundleEntry], list
         ident = raw.get(f.id) if isinstance(raw, dict) else None
         document = raw.get(f.document) if isinstance(raw, dict) else None
         files = _decode_files(raw.get(f.files), f) if isinstance(raw, dict) else None
+        raw_content = raw.get(f.content) if isinstance(raw, dict) else None
+        content = _decode_body(raw_content, f) if raw_content is not None else None
         if (
             not isinstance(kind, str)
             or not kind
@@ -261,6 +278,7 @@ def read_bundle(data: bytes, fmt: BundleFormat) -> tuple[list[BundleEntry], list
             or not ident
             or not isinstance(document, dict)
             or files is None
+            or (raw_content is not None and content is None)
         ):
             warnings.append(
                 _warning(
@@ -276,5 +294,7 @@ def read_bundle(data: bytes, fmt: BundleFormat) -> tuple[list[BundleEntry], list
             )
             continue
         seen.add((kind, ident))
-        entries.append(BundleEntry(kind=kind, id=ident, document=document, files=files))
+        entries.append(
+            BundleEntry(kind=kind, id=ident, document=document, files=files, content=content)
+        )
     return entries, warnings

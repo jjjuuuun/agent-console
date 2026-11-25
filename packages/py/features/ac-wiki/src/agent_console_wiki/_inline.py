@@ -9,36 +9,67 @@
 만든다.
 - 자동 링크 `<scheme:…>`: 링크 패턴을 걸지 않는다.
 - 인라인 링크 `[글자](대상 "제목")`·이미지 `![…](…)`: 괄호 짝·`<…>` 대상·제목을 읽는다. 링크 안에
-링크는
-  없다. 참조 링크(`[글자][이름]`)는 읽지 않는다.
+  링크는 없다.
+- 참조 링크 `[글자][이름]`·`[이름][]`·`[이름]`: 정의(`[이름]: 대상`)가 있는 이름만 링크다(이름
+  비교는 CommonMark처럼 앞뒤 공백을 떼고 공백을 하나로, 대소문자 무시). 정의는 블록 파서가 찾아
+  넘긴다(`references`). 정의가 없는 이름은 글자 그대로다.
 """
 
 from __future__ import annotations
 
 import bisect
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
-__all__ = ["InlineScan", "MarkdownLink", "scan_inline"]
+from markdown_it.common.utils import normalizeReference
+
+__all__ = ["InlineScan", "LinkReference", "MarkdownLink", "reference_key", "scan_inline"]
 
 _BACKTICKS = re.compile(r"`+")
 _AUTOLINK = re.compile(r"<[A-Za-z][A-Za-z0-9+.\-]{1,31}:[^\s<>]*>")
 _SPECIAL = re.compile(r"[\[\]\\]")
 _CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)", re.DOTALL)
 _SPACE = " \t"
+_MAX_LABEL = 999  # CommonMark 참조 이름 최대 글자 수
+
+
+def reference_key(label: str) -> str:
+    """참조 이름 비교 키(CommonMark 규칙 — markdown-it-py `normalizeReference`와 같다).
+
+    >>> reference_key("  Foo   Bar ") == reference_key("foo bar")
+    True
+    """
+    return normalizeReference(label)
+
+
+@dataclass(frozen=True, slots=True)
+class LinkReference:
+    """참조 링크 정의(`[이름]: 대상`) 하나. 위치는 부르는 쪽이 정한 기준(파서는 본문 전체 기준).
+
+    Attributes:
+        dest: 대상 원문(`<…>`면 괄호 안).
+        dest_start: 대상 원문 시작.
+        dest_end: 대상 원문 끝.
+    """
+
+    dest: str
+    dest_start: int
+    dest_end: int
 
 
 @dataclass(frozen=True, slots=True)
 class MarkdownLink:
-    """인라인 링크 하나(위치는 훑은 글 기준 코드 포인트).
+    """마크다운 링크 하나(위치는 훑은 글 기준 코드 포인트).
 
     Attributes:
         start: `[` 위치.
-        end: 닫는 `)` 다음 위치.
-        label: 링크 글자 원문(`[`·`]` 안).
+        end: 링크 원문 끝(인라인은 닫는 `)`, 참조는 마지막 `]` 다음).
+        label: 링크 글자 원문(첫 `[`·`]` 안).
         dest: 대상 원문(`<…>`면 괄호 안).
-        dest_start: 대상 원문 시작.
-        dest_end: 대상 원문 끝.
+        dest_start: 대상 원문 시작(참조 링크는 정의의 `LinkReference.dest_start` 그대로).
+        dest_end: 대상 원문 끝(참조 링크는 정의 기준).
+        reference: 참조 링크면 정의 이름 키(`reference_key`), 인라인 링크면 None.
     """
 
     start: int
@@ -47,6 +78,7 @@ class MarkdownLink:
     dest: str
     dest_start: int
     dest_end: int
+    reference: str | None = None
 
 
 @dataclass(slots=True)
@@ -55,7 +87,7 @@ class InlineScan:
 
     Attributes:
         excluded: 링크 패턴을 걸지 않을 범위(코드 조각·자동 링크·이미지·마크다운 링크), 시작 순.
-        links: 마크다운 인라인 링크(이미지 제외), 시작 순.
+        links: 마크다운 링크(인라인·참조, 이미지 제외), 시작 순.
     """
 
     excluded: list[tuple[int, int]]
@@ -205,9 +237,39 @@ def _inline_link(text: str, paren: int, end: int) -> tuple[int, int, int] | None
     return None
 
 
-def scan_inline(text: str) -> InlineScan:
-    """인라인 영역 원문을 훑는다(위치는 `text` 기준 코드 포인트)."""
-    has_link = "](" in text
+def _label_end(text: str, pos: int, end: int) -> int | None:
+    """`text[pos] == "["`인 참조 이름의 닫는 `]` 위치(이름이 틀리면 None)."""
+    i = pos + 1
+    limit = min(end, pos + 1 + _MAX_LABEL + 1)
+    while i < limit:
+        ch = text[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "[":
+            return None
+        if ch == "]":
+            return i
+        i += 1
+    return None
+
+
+def scan_inline(text: str, references: Mapping[str, LinkReference] | None = None) -> InlineScan:
+    """인라인 영역 원문을 훑는다(위치는 `text` 기준 코드 포인트).
+
+    Args:
+        text: 인라인 영역 원문(문단·제목 하나).
+        references: 참조 이름 키(`reference_key`) → 정의. 비었거나 None이면 참조 링크를 읽지 않는다.
+
+    Returns:
+        `InlineScan`.
+
+    >>> refs = {reference_key("Docs"): LinkReference("guide.md", 100, 108)}
+    >>> [(link.label, link.dest) for link in scan_inline("see [the guide][docs]", refs).links]
+    [('the guide', 'guide.md')]
+    """
+    refs = references or {}
+    has_link = "](" in text or (bool(refs) and "]" in text)
     if not has_link and "`" not in text and "<" not in text:
         return InlineScan(excluded=[], links=[])
     code = _code_spans(text)
@@ -259,35 +321,77 @@ def scan_inline(text: str) -> InlineScan:
                 stack.append(i)
             elif ch == "]" and stack:
                 opener = stack.pop()
+                image = opener > 0 and text[opener - 1] == "!" and not _escaped(text, opener - 1)
+                found: MarkdownLink | None = None
+                close = -1
                 if i + 1 < end and text[i + 1] == "(":
                     tail = _inline_link(text, i + 1, end)
                     if tail is not None:
                         d_start, d_end, close = tail
-                        image = (
-                            opener > 0
-                            and text[opener - 1] == "!"
-                            and not _escaped(text, opener - 1)
+                        found = MarkdownLink(
+                            start=opener,
+                            end=close,
+                            label=text[opener + 1 : i],
+                            dest=text[d_start:d_end],
+                            dest_start=d_start,
+                            dest_end=d_end,
                         )
-                        if image:
-                            excluded.append((opener - 1, close))
-                        else:
-                            links.append(
-                                MarkdownLink(
-                                    start=opener,
-                                    end=close,
-                                    label=text[opener + 1 : i],
-                                    dest=text[d_start:d_end],
-                                    dest_start=d_start,
-                                    dest_end=d_end,
-                                )
-                            )
-                            excluded.append((opener, close))
-                            stack.clear()
-                        i = close
-                        continue
+                if found is None and refs:
+                    found = _reference_link(text, opener, i, end, refs)
+                    if found is not None:
+                        close = found.end
+                if found is not None:
+                    if image:
+                        excluded.append((opener - 1, close))
+                    else:
+                        links.append(found)
+                        excluded.append((opener, close))
+                        stack.clear()
+                    i = close
+                    continue
             i += 1
     excluded.sort()
     return InlineScan(excluded=_merge(excluded), links=links)
+
+
+def _reference_link(
+    text: str, opener: int, closer: int, end: int, refs: Mapping[str, LinkReference]
+) -> MarkdownLink | None:
+    """`[글자]` 뒤의 참조 링크 꼴(`[이름]`·`[]`·없음)을 읽는다. 정의가 없는 이름이면 None.
+
+    CommonMark처럼 `[글자][이름]`의 이름이 정의에 없으면 링크가 아니다(`[글자]`만 줄임 꼴로 보지
+    않는다). `[글자][]`·`[글자]`는 글자를 이름으로 쓴다.
+    """
+    label_text = text[opener + 1 : closer]
+    stop = closer + 1
+    if stop < end and text[stop] == "[":
+        label_close = _label_end(text, stop, end)
+        if label_close is not None:
+            name = text[stop + 1 : label_close]
+            if name.strip():
+                key = reference_key(name)
+                return _reference(opener, label_close + 1, label_text, key, refs.get(key))
+            stop = label_close + 1  # `[]`: 글자를 이름으로(아래)
+    if not label_text.strip() or len(label_text) > _MAX_LABEL:
+        return None
+    key = reference_key(label_text)
+    return _reference(opener, stop, label_text, key, refs.get(key))
+
+
+def _reference(
+    start: int, end: int, label: str, key: str, ref: LinkReference | None
+) -> MarkdownLink | None:
+    if ref is None:
+        return None
+    return MarkdownLink(
+        start=start,
+        end=end,
+        label=label,
+        dest=ref.dest,
+        dest_start=ref.dest_start,
+        dest_end=ref.dest_end,
+        reference=key,
+    )
 
 
 def _merge(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:

@@ -11,13 +11,15 @@ export interface DeleteDialogProps {
   /** 대상별 추가 안내 문구(예: 이 팀으로 만든 대화 n개의 기록은 남습니다) */
   note?: string;
   busy?: boolean;
+  /** 사용처를 확인하는 중이면 true: 삭제 단추를 막고 "확인 중" 문구를 보인다(목록·체크 요구를 우회하지 못하게) */
+  checking?: boolean;
   error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /** 삭제 확인(`screens.md` 4.3). 사용처가 있으면 목록을 보여 주고 확인 체크를 요구한다. 열 때마다 새로 시작하도록 `open`일 때만 렌더한다. */
-export function DeleteDialog({ open, name, references = [], note, busy, error, onConfirm, onCancel }: DeleteDialogProps) {
+export function DeleteDialog({ open, name, references = [], note, busy, checking, error, onConfirm, onCancel }: DeleteDialogProps) {
   const [understood, setUnderstood] = useState(false);
   const needsAck = references.length > 0;
   return (
@@ -28,7 +30,7 @@ export function DeleteDialog({ open, name, references = [], note, busy, error, o
       actions={
         <>
           <Button onClick={onCancel}>{t.cancel}</Button>
-          <Button variant="danger" loading={busy === true} disabled={needsAck && !understood} onClick={onConfirm}>
+          <Button variant="danger" loading={busy === true} disabled={checking === true || (needsAck && !understood)} aria-disabled={checking === true || (needsAck && !understood)} onClick={onConfirm}>
             {t.delete.action}
           </Button>
         </>
@@ -38,6 +40,7 @@ export function DeleteDialog({ open, name, references = [], note, busy, error, o
         {error ? <Banner tone="danger">{error}</Banner> : null}
         <p className="ac-text">{t.delete.body}</p>
         {note ? <p className="ac-text">{note}</p> : null}
+        {checking === true ? <p className="ac-text" role="status">{t.delete.checking}</p> : null}
         {needsAck ? (
           <>
             <p className="ac-text">{t.delete.usedBy(references.length)}</p>

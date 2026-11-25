@@ -13,7 +13,7 @@
     - ``ERROR_MAP``·``export_error_reply``·``exporter_factories_of``.
     - 포트: ``DEFINITIONS_LOOKUP``(필수)·``EXPORT_DEPENDENCIES``·``SECRET_RULES``·
       ``PROJECT_FOLDERS``·``DEFINITIONS_SPACES``(선택, 5.7R.33k), 프로토콜
-      ``DefinitionLookup``·``ExportDependencies``.
+      ``DefinitionLookup``·``ExportDependencies``·``ScopedExportDependencies``(공간 기준 계산).
     - ``ProjectExports``·``ExportProjectError``·``ExportSource``: 요청 ``project``·``source`` →
       내보내기 서비스(쓰기 대상 = 등록 프로젝트 폴더, 서버 없이도 쓴다).
     - ``testing.local_definitions_module``: 단독 실행·테스트용 ``definitions.lookup`` 제공 모듈.
@@ -41,6 +41,7 @@ from .ports import (
     SECRET_RULES,
     DefinitionLookup,
     ExportDependencies,
+    ScopedExportDependencies,
     SecretRulesReader,
 )
 from .projects import ExportProjectError, ExportSource, ProjectExports
@@ -67,6 +68,7 @@ __all__ = [
     "ExportsModule",
     "LookupExportCatalog",
     "ProjectExports",
+    "ScopedExportDependencies",
     "SecretRulesReader",
     "TokenRequiredError",
     "build_router",

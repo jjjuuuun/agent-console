@@ -12,6 +12,7 @@
     "id": "id",
     "document": "document",
     "files": "files",
+    "content": "content",
     "text": "text",
     "base64": "base64"
   },

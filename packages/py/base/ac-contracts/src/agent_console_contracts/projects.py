@@ -10,6 +10,9 @@
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
 
+3.7.0(0.14.10, 더하기만): 종류 공통 거꾸로 참조 `GET /projects/copy/items/{kind}/{id}/references`의
+응답 `CopyItemReferences`(같은 공간에서 이 항목을 쓰는 정의, 삭제 확인 창).
+
 3.6.0(0.14.6, 더하기만): 복사 대화상자 항목의 버전 `CopyItem.version`(종류 공통 삭제의 `If-Match`에
 그대로 쓴다).
 
@@ -778,6 +781,32 @@ class CopyItem(ContractModel):
     )
 
 
+class CopyItemReferences(ContractModel):
+    """(3.7.0) 같은 공간에서 이 항목을 쓰는 정의(`GET /projects/copy/items/{kind}/{id}/references`).
+
+    삭제 확인 창의 "이 구성을 쓰는 구성" 목록이다. 서버는 종류 이름·참조 필드를 모르고, 등록된 참조
+    추출(정의 연동의 X25, 종류 기여의 `references`)로 그 공간의 정의를 하나씩 본다. 다른 공간(공용 ↔
+    프로젝트)의 정의는 보지 않는다 — 사본은 독립이다.
+    """
+
+    items: list[CopyItem] = Field(
+        default_factory=list,
+        description=(
+            "이 항목을 참조하는 같은 공간의 정의(저장소 종류 순 → 저장소 순서, 대상 자신 제외). "
+            "`version`은 "
+            "그 정의의 버전이다."
+        ),
+    )
+    checked: bool = Field(
+        default=True,
+        description=(
+            "참조 추출이 있어 검사했다. false = 검사 수단이 없다(예: 정의 연동이 꺼짐) — `items`가 "
+            "비어도 '쓰는 곳 없음'이 아니며 `warnings`에 info `project.references_unavailable`."
+        ),
+    )
+    warnings: list[Issue] = Field(default_factory=list, description="검사 이슈(위치 없음).")
+
+
 # ---------------------------------------------------------------- 폴더 확인·탐색(design §PI.6)
 
 
@@ -1199,6 +1228,7 @@ __all__ = [
     "CopyApplyRequest",
     "CopyApplyResult",
     "CopyItem",
+    "CopyItemReferences",
     "CopyKindInfo",
     "CopyPlan",
     "CopyPlanItem",

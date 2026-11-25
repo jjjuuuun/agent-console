@@ -110,6 +110,7 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 `kind.with_summary_fields(*fields)`는 목록 요약 필드를 더한 사본이다.
 `DefinitionKind.reserved_ids`(기본 빈 값)는 그 종류 id로 쓰면 안 되는 말이다(대소문자 무시, 예: 같은 깊이의 고정 REST 경로
 `/<종류>/check`와 겹치는 id). 저장소는 이 값을 보지 않는다. 만들기·복사 계획처럼 id를 정하는 쪽이 읽어 피하거나 새 id를 제안한다.
+`DefinitionKind.title`(기본 None)은 종류 표시 이름이다(복사 대화상자·구성 표의 종류 열). 기본 종류는 값을 가진다. 저장소는 이 값을 보지 않는다.
 
 이름만 받고 id를 정해야 할 때는 `slug_id(name, fallback=)`·`unique_id(name, taken, fallback=)`를 쓴다(악센트 떼기, 허용 밖
 글자 묶음 → `-`, 소문자, 120자, 겹치면 `-2`·`-3`…, 대소문자 무시).
