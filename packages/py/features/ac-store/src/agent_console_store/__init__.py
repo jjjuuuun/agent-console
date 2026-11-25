@@ -37,7 +37,7 @@ from .errors import (
 from .file_store import FileDefinitionStore
 from .graphs import list_graph_summaries, to_versioned_graph
 from .hashing import HashFn, canonical_json, default_hash
-from .ids import SLUG_MAX_CHARS, slug_id, unique_id
+from .ids import SLUG_MAX_CHARS, NoFreeId, numbered_id, slug_id, unique_id
 from .interfaces import (
     DefinitionStore,
     DefinitionSummary,
@@ -83,6 +83,7 @@ from .project_assign import (
 )
 from .records import (
     RECORDS_SPACES_PORT,
+    BatchRecordsSpaces,
     RecordsAbsent,
     RecordsDb,
     RecordsHandle,
@@ -146,6 +147,7 @@ __all__ = [
     "AssignCandidate",
     "AssignPlan",
     "BaseDefinitionStore",
+    "BatchRecordsSpaces",
     "CacheShut",
     "ContentTooLarge",
     "DefinitionCorrupt",
@@ -176,6 +178,7 @@ __all__ = [
     "MovePartialError",
     "MoveSpec",
     "MoveVerifyError",
+    "NoFreeId",
     "NotFound",
     "ObservedVersionRepository",
     "OpenCache",
@@ -230,6 +233,7 @@ __all__ = [
     "list_graph_summaries",
     "load_yaml_text",
     "merge_into",
+    "numbered_id",
     "open_records_db",
     "open_sqlite",
     "page_across_sources",

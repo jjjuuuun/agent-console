@@ -65,7 +65,8 @@
     - 사용처: ``definition_references(kind, id, *, graphs, agents, workspace, node_types)``
       (노드 `binds`·설정 층 리소스 첨부로 찾는다). 반대 방향(쓰는 정의 — 에이전트·리소스·
       자식 팀 구성, 내보내기·쓰는 정의 먼저 쓰기용):
-      ``graph_dependencies(plan, *, workspace)``·``agent_dependencies(agent, *, workspace)``
+      ``graph_dependencies(plan, *, workspace, scope_layers=())``·
+      ``agent_dependencies(agent, *, workspace, scope_layers=())``
       -> ``DefinitionDependency[]``.
     - 첨부 검사: ``agent_attachments``·``graph_attachments(graph, *, plan)``·
       ``settings_attachments``

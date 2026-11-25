@@ -74,10 +74,15 @@ class RunsUsageLink:
             lambda: ctx.port(RECORDS_SPACES), SqliteStorage, prefix=cfg.records_space_prefix
         )
         rollups = IncrementalTokenRollups(
-            runs, events, extra=project_rollup_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores)
+            runs,
+            events,
+            extra=project_rollup_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores),
+            batch=stores.batch,  # 상한보다 프로젝트가 많아도 순회 중에 풀을 흔들지 않는다
         )
         query = MergedEventQuery(
-            events, project_event_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores)
+            events,
+            project_event_sources(lambda: ctx.port(PROJECTS_LOOKUP), stores),
+            batch=stores.batch,
         )
         ctx.provide(USAGE_EVENT_QUERY, query)
         ctx.provide(USAGE_TOKEN_ROLLUPS, rollups)

@@ -320,3 +320,50 @@ describe("첫 맞춤은 컨테이너 크기가 정해진 뒤에도 한다 (4R.21
     }
   });
 });
+
+describe("사용자가 먼저 움직인 보기는 지연된 첫 맞춤이 덮어쓰지 않는다 (REL.4)", () => {
+  it("첫 맞춤 전에 끌어서 보기를 움직이면 이후 크기 확정·재시도가 그 보기를 유지한다", async () => {
+    let width = 160;
+    const original = globalThis.ResizeObserver;
+    const proto = HTMLElement.prototype;
+    Object.defineProperty(proto, "offsetWidth", { configurable: true, get: () => width });
+    Object.defineProperty(proto, "offsetHeight", { configurable: true, get: () => 80 });
+    const watchers: Array<() => void> = [];
+    globalThis.ResizeObserver = class {
+      constructor(private cb: ResizeObserverCallback) {}
+      observe(target: Element) {
+        watchers.push(() => this.cb([{ target, contentRect: { width: 1000, height: 600 } } as ResizeObserverEntry], this as unknown as ResizeObserver));
+      }
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      setup(sampleGraph());
+      await settle();
+      const viewport = () => document.querySelector<HTMLElement>(".react-flow__viewport")!.style.transform;
+      const pane = document.querySelector<HTMLElement>(".react-flow__pane")!;
+      // 크기가 확정되는 즉시(첫 맞춤 재시도 타이머가 돌기 전에) 사용자가 끌어서 옮긴다
+      let moved = "";
+      await act(async () => {
+        for (const w of watchers) w();
+        fireEvent.mouseDown(pane, { view: window, button: 0, buttons: 1, clientX: 50, clientY: 50 });
+        fireEvent.mouseMove(window, { view: window, buttons: 1, clientX: 90, clientY: 80 });
+        fireEvent.mouseUp(window, { view: window, clientX: 90, clientY: 80 });
+        moved = viewport();
+        await new Promise((r) => setTimeout(r, 1300));
+      });
+      // 사용자가 움직인 뒤 창 크기가 바뀌어도 그 보기를 유지한다
+      width = 300;
+      await act(async () => {
+        for (const w of watchers) w();
+        await new Promise((r) => setTimeout(r, 1300));
+      });
+      expect(moved).toMatch(/scale\(/);
+      expect(viewport()).toBe(moved);
+    } finally {
+      globalThis.ResizeObserver = original;
+      delete (proto as unknown as Record<string, unknown>).offsetWidth;
+      delete (proto as unknown as Record<string, unknown>).offsetHeight;
+    }
+  });
+});

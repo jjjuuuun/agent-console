@@ -24,6 +24,7 @@ from agent_console_contracts import (
     Position,
 )
 from agent_console_graph import InvalidSchemaError, PortResolver, check_instance, node_ports
+from agent_console_numbered_id import numbered_id
 
 from ._plan import TeamPlan
 
@@ -91,9 +92,7 @@ class SuggestionBuilder:
 
     @staticmethod
     def _new_id(base: str, used: set[str]) -> str:
-        candidate, n = base, 2
-        while candidate in used:
-            candidate, n = f"{base}-{n}", n + 1
+        candidate = numbered_id(base, used.__contains__)
         used.add(candidate)
         return candidate
 

@@ -1,6 +1,7 @@
 """이름 → 정의 id(`slug_id`·`unique_id`) — 위키·SDD가 함께 쓰는 규칙."""
 
 import re
+from pathlib import Path
 
 import pytest
 
@@ -47,3 +48,28 @@ def test_unique_id_case_insensitive() -> None:
 
 def test_fallback_is_also_deduplicated() -> None:
     assert unique_id("노트", ["wiki"], fallback="wiki") == "wiki-2"
+
+
+def test_numbered_rule_is_the_shared_one() -> None:
+    """번호 붙이기는 `agent_console_numbered_id` 하나를 다시 내보낸 것이다(사본 없음)."""
+    import agent_console_numbered_id
+    from agent_console_store import NoFreeId, numbered_id
+    from agent_console_store.ids import numbered_id as from_ids
+
+    assert numbered_id is agent_console_numbered_id.numbered_id is from_ids
+    assert NoFreeId is agent_console_numbered_id.NoFreeId
+
+
+def test_backup_names_get_numbers_when_same_second(tmp_path: Path) -> None:
+    """같은 초에 두 번 백업하면 두 번째 이름에 `-2`가 붙는다(번호 규칙 공용)."""
+    from agent_console_store import open_records_db
+
+    path = tmp_path / "records.sqlite3"
+    db = open_records_db(path, backup_dir=tmp_path / "bk", clock=lambda: 0.0)
+    db.writable_engine()
+    db.close()
+    first = open_records_db(path, backup_dir=tmp_path / "bk", clock=lambda: 0.0)
+    made = [first._backup({"legacy": "0001"}), first._backup({"legacy": "0001"})]
+    first.close()
+    assert made[0].name.endswith(".sqlite3")
+    assert made[1].name == made[0].name.removesuffix(".sqlite3") + "-2.sqlite3"

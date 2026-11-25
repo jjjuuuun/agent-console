@@ -9,6 +9,10 @@
   ``가져옴: <공간> <종류>/<id> @<버전 앞 7자>``를 남긴다.
 - 옛 범위 필드(``project``)는 사본에서 뺀다.
 - 리소스 본문 파일(여러 파일·단일 본문)도 함께 복사한다.
+- 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가 그 종류의 예약어
+  (``DefinitionKind.reserved_ids``)면 아무것도 쓰지 않고 422 ``validation_failed``
+  (``details.issues`` = error ``project.copy_reserved_id``, 문구는 ``messages``의
+  ``project.copy_reserved_id.rename``·``project.copy_reserved_id.write``).
 - 쓰기 전에 대상 공간의 비밀 규칙으로 모든 문서를 검사하고, 하나라도 걸리면 아무것도 쓰지 않고
   422(``SecretRejected``, 위치만).
 - 계획도 같은 판정(``scan_secrets`` + 대상 공간 비밀 규칙)을 미리 돌려 걸린 항목을 막힘
@@ -65,6 +69,7 @@ from agent_console_projects import (
     find_referrers,
     legacy_items,
     renames_of,
+    reserved_target_issues,
     without_scope_field,
 )
 from agent_console_secret_rules import SecretRules
@@ -506,8 +511,12 @@ class CopyService:
             messages=self._messages,
             target_label=copy_target_label(dst.project_name, messages=self._messages),
             plain_secrets=plain,
-            reserved_ids={k.name: k.reserved_ids for k in self._kind_info() if k.reserved_ids},
+            reserved_ids=self._reserved_ids(),
         )
+
+    def _reserved_ids(self) -> dict[str, tuple[str, ...]]:
+        """종류 → 예약어(정의 종류 데이터 ``DefinitionKind.reserved_ids``, 기여 종류 포함)."""
+        return {k.name: k.reserved_ids for k in self._kind_info() if k.reserved_ids}
 
     def legacy_plan(self, project_id: str) -> CopyPlan:
         """옛 프로젝트 전용 정의(라이브러리의 ``project`` 필드 = 이 id) → 이 프로젝트 공간 계획."""
@@ -521,12 +530,28 @@ class CopyService:
         """고른 동작을 적용한다(항목별 결과, 계획 뒤에 바뀐 항목만 ``conflict``).
 
         Raises:
+            ProjectError: 대상에 쓸 id(copy·overwrite·rename)가 그 종류의 예약어다(422
+                ``validation_failed``, ``details.issues`` = error ``project.copy_reserved_id``,
+                아무것도 쓰지 않음).
             ConfigReadonly: 대상 프로젝트 폴더에 쓸 수 없다(409).
             SecretRejected: 쓸 문서에 평문 비밀이 있다(422, 아무것도 쓰지 않음).
         """
         src, dst = self._pair(request.source, request.target)
-        source_index = space_index(src.store, src.kinds)
         target_index = space_index(dst.store, dst.kinds)
+        reserved = reserved_target_issues(
+            request.items,
+            self._reserved_ids(),
+            target_index=target_index,
+            messages=self._messages,
+            target_label=copy_target_label(dst.project_name, messages=self._messages),
+        )
+        if reserved:
+            raise ProjectError(
+                ErrorCodes.VALIDATION_FAILED,
+                " ".join(i.message for i in reserved),
+                {"issues": [i.model_dump(mode="json", exclude_none=True) for i in reserved]},
+            )
+        source_index = space_index(src.store, src.kinds)
         decisions = apply_decisions(
             request.items,
             source_index=source_index,

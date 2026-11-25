@@ -289,9 +289,14 @@ class WikiRepository:
 
     def index(self) -> WikiIndex:
         """지금 파일로 링크 색인을 만든다(파싱 캐시)."""
+        return self._index_and_files()[0]
+
+    def _index_and_files(self) -> tuple[WikiIndex, list[PageFile]]:
+        """색인과 그때 나열한 파일 목록(같은 요청에서 목록을 다시 나열하지 않게)."""
         cache = self._cache
         if cache is not None and len(cache) > self._cache_cap:
             cache.clear()
+        files = self._files()
         parsed, issues = read_pages(
             self.pages,
             self.syntax,
@@ -299,11 +304,12 @@ class WikiRepository:
             max_page_bytes=self.limits.max_page_bytes,
             timeout_ms=self.limits.parse_timeout_ms,
             cache=cache,
+            files=files,
         )
         self._list_issues = issues
         index = build_index(parsed, self.syntax, home=self.home)
         index.issues.extend(issues)
-        return index
+        return index, files
 
     def _summaries(self) -> dict[str, HistorySummary]:
         if self.history is None:
@@ -313,12 +319,16 @@ class WikiRepository:
         except Exception:  # 기록 DB를 못 읽어도 페이지는 보인다
             return {}
 
-    def _times(self, index: WikiIndex) -> dict[str, PageTimes]:
+    def _times(
+        self, index: WikiIndex, files: Sequence[PageFile] | None = None
+    ) -> dict[str, PageTimes]:
+        """페이지마다 만든·고친 시각(기록 요약, 없으면 파일 수정 시각 — ``files``가 있으면 그
+        목록에서, 없으면 다시 나열한다)."""
         summaries = self._summaries()
         out: dict[str, PageTimes] = {}
         mtimes: dict[str, float] = {}
         if len(summaries) < len(index.pages):
-            for info in self._files():
+            for info in files if files is not None else self._files():
                 page = page_path_for_file(info.file, self.syntax.page_extensions)
                 if page is not None:
                     mtimes.setdefault(page, info.mtime)
@@ -340,8 +350,8 @@ class WikiRepository:
 
     def list_pages(self, *, prefix: str | None = None, tag: str | None = None) -> WikiPageList:
         """페이지 요약 목록(경로 순). 상한을 넘으면 `truncated`·`total`."""
-        index = self.index()
-        times = self._times(index)
+        index, files = self._index_and_files()
+        times = self._times(index, files)
         key = self.syntax.key
         items = [
             self._summary(index, path, times.get(path))
@@ -366,7 +376,7 @@ class WikiRepository:
         found = self.read(path)
         with self._lock:
             self._sync_external(found)
-        index = self.index()
+        index, files = self._index_and_files()
         if found.path not in index.pages:
             # 크기 상한을 넘어 색인에 없는 페이지: 링크 없이 본문만.
             parsed = parse_page(found.path, found.data, self.syntax)
@@ -380,7 +390,7 @@ class WikiRepository:
                 issues=list(parsed.issues),
             )
         page = index.pages[found.path]
-        times = self._times(index)
+        times = self._times(index, files)
         return WikiPageView(
             page=self._summary(index, found.path, times.get(found.path)),
             content=found.text,
@@ -437,8 +447,8 @@ class WikiRepository:
 
     def lint(self) -> WikiLintReport:
         """점검(기본 점검 + 점검 규칙 + 쓰기 규칙 다시 보기)."""
-        index = self.index()
-        times = self._times(index)
+        index, files = self._index_and_files()
+        times = self._times(index, files)
 
         def read(path: str) -> str | None:
             found = self.current(path)

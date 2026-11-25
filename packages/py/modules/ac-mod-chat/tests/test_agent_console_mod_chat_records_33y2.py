@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from agent_console_store import (
     RecordsDb,
     RecordsUnavailable,
     SqliteDatabase,
+    UnknownSpace,
     open_records_db,
 )
 
@@ -232,3 +234,40 @@ async def test_for_project_ready_waits_for_restart_policy(spaces: Spaces) -> Non
     assert await service.for_project_ready("pa") is space  # 두 번째는 기다릴 것 없이 같은 서비스
     assert await service.for_project_ready(None) is service
     await service.aclose()
+
+
+# ---- 등록이 풀린 프로젝트(모르는 기록 공간) 읽기(REL.3 후속, mod-runs와 같은 정책) ---------------
+class _GoneRuns:
+    """``runs`` 연결: 공간에 묶은 읽기가 모르는 공간(``UnknownSpace``)을 던진다."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+        self.asked: list[str | None] = []
+
+    def for_project(self, project_id: str | None) -> _GoneRuns:
+        self.asked.append(project_id)
+        return self
+
+    def list(self, **filters: Any) -> list[Any]:
+        raise self.error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [UnknownSpace("gone"), RecordsUnavailable("readonly"), LookupError("gone")],
+    ids=["unknown-space", "records-unavailable", "lookup"],
+)
+def test_busy_check_skips_unreadable_space_quietly(
+    spaces: Spaces, error: Exception, caplog: pytest.LogCaptureFixture
+) -> None:
+    """다른 곳에서 도는 턴 확인이 읽을 수 없는 공간이면 "없음"이다(예외 로그 없이)."""
+    service = _service(spaces)
+    runs = _GoneRuns(error)
+    service.connect(runs=runs)
+    space = service.for_project("gone")
+    with caplog.at_level(logging.ERROR):
+        assert space.active_run_id("c1") is None
+        assert not space.is_busy("c1")
+    assert runs.asked
+    assert set(runs.asked) == {"gone"}  # 그 공간에 묶어 읽었다
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR], caplog.text

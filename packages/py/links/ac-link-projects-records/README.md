@@ -14,6 +14,9 @@
   (`<상태 폴더>/records-spool/<등록 id>/<run id>.jsonl`)을 둔다. 다음에 그 공간을 열면 다시 쓰고(이벤트 `seq`
   중복 무시) 지운다.
 - 열린 공간은 상한(`max_open_spaces`)과 유휴 시간(`idle_close_seconds`)으로 관리한다. 밀려난 핸들은 다시 쓰면 살아난다.
+- 여러 공간을 차례로 읽는 순회(사용량 집계 등)는 `pool.batch()` 블록 안에서 돈다(`BatchRecordsSpaces`, 소비 쪽은
+  `RecordsStores.batch()`). 블록 안에서 연 공간은 끝날 때까지 상한으로 밀어내지 않고, 가장 바깥 블록이 끝날 때 오래 안 쓴 것부터
+  상한을 맞춘다. 그래서 프로젝트가 상한보다 많아도 순회 한 번에 프로젝트마다 한 번만 열고, 다음 순회는 상한 밖 공간만 다시 연다.
 
 ## 설치
 
@@ -59,8 +62,17 @@ pip install agent-console-link-projects-records
 
 ## 설정 (`modules.options.link-projects-records`)
 
-`space_prefix`·`max_open_spaces`(기본 8)·`idle_close_seconds`(300)·`busy_timeout_ms`(5000)·`backups_keep`(3)·
-`journal`(auto = 네트워크 드라이브면 DELETE)·`spool_dir`. 모두 고급 설정이다.
+| 키 | 기본 | 뜻 |
+| --- | --- | --- |
+| `space_prefix` | `project:` | 공간 이름에서 떼어 낼 접두(나머지가 프로젝트 등록 id) |
+| `max_open_spaces` | 8 | 동시에 열어 둘 기록 DB 수. 넘으면 오래 안 쓴 것부터 연결을 닫는다(`batch()` 블록 안에서는 블록이 끝날 때). 등록 프로젝트 수 이상이면 사용량 집계가 다시 열지 않는다 |
+| `idle_close_seconds` | 300 | 이 시간 동안 안 쓴 기록 DB의 연결을 닫는다(0 = 닫지 않음) |
+| `busy_timeout_ms` | 5000 | 다른 앱이 쓰는 중일 때 잠금을 기다리는 시간 |
+| `backups_keep` | 3 | 올리기 전 백업 보관 개수 |
+| `journal` | `auto` | `auto`·`WAL`·`DELETE`(auto = 네트워크 드라이브면 DELETE) |
+| `spool_dir` | `records-spool` | 대기 파일 폴더 이름(앱 상태 폴더 안) |
+
+모두 고급 설정이다.
 
 `session_archive{enabled, dir}`(기본 켬·`sessions`): 노드가 끝나면 대화 세션 원본을
 `<폴더>/.agent-console/<dir>/<backend>/<session>/`에 복사하고(`runs.event` 구독, 백엔드 보관 기능은 선택 포트 `runs.session_archive`),

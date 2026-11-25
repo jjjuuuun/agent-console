@@ -97,6 +97,7 @@ def _assembly(
     *,
     contributions: bool,
     items: Sequence[KindContribution[Any]] = CONTRIBUTIONS,
+    options: Mapping[str, Any] | None = None,
 ) -> Assembly:
     mods: list[Any] = [
         ProjectsModule(dialog_providers=[], platform="linux", which=lambda _n: None),
@@ -108,7 +109,9 @@ def _assembly(
         environ={"HOME": str(tmp_path)},
         paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
     )
-    opts = {"mod-projects": {"folder_dialog": {"include_default_providers": False}}}
+    opts = {
+        "mod-projects": {"folder_dialog": {"include_default_providers": False}, **(options or {})}
+    }
     return assemble(mods, ModulesConfig(options=opts), base=base)
 
 
@@ -394,3 +397,153 @@ def test_copy_plan_suggests_rename_for_reserved_ids(tmp_path: Path) -> None:
         assert spaces is not None
         pa = spaces.open("pa").definitions
         assert sorted(pa.list_ids("guarded")) == ["check-2", "plain"]
+
+
+def _rename_request(
+    target: str | None, plan: Mapping[str, Any], new_ids: Mapping[tuple[str, str], str]
+) -> dict[str, Any]:
+    return {
+        "source": {"project_id": None},
+        "target": {"project_id": target},
+        "items": [
+            {
+                "kind": i["kind"],
+                "id": i["id"],
+                "action": "rename",
+                "new_id": new_ids[(i["kind"], i["id"])],
+                "source_version": i["source_version"],
+                "target_version": i["target_version"],
+            }
+            for i in plan["items"]
+        ],
+    }
+
+
+# 예약어는 종류 데이터(``DefinitionKind.reserved_ids``)에서 온다 — 코드 상수에 없는 말을 쓴다.
+GUARDED = DefinitionKind(name="guarded", directory="guarded", reserved_ids=("check", "variables"))
+MEMO = DefinitionKind(name="memo", directory="memos", reserved_ids=("zeta-route",))
+OPEN = DefinitionKind(name="open", directory="open")
+RESERVED_ITEMS = (*CONTRIBUTIONS, *(KindContribution(k) for k in (GUARDED, MEMO, OPEN)))
+
+
+def test_copy_apply_rejects_reserved_rename_ids(tmp_path: Path) -> None:
+    """REL.6: 사용자가 넣은 rename 새 id가 그 종류의 예약어면 422, 아무것도 쓰지 않는다."""
+    assembly = _assembly(tmp_path, contributions=True, items=RESERVED_ITEMS)
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    lib.create("guarded", {"id": "plain", "name": "보통"})
+    lib.create("memo", {"id": "m", "name": "메모"})
+    lib.create("open", {"id": "o", "name": "열림"})
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        plan = _plan(client, None, "pa", [("guarded", "plain"), ("memo", "m"), ("open", "o")])
+        assert not [w for w in plan["warnings"] if w["code"] == "project.copy_reserved_id"]
+        new_ids = {("guarded", "plain"): "Check", ("memo", "m"): "zeta-route", ("open", "o"): "o2"}
+        response = client.post(
+            f"{API}/projects/copy/apply", json=_rename_request("pa", plan, new_ids)
+        )
+        assert response.status_code == 422, response.text
+        error = response.json()["error"]
+        assert error["code"] == "validation_failed"
+        issues = error["details"]["issues"]
+        assert [(i["code"], i["severity"], i["path"]) for i in issues] == [
+            ("project.copy_reserved_id", "error", "/items/0/new_id"),
+            ("project.copy_reserved_id", "error", "/items/1/new_id"),
+        ]
+        assert [i["details"] for i in issues] == [
+            {
+                "kind": "guarded",
+                "id": "plain",
+                "action": "rename",
+                "target_id": "Check",
+                "new_id": "Check",
+                "reserved": ["check", "variables"],
+                "suggested_id": "Check-2",
+            },
+            {
+                "kind": "memo",
+                "id": "m",
+                "action": "rename",
+                "target_id": "zeta-route",
+                "new_id": "zeta-route",
+                "reserved": ["zeta-route"],
+                "suggested_id": "zeta-route-2",
+            },
+        ]
+        assert "Check-2" in issues[0]["message"]
+        assert "프로젝트" in issues[0]["message"]
+        assert issues[0]["message"] in error["message"]
+        spaces = assembly.port(PROJECTS_SPACES)
+        assert spaces is not None
+        pa = spaces.open("pa").definitions
+        for kind in ("guarded", "memo", "open"):
+            assert pa.list_ids(kind) == []  # 하나라도 걸리면 아무것도 쓰지 않는다
+
+        # 예약어가 없는 종류는 같은 말도 받는다(목록은 종류 데이터에서 온다)
+        only_open = {**plan, "items": [i for i in plan["items"] if i["kind"] == "open"]}
+        ok = _rename_request("pa", only_open, {("open", "o"): "check"})
+        response = client.post(f"{API}/projects/copy/apply", json=ok)
+        assert response.status_code == 200, response.text
+        assert [i["status"] for i in response.json()["items"]] == ["renamed"]
+        assert pa.list_ids("open") == ["check"]
+
+
+def test_copy_apply_reserved_rename_message_is_configurable(tmp_path: Path) -> None:
+    """REL.6: 문구는 ``modules.options.mod-projects.messages``의 키로 바꾼다(코드는 그대로)."""
+    assembly = _assembly(
+        tmp_path,
+        contributions=True,
+        items=RESERVED_ITEMS,
+        options={"messages": {"project.copy_reserved_id.rename": "${id} 금지 → ${suggested}"}},
+    )
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    lib.create("guarded", {"id": "plain", "name": "보통"})
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        plan = _plan(client, None, "pa", [("guarded", "plain")])
+        response = client.post(
+            f"{API}/projects/copy/apply",
+            json=_rename_request("pa", plan, {("guarded", "plain"): "variables"}),
+        )
+        assert response.status_code == 422, response.text
+        error = response.json()["error"]
+        assert error["message"] == "variables 금지 → variables-2"
+        assert error["details"]["issues"][0]["code"] == "project.copy_reserved_id"
+
+
+def test_copy_apply_rejects_reserved_source_id_kept_as_is(tmp_path: Path) -> None:
+    """REL.6: 계획 경고를 두고 예약어 원본 id를 copy로 그대로 쓰면 422, 아무것도 쓰지 않는다."""
+    assembly = _assembly(tmp_path, contributions=True, items=RESERVED_ITEMS)
+    lib: Any = assembly.port(DEFINITIONS_STORE)
+    lib.create("guarded", {"id": "check", "name": "체크"})
+    lib.create("open", {"id": "check", "name": "열림"})
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        plan = _plan(client, None, "pa", [("guarded", "check"), ("open", "check")])
+        items = [
+            {
+                "kind": i["kind"],
+                "id": i["id"],
+                "action": "copy",
+                "source_version": i["source_version"],
+                "target_version": i["target_version"],
+            }
+            for i in plan["items"]
+        ]
+        response = client.post(
+            f"{API}/projects/copy/apply",
+            json={"source": {"project_id": None}, "target": {"project_id": "pa"}, "items": items},
+        )
+        assert response.status_code == 422, response.text
+        error = response.json()["error"]
+        [issue] = error["details"]["issues"]  # 예약어가 없는 종류(open)는 같은 말도 통과
+        assert issue["code"] == "project.copy_reserved_id"
+        assert issue["path"] == "/items/0/id"
+        assert issue["details"]["action"] == "copy"
+        assert issue["details"]["target_id"] == "check"
+        assert issue["details"]["suggested_id"] == "check-2"
+        assert error["message"] == issue["message"]
+        spaces = assembly.port(PROJECTS_SPACES)
+        assert spaces is not None
+        pa = spaces.open("pa").definitions
+        assert pa.list_ids("guarded") == []
+        assert pa.list_ids("open") == []

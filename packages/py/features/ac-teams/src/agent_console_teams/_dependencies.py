@@ -4,15 +4,17 @@
 노드 타입·연결 종류 이름을 모른다. 에이전트 노드는 계획의 `agent_refs`(디스크립터 `binds`),
 중첩 팀 노드는 `team_refs`·`team_versions`(디스크립터 `binds.kind == team_kind`),
 리소스 연결은 `attachments_of`, 설정 층 첨부는 `resources[]`(`TeamConventions` 키)로 찾는다.
+범위 층(`scope_layers`, 예: 프로젝트 층)의 첨부는 공통 층 첨부 다음에 넣는다(설정 층 순서와 같다).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from agent_console_contracts import Agent, ResourceAttachment, WorkspaceSettings
+from agent_console_settings import Layer
 from agent_console_teams._attachments import _list, _settings_list
 from agent_console_teams._conventions import DEFAULT_CONVENTIONS, TeamConventions
 from agent_console_teams._plan import TeamPlan
@@ -63,16 +65,35 @@ def _dependency(
     )
 
 
+def _shared_layers(
+    workspace: WorkspaceSettings | None, scope_layers: Sequence[Layer], *, kind: str
+) -> Iterator[DefinitionDependency]:
+    """모든 구성원에게 적용되는 층의 첨부(`shared`): 공통 층 → 범위 층(목록 순서)."""
+    if workspace is not None:
+        yield from _attachments(workspace.agent_defaults, kind=kind, shared=True)
+    for layer in scope_layers:
+        yield from _attachments(layer.value, kind=kind, shared=True)
+
+
 def graph_dependencies(
     plan: TeamPlan,
     *,
     workspace: WorkspaceSettings | None = None,
     conventions: TeamConventions | None = None,
+    scope_layers: Sequence[Layer] = (),
 ) -> list[DefinitionDependency]:
     """팀 구성이 쓰는 정의: 노드마다(그래프 순서) 묶인 에이전트 → 중첩 팀 노드의 자식 팀 구성
     (종류 `team_kind`, 고정 버전은 `version`) → 노드 층 첨부 → 리소스 연결 첨부, 그다음 팀 구성 층
-    첨부·공통 층 첨부(`shared`). 에이전트 정의 자신의 첨부·자식 팀 구성 안의 정의는 넣지 않는다
-    (`agent_dependencies`, 자식에 다시 부른다). 같은 항목이 여러 번 나올 수 있다(쓰는 쪽이 고른다).
+    첨부·공통 층 첨부·범위 층 첨부(`shared`). 에이전트 정의 자신의 첨부·자식 팀 구성 안의 정의는
+    넣지 않는다(`agent_dependencies`, 자식에 다시 부른다). 같은 항목이 여러 번 나올 수 있다(쓰는
+    쪽이 고른다).
+
+    Args:
+        plan: 해석한 팀 구성.
+        workspace: 공통 설정(없으면 공통 층 첨부를 넣지 않는다).
+        conventions: 키 이름 약속(없으면 계획의 약속).
+        scope_layers: 공통 바로 아래 범위 층(`layers_for`와 같은 값, 예: 프로젝트 층). 값의
+            `resources[]` 첨부를 넣는다.
     """
     c = conventions or plan.conventions or DEFAULT_CONVENTIONS
     out: list[DefinitionDependency] = []
@@ -100,8 +121,7 @@ def graph_dependencies(
                 _dependency(att.attachment, kind=c.resource_kind, node_id=node.id, shared=False)
             )
     out.extend(_attachments(plan.graph.settings, kind=c.resource_kind, shared=True))
-    if workspace is not None:
-        out.extend(_attachments(workspace.agent_defaults, kind=c.resource_kind, shared=True))
+    out.extend(_shared_layers(workspace, scope_layers, kind=c.resource_kind))
     return out
 
 
@@ -110,11 +130,12 @@ def agent_dependencies(
     *,
     workspace: WorkspaceSettings | None = None,
     conventions: TeamConventions = DEFAULT_CONVENTIONS,
+    scope_layers: Sequence[Layer] = (),
 ) -> list[DefinitionDependency]:
-    """에이전트가 쓰는 정의: 에이전트 층 첨부, 그다음 공통 층 첨부(`shared`)."""
+    """에이전트가 쓰는 정의: 에이전트 층 첨부, 그다음 공통 층·범위 층 첨부(`shared`).
+
+    `scope_layers`는 `graph_dependencies`와 같다(공통 바로 아래 범위 층, 예: 프로젝트 층).
+    """
     out = list(_attachments(agent, kind=conventions.resource_kind))
-    if workspace is not None:
-        out.extend(
-            _attachments(workspace.agent_defaults, kind=conventions.resource_kind, shared=True)
-        )
+    out.extend(_shared_layers(workspace, scope_layers, kind=conventions.resource_kind))
     return out

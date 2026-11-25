@@ -601,3 +601,23 @@ def test_ports_are_declared_on_the_descriptor() -> None:
     assert [p.name for p in d.provides] == ["records.spaces", "records.sessions", "server.warnings"]
     assert [p.name for p in d.optional] == ["runs.session_archive", "runs.reader"]
     assert [p.name for p in d.requires] == [PROJECTS_SPACES.name]
+
+
+def test_batch_defers_cap_until_outermost_block_ends(tmp_path: Path) -> None:
+    """``batch()`` 안에서는 상한으로 밀어내지 않고(받은 엔진이 그대로), 가장 바깥 블록이 끝날 때
+    오래 안 쓴 것부터 맞춘다."""
+    from agent_console_store import BatchRecordsSpaces
+
+    folders = {n: _folder(tmp_path, n) for n in "abcd"}
+    pool = _pool(tmp_path, FolderSpaces(folders), [RUNS_BRANCH], options=PoolOptions(max_open=2))
+    assert isinstance(pool, BatchRecordsSpaces)
+    with pool.batch():
+        engines = {n: pool.open(f"project:{n}").writable_engine() for n in "ab"}
+        with pool.batch():
+            for n in "cd":
+                engines[n] = pool.open(f"project:{n}").writable_engine()
+        assert len(pool.open_spaces()) == 4  # 안쪽 블록이 끝나도 바깥 블록 동안은 그대로
+        for n in "abcd":
+            assert pool.open(f"project:{n}").writable_engine() is engines[n]  # 다시 열지 않았다
+    assert pool.open_spaces() == ["project:c", "project:d"]
+    pool.close_all()

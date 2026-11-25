@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- REL.2: 선택 능력 `BatchRecordsSpaces`(`batch()` 블록 — 그 안에서 연 공간을 열린 핸들 상한으로 밀어내지 않는다)와 `RecordsStores.batch()`(포트가 그 능력이면 그 블록, 아니면 빈 블록). 여러 프로젝트를 차례로 읽는 순회용. 더하기만.
+- REL.5: 겹치면 `-n` 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합치고 `numbered_id`·`NoFreeId`를 다시 내보낸다(`agent_console_store`·`agent_console_store.ids`). `unique_id`·기록 DB 백업 이름이 그것을 쓴다(동작 같음). 새 의존 `agent-console-numbered-id`.
 - FU.18: `DefinitionKind.title`(종류 표시 이름, 기본 None, 저장소는 보지 않음). 기본 종류 `graph`·`agent`·`resource`·`settings`가 값을 가진다. 더하기만, 표 변경 없음.
 
 - FU.11: 여러 Run 묶어 읽기 `RunRepository.list_node_runs_many(run_ids)`·`EventRepository.list_many(since, type_prefixes=)`(Run id → 결과, 없는 Run은 키 없음, Run마다 부른 `list_node_runs`·`list`와 같은 결과). SQLite는 Run `RUN_BATCH_SIZE`(200)개마다 질의 한 번(사용량 토큰 집계 N+1 방지). 더하기만, 표 변경 없음.

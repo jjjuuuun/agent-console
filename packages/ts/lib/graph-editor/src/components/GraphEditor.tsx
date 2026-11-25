@@ -1056,6 +1056,12 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   const nodesMeasured = useNodesInitialized();
   const lastFit = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const lastFitSize = useRef<string | null>(null);
+  // 사용자가 직접(마우스·터치·휠·키보드) 보기를 움직였는가. 프로그램의 fitView는 이벤트가 null이라 해당 없다.
+  // 한 번이라도 움직였으면 창·패널 크기가 바뀌어도 자동 맞춤이 그 보기를 덮어쓰지 않는다.
+  const userMoved = useRef(false);
+  const onMoveStart = useCallback((event: MouseEvent | TouchEvent | null) => {
+    if (event !== null) userMoved.current = true;
+  }, []);
   const hasNodes = gNodes.length > 0;
   useEffect(() => {
     if (!sized || !hasNodes) return;
@@ -1065,6 +1071,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     if (lastFit.current !== null && Date.now() - mountedAt.current > REFIT_WINDOW_MS && lastFitSize.current === canvasSize) return;
     const same = (a: { x: number; y: number; zoom: number }, b: { x: number; y: number; zoom: number }) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
     const attempt = () => {
+      if (userMoved.current) return;
       const v = flow.getViewport();
       // React Flow 자체 첫 맞춤은 옆 패널이 자리 잡기 전의 작은 캔버스로 끝날 수 있다. 처음 크기에서 바뀌었고 우리가 아직 맞추지 않았다면 처음 3초 안에는 다시 맞춘다.
       const resized = firstSize.current !== canvasSize;
@@ -1685,6 +1692,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
             openEdgeMenu(ev.clientX, ev.clientY, edge.id);
           }}
           onPaneClick={() => setMenu(null)}
+          onMoveStart={onMoveStart}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
           connectionRadius={CONNECTION_RADIUS}

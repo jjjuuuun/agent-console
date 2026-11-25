@@ -42,11 +42,13 @@ pip install agent-console-link-runs-usage
 | 필수 | `runs.reader` | `list(root_only=, limit=, project_id=)`·`list_node_runs(run_id)`, 선택 `list_node_runs_many(run_ids)`·`for_project(None)`(앱 기록만) |
 | 필수 | `runs.events` | `list(run_id, since_seq=, type_prefix=)`·`latest_by_type(...)`, 선택 `list_many(since, type_prefixes=)` |
 | 선택 | `projects.lookup` | `list_projects()`(`id`·`archived`) |
-| 선택 | `records.spaces` | 공간 이름(`records_space_prefix` + 프로젝트 id) → 기록 DB 핸들 |
+| 선택 | `records.spaces` | 공간 이름(`records_space_prefix` + 프로젝트 id) → 기록 DB 핸들. 선택 `batch()`(`BatchRecordsSpaces`)가 있으면 집계·조회 한 번을 그 블록 안에서 돈다(프로젝트가 풀 상한보다 많아도 순회 중에 연결을 쫓아내고 다시 열지 않음) |
 | 구독 | `runs.event` | 이벤트가 생긴 Run 표시 |
 | 제공 | `usage.event_query` / `usage.token_rollups` | `MergedEventQuery`(앱 + 프로젝트 기록) / `IncrementalTokenRollups`(앱 + 프로젝트 기록, 출처별 커서) |
 
 설정 `modules.options.link-runs-usage.records_space_prefix`(기본 `project:`, 값이 없으면 `link-projects-records.space_prefix`를 이어받음).
+동시에 열어 둘 프로젝트 기록 DB 수는 이 연동이 아니라 기록 연동 설정 `modules.options.link-projects-records.max_open_spaces`(기본 8)다.
+등록 프로젝트가 그보다 많으면 집계 한 번은 프로젝트마다 한 번 열고, 다음 집계는 상한 밖 프로젝트만 다시 연다.
 
 ## 단독 실행
 

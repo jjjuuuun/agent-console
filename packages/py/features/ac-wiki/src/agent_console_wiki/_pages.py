@@ -77,6 +77,9 @@ class WikiPages(Protocol):
     """위키 폴더 하나의 페이지 파일 작업. 경로는 폴더 기준 POSIX 상대 파일 경로.
 
     실패는 `OSError`(경로 규칙·링크는 `WikiPathError`)로 알린다. 없는 파일 읽기·정보만 None.
+
+    선택 능력 `reading()`: 여러 파일을 이어 읽을 때 쓰는 문맥 관리자(값 = `read`와 같은 뜻의
+    함수). 구현이 폴더 열기 등을 한 번만 하게 할 수 있다(`read_pages`가 있으면 쓴다, 없으면 `read`).
     """
 
     def list(self, extensions: Sequence[str]) -> list[PageFile]:
@@ -177,15 +180,7 @@ class LocalWikiPages:
     def _open_parent(self, norm: str, file: str, *, create: bool, stack: ExitStack) -> int | None:
         """`norm`(검사한 경로)의 부모 폴더 fd. 없으면 None(`create`면 만든다)."""
         fd = self._open_root(file, create=create, stack=stack)
-        for part in norm.split("/")[:-1]:
-            if fd is None:
-                return None
-            child = _open_dir_at(fd, part, create=create, file=file)
-            if child is None:
-                return None
-            stack.callback(os.close, child)
-            fd = child
-        return fd
+        return _descend(fd, norm.split("/")[:-1], file, create=create, stack=stack)
 
     def _list_fd(self, extensions: Sequence[str]) -> list[PageFile]:
         out: list[PageFile] = []
@@ -253,26 +248,42 @@ class LocalWikiPages:
 
     def _read_fd(self, file: str) -> bytes | None:
         norm = check_page_path(file, reserved=self._reserved)
-        name = norm.rsplit("/", 1)[-1]
         with ExitStack() as stack:
             parent = self._open_parent(norm, file, create=False, stack=stack)
             if parent is None:
                 return None
-            st = _lstat_at(parent, name, file)
-            if st is None or not stat.S_ISREG(st.st_mode):
-                return None
-            try:
-                fd = os.open(name, _READ_FLAGS | _NOFOLLOW | _NONBLOCK, dir_fd=parent)
-            except FileNotFoundError:
-                return None
-            except OSError:
-                if _is_link_at(parent, name):
-                    raise WikiPathError(file, "link") from None
-                raise
-            with os.fdopen(fd, "rb") as handle:
-                if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            return _read_at(parent, norm.rsplit("/", 1)[-1], file)
+
+    @contextlib.contextmanager
+    def _reading_fd(self) -> Iterator[Callable[[str], bytes | None]]:
+        """이어 읽기: 루트 fd는 처음 읽을 때 한 번 열고, 바로 앞 파일과 같은 폴더면 그 폴더 fd를
+        다시 쓴다(경로 순 목록이면 폴더마다 한 번). 파일마다의 검사(경로 규칙·끝 칸 링크 거부·
+        `O_NOFOLLOW` 열기)는 `read`와 같다. 문맥을 나가면 연 fd를 모두 닫는다."""
+        with ExitStack() as stack:
+            root: list[int | None] = []
+            folder: list[tuple[str, int | None, ExitStack]] = []
+
+            def read(file: str) -> bytes | None:
+                norm = check_page_path(file, reserved=self._reserved)
+                if not root:
+                    root.append(self._open_root(file, create=False, stack=stack))
+                base = root[0]
+                if base is None:
                     return None
-                return handle.read()
+                key, _, name = norm.rpartition("/")
+                if not folder or folder[0][0] != key:
+                    if folder:
+                        folder.pop()[2].close()
+                    inner = stack.enter_context(ExitStack())
+                    parts = key.split("/") if key else []
+                    fd = _descend(base, parts, file, create=False, stack=inner)
+                    folder.append((key, fd, inner))
+                parent = folder[0][1]
+                if parent is None:
+                    return None
+                return _read_at(parent, name, file)
+
+            yield read
 
     def _write_fd(self, file: str, data: bytes) -> None:
         norm = check_page_path(file, reserved=self._reserved)
@@ -459,6 +470,29 @@ class LocalWikiPages:
     def read(self, file: str) -> bytes | None:
         return self._read_fd(file) if _FD_OPS else self._read_path(file)
 
+    @contextlib.contextmanager
+    def reading(self) -> Iterator[Callable[[str], bytes | None]]:
+        """여러 파일 이어 읽기(`WikiPages` 선택 능력). 값은 `read`와 같은 뜻의 함수다.
+
+        디렉터리 fd 방식이면 루트까지 내려가기(기준 폴더 실제 경로 확인 포함)를 한 번만 하고 같은
+        폴더 fd를 이어 쓴다 — 느린 파일 시스템(네트워크·가상 드라이브)에서 첫 색인이 빨라진다.
+        경로 방식(Windows)은 `read`를 그대로 준다.
+
+        >>> import tempfile, pathlib
+        >>> root = pathlib.Path(tempfile.mkdtemp())
+        >>> (root / "a").mkdir()
+        >>> _ = (root / "a" / "x.md").write_text("x"), (root / "y.md").write_text("y")
+        >>> pages = LocalWikiPages(root)
+        >>> with pages.reading() as read:
+        ...     [read("a/x.md"), read("y.md"), read("a/none.md")]
+        [b'x', b'y', None]
+        """
+        if not _FD_OPS:
+            yield self.read
+            return
+        with self._reading_fd() as read:
+            yield read
+
     def write(self, file: str, data: bytes) -> None:
         if _FD_OPS:
             self._write_fd(file, data)
@@ -553,6 +587,57 @@ def _open_dir_at(dir_fd: int, name: str, *, create: bool, file: str) -> int | No
     raise FileNotFoundError(file)  # pragma: no cover - 만든 직전에 사라짐
 
 
+def _descend(
+    fd: int | None, parts: Sequence[str], file: str, *, create: bool, stack: ExitStack
+) -> int | None:
+    """`fd`에서 `parts` 폴더를 한 칸씩 링크를 따라가지 않고 연다(닫기는 `stack`). 없으면 None."""
+    for part in parts:
+        if fd is None:
+            return None
+        child = _open_dir_at(fd, part, create=create, file=file)
+        if child is None:
+            return None
+        stack.callback(os.close, child)
+        fd = child
+    return fd
+
+
+def _read_at(parent: int, name: str, file: str) -> bytes | None:
+    """폴더 fd `parent` 안 파일 `name` 내용(끝 칸이 링크면 `WikiPathError`). 없으면 None.
+
+    미리 `lstat`하지 않는다: `O_NOFOLLOW` 열기가 링크를 거부하고(→ 링크 확인 뒤 `WikiPathError`),
+    연 뒤 `fstat`이 일반 파일이 아닌 것(폴더·장치·FIFO — `O_NONBLOCK`이라 열기가 멈추지 않음)을
+    거른다. 느린 파일 시스템에서 파일마다 시스템 호출 하나를 아낀다.
+    """
+    try:
+        fd = os.open(name, _READ_FLAGS | _NOFOLLOW | _NONBLOCK, dir_fd=parent)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        if _is_link_at(parent, name):
+            raise WikiPathError(file, "link") from None
+        raise
+    try:
+        regular = stat.S_ISREG(os.fstat(fd).st_mode)
+    except BaseException:
+        os.close(fd)
+        raise
+    if not regular:
+        os.close(fd)
+        return None
+    with os.fdopen(fd, "rb") as handle:
+        return handle.read()
+
+
+def _reading(pages: WikiPages) -> contextlib.AbstractContextManager[Callable[[str], bytes | None]]:
+    """`pages`의 선택 능력 `reading()`, 없으면 `read`를 그대로 주는 문맥."""
+    method = getattr(pages, "reading", None)
+    if callable(method):
+        found: contextlib.AbstractContextManager[Callable[[str], bytes | None]] = method()
+        return found
+    return contextlib.nullcontext(pages.read)
+
+
 def read_pages(
     pages: WikiPages,
     syntax: CompiledWikiSyntax,
@@ -562,6 +647,7 @@ def read_pages(
     timeout_ms: float | None = None,
     clock: Callable[[], float] = time.perf_counter,
     cache: ParseCache | None = None,
+    files: Sequence[PageFile] | None = None,
 ) -> tuple[list[ParsedPage], list[WikiIssue]]:
     """위키 폴더의 페이지를 모두 읽어 파싱한다(캐시 없는 간단한 길 — 서버 모듈은 파일 해시로
     캐시한다).
@@ -575,11 +661,16 @@ def read_pages(
         clock: 시간 상한에 쓰는 시계.
         cache: 파싱 캐시(`ParseCache`). 주면 크기·수정 시각이 같은 파일은 다시 읽지 않고, 없어진
             파일 항목은 뺀다.
+        files: 이미 받은 파일 목록(`pages.list(syntax.page_extensions)` 결과). 주면 다시 나열하지
+            않는다(같은 요청에서 목록을 또 쓰는 쪽이 한 번만 나열하게).
+
+    읽기는 `pages`가 선택 능력 `reading()`을 가지면 그 문맥 안에서 이어 읽는다(없으면 `read`).
 
     Returns:
         (파싱한 페이지들, 폴더 수준 이슈).
     """
-    files = pages.list(syntax.page_extensions)
+    if files is None:
+        files = pages.list(syntax.page_extensions)
     issues: list[WikiIssue] = []
     if max_pages is not None and len(files) > max_pages:
         issues.append(
@@ -592,33 +683,34 @@ def read_pages(
         )
         files = files[:max_pages]
     parsed: dict[str, ParsedPage] = {}
-    for info in files:
-        path = page_path_for_file(info.file, syntax.page_extensions)
-        if path is None or path in parsed:
-            continue
-        if max_page_bytes is not None and info.size > max_page_bytes:
-            issues.append(
-                WikiIssue(
-                    severity="warning",
-                    code=KnownIssueCodes.WIKI_TOO_LARGE,
-                    message="페이지가 크기 상한을 넘어 읽지 않았습니다.",
-                    page=path,
-                    details={"limit": max_page_bytes},
-                )
-            )
-            continue
-        if cache is not None:
-            hit = cache.get(info.file)
-            if hit is not None and hit[0] == info.size and hit[1] == info.mtime:
-                parsed[path] = hit[2]
+    with _reading(pages) as read:
+        for info in files:
+            path = page_path_for_file(info.file, syntax.page_extensions)
+            if path is None or path in parsed:
                 continue
-        data = pages.read(info.file)
-        if data is None:
-            continue
-        page = parse_page(path, data, syntax, timeout_ms=timeout_ms, clock=clock)
-        parsed[path] = page
-        if cache is not None:
-            cache[info.file] = (info.size, info.mtime, page)
+            if max_page_bytes is not None and info.size > max_page_bytes:
+                issues.append(
+                    WikiIssue(
+                        severity="warning",
+                        code=KnownIssueCodes.WIKI_TOO_LARGE,
+                        message="페이지가 크기 상한을 넘어 읽지 않았습니다.",
+                        page=path,
+                        details={"limit": max_page_bytes},
+                    )
+                )
+                continue
+            if cache is not None:
+                hit = cache.get(info.file)
+                if hit is not None and hit[0] == info.size and hit[1] == info.mtime:
+                    parsed[path] = hit[2]
+                    continue
+            data = read(info.file)
+            if data is None:
+                continue
+            page = parse_page(path, data, syntax, timeout_ms=timeout_ms, clock=clock)
+            parsed[path] = page
+            if cache is not None:
+                cache[info.file] = (info.size, info.mtime, page)
     if cache is not None:
         present = {info.file for info in files}
         for stale in [f for f in cache if f not in present]:

@@ -12,6 +12,7 @@ from agent_console_contracts import (
 )
 from agent_console_teams import (
     DefinitionDependency,
+    Layer,
     agent_dependencies,
     graph_dependencies,
     team_plan,
@@ -78,3 +79,34 @@ def test_agent_dependencies() -> None:
         DefinitionDependency("resource", "common", shared=True),
     ]
     assert agent_dependencies(Agent(id="b", name="B")) == []
+
+
+@pytest.mark.parametrize("k", KITS)
+def test_scope_layer_attachments_follow_common_layer(k: Kit) -> None:
+    """REL.8: 범위 층(예: 프로젝트 층) 첨부는 공통 층 다음에 `shared`로 들어간다.
+
+    값이 없는 층·`resources`가 없는 층은 건너뛰고, 형식이 틀린 원소도 건너뛴다.
+    """
+    graph = k.graph([k.person(), k.worker("lead", "alice")], [k.edge("e1", "entry", "me", "lead")])
+    plan = team_plan(graph, node_types=k.node_types, edge_types=k.edge_types)
+    workspace = WorkspaceSettings(
+        agent_defaults=AgentDefaults(resources=[ResourceAttachment(ref="common")])
+    )
+    layers = [
+        Layer("empty", "빈 층", None),
+        Layer("plain", "값만", {"model": "m"}),
+        Layer("scope", "범위", {"resources": [{"ref": "scoped", "mode": "replace"}, {"bad": 1}]}),
+    ]
+    expected = [
+        DefinitionDependency("resource", "common", shared=True),
+        DefinitionDependency("resource", "scoped", shared=True, mode="replace"),
+    ]
+    found = graph_dependencies(plan, workspace=workspace, scope_layers=layers)
+    assert found == [DefinitionDependency("agent", "alice", node_id="lead"), *expected]
+    agent = Agent(id="a", name="A", resources=[ResourceAttachment(ref="own")])
+    assert agent_dependencies(agent, workspace=workspace, scope_layers=layers) == [
+        DefinitionDependency("resource", "own"),
+        *expected,
+    ]
+    # 공통 설정이 없어도 범위 층 첨부는 들어간다
+    assert agent_dependencies(agent, scope_layers=layers)[1:] == expected[1:]

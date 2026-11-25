@@ -19,6 +19,7 @@ from agent_console_store import (
     dump_yaml,
     load_yaml_text,
     merge_into,
+    numbered_id,
     to_plain,
     wrap_value,
 )
@@ -159,12 +160,11 @@ def reset_manifest(
     if old is not None:
         stamp = (now or datetime.now(UTC)).astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
         folder = space.state_dir / "backups"
-        stem = f"project-{stamp}"
-        backup = folder / f"{stem}.yaml"
-        n = 1
-        while space.files.read_bytes(backup) is not None:
-            n += 1
-            backup = folder / f"{stem}-{n}.yaml"
+        name = numbered_id(
+            f"project-{stamp}",
+            lambda stem: space.files.read_bytes(folder / f"{stem}.yaml") is not None,
+        )
+        backup = folder / f"{name}.yaml"
         space.files.write_bytes(backup, old)
     space.files.write_bytes(space.manifest_path, dump_yaml(wrap_value(data)).encode("utf-8"))
     return backup

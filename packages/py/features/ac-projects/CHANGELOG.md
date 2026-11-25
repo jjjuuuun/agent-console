@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- REL.6: `reserved_target_issues(items, reserved_ids, *, target_index=, messages=, target_label=)` — 적용 요청에서 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가 그 종류의 예약어(`DefinitionKind.reserved_ids`, 대소문자 무시)인 항목마다 error `project.copy_reserved_id`(`details{kind, id, action, target_id, reserved, suggested_id}`, rename이면 `new_id`도, `path` rename `/items/<n>/new_id`·그 밖 `/items/<n>/id`). 문구 키 `COPY_RESERVED_RENAME`(`project.copy_reserved_id.rename`)·`COPY_RESERVED_WRITE`(`project.copy_reserved_id.write`)를 `messages=`로 바꾼다. (같은 미출시 기간에 낸 `reserved_rename_issues`는 이 이름으로 바꾸며 넓혔다.)
+- REL.5: `registration_id`의 겹치면 `-n` 규칙을 `agent-console-numbered-id`의 `numbered_id`로 합쳤다(공개 이름·동작 같음). 새 의존 `agent-console-numbered-id`.
 - FU.13: 거꾸로 참조 `find_referrers(target, documents, references, *, messages=)` → `ReferrerScan(keys, checked, warnings)`. 같은 공간에서 정의 하나를 쓰는 정의를 주입한 참조 추출(X25)로 찾는다(삭제 확인 창의 "쓰는 구성"). 참조 추출이 없으면 문서를 읽지 않고 info `project.references_unavailable`(문구 키 `REFERRERS_UNAVAILABLE_MESSAGE`, 기본 `DEFAULT_REFERRER_MESSAGES`).
 
 - FU.6: `copy_plan(reserved_ids=)` — 종류의 예약어 id로 대상에 쓰게 되는 항목에 경고 `project.copy_reserved_id`

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.5: 매니페스트 백업 이름의 번호 붙이기를 `agent_console_store.numbered_id`로 합쳤다(동작 같음).
 - FU.2: `.gitignore` 틀에 이름 자리(`{state_dir}`·`{memory_file}`·`{records_file}`·`{sessions_dir}`)를 두고
   `init_space`·`missing_gitignore_lines`·`append_gitignore`가 공간 배치(`SpaceLayout`)로 채운다. 새 공개
   `render_gitignore_template(template, layout)`·`GITIGNORE_FIELDS`, `default_gitignore_template(layout=None)`

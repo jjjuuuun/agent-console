@@ -17,15 +17,16 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import heapq
 import logging
 from collections.abc import Callable, Iterable, Iterator
 from typing import Any, Protocol
 
 from agent_console_contracts import RunEvent
-from agent_console_store import RecordsStores, RecordsUnavailable, SqliteStorage
+from agent_console_store import RecordsStores, RecordsUnavailable, SqliteStorage, UnknownSpace
 
-from .rollups import RollupSource
+from .rollups import Batch, RollupSource
 
 _log = logging.getLogger(__name__)
 
@@ -55,13 +56,20 @@ class MergedEventQuery:
     Args:
         base: 늘 읽는 조회(앱 기록 ``runs.events``).
         extra: 부를 때마다 추가 조회 목록(예: 프로젝트 기록 DB들). 하나가 실패하면 그것만 건너뛴다.
+        batch: 조회 한 번(모든 출처 읽기)을 감싸는 블록(예: ``RecordsStores.batch`` - 기록 공간 풀이
+            순회 중에 연 기록 DB를 상한으로 밀어내지 않는다). 기본은 빈 블록.
     """
 
     def __init__(
-        self, base: LatestEvents, extra: Callable[[], Iterable[LatestEvents]] = lambda: ()
+        self,
+        base: LatestEvents,
+        extra: Callable[[], Iterable[LatestEvents]] = lambda: (),
+        *,
+        batch: Batch = contextlib.nullcontext,
     ) -> None:
         self._base = base
         self._extra = extra
+        self._batch = batch
 
     def latest_by_type(
         self,
@@ -73,11 +81,14 @@ class MergedEventQuery:
     ) -> builtins.list[RunEvent]:
         """그 ``type``의 최근 이벤트 ``limit``개(모든 출처를 합친 ts 내림차순)."""
         found = [self._base.latest_by_type(type, run_id=run_id, actor=actor, limit=limit)]
-        for source in self._sources():
-            try:
-                found.append(source.latest_by_type(type, run_id=run_id, actor=actor, limit=limit))
-            except Exception:  # 프로젝트 기록 하나가 깨져도 사용량 화면은 나온다
-                _log.warning("프로젝트 기록 이벤트를 읽지 못했습니다", exc_info=True)
+        with self._batch():
+            for source in self._sources():
+                try:
+                    found.append(
+                        source.latest_by_type(type, run_id=run_id, actor=actor, limit=limit)
+                    )
+                except Exception:  # 프로젝트 기록 하나가 깨져도 사용량 화면은 나온다
+                    _log.warning("프로젝트 기록 이벤트를 읽지 못했습니다", exc_info=True)
         merged = heapq.merge(*found, key=lambda event: event.ts, reverse=True)
         return [event for _, event in zip(range(limit), merged, strict=False)]
 
@@ -118,8 +129,8 @@ def project_readers(
         except RecordsUnavailable as exc:
             _log.warning("프로젝트 기록을 읽을 수 없어 건너뜁니다: %s (%s)", project.id, exc.reason)
             continue
-        except LookupError:
-            continue  # 목록과 공간 사이에 지워진 프로젝트
+        except (UnknownSpace, LookupError):
+            continue  # 목록과 공간 사이에 지워진 프로젝트(``RecordsStores``는 ``UnknownSpace``)
         if reader is not None:  # 기록 DB 파일이 아직 없다
             yield project.id, reader
 

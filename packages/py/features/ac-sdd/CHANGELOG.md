@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.5: 가져온 문서 본문 파일 이름의 번호 붙이기를 `agent_console_store.numbered_id`로 합쳤다(동작 같음).
 - FU.5: `slug_id`·`unique_id`는 `agent_console_store`의 것을 다시 내보낸다(`_ids` 사본 삭제, 규칙 그대로).
 
 ## 0.1.0

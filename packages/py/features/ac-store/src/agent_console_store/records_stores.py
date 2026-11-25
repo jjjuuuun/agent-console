@@ -13,11 +13,16 @@
   여는 **다른 스레드는 훅이 끝날 때까지 기다린다**(예: 시작 직후 로그 수집이 먼저 열었을 때 첫
   요청이 복구 전 상태를 읽지 않게). 훅 안에서 같은 스레드가 다시 열면 기다리지 않는다.
 
+- 여러 프로젝트를 차례로 읽는 순회(예: 사용량 집계)는 `with stores.batch():`로 감싼다. 포트가
+  `BatchRecordsSpaces`면 순회 동안 연 공간을 열린 핸들 상한으로 밀어내지 않는다(상한보다
+  프로젝트가 많을 때 연결을 쫓아내고 다시 여는 것을 막는다).
+
 포트가 없으면 `available`이 거짓이다. 소비 모듈은 그때 호스트 DB(기능 단독)를 쓴다.
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 import time
@@ -28,7 +33,7 @@ from sqlalchemy import Engine
 
 from agent_console_contracts import KnownRecordsUnavailableReasons
 
-from .records import RecordsHandle, RecordsSpaces, RecordsUnavailable
+from .records import BatchRecordsSpaces, RecordsHandle, RecordsSpaces, RecordsUnavailable
 from .spaces import UnknownSpace
 
 _log = logging.getLogger(__name__)
@@ -94,6 +99,17 @@ class RecordsStores[S]:
     def available(self) -> bool:
         """기록 공간 포트가 있나(없으면 소비 모듈은 호스트 DB를 쓴다)."""
         return self._spaces() is not None
+
+    def batch(self) -> contextlib.AbstractContextManager[object]:
+        """여러 프로젝트를 차례로 읽는 순회를 한 묶음으로(`with stores.batch(): ...`).
+
+        포트가 `BatchRecordsSpaces`면 그 블록이다(블록 안에서 연 공간을 상한으로 밀어내지 않고
+        끝날 때 맞춘다). 포트가 없거나 그 능력이 없으면 아무 일도 하지 않는 블록이다.
+        """
+        port: object = self._spaces()  # 선택 능력이라 포트 모양과 따로 본다
+        if isinstance(port, BatchRecordsSpaces):
+            return port.batch()
+        return contextlib.nullcontext()
 
     def space_name(self, project_id: str) -> str:
         """공간 이름(`접두 + 프로젝트 id`)."""

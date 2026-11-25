@@ -3,7 +3,7 @@
 - 폴더 id(매니페스트 `id`)가 있으면 그것, 없으면 폴더 이름 slug, slug로 못 바꾸는 이름(한글 등)은
   `proj-<경로 해시 4자>`.
 - 이 앱에 같은 id가 이미 있으면(같은 저장소의 git worktree 두 개 등) 등록 id에만 `-2`, `-3`…을
-  붙인다. 폴더 파일은 고치지 않는다.
+  붙인다(규칙은 `agent_console_numbered_id.numbered_id` 하나). 폴더 파일은 고치지 않는다.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from collections.abc import Collection
 from typing import Final
 
 from agent_console_local_folders import PathFlavor, path_module
+from agent_console_numbered_id import numbered_id
 
 from ._paths import PathRules, folder_key, host_flavor
 
@@ -70,15 +71,9 @@ def registration_id(manifest_id: str, taken_ids: Collection[str]) -> str:
     'app-3'
     """
     taken = {t.casefold() for t in taken_ids}
-    if manifest_id.casefold() not in taken:
-        return manifest_id
-    n = 2
-    while True:
-        suffix = f"-{n}"
-        candidate = manifest_id[: MAX_ID_LENGTH - len(suffix)] + suffix
-        if candidate.casefold() not in taken:
-            return candidate
-        n += 1
+    return numbered_id(
+        manifest_id, lambda candidate: candidate.casefold() in taken, max_length=MAX_ID_LENGTH
+    )
 
 
 def suggest_project_id(

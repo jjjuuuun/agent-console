@@ -6,6 +6,9 @@
   리소스(여러 파일 본문)도 A 공간에서 찾아 함께 담기고 → B에서 같은 형식 출처로 가져오면 → 같은
   정의·같은 본문.
 - 원본 파일은 가져오기 뒤에도 그대로다. 비밀 참조(`secret://`)는 참조 그대로 옮겨진다.
+- 프로젝트 설정 층이 붙이는 공통 첨부(리소스)도 함께 담긴다: A의 팀 구성 하나만 골라 내보내면
+  구성원 에이전트와 A 설정 층의 리소스가 따라오고, 같은 첨부를 쓰는 B로 가져오면 B에서 그 팀
+  구성을 실행할 때 리소스 없음 경고 없이 끝난다.
 """
 
 from __future__ import annotations
@@ -22,7 +25,15 @@ from fastapi.testclient import TestClient
 from agent_console_example_transfer import FORMAT_ID, default_format_data
 from agent_console_exports import EXPORTERS_GROUP
 from agent_console_imports import IMPORT_SOURCES_GROUP
-from agent_console_server.testing import API, agent_doc, make_settings, register_project, server
+from agent_console_server.testing import (
+    API,
+    agent_doc,
+    make_settings,
+    register_project,
+    server,
+    team_graph,
+    wait_run,
+)
 
 PLUGIN = "agent_console_example_transfer:register"
 PACKAGE = PLUGIN.split(":", 1)[0]
@@ -141,3 +152,64 @@ def test_export_then_import_through_the_server(tmp_path: Path) -> None:
         env = target_side["agent"]["backend_options"]["env"]
         assert env == {"API_TOKEN": "secret://example_token"}
         assert bundle.read_bytes() == before  # 원본 파일은 읽기만
+
+
+def _attach_in_project_layer(client: TestClient, project: str, ref: str) -> None:
+    """프로젝트 설정 층(`settings.resources`)에 공통 첨부 하나."""
+    view = client.get(f"{API}/projects/{project}")
+    put = client.put(
+        f"{API}/projects/{project}",
+        json={"settings": {"resources": [{"ref": ref}]}},
+        headers={"If-Match": view.headers["ETag"]},
+    )
+    assert put.status_code == 200, put.text
+
+
+def _run_warnings(client: TestClient, project: str) -> list[dict[str, Any]]:
+    """B에서 팀 구성 `flow`를 실행하고(끝나야 한다) 리소스 없음 경고 목록을 돌려준다."""
+    started = client.post(
+        f"{API}/runs", json={"graph_id": "flow", "project_id": project, "input": {"request": "hi"}}
+    )
+    assert started.status_code == 202, started.text
+    snap = wait_run(client, started.json()["id"])
+    assert snap["run"]["status"] == "completed", snap["run"]
+    events = client.get(f"{API}/runs/{snap['run']['id']}/events").json()
+    return [e for e in events if "resource.not_found" in str(e)]
+
+
+def test_project_layer_attachments_travel_with_the_team(tmp_path: Path) -> None:
+    with _server(tmp_path) as client:
+        a_dir, b_dir = tmp_path / "proj-a", tmp_path / "proj-b"
+        a_dir.mkdir()
+        b_dir.mkdir()
+        register_project(client, "a", a_dir)
+        register_project(client, "b", b_dir)
+        made = client.post(f"{API}/resources?project=a", json=SKILL)
+        assert made.status_code == 201, made.text
+        for project in ("a", "b"):
+            _attach_in_project_layer(client, project, str(SKILL["id"]))
+        for agent in (agent_doc("fast", "빠른 답"), agent_doc("slow", "깊은 답")):
+            assert client.post(f"{API}/agents?project=a", json=agent).status_code == 201
+        assert client.post(f"{API}/graphs?project=a", json=team_graph()).status_code == 201
+        assert _run_warnings(client, "a") == []  # A에서는 리소스가 있다
+
+        request = {"exporter": FORMAT_ID, "items": [{"kind": "graph", "id": "flow"}], "root": "b"}
+        written = client.post(f"{API}/exports/write?project=a", json=request)
+        assert written.status_code == 200, written.text
+        preview = client.post(
+            f"{API}/resources/import/preview?project=b", json={"source": FORMAT_ID}
+        )
+        assert preview.status_code == 200, preview.text
+        candidates = preview.json()["candidates"]
+        found = sorted((c["kind"], c["suggested_id"]) for c in candidates)
+        assert ("resource", SKILL["id"]) in found  # 프로젝트 설정 층의 첨부가 묶음에 들어간다
+        assert {("agent", "fast"), ("agent", "slow"), ("graph", "flow")} <= set(found)
+        applied = client.post(
+            f"{API}/resources/import?project=b",
+            json={"source": FORMAT_ID, "items": [{"candidate_id": c["id"]} for c in candidates]},
+        )
+        assert applied.status_code == 200, applied.text
+        assert all(i["error"] is None for i in applied.json()["items"]), applied.text
+
+        assert client.post(f"{API}/graphs/flow/validate?project=b").json() == []
+        assert _run_warnings(client, "b") == []  # 가져온 리소스로 실행 검증 통과

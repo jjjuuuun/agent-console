@@ -41,6 +41,7 @@ from agent_console_contracts import (
 
 from .database import LEGACY_BRANCH, MigrationBranchLike, _check_name
 from .errors import StoreError
+from .ids import numbered_id
 from .migrate import (
     LEGACY_VERSION_TABLE,
     branch_version_table,
@@ -169,6 +170,19 @@ class RecordsSpaces(Protocol):
     def close(self, space: str) -> None:
         """공간의 핸들을 닫는다."""
         ...
+
+
+@runtime_checkable
+class BatchRecordsSpaces(Protocol):
+    """`records.spaces`의 선택 능력: 여러 공간을 차례로 읽는 순회(예: 사용량 집계)를 한 묶음으로.
+
+    `batch()` 블록 안에서 연 공간은 블록이 끝날 때까지 열린 핸들 상한으로 밀어내지 않고, 블록이
+    끝날 때 상한을 맞춘다(상한보다 많은 공간을 순회해도 연결을 쫓아내고 다시 열지 않는다). 겹쳐
+    불러도 된다(가장 바깥 블록이 끝날 때 맞춘다). 없는 구현은 블록 없이 순회한다
+    (`RecordsStores.batch`).
+    """
+
+    def batch(self) -> contextlib.AbstractContextManager[object]: ...
 
 
 def is_network_fs(path: str | Path, *, mountinfo: str | None = None) -> bool:
@@ -696,11 +710,11 @@ class RecordsDb:
         ]
         label = "-".join(behind) or "empty"
         self._backup_dir.mkdir(parents=True, exist_ok=True)
-        dest = self._backup_dir / f"records-{stamp}-{label}.sqlite3"
-        n = 1
-        while dest.exists():
-            n += 1
-            dest = self._backup_dir / f"records-{stamp}-{label}-{n}.sqlite3"
+        folder = self._backup_dir
+        stem = numbered_id(
+            f"records-{stamp}-{label}", lambda name: (folder / f"{name}.sqlite3").exists()
+        )
+        dest = folder / f"{stem}.sqlite3"
         src = sqlite3.connect(_ro_uri(self.path), uri=True, timeout=self._timeout)
         out = sqlite3.connect(dest)
         try:
@@ -785,6 +799,7 @@ def open_records_db(
 
 __all__ = [
     "RECORDS_SPACES_PORT",
+    "BatchRecordsSpaces",
     "RecordsAbsent",
     "RecordsDb",
     "RecordsHandle",

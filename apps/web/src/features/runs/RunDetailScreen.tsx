@@ -7,6 +7,7 @@ import type { GroupBadge, LinkBadge, MethodBadge, SessionBadgeView, SpanLabel, T
 import type { NodeRunBadge } from "@agent-console/graph-editor";
 import { Badge, Banner, ConfirmDialog, PageHeader, Tabs, useShortcuts, useToast } from "@agent-console/ui";
 import { useApi } from "../../app/ApiContext";
+import { wikiEventSummary } from "../../app/wikiIssueMessages";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { describeError } from "../../app/errors";
 import { messages as appMessages } from "../../app/messages";
@@ -655,7 +656,7 @@ export function RunDetailScreen() {
       const mapped = mapConditionOutcome(cond);
       if (mapped !== null) return `${summarizeEvent(ev)} · ${mapped.result ? dm.run.event.conditionPass : dm.run.event.conditionFalse}`;
     }
-    return undefined;
+    return wikiEventSummary(ev.payload);
   };
 
   const content: Record<InspectorTab, React.ReactNode> = {

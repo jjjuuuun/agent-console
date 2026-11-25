@@ -3,7 +3,8 @@
 사용자가 id 없이 이름만 주고 정의를 만들 때(위키·문서 틀·스펙 등) 쓰는 같은 규칙이다.
 악센트는 떼고(NFKD → ASCII), 영문자·숫자·`_`·`-` 밖의 글자 묶음은 `-` 하나로 바꾸고,
 소문자로, 앞뒤 `-`·`_`를 떼고, 120자에서 자른다(뒤에 `-<번호>`를 붙여도 저장소 id 길이
-128자 안). 남는 글자가 없으면 `fallback`.
+128자 안). 남는 글자가 없으면 `fallback`. 번호 붙이기는 `agent_console_numbered_id.numbered_id`
+하나로 하고 여기서 다시 내보낸다(이 패키지를 쓰는 기능이 같은 규칙을 import 하나로 쓰게).
 """
 
 from __future__ import annotations
@@ -13,7 +14,9 @@ import unicodedata
 from collections.abc import Collection
 from typing import Final
 
-__all__ = ["SLUG_MAX_CHARS", "slug_id", "unique_id"]
+from agent_console_numbered_id import NoFreeId, numbered_id
+
+__all__ = ["SLUG_MAX_CHARS", "NoFreeId", "numbered_id", "slug_id", "unique_id"]
 
 SLUG_MAX_CHARS: Final = 120
 """`slug_id`가 만드는 id의 최대 글자 수(번호 꼬리 `-n` 자리를 남긴다)."""
@@ -42,11 +45,5 @@ def unique_id(name: str, taken: Collection[str], *, fallback: str) -> str:
     >>> unique_id("x", ["X", "x-2"], fallback="wiki")
     'x-3'
     """
-    base = slug_id(name, fallback=fallback)
     folded = {t.casefold() for t in taken}
-    if base.casefold() not in folded:
-        return base
-    n = 2
-    while f"{base}-{n}".casefold() in folded:
-        n += 1
-    return f"{base}-{n}"
+    return numbered_id(slug_id(name, fallback=fallback), lambda c: c.casefold() in folded)

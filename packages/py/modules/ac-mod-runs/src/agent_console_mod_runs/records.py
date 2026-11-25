@@ -22,6 +22,10 @@
   WS ``run:<id>``)가 그 공간을 본다. ``runs.reader``의 ``get(run_id)``도 자리를 모르고 호스트 DB에
   없으면 같은 위치 찾기를 쓴다(재시작 직후 ``/runs/{id}/logs``·로그 범위 ``run:<id>`` 등, 5.7R.33i
   후속). 찾은 공간이 하나일 때만 그 Run을 돌려준다(여럿이면 None — 모호함은 ``locate``가 알린다).
+- 읽을 수 없는 자리(기록 DB를 못 씀·**등록이 풀린 프로젝트** = 모르는 공간): 이 프로세스가 아는
+  ``run_id`` 자리의 읽기는 그 자리를 건너뛴다(없음·빈 결과 — REST는 404 ``not_found``, 공간을
+  지정한 ``?project=`` 조회는 404 ``project.not_found``). 쓰기는 기록 DB를 잃은 것과 같이 대기
+  파일로 간다(이유 ``not_found``).
 - 재시작 복구(``recover_space``): 공간을 이 프로세스에서 처음 열 때 **자기 host_id**의 끝나지 않은
   Run 중 지금 돌고 있지 않은 것만 ``interrupted``로 바꾼다(다른 앱의 Run은 건드리지 않는다).
 """
@@ -57,6 +61,7 @@ from agent_console_store import (
     SpaceLocator,
     SqliteStorage,
     StoreError,
+    UnknownSpace,
 )
 
 UNFINISHED: tuple[RunStatus, ...] = ("queued", "running", "paused", "waiting")
@@ -70,6 +75,10 @@ SPOOL_INTERACTION = "interaction"
 
 LOST_MESSAGE = "프로젝트 기록을 쓸 수 없어 실행을 멈췄습니다(남은 기록은 앱에 보관했다가 넣습니다)"
 """기록 DB를 잃어 멈춘 Run의 ``error.message``."""
+
+_UNREADABLE: tuple[type[Exception], ...] = (RecordsUnavailable, UnknownSpace, LookupError)
+"""그 자리를 지금 읽거나 쓸 수 없다: 기록 DB를 쓸 수 없음·모르는 공간(등록이 풀린 프로젝트 —
+``RecordsStores``는 ``LookupError``가 아닌 ``UnknownSpace``를 던진다)·그 밖의 조회 실패."""
 
 _log = logging.getLogger("agent_console_mod_runs")
 
@@ -254,7 +263,7 @@ class SpaceRecorder:
             return self.host
         try:
             return self.reader(project_id)
-        except (RecordsUnavailable, LookupError):
+        except _UNREADABLE:
             return None
 
     def _read_grouped(self, run_ids: Iterable[str]) -> builtins.list[tuple[Any, list[str]]]:
@@ -284,7 +293,7 @@ class SpaceRecorder:
                 return write(self.records.writer(project_id))
             except RecordsUnavailable as exc:
                 self._lose(run_id, exc.reason)
-            except LookupError:
+            except (UnknownSpace, LookupError):  # 등록이 풀린 프로젝트
                 self._lose(run_id, "not_found")
         for item in spooled:
             self._spool(project_id, run_id, kind, item)
@@ -510,7 +519,7 @@ class _Interactions:
             return self._o.host
         try:
             return self._o.reader(project_id)
-        except (RecordsUnavailable, LookupError):
+        except _UNREADABLE:
             return None
 
     def get(self, interaction_id: str) -> Interaction | None:
@@ -559,6 +568,10 @@ class _Interactions:
                 if current is None:
                     raise
                 self._o._lose(run_id, exc.reason)
+            except UnknownSpace:  # 등록이 풀린 프로젝트
+                if current is None:
+                    raise
+                self._o._lose(run_id, "not_found")
         if current is None:
             raise LookupError(f"interaction/{interaction_id}")
         closed = current.model_copy(
@@ -795,7 +808,7 @@ def recover_space(
     """
     try:
         store = records.reader(project_id)
-    except (RecordsUnavailable, LookupError):
+    except _UNREADABLE:
         return False
     if store is None:
         return True
@@ -806,7 +819,7 @@ def recover_space(
         return True
     try:
         writer = records.writer(project_id)
-    except (RecordsUnavailable, LookupError):
+    except _UNREADABLE:
         return False
     own: Any = _OwnRecorder(writer, targets)
     done = recover_unfinished_runs(own, clock=clock, ids=ids)

@@ -256,3 +256,32 @@ def test_closed_db_read_is_not_reported_as_corrupt(tmp_path: Path) -> None:
     with pytest.raises(RecordsUnavailable) as caught:
         db.read_engine()
     assert caught.value.reason == "folder_missing"
+
+
+def test_batch_delegates_to_port_or_is_empty_block(spaces: Spaces) -> None:
+    """`batch()`: 포트가 `BatchRecordsSpaces`면 그 블록, 아니거나 포트가 없으면 빈 블록."""
+    from collections.abc import Iterator
+    from contextlib import contextmanager
+
+    from agent_console_store import BatchRecordsSpaces
+
+    assert not isinstance(spaces, BatchRecordsSpaces)
+    with RecordsStores(lambda: spaces, SqliteStorage).batch():
+        pass
+    with RecordsStores(lambda: None, SqliteStorage).batch():
+        pass
+
+    calls: list[str] = []
+
+    class Batched(Spaces):
+        @contextmanager
+        def batch(self) -> Iterator[None]:
+            calls.append("enter")
+            yield
+            calls.append("exit")
+
+    batched = Batched(spaces.tmp)
+    assert isinstance(batched, BatchRecordsSpaces)
+    with RecordsStores(lambda: batched, SqliteStorage).batch():
+        assert calls == ["enter"]
+    assert calls == ["enter", "exit"]

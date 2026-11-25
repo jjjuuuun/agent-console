@@ -2,23 +2,28 @@
 
 내보내기(``mod-exports``)와 팀 의미(``ac-teams``)를 잇는다(design §3R.1.4 L10).
 
-- 필수: ``definitions.lookup``. 선택: ``workspace.settings``.
+- 필수: ``definitions.lookup``. 선택: ``workspace.settings``·``settings.scope_layers``(프로젝트
+  공간에서 내보낼 때 그 범위 층의 공통 첨부).
 - 제공: ``exports.dependencies``(정의가 쓰는 정의). 경로 없음.
 - 이 연동이 꺼지면: 내보내기는 의존 자동 포함 없이 고른 항목만 내보낸다.
 """
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version
 
 from agent_console_contracts import CONTRACT_VERSIONS, WorkspaceSettings
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
-from agent_console_teams import catalog_from_registries
+from agent_console_teams import Layer, catalog_from_registries
 
 from .dependencies import TeamExportDependencies
-from .ports import DEFINITIONS_LOOKUP, EXPORT_DEPENDENCIES, WORKSPACE_SETTINGS
+from .ports import DEFINITIONS_LOOKUP, EXPORT_DEPENDENCIES, SCOPE_LAYERS, WORKSPACE_SETTINGS
 
 MODULE_ID = "link-exports-teams"
+
+_log = logging.getLogger("agent_console_link_exports_teams")
 
 
 def _version() -> str:
@@ -39,7 +44,7 @@ class ExportsTeamsLink:
         description="내보낼 때 구성이 쓰는 에이전트·리소스를 함께 넣는다",
         provides=(EXPORT_DEPENDENCIES,),
         requires=(DEFINITIONS_LOOKUP,),
-        optional=(WORKSPACE_SETTINGS,),
+        optional=(WORKSPACE_SETTINGS, SCOPE_LAYERS),
         contracts={"exports": CONTRACT_VERSIONS["exports"]},
     )
 
@@ -52,10 +57,22 @@ class ExportsTeamsLink:
             reader = ctx.port(WORKSPACE_SETTINGS)
             return reader() if reader is not None else None
 
+        def scopes(scope: str) -> Sequence[Layer]:
+            found: list[Layer] = []
+            for source in ctx.ports(SCOPE_LAYERS):
+                try:
+                    found.extend(source.scope_layers(scope).layers)
+                except Exception:  # 제공 모듈의 오류 타입을 모른다 — 그 공급자 층만 빼고 계속
+                    _log.exception("범위 층을 읽지 못했습니다: %s", scope)
+            return found
+
         ctx.provide(
             EXPORT_DEPENDENCIES,
             TeamExportDependencies(
-                lookup, catalog=lambda: catalog_from_registries(ctx.registries), workspace=workspace
+                lookup,
+                catalog=lambda: catalog_from_registries(ctx.registries),
+                workspace=workspace,
+                scopes=scopes,
             ),
         )
         return ModuleParts()

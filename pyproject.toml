@@ -102,6 +102,7 @@ agent-console-link-projects-wiki = { workspace = true }
 agent-console-path-glob = { workspace = true }
 agent-console-write-budget = { workspace = true }
 agent-console-query-hash = { workspace = true }
+agent-console-numbered-id = { workspace = true }
 
 # ---------------------------------------------------------------- poe (CLAUDE.md "명령어")
 # mypy 캐시는 저장소 루트 `.mypy_cache` 한곳에만 쌓는다(5.2R.94b). `poe examples`·`poe mypy-package`처럼
@@ -259,6 +260,7 @@ root_packages = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -339,6 +341,7 @@ source_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -418,6 +421,7 @@ source_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -497,6 +501,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -521,7 +526,7 @@ forbidden_modules = [
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "imports는 contracts, registry, secret-rules, claude-format에만 의존 (출처 이름·저장소를 모른다, store는 프로토콜로만)"
+name = "imports는 contracts, registry, secret-rules, claude-format, numbered-id에만 의존 (출처 이름·저장소를 모른다, store는 프로토콜로만)"
 type = "forbidden"
 source_modules = ["agent_console_imports"]
 forbidden_modules = [
@@ -653,6 +658,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -734,6 +740,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -811,6 +818,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -890,6 +898,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -981,6 +990,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1004,7 +1014,7 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
-name = "projects는 contracts, local-folders에만 의존 (순수 등록·복사 계획·경로 지킴 규칙, 참조 추출·고치기는 주입 — teams·store를 모른다, design §PI.10·§UX-P.6 X25, 경로 비교는 local-folders 재사용 5.7R.33d)"
+name = "projects는 contracts, local-folders, numbered-id에만 의존 (순수 등록·복사 계획·경로 지킴 규칙, 참조 추출·고치기는 주입 — teams·store를 모른다, design §PI.10·§UX-P.6 X25, 경로 비교는 local-folders 재사용 5.7R.33d, 겹치면 -n은 numbered-id)"
 type = "forbidden"
 source_modules = ["agent_console_projects"]
 forbidden_modules = [
@@ -1137,6 +1147,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1218,6 +1229,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1298,6 +1310,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1378,6 +1391,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_project_space",
     "agent_console_projects",
     "agent_console_pty_session",
@@ -1458,6 +1472,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1538,10 +1553,92 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
     "agent_console_pty_session",
+    "agent_console_registry",
+    "agent_console_resources",
+    "agent_console_resources_core",
+    "agent_console_runtime",
+    "agent_console_safe_regex",
+    "agent_console_safe_zip",
+    "agent_console_sdd",
+    "agent_console_secret_rules",
+    "agent_console_server",
+    "agent_console_settings",
+    "agent_console_store",
+    "agent_console_teams",
+    "agent_console_text_template",
+    "agent_console_trace",
+    "agent_console_usage",
+    "agent_console_wiki",
+    "agent_console_write_budget",
+]
+
+[[tool.importlinter.contracts]]
+name = "numbered-id는 다른 agent_console 패키지에 의존하지 않는다 (겹치면 -2·-3… 붙이기 — projects·store·imports·teams가 함께 쓴다)"
+type = "forbidden"
+source_modules = ["agent_console_numbered_id"]
+forbidden_modules = [
+    "agent_console_architecture",
+    "agent_console_backend_claude_sdk",
+    "agent_console_backend_fake_agent",
+    "agent_console_chat",
+    "agent_console_claude_format",
+    "agent_console_cli",
+    "agent_console_conditions",
+    "agent_console_contracts",
+    "agent_console_delegation_host",
+    "agent_console_exports",
+    "agent_console_graph",
+    "agent_console_hook_probe",
+    "agent_console_imports",
+    "agent_console_link_chat_runs",
+    "agent_console_link_definitions_resources",
+    "agent_console_link_definitions_teams",
+    "agent_console_link_exports_teams",
+    "agent_console_link_logs_architecture",
+    "agent_console_link_logs_runs",
+    "agent_console_link_logs_trace",
+    "agent_console_link_logs_usage",
+    "agent_console_link_memory_runs",
+    "agent_console_link_projects_memory",
+    "agent_console_link_projects_records",
+    "agent_console_link_projects_runs",
+    "agent_console_link_projects_sdd",
+    "agent_console_link_projects_wiki",
+    "agent_console_link_runs_sdd",
+    "agent_console_link_runs_teams",
+    "agent_console_link_runs_trace",
+    "agent_console_link_runs_usage",
+    "agent_console_link_wiki_runs",
+    "agent_console_local_folders",
+    "agent_console_logs",
+    "agent_console_logs_claude",
+    "agent_console_memory",
+    "agent_console_mod_architecture",
+    "agent_console_mod_chat",
+    "agent_console_mod_definitions",
+    "agent_console_mod_exports",
+    "agent_console_mod_imports",
+    "agent_console_mod_logs",
+    "agent_console_mod_memory",
+    "agent_console_mod_projects",
+    "agent_console_mod_resources",
+    "agent_console_mod_runs",
+    "agent_console_mod_sdd",
+    "agent_console_mod_usage",
+    "agent_console_mod_versions",
+    "agent_console_mod_wiki",
+    "agent_console_modkit",
+    "agent_console_nodes_core",
+    "agent_console_path_glob",
+    "agent_console_project_space",
+    "agent_console_projects",
+    "agent_console_pty_session",
+    "agent_console_query_hash",
     "agent_console_registry",
     "agent_console_resources",
     "agent_console_resources_core",
@@ -1616,6 +1713,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1692,6 +1790,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_project_space",
     "agent_console_projects",
     "agent_console_pty_session",
@@ -1764,6 +1863,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1843,6 +1943,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1918,6 +2019,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -1941,7 +2043,7 @@ forbidden_modules = [
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "teams는 contracts, registry, graph, settings, resources, secret-rules에만 의존 (순수 의미 계산, design §R9.4)"
+name = "teams는 contracts, registry, graph, settings, resources, secret-rules, numbered-id에만 의존 (순수 의미 계산, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_teams"]
 forbidden_modules = [
@@ -2070,6 +2172,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2153,6 +2256,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2231,6 +2335,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2307,6 +2412,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2390,6 +2496,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2470,6 +2577,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2552,6 +2660,7 @@ forbidden_modules = [
     "agent_console_mod_versions",
     "agent_console_mod_wiki",
     "agent_console_modkit",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2627,6 +2736,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2720,6 +2830,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2796,6 +2907,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -2821,7 +2933,7 @@ forbidden_modules = [
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "store는 contracts에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
+name = "store는 contracts, numbered-id에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
 type = "forbidden"
 source_modules = ["agent_console_store"]
 forbidden_modules = [
@@ -2956,6 +3068,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_projects",
     "agent_console_pty_session",
@@ -3099,6 +3212,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",
@@ -4076,6 +4190,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_project_space",
     "agent_console_projects",
     "agent_console_pty_session",
@@ -4151,6 +4266,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_project_space",
     "agent_console_projects",
     "agent_console_pty_session",
@@ -4227,6 +4343,7 @@ forbidden_modules = [
     "agent_console_mod_wiki",
     "agent_console_modkit",
     "agent_console_nodes_core",
+    "agent_console_numbered_id",
     "agent_console_path_glob",
     "agent_console_project_space",
     "agent_console_projects",

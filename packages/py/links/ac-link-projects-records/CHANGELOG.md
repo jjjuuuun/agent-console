@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.2: `RecordsSpacePool.batch()`(`BatchRecordsSpaces`) — 블록 안에서 연 공간은 상한(`max_open_spaces`)으로 밀어내지 않고 가장 바깥 블록이 끝날 때 맞춘다. 프로젝트가 상한보다 많을 때 순회(사용량 집계)가 오래 안 쓴 순서 캐시를 매번 전부 다시 열던 것을 막는다. README 설정 표.
 - FU.2: `session_archive.dir` 설명 — `.gitignore` 틀이 이 이름을 따른다(`mod-projects.sessions_dir`가 이어받음).
 - 정리(11/20 후속): 열린 핸들 캐시를 `agent_console_store.OpenCache`로 옮겼다(메모리 공간 풀과 공용, 동작 같음).
 

@@ -7,7 +7,8 @@
   (``FolderWriter`` 규칙 그대로). 보관 파일(zip) 내려받기는 그대로다(받는 곳은 사용자가 고른다).
 - 내보낼 원본 = 요청 ``?project=``의 프로젝트 공간(기본, ``definitions.spaces``) 또는
   ``source=library``면 라이브러리(``definitions.lookup``). ``project``가 없으면 라이브러리.
-  함께 쓰는 정의는 원본과 같은 저장소에서 찾는다(공간 원본 = ``for_lookup(공간 저장소)``).
+  함께 쓰는 정의는 원본과 같은 저장소에서 찾는다(공간 원본 = ``for_lookup(공간 저장소,
+  scope=프로젝트 id)`` — 그 프로젝트 설정 층의 공통 첨부도 넣는다).
 
 포트가 없으면(모듈 단독 사용) 지금 설정(``roots``)과 라이브러리 그대로다.
 """
@@ -71,9 +72,9 @@ class ProjectExports:
         exporters: 형식 id → 형식.
         library: 라이브러리 정의 읽기(``definitions.lookup``).
         dependencies: 라이브러리 정의의 쓰는 정의(``exports.dependencies``). 프로젝트 공간 원본에는
-            ``for_lookup(공간 저장소)``(``ScopedExportDependencies``)로 만든 그 공간 기준 계산을
-            쓴다. 그 모양이 아니면 공간 원본은 고른 항목만 내보낸다(라이브러리 기준 계산을 섞지
-            않는다).
+            ``for_lookup(공간 저장소, scope=프로젝트 id)``(``ScopedExportDependencies``)로 만든 그
+            공간 기준 계산을 쓴다. 그 모양이 아니면 공간 원본은 고른 항목만 내보낸다(라이브러리
+            기준 계산을 섞지 않는다).
         roots: 프로젝트 기능이 없을 때의 폴더 쓰기 루트(설치자 ``roots``).
         protected: 쓰기 금지 위치(``~/.claude`` 등).
         folders: 등록 프로젝트 폴더(``projects.folders``). 없으면 단독 사용.
@@ -160,12 +161,14 @@ class ProjectExports:
                 code=str(getattr(exc, "code", ErrorCodes.INTERNAL)),
                 details={"project_id": project},
             ) from None
-        return LookupExportCatalog(lookup, self._space_dependencies(lookup))
+        return LookupExportCatalog(lookup, self._space_dependencies(lookup, project))
 
-    def _space_dependencies(self, lookup: DefinitionLookup) -> ExportDependencies | None:
+    def _space_dependencies(
+        self, lookup: DefinitionLookup, project: str
+    ) -> ExportDependencies | None:
         deps = self._dependencies
         if isinstance(deps, ScopedExportDependencies):
-            return deps.for_lookup(lookup)
+            return deps.for_lookup(lookup, scope=project)
         return None
 
     def service(

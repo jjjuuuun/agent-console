@@ -198,6 +198,17 @@ describe("실행 상세", () => {
     expect(screen.queryByText("텍스트 2자")).toBeNull();
   });
 
+  it("에이전트 탭: 위키 접근 이벤트는 사유 코드 표 문구로, 모르는 코드는 기본 요약으로 보인다", async () => {
+    mount("/runs/r1?tab=agents", detailOverrides({
+      listRunEvents: async () => [
+        ev(1, "wiki.access", { actor: "pl", node_path: ["n-lead"], payload: { op: "write", status: "secret_rejected", code: "wiki.redacted_content", path: "a.md" } }),
+        ev(2, "wiki.access", { actor: "pl", node_path: ["n-lead"], payload: { op: "write", status: "secret_rejected", code: "wiki.some_future_code" } }),
+      ],
+    }));
+    expect(await screen.findByText(/가린 줄을 직접 고치세요/)).toBeTruthy();
+    expect(screen.queryByText(/some_future_code/, { selector: "span" })).toBeNull();
+  });
+
   it("hook·MCP 탭: 접두 세그먼트는 데이터에서, 집계 줄·오류만 필터", async () => {
     mount("/runs/r1?tab=observe", detailOverrides());
     const table = await screen.findByRole("table", { name: "hook·MCP 호출" });

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- REL.8: `graph_dependencies`·`agent_dependencies`에 선택 인자 `scope_layers`(공통 바로 아래 범위 층, `layers_for`와 같은 값). 층 값의 `resources[]` 첨부를 공통 층 첨부 다음에 `shared`로 넣는다. 기본 `()` = 기존과 같다.
+- REL.5: 제안의 새 노드·엣지 id 번호 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합쳤다(동작 같음). 새 의존 `agent-console-numbered-id`.
 - 6R.20k(계약 0.13.2): 세션 집계 `session_summary(plan, strategies) -> GraphSessionSummary | None`(screen-delegation §14.4.4, 웹 `sessionView.sessionSummary`와 같은 규칙)·`edge_sessions(plan, strategies)`. 세션 값은 디스크립터의 열린 문자열이고 값별로 센다(값 이름·방식 id를 비교하지 않음). 세션 값이 있는 연결이 없으면 None.
 - 5.2R.94(잔해 정리): **공개 API 삭제** — `TeamIssueCodes.DELEGATION_TOO_DEEP`(옛 별칭)을 뺐다.
   `TeamIssueCodes.DELEGATION_DEPTH_EXCEEDED`를 쓴다(값 `delegation.depth_exceeded`는 같다).

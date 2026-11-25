@@ -33,10 +33,10 @@ forbidden_modules = ["@all", "!agent_console_safe_regex"]
 allow_indirect_imports = true
 
 [[contracts]]
-name = "imports는 contracts, registry, secret-rules, claude-format에만 의존 (출처 이름·저장소를 모른다, store는 프로토콜로만)"
+name = "imports는 contracts, registry, secret-rules, claude-format, numbered-id에만 의존 (출처 이름·저장소를 모른다, store는 프로토콜로만)"
 type = "forbidden"
 source_modules = ["agent_console_imports"]
-forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_secret_rules", "!agent_console_claude_format"]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_secret_rules", "!agent_console_claude_format", "!agent_console_numbered_id"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -84,10 +84,10 @@ source_modules = ["agent_console_conditions"]
 forbidden_modules = ["@all", "!agent_console_conditions", "!agent_console_contracts", "!agent_console_registry", "!agent_console_safe_regex"]
 
 [[contracts]]
-name = "projects는 contracts, local-folders에만 의존 (순수 등록·복사 계획·경로 지킴 규칙, 참조 추출·고치기는 주입 — teams·store를 모른다, design §PI.10·§UX-P.6 X25, 경로 비교는 local-folders 재사용 5.7R.33d)"
+name = "projects는 contracts, local-folders, numbered-id에만 의존 (순수 등록·복사 계획·경로 지킴 규칙, 참조 추출·고치기는 주입 — teams·store를 모른다, design §PI.10·§UX-P.6 X25, 경로 비교는 local-folders 재사용 5.7R.33d, 겹치면 -n은 numbered-id)"
 type = "forbidden"
 source_modules = ["agent_console_projects"]
-forbidden_modules = ["@all", "!agent_console_projects", "!agent_console_contracts", "!agent_console_local_folders"]
+forbidden_modules = ["@all", "!agent_console_projects", "!agent_console_contracts", "!agent_console_local_folders", "!agent_console_numbered_id"]
 
 [[contracts]]
 name = "local-folders는 다른 agent_console 패키지에 의존하지 않는다 (표준 라이브러리만, 파일 시스템은 주입, design §PI.10)"
@@ -126,6 +126,12 @@ source_modules = ["agent_console_query_hash"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
+name = "numbered-id는 다른 agent_console 패키지에 의존하지 않는다 (겹치면 -2·-3… 붙이기 — projects·store·imports·teams가 함께 쓴다)"
+type = "forbidden"
+source_modules = ["agent_console_numbered_id"]
+forbidden_modules = ["@all"]
+
+[[contracts]]
 name = "sdd는 contracts, safe-regex, conditions, text-template, store에만 의존 (실행·프로젝트·런타임을 모른다 — 문서 문자열만 받는다, design §6R.3)"
 type = "forbidden"
 source_modules = ["agent_console_sdd"]
@@ -160,10 +166,10 @@ forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_resourc
 allow_indirect_imports = true
 
 [[contracts]]
-name = "teams는 contracts, registry, graph, settings, resources, secret-rules에만 의존 (순수 의미 계산, design §R9.4)"
+name = "teams는 contracts, registry, graph, settings, resources, secret-rules, numbered-id에만 의존 (순수 의미 계산, design §R9.4)"
 type = "forbidden"
 source_modules = ["agent_console_teams"]
-forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_graph", "!agent_console_settings", "!agent_console_resources", "!agent_console_secret_rules"]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_registry", "!agent_console_graph", "!agent_console_settings", "!agent_console_resources", "!agent_console_secret_rules", "!agent_console_numbered_id"]
 allow_indirect_imports = true
 
 [[contracts]]
@@ -269,10 +275,10 @@ forbidden_modules = ["@all", "!agent_console_backend_fake_agent", "!agent_consol
 allow_indirect_imports = true
 
 [[contracts]]
-name = "store는 contracts에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
+name = "store는 contracts, numbered-id에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
 type = "forbidden"
 source_modules = ["agent_console_store"]
-forbidden_modules = ["@all", "!agent_console_contracts"]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_numbered_id"]
 allow_indirect_imports = true
 
 [[contracts]]

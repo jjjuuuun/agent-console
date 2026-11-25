@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시
+
+- 등록이 풀린 프로젝트(모르는 기록 공간)에서 다른 곳에서 도는 턴 확인(`busy_elsewhere`)과 재시작 대기열 정책 적용이 `UnknownSpace`를 잡지 않아 예외 로그로 새던 것을 고쳤다. 읽을 수 없는 공간은 `mod-runs`와 같은 정책(`RecordsUnavailable`·`UnknownSpace`·`LookupError`)으로 조용히 "없음"이다.
+
 ## 0.1.0
 
 - 5.7R.33p: `GET /conversations/project-counts?source=app` — 앱(호스트) DB의 대화만 센다(프로젝트 기록 DB는 읽지 않는다). 생략하면 지금처럼 앱 DB + 보관하지 않은 등록 프로젝트 기록 DB. 다른 값은 422. 계약 변경 없음.

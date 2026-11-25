@@ -400,3 +400,17 @@ def test_rollups_limit_spans_sources_and_broken_source_is_skipped() -> None:
 
     only_app = IncrementalTokenRollups(app.runs, app.events, extra=failing)
     assert _by_graph(only_app.rollups(limit=10, tz=UTC)) == {"app": 2}
+
+
+def test_unknown_project_listed_first_is_skipped_not_aborting_others(tmp_path: Path) -> None:
+    """목록과 기록 공간 사이에 지워진 프로젝트(``RecordsStores``가 ``UnknownSpace``)는 그것만
+    건너뛴다 - 목록 앞에 있어도 뒤 프로젝트를 읽는다."""
+    from agent_console_link_runs_usage import project_readers
+    from agent_console_store import RecordsStores
+
+    db = _project_db(tmp_path, "p1", [("p1-a", 3.0, 10)])
+    spaces: Any = _Spaces({"project:p1": db})
+    stores = RecordsStores(lambda: spaces, SqliteStorage)
+    lookup = _Lookup([_Project("unknown"), _Project("p1")])
+    assert [pid for pid, _ in project_readers(lambda: lookup, stores)] == ["p1"]
+    db.close()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from agent_console_contracts import HTTP_STATUS_BY_ERROR_CODE
 from agent_console_link_exports_teams import (
     EXPORT_DEPENDENCIES,
+    SCOPE_LAYERS,
     DefinitionLookup,
     TeamExportDependencies,
     module,
@@ -22,8 +24,10 @@ from agent_console_mod_exports import ExportDependencies, ScopedExportDependenci
 from agent_console_mod_exports import module as exports
 from agent_console_modkit import Assembly, BaseServices, ModulesConfig, Paths, assemble
 from agent_console_modkit.host import SecurityPolicy, create_host_app
+from agent_console_modkit.testing import fake_module
 from agent_console_registry import Registry
 from agent_console_store import InMemoryDefinitionStore
+from agent_console_teams import Layer
 from agent_console_teams.testing import Kit
 
 TOKEN = "t" * 32
@@ -124,6 +128,66 @@ def test_for_lookup_reads_only_the_given_store(tmp_path: Path) -> None:
     assert ("agent", "alice") in found  # 팀 구성 해석은 같은 디스크립터
     # 원래 계산은 그대로 라이브러리 기준
     assert [(d.kind, d.id) for d in deps.dependencies("agent", "alice")] == [("resource", "doc")]
+
+
+class _ScopeSource:
+    """``settings.scope_layers`` 시험 공급자: 범위 id → 공통 첨부가 붙은 층(모르는 범위는 오류)."""
+
+    def __init__(self, refs: dict[str, list[str]]) -> None:
+        self.refs = refs
+        self.asked: list[str] = []
+
+    def scope_layers(self, scope_id: str) -> Any:
+        self.asked.append(scope_id)
+        if scope_id not in self.refs:
+            raise KeyError(scope_id)
+        value = {"resources": [{"ref": r} for r in self.refs[scope_id]]}
+        return SimpleNamespace(layers=[Layer("project", "프로젝트", value)], warnings=[])
+
+
+def _scope_module(source: _ScopeSource) -> Any:
+    return fake_module(
+        "fake-scope",
+        kind="testing",
+        provides=[SCOPE_LAYERS],
+        on_build=lambda ctx: ctx.provide(SCOPE_LAYERS, source),
+    )
+
+
+def test_for_lookup_scope_adds_scope_layer_attachments(tmp_path: Path) -> None:
+    """REL.8: ``for_lookup(..., scope=)``는 ``settings.scope_layers`` 층의 공통 첨부도 넣는다.
+
+    범위 없이 부르거나 공급자가 오류를 내면(그 공급자만 빼고) 범위 첨부가 없다.
+    """
+    source = _ScopeSource({"app": ["guide"]})
+    base = BaseServices(
+        environ={"HOME": str(tmp_path / "home")},
+        paths=Paths(base_dir=tmp_path, workspace=tmp_path / "ws", state=tmp_path / "state"),
+        registries=_Registries(),
+    )
+    assembly = assemble([definitions, exports, module, _scope_module(source)], base=base)
+    deps = assembly.port(EXPORT_DEPENDENCIES)
+    assert isinstance(deps, TeamExportDependencies)
+    space = InMemoryDefinitionStore()
+    space.create("agent", {"id": "alice", "name": "사본", "resources": [{"ref": "notes"}]})
+    graph = KIT.graph(
+        [KIT.person(), KIT.worker("a", "alice")], [KIT.edge("e1", "entry", "me", "a")]
+    )
+    space.create("graph", graph.model_dump(mode="json", exclude_none=True))
+
+    scoped = deps.for_lookup(space, scope="app")
+    assert [(d.kind, d.id, d.shared) for d in scoped.dependencies("agent", "alice")] == [
+        ("resource", "notes", False),
+        ("resource", "guide", True),
+    ]
+    found = {(d.kind, d.id, d.shared) for d in scoped.dependencies("graph", graph.id)}
+    assert ("resource", "guide", True) in found
+    assert source.asked == ["app"]  # 범위 층은 for_lookup에서 한 번 읽는다
+
+    plain = deps.for_lookup(space)
+    assert [d.id for d in plain.dependencies("agent", "alice")] == ["notes"]
+    broken = deps.for_lookup(space, scope="ghost")  # 공급자 오류 → 그 층만 빠진다
+    assert [d.id for d in broken.dependencies("agent", "alice")] == ["notes"]
 
 
 def test_standalone_provider(tmp_path: Path) -> None:

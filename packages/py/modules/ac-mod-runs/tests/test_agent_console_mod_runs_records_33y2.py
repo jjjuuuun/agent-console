@@ -100,9 +100,11 @@ class Spaces:
         self.root = root
         self.host_id = host_id
         self.handles: dict[str, Handle] = {}
+        self.gone: set[str] = set()
+        """등록이 풀린 공간(열면 모르는 프로젝트)."""
 
     def open(self, space: str) -> Handle:
-        if not space.startswith("project:") or space.endswith(":nope"):
+        if not space.startswith("project:") or space.endswith(":nope") or space in self.gone:
             raise LookupError(space)
         if space not in self.handles:
             folder = self.root / space.split(":", 1)[1]
@@ -404,3 +406,55 @@ def test_ws_run_topic_for_project_run_started_here(tmp_path: Path, spaces: Space
             seqs = _ws_events(ws, last)
         assert seqs == list(range(1, last + 1))
     assert {r.id for r in _space_runs(spaces, "pa")} >= {run_id}
+
+
+# ---- 등록이 풀린 프로젝트의 Run(아는 자리가 모르는 공간이 됨) -----------------------------------
+
+
+def test_unregistered_project_run_reads_answer_fixed_errors(tmp_path: Path, spaces: Spaces) -> None:
+    """이 프로세스가 공간에 쓴 Run의 프로젝트 등록이 풀리면(공간을 열 때 모르는 프로젝트), Run
+    단위 읽기는 500이 아니라 정해진 오류다: ``?project=`` 없는 조회는 읽을 수 없는 자리를
+    건너뛰어(기록 DB를 읽을 수 없을 때와 같다) 404 ``not_found``, ``?project=``를 준 조회는 404
+    ``project.not_found``(``details.project_id``)."""
+    with _client(tmp_path, spaces) as client:
+        run_id = _finish(client, "pa")["run"]["id"]
+        spaces.gone.add("project:pa")
+        for path in (
+            f"/runs/{run_id}",
+            f"/runs/{run_id}/events",
+            f"/runs/{run_id}/interactions",
+            f"/runs/{run_id}/resume-options",
+        ):
+            plain = client.get(f"{API}{path}")
+            assert plain.status_code == 404, (path, plain.text)
+            assert plain.json()["error"]["code"] == "not_found", path
+            scoped = client.get(f"{API}{path}?project=pa")
+            assert scoped.status_code == 404, (path, scoped.text)
+            error = scoped.json()["error"]
+            assert error["code"] == "project.not_found", path
+            assert error["details"] == {"project_id": "pa"}, path
+
+
+def test_unregistered_project_reads_and_writes_skip_in_recorder(spaces: Spaces) -> None:
+    """``runs.reader``·``runs.events``(다른 모듈이 받는 포트)에서도 모르는 공간은 건너뛰고(빈 결과),
+    쓰기는 기록 DB를 잃은 것과 같이 대기 줄로 간다(이유 ``not_found``)."""
+    lost: list[tuple[str, str]] = []
+    records = space_records(lambda: spaces, prefix="project:")
+    recorder = SpaceRecorder(
+        InMemoryStorage(), records, on_lost=lambda r, why: lost.append((r, why))
+    )
+    run = _run("r1", host=None)
+    recorder.runs.save(run)
+    recorder.events.append_many([_event("r1", 1)])
+    spaces.gone.add("project:pa")
+    assert recorder.runs.get("r1") is None
+    assert recorder.runs.list_node_runs("r1") == []
+    assert recorder.runs.list_node_runs_many(["r1"]) == {}
+    assert recorder.runs.descendants("r1") == []
+    assert recorder.events.last_seq("r1") == 0
+    assert recorder.events.list("r1") == []
+    assert recorder.events.list_many({"r1": 0}) == {}
+    assert recorder.interactions.list(run_id="r1") == []
+    recorder.events.append(_event("r1", 2))
+    assert lost == [("r1", "not_found")]
+    assert recover_space(records, "pa", active=list) is False

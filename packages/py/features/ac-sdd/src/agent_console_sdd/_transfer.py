@@ -19,7 +19,7 @@ from agent_console_contracts.sdd import (
     SpecDocument,
     SpecExportResult,
 )
-from agent_console_store import unique_id
+from agent_console_store import numbered_id, unique_id
 
 from ._errors import SpecPathError
 from ._files import SpecFiles, check_project_path
@@ -67,13 +67,9 @@ class ImportedDocuments:
 
 
 def _unique_file(name: str, taken: set[str]) -> str:
-    if name.casefold() not in taken:
-        return name
+    """파일 이름이 겹치면(대소문자 무시) 확장자 앞에 `-2`…를 붙인다."""
     stem, ext = posixpath.splitext(name)
-    n = 2
-    while f"{stem}-{n}{ext}".casefold() in taken:
-        n += 1
-    return f"{stem}-{n}{ext}"
+    return numbered_id(stem, lambda c: f"{c}{ext}".casefold() in taken) + ext
 
 
 def import_documents(

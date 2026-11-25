@@ -113,7 +113,8 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 `DefinitionKind.title`(기본 None)은 종류 표시 이름이다(복사 대화상자·구성 표의 종류 열). 기본 종류는 값을 가진다. 저장소는 이 값을 보지 않는다.
 
 이름만 받고 id를 정해야 할 때는 `slug_id(name, fallback=)`·`unique_id(name, taken, fallback=)`를 쓴다(악센트 떼기, 허용 밖
-글자 묶음 → `-`, 소문자, 120자, 겹치면 `-2`·`-3`…, 대소문자 무시).
+글자 묶음 → `-`, 소문자, 120자, 겹치면 `-2`·`-3`…, 대소문자 무시). 번호 붙이기 자체는 `agent-console-numbered-id`의
+`numbered_id(base, is_taken, *, max_length=, limit=)`이고 여기서 다시 내보낸다(`agent_console_store.numbered_id`).
 
 ```python
 >>> from agent_console_store import slug_id, unique_id
@@ -173,7 +174,8 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 공개: `RecordsDb`(`state`·`read_engine()`·`writable_engine()`·`revision()`·`refresh()`·`close()`), `RecordsState`,
 `RecordsUnavailable`(`reason`·`backup_path`, 코드 `project.records_unavailable`), `RecordsAbsent`, 소비 모듈이 받는
-모양 `RecordsHandle`·`RecordsSpaces`와 포트 이름 `RECORDS_SPACES_PORT`(`records.spaces`), `is_network_fs`(네트워크 파일
+모양 `RecordsHandle`·`RecordsSpaces`(선택 능력 `BatchRecordsSpaces.batch()` — 여러 공간 순회 동안 열린 핸들 상한으로 밀어내지
+않음, 소비 쪽은 `RecordsStores.batch()`)와 포트 이름 `RECORDS_SPACES_PORT`(`records.spaces`), `is_network_fs`(네트워크 파일
 시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
 `backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
 

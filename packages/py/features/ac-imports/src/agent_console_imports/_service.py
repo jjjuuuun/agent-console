@@ -15,6 +15,7 @@ from agent_console_contracts import (
     ImportResult,
     ImportSourceDescriptor,
 )
+from agent_console_numbered_id import NoFreeId, numbered_id
 
 from ._interfaces import DefinitionWriter, ImportItem, ImportSource
 
@@ -216,9 +217,12 @@ class ImportService:
         return AppliedItemInfo(**info, target_id=target, action=action)  # type: ignore[arg-type]
 
     def _free_id(self, kind: str, base: str, cache: dict[str, set[str]]) -> str:
-        for n in range(2, MAX_RENAME_ATTEMPTS):
-            suffix = f"-{n}"
-            candidate = base[: 128 - len(suffix)] + suffix
-            if not self._exists(kind, candidate, cache):
-                return candidate
-        raise ImportServiceError("빈 id를 찾지 못했습니다")
+        try:
+            return numbered_id(
+                base,
+                lambda candidate: self._exists(kind, candidate, cache),
+                max_length=128,
+                limit=MAX_RENAME_ATTEMPTS,
+            )
+        except NoFreeId:
+            raise ImportServiceError("빈 id를 찾지 못했습니다") from None

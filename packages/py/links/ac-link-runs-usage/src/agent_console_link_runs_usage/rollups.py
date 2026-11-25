@@ -20,6 +20,9 @@
   않는다. 기본 출처가 선택 메서드 ``for_project(None)``(앱 기록만 읽기, ``mod-runs``)을 가지면
   그것으로 읽는다 — 기록 공간이 있는 조립에서 ``list(project_id=)``는 프로젝트 기록 DB를 읽기
   때문이다.
+- 순회 묶음: 집계 한 번은 ``batch()`` 블록 안에서 돈다(예: ``RecordsStores.batch`` — 기록 공간 풀이
+  순회 중에 연 프로젝트 기록 DB를 상한으로 밀어내지 않는다. 프로젝트가 상한보다 많아도 집계 한 번에
+  프로젝트마다 한 번만 연다).
 - 질의 수(FU.11): 다시 읽을 Run은 출처마다 묶어 읽는다(선택 메서드 ``list_many``·
   ``list_node_runs_many``, 저장소 ``RUN_BATCH_SIZE``개마다 질의 한 번). 없으면 Run마다 읽는다.
 """
@@ -27,6 +30,7 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import logging
 import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -117,6 +121,9 @@ class RollupSource:
 ExtraSources = Callable[[str | None], Iterable[RollupSource]]
 """``project_id`` → 추가 출처들. None = 전부(계정 전체), 문자열 = 그 프로젝트 출처만."""
 
+Batch = Callable[[], contextlib.AbstractContextManager[object]]
+"""여러 출처를 읽는 순회 한 번을 감싸는 블록(예: ``RecordsStores.batch``). 기본은 빈 블록."""
+
 
 def _no_extra(project_id: str | None) -> Iterable[RollupSource]:
     return ()
@@ -139,6 +146,7 @@ class IncrementalTokenRollups:
         events: 기본 출처 이벤트 조회(``list(run_id, since_seq=, type_prefix=)``).
         event_types: 집계 재료 이벤트 형식.
         extra: 추가 출처(부를 때마다 다시 읽는다). 기본은 없음(앱 기록만).
+        batch: 집계 한 번(출처 목록 읽기 ~ 다시 읽기)을 감싸는 블록. 기본은 빈 블록.
     """
 
     def __init__(
@@ -148,8 +156,10 @@ class IncrementalTokenRollups:
         *,
         event_types: Sequence[str] = USAGE_EVENT_TYPES,
         extra: ExtraSources = _no_extra,
+        batch: Batch = contextlib.nullcontext,
     ) -> None:
         self._base = RollupSource(APP_SOURCE_KEY, runs, events)
+        self._batch = batch
         self._app_runs = runs
         self._extra = extra
         self._types = tuple(event_types)
@@ -183,6 +193,10 @@ class IncrementalTokenRollups:
             project_id: None이면 계정 전체(모든 출처). 주면 그 프로젝트 출처 + 앱 기록 중 같은
                 ``project_id``의 Run만.
         """
+        with self._batch():
+            return self._rollups(limit=limit, tz=tz, project_id=project_id)
+
+    def _rollups(self, *, limit: int, tz: tzinfo, project_id: str | None) -> list[TokenRollupRow]:
         sources = [self._base, *self._extra_sources(project_id)]
         candidates: list[tuple[RollupSource, Run]] = []
         for source in sources:
@@ -334,6 +348,7 @@ __all__ = [
     "USAGE_EVENT_TYPES",
     "AppRunSource",
     "AppScopedRuns",
+    "Batch",
     "BatchEvents",
     "BatchNodeRuns",
     "ExtraSources",

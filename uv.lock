@@ -61,6 +61,7 @@ members = [
     "agent-console-mod-wiki",
     "agent-console-modkit",
     "agent-console-nodes-core",
+    "agent-console-numbered-id",
     "agent-console-path-glob",
     "agent-console-project-space",
     "agent-console-projects",
@@ -540,6 +541,7 @@ source = { editable = "packages/py/features/ac-imports" }
 dependencies = [
     { name = "agent-console-claude-format" },
     { name = "agent-console-contracts" },
+    { name = "agent-console-numbered-id" },
     { name = "agent-console-registry" },
     { name = "agent-console-secret-rules" },
 ]
@@ -557,6 +559,7 @@ dev = [
 requires-dist = [
     { name = "agent-console-claude-format", editable = "packages/py/base/ac-claude-format" },
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-numbered-id", editable = "packages/py/base/ac-numbered-id" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
 ]
@@ -1414,6 +1417,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "agent-console-link-projects-records" },
     { name = "agent-console-mod-runs" },
     { name = "agent-console-mod-usage" },
     { name = "httpx" },
@@ -1433,6 +1437,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "agent-console-link-projects-records", editable = "packages/py/links/ac-link-projects-records" },
     { name = "agent-console-mod-runs", editable = "packages/py/modules/ac-mod-runs" },
     { name = "agent-console-mod-usage", editable = "packages/py/modules/ac-mod-usage" },
     { name = "httpx", specifier = ">=0.27" },
@@ -2432,6 +2437,29 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-numbered-id"
+version = "0.1.0"
+source = { editable = "packages/py/base/ac-numbered-id" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-path-glob"
 version = "0.1.0"
 source = { editable = "packages/py/base/ac-path-glob" }
@@ -2494,6 +2522,7 @@ source = { editable = "packages/py/features/ac-projects" }
 dependencies = [
     { name = "agent-console-contracts" },
     { name = "agent-console-local-folders" },
+    { name = "agent-console-numbered-id" },
 ]
 
 [package.dev-dependencies]
@@ -2508,6 +2537,7 @@ dev = [
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-local-folders", editable = "packages/py/features/ac-local-folders" },
+    { name = "agent-console-numbered-id", editable = "packages/py/base/ac-numbered-id" },
 ]
 
 [package.metadata.requires-dev]
@@ -3001,6 +3031,7 @@ version = "0.1.0"
 source = { editable = "packages/py/features/ac-store" }
 dependencies = [
     { name = "agent-console-contracts" },
+    { name = "agent-console-numbered-id" },
     { name = "alembic" },
     { name = "pydantic" },
     { name = "ruamel-yaml" },
@@ -3018,6 +3049,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-numbered-id", editable = "packages/py/base/ac-numbered-id" },
     { name = "alembic", specifier = ">=1.13" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
@@ -3039,6 +3071,7 @@ source = { editable = "packages/py/features/ac-teams" }
 dependencies = [
     { name = "agent-console-contracts" },
     { name = "agent-console-graph" },
+    { name = "agent-console-numbered-id" },
     { name = "agent-console-registry" },
     { name = "agent-console-resources" },
     { name = "agent-console-secret-rules" },
@@ -3058,6 +3091,7 @@ dev = [
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-graph", editable = "packages/py/base/ac-graph" },
+    { name = "agent-console-numbered-id", editable = "packages/py/base/ac-numbered-id" },
     { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
     { name = "agent-console-resources", editable = "packages/py/features/ac-resources" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },

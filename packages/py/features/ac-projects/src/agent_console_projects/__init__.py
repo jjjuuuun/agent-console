@@ -6,7 +6,7 @@
 - 합치기: 등록부 + 매니페스트 → `Project`(`merge_project`·`split_project`·`initial_manifest`·
   `combined_version`·`ignored_key_issues`).
 - 공간 사이 복사: `copy_plan`(대상 이름 `copy_target_label`, 평문 비밀 막힘 `PlainSecretCheck`)·
-  `skip_warnings`·`apply_decisions`·`apply_renames`.
+  `skip_warnings`·`apply_decisions`·`apply_renames`·`reserved_target_issues`(대상 id 예약어).
 - 거꾸로 참조: `find_referrers`(한 공간에서 정의 하나를 쓰는 정의, 참조 추출 주입 — 삭제 확인 창).
 - 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33), 폴더 안 파일 접근
   `FolderGuard`·`normalize_reserved`·`relative_inside`(예약 경로·링크를 푼 실제 경로, §PI.5).
@@ -30,6 +30,8 @@ from ._copy import (
     CODE_COPY_SOURCE_MISSING,
     CODE_COPY_UNKNOWN_ACTION,
     CODE_SECRET_PLAIN_FOUND,
+    COPY_RESERVED_RENAME,
+    COPY_RESERVED_WRITE,
     COPY_TARGET_LIBRARY,
     COPY_TARGET_PROJECT,
     DEFAULT_COPY_MESSAGES,
@@ -44,6 +46,7 @@ from ._copy import (
     copy_plan,
     copy_target_label,
     renames_of,
+    reserved_target_issues,
     skip_warnings,
 )
 from ._folders import ProjectFolder, ProjectFolderSet, project_folders
@@ -133,6 +136,8 @@ __all__ = [
     "CODE_SECRET_PLAIN_FOUND",
     "CODE_SHARED_USES_PROJECT",
     "CODE_UNKNOWN",
+    "COPY_RESERVED_RENAME",
+    "COPY_RESERVED_WRITE",
     "COPY_TARGET_LIBRARY",
     "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
@@ -205,6 +210,7 @@ __all__ = [
     "registry_conflicts",
     "relative_inside",
     "renames_of",
+    "reserved_target_issues",
     "resolve_folder",
     "scope_issues",
     "skip_warnings",

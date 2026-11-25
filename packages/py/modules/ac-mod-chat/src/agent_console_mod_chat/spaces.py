@@ -41,12 +41,21 @@ from agent_console_store import (
     RecordsUnavailable,
     SpaceLocator,
     StoreError,
+    UnknownSpace,
 )
 
 from .storage import QueueCounts, QueuedItem, SqliteChatStorage
 
 UNFINISHED = ("queued", "running", "paused", "waiting")
 """끝나지 않은 Run 상태(다른 곳에서 도는 턴 판정)."""
+
+_UNREADABLE: tuple[type[Exception], ...] = (RecordsUnavailable, UnknownSpace, LookupError)
+"""그 공간을 지금 읽을 수 없다: 기록 DB를 쓸 수 없음·모르는 공간(등록이 풀린 프로젝트 —
+``RecordsStores``는 ``LookupError``가 아닌 ``UnknownSpace``를 던진다)·그 밖의 조회 실패
+(``mod-runs``와 같은 정책)."""
+
+_UNREADABLE_RUNS: tuple[type[Exception], ...] = (*_UNREADABLE, TypeError)
+"""``runs`` 연결 읽기에서 "없음"으로 보는 예외(읽을 수 없는 공간 + 필터를 모르는 읽기 포트)."""
 
 _log = logging.getLogger("agent_console_mod_chat")
 
@@ -336,7 +345,7 @@ class SpacedChatService(ChatService):
             scoped = _scoped(runs, project_id)
             try:
                 found = scoped.list(conversation_id=conversation_id, status=list(UNFINISHED))
-            except (RecordsUnavailable, LookupError, TypeError):
+            except _UNREADABLE_RUNS:  # 읽을 수 없는 공간 = 다른 곳에서 도는 턴 없음
                 return None
             for run in found:
                 return str(run.id)
@@ -348,7 +357,7 @@ class SpacedChatService(ChatService):
         async def apply() -> None:
             try:
                 applied = await service.apply_restart_policy()
-            except (RecordsUnavailable, LookupError):
+            except _UNREADABLE:  # 등록이 풀린 프로젝트 등 — 정책을 적용할 대기열이 없다
                 return
             except Exception:
                 _log.exception("프로젝트 대기열 재시작 정책 실패: %s", project_id)

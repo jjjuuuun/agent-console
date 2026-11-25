@@ -5,13 +5,17 @@
 공간은 그 프로세스에서 **처음 쓸 때** 열고 계보를 맞춘다(서버 시작 때 열지 않는다).
 ``shutdown()``(서버 종료) 뒤에는 새로 열지 않는다. 늦게 온 열기(예: 끝나지 않은 배경 수집 스레드)는
 ``link_disabled`` 핸들을 받아 연결이 남지 않는다.
+여러 공간을 차례로 읽는 순회(사용량 집계 등)는 ``batch()`` 블록 안에서 돈다. 블록 안에서는 상한으로
+밀어내지 않고 블록이 끝날 때 맞춘다(상한보다 많은 공간을 순회할 때 오래 안 쓴 순서 캐시가 매번
+전부 다시 여는 것을 막는다 - ``BatchRecordsSpaces``).
 """
 
 from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -177,6 +181,7 @@ class RecordsSpacePool:
         self._network_fs = network_fs
         self._entries: OpenCache[_Entry] = OpenCache(lambda e: e.db.close(), clock=clock)
         self._lock = self._entries.lock
+        self._batch_depth = 0
 
     # ---- RecordsSpaces -------------------------------------------------------
 
@@ -231,6 +236,25 @@ class RecordsSpacePool:
                 can_write=self._can_write(found),
                 network_fs=self._network_fs,
             )
+
+    @contextmanager
+    def batch(self) -> Iterator[None]:
+        """여러 공간을 차례로 읽는 순회 묶음(``BatchRecordsSpaces``).
+
+        블록 안에서 연 공간은 블록이 끝날 때까지 상한(``max_open``)으로 밀어내지 않는다 - 순회
+        중에 받은 엔진이 쫓겨나 다시 열리지 않는다. 가장 바깥 블록이 끝나면 오래 안 쓴 것부터
+        상한을 맞춘다. 블록이 도는 동안에는 다른 스레드의 열기도 밀어내지 않는다(그동안 열린
+        핸들이 상한을 넘을 수 있고, 넘는 수는 순회한 공간 수까지다).
+        """
+        with self._lock:
+            self._batch_depth += 1
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._batch_depth -= 1
+                if self._batch_depth == 0:
+                    self._enforce_cap()
 
     def close(self, space: str) -> None:
         """공간의 핸들을 닫는다(없으면 아무 일도 없다)."""
@@ -337,6 +361,8 @@ class RecordsSpacePool:
             entry.db.suspend()
 
     def _enforce_cap(self) -> None:
+        if self._batch_depth > 0:
+            return  # 순회 묶음이 끝날 때 맞춘다
         for _, entry in self._entries.over(self._options.max_open):
             entry.db.suspend()  # 들고 있는 쪽이 다시 쓰면 살아난다(닫지 않는다)
 

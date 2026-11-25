@@ -194,9 +194,12 @@ class _Dep:
 class _AgentResources:
     """에이전트 → ``resources[].ref`` (읽는 저장소를 기록한다)."""
 
-    def __init__(self, lookup: Any, seen: list[Any]) -> None:
+    def __init__(
+        self, lookup: Any, seen: list[Any], scopes: list[str | None] | None = None
+    ) -> None:
         self.lookup = lookup
         self.seen = seen
+        self.scopes = scopes if scopes is not None else []
 
     def dependencies(self, kind: str, id: str) -> list[_Dep]:
         self.seen.append(self.lookup)
@@ -205,8 +208,9 @@ class _AgentResources:
         doc = self.lookup.get(kind, id).document
         return [_Dep("resource", r["ref"]) for r in doc.get("resources", [])]
 
-    def for_lookup(self, lookup: Any) -> _AgentResources:
-        return _AgentResources(lookup, self.seen)
+    def for_lookup(self, lookup: Any, *, scope: str | None = None) -> _AgentResources:
+        self.scopes.append(scope)
+        return _AgentResources(lookup, self.seen, self.scopes)
 
 
 def _deps_module(deps: Any) -> Any:
@@ -225,7 +229,10 @@ def _plan_paths(client: TestClient, **params: str) -> set[str]:
 
 
 def test_project_space_export_follows_dependencies_in_that_space(tmp_path: Path) -> None:
-    """FU.22: 프로젝트 공간 원본은 그 공간 저장소 기준 의존 계산(``for_lookup``)을 쓴다."""
+    """FU.22: 프로젝트 공간 원본은 그 공간 저장소 기준 의존 계산(``for_lookup``)을 쓴다.
+
+    REL.8: ``for_lookup``에 범위(``scope`` = 프로젝트 id)도 넘긴다(그 프로젝트 설정 층 첨부용).
+    """
     library = FileDefinitionStore(tmp_path / "ws", DEFAULT_KINDS)
     library.create("agent", {**LIB_AGENT, "resources": [{"ref": "lib-only"}]})
     library.create("resource", {**RULE, "id": "lib-only"})
@@ -246,6 +253,8 @@ def test_project_space_export_follows_dependencies_in_that_space(tmp_path: Path)
         assert not any("lib-only" in p for p in in_space)  # 공용으로 넘어가 찾지 않는다
         assert seen
         assert all(lookup is space for lookup in seen)
+        assert deps.scopes
+        assert set(deps.scopes) == {"a"}  # REL.8: 범위 = 그 프로젝트 id
         seen.clear()
         _plan_paths(client, project="a", source="library")
         assert seen

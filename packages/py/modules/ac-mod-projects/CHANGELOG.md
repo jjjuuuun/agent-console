@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- REL.6: 복사 적용(`POST /projects/copy/apply`)이 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가 그 종류의 예약어면 아무것도 쓰지 않고 422 `validation_failed`(`details.issues` = error `project.copy_reserved_id`, 제안 `suggested_id`)로 거절한다. 예약어는 종류 데이터(`DefinitionKind.reserved_ids`, 기여 종류 포함), 문구는 설정 `messages`의 `project.copy_reserved_id.rename`·`project.copy_reserved_id.write`.
+
 - FU.18: 복사 종류 목록 `CopyKindInfo.title`이 종류 기여 `title`이 없으면 종류 데이터 `DefinitionKind.title`을 쓴다(기본 종류도 이름이 나온다, 둘 다 없으면 null).
 
 - FU.13: 종류 공통 거꾸로 참조 `GET /projects/copy/items/{kind}/{id}/references?project=` → `CopyItemReferences`(계약 0.14.10) — 같은 공간의 정의를 읽어 `definitions.references`·종류 기여 `references`(순수 규칙 `find_referrers`, `ac-projects`)로 이 항목을 쓰는 정의를 찾는다. 삭제 확인 창의 "쓰는 구성" 목록에 쓴다. 참조 추출이 없으면 `checked` false. `CopyService.item_references`.

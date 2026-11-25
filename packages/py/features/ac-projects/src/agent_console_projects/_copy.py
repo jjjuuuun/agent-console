@@ -8,6 +8,8 @@
 - `apply_decisions`: 사용자가 고른 동작을 지금 버전과 맞춰 항목별 결과(충돌 항목만 `conflict`).
 - `apply_renames`: rename 항목의 id를 바꾸고 묶음 안 참조를 새 id로 고친다
   (`rewrite_references` 주입).
+- `reserved_target_issues`: 적용 요청에서 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가
+  그 종류의 예약어인 항목(적용 전에 요청 전체를 거절할 근거).
 - `skip_warnings`: 빼는(skip) 참조 항목 때문에 실행 전에 막힐 정의 경고.
 - `copy_target_label`: 문구의 `${target}`(대상 공간 표시 이름 — 공용 구성 / 따옴표 친
   프로젝트 이름).
@@ -52,6 +54,8 @@ __all__ = [
     "CODE_COPY_SOURCE_MISSING",
     "CODE_COPY_UNKNOWN_ACTION",
     "CODE_SECRET_PLAIN_FOUND",
+    "COPY_RESERVED_RENAME",
+    "COPY_RESERVED_WRITE",
     "COPY_TARGET_LIBRARY",
     "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
@@ -66,6 +70,7 @@ __all__ = [
     "copy_plan",
     "copy_target_label",
     "renames_of",
+    "reserved_target_issues",
     "skip_warnings",
 ]
 
@@ -86,6 +91,12 @@ CODE_COPY_RESERVED_ID: Final = "project.copy_reserved_id"
 """항목 id가 그 종류의 예약어(`reserved_ids`, 예: 같은 깊이의 고정 REST 경로)라 대상 공간에서 그
 id로 열 수 없다(warning). `details{kind, id, reserved, suggested_id}`, 쓰는 항목의 기본 동작은
 rename(대상에 없음) 또는 고르기(내용이 다름)다."""
+COPY_RESERVED_RENAME: Final = "project.copy_reserved_id.rename"
+"""문구 표 키: 적용 요청의 rename 새 id가 예약어일 때(`reserved_target_issues`, 이슈 코드는
+`project.copy_reserved_id` 그대로). 변수 item·id(새 id)·suggested·target."""
+COPY_RESERVED_WRITE: Final = "project.copy_reserved_id.write"
+"""문구 표 키: 적용 요청이 예약어인 원본 id를 그대로(copy·overwrite) 쓰려 할 때
+(`reserved_target_issues`). 변수 item·id·suggested·target."""
 CODE_COPY_UNKNOWN_ACTION: Final = "project.copy_unknown_action"
 """모르는 동작(항목 결과 skipped)."""
 CODE_SECRET_PLAIN_FOUND: Final = KnownIssueCodes.SECRET_PLAIN_FOUND
@@ -114,6 +125,14 @@ DEFAULT_COPY_MESSAGES: Mapping[str, str] = {
     CODE_COPY_RESERVED_ID: (
         "${item}의 id \u2018${id}\u2019는 이 종류의 경로 이름과 겹쳐 ${target}에서 열 수 없습니다. "
         "새 id \u2018${suggested}\u2019로 바꿔 복사하세요."
+    ),
+    COPY_RESERVED_RENAME: (
+        "${item}의 새 id \u2018${id}\u2019는 이 종류의 경로 이름과 겹쳐 ${target}에서 열 수 "
+        "없습니다. 다른 id(예: \u2018${suggested}\u2019)를 쓰세요."
+    ),
+    COPY_RESERVED_WRITE: (
+        "${item}의 id \u2018${id}\u2019는 이 종류의 경로 이름과 겹쳐 ${target}에서 열 수 없어 "
+        "그대로 쓸 수 없습니다. 새 id(예: \u2018${suggested}\u2019)로 이름을 바꿔 복사하세요."
     ),
     KnownIssueCodes.PROJECT_REFERENCES_UNAVAILABLE: (
         "참조를 알 수 없어 함께 가져올 항목을 찾지 못했습니다. 고른 항목만 복사합니다."
@@ -672,9 +691,7 @@ def apply_decisions(
     for raw in items:
         item = raw if isinstance(raw, CopyApplyItem) else CopyApplyItem.model_validate(raw)
         key = (item.kind, item.id)
-        target_id = (
-            item.new_id if item.action == KnownCopyActions.RENAME and item.new_id else item.id
-        )
+        target_id = _target_id(item)
 
         def conflict(
             reason: str, item: CopyApplyItem = item, target_id: str = target_id
@@ -753,6 +770,109 @@ def apply_decisions(
         claimed.add(tkey)
         out.append(
             CopyDecision(item.kind, item.id, item.action, target_id, _WRITE_STATUS[item.action])
+        )
+    return out
+
+
+def _target_id(item: CopyApplyItem) -> str:
+    """대상에 쓸 id(`apply_decisions`와 같은 규칙: rename이고 새 id가 있으면 새 id)."""
+    return item.new_id if item.action == KnownCopyActions.RENAME and item.new_id else item.id
+
+
+_RESERVED_CHECKED: Final = (
+    KnownCopyActions.COPY,
+    KnownCopyActions.OVERWRITE,
+    KnownCopyActions.RENAME,
+)
+"""대상에 그 id로 쓰는 동작(reuse·skip은 쓰지 않으므로 보지 않는다)."""
+
+
+def reserved_target_issues(
+    items: Iterable[CopyApplyItem | Mapping[str, Any]],
+    reserved_ids: Mapping[str, Collection[str]] | None,
+    *,
+    target_index: Mapping[DefinitionId, str] | None = None,
+    messages: Mapping[str, str] | None = None,
+    target_label: str = DEFAULT_TARGET_LABEL,
+) -> list[Issue]:
+    """대상에 쓸 id가 그 종류의 예약어(대소문자 무시)인 항목마다 error 이슈 하나.
+
+    copy·overwrite는 원본 id, rename은 새 id를 본다(`apply_decisions`와 같은 대상 id). 계획의
+    `suggested_id`는 이미 예약어를 피하므로, 걸리는 것은 사용자가 직접 넣은 새 id이거나 계획
+    경고(`project.copy_reserved_id`)를 두고 예약어 id를 그대로 쓰려는 항목이다. 부르는 쪽은 이슈가
+    하나라도 있으면 아무것도 쓰지 않고 요청을 거절한다(422). reuse·skip은 쓰지 않으므로 보지 않는다.
+
+    Args:
+        items: 적용 항목(`CopyApplyItem` 또는 같은 키 dict).
+        reserved_ids: 종류 → 예약어(정의 종류 데이터 `DefinitionKind.reserved_ids`).
+            None = 보지 않음.
+        target_index: 대상 공간의 (종류, id) → 버전. 제안 id(`details.suggested_id`)가 대상에 있는
+            id·예약어·요청의 다른 대상 id와 겹치지 않게 쓴다.
+        messages: 문구 바꾸기(rename은 키 `COPY_RESERVED_RENAME`, copy·overwrite는
+            `COPY_RESERVED_WRITE`).
+        target_label: 문구의 `${target}`.
+
+    Returns:
+        error `project.copy_reserved_id` 이슈 목록(요청 순). `details{kind, id, action, target_id,
+        reserved, suggested_id}`(rename이면 `new_id`도), `path`는 rename `/items/<n>/new_id`,
+        그 밖 `/items/<n>/id`.
+
+    >>> issues = reserved_target_issues(
+    ...     [{"kind": "tpl", "id": "a", "action": "rename", "new_id": "Check",
+    ...       "source_version": "1"},
+    ...      {"kind": "tpl", "id": "variables", "action": "copy", "source_version": "1"}],
+    ...     {"tpl": ("variables", "check")})
+    >>> [(i.details["action"], i.details["target_id"], i.details["suggested_id"]) for i in issues]
+    [('rename', 'Check', 'Check-2'), ('copy', 'variables', 'variables-2')]
+    """
+    reserved = {
+        kind: {w.casefold() for w in words} for kind, words in (reserved_ids or {}).items() if words
+    }
+    if not reserved:
+        return []
+    parsed = [
+        raw if isinstance(raw, CopyApplyItem) else CopyApplyItem.model_validate(raw)
+        for raw in items
+    ]
+    wanted = [(i.kind, _target_id(i)) for i in parsed if i.action in _RESERVED_CHECKED]
+    out: list[Issue] = []
+    suggested: list[DefinitionId] = []
+    for index, item in enumerate(parsed):
+        if item.action not in _RESERVED_CHECKED:
+            continue
+        target_id = _target_id(item)
+        words = reserved.get(item.kind)
+        if not words or target_id.casefold() not in words:
+            continue
+        taken = [i for k, i in (target_index or {}) if k == item.kind]
+        taken += [i for k, i in (*wanted, *suggested) if k == item.kind]
+        suggestion = registration_id(target_id, [*taken, *words])
+        suggested.append((item.kind, suggestion))
+        renaming = item.action == KnownCopyActions.RENAME
+        key = (item.kind, item.id)
+        out.append(
+            Issue(
+                severity="error",
+                code=CODE_COPY_RESERVED_ID,
+                message=_say(
+                    messages,
+                    COPY_RESERVED_RENAME if renaming else COPY_RESERVED_WRITE,
+                    item=_label(key),
+                    id=target_id,
+                    suggested=suggestion,
+                    target=target_label,
+                ),
+                path=f"/items/{index}/{'new_id' if renaming else 'id'}",
+                details={
+                    "kind": item.kind,
+                    "id": item.id,
+                    "action": item.action,
+                    "target_id": target_id,
+                    **({"new_id": target_id} if renaming else {}),
+                    "reserved": sorted((reserved_ids or {})[item.kind]),
+                    "suggested_id": suggestion,
+                },
+            )
         )
     return out
 

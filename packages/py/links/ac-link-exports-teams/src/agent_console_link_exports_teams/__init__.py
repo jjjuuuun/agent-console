@@ -7,7 +7,7 @@
     - ``module``(``ExportsTeamsLink``): entry point ``agent_console.server_modules``의
       ``link-exports-teams``.
     - ``TeamExportDependencies``: 서버 없이 쓰는 의존 계산.
-    - 포트(``ports``): ``DEFINITIONS_LOOKUP``(필수)·``WORKSPACE_SETTINGS``(선택)·
+    - 포트(``ports``): ``DEFINITIONS_LOOKUP``(필수)·``WORKSPACE_SETTINGS``·``SCOPE_LAYERS``(선택)·
       ``EXPORT_DEPENDENCIES``(제공), 소비자 쪽 프로토콜.
 """
 
@@ -18,19 +18,23 @@ from .module import MODULE_ID, ExportsTeamsLink, module
 from .ports import (
     DEFINITIONS_LOOKUP,
     EXPORT_DEPENDENCIES,
+    SCOPE_LAYERS,
     WORKSPACE_SETTINGS,
     DefinitionLookup,
     ExportDependencies,
+    ScopeLayersSource,
 )
 
 __all__ = [
     "DEFINITIONS_LOOKUP",
     "EXPORT_DEPENDENCIES",
     "MODULE_ID",
+    "SCOPE_LAYERS",
     "WORKSPACE_SETTINGS",
     "DefinitionLookup",
     "ExportDependencies",
     "ExportsTeamsLink",
+    "ScopeLayersSource",
     "TeamExportDependencies",
     "module",
 ]

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.3: 등록이 풀린 프로젝트(`RecordsStores`의 `UnknownSpace`)를 읽을 수 없는 자리로 다룬다 — `run_id` 자리 읽기는 건너뛰고(REST 404 `not_found`, `?project=` 조회는 404 `project.not_found`), 쓰기는 대기 파일로(이유 `not_found`), 재시작 복구는 다음 열기로. 전에는 `runs.reader`·`runs.events`·WS 재생·실행 중 쓰기에서 예외가 그대로 나갔다.
 - FU.11: `runs.reader.list_node_runs_many`·`runs.events.list_many`(저장소 묶어 읽기) — Run의 자리(호스트·이 프로세스가 아는 공간)마다 묶어 한 번씩 읽는다. 읽을 수 없는 자리(`RecordsUnavailable`)의 Run은 뺀다. 표 변경 없음.
 - 5.7R.33t1: 맡는 범위 없는 프로젝트 실행 막기(K33-10). `runs.scopes` 선택 메서드 `accepts_project`(`RunProjectScoper`), 선택 포트 `projects.lookup`이 있는데 맡는 공급자가 없으면 실행 시작·대화 턴·이어 가기·프로젝트 기준 검증(`definitions_for`·`load_graph(project_id=)`·`check_project`)을 409 `feature_unavailable`(`details = {module, port: "runs.scopes", project_id}`)로 막고 Run을 만들지 않는다. 막는 동안 `server.warnings`에 같은 코드·`details.port`의 경고. 새 설정 `unscoped_project_runs`(`policy` reject·allow, `message`), 새 공개 이름 `RunProjectScoper`·`UnscopedProjectRuns`·`unscoped_project_policy`·`unscoped_project_warning`·`UNSCOPED_PROJECT_PORT`, `RunService(unscoped_project=)`·`accepts_project`·`has_project_scope`·`unscoped_project_error`. `graph_of_run`은 막지 않는다. 계약·표 변경 없음.
 - 5.7R.33p: `GET /runs/project-counts?source=app` — 앱(호스트) DB의 루트 Run만 센다(프로젝트 기록 DB는 읽지 않는다). 생략하면 지금처럼 앱 DB + 보관하지 않은 등록 프로젝트 기록 DB. 다른 값은 422. 계약 변경 없음.
