@@ -4,6 +4,7 @@
 - `statusline`: Claude Code statusLine 사용량 브리지. 로직은 `agent_console_usage`.
 - `logs purge`: 로그 색인 비우기(M-3). 로직은 `agent_console_logs.purge_index`
   (`_logs`에서 지연 import).
+- `--version`: 설치 메타데이터(`agent-console-cli`)의 버전을 `agent-console <버전>`으로 출력한다.
 
 시작 시간: `statusline`은 Claude Code가 상태 줄을 그릴 때마다 실행되므로 모듈 상단에서
 서버 패키지를 import하지 않는다(`tests/test_agent_console_cli_unit.py`가 검사).
@@ -14,7 +15,9 @@ from __future__ import annotations
 import os
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as dist_version
 from pathlib import Path
 from typing import Annotated
 
@@ -31,6 +34,8 @@ from ._server import ServerConfigError, run_serve, server_log_index_path, server
 from ._statusline import StatuslineOptions, parse_labels, run_statusline
 
 PROG_NAME = "agent-console"
+DIST_NAME = "agent-console-cli"
+"""`--version`이 버전을 읽는 배포 이름(설치 메타데이터)."""
 EXIT_FAILED = 1
 CONFIG_ENV = "AGENT_CONSOLE_CONFIG"
 DEFAULT_LOGS_MODULE = "mod-logs"
@@ -52,6 +57,41 @@ logs_app = typer.Typer(
     pretty_exceptions_enable=False,
 )
 app.add_typer(logs_app, name="logs")
+
+
+def cli_version(read: Callable[[str], str] = dist_version) -> str:
+    """설치된 `agent-console-cli` 버전.
+
+    설치 메타데이터가 없으면(소스로 실행) `"0.0.0"`(서버 `server_version`과 같음).
+
+    Args:
+        read: 배포 이름 → 버전(기본 `importlib.metadata.version`, 테스트에서 바꿔 끼운다).
+    """
+    try:
+        return read(DIST_NAME)
+    except PackageNotFoundError:
+        return "0.0.0"
+
+
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(f"{PROG_NAME} {cli_version()}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=_print_version,
+            is_eager=True,
+            help="버전을 출력하고 끝낸다.",
+        ),
+    ] = False,
+) -> None:
+    pass
 
 
 ConfigOption = Annotated[

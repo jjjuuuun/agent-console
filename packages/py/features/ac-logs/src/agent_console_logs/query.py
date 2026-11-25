@@ -33,7 +33,6 @@ from agent_console_contracts.logs import (
     LogEventDetail,
     LogEventPage,
     LogLane,
-    LogProjectRef,
     LogSessionSummary,
     LogTimeline,
     LogTokenTotals,
@@ -484,7 +483,7 @@ def _summary(
     cwd = next((e.cwd for e in whole if e.cwd), "")
     repo_root = next((e.repo_root for e in whole if e.cwd == cwd and e.repo_root), "")
     title = pick_session_title(whole, ctx.session_title_rules)
-    pid, label, _ = project_of(cwd, repo_root, ctx)
+    pid, _label, _ = project_of(cwd, repo_root, ctx)
     times = [e.time for e in ordered if e.time is not None]
     return LogSessionSummary(
         session=session,
@@ -492,7 +491,6 @@ def _summary(
         title=title,
         cwd=cwd,
         repo_root=repo_root,
-        project=LogProjectRef(id=pid, label=label) if pid else None,
         project_id=pid,
         first_time=min(times) if times else None,
         last_time=max(times) if times else None,

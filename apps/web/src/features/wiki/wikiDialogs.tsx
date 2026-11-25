@@ -3,7 +3,7 @@
  * 각 훅은 `{ open, dialog }`를 돌려주고 `dialog`를 화면 어디든 한 번 그린다(열려 있을 때만 마운트된다).
  * 요청·캐시 갱신·토스트·이동은 여기서 하고 대화상자 자체는 props만 받는다.
  */
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast, ConfirmDialog } from "@agent-console/ui";
 import type { WikiCreateRequest, WikiSummary } from "@agent-console/contracts/wiki";
@@ -79,6 +79,8 @@ function NewWikiHost({ onClose, onCreated, copy, onImportZip }: { onClose: () =>
   const canImport = rulesScreen && ctx.capabilities.rules_library && ctx.projectId !== null;
   const library = useLibraryRulesKind(canImport);
   const navigate = useNavigate();
+  const wikis = useWikiList();
+  const existingIds = useMemo(() => new Set((wikis.data ?? []).map((w) => w.id)), [wikis.data]);
   const importRules = (added: (ruleId: string) => void) => {
     const kind = library.kind;
     if (kind === null || ctx.projectId === null) return;
@@ -99,6 +101,8 @@ function NewWikiHost({ onClose, onCreated, copy, onImportZip }: { onClose: () =>
       onClose={onClose}
       folder={ctx.projectName === undefined ? undefined : { name: ctx.projectName }}
       pagesRoot={ctx.pagesRoot}
+      kindName={ctx.info?.wiki_kind ?? null}
+      existingIds={existingIds}
       rules={rules.data}
       rulesFailed={rules.isError}
       blockedReason={ctx.readOnly ? ctx.readOnlyReason : undefined}

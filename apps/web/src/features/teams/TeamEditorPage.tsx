@@ -1,4 +1,3 @@
-import { useMoveIssueToShared, useProjectScopeFilter } from "../projects";
 import { flashElement, useFixTarget } from "../../app/fix";
 import { newAttachment } from "../../lib/serialize";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,7 +27,7 @@ import { useRegisterCommands } from "../../shell/commands";
 import { usePageTitle } from "../../shell/titles";
 import { Skeleton, useBackends, useEdgeTypes, useDelegationStrategies, useResourceList, useResourceTypes } from "../settings";
 import { ActionMenu, nodeAvatarsOf, useAgentList, useGraphList, useInteractionKinds, useInvalidateLists, useNodeTypes, DeleteDialog, DEFINITION_KINDS, definitionKey, definitionPath, NewDefinitionDialog, libraryMessages as lm, modeLabel, routePath, ROUTE_ROLES, ResourcePicker, useRouteOn, useRoutesOn } from "../library";
-import { useProjects, ProjectTag, SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
+import { useProjects, SpaceChip, SpaceNote, useConfigTransfer } from "../projects";
 import { ConnectedBackendChooserCard, precheckBackends, useSaveDefaultBackend, type UnresolvedBackend } from "../backendChoice";
 import { DEFAULT_TEAM_CONVENTIONS, retryFocus } from "../delegation";
 import { useTeamPlan } from "./useTeamPlan";
@@ -123,10 +122,7 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   const runs = useApiQuery(["list", "graph-runs", id], (r) => r.listRuns({ graph_id: id, limit: 50 }), { refetchInterval: 8000, retry: false });
 
   const draft = editor.draft;
-  // 팔레트는 이 팀의 범위(공용이면 현재 프로젝트)에 맞는 에이전트·리소스만 보인다
-  const inScope = useProjectScopeFilter(draft?.project);
   const validation = useValidation(id, draft);
-  const moveToShared = useMoveIssueToShared();
   usePageTitle(draft?.name ?? null);
 
   const [params] = useSearchParams();
@@ -456,9 +452,9 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
     if (nt.binds == null || definitionLists[nt.binds.kind] !== undefined) continue;
     const kind = nt.binds.kind;
     if (kind === DEFINITION_KINDS.agent) {
-      definitionLists[kind] = inScope(agents.data ?? [], (a) => a.project).map((a) => ({ id: a.id, name: a.name, ...(a.role ? { description: a.role } : {}), usageCount: counts.get(`${kind}:${a.id}`) ?? 0 }));
+      definitionLists[kind] = (agents.data ?? []).map((a) => ({ id: a.id, name: a.name, ...(a.role ? { description: a.role } : {}), usageCount: counts.get(`${kind}:${a.id}`) ?? 0 }));
     } else if (kind === DEFINITION_KINDS.resource) {
-      definitionLists[kind] = inScope(resources.data ?? [], (r) => r.project).map((r) => {
+      definitionLists[kind] = (resources.data ?? []).map((r) => {
         const type = typeIconByResourceType.get(r.type);
         return { id: r.id, name: r.name, description: [type?.title ?? r.type, r.description].filter(Boolean).join(" · "), ...(type?.ui_hints?.icon ? { iconName: type.ui_hints.icon } : {}), usageCount: counts.get(`${kind}:${r.id}`) ?? 0 };
       });
@@ -508,11 +504,6 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
   };
 
   function applySuggestion(issue: Issue, suggestion: IssueSuggestion) {
-    // 범위 경고의 [공용으로 옮기기]는 그래프 편집이 아니라 프로젝트 이동이다(옮긴 뒤 다시 검증)
-    if (moveToShared.handles(suggestion.id)) {
-      void moveToShared.run(issue).then((ok) => ok && validation.validateNow());
-      return;
-    }
     const prev = draft;
     const unset = suggestion.patch?.unset_node_fields?.length ?? 0;
     if (handle.current?.applySuggestion(issue, suggestion) === true && prev !== undefined) {
@@ -571,7 +562,6 @@ function TeamEditor({ id, basePath }: { id: string; basePath: string }) {
         usageCount: it.usageCount,
         disabled: it.disabledReason !== undefined,
         ...(grouped ? { group: scope == null ? "shared" : scope === projects.current ? "current" : "other" } : {}),
-        ...(projects.enabled && scope !== undefined ? { tag: <ProjectTag scope={scope ?? null} /> } : {}),
       };
     });
   /** 보이는 영역 중앙에 놓는다(시야 이동은 `onChange`의 add-node 처리가 한다: 큰 줌에서 카드가 잘리지 않게 맞춘다) */

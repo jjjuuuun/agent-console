@@ -237,7 +237,7 @@ class _Page:
         anchor = anchors.get(s.session)
         name = escape_html(s.session)
         link = f'<a href="#{anchor}">{name}</a>' if anchor else name
-        project = s.project.label or s.project.id if s.project else ""
+        project = s.project_id or ""
         tokens = s.tokens.total if s.tokens and s.tokens.total is not None else None
         cells = [
             link,

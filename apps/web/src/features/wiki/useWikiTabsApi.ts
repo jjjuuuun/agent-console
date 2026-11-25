@@ -9,7 +9,7 @@ import { useWikiSpace } from "./useWikiApi";
 /** 그래프 질의 인자: 중심 경로(없으면 전체)와 깊이(없으면 서버가 정한 전체). */
 export interface GraphQuery {
   center?: string | undefined;
-  depth?: number | undefined;
+  depth?: number | "all" | undefined;
 }
 
 export const wikiTabKeys = {

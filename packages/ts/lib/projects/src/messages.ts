@@ -17,7 +17,6 @@ export const DEFAULT_PROJECT_MESSAGES = {
   "projects.status.readonly": "읽기 전용 폴더",
   "projects.status.unknown": "프로젝트 상태: {status}",
   "projects.status.blocked_reason": "{status}라서 사용할 수 없습니다",
-  "projects.dir_fallback": "구성 폴더",
   "projects.blocked.new_chat": "폴더를 쓸 수 없어 새 채팅을 시작할 수 없습니다",
   "projects.blocked.run": "폴더를 쓸 수 없어 실행할 수 없습니다",
   "projects.blocked.records_readonly": "이 폴더에 쓸 수 없어 대화·실행 기록을 저장할 수 없습니다",

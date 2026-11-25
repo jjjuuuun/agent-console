@@ -13,7 +13,7 @@ import type { Conversation as ChatConversation } from "@agent-console/contracts/
 import type { EdgeLayout, NodeLayout, ObserveSettings, WorkspaceSettings } from "@agent-console/contracts/definitions";
 import * as logs from "@agent-console/contracts/logs";
 import * as memory from "@agent-console/contracts/memory";
-import type { MemoryEventPayload, MemoryScopeRef } from "@agent-console/contracts/memory";
+import type { MemoryChanged, MemoryEventPayload, MemoryScopeRef } from "@agent-console/contracts/memory";
 import type { LogEvent, LogLane, LogSettings, LogTimeline, LogWidget } from "@agent-console/contracts/logs";
 import * as modules from "@agent-console/contracts/modules";
 import type {
@@ -25,7 +25,6 @@ import type {
 } from "@agent-console/contracts/modules";
 import * as projects from "@agent-console/contracts/projects";
 import type {
-  DefinitionMove,
   FolderCheck,
   FolderCheckRequest,
   CopyApplyItem,
@@ -88,6 +87,7 @@ import type {
   WikiEventPayload,
   WikiHistoryPage,
   WikiImportResult,
+  WikiGraph,
   WikiGraphNode,
   WikiInfo,
   WikiIssue,
@@ -177,15 +177,13 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(LOG_PROJECT_UNGROUPED).toBe("~ungrouped");
   });
 
-  it("projects 하위 경로(0.8.0): 프로젝트·옮기기 계획, 정의 범위·오류 해결 데이터", () => {
+  it("projects 하위 경로(0.8.0): 프로젝트, 정의 범위·오류 해결 데이터", () => {
     expect(projects.CONTRACT_MODULE).toBe("projects");
     expect(projects.CONTRACT_VERSION).toBe(CONTRACT_VERSIONS.projects);
-    expect(modulesOf["projects"]).toEqual(expect.arrayContaining(["Project", "MovePlan", "DeletePlan"]));
-    expect(modulesOf["definitions"]).toContain("ProjectPreferences");
+    expect(modulesOf["projects"]).toEqual(expect.arrayContaining(["Project"]));
+    // 4.0.0(0.15.0): 옮기기·삭제 계획과 새 정의 범위 설정은 지웠다(0.15.0 블록)
     // 2.0.0(0.11.0): working_directory → folder(필수 키, 옛 파일은 null)
     expectTypeOf<Project["folder"]>().toEqualTypeOf<string | null>();
-    // `from`은 JSON 키 그대로
-    expectTypeOf<DefinitionMove["from"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<Agent["project"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<ErrorInfo["fix"]>().toEqualTypeOf<Fix | null | undefined>();
     expectTypeOf<UsageIndicatorSettings["value_mode"]>().toEqualTypeOf<"remaining" | "used" | undefined>();
@@ -243,13 +241,13 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
 
   it("알려진 이슈 코드·제안 id(5.2R.3 후속): 열린 문자열의 이름 → 값 표", () => {
     expect(KNOWN_ISSUE_CODES.PROJECT_REFERENCES_UNAVAILABLE).toBe("project.references_unavailable");
-    expect(KNOWN_ISSUE_CODES.PROJECT_DEFINITIONS_UNAVAILABLE).toBe("project.definitions_unavailable");
     expect(KNOWN_ISSUE_CODES.BACKEND_UNRESOLVED).toBe(ERROR_CODES.BACKEND_UNRESOLVED);
-    expect(KNOWN_SUGGESTION_IDS.PROJECT_MOVE_TO_SHARED).toBe("project.move_to_shared");
+    // 0.15.0: 유일하던 제안 id를 지웠다(빈 표)
+    expect(KNOWN_SUGGESTION_IDS).toEqual({});
   });
 
   it("프로젝트 2.0(0.11.0, 5.7R.33c)·3.0(0.12.0, 5.7R.33c2): 폴더·이슈 코드", () => {
-    expect(projects.CONTRACT_VERSION).toMatch(/^3\./);
+    expect(ver(projects.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("3.0.0"));
     expect(modulesOf["projects"]).toEqual(
       expect.arrayContaining(["ProjectView", "FolderCheck", "FolderListing", "AssignProjectRequest", "ProjectCounts"]),
     );
@@ -293,7 +291,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(modulesOf["common"]).toContain("SpaceRef");
     expect(modulesOf["memory"]).toEqual(expect.arrayContaining(["MemoryCopyRequest", "MemoryCopyResult"]));
     expect(ver(memory.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.1.0"));
-    expect(CONTRACT_VERSIONS.common).toMatch(/^1\.([6-9]|\d\d)\./);
+    expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.6.0"));
     expectTypeOf<ProjectNotImportedDetails["in_library"]>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<ProjectView["config_writable"]>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<ProjectView["kinds"]>().toEqualTypeOf<string[] | undefined>();
@@ -323,7 +321,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
       expect((ERROR_CODES as Record<string, string>)[name]).toBe(code);
       expect((HTTP_STATUS_BY_ERROR_CODE as Record<string, number>)[code]).toBe(status);
     }
-    expect(KNOWN_ISSUE_CODES.PROJECT_MEMORY_NETWORK_FS).toBe("project.memory_network_fs");
+    // 옛 별칭 PROJECT_MEMORY_NETWORK_FS는 0.15.0에서 지웠다(PROJECT_NETWORK_FS)
   });
 
   it("0.12.1(5.7R.33c3): 기록 공간·폴더 확인 보강 — 더하기만, 새 필드는 선택", () => {
@@ -470,7 +468,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.13.2(6R.20k): GraphSummary.session_summary — 더하기만", () => {
-    expect(CONTRACT_VERSIONS).toMatchObject({ definitions: "1.7.0" });
+    expect(ver(CONTRACT_VERSIONS.definitions)).toBeGreaterThanOrEqual(ver("1.7.0"));
     expectTypeOf<GraphSummary["session_summary"]>().toEqualTypeOf<GraphSessionSummary | null | undefined>();
     const summary: GraphSessionSummary = { nodes: 2, delegated: { "사용자 값": 1 } };
     expect(summary.delegated).toEqual({ "사용자 값": 1 });
@@ -487,7 +485,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.0(7R.3): 하위 모듈 wiki 1.0.0, CopyKindInfo.title, SpecTemplateSummary.kind, 위젯 wiki-ref·glob", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.0"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0140 = { common: "1.10.0", projects: "3.3.0", sdd: "1.2.0", wiki: "1.0.0", modules: "1.5.0" };
@@ -544,7 +542,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
   });
 
   it("0.14.1(7R.13·7R.17 후속): WikiInfo.writable, wiki.update_unavailable, secret_scan 기본값 system reject", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.1"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0141 = { common: "1.11.0", wiki: "1.1.0", sdd: "1.2.0", modules: "1.5.0" };
@@ -557,14 +555,14 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(defs["WikiSettings"]?.properties["secret_scan"]?.default).toEqual({ user: "warn", agent: "reject", system: "reject" });
   });
   it("0.14.2(7R.19~7R.21 서버 후속): rules_kind, 규칙 항목 글롭·경로·이름, 점검 부분 실패, 그래프 scheme_target", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.2"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     const v0142 = { common: "1.12.0", wiki: "1.2.0", sdd: "1.2.0", modules: "1.5.0" };
     for (const [sub, version] of Object.entries(v0142)) {
       expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0")).toBeGreaterThanOrEqual(ver(version));
     }
-    expect(wiki.CONTRACT_VERSION).toBe("1.2.0");
+    expect(ver(wiki.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expectTypeOf<WikiInfo["rules_kind"]>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<WikiRuleEntry["applies_to"]>().toEqualTypeOf<string[] | null | undefined>();
     expectTypeOf<WikiRuleEntry["path"]>().toEqualTypeOf<string | null | undefined>();
@@ -575,16 +573,16 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(constants.KNOWN_WIKI_LINT_CHECKS).toEqual({ LINT_RULES: "lint_rules", WRITE_RULES: "write_rules" });
   });
   it("0.14.3(plugins.disabled 후속): PluginInfo.reason", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.3"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.12.0"));
-    expect(CONTRACT_VERSIONS).toMatchObject({ wiki: "1.2.0" });
+    expect(ver(CONTRACT_VERSIONS.wiki)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver(modules.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.6.0"));
     expectTypeOf<PluginInfo["reason"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.4(묶음 4b V1): CopyPlanItem.blocked·issues", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.4"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.4.0"));
@@ -592,14 +590,14 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<NonNullable<CopyPlanItem["issues"]>[number]["code"]>().toEqualTypeOf<string>();
   });
   it("0.14.5(요청 11/07 후속): CopyKindInfo.deletable", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.5"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.5.0"));
     expectTypeOf<CopyKindInfo["deletable"]>().toEqualTypeOf<boolean | undefined>();
   });
   it("0.14.6(요청 11/07 후속): CopyItem.version", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.6"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["projects"] ?? "0")).toBeGreaterThanOrEqual(ver("3.6.0"));
@@ -608,7 +606,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<CopyItem["version"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.7(요청 11/07 후속): ConversationLocation, conversation.ambiguous", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.7"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.13.0"));
@@ -619,7 +617,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<ConversationLocation["project_id"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.8(요청 11/08 후속): RunLocation, run.ambiguous", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.8"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.14.0"));
@@ -628,13 +626,14 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<RunLocation["project_id"]>().toEqualTypeOf<string | null | undefined>();
   });
   it("0.14.9(6R.31): 줄 머리 상태 문법, document_state_on, 메모리 자동 정리 대상", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.9"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0", memory: "1.2.0", runs: "1.9.0" });
+    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0", runs: "1.9.0" });
+    expect(ver(CONTRACT_VERSIONS.memory)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
     expect(sdd.CONTRACT_VERSION).toBe("1.3.0");
-    expect(memory.CONTRACT_VERSION).toBe("1.2.0");
+    expect(ver(memory.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(KNOWN_ISSUE_CODES.SDD_STATUS_PATTERN_IGNORED).toBe("sdd.status_pattern_ignored");
     expect(KNOWN_ISSUE_CODES.SDD_DOCUMENT_STATE_NOT_APPLIED).toBe("sdd.document_state_not_applied");
     expectTypeOf<TaskSyntax["status_pattern"]>().toEqualTypeOf<string | null | undefined>();
@@ -648,12 +647,14 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(old.document_state_on).toBeUndefined();
   });
   it("0.14.10(FU.13): CopyItemReferences — 종류 공통 거꾸로 참조", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.10"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ projects: "3.7.0", sdd: "1.3.0", memory: "1.2.0" });
+    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0" });
+    expect(ver(CONTRACT_VERSIONS.projects)).toBeGreaterThanOrEqual(ver("3.7.0"));
+    expect(ver(CONTRACT_VERSIONS.memory)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
-    expect(projects.CONTRACT_VERSION).toBe("3.7.0");
+    expect(ver(projects.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("3.7.0"));
     expectTypeOf<CopyItemReferences["items"]>().toEqualTypeOf<CopyItem[] | undefined>();
     expectTypeOf<CopyItemReferences["checked"]>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<NonNullable<CopyItemReferences["warnings"]>[number]["code"]>().toEqualTypeOf<string>();
@@ -661,21 +662,88 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(empty.items).toBeUndefined();
   });
   it("0.14.11(FU.17): 위키 이슈 코드 wiki.unknown_title_source·wiki.redacted_content", () => {
-    // 정확한 지금 값은 0.14.12 테스트가 고정한다
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.11"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ common: "1.16.0", projects: "3.7.0", wiki: "1.2.0" });
+    expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.16.0"));
+    expect(ver(CONTRACT_VERSIONS.projects)).toBeGreaterThanOrEqual(ver("3.7.0"));
+    expect(ver(CONTRACT_VERSIONS.wiki)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(KNOWN_ISSUE_CODES.WIKI_UNKNOWN_TITLE_SOURCE).toBe("wiki.unknown_title_source");
     expect(KNOWN_ISSUE_CODES.WIKI_REDACTED_CONTENT).toBe("wiki.redacted_content");
   });
   it("0.14.12(FU.19): PluginOptionsView·ServerInfo.plugin_options — 플러그인 설정 보기", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.14.12");
-    expect(packageJson.version).toBe("0.14.12");
-    expect(CONTRACT_VERSIONS).toMatchObject({ modules: "1.7.0", common: "1.16.0" });
+    // 정확한 지금 값은 0.15.0 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.12"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(CONTRACT_VERSIONS).toMatchObject({ modules: "1.7.0" });
+    expect(ver(CONTRACT_VERSIONS.common)).toBeGreaterThanOrEqual(ver("1.16.0"));
     expect(modules.CONTRACT_VERSION).toBe("1.7.0");
     expectTypeOf<PluginOptionsView["settings_key"]>().toEqualTypeOf<string>();
     expectTypeOf<NonNullable<ServerInfo["plugin_options"]>[number]>().toEqualTypeOf<PluginOptionsView>();
     const old: ServerInfo = { server_version: "1", contracts_version: "0.14.11" };
     expect(old.plugin_options).toBeUndefined();
+  });
+  it("0.15.0(깨는 변경): 옛 프로젝트 범위 API 삭제, 메모리 공간·위키 정보·그래프 깊이 전체 더하기", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.15.0");
+    expect(packageJson.version).toBe("0.15.0");
+    expect(CONTRACT_VERSIONS).toEqual({
+      common: "2.0.0",
+      resources: "1.1.0",
+      logs: "2.0.0",
+      definitions: "2.0.0",
+      runs: "1.9.0",
+      usage: "1.1.0",
+      projects: "4.0.0",
+      chat: "1.4.0",
+      exports: "1.0.0",
+      imports: "1.1.0",
+      architecture: "1.0.0",
+      memory: "1.3.0",
+      sdd: "1.3.0",
+      wiki: "1.3.0",
+      modules: "1.7.0",
+    });
+    const removed = [
+      "MovePlan",
+      "MovePlanRequest",
+      "DefinitionMove",
+      "DeletePlan",
+      "ProjectDeleteMode",
+      "ProjectPreferences",
+      "DefinitionScope",
+      "LogProjectSettings",
+      "LogProjectGroup",
+      "LogProjectRef",
+      "LogUngroupedPolicy",
+    ];
+    const defs = contractsSchema["$defs"] as Record<string, { properties?: Record<string, unknown> }>;
+    for (const name of removed) {
+      expect(defs[name], name).toBeUndefined();
+      for (const names of Object.values(modulesOf)) expect(names).not.toContain(name);
+    }
+    expect(defs["WorkspaceSettings"]?.properties).not.toHaveProperty("projects");
+    expect(defs["LogSettings"]?.properties).not.toHaveProperty("projects");
+    expect(defs["LogSessionSummary"]?.properties).not.toHaveProperty("project");
+    for (const name of [
+      "PROJECT_MEMORY_NETWORK_FS",
+      "PROJECT_SHARED_USES_PROJECT",
+      "PROJECT_CROSS_PROJECT",
+      "PROJECT_DEFINITIONS_UNAVAILABLE",
+    ]) {
+      expect(KNOWN_ISSUE_CODES).not.toHaveProperty(name);
+    }
+    expect(KNOWN_SUGGESTION_IDS).toEqual({});
+    expect(LOG_PROJECT_UNGROUPED).toBe("~ungrouped");
+    expect(ERROR_CODES.PROJECT_MEMORY_UNAVAILABLE).toBe("project.memory_unavailable");
+    expect(KNOWN_ISSUE_CODES.PROJECT_MEMORY_UNAVAILABLE).toBe("project.memory_unavailable");
+    expect(HTTP_STATUS_BY_ERROR_CODE["project.memory_unavailable"]).toBe(409);
+    expect(constants.WIKI_GRAPH_DEPTH_ALL).toBe("all");
+    expectTypeOf<MemoryChanged["space"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<WikiInfo["wiki_kind"]>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<WikiInfo["reserved_page_names"]>().toEqualTypeOf<string[] | null | undefined>();
+    expectTypeOf<WikiGraph["depth"]>().toEqualTypeOf<number | null | undefined>();
+    expectTypeOf<WikiRuleEntry["severity"]>().toEqualTypeOf<"error" | "warning" | "info" | null | undefined>();
+    const oldInfo: WikiInfo = { limits: { max_page_bytes: 1, max_pages: 1, graph_max_nodes: 1 } };
+    expect(oldInfo.reserved_page_names).toBeUndefined();
   });
 });

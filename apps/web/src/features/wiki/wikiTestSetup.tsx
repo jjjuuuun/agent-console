@@ -61,7 +61,6 @@ export function setup(path: string, f: Fixture = {}) {
   const { clients, ws, wikiClient, wiki, rest } = createFakeClients(
     { listModules: vi.fn(async () => f.modules ?? [mod(["wiki", "projects", "settings"])]), listProjects: vi.fn(async () => projects) },
     {},
-    {},
     {
       getWikiInfo: vi.fn(async () => f.info ?? INFO),
       listWikis: vi.fn(async () => f.wikis ?? []),

@@ -38,14 +38,19 @@ class MemorySpaceError(Exception):
     Attributes:
         code: 오류 코드.
         space: 요청한 공간 이름.
+        reason: 제공자가 준 짧은 이유 낱말(응답 ``details.reason``, 없으면 None — 예:
+            ``project.memory_unavailable``의 ``migrate_failed``).
     """
 
     code: str = ErrorCodes.FEATURE_UNAVAILABLE
 
-    def __init__(self, message: str, *, space: str, code: str | None = None) -> None:
+    def __init__(
+        self, message: str, *, space: str, code: str | None = None, reason: str | None = None
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.space = space
+        self.reason = reason
         if code is not None:
             self.code = code
 
@@ -120,7 +125,13 @@ class MemorySpaceServices:
         except Exception as exc:
             code = getattr(exc, "code", None)
             if isinstance(code, str) and code:
-                raise MemorySpaceError(str(exc) or code, space=space, code=code) from exc
+                reason = getattr(exc, "reason", None)
+                raise MemorySpaceError(
+                    str(exc) or code,
+                    space=space,
+                    code=code,
+                    reason=reason if isinstance(reason, str) and reason else None,
+                ) from exc
             raise
         if opened is None:
             raise UnknownMemorySpace(space)

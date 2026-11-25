@@ -110,14 +110,10 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     definitions.UsageIndicatorSettings,
     definitions.UsageIndicatorColorRule,
     definitions.SecretRuleSettings,
-    definitions.ProjectPreferences,
     # 프로젝트(0.8.0)
     projects.Project,
     projects.ProjectCreate,
     projects.ProjectUpdate,
-    projects.MovePlanRequest,
-    projects.MovePlan,
-    projects.DeletePlan,
     # 프로젝트 2.0(0.11.0)·3.0(0.12.0, design §PI)
     projects.ProjectRegistration,
     projects.ProjectManifest,
@@ -523,6 +519,7 @@ def build_schema() -> dict[str, Any]:
             "WIKI_ACCESS_OPS": list(wiki.WIKI_ACCESS_OPS),
             "WIKI_WRITE_SUBJECT_PATHS": list(wiki.WIKI_WRITE_SUBJECT_PATHS),
             "WIKI_LINT_SUBJECT_PATHS": list(wiki.WIKI_LINT_SUBJECT_PATHS),
+            "WIKI_GRAPH_DEPTH_ALL": wiki.WIKI_GRAPH_DEPTH_ALL,
             "KNOWN_WIKI_LINK_KINDS": _upper_constants(wiki.KnownWikiLinkKinds),
             "KNOWN_WIKI_RESOLVERS": _upper_constants(wiki.KnownWikiResolvers),
             "KNOWN_WIKI_AUTHOR_KINDS": _upper_constants(wiki.KnownWikiAuthorKinds),

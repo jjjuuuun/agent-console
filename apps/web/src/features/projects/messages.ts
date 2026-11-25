@@ -1,11 +1,7 @@
-import { DEFAULT_BADGE_MESSAGES } from "@agent-console/projects";
-
 /**
  * 프로젝트 UI 문구 표. 프로젝트 이름·종류 이름·모듈 id는 여기에 없다(서버 데이터).
- * 범위 배지 문구는 `@agent-console/projects`의 기본 표를 쓰되 이 표로 덮을 수 있다.
  */
 export const projectMessages = {
-  badge: DEFAULT_BADGE_MESSAGES as Readonly<Record<string, string>>,
   switcher: {
     region: "프로젝트 전환",
     label: "프로젝트",
@@ -55,51 +51,18 @@ export const projectMessages = {
     created: (name: string) => `프로젝트 “${name}”를 만들고 전환했습니다`,
     guideAction: "시작 안내 보기",
   },
-  filter: {
-    label: "보기 범위",
-    modes: {
-      shared_and_project: "공용 + 이 프로젝트",
-      project_only: "이 프로젝트만",
-      shared_only: "공용만",
-    } as Record<string, string>,
-    chip: (name: string) => `프로젝트: ${name}`,
-    clear: "모든 프로젝트 보기로",
-    hiddenCount: (n: number) => `범위 밖 ${n}개 숨김`,
-  },
-  tag: {
-    shared: "공용",
-    sharedTitle: "프로젝트에 속하지 않은 공용 항목",
-    projectTitle: (name: string) => `프로젝트: ${name}`,
-  },
-  field: {
-    label: "프로젝트",
-    shared: "공용 (프로젝트 없음)",
-    newProject: "새 프로젝트…",
-    hint: "공용은 모든 프로젝트에서 보입니다. 프로젝트 전용은 그 프로젝트에서만 기본으로 보입니다.",
-    sharedUsesProject: "공용 항목이 프로젝트 전용 항목을 쓰면 다른 프로젝트에서 경고가 납니다.",
-  },
+  /** 목록 다중 선택 줄(설정 가져오기·내보내기 선택 모드) */
   move: {
     menu: "프로젝트로 이동…",
-    title: "프로젝트로 이동",
-    target: "옮길 곳",
-    toShared: "공용 (프로젝트 없음)",
-    items: (n: number) => `${n}개 항목`,
-    related: "함께 옮기기를 권하는 항목",
-    relatedHint: "옮기는 항목이 쓰는 항목입니다. 같이 옮기지 않으면 범위 경고가 납니다.",
-    warnings: "옮긴 뒤 생길 경고",
-    noChange: "이미 그 범위에 있습니다",
-    planning: "옮기기 계획을 계산하는 중…",
-    planFailed: "옮기기 계획을 계산하지 못했습니다",
-    apply: "옮기기",
-    applied: (n: number) => `${n}개 항목을 옮겼습니다`,
-    appliedWithWarnings: (n: number, w: number) => `${n}개 항목을 옮겼습니다 (경고 ${w})`,
-    failed: "옮기지 못했습니다",
     selectMode: "선택",
     selectModeOff: "선택 끝내기",
     selectAll: "모두 선택",
     selected: (n: number) => `${n}개 선택됨`,
     selectRow: (name: string) => `${name} 선택`,
     clearSelection: "선택 해제",
+  },
+  copyReserved: {
+    noCopy: "예약된 이름은 그대로 복사할 수 없어 새 이름으로만 추가할 수 있습니다.",
   },
   manage: {
     title: "프로젝트",
@@ -134,9 +97,5 @@ export const projectMessages = {
   usage: {
     accountWide: "계정 전체",
     accountWideTitle: "구독 사용량은 프로젝트가 아니라 계정 전체 기준입니다.",
-  },
-  scopeIssue: {
-    moved: "공용으로 옮겼습니다",
-    moveFailed: "옮기지 못했습니다",
   },
 } as const;

@@ -202,8 +202,6 @@ FORM_MODELS = (
     "LogSourceSetting",
     "LogTaxonomy",
     "LogCategory",
-    "LogProjectSettings",
-    "LogProjectGroup",
     "LogDashboard",
     "LogWidget",
     "LogWidgetQuery",

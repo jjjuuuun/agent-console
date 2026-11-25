@@ -10,9 +10,9 @@
 - 거꾸로 참조: `find_referrers`(한 공간에서 정의 하나를 쓰는 정의, 참조 추출 주입 — 삭제 확인 창).
 - 경로 지킴: `path_fields`·`outside_paths`(스키마 주석 `x-path`만 본다, X33), 폴더 안 파일 접근
   `FolderGuard`·`normalize_reserved`·`relative_inside`(예약 경로·링크를 푼 실제 경로, §PI.5).
-- 옛 데이터: `legacy_items`·`legacy_counts`·`without_scope_field`, 프로젝트 층 값
-  `project_layer_value`. 옛 범위 규칙(`scope_issues`·`move_plan`·`delete_plan`·`visible`)은 [정리]
-  화면 전환까지만 남는다(33t에서 삭제).
+- 옛 데이터: `legacy_items`·`legacy_counts`·`without_scope_field`(옛 `project` 필드 정의 정리 =
+  복사 계획 입력), 프로젝트 층 값 `project_layer_value`.
+- 이슈 코드 별칭 `CODE_UNKNOWN`·`CODE_REFERENCES_UNAVAILABLE`(계약 `KnownIssueCodes`).
 
 서버·웹·저장소 없이 쓴다(의존은 `agent-console-contracts`·`agent-console-local-folders`). 정의 종류
 이름·설정 필드 이름을 모르고, 참조 추출·참조 고치기·파일 시스템은 주입받는다.
@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+from ._codes import CODE_REFERENCES_UNAVAILABLE, CODE_UNKNOWN
 from ._copy import (
     CODE_COPY_CONFLICT,
     CODE_COPY_KIND_NOT_PORTABLE,
@@ -70,13 +71,7 @@ from ._merge import (
     merge_project,
     split_project,
 )
-from ._model import (
-    DefinitionId,
-    References,
-    ScopedDefinition,
-    effective_scope,
-    known_project_ids,
-)
+from ._model import DefinitionId, References, ScopedDefinition
 from ._pathguard import PathField, outside_paths, path_fields
 from ._paths import (
     CaseRule,
@@ -108,19 +103,6 @@ from ._registry import (
     registered_folders,
     registry_conflicts,
 )
-from ._scope import (
-    CODE_CROSS_PROJECT,
-    CODE_REFERENCES_UNAVAILABLE,
-    CODE_SHARED_USES_PROJECT,
-    CODE_UNKNOWN,
-    DEFAULT_MESSAGES,
-    MOVE_TO_SHARED_SUGGESTION,
-    UnknownDefinitionError,
-    delete_plan,
-    move_plan,
-    scope_issues,
-    visible,
-)
 
 __all__ = [
     "CODE_COPY_CONFLICT",
@@ -131,24 +113,20 @@ __all__ = [
     "CODE_COPY_SKIP_BREAKS_REFERENCE",
     "CODE_COPY_SOURCE_MISSING",
     "CODE_COPY_UNKNOWN_ACTION",
-    "CODE_CROSS_PROJECT",
     "CODE_REFERENCES_UNAVAILABLE",
     "CODE_SECRET_PLAIN_FOUND",
-    "CODE_SHARED_USES_PROJECT",
     "CODE_UNKNOWN",
     "COPY_RESERVED_RENAME",
     "COPY_RESERVED_WRITE",
     "COPY_TARGET_LIBRARY",
     "COPY_TARGET_PROJECT",
     "DEFAULT_COPY_MESSAGES",
-    "DEFAULT_MESSAGES",
     "DEFAULT_REFERRER_MESSAGES",
     "DEFAULT_TARGET_LABEL",
     "FALLBACK_PREFIX",
     "LEGACY_SCOPE_FIELD",
     "MANIFEST_KEYS",
     "MAX_ID_LENGTH",
-    "MOVE_TO_SHARED_SUGGESTION",
     "REFERRERS_UNAVAILABLE_MESSAGE",
     "REGISTRATION_KEYS",
     "CaseRule",
@@ -171,7 +149,6 @@ __all__ = [
     "RewriteReferences",
     "ScopedDefinition",
     "SourceDefinition",
-    "UnknownDefinitionError",
     "apply_decisions",
     "apply_renames",
     "combined_version",
@@ -180,8 +157,6 @@ __all__ = [
     "conflict_status",
     "copy_plan",
     "copy_target_label",
-    "delete_plan",
-    "effective_scope",
     "find_referrers",
     "folder_conflicts",
     "folder_key",
@@ -190,13 +165,11 @@ __all__ = [
     "host_flavor",
     "ignored_key_issues",
     "initial_manifest",
-    "known_project_ids",
     "legacy_counts",
     "legacy_items",
     "legacy_manifest_values",
     "load_path_rules",
     "merge_project",
-    "move_plan",
     "normalize_reserved",
     "outside_paths",
     "path_fields",
@@ -212,10 +185,8 @@ __all__ = [
     "renames_of",
     "reserved_target_issues",
     "resolve_folder",
-    "scope_issues",
     "skip_warnings",
     "split_project",
     "suggest_project_id",
-    "visible",
     "without_scope_field",
 ]

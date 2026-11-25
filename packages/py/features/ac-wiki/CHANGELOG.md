@@ -2,6 +2,9 @@
 
 ## 미출시
 
+- REL.16(계약 0.15.0, wiki 1.3.0): `neighborhood(index, center, depth=None)`·`WikiRepository.graph(depth=None)` =
+  가운데에서 깊이 제한 없이 이어진 칸 전부(칸 수 상한·`truncated`·`total` 그대로). 응답 `WikiGraph.depth`에 적용한
+  깊이를 싣는다(가운데 없음·제한 없음은 null). 정수 깊이 동작은 그대로다.
 - REL.1: 첫 색인 속도. `WikiPages` 선택 능력 `reading()`(이어 읽기 문맥) — `LocalWikiPages`는 fd 방식에서 기준 폴더 실제 경로 확인·루트까지 내려가기를 파일마다가 아니라 한 번만 하고 같은 폴더 fd를 이어 쓴다. 파일 읽기는 미리 `lstat`하지 않는다(`O_NOFOLLOW` 열기 + `fstat`이 같은 거부를 한다). `read_pages(files=)`로 받은 목록을 다시 나열하지 않고, `WikiRepository.list_pages`·`view`·`lint`는 요청 하나에 폴더를 한 번만 나열한다(시각 채우기가 같은 목록을 쓴다). 결과·거부 규칙은 같다.
 - FU.17: `WikiIssueCodes.UNKNOWN_TITLE_SOURCE`·`REDACTED_CONTENT`가 계약 0.14.11(`common` 1.16.0)
   `KnownIssueCodes.WIKI_UNKNOWN_TITLE_SOURCE`·`WIKI_REDACTED_CONTENT`의 별칭이 되었다(값·공개 이름 그대로).

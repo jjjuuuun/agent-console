@@ -36,7 +36,6 @@ from agent_console_contracts import (
     LogEvent,
     LogEventDetail,
     LogEventPage,
-    LogProjectSettings,
     LogQuerySchema,
     LogScanReport,
     LogSessionSummary,
@@ -273,7 +272,7 @@ def test_session_timeline_and_archive_round_trip() -> None:
         "events": 2,
         "errors": 1,
         "thread_count": 2,
-        "project": {"id": "zz-group", "label": "Z"},
+        "project_id": "zz-project",
         "models": ["zz-model"],
         "tokens": {"input": 3, "output": 4, "cache_read": None, "total": 7},
     }
@@ -281,7 +280,10 @@ def test_session_timeline_and_archive_round_trip() -> None:
     summary = LogSessionSummary.model_validate(session)
     assert summary.model_dump(mode="json", exclude_unset=True) == session
     bare = LogSessionSummary.model_validate({"session": "s"})
-    assert (bare.project, bare.tokens, bare.thread_count, bare.models) == (None, None, 0, [])
+    assert (bare.project_id, bare.tokens, bare.thread_count, bare.models) == (None, None, 0, [])
+    # 0.15.0: 옛 응답의 `project`(지운 LogProjectRef)가 있어도 읽기가 실패하지 않는다(무시).
+    old = LogSessionSummary.model_validate({**session, "project": {"id": "g", "label": "G"}})
+    assert old.model_dump(mode="json", exclude_unset=True) == session
     timeline = LogTimeline.model_validate(
         {"session": session, "lanes": lanes, "events": [{**EVENT, "duration_ms": 12.5}]}
     )
@@ -363,7 +365,7 @@ def test_workspace_logs_omitted_is_inherited() -> None:
     assert "logs" not in settings.model_dump(exclude_unset=True)
     assert settings.logs.sources is None
     assert settings.logs.taxonomy is None
-    assert settings.logs.projects is None
+    assert "projects" not in type(settings.logs).model_fields  # 0.15.0에서 지움(모르는 키)
     assert settings.logs.dashboards is None
     empty = WorkspaceSettings.model_validate({"logs": {}})
     assert empty.model_dump(mode="json", exclude_unset=True) == {"logs": {}}
@@ -435,11 +437,12 @@ def test_log_settings_keep_unknown_keys() -> None:
     assert parsed.model_dump(mode="json", exclude_unset=True) == doc
 
 
-def test_ungrouped_policy_is_fixed_vocabulary() -> None:
-    for value in ("cwd", "repo_root", "none"):
-        assert LogProjectSettings.model_validate({"ungrouped": value}).ungrouped == value
-    with pytest.raises(ValidationError):
-        LogProjectSettings.model_validate({"ungrouped": "zz"})
+def test_removed_log_projects_is_kept_as_unknown_key() -> None:
+    """0.15.0: 옛 `logs.projects`는 모델 필드가 아니다. 어떤 값이든 읽기가 실패하지 않고
+    보존된다."""
+    for value in ({"ungrouped": "zz"}, {"groups": "x"}, [1], "x"):
+        parsed = LogSettings.model_validate({"projects": value})
+        assert parsed.model_dump(mode="json", exclude_unset=True) == {"projects": value}
 
 
 def test_existing_settings_yaml_reads_unchanged() -> None:

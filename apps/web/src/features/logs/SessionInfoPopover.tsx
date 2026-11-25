@@ -7,6 +7,8 @@ import { messages as appMessages } from "../../app/messages";
 export interface SessionInfoPopoverProps {
   session: string;
   summary: LogSessionSummary | undefined;
+  /** 세션의 프로젝트 표시 이름(`project_id`의 이름, 없으면 id). 프로젝트가 없으면 null */
+  projectName?: string | null;
   /** 이 화면이 센 오류 수(분류 체계 기준) */
   errorCount: number;
   eventCount: number;
@@ -19,11 +21,11 @@ export interface SessionInfoPopoverProps {
 const nf = (n: number) => n.toLocaleString(appMessages.locale);
 
 /** [세션 정보 ▾]: 헤더 한 줄에 못 넣는 값(시작·길이·에이전트·모델·토큰 상세·전체 id·프로젝트 경로)을 비모달 팝오버로 보인다. 값이 없으면 "–". */
-export function SessionInfoPopover({ session, summary, errorCount, eventCount, durationMs, open, onOpenChange, onCopy }: SessionInfoPopoverProps) {
+export function SessionInfoPopover({ session, summary, projectName = null, errorCount, eventCount, durationMs, open, onOpenChange, onCopy }: SessionInfoPopoverProps) {
   const tok = summary?.tokens;
   const rows: { label: string; value: ReactNode }[] = [
     { label: t.detail.sessionId, value: (<><code className="logs-mono ac-mono-wrap">{session}</code> <Button size="sm" variant="ghost" onClick={() => onCopy(session)}>{t.copy}</Button></>) },
-    { label: t.detail.project, value: summary?.project || summary?.cwd ? (<>{summary.project ? <span title={summary.project.id}>{summary.project.label || summary.project.id}</span> : null}{summary.cwd ? <code className="logs-mono ac-mono-wrap">{summary.cwd}</code> : null}</>) : t.dash },
+    { label: t.detail.project, value: projectName || summary?.cwd ? (<>{projectName ? <span title={summary?.project_id ?? undefined}>{projectName}</span> : null}{summary?.cwd ? <code className="logs-mono ac-mono-wrap">{summary.cwd}</code> : null}</>) : t.dash },
     { label: t.detail.start, value: summary?.first_time != null ? new Date(summary.first_time * 1000).toLocaleString(appMessages.locale) : t.dash },
     { label: t.detail.length, value: durationMs !== null ? `${Math.round(durationMs / 1000)}${t.detail.seconds}` : t.dash },
     { label: t.detail.agents, value: summary?.thread_count != null ? String(summary.thread_count) : t.dash },

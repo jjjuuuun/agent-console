@@ -1,53 +1,6 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
-import type { MovePlan } from "@agent-console/contracts/projects";
-import { Button, useToast } from "@agent-console/ui";
-import { useInvalidateLists } from "../library";
-import { MoveToProjectDialog, type MoveItem } from "./MoveToProjectDialog";
+import { useMemo, useState } from "react";
+import { Button } from "@agent-console/ui";
 import { projectMessages as t } from "./messages";
-import { useProjects } from "./ProjectsContext";
-
-export interface ProjectMove {
-  /** 프로젝트 기능이 켜져 있고 옮길 곳(프로젝트)이 하나 이상 있는가. false면 메뉴 항목·선택 모드를 그리지 않는다 */
-  available: boolean;
-  /** 대화상자를 연다 */
-  request: (items: readonly MoveItem[]) => void;
-  /** 화면 어디에든 한 번 그린다 */
-  dialog: ReactNode;
-}
-
-/**
- * "프로젝트로 이동…" 동작: 대화상자 상태와 적용 뒤 처리(목록 갱신·토스트)를 묶는다.
- * 어느 정의 종류인지는 호출자가 `MoveItem.kind`로 준다.
- */
-export function useProjectMove(onDone?: (result: MovePlan) => void): ProjectMove {
-  const p = useProjects();
-  const toast = useToast();
-  const invalidate = useInvalidateLists();
-  const [items, setItems] = useState<readonly MoveItem[] | null>(null);
-  const request = useCallback((next: readonly MoveItem[]) => setItems(next), []);
-  const { client } = p;
-  const dialog = useMemo(
-    () =>
-      items === null || client === undefined ? null : (
-      <MoveToProjectDialog
-        items={items}
-        projects={p.projects}
-        client={client}
-        onClose={() => setItems(null)}
-        onApplied={(result) => {
-          setItems(null);
-          const n = (result.moves ?? []).length;
-          const w = (result.warnings ?? []).length;
-          toast({ tone: w > 0 ? "warning" : "success", text: w > 0 ? t.move.appliedWithWarnings(n, w) : t.move.applied(n) });
-          void invalidate();
-          onDone?.(result);
-        }}
-      />
-    ),
-    [items, client, p.projects, toast, invalidate, onDone],
-  );
-  return useMemo(() => ({ available: p.enabled && p.projects.length > 0, request, dialog }), [p.enabled, p.projects.length, request, dialog]);
-}
 
 export interface ListSelection {
   selecting: boolean;

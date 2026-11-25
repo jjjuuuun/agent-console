@@ -1,5 +1,82 @@
 # 변경 기록
 
+## 0.15.0
+
+- 계약 0.15.0(REL.14·REL.16, 깨는 변경 — 사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`)). 하위 계약 버전:
+  `common` 2.0.0, `logs` 2.0.0, `definitions` 2.0.0, `projects` 4.0.0, `memory` 1.3.0, `wiki` 1.3.0.
+- 지움(REL.16): `MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`(projects),
+  `WorkspaceSettings.projects`·`ProjectPreferences`·`DefinitionScope`(definitions), `LogSettings.projects`·
+  `LogProjectSettings`·`LogProjectGroup`·`LogUngroupedPolicy`(옛 묶기 규칙에서만 쓰던 고정 어휘),
+  `LogSessionSummary.project`·`LogProjectRef`(logs), `KnownIssueCodes.PROJECT_MEMORY_NETWORK_FS`·
+  `PROJECT_SHARED_USES_PROJECT`·`PROJECT_CROSS_PROJECT`·`PROJECT_DEFINITIONS_UNAVAILABLE`,
+  `KnownSuggestionIds.PROJECT_MOVE_TO_SHARED`(표는 빈 채로 남김, `x-constants.KNOWN_SUGGESTION_IDS` = `{}`).
+- 더함(REL.16): `MemoryChanged.space`, `ErrorCodes`·`KnownIssueCodes.PROJECT_MEMORY_UNAVAILABLE`
+  (`project.memory_unavailable`, 409, `details.project_id`·`details.reason`), `WikiInfo.wiki_kind`·
+  `reserved_page_names`, 상수 `WIKI_GRAPH_DEPTH_ALL`(`all`, `x-constants`)·`WikiGraph.depth`. 좁힘:
+  `WikiRuleEntry.severity: IssueSeverity | None`. `LOG_PROJECT_UNGROUPED`는 deprecated를 풀고 "어느 등록 프로젝트
+  폴더에도 들지 않은 로그"로 설명을 고쳤다.
+- REL.14(Python 전용, 스키마 변화 없음): 공통 설정의 읽고 무시하는 옛 키 `IGNORED_SETTINGS_KEYS`
+  (`("projects", "logs.projects")`)와 `ignored_settings_keys(settings, *, section=None)` — 모델·dict 모두,
+  필드가 모델에 있든(0.14) 지워졌든(0.15) 같은 답. 읽는 쪽 모듈은 속성 접근 대신 이 함수로 정보 이슈
+  `settings.ignored_key`를 낸다.
+- REL.14(깨는 변경, Python 전용): 호환 속성 `Project.working_directory`·`Project.log_projects`(그리고 같은
+  필드 묶음을 쓰는 `ProjectManifest`·`ProjectCreate`)를 지웠다. 대신 `folder`를 쓴다. 옛 파일의
+  `working_directory`는 그대로 `folder`로 읽고, `log_projects`·`uses`·`import_mode`는 읽고 버린다
+  (`IGNORED_PROJECT_KEYS`).
+
+### BREAKING CHANGE
+
+Contracts 0.15.0 removes the project-scope APIs that were deprecated in 0.11–0.12.
+Stored data does not need a migration: old keys in `settings.yaml`, `project.yaml`,
+and export bundles are still read (kept as unknown keys) and never stop the server
+from starting.
+
+**Removed models, fields, and constants**
+
+| Removed | Use instead |
+| --- | --- |
+| `MovePlan`, `MovePlanRequest`, `DefinitionMove` | Definitions no longer belong to a project. To clean up old definitions that still have a `project` field, use the copy plan: `POST /api/v1/projects/{id}/legacy/plan`, then `POST /api/v1/projects/copy/apply`. |
+| `DeletePlan`, `ProjectDeleteMode` | `DELETE /api/v1/projects/{id}` unregisters (archives) a project. It never deletes definitions and takes no `mode`. |
+| `WorkspaceSettings.projects` (`ProjectPreferences`, `DefinitionScope`) | Nothing. A new definition is saved in the space where you create it (the shared library or a project). |
+| `LogSettings.projects` (`LogProjectSettings`, `LogProjectGroup`) | Nothing. A log session belongs to the registered project whose folder contains its working directory. |
+| `LogSessionSummary.project` (`LogProjectRef`) | `LogSessionSummary.project_id`. Get the display name from `GET /api/v1/projects`. |
+| `KnownIssueCodes.PROJECT_MEMORY_NETWORK_FS` (`project.memory_network_fs`) | `KnownIssueCodes.PROJECT_NETWORK_FS` (`project.network_fs`). Servers have sent only the new code since 0.12.1. |
+| `KnownIssueCodes.PROJECT_SHARED_USES_PROJECT`, `PROJECT_CROSS_PROJECT`, `PROJECT_DEFINITIONS_UNAVAILABLE`, `KnownSuggestionIds.PROJECT_MOVE_TO_SHARED` | Nothing. No server sends them. `KnownSuggestionIds` stays and is currently empty. |
+| Python: `Project.working_directory`, `Project.log_projects` | `Project.folder`; `log_projects` was always empty. Files that still use `working_directory` are read as `folder`. |
+
+**Removed REST endpoints**
+
+`POST /api/v1/projects/move-plan`, `POST /api/v1/projects/move`, and
+`POST /api/v1/projects/scope-issues` are gone. They now answer
+`405 Method Not Allowed` because the path matches `/api/v1/projects/{id}`.
+
+**Settings that are read and ignored**
+
+If your workspace `settings.yaml` still has `projects` (for example
+`projects.new_definition_scope`) or `logs.projects`, the server starts, ignores the
+key, and reports an info issue `settings.ignored_key` with `details.key`. Remove the
+key when convenient. Old project-file keys keep their behavior: `working_directory`
+is read as `folder`; `log_projects`, `uses`, and `import_mode` are dropped on save.
+
+**Dependency ranges**
+
+0.x contract minors are not compatible with each other. Update plugins to
+`agent-console-contracts>=0.15,<0.16` (Python) and `@agent-console/contracts@^0.15.0`
+(TypeScript). A 0.15 web app connected to a 0.14 server, or the reverse, shows the
+contract version warning.
+
+**Also in 0.15.0 (additive)**
+
+- `MemoryChanged.space`: the memory space of the change (`null` = shared library).
+- Error and issue code `project.memory_unavailable` (409): a project's memory
+  database cannot be opened. It replaces `feature_unavailable` for that case.
+- `WikiInfo.wiki_kind` and `WikiInfo.reserved_page_names`.
+- Wiki graph: `GET …/graph?depth=all` (constant `WIKI_GRAPH_DEPTH_ALL`) and
+  `WikiGraph.depth`. Omitting `depth` still means 1.
+- `WikiRuleEntry.severity` is now `"error" | "warning" | "info" | null`.
+- `LOG_PROJECT_UNGROUPED` (`~ungrouped`) is no longer deprecated. It is the log filter
+  value for sessions outside every registered project folder.
+
 ## 0.14.12
 
 - 계약 0.14.12(FU.19). 더하기만이라 patch, 사내 의존 범위 `>=0.14,<0.15`(TS `^0.14.0`) 그대로.

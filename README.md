@@ -2,22 +2,62 @@
 
 [![CI](https://github.com/jjjuuuun/agent-console/actions/workflows/ci.yml/badge.svg)](https://github.com/jjjuuuun/agent-console/actions/workflows/ci.yml)
 
-에이전트 팀을 원하는 대로 구성해서 채팅으로 일을 맡기는 로컬 웹 플랫폼입니다.
-화면에서 에이전트를 만들고 그래프로 이어 팀을 구성한 뒤, 채팅으로 일을 맡기고 실행 과정·사용량·로그를 같은 화면에서 봅니다.
+**English** | [한국어](README.ko.md)
 
-에이전트, 팀 구성, 리소스, 모델, 연결 종류는 모두 사용자가 만들고 고치는 데이터이며, 새 종류는 플러그인으로 더합니다.
-서버(Python)와 웹(React)은 내 컴퓨터에서 돌고, 기본으로 `127.0.0.1`에서만 접속을 받습니다.
+A local web platform where you build your own agent teams and hand them work through chat. Agents, teams, routing,
+graphs, log sources and wiki rules are all your data, not hard-coded lists.
 
-> 개발 중인 프로젝트입니다. 저장소를 받아 로컬에서 실행하는 방식만 지원하며, 화면과 설정 키는 바뀔 수 있습니다.
+## What is Agent Console?
 
-## 준비물
+Agent Console runs on your machine: a Python server and a React web app. In the web app you create agents, connect them
+into a team on a graph editor, and give the team work in a chat. You can then follow each run (delegation, hooks, MCP
+tool calls), check usage, and read session logs on the same screen.
 
-- Python 3.12 이상 (최신 보안 패치를 권장합니다)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.4 이상
-- Node.js `^22.23.4 || ^24.22.1 || >=26.12.1` (보안 패치가 들어간 버전입니다)
-- pnpm 10.34.5 이상 (`corepack enable`로 켜면 루트 `packageManager`에 적힌 10.34.9를 씁니다)
+Nothing comes pre-installed. There are no built-in teams, roles or categories. Anything that looks like a "type"
+(node types, edge types, execution backends, log sources, import and export formats) is registered through an
+extension point. If a setting is not enough, you add a plugin package instead of changing the server or web code.
 
-## 설치
+## Features
+
+- **Agents**: name, instructions, execution backend, model, tools and resources. Edit them in the UI or as YAML files
+  in your workspace.
+- **Team graphs**: a visual graph editor for putting agents together, with conditions, delegation between agents, and
+  questions or approvals that go back to you during a run.
+- **Chat**: pick a team and send it a task. Each message starts a run, and agents can ask you for input while they work.
+- **Runs and tracing**: run history and run detail, including the delegation flow, hook events, MCP tool calls,
+  timing and errors.
+- **Usage**: 5-hour and weekly usage windows and token totals from several sources (runs, session logs, and a bridge
+  for the Claude Code status line).
+- **Logs**: collects Claude Code session logs from the project folders you register, with search, timelines and
+  dashboards. The classification rules are data you can change or turn off.
+- **Projects**: register local folders. Chats, runs, logs, memory, wiki and specs are kept per project. Configuration
+  lives in a shared library that projects copy from.
+- **Wiki, memory and specs**: a project wiki with a link graph and rule checks, shared memory that agents can read and
+  write, and spec documents with task tracking, all driven by templates and rules you define.
+- **Import and export**: copy agents and settings from a project's `.claude/` folder, export to a zip file or a Claude
+  Code folder layout, and keep versions of every definition so you can restore them.
+- **Modular server**: each backend feature (chat, runs, usage, logs, definitions, import and export, ...) is a server
+  module that you can turn on or off. The web app only shows modules that are on.
+
+## Screenshots
+
+![Team graph editor with agent nodes and their connections](assets/readme/team-graph.png)
+
+| | |
+| --- | --- |
+| ![Chat handing a task to a team, with run progress next to the conversation](assets/readme/chat-run.png) | ![Run detail showing the delegation flow, hook events and MCP tool calls](assets/readme/run-detail.png) |
+| ![Log view listing Claude Code sessions from a registered project](assets/readme/logs.png) | ![Usage dashboard with 5-hour and weekly windows and token totals](assets/readme/usage.png) |
+
+## Requirements
+
+- Python 3.12 or later (latest security patch recommended)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.4 or later
+- Node.js `^22.23.4 || ^24.22.1 || >=26.12.1`
+- pnpm 10.34.5 or later (`corepack enable` uses the version pinned in `package.json`)
+
+You do not need a Claude account to try it out. The built-in `fake-agent` backend runs without any model calls.
+
+## Quick start
 
 ```bash
 git clone https://github.com/jjjuuuun/agent-console.git
@@ -26,48 +66,115 @@ uv sync --all-packages
 pnpm install
 ```
 
-## 실행
-
-웹을 한 번 빌드하면 서버 하나가 API와 웹 화면을 함께 제공합니다.
+**Option 1: one process.** Build the web app once, and the server serves both the API and the web UI:
 
 ```bash
-pnpm --filter @agent-console/web build    # 처음 한 번, 코드를 새로 받을 때마다
+pnpm --filter @agent-console/web build    # first time, and after every pull
 AGENT_CONSOLE_SERVE_STATIC=1 AGENT_CONSOLE_WEB_DIR=apps/web/dist uv run agent-console serve --open
 ```
 
-브라우저에서 <http://127.0.0.1:8765>을 엽니다. `--open`을 붙이면 서버가 준비된 뒤 자동으로 열립니다. 종료는 Ctrl-C입니다.
+`--open` opens `http://localhost:8765/` in your browser once the server is ready. Without it, open the address
+yourself. On Windows, or to keep these options, put them in `agent-console.yaml` and run
+`uv run agent-console serve` instead:
 
-`agent-console`은 실행 명령입니다. `serve`(서버 실행)와 `statusline`(Claude Code 사용량 상태 줄 연결)이 있고,
-옵션은 `uv run agent-console serve --help`로 봅니다.
+```yaml
+web:
+  serve_static: true
+  static_dir: apps/web/dist
+  open: {enabled: true}
+```
 
-## 처음 쓰기
+**Option 2: `pnpm app`.** Starts the server and a web preview together, building the web app first if needed:
 
-서버는 빈 작업 공간으로 시작합니다. 미리 들어 있는 에이전트나 팀 구성은 없습니다.
+```bash
+pnpm app                                  # server http://127.0.0.1:8765, web http://127.0.0.1:4173
+pnpm app --build                          # rebuild the web app first
+pnpm app -- --disable-module mod-exports  # arguments after `--` go to `agent-console serve`
+```
 
-1. **에이전트**를 만듭니다(이름·지시문·백엔드·모델).
-2. **팀 구성**을 만들어 에이전트 노드를 놓고 연결합니다. 에이전트 하나만 있는 팀도 됩니다.
-3. **채팅**에서 팀 구성을 골라 일을 맡깁니다. 실행 과정·사용량·로그는 각 화면에서 봅니다.
+`pnpm app` is meant for development. It also shows the `fake-agent` backend in the UI.
 
-Claude Code에서 쓰던 프로젝트 `.claude/` 설정이 있으면 **가져오기**로 복사해 올 수 있습니다(원본은 읽기만 합니다).
-사용자 전역 구성(`~/.claude/agents`·`~/.claude/settings.json` 등)은 가져오지 않습니다. 앱은 등록된 프로젝트 폴더와 자기 작업 공간
-밖을 연동하지 않습니다.
+Either way, the server listens on `127.0.0.1` only. Other addresses need `security.allow_remote: true`. The server is
+ready when `GET /api/v1/health` returns 200. Press Ctrl-C to stop. All server options are listed by
+`uv run agent-console serve --help`.
 
-Claude 호출은 기본으로 Claude 구독 로그인을 씁니다. **로그인은 앱 하나에 하나**이고, 자격은 작업 공간 안 앱 전용 폴더
-(기본 `<작업 공간>/.state/claude`)에 두어 모든 프로젝트가 함께 씁니다. 터미널의 Claude Code 로그인(`~/.claude`)으로 대신하지
-않습니다. 로그인이 필요하면 백엔드 상태 카드의 **[구독으로 로그인]**으로 앱 화면에서 로그인합니다(앱은 토큰을 받거나 저장하지
-않습니다). API 키 방식, 모델 등록 등 자세한 설정은 [USAGE.md](USAGE.md)에 있습니다.
+## First steps
 
-로그 화면은 **앱에 등록된 프로젝트 폴더의 Claude Code 세션만** 모읍니다(기본 꺼짐). 등록된 프로젝트가 없으면 아무것도
-모으지 않고, 홈 전체를 읽지 않습니다.
+The server starts with an empty workspace. No agents or teams are installed in advance.
 
-## 문서
+1. **Create an agent** (name, instructions, backend, model). To try things without model calls, use the `fake-agent`
+   backend. It is hidden by default. `pnpm app` shows it, or set `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS=1`
+   (setting: `modules.options.mod-runs.show_hidden_backends: true`).
+2. **Create a team.** Place agent nodes on the graph and connect them. A team with a single agent is fine.
+3. **Open Chat**, pick the team and send a task. Runs, usage and logs each have their own page.
 
-- [USAGE.md](USAGE.md): 실제 Claude 연결, 기능별 사용법, 서버 운용
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): Claude Code로 이 프로젝트를 개발한 방식과 확장 지점
-- [CLAUDE.md](CLAUDE.md): 개발 규칙(원칙, 스택, 명령어, 완료 조건)
-- [.claude/agents/](.claude/agents/): 개발에 쓴 리더 에이전트 정의
-- 각 패키지 폴더(`packages/`, `apps/`)의 README: 패키지별 API와 설정
+**Using real Claude models.** Switch the backend to `claude-agent-sdk` in *Settings › Agent defaults*. Model ids are not
+built in. List the ones you want under `modules.options.mod-runs.backends.claude-agent-sdk.models`. By default the
+backend signs in with your Claude subscription. The sign-in happens on the backend status card inside the app, the
+credentials are kept in an app-only folder (`<workspace>/.state/claude`), and the app never receives or stores the
+token. Anthropic's documentation recommends API keys for apps built on the Agent SDK, so check the terms yourself
+before using subscription credentials. To use an API key instead, keep the key in an environment variable and refer
+to it as `secret://anthropic_api_key`. The full steps are in [USAGE.md](USAGE.md).
 
-## 라이선스
+**Already using Claude Code?** Register the project folder and import its `.claude/` agents and settings. The
+original files are only read. Global configuration under `~/.claude` is not imported.
 
-[MIT](LICENSE) © 2026 jjjuuuun
+## Configuration
+
+| What | Where |
+| --- | --- |
+| Server settings | `agent-console.yaml`. The server looks at `--config`, then `AGENT_CONSOLE_CONFIG`, then the current folder. Start from `agent-console.example.yaml`. Precedence: command line > `AGENT_CONSOLE_*` environment variables > file > defaults |
+| Workspace | Default `.agent-console/` (setting `workspace`, or `--workspace`). Holds your definitions as YAML (agents, teams, resources, `settings.yaml`). Runtime state (SQLite database, app sign-in, usage bridge file) is kept under `<workspace>/.state/` |
+| Project folders | Created or registered from the UI. The app only works inside registered folders and its own workspace. Each project keeps its copy of the configuration in `<folder>/.agent-console/`. Removing a project only unregisters it, and nothing in the folder is deleted |
+| Feature modules | `modules.enabled` / `modules.disabled`, or `--enable-module` / `--disable-module`. Module settings go under `modules.options.<module id>`. `GET /api/v1/modules` lists the modules and their state |
+
+Relative paths in the settings file are resolved against the folder that contains it. If the file has unknown or
+removed keys, the server refuses to start and explains what to change. The full key reference is in
+[apps/server/README.md](apps/server/README.md).
+
+Keep secrets out of files. Put them in environment variables and refer to them with `secret://<name>`.
+
+## Extending
+
+New kinds of things are added as plugin packages, without changing the server or web code. Installed packages
+register through Python entry points, and each one can be turned off with `plugins.disabled`.
+
+Extension points include node types, edge types, condition operators, execution backends, delegation strategies,
+interaction kinds, log sources and classifiers, usage sources, import sources, export formats, resource types,
+secret providers, memory scopes, wiki checks, and whole server modules. On the web side there are settings form
+widgets and dashboard widgets.
+
+- [Extension guide](docs/extending/README.md): which extension point fits your change, and how to build, test and ship a
+  plugin
+- [Example plugins](examples/extensions/README.md): one small package per extension point, each with install and
+  remove commands
+
+```bash
+uv pip install -e examples/extensions/agent-console-example-condition   # then restart the server
+```
+
+## Documentation
+
+- [USAGE.md](USAGE.md): user guide (Korean)
+- [CHANGELOG.md](CHANGELOG.md): release notes
+- [docs/extending/](docs/extending/README.md): extension guide (Korean)
+- [apps/server/README.md](apps/server/README.md): server settings, REST and WebSocket (Korean)
+- [apps/cli/README.md](apps/cli/README.md): the `agent-console` command: `serve`, `statusline`, `logs purge` (Korean)
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): how this project was built with Claude Code (Korean)
+- Each package under `packages/` and `apps/` has its own README with its API and settings
+
+## Known limitations
+
+Automated tests use the fake backend. Real Claude Agent SDK runs and some platform setups (Windows file system
+details, the native folder picker, IME input, SQLite builds without FTS5, very large wikis, binding to non-loopback
+addresses) are outside the automated tests, so check them in your own environment. The web UI and most documentation are in Korean for now. Packages are not
+published to PyPI or npm, so install from source. See [CHANGELOG.md](CHANGELOG.md) for details.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, checks, commit message
+format and package rules.
+
+## License
+
+[MIT](LICENSE)

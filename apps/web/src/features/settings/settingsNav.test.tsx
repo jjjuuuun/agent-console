@@ -101,11 +101,12 @@ describe("설정 섹션 검색·묶음 접기", () => {
     mount("/settings#chat", store);
     const n = await nav();
     // 현재 섹션(채팅)은 "자주 쓰는" 묶음 — 접을 수 없다
-    const frequent = within(n).getByRole("button", { name: /자주 쓰는/ });
+    // 묶음·섹션은 모듈 목록을 받은 뒤 채워지므로(부하에서 늦다) 상태 기반으로 기다린다.
+    const frequent = await within(n).findByRole("button", { name: /자주 쓰는/ }, LONG);
     fireEvent.click(frequent);
-    expect(within(n).getByRole("link", { name: "채팅" })).toBeTruthy();
+    expect(await within(n).findByRole("link", { name: "채팅" }, LONG)).toBeTruthy();
     expect(mem.get(NAV_COLLAPSED_KEY)).toBeUndefined();
-    const defaults = within(n).getByRole("button", { name: /실행 기본값/ });
+    const defaults = await within(n).findByRole("button", { name: /실행 기본값/ }, LONG);
     expect(defaults.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(defaults);
     expect(defaults.getAttribute("aria-expanded")).toBe("false");
@@ -114,13 +115,15 @@ describe("설정 섹션 검색·묶음 접기", () => {
     cleanup();
     mount("/settings#chat", store);
     const again = await nav();
-    expect(within(again).getByRole("button", { name: /실행 기본값/ }).getAttribute("aria-expanded")).toBe("false");
+    const againDefaults = await within(again).findByRole("button", { name: /실행 기본값/ }, LONG);
+    expect(againDefaults.getAttribute("aria-expanded")).toBe("false");
     // 접힌 묶음의 섹션이 현재 섹션이면 펼쳐진다
     cleanup();
     mount("/settings#delegation", store);
     const third = await nav();
-    expect(within(third).getByRole("link", { name: "위임" })).toBeTruthy();
-    expect(within(third).getByRole("button", { name: /실행 기본값/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(await within(third).findByRole("link", { name: "위임" }, LONG)).toBeTruthy();
+    const thirdDefaults = await within(third).findByRole("button", { name: /실행 기본값/ }, LONG);
+    expect(thirdDefaults.getAttribute("aria-expanded")).toBe("true");
   });
 });
 

@@ -285,7 +285,7 @@ dev = [
 
 [[package]]
 name = "agent-console-cli"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "apps/cli" }
 dependencies = [
     { name = "agent-console-logs" },
@@ -363,7 +363,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.14.12"
+version = "0.15.0"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -1996,7 +1996,7 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-projects"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "packages/py/modules/ac-mod-projects" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -2517,7 +2517,7 @@ dev = [
 
 [[package]]
 name = "agent-console-projects"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "packages/py/features/ac-projects" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -2871,7 +2871,7 @@ dev = [
 
 [[package]]
 name = "agent-console-server"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "apps/server" }
 dependencies = [
     { name = "agent-console-backend-claude-sdk", extra = ["login"] },

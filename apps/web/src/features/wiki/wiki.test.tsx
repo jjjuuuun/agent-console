@@ -98,6 +98,27 @@ describe("위키 목록 /wiki", () => {
   });
 });
 
+describe("새 위키 id 미리 보기 (wiki_kind)", () => {
+  it("wiki_kind가 있으면 한글뿐인 이름의 id를 종류 이름으로 미리 보이고, 겹치면 -2를 붙인다. 입력값으로 보내지는 않는다", async () => {
+    setup("/wiki?prj=p1", { wikis: [wikiSummary({ id: "문서-kind" })], info: { ...INFO, wiki_kind: "문서-kind" } });
+    fireEvent.click(await screen.findByRole("button", { name: "새 위키…" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    fireEvent.click(within(dialog).getByText(/고급/));
+    fireEvent.change(within(dialog).getByLabelText(/이름/), { target: { value: "가이드" } });
+    expect((within(dialog).getByTestId("wiki-new-id") as HTMLInputElement).placeholder).toBe("문서-kind-2");
+    expect((within(dialog).getByTestId("wiki-new-id") as HTMLInputElement).value).toBe("");
+  });
+
+  it("wiki_kind가 null이면 지금처럼 '자동'만 보인다", async () => {
+    setup("/wiki?prj=p1", { wikis: [], info: { ...INFO, wiki_kind: null } });
+    fireEvent.click(await screen.findByRole("button", { name: "새 위키…" }, LONG));
+    const dialog = await screen.findByRole("dialog", {}, LONG);
+    fireEvent.click(within(dialog).getByText(/고급/));
+    fireEvent.change(within(dialog).getByLabelText(/이름/), { target: { value: "가이드" } });
+    expect((within(dialog).getByTestId("wiki-new-id") as HTMLInputElement).placeholder).toBe("자동");
+  });
+});
+
 describe("위키 화면 낮은 결함 (FU.7 N3·N5)", () => {
   it("N3 새 위키: 쓸 수 있는 규칙이 있는데 하나도 더하지 않았으면 한 줄 안내가 보이고 '체크' 표현은 없다", async () => {
     setup("/wiki?prj=p1", { wikis: [], wiki: { listWikiRules: vi.fn(async () => [{ id: "r1", name: "규칙1" }, { id: "r2", name: "규칙2" }]) } });

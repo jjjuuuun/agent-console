@@ -29,7 +29,6 @@ function setup(path: string, f: Fixture = {}) {
   const projects = f.projects ?? [projectView(project("p1", { name: "결제앱" }))];
   const made = createFakeClients(
     { listModules: vi.fn(async () => [mod(["sdd", "projects", "settings"])]), listProjects: vi.fn(async () => projects), listDefinitionVersions: vi.fn(async () => []), ...f.rest },
-    {},
     {
       getSddInfo: vi.fn(async () => f.info ?? INFO),
       listSpecs: vi.fn(async () => []),

@@ -70,7 +70,7 @@ describe("그래프 탭", () => {
     setup(base("graph", "&path=a/one&depth=all"), fixture({ storage, wiki: { getWikiGraph } }));
     const stub = await screen.findByTestId("graph-stub", {}, LONG);
     expect(stub.getAttribute("data-center")).toBe("a/one");
-    expect(getWikiGraph).toHaveBeenCalledWith("w1", { center: "a/one", depth: 1000 });
+    expect(getWikiGraph).toHaveBeenCalledWith("w1", { center: "a/one", depth: "all" });
   });
 
   it("잘렸으면 서버 총 개수로 안내하고, 총 개수가 없으면 지어내지 않는다", async () => {

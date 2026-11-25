@@ -2,7 +2,8 @@
 
 - 정의의 `project` 필드(옛 프로젝트 전용 범위)는 design §PI(K33-5)에서 없어졌다. `mod-projects`는
   `definitions.checks` 범위 경고를 더 내지 않는다(5.7R.33f). 옛 [정리] 화면용
-  `POST /projects/scope-issues`(deprecated, 33t 삭제)만 같은 코드를 낸다.
+  `POST /projects/scope-issues`도 REL.14에서 지웠다(405). 옛 정의는
+  `POST /projects/{id}/legacy/plan`(복사 계획)으로 찾는다.
 - 프로젝트 모듈(`mod-projects`)을 끄면 검증 결과는 엔진 + 팀 규칙 그대로(범위 경고 없음)다.
 """
 
@@ -13,12 +14,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agent_console_contracts import KnownIssueCodes, KnownSuggestionIds
 from agent_console_server.testing import API, agent_doc, make_settings, server
-
-SHARED_USES_PROJECT = KnownIssueCodes.PROJECT_SHARED_USES_PROJECT
-MOVE_TO_SHARED = KnownSuggestionIds.PROJECT_MOVE_TO_SHARED
-OPTIONS = {"mod-projects": {"snapshot_ttl_seconds": 0}}
 
 
 def _graph(graph_id: str, agent_ref: str) -> dict[str, Any]:
@@ -67,11 +63,12 @@ def _codes(issues: list[dict[str, Any]]) -> set[str]:
 
 
 def test_validate_has_no_project_scope_warning(tmp_path: Path) -> None:
-    with server(make_settings(tmp_path, options=OPTIONS)) as client:
+    with server(make_settings(tmp_path)) as client:
         _seed(client, project=True, folder=tmp_path / "alpha")
-        scope = client.post(f"{API}/projects/scope-issues").json()
-        [old] = [i for i in scope if i["code"] == SHARED_USES_PROJECT]
-        assert [s["id"] for s in old["suggestions"]] == [MOVE_TO_SHARED]
+        assert client.post(f"{API}/projects/scope-issues").status_code == 405  # REL.14 삭제
+        plan = client.post(f"{API}/projects/alpha/legacy/plan")
+        assert plan.status_code == 200, plan.text
+        assert [(i["kind"], i["id"]) for i in plan.json()["items"]] == [("agent", "pa-2")]
 
         saved = client.post(f"{API}/graphs/g-shared/validate").json()
         draft = client.post(
@@ -83,7 +80,7 @@ def test_validate_has_no_project_scope_warning(tmp_path: Path) -> None:
 
 
 def test_validate_without_projects_module_has_no_scope_warning(tmp_path: Path) -> None:
-    settings = make_settings(tmp_path, options=OPTIONS, modules={"disabled": ["mod-projects"]})
+    settings = make_settings(tmp_path, modules={"disabled": ["mod-projects"]})
     with server(settings) as client:
         mods = {m["id"]: m["status"] for m in client.get(f"{API}/modules").json()}
         assert mods["mod-projects"] == "disabled"

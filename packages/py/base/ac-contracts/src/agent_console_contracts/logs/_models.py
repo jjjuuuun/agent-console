@@ -230,26 +230,18 @@ class LogTokenTotals(ContractModel):
     total: int | None = Field(default=None, ge=0)
 
 
-class LogProjectRef(ContractModel):
-    """프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다."""
-
-    id: NonEmptyStr
-    label: str = ""
-
-
 class LogSessionSummary(ContractModel):
-    """`GET /logs/sessions` 항목: 세션 하나의 요약."""
+    """`GET /logs/sessions` 항목: 세션 하나의 요약.
+
+    2.0.0(0.15.0): 옛 프로젝트 묶음 `project`(`LogProjectRef`)를 지웠다. 프로젝트는 `project_id`이고
+    표시 이름은 `GET /projects`로 얻는다. 옛 응답의 `project` 키는 읽을 때 무시된다.
+    """
 
     session: NonEmptyStr
     sources: list[str] = Field(default_factory=list)
     title: str = Field(default="", description="첫 입력 등에서 뽑은 짧은 제목.")
     cwd: str = ""
     repo_root: str = ""
-    project: LogProjectRef | None = Field(
-        default=None,
-        description="이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다.",
-        json_schema_extra={"deprecated": True},
-    )
     project_id: str | None = Field(
         default=None,
         description=(
@@ -449,7 +441,6 @@ __all__ = [
     "LogFilterFieldInfo",
     "LogLane",
     "LogMetricInfo",
-    "LogProjectRef",
     "LogQuerySchema",
     "LogScanReport",
     "LogSessionSummary",

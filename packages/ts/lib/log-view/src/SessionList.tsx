@@ -157,7 +157,7 @@ export function SessionList(props: SessionListProps) {
         return s.title ? <span className="ac-lv-ellipsis" title={s.title}>{s.title}</span> : m.none;
       case "project":
         if (s.project_id) return <span className="ac-lv-ellipsis" title={s.project_id}>{projectLabelFor?.(s.project_id) ?? s.project_id}</span>;
-        return s.project ? <span className="ac-lv-ellipsis" title={s.project.id}>{s.project.label || s.project.id}</span> : m.none;
+        return m.none;
       case "threads":
         return s.thread_count == null ? m.none : <span className="ac-lv-num">{s.thread_count}</span>;
       case "events":

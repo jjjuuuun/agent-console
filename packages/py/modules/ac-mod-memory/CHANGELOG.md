@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- REL.16(계약 0.15.0, memory 1.3.0): WS `memory.changed`의 `MemoryChanged.space`를 채운다 — 공간
+  서비스는 자기 공간 이름(등록 id), 라이브러리는 null. 공간 제공자 예외에 문자열 `reason`이 있으면 오류
+  응답 `details.reason`으로 싣는다(예: `project.memory_unavailable`). `MemorySpaceError(reason=)`.
+
 - FU.12: `search_query_hasher`는 공용 `query_hasher_from_env`를 쓴다(동작 그대로).
 - FU.6: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트 환경변수 이름) — 에이전트 검색 이벤트
   `query_sha256`. 기본이 솔트 없는 sha256에서 프로세스마다 무작위 솔트 HMAC으로 바뀌었다. `search_query_hasher(cfg, environ)`.

@@ -58,7 +58,7 @@ importers:
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/chat
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../../packages/ts/lib/contracts
       '@agent-console/folder-picker':
         specifier: ^0.1.0
@@ -79,7 +79,7 @@ importers:
         specifier: ^0.1.0
         version: link:../../packages/ts/lib/memory-view
       '@agent-console/projects':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/projects
       '@agent-console/schema-form':
         specifier: ^0.1.0
@@ -143,7 +143,7 @@ importers:
         specifier: ^0.1.0
         version: link:../../../packages/ts/lib/arch-view
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../../../packages/ts/lib/contracts
       '@agent-console/eslint-config':
         specifier: ^0.1.0
@@ -242,7 +242,7 @@ importers:
   packages/ts/lib/api-client:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -270,7 +270,7 @@ importers:
   packages/ts/lib/arch-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@xyflow/react':
         specifier: ^12.12.0
@@ -322,7 +322,7 @@ importers:
   packages/ts/lib/chat:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       react-markdown:
         specifier: ^10.1.0
@@ -450,7 +450,7 @@ importers:
   packages/ts/lib/graph-editor:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@xyflow/react':
         specifier: ^12.12.0
@@ -523,7 +523,7 @@ importers:
   packages/ts/lib/log-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/virtual-rows':
         specifier: ^0.1.0
@@ -578,7 +578,7 @@ importers:
   packages/ts/lib/markdown-doc:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/text-editor':
         specifier: ^0.1.0
@@ -636,7 +636,7 @@ importers:
   packages/ts/lib/memory-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/text-editor':
         specifier: ^0.1.0
@@ -691,7 +691,7 @@ importers:
   packages/ts/lib/projects:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -726,7 +726,7 @@ importers:
         version: 6.11.0(@rjsf/utils@6.11.0(react@19.3.1))
     devDependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/eslint-config':
         specifier: ^0.1.0
@@ -771,7 +771,7 @@ importers:
   packages/ts/lib/sdd-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/markdown-doc':
         specifier: ^0.1.0
@@ -902,7 +902,7 @@ importers:
   packages/ts/lib/trace-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
     devDependencies:
       '@agent-console/eslint-config':
@@ -1036,7 +1036,7 @@ importers:
   packages/ts/lib/wiki-view:
     dependencies:
       '@agent-console/contracts':
-        specifier: ^0.14.0
+        specifier: ^0.15.0
         version: link:../contracts
       '@agent-console/markdown-doc':
         specifier: ^0.1.0

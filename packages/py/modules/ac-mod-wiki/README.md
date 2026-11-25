@@ -3,7 +3,7 @@
 Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크 해석·색인·저장소·
 규칙·점검·기록·검색·zip)를 서버에 붙인다. 실행·프로젝트를 모르고, 둘 다 연동 모듈이 포트로 붙인다.
 
-- REST `/wiki/*`: 화면 정보 `GET /wiki/info`(페이지 폴더·능력·한도), 위키 목록·만들기·보기·저장·지우기
+- REST `/wiki/*`: 화면 정보 `GET /wiki/info`(페이지 폴더·능력·한도·정의 종류 이름·`GET`으로 읽을 수 없는 마지막 경로 조각 `reserved_page_names`, 그래프는 `?depth=all`로 깊이 제한 없음), 위키 목록·만들기·보기·저장·지우기
   (`/wiki/wikis[/{wiki}]`, 목록 카드 값 — 페이지·끊긴 링크·고아·점검 수·최근 변경 — 을 요청 하나로), 페이지
   (`…/pages[/{path}]`, `ETag` = 본문 sha256, 새 페이지 `If-None-Match: *`), 저장 전 시험 `…/preview`, 옮기기
   `…/move`(링크 문자열만 고침), 기록 `…/history[/{version}]`·`…/restore`, 링크 넣기 `…/link-text`, 페이지 틀

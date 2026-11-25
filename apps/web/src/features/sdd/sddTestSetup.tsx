@@ -50,7 +50,6 @@ export function setup(path: string, f: Fixture = {}) {
   const projects = f.projects ?? [projectView(project("p1", { name: "결제앱" }))];
   const { clients, ws, sddClient, sdd, rest } = createFakeClients(
     { listModules: vi.fn(async () => f.modules ?? (await MODULES())), listProjects: vi.fn(async () => projects) },
-    {},
     {
       getSddInfo: vi.fn(async () => f.info ?? INFO),
       listSpecs: vi.fn(async () => f.specs ?? []),

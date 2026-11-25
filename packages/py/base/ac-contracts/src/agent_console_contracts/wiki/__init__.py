@@ -4,6 +4,9 @@
 1.2.0(0.14.2): `WikiInfo.rules_kind`, `WikiRuleEntry.applies_to`·`path`·`title`,
 `WikiLintReport.partial`·`skipped`·`enabled_checks`(`KnownWikiLintChecks`),
 `WikiGraphNode.scheme_target`.
+1.3.0(0.15.0): `WikiInfo.wiki_kind`·`reserved_page_names`, 그래프 깊이 "전체"
+(`WIKI_GRAPH_DEPTH_ALL`, `?depth=all`)와 응답 `WikiGraph.depth`, `WikiRuleEntry.severity`를
+`IssueSeverity`(error·warning·info)로 좁힘.
 
 사용자 데이터(모르는 키 보존): 위키 `WikiDefinition`, 위키 규칙 `WikiRulesDefinition`
 (지침·쓰기 규칙·점검 규칙·페이지 틀·문법), 문법 `WikiSyntax`, 설정 섹션 `WikiSettings`, 리소스
@@ -23,6 +26,7 @@ from ._api import (
     KNOWN_WIKI_EVENT_TYPES,
     WIKI_ACCESS_OPS,
     WIKI_EVENT_PREFIX,
+    WIKI_GRAPH_DEPTH_ALL,
     KnownWikiAuthorKinds,
     KnownWikiChangeOps,
     KnownWikiFrontMatterRoles,
@@ -136,6 +140,7 @@ __all__ = [
     "KNOWN_WIKI_EVENT_TYPES",
     "WIKI_ACCESS_OPS",
     "WIKI_EVENT_PREFIX",
+    "WIKI_GRAPH_DEPTH_ALL",
     "WIKI_LINK_INSERT_VARIABLES",
     "WIKI_LINT_SUBJECT_PATHS",
     "WIKI_PATH_HINT_VARIABLES",

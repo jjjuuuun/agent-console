@@ -224,6 +224,18 @@ async def test_old_log_projects_setting_is_ignored_with_info(tmp_path: Path) -> 
         await assembly.stop()
 
 
+async def test_without_old_log_projects_setting_no_ignored_key(tmp_path: Path) -> None:
+    """REL.14(REL.12 R1): 옛 키가 없으면 이슈 없음(속성 대신 ``ignored_settings_keys``로 본다)."""
+    assembly = _assembly(tmp_path, [project_folders_module({"demo-id": Path("/w/demo")})])
+    await assembly.start(fail_fast=True)
+    try:
+        await _service(assembly).scan()
+        issues = [i for source in assembly.ports(SERVER_WARNINGS) for i in source()]
+        assert not [i for i in issues if i.code == "settings.ignored_key"]
+    finally:
+        await assembly.stop()
+
+
 async def test_archived_folders_are_retained_not_read(tmp_path: Path) -> None:
     """보관 폴더는 읽지 않는다(범위 밖이지만 색인을 지우는 판정에서는 남김)."""
     assembly = _assembly(

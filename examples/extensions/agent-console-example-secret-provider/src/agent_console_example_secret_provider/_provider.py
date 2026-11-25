@@ -44,22 +44,25 @@ PROVIDER_ID: Final = "example-file"
 PATH_OPTION: Final = "path"
 """설치자 설정에서 비밀 파일 경로를 주는 키(줄 규칙 키와 함께 `secrets.providers.<key>` 아래)."""
 
+_OPTIONS_TITLE: Final = "비밀 파일 공급자"
+"""설치자 설정 스키마의 제목(설정 화면 "확장 옵션" 묶음의 폼 머리말)."""
+
+_OPTIONS_DESCRIPTION: Final = (
+    "정의의 비밀 참조(secret://이름)를 환경변수에서 못 찾았을 때 읽을 로컬 파일과 "
+    "그 줄 규칙입니다. 값은 파일에만 두고 여기에는 적지 않습니다."
+)
+"""설치자 설정 스키마의 설명(폼 머리말 아래 한 문장)."""
+
 _log = logging.getLogger("agent_console_example_secret_provider")
 
 
+# 모델 docstring과 클래스 이름은 JSON Schema의 `description`·`title`이 되어 설정 화면 폼 머리말로
+# 그대로 보인다. 그래서 docstring은 사용자가 읽는 한 문장으로 두고 `title`을 따로 주며, 필드 설명은
+# 각 `Field(title=..., description=...)`에 둔다. 기본값은 `data/defaults.json`, 옵션이 덮어쓴다.
 class SecretFileSettings(BaseModel):
-    """줄 규칙과 경로 환경변수 이름(기본값 `data/defaults.json` + 옵션 덮어쓰기).
+    """비밀 파일의 줄을 어떻게 읽을지 정하는 규칙입니다."""
 
-    Attributes:
-        path_env: 파일 경로를 담은 환경변수 이름(`EnvFileSecretProvider`가 읽는다).
-        comment_prefixes: 이 문자열로 시작하는 줄은 주석.
-        name_pattern: 이름 정규식(맞지 않는 줄은 건너뛰고 줄 번호만 경고).
-        strip_quotes: 값 양끝의 같은 따옴표(`"`·`'`) 한 쌍을 벗긴다.
-        upper_fallback: 이름이 없으면 대문자 이름으로 한 번 더 찾는다(환경변수 공급자와 같은 규칙).
-        max_file_bytes: 이보다 큰 파일은 읽지 않는다.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", title="비밀 파일 줄 규칙")
 
     path_env: str = Field(
         min_length=1,
@@ -120,6 +123,8 @@ def options_schema() -> dict[str, Any]:
         if key in props:
             props[key]["default"] = value
     schema.pop("required", None)
+    schema["title"] = _OPTIONS_TITLE
+    schema["description"] = _OPTIONS_DESCRIPTION
     schema["properties"] = {
         PATH_OPTION: {
             "type": "string",

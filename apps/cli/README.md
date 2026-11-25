@@ -21,12 +21,17 @@ uv pip install ./apps/cli     # 단독(서버·사용량 패키지도 함께 설
 ## 명령
 
 ```bash
+uv run agent-console --version                  # agent-console <버전>
 uv run agent-console serve [서버 옵션…]          # 옵션 목록: uv run agent-console serve --help
 uv run agent-console statusline (--output PATH | --config PATH) [--label WINDOW=TEXT ...]
                                 [--template TEXT] [--separator TEXT] [--empty TEXT]
 uv run agent-console logs purge [--config PATH | --index PATH] [--source ID ...] [--category ID ...]
                                 [--before WHEN] [--rescan/--no-rescan] [--dry-run | --yes] [--all]
 ```
+
+### `--version`
+`agent-console <버전>` 한 줄을 출력하고 끝낸다(종료 코드 0). 버전은 코드에 두지 않고 설치 메타데이터(`agent-console-cli`,
+`pyproject.toml`의 `project.version`)에서 읽는다. 서버 패키지를 import하지 않는다.
 
 ### `serve`
 `serve` 뒤의 인자를 서버 `agent_console_server.main(argv, prog="agent-console serve")`에 그대로 넘긴다. 옵션 정의는
@@ -83,6 +88,7 @@ Claude Code가 statusLine 명령에 넘기는 stdin JSON을 받아 사용량 상
 | 이름 | 설명 |
 | --- | --- |
 | `main(argv=None) -> int`, `app`(Typer) | 진입점 |
+| `cli_version(read=importlib.metadata.version) -> str` | 설치된 `agent-console-cli` 버전(`--version`이 쓴다, 메타데이터가 없으면 `0.0.0`) |
 
 명령 내부 함수(`_server.run_serve`·`server_state_dir`·`server_log_index_path`, `_statusline.run_statusline`,
 `_logs.run_purge`)는 이 명령 전용이다.

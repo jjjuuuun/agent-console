@@ -105,6 +105,10 @@ from .settings import WikiModuleSettings, package_defaults
 
 _USER = WikiAuthor(kind=KnownWikiAuthorKinds.USER)
 
+PAGE_ROUTE_WORDS: tuple[str, ...] = ("history",)
+"""``GET …/pages/<경로>/<이 말>``이 기록 경로라 그 이름으로 끝나는 페이지를 ``GET``으로 읽을 수
+없는 말(경로 어휘). ``WikiInfo.reserved_page_names``로 웹에 알린다(계약 wiki 1.3.0)."""
+
 
 def user_author() -> WikiAuthor:
     """REST·화면 쓰기의 쓴 주체(사람). 1인 로컬이라 ``label``은 비운다(§7R.18 Q13)."""
@@ -832,7 +836,8 @@ class WikiService:
 
     def info(self, scope: WikiScope) -> WikiInfo:
         """``GET /wiki/info``. ``writable`` = 공간 ``config_writable``(단독 루트는 그 판단),
-        ``rules_kind`` = 위키 규칙 정의 종류 이름(설치자 데이터)."""
+        ``rules_kind``·``wiki_kind`` = 위키 규칙·위키 정의 종류 이름(설치자 데이터),
+        ``reserved_page_names`` = ``PAGE_ROUTE_WORDS``."""
         issues: list[WikiIssue] = []
         probe = self._search_probe(self.settings())
         if probe.degraded:
@@ -848,6 +853,8 @@ class WikiService:
             capabilities=self.capabilities(scope),
             writable=scope.writable,
             rules_kind=self.rules_kind.name,
+            wiki_kind=self.wiki_kind.name,
+            reserved_page_names=list(PAGE_ROUTE_WORDS),
             limits=WikiLimits(
                 max_page_bytes=self.options.max_page_bytes,
                 max_pages=self.options.max_pages,
@@ -1071,6 +1078,7 @@ class WikiService:
 
 
 __all__ = [
+    "PAGE_ROUTE_WORDS",
     "LiveSecretScanner",
     "WikiPorts",
     "WikiScope",

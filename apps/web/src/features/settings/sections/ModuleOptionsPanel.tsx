@@ -31,6 +31,7 @@ export function ModuleOptionsReadOnly({ view }: ModuleOptionsViewProps) {
           onChange={noop}
           disabled
           rawJsonToggle={false}
+          hideRootTitle
           idPrefix={`modopt-${view.module_id}`}
           customWidgets={SETTINGS_WIDGETS}
           customFields={SETTINGS_FIELDS}
@@ -76,6 +77,7 @@ export function PluginOptionsReadOnly({ item }: { item: PluginOptionsView }) {
           onChange={noop}
           disabled
           rawJsonToggle={false}
+          hideRootTitle
           idPrefix={`plugopt-${item.extension}-${item.name}`}
           customWidgets={SETTINGS_WIDGETS}
           customFields={SETTINGS_FIELDS}

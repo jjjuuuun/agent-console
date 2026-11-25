@@ -9,7 +9,6 @@ import { CONTRACTS_VERSION, type Interaction, type WorkspaceSettings } from "@ag
 import type { MemoryChanged } from "@agent-console/contracts/memory";
 import type { SddChanged } from "@agent-console/contracts/sdd";
 import type { WikiChanged } from "@agent-console/contracts/wiki";
-import type { ProjectsClient } from "@agent-console/projects";
 import type { ApiClients } from "../app/apiClients";
 
 type RestMocks = { [K in keyof RestClient]: ReturnType<typeof vi.fn> };
@@ -150,12 +149,6 @@ export function createFakeWs(initial: ConnectionStatus = "open"): FakeWs {
   } as unknown as FakeWs;
 }
 
-/** 모든 메서드가 vi.fn인 가짜 프로젝트 클라이언트. 목록은 기본으로 비어 있다. */
-export function createFakeProjects(overrides: Partial<Record<keyof ProjectsClient, unknown>> = {}): ProjectsClient & { [K in keyof ProjectsClient]: ReturnType<typeof vi.fn> } {
-  const base: Record<string, unknown> = { listProjects: vi.fn(async () => []), listScopeIssues: vi.fn(async () => []), ...overrides };
-  return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
-}
-
 /** 모든 메서드가 vi.fn인 가짜 스펙(SDD) 클라이언트. 덮어쓰지 않은 메서드는 undefined를 돌려준다. */
 export function createFakeSdd(overrides: Partial<Record<keyof SddClient, unknown>> = {}): SddClient {
   const base: Record<string, unknown> = { ...overrides };
@@ -168,10 +161,9 @@ export function createFakeWiki(overrides: Partial<Record<keyof WikiClient, unkno
   return new Proxy(base, { get: (target, key: string) => target[key] ?? (target[key] = vi.fn(async () => undefined)) }) as never;
 }
 
-export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, projectsOverrides: Partial<Record<keyof ProjectsClient, unknown>> = {}, sddOverrides: Partial<Record<keyof SddClient, unknown>> = {}, wikiOverrides: Partial<Record<keyof WikiClient, unknown>> = {}) {
+export function createFakeClients(restOverrides: Partial<Record<keyof RestClient, unknown>> = {}, sddOverrides: Partial<Record<keyof SddClient, unknown>> = {}, wikiOverrides: Partial<Record<keyof WikiClient, unknown>> = {}) {
   const rest = createFakeRest(restOverrides);
   const ws = createFakeWs();
-  const projects = createFakeProjects(projectsOverrides);
   // 공간 클라이언트: 기본은 빈 가짜지만 실행 그래프 조회(`getGraph`·`getGraphVersion`)는 공용과 같은 값을 돌려준다(실행 화면이 실행의 공간으로 조회하므로).
   const sharedGraphOverrides = Object.fromEntries((["getGraph", "getGraphVersion", "getGraphPlan"] as const).filter((k) => k in restOverrides).map((k) => [k, restOverrides[k]]));
   const space = vi.fn(() => createFakeRest(sharedGraphOverrides) as never);
@@ -179,8 +171,8 @@ export function createFakeClients(restOverrides: Partial<Record<keyof RestClient
   const sdd = vi.fn(() => sddClient);
   const wikiClient = createFakeWiki(wikiOverrides);
   const wiki = vi.fn(() => wikiClient);
-  const clients: ApiClients = { rest, projects, space, sdd, wiki, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
-  return { rest, ws, projects, space, sdd, sddClient, wiki, wikiClient, clients };
+  const clients: ApiClients = { rest, space, sdd, wiki, ws, meta: { baseUrl: "http://fake.test", serverVersion: "9.9.9", contractsVersion: CONTRACTS_VERSION } };
+  return { rest, ws, space, sdd, sddClient, wiki, wikiClient, clients };
 }
 
 export function versionConflict(): ApiError {

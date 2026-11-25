@@ -33,7 +33,7 @@ function Where() {
 }
 
 function harness(ui: React.ReactNode, over: { wiki?: Record<string, unknown>; rest?: Record<string, unknown>; at?: string; project?: string | null } = {}) {
-  const made = createFakeClients({ listModules: vi.fn(async () => [mod(["wiki"])]), ...over.rest }, {}, {}, over.wiki);
+  const made = createFakeClients({ listModules: vi.fn(async () => [mod(["wiki"])]), ...over.rest }, {}, over.wiki);
   const out = render(
     <ApiProvider clients={made.clients}>
       <QueryClientProvider client={createAppQueryClient({ retry: false })}>
@@ -225,7 +225,6 @@ describe("메모리 화면 항목 메뉴", () => {
         getMemoryEntry: vi.fn(async () => entry),
         getModuleOptions: vi.fn(async () => ({ module_id: "m-any", values: { max_entry_bytes: 65_536 } })),
       },
-      {},
       {},
       { listWikis: vi.fn(async () => [W("a1", "첫 위키")]), listWikiPages: vi.fn(async () => ({ items: [], truncated: false })), listWikiTemplates: vi.fn(async () => []), getWikiInfo: vi.fn(async () => ({ pages_root: ".cfg/wikis" })) },
     );

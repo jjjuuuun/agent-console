@@ -133,6 +133,25 @@ describe("useArchPopout", () => {
     act(() => void vi.advanceTimersByTime(ARCH_POPOUT.closedPollMs + 10));
     expect(hook.result.current.mode).toBe("docked");
   });
+  it("창이 아직 로드 중이라 hello가 늦어도(점검 3번보다 늦어도) 분리 상태를 유지한다", () => {
+    vi.useFakeTimers();
+    const w = fakeWindow();
+    const { hook, peer } = setup({ openWindow: () => w });
+    act(() => hook.result.current.open());
+    act(() => void vi.advanceTimersByTime(ARCH_POPOUT.closedPollMs * 10));
+    expect(hook.result.current.mode).toBe("detached");
+    act(() => peer.post({ kind: "hello" }));
+    // hello를 받은 뒤에는 응답이 끊기면 다시 붙는다
+    act(() => void vi.advanceTimersByTime(ARCH_POPOUT.closedPollMs * 5));
+    expect(hook.result.current.mode).toBe("docked");
+  });
+  it("hello를 한 번도 못 받고 오래 지나면 다시 붙는다", () => {
+    vi.useFakeTimers();
+    const { hook } = setup({ openWindow: () => fakeWindow() });
+    act(() => hook.result.current.open());
+    act(() => void vi.advanceTimersByTime(ARCH_POPOUT.firstHelloWaitMs + ARCH_POPOUT.closedPollMs * 2));
+    expect(hook.result.current.mode).toBe("docked");
+  });
   it("이 화면을 다시 열었을 때 이미 열린 분리 창이 hello로 답하면 분리 상태가 된다", () => {
     const h = hub();
     const peer = createArchSync("run:r1", { factory: h.factory, id: "peer" })!;

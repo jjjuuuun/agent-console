@@ -8,18 +8,16 @@ import하지 않는다.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from agent_console_contracts import DefinitionKey, Project
+from agent_console_contracts import DefinitionKey
 
 __all__ = [
     "DefinitionId",
     "References",
     "ScopedDefinition",
-    "effective_scope",
-    "known_project_ids",
 ]
 
 type DefinitionId = tuple[str, str]
@@ -120,28 +118,3 @@ class ScopedDefinition:
             name=name if isinstance(name, str) else "",
             document=document,
         )
-
-
-def known_project_ids(projects: Iterable[str | Project | Mapping[str, Any]]) -> frozenset[str]:
-    """프로젝트 목록(id 문자열·`Project`·`{"id": ...}` dict)에서 id 집합."""
-    ids: set[str] = set()
-    for p in projects:
-        if isinstance(p, str):
-            ids.add(p)
-        elif isinstance(p, Project):
-            ids.add(p.id)
-        elif isinstance(p, Mapping) and isinstance(p.get("id"), str):
-            ids.add(p["id"])
-    return frozenset(ids)
-
-
-def effective_scope(project: str | None, known: Collection[str] | None) -> str | None:
-    """규칙에 쓰는 범위. 없는 프로젝트를 가리키면 공용(``None``)으로 본다(`project.unknown`).
-
-    Args:
-        project: 정의의 `project` 값.
-        known: 있는 프로젝트 id. ``None``이면 존재를 따지지 않는다(값 그대로).
-    """
-    if project is None or known is None or project in known:
-        return project
-    return None

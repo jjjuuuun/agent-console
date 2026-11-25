@@ -29,6 +29,7 @@ from ._api import (
     VersionConflictDetails,
     VersionedGraph,
 )
+from ._ignored import IGNORED_SETTINGS_KEYS, ignored_settings_keys
 from ._issues import (
     GraphPatch,
     Issue,
@@ -49,7 +50,6 @@ from ._models import (
     ChatSettings,
     ChatTitlePolicy,
     CollectorSetting,
-    DefinitionScope,
     DelegationSettings,
     EdgeLayout,
     EdgeSpec,
@@ -67,7 +67,6 @@ from ._models import (
     NotificationSettings,
     ObserveSettings,
     OnTimeout,
-    ProjectPreferences,
     QueueAfterRestart,
     ReplyDisplay,
     SecretRuleSettings,
@@ -87,6 +86,7 @@ __all__ = [
     "DEFAULT_USAGE_INDICATOR_COLOR_RULES",
     "DEFAULT_USAGE_INDICATOR_FIELDS",
     "DEFAULT_USAGE_INDICATOR_PLACEMENT",
+    "IGNORED_SETTINGS_KEYS",
     "Agent",
     "AgentDefaults",
     "AgentSettings",
@@ -100,7 +100,6 @@ __all__ = [
     "ContentChange",
     "DefinitionDiff",
     "DefinitionReference",
-    "DefinitionScope",
     "DefinitionVersion",
     "DelegationSettings",
     "DiffChange",
@@ -136,7 +135,6 @@ __all__ = [
     "NotificationSettings",
     "ObserveSettings",
     "OnTimeout",
-    "ProjectPreferences",
     "QueueAfterRestart",
     "ReplyDisplay",
     "RestoreVersionRequest",
@@ -153,4 +151,5 @@ __all__ = [
     "VersionUiSettings",
     "VersionedGraph",
     "WorkspaceSettings",
+    "ignored_settings_keys",
 ]

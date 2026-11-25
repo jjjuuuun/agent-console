@@ -6,7 +6,6 @@ import {
   PROJECT_ACTIONS,
   PROJECT_CONTEXT_RETIRED_TERMS,
   RETIRED_TERMS,
-  configDirLabel,
   createProjectsText,
   projectAbilities,
   sameSpace,
@@ -115,12 +114,6 @@ describe("능력 표 (§6.0)", () => {
   test("표(데이터)를 바꾸면 결과가 바뀐다 — 코드에 상태별 분기가 없다", () => {
     const table = { ...ABILITY_TABLE, ready: new Set(["view_records" as const]) };
     expect(projectAbilities(view("ready"), { table }).start_chat.allowed).toBe(false);
-  });
-
-  test("구성 폴더 이름: 값이 없으면 대체 문구", () => {
-    expect(configDirLabel(".x", "구성 폴더")).toBe(".x");
-    expect(configDirLabel(undefined, "구성 폴더")).toBe("구성 폴더");
-    expect(configDirLabel("  ", "구성 폴더")).toBe("구성 폴더");
   });
 });
 

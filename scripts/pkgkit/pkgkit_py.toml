@@ -46,6 +46,8 @@ modules_group = "agent_console.server_modules"
 [python.internal_ranges]
 default = ">=0.1,<0.2"
 agent-console-contracts = "from-package"
+# 앱(서버)은 1.x — 예제·CLI가 개발 의존으로 쓴다.
+agent-console-server = "from-package"
 
 # import-linter 생성 규칙(importlinter_sync)
 [importlinter]

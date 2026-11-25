@@ -6,22 +6,22 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.14.12",
+    "CONTRACTS_VERSION": "0.15.0",
     "CONTRACT_VERSIONS": {
-      "common": "1.16.0",
+      "common": "2.0.0",
       "resources": "1.1.0",
-      "logs": "1.2.0",
-      "definitions": "1.7.0",
+      "logs": "2.0.0",
+      "definitions": "2.0.0",
       "runs": "1.9.0",
       "usage": "1.1.0",
-      "projects": "3.7.0",
+      "projects": "4.0.0",
       "chat": "1.4.0",
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
-      "memory": "1.2.0",
+      "memory": "1.3.0",
       "sdd": "1.3.0",
-      "wiki": "1.2.0",
+      "wiki": "1.3.0",
       "modules": "1.7.0"
     },
     "USAGE_REPORT_PARTS": [
@@ -201,6 +201,7 @@
       "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
       "CONVERSATION_AMBIGUOUS": "conversation.ambiguous",
       "RUN_AMBIGUOUS": "run.ambiguous",
+      "PROJECT_MEMORY_UNAVAILABLE": "project.memory_unavailable",
       "SDD_NOT_FOUND": "sdd.not_found",
       "SDD_DOCUMENT_MISSING": "sdd.document_missing",
       "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
@@ -283,6 +284,7 @@
       "chat.session_unavailable": 409,
       "conversation.ambiguous": 409,
       "run.ambiguous": 409,
+      "project.memory_unavailable": 409,
       "sdd.not_found": 404,
       "sdd.document_missing": 404,
       "sdd.template_exists": 409,
@@ -325,11 +327,8 @@
       "TEAM_CHILD_NO_ENTRY": "team.child_no_entry",
       "DELEGATION_DEPTH_EXCEEDED": "delegation.depth_exceeded",
       "BACKEND_UNRESOLVED": "backend.unresolved",
-      "PROJECT_SHARED_USES_PROJECT": "project.shared_uses_project",
-      "PROJECT_CROSS_PROJECT": "project.cross_project",
       "PROJECT_UNKNOWN": "project.unknown",
       "PROJECT_REFERENCES_UNAVAILABLE": "project.references_unavailable",
-      "PROJECT_DEFINITIONS_UNAVAILABLE": "project.definitions_unavailable",
       "MEMORY_DENIED": "memory.denied",
       "MEMORY_NOT_FOUND": "memory.not_found",
       "MEMORY_CONFLICT": "memory.conflict",
@@ -360,13 +359,13 @@
       "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
       "PROJECT_CONFIG_READONLY": "project.config_readonly",
       "PROJECT_COPY_CONFLICT": "project.copy_conflict",
-      "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
       "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
       "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
       "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
       "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
       "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
       "PROJECT_NETWORK_FS": "project.network_fs",
+      "PROJECT_MEMORY_UNAVAILABLE": "project.memory_unavailable",
       "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
       "RUN_OTHER_HOST": "run.other_host",
       "SDD_GATE_BLOCKED": "sdd.gate_blocked",
@@ -443,9 +442,7 @@
       "WIKI_UNKNOWN_TITLE_SOURCE": "wiki.unknown_title_source",
       "WIKI_REDACTED_CONTENT": "wiki.redacted_content"
     },
-    "KNOWN_SUGGESTION_IDS": {
-      "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
-    },
+    "KNOWN_SUGGESTION_IDS": {},
     "WS_CLOSE_UNAUTHORIZED": 4401,
     "WS_CLOSE_FORBIDDEN": 4403,
     "WS_AUTH_CLOSE_CODES": [
@@ -656,6 +653,7 @@
       "/broken_links",
       "/updated_by_kind"
     ],
+    "WIKI_GRAPH_DEPTH_ALL": "all",
     "KNOWN_WIKI_LINK_KINDS": {
       "PATTERN": "pattern",
       "MARKDOWN": "markdown"
@@ -847,9 +845,6 @@
       "LogFilterFieldInfo",
       "LogLane",
       "LogMetricInfo",
-      "LogProjectGroup",
-      "LogProjectRef",
-      "LogProjectSettings",
       "LogQuerySchema",
       "LogScanReport",
       "LogSessionSummary",
@@ -862,7 +857,6 @@
       "LogTaxonomy",
       "LogTimeline",
       "LogTokenTotals",
-      "LogUngroupedPolicy",
       "LogWidget",
       "LogWidgetQuery",
       "TokenSample"
@@ -881,7 +875,6 @@
       "ContentChange",
       "DefinitionDiff",
       "DefinitionReference",
-      "DefinitionScope",
       "DefinitionVersion",
       "DelegationSettings",
       "DiffChange",
@@ -917,7 +910,6 @@
       "NotificationSettings",
       "ObserveSettings",
       "OnTimeout",
-      "ProjectPreferences",
       "QueueAfterRestart",
       "ReplyDisplay",
       "RestoreVersionRequest",
@@ -1073,8 +1065,6 @@
       "CopyPlanItem",
       "CopyPlanRequest",
       "DefinitionKey",
-      "DefinitionMove",
-      "DeletePlan",
       "ExistingProjectProbe",
       "FolderCapabilities",
       "FolderCheck",
@@ -1087,13 +1077,10 @@
       "FolderRoot",
       "ManifestResetRequest",
       "ManifestResetResult",
-      "MovePlan",
-      "MovePlanRequest",
       "OutsideFolderPath",
       "Project",
       "ProjectCounts",
       "ProjectCreate",
-      "ProjectDeleteMode",
       "ProjectFolderConflictDetails",
       "ProjectFolderUnavailableDetails",
       "ProjectManifest",
@@ -8344,59 +8331,6 @@
       "title": "DefinitionKey",
       "type": "object"
     },
-    "DefinitionMove": {
-      "description": "(deprecated, 0.11.0) 정의 하나의 범위 바꾸기(필드 `project`를 고쳐 저장). null = 공용.",
-      "properties": {
-        "kind": {
-          "description": "정의 종류 이름(예: agent, graph, resource).",
-          "minLength": 1,
-          "type": "string"
-        },
-        "id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "name": {
-          "default": "",
-          "type": "string"
-        },
-        "from": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "지금 범위(null = 공용)."
-        },
-        "to": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "옮길 범위(null = 공용)."
-        },
-        "required": {
-          "default": false,
-          "description": "옮기려는 그 정의면 true. false는 참조 때문에 함께 옮기기를 권하는 정의.",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "kind",
-        "id"
-      ],
-      "title": "DefinitionMove",
-      "type": "object"
-    },
     "DefinitionReference": {
       "description": "정의를 쓰는 곳 하나(사용처 화면, 삭제 확인).",
       "properties": {
@@ -8439,13 +8373,6 @@
       ],
       "title": "DefinitionReference",
       "type": "object"
-    },
-    "DefinitionScope": {
-      "enum": [
-        "project",
-        "shared"
-      ],
-      "type": "string"
     },
     "DefinitionVersion": {
       "description": "정의 버전 이력 항목. 목록(`GET /graphs/{id}/versions`)은 `content` 없이,\n단건(`GET /graphs/{id}/versions/{version_hash}`)은 `content`를 담는다.",
@@ -8673,37 +8600,6 @@
         "max_depth"
       ],
       "title": "DelegationStrategyDescriptor",
-      "type": "object"
-    },
-    "DeletePlan": {
-      "description": "(deprecated, 0.11.0) `POST /projects/{id}/delete-plan` 응답. 2.0 삭제 = 등록 해제(보관).",
-      "properties": {
-        "project_id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "definitions": {
-          "description": "이 프로젝트 전용 정의(공용으로 옮기거나 함께 삭제).",
-          "items": {
-            "$ref": "#/$defs/DefinitionKey"
-          },
-          "type": "array"
-        },
-        "default_mode": {
-          "$ref": "#/$defs/ProjectDeleteMode",
-          "default": "move_to_shared"
-        },
-        "warnings": {
-          "items": {
-            "$ref": "#/$defs/Issue"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "project_id"
-      ],
-      "title": "DeletePlan",
       "type": "object"
     },
     "DiffChange": {
@@ -14233,146 +14129,6 @@
       "title": "LogMetricInfo",
       "type": "object"
     },
-    "LogProjectGroup": {
-      "additionalProperties": true,
-      "description": "이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
-      "properties": {
-        "id": {
-          "description": "묶음을 가리키는 고유 이름입니다.",
-          "minLength": 1,
-          "title": "묶음 id",
-          "type": "string",
-          "x-ui": {
-            "example": "my-app",
-            "tier": "basic",
-            "when": "새 묶음을 만들 때 한 번 정하세요."
-          }
-        },
-        "label": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "화면에 보일 묶음 이름입니다. 비우면 id를 씁니다.",
-          "title": "표시 이름",
-          "x-ui": {
-            "example": "내 앱",
-            "tier": "basic",
-            "when": "목록에서 묶음을 알아보기 쉬운 이름으로 보고 싶을 때 적으세요."
-          }
-        },
-        "match": {
-          "description": "저장소 경로(없으면 작업 폴더)와 맞춰 봅니다. 하위 폴더까지는 /proj/** 처럼 씁니다.",
-          "items": {
-            "type": "string"
-          },
-          "title": "경로 글롭",
-          "type": "array",
-          "x-ui": {
-            "example": [
-              "/home/me/app/**"
-            ],
-            "tier": "basic",
-            "when": "다른 폴더의 로그도 이 묶음에 넣고 싶을 때 더하세요."
-          }
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "title": "프로젝트 묶음",
-      "type": "object"
-    },
-    "LogProjectRef": {
-      "description": "프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다.",
-      "properties": {
-        "id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "label": {
-          "default": "",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "title": "LogProjectRef",
-      "type": "object"
-    },
-    "LogProjectSettings": {
-      "additionalProperties": true,
-      "description": "이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
-      "properties": {
-        "groups": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/LogProjectGroup"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "경로로 로그를 묶는 규칙입니다. 위에서부터 보고 처음 맞는 묶음이 이깁니다.",
-          "title": "묶음",
-          "x-ui": {
-            "tier": "basic",
-            "when": "여러 폴더의 로그를 한 프로젝트로 묶어 보고 싶을 때 더하세요."
-          }
-        },
-        "ungrouped": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/LogUngroupedPolicy"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "맞는 묶음이 없으면 자기 경로(cwd), 저장소(repo_root), 기타 한 묶음(none)으로 둡니다.",
-          "title": "묶음 밖 경로",
-          "x-ui": {
-            "enum_labels": {
-              "cwd": "작업 폴더로 묶기",
-              "none": "묶지 않기",
-              "repo_root": "저장소 루트로 묶기"
-            },
-            "tier": "advanced",
-            "when": "묶음에 들지 않은 로그를 한곳에 모으고 싶을 때 none으로 바꾸세요."
-          }
-        },
-        "git_worktrees": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "git worktree 폴더를 원래 저장소와 한 묶음으로 봅니다. 기본은 켬입니다.",
-          "title": "worktree 묶기",
-          "x-ui": {
-            "tier": "advanced",
-            "when": "worktree마다 따로 보고 싶을 때 끄세요."
-          }
-        }
-      },
-      "title": "프로젝트 묶기",
-      "type": "object"
-    },
     "LogQuerySchema": {
       "description": "`GET /logs/schema`: 위젯 질의·필터 막대가 고를 차원·지표·필터 목록(서버 데이터).",
       "properties": {
@@ -14441,7 +14197,7 @@
       "type": "object"
     },
     "LogSessionSummary": {
-      "description": "`GET /logs/sessions` 항목: 세션 하나의 요약.",
+      "description": "`GET /logs/sessions` 항목: 세션 하나의 요약.\n\n2.0.0(0.15.0): 옛 프로젝트 묶음 `project`(`LogProjectRef`)를 지웠다. 프로젝트는 `project_id`이고\n표시 이름은 `GET /projects`로 얻는다. 옛 응답의 `project` 키는 읽을 때 무시된다.",
       "properties": {
         "session": {
           "minLength": 1,
@@ -14465,19 +14221,6 @@
         "repo_root": {
           "default": "",
           "type": "string"
-        },
-        "project": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/LogProjectRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "deprecated": true,
-          "description": "이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다."
         },
         "project_id": {
           "anyOf": [
@@ -14593,23 +14336,6 @@
           "x-ui": {
             "tier": "advanced",
             "when": "로그 범주 이름·색이 알아보기 어려울 때 바꾸세요."
-          }
-        },
-        "projects": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/LogProjectSettings"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "deprecated": true,
-          "description": "더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).",
-          "title": "프로젝트 묶기(이전 형식)",
-          "x-ui": {
-            "tier": "advanced"
           }
         },
         "dashboards": {
@@ -15081,14 +14807,6 @@
       },
       "title": "LogTokenTotals",
       "type": "object"
-    },
-    "LogUngroupedPolicy": {
-      "enum": [
-        "cwd",
-        "repo_root",
-        "none"
-      ],
-      "type": "string"
     },
     "LogWarningEvent": {
       "properties": {
@@ -15898,6 +15616,18 @@
         "author_kind": {
           "minLength": 1,
           "type": "string"
+        },
+        "space": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(1.3.0) 바뀐 항목이 있는 메모리 공간. null = 공용 라이브러리, 그 밖 = 공간 이름(프로젝트 등록 id). 옛 서버는 보내지 않는다(웹은 지금 보는 목록을 다시 읽는다)."
         }
       },
       "required": [
@@ -18036,77 +17766,6 @@
       "minLength": 1,
       "type": "string"
     },
-    "MovePlan": {
-      "description": "(deprecated, 0.11.0) 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.\n\n2.0에서 정의의 프로젝트 전용 범위가 없어졌다(K33-5). 옛 `project` 필드 정리는\n복사 계획(`CopyPlan`, `remove_source`)을 쓴다. 다음 major에서 삭제.",
-      "properties": {
-        "target": {
-          "$ref": "#/$defs/DefinitionKey",
-          "description": "옮기려는 정의."
-        },
-        "to": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "옮길 범위(null = 공용)."
-        },
-        "moves": {
-          "items": {
-            "$ref": "#/$defs/DefinitionMove"
-          },
-          "type": "array"
-        },
-        "warnings": {
-          "description": "옮긴 뒤 생길 범위 경고(project.shared_uses_project 등)나 검사 못 함 정보.",
-          "items": {
-            "$ref": "#/$defs/Issue"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "target"
-      ],
-      "title": "MovePlan",
-      "type": "object"
-    },
-    "MovePlanRequest": {
-      "description": "(deprecated, 0.11.0) `POST /projects/move-plan` 요청. 다음 major에서 삭제.",
-      "properties": {
-        "kind": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "to": {
-          "anyOf": [
-            {
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "옮길 프로젝트 id. null = 공용으로."
-        }
-      },
-      "required": [
-        "kind",
-        "id"
-      ],
-      "title": "MovePlanRequest",
-      "type": "object"
-    },
     "NetworkPolicy": {
       "enum": [
         "allow",
@@ -19818,13 +19477,6 @@
       "title": "프로젝트 폴더 추가",
       "type": "object"
     },
-    "ProjectDeleteMode": {
-      "enum": [
-        "move_to_shared",
-        "delete_definitions"
-      ],
-      "type": "string"
-    },
     "ProjectFolderConflictDetails": {
       "description": "409 `project.folder_taken`·`project.folder_overlaps`의 `details`.",
       "properties": {
@@ -20030,42 +19682,6 @@
         "folder"
       ],
       "title": "ProjectOutsideFolderDetails",
-      "type": "object"
-    },
-    "ProjectPreferences": {
-      "additionalProperties": true,
-      "description": "이전 형식의 프로젝트 설정입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).",
-      "properties": {
-        "new_definition_scope": {
-          "additionalProperties": {
-            "$ref": "#/$defs/DefinitionScope"
-          },
-          "default": {},
-          "description": "종류마다 새로 만든 정의를 프로젝트 전용(project)으로 둘지 공용(shared)으로 둘지입니다.",
-          "title": "종류별 새 정의 범위",
-          "type": "object",
-          "x-ui": {
-            "example": {
-              "agent": "shared"
-            },
-            "tier": "advanced"
-          }
-        },
-        "fallback": {
-          "$ref": "#/$defs/DefinitionScope",
-          "default": "project",
-          "description": "종류별 범위에 없는 종류를 새로 만들 때의 범위입니다.",
-          "title": "기본 범위",
-          "x-ui": {
-            "enum_labels": {
-              "project": "프로젝트 것",
-              "shared": "공용 것"
-            },
-            "tier": "advanced"
-          }
-        }
-      },
-      "title": "프로젝트 설정",
       "type": "object"
     },
     "ProjectRecordsUnavailableDetails": {
@@ -28610,7 +28226,7 @@
       "type": "object"
     },
     "WikiGraph": {
-      "description": "`GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`).",
+      "description": "`GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`).\n\n`depth`는 정수(0 이상, 생략 = 1) 또는 `WIKI_GRAPH_DEPTH_ALL`(`all`, 깊이 제한 없음)이다.",
       "properties": {
         "nodes": {
           "items": {
@@ -28641,6 +28257,19 @@
           ],
           "default": null,
           "description": "자르기 전 칸 수(모르면 null)."
+        },
+        "depth": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(1.3.0) 실제 적용한 깊이. null = 깊이 제한 없음(`depth=all`) 또는 가운데 없음(전체 그래프), 옛 서버."
         }
       },
       "title": "WikiGraph",
@@ -28886,6 +28515,33 @@
           ],
           "default": null,
           "description": "(1.2.0) 위키 규칙 정의 종류 이름(설치자 데이터, 기본 `wiki-rules`). 웹이 복사·리소스 종류 목록에서 규칙 종류를 고를 때 쓴다(공용 규칙을 따로 읽지 않는다). null = 옛 서버."
+        },
+        "wiki_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(1.3.0) 위키 정의 종류 이름(설치자 데이터, 기본 `wiki`). 웹이 새 위키의 id(종류 이름에서 만든 id)를 미리 보일 때 쓴다(`rules_kind`와 같은 방식). null = 옛 서버."
+        },
+        "reserved_page_names": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(1.3.0) 이 서버에서 `GET`으로 읽을 수 없는 페이지 경로의 마지막 조각(예 `history` — `…/pages/<경로>/history`가 기록 경로라 겹침). 쓰기·지우기는 된다. 값은 서버의 경로 구현이 정한다. null = 옛 서버(웹은 자기 데이터를 쓴다)."
         },
         "issues": {
           "description": "공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).",
@@ -30424,14 +30080,14 @@
         "severity": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/IssueSeverity"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "점검 규칙의 심각도(그 밖은 null)."
+          "description": "점검 규칙의 심각도(error·warning·info, 1.3.0에서 좁힘). 그 밖의 항목은 null."
         },
         "applies_to": {
           "anyOf": [
@@ -32163,28 +31819,11 @@
         },
         "logs": {
           "$ref": "#/$defs/LogSettings",
-          "description": "읽을 로그 출처·범주 표시·프로젝트 묶기·대시보드입니다. 비운 항목은 기본값입니다.",
+          "description": "읽을 로그 출처·범주 표시·대시보드입니다. 비운 항목은 기본값입니다.",
           "title": "로그",
           "x-ui": {
             "tier": "basic",
-            "when": "다른 로그 폴더를 읽거나 로그를 프로젝트별로 묶고 싶을 때 바꾸세요."
-          }
-        },
-        "projects": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ProjectPreferences"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "deprecated": true,
-          "description": "더 이상 쓰지 않습니다. 구성은 모두 공용이고 프로젝트가 가져다 씁니다.",
-          "title": "프로젝트(이전 형식)",
-          "x-ui": {
-            "tier": "advanced"
+            "when": "다른 로그 폴더를 읽거나 범주 표시를 바꾸고 싶을 때 바꾸세요."
           }
         },
         "default_backend": {

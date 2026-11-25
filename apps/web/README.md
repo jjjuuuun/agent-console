@@ -59,7 +59,7 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 | `@agent-console/trace-view` | 실행 추적 타임라인 | — |
 | `@agent-console/text-editor` | 텍스트·마크다운·JSON 편집기와 diff | — |
 | `@agent-console/list-arrange` | 목록 정렬·그룹·접기 | — |
-| `@agent-console/projects` | 프로젝트 범위 규칙·REST 클라이언트 | — |
+| `@agent-console/projects` | 프로젝트 상태·공간·복사 계획 도우미 | — |
 
 패키지 의존은 `^x.y.z` 범위 + pnpm `linkWorkspacePackages`로 연결한다(`workspace:` 프로토콜 없음).
 

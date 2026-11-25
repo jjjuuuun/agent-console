@@ -10,6 +10,8 @@ export const ARCH_POPOUT = {
   channelPrefix: "ac.arch.sync.",
   /** 분리 창이 닫혔는지 확인하는 간격(ms). `bye` 메시지를 못 보내고 닫힌 경우(강제 종료)를 잡는다. */
   closedPollMs: 1000,
+  /** 창을 연 뒤 첫 `hello`(화면이 뜬 신호)를 기다리는 시간(ms). 창이 아직 로드 중이라 응답이 없는 것을 "응답 끊김"으로 보지 않는다(창이 닫히면 `closed`로 바로 안다). */
+  firstHelloWaitMs: 30000,
   /** 분리 창이 열려 있는지 묻는 `ping`에 답이 오기를 기다리는 시간(ms) */
   pingWaitMs: 400,
   storage: {

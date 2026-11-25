@@ -7,7 +7,8 @@ Agent Console 정의 기능 모듈. 워크스페이스의 정의(에이전트·�
   응답은 저장 원문 + `ETag`(`version_hash`), `If-Match`로 낙관적 잠금(그래프 저장은 필수 428, 다르면 412).
 - 제공 포트: `definitions.store`·`definitions.lookup`(같은 파일 저장소), `workspace.settings`(`() -> WorkspaceSettings`),
   `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
-  `server.warnings`(평문 비밀 점검 `secret.plain_found`), `definitions.save_warnings`(저장한 정의 하나의
+  `server.warnings`(평문 비밀 점검 `secret.plain_found`, 공통 설정에 남은 옛 최상위 키 — 예 `projects` — 의 정보
+  `settings.ignored_key`(`details.key`, 읽기·시작은 막지 않음, `ignored_settings_issues`)), `definitions.save_warnings`(저장한 정의 하나의
   평문 비밀 경고 — 에이전트·팀 구성 만들기·저장·복제 응답의 `X-Console-Issues` 헤더에 싣고 리소스 모듈도
   같은 계산을 쓴다. 저장은 허용, 문구는 설정 `plain_secret_save_message`). 토픽 `definitions.saved{kind, id, version_hash}`.
 - 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422. 공간 저장 `?project=`는 검사의 선택 메서드 `space_issues`, 없으면 `issues`), `graphs.validation`·`graphs.entry_labels`·

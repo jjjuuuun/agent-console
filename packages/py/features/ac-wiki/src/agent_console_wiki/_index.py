@@ -487,7 +487,7 @@ def _graph_links(index: WikiIndex, path: str) -> Sequence[IndexedLink]:
 def neighborhood(
     index: WikiIndex,
     center: str | None = None,
-    depth: int = 1,
+    depth: int | None = 1,
     limit: int = 500,
 ) -> WikiGraph:
     """링크 그래프. `center`가 있으면 그 페이지에서 링크 방향을 가리지 않고 `depth` 단계 안의 칸만.
@@ -495,7 +495,8 @@ def neighborhood(
     Args:
         index: 색인.
         center: 가운데 페이지(None = 전체, 노드 `depth`는 null).
-        depth: 가운데에서 몇 단계까지(0 = 가운데만).
+        depth: 가운데에서 몇 단계까지(0 = 가운데만, None = 제한 없이 이어진 칸 전부 — REST
+            `?depth=all`). 응답 `WikiGraph.depth`는 가운데가 있을 때 이 값이다(전체는 null).
         limit: 칸 수 상한(넘으면 가까운 것부터 자르고 `truncated`, `total` = 자르기 전 칸 수).
 
     Returns:
@@ -530,7 +531,7 @@ def neighborhood(
             current = queue.popleft()
             d = depths[current]
             assert d is not None
-            if d >= depth or current not in index.pages:
+            if (depth is not None and d >= depth) or current not in index.pages:
                 continue
             neighbors: list[tuple[str, IndexedLink | None]] = [
                 (item.node_key, item) for item in _graph_links(index, current)
@@ -560,4 +561,10 @@ def neighborhood(
         WikiGraphEdge.model_validate({"from": a, "to": b, "count": n})
         for (a, b), n in sorted(edge_counts.items())
     ]
-    return WikiGraph(nodes=nodes, edges=edges, truncated=total > len(kept), total=total)
+    return WikiGraph(
+        nodes=nodes,
+        edges=edges,
+        truncated=total > len(kept),
+        total=total,
+        depth=depth if center is not None else None,
+    )

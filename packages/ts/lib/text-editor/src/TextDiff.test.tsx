@@ -67,6 +67,18 @@ describe("TextDiff", () => {
     expect(container.querySelector(".cm-collapsedLines")).toBeNull();
   });
 
+  it("라이브러리가 role=button만 달고 tabindex를 안 주는 모양(merge 6.13)에도 탭 정지가 된다", async () => {
+    const lines = Array.from({ length: 40 }, (_, i) => `line ${i}`);
+    const after = lines.map((l, i) => (i === 39 ? "CHANGED" : l)).join("\n");
+    const { container } = render(<TextDiff before={lines.join("\n")} after={after} ariaLabel="본문 비교" mode="unified" />);
+    const fold = await waitFor(() => container.querySelector(".cm-collapsedLines") as HTMLElement);
+    fold.setAttribute("role", "button");
+    fold.removeAttribute("tabindex");
+    expect(fold.tabIndex).toBe(-1);
+    fold.parentElement?.appendChild(document.createElement("span"));
+    await waitFor(() => expect(fold.tabIndex).toBe(0));
+  });
+
   it("Space로도 접힌 구간을 펼친다", async () => {
     const lines = Array.from({ length: 40 }, (_, i) => `line ${i}`);
     const after = lines.map((l, i) => (i === 39 ? "CHANGED" : l)).join("\n");

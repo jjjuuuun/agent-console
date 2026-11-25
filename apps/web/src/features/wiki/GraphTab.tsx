@@ -8,6 +8,7 @@ import { useNavigate } from "react-router";
 import { Banner, Button, EmptyState, useToast } from "@agent-console/ui";
 import { LinkGraph, LinkList, type GraphNodeData } from "@agent-console/wiki-view";
 import { ToneChip } from "@agent-console/markdown-doc";
+import { WIKI_GRAPH_DEPTH_ALL } from "@agent-console/contracts/constants";
 import type { WikiGraph, WikiGraphNode } from "@agent-console/contracts/wiki";
 import { useStorage } from "../../app/StorageContext";
 import { ROUTE_ROLES, routePath, useRoutesOn } from "../library";
@@ -75,9 +76,9 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const effectiveCurrent = currentPath ?? fallbackPath;
   const wanted = mode === ALL ? undefined : mode === PICK ? (centerParam ?? undefined) : effectiveCurrent;
   const depthParam = params.get(P.depth);
-  const depth = depthParam === WIKI_GRAPH.all ? undefined : WIKI_GRAPH.depths.includes(Number(depthParam)) ? Number(depthParam) : WIKI_GRAPH.defaultDepth;
+  const depth = depthParam === WIKI_GRAPH_DEPTH_ALL ? undefined : WIKI_GRAPH.depths.includes(Number(depthParam)) ? Number(depthParam) : WIKI_GRAPH.defaultDepth;
 
-  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : (depth ?? WIKI_GRAPH.allDepth) }, !noSyntax && !waitingFallback);
+  const firstQ = useWikiGraph(wikiId, { center: wanted, depth: wanted === undefined ? undefined : (depth ?? WIKI_GRAPH_DEPTH_ALL) }, !noSyntax && !waitingFallback);
   const firstMissing =
     wanted !== undefined &&
     ((firstQ.data !== undefined && !(firstQ.data.nodes ?? []).some((n) => n.path === wanted && n.broken !== true)) || (firstQ.isError && classifyWikiError(firstQ.error, "").kind === "pageNotFound"));
@@ -173,6 +174,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
                 onCenter={centerNode}
                 height="fill"
                 hideTruncatedNotice
+                elkMaxNodes={WIKI_GRAPH.elkMaxNodes}
                 {...(gap === undefined ? {} : { gap })}
               />
             </div>
@@ -198,7 +200,9 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
   const total = q.data?.total;
   const pages = pagesQ.data?.items ?? [];
   const pickListId = `${idBase}-pages`;
-  const depthValue = depth === undefined ? WIKI_GRAPH.all : String(depth);
+  // 선택 표시는 서버가 실제로 적용한 깊이(`WikiGraph.depth`)를 따른다. 숫자면 그 값, null·생략(제한 없음·옛 서버)이면 주소 값.
+  const appliedDepth = center === undefined ? undefined : q.data?.depth;
+  const depthValue = typeof appliedDepth === "number" ? String(appliedDepth) : depth === undefined ? WIKI_GRAPH_DEPTH_ALL : String(depth);
   const toolbarOff = noSyntax;
 
   return (
@@ -247,7 +251,7 @@ export function GraphTab({ wikiId, view, summary, params, setParams, goTab, hasT
             {WIKI_GRAPH.depths.map((n) => (
               <button key={n} type="button" className="wiki-segment-btn" aria-pressed={depthValue === String(n)} disabled={center === undefined} onClick={() => setDepth(String(n))}>{n}</button>
             ))}
-            <button type="button" className="wiki-segment-btn" aria-pressed={depthValue === WIKI_GRAPH.all} disabled={center === undefined} onClick={() => setDepth(WIKI_GRAPH.all)}>{g.depthAll}</button>
+            <button type="button" className="wiki-segment-btn" aria-pressed={depthValue === WIKI_GRAPH_DEPTH_ALL} disabled={center === undefined} onClick={() => setDepth(WIKI_GRAPH_DEPTH_ALL)}>{g.depthAll}</button>
           </div>
           <label className="wiki-inline"><input type="checkbox" checked={showBroken} onChange={(e) => setShowBroken(e.target.checked)} />{g.showBroken}</label>
           <label className="wiki-inline"><input type="checkbox" checked={showOrphan} onChange={(e) => setShowOrphan(e.target.checked)} />{g.showOrphan}</label>

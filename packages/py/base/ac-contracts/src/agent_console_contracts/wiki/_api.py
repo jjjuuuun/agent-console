@@ -303,6 +303,11 @@ class WikiEventPayload(ContractModel):
 WIKI_EVENT_PREFIX: Final = "wiki."
 """위키 RunEvent `type` 접두. `type` = 접두 + `WikiEventPayload.op`."""
 
+WIKI_GRAPH_DEPTH_ALL: Final = "all"
+"""(1.3.0) 그래프 `GET …/graph?depth=`의 "전체" 값: 가운데에서 깊이 제한 없이 이어진 칸 전부(칸 수
+상한 `WikiLimits.graph_max_nodes`는 그대로, 넘으면 `truncated`). 그 밖의 값은 0 이상의 정수이고,
+생략하면 1이다. 응답 `WikiGraph.depth`는 이때 null이다."""
+
 WIKI_ACCESS_OPS: Final[tuple[str, ...]] = get_args(WikiAccessOp)
 """허용 동작 어휘(정의 순서): read·search·list·links·write·move·delete."""
 
@@ -449,6 +454,7 @@ __all__ = [
     "KNOWN_WIKI_EVENT_TYPES",
     "WIKI_ACCESS_OPS",
     "WIKI_EVENT_PREFIX",
+    "WIKI_GRAPH_DEPTH_ALL",
     "KnownWikiAuthorKinds",
     "KnownWikiChangeOps",
     "KnownWikiFrontMatterRoles",

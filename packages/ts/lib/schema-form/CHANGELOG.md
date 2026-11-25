@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 - `x-ui` 렌더(필수 칩·설명·예시·기본값·단위·고급 접힘), `xui`·`advancedStorageKey`·`compactProvenance` prop, 메시지 키 추가.
+- `hideRootTitle` prop: 최상위 객체 제목을 숨긴다(바깥 패널이 머리말을 가질 때). 기본 false.
 
 ## [0.1.0]
 - 처음 만듦.

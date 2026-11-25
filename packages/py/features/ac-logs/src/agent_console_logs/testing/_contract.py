@@ -343,12 +343,11 @@ class LogIndexContractTests:
         assert (s1.first_time, s1.last_time) == (100.0, 102.0)
         assert s1.cwd == "/w/proj"
         assert s1.project_id is None  # 프로젝트 판정 없음
-        assert s1.project is None
         with_projects = index.list_sessions(LogFilter(), _ctx(project_for=_registered({"p": "/w"})))
         by_id = {s.session: s.project_id for s in with_projects}
         assert by_id == {"S1": "p", "S2": None}
-        assert with_projects[1].project is not None
-        assert with_projects[1].project.id == "p"
+        # 옛 `summary.project`는 채우지 않는다(REL.14). 프로젝트는 `project_id` 하나다.
+        assert all(getattr(s, "project", None) is None for s in with_projects)
         assert sessions[0].errors == 1
         assert sessions[0].title == ""
         assert index.list_sessions(LogFilter(limit=1), ctx)[0].session == "S2"

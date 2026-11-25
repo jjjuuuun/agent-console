@@ -15,7 +15,8 @@
       ``DEFINITIONS_SAVED``(``SavedDefinition`` — ``space`` 포함).
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
       ``register_contributed_kinds``(종류 기여 → 라이브러리 저장소에 등록),
-      ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``PlainSecretScan``·
+      ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``ignored_settings_issues``
+      (옛 설정 키 안내), ``PlainSecretScan``·
       ``scan_store``·``plain_secret_warnings``(평문 점검), ``save_secret_warnings``(저장 응답 경고),
       ``DefinitionService``.
     - ``build_router``: FastAPI 라우터(접두 없음, ``service(space)`` 공장).
@@ -68,10 +69,12 @@ from .store import (
     register_contributed_kinds,
 )
 from .workspace import (
+    IGNORED_SETTINGS_MESSAGE,
     INVALID_RULE,
     SecretRuleCheck,
     WorkspaceState,
     build_rules,
+    ignored_settings_issues,
     settings_rule_issues,
 )
 
@@ -87,6 +90,7 @@ __all__ = [
     "GRAPH_ENTRY_LABELS",
     "GRAPH_SESSION_SUMMARY",
     "GRAPH_VALIDATION",
+    "IGNORED_SETTINGS_MESSAGE",
     "INVALID_RULE",
     "KIND_CONTRIBUTIONS",
     "MODULE_ID",
@@ -118,6 +122,7 @@ __all__ = [
     "build_rules",
     "build_store",
     "definition_kinds",
+    "ignored_settings_issues",
     "module",
     "plain_secret_warnings",
     "register_contributed_kinds",

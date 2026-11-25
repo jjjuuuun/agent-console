@@ -141,7 +141,6 @@ describe("스펙 목록 화면: 열 머리 정렬·행 메뉴", () => {
   function setup(path: string) {
     const { clients, sddClient } = createFakeClients(
       { listModules: vi.fn(async () => [mod(["sdd", "projects"])]), listProjects: vi.fn(async () => [pv]) },
-      {},
       {
         getSddInfo: vi.fn(async () => INFO),
         listSpecs: vi.fn(async () => [sum("s1", "다람쥐", 100), sum("s2", "가지", 300), sum("s3", "나비", 200)]),

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -458,3 +459,50 @@ def test_unregistered_project_reads_and_writes_skip_in_recorder(spaces: Spaces) 
     recorder.events.append(_event("r1", 2))
     assert lost == [("r1", "not_found")]
     assert recover_space(records, "pa", active=list) is False
+
+
+def test_snapshot_shows_finished_status_only_after_end_event_is_stored(
+    tmp_path: Path, spaces: Spaces, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """REL.33 후속: 엔진은 최종 Run을 저장한 뒤 ``run.<상태>`` 이벤트를 저장한다(5.2R.39).
+    그 사이 ``GET /runs/{id}``(``?project=`` 포함)는 저장본의 끝난 상태가 아니라 손잡이의 직전
+    상태를 보이고, 끝난 상태가 보이면 이벤트 목록에 끝 이벤트까지 있다."""
+    from agent_console_mod_runs import records as records_module
+
+    gate, entered = threading.Event(), threading.Event()
+    original = records_module._Events.append_many
+
+    def held_append_many(self: Any, events: Any) -> int:
+        if any(e.type == "run.completed" for e in events) and not gate.is_set():
+            entered.set()
+            assert gate.wait(10), "끝 이벤트 저장을 풀지 않았다"
+        return int(original(self, events))
+
+    monkeypatch.setattr(records_module._Events, "append_many", held_append_many)
+    with _client(tmp_path, spaces) as client:
+        body = {"graph_id": "g", "input": {}, "project_id": "pa"}
+        created = client.post(f"{API}/runs", json=body)
+        assert created.status_code == 202, created.text
+        root_id = str(created.json()["id"])
+        assert entered.wait(10), "자식 Run의 끝 이벤트 저장에 이르지 않았다"
+        [child] = client.get(f"{API}/runs/{root_id}?project=pa").json()["children"]
+        assert child["status"] == "completed"  # 목록(저장본)은 이미 끝난 상태다
+        try:
+            for query in ("?project=pa", ""):
+                snap = client.get(f"{API}/runs/{child['id']}{query}").json()
+                assert snap["run"]["status"] == "running", query  # 끝 이벤트 저장 전 = 직전 상태
+                assert snap["run"]["ended_at"] is None
+                assert snap["run"]["host_id"] == "host-mine"  # 나머지는 저장본 그대로
+                assert snap["run"]["project_id"] == "pa"
+        finally:
+            gate.set()
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            snap = client.get(f"{API}/runs/{child['id']}?project=pa").json()
+            if snap["run"]["status"] == "completed":
+                break
+            time.sleep(0.02)
+        assert snap["run"]["status"] == "completed"
+        events = client.get(f"{API}/runs/{child['id']}/events?project=pa").json()
+        assert events[-1]["type"] == "run.completed"
+        assert snap["last_seq"] == events[-1]["seq"]

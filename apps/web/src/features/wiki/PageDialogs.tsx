@@ -9,16 +9,16 @@ import { MovePageForm, NewPageForm, type NewPageValue } from "@agent-console/wik
 import type { WikiBacklink, WikiMoveResult, WikiPageVersion } from "@agent-console/contracts/wiki";
 import { classifyWikiError, failureText } from "./wikiErrors";
 import { ROUTE_WORDS, WIKI_LIMITS } from "./wikiConfig";
-import { useWikiSpace, useWikiTemplates } from "./useWikiApi";
+import { useWikiInfo, useWikiSpace, useWikiTemplates } from "./useWikiApi";
 import type { NewPagePrefill } from "./wikiTabs";
 import { wikiMessages as m } from "./messages";
 
 const lastSegment = (path: string): string => path.split("/").pop() ?? path;
 
-/** 서버가 읽을 수 없는 이름으로 끝나는 새 경로인가(주소 규칙). 맞으면 그 낱말. */
-export function routeWordOf(path: string): string | undefined {
+/** 서버가 읽을 수 없는 이름으로 끝나는 새 경로인가(주소 규칙). 맞으면 그 낱말. `words`는 서버 값(`WikiInfo.reserved_page_names`), 없으면 웹 데이터. */
+export function routeWordOf(path: string, words: readonly string[] | null | undefined = ROUTE_WORDS): string | undefined {
   const last = lastSegment(path.trim());
-  return ROUTE_WORDS.find((w) => w === last);
+  return (words ?? ROUTE_WORDS).find((w) => w === last);
 }
 
 // ------------------------------------------------------------------ 새 페이지
@@ -51,7 +51,7 @@ export function NewPageDialog({ wikiId, wikiName, open, onClose, prefill, existi
   const [pathError, setPathError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const touched = useRef(prefill?.path !== undefined && prefill.path !== "");
-  const word = routeWordOf(value.path);
+  const word = routeWordOf(value.path, useWikiInfo().data?.reserved_page_names);
   const blocked = blockedReason !== undefined && blockedReason !== "";
 
   // 틀을 고르면 서버가 경로 틀을 채운 경로를 돌려준다(사용자가 경로를 직접 고쳤으면 그 값이 우선)

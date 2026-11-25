@@ -398,7 +398,13 @@ export function ModulesSectionView({ state, refetching, onRefresh, screens, part
                             <span className="app-muted app-mod-version">{mod.version}</span>
                             <span className="app-muted app-mod-roles" title={roles.join(", ")}>{summaryRoles(roles)}</span>
                           </div>
-                          {open ? <Detail mod={mod} screens={screens} parts={parts} renderOptions={renderOptions} /> : null}
+                          {open ? (
+                            // axe 는 트리 안의 group 안쪽을 따라 들어가 treeitem 이 아닌 자식(dt·dd 등)을 허용하지 않는다.
+                            // 상세는 행의 자식 treeitem(레벨 3) 하나로 감싸 트리 구조를 지킨다. 펼침 대상이 아니라 탐색 키에는 없다.
+                            <div role="treeitem" aria-level={3} className="app-mod-detail-wrap">
+                              <Detail mod={mod} screens={screens} parts={parts} renderOptions={renderOptions} />
+                            </div>
+                          ) : null}
                         </li>
                       );
                     })}

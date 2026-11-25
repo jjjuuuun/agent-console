@@ -359,7 +359,8 @@ def build_router(
     @router.get("/runs/{run_id}", response_model=RunSnapshot, responses=errors())
     async def get_run(run_id: str, project: str | None = None) -> RunSnapshot:
         """Run·NodeRun·마지막 이벤트 seq와 직접 자식 Run(``children``, 만든 순 — 중첩 팀).
-        ``project`` = 그 프로젝트 기록 DB에서(없으면 호스트 DB)."""
+        ``project`` = 그 프로젝트 기록 DB에서(없으면 호스트 DB). 이 앱에서 도는 Run은 끝난 상태를
+        ``run.<상태>`` 이벤트까지 저장된 뒤에만 보인다(``live_view`` — 그 전에는 직전 상태)."""
         if project is not None and service().records is not None:
             reader = service().reader(project)
             found = reader.get(run_id)
@@ -368,7 +369,7 @@ def build_router(
             kids: list[Run] = reader.list(parent_run_id=run_id)
             kids.sort(key=lambda child: (child.created_at, child.id))
             return RunSnapshot(
-                run=found,
+                run=service().live_view(found),
                 node_runs=reader.list_node_runs(run_id),
                 last_seq=reader.last_seq(run_id),
                 children=kids,
@@ -379,7 +380,7 @@ def build_router(
         children: list[Run] = runs().list(parent_run_id=run_id)
         children.sort(key=lambda child: (child.created_at, child.id))
         return RunSnapshot(
-            run=run,
+            run=service().live_view(run),
             node_runs=runs().list_node_runs(run_id),
             last_seq=events().last_seq(run_id),
             children=children,

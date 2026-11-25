@@ -20,8 +20,6 @@ export type {
   CopyPlanItem,
   CopyPlanRequest,
   DefinitionKey,
-  DefinitionMove,
-  DeletePlan,
   ExistingProjectProbe,
   FolderCapabilities,
   FolderCheck,
@@ -34,13 +32,10 @@ export type {
   FolderRoot,
   ManifestResetRequest,
   ManifestResetResult,
-  MovePlan,
-  MovePlanRequest,
   OutsideFolderPath,
   Project,
   ProjectCounts,
   ProjectCreate,
-  ProjectDeleteMode,
   ProjectFolderConflictDetails,
   ProjectFolderUnavailableDetails,
   ProjectManifest,
@@ -57,4 +52,4 @@ export type {
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "projects" as const;
-export const CONTRACT_VERSION = "3.7.0" as const;
+export const CONTRACT_VERSION = "4.0.0" as const;

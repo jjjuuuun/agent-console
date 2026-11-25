@@ -73,6 +73,20 @@ describe("설정의 기능 모듈 섹션", () => {
     expect(screen.getByText("part-x")).toBeTruthy();
   });
 
+  it("펼친 상세는 트리의 허용된 자식(treeitem)에 담기고 dt·dd는 group 안에 들지 않는다(aria-required-children)", () => {
+    view({ phase: "ready", modules: MODULES });
+    const row = screen.getByRole("treeitem", { name: /^m-ok\b/ });
+    fireEvent.click(row);
+    const tree = screen.getByRole("tree");
+    const detail = screen.getAllByRole("treeitem").find((e) => e.getAttribute("aria-level") === "3") as HTMLElement;
+    expect(detail.querySelector("dl dt")).not.toBeNull();
+    // 트리 안의 모든 요소 중 role 이 없는 li·구조 요소를 건너뛴 가장 가까운 역할 조상은 treeitem 이어야 한다(axe 는 group 안쪽을 따라 들어가 dt·dd 를 허용하지 않는다).
+    for (const el of Array.from(tree.querySelectorAll("dt, dd"))) {
+      expect(el.closest('[role="group"], [role="treeitem"], [role="tree"]')?.getAttribute("role")).toBe("treeitem");
+    }
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+  });
+
   it("방향키로 이동하고 오른쪽 키로 펼치며 왼쪽 키로 접는다", () => {
     view({ phase: "ready", modules: MODULES });
     const first = screen.getAllByRole("treeitem")[0]!;

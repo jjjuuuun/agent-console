@@ -76,9 +76,12 @@ True
 | `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck`(겹침·기존 구성 개수·`suggested_id`·`config_dir`) | 403 |
 | `GET /projects/folders/capabilities` | → `FolderCapabilities` | — |
 | `POST /projects/folders/pick` | `FolderPickRequest` → `FolderPickResult`(picked·cancelled·unavailable·busy·timeout·failed) | 403(루프백 아님) |
-| (deprecated) `POST /projects/move-plan`·`/move`·`/scope-issues` | 옛 정의 범위 정리(33t에서 삭제) | — |
 
 선택 창 요청은 사용자가 고를 때까지 열려 있다. 요청을 끊으면 서버가 창 프로세스를 끝낸다.
+
+옛 정의 범위 정리 경로(`POST /projects/move-plan`·`/move`·`/scope-issues`)는 0.3.0에서 지웠다. 경로가
+`/projects/{id}` 모양에 맞아 405 Method Not Allowed로 답한다. 옛 `project` 필드 정의 정리는
+`POST /projects/{id}/legacy/plan` → `POST /projects/copy/apply`다.
 
 ## 포트
 
@@ -110,7 +113,7 @@ True
   `server_host`(서버 `host`를 이어받음), `case_insensitive_paths`(예 `/mnt/?`)
 - `folder_dialog`: `mode`(auto·off)·`providers`·`include_default_providers`·`timeout_seconds`(기본 300)
 - `max_open_spaces`·`idle_close_seconds`(공간 캐시), `records_space_prefix`(기록 연동 `space_prefix`를
-  이어받음), `messages`, (옛) `snapshot_ttl_seconds`, (읽지 않음, 33i) `working_directory`
+  이어받음), `messages`, (읽지 않음) `snapshot_ttl_seconds`·`working_directory`(남아 있어도 시작한다)
 
 ## 단독 실행
 

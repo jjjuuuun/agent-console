@@ -15,7 +15,6 @@ import {
   type WikiClient,
   withSpace,
 } from "@agent-console/api-client";
-import { createProjectsClient, type ProjectsClient } from "@agent-console/projects";
 
 /**
  * 응답에서 읽은 "기능 구성이 바뀌었을 수 있다"는 신호. 켜져 있다고 믿던 기능의 REST가 404이거나(`not-found`),
@@ -33,8 +32,6 @@ export interface ClientMeta {
 /** 앱이 쓰는 서버 클라이언트 묶음. */
 export interface ApiClients {
   rest: RestClient;
-  /** 프로젝트 REST(서버 프로젝트 모듈이 꺼져 있으면 호출하지 않는다). 전송은 `rest`와 같은 주소·토큰·fetch */
-  projects: ProjectsClient;
   /** 한 공간(공용 = null, 프로젝트 id)의 정의·메모리 클라이언트. 모든 요청에 `?project=<id>`가 붙는다 */
   space: (project: string | null) => SpaceRestClient;
   /** 한 공간(단독 = null, 프로젝트 id)의 스펙(SDD) 클라이언트. 모든 요청에 `?project=<id>`가 붙는다 */
@@ -87,7 +84,6 @@ export function createApiClients(options: CreateApiClientsOptions): ApiClients {
   const common = token === undefined ? { baseUrl } : { baseUrl, token };
   return {
     rest: createRestClient({ ...common, fetch: guardedFetch }),
-    projects: createProjectsClient(createRestIo({ ...common, fetch: guardedFetch })),
     space: (project) => createSpaceRestClient({ ...common, fetch: guardedFetch }, project),
     sdd: (project) => createSddClient(withSpace(createRestIo({ ...common, fetch: guardedFetch }), project)),
     wiki: (project) => createWikiClient(withSpace(createRestIo({ ...common, fetch: guardedFetch }), project)),

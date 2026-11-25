@@ -403,9 +403,9 @@ class WikiRepository:
         )
 
     def graph(
-        self, center: str | None = None, *, depth: int = 1, limit: int | None = None
+        self, center: str | None = None, *, depth: int | None = 1, limit: int | None = None
     ) -> WikiGraph:
-        """링크 그래프(칸 수 상한 = `min(limit, graph_max_nodes)`)."""
+        """링크 그래프(칸 수 상한 = `min(limit, graph_max_nodes)`, `depth` None = 제한 없음)."""
         cap = self.limits.graph_max_nodes
         return neighborhood(self.index(), center, depth, min(limit or cap, cap))
 

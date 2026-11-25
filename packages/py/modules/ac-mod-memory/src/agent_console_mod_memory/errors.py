@@ -16,7 +16,10 @@
 | ``VersionRequiredError``(``If-Match`` 없음) | ``version_required``(428) | — |
 | ``MemorySpacesUnavailable``(공간 제공자 없음) | ``feature_unavailable``(409) | ``project_id`` |
 | ``UnknownMemorySpace`` | ``project.not_found``(404) | ``project_id`` |
-| 그 밖의 ``MemorySpaceError``(폴더 없음 등) | 제공자 예외의 ``code`` | ``project_id`` |
+| 그 밖의 ``MemorySpaceError``(폴더 없음 등) | 예외의 ``code`` | ``project_id``·``reason``(주) |
+
+(주) ``reason``은 제공자 예외에 문자열 ``reason``이 있을 때만(예: 프로젝트 메모리 DB를 못 엶
+``project.memory_unavailable``의 ``migrate_failed``).
 """
 
 from __future__ import annotations
@@ -116,7 +119,10 @@ def _store(exc: Exception) -> ErrorReply:
 def _space(exc: Exception) -> ErrorReply:
     if not isinstance(exc, MemorySpaceError):  # pragma: no cover - 표가 형식을 보장한다
         return ErrorReply(code=ErrorCodes.FEATURE_UNAVAILABLE)
-    return ErrorReply(code=exc.code, message=exc.message, details={"project_id": exc.space})
+    details: dict[str, Any] = {"project_id": exc.space}
+    if exc.reason:
+        details["reason"] = exc.reason
+    return ErrorReply(code=exc.code, message=exc.message, details=details)
 
 
 ERROR_MAP: dict[type[Exception], ErrorMapping] = {

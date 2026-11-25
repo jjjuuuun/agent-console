@@ -1,7 +1,8 @@
 # 변경 기록
 
-## 미출시
+## 1.0.0
 
+- REL.20: 표시 버전을 1.0.0으로 올렸다(`project.version`). `/health`·`/bootstrap`·`/server-info`의 `server_version`과 OpenAPI `info.version`은 설치 메타데이터에서 읽는다(코드 변경 없음, 값을 맞추는 테스트 추가). 계약 버전은 0.15.0 그대로다. README 공개 API 표에 `server_version()`을 적었다.
 - 5.2R.100(README 현행화, 코드 변경 없음): README의 이력 문장을 여기로 옮기고 현재 동작 설명만 남겼다. 옮긴 이력: 라우터(`ac-routing`)·터미널 콘솔(`ac-console`)·`ac-client` 패키지와 WS `console.*` 메시지는 2R.20에서 삭제했다(되돌리기 기준점: 태그 `phase-2r`). WS `graph:` 토픽과 통짜 모듈은 3R.16에서 삭제했다. 채팅 대기열은 3R.15부터 서버 DB(`chat_queue`)에 저장한다(그 전에는 서버 메모리). `mod-imports.project_dir` 기본값은 4R.18부터 설정 파일 폴더다. claude-agent-sdk `allow_subscription_auth` 기본값은 5.2R.79부터 `true`다. README 모듈 표를 설치된 entry point 기준(기능 10개·연동 11개)으로 다시 만들고, 백엔드 로그인(`backend_login`) 절을 더했다.
 - 5.2R.104(프리셋 기능 삭제): 의존 `agent-console-mod-presets`를 뺐다. 경로 `/presets`·`serve --apply-preset`·환경변수 `AGENT_CONSOLE_PRESET_DIRS`·`AGENT_CONSOLE_APPLY_PRESETS`가 없어졌다. 설정에 `presets` 또는 `modules.options.mod-presets`가 남아 있으면 "프리셋 기능은 삭제되었습니다" 설정 오류(`settings.removed_key`, `mod-definitions` 선언)로 시작을 거부한다.
 - 5.2R.93(설정 호환 정리): 호스트 지운 키 표 `REMOVED_KEYS`(1R의 `console`·`default_manual_route_pattern`)를 지웠다. 남은 `console:` 등은 일반 설정 오류다(`extra="forbid"`). 읽기 호환 장치 `MovedKey`·`SETTINGS_MOVED_KEY`·`ServerSettings.moved_keys`·`migrate_moved_keys`와 `/server-info`의 `settings.moved_key` 경고를 지웠다. 지운 키 거부(`RemovedKey`·`SETTINGS_REMOVED_KEY`)와 기본값 채우기(`SeedSetting`, modkit `seed_settings`)는 그대로다. `_ws.py`·`testing.py` 이력 주석을 고쳤다.

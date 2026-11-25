@@ -3,17 +3,11 @@ import { useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Project, ProjectView } from "@agent-console/contracts/projects";
 import {
-  DEFAULT_SCOPE_VIEW_MODE,
-  SCOPE_VIEW_MODES,
   createCurrentProjectStore,
-  filterByScope,
   readProjectParam,
   writeProjectParam,
   type CurrentProject,
   type CurrentProjectStore,
-  type ProjectsClient,
-  type Scope,
-  type ScopeViewMode,
 } from "@agent-console/projects";
 import { useApi } from "../../app/ApiContext";
 import { AdoptProjectContext, CURRENT_PROJECT_PARAM, CurrentProjectContext, ProjectScopeReadyContext } from "../../app/projectScope";
@@ -41,8 +35,6 @@ const loadProjects = (rest: RestClient): Promise<ProjectView[]> => rest.listProj
 
 /** 목록 질의 키(`["list", …]` 아래라 쓰기 뒤 다른 목록과 함께 갱신된다). */
 export const PROJECTS_QUERY_KEY = ["list", "projects"] as const;
-/** 목록 보기 범위(공용 + 이 프로젝트 / 이 프로젝트만 / 공용만)를 브라우저에 기억하는 키. 현재 프로젝트 키(`ac.project`)는 패키지 기본값이다. */
-export const SCOPE_VIEW_STORAGE_KEY = "ac.projectView";
 
 export interface ProjectsValue {
   /** 프로젝트 기능이 켜져 있는가. false면 아래 값은 모두 비어 있고 프로젝트 UI는 그려지지 않는다 */
@@ -71,10 +63,6 @@ export interface ProjectsValue {
   current: CurrentProject;
   currentProject: Project | undefined;
   setCurrent(id: CurrentProject): void;
-  /** 프로젝트를 고른 목록 보기에서 무엇을 보일지(모든 목록이 공유하는 하나의 값) */
-  viewMode: ScopeViewMode;
-  setViewMode(mode: ScopeViewMode): void;
-  client: ProjectsClient | undefined;
   /** 프로젝트 목록을 다시 읽는다 */
   refresh(): Promise<void>;
   /** 사이드바 전환기가 열려 있는가(단축키·팔레트가 연다) */
@@ -82,8 +70,6 @@ export interface ProjectsValue {
   setSwitcherOpen(open: boolean): void;
   /** `requestAddFolder`와 같다(옛 이름). 추가하면 그 프로젝트로 전환하고 `onCreated`를 부른다 */
   requestCreate(onCreated?: (project: Project) => void): void;
-  /** 항목 목록을 현재 보기 범위로 거른다(꺼져 있거나 모든 프로젝트 보기면 그대로) */
-  filter<T>(items: readonly T[], scopeOf: (item: T) => Scope): T[];
 }
 
 const OFF: ProjectsValue = {
@@ -102,14 +88,10 @@ const OFF: ProjectsValue = {
   current: null,
   currentProject: undefined,
   setCurrent: () => {},
-  viewMode: DEFAULT_SCOPE_VIEW_MODE,
-  setViewMode: () => {},
-  client: undefined,
   refresh: async () => {},
   switcherOpen: false,
   setSwitcherOpen: () => {},
   requestCreate: () => {},
-  filter: (items) => [...items],
 };
 
 const ProjectsContext = createContext<ProjectsValue>(OFF);
@@ -123,11 +105,6 @@ function asProjectStorage(storage: SafeStorage) {
   return { getItem: (k: string) => storage.get(k), setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.remove(k) };
 }
 
-function readViewMode(storage: SafeStorage): ScopeViewMode {
-  const raw = storage.get(SCOPE_VIEW_STORAGE_KEY);
-  return SCOPE_VIEW_MODES.find((m) => m === raw) ?? DEFAULT_SCOPE_VIEW_MODE;
-}
-
 /**
  * 프로젝트 상태 공급자(앱 셸 안, 라우터 안). 서버에 프로젝트 역할이 켜져 있을 때만 목록을 읽는다.
  * 현재 프로젝트는 주소 `?prj=`가 우선이고 없으면 브라우저 저장값이다(서버 상태가 아님).
@@ -138,7 +115,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   // 모듈 목록을 못 받은 서버(구버전 등)에서는 켜져 있는지 알 수 없으므로 프로젝트 UI를 만들지 않는다(다른 기능의 fail-open과 달리 이 UI는 덧붙는 것이다).
   const listKnown = useModules().state.phase === "ready";
   const requiredMet = phase === "met" && listKnown;
-  const { projects: client, rest } = useApi();
+  const { rest } = useApi();
   const storage = useStorage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -151,7 +128,6 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     return created;
   });
   const current = useSyncExternalStore(store.subscribe, store.get, store.get);
-  const [viewMode, setViewModeState] = useState<ScopeViewMode>(() => readViewMode(storage));
 
   const list = useApiQuery<ProjectView[]>(PROJECTS_QUERY_KEY, loadProjects, { enabled: requiredMet, retry: false, meta: { silentBackgroundError: true } });
   // 목록 REST가 404면 서버에 프로젝트 기능이 없다(모듈 목록이 낡았을 때): 꺼진 것으로 본다.
@@ -190,13 +166,6 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   }, [enabled, location.pathname, location.search, location.hash, current, navigate, store]);
 
   const setCurrent = useCallback((id: CurrentProject) => store.set(id), [store]);
-  const setViewMode = useCallback(
-    (mode: ScopeViewMode) => {
-      setViewModeState(mode);
-      storage.set(SCOPE_VIEW_STORAGE_KEY, mode);
-    },
-    [storage],
-  );
   const refresh = useCallback(() => queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY }), [queryClient]);
   const names = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
 
@@ -266,16 +235,12 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       current: effective,
       currentProject: effective === null ? undefined : projects.find((p) => p.id === effective),
       setCurrent,
-      viewMode,
-      setViewMode,
-      client: enabled ? client : undefined,
       refresh,
       switcherOpen,
       setSwitcherOpen,
       requestCreate,
-      filter: (items, scopeOf) => (!enabled || effective === null ? [...items] : filterByScope(items, effective, { mode: viewMode, knownProjects: listed ? knownIds : undefined, scopeOf })),
     }),
-    [enabled, phase, list.isLoading, list.isError, projects, views, names, effective, setCurrent, viewMode, setViewMode, client, refresh, switcherOpen, requestCreate, requestAddFolder, requestRepath, requestUnregister, openHome, listed, knownIds],
+    [enabled, phase, list.isLoading, list.isError, projects, views, names, effective, setCurrent, refresh, switcherOpen, requestCreate, requestAddFolder, requestRepath, requestUnregister, openHome, listed],
   );
   return (
     <ProjectsContext.Provider value={value}>

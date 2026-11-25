@@ -11,6 +11,8 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -20,11 +22,12 @@ import typer
 import agent_console_cli._app as cli_app
 import agent_console_server
 import agent_console_server._app as server_app
-from agent_console_cli import main
+from agent_console_cli import cli_version, main
 from agent_console_modkit import FlagSetting, ModuleDescriptor, ModuleParts, SettingsCompat
 
 # ---------------------------------------------------------------- 명령
 
+_PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
@@ -57,6 +60,7 @@ def test_only_serve_statusline_and_logs_are_exposed(
     commands: dict[str, object] = getattr(typer.main.get_command(cli_app.app), "commands", {})
     assert sorted(commands) == ["logs", "serve", "statusline"]
     assert "logs" in top
+    assert "--version" in top
     assert "sekret-token-should-not-show" not in top
     assert main(["serve", "--help"]) == 0
     serve_help = _strip_ansi(capsys.readouterr().out)
@@ -197,6 +201,45 @@ def test_removed_phase1_keys_are_reported(
     old.write_text("console: {command_prefix: '!'}\n", encoding="utf-8")
     assert main(["serve", "--config", str(old)]) == 2
     assert "console" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- 버전
+
+
+def test_version_prints_installed_metadata(capsys: pytest.CaptureFixture[str]) -> None:
+    """`--version` = `agent-console <설치 메타데이터 버전>`, pyproject 버전과 같다."""
+    declared = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))["project"]["version"]
+    assert main(["--version"]) == 0
+    assert capsys.readouterr().out == f"agent-console {metadata.version('agent-console-cli')}\n"
+    assert cli_version() == metadata.version("agent-console-cli") == declared
+
+
+def test_version_without_metadata_falls_back() -> None:
+    def missing(name: str) -> str:
+        raise metadata.PackageNotFoundError(name)
+
+    assert cli_version(missing) == "0.0.0"
+
+
+def test_version_does_not_load_server() -> None:
+    code = (
+        "import json, sys, agent_console_cli\n"
+        "try:\n"
+        "    agent_console_cli.main(['--version'])\n"
+        "finally:\n"
+        "    names = sorted(m for m in sys.modules if '.' not in m)\n"
+        "    print(json.dumps(names), file=sys.stderr)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+    )
+    loaded = set(json.loads(result.stderr.strip().splitlines()[-1]))
+    assert loaded.isdisjoint({"agent_console_server", "fastapi", "uvicorn"})
+    assert result.stdout.startswith("agent-console ")
 
 
 # ---------------------------------------------------------------- 시작 시간

@@ -9,7 +9,7 @@
 - 선택: ``definitions.lookup``·``definitions.store``·``definitions.references``·
   ``definitions.reference_rewriters``·``records.spaces``·``secrets.rules``·
   ``definitions.kind_contributions``(X44 — 공간 종류에 더하고 참조 추출을 복사 계획에 합친다).
-  구독 ``definitions.saved``.
+  토픽 ``definitions.saved``를 낸다(공간 저장마다 ``space``).
 - 웹 역할 ``projects``. 이 모듈을 끄면 프로젝트 기능이 없고 각 기능은 단독 동작한다.
 """
 
@@ -48,7 +48,6 @@ from agent_console_store import (
 
 from .copying import CopyService
 from .definitions import (
-    DefinitionSnapshot,
     combine_references,
     contribution_deleters,
     contribution_references,
@@ -71,12 +70,10 @@ from .ports import (
     RECORDS_SPACES,
     SECRET_RULES,
     DefinitionReader,
-    SavedLike,
 )
 from .projects import ProjectManager
 from .repository import PROJECT_KIND_NAME, ProjectRepository, project_kind
 from .routes import Services, build_router
-from .service import ScopeService
 from .settings import SETTINGS_COMPAT, ProjectModuleSettings
 from .spaces import DefinitionSpacesView, ProjectSpaceCache, VersionsFactory
 
@@ -352,24 +349,6 @@ class ProjectsModule:
             kind_titles=lambda: contribution_titles(ctx.ports(KIND_CONTRIBUTIONS)),
             kind_deleters=lambda: contribution_deleters(ctx.ports(KIND_CONTRIBUTIONS)),
         )
-        snapshot = DefinitionSnapshot(
-            reader, ttl=cfg.snapshot_ttl_seconds, skip_kinds=(PROJECT_KIND_NAME,)
-        )
-        scope = ScopeService(
-            repository,
-            snapshot=snapshot,
-            writer=lambda: ctx.port(DEFINITIONS_STORE),
-            references=references,
-            unavailable=lambda: ctx.unavailable(
-                DEFINITIONS_STORE, "정의 기능이 꺼져 있어 정의를 옮길 수 없습니다"
-            ),
-            messages=cfg.messages,
-        )
-
-        def on_saved(_item: SavedLike) -> None:
-            snapshot.invalidate()
-
-        ctx.subscribe(DEFINITIONS_SAVED, on_saved)
         ctx.provide(PROJECTS_LOOKUP, manager)
         ctx.provide(PROJECT_FOLDERS, manager.folder_set)
         ctx.provide(PROJECTS_SPACES, spaces)
@@ -383,7 +362,6 @@ class ProjectsModule:
             folders=lambda: folders,
             picker=lambda: picker,
             copies=lambda: copies,
-            scope=lambda: scope,
         )
         return ModuleParts(
             routers=[build_router(services)], error_map=dict(ERROR_MAP), shutdown=[shutdown]

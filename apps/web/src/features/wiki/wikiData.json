@@ -104,9 +104,8 @@
       3
     ],
     "defaultDepth": 1,
-    "all": "all",
-    "allDepth": 1000,
-    "bigNodes": 200
+    "bigNodes": 200,
+    "elkMaxNodes": 80
   },
   "rulesScreen": {
     "params": {

@@ -164,16 +164,6 @@ export type RecordSource = "project" | "app";
 export type DiffOp = "add" | "remove" | "replace";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "DefinitionScope".
- */
-export type DefinitionScope = "project" | "shared";
-/**
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ProjectDeleteMode".
- */
-export type ProjectDeleteMode = "move_to_shared" | "delete_definitions";
-/**
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "OnTimeout".
  */
 export type OnTimeout = "expire" | "cancel_run";
@@ -221,11 +211,6 @@ export type KnownRunEvent =
   | RunChildStartedEvent
   | RunChildFinishedEvent
   | AgentContextPreparedEvent;
-/**
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogUngroupedPolicy".
- */
-export type LogUngroupedPolicy = "cwd" | "repo_root" | "none";
 /**
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "ProjectStatus".
@@ -4893,32 +4878,6 @@ export interface DiffChange {
   secret?: boolean;
 }
 /**
- * (deprecated, 0.11.0) 정의 하나의 범위 바꾸기(필드 `project`를 고쳐 저장). null = 공용.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "DefinitionMove".
- */
-export interface DefinitionMove {
-  /**
-   * 정의 종류 이름(예: agent, graph, resource).
-   */
-  kind: string;
-  id: string;
-  name?: string;
-  /**
-   * 지금 범위(null = 공용).
-   */
-  from?: string | null;
-  /**
-   * 옮길 범위(null = 공용).
-   */
-  to?: string | null;
-  /**
-   * 옮기려는 그 정의면 true. false는 참조 때문에 함께 옮기기를 권하는 정의.
-   */
-  required?: boolean;
-}
-/**
  * 정의를 쓰는 곳 하나(사용처 화면, 삭제 확인).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -5028,21 +4987,6 @@ export interface DelegationStrategyDescriptor {
    */
   nestable?: boolean | null;
   ui_hints?: UiHints | null;
-}
-/**
- * (deprecated, 0.11.0) `POST /projects/{id}/delete-plan` 응답. 2.0 삭제 = 등록 해제(보관).
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "DeletePlan".
- */
-export interface DeletePlan {
-  project_id: string;
-  /**
-   * 이 프로젝트 전용 정의(공용으로 옮기거나 함께 삭제).
-   */
-  definitions?: DefinitionKey[];
-  default_mode?: ProjectDeleteMode;
-  warnings?: Issue[];
 }
 /**
  * `POST /sdd/specs/{id}/documents/{doc}/state` 요청: 문서 상태 전환(전환·관문 검사).
@@ -7068,6 +7012,9 @@ export interface LogLane {
 /**
  * `GET /logs/sessions` 항목: 세션 하나의 요약.
  *
+ * 2.0.0(0.15.0): 옛 프로젝트 묶음 `project`(`LogProjectRef`)를 지웠다. 프로젝트는 `project_id`이고
+ * 표시 이름은 `GET /projects`로 얻는다. 옛 응답의 `project` 키는 읽을 때 무시된다.
+ *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "LogSessionSummary".
  */
@@ -7080,11 +7027,6 @@ export interface LogSessionSummary {
   title?: string;
   cwd?: string;
   repo_root?: string;
-  /**
-   * @deprecated
-   * 이전 형식의 프로젝트 묶음(0.11.0 deprecated, K33-15). `project_id`를 쓴다.
-   */
-  project?: LogProjectRef | null;
   /**
    * 세션 작업 폴더가 들어 있는 등록 프로젝트의 id(불투명 문자열, 0.11.0). 어느 등록 폴더에도 들지 않으면 null.
    */
@@ -7102,16 +7044,6 @@ export interface LogSessionSummary {
    * 응답(message_id)별 한 번만 센 토큰 합.
    */
   tokens?: LogTokenTotals | null;
-}
-/**
- * 프로젝트 묶음(묶기 규칙을 적용한 결과). 0.11.0 deprecated(K33-15), `project_id`를 쓴다.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogProjectRef".
- */
-export interface LogProjectRef {
-  id: string;
-  label?: string;
 }
 /**
  * 토큰 합 분해. 값이 없으면 null(0으로 채우지 않음).
@@ -7320,48 +7252,6 @@ export interface LogMetricInfo {
   unit?: string | null;
 }
 /**
- * 이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogProjectGroup".
- */
-export interface LogProjectGroup {
-  /**
-   * 묶음을 가리키는 고유 이름입니다.
-   */
-  id: string;
-  /**
-   * 화면에 보일 묶음 이름입니다. 비우면 id를 씁니다.
-   */
-  label?: string | null;
-  /**
-   * 저장소 경로(없으면 작업 폴더)와 맞춰 봅니다. 하위 폴더까지는 /proj/** 처럼 씁니다.
-   */
-  match?: string[];
-  [k: string]: unknown;
-}
-/**
- * 이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "LogProjectSettings".
- */
-export interface LogProjectSettings {
-  /**
-   * 경로로 로그를 묶는 규칙입니다. 위에서부터 보고 처음 맞는 묶음이 이깁니다.
-   */
-  groups?: LogProjectGroup[] | null;
-  /**
-   * 맞는 묶음이 없으면 자기 경로(cwd), 저장소(repo_root), 기타 한 묶음(none)으로 둡니다.
-   */
-  ungrouped?: LogUngroupedPolicy | null;
-  /**
-   * git worktree 폴더를 원래 저장소와 한 묶음으로 봅니다. 기본은 켬입니다.
-   */
-  git_worktrees?: boolean | null;
-  [k: string]: unknown;
-}
-/**
  * `GET /logs/schema`: 위젯 질의·필터 막대가 고를 차원·지표·필터 목록(서버 데이터).
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -7441,11 +7331,6 @@ export interface LogSettings {
    * 범주별 표시 이름·색·보이기를 기본값 위에 덮어씁니다.
    */
   taxonomy?: LogTaxonomy | null;
-  /**
-   * @deprecated
-   * 더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).
-   */
-  projects?: LogProjectSettings | null;
   /**
    * 위젯을 모은 로그 대시보드입니다.
    */
@@ -7872,6 +7757,10 @@ export interface MemoryChanged {
   version: number;
   op: "create" | "update" | "delete" | "restore" | "archive" | "unarchive" | "move" | "purge";
   author_kind: string;
+  /**
+   * (1.3.0) 바뀐 항목이 있는 메모리 공간. null = 공용 라이브러리, 그 밖 = 공간 이름(프로젝트 등록 id). 옛 서버는 보내지 않는다(웹은 지금 보는 목록을 다시 읽는다).
+   */
+  space?: string | null;
 }
 /**
  * 메모리 범위 하나: 범위 종류 id + 범위 id.
@@ -8816,41 +8705,6 @@ export interface ModuleOptionsView {
   yaml_snippet?: string;
 }
 /**
- * (deprecated, 0.11.0) 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.
- *
- * 2.0에서 정의의 프로젝트 전용 범위가 없어졌다(K33-5). 옛 `project` 필드 정리는
- * 복사 계획(`CopyPlan`, `remove_source`)을 쓴다. 다음 major에서 삭제.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "MovePlan".
- */
-export interface MovePlan {
-  target: DefinitionKey;
-  /**
-   * 옮길 범위(null = 공용).
-   */
-  to?: string | null;
-  moves?: DefinitionMove[];
-  /**
-   * 옮긴 뒤 생길 범위 경고(project.shared_uses_project 등)나 검사 못 함 정보.
-   */
-  warnings?: Issue[];
-}
-/**
- * (deprecated, 0.11.0) `POST /projects/move-plan` 요청. 다음 major에서 삭제.
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "MovePlanRequest".
- */
-export interface MovePlanRequest {
-  kind: string;
-  id: string;
-  /**
-   * 옮길 프로젝트 id. null = 공용으로.
-   */
-  to?: string | null;
-}
-/**
  * 노드 1회 실행. 재실행·반복은 attempt/iteration 증가.
  *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
@@ -9469,22 +9323,6 @@ export interface ProjectOutsideFolderDetails {
   project_id: string;
   folder: string;
   paths?: OutsideFolderPath[];
-}
-/**
- * 이전 형식의 프로젝트 설정입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시).
- *
- * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
- * via the `definition` "ProjectPreferences".
- */
-export interface ProjectPreferences {
-  /**
-   * 종류마다 새로 만든 정의를 프로젝트 전용(project)으로 둘지 공용(shared)으로 둘지입니다.
-   */
-  new_definition_scope?: {
-    [k: string]: DefinitionScope;
-  };
-  fallback?: DefinitionScope;
-  [k: string]: unknown;
 }
 /**
  * 409 `project.records_unavailable`의 `details`.
@@ -12101,6 +11939,8 @@ export interface WikiEventPayload {
 /**
  * `GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`).
  *
+ * `depth`는 정수(0 이상, 생략 = 1) 또는 `WIKI_GRAPH_DEPTH_ALL`(`all`, 깊이 제한 없음)이다.
+ *
  * This interface was referenced by `AgentConsoleContracts`'s JSON-Schema
  * via the `definition` "WikiGraph".
  */
@@ -12115,6 +11955,10 @@ export interface WikiGraph {
    * 자르기 전 칸 수(모르면 null).
    */
   total?: number | null;
+  /**
+   * (1.3.0) 실제 적용한 깊이. null = 깊이 제한 없음(`depth=all`) 또는 가운데 없음(전체 그래프), 옛 서버.
+   */
+  depth?: number | null;
 }
 /**
  * 그래프 칸 하나(페이지, 끊긴 대상, 또는 스킴 링크 대상).
@@ -12285,6 +12129,14 @@ export interface WikiInfo {
    * (1.2.0) 위키 규칙 정의 종류 이름(설치자 데이터, 기본 `wiki-rules`). 웹이 복사·리소스 종류 목록에서 규칙 종류를 고를 때 쓴다(공용 규칙을 따로 읽지 않는다). null = 옛 서버.
    */
   rules_kind?: string | null;
+  /**
+   * (1.3.0) 위키 정의 종류 이름(설치자 데이터, 기본 `wiki`). 웹이 새 위키의 id(종류 이름에서 만든 id)를 미리 보일 때 쓴다(`rules_kind`와 같은 방식). null = 옛 서버.
+   */
+  wiki_kind?: string | null;
+  /**
+   * (1.3.0) 이 서버에서 `GET`으로 읽을 수 없는 페이지 경로의 마지막 조각(예 `history` — `…/pages/<경로>/history`가 기록 경로라 겹침). 쓰기·지우기는 된다. 값은 서버의 경로 구현이 정한다. null = 옛 서버(웹은 자기 데이터를 쓴다).
+   */
+  reserved_page_names?: string[] | null;
   /**
    * 공간 수준 이슈(예: `wiki.spaces_unavailable`·`wiki.search_degraded`).
    */
@@ -12873,9 +12725,9 @@ export interface WikiRuleEntry {
    */
   action?: string | null;
   /**
-   * 점검 규칙의 심각도(그 밖은 null).
+   * 점검 규칙의 심각도(error·warning·info, 1.3.0에서 좁힘). 그 밖의 항목은 null.
    */
-  severity?: string | null;
+  severity?: IssueSeverity | null;
   /**
    * (1.2.0) 쓰기 규칙의 적용 경로 글롭(빈 목록 = 모든 페이지). 그 밖의 항목·옛 서버는 null.
    */
@@ -13417,11 +13269,6 @@ export interface WorkspaceSettings {
   logs?: LogSettings;
   /**
    * @deprecated
-   * 더 이상 쓰지 않습니다. 구성은 모두 공용이고 프로젝트가 가져다 씁니다.
-   */
-  projects?: ProjectPreferences | null;
-  /**
-   * @deprecated
    * 더 이상 쓰지 않습니다. 에이전트 공통 설정의 실행 백엔드를 씁니다(읽기만 함).
    */
   default_backend?: string | null;
@@ -13436,23 +13283,23 @@ export interface WorkspaceSettings {
 
 // ---- 상수 (schema x-constants)
 
-export const CONTRACTS_VERSION = "0.14.12" as const;
+export const CONTRACTS_VERSION = "0.15.0" as const;
 
 export const CONTRACT_VERSIONS = {
-  "common": "1.16.0",
+  "common": "2.0.0",
   "resources": "1.1.0",
-  "logs": "1.2.0",
-  "definitions": "1.7.0",
+  "logs": "2.0.0",
+  "definitions": "2.0.0",
   "runs": "1.9.0",
   "usage": "1.1.0",
-  "projects": "3.7.0",
+  "projects": "4.0.0",
   "chat": "1.4.0",
   "exports": "1.0.0",
   "imports": "1.1.0",
   "architecture": "1.0.0",
-  "memory": "1.2.0",
+  "memory": "1.3.0",
   "sdd": "1.3.0",
-  "wiki": "1.2.0",
+  "wiki": "1.3.0",
   "modules": "1.7.0"
 } as const;
 
@@ -13647,6 +13494,7 @@ export const ERROR_CODES = {
   "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
   "CONVERSATION_AMBIGUOUS": "conversation.ambiguous",
   "RUN_AMBIGUOUS": "run.ambiguous",
+  "PROJECT_MEMORY_UNAVAILABLE": "project.memory_unavailable",
   "SDD_NOT_FOUND": "sdd.not_found",
   "SDD_DOCUMENT_MISSING": "sdd.document_missing",
   "SDD_TEMPLATE_EXISTS": "sdd.template_exists",
@@ -13730,6 +13578,7 @@ export const HTTP_STATUS_BY_ERROR_CODE = {
   "chat.session_unavailable": 409,
   "conversation.ambiguous": 409,
   "run.ambiguous": 409,
+  "project.memory_unavailable": 409,
   "sdd.not_found": 404,
   "sdd.document_missing": 404,
   "sdd.template_exists": 409,
@@ -13773,11 +13622,8 @@ export const KNOWN_ISSUE_CODES = {
   "TEAM_CHILD_NO_ENTRY": "team.child_no_entry",
   "DELEGATION_DEPTH_EXCEEDED": "delegation.depth_exceeded",
   "BACKEND_UNRESOLVED": "backend.unresolved",
-  "PROJECT_SHARED_USES_PROJECT": "project.shared_uses_project",
-  "PROJECT_CROSS_PROJECT": "project.cross_project",
   "PROJECT_UNKNOWN": "project.unknown",
   "PROJECT_REFERENCES_UNAVAILABLE": "project.references_unavailable",
-  "PROJECT_DEFINITIONS_UNAVAILABLE": "project.definitions_unavailable",
   "MEMORY_DENIED": "memory.denied",
   "MEMORY_NOT_FOUND": "memory.not_found",
   "MEMORY_CONFLICT": "memory.conflict",
@@ -13808,13 +13654,13 @@ export const KNOWN_ISSUE_CODES = {
   "PROJECT_MANIFEST_INVALID": "project.manifest_invalid",
   "PROJECT_CONFIG_READONLY": "project.config_readonly",
   "PROJECT_COPY_CONFLICT": "project.copy_conflict",
-  "PROJECT_MEMORY_NETWORK_FS": "project.memory_network_fs",
   "FOLDERS_DIALOG_UNAVAILABLE": "folders.dialog_unavailable",
   "FOLDERS_DIALOG_BUSY": "folders.dialog_busy",
   "FOLDERS_DIALOG_TIMEOUT": "folders.dialog_timeout",
   "PROJECT_RECORDS_UNAVAILABLE": "project.records_unavailable",
   "CHAT_SESSION_UNAVAILABLE": "chat.session_unavailable",
   "PROJECT_NETWORK_FS": "project.network_fs",
+  "PROJECT_MEMORY_UNAVAILABLE": "project.memory_unavailable",
   "PROJECT_GITIGNORE_OUTDATED": "project.gitignore_outdated",
   "RUN_OTHER_HOST": "run.other_host",
   "SDD_GATE_BLOCKED": "sdd.gate_blocked",
@@ -13892,9 +13738,7 @@ export const KNOWN_ISSUE_CODES = {
   "WIKI_REDACTED_CONTENT": "wiki.redacted_content"
 } as const;
 
-export const KNOWN_SUGGESTION_IDS = {
-  "PROJECT_MOVE_TO_SHARED": "project.move_to_shared"
-} as const;
+export const KNOWN_SUGGESTION_IDS = {} as const;
 
 export const WS_CLOSE_UNAUTHORIZED = 4401 as const;
 
@@ -14140,6 +13984,8 @@ export const WIKI_LINT_SUBJECT_PATHS = [
   "/broken_links",
   "/updated_by_kind"
 ] as const;
+
+export const WIKI_GRAPH_DEPTH_ALL = "all" as const;
 
 export const KNOWN_WIKI_LINK_KINDS = {
   "PATTERN": "pattern",

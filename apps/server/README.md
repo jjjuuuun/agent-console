@@ -239,6 +239,7 @@ python -m agent_console_server --config agent-console.yaml --port 8765 --disable
 | `build_opener(web_open, *, browser=None, spawn=None) -> Opener` | `web.open.command`가 있으면 그 명령(셸 없이, `{url}` 치환), 없으면 기본 브라우저(`webbrowser.open`). 브라우저·하위 프로세스 주입 |
 | `RemovedKey`, `SETTINGS_REMOVED_KEY`, `ConfigError.code`·`ConfigError.removed` | 지운 옛 키가 남아 있으면 `load_settings`가 `ConfigError(code="settings.removed_key", removed=[RemovedKey{old, new, message}])`를 낸다. 메시지에 이유·새 위치를 적는다. 지운 키는 모듈 선언(`SettingsCompat.removed`)에서만 온다 |
 | `build_openapi(app)` | OpenAPI 문서(컴포넌트 = 계약 JSON Schema `$defs`) |
+| `server_version() -> str` | 서버 버전 = 설치 메타데이터 `agent-console-server`의 버전(`pyproject.toml` `project.version`, 메타데이터가 없으면 `0.0.0`). `/health`·`/bootstrap`·`/server-info`의 `server_version`과 OpenAPI `info.version`이 이 값이다. 계약 버전(`contracts_version`)은 따로 간다 |
 | `QueryRedactingFilter`, `install_log_redaction` | 로그의 비밀성 쿼리 값 가리기 |
 | `SecurityPolicy`, `TOKEN_HEADER`, `TOKEN_QUERY`, `WS_CLOSE_UNAUTHORIZED`(4401), `WS_CLOSE_FORBIDDEN`(4403), `API_PREFIX`, `WS_PATH` | 보안·경로 상수(보안 미들웨어·토큰·`/health`·WS 다중화·로그 가림은 `agent-console-modkit[host]`에서 온다) |
 
@@ -285,7 +286,6 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
       rollup_run_limit: 500        # GET /usage 토큰 집계에 쓰는 최근 Run 수
       source_timeout_seconds: 10
     mod-imports:
-      home: null               # ~/.claude의 부모. 비우면 환경변수 HOME·USERPROFILE
       project_dir: null        # 프로젝트 `.claude/`·`.mcp.json` 위치. 비우면 설정 파일 폴더(작업 폴더를 따라가지 않는다)
       options: {}              # 출처 공장 이름 → 옵션(예: claude: {mapping: {...}})
     mod-exports:
@@ -317,7 +317,9 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
 다른 설정의 값을 기본값으로 넘기는 것은 호스트 설정에서만 한다(경고 없음, 새 위치에 값이 없을 때만):
 `security.expose_paths: false` → `mod-exports.expose_paths`, `secrets.min_redact_chars` → `mod-runs.min_redact_chars`.
 모듈끼리는 기본값을 주고받지 않는다(H3): `mod-imports.project_dir`는 생략하면 호스트 `paths.base_dir`(설정 파일 폴더)이고
-`mod-runs.working_directory`를 따라가지 않는다. `mod-exports.home`도 `mod-imports.home`을 따라가지 않는다(생략 시 HOME·USERPROFILE).
+`mod-runs.working_directory`를 따라가지 않는다. `mod-exports.home`은 생략하면 HOME·USERPROFILE이다.
+`modules.options.mod-imports.home`(사용자 전역 `~/.claude` 가져오기)은 없앤 키다. 값이 null이어도 키가 있으면 서버가
+시작하지 않고 이유를 알려 주는 설정 오류(`settings.removed_key`)를 낸다. 가져오기 출처는 프로젝트 폴더의 `.claude/`뿐이다.
 환경변수 `WORKING_DIRECTORY`·`MAX_CONCURRENCY`는 새 위치(`modules.options.mod-runs.*`)로 들어간다.
 
 삭제된 프리셋 기능의 설정(최상위 `presets`, `modules.options.mod-presets`)이 남아 있으면 "프리셋 기능은 삭제되었습니다" 설정

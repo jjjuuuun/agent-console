@@ -118,9 +118,6 @@ type SendKey = Literal["enter", "mod_enter"]
 type OnTimeout = Literal["expire", "cancel_run"]
 """상호작용 응답 대기 한도를 넘었을 때."""
 
-type DefinitionScope = Literal["project", "shared"]
-"""새 정의의 범위. project = 지금 고른 프로젝트 전용, shared = 공용."""
-
 PROJECT_FIELD_DESCRIPTION = (
     "이 정의가 속한 프로젝트입니다. 비우면 공용이라 모든 프로젝트에서 보입니다."
 )
@@ -1429,36 +1426,6 @@ class SecretRuleSettings(DefinitionModel):
     )
 
 
-class ProjectPreferences(DefinitionModel):
-    """이전 형식의 프로젝트 설정입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시)."""
-
-    # 0.11.0 deprecated(design §PI.8, K33-5): 정의의 프로젝트 전용 범위가 없어져 새 정의 범위
-    # 설정도 쓰지 않는다. 서버는 읽고 무시하며 정보 이슈 `settings.ignored_key`를 낸다(시작은 막지
-    # 않음). 다음 major에서 삭제. 프로젝트 목록 자체는 정의 종류 `project`다.
-
-    # 0.8.0. 계약 하위 모듈 `projects`가 아니라 여기 둔다: 공통 설정(WorkspaceSettings)의 섹션이고,
-    # `projects`는 `definitions`를 쓰므로(Project.settings = AgentSettings)
-    # 반대 방향 import를 피한다.
-    model_config = ConfigDict(title="프로젝트 설정")
-
-    new_definition_scope: dict[str, DefinitionScope] = Field(
-        default_factory=dict,
-        title="종류별 새 정의 범위",
-        description=(
-            "종류마다 새로 만든 정의를 프로젝트 전용(project)으로 둘지 공용(shared)으로 둘지입니다."
-        ),
-        json_schema_extra={"default": {}, **x_ui(tier="advanced", example={"agent": "shared"})},
-    )
-    fallback: DefinitionScope = Field(
-        default="project",
-        title="기본 범위",
-        description="종류별 범위에 없는 종류를 새로 만들 때의 범위입니다.",
-        json_schema_extra=x_ui(
-            enum_labels={"project": "프로젝트 것", "shared": "공용 것"}, tier="advanced"
-        ),
-    )
-
-
 _DEFAULTS_LAYER_UI: dict[str, dict[str, Any]] = {
     "backend": x_ui(
         tier="basic",
@@ -1817,18 +1784,10 @@ class WorkspaceSettings(DefinitionModel):
     logs: LogSettings = Field(
         default_factory=LogSettings,
         title="로그",
-        description=(
-            "읽을 로그 출처·범주 표시·프로젝트 묶기·대시보드입니다. 비운 항목은 기본값입니다."
-        ),
+        description="읽을 로그 출처·범주 표시·대시보드입니다. 비운 항목은 기본값입니다.",
         json_schema_extra=x_ui(
-            tier="basic", when="다른 로그 폴더를 읽거나 로그를 프로젝트별로 묶고 싶을 때 바꾸세요."
+            tier="basic", when="다른 로그 폴더를 읽거나 범주 표시를 바꾸고 싶을 때 바꾸세요."
         ),
-    )
-    projects: ProjectPreferences | None = Field(
-        default=None,
-        title="프로젝트(이전 형식)",
-        description="더 이상 쓰지 않습니다. 구성은 모두 공용이고 프로젝트가 가져다 씁니다.",
-        json_schema_extra={"deprecated": True, **x_ui(tier="advanced")},
     )
     default_backend: str | None = Field(
         default=None,

@@ -1,13 +1,13 @@
 [project]
 name = "agent-console-server"
-version = "0.1.0"
+version = "1.0.0"
 description = "Agent Console 서버 — 설치된 기능 모듈을 모아 HTTP·WebSocket으로 제공"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.14,<0.15",
+    "agent-console-contracts>=0.15,<0.16",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-resources-core>=0.1,<0.2",
@@ -22,7 +22,7 @@ dependencies = [
     "agent-console-mod-versions>=0.1,<0.2",
     "agent-console-mod-definitions>=0.1,<0.2",
     "agent-console-mod-resources>=0.1,<0.2",
-    "agent-console-mod-projects>=0.2,<0.3",
+    "agent-console-mod-projects>=0.3,<0.4",
     "agent-console-link-projects-runs>=0.3,<0.4",
     "agent-console-link-projects-records>=0.1,<0.2",
     "agent-console-link-definitions-resources>=0.1,<0.2",

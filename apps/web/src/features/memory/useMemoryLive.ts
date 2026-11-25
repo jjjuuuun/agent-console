@@ -8,6 +8,8 @@ import { useApi } from "../../app/ApiContext";
 
 export interface UseMemoryLiveOptions {
   enabled?: boolean;
+  /** 지금 보는 메모리 공간(null = 공용 라이브러리, 문자열 = 프로젝트 id). 알림의 `space`가 있고 이것과 다르면 무시한다. 생략하면 거르지 않는다 */
+  space?: string | null;
   debounceMs: number;
   /** 모인 알림(오래된 것부터). 한 번에 최대 1회, 알림이 없으면 부르지 않는다 */
   onBatch: (batch: readonly MemoryChanged[]) => void;
@@ -20,7 +22,12 @@ export interface MemoryLive {
   disconnected: boolean;
 }
 
-export function useMemoryLive({ enabled = true, debounceMs, onBatch, onReconnect }: UseMemoryLiveOptions): MemoryLive {
+/** 알림이 지금 공간이 아닌 다른 공간의 것인가. 알림에 `space`가 없거나 지금 공간을 모르면(`undefined`) false. */
+export function isOtherSpace(changed: Pick<MemoryChanged, "space">, current: string | null | undefined): boolean {
+  return changed.space !== undefined && current !== undefined && changed.space !== current;
+}
+
+export function useMemoryLive({ enabled = true, space, debounceMs, onBatch, onReconnect }: UseMemoryLiveOptions): MemoryLive {
   const { ws } = useApi();
   const [disconnected, setDisconnected] = useState(() => ws.status === "reconnecting" || ws.status === "closed");
   const latest = useRef({ onBatch, onReconnect });
@@ -39,6 +46,8 @@ export function useMemoryLive({ enabled = true, debounceMs, onBatch, onReconnect
       if (batch.length > 0) latest.current.onBatch(batch);
     };
     const sub = ws.subscribeMemory((changed) => {
+      // 다른 공간의 알림은 지금 목록과 상관없다. `space`가 없으면(옛 서버) 지금 목록을 다시 읽는다.
+      if (isOtherSpace(changed, space)) return;
       buffer.push(changed);
       // 첫 알림에서 창을 열고, 창이 끝날 때 한 번 넘긴다(그동안 온 알림은 모두 포함)
       timer ??= setTimeout(flush, debounceMs);
@@ -55,7 +64,7 @@ export function useMemoryLive({ enabled = true, debounceMs, onBatch, onReconnect
       off();
       sub.unsubscribe();
     };
-  }, [ws, enabled, debounceMs]);
+  }, [ws, enabled, debounceMs, space]);
 
   return { disconnected };
 }

@@ -29,8 +29,9 @@
 - ``definitions.kind_contributions``(여러 제공자, X44, 6R.5): 정의 종류 기여
   (``agent_console_modkit.KindContribution``). 프로젝트 공간 종류 = 라이브러리 종류 + 기여 종류
   (``library=False`` 포함) 중 옮길 수 있는 것. 기여의 ``references``는 ``definitions.references``와
-  합쳐 복사 계획·범위 검사의 참조 닫힘에 쓴다.
-- 토픽 ``definitions.saved``: 옛 범위 정리용 정의 스냅샷 캐시를 버린다.
+  합쳐 복사 계획의 참조 닫힘에 쓴다.
+- 토픽 ``definitions.saved``: 프로젝트 공간에 저장할 때마다 낸다(``space`` = 등록 id).
+  구독하지 않는다.
 """
 
 from __future__ import annotations

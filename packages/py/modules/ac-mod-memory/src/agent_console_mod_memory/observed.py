@@ -2,7 +2,8 @@
 
 REST·정리·가져오기·에이전트 도구(연동이 ``memory.service``의 ``store``로 쓴다) 어느 쪽에서 쓰든
 항목이 바뀌면 ``MemoryChanged``(본문 없음)를 알린다. 웹은 WS 토픽 ``memory.changed``로 목록을
-갱신한다. 버전이 오르지 않은 호출(이미 그 상태인 보관 등)은 알리지 않는다.
+갱신한다. 버전이 오르지 않은 호출(이미 그 상태인 보관 등)은 알리지 않는다. 감싸개는 공간을
+모른다(``space`` = null). 공간 이름은 ``MemoryService``가 붙인다.
 
 ``MemoryStore`` 프로토콜 밖 속성(SQLite ``warnings`` 등)은 안쪽 저장소로 넘긴다(``__getattr__``).
 선택 능력 ``scan_entries``(``EntryScanner``)는 ``isinstance`` 판정이 정적 속성만 보므로(Python 3.12)

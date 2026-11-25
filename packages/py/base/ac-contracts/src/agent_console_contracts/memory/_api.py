@@ -335,6 +335,13 @@ class MemoryChanged(ContractModel):
     version: int = Field(ge=1, description="바뀐 뒤 버전(완전 삭제면 마지막 버전).")
     op: MemoryChangeOp
     author_kind: MemoryAuthorKind
+    space: str | None = Field(
+        default=None,
+        description=(
+            "(1.3.0) 바뀐 항목이 있는 메모리 공간. null = 공용 라이브러리, 그 밖 = 공간 "
+            "이름(프로젝트 등록 id). 옛 서버는 보내지 않는다(웹은 지금 보는 목록을 다시 읽는다)."
+        ),
+    )
 
 
 MEMORY_EVENT_PREFIX: Final = "memory."

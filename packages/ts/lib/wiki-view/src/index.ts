@@ -42,7 +42,7 @@ export { splitByMarks } from "./marks";
 export type { TextSegment } from "./marks";
 export { allFolders, ancestorFolders, buildTree, pageName } from "./tree";
 export type { BuildTreeOptions, TreeRow, TreeTitleMode } from "./tree";
-export { GRAPH_DEFAULTS, boundaryPoint, createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, nearestNode, removeOverlaps } from "./graph";
+export { ELK_MAX_NODES_DEFAULT, GRAPH_DEFAULTS, boundaryPoint, createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, layeredPositions, nearestNode, removeOverlaps } from "./graph";
 export type { ArrowDirection, ElkLike, FlowEdge, FlowNode, GraphEdgeData, GraphFlowOptions, GraphLayoutEngine, GraphLayoutInput, GraphNodeData } from "./graph";
 export { authorFacts, authorLabel, resolveDisplay, severityRank } from "./display";
 export type { DisplayEntry, ResolvedDisplay, WikiDisplay } from "./display";

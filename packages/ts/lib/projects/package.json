@@ -1,7 +1,7 @@
 {
   "name": "@agent-console/projects",
-  "version": "0.1.0",
-  "description": "프로젝트(정의·대화·실행의 범위) 재사용 로직: 보기 규칙, 기본 범위, 배지, 로그 필터, 현재 프로젝트 상태, REST 클라이언트",
+  "version": "0.2.0",
+  "description": "프로젝트 재사용 로직: 상태·능력 표, 공간, 복사 계획, 로그 필터, 현재 프로젝트 상태",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -32,7 +32,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.14.0"
+    "@agent-console/contracts": "^0.15.0"
   },
   "devDependencies": {
     "@agent-console/eslint-config": "^0.1.0",

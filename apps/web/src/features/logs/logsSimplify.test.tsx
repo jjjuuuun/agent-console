@@ -123,7 +123,7 @@ describe("viewMenuEntries([보기 ▾] 항목 구성)", () => {
 
 // ---- 화면 단위: 도달 경로 표(§3)의 기능이 줄어든 자리에서 닿는다. 출처·범주·모델 이름은 임의 값이다.
 const src = (id: string, enabled = true): LogSourceInfo => ({ descriptor: { id, title: `출처-${id}`, format: "fmt", reads_paths: false, default_enabled: false }, enabled, origin: "plugin" });
-const session = (id: string): LogSessionSummary => ({ session: id, first_time: 1_700_000_000, last_time: 1_700_000_100, events: 3, errors: 1, thread_count: 2, models: ["m-1"], tokens: { total: 4100, input: 1, output: 2, cache_read: 3, cache_creation: 4 }, project: { id: "p-1", label: "내 프로젝트" }, cwd: "/work/p-1" });
+const session = (id: string): LogSessionSummary => ({ session: id, first_time: 1_700_000_000, last_time: 1_700_000_100, events: 3, errors: 1, thread_count: 2, models: ["m-1"], tokens: { total: 4100, input: 1, output: 2, cache_read: 3, cache_creation: 4 }, project_id: "p-1", cwd: "/work/p-1" });
 const event = (n: number, over: Partial<LogEvent> = {}): LogEvent => ({ uid: `u${n}`, seq: n, source: "x", observed_at: n, category: `cat-${n}`, title: `이벤트 ${n}`, time: 1_700_000_000 + n, thread: "th-1", ...over });
 const timeline = (): LogTimeline => ({ session: session("ses-1"), lanes: [{ id: "th-1", label: "메인 줄" }], events: [1, 2, 3, 4, 5, 6].map((n) => event(n)), total: 6 });
 
@@ -163,7 +163,8 @@ describe("로그 화면: 기능이 줄어든 자리에서 닿는다(AC-1·AC-3)"
     await screen.findByRole("slider", {}, LONG);
     fireEvent.click(screen.getByRole("button", { name: "세션 정보" }));
     const pop = await screen.findByRole("dialog", { name: "세션 정보" });
-    for (const text of ["ses-1", "m-1", "4,100", "입력 1", "캐시 읽기 3", "내 프로젝트", "/work/p-1"]) expect(pop.textContent, text).toContain(text);
+    // 프로젝트 이름은 등록 프로젝트에서 읽고(이 시험은 목록이 없다) 없으면 `project_id` 그대로 보인다
+    for (const text of ["ses-1", "m-1", "4,100", "입력 1", "캐시 읽기 3", "p-1", "/work/p-1"]) expect(pop.textContent, text).toContain(text);
     fireEvent.keyDown(pop, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "세션 정보" })).toBeNull());
     fireEvent.keyDown(document.body, { key: "i" });

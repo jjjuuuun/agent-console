@@ -27,6 +27,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
+from pydantic import NonNegativeInt
 
 from agent_console_contracts import ErrorCodes, ErrorResponse
 from agent_console_contracts.wiki import (
@@ -70,11 +71,7 @@ from agent_console_wiki import WriteOutcome, export_zip, import_zip
 
 from .errors import WikiRequestError
 from .rules_routes import build_rules_router
-from .service import WikiScope, WikiService, user_author
-
-PAGE_ROUTE_WORDS: tuple[str, ...] = ("history",)
-"""``GET …/pages/<경로>/<이 말>``이 기록 경로라 그 이름으로 끝나는 페이지를 ``GET``으로 읽을 수
-없는 말(경로 어휘)."""
+from .service import PAGE_ROUTE_WORDS, WikiScope, WikiService, user_author
 
 ZIP_MEDIA_TYPE = "application/zip"
 MARKDOWN_MEDIA_TYPE = TEXT_FILE_MEDIA_TYPE
@@ -426,13 +423,16 @@ def build_router(service: Callable[[], WikiService]) -> APIRouter:
         wiki_id: str,
         space: SpaceQuery = None,
         center: str | None = None,
-        depth: Annotated[int, Query(ge=0)] = 1,
+        depth: Annotated[NonNegativeInt | Literal["all"], Query()] = 1,
         limit: Annotated[int | None, Query(ge=1)] = None,
     ) -> WikiGraph:
-        """링크 그래프(center 없음 = 전체, 칸 수 상한 ``graph_max_nodes``)."""
-        return (
-            service().repository_of(scope(space), wiki_id).graph(center, depth=depth, limit=limit)
-        )
+        """링크 그래프(center 없음 = 전체, 칸 수 상한 ``graph_max_nodes``). ``depth=all`` =
+        가운데에서 깊이 제한 없이(``WIKI_GRAPH_DEPTH_ALL``, 생략 = 1), 응답 ``depth`` = 적용한
+        깊이."""
+        # 질의 어휘 `all`은 계약 상수 WIKI_GRAPH_DEPTH_ALL과 같다(테스트가 고정한다)
+        steps = depth if isinstance(depth, int) else None
+        repo = service().repository_of(scope(space), wiki_id)
+        return repo.graph(center, depth=steps, limit=limit)
 
     @router.get("/wiki/wikis/{wiki_id}/lint", response_model=WikiLintReport, responses=_errors())
     def lint(wiki_id: str, space: SpaceQuery = None) -> WikiLintReport:

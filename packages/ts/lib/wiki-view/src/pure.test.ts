@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { WikiLink } from "@agent-console/contracts/wiki";
 import { authorLabel, resolveDisplay, severityRank } from "./display";
 import { formatRelative } from "./format";
-import { createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, nearestNode, removeOverlaps } from "./graph";
+import { createElkGraphLayout, edgeGeometry, graphToFlow, gridPositions, layeredPositions, nearestNode, removeOverlaps } from "./graph";
 import { escapeLinkText, linkifySource, linkLabel, linkMarks, parseLinkHref, usableLinks } from "./linkify";
 import { splitByMarks } from "./marks";
 import { defaultMessages } from "./messages";
@@ -169,6 +169,37 @@ describe("그래프 순수 함수", () => {
     }
     const spread = { n0: { x: 0, y: 0 }, n1: { x: 500, y: 0 } };
     expect(removeOverlaps(nodes.slice(0, 2), spread, 48)).toBe(spread);
+  });
+  it("큰 그래프(500개 허브)는 elkjs 없이 즉시 배치되고 겹침이 없으며 결정론적", async () => {
+    const layout = vi.fn(async () => ({ children: [] }));
+    const engine = createElkGraphLayout(async () => ({ layout }), { maxNodes: 80 });
+    const nodes = Array.from({ length: 500 }, (_, i) => ({ id: `n${String(i).padStart(3, "0")}`, width: 168, height: 36 }));
+    const edges = nodes.slice(1).flatMap((n, i) => [
+      { id: `h${i}`, source: "n000", target: n.id },
+      { id: `r${i}`, source: n.id, target: nodes[((i + 1) % 499) + 1]!.id },
+    ]);
+    const t0 = Date.now();
+    const a = await engine({ nodes, edges, gap: 48, center: "n007" });
+    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(layout).not.toHaveBeenCalled();
+    expect(await engine({ nodes, edges, gap: 48, center: "n007" })).toEqual(a);
+    expect(Object.keys(a)).toHaveLength(500);
+    // 중심이 가장 왼쪽 층(뿌리)
+    expect(a["n007"]!.x).toBe(Math.min(...Object.values(a).map((p) => p.x)));
+    const boxes = Object.values(a).sort((p, q) => p.x - q.x || p.y - q.y);
+    const keys = new Set(boxes.map((p) => `${p.x},${p.y}`));
+    expect(keys.size).toBe(500);
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length && boxes[j]!.x - boxes[i]!.x < 168; j += 1) {
+        expect(Math.abs(boxes[i]!.y - boxes[j]!.y) >= 36 || Math.abs(boxes[i]!.x - boxes[j]!.x) >= 168).toBe(true);
+      }
+    }
+  });
+  it("층 배치: 끊긴 덩어리·고립 노드도 모두 놓는다", () => {
+    const nodes = ["a", "b", "c", "d", "e"].map((id) => ({ id, width: 10, height: 10 }));
+    const pos = layeredPositions(nodes, [{ source: "a", target: "b" }, { source: "c", target: "d" }], 4);
+    expect(Object.keys(pos).sort()).toEqual(["a", "b", "c", "d", "e"]);
+    expect(pos["b"]!.x).toBeGreaterThan(pos["a"]!.x);
   });
   it("격자 배치는 결정론적", () => {
     const nodes = [1, 2, 3, 4, 5].map((i) => ({ id: String(i), width: 10, height: 10 }));

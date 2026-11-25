@@ -10,7 +10,8 @@
 - 맥락 바꾸기: ``{context_field: 폴더 id}``(매니페스트 ``id``, 없거나 읽지 못하면 등록 id).
 - 파일이 없고 구성 폴더에 쓸 수 없으면 만들지 않고 ``ConfigReadonly``(409
   ``project.config_readonly``). 계보를 올리지 못하면(더 새 앱이 올린 DB 등)
-  ``MemoryDbUnavailable``(409 ``feature_unavailable``). 앱 DB로 대신 쓰지 않는다.
+  ``MemoryDbUnavailable``(409 ``project.memory_unavailable``, 계약 0.15.0 — ``details.reason``). 앱
+  DB로 대신 쓰지 않는다.
 - 자동 정리 대상(``existing()``, 5.7R.46): 켜진(보관 안 된) 등록 중 폴더가 있고 구성 폴더에 쓸 수
   있고 ``memory.sqlite3``가 **이미 있는** 것만. 파일·폴더를 만들지 않고 저장소도 열지 않는다.
 - 서버 종료(``shutdown()``, 모듈 종료 훅) 뒤에는 새로 열지 않는다. 늦게 온 열기(예: 끝나지 않은
@@ -52,12 +53,28 @@ from .ports import ProjectListing, ProjectSpaces, SpaceLike
 
 _log = logging.getLogger(__name__)
 _SHUT_MESSAGE = "서버를 닫는 중이라 프로젝트 메모리를 열 수 없습니다"
+_NO_BRANCHES_MESSAGE = "메모리 DB 계보가 없습니다(메모리 모듈이 꺼졌나요?)"
+
+REASON_NO_MIGRATIONS = "no_migrations"
+"""``MemoryDbUnavailable.reason``: 올릴 메모리 계보가 없다(메모리 모듈이 꺼짐)."""
+REASON_MIGRATE_FAILED = "migrate_failed"
+"""``MemoryDbUnavailable.reason``: 계보를 올리지 못했다(더 새 앱이 올린 DB 등)."""
+REASON_SHUTTING_DOWN = "shutting_down"
+"""``MemoryDbUnavailable.reason``: 서버 종료(``shutdown()``) 뒤다."""
 
 
 class MemoryDbUnavailable(SpaceError):
-    """프로젝트 메모리 DB를 열 수 없다(계보 없음·올리기 실패) -> ``feature_unavailable``(409)."""
+    """프로젝트 메모리 DB를 열 수 없다 -> ``project.memory_unavailable``(409).
 
-    code = ErrorCodes.FEATURE_UNAVAILABLE
+    Attributes:
+        reason: 짧은 이유 낱말(``REASON_*``, 응답 ``details.reason``).
+    """
+
+    code = ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+
+    def __init__(self, message: str, *, reason: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 @dataclass(frozen=True)
@@ -123,7 +140,7 @@ def migrate_memory_db(path: Path, branches: Sequence[MigrationBranchLike]) -> No
         MemoryDbUnavailable: 계보가 없거나 올리지 못했다.
     """
     if not branches:
-        raise MemoryDbUnavailable("메모리 DB 계보가 없습니다(메모리 모듈이 꺼졌나요?)")
+        raise MemoryDbUnavailable(_NO_BRANCHES_MESSAGE, reason=REASON_NO_MIGRATIONS)
     path.parent.mkdir(parents=True, exist_ok=True)
     engine = create_sqlite_engine(path)
     try:
@@ -132,7 +149,9 @@ def migrate_memory_db(path: Path, branches: Sequence[MigrationBranchLike]) -> No
                 engine, versions=branch.versions, version_table=branch_version_table(branch.name)
             )
     except Exception as exc:
-        raise MemoryDbUnavailable("프로젝트 메모리 DB를 이 앱 버전으로 맞추지 못했습니다") from exc
+        raise MemoryDbUnavailable(
+            "프로젝트 메모리 DB를 이 앱 버전으로 맞추지 못했습니다", reason=REASON_MIGRATE_FAILED
+        ) from exc
     finally:
         engine.dispose()
 
@@ -180,14 +199,14 @@ class ProjectMemoryPool:
             MemoryDbUnavailable: 계보를 올리지 못했다. 또는 서버 종료(``shutdown()``) 뒤다.
         """
         if self._entries.shut:
-            raise MemoryDbUnavailable(_SHUT_MESSAGE)
+            raise MemoryDbUnavailable(_SHUT_MESSAGE, reason=REASON_SHUTTING_DOWN)
         provider = self._spaces()
         if provider is None:
             raise LookupError(space)
         found = provider.open(space)
         with self._lock:
             if self._entries.shut:  # 공간을 찾는 사이에 닫혔다
-                raise MemoryDbUnavailable(_SHUT_MESSAGE)
+                raise MemoryDbUnavailable(_SHUT_MESSAGE, reason=REASON_SHUTTING_DOWN)
             self._sweep()
             path = Path(found.memory_db_path)
             entry = self._entries.get(space)
@@ -282,7 +301,7 @@ class ProjectMemoryPool:
         if not found.config_writable:
             raise ConfigReadonly("프로젝트 구성 폴더에 쓸 수 없어 메모리 DB를 만들 수 없습니다")
         if not branches:
-            raise MemoryDbUnavailable("메모리 DB 계보가 없습니다(메모리 모듈이 꺼졌나요?)")
+            raise MemoryDbUnavailable(_NO_BRANCHES_MESSAGE, reason=REASON_NO_MIGRATIONS)
         # 파일이 없으면 보기(목록·검색)만으로 만들지 않는다: 첫 쓰기 때 계보를 올리고 연다.
         deferred = DeferredMemoryStore(
             lambda: self._open_store(path, branches), exists=path.is_file
@@ -309,6 +328,9 @@ class ProjectMemoryPool:
 
 
 __all__ = [
+    "REASON_MIGRATE_FAILED",
+    "REASON_NO_MIGRATIONS",
+    "REASON_SHUTTING_DOWN",
     "MemoryDbUnavailable",
     "PoolOptions",
     "ProjectMemoryPool",

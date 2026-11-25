@@ -348,7 +348,8 @@ def test_new_info_codes_are_issue_only(name: str, code: str) -> None:
     assert build_schema()["x-constants"]["KNOWN_ISSUE_CODES"][name] == code
 
 
-def test_memory_network_fs_stays_as_deprecated_alias() -> None:
+def test_network_fs_code_replaces_memory_alias() -> None:
+    """0.12.1의 deprecated 별칭 `PROJECT_MEMORY_NETWORK_FS`는 0.15.0에서 지웠다."""
     codes = build_schema()["x-constants"]["KNOWN_ISSUE_CODES"]
-    assert codes["PROJECT_MEMORY_NETWORK_FS"] == "project.memory_network_fs"
+    assert "PROJECT_MEMORY_NETWORK_FS" not in codes
     assert codes["PROJECT_NETWORK_FS"] == "project.network_fs"

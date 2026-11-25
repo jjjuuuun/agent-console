@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CopyApplyRequest, CopyApplyResult, CopyPlan, CopyPlanRequest } from "@agent-console/contracts/projects";
 import { createProjectsText } from "@agent-console/projects";
+import { ApiError } from "@agent-console/api-client";
 import { CopyPlanDialog, type CopyPlanDialogProps } from "./CopyPlanDialog";
 import type { SpaceItem } from "./useSpaceItems";
 
@@ -168,10 +169,37 @@ describe("CopyPlanDialog: 계획", () => {
     expect(screen.queryByText("서버 문구")).toBeNull();
     expect(screen.getByText(/예약된 이름/)).toBeTruthy();
     const select = screen.getByLabelText(/처리/) as HTMLSelectElement;
-    expect(Array.from(select.options).map((o) => o.value)).toEqual(["copy", "rename", "skip"]);
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["rename", "skip"]);
     fireEvent.click(screen.getByRole("button", { name: /가져오기 \(1\)/ }));
     await waitFor(() => expect(applyCopy).toHaveBeenCalled());
     expect(applyCopy.mock.calls[0]?.[0]?.items[0]).toMatchObject({ action: "rename", new_id: "new-2" });
+  });
+
+  it("예약어 경고 항목은 서버 기본이 복사여도 새 이름으로 바뀌고 복사·덮어쓰기를 고를 수 없으며 이유가 보인다", async () => {
+    const warn = { severity: "warning" as const, code: "project.copy_reserved_id", message: "서버 문구", details: { kind: "k1", id: "new", reserved: "new", suggested_id: "new-2" } };
+    const { applyCopy } = setup(
+      { initialStep: "plan", initialItems: [{ kind: "k1", id: "new" }] },
+      { items: [planItem({ kind: "k1", id: "new", default_action: "copy" })], warnings: [warn] },
+    );
+    const select = (await screen.findByLabelText(/처리/)) as HTMLSelectElement;
+    expect(select.value).toBe("rename");
+    expect(Array.from(select.options).map((o) => o.value)).not.toContain("copy");
+    expect(screen.getByText(/새 이름으로만 추가할 수 있습니다/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /가져오기 \(1\)/ }));
+    await waitFor(() => expect(applyCopy).toHaveBeenCalled());
+    expect(applyCopy.mock.calls[0]?.[0]?.items[0]).toMatchObject({ action: "rename", new_id: "new-2" });
+  });
+
+  it("적용이 422 validation_failed면 서버 문구가 띠에 보이고 계획 단계에 머문다", async () => {
+    const apply = vi.fn(async (): Promise<CopyApplyResult> => {
+      throw new ApiError(422, { code: "validation_failed", message: "‘new’은(는) 예약된 이름이라 쓸 수 없습니다 (서버)", details: { issues: [{ severity: "error", code: "project.copy_reserved_id", message: "x" }] } });
+    });
+    const { onClose } = setup({ initialStep: "plan", initialItems: [{ kind: "k1", id: "a" }] }, { items: [planItem({ kind: "k1", id: "a" })] }, apply);
+    fireEvent.click(await screen.findByRole("button", { name: "가져오기 (1)" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("예약된 이름이라 쓸 수 없습니다 (서버)");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "가져오기 (1)" })).toBeTruthy();
   });
 
   it("옛 전용 구성 옮기기: remove_source 체크가 기본 켜짐이고 요청에 실린다", async () => {

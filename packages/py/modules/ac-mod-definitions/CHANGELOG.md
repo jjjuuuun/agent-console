@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.14: `server.warnings`에 공통 설정(`settings.yaml`)의 옛 최상위 키(계약 `IGNORED_SETTINGS_KEYS` 중 점 없는 것, 지금은 `projects`) 안내 — info `settings.ignored_key`(`details.key`, 문구 `IGNORED_SETTINGS_MESSAGE`). 읽기·저장·서버 시작은 막지 않는다. 섹션 아래 키(`logs.projects`)는 그 섹션을 읽는 `mod-logs`가 낸다. `ignored_settings_issues(settings, *, message=)` 공개.
 - FU.3: 공간(`?project=`) 저장 전 검사는 검사의 선택 메서드 `space_issues(space, kind, document)`(`SpaceDefinitionCheck`)를 부른다. 없는 검사는 지금처럼 `issues`.
 - 요청 11/07: 공간(`?project=`) 팀 구성 목록도 `validation` 요약을 채운다. `graphs.validation` 제공자의 선택 메서드 `space_summaries(space, graph_ids, lookup=)`(`SpaceGraphValidationSource`)를 부르고, 없으면 지금처럼 null(라이브러리 `summaries`는 부르지 않는다). `DefinitionService(space=)` 선택 인자.
 - 6R.20k(계약 0.13.2): 선택 포트 `graphs.session_summary`(`GraphSessionSummarySource.session_summary(graph)`, `GRAPH_SESSION_SUMMARY`). 있으면 `GET /graphs` 행의 `session_summary`를 채운다(라이브러리·공간 목록 모두). 없거나 제공자가 예외를 내면 null. `DefinitionService(session_summary=)` 선택 인자.

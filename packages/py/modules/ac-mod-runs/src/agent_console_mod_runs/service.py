@@ -713,6 +713,30 @@ class RunService:
         except Exception:
             return None
 
+    def live_view(self, stored: Run) -> Run:
+        """저장본을 이 앱의 실행 손잡이 상태에 맞춘다(Run 상세 스냅숏용, REL.33 후속).
+
+        엔진은 최종 Run을 먼저 저장하고 ``run.<상태>`` 이벤트를 그 뒤에 저장한다(5.2R.39). 그
+        사이 손잡이는 직전 상태를 보이는데 저장본은 이미 끝난 상태다. 손잡이가 아직 끝나지 않았고
+        저장본이 끝났으면 상태·종료 시각·오류·합계를 손잡이 값으로 돌려(나머지 — ``host_id``·공간
+        ``project_id`` 등 — 는 저장본 그대로) 끝난 상태가 마지막 이벤트까지 저장된 뒤에만 보이게
+        한다. 손잡이가 없거나(다른 앱·끝나서 내려감) 둘이 같은 쪽이면 저장본 그대로다.
+        """
+        handle = self.runtime.get(stored.id)
+        if handle is None or stored.status in UNFINISHED:
+            return stored
+        current = handle.run
+        if current.status not in UNFINISHED:
+            return stored
+        return stored.model_copy(
+            update={
+                "status": current.status,
+                "ended_at": current.ended_at,
+                "error": current.error,
+                "totals": current.totals,
+            }
+        )
+
     def current_run(self, run_id: str, project_id: str | None = None) -> Run | None:
         """실행 중이면 손잡이의 Run, 아니면 저장본(없으면 None). ``project_id``가 있으면 그 공간."""
         handle = self.runtime.get(run_id)

@@ -2,6 +2,8 @@
 
 ## 미출시
 
+- REL.14: 세션 요약(`list_sessions`, 메모리·SQLite 색인 모두)이 옛 `LogSessionSummary.project`(`LogProjectRef`)를 채우지 않고 `project_id`만 채운다(계약 0.15.0에서 필드 삭제 예정). 로그 보관본 HTML의 프로젝트 칸은 `project_id`(지금과 같은 값). 공개 테스트 키트 `testing`의 세션 검사도 `project_id`만 본다 — 외부 색인 구현은 `project`를 채우지 않아도 된다. 필터 예약 값 `UNGROUPED_PROJECT`(`~ungrouped`)는 그대로.
+
 - FU.5: 경로 글롭을 기반 패키지 `agent-console-path-glob`으로 옮겼다(`glob_match`·규칙 그대로, 새 의존).
 
 - 7R.15: 기본 분류 체계 데이터에 범주 `wiki`(라벨 `위키`만, `order`에는 넣지 않음).

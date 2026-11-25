@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { createProjectsText, projectAbilities } from "@agent-console/projects";
-import { SelectMark, SelectionToolbar, useListSelection, type ListSelection } from "./useProjectMove";
+import { SelectMark, SelectionToolbar, useListSelection, type ListSelection } from "./useListSelection";
 import { useProjects } from "./ProjectsContext";
 import { useSpace } from "./SpaceScope";
 import { useCopyDialog } from "./useCopyDialog";

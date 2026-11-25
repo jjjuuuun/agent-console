@@ -63,9 +63,12 @@
 .runs-actors li > button[aria-pressed="true"] { background: var(--ac-accent-bg); border-radius: var(--ac-radius-sm); }
 .runs-actors li > button { background: none; border: 0; color: var(--ac-text); font: inherit; cursor: pointer; text-align: left; display: flex; gap: var(--ac-space-1); padding: var(--ac-space-1); min-width: 0; }
 .runs-actor-sub { padding-left: var(--ac-space-3); }
-.runs-events { position: relative; min-width: 0; display: flex; flex-direction: column; }
+.runs-events { container-type: inline-size; position: relative; min-width: 0; display: flex; flex-direction: column; }
 .runs-events-scroll { overflow: auto; max-height: 60vh; display: flex; flex-direction: column; }
-.runs-event-line { display: grid; grid-template-columns: 56px max-content max-content minmax(0, 1fr); gap: var(--ac-space-2); align-items: center; width: 100%; min-height: 32px; background: none; border: 0; color: var(--ac-text); font: inherit; font-size: var(--ac-text-sm); text-align: left; cursor: pointer; border-bottom: 1px solid var(--ac-border); }
+.runs-event-line { display: grid; grid-template-columns: 56px fit-content(9rem) fit-content(13rem) minmax(16ch, 1fr); gap: var(--ac-space-2); align-items: start; padding-block: var(--ac-space-1); width: 100%; min-height: 32px; background: none; border: 0; color: var(--ac-text); font: inherit; font-size: var(--ac-text-sm); text-align: left; cursor: pointer; border-bottom: 1px solid var(--ac-border); }
+.runs-event-line > :nth-child(4) { min-width: 0; overflow-wrap: anywhere; word-break: keep-all; white-space: normal; }
+.runs-event-line > :nth-child(2), .runs-event-line > :nth-child(3) { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container (max-width: 40rem) { .runs-event-line { grid-template-columns: 56px fit-content(9rem) fit-content(13rem); } .runs-event-line > :nth-child(4) { grid-column: 1 / -1; } }
 .runs-event[data-error="true"] .runs-event-line { box-shadow: inset 3px 0 0 var(--ac-danger); }
 .runs-event-json, .runs-json { max-height: 240px; overflow: auto; }
 .runs-new-events { position: absolute; right: var(--ac-space-3); bottom: var(--ac-space-3); }

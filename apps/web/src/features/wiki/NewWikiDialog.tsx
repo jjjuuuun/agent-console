@@ -7,6 +7,7 @@ import { useId, useMemo, useRef, useState } from "react";
 import { Button, Dialog, Disclosure } from "@agent-console/ui";
 import { RuleListEditor, type RuleSummary } from "@agent-console/wiki-view";
 import type { WikiCreateRequest, WikiRuleRef, WikiRulesListItem } from "@agent-console/contracts/wiki";
+import { suggestId } from "../library";
 import { isImeKeyEvent } from "../../lib/ime";
 import { describeError } from "../../app/errors";
 import { WIKI_LIMITS } from "./wikiConfig";
@@ -35,9 +36,13 @@ export interface NewWikiDialogProps {
   /** 읽기 전용·폴더 문제 이유. 있으면 제출이 막힌다 */
   blockedReason?: string | undefined;
   onSubmit: (body: WikiCreateRequest) => Promise<void>;
+  /** 위키 정의 종류 이름(`WikiInfo.wiki_kind`). 있으면 id 칸이 비었을 때 서버가 정할 id를 미리 보인다(이름이 한글뿐이면 종류 이름, 겹치면 `-2`). null·생략 = 미리 보기 없음 */
+  kindName?: string | null | undefined;
+  /** 이미 있는 위키 id(미리 보기에서 겹침을 피한다) */
+  existingIds?: ReadonlySet<string> | undefined;
 }
 
-export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFailed = false, onImportRules, importDisabledReason, onImportZip, onOpenRule, blockedReason, onSubmit }: NewWikiDialogProps) {
+export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFailed = false, onImportRules, importDisabledReason, onImportZip, onOpenRule, blockedReason, onSubmit, kindName, existingIds }: NewWikiDialogProps) {
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<string[]>([]);
   const [id, setId] = useState("");
@@ -80,7 +85,9 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
       setBusy(false);
     }
   };
-  const location = pagesRoot === undefined || pagesRoot === "" ? null : m.newWiki.location(`${pagesRoot}/${id.trim() === "" ? m.newWiki.idAuto : id.trim()}/…`);
+  const idPreview = kindName === undefined || kindName === null || kindName === "" || name.trim() === "" ? undefined : suggestId(name, existingIds ?? new Set<string>(), kindName);
+  const idShown = id.trim() !== "" ? id.trim() : idPreview ?? m.newWiki.idAuto;
+  const location = pagesRoot === undefined || pagesRoot === "" ? null : m.newWiki.location(`${pagesRoot}/${idShown}/…`);
   return (
     <Dialog
       open={open}
@@ -153,7 +160,7 @@ export function NewWikiDialog({ open, onClose, folder, pagesRoot, rules, rulesFa
           <div className="wiki-form">
             <label className="wiki-field">
               <span className="wiki-label">{m.newWiki.id}</span>
-              <input className="wiki-input ac-mono" value={id} placeholder={m.newWiki.idAuto} onChange={(e) => setId(e.target.value)} />
+              <input className="wiki-input ac-mono" value={id} placeholder={idPreview ?? m.newWiki.idAuto} onChange={(e) => setId(e.target.value)} data-testid="wiki-new-id" />
             </label>
             <label className="wiki-field">
               <span className="wiki-label">{m.newWiki.description}</span>

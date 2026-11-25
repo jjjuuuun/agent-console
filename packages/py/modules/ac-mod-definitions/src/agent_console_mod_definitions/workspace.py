@@ -7,18 +7,27 @@
   추가 규칙·약한 이름(손으로 고친 파일)은 빼고 경고 로그.
 - ``SecretRuleCheck``: 공통 설정 저장 전 검사 — 사용자 규칙이 위험·잘못된 정규식이면 error
   (``secret.invalid_rule``, 패턴 원문은 메시지에 없음).
+- ``ignored_settings_issues``: 공통 설정에 남은 옛 최상위 키(예: ``projects``) → 정보
+  ``settings.ignored_key``(``server.warnings``, 읽기·시작은 막지 않음).
 """
 
 from __future__ import annotations
 
 import logging
+import string
 import threading
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from agent_console_contracts import Issue, SecretRuleSettings, WorkspaceSettings
+from agent_console_contracts import (
+    Issue,
+    KnownIssueCodes,
+    SecretRuleSettings,
+    WorkspaceSettings,
+    ignored_settings_keys,
+)
 from agent_console_secret_rules import (
     InvalidSecretRuleError,
     RuleProblem,
@@ -38,6 +47,43 @@ SECRETS_POINTER = "/secrets"
 
 WEAK_KEY_NAMES = "weak_key_names"
 """설정 ``secrets``의 약한 키 이름 필드(``RuleProblem.field``와 같은 이름)."""
+
+IGNORED_SETTINGS_MESSAGE = (
+    "공통 설정의 ${key}는 더 이상 읽지 않습니다. 새 구성은 만드는 곳(공용 구성 또는 프로젝트)에 "
+    "저장됩니다. 설정에서 지워도 됩니다"
+)
+"""``ignored_settings_issues`` 기본 문구(``string.Template``, 변수 ``key`` = 키 경로)."""
+
+
+def ignored_settings_issues(
+    settings: WorkspaceSettings | Mapping[str, Any] | None,
+    *,
+    message: str = IGNORED_SETTINGS_MESSAGE,
+) -> list[Issue]:
+    """공통 설정에 남은 옛 최상위 키 → 정보 ``settings.ignored_key``(``details.key`` = 키 경로).
+
+    키 목록은 계약 ``IGNORED_SETTINGS_KEYS``다. 섹션 아래 키(예: ``logs.projects``)는 그 섹션을
+    읽는 모듈이 낸다(같은 이슈를 두 번 내지 않게). 모델 필드가 있든 없든 같은 답이다.
+
+    >>> doc = {"projects": {}, "logs": {"projects": {}}}
+    >>> [(i.code, i.details) for i in ignored_settings_issues(doc)]
+    [('settings.ignored_key', {'key': 'projects'})]
+    >>> ignored_settings_issues(None)
+    []
+    """
+    if settings is None:
+        return []
+    template = string.Template(message)
+    return [
+        Issue(
+            severity="info",
+            code=KnownIssueCodes.SETTINGS_IGNORED_KEY,
+            message=template.safe_substitute(key=key),
+            details={"key": key},
+        )
+        for key in ignored_settings_keys(settings)
+        if "." not in key
+    ]
 
 
 def rule_problem_issues(problems: Iterable[RuleProblem]) -> list[Issue]:
@@ -180,11 +226,13 @@ class WorkspaceState:
 
 
 __all__ = [
+    "IGNORED_SETTINGS_MESSAGE",
     "INVALID_RULE",
     "SECRETS_POINTER",
     "SecretRuleCheck",
     "WorkspaceState",
     "build_rules",
+    "ignored_settings_issues",
     "rule_problem_issues",
     "settings_rule_issues",
 ]

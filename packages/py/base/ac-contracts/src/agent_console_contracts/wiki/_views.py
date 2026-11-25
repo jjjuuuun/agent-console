@@ -11,7 +11,7 @@ from pydantic import Field
 
 from agent_console_contracts._base import ContractModel, JsonObject, NonEmptyStr
 from agent_console_contracts.common import LabelDisplayTarget, SpaceRef
-from agent_console_contracts.definitions import Issue
+from agent_console_contracts.definitions import Issue, IssueSeverity
 
 from ._rules import WikiDefinition, WikiRulesDefinition, WikiSyntax, WikiTemplateVariable
 
@@ -80,6 +80,21 @@ class WikiInfo(ContractModel):
         description=(
             "(1.2.0) 위키 규칙 정의 종류 이름(설치자 데이터, 기본 `wiki-rules`). 웹이 복사·리소스 "
             "종류 목록에서 규칙 종류를 고를 때 쓴다(공용 규칙을 따로 읽지 않는다). null = 옛 서버."
+        ),
+    )
+    wiki_kind: str | None = Field(
+        default=None,
+        description=(
+            "(1.3.0) 위키 정의 종류 이름(설치자 데이터, 기본 `wiki`). 웹이 새 위키의 id(종류 "
+            "이름에서 만든 id)를 미리 보일 때 쓴다(`rules_kind`와 같은 방식). null = 옛 서버."
+        ),
+    )
+    reserved_page_names: list[str] | None = Field(
+        default=None,
+        description=(
+            "(1.3.0) 이 서버에서 `GET`으로 읽을 수 없는 페이지 경로의 마지막 조각(예 `history` — "
+            "`…/pages/<경로>/history`가 기록 경로라 겹침). 쓰기·지우기는 된다. 값은 서버의 경로 "
+            "구현이 정한다. null = 옛 서버(웹은 자기 데이터를 쓴다)."
         ),
     )
     issues: list[WikiIssue] = Field(
@@ -287,7 +302,10 @@ class WikiRuleEntry(ContractModel):
     rule_id: NonEmptyStr = Field(description="이 항목을 준 위키 규칙 id.")
     label: str = Field(default="", description="쓰기·점검 규칙의 안내 문장 또는 틀의 표시 이름.")
     action: str | None = Field(default=None, description="쓰기 규칙의 동작(그 밖은 null).")
-    severity: str | None = Field(default=None, description="점검 규칙의 심각도(그 밖은 null).")
+    severity: IssueSeverity | None = Field(
+        default=None,
+        description="점검 규칙의 심각도(error·warning·info, 1.3.0에서 좁힘). 그 밖의 항목은 null.",
+    )
     applies_to: list[str] | None = Field(
         default=None,
         description=(
@@ -487,12 +505,23 @@ class WikiGraphEdge(ContractModel):
 
 
 class WikiGraph(ContractModel):
-    """`GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`)."""
+    """`GET …/graph?center=&depth=&limit=` 응답(center 없음 = 전체, 상한 `graph_max_nodes`).
+
+    `depth`는 정수(0 이상, 생략 = 1) 또는 `WIKI_GRAPH_DEPTH_ALL`(`all`, 깊이 제한 없음)이다.
+    """
 
     nodes: list[WikiGraphNode] = Field(default_factory=list)
     edges: list[WikiGraphEdge] = Field(default_factory=list)
     truncated: bool = Field(default=False, description="상한을 넘어 일부 칸만 실었다.")
     total: int | None = Field(default=None, ge=0, description="자르기 전 칸 수(모르면 null).")
+    depth: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "(1.3.0) 실제 적용한 깊이. null = 깊이 제한 없음(`depth=all`) 또는 가운데 없음(전체 "
+            "그래프), 옛 서버."
+        ),
+    )
 
 
 class WikiLintReport(ContractModel):

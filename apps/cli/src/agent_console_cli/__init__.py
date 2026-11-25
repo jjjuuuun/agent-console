@@ -4,8 +4,9 @@
   (옵션 정의는 서버 한 곳, 모듈이 선언한 옵션 포함).
 - `agent-console statusline` — Claude Code statusLine stdin JSON → 사용량 상태 줄 + 브리지 파일
   (`agent_console_usage.statusline` 호출만).
+- `agent-console --version` — 설치된 버전(`cli_version`, 설치 메타데이터).
 """
 
-from ._app import app, main
+from ._app import app, cli_version, main
 
-__all__ = ["app", "main"]
+__all__ = ["app", "cli_version", "main"]

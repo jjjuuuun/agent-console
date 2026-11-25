@@ -73,6 +73,10 @@ describe("순수 함수", () => {
   it("주소와 겹쳐 읽을 수 없는 이름은 새 경로 입력에서 알린다", () => {
     expect(routeWordOf("a/history")).toBe("history");
     expect(routeWordOf("history/a")).toBeUndefined();
+    // 서버가 준 목록이 우선, null이면 웹 데이터
+    expect(routeWordOf("a/history", ["raw"])).toBeUndefined();
+    expect(routeWordOf("a/raw", ["raw"])).toBe("raw");
+    expect(routeWordOf("a/history", null)).toBe("history");
   });
   it("점검 배지는 위험·경고 톤인 심각도만 센다(모르는 심각도는 세지 않는다)", () => {
     expect(lintBadge({ error: 2, warning: 3, info: 9, purple: 4 })).toBe(5);

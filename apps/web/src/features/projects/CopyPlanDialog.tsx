@@ -27,6 +27,7 @@ import {
 import { KNOWN_COPY_ACTIONS } from "@agent-console/contracts/constants";
 import { Banner, Button, Choice, Dialog } from "@agent-console/ui";
 import { describeError } from "../../app/errors";
+import { projectMessages } from "./messages";
 import { FixButtons } from "../../app/fix";
 import { useDelayed } from "../../app/useDelayed";
 import type { SpaceItem } from "./useSpaceItems";
@@ -86,6 +87,17 @@ type PlanState = { status: "idle" } | { status: "loading" } | { status: "error";
  * 동작 규칙(기본 동작·제출 가능·건너뜀 경고·요약)은 `@agent-console/projects`의 복사 도우미가 정하고, 이 컴포넌트는 그리기만 한다.
  * 열 때마다 새로 시작하도록 호출자는 열려 있을 때만 마운트한다.
  */
+/** 예약어 id 항목의 선택이 원본 id를 그대로 쓰는 동작(복사·덮어쓰기)이면 새 이름으로 바꾼다(제안 id를 채운다). */
+function withoutReservedWrites(selections: Map<string, CopySelection>, reserved: ReadonlyMap<string, string>): Map<string, CopySelection> {
+  const next = new Map(selections);
+  for (const [key, sel] of next) {
+    if (!reserved.has(key) || (sel.action !== KNOWN_COPY_ACTIONS.COPY && sel.action !== KNOWN_COPY_ACTIONS.OVERWRITE)) continue;
+    const suggested = reserved.get(key) ?? "";
+    next.set(key, { action: KNOWN_COPY_ACTIONS.RENAME, ...(suggested === "" ? {} : { newId: suggested }) });
+  }
+  return next;
+}
+
 export function CopyPlanDialog(props: CopyPlanDialogProps) {
   const { text, direction } = props;
   const uid = useId();
@@ -120,7 +132,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
         setSelections((prev) => {
           const fresh = initialSelections(plan);
           for (const [k, v] of prev) if (fresh.has(k)) fresh.set(k, v);
-          return fresh;
+          return withoutReservedWrites(fresh, reservedIdSuggestions(plan));
         });
         setPlanned((prev) => {
           const next = new Map(prev);
@@ -386,10 +398,12 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                 {items.map((item) => {
                   const key = copyItemKey(item);
                   const blocked = item.blocked === true;
-                  const sel = blocked ? { action: SKIP } : (selections.get(key) ?? { action: defaultActionFor(item) });
+                  const sel = blocked ? { action: SKIP } : (selections.get(key) ?? { action: reservedSuggested.has(key) ? RENAME : defaultActionFor(item) });
                   const allChoices = actionChoicesFor(item);
                   // 막힌 항목은 건너뛰기만 보인다(복사·덮어쓰기·새 이름으로 바꿀 수 없다)
-                  const choices = blocked ? allChoices.filter((c) => c.action === SKIP) : allChoices;
+                  // 예약어 id 항목은 원본 id를 그대로 쓰는 복사·덮어쓰기를 고를 수 없다(서버가 적용에서 거절한다). 새 이름이 기본이다.
+                  const reserved = reservedSuggested.has(key);
+                  const choices = blocked ? allChoices.filter((c) => c.action === SKIP) : reserved ? allChoices.filter((c) => c.action !== KNOWN_COPY_ACTIONS.COPY && c.action !== OVERWRITE) : allChoices;
                   const blockedReasons = blocked ? (item.issues ?? []).filter((i) => i.severity === "error").map((i) => i.message) : [];
                   const skipped = sel.action === SKIP;
                   const needsChoice = sel.action === null;
@@ -407,7 +421,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                           aria-label={text({ key: "copy.plan.include_row", params: { name } })}
                           checked={!skipped}
                           disabled={busy || blocked}
-                          onChange={(e) => setSelection(item, e.target.checked ? defaultActionFor(item) : SKIP)}
+                          onChange={(e) => setSelection(item, e.target.checked ? (reserved ? RENAME : defaultActionFor(item)) : SKIP)}
                         />
                         <div className="cpd-item">
                           <div className="cpd-item-name">
@@ -454,7 +468,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                         </div>
                       ) : null}
                       {reservedSuggested.has(key) ? (
-                        <p className="cpd-note cpd-warning" role="note">{text({ key: "copy.reserved_id", params: { id: item.id, suggested: reservedSuggested.get(key) || sel.newId || "" } })}</p>
+                        <p className="cpd-note cpd-warning" role="note">{text({ key: "copy.reserved_id", params: { id: item.id, suggested: reservedSuggested.get(key) || sel.newId || "" } })} {projectMessages.copyReserved.noCopy}</p>
                       ) : null}
                       {skipped && warn !== undefined ? <p className="cpd-note cpd-warning">{text(warn.message)}</p> : null}
                     </li>

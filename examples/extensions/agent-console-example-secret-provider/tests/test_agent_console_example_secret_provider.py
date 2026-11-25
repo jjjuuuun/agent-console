@@ -199,6 +199,21 @@ def test_options_schema_declares_path_and_package_defaults() -> None:
     assert schema.get("additionalProperties") is False
 
 
+def test_options_schema_headings_are_for_people() -> None:
+    """폼 머리말(스키마 맨 위 title·description)과 필드 라벨이 클래스 이름·코드 문서가 아니다."""
+    schema = options_schema()
+    assert schema["title"]
+    assert schema["title"] != "SecretFileSettings"
+    description = schema["description"]
+    assert description
+    assert "Attributes:" not in description
+    assert "\n" not in description
+    for key, prop in schema["properties"].items():
+        assert prop.get("title"), key
+        assert prop["title"] != key, key
+        assert prop.get("description"), key
+
+
 def test_from_options_reads_the_configured_file(tmp_path: Path) -> None:
     (tmp_path / "conf").mkdir()
     _file(tmp_path / "conf", f"example_token={VALUE}\n")

@@ -21,9 +21,6 @@ export type {
   LogFilterFieldInfo,
   LogLane,
   LogMetricInfo,
-  LogProjectGroup,
-  LogProjectRef,
-  LogProjectSettings,
   LogQuerySchema,
   LogScanReport,
   LogSessionSummary,
@@ -36,11 +33,10 @@ export type {
   LogTaxonomy,
   LogTimeline,
   LogTokenTotals,
-  LogUngroupedPolicy,
   LogWidget,
   LogWidgetQuery,
   TokenSample,
 } from "./contracts.generated";
 
 export const CONTRACT_MODULE = "logs" as const;
-export const CONTRACT_VERSION = "1.2.0" as const;
+export const CONTRACT_VERSION = "2.0.0" as const;

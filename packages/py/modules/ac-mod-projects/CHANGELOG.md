@@ -1,6 +1,13 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.3.0)
+
+- REL.14 — BREAKING CHANGE: Removed POST /projects/move-plan, /move, /scope-issues and ScopeService, DefinitionSnapshot. The snapshot_ttl_seconds option is accepted but no longer read.
+  지운 공개 이름: `ScopeService`·`DefinitionsUnavailableError`·`CODE_DEFINITIONS_UNAVAILABLE`·`DefinitionSnapshot`
+  (`service.py`의 `MODULE_MESSAGES`·`issues_payload`도). 지운 경로는 `/projects/{id}`와 겹쳐 405로 답하고 OpenAPI에 없다.
+  `definitions.saved` 구독(스냅샷 캐시 버리기)도 없앴다 — 이 토픽은 공간 저장 알림으로 계속 낸다.
+  설정 `snapshot_ttl_seconds`는 스키마 `deprecated`, 남아 있어도 서버가 시작한다.
+- 의존 `agent-console-projects>=0.3,<0.4`. 소비자 범위 `agent-console-mod-projects>=0.3,<0.4`.
 
 - REL.6: 복사 적용(`POST /projects/copy/apply`)이 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가 그 종류의 예약어면 아무것도 쓰지 않고 422 `validation_failed`(`details.issues` = error `project.copy_reserved_id`, 제안 `suggested_id`)로 거절한다. 예약어는 종류 데이터(`DefinitionKind.reserved_ids`, 기여 종류 포함), 문구는 설정 `messages`의 `project.copy_reserved_id.rename`·`project.copy_reserved_id.write`.
 

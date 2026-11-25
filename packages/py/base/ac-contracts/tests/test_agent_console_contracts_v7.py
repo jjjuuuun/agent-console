@@ -32,9 +32,7 @@ from agent_console_contracts import (
     ConversationSummary,
     CreateConversationRequest,
     CreateRunRequest,
-    DefinitionMove,
     DelegationStrategyDescriptor,
-    DeletePlan,
     EditorSettings,
     ErrorCodes,
     ErrorInfo,
@@ -48,10 +46,8 @@ from agent_console_contracts import (
     KnownIssueCodes,
     KnownSuggestionIds,
     ModuleOptionsView,
-    MovePlan,
     Project,
     ProjectCreate,
-    ProjectPreferences,
     ProjectUpdate,
     Resource,
     ResourceSummary,
@@ -121,16 +117,9 @@ def test_projects_submodule_sits_with_runs_and_usage() -> None:
         "Project",
         "ProjectCreate",
         "ProjectUpdate",
-        "MovePlan",
-        "MovePlanRequest",
-        "DefinitionMove",
         "DefinitionKey",
-        "DeletePlan",
-        "ProjectDeleteMode",
     } <= set(grouped["projects"])
-    # 공통 설정 섹션은 definitions가 갖고 projects는 다시 내보내기만 한다
-    assert "ProjectPreferences" in grouped["definitions"]
-    assert projects_module.ProjectPreferences is ProjectPreferences
+    # 0.15.0: 옮기기·삭제 계획과 새 정의 범위 설정(`ProjectPreferences`)은 지웠다(v15 테스트)
     assert {"Fix", "FixAction", "FixTarget"} <= set(grouped["common"])
     assert {"BackendUnresolvedDetails", "UnresolvedBackendNode"} <= set(grouped["runs"])
     assert {"UsageSetupSnippet", "UsageWindowInfo"} <= set(grouped["usage"])
@@ -179,42 +168,6 @@ def test_project_create_and_update() -> None:
     update = ProjectUpdate.model_validate({"settings": None})
     assert update.model_dump(exclude_unset=True) == {"settings": None}
     assert ProjectUpdate().model_dump(exclude_unset=True) == {}
-
-
-def test_move_plan_uses_from_alias() -> None:
-    plan = MovePlan.model_validate(
-        {
-            "target": {"kind": "agent", "id": "a"},
-            "to": None,
-            "moves": [
-                {"kind": "agent", "id": "a", "from": "p", "to": None, "required": True},
-                {"kind": "resource", "id": "r", "from": "p"},
-            ],
-            "warnings": [{"severity": "warning", "code": "zz", "message": "m"}],
-        }
-    )
-    assert plan.moves[0].from_ == "p"
-    assert plan.moves[1].required is False
-    dumped = plan.model_dump(mode="json", exclude_unset=True)
-    assert dumped["moves"][0]["from"] == "p"
-    assert DefinitionMove.model_validate({"kind": "k", "id": "i"}).from_ is None
-
-
-def test_delete_plan_default_mode() -> None:
-    plan = DeletePlan.model_validate({"project_id": "p"})
-    assert plan.default_mode == "move_to_shared"
-    with pytest.raises(ValidationError):
-        DeletePlan.model_validate({"project_id": "p", "default_mode": "zz"})
-
-
-def test_project_preferences() -> None:
-    prefs = ProjectPreferences()
-    assert prefs.fallback == "project"
-    assert prefs.new_definition_scope == {}
-    doc = {"new_definition_scope": {"agent": "shared", "zz-kind": "project"}}
-    assert ProjectPreferences.model_validate(doc).model_dump(exclude_unset=True) == doc
-    with pytest.raises(ValidationError):
-        ProjectPreferences.model_validate({"fallback": "zz"})
 
 
 # ---------------------------------------------------------------- 표 2: 정의 범위(생략 = 공용)
@@ -266,8 +219,9 @@ def test_summaries_carry_project() -> None:
 
 
 def test_workspace_projects_section_is_optional() -> None:
+    """0.15.0: `projects`는 모델 필드가 아니다. 옛 설정의 키는 모르는 키로 보존된다."""
     settings = WorkspaceSettings.model_validate({})
-    assert settings.projects is None
+    assert "projects" not in WorkspaceSettings.model_fields
     assert "projects" not in settings.model_dump(exclude_unset=True)
     layer = {"projects": {"fallback": "shared"}}
     assert WorkspaceSettings.model_validate(layer).model_dump(exclude_unset=True) == layer
@@ -470,27 +424,20 @@ def test_x_ui_helper() -> None:
 def test_x_ui_reaches_json_schema() -> None:
     props = build_schema()["$defs"]["EditorSettings"]["properties"]
     assert props["auto_connect_io"]["x-ui"]["tier"] == "advanced"
-    prefs = build_schema()["$defs"]["ProjectPreferences"]["properties"]
-    assert prefs["new_definition_scope"]["x-ui"]["example"] == {"agent": "shared"}
 
 
 def test_v7_issue_codes_are_documented_constants() -> None:
     assert {
         KnownIssueCodes.BACKEND_UNRESOLVED,
-        KnownIssueCodes.PROJECT_SHARED_USES_PROJECT,
-        KnownIssueCodes.PROJECT_CROSS_PROJECT,
         KnownIssueCodes.PROJECT_UNKNOWN,
         KnownIssueCodes.PROJECT_REFERENCES_UNAVAILABLE,
-        KnownIssueCodes.PROJECT_DEFINITIONS_UNAVAILABLE,
     } == {
         "backend.unresolved",
-        "project.shared_uses_project",
-        "project.cross_project",
         "project.unknown",
         "project.references_unavailable",
-        "project.definitions_unavailable",
     }
-    assert KnownSuggestionIds.PROJECT_MOVE_TO_SHARED == "project.move_to_shared"
+    # 0.15.0: 범위 경고 코드 셋과 제안 `project.move_to_shared`는 지웠다(내는 서버 없음)
+    assert not hasattr(KnownSuggestionIds, "PROJECT_MOVE_TO_SHARED")
 
 
 def test_known_issue_codes_and_suggestion_ids_reach_x_constants() -> None:
@@ -502,7 +449,7 @@ def test_known_issue_codes_and_suggestion_ids_reach_x_constants() -> None:
     assert constants["KNOWN_ISSUE_CODES"]["PROJECT_REFERENCES_UNAVAILABLE"] == (
         "project.references_unavailable"
     )
-    assert constants["KNOWN_SUGGESTION_IDS"] == {"PROJECT_MOVE_TO_SHARED": "project.move_to_shared"}
+    assert constants["KNOWN_SUGGESTION_IDS"] == {}  # 0.15.0: 빈 표(문서 자리)
     # 이슈 코드는 열린 문자열이다: 표는 문서 상수일 뿐 Issue.code 스키마는 그대로 string.
     assert build_schema()["$defs"]["Issue"]["properties"]["code"]["type"] == "string"
 
@@ -513,10 +460,6 @@ def test_rest_models_are_in_schema() -> None:
         "Project",
         "ProjectCreate",
         "ProjectUpdate",
-        "MovePlan",
-        "MovePlanRequest",
-        "DeletePlan",
-        "ProjectPreferences",
         "BackendUnresolvedDetails",
         "ModuleOptionsView",
         "Fix",

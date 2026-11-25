@@ -18,7 +18,6 @@ from agent_console_projects import (
     _pathguard,
     _paths,
     _registry,
-    _scope,
 )
 
 
@@ -35,7 +34,6 @@ from agent_console_projects import (
         _pathguard,
         _paths,
         _registry,
-        _scope,
     ],
 )
 def test_module_doctests(module: ModuleType) -> None:

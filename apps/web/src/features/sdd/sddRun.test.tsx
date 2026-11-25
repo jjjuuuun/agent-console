@@ -53,7 +53,6 @@ function setup(path: string, f: Fixture = {}, storage?: SafeStorage) {
   const projects = f.projects ?? [projectView(project("p1"))];
   const { clients, sddClient, rest } = createFakeClients(
     { listModules: vi.fn(async () => [mod(["sdd", "projects", "settings", "runs"])]), listProjects: vi.fn(async () => projects) },
-    {},
     {
       getSddInfo: vi.fn(async () => f.info ?? INFO),
       listSpecs: vi.fn(async () => []),

@@ -33,6 +33,7 @@ from agent_console_mod_projects import (
     PROJECTS_SPACES,
     FolderDialogSettings,
     FolderPicker,
+    ProjectModuleSettings,
     ProjectsModule,
 )
 from agent_console_mod_projects.testing import local_definitions_module, references_module
@@ -899,6 +900,49 @@ def test_legacy_plan_and_remove_source(tmp_path: Path, work: Path) -> None:
     assert lib.list_ids("agent") == ["keep"]
     copied = _yaml(app / CFG / "agents" / "old.yaml")
     assert "project" not in copied
+
+
+REMOVED_SCOPE_PATHS = ("/projects/move-plan", "/projects/move", "/projects/scope-issues")
+"""0.3.0에서 지운 옛 범위 정리 경로(REL.14, REL.11 K-5)."""
+
+
+def test_removed_scope_routes_answer_405_and_leave_openapi(tmp_path: Path, work: Path) -> None:
+    """지운 POST 경로는 ``/projects/{id}``(GET·PUT·DELETE)와 겹쳐 405이고 OpenAPI에 없다."""
+    app = _folder(work, "app")
+    assembly = _assembly(tmp_path)
+    _library(assembly).create(
+        "agent", {"id": "old", "name": "옛", "backend": "fake-agent", "project": "app"}
+    )
+    with _client(assembly) as client:
+        _register(client, app)
+        for path in REMOVED_SCOPE_PATHS:
+            response = client.post(f"{API}{path}", json={})
+            assert response.status_code == 405, (path, response.text)
+        paths = client.get(f"{API}/openapi.json").json()["paths"]
+        assert not {f"{API}{p}" for p in REMOVED_SCOPE_PATHS} & set(paths)
+        assert f"{API}/projects/{{project_id}}/legacy/plan" in paths  # 대신 쓸 경로
+        # 옛 정의(project 필드)는 대신 쓸 경로로 여전히 찾는다.
+        plan = client.post(f"{API}/projects/app/legacy/plan").json()
+        assert [(i["kind"], i["id"]) for i in plan["items"]] == [("agent", "old")]
+
+
+def test_removed_scope_names_are_gone() -> None:
+    """0.3.0(깨는 변경): 옛 범위 정리 공개 이름은 없다. ``snapshot_ttl_seconds``는 받기만 한다."""
+    import agent_console_mod_projects as mod
+
+    for name in (
+        "ScopeService",
+        "DefinitionSnapshot",
+        "DefinitionsUnavailableError",
+        "CODE_DEFINITIONS_UNAVAILABLE",
+    ):
+        assert name not in mod.__all__
+        assert not hasattr(mod, name)
+    field = ProjectModuleSettings.model_json_schema()["properties"]["snapshot_ttl_seconds"]
+    assert field["deprecated"] is True
+    assert (
+        ProjectModuleSettings.model_validate({"snapshot_ttl_seconds": 5}).snapshot_ttl_seconds == 5
+    )
 
 
 # ---------------------------------------------------------------- 포트

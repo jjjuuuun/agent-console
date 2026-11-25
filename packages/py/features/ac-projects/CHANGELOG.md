@@ -1,6 +1,13 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.3.0)
+
+- REL.14 — BREAKING CHANGE: Removed the old definition-scope rules visible, scope_issues, move_plan, delete_plan and their constants. Use legacy_items, legacy_counts, and copy_plan.
+  지운 이름: `visible`·`scope_issues`·`move_plan`·`delete_plan`·`UnknownDefinitionError`·`MOVE_TO_SHARED_SUGGESTION`·
+  `CODE_SHARED_USES_PROJECT`·`CODE_CROSS_PROJECT`·`DEFAULT_MESSAGES`(범위 문구 표)·`effective_scope`·`known_project_ids`.
+  `CODE_UNKNOWN`·`CODE_REFERENCES_UNAVAILABLE`은 같은 이름으로 남는다(모듈 `_codes`로 옮김). `ScopedDefinition`·
+  `References`·`DefinitionId`·`legacy_*`·`without_scope_field`는 그대로.
+- 소비자 범위: `agent-console-projects>=0.3,<0.4`.
 
 - REL.6: `reserved_target_issues(items, reserved_ids, *, target_index=, messages=, target_label=)` — 적용 요청에서 대상에 쓸 id(copy·overwrite = 원본 id, rename = 새 id)가 그 종류의 예약어(`DefinitionKind.reserved_ids`, 대소문자 무시)인 항목마다 error `project.copy_reserved_id`(`details{kind, id, action, target_id, reserved, suggested_id}`, rename이면 `new_id`도, `path` rename `/items/<n>/new_id`·그 밖 `/items/<n>/id`). 문구 키 `COPY_RESERVED_RENAME`(`project.copy_reserved_id.rename`)·`COPY_RESERVED_WRITE`(`project.copy_reserved_id.write`)를 `messages=`로 바꾼다. (같은 미출시 기간에 낸 `reserved_rename_issues`는 이 이름으로 바꾸며 넓혔다.)
 - REL.5: `registration_id`의 겹치면 `-n` 규칙을 `agent-console-numbered-id`의 `numbered_id`로 합쳤다(공개 이름·동작 같음). 새 의존 `agent-console-numbered-id`.

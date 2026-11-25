@@ -44,7 +44,8 @@ export function useMemoryContext(): MemoryContext {
 
   const project = useMemoryProject();
   const graphList = graphs.data;
-  const visibleGraphs = useMemo(() => (graphList === undefined ? [] : projects.filter(graphList, (g) => g.project)), [graphList, projects]);
+  // 목록은 서버가 이 공간 것만 준다: 범위로 더 거르지 않는다
+  const visibleGraphs = useMemo(() => graphList ?? [], [graphList]);
   const graphIds = useMemo(() => visibleGraphs.map((g) => g.id), [visibleGraphs]);
 
   const graphNames = useMemo(() => (graphList === undefined ? undefined : new Map(graphList.map((g) => [g.id, g.name] as const))), [graphList]);

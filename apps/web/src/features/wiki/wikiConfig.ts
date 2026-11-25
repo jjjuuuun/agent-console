@@ -106,8 +106,8 @@ export function severityTone(severity: string): string {
   return (display.severities as Record<string, TableEntry | undefined>)[severity]?.tone ?? "neutral";
 }
 
-/** 그래프 탭 깊이 선택(데이터): 숫자 단계, 기본 단계, "전체"를 뜻하는 주소 값. 서버는 `depth` 숫자 하나를 받고 없으면 전체다. */
-export const WIKI_GRAPH = data.graph as { depths: readonly number[]; defaultDepth: number; all: string; /** "전체" 깊이로 서버에 보내는 충분히 큰 단계 수(서버 depth에는 무제한 값이 없다) */ allDepth: number; /** 이보다 페이지·노드가 많으면 큰 그래프(처음엔 한 페이지 주변만, 안내 칩) */ bigNodes: number };
+/** 그래프 탭 깊이 선택(데이터): 숫자 단계, 기본 단계, "전체"는 계약 상수 `WIKI_GRAPH_DEPTH_ALL`(주소 값과 서버 `depth` 값이 같다). */
+export const WIKI_GRAPH = data.graph as { depths: readonly number[]; defaultDepth: number; /** 이보다 페이지·노드가 많으면 큰 그래프(처음엔 한 페이지 주변만, 안내 칩) */ bigNodes: number; /** 이보다 노드가 많으면 elkjs 대신 값싼 층 배치(stress가 허브 그래프에서 급격히 느려진다) */ elkMaxNodes: number };
 export const GRAPH_LIST_ONLY_KEY: string = data.storage.graphListOnly;
 
 /** 공용 구성 › 위키 규칙 화면의 데이터(주소 인자·탭·REST 컬렉션·고급이어도 섹션으로 보일 속성). */

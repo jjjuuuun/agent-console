@@ -111,6 +111,8 @@ export interface GraphLayoutInput {
   nodes: Array<{ id: string; width: number; height: number }>;
   edges: Array<{ id: string; source: string; target: string }>;
   gap: number;
+  /** 중심 노드 id(있으면 층 배치의 뿌리). 없으면 연결이 가장 많은 노드 */
+  center?: string | null;
 }
 export type GraphLayoutEngine = (input: GraphLayoutInput) => Promise<Record<string, { x: number; y: number }>>;
 
@@ -119,8 +121,77 @@ export interface ElkLike {
   layout(graph: unknown): Promise<{ children?: Array<{ id: string; x?: number; y?: number }> }>;
 }
 
-/** elkjs `stress` 배치 엔진. elkjs는 처음 배치할 때만 불러온다. 같은 입력 = 같은 배치(시드 고정). */
-export function createElkGraphLayout(load?: () => Promise<ElkLike>): GraphLayoutEngine {
+/** 노드가 이 수를 넘으면 elkjs를 쓰지 않고 값싼 층 배치(`layeredPositions`)를 쓴다(기본). stress는 허브가 있는 그래프에서 노드 수의 3제곱에 가깝게 느려져 500개에 약 50초 걸린다. */
+export const ELK_MAX_NODES_DEFAULT = 80;
+
+export interface ElkGraphLayoutOptions {
+  /** 이 수를 넘는 그래프는 elkjs 없이 층 배치로 놓는다(기본 `ELK_MAX_NODES_DEFAULT`) */
+  maxNodes?: number;
+}
+
+/**
+ * 값싼 층 배치(O(노드+엣지), 결정론적, 겹침 없음). 뿌리(중심 또는 연결이 가장 많은 노드)에서 너비 우선으로 층을 나누고
+ * 층마다 칸 격자 한 덩어리로 세로로 채워 왼쪽→오른쪽으로 쌓는다. 한 층의 노드는 부모 순서(발견 순서)로 놓여 가까운 노드가 가까이 모인다.
+ * 연결되지 않은 덩어리는 이어서 새 층부터 놓는다.
+ */
+export function layeredPositions(
+  nodes: ReadonlyArray<{ id: string; width: number; height: number }>,
+  edges: ReadonlyArray<{ source: string; target: string }>,
+  gap: number,
+  center: string | null = null,
+): Record<string, { x: number; y: number }> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const adj = new Map<string, string[]>(nodes.map((n) => [n.id, []]));
+  for (const e of edges) {
+    if (e.source === e.target || !byId.has(e.source) || !byId.has(e.target)) continue;
+    adj.get(e.source)?.push(e.target);
+    adj.get(e.target)?.push(e.source);
+  }
+  for (const list of adj.values()) list.sort();
+  const degree = (id: string): number => adj.get(id)?.length ?? 0;
+  const rootOrder = [...nodes.map((n) => n.id)].sort((a, b) => degree(b) - degree(a) || (a < b ? -1 : a > b ? 1 : 0));
+  if (center !== null && byId.has(center)) rootOrder.unshift(center);
+  const layers: string[][] = [];
+  const seen = new Set<string>();
+  for (const root of rootOrder) {
+    if (seen.has(root)) continue;
+    let level = layers.length;
+    let frontier = [root];
+    seen.add(root);
+    while (frontier.length > 0) {
+      (layers[level] ??= []).push(...frontier);
+      const next: string[] = [];
+      for (const id of frontier) {
+        for (const nb of adj.get(id) ?? []) {
+          if (seen.has(nb)) continue;
+          seen.add(nb);
+          next.push(nb);
+        }
+      }
+      frontier = next;
+      level += 1;
+    }
+  }
+  const cw = Math.max(...nodes.map((n) => n.width)) + gap;
+  const ch = Math.max(...nodes.map((n) => n.height)) + gap / 2;
+  const maxRows = Math.max(6, Math.ceil(Math.sqrt(nodes.length) * 1.2));
+  const tallest = Math.min(maxRows, Math.max(...layers.map((l) => l.length)));
+  const out: Record<string, { x: number; y: number }> = {};
+  let x = 0;
+  for (const layer of layers) {
+    const rows = Math.min(maxRows, layer.length);
+    const top = ((tallest - rows) * ch) / 2;
+    layer.forEach((id, i) => {
+      out[id] = { x: x + Math.floor(i / rows) * cw, y: top + (i % rows) * ch };
+    });
+    x += Math.ceil(layer.length / rows) * cw + gap;
+  }
+  return out;
+}
+
+/** elkjs `stress` 배치 엔진(작은 그래프) + 큰 그래프는 층 배치. elkjs는 처음 배치할 때만 불러온다. 같은 입력 = 같은 배치(시드 고정). */
+export function createElkGraphLayout(load?: () => Promise<ElkLike>, options: ElkGraphLayoutOptions = {}): GraphLayoutEngine {
+  const maxNodes = options.maxNodes ?? ELK_MAX_NODES_DEFAULT;
   let instance: Promise<ElkLike> | undefined;
   const getElk = (): Promise<ElkLike> => {
     instance ??=
@@ -132,6 +203,7 @@ export function createElkGraphLayout(load?: () => Promise<ElkLike>): GraphLayout
     return instance;
   };
   return async (input) => {
+    if (input.nodes.length > maxNodes) return layeredPositions(input.nodes, input.edges, input.gap, input.center ?? null);
     const elk = await getElk();
     const out = await elk.layout({
       id: "wiki-link-graph",

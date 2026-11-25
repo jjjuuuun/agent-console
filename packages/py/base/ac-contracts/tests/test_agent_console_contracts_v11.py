@@ -257,7 +257,8 @@ def test_project_view_new_fields_and_defaults() -> None:
         }
     )
     assert full.kinds == ["zz-kind", "graph"]
-    assert full.issues[0].code == KnownIssueCodes.PROJECT_MEMORY_NETWORK_FS
+    # 0.15.0에서 문서 상수는 지웠지만 이슈 코드는 열린 문자열이라 옛 값도 그대로 읽힌다
+    assert full.issues[0].code == "project.memory_network_fs"
     statuses = build_schema()["x-constants"]["KNOWN_PROJECT_STATUSES"]
     assert statuses["MANIFEST_INVALID"] == "manifest_invalid"
 
@@ -456,10 +457,8 @@ def test_new_codes_exposed_with_http_status(name: str, expected: tuple[str, int]
 
 
 def test_memory_network_fs_is_issue_only() -> None:
-    assert KnownIssueCodes.PROJECT_MEMORY_NETWORK_FS == "project.memory_network_fs"
+    """0.15.0: 옛 이름 `project.memory_network_fs`는 문서 상수에서 지웠다(`project.network_fs`)."""
+    assert not hasattr(KnownIssueCodes, "PROJECT_MEMORY_NETWORK_FS")
     assert not hasattr(ErrorCodes, "PROJECT_MEMORY_NETWORK_FS")
     assert "project.memory_network_fs" not in HTTP_STATUS_BY_ERROR_CODE
-    assert (
-        build_schema()["x-constants"]["KNOWN_ISSUE_CODES"]["PROJECT_MEMORY_NETWORK_FS"]
-        == "project.memory_network_fs"
-    )
+    assert "PROJECT_MEMORY_NETWORK_FS" not in build_schema()["x-constants"]["KNOWN_ISSUE_CODES"]

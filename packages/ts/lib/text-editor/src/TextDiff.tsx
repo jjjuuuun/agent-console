@@ -164,10 +164,9 @@ export function TextDiff({
     if (!el) return;
     const enhance = () => {
       for (const n of el.querySelectorAll<HTMLElement>(".cm-collapsedLines")) {
-        if (n.getAttribute("role") !== "button") {
-          n.setAttribute("role", "button");
-          n.tabIndex = 0;
-        }
+        // 라이브러리 버전에 따라 role=button만 달려 있고 tabindex가 없을 수 있다. 둘을 따로 확인한다.
+        if (n.getAttribute("role") !== "button") n.setAttribute("role", "button");
+        if (n.tabIndex !== 0) n.tabIndex = 0;
       }
     };
     enhance();

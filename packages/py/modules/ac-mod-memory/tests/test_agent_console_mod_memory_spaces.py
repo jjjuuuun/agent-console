@@ -14,7 +14,9 @@ from agent_console_contracts import ErrorCodes
 from agent_console_contracts.memory import (
     MemoryAccessConfig,
     MemoryAccessContext,
+    MemoryChanged,
     MemoryScopeRef,
+    MemoryWriteRequest,
 )
 from agent_console_memory import InMemoryMemoryStore, MemoryStore
 from agent_console_mod_memory import (
@@ -23,6 +25,7 @@ from agent_console_mod_memory import (
     MEMORY_SERVICE,
     MEMORY_SPACES,
     MemoryService,
+    MemorySpaceServices,
     MemorySpacesUnavailable,
 )
 from agent_console_modkit import Assembly, Module, ModuleContext, ModuleParts
@@ -53,6 +56,13 @@ class _Error(Exception):
     code = ErrorCodes.PROJECT_FOLDER_MISSING
 
 
+class _DbError(Exception):
+    """프로젝트 메모리 DB를 못 엶(연동 ``MemoryDbUnavailable`` 흉내): 코드 + 이유 낱말."""
+
+    code = ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+    reason = "migrate_failed"
+
+
 @dataclass
 class _Spaces:
     spaces: dict[str, _Space]
@@ -62,6 +72,8 @@ class _Spaces:
         self.opened.append(space)
         if space == "gone":
             raise _Error("폴더 없음")
+        if space == "newer":
+            raise _DbError("이 앱 버전으로 맞추지 못함")
         return self.spaces[space]
 
 
@@ -123,6 +135,30 @@ def test_project_query_routes_to_space_store(
         assert gone.status_code == 409
         assert gone.json()["error"]["code"] == ErrorCodes.PROJECT_FOLDER_MISSING
         assert gone.json()["error"]["details"] == {"project_id": "gone"}
+        # 계약 0.15.0: 제공자 예외의 `reason`은 details로 간다(코드는 그대로)
+        newer = client.get(f"{API}/memory/entries?project=newer")
+        assert newer.status_code == 409
+        assert newer.json()["error"]["code"] == ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+        details = newer.json()["error"]["details"]
+        assert details == {"project_id": "newer", "reason": "migrate_failed"}
+
+
+def test_change_notice_carries_space_name() -> None:
+    """계약 memory 1.3.0: `MemoryChanged.space` = 공간 이름, 라이브러리 = null."""
+    changes: list[MemoryChanged] = []
+    spaces = _Spaces({"a": _Space(InMemoryMemoryStore())})
+
+    def make(store: MemoryStore, context: Mapping[str, str]) -> MemoryService:
+        return MemoryService(store, on_change=changes.append, context_overrides=context)
+
+    services = MemorySpaceServices(lambda: spaces, make)
+    library = MemoryService(InMemoryMemoryStore(), on_change=changes.append, spaces=services)
+    services.library = library
+    body = MemoryWriteRequest(scope=MemoryScopeRef(**NOTES), key="k", content="x")
+    library.create(body)
+    library.space("a").create(body)
+    assert [c.space for c in changes] == [None, "a"]
+    assert "space" not in changes[0].model_dump(exclude_unset=True)
 
 
 def test_no_provider_project_query_is_feature_unavailable(

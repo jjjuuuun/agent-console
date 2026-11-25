@@ -176,6 +176,7 @@ export function SchemaForm(props: SchemaFormProps) {
     xui = true,
     advancedStorageKey,
     compactProvenance = false,
+    hideRootTitle = false,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
   const baseSchema = useMemo(() => titleUntitledBranches(normalizeNullable(props.schema), messages), [props.schema, messages]);
@@ -233,6 +234,7 @@ export function SchemaForm(props: SchemaFormProps) {
             value,
             focusPath,
             advancedStorageKey,
+            hideRootTitle,
             // 행 칩과 같은 판정(fieldProvenance)을 "지정 N"에도 쓴다. 출처 표시가 꺼져 있으면 undefined(템플릿이 값·기본값으로 판단).
             ...(provEnabled
               ? {
@@ -242,7 +244,7 @@ export function SchemaForm(props: SchemaFormProps) {
               : {}),
           }
         : null,
-    [xui, messages, value, focusPath, advancedStorageKey, provEnabled, provenance, layers, editLayerId],
+    [xui, messages, value, focusPath, advancedStorageKey, hideRootTitle, provEnabled, provenance, layers, editLayerId],
   );
   const provContext = useMemo<ProvenanceContextValue | null>(
     () =>

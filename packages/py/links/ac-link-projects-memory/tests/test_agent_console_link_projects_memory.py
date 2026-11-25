@@ -25,6 +25,9 @@ from agent_console_contracts.memory import (
 from agent_console_link_projects_memory import (
     MEMORY_SPACES,
     MODULE_ID,
+    REASON_MIGRATE_FAILED,
+    REASON_NO_MIGRATIONS,
+    REASON_SHUTTING_DOWN,
     MemoryDbUnavailable,
     PoolOptions,
     ProjectMemoryPool,
@@ -145,7 +148,8 @@ def test_shutdown_refuses_late_opens_and_leaves_no_connections(tmp_path: Path) -
     assert pool.open_spaces() == []
     with pytest.raises(MemoryDbUnavailable) as caught:
         pool.open("reg-1")
-    assert caught.value.code == ErrorCodes.FEATURE_UNAVAILABLE
+    assert caught.value.code == ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+    assert caught.value.reason == REASON_SHUTTING_DOWN
     assert pool.existing() == []
     assert pool.open_spaces() == []
     if Path("/proc/self/fd").is_dir():
@@ -181,7 +185,8 @@ def test_unknown_project_and_missing_branches(tmp_path: Path) -> None:
     empty = ProjectMemoryPool(lambda: FolderSpaces({"a": folder}), lambda: [])
     with pytest.raises(MemoryDbUnavailable) as caught:
         empty.open("a")
-    assert caught.value.code == ErrorCodes.FEATURE_UNAVAILABLE
+    assert caught.value.code == ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+    assert caught.value.reason == REASON_NO_MIGRATIONS
     no_provider = ProjectMemoryPool(lambda: None, lambda: [MEMORY_BRANCH])
     with pytest.raises(LookupError):
         no_provider.open("a")
@@ -423,6 +428,25 @@ def test_agent_tool_write_lands_in_folder_db_with_folder_id(
     assert found is not None
     assert _app_rows(database) == 0
     assert _file_rows(folder / ".agent-console" / "memory.sqlite3") == 1
+
+
+def test_unreadable_memory_db_is_project_memory_unavailable(
+    tmp_path: Path, database: SqliteDatabase
+) -> None:
+    """계약 0.15.0: 폴더의 메모리 DB를 열 수 없으면 409 ``project.memory_unavailable``(``reason``).
+
+    모듈이 꺼진 경우(``feature_unavailable``)와 구분된다. 앱 DB로 대신 쓰지 않는다.
+    """
+    folder = _project(tmp_path, "a", "folder-a")
+    (folder / ".agent-console" / "memory.sqlite3").write_bytes(b"not a sqlite database" * 64)
+    with _client(_assemble(database, {"reg-1": folder})) as client:
+        res = client.get(f"{API}/memory/entries?project=reg-1")
+        assert res.status_code == 409, res.text
+        error = res.json()["error"]
+        assert error["code"] == ErrorCodes.PROJECT_MEMORY_UNAVAILABLE
+        assert error["details"] == {"project_id": "reg-1", "reason": REASON_MIGRATE_FAILED}
+        assert client.get(f"{API}/memory/entries").status_code == 200
+    assert _app_rows(database) == 0
 
 
 def test_link_off_project_query_is_feature_unavailable(

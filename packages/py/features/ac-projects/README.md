@@ -35,9 +35,9 @@
 | `find_referrers(target, documents, references, *, messages)` | 거꾸로 참조: 같은 공간에서 `target`을 쓰는 정의(참조 추출 주입, 종류 이름을 모름). 참조 추출이 없으면 `checked` False + info `project.references_unavailable` |
 | `path_fields(schema, value)`·`outside_paths(value, schema, root, allowed)` | `x-path` 값 찾기, 프로젝트 폴더 밖 경로 |
 | `FolderGuard(folder, *, reserved, realpath)`·`normalize_reserved`·`relative_inside` | 폴더 안 파일 접근의 경로 지킴: 예약 경로(대소문자 무시)·링크를 푼 실제 경로가 폴더 안인지. 경로 문자열 검사는 호출자 몫 |
-| `legacy_items`·`legacy_counts`·`without_scope_field` | 옛 프로젝트 전용 정의(`project` 필드) 해석 |
+| `legacy_items`·`legacy_counts`·`without_scope_field` | 옛 프로젝트 전용 정의(`project` 필드) 해석(정리 = 복사 계획 입력, 입력 모양 `ScopedDefinition`) |
 | `project_layer_value(project)` | 프로젝트 층 값(`settings` 지정 필드 + 작업 폴더 = `folder`) |
-| `visible`·`scope_issues`·`move_plan`·`delete_plan` | 옛 범위 규칙. [정리] 화면 전환까지만(33t에서 삭제) |
+| `CODE_UNKNOWN`·`CODE_REFERENCES_UNAVAILABLE` | 이슈 코드 별칭(계약 `KnownIssueCodes`의 `project.unknown`·`project.references_unavailable`) |
 
 ## 의존성: 무엇을 / 왜 / 대안
 

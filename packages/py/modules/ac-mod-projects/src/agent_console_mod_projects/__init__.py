@@ -17,7 +17,6 @@
     - 확장 지점: 코드 선택 창 제공자 ``FolderDialogProvider``(entry point
       ``agent_console.folder_dialogs``, 호스트 플러그인 로더가 묶음의 확장
       ``FOLDER_DIALOGS_EXTENSION``에 읽어 ``plugins.enabled``·``plugins.disabled``를 따른다)
-    - (deprecated) 옛 범위 정리 ``ScopeService``·``DefinitionSnapshot``
     - 설정 ``ProjectModuleSettings``·``FolderDialogSettings``(``SETTINGS_COMPAT``)
 """
 
@@ -25,7 +24,6 @@ from __future__ import annotations
 
 from .copying import CopyService, space_index
 from .definitions import (
-    DefinitionSnapshot,
     combine_references,
     contribution_references,
     read_definitions,
@@ -62,12 +60,10 @@ from .ports import (
 )
 from .projects import ProjectManager
 from .repository import PROJECT_KIND_NAME, ProjectRepository, project_kind
-from .service import CODE_DEFINITIONS_UNAVAILABLE, DefinitionsUnavailableError, ScopeService
 from .settings import SETTINGS_COMPAT, FolderDialogSettings, ProjectModuleSettings
 from .spaces import DefinitionSpacesView, ProjectSpaceCache
 
 __all__ = [
-    "CODE_DEFINITIONS_UNAVAILABLE",
     "DEFINITIONS_LOOKUP",
     "DEFINITIONS_REFERENCES",
     "DEFINITIONS_REWRITERS",
@@ -88,11 +84,9 @@ __all__ = [
     "WEB_ROLES",
     "CopyService",
     "DefinitionReader",
-    "DefinitionSnapshot",
     "DefinitionSpaces",
     "DefinitionSpacesView",
     "DefinitionWriter",
-    "DefinitionsUnavailableError",
     "FolderDialogProvider",
     "FolderDialogSettings",
     "FolderPicker",
@@ -105,7 +99,6 @@ __all__ = [
     "ProjectSpaceCache",
     "ProjectSpaces",
     "ProjectsModule",
-    "ScopeService",
     "as_folder_dialog_provider",
     "combine_references",
     "contribution_references",

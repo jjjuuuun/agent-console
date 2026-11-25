@@ -57,6 +57,8 @@ export function useArchPopout(opts: UseArchPopoutOptions): ArchPopout {
   const [prefer, setPreferState] = useState(() => storage.get(preferKey(kind)) === "1");
   const win = useRef<PopoutWindowLike | null>(null);
   const lastSeen = useRef(0);
+  // 연 뒤 hello를 한 번이라도 받았는가. 못 받았으면(창이 아직 로드 중) 응답 끊김 판단을 더 길게 기다린다.
+  const heard = useRef(false);
   const latest = useRef(opts);
   useEffect(() => {
     latest.current = opts;
@@ -83,6 +85,7 @@ export function useArchPopout(opts: UseArchPopoutOptions): ArchPopout {
     const off = sync.subscribe((m) => {
       if (m.kind === "hello") {
         lastSeen.current = Date.now();
+        heard.current = true;
         setAlive(true);
         setBlocked(false);
       } else if (m.kind === "bye") gone();
@@ -99,7 +102,8 @@ export function useArchPopout(opts: UseArchPopoutOptions): ArchPopout {
         gone();
         return;
       }
-      if (Date.now() - lastSeen.current > ARCH_POPOUT.closedPollMs * 3) gone();
+      const limit = heard.current ? ARCH_POPOUT.closedPollMs * 3 : ARCH_POPOUT.firstHelloWaitMs;
+      if (Date.now() - lastSeen.current > limit) gone();
       else sync.post({ kind: "ping" });
     }, ARCH_POPOUT.closedPollMs);
     return () => clearInterval(timer);
@@ -119,6 +123,7 @@ export function useArchPopout(opts: UseArchPopoutOptions): ArchPopout {
     }
     win.current = w;
     lastSeen.current = Date.now();
+    heard.current = false;
     setBlocked(false);
     setAlive(true);
     setPrefer(true);

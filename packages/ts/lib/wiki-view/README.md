@@ -31,7 +31,7 @@ const text = linkifySource(content, [link]);
 | `PageView` | 본문 보기. 서버 링크 범위로 `linkifySource` → `MarkdownPreview`(markdown-doc), 상태별 링크 모양 |
 | `OutlinksPanel` | 나가는 링크 목록(본문 위치 이동·강조 연동 콜백) |
 | `PageHistory` / `HistoryDiff` | 기록 목록(동작·쓴 주체 칩) / 비교(text-editor `TextDiff`) |
-| `LinkGraph` / `LinkList` | 링크 그래프(@xyflow/react + elkjs stress, 읽기 전용) / 같은 정보를 글로 |
+| `LinkGraph` / `LinkList` | 링크 그래프(@xyflow/react + elkjs stress, 노드가 많으면 값싼 층 배치, 읽기 전용) / 같은 정보를 글로 |
 | `LintTable` | 점검 표(가상 그리드, 거르기·정렬) |
 | `SearchResults` | 검색 결과(서버 `marks` 강조) |
 | `NewPageForm` / `MovePageForm` | 새 페이지(틀·변수) / 이름 바꾸기(링크 고치기 미리보기) |

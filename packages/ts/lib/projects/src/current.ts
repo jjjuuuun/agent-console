@@ -5,7 +5,15 @@
  *
  * 값: 프로젝트 id 문자열, `null` = 모든 프로젝트.
  */
-import { normalizeScope, type CurrentProject } from "./scope";
+/** 현재 프로젝트 id. null = 모든 프로젝트. */
+export type CurrentProject = string | null;
+
+/** 빈 문자열·공백·undefined를 null로 맞춘다. */
+function normalizeScope(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const s = value.trim();
+  return s === "" ? null : s;
+}
 
 /** 기본 주소 쿼리 이름. */
 export const DEFAULT_PROJECT_PARAM = "project";

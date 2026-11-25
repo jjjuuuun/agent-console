@@ -20,6 +20,7 @@ from agent_console_contracts import (
     Graph,
     NodeSpec,
     PostMessageRequest,
+    QueuedMessage,
     Run,
     SessionRef,
 )
@@ -88,3 +89,37 @@ async def test_turn_shows_closed_status_only_after_sessions_recorded() -> None:
     closed = [sessions for status, sessions in notes if status == "completed"]
     assert closed  # 끝난 상태 알림은 세션 기록 뒤
     assert closed[0] == {"pl": REF}
+
+
+async def test_message_during_closing_is_queued_then_starts_as_new_run() -> None:
+    """Run이 끝났어도 마무리 전에 온 메시지는 대기열 응답(id는 Run id가 아니다)이고, 마무리
+    뒤 새 Run으로 시작된다(REL.33 — 화면이 끝남을 본 직후 보내면 이 창에 든다)."""
+    runs, events = MemoryRuns(), MemoryEvents()
+    launcher = FakeLauncher(runs, events)
+    service = ChatService(
+        MemoryConversations(),
+        MemoryGraphs([Graph(id="g", name="g", nodes=[NodeSpec(id="pl", type="agent")])]),
+        launcher=launcher,
+        runs=runs,
+        events=events,
+    )
+    conv = service.create(CreateConversationRequest(graph_id="g"))
+    first = await service.post_message(conv.id, PostMessageRequest(text="하나"))
+    assert isinstance(first, Run)
+
+    launcher.finish(first.id)  # 실행 기록은 끝났고 대화 마무리는 아직
+    done = runs.get(first.id)
+    assert done is not None
+    assert done.status == "completed"
+    sent = await service.post_message(conv.id, PostMessageRequest(text="둘"))
+    assert isinstance(sent, QueuedMessage)
+    assert runs.get(sent.id or "") is None  # 대기열 항목 id로는 Run을 읽을 수 없다
+
+    second = await launcher.wait_started(2)
+    assert second.run_id != sent.id
+    assert service.get(conv.id).last_run_id == second.run_id
+    assert service.queue(conv.id) == []
+    launcher.finish(second.run_id)
+    await service.wait_idle()
+    [_, turn] = service.turns(conv.id)
+    assert (turn.user_text, turn.status) == ("둘", "completed")

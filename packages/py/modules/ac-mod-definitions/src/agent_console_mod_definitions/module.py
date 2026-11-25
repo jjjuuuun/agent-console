@@ -3,6 +3,8 @@
 - 제공: ``definitions.store``·``definitions.lookup``(같은 저장소)·``workspace.settings``·
   ``secrets.rules``·``definitions.checks``(공통 설정 비밀 규칙 검사)·``server.warnings``(평문 점검)·
   ``definitions.save_warnings``(저장 응답의 평문 비밀 경고 — 리소스 모듈도 쓴다).
+  ``server.warnings``에는 공통 설정에 남은 옛 최상위 키 안내(info ``settings.ignored_key``)도
+  싣는다.
   토픽 ``definitions.saved``를 낸다(저장마다, 저장소 쓰기 잠금 안 동기 호출, 구독자 예외 격리).
 - 선택: ``definitions.checks``(여러 제공자 — 저장 전 검사), ``graphs.validation``·
   ``graphs.entry_labels``·``graphs.session_summary``(팀 구성 목록의 검증 요약·입구 이름·세션 집계,
@@ -28,9 +30,11 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-from agent_console_contracts import CONTRACT_VERSIONS, Issue
+from pydantic import ValidationError
+
+from agent_console_contracts import CONTRACT_VERSIONS, Issue, WorkspaceSettings
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts
-from agent_console_store import DefinitionStore, SpaceStores
+from agent_console_store import DefinitionStore, SpaceStores, StoreError
 
 from .errors import ERROR_MAP
 from .plain_scan import PlainSecretScan, save_secret_warnings, scan_store
@@ -60,7 +64,7 @@ from .store import (
     register_contributed_kinds,
     versions_for,
 )
-from .workspace import SecretRuleCheck, WorkspaceState
+from .workspace import SecretRuleCheck, WorkspaceState, ignored_settings_issues
 
 MODULE_ID = "mod-definitions"
 WEB_ROLES: tuple[str, ...] = ("definitions:agent", "definitions:graph", "settings")
@@ -176,6 +180,11 @@ class DefinitionsModule:
             found = list(scan.warnings())
             if in_memory:
                 found.append(versions_memory_warning())
+            try:
+                current: WorkspaceSettings | None = state.settings()
+            except (StoreError, ValidationError):  # 손상된 설정 파일은 설정 화면·저장이 알린다
+                current = None
+            found.extend(ignored_settings_issues(current))
             return found
 
         ctx.provide(SERVER_WARNINGS, warnings)

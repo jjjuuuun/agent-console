@@ -268,6 +268,31 @@ def test_memory_versions_warn_in_server_warnings(tmp_path: Path) -> None:
         db.close()
 
 
+def test_old_workspace_projects_key_is_info_in_server_warnings(tmp_path: Path) -> None:
+    """REL.14(K-7): 공통 설정의 옛 ``projects``는 읽고 무시하며 정보 ``settings.ignored_key``.
+
+    섹션 아래 키(``logs.projects``)는 로그 모듈이 낸다(여기서는 내지 않는다). 키를 지우면 사라진다.
+    """
+    ws = tmp_path / "ws"
+    ws.mkdir(parents=True)
+    (ws / "settings.yaml").write_text(
+        "projects:\n  new_definition_scope: {agent: project}\n  fallback: shared\n"
+        "logs:\n  projects: {ungrouped: none}\n",
+        encoding="utf-8",
+    )
+    assembly = _assembly(tmp_path)
+    [source] = assembly.ports(SERVER_WARNINGS)
+    found = [w for w in source() if w.code == "settings.ignored_key"]
+    assert [(w.severity, w.details) for w in found] == [("info", {"key": "projects"})]
+    assert "projects" in found[0].message
+    store = assembly.port(DEFINITIONS_STORE)
+    assert store is not None
+    settings = store.get("settings", "settings")
+    doc = {k: v for k, v in settings.document.items() if k != "projects"}
+    store.save("settings", doc, expected_version=settings.version_hash)
+    assert not [w for w in source() if w.code == "settings.ignored_key"]
+
+
 def test_versions_go_to_database_handle_and_persist(tmp_path: Path) -> None:
     db_path = tmp_path / "state" / "c.sqlite3"
     db = SqliteDatabase.open(db_path)

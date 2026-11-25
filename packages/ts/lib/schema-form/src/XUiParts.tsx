@@ -17,6 +17,8 @@ export interface XUiContextValue {
   value: unknown;
   focusPath: string | null | undefined;
   advancedStorageKey: string | undefined;
+  /** true면 최상위 객체의 제목을 그리지 않는다(바깥 패널이 머리말을 가질 때) */
+  hideRootTitle?: boolean;
   /** 출처 표시 모드면 행 칩과 같은 "이 층에서 지정" 판정. 없으면 값·기본값 비교로 판단한다 */
   isFieldSet?: (pointer: string, container: boolean) => boolean;
 }
@@ -288,8 +290,9 @@ export function arrayItemTitle(root: unknown, path: readonly (string | number)[]
  * 최상위 객체의 속성을 기본/고급으로 나눈다. 고급이 없거나 기본이 없으면 기본 템플릿 그대로.
  * 기본 필드는 기본 템플릿 안에(제목·설명 유지), 고급은 그 아래 접는 영역에 둔다.
  */
-export function XUiObjectFieldTemplate(p: ObjectFieldTemplateProps) {
+export function XUiObjectFieldTemplate(props0: ObjectFieldTemplateProps) {
   const ctx = useContext(XUiContext);
+  const p = ctx?.hideRootTitle && props0.fieldPathId.path.length === 0 ? { ...props0, title: "", required: false } : props0;
   const Default = getDefaultRegistry().templates.ObjectFieldTemplate;
   const path = p.fieldPathId.path as (string | number)[];
   const isRoot = path.length === 0;

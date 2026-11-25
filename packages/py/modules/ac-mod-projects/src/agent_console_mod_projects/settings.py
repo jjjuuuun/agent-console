@@ -109,11 +109,14 @@ class ProjectModuleSettings(BaseModel):
         json_schema_extra={"deprecated": True, **x_ui(tier="advanced", example="./project")},
     )
     snapshot_ttl_seconds: float = Field(
-        title="정의 목록 재사용 시간",
-        json_schema_extra=x_ui(tier="advanced", unit="초"),
+        title="정의 목록 재사용 시간(읽지 않음)",
+        json_schema_extra={"deprecated": True, **x_ui(tier="advanced", unit="초")},
         default=2.0,
         ge=0,
-        description="옛 범위 정리 화면이 읽은 정의 목록을 다시 쓰는 시간. 0이면 매번 읽는다.",
+        description=(
+            "더 이상 읽지 않습니다. 옛 범위 정리 화면(지워짐)이 읽은 정의 목록을 다시 쓰던 "
+            "시간이었습니다. 설정에서 지워도 됩니다."
+        ),
     )
     status_timeout_seconds: float = Field(
         default=2.0,

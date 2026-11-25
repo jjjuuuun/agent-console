@@ -1,7 +1,8 @@
 """계약 v10(design §PI.10, 5.7R.33c, 0.11.0): `projects` 2.0.0 — 프로젝트 = 로컬 폴더.
 
 - 옛 프로젝트 YAML(`working_directory`·`log_projects`)이 읽힌다: 폴더는 `folder`로, 묶음은 버림.
-- 옛 로그 묶기 `logs.projects`·새 정의 범위 `projects`가 든 설정도 읽힌다(deprecated 표시).
+- 옛 로그 묶기 `logs.projects`·새 정의 범위 `projects`가 든 설정도 읽힌다(0.15.0에서 필드를 지웠고
+  모르는 키로 보존된다).
 - 이슈·오류 코드 7개가 스키마 상수(→ TS)로 나가고 HTTP 상태가 정해져 있다.
 - 폴더 확인 요청 `exclude_project_id`·응답 `nearest_existing`(K33-13), `x-path` 경로 주석(X33).
 - 정의 종류·상태 이름은 열린 문자열이다(코드에 고정 목록 없음).
@@ -124,9 +125,10 @@ def test_legacy_project_yaml_reads_working_directory_as_folder() -> None:
     assert dumped["folder"] == "/home/me/work/payments"
     assert dumped["zz_kept"] is True  # 모르는 키는 그대로
     assert project.archived is False
-    # 1.x 파이썬 소비자 호환 읽기(스키마에는 없음)
-    assert project.working_directory == project.folder
-    assert project.log_projects == []
+    # 옛 키는 읽어 옮기기만 한다. 호환 속성은 지웠다(REL.14) — 모르는 키로도 남지 않는다.
+    assert not hasattr(project, "working_directory")
+    assert not hasattr(project, "log_projects")
+    assert "working_directory" not in (project.model_extra or {})
     assert "working_directory" not in Project.model_json_schema()["properties"]
 
 
@@ -339,18 +341,21 @@ projects:
 
 
 def test_legacy_logs_projects_and_scope_settings_still_read() -> None:
+    """0.15.0: 필드는 없지만 옛 키가 든 설정의 읽기가 실패하지 않고 모르는 키로 보존된다."""
     doc = _load_yaml(_LEGACY_SETTINGS_YAML)
     settings = WorkspaceSettings.model_validate(doc)
     assert settings.logs is not None
-    assert settings.logs.projects is not None
+    assert settings.logs.model_extra == {"projects": doc["logs"]["projects"]}
+    assert settings.model_extra == {"projects": doc["projects"]}
     assert settings.model_dump(mode="json", exclude_unset=True) == doc
 
 
-def test_deprecated_fields_are_marked_in_schema() -> None:
+def test_removed_fields_are_not_in_schema() -> None:
+    """0.15.0: deprecated로 둔 필드를 지웠다(스키마에 없음, `project_id`는 그대로)."""
     defs = build_schema()["$defs"]
-    assert defs["LogSettings"]["properties"]["projects"]["deprecated"] is True
-    assert defs["WorkspaceSettings"]["properties"]["projects"]["deprecated"] is True
-    assert defs["LogSessionSummary"]["properties"]["project"]["deprecated"] is True
+    assert "projects" not in defs["LogSettings"]["properties"]
+    assert "projects" not in defs["WorkspaceSettings"]["properties"]
+    assert "project" not in defs["LogSessionSummary"]["properties"]
     assert "project_id" in defs["LogSessionSummary"]["properties"]
 
 

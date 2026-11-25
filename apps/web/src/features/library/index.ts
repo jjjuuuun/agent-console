@@ -5,6 +5,7 @@ export { ATTACHMENT_MODES, AgentSettingsForm } from "./AgentSettingsForm";
 export { Avatar } from "./Avatar";
 export { AVATAR_COLOR_TOKENS, nodeAvatarsOf, readAvatarUi, resolveAvatar, resolveAvatarColor, withAvatarUi, type AvatarSpec } from "./avatarSpec";
 export { DefinitionIdField, useDefinitionId, type DefinitionId } from "./DefinitionIdField";
+export { suggestId } from "./ids";
 export { DeleteDialog } from "./DeleteDialog";
 export { DescriptorIcon } from "./DescriptorIcon";
 export { Field } from "./Field";

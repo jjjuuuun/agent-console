@@ -316,12 +316,12 @@ describe("LogEventDetail", () => {
 
 describe("SessionList", () => {
   const sessions: LogSessionSummary[] = [
-    { session: "abcdef0123456789", first_time: 1_700_000_000, last_time: 1_700_000_125, events: 1204, errors: 2, thread_count: 3, models: ["m1", "m2", "m3"], tokens: { input: 1, output: 2, cache_read: null, cache_creation: 4, total: 4100 }, project: { id: "p1", label: "프로젝트 하나" } },
+    { session: "abcdef0123456789", first_time: 1_700_000_000, last_time: 1_700_000_125, events: 1204, errors: 2, thread_count: 3, models: ["m1", "m2", "m3"], tokens: { input: 1, output: 2, cache_read: null, cache_creation: 4, total: 4100 }, project_id: "p1" },
     { session: "ffff", events: 0, errors: 0, tokens: null },
   ];
   const columns = sessionColumns(["start", "session", "project", "events", "errors", "models", "tokens", "length"]);
   it("값이 없으면 –, 오류는 아이콘+숫자, 모델은 2개+외 n, 토큰 약식", () => {
-    render(<SessionList sessions={sessions} columns={columns} order="desc" onOpen={() => undefined} now={() => 1_700_000_000_000} />);
+    render(<SessionList sessions={sessions} columns={columns} order="desc" onOpen={() => undefined} now={() => 1_700_000_000_000} projectLabelFor={(id) => (id === "p1" ? "프로젝트 하나" : undefined)} />);
     expect(screen.getByText("abcdef01")).toBeTruthy();
     expect(screen.getByText("프로젝트 하나")).toBeTruthy();
     expect(screen.getByText("1,204")).toBeTruthy();

@@ -11,7 +11,8 @@
     - ``ProjectMemoryPool``: HTTP 없이 쓰는 부품 - ``open(space) -> ProjectMemorySpace``
       (``store``·``context``·``path``)·``close``·``close_all``. 열린 저장소 캐시(상한·유휴 닫기).
       ``existing()``(5.7R.46): 메모리 파일이 이미 있는 켜진 등록 id(서버 자동 정리 대상).
-    - ``migrate_memory_db(path, branches)``·``folder_id(space)``·``MemoryDbUnavailable``.
+    - ``migrate_memory_db(path, branches)``·``folder_id(space)``·``MemoryDbUnavailable``(409
+      ``project.memory_unavailable``, ``reason`` = ``REASON_*``).
     - 포트(``ports``): 받음 ``PROJECTS_SPACES``(필수)·``PROJECTS_LOOKUP``(선택), 제공
       ``MEMORY_SPACES``.
     - ``testing``: ``FolderSpaces``·``folder_spaces_module``(단독 실행·테스트).
@@ -21,6 +22,9 @@ from __future__ import annotations
 
 from .module import MODULE_ID, ProjectsMemoryLink, module, options_of
 from .pool import (
+    REASON_MIGRATE_FAILED,
+    REASON_NO_MIGRATIONS,
+    REASON_SHUTTING_DOWN,
     MemoryDbUnavailable,
     PoolOptions,
     ProjectMemoryPool,
@@ -43,6 +47,9 @@ __all__ = [
     "MODULE_ID",
     "PROJECTS_LOOKUP",
     "PROJECTS_SPACES",
+    "REASON_MIGRATE_FAILED",
+    "REASON_NO_MIGRATIONS",
+    "REASON_SHUTTING_DOWN",
     "MemoryDbUnavailable",
     "PoolOptions",
     "ProjectListing",

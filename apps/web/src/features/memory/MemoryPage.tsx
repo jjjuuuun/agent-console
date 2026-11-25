@@ -44,7 +44,7 @@ import { useMemoryActions } from "./useMemoryActions";
 import { useMemoryContext } from "./useMemoryContext";
 import { MemoryStoreChip } from "./MemoryStoreChip";
 import { useMemoryStore } from "./useMemoryStore";
-import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryRest, useMemoryScopes } from "./useMemoryApi";
+import { memoryKeys, useInvalidateMemory, useMemoryEntries, useMemoryKinds, useMemoryLimits, useMemoryProject, useMemoryRest, useMemoryScopes } from "./useMemoryApi";
 import { useMemoryLive } from "./useMemoryLive";
 import "./memory.css";
 
@@ -213,7 +213,9 @@ export function MemoryPage({ layoutWidth }: MemoryPageProps) {
   const lastAnnounce = useRef(0);
   const treeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(treeTimer.current), []);
+  const memorySpace = useMemoryProject();
   const live = useMemoryLive({
+    space: memorySpace,
     debounceMs: MEMORY_LIMITS.liveDebounceMs,
     onBatch: (batch) => {
       const ids = new Set(batch.map((b) => b.entry_id));

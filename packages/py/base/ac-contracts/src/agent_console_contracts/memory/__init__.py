@@ -7,6 +7,7 @@
 1.1.0(0.12.0): 공간 사이 복사 `MemoryCopyRequest`·`MemoryCopyResult`(design §PI.4.3,
 `common.SpaceRef`).
 1.2.0(0.14.9): 서버 자동 정리 대상 `MemoryRetentionSettings.auto`(`MemoryRetentionAuto`).
+1.3.0(0.15.0): 변경 알림의 공간 `MemoryChanged.space`(null = 라이브러리).
 범위 종류 이름·도구 이름은 전부 데이터이고 계약은 아무 이름도 모른다(도구 기본 이름·설명은 패키지
 데이터 `data/memory_access_defaults.json`).
 

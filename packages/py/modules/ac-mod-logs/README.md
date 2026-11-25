@@ -41,7 +41,7 @@
 `POST /logs/index/purge`(색인 비우기, M-3, 아래).
 기본 필터에는 `thread`(여러 값)·`scope`(`<종류>:<값>`)·`max_seq`(이 seq 이하)가 있다.
 모르는 필터·차원·지표·시간대·범위 종류는 422 `validation_failed`(`details.path`, `details.issues[].code = logs.invalid_query`).
-프로젝트 필터 `project=~ungrouped`는 묶기 규칙에 맞지 않는 로그다.
+프로젝트 필터 `project=~ungrouped`는 어느 등록 프로젝트 폴더에도 들지 않은 로그다. 세션 요약의 프로젝트는 `project_id`(등록 id, 이름은 `GET /projects`)만 채운다.
 
 ### 색인 비우기 `POST /logs/index/purge`(M-3)
 

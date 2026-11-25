@@ -196,7 +196,7 @@ describe("메모리 화면: 상태", () => {
 });
 
 describe("메모리 화면: 프로젝트 전환기", () => {
-  it("프로젝트를 고르면 그 프로젝트·보이는 팀 구성의 범위만 나무에 남고 숨긴 수가 나온다", async () => {
+  it("프로젝트를 고르면 그 프로젝트 공간으로 읽고 팀 구성 범위는 서버가 준 목록 그대로 나무에 남는다(옛 project 필드로 거르지 않음)", async () => {
     const { clients } = setup("/memory?prj=P1", {
       projects: [{ id: "P1", name: "프로젝트 하나" }, { id: "P2", name: "프로젝트 둘" }],
       rest: { listGraphs: vi.fn(async () => [{ id: "g1", name: "팀 하나", project: "P1" }, { id: "g2", name: "팀 둘", project: "P2" }]), listModules: vi.fn(async () => [mod(["memory", "projects", "definitions:graph"])]) },
@@ -204,16 +204,11 @@ describe("메모리 화면: 프로젝트 전환기", () => {
     // 5.7R.37: 현재 프로젝트를 고르면 메모리는 그 프로젝트 공간(`?project=`) 클라이언트로 읽는다
     await waitFor(() => expect(clients.space).toHaveBeenCalledWith("P1"), LONG);
     const tree = await screen.findByRole("tree", { name: "메모리 범위 나무" }, LONG);
-    expect(await screen.findByText("다른 프로젝트 범위 6개 숨김", {}, LONG)).toBeTruthy();
     expect(within(tree).getAllByText("팀 하나").length).toBeGreaterThan(0);
-    expect(within(tree).queryAllByText("팀 둘")).toHaveLength(0);
+    expect(within(tree).getAllByText("팀 둘").length).toBeGreaterThan(0);
     // 현재 프로젝트는 머리의 프로젝트 칩이 보인다(칩 해제로 프로젝트를 풀 수 없다: 활성 필터 칩 없음).
     await waitFor(() => expect(document.querySelector(".space-chip")?.textContent).toContain("프로젝트 하나"), LONG);
     expect(screen.queryByRole("group", { name: "활성 필터" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "모두 보기" }));
-    await waitFor(() => expect(screen.queryByText(/다른 프로젝트 범위/)).toBeNull(), LONG);
-    expect(within(tree).getAllByText("팀 둘").length).toBeGreaterThan(0);
-    expect(within(screen.getByRole("group", { name: "활성 필터" })).getByRole("button", { name: /프로젝트 필터 해제됨/ })).toBeTruthy();
   });
 
   it("프로젝트 기능이 없으면 거르지 않는다", async () => {
@@ -550,6 +545,19 @@ describe("메모리 화면: 실시간", () => {
     await waitFor(() => expect(calls()).toBeGreaterThan(first), LONG);
     await new Promise((r) => setTimeout(r, 700));
     expect(calls()).toBe(first + 1);
+  });
+
+  it("다른 공간의 알림(space)은 무시하고, 지금 공간이거나 space가 없으면 다시 읽는다", async () => {
+    const { ws, rest } = setup("/memory");
+    await grid();
+    const calls = () => (rest.listMemoryEntries as ReturnType<typeof vi.fn>).mock.calls.length;
+    const first = calls();
+    const change = { scope: { kind: "desk", id: "g1" }, key: "k", entry_id: "e1", version: 3, op: "update", author_kind: "agent" } as const;
+    act(() => ws.emitMemory({ ...change, space: "other-project" }));
+    await new Promise((r) => setTimeout(r, 900));
+    expect(calls()).toBe(first);
+    act(() => ws.emitMemory({ ...change, space: null }));
+    await waitFor(() => expect(calls()).toBeGreaterThan(first), LONG);
   });
 
   it("검색어가 있으면 행을 움직이지 않고 '새 변경' 칩만 띄운다. 칩을 누르면 다시 읽는다", async () => {

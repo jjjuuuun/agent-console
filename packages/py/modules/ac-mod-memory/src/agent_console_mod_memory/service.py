@@ -12,7 +12,8 @@ HTTP를 모른다. 저장소(``MemoryStore``)·사용자 설정 섹션 읽기·�
 - 공간(5.7R.33z): ``space(name)``(이름 → 그 공간의 서비스, 없으면 자기 자신), ``copy``(공간 사이
   메모리 복사, 복사 뒤 독립).
 
-모든 쓰기는 변경 알림 감싸개(``ObservedMemoryStore``)를 거친다.
+모든 쓰기는 변경 알림 감싸개(``ObservedMemoryStore``)를 거친다. 알림의 ``space``는 이 서비스의
+공간 이름(``space_name``, 라이브러리는 null, 계약 memory 1.3.0)이다.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from agent_console_contracts.memory import (
     MemoryAccessConfig,
     MemoryAccessContext,
     MemoryAuthor,
+    MemoryChanged,
     MemoryCopyRequest,
     MemoryCopyResult,
     MemoryEntry,
@@ -213,7 +215,14 @@ class MemoryService:
         self._limits = limits if limits is not None else MemoryLimits()
         self._transfer = transfer_limits if transfer_limits is not None else MemoryTransferLimits()
         self._scanner: SecretScanner = scanner if scanner is not None else SecretRulesScanner()
-        sink: ChangeSink = on_change if on_change is not None else (lambda _changed: None)
+        publish: ChangeSink = on_change if on_change is not None else (lambda _changed: None)
+
+        def sink(change: MemoryChanged) -> None:
+            # 공간 이름은 알릴 때 읽는다(공간 고르기가 만든 뒤 `space_name`을 붙인다).
+            # 라이브러리 = null.
+            name = self.space_name
+            publish(change if name is None else change.model_copy(update={"space": name}))
+
         self._store: ObservedMemoryStore = observe(store, sink)
         self._section = section
         self._plugins = plugins

@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from agent_console_contracts import HandoffMatrix, Issue, KnownIssueCodes
+from agent_console_contracts import HandoffMatrix, Issue, KnownIssueCodes, ignored_settings_keys
 from agent_console_contracts.logs import (
     LogAggregateRequest,
     LogAggregateRow,
@@ -398,18 +398,19 @@ class LogsService:
         """출처 설정에 남은 deprecated 키(읽지 않음) → 정보 이슈(출처·키마다).
 
         옛 묶기 설정 ``logs.projects``가 있으면 정보 ``settings.ignored_key``(K33-15, 5.7R.33i).
+        필드 속성 대신 ``ignored_settings_keys``로 찾는다(계약에서 필드를 지워도 같은 답, REL.14).
         """
         if settings is None:
             return []
         out: list[Issue] = []
-        if settings.projects is not None:
+        for key in ignored_settings_keys(settings, section="logs"):
             out.append(
                 Issue(
                     severity="info",
                     code=KnownIssueCodes.SETTINGS_IGNORED_KEY,
-                    message="로그 설정의 프로젝트 묶기(logs.projects)는 더 이상 읽지 않습니다. "
+                    message=f"로그 설정의 프로젝트 묶기({key})는 더 이상 읽지 않습니다. "
                     "로그는 등록한 프로젝트 폴더로 나뉩니다. 설정에서 지워도 됩니다",
-                    details={"key": "logs.projects"},
+                    details={"key": key},
                 )
             )
         schemas = {

@@ -191,6 +191,8 @@ export interface SchemaFormProps {
   xui?: boolean;
   /** 고급 영역 펼침 상태를 localStorage에 `ac.form.advanced.<키>`로 기억한다(폼 종류별 키). 없으면 기억하지 않는다. */
   advancedStorageKey?: string;
+  /** 최상위 객체의 제목(스키마 title)을 숨긴다. 바깥 패널이 자기 머리말을 가질 때 쓴다. 기본 false. 중첩 객체 제목은 그대로. `xui`가 켜져 있을 때만 적용 */
+  hideRootTitle?: boolean;
   /** 출처 표시 간소화: 지정된 필드만 배지와 [상속으로 되돌리기] 아이콘, 나머지는 입력을 바로 편집(건드리면 이 층에서 지정). 기본 false. */
   compactProvenance?: boolean;
 

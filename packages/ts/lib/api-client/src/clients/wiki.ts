@@ -69,7 +69,8 @@ export interface SearchWikiParams {
 export interface WikiGraphParams {
   /** 없으면 전체 */
   center?: string;
-  depth?: number;
+  /** 정수 단계 또는 `"all"`(`WIKI_GRAPH_DEPTH_ALL`, 깊이 제한 없음). 생략 = 서버 기본 */
+  depth?: number | "all";
   limit?: number;
 }
 

@@ -107,6 +107,8 @@ export interface LinkGraphProps {
   onCenter?: (path: string) => void;
   /** 배치 엔진(기본 elkjs stress, 처음 필요할 때 불러옴). 실패하면 격자 배치로 남는다. */
   engine?: GraphLayoutEngine;
+  /** 기본 엔진에서 이 수를 넘는 그래프는 elkjs 대신 값싼 층 배치로 놓는다(기본 80, `ELK_MAX_NODES_DEFAULT`). 넘긴 `engine`에는 쓰이지 않는다 */
+  elkMaxNodes?: number;
   /** 노드 크기·간격(px). 앱 토큰 값을 넘긴다. */
   nodeWidth?: number;
   nodeHeight?: number;
@@ -126,7 +128,7 @@ export interface LinkGraphProps {
 
 const ARROWS: Readonly<Record<string, ArrowDirection>> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
 
-function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, engine, nodeWidth, nodeHeight, gap, ariaLabelOf, height = "fill", maxZoom = 1, readableZoom = 0.8, hideTruncatedNotice = false, messages, className }: LinkGraphProps) {
+function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen, onCenter, engine, elkMaxNodes, nodeWidth, nodeHeight, gap, ariaLabelOf, height = "fill", maxZoom = 1, readableZoom = 0.8, hideTruncatedNotice = false, messages, className }: LinkGraphProps) {
   const t = resolveMessages(messages);
   const base = useDomId();
   const w = nodeWidth ?? GRAPH_DEFAULTS.nodeWidth;
@@ -136,7 +138,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
     () => graphToFlow(graph, { centerPath, nodeWidth: w, nodeHeight: h, ...(ariaLabelOf ? { ariaLabelOf } : {}) }),
     [graph, centerPath, w, h, ariaLabelOf],
   );
-  const defaultEngine = useMemo(() => createElkGraphLayout(), []);
+  const defaultEngine = useMemo(() => createElkGraphLayout(undefined, elkMaxNodes === undefined ? {} : { maxNodes: elkMaxNodes }), [elkMaxNodes]);
   const [placed, setPlaced] = useState<{ source: typeof flow; positions: Record<string, { x: number; y: number }> } | null>(null);
   const [failed, setFailed] = useState<typeof flow | null>(null);
   useEffect(() => {
@@ -146,6 +148,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
       nodes: flow.nodes.map((n) => ({ id: n.id, width: n.width, height: n.height })),
       edges: flow.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
       gap: g,
+      center: centerPath,
     }).then(
       (positions) => {
         if (!cancelled) setPlaced({ source: flow, positions });
@@ -157,7 +160,7 @@ function Inner({ graph, centerPath = null, selectedPath = null, onSelect, onOpen
     return () => {
       cancelled = true;
     };
-  }, [flow, engine, defaultEngine, g]);
+  }, [flow, engine, defaultEngine, g, centerPath]);
 
   const positions = useMemo(
     () => (placed && placed.source === flow ? placed.positions : gridPositions(flow.nodes, g)),

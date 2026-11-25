@@ -67,6 +67,7 @@ props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonl
 
 ## 스키마 `x-ui` 렌더
 스키마의 `x-ui`(`tier`·`when`·`example`·`group`·`group_title`·`order`·`unit`·`enum_labels`(enum 값 → 화면 라벨))를 읽어 그린다. 필드 이름·종류 id는 코드에 없다.
+- `hideRootTitle`: 최상위 객체 제목(스키마 클래스 이름 등)을 숨긴다. 중첩 객체 제목은 그대로.
 - 기본 필드 위, 고급 필드는 "고급 설정 (N)" 접힘 영역(펼침은 `advancedStorageKey`로 기억, 오류·`focusPath`가 있으면 자동 펼침, "지정 N" 칩).
 - 필드마다 필수 칩, 설명 한 줄, 단위 접미사, 예시(빈 칸일 때 클릭하면 채움), 기본값, "바꾸는 때"(고급은 항상, 기본은 i 버튼). `readOnly: true`는 텍스트 + 복사 버튼.
 - `x-ui.tier`가 없으면 폴백: `required` -> 기본, 객체는 자식 중 기본이 있으면 기본, 기본값 있는 선택 필드 -> 고급, 없는 선택 필드 -> 기본. 고급만 있는 폼은 접지 않는다.

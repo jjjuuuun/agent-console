@@ -42,6 +42,19 @@ function Controlled({ schema, initial, onSpy, ...rest }: { schema: JsonSchema; i
   );
 }
 
+describe("SchemaForm hideRootTitle", () => {
+  const schema: JsonSchema = { type: "object", title: "RootClassName", properties: { inner: { type: "object", title: "InnerTitle", properties: { a: { type: "string", title: "에이" } } } } };
+  it("기본은 최상위 제목을 그린다", () => {
+    render(<SchemaForm schema={schema} />);
+    expect(screen.getByText("RootClassName")).toBeTruthy();
+  });
+  it("hideRootTitle이면 최상위 제목만 숨기고 중첩 제목은 그대로", () => {
+    render(<SchemaForm schema={schema} hideRootTitle />);
+    expect(screen.queryByText("RootClassName")).toBeNull();
+    expect(screen.getByText("InnerTitle")).toBeTruthy();
+  });
+});
+
 describe("SchemaForm 필드 생성", () => {
   it("문자열·숫자·불리언·enum·배열·중첩 객체 필드를 그린다", () => {
     render(<SchemaForm schema={arbitrary} value={{}} />);
@@ -302,6 +315,19 @@ describe("$defs / $ref 스키마 (설정 화면용)", () => {
   });
 });
 
+describe("anyOf 분기 선택기 이름", () => {
+  it("접히지 않는 anyOf 선택기(select)에 필드 제목이 접근 이름으로 이어진다", () => {
+    const schema: JsonSchema = {
+      type: "object",
+      properties: { marker: { title: "표시", anyOf: [{ type: "string" }, { type: "integer" }] } },
+    };
+    render(<SchemaForm schema={schema} value={{}} />);
+    const select = document.querySelector<HTMLSelectElement>("select[id$='__anyof_select']");
+    expect(select).not.toBeNull();
+    expect(screen.getByRole("combobox", { name: "표시" })).toBe(select);
+  });
+});
+
 describe("nullable 필드 (Pydantic `str | None`)", () => {
   it("anyOf [string, null]은 선택기가 아니라 텍스트 입력으로 그려지고 null도 유효하다", () => {
     const schema: JsonSchema = {
@@ -449,5 +475,19 @@ describe("값의 모양을 정하지 않는 위치는 원시 JSON 편집기", ()
     const { container } = render(<SchemaForm schema={schema} value={{ free: { x: [1, { y: 2 }] }, any: [1] }} />);
     expect(container.querySelectorAll("textarea.ac-sf-raw-input")).toHaveLength(2);
     expect(container.textContent).not.toMatch(/Unsupported field schema/);
+  });
+});
+
+describe("정해진 필드 밖의 남는 키(additionalProperties: true)", () => {
+  it("배열·객체 값도 영어 오류 없이 JSON 편집기로 그린다", () => {
+    const schema: JsonSchema = {
+      type: "object",
+      properties: { wikis: { type: "array", title: "위키", items: { type: "object", title: "권한", properties: { wiki: { type: "string", title: "위키" } }, additionalProperties: true } } },
+    };
+    const { container } = render(<SchemaForm schema={schema} value={{ wikis: [{ wiki: "w1", actions: ["read"] }] }} />);
+    expect(container.textContent).not.toMatch(/Unsupported field schema|Missing items definition/);
+    const ta = container.querySelector<HTMLTextAreaElement>("textarea.ac-sf-raw-input");
+    expect(ta?.value).toContain("read");
+    expect(container.querySelector('label[for$="-key"]')?.textContent).toContain("actions");
   });
 });

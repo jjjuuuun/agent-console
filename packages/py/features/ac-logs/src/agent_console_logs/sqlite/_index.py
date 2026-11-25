@@ -31,7 +31,6 @@ from agent_console_contracts.logs import (
     LogEventDetail,
     LogEventPage,
     LogLane,
-    LogProjectRef,
     LogSessionSummary,
     LogTimeline,
     TokenSample,
@@ -711,7 +710,7 @@ class SqliteLogIndex:
         out = []
         for r in rows:
             cwd, repo_root, title = self._session_head(conn, r.session, ctx)
-            pid, label, _grouped = q.project_of(cwd, repo_root, ctx)
+            pid, _label, _grouped = q.project_of(cwd, repo_root, ctx)
             out.append(
                 LogSessionSummary(
                     session=r.session,
@@ -719,7 +718,6 @@ class SqliteLogIndex:
                     title=title,
                     cwd=cwd,
                     repo_root=repo_root,
-                    project=LogProjectRef(id=pid, label=label) if pid else None,
                     project_id=pid,
                     first_time=r.first,
                     last_time=r.last,

@@ -217,6 +217,21 @@ def test_neighborhood_depth_limit_and_flags() -> None:
         neighborhood(index, "nope")
 
 
+def test_neighborhood_unlimited_depth_reports_applied_depth() -> None:
+    """계약 wiki 1.3.0: `depth=None`(REST `?depth=all`)은 이어진 칸 전부, 응답 `depth` = 적용한
+    깊이."""
+    files = {"c": "[[n1]]", "n1": "[[n2]]", "n2": "[[n3]]", "n3": "", "island": ""}
+    index = _index(files, home="c")
+    every = neighborhood(index, "c", None)
+    assert {(n.path, n.depth) for n in every.nodes} == {("c", 0), ("n1", 1), ("n2", 2), ("n3", 3)}
+    assert every.depth is None
+    assert neighborhood(index, "c", 2).depth == 2
+    assert neighborhood(index, "c", 0).depth == 0
+    assert neighborhood(index).depth is None  # 가운데 없음 = 전체
+    capped = neighborhood(index, "c", None, limit=2)
+    assert (len(capped.nodes), capped.truncated, capped.total) == (2, True, 4)
+
+
 def test_edges_are_merged_with_count() -> None:
     index = _index({"a": "[[b]] [[b]] [b](b.md)", "b": ""})
     graph = neighborhood(index, "a", 1)

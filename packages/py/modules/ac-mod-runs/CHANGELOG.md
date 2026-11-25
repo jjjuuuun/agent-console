@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- REL.33: `GET /runs/{id}`(`?project=` 포함) 스냅숏이 이 앱에서 도는 Run의 끝난 상태를 `run.<상태>` 이벤트까지 저장된 뒤에만 보인다(`RunService.live_view` — 엔진은 최종 Run을 먼저 저장하므로 그 사이에는 손잡이의 직전 상태·종료 시각·오류·합계, 나머지는 저장본). 전에는 끝난 상태와 끝 이벤트가 빠진 `last_seq`·이벤트 목록이 함께 보일 수 있었다. 계약·표 변경 없음.
 - REL.3: 등록이 풀린 프로젝트(`RecordsStores`의 `UnknownSpace`)를 읽을 수 없는 자리로 다룬다 — `run_id` 자리 읽기는 건너뛰고(REST 404 `not_found`, `?project=` 조회는 404 `project.not_found`), 쓰기는 대기 파일로(이유 `not_found`), 재시작 복구는 다음 열기로. 전에는 `runs.reader`·`runs.events`·WS 재생·실행 중 쓰기에서 예외가 그대로 나갔다.
 - FU.11: `runs.reader.list_node_runs_many`·`runs.events.list_many`(저장소 묶어 읽기) — Run의 자리(호스트·이 프로세스가 아는 공간)마다 묶어 한 번씩 읽는다. 읽을 수 없는 자리(`RecordsUnavailable`)의 Run은 뺀다. 표 변경 없음.
 - 5.7R.33t1: 맡는 범위 없는 프로젝트 실행 막기(K33-10). `runs.scopes` 선택 메서드 `accepts_project`(`RunProjectScoper`), 선택 포트 `projects.lookup`이 있는데 맡는 공급자가 없으면 실행 시작·대화 턴·이어 가기·프로젝트 기준 검증(`definitions_for`·`load_graph(project_id=)`·`check_project`)을 409 `feature_unavailable`(`details = {module, port: "runs.scopes", project_id}`)로 막고 Run을 만들지 않는다. 막는 동안 `server.warnings`에 같은 코드·`details.port`의 경고. 새 설정 `unscoped_project_runs`(`policy` reject·allow, `message`), 새 공개 이름 `RunProjectScoper`·`UnscopedProjectRuns`·`unscoped_project_policy`·`unscoped_project_warning`·`UNSCOPED_PROJECT_PORT`, `RunService(unscoped_project=)`·`accepts_project`·`has_project_scope`·`unscoped_project_error`. `graph_of_run`은 막지 않는다. 계약·표 변경 없음.

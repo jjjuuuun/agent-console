@@ -2,22 +2,18 @@
 
 전부 "생략 = 상속"이다. 필드를 생략하면(`model_fields_set`에 없으면) 기본값을 따른다:
 출처는 디스크립터 `default_enabled`·`config_schema` 기본값, 분류 체계는 `ac-logs` 기본 분류 체계,
-프로젝트 묶기는 "경로 그대로 + worktree 묶기", 대시보드는 없음. 저장·전송은
-`model_dump(exclude_unset=True)`로 한다. 모르는 키는 보존한다(손으로 고친 YAML 왕복).
+대시보드는 없음. 저장·전송은 `model_dump(exclude_unset=True)`로 한다. 모르는 키는 보존한다(손으로
+고친 YAML 왕복). 2.0.0(0.15.0)에서 옛 프로젝트 묶기 `projects`(`LogProjectSettings`·
+`LogProjectGroup`·`LogUngroupedPolicy`)를 지웠다. 옛 설정의 `projects` 키는 모르는 키로 보존되고
+읽지 않는다(`IGNORED_SETTINGS_KEYS`). 세션의 프로젝트는 작업 폴더가 든 등록 프로젝트다.
 
 범주·위젯 종류·차원·지표 이름은 모두 열린 문자열이다(알려진 값은 문서 상수·디스크립터).
 """
-
-from typing import Literal
 
 from pydantic import ConfigDict, Field
 
 from agent_console_contracts._base import DefinitionModel, JsonObject, NonEmptyStr
 from agent_console_contracts.common import x_ui
-
-type LogUngroupedPolicy = Literal["cwd", "repo_root", "none"]
-"""묶기 규칙에 맞지 않는 경로의 프로젝트. 동작 모드라 고정 어휘다.
-cwd = 자기 경로, repo_root = 본 저장소 경로(없으면 cwd), none = 한 묶음("기타")."""
 
 
 class LogCategory(DefinitionModel):
@@ -124,86 +120,6 @@ class LogSourceSetting(DefinitionModel):
         json_schema_extra=x_ui(
             tier="advanced", when="출처가 읽을 폴더가 기본 위치와 다를 때 바꾸세요."
         ),
-    )
-
-
-class LogProjectGroup(DefinitionModel):
-    """이전 형식의 로그 묶음입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시)."""
-
-    # 0.11.0 deprecated(design §PI.14 K33-15). 세션의 프로젝트는 등록 프로젝트 폴더로만 정한다.
-    # 다음 major에서 삭제.
-
-    model_config = ConfigDict(title="프로젝트 묶음")
-
-    id: NonEmptyStr = Field(
-        title="묶음 id",
-        description="묶음을 가리키는 고유 이름입니다.",
-        json_schema_extra=x_ui(
-            tier="basic", when="새 묶음을 만들 때 한 번 정하세요.", example="my-app"
-        ),
-    )
-    label: str | None = Field(
-        default=None,
-        title="표시 이름",
-        description="화면에 보일 묶음 이름입니다. 비우면 id를 씁니다.",
-        json_schema_extra=x_ui(
-            tier="basic",
-            when="목록에서 묶음을 알아보기 쉬운 이름으로 보고 싶을 때 적으세요.",
-            example="내 앱",
-        ),
-    )
-    match: list[str] = Field(
-        default_factory=list,
-        title="경로 글롭",
-        description=(
-            "저장소 경로(없으면 작업 폴더)와 맞춰 봅니다. 하위 폴더까지는 /proj/** 처럼 씁니다."
-        ),
-        json_schema_extra=x_ui(
-            tier="basic",
-            when="다른 폴더의 로그도 이 묶음에 넣고 싶을 때 더하세요.",
-            example=["/home/me/app/**"],
-        ),
-    )
-
-
-class LogProjectSettings(DefinitionModel):
-    """이전 형식의 로그 묶기 규칙입니다. 더 이상 쓰지 않습니다(읽기만 하고 무시)."""
-
-    # design §4R.6에서 시작. 0.11.0 deprecated(design §PI.14 K33-15): 서버는 읽고 무시하며 정보
-    # 이슈 `settings.ignored_key`를 낸다(시작은 막지 않음). 로그의 프로젝트는 등록 프로젝트 폴더로
-    # 정한다(세션 `project_id`). 다음 major에서 삭제.
-
-    model_config = ConfigDict(title="프로젝트 묶기")
-
-    groups: list[LogProjectGroup] | None = Field(
-        default=None,
-        title="묶음",
-        description="경로로 로그를 묶는 규칙입니다. 위에서부터 보고 처음 맞는 묶음이 이깁니다.",
-        json_schema_extra=x_ui(
-            tier="basic", when="여러 폴더의 로그를 한 프로젝트로 묶어 보고 싶을 때 더하세요."
-        ),
-    )
-    ungrouped: LogUngroupedPolicy | None = Field(
-        default=None,
-        title="묶음 밖 경로",
-        description=(
-            "맞는 묶음이 없으면 자기 경로(cwd), 저장소(repo_root), 기타 한 묶음(none)으로 둡니다."
-        ),
-        json_schema_extra=x_ui(
-            enum_labels={
-                "cwd": "작업 폴더로 묶기",
-                "repo_root": "저장소 루트로 묶기",
-                "none": "묶지 않기",
-            },
-            tier="advanced",
-            when="묶음에 들지 않은 로그를 한곳에 모으고 싶을 때 none으로 바꾸세요.",
-        ),
-    )
-    git_worktrees: bool | None = Field(
-        default=None,
-        title="worktree 묶기",
-        description="git worktree 폴더를 원래 저장소와 한 묶음으로 봅니다. 기본은 켬입니다.",
-        json_schema_extra=x_ui(tier="advanced", when="worktree마다 따로 보고 싶을 때 끄세요."),
     )
 
 
@@ -335,12 +251,6 @@ class LogSettings(DefinitionModel):
             tier="advanced", when="로그 범주 이름·색이 알아보기 어려울 때 바꾸세요."
         ),
     )
-    projects: LogProjectSettings | None = Field(
-        default=None,
-        title="프로젝트 묶기(이전 형식)",
-        description="더 이상 쓰지 않습니다. 로그는 등록한 프로젝트 폴더로 나뉩니다(읽고 무시).",
-        json_schema_extra={"deprecated": True, **x_ui(tier="advanced")},
-    )
     dashboards: list[LogDashboard] | None = Field(
         default=None,
         title="대시보드",
@@ -352,12 +262,9 @@ class LogSettings(DefinitionModel):
 __all__ = [
     "LogCategory",
     "LogDashboard",
-    "LogProjectGroup",
-    "LogProjectSettings",
     "LogSettings",
     "LogSourceSetting",
     "LogTaxonomy",
-    "LogUngroupedPolicy",
     "LogWidget",
     "LogWidgetQuery",
 ]

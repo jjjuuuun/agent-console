@@ -40,7 +40,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.14.0",
+    "@agent-console/contracts": "^0.15.0",
     "@agent-console/markdown-doc": "^0.1.0",
     "@agent-console/virtual-rows": "^0.1.0",
     "@xyflow/react": "^12.12.0",

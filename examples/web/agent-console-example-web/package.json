@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@agent-console/arch-view": "^0.1.0",
-    "@agent-console/contracts": "^0.14.0",
+    "@agent-console/contracts": "^0.15.0",
     "@agent-console/eslint-config": "^0.1.0",
     "@agent-console/log-view": "^0.1.0",
     "@agent-console/schema-form": "^0.1.0",

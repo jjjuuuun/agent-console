@@ -73,10 +73,11 @@ screenshots/
 *.har
 *.trace.zip
 
-# 개인 작업 문서(공개 대상 아님). docs/는 DEVELOPMENT.md만, .claude/는 agents/만 공개
+# 개인 작업 문서(공개 대상 아님). docs/는 DEVELOPMENT.md·extending/만, .claude/는 agents/만 공개
 /specs/
 /docs/*
 !/docs/DEVELOPMENT.md
+!/docs/extending/
 /KICKOFF.md
 /.claude/*
 !/.claude/agents/

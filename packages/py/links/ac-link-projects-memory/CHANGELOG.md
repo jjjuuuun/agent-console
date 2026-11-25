@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- REL.16(계약 0.15.0): `MemoryDbUnavailable`의 오류 코드를 `feature_unavailable`에서 계약의 새 코드
+  `project.memory_unavailable`(409)로 바꿨다. 예외는 `reason`(`REASON_NO_MIGRATIONS`·`REASON_MIGRATE_FAILED`·
+  `REASON_SHUTTING_DOWN`)을 갖고, 메모리 모듈이 응답 `details.reason`으로 싣는다. 모듈이 꺼진 경우는 그대로
+  `feature_unavailable`이다.
+
 - FU.2: `memory.sqlite3`가 없으면 보기(GET 목록·검색·범위·태그)만으로 만들지 않는다 — 저장소를
   `DeferredMemoryStore`로 주고 첫 쓰기 때 만들고 계보를 올린다. 파일이 생긴 뒤 다시 열면 SQLite 저장소
   그대로 준다. 계보가 없으면 전처럼 열 때 `MemoryDbUnavailable`.

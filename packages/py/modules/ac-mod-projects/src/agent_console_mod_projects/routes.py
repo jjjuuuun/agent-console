@@ -20,7 +20,10 @@
 | ``POST /projects/folders/check`` | ``FolderCheckRequest`` → ``FolderCheck`` |
 | ``GET /projects/folders/capabilities`` | → ``FolderCapabilities`` |
 | ``POST /projects/folders/pick`` | ``FolderPickRequest`` → ``FolderPickResult``(끊기면 창 닫음) |
-| (deprecated) ``POST /projects/move-plan``·``/move``·``/scope-issues`` | 옛 범위 정리(33t 삭제) |
+
+옛 범위 정리 경로(``POST /projects/move-plan``·``/move``·``/scope-issues``)는 0.3.0에서
+지웠다. 경로가 ``/projects/{id}``(GET·PUT·DELETE) 모양에 맞아 405로 답한다. 대신
+``{id}/legacy/plan`` → ``copy/apply``.
 """
 
 from __future__ import annotations
@@ -50,11 +53,8 @@ from agent_console_contracts import (
     FolderListing,
     FolderPickRequest,
     FolderPickResult,
-    Issue,
     ManifestResetRequest,
     ManifestResetResult,
-    MovePlan,
-    MovePlanRequest,
     ProjectCreate,
     ProjectUpdate,
     ProjectView,
@@ -66,7 +66,6 @@ from .copying import CopyService
 from .errors import ProjectError
 from .folders import FolderPicker, FolderService
 from .projects import ProjectManager
-from .service import ScopeService, issues_payload
 
 _ERROR_STATUSES = (400, 401, 403, 404, 409, 422, 500)
 
@@ -94,7 +93,6 @@ class Services:
     folders: Callable[[], FolderService]
     picker: Callable[[], FolderPicker]
     copies: Callable[[], CopyService]
-    scope: Callable[[], ScopeService]
 
 
 async def _pick(
@@ -222,23 +220,6 @@ def build_router(services: Services) -> APIRouter:
             lambda: s.copies().delete_item(ref, kind, item_id, expected_version=expected)
         )
         return Response(status_code=204)
-
-    # ---------------------------------------------------------------- (deprecated) 옛 범위
-
-    @router.post("/projects/move-plan", response_model=MovePlan, responses=errors())
-    async def plan_move(body: MovePlanRequest) -> JSONResponse:
-        """(deprecated) 옛 정의 범위 옮기기 계획."""
-        return _json(s.scope().move_plan(body))
-
-    @router.post("/projects/move", response_model=MovePlan, responses=errors(412))
-    async def apply_move(body: MovePlan) -> JSONResponse:
-        """(deprecated) 옛 정의 범위 옮기기 적용."""
-        return _json(s.scope().apply_moves(body))
-
-    @router.post("/projects/scope-issues", response_model=list[Issue], responses=errors())
-    async def list_scope_issues() -> JSONResponse:
-        """(deprecated) 워크스페이스 전체의 옛 범위 이슈."""
-        return JSONResponse(issues_payload(s.scope().scope_issues()))
 
     # ---------------------------------------------------------------- 등록
 

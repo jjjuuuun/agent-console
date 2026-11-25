@@ -37,6 +37,7 @@ import { LogsPageFrame } from "./LogsPageFrame";
 import { freshNotice, settingsLogsHref, useOtherSourcesNotice } from "./LogsEmpty";
 import { LogViewMenu } from "./LogViewMenu";
 import type { LogNotice } from "./NoticeBar";
+import { useProjects } from "../projects";
 import { SessionInfoPopover } from "./SessionInfoPopover";
 import { ViewTabs } from "./ViewTabs";
 import { useSessionShortcuts } from "./sessionShortcuts";
@@ -82,6 +83,7 @@ export function SessionDetailPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const storage = useStorage();
+  const projects = useProjects();
   const url = useLogUrlState(FIELDS);
   const [selectedUid, setSelectedUid] = useSelectedUid();
   const taxonomy = useLogTaxonomyView();
@@ -349,7 +351,9 @@ export function SessionDetailPage() {
   const archCount = observedValue(arch.target?.count);
   const archOthers = hasActiveFilter(url.filter) || errorsOnly || !atEnd;
   const hasHiddenCategories = hiddenIds.length > 0;
-  const summaryText = [summary?.project ? summary.project.label || summary.project.id : null, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString(appMessages.locale)}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
+  // 세션의 프로젝트 = `project_id`, 이름은 등록 프로젝트에서(없으면 id)
+  const projectName = summary?.project_id ? (projects.names.get(summary.project_id) ?? summary.project_id) : null;
+  const summaryText = [projectName, `${t.detail.events} ${(summary?.events ?? all.length).toLocaleString(appMessages.locale)}`, `${t.detail.errors} ${errorCount}`].filter(Boolean).join(" · ");
   const emptyRows = rows.length === 0;
   const detailOpen = selectedUid !== null;
   const durationMs = summary?.first_time != null && summary?.last_time != null ? Math.max(0, (summary.last_time - summary.first_time) * 1000) : null;
@@ -478,12 +482,12 @@ export function SessionDetailPage() {
                 <span className="app-skeleton-row logs-skel-inline" aria-hidden="true" />
               ) : (
                 <span className="logs-summary ac-ellipsis" title={summaryText}>
-                  <span className="logs-summary-project">{summary.project ? `${summary.project.label || summary.project.id} · ` : null}</span>
+                  <span className="logs-summary-project">{projectName ? `${projectName} · ` : null}</span>
                   {`${t.detail.events} ${(summary.events ?? all.length).toLocaleString(appMessages.locale)} · ${t.detail.errors} ${errorCount}`}
                 </span>
               )}
               <span className="logs-spacer" />
-              <SessionInfoPopover session={session} summary={summary} errorCount={errorCount} eventCount={all.length} durationMs={durationMs} open={infoOpen} onOpenChange={setInfoOpen} onCopy={copy} />
+              <SessionInfoPopover session={session} summary={summary} projectName={projectName} errorCount={errorCount} eventCount={all.length} durationMs={durationMs} open={infoOpen} onOpenChange={setInfoOpen} onCopy={copy} />
             </div>
           </header>
 

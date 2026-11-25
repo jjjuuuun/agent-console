@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.14.12"
+CONTRACTS_VERSION: Final = "0.15.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -38,20 +38,20 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "1.16.0",
+    "common": "2.0.0",
     "resources": "1.1.0",
-    "logs": "1.2.0",
-    "definitions": "1.7.0",
+    "logs": "2.0.0",
+    "definitions": "2.0.0",
     "runs": "1.9.0",
     "usage": "1.1.0",
-    "projects": "3.7.0",
+    "projects": "4.0.0",
     "chat": "1.4.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
-    "memory": "1.2.0",
+    "memory": "1.3.0",
     "sdd": "1.3.0",
-    "wiki": "1.2.0",
+    "wiki": "1.3.0",
     "modules": "1.7.0",
 }
 """계약 하위 모듈 → 버전(semver). 그 하위 모듈의 형식을 바꾸면 그 값을 올린다.
@@ -111,7 +111,21 @@ Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMB
 0.14.11(FU.17, 더하기만): `common` 1.16.0(문서 상수 `KnownIssueCodes.WIKI_UNKNOWN_TITLE_SOURCE`·
 `WIKI_REDACTED_CONTENT` — 위키 문법의 모르는 제목 출처, 가린 비밀 자리 표시가 든 쓰기 거부 사유).
 0.14.12(FU.19, 더하기만): `modules` 1.7.0(`PluginOptionsView`·`ServerInfo.plugin_options` — 설정을
-선언한 플러그인(비밀 값 공급자 등)의 스키마·가린 지금 값·설정 자리)."""
+선언한 플러그인(비밀 값 공급자 등)의 스키마·가린 지금 값·설정 자리).
+0.15.0(깨는 변경 — 0.11~0.12에 deprecated로 둔 프로젝트 범위 API 삭제):
+`common` 2.0.0(이슈 코드 `project.memory_network_fs`·`project.shared_uses_project`·
+`project.cross_project`·`project.definitions_unavailable`, 제안 id `project.move_to_shared` 삭제 —
+`KnownSuggestionIds`는 빈 표로 남김. 새 오류·이슈 코드 `project.memory_unavailable` 409.
+`LOG_PROJECT_UNGROUPED` deprecated 해제),
+`logs` 2.0.0(`LogSettings.projects`·`LogProjectSettings`·`LogProjectGroup`·
+`LogUngroupedPolicy`, `LogSessionSummary.project`·`LogProjectRef` 삭제),
+`definitions` 2.0.0(`WorkspaceSettings.projects`·`ProjectPreferences`·`DefinitionScope` 삭제),
+`projects` 4.0.0(`MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·
+`ProjectDeleteMode` 삭제), `memory` 1.3.0(`MemoryChanged.space`),
+`wiki` 1.3.0(`WikiInfo.wiki_kind`·`reserved_page_names`, 그래프 깊이 전체
+`WIKI_GRAPH_DEPTH_ALL`·`WikiGraph.depth`, `WikiRuleEntry.severity`를 `IssueSeverity`로 좁힘).
+저장 데이터 마이그레이션은 없다: 옛 키는 모르는 키로 보존되어 읽기·서버 시작을 막지 않는다.
+사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -122,9 +136,9 @@ LOG_EVENT_ORDERS: Final = ("asc", "desc")
 """로그 목록 필터 `order`의 값(design §4R.9). seq 기준 오름·내림차순, 기본 asc."""
 
 LOG_PROJECT_UNGROUPED: Final = "~ungrouped"
-"""로그 필터 `project`의 예약 값: 묶기 규칙에 맞지 않은 로그(design §4R.9). `~` 접두로 그룹 id와
-겹치지 않는다. 0.11.0 deprecated(K33-15): 로그 필터 `project`는 등록 프로젝트 id를 받는다.
-다음 major에서 삭제."""
+"""로그 필터 `project`의 예약 값: 어느 등록 프로젝트 폴더에도 들지 않은 로그(세션 `project_id`가
+null). 그 밖의 값은 등록 프로젝트 id다. `~` 접두로 프로젝트 id와 겹치지 않는다(0.15.0부터 deprecated
+아님)."""
 
 
 class ErrorCodes:
@@ -268,6 +282,11 @@ class ErrorCodes:
     """같은 Run id가 여러 기록 공간(프로젝트 기록 DB·앱 기록)에 있어 하나로 정할 수 없다(HTTP 409,
     0.14.8, `GET /runs/{id}/locate`). `details.project_ids` = 찾은 곳(null = 앱 기록).
     `?project=`를 붙여 직접 고른다."""
+    PROJECT_MEMORY_UNAVAILABLE: Final = "project.memory_unavailable"
+    """(0.15.0) 프로젝트 메모리 DB(`<folder>/<config_dir>/memory.sqlite3`)를 열 수 없다(HTTP 409 —
+    더 새 앱이 올린 DB, 메모리 계보 없음, 서버 종료 중). 앱 DB로 대신 쓰지 않는다. 모듈이 꺼진
+    `feature_unavailable`과 다르다. `details.project_id`, `details.reason`(열린 문자열, 예
+    `no_migrations`·`migrate_failed`·`shutting_down`)."""
 
     # ---- 6R(design §6R.6·§6R.18, 0.13.0): 스펙(SDD)
     SDD_NOT_FOUND: Final = "sdd.not_found"
@@ -396,6 +415,7 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.CHAT_SESSION_UNAVAILABLE: 409,
     ErrorCodes.CONVERSATION_AMBIGUOUS: 409,
     ErrorCodes.RUN_AMBIGUOUS: 409,
+    ErrorCodes.PROJECT_MEMORY_UNAVAILABLE: 409,
     ErrorCodes.SDD_NOT_FOUND: 404,
     ErrorCodes.SDD_DOCUMENT_MISSING: 404,
     ErrorCodes.SDD_TEMPLATE_EXISTS: 409,
@@ -516,18 +536,11 @@ class KnownIssueCodes:
     BACKEND_UNRESOLVED: Final = "backend.unresolved"
     """백엔드를 쓰는 노드의 실행 백엔드가 층 어디에도 정해지지 않았다(노드 이슈로도, 실행 거부 오류
     코드 `ErrorCodes.BACKEND_UNRESOLVED`로도 쓴다). `fix`로 [노드에서 지정]·[기본값으로 지정]."""
-    PROJECT_SHARED_USES_PROJECT: Final = "project.shared_uses_project"
-    """(0.11.0부터 내지 않음, K33-5) 공용 정의가 프로젝트 전용 정의를 쓴다(warning).
-    `details.project`·`details.kind`·`details.id` = 참조된 정의."""
-    PROJECT_CROSS_PROJECT: Final = "project.cross_project"
-    """(0.11.0부터 내지 않음, K33-5) 프로젝트 P 전용 정의가 다른 프로젝트 Q 전용 정의를 쓴다."""
     PROJECT_UNKNOWN: Final = "project.unknown"
     """정의·실행이 없는 프로젝트 id를 가리킨다(info, 공용·프로젝트 층 없음으로 취급)."""
     PROJECT_REFERENCES_UNAVAILABLE: Final = "project.references_unavailable"
-    """참조 추출이 없어(예: 정의 모듈이 꺼짐) 참조 규칙(`project.shared_uses_project`·
-    `project.cross_project`)을 보지 못했다(info)."""
-    PROJECT_DEFINITIONS_UNAVAILABLE: Final = "project.definitions_unavailable"
-    """정의 읽기가 없어(예: 정의 모듈이 꺼짐) 프로젝트 범위 검사·옮기기 계획을 하지 못했다(info)."""
+    """참조 추출이 없어(예: 정의 모듈이 꺼짐) 복사·거꾸로 참조에서 함께 필요한 정의를 보지
+    못했다(info)."""
 
     # ---- 5.7R(design §5.7R.5, 0.10.0): 공유 메모리·에이전트 도구 공급자(X30)·구조도 검사(M-4)
     # 메모리 도구 실패 사유 코드(`memory.<MemoryEventPayload.status>`, 도구 결과 `is_error`).
@@ -585,8 +598,9 @@ class KnownIssueCodes:
     PROJECT_OUTSIDE_FOLDER: Final = "project.outside_folder"
     FOLDERS_REMOTE_DISABLED: Final = "folders.remote_disabled"
     SETTINGS_IGNORED_KEY: Final = "settings.ignored_key"
-    """설정에 이제 쓰지 않는 키가 있어 읽고 무시했다(info, 서버 시작은 막지 않음). 예:
-    `projects.new_definition_scope`(§PI.8), `logs.projects`(K33-15). `details.key` = 설정 경로."""
+    """설정에 이제 쓰지 않는 키가 있어 읽고 무시했다(info, 서버 시작은 막지 않음). 공통 설정의 옛
+    키 목록은 `IGNORED_SETTINGS_KEYS`(`projects`·`logs.projects`, 0.15.0에서 모델 필드를 지웠고
+    모르는 키로 보존된다). `details.key` = 설정 경로."""
     LOGS_NO_PROJECTS: Final = "logs.no_projects"
     """등록된 프로젝트가 없어 로그를 수집하지 않는다(info, design §PI.5)."""
 
@@ -596,9 +610,6 @@ class KnownIssueCodes:
     PROJECT_CONFIG_READONLY: Final = "project.config_readonly"
     PROJECT_COPY_CONFLICT: Final = "project.copy_conflict"
     """복사 결과 항목의 이슈(`CopyApplyItemResult.issue`, status conflict)."""
-    PROJECT_MEMORY_NETWORK_FS: Final = "project.memory_network_fs"
-    """(deprecated, 0.12.1) `PROJECT_NETWORK_FS`의 옛 이름. 서버는 새 이름만 낸다. 화면·도구는 두
-    이름을 같은 뜻으로 읽는다. 다음 major에서 삭제."""
     FOLDERS_DIALOG_UNAVAILABLE: Final = "folders.dialog_unavailable"
     FOLDERS_DIALOG_BUSY: Final = "folders.dialog_busy"
     FOLDERS_DIALOG_TIMEOUT: Final = "folders.dialog_timeout"
@@ -611,7 +622,9 @@ class KnownIssueCodes:
     """프로젝트 폴더가 네트워크 파일 시스템이라 SQLite 잠금(메모리·기록 DB)을 믿을 수 없다(info,
     `ProjectView.issues`, 감지할 수 있을 때만, K33-22). `details.files` = 영향받는 파일 이름
     (예: `memory.sqlite3`·`records.sqlite3`). 오류 코드가 아니다. 0.12.0의
-    `project.memory_network_fs`를 일반화했다."""
+    `project.memory_network_fs`(0.15.0에서 삭제)를 일반화했다."""
+    PROJECT_MEMORY_UNAVAILABLE: Final = "project.memory_unavailable"
+    """(0.15.0) 프로젝트 메모리 DB를 열 수 없다. `ErrorCodes`의 같은 이름과 같은 값이다."""
     PROJECT_GITIGNORE_OUTDATED: Final = "project.gitignore_outdated"
     """앱이 만든 `.gitignore` 틀에 지금 틀의 줄이 빠져 있다(info, `ProjectView.issues`). 사용자가
     [덧붙이기]를 누를 때만 빠진 줄을 끝에 더한다. `details.lines` = 빠진 줄. 오류 코드가 아니다."""
@@ -805,9 +818,8 @@ class KnownSuggestionIds:
     `x-constants.KNOWN_SUGGESTION_IDS`(TS 상수 `KNOWN_SUGGESTION_IDS`)로 내보낸다.
     """
 
-    PROJECT_MOVE_TO_SHARED: Final = "project.move_to_shared"
-    """[공용으로 옮기기]. 빈 patch이고, 옮길 정의는 이슈 `details`의 `kind`·`id`(`details.move`에도
-    같음). 범위 경고 `project.shared_uses_project`·`project.cross_project`에 붙는다."""
+    # 0.15.0: 유일하던 `PROJECT_MOVE_TO_SHARED`(`project.move_to_shared`)를 지웠다(내는 서버가
+    # 없다). 표는 문서 자리로 남긴다 — 스키마 `x-constants.KNOWN_SUGGESTION_IDS`는 빈 표다.
 
 
 class KnownInteractionKinds:

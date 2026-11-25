@@ -2,6 +2,10 @@
 
 ## 미출시
 
+- REL.16(계약 0.15.0, wiki 1.3.0): `GET …/graph?depth=all`(계약 `WIKI_GRAPH_DEPTH_ALL`) — 깊이 제한 없음, 생략은
+  그대로 1, 그 밖은 0 이상의 정수(아니면 422). `GET /wiki/info`가 `wiki_kind`(위키 정의 종류 이름)와
+  `reserved_page_names`(`PAGE_ROUTE_WORDS`, `GET`으로 읽을 수 없는 마지막 경로 조각)를 채운다. `PAGE_ROUTE_WORDS`는
+  `service`로 옮겼다(공개 이름·`routes`에서의 import는 그대로).
 - FU.23: 색인 공장 옵션에 지금 비밀 의심 규칙(`secrets.rules`, 사용자 규칙 포함)의 가리기 `redact`와 서명
   `redact_signature`(`service.secret_rules_signature`)를 넘긴다(전에는 색인 구현이 기본 규칙으로만 가렸다). 규칙이
   바뀌면 저장소·색인을 다시 짓는다. 색인 캐시 키에는 함수 대신 서명이 들어간다.

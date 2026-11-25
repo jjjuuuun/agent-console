@@ -1,4 +1,4 @@
-"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 3.1.0 — 0.12.1).
+"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 4.0.0 — 0.15.0).
 
 프로젝트 = 로컬 폴더 하나(절대 경로) + 그 폴더 안의 프로젝트 구성(`.agent-console/`, design §PI.2).
 기능(채팅·실행·로그·메모리 등)은 등록된 프로젝트 폴더에 대해서만 동작한다. 앱 workspace의 구성은
@@ -9,6 +9,12 @@
 저장은 두 곳이다: 앱 등록부 `ProjectRegistration`(`<workspace>/projects/<id>.yaml`)과 폴더
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
+
+4.0.0(0.15.0, 깨는 변경): 1.x 정의 범위 옮기기·삭제 계획(`MovePlan`·`MovePlanRequest`·
+`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`)과 다시 내보내던 `ProjectPreferences`·
+`DefinitionScope`를 지웠다. 정의는 프로젝트 소유가 아니다(K33-5). 옛 `project` 필드 정리는 복사
+계획(`CopyPlan`)이고, 프로젝트 삭제는 등록 해제(보관)다. 옛 등록부·`project.yaml`의
+`working_directory`는 그대로 `folder`로 읽는다.
 
 3.7.0(0.14.10, 더하기만): 종류 공통 거꾸로 참조 `GET /projects/copy/items/{kind}/{id}/references`의
 응답 `CopyItemReferences`(같은 공간에서 이 항목을 쓰는 정의, 삭제 확인 창).
@@ -41,11 +47,7 @@
 - `ProjectNotImportedDetails`: `reason`·`import_mode` → `in_library`.
 
 1.x에서 바뀐 것(2.0.0): `working_directory` → `folder`(읽을 때 옮김), `log_projects` 삭제(버림),
-`archived`·`archived_at`, 상태 보기·폴더 확인·탐색·이전 기록 넣기·개수 DTO. 정의 범위 옮기기
-(`MovePlan` 등)와 `ProjectDeleteMode`의 `delete_definitions`는 deprecated(다음 major에서 삭제).
-
-새 정의 범위 설정 `ProjectPreferences`(deprecated)는 공통 설정의 섹션이라 `definitions`에 있고
-편의를 위해 여기서도 다시 내보낸다.
+`archived`·`archived_at`, 상태 보기·폴더 확인·탐색·이전 기록 넣기·개수 DTO.
 
 의존: `common`(`SpaceRef`), `definitions`. 실행·대화의 `project_id`는 `runs`·`chat`의 불투명
 문자열이다.
@@ -58,11 +60,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from ._base import ContractModel, DefinitionModel, JsonObject, NonEmptyStr, Slug
 from .common import JsonPointer, SpaceRef, x_ui
-from .definitions import AgentSettings, DefinitionScope, Issue, ProjectPreferences
-
-type ProjectDeleteMode = Literal["move_to_shared", "delete_definitions"]
-"""(deprecated, 0.11.0) 1.x 프로젝트 삭제 때 그 프로젝트 정의 처리. 2.0에서 삭제는 등록 해제
-(보관) 하나이고 정의는 프로젝트 소유가 아니다(design §PI.2 K33-4). 다음 major에서 삭제."""
+from .definitions import AgentSettings, Issue
 
 type ProjectStatus = str
 """프로젝트 상태(계산 값, 저장하지 않음). 열린 문자열이고 알려진 값은 `KnownProjectStatuses`."""
@@ -404,18 +402,6 @@ class Project(_RegistrationFields, _ManifestFields):
     def _read_legacy_keys(cls, data: Any) -> Any:
         """옛 키를 읽는다: `working_directory` → `folder`, `IGNORED_PROJECT_KEYS`는 버린다."""
         return _read_legacy_project_keys(data)
-
-    # ---- 1.x 호환 읽기 전용(파이썬 소비자만, 스키마에 없음). 33e·33i가 소비자를 옮긴 뒤 삭제한다.
-
-    @property
-    def working_directory(self) -> str | None:
-        """(deprecated, 0.11.0) `folder`와 같다. 새 코드는 `folder`를 쓴다."""
-        return self.folder
-
-    @property
-    def log_projects(self) -> list[str]:
-        """(deprecated, 0.11.0) 늘 빈 목록. 로그의 프로젝트는 폴더로 정한다(design §PI.5)."""
-        return []
 
 
 class ProjectCreate(_LabelFields, _ManifestFields):
@@ -1168,55 +1154,6 @@ class ProjectCounts(ContractModel):
     )
 
 
-# ---------------------------------------------------------------- (deprecated) 1.x 정의 범위 옮기기
-
-
-class DefinitionMove(DefinitionKey):
-    """(deprecated, 0.11.0) 정의 하나의 범위 바꾸기(필드 `project`를 고쳐 저장). null = 공용."""
-
-    from_: str | None = Field(default=None, alias="from", description="지금 범위(null = 공용).")
-    to: str | None = Field(default=None, description="옮길 범위(null = 공용).")
-    required: bool = Field(
-        default=False,
-        description="옮기려는 그 정의면 true. false는 참조 때문에 함께 옮기기를 권하는 정의.",
-    )
-
-
-class MovePlanRequest(ContractModel):
-    """(deprecated, 0.11.0) `POST /projects/move-plan` 요청. 다음 major에서 삭제."""
-
-    kind: NonEmptyStr
-    id: NonEmptyStr
-    to: Slug | None = Field(default=None, description="옮길 프로젝트 id. null = 공용으로.")
-
-
-class MovePlan(ContractModel):
-    """(deprecated, 0.11.0) 옮기기 계획(순수 함수 `move_plan`의 결과). 저장하지 않는다.
-
-    2.0에서 정의의 프로젝트 전용 범위가 없어졌다(K33-5). 옛 `project` 필드 정리는
-    복사 계획(`CopyPlan`, `remove_source`)을 쓴다. 다음 major에서 삭제.
-    """
-
-    target: DefinitionKey = Field(description="옮기려는 정의.")
-    to: str | None = Field(default=None, description="옮길 범위(null = 공용).")
-    moves: list[DefinitionMove] = Field(default_factory=list)
-    warnings: list[Issue] = Field(
-        default_factory=list,
-        description="옮긴 뒤 생길 범위 경고(project.shared_uses_project 등)나 검사 못 함 정보.",
-    )
-
-
-class DeletePlan(ContractModel):
-    """(deprecated, 0.11.0) `POST /projects/{id}/delete-plan` 응답. 2.0 삭제 = 등록 해제(보관)."""
-
-    project_id: NonEmptyStr
-    definitions: list[DefinitionKey] = Field(
-        default_factory=list, description="이 프로젝트 전용 정의(공용으로 옮기거나 함께 삭제)."
-    )
-    default_mode: ProjectDeleteMode = "move_to_shared"
-    warnings: list[Issue] = Field(default_factory=list)
-
-
 __all__ = [
     "IGNORED_PROJECT_KEYS",
     "PROJECT_MANIFEST_FORMAT",
@@ -1234,9 +1171,6 @@ __all__ = [
     "CopyPlanItem",
     "CopyPlanRequest",
     "DefinitionKey",
-    "DefinitionMove",
-    "DefinitionScope",
-    "DeletePlan",
     "ExistingProjectProbe",
     "FolderCapabilities",
     "FolderCheck",
@@ -1259,19 +1193,15 @@ __all__ = [
     "KnownRecordsUnavailableReasons",
     "ManifestResetRequest",
     "ManifestResetResult",
-    "MovePlan",
-    "MovePlanRequest",
     "OutsideFolderPath",
     "Project",
     "ProjectCounts",
     "ProjectCreate",
-    "ProjectDeleteMode",
     "ProjectFolderConflictDetails",
     "ProjectFolderUnavailableDetails",
     "ProjectManifest",
     "ProjectNotImportedDetails",
     "ProjectOutsideFolderDetails",
-    "ProjectPreferences",
     "ProjectRecordsUnavailableDetails",
     "ProjectRegistration",
     "ProjectStatus",

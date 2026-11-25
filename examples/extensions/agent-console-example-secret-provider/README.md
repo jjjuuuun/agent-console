@@ -118,6 +118,9 @@ entry point는 인자 없이 불린다. 설치자 설정이 필요한 공급자�
 
 - `options_schema() -> dict`: 옵션 JSON Schema(기본값 = `properties.*.default`). 서버가 `GET /api/v1/server-info`의
   `plugin_options`에 스키마·지금 값(기본값을 채우고 비밀·경로는 가림)·설정 자리·YAML 조각을 싣는다.
+  스키마 맨 위 `title`·`description`은 설정 화면 "확장 옵션"의 폼 머리말이 된다. Pydantic 모델로 만들면 그대로는
+  클래스 이름과 docstring이 들어가므로, 이 예제는 `ConfigDict(title=...)`·한 문장 docstring을 쓰고 `options_schema()`에서
+  머리말을 사람이 읽는 문장으로 정한다.
 - `from_options(options, *, environ, base_dir) -> 공급자`: 서버 설정 `secrets.providers.<key>` 값으로 새 공급자를 만든다.
   `base_dir`은 설정 파일 폴더(상대 경로 기준), `environ`은 서버 환경이다. 틀린 값이면 `ValueError`(키 이름만) →
   서버가 시작을 거부한다(설정 오류).
