@@ -2,6 +2,7 @@
 
 ## 0.1.1 (미발행)
 
+- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-architecture`, so the web can show the module description, projection limit settings and the `architecture.settings_invalid` warning in English (data only, no API change).
 - 5.7R.8(X32): 선택 여러 제공자 포트 `architecture.profile_checks`(`ProfileCheck.check(profile,
   profile_id) -> list[Issue]`)를 받아 목록 `issues` 수·상세 `problems`·`POST
   /architecture/profiles/check` 결과에 더한다(부를 때 읽음, 예외를 낸 검사는 건너뜀).

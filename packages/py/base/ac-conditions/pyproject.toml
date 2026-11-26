@@ -28,6 +28,9 @@ lt = "agent_console_conditions.builtin:LT"
 lte = "agent_console_conditions.builtin:LTE"
 any_item = "agent_console_conditions.builtin:ANY_ITEM"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-conditions = "agent_console_conditions"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

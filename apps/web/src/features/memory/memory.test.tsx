@@ -60,7 +60,12 @@ function setup(path: string, f: Fixture = {}) {
   return { ...view, clients, ws, rest };
 }
 
-const grid = () => screen.findByRole("grid", { name: "메모리 항목 표" }, LONG);
+// 표는 항목 질의가 끝나기 전에 머리만 먼저 그려질 수 있다(화면 언어 공급자가 첫 렌더 타이밍을 바꾼 뒤 드러남, I.10). 행이 있는 시험이 바로 행을 찾도록 행을 잠깐 기다린다(항목이 0개인 시험은 시간만 쓰고 지나간다).
+const grid = async () => {
+  const found = await screen.findByRole("grid", { name: "메모리 항목 표" }, LONG);
+  await waitFor(() => expect(screen.queryAllByRole("row").length).toBeGreaterThan(1), { timeout: 2_000 }).catch(() => undefined);
+  return found;
+};
 const rowNames = () => screen.getAllByRole("row").slice(1).map((r) => r.getAttribute("aria-label") ?? "");
 
 describe("메모리 화면: 역할·배치", () => {

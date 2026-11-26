@@ -455,13 +455,23 @@ class ArchitectureOptions(DefinitionModel):
 
 
 class ArchitectureProfile(DefinitionModel):
-    """구조도 규칙(프로필)입니다. 어떤 칸과 연결을 어디에 그리고 무엇을 셀지 정합니다."""
+    """An architecture map profile: which cells and edges to draw where, and what to count.
+
+    The schema description (screen text) stays the Korean server original in ``model_config``.
+    """
 
     # source_priority: 한 칸·연결을 여러 출처 종류가 채우면 목록 앞의 종류만 센다(이중 집계 방지).
     # 목록에 없는 종류는 맨 뒤다. error_when에 맞거나 분류 체계에서 오류로 표시한 범주의 이벤트를
     # 오류로 센다. unassigned = 어느 칸에도 맞지 않은 이벤트를 "분류 안 됨"으로 센다.
 
-    model_config = ConfigDict(title="구조도 프로필")
+    model_config = ConfigDict(
+        title="구조도 프로필",
+        json_schema_extra={
+            "description": (
+                "구조도 규칙(프로필)입니다. 어떤 칸과 연결을 어디에 그리고 무엇을 셀지 정합니다."
+            )
+        },
+    )
 
     title: str | None = Field(
         default=None,

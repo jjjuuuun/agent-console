@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-definitions`, so the web can show the module description, definition store settings and the `definitions.versions_memory` and `secret.invalid_rule` issues in English (data only, no API change).
 - I.6: `PRESETS_REMOVED_REASON` is English (`The presets feature was removed. Delete this key from the settings file`); the host prints it to the terminal when it refuses to start.
 - P1.16: `server.warnings`가 공통 설정의 옛 최상위 `default_backend`(1.1.0부터 읽지 않음)도 info `settings.ignored_key`로
   안내한다 — `details = {key: "default_backend", replacement: "agent_defaults.backend"}`, 문구 `RENAMED_SETTINGS_MESSAGE`.

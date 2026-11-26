@@ -97,7 +97,10 @@ def run_input_variables(
         name = field_variable(f)
         if name not in seen:
             seen.add(name)
-            out.append(TemplateVariable(name=name, description=f"작업 필드 '{f}' 값입니다."))
+            # 고정 문구(화면 번역 키, design §I18N I-6) — 필드 이름은 변수 이름에 이미 있다.
+            out.append(
+                TemplateVariable(name=name, description="변수 이름에 적힌 작업 필드의 값입니다.")
+            )
     for doc in documents:
         name = document_variable(doc.id)
         if name not in seen:

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +8,15 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
+    <script>
+      /* 렌더 전: 마지막으로 정해진 화면 언어(agent-console.language)를 <html lang>에 먼저 적용한다. 앱 묶음이 있는지는 앱이 마운트될 때 다시 맞춘다. */
+      (function () {
+        try {
+          var l = localStorage.getItem("agent-console.language");
+          if (l && /^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/.test(l)) document.documentElement.lang = l.replace("_", "-");
+        } catch (e) {}
+      })();
+    </script>
     <script>
       /* 렌더 전: 직접 고른 값(light|dark)만 data-theme로 먼저 적용해 깜박임을 막는다. system/없음이면 속성을 두지 않는다. */
       (function () {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { InlineMarkdown, SchemaForm, type UiSchema } from "@agent-console/schema-form";
+import { InlineMarkdown, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../../../i18n";
 import { Button, ConfirmDialog, Disclosure, Icon, StatusChip, useToast } from "@agent-console/ui";
 import type { LogSourceInfo, LogSourceSetting, WorkspaceSettings } from "@agent-console/contracts";
 import { ErrorBlock } from "../../../../app/ErrorBlock";
@@ -193,7 +194,7 @@ export function LogsSourcesBlock({ value, onChange, errors, disabled, dirty, foc
                       {isHttpUrl(d.docs_url) ? <a href={d.docs_url} target="_blank" rel="noopener noreferrer">{t.settings.sources.docs}</a> : d.docs_url ? <span className="app-muted app-wrap">{d.docs_url}</span> : null}
                       {hasConfig ? (
                         <Disclosure summary={t.settings.sources.configTitle} {...(cfgErrors.length > 0 ? { open: true } : { defaultOpen: true })}>
-                          <SchemaForm
+                          <AppSchemaForm
                             schema={d.config_schema as Record<string, unknown>}
                             value={setting?.config ?? {}}
                             idPrefix={`logs-src-${d.id}`}

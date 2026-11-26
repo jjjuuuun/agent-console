@@ -20,6 +20,9 @@ dependencies = [
 [project.entry-points."agent_console.server_modules"]
 mod-chat = "agent_console_mod_chat.module:module"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-chat = "agent_console_mod_chat"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/api-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "서버 REST·WebSocket 계약을 감싼 순수 TypeScript 클라이언트",
   "private": true,
   "license": "MIT",
@@ -108,6 +108,11 @@
       "development": "./src/clients/architecture.ts",
       "types": "./dist/clients/architecture.d.ts",
       "default": "./dist/clients/architecture.js"
+    },
+    "./i18n": {
+      "development": "./src/clients/i18n.ts",
+      "types": "./dist/clients/i18n.d.ts",
+      "default": "./dist/clients/i18n.js"
     },
     "./settings": {
       "development": "./src/clients/settings.ts",

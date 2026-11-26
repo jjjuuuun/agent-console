@@ -103,7 +103,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-nav { border-right: 1px solid var(--ac-border); padding: var(--ac-space-3); overflow: auto; }
 .app-settings-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .app-settings-navgroup + .app-settings-navgroup { margin-top: var(--ac-space-3); }
-.app-settings-grouptitle { margin: 0 0 var(--ac-space-1); padding: 0 var(--ac-space-2); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); letter-spacing: 0.02em; }
+.app-settings-grouptitle { margin: 0 0 var(--ac-space-1); padding: 0 var(--ac-space-2); font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); font-weight: 600; color: var(--ac-text-muted); }
 .app-settings-changed { display: inline-block; width: 6px; height: 6px; margin-left: var(--ac-space-2); border-radius: var(--ac-radius-full); background: var(--ac-accent); vertical-align: middle; }
 .app-settings-nav a { display: block; padding: var(--ac-space-1) var(--ac-space-2); border-left: 2px solid transparent; color: var(--ac-text); text-decoration: none; border-radius: var(--ac-radius-sm); font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); }
 .app-settings-nav a { transition: var(--ac-trans-colors); }
@@ -224,6 +224,36 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 
 .app-theme-radios { display: flex; flex-direction: column; gap: var(--ac-space-2); }
 .app-theme-radio { display: inline-flex; align-items: center; gap: var(--ac-space-2); cursor: pointer; }
+/* 설정 › 화면: 항목(언어·테마) 한 덩어리 = 소제목 + 설명 + 선택지. 설정 본문 폭 안에서 줄어들고 글자는 말줄임·줄바꿈으로 처리한다 */
+.app-appearance { display: flex; flex-direction: column; gap: var(--ac-space-5); min-width: 0; }
+.app-appearance-item { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.app-appearance-label { margin: 0; font-size: 13px; font-weight: var(--ac-fw-strong); line-height: 20px; }
+.app-appearance-help { margin: 0; font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+/* 언어 고르기(LanguageSelect): 한 줄 = 라디오 | 이름 | 코드 | 부분 번역 칩 | 출처. 이름·출처는 줄어들며 말줄임 */
+.app-lang-setting { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.app-lang { display: flex; flex-direction: column; gap: var(--ac-space-2); min-width: 0; }
+.app-lang-list { display: flex; flex-direction: column; min-width: 0; }
+.app-lang-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; column-gap: var(--ac-space-2); min-height: 28px; min-width: 0; cursor: pointer; }
+.app-lang-row > input { margin: 0; width: 16px; height: 16px; min-height: 0; padding: 0; }
+.app-lang-row[data-disabled="true"] { cursor: default; color: var(--ac-text-muted); }
+.app-lang-body { display: grid; grid-template-columns: minmax(96px, auto) 40px auto minmax(0, 1fr); align-items: center; column-gap: var(--ac-space-2); min-width: 0; font-size: 13px; }
+.app-lang-name { min-width: 0; font-size: 13px; }
+.app-lang-code { font-family: var(--ac-font-mono); font-size: 12px; color: var(--ac-text-muted); }
+.app-lang-partial { display: inline-flex; align-items: center; gap: var(--ac-space-1); height: 20px; padding: 0 var(--ac-space-2); border: 1px solid var(--ac-warning); border-radius: var(--ac-radius-full); color: var(--ac-warning); font-size: 12px; white-space: nowrap; }
+.app-lang-sources { min-width: 0; font-size: 12px; color: var(--ac-text-subtle); text-align: right; }
+.app-lang-auto { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; font-size: 13px; }
+.app-lang-auto-sub { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; font-size: 12px; }
+.app-lang-note { margin: 0; font-size: 12px; line-height: var(--ac-lh-xs); }
+.app-lang-loading { display: flex; align-items: center; gap: var(--ac-space-2); margin: 0; font-size: 12px; }
+.app-lang-pop { position: relative; display: flex; flex-direction: column; gap: var(--ac-space-1); min-width: 0; width: min(100%, 320px); }
+.app-lang-trigger { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--ac-space-2); width: 100%; text-align: left; }
+.app-lang-panel { width: 100%; max-width: none; display: flex; flex-direction: column; gap: var(--ac-space-1); }
+.app-lang-listbox { margin: 0; padding: 0; list-style: none; outline: none; min-width: 0; }
+.app-lang-option { display: flex; align-items: center; gap: var(--ac-space-2); min-height: var(--ac-control-md); padding: 0 var(--ac-space-2); border-radius: var(--ac-radius-sm); cursor: pointer; min-width: 0; }
+.app-lang-option[data-active="true"] { background: var(--ac-hover-bg); }
+.app-lang-option[aria-selected="true"] .app-lang-name { font-weight: var(--ac-fw-strong); }
+.app-lang-option .app-lang-body { grid-template-columns: minmax(0, 1fr) auto auto; flex: 1 1 auto; }
+.app-lang-option .app-lang-sources { display: none; }
 
 /* 해결 버튼(오류의 fix)·백엔드 해결 카드 */
 .app-fix-actions { display: flex; flex-wrap: wrap; gap: var(--ac-space-2); justify-content: center; }
@@ -307,7 +337,7 @@ kbd { background: var(--ac-surface-2); border: 1px solid var(--ac-border-soft); 
 .app-settings-search .ac-input { width: 100%; padding-right: 28px; }
 .app-settings-search-key { line-height: var(--ac-lh-xs); position: absolute; right: var(--ac-space-2); font-size: var(--ac-text-xs); color: var(--ac-text-muted); border: 1px solid var(--ac-border); border-radius: var(--ac-radius-sm); padding: 0 4px; pointer-events: none; }
 .app-settings-nomatch { margin: 0; padding: 0 var(--ac-space-2); }
-.app-settings-grouptoggle { display: flex; align-items: center; gap: var(--ac-space-1); width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+.app-settings-grouptoggle { display: flex; align-items: center; gap: var(--ac-space-1); width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .app-settings-grouptoggle:focus-visible { outline: 2px solid var(--ac-focus-ring, var(--ac-accent)); outline-offset: 1px; border-radius: var(--ac-radius-sm); }
 .app-settings-grouptoggle[data-open="false"] .app-settings-chev { transform: rotate(-90deg); }
 .app-settings-layout[data-narrow="true"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }

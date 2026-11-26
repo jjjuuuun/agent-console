@@ -105,7 +105,7 @@ apply. A wiki that points to a deleted rule set shows `wiki.rules_missing` and w
 <!-- extdocs:facts wiki-rules -->
 - Registration: Registration kind `definition`.
 - Interface:
-  - `agent_console_contracts.wiki:WikiRulesDefinition` — 위키 규칙입니다. 에이전트 지침, 쓰기·점검 규칙, 페이지 틀, 문법을 담습니다.
+  - `agent_console_contracts.wiki:WikiRulesDefinition` — Wiki rules: agent instructions, write and check rules, page templates, and syntax.
 - Built-in implementations: —
 - Examples:
   - snippet: Wiki rules definition data
@@ -244,7 +244,7 @@ is left out and reported with `wiki.settings_invalid`.
 <!-- extdocs:facts wiki-syntax -->
 - Registration: Uses the package data `data/default_syntax.yaml`; the settings `wiki.syntax` override it.
 - Interface:
-  - `agent_console_contracts.wiki:WikiSyntax` — 링크·머리말·제목을 페이지에서 읽는 규칙입니다.
+  - `agent_console_contracts.wiki:WikiSyntax` — Rules for reading links, front matter, and titles from pages.
   - `agent_console_wiki:load_default_syntax` — Read the package default wiki syntax (`data/default_syntax.yaml`).
 - Built-in implementations: —
 - Examples:

@@ -176,7 +176,7 @@ X_PATH_KINDS: Final = ("directory", "file")
 
 
 def x_path(kind: XPathKind = "directory") -> dict[str, Any]:
-    """Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-path": kind}`를 만든다.
+    """Build `{"x-path": kind}` for Pydantic `Field(json_schema_extra=...)`.
 
     다른 확장 키와 함께 쓰려면 `{**x_ui(...), **x_path()}`처럼 합친다.
     예외: `kind`가 `X_PATH_KINDS`에 없으면 `ValueError`.

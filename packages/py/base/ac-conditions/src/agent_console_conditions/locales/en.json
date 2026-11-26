@@ -1,0 +1,31 @@
+{
+  "text": {
+    "항목 중 하나라도 맞음": "Any item matches",
+    "목록의 항목 중 하나라도 적은 필드가 모두 맞는다. 값은 {항목 안 경로: [허용 값, …]}이다(예: {\"/kind\": [\"skill\", \"spec\"]}). 경로 \"\"는 항목 자체다.": "At least one item in the list matches every listed field. The value is {path inside the item: [allowed values, …]} (for example {\"/kind\": [\"skill\", \"spec\"]}). The path \"\" is the item itself.",
+    "포함": "Contains",
+    "텍스트면 기대 텍스트를 포함하고, 목록이면 기대 값과 같은 항목이 있다.": "For text, it contains the expected text. For a list, it has an item equal to the expected value.",
+    "같음": "Equals",
+    "실제 값이 기대 값과 같다(JSON 값 비교, 숫자는 값으로 비교하고 참거짓은 숫자와 다르다).": "The actual value equals the expected value (JSON value comparison: numbers compare by value, and booleans differ from numbers).",
+    "값 있음": "Has a value",
+    "경로에 값이 있다(null도 있는 것으로 본다). 값은 필요 없다.": "The path has a value (null counts as a value). No value is needed.",
+    "보다 큼": "Greater than",
+    "실제 숫자가 기대 숫자보다 크다.": "The actual number is greater than the expected number.",
+    "이상": "At least",
+    "실제 숫자가 기대 숫자보다 크거나 같다.": "The actual number is greater than or equal to the expected number.",
+    "다음 중 하나": "One of",
+    "실제 값이 목록의 값 중 하나와 같다.": "The actual value equals one of the values in the list.",
+    "보다 작음": "Less than",
+    "실제 숫자가 기대 숫자보다 작다.": "The actual number is less than the expected number.",
+    "이하": "At most",
+    "실제 숫자가 기대 숫자보다 작거나 같다.": "The actual number is less than or equal to the expected number.",
+    "정규식 일치": "Matches regex",
+    "텍스트가 정규식과 일치한다(입력 길이·시간 상한이 있는 안전한 정규식).": "The text matches the regular expression (a safe regex with input length and time limits).",
+    "같지 않음": "Not equal",
+    "실제 값이 기대 값과 다르다. 경로에 값이 없으면 거짓이다.": "The actual value differs from the expected value. False if the path has no value."
+  },
+  "codes": {
+    "condition.empty": "The condition is empty, so it always passes.",
+    "condition.invalid_value": "The condition value doesn't fit operator {op}.",
+    "condition.unknown_operator": "Condition operator {op} isn't registered. This item is false at run time."
+  }
+}

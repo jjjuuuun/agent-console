@@ -1,0 +1,115 @@
+# i18n 검사·뽑기 설정(`uv run poe i18n-check` · `uv run poe i18n-extract --lang <code>`, design §I18N.10 S1~S3).
+# 경로는 저장소 루트 기준. 이 파일만 고치면 대상·제외·심각도를 바꿀 수 있다(README "설정").
+
+# 검사·뽑기 대상 패키지 폴더(glob). 폴더 이름이 패키지 이름(`--package`)이고 entry point 이름이다.
+targets:
+  - packages/py/*/*
+  - apps/server
+  - apps/cli
+  - examples/extensions/*
+
+# 요약 표의 묶음(이름 → 패키지 폴더 glob, 위에서부터 처음 맞는 것). 번역 작업 나눔과 같게 둔다.
+groups:
+  - name: contracts-base
+    paths: [packages/py/base/*]
+  - name: modules-a-l
+    paths: ["packages/py/modules/ac-mod-[a-l]*"]
+  - name: modules-m-z-links-kit
+    paths: ["packages/py/modules/ac-mod-[m-z]*", packages/py/links/*, packages/py/kit/*]
+  - name: features-examples
+    paths: [packages/py/features/*, examples/extensions/*]
+  - name: apps
+    paths: [apps/*]
+
+# 원문 언어와 원문 문자를 찾는 정규식(서버 원문은 한국어 — design I-7).
+source_language: ko
+source_pattern: "[\\u1100-\\u11ff\\u3130-\\u318f\\uac00-\\ud7a3]"
+
+# 묶어 둔 언어(완전해야 함 — I-9). `codes`는 모든 언어, `text`는 원문 언어가 아닌 언어만 본다.
+languages: [ko, en]
+
+# 소스에서 문구·코드를 모을 범위(패키지 폴더 기준 glob). `locales/`는 늘 뺀다.
+sources:
+  python: ["src/**/*.py"]
+  data: ["src/**/*.yaml", "src/**/*.yml", "src/**/*.json"]
+  exclude: ["src/**/testing/**", "src/**/testing.py", "src/**/_testing.py", "src/**/fixtures/**"]
+
+codes:
+  # 오류·이슈 코드 모양. 이 모양인 문자열만 코드로 본다.
+  pattern: "^[a-z][a-z0-9_]*(?:\\.[a-z0-9_]+)*$"
+  # 이 이름(정규식)의 클래스 안 문자열 상수는 모두 코드 정의다(ErrorCodes·KnownIssueCodes 포함).
+  class_pattern: "Codes$"
+  # 코드가 아닌 것(정규식, 전체 일치). 검사 도구 자신이 내는 코드처럼 화면에 나오지 않는 것.
+  exclude:
+    - "i18n\\.(missing_key|extra_key|untranslated|placeholder_mismatch|missing_code|missing_text|unknown_placeholder)"
+
+texts:
+  # 서버 원문으로 보지 않을 문자열(정규식, search).
+  exclude: []
+  # 응답에서 들어가지 않을 키(값 전체를 건너뜀). `$comment`는 화면에 나오지 않는 스키마 주석.
+  skip_keys: ["$comment"]
+  # 같은 문구가 여러 패키지에 있을 때 뽑기가 고를 패키지(앞이 이김). 없으면 이름 순 첫째.
+  prefer_owners: [ac-contracts]
+
+# 오류·이슈 객체 모양: 이 두 키가 문자열이면 이슈로 보고 `message`는 S1이 아니라 S2(코드)로 본다.
+issue:
+  code: code
+  message: message
+  details: details
+
+# 규칙별 심각도(error = 종료 코드 1, warning = 경고만). `--strict`는 모두 error로 본다.
+# 번역(I.7)이 끝나기 전이라 빠진 문구·코드는 경고로 시작한다 — I.15에서 아래 다섯 줄을 error로 바꾼다.
+severity:
+  missing_text: warning
+  untranslated_text: warning
+  dynamic_text: warning
+  unowned_text: warning
+  missing_code: warning
+  untranslated_code: warning
+  unowned_code: warning
+  stale_code: warning
+  placeholder_mismatch: error
+  unknown_placeholder: error
+  catalog_unregistered: error
+  catalog_invalid: error
+
+# S1: 조립 서버(fake 백엔드, 빈 작업 공간)의 OpenAPI GET 경로를 훑는다.
+server:
+  openapi: /api/v1/openapi.json
+  # 서버 프로세스 환경(값의 `{tmp}` = 임시 폴더). 실제 ~/.claude를 읽지 않게 빈 폴더를 준다.
+  env:
+    CLAUDE_CONFIG_DIR: "{tmp}/claude-config"
+  # 모듈 설정(`modules.options`).
+  options:
+    link-projects-runs: {require_project: false}
+  # 훑기 전에 만들 데이터(ASCII 이름만 — 사용자 데이터가 원문으로 잡히지 않게).
+  seeds:
+    - method: POST
+      path: /api/v1/agents
+      body: {id: i18n-agent, name: i18n-agent, backend: fake-agent, backend_options: {default: {response: ok}}}
+    - method: POST
+      path: /api/v1/graphs
+      body:
+        id: i18n-graph
+        name: i18n-graph
+        nodes:
+          - {id: you, type: user, label: you}
+          - {id: a, type: agent, label: a, config: {agent_ref: i18n-agent}}
+        edges:
+          - {id: m1, source: {node: you, port: says}, target: {node: a, port: in}, kind: message, config: {}}
+          - {id: r1, source: {node: a, port: out}, target: {node: you, port: hears}, kind: reply, config: {}}
+  # 경로 변수 값: `values`(고정) 또는 `from`(GET 경로) + `select`(`/` 경로, `*` = 목록 항목).
+  params:
+    agent_id: {values: [i18n-agent]}
+    graph_id: {values: [i18n-graph]}
+    node_id: {values: [a]}
+    module_id: {from: /api/v1/modules, select: "/*/id"}
+    backend_id: {from: /api/v1/backends, select: "/*/id"}
+    profile_id: {from: /api/v1/architecture/profiles, select: "/profiles/*/id"}
+  # 경로 변수 하나가 가질 값 수 상한(곱이 너무 커지지 않게).
+  max_param_values: 50
+  # 훑지 않을 경로(OpenAPI 경로 틀, fnmatch).
+  skip_paths:
+    - /api/v1/i18n/{lang}                  # 문구 묶음 자체(원문이 키로 들어 있다)
+    - /api/v1/backends/{backend_id}/models # 백엔드가 외부에 물을 수 있다(실호출 금지)
+    - /api/v1/backends/login/*             # 로그인 세션

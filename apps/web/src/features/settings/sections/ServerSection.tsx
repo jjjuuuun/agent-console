@@ -1,3 +1,4 @@
+import { useT } from "@agent-console/i18n";
 import { Banner, Button, Disclosure, IconButton, Icon } from "@agent-console/ui";
 import { useApi } from "../../../app/ApiContext";
 import { useConnectionStatus } from "../../../app/useConnectionStatus";
@@ -20,6 +21,7 @@ function CopyRow({ label, value, children }: { label: string; value: string; chi
 
 /** ⑥ 서버 정보(읽기 전용). 토큰은 어떤 경우에도 표시하지 않는다. */
 export function ServerSection() {
+  const tSettings = useT("settings");
   const { meta, ws } = useApi();
   const connection = useConnectionStatus(ws);
   const info = useServerInfo();
@@ -55,7 +57,7 @@ export function ServerSection() {
   const bind = [str("host"), str("port")].filter(Boolean).join(":");
   return (
     <>
-      <table className="app-table app-server-table" aria-label={m.settings.sections.server}>
+      <table className="app-table app-server-table" aria-label={tSettings("sections.server")}>
         <tbody>
           <CopyRow label={m.connection.rowLabel} value={`${m.connection.state[connection]} — ${m.connection.note}`}>
             {m.connection.state[connection]}

@@ -65,7 +65,7 @@ from it. For a full example, see the [architecture map example](../../examples/e
 - Registration: Register in the entry point group `agent_console.architecture_profiles` (constant `agent_console_architecture:ARCHITECTURE_PROFILES_GROUP`). The registration name is the id.
 - Interface:
   - `agent_console_architecture:ProfileSource` — The bundle of profiles one source provides.
-  - `agent_console_contracts.architecture:ArchitectureProfile` — 구조도 규칙(프로필)입니다. 어떤 칸과 연결을 어디에 그리고 무엇을 셀지 정합니다.
+  - `agent_console_contracts.architecture:ArchitectureProfile` — An architecture map profile: which cells and edges to draw where, and what to count.
 - Settings: `architecture.profiles`, `architecture.include_defaults`
 - Built-in implementations: —
 - Examples:

@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7a: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-conditions`, so the web can show the built-in operator names and condition issues (by code) in English (data only, no API change).
 - FU.6: 기본 연산자 `any_item`(11번째) — 목록 항목 중 하나라도 `{항목 안 경로: [허용 값…]}`이 모두 맞으면 참(값 스키마 객체·키는 JSON Pointer).
   디스크립터는 데이터 파일, `compile_expected` 빠른 경로 포함. 기본 구조도 Instructions 칸이 규칙과 함께 붙은 skill을 세는 데 쓴다.
 

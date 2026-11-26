@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getDefaultValue, SchemaForm, type JsonSchema, type UiSchema } from "@agent-console/schema-form";
+import { getDefaultValue, type JsonSchema, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../../i18n";
 import { getContractSchema, type NotificationSettings, type WorkspaceSettings } from "@agent-console/contracts";
 import { Banner, Button } from "@agent-console/ui";
 import { messages as m } from "../../../app/messages";
@@ -98,7 +99,7 @@ export function NotificationsEditor({ value, onChange, errors, disabled }: Notif
         </Banner>
       </div>
       <span className="ac-sr-only" role="status" aria-live="polite">{live}</span>
-      <SchemaForm
+      <AppSchemaForm
         schema={schema}
         uiSchema={uiSchema}
         value={effective}

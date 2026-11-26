@@ -260,7 +260,7 @@ annotating URLs or identifiers that are not paths.
 <!-- extdocs:facts path-field -->
 - Registration: Add the schema annotation key `x-path`.
 - Interface:
-  - `agent_console_contracts:x_path` — Pydantic `Field(json_schema_extra=...)`에 넣을 `{"x-path": kind}`를 만든다.
+  - `agent_console_contracts:x_path` — Build `{"x-path": kind}` for Pydantic `Field(json_schema_extra=...)`.
 - Built-in implementations: —
 - Examples:
   - snippet: Add the `x-path` annotation to a schema property

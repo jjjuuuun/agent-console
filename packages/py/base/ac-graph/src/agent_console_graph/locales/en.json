@@ -1,0 +1,18 @@
+{
+  "text": {
+    "출력": "Output"
+  },
+  "codes": {
+    "cycle": "The flow loops back on itself (cycle).",
+    "duplicate_edge_id": "Several edges use the same id: {edge_id}",
+    "duplicate_node_id": "Several nodes use the same id: {node_id}",
+    "invalid_config": "The node settings don't match the node type's settings schema.",
+    "invalid_config_schema": "The node type's config_schema is invalid.",
+    "port_resolution_failed": "Couldn't resolve the ports ({error}).",
+    "ports_unresolved": "The node type's dynamic ports can't be resolved, so the port check was skipped.",
+    "unknown_edge_type": "Unknown edge type {kind}",
+    "unknown_node": "The edge's {end} node {node} isn't in the team.",
+    "unknown_node_type": "Unknown node type {type}. Check that the extension that provides it is installed and enabled.",
+    "unknown_port": "Node {node} has no port {port}."
+  }
+}

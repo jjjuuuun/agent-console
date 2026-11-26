@@ -1,5 +1,9 @@
 # 변경 기록
 
+## Unreleased
+
+- I.7a: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-contracts`, so the web can show contract schema titles, descriptions and `x-ui` hints (by source text) and the `ErrorCodes`, `KnownIssueCodes`, architecture and wiki codes (by code, placeholders = `details` keys) in English (data only, no API change).
+
 ## 0.16.0
 
 - Contracts 0.16.0 (breaking change — internal dependency range `>=0.16,<0.17`, TS `^0.16.0`). Submodule
@@ -33,6 +37,10 @@
   cannot use (server route words). Creating a template or "save as template" with one of these ids returns
   422 `validation_failed` (`details.reserved`). Works with the SDD screen alone, without the projects
   module.
+- Docs only: the first docstring line of `ArchitectureProfile`, `SpecSyntax`, `SpecTemplate`,
+  `WikiSyntax`, `WikiRulesDefinition`, `Run`, and `x_path` is English (the generated extension guide reads
+  it). The JSON Schema descriptions shown on screen stay the same Korean text; only the `Run` description
+  in the schema and the generated TS comment changes.
 
 ### BREAKING CHANGE
 

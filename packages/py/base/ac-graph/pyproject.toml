@@ -12,6 +12,9 @@ dependencies = [
     "referencing>=0.28",
 ]
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-graph = "agent_console_graph"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

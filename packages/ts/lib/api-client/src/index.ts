@@ -44,6 +44,8 @@ export type { ImportScope } from "./clients/imports";
 export { LOG_EMPTY_VALUE, logQuery } from "./clients/logs";
 export { memoryConflictVersion, memoryScopeText } from "./clients/memory";
 export type { MemoryClient, MemoryImportPolicyName } from "./clients/memory";
+export type { I18nClient } from "./clients/i18n";
+export { createI18nClient } from "./clients/i18n";
 export type { ListFoldersParams, ProjectsClient } from "./clients/projects";
 export { createSddClient } from "./clients/sdd";
 export type { ListSpecTasksParams, SddAutomationOp, SddClient } from "./clients/sdd";

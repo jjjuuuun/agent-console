@@ -1,0 +1,15 @@
+{
+  "text": {
+    "에이전트 구조도 프로필을 보고 검사한다": "Lists and checks agent architecture map profiles",
+    "구조도 투영 상한(설치자 값).": "Architecture map projection limits (server administrator values).",
+    "이벤트를 본문으로 넘겨 그리는 요청(POST /architecture/project)이 받을 수 있는 최대 이벤트 수. 넘으면 그리지 않고 범위가 크다는 오류를 돌려준다.": "Maximum number of events a request that sends events in the body to draw a map (POST /architecture/project) accepts. Above this, the map isn't drawn and a scope-too-large error is returned.",
+    "단독 투영 이벤트 상한": "Event limit for standalone projection",
+    "다른 도구에서 큰 이벤트 묶음을 넘겨 구조도를 그려야 할 때 늘리세요.": "Raise this when another tool needs to send a large batch of events to draw an architecture map.",
+    "로그 범위(세션·실행)를 구조도로 그릴 때 셀 최대 이벤트 수. 로그 연동이 이 값을 읽는다. 넘으면 그리지 않고 필터를 좁히라고 안내한다.": "Maximum number of events counted when drawing a log scope (session or run) as an architecture map. The logs integration reads this value. Above this, the map isn't drawn and you're asked to narrow the filter.",
+    "범위 이벤트 상한": "Event limit per scope",
+    "아주 긴 세션의 구조도가 상한 초과로 보이지 않을 때 늘리세요.": "Raise this when the architecture map of a very long session doesn't show because it exceeds the limit."
+  },
+  "codes": {
+    "architecture.settings_invalid": "Part of the architecture map settings is invalid, so that part is ignored ({errors} problems)."
+  }
+}

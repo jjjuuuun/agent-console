@@ -19,6 +19,9 @@ dependencies = [
 [project.entry-points."agent_console.server_modules"]
 mod-definitions = "agent_console_mod_definitions.module:module"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-definitions = "agent_console_mod_definitions"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

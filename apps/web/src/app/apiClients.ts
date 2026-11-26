@@ -57,7 +57,8 @@ export interface CreateApiClientsOptions {
 /** 404·409를 보고 기능 신호를 낸다. 본문은 복제해서 읽으므로 호출자가 읽는 응답에는 영향이 없다. */
 async function signalFeature(response: Response, input: string, emit: (signal: FeatureSignal) => void): Promise<void> {
   if (response.status === 404) {
-    if (!/\/modules(\?|$)/.test(input)) emit({ kind: "not-found" });
+    // 기능 목록(`/modules`)과 화면 문구 묶음(`/i18n`)의 404는 "기능 구성이 바뀜"이 아니다(문구 묶음이 없는 언어도 404).
+    if (!/\/modules(\?|$)|\/i18n(\/|\?|$)/.test(input)) emit({ kind: "not-found" });
     return;
   }
   if (response.status !== 409) return;

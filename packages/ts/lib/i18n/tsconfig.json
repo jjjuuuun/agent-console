@@ -1,0 +1,12 @@
+{
+  "extends": "@agent-console/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "customConditions": ["development"],
+    "paths": {
+      "@agent-console/i18n": ["./src/index.ts"],
+      "@agent-console/i18n/testing": ["./src/testing.ts"]
+    }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

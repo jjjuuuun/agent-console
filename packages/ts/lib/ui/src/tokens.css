@@ -828,6 +828,9 @@ textarea.ac-input { height: auto; min-height: calc(var(--ac-control-md) * 2.5); 
   .ac-pageheader-secondary { display: none; }
   .ac-pageheader-more { display: inline-flex; }
 }
+/* 측정 기반 접기: 보조 액션 때문에 제목이 120px 아래로 줄면 컨테이너가 넓어도 접는다(PageHeader가 data-collapsed를 단다) */
+.ac-pageheader[data-collapsed="true"] .ac-pageheader-secondary { display: none; }
+.ac-pageheader[data-collapsed="true"] .ac-pageheader-more { display: inline-flex; }
 .ac-breadcrumb { display: flex; align-items: center; gap: var(--ac-space-1); list-style: none; margin: 0; padding: 0; font-size: var(--ac-text-sm); line-height: var(--ac-lh-sm); color: var(--ac-text-muted); }
 .ac-breadcrumb li { display: inline-flex; align-items: center; gap: var(--ac-space-1); }
 .ac-breadcrumb a { color: var(--ac-text-muted); text-decoration: none; }

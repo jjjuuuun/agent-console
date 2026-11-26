@@ -23,6 +23,9 @@ mod-architecture = "agent_console_mod_architecture.module:module"
 [project.entry-points."agent_console.host_plugin_loaders"]
 architecture = "agent_console_mod_architecture.plugins:load_plugins"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-architecture = "agent_console_mod_architecture"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

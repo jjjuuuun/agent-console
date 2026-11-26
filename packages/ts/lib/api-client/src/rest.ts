@@ -10,6 +10,7 @@ import { createChatClient, type ChatClient } from "./clients/chat";
 import { createCoreClient, type CoreClient } from "./clients/core";
 import { createExportsClient, type ExportsClient } from "./clients/exports";
 import { createGraphsClient, type GraphsClient } from "./clients/graphs";
+import { createI18nClient, type I18nClient } from "./clients/i18n";
 import { createImportsClient, type ImportsClient } from "./clients/imports";
 import { createInteractionsClient, type InteractionsClient } from "./clients/interactions";
 import { createLoginClient, type LoginClient } from "./clients/login";
@@ -46,6 +47,7 @@ export interface RestClient
     UsageClient,
     ResourcesClient,
     ImportsClient,
+    I18nClient,
     SettingsClient,
     ExportsClient,
     VersionsClient,
@@ -72,6 +74,7 @@ export function createRestClient(options: RestClientOptions): RestClient {
     ...createUsageClient(io),
     ...createResourcesClient(io),
     ...createImportsClient(io),
+    ...createI18nClient(io),
     ...createSettingsClient(io),
     ...createExportsClient(io),
     ...createVersionsClient(io),

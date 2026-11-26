@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { SchemaForm, type JsonSchema, type UiSchema } from "@agent-console/schema-form";
+import { type JsonSchema, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../../i18n";
 import { getContractSchema, type VersionUiSettings, type WorkspaceSettings } from "@agent-console/contracts";
 import { messages as m } from "../../../app/messages";
 import { DEFAULT_DIFF_LABEL_KEYS } from "../../../lib/itemLabelKeys";
@@ -38,7 +39,7 @@ export function VersionsUiEditor({ value, onChange, errors, disabled }: Versions
   );
   const shown = { item_label_keys: value?.item_label_keys ?? [] };
   return (
-    <SchemaForm
+    <AppSchemaForm
       schema={schema}
       uiSchema={uiSchema}
       value={shown}

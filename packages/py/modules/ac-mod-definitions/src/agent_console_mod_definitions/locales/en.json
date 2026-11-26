@@ -1,0 +1,18 @@
+{
+  "text": {
+    "에이전트·팀 구성·공통 설정을 만들고 고치고 저장한다": "Creates, edits and saves agents, teams and common settings",
+    "정의 저장소·평문 점검 설정.": "Definition store and plaintext check settings.",
+    "정의 하나(리소스 등)의 본문 파일 총량 한도. 비우면 무제한. 화면·가져오기·되돌리기에 같은 한도.": "Total size limit for the content files of one definition (such as a resource). Leave empty for no limit. The same limit applies to editing, import and revert.",
+    "본문 최대 크기": "Maximum content size",
+    "저장 전 검사 문제 중 평문 비밀 경고로 옮길 코드.": "Pre-save check problem codes to turn into plaintext secret warnings.",
+    "평문 비밀 문제 코드": "Plaintext secret problem codes",
+    "비밀처럼 보이는 평문이 있어 프로젝트로 복사하거나 프로젝트에서 실행할 수 없습니다. 비밀 저장소에 넣고 secret:// 참조로 바꾸세요": "This contains plaintext that looks like a secret, so it can't be copied to a project or run in a project. Put it in the secret store and replace it with a secret:// reference.",
+    "공용 구성에 비밀처럼 보이는 평문이 든 정의를 저장할 때 응답 경고에 보일 문구. 저장은 되지만 프로젝트로 복사·실행할 때 막힌다는 안내다.": "Warning text shown when you save a definition with plaintext that looks like a secret to the shared library. Saving works, but copying it to a project or running it there is blocked.",
+    "저장 때 평문 비밀 경고 문구": "Plaintext secret warning on save",
+    "공통 설정": "Common settings"
+  },
+  "codes": {
+    "definitions.versions_memory": "There's no database, so definition version history is kept in memory only (it's lost on restart).",
+    "secret.invalid_rule": "This secret detection rule is invalid. Fix or remove it."
+  }
+}

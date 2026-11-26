@@ -12,7 +12,7 @@
 .usage-ind-link[aria-current="page"] { background: var(--ac-accent-bg-strong); }
 .usage-ind-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .usage-ind-row { display: flex; align-items: center; gap: var(--ac-space-2); min-width: 0; }
-.usage-ind-row > .usage-ind-label { flex: 0 1 auto; max-width: 5em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.usage-ind-row > .usage-ind-label { flex: 0 1 auto; max-width: 56px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .usage-ind-bar { flex: 1 1 0; min-width: 24px; }
 .usage-ind-row > .usage-ind-value { flex: none; min-width: 4ch; text-align: right; }
 .usage-ind-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ac-space-2); min-width: 0; }

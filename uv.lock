@@ -50,6 +50,7 @@ members = [
     "agent-console-mod-chat",
     "agent-console-mod-definitions",
     "agent-console-mod-exports",
+    "agent-console-mod-i18n",
     "agent-console-mod-imports",
     "agent-console-mod-logs",
     "agent-console-mod-memory",
@@ -1878,6 +1879,47 @@ dev = [
 ]
 
 [[package]]
+name = "agent-console-mod-i18n"
+version = "0.1.0"
+source = { editable = "packages/py/modules/ac-mod-i18n" }
+dependencies = [
+    { name = "agent-console-contracts" },
+    { name = "agent-console-i18n" },
+    { name = "agent-console-modkit", extra = ["host"] },
+    { name = "agent-console-registry" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
+    { name = "agent-console-i18n", editable = "packages/py/features/ac-i18n" },
+    { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
+    { name = "agent-console-registry", editable = "packages/py/base/ac-registry" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "agent-console-mod-imports"
 version = "0.1.0"
 source = { editable = "packages/py/modules/ac-mod-imports" }
@@ -2925,6 +2967,7 @@ dependencies = [
     { name = "agent-console-mod-chat" },
     { name = "agent-console-mod-definitions" },
     { name = "agent-console-mod-exports" },
+    { name = "agent-console-mod-i18n" },
     { name = "agent-console-mod-imports" },
     { name = "agent-console-mod-logs" },
     { name = "agent-console-mod-memory" },
@@ -2988,6 +3031,7 @@ requires-dist = [
     { name = "agent-console-mod-chat", editable = "packages/py/modules/ac-mod-chat" },
     { name = "agent-console-mod-definitions", editable = "packages/py/modules/ac-mod-definitions" },
     { name = "agent-console-mod-exports", editable = "packages/py/modules/ac-mod-exports" },
+    { name = "agent-console-mod-i18n", editable = "packages/py/modules/ac-mod-i18n" },
     { name = "agent-console-mod-imports", editable = "packages/py/modules/ac-mod-imports" },
     { name = "agent-console-mod-logs", editable = "packages/py/modules/ac-mod-logs" },
     { name = "agent-console-mod-memory", editable = "packages/py/modules/ac-mod-memory" },

@@ -1,0 +1,26 @@
+{
+  "text": {
+    "구성을 다른 도구 형식으로 미리 보고 지정한 폴더에 내보낸다": "Previews configuration in other tools' formats and exports it to a folder you choose",
+    "내보내기 폴더 쓰기를 허용한 루트 하나(설치자만 등록, 웹에서 바꾸지 않는다).": "One root folder that exports may write to (only the server administrator registers it; it can't be changed from the web).",
+    "내보내기 화면에서 이 폴더를 고를 때 쓰는 이름.": "Name used when picking this folder on the export screen.",
+    "새 폴더를 등록할 때 이름을 정합니다.": "Set a name when you register a new folder.",
+    "화면 이름(비우면 id).": "Display name (leave empty to use the id).",
+    "화면 이름": "Display name",
+    "내보낸 파일을 쓸 폴더(상대 경로는 설정 파일 폴더 기준). 있는 폴더여야 쓸 수 있다.": "Folder to write exported files to (relative paths are resolved from the settings file folder). The folder must already exist.",
+    "내보낸 파일을 쓸 폴더를 바꿀 때.": "Change this to write exported files to a different folder.",
+    "설정 내보내기를 어디에 쓸 수 있는지 정합니다. 기본은 zip 내려받기만 합니다.": "Sets where exports can be written. By default, exports are only downloaded as a zip.",
+    "폴더 쓰기를 허용한 곳. 비우면 폴더 쓰기 꺼짐(zip 내려받기만).": "Places where writing to a folder is allowed. Leave empty to turn off folder writes (zip download only).",
+    "쓰기 허용 폴더": "Writable folders",
+    "내보낸 파일을 zip이 아니라 폴더에 바로 쓰고 싶을 때.": "Use this when you want exported files written straight to a folder instead of a zip.",
+    "쓰기 금지 폴더를 찾을 홈(상대 경로는 설정 파일 폴더 기준). 비우면 HOME·USERPROFILE.": "Home folder used to find write-protected folders (relative paths are resolved from the settings file folder). Leave empty to use HOME or USERPROFILE.",
+    "기준 홈 폴더": "Home folder",
+    "홈 기준 쓰기 금지 폴더(외부 도구 원본). 허용 폴더로 등록해도 이 안에는 쓰지 않는다.": "Write-protected folders under the home folder (other tools' originals). Nothing is written inside them, even if they're registered as writable folders.",
+    "홈 안 쓰기 금지 폴더": "Write-protected folders in home",
+    "그 밖의 쓰기 금지 폴더(상대 경로는 설정 파일 폴더 기준).": "Other write-protected folders (relative paths are resolved from the settings file folder).",
+    "그 밖의 쓰기 금지 폴더": "Other write-protected folders",
+    "내보내기 형식 이름 → 그 형식이 받는 옵션(키는 형식이 정한다, 예: mapping·layout).": "Export format name → options that format accepts (the format defines the keys, such as mapping and layout).",
+    "형식별 옵션": "Options per format",
+    "내보내기 화면에 허용 폴더의 전체 경로를 보일지(로컬 앱이라 기본 표시).": "Whether the export screen shows the full path of allowed folders (shown by default because this is a local app).",
+    "폴더 경로 보이기": "Show folder paths"
+  }
+}

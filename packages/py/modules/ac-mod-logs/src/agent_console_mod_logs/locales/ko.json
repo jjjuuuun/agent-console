@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "logs.ignored_key": "로그 출처 {source} 설정의 {key}는 더 이상 읽지 않습니다. 설정에서 지워도 됩니다",
+    "logs.out_of_scope": "로그 출처 {source}의 루트 폴더에 등록되지 않은 프로젝트 기록 {skipped}개가 있어 건너뛰었습니다",
+    "logs.purge_unsupported": "이 로그 색인({index})은 비우기를 지원하지 않습니다"
+  }
+}

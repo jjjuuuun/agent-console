@@ -52,7 +52,7 @@ is left out and reported with `sdd.settings_invalid`.
 <!-- extdocs:facts sdd-syntax -->
 - Registration: Uses the package data `data/default_syntax.yaml`; the settings `sdd.syntax` override it.
 - Interface:
-  - `agent_console_contracts.sdd:SpecSyntax` — 작업·요구·단계를 문서에서 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
+  - `agent_console_contracts.sdd:SpecSyntax` — Rules for reading tasks, requirements, and stages from documents.
   - `agent_console_sdd:load_default_syntax` — Read the package default task syntax (`data/default_syntax.yaml`).
 - Built-in implementations: —
 - Examples:
@@ -206,7 +206,7 @@ its run profiles exist only in the library (the copy plan brings them along, but
 <!-- extdocs:facts spec-template -->
 - Registration: Registration kind `definition`.
 - Interface:
-  - `agent_console_contracts.sdd:SpecTemplate` — 문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다.
+  - `agent_console_contracts.sdd:SpecTemplate` — A document template: creating a spec copies its document skeleton and rules as they are.
 - Built-in implementations: —
 - Examples:
   - snippet: Document template definition data

@@ -244,7 +244,8 @@ describe("실행 상세", () => {
     mount("/runs/r1?tab=interactions", detailOverrides({ respondInteraction }));
     expect(await screen.findByText(/총 2건 · 응답 대기 1 · 평균 응답 시간 20초/)).toBeTruthy();
     expect(screen.getByText("응답자 사용자")).toBeTruthy();
-    expect(screen.getByText(/대기 20초/)).toBeTruthy();
+    // 대기 요청 카드도 경과 시간(now 기준)이 20초가 되면 같은 글자를 그리므로, 닫힌 요청 행 안에서만 찾는다.
+    expect(within(document.getElementById("interaction-i0") as HTMLElement).getByText(/대기 20초/)).toBeTruthy();
     const input = await screen.findByLabelText("답장");
     fireEvent.change(input, { target: { value: "네" } });
     fireEvent.click(screen.getByRole("button", { name: "보내기" }));

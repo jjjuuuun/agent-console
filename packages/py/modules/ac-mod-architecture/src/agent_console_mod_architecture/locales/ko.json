@@ -1,0 +1,5 @@
+{
+  "codes": {
+    "architecture.settings_invalid": "구조도 설정 일부가 형식에 맞지 않아 그 부분을 빼고 씁니다(문제 {errors}개)"
+  }
+}

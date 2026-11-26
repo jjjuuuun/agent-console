@@ -59,7 +59,7 @@ type NodeRunStatus = Literal[
 
 
 class Run(ContractModel):
-    """그래프 1회 실행. 하위 그래프는 자식 Run(parent_run_id).
+    """One run of a graph. A subgraph runs as a child Run (`parent_run_id`).
 
     목록 `GET /runs` 질의(0.8.0): `project`(같은 `project_id`만), `root_only`(true면 루트 Run만,
     `root_run_id`가 null인 것). 기존 질의(`graph_id`·`conversation_id`·`root` 등)는 그대로다.

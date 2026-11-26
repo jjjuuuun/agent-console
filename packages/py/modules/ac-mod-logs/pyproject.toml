@@ -24,6 +24,9 @@ mod-logs = "agent_console_mod_logs.module:module"
 [project.entry-points."agent_console.host_plugin_loaders"]
 logs = "agent_console_mod_logs.plugins:load_plugins"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-logs = "agent_console_mod_logs"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

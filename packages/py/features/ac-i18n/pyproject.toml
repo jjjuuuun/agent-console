@@ -50,7 +50,6 @@ area = "i18n"
 summary = "Adds translations of server messages, errors, issue codes, and web namespaces as per-language JSON files inside a package"
 registration = { kind = "entry-point", group = "agent_console_i18n:MESSAGE_CATALOGS_GROUP" }
 interface = ["agent_console_i18n:read_catalog", "agent_console_i18n:package_catalogs", "agent_console_i18n:CatalogSet"]
-builtin = "none"
 example = [
     { kind = "snippet", note = "Register a package that has `locales/<lang>.json` as an entry point" },
     { kind = "contract-tests", symbols = ["agent_console_i18n.testing:make_catalog_package", "agent_console_i18n.testing:make_distribution"] },

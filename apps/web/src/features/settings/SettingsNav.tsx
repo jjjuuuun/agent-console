@@ -1,6 +1,6 @@
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { Icon } from "@agent-console/ui";
-import { messages as m } from "../../app/messages";
+import { useT } from "@agent-console/i18n";
 
 /** 목록 한 줄. 어느 섹션이 있는지는 부모가 정해 주며, 이 컴포넌트는 섹션 id·이름을 모른다. */
 export interface NavItem {
@@ -31,15 +31,15 @@ export interface SettingsNavProps {
 
 /** 섹션 목록의 검색 칸. `Esc`로 비우고 `Enter`는 첫 일치 섹션으로 간다. */
 function SearchBox({ query, onQueryChange, searchRef, onEnter }: Pick<SettingsNavProps, "query" | "onQueryChange" | "searchRef"> & { onEnter: () => void }) {
-  const t = m.settings.nav;
+  const t = useT("settings");
   return (
     <div className="app-settings-search">
       <input
         ref={searchRef}
         type="search"
         className="ac-input"
-        aria-label={t.searchLabel}
-        placeholder={t.searchPlaceholder}
+        aria-label={t("nav.searchLabel")}
+        placeholder={t("nav.searchPlaceholder")}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={(e) => {
@@ -53,18 +53,18 @@ function SearchBox({ query, onQueryChange, searchRef, onEnter }: Pick<SettingsNa
           }
         }}
       />
-      {query === "" ? <kbd className="app-settings-search-key" aria-hidden="true">{t.searchHint}</kbd> : null}
+      {query === "" ? <kbd className="app-settings-search-key" aria-hidden="true">/</kbd> : null}
     </div>
   );
 }
 
 /** 설정 섹션 목록(검색 + 묶음 접기). 폭이 좁으면 같은 데이터를 드롭다운으로 그린다. */
 export function SettingsNav({ groups, active, onPick, query, onQueryChange, searchRef, collapsed, onToggleGroup, narrow }: SettingsNavProps) {
-  const t = m.settings.nav;
+  const t = useT("settings");
   const searching = query.trim() !== "";
   const first = groups[0]?.items[0];
   const search = <SearchBox query={query} onQueryChange={onQueryChange} searchRef={searchRef} onEnter={() => first && onPick(first.id)} />;
-  const none = groups.length === 0 ? <p className="app-muted app-settings-nomatch" role="status">{t.noMatch}</p> : null;
+  const none = groups.length === 0 ? <p className="app-muted app-settings-nomatch" role="status">{t("nav.noMatch")}</p> : null;
 
   const onNavKey = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -78,10 +78,10 @@ export function SettingsNav({ groups, active, onPick, query, onQueryChange, sear
   if (narrow) {
     // 현재 섹션은 검색에 걸리지 않아도 값으로 남겨 둔다(select 값이 비지 않게).
     return (
-      <nav className="app-settings-nav" aria-label={m.settings.sectionNav}>
+      <nav className="app-settings-nav" aria-label={t("sectionNav")}>
         <div className="app-settings-navtop">
           {search}
-          <select className="ac-input app-settings-picker" aria-label={t.picker} value={active} onChange={(e) => onPick(e.target.value)}>
+          <select className="ac-input app-settings-picker" aria-label={t("nav.picker")} value={active} onChange={(e) => onPick(e.target.value)}>
             {groups.map((g) => (
               <optgroup key={g.group} label={g.title}>
                 {g.items.map((it) => <option key={it.id} value={it.id}>{it.title}</option>)}
@@ -95,7 +95,7 @@ export function SettingsNav({ groups, active, onPick, query, onQueryChange, sear
   }
 
   return (
-    <nav className="app-settings-nav" aria-label={m.settings.sectionNav} onKeyDown={onNavKey}>
+    <nav className="app-settings-nav" aria-label={t("sectionNav")} onKeyDown={onNavKey}>
       <div className="app-settings-navtop">{search}</div>
       {none}
       {groups.map((g) => {
@@ -112,7 +112,7 @@ export function SettingsNav({ groups, active, onPick, query, onQueryChange, sear
                 aria-expanded={open}
                 aria-controls={`settings-group-list-${g.group}`}
                 aria-disabled={locked ? "true" : undefined}
-                title={locked ? undefined : t.groupToggle(g.title, open)}
+                title={locked ? undefined : t(open ? "nav.groupToggleOpen" : "nav.groupToggleClosed", { title: g.title })}
                 onClick={() => {
                   if (!locked) onToggleGroup(g.group);
                 }}

@@ -1,0 +1,11 @@
+{
+  "text": {
+    "다른 도구의 설정(예: .claude)에서 구성을 복사해 가져온다": "Imports configuration by copying it from other tools' settings (such as .claude)",
+    "가져오기 출처를 만들 위치(원본은 읽기만 한다).": "Where import sources read from (originals are only read).",
+    "가져올 프로젝트 폴더(`.claude/`·`.mcp.json`, 상대 경로는 설정 파일 폴더 기준). 비우면 그 폴더.": "Project folder to import from (`.claude/` and `.mcp.json`; relative paths are resolved from the settings file folder). Leave empty to use that folder.",
+    "프로젝트 폴더": "Project folder",
+    "다른 프로젝트의 .claude 설정을 가져올 때.": "Use this to import the .claude settings of another project.",
+    "가져오기 출처 이름 → 그 출처가 받는 옵션(키는 출처가 정한다).": "Import source name → options that source accepts (the source defines the keys).",
+    "출처별 옵션": "Options per source"
+  }
+}

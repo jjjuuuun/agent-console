@@ -10,6 +10,9 @@ dependencies = [
     "pydantic>=2.9",
 ]
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-contracts = "agent_console_contracts"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { Button, Dialog, ShortcutProvider, nextTheme, splitKeySequence, useEffectiveShortcuts, useTheme, type KeyPlatform, type ShortcutDef, useToast, formatKeyCombo } from "@agent-console/ui";
+import { Button, Dialog, nextTheme, splitKeySequence, useEffectiveShortcuts, useTheme, type KeyPlatform, type ShortcutDef, useToast, formatKeyCombo } from "@agent-console/ui";
 import { useApi } from "../app/ApiContext";
 import { useConnectionStatus } from "../app/useConnectionStatus";
 import { resetHints } from "../app/hints";
@@ -10,6 +10,7 @@ import { readJson } from "../app/storage";
 import { useStorage } from "../app/StorageContext";
 import { UnsavedProvider, useHasUnsaved } from "../definition/unsaved";
 import { detectPlatform } from "../lib/keybindings";
+import { AppShortcutProvider } from "../i18n";
 import { usePwaUpdate } from "../pwa/PwaContext";
 import { AppSidebar, type SidebarBadge } from "./AppSidebar";
 import { CommandsProvider, useRegisterCommands, type CommandDef } from "./commands";
@@ -159,7 +160,7 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
       pathFor={(target) => targetPath(target, targetRoutes)}
       isViewing={(pathname, target) => isViewingTarget(pathname, target, targetRoutes)}
     >
-    <ShortcutProvider defaults={defaults} {...(overrides ? { overrides } : {})} platform={platform} onWarn={import.meta.env.DEV ? undefined : null}>
+    <AppShortcutProvider defaults={defaults} {...(overrides ? { overrides } : {})} platform={platform} onWarn={import.meta.env.DEV ? undefined : null}>
       <ShellFrame
         routes={routes}
         groups={groups}
@@ -172,7 +173,7 @@ function ShellInner({ routes, groups, platform, ports }: { routes: readonly Rout
         helpOpen={helpOpen}
         setHelpOpen={setHelpOpen}
       />
-    </ShortcutProvider>
+    </AppShortcutProvider>
     </NotificationsProvider>
     </ShortcutEnvironmentContext.Provider>
   );

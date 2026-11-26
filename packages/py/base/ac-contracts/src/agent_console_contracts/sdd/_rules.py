@@ -228,10 +228,23 @@ class StageSyntax(DefinitionModel):
 
 
 class SpecSyntax(DefinitionModel):
-    """작업·요구·단계를 문서에서 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다."""
+    """Rules for reading tasks, requirements, and stages from documents.
+
+    Empty items follow the app settings or the default rules. The schema description (screen
+    text) stays the Korean server original in ``model_config``.
+    """
 
     # 병합: 패키지 기본(include_default_syntax) → 사용자 설정 sdd.syntax → 스펙 rules.syntax.
     # 키 단위 덮어쓰기, 목록은 통째로 바꾼다.
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "description": (
+                "작업·요구·단계를 문서에서 읽는 규칙입니다. "
+                "비운 항목은 앱 설정이나 기본 규칙을 따릅니다."
+            )
+        }
+    )
 
     task: TaskSyntax | None = Field(
         default=None,
@@ -838,12 +851,20 @@ class _SpecCommon(DefinitionModel):
 
 
 class SpecTemplate(_SpecCommon):
-    """문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다."""
+    """A document template: creating a spec copies its document skeleton and rules as they are.
+
+    The schema description (screen text) stays the Korean server original in ``model_config``.
+    """
 
     # 정의 종류 이름(kind)은 mod-sdd 데이터(기본 spec-template). 라이브러리·프로젝트 공간, 옮길 수
     # 있음.
 
-    model_config = ConfigDict(title="문서 틀")
+    model_config = ConfigDict(
+        title="문서 틀",
+        json_schema_extra={
+            "description": "문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다."
+        },
+    )
 
 
 class SpecDefinition(_SpecCommon):

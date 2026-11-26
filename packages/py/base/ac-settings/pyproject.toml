@@ -10,6 +10,9 @@ dependencies = [
     "jsonpatch>=1.44",
 ]
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-settings = "agent_console_settings"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

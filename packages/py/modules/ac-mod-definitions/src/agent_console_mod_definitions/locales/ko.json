@@ -1,0 +1,6 @@
+{
+  "codes": {
+    "definitions.versions_memory": "DB가 없어 정의 버전 기록을 메모리에만 둡니다(재시작하면 사라집니다)",
+    "secret.invalid_rule": "비밀 감지 규칙이 잘못되었습니다. 규칙을 고치거나 지우세요"
+  }
+}

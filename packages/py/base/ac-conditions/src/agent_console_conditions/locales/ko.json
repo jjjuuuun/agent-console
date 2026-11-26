@@ -1,0 +1,7 @@
+{
+  "codes": {
+    "condition.empty": "조건이 비어 있어 항상 통과합니다",
+    "condition.invalid_value": "조건 값이 연산자 '{op}'에 맞지 않습니다",
+    "condition.unknown_operator": "조건 연산자 '{op}'이(가) 등록되어 있지 않습니다. 실행 때 이 항목은 거짓입니다"
+  }
+}

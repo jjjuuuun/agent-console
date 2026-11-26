@@ -23,6 +23,9 @@ mod-exports = "agent_console_mod_exports.module:module"
 [project.entry-points."agent_console.host_plugin_loaders"]
 exports = "agent_console_mod_exports.plugins:load_plugins"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-exports = "agent_console_mod_exports"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

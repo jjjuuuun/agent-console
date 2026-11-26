@@ -30,6 +30,8 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 | 폴더 | 역할 |
 | --- | --- |
 | `app/` | 부팅(`config`, `boot`, `AppRoot`), API·질의 컨텍스트(`ApiContext`, `queries`), 한글 문구(`messages`), 안내 배너(`hints`), 저장소(`storage`) |
+| `i18n/` | 화면 언어 조립(도메인 로직은 `@agent-console/i18n`): 앱 묶음(`import.meta.glob('../locales/*/*.json')`, 언어·네임스페이스 이름은 파일 이름에서 읽음, `boot`만 첫 청크에 동기로), 라이브러리 패키지 묶음 지연 로더(`libLocales.ts`), 첫 화면 언어(`agent-console.language` → 브라우저 언어 → `en`), 언어 바꾸기 순서(`languageController`: 250ms 연타 합치기·묶음 준비 뒤 한 번에 교체·`ui.language` 한 칸 저장), 설정 › 화면의 언어 고르기(`LanguageSelect`·`LanguageSetting`), `AppSchemaForm`·`AppShortcutProvider`(현재 언어 문구를 라이브러리에 건넴) |
+| `locales/<언어>/<네임스페이스>.json` | 앱 문구 묶음. 언어 추가 = 폴더 추가(서버 `GET /i18n`의 언어와 합쳐져 선택지가 된다). 지금 옮긴 것: `boot`(부팅·연결 실패 화면)·`settings`(설정 화면 틀과 화면 섹션). 나머지 `app/messages.ts` 문구는 I.12가 옮긴다 |
 | `definition/` | 정의 편집 공통: `useDefinitionEditor`(초안·If-Match 저장·412 충돌), `ConflictBanner`, `SaveStatus`, `UnsavedGuard`(이탈 보호) — 팀 구성·에이전트·리소스 화면도 쓴다 |
 | `shell/` | 앱 셸: 라우트 설정 데이터(`routeConfig`), 페이지 표(`routes.tsx`), 사이드바, 빠른 이동, 도움말, 단축키, 응답 대기 구독, Esc 스택 |
 | `pwa/` | 설치 안내 상태(`installPrompt`), 업데이트 알림 어댑터(`registerSw`는 `main.tsx`만 import) |
@@ -43,6 +45,7 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 ## 의존성 (무엇을 / 왜 / 대안)
 | 의존 | 왜 | 대안 |
 | --- | --- | --- |
+| `@agent-console/i18n`(앱은 이것만 import, i18next·react-i18next는 그 패키지 안) | 화면 문구 다국어(언어 해석·묶음 덮기·훅·서식) | i18next 직접 사용 |
 | `react` 19 · `react-dom` | 화면 | — |
 | `react-router` ^7 | 라우팅·이탈 보호(`useBlocker`)·메모리 라우터 테스트 | TanStack Router |
 | `@tanstack/react-query` ^5 | 화면 간 서버 상태 캐시·무효화·창 포커스 복귀 갱신 | 직접 만든 `useAsync`(이전 방식) |
@@ -64,6 +67,6 @@ pnpm --filter @agent-console/web preview              # 빌드본 로컬 서빙 
 패키지 의존은 `^x.y.z` 범위 + pnpm `linkWorkspacePackages`로 연결한다(`workspace:` 프로토콜 없음).
 
 ## 테스트
-- 단위·화면 테스트(Vitest, happy-dom): 저장소 루트에서 `npx vitest run --project web [경로] --maxWorkers=2`. 전체 TS 검사는 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser). 부하가 큰 환경에서는 `pnpm check -- --testTimeout=60000`.
+- 단위·화면 테스트(Vitest, happy-dom): 저장소 루트에서 `npx vitest run --project web [경로] --maxWorkers=2`. 전체 TS 검사는 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser). 부하가 큰 환경에서는 `pnpm check -- --testTimeout=60000`. 화면 언어는 테스트에서 `ko`로 고정이다(`src/testing/setup.ts`가 브라우저 언어를 ko로, Playwright는 `locale: "ko-KR"`).
 - 정적 검사: `src/app/noHardcoding.test.ts`·`moduleIdsNoHardcoding.test.ts`(하드코딩 점검), `src/app/tokenConsumers.test.ts`(토큰 정의·사용 일치, 허용 목록은 `tokenAllowlist.json`).
 - E2E(Playwright, fake 백엔드): 루트에서 `pnpm e2e [파일 이름 일부 | -g 제목]`. 웹을 빌드해 서버와 함께 띄운다. 시나리오는 `apps/web/e2e/*.spec.ts`다.

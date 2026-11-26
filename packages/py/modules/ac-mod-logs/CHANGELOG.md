@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-logs`, so the web can show the module description, log settings, default dashboard template titles and the `logs.ignored_key`, `logs.out_of_scope` and `logs.purge_unsupported` issues in English (data only, no API change).
 - REL.14: 옛 `logs.projects` 안내를 속성 접근(`LogSettings.projects`) 대신 계약 도우미 `ignored_settings_keys(settings, section="logs")`로 찾는다 — 계약 0.15.0에서 필드가 지워져도 키가 없으면 이슈 없음, 있으면 정보 `settings.ignored_key`(지금과 같음). 세션 요약은 `project_id`만 채운다(옛 `project`는 null).
 
 - 수정(11/20 후속): 수집 기다림을 `agent_console_modkit.WorkGate`로 옮겼다(`DEFAULT_STOP_WAIT` = `DEFAULT_WORK_WAIT`). `run_periodic`이 취소되면(서버 종료) 새 수집을 막고 진행 중인 스레드 수집을 기다린 뒤 취소를 다시 던진다 — 조립기가 종료 훅보다 먼저 하므로 기록 공간 풀이 닫히기 전에 끝난다.

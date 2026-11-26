@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { contractsSchema, getContractSchema, type UsageSourceInfo, type UsageSourceSetting, type UsageWindowSnapshot, type WorkspaceSettings } from "@agent-console/contracts";
-import { InlineMarkdown, SchemaForm } from "@agent-console/schema-form";
+import { InlineMarkdown } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../../i18n";
 import { Button, ConfirmDialog, Disclosure, TrustBadge } from "@agent-console/ui";
 import { messages as m } from "../../../app/messages";
 import { formatDateTime } from "../../../lib/format";
@@ -88,7 +89,7 @@ export function UsageSourcesEditor({ sources, settings, onChange, disabled, erro
               ) : null}
               {d.config_schema && Object.keys(d.config_schema).length > 0 ? (
                 <Disclosure summary={t.config} {...(configErrors.length > 0 ? { open: true } : {})}>
-                  <SchemaForm
+                  <AppSchemaForm
                     schema={d.config_schema}
                     value={setting?.config ?? info.config ?? {}}
                     idPrefix={`usage-src-${d.id}`}

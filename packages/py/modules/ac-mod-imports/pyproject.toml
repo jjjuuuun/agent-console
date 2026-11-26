@@ -23,6 +23,9 @@ mod-imports = "agent_console_mod_imports.module:module"
 [project.entry-points."agent_console.host_plugin_loaders"]
 imports = "agent_console_mod_imports.plugins:load_plugins"
 
+[project.entry-points."agent_console.message_catalogs"]
+ac-mod-imports = "agent_console_mod_imports"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

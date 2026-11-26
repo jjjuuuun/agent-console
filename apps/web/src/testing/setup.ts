@@ -4,3 +4,7 @@
 import { configure } from "@testing-library/react";
 
 configure({ asyncUtilTimeout: 10_000 });
+
+// 화면 언어는 ko로 고정한다(기존 한국어 단언 유지, design §I18N.5). 앱은 저장된 언어가 없으면 브라우저 언어를 따르므로 브라우저 언어를 ko로 둔다.
+Object.defineProperty(globalThis.navigator, "languages", { value: ["ko-KR", "ko"], configurable: true });
+Object.defineProperty(globalThis.navigator, "language", { value: "ko-KR", configurable: true });

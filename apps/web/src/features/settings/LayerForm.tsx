@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { getDefaultValue, SchemaForm, type FormError, type JsonSchema, type ProvenanceLayer, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
+import { getDefaultValue, type FormError, type JsonSchema, type ProvenanceLayer, type SchemaFormFieldProps, type SchemaFormWidgetProps, type UiSchema } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../i18n";
 import { ProvenanceBadge } from "@agent-console/ui";
 import type { ComponentType } from "react";
 import { flashFocused } from "../../app/fix";
@@ -62,7 +63,7 @@ export function LayerForm(props: LayerFormProps) {
   const inherited = useMemo(() => baseValue ?? getDefaultValue(schema as JsonSchema), [baseValue, schema]);
   const effective = useMemo(() => deepMerge(inherited, value), [inherited, value]);
   return (
-    <SchemaForm
+    <AppSchemaForm
       schema={schema}
       {...(uiSchema ? { uiSchema } : {})}
       value={value}

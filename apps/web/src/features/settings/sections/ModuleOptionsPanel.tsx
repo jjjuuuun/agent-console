@@ -1,5 +1,6 @@
 import type { ModuleOptionsView, PluginOptionsView } from "@agent-console/contracts";
-import { SchemaForm, type JsonSchema } from "@agent-console/schema-form";
+import { type JsonSchema } from "@agent-console/schema-form";
+import { AppSchemaForm } from "../../../i18n";
 import { Banner } from "@agent-console/ui";
 import { ApiError } from "@agent-console/api-client";
 import { messages as m } from "../../../app/messages";
@@ -25,7 +26,7 @@ export function ModuleOptionsReadOnly({ view }: ModuleOptionsViewProps) {
       ) : Object.keys(values).length === 0 && snippet === "" ? (
         <p className="app-muted">{t.empty}</p>
       ) : (
-        <SchemaForm
+        <AppSchemaForm
           schema={view.schema as JsonSchema}
           value={values}
           onChange={noop}
@@ -71,7 +72,7 @@ export function PluginOptionsReadOnly({ item }: { item: PluginOptionsView }) {
       ) : !hasValues && snippet === "" ? (
         <p className="app-muted">{tp.empty}</p>
       ) : (
-        <SchemaForm
+        <AppSchemaForm
           schema={item.schema as JsonSchema}
           value={values}
           onChange={noop}

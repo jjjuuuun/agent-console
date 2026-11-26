@@ -1,0 +1,19 @@
+{
+  "text": {
+    "화면 언어": "Language",
+    "설치된 패키지와 사용자 폴더의 화면 문구 번역을 모아 화면에 준다": "Collects the screen text translations of installed packages and user folders and gives them to the screen",
+    "화면 문구 묶음을 어디서 모으고 어떤 언어를 기본으로 볼지(설치자 값).": "Where to collect message catalogs and which languages to use by default (installer values).",
+    "기본 언어": "Default language",
+    "화면 설정값과 브라우저 언어로 언어를 정하지 못했을 때 쓸 언어 코드(BCP 47, 예: en, ko).": "Language code to use when neither the screen setting nor the browser language decides the language (BCP 47, for example en or ko).",
+    "브라우저 언어와 상관없이 처음 화면을 다른 언어로 보이고 싶을 때 바꾸세요.": "Change this to show the first screen in another language regardless of the browser language.",
+    "대체 언어": "Fallback language",
+    "고른 언어의 묶음에 없는 문구를 찾을 언어 코드. 언어 목록의 완성 여부도 이 언어 묶음을 기준으로 센다.": "Language code used for text that the chosen language's catalog does not have. The completeness shown in the language list is also counted against this language.",
+    "일부만 번역한 언어의 빈 곳을 영어가 아닌 다른 언어로 채우고 싶을 때 바꾸세요.": "Change this to fill the gaps of a partly translated language with a language other than English.",
+    "사용자 문구 폴더": "User catalog folders",
+    "언어별 문구 묶음 파일(<언어 코드>.json)을 둔 폴더 목록. 상대 경로는 설정 파일 폴더 기준이고, 패키지 묶음 위에 목록 순서대로 덮는다.": "Folders that hold per-language catalog files (<language code>.json). Relative paths are relative to the settings file folder, and the folders override package catalogs in list order.",
+    "새 언어를 더하거나 기본 문구 몇 개를 바꾸고 싶을 때 폴더를 적으세요. 파일을 고치면 다음 요청부터 반영됩니다.": "Add a folder to add a new language or to change a few default strings. Edited files take effect from the next request.",
+    "끌 문구 묶음": "Disabled catalogs",
+    "읽지 않을 패키지 문구 묶음 이름(entry point 이름). 설정 plugins.disabled에 적은 이름도 빠진다. 뺀 묶음의 문구는 대체 언어나 원문으로 보인다.": "Names of package catalogs not to read (entry point names). Names in the setting plugins.disabled are left out too. Text from a left-out catalog shows in the fallback language or as the original text.",
+    "어떤 플러그인의 번역이 마음에 들지 않아 원문으로 보고 싶을 때 이름을 적으세요.": "Add a name when you would rather see the original text than a plugin's translation."
+  }
+}

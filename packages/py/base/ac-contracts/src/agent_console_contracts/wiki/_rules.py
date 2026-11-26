@@ -323,15 +323,24 @@ class WikiLintDefaults(DefinitionModel):
 
 
 class WikiSyntax(DefinitionModel):
-    """링크·머리말·제목을 페이지에서 읽는 규칙입니다.
+    """Rules for reading links, front matter, and titles from pages.
 
-    비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
+    Empty items follow the app settings or the default rules. The schema description (screen
+    text) stays the Korean server original in ``model_config``.
     """
 
     # 병합: 패키지 기본(include_default_syntax) → 사용자 설정 wiki.syntax → 위키 규칙 syntax(규칙
     # 순서). 첫 단계 키 단위 덮어쓰기, 그 아래는 통째로 바꾼다. 빈 목록 = "이 층에서는 없음".
 
-    model_config = ConfigDict(title="위키 문법")
+    model_config = ConfigDict(
+        title="위키 문법",
+        json_schema_extra={
+            "description": (
+                "링크·머리말·제목을 페이지에서 읽는 규칙입니다.\n\n"
+                "비운 항목은 앱 설정이나 기본 규칙을 따릅니다."
+            )
+        },
+    )
 
     links: list[WikiLinkRule] | None = Field(
         default=None,
@@ -774,12 +783,22 @@ class _WikiCommon(DefinitionModel):
 
 
 class WikiRulesDefinition(_WikiCommon):
-    """위키 규칙입니다. 에이전트 지침, 쓰기·점검 규칙, 페이지 틀, 문법을 담습니다."""
+    """Wiki rules: agent instructions, write and check rules, page templates, and syntax.
+
+    The schema description (screen text) stays the Korean server original in ``model_config``.
+    """
 
     # 정의 종류 이름(kind)은 mod-wiki 설치자 데이터(기본 wiki-rules). 라이브러리·프로젝트 공간,
     # 옮길 수 있음, 본문 여러 파일(지침·페이지 틀).
 
-    model_config = ConfigDict(title="위키 규칙")
+    model_config = ConfigDict(
+        title="위키 규칙",
+        json_schema_extra={
+            "description": (
+                "위키 규칙입니다. 에이전트 지침, 쓰기·점검 규칙, 페이지 틀, 문법을 담습니다."
+            )
+        },
+    )
 
     instructions: WikiContentRef | None = Field(
         default=None,

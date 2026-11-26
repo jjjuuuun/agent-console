@@ -4,6 +4,7 @@ import { useLocation } from "react-router";
 import { getContractSchema, type WorkspaceSettings } from "@agent-console/contracts";
 import type { FormError } from "@agent-console/schema-form";
 import { Banner, Button, Dialog, PageHeader, Spinner, useShortcuts, useToast } from "@agent-console/ui";
+import { useT } from "@agent-console/i18n";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { ErrorBlock, errorDetails } from "../../app/ErrorBlock";
 import { DOCUMENT_REQUIRES, PROJECT_REQUIRES } from "../../app/requirements";
@@ -94,8 +95,10 @@ export const SETTINGS_SECTIONS: readonly SectionDef[] = [
 /** 설정 화면에서 기능 모듈 섹션의 앵커 id */
 const MODULES_SECTION_ID = "modules";
 
-const sectionTitle = (d: SectionDef) => d.title ?? (m.settings.sections as Record<string, string>)[d.titleKey] ?? d.id;
-const sectionDescription = (d: SectionDef) => d.description ?? (m.settings.sectionDescription as Record<string, string>)[d.descriptionKey];
+/** 섹션 제목·설명을 만드는 함수 둘. 모듈이 선언한 섹션은 `title`·`description`(서버 원문)을, 앱 섹션은 문구 묶음 `settings`를 쓴다. */
+type SectionText = (key: string) => string;
+const sectionTitle = (d: SectionDef, t: SectionText) => d.title ?? t(`sections.${d.titleKey}`);
+const sectionDescription = (d: SectionDef, t: SectionText): string | undefined => d.description ?? (d.title === undefined ? t(`sectionDescription.${d.descriptionKey}`) : undefined);
 
 /** 서버가 준 필드 오류를 섹션별로 나눈다. `agent_defaults` 아래 오류는 공통 폼 기준 경로로 바꾼다. */
 export function errorsForSection(def: SectionDef, errors: readonly FormError[]): FormError[] {
@@ -113,6 +116,7 @@ export interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS }: SettingsScreenProps) {
+  const t = useT("settings");
   const toast = useToast();
   const queryClient = useQueryClient();
   // 서버 모듈이 꺼서 쓸 수 없는 섹션은 목록과 본문에서 사라진다. 설정 문서 기능이 꺼지면 폼·저장 줄도 사라진다.
@@ -159,12 +163,12 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
 
   const onSave = () => {
     void editor.save().then((ok) => {
-      if (ok) toast({ tone: "success", text: `${m.definition.savedToast}. ${m.settings.savedNextRun}` });
+      if (ok) toast({ tone: "success", text: `${m.definition.savedToast}. ${t("savedNextRun")}` });
     });
   };
   useShortcuts([{ id: "settings.save", scope: "settings", keys: "Mod+S", titleKey: "shortcuts.save", modifierRequired: true, run: onSave }]);
 
-  const groupTitle = (g: string) => (m.settings.groups as Record<string, string>)[g] ?? g;
+  const groupTitle = (g: string) => t(`groups.${g}`);
   const storage = useStorage();
   const { collapsed, toggle: toggleGroup } = useCollapsedGroups(storage);
   const narrow = useNarrowViewport();
@@ -174,18 +178,18 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
   // 검색 대상 = 섹션 제목·설명 + 그 섹션 필드의 라벨·설명(스키마). 섹션 이름·필드 이름은 코드에 두지 않는다.
   const rootSchema = useMemo(() => getContractSchema("WorkspaceSettings") as SchemaNode, []);
   const searchable = useMemo(
-    () => shownSections.map((def) => ({ def, id: def.id, group: def.group, texts: [sectionTitle(def), sectionDescription(def) ?? "", ...fieldTexts(rootSchema, def.keys), ...(def.searchTerms ?? [])] })),
-    [shownSections, rootSchema],
+    () => shownSections.map((def) => ({ def, id: def.id, group: def.group, texts: [sectionTitle(def, t), sectionDescription(def, t) ?? "", ...fieldTexts(rootSchema, def.keys), ...(def.searchTerms ?? [])] })),
+    [shownSections, rootSchema, t],
   );
   const matched = useMemo(() => filterSections(searchable, query), [searchable, query]);
 
   if (documentOn && editor.status === "error") {
-    const view = describeError(editor.error, m.settings.loadFailed);
+    const view = describeError(editor.error, t("loadFailed"));
     return (
       <div className="app-screen-frame" data-screen="settings">
-        <PageHeader title={m.settings.title} />
+        <PageHeader title={t("title")} />
         <div className="app-screen-body">
-          <ErrorBlock title={m.settings.loadFailed} message={view.message} fix={view.fix} details={errorDetails(view)} detailsLabel={m.common.details} retryLabel={m.common.retry} onRetry={editor.reload} />
+          <ErrorBlock title={t("loadFailed")} message={view.message} fix={view.fix} details={errorDetails(view)} detailsLabel={m.common.details} retryLabel={m.common.retry} onRetry={editor.reload} />
         </div>
       </div>
     );
@@ -287,11 +291,11 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
       const changed = changeCount(def);
       return {
         id: def.id,
-        title: sectionTitle(def),
+        title: sectionTitle(def, t),
         marks: (
           <>
-            {failed ? <span className="app-sev" data-severity="error" aria-label={m.settings.sectionNavError}> ●</span> : null}
-            {changed > 0 ? <span className="app-settings-changed" role="img" title={m.settings.changedDot} aria-label={m.settings.changedDot} /> : null}
+            {failed ? <span className="app-sev" data-severity="error" aria-label={t("sectionNavError")}> ●</span> : null}
+            {changed > 0 ? <span className="app-settings-changed" role="img" title={t("changedDot")} aria-label={t("changedDot")} /> : null}
             {def.id === MODULES_SECTION_ID && counts.problems > 0 ? (
               <span className="app-sev" data-severity={counts.hasFailed ? "error" : "warning"} role="img" aria-label={m.modules.dotLabel}> ●</span>
             ) : null}
@@ -305,7 +309,7 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
     <div className="app-screen-frame" data-screen="settings">
       <UnsavedGuard dirty={editor.dirty} />
       <PageHeader
-        title={m.settings.title}
+        title={t("title")}
         status={
           <>
             {documentOn ? <SaveStatus dirty={editor.dirty} phase={editor.savePhase} onRetry={onSave} /> : null}
@@ -315,7 +319,7 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
         actions={!documentOn ? undefined : (
           <>
             <Button onClick={editor.revert} disabled={!editor.dirty || editor.savePhase === "saving"}>
-              {m.settings.revert}
+              {t("revert")}
             </Button>
             <Button
               variant="primary"
@@ -324,7 +328,7 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
               title={editor.conflict !== null ? m.definition.conflict.saveDisabled : "Ctrl+S"}
               onClick={onSave}
             >
-              {m.settings.save}
+              {t("save")}
             </Button>
           </>
         )}
@@ -336,14 +340,14 @@ export function SettingsScreen({ sectionRenderers, sections = SETTINGS_SECTIONS 
       <div className="app-settings-layout" data-narrow={narrow ? "true" : undefined}>
         <SettingsNav groups={navGroups} active={active} onPick={goTo} query={query} onQueryChange={setQuery} searchRef={searchRef} collapsed={collapsed} onToggleGroup={toggleGroup} narrow={narrow} />
         <div className="app-settings-body">
-          {ready && editor.versionHash === undefined ? <Banner tone="info">{m.settings.emptyHint}</Banner> : null}
+          {ready && editor.versionHash === undefined ? <Banner tone="info">{t("emptyHint")}</Banner> : null}
           {activeDef === undefined ? null : (
             <SettingsSection
               key={activeDef.id}
               id={activeDef.id}
-              title={sectionTitle(activeDef)}
-              {...(sectionDescription(activeDef) === undefined ? {} : { description: sectionDescription(activeDef) as string })}
-              status={changeCount(activeDef) > 0 ? m.settings.changes(changeCount(activeDef)) : undefined}
+              title={sectionTitle(activeDef, t)}
+              {...(sectionDescription(activeDef, t) === undefined ? {} : { description: sectionDescription(activeDef, t) as string })}
+              status={changeCount(activeDef) > 0 ? t("changes", { count: changeCount(activeDef) }) : undefined}
               hasError={errorsForSection(activeDef, editor.fieldErrors).length > 0}
               loading={!ready && !independent.has(activeDef.id)}
             >

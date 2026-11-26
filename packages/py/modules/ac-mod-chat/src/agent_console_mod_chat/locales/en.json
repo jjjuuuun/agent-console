@@ -1,0 +1,13 @@
+{
+  "text": {
+    "에이전트와 대화하고 메시지·대기열을 관리한다": "Chats with agents and manages messages and the queue",
+    "채팅 모듈 설정.": "Chat module settings.",
+    "프로젝트 기록 DB 공간 이름 = 이 접두 + 프로젝트 id(기록 연동 설정 space_prefix를 이어받는다).": "Project records database space name = this prefix + project id (inherits the records integration setting space_prefix).",
+    "주소로 바로 연 대화가 어느 프로젝트 기록에 있는지 찾을 때 읽는 등록 프로젝트 기록 DB 최대 개수(0 = 이 서버가 이미 연 프로젝트와 앱 기록만).": "Maximum number of registered project records databases read to find which project's records hold a conversation opened directly by URL (0 = only projects this server has already opened, plus app records).",
+    "대화 위치 찾기 프로젝트 수 상한": "Project limit for locating conversations",
+    "대화": "Conversation"
+  },
+  "codes": {
+    "chat.storage_memory": "There's no database, so conversations and the queue are kept in memory only (they're lost on restart)."
+  }
+}

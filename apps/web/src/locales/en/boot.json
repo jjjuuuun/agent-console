@@ -1,0 +1,14 @@
+{
+  "connecting": "Connecting to the server…",
+  "preparing": "The server is getting ready… This page opens automatically when it's ready.",
+  "waiting": "Waiting for the server to start… It connects automatically once the server is running.",
+  "failedTitle": "Can't connect to the server",
+  "failedBody": "Check that the server ({address}) is running. Start it with `agent-console serve`.",
+  "corsHint": "The server's allowed origins setting must include this address.",
+  "retry": "Try again",
+  "reload": "Reload",
+  "requestAddress": "Request address",
+  "details": "Details",
+  "notificationsRegion": "Notifications",
+  "refreshFailed": "Couldn't refresh the list. Showing the previous content."
+}

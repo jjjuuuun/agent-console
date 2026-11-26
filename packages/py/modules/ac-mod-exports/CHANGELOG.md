@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.7b: Message catalogs `locales/en.json` and `locales/ko.json` registered as entry point `agent_console.message_catalogs` `ac-mod-exports`, so the web can show the module description and export folder settings in English (data only, no API change).
 - REL.8: `ScopedExportDependencies.for_lookup(lookup, *, scope=None)` — 프로젝트 공간 원본이면 `scope`에 프로젝트 id를 넘긴다(제공자가 그 프로젝트 설정 층의 공통 첨부도 의존에 넣는다). FU.22와 같은 미출시 변경이라 `for_lookup(lookup)`만 가진 제공자는 `scope` 키워드를 더한다.
 - FU.22: 프로젝트 공간에서 내보낼 때도 함께 쓰는 정의를 넣는다. `exports.dependencies` 값이 `for_lookup(lookup)`(새 선택 프로토콜 `ScopedExportDependencies`)을 가지면 그 공간 저장소로 만든 계산을 쓴다(공용으로 넘어가 찾지 않음). 없으면 예전처럼 고른 항목만.
 - FU.19: `LookupExportCatalog.content` — 한 파일 본문 종류(`list_files`가 `ValueError`인 종류)의 본문을 `read_content`로 읽는다. 여러 파일 본문 종류는 None(본문은 `files`). 소비자 프로토콜 `DefinitionLookup`에 `read_content`가 더해졌다(`DefinitionStore`가 만족).

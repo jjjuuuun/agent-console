@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 화면 문구 묶음 클라이언트(I.10, 서버 I.4, 계약 `i18n` 1.0.0): 하위 경로 `i18n`(`createI18nClient`, `I18nClient`) — `getI18nInfo()`(`GET /i18n`)·`getI18nCatalog(language, { signal })`(`GET /i18n/{lang}`, 그 언어 묶음이 없으면 404 대신 `null`). `createRestClient`에 합쳐진다. 새 기능이라 minor(0.2.0).
 - 앱 DB 기록 개수(5.7R.33p): `getRunProjectCounts(params?)`·`getConversationProjectCounts(params?)`가 `ProjectCountsParams{source?: "app"}`를 받는다(`?source=app` = 앱 DB의 기록만, 생략하면 지금처럼 앱 DB + 프로젝트 기록 DB). 타입 `ProjectCountsParams`.
 - 실행 위치 찾기(요청 11/08 후속, 계약 `runs` 1.9.0·0.14.8): `RunsClient.locateRun(id)`(`GET /runs/{id}/locate` → `RunLocation{project_id}`, 없으면 404, 여러 기록 공간이면 409 `run.ambiguous`). Run 단위 호출의 기록 공간: `getRun(id, project?)`, `ListRunEventsParams.project`, `listRunInteractions(runId, project?)`(`?project=`, 생략하면 주소 그대로). 타입 `RunSpace`.
 - 대화 위치 찾기(요청 11/07 후속, 계약 `chat` 1.4.0·0.14.7): `ChatClient.locateConversation(id)`(`GET /conversations/{id}/locate` → `ConversationLocation{project_id}`). 없으면 404, 여러 기록 공간이면 409 `conversation.ambiguous`.

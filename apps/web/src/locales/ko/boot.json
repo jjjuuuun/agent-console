@@ -1,0 +1,14 @@
+{
+  "connecting": "서버에 연결하는 중…",
+  "preparing": "서버를 준비하는 중입니다… 준비되면 자동으로 열립니다.",
+  "waiting": "서버가 켜지기를 기다리는 중입니다… 켜지면 자동으로 연결합니다.",
+  "failedTitle": "서버에 연결할 수 없습니다",
+  "failedBody": "서버({address})가 실행 중인지 확인하세요. 서버는 `agent-console serve`로 시작합니다.",
+  "corsHint": "서버 설정의 허용 출처에 이 주소가 있어야 합니다.",
+  "retry": "다시 시도",
+  "reload": "새로고침",
+  "requestAddress": "요청 주소",
+  "details": "상세",
+  "notificationsRegion": "알림",
+  "refreshFailed": "목록을 새로 고치지 못했습니다. 이전 내용을 보여 줍니다."
+}

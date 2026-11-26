@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { RouterProvider, type createBrowserRouter } from "react-router";
 import { TextDiffMessagesProvider } from "@agent-console/text-editor/messages";
+import { setLanguage, useT, type Console18n } from "@agent-console/i18n";
 import { IconRegistryProvider, THEME_CYCLE, ThemeProvider, ToastProvider, useToast, type ThemeChoice } from "@agent-console/ui";
 import { ApiProvider } from "./ApiContext";
 import { DEFAULT_CONFIG_WIDGETS, DEFAULT_LINK_PARTS } from "../links";
 import { ConfigWidgetsProvider, type ConfigWidgetTable } from "./ConfigWidgets";
 import { LinkPartsProvider, ModulesProvider, type LinkPartDef } from "../modules";
+import { AppI18nProvider, LanguageProvider, createAppI18n } from "../i18n";
 import type { ApiClients, FeatureSignal } from "./apiClients";
 import { AppStatusProvider } from "./AppStatus";
 import { BootError } from "./boot";
@@ -50,6 +52,8 @@ export interface AppRootProps {
   onReload?: () => void;
   /** 질의 클라이언트(테스트 주입). 생략하면 앱 기본 */
   queryClient?: QueryClient;
+  /** 화면 언어 인스턴스(테스트 주입). 생략하면 저장소·브라우저 언어로 만든다 */
+  i18n?: Console18n;
   /** 부팅 자동 재시도 정책(기본 `BOOT_RETRY`). 서버가 켜지는 중이면 기다렸다가 저절로 붙는다 */
   bootRetry?: BootRetryPolicy;
 }
@@ -64,11 +68,13 @@ const BACKGROUND_ERROR = "background-error";
 /** 갱신 실패를 한 번만 토스트로 알린다(데이터가 있을 때의 백그라운드 갱신 오류). */
 function BackgroundErrorBridge({ bus }: { bus: EventTarget }) {
   const toast = useToast();
+  const t = useT("boot");
+  const text = t("refreshFailed");
   useEffect(() => {
-    const onError = () => toast({ tone: "danger", text: m.common.refreshFailed });
+    const onError = () => toast({ tone: "danger", text });
     bus.addEventListener(BACKGROUND_ERROR, onError);
     return () => bus.removeEventListener(BACKGROUND_ERROR, onError);
-  }, [bus, toast]);
+  }, [bus, toast, text]);
   return null;
 }
 
@@ -84,8 +90,31 @@ function createSignalBus() {
   };
 }
 
-/** 앱 부팅(주소·토큰 획득) -> 테마·질의·토스트·API 컨텍스트 -> 라우터. */
-export function AppRoot({ createClients, router, storage = appStorage, sessionStorage: tabStorage = appSessionStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY }: AppRootProps) {
+/** 앱 부팅(주소·토큰 획득) -> 언어·테마·질의·토스트·API 컨텍스트 -> 라우터. 언어 인스턴스는 부팅 화면부터 쓰도록 맨 바깥에서 만든다. */
+export function AppRoot(props: AppRootProps) {
+  const { storage = appStorage, i18n: injected } = props;
+  const [i18n] = useState(() => injected ?? createAppI18n({ storage }));
+  return (
+    <AppI18nProvider i18n={i18n}>
+      <AppRootBody {...props} i18n={i18n} />
+    </AppI18nProvider>
+  );
+}
+
+function AppRootBody({ createClients, router, storage = appStorage, sessionStorage: tabStorage = appSessionStorage, onReload = () => window.location.reload(), queryClient, linkParts = DEFAULT_LINK_PARTS, configWidgets = DEFAULT_CONFIG_WIDGETS, bootRetry: bootRetryProp = BOOT_RETRY, i18n }: AppRootProps & { i18n: Console18n }) {
+  const t = useT("boot");
+  // 첫 화면 언어의 나머지 앱 묶음(부팅 묶음은 이미 동기로 들어 있다). 준비되기 전에는 본문을 그리지 않는다.
+  const [bundleReady, setBundleReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof document !== "undefined") document.documentElement.lang = i18n.language;
+    void setLanguage(i18n, i18n.language).then(() => {
+      if (!cancelled) setBundleReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [i18n]);
   const [bootRetry] = useState(bootRetryProp); // 정책은 마운트 때 한 번 고정(인라인 객체가 효과를 다시 돌리지 않게)
   const [attempt, setAttempt] = useState(0);
   const [boot, setBoot] = useState<Boot | null>(null);
@@ -129,7 +158,7 @@ export function AppRoot({ createClients, router, storage = appStorage, sessionSt
     };
   }, [createClients, attempt, signals, bootRetry]);
 
-  const booting = boot === null || boot.attempt !== attempt;
+  const booting = boot === null || boot.attempt !== attempt || (boot.status === "ready" && !bundleReady);
   const showSpinner = useDelayed(booting);
   const onThemeChange = useCallback(
     (next: ThemeChoice) => {
@@ -152,33 +181,33 @@ export function AppRoot({ createClients, router, storage = appStorage, sessionSt
   );
 
   if (booting) {
-    return themed(<div className="app-boot">{showSpinner ? <LoadingBlock label={m.app.booting} /> : null}</div>);
+    return themed(<div className="app-boot">{showSpinner ? <LoadingBlock label={t("connecting")} /> : null}</div>);
   }
   if (boot.status === "waiting") {
     return themed(
       <div className="app-boot">
-        <LoadingBlock label={boot.kind === "not-ready" ? m.boot.preparing : m.boot.waiting} />
+        <LoadingBlock label={boot.kind === "not-ready" ? t("preparing") : t("waiting")} />
       </div>,
     );
   }
   if (boot.status === "error") {
     const bootError = boot.error instanceof BootError ? boot.error : undefined;
     const cause = bootError?.cause ?? boot.error;
-    const view = describeError(cause, m.boot.failedTitle);
+    const view = describeError(cause, t("failedTitle"));
     const address = bootError?.baseUrl ?? "";
-    const details = errorDetails(view, address === "" ? undefined : `${m.boot.requestAddress}: ${address}`);
+    const details = errorDetails(view, address === "" ? undefined : `${t("requestAddress")}: ${address}`);
     return themed(
       <div className="app-boot">
         <ErrorBlock
-          title={m.boot.failedTitle}
-          message={m.boot.failedBody(address === "" ? "?" : address)}
+          title={t("failedTitle")}
+          message={t("failedBody", { address: address === "" ? "?" : address })}
           details={details}
-          detailsLabel={m.common.details}
-          retryLabel={m.boot.retry}
+          detailsLabel={t("details")}
+          retryLabel={t("retry")}
           onRetry={() => setAttempt((a) => a + 1)}
-          secondary={{ label: m.boot.reload, onClick: onReload }}
+          secondary={{ label: t("reload"), onClick: onReload }}
         >
-          {bootError?.corsSuspected ? <p className="ac-text app-wrap">{m.boot.corsHint}</p> : null}
+          {bootError?.corsSuspected ? <p className="ac-text app-wrap">{t("corsHint")}</p> : null}
         </ErrorBlock>
       </div>,
     );
@@ -186,14 +215,16 @@ export function AppRoot({ createClients, router, storage = appStorage, sessionSt
   return themed(
     <ApiProvider clients={boot.clients}>
       <QueryClientProvider client={client}>
-        <ToastProvider regionLabel={m.common.notifications}>
+        <ToastProvider regionLabel={t("notificationsRegion")}>
           <BackgroundErrorBridge bus={bus} />
           <ModulesProvider subscribeSignals={signals.subscribe}>
             <LinkPartsProvider parts={linkParts}>
               <ConfigWidgetsProvider widgets={configWidgets}>
-                <AppStatusProvider value={status}>
-                  <RouterProvider router={router} />
-                </AppStatusProvider>
+                <LanguageProvider i18n={i18n} storage={storage}>
+                  <AppStatusProvider value={status}>
+                    <RouterProvider router={router} />
+                  </AppStatusProvider>
+                </LanguageProvider>
               </ConfigWidgetsProvider>
             </LinkPartsProvider>
           </ModulesProvider>
