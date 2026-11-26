@@ -15,7 +15,7 @@ It knows nothing about the API, storage, `api-client`, `log-view`, or `ui`. All 
 Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
-npm install ./agent-console-memory-view-0.1.0.tgz
+npm install ./agent-console-memory-view-0.2.0.tgz
 ```
 
 An app that uses it loads the token CSS (the `--ac-*` variables, `@agent-console/ui/tokens.css`) and this package's `@agent-console/memory-view/styles.css` once each.
@@ -55,6 +55,18 @@ import { MemoryScopeTree, MemoryEntryTable, MemoryEntryEditor, MemoryEntryMeta, 
 <MemoryEntryEditor value={body} onChange={setBody} entryKey={entry.key} contentType={entry.content_type} onSave={save} saveState="dirty" maxBytes={limit} handleRef={editorRef} />;
 ```
 
+## Messages and language
+The default messages are Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside. There is no dependency on i18next. Placeholders are `{name}` and pure functions in this package fill them.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). In the JSON files, dotted keys are spread into a tree; when one key is the prefix of another, its value sits under `_`. `flattenMessageTree` turns a tree back into the dotted keys the components read.
+To use English, pass the bundle as `messages` (to the components and to functions such as `scopeLabel`, `formatRelativeTime`, and `orderText`).
+
+```tsx
+import en from "@agent-console/memory-view/locales/en";
+
+<MemoryScopeTree kinds={kinds} scopes={scopes} messages={en} /* … */ />
+```
+The Korean bundle is `@agent-console/memory-view/locales/ko`. Both files also export `tree` (the JSON as a tree) for code that takes tree bundles. To change only a few messages, spread and override: `messages={{ ...en, "table.empty": "…" }}`. For a new language, build an object with the same keys. The component sources contain no Korean string literals (the same test checks this).
+
 ## Public API
 | Name | Role |
 | --- | --- |
@@ -70,7 +82,8 @@ import { MemoryScopeTree, MemoryEntryTable, MemoryEntryEditor, MemoryEntryMeta, 
 | `visibleScopes(scopes, kinds, project, graphs)` | Filtering for the project switcher (decided only from `context_fields` and the id template) |
 | `formatAuthor(author, options)` | Author display (an agent avatar and name, chips for user, cleanup, and import, and the raw text for an unknown kind) |
 | `validateKey`, `languageForContentType`, `formatBytes`, `formatRelativeTime`, `utf8Bytes` | The key character rules, content format → editor language, and size and time formatting |
-| `defaultMessages`, `resolveMessages` | The Korean text table (the names of the `memory.*` keys with the prefix removed) |
+| `defaultMessages`, `resolveMessages`, `flattenMessageTree` | The Korean text table (the names of the `memory.*` keys with the prefix removed), the merge with custom messages, and tree → dotted keys |
+| `@agent-console/memory-view/locales/ko`, `…/locales/en` | The message bundles (`default` = the table, `tree` = the JSON tree) |
 | `@agent-console/memory-view/testing` | Sample data (`sampleKinds`, `sampleScopes`, `makeEntries`, `sampleVersions`, `samplePlan`, and `renameKinds`) |
 
 ## Development and standalone reuse

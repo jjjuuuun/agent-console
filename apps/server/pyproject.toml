@@ -1,7 +1,7 @@
 [project]
 name = "agent-console-server"
 version = "1.0.0"
-description = "Agent Console 서버 — 설치된 기능 모듈을 모아 HTTP·WebSocket으로 제공"
+description = "Agent Console server: assembles the installed feature modules and serves them over HTTP and WebSocket"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { EdgeTypeDescriptor, GraphSummary, Issue, NodeTypeDescriptor } from "@agent-console/contracts";
 import { useApi } from "../../app/ApiContext";
 import { describeError } from "../../app/errors";
-import { useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
+import { DEFINITION_KINDS, useInvalidateLists, NewDefinitionDialog, type NewDefinitionValues } from "../library";
 import { projectBody, useProjectId } from "../../app/projectScope";
 import { useNewScope } from "../projects";
 import { teamMessages as t } from "./messages";
@@ -63,6 +63,7 @@ export function NewTeamDialog({ graphs, nodeTypes, edgeTypes, onClose, onCreated
   return (
     <NewDefinitionDialog
       open
+      kind={DEFINITION_KINDS.graph}
       title={t.create.title}
       submitLabel={t.create.submit}
       existingIds={new Set(graphs.map((g) => g.id))}
@@ -179,6 +180,7 @@ export function DuplicateTeamDialog({ sourceId, sourceName, existingIds, onClose
   return (
     <NewDefinitionDialog
       open
+      kind={DEFINITION_KINDS.graph}
       title={t.duplicate.title}
       submitLabel={t.duplicate.submit}
       existingIds={existingIds}

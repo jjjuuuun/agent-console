@@ -1,0 +1,160 @@
+{
+  "projects": {
+    "status": {
+      "ready": "정상",
+      "folder_missing": "폴더 없음",
+      "not_a_directory": "폴더 아님",
+      "no_access": "권한 없음",
+      "folder_unset": "폴더 미지정",
+      "folder_conflict": "폴더 겹침",
+      "manifest_invalid": "설정 파일 오류",
+      "archived": "등록 해제됨",
+      "readonly": "읽기 전용 폴더",
+      "unknown": "프로젝트 상태: {status}",
+      "blocked_reason": "{status}라서 사용할 수 없습니다"
+    },
+    "blocked": {
+      "new_chat": "폴더를 쓸 수 없어 새 채팅을 시작할 수 없습니다",
+      "run": "폴더를 쓸 수 없어 실행할 수 없습니다",
+      "records_readonly": "이 폴더에 쓸 수 없어 대화·실행 기록을 저장할 수 없습니다",
+      "records_newer": "더 새 버전의 앱이 이 폴더의 기록을 만들어 이 앱에서는 시작할 수 없습니다. 앱을 업데이트하세요",
+      "records_unavailable": "이 폴더의 기록 파일을 쓸 수 없어 시작할 수 없습니다",
+      "records_move": "기록을 저장할 수 없는 폴더라 옮길 수 없습니다",
+      "runs_unscoped": "프로젝트 실행 연동이 꺼져 있어 프로젝트에서 실행할 수 없습니다",
+      "server_message": "{message}",
+      "archived": "등록 해제된 프로젝트의 기록은 읽기만 가능합니다",
+      "copy_in": "폴더를 쓸 수 없어 구성을 가져올 수 없습니다",
+      "edit": "폴더를 쓸 수 없어 이 프로젝트의 구성을 고칠 수 없습니다",
+      "manifest": "프로젝트 설정 파일을 읽을 수 없어 사용할 수 없습니다",
+      "login": "로그인이 필요합니다"
+    },
+    "config_readonly": "이 폴더에는 쓸 수 없어 구성을 가져오거나 고칠 수 없습니다(보기는 됩니다)"
+  },
+  "space": {
+    "library": "공용",
+    "library_tip": "프로젝트와 독립된 기본 구성입니다. 프로젝트로 가져가면 사본이 만들어집니다.",
+    "project": "프로젝트: {name}",
+    "project_note": "이 프로젝트의 사본입니다. 수정은 공용 구성에 영향을 주지 않습니다.",
+    "view_in_project": "프로젝트 홈의 구성 보기",
+    "open_home": "프로젝트 홈으로",
+    "view_library": "공용 구성 보기",
+    "back_home": "← {name} 홈",
+    "save_location": "저장 위치: 프로젝트 {name}"
+  },
+  "copy": {
+    "state": {
+      "absent": "없음",
+      "identical": "같은 내용이 이미 있음",
+      "different": "내용이 다름"
+    },
+    "action": {
+      "copy": "복사",
+      "reuse": "그대로 쓰기",
+      "overwrite": "덮어쓰기",
+      "rename": "새 이름으로 추가",
+      "skip": {
+        "_": "가져오지 않기",
+        "save": "저장하지 않기",
+        "move": "옮기지 않기"
+      },
+      "skip_keep": {
+        "_": "가져오지 않기(이 프로젝트의 것을 씀)",
+        "save": "저장하지 않기(공용의 것을 씀)",
+        "move": "옮기지 않기(공용의 것을 씀)"
+      },
+      "choose": "선택하세요"
+    },
+    "reserved_id": "‘{id}’은(는) 예약된 이름이라 문제가 될 수 있습니다. 새 이름 ‘{suggested}’(으)로 추가하기를 권합니다.",
+    "skip_warn": "‘{by}’은(는) {id}가 없어 실행 전에 막힙니다",
+    "status": {
+      "copied": "복사함",
+      "reused": "그대로 씀",
+      "overwritten": "덮어씀",
+      "renamed": "새 이름으로 추가함 → {id}",
+      "skipped": "건너뜀",
+      "conflict": "계획 뒤에 바뀌어 적용하지 않았습니다"
+    },
+    "import": {
+      "title": "공용에서 가져오기 — {name}",
+      "intro_unknown": "공용 구성의 사본을 ‘{name}’ 프로젝트의 구성 폴더에 만듭니다. 가져온 뒤에는 서로 독립입니다. 공용을 고쳐도 이 프로젝트의 사본은 바뀌지 않습니다.",
+      "intro": "공용 구성의 사본을 ‘{name}’ 프로젝트의 구성 폴더({dir})에 만듭니다. 가져온 뒤에는 서로 독립입니다. 공용을 고쳐도 이 프로젝트의 사본은 바뀌지 않습니다."
+    },
+    "save": {
+      "title": "공용에 저장 — {name}",
+      "intro": "{name}의 사본을 공용 구성에 복사합니다. 복사한 뒤에는 서로 독립입니다."
+    },
+    "move": {
+      "title": "공용 구성 옮기기 — {name}"
+    },
+    "pick": {
+      "search": "검색",
+      "search_placeholder": "검색…",
+      "kind": "종류",
+      "kind_all": "전체",
+      "list": "복사할 구성",
+      "exists": "이 프로젝트에 같은 이름이 있음",
+      "exists_library": "공용에 같은 이름이 있음",
+      "empty_library": "공용 구성이 없습니다. 구성 화면에서 먼저 만드세요.",
+      "empty_project": "이 프로젝트에는 구성이 없습니다",
+      "no_match": "‘{query}’와 맞는 구성이 없습니다",
+      "loading": "구성 목록을 불러오는 중…",
+      "failed": "구성 목록을 불러오지 못했습니다",
+      "to_library": "공용 구성 화면으로",
+      "selected": "{n}개 선택",
+      "next": "다음"
+    },
+    "plan": {
+      "counts": "요청한 항목 {requested}개 · 함께 가져올 항목 {referenced}개",
+      "include_refs": "함께 가져올 항목도 포함",
+      "refs_off_note": "연결된 항목을 빼면 이 구성은 실행 전에 막힐 수 있습니다.",
+      "col_item": "항목",
+      "col_state": "대상 상태",
+      "col_action": "처리",
+      "blocked": "가져올 수 없어 건너뜁니다.",
+      "include_row": "{name} 가져오기",
+      "reason_requested": "요청",
+      "reason_referenced": "‘{by}’이(가) 사용",
+      "need_choice": "내용이 다른 항목 {n}개의 처리 방법을 고르세요.",
+      "bad_new_id": "새 이름을 확인하세요.",
+      "all_skipped": "가져올 항목이 없습니다.",
+      "empty": "복사할 항목이 없습니다.",
+      "overwrite_warn": "이 프로젝트에서 바꾼 내용이 사라집니다. 편집기의 버전 기록에서 되돌릴 수 있습니다.",
+      "overwrite_warn_library": "공용 구성의 내용이 사라집니다. 편집기의 버전 기록에서 되돌릴 수 있습니다.",
+      "new_id": "새 이름(id)",
+      "new_id_help": "이 묶음 안의 연결이 새 이름으로 바뀝니다.",
+      "new_id_empty": "새 이름을 입력하세요.",
+      "new_id_invalid": "영문·숫자·-·_만 쓸 수 있고 첫 글자는 영문이나 숫자여야 합니다.",
+      "new_id_taken": "이미 있는 이름입니다.",
+      "new_id_reserved": "예약된 이름이라 쓸 수 없습니다. 다른 이름을 입력하세요.",
+      "remove_source": "복사한 뒤 공용에서 지우기",
+      "remove_source_help": "끄면 공용에는 남고 옛 프로젝트 필드만 지워집니다.",
+      "loading": "복사 계획을 만드는 중…",
+      "failed": "복사 계획을 만들지 못했습니다",
+      "retry": "다시 시도"
+    },
+    "independent_note": "복사한 뒤에는 서로 독립입니다. 알림이나 자동 동기화는 없습니다.",
+    "back": "← 뒤로",
+    "cancel": "취소",
+    "close": "닫기",
+    "submit": {
+      "import": "가져오기 ({n})",
+      "save": "저장 ({n})",
+      "move": "옮기기 ({n})",
+      "run": "가져오고 실행 ({n})",
+      "busy": "복사하는 중…"
+    },
+    "result": {
+      "partial": "{total}개 중 {ok}개를 가져왔습니다",
+      "replan": "다시 계획",
+      "replan_all": "다시 계획 ({n})",
+      "error_prefix": "적용하지 못했습니다",
+      "toast_one": "‘{name}’을(를) 가져왔습니다",
+      "toast_many": "‘{name}’ 외 {n}개를 가져왔습니다",
+      "open": "열기"
+    },
+    "import_to_project": "이 프로젝트로 가져오기…",
+    "import_selected": "선택한 {n}개를 이 프로젝트로 가져오기…",
+    "save_to_library": "공용에 저장…",
+    "summary": "복사 {copy} · 그대로 쓰기 {reuse} · 덮어쓰기 {overwrite} · 새 이름 {rename} · 건너뜀 {skip}"
+  }
+}

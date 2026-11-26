@@ -1,0 +1,252 @@
+{
+  "a11y": {
+    "tree": "메모리 범위 나무",
+    "table": "메모리 항목 표",
+    "row": "{key}, {author}, {updated}, {size}, 버전 {version}",
+    "pinned": "고정됨",
+    "archived": "보관됨",
+    "deleted": "지움"
+  },
+  "scope": {
+    "all": "모든 범위",
+    "unavailableGroup": "쓸 수 없는 범위",
+    "unknownKind": {
+      "_": "알 수 없는 범위 종류",
+      "tip": "이 범위의 항목은 남아 있지만 에이전트는 쓸 수 없습니다. [설정 › 메모리]에서 범위 종류를 다시 만들면 다시 쓰입니다."
+    },
+    "disabledKind": {
+      "_": "꺼짐",
+      "tip": "꺼진 범위 종류입니다. 항목은 그대로 볼 수 있지만 에이전트는 쓸 수 없습니다."
+    },
+    "deleted": "삭제됨",
+    "hiddenOthers": "다른 프로젝트 범위 {n}개 숨김",
+    "showAll": "모두 보기",
+    "menu": {
+      "_": "{label} 범위 메뉴",
+      "newHere": "이 범위로 새 항목",
+      "exportScope": "이 범위 내보내기",
+      "clear": "범위 비우기…"
+    },
+    "entries": "항목 {n}개"
+  },
+  "table": {
+    "key": "키",
+    "author": "쓴 주체",
+    "updated": "수정",
+    "size": "크기",
+    "version": "버전",
+    "tags": "태그",
+    "pinned": "고정됨",
+    "summary": "항목 {n}",
+    "summaryMore": "항목 {n}개 이상",
+    "order": {
+      "latest": "최신순",
+      "updated_at": {
+        "desc": "최근 수정순",
+        "asc": "오래된 수정순"
+      },
+      "created_at": {
+        "desc": "최근 생성순",
+        "asc": "오래된 생성순"
+      },
+      "key": {
+        "asc": "키 오름차순",
+        "desc": "키 내림차순"
+      },
+      "bytes": {
+        "desc": "큰 순",
+        "asc": "작은 순"
+      },
+      "version": {
+        "desc": "버전 높은 순",
+        "asc": "버전 낮은 순"
+      },
+      "fallback": "{sort} {order}",
+      "result": "검색 결과"
+    },
+    "newChanges": "새 변경 {n}건 — 맨 위로 · 새로고침",
+    "loading": "불러오는 중…",
+    "empty": "표시할 항목이 없습니다.",
+    "moreTags": "+{n}"
+  },
+  "sort": {
+    "label": "정렬",
+    "updated_at": "수정",
+    "created_at": "만든 때",
+    "key": "키",
+    "bytes": "크기",
+    "version": "버전",
+    "asc": "오름차순",
+    "desc": "내림차순",
+    "order": "방향"
+  },
+  "filter": {
+    "tagsTruncated": "태그가 많아 일부만 보입니다. 입력으로 직접 찾으세요."
+  },
+  "secret": {
+    "title": "비밀 값으로 보이는 내용이 있어 저장하지 않았습니다.",
+    "body": "API 키·토큰·비밀번호처럼 보이는 문자열은 메모리에 저장할 수 없습니다. 어느 부분인지는 알려 드리지 않습니다. 의심되는 부분을 지우거나 바꾼 뒤 다시 저장하세요.",
+    "bodyAt": "{where}에 비밀로 보이는 값이 있습니다. 의심되는 부분을 지우거나 바꾼 뒤 다시 저장하세요.",
+    "field": {
+      "content": "본문",
+      "key": "키",
+      "tags": "태그"
+    }
+  },
+  "import": {
+    "preview": {
+      "title": "미리보기 · 쓰지 않았습니다",
+      "created": "만들어질 항목 {n}",
+      "overwritten": "덮어쓸 항목 {n}",
+      "renamed": "이름 바꿔 만들 항목 {n}",
+      "skipped": "건너뛸 항목 {n}",
+      "note": "실제 가져오기 때 결과가 달라질 수 있습니다."
+    }
+  },
+  "row": {
+    "archived": "보관됨",
+    "deleted": "지움",
+    "unknownKind": "알 수 없는 범위 종류"
+  },
+  "author": {
+    "agent": "에이전트 {name}",
+    "user": "사용자",
+    "system": {
+      "retention": "정리",
+      "import": "가져오기"
+    },
+    "deletedAgent": "(삭제된 에이전트)"
+  },
+  "detail": {
+    "info": "정보",
+    "scope": "범위",
+    "version": "버전",
+    "size": "크기",
+    "hash": "해시",
+    "createdBy": "만든 이",
+    "updatedBy": "고친 이",
+    "tags": "태그",
+    "contentType": "형식",
+    "pinned": {
+      "_": "고정",
+      "tip": "켜면 정리 규칙에서 빠집니다."
+    },
+    "archived": {
+      "_": "보관",
+      "tip": "켜면 에이전트 도구 결과에서 빠집니다."
+    },
+    "on": "켜짐",
+    "off": "꺼짐",
+    "history": "기록",
+    "copy": "복사",
+    "openRun": "실행 열기",
+    "tagInput": "태그 추가",
+    "tagRemove": "{tag} 태그 지우기",
+    "tagsMore": "+{n}",
+    "tagsLess": "접기",
+    "bytesExact": "{n} B"
+  },
+  "editor": {
+    "aria": "{key} 본문",
+    "bytes": "{used} / {limit}",
+    "bytesNoLimit": "{used}",
+    "overLimit": "한도 초과 {over}",
+    "position": "줄 {line}, 열 {col}",
+    "tooLarge": "한도를 넘어 저장할 수 없습니다.",
+    "status": "편집기 상태"
+  },
+  "save": {
+    "saved": "저장됨",
+    "dirty": "저장 안 됨",
+    "saving": "저장 중…",
+    "pending": "저장 대기…",
+    "failed": "저장 실패"
+  },
+  "history": {
+    "title": "버전 기록",
+    "list": "버전",
+    "vsPrev": "직전과",
+    "vsCurrent": "현재와",
+    "compare": "비교 대상",
+    "sideBySide": "나란히",
+    "unified": "한 줄",
+    "layout": "비교 보기 방식",
+    "noBodyChange": "본문 변경 없음",
+    "restore": "이 버전으로 되돌리기",
+    "isCurrent": "지금 버전입니다",
+    "deletedState": "지움",
+    "note": "버전은 {max}개까지 보관하고 오래된 것부터 지웁니다. 첫 버전은 남습니다.",
+    "thisVersion": "이 버전",
+    "noBase": "비교할 이전 버전이 없습니다.",
+    "keyChanged": "키: {from} → {to}",
+    "scopeChanged": "범위: {from} → {to}",
+    "archivedNow": "보관: 켜짐",
+    "unarchivedNow": "보관: 꺼짐",
+    "diffAria": "{from}과 {to}의 본문 비교",
+    "loading": "불러오는 중…",
+    "error": "버전을 불러오지 못했습니다.",
+    "retry": "다시 시도",
+    "empty": "기록이 없습니다.",
+    "op": {
+      "create": "만듦",
+      "update": "수정",
+      "delete": "지움",
+      "restore": "복원",
+      "archive": "보관",
+      "unarchive": "보관 해제",
+      "move": "옮김"
+    },
+    "unchangedLines": "변경 없는 $줄 — 펼치기"
+  },
+  "retention": {
+    "preview": "미리보기",
+    "previewing": "미리보는 중…",
+    "previewedAt": "미리보기 · {time} 기준",
+    "again": "다시 미리보기",
+    "summary": "대상 {n}개 — 보관 {a} · 지우기 {d}",
+    "excludedPinned": "고정 {p}개 제외",
+    "more": "처음 {shown}개만 보입니다. 외 {n}개",
+    "stale": "적용할 때 대상이 달라질 수 있습니다.",
+    "noRules": "규칙이 없습니다.",
+    "none": "정리할 대상이 없습니다.",
+    "apply": "지금 적용",
+    "col": {
+      "rule": "규칙",
+      "action": "동작",
+      "scope": "범위",
+      "key": "키",
+      "updated": "마지막 쓰기",
+      "size": "크기"
+    },
+    "action": {
+      "archive": "보관",
+      "delete": "지우기"
+    },
+    "result": "보관 {a} · 지움 {d} · 건너뜀 {s} · {time}",
+    "error": "미리보기를 불러오지 못했습니다.",
+    "retry": "다시 시도",
+    "table": "정리 대상 표"
+  },
+  "time": {
+    "now": "방금",
+    "minutes": "{n}분 전",
+    "hours": "{n}시간 전",
+    "days": "{n}일 전",
+    "never": "–"
+  },
+  "size": {
+    "b": "{n} B",
+    "kib": "{n} KiB",
+    "mib": "{n} MiB"
+  },
+  "key": {
+    "error": {
+      "empty": "키를 입력하세요",
+      "emptySegment": "빈 마디가 있습니다",
+      "edgeSlash": "앞뒤에 /를 둘 수 없습니다",
+      "dotSegment": ".과 ..은 쓸 수 없습니다",
+      "control": "제어 문자는 쓸 수 없습니다",
+      "tooLong": "{n}/256자"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import type { FolderCheck, FolderPickResult } from "@agent-console/contracts/projects";
 import { describe, expect, test } from "vitest";
 
-import { folderCapabilities, folderCheckData, folderCheckOutcome, folderErrorOutcome, folderPickOutcome, logFilterFor } from "@agent-console/projects";
+import { folderCapabilities, folderCheckData, folderCheckOutcome, folderErrorOutcome, folderPickOutcome } from "@agent-console/projects";
 
 const ok: FolderCheck = {
   input: "~/work/app",
@@ -102,11 +102,5 @@ describe("선택 창 응답 → picker", () => {
     expect(folderCapabilities({ native_dialog: true, browse: true })).toEqual({ browse: true, native_dialog: true });
     expect(folderCapabilities({ reason: "remote" })).toEqual({ browse: true, native_dialog: false, reason: "remote" });
     expect(folderCapabilities({ browse: false, native_dialog: false, reason: null })).toEqual({ browse: false, native_dialog: false, reason: null });
-  });
-});
-
-describe("로그 필터", () => {
-  test("LogSessionSummary.project_id 기준: 필터는 project=<id>", () => {
-    expect(logFilterFor("p1").filter).toEqual({ project: "p1" });
   });
 });

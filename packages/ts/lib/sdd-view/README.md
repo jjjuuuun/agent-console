@@ -45,6 +45,21 @@ import { TaskTable, DocumentEditor, PlanGraph, TraceMatrix } from "@agent-consol
 Pure functions: `groupByStage`, `flattenTaskRows`, `statusTone`, `codeDisplay`, `toneAttr`, `planToFlow`, `planBundles`, `applyPositions`, `createElkPlanLayout`, `filterTraceRows`, and `gapLabelKey`.
 Text comes from the `messages` prop (partial override) and `defaultMessages`. The subpath `./testing` holds sample data (keep it out of the app bundle).
 
+## Messages and language
+The default messages are Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside. There is no dependency on i18next. Placeholders are `{name}` and `formatMessage` fills them.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). In the JSON files, dotted keys are spread into a tree; when one key is the prefix of another, its value sits under `_`. `flattenMessageTree` (from `@agent-console/markdown-doc`) turns a tree back into the dotted keys the components read.
+To use English, pass the bundle as `messages`:
+
+```tsx
+import en from "@agent-console/sdd-view/locales/en";
+import mdEn from "@agent-console/markdown-doc/locales/en";
+
+<TaskTable tasks={tasks} statuses={statuses} messages={en} />
+<DocumentEditor document={doc} value={draft} onChange={setDraft} messages={mdEn} />
+```
+`DocumentEditor`, the chips, and `RulesSourceBadge` come from `@agent-console/markdown-doc`, so their `editor.*` and `source.*` messages are in that package's bundle (`@agent-console/markdown-doc/locales/en`).
+The Korean bundle is `@agent-console/sdd-view/locales/ko`. Both files also export `tree` (the JSON as a tree) for code that takes tree bundles. To change only a few messages, spread and override: `messages={{ ...en, "specs.empty.title": "…" }}`. For a new language, build an object with the same keys. The component sources contain no Korean string literals (the same test checks this).
+
 ## Dependencies (what / why / alternatives)
 - `@xyflow/react` — renders the plan graph. Alternative: plain SVG (pan, zoom, and accessibility built by hand).
 - `elkjs` — layered layout. Imported dynamically only when first needed; the engine can be swapped with the `engine` prop. Alternative: a per-layer column layout (already present as the fallback on failure).

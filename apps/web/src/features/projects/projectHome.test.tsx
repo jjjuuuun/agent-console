@@ -310,6 +310,27 @@ describe("프로젝트 홈: 구성 표는 서버 종류 목록으로 (V5)", () =
   });
 });
 
+describe("프로젝트 홈: 구성 행 [열기]는 서버가 준 open_role로 푼다 (P1.32)", () => {
+  it("open_role이 라우트 역할이면 링크가 붙고, 모르는 역할·값 없음이면 이름만 보인다", async () => {
+    mount([view("a")], "/projects/a", {
+      listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
+      listCopyKinds: vi.fn(async () => [
+        { kind: "qq-a", library: true, portable: true, title: "틀", open_role: "sdd:templates" },
+        { kind: "qq-b", library: true, portable: true, title: "모름", open_role: "zz:nowhere" },
+        { kind: "qq-c", library: true, portable: true, title: "없음", open_role: null },
+      ]),
+      listCopyItems: vi.fn(async (project: string | null, kind?: string) => (project === null ? [] : [{ kind, id: `${kind}-1`, name: `${kind} 항목` }])),
+    });
+    const config = await screen.findByTestId("project-config-card");
+    const a = await within(config).findByRole("link", { name: "qq-a 항목" });
+    expect(a.getAttribute("href")).toBe("/spec-templates/qq-a-1?prj=a");
+    await within(config).findByText("qq-b 항목");
+    expect(within(config).queryByRole("link", { name: "qq-b 항목" })).toBeNull();
+    expect(within(config).queryByRole("link", { name: "qq-c 항목" })).toBeNull();
+  });
+});
+
 describe("프로젝트 홈: 삭제 전 거꾸로 참조 (FU.16)", () => {
   const open = async (listCopyItemReferences: ReturnType<typeof vi.fn>, deleteCopyItem = vi.fn(async () => undefined)) => {
     mount([view("a")], "/projects/a", {

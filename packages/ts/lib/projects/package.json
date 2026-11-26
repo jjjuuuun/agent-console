@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/projects",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "프로젝트 재사용 로직: 상태·능력 표, 공간, 복사 계획, 로그 필터, 현재 프로젝트 상태",
   "private": true,
   "license": "MIT",
@@ -23,6 +23,16 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
     }
   },
   "scripts": {

@@ -1,396 +1,499 @@
 # agent-console-server
 
-Agent Console 서버: 설정 로드 → 호스트 기본 서비스(레지스트리·DB·플러그인 로더, 확장 지점) → **모듈 조립(`agent-console-modkit`)**
-(설치된 기능·연동 모듈 entry point) → FastAPI REST(`/api/v1`)·WebSocket(`/ws`). 서버는 모듈을 `assemble`에 넘기고 받은
-라우터·WS 토픽·오류 맵을 붙이기만 한다. 기능 이름은 모른다.
-웹은 기본적으로 **별도 프로세스**다(CORS + 토큰). `web.serve_static`(선택 기능, 기본 꺼짐)을 켜면 서버 하나가
-웹 빌드까지 서빙한다(아래 "단일 실행").
-비즈니스 로직(검증·실행·팀 의미·채팅·사용량·가져오기 규칙)은 각 패키지·모듈에 있고, 이 앱은 조립과 전송 계층만 맡는다.
+The Agent Console server. It loads the settings, sets up the host base services (registries, database, plugin
+loaders, extension points), **assembles the modules (`agent-console-modkit`)** (the installed feature and link module
+entry points), and serves FastAPI REST (`/api/v1`) and WebSocket (`/ws`). The server passes the modules to `assemble`
+and only attaches the routers, WS topics, and error maps it gets back. It does not know feature names.
+By default the web runs as a **separate process** (CORS + token). When you turn on `web.serve_static` (optional, off by
+default), one server also serves the web build (see "Single process" below).
+Business logic (validation, runs, team meaning, chat, usage, import rules) lives in the packages and modules. This app
+only assembles them and handles the transport layer.
 
-## 설치
+## Install
 
 ```bash
-uv sync --all-packages          # 워크스페이스 안
-uv pip install ./apps/server    # 단독
+uv sync --all-packages          # inside the workspace
+uv pip install ./apps/server    # standalone
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
-| `fastapi` | REST·WS 라우팅, OpenAPI | Pydantic 계약 모델을 그대로 요청·응답 모델로 쓴다 | Starlette 단독 — OpenAPI·본문 검증을 직접 써야 한다 |
-| `uvicorn` | ASGI 서버 | FastAPI 표준 실행기, WS 지원 | hypercorn |
-| `websockets` | uvicorn WS 구현 | uvicorn 기본 WS 백엔드 | wsproto |
-| `ruamel-yaml` | `agent-console.yaml` 읽기(safe 로더) | store와 같은 라이브러리 | PyYAML |
-| `pydantic`·`starlette` | 설정 모델·미들웨어 | 서버가 직접 import하므로 직접 의존으로 선언한다 | — |
-| 직접 쓰는 Agent Console 패키지 | `agent-console-contracts`·`registry`·`secret-rules`·`modkit[host]` | 계약 모델, 레지스트리, 비밀 규칙, 모듈 조립·보안 미들웨어·호스트 확장 지점 | — |
-| 설치만 하는 플러그인 | `agent-console-resources-core`·`nodes-core`·`delegation-host`·`backend-claude-sdk[login]`·`backend-fake-agent`, 로그 출처 `logs-claude`·`hook-probe` | 기본 리소스 종류·노드·위임 방식·실행 백엔드(구독 로그인 PTY 포함)·로그 출처. 서버는 import하지 않고 entry point로만 들어온다 | — |
-| 기능·연동 모듈 | `agent-console-mod-{definitions,resources,runs,chat,usage,imports,exports,versions,logs,projects}`, `agent-console-link-{definitions-resources,definitions-teams,exports-teams,runs-teams,runs-trace,runs-usage,chat-runs,logs-runs,logs-trace,logs-usage,projects-runs}` | 설치 의존으로만 둔다. 서버는 import하지 않고 entry point `agent_console.server_modules`로 조립한다(import-linter). 필요 없는 모듈은 설치에서 빼거나 설정으로 끈다 | — |
-| `httpx`(dev) | `TestClient` | FastAPI 테스트 클라이언트 요구 | — |
+| `fastapi` | REST and WS routing, OpenAPI | Uses the Pydantic contract models directly as request and response models | Starlette alone: OpenAPI and body validation would have to be written by hand |
+| `uvicorn` | ASGI server | The standard FastAPI runner, with WS support | hypercorn |
+| `websockets` | uvicorn WS implementation | The default uvicorn WS backend | wsproto |
+| `ruamel-yaml` | Reads `agent-console.yaml` (safe loader) | The same library as the store | PyYAML |
+| `pydantic`, `starlette` | Settings models, middleware | The server imports them, so they are declared as direct dependencies | — |
+| Agent Console packages used directly | `agent-console-contracts`, `registry`, `secret-rules`, `modkit[host]` | Contract models, registries, secret rules, module assembly, security middleware, host extension points | — |
+| Plugins that are only installed | `agent-console-resources-core`, `nodes-core`, `delegation-host`, `backend-claude-sdk[login]`, `backend-fake-agent`, log sources `logs-claude` and `hook-probe` | Default resource kinds, nodes, delegation strategies, execution backends (including the subscription sign-in PTY), log sources. The server does not import them; they come in through entry points only | — |
+| Feature and link modules | `agent-console-mod-*` and `agent-console-link-*` (the tables in "Module assembly") | Install dependencies only. The server does not import them and assembles them through the entry point `agent_console.server_modules` (enforced by import-linter). Leave out modules you do not need when installing, or turn them off in the settings | — |
+| `httpx` (dev) | `TestClient` | Required by the FastAPI test client | — |
 
-CORS는 Starlette `CORSMiddleware` 대신 보안 미들웨어 안에서 처리한다: preflight도 Host 검사를 먼저 통과해야 하고,
-보안 검사가 낸 오류 응답(401·403·413)에도 허용 출처 헤더가 붙어야 웹이 읽을 수 있기 때문이다.
+CORS is handled inside the security middleware instead of the Starlette `CORSMiddleware`: a preflight request must
+pass the Host check first, and error responses from the security checks (401, 403, 413) must also carry the allowed
+origin headers so that the web can read them.
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 from agent_console_server import create_app, load_settings, serve
 
-settings = load_settings()  # agent-console.yaml + AGENT_CONSOLE_* 환경변수
-app = create_app(settings)  # ASGI 앱(구성 요소는 lifespan에서 조립)
-serve(settings)  # uvicorn 실행(막힘)
+settings = load_settings()  # agent-console.yaml + AGENT_CONSOLE_* environment variables
+app = create_app(settings)  # ASGI app (the parts are assembled in the lifespan)
+serve(settings)  # runs uvicorn (blocks)
 ```
 
 ```bash
 python -m agent_console_server --config agent-console.yaml --port 8765 --disable-module mod-exports
 ```
 
-명령행은 `main(argv, *, prog=, modules=)` 하나다. `python -m agent_console_server`와 `agent-console serve`(apps/cli)가
-같은 옵션을 쓴다: `--config/-c`·`--host`·`--port`·`--workspace`·`--allow-origin ORIGIN`(여러 번, 설정의
-`security.allowed_origins` 뒤에 덧붙임, `merge_origins`)·`--open/--no-open`·`--enable-module`·`--disable-module`, 그리고
-설치된 모듈이 `SettingsCompat.flags`로 선언한 옵션(지금 기본 모듈에는 없다). 설정 오류는 표준 오류에 `<prog>: …`를 쓰고 종료 코드 2.
+There is one command line, `main(argv, *, prog=, modules=)`. `python -m agent_console_server` and
+`agent-console serve` (apps/cli) take the same options: `--config/-c`, `--host`, `--port`, `--workspace`,
+`--allow-origin ORIGIN` (repeatable, appended after `security.allowed_origins` from the settings, `merge_origins`),
+`--open/--no-open`, `--enable-module`, `--disable-module`, and the options that installed modules declare with
+`SettingsCompat.flags` (the default modules declare none today). A settings error writes `<prog>: …` to standard error
+and exits with code 2.
 
-서버는 빈 워크스페이스로 시작한다. 에이전트·팀 구성은 사용자가 만들거나 가져오기(`mod-imports`)로 들인다.
+The server starts with an empty workspace. Users create agents and teams themselves or bring them in with an import
+(`mod-imports`).
 
-## 모듈 조립
+## Module assembly
 
-`create_app`은 entry point `agent_console.server_modules`로 설치된 모듈(`installed_modules()`, 테스트는
-`create_app(modules=[...])`)을 `agent_console_modkit.assemble(modules, settings.modules)`로 조립한다. **서버는 기능 이름을
-모른다**(import-linter "서버 앱은 modkit과 기반만" + `tests/test_agent_console_server_assembly.py`).
-모듈 라우터는 연동 모듈 먼저 붙인다(고정 하위 경로가 기능 모듈의 매개변수 경로에 가리지 않게).
+`create_app` assembles the modules installed through the entry point `agent_console.server_modules`
+(`installed_modules()`; tests pass `create_app(modules=[...])`) with
+`agent_console_modkit.assemble(modules, settings.modules)`. **The server does not know feature names** (the
+import-linter contract "server app uses only modkit and base packages" and `tests/test_agent_console_server_assembly.py`).
+Link module routers are attached first, so that their fixed sub-paths are not hidden by the parameter paths of
+feature modules.
 
-호스트 기본 서비스도 설치된 패키지가 modkit 확장 지점으로 알린 것을 쓴다: 레지스트리 묶음 공장
-(`agent_console.host_registries`)·플러그인 로더(`agent_console.host_plugin_loaders`) → `load_host_plugins`, DB 공장
-(`agent_console.host_database`) → `open_host_database`, 비밀 해석(환경변수 `secrets.env_prefix` → 묶음의 비밀 공급자) →
-`secret_resolver`. 지운 설정 키·모듈 환경변수·모듈 명령행 옵션은 모듈의 `settings_compat` 선언으로 다룬다
-(`settings_compat()`·`flag_overrides()`). `GET /health`는 모듈 시작 훅이 끝난 뒤에만 200이다(그 전·종료 뒤 503 `not_ready`).
+The host base services also come from what installed packages announce through modkit extension points: the registry
+bundle factories (`agent_console.host_registries`) and plugin loaders (`agent_console.host_plugin_loaders`) →
+`load_host_plugins`, the database factory (`agent_console.host_database`) → `open_host_database`, and secret
+resolution (environment variable `secrets.env_prefix` → the secret providers of the bundle) → `secret_resolver`.
+Removed settings keys, module environment variables, and module command-line options are handled by each module's
+`settings_compat` declaration (`settings_compat()`, `flag_overrides()`). `GET /health` returns 200 only after the module
+start hooks have finished (503 `not_ready` before that and after shutdown).
 
-설치된 모듈(entry point `agent_console.server_modules`, 웹 역할은 `/modules`의 `web_roles`). 패키지는 `packages/py/modules/`·`packages/py/links/`에 있고, 각 모듈 설정은 `modules.options.<모듈 id>`(키는 각 모듈 README)다.
+Installed modules come from the entry point `agent_console.server_modules`; their web roles are the `web_roles` of
+`/modules`. The packages are in `packages/py/modules/` and `packages/py/links/`. Each module's settings live under
+`modules.options.<module id>` (the keys are in each module README). The ports each module requires, may use, and
+provides are listed in its README and reported at run time by `GET /api/v1/modules` (`requires`, `provides`).
 
-### 기능 모듈
+### Feature modules
 
-| 모듈 id | 패키지 | 경로·WS | web_roles | 필수 포트 | 선택 포트 | 제공 포트 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `mod-chat` | `ac-mod-chat` | `/conversations…`(대화·턴·메시지·대기열), WS `conversation:` | `conversations` | — | `chat.turn_launcher`·`chat.runs`·`chat.run_events`·`chat.interactions`·`chat.turn_sessions`·`definitions.lookup`·`workspace.settings` | `chat.conversations`·`server.warnings`(multi) |
-| `mod-definitions` | `ac-mod-definitions` | `/agents`·`/graphs`(CRUD·복제)·`/settings`, 토픽 `definitions.saved` | `definitions:agent`·`definitions:graph`·`settings` | — | `definitions.checks`(multi)·`graphs.validation`·`graphs.entry_labels` | `definitions.store`·`definitions.lookup`·`workspace.settings`·`secrets.rules`·`definitions.checks`(multi)·`server.warnings`(multi) |
-| `mod-exports` | `ac-mod-exports` | `/exporters`, `/exports/*` | `exports` | `definitions.lookup` | `exports.dependencies`·`secrets.rules` | — |
-| `mod-imports` | `ac-mod-imports` | `/resources/import/*` | `imports` | `definitions.store` | `secrets.rules` | — |
-| `mod-logs` | `ac-mod-logs` | `/logs…`(출처·분류기·수집·이벤트·세션·타임라인·집계·handoff·분류 체계·대시보드 템플릿·스키마), WS `logs` | `logs` | — | `logs.sources`(multi)·`workspace.settings`·`secrets.rules`·`logs.source_defaults`(multi) | `logs.query`·`logs.ingest`·`server.warnings`(multi) |
-| `mod-projects` | `ac-mod-projects` | `/projects…`(CRUD·옮기기 계획·옮기기·범위 검사·삭제 계획) | `projects` | — | `definitions.lookup`·`definitions.store`·`definitions.references`(multi) | `projects.lookup`·`definitions.checks`(multi) |
-| `mod-resources` | `ac-mod-resources` | `/resources…`(CRUD·본문·파일)·`/resource-types`·`/merge-strategies` | `definitions:resource` | `definitions.store` | `definitions.usages` | `resources.lookup`·`resources.types` |
-| `mod-runs` | `ac-mod-runs` | `/runs…`·`/interactions`·디스크립터(`/node-types`·`/edge-types`·`/backends`·`/delegation-strategies`·`/interaction-kinds`)·`/agents/{id}/activity`·이어 가기·백엔드 상태·로그인(`backend_login`), WS `run:`·`interactions` | `runs` | `definitions.lookup` | `runs.preparers`(multi)·`runs.services`(multi)·`runs.scopes`(multi)·`runs.resume_handlers`(multi)·`workspace.settings`·`secrets.rules` | `runs.starter`·`runs.reader`·`runs.events`·`interactions.port`·`secrets.redact`·`server.warnings`(multi)·`server.attributes`(multi) |
-| `mod-usage` | `ac-mod-usage` | `/usage`(`?parts=`), `/usage/sources` | `usage` | — | `usage.event_query`·`usage.token_rollups`·`workspace.settings`·`usage.sources`(multi) | `usage.service`·`server.warnings`(multi)·`definitions.checks`(multi) |
-| `mod-versions` | `ac-mod-versions` | `{컬렉션}/versions…` | `versions` | `definitions.store` | `definitions.checks`(multi)·`secrets.rules` | — |
+| Module id | Package | Routes and WS | Web roles |
+| --- | --- | --- | --- |
+| `mod-architecture` | [`ac-mod-architecture`](../../packages/py/modules/ac-mod-architecture/README.md) | `/architecture/…` (profiles, profile check, projection) | `architecture` |
+| `mod-chat` | [`ac-mod-chat`](../../packages/py/modules/ac-mod-chat/README.md) | `/conversations…` (conversations, turns, messages, queue), WS `conversation:` | `conversations` |
+| `mod-definitions` | [`ac-mod-definitions`](../../packages/py/modules/ac-mod-definitions/README.md) | `/agents`, `/graphs` (CRUD, duplicate), `/settings`; in-process topic `definitions.saved` | `definitions:agent`, `definitions:graph`, `settings` |
+| `mod-exports` | [`ac-mod-exports`](../../packages/py/modules/ac-mod-exports/README.md) | `/exporters`, `/exports/*` | `exports` |
+| `mod-i18n` | [`ac-mod-i18n`](../../packages/py/modules/ac-mod-i18n/README.md) | `/i18n`, `/i18n/{lang}` (message catalogs) | `i18n` |
+| `mod-imports` | [`ac-mod-imports`](../../packages/py/modules/ac-mod-imports/README.md) | `/resources/import/*` | `imports` |
+| `mod-logs` | [`ac-mod-logs`](../../packages/py/modules/ac-mod-logs/README.md) | `/logs…` (sources, classifiers, collection, events, sessions, timeline, totals, handoffs, taxonomy, dashboard templates, schema), WS `logs` | `logs` |
+| `mod-memory` | [`ac-mod-memory`](../../packages/py/modules/ac-mod-memory/README.md) | `/memory/…` (scope kinds, scopes, tags, entries, versions, retention, export, import, copy), WS `memory.changed` | `memory` |
+| `mod-projects` | [`ac-mod-projects`](../../packages/py/modules/ac-mod-projects/README.md) | `/projects…` (CRUD, folder browse, check, and pick, copy plan and apply, copied items, legacy plan, manifest reset) | `projects` |
+| `mod-resources` | [`ac-mod-resources`](../../packages/py/modules/ac-mod-resources/README.md) | `/resources…` (CRUD, content, files), `/resource-types`, `/merge-strategies` | `definitions:resource` |
+| `mod-runs` | [`ac-mod-runs`](../../packages/py/modules/ac-mod-runs/README.md) | `/runs…`, `/interactions`, descriptors (`/node-types`, `/edge-types`, `/backends`, `/delegation-strategies`, `/interaction-kinds`), `/agents/{id}/activity`, resume, backend status, sign-in (`backend_login`), WS `run:` and `interactions` | `runs` |
+| `mod-sdd` | [`ac-mod-sdd`](../../packages/py/modules/ac-mod-sdd/README.md) | `/sdd/…` (info, specs, check, tasks, plan, trace, syntax, import, export, templates), WS `sdd.changed` | `sdd` |
+| `mod-usage` | [`ac-mod-usage`](../../packages/py/modules/ac-mod-usage/README.md) | `/usage` (`?parts=`), `/usage/sources` | `usage` |
+| `mod-versions` | [`ac-mod-versions`](../../packages/py/modules/ac-mod-versions/README.md) | `{collection}/versions…` | `versions` |
+| `mod-wiki` | [`ac-mod-wiki`](../../packages/py/modules/ac-mod-wiki/README.md) | `/wiki/…` (info, changes, wikis, pages, link graph, lint, scan, wiki rules), WS `wiki.changed` | `wiki`, `wiki:rules` |
 
-### 연동 모듈
+### Link modules
 
-| 모듈 id | 패키지 | 경로·WS | web_roles | 필수 포트 | 선택 포트 | 제공 포트 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `link-chat-runs` | `ac-link-chat-runs` | — | `conversations:runs` | `chat.conversations`·`runs.starter`·`runs.reader`·`runs.events` | `interactions.port` | `chat.turn_launcher`·`chat.runs`·`chat.run_events`·`chat.interactions`·`chat.turn_sessions`·`runs.resume_handlers`(multi) |
-| `link-definitions-resources` | `ac-link-definitions-resources` | — | — | `definitions.lookup`·`resources.types` | `resources.lookup`·`secrets.rules` | `definitions.checks`(multi) |
-| `link-definitions-teams` | `ac-link-definitions-teams` | 사용처·유효 설정·실행 계획·묶음 미리보기 | `definitions:teams` | `definitions.lookup` | `workspace.settings`·`resources.lookup`·`resources.types`·`secrets.redact`·`secrets.rules`·`settings.scope_layers`(multi) | `graphs.entry_labels`·`definitions.usages`·`definitions.dependencies`·`definitions.references`(multi) |
-| `link-exports-teams` | `ac-link-exports-teams` | — | — | `definitions.lookup` | `workspace.settings` | `exports.dependencies` |
-| `link-logs-runs` | `ac-link-logs-runs` | `GET /runs/{id}/logs` | `logs:runs` | `logs.ingest`·`logs.query`·`runs.reader`·`runs.events` | — | `logs.sources`(multi) |
-| `link-logs-trace` | `ac-link-logs-trace` | `GET /logs/sessions/{session}/trace` | `logs:trace` | `logs.query` | — | — |
-| `link-logs-usage` | `ac-link-logs-usage` | — | — | `logs.query`·`usage.service` | `logs.ingest` | `usage.sources`(multi)·`logs.source_defaults`(multi) |
-| `link-projects-runs` | `ac-link-projects-runs` | — | — | `projects.lookup` | — | `runs.scopes`(multi)·`settings.scope_layers`(multi) |
-| `link-runs-teams` | `ac-link-runs-teams` | `POST /graphs/{id}/validate` | `runs:team-rules` | `runs.starter`·`definitions.lookup` | `workspace.settings`·`resources.lookup`·`resources.types`·`definitions.checks`(multi) | `runs.preparers`(multi)·`runs.services`(multi)·`graphs.validation` |
-| `link-runs-trace` | `ac-link-runs-trace` | `/runs/{id}/trace`·`/runs/handoffs` | `runs:trace` | `runs.reader`·`runs.events` | `definitions.lookup` | — |
-| `link-runs-usage` | `ac-link-runs-usage` | — | `usage:tokens` | `runs.reader`·`runs.events` | — | `usage.event_query`·`usage.token_rollups` |
+| Module id | Package | Routes and WS | Web roles |
+| --- | --- | --- | --- |
+| `link-chat-runs` | [`ac-link-chat-runs`](../../packages/py/links/ac-link-chat-runs/README.md) | — | `conversations:runs` |
+| `link-definitions-resources` | [`ac-link-definitions-resources`](../../packages/py/links/ac-link-definitions-resources/README.md) | — | — |
+| `link-definitions-teams` | [`ac-link-definitions-teams`](../../packages/py/links/ac-link-definitions-teams/README.md) | Usages, effective settings, run plan, bundle preview | `definitions:teams` |
+| `link-exports-teams` | [`ac-link-exports-teams`](../../packages/py/links/ac-link-exports-teams/README.md) | — | — |
+| `link-logs-architecture` | [`ac-link-logs-architecture`](../../packages/py/links/ac-link-logs-architecture/README.md) | `GET /logs/architecture`, `GET /logs/events/{uid}/architecture` | `logs:architecture` |
+| `link-logs-runs` | [`ac-link-logs-runs`](../../packages/py/links/ac-link-logs-runs/README.md) | `GET /runs/{id}/logs` | `logs:runs` |
+| `link-logs-trace` | [`ac-link-logs-trace`](../../packages/py/links/ac-link-logs-trace/README.md) | `GET /logs/sessions/{session}/trace` | `logs:trace` |
+| `link-logs-usage` | [`ac-link-logs-usage`](../../packages/py/links/ac-link-logs-usage/README.md) | — | — |
+| `link-memory-runs` | [`ac-link-memory-runs`](../../packages/py/links/ac-link-memory-runs/README.md) | — | `memory:runs` |
+| `link-projects-memory` | [`ac-link-projects-memory`](../../packages/py/links/ac-link-projects-memory/README.md) | — | — |
+| `link-projects-records` | [`ac-link-projects-records`](../../packages/py/links/ac-link-projects-records/README.md) | — | — |
+| `link-projects-runs` | [`ac-link-projects-runs`](../../packages/py/links/ac-link-projects-runs/README.md) | — | — |
+| `link-projects-sdd` | [`ac-link-projects-sdd`](../../packages/py/links/ac-link-projects-sdd/README.md) | — | — |
+| `link-projects-wiki` | [`ac-link-projects-wiki`](../../packages/py/links/ac-link-projects-wiki/README.md) | — | — |
+| `link-runs-sdd` | [`ac-link-runs-sdd`](../../packages/py/links/ac-link-runs-sdd/README.md) | — | — |
+| `link-runs-teams` | [`ac-link-runs-teams`](../../packages/py/links/ac-link-runs-teams/README.md) | `POST /graphs/{id}/validate` | `runs:team-rules` |
+| `link-runs-trace` | [`ac-link-runs-trace`](../../packages/py/links/ac-link-runs-trace/README.md) | `/runs/{id}/trace`, `/runs/handoffs` | `runs:trace` |
+| `link-runs-usage` | [`ac-link-runs-usage`](../../packages/py/links/ac-link-runs-usage/README.md) | — | `usage:tokens` |
+| `link-wiki-runs` | [`ac-link-wiki-runs`](../../packages/py/links/ac-link-wiki-runs/README.md) | — | `wiki:runs` |
 
-- 모르는 WS 토픽을 구독하면 `error{reason: unknown_topic}`이다.
-- 모듈 하나 끄기 매트릭스: `tests/test_agent_console_server_module_matrix.py`(설치된 모듈 전부 × 시작·상태·나머지 API·404).
-- `link-chat-runs`를 끄면(또는 `mod-runs`가 없으면) 대화 목록·만들기·대기열은 동작하고 메시지 전송만 409
-  `feature_unavailable{module: mod-chat, port: chat.turn_launcher}`다. 정의 모듈이 없으면 대화 만들기가 409
-  (`port: definitions.lookup`). `mod-chat`을 끄면 대화 경로 404, `link-chat-runs`는 `unsatisfied`.
-- `GET /server-info`는 호스트 경로다. 경고는 `server.warnings`(평문 점검·`team.rules_unavailable`·저장소 메모리 경고 등), 속성은
-  `server.attributes`(`recovered_runs`)를 모은다.
-- `mod-definitions`를 끄면 정의 포트가 없어 `mod-imports`·`mod-exports`·`mod-versions`·`mod-resources`·
-  `mod-runs`·`link-*`는 `unsatisfied`, `mod-usage`는 외부 출처만으로 동작한다(토큰 집계 `[]`). `mod-chat`은 켜진 채로
-  대화 목록만 보인다.
-- `mod-runs`를 끄면 실행 경로·디스크립터가 404, `link-runs-*`·`link-chat-runs`는 `unsatisfied`, 정의 CRUD·대화 목록은
-  그대로다.
-- `mod-projects`를 끄면 `/projects…`가 404, `link-projects-runs`는 `unsatisfied`(실행의 `project_id` 기록·거르기는 그대로, 프로젝트
-  층(작업 폴더·설정)만 빠진다). `mod-logs`를 끄면 `/logs…` 404, `link-logs-*`는 `unsatisfied`.
-- 연동을 끄면: `link-definitions-resources` → 리소스 검사 없이 저장, `link-definitions-teams` → 해당 경로 404·목록 입구 이름·
-  사용 수 null, `link-exports-teams` → 의존 자동 포함 없이 고른 항목만 내보내기, `link-runs-teams` → 엔진 검증만으로 실행
-  (`team.rules_unavailable` 경고, 노드 서비스도 없어 에이전트 노드는 `agent.lookup_unavailable`), 검증 경로 404·목록 검증
-  요약 null, `link-runs-trace` → 흐름·넘김 경로 404, `link-runs-usage` → 토큰 집계 `[]`, `link-logs-runs` → 로그에 플랫폼 실행이
-  없고 `/runs/{id}/logs` 404, `link-logs-trace` → 세션 흐름 경로 404, `link-logs-usage` → 사용량 출처 `local-logs` 없음.
-- 플러그인 레지스트리(노드·연결·백엔드·리소스 종류·사용량 출처·가져오기 출처·내보내기 형식 …)는 호스트가 `create_app`에서
-  **한 번** 로드해(`agent_console_modkit.load_host_plugins` — 로더는 각 모듈 패키지가 entry point로 준다) 모든 모듈에 기본
-  서비스 `registries`로 넘긴다.
+- Subscribing to an unknown WS topic gives `error{reason: unknown_topic}`.
+- Turning off one module at a time: `tests/test_agent_console_server_module_matrix.py` (every installed module ×
+  startup, status, the remaining API, 404).
+- When `link-chat-runs` is off (or `mod-runs` is missing), listing and creating conversations and the queue still work;
+  only sending a message returns 409 `feature_unavailable{module: mod-chat, port: chat.turn_launcher}`. Without the
+  definitions module, creating a conversation returns 409 (`port: definitions.lookup`). When `mod-chat` is off, the
+  conversation routes return 404 and `link-chat-runs` is `unsatisfied`.
+- `GET /server-info` is a host route. It collects warnings from `server.warnings` (plain-text secret scan,
+  `team.rules_unavailable`, in-memory storage warnings, and so on) and attributes from `server.attributes`
+  (`recovered_runs`).
+- When `mod-definitions` is off, the definition ports are missing, so `mod-imports`, `mod-exports`, `mod-versions`,
+  `mod-resources`, `mod-runs`, and the `link-*` modules that need them are `unsatisfied`; `mod-usage` works with external
+  sources only (token totals `[]`). `mod-chat` stays on and shows only the conversation list.
+- When `mod-runs` is off, the run routes and descriptors return 404, `link-runs-*` and `link-chat-runs` are
+  `unsatisfied`, and definition CRUD and the conversation list work as before.
+- When `mod-projects` is off, `/projects…` returns 404 and `link-projects-*` are `unsatisfied` (runs still record and
+  filter by `project_id`; only the project layer, that is the project folder and project settings, is gone). When
+  `mod-logs` is off, `/logs…` returns 404 and `link-logs-*` are `unsatisfied`.
+- When `mod-i18n` is off, `/i18n…` returns 404, the web uses only its own message catalogs, and server text stays as the
+  original.
+- Turning off a link: `link-definitions-resources` → definitions are saved without resource checks;
+  `link-definitions-teams` → its routes return 404, and the entry names and usage counts in lists are null;
+  `link-exports-teams` → exports contain only the chosen items, without automatic dependencies; `link-runs-teams` →
+  runs use engine validation only (`team.rules_unavailable` warning; there are also no node services, so agent nodes
+  report `agent.lookup_unavailable`), the validate route returns 404, and the validation summary in lists is null;
+  `link-runs-trace` → the flow and handoff routes return 404; `link-runs-usage` → token totals are `[]`;
+  `link-logs-runs` → logs contain no platform runs and `/runs/{id}/logs` returns 404; `link-logs-trace` → the session
+  flow route returns 404; `link-logs-usage` → there is no `local-logs` usage source. The other link modules describe
+  what turns off in their own README.
+- The plugin registries (nodes, edges, backends, resource kinds, usage sources, import sources, export formats, …) are
+  loaded **once** by the host in `create_app` (`agent_console_modkit.load_host_plugins`; each module package provides
+  its loaders through an entry point) and passed to every module as the base service `registries`.
 
-- 호스트 경로(모듈과 상관없이 항상): `GET /health`, `GET /bootstrap`, `GET /modules`(`ModuleInfo[]`, 토큰 불필요),
-  `GET /server-info`, `/ws` 다중화,
-  보안 미들웨어, 정적 서빙(선택).
-- 켜고 끄기: 설치자 설정 `modules{enabled, disabled, bindings, options}`, 명령행 `--enable-module ID`·`--disable-module ID`
-  (`apply_module_flags`, 설정보다 우선, 같은 id면 끄기가 이김). 꺼진 모듈의 경로는 등록되지 않는다(404).
-- 상태: `active | disabled | unsatisfied | failed | conflict`(`module_info`가 modkit `ModuleReport` → 계약 `ModuleInfo`).
-  `ModuleInfo.requires` = 필수 + 선택 포트.
-- 켜진 모듈 안에서 선택 포트가 없어 꺼진 동작은 모듈이 `raise ctx.unavailable(PORT)`(modkit `FeatureUnavailableError`)를 던지고,
-  서버가 409 `feature_unavailable`, `details = FeatureUnavailableDetails{module, port}`로 바꾼다.
-- 시작 훅 실패는 서버 기동 실패다(`Assembly.start(fail_fast=True)`, 이미 시작한 모듈은 역순 정리).
-- 기능 예외 → 계약 오류 변환: 모듈은 자기 `error_map`(modkit `ErrorReply`로 `details`·헤더 포함)을 쓴다. 앱 수준
-  `register_error_handlers`에는 공통 처리기(저장소·엔진 오류 등)가 있고, 같은 예외 형식이면 앱 수준
-  처리기가 이긴다(같은 계약 본문). 대화 오류(`ChatError`)는 `mod-chat`의 오류 맵만 처리한다.
+- Host routes (always present, whatever modules are on): `GET /health`, `GET /bootstrap`, `GET /modules`
+  (`ModuleInfo[]`, no token needed), `GET /server-info`, `/ws` multiplexing, the security middleware, and static
+  serving (optional).
+- Turning modules on and off: the administrator setting `modules{enabled, disabled, bindings, options}` and the
+  command-line options `--enable-module ID` and `--disable-module ID` (`apply_module_flags`; they take precedence over
+  the settings, and when both name the same id, turning off wins). Routes of a module that is off are not registered
+  (404).
+- Status: `active | disabled | unsatisfied | failed | conflict` (`module_info` turns the modkit `ModuleReport` into the
+  contract `ModuleInfo`). `ModuleInfo.requires` = required + optional ports.
+- When an optional port is missing inside a module that is on, the module raises `raise ctx.unavailable(PORT)` (modkit
+  `FeatureUnavailableError`) for the affected operation, and the server turns it into 409 `feature_unavailable` with
+  `details = FeatureUnavailableDetails{module, port}`.
+- A failing start hook fails server startup (`Assembly.start(fail_fast=True)`; modules that already started are stopped
+  in reverse order).
+- Feature exceptions → contract errors: modules use their own `error_map` (modkit `ErrorReply`, including `details` and
+  headers). The app-level `register_error_handlers` holds the common handlers (store errors, engine errors, and so on);
+  for the same exception type, the app-level handler wins (the contract body is the same). Conversation errors
+  (`ChatError`) are handled only by the error map of `mod-chat`.
 
-## 조립 순서와 종료
+## Assembly order and shutdown
 
-앱 생성(`create_app`): 레지스트리(노드·연결·백엔드·위임 방식·상호작용 종류 = `load_registries`, 비밀 공급자,
-리소스 종류 플러그인 + `<workspace>/resource-types/*.yaml`, 사용량 출처, 가져오기 출처, 내보내기 형식, `plugins.modules`) →
-모듈 조립(build). 로딩 보고는 `GET /server-info`의 `plugins`.
+Creating the app (`create_app`): registries (nodes, edges, backends, delegation strategies, interaction kinds =
+`load_registries`, secret providers, resource kind plugins + `<workspace>/resource-types/*.yaml`, usage sources, import
+sources, export formats, `plugins.modules`) → module assembly (build). The load report is `plugins` in
+`GET /server-info`.
 
-시작(lifespan, 조립 순서대로 모듈 시작 훅): `mod-definitions`(legacy 계보·평문 점검) → … → `mod-runs` — **이전 프로세스의
-미종료 Run 정리**(`recover_unfinished_runs`: Run `interrupted`, 대기 상호작용 `expired(interrupted)`, 모듈 안에서 가장 먼저) →
-백엔드 설치자 설정(`from_options`) → `mod-chat`(대화·대기열 저장소 = 호스트 DB 핸들, 실행 연결 `ChatService.connect`) →
-`link-chat-runs`(채팅 대기열 재시작 정책 `chat.queue_after_restart`). 그 밖의 기능 모듈 — `mod-versions`(보존 개수 전체 적용),
-`mod-usage` 배경 작업(관측값 정리).
+Startup (lifespan, module start hooks in assembly order): `mod-definitions` (legacy lineage, plain-text secret scan) →
+… → `mod-runs`: **cleanup of runs the previous process left unfinished** (`recover_unfinished_runs`: the run becomes
+`interrupted` and pending interactions become `expired(interrupted)`; this is the first thing the module does) →
+backend administrator settings (`from_options`) → `mod-chat` (conversation and queue store = the host database handle,
+run connection `ChatService.connect`) → `link-chat-runs` (chat queue restart policy `chat.queue_after_restart`). Other
+feature modules: `mod-versions` (applies the retention count to everything), `mod-usage` background work (pruning
+observations).
 
-종료(역순): `link-chat-runs`가 대기열 꺼내기를 멈추고 `runs.starter.shutdown()`(실행 중 Run을 끊김으로 정리, 시간 한도
-`modules.options.mod-runs.runtime.shutdown_timeout` — 넘으면 남은 Run을 강제 취소하고 정리 기록까지 기다림)을 **먼저**
-기다린 뒤 `mod-chat`이 채팅 감시를 정리한다. `mod-runs` 종료 훅은 같은 정리를 다시 기다리기만 한다(한 번만 정리). DB
-핸들은 호스트가 마지막에 닫는다.
+Shutdown (reverse order): `link-chat-runs` stops taking items from the queue and waits **first** for
+`runs.starter.shutdown()` (runs still running are recorded as interrupted; the time limit is
+`modules.options.mod-runs.runtime.shutdown_timeout`, after which the remaining runs are force-canceled and the cleanup
+records are awaited), then `mod-chat` cleans up its chat watchers. The `mod-runs` stop hook only waits for the same
+cleanup again (it runs once). The host closes the database handle last.
 
-실행 시작(`POST /runs`, 채팅 턴 공통 = `mod-runs`의 `RunService.start_run`): 엔진 그래프 검증 → 실행 전 준비자
-(`runs.preparers` — `link-runs-teams`가 `ac-teams.team_rules_apply`이면 `validate_team`, 같은 뜻은 `merge_validation`으로 뺌) →
-차단 이슈(`blocks_run`)가 있으면 거부 → 준비자 `prepare`(`prepare_run` — grant·상호작용 설정) →
-`GraphRuntime.start(conversation_id=, services=노드 서비스(+ 대화 턴이면 SESSIONS), interaction_grants=, interaction_settings=)`.
-준비자가 없으면(`link-runs-teams` 꺼짐) 엔진 검증만으로 실행하고 `GET /server-info`에 `team.rules_unavailable` 경고가 나온다.
-노드 서비스(`runs.services`, `link-runs-teams`): `AGENT_LOOKUP`, `WORKSPACE_SETTINGS`, `WORKING_DIRECTORY`,
-`RESOURCE_LOOKUP`(`resources.lookup` 포트), `RUN_FILES_ROOT = <workspace>/.state/runs`, `DEFAULT_BACKEND`.
-`plugins.modules`는 플러그인 로더 뒤에 같은 묶음으로 로드해(`load_host_plugins`) 각 레지스트리 검사기와 `plugins.enabled`·`plugins.disabled`를
-거친다(꺼진 key는 `disabled`). 뺀 항목의 보고에는 이유(`LoadReport.reason`)가 붙고, `plugins.disabled`에 있지만 어느 보고에도
-없는 이름은 `GET /server-info` `warnings`에 `plugins.config` 경고로 나온다.
+Starting a run (`POST /runs`, shared with chat turns = `RunService.start_run` of `mod-runs`): engine graph validation
+→ pre-run preparers (`runs.preparers`: when `ac-teams.team_rules_apply` is set, `link-runs-teams` runs
+`validate_team`; duplicate meanings are removed with `merge_validation`) → refusal if there is a blocking issue
+(`blocks_run`) → preparer `prepare` (`prepare_run`: grants and interaction settings) →
+`GraphRuntime.start(conversation_id=, services=node services (+ SESSIONS for a chat turn), interaction_grants=, interaction_settings=)`.
+Without preparers (`link-runs-teams` off), runs use engine validation only and `GET /server-info` shows the
+`team.rules_unavailable` warning.
+Node services (`runs.services`, `link-runs-teams`): `AGENT_LOOKUP`, `WORKSPACE_SETTINGS`, `WORKING_DIRECTORY`,
+`RESOURCE_LOOKUP` (port `resources.lookup`), `RUN_FILES_ROOT = <workspace>/.state/runs`, `DEFAULT_BACKEND`.
+`plugins.modules` is loaded after the plugin loaders into the same bundle (`load_host_plugins`) and goes through each
+registry's validator and `plugins.enabled` and `plugins.disabled` (keys that are off are `disabled`). The reports of
+left-out items carry a reason (`LoadReport.reason`), and names in `plugins.disabled` that appear in no report show up as
+a `plugins.config` warning in `GET /server-info` `warnings`.
 
 ## REST (`/api/v1`)
 
-| 영역 | 경로 |
+| Area | Routes |
 | --- | --- |
-| 준비 신호 | `GET /api/v1/health` → `HealthResponse{status:"ok", server_version, contracts_version}`(토큰 불필요, 비밀 없음. 200이면 요청을 받을 준비가 된 것) |
-| 모듈 | `GET /modules` → `ModuleInfo[]`(id 순, 토큰 불필요, 비밀 없음) |
-| 부트스트랩·정보(호스트) | `GET /bootstrap`, `GET /server-info`(경고 = 모듈의 `server.warnings`, 속성 = 바인딩·출처 + 모듈의 `server.attributes`(`recovered_runs` 등)) |
-| 디스크립터(`mod-runs`, 리소스 종류·병합은 `mod-resources`) | `GET /node-types`, `POST /node-types/{id}/ports`, `GET /edge-types`, `GET /backends`, `GET /backends/{id}/models`, `GET /delegation-strategies`, `GET /interaction-kinds`, `GET /resource-types`, `GET /merge-strategies` |
-| 에이전트 | `GET/POST /agents`, `GET/PUT/DELETE /agents/{id}`, `GET /agents/{id}/usages`, `GET /agents/{id}/effective-settings`, `GET /agents/{id}/activity?limit=`(RunEvent[], 최신순) |
-| 팀 구성 | `GET /graphs?validate=`(요약마다 `validation{blocks_run, error_count, warning_count, codes}`, 워크스페이스 개정별 캐시, `validate=false`면 null), `POST /graphs`, `GET/PUT/DELETE /graphs/{id}`, `POST /graphs/{id}/duplicate {id,name}`(201 VersionedGraph, 409), `POST /graphs/{id}/validate`(`link-runs-teams`), `GET /graphs/{id}/plan`(TeamPlanSummary), `GET /graphs/{id}/nodes/{node}/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview`(BundlePreview{bundle, warnings}) |
-| 팀 구성 초안(저장 안 함) | `POST /graphs/plan {graph}`(TeamPlanSummary), `POST /graphs/effective-settings {graph, node_id}`(EffectiveSettings), `POST /graphs/bundle-preview {graph, node_id}`(BundlePreview). 비밀 가림은 저장본 경로와 같다 |
-| 실행(`mod-runs`, 흐름·넘김은 `link-runs-trace`) | `POST /runs`, `GET /runs?graph_id=&conversation_id=&agent_id=&status=&limit=`, `GET /runs/handoffs`(같은 필터), `GET /runs/{id}`, `POST /runs/{id}/cancel`, `GET /runs/{id}/events?actor=&type_prefix=&since_seq=`, `GET /runs/{id}/trace`, `GET /runs/{id}/resume-options`, `POST /runs/{id}/resume` |
-| 상호작용(`mod-runs`) | `GET /interactions?status=&conversation_id=&limit=`(최신순), `GET /runs/{id}/interactions`, `POST /runs/{run}/interactions/{id}/respond {response}`(200·404·409 `interaction_closed`·422) |
-| 채팅 | `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/{id}`, `GET /conversations/{id}/turns?before=<run_id>&limit=`, `POST /conversations/{id}/messages`(202 Run 또는 `{queued: true, id, position, text}`, 409 `conversation_busy`), `GET /conversations/{id}/queue`, `DELETE /conversations/{id}/queue/{queued_id}`(204) |
-| 리소스 | `GET /resources?type=`, `POST /resources`, `GET/PUT/DELETE /resources/{id}`(ETag, PUT은 If-Match 필수), `GET /resources/{id}/usages`, `GET/PUT /resources/{id}/content`(텍스트 본문 + ETag, If-Match, 412면 현재 ETag) |
-| 리소스 여러 파일 | `GET /resources/{id}/files`(ResourceFile[] 경로 순), `GET /resources/{id}/files/{path}`(내용 + ETag, 텍스트 형식이면 `text/plain` 그 밖 `application/octet-stream`), `PUT …/files/{path}`(본문 = 바이트)·`DELETE …/files/{path}` — If-Match = 리소스 `version_hash`(없음 428·다름 412), 응답 = 정의 원문 + 새 ETag. 쓰기는 종류 디스크립터 `content.multi_file`일 때만(아니면 422 `resource.not_multi_file`). 경로 규칙 위반 400, 총량 한도(`modules.options.mod-definitions.max_content_bytes`) 초과 413 |
-| 가져오기(`mod-imports`) | `GET /resources/import/sources`, `POST /resources/import/preview {source}`(후보 + `warnings`: 링크라서 건너뜀 `import.skipped_link` 등), `POST /resources/import {source, items}` — 원본 읽기만 |
-| 내보내기(`mod-exports`) | `GET /exporters`(ExporterDescriptor[]), `POST /exports/plan`(ExportRequest → ExportPlan, 쓰기 없음, `root`·`subdir`를 주면 그 폴더 기준 create·skip·conflict), `POST /exports/archive`(zip 응답 `application/zip` + `Content-Disposition`, 디스크에 쓰지 않음), `GET /exports/roots`(**토큰 필수**, ExportRootInfo[], 비면 폴더 쓰기 꺼짐, `modules.options.mod-exports.expose_paths=false`(생략하면 `security.expose_paths` 값)면 path 빈 문자열), `POST /exports/write`(ExportWriteRequest → ExportResult, `on_conflict` 기본 fail → 409 `already_exists` `details.paths`). 형식 없음·루트 없음·정의 없음 404, 종류·옵션·경로 잘못 422(`details.issues`, path = 요청 기준 `/items/0/kind`·`/options/…`·`/subdir`), 형식이 error 경고를 내면 archive·write 422 |
-| 사용량(`mod-usage`) | `GET /usage?parts=windows,tokens`(생략 = 전부, 요청하지 않은 부분은 null, `windows`만이면 실행 기록을 읽지 않음), `GET /usage/sources` |
-| 설정 | `GET/PUT /settings` |
-| 버전(종류 공통, `mod-versions`) | `{컬렉션}` = `/agents/{id}`·`/graphs/{id}`·`/resources/{id}`·`/settings`(표는 설정 데이터 `modules.options.mod-versions.collections`): `GET {컬렉션}/versions`, `GET …/versions/{hash}`(content = 원문), `GET …/versions/{a}/diff[/{b}]`(DefinitionDiff, b 생략 = 현재, 비밀 위치 `secret:true`·값 `***`, 본문은 sha256만 `content_changes`), `GET …/versions/{hash}/files[/{path}]`(본문 스냅샷 없으면 404, 내용은 텍스트면 `text/plain` 그 밖 `application/octet-stream`), `POST …/versions/{hash}/restore {message?}`(새 버전 저장, 정의가 있으면 If-Match 필수 428/412, 지운 정의는 없이 되살림, 저장 전 검사 동일 → 422, 응답 DefinitionVersion + ETag, 기본 메시지 `restored from <hash>`) |
+| Readiness | `GET /api/v1/health` → `HealthResponse{status:"ok", server_version, contracts_version}` (no token needed, no secrets. 200 means the server is ready to take requests) |
+| Modules | `GET /modules` → `ModuleInfo[]` (in id order, no token needed, no secrets) |
+| Bootstrap and info (host) | `GET /bootstrap`, `GET /server-info` (warnings = the modules' `server.warnings`; attributes = binding and source + the modules' `server.attributes`, such as `recovered_runs`) |
+| Descriptors (`mod-runs`; resource kinds and merge strategies from `mod-resources`) | `GET /node-types`, `POST /node-types/{id}/ports`, `GET /edge-types`, `GET /backends`, `GET /backends/{id}/models`, `GET /delegation-strategies`, `GET /interaction-kinds`, `GET /resource-types`, `GET /merge-strategies` |
+| Agents | `GET/POST /agents`, `GET/PUT/DELETE /agents/{id}`, `GET /agents/{id}/usages`, `GET /agents/{id}/effective-settings`, `GET /agents/{id}/activity?limit=` (RunEvent[], newest first) |
+| Teams | `GET /graphs?validate=` (each summary has `validation{blocks_run, error_count, warning_count, codes}`, cached per workspace revision; null when `validate=false`), `POST /graphs`, `GET/PUT/DELETE /graphs/{id}`, `POST /graphs/{id}/duplicate {id,name}` (201 VersionedGraph, 409), `POST /graphs/{id}/validate` (`link-runs-teams`), `GET /graphs/{id}/plan` (TeamPlanSummary), `GET /graphs/{id}/nodes/{node}/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview` (BundlePreview{bundle, warnings}) |
+| Team drafts (not saved) | `POST /graphs/plan {graph}` (TeamPlanSummary), `POST /graphs/effective-settings {graph, node_id}` (EffectiveSettings), `POST /graphs/bundle-preview {graph, node_id}` (BundlePreview). Secrets are masked the same way as for the saved routes |
+| Runs (`mod-runs`; flow and handoffs from `link-runs-trace`) | `POST /runs`, `GET /runs?graph_id=&conversation_id=&agent_id=&status=&limit=`, `GET /runs/handoffs` (same filters), `GET /runs/{id}`, `POST /runs/{id}/cancel`, `GET /runs/{id}/events?actor=&type_prefix=&since_seq=`, `GET /runs/{id}/trace`, `GET /runs/{id}/resume-options`, `POST /runs/{id}/resume` |
+| Interactions (`mod-runs`) | `GET /interactions?status=&conversation_id=&limit=` (newest first), `GET /runs/{id}/interactions`, `POST /runs/{run}/interactions/{id}/respond {response}` (200, 404, 409 `interaction_closed`, 422) |
+| Chat | `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/{id}`, `GET /conversations/{id}/turns?before=<run_id>&limit=`, `POST /conversations/{id}/messages` (202 Run or `{queued: true, id, position, text}`, 409 `conversation_busy`), `GET /conversations/{id}/queue`, `DELETE /conversations/{id}/queue/{queued_id}` (204) |
+| Resources | `GET /resources?type=`, `POST /resources`, `GET/PUT/DELETE /resources/{id}` (ETag; PUT requires If-Match), `GET /resources/{id}/usages`, `GET/PUT /resources/{id}/content` (text content + ETag, If-Match; on 412 the current ETag) |
+| Resource files | `GET /resources/{id}/files` (ResourceFile[] in path order), `GET /resources/{id}/files/{path}` (content + ETag; `text/plain` for text formats, otherwise `application/octet-stream`), `PUT …/files/{path}` (body = bytes) and `DELETE …/files/{path}`: If-Match = the resource `version_hash` (missing 428, different 412), response = the definition as stored + the new ETag. Writes work only when the kind descriptor has `content.multi_file` (otherwise 422 `resource.not_multi_file`). A path rule violation is 400; going over the total limit (`modules.options.mod-definitions.max_content_bytes`) is 413 |
+| Import (`mod-imports`) | `GET /resources/import/sources`, `POST /resources/import/preview {source}` (candidates + `warnings`, such as `import.skipped_link` for links that were skipped), `POST /resources/import {source, items}`: the source is only read |
+| Export (`mod-exports`) | `GET /exporters` (ExporterDescriptor[]), `POST /exports/plan` (ExportRequest → ExportPlan, no writes; with `root` and `subdir`, create, skip, and conflict are computed for that folder), `POST /exports/archive` (zip response `application/zip` + `Content-Disposition`, nothing is written to disk), `GET /exports/roots` (**token required**, ExportRootInfo[]; empty means folder writes are off; when `modules.options.mod-exports.expose_paths=false` (defaults to the `security.expose_paths` value when omitted), path is an empty string), `POST /exports/write` (ExportWriteRequest → ExportResult, `on_conflict` defaults to fail → 409 `already_exists` with `details.paths`). Unknown format, root, or definition: 404; wrong kind, options, or path: 422 (`details.issues`, path relative to the request: `/items/0/kind`, `/options/…`, `/subdir`); when the format reports an error-level warning, archive and write return 422 |
+| Usage (`mod-usage`) | `GET /usage?parts=windows,tokens` (omitted = all; parts that were not requested are null; with `windows` only, run history is not read), `GET /usage/sources` |
+| Settings | `GET/PUT /settings` |
+| Versions (all kinds, `mod-versions`) | `{collection}` = `/agents/{id}`, `/graphs/{id}`, `/resources/{id}`, `/settings` (the table is the settings data `modules.options.mod-versions.collections`): `GET {collection}/versions`, `GET …/versions/{hash}` (content = as stored), `GET …/versions/{a}/diff[/{b}]` (DefinitionDiff; b omitted = current; secret positions have `secret:true` and the value `***`; content shows only sha256 in `content_changes`), `GET …/versions/{hash}/files[/{path}]` (404 when there is no content snapshot; `text/plain` for text, otherwise `application/octet-stream`), `POST …/versions/{hash}/restore {message?}` (saves a new version; If-Match is required when the definition exists, 428/412; a deleted definition is restored without it; the same pre-save checks apply → 422; response DefinitionVersion + ETag; default message `restored from <hash>`) |
+| Message catalogs (`mod-i18n`) | `GET /i18n` (`I18nInfo`: languages with `sources`, `complete`, `missing`, plus `default_language` and `fallback_language`), `GET /i18n/{lang}` (`MessageCatalog`; `en-US` matches `en`; `ETag` + `Cache-Control: no-cache`, `If-None-Match` → 304; 404 `i18n.unknown_language`) |
+| Projects, logs, memory, specs, wiki, architecture map | `/projects…` (`mod-projects`), `/logs…` (`mod-logs`), `/memory/…` (`mod-memory`), `/sdd/…` (`mod-sdd`), `/wiki/…` (`mod-wiki`), `/architecture/…` (`mod-architecture`). The full route lists are in each module README (see the module tables above) |
 
-- 고정 경로(`/runs/handoffs`, 연동 모듈)는 `{id}` 경로(기능 모듈)보다 먼저 맞는다: 호스트가 연동 모듈 라우터를 먼저
-  붙인다(`agent_console_modkit.host.include_routers`). `/resources/import/*`(모듈 라우터)는
-  리소스 `{id}` 경로와 메서드·깊이가 겹치지 않는다.
-- 4xx는 모두 `ErrorResponse{error{code, message, details}}`. 422는 `details.issues`. 412는 `ETag` 헤더에 현재 버전.
-- **정의 응답은 저장 원문**이다(에이전트·팀 구성·리소스·설정의 GET·POST·PUT, 에이전트 목록, `VersionedGraph.graph`).
-  생략한 키는 응답에도 없고, 명시한 null·빈 목록·기본값과 같은 값은 그대로 있다("생략 = 상속").
-  기본값·출처를 채운 값은 `.../effective-settings`가 준다. `GET /settings`는 파일이 없으면 `{}`(ETag 없음).
-  GET 결과를 그대로 PUT해도 파일이 불어나지 않는다. `response_model`은 OpenAPI 문서용으로만 남는다.
-- **리소스 저장 전 검사**: `POST /resources`·`PUT /resources/{id}`는 종류 검사(`agent_console_resources.validate_resource`)에
-  error 이슈(예: `resource.plain_secret` — MCP `env`·`headers`의 평문 값)가 있으면 422 `validation_failed`로 거부한다.
-  `details.issues[].path`는 리소스 문서 기준 JSON Pointer(`/config/env/API_KEY`), 메시지에는 값이 없다. 모르는 종류는 막지 않는다.
-  이 검사는 `link-definitions-resources`가 포트 `definitions.checks`로 주는 `DefinitionChecker`다.
-- **첨부 덮어쓰기 검사**: 에이전트(`POST/PUT /agents`), 팀 구성(`POST/PUT /graphs` — 팀 층·노드 층·리소스 연결),
-  공통 설정(`PUT /settings` — `agent_defaults`)을 저장할 때 리소스 첨부의 `config_override`를 리소스 config에 얕게
-  덮어 종류 검사를 한다(`ac-teams.attachment_issues`). error면 422 `validation_failed`, path는 첨부 위치 기준
-  (`/resources/0/config_override/env/API_KEY`). `ref` 리소스가 없으면 스키마를 모르므로 비밀 의심 규칙
-  (`ac-secret-rules`, ac-imports와 같은 규칙 + 설정 `secrets.extra_*`)으로 보고 걸리면 422 `resource.override_secret_suspected`,
-  아니면 warning만 내고 저장한다
-  (`link-definitions-resources`의 `DefinitionChecker` 하나가 REST·버전 되돌리기 공통).
-- **표시용 가리기**: `GET .../effective-settings`(에이전트·노드)와 `GET .../bundle-preview`는 리소스 종류 config 스키마의
-  `x-secret` 위치에서 `secret://`가 아닌 값을 `***`로 바꿔 보낸다(검사 전에 저장된 데이터의 안전망).
-- **비밀 규칙**: `mod-definitions`(`WorkspaceState`·`SecretRuleCheck`·`PlainSecretScan`)가 조립한다(로직은 `ac-secret-rules`).
-  - 공통 설정 `secrets.extra_key_names`·`extra_value_patterns`는 기본 규칙에 **더하기만** 한다. 패턴은 `ac-safe-regex`
-    검사 — 위험·잘못된 정규식이면 `PUT /settings` 422(`secret.invalid_rule`, path `/secrets/extra_value_patterns/<i>`).
-  - `secrets.redact_suspected_in_logs`(기본 true): 런타임 `SecretResolver(extra_redact=)`로 실행 기록(이벤트·Run·NodeRun)·
-    상호작용 저장 직전 의심 값을 `[REDACTED]`로 가린다. false면 원문(디버깅용). 설정은 Run 시작 때 반영된다.
-  - 평문 점검: 시작 시와 `GET /server-info`(캐시)에서 리소스·에이전트·팀 구성·설정을 훑어 `warnings`에
-    `secret.plain_found`(warning, `details{kind, id}`, path = 정의 문서 기준, 값 없음)를 낸다. 저장 검사의 평문 이슈
-    (`resource.plain_secret`·`resource.override_secret_suspected`)와 문서 전체 의심 판정을 합친다. 캐시는 정의가
-    새 버전으로 저장될 때(토픽 `definitions.saved` — 모든 모듈의 쓰기 포함)와 삭제될 때 버린다.
-    원문 GET은 가리지 않는다.
-  - 선언형 리소스 종류는 스키마 `x-secret: true` 위치의 평문이 일반 규칙으로 거부된다(`resource.plain_secret`).
-- 채팅 대기열은 `mod-chat`이 서버 DB(표 `chat_queue`)에 저장한다. 서버를 다시 시작하면 `link-chat-runs`가 워크스페이스 설정
-  `chat.queue_after_restart`대로 처리한다. DB가 없으면 메모리에 두고 `chat.storage_memory` 경고를 낸다.
+- Fixed paths (`/runs/handoffs`, link modules) match before `{id}` paths (feature modules): the host attaches the link
+  module routers first (`agent_console_modkit.host.include_routers`). `/resources/import/*` (a module router) does not
+  overlap the resource `{id}` paths in method and depth.
+- Every 4xx is `ErrorResponse{error{code, message, details}}`. 422 has `details.issues`. 412 has the current version in
+  the `ETag` header.
+- **Definition responses are the stored document as written** (GET, POST, and PUT of agents, teams, resources, and
+  settings, the agent list, and `VersionedGraph.graph`). Omitted keys are also absent from the response; explicit null,
+  empty lists, and values equal to the default stay as they are ("omitted = inherited"). Values with defaults and
+  sources filled in come from `.../effective-settings`. `GET /settings` returns `{}` when there is no file (no ETag).
+  PUT of a GET result does not grow the file. `response_model` is kept only for the OpenAPI document.
+- **Resource pre-save check**: `POST /resources` and `PUT /resources/{id}` are refused with 422 `validation_failed`
+  when the kind check (`agent_console_resources.validate_resource`) has an error issue (for example
+  `resource.plain_secret`: a plain value in MCP `env` or `headers`). `details.issues[].path` is a JSON Pointer relative
+  to the resource document (`/config/env/API_KEY`), and the message contains no value. Unknown kinds are not blocked.
+  This check is the `DefinitionChecker` that `link-definitions-resources` provides through the port
+  `definitions.checks`.
+- **Attachment override check**: when agents (`POST/PUT /agents`), teams (`POST/PUT /graphs`: team layer, node layer,
+  resource links), and common settings (`PUT /settings`: `agent_defaults`) are saved, the `config_override` of each
+  resource attachment is shallow-merged onto the resource config and checked against the kind
+  (`ac-teams.attachment_issues`). An error is 422 `validation_failed`, with the path relative to the attachment
+  (`/resources/0/config_override/env/API_KEY`). When the `ref` resource does not exist, the schema is unknown, so the
+  suspected-secret rules (`ac-secret-rules`, the same rules as ac-imports + the settings `secrets.extra_*`) apply: a match
+  is 422 `resource.override_secret_suspected`, otherwise it is saved with a warning only
+  (one `DefinitionChecker` from `link-definitions-resources` serves both REST and version restore).
+- **Masking for display**: `GET .../effective-settings` (agents and nodes) and `GET .../bundle-preview` replace values
+  that are not `secret://` at the `x-secret` positions of the resource kind config schema with `***` (a safety net for
+  data saved before the checks).
+- **Secret rules**: assembled by `mod-definitions` (`WorkspaceState`, `SecretRuleCheck`, `PlainSecretScan`; the logic
+  is in `ac-secret-rules`).
+  - The common settings `secrets.extra_key_names` and `extra_value_patterns` only **add** to the default rules. Patterns
+    go through the `ac-safe-regex` check: a dangerous or invalid regular expression makes `PUT /settings` return 422
+    (`secret.invalid_rule`, path `/secrets/extra_value_patterns/<i>`).
+  - `secrets.redact_suspected_in_logs` (default true): the runtime `SecretResolver(extra_redact=)` replaces suspected
+    values with `[REDACTED]` just before run history (events, Run, NodeRun) and interactions are saved. With false, the
+    original is kept (for debugging). The setting takes effect when a run starts.
+  - Plain-text scan: at startup and in `GET /server-info` (cached), resources, agents, teams, and settings are scanned,
+    and `secret.plain_found` (warning, `details{kind, id}`, path relative to the definition document, no value) is
+    added to `warnings`. It combines the plain-text issues of the save checks (`resource.plain_secret`,
+    `resource.override_secret_suspected`) with a whole-document suspicion check. The cache is dropped when a definition
+    is saved as a new version (topic `definitions.saved`, including writes from every module) and when one is deleted.
+    Raw GETs are not masked.
+  - For declarative resource kinds, plain text at schema positions with `x-secret: true` is refused by the general rule
+    (`resource.plain_secret`).
+- `mod-chat` stores the chat queue in the server database (table `chat_queue`). After a server restart,
+  `link-chat-runs` handles it according to the workspace setting `chat.queue_after_restart`. Without a database the
+  queue is kept in memory and the `chat.storage_memory` warning is raised.
 
 ## WebSocket `/ws?token=`
 
-토픽: `run:<id>`(`mod-runs`, `since_seq` 재생 → 실시간), `conversation:<id>`(`mod-chat`, 구독 직후 현재 요약 + `conversation.updated`),
-`interactions`(`mod-runs`, 구독 직후 대기 목록을 `interaction.updated`로 하나씩, 이후 변화마다). 토픽은 켜진 모듈이 정한다
-(모르는 토픽은 `error{reason: unknown_topic}`). 모르는 메시지 종류는 `error{code: bad_request}`.
+Topics: `run:<id>` (`mod-runs`; replay from `since_seq`, then live), `conversation:<id>` (`mod-chat`; the current summary
+right after subscribing, then `conversation.updated`), `interactions` (`mod-runs`; right after subscribing, the pending
+list one by one as `interaction.updated`, then each change), and the module topics listed in the module tables (`logs`,
+`memory.changed`, `sdd.changed`, `wiki.changed`). The modules that are on decide the topics (an unknown topic gives
+`error{reason: unknown_topic}`). An unknown message type gives `error{code: bad_request}`.
 
-## 공개 API
+## Public API
 
-| 이름 | 설명 |
+| Name | Description |
 | --- | --- |
-| `load_settings(config_path=None, *, environ=None, cwd=None, overrides=None, compat=None) -> ServerSettings` | 우선순위: overrides(명령행) > 환경변수 > 설정 파일 > 기본값. `compat` = 모듈 설정 호환 선언(None이면 설치된 모듈). `ConfigError`(값은 메시지에 넣지 않음) |
-| `settings_compat(modules=None)`, `SETTINGS_COMPAT_CONTEXT` | 모듈의 `SettingsCompat` 모음(`ServerSettings.model_validate(..., context={SETTINGS_COMPAT_CONTEXT: …})`) |
-| `flag_overrides(values, compat=None)` | 모듈이 선언한 명령행 옵션 값(`{"echo-tag": [...]}`) → 설정 덮어쓰기. 선언한 모듈이 없으면 `ConfigError` |
-| `create_app(settings=None, *, environ=None, token=None, modules=None) -> FastAPI` | `environ` = 비밀 공급자·백엔드·모듈(가져오기 HOME 등)이 읽을 환경(기본 `os.environ`). `modules` = 조립할 모듈(None이면 설치된 entry point). `app.state.assembly` = 조립 결과 |
-| `installed_modules(group=MODULES_GROUP) -> list[Module]` | entry point로 설치된 서버 모듈(읽기 실패는 경고 로그) |
-| `apply_module_flags(settings, *, enable=(), disable=()) -> ServerSettings` | `--enable-module`·`--disable-module` 적용 사본 |
-| `module_info(report) -> ModuleInfo` | modkit 보고 → 계약 모델 |
-| `serve(settings=None, *, environ=None, token=None, opener=None)` | uvicorn 실행. 토큰은 로그에 남기지 않는다. 준비되면 준비 줄을 남기고 `web.open.enabled`면 `opener(url)`(없으면 `build_opener(web.open)`) |
-| `build_opener(web_open, *, browser=None, spawn=None) -> Opener` | `web.open.command`가 있으면 그 명령(셸 없이, `{url}` 치환), 없으면 기본 브라우저(`webbrowser.open`). 브라우저·하위 프로세스 주입 |
-| `RemovedKey`, `SETTINGS_REMOVED_KEY`, `ConfigError.code`·`ConfigError.removed` | 지운 옛 키가 남아 있으면 `load_settings`가 `ConfigError(code="settings.removed_key", removed=[RemovedKey{old, new, message}])`를 낸다. 메시지에 이유·새 위치를 적는다. 지운 키는 모듈 선언(`SettingsCompat.removed`)에서만 온다 |
-| `build_openapi(app)` | OpenAPI 문서(컴포넌트 = 계약 JSON Schema `$defs`) |
-| `server_version() -> str` | 서버 버전 = 설치 메타데이터 `agent-console-server`의 버전(`pyproject.toml` `project.version`, 메타데이터가 없으면 `0.0.0`). `/health`·`/bootstrap`·`/server-info`의 `server_version`과 OpenAPI `info.version`이 이 값이다. 계약 버전(`contracts_version`)은 따로 간다 |
-| `QueryRedactingFilter`, `install_log_redaction` | 로그의 비밀성 쿼리 값 가리기 |
-| `SecurityPolicy`, `TOKEN_HEADER`, `TOKEN_QUERY`, `WS_CLOSE_UNAUTHORIZED`(4401), `WS_CLOSE_FORBIDDEN`(4403), `API_PREFIX`, `WS_PATH` | 보안·경로 상수(보안 미들웨어·토큰·`/health`·WS 다중화·로그 가림은 `agent-console-modkit[host]`에서 온다) |
+| `load_settings(config_path=None, *, environ=None, cwd=None, overrides=None, compat=None) -> ServerSettings` | Precedence: overrides (command line) > environment variables > settings file > defaults. `compat` = the module settings compatibility declarations (None means the installed modules). Raises `ConfigError` (values are not put in the message) |
+| `settings_compat(modules=None)`, `SETTINGS_COMPAT_CONTEXT` | The modules' `SettingsCompat` declarations (`ServerSettings.model_validate(..., context={SETTINGS_COMPAT_CONTEXT: …})`) |
+| `flag_overrides(values, compat=None)` | Values of command-line options declared by modules (`{"echo-tag": [...]}`) → settings overrides. `ConfigError` when no module declares the option |
+| `create_app(settings=None, *, environ=None, token=None, modules=None) -> FastAPI` | `environ` = the environment that secret providers, backends, and modules (such as HOME for imports) read (default `os.environ`). `modules` = the modules to assemble (None means the installed entry points). `app.state.assembly` = the assembly result |
+| `installed_modules(group=MODULES_GROUP) -> list[Module]` | Server modules installed through entry points (read failures are logged as warnings) |
+| `apply_module_flags(settings, *, enable=(), disable=()) -> ServerSettings` | A copy with `--enable-module` and `--disable-module` applied |
+| `module_info(report) -> ModuleInfo` | modkit report → contract model |
+| `serve(settings=None, *, environ=None, token=None, opener=None, modules=None)` | Runs uvicorn. The token is never logged. When ready, it logs the ready line, and when `web.open.enabled` is set it calls `opener(url)` (or `build_opener(web.open)` when none is given) |
+| `build_opener(web_open, *, browser=None, spawn=None) -> Opener` | Runs the `web.open.command` command when set (without a shell, `{url}` replaced), otherwise opens the default browser (`webbrowser.open`). The browser and subprocess are injected |
+| `RemovedKey`, `SETTINGS_REMOVED_KEY`, `ConfigError.code`, `ConfigError.removed` | When a removed old key is still present, `load_settings` raises `ConfigError(code="settings.removed_key", removed=[RemovedKey{old, new, message}])`. The message gives the reason and the new location. Removed keys come only from module declarations (`SettingsCompat.removed`) |
+| `build_openapi(app)` | The OpenAPI document (components = the contract JSON Schema `$defs`) |
+| `server_version() -> str` | The server version = the version in the installed metadata of `agent-console-server` (`pyproject.toml` `project.version`; `0.0.0` without metadata). The `server_version` of `/health`, `/bootstrap`, and `/server-info` and the OpenAPI `info.version` are this value. The contract version (`contracts_version`) is separate |
+| `QueryRedactingFilter`, `install_log_redaction` | Masks secret-like query values in logs |
+| `SecurityPolicy`, `TOKEN_HEADER`, `TOKEN_QUERY`, `WS_CLOSE_UNAUTHORIZED` (4401), `WS_CLOSE_FORBIDDEN` (4403), `API_PREFIX`, `WS_PATH` | Security and path constants (the security middleware, token, `/health`, WS multiplexing, and log masking come from `agent-console-modkit[host]`) |
 
-## 설정 파일 `agent-console.yaml`
+## Settings file `agent-console.yaml`
 
-찾는 순서: `--config`/`load_settings(path)` → `AGENT_CONSOLE_CONFIG` → 현재 폴더의 `agent-console.yaml`. 상대 경로는 설정 파일 폴더(없으면 현재 폴더) 기준.
+Lookup order: `--config` / `load_settings(path)` → `AGENT_CONSOLE_CONFIG` → `agent-console.yaml` in the current folder.
+Relative paths are relative to the settings file folder (or the current folder when there is no settings file).
 
 ```yaml
-host: 127.0.0.1               # 루프백이 아니면 security.allow_remote: true 필요
+host: 127.0.0.1               # a non-loopback address requires security.allow_remote: true
 port: 8765
-workspace: .agent-console      # 정의 YAML 폴더(선언형 리소스 종류는 <workspace>/resource-types)
-database: null                 # 기본 <workspace>/.state/console.sqlite3
+workspace: .agent-console      # definition YAML folder (declarative resource kinds in <workspace>/resource-types)
+database: null                 # default <workspace>/.state/console.sqlite3
 log_level: info
 plugins:
-  enabled: null                # entry point 이름 목록(모든 그룹 공통). null = 설치된 것 전부
-  disabled: []                 # 뺄 이름(모든 그룹 공통, enabled보다 우선). 모르는 이름은 server-info 경고
-  modules: []                  # 설치 안 한 플러그인 `pkg.mod:attr`(register(registries))
+  enabled: null                # entry point names (shared by all groups). null = everything installed
+  disabled: []                 # names to leave out (all groups, wins over enabled). Unknown names become a server-info warning
+  modules: []                  # plugins that are not installed, as `pkg.mod:attr` (register(registries))
 security:
-  token: null                  # 비우면 시작마다 무작위
+  token: null                  # empty = random at each start
   allow_remote: false
-  allowed_hosts: []            # 추가 Host(루프백 + 바인딩 포트는 항상 허용)
-  allowed_origins: []          # CORS·bootstrap 허용 출처(예: http://localhost:5173 — 웹 개발 서버)
-  expose_paths: true           # false면 GET /server-info에서 workspace 절대 경로를 뺀다(내보내기 루트 경로의 기본값도 됨)
+  allowed_hosts: []            # extra Host values (loopback + the bound port are always allowed)
+  allowed_origins: []          # origins allowed for CORS and bootstrap (for example http://localhost:5173, the web dev server)
+  expose_paths: true           # false removes the absolute workspace path from GET /server-info (also the default for export root paths)
   max_request_bytes: 1048576
   max_ws_message_bytes: 1048576
   max_ws_subscriptions: 256
-secrets: {env_prefix: "", min_redact_chars: 4}   # 비밀 해석(호스트 기본 서비스). min_redact_chars는 mod-runs 기본값으로도 넘어간다
+secrets: {env_prefix: "", min_redact_chars: 4, providers: {}}   # secret resolution (host base service). min_redact_chars is also the mod-runs default. providers = secret provider name → its options (no secret values)
 web:
-  serve_static: false          # 선택 기능. 켜면 웹 빌드 폴더를 SPA로 서빙(단일 실행)
-  static_dir: null             # 웹 빌드 폴더(예: apps/web/dist). 비우면 패키지 포함 빌드
+  serve_static: false          # optional. When on, serves the web build folder as an SPA (single process)
+  static_dir: null             # web build folder (for example apps/web/dist). Empty = the build bundled in the package
   open:
-    enabled: false             # 준비되면 웹 화면을 연다(serve --open/--no-open이 덮어씀)
-    url: null                  # 열 주소({host}·{port} 치환). 비우면 serve_static일 때 서버 주소
-    command: null              # 브라우저 대신 실행할 명령(예: [msedge, "--app={url}"])
-    wait_seconds: 30           # 준비 신호를 기다리는 최대 초
-modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기 전용, serve --enable-module/--disable-module이 우선)
-  enabled: null                # null = 설치된 모듈 전부. 목록이면 그것만
-  disabled: []                 # enabled 뒤에 끈다(예: [mod-usage])
-  bindings: {}                 # 같은 포트를 여러 모듈이 줄 때 고른 모듈 {포트: 모듈 id}
-  options:                     # 모듈 id → 그 모듈 설정(각 모듈 settings_schema로 검증, 키는 각 모듈 README)
+    enabled: false             # open the web screen when ready (serve --open/--no-open overrides it)
+    url: null                  # address to open ({host} and {port} are replaced). Empty = the server address when serve_static is on
+    command: null              # command to run instead of the browser (for example [msedge, "--app={url}"])
+    wait_seconds: 30           # maximum seconds to wait for the readiness signal
+modules:                       # server modules on and off (read-only in the web; serve --enable-module/--disable-module wins)
+  enabled: null                # null = every installed module. A list = only those
+  disabled: []                 # turned off after enabled (for example [mod-usage])
+  bindings: {}                 # the chosen module when several modules provide the same port {port: module id}
+  options:                     # module id → that module's settings (validated by each module's settings_schema; keys in each module README)
     mod-usage:
-      retention_seconds: 2592000   # 사용량 관측값 보존(초). null = 지우지 않음
+      retention_seconds: 2592000   # how long usage observations are kept (seconds). null = never deleted
       prune_interval_seconds: 3600
-      rollup_run_limit: 500        # GET /usage 토큰 집계에 쓰는 최근 Run 수
+      rollup_run_limit: 500        # number of recent runs used for the GET /usage token totals
       source_timeout_seconds: 10
     mod-imports:
-      project_dir: null        # 프로젝트 `.claude/`·`.mcp.json` 위치. 비우면 설정 파일 폴더(작업 폴더를 따라가지 않는다)
-      options: {}              # 출처 공장 이름 → 옵션(예: claude: {mapping: {...}})
+      project_dir: null        # where the project `.claude/` and `.mcp.json` are. Empty = the settings file folder (does not follow the run folder)
+      options: {}              # source factory name → options (for example claude: {mapping: {...}})
     mod-exports:
-      roots: []                # 폴더 쓰기 허용 루트 [{id, label, path}]. 비우면 보관 파일(zip)만
-      home: null               # protected_in_home 기준 홈. 비우면 HOME·USERPROFILE
-      protected_in_home: [.claude] # 홈 기준 쓰기 금지 폴더(루트로 등록해도 이 안에는 쓰지 않는다)
-      protected: []            # 그 밖의 쓰기 금지 폴더
-      options: {}              # 형식 이름 → 공장 옵션(예: claude-dir: {mapping: {...}, layout: {...}})
-      expose_paths: true       # GET /exports/roots에 절대 경로를 보일지
+      roots: []                # roots allowed for folder writes [{id, label, path}]. Empty = archive (zip) only
+      home: null               # home folder for protected_in_home. Empty = HOME or USERPROFILE
+      protected_in_home: [.claude] # folders under home that are never written (even when registered as a root)
+      protected: []            # other folders that are never written
+      options: {}              # format name → factory options (for example claude-dir: {mapping: {...}, layout: {...}})
+      expose_paths: true       # whether GET /exports/roots shows absolute paths
     mod-versions:
-      max_per_definition: null # 정의마다 남길 버전 수(null = 모두, D3). 저장할 때와 시작할 때 적용
+      max_per_definition: null # versions kept per definition (null = all). Applied on save and at startup
     mod-definitions:
-      max_content_bytes: 10485760  # 정의 하나(리소스 등)의 본문 파일 총량 한도(바이트, null = 무제한). 넘으면 413
+      max_content_bytes: 10485760  # total content file size of one definition (such as a resource) in bytes (null = no limit). Over it: 413
     mod-runs:
-      working_directory: null  # 에이전트 작업 폴더(WORKING_DIRECTORY 서비스). 기본 base_dir
-      run_files_dir: runs      # 실행 묶음 파일 폴더(상태 폴더 기준)
+      working_directory: null  # run folder of agents (WORKING_DIRECTORY service). Default base_dir
+      run_files_dir: runs      # run bundle file folder (relative to the state folder)
       runtime: {max_concurrency: null, cancel_grace: 2.0, event_queue_size: 10000, shutdown_timeout: 10.0}
-      show_hidden_backends: false  # 개발·테스트용 백엔드(디스크립터 ui_hints.hidden, 예: fake-agent)의 숨김 풀기. 환경변수 AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS
-      backends:                # 백엔드 id → 그 백엔드의 from_options 훅에 넘길 값(키는 각 백엔드 README)
-        claude-agent-sdk: {models: [], allow_command_hooks: false, allow_subscription_auth: true}  # 구독 기본(본인 책임)
+      show_hidden_backends: false  # shows backends for development and tests (descriptor ui_hints.hidden, such as fake-agent). Environment variable AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS
+      backends:                # backend id → values passed to that backend's from_options hook (keys in each backend README)
+        claude-agent-sdk: {models: [], allow_command_hooks: false, allow_subscription_auth: true}  # subscription by default (at your own responsibility)
         fake-agent: {models: [], echo_hooks: false}
-      backend_login: {enabled: true, timeout_s: 300}  # 앱 화면 백엔드 로그인(아래 "백엔드 로그인")
+      backend_login: {enabled: true, timeout_s: 300}  # backend sign-in from the app screen (see "Backend sign-in" below)
+    mod-i18n:
+      default_language: en     # language when neither the screen setting nor the browser language decides it
+      fallback_language: en    # language for text the chosen language lacks
+      catalog_dirs: []         # folders with <language>.json catalogs (relative to the settings file folder, applied after package catalogs)
+      disabled_catalogs: []    # package catalog ids to leave out
 ```
 
-**지운 키**: 모듈 설정은 `modules.options.<모듈 id>`에만 둔다. 최상위 `usage`·`imports`·`exports`·`versions`·`resources`·
-`runtime`·`backends`·`working_directory` 같은 키는 읽지 않는다. 남아 있으면 서버가 시작하지 않고 새 위치를 알려 주는
-설정 오류(`settings.removed_key`, 예: `usage: The settings key usage is no longer read. Move it to modules.options.mod-usage`)를 낸다.
-터미널에 찍히는 설정 오류·도움말·시작 안내는 영어 원문이다(웹으로 가는 응답 원문은 그대로, 웹이 코드로 번역).
-지운 키 목록은 각 모듈이 `SettingsCompat.removed`(`RemovedSetting(old, new=...)`)로 선언한다 — 서버에 표가 없다.
-다른 설정의 값을 기본값으로 넘기는 것은 호스트 설정에서만 한다(경고 없음, 새 위치에 값이 없을 때만):
-`security.expose_paths: false` → `mod-exports.expose_paths`, `secrets.min_redact_chars` → `mod-runs.min_redact_chars`.
-모듈끼리는 기본값을 주고받지 않는다(H3): `mod-imports.project_dir`는 생략하면 호스트 `paths.base_dir`(설정 파일 폴더)이고
-`mod-runs.working_directory`를 따라가지 않는다. `mod-exports.home`은 생략하면 HOME·USERPROFILE이다.
-`modules.options.mod-imports.home`(사용자 전역 `~/.claude` 가져오기)은 없앤 키다. 값이 null이어도 키가 있으면 서버가
-시작하지 않고 이유를 알려 주는 설정 오류(`settings.removed_key`)를 낸다. 가져오기 출처는 프로젝트 폴더의 `.claude/`뿐이다.
-환경변수 `WORKING_DIRECTORY`·`MAX_CONCURRENCY`는 새 위치(`modules.options.mod-runs.*`)로 들어간다.
+**Removed keys**: module settings live only under `modules.options.<module id>`. Top-level keys such as `usage`,
+`imports`, `exports`, `versions`, `resources`, `runtime`, `backends`, and `working_directory` are not read. When one is
+still present, the server does not start and reports a settings error that gives the new location
+(`settings.removed_key`, for example
+`usage: The settings key usage is no longer read. Move it to modules.options.mod-usage`).
+Settings errors, help text, and startup messages in the terminal are in English. Text in API responses is not
+translated by the server; the web shows it in the chosen language through the message catalogs (`mod-i18n`).
+Each module declares its removed keys with `SettingsCompat.removed` (`RemovedSetting(old, new=...)`); the server has
+no table of its own.
+Passing another setting's value as a default happens only in the host settings (no warning, and only when the new
+location has no value): `security.expose_paths: false` → `mod-exports.expose_paths`, `secrets.min_redact_chars` →
+`mod-runs.min_redact_chars`.
+Modules do not pass defaults to each other: when omitted, `mod-imports.project_dir` is the host `paths.base_dir` (the
+settings file folder) and does not follow `mod-runs.working_directory`. When omitted, `mod-exports.home` is HOME or
+USERPROFILE.
+`modules.options.mod-imports.home` (importing the user-wide `~/.claude`) is a removed key. Even with a null value, if
+the key is present the server does not start and reports a settings error with the reason (`settings.removed_key`).
+The only import source is the `.claude/` folder of the project folder.
+The environment variables `WORKING_DIRECTORY` and `MAX_CONCURRENCY` go to their new location
+(`modules.options.mod-runs.*`).
 
-삭제된 프리셋 기능의 설정(최상위 `presets`, `modules.options.mod-presets`)이 남아 있으면 "The presets feature was removed" 설정
-오류(`settings.removed_key`, `mod-definitions`가 선언)로 시작하지 않는다. 그 밖에 모르는 키(예: 옛 `console`)는 일반 설정
-오류다(호스트 설정은 `extra="forbid"`).
-워크스페이스 `settings.yaml`에 남은 `console`·`default_entry`는 사용자 데이터라 모르는 키로 그대로 보존한다(오류 없음).
+When settings of the deleted presets feature (top-level `presets`, `modules.options.mod-presets`) are still present,
+the server does not start and reports the settings error "The presets feature was removed" (`settings.removed_key`,
+declared by `mod-definitions`). Any other unknown key (such as the old `console`) is a general settings error (the host
+settings use `extra="forbid"`).
+`console` and `default_entry` left in the workspace `settings.yaml` are user data, so they are kept as unknown keys
+(no error).
 
-환경변수(`AGENT_CONSOLE_` 접두어, 빈 값은 무시): `CONFIG`, `HOST`, `PORT`, `WORKSPACE`, `DATABASE`, `WORKING_DIRECTORY`, `LOG_LEVEL`, `TOKEN`, `WEB_DIR`, `MAX_CONCURRENCY`, `SECRET_ENV_PREFIX`, 불리언(1/true/yes/on) `ALLOW_REMOTE`·`SERVE_STATIC`·`OPEN`, 쉼표 목록 `PLUGINS_ENABLED`, `PLUGINS_DISABLED`, `PLUGIN_MODULES`, `ALLOWED_HOSTS`, `ALLOWED_ORIGINS`(`WORKING_DIRECTORY`·`MAX_CONCURRENCY`는
-그것을 선언한 모듈의 `modules.options.<id>`로 들어간다 — 모듈의 `settings_compat` 선언).
+Environment variables (prefix `AGENT_CONSOLE_`, empty values are ignored): `CONFIG`, `HOST`, `PORT`, `WORKSPACE`,
+`DATABASE`, `WORKING_DIRECTORY`, `LOG_LEVEL`, `TOKEN`, `WEB_DIR`, `MAX_CONCURRENCY`, `SECRET_ENV_PREFIX`; booleans
+(1/true/yes/on) `ALLOW_REMOTE`, `SERVE_STATIC`, `OPEN`; comma-separated lists `PLUGINS_ENABLED`, `PLUGINS_DISABLED`,
+`PLUGIN_MODULES`, `ALLOWED_HOSTS`, `ALLOWED_ORIGINS`. (`WORKING_DIRECTORY` and `MAX_CONCURRENCY` go into
+`modules.options.<id>` of the module that declares them, through the module's `settings_compat` declaration.)
 
-## 단일 실행: 서버 하나로 API·WS·웹
+## Single process: one server for API, WS, and web
 
-웹 빌드를 서버가 함께 서빙하면 같은 출처가 되어 `allowed_origins`·CORS 설정이 필요 없다. 기본은 꺼짐이고, 꺼 두면 서버는 웹을 몰라도 동작한다.
+When the server also serves the web build, everything has the same origin, so `allowed_origins` and CORS settings are
+not needed. This is off by default, and while it is off the server works without knowing about the web.
 
 ```bash
-pnpm --filter @agent-console/web build                     # apps/web/dist 생성(코드를 받을 때마다)
+pnpm --filter @agent-console/web build                     # creates apps/web/dist (each time you pull new code)
 AGENT_CONSOLE_SERVE_STATIC=1 AGENT_CONSOLE_WEB_DIR=apps/web/dist \
-  uv run agent-console serve --open                        # http://localhost:8765/ 를 연다
+  uv run agent-console serve --open                        # opens http://localhost:8765/
 ```
 
-같은 내용을 설정 파일로 두려면 `web: {serve_static: true, static_dir: apps/web/dist, open: {enabled: true}}`.
+To keep the same in the settings file: `web: {serve_static: true, static_dir: apps/web/dist, open: {enabled: true}}`.
 
-정적 폴더 경로 기준: `web.static_dir`과 `AGENT_CONSOLE_WEB_DIR`의 **상대 경로는 설정 파일이 있는 폴더 기준**이다(설정 파일이
-없으면 `serve`를 띄운 현재 폴더). 환경변수로 준 값도 같은 기준이라, 저장소 밖 설정 파일(`--config ~/console/agent-console.yaml`)과
-`AGENT_CONSOLE_WEB_DIR=apps/web/dist`를 함께 쓰면 `~/console/apps/web/dist`를 찾는다. 위치가 헷갈리면 **절대 경로**를 쓴다.
-폴더가 없으면 패키지에 포함된 빌드를, 그것도 없으면 안내 페이지를 보여 준다.
-설치한 PWA 창이나 다른 브라우저로 열려면 `web.open.command`(예: `[msedge, "--app={url}"]`), 별도 웹 서버 주소를 열려면 `web.open.url`.
+Static folder path base: **relative paths in `web.static_dir` and `AGENT_CONSOLE_WEB_DIR` are relative to the folder of
+the settings file** (or to the current folder where `serve` was started when there is no settings file). A value given
+through the environment variable uses the same base, so a settings file outside the repository
+(`--config ~/console/agent-console.yaml`) together with `AGENT_CONSOLE_WEB_DIR=apps/web/dist` looks for
+`~/console/apps/web/dist`. If the location is unclear, use an **absolute path**.
+When the folder does not exist, the build bundled in the package is used, and when that is missing too, a guide page
+is shown.
+To open in an installed PWA window or another browser, use `web.open.command` (for example `[msedge, "--app={url}"]`);
+to open a separate web server address, use `web.open.url`.
 
-- 준비 신호: 스크립트·바로가기·데스크톱 셸은 `GET /api/v1/health`가 200이 될 때까지 기다린다. 서버 로그에도 `Ready: <URL>` 줄이 남는다(포트 0이면 실제 포트).
-- 열기는 준비 뒤에 한 번만 한다. 열 주소가 없거나(정적 서빙 꺼짐 + `url` 없음) 열기에 실패하면 경고만 남기고 서버는 계속 돈다.
-- `/api/…`·`/ws`는 정적 서빙이 가로채지 않는다(모르는 API 경로는 JSON 404). 빌드가 없으면 안내 페이지를 보여 준다.
+- Readiness signal: scripts, shortcuts, and desktop shells wait until `GET /api/v1/health` returns 200. The server log
+  also gets a `Ready: <URL>` line (with the actual port when the port is 0).
+- Opening happens once, after the server is ready. When there is no address to open (static serving off + no `url`) or
+  opening fails, only a warning is logged and the server keeps running.
+- Static serving does not take over `/api/…` and `/ws` (unknown API paths return a JSON 404). Without a build, a guide
+  page is shown.
 
-## 백엔드 로그인 (`mod-runs`)
+## Backend sign-in (`mod-runs`)
 
-앱 화면에서 실행 백엔드에 로그인·로그아웃한다(기본 켜짐). 기본 백엔드 `claude-agent-sdk`는 `claude auth login`을 PTY 하위 프로세스로
-띄워 로그인 주소·코드 입력을 화면으로 중계한다. 로그인 자격은 Claude Code CLI가 자기 위치에 쓰고 **서버는 토큰을 받거나 저장하지
-않는다.** 입력한 코드는 응답·로그·오류에 남지 않는다. 로그인 능력이 없는 백엔드에는 경로가 409다.
+You sign in to and out of execution backends from the app screen (on by default). The default backend
+`claude-agent-sdk` starts `claude auth login` as a PTY subprocess and relays the sign-in address and code entry to the
+screen. Claude Code CLI writes the credentials to its own location, and **the server never receives or stores
+tokens.** The code you enter does not appear in responses, logs, or errors. For backends without sign-in support, the
+routes return 409.
 
-- 경로: `POST /backends/{id}/login`(201 세션), `GET /backends/login/current`, `GET /backends/login/{sid}`(폴링 = 하트비트),
-  `POST /backends/login/{sid}/input`, `DELETE /backends/login/{sid}`(취소), `POST /backends/{id}/logout`. 상태 점검은
-  `GET /backends/status`·`GET /backends/{id}/status`, 연결 테스트는 `POST /backends/{id}/probe`.
-- 설정 `modules.options.mod-runs.backend_login`: `enabled`(기본 true, 끄면 경로 없음), `timeout_s`·`timeout_max_s`(300·900),
-  `heartbeat_s`(30), `retain_s`(60), `screen_max_lines`(40). 실행 인자·화면 글자 규칙은 백엔드 설치자 설정
-  (`backends.claude-agent-sdk.login`, 키는 `ac-backend-claude-sdk` README "구독 로그인")에 있다.
+- Routes: `POST /backends/{id}/login` (201 session), `GET /backends/login/current`, `GET /backends/login/{sid}`
+  (polling = heartbeat), `POST /backends/login/{sid}/input`, `DELETE /backends/login/{sid}` (cancel),
+  `POST /backends/{id}/logout`. Status checks are `GET /backends/status` and `GET /backends/{id}/status`; the
+  connection test is `POST /backends/{id}/probe`.
+- Settings `modules.options.mod-runs.backend_login`: `enabled` (default true; off removes the routes), `timeout_s` and
+  `timeout_max_s` (300 and 900), `heartbeat_s` (30), `retain_s` (60), `screen_max_lines` (40). The command arguments
+  and screen text rules are in the backend administrator settings (`backends.claude-agent-sdk.login`; the keys are in
+  the `ac-backend-claude-sdk` README, "Subscription sign-in").
 
-## 보안
+## Security
 
-- 기본 바인딩 127.0.0.1. 다른 주소는 `security.allow_remote: true`일 때만.
-- Host: 루프백 이름 + 바인딩 포트, 또는 `allowed_hosts`(DNS 리바인딩 차단) → 403 `forbidden`. preflight도 같다.
-- CORS: `allowed_origins`에 **명시된** 출처만 `Access-Control-Allow-Origin`(+ `Expose-Headers: ETag`). 허용 헤더
-  `X-Console-Token`·`If-Match`·`Content-Type`. 목록 밖 preflight는 403.
-- Origin: 변경 요청과 `GET /bootstrap`은 같은 출처 또는 `allowed_origins`만. `/bootstrap`의 `Sec-Fetch-Site: cross-site`는
-  명시 출처일 때만 허용.
-- 토큰: POST/PUT/PATCH/DELETE(상호작용 응답 포함)는 `X-Console-Token` → 401. WS는 `?token=`.
-- 본문 크기: `max_request_bytes` 초과 → 413.
-- 가져오기: `~/.claude`·프로젝트 `.claude/`는 읽기만 한다. MCP 서버의 평문 비밀은 저장하지 않고 `secret://` 참조로 바꾼다.
-- 내보내기: 기본은 zip 응답(서버 디스크에 쓰지 않음). 폴더 쓰기는 `modules.options.mod-exports.roots`에 등록한 루트 아래에만, 경로 탈출·링크·
-  보호 위치(`~/.claude` 등, 루트로 등록해도) 거부. 산출물은 `ac-secret-rules`로 마지막 검사해 평문 비밀 의심 값을 가린다.
-- 비밀: 토큰은 로그에 남기지 않는다. 500 응답은 내부 메시지를 담지 않는다. 묶음 미리보기·플러그인 오류 문구는
-  `SecretResolver.redact`로 가린다. 셸 명령 실행 API는 없다.
+- The default bind address is 127.0.0.1. Other addresses only with `security.allow_remote: true`.
+- Host: loopback names + the bound port, or `allowed_hosts` (blocks DNS rebinding) → otherwise 403 `forbidden`. The
+  same applies to preflight requests.
+- CORS: `Access-Control-Allow-Origin` (+ `Expose-Headers: ETag`) only for origins **listed** in `allowed_origins`.
+  Allowed headers: `X-Console-Token`, `If-Match`, `Content-Type`. A preflight from an origin outside the list is 403.
+- Origin: change requests and `GET /bootstrap` accept only the same origin or `allowed_origins`. For `/bootstrap`,
+  `Sec-Fetch-Site: cross-site` is accepted only for a listed origin.
+- Token: POST/PUT/PATCH/DELETE (including interaction responses) require `X-Console-Token` → otherwise 401. WS uses
+  `?token=`.
+- Body size: over `max_request_bytes` → 413.
+- Import: `~/.claude` and the project `.claude/` are only read. Plain secrets of MCP servers are not stored; they are
+  replaced with `secret://` references.
+- Export: the default is a zip response (nothing is written to the server disk). Folder writes go only under roots
+  registered in `modules.options.mod-exports.roots`; path escapes, links, and protected locations (such as
+  `~/.claude`, even when registered as a root) are refused. The output gets a final check with `ac-secret-rules`, and
+  values that look like plain secrets are masked.
+- Secrets: the token is never logged. 500 responses do not contain internal messages. Bundle previews and plugin error
+  text are masked with `SecretResolver.redact`. There is no API that runs shell commands.
 
-## 테스트
+## Tests
 
 ```bash
 uv run pytest apps/server/tests
 ```
 
-공용 도우미는 공개 하위 모듈 `agent_console_server.testing`(임시 설정 `make_settings(tmp_path, options={모듈 id: 설정}, **호스트 키)`·
-앱 클라이언트·테스트 그래프·WS 도우미). 이 모듈은 `fastapi.testclient`를 쓰므로 **`httpx`가 있어야 import된다**. `httpx`는 서버의
-런타임 의존이 아니라 개발 의존(dev 그룹)이라, 저장소 밖에서 쓰려면 `pip install agent-console-server httpx`처럼 함께 설치한다
-(없으면 `ModuleNotFoundError: httpx`).
-TS 계약 생성물·루트 예시 설정을 읽는 검사는 저장소 `tests/integration/`에 있다.
-상호작용 통합 테스트는 실제 SQLite + 엔진 + fake 백엔드로 대기 → 응답 → 완료, 동시 응답, 재시작 정리, 종료 순서를 본다.
+Shared helpers are in the public submodule `agent_console_server.testing` (temporary settings
+`make_settings(tmp_path, options={module id: settings}, **host keys)`, app client, test graphs, WS helpers). This
+module uses `fastapi.testclient`, so **it imports only when `httpx` is installed**. `httpx` is not a runtime
+dependency of the server but a development dependency (dev group), so to use it outside the repository install both,
+as in `pip install agent-console-server httpx` (otherwise `ModuleNotFoundError: httpx`).
+Checks that read the generated TS contracts or the example settings at the repository root are in the repository
+`tests/integration/`.
+The interaction integration tests use real SQLite + the engine + the fake backend to cover waiting → response →
+completion, concurrent responses, restart cleanup, and shutdown order.

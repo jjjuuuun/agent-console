@@ -99,6 +99,7 @@ function CopyDialogHost({ request, onClose }: { request: CopyRequest; onClose: (
       {...(request.items === undefined ? {} : { initialItems: request.items })}
       candidates={narrow(source.items)}
       kindTitles={{ ...target.kindTitles, ...source.kindTitles }}
+      reservedIds={{ ...source.reservedIds, ...target.reservedIds }}
       candidatesLoading={source.loading}
       candidatesFailed={source.failed}
       onCandidatesRetry={source.retry}

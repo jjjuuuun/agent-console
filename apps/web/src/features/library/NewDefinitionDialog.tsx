@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Banner, Button, Dialog } from "@agent-console/ui";
 import { DefinitionIdField, useDefinitionId } from "./DefinitionIdField";
+import { useKindReservedIds } from "./useKindReservedIds";
 import { libraryMessages as t } from "./messages";
 
 export interface NewDefinitionValues {
@@ -19,6 +20,8 @@ export interface NewDefinitionDialogProps {
   fallbackId: string;
   initialName?: string;
   initialDescription?: string;
+  /** 만들 정의의 종류. 주면 서버가 준 그 종류의 예약어를 id 칸이 입력 즉시 안내한다(없으면 검사 안 함) */
+  kind?: string | undefined;
   /** true면 id 칸을 숨긴다(이름 바꾸기). 이때 id 검증은 하지 않는다 */
   hideId?: boolean;
   /** false면 설명 칸을 숨긴다 */
@@ -43,7 +46,7 @@ export function NewDefinitionDialog(props: NewDefinitionDialogProps) {
   const [description, setDescription] = useState(props.initialDescription ?? "");
   const nameRef = useRef<HTMLInputElement>(null);
   const uid = useId();
-  const defId = useDefinitionId(name, existingIds, fallbackId);
+  const defId = useDefinitionId(name, existingIds, fallbackId, useKindReservedIds(props.kind));
   const id = defId.id;
   const invalid = name.trim() === "" || (!hideId && defId.invalid);
 

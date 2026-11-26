@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     conditions: ["development"],
     alias: {
+      "@agent-console/sdd-view/locales/ko": fileURLToPath(new URL("./src/locales/ko.ts", import.meta.url)),
+      "@agent-console/sdd-view/locales/en": fileURLToPath(new URL("./src/locales/en.ts", import.meta.url)),
       "@agent-console/sdd-view/testing": fileURLToPath(new URL("./src/testing.ts", import.meta.url)),
       "@agent-console/sdd-view": fileURLToPath(new URL("./src/index.ts", import.meta.url)),
     },

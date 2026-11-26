@@ -13,6 +13,7 @@ import {
   initialSelections,
   selectAction,
   reservedIdSuggestions,
+  reservedIdsForPlan,
   COPY_WARNING_RESERVED_ID,
   skipWarnings,
   summarizeResult,
@@ -62,6 +63,8 @@ export interface CopyPlanDialogProps {
   candidates: readonly SpaceItem[];
   /** 종류 이름 → 표시 이름. 후보에 없는 종류(함께 가져오는 항목)의 칩에 쓴다. 없으면 종류 원문. */
   kindTitles?: Readonly<Record<string, string>>;
+  /** 종류 이름 → 새 이름으로 쓸 수 없는 말(서버 `CopyKindInfo.reserved_ids`). 없으면 계획 경고가 알려 준 말만 안내한다. */
+  reservedIds?: Readonly<Record<string, readonly string[]>>;
   candidatesLoading?: boolean;
   candidatesFailed?: boolean;
   onCandidatesRetry?: () => void;
@@ -174,8 +177,11 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
   }, [props.targetItems]);
   const takenFor = useCallback((item: { kind: string }) => targetIds.get(item.kind) ?? new Set<string>(), [targetIds]);
 
+  const reservedByKind = useMemo(() => (plan === null ? new Map<string, readonly string[]>() : reservedIdsForPlan(plan, props.reservedIds)), [plan, props.reservedIds]);
+  const reservedFor = useCallback((item: { kind: string }) => reservedByKind.get(item.kind) ?? [], [reservedByKind]);
+
   const sums = plan === null ? null : summarizeSelections(plan, selections);
-  const submit = plan === null ? { allowed: false, reason: "empty" as const } : canSubmit(plan, selections, takenFor);
+  const submit = plan === null ? { allowed: false, reason: "empty" as const } : canSubmit(plan, selections, takenFor, reservedFor);
   const warnings = plan === null ? [] : skipWarnings(plan, selections);
   const reservedSuggested = useMemo(() => (plan === null ? new Map<string, string>() : reservedIdSuggestions(plan)), [plan]);
   const unsetCount = sums?.unset ?? 0;
@@ -409,7 +415,7 @@ export function CopyPlanDialog(props: CopyPlanDialogProps) {
                   const needsChoice = sel.action === null;
                   const taken = takenFor(item);
                   const others = items.flatMap((o) => (o !== item && o.kind === item.kind && selections.get(copyItemKey(o))?.action === RENAME ? [selections.get(copyItemKey(o))?.newId ?? ""] : []));
-                  const idProblem = sel.action === RENAME ? validateNewId(sel.newId, [...taken, ...others]) : null;
+                  const idProblem = sel.action === RENAME ? validateNewId(sel.newId, [...taken, ...others], reservedFor(item)) : null;
                   const warn = warnings.find((w) => copyItemKey(w.item) === key);
                   const name = item.name !== undefined && item.name !== "" ? item.name : item.id;
                   return (

@@ -7,7 +7,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     conditions: ["development"],
-    alias: { "@agent-console/markdown-doc": fileURLToPath(new URL("./src/index.ts", import.meta.url)) },
+    alias: {
+      "@agent-console/markdown-doc/locales/ko": fileURLToPath(new URL("./src/locales/ko.ts", import.meta.url)),
+      "@agent-console/markdown-doc/locales/en": fileURLToPath(new URL("./src/locales/en.ts", import.meta.url)),
+      "@agent-console/markdown-doc": fileURLToPath(new URL("./src/index.ts", import.meta.url)),
+    },
   },
   test: { include: ["test/**/*.test.ts", "src/**/*.test.{ts,tsx}"], environment: "happy-dom", testTimeout: 30_000 },
 });

@@ -173,15 +173,43 @@ export function suggestRename(id: string, taken: Iterable<string>): string {
   }
 }
 
-export type NewIdProblem = "empty" | "invalid" | "taken";
+export type NewIdProblem = "empty" | "invalid" | "taken" | "reserved";
 
-/** 새 이름 검사. `taken` = 대상에 이미 있는 id + 같은 묶음의 다른 새 이름. 문제 없으면 null. */
-export function validateNewId(newId: string | undefined, taken: Iterable<string>): NewIdProblem | null {
+/**
+ * 새 이름 검사. `taken` = 대상에 이미 있는 id + 같은 묶음의 다른 새 이름. 문제 없으면 null.
+ * @param reserved 이 종류 id로 쓰면 안 되는 말(서버가 준 목록, 대소문자 무시 — 서버 `casefold` 비교와 같은 규칙). 생략·빈 목록이면 검사하지 않는다.
+ */
+export function validateNewId(newId: string | undefined, taken: Iterable<string>, reserved: Iterable<string> = []): NewIdProblem | null {
   const v = (newId ?? "").trim();
   if (v === "") return "empty";
   if (!SLUG_PATTERN.test(v)) return "invalid";
   for (const t of taken) if (t === v) return "taken";
+  const folded = v.toLowerCase();
+  for (const r of reserved) if (r.trim().toLowerCase() === folded) return "reserved";
   return null;
+}
+
+/** 종류별 예약어 목록(`CopyKindInfo.reserved_ids`)을 종류 이름 표로 만든다. 필드가 없는 응답(옛 서버)의 종류는 빈 목록. */
+export function reservedIdsByKind(kinds: readonly { kind: string; reserved_ids?: readonly string[] | null | undefined }[]): Record<string, readonly string[]> {
+  const out: Record<string, readonly string[]> = {};
+  for (const k of kinds) out[k.kind] = k.reserved_ids ?? [];
+  return out;
+}
+
+/**
+ * 종류별 예약어 표. 목록 출처 우선순위: 종류 정보(`known`, 비어 있지 않을 때) → 계획 경고 `details.reserved`(원본 id가 예약어인 항목의 말) → 없음.
+ * 서버가 목록을 안 주는 옛 서버에서도 경고가 알려 준 말은 새 이름 칸이 바로 안내한다.
+ */
+export function reservedIdsForPlan(plan: Pick<CopyPlan, "warnings">, known: Readonly<Record<string, readonly string[]>> = {}): Map<string, readonly string[]> {
+  const out = new Map<string, readonly string[]>();
+  for (const [kind, ids] of Object.entries(known)) if (ids.length > 0) out.set(kind, ids);
+  for (const w of plan.warnings ?? []) {
+    if (w.code !== COPY_WARNING_RESERVED_ID) continue;
+    const d = w.details ?? {};
+    if (typeof d.kind !== "string" || typeof d.reserved !== "string" || (known[d.kind] ?? []).length > 0) continue;
+    out.set(d.kind, [...(out.get(d.kind) ?? []), d.reserved]);
+  }
+  return out;
 }
 
 /** 아직 동작을 고르지 않은 항목(내용이 다름 등). 제출 전에 사용자가 골라야 한다. */
@@ -252,12 +280,14 @@ export interface SubmitState {
 
 /**
  * 제출할 수 있는가. 고르지 않은 항목이 있거나, 새 이름이 올바르지 않거나, 전부 건너뛰면 안 된다.
+ * @param reservedIds 항목 종류의 예약어(새 이름이 이 말이면 막는다, 생략하면 검사 없음)
  * @param targetIds 대상 공간에 이미 있는 정의 id(`kind` 구분 없이 종류별로 묶고 싶으면 호출자가 `takenIds`로 나눠 준다)
  */
 export function canSubmit(
   plan: Pick<CopyPlan, "items">,
   selections: CopySelections,
   takenIds: (item: Pick<CopyPlanItem, "kind" | "id">) => Iterable<string> = () => [],
+  reservedIds: (item: Pick<CopyPlanItem, "kind" | "id">) => Iterable<string> = () => [],
 ): SubmitState {
   if (itemsOf(plan).length === 0) return { allowed: false, reason: "empty" };
   if (itemsNeedingChoice(plan, selections).length > 0) return { allowed: false, reason: "need_choice" };
@@ -266,7 +296,7 @@ export function canSubmit(
     const sel = selections.get(copyItemKey(item));
     if (sel?.action !== A.RENAME) continue;
     const others = [...(newIds.get(item.kind) ?? [])];
-    if (validateNewId(sel.newId, [...takenIds(item), ...others]) !== null) return { allowed: false, reason: "bad_new_id" };
+    if (validateNewId(sel.newId, [...takenIds(item), ...others], reservedIds(item)) !== null) return { allowed: false, reason: "bad_new_id" };
     newIds.set(item.kind, [...others, (sel.newId ?? "").trim()]);
   }
   const allSkipped = itemsOf(plan).every((i) => selections.get(copyItemKey(i))?.action === A.SKIP);
@@ -288,7 +318,7 @@ export interface BuildApplyOptions {
 export function buildApplyRequest(plan: Pick<CopyPlan, "items">, selections: CopySelections, options: BuildApplyOptions): CopyApplyRequest {
   const items: CopyApplyItem[] = itemsOf(plan).map((item) => {
     const sel = selections.get(copyItemKey(item));
-    if (sel === undefined || sel.action === null) throw new Error(`복사 동작을 고르지 않은 항목이 있습니다: ${item.kind}/${item.id}`);
+    if (sel === undefined || sel.action === null) throw new Error(`A copy action is not chosen for an item: ${item.kind}/${item.id}`);
     const out: CopyApplyItem = { kind: item.kind, id: item.id, action: sel.action, source_version: item.source_version };
     if (sel.action === A.RENAME && sel.newId !== undefined) out.new_id = sel.newId.trim();
     if (item.target_version !== undefined && item.target_version !== null) out.target_version = item.target_version;

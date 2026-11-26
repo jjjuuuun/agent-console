@@ -249,6 +249,7 @@ export const sddMessages = {
     name: "틀 이름",
     advanced: "고급 (id)",
     id: "id",
+    idReserved: "예약된 이름이라 쓸 수 없습니다. 다른 id를 입력하세요",
     content: "문서 본문",
     contentBlank: "빈 뼈대로 저장",
     contentInclude: "현재 본문을 뼈대로 포함",

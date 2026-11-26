@@ -8,16 +8,16 @@ export interface DefinitionId {
   /** 직접 고치기(고치면 제안이 멈춘다) */
   setId: (next: string) => void;
   /** 검사 결과(빈 값이면 문제 없음으로 본다. 제출 가능 여부는 `invalid`) */
-  problem: "empty" | "pattern" | "duplicate" | undefined;
+  problem: "empty" | "pattern" | "duplicate" | "reserved" | undefined;
   /** 제출을 막아야 하는가(id가 비었거나 규칙 위반) */
   invalid: boolean;
 }
 
-/** 이름에서 id를 자동 제안하고(직접 고치면 멈춘다) 중복·규칙을 즉시 검사한다. 새 정의 만들기 대화상자와 서랍이 같이 쓴다. */
-export function useDefinitionId(name: string, existingIds: ReadonlySet<string>, fallbackId: string): DefinitionId {
+/** 이름에서 id를 자동 제안하고(직접 고치면 멈춘다) 중복·규칙·예약어(`reserved`, 서버가 준 목록)를 즉시 검사한다. 새 정의 만들기 대화상자와 서랍이 같이 쓴다. */
+export function useDefinitionId(name: string, existingIds: ReadonlySet<string>, fallbackId: string, reserved: Iterable<string> = []): DefinitionId {
   const [edited, setEdited] = useState<string | null>(null);
   const id = edited ?? (name.trim() === "" ? "" : suggestId(name, existingIds, fallbackId));
-  const raw = idProblem(id, existingIds);
+  const raw = idProblem(id, existingIds, reserved);
   return { id, setId: setEdited, problem: id === "" ? undefined : raw, invalid: raw !== undefined };
 }
 

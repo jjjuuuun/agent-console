@@ -21,6 +21,7 @@ export const libraryMessages = {
       empty: "id를 입력하세요",
       pattern: "영숫자로 시작하고 영숫자·하이픈·밑줄·점만 쓸 수 있습니다",
       duplicate: "이미 있는 id입니다",
+      reserved: "예약된 이름이라 쓸 수 없습니다. 다른 id를 입력하세요",
     },
     nameRequired: "이름을 입력하세요",
   },

@@ -1,0 +1,167 @@
+{
+  "common": {
+    "unknown": "알 수 없음",
+    "loading": "불러오는 중…",
+    "close": "닫기",
+    "readOnly": "읽기 전용",
+    "blocked": "지금은 할 수 없습니다"
+  },
+  "specs": {
+    "list": "스펙 목록",
+    "empty": {
+      "title": "스펙이 없습니다",
+      "body": "새 스펙을 만들거나 폴더에서 문서를 가져오세요."
+    },
+    "progress": "작업 {done}/{total}",
+    "ready": "준비 {n}",
+    "issues": "문제 {n}",
+    "stage": {
+      "_": "지금 단계: {stage}",
+      "none": "–"
+    },
+    "noTasks": "작업 없음",
+    "updated": "수정 {time}",
+    "sort": {
+      "label": "스펙 정렬"
+    },
+    "col": {
+      "name": "이름",
+      "progress": "진행",
+      "stage": "지금 단계",
+      "documents": "문서 상태",
+      "ready": "준비",
+      "updated": "갱신",
+      "menu": "동작"
+    }
+  },
+  "docs": {
+    "nav": "문서",
+    "empty": "문서가 없습니다",
+    "noState": "상태 없음"
+  },
+  "tasks": {
+    "table": "작업 표",
+    "empty": {
+      "title": "작업이 없습니다",
+      "body": "작업 문서에 작업 줄을 쓰면 여기에 나타납니다."
+    },
+    "noSyntax": {
+      "title": "작업 문법이 없습니다",
+      "body": "작업 줄을 읽는 문법이 꺼져 있거나 비어 있습니다. 규칙 탭에서 문법을 켜거나 정하세요.",
+      "action": "규칙 열기"
+    },
+    "stage": {
+      "none": "단계 없음",
+      "progress": "{done}/{total}"
+    },
+    "col": {
+      "title": "작업",
+      "status": "상태",
+      "links": "연결",
+      "ready": "준비",
+      "fields": "필드",
+      "runs": "실행",
+      "actions": "동작"
+    },
+    "ready": "준비됨",
+    "blocked": "막힘",
+    "rowState": "상태 {status}{readiness}",
+    "expand": "상세 펴기",
+    "collapse": "상세 접기",
+    "detail": {
+      "document": "문서",
+      "line": "{line}번째 줄",
+      "requirements": "요구",
+      "dependencies": "의존",
+      "fields": "필드",
+      "open": "문서에서 열기",
+      "issues": "문제"
+    },
+    "status": {
+      "change": "{title}의 상태 바꾸기",
+      "menu": "상태 목록"
+    },
+    "conflict": {
+      "title": "줄이 바뀌었습니다",
+      "body": "다른 곳에서 이 줄이 바뀌어 최신 줄로 다시 그렸습니다. 다시 시도하세요.",
+      "latest": "최신 줄"
+    },
+    "runChip": {
+      "title": "{ref}"
+    },
+    "moreFields": "+{n}",
+    "select": {
+      "row": "{title} 선택",
+      "all": "보이는 준비된 작업 모두 선택",
+      "count": "{n}개 선택",
+      "clear": "선택 해제"
+    },
+    "rowMenu": "{title} 메뉴"
+  },
+  "plan": {
+    "graph": "작업 계획 그래프",
+    "controls": "그래프 조작",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "fitView": "화면에 맞춤",
+    "interactive": "상호작용 잠금 전환",
+    "nodeHint": "Enter 또는 Space로 작업을 선택합니다.",
+    "empty": "계획할 작업이 없습니다",
+    "layout": "배치를 계산하는 중…",
+    "layoutFailed": "자동 배치를 쓸 수 없어 층별로 놓았습니다",
+    "critical": "병목",
+    "layerHead": "묶음 {n}",
+    "criticalBadge": "병목 {n}/{total}",
+    "criticalHint": "가장 긴 의존 사슬",
+    "ready": "준비됨",
+    "blocked": "막힘",
+    "cycle": "순환",
+    "node": "{title}, {layer}번째 묶음, {flags}",
+    "bundles": "병렬 묶음",
+    "bundle": "묶음 {n}",
+    "bundleCount": "· {n}개 작업을 동시에 할 수 있습니다",
+    "bundlesEmpty": "묶음이 없습니다",
+    "cycles": "순환 의존",
+    "cycleLine": "{keys}",
+    "truncated": "작업이 많아 앞의 {n}개만 그렸습니다",
+    "criticalPath": "병목 경로 {n}단계"
+  },
+  "trace": {
+    "table": "요구-작업 추적 표",
+    "empty": {
+      "title": "추적할 요구가 없습니다",
+      "body": "요구 문서에 요구 줄을 쓰면 여기에 나타납니다."
+    },
+    "col": {
+      "requirement": "요구",
+      "tasks": "작업",
+      "runs": "실행",
+      "verification": "검증",
+      "gaps": "빈 곳"
+    },
+    "noGaps": "빈 곳 없음",
+    "filter": {
+      "gaps": "빈 곳만 보기"
+    },
+    "openTask": "{key} 작업 열기",
+    "noVerification": "검증 없음",
+    "orphans": "연결되지 않은 것",
+    "orphan": {
+      "tasks": "요구 없는 작업 {n}",
+      "unknownRefs": "없는 요구를 가리키는 작업 {n}",
+      "unknownLinks": "없는 작업을 가리키는 연결 {n}"
+    },
+    "row": "{id}, 작업 {tasks}, {gaps}"
+  },
+  "gate": {
+    "title": "관문에 막혔습니다",
+    "fallback": "{id} 관문 조건을 만족하지 않습니다.",
+    "documents": "확인할 문서",
+    "openDocument": "{title} 열기",
+    "dismiss": "알림 닫기",
+    "action": "가져와서 실행"
+  },
+  "chip": {
+    "noLabel": "이름 없음"
+  }
+}

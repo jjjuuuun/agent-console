@@ -262,6 +262,7 @@ export function ResourceDetail({ id, basePath, request }: ResourceDetailProps) {
       {dialog === "duplicate" ? (
         <NewDefinitionDialog
           open
+          kind={DEFINITION_KINDS.resource}
           title={t.detail.duplicate}
           submitLabel={t.detail.duplicate}
           existingIds={existingIds}

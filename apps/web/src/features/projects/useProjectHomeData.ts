@@ -78,7 +78,9 @@ export function useProjectConfig(view: ProjectView | undefined, enabled: boolean
     const title = titleOf(info);
     if (q?.isError) failed.push({ kind: info.kind, title });
     for (const item of q?.data ?? []) {
-      const path = definitionPath(info.kind, item.id);
+      // 서버가 준 여는 화면 역할(`open_role`)을 라우트 역할로 푼다. 없으면(옛 서버) 정의 종류 규칙, 그 화면이 없으면 [열기]를 그리지 않는다.
+      const openRoute = info.open_role == null || info.open_role === "" ? undefined : routeServing(DEFAULT_ROUTES, info.open_role);
+      const path = openRoute !== undefined ? `${openRoute.path}/${encodeURIComponent(item.id)}` : info.open_role == null || info.open_role === "" ? definitionPath(info.kind, item.id) : undefined;
       rows.push({
         key: `${info.kind}:${item.id}`,
         kind: info.kind,

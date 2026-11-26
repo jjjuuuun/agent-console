@@ -19,10 +19,19 @@ export function suggestId(name: string, existing: ReadonlySet<string>, fallback:
 /** id 규칙(서버 저장 파일 이름이 된다): 영숫자로 시작, 영숫자·`_`·`-`·`.`. */
 export const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
 
-/** 입력한 id를 검사해 문제 종류를 돌려준다(없으면 undefined). */
-export function idProblem(id: string, existing: ReadonlySet<string>): "empty" | "pattern" | "duplicate" | undefined {
+/** `id`가 서버가 준 예약어 목록에 있는가(양쪽 trim, 대소문자 무시 — 서버 `casefold` 비교와 같은 규칙. 로캘 비교는 쓰지 않는다). */
+export function isReservedId(id: string, reserved: Iterable<string>): boolean {
+  const folded = id.trim().toLowerCase();
+  if (folded === "") return false;
+  for (const r of reserved) if (r.trim().toLowerCase() === folded) return true;
+  return false;
+}
+
+/** 입력한 id를 검사해 문제 종류를 돌려준다(없으면 undefined). `reserved` = 서버가 준 예약어(대소문자 무시). */
+export function idProblem(id: string, existing: ReadonlySet<string>, reserved: Iterable<string> = []): "empty" | "pattern" | "duplicate" | "reserved" | undefined {
   if (id.trim() === "") return "empty";
   if (!ID_PATTERN.test(id)) return "pattern";
   if (existing.has(id)) return "duplicate";
+  if (isReservedId(id, reserved)) return "reserved";
   return undefined;
 }

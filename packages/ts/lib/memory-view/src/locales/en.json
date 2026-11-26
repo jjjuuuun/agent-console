@@ -1,0 +1,252 @@
+{
+  "a11y": {
+    "tree": "Memory scope tree",
+    "table": "Memory entries table",
+    "row": "{key}, {author}, {updated}, {size}, version {version}",
+    "pinned": "Pinned",
+    "archived": "Archived",
+    "deleted": "Deleted"
+  },
+  "scope": {
+    "all": "All scopes",
+    "unavailableGroup": "Unavailable scopes",
+    "unknownKind": {
+      "_": "Unknown scope kind",
+      "tip": "Entries in this scope are still stored, but agents can't use them. Recreate the scope kind in [Settings › Memory] to use them again."
+    },
+    "disabledKind": {
+      "_": "Off",
+      "tip": "This scope kind is turned off. You can still view its entries, but agents can't use them."
+    },
+    "deleted": "Deleted",
+    "hiddenOthers": "Hiding scopes of other projects: {n}",
+    "showAll": "Show all",
+    "menu": {
+      "_": "Scope menu for {label}",
+      "newHere": "New entry in this scope",
+      "exportScope": "Export this scope",
+      "clear": "Clear scope…"
+    },
+    "entries": "Entries: {n}"
+  },
+  "table": {
+    "key": "Key",
+    "author": "Author",
+    "updated": "Updated",
+    "size": "Size",
+    "version": "Version",
+    "tags": "Tags",
+    "pinned": "Pinned",
+    "summary": "Entries: {n}",
+    "summaryMore": "Entries: {n} or more",
+    "order": {
+      "latest": "Newest first",
+      "updated_at": {
+        "desc": "Recently updated first",
+        "asc": "Least recently updated first"
+      },
+      "created_at": {
+        "desc": "Recently created first",
+        "asc": "Oldest created first"
+      },
+      "key": {
+        "asc": "Key ascending",
+        "desc": "Key descending"
+      },
+      "bytes": {
+        "desc": "Largest first",
+        "asc": "Smallest first"
+      },
+      "version": {
+        "desc": "Highest version first",
+        "asc": "Lowest version first"
+      },
+      "fallback": "{sort} {order}",
+      "result": "Search results"
+    },
+    "newChanges": "New changes: {n} — back to top · refresh",
+    "loading": "Loading…",
+    "empty": "No entries to show.",
+    "moreTags": "+{n}"
+  },
+  "sort": {
+    "label": "Sort",
+    "updated_at": "Updated",
+    "created_at": "Created",
+    "key": "Key",
+    "bytes": "Size",
+    "version": "Version",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "order": "Direction"
+  },
+  "filter": {
+    "tagsTruncated": "Too many tags to show all of them. Type to find one."
+  },
+  "secret": {
+    "title": "Not saved because the content looks like a secret value.",
+    "body": "Strings that look like API keys, tokens, or passwords can't be stored in memory. We don't say which part triggered this. Remove or change the suspicious part, then save again.",
+    "bodyAt": "The {where} contains what looks like a secret value. Remove or change the suspicious part, then save again.",
+    "field": {
+      "content": "content",
+      "key": "key",
+      "tags": "tags"
+    }
+  },
+  "import": {
+    "preview": {
+      "title": "Preview · nothing was written",
+      "created": "Entries to create: {n}",
+      "overwritten": "Entries to overwrite: {n}",
+      "renamed": "Entries to create under a new name: {n}",
+      "skipped": "Entries to skip: {n}",
+      "note": "The actual import may give different results."
+    }
+  },
+  "row": {
+    "archived": "Archived",
+    "deleted": "Deleted",
+    "unknownKind": "Unknown scope kind"
+  },
+  "author": {
+    "agent": "Agent {name}",
+    "user": "Person",
+    "system": {
+      "retention": "Cleanup",
+      "import": "Import"
+    },
+    "deletedAgent": "(deleted agent)"
+  },
+  "detail": {
+    "info": "Info",
+    "scope": "Scope",
+    "version": "Version",
+    "size": "Size",
+    "hash": "Hash",
+    "createdBy": "Created by",
+    "updatedBy": "Updated by",
+    "tags": "Tags",
+    "contentType": "Format",
+    "pinned": {
+      "_": "Pinned",
+      "tip": "When on, cleanup rules skip this entry."
+    },
+    "archived": {
+      "_": "Archived",
+      "tip": "When on, this entry is left out of agent tool results."
+    },
+    "on": "On",
+    "off": "Off",
+    "history": "History",
+    "copy": "Copy",
+    "openRun": "Open run",
+    "tagInput": "Add tag",
+    "tagRemove": "Remove tag {tag}",
+    "tagsMore": "+{n}",
+    "tagsLess": "Collapse",
+    "bytesExact": "{n} B"
+  },
+  "editor": {
+    "aria": "Content of {key}",
+    "bytes": "{used} / {limit}",
+    "bytesNoLimit": "{used}",
+    "overLimit": "Over the limit by {over}",
+    "position": "Line {line}, column {col}",
+    "tooLarge": "Over the size limit, so it can't be saved.",
+    "status": "Editor status"
+  },
+  "save": {
+    "saved": "Saved",
+    "dirty": "Not saved",
+    "saving": "Saving…",
+    "pending": "Waiting to save…",
+    "failed": "Save failed"
+  },
+  "history": {
+    "title": "Version history",
+    "list": "Versions",
+    "vsPrev": "Against previous",
+    "vsCurrent": "Against current",
+    "compare": "Compare against",
+    "sideBySide": "Side by side",
+    "unified": "Unified",
+    "layout": "Comparison layout",
+    "noBodyChange": "No content change",
+    "restore": "Restore this version",
+    "isCurrent": "This is the current version",
+    "deletedState": "Deleted",
+    "note": "Up to {max} versions are kept, and the oldest are deleted first. The first version stays.",
+    "thisVersion": "This version",
+    "noBase": "There is no earlier version to compare.",
+    "keyChanged": "Key: {from} → {to}",
+    "scopeChanged": "Scope: {from} → {to}",
+    "archivedNow": "Archived: on",
+    "unarchivedNow": "Archived: off",
+    "diffAria": "Content comparison of {from} and {to}",
+    "loading": "Loading…",
+    "error": "Couldn't load the versions.",
+    "retry": "Try again",
+    "empty": "No history.",
+    "op": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "restore": "Restored",
+      "archive": "Archived",
+      "unarchive": "Unarchived",
+      "move": "Moved"
+    },
+    "unchangedLines": "Expand $ unchanged lines"
+  },
+  "retention": {
+    "preview": "Preview",
+    "previewing": "Previewing…",
+    "previewedAt": "Preview · as of {time}",
+    "again": "Preview again",
+    "summary": "Targets: {n} — archive {a} · delete {d}",
+    "excludedPinned": "Pinned entries excluded: {p}",
+    "more": "Showing only the first {shown}. {n} more",
+    "stale": "The targets may differ when you apply.",
+    "noRules": "No rules.",
+    "none": "Nothing to clean up.",
+    "apply": "Apply now",
+    "col": {
+      "rule": "Rule",
+      "action": "Action",
+      "scope": "Scope",
+      "key": "Key",
+      "updated": "Last written",
+      "size": "Size"
+    },
+    "action": {
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "result": "Archived {a} · deleted {d} · skipped {s} · {time}",
+    "error": "Couldn't load the preview.",
+    "retry": "Try again",
+    "table": "Cleanup targets table"
+  },
+  "time": {
+    "now": "Just now",
+    "minutes": "{n} min ago",
+    "hours": "{n} h ago",
+    "days": "{n} d ago",
+    "never": "–"
+  },
+  "size": {
+    "b": "{n} B",
+    "kib": "{n} KiB",
+    "mib": "{n} MiB"
+  },
+  "key": {
+    "error": {
+      "empty": "Enter a key",
+      "emptySegment": "The key has an empty segment",
+      "edgeSlash": "A key can't start or end with /",
+      "dotSegment": "A segment can't be . or ..",
+      "control": "Control characters aren't allowed",
+      "tooLong": "{n}/256 characters"
+    }
+  }
+}

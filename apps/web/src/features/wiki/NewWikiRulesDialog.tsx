@@ -1,6 +1,6 @@
 /** 새 위키 규칙 대화상자(screen-wiki §10.1): 이름* + id(이름에서 제안, 직접 고침) + 고급(설명). 제출은 props이고 실패는 던진다(서버 문장이 맨 위 배너에 보인다). 한글 조합 중 Enter는 제출하지 않는다. */
 import { useId, useRef, useState } from "react";
-import { DefinitionIdField, useDefinitionId } from "../library";
+import { DefinitionIdField, useDefinitionId, useKindReservedIds } from "../library";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
 import { describeError } from "../../app/errors";
 import { useImeGuard } from "../../lib/ime";
@@ -24,9 +24,11 @@ export interface NewWikiRulesDialogProps {
   existingIds: ReadonlySet<string>;
   /** 이름이 한글뿐일 때 id 제안에 쓸 기본 이름(`WikiInfo.rules_kind`). 모르면 생략 */
   fallbackId?: string;
+  /** 규칙 문서의 정의 종류(`WikiInfo.rules_kind`). 주면 서버가 준 예약어를 id 칸이 입력 즉시 안내한다 */
+  kind?: string | undefined;
 }
 
-export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallbackId }: NewWikiRulesDialogProps) {
+export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallbackId, kind }: NewWikiRulesDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [touched, setTouched] = useState(false);
@@ -36,7 +38,7 @@ export function NewWikiRulesDialog({ open, onClose, onSubmit, existingIds, fallb
   const ime = useImeGuard();
   const uid = useId();
   const missing = name.trim() === "";
-  const defId = useDefinitionId(name, existingIds, fallbackId ?? t.fallbackId);
+  const defId = useDefinitionId(name, existingIds, fallbackId ?? t.fallbackId, useKindReservedIds(kind));
 
   // id가 규칙에 안 맞거나 겹치면 제출이 막힌다: disabled 대신 aria-disabled + 칸 아래 오류 문장 연결
   const idBlocked = defId.problem !== undefined;

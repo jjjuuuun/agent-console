@@ -1,0 +1,160 @@
+{
+  "projects": {
+    "status": {
+      "ready": "Ready",
+      "folder_missing": "Folder missing",
+      "not_a_directory": "Not a folder",
+      "no_access": "No access",
+      "folder_unset": "Folder not set",
+      "folder_conflict": "Folder overlaps",
+      "manifest_invalid": "Settings file error",
+      "archived": "Unregistered",
+      "readonly": "Read-only folder",
+      "unknown": "Project status: {status}",
+      "blocked_reason": "Not available because the status is {status}"
+    },
+    "blocked": {
+      "new_chat": "Can't start a new chat because the folder can't be used",
+      "run": "Can't run because the folder can't be used",
+      "records_readonly": "Can't save chat and run records because this folder isn't writable",
+      "records_newer": "A newer version of the app created the records in this folder, so this app can't start here. Update the app",
+      "records_unavailable": "Can't start because the records file in this folder can't be written",
+      "records_move": "Can't move because the records can't be saved in this folder",
+      "runs_unscoped": "Can't run in a project because project run integration is turned off",
+      "server_message": "{message}",
+      "archived": "Records of an unregistered project are read-only",
+      "copy_in": "Can't copy items in because the folder can't be used",
+      "edit": "Can't edit this project's items because the folder can't be used",
+      "manifest": "Not available because the project settings file can't be read",
+      "login": "Sign-in required"
+    },
+    "config_readonly": "This folder isn't writable, so you can't copy items in or edit them (viewing still works)"
+  },
+  "space": {
+    "library": "Shared",
+    "library_tip": "The default items, independent of any project. Copying them to a project makes a copy.",
+    "project": "Project: {name}",
+    "project_note": "This is this project's copy. Editing it doesn't affect the shared library.",
+    "view_in_project": "View items in the project home",
+    "open_home": "Go to project home",
+    "view_library": "View the shared library",
+    "back_home": "← {name} home",
+    "save_location": "Saved to project {name}"
+  },
+  "copy": {
+    "state": {
+      "absent": "Not there",
+      "identical": "Same content already exists",
+      "different": "Different content"
+    },
+    "action": {
+      "copy": "Copy",
+      "reuse": "Keep as is",
+      "overwrite": "Overwrite",
+      "rename": "Add under a new name",
+      "skip": {
+        "_": "Don't copy",
+        "save": "Don't save",
+        "move": "Don't move"
+      },
+      "skip_keep": {
+        "_": "Don't copy (use this project's)",
+        "save": "Don't save (use the shared one)",
+        "move": "Don't move (use the shared one)"
+      },
+      "choose": "Choose"
+    },
+    "reserved_id": "“{id}” is a reserved name and may cause problems. We recommend adding it as “{suggested}”.",
+    "skip_warn": "“{by}” will be blocked before a run because {id} is missing",
+    "status": {
+      "copied": "Copied",
+      "reused": "Kept as is",
+      "overwritten": "Overwritten",
+      "renamed": "Added under a new name → {id}",
+      "skipped": "Skipped",
+      "conflict": "Not applied because it changed after the plan"
+    },
+    "import": {
+      "title": "Copy from the shared library — {name}",
+      "intro_unknown": "This makes a copy of a shared item in the config folder of the project “{name}”. After copying, the two are independent. Editing the shared item doesn't change this project's copy.",
+      "intro": "This makes a copy of a shared item in the config folder ({dir}) of the project “{name}”. After copying, the two are independent. Editing the shared item doesn't change this project's copy."
+    },
+    "save": {
+      "title": "Save to the shared library — {name}",
+      "intro": "This copies the copy of {name} to the shared library. After copying, the two are independent."
+    },
+    "move": {
+      "title": "Move a shared item — {name}"
+    },
+    "pick": {
+      "search": "Search",
+      "search_placeholder": "Search…",
+      "kind": "Kind",
+      "kind_all": "All",
+      "list": "Items to copy",
+      "exists": "This project already has one with the same name",
+      "exists_library": "The shared library already has one with the same name",
+      "empty_library": "The shared library is empty. Create items on the configuration screen first.",
+      "empty_project": "This project has no items",
+      "no_match": "No items match “{query}”",
+      "loading": "Loading the item list…",
+      "failed": "Couldn't load the item list",
+      "to_library": "Go to the shared library",
+      "selected": "Selected: {n}",
+      "next": "Next"
+    },
+    "plan": {
+      "counts": "Requested items: {requested} · items copied along: {referenced}",
+      "include_refs": "Include the items copied along with them",
+      "refs_off_note": "Leaving out linked items may block this item before a run.",
+      "col_item": "Item",
+      "col_state": "Target status",
+      "col_action": "Action",
+      "blocked": "Can't be copied, so it's skipped.",
+      "include_row": "Copy {name}",
+      "reason_requested": "Requested",
+      "reason_referenced": "Used by “{by}”",
+      "need_choice": "Choose what to do with the items whose content differs: {n}.",
+      "bad_new_id": "Check the new name.",
+      "all_skipped": "Nothing to copy.",
+      "empty": "No items to copy.",
+      "overwrite_warn": "Changes you made in this project will be lost. You can restore them from the version history in the editor.",
+      "overwrite_warn_library": "The content of the shared item will be lost. You can restore it from the version history in the editor.",
+      "new_id": "New name (id)",
+      "new_id_help": "Links inside this group switch to the new name.",
+      "new_id_empty": "Enter a new name.",
+      "new_id_invalid": "Use only letters, digits, - and _, and start with a letter or digit.",
+      "new_id_taken": "That name already exists.",
+      "new_id_reserved": "That name is reserved and can't be used. Enter a different name.",
+      "remove_source": "Delete from the shared library after copying",
+      "remove_source_help": "When off, the shared item stays and only the old project field is cleared.",
+      "loading": "Building the copy plan…",
+      "failed": "Couldn't build the copy plan",
+      "retry": "Try again"
+    },
+    "independent_note": "After copying, the two are independent. There are no notifications or automatic syncing.",
+    "back": "← Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "submit": {
+      "import": "Copy ({n})",
+      "save": "Save ({n})",
+      "move": "Move ({n})",
+      "run": "Copy and run ({n})",
+      "busy": "Copying…"
+    },
+    "result": {
+      "partial": "Copied {ok} of {total}",
+      "replan": "Plan again",
+      "replan_all": "Plan again ({n})",
+      "error_prefix": "Couldn't apply",
+      "toast_one": "Copied “{name}”",
+      "toast_many": "Copied “{name}” and {n} more",
+      "open": "Open"
+    },
+    "import_to_project": "Copy to project…",
+    "import_selected": "Copy the selected {n} to this project…",
+    "save_to_library": "Save to the shared library…",
+    "summary": "Copy {copy} · keep as is {reuse} · overwrite {overwrite} · new name {rename} · skipped {skip}"
+  }
+}

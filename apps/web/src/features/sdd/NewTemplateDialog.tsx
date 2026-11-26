@@ -2,6 +2,7 @@
 import { useId, useRef, useState } from "react";
 import { Banner, Button, Dialog, Disclosure } from "@agent-console/ui";
 import type { SpecTemplateCreateRequest } from "@agent-console/contracts/sdd";
+import { isReservedId } from "../library";
 import { describeError } from "../../app/errors";
 import { useImeGuard } from "../../lib/ime";
 import { SDD_LIMITS } from "./sddConfig";
@@ -12,9 +13,11 @@ export interface NewTemplateDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (body: SpecTemplateCreateRequest) => Promise<void>;
+  /** 문서 틀 id로 쓸 수 없는 말(서버 `SddInfo.reserved_template_ids`). 없으면 검사하지 않고 서버 거절 문구만 보인다 */
+  reservedIds?: readonly string[] | undefined;
 }
 
-export function NewTemplateDialog({ open, onClose, onSubmit }: NewTemplateDialogProps) {
+export function NewTemplateDialog({ open, onClose, onSubmit, reservedIds = [] }: NewTemplateDialogProps) {
   const [name, setName] = useState("");
   const [id, setId] = useState("");
   const [description, setDescription] = useState("");
@@ -25,10 +28,11 @@ export function NewTemplateDialog({ open, onClose, onSubmit }: NewTemplateDialog
   const ime = useImeGuard();
   const uid = useId();
   const missing = name.trim() === "";
+  const reserved = isReservedId(id, reservedIds);
 
   const submit = async () => {
     setTouched(true);
-    if (busy || missing) return;
+    if (busy || missing || reserved) return;
     setBusy(true);
     setError(null);
     try {
@@ -77,7 +81,8 @@ export function NewTemplateDialog({ open, onClose, onSubmit }: NewTemplateDialog
         <Disclosure summary={t.create.advanced}>
           <label className="sdd-field" htmlFor={`${uid}-id`}>
             <span className="sdd-label">{t.create.id}</span>
-            <input id={`${uid}-id`} className="sdd-input sdd-mono" placeholder={t.create.idAuto} value={id} onChange={(e) => setId(e.target.value)} />
+            <input id={`${uid}-id`} className="sdd-input sdd-mono" placeholder={t.create.idAuto} value={id} onChange={(e) => setId(e.target.value)} aria-invalid={reserved ? true : undefined} aria-describedby={reserved ? `${uid}-id-note` : undefined} />
+            {reserved ? <span id={`${uid}-id-note`} className="app-field-error" role="alert">{t.create.idReserved}</span> : null}
           </label>
           <label className="sdd-field" htmlFor={`${uid}-desc`}>
             <span className="sdd-label">{t.create.description}</span>

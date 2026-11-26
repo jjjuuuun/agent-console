@@ -1,0 +1,70 @@
+{
+  "common": {
+    "close": "Close"
+  },
+  "editor": {
+    "label": "Document content editor: {title}",
+    "preview": "Preview",
+    "previewEmpty": "Nothing to preview.",
+    "mode": {
+      "edit": "Edit",
+      "preview": "Preview",
+      "split": "Side by side",
+      "group": "View mode"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "dirty": "You have unsaved changes",
+    "saved": "Saved",
+    "composing": "Saving is deferred while you type",
+    "missing": {
+      "title": "The document file is missing",
+      "body": "The file {file} is gone. The app doesn't create files for you.",
+      "create": "Create an empty file"
+    },
+    "readOnly": {
+      "title": "Read-only",
+      "body": "This document can't be edited."
+    },
+    "conflict": {
+      "title": "The document changed elsewhere",
+      "body": "Saving overwrites the changed content. Load the latest content first, or overwrite it with your changes.",
+      "reload": "Load latest content",
+      "overwrite": "Overwrite with my changes"
+    },
+    "copyMine": "Copy my changes",
+    "compare": {
+      "_": "Compare changes",
+      "head": "{before} ↔ {after}",
+      "before": "Saved content",
+      "after": "Content being edited",
+      "same": "There are no differences to compare."
+    },
+    "diff": {
+      "split": "Side by side",
+      "unified": "Unified",
+      "toolbar": "Comparison layout",
+      "unchanged": "Expand $ unchanged lines"
+    },
+    "external": {
+      "body": "This document changed elsewhere. Saving will cause a conflict."
+    },
+    "goto": {
+      "_": "Go to line",
+      "label": "Line number",
+      "go": "Go",
+      "invalid": "The document has no such line.",
+      "issue": "Go to line"
+    },
+    "tooLarge": "Over the size limit, so it's read-only",
+    "issues": "Document check results",
+    "empty": "Select a document",
+    "issue": {
+      "line": "Line {line}"
+    }
+  },
+  "source": {
+    "label": "Source: {source}",
+    "tip": "Where this value came from"
+  }
+}

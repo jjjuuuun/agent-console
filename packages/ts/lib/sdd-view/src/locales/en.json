@@ -1,0 +1,167 @@
+{
+  "common": {
+    "unknown": "Unknown",
+    "loading": "Loading…",
+    "close": "Close",
+    "readOnly": "Read-only",
+    "blocked": "Not available right now"
+  },
+  "specs": {
+    "list": "Spec list",
+    "empty": {
+      "title": "No specs yet",
+      "body": "Create a new spec, or import documents from a folder."
+    },
+    "progress": "Tasks {done}/{total}",
+    "ready": "Ready {n}",
+    "issues": "Issues {n}",
+    "stage": {
+      "_": "Current phase: {stage}",
+      "none": "–"
+    },
+    "noTasks": "No tasks",
+    "updated": "Updated {time}",
+    "sort": {
+      "label": "Sort specs"
+    },
+    "col": {
+      "name": "Name",
+      "progress": "Progress",
+      "stage": "Current phase",
+      "documents": "Document status",
+      "ready": "Ready",
+      "updated": "Updated",
+      "menu": "Actions"
+    }
+  },
+  "docs": {
+    "nav": "Documents",
+    "empty": "No documents",
+    "noState": "No status"
+  },
+  "tasks": {
+    "table": "Tasks table",
+    "empty": {
+      "title": "No tasks",
+      "body": "Task lines you write in a task document appear here."
+    },
+    "noSyntax": {
+      "title": "No task syntax",
+      "body": "The syntax that reads task lines is turned off or empty. Turn it on or set it in the Rules tab.",
+      "action": "Open rules"
+    },
+    "stage": {
+      "none": "No phase",
+      "progress": "{done}/{total}"
+    },
+    "col": {
+      "title": "Task",
+      "status": "Status",
+      "links": "Links",
+      "ready": "Ready",
+      "fields": "Fields",
+      "runs": "Runs",
+      "actions": "Actions"
+    },
+    "ready": "Ready",
+    "blocked": "Blocked",
+    "rowState": "Status {status}{readiness}",
+    "expand": "Expand details",
+    "collapse": "Collapse details",
+    "detail": {
+      "document": "Document",
+      "line": "Line {line}",
+      "requirements": "Requirements",
+      "dependencies": "Dependencies",
+      "fields": "Fields",
+      "open": "Open in document",
+      "issues": "Issues"
+    },
+    "status": {
+      "change": "Change status of {title}",
+      "menu": "Status list"
+    },
+    "conflict": {
+      "title": "The line changed",
+      "body": "This line changed elsewhere, so it was redrawn with the latest line. Try again.",
+      "latest": "Latest line"
+    },
+    "runChip": {
+      "title": "{ref}"
+    },
+    "moreFields": "+{n}",
+    "select": {
+      "row": "Select {title}",
+      "all": "Select all visible ready tasks",
+      "count": "Selected: {n}",
+      "clear": "Clear selection"
+    },
+    "rowMenu": "Menu for {title}"
+  },
+  "plan": {
+    "graph": "Task plan graph",
+    "controls": "Graph controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "interactive": "Toggle interaction lock",
+    "nodeHint": "Press Enter or Space to select a task.",
+    "empty": "No tasks to plan",
+    "layout": "Calculating the layout…",
+    "layoutFailed": "Automatic layout isn't available, so the tasks are placed by layer",
+    "critical": "Critical",
+    "layerHead": "Batch {n}",
+    "criticalBadge": "Critical {n}/{total}",
+    "criticalHint": "The longest dependency chain",
+    "ready": "Ready",
+    "blocked": "Blocked",
+    "cycle": "Cycle",
+    "node": "{title}, batch {layer}, {flags}",
+    "bundles": "Parallel batches",
+    "bundle": "Batch {n}",
+    "bundleCount": " · Tasks that can run at the same time: {n}",
+    "bundlesEmpty": "No batches",
+    "cycles": "Circular dependencies",
+    "cycleLine": "{keys}",
+    "truncated": "Too many tasks, so only the first {n} are drawn",
+    "criticalPath": "Critical path length: {n}"
+  },
+  "trace": {
+    "table": "Requirement-to-task trace table",
+    "empty": {
+      "title": "No requirements to trace",
+      "body": "Requirement lines you write in a requirements document appear here."
+    },
+    "col": {
+      "requirement": "Requirement",
+      "tasks": "Tasks",
+      "runs": "Runs",
+      "verification": "Verification",
+      "gaps": "Gaps"
+    },
+    "noGaps": "No gaps",
+    "filter": {
+      "gaps": "Show only gaps"
+    },
+    "openTask": "Open task {key}",
+    "noVerification": "No verification",
+    "orphans": "Unlinked items",
+    "orphan": {
+      "tasks": "Tasks without a requirement: {n}",
+      "unknownRefs": "Tasks pointing to a missing requirement: {n}",
+      "unknownLinks": "Links pointing to a missing task: {n}"
+    },
+    "row": "{id}, tasks: {tasks}, {gaps}"
+  },
+  "gate": {
+    "title": "Blocked by a gate",
+    "fallback": "The condition of gate {id} isn't met.",
+    "documents": "Documents to check",
+    "openDocument": "Open {title}",
+    "dismiss": "Dismiss notice",
+    "action": "Copy and run"
+  },
+  "chip": {
+    "noLabel": "No name"
+  }
+}

@@ -2,23 +2,23 @@
 
 {{description}}
 
-## 설치
-저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+## Installation
+Inside the repository, `pnpm install` links the local packages. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
-npm install ./agent-console-<이름>-{{version}}.tgz
+npm install ./agent-console-<name>-{{version}}.tgz
 ```
 
-## 최소 사용
+## Minimal usage
 ```ts readme
 import { describePackage } from "{{name}}";
 
 const info = describePackage();
 ```
 
-`info`는 `"{{name}}@{{version}}"`이다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
+`info` is `"{{name}}@{{version}}"`. This block must match `test/readme.test.ts`.
 
-## 개발·재사용
-- `pnpm build` · `pnpm typecheck` · `pnpm lint` · `pnpm test`는 이 폴더 안에서 단독으로 돈다.
-- 공개 API는 `exports`에 적힌 경로뿐이다. 다른 패키지는 `src/`·`dist/`를 직접 import하지 않는다.
-- 저장소 밖으로 복사해도 되는지는 `pnpm portability --package {{name}}`로 확인한다.
+## Development and standalone reuse
+- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm test` each run on their own inside this folder.
+- The public API is only the paths listed in `exports`. Other packages do not import `src/` or `dist/` directly.
+- Check that the package still works when copied out of the repository with `pnpm portability --package {{name}}`.

@@ -160,7 +160,7 @@ function WikiRulesBody() {
       />
       <SpaceNote />
       <div className="wiki-screen-body">{body}</div>
-      {creating ? <NewWikiRulesDialog open existingIds={existingIds} fallbackId={kind} onClose={() => setCreating(false)} onSubmit={create} /> : null}
+      {creating ? <NewWikiRulesDialog open existingIds={existingIds} fallbackId={kind} kind={kind} onClose={() => setCreating(false)} onSubmit={create} /> : null}
       {transfer.dialog}
       <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
     </div>

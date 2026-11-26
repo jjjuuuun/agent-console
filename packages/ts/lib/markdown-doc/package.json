@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/markdown-doc",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "마크다운 문서 편집기·미리보기와 공용 상태 칩·출처 배지",
   "private": true,
   "license": "MIT",
@@ -26,7 +26,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

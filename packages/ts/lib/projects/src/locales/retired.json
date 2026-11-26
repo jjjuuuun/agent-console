@@ -1,0 +1,10 @@
+{
+  "ko": {
+    "terms": ["작업 폴더", "작업 경로", "서버 작업 폴더", "프로젝트 만들기", "공용으로 옮기기", "사용 중", "빼기", "가져온 구성", "원본 없음"],
+    "projectContext": ["사용 중", "빼기"]
+  },
+  "en": {
+    "terms": ["Working folder", "Work path", "Server working folder", "Create project", "Move to shared", "In use", "Remove", "Imported configuration", "No source"],
+    "projectContext": ["In use", "Remove"]
+  }
+}

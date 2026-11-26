@@ -11,6 +11,8 @@ export { DescriptorIcon } from "./DescriptorIcon";
 export { Field } from "./Field";
 export { LayeredAttachments } from "./LayeredAttachments";
 export { LazyTextEditor } from "./LazyTextEditor";
+export { isReservedId } from "./ids";
+export { useKindReservedIds } from "./useKindReservedIds";
 export { NewDefinitionDialog, type NewDefinitionValues } from "./NewDefinitionDialog";
 export { ResourcePicker } from "./ResourcePicker";
 export { useAgentList, useGraphList, useImportSources, useInteractionKinds, useInvalidateLists, useNodeTypes } from "./data";

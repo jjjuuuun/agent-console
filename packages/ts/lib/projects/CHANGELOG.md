@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.3.0]
+- Messages (I.9c, folded into 0.3.0): moved `DEFAULT_PROJECT_MESSAGES` to `src/locales/ko.json` (still the Korean default) and added `en.json`. New subpath exports `./locales/ko` and `./locales/en` (`createProjectsText(en)`), `flattenMessageTree`, the `MessageTree` and `ProjectMessages` types, and the English retired-word lists `RETIRED_TERMS_EN` and `PROJECT_CONTEXT_RETIRED_TERMS_EN` (the Korean lists moved to `locales/retired.json`, same values). The error `buildApplyRequest` throws is now English. Added tests for matching keys and placeholders and for no Korean string literals in the source.
+- **BREAKING CHANGE**: 웹 소비자가 없는 로그 필터 도우미 `applyLogFilter`·`logFilterFor`와 타입 `LogProjectRef`·`ProjectLogFilter`(`logs.ts`)를 지웠다. 대신 로그 질의 필터 `project=<id>`를 직접 만든다(`LogSessionSummary.project_id` 기준).
+- 더함(minor): `validateNewId(newId, taken, reserved?)`의 세 번째 인자(서버가 준 예약어, 대소문자 무시)와 문제 종류 `reserved`(`NewIdProblem` 합집합이 넓어진다), `canSubmit`의 네 번째 인자(종류별 예약어), `reservedIdsByKind`(`CopyKindInfo.reserved_ids` → 종류 표)·`reservedIdsForPlan`(종류 정보 → 계획 경고 `details.reserved` 순), 문구 키 `copy.plan.new_id_reserved`.
+
 ## [0.2.0]
 - **BREAKING CHANGE**: 프로젝트 전용 범위(0.11~0.12에서 deprecated) 내보내기를 지웠다. 정의에 프로젝트 전용 범위가 없어졌기 때문이다.
   - 보기 규칙·기본 범위(`scope.ts`): `DEFAULT_SCOPE_VIEW_MODE`·`SCOPE_GROUP_ORDER`·`SCOPE_VIEW_MODES`·`defaultScopeFor`·`filterByScope`·`groupByScope`·`groupOf`·`isShared`·`isVisible`·`normalizeScope`·`withScope`, 타입 `NewScopePreferences`·`Scope`·`ScopeGroup`·`ScopeViewMode`·`VisibilityOptions`. `CurrentProject` 타입은 남기고 `current.ts`에서 같은 이름으로 내보낸다.

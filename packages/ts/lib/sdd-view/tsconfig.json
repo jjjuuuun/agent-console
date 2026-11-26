@@ -3,7 +3,12 @@
   "compilerOptions": {
     "types": ["node"],
     "customConditions": ["development"],
-    "paths": { "@agent-console/sdd-view": ["./src/index.ts"], "@agent-console/sdd-view/testing": ["./src/testing.ts"] }
+    "paths": {
+      "@agent-console/sdd-view": ["./src/index.ts"],
+      "@agent-console/sdd-view/testing": ["./src/testing.ts"],
+      "@agent-console/sdd-view/locales/ko": ["./src/locales/ko.ts"],
+      "@agent-console/sdd-view/locales/en": ["./src/locales/en.ts"]
+    }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

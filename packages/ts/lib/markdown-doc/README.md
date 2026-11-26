@@ -32,6 +32,18 @@ import { DocumentEditor, MarkdownPreview } from "@agent-console/markdown-doc";
 <MarkdownPreview source={text} transformSource={linkify} renderLink={(href, children) => <a href={href}>{children}</a>} />
 ```
 
+## Messages and language
+The default messages are Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside. There is no dependency on i18next. Placeholders are `{name}` and `formatMessage` fills them.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). In the JSON files, dotted keys are spread into a tree; when one key is the prefix of another, its value sits under `_`. `flattenMessageTree` turns a tree back into the dotted keys the components read.
+To use English, pass the bundle as `messages`:
+
+```tsx
+import en from "@agent-console/markdown-doc/locales/en";
+
+<DocumentEditor document={doc} value={draft} onChange={setDraft} messages={en} />
+```
+The Korean bundle is `@agent-console/markdown-doc/locales/ko`. Both files also export `tree` (the JSON as a tree) for code that takes tree bundles. To change only a few messages, spread and override: `messages={{ ...en, "editor.save": "…" }}`. For a new language, build an object with the same keys. The component sources contain no Korean string literals (the same test checks this).
+
 ## Public API
 | Name | Purpose |
 | --- | --- |
@@ -40,7 +52,8 @@ import { DocumentEditor, MarkdownPreview } from "@agent-console/markdown-doc";
 | `ToneChip` / `DocumentStateChip` | Status chips (they set only `data-tone`; CSS decides the color) |
 | `RulesSourceBadge` | The source badge for rule and syntax values (the `source.<value>` text key, or the raw text if there is none) |
 | `toneAttr`, `statusTone`, `NEUTRAL_TONE` | Tone name normalization, and status id → chip value |
-| `defaultMessages`, `resolveMessages`, `formatMessage`, `messageOr` | The text table (partially overridden through the `messages` prop) |
+| `defaultMessages`, `resolveMessages`, `formatMessage`, `messageOr`, `flattenMessageTree` | The Korean text table (partially overridden through the `messages` prop), and tree → dotted keys |
+| `@agent-console/markdown-doc/locales/ko`, `…/locales/en` | The message bundles (`default` = the table, `tree` = the JSON tree) |
 
 ## Dependencies (what / why / alternatives)
 - `@agent-console/text-editor` — the editor and comparison (CodeMirror 6). Alternative: wire up CodeMirror directly.

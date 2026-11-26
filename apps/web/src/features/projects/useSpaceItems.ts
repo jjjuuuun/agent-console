@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { CopyKindInfo } from "@agent-console/contracts/projects";
+import { reservedIdsByKind } from "@agent-console/projects";
 import { useApi } from "../../app/ApiContext";
 import { kindTitle } from "./useProjectHomeData";
 
@@ -19,6 +20,8 @@ export interface SpaceItems {
   retry: () => void;
   /** 종류 이름 → 서버가 준 표시 이름(`CopyKindInfo.title`). 후보 목록에 없는 종류(연결로 따라온 항목)의 칩에 쓴다. 서버가 모르면(null) 라우트 제목·원문. */
   kindTitles: Readonly<Record<string, string>>;
+  /** 종류 이름 → 서버가 준 예약어(`CopyKindInfo.reserved_ids`, 옛 서버는 빈 목록). 새 이름 칸이 입력 즉시 안내한다. */
+  reservedIds: Readonly<Record<string, readonly string[]>>;
 }
 
 /** 복사 방향을 가르는 종류 플래그(서버 `CopyKindInfo`의 불리언 필드 이름). `portable` = 프로젝트에 둘 수 있음, `library` = 공용에 둘 수 있음 */
@@ -59,6 +62,7 @@ export function useSpaceItems(space: string | null, flag: CopyKindFlag, enabled:
   return {
     items,
     kindTitles,
+    reservedIds: reservedIdsByKind(kindsQuery.data ?? []),
     loading: enabled && (kindsQuery.isPending || queries.some((q) => q.isPending)),
     failed: kindsQuery.isError || queries.some((q) => q.isError),
     retry: () => {

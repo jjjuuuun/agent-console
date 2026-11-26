@@ -15,5 +15,5 @@ export { RulesSourceBadge } from "./RulesSourceBadge";
 export type { RulesSourceBadgeProps } from "./RulesSourceBadge";
 export { NEUTRAL_TONE, statusTone, toneAttr } from "./tone";
 export type { StatusLike, ToneDisplay } from "./tone";
-export { defaultMessages, formatMessage, messageOr, resolveMessages } from "./messages";
-export type { MarkdownDocMessageKey, MarkdownDocMessages } from "./messages";
+export { defaultMessages, flattenMessageTree, formatMessage, messageOr, resolveMessages } from "./messages";
+export type { MarkdownDocMessageKey, MarkdownDocMessages, MessageTree } from "./messages";

@@ -2,13 +2,13 @@ import { existsSync } from "node:fs";
 
 import { expect, test } from "vitest";
 
-// README "최소 사용"의 ```ts readme 블록과 아래 표시 구간이 같아야 한다(`pnpm pkg-lint`가 검사).
+// The ```ts readme block in the README "Minimal usage" section must match the marked region below (checked by `pnpm pkg-lint`).
 // readme:start
 import { configPath } from "{{name}}";
 
 const path = configPath("base");
 // readme:end
 
-test("README 예제가 실제로 돈다", () => {
+test("the README example runs", () => {
   expect(existsSync(path)).toBe(true);
 });

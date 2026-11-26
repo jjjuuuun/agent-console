@@ -2,6 +2,7 @@
 import { useId, useRef, useState } from "react";
 import { Banner, Button, Choice, Dialog, Disclosure } from "@agent-console/ui";
 import type { SaveAsTemplateRequest, TemplateConflictPolicy } from "@agent-console/contracts/sdd";
+import { isReservedId } from "../library";
 import { describeError } from "../../app/errors";
 import { sddMessages as m } from "./messages";
 
@@ -10,6 +11,8 @@ export interface SaveTemplateDialogProps {
   onClose: () => void;
   initialName: string;
   onSubmit: (body: SaveAsTemplateRequest) => Promise<void>;
+  /** 문서 틀 id로 쓸 수 없는 말(서버 `SddInfo.reserved_template_ids`). 없으면 검사하지 않고 서버 거절 문구만 보인다 */
+  reservedIds?: readonly string[] | undefined;
 }
 
 const POLICIES: readonly { id: TemplateConflictPolicy; label: string }[] = [
@@ -18,7 +21,7 @@ const POLICIES: readonly { id: TemplateConflictPolicy; label: string }[] = [
   { id: "rename", label: m.saveTemplate.conflictRename },
 ];
 
-export function SaveTemplateDialog({ open, onClose, initialName, onSubmit }: SaveTemplateDialogProps) {
+export function SaveTemplateDialog({ open, onClose, initialName, onSubmit, reservedIds = [] }: SaveTemplateDialogProps) {
   const [name, setName] = useState(initialName);
   const [id, setId] = useState("");
   const [include, setInclude] = useState(false);
@@ -27,8 +30,9 @@ export function SaveTemplateDialog({ open, onClose, initialName, onSubmit }: Sav
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   const uid = useId();
+  const reserved = isReservedId(id, reservedIds);
   const submit = async () => {
-    if (busy || name.trim() === "") return;
+    if (busy || name.trim() === "" || reserved) return;
     setBusy(true);
     setError(null);
     try {
@@ -47,7 +51,7 @@ export function SaveTemplateDialog({ open, onClose, initialName, onSubmit }: Sav
       actions={
         <>
           <Button onClick={onClose} disabled={busy}>{m.cancel}</Button>
-          <Button variant="primary" loading={busy} aria-disabled={name.trim() === "" || undefined} onClick={() => void submit()}>{m.saveTemplate.submit}</Button>
+          <Button variant="primary" loading={busy} aria-disabled={name.trim() === "" || reserved || undefined} onClick={() => void submit()}>{m.saveTemplate.submit}</Button>
         </>
       }
     >
@@ -65,7 +69,8 @@ export function SaveTemplateDialog({ open, onClose, initialName, onSubmit }: Sav
         <Disclosure summary={m.saveTemplate.advanced}>
           <label className="sdd-field" htmlFor={`${uid}-id`}>
             <span className="sdd-label">{m.saveTemplate.id}</span>
-            <input id={`${uid}-id`} className="sdd-input sdd-mono" value={id} onChange={(e) => setId(e.target.value)} />
+            <input id={`${uid}-id`} className="sdd-input sdd-mono" value={id} onChange={(e) => setId(e.target.value)} aria-invalid={reserved ? true : undefined} aria-describedby={reserved ? `${uid}-id-note` : undefined} />
+            {reserved ? <span id={`${uid}-id-note`} className="app-field-error" role="alert">{m.saveTemplate.idReserved}</span> : null}
           </label>
           <fieldset className="sdd-field">
             <legend className="sdd-label">{m.saveTemplate.conflict}</legend>

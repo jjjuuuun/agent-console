@@ -7,7 +7,7 @@ Link patterns, front matter keys, rule ids, and the names of operations, kinds, 
 Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
-npm install ./agent-console-wiki-view-0.1.0.tgz
+npm install ./agent-console-wiki-view-0.2.0.tgz
 ```
 
 The app loads `tokens.css` and `@agent-console/wiki-view/styles.css` once each (colors and spacing use only `--ac-*` tokens).
@@ -43,6 +43,18 @@ Pure functions: `linkifySource`, `usableLinks`, and `linkMarks` (link ranges →
 ## Link ranges (UTF-16)
 `WikiLink.start` and `end` are UTF-16 code unit offsets. Use them as they are in `content.slice(start, end)`; do not convert them to code points.
 Replace in descending order of `start` so that earlier offsets do not shift. Ranges that overlap or fall outside the content are dropped. Search `marks` follow the same rule (a surrogate pair is never split).
+
+## Messages and language
+The default messages are Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside. There is no dependency on i18next. Placeholders are `{name}` and `formatMessage` fills them.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). In the JSON files, dotted keys are spread into a tree; when one key is the prefix of another, its value sits under `_`. `flattenMessageTree` (from `@agent-console/markdown-doc`) turns a tree back into the dotted keys the components read.
+To use English, pass the bundle as `messages` to a component:
+
+```tsx
+import en from "@agent-console/wiki-view/locales/en";
+
+<OutlinksPanel content={content} links={links} messages={en} />
+```
+The Korean bundle is `@agent-console/wiki-view/locales/ko`. Both files also export `tree` (the JSON as a tree) for code that takes tree bundles. To change only a few messages, spread and override: `messages={{ ...en, "tree.empty": "…" }}`. For a new language, build an object with the same keys. The component sources contain no Korean string literals (the same test checks this).
 
 ## Dependencies
 contracts (types plus the constants-only entry point), `markdown-doc` (preview, chips, and source badges), `text-editor` (comparison), @xyflow/react + elkjs (the graph), and @tanstack/react-virtual (the virtual list).

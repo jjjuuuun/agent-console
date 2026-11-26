@@ -238,13 +238,13 @@ def test_readme_doctest_counts_only_minimal_usage_section(ws: tuple[Path, Config
 
 
 def test_readme_doctest_heading_aliases(ws: tuple[Path, Config]) -> None:
-    """D.4a: 제목 후보 목록(영어 + 한국어 별칭) 중 하나면 된다. 안내 이름은 첫 후보."""
+    """D.4a: 제목 후보 목록(안내 이름 + 별칭) 중 하나면 된다. 안내 이름은 첫 후보."""
     root, cfg = ws
     readme = pkg(root) / "README.md"
     readme.write_text("# x\n\n## 최소 사용 예\n\n```python\n>>> 1\n1\n```\n", encoding="utf-8")
-    assert run(root, cfg, ["readme-doctest"]) == []
-    only_en = dataclasses.replace(cfg, readme_doctest_headings=("Minimal usage",))
-    [hit] = run(root, only_en, ["readme-doctest"], package="ac-notes")
+    with_alias = dataclasses.replace(cfg, readme_doctest_headings=("Minimal usage", "최소 사용"))
+    assert run(root, with_alias, ["readme-doctest"]) == []
+    [hit] = run(root, cfg, ["readme-doctest"], package="ac-notes")
     assert '"Minimal usage" 절이 없습니다' in hit.message
     assert _headings("Usage") == ("Usage",)
     assert _headings(["A", " ", "B"]) == ("A", "B")

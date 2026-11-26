@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ResourceTypeDescriptor } from "@agent-console/contracts";
 import { Button, Dialog } from "@agent-console/ui";
 import { ResourceTypeGrid } from "./ResourceTypeGrid";
-import { DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, libraryMessages as lm } from "../library";
+import { DEFINITION_KINDS, DescriptorIcon, NewDefinitionDialog, type NewDefinitionValues, libraryMessages as lm } from "../library";
 import { useNewScope } from "../projects";
 import { resourceMessages as t } from "./messages";
 
@@ -33,6 +33,7 @@ export function CreateResourceDialog({ types, existingIds, initialTypeId, busy, 
   return (
     <NewDefinitionDialog
       open
+      kind={DEFINITION_KINDS.resource}
       title={t.create.title}
       submitLabel={t.create.submit}
       existingIds={existingIds}

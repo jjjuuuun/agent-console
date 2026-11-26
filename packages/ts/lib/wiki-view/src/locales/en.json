@@ -1,0 +1,223 @@
+{
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel"
+  },
+  "time": {
+    "now": "Just now",
+    "minutes": "{n} min ago",
+    "hours": "{n} h ago",
+    "days": "{n} d ago"
+  },
+  "author": {
+    "run": "Run {id}",
+    "tip": {
+      "agent": "Agent {id}",
+      "node": "Node {path}",
+      "run": "Run {id}"
+    }
+  },
+  "tree": {
+    "label": "Page tree",
+    "empty": "No pages",
+    "noMatch": "No pages match",
+    "folder": "Folder {name}, pages: {n}",
+    "home": "Home page",
+    "orphan": "Orphan page",
+    "broken": "Broken links: {n}",
+    "dirty": "Not saved",
+    "truncated": {
+      "_": "Only some pages were loaded. Use content search.",
+      "total": "Only {max} of {total} pages were loaded. Use content search."
+    }
+  },
+  "page": {
+    "empty": "This page is empty."
+  },
+  "link": {
+    "broken": {
+      "tip": "Broken link: the page “{target}” doesn't exist",
+      "popover": "Broken link",
+      "body": "The page “{target}” doesn't exist",
+      "create": "Create this page"
+    },
+    "scheme": {
+      "off": "The linked feature is turned off"
+    },
+    "outside": {
+      "tip": "This link points outside the wiki folder, so it isn't opened"
+    }
+  },
+  "outlinks": {
+    "label": "Outgoing links",
+    "empty": "This page has no outgoing links",
+    "locate": "Go to “{label}” in the content",
+    "create": {
+      "_": "Create the page “{label}”",
+      "tip": "Create this page"
+    }
+  },
+  "history": {
+    "label": "Page history",
+    "empty": "No history yet. The first version is created when you save or rescan.",
+    "current": "Current",
+    "compare": {
+      "_": "Compare v{v}",
+      "tip": "Compare"
+    },
+    "restore": {
+      "_": "Restore v{v}",
+      "tip": "Restore"
+    },
+    "pruned": "Older versions were deleted because of the retention limit",
+    "unavailable": {
+      "title": "This wiki doesn't store history",
+      "body": "Page history and restore need a project records store. Editing and searching pages still work.",
+      "settings": "View project settings"
+    }
+  },
+  "diff": {
+    "label": "Compare v{v}",
+    "base": {
+      "_": "Compare against",
+      "previous": "Previous version",
+      "current": "Current content"
+    },
+    "noPrevious": "There is no earlier version — comparing with the current content",
+    "same": "There are no differences to compare."
+  },
+  "graph": {
+    "label": "Link graph, nodes: {n}. Arrow keys move to a neighboring node, Enter opens it, and Shift+Enter or C makes it the center",
+    "empty": "No pages to draw in the graph",
+    "layoutFailed": "Automatic layout isn't available, so the nodes are placed on a grid",
+    "truncated": {
+      "_": "Only some are shown",
+      "total": "Showing {n} of {total}"
+    }
+  },
+  "linklist": {
+    "label": "Link list",
+    "filter": "Filter by title or path",
+    "empty": "No pages to show",
+    "noMatch": "Nothing matches",
+    "expand": "Expand {title}",
+    "collapse": "Collapse {title}",
+    "center": "Current",
+    "orphan": "Orphan",
+    "broken": "Broken link",
+    "out": "Outgoing links",
+    "in": "Incoming links",
+    "truncated": "Only some are shown"
+  },
+  "lint": {
+    "label": "Check results",
+    "summary": "Count by severity",
+    "none": "No problems",
+    "col": {
+      "severity": "Severity",
+      "code": "Code",
+      "page": "Page",
+      "line": "Line",
+      "message": "Message",
+      "rule": "Rule"
+    },
+    "filter": {
+      "severity": "Show only {severity}",
+      "code": "Filter by code",
+      "codeAll": "All codes",
+      "page": "Filter by page path"
+    },
+    "noMatch": "Nothing matches",
+    "clearFilter": "Clear filters"
+  },
+  "search": {
+    "label": "Search results",
+    "empty": "No pages match “{query}”",
+    "degraded": "Search is reading files one by one. With many pages it can take a long time or cover only some of them.",
+    "truncated": "Too many results, so only some are shown"
+  },
+  "new": {
+    "path": "Path",
+    "suggestions": "Folder suggestions",
+    "exists": {
+      "_": "This page already exists",
+      "open": "Open"
+    },
+    "title": {
+      "_": "Title",
+      "hint": "If left empty, it's taken from the title in the document or the file name"
+    },
+    "template": {
+      "_": "Page template",
+      "blank": "Blank page",
+      "path": "Path template: {path}"
+    },
+    "variables": "Template values",
+    "prefilled": "Content filled in: {n} characters",
+    "submit": "Create",
+    "submitting": "Creating…"
+  },
+  "move": {
+    "from": "Current",
+    "to": "New path",
+    "rewrite": {
+      "_": "Also fix links that point to this page",
+      "hint": "Only the link text changes. The rest of the formatting stays as it is."
+    },
+    "pages": "Pages to change",
+    "same": "The new path is the same as the current one. Enter a different path to see which pages will change.",
+    "loading": "Loading…",
+    "totals": "Pages: {pages} · links: {links}",
+    "count": "Links: {n}",
+    "willBreak": "Links won't be fixed. {links} links in {pages} pages will become broken links.",
+    "conflicts": {
+      "_": "Fixed links in {done} pages. {skipped} pages changed in the meantime and couldn't be fixed.",
+      "label": "Pages that couldn't be fixed"
+    },
+    "conflict": {
+      "row": "Skipped because it changed in the meantime",
+      "open": "Open"
+    },
+    "submit": "Rename",
+    "submitting": "Renaming…"
+  },
+  "rules": {
+    "label": "Rules in use",
+    "empty": "No rules in use. This wiki has no write rules, check rules, or instructions.",
+    "missing": "The rule “{id}” isn't in this project",
+    "duplicate": "The rule “{id}” is listed twice",
+    "sum": {
+      "write": "Write: {n}",
+      "lint": "Checks: {n}",
+      "templates": "Templates: {n}",
+      "instructions": "Has instructions"
+    },
+    "open": "Open {name}",
+    "up": {
+      "_": "Move {name} up",
+      "tip": "Move up (Alt+↑)"
+    },
+    "down": {
+      "_": "Move {name} down",
+      "tip": "Move down (Alt+↓)"
+    },
+    "remove": {
+      "_": "Remove",
+      "label": "Remove {name}"
+    },
+    "add": {
+      "_": "Add rule",
+      "none": "No rules to add"
+    },
+    "import": "Copy from the shared library…"
+  },
+  "syntax": {
+    "empty": "No syntax values to show",
+    "emptyList": "Empty",
+    "noLinks": "No link rules — the graph, backlinks, and broken-link checks are off",
+    "source": {
+      "rules": "Rule {id}",
+      "open": "Open"
+    }
+  }
+}

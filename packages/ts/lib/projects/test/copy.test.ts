@@ -13,6 +13,8 @@ import {
   itemsNeedingChoice,
   mergeReplan,
   reservedIdSuggestions,
+  reservedIdsByKind,
+  reservedIdsForPlan,
   selectAction,
   skipWarnings,
   suggestRename,
@@ -97,6 +99,37 @@ describe("선택·검사", () => {
     for (const i of mixed.items!) sel = selectAction(sel, i, "skip");
     expect(canSubmit(mixed, sel).reason).toBe("all_skipped");
     expect(canSubmit(plan([]), new Map()).reason).toBe("empty");
+  });
+
+  test("새 이름 예약어: 대소문자 무시·양쪽 공백 무시, 목록이 없으면 지금 동작과 같다", () => {
+    expect(validateNewId("Zed-Word", [], ["zed-word"])).toBe("reserved");
+    expect(validateNewId("zed-word", [], [" ZED-WORD "])).toBe("reserved");
+    expect(validateNewId(" zed-word ", [], ["zed-word"])).toBe("reserved");
+    expect(validateNewId("zed-word-2", [], ["zed-word"])).toBeNull();
+    expect(validateNewId("zed-word", [])).toBeNull();
+    expect(validateNewId("zed-word", [], [])).toBeNull();
+    // 앞선 문제가 우선: 비어 있음·문법·중복
+    expect(validateNewId("", [], [""])).toBe("empty");
+    expect(validateNewId("zed-word", ["zed-word"], ["zed-word"])).toBe("taken");
+  });
+
+  test("예약어 표: 종류 정보 우선, 없으면 계획 경고 details.reserved, 둘 다 없으면 없음", () => {
+    expect(reservedIdsByKind([{ kind: "k1", reserved_ids: ["a"] }, { kind: "k2" }])).toEqual({ k1: ["a"], k2: [] });
+    const warned: Pick<CopyPlan, "warnings"> = { warnings: [{ severity: "warning", code: "project.copy_reserved_id", message: "m", details: { kind: "k2", id: "Wx", reserved: "Wx" } }] };
+    const merged = reservedIdsForPlan(warned, { k1: ["a"], k2: [] });
+    expect(merged.get("k1")).toEqual(["a"]);
+    expect(merged.get("k2")).toEqual(["Wx"]);
+    // 종류 정보가 있으면 경고는 쓰지 않는다
+    expect(reservedIdsForPlan(warned, { k2: ["b"] }).get("k2")).toEqual(["b"]);
+    expect(reservedIdsForPlan({ warnings: [] }).size).toBe(0);
+  });
+
+  test("제출 막기: 새 이름이 그 종류의 예약어면 bad_new_id, 목록이 없으면 통과", () => {
+    const one = plan([item({ id: "rev", target_state: "different", kind: "k1" })]);
+    const sel = new Map([[copyItemKey({ kind: "k1", id: "rev" }), { action: "rename", newId: "Zed-Word" }]]);
+    expect(canSubmit(one, sel).allowed).toBe(true);
+    expect(canSubmit(one, sel, () => [], (i) => (i.kind === "k1" ? ["zed-word"] : [])).reason).toBe("bad_new_id");
+    expect(canSubmit(one, sel, () => [], () => []).allowed).toBe(true);
   });
 
   test("새 이름: 제안은 -2부터 겹치지 않게, 검사는 비어 있음·문법·중복", () => {

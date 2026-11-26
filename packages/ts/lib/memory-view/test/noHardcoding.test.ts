@@ -52,8 +52,10 @@ describe("noHardcoding", () => {
     expect(literals(readFileSync(file, "utf8")).filter((l) => isForbidden(l))).toEqual([]);
   });
   it("문구 표에도 범위 종류 이름이 없다", () => {
-    const text = readFileSync(join(SRC, "messages.ts"), "utf8");
-    for (const word of ["공용", "shared", "팀 범위"]) expect(text).not.toContain(word);
+    for (const file of ["messages.ts", "locales/ko.json", "locales/en.json"]) {
+      const text = readFileSync(join(SRC, file), "utf8");
+      for (const word of ["공용", "shared", "팀 범위"]) expect(text, file).not.toContain(word);
+    }
   });
   it("CSS에는 hex 색과 종류 선택자가 없다", () => {
     const css = readFileSync(join(SRC, "styles.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");

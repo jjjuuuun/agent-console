@@ -97,6 +97,7 @@ function CreateAgent({ existing, busy, error, onClose, onCreate }: { existing: R
   return (
     <NewDefinitionDialog
       open
+      kind={DEFINITION_KINDS.agent}
       title={t.create.title}
       submitLabel={t.create.submit}
       existingIds={existing}

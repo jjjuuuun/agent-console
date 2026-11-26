@@ -161,7 +161,7 @@ function TemplatesBody() {
       />
       <SpaceNote />
       <div className="sdd-screen-body">{body}</div>
-      {creating ? <NewTemplateDialog open onClose={() => setCreating(false)} onSubmit={create} /> : null}
+      {creating ? <NewTemplateDialog open reservedIds={space.info?.reserved_template_ids} onClose={() => setCreating(false)} onSubmit={create} /> : null}
       {transfer.dialog}
       <ConfirmDialog open={blocker.state === "blocked"} title={m.leave.title} confirmLabel={m.leave.leave} cancelLabel={m.leave.stay} danger onConfirm={() => blocker.state === "blocked" && blocker.proceed()} onCancel={() => blocker.state === "blocked" && blocker.reset()}>{m.leave.body}</ConfirmDialog>
       <ConfirmDialog

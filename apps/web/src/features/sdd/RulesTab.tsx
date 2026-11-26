@@ -21,7 +21,7 @@ import { ruleSections } from "./ruleSections";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import type { SddTabProps } from "./sddTabs";
 import { useAutomationControl } from "./useAutomation";
-import { useSddSpace, useSpecSyntax } from "./useSddApi";
+import { useSddInfo, useSddSpace, useSpecSyntax } from "./useSddApi";
 import { specTemplatesPath } from "./sddPaths";
 
 const P = SDD_PARAMS;
@@ -32,6 +32,7 @@ const autoOf = (def: Obj | undefined): Obj | undefined => ((def?.["rules"] as Ob
 
 export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ownHashes, refresh, reportDirty }: SddTabProps) {
   const space = useSddSpace();
+  const reservedTemplateIds = useSddInfo().data?.reserved_template_ids;
   const toast = useToast();
   const navigate = useNavigate();
   const syntax = useSpecSyntax(specId);
@@ -219,6 +220,7 @@ export function RulesTab({ specId, view, versionHash, ctx, params, setParams, ow
           open
           onClose={() => setSaveTemplate(false)}
           initialName={view.spec.name}
+          reservedIds={reservedTemplateIds}
           onSubmit={async (body) => {
             await space.client.saveSpecAsTemplate(specId, body);
             setSaveTemplate(false);

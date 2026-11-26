@@ -30,8 +30,8 @@ export {
   KEY_MAX_LENGTH, formatBytes, formatRelativeTime, formatSizeDelta, formatTimestamp, hashSlot, keyErrorText, languageForContentType, nextSort, orderText, secretRejectedField, utf8Bytes, validateKey,
 } from "./format";
 export type { KeyErrorCode, SortState } from "./format";
-export { defaultMessages, formatMessage, messageOr, resolveMessages } from "./messages";
-export type { MemoryViewMessageKey, MemoryViewMessages } from "./messages";
+export { defaultMessages, flattenMessageTree, formatMessage, messageOr, resolveMessages } from "./messages";
+export type { MemoryViewMessageKey, MemoryViewMessages, MessageTree } from "./messages";
 export { useVirtualRows } from "./hooks";
 export { MemorySortMenu } from "./MemorySortMenu";
 export type { MemorySortMenuProps } from "./MemorySortMenu";

@@ -130,6 +130,27 @@ describe("CopyPlanDialog: 계획", () => {
     expect(screen.getByRole("button", { name: "가져오기 (1)" }).getAttribute("aria-disabled")).toBeNull();
   });
 
+  it("새 이름이 서버가 준 예약어(대소문자 무시)면 입력 즉시 안내하고 제출을 막는다. 목록이 없으면 안내하지 않는다", async () => {
+    const plan = { items: [planItem({ kind: "k1", id: "docs", target_state: "identical", default_action: "reuse" })] };
+    setup({ initialStep: "plan", initialItems: [{ kind: "k1", id: "docs" }], reservedIds: { k1: ["zed-word"], k2: ["other"] } }, plan);
+    fireEvent.change((await screen.findByLabelText(/docs: 처리/)) as HTMLSelectElement, { target: { value: "rename" } });
+    const input = screen.getByLabelText("새 이름(id)") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "Zed-Word" } });
+    expect(screen.getByText(/예약된 이름이라 쓸 수 없습니다/)).toBeTruthy();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("button", { name: /가져오기/ }).getAttribute("aria-disabled")).toBe("true");
+    fireEvent.change(input, { target: { value: "other" } }); // 다른 종류의 예약어는 상관없다
+    expect(screen.queryByText(/예약된 이름이라 쓸 수 없습니다/)).toBeNull();
+    expect(screen.getByRole("button", { name: "가져오기 (1)" }).getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("예약어 목록을 받지 못하면(옛 서버) 새 이름 칸은 예전처럼 안내 없이 통과한다", async () => {
+    setup({ initialStep: "plan", initialItems: [{ kind: "k1", id: "docs" }] }, { items: [planItem({ kind: "k1", id: "docs", target_state: "identical", default_action: "reuse" })] });
+    fireEvent.change((await screen.findByLabelText(/docs: 처리/)) as HTMLSelectElement, { target: { value: "rename" } });
+    fireEvent.change(screen.getByLabelText("새 이름(id)"), { target: { value: "zed-word" } });
+    expect(screen.queryByText(/예약된 이름이라 쓸 수 없습니다/)).toBeNull();
+  });
+
   it("연결된 항목을 가져오지 않기로 하면 경고, 요청 항목을 건너뛰면 경고 없음", async () => {
     setup({ initialStep: "plan", initialItems: [{ kind: "k1", id: "review-team" }] }, { items: [planItem({ kind: "k1", id: "review-team" }), referenced] });
     await screen.findByText("요청한 항목 1개 · 함께 가져올 항목 1개");

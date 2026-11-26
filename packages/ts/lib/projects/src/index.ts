@@ -3,8 +3,6 @@
  * 화면을 그리지 않는다. 데이터와 콜백을 받는 순수 함수와 작은 저장소만 있다.
  * 계약 타입(`@agent-console/contracts`)만 import한다.
  */
-export { applyLogFilter, logFilterFor } from "./logs";
-export type { LogProjectRef, ProjectLogFilter } from "./logs";
 
 export {
   DEFAULT_PROJECT_PARAM,
@@ -19,11 +17,14 @@ export type { CurrentProject, CurrentProjectStore, CurrentProjectStoreOptions, P
 export {
   DEFAULT_PROJECT_MESSAGES,
   PROJECT_CONTEXT_RETIRED_TERMS,
+  PROJECT_CONTEXT_RETIRED_TERMS_EN,
   RETIRED_TERMS,
+  RETIRED_TERMS_EN,
   createProjectsText,
+  flattenMessageTree,
   formatMessage,
 } from "./messages";
-export type { MessageParams, MessageRef, ProjectMessageKey, ProjectsText } from "./messages";
+export type { MessageParams, MessageRef, MessageTree, ProjectMessageKey, ProjectMessages, ProjectsText } from "./messages";
 
 export {
   ABILITY_TABLE,
@@ -46,6 +47,8 @@ export {
   COPY_REASON_REQUESTED,
   COPY_WARNING_RESERVED_ID,
   reservedIdSuggestions,
+  reservedIdsByKind,
+  reservedIdsForPlan,
   SLUG_PATTERN,
   actionChoicesFor,
   choiceLabel,

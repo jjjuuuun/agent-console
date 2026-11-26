@@ -231,6 +231,7 @@ export function AgentDetail({ id, basePath, request }: AgentDetailProps) {
       {dialog === "duplicate" ? (
         <NewDefinitionDialog
           open
+          kind={DEFINITION_KINDS.agent}
           title={t.detail.duplicate}
           submitLabel={t.detail.duplicate}
           existingIds={existingIds}

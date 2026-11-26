@@ -57,7 +57,7 @@ def test_example_config_documents_log_and_probe_options() -> None:
 def test_static_dir_relative_paths_follow_config_folder(tmp_path: Path) -> None:
     """5R.19: `web.static_dir`·`AGENT_CONSOLE_WEB_DIR` 상대 경로는 설정 파일 폴더 기준.
 
-    apps/server README "단일 실행"의 안내와 같다.
+    apps/server README "Single process: one server for API, WS, and web"의 안내와 같다.
     """
     from agent_console_server import load_settings
 

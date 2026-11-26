@@ -76,19 +76,19 @@ importers:
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/log-view
       '@agent-console/markdown-doc':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/markdown-doc
       '@agent-console/memory-view':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/memory-view
       '@agent-console/projects':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../../packages/ts/lib/projects
       '@agent-console/schema-form':
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/schema-form
       '@agent-console/sdd-view':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/sdd-view
       '@agent-console/text-editor':
         specifier: ^0.1.0
@@ -100,7 +100,7 @@ importers:
         specifier: ^0.2.0
         version: link:../../packages/ts/lib/ui
       '@agent-console/wiki-view':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../../packages/ts/lib/wiki-view
       '@tanstack/react-query':
         specifier: ^5.104.3
@@ -829,7 +829,7 @@ importers:
         specifier: ^0.16.0
         version: link:../contracts
       '@agent-console/markdown-doc':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../markdown-doc
       '@agent-console/virtual-rows':
         specifier: ^0.1.0
@@ -1094,7 +1094,7 @@ importers:
         specifier: ^0.16.0
         version: link:../contracts
       '@agent-console/markdown-doc':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../markdown-doc
       '@agent-console/text-editor':
         specifier: ^0.1.0

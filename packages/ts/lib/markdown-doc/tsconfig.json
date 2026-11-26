@@ -3,7 +3,11 @@
   "compilerOptions": {
     "types": ["node"],
     "customConditions": ["development"],
-    "paths": { "@agent-console/markdown-doc": ["./src/index.ts"] }
+    "paths": {
+      "@agent-console/markdown-doc": ["./src/index.ts"],
+      "@agent-console/markdown-doc/locales/ko": ["./src/locales/ko.ts"],
+      "@agent-console/markdown-doc/locales/en": ["./src/locales/en.ts"]
+    }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }
