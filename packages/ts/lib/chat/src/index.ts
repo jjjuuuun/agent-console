@@ -40,4 +40,5 @@ export { DECISION_COLOR_TOKENS, decisionButtonStyle, isDecisionColorToken } from
 export { defaultInteractionMessages } from "./interaction/messages";
 export type { InteractionMessages } from "./interaction/messages";
 export type { FallbackArgs, FieldError, RenderEditor, RendererComponent, RendererProps } from "./interaction/types";
+export type { ChatLocale } from "./locales/types";
 export { formatCountdown, formatSeconds, showDuration } from "./shared/util";

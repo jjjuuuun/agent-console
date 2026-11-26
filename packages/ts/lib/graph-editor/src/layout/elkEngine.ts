@@ -9,6 +9,7 @@
  *   (기본 `MODEL_ORDER`)으로 계산한다. 그래도 되돌아가는 연결의 도착 노드가 출발 노드보다 앞 층에 놓이지 않으면
  *   그 연결을 층 계산에서 빼고 한 번 더 계산한다(연결선 자체는 앱이 그린다). 되돌아가는 연결이 없으면 입력·결과가 이전과 같다.
  */
+import ko from "../locales/ko.json";
 import type { Side } from "../shapes/types";
 import type { EdgeShapeOption, LayoutEngineDescriptor, LayoutRequest, LayoutResult, OptionDecl } from "./types";
 
@@ -48,6 +49,11 @@ export interface ElkEngineOptions {
    * 값은 ELK의 `cycleBreaking.strategy` 이름(`GREEDY`·`DEPTH_FIRST`·`MODEL_ORDER` 등)이다.
    */
   cycleBreaking?: string;
+  /**
+   * 옵션 기본값 덮어쓰기(키 → 값, 예: `{ layerGap: 160 }`). 선언에 있는 키만 적용하고 `min`·`max` 안으로 자른다. 사용자가 이미 고른 값(저장됨)이 우선이다.
+   * 앱이 화면 성격에 맞게 데이터로 넘긴다(예: 라벨이 많은 팀 편집기는 층 간격을 넓힘). 라이브러리 기본값은 그대로 `ELK_OPTION_DECLS`.
+   */
+  optionDefaults?: Readonly<Record<string, number>>;
   /** 권장 연결선 모양 선언(기본: 자동 경로 `auto`, 처음부터 체크). `null`이면 팝오버에 체크를 두지 않는다 */
   edgeShapeOption?: EdgeShapeOption | null;
 }
@@ -59,8 +65,8 @@ const PORT_SIDE: Readonly<Record<Side, string>> = { left: "WEST", right: "EAST",
 
 /** 옵션 선언(키는 UI·저장용 이름이고 ELK 옵션 이름은 어댑터 안에서만 쓴다). */
 export const ELK_OPTION_DECLS: readonly OptionDecl[] = [
-  { key: "nodeGap", title: "노드 사이 간격", type: "number", default: 48, min: 8, max: 400, step: 8 },
-  { key: "layerGap", title: "층 사이 간격", type: "number", default: 80, min: 8, max: 600, step: 8 },
+  { key: "nodeGap", title: ko.layout.options.nodeGap, type: "number", default: 48, min: 8, max: 400, step: 8 },
+  { key: "layerGap", title: ko.layout.options.layerGap, type: "number", default: 80, min: 8, max: 600, step: 8 },
 ];
 
 /** ELK는 노드 좌표만 정하고 경로는 자동 경로 라우터가 그리므로(§4.4) 기본으로 자동 경로를 권한다. */
@@ -186,8 +192,12 @@ export function createElkEngine(options: ElkEngineOptions = {}): LayoutEngineDes
   };
   return {
     id: options.id ?? ELK_ENGINE_ID,
-    title: options.title ?? "ELK 계층형",
-    options: ELK_OPTION_DECLS.map((o) => ({ ...o, title: titles[o.key] ?? o.title })),
+    title: options.title ?? ko.layout.engineTitle,
+    options: ELK_OPTION_DECLS.map((o) => {
+      const d = options.optionDefaults?.[o.key];
+      const base = { ...o, title: titles[o.key] ?? o.title };
+      return typeof d === "number" && Number.isFinite(d) ? { ...base, default: Math.min(o.max ?? d, Math.max(o.min ?? d, d)) } : base;
+    }),
     ...(options.edgeShapeOption === null ? {} : { edgeShapeOption: options.edgeShapeOption ?? ELK_EDGE_SHAPE_OPTION }),
     async run(req: LayoutRequest, signal?: AbortSignal): Promise<LayoutResult> {
       if (signal?.aborted === true) throw abortError();

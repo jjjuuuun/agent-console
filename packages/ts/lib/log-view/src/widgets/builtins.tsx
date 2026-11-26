@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LogAggregateRow } from "@agent-console/contracts/logs";
 import { LineChartLazy, type ChartSeries } from "../charts";
+import ko from "../locales/ko.json";
 import { fmt } from "../messages";
 import { slotColor } from "../taxonomy";
 import { AggregateTable } from "./AggregateTable";
@@ -179,47 +180,63 @@ function TableBody(p: WidgetRenderProps) {
   return <AggregateTable rows={p.rows} groupBy={p.groupBy} metricLabel={metricLabel(p)} limit={intOpt(p.options["limit"], 50)} sortable ariaLabel={p.title} messages={p.messages} formatters={p.formatters} />;
 }
 
-/** 내장 위젯 4종. 이것도 레지스트리 데이터일 뿐이다(앱이 `createWidgetRegistry`로 덮어쓰거나 더한다). */
-export const builtinWidgets: WidgetDescriptor[] = [
-  {
-    kind: "metric",
-    title: "지표",
-    description: "숫자 하나를 크게 보입니다.",
-    iconName: "hash",
-    queryShape: { groupBy: { min: 0, max: 0 } },
-    optionsSchema: { type: "object", properties: {} },
-    defaultSize: { w: 3, h: 2 },
-    render: (p) => <MetricBody {...p} />,
-  },
-  {
-    kind: "bar",
-    title: "막대",
-    description: "항목별 크기를 가로 막대로 비교합니다.",
-    iconName: "bar-chart-horizontal",
-    queryShape: { groupBy: { min: 1, max: 2 }, series: true },
-    optionsSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, default: 10, title: "limit" } } },
-    defaultSize: { w: 6, h: 4 },
-    render: (p) => <BarBody {...p} />,
-  },
-  {
-    kind: "line",
-    title: "선",
-    description: "시간에 따른 변화를 꺾은선으로 봅니다.",
-    iconName: "line-chart",
-    queryShape: { groupBy: { min: 1, max: 2 }, timeFirst: true, series: true },
-    optionsSchema: { type: "object", properties: {} },
-    defaultSize: { w: 12, h: 4 },
-    render: (p) => <LineBody {...p} />,
-  },
-  {
-    kind: "table",
-    title: "표",
-    description: "집계 결과를 표로 보입니다.",
-    iconName: "table",
-    queryShape: { groupBy: { min: 1, max: 3 } },
-    optionsSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, default: 50, title: "limit" } } },
-    defaultSize: { w: 6, h: 4 },
-    render: (p) => <TableBody {...p} />,
-    tableToggle: false,
-  },
-];
+/** 내장 위젯 4종의 제목·설명 문구(언어 묶음의 `builtinWidgets`). */
+export interface BuiltinWidgetTexts {
+  metric: { title: string; description: string };
+  bar: { title: string; description: string };
+  line: { title: string; description: string };
+  table: { title: string; description: string };
+}
+
+/**
+ * 내장 위젯 4종을 문구와 함께 만든다. 이것도 레지스트리 데이터일 뿐이다(앱이 `createWidgetRegistry`로 덮어쓰거나 더한다).
+ * 영어는 `createBuiltinWidgets(en.builtinWidgets)`.
+ */
+export function createBuiltinWidgets(texts: BuiltinWidgetTexts): WidgetDescriptor[] {
+  return [
+    {
+      kind: "metric",
+      title: texts.metric.title,
+      description: texts.metric.description,
+      iconName: "hash",
+      queryShape: { groupBy: { min: 0, max: 0 } },
+      optionsSchema: { type: "object", properties: {} },
+      defaultSize: { w: 3, h: 2 },
+      render: (p) => <MetricBody {...p} />,
+    },
+    {
+      kind: "bar",
+      title: texts.bar.title,
+      description: texts.bar.description,
+      iconName: "bar-chart-horizontal",
+      queryShape: { groupBy: { min: 1, max: 2 }, series: true },
+      optionsSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, default: 10, title: "limit" } } },
+      defaultSize: { w: 6, h: 4 },
+      render: (p) => <BarBody {...p} />,
+    },
+    {
+      kind: "line",
+      title: texts.line.title,
+      description: texts.line.description,
+      iconName: "line-chart",
+      queryShape: { groupBy: { min: 1, max: 2 }, timeFirst: true, series: true },
+      optionsSchema: { type: "object", properties: {} },
+      defaultSize: { w: 12, h: 4 },
+      render: (p) => <LineBody {...p} />,
+    },
+    {
+      kind: "table",
+      title: texts.table.title,
+      description: texts.table.description,
+      iconName: "table",
+      queryShape: { groupBy: { min: 1, max: 3 } },
+      optionsSchema: { type: "object", properties: { limit: { type: "integer", minimum: 1, default: 50, title: "limit" } } },
+      defaultSize: { w: 6, h: 4 },
+      render: (p) => <TableBody {...p} />,
+      tableToggle: false,
+    },
+  ];
+}
+
+/** 기본(한국어) 내장 위젯. */
+export const builtinWidgets: WidgetDescriptor[] = createBuiltinWidgets(ko.builtinWidgets);

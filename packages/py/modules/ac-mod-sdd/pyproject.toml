@@ -1,16 +1,16 @@
 [project]
 name = "agent-console-mod-sdd"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent Console — 스펙(SDD) 기능 모듈: REST /sdd/*·WS sdd.changed, 정의 종류 기여(문서 틀·스펙), 설정 섹션 sdd, 포트 sdd.service"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-sdd>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "agent-console-conditions>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
@@ -63,15 +63,15 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_mod_sdd.ports:SDD_SERVICE", reason = "스펙 모듈이 연동 모듈에 주는 서비스 통로(구현은 이 모듈 하나)" },
-    { port = "agent_console_mod_sdd.ports:SDD_SPACES", reason = "프로젝트 연동이 공간 이름 → 스펙 저장 공간을 주는 모듈 사이 통로" },
+    { port = "agent_console_mod_sdd.ports:SDD_SERVICE", reason = "Service port that the specs module gives link modules (this module is the only implementation)" },
+    { port = "agent_console_mod_sdd.ports:SDD_SPACES", reason = "Inter-module port through which the projects link module provides the spec storage for a space name" },
 ]
 
 [tool.agent-console.extension-points.sdd-verification-source]
-title = "검증 결과 출처"
+title = "Verification source"
 area = "sdd"
 design_id = "X42"
-summary = "작업의 검증 결과(테스트 보고서 등)를 추적 표에 넣는 출처를 플러그인이나 연동 모듈로 더한다"
+summary = "Adds, through a plugin or a link module, a source that puts task verification results (test reports and so on) into the trace table"
 registration = { kind = "entry-point", group = "agent_console_mod_sdd:VERIFICATION_SOURCES_GROUP", port = "agent_console_mod_sdd.ports:SDD_VERIFICATION_SOURCES" }
 interface = "agent_console_sdd:VerificationSource"
 example = [
@@ -81,10 +81,10 @@ example = [
 guide = "sdd.md"
 
 [tool.agent-console.extension-points.sdd-task-integration]
-title = "작업 연동"
+title = "Task integration"
 area = "sdd"
 design_id = "X43"
-summary = "스펙 작업에 동작·링크·이슈·자동 진행을 붙인다(예: 실행, 외부 이슈 트래커)"
+summary = "Attaches actions, links, issues, and auto-advance to spec tasks (for example, runs or an external issue tracker)"
 registration = { kind = "port", port = "agent_console_mod_sdd.ports:SDD_INTEGRATIONS" }
 interface = ["agent_console_sdd:TaskIntegration", "agent_console_sdd:ProfileChecker", "agent_console_sdd:TaskIssueSource", "agent_console_sdd:AutomationControl"]
 example = { kind = "reference", path = "packages/py/links/ac-link-runs-sdd" }

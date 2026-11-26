@@ -1,26 +1,26 @@
 # agent-console-query-hash
 
-검색 이벤트에 남길 검색어 해시를 만든다. 검색어는 짧은 경우가 많아 솔트 없는 sha256이면 사전 대입으로 원문을
-되찾을 수 있으므로 기본은 솔트 HMAC-SHA256이다. 표준 라이브러리만 쓴다. 방식과 솔트는 쓰는 쪽이 정해 넘기고
-(예: 설치자 설정 + 환경변수), 이 패키지는 솔트를 저장하거나 출력하지 않는다.
+Builds the query hash stored in search events. Queries are often short, so an unsalted sha256 can be reversed with a dictionary attack;
+the default is therefore a salted HMAC-SHA256. It uses only the standard library. The caller chooses the mode and the salt and passes them in
+(for example, server administrator settings plus an environment variable). This package never stores or prints the salt.
 
-- `query_hasher(mode="hmac", *, salt=None, random_bytes=secrets.token_bytes)`: 검색어 → 16진수 해시(또는 None).
-  - `hmac`: HMAC-SHA256(솔트, 검색어). 솔트가 없거나 비면 만들 때 무작위 32바이트(그 해셔 안에서만 같은 값).
-  - `sha256`: 솔트 없는 sha256(설치를 넘어 같은 값이 필요할 때).
-  - `off`: 늘 None(해시를 싣지 않음).
-- `query_hasher_from_env(mode, *, salt_env, environ)`: 설정 값(방식 + 솔트 환경변수 이름)으로 만든다. 변수가 없거나
-  비면 무작위 솔트. `environ`은 주입한다(보통 `os.environ`).
-- `QueryHasher`: `Callable[[str], str | None]`. 도구 묶음은 이 모양만 받는다.
-- `QueryHashModes`·`QUERY_HASH_MODES`: 방식 이름(설정 검증·화면 선택지).
+- `query_hasher(mode="hmac", *, salt=None, random_bytes=secrets.token_bytes)`: query → hex hash (or None).
+  - `hmac`: HMAC-SHA256(salt, query). If the salt is missing or empty, 32 random bytes are drawn when the hasher is created (the same value only within that hasher).
+  - `sha256`: unsalted sha256 (when you need the same value across installations).
+  - `off`: always None (no hash is attached).
+- `query_hasher_from_env(mode, *, salt_env, environ)`: builds a hasher from settings (mode plus the name of the salt environment variable). If the variable is missing or
+  empty, a random salt is used. `environ` is injected (usually `os.environ`).
+- `QueryHasher`: `Callable[[str], str | None]`. Tool sets accept only this shape.
+- `QueryHashModes`, `QUERY_HASH_MODES`: mode names (for settings validation and screen choices).
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-query-hash
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-query-hash
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-query-hash
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> import hashlib
@@ -41,15 +41,15 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

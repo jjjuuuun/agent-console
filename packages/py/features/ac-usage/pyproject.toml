@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "pydantic>=2.9",
     "jsonschema>=4.23",
@@ -57,10 +57,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.usage-source]
-title = "사용량 출처"
+title = "Usage source"
 area = "usage"
 design_id = "X13"
-summary = "사용량(창 사용률·토큰)을 읽어 오는 출처를 더한다"
+summary = "Adds a source that reads usage (window usage rates and tokens)"
 registration = { kind = "entry-point", group = "agent_console_usage:USAGE_SOURCES_GROUP" }
 interface = ["agent_console_usage:UsageSource", "agent_console_usage:UsageSourceContext", "agent_console_usage:UsageRecord"]
 settings = ["usage.sources"]

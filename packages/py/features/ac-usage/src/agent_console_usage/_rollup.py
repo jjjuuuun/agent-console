@@ -57,7 +57,7 @@ _SPLIT_FIELDS = ("input_tokens", "output_tokens", "cache_read_tokens", "cache_cr
 
 @dataclass(frozen=True, slots=True)
 class UsageRecord:
-    """사용량 한 건(집계 재료). 모르는 차원은 `None`."""
+    """One usage record (aggregation input). Unknown dimensions are `None`."""
 
     run_id: str
     usage: Usage

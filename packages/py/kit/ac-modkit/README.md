@@ -1,26 +1,26 @@
 # agent-console-modkit
 
-서버 모듈 키트. 기능 모듈·연동 모듈이 따르는 인터페이스와
-조립기, 그리고 통합 서버·단독 실행이 함께 쓰는 HTTP 호스트를 담는다.
+The server module kit. It holds the interfaces and the assembler that feature modules and link modules follow,
+and the HTTP host shared by the integrated server and standalone runs.
 
-- **기능·모듈·연동 이름을 모른다.** 포트·토픽은 이름 문자열로만 맞춘다(`PortKey("definitions.store")`).
-- **전역 상태 없음.** 이벤트 버스·WS 허브·시계·환경·경로는 `BaseServices`로 주입한다.
-- **계약 패키지에 의존하지 않는다.** 보고(`ModuleReport`)·오류 본문은 자체 타입이고, 계약 모델
-  (`ModuleInfo` 등)으로 바꾸는 일은 통합 서버가 한다. 의존: `agent-console-registry`, `pydantic`.
-- 코어(`agent_console_modkit`)는 FastAPI 없이 쓴다. HTTP 호스트(`agent_console_modkit.host`)와 단독
-  실행(`agent_console_modkit.standalone`)은 extra `[host]`(fastapi·uvicorn·websockets·ruamel-yaml).
+- **It knows no feature, module, or link names.** Ports and topics are matched only by name strings (`PortKey("definitions.store")`).
+- **No global state.** The event bus, WS hub, clock, environment, and paths are injected through `BaseServices`.
+- **It does not depend on the contracts package.** Reports (`ModuleReport`) and error bodies are its own types, and converting them to contract models
+  (`ModuleInfo` and others) is done by the integrated server. Dependencies: `agent-console-registry`, `pydantic`.
+- The core (`agent_console_modkit`) is used without FastAPI. The HTTP host (`agent_console_modkit.host`) and standalone
+  runs (`agent_console_modkit.standalone`) need the extra `[host]` (fastapi, uvicorn, websockets, ruamel-yaml).
 
-## 설치
+## Installation
 
 ```bash
-pip install agent-console-modkit            # 코어(조립·이벤트)
-pip install "agent-console-modkit[host]"    # + 호스트·단독 실행
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> "agent-console-modkit[host]"
+pip install agent-console-modkit            # core (assembly, events)
+pip install "agent-console-modkit[host]"    # + host and standalone runs
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> "agent-console-modkit[host]"
 ```
 
-## 최소 사용
+## Minimal usage
 
-모듈 셋을 조립한다. `mod-chat`은 `definitions.store`가 필수이고 `chat.turn_launcher`는 선택이다.
+Assemble a set of modules. `mod-chat` requires `definitions.store`, and `chat.turn_launcher` is optional.
 
 ```python
 >>> from agent_console_modkit import ModulesConfig, PortKey, assemble
@@ -38,7 +38,7 @@ pip install "agent-console-modkit[host]"    # + 호스트·단독 실행
 
 ```
 
-정의 모듈을 끄면 그것을 필수로 쓰는 모듈은 이유와 함께 꺼진다(자동 보정 없음).
+When the definitions module is turned off, the modules that require it are turned off with a reason (no automatic correction).
 
 ```python
 >>> off = assemble([chat, link, definitions], ModulesConfig(disabled=["mod-definitions"]))
@@ -50,7 +50,7 @@ mod-definitions disabled ()
 
 ```
 
-같은 단일 포트를 둘이 주면 둘 다 `conflict`이고, `bindings`로 고른다. `PortKey(multi=True)`는 목록으로 받는다.
+When two modules provide the same single port, both are `conflict`, and you choose with `bindings`. `PortKey(multi=True)` receives a list.
 
 ```python
 >>> a = fake_module("mod-a", provides=[STORE])
@@ -62,7 +62,7 @@ mod-definitions disabled ()
 
 ```
 
-모듈 이벤트 버스는 구독자 예외를 격리한다.
+The module event bus isolates subscriber exceptions.
 
 ```python
 >>> from agent_console_modkit import EventBus, Topic
@@ -79,7 +79,7 @@ mod-definitions disabled ()
 
 ```
 
-호스트(extra `[host]`)는 켜진 모듈의 라우터·WS 토픽·오류 맵을 붙이고 보안 규칙(Host·Origin·토큰·크기)을 건다.
+The host (extra `[host]`) attaches the routers, WS topics, and error maps of enabled modules and applies the security rules (Host, Origin, token, size).
 
 ```python
 >>> from fastapi.testclient import TestClient
@@ -97,8 +97,8 @@ mod-definitions disabled ()
 
 ```
 
-호스트는 `GET /modules`(모듈 보고)도 붙인다. 켜진 모듈 안에서 선택 포트가 없어 꺼진 동작은
-`raise ctx.unavailable(PORT)`로 알리고, 호스트가 409 `feature_unavailable{module, port}`로 바꾼다.
+The host also attaches `GET /modules` (module reports). Behavior inside an enabled module that is off because an optional port is missing is reported with
+`raise ctx.unavailable(PORT)`, and the host turns it into 409 `feature_unavailable{module, port}`.
 
 ```python
 >>> with TestClient(app) as client:
@@ -110,11 +110,11 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 
 ```
 
-`/health`는 모듈 시작 훅이 끝난 뒤에만 200이다(그 전·종료 뒤 503 `not_ready`, `Assembly.running`).
+`/health` is 200 only after the module startup hooks finish (503 `not_ready` before that and after shutdown, `Assembly.running`).
 
-호스트 기본 서비스도 기능 이름 없이 만든다. 설치된 패키지가 entry point로 레지스트리 묶음
-공장(`agent_console.host_registries`)·플러그인 로더(`agent_console.host_plugin_loaders`)·DB 공장
-(`agent_console.host_database`)을 알리고, 호스트는 `load_host_plugins`·`open_host_database`로 쓴다.
+The host's base services are also built without feature names. Installed packages announce a registry bundle
+factory (`agent_console.host_registries`), plugin loaders (`agent_console.host_plugin_loaders`), and a database factory
+(`agent_console.host_database`) through entry points, and the host uses them with `load_host_plugins` and `open_host_database`.
 
 ```python
 >>> from importlib.metadata import EntryPoint
@@ -123,20 +123,20 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 >>> plugins = load_host_plugins(entry_points=[loader], options={"example": {"a": 1}})
 >>> plugins.registries.extension("examples").get("example")
 {'workspace': None, 'options': {'a': 1}}
->>> off = load_host_plugins(entry_points=[loader], disabled=["example"])  # 설정 plugins.disabled
+>>> off = load_host_plugins(entry_points=[loader], disabled=["example"])  # settings plugins.disabled
 >>> [(r.status, r.reason) for _, r in off.reports]
 [('skipped', '설정 plugins.disabled에 있음')]
 
 ```
 
-`enabled`(허용 목록)와 `disabled`(제외 목록)는 모든 그룹에 같은 규칙이고, 허용 목록 안에서 제외 목록을 뺀다. 로더는
-합친 결과를 `PluginLoadContext.enabled`로 받고(entry point가 아닌 key는 `ctx.allows(name)`), 어느 보고에도 없는
-제외 이름은 `HostPlugins.warnings`에 남는다.
+`enabled` (allow list) and `disabled` (exclude list) follow the same rule in every group: the exclude list is subtracted within the allow list. Loaders
+receive the combined result as `PluginLoadContext.enabled` (for keys that are not entry points, `ctx.allows(name)`), and excluded names that appear in no report
+are kept in `HostPlugins.warnings`.
 
-지운 설정 키·환경변수·명령행 별칭·기본값은 모듈이 `ModuleDescriptor.settings_compat`(`SettingsCompat`)으로
-알린다. 옛 키를 읽어 옮기지는 않는다. 키를 옮기거나 지운 모듈은 `RemovedSetting(old, new=..., reason=...)`을
-선언하고, 호스트는 그 키가 남아 있으면 이유·새 위치를 알려 주는 오류(서버 코드 `settings.removed_key`)로
-거부한다.
+Removed settings keys, environment variables, command-line aliases, and defaults are announced by modules through `ModuleDescriptor.settings_compat` (`SettingsCompat`).
+Old keys are not read and migrated. A module that moved or removed a key declares `RemovedSetting(old, new=..., reason=...)`,
+and if that key remains, the host refuses with an error that gives the reason and the new location (server code `settings.removed_key`).
+This message is printed in the terminal on a refused start, so its source text is English.
 
 ```python
 >>> from agent_console_modkit import removed_settings, seed_settings
@@ -144,12 +144,12 @@ feature_unavailable {'module': 'echo', 'port': 'echo.transform'}
 >>> seed_settings({"host": "127.0.0.1"}, {"mod-echo": ECHO_SETTINGS_COMPAT})["modules"]
 {'options': {'mod-echo': {'host': '127.0.0.1'}}}
 >>> [r.message() for r in removed_settings({"echo_old": {}}, {"mod-echo": ECHO_SETTINGS_COMPAT})]
-['설정 키 echo_old는 더 이상 읽지 않습니다. modules.options.mod-echo로 옮기세요']
+['The settings key echo_old is no longer read. Move it to modules.options.mod-echo']
 
 ```
 
-WS 알림은 저장소 스레드에서도 오지만 `Hub`는 루프 스레드에서만 만진다. `LoopPublisher`가 시작 훅에서
-`bind`한 루프로 옮기고, 같은 변경을 두 번 알리면 한 번만 낸다(`key`).
+WS notifications can come from store threads, but `Hub` is touched only on the loop thread. `LoopPublisher` moves them to the loop
+bound in the startup hook, and the same change notified twice is emitted once (`key`).
 
 ```python
 >>> import asyncio, threading
@@ -169,18 +169,18 @@ WS 알림은 저장소 스레드에서도 오지만 `Hub`는 루프 스레드에
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-### 모듈 옵션 읽기 전용 보기
+### Read-only view of module options
 
-모듈 옵션(`modules.options.<id>`)은 설정 파일에서만 바꾼다. `Assembly.module_options(id)`는 그 값을
-스키마와 함께 **보여 주기만** 한다(꺼진 모듈도). 스키마가 비밀이라고 말하는 필드(`SecretStr`·`x-secret`)는
-늘 가리고, 평문 비밀 의심 판정은 `secret_paths`로 주입한다(예: `agent_console_secret_rules`의
-`find_suspected` 결과 위치). 호스트는 `GET /modules/{id}/options`로 내보내고, 설정 파일에 붙일 YAML
-조각(`host.options_yaml_snippet`)을 함께 준다. 쓰기 경로는 없다. 조각에서 가린 줄은 **주석**이라
-그대로(또는 일부만) 붙여 넣어도 비밀 원문이나 가림 문자열이 설정 값이 되지 않는다(그 키는 빠져 기본값이
-되고, 가린 줄만 남은 객체·목록은 `{}`·`[]`로 닫힌다). 가림 문자열은 modkit 안에서 `OPTIONS_MASK` 하나다
-(`host.REDACTED`도 같은 값). 비밀 규칙 패키지를 쓰는 호스트는 그 가림 문자열을 `mask=`로 넘겨 맞춘다.
+Module options (`modules.options.<id>`) are changed only in the settings file. `Assembly.module_options(id)` only **shows** the value
+together with the schema (even for disabled modules). Fields the schema says are secret (`SecretStr`, `x-secret`) are
+always masked, and plain-text secret suspicion is injected through `secret_paths` (for example the locations from
+`find_suspected` of `agent_console_secret_rules`). The host publishes it at `GET /modules/{id}/options`, together with a YAML
+snippet to paste into the settings file (`host.options_yaml_snippet`). There is no write path. Masked lines in the snippet are **comments**, so
+pasting it as is (or in part) never turns the secret text or the mask string into a settings value (those keys drop out and become defaults,
+and objects and lists left with only masked lines are closed as `{}` and `[]`). The mask string is the single `OPTIONS_MASK` within modkit
+(`host.REDACTED` is the same value). Hosts that use the secret rules package pass that package's mask string as `mask=` to match.
 
 ```python
 >>> from pydantic import BaseModel, SecretStr
@@ -192,7 +192,7 @@ WS 알림은 저장소 스레드에서도 오지만 `Hub`는 루프 스레드에
 >>> view = assembly.module_options("mod-opts")
 >>> view.values, view.masked
 ({'limit': 3, 'token': '[REDACTED]'}, ('/token',))
->>> assembly.module_options("mod-chat") is None   # 모르는 모듈
+>>> assembly.module_options("mod-chat") is None   # unknown module
 True
 >>> from agent_console_modkit.host import options_yaml_snippet
 >>> print(options_yaml_snippet("mod-opts", view.values, masked=view.masked), end="")
@@ -205,12 +205,13 @@ modules:
 ```
 
 
-## 모듈 만들기
+## Writing a module
 
 ```python
 from agent_console_modkit import ModuleContext, ModuleDescriptor, ModuleParts, PortKey
 
-STORE = PortKey("definitions.store")  # 이름이 같으면 같은 포트(다른 모듈 import 불필요)
+# the same name means the same port (no need to import other modules)
+STORE = PortKey("definitions.store")
 
 
 class _Module:
@@ -225,7 +226,7 @@ class _Module:
     )
 
     def build(self, ctx: ModuleContext) -> ModuleParts:
-        store = ctx.port(STORE)  # 필수 포트는 항상 있다. 선택 포트는 None일 수 있다
+        store = ctx.port(STORE)  # required ports are always present; optional ports can be None
         router = make_router(store)  # fastapi.APIRouter
         return ModuleParts(
             routers=[router], ws_topics={"x:": handler}, error_map={XError: "not_found"}
@@ -235,84 +236,84 @@ class _Module:
 module = _Module()
 ```
 
-### 선택 포트를 읽는 시점(관례)
+### When to read optional ports (convention)
 
-- **선택 포트는 부를 때 읽는다.** `build`에서 값을 꺼내 저장하지 말고, `ctx`를 붙잡은 함수에서 요청을 처리할 때
-  `ctx.port(KEY)`·`ctx.ports(KEY)`를 부른다(예: `lambda: ctx.port(SETTINGS)`).
-- 조립 순서는 "필수 간선 전부 + 순환을 만들지 않는 선택 간선"이다. 선택 포트로 순환이 생기면 여러 제공자 포트
-  (`PortKey(multi=True)`) 간선을 먼저 빼므로, **multi 선택 포트는 제공 모듈이 소비자보다 늦게 build될 수 있다**.
-  그래서 `build` 때 `ctx.ports(...)`는 빈 목록이거나 일부만 담길 수 있다.
-- `build` 때 읽어도 되는 것은 필수 포트와 단일 선택 포트뿐이다. 단일 선택 포트도 단일 포트끼리만으로 순환이
-  생기면 빠질 수 있고(빠진 선택 간선은 보고·경고에 따로 나오지 않는다), 그런 조합이 없다고 확신할 수 없으면 부를
-  때 읽는다.
+- **Read optional ports when calling.** Do not take values out in `build` and keep them; call `ctx.port(KEY)` and `ctx.ports(KEY)` in functions that hold `ctx`
+  when handling requests (for example `lambda: ctx.port(SETTINGS)`).
+- The assembly order is "all required edges + optional edges that do not create cycles". When optional ports create a cycle, edges of multi-provider ports
+  (`PortKey(multi=True)`) are removed first, so **providers of multi optional ports can be built later than their consumers**.
+  So `ctx.ports(...)` at `build` time can be an empty list or hold only some providers.
+- What may be read at `build` time is only required ports and single optional ports. Single optional ports can also be dropped when single ports alone form
+  a cycle (dropped optional edges are not reported or warned separately), so unless you are sure there is no such combination, read them
+  when calling.
 
-설치는 entry point 그룹 `agent_console.server_modules`(`MODULES_GROUP`)로 한다.
-`poe new-package --kind module|link`가 `module.py`·`__main__.py`를 만들어 준다.
+Install through the entry point group `agent_console.server_modules` (`MODULES_GROUP`).
+`poe new-package --kind module|link` creates `module.py` and `__main__.py` for you.
 
-## 단독 실행(개발·재사용)
+## Standalone runs (development and reuse)
 
-모듈 패키지의 `__main__.py`는 `standalone.run`을 부르는 몇 줄이다.
+A module package's `__main__.py` is a few lines that call `standalone.run`.
 
 ```bash
 python -m agent_console_mod_x [--with ID] [--config PATH] [--host 127.0.0.1] [--port 0] [--check]
 ```
 
-- `--with ID`: 함께 띄울 모듈(설치된 entry point에서 찾는다). 필수 포트를 자동으로 끌어오지 않는다. 하나도 주지 않으면
-  모듈 패키지가 `run(default_with=[...])`로 정한 모듈(예: 같은 패키지 `testing`의 로컬 정의 저장소)을 붙인다.
-- `--config PATH`: 통합 서버 설정과 같은 키(`host`·`port`·`security`·`modules`), `.json`·`.toml`·YAML.
-- `--check`: 시작 → `GET /api/v1/health` 200 확인 → 종료(이식성 검사용). 종료 코드 0/1/2.
-- 기본 바인딩은 127.0.0.1이다. 루프백이 아니면 `security.allow_remote: true`가 필요하다.
-  토큰은 출력하지 않는다. 변경 요청을 하려면 설정 `security.token`을 정한다.
+- `--with ID`: modules to start together (found in installed entry points). Required ports are not pulled in automatically. If none is given,
+  the modules the module package set with `run(default_with=[...])` are attached (for example the local definition store in the same package's `testing`).
+- `--config PATH`: the same keys as the integrated server settings (`host`, `port`, `security`, `modules`), `.json`, `.toml`, YAML.
+- `--check`: start → check `GET /api/v1/health` returns 200 → exit (for portability checks). Exit codes 0/1/2.
+- The default binding is 127.0.0.1. For non-loopback addresses, `security.allow_remote: true` is required.
+  The token is never printed. To make change requests, set `security.token` in the settings.
 
-## 공개 API
+## Public API
 
-| 이름 | 설명 |
+| Name | Description |
 | --- | --- |
-| `PortKey[T](name, description="", multi=False)` | 포트 이름(같음 = 이름). `multi`면 여럿이 제공해도 충돌 아님 |
-| `Topic[T](name)` | 모듈 이벤트 토픽 |
-| `KindContribution[K](kind, references=None, summary_fields=(), title=None, delete=None)` / `KindReferences` / `KindDelete` / `DEFINITION_KIND_CONTRIBUTIONS` | 정의 종류 기여. `delete`(선택, `(공간, id, 기대 버전) -> None`)를 주면 종류 공통 삭제 경로가 그 종류 항목을 지울 수 있다(None = 지울 수 없음). 여러 제공자 포트 `definitions.kind_contributions` — 공급 모듈(예: SDD)과 소비 모듈(정의·프로젝트)이 서로 import하지 않게 키트에 둔다. 키트는 종류 값의 타입을 모른다(정의 모듈은 `agent_console_store.DefinitionKind`만 받는다) |
-| `ModuleDescriptor` | `id`·`version`·`kind`(`feature`/`link`, 열린 문자열)·`title`·`description`·`provides`·`requires`·`optional`·`settings_schema`·`contracts`(`{계약 하위 모듈: 버전}`)·`web_roles`·`migrations`·`settings_compat` |
-| `ModuleParts` | `routers`·`ws_topics`(키가 `:`로 끝나면 접두)·`error_map`(예외 → 코드 문자열 또는 `ErrorMapper`)·`startup`·`shutdown`(역순)·`background` |
-| `ErrorReply(code, message=None, details={}, headers={}, fix=None)` / `ErrorMapper` / `ErrorMapping` / `error_reply` | `error_map` 값: 코드만이면 문자열, 상세·헤더(예: `ETag`)·해결 버튼(`fix`, 주었을 때만 본문 `error.fix`)이 필요하면 예외 → `ErrorReply` 함수 |
+| `PortKey[T](name, description="", multi=False)` | A port name (equality = name). With `multi`, several providers are not a conflict |
+| `Topic[T](name)` | A module event topic |
+| `KindContribution[K](kind, references=None, summary_fields=(), title=None, delete=None)` / `KindReferences` / `KindDelete` / `DEFINITION_KIND_CONTRIBUTIONS` | Definition kind contributions. With `delete` (optional, `(space, id, expected version) -> None`), the common delete path for kinds can delete items of that kind (None = cannot be deleted). The multi-provider port `definitions.kind_contributions` lives in the kit so that supplying modules (for example SDD) and consuming modules (definitions, projects) do not import each other. The kit does not know the type of kind values (the definitions module accepts only `agent_console_store.DefinitionKind`) |
+| `ModuleDescriptor` | `id`, `version`, `kind` (`feature`/`link`, an open string), `title`, `description`, `provides`, `requires`, `optional`, `settings_schema`, `contracts` (`{contract submodule: version}`), `web_roles`, `migrations`, `settings_compat` |
+| `ModuleParts` | `routers`, `ws_topics` (a key ending in `:` is a prefix), `error_map` (exception → a code string or an `ErrorMapper`), `startup`, `shutdown` (reverse order), `background` |
+| `ErrorReply(code, message=None, details={}, headers={}, fix=None)` / `ErrorMapper` / `ErrorMapping` / `error_reply` | `error_map` values: a string when only a code is needed; when details, headers (for example `ETag`), or a fix button (`fix`, which appears in the body `error.fix` only when given) are needed, an exception → `ErrorReply` function |
 | `Module` | `descriptor` + `build(ctx) -> ModuleParts` (runtime_checkable) |
 | `ModuleContext` | `port(key)`·`ports(key)`·`provide(key, impl)`·`unavailable(key)`·`publish`·`subscribe`, `settings`, `clock`·`environ`·`paths`·`database`·`registries`·`ws_hub`·`events`·`secret_resolver` |
-| `FeatureUnavailableError(module, port)` / `FEATURE_UNAVAILABLE` | 선택 포트가 없어 꺼진 동작(호스트가 409, `details = {module, port}`) |
-| `assemble(modules, config=None, *, base=None) -> Assembly` | 위상 정렬 → build. 실패는 보고에 담는다 |
+| `FeatureUnavailableError(module, port)` / `FEATURE_UNAVAILABLE` | Behavior that is off because an optional port is missing (the host returns 409, `details = {module, port}`) |
+| `assemble(modules, config=None, *, base=None) -> Assembly` | Topological sort → build. Failures go into the report |
 | `Assembly` | `parts`·`report`·`order`·`warnings`·`port`·`ports`·`provided_ports`·`routers(first_kinds=())`·`ws_topics`·`error_map`·`start(fail_fast=False)`·`stop()` |
-| `ModulesConfig` | `enabled`·`disabled`·`bindings`·`options`, `with_overrides(enable=, disable=)`(명령행 켜고 끄기, 같은 id면 끄기가 이김) |
-| `ModuleState` / `ModuleReport` | 상태 5종(`active`·`disabled`·`unsatisfied`·`failed`·`conflict`)과 보고(`reason`·`missing`·`conflicts`…, `to_dict()`) |
-| `EventBus` | `subscribe`(해제 함수 반환)·`publish`(막히지 않음)·`deliver`(기다림)·`drain`·`errors` |
-| `Hub[T]` | WS 토픽 문자열 팬아웃(느린 구독자는 버림·`dropped`) |
-| `LoopPublisher[T](publish, *, key=None)` | 다른 스레드에서 온 알림을 `bind(loop)`한 이벤트 루프 스레드로 옮겨 `publish`를 부른다. `key`가 같은 알림이 바로 이어지면 한 번만(키 None = 그 알림은 검사 안 함), 바인드 전·`bind(None)` 뒤는 바로 부름, 바인드한 루프가 닫혔으면 버림(`dropped`) |
-| `WorkGate` / `DEFAULT_WORK_WAIT` | 배경 스레드 작업 수 세기 + 닫힘. `run(fn, stopped=None)`(닫힌 뒤에는 `stopped()`), `close()`·`reopen()`·`closed`·`busy`, `wait_idle(timeout)`, `await close_and_wait(timeout)`. 배경 작업이 취소되거나 종료 훅이 자원을 닫기 전에 진행 중인 스레드 작업을 기다린다 |
-| `BaseServices` / `Paths` | 호스트 기본 서비스 |
-| `DatabaseHandle` (프로토콜) / `MigrationBranch(name, versions, scopes=("app",))` | 공용 DB 핸들과 모듈이 `ModuleDescriptor.migrations`로 선언하는 마이그레이션 계보. `assemble`이 켜진 모듈의 계보 중 `scopes`에 `"app"`이 든 것만 build 직전에 `database.upgrade`로 올린다(다른 범위, 예: 프로젝트 기록 DB의 `"project"`는 그 DB를 여는 모듈이 `ModuleContext.active_migrations(scope)`로 읽어 올린다)(실패하면 그 모듈만 `failed`, 메시지는 가림). 구현은 저장 계층(`agent_console_store.SqliteDatabase`) |
-| `load_installed_modules(group=MODULES_GROUP)` | entry point에서 모듈 읽기(ac-registry 로더) |
-| `load_host_plugins(*, enabled, disabled, paths, modules, options, entry_points)` → `HostPlugins`(`registries`·`reports`·`warnings`) / `PluginLoadContext`(`enabled`·`disabled`·`allows(name)`) / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` / `REASON_PLUGINS_DISABLED`·`REASON_PLUGINS_NOT_ENABLED` | 호스트 플러그인 레지스트리: 묶음 공장(`HOST_REGISTRIES_GROUP`, 이름 순 첫 번째, 없으면 `ExtensionRegistries`) → 로더(`HOST_PLUGIN_LOADERS_GROUP`, 이름 순) → `register(registries)` 플러그인. 실패는 보고, 뺀 항목은 이유(`reason`) |
-| `open_host_database(path)` | DB 공장(`HOST_DATABASE_GROUP`) → `DatabaseHandle`(없으면 None) |
-| `env_secret_lookup`·`secret_lookup`·`secret_providers_of`·`SECRET_PROVIDERS_REGISTRY` | 비밀 해석 사슬(환경변수 → 묶음의 비밀 공급자) |
-| `SettingsCompat`(`RemovedSetting`·`EnvSetting`·`FlagSetting`·`SeedSetting`) / `compat_of`·`removed_settings`·`env_settings`·`compat_flags`·`flag_settings`·`seed_settings` | 모듈이 선언하는 호스트 설정 호환(지운 키 거부, 환경변수·명령행·다른 설정 값 → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()`는 거부 문구(새 위치 안내) |
-| `NOT_READY` / `Assembly.running` | 준비 전 `/health` 503 코드, 시작 완료 여부 |
-| `Assembly.module_options(id, *, secret_paths=None, hide_paths=False, mask=OPTIONS_MASK)` / `read_module_options` / `ModuleOptions` / `mask_values` / `OPTIONS_MASK` / `SECRET_SCHEMA_KEY` / `SecretPathFinder` | 모듈 옵션 읽기 전용 보기(스키마·가린 지금 값, 꺼진 모듈 포함, 모르는 id면 None). 스키마 비밀 필드는 늘 가리고 평문 비밀 판정은 주입, `hide_paths`면 경로 필드도 가림 |
-| `WsSubscribeRequest`·`WsReject`·`WsForward`·`WsTopicHandler` | WS 토픽 처리기 형식 |
-| `host.SecurityPolicy`·`SecurityMiddleware`·`resolve_token`·`is_loopback_host` | 보안 규칙·미들웨어 |
-| `host.build_health_router`·`build_modules_router`·`default_modules_payload`·`websocket_endpoint`·`WsCodec`·`JsonWsCodec`·`create_host_app`·`install_error_map`·`install_feature_unavailable`·`include_routers`·`ROUTE_FIRST_KINDS` | 호스트 조립(`/health`·`/modules`·`/ws`·오류 처리기, 모듈 라우터는 연동 모듈 먼저) |
-| `host.build_module_options_router`·`default_module_options_payload(mask=)`·`options_yaml_snippet`·`OPTIONS_KEY_PATH`·`MASKED_LINE_NOTE` | `GET /modules/{id}/options`(읽기 전용, 모르는 id 404 `not_found`)와 설정 파일용 YAML 조각. `create_host_app(options_payload=)`로 바꾼다 |
-| `host.QueryRedactingFilter`·`install_log_redaction` | 로그에서 토큰·비밀성 쿼리 값 가리기 |
-| `host.HostSettings`·`load_host_settings` | 호스트 설정(모르는 키 무시) |
-| `host.IfMatchHeader`·`if_match_version`·`etag`·`json_with_etag`·`attachment_response` | 버전 있는 자원·본문 파일 응답 |
-| `host.with_issues(response, issues)`·`ISSUES_HEADER` | 저장은 됐지만 알릴 경고 이슈를 본문 모양을 바꾸지 않고 `X-Console-Issues` 헤더(JSON 배열, ASCII)로 싣는다. CORS `Access-Control-Expose-Headers`에 `ETag`와 함께 노출 |
-| `standalone.run(module, argv, *, default_with=(), error_status=None, …)` | 단독 실행. `default_with` = `--with`를 주지 않았을 때 붙일 모듈(같은 패키지 `testing`의 로컬 제공자 등), `error_status` = 오류 코드 → HTTP 상태 표 |
-| `testing.fake_module`·`EchoModule`·`echo_module` | 가짜·예제 모듈 |
-| `testing.example_plugin_loader`·`open_recording_database`·`ECHO_SETTINGS_COMPAT` | 호스트 확장 지점 예제(로더·DB 공장·설정 호환) |
+| `ModulesConfig` | `enabled`, `disabled`, `bindings`, `options`, `with_overrides(enable=, disable=)` (command-line on and off; for the same id, off wins) |
+| `ModuleState` / `ModuleReport` | The 5 states (`active`, `disabled`, `unsatisfied`, `failed`, `conflict`) and reports (`reason`, `missing`, `conflicts`…, `to_dict()`) |
+| `EventBus` | `subscribe` (returns an unsubscribe function), `publish` (non-blocking), `deliver` (waits), `drain`, `errors` |
+| `Hub[T]` | Fan-out of WS topic strings (slow subscribers are dropped, `dropped`) |
+| `LoopPublisher[T](publish, *, key=None)` | Moves notifications from other threads to the event loop thread bound with `bind(loop)` and calls `publish`. Consecutive notifications with the same `key` are emitted once (key None = that notification is not checked); before binding and after `bind(None)` it calls directly; if the bound loop is closed, they are dropped (`dropped`) |
+| `WorkGate` / `DEFAULT_WORK_WAIT` | Counting background thread work + closing. `run(fn, stopped=None)` (`stopped()` after closing), `close()`, `reopen()`, `closed`, `busy`, `wait_idle(timeout)`, `await close_and_wait(timeout)`. Waits for running thread work before background tasks are cancelled or shutdown hooks close resources |
+| `BaseServices` / `Paths` | Host base services |
+| `DatabaseHandle` (protocol) / `MigrationBranch(name, versions, scopes=("app",))` | The shared database handle and the migration lineages modules declare in `ModuleDescriptor.migrations`. `assemble` upgrades, right before build, only the lineages of enabled modules whose `scopes` include `"app"` with `database.upgrade` (other scopes, for example `"project"` for project records databases, are read with `ModuleContext.active_migrations(scope)` and upgraded by the module that opens that database) (on failure only that module is `failed`, with a masked message). The implementation is in the storage layer (`agent_console_store.SqliteDatabase`) |
+| `load_installed_modules(group=MODULES_GROUP)` | Reads modules from entry points (the ac-registry loader) |
+| `load_host_plugins(*, enabled, disabled, paths, modules, options, entry_points)` → `HostPlugins` (`registries`, `reports`, `warnings`) / `PluginLoadContext` (`enabled`, `disabled`, `allows(name)`) / `PluginLoader` / `ExtensionRegistries` / `RegistryBundle` / `REASON_PLUGINS_DISABLED`, `REASON_PLUGINS_NOT_ENABLED` | Host plugin registries: bundle factory (`HOST_REGISTRIES_GROUP`, the first by name, otherwise `ExtensionRegistries`) → loaders (`HOST_PLUGIN_LOADERS_GROUP`, by name) → `register(registries)` plugins. Failures are reported, and excluded items carry a reason (`reason`) |
+| `open_host_database(path)` | Database factory (`HOST_DATABASE_GROUP`) → `DatabaseHandle` (None if absent) |
+| `env_secret_lookup`, `secret_lookup`, `secret_providers_of`, `SECRET_PROVIDERS_REGISTRY` | The secret resolution chain (environment variables → the bundle's secret providers) |
+| `SettingsCompat` (`RemovedSetting`, `EnvSetting`, `FlagSetting`, `SeedSetting`) / `compat_of`, `removed_settings`, `env_settings`, `compat_flags`, `flag_settings`, `seed_settings` | Host settings compatibility declared by modules (refusing removed keys; environment variables, command-line options, and other settings values → `modules.options.<id>`). `RemovedSetting(path, reason="", new=None).message()` is the refusal text (with the new location) |
+| `NOT_READY` / `Assembly.running` | The `/health` 503 code before ready, and whether startup has finished |
+| `Assembly.module_options(id, *, secret_paths=None, hide_paths=False, mask=OPTIONS_MASK)` / `read_module_options` / `ModuleOptions` / `mask_values` / `OPTIONS_MASK` / `SECRET_SCHEMA_KEY` / `SecretPathFinder` | Read-only view of module options (schema and masked current values, including disabled modules; None for unknown ids). Schema secret fields are always masked and plain-text secret judgement is injected; with `hide_paths`, path fields are masked too |
+| `WsSubscribeRequest`, `WsReject`, `WsForward`, `WsTopicHandler` | WS topic handler types |
+| `host.SecurityPolicy`, `SecurityMiddleware`, `resolve_token`, `is_loopback_host` | Security rules and middleware |
+| `host.build_health_router`, `build_modules_router`, `default_modules_payload`, `websocket_endpoint`, `WsCodec`, `JsonWsCodec`, `create_host_app`, `install_error_map`, `install_feature_unavailable`, `include_routers`, `ROUTE_FIRST_KINDS` | Host assembly (`/health`, `/modules`, `/ws`, error handlers; link module routers first) |
+| `host.build_module_options_router`, `default_module_options_payload(mask=)`, `options_yaml_snippet`, `OPTIONS_KEY_PATH`, `MASKED_LINE_NOTE` | `GET /modules/{id}/options` (read-only; unknown ids give 404 `not_found`) and the YAML snippet for the settings file. Replace with `create_host_app(options_payload=)` |
+| `host.QueryRedactingFilter`, `install_log_redaction` | Masks tokens and secret-like query values in logs |
+| `host.HostSettings`, `load_host_settings` | Host settings (unknown keys ignored) |
+| `host.IfMatchHeader`, `if_match_version`, `etag`, `json_with_etag`, `attachment_response` | Versioned resources and body file responses |
+| `host.with_issues(response, issues)`, `ISSUES_HEADER` | Carries warning issues to report after a successful save in the `X-Console-Issues` header (a JSON array, ASCII) without changing the body shape. Exposed in CORS `Access-Control-Expose-Headers` together with `ETag` |
+| `standalone.run(module, argv, *, default_with=(), error_status=None, …)` | Standalone run. `default_with` = modules to attach when `--with` is not given (local providers from the same package's `testing` and so on), `error_status` = an error code → HTTP status table |
+| `testing.fake_module`, `EchoModule`, `echo_module` | Fake and example modules |
+| `testing.example_plugin_loader`, `open_recording_database`, `ECHO_SETTINGS_COMPAT` | Examples of host extension points (loaders, database factory, settings compatibility) |
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

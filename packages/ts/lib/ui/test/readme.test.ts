@@ -6,11 +6,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button, formatBadgeCount } from "@agent-console/ui";
 
-const html = renderToStaticMarkup(createElement(Button, null, "저장"));
+const html = renderToStaticMarkup(createElement(Button, null, "Save"));
 const badge = formatBadgeCount(120);
 // readme:end
 
 test("README 예제가 실제로 돈다", () => {
-  expect(html).toContain("저장");
+  expect(html).toContain("Save");
   expect(badge).toBe("99+");
 });

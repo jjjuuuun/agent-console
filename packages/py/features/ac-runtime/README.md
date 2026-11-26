@@ -1,18 +1,18 @@
 # agent-console-runtime
 
-그래프 실행 엔진(토큰 기반 asyncio 스케줄러)과 확장 인터페이스.
-엔진은 특정 노드·엣지 타입·백엔드를 모른다. 모든 능력은 `Registries`에 등록된 구현으로 들어온다.
+The graph execution engine (a token-based asyncio scheduler) and its extension interfaces.
+The engine does not know any specific node type, edge type, or backend. Every capability comes in as an implementation registered in `Registries`.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                     # 워크스페이스 안
-uv pip install ./packages/py/features/ac-runtime    # 단독
+uv sync --all-packages                     # inside the workspace
+uv pip install ./packages/py/features/ac-runtime    # standalone
 ```
 
-의존: `agent-console-contracts`, `agent-console-registry`, `agent-console-graph` (저장소·라우팅·플러그인을 모른다)
+Dependencies: `agent-console-contracts`, `agent-console-registry`, `agent-console-graph` (it does not know stores, routing, or plugins)
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import asyncio
@@ -28,22 +28,22 @@ uv pip install ./packages/py/features/ac-runtime    # 단독
 
 ```
 
-실제로는 `registries = Registries(); load_registries(registries)`(entry point `agent_console.node_types` /
-`edge_types` / `backends`)로 설치된 타입을 읽는다. 여기서는 엔진이 아무 타입도 모른다는 것을 보이는
-테스트 타입(`t.step` 노드, `t.flow`·`t.entry`·`t.exit` 엣지)을 쓴다.
+In real use, installed types are read with `registries = Registries(); load_registries(registries)` (entry points `agent_console.node_types` /
+`edge_types` / `backends`). Here, test types (the `t.step` node and the `t.flow`, `t.entry`, `t.exit` edges) show that the engine
+does not know any type.
 
 ```python
 >>> async def main():
 ...     registries = make_registries()
 ...     bus = InMemoryEventBus()
 ...     runtime = GraphRuntime(registries, InMemoryRecorder(), bus, max_concurrency=4)
-...     # 그래프에는 입구 엣지(디스크립터 scheduling="entry")가 있어야 한다. 없으면 NoEntryError.
+...     # the graph must have an entry edge (descriptor scheduling="entry"); otherwise NoEntryError.
 ...     g = graph(
 ...         [node("a"), node("b", outputs={"out": "완료"})],
 ...         [edge("a", "b"), reply("b")],
-...         entries=["a"],  # 사용자 자리 you → a 입구 엣지
+...         entries=["a"],  # an entry edge from the user slot you → a
 ...     )
-...     events = bus.subscribe()  # run_id=로 한 Run만 받을 수도 있다
+...     events = bus.subscribe()  # pass run_id= to receive only one Run
 ...     handle = await runtime.start(g, {"text": "hello"}, origin="api")
 ...     async for event in events:
 ...         if event.type == "run.reply":
@@ -51,59 +51,59 @@ uv pip install ./packages/py/features/ac-runtime    # 단독
 ...         if event.type == "run.completed":
 ...             break
 ...     events.close()
-...     run = await handle.wait()  # 또는 runtime.cancel(handle.run_id)
+...     run = await handle.wait()  # or runtime.cancel(handle.run_id)
 ...     print(run.status)
-...     await runtime.shutdown(timeout=10)  # 앱 종료: 협조 취소 → 넘으면 태스크 강제 취소
+...     await runtime.shutdown(timeout=10)  # app shutdown: cooperative cancel → tasks force-cancelled past the timeout
 >>> asyncio.run(main())
 답변: 완료
 completed
 
 ```
 
-**종료 공개 순서**: `RunHandle.run`이 종료 상태(`completed`·`failed`·`cancelled`·`interrupted`·parked
-`waiting`)를 보이면, 그 Run의 기록 — 답변(`run.reply`) 등 모든 이벤트, 최종 Run 저장, `run.<상태>` 이벤트 — 은
-이미 저장소에 저장되고 `event_sink`로 발행됐다. 종료 처리 중에는 직전 상태(`running` 등)를 보인다.
+**Order of publishing the end**: when `RunHandle.run` shows a final status (`completed`, `failed`, `cancelled`, `interrupted`, parked
+`waiting`), that Run's records (every event including replies (`run.reply`), the final Run save, and the `run.<status>` event) are
+already saved in the store and published through `event_sink`. While finishing, it shows the previous status (`running` and so on).
 
-`start(..., conversation_id=)`는 Run 메타(`Run.conversation_id`)다. 엔진은 의미를 모르고 기록만 하며, 그 Run의
-상호작용(`Interaction.conversation_id`)에 같은 값이 복사된다(채팅 어댑터가 채운다).
+`start(..., conversation_id=)` is Run metadata (`Run.conversation_id`). The engine does not know its meaning and only records it, and the same value is copied to that Run's
+interactions (`Interaction.conversation_id`) (the chat adapter fills it).
 
-운영에서는 `agent_console_store`의 `SqliteStorage`/`InMemoryStorage`를 recorder로 넘긴다(구조적 타이핑).
-서버 시작 시 `recover_unfinished_runs(storage, sink=bus)`로 이전 프로세스의 Run을 `interrupted`로 정리한다
-(대기 중 상호작용 `expired(interrupted)` + `interaction.closed`, waiting 포함 끝나지 않은 NodeRun `cancelled(interrupted)`).
+In production, pass `SqliteStorage`/`InMemoryStorage` from `agent_console_store` as the recorder (structural typing).
+At server start, `recover_unfinished_runs(storage, sink=bus)` cleans up Runs from the previous process as `interrupted`
+(pending interactions become `expired(interrupted)` + `interaction.closed`, and unfinished NodeRuns including waiting ones become `cancelled(interrupted)`).
 
-## 확장 인터페이스
+## Extension interfaces
 
-| 지점 | 프로토콜 | 핵심 메서드 |
+| Point | Protocol | Key methods |
 | --- | --- | --- |
-| 노드 타입 | `NodeType` | `descriptor`, `resolve_ports(config)`, `validate(config, ValidationContext)`, `async execute(NodeContext, inputs) -> NodeResult` |
-| 엣지 타입 | `EdgeType` | `descriptor`, `activates(NodeRunView, EdgeSpec) -> Activation \| Blocked \| None`. `Activation.condition`(근거 → `edge.traversed.condition`)·`warnings`(→ `log.warning`), `Blocked(reason, condition, warnings)` = dead-path + `edge.skipped`. 선택 능력 `EdgeValidator.validate_edge(edge, EdgeValidationContext)`(저장 전 의미 검사, `validate_graph_with`가 부름) |
-| 선택 훅 | `NODE_ACTOR_HOOK = "actor_of"` | `actor_of(config) -> str \| None`: 이 노드 자리의 에이전트 정의 id. 엔진이 그 노드의 `node.*`·`run.reply`·`ctx.emit` 이벤트 머리 `actor`에 쓴다 |
-| 선택 훅 | `NODE_NAME_HOOK = "display_name"` | `display_name(config, services) -> str \| None`: 노드에 `label`이 없을 때 사용자 문구에 쓸 이름(예: 묶인 에이전트 정의 이름). 실행 실패 요약·위임 거절 문구는 `node_display_name`(label → 이 훅 → 타입 `title`)으로 노드를 부르고 id는 `details.node_id`에 둔다. 실패 요약은 원인 `ErrorInfo.fix`를 그대로 잇는다 |
-| 실행 백엔드 | `ExecutionBackend` | `descriptor`, `async list_models()`, `async run(AgentRequest, BackendEventSink, CancelToken) -> AgentResult`. `AgentRequest.run_folder`(노드 실행 폴더, 산출물용·없으면 None)·`run_context`(`run_id`·`node_path`)는 노드가 채운다(hook probe 기록 위치) |
-| 선택 sink 능력 | `SubagentResultListener` | `async on_subagent_result(name, *, text, status, actor, tool_use_id)`: 서브에이전트 호출 하나가 끝날 때마다. 백엔드는 `isinstance(sink, SubagentResultListener)`일 때만 알리고, 위임 방식이 sink를 감싸 대상 답변(`emit_replies`)을 낸다 |
-| 선택 훅 | `ConfigurableBackend` (`BACKEND_OPTIONS_HOOK = "from_options"`) | `classmethod from_options(options: Mapping, *, secrets: SecretResolver, environ: Mapping[str, str]) -> ExecutionBackend`. 앱 설정 `backends.<id>`로 다시 만들 수 있는 백엔드가 구현한다. 앱은 훅 유무만 보고, 키 해석은 백엔드 패키지가 한다(모르는 키는 `ValueError`). 훅이 키워드 `host`(`BACKEND_HOST_PARAM`)를 받으면 앱이 `BackendHostContext(workspace_dir=…)`를 넘긴다(`accepts_host_context`로 확인 — 앱 workspace = 앱이 관리하는 상대 경로·앱 하나에 하나인 구독 자격 폴더의 기준. 프로젝트 폴더는 넘기지 않는다) |
-| 선택 능력 | `StatusCapableBackend` / `ProbeCapableBackend` (디스크립터 `capabilities.status`·`probe`와 함께) | `async status(BackendCheckContext) -> BackendReadiness`(모델·네트워크 호출 금지, 빨리 끝남), `async probe(BackendCheckContext, timeout_s) -> BackendProbeResult`(가장 짧은 실제 호출 한 번, 실패는 `ok=false`+`reason`). `BackendCheckContext`는 `backend_id`·`clock`·`has_secret(name)`(존재만, 값 없음). 조회 서비스 `BackendReadinessService(backends, redact=, has_secret=, probe_timeout_max_s=)`: 능력 없으면 상태 `unknown`·probe는 `ProbeUnsupportedError`, 시간 상한·자르기, 같은 백엔드 동시 probe 합치기, 응답 글자 가림, 로그는 id·ok·reason·소요 시간만 |
-| 선택 능력(로그인) | `LoginCapableBackend` / `LogoutCapableBackend` (디스크립터 `capabilities.login`·`logout`, `login_methods`와 함께) | `async start_login(BackendLoginContext, method_id) -> LoginDriver`, `async logout(BackendLoginContext, method_id) -> BackendLogoutResult`. `LoginDriver`: `progress() -> LoginProgress`(phase·message·open_url·needs_code·code_label·accepts_keys·screen·warnings·reason·details·fixes), `async wait_changed(timeout)`, `async send_text`·`send_key`, `async cancel()`, `secrets_to_mask()`. 시작 거절은 `LoginRefusedError(code, message)`. 세션 서비스 `BackendLoginService(backends, redact=, environ=, timeout_default_s=, timeout_max_s=, heartbeat_s=, retain_s=, screen_max_lines=)`: 서버 전체 세션 하나(`LoginBusyError`), 시간 상한 → `expired`, 하트비트 끊김 → `cancelled`(reason `heartbeat`), 취소·`aclose`(종료 훅) 때 드라이버 `cancel`, 응답 가림(입력값과 그 5자 이상 조각 `mask_values` + 주입 `redact`), 로그는 세션 id·백엔드 id·방법·phase·reason·소요 시간만. 테스트 도우미 `agent_console_runtime.testing_login`(`ManualLoginDriver`·`LoginBackendStub`) |
-| 비밀 공급자 | `SecretProvider` | `get_secret(name) -> str \| None` (기본 구현 `EnvSecretProvider(environ)`) |
-| 위임 방식 | `DelegationStrategy` | `descriptor: DelegationStrategyDescriptor`, `validate(DelegationPlan) -> list[Issue]`, `async run(DelegationPlan, NodeContext) -> AgentResult`. 레지스트리 `registries.delegation_strategies`(= `extension(DELEGATION_STRATEGIES_EXTENSION)`), entry point `agent_console.delegation_strategies`. 선택 프로토콜 `ComposableDelegation`(`contribute(plan, ctx) -> DelegationContribution`, 디스크립터 `composable`): 노드가 여러 방식의 결과를 `merge_contributions`로 합치고 `apply_contribution`으로 요청에 더해 백엔드를 한 번 부른다(혼합 위임). 저장 시점 선택 프로토콜: `StaticDelegationChecks`(`static_issues(config, members) -> list[Issue]`, 스키마 밖 정적 규칙)·`DelegationNameDeclarer`(`declared_names(config, members) -> {묶음: [이름]}`, 묶음 예 `DelegationNameGroups`, 충돌 코드 `duplicate_names_code(묶음)`), 대상은 `DelegationMemberView`(정적 필드) |
-| 상호작용 종류 | `InteractionKind` | `descriptor: InteractionKindDescriptor`(요청·응답 스키마, `expire_response`, 화면 힌트). 레지스트리 `registries.interaction_kinds`(= `extension(INTERACTION_KINDS_EXTENSION)`), entry point `agent_console.interaction_kinds`(`load_registries`가 로드, 디스크립터 객체를 가리켜도 `StaticInteractionKind`로 감싼다) |
-| 저장 | `RunRecorder` | `runs.save/save_node_run/list_node_runs/interrupt_unfinished`, `events.append/append_many/last_seq`, `interactions.save/get/close/close_pending`(`InteractionWriter`, `close`는 pending 조건부, 이미 닫혔으면 `code == "interaction_closed"`·`interaction` 속성이 있는 예외) |
-| 발행 | `EventSink` | `publish(event)` (막히지 않아야 함) |
-| 자식 Run 준비 | `ChildRunPreparer` | `(ChildRunRequest) -> ChildRunPreparation \| Awaitable[...]`. `GraphRuntime(child_preparer=)`(속성으로 바꿔 끼울 수 있음). 막으려면 `GraphValidationError` |
+| Node type | `NodeType` | `descriptor`, `resolve_ports(config)`, `validate(config, ValidationContext)`, `async execute(NodeContext, inputs) -> NodeResult` |
+| Edge type | `EdgeType` | `descriptor`, `activates(NodeRunView, EdgeSpec) -> Activation \| Blocked \| None`. `Activation.condition` (evidence → `edge.traversed.condition`) and `warnings` (→ `log.warning`); `Blocked(reason, condition, warnings)` = dead path + `edge.skipped`. Optional capability `EdgeValidator.validate_edge(edge, EdgeValidationContext)` (semantic check before saving, called by `validate_graph_with`) |
+| Optional hook | `NODE_ACTOR_HOOK = "actor_of"` | `actor_of(config) -> str \| None`: the agent definition id of this node slot. The engine writes it to the `actor` header of that node's `node.*`, `run.reply`, and `ctx.emit` events |
+| Optional hook | `NODE_NAME_HOOK = "display_name"` | `display_name(config, services) -> str \| None`: the name to use in user-facing text when the node has no `label` (for example the name of the bound agent definition). Run failure summaries and delegation refusal text call the node by `node_display_name` (label → this hook → the type `title`) and put the id in `details.node_id`. Failure summaries carry over the cause's `ErrorInfo.fix` as is |
+| Execution backend | `ExecutionBackend` | `descriptor`, `async list_models()`, `async run(AgentRequest, BackendEventSink, CancelToken) -> AgentResult`. `AgentRequest.run_folder` (the node run folder for artifacts, or None) and `run_context` (`run_id`, `node_path`) are filled by the node (where hook probe records go) |
+| Optional sink capability | `SubagentResultListener` | `async on_subagent_result(name, *, text, status, actor, tool_use_id)`: each time one subagent call ends. Backends notify only when `isinstance(sink, SubagentResultListener)`, and the delegation strategy wraps the sink to emit target replies (`emit_replies`) |
+| Optional hook | `ConfigurableBackend` (`BACKEND_OPTIONS_HOOK = "from_options"`) | `classmethod from_options(options: Mapping, *, secrets: SecretResolver, environ: Mapping[str, str]) -> ExecutionBackend`. Implemented by backends that can be rebuilt from the app setting `backends.<id>`. The app only checks whether the hook exists, and the backend package interprets the keys (unknown keys raise `ValueError`). If the hook accepts the keyword `host` (`BACKEND_HOST_PARAM`), the app passes `BackendHostContext(workspace_dir=…)` (checked with `accepts_host_context`; app workspace = the base for relative paths the app manages and for the one-per-app subscription credentials folder. Project folders are not passed) |
+| Optional capability | `StatusCapableBackend` / `ProbeCapableBackend` (with descriptor `capabilities.status` and `probe`) | `async status(BackendCheckContext) -> BackendReadiness` (no model or network calls, finishes quickly), `async probe(BackendCheckContext, timeout_s) -> BackendProbeResult` (one shortest real call; failures are `ok=false` + `reason`). `BackendCheckContext` has `backend_id`, `clock`, `has_secret(name)` (existence only, no value). The lookup service `BackendReadinessService(backends, redact=, has_secret=, probe_timeout_max_s=)`: without the capability, status `unknown` and probe raises `ProbeUnsupportedError`; time limits and truncation; concurrent probes of the same backend are merged; response text is masked; logs contain only id, ok, reason, and duration |
+| Optional capability (sign-in) | `LoginCapableBackend` / `LogoutCapableBackend` (with descriptor `capabilities.login`, `logout`, and `login_methods`) | `async start_login(BackendLoginContext, method_id) -> LoginDriver`, `async logout(BackendLoginContext, method_id) -> BackendLogoutResult`. `LoginDriver`: `progress() -> LoginProgress` (phase, message, open_url, needs_code, code_label, accepts_keys, screen, warnings, reason, details, fixes), `async wait_changed(timeout)`, `async send_text`, `send_key`, `async cancel()`, `secrets_to_mask()`. Refusing to start raises `LoginRefusedError(code, message)`. The session service `BackendLoginService(backends, redact=, environ=, timeout_default_s=, timeout_max_s=, heartbeat_s=, retain_s=, screen_max_lines=)`: one session for the whole server (`LoginBusyError`), time limit → `expired`, lost heartbeat → `cancelled` (reason `heartbeat`), driver `cancel` on cancel and `aclose` (shutdown hook), response masking (input values and their fragments of 5 or more characters through `mask_values` + the injected `redact`), logs contain only session id, backend id, method, phase, reason, and duration. Test helpers `agent_console_runtime.testing_login` (`ManualLoginDriver`, `LoginBackendStub`) |
+| Secret provider | `SecretProvider` | `get_secret(name) -> str \| None` (default implementation `EnvSecretProvider(environ)`) |
+| Delegation strategy | `DelegationStrategy` | `descriptor: DelegationStrategyDescriptor`, `validate(DelegationPlan) -> list[Issue]`, `async run(DelegationPlan, NodeContext) -> AgentResult`. Registry `registries.delegation_strategies` (= `extension(DELEGATION_STRATEGIES_EXTENSION)`), entry point `agent_console.delegation_strategies`. Optional protocol `ComposableDelegation` (`contribute(plan, ctx) -> DelegationContribution`, descriptor `composable`): the node merges the results of several strategies with `merge_contributions`, adds them to the request with `apply_contribution`, and calls the backend once (mixed delegation). Optional protocols at save time: `StaticDelegationChecks` (`static_issues(config, members) -> list[Issue]`, static rules beyond the schema) and `DelegationNameDeclarer` (`declared_names(config, members) -> {group: [names]}`, example groups `DelegationNameGroups`, conflict code `duplicate_names_code(group)`); targets are `DelegationMemberView` (static fields) |
+| Interaction kind | `InteractionKind` | `descriptor: InteractionKindDescriptor` (request and response schemas, `expire_response`, screen hints). Registry `registries.interaction_kinds` (= `extension(INTERACTION_KINDS_EXTENSION)`), entry point `agent_console.interaction_kinds` (loaded by `load_registries`; even if it points to a descriptor object, it is wrapped in `StaticInteractionKind`) |
+| Storage | `RunRecorder` | `runs.save/save_node_run/list_node_runs/interrupt_unfinished`, `events.append/append_many/last_seq`, `interactions.save/get/close/close_pending` (`InteractionWriter`; `close` is conditional on pending, and if already closed, raises an exception with `code == "interaction_closed"` and an `interaction` attribute) |
+| Publishing | `EventSink` | `publish(event)` (must not block) |
+| Child Run preparation | `ChildRunPreparer` | `(ChildRunRequest) -> ChildRunPreparation \| Awaitable[...]`. `GraphRuntime(child_preparer=)` (can be swapped through the attribute). Raise `GraphValidationError` to block |
 
-레지스트리 key는 디스크립터 `id`와 같아야 한다(`NodeSpec.type`·`EdgeSpec.kind`로 찾는다).
-runtime이 모르는 확장 지점(예: 플러그인이 정의한 분류기)은 `registries.extension("my_classifiers", validator=as_x)`로 담는다.
-검사기를 붙이면 entry point·모듈·`register(registries)` 플러그인·직접 `register` 모두 같은 검사를 거친다(거부 →
-`InvalidExtensionError`, 로더에서는 `failed`). 기본 레지스트리(노드·엣지·백엔드·비밀 공급자·위임 방식·상호작용 종류)에는
-`as_node_type` 등이 이미 붙어 있다.
+Registry keys must equal the descriptor `id` (looked up by `NodeSpec.type` and `EdgeSpec.kind`).
+Extension points the runtime does not know (for example classifiers defined by plugins) are held with `registries.extension("my_classifiers", validator=as_x)`.
+With a validator attached, entry points, modules, `register(registries)` plugins, and direct `register` calls all go through the same check (rejection →
+`InvalidExtensionError`, `failed` in loaders). The default registries (nodes, edges, backends, secret providers, delegation strategies, interaction kinds) already have
+`as_node_type` and the like attached.
 
 ```python
 from agent_console_runtime import load_registry_plugins, session_refs
 
-# 설정 plugins.modules: register(registries) 플러그인. enabled에 없는 key는 해제하고 "disabled"로 보고
+# settings plugins.modules: register(registries) plugins. Keys not in enabled are removed and reported as "disabled"
 reports = load_registry_plugins(["my_pkg.plugin:register"], registries, enabled=None)
 
-# 대화 저장본의 세션(계약 SessionRef) → 노드 서비스 SESSIONS 값(엔진 SessionRef)
+# sessions of the saved conversation (contract SessionRef) → node service SESSIONS value (engine SessionRef)
 services = services.with_(SESSIONS, session_refs(conversation_sessions))
 ```
 
@@ -116,33 +116,33 @@ services = services.with_(SESSIONS, session_refs(conversation_sessions))
 `previous_session_id`, `await invoke_node(node_id, inputs, by_edge=, max_depth=None, tool_use_id=None) -> NodeRunView`, `call`, `invoked_by`,
 `await run_child(graph, input=None, graph_version=None, services=None) -> ChildRunResult`.
 
-- `incoming`: 이 노드로 들어온 값(통과한 엣지마다 `Incoming{port, edge_id, source_node, source_port, value}`, 들어오는 엣지 순서).
-  `execute`의 `inputs`는 호환을 위해 포트마다 첫 값만 담는다. join `all` 합류 값을 모두 쓰려면 이것을 쓴다.
-  반복 회차(아래 "반복")에서는 이전 회차 전에 도착해 남아 있는 값에 `carried=True`가 붙고, `inputs` 첫 값은 새 값이 먼저다.
-- `iteration`: 반복 회차(0부터). `previous_session_id`: 같은 노드 직전 회차 결과의 `backend_session_id`(없으면 None).
+- `incoming`: the values that came into this node (one `Incoming{port, edge_id, source_node, source_port, value}` per traversed edge, in incoming edge order).
+  For compatibility, the `inputs` of `execute` hold only the first value per port. Use this to get all values merged by join `all`.
+  In loop iterations (see "Loops" below), values that arrived before the previous iteration and remain get `carried=True`, and the new value comes first in `inputs`.
+- `iteration`: the loop iteration (from 0). `previous_session_id`: the `backend_session_id` of the same node's result in the previous iteration (None if absent).
 
-- `emit`: 머리 필드(run_id·seq·ts·attempt)는 엔진이 채운다. `run.*`·`node.*`·`edge.*`는 엔진 전용.
-  알려진 type은 계약 payload 형식을 검사한다. `NodeContext`는 `BackendEventSink`를 만족하므로 `backend.run(req, ctx, ctx.cancel)`.
-  `actor`를 생략하면 노드의 actor, `node_path`를 생략하면 `[노드]`. 위임 대상(하위 에이전트) 이벤트는
-  `node_path=ctx.child_path(대상)`, `actor=대상 에이전트`로 낸다. 이 노드 경로로 시작하지 않는 경로는 `ValueError`.
-- `emit_replies`: 이 노드에서 `invocation` 연결로 닿는 대상 노드의 답변 엣지(`scheduling = exit`)를 평가해 `run.reply`를 낸다
-  (대상은 스케줄되지 않으므로 위임 방식이 결과마다 부른다). 호출 대상이 아니면 `ValueError`.
-- `services`: 앱 제공 서비스의 타입드 조회. 서비스를 쓰는 플러그인이 `ServiceKey[T]("name")`를 정의·공개하고 앱이 같은 키로 주입한다.
-- `secrets`: `resolve("secret://name")`, `resolve_refs(obj)`. 해석한 값은 이벤트·오류 메시지에서 `[REDACTED]`로 가려진다.
+- `emit`: the engine fills the header fields (run_id, seq, ts, attempt). `run.*`, `node.*`, and `edge.*` are engine-only.
+  Known types have their contract payload format checked. `NodeContext` satisfies `BackendEventSink`, so `backend.run(req, ctx, ctx.cancel)`.
+  Omitting `actor` uses the node's actor, and omitting `node_path` uses `[node]`. Events of a delegate (subagent) are emitted
+  with `node_path=ctx.child_path(target)` and `actor=target agent`. A path that does not start with this node's path raises `ValueError`.
+- `emit_replies`: evaluates the reply edges (`scheduling = exit`) of the target nodes reached from this node through `invocation` edges and emits `run.reply`
+  (targets are not scheduled, so the delegation strategy calls it per result). Raises `ValueError` if it is not a call target.
+- `services`: typed lookup of app-provided services. The plugin that uses a service defines and publishes `ServiceKey[T]("name")`, and the app injects with the same key.
+- `secrets`: `resolve("secret://name")`, `resolve_refs(obj)`. Resolved values are masked as `[REDACTED]` in events and error messages.
 
-### 플랫폼 도구 (`HostTool`, 런타임 전용)
+### Platform tools (`HostTool`, runtime only)
 
-위임 방식이 모델에게 줄 도구를 만들어 `AgentRequest.host_tools`에 넣고, `capabilities.host_tools`를 선언한 백엔드가
-모델의 호출마다 `handler`를 부른다. 계약 타입이 아니며 `AgentRequest.model_dump()`에 나오지 않는다.
+A delegation strategy builds tools for the model and puts them into `AgentRequest.host_tools`, and a backend that declares `capabilities.host_tools`
+calls `handler` for each model call. It is not a contract type and does not appear in `AgentRequest.model_dump()`.
 
 - `HostTool(name, description, input_schema, handler, call_handler=None)`, `HostToolResult(text, is_error=False)`,
   `HostToolHandler = Callable[[dict], Awaitable[HostToolResult]]`,
-  `HostToolCallHandler = Callable[[dict, str | None], Awaitable[HostToolResult]]`(호출 id까지 받는 핸들러)
-- 백엔드 공용: `await call_host_tool(tool, args, cancel=, tool_use_id=None)`(예외 → 오류 결과(형식 이름만), 실행 취소 →
-  핸들러 취소 후 오류 결과, 바깥 취소는 그대로 전파. 도구에 `call_handler`가 있으면 그것을 백엔드가 아는 호출 id와 함께
-  부른다), `duplicate_host_tool_names(tools)`, `object_input_schema(schema)`
-- 위임 도구 호출 id: `invoke_node(tool_use_id=)`로 넘기면 대상 NodeRun의 `node.*` payload
-  `tool_use_id`에 실려, 위임자의 도구 호출 이벤트와 대상 실행이 명시 id로 이어진다(모르면 null).
+  `HostToolCallHandler = Callable[[dict, str | None], Awaitable[HostToolResult]]` (a handler that also receives the call id)
+- Shared by backends: `await call_host_tool(tool, args, cancel=, tool_use_id=None)` (exceptions → error results (type name only); run cancellation →
+  the handler is cancelled and an error result is returned; outside cancellation propagates as is. If the tool has `call_handler`, it is called with the call id the backend
+  knows), `duplicate_host_tool_names(tools)`, `object_input_schema(schema)`
+- Delegation tool call id: passed with `invoke_node(tool_use_id=)`, it goes into `tool_use_id` of the target NodeRun's `node.*` payload,
+  so the delegator's tool call event and the target run are linked by explicit id (null if unknown).
 
 ```python
 >>> import asyncio
@@ -155,68 +155,68 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-### 세션 기록 보관·복원
+### Session record archiving and restore
 
-백엔드의 선택 메서드 `session_archive()`가 `SessionArchive`(`files`·`status`·`restore`)를 주면, 조립(연동 모듈)이 대화
-노드 세션 원본을 프로젝트 폴더에 보관하고 다른 앱에서 복원해 이어 간다. 상태 값은 계약 `KnownSessionStates`
-(`available`·`relocatable`·`missing`, 조립이 `archived`·`not_applicable`을 더함). `BackendSessionArchives(lookup)`이 백엔드 id로
-찾고(없으면 None = `not_applicable`), `JsonlFolderSessionArchive(root, key)`는 `<root>/<cwd 키>/<세션>.jsonl` + `<세션>/` 모양의 공용
-구현이다(그 세션 파일만 다루고, 복원은 `<root>/<지금 키>/`에만 쓴다. 이름 검사·링크 건너뛰기는 `copy_files`·`session_files_in`).
+When a backend's optional method `session_archive()` returns a `SessionArchive` (`files`, `status`, `restore`), the assembly (a link module) archives the source
+of a conversation node's session in the project folder and restores it in another app to continue. The status values are the contract `KnownSessionStates`
+(`available`, `relocatable`, `missing`; the assembly adds `archived` and `not_applicable`). `BackendSessionArchives(lookup)` finds it by backend id
+(None if absent = `not_applicable`), and `JsonlFolderSessionArchive(root, key)` is a shared implementation for the shape `<root>/<cwd key>/<session>.jsonl` + `<session>/`
+(it handles only that session's files, and restore writes only to `<root>/<current key>/`. Name checks and link skipping are `copy_files` and `session_files_in`).
 
-## 스케줄러 의미
+## Scheduler semantics
 
-엔진은 연결 종류·노드 타입 이름을 모른다. 엣지 디스크립터 `scheduling`과 노드 디스크립터 `executable`만 본다
+The engine does not know edge type or node type names. It looks only at the edge descriptor `scheduling` and the node descriptor `executable`
 (`agent_console_graph.schedule_view`).
 
-| `scheduling` | 엔진 동작 | 위상·사이클 |
+| `scheduling` | Engine behavior | Topology and cycles |
 | --- | --- | --- |
-| `entry` | Run 시작 때 `activates`를 부른다. 소스는 `{소스 포트: Run 입력 dict}`를 출력으로 가진 성공 결과로 보인다. 통과 값이 도착 노드(입구) 입력 포트로 들어간다 | 제외 |
-| `flow` | 소스가 끝나면(succeeded·failed) `activates` → 통과하면 도착 입력 포트에 값, 아니면 dead | 포함 |
-| `exit` | 소스가 끝나면(succeeded·failed) `activates` → 통과하면 `run.reply`(값이 `Reply`면 label·order·final, 문자열은 그대로, 그 밖은 JSON) | 제외 |
-| `none` | 부르지 않는다(위임·리소스·상호작용 허용 등 노드가 해석) | 제외 |
+| `entry` | `activates` is called when the Run starts. The source appears as a successful result whose output is `{source port: Run input dict}`. The passed value goes into the input port of the target node (the entry) | Excluded |
+| `flow` | When the source ends (succeeded or failed), `activates` → if it passes, the value goes into the target input port; otherwise dead | Included |
+| `exit` | When the source ends (succeeded or failed), `activates` → if it passes, `run.reply` (if the value is a `Reply`, label, order, and final; strings as is; anything else as JSON) | Excluded |
+| `none` | Not called (the node interprets it, for delegation, resources, allowed interactions, and so on) | Excluded |
 
-- Run 시작 시 그래프를 깊은 복사해 고정하고 `graph_version = graph_hash(graph)`. 기본적으로 시작 전 검증(`GraphValidationError`).
-- **입구는 명시한 `entry` 엣지뿐**이다. 들어오는 엣지가 없는 노드를 입구로 추론하지 않는다. 실행 가능한 노드로 들어가는
-  `entry` 엣지가 없으면 Run을 만들지 않는다(`NoEntryError`, issue code `no_entry`, `validate=False`여도 같다).
-- 스케줄 대상 = `executable=true`이고 `entry`·`flow` 엣지가 하나 이상 들어오는 노드. 나머지(호출 대상, 리소스 같은
-  `executable=false`, 연결이 덜 된 노드, 입구·답변만 있는 사용자 자리)는 NodeRun도 이벤트도 없다.
-  스케줄되지 않는 노드에서 오는 `flow` 엣지는 처음부터 dead다.
-- 답변(`exit`)은 소스 노드의 `node.completed`/`node.failed` 직후, 하류 흐름보다 먼저 나간다. 답변 엣지 통과는 실패를 "처리"하지 않는다.
-  `entry`·`exit` 엣지는 `edge.traversed`를 내지 않는다(`run.reply`의 `edge_id`로 연결된다).
-- join `any`(기본): 처음 통과한 엣지에서 바로 실행(입력은 도착한 것만, 이후 도착은 무시). `all`: 열린 엣지가 없고 하나 이상 통과하면 실행.
-  들어오는 엣지가 모두 dead면 `skipped`로 확정하고 하류로 전파(dead-path elimination). 끝까지 도달하지 못한 노드도 `skipped`.
-- 실패 노드는 나가는 엣지 중 하나라도 통과하면 "처리됨". 처리되지 않은 실패가 있으면 Run `failed`(`node_failed`), 아니면 `completed`.
-- 동시 실행 한도 `max_concurrency`는 런타임 전체(모든 Run 합산) 기준. 상호작용을 기다리는 노드는 슬롯을 반납한다.
-- 취소: `CancelToken`이 실행 중 노드에 전파(`on_cancel` 콜백) → `cancel_grace`초 뒤 남은 태스크 asyncio 취소 → 실행 중·대기열 노드 `cancelled`, 미도달 노드 `skipped`, Run `cancelled`.
-- 모든 기록은 Run별 한 줄로 직렬화되어 워커 스레드에서 실행되고, 연속 이벤트는 `append_many`로 묶어 **저장한 뒤 발행**한다.
+- When a Run starts, the graph is deep-copied and frozen, and `graph_version = graph_hash(graph)`. It is validated before starting by default (`GraphValidationError`).
+- **The only entries are explicit `entry` edges.** Nodes without incoming edges are never inferred as entries. If there is no `entry` edge into an executable node,
+  no Run is created (`NoEntryError`, issue code `no_entry`, even with `validate=False`).
+- Scheduled nodes = nodes with `executable=true` and at least one incoming `entry` or `flow` edge. The rest (call targets, `executable=false` nodes such as resources,
+  nodes not fully connected, user slots with only entry and reply edges) get neither NodeRuns nor events.
+  `flow` edges coming from unscheduled nodes are dead from the start.
+- Replies (`exit`) go out right after the source node's `node.completed`/`node.failed`, before downstream flow. Passing a reply edge does not "handle" a failure.
+  `entry` and `exit` edges do not emit `edge.traversed` (they are linked through the `edge_id` of `run.reply`).
+- join `any` (default): runs right away on the first edge that passes (inputs are only what arrived; later arrivals are ignored). `all`: runs when no edges are open and at least one passed.
+  If all incoming edges are dead, the node is settled as `skipped` and that propagates downstream (dead-path elimination). Nodes never reached are `skipped` too.
+- A failed node is "handled" if at least one of its outgoing edges passes. If there is an unhandled failure, the Run is `failed` (`node_failed`); otherwise `completed`.
+- The concurrency limit `max_concurrency` applies to the whole runtime (all Runs combined). Nodes waiting for interactions give their slot back.
+- Cancellation: the `CancelToken` propagates to running nodes (`on_cancel` callback) → after `cancel_grace` seconds the remaining tasks are cancelled with asyncio → running and queued nodes become `cancelled`, unreached nodes `skipped`, and the Run `cancelled`.
+- All records are serialized into one queue per Run and executed on a worker thread, and consecutive events are batched with `append_many`, **saved and then published**.
 
-## 반복 — 사이클 연결
+## Loops: cycle edges
 
-엔진은 연결 이름을 모르고 연결 종류 디스크립터 `cycle`(사이클 연결)만 본다. 검증은 `validate_graph(cycle_edge=descriptor_cycle_edge)`:
-흐름 사이클마다 사이클 연결이 하나 이상 있어야 한다(없으면 `cycle`).
+The engine does not know edge names and looks only at the edge type descriptor `cycle` (cycle edges). Validation is `validate_graph(cycle_edge=descriptor_cycle_edge)`:
+every flow cycle must have at least one cycle edge (otherwise `cycle`).
 
-- **반복 영역**(`agent_console_graph.loop_regions`): 사이클 연결 `e(s → t)`의 `t`에서 `s`로 가는 흐름 경로 위 노드(사이클 연결은 모두 빼고 계산).
-- `s`가 끝나고 `e.activates`가 통과하면: 지금까지 `e`가 영역을 연 횟수 `k` < 한도 `m`이면 영역을 다시 연다.
-  영역 노드는 **새 NodeRun**(`iteration` = 직전 + 1)으로 pending, 영역 안 흐름 연결은 open, `t`에는 `e`의 값(`ctx.incoming`에 `edge_id = e`).
-  이벤트 `loop.iteration{edge_id, iteration(= t의 새 회차), nodes}`. `k ≥ m`이면 `e`는 dead, `loop.exhausted{edge_id, iteration = k, max_iterations = m}`.
-- 한도 `m` = 엣지 config `max_iterations` → `start(flow_settings=)`(없으면 생성자 `flow_settings`)의 `max_iterations` → 디스크립터 `cycle.max_iterations`
-  (`effective_max_iterations`). 정수가 아니거나 1 미만이면 다시 열지 않는다(저장 전 검증이 막는다).
-- 영역 안 다른 노드가 아직 실행 중·대기열·live wait이면 다시 열기를 그 노드들이 끝날 때까지 미룬다(회차 경계 = 영역이 조용할 때).
-- **영역 밖으로 나가는 연결**은 그 회차에 지나가면 바로 하류를 활성화한다. 하류는 한 번만 실행된다(이미 끝났으면 다시 열지 않는다).
-  지나가지 않은 경우 영역이 다시 열릴 수 있는 동안은 dead로 확정하지 않고 기다린다(예: 반려 두 번 뒤 승인 — 승인 쪽 하류가 미리 skipped되지 않음).
-  반복이 끝나면(사이클 연결이 지나가지 않거나 한도 도달, 출발 노드 skipped) 그때 dead.
-- **중첩 반복**: 바깥 영역이 다시 열리면 그 안의 사이클 연결 횟수는 0으로 돌아간다.
-- **안전 한도**: Run 하나의 노드 실행(활성화) 수가 `flow.max_node_runs`(기본 200, None = 제한 없음)를 넘으면 Run `failed`
-  (`ErrorInfo.code = flow.max_node_runs_exceeded`, `details.limit`). 실행 중 노드는 같은 오류로 `cancelled`.
-- 이전 회차의 처리되지 않은 실패는 남아 Run을 `failed`로 만든다. `totals`는 모든 회차 사용량의 합.
-- 재시작 복구·이어 가기: NodeRun 키 (run_id, node_id, attempt, iteration, call)라 끝나지 않은 회차만 `cancelled`(payload `iteration`).
-  `resume_options`는 노드마다 마지막 회차를 본다. 이어 간 Run의 반복 횟수는 0부터 다시 센다.
+- **Loop region** (`agent_console_graph.loop_regions`): the nodes on the flow paths from `t` to `s` of a cycle edge `e(s → t)` (computed with every cycle edge left out).
+- When `s` ends and `e.activates` passes: if the number of times `e` has opened the region so far, `k`, is below the limit `m`, the region is opened again.
+  Region nodes become pending as **new NodeRuns** (`iteration` = previous + 1), flow edges inside the region open, and `t` gets the value of `e` (`edge_id = e` in `ctx.incoming`).
+  Event `loop.iteration{edge_id, iteration (= the new iteration of t), nodes}`. If `k ≥ m`, `e` is dead with `loop.exhausted{edge_id, iteration = k, max_iterations = m}`.
+- Limit `m` = edge config `max_iterations` → `max_iterations` of `start(flow_settings=)` (otherwise the constructor's `flow_settings`) → descriptor `cycle.max_iterations`
+  (`effective_max_iterations`). If it is not an integer or is below 1, the region is not reopened (pre-save validation blocks it).
+- If other nodes in the region are still running, queued, or in a live wait, reopening waits until they finish (iteration boundary = when the region is quiet).
+- **Edges leaving the region** activate downstream right away when they pass in that iteration. Downstream runs only once (if it already finished, it is not reopened).
+  If they do not pass, they are not settled as dead while the region can still reopen; they wait (for example, approval after two rejections: the downstream of the approval side is not skipped early).
+  When the loop ends (the cycle edge does not pass, the limit is reached, or the source node is skipped), they become dead then.
+- **Nested loops**: when the outer region reopens, the counts of the cycle edges inside it go back to 0.
+- **Safety limit**: if the number of node runs (activations) in one Run exceeds `flow.max_node_runs` (default 200, None = unlimited), the Run is `failed`
+  (`ErrorInfo.code = flow.max_node_runs_exceeded`, `details.limit`). Running nodes become `cancelled` with the same error.
+- Unhandled failures from earlier iterations remain and make the Run `failed`. `totals` is the sum of usage across all iterations.
+- Restart recovery and resuming: the NodeRun key is (run_id, node_id, attempt, iteration, call), so only unfinished iterations become `cancelled` (payload `iteration`).
+  `resume_options` looks at the last iteration per node. A resumed Run counts loop iterations from 0 again.
 
 ```python
 >>> import asyncio
 >>> from agent_console_contracts import FlowSettings
 >>> from agent_console_runtime.testing import BUILDERS as b, make_harness
->>> h = make_harness()  # 테스트 연결 `t.loop`은 디스크립터 cycle(max_iterations 3)을 가진다
+>>> h = make_harness()  # the test edge `t.loop` has a descriptor cycle (max_iterations 3)
 >>> g = b.graph(
 ...     [b.node("draft"), b.node("check", outputs={"out": "again"})],
 ...     [b.edge("draft", "check"), b.edge("check", "draft", kind="t.loop")],
@@ -228,31 +228,31 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 호출 NodeRun — `ctx.invoke_node`
+## Call NodeRuns: `ctx.invoke_node`
 
-위임 방식(예: 독립 위임 `host`)이 `invocation` 연결의 대상을 **자기 NodeRun**으로 실행할 때 쓴다.
-대상 노드 타입의 `execute`가 스케줄되는 노드와 같은 길(상호작용·이벤트·기록·취소)로 돈다. 엔진은 연결·방식 이름을 모른다.
+Used when a delegation strategy (for example the standalone delegation `host`) runs the target of an `invocation` edge as **its own NodeRun**.
+The target node type's `execute` runs along the same path as scheduled nodes (interactions, events, records, cancellation). The engine does not know edge or strategy names.
 
-- 허용: `by_edge`가 부르는 노드에서 `node_id`로 가는 연결이고 디스크립터에 `invocation`이 있으며 대상이 실행 가능할 때만
-  (아니면 `ValueError`). 엔진 밖에서 만든 맥락이면 `RuntimeError`.
-- 기록: 대상 NodeRun `iteration` = 부른 노드의 회차, `call` = 이 Run에서 그 노드를 부른 순번(0부터, 스케줄되기도 하는 노드면 1부터),
-  `invoked_by` = 부른 노드 경로. `node.*` 이벤트 `node_path = [...부른 노드 경로, 대상]`, payload `call`. 대상의 답변(`exit`) 연결은
-  엔진이 평가해 `run.reply`를 낸다. 대상 `ctx.node_path`도 같은 경로라 대상 안 이벤트·상호작용·다시 부르기(깊이 2)가 그 아래로 이어진다.
-- 결과: `NodeRunView`(`status`·`outputs`·`error`·`call`, 메모리 원본). 대상 실패는 예외가 아니라 결과이고 Run 실패로 세지 않는다(부른 쪽이 판단).
-  `usage`는 Run `totals`에 더해진다. 같은 대상의 다음 호출은 직전 호출의 `backend_session_id`를 `ctx.previous_session_id`로 받는다.
-- 동시성: 같은 대상은 직렬, 다른 대상은 동시에(런타임 `max_concurrency` 안). 부르는 동안 부른 쪽은 슬롯을 내놓고 끝나면 다시 잡는다
-  (`max_concurrency=1`에서도 교착 없음).
-- 대기: 대상이 상호작용을 기다리고 부른 쪽에 다른 일이 없으면 Run `waiting`(부른 쪽 NodeRun은 `running` 그대로).
-- 한도: 노드 실행 총 한도(`flow.max_node_runs`)에 센다. 깊이(`len(경로) - 1`)가 `max_depth`·`delegation_settings.max_depth`
-  (`GraphRuntime(delegation_settings=)`/`start(delegation_settings=)`) 중 작은 값을 넘거나 대상이 이미 경로에 있으면 실행하지 않고
-  `failed` 결과(`error.code` = `delegation.depth_exceeded`·`delegation.cycle`) + `log.warning`.
-- 취소·끊김: Run 취소 토큰을 따른다. 대상 NodeRun은 `cancelled`(끊김이면 `error.code = interrupted`). 재시작 복구도 끝나지 않은 호출 NodeRun을
-  `cancelled`로 바꾸고 이벤트 `node_path = invoked_by + [노드]`, payload `call`. 이어 가기(`resume_options`·`resume_seed`)는 호출 NodeRun을 보지 않는다.
+- Allowed: only when `by_edge` is an edge from the calling node to `node_id`, its descriptor has `invocation`, and the target is executable
+  (otherwise `ValueError`). A context created outside the engine raises `RuntimeError`.
+- Records: the target NodeRun's `iteration` = the calling node's iteration, `call` = the order in which this Run called that node (from 0, or from 1 for nodes that are also scheduled),
+  `invoked_by` = the calling node's path. `node.*` events have `node_path = [...calling node path, target]` and payload `call`. The target's reply (`exit`) edges are
+  evaluated by the engine, which emits `run.reply`. The target's `ctx.node_path` is the same path, so events, interactions, and further calls (depth 2) inside the target continue beneath it.
+- Result: `NodeRunView` (`status`, `outputs`, `error`, `call`; the in-memory original). A target failure is a result, not an exception, and does not count as a Run failure (the caller decides).
+  `usage` is added to the Run's `totals`. The next call to the same target receives the previous call's `backend_session_id` as `ctx.previous_session_id`.
+- Concurrency: the same target runs serially, different targets concurrently (within the runtime's `max_concurrency`). While calling, the caller gives up its slot and takes it again when done
+  (no deadlock even with `max_concurrency=1`).
+- Waiting: if the target waits for an interaction and the caller has nothing else to do, the Run is `waiting` (the caller's NodeRun stays `running`).
+- Limits: counted toward the total node run limit (`flow.max_node_runs`). If the depth (`len(path) - 1`) exceeds the smaller of `max_depth` and `delegation_settings.max_depth`
+  (`GraphRuntime(delegation_settings=)`/`start(delegation_settings=)`) or the target is already on the path, it does not run and returns
+  a `failed` result (`error.code` = `delegation.depth_exceeded` or `delegation.cycle`) + `log.warning`.
+- Cancellation and interruption: follows the Run's cancel token. The target NodeRun becomes `cancelled` (`error.code = interrupted` when interrupted). Restart recovery also turns unfinished call NodeRuns
+  into `cancelled` with events `node_path = invoked_by + [node]` and payload `call`. Resuming (`resume_options`, `resume_seed`) does not look at call NodeRuns.
 
 ```python
 >>> import asyncio
 >>> from agent_console_runtime.testing import BUILDERS as b, make_harness
->>> h = make_harness()  # 테스트 연결 `t.invoke`(invocation `t.invoker`) + 위임자 `t.lead`
+>>> h = make_harness()  # the test edge `t.invoke` (invocation `t.invoker`) + the delegator `t.lead`
 >>> g = b.graph(
 ...     [b.node("lead", type="t.lead", calls=["dev", "dev"]), b.node("dev")],
 ...     [b.edge("lead", "dev", kind="t.invoke", sp="alt", tp="in2")],
@@ -264,33 +264,33 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 자식 Run — `ctx.run_child`
+## Child Runs: `ctx.run_child`
 
-노드(예: 중첩 팀 노드)가 다른 그래프를 **자식 Run**으로 실행하고 결과를 기다린다. 엔진은 노드·팀 이름을 모른다.
+A node (for example a nested team node) runs another graph as a **child Run** and waits for the result. The engine does not know node or team names.
 
-- 자식 Run: `parent_run_id` = 부모, `parent_node_id` = 부른 노드, `root_run_id` = 맨 위 Run(손자도 루트 id, 루트 자신은 null),
-  `origin` = 부모 값, `conversation_id` = null(대화 턴이 아님). 같은 런타임에 등록되어 `get`·`cancel`·`respond`·`pending`·`shutdown`이
-  그대로 다루고, 같은 저장소·이벤트 발행·동시 실행 한도를 쓴다.
-- 준비: `GraphRuntime(child_preparer=)`가 있으면 그것이 `ChildRunRequest{graph, input, parent, node_id, node_path, ancestors, services}`를
-  받아 `ChildRunPreparation{services, interaction_grants, interaction_settings, flow_settings, delegation_settings, checked}`를 준다
-  (None = 부모 Run 값, 허용 상호작용은 없음). 없거나 `checked=False`면 엔진 검증을 한다. 막히면(검증 오류·입구 없음·준비자 거절) 자식 Run을
-  만들지 않고 `failed` 결과(`error.code = validation_failed`, `details.issues`).
-- 한도: 중첩 깊이(루트 = 0)가 `delegation_settings.max_nesting`(없으면 계약 기본값 3)을 넘으면 `team.nesting_exceeded`, 자식 그래프 id가
-  이미 Run 경로에 있으면 `team.recursive` — 둘 다 자식 Run 없이 `failed` 결과 + `log.warning`(`node_path` = 부른 노드).
-- 이벤트: 부모 Run에 `run.child_started{child_run_id, node_id, graph_id}`·`run.child_finished{child_run_id, node_id, status = 자식 상태}`.
-  자식 답변은 자식 Run의 `run.reply`로만 남고 부모 채팅에 흐르지 않는다(부모 답변은 노드의 답변 연결).
-- 결과: `ChildRunResult{run_id, status, replies(답변 payload), totals, error}`. 자식 실패는 예외가 아니라 결과다.
-  `totals`는 부모 합계에 자동으로 더하지 않는다 — 노드가 `NodeResult.usage`로 돌려주면 들어간다.
-- 대기·슬롯: 기다리는 동안 부른 노드는 슬롯을 내놓는다(`max_concurrency=1`·2단 중첩에서도 교착 없음). 자식이 상호작용만 기다리면
-  부모 Run도 `waiting`(부른 노드는 `running` 그대로). 자식 안 상호작용은 `Interaction.root_run_id` = 루트, `conversation_id` = 루트 대화.
-- 취소·끊김: 부모 취소·끊김(종료)은 자식에 같은 방식으로 전파되고, 부모는 자식이 끝난 뒤(`run.child_finished` 뒤) 끝난다. 노드가 기다리지 않고
-  남긴 자식도 부모가 끝날 때 멈춘다. 재시작 복구(`recover_unfinished_runs`)는 자식 Run도 일반 Run처럼 `interrupted`로 정리한다.
-- 실행 폴더: 자식 Run 노드의 `ctx.run.id`는 자식 Run id다 — `<Run 파일 루트>/<자식 Run>/<노드>`(ac-nodes-core `run_folder` 규칙 그대로).
+- Child Run: `parent_run_id` = the parent, `parent_node_id` = the calling node, `root_run_id` = the top Run (grandchildren get the root id too; the root itself is null),
+  `origin` = the parent's value, `conversation_id` = null (not a conversation turn). It is registered in the same runtime, so `get`, `cancel`, `respond`, `pending`, and `shutdown`
+  handle it as is, and it uses the same store, event publishing, and concurrency limit.
+- Preparation: if there is `GraphRuntime(child_preparer=)`, it receives `ChildRunRequest{graph, input, parent, node_id, node_path, ancestors, services}`
+  and returns `ChildRunPreparation{services, interaction_grants, interaction_settings, flow_settings, delegation_settings, checked}`
+  (None = the parent Run's values; no allowed interactions). Without it, or with `checked=False`, the engine validates. If blocked (validation errors, no entry, the preparer refuses), no child Run
+  is created and the result is `failed` (`error.code = validation_failed`, `details.issues`).
+- Limits: if the nesting depth (root = 0) exceeds `delegation_settings.max_nesting` (the contract default 3 if absent), `team.nesting_exceeded`; if the child graph id
+  is already on the Run path, `team.recursive`. Both return a `failed` result without a child Run + `log.warning` (`node_path` = the calling node).
+- Events: the parent Run gets `run.child_started{child_run_id, node_id, graph_id}` and `run.child_finished{child_run_id, node_id, status = child status}`.
+  Child replies stay only as the child Run's `run.reply` and do not flow into the parent chat (the parent's replies come from the node's reply edges).
+- Result: `ChildRunResult{run_id, status, replies (reply payloads), totals, error}`. A child failure is a result, not an exception.
+  `totals` is not added to the parent's totals automatically; it is included when the node returns it as `NodeResult.usage`.
+- Waiting and slots: while waiting, the calling node gives up its slot (no deadlock even with `max_concurrency=1` and two levels of nesting). If the child only waits for interactions,
+  the parent Run is `waiting` too (the calling node stays `running`). Interactions inside the child have `Interaction.root_run_id` = the root and `conversation_id` = the root conversation.
+- Cancellation and interruption: cancelling or interrupting (shutting down) the parent propagates to the child the same way, and the parent ends after the child ends (after `run.child_finished`). Children the node
+  left without waiting also stop when the parent ends. Restart recovery (`recover_unfinished_runs`) cleans up child Runs as `interrupted` like any Run.
+- Run folders: `ctx.run.id` of nodes in a child Run is the child Run id: `<Run file root>/<child Run>/<node>` (the ac-nodes-core `run_folder` rule as is).
 
 ```python
 >>> import asyncio
 >>> from agent_console_runtime.testing import BUILDERS as b, make_harness
->>> h = make_harness()  # 테스트 노드 `t.nest`: config `graph`를 ctx.run_child로 실행
+>>> h = make_harness()  # the test node `t.nest`: runs config `graph` with ctx.run_child
 >>> child = b.graph([b.node("A", outputs={"out": "자식 답"})], [b.reply("A")], "child", entries=["A"])
 >>> parent = b.graph(
 ...     [b.node("N", type="t.nest", graph=child.model_dump(mode="json"))],
@@ -306,110 +306,110 @@ HostToolResult(text='맡김: 검토', is_error=False)
 
 ```
 
-## 실행 중 상호작용 (live wait)
+## Interactions while running (live wait)
 
 ```python
 outcome = await ctx.request_input(
-    InteractionRequest(kind="<등록된 종류 id>", title="…", payload={...})
+    InteractionRequest(kind="<registered kind id>", title="…", payload={...})
 )
 if outcome.status == "answered":
-    ...  # expired·cancelled도 예외가 아니라 결과(response = expire_response)
+    ...  # expired and cancelled are results too, not exceptions (response = expire_response)
 
-await runtime.respond(run_id, interaction_id, {"answer": "…"})  # 앱(서버·CLI)
-runtime.pending(run_id=None)  # 대기 목록(비밀 가린 저장본)
+await runtime.respond(run_id, interaction_id, {"answer": "…"})  # the app (server, CLI)
+runtime.pending(run_id=None)  # waiting list (stored copies with secrets masked)
 ```
 
-- `NodeContext`는 `InteractivePort`를 만족한다. 백엔드는 `isinstance(sink, InteractivePort)`일 때만 요청을 연다.
-- 엔진은 종류 이름을 모른다. 종류는 `registries.interaction_kinds`에서 찾고(없으면 `UnknownExtensionError`),
-  응답 스키마(요청 값 > 디스크립터 기본)로 응답을 검증한다(`ResponseValidationError.issues`, ac-graph 검사기).
-  grant(`start(interaction_grants=)`, `ctx.interaction_grant`)는 시간 제한 기본값으로만 쓰고 종류를 강제하지 않는다.
-- 상태: 첫 요청 → NodeRun `waiting`(`node.waiting`, `wait.reason` = 종류, `wait.data.interaction_ids`), 동시 실행 슬롯 반납.
-  열린 요청이 모두 닫히면 슬롯 재획득 → `node.resumed{waited_ms}` → 요청자에게 결과. 한 노드가 요청을 여러 개 열 수 있다.
-  실행 중·대기열 노드가 없고 대기 노드가 있으면 Run `waiting`(`run.waiting`), 다시 움직이면 `run.resumed`.
-- 이벤트: `interaction.requested{interaction}` · `interaction.answered{interaction_id, kind, answered_by, response_preview}` ·
-  `interaction.closed{interaction_id, kind, status, reason}`. `interaction.*`는 엔진 예약 접두다.
-- 응답 경합: 메모리에서 먼저 닫기 시작한 하나 + 저장소 조건부 갱신. 진 쪽은 `InteractionClosedError(interaction)`.
-  끝난 Run·다른 프로세스의 요청은 저장소를 보고 `InteractionClosedError`/`UnknownInteractionError`.
-- 시간 제한: 요청 `timeout_seconds`·`on_timeout` > grant > `interaction_settings`(`start(...)` > 생성자) > 무기한·`expire`.
-  `expire` → `expired(timeout)`, `cancel_run` → `cancelled(timeout)` 후 Run 취소(사유 `interaction_timeout`).
-  타이머는 주입된 `clock`·`sleep`을 쓴다(`testing.ManualClock`).
-- 닫힘: Run 취소 → `cancelled(cancelled)`(노드가 결과를 받고 정리할 수 있게 유예 전에 닫는다),
-  노드가 대기 중에 끝남 → `cancelled(node_finished)`, 재시작 → `recover_unfinished_runs`가 `expired(interrupted)`.
-- 비밀: 저장·이벤트·`respond`/`pending`의 반환값은 가린 사본, 요청자(`InteractionOutcome.response`)는 원문.
+- `NodeContext` satisfies `InteractivePort`. Backends open requests only when `isinstance(sink, InteractivePort)`.
+- The engine does not know kind names. Kinds are looked up in `registries.interaction_kinds` (`UnknownExtensionError` if absent),
+  and responses are validated against the response schema (request value > descriptor default) (`ResponseValidationError.issues`, the ac-graph validator).
+  Grants (`start(interaction_grants=)`, `ctx.interaction_grant`) are used only as time limit defaults and do not enforce kinds.
+- State: the first request → NodeRun `waiting` (`node.waiting`, `wait.reason` = the kind, `wait.data.interaction_ids`), and the concurrency slot is given back.
+  When all open requests are closed, the slot is taken again → `node.resumed{waited_ms}` → the result goes to the requester. One node can open several requests.
+  When there are no running or queued nodes and some nodes are waiting, the Run is `waiting` (`run.waiting`), and `run.resumed` when it moves again.
+- Events: `interaction.requested{interaction}` · `interaction.answered{interaction_id, kind, answered_by, response_preview}` ·
+  `interaction.closed{interaction_id, kind, status, reason}`. `interaction.*` is a prefix reserved for the engine.
+- Response races: the one that started closing first in memory + a conditional update in the store. The loser gets `InteractionClosedError(interaction)`.
+  Requests of finished Runs or other processes are checked in the store and raise `InteractionClosedError`/`UnknownInteractionError`.
+- Time limits: request `timeout_seconds` and `on_timeout` > grant > `interaction_settings` (`start(...)` > constructor) > unlimited with `expire`.
+  `expire` → `expired(timeout)`; `cancel_run` → `cancelled(timeout)` and then the Run is cancelled (reason `interaction_timeout`).
+  Timers use the injected `clock` and `sleep` (`testing.ManualClock`).
+- Closing: Run cancellation → `cancelled(cancelled)` (closed before the grace period so the node can receive the result and clean up);
+  the node ends while waiting → `cancelled(node_finished)`; restart → `recover_unfinished_runs` gives `expired(interrupted)`.
+- Secrets: stored copies, events, and the return values of `respond`/`pending` are masked copies; the requester (`InteractionOutcome.response`) gets the original.
 
-## 끊긴 실행 이어 가기
+## Resuming interrupted runs
 
 - `GraphRuntime.start(graph, input, seed={노드: 입력}, resumed_from=원래_run_id, origin="resume")`:
-  입구 주입 없이 seed 노드를 그 입력으로 시작한다. seed 노드의 상류(흐름 엣지를 거슬러 닿는 노드)는
-  실행하지 않고 `node.skipped`(payload `reason = "resumed"`, `SkipReasons.RESUMED`)로 남기며, 하류는 평소처럼
-  이어진다. seed 노드가 스케줄 대상이 아니면 `GraphValidationError`(`seed_not_scheduled`). 엔진은 노드
-  이름을 모르고, 다시 실행해도 되는지(디스크립터 `rerunnable`)는 호출자가 검사한다.
-- 순수 함수: `resume_options(run, node_runs, events, graph=, node_types=)`(끊긴 노드 + 끊기기 직전 상태 +
+  starts the seed nodes with those inputs, without entry injection. Upstream nodes of the seed nodes (nodes reached by following flow edges backward)
+  are not run and are left as `node.skipped` (payload `reason = "resumed"`, `SkipReasons.RESUMED`), and downstream continues
+  as usual. If a seed node is not a scheduled node, `GraphValidationError` (`seed_not_scheduled`). The engine does not know node
+  names; whether a node may run again (descriptor `rerunnable`) is checked by the caller.
+- Pure functions: `resume_options(run, node_runs, events, graph=, node_types=)` (interrupted nodes + the state right before the interruption +
   `rerunnable`), `resume_issues(options, node_ids)`, `resume_seed(node_runs, node_ids)`, `interrupted_status`.
 - `ResumeService(runs, events, graph_of=, node_types=, starter=)`: `options(run_id)`, `await resume(run_id,
-  node_ids)`. 끊긴 Run이 아님·자식 Run(`root_run_id`가 있음 — 루트를 이어 가면 부른 노드가 자식을 새로
-  만든다)·이미 이어 감(`runs.list(resumed_from=)`)·당시 팀 구성 없음은
-  `RunNotResumableError`(409 `run_not_resumable`), 고를 수 없는 노드는 `GraphValidationError`(노드별 이슈).
-  새 Run을 어떻게 시작할지(대화 턴인지 등)는 주입한 `starter`가 정한다.
-- 한계: 저장된 입력은 `NodeRun.inputs`(포트마다 첫 값)라 엣지별 값(`ctx.incoming`)은 비어 있다.
+  node_ids)`. Not an interrupted Run, a child Run (has `root_run_id`; resuming the root makes the calling node create a new child),
+  already resumed (`runs.list(resumed_from=)`), or the team at that time is missing: all raise
+  `RunNotResumableError` (409 `run_not_resumable`); nodes that cannot be chosen raise `GraphValidationError` (issues per node).
+  How to start the new Run (whether it is a conversation turn and so on) is decided by the injected `starter`.
+- Limitation: the saved input is `NodeRun.inputs` (the first value per port), so per-edge values (`ctx.incoming`) are empty.
 
-## 비밀 값 처리
+## Handling secret values
 
-- 노드는 `ctx.secrets.resolve(...)`로 비밀을 해석한다. 해석기는 해석한 값을 기억한다.
-- **저장되는 모든 기록**(Run, NodeRun의 inputs·outputs·error, 상호작용, RunEvent)은 저장 경로 한 곳
-  (`RunJournal.save`/`event`)에서 해석한 값을 `[REDACTED]`로 가린 사본으로 저장·발행된다.
-  `wait()`가 돌려주는 최종 Run도 가린 사본이다.
-- `SecretResolver(providers, *, min_redact_chars=4, extra_redact=None)`: `extra_redact(text) -> text`를 주면 해석한
-  비밀을 가린 뒤 모든 문자열에 한 번 더 건다(해석하지 않은 평문 토큰 가림). 엔진은 의심 규칙을 모른다 —
-  서버가 `ac-secret-rules`의 `redact_suspected`를 넣고, 워크스페이스 설정 `secrets.redact_suspected_in_logs`로 끈다.
-- `min_redact_chars`(기본 4)보다 짧은 비밀 값은 정상 텍스트를 훼손하므로 가리지 않는다. 대신 해석 시 그 **이름**으로
-  경고 로그를 한 번 남긴다(값은 남기지 않는다).
-- `Run.input`도 가린 사본으로 저장된다. 입력에 비밀과 같은 문자열이 있으면 저장본(과 `wait()`의 Run)은 원문과 다르다.
-- 하류 노드로 넘어가는 값(엣지 전달 값)은 엔진 메모리 안에만 있으므로 가리지 않는다(노드가 원래 값을 써야 한다).
-- 한계: 가리기는 **이 해석기로 해석한 값**에만 적용된다. 해석 전(또는 다른 경로로 얻은) 비밀, 해석 전에 이미 기록된 값,
-  변형된 값(인코딩·일부 잘림)은 가릴 수 없다. 백엔드는 공급자 원시 메시지(`raw`)에서 자체 마스킹도 해야 한다.
-- **해석 전 입력은 가려지지 않는다**: 사용자가 Run 입력(콘솔 입력·`POST /runs`의 `input`)에 비밀 값을 직접 쓰면,
-  그 값을 해석기가 아직 `secret://`로 해석한 적이 없으면 모르는 값이므로 그대로 저장·표시된다.
-  (`GraphRuntime(secrets=…)`로 해석기를 공유하고 같은 값이 이미 해석된 뒤라면 가려진다.)
-- **`secret://`는 문자열 전체가 참조일 때만 해석된다**: `"secret://API_KEY"`는 값으로 바뀌지만
-  `"Bearer secret://API_KEY"`처럼 다른 글자와 섞인 문자열은 해석하지 않고 그대로 둔다.
+- Nodes resolve secrets with `ctx.secrets.resolve(...)`. The resolver remembers resolved values.
+- **Every stored record** (Runs, NodeRun inputs, outputs, and errors, interactions, RunEvents) is stored and published as a copy with resolved values masked as `[REDACTED]`
+  at the single storage path (`RunJournal.save`/`event`).
+  The final Run that `wait()` returns is a masked copy too.
+- `SecretResolver(providers, *, min_redact_chars=4, extra_redact=None)`: with `extra_redact(text) -> text`, after resolved
+  secrets are masked, it is applied once more to every string (masking unresolved plain-text tokens). The engine does not know suspicion rules;
+  the server plugs in `redact_suspected` from `ac-secret-rules`, and the workspace setting `secrets.redact_suspected_in_logs` turns it off.
+- Secret values shorter than `min_redact_chars` (default 4) would damage normal text, so they are not masked. Instead, a warning log with the secret's **name**
+  is written once when it is resolved (the value is never logged).
+- `Run.input` is stored as a masked copy too. If the input contains a string equal to a secret, the stored copy (and the Run from `wait()`) differs from the original.
+- Values passed to downstream nodes (edge values) live only in engine memory, so they are not masked (nodes need the original values).
+- Limitation: masking applies only to **values resolved by this resolver**. Secrets before resolution (or obtained another way), values recorded before resolution,
+  and transformed values (encoded, partly cut) cannot be masked. Backends must also mask the provider's raw messages (`raw`) themselves.
+- **Inputs before resolution are not masked**: if the user writes a secret value directly into a Run input (console input, `input` of `POST /runs`),
+  and the resolver has never resolved that value through `secret://`, it is an unknown value and is stored and shown as is.
+  (If the resolver is shared through `GraphRuntime(secrets=…)` and the same value has already been resolved, it is masked.)
+- **`secret://` is resolved only when the whole string is a reference**: `"secret://API_KEY"` becomes the value, but
+  a string mixed with other text such as `"Bearer secret://API_KEY"` is not resolved and stays as is.
 
-## 저장소 실패 시 동작
+## Behavior on store failures
 
-- 기록이 실패하면 그 Run의 이후 기록은 버려지고(저장되지 않은 이벤트는 발행하지도 않는다) 실행이 끝난다.
-- `handle.wait()`/`runtime.run()`은 `RecorderError`(원인은 `__cause__`)를 던진다. `start()` 중 실패하면 `start()`가 던진다.
-- 저장소의 Run은 마지막으로 저장된 상태(보통 `running`)로 남는다. 다음 서버 시작 때 `recover_unfinished_runs`가 `interrupted`로 정리한다.
-- 아무도 `wait()`하지 않아도 엔진이 태스크 예외를 회수해 로그로 남긴다("Task exception was never retrieved" 없음).
+- When recording fails, later records of that Run are discarded (events that were not saved are not published either) and the run ends.
+- `handle.wait()`/`runtime.run()` raise `RecorderError` (the cause in `__cause__`). If it fails during `start()`, `start()` raises.
+- The Run in the store stays in its last saved state (usually `running`). At the next server start, `recover_unfinished_runs` cleans it up as `interrupted`.
+- Even if nobody calls `wait()`, the engine retrieves task exceptions and logs them (no "Task exception was never retrieved").
 
-## 프로세스 그룹 유틸
+## Process group utilities
 
-`process_group_kwargs()`로 시작한 하위 프로세스를 `terminate_process_group(popen)` / `await aterminate_process_group(proc)`로
-그룹째 종료한다(POSIX: SIGTERM → 유예 → SIGKILL, Windows: CTRL_BREAK → 유예 → `taskkill /T /F`). agent_bench `terminate` 이식.
+Child processes started with `process_group_kwargs()` are terminated as a group with `terminate_process_group(popen)` / `await aterminate_process_group(proc)`
+(POSIX: SIGTERM → grace → SIGKILL; Windows: CTRL_BREAK → grace → `taskkill /T /F`). Ported from agent_bench `terminate`.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-runtime`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-runtime`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-runtime/tests
 ```
 
-테스트는 `agent_console_runtime.testing`의 테스트 전용 `t.*` 노드·엣지 타입만 등록해 엔진이 특정 타입을 모름을 확인한다.
-입구·답변·위임 타입(`t.user`·`t.res`·`t.lead`, `t.entry`·`t.exit`·`t.tie`·`t.call`, 위임 방식 `t.inline`)은
-`register_scheduling_types(registries)`로 아무 레지스트리 묶음(실제 플러그인으로 조립한 스택 포함)에 넣을 수 있고,
-호출 NodeRun 타입(연결 `t.invoke`, 위임 방식 `t.invoker` — `ctx.invoke_node`로 대상 실행, 위임자 config `calls`·`parallel`·`max_depth`)은
-`register_invocation_types(registries)`로, 자식 Run 노드 `t.nest`(config `graph`·`version`·`input_key`)는
-`register_child_types(registries)`로 넣는다(`make_registries`는 모두 넣는다).
-`graph(..., entries=[...])`·`with_entries(graph, entry(dst, key=...))`로 입구를 명시한 테스트 그래프를 만든다.
-`agent_console_runtime.testing`(메모리 recorder, `StepClock`, `SequentialIds`)은 플러그인 테스트에서도 쓸 수 있다.
-백엔드 어댑터 테스트용 sink는 `agent_console_runtime.testing_sink` 한 곳에 있다: `ValidatingSink`(계약 검증·하위 경로 검사),
-`ListeningSink`(+ `SubagentResultListener` 기록), `InteractiveSink`(+ `InteractivePort`, 응답 함수). fake·claude-sdk의 `testing`은 이것을 다시 내보낸다.
+Tests register only the test-only `t.*` node and edge types from `agent_console_runtime.testing` to check that the engine knows no specific type.
+The entry, reply, and delegation types (`t.user`, `t.res`, `t.lead`, `t.entry`, `t.exit`, `t.tie`, `t.call`, delegation strategy `t.inline`)
+can be added to any registry bundle (including a stack assembled from real plugins) with `register_scheduling_types(registries)`;
+the call NodeRun types (edge `t.invoke`, delegation strategy `t.invoker`, which runs targets with `ctx.invoke_node`; delegator config `calls`, `parallel`, `max_depth`)
+with `register_invocation_types(registries)`; and the child Run node `t.nest` (config `graph`, `version`, `input_key`)
+with `register_child_types(registries)` (`make_registries` adds them all).
+Build test graphs with explicit entries using `graph(..., entries=[...])` and `with_entries(graph, entry(dst, key=...))`.
+`agent_console_runtime.testing` (in-memory recorder, `StepClock`, `SequentialIds`) can be used in plugin tests too.
+Sinks for backend adapter tests live in one place, `agent_console_runtime.testing_sink`: `ValidatingSink` (contract validation and subpath checks),
+`ListeningSink` (+ recording `SubagentResultListener`), `InteractiveSink` (+ `InteractivePort`, a response function). The `testing` modules of fake and claude-sdk re-export them.

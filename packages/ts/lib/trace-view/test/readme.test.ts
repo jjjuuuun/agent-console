@@ -4,9 +4,9 @@ import { expect, test } from "vitest";
 // readme:start
 import { formatDuration } from "@agent-console/trace-view";
 
-const text = formatDuration(125, { s: "초", m: "분", h: "시간" });
+const text = formatDuration(125, { s: "s", m: "m", h: "h" });
 // readme:end
 
 test("README 예제가 실제로 돈다", () => {
-  expect(text).toBe("2분 5초");
+  expect(text).toBe("2m 5s");
 });

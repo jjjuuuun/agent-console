@@ -294,7 +294,7 @@ def test_warnings_for_unknown_ids_and_bad_bindings() -> None:
     text = " | ".join(assembly.warnings)
     assert "mod-zzz" in text
     assert "mod-nope" in text
-    assert "설정을 받지 않습니다" in text
+    assert "takes no settings" in text
     assert assembly.report[0].active
 
 

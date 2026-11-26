@@ -1,20 +1,20 @@
 # @agent-console/virtual-rows
 
-가상 스크롤 행 훅(@tanstack/react-virtual 어댑터). 의존: @tanstack/react-virtual(검증된 가상 스크롤, 대안: 직접 구현·react-window).
+A virtual-scroll row hook (an adapter over @tanstack/react-virtual). Dependency: @tanstack/react-virtual (proven virtual scrolling; alternatives: a custom implementation, react-window).
 
-## 설치
-저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+## Installation
+Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
-npm install ./agent-console-<이름>-0.1.0.tgz
+npm install ./agent-console-<name>-0.1.0.tgz
 ```
 
-## 최소 사용
+## Minimal usage
 ```ts readme
 import { useRef } from "react";
 import { useVirtualRows } from "@agent-console/virtual-rows";
 
-// 목록 컴포넌트 안에서: 스크롤 컨테이너 ref와 행 수·행 높이를 주고, 보이는 행만 그린다.
+// Inside a list component: pass the scroll container ref, the row count, and the row height, then render only the visible rows.
 export function useRows(count: number) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualRows({ count, rowHeight: 32, scrollRef });
@@ -22,9 +22,9 @@ export function useRows(count: number) {
 }
 ```
 
-`items`의 각 항목은 `index`·`start`(px)·`size`(px)를 가진다. 높이는 숫자 또는 행 번호 → 높이 함수이고, 함수가 돌려주는 값이 바뀌면 `measureKey`를 바꿔 알린다. `keepIndex`는 화면 밖이어도 DOM에 남길 행(포커스)이다. 뷰포트 높이를 읽을 수 없으면 `fallbackHeight`(기본 480)로 첫 화면 분량을 그린다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
+Each entry in `items` has `index`, `start` (px), and `size` (px). The row height is a number or a function from row index to height; when the values the function returns change, change `measureKey` to tell the hook. `keepIndex` is a row that stays in the DOM even when it is off screen (for focus). When the viewport height cannot be read, the hook renders one screenful of rows using `fallbackHeight` (default 480). This block must match `test/readme.test.ts`.
 
-## 개발·재사용
-- `pnpm build` · `pnpm typecheck` · `pnpm lint` · `pnpm test`는 이 폴더 안에서 단독으로 돈다.
-- 공개 API는 `exports`에 적힌 경로뿐이다. 다른 패키지는 `src/`·`dist/`를 직접 import하지 않는다.
-- 저장소 밖으로 복사해도 되는지는 `pnpm portability --package @agent-console/virtual-rows`로 확인한다.
+## Development and standalone reuse
+- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm test` each run on their own inside this folder.
+- The public API is only the paths listed in `exports`. Other packages do not import `src/` or `dist/` directly.
+- To check that the package still works when copied out of the repository, run `pnpm portability --package @agent-console/virtual-rows`.

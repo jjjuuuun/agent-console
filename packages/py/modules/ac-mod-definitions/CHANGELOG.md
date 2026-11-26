@@ -2,6 +2,12 @@
 
 ## 미출시
 
+- I.6: `PRESETS_REMOVED_REASON` is English (`The presets feature was removed. Delete this key from the settings file`); the host prints it to the terminal when it refuses to start.
+- P1.16: `server.warnings`가 공통 설정의 옛 최상위 `default_backend`(1.1.0부터 읽지 않음)도 info `settings.ignored_key`로
+  안내한다 — `details = {key: "default_backend", replacement: "agent_defaults.backend"}`, 문구 `RENAMED_SETTINGS_MESSAGE`.
+  새 위치 표 `RENAMED_SETTINGS_KEYS`(옛 키 → 새 위치, 계약 `IGNORED_SETTINGS_KEYS`에 아직 없는 키도 찾고 겹치면 한 번)와
+  `ignored_settings_issues(..., renamed=, renamed_message=)` 선택 인자. 서버 시작·읽기·저장은 막지 않고, 파일의 키를 지우지 않는다.
+
 - REL.14: `server.warnings`에 공통 설정(`settings.yaml`)의 옛 최상위 키(계약 `IGNORED_SETTINGS_KEYS` 중 점 없는 것, 지금은 `projects`) 안내 — info `settings.ignored_key`(`details.key`, 문구 `IGNORED_SETTINGS_MESSAGE`). 읽기·저장·서버 시작은 막지 않는다. 섹션 아래 키(`logs.projects`)는 그 섹션을 읽는 `mod-logs`가 낸다. `ignored_settings_issues(settings, *, message=)` 공개.
 - FU.3: 공간(`?project=`) 저장 전 검사는 검사의 선택 메서드 `space_issues(space, kind, document)`(`SpaceDefinitionCheck`)를 부른다. 없는 검사는 지금처럼 `issues`.
 - 요청 11/07: 공간(`?project=`) 팀 구성 목록도 `validation` 요약을 채운다. `graphs.validation` 제공자의 선택 메서드 `space_summaries(space, graph_ids, lookup=)`(`SpaceGraphValidationSource`)를 부르고, 없으면 지금처럼 null(라이브러리 `summaries`는 부르지 않는다). `DefinitionService(space=)` 선택 인자.

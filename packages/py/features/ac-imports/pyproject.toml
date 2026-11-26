@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-numbered-id>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-claude-format>=0.1,<0.2",
@@ -27,7 +27,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "mypy>=1.11",
     "ruff>=0.6",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
 ]
 
 # 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
@@ -55,10 +55,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.import-source]
-title = "가져오기 출처"
+title = "Import source"
 area = "transfer"
 design_id = "X16"
-summary = "바깥 설정·파일을 읽어 정의로 가져오는 출처(공장)를 더한다"
+summary = "Adds a source (factory) that reads outside settings or files and imports them as definitions"
 registration = { kind = "entry-point", group = "agent_console_imports:IMPORT_SOURCES_GROUP" }
 interface = ["agent_console_imports:ImportSource", "agent_console_imports:ImportSourceFactory", "agent_console_imports:ImportItem"]
 example = { kind = "package", path = "examples/extensions/agent-console-example-transfer" }

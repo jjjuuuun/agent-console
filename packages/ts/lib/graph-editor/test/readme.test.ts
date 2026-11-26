@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
 
-// README "최소 사용"의 ```ts readme 블록과 아래 표시 구간이 같아야 한다(`pnpm pkg-lint`가 검사).
+// The ```ts readme block in the README "Minimal usage" section must match the marked range below (`pnpm pkg-lint` checks it).
 // readme:start
 import { categoryColorSlot, categoryColorVar } from "@agent-console/graph-editor";
 
-// 노드 분류(category) 문자열 -> 분류색 슬롯. 같은 문자열은 언제나 같은 색이다.
+// Node category string -> category color slot. The same string always gets the same color.
 const slot = categoryColorSlot("review");
 const cssVar = categoryColorVar("review");
 // readme:end

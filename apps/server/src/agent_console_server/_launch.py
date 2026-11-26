@@ -152,20 +152,22 @@ def announce_when_ready(
         clock=clock,
     ):
         if not stop.is_set():
-            _log.warning("준비 신호를 %.0f초 안에 받지 못했습니다", settings.web.open.wait_seconds)
+            _log.warning(
+                "The server was not ready within %.0f seconds", settings.web.open.wait_seconds
+            )
         return None
     port = bound_port(server, settings.port)
-    _log.info("준비됨: %s (준비 신호 GET /api/v1/health)", server_url(settings, port))
+    _log.info("Ready: %s (readiness check: GET /api/v1/health)", server_url(settings, port))
     if opener is None:
         return None
     url = open_url(settings, port)
     if url is None:
-        _log.warning("열 주소가 없습니다: web.serve_static을 켜거나 web.open.url을 지정하세요")
+        _log.warning("No URL to open. Turn on web.serve_static or set web.open.url")
         return None
     try:
         opener(url)
     except Exception as exc:  # 열기 실패는 서버를 멈추지 않는다
-        _log.warning("웹 화면을 열지 못했습니다: %s", exc.__class__.__name__)
+        _log.warning("Couldn't open the web app: %s", exc.__class__.__name__)
         return None
     return url
 

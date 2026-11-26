@@ -49,6 +49,8 @@ ALLOWED_IMPORTS: dict[str, set[str]] = {
     "common": set(),
     "resources": {"common"},
     "logs": {"common"},
+    # 0.16.0(design §I18N.7): i18n도 같은 층이고 common만 쓴다(다른 하위 모듈은 i18n을 모른다)
+    "i18n": {"common"},
     "definitions": _BELOW_DEFINITIONS,
     "runs": _BELOW_DEFINITIONS | {"definitions"},
     "usage": _BELOW_DEFINITIONS | {"definitions"},
@@ -114,6 +116,7 @@ def test_contract_versions_cover_every_submodule() -> None:
         "memory",
         "sdd",
         "wiki",
+        "i18n",
     }
     for version in CONTRACT_VERSIONS.values():
         major, minor, patch = version.split(".")

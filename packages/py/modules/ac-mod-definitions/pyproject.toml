@@ -7,9 +7,9 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "agent-console-graph>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "pydantic>=2.9",
@@ -63,16 +63,16 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-ports = [
-    { port = "definitions.save_warnings", reason = "정의 모듈이 저장 응답의 평문 비밀 경고 계산을 리소스 모듈에 주는 모듈 사이 통로(구현은 이 모듈 하나)" },
-    { port = "definitions.lookup", reason = "정의 모듈이 다른 기능 모듈·연동에 주는 정의 읽기 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
-    { port = "definitions.store", reason = "정의 모듈이 다른 기능 모듈에 주는 정의 저장소 통로(구현은 이 모듈 하나). 저장소를 바꾸는 확장은 definition-store 지점" },
-    { port = "definitions.spaces", reason = "프로젝트 모듈이 공간 이름 → 정의 저장소를 기능 모듈에 주는 모듈 사이 통로" },
-    { port = "definitions.checks", reason = "기능 모듈·연동이 저장 전 정의 검사를 정의 모듈에 보태는 모듈 사이 다중 통로. 새 정의 종류의 검사는 definition-kind-contribution 지점" },
-    { port = "definitions.dependencies", reason = "팀 구성 연동이 정의 사이 의존을 계산해 주는 모듈 사이 통로(구현은 그 연동 하나)" },
-    { port = "definitions.usages", reason = "팀 구성 연동이 정의가 붙은 곳을 리소스 모듈에 주는 모듈 사이 통로(구현은 그 연동 하나)" },
-    { port = "graphs.entry_labels", reason = "팀 구성 연동이 팀 구성 입구 이름을 정의 모듈에 주는 모듈 사이 통로" },
-    { port = "graphs.session_summary", reason = "팀 구성 연동이 목록용 세션 집계를 정의 모듈에 주는 모듈 사이 통로" },
-    { port = "graphs.validation", reason = "실행-팀 구성 연동이 목록용 검증 요약을 정의 모듈에 주는 모듈 사이 통로" },
-    { port = "secrets.rules", reason = "정의 모듈이 지금 비밀 의심 규칙(사용자 설정)을 다른 모듈에 나눠 주는 통로. 비밀 값 출처를 더하는 확장은 secret-provider 지점" },
-    { port = "workspace.settings", reason = "정의 모듈이 지금 워크스페이스 설정을 다른 모듈에 나눠 주는 통로(구현은 이 모듈 하나)" },
+    { port = "definitions.save_warnings", reason = "Inter-module port through which the definitions module gives the resources module the plaintext secret warnings for save responses (this module is the only implementation)" },
+    { port = "definitions.lookup", reason = "Definition read port that the definitions module gives other feature modules and link modules (this module is the only implementation). To replace the store, use the `definition-store` extension point" },
+    { port = "definitions.store", reason = "Definition store port that the definitions module gives other feature modules (this module is the only implementation). To replace the store, use the `definition-store` extension point" },
+    { port = "definitions.spaces", reason = "Inter-module port through which the projects module gives feature modules the definition store for a space name" },
+    { port = "definitions.checks", reason = "Inter-module multi-provider port through which feature modules and link modules add pre-save definition checks to the definitions module. Checks for a new definition kind use the `definition-kind-contribution` extension point" },
+    { port = "definitions.dependencies", reason = "Inter-module port through which the teams link module computes dependencies between definitions (that link module is the only implementation)" },
+    { port = "definitions.usages", reason = "Inter-module port through which the teams link module tells the resources module where a definition is used (that link module is the only implementation)" },
+    { port = "graphs.entry_labels", reason = "Inter-module port through which the teams link module gives the definitions module the entry names of teams" },
+    { port = "graphs.session_summary", reason = "Inter-module port through which the teams link module gives the definitions module session totals for lists" },
+    { port = "graphs.validation", reason = "Inter-module port through which the runs and teams link module gives the definitions module validation summaries for lists" },
+    { port = "secrets.rules", reason = "Port through which the definitions module shares the current secret detection rules (user settings) with other modules. To add a place to look up secret values, use the `secret-provider` extension point" },
+    { port = "workspace.settings", reason = "Port through which the definitions module shares the current workspace settings with other modules (this module is the only implementation)" },
 ]

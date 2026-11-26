@@ -40,10 +40,10 @@ export function RollupPanel(p: RollupPanelProps) {
 
   const hasNote = useMemo(() => lines.some((l) => l.precision.length > 0 || l.costUsd !== undefined), [lines]);
   const cell = (l: RollupLine) => (
-    <>
+    <span className="usage-bar-note">
       {l.precision.length > 0 ? <Tag title={l.precision.join(" / ")}>{t.rollup.totalOnly}</Tag> : null}
       {l.costUsd !== undefined ? <Tag title={t.rollup.costSession}>{t.rollup.cost(String(l.costUsd))} · {t.rollup.costSession}</Tag> : null}
-    </>
+    </span>
   );
 
   return (

@@ -27,7 +27,8 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import logging
-from collections.abc import Callable, Iterable, Mapping, Sequence
+import re
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
@@ -36,6 +37,7 @@ from typing import Any, Protocol, runtime_checkable
 from agent_console_registry import LoadReport, Registry, load_plugins
 
 from ._database import DatabaseHandle
+from ._loading import MODULES_GROUP
 from ._services import Paths
 
 _log = logging.getLogger("agent_console_modkit.hostext")
@@ -67,7 +69,7 @@ SECRET_PROVIDERS_REGISTRY = "secret_providers"
 
 @dataclass(frozen=True)
 class PluginLoadContext:
-    """플러그인 로더가 받는 것.
+    """What a plugin loader receives.
 
     Attributes:
         registries: 레지스트리 묶음(``extension(name, validator=)``이 있다).
@@ -100,12 +102,12 @@ class PluginLoadContext:
 
 
 type PluginLoader = Callable[[PluginLoadContext], Iterable[tuple[str, LoadReport]]]
-"""플러그인 로더: 묶음에 로드하고 ``(보고 그룹, 보고)``를 돌려준다. 실패는 예외 대신 보고."""
+"""Plugin loader: loads into the bundle, returns ``(report group, report)``; reports failures."""
 
 
 @runtime_checkable
 class RegistryBundle(Protocol):
-    """레지스트리 묶음이 갖출 최소 모양."""
+    """The minimum shape a registry bundle must have."""
 
     def extension(self, name: str, *, validator: Any = None) -> Registry[Any]:
         """이름 붙은 레지스트리(없으면 만든다)."""
@@ -118,7 +120,7 @@ class RegistryBundle(Protocol):
 
 @dataclass
 class ExtensionRegistries:
-    """기본 레지스트리 묶음(공장 entry point가 없을 때). 이름 붙은 레지스트리만 있다."""
+    """Default registry bundle (no factory entry point). Holds named registries only."""
 
     extensions: dict[str, Registry[Any]] = field(default_factory=dict)
 
@@ -183,7 +185,11 @@ def _first_factory(
     chosen: Callable[..., Any] | None = None
     for ep in _entry_points(group, entry_points):
         if chosen is not None:
-            _log.warning("%s: 공장이 여럿입니다. 앞의 것을 쓰고 %s는 건너뜁니다", group, ep.name)
+            _log.warning(
+                "%s: more than one factory is installed; using the first and skipping %s",
+                group,
+                ep.name,
+            )
             reports.append(
                 (HOST_EXTENSIONS_REPORT_GROUP, LoadReport(_source(ep), "skipped", key=ep.name))
             )
@@ -205,6 +211,87 @@ def _installed_names(
     """설치된(또는 주입된) entry point 이름 전부(그룹 무관)."""
     found = entry_points if entry_points is not None else importlib.metadata.entry_points()
     return frozenset(ep.name for ep in found)
+
+
+def _all_entry_points(
+    entry_points: Iterable[importlib.metadata.EntryPoint] | None,
+) -> list[importlib.metadata.EntryPoint]:
+    """설치된(또는 주입된) entry point 전부(그룹 무관)."""
+    return list(entry_points if entry_points is not None else importlib.metadata.entry_points())
+
+
+def _normalized_dist(name: str) -> str:
+    """배포 이름 비교용 정규화(PEP 503: 대소문자·``-_.`` 차이 무시)."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _dist_name(ep: importlib.metadata.EntryPoint) -> str | None:
+    dist = getattr(ep, "dist", None)
+    name = getattr(dist, "name", None) if dist is not None else None
+    return name if isinstance(name, str) and name else None
+
+
+def _unknown_disabled_warning(
+    name: str,
+    known: Collection[str],
+    entry_points: Iterable[importlib.metadata.EntryPoint],
+    *,
+    modules_group: str = MODULES_GROUP,
+) -> str:
+    """``plugins.disabled``의 이름 ``name``이 어느 보고에도 없을 때의 경고 문장.
+
+    흔한 실수 두 가지를 알아보고 고칠 이름을 보인다.
+
+    - 설치된 **배포 이름**(예: ``my-console-ops``)이면 그 배포가 등록한 entry point 이름 가운데
+      ``known``(이번 로드 보고에 나온 이름 = ``plugins.disabled``가 받는 이름)에 있는 것.
+    - **서버 모듈 id**(``modules_group`` entry point 이름)이면 모듈은 ``modules.disabled``로 끈다는
+      안내와, 같은 배포의 플러그인 entry point 이름.
+
+    Args:
+        name: ``plugins.disabled``에 적힌 이름.
+        known: 이번 로드 보고의 key 집합(``plugins.disabled``가 받는 이름).
+        entry_points: 설치된(또는 주입된) entry point 전부. 배포 이름은 ``EntryPoint.dist``에서
+            읽는다(없으면 그 항목은 배포 대조에서 빠진다).
+        modules_group: 서버 모듈 entry point 그룹.
+
+    Returns:
+        사람이 읽는 한 문장(알아본 실수가 없으면 기본 경고만).
+    """
+    base = f"plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함)"
+    eps = list(entry_points)
+    modules = [ep for ep in eps if ep.group == modules_group and ep.name == name]
+    dists: set[str] = set()
+    hints: list[str] = []
+    if modules:
+        hints.append(
+            f"'{name}'은(는) 서버 모듈 id입니다. "
+            "모듈은 modules.disabled(또는 --disable-module)로 끕니다"
+        )
+        dists = {_normalized_dist(d) for ep in modules if (d := _dist_name(ep)) is not None}
+    else:
+        wanted = _normalized_dist(name)
+        if any((d := _dist_name(ep)) is not None and _normalized_dist(d) == wanted for ep in eps):
+            hints.append(
+                f"'{name}'은(는) 배포 이름입니다. plugins.disabled에는 entry point 이름을 적습니다"
+            )
+            dists = {wanted}
+    if dists:
+        candidates = sorted(
+            {
+                ep.name
+                for ep in eps
+                if ep.group != modules_group
+                and ep.name in known
+                and (d := _dist_name(ep)) is not None
+                and _normalized_dist(d) in dists
+            }
+        )
+        hints.append(
+            "이 배포의 entry point 이름: " + ", ".join(candidates)
+            if candidates
+            else "이 배포에는 plugins.disabled로 끌 수 있는 entry point가 없습니다"
+        )
+    return f"{base} — " + ". ".join(hints) if hints else base
 
 
 def _with_reason(
@@ -236,7 +323,9 @@ def load_host_plugins(
         enabled: 로드할 entry point 이름(모든 그룹 공통, 설정 ``plugins.enabled``). None = 전부.
         disabled: 로드하지 않을 이름(모든 그룹 공통, 설정 ``plugins.disabled``). ``enabled``보다
             우선한다. ``plugins.modules`` 플러그인이 등록한 key에도 같은 규칙이 걸린다. 어느
-            보고에도 나오지 않는 이름은 ``HostPlugins.warnings``에 경고로 남긴다.
+            보고에도 나오지 않는 이름은 ``HostPlugins.warnings``에 경고로 남긴다. 그 이름이 설치된
+            배포 이름이나 서버 모듈 id이면 경고에 그 배포의 entry point 이름(적을 이름)을
+            보인다.
         paths: 호스트 경로(로더에 넘긴다).
         modules: ``register(registries)`` 플러그인 경로(설정 ``plugins.modules``).
         options: 모듈 설정 원본(``modules.options``, 로더에 넘긴다).
@@ -295,16 +384,15 @@ def load_host_plugins(
     reports = [(group, _with_reason(r, requested, blocked)) for group, r in reports]
     for _, report in reports:
         if not report.ok:
-            _log.warning("플러그인 로드 실패: %s (%s)", report.source, report.error)
+            _log.warning("Couldn't load plugin: %s (%s)", report.source, report.error)
         elif report.reason is not None:
-            _log.info("플러그인 %s: %s (%s)", report.status, report.source, report.reason)
+            _log.info("Plugin %s: %s (%s)", report.status, report.source, report.reason)
     seen = {r.key for _, r in reports if r.key is not None}
-    warnings = [
-        f"plugins.disabled의 '{name}'은(는) 설치된 플러그인 이름이 아닙니다(무시함)"
-        for name in sorted(blocked - seen)
-    ]
-    for warning in warnings:
-        _log.warning("%s", warning)
+    unknown = sorted(blocked - seen)
+    found = _all_entry_points(entry_points) if unknown else []
+    warnings = [_unknown_disabled_warning(name, seen, found) for name in unknown]
+    for name in unknown:  # 웹(server-info) 문구는 한국어 원문 `warnings`, 터미널은 영어 한 줄
+        _log.warning("plugins.disabled: '%s' is not an installed plugin name (ignored)", name)
     return HostPlugins(registries=registries, reports=reports, warnings=warnings)
 
 
@@ -322,9 +410,12 @@ def open_host_database(
     factory = _first_factory(HOST_DATABASE_GROUP, entry_points, reports)
     for _, report in reports:
         if not report.ok:
-            _log.warning("DB 공장 로드 실패: %s (%s)", report.source, report.error)
+            _log.warning("Couldn't load the database factory: %s (%s)", report.source, report.error)
     if factory is None:
-        _log.warning("DB 공장(%s)이 설치되어 있지 않아 DB 없이 시작합니다", HOST_DATABASE_GROUP)
+        _log.warning(
+            "No database factory (%s) is installed; starting without a database",
+            HOST_DATABASE_GROUP,
+        )
         return None
     handle = factory(path)
     if not isinstance(handle, DatabaseHandle):

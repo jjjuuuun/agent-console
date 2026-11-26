@@ -43,7 +43,10 @@ DEFAULT_LOGS_MODULE = "mod-logs"
 
 app = typer.Typer(
     name=PROG_NAME,
-    help="Agent Console — 로컬 서버 실행, Claude Code 사용량 상태 줄, 로그 색인 관리.",
+    help=(
+        "Agent Console: run the local server, show Claude Code usage in the status line, "
+        "and manage the log index."
+    ),
     no_args_is_help=True,
     add_completion=False,
     pretty_exceptions_enable=False,
@@ -51,7 +54,7 @@ app = typer.Typer(
 
 logs_app = typer.Typer(
     name="logs",
-    help="로그 색인 관리(서버 없이 색인 파일을 직접 고친다).",
+    help="Manage the log index (edits the index file directly, without the server).",
     no_args_is_help=True,
     add_completion=False,
     pretty_exceptions_enable=False,
@@ -87,7 +90,7 @@ def _root(
             "--version",
             callback=_print_version,
             is_eager=True,
-            help="버전을 출력하고 끝낸다.",
+            help="Print the version and exit.",
         ),
     ] = False,
 ) -> None:
@@ -99,7 +102,10 @@ ConfigOption = Annotated[
     typer.Option(
         "--config",
         "-c",
-        help="서버 설정 파일(agent-console.yaml). 없으면 AGENT_CONSOLE_CONFIG → 현재 폴더.",
+        help=(
+            "Server settings file (agent-console.yaml). "
+            "Default: AGENT_CONSOLE_CONFIG, then the current folder."
+        ),
         show_default=False,
     ),
 ]
@@ -110,9 +116,10 @@ ConfigOption = Annotated[
     add_help_option=False,
 )
 def serve(ctx: typer.Context) -> None:
-    """서버를 실행한다(Ctrl-C로 종료). 옵션은 `agent-console serve --help`.
+    """Run the server (press Ctrl-C to stop). For options, run `agent-console serve --help`.
 
-    인자는 서버 명령행(`agent_console_server.main`)이 해석한다. 토큰은 출력하지 않는다.
+    The server command line (`agent_console_server.main`) reads the arguments. The API token is
+    never printed.
     """
     raise typer.Exit(run_serve(ctx.args, prog=f"{PROG_NAME} serve"))
 
@@ -124,7 +131,10 @@ def statusline(
         typer.Option(
             "--output",
             "-o",
-            help="브리지 파일 경로. 없으면 서버 설정 workspace의 .state/usage/statusline.json.",
+            help=(
+                "Bridge file path. Default: .state/usage/statusline.json in the workspace "
+                "from the server settings."
+            ),
             show_default=False,
         ),
     ] = None,
@@ -134,35 +144,39 @@ def statusline(
         typer.Option(
             "--label",
             metavar="WINDOW=TEXT",
-            help="창 id의 표시 이름(여러 번 가능). 없으면 기본 짧은 이름(5h·7d 등, 데이터).",
+            help=(
+                "Display name for a window id (repeatable). "
+                "Default: the built-in short names (5h, 7d, and so on)."
+            ),
             show_default=False,
         ),
     ] = None,
     template: Annotated[
         str,
         typer.Option(
-            help="창 하나의 틀. 자리: {label} {window} {percent} {resets_in} {resets_suffix}."
+            help=(
+                "Template for one window. Placeholders: "
+                "{label} {window} {percent} {resets_in} {resets_suffix}."
+            )
         ),
     ] = DEFAULT_STATUSLINE_TEMPLATE,
-    separator: Annotated[str, typer.Option(help="창 사이 구분자.")] = " · ",
-    empty: Annotated[str, typer.Option(help="보일 창이 없을 때의 문자열.")] = "",
+    separator: Annotated[str, typer.Option(help="Separator between windows.")] = " · ",
+    empty: Annotated[str, typer.Option(help="Text to print when there is no window to show.")] = "",
 ) -> None:
-    """Claude Code statusLine stdin JSON → 사용량 상태 줄 출력 + 브리지 파일(원자적 쓰기).
+    """Read Claude Code statusLine JSON on stdin and print a usage status line.
 
-    `~/.claude`를 읽거나 쓰지 않는다. statusLine 설정은 사용자가 직접 넣는다
-    (agent-console-usage README).
+    It also updates the bridge file (atomic write). This command never reads or writes
+    `~/.claude`; add the statusLine setting yourself (see the agent-console-usage README).
     """
     try:
         labels = parse_labels(label) if label else default_window_labels()
         template.format(label="", window="", percent="", resets_in="", resets_suffix="")
     except (ValueError, KeyError, IndexError) as exc:
-        typer.echo(f"{PROG_NAME}: 옵션 오류: {exc}", err=True)
+        typer.echo(f"{PROG_NAME}: invalid option: {exc}", err=True)
         raise typer.Exit(2) from None
     if output is None:
         if config is None and not os.environ.get(CONFIG_ENV):
-            typer.echo(
-                f"{PROG_NAME}: --output 또는 --config(또는 {CONFIG_ENV})가 필요합니다", err=True
-            )
+            typer.echo(f"{PROG_NAME}: give --output, or --config (or {CONFIG_ENV})", err=True)
             raise typer.Exit(2)
         try:
             output = server_state_dir(config) / DEFAULT_STATUSLINE_FILE
@@ -189,23 +203,26 @@ def logs_purge(
         Path | None,
         typer.Option(
             "--index",
-            help="색인 SQLite 파일을 직접 지정(서버 설정을 읽지 않는다).",
+            help="Log index SQLite file to use (the server settings are not read).",
             show_default=False,
         ),
     ] = None,
     source: Annotated[
         list[str] | None,
-        typer.Option("--source", help="이벤트 출처 id(여러 번 가능).", show_default=False),
+        typer.Option("--source", help="Event source id (repeatable).", show_default=False),
     ] = None,
     category: Annotated[
         list[str] | None,
-        typer.Option("--category", help="이벤트 범주 id(여러 번 가능).", show_default=False),
+        typer.Option("--category", help="Event category id (repeatable).", show_default=False),
     ] = None,
     before: Annotated[
         str | None,
         typer.Option(
             "--before",
-            help="이 시각보다 이른 이벤트만(epoch 초 또는 ISO 8601, 시간대 없으면 로컬).",
+            help=(
+                "Only events before this time "
+                "(epoch seconds or ISO 8601; local time if no time zone)."
+            ),
             show_default=False,
         ),
     ] = None,
@@ -213,34 +230,41 @@ def logs_purge(
         bool,
         typer.Option(
             "--rescan/--no-rescan",
-            help="범위 출처의 커서도 지워 다음 수집에서 다시 색인되게 한다.",
+            help=(
+                "Also clear the cursors of the matching sources "
+                "so the next collection indexes them again."
+            ),
         ),
     ] = True,
     dry_run: Annotated[
-        bool, typer.Option("--dry-run", help="지우지 않고 수만 센다(기본 동작).")
+        bool, typer.Option("--dry-run", help="Count only, delete nothing (the default).")
     ] = False,
-    yes: Annotated[bool, typer.Option("--yes", "-y", help="실제로 지운다.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Delete for real.")] = False,
     everything: Annotated[
-        bool, typer.Option("--all", help="범위 없이 색인 전체를 비운다(--yes와 함께).")
+        bool, typer.Option("--all", help="Clear the whole index, with no filter (use with --yes).")
     ] = False,
     module_id: Annotated[
         str,
-        typer.Option("--module-id", help="색인 위치를 읽을 로그 모듈 id(설정 modules.options)."),
+        typer.Option(
+            "--module-id",
+            help="Log module id whose index_path to read (settings modules.options).",
+        ),
     ] = DEFAULT_LOGS_MODULE,
 ) -> None:
-    """로그 색인에서 출처·범주·시각 범위의 행을 지운다. 원본 로그 파일은 그대로다.
+    """Delete log index rows by source, category, or time. The original log files are not changed.
 
-    기본은 지울 행 수만 센다. `--yes`가 있어야 지운다. 색인 위치는 `--index`, 없으면 서버 설정
-    (`--config`·`AGENT_CONSOLE_CONFIG`·현재 폴더)의 로그 모듈 `index_path` → 서버 DB 순이다.
-    분류 기본값이 바뀐 뒤 옛 이벤트를 다시 색인하려면 범위를 지우고 다시 수집한다.
+    By default this only counts the rows it would delete; add `--yes` to delete them. The index is
+    `--index`, or else the log module `index_path` from the server settings (`--config`,
+    `AGENT_CONSOLE_CONFIG`, or the current folder), or else the server database. To index old events
+    again after the classification defaults change, delete the range and collect again.
     """
     if dry_run and yes:
-        typer.echo(f"{PROG_NAME}: --dry-run과 --yes는 함께 쓸 수 없습니다", err=True)
+        typer.echo(f"{PROG_NAME}: --dry-run and --yes cannot be used together", err=True)
         raise typer.Exit(2)
     try:
         bound = parse_before(before) if before is not None else None
     except ValueError as exc:
-        typer.echo(f"{PROG_NAME}: 옵션 오류: {exc}", err=True)
+        typer.echo(f"{PROG_NAME}: invalid option: {exc}", err=True)
         raise typer.Exit(2) from None
     if index is None:
         try:
@@ -248,7 +272,7 @@ def logs_purge(
         except ServerConfigError as exc:
             typer.echo(f"{PROG_NAME}: {exc}", err=True)
             raise typer.Exit(2) from None
-    typer.echo(f"색인: {index}")
+    typer.echo(f"Index: {index}")
     code = run_purge(
         index,
         PurgeOptions(

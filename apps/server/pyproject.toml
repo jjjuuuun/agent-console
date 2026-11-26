@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-resources-core>=0.1,<0.2",
@@ -29,7 +29,7 @@ dependencies = [
     "agent-console-link-definitions-teams>=0.1,<0.2",
     "agent-console-link-exports-teams>=0.1,<0.2",
     "agent-console-mod-runs>=0.1,<0.2",
-    "agent-console-link-runs-teams>=0.1,<0.2",
+    "agent-console-link-runs-teams>=0.2,<0.3",
     "agent-console-link-runs-trace>=0.1,<0.2",
     "agent-console-link-runs-usage>=0.1,<0.2",
     "agent-console-mod-chat>=0.1,<0.2",
@@ -45,10 +45,10 @@ dependencies = [
     "agent-console-mod-memory>=0.1,<0.2",
     "agent-console-link-memory-runs>=0.1,<0.2",
     "agent-console-link-projects-memory>=0.1,<0.2",
-    "agent-console-mod-sdd>=0.1,<0.2",
+    "agent-console-mod-sdd>=0.2,<0.3",
     "agent-console-link-projects-sdd>=0.1,<0.2",
     "agent-console-link-runs-sdd>=0.1,<0.2",
-    "agent-console-mod-wiki>=0.1,<0.2",
+    "agent-console-mod-wiki>=0.2,<0.3",
     "agent-console-link-wiki-runs>=0.1,<0.2",
     "agent-console-link-projects-wiki>=0.1,<0.2",
     "fastapi>=0.115",
@@ -98,6 +98,6 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-ports = [
-    { port = "server.warnings", reason = "모듈이 서버 정보(GET /server-info) 경고를 보태는 호스트 통로 — 모듈 작성 공통 사항(서버 모듈 안내)으로 다룬다" },
-    { port = "server.attributes", reason = "모듈이 서버 정보(GET /server-info) 속성을 보태는 호스트 통로 — 모듈 작성 공통 사항(서버 모듈 안내)으로 다룬다" },
+    { port = "server.warnings", reason = "Host port through which modules add warnings to the server info (GET /server-info). It is covered as a common part of writing modules (the server module guide)" },
+    { port = "server.attributes", reason = "Host port through which modules add properties to the server info (GET /server-info). It is covered as a common part of writing modules (the server module guide)" },
 ]

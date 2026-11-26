@@ -50,6 +50,7 @@ from .copying import CopyService
 from .definitions import (
     combine_references,
     contribution_deleters,
+    contribution_open_roles,
     contribution_references,
     contribution_titles,
 )
@@ -347,6 +348,7 @@ class ProjectsModule:
             messages=cfg.messages,
             kind_info=lambda: library_kinds(reader(), ctx.ports(KIND_CONTRIBUTIONS)),
             kind_titles=lambda: contribution_titles(ctx.ports(KIND_CONTRIBUTIONS)),
+            kind_open_roles=lambda: contribution_open_roles(ctx.ports(KIND_CONTRIBUTIONS)),
             kind_deleters=lambda: contribution_deleters(ctx.ports(KIND_CONTRIBUTIONS)),
         )
         ctx.provide(PROJECTS_LOOKUP, manager)

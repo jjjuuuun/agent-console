@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-safe-regex>=0.1,<0.2",
     "jsonschema>=4.23",
@@ -66,10 +66,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.condition-operator]
-title = "조건 연산자"
+title = "Condition operator"
 area = "graph"
 design_id = "X22"
-summary = "조건 연결·조건 규칙에서 쓰는 비교 연산자를 더한다"
+summary = "Adds a comparison operator for condition edges and condition rules"
 registration = { kind = "entry-point", group = "agent_console_conditions:CONDITION_OPERATORS_GROUP" }
 interface = ["agent_console_conditions:ConditionOperator"]
 example = { kind = "package", path = "examples/extensions/agent-console-example-condition" }

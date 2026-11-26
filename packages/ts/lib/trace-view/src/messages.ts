@@ -1,3 +1,5 @@
+import ko from "./locales/ko.json";
+
 /** 위임 흐름 타임라인 문구. 앱이 `messages`로 덮어쓴다. */
 export interface TraceMessages {
   treeLabel: string;
@@ -41,46 +43,5 @@ export interface TraceMessages {
   groupHint: string;
 }
 
-export const defaultTraceMessages: TraceMessages = {
-  treeLabel: "위임 흐름",
-  empty: "위임 흐름이 없습니다 — 이 실행은 단일 에이전트로 처리되었습니다",
-  sameSession: "같은 세션",
-  separateSession: "별도 세션",
-  userWait: "사용자 대기 {duration}",
-  statusText: {
-    running: "실행 중",
-    succeeded: "완료",
-    completed: "완료",
-    failed: "실패",
-    waiting: "응답 대기",
-    skipped: "건너뜀",
-    cancelled: "취소됨",
-    pending: "대기",
-    queued: "대기열",
-    answered: "답함",
-    expired: "만료",
-    interrupted: "중단됨",
-  },
-  rowLabel: "{name}, {method}, {status}, {duration}",
-  running: "진행 중",
-  collapse: "접기",
-  expand: "펼치기",
-  showUserWait: "사용자 대기 포함",
-  follow: "끝 따라가기",
-  zoomIn: "확대",
-  zoomOut: "축소",
-  detailLabel: "상세",
-  closeDetail: "닫기",
-  tokensTotal: "{n} 토큰(총)",
-  tokensTitle: "총 토큰 {n}",
-  tokensUnit: "tok",
-  showMethodText: "방식 글자 표시",
-  units: { s: "초", m: "분", h: "시간" },
-  iterationSuffix: " #{n}",
-  callSuffix: " · 호출 {n}",
-  childRunTitle: "자식 실행 {id}",
-  groupSpanCount: "span {n}개",
-  openChildRun: "열기",
-  childRunLabel: "자식 실행",
-  groupHint: "Enter로 접고 펴기, Ctrl+Enter로 자식 실행 열기",
-};
+/** 기본 문구는 한국어(`locales/ko.json`). 영어는 `@agent-console/trace-view/locales/en`을 `messages`로 넘긴다. */
+export const defaultTraceMessages: TraceMessages = ko;

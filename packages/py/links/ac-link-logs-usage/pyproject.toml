@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-logs>=0.1,<0.2",
     "agent-console-usage>=0.1,<0.2",
@@ -64,5 +64,5 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 entry point 그룹(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-groups = [
-    { group = "agent_console.config_schemas", reason = "런타임 출처의 설정 스키마를 저장소 도구(설정 스키마 라벨 검사)에 알리는 개발용 목록. 서버는 읽지 않는다" },
+    { group = "agent_console.config_schemas", reason = "Development-only list that tells repository tools (the settings schema label check) about the settings schemas of runtime sources. The server does not read it" },
 ]

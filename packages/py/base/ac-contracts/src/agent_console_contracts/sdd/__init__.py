@@ -9,6 +9,9 @@
 흐름의 이름·단계·문서 종류·상태·역할은 전부 사용자 데이터이고 계약은 아무 이름도 모른다. 코드 개념은
 작업 필드 역할 셋(`KnownTaskFieldRoles`)뿐이다.
 
+1.4.0(0.16.0): 문서 틀 id 예약어 `SddInfo.reserved_template_ids`(서버 경로 어휘, 화면이 새 틀
+id 칸에서 미리 안내한다).
+
 1.3.0(0.14.9): 줄 머리 상태 문법 `TaskSyntax.status_pattern`·`status_format`·`field_format`,
 실행 결과로 문서 상태 바꾸기 `RunProfile.document_state_on`(`DocumentStateOnRun`).
 

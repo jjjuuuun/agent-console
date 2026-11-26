@@ -18,6 +18,7 @@ export const templateMessages = {
     advanced: "고급 (id, 설명)",
     id: "id",
     idAuto: "자동",
+    idReserved: "예약된 이름이라 쓸 수 없습니다. 다른 id를 입력하세요",
     description: "설명",
     submit: "만들기",
     submitting: "만드는 중…",
@@ -59,7 +60,7 @@ export const templateMessages = {
     noDocuments: "이 틀에는 문서가 없습니다. 규칙 탭에서 문서를 추가하면 여기에 연결됩니다.",
     loadFailed: "뼈대 파일을 불러오지 못했습니다",
   },
-  versions: { note: "이 틀은 버전 비교를 지원하지 않습니다. 되돌리기와 원문 보기만 됩니다." },
+  versions: { note: "이 서버는 문서 틀 버전 비교를 지원하지 않습니다. 되돌리기와 원문 보기만 됩니다." },
   delete: {
     title: (name: string) => `‘${name}’ 문서 틀을 삭제합니다`,
     body: "이미 만든 스펙에는 영향이 없습니다. 틀의 버전 기록에서 되살릴 수 있습니다.",

@@ -1,40 +1,40 @@
 # agent-console-architecture
 
-관측 구조도 순수 라이브러리. 로그 이벤트(계약 `LogEvent`)와 구조도 프로필(계약 `ArchitectureProfile`)을 받아
-칸·연결마다 횟수·오류·토큰·소요를 센 **그리기 완결형** `ArchitectureView`를 만든다.
+A pure library for the observed architecture map. It takes log events (contract `LogEvent`) and an architecture map profile (contract `ArchitectureProfile`)
+and builds a **self-contained, ready-to-draw** `ArchitectureView` that counts calls, errors, tokens, and duration for each cell and edge.
 
-- 칸·연결·범주·도구·출처 이름은 코드에 없다. 무엇을 셀지(`when`, 조건 데이터), 어디에 그릴지(좌표), 어떤 출처가
-  어떤 칸을 채우는지(`coverage`)는 전부 프로필 데이터다. 조건은 `agent-console-conditions`의 `ConditionSpec`.
-- 연결은 그 전달을 기록한 이벤트 하나가 조건에 맞을 때만 센다. 시간상 이웃은 잇지 않는다.
-  순서로만 아는 연결(`kind: structural`)은 지표가 없다.
-- 지표 상태는 `observed`(0 포함)·`inferred`(추정)·`not_collected`(값 null)다. **null을 0으로 채우지 않는다**.
-- 서버·웹·로그 색인 없이 단독으로 쓴다. `agent-console-logs`를 모른다: 오류 범주·출처 종류·토큰 표본은 인자다.
+- No cell, edge, category, tool, or source names are in the code. What to count (`when`, condition data), where to draw it (coordinates), and which source
+  fills which cell (`coverage`) are all profile data. Conditions are `ConditionSpec` from `agent-console-conditions`.
+- An edge is counted only when one event that recorded that hand-over matches its condition. Neighbors in time are not connected.
+  Edges known only by order (`kind: structural`) have no metrics.
+- Metric states are `observed` (including 0), `inferred` (estimated), and `not_collected` (value null). **Null is never filled with 0**.
+- You use it on its own, without the server, the web app, or a log index. It does not know `agent-console-logs`: error categories, source kinds, and token samples are arguments.
 
-공개 API(요지):
+Public API (summary):
 
-| 무엇 | 함수 |
+| What | Functions |
 | --- | --- |
-| 프로필 읽기 | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
-| 병합 | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)`는 없거나 0개여도 예외 없음) |
-| 검사 | `profile_issues(profile, *, operators, filters=None, profile_id=None, unlisted_paths=())`, `check_profile_data(data, ...)`, `unlisted_path_issues(profile, unlisted_paths)`(조건 경로가 주어진 접두 아래면 warning `architecture.condition_path_unlisted` — 접두는 호출자가 데이터로 준다, M-4) |
-| 투영 | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`events` = `LogEvent` 또는 그 JSON 행, `matches` = 미리 판정한 결과, 반복 투영 캐시용) |
-| 증분 투영 | `ArchitectureTally(profile, *, profile_id)`: `add_event(event, match)`·`add_row(row, match)`로 새 이벤트만 더하고 `view(source_kinds=, tokens=, notes=)`로 그린다(같은 이벤트를 한 번에 투영한 결과와 같다. 출처 종류는 `view` 인자라 바뀌어도 다시 세지 않는다. 소요 합은 `math.fsum`) |
-| 판정 | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`·`parse_arch` |
-| 플러그인 | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
-| 테스트 도구 | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile`(테스트 전용 합성 프로필 YAML), `load_sample(name)`(수집 결과 표본: 이벤트·토큰·출처 종류, `SAMPLES`) |
+| Read profiles | `load_default_profiles(path=None)`, `parse_profiles_document(text)`, `profiles_from_mapping(data)` |
+| Merge | `merge_profiles(defaults, plugins, user, *, include_defaults=None) -> ProfileCatalog` (`pick(requested)` does not raise even when nothing or zero profiles are requested) |
+| Validate | `profile_issues(profile, *, operators, filters=None, profile_id=None, unlisted_paths=())`, `check_profile_data(data, ...)`, `unlisted_path_issues(profile, unlisted_paths)` (warning `architecture.condition_path_unlisted` when a condition path is under one of the given prefixes; the caller passes the prefixes as data) |
+| Project | `project_architecture(events, profile, *, profile_id, operators, source_kinds, tokens, error_categories, max_seq, notes, matches)` (`events` = `LogEvent` or its JSON rows, `matches` = precomputed judgements, for caching repeated projections) |
+| Incremental projection | `ArchitectureTally(profile, *, profile_id)`: add only new events with `add_event(event, match)` and `add_row(row, match)`, and draw with `view(source_kinds=, tokens=, notes=)` (the same as projecting the same events at once. Source kinds are a `view` argument, so changing them does not recount. Duration sums use `math.fsum`) |
+| Judge | `ProfileMatcher`, `event_membership(...)`, `selector_predicate(profile, selector, *, profile_id, operators, matcher)`, `format_arch`, `parse_arch` |
+| Plugins | entry point `agent_console.architecture_profiles` → `load_profile_plugins(registry)`, `plugin_sources(registry)` |
+| Test tools | `agent_console_architecture.testing`: `make_event`, `make_events`, `rename_profile_ids`, `demo_profile` (a synthetic profile YAML for tests only), `load_sample(name)` (collected samples: events, tokens, source kinds, `SAMPLES`) |
 
-## 기본 프로필
+## Default profile
 
-패키지 기본 프로필 데이터는 `src/agent_console_architecture/data/default_architecture.yaml`의 프로필 하나
-`agent-architecture`다(칸 16·연결 21·영역 3).
-기능이 동작하는 데 필요한 기본값일 뿐이고 사용자 데이터다:
+The package's default profile data is one profile in `src/agent_console_architecture/data/default_architecture.yaml`,
+`agent-architecture` (16 cells, 21 edges, 3 areas).
+It is only a default the feature needs to work, and it is user data:
 
-- 끄기: 설정 `architecture.include_defaults: false`(전부) 또는 `architecture.profiles.agent-architecture: null`(이 프로필만)
-- 바꾸기: 같은 id로 프로필 전체를 다시 적는다(id 단위로 통째로 바뀐다). `load_default_profiles(path)`로 다른 파일을 기본으로 쓸 수도 있다.
-- 조건은 목록 질의가 주는 이벤트 본문만 본다(`detail`·`raw`는 쓰지 않는다). 범주·태그·도구 이름 틀은 기본 분류 데이터
-  (`ac-logs-claude` 분류기 설정, `ac-link-logs-runs` `run_event_map.yaml`)에 맞춘 값이라 분류 데이터를 바꾸면 함께 바꾼다.
-- 출처 종류별 수집 범위(`coverage`)와 출처 우선순위(`source_priority: [claude-code-jsonl, platform-runs]`)가 있다.
-  같은 실행을 플랫폼 기록과 세션 로그로 함께 읽어도 칸·연결마다 한 출처만 세므로 같은 도구 호출이 한 번만 세진다.
+- Turn off: setting `architecture.include_defaults: false` (all) or `architecture.profiles.agent-architecture: null` (this profile only)
+- Change: write the whole profile again with the same id (it is replaced as a whole per id). You can also use another file as the default with `load_default_profiles(path)`.
+- Conditions look only at the event body that list queries return (`detail` and `raw` are not used). The category, tag, and tool name patterns match the default classification data
+  (the `ac-logs-claude` classifier settings, `ac-link-logs-runs` `run_event_map.yaml`), so change them together if you change the classification data.
+- It has the collection range per source kind (`coverage`) and a source priority (`source_priority: [claude-code-jsonl, platform-runs]`).
+  Even when the same run is read from both platform records and session logs, each cell and edge counts only one source, so the same tool call is counted once.
 
 ```python
 >>> from agent_console_architecture import load_default_profiles, project_architecture
@@ -52,7 +52,7 @@
 
 ```
 
-수집이 이어지는 범위는 누적 집계에 새 이벤트만 더한다.
+For a range that keeps being collected, add only new events to the running tally.
 
 ```python
 >>> from agent_console_architecture import ArchitectureTally, ProfileMatcher
@@ -65,24 +65,24 @@ True
 
 ```
 
-판정기(`ProfileMatcher`)는 칸·연결 조건 중 "참이려면 반드시 참인 최상위 키 항목"(`ac-conditions`
-`necessary_items`)이 가장 많이 쓰는 키(예: `/category`) 값별로 맞을 수 없는 칸·연결을 미리 거르고, 같은 판정
-결과는 같은 객체를 나눠 쓴다(결과는 거르지 않을 때와 같다 — 차등 테스트).
+The matcher (`ProfileMatcher`) uses the "top-level key items that must be true" of cell and edge conditions (`ac-conditions`
+`necessary_items`) to filter out, per value of the most used key (for example `/category`), cells and edges that cannot match, and identical judgement
+results share one object (the result is the same as without filtering, checked by a differential test).
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what / why / alternatives
 
-- **ruamel.yaml**: 프로필 문서(YAML) 읽기. 저장소 표준 YAML 도구(확정 스택)라 새 의존이 아니다. 대안: PyYAML.
-- 사내: `agent-console-contracts`(모델), `agent-console-conditions`(조건 평가·검사, 연산자 확장),
-  `agent-console-registry`(플러그인 로딩).
+- **ruamel.yaml**: reads profile documents (YAML). It is the repository's standard YAML tool, so it is not a new dependency. Alternative: PyYAML.
+- Internal: `agent-console-contracts` (models), `agent-console-conditions` (condition evaluation and validation, operator extensions),
+  `agent-console-registry` (plugin loading).
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-architecture
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-architecture
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-architecture
 ```
 
-## 최소 사용: jsonl 이벤트 → 구조도
+## Minimal usage: jsonl events → architecture map
 
 ```python
 >>> import json
@@ -124,7 +124,7 @@ pip install agent-console-architecture
 
 ```
 
-칸을 누르면 이벤트 표를 거를 판정 함수가 같은 수를 고른다.
+Clicking a cell picks the same count with a judge function that filters the event table.
 
 ```python
 >>> keep = selector_predicate(profiles["flow"], work.selector, profile_id="flow", operators=operators)
@@ -133,15 +133,15 @@ pip install agent-console-architecture
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

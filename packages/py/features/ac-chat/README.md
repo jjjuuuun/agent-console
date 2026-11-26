@@ -1,74 +1,74 @@
 # agent-console-chat
 
-대화(채팅) 서비스. 팀 구성(그래프) 하나를 골라 이어 가는 대화를 만들고, 메시지마다 턴(Run)을 시작하고,
-턴 목록을 Run 기록에서 조립한다. 전송 계층(HTTP·WS·CLI), 저장소, 실행 엔진을 모른다.
+The conversation (chat) service. It creates an ongoing conversation on one chosen team (graph), starts a turn (Run) for each message,
+and assembles the turn list from Run records. It does not know the transport layer (HTTP, WS, CLI), the store, or the execution engine.
 
-- **대화 한 턴 = Run 하나.** 메시지를 따로 저장하지 않는다. 사용자 메시지 = Run 입력, 답변 = `run.reply` 이벤트,
-  되묻기·승인·검토 = 그 Run의 상호작용(`ChatTurn.interactions`).
-- **실행 중 새 메시지**: 유효 설정 `chat.busy_policy`(공통 → 팀 구성)가 `queue`면 대기열에 넣고 앞 턴이 끝나면 실행,
-  `reject`면 `ConversationBusyError`(409 `conversation_busy`). 응답 대기(`waiting`) 중인 턴도 실행 중이다.
-  대기열 항목은 `cancel_queued`로 취소한다.
-- **세션 이어 쓰기**: 턴이 끝나면 노드별 마지막 `agent.session_started`(`node_path == [노드]`)를 대화 `sessions`에
-  저장하고 다음 턴 `TurnStart.sessions`로 넘긴다. 쓸지 말지는 노드의 `session` 정책이 정한다.
-  팀 구성을 바꾸면(`update(graph_id=)`) 새 팀 구성에 없는 노드의 세션은 버린다. 무엇을 모으고 키를 어떻게
-  붙이는지는 `TurnSessions` 규칙(`collect`·`prune`)이 정한다. 기본 `RootRunSessions`는 위 규칙(턴 Run 자기
-  노드, 키 = 노드 id)이고, 중첩 실행(자식 Run)까지 이으려면 조립이 규칙을 주입한다(예:
-  `agent-console-link-chat-runs`의 `LineageSessions` — 경로 키 `"<팀 노드>/<자식 노드>"`).
-- **턴 마무리 순서**: 답변(`run.reply` — 엔진이 Run 종료 상태보다 먼저 저장) → 세션 기록 → 끝난 상태
-  공개 → 알림(`listener`). Run이 끝났어도 세션을 기록하기 전에는 `turns()`·`turn()`·요약 `last_status`가 그 턴을
-  `running`(종료 시각 없음)으로 보인다. 그래서 끝난 상태가 보이는 턴에는 답변이 모두 들어 있다.
-- **대화 제목**: 설정 `chat.title`이 `first_message`면 첫 메시지 앞 `ChatOptions.title_chars`(기본 40)자, `manual`이면 비워 둔다.
-- **요약**: `ConversationSummary.last_status`·`queued`·`pending_interactions`. 바뀔 때마다 `listener`를 부른다(서버가 WS
-  `conversation.updated`로 내보냄). 상호작용 상태가 바뀌면 앱이 `notify(conversation_id)`를 부른다.
-- **대기열 저장**: 대기열은 주입한 `QueueStore`에 있다(기본 `MemoryQueue`; 서버는
-  `agent_console_mod_chat.storage`의 대기열 저장소(SQLite)를 그대로 넘긴다). 실행 중 표시는 프로세스 메모리에 있다.
-  - 재시작 뒤 `await apply_restart_policy()`(시작 시 한 번): 유효 설정 `chat.queue_after_restart`가
-    `ask`(기본)면 모든 항목을 멈추고(`held`, 사유 `restart`), `run`이면 순서대로 실행, `drop`이면 지운다.
-  - 멈춘 맨 앞 항목은 뒤의 항목을 막는다(순서 보존). `await release_queued(대화, 항목)`으로 풀고
-    `cancel_queued`로 지운다. 쉬고 있는데 대기열이 남아 있으면 `queue` 정책의 새 메시지는 그 뒤에 선다.
-  - 종료 직전 `stop_dispatch()`(엔진을 멈추기 전): 끊기는 턴 뒤에 대기열을 꺼내지 않는다. `aclose()`는
-    대기열을 지우지 않는다.
-- **끊긴 턴 이어 가기**: `await resume_turn(run_id, graph=, seed=)` → 같은 대화의 새 턴(Run, `origin =
-  ChatOptions.resume_origin`(기본 `resume`), `resumed_from`, 입력은 원래 턴과 같음). 실행 중이면
-  `ConversationBusyError`, 대화의 마지막 턴이 아니면 `TurnNotResumableError`(409 `run_not_resumable`).
-  어떤 노드를 다시 실행해도 되는지는 호출자(`ac-runtime.ResumeService`)가 검사한다. `ChatTurn.resumed_from`.
+- **One conversation turn = one Run.** Messages are not stored separately. The user message = the Run input, the reply = `run.reply` events,
+  questions, approvals, and reviews = that Run's interactions (`ChatTurn.interactions`).
+- **New messages while running**: when the effective setting `chat.busy_policy` (common → team) is `queue`, the message is queued and runs after the previous turn ends;
+  when it is `reject`, `ConversationBusyError` (409 `conversation_busy`). A turn waiting for a reply (`waiting`) counts as running.
+  Cancel queued items with `cancel_queued`.
+- **Session continuation**: when a turn ends, the last `agent.session_started` per node (`node_path == [node]`) is saved in the conversation's `sessions`
+  and passed to the next turn as `TurnStart.sessions`. The node's `session` policy decides whether to use it.
+  When the team changes (`update(graph_id=)`), sessions of nodes that are not in the new team are discarded. What is collected and how keys are
+  built is decided by the `TurnSessions` rule (`collect`, `prune`). The default `RootRunSessions` is the rule above (the turn Run's own
+  nodes, key = node id); to continue nested runs (child Runs) too, the assembly injects a rule (for example
+  `LineageSessions` from `agent-console-link-chat-runs`, with path keys `"<team node>/<child node>"`).
+- **Turn completion order**: reply (`run.reply`, which the engine stores before the Run's final status) → session record → publish the finished status
+  → notify (`listener`). Even after the Run ends, until the session is recorded, `turns()`, `turn()`, and the summary `last_status` show that turn
+  as `running` (no end time). So a turn that shows a finished status has all its replies.
+- **Conversation title**: when the setting `chat.title` is `first_message`, the first `ChatOptions.title_chars` (default 40) characters of the first message; when it is `manual`, left empty.
+- **Summary**: `ConversationSummary.last_status`, `queued`, `pending_interactions`. `listener` is called on every change (the server sends it as WS
+  `conversation.updated`). When an interaction's status changes, the app calls `notify(conversation_id)`.
+- **Queue storage**: the queue lives in the injected `QueueStore` (default `MemoryQueue`; the server passes in
+  the queue store (SQLite) of `agent_console_mod_chat.storage`). The running indicator lives in process memory.
+  - After a restart, `await apply_restart_policy()` (once at startup): when the effective setting `chat.queue_after_restart` is
+    `ask` (default), every item is held (`held`, reason `restart`); `run` runs them in order; `drop` deletes them.
+  - A held first item blocks the items behind it (order is preserved). Release it with `await release_queued(conversation, item)`
+    and delete it with `cancel_queued`. If the conversation is idle but the queue is not empty, new messages under the `queue` policy line up behind it.
+  - Just before shutdown, `stop_dispatch()` (before stopping the engine): nothing more is taken from the queue after an interrupted turn. `aclose()` does not
+    delete the queue.
+- **Resuming interrupted turns**: `await resume_turn(run_id, graph=, seed=)` → a new turn in the same conversation (Run, `origin =
+  ChatOptions.resume_origin` (default `resume`), `resumed_from`, with the same input as the original turn). While running,
+  `ConversationBusyError`; if it is not the conversation's last turn, `TurnNotResumableError` (409 `run_not_resumable`).
+  Which nodes may run again is checked by the caller (`ac-runtime.ResumeService`). `ChatTurn.resumed_from`.
 
-## 주입 프로토콜
+## Injected protocols
 
 `ChatService(conversations, graphs, *, launcher=None, runs=None, events=None, interactions=None, settings=, listener=, clock=, ids=, options=, queue=)`.
-대화 저장소와 팀 구성 조회만 필수다. **실행 연결**(`launcher`·`runs`·`events`·`interactions`)은 선택이다.
+Only the conversation store and the team lookup are required. The **run connection** (`launcher`, `runs`, `events`, `interactions`) is optional.
 
-| 프로토콜 | 메서드 | 보통 넘기는 것 | 없으면 |
+| Protocol | Methods | What you usually pass | Without it |
 | --- | --- | --- | --- |
-| `ConversationRepository`(필수) | `get`, `save`, `delete`, `list(graph_id=, archived=)` | 저장소 대화 리포지토리 | — |
-| `GraphLookup`(필수) | `get_graph(graph_id)` | 정의 저장소 위 함수 하나 | — |
-| `ProjectGraphLookup`(선택 능력) | `get_project_graph(project_id, graph_id)` | 있으면 `project_id`가 있는 대화의 팀 구성은 그 프로젝트에서만 찾는다(가짜 `testing.MemoryProjectGraphs`) | 모든 대화가 `get_graph` |
-| `TurnLauncher` | `async start_turn(TurnStart) -> TurnHandle`, `cancel(run_id, reason)` | `GraphRuntime`을 감싼 얇은 어댑터(`TurnStart.sessions`를 노드 서비스로, `conversation_id`·`origin`을 Run에) | 전송·이어 가기 `ChatFeatureUnavailableError`, 대기열은 꺼내지 않고 남긴다 |
-| `TurnHandle` | `run_id`, `run`, `async wait()` | `GraphRuntime.start()`의 `RunHandle` 그대로 | — |
-| `RunReader` | `get`, `list(conversation_id=, limit=)`(최신순) | 저장소 Run 리포지토리 | 턴 목록이 비고 마지막 상태는 null |
-| `EventReader` | `list(run_id, since_seq=, limit=)` | 저장소 이벤트 리포지토리 | 답변·세션을 읽지 않는다 |
-| `InteractionReader` | `list(run_id=, conversation_id=, status=)` | 저장소 상호작용 리포지토리 | 턴의 상호작용이 비고 대기 수는 0 |
-| `TurnSessions` | `collect(run)`, `prune(sessions, node_ids)` | 실행 연동이 주는 세션 규칙 | 기본 `RootRunSessions(events)` |
+| `ConversationRepository` (required) | `get`, `save`, `delete`, `list(graph_id=, archived=)` | The store's conversation repository | — |
+| `GraphLookup` (required) | `get_graph(graph_id)` | One function over the definition store | — |
+| `ProjectGraphLookup` (optional capability) | `get_project_graph(project_id, graph_id)` | When present, the team of a conversation with a `project_id` is looked up only in that project (fake `testing.MemoryProjectGraphs`) | Every conversation uses `get_graph` |
+| `TurnLauncher` | `async start_turn(TurnStart) -> TurnHandle`, `cancel(run_id, reason)` | A thin adapter around `GraphRuntime` (`TurnStart.sessions` to the node services, `conversation_id` and `origin` to the Run) | Sending and resuming raise `ChatFeatureUnavailableError`; the queue is kept, not taken |
+| `TurnHandle` | `run_id`, `run`, `async wait()` | The `RunHandle` of `GraphRuntime.start()` as is | — |
+| `RunReader` | `get`, `list(conversation_id=, limit=)` (newest first) | The store's Run repository | The turn list is empty and the last status is null |
+| `EventReader` | `list(run_id, since_seq=, limit=)` | The store's event repository | Replies and sessions are not read |
+| `InteractionReader` | `list(run_id=, conversation_id=, status=)` | The store's interaction repository | Turn interactions are empty and the waiting count is 0 |
+| `TurnSessions` | `collect(run)`, `prune(sessions, node_ids)` | The session rule that the runs integration provides | The default `RootRunSessions(events)` |
 | `ChatSettingsResolver` | `(graph) -> ChatSettings` | `layered_chat_settings(lambda: workspace.chat)` |
-| `QueueStore`(선택) | `enqueue`·`get`·`list`·`remove`·`hold_all`·`release`·`pop_next`·`counts`·`clear` | `mod-chat`의 대기열 저장소(없으면 `MemoryQueue`) |
+| `QueueStore` (optional) | `enqueue`, `get`, `list`, `remove`, `hold_all`, `release`, `pop_next`, `counts`, `clear` | The queue store of `mod-chat` (`MemoryQueue` if absent) |
 
-`agent_console_chat.testing`에 위 프로토콜의 인메모리 예제 구현과 가짜 실행기(`FakeLauncher`)가 있다.
-조립 순서상 서비스를 먼저 만들고 실행 연결을 나중에 아는 조립기(서버 모듈)는 턴을 시작하기 전에
-`connect(launcher=, runs=, events=, interactions=, sessions=)`를 한 번 부른다(`can_send`로 전송 가능 여부를 본다).
+`agent_console_chat.testing` has in-memory example implementations of these protocols and a fake launcher (`FakeLauncher`).
+An assembler (server module) that has to create the service first and learns about the run connection later calls
+`connect(launcher=, runs=, events=, interactions=, sessions=)` once before starting turns (`can_send` tells whether sending is possible).
 
-선택 연결 `SessionContinuity`(`state`·`prepare`): 주면 `ChatService.session_states(id)`가 노드별 이어 가기 상태
-(`ConversationSessions`)를 보이고, 보내기 전에 기록이 없는 노드가 있으면 `SessionUnavailableError`(409 `chat.session_unavailable`,
-`details{conversation_id, node_ids}`), `on_missing_session: "fresh"`면 그 노드만 새 세션으로 시작한다. 보관 사본·옛 위치에서 복원한
-노드는 `TurnStart.session_notes`(`archived`·`relocatable`·`fresh`)로 실행기에 알린다. 예제 구현 `testing.MemoryContinuity`.
+Optional connection `SessionContinuity` (`state`, `prepare`): when given, `ChatService.session_states(id)` shows the continuation state per node
+(`ConversationSessions`), and if a node has no record before sending, `SessionUnavailableError` (409 `chat.session_unavailable`,
+`details{conversation_id, node_ids}`); with `on_missing_session: "fresh"`, only that node starts a new session. Nodes restored from an archived copy or an old location
+are reported to the launcher through `TurnStart.session_notes` (`archived`, `relocatable`, `fresh`). Example implementation: `testing.MemoryContinuity`.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                   # 워크스페이스 안에서
-uv pip install ./packages/py/features/ac-chat     # 다른 프로젝트에서 단독으로(ac-contracts 필요)
+uv sync --all-packages                   # inside the workspace
+uv pip install ./packages/py/features/ac-chat     # standalone, from another project (needs ac-contracts)
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import asyncio
@@ -85,7 +85,7 @@ uv pip install ./packages/py/features/ac-chat     # 다른 프로젝트에서 �
 
 >>> async def main():
 ...     runs, events = MemoryRuns(), MemoryEvents()
-...     launcher = FakeLauncher(runs, events)  # 실제로는 엔진(GraphRuntime) 어댑터
+...     launcher = FakeLauncher(runs, events)  # in real use, an engine (GraphRuntime) adapter
 ...     chat = ChatService(
 ...         MemoryConversations(),
 ...         MemoryGraphs([Graph(id="team", name="팀", nodes=[NodeSpec(id="pl", type="agent")])]),
@@ -98,12 +98,12 @@ uv pip install ./packages/py/features/ac-chat     # 다른 프로젝트에서 �
 ...     conv = chat.create(CreateConversationRequest(graph_id="team"))
 ...     run = await chat.post_message(conv.id, PostMessageRequest(text="로그인 화면 만들어 줘"))
 ...     queued = await chat.post_message(conv.id, PostMessageRequest(text="그리고 테스트도"))
-...     print(type(run).__name__, type(queued).__name__, queued.position)  # 실행 중이면 대기열로
-...     launcher.finish(run.id)  # 실제로는 엔진이 끝냄 → 대기열 다음 메시지가 자동 시작
+...     print(type(run).__name__, type(queued).__name__, queued.position)  # queued while a turn is running
+...     launcher.finish(run.id)  # in real use the engine finishes it → the next queued message starts automatically
 ...     second = await launcher.wait_started(2)
 ...     launcher.finish(second.run_id)
 ...     await chat.wait_idle(conv.id)
-...     for turn in chat.turns(conv.id):  # ChatTurn[] (오래된 순)
+...     for turn in chat.turns(conv.id):  # ChatTurn[] (oldest first)
 ...         print(turn.run_id, turn.user_text, turn.status)
 >>> asyncio.run(main())
 Run QueuedMessage 1
@@ -112,7 +112,7 @@ run-2 그리고 테스트도 completed
 
 ```
 
-실행 연결 없이도 대화·대기열은 동작한다. 전송만 `ChatFeatureUnavailableError`(`code = feature_unavailable`)다.
+Conversations and the queue work even without a run connection. Only sending raises `ChatFeatureUnavailableError` (`code = feature_unavailable`).
 
 ```python
 >>> from agent_console_chat import ChatFeatureUnavailableError
@@ -128,27 +128,27 @@ feature_unavailable {'dependency': 'launcher'}
 
 ```
 
-## 오류
+## Errors
 
-모두 `ChatError`(`code` = 계약 `ErrorCodes`, `details`)의 하위 클래스다.
+All are subclasses of `ChatError` (`code` = contract `ErrorCodes`, `details`).
 `ConversationNotFoundError`·`GraphNotFoundError`·`QueuedMessageNotFoundError`·`TurnNotFoundError`(not_found),
 `ConversationBusyError`(conversation_busy), `TurnNotResumableError`(run_not_resumable),
 `InvalidMessageError`(bad_request), `ChatFeatureUnavailableError`(feature_unavailable, `details.dependency` =
-`launcher`·`runs` — 실행 연결이 없음).
-실행 엔진이 시작을 거부한 오류(예: 그래프 검증 실패)는 바꾸지 않고 그대로 올린다.
+`launcher` or `runs`: there is no run connection).
+Errors where the execution engine refused to start (for example, graph validation failure) are raised as is, unchanged.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-chat`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-chat`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-chat

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Icon } from "./Icon";
 import { Popover } from "./Popover";
 import { joinClass } from "./Status";
+import { defaultUiMessages, formatUiMessage, type UiMessages } from "../messages";
 import { useOverflowFit } from "./useOverflowFit";
 
 export interface ChipItem {
@@ -22,12 +23,12 @@ export interface ChipRowProps {
   chips: readonly ChipItem[];
   /** 줄 접근성 이름(`role=group`). */
   ariaLabel: string;
-  /** `+N` 버튼의 접근성 이름. 기본 "N개 더 보기". */
+  /** `+N` 버튼의 접근성 이름. 기본 `messages.moreCount`("N개 더 보기"). */
   moreLabel?: (hiddenCount: number) => string;
+  /** 기본 문구 덮어쓰기(`@agent-console/ui/locales/en` 등). */
+  messages?: Partial<UiMessages>;
   className?: string;
 }
-
-const defaultMoreLabel = (n: number) => `${n}개 더 보기`;
 
 function Chip({ chip }: { chip: ChipItem }) {
   const content = (
@@ -50,9 +51,10 @@ function Chip({ chip }: { chip: ChipItem }) {
  * 한 줄 칩 목록. 폭에 다 안 들어가면 넘치는 칩을 숨기고 끝에 `+N` 버튼을 둔다(누르면 숨은 칩 전체 팝오버).
  * 칩 한 개는 `--ac-chip-max-w`에서 말줄임. 활성 칩은 항상 보인다. 표현 전용: 칩 목록·문구는 호출자 데이터.
  */
-export function ChipRow({ chips, ariaLabel, moreLabel = defaultMoreLabel, className }: ChipRowProps) {
+export function ChipRow({ chips, ariaLabel, moreLabel, messages, className }: ChipRowProps) {
   const [open, setOpen] = useState(false);
   const keys = chips.map((c) => c.id);
+  const moreText = moreLabel ?? ((n: number) => formatUiMessage((messages?.moreCount ?? defaultUiMessages.moreCount), { n }));
   const { rootRef, moreRef, itemRef, hidden } = useOverflowFit({ keys, priorityKeys: chips.filter((c) => c.active).map((c) => c.id), gap: 6, fallbackMoreWidth: 44 });
   const hiddenChips = chips.filter((c) => hidden.has(c.id));
   return (
@@ -69,10 +71,10 @@ export function ChipRow({ chips, ariaLabel, moreLabel = defaultMoreLabel, classN
           <Popover
             open={open}
             onOpenChange={setOpen}
-            panelLabel={moreLabel(hiddenChips.length)}
+            panelLabel={moreText(hiddenChips.length)}
             align="end"
             renderTrigger={(props) => (
-              <button {...props} type="button" className="ac-chip ac-chip-more" aria-label={`+${hiddenChips.length} ${moreLabel(hiddenChips.length)}`} title={moreLabel(hiddenChips.length)}>
+              <button {...props} type="button" className="ac-chip ac-chip-more" aria-label={`+${hiddenChips.length} ${moreText(hiddenChips.length)}`} title={moreText(hiddenChips.length)}>
                 +{hiddenChips.length}
               </button>
             )}

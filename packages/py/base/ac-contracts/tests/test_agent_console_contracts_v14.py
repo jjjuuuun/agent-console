@@ -68,7 +68,7 @@ def test_contracts_version_is_at_least_0_14_0() -> None:
         "wiki": "1.0.0",
         "modules": "1.5.0",
     }
-    assert set(CONTRACT_VERSIONS) == set(v0140)
+    assert set(v0140) <= set(CONTRACT_VERSIONS)  # 0.16.0: 하위 모듈 i18n이 늘었다
     for sub, version in v0140.items():
         assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
     # wiki는 memory·sdd와 같은 층(modules 바로 아래)

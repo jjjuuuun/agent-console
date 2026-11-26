@@ -1,29 +1,29 @@
 # @agent-console/schema-form
 
-JSON Schema(+ uiSchema)와 값을 받아 입력 폼을 그리는 React 컴포넌트. @rjsf/core v6 위의 얇은 래퍼이며
-API·앱·그래프·전역 상태(fetch, WebSocket, localStorage)를 쓰지 않는다. 필드·순서·라벨·기본값은 전달받은 스키마가 정한다.
-`@agent-console/ui` 등 다른 패키지를 import하지 않는다. 공통 모양은 CSS 변수 `--ac-*`와 유틸 클래스 이름으로만 공유한다.
+A React component that takes a JSON Schema (plus a uiSchema) and a value and draws an input form. It is a thin wrapper over @rjsf/core v6 and
+uses no API, app, graph, or global state (fetch, WebSocket, localStorage). The fields, order, labels, and defaults are decided by the schema it receives.
+It does not import other packages such as `@agent-console/ui`. The common look is shared only through the `--ac-*` CSS variables and utility class names.
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { getDefaultValue } from "@agent-console/schema-form";
 
-const schema = { type: "object", properties: { name: { type: "string", default: "새 이름" } } };
+const schema = { type: "object", properties: { name: { type: "string", default: "New name" } } };
 const value = getDefaultValue(schema);
 ```
 
-## 설치
-저장소 안에서는 `pnpm install`이 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다: `npm install ./agent-console-<이름>-<버전>.tgz`
-`react`, `react-dom`(^19)은 peerDependency다.
+## Installation
+Inside the repository, `pnpm install` links the package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`): `npm install ./agent-console-<name>-<version>.tgz`
+`react` and `react-dom` (^19) are peer dependencies.
 
-## 최소 사용 예
+## Another usage example
 ```tsx
 import { SchemaForm, getDefaultValue } from "@agent-console/schema-form";
-import "@agent-console/schema-form/styles.css"; // --ac-* 변수는 앱이 tokens.css로 제공(없으면 폴백 값)
+import "@agent-console/schema-form/styles.css"; // the app provides the --ac-* variables through tokens.css (fallback values otherwise)
 
-const schema = { type: "object", properties: { name: { type: "string", title: "이름" } } };
+const schema = { type: "object", properties: { name: { type: "string", title: "Name" } } };
 
 function Panel() {
   const [value, setValue] = useState(() => getDefaultValue(schema));
@@ -32,64 +32,84 @@ function Panel() {
       schema={schema}
       uiSchema={{ name: { "ui:widget": "textarea" } }}
       value={value}
-      onChange={setValue}                         // 사용자 편집 때만 호출
-      errors={[{ path: "/name", message: "필수" }]} // 서버 오류(JSON Pointer)
+      onChange={setValue}                         // called only for user edits
+      errors={[{ path: "/name", message: "Required" }]} // server errors (JSON Pointer)
     />
   );
 }
 ```
 
-props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonly`, `idPrefix`, `focusPath`,
-`customWidgets`(`ui:widget` 이름 → 컴포넌트, props는 `SchemaFormWidgetProps`), `customFields`(`ui:field` 이름 → 컴포넌트, props는 `SchemaFormFieldProps`; `pointer` = 폼 값 안 이 필드의 JSON Pointer(배열 인덱스 포함) — 키-값 맵·첨부 목록처럼 객체·배열 값 전체를 한 컴포넌트가 그릴 때. 출처 표시 행 안에서도 동작), `validateOn`(`blur`|`change`|`submit`),
-`rawJsonToggle`, `messages`(한국어 기본값 부분 덮어쓰기), `className`.
-해석할 수 없는 스키마(`true`, `{}`)나 렌더 예외는 원시 JSON 편집기로 대체된다.
+Props: `schema`, `uiSchema`, `value`, `onChange`, `errors`, `disabled`, `readonly`, `idPrefix`, `focusPath`,
+`customWidgets` (a `ui:widget` name → a component, with props `SchemaFormWidgetProps`), `customFields` (a `ui:field` name → a component, with props `SchemaFormFieldProps`; `pointer` = this field's JSON Pointer inside the form value (including array indexes) — for when one component draws a whole object or array value, such as a key-value map or an attachment list. It also works inside a provenance row), `validateOn` (`blur` | `change` | `submit`),
+`rawJsonToggle`, `messages` (a partial override of the Korean defaults), and `className`.
+A schema that cannot be interpreted (`true`, `{}`) or a render exception is replaced by a raw JSON editor.
 
-## 출처 표시(선택)
-설정 층(공통/팀/에이전트/노드 등)이 겹치는 값을 편집할 때 쓴다. `provenance` 또는 `disabledPaths`를 주면 켜지고, 없으면 위 동작 그대로다.
-층 id·이름은 코드에 없으며 `layers`(낮은 우선순위가 앞) 데이터로만 받는다. 경로는 모두 JSON Pointer다.
+## Provenance display (optional)
+Use it when editing values that overlap across settings layers (common, team, agent, node, and so on). Passing `provenance` or `disabledPaths` turns it on; without them, everything behaves as above.
+Layer ids and names are not in the code; they come only as `layers` data (lower priority first). Every path is a JSON Pointer.
 
-| prop | 설명 |
+| Prop | Description |
 | --- | --- |
-| `layers` `{id,label}[]` / `editLayerId` | 층 목록과 지금 편집 중인 층. 배지 색 슬롯 = 층 인덱스 mod 6(`--ac-layer-1..6`) |
-| `provenance` `{pointer: layerId}` | 잎 값별 출처(서버 `Resolved.provenance`). 객체 행은 하위 출처를 모아 "혼합 N층" 배지 |
-| `effectiveValue` | 상속 값을 보여 주기 위한 유효 값. `value`는 이 층 값만 |
-| `layerValues` `{layerId: value}` | 배지 클릭 팝오버 "값이 정해지는 과정"(`onOpenLayer`가 있으면 줄이 버튼) |
-| `onOverride(path)` / `onInherit(path)` | [이 층에서 덮어쓰기·지정] / [↺ 상속으로 되돌리기]. 앱이 `value`를 바꾼다. 입력을 비워도 `onInherit`은 호출되지 않는다 |
-| `disabledPaths` `{pointer: 사유}` | 적용 안 되는 필드(하위 포함): 회색 + 자물쇠 + 사유, 입력·버튼 비활성 |
-| `fieldWarnings` / `mergeNotes` | 필드 아래 경고 문구 / 라벨 옆 칩 문구(문구는 앱이 정함) |
-| `renderProvenanceBadge(info)` | 배지 렌더 주입(예: `@agent-console/ui`의 `ProvenanceBadge`). 이 패키지는 다른 `@agent-console/*`를 import하지 않으므로 내장 배지가 기본 |
+| `layers` `{id,label}[]` / `editLayerId` | The layer list and the layer being edited. The badge color slot = the layer index mod 6 (`--ac-layer-1..6`) |
+| `provenance` `{pointer: layerId}` | The source of each leaf value (the server's `Resolved.provenance`). An object row gathers its descendants' sources into a "Mixed N layers" badge |
+| `effectiveValue` | The effective value, used to show inherited values. `value` holds only this layer's values |
+| `layerValues` `{layerId: value}` | The popover "How this value is decided", opened by clicking the badge (a row becomes a button when `onOpenLayer` is given) |
+| `onOverride(path)` / `onInherit(path)` | [Override or set in this layer] / [↺ Revert to inherited]. The app changes `value`. Clearing an input does not call `onInherit` |
+| `disabledPaths` `{pointer: reason}` | Fields that do not apply (including descendants): grayed out with a lock and the reason, with inputs and buttons disabled |
+| `fieldWarnings` / `mergeNotes` | A warning text under a field / a chip text next to a label (the app decides the text) |
+| `renderProvenanceBadge(info)` | Injects the badge renderer (for example, `ProvenanceBadge` from `@agent-console/ui`). This package imports no other `@agent-console/*`, so the built-in badge is the default |
 
-- `onChange`는 **이 층의 값만** 돌려준다(상속 값 미포함). 지우면 문자열은 `""`, 그 외는 `null`로 남고 키는 유지된다.
-- 상태: `set`(편집 가능 + ↺), `inherited`(읽기 전용 스타일 + 덮어쓰기), `default`(읽기 전용 + 지정). 읽기 전용은 행의 `<fieldset disabled>`로 구현한다.
-- `Alt+Enter`: 포커스된 필드의 덮어쓰기/되돌리기 토글. 덮어쓰기 후 편집 가능해지면 입력으로 포커스가 이동한다.
-- `ui:widget: "checkboxes"`로 그린 enum 배열(`items.enum`)도 `x-ui.enum_labels`(배열 또는 `items` 쪽)를 라벨로 쓴다. 웹 리소스 폼은 enum 배열 전체를 이 위젯으로 그린다.
-- 배열은 통째로 하나의 값(교체 병합)이라 배지 하나이고 원소 출처(`/tags/0`)는 모아서 본다.
+- `onChange` returns **only this layer's values** (inherited values are not included). When cleared, a string stays `""` and anything else stays `null`, and the key is kept.
+- States: `set` (editable + ↺), `inherited` (read-only style + override), and `default` (read-only + set). Read-only is implemented with the row's `<fieldset disabled>`.
+- `Alt+Enter`: toggles override and revert for the focused field. When it becomes editable after an override, focus moves to the input.
+- An enum array (`items.enum`) drawn with `ui:widget: "checkboxes"` also uses `x-ui.enum_labels` (on the array or on the `items` side) as labels. The web resource form draws every enum array with this widget.
+- An array is one value as a whole (replace merge), so it has one badge, and the sources of its elements (`/tags/0`) are viewed together.
 
-## 스키마 `x-ui` 렌더
-스키마의 `x-ui`(`tier`·`when`·`example`·`group`·`group_title`·`order`·`unit`·`enum_labels`(enum 값 → 화면 라벨))를 읽어 그린다. 필드 이름·종류 id는 코드에 없다.
-- `hideRootTitle`: 최상위 객체 제목(스키마 클래스 이름 등)을 숨긴다. 중첩 객체 제목은 그대로.
-- 기본 필드 위, 고급 필드는 "고급 설정 (N)" 접힘 영역(펼침은 `advancedStorageKey`로 기억, 오류·`focusPath`가 있으면 자동 펼침, "지정 N" 칩).
-- 필드마다 필수 칩, 설명 한 줄, 단위 접미사, 예시(빈 칸일 때 클릭하면 채움), 기본값, "바꾸는 때"(고급은 항상, 기본은 i 버튼). `readOnly: true`는 텍스트 + 복사 버튼.
-- `x-ui.tier`가 없으면 폴백: `required` -> 기본, 객체는 자식 중 기본이 있으면 기본, 기본값 있는 선택 필드 -> 고급, 없는 선택 필드 -> 기본. 고급만 있는 폼은 접지 않는다.
-- `xui={false}`면 기존 rjsf 모양. 출처 표시와 함께 `compactProvenance`를 켜면 지정된 필드만 배지와 되돌리기 아이콘을 보이고, 나머지는 바로 편집(건드리면 이 층에 지정)한다.
-- 순수 함수 `readXUi`·`resolveTier`·`splitByTier`는 `src/xui.ts`(공개 export는 아님).
+## Rendering the schema's `x-ui`
+The form reads and draws the schema's `x-ui` (`tier`, `when`, `example`, `group`, `group_title`, `order`, `unit`, and `enum_labels` (an enum value → a screen label)). Field names and kind ids are not in the code.
+- `hideRootTitle`: hides the top-level object title (such as a schema class name). Nested object titles stay.
+- Basic fields come first, and advanced fields go in a collapsed "Advanced settings (N)" area (the expanded state is remembered through `advancedStorageKey`, it opens automatically when there is an error or a `focusPath`, and there is a "N set" chip).
+- Each field gets a required chip, a one-line description, a unit suffix, an example (click to fill when empty), the default, and "When to change" (always shown for advanced fields, an i button for basic ones). `readOnly: true` shows text plus a copy button.
+- Without `x-ui.tier`, the fallback is: `required` → basic, an object is basic if any child is basic, an optional field with a default → advanced, and an optional field without one → basic. A form with only advanced fields is not collapsed.
+- With `xui={false}`, the form keeps the existing rjsf look. When `compactProvenance` is on together with provenance display, only fields that are set show the badge and the revert icon, and the rest are edited directly (touching one sets it in this layer).
+- The pure functions `readXUi`, `resolveTier`, and `splitByTier` are in `src/xui.ts` (not a public export).
 
-## 폐기 예정 필드 (`deprecated: true`)
-- 스키마 속성에 `deprecated: true`가 있으면 **필드 이름을 모른 채** 일반 규칙으로 처리한다(`$defs` 참조 안쪽 포함, 배열 항목 안은 제외).
-- 값이 없으면 폼에서 뺀다(스키마와 `required`에서 제거, "숨김 N개" 안내도 두지 않는다). 값이 있으면 그리되 라벨에 `messages.deprecatedChip`, 설명에 `messages.deprecatedNote`를 붙인다. 값은 그대로 편집·삭제할 수 있다.
+## Deprecated fields (`deprecated: true`)
+- When a schema property has `deprecated: true`, it is handled by a general rule **without knowing the field name** (including inside `$defs` references, but excluding inside array items).
+- With no value, the field is left out of the form (removed from the schema and from `required`, and no "N hidden" notice is shown either). With a value, it is drawn with `messages.deprecatedChip` on the label and `messages.deprecatedNote` in the description. The value can still be edited or deleted as it is.
 
-## 의존성 (무엇을 / 왜 / 대안)
-| 패키지 | 버전(설치 시점 npm latest) | 이유 | 대안 |
+## Text and language
+The form's own default text (`DEFAULT_MESSAGES`) is Korean (`src/locales/ko.json`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders are `{name}`.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). To use English, pass one bundle as `messages`.
+
+```tsx
+import en from "@agent-console/schema-form/locales/en";
+
+<SchemaForm schema={schema} value={value} onChange={setValue} messages={en} />
+```
+The Korean bundle is `@agent-console/schema-form/locales/ko`. To change only part of a bundle, spread it and override, as in `messages={{ ...en, addItem: "Add" }}`. For a new language, build an object with the same keys and pass it in.
+
+Text that comes from the schema (titles, descriptions, `x-ui`'s `when`, `group_title`, `unit`, the `enum_labels` values, the names of `oneOf` branches, and the uiSchema's `ui:title`, `ui:description`, `ui:placeholder`, and `ui:help`) is changed through the `translate` prop. By default it is shown as it is. The function can return unknown text as it is, and should be passed as a stable reference (a module constant or `useCallback`). Defaults, `enum`, `const`, and property names are data, so they are not changed.
+
+```tsx
+const translate = (text: string) => table[text] ?? text; // table is the app's text table
+
+<SchemaForm schema={schema} value={value} onChange={setValue} messages={en} translate={translate} />
+```
+To use the same conversion outside the form, use `translateSchema(schema, translate)` and `translateUiSchema(uiSchema, translate)`. The component source contains no Korean strings (the same test checks this).
+
+## Dependencies (what / why / alternatives)
+| Package | Version (npm latest at install time) | Why | Alternatives |
 | --- | --- | --- | --- |
-| @rjsf/core | 6.11.0 (peer react >=18, React 19.3 에서 동작 확인) | JSON Schema에서 폼 생성(배열·중첩·oneOf·$ref 처리) | JSON Forms, 직접 구현(비용 큼) |
-| @rjsf/utils | 6.11.0 | 기본값 계산·deepEquals 등 유틸 | - |
-| @rjsf/validator-ajv8 | 6.11.0 | 클라이언트 검증(ajv8) | validator-ajv6(구버전) |
+| @rjsf/core | 6.11.0 (peer react >=18, verified to work on React 19.3) | Generates forms from JSON Schema (handles arrays, nesting, oneOf, and $ref) | JSON Forms, a custom implementation (costly) |
+| @rjsf/utils | 6.11.0 | Utilities such as default value calculation and deepEquals | - |
+| @rjsf/validator-ajv8 | 6.11.0 | Client-side validation (ajv8) | validator-ajv6 (an older version) |
 
-rjsf 타입은 공개 API에 노출하지 않는다. 엔진 교체 시 이 패키지 내부만 바꾼다.
+rjsf types are not exposed in the public API. To swap the engine, change only this package's internals.
 
-## 테스트
-`pnpm test` (패키지 폴더 또는 루트, Vitest + happy-dom). 테스트는 tokens.css 없이 동작한다.
+## Testing
+`pnpm test` (from the package folder or the repository root; Vitest + happy-dom). The tests run without tokens.css.
 
-## 추가 동작
-- 배열 추가·삭제·이동·복제 버튼은 패키지 자체 템플릿(문자 아이콘 + 한국어 `aria-label`/`title`, `messages`로 변경)이라 아이콘 폰트(glyphicon)가 필요 없다.
-- 스키마가 값의 모양을 정하지 않는 위치(`additionalProperties: true` 자유 객체, 스키마 없는 값 `{}`/`true`)는 해당 값 전체를 원시 JSON 편집기로 그린다(잘못된 JSON은 필드 오류로 표시, 유효할 때만 반영).
+## Additional behavior
+- The buttons for adding, deleting, moving, and duplicating array items use the package's own template (a character icon plus an `aria-label` and `title`, changeable through `messages`), so no icon font (glyphicon) is needed.
+- Where the schema does not decide the shape of a value (a free object with `additionalProperties: true`, or a value with no schema such as `{}` or `true`), the whole value is drawn with a raw JSON editor (invalid JSON is shown as a field error, and applied only when valid).

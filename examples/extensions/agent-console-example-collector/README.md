@@ -1,23 +1,23 @@
 # agent-console-example-collector
 
-새 **관측 수집기**를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹·백엔드 코드를 고치지 않고, 설치하면 claude-sdk 백엔드의 수집기 목록
-(`GET /api/v1/backends`의 `collectors`)에 나타나고 제거하면 사라진다.
+An example that adds a new **observation collector** with a single plugin package.
+No engine, server, web, or backend code changes. Once installed, it appears in the collector list of the claude-sdk backend
+(`collectors` of `GET /api/v1/backends`), and it disappears when removed.
 
-수집기 `example.tool_count`(도구 호출 수)
-- 실행 하나 동안 모델 응답의 도구 호출 블록을 도구 이름별로 센다(실행별 상태 `ctx.state`).
-- 실행 결과 메시지에서 이벤트 `example.tool_count{total, by_tool}`를 한 번 낸다. 백엔드가 RunEvent 일반형으로
-  내보내므로 실행 화면·로그 화면(`platform-runs` 출처)에 그대로 보인다.
-- 설정 `only`(셀 도구 이름 목록, 비우면 전부)는 pydantic 모델 `ToolCountConfig`다. 디스크립터 `config_schema`가
-  이 스키마이고, 틀린 설정은 검증 경고 `observe.collector_config_invalid`로 보인다.
-- 실행에 개입하지 않는다. 예외는 백엔드가 삼키고 실행마다 경고 이벤트 하나로 남긴다.
+Collector `example.tool_count` (tool call count)
+- During one run, it counts the tool call blocks of model responses by tool name (per-run state `ctx.state`).
+- On the run's result message, it emits the event `example.tool_count{total, by_tool}` once. The backend publishes it as a generic RunEvent,
+  so it shows up as it is on the run screen and the logs screen (source `platform-runs`).
+- The setting `only` (the list of tool names to count; empty = all) is the pydantic model `ToolCountConfig`. The descriptor's `config_schema` is
+  that schema, and a wrong setting shows up as the validation warning `observe.collector_config_invalid`.
+- It does not interfere with the run. The backend swallows exceptions and leaves one warning event per run.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
-`BaseClaudeSdkCollector`를 상속하고 필요한 메서드만 고친다. 아래는 실행 부품 `CollectorRun`에
-SDK 메시지를 직접 넣어 본 예다(실제로는 백엔드가 넣는다).
+Subclass `BaseClaudeSdkCollector` and override only the methods you need. Below, SDK messages are fed directly to the run part `CollectorRun`
+(in a real setup, the backend feeds them).
 
 ```python
 >>> import asyncio
@@ -59,8 +59,8 @@ SDK 메시지를 직접 넣어 본 예다(실제로는 백엔드가 넣는다).
 
 ```
 
-실제 구현은 `src/agent_console_example_collector/tool_count.py`(설정 모델, 이름별 집계, 순수 함수
-`count_tool_uses`·`merge_counts`). 아래는 그 구현을 entry point로 등록한 것처럼 찾는 예다.
+The real implementation is `src/agent_console_example_collector/tool_count.py` (settings model, counts by name, pure functions
+`count_tool_uses` and `merge_counts`). Below, that implementation is discovered as if it were registered as an entry point.
 
 ```python
 >>> from importlib.metadata import EntryPoint
@@ -69,26 +69,26 @@ SDK 메시지를 직접 넣어 본 예다(실제로는 백엔드가 넣는다).
 ...     "example.tool_count", "agent_console_example_collector:ToolCountCollector", COLLECTORS_GROUP
 ... )
 >>> found, reports = discover_collectors("claude-agent-sdk", entry_points=[ep])
->>> [c.descriptor.id for c in found]          # 설치했으면 entry_points 인자 없이 부른다
+>>> [c.descriptor.id for c in found]          # when installed, call it without the entry_points argument
 ['example.tool_count', 'sdk-hooks', 'mcp-calls']
 >>> found[0].descriptor.config_schema["properties"]["only"]["title"]
 '셀 도구'
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 등록과 설정
+## Registration and settings
 
 ```toml
 [project.entry-points."agent_console.collectors"]   # agent_console_backend_claude_sdk.collectors.COLLECTORS_GROUP
 "example.tool_count" = "agent_console_example_collector:ToolCountCollector"
 ```
 
-백엔드는 `descriptor.backend`(기본 `claude-agent-sdk`)가 자기 id인 수집기만 쓴다. 다른 id의 claude-sdk
-백엔드 인스턴스에 쓰려면 `ToolCountCollector(backend="<id>")`를 `ClaudeSdkBackend(collectors=[...])`로 넘긴다.
+A backend uses only the collectors whose `descriptor.backend` (default `claude-agent-sdk`) is its own id. To use it with a claude-sdk
+backend instance that has another id, pass `ToolCountCollector(backend="<id>")` to `ClaudeSdkBackend(collectors=[...])`.
 
-에이전트·팀·공통 설정(`observe`, 생략하면 상위 설정을 물려받는다). 정하지 않은 수집기는 꺼져 있다.
+Agent, team, and common settings (`observe`; when omitted, the settings above are inherited). Collectors that are not configured are off.
 
 ```yaml
 observe:
@@ -96,34 +96,34 @@ observe:
     example.tool_count:
       enabled: true
       config:
-        only: [Bash, Edit]     # 비우면 전부
+        only: [Bash, Edit]     # empty = all
 ```
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-collector   # 설치
-uv pip uninstall agent-console-example-collector                        # 제거
+uv pip install -e examples/extensions/agent-console-example-collector   # install
+uv pip uninstall agent-console-example-collector                        # remove
 ```
 
-설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/backends`의 claude-sdk 항목 `collectors`에 `example.tool_count`가 나온다. 위 설정으로 실행하면
-  실행이 끝날 때 `example.tool_count` 이벤트가 하나 나온다.
-- 제거: 수집기 목록에서 사라진다. 설정의 `observe.collectors.example.tool_count`는 남지만 검증 경고
-  `observe.unknown_collector`만 나고 실행은 그대로 된다(테스트로 확인).
-- 설치한 채로 끄기: 설정에 `enabled: false`(또는 항목을 지움).
+**Restart the server** after installing or removing.
+- Install: `example.tool_count` appears in `collectors` of the claude-sdk entry of `GET /api/v1/backends`. When you run with the settings above,
+  one `example.tool_count` event appears at the end of the run.
+- Remove: it disappears from the collector list. `observe.collectors.example.tool_count` stays in the settings, but it only produces the validation warning
+  `observe.unknown_collector`, and runs work as before (checked by the tests).
+- Turn off while installed: set `enabled: false` (or delete the entry).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
 ```bash
 cd examples/extensions/agent-console-example-collector
 uv run --project ../../.. python -m pytest
 ```
 
-설치 없이 돈다(`pythonpath = ["src"]`). SDK는 가짜 클라이언트(`agent_console_backend_claude_sdk.testing.FakeSdkClient`)를
-주입하므로 모델 호출이 없다. 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
+The tests run without installing (`pythonpath = ["src"]`). The SDK is replaced by an injected fake client (`agent_console_backend_claude_sdk.testing.FakeSdkClient`),
+so there are no model calls. The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).

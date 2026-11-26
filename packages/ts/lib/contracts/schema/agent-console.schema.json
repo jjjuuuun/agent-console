@@ -6,21 +6,22 @@
   "type": "object",
   "additionalProperties": false,
   "x-constants": {
-    "CONTRACTS_VERSION": "0.15.0",
+    "CONTRACTS_VERSION": "0.16.0",
     "CONTRACT_VERSIONS": {
-      "common": "2.0.0",
+      "common": "2.1.0",
       "resources": "1.1.0",
       "logs": "2.0.0",
-      "definitions": "2.0.0",
+      "i18n": "1.0.0",
+      "definitions": "3.0.0",
       "runs": "1.9.0",
       "usage": "1.1.0",
-      "projects": "4.0.0",
+      "projects": "4.1.0",
       "chat": "1.4.0",
       "exports": "1.0.0",
       "imports": "1.1.0",
       "architecture": "1.0.0",
       "memory": "1.3.0",
-      "sdd": "1.3.0",
+      "sdd": "1.4.0",
       "wiki": "1.3.0",
       "modules": "1.7.0"
     },
@@ -135,7 +136,8 @@
       "TONE": "tone",
       "WIKI_REF": "wiki-ref",
       "GLOB": "glob",
-      "WIKI_RULE_REFS": "wiki-rule-refs"
+      "WIKI_RULE_REFS": "wiki-rule-refs",
+      "LANGUAGE": "language"
     },
     "LOG_EVENT_ORDERS": [
       "asc",
@@ -223,6 +225,7 @@
       "WIKI_LINK_INSERT_UNAVAILABLE": "wiki.link_insert_unavailable",
       "WIKI_VERSION_NOT_FOUND": "wiki.version_not_found",
       "WIKI_CONFIG_READONLY": "wiki.config_readonly",
+      "I18N_UNKNOWN_LANGUAGE": "i18n.unknown_language",
       "FAKE_SESSION_MISSING": "fake.session_missing"
     },
     "HTTP_STATUS_BY_ERROR_CODE": {
@@ -305,7 +308,8 @@
       "wiki.history_unavailable": 409,
       "wiki.config_readonly": 409,
       "wiki.link_insert_unavailable": 422,
-      "wiki.version_not_found": 404
+      "wiki.version_not_found": 404,
+      "i18n.unknown_language": 404
     },
     "KNOWN_ISSUE_CODES": {
       "LIMITS_NOT_ENFORCED": "limits.not_enforced",
@@ -440,7 +444,14 @@
       "WIKI_UPDATE_UNAVAILABLE": "wiki.update_unavailable",
       "WIKI_LINT_FAILED": "wiki.lint_failed",
       "WIKI_UNKNOWN_TITLE_SOURCE": "wiki.unknown_title_source",
-      "WIKI_REDACTED_CONTENT": "wiki.redacted_content"
+      "WIKI_REDACTED_CONTENT": "wiki.redacted_content",
+      "I18N_CATALOG_UNREADABLE": "i18n.catalog_unreadable",
+      "I18N_CATALOG_INVALID": "i18n.catalog_invalid",
+      "I18N_CATALOG_UNKNOWN_SECTION": "i18n.catalog_unknown_section",
+      "I18N_ENTRY_INVALID": "i18n.entry_invalid",
+      "I18N_LANGUAGE_INVALID": "i18n.language_invalid",
+      "I18N_LOCALES_MISSING": "i18n.locales_missing",
+      "I18N_SOURCE_UNAVAILABLE": "i18n.source_unavailable"
     },
     "KNOWN_SUGGESTION_IDS": {},
     "WS_CLOSE_UNAUTHORIZED": 4401,
@@ -860,6 +871,11 @@
       "LogWidget",
       "LogWidgetQuery",
       "TokenSample"
+    ],
+    "i18n": [
+      "I18nInfo",
+      "LanguageInfo",
+      "MessageCatalog"
     ],
     "definitions": [
       "Agent",
@@ -7983,6 +7999,25 @@
           "default": false,
           "description": "(3.5.0) 이 공간에서 종류 공통 삭제 경로 `DELETE /projects/copy/items/{kind}/{id}`로 항목을 지울 수 있다. 기본 종류(라이브러리 저장소 종류)는 true, 기여 종류는 기여 모듈이 삭제 수단을 주면 true. false = 수단 없음(그 기능 화면에서만 지운다) 또는 옛 서버.",
           "type": "boolean"
+        },
+        "reserved_ids": {
+          "description": "(4.1.0) 이 종류 id로 쓰면 안 되는 말(대소문자 무시 — 서버는 `casefold`로 비교한다). 정의 종류 데이터 `DefinitionKind.reserved_ids` 그대로이고 기여 종류도 포함한다. 대상에 이 id로 쓰는 복사 적용은 422 `project.copy_reserved_id`로 거절된다. 빈 목록 = 예약어 없음 또는 옛 서버(화면은 적용 결과의 오류로만 안다).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "open_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "(4.1.0) 이 종류 항목을 여는 웹 화면의 라우트 역할(`FixTarget.role`과 같은 열린 문자열, 예: 정의 편집 화면 역할). 서버는 웹 경로를 모른다 — 종류 데이터(`DefinitionKind.open_role`)나 종류를 기여한 모듈(`KindContribution.open_role`)이 준다. 웹이 역할을 경로로 풀고 항목 id로 연다. null(여는 화면 없음·서버가 모름·옛 서버)이거나 웹이 그 역할의 화면을 모르면 화면은 [열기]를 숨긴다."
         }
       },
       "required": [
@@ -11857,6 +11892,35 @@
       "title": "HealthResponse",
       "type": "object"
     },
+    "I18nInfo": {
+      "description": "`GET /i18n` 응답: 서버가 줄 수 있는 언어와 언어 해석 기본값.",
+      "properties": {
+        "languages": {
+          "description": "묶음이 하나라도 있는 언어(코드 순). 화면 선택지 = 화면이 가진 묶음과 이 목록.",
+          "items": {
+            "$ref": "#/$defs/LanguageInfo"
+          },
+          "type": "array"
+        },
+        "default_language": {
+          "description": "설정값·브라우저 언어로 정하지 못했을 때 쓸 언어(설정 `mod-i18n.default_language`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "fallback_language": {
+          "description": "고른 언어 묶음에 없는 문구를 찾을 대체 언어(설정 `mod-i18n.fallback_language`). `LanguageInfo.complete`의 기준이다.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "languages",
+        "default_language",
+        "fallback_language"
+      ],
+      "title": "I18nInfo",
+      "type": "object"
+    },
     "ImportCandidate": {
       "description": "가져올 수 있는 항목 하나.",
       "properties": {
@@ -13210,6 +13274,47 @@
         "id_from"
       ],
       "title": "LabelDisplayTarget",
+      "type": "object"
+    },
+    "LanguageInfo": {
+      "description": "묶음이 있는 언어 하나(`I18nInfo.languages` 항목).",
+      "properties": {
+        "code": {
+          "description": "언어 코드(BCP 47, 서버가 정규화한 표기 — 예: `en`, `ko`, `zh-Hant-TW`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "sources": {
+          "description": "이 언어에 기여한 묶음 출처 이름(병합 순서, 뒤가 이김). 패키지 묶음은 entry point 이름, 사용자 폴더 묶음은 서버가 정한 폴더 출처 이름이다.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "complete": {
+          "description": "기준 언어(`I18nInfo.fallback_language`) 묶음의 키를 빈 값 없이 다 가진다. false면 빠진 문구는 대체 언어 → 서버 원문 순으로 보인다.",
+          "type": "boolean"
+        },
+        "missing": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "기준 언어 대비 빠졌거나 빈 문구 수(`text`·`codes` 항목과 `ns` 잎을 센다). null = 서버가 세지 않음(그때는 `complete`만 본다). `complete`가 true면 0이다."
+        }
+      },
+      "required": [
+        "code",
+        "sources",
+        "complete"
+      ],
+      "title": "LanguageInfo",
       "type": "object"
     },
     "Limits": {
@@ -17576,6 +17681,46 @@
         "id"
       ],
       "title": "MergeStrategyInfo",
+      "type": "object"
+    },
+    "MessageCatalog": {
+      "description": "`GET /i18n/{lang}` 응답: 한 언어의 병합한 문구 묶음(§I18N.3 Python 묶음 형식 + 언어).",
+      "properties": {
+        "language": {
+          "description": "묶음 언어 코드. 요청한 언어에 맞춘 값이다(예: `en-US`를 요청하고 `en` 묶음만 있으면 `en`).",
+          "minLength": 1,
+          "type": "string"
+        },
+        "text": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "원문 키 → 번역(서버 고정 문구 — 스키마 제목·설명, 서술자 이름 등).",
+          "type": "object"
+        },
+        "codes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "오류·이슈 코드 → 문구 틀(`{name}` 자리표시자는 그 오류·이슈의 `details` 값으로 채운다).",
+          "type": "object"
+        },
+        "ns": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "description": "웹 네임스페이스 → 중첩 문구 객체(잎 = 문자열). 웹 앱·라이브러리 묶음을 덮는다.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "language",
+        "text",
+        "codes",
+        "ns"
+      ],
+      "title": "MessageCatalog",
       "type": "object"
     },
     "MissingSessionPolicy": {
@@ -22368,6 +22513,13 @@
             "$ref": "#/$defs/LabelDisplay"
           },
           "type": "array"
+        },
+        "reserved_template_ids": {
+          "description": "(1.4.0) 문서 틀 id로 쓸 수 없는 말(대소문자 무시 — 서버는 `casefold`로 비교한다). 값은 서버의 경로 구현이 정한다(같은 깊이의 고정 경로와 겹치는 말). 새 문서 틀 만들기·틀로 저장이 이 id를 주면 422 `validation_failed`(`details.reserved`)이고, 이름에서 만든 id는 이 말을 피한다. 빈 목록 = 예약어 없음 또는 옛 서버(화면은 서버 오류로만 안다).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -25967,6 +26119,25 @@
           "title": "버전 비교",
           "x-ui": {
             "tier": "advanced"
+          }
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "화면에 보이는 문구의 언어 코드(예: en, ko)입니다. 비우면 브라우저 언어를 따릅니다. 사용자가 만든 이름·설명·본문은 번역하지 않습니다.",
+          "title": "화면 언어",
+          "x-ui": {
+            "example": "en",
+            "tier": "basic",
+            "when": "브라우저 언어와 다른 언어로 화면을 보고 싶을 때 고르세요.",
+            "widget": "language"
           }
         }
       },
@@ -31824,24 +31995,6 @@
           "x-ui": {
             "tier": "basic",
             "when": "다른 로그 폴더를 읽거나 범주 표시를 바꾸고 싶을 때 바꾸세요."
-          }
-        },
-        "default_backend": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "deprecated": true,
-          "description": "더 이상 쓰지 않습니다. 에이전트 공통 설정의 실행 백엔드를 씁니다(읽기만 함).",
-          "title": "기본 실행 백엔드(이전 형식)",
-          "x-ui": {
-            "example": null,
-            "tier": "advanced"
           }
         },
         "attributes": {

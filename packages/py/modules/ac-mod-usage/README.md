@@ -1,50 +1,50 @@
 # agent-console-mod-usage
 
-Agent Console 사용량 기능 모듈. 사용량 라이브러리 `agent-console-usage`를 서버에 꽂는다.
+Agent Console usage feature module. It plugs the usage library `agent-console-usage` into the server.
 
-- 경로: `GET /usage`(`?parts=windows,tokens`, 생략 = 전부, 요청하지 않은 부분은 null), `GET /usage/sources`.
-- `parts=windows`는 출처 수집만 한다. 실행 기록(토큰 집계)을 읽지 않는다(셸 표시기용, E-14).
-- 제공 포트: `usage.service`, `server.warnings`(런타임 출처 id 겹침 `usage.source_conflict`, 저장된 출처 설정이
-  그 출처 `config_schema`에 맞지 않음 `usage.source_config_invalid` — severity warning, `path` = 설정 문서 위치),
-  `definitions.checks`(multi — `UsageSettingsCheck`). 필수 포트 없음(혼자 켜진다).
-- 저장 전 검사(`definitions.checks`): 공통 설정(`settings` 종류)을 저장할 때 `usage.sources[i].config`를
-  지금 쓸 수 있는 출처(플러그인 + 런타임)의 `config_schema`로 본다. 틀리면 error 이슈 → 저장 쪽(`mod-definitions`
-  `PUT /settings`, `mod-versions` 되돌리기)가 422 `validation_failed`
-  (`details.issues[].path`, 예 `/usage/sources/0/config/budgets/local_five_hour`)로 거부한다. 값·스키마 원문은
-  싣지 않는다. 저장 시점에 없는 출처(연동 꺼짐·미설치)는 검증할 수 없어 통과하고, 그 출처가 나타나면
-  `server.warnings`와 `GET /usage/sources`의 `error`로 드러난다.
-- 선택 포트(없으면 그 부분만 꺼진다): `usage.event_query`(실행 이벤트 조회), `usage.token_rollups`(토큰 집계,
-  없으면 `rollups = []`), `workspace.settings`(출처 켜기·설정), `usage.sources`(multi — 런타임 사용량
-  출처 `UsageSource`, 예: `link-logs-usage`의 `local-logs`).
-- 런타임 출처: 출처 id = 디스크립터 `id`. 요청마다 포트 목록을 다시 읽는다(연동 모듈은 이 모듈보다 늦게
-  만들어진다). 플러그인(레지스트리) 출처와 id가 겹치면 플러그인이 이기고, 런타임 출처끼리 겹치면 먼저 연결된
-  모듈(모듈 id 순)이 이긴다. 빠진 id는 `server.warnings` `usage.source_conflict`(`details.source`)로 보인다.
-  켜기·설정은 플러그인 출처와 같다(`usage.sources[{id, enabled, config}]`).
-- 자동 켜기: `usage.sources`에 적지 않은 출처는 디스크립터 `auto_enable`이고 `test_only`가 아니면 켜진다
-  (`agent_console_usage.auto_enabled`). 빈 설정에서 `run-events`·`statusline-file`·`local-logs`가 켜지고 `fake`는 꺼진다.
-- 연결 안내 조각: `GET /usage/sources`의 `descriptor.setup_snippets`는 자리표시자를 채워 내보낸다. `{output_path}` =
-  그 출처가 읽을 파일의 절대 경로(출처 `setup_values`), `{agent_console_cmd}` = 옵션 `agent_console_command`(기본
-  `agent-console`)를 주입된 `PATH`와 서버를 실행한 파이썬 폴더에서 찾은 절대 경로(`resolve_command`, 끝내 못 찾으면 이름 그대로). `last_received_at`도 같은 응답에 있다.
-- 저장소: 관측값 `usage_observations`는 이 모듈이 소유한다(`agent_console_mod_usage.storage`). 호스트의 DB 핸들
-  (`BaseServices.database`, 예: `agent_console_store.SqliteDatabase`) 엔진 위에 만들고, 마이그레이션 계보
-  `usage`(패키지 데이터 `storage/migrations/versions`)는 모듈이 켜질 때만 올라간다. 테이블은 legacy 0002가
-  만든 그대로다(변경 없음). DB 핸들이 없으면 기록·정리만 꺼진다. **legacy는 다운그레이드하지 않는다** — 되돌릴 때는 `usage` 계보만 되돌린다
-  (`SqliteDatabase.downgrade_branch`). legacy를 0002 이하로 내리면 `usage_observations`는 사라지지만 버전 테이블
-  `alembic_version_usage`는 남아 다음 시작 때 테이블이 다시 만들어지지 않는다.
-- 설정 `modules.options.mod-usage`(옛 최상위 `usage`는 `settings.removed_key` 오류로 새 위치를 안내): `retention_seconds`·
-  `prune_interval_seconds`·`rollup_run_limit`·`source_timeout_seconds`·`agent_console_command`.
-- 웹 역할: `usage`.
+- Routes: `GET /usage` (`?parts=windows,tokens`; omitted = everything; parts not requested are null) and `GET /usage/sources`.
+- `parts=windows` only collects from the sources. It does not read run history (token totals), which keeps it cheap for shell status indicators.
+- Provided ports: `usage.service`, `server.warnings` (runtime source id collisions `usage.source_conflict`, and saved source settings that do not
+  match that source's `config_schema` `usage.source_config_invalid`, severity warning, `path` = the location in the settings document),
+  and `definitions.checks` (multi, `UsageSettingsCheck`). No required ports (it turns on by itself).
+- Pre-save check (`definitions.checks`): when the common settings (kind `settings`) are saved, `usage.sources[i].config` is checked against
+  the `config_schema` of the sources available now (plugins + runtime). When it is wrong, an error issue makes the saving side (`mod-definitions`
+  `PUT /settings`, `mod-versions` revert) reject the request with 422 `validation_failed`
+  (`details.issues[].path`, for example `/usage/sources/0/config/budgets/local_five_hour`). Values and the schema text are not
+  included. Sources that do not exist at save time (link off, not installed) cannot be validated and pass; when such a source appears,
+  the problem shows up in `server.warnings` and in the `error` of `GET /usage/sources`.
+- Optional ports (when missing, only that part is off): `usage.event_query` (run event queries), `usage.token_rollups` (token totals;
+  without it, `rollups = []`), `workspace.settings` (turning sources on and their settings), and `usage.sources` (multi, runtime usage
+  sources `UsageSource`, for example `local-logs` of `link-logs-usage`).
+- Runtime sources: source id = descriptor `id`. The port list is read again on every request (link modules are built after
+  this module). When an id collides with a plugin (registry) source, the plugin wins; when runtime sources collide with each other, the module that
+  connected first (module id order) wins. A dropped id shows up as `server.warnings` `usage.source_conflict` (`details.source`).
+  Turning them on and their settings work like plugin sources (`usage.sources[{id, enabled, config}]`).
+- Automatic enabling: sources not listed in `usage.sources` are on when their descriptor is `auto_enable` and not `test_only`
+  (`agent_console_usage.auto_enabled`). With empty settings, `run-events`, `statusline-file`, and `local-logs` are on, and `fake` is off.
+- Setup snippets: `descriptor.setup_snippets` of `GET /usage/sources` are sent with the placeholders filled in. `{output_path}` =
+  the absolute path of the file that source reads (the source's `setup_values`); `{agent_console_cmd}` = the absolute path of the option `agent_console_command` (default
+  `agent-console`) found in the injected `PATH` and in the folder of the Python that runs the server (`resolve_command`; when it cannot be found, the name as it is). `last_received_at` is in the same response.
+- Storage: this module owns the observations `usage_observations` (`agent_console_mod_usage.storage`). They are built on the engine of the host database handle
+  (`BaseServices.database`, for example `agent_console_store.SqliteDatabase`), and the migration lineage
+  `usage` (package data `storage/migrations/versions`) is applied only when the module is on. The table is exactly the one legacy 0002
+  created (no changes). Without a database handle, only recording and cleanup are off. **Legacy is never downgraded**: to roll back, roll back only the `usage` lineage
+  (`SqliteDatabase.downgrade_branch`). When legacy is downgraded to 0002 or below, `usage_observations` disappears, but the version table
+  `alembic_version_usage` remains, so the table is not created again on the next start.
+- Settings `modules.options.mod-usage` (the old top-level `usage` points to the new location with a `settings.removed_key` error): `retention_seconds`,
+  `prune_interval_seconds`, `rollup_run_limit`, `source_timeout_seconds`, and `agent_console_command`.
+- Web role: `usage`.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-usage
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-usage
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-usage
 ```
 
-## 최소 사용
+## Minimal usage
 
-`parts`는 쉼표 목록이고 모르는 이름은 무시한다.
+`parts` is a comma-separated list, and unknown names are ignored.
 
 ```python
 >>> from agent_console_mod_usage import parse_parts
@@ -55,7 +55,7 @@ pip install agent-console-mod-usage
 
 ```
 
-모듈을 조립하면 `usage.service` 포트로 보고 서비스를 받는다. 토큰 집계 포트가 없으면 `rollups`는 빈 목록이다.
+When the module is assembled, the report service comes through the `usage.service` port. Without the token totals port, `rollups` is an empty list.
 
 ```python
 >>> import asyncio
@@ -68,20 +68,20 @@ pip install agent-console-mod-usage
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행(같은 modkit 호스트, 기본 127.0.0.1). 관측값은 상태 폴더의 `console.sqlite3`에 쌓인다:
+Standalone run (the same modkit host, 127.0.0.1 by default). Observations accumulate in `console.sqlite3` in the state folder:
 
 ```bash
 python -m agent_console_mod_usage [--config PATH] [--port 0] [--check]

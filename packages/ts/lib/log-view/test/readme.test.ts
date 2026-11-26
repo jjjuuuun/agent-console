@@ -4,12 +4,12 @@ import { expect, test } from "vitest";
 // readme:start
 import { isErrorEvent, sortEvents, splitSearchParams, toTaxonomyView } from "@agent-console/log-view";
 
-// 오류 표시는 분류 체계의 tone="danger" 항목만 근거다(이름 비교 없음).
+// An error is decided only by the taxonomy entries with tone="danger" (no name comparison).
 const taxonomy = toTaxonomyView({ categories: { "x-fail": { tone: "danger" } } });
 const failing = isErrorEvent({ category: "x-fail" }, taxonomy);
-// 재생 순서는 (time, seq) 오름차순.
+// Playback order is ascending by (time, seq).
 const order = sortEvents([{ seq: 2, time: 5 }, { seq: 1, time: 9 }]).map((e) => e.seq);
-// 화면 전용 URL 파라미터(through·lane·view·range·tab)는 서버 필터에서 빠진다.
+// Screen-only URL parameters (through, lane, view, range, tab) are left out of the server filter.
 const { filter, screen } = splitSearchParams("q=abc&through=7");
 // readme:end
 

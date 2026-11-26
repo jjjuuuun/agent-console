@@ -91,7 +91,7 @@ def server_info(
         try:
             attributes.update(source())
         except Exception:
-            _log.exception("서버 속성 제공자 실패")
+            _log.exception("A server attribute provider failed")
     if settings.security.expose_paths:
         attributes["workspace"] = str(settings.workspace_path)
     warnings: list[Issue] = [
@@ -102,7 +102,7 @@ def server_info(
         try:
             warnings.extend(warning_source())
         except Exception:
-            _log.exception("서버 경고 제공자 실패")
+            _log.exception("A server warning provider failed")
     return ServerInfo(
         server_version=server_version,
         contracts_version=CONTRACTS_VERSION,

@@ -68,8 +68,13 @@ const MINIMAP_KEY = "ac.teams.minimap";
 const RECENT_KEY = (kind: string) => `ac.teams.recent.${kind}`;
 const RECENT_MAX = 8;
 const EMPTY_SET: ReadonlySet<string> = new Set();
+/**
+ * 팀 편집기의 자동 배치 옵션 기본값(데이터). 위임 연결 라벨(최대 280px)이 노드 쪽으로 밀리지 않게 층 간격을 라이브러리 기본(80)보다 넓힌다.
+ * 사용자가 [정리] 팝오버에서 고른 값은 그대로 우선한다.
+ */
+const TEAM_LAYOUT_OPTION_DEFAULTS = { layerGap: 160 } as const;
 /** 자동 배치 엔진 목록: 모듈 수준에서 한 번만 만든다(elkjs는 첫 [정리] 때 동적으로 불러온다) */
-const LAYOUT_ENGINES = [createElkEngine()];
+const LAYOUT_ENGINES = [createElkEngine({ optionDefaults: TEAM_LAYOUT_OPTION_DEFAULTS })];
 /** 한도 필드 이름: 약속(TeamConventions) 포인터의 마지막 조각 */
 const limitFieldName = () => DEFAULT_TEAM_CONVENTIONS.edgeIterationLimit.split("/").pop() ?? "";
 

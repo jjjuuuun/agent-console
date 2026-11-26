@@ -1,15 +1,15 @@
 # @agent-console/api-client
 
-서버 REST(`/api/v1`)와 WebSocket(`/ws`)을 `@agent-console/contracts` 타입으로 감싼 순수 TypeScript 클라이언트.
-React·앱 코드에 의존하지 않는다. 서버 주소, 토큰, `fetch`, `WebSocket` 구현은 모두 인자로 받는다.
+A pure TypeScript client that wraps the server's REST (`/api/v1`) and WebSocket (`/ws`) with `@agent-console/contracts` types.
+It does not depend on React or app code. The server address, token, `fetch`, and `WebSocket` implementation are all taken as arguments.
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { createRestClient } from "@agent-console/api-client";
 
-// fetch를 주입하므로 서버 없이도 돈다(실제로는 전역 fetch 또는 서버 주소를 쓴다).
+// fetch is injected, so this runs without a server (in real use you rely on the global fetch or a server address).
 const fakeFetch = async () =>
   new Response(JSON.stringify({ token: "t", server_version: "0.0.0", contracts_version: "0.4.0" }), {
     status: 200,
@@ -19,41 +19,41 @@ const rest = createRestClient({ baseUrl: "http://127.0.0.1:8765", fetch: fakeFet
 const boot = await rest.getBootstrap();
 ```
 
-## 설치
-저장소 안에서는 `pnpm install`이 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다: `npm install ./agent-console-<이름>-<버전>.tgz`
+## Installation
+Inside the repository, `pnpm install` links the package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`): `npm install ./agent-console-<name>-<version>.tgz`
 
-## 사용 예
+## Usage example
 ```ts
 import { createClient, ApiError } from "@agent-console/api-client";
 import { isKnownRunEvent } from "@agent-console/contracts";
 
-// 1) 부트스트랩으로 토큰을 받는다(GET /bootstrap은 토큰이 필요 없다).
+// 1) Get a token from bootstrap (GET /bootstrap needs no token).
 const baseUrl = "http://127.0.0.1:8765";
 const boot = await createClient({ baseUrl }).rest.getBootstrap();
 const { rest, ws } = createClient({ baseUrl, token: boot.token });
 
-// 2) REST: 저장은 마지막으로 받은 version_hash를 If-Match로 보낸다.
+// 2) REST: a save sends the last received version_hash as If-Match.
 const { graph, version_hash } = await rest.getGraph("main");
 try {
-  await rest.updateGraph("main", { ...graph, name: "새 이름" }, version_hash);
+  await rest.updateGraph("main", { ...graph, name: "New name" }, version_hash);
 } catch (e) {
   if (e instanceof ApiError && e.versionConflict) {
-    // 412 version_conflict: e.versionConflict.current_version_hash 등으로 충돌 화면을 그린다.
-  } else throw e; // 428 version_required, 404 not_found 등은 e.status / e.code
+    // 412 version_conflict: draw the conflict screen from e.versionConflict.current_version_hash and so on.
+  } else throw e; // 428 version_required, 404 not_found, and so on come through e.status / e.code
 }
 
-// 3) Run 이벤트: 재접속하면 마지막 seq 다음부터 이어받는다(중복 없음).
+// 3) Run events: after a reconnect, it resumes from the sequence after the last seq (no duplicates).
 const run = await rest.createRun({ graph_id: "main", input: {}, origin: "web" });
-const snap = await rest.getRun(run.id); // 스냅샷 + 이후 증분
+const snap = await rest.getRun(run.id); // a snapshot + later increments
 const sub = ws.subscribeRun(run.id, (event) => {
-  if (isKnownRunEvent(event)) { /* event.type으로 좁혀서 사용 */ } else { /* 일반 행 */ }
+  if (isKnownRunEvent(event)) { /* narrow by event.type and use it */ } else { /* an ordinary row */ }
 }, { sinceSeq: snap.last_seq });
 sub.unsubscribe();
 ```
 
-## 기능별 하위 경로
-전체 클라이언트(`createRestClient`)는 기능 클라이언트를 합친 편의 조립이다. 기능 하나만 쓰려면 하위 경로와 전송(`createRestIo`)을 따로 쓴다.
-기능 클라이언트끼리는 서로 import하지 않으며(dependency-cruiser로 강제), 공통은 `io`(전송 계약·도구)뿐이다.
+## Per-feature subpaths
+The full client (`createRestClient`) is a convenience assembly that combines the feature clients. To use only one feature, use its subpath and the transport (`createRestIo`) separately.
+Feature clients do not import one another (enforced by dependency-cruiser); the only thing they share is `io` (the transport contract and helpers).
 
 ```ts
 import { createRestIo } from "@agent-console/api-client/transport";
@@ -63,46 +63,46 @@ const chat = createChatClient(createRestIo({ baseUrl: "http://127.0.0.1:8765", t
 const conversations = await chat.listConversations({ archived: false });
 ```
 
-하위 경로: `core`(부트스트랩·서버 정보·모듈 목록 `listModules`), `catalog`(종류 목록), `agents`, `graphs`, `runs`, `chat`, `interactions`, `usage`, `resources`, `imports`, `exports`, `settings`, `versions`, `logs`, `memory`, `projects`, `architecture`, 그리고 `io`·`transport`.
+Subpaths: `core` (bootstrap, server info, and the module list `listModules`), `catalog` (the kind list), `agents`, `graphs`, `runs`, `chat`, `interactions`, `usage`, `resources`, `imports`, `exports`, `settings`, `versions`, `logs`, `memory`, `projects`, `architecture`, and `io` and `transport`.
 
-## 공개 API
-- `createClient(opts)` → `{ rest, ws }` (같은 `baseUrl`/`token`)
-- `createRestClient({ baseUrl, token?, fetch? })` →  Phase 1 REST 전부(부트스트랩, 노드/엣지 타입, 포트 해석, 백엔드·모델, 에이전트 CRUD, 그래프 CRUD·validate·versions, Run 생성·조회·취소, 설정)
-- 중첩 팀·조건: `listConditionOperators`(`GET /condition-operators`), `listRuns({root})`(루트 아래 모든 자식 Run, 없는 id면 빈 목록), `listInteractions({root})`(루트와 그 자식 Run의 상호작용; 응답은 각 `Interaction.run_id`로 보낸다), `getRun`의 `children`(직접 자식 Run).
-- v2 REST: 채팅(`listConversations`·`createConversation`·`updateConversation`(이름·보관·`graph_id` 전환)·`listTurns`·`postMessage` → `{run}` 또는 `{queued}`·`cancelQueuedMessage`), 상호작용(`listInteractionKinds`·`listInteractions`·`listRunInteractions`·`respondInteraction`), 실행(`getRunTrace`·`listRunEvents`·`getHandoffs`·확장된 `listRuns` 필터), 에이전트(`listAgentUsages`·`getAgentEffectiveSettings`·`getAgentActivity`), 팀 구성(`duplicateGraph`·`getNodeEffectiveSettings`·`getNodeBundlePreview` → `BundlePreview{bundle, warnings}`, 계약 v3의 `getGraphPlan`·`planDraftGraph`(`TeamPlanSummary`)·`previewDraftEffectiveSettings`·`previewDraftBundle`(저장하지 않는 초안 미리보기), `listGraphs({validate:false})`), 위임 전략·리소스 종류 디스크립터, 사용량(`getUsage`·`listUsageSources`), 리소스(CRUD·본문·사용처, `.claude` 가져오기 `listImportSources`·`previewImport`·`importResources`). 정의 저장 계열은 `Versioned<T>{value, version_hash}`(ETag)와 선택 `If-Match` 인자를 쓴다.
-- 로그(`logs`): 출처·수집(`listLogSources`·`scanLogs`)·세션·타임라인·이벤트·집계·handoff·분류 체계·대시보드 템플릿·`getLogSchema`·보관본(`downloadLogArchive` → Blob + 파일 이름)·`getLogSessionTrace`·`listRunLogs`·구조도(`getLogArchitecture`(로그 필터 + `profile` → `ArchitectureView`)·`getLogEventArchitecture`(uid → `ArchitectureMembership`), 프로필 목록은 `architecture`의 `listArchitectureProfiles`). 필터는 `LogQueryParams`(이름 → 값 또는 값 목록, 반복 키)이며 이름의 유효성은 서버가 정한다. WS `subscribeLogs(h)`는 토픽 `logs`의 `logs.ingested`를 준다(재접속 때 자동 재구독).
-- 공유 메모리(`memory`): 범위 종류·범위 요약·태그(`listMemoryScopeKinds`·`listMemoryScopes`·`listMemoryTags`), 항목 목록·검색(`listMemoryEntries`, 범위는 `MemoryScopeRef`로 주고 `<종류>:<id>` 반복 키로 나간다, 서버 정렬 `sort`·`order`, 커서 쪽 넘김), 만들기·읽기·고치기(`updateMemoryEntry(id, body, version)`은 `If-Match` 필수, 412는 `memoryConflictVersion(error)`로 현재 버전을 읽는다)·표시 삭제·완전 삭제(`purgeMemoryEntry`, 204)·옮기기·보관·되돌리기(`restoreMemoryEntry`)·버전 목록/본문, 정리 미리보기·적용(`planMemoryRetention`·`applyMemoryRetention`), 설정 검사(`checkMemorySettings`), 내보내기(`exportMemory` → Blob + 파일 이름)·가져오기(`importMemory(zip 바이트, {policy, dryRun})`, multipart가 아니라 zip 바이트가 본문), 로그 색인 비우기(`purgeLogIndex`, 범위 없이 실제로 지우려면 `all: true`, 없으면 422·지원하지 않으면 400 `logs.purge_unsupported`). WS `subscribeMemory(h)`는 토픽 `memory.changed`의 변경 알림(본문 없음)을 준다(구독 직후 보내 주는 것은 없고 재접속 때 자동 재구독). 범위 종류·태그·키 이름은 코드에 없다.
-- `getServerInfo()` → `GET /server-info`(설정 화면의 서버 정보, 읽기 전용).
-- `getAgentVersioned(id)`·`updateAgentVersioned(id, agent, versionHash?)`: 에이전트를 `ETag`(`version_hash`)와 함께 읽고 `If-Match`로 저장한다(충돌은 412 `ApiError.versionConflict`). 기존 `getAgent`·`updateAgent`는 그대로.
-- `ApiError { status, code, message, details, versionConflict? }`: 모든 REST 실패. 네트워크 실패는 `status 0`, `code "network_error"`. 모르는 `code`도 그대로 노출한다. `isInteractionClosed`(409 `interaction_closed`: 이미 답한 요청)·`isConversationBusy`(409 `conversation_busy`)로 같은 409를 구분한다.
-- `createWsClient({ baseUrl, token?, webSocket?, backoff?, timers?, random?, nextId?, onError? })` → `connect / close / status / onStatus / subscribe / subscribeRun / subscribeConversation(id, h) / subscribeInteractions(h) / onMessage`. `conversation:<id>`·`interactions` 토픽은 재접속 때 자동으로 다시 구독한다(재생 없음, `interactions`는 서버가 대기 목록을 다시 보냄).
-- 상수 `WS_CLOSE_UNAUTHORIZED`(4401)·`WS_CLOSE_FORBIDDEN`(4403)·`WS_AUTH_CLOSE_CODES`: `noReconnectCloseCodes`의 기본값이다(`createClient`도 이 옵션을 받는다. 값은 `@agent-console/contracts`의 상수를 그대로 re-export).
-- 주입 타입: `FetchLike`, `WebSocketFactory`, `WebSocketLike`, `TimerApi`. `token`은 문자열 또는 호출 때마다 읽는 함수(재접속 때도 다시 읽음).
+## Public API
+- `createClient(opts)` → `{ rest, ws }` (the same `baseUrl` and `token`)
+- `createRestClient({ baseUrl, token?, fetch? })` → all of the Phase 1 REST (bootstrap, node and edge types, port resolution, backends and models, agent CRUD, team graph CRUD, validate, and versions, run creation, lookup, and cancel, and settings)
+- Nested teams and conditions: `listConditionOperators` (`GET /condition-operators`), `listRuns({root})` (every child run under a root; an empty list for an unknown id), `listInteractions({root})` (the interactions of the root and its child runs; the response routes each by its `Interaction.run_id`), and `children` in `getRun` (the direct child runs).
+- v2 REST: chat (`listConversations`, `createConversation`, `updateConversation` (rename, archive, and switching `graph_id`), `listTurns`, `postMessage` → `{run}` or `{queued}`, and `cancelQueuedMessage`), interactions (`listInteractionKinds`, `listInteractions`, `listRunInteractions`, and `respondInteraction`), runs (`getRunTrace`, `listRunEvents`, `getHandoffs`, and the extended `listRuns` filters), agents (`listAgentUsages`, `getAgentEffectiveSettings`, and `getAgentActivity`), teams (`duplicateGraph`, `getNodeEffectiveSettings`, `getNodeBundlePreview` → `BundlePreview{bundle, warnings}`, contract v3's `getGraphPlan`, `planDraftGraph` (`TeamPlanSummary`), `previewDraftEffectiveSettings`, and `previewDraftBundle` (previews of an unsaved draft), and `listGraphs({validate:false})`), delegation strategy and resource kind descriptors, usage (`getUsage` and `listUsageSources`), and resources (CRUD, content, and usages, and `.claude` import with `listImportSources`, `previewImport`, and `importResources`). The definition save family uses `Versioned<T>{value, version_hash}` (the ETag) and an optional `If-Match` argument.
+- Logs (`logs`): sources and collection (`listLogSources` and `scanLogs`), sessions, timeline, events, aggregation, handoff, the taxonomy, dashboard templates, `getLogSchema`, the archive (`downloadLogArchive` → a Blob plus a file name), `getLogSessionTrace`, `listRunLogs`, and the architecture map (`getLogArchitecture` (a log filter plus `profile` → `ArchitectureView`) and `getLogEventArchitecture` (uid → `ArchitectureMembership`); the profile list is `listArchitectureProfiles` in `architecture`). A filter is `LogQueryParams` (a name → a value or a list of values, with repeated keys), and the server decides whether a name is valid. The WS `subscribeLogs(h)` delivers `logs.ingested` on the topic `logs` (it re-subscribes automatically on reconnect).
+- Shared memory (`memory`): scope kinds, scope summaries, and tags (`listMemoryScopeKinds`, `listMemoryScopes`, and `listMemoryTags`), entry lists and search (`listMemoryEntries`; the scope is passed as a `MemoryScopeRef` and goes out as a repeated `<kind>:<id>` key, with the server sorting `sort` and `order`, and cursor paging), create, read, and update (`updateMemoryEntry(id, body, version)` requires `If-Match`, and a 412 gives the current version through `memoryConflictVersion(error)`), mark-delete, permanent delete (`purgeMemoryEntry`, 204), move, archive, revert (`restoreMemoryEntry`), the version list and content, cleanup preview and apply (`planMemoryRetention` and `applyMemoryRetention`), the settings check (`checkMemorySettings`), export (`exportMemory` → a Blob plus a file name) and import (`importMemory(zip bytes, {policy, dryRun})`; the body is the zip bytes, not multipart), and clearing the log index (`purgeLogIndex`; to actually delete without a scope, pass `all: true`, otherwise 422, and 400 `logs.purge_unsupported` when unsupported). The WS `subscribeMemory(h)` delivers change notices (with no body) on the topic `memory.changed` (nothing is sent right after subscribing, and it re-subscribes automatically on reconnect). Scope kinds, tags, and key names are not in the code.
+- `getServerInfo()` → `GET /server-info` (the server info in Settings, read-only).
+- `getAgentVersioned(id)` and `updateAgentVersioned(id, agent, versionHash?)`: read an agent together with its `ETag` (`version_hash`) and save it with `If-Match` (a conflict is a 412 `ApiError.versionConflict`). The existing `getAgent` and `updateAgent` are unchanged.
+- `ApiError { status, code, message, details, versionConflict? }`: every REST failure. A network failure is `status 0` with `code "network_error"`. An unknown `code` is exposed as it is. `isInteractionClosed` (409 `interaction_closed`: a request that was already answered) and `isConversationBusy` (409 `conversation_busy`) tell the same 409 apart.
+- `createWsClient({ baseUrl, token?, webSocket?, backoff?, timers?, random?, nextId?, onError? })` → `connect / close / status / onStatus / subscribe / subscribeRun / subscribeConversation(id, h) / subscribeInteractions(h) / onMessage`. The `conversation:<id>` and `interactions` topics are re-subscribed automatically on reconnect (no replay; for `interactions` the server sends the waiting list again).
+- The constants `WS_CLOSE_UNAUTHORIZED` (4401), `WS_CLOSE_FORBIDDEN` (4403), and `WS_AUTH_CLOSE_CODES`: the default of `noReconnectCloseCodes` (`createClient` accepts this option too; the values are re-exported as they are from the constants in `@agent-console/contracts`).
+- Injected types: `FetchLike`, `WebSocketFactory`, `WebSocketLike`, and `TimerApi`. `token` is a string or a function read on every call (it is read again on reconnect as well).
 
-## 동작 규칙
-- 재접속: 지수 백오프 `min(maxMs, initialMs * factor^n) * (1 - jitter * random())` (기본 500ms ×2, 최대 10s, 지터 0.2). 열리면 초기화. `close()` 하면 멈춘다.
-- Run 이벤트: 토픽별 마지막 seq를 기억해 재접속 시 `subscribe {since_seq}`를 보내고, `seq <= 마지막`인 이벤트는 버린다.
-- 이미 지난 seq(순서가 뒤바뀌어 늦게 도착한 이벤트·줄)는 버린다.
-- 같은 토픽의 두 번째 이후 구독이 넘긴 `sinceSeq`와 `onError`는 무시된다(첫 구독의 값이 쓰인다).
-- 백오프는 연결이 열린 뒤 첫 메시지를 받거나 `stableMs`(기본 10초) 동안 유지돼야 초기화된다. 열자마자 닫는 서버에는 간격이 계속 늘어난다.
-- `noReconnectCloseCodes`(기본 `WS_AUTH_CLOSE_CODES`)에 든 close 코드는 재접속하지 않고 `closed`로 둔다(인증 실패 코드는 `WS_AUTH_CLOSE_CODES`).
-- 핸들러가 던진 예외는 격리되어 `onError({code: "handler_error"})`로 보고되고 다른 핸들러는 계속 호출된다.
-- 같은 토픽을 여러 번 구독하면 소켓 구독은 하나이고, 늦게 붙은 쪽은 이후 이벤트부터 받는다.
-- `graph:<id>` 토픽 전용 핸들러는 없다. `onMessage`로 원본을 받는다.
+## Behavior
+- Reconnect: exponential backoff `min(maxMs, initialMs * factor^n) * (1 - jitter * random())` (by default 500 ms ×2, at most 10 s, jitter 0.2). It resets once the connection opens. Calling `close()` stops it.
+- Run events: it remembers the last seq per topic, sends `subscribe {since_seq}` on reconnect, and drops events with `seq <=` the last.
+- A seq that has already passed (an event or line that arrived late because of reordering) is dropped.
+- The `sinceSeq` and `onError` passed by a second or later subscription to the same topic are ignored (the first subscription's values are used).
+- The backoff resets only after the connection has opened and either received a first message or held for `stableMs` (default 10 seconds). For a server that closes immediately after opening, the interval keeps growing.
+- A close code listed in `noReconnectCloseCodes` (default `WS_AUTH_CLOSE_CODES`) does not reconnect and leaves the state as `closed` (the authentication failure codes are `WS_AUTH_CLOSE_CODES`).
+- An exception thrown by a handler is isolated and reported through `onError({code: "handler_error"})`, and the other handlers are still called.
+- Subscribing to the same topic several times uses a single socket subscription, and a late subscriber receives events from then on.
+- There is no dedicated handler for the `graph:<id>` topic. Receive the raw message through `onMessage`.
 
-## 의존성
-| 무엇을 | 왜 | 대안 |
+## Dependencies
+| What | Why | Alternatives |
 | --- | --- | --- |
-| `@agent-console/contracts` (워크스페이스) | 생성된 계약 타입·`ERROR_CODES` 재사용 | 없음(유일한 의존) |
-| 외부 라이브러리 없음 | `fetch`·`WebSocket`이 표준이고 재접속·seq 재생 규칙이 이 프로젝트 계약에 묶여 있다 | `reconnecting-websocket`(since_seq 재생·콘솔 중복 제거는 어차피 직접 필요), `openapi-fetch`(스키마가 JSON Schema 단일 파일이라 OpenAPI 경로는 보류) |
+| `@agent-console/contracts` (workspace) | Reuses the generated contract types and `ERROR_CODES` | None (the only dependency) |
+| No external library | `fetch` and `WebSocket` are standards, and the reconnect and seq replay rules are tied to this project's contract | `reconnecting-websocket` (the since_seq replay and the console's duplicate removal would need to be written anyway), `openapi-fetch` (the schema is a single JSON Schema file, so the OpenAPI path is deferred) |
 
-## 여러 파일 리소스·이어 가기
-- `listResourceFiles`/`readResourceFile`/`putResourceFile`/`deleteResourceFile`(`If-Match` = 정의 `version_hash`, 응답 = 정의 + 새 ETag), `getResumeOptions`/`resumeRun`, `releaseQueuedMessage`.
+## Multi-file resources and resuming
+- `listResourceFiles`, `readResourceFile`, `putResourceFile`, and `deleteResourceFile` (`If-Match` = the definition's `version_hash`, and the response = the definition plus the new ETag), `getResumeOptions`, `resumeRun`, and `releaseQueuedMessage`.
 
-## 테스트
-`pnpm test` (패키지 폴더 또는 루트, Vitest). 가짜 `fetch`/`WebSocket`/타이머로 REST 정상·오류·412, 재접속 백오프, `since_seq` 재생, 콘솔 seq 중복 제거를 검증한다.
+## Testing
+`pnpm test` (from the package folder or the repository root; Vitest). With a fake `fetch`, `WebSocket`, and timers, it verifies REST success, errors, and 412, reconnect backoff, `since_seq` replay, and the console's seq de-duplication.
 
-## 프로젝트와 공간
-- `projects` 클라이언트(`createProjectsClient`, `createRestClient`에도 합쳐져 있다): `listProjects`·`getProject`·`createProject`·`updateProject`·`unregisterProject`(DELETE = 서버가 보관), 설정 파일 `resetProjectManifest`(`status == manifest_invalid`일 때만, 백업 경로 `backup_path`)·`appendProjectGitignore`, 폴더 `checkFolder`·`createFolder`·`listFolders`·`getFolderCapabilities`·`pickFolder(request, {signal})`(abort하면 서버가 창을 닫는다), 공간 사이 복사 `planCopy`·`applyCopy`, 삭제 전 거꾸로 참조 `listCopyItemReferences(project|null, kind, id)`(`checked === false`면 검사 수단 없음), 옛 기록 `planLegacyCopy`. 기록 개수·프로젝트에 넣기는 `runs`(`getRunProjectCounts`·`assignRunsToProject`)와 `chat`, 메모리 복사는 `memory`(`copyMemory`)에 있다(기능끼리 import하지 않는다).
-- Run 위임 흐름·넘김: `getRunTrace(id, { project })`와 `getHandoffs({ project })`는 선택 `project`(`?project=`, 없는 프로젝트는 404 `project.not_found`)를 붙인다. 생략하면 공용 기록 그대로다.
-- 공간 인자: 정의·메모리 REST는 `?project=<id>`로 프로젝트 폴더의 사본 저장소를 고른다(없으면 공용). 기능 클라이언트는 공간을 모르고, 전송을 `withSpace(io, "payments")`로 감싸거나 `createSpaceRestClient(options, "payments")`로 정의·버전·메모리 묶음을 얻는다. `null`·생략이면 요청 주소가 달라지지 않는다.
+## Projects and spaces
+- The `projects` client (`createProjectsClient`, also merged into `createRestClient`): `listProjects`, `getProject`, `createProject`, `updateProject`, and `unregisterProject` (DELETE = the server archives it), the settings file `resetProjectManifest` (only when `status == manifest_invalid`, with the backup path `backup_path`) and `appendProjectGitignore`, folders `checkFolder`, `createFolder`, `listFolders`, `getFolderCapabilities`, and `pickFolder(request, {signal})` (aborting makes the server close the window), copying between spaces with `planCopy` and `applyCopy`, reverse references before deletion with `listCopyItemReferences(project|null, kind, id)` (with `checked === false` there is no way to check), and old records with `planLegacyCopy`. Record counts and assigning records to a project are in `runs` (`getRunProjectCounts` and `assignRunsToProject`) and `chat`, and copying memory is in `memory` (`copyMemory`) (features do not import one another).
+- Run delegation flow and handoffs: `getRunTrace(id, { project })` and `getHandoffs({ project })` attach an optional `project` (`?project=`; an unknown project is a 404 `project.not_found`). When omitted, they read the shared records as before.
+- The space argument: the definition and memory REST calls pick the project folder's copy store with `?project=<id>` (the shared library when omitted). Feature clients do not know about spaces; wrap the transport with `withSpace(io, "payments")`, or get the definition, version, and memory bundle with `createSpaceRestClient(options, "payments")`. With `null` or when omitted, the request address does not change.

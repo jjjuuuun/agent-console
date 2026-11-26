@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/log-view": [
         "./src/index.ts"
+      ],
+      "@agent-console/log-view/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/log-view/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

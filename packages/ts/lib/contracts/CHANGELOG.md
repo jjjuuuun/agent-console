@@ -2,6 +2,19 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
+## [0.16.0]
+- Contracts 0.16.0. Breaking change — internal dependency range `^0.16.0`. `common` 2.1.0, `i18n` 1.0.0 (new), `definitions` 3.0.0, `projects` 4.1.0, `sdd` 1.4.0. The unreleased 0.15.1 is folded into this release.
+- Removed: `WorkspaceSettings.default_backend`. Use `agent_defaults.backend`.
+- New subpath `@agent-console/contracts/i18n`: `I18nInfo` (`languages`, `default_language`, `fallback_language`), `LanguageInfo` (`code`, `sources`, `complete`, `missing?` — missing or empty messages compared with the fallback language, `null`/absent = not counted), `MessageCatalog` (`language`, `text`, `codes`, `ns`).
+- New field `UiPreferences.language?: string | null` (screen language, `null` = follow the browser; widget `language`).
+- New constants: `ERROR_CODES.I18N_UNKNOWN_LANGUAGE` (`i18n.unknown_language`, `HTTP_STATUS_BY_ERROR_CODE` 404), `KNOWN_ISSUE_CODES.I18N_CATALOG_UNREADABLE`, `I18N_CATALOG_INVALID`, `I18N_CATALOG_UNKNOWN_SECTION`, `I18N_ENTRY_INVALID`, `I18N_LANGUAGE_INVALID`, `I18N_LOCALES_MISSING`, `I18N_SOURCE_UNAVAILABLE`, `KNOWN_UI_WIDGETS.LANGUAGE` (`language`).
+- New fields (from the unreleased 0.15.1): `CopyKindInfo.reserved_ids?: string[]` (reserved ids per kind, case-insensitive), `SddInfo.reserved_template_ids?: string[]` (reserved document template ids). Both absent = empty list (older servers do not send them).
+- New field `CopyKindInfo.open_role?: string | null` (`projects` 4.1.0): the web route role of the screen that opens an item of that kind (same vocabulary as `FixTarget.role`). `null`/absent = no screen known (older servers do not send it); the web hides "Open" then, and also when it has no screen for that role.
+
+### BREAKING CHANGE
+
+`WorkspaceSettings.default_backend` is removed. Read and write `agent_defaults.backend` instead. Settings documents that still contain `default_backend` are read by the server and keep the key, but the value is not used (info issue `settings.ignored_key`, `details.replacement = "agent_defaults.backend"`).
+
 ## [0.15.0]
 - 계약 0.15.0. 깨는 변경 — 사내 의존 범위 `^0.15.0`. `common`·`logs`·`definitions` 2.0.0, `projects` 4.0.0, `memory`·`wiki` 1.3.0.
 - 지운 타입·상수: `MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`·`ProjectPreferences`·`DefinitionScope`·`LogProjectSettings`·`LogProjectGroup`·`LogProjectRef`·`LogUngroupedPolicy`, 필드 `WorkspaceSettings.projects`·`LogSettings.projects`·`LogSessionSummary.project`, `KNOWN_ISSUE_CODES`의 `PROJECT_MEMORY_NETWORK_FS`·`PROJECT_SHARED_USES_PROJECT`·`PROJECT_CROSS_PROJECT`·`PROJECT_DEFINITIONS_UNAVAILABLE`, `KNOWN_SUGGESTION_IDS.PROJECT_MOVE_TO_SHARED`(`KNOWN_SUGGESTION_IDS` = `{}`).

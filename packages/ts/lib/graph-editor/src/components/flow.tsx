@@ -3,7 +3,7 @@ import { ARROW_GAP, buildEdgePath } from "../logic/edgePath";
 import { Fragment, memo, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Handle, Position, useStore, useUpdateNodeInternals } from "@xyflow/react";
 import type { Edge, EdgeProps, Node, NodeProps } from "@xyflow/react";
-import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { CSSProperties, FocusEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { ChipView, EdgeBadge } from "../types";
 import { FALLBACK_EDGE_SHAPE } from "../logic/layout";
 import { BUILTIN_EDGE_SHAPES } from "../shapes/registry";
@@ -419,36 +419,65 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
   const pinX = data?.labelOffset?.x;
   const pinY = data?.labelOffset?.y;
   const report = spread?.report;
-  // 라벨 실제 크기를 재서 겹침 계산에 쓴다(칩 폭·줄 수는 내용·줌에 따라 달라진다)
+  // 라벨 실제 크기를 재서 겹침 계산에 쓴다(칩 폭·줄 수는 내용·줌에 따라 달라진다).
+  // 접힌 칩은 아이콘·`+N`만 보이므로 접힌 크기를 따로 재서 기억한다. 펼친 크기는 접기 전에 잰 값이고, 접힌 칩을 펼쳐 보는 동안(포인터·초점)에 다시 잰다.
+  // 펼친 크기는 접힌 동안 줄지 않는다(접었다 폈다 되풀이하지 않게)
   const [chipEl, setChipEl] = useState<HTMLDivElement | null>(null);
   const [chipSize, setChipSize] = useState<{ width: number; height: number } | null>(null);
+  const [foldedSize, setFoldedSize] = useState<{ width: number; height: number } | null>(null);
+  const [open, setOpen] = useState(false);
+  // 칩을 접을 수 있는가: 줄일 칩이 있고(`badged`), 크기를 잴 수 있고(레이아웃이 있는 화면), 선택하지 않았고, 사용자가 위치를 정하지 않은 라벨만(선택·고정 라벨은 항상 펼친 채)
+  const foldable = badged && selected !== true && !pinned && chipSize !== null && chipSize.width > 0;
+  const folded = foldable && spread?.folded?.has(props.id) === true;
+  const expanded = folded && open;
+  const fullKnown = useRef<{ width: number; height: number } | null>(null);
+  // 접힘이 풀리면 펼침 표시도 끈다(렌더 중 상태 보정)
+  if (!folded && open) setOpen(false);
   useLayoutEffect(() => {
     const el = chipEl;
     if (el === null) return;
+    const same = (a: { width: number; height: number } | null, w: number, h: number) => a !== null && a.width === w && a.height === h;
     const measure = () => {
       const width = el.offsetWidth;
       const height = el.offsetHeight;
-      setChipSize((c) => (c !== null && c.width === width && c.height === height ? c : { width, height }));
+      if (folded && !expanded) {
+        if (width > 0) setFoldedSize((c) => (same(c, width, height) ? c : { width, height }));
+        return;
+      }
+      const k = folded ? fullKnown.current : null;
+      const next = { width: Math.max(width, k?.width ?? 0), height: Math.max(height, k?.height ?? 0) };
+      fullKnown.current = next;
+      setChipSize((c) => (same(c, next.width, next.height) ? c : next));
     };
     measure();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [chipEl]);
+  }, [chipEl, folded, expanded]);
   const sizeW = chipSize?.width;
   const sizeH = chipSize?.height;
+  const foldW = foldedSize?.width;
+  const foldH = foldedSize?.height;
   useEffect(() => {
     if (report === undefined) return;
     const offset = pinX === undefined && pinY === undefined ? undefined : { x: pinX ?? 0, y: pinY ?? 0 };
     report(
       props.id,
-      { id: props.id, labelAt: result.labelAt, visible: visibleChip, ...(sizeW === undefined || sizeH === undefined || sizeW === 0 ? {} : { size: { width: sizeW, height: sizeH } }), ...(pinned ? { fixed: { t: pinT, offset } } : {}) },
-      `${path}|${visibleChip}|${pinned}|${pinT}|${pinX}|${pinY}|${sizeW}x${sizeH}`,
+      {
+        id: props.id,
+        labelAt: result.labelAt,
+        visible: visibleChip,
+        ...(sizeW === undefined || sizeH === undefined || sizeW === 0 ? {} : { size: { width: sizeW, height: sizeH } }),
+        ...(foldable ? { foldable: true } : {}),
+        ...(foldW === undefined || foldH === undefined ? {} : { foldedSize: { width: foldW, height: foldH } }),
+        ...(pinned ? { fixed: { t: pinT, offset } } : {}),
+      },
+      `${path}|${visibleChip}|${pinned}|${pinT}|${pinX}|${pinY}|${sizeW}x${sizeH}|${foldable}|${foldW}x${foldH}`,
     );
     // `result`는 렌더마다 새로 만들어지지만 내용은 `path`로 정해지므로 `path`가 같으면 다시 알리지 않는다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report, props.id, path, visibleChip, pinned, pinT, pinX, pinY, sizeW, sizeH]);
+  }, [report, props.id, path, visibleChip, pinned, pinT, pinX, pinY, sizeW, sizeH, foldable, foldW, foldH]);
   useEffect(() => (report === undefined ? undefined : () => report(props.id, null, "")), [report, props.id]);
   const chips = buildChipEntries(data);
   const iconNode: ReactNode =
@@ -489,6 +518,16 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
     </>
   );
 
+  const leadChipData = data?.leadChip;
+  const leadIcon: ReactNode =
+    leadChipData === undefined
+      ? null
+      : (leadChipData.iconName !== undefined ? (data?.renderIcon?.(leadChipData.iconName) ?? leadChipData.iconText ?? null) : (leadChipData.iconText ?? null)) || null;
+  const foldedCount = chips.shown.length + chips.hidden.length - (leadChipData === undefined ? 0 : 1) + (data?.runBadges?.length ?? 0) + (data?.countBadge !== undefined ? 1 : 0);
+  // 접힌 칩에 아이콘 말고 보일 것: 아이콘이 없으면 라벨 첫 글자, 아이콘으로 못 보이는 칩 수는 `+N`
+  const foldIcon = iconNode !== null || leadIcon !== null || data?.orderBadge !== undefined;
+  const foldMarker: string | null = foldIcon && foldedCount === 0 ? null : `${foldIcon ? "" : ([...(data?.label ?? "")][0] ?? "…")}${foldedCount > 0 ? format(edit?.messages.edgeChipsMore ?? "+{n}", { n: foldedCount }) : ""}`;
+  const fullText = [data?.label, ...chips.shown.map((c) => c.text), ...chips.hidden.map((c) => c.text)].filter((t) => t !== undefined && t !== "").join("; ");
   const baseEdge = (
     <BaseEdge
       id={props.id}
@@ -536,7 +575,22 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
           data-wide={(data?.extraChips?.length ?? 0) > 0 || (data?.runBadges?.length ?? 0) > 0 ? "true" : undefined}
           data-stacked={stacked ? "true" : undefined}
           data-edge-id={extended ? props.id : undefined}
-          title={data?.label}
+          data-folded={folded ? "true" : undefined}
+          data-expanded={expanded ? "true" : undefined}
+          title={folded ? fullText : data?.label}
+          {...(folded
+            ? {
+                role: "group",
+                tabIndex: 0,
+                "aria-label": fullText,
+                onPointerEnter: () => setOpen(true),
+                onPointerLeave: () => setOpen(false),
+                onFocus: () => setOpen(true),
+                onBlur: (e: FocusEvent<HTMLElement>) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+                },
+              }
+            : {})}
           {...chipHandlers}
         >
           {data?.orderBadge !== undefined && (
@@ -558,6 +612,11 @@ export const AcEdge = memo(function AcEdge(props: EdgeProps<FlowEdge>) {
           {data?.countBadge !== undefined && (
             <span className="ac-ge-count" title={data.countText} aria-label={data.countText}>
               ×{data.countBadge}
+            </span>
+          )}
+          {folded && foldMarker !== null && (
+            <span className="ac-ge-fold-more" aria-hidden="true">
+              {foldMarker}
             </span>
           )}
         </div>

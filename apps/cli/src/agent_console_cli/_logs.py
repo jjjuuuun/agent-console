@@ -52,7 +52,7 @@ def parse_before(text: str) -> float:
     try:
         moment = datetime.fromisoformat(value)
     except ValueError:
-        raise ValueError(f"--before는 epoch 초나 ISO 8601 시각입니다: {text!r}") from None
+        raise ValueError(f"--before takes epoch seconds or an ISO 8601 time: {text!r}") from None
     return moment.timestamp()
 
 
@@ -68,8 +68,8 @@ def run_purge(index_path: Path, options: PurgeOptions, *, out: TextIO, err: Text
     scoped = bool(options.sources or options.categories or options.before is not None)
     if not scoped and not options.everything:
         err.write(
-            "agent-console logs purge: 범위(--source·--category·--before)가 없습니다. "
-            "색인 전체를 비우려면 --all을 주세요\n"
+            "agent-console logs purge: no filter given (--source, --category, --before). "
+            "To clear the whole index, add --all\n"
         )
         return EXIT_USAGE
     try:
@@ -90,19 +90,19 @@ def run_purge(index_path: Path, options: PurgeOptions, *, out: TextIO, err: Text
         err.write(f"agent-console logs purge: {exc}\n")
         return EXIT_USAGE
     except Exception as exc:  # DB 잠김 등
-        err.write(f"agent-console logs purge: 실패({type(exc).__name__}: {exc})\n")
+        err.write(f"agent-console logs purge: failed ({type(exc).__name__}: {exc})\n")
         return EXIT_FAILED
     finally:
         index.close()
-    verb = "지웠습니다" if options.apply else "지울 행(dry-run, 지우지 않음)"
+    verb = "Deleted" if options.apply else "Would delete (dry run, nothing deleted)"
     out.write(
-        f"{verb}: 이벤트 {result.events} · 토큰 표본 {result.usage} · "
-        f"커서 {result.cursors} · 에이전트 {result.agents}\n"
+        f"{verb}: events {result.events} · token samples {result.usage} · "
+        f"cursors {result.cursors} · agents {result.agents}\n"
     )
     if not options.apply:
-        out.write("실제로 지우려면 --yes를 주세요.\n")
+        out.write("To delete for real, add --yes.\n")
     elif options.rescan and result.cursors:
-        out.write("다음 수집에서 범위 출처를 처음부터 다시 읽습니다.\n")
+        out.write("The next collection reads the matching sources again from the start.\n")
     return EXIT_OK
 
 

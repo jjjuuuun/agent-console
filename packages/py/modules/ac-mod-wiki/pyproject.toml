@@ -1,16 +1,16 @@
 [project]
 name = "agent-console-mod-wiki"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent Console — 위키 기능 모듈: REST /wiki/*·WS wiki.changed, 정의 종류 기여(위키·위키 규칙), 설정 섹션 wiki, 포트 wiki.service, 계보 wiki"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
-    "agent-console-wiki[sqlite]>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-wiki[sqlite]>=0.2,<0.3",
+    "agent-console-store>=0.2,<0.3",
     "agent-console-conditions>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
@@ -64,16 +64,16 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_mod_wiki.ports:WIKI_SERVICE", reason = "위키 모듈이 연동 모듈에 주는 서비스 통로(구현은 이 모듈 하나)" },
-    { port = "agent_console_mod_wiki.ports:WIKI_SPACES", reason = "프로젝트 연동이 공간 이름 → 위키 저장 공간을 주는 모듈 사이 통로" },
-    { port = "agent_console_mod_wiki.ports:WIKI_INTEGRATIONS", reason = "저장소 연동 모듈이 켜 주는 능력 이름을 알리는 모듈 사이 통로(능력 이름은 위키 모듈이 아는 것만 뜻이 있다)" },
+    { port = "agent_console_mod_wiki.ports:WIKI_SERVICE", reason = "Service port that the wiki module gives link modules (this module is the only implementation)" },
+    { port = "agent_console_mod_wiki.ports:WIKI_SPACES", reason = "Inter-module port through which the projects link module provides the wiki storage for a space name" },
+    { port = "agent_console_mod_wiki.ports:WIKI_INTEGRATIONS", reason = "Inter-module port that announces the capability names that storage link modules turn on (only names that the wiki module knows have any meaning)" },
 ]
 
 [tool.agent-console.extension-points.wiki-write-check]
-title = "위키 쓰기 검사 보탬"
+title = "Wiki write check contribution"
 area = "wiki"
 design_id = "X50"
-summary = "위키 페이지를 쓸 때 경고·거부를 내는 검사를 플러그인이나 연동 모듈로 더한다"
+summary = "Adds, through a plugin or a link module, a check that warns about or rejects a write to a wiki page"
 registration = { kind = "entry-point", group = "agent_console_mod_wiki:WRITE_CHECKS_GROUP", port = "agent_console_mod_wiki.ports:WIKI_WRITE_CHECKS" }
 interface = "agent_console_wiki:WikiWriteCheck"
 settings = ["wiki.write_checks"]

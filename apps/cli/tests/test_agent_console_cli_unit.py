@@ -73,6 +73,31 @@ def test_only_serve_statusline_and_logs_are_exposed(
     assert main(["nope"]) == 2
 
 
+_HANGUL = re.compile(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--help"],
+        ["serve", "--help"],
+        ["statusline", "--help"],
+        ["logs", "--help"],
+        ["logs", "purge", "--help"],
+    ],
+)
+def test_help_is_english(
+    argv: list[str], capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """I.6: 터미널 도움말은 영어 원문이다(설치된 모듈이 선언한 `serve` 옵션 도움말 포함)."""
+    _plain_help_env(monkeypatch)
+    assert main(argv) == 0
+    captured = capsys.readouterr()
+    text = _strip_ansi(captured.out + captured.err)
+    assert "--help" in text
+    assert _HANGUL.findall(text) == []
+
+
 @pytest.fixture
 def served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> list[Any]:
     """서버 `serve`를 가로채 받은 설정을 모은다(현재 폴더·환경변수 설정은 비운다)."""
@@ -157,7 +182,9 @@ class _FlagModule:
         title="Flag demo",
         settings_compat=SettingsCompat(
             flags=(
-                FlagSetting("demo-value", ("values",), help="예제 값", metavar="TEXT", repeat=True),
+                FlagSetting(
+                    "demo-value", ("values",), help="Example value", metavar="TEXT", repeat=True
+                ),
             )
         ),
     )
@@ -180,7 +207,7 @@ def test_module_declared_flag_reaches_serve(
     assert main(["serve", "--help"]) == 0
     help_text = _strip_ansi(capsys.readouterr().out)
     assert "--demo-value" in help_text
-    assert "mod-flag-demo" in help_text
+    assert "Example value (module mod-flag-demo)" in help_text
     assert main(["serve", "--demo-value", "x", "--demo-value", "y"]) == 0
     assert served[0].modules.options["mod-flag-demo"]["values"] == ["x", "y"]
 

@@ -303,4 +303,4 @@ uv run agent-console serve --disable-module mod-logs
 `uv run poe check`(ruff·mypy·import-linter·pytest)와 `pnpm check`(ESLint·tsc·Vitest·dependency-cruiser)로 전체 검사를 합니다.
 화면을 고칠 때는 `pnpm app`으로 서버(127.0.0.1:8765)와 웹 미리보기(127.0.0.1:4173)를 함께 띄우거나
 (`--build`로 웹 다시 빌드, `--` 뒤 인자는 `serve`로 전달), `uv run agent-console serve`와 `pnpm --filter @agent-console/web dev`(5173)를 따로 띄웁니다.
-개발 규칙과 명령 전체는 [CLAUDE.md](CLAUDE.md), 개발 방식과 확장 지점은 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)에 있습니다.
+개발 규칙과 명령 전체는 루트의 `CLAUDE.md`, 개발 방식과 확장 지점은 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)에 있습니다.

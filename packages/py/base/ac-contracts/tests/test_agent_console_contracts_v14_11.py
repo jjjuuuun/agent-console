@@ -39,7 +39,7 @@ def test_contracts_version_is_at_least_0_14_11() -> None:
         "wiki": "1.2.0",
         "modules": "1.6.0",
     }
-    assert set(CONTRACT_VERSIONS) == set(v01411)
+    assert set(v01411) <= set(CONTRACT_VERSIONS)  # 0.16.0: 하위 모듈 i18n이 늘었다
     for sub, version in v01411.items():
         assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
 

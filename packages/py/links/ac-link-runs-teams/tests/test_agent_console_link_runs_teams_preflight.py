@@ -1,7 +1,8 @@
 """사전 점검 ``backend.unresolved``(5.2R.4): 실행 백엔드가 빈 노드가 있으면 Run을 만들지 않고 422.
 
 - HTTP(mod-definitions·mod-runs와 함께): 본문(노드 label·백엔드 디스크립터·해결 버튼 2개), Run 0건,
-  기본값을 정하면 실행된다.
+  옛 최상위 ``default_backend``만 있으면 그대로 422(읽지 않음), ``agent_defaults.backend``를 정하면
+  실행된다.
 - ``TeamRules.preflight`` 단독: 이름을 바꾼 백엔드로도 같고(코드에 백엔드 이름 없음), 문구·역할은
   ``BackendFixTexts`` 데이터로 바뀐다.
 """
@@ -90,6 +91,14 @@ def _client(tmp_path: Path, *, show_hidden: bool = True) -> Iterator[TestClient]
         yield client
 
 
+def _put_settings(client: TestClient, extra: dict[str, Any]) -> None:
+    got = client.get(f"{API}/settings")
+    etag = got.headers.get("etag")  # 설정 파일이 아직 없으면 ETag 없음
+    body = {**got.json(), **extra}
+    put = client.put(f"{API}/settings", json=body, headers={"If-Match": etag} if etag else {})
+    assert put.status_code == 200, put.text
+
+
 def _wait(client: TestClient, run_id: str) -> dict[str, Any]:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -132,12 +141,17 @@ def test_post_runs_without_backend_is_422_and_records_nothing(tmp_path: Path) ->
         # 기록 0건: Run을 만들지 않았다
         assert client.get(f"{API}/runs").json() == []
 
-        # 기본값(옛 default_backend도 공통 층으로 읽힌다)을 정하면 실행된다
-        got = client.get(f"{API}/settings")
-        body = {**got.json(), "default_backend": "fake-agent"}
-        etag = got.headers.get("etag")  # 설정 파일이 아직 없으면 ETag 없음
-        put = client.put(f"{API}/settings", json=body, headers={"If-Match": etag} if etag else {})
-        assert put.status_code == 200, put.text
+        # 옛 최상위 default_backend만 있으면 읽지 않는다: 같은 사전 점검(해결 버튼 포함)
+        _put_settings(client, {"default_backend": "fake-agent"})
+        res = client.post(f"{API}/runs", json={"graph_id": "solo", "input": {"text": "hi"}})
+        assert res.status_code == 422, res.text
+        legacy = res.json()["error"]
+        assert legacy["code"] == ErrorCodes.BACKEND_UNRESOLVED
+        assert [a["target"] for a in legacy["fix"]["actions"]] == [a["target"] for a in actions]
+        assert client.get(f"{API}/runs").json() == []
+
+        # 공통 기본값(agent_defaults.backend)을 정하면 실행된다
+        _put_settings(client, {"agent_defaults": {"backend": "fake-agent"}})
         run = client.post(f"{API}/runs", json={"graph_id": "solo", "input": {"text": "hi"}})
         assert run.status_code == 202, run.text
         assert _wait(client, run.json()["id"])["run"]["status"] == "completed"

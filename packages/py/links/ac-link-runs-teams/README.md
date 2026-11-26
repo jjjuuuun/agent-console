@@ -1,27 +1,27 @@
 # agent-console-link-runs-teams
 
-실행·팀 연동 모듈. 실행 모듈(`mod-runs`)에 팀 의미(`ac-teams`)를 잇는다.
+Runs and teams link module. It connects team semantics (`ac-teams`) to the runs module (`mod-runs`).
 
-- `runs.preparers`: 엔진 검증 뒤 팀 규칙 검사(`validate_team`, 엔진 이슈와 같은 뜻은 `merge_validation`으로 뺌)와 실행 준비(`prepare_run` — 허용 상호작용·상호작용 대기 설정).
-- 사전 점검(`TeamRules.preflight`, `mod-runs`의 선택 메서드): 실행을 만들기 전에 실행 백엔드가 빈 노드(`ac-teams.resolve_backends`·`unresolved_backends`)가 있으면 422 `backend.unresolved`(`details` = `BackendUnresolvedDetails{nodes, options}`, `fix.actions` = [노드에서 지정]·[기본값으로 지정])를 낸다. Run·턴 기록이 남지 않는다. 문구·웹 라우트 역할·설정 섹션·초점은 `BackendFixTexts` 데이터(`TeamRules(fix_texts=)`)다. 자식 Run은 점검하지 않는다(노드 실패 `agent.no_backend`).
-- `runs.services`: 노드 서비스(`ac-nodes-core` 키 — 에이전트·리소스 조회, 공통 설정, 기본 백엔드, 작업 폴더, 실행 파일 폴더, 중첩 팀 조회 `TEAM_LOOKUP`).
-- 중첩 팀: 팀 구성 읽기(`runs.starter`의 `load_graph(id, version_hash)`, 고정 버전 포함)로 노드 서비스 `TEAM_LOOKUP`과 팀 규칙의 중첩 검사(`team.recursive`·`team.nesting_exceeded`·`team.team_not_found`·`team.child_no_entry`)를 준다.
-- Run의 정의 출처: 실행 환경 `definitions`·노드 서비스 `RUN_DEFINITIONS`가 있으면 노드 서비스(`AGENT_LOOKUP`·`TEAM_LOOKUP`(고정 버전 포함)·`RESOURCE_LOOKUP`(본문·여러 파일))와 실행 전 검사·사전 점검이 그 출처 하나만 본다(`lookups_from(source) -> RunLookups`). 켜고 끄기(리소스·팀 구성 읽기 없음)는 지금과 같다.
-- `graphs.validation`: 팀 구성 목록 검증 요약(워크스페이스 지문 캐시, `definitions.saved` 구독으로도 버림). 공간(`?project=`) 목록은 선택 메서드 `space_summaries(space, ids, lookup=)` — `runs.starter`가 선택 메서드 `check_project(graph_id, project_id)`(`ProjectRunChecker`, 실행 시작과 같은 정의 출처·실행 범위)를 가질 때만 계산하고, 없으면 null.
-- 경로 `POST /graphs/{id}/validate`(본문 그래프 또는 저장본, 이슈가 있어도 200). 결과 = 엔진 검증 + 팀 규칙 + 선택 포트 `definitions.checks`(저장 전 정의 검사)의 경고·정보(예: 다른 연동 모듈이 내는 저장 전 정의 경고와 그 제안). 검사의 error는 저장 경로가 422로 거부하므로 붙이지 않고, 같은 코드·대상·path는 한 번만 낸다. 제공 모듈이 없으면 엔진 검증 + 팀 규칙만이다(`definition_check_issues`·`with_definition_checks`는 HTTP 없이도 쓴다). 선택 질의 `?project=<id>`를 주면 그 프로젝트에서 실행할 때 기준이다(`runs.starter`의 `check_project`·`load_graph(project_id=)` — 그 공간의 정의·실행 범위, 공간에만 있는 구성도 읽는다). `check_project`가 없으면 409 `feature_unavailable`, 출처 공급자가 막으면 그 오류(예: 공간에 없는 구성 422 `project.not_imported`). 이때 저장 전 검사도 그 공간 기준이다(검사의 선택 메서드 `space_issues`, 없으면 `issues`).
+- `runs.preparers`: after engine validation, the team rule check (`validate_team`; issues that mean the same as engine issues are dropped with `merge_validation`) and run preparation (`prepare_run`: allowed interactions and interaction wait settings).
+- Pre-check (`TeamRules.preflight`, an optional method of `mod-runs`): before a run is created, when a node has no execution backend (`ac-teams.resolve_backends`, `unresolved_backends`), it returns 422 `backend.unresolved` (`details` = `BackendUnresolvedDetails{nodes, options}`, `fix.actions` = [Set on node] and [Set as default]). No run or turn record is left. The text, web route roles, settings section, and focus are `BackendFixTexts` data (`TeamRules(fix_texts=)`). Child runs are not pre-checked (the node fails with `agent.no_backend`).
+- `runs.services`: node services (`ac-nodes-core` keys: agent and resource lookup, common settings, default backend, project folder, run file folder, nested team lookup `TEAM_LOOKUP`).
+- Nested teams: reading teams (`load_graph(id, version_hash)` of `runs.starter`, including pinned versions) provides the node service `TEAM_LOOKUP` and the nesting checks of the team rules (`team.recursive`, `team.nesting_exceeded`, `team.team_not_found`, `team.child_no_entry`).
+- Definition source of a run: when the run environment has `definitions` and the node service `RUN_DEFINITIONS` is set, the node services (`AGENT_LOOKUP`, `TEAM_LOOKUP` (including pinned versions), `RESOURCE_LOOKUP` (bodies and multiple files)) and the pre-run checks and pre-checks look only at that one source (`lookups_from(source) -> RunLookups`). Turning it on and off (no resource or team reading) works as before.
+- `graphs.validation`: validation summaries for the team list (cached by workspace fingerprint, also dropped through the `definitions.saved` subscription). Space lists (`?project=`) use the optional method `space_summaries(space, ids, lookup=)`, computed only when `runs.starter` has the optional method `check_project(graph_id, project_id)` (`ProjectRunChecker`, the same definition source and run scope as a run start); otherwise null.
+- Route `POST /graphs/{id}/validate` (a graph in the body or the saved one; 200 even with issues). The result = engine validation + team rules + the warnings and info of the optional port `definitions.checks` (pre-save definition checks; for example the pre-save definition warnings that other link modules raise, with their suggestions). Errors of the checks are not added because the save routes reject them with 422, and the same code, target, and path is reported once. Without a providing module, it is engine validation + team rules only (`definition_check_issues` and `with_definition_checks` also work without HTTP). With the optional query `?project=<id>`, the result is for running in that project (`check_project` and `load_graph(project_id=)` of `runs.starter`: the definitions and run scope of that space; items that exist only in the space are read too). Without `check_project`, 409 `feature_unavailable`; when the source provider blocks, that error (for example 422 `project.not_imported` for an item that is not in the space). In that case the pre-save checks are also for that space (the optional method `space_issues` of the checks, or `issues` when it is missing).
 
-이 연동이 꺼지면 실행은 엔진 검증만으로 하고(`mod-runs`가 `team.rules_unavailable` 경고), 목록 검증 요약은 null, 검증 경로는 404다. 에이전트 노드도 에이전트 조회 서비스가 없어 `agent.lookup_unavailable`로, 중첩 팀 노드는 팀 구성 조회가 없어 `team.lookup_unavailable`로 실패한다.
+When this link is off, runs use only engine validation (`mod-runs` warns `team.rules_unavailable`), list validation summaries are null, and the validation route returns 404. Agent nodes fail with `agent.lookup_unavailable` because there is no agent lookup service, and nested team nodes fail with `team.lookup_unavailable` because there is no team lookup.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-runs-teams
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-runs-teams
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-runs-teams
 ```
 
-## 최소 사용
+## Minimal usage
 
-단독 실행용 동반 모듈(`testing.local_runs_module` — 검증만 하는 `runs.starter`와 파일 정의 저장소)과 조립해 검증한다.
+Assemble it with the companion module for standalone runs (`testing.local_runs_module`: a `runs.starter` that only validates, and a file definition store) and validate.
 
 ```python
 >>> import tempfile
@@ -37,27 +37,27 @@ pip install agent-console-link-runs-teams
 >>> [(r.id, r.state.value) for r in assembly.report]
 [('link-runs-teams', 'active'), ('local-runs', 'active')]
 >>> [rules] = assembly.ports(RUN_PREPARERS)
->>> rules.workspace.default_backend is None
+>>> rules.workspace.agent_defaults.backend is None
 True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-### 해결 버튼 표
+### Fix button table
 
-검증 이슈·노드 실패 코드 → 해결 버튼(`Fix.actions`)은 데이터 `data/issue_fixes.json`이다(입구·답변 없음,
-백엔드 없음·모름, 알 수 없는 종류, 위임 깊이). `TeamRules`가 검증 이슈에 붙이고(`mod-runs` 선택 메서드
-`annotate_issues`), 노드 서비스 `ERROR_FIXES`로 노드 실패(자식 Run의 `agent.no_backend` 등)에도 붙인다.
-다른 표는 `load_issue_fixes(텍스트)`로 만들어 `TeamRules(issue_fixes=)`에 넘긴다.
+The mapping from validation issue and node failure codes to fix buttons (`Fix.actions`) is the data `data/issue_fixes.json` (no entry or reply edge,
+no or unknown backend, unknown type, delegation depth). `TeamRules` attaches them to validation issues (the `mod-runs` optional method
+`annotate_issues`), and through the node service `ERROR_FIXES` also to node failures (`agent.no_backend` of a child run, and so on).
+To use another table, build it with `load_issue_fixes(text)` and pass it to `TeamRules(issue_fixes=)`.
 
-서버에서는 설치자 옵션(`modules.options.link-runs-teams`, `RunsTeamsLinkSettings`)으로 바꾸거나 끈다.
+In the server, change or turn it off with the administrator options (`modules.options.link-runs-teams`, `RunsTeamsLinkSettings`).
 
-| 키 | 기본 | 뜻 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `issue_fixes_file` | null | 해결 버튼 표 JSON 파일. null·빈 문자열 = 패키지 기본(`DEFAULT_ISSUE_FIXES`), 경로 = 그 파일(상대 경로는 설정 파일 폴더 기준, 없으면 경고 후 빈 표), `{"rules": []}` 파일 = 버튼 없음 |
+| `issue_fixes_file` | null | Fix button table JSON file. null or an empty string = the package default (`DEFAULT_ISSUE_FIXES`); a path = that file (a relative path is relative to the settings file folder; when the file is missing, a warning and an empty table); a file with `{"rules": []}` = no buttons |
 
-`issue_fixes_of(경로, 기준 폴더)`가 옵션 값을 표로 바꾼다(모듈 밖에서도 쓴다).
+`issue_fixes_of(path, base folder)` turns the option value into a table (also usable outside the module).
 
 ```python
 >>> from agent_console_link_runs_teams import DEFAULT_ISSUE_FIXES
@@ -67,33 +67,33 @@ True
 
 ```
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 필수 | `runs.starter` | `check(graph)`·`load_graph(id, version_hash=None)`(중첩 팀 조회에도 쓴다) |
-| 필수 | `definitions.lookup` | `get(kind, id).document`(지문 재료 `kinds()`·`summaries(kind)`가 있으면 캐시 키로) |
-| 선택 | `workspace.settings` / `resources.lookup` / `resources.types` | 공통 설정 / 리소스 조회 / 리소스 종류 |
-| 선택(여러 제공자) | `definitions.checks` | `issues(kind, document) -> Sequence[Issue]`(검증 경로에 경고·정보를 붙인다), 선택 `space_issues(space, kind, document)` |
-| 제공(multi) | `runs.preparers` / `runs.services` | `TeamRules`(노드 서비스에 중첩 팀 조회 `TEAM_LOOKUP` 포함, 팀 규칙에 중첩 검사) |
-| 제공 | `graphs.validation` | `ValidationSummaries.summaries(graph_ids)`, 선택 `space_summaries(space, graph_ids, lookup=)` |
-| 구독 | `definitions.saved` | 검증 요약 캐시 버리기 |
+| Required | `runs.starter` | `check(graph)`, `load_graph(id, version_hash=None)` (also used for nested team lookup) |
+| Required | `definitions.lookup` | `get(kind, id).document` (when the fingerprint inputs `kinds()` and `summaries(kind)` exist, they are used as the cache key) |
+| Optional | `workspace.settings` / `resources.lookup` / `resources.types` | Common settings / resource lookup / resource types |
+| Optional (several providers) | `definitions.checks` | `issues(kind, document) -> Sequence[Issue]` (adds warnings and info to the validation route), optional `space_issues(space, kind, document)` |
+| Provides (multi) | `runs.preparers` / `runs.services` | `TeamRules` (the node services include the nested team lookup `TEAM_LOOKUP`, the team rules include the nesting checks) |
+| Provides | `graphs.validation` | `ValidationSummaries.summaries(graph_ids)`, optional `space_summaries(space, graph_ids, lookup=)` |
+| Subscribes | `definitions.saved` | Drops the validation summary cache |
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_link_runs_teams [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.local_runs_module`을 붙인다. 실제 실행까지 하려면 `--with mod-runs --with mod-definitions`.
+Without `--with`, it attaches `testing.local_runs_module`. To actually run teams: `--with mod-runs --with mod-definitions`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

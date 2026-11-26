@@ -175,9 +175,10 @@ def test_merge_rules_and_user_settings_layers() -> None:
     assert us.layers_under("/chat") == ["defaults", "team"]
 
 
-def test_legacy_default_backend_is_read_as_common_backend() -> None:
+def test_legacy_default_backend_is_not_read() -> None:
+    """옛 최상위 ``default_backend``는 공통 층에 들어가지 않는다(1.1.0, ``agent_defaults``만)."""
     ws = WorkspaceSettings.model_validate({"default_backend": "old"})
-    assert agent_layers(None, ws)[0].value == {"backend": "old"}
+    assert agent_layers(None, ws)[0].value == {}
     ws2 = WorkspaceSettings.model_validate(
         {"default_backend": "old", "agent_defaults": {"backend": "new"}}
     )

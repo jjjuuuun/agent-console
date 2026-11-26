@@ -25,6 +25,7 @@ from agent_console_mod_definitions import (
     GRAPH_ENTRY_LABELS,
     GRAPH_SESSION_SUMMARY,
     GRAPH_VALIDATION,
+    RENAMED_SETTINGS_KEYS,
     SECRET_RULES,
     SERVER_WARNINGS,
     VERSIONS_MEMORY,
@@ -34,6 +35,7 @@ from agent_console_mod_definitions import (
     GraphSessionSummarySource,
     GraphValidationSource,
     SavedDefinition,
+    ignored_settings_issues,
     module,
 )
 from agent_console_modkit import (
@@ -209,9 +211,9 @@ def test_checks_reject_and_settings_rule_check(tmp_path: Path) -> None:
             ("secret.invalid_rule", "/secrets/extra_value_patterns/1")
         ]
         assert client.get(f"{API}/settings").json() == {}
-        ok = client.put(f"{API}/settings", json={"default_backend": "fake-agent"})
+        ok = client.put(f"{API}/settings", json={"agent_defaults": {"backend": "fake-agent"}})
         assert ok.status_code == 200
-        assert client.get(f"{API}/settings").json() == {"default_backend": "fake-agent"}
+        assert client.get(f"{API}/settings").json() == {"agent_defaults": {"backend": "fake-agent"}}
 
 
 def test_saved_topic_and_ports(tmp_path: Path) -> None:
@@ -291,6 +293,53 @@ def test_old_workspace_projects_key_is_info_in_server_warnings(tmp_path: Path) -
     doc = {k: v for k, v in settings.document.items() if k != "projects"}
     store.save("settings", doc, expected_version=settings.version_hash)
     assert not [w for w in source() if w.code == "settings.ignored_key"]
+
+
+def test_old_default_backend_key_is_info_with_new_location(tmp_path: Path) -> None:
+    """1.1.0: 옛 최상위 ``default_backend``는 읽지 않고 정보 ``settings.ignored_key``로 새 위치
+    (``agent_defaults.backend``)를 안내한다. null이면 없는 것, 키를 지우면 사라진다."""
+    ws = tmp_path / "ws"
+    ws.mkdir(parents=True)
+    (ws / "settings.yaml").write_text(
+        "default_backend: fake-agent\nprojects: {fallback: shared}\n", encoding="utf-8"
+    )
+    assembly = _assembly(tmp_path)
+    [source] = assembly.ports(SERVER_WARNINGS)
+    found = [w for w in source() if w.code == "settings.ignored_key"]
+    assert [(w.severity, w.details) for w in found] == [
+        ("info", {"key": "projects"}),
+        ("info", {"key": "default_backend", "replacement": "agent_defaults.backend"}),
+    ]
+    assert "agent_defaults.backend" in found[1].message
+    # 값은 읽지 않는다(공통 층 백엔드 없음)
+    settings_port = assembly.port(WORKSPACE_SETTINGS)
+    assert settings_port is not None
+    assert settings_port().agent_defaults.backend is None
+    store = assembly.port(DEFINITIONS_STORE)
+    assert store is not None
+    saved = store.get("settings", "settings")
+    store.save("settings", {"default_backend": None}, expected_version=saved.version_hash)
+    assert not [w for w in source() if w.code == "settings.ignored_key"]
+
+
+def test_ignored_settings_issues_renamed_table_is_an_argument() -> None:
+    """새 위치 표·문구는 인자다(빈 표 = 계약 목록만, 계약 목록과 겹치는 키는 한 번).
+
+    계약 0.16.0부터 ``default_backend``는 계약 목록에도 있다(빈 표면 새 위치 없이 낸다)."""
+    doc = {"default_backend": "b", "projects": {}, "old": 1}
+    got_plain = ignored_settings_issues(doc, renamed={})
+    assert [i.details for i in got_plain] == [{"key": "projects"}, {"key": "default_backend"}]
+    got = ignored_settings_issues(
+        doc, renamed={"projects": "x.y", "old": "new.at"}, renamed_message="$key→$replacement"
+    )
+    assert [(i.details, i.message) for i in got if i.details["key"] != "default_backend"] == [
+        ({"key": "projects", "replacement": "x.y"}, "projects→x.y"),
+        ({"key": "old", "replacement": "new.at"}, "old→new.at"),
+    ]
+    assert [i.details for i in got if i.details["key"] == "default_backend"] == [
+        {"key": "default_backend"}
+    ]
+    assert RENAMED_SETTINGS_KEYS == {"default_backend": "agent_defaults.backend"}
 
 
 def test_versions_go_to_database_handle_and_persist(tmp_path: Path) -> None:

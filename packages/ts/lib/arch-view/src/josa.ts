@@ -5,6 +5,8 @@
 
 const HANGUL_START = 0xac00;
 const HANGUL_END = 0xd7a3;
+/** "으로/로" 조사 쌍의 받침 있는 쪽(U+C73C U+B85C). ㄹ 받침 뒤에서 "로"를 쓰는 규칙에 쓴다. */
+const EURO = String.fromCodePoint(0xc73c, 0xb85c);
 /** 숫자를 한글로 읽을 때 받침이 있는 숫자(영 일 삼 육 칠 팔). */
 const DIGIT_BATCHIM = new Set(["0", "1", "3", "6", "7", "8"]);
 /** 알파벳 이름(에프 엘 엠 엔 에스 알 엑스 에이치)이 받침으로 끝나는 글자. 약어(전부 대문자)를 읽을 때 쓴다. */
@@ -65,7 +67,7 @@ export function josa(word: string, pair: string): string {
   const [withB, withoutB] = pair.split("/");
   if (withB === undefined || withoutB === undefined) return pair;
   if (!hasBatchim(word)) return withoutB;
-  if (withB === "으로" && endsWithRieul(word)) return withoutB;
+  if (withB === EURO && endsWithRieul(word)) return withoutB;
   return withB;
 }
 

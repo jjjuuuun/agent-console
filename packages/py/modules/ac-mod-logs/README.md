@@ -1,114 +1,114 @@
 # agent-console-mod-logs
 
-로그 기능 모듈(`mod-logs`). 로그 출처·분류기 플러그인으로 로그를 모아 색인하고(배경·수동 수집),
-`/logs…` REST와 WS 토픽 `logs`로 질의·알림을 낸다.
+Logs feature module (`mod-logs`). It collects and indexes logs through log source and classifier plugins (in the background and on demand),
+and serves queries and notifications through the `/logs…` REST routes and the WS topic `logs`.
 
-- **기능 이름·출처 이름을 모른다.** 출처·분류기는 호스트 레지스트리 묶음(`log_sources`·`log_classifiers`)에서
-  오고, 그 묶음은 이 패키지의 호스트 플러그인 로더(entry point `agent_console.host_plugin_loaders` = `logs`)가
-  entry point로 채운다. 묶음이 없으면(단독 실행) entry point에서 직접 읽는다.
-- **혼자 켜진다.** 필수 포트가 없다. 선택 포트가 없으면 그 부분만 꺼진다.
-  - `workspace.settings` 없음 → 기본 설정(출처 디스크립터 `default_enabled`, 기본 분류 체계)
-  - `secrets.rules` 없음 → 색인을 가리지 않고 `logs.redaction_unavailable` 경고
-  - `logs.sources` 없음 → 플러그인 출처만
-- **원본은 읽기만 한다.** 수집은 `agent-console-logs`의 `LogIngestor`가 읽기 전용 열기로만 한다.
-- 서버 앱(`apps/server`)은 이 모듈 이름을 모른다. 설치되면 entry point로 들어온다.
+- **It does not know feature names or source names.** Sources and classifiers come from the host registry bundle (`log_sources`, `log_classifiers`),
+  and that bundle is filled from entry points by this package's host plugin loader (entry point `agent_console.host_plugin_loaders` = `logs`).
+  Without the bundle (standalone run), it reads the entry points directly.
+- **It turns on by itself.** There are no required ports. When an optional port is missing, only that part is off.
+  - No `workspace.settings` → default settings (the source descriptors' `default_enabled`, the default classification scheme)
+  - No `secrets.rules` → the index is not masked, with the warning `logs.redaction_unavailable`
+  - No `logs.sources` → plugin sources only
+- **Originals are only read.** Collection is done by `LogIngestor` of `agent-console-logs`, which opens files read-only.
+- The server app (`apps/server`) does not know this module's name. When installed, it comes in through its entry point.
 
-## 포트·토픽·경로
+## Ports, topics, and routes
 
-| 구분 | 이름 | 모양 |
+| Kind | Name | Shape |
 | --- | --- | --- |
-| 제공 | `logs.query` | `LogQueryPort`(목록·목록 행(`iter_event_rows`, 모델 없는 JSON 행)·상세·세션·타임라인·집계·handoff·토큰 표본·분류 체계·질의 맥락) |
-| 제공 | `logs.ingest` | `LogIngestPort`(`add_runtime_source`·`request_scan(source_ids, ref_hint=)`·`scan`) |
-| 제공 | `server.warnings` | `logs.storage_memory`·`logs.redaction_unavailable`·`logs.source_failed`·`logs.unknown_classifier` |
-| 선택(multi) | `logs.sources` | `RuntimeLogSource`(`source`·`classifier` 속성, 예: `testing.RuntimeSource`) |
-| 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`logs.*`, `secrets.redact_suspected_in_logs`) |
-| 선택 | `secrets.rules` | `() -> SecretRules`(`redact_value`) |
-| 선택(multi) | `logs.source_defaults` | `() -> {출처 id: bool}` — 설정에 `enabled`가 없는 출처의 기본값(예: `link-logs-usage`가 이 PC에 Claude Code 로그가 있으면 켬). 사용자가 적은 `enabled`가 이기고 설정 파일은 그대로다(`apply_source_defaults`). 없으면 디스크립터 `default_enabled` |
-| 선택 | `projects.folders` | 앱에 등록된 프로젝트 폴더(`registered`·`archived`·`project_for`). 범위는 등록 프로젝트 전체 하나이고, 범위를 아는 출처(`claude-code-jsonl`)는 이 폴더(하위 폴더 포함)의 기록만 읽는다. 보관 프로젝트는 새로 읽지 않지만 색인은 남긴다. 세션 `project_id`·필터 `project`·집계 차원 `project`는 `project_for(cwd)`(등록 id)다. 옛 묶기 설정 `logs.projects`는 읽지 않고 정보 `settings.ignored_key`. 없으면 등록된 프로젝트 없음으로 보고 그 출처는 아무것도 읽지 않으며 경고 `logs.no_projects`("프로젝트를 먼저 만들거나 등록하세요"). 설정 `roots`에서 범위 밖 기록을 건너뛰면 `logs.out_of_scope`. 단독 실행에서 쓰려면 `--with mod-projects`, 테스트는 `testing.project_folders_module`. 출처는 호스트 경로 `workspace`(앱 workspace)도 맥락 `paths`로 받는다(`claude-code-jsonl`의 앱 실행 세션 루트 `workspace_roots`) |
-| 선택(multi) | `logs.scope_kinds` | `LogScopeKind`(`id`·`resolve(value) -> LogScope{sessions, run_ids}`) — 필터 `scope=<id>:<값>`. 없으면 `scope`는 422 |
-| 선택(multi) | `logs.filter_predicates` | `LogFilterExtension`(`fields`·`build(values, context) -> 판정 함수`) — 이름이 `GET /logs/schema` filters에 실리고 목록·세션·타임라인·집계·handoff·보관본이 따른다. 없으면 그 이름은 422. 이름이 겹치면 먼저 온 것만(경고 로그) |
-| 토픽 | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
-| WS | `logs` | `logs.ingested` 메시지 |
-| 웹 역할 | `logs` | 로그 화면 |
-| 계보 | `logs` | `storage.BRANCH`(버전 테이블 `alembic_version_logs`) |
+| Provides | `logs.query` | `LogQueryPort` (list, list rows (`iter_event_rows`, JSON rows without models), detail, sessions, timeline, totals, handoffs, token samples, classification scheme, query context) |
+| Provides | `logs.ingest` | `LogIngestPort` (`add_runtime_source`, `request_scan(source_ids, ref_hint=)`, `scan`) |
+| Provides | `server.warnings` | `logs.storage_memory`, `logs.redaction_unavailable`, `logs.source_failed`, `logs.unknown_classifier` |
+| Optional (multi) | `logs.sources` | `RuntimeLogSource` (attributes `source` and `classifier`; for example `testing.RuntimeSource`) |
+| Optional | `workspace.settings` | `() -> WorkspaceSettings` (`logs.*`, `secrets.redact_suspected_in_logs`) |
+| Optional | `secrets.rules` | `() -> SecretRules` (`redact_value`) |
+| Optional (multi) | `logs.source_defaults` | `() -> {source id: bool}`: the default for sources without `enabled` in the settings (for example, `link-logs-usage` turns it on when this computer has Claude Code logs). An `enabled` written by the user wins, and the settings file is not changed (`apply_source_defaults`). Without it, the descriptor's `default_enabled` |
+| Optional | `projects.folders` | Project folders registered in the app (`registered`, `archived`, `project_for`). The scope is all registered projects as one, and sources that understand scope (`claude-code-jsonl`) read only the records of these folders (including subfolders). Unregistered projects are not read again, but their index entries stay. The session `project_id`, the filter `project`, and the totals dimension `project` are `project_for(cwd)` (registration id). The old grouping setting `logs.projects` is not read; info `settings.ignored_key`. Without the port, there are treated as being no registered projects, those sources read nothing, and the warning `logs.no_projects` asks you to add or register a project first. When records outside the scope are skipped in the `roots` setting, `logs.out_of_scope`. To use it in a standalone run, `--with mod-projects`; in tests, `testing.project_folders_module`. Sources also receive the host path `workspace` (the app workspace) in the context `paths` (the app run session root `workspace_roots` of `claude-code-jsonl`) |
+| Optional (multi) | `logs.scope_kinds` | `LogScopeKind` (`id`, `resolve(value) -> LogScope{sessions, run_ids}`): the filter `scope=<id>:<value>`. Without it, `scope` returns 422 |
+| Optional (multi) | `logs.filter_predicates` | `LogFilterExtension` (`fields`, `build(values, context) -> predicate`): the names appear in the filters of `GET /logs/schema`, and the list, sessions, timeline, totals, handoffs, and archive follow them. Without it, those names return 422. When names collide, only the first one is used (with a warning log) |
+| Topic | `logs.ingested` | `LogsIngestedPayload{source_ids, count, max_seq}` |
+| WS | `logs` | `logs.ingested` messages |
+| Web role | `logs` | The logs screen |
+| Lineage | `logs` | `storage.BRANCH` (version table `alembic_version_logs`) |
 
-경로(`/api/v1` 아래, 모듈이 꺼지면 404):
-`GET /logs/sources`, `GET /logs/classifiers`, `POST /logs/scan`(202, 본문 `{source_ids?}`),
+Routes (under `/api/v1`; 404 when the module is off):
+`GET /logs/sources`, `GET /logs/classifiers`, `POST /logs/scan` (202, body `{source_ids?}`),
 `GET /logs/events?<LogFilter>`, `GET /logs/events/{uid}`, `GET /logs/sessions?<LogFilter>`,
 `GET /logs/sessions/{session}/timeline?<LogFilter>`, `POST /logs/aggregate`, `GET /logs/handoffs?<LogFilter>`,
 `GET /logs/taxonomy`, `GET /logs/dashboard-templates`, `GET /logs/schema`,
-`GET /logs/archive?<LogFilter>&format=json|html&tz=<IANA>`(첨부),
-`POST /logs/index/purge`(색인 비우기, M-3, 아래).
-기본 필터에는 `thread`(여러 값)·`scope`(`<종류>:<값>`)·`max_seq`(이 seq 이하)가 있다.
-모르는 필터·차원·지표·시간대·범위 종류는 422 `validation_failed`(`details.path`, `details.issues[].code = logs.invalid_query`).
-프로젝트 필터 `project=~ungrouped`는 어느 등록 프로젝트 폴더에도 들지 않은 로그다. 세션 요약의 프로젝트는 `project_id`(등록 id, 이름은 `GET /projects`)만 채운다.
+`GET /logs/archive?<LogFilter>&format=json|html&tz=<IANA>` (attachment), and
+`POST /logs/index/purge` (empty the index, below).
+The base filters include `thread` (several values), `scope` (`<kind>:<value>`), and `max_seq` (up to this seq).
+Unknown filters, dimensions, metrics, time zones, and scope kinds return 422 `validation_failed` (`details.path`, `details.issues[].code = logs.invalid_query`).
+The project filter `project=~ungrouped` means logs that are in no registered project folder. The project of a session summary fills only `project_id` (registration id; the name comes from `GET /projects`).
 
-### 색인 비우기 `POST /logs/index/purge`(M-3)
+### Emptying the index: `POST /logs/index/purge`
 
-본문 `LogPurgeRequest{sources?, categories?, before?, rescan=true, dry_run=true, all=false}`(모듈 안 모델, 모르는 키·빈 목록은 422),
-응답 `LogPurgeResponse{dry_run, events, usage, cursors, agents}`(지운, dry_run이면 지울 행 수). 두 모델은 계약 밖이라
-OpenAPI에는 인라인 스키마(`routes.PURGE_BODY_SCHEMA`·`PURGE_RESPONSE_SCHEMA`)로만 싣는다. 의미는
-`agent_console_logs.purge_index`다. **dry_run이 기본**이라 `"dry_run": false`를 줘야 지운다. 본문을 생략하면 색인 전체를
-센다. `rescan`이면 범위 출처의 커서도 지워 다음 수집(`POST /logs/scan` 또는 배경 수집)이 지금 분류 규칙으로 다시
-색인한다. 진행 중인 수집이 끝난 뒤 수집 잠금 안에서 돌고, 원본 파일은 건드리지 않는다. 범위(출처·범주·시각) 없이
-실제로 지우려면(`"dry_run": false`) `"all": true` 확인이 있어야 한다(없으면 아무것도 지우지 않고 422, `details.path =
-"all"` — CLI `--all`과 같은 안전장치). 색인이 비우기를 지원하지 않으면 400 `logs.purge_unsupported`. 서비스에서는
-`LogsService.purge(...)`(async). 서버 없이 색인 파일을 고치려면 `agent-console logs purge`(apps/cli).
+Body `LogPurgeRequest{sources?, categories?, before?, rescan=true, dry_run=true, all=false}` (a model inside the module; unknown keys and empty lists return 422),
+response `LogPurgeResponse{dry_run, events, usage, cursors, agents}` (rows deleted, or rows that would be deleted with dry_run). Both models are outside the contract, so
+OpenAPI carries them only as inline schemas (`routes.PURGE_BODY_SCHEMA`, `PURGE_RESPONSE_SCHEMA`). The semantics are those of
+`agent_console_logs.purge_index`. **dry_run is the default**, so nothing is deleted unless you pass `"dry_run": false`. Without a body, the whole index is
+counted. With `rescan`, the cursors of the sources in range are deleted too, so the next collection (`POST /logs/scan` or the background collection) indexes again with the current
+classification rules. It runs inside the collection lock after any running collection finishes, and it does not touch the original files. To actually delete without a range (source, category, time)
+(`"dry_run": false`), the confirmation `"all": true` is required (without it, nothing is deleted and the request returns 422 with `details.path =
+"all"`, the same safeguard as the CLI `--all`). When the index does not support purging, 400 `logs.purge_unsupported`. In the service, use
+`LogsService.purge(...)` (async). To change the index file without a server, use `agent-console logs purge` (apps/cli).
 
 ```bash
-# 옛 색인의 Claude Code 요청 본문(api-request-blob, 범주 meta)을 지우고 다시 수집
-curl -X POST .../api/v1/logs/index/purge -d '{"sources":["claude-code-jsonl"],"categories":["meta"]}'   # 세기
+# Delete the Claude Code request bodies of an old index (api-request-blob, category meta) and collect again
+curl -X POST .../api/v1/logs/index/purge -d '{"sources":["claude-code-jsonl"],"categories":["meta"]}'   # count
 curl -X POST .../api/v1/logs/index/purge -d '{"sources":["claude-code-jsonl"],"categories":["meta"],"dry_run":false}'
 curl -X POST .../api/v1/logs/scan -d '{"source_ids":["claude-code-jsonl"]}'
 ```
 
-## 설치자 옵션(`modules.options.mod-logs`)
+## Administrator options (`modules.options.mod-logs`)
 
-| 키 | 기본 | 뜻 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `scan_interval_seconds` | 30 | 배경 수집 주기(초). 0이면 반복 수집 없음 |
-| `startup_scan` | true | 시작 직후 한 번 수집(주기와 따로) |
-| `scan_budget_bytes` | 8,000,000 | 출처 하나를 한 번 수집할 때 읽는 최대 바이트 |
-| `batch_size` | 500 | 한 트랜잭션의 이벤트 수 |
-| `retention_days` | null | 이보다 오래된 색인 이벤트 삭제(원본은 그대로). null = 영구 |
-| `index_path` | null | 별도 SQLite 파일에 색인(같은 계보를 모듈이 직접 올림). null = 호스트 DB |
-| `max_detail_bytes` | 80,000 | 상세 응답 detail·raw 상한 |
-| `timeline_limit` | 5000 | 타임라인 한 번에 싣는 이벤트 수 |
-| `dashboard_templates_dir` | null | 대시보드 템플릿 폴더. null = 패키지 기본(`data/dashboard_templates`) |
-| `archive_max_events` | 5000 | 보관본에 담는 최대 이벤트 수(넘으면 앞부분만, `truncated`) |
-| `archive_max_bytes` | 20,000,000 | 보관본 이벤트 JSON 바이트 합 상한 |
-| `archive_file_prefix` | `agent-console-logs` | 보관본 파일 이름 앞부분(`<앞부분>-<UTC 시각>.json\|html`) |
-| `archive_title` | `Agent Console 로그 보관본` | 보관본 HTML 제목 |
-| `session_title_rules` | null | 세션 제목 순위 규칙 `[{tag, pick: first\|last}]`(위에서부터, 후보가 있는 첫 규칙). null = `agent-console-logs` 기본 데이터, `[]` = 제목 없음 |
-| `base_taxonomy_file` | null | 기본 분류 체계 YAML 파일. null = `agent-console-logs` 기본 데이터(`default_taxonomy.yaml`), 경로 = 그 파일(없으면 경고 후 빈 분류), `false`·빈 문자열 = 기본 분류 없음(워크스페이스 설정 `logs.taxonomy`만 얹힌다) |
+| `scan_interval_seconds` | 30 | Background collection interval in seconds. 0 means no repeated collection |
+| `startup_scan` | true | Collect once right after startup (separately from the interval) |
+| `scan_budget_bytes` | 8,000,000 | Maximum bytes read from one source in one collection |
+| `batch_size` | 500 | Number of events per transaction |
+| `retention_days` | null | Delete index events older than this (the originals stay). null = forever |
+| `index_path` | null | Index into a separate SQLite file (the module applies the same lineage itself). null = the host database |
+| `max_detail_bytes` | 80,000 | Upper limit for detail and raw in detail responses |
+| `timeline_limit` | 5000 | Number of events in one timeline response |
+| `dashboard_templates_dir` | null | Dashboard template folder. null = the package default (`data/dashboard_templates`) |
+| `archive_max_events` | 5000 | Maximum number of events in an archive (only the first part when exceeded, `truncated`) |
+| `archive_max_bytes` | 20,000,000 | Upper limit on the total JSON bytes of archive events |
+| `archive_file_prefix` | `agent-console-logs` | Start of the archive file name (`<prefix>-<UTC time>.json\|html`) |
+| `archive_title` | `Agent Console 로그 보관본` | HTML title of the archive |
+| `session_title_rules` | null | Session title ranking rules `[{tag, pick: first\|last}]` (from the top; the first rule with a candidate). null = the `agent-console-logs` default data, `[]` = no title |
+| `base_taxonomy_file` | null | Base classification scheme YAML file. null = the `agent-console-logs` default data (`default_taxonomy.yaml`); a path = that file (when missing, a warning and an empty scheme); `false` or an empty string = no base scheme (only the workspace setting `logs.taxonomy` is applied) |
 
-보관본(`/logs/archive`)은 필터 범위의 이벤트(본문은 `max_detail_bytes`까지)·세션·줄·근거 연결·유효 분류 체계를
-담는다(`limit`·`cursor`는 쓰지 않는다). `format=json`(기본)은 `LogArchive` v1, `format=html`은 스크립트 없는 HTML
-(`agent_console_logs.render_archive`, 시각은 `tz` 또는 서버 로컬)이고 둘 다 첨부로 내려준다. 가림 규칙이 있으면
-내보낼 때 지금 규칙으로 한 번 더 가린다(수집 뒤 규칙이 바뀐 경우). 모르는 `format`·`tz`·필터 이름은 422다.
+An archive (`/logs/archive`) contains the events in the filter range (bodies up to `max_detail_bytes`), sessions, lines, evidence links, and the effective classification scheme
+(`limit` and `cursor` are not used). `format=json` (default) is `LogArchive` v1, and `format=html` is HTML without scripts
+(`agent_console_logs.render_archive`; times use `tz` or the server's local time); both are sent as attachments. When there are masking rules,
+the export masks once more with the current rules (in case the rules changed after collection). Unknown `format`, `tz`, and filter names return 422.
 
-상대 경로는 호스트 `base_dir`(설정 파일 폴더) 기준이다. 대시보드 템플릿은 기본 데이터다. 파일 하나가
-`LogDashboard` 하나이고 위젯마다 `options.w`·`h`가 있으며 질의 필터에 기간이 없다. 폴더를 비우거나 지워도 동작한다.
+Relative paths are relative to the host `base_dir` (the settings file folder). Dashboard templates are default data. One file is
+one `LogDashboard`, every widget has `options.w` and `h`, and the query filters have no time range. It still works when the folder is emptied or deleted.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-logs
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-logs
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-logs
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternative |
 | --- | --- | --- | --- |
-| `agent-console-logs` | `LogIngestor`·`SqliteLogIndex`·`MemoryLogIndex`·질의·기본 플러그인 | 수집·색인·질의는 라이브러리에 둔다 | — |
-| `agent-console-modkit[host]` | 모듈 인터페이스·호스트·단독 실행 | 모든 서버 모듈의 공통 키트 | — |
-| `agent-console-store` | 계보 실행기(`upgrade`)·정의 파일 저장소(단독 실행의 `settings.yaml`) | 호스트와 같은 방식 | 직접 alembic 호출 |
-| `fastapi` | 라우터 | 호스트와 같은 웹 프레임워크 | — |
-| `ruamel-yaml` | 대시보드 템플릿(YAML 데이터) 읽기 | 워크스페이스 YAML 표준 | PyYAML |
-| `sqlalchemy` | 엔진 | 호스트 `DatabaseHandle.engine`과 같은 타입 | — |
+| `agent-console-logs` | `LogIngestor`, `SqliteLogIndex`, `MemoryLogIndex`, queries, default plugins | Collection, indexing, and queries live in the library | — |
+| `agent-console-modkit[host]` | Module interface, host, standalone run | The common kit of all server modules | — |
+| `agent-console-store` | Lineage runner (`upgrade`), definition file store (`settings.yaml` in a standalone run) | The same approach as the host | Calling alembic directly |
+| `fastapi` | Router | The same web framework as the host | — |
+| `ruamel-yaml` | Reading dashboard templates (YAML data) | The workspace YAML standard | PyYAML |
+| `sqlalchemy` | Engine | The same type as the host `DatabaseHandle.engine` | — |
 
-## 최소 사용
+## Minimal usage
 
-서버 없이 서비스만 쓴다: 임시 폴더의 v1 jsonl을 메모리 색인에 수집하고 질의한다.
+Use only the service, without a server: collect v1 jsonl files in a temporary folder into an in-memory index and query them.
 
 ```python
 >>> import asyncio, json, tempfile, time
@@ -135,7 +135,7 @@ pip install agent-console-mod-logs
 
 ```
 
-모듈로 조립하면 REST가 붙는다(설정은 `workspace.settings` 포트로 받는다).
+Assembled as a module, it gets the REST routes (the settings come through the `workspace.settings` port).
 
 ```python
 >>> from fastapi.testclient import TestClient
@@ -159,64 +159,65 @@ pip install agent-console-mod-logs
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_mod_logs [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`를 주지 않으면 `testing.local_settings_module`(워크스페이스 폴더의 `settings.yaml`)을 붙인다. 읽을 출처는
-그 파일의 `logs.sources`에 켠다. 색인은 상태 폴더의 `console.sqlite3`(계보 `logs`)다. 비밀 의심 가림까지 쓰려면
-`--with mod-definitions`(설치돼 있을 때).
+Without `--with`, it attaches `testing.local_settings_module` (the `settings.yaml` of the workspace folder). Turn on the sources to read
+in `logs.sources` of that file. The index is `console.sqlite3` in the state folder (lineage `logs`). To mask suspected secrets as well,
+add `--with mod-definitions` (when installed).
 
-## 저장 계층
+## Storage layer
 
-- **계보 `logs`**: 패키지 데이터 `storage/migrations/versions/logs_0001_index.py`(테이블)·`logs_0002_scope_indexes.py`(`thread`·`run_id`·`session` + `seq` 색인), 버전 테이블 `alembic_version_logs`.
-  모듈이 켜질 때만 올라가고, 되돌리기(`downgrade`)는 이 계보 단위로만 한다.
-  `ac-store.MODULE_OWNED_TABLES`에는 넣지 않는다(F-2) — legacy 이관 전용 목록이다.
-- **색인 위치**: 기본은 호스트 DB(F-9). `index_path`를 주면 그 SQLite 파일에 같은 계보를 직접 올려 쓴다.
-  DB가 없으면 `MemoryLogIndex`다(`LogStorage.kind == "memory"`, `logs.storage_memory` 경고).
-- 색인 구현·질의는 `agent-console-logs`의 `agent_console_logs.sqlite`에 있다.
+- **Lineage `logs`**: package data `storage/migrations/versions/logs_0001_index.py` (tables) and `logs_0002_scope_indexes.py` (`thread`, `run_id`, `session` + `seq` indexes), version table `alembic_version_logs`.
+  It is applied only when the module is on, and rollback (`downgrade`) works only per lineage.
+  It is not added to `ac-store.MODULE_OWNED_TABLES`, which is a list only for the legacy migration.
+- **Index location**: the host database by default. With `index_path`, the same lineage is applied directly to that SQLite file and used.
+  Without a database, `MemoryLogIndex` (`LogStorage.kind == "memory"`, warning `logs.storage_memory`).
+- The index implementation and queries are in `agent_console_logs.sqlite` of `agent-console-logs`.
 
 ```python
 from agent_console_mod_logs import open_log_storage
 
-storage = open_log_storage(None, index_path="logs.sqlite3")  # 별도 파일에 계보를 올리고 연다
-open_log_storage(None).kind  # DB도 경로도 없으면 "memory"
+# applies the lineage to a separate file and opens it
+storage = open_log_storage(None, index_path="logs.sqlite3")
+open_log_storage(None).kind  # "memory" when there is neither a database nor a path
 ```
 
-## 공개 API
+## Public API
 
-| 이름 | 설명 |
+| Name | Description |
 | --- | --- |
-| `module` / `LogsModule` / `MODULE_ID` / `WEB_ROLES` | 서버 모듈(entry point `agent_console.server_modules`) |
-| `base_taxonomy_of` | 옵션 `base_taxonomy_file` → 기본 분류 체계(`LogsService(base_taxonomy=)`에 넘길 값) |
-| `LogsService` | 수집 스케줄(`scan`·`request_scan`·`run_periodic`·`start`·`stop`) + 질의(`parse_filter`·`extensions`·`events`·`iter_event_rows`·`event`·`sessions`·`timeline`·`aggregate`·`handoffs`·`token_samples`·`taxonomy`·`schema`·`dashboard_templates`·`sources`·`classifiers`) |
-| `LogsModuleSettings` | 설치자 옵션 |
-| `LogRedaction` | 저장 직전 비밀 의심 가리기(포트 값으로) |
-| `LOGS_QUERY`·`LOGS_INGEST`·`SERVER_WARNINGS`·`LOG_SOURCES`·`LOG_SCOPE_KINDS`·`LOG_FILTER_PREDICATES`·`WORKSPACE_SETTINGS`·`SECRET_RULES`·`LOGS_INGESTED`·`LOGS_TOPIC` | 포트·토픽·WS 토픽 |
-| `LogQueryPort`·`LogIngestPort`·`RuntimeLogSource` | 포트 프로토콜(구조 타입) |
-| `load_dashboard_templates`·`parse_dashboard` | 대시보드 템플릿 읽기 |
-| `plugins.load_plugins`·`plugins.bundle_registries` | 호스트 플러그인 로더 |
-| `standalone.main` | 단독 실행 진입점 |
-| `storage.BRANCH`·`open_log_storage`·`LogStorage` | 계보·색인 열기 |
-| `testing.local_settings_module`·`static_settings_module`·`runtime_sources_module`·`RuntimeSource`·`query_extensions_module`(등록 흉내) | 단독 실행·테스트용 모듈 |
+| `module` / `LogsModule` / `MODULE_ID` / `WEB_ROLES` | Server module (entry point `agent_console.server_modules`) |
+| `base_taxonomy_of` | Option `base_taxonomy_file` → base classification scheme (the value passed to `LogsService(base_taxonomy=)`) |
+| `LogsService` | Collection schedule (`scan`, `request_scan`, `run_periodic`, `start`, `stop`) + queries (`parse_filter`, `extensions`, `events`, `iter_event_rows`, `event`, `sessions`, `timeline`, `aggregate`, `handoffs`, `token_samples`, `taxonomy`, `schema`, `dashboard_templates`, `sources`, `classifiers`) |
+| `LogsModuleSettings` | Administrator options |
+| `LogRedaction` | Masks suspected secrets right before storage (with the port value) |
+| `LOGS_QUERY`, `LOGS_INGEST`, `SERVER_WARNINGS`, `LOG_SOURCES`, `LOG_SCOPE_KINDS`, `LOG_FILTER_PREDICATES`, `WORKSPACE_SETTINGS`, `SECRET_RULES`, `LOGS_INGESTED`, `LOGS_TOPIC` | Ports, topics, WS topic |
+| `LogQueryPort`, `LogIngestPort`, `RuntimeLogSource` | Port protocols (structural types) |
+| `load_dashboard_templates`, `parse_dashboard` | Reading dashboard templates |
+| `plugins.load_plugins`, `plugins.bundle_registries` | Host plugin loader |
+| `standalone.main` | Standalone entry point |
+| `storage.BRANCH`, `open_log_storage`, `LogStorage` | Lineage, opening the index |
+| `testing.local_settings_module`, `static_settings_module`, `runtime_sources_module`, `RuntimeSource`, `query_extensions_module` (imitates registration) | Modules for standalone runs and tests |
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-## 출처 설정의 지운 키
+## Removed keys in source settings
 
-출처 설정 스키마가 `deprecated: true`로 표시한 키(예: `claude-code-jsonl`의 옛 `project_roots`)가 설정에 남아 있으면
-읽지 않고 정보 이슈 `logs.ignored_key`(`details.source`·`details.key`, `server.warnings`)를 낸다. 키 이름은 출처 스키마
-데이터에서 오고 이 모듈은 출처별 키를 모른다. 서버 시작은 막지 않는다.
+When a key that the source settings schema marks with `deprecated: true` (for example the old `project_roots` of `claude-code-jsonl`) is still in the settings,
+it is not read, and the info issue `logs.ignored_key` (`details.source`, `details.key`, `server.warnings`) is raised. The key names come from the source schema
+data, and this module does not know any source-specific keys. Server startup is not blocked.

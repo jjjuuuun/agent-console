@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- I.6: The `--example-notes-max` help is English (it appears in `agent-console serve --help`).
 - REL.20: 개발 의존 범위를 `agent-console-server>=1.0,<2`로 올렸다(서버 표시 버전 1.0.0). 코드 변경 없음.
 
 ## 0.1.0

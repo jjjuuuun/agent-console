@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/log-view",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "로그 분석 표현 컴포넌트(이벤트 표·필터·상세·세션 목록·재생 막대·대시보드 격자)와 위젯 레지스트리",
   "private": true,
   "license": "MIT",
@@ -9,10 +9,10 @@
     "kind": "lib",
     "extensionPoints": {
       "dashboard-widget": {
-        "title": "대시보드 위젯",
+        "title": "Dashboard widget",
         "area": "web",
         "design_id": "X21",
-        "summary": "대시보드에 새 위젯 종류를 더한다",
+        "summary": "Adds a new widget kind to the dashboard",
         "registration": {
           "kind": "props",
           "export": "@agent-console/log-view#DashboardGridProps"
@@ -49,7 +49,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -58,7 +68,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.15.0",
+    "@agent-console/contracts": "^0.16.0",
     "@agent-console/virtual-rows": "^0.1.0",
     "react-is": "^19.3.0",
     "recharts": "^3.10.1"

@@ -320,4 +320,10 @@ describe("5.5R.30 화면 후속", () => {
     expect(widths[0]!).toBeLessThan(400 - 2);
     expect(ruleBody(".ac-dialog-actions")).toContain("justify-content: flex-end");
   });
+
+  it("P1.8: 머리 상태 칸은 자식 사이 간격 토큰을 갖는다(Tag 맞닿음 방지)", () => {
+    const body = ruleBody(".ac-pageheader-status");
+    expect(body).toContain("display: flex");
+    expect(body).toMatch(/gap:\s*var\(--ac-space-\d+\)/);
+  });
 });

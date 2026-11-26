@@ -68,3 +68,9 @@ export const EVENT_IDLE_SECONDS = 30;
 
 /** "실패만" 필터가 비교하는 span 상태 값. */
 export const FAILED_STATUS = "failed";
+
+/**
+ * 오래 열어 둔 실행 목록에서 기간 하한(`since`)의 기준 시각을 다시 잡는 간격(ms, 앱 기본값 데이터).
+ * 창이 다시 보일 때(포커스)는 마지막 기준에서 이만큼 지났을 때만, [새로 고침]은 늘 다시 잡는다. 질의 키가 바뀌므로 페이지가 처음으로 돌아간다.
+ */
+export const PERIOD_ANCHOR_REFRESH_MS = 10 * 60 * 1000;

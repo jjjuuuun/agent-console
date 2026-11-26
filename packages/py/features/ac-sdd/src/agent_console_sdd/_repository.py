@@ -833,6 +833,7 @@ class SpecRepository:
         include_content: bool = False,
         on_conflict: TemplateConflictPolicy = "fail",
         target: DefinitionStore | None = None,
+        taken: Sequence[str] = (),
     ) -> SaveAsTemplateResult:
         """스펙 → 문서 틀(§6R.18 Q8). `target` 저장소(기본 = 이 공간의 틀 저장소)에 저장한다.
 
@@ -840,17 +841,23 @@ class SpecRepository:
         `rename` =
         `-2`… 새 id. 버전 기록 메시지에만 `스펙에서 만듦: <종류>/<id>`. 결과의 `target`은 호출자가
         채운다(공간 이름은 서버만 안다).
+
+        `taken`은 `create_template`과 같다 — 이름에서 만든 id와 `rename` 새 id가 피할 값(예: 경로
+        예약어, 대소문자 무시). 준 `id`는 그대로 쓴다(예약어 거부는 호출자 몫).
         """
         stored = self.get(spec_id)
         dest = target if target is not None else self.template_store
-        taken = dest.list_ids(self.template_kind)
+        existing = dest.list_ids(self.template_kind)
+        avoid = [*existing, *taken]
         template_id = id or slug_id(name, fallback=slug_id(self.template_kind, fallback="item"))
+        if id is None and template_id.casefold() in {t.casefold() for t in taken}:
+            template_id = unique_id(template_id, avoid, fallback=template_id)
         status: SaveAsTemplateStatus = "created"
-        if template_id in taken:
+        if template_id in existing:
             if on_conflict == "fail":
                 raise TemplateExistsError(template_id)
             if on_conflict == "rename":
-                template_id = unique_id(template_id, taken, fallback=template_id)
+                template_id = unique_id(template_id, avoid, fallback=template_id)
                 status = "renamed"
             else:
                 status = "overwritten"

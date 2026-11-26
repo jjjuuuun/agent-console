@@ -128,7 +128,7 @@ def render_template(template: str, context: MemoryAccessContext) -> str | None:
 
 @dataclass(frozen=True, slots=True)
 class MemoryScopeKind:
-    """범위 종류 하나(병합 목록의 항목).
+    """One scope kind (an entry in the merged list).
 
     Attributes:
         id: 범위 종류 id(Slug).

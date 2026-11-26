@@ -286,7 +286,7 @@ def test_load_host_settings_formats(tmp_path: Path, name: str, text: str) -> Non
 def test_load_host_settings_rejects_non_mapping(tmp_path: Path) -> None:
     path = tmp_path / "c.yaml"
     path.write_text("- a\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="매핑"):
+    with pytest.raises(ValueError, match="mapping"):
         load_host_settings(path)
 
 

@@ -1,28 +1,28 @@
 # agent-console-mod-projects
 
-Agent Console 프로젝트 기능 모듈(모듈 id `mod-projects`).
+Agent Console projects feature module (module id `mod-projects`).
 
-- 프로젝트 = 로컬 폴더 + 그 폴더 안 구성 사본(`<folder>/.agent-console/`). 앱 등록부
-  (`<workspace>/projects/<id>.yaml`)에는 폴더·보관·라벨만, 이름·설명·프로젝트 층은 폴더 매니페스트
-  (`.agent-console/project.yaml`)에 둔다.
-- 등록할 때 매니페스트와 `.gitignore`를 **없을 때만** 만든다. 있으면 채택하고, 깨졌으면 폴더에 아무것도
-  쓰지 않는다(상태 `manifest_invalid`, [설정 파일 다시 만들기]).
-- 같은 폴더·겹치는 폴더는 등록하지 않는다(409). 삭제는 등록 해제(보관)이고 폴더 내용·기록은 지우지 않는다.
-- 폴더 확인·앱 안 찾아보기·네이티브 폴더 선택 창(서버 컴퓨터, 루프백 서버에서만), 공간 사이 복사
-  (라이브러리 ↔ 프로젝트, 참조 닫힘·충돌 선택·본문 파일 포함·비밀 거부)를 REST로 낸다.
-- 규칙 계산은 순수 패키지 `agent-console-projects`·`agent-console-local-folders`·
-  `agent-console-project-space`가 한다.
+- Project = a local folder + the configuration copies inside it (`<folder>/.agent-console/`). The app registry
+  (`<workspace>/projects/<id>.yaml`) keeps only the folder, the unregistered flag, and labels; the name, description, and project layer live in the folder manifest
+  (`.agent-console/project.yaml`).
+- On registration, the manifest and `.gitignore` are created **only when they do not exist**. Existing ones are adopted, and when the manifest is broken nothing is
+  written to the folder (status `manifest_invalid`, [Recreate settings file]).
+- The same folder or overlapping folders are not registered (409). Deleting means unregistering; folder contents and records are not deleted.
+- It exposes over REST: folder checks, browsing inside the app, the native folder picker (on the server computer, loopback servers only), and copying between spaces
+  (library ↔ project, with reference closure, conflict choices, body files, and secret rejection).
+- The rule calculations are done by the pure packages `agent-console-projects`, `agent-console-local-folders`, and
+  `agent-console-project-space`.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-projects
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-projects
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-projects
 ```
 
-## 최소 사용
+## Minimal usage
 
-서버 없이 등록부와 동작 묶음만 쓴다(폴더를 등록하면 그 폴더에 `.agent-console/`가 생긴다).
+Use only the registry and the action set, without a server (registering a folder creates `.agent-console/` in it).
 
 ```python
 >>> import tempfile, pathlib
@@ -52,82 +52,82 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## REST (호스트가 `/api/v1`을 붙인다)
+## REST (the host adds `/api/v1`)
 
-| 메서드·경로 | 요청 → 응답 | 오류 |
+| Method and route | Request → response | Errors |
 | --- | --- | --- |
-| `GET /projects` | → `ProjectView[]`(보관 포함) | — |
-| `POST /projects` | `ProjectCreate` → 201 `ProjectView` + `ETag` | 409 `project.folder_taken`(보관이면 `details.archived`)·`project.folder_overlaps`, 409 `already_exists`, 422 `folders.*`(경로 아님), 422 비밀 |
-| `GET /projects/{id}` | → `ProjectView` + `ETag`(등록부·매니페스트 합친 해시) | 404 |
-| `PUT /projects/{id}` | `ProjectUpdate`(+`If-Match`) → `ProjectView` | 412, 409 겹침·`project.folder_missing`·`project.manifest_invalid`·`project.config_readonly` |
-| `DELETE /projects/{id}` | (+`If-Match`) → 204(보관) | 404, 412 |
-| `POST /projects/{id}/manifest/reset` | `ManifestResetRequest` → `ManifestResetResult` | 409(깨진 상태 아님 `already_exists`·쓰기 불가) |
-| `POST /projects/{id}/gitignore/append` | → `ProjectView` | 409 폴더 없음·쓰기 불가 |
-| `POST /projects/{id}/legacy/plan` | → `CopyPlan`(라이브러리의 옛 `project` 필드 정의 → 이 공간) | 404, 409 `feature_unavailable` |
-| `POST /projects/copy/plan` | `CopyPlanRequest` → `CopyPlan` | 400 같은 공간, 404 `project.not_found`, 409 `feature_unavailable`·`project.manifest_invalid` |
-| `POST /projects/copy/apply` | `CopyApplyRequest` → `CopyApplyResult`(바뀐 항목만 `conflict`) | 위 + 409 `project.config_readonly`, 422 비밀(아무것도 쓰지 않음), 422 `validation_failed`(대상에 쓸 id — copy·overwrite는 원본 id, rename은 새 id — 가 그 종류의 예약어: `details.issues` = error `project.copy_reserved_id`(제안 `suggested_id`), 아무것도 쓰지 않음, 문구 키 `project.copy_reserved_id.rename`·`project.copy_reserved_id.write`) |
-| `GET /projects/copy/kinds?project=` | → `CopyKindInfo[]`(그 공간의 복사 종류 + `library`·`portable`·`deletable`, 기본 + 기여 종류) | 404 `project.not_found`, 409 `feature_unavailable`(공용인데 정의 모듈 없음) |
-| `GET /projects/copy/items?project=&kind=` | → `CopyItem[]`(그 공간의 정의 목록, 본문 없음) | 위 + 404 `not_found`(이 공간의 복사 종류가 아님) |
-| `DELETE /projects/copy/items/{kind}/{id}?project=` (+`If-Match` 선택) | → 204(종류 공통 삭제 — 기본 종류는 공간 저장소에서, 기여 종류는 기여의 `delete` 콜백으로. 참조 검사 없음) | 위 + 404(없는 종류·항목), 400 `bad_request` `details.reason=not_deletable`(`CopyKindInfo.deletable` false), 409 `project.config_readonly`, 412 `version_conflict` |
-| `GET /projects/copy/items/{kind}/{id}/references?project=` | → `CopyItemReferences`(같은 공간에서 이 항목을 쓰는 정의 — 삭제 확인 창. 종류 이름을 모르고 `definitions.references`·기여 `references`로 찾는다. 참조 추출이 없으면 `checked` false + info `project.references_unavailable`) | 위 + 404(이 공간의 복사 종류가 아님·없는 항목) |
-| `GET /projects/folders?path=&hidden=` | → `FolderListing`(폴더 이름만) | 403 `folders.remote_disabled`, 4xx `folders.*` |
-| `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck`(겹침·기존 구성 개수·`suggested_id`·`config_dir`) | 403 |
+| `GET /projects` | → `ProjectView[]` (including unregistered ones) | — |
+| `POST /projects` | `ProjectCreate` → 201 `ProjectView` + `ETag` | 409 `project.folder_taken` (`details.archived` when unregistered) and `project.folder_overlaps`, 409 `already_exists`, 422 `folders.*` (not a path), 422 secret |
+| `GET /projects/{id}` | → `ProjectView` + `ETag` (a hash of the registry entry and manifest combined) | 404 |
+| `PUT /projects/{id}` | `ProjectUpdate` (+ `If-Match`) → `ProjectView` | 412, 409 overlap, `project.folder_missing`, `project.manifest_invalid`, `project.config_readonly` |
+| `DELETE /projects/{id}` | (+ `If-Match`) → 204 (unregistered) | 404, 412 |
+| `POST /projects/{id}/manifest/reset` | `ManifestResetRequest` → `ManifestResetResult` | 409 (not broken: `already_exists`; not writable) |
+| `POST /projects/{id}/gitignore/append` | → `ProjectView` | 409 folder missing, not writable |
+| `POST /projects/{id}/legacy/plan` | → `CopyPlan` (library definitions with the old `project` field → this space) | 404, 409 `feature_unavailable` |
+| `POST /projects/copy/plan` | `CopyPlanRequest` → `CopyPlan` | 400 same space, 404 `project.not_found`, 409 `feature_unavailable` and `project.manifest_invalid` |
+| `POST /projects/copy/apply` | `CopyApplyRequest` → `CopyApplyResult` (only changed items are `conflict`) | The above + 409 `project.config_readonly`, 422 secret (nothing is written), 422 `validation_failed` (the id to write in the target (the source id for copy and overwrite, the new id for rename) is a reserved word of that kind: `details.issues` = error `project.copy_reserved_id` (suggestion `suggested_id`), nothing is written; text keys `project.copy_reserved_id.rename` and `project.copy_reserved_id.write`) |
+| `GET /projects/copy/kinds?project=` | → `CopyKindInfo[]` (the copy kinds of that space + `library`, `portable`, `deletable`; default and contributed kinds) | 404 `project.not_found`, 409 `feature_unavailable` (shared library without the definitions module) |
+| `GET /projects/copy/items?project=&kind=` | → `CopyItem[]` (the definition list of that space, without bodies) | The above + 404 `not_found` (not a copy kind of this space) |
+| `DELETE /projects/copy/items/{kind}/{id}?project=` (+ optional `If-Match`) | → 204 (common delete for all kinds: default kinds from the space store, contributed kinds through the contribution's `delete` callback. No reference check) | The above + 404 (unknown kind or item), 400 `bad_request` `details.reason=not_deletable` (`CopyKindInfo.deletable` false), 409 `project.config_readonly`, 412 `version_conflict` |
+| `GET /projects/copy/items/{kind}/{id}/references?project=` | → `CopyItemReferences` (definitions in the same space that use this item, for the delete confirmation dialog. It does not know kind names; it finds them through `definitions.references` and the contributions' `references`. Without reference extraction, `checked` false + info `project.references_unavailable`) | The above + 404 (not a copy kind of this space, or the item does not exist) |
+| `GET /projects/folders?path=&hidden=` | → `FolderListing` (folder names only) | 403 `folders.remote_disabled`, 4xx `folders.*` |
+| `POST /projects/folders/check` | `FolderCheckRequest` → `FolderCheck` (overlaps, number of existing configuration items, `suggested_id`, `config_dir`) | 403 |
 | `GET /projects/folders/capabilities` | → `FolderCapabilities` | — |
-| `POST /projects/folders/pick` | `FolderPickRequest` → `FolderPickResult`(picked·cancelled·unavailable·busy·timeout·failed) | 403(루프백 아님) |
+| `POST /projects/folders/pick` | `FolderPickRequest` → `FolderPickResult` (picked, cancelled, unavailable, busy, timeout, failed) | 403 (not loopback) |
 
-선택 창 요청은 사용자가 고를 때까지 열려 있다. 요청을 끊으면 서버가 창 프로세스를 끝낸다.
+A picker request stays open until the user chooses. When the request is cut off, the server ends the picker process.
 
-옛 정의 범위 정리 경로(`POST /projects/move-plan`·`/move`·`/scope-issues`)는 0.3.0에서 지웠다. 경로가
-`/projects/{id}` 모양에 맞아 405 Method Not Allowed로 답한다. 옛 `project` 필드 정의 정리는
-`POST /projects/{id}/legacy/plan` → `POST /projects/copy/apply`다.
+The old routes for cleaning up definition scopes (`POST /projects/move-plan`, `/move`, `/scope-issues`) were removed in 0.3.0. They match the
+`/projects/{id}` shape, so they answer 405 Method Not Allowed. Old definitions with the `project` field are cleaned up with
+`POST /projects/{id}/legacy/plan` → `POST /projects/copy/apply`.
 
-## 포트
+## Ports
 
-| 포트 | 방향 | 없으면 |
+| Port | Direction | When missing |
 | --- | --- | --- |
-| `projects.lookup` | 제공(`get_project`·`list_projects`, 합친 `Project`) | — |
-| `projects.folders` | 제공(`() -> ProjectFolderSet`, `entries`(id·폴더)·`archived`(보관 폴더)·`project_for`) | — |
-| `projects.spaces` | 제공(`open(project_id) -> ProjectSpace`, 캐시 상한·유휴 닫기. 모르는 id `LookupError`, 폴더 없음 `FolderMissing`) | — |
-| `definitions.spaces` | 제공(`open(project_id) -> DefinitionStore`) | — |
-| `definitions.lookup`·`definitions.store` | 선택(라이브러리) | 라이브러리가 낀 복사 409 `feature_unavailable`, 공간 종류 = `ac-store` 기본 |
-| `definitions.references`(여러) | 선택 | 복사 계획에 `project.references_unavailable` 정보 |
-| `definitions.kind_contributions`(여러) | 선택(공간 종류에 기여 종류를 더함 — `library=False` 포함, 옮길 수 있는 것만. 기여의 `references`는 `definitions.references`와 합쳐 참조 닫힘에) | 공간 종류 = 라이브러리 종류 |
-| `definitions.reference_rewriters`(여러) | 선택(이름 바꾸기 복사의 참조 고치기) | 참조는 그대로, 결과 항목에 정보 이슈 |
-| `records.spaces` | 선택(`ProjectView.records_*`) | `records_state=unavailable`·`reason=link_disabled` |
-| `secrets.rules` | 선택 | 기본 비밀 규칙 |
+| `projects.lookup` | Provides (`get_project`, `list_projects`, the combined `Project`) | — |
+| `projects.folders` | Provides (`() -> ProjectFolderSet`: `entries` (id, folder), `archived` (unregistered folders), `project_for`) | — |
+| `projects.spaces` | Provides (`open(project_id) -> ProjectSpace`, with a cache limit and idle closing. An unknown id raises `LookupError`, a missing folder `FolderMissing`) | — |
+| `definitions.spaces` | Provides (`open(project_id) -> DefinitionStore`) | — |
+| `definitions.lookup`, `definitions.store` | Optional (the library) | Copies that involve the library return 409 `feature_unavailable`; space kinds = the `ac-store` defaults |
+| `definitions.references` (several) | Optional | Info `project.references_unavailable` in copy plans |
+| `definitions.kind_contributions` (several) | Optional (adds contributed kinds to the space kinds, including `library=False`, only portable ones. The contributions' `references` are merged with `definitions.references` for reference closure) | Space kinds = library kinds |
+| `definitions.reference_rewriters` (several) | Optional (rewrites references in rename copies) | References stay as they are, with an info issue on the result item |
+| `records.spaces` | Optional (`ProjectView.records_*`) | `records_state=unavailable`, `reason=link_disabled` |
+| `secrets.rules` | Optional | Default secret rules |
 
-확장 지점(폴더 선택 창): 코드 선택 창 제공자는 entry point `agent_console.folder_dialogs`
-(`FolderDialogProvider{id, available(environ), pick(*, initial, title, timeout, cancel)}`)로 더한다.
-호스트 플러그인 로더(`agent_console_mod_projects.plugins:load_plugins`, 확장 `FOLDER_DIALOGS_EXTENSION`)가 서버 시작 때
-읽으므로 다른 플러그인처럼 서버 설정 `plugins.enabled`·`plugins.disabled`를 따르고 `server-info`에 나온다. 묶음 없이
-조립하면 `load_dialog_providers(enabled=, disabled=)`로 직접 읽는다. 데이터 제공자(명령 표)는 설정 `folder_dialog.providers`.
+Extension point (folder picker): code picker providers are added through the entry point `agent_console.folder_dialogs`
+(`FolderDialogProvider{id, available(environ), pick(*, initial, title, timeout, cancel)}`).
+The host plugin loader (`agent_console_mod_projects.plugins:load_plugins`, extension `FOLDER_DIALOGS_EXTENSION`) reads them at server startup,
+so like other plugins they follow the server settings `plugins.enabled` and `plugins.disabled` and appear in `server-info`. When assembling
+without a bundle, read them directly with `load_dialog_providers(enabled=, disabled=)`. Data providers (command tables) are the setting `folder_dialog.providers`.
 
-## 설정 (`modules.options.mod-projects`)
+## Settings (`modules.options.mod-projects`)
 
-- `directory`(등록부 폴더), `config_dir`(기본 `.agent-console`), `records_file`(기록 DB 파일 이름),
-  `sessions_dir`(세션 보관 폴더 이름 — 비우면 `link-projects-records.session_archive.dir`를 이어받음).
-  `.gitignore` 틀과 `project.gitignore_outdated` 점검은 이 이름들을 따른다
-- `status_timeout_seconds`(기본 2), `browse_roots`, `allow_remote_browse`(기본 끔),
-  `server_host`(서버 `host`를 이어받음), `case_insensitive_paths`(예 `/mnt/?`)
-- `folder_dialog`: `mode`(auto·off)·`providers`·`include_default_providers`·`timeout_seconds`(기본 300)
-- `max_open_spaces`·`idle_close_seconds`(공간 캐시), `records_space_prefix`(기록 연동 `space_prefix`를
-  이어받음), `messages`, (읽지 않음) `snapshot_ttl_seconds`·`working_directory`(남아 있어도 시작한다)
+- `directory` (registry folder), `config_dir` (default `.agent-console`), `records_file` (record database file name), and
+  `sessions_dir` (session archive folder name; when empty, it inherits `link-projects-records.session_archive.dir`).
+  The `.gitignore` template and the `project.gitignore_outdated` check follow these names
+- `status_timeout_seconds` (default 2), `browse_roots`, `allow_remote_browse` (off by default),
+  `server_host` (inherits the server `host`), `case_insensitive_paths` (for example `/mnt/?`)
+- `folder_dialog`: `mode` (auto, off), `providers`, `include_default_providers`, `timeout_seconds` (default 300)
+- `max_open_spaces` and `idle_close_seconds` (space cache), `records_space_prefix` (inherits the records link `space_prefix`),
+  `messages`, and (not read) `snapshot_ttl_seconds` and `working_directory` (the server still starts when they remain)
 
-## 단독 실행
+## Standalone run
 
 ```bash
-python -m agent_console_mod_projects --check   # --with 없으면 로컬 정의 저장소를 함께 붙인다
+python -m agent_console_mod_projects --check   # without --with, a local definition store is attached too
 ```
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

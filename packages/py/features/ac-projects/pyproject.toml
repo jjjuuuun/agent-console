@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-numbered-id>=0.1,<0.2",
     "agent-console-local-folders>=0.1,<0.2",
 ]
@@ -49,12 +49,12 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console.extension-points.path-field]
-title = "경로 필드 표시"
+title = "Path field marker"
 area = "projects"
 design_id = "X33"
-summary = "설정 스키마의 속성이 로컬 경로임을 표시해 경로 지킴(프로젝트 폴더 밖 거부) 대상으로 만든다"
+summary = "Marks a settings schema property as a local path so that path guarding (rejecting paths outside the project folder) applies to it"
 registration = { kind = "annotation", name = "x-path" }
 interface = "agent_console_contracts:x_path"
 builtin = "none"
-example = { kind = "snippet", note = "스키마 속성에 x-path 주석 달기" }
+example = { kind = "snippet", note = "Add the `x-path` annotation to a schema property" }
 guide = "projects.md"

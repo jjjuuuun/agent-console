@@ -2,6 +2,8 @@
 # 코드 블록 안도 검사한다(복사해 쓰는 예에 내부 경로가 섞이지 않게). `prose_only: true` 규칙만
 # 코드 펜스·인라인 코드(백틱) 밖 글을 본다.
 # 줄 하나만 예외로 두려면 그 줄에 `<!-- extdocs:allow <규칙 id> -->`를 단다(README "공개 가능 린트").
+# 규칙 칸(선택): `files`·`exclude_files`(저장소 상대 glob — 규칙을 볼 파일 범위),
+# `skip_line`(이 정규식에 맞는 줄은 이 규칙만 건너뜀), `severity`(error 기본 · warning = 늘 경고).
 rules:
   - id: internal-doc-link
     message: 내부 설계 문서(specs/·docs/design/)를 가리킨다
@@ -37,3 +39,16 @@ rules:
   - id: email
     message: 이메일 주소
     pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+  - id: korean-prose
+    message: 영어 문서의 코드 밖 한글(한국어 사본은 *.ko.md로 둔다)
+    # 영어 단일·영어 기본 문서에 한국어 글이 남지 않게 한다. 코드 펜스·인라인 코드 안(doctest 출력의
+    # 한국어 원문 문구 등)은 보지 않는다. 한국어 사본 `*.ko.md`는 대상 밖이다.
+    # 일치는 줄의 첫 한글부터 마지막 한글까지(한글 음절·자모·호환 자모).
+    pattern: "[\\u1100-\\u11FF\\u3130-\\u318F\\uA960-\\uA97F\\uAC00-\\uD7AF\\uD7B0-\\uD7FF](?:.*[\\u1100-\\u11FF\\u3130-\\u318F\\uA960-\\uA97F\\uAC00-\\uD7AF\\uD7B0-\\uD7FF])?"
+    prose_only: true
+    exclude_files: ["**/*.ko.md"]
+    # 맨 위 언어 전환 줄(`**English** | [한국어](README.ko.md)`): `|`로 나뉜 항목이 둘 이상이고
+    # 항목마다 굵은 이름 또는 .md 문서 링크 하나뿐인 줄.
+    skip_line: "^\\s*(?:\\*\\*[^*|]+\\*\\*|\\[[^\\]|]+\\]\\([^)\\s|]+\\.md\\))(?:\\s*\\|\\s*(?:\\*\\*[^*|]+\\*\\*|\\[[^\\]|]+\\]\\([^)\\s|]+\\.md\\)))+\\s*$"
+    # 문서 영어화가 끝날 때까지는 경고. 끝나면 이 줄을 지워 오류로 바꾼다.
+    severity: warning

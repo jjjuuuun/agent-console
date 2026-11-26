@@ -15,7 +15,7 @@ license-files = ["LICENSE"]
 requires = ["uv_build>=0.8.17,<0.9"]
 build-backend = "uv_build"
 
-# 아래 도구 설정은 scripts/pkgkit 템플릿에서 생성한다. 바꿀 때는 템플릿을 고치고 `poe pkg-lint`로 맞춘다.
+# The tool settings below are generated from the scripts/pkgkit templates. To change them, edit the templates and align with `poe pkg-lint`.
 [tool.pytest.ini_options]
 testpaths = ["tests", "README.md"]
 addopts = ["--doctest-glob=README.md", "--import-mode=importlib", "-ra"]

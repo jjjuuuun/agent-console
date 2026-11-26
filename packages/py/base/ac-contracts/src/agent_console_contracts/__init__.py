@@ -3,7 +3,7 @@
 서버·엔진·CLI·웹(생성된 TS 타입)이 같은 모델을 쓴다. 계약은 특정 노드 타입·엣지 타입·
 백엔드·모델 이름을 모른다. 노드 `config`, `attributes`, `backend_options`는 `dict[str, Any]`다.
 
-모델은 기능별 하위 모듈(`CONTRACT_SUBMODULES`: common·resources·logs·definitions·runs·usage·
+모델은 기능별 하위 모듈(`CONTRACT_SUBMODULES`: common·resources·logs·i18n·definitions·runs·usage·
 projects·chat·exports·imports·architecture·memory·sdd·wiki·modules)에 정의되고 버전은 하위
 모듈마다 있다
 (`CONTRACT_VERSIONS`). 한 기능만
@@ -204,6 +204,7 @@ from .exports import (
     ExportSelection,
     ExportWriteRequest,
 )
+from .i18n import I18nInfo, LanguageInfo, MessageCatalog
 from .imports import (
     ImportCandidate,
     ImportPreview,
@@ -1005,6 +1006,7 @@ __all__ = [
     "HandoffCount",
     "HandoffMatrix",
     "HealthResponse",
+    "I18nInfo",
     "ImportCandidate",
     "ImportDir",
     "ImportFile",
@@ -1095,6 +1097,7 @@ __all__ = [
     "KnownWikiWriteActions",
     "LabelDisplay",
     "LabelDisplayTarget",
+    "LanguageInfo",
     "Limits",
     "LogAggregateRequest",
     "LogAggregateRow",
@@ -1188,6 +1191,7 @@ __all__ = [
     "MemoryVersionSummary",
     "MemoryWriteRequest",
     "MergeStrategyInfo",
+    "MessageCatalog",
     "MissingSessionPolicy",
     "ModelInfo",
     "ModuleInfo",

@@ -17,6 +17,12 @@
   남기지 않는다.
 - 기록 저장소가 쓰기 중 실패하면 파일 쓰기는 그대로 두고 결과 이슈 `wiki.history_unavailable`
   (정보)를 더한다(기록 DB를 못 써도 페이지는 쓴다, design §7R.6).
+- 신선도 창 `freshness_seconds`(기본 0 = 요청마다 확인): 0보다 크면 페이지 목록·링크 색인·기록
+  요약을 한 벌(스냅숏)로 들고, 마지막 확인에서 그 시간이 지나기 전에는 폴더를 다시 나열하지 않는다.
+  이 저장소로 한 쓰기·지우기·옮기기·되돌리기·외부 변경 기록(`scan`)은 스냅숏을 바로 버린다. 쓰기
+  판단·미리보기·옮기기는 창과 무관하게 지금 파일로 판단하고, 본문(`current`·`read`)은 늘 지금
+  파일이다. `view`는 보는 페이지 파일의 크기·수정 시각이 스냅숏과 다르면 스냅숏을 버리고 다시
+  짓는다. 그래서 창만큼 늦게 보일 수 있는 것은 바깥 편집기가 바꾼 **다른** 페이지의 목록·링크뿐이다.
 """
 
 from __future__ import annotations
@@ -92,6 +98,19 @@ from ._writecheck import (
 __all__ = ["PageContent", "WikiRepository", "WikiRepositoryLimits", "WriteOutcome"]
 
 _GONE_OPS = frozenset({KnownWikiVersionOps.DELETE, KnownWikiVersionOps.MOVE_OUT})
+
+
+@dataclass(slots=True)
+class _Snapshot:
+    """한 번 확인한 페이지 목록과 그 위에 지은 것(색인·목록 이슈·기록 요약 — 필요할 때 채운다).
+
+    한 번 만든 색인·요약은 바꾸지 않는다(여러 요청이 같이 읽는다)."""
+
+    files: list[PageFile]
+    checked_at: float = 0.0
+    index: WikiIndex | None = None
+    list_issues: list[WikiIssue] = field(default_factory=list)
+    summaries: dict[str, HistorySummary] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,8 +210,13 @@ class WikiRepository:
         checks: 쓰기 검사 보탬(X50).
         secrets: 비밀 검사(기본 = 계약 `WikiSettings` 기본 방식 + `ac-secret-rules` 기본 규칙).
         limits: 한도. operators: 조건 연산자(기본 `default_operator_map()`).
-        clock: 시계(유닉스 초) — 기록 시각·점검·틀 `date`(그 시각의 로컬 날짜).
+        clock: 시계(유닉스 초) — 기록 시각·점검·틀 `date`(그 시각의 로컬 날짜)·신선도 창.
         parse_cache_entries: 파싱 캐시 크기(0 = 캐시 없음). 서버 모듈은 공간 캐시를 따로 둘 수 있다.
+        freshness_seconds: 신선도 창(초, 모듈 설명). 0 = 요청마다 폴더를 다시 나열한다. 시계가
+            거꾸로 가면 창이 지난 것으로 본다.
+
+    Raises:
+        ValueError: `freshness_seconds`가 음수.
     """
 
     def __init__(
@@ -211,7 +235,10 @@ class WikiRepository:
         operators: Mapping[str, ConditionOperator] | None = None,
         clock: Callable[[], float] = time.time,
         parse_cache_entries: int = 20_000,
+        freshness_seconds: float = 0.0,
     ) -> None:
+        if freshness_seconds < 0:
+            raise ValueError("freshness_seconds must be >= 0")
         self.pages = pages
         self.wiki_id = wiki_id
         self.syntax = syntax
@@ -232,7 +259,9 @@ class WikiRepository:
             operators=self.operators,
             case_insensitive=syntax.case_insensitive,
         )
-        self._list_issues: list[WikiIssue] = []
+        self.freshness_seconds = float(freshness_seconds)
+        self._snap: _Snapshot | None = None
+        self._snap_lock = threading.Lock()
 
     # ------------------------------------------------------------ 읽기
 
@@ -287,16 +316,34 @@ class WikiRepository:
             raise WikiPageNotFoundError(path, has_history=self.has_history(path))
         return found
 
-    def index(self) -> WikiIndex:
-        """지금 파일로 링크 색인을 만든다(파싱 캐시)."""
-        return self._index_and_files()[0]
+    def index(self, *, fresh: bool = False) -> WikiIndex:
+        """링크 색인(파싱 캐시). 신선도 창 안이면 마지막에 지은 색인이다.
 
-    def _index_and_files(self) -> tuple[WikiIndex, list[PageFile]]:
-        """색인과 그때 나열한 파일 목록(같은 요청에서 목록을 다시 나열하지 않게)."""
+        Args:
+            fresh: 창과 무관하게 지금 파일로 확인한다(쓰기 판단이 쓴다).
+        """
+        return self._index_and_files(fresh=fresh)[0]
+
+    def page_files(self) -> list[PageFile]:
+        """페이지 파일 목록(신선도 창 안이면 마지막에 나열한 목록, 0이면 지금 나열).
+
+        목록 자체로 캐시 열쇠를 만드는 쪽(서버 모듈의 위키 요약 등)이 쓴다. 돌려준 목록은 고치지
+        않는다."""
+        if self.freshness_seconds <= 0:
+            return self._files()
+        return self._snapshot(need_index=False).files
+
+    def invalidate(self) -> None:
+        """신선도 스냅숏을 버린다(다음 읽기가 폴더를 다시 나열한다). 이 저장소의 쓰기는 스스로
+        부른다. 저장소 밖에서 페이지를 바꾼 쪽(연동 등)이 알릴 때 쓴다."""
+        with self._snap_lock:
+            self._snap = None
+
+    def _build(self, snap: _Snapshot) -> None:
+        """스냅숏의 파일 목록으로 색인을 짓는다(바뀐 파일만 다시 파싱)."""
         cache = self._cache
         if cache is not None and len(cache) > self._cache_cap:
             cache.clear()
-        files = self._files()
         parsed, issues = read_pages(
             self.pages,
             self.syntax,
@@ -304,27 +351,74 @@ class WikiRepository:
             max_page_bytes=self.limits.max_page_bytes,
             timeout_ms=self.limits.parse_timeout_ms,
             cache=cache,
-            files=files,
+            files=snap.files,
         )
-        self._list_issues = issues
         index = build_index(parsed, self.syntax, home=self.home)
-        index.issues.extend(issues)
-        return index, files
+        index.issues.extend(issues)  # 만들 때 한 번만(색인은 여러 요청이 같이 읽는다)
+        snap.index = index
+        snap.list_issues = issues
 
-    def _summaries(self) -> dict[str, HistorySummary]:
+    def _is_fresh(self, snap: _Snapshot) -> bool:
+        age = self.clock() - snap.checked_at
+        return 0 <= age < self.freshness_seconds
+
+    def _snapshot(self, *, need_index: bool, force: bool = False) -> _Snapshot:
+        """신선도 창의 스냅숏(창이 지났거나 ``force``면 다시 나열한다 — 목록이 그대로면 지은 색인을
+        이어 쓴다). 같은 저장소를 동시에 읽는 요청은 확인을 한 번만 한다."""
+        with self._snap_lock:
+            snap = self._snap
+            if snap is None or force or not self._is_fresh(snap):
+                files = self._files()
+                if snap is not None and snap.files == files:
+                    snap = _Snapshot(files, index=snap.index, list_issues=snap.list_issues)
+                else:
+                    snap = _Snapshot(files)
+                if need_index and snap.index is None:
+                    self._build(snap)
+                snap.checked_at = self.clock()
+                self._snap = snap
+            elif need_index and snap.index is None:
+                self._build(snap)
+            return snap
+
+    def _indexed(self, *, fresh: bool = False) -> _Snapshot:
+        """색인이 든 스냅숏. 창이 0이면 매번 새로 짓고 들고 있지 않는다. ``fresh``면 창과 무관하게
+        지금 파일로 확인한다(쓰기 판단)."""
+        if self.freshness_seconds <= 0:
+            snap = _Snapshot(self._files())
+            self._build(snap)
+            return snap
+        return self._snapshot(need_index=True, force=fresh)
+
+    def _index_and_files(self, *, fresh: bool = False) -> tuple[WikiIndex, list[PageFile]]:
+        """색인과 그때 나열한 파일 목록(같은 요청에서 목록을 다시 나열하지 않게)."""
+        snap = self._indexed(fresh=fresh)
+        assert snap.index is not None
+        return snap.index, snap.files
+
+    def _summaries(self, snap: _Snapshot | None = None) -> dict[str, HistorySummary]:
+        """페이지별 기록 요약(``snap``이 신선도 스냅숏이면 거기 한 번만 읽어 둔다)."""
         if self.history is None:
             return {}
+        if snap is not None and snap.summaries is not None:
+            return snap.summaries
         try:
-            return self.history.summaries(self.wiki_id)
+            found = self.history.summaries(self.wiki_id)
         except Exception:  # 기록 DB를 못 읽어도 페이지는 보인다
             return {}
+        if snap is not None and self.freshness_seconds > 0:
+            snap.summaries = found
+        return found
 
     def _times(
-        self, index: WikiIndex, files: Sequence[PageFile] | None = None
+        self,
+        index: WikiIndex,
+        files: Sequence[PageFile] | None = None,
+        snap: _Snapshot | None = None,
     ) -> dict[str, PageTimes]:
         """페이지마다 만든·고친 시각(기록 요약, 없으면 파일 수정 시각 — ``files``가 있으면 그
         목록에서, 없으면 다시 나열한다)."""
-        summaries = self._summaries()
+        summaries = self._summaries(snap)
         out: dict[str, PageTimes] = {}
         mtimes: dict[str, float] = {}
         if len(summaries) < len(index.pages):
@@ -350,8 +444,10 @@ class WikiRepository:
 
     def list_pages(self, *, prefix: str | None = None, tag: str | None = None) -> WikiPageList:
         """페이지 요약 목록(경로 순). 상한을 넘으면 `truncated`·`total`."""
-        index, files = self._index_and_files()
-        times = self._times(index, files)
+        snap = self._indexed()
+        index = snap.index
+        assert index is not None
+        times = self._times(index, snap.files, snap)
         key = self.syntax.key
         items = [
             self._summary(index, path, times.get(path))
@@ -361,7 +457,7 @@ class WikiRepository:
         ]
         total: int | None = None
         truncated = False
-        for issue in self._list_issues:
+        for issue in snap.list_issues:
             if issue.code == KnownIssueCodes.WIKI_TOO_MANY_PAGES:
                 truncated = True
                 total = int(issue.details.get("total") or 0) or None
@@ -376,7 +472,12 @@ class WikiRepository:
         found = self.read(path)
         with self._lock:
             self._sync_external(found)
-        index, files = self._index_and_files()
+        snap = self._indexed()
+        if self._stale_for(snap, found):
+            self.invalidate()
+            snap = self._indexed()
+        index = snap.index
+        assert index is not None
         if found.path not in index.pages:
             # 크기 상한을 넘어 색인에 없는 페이지: 링크 없이 본문만.
             parsed = parse_page(found.path, found.data, self.syntax)
@@ -390,7 +491,7 @@ class WikiRepository:
                 issues=list(parsed.issues),
             )
         page = index.pages[found.path]
-        times = self._times(index, files)
+        times = self._times(index, snap.files, snap)
         return WikiPageView(
             page=self._summary(index, found.path, times.get(found.path)),
             content=found.text,
@@ -401,6 +502,16 @@ class WikiRepository:
             backlinks=index.backlinks(found.path),
             issues=list(page.issues),
         )
+
+    def _stale_for(self, snap: _Snapshot, found: PageContent) -> bool:
+        """보는 페이지 파일이 스냅숏 목록과 다르다(없음·크기·수정 시각). 창이 0이면 늘 거짓."""
+        if self.freshness_seconds <= 0:
+            return False
+        listed = next((f for f in snap.files if f.file == found.file), None)
+        if listed is None:  # 대소문자를 가리지 않는 파일 시스템에서 다른 대소문자로 찾았을 때
+            folded = found.file.casefold()
+            listed = next((f for f in snap.files if f.file.casefold() == folded), None)
+        return listed is None or listed.size != len(found.data) or listed.mtime != found.mtime
 
     def graph(
         self, center: str | None = None, *, depth: int | None = 1, limit: int | None = None
@@ -447,8 +558,10 @@ class WikiRepository:
 
     def lint(self) -> WikiLintReport:
         """점검(기본 점검 + 점검 규칙 + 쓰기 규칙 다시 보기)."""
-        index, files = self._index_and_files()
-        times = self._times(index, files)
+        snap = self._indexed()
+        index = snap.index
+        assert index is not None
+        times = self._times(index, snap.files, snap)
 
         def read(path: str) -> str | None:
             found = self.current(path)
@@ -553,6 +666,7 @@ class WikiRepository:
     ) -> list[WikiPageVersion]:
         if self.history is None or not entries:
             return []
+        self.invalidate()  # 기록 요약이 바뀐다
         try:
             versions = self.history.record(entries)
             keep = self.limits.max_versions_per_page
@@ -671,7 +785,7 @@ class WikiRepository:
         data = content.encode("utf-8")
         self._check_size(data)
         current = self.current(path)
-        index = self.index()
+        index = self.index(fresh=True)
         parsed = self._parse(path, data)
         before = self._before(index, current)
         op = KnownWikiChangeOps.UPDATE if current is not None else KnownWikiChangeOps.CREATE
@@ -796,7 +910,7 @@ class WikiRepository:
             )
         if current is None:
             self._check_count()
-        index = self.index()
+        index = self.index(fresh=True)
         parsed = self._parse(path, data)
         op = KnownWikiChangeOps.UPDATE if current is not None else KnownWikiChangeOps.CREATE
         _, rules, secrets = self._decide(
@@ -815,6 +929,7 @@ class WikiRepository:
         self._sync_external(current, issues)
         file = current.file if current is not None else self._new_file(path)
         self.pages.write(file, data)
+        self.invalidate()
         if self._cache is not None:
             self._cache.pop(file, None)
         recorded = record_op or (
@@ -876,7 +991,7 @@ class WikiRepository:
             current = self.read(path)
             if if_hash is not None and current.content_hash != if_hash:
                 raise WikiConflictError(path, expected=if_hash, actual=current.content_hash)
-            index = self.index()
+            index = self.index(fresh=True)
             before = self._before(index, current)
             assert before is not None
             _, rules, secrets = self._decide(
@@ -885,6 +1000,7 @@ class WikiRepository:
             issues = self._raise(rules, secrets)
             self._sync_external(current, issues)
             self.pages.delete(current.file)
+            self.invalidate()
             if self._cache is not None:
                 self._cache.pop(current.file, None)
             versions = self._record(
@@ -963,7 +1079,7 @@ class WikiRepository:
             existing = self._find_file(new)
             if existing is not None and existing.casefold() != current.file.casefold():
                 raise WikiPageExistsError(new)
-            index = self.index()
+            index = self.index(fresh=True)
             before = self._before(index, current)
             assert before is not None
             _, rules, secrets = self._decide(
@@ -1035,6 +1151,7 @@ class WikiRepository:
 
             self._sync_external(current, issues)
             self.pages.move(current.file, new_file)
+            self.invalidate()
             new_data = self_text.encode("utf-8") if self_count else current.data
             if self_count:
                 self.pages.write(new_file, new_data)
@@ -1074,6 +1191,7 @@ class WikiRepository:
                 data = text.encode("utf-8")
                 self._sync_external(again, issues)
                 self.pages.write(found.file, data)
+                self.invalidate()
                 if self._cache is not None:
                     self._cache.pop(found.file, None)
                 entries.append(
@@ -1106,7 +1224,8 @@ class WikiRepository:
 
     def scan(self) -> WikiScanResult:
         """앱 밖 변경을 기록한다(모듈 설명). 기록 저장소가 없으면 감지할 기준이 없어
-        `recorded=False`."""
+        `recorded=False`. 신선도 스냅숏은 창과 무관하게 버린다(다음 읽기가 지금 파일을 본다)."""
+        self.invalidate()
         if self.history is None:
             return WikiScanResult(recorded=False)
         with self._lock:

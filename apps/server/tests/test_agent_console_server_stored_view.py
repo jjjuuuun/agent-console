@@ -78,7 +78,7 @@ def test_settings_get_put_does_not_grow_file(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     with server(settings) as client:
         assert client.get(f"{API}/settings").json() == {}
-        first = {"default_backend": "fake-agent", "chat": {"busy_policy": "queue"}}
+        first = {"agent_defaults": {"backend": "fake-agent"}, "chat": {"busy_policy": "queue"}}
         assert client.put(f"{API}/settings", json=first).status_code == 200
         [path] = list(settings.workspace_path.rglob("settings*.yaml"))
         before = path.read_text(encoding="utf-8")
@@ -89,7 +89,7 @@ def test_settings_get_put_does_not_grow_file(tmp_path: Path) -> None:
         assert again.json() == first
         assert _etag(again) == _etag(got)  # 같은 원문 → 같은 버전
         assert path.read_text(encoding="utf-8") == before
-        assert len(before.splitlines()) <= 3
+        assert len(before.splitlines()) <= 4  # 섹션 두 개, 섹션마다 머리 + 값 한 줄
 
 
 def _mcp(env_value: str) -> dict[str, Any]:

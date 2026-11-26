@@ -1,118 +1,144 @@
-# 플러그인 공통
+# Plugin basics
 
-"같은 종류 하나 더"는 모두 같은 방식으로 들어온다. 패키지가 entry point로 구현을 알리고, 서버가 시작할 때 그것을
-읽어 확장 지점마다 레지스트리에 등록한다. 기본 구현도 같은 길로 등록되므로 플러그인은 기본 구현과 똑같이
-다뤄진다. 이 문서는 지점과 상관없이 같은 규칙을 모은다. 지점마다 다른 것(인터페이스, 디스크립터 필드)은
-영역 페이지에 있다.
+Every "one more of the same kind" comes in the same way. A package announces its implementation with an entry point,
+and the server reads it at startup and registers it in the registry of each extension point. Built-in implementations
+are registered the same way, so a plugin is treated exactly like a built-in implementation. This page collects the
+rules that apply to every point. What differs per point (interfaces, descriptor fields) is on the area pages.
 
-## entry point
+## Entry points
 
 ```toml
 [project.entry-points."agent_console.edge_types"]
 "acme.relay" = "acme_console_edges:RelayEdge"
 ```
 
-- **그룹** = 확장 지점. 그룹 이름은 정의한 패키지의 공개 상수(예: `agent_console_runtime.EDGE_TYPES_GROUP`)와 같다.
-  전체 목록과 기본 구현: [entry point 그룹 표](reference.md#entry-point-그룹).
-- **이름** = 등록 id. 데이터(팀 구성의 `type`·`kind`, 조건의 `op`, 설정의 출처 id)가 이 이름으로 구현을 찾는다.
-  디스크립터가 있는 지점이면 디스크립터 `id`와 같게 둔다.
-- **값** = `모듈:속성`. 속성은 다음 중 하나다.
-  - 클래스: 서버가 인자 없이 인스턴스를 만든다. 가장 흔한 모양이다.
-  - 이미 만든 객체(모듈 수준 인스턴스).
-  - 인자 없는 팩토리: 몇몇 지점은 "인자 없는 함수 → 실제 구현을 만드는 함수"를 받는다(예: 위키 검색 색인은
-    `(폴더, 옵션) -> 색인`을 돌려주는 함수). 그 모양은 지점의 영역 페이지에 적혀 있다.
-- 생성자에서 파일·네트워크·환경변수를 읽지 않는다. 바깥 값은 설정(`config`·옵션)이나 지점이 넘겨주는 문맥으로
-  받는다. 그래야 테스트에서 가짜로 바꿀 수 있고 로드가 빠르다.
+- **Group** = extension point. The group name equals a public constant of the package that defines it (for example,
+  `agent_console_runtime.EDGE_TYPES_GROUP`). The full list and the built-in implementations are in the
+  [entry point group table](reference.md#entry-point-groups).
+- **Name** = registration id. Data (the `type` and `kind` of a team, the `op` of a condition, a source id in settings)
+  finds the implementation by this name. If the point has a descriptor, make the descriptor `id` the same.
+- **Value** = `module:attribute`. The attribute is one of these:
+  - A class: the server creates an instance without arguments. This is the most common shape.
+  - An object that already exists (a module-level instance).
+  - A factory without arguments: some points take "a function without arguments that returns the function that builds
+    the real implementation" (for example, the wiki search index takes a function that returns
+    `(folder, options) -> index`). The area page of the point describes that shape.
+- Do not read files, the network, or environment variables in the constructor. Take outside values from settings
+  (`config`, options) or from the context the point passes in. That way tests can swap in fakes, and loading stays
+  fast.
 
-## 이름과 중복
+## Names and duplicates
 
-- 같은 그룹에 같은 이름이 둘이면 하나만 등록된다. 이름이 같은 항목은 값(모듈 경로) 순으로 앞의 것이 쓰이고 뒤의
-  것은 `failed`(중복)로 보고된다. 기본 구현의 이름을 덮어쓸 수는 없다.
-- 그래서 이름에는 자기 접두사를 붙인다(`acme.relay`). 접두사 없는 이름은 기본 구현이 쓴다.
-- 다른 버전을 같은 이름으로 함께 두는 지점(노드 종류의 `type_version` 등)은 그 지점 페이지가 설명한다.
+- When a group has two entries with the same name, only one is registered. Among entries with the same name, the one
+  that comes first in value (module path) order is used, and the later one is reported as `failed` (a duplicate, with
+  the source that registered first in `error`). Install order does not matter.
+- Built-in implementations also come in through entry points, so the same rule applies. If you use the same name as a
+  built-in implementation, either the built-in implementation or your plugin drops out as `failed`, depending on value
+  order. To replace a built-in implementation, do not reuse its name: register a new name and choose that name in the
+  data (`plugins.disabled` turns things off by name, so with the same name both are turned off).
+- That is why names carry your own prefix (`acme.relay`). Names without a prefix are for built-in implementations.
+- Different groups can use the same name without affecting each other (registration is per group; turning on and off,
+  described below, applies to all groups).
+- Explicit module plugins (`plugins.modules`) are called after all entry points are read. If one registers a name that
+  already exists, that plugin is `failed` (a duplicate) and the earlier entry stays. Overwrite with
+  `register(name, implementation, replace=True)` only when you mean to replace it. If the overwritten name is then
+  dropped by `plugins.disabled`, the original entry comes back.
+- Points that keep different versions under the same name (such as `type_version` of node types) are explained on that
+  point's page. Entries with different versions stay together, and a lookup without a version gets the highest
+  version.
 
-## 로드 시점과 실패
+## Load time and failures
 
-- entry point는 **서버가 시작할 때 한 번** 읽는다. 설치·제거·버전 교체 뒤에는 서버를 다시 시작한다.
-- 로드 실패는 서버를 멈추지 않는다. import 오류, 속성 없음, 지점 검사 실패(필요한 메서드·디스크립터 없음), 중복은
-  그 항목만 빠지고 결과가 보고된다.
-- 결과는 `GET /api/v1/server-info`의 `plugins`에 항목마다 나온다.
+- Entry points are read **once, when the server starts**. Restart the server after installing, removing, or changing
+  the version of a package.
+- A load failure does not stop the server. For an import error, a missing attribute, a failed point check (a required
+  method or descriptor is missing), or a duplicate, only that entry drops out and the result is reported.
+- The results appear per entry in `plugins` of `GET /api/v1/server-info`.
 
-| `status` | 뜻 |
+| `status` | Meaning |
 | --- | --- |
-| `loaded` | 등록됨 |
-| `failed` | 읽지 못함. `error`에 이유(예외 이름과 메시지) |
-| `skipped` | `plugins.disabled`에 있거나 `plugins.enabled`에 없어 읽지 않음 |
-| `disabled` | 명시 모듈 플러그인이 등록했지만 `plugins.disabled`에 있거나 `plugins.enabled`에 없어 뺌 |
+| `loaded` | Registered |
+| `failed` | Could not be read. The reason (exception name and message) is in `error` |
+| `skipped` | Not read because it is in `plugins.disabled` or not in `plugins.enabled` |
+| `disabled` | Registered by an explicit module plugin, but removed because it is in `plugins.disabled` or not in `plugins.enabled` |
 
-`skipped`·`disabled`는 오류가 아니므로 `error`가 비어 있다. 어느 설정 때문인지는 `reason`
-(예: `설정 plugins.disabled에 있음`)과 서버 로그에 남는다.
+`skipped` and `disabled` are not errors, so `error` is empty. Which setting caused it is recorded in `reason` (for
+example, `설정 plugins.disabled에 있음`) and in the server log.
 
 ```bash
 curl -s http://127.0.0.1:8765/api/v1/server-info      # plugins: [{name, group, loaded, status, reason, error}]
 ```
 
-## 켜고 끄기
+## Turning plugins on and off
 
-서버 설정 파일(또는 환경변수):
+In the server settings file (or environment variables):
 
 ```yaml
 plugins:
-  disabled: [acme.relay] # 끌 이름(모든 그룹 공통). 나머지는 그대로 읽는다
-  enabled: null          # null = 설치된 것 전부. 목록을 주면 그 이름만 읽는다(모든 그룹 공통)
-  modules: []            # 설치하지 않은 플러그인 모듈 "패키지.모듈:속성"(아래)
+  disabled: [acme.relay] # names to turn off (all groups). Everything else is read as usual
+  enabled: null          # null = everything installed. A list reads only those names (all groups)
+  modules: []            # plugin modules that are not installed, as "package.module:attribute" (below)
 ```
 
-- **하나만 끄려면 `plugins.disabled`에 그 이름을 적는다.** 다른 플러그인과 기본 구현은 그대로 읽힌다. 이름은
-  entry point 이름(등록 id)이고, `server-info`의 `plugins`에 나오는 `name`과 같다.
-- `plugins.enabled`는 **모든 그룹에 함께 걸리는 허용 목록**이다. 기본 구현도 entry point로 들어오므로 목록을 적으면
-  기본 구현의 이름도 함께 적어야 한다. 쓸 것만 골라 적을 때 쓴다.
-- 둘 다 적으면 `plugins.enabled` 안에서 `plugins.disabled`를 뺀다(제외 목록이 이긴다).
-- 두 목록 모두 그룹을 가리지 않는다. 다른 그룹에 같은 이름이 있으면 함께 꺼진다.
-- `plugins.disabled`에 설치되지 않은 이름을 적으면 서버는 시작하고, `server-info`의 `warnings`에 `plugins.config`
-  경고를 낸다(오타 확인용).
-- `plugins.modules` 플러그인이 등록한 항목에도 같은 규칙이 걸린다. 이름은 등록한 key이고, 꺼진 항목은 `group`
-  `plugins.modules`, `status` `disabled`로 나온다(entry point 플러그인은 `skipped`).
-- 환경변수: `AGENT_CONSOLE_PLUGINS_DISABLED`·`AGENT_CONSOLE_PLUGINS_ENABLED`(쉼표로 구분),
+- **To turn off just one, put its name in `plugins.disabled`.** Other plugins and the built-in implementations are
+  read as usual. The name is the entry point name (registration id), the same as `name` in `plugins` of
+  `server-info`.
+- `plugins.enabled` is **an allow list that applies to all groups together**. Built-in implementations also come in
+  through entry points, so when you write the list you must include the names of the built-in implementations too.
+  Use it when you want to pick only what you use.
+- When you set both, `plugins.disabled` is removed from `plugins.enabled` (the deny list wins).
+- Neither list looks at groups. If another group has the same name, it is turned off too.
+- If `plugins.disabled` contains a name that is not installed, the server still starts and adds a `plugins.config`
+  warning to `warnings` of `server-info` (to catch typos). If the name is an installed distribution name
+  (`my-console-ops`), the warning shows the entry point names of that distribution. If it is a server module id
+  (`mod-…`), the warning says to turn it off with `modules.disabled` and also shows the entry point names of the same
+  distribution.
+- The same rules apply to entries registered by `plugins.modules` plugins. The name is the registered key, and an entry
+  that is turned off appears with `group` `plugins.modules` and `status` `disabled` (entry point plugins show
+  `skipped`).
+- Environment variables: `AGENT_CONSOLE_PLUGINS_DISABLED` and `AGENT_CONSOLE_PLUGINS_ENABLED` (comma-separated),
   `AGENT_CONSOLE_PLUGIN_MODULES`.
-- 설치하지 않고 시험할 때는 `plugins.modules`에 `"패키지.모듈:속성"`을 적는다. 그 속성은 `register(registries)`
-  메서드가 있는 객체 또는 같은 모양의 함수이고, 이름 붙은 레지스트리에 직접 등록한다. 등록은 entry point와 같은
-  검사를 거친다. 모듈은 서버의 import 경로에 있어야 한다.
-- 서버 모듈(기능 단위)은 플러그인이 아니라 모듈 설정 `modules.enabled`·`modules.disabled`로 켜고 끈다
-  ([서버 모듈](modules.md#켜고-끄기)).
+- To try a plugin without installing it, put `"package.module:attribute"` in `plugins.modules`. The attribute is an
+  object with a `register(registries)` method, or a function of the same shape, and it registers directly in the named
+  registries. Registration goes through the same checks as entry points. The module must be on the server's import
+  path.
+- Server modules (feature units) are not plugins. Turn them on and off with the module settings `modules.enabled` and
+  `modules.disabled` ([Server modules](modules.md#turning-on-and-off)).
 
-## 지운 뒤 남는 데이터
+## Data left after removal
 
-플러그인을 지우거나 끄면 그 이름을 쓰던 사용자 데이터(팀 구성의 노드·연결, 조건, 리소스, 설정의 출처 항목)는
-**지워지지 않는다**. 대신:
+When you remove or turn off a plugin, the user data that uses its name (nodes and edges of a team, conditions,
+resources, source entries in settings) is **not deleted**. Instead:
 
-- 저장 전 검사와 목록 검사가 이슈로 알린다. 코드와 심각도는 지점마다 정해져 있고 영역 페이지에 적는다. 예: 노드
-  종류 `unknown_node_type`·연결 종류 `unknown_edge_type`은 오류(그 팀 구성은 실행 전 검사에서 막힌다), 조건 연산자
-  `condition.unknown_operator`는 경고(실행은 되고 그 조건 항목만 거짓).
-- 모르는 이름이 영향을 주는 범위는 그 부분뿐이다. 다른 팀 구성과 다른 플러그인은 그대로 동작한다.
-- 다시 설치하면 데이터를 고치지 않고 그대로 동작한다.
+- The pre-save check and the list checks report issues. The code and severity are fixed per point and written on the
+  area page. For example, the node type `unknown_node_type` and the edge type `unknown_edge_type` are errors (that team
+  is blocked by the pre-run check), and the condition operator `condition.unknown_operator` is a warning (the run goes
+  ahead and only that condition item is false).
+- An unknown name affects only that part. Other teams and other plugins keep working.
+- When you install the plugin again, everything works again without changing the data.
 
-플러그인을 만들 때도 같은 관례를 따른다. 내 플러그인이 다른 확장의 id를 데이터로 받으면, 모르는 id는 예외 대신
-자기 접두사의 경고 코드로 알리고 그 부분만 건너뛴다.
+Follow the same convention when you write a plugin. If your plugin takes ids of other extensions as data, report
+unknown ids with a warning code under your own prefix instead of raising, and skip only that part.
 
-## 설정 스키마
+## Settings schema
 
-지점 대부분은 디스크립터에 `config_schema`(JSON Schema)를 둔다. 웹은 이 스키마로 설정 폼을 그리므로 플러그인은
-웹 코드를 쓰지 않는다. 필드마다 다음을 단다.
+Most points put a `config_schema` (JSON Schema) on the descriptor. The web draws the settings form from this schema,
+so a plugin does not write web code. Add the following to each field.
 
-| 키 | 무엇 |
+| Key | What |
 | --- | --- |
-| `title` | 짧은 라벨 |
-| `description` | 무엇을 하는지, 왜 바꾸는지 한 문장. 내부 이름을 쓰지 않는다 |
-| `x-ui.tier` | `basic`(위쪽에 보임) 또는 `advanced`(접힘) |
-| `x-ui.when` | 언제 바꾸는지 한 문장(`basic` 필드는 필수) |
-| `x-ui.example` | 빈 칸을 눌렀을 때 채울 예시 값 |
-| `x-ui.unit` | 단위(초, 개, MB) |
+| `title` | A short label |
+| `description` | One sentence on what it does and why you would change it. Do not use internal names |
+| `x-ui.tier` | `basic` (shown at the top) or `advanced` (collapsed) |
+| `x-ui.when` | One sentence on when to change it (required for `basic` fields) |
+| `x-ui.example` | An example value to fill in when the user selects an empty field |
+| `x-ui.unit` | The unit (seconds, items, MB) |
 
-Pydantic 모델이면 `x_ui()`를 `json_schema_extra`에 넣는다. `lint_schema_help`로 스스로 검사할 수 있다.
-스키마 맨 위 `title`·`description`은 폼 머리말로 보이는데, Pydantic은 클래스 이름과 docstring을 그대로 넣는다.
-`model_config = ConfigDict(title="...")`로 제목을 주고 docstring은 사용자가 읽는 한 문장으로 둔다(`Attributes:` 같은
-코드 문서는 각 `Field(title=..., description=...)`로 옮긴다).
+For a Pydantic model, put `x_ui()` in `json_schema_extra`. You can check the result yourself with
+`lint_schema_help`. The top-level `title` and `description` of the schema appear as the form header, and Pydantic
+fills them with the class name and the docstring. Give the title with `model_config = ConfigDict(title="...")` and
+keep the docstring as one sentence the user reads (move code documentation such as `Attributes:` into each
+`Field(title=..., description=...)`).
 
 ```python
 >>> from pydantic import BaseModel, Field
@@ -134,21 +160,25 @@ Pydantic 모델이면 `x_ui()`를 `json_schema_extra`에 넣는다. `lint_schema
 
 ```
 
-웹이 모르는 `x-ui` 위젯 이름을 쓰면 구조화 값은 JSON 편집으로 바뀌고 안내가 붙는다. 새 위젯이 꼭 필요하면 [웹](web.md).
+If you use an `x-ui` widget name that the web does not know, structured values switch to JSON editing with a note.
+If you really need a new widget, see [Web](web.md).
 
-## 비밀 값
+## Secrets
 
-- 비밀(키·토큰)은 설정에 값으로 쓰지 않는다. 사용자는 `secret://이름` 참조를 쓰고, 서버가 환경변수(또는 비밀 공급자
-  플러그인)에서 값을 찾아 넘긴다. 참조는 문자열 전체가 `secret://이름`일 때만 풀린다.
-- 스키마에서 비밀 필드는 `SecretStr`(또는 `"x-secret": true`)로 표시한다. 화면·설정 보기·응답에서 가려진다.
-- 받은 비밀을 로그·이벤트·오류 메시지·예외 문자열에 넣지 않는다. 엔진이 해석한 값은 기록에서 가리지만, 플러그인이
-  다른 길로 얻은 값이나 바꾼 값(인코딩·일부 잘림)은 가릴 수 없다.
-- 새 비밀 출처(파일·키체인 등)가 필요하면 비밀 값 공급자 지점을 쓴다([실행 백엔드](backends.md)).
+- Do not write secrets (keys, tokens) as values in settings. Users write a `secret://name` reference, and the server
+  finds the value in environment variables (or a secret provider plugin) and passes it on. A reference is resolved only
+  when the whole string is `secret://name`.
+- Mark secret fields in the schema with `SecretStr` (or `"x-secret": true`). They are masked on screens, in settings
+  views, and in responses.
+- Do not put a secret you received into logs, events, error messages, or exception strings. The engine masks values it
+  resolved in records, but it cannot mask values a plugin got another way or changed (encoded, partly truncated).
+- If you need a new secret source (a file, a keychain, and so on), use the secret provider point
+  ([Execution backends](backends.md)).
 
-## 확장 지점 하나 고르기
+## Choosing an extension point
 
-| 하고 싶은 일 | 볼 곳 |
+| What you want to do | Where to look |
 | --- | --- |
-| 지점 전체 표(등록 종류·기본 구현 수·예제 종류) | [확장 지점 참조](reference.md#확장-지점) |
-| 예제 패키지 설치해 보기 | [예제 색인](../../examples/extensions/README.md) |
-| 처음 만들기 | [시작하기](getting-started.md) |
+| The full point table (registration kind, number of built-in implementations, example kinds) | [Extension point reference](reference.md#extension-points) |
+| Install an example package to try it | [Example index](../../examples/extensions/README.md) |
+| Build your first one | [Get started](getting-started.md) |

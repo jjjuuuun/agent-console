@@ -294,6 +294,8 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "portable": True,
             "title": None,  # 기여가 표시 이름을 주지 않으면 null(화면은 종류 이름)
             "deletable": False,  # 기여가 삭제 수단(``delete``)을 주지 않음
+            "reserved_ids": [],  # 종류 데이터에 예약어 없음
+            "open_role": None,  # 기여·종류 데이터가 여는 화면 역할을 주지 않음
         }
         assert "note" not in by_kind  # library=False 종류는 라이브러리에 없다
         assert "settings" not in by_kind  # 싱글턴은 복사 대상이 아니다
@@ -316,6 +318,8 @@ def test_copy_kinds_and_items_follow_contributions(tmp_path: Path) -> None:
             "portable": True,
             "title": "노트",  # 기여 ``title``(검증 11/07 B)
             "deletable": False,
+            "reserved_ids": [],
+            "open_role": None,
         }
         assert "private" not in project  # portable=False 기여는 프로젝트 공간에 없다
         assert client.get(f"{API}/projects/copy/items?project=pa&kind=note").json() == []
@@ -346,6 +350,38 @@ def test_copy_kinds_titles_for_builtin_kinds_fu18(tmp_path: Path) -> None:
             assert {name: got[name] for name in builtin} == builtin
             assert got["memo"] == "메모"  # 기여 title 없음 → 종류 데이터
             assert got["memo2"] == "기여 이름"  # 기여 title이 먼저
+
+
+def test_copy_kinds_open_role_p1_19(tmp_path: Path) -> None:
+    """P1.19: ``CopyKindInfo.open_role`` = 기여 ``open_role`` → 종류 데이터 ``open_role`` → null.
+
+    역할은 열린 문자열이다(임의 종류·임의 역할). 프로젝트 모듈은 역할 이름을 모른다 — 기본 종류
+    기대값도 종류 데이터 ``DEFAULT_KINDS``에서 읽는다.
+    """
+    by_data = DefinitionKind(name="zz-data", directory="zz-data", open_role="zz-screen:data")
+    by_both = DefinitionKind(name="zz-both", directory="zz-both", open_role="zz-screen:kind")
+    plain = DefinitionKind(name="zz-plain", directory="zz-plain")
+    items = (
+        *CONTRIBUTIONS,
+        KindContribution(by_data),
+        KindContribution(by_both, open_role="zz-screen:contributed"),
+        KindContribution(plain),
+    )
+    assembly = _assembly(tmp_path, contributions=True, items=items)
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        for query in ("", "?project=pa"):
+            got = {
+                k["kind"]: k["open_role"]
+                for k in client.get(f"{API}/projects/copy/kinds{query}").json()
+            }
+            assert got["zz-data"] == "zz-screen:data"  # 기여 open_role 없음 → 종류 데이터
+            assert got["zz-both"] == "zz-screen:contributed"  # 기여가 먼저
+            assert got["zz-plain"] is None
+            builtin = {k.name: k.open_role for k in DEFAULT_KINDS if not k.is_singleton}
+            assert builtin
+            assert all(builtin.values())
+            assert {name: got[name] for name in builtin} == builtin
             assert got["note-template"] is None  # 둘 다 없음 → null
 
 
@@ -424,6 +460,30 @@ GUARDED = DefinitionKind(name="guarded", directory="guarded", reserved_ids=("che
 MEMO = DefinitionKind(name="memo", directory="memos", reserved_ids=("zeta-route",))
 OPEN = DefinitionKind(name="open", directory="open")
 RESERVED_ITEMS = (*CONTRIBUTIONS, *(KindContribution(k) for k in (GUARDED, MEMO, OPEN)))
+
+
+def test_copy_kinds_expose_reserved_ids_p1_5(tmp_path: Path) -> None:
+    """P1.5: ``CopyKindInfo.reserved_ids``는 종류 데이터 ``DefinitionKind.reserved_ids`` 그대로다.
+
+    기여 종류가 준 임의 예약어가 라이브러리·프로젝트 공간 양쪽 목록에 나오고, 예약어 없는 종류는
+    빈 목록이다. 프로젝트 모듈은 예약어 목록을 모른다(기대값도 이 테스트가 만든 종류 데이터).
+    """
+    oddly = DefinitionKind(name="oddly-kind", directory="oddly", reserved_ids=("Qux-Route", "zz9"))
+    items = (*RESERVED_ITEMS, KindContribution(oddly))
+    assembly = _assembly(tmp_path, contributions=True, items=items)
+    with _client(assembly) as client:
+        _register(client, tmp_path / "work" / "pa")
+        for query in ("", "?project=pa"):
+            got = {
+                k["kind"]: k["reserved_ids"]
+                for k in client.get(f"{API}/projects/copy/kinds{query}").json()
+            }
+            assert got["oddly-kind"] == ["Qux-Route", "zz9"]  # 순서·대소문자 그대로
+            assert got["guarded"] == list(GUARDED.reserved_ids)
+            assert got["memo"] == list(MEMO.reserved_ids)
+            assert got["open"] == []
+            builtin = [k.name for k in DEFAULT_KINDS if not k.is_singleton]
+            assert all(got[name] == [] for name in builtin)
 
 
 def test_copy_apply_rejects_reserved_rename_ids(tmp_path: Path) -> None:

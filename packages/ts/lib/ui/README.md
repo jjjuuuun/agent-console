@@ -1,108 +1,120 @@
 # @agent-console/ui
 
-디자인 토큰(`tokens.css`)과 도메인을 모르는 기본 컴포넌트. 노드 타입·그래프·API를 모른다.
-다른 TS 패키지를 import하지 않는다(react는 peer). graph-editor·schema-form은 이 패키지에 의존하지 않고
-**`--ac-*` CSS 변수, 유틸 클래스 이름, `data-status` 규칙**만 약속으로 쓴다.
+The design tokens (`tokens.css`) and basic components that know nothing about the domain. It knows no node types, graphs, or APIs.
+It imports no other TS package (react is a peer). graph-editor and schema-form do not depend on this package;
+they rely only on **the `--ac-*` CSS variables, the utility class names, and the `data-status` rule** as a convention.
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button, formatBadgeCount } from "@agent-console/ui";
 
-const html = renderToStaticMarkup(createElement(Button, null, "저장"));
+const html = renderToStaticMarkup(createElement(Button, null, "Save"));
 const badge = formatBadgeCount(120);
 ```
 
-## 설치 / import
-저장소 안에서는 `pnpm install`이 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다: `npm install ./agent-console-<이름>-<버전>.tgz` (react 19 필요)
+## Installation and import
+Inside the repository, `pnpm install` links the package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`): `npm install ./agent-console-<name>-<version>.tgz` (React 19 is required)
 
-앱이 진입점에서 **한 번만**, 다른 패키지 `styles.css`보다 **먼저** 불러온다.
+The app loads it **once**, at the entry point, **before** the other packages' `styles.css`.
 ```ts
 import "@agent-console/ui/tokens.css";
 import "@agent-console/graph-editor/styles.css";
 ```
 
-## tokens.css 구성
-- 색: 기본은 시스템(`data-theme` 속성이 없으면 `prefers-color-scheme`; 라이트 선호가 아니면 다크 값 `:root`), `[data-theme="dark|light"]`로 고정. `--ac-bg`, `--ac-surface-1..3`, `--ac-text*`, `--ac-accent*`, 의미색(`--ac-danger/warning/success/info` + `-bg`), 분류색 `--ac-cat-1..8`·`--ac-cat-neutral`, 엣지·캔버스, 상태색 `--ac-status-<state>`(+`-bg`).
-- 타입: `--ac-font-sans`(Pretendard → Noto Sans KR → Malgun Gothic → Apple SD Gothic Neo → system-ui), `--ac-font-mono`, `--ac-text-xs..xl/code`(12px 이상), `--ac-lh-*`.
-- 간격 `--ac-space-0..7`, 반경 `--ac-radius-*`, 컨트롤 높이, 레이아웃 상수, z-index, 모션, 그림자.
-- 유틸: `.ac-text`, `.ac-ellipsis`, `.ac-clamp-2/3`, `.ac-mono-wrap`, `.ac-pre`, `.ac-num`, `.ac-sr-only`.
-- 상태: `[data-status="pending|queued|running|succeeded|failed|skipped|waiting|cancelled"]`가 색·테두리 패턴·아이콘 마스크를 CSS 변수로 준다. Run 상태는 `data-status-kind="run"`에서 `completed|paused|interrupted`가 추가된다. 그 외 값은 점선 + 물음표 폴백. 아이콘은 인라인 SVG data URI(외부 파일 없음). reduced-motion이면 정지.
+## What tokens.css contains
+- Color: by default it follows the system (without a `data-theme` attribute it uses `prefers-color-scheme`; unless light is preferred, the dark values in `:root` apply), and `[data-theme="dark|light"]` pins it. `--ac-bg`, `--ac-surface-1..3`, `--ac-text*`, `--ac-accent*`, the semantic colors (`--ac-danger/warning/success/info` + `-bg`), the category colors `--ac-cat-1..8` and `--ac-cat-neutral`, edges and canvas, and the status colors `--ac-status-<state>` (+`-bg`).
+- Type: `--ac-font-sans` (Pretendard → Noto Sans KR → Malgun Gothic → Apple SD Gothic Neo → system-ui), `--ac-font-mono`, `--ac-text-xs..xl/code` (12px or more), and `--ac-lh-*`.
+- Spacing `--ac-space-0..7`, radii `--ac-radius-*`, control heights, layout constants, z-index, motion, and shadows.
+- Utilities: `.ac-text`, `.ac-ellipsis`, `.ac-clamp-2/3`, `.ac-mono-wrap`, `.ac-pre`, `.ac-num`, and `.ac-sr-only`.
+- Status: `[data-status="pending|queued|running|succeeded|failed|skipped|waiting|cancelled"]` supplies the color, border pattern, and icon mask through CSS variables. Run statuses add `completed|paused|interrupted` under `data-status-kind="run"`. Any other value falls back to a dashed outline plus a question mark. Icons are inline SVG data URIs (no external files). With reduced motion, animation stops.
 
-## 상태 표시 규칙
-요소에 `data-status="<서버 상태 문자열>"`만 달고, 그 안에 빈 `<span class="ac-status-icon">`을 두면 아이콘이 나온다. 박스(노드 카드 등)에 테두리 패턴·헤더 tint까지 주려면 아래 범용 훅 클래스를 단다. 한글 라벨은 JS 표 없이 호출자가 `messages`로 넘긴다.
+## Status display rule
+Put only `data-status="<the server's status string>"` on an element, and place an empty `<span class="ac-status-icon">` inside it, and the icon appears. To give a box (such as a node card) the border pattern and header tint as well, add the generic hook classes below. The caller passes labels through `messages`, with no JS table.
 
-### 범용 훅 클래스
-| 클래스 | 붙이는 곳 | 효과 |
+### Generic hook classes
+| Class | Where to put it | Effect |
 | --- | --- | --- |
-| `ac-status-box` | `data-status`를 가진 박스 | 상태별 테두리 색·패턴·두께, skipped 빗금·흐림, waiting 바깥 링 |
-| `ac-status-header` | 박스의 직계 헤더 | 상태 tint, running 진행 막대 |
-| `ac-status-keep` | skipped 박스의 직계 자식 중 흐리게 하지 않을 것(분류색 막대 등) | 불투명도 .7 제외 |
-| `ac-status-icon` | 빈 `<span>` (가장 가까운 `data-status` 조상 것을 사용) | 상태 아이콘(마스크), running 회전, waiting 깜박임 |
+| `ac-status-box` | A box that has `data-status` | The border color, pattern, and thickness per status, hatching and dimming for skipped, and an outer ring for waiting |
+| `ac-status-header` | The box's direct child header | The status tint, and a progress bar for running |
+| `ac-status-keep` | A direct child of a skipped box that should not be dimmed (such as the category color bar) | Excluded from the 0.7 opacity |
+| `ac-status-icon` | An empty `<span>` (it uses the nearest `data-status` ancestor) | The status icon (a mask), rotation for running, and blinking for waiting |
 
-## 사용 예
+## Usage example
 ```tsx
 import { Button, IconButton, StatusChip, StatusIcon, Banner, ThemeProvider } from "@agent-console/ui";
 
-<ThemeProvider theme={theme} onThemeChange={setTheme /* 저장은 앱 */}>
-  <StatusChip status="running" label="실행 중" />
-  <StatusChip status="interrupted" kind="run" label="중단됨" />
-  <StatusChip status="나중에-생긴-상태" />{/* 라벨 생략 시 원문, 스타일은 폴백 */}
-  <Button variant="primary" loading={saving} onClick={save}>저장</Button>
-  <IconButton label="삭제" icon={<TrashSvg />} />
-  <Banner tone="danger" title="저장 실패">버전이 충돌했습니다.</Banner>
+<ThemeProvider theme={theme} onThemeChange={setTheme /* the app saves it */}>
+  <StatusChip status="running" label="Running" />
+  <StatusChip status="interrupted" kind="run" label="Interrupted" />
+  <StatusChip status="a-status-added-later" />{/* without a label it shows the raw text, with the fallback style */}
+  <Button variant="primary" loading={saving} onClick={save}>Save</Button>
+  <IconButton label="Delete" icon={<TrashSvg />} />
+  <Banner tone="danger" title="Couldn't save">The version conflicted.</Banner>
 </ThemeProvider>
 ```
 
-## 공개 API
-- 기본: `Button`, `IconButton`, `Spinner`, `StatusIcon`, `StatusChip`, `Badge`, `Tag`, `Banner`, `ThemeProvider`/`useTheme`.
-- v2(모두 제어형·문구는 props): `Sidebar`(`items`·`activeId`·`onNavigate`·`collapsed`·`messages`, 방향키 roving, 배지 `99+`; `groups` + 항목 `group`으로 묶음 제목·접힘 구분선, 항목이 없는 묶음은 안 그림(`groupSidebarItems`); `position:'bottom'` 항목과 `tools` 슬롯은 하단 도구줄에 아이콘으로, 접기 버튼은 도구줄 오른쪽 끝(`messages.toggle` = 고정 이름 + `aria-expanded`)), `Dialog`/`ConfirmDialog`(포커스 가둠·Esc·배경 inert·포커스 복귀, `danger`는 취소 기본 포커스), `ToastProvider`/`useToast`(오류 assertive, 액션 버튼 1개, `regionLabel`), `Tabs`(`←→ Home End`, `lazy`, 제어/비제어), `ProvenanceBadge`(색 슬롯 = `layer.index mod 6`, 텍스트 라벨 필수), `Gauge`(값 없음 상태, `role=meter`는 값이 있을 때만), `EmptyState`(`steps`, `secondaryAction`).
-- `Drawer({open,title,onClose,closeLabel,description?,actions?,width?=560,initialFocus?,testId?})`: 오른쪽 모달 서랍. 머리(제목·닫기) / 스크롤 본문 / 하단 고정 `actions` 3행, Esc·Tab 순환·배경 inert·포커스 복귀(`Dialog`와 같은 모달 훅). 제어형이라 닫아도 호출자의 편집 상태는 그대로다. 문구는 모두 props.
-- 모달 훅: `useModalBackdrop(open, backdropRef, { inert? })`(배경 inert + 포커스 복귀, `inert:false`는 비모달 패널), `trapTabKey(event, root)`(`Tab` 순환), `FOCUSABLE_SELECTOR`. `Dialog`와 앱의 드로어가 같이 쓴다.
-- 제어형·문구는 props, 종류 이름 없음):
-  - `PageHeader`(`title`, `breadcrumb`, `status`, `actions`; 제목 h1, 마지막 breadcrumb = `aria-current`).
-  - `CommandPalette`(`open`, `onClose`, `groups: {id,title,items:{id,label,hint?,icon?,badge?,shortcut?,disabled?,run}[]}[]`, `query`, `onQueryChange`, `loading`, `messages`). `role=combobox`+`listbox`, `↑↓` 순환(비활성 건너뜀), `Enter` 실행, `Esc` 닫기, **한글 IME 조합 중 Enter·방향키 무시**, 열면 배경 inert·닫으면 포커스 복귀. 필터는 호출자 몫이며 `filterCommandGroups(groups, query, maxPerGroup?)` 헬퍼 제공. 항목 `run`은 팔레트가 닫은 뒤 호출한다.
-  - 단축키: `useKeyCombo(combo, handler, {platform})`, `matchKeyCombo`, `parseKeyCombo`, `formatKeyCombo`. 조합 문자열(`"Mod+K"`, `"Alt+J"`)은 **데이터**(웹 기본 표 + 사용자 설정 `ui.keybindings` 덮어쓰기)로 받는다. 수식키 일치는 정확 일치, IME 조합 중 무시. 전역 단축키 처리기는 아래 단축키 관리 항목.
-  - `ListPane<T>`(`items`, `getItemId?`, `selectedId`, `onSelect`, `renderItem`, `rowHeight?`, `loading/error/empty` 슬롯(오류 > 로딩 > 빈), `searchValue/onSearchChange`, `toolbar`, `messages`). `role=listbox`, `↑↓ Home End` 포커스 이동, `Enter/Space`/클릭 선택, 검색창 `↓`로 목록 진입.
-  - `ListPane`의 `groups`(`ListPaneGroup[]`: key·label·title·count·depth·collapsed·items)와 `onToggleGroup(key, collapsed)`: 묶음 머리(`GroupHeader`, sticky·`aria-expanded`)와 `role=group` 항목. 머리도 `↑↓` 이동 대상, 머리에서 `←` 접기 `→` 펴기 `Enter/Space` 토글. 하위 묶음 숨김·계산은 호출자(예: `@agent-console/list-arrange`)가 한다. `ListViewMenu`: 묶는 기준·정렬 선택지를 `ListViewOption[]`로 받는 "보기" 메뉴(`menuitemradio`, 선택해도 열린 채, `open/onOpenChange`로 `G` 단축키 연결, 모두 접기/펼치기).
-  - `AttachmentList`(`groups: {layer,items:Attachment[],editable}[]`, `modeOptions`(데이터), `renderRow`, `onReorder(layerId, orderedKeys)`, `onRemove`, `onModeChange`, `onAdd`, `messages`). 순서 변경은 위/아래 버튼(키보드 가능), 편집 불가 층은 읽기 전용.
-  - `Disclosure`(`<details>` 기반, 제어/비제어, 요약 Enter/Space).
-  - `FileTree`(`items: {path, trailing?, leading?}[]`, `view` tree/flat, `selected`, `onSelect`). `role=tree`, `↑↓ ←→ Home End Enter`, 폴더는 경로에서 만든다(도메인 무관).
-  - `TrustBadge`(`trust: string` 열린 값, `label`). 스타일이 아는 등급은 색·아이콘·테두리 모양이 달라지고, 모르는 값은 중립 배지 + 원문(코드에 등급 목록 없음, CSS `[data-trust]`만).
-  - 아이콘: `iconRegistry`(앱 고정 이름 `defaultIcons`: entry/exit/ask/override/inherit/lock/external-link/copy/eye/eye-off), `createIconRegistry`, `registerIcons(icons, base?)`(불변, 새 레지스트리 반환), `IconRegistryProvider`(`registry`/`icons`, 중첩 시 상위에 더함), `Icon({name,size,label,fallbackText})`. 모르는 이름은 `fallbackText` 첫 글자 아바타.
+## Text and language
+v2 components such as `Sidebar` and `ListPane` take their text through their own `messages` props. The other text that components use by default ("More" in `Tabs` and `PageHeader`, "N more" in `ChipRow`, and the duplicate warning and the outside-provider error in `ShortcutProvider`) is gathered in `UiMessages` (`defaultUiMessages`). The default is Korean (`src/locales/ko.json`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders are `{name}`, filled by `formatUiMessage`.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). To use English, pass one bundle as `messages`.
 
-- 넘침 방지·아이콘 버튼 기반(모두 제어형·문구는 props·`min-width:0`+말줄임+툴팁):
-  - `Dialog({open,title,onClose,children,actions?,size?: "sm"|"md"|"lg"|"xl",initialFocus?})`: 제목 / **스크롤 본문** / **하단 고정 `actions`** 3행 그리드(최대 높이 `--ac-dialog-max-h`, 폭 `--ac-dialog-w-*` 이하 94vw, 폭 < 480이면 버튼이 전체 폭 세로 쌓기). 버튼은 반드시 `actions`에 둔다(본문 안 버튼 줄 금지: 대시보드 템플릿 다이얼로그가 깨진 원인은 `actions` 없이 본문 안에 버튼 줄을 그려 `overflow:auto` 안에 잘렸기 때문). 본문의 `fieldset`은 테두리 없음, 라디오·체크 한 줄은 `<label class="ac-choice"><input/><span>라벨</span></label>`. `wide`는 `size="lg"` 별칭(사용 중단).
-  - `Tabs`(+`moreLabel?`, `TabItem.title?`): 한 줄, 폭 `[--ac-tab-min-w, --ac-tab-max-w]`, 넘치면 오른쪽 "더 보기 ▾" 메뉴. **활성 탭은 항상 보임**, 키보드 ←→는 숨은 탭까지 이동하고 승격.
-  - `ChipRow({chips: {id,label,title?,icon?,tone?,active?,onSelect?}[], ariaLabel, moreLabel?(n)})`: 한 줄, 칩 최대 `--ac-chip-max-w`, 넘치면 `+N` 버튼과 팝오버. `active` 칩은 항상 보임.
-  - `MiddleEllipsis({value, head?, tail?, copyLabel?})` / `middleEllipsis(value, head=8, tail=4)`: 긴 id·해시를 `abcdefgh…wxyz`로 줄이고 전체 값은 툴팁. `copyLabel`을 주면 복사 버튼.
-  - `ActionButton({icon?: 레지스트리 이름, label, shortcut?, display?: "icon"|"icon-label"|"label", variant?, size?, loading?, pressed?, platform?, ...button})`: `label` = `aria-label` = 툴팁(+`Ctrl+…`), 로딩이면 스피너·`aria-busy`. `ActionDef = {id, icon?, label, shortcut?}`가 화면 설정 표의 한 줄 모양이다.
-  - `Tooltip({content, placement?, align?})`(CSS 전용, 호버 400ms/포커스 즉시, 장식이라 `aria-hidden`), `Popover({open,onOpenChange,renderTrigger,panelRole,panelLabel,align})`(비모달, Esc·바깥 클릭, 포털 없음), `Menu({items: MenuItemDef[], onClose})`(`role=menu`, `↑↓ Home End`).
-  - `PageHeader`(+`secondaryActions: MenuItemDef[]`, `moreLabel?`): 제목 최대 `--ac-header-title-max` + 말줄임 + 툴팁. 헤더(컨테이너) 폭 < 640이면 보조 액션이 `more` 메뉴로 접힌다(컨테이너 쿼리, 뷰포트 아님).
-  - 훅·순수 함수: `useOverflowFit`, `computeVisible(widths,gap,available,moreWidth,priority)`.
-  - 아이콘 추가: `refresh close more plus undo check trash send stop panel-left-close panel-left-open filter columns table chevron-left/right/down expand play pencil pin`. 앱이 같은 이름을 등록하면 앱 것이 이긴다.
-  - 기본 라벨(`moreLabel` "더 보기" 등)은 한국어 기본값이다. 다른 언어는 props로 넘긴다.
-  - ESLint: `@agent-console/eslint-config/react`의 `agent-console/button-name`이 아이콘만 있는 `<button>`을 막는다.
+```tsx
+import en from "@agent-console/ui/locales/en";
 
-- 단축키 관리(도메인 무관 — 동작 id·핸들러·제목 키는 데이터):
-  - `ShortcutProvider({defaults: ShortcutDef[], overrides?: Record<id, keys>, platform?, enabled?, onWarn?, target?})`, `ShortcutDef = {id, scope, keys, titleKey, modifierRequired?, run}`.
-  - `useShortcuts(defs)`(화면이 등록/해제, 같은 id면 화면 정의가 이김, 최신 핸들러 호출), `useEffectiveShortcuts()`(도움말·설정 표, 변경 시 갱신), `useShortcutRegistry().getEffectiveKeys()` → `{id, scope, titleKey, keys, isDefault, conflict?}[]`, 순수 함수 `computeEffectiveKeys`.
-  - 키 표기: `"Mod+K"`, `"?"`, 시퀀스는 공백(`"g c"`). `overrides`의 빈 문자열 = 비활성.
-  - 규칙: 수식키(Ctrl/Meta/Alt) 없는 한 글자 키는 input·textarea·select·contenteditable·`[data-ac-editable]` 안에서 동작 안 함(수식키 조합은 동작). 시퀀스는 두 번째 키 1초 안(아니면, 또는 다른 키면 취소). IME 조합 중 무시. 같은 범위(global은 모든 범위와 겹침)의 중복 키는 `conflict`로 표시하고 `onWarn`(기본 console.warn, `null`이면 끔)으로 경고.
-  - Esc 레이어 스택은 이 패키지가 아니라 앱 몫이다.
+<Tabs tabs={tabs} ariaLabel="Sections" messages={en} />
+<ShortcutProvider defaults={defaults} messages={en} />
+```
+An individual prop such as `moreLabel` takes priority. The Korean bundle is `@agent-console/ui/locales/ko`. For a new language, build an object with the same keys and pass it in. The component source contains no Korean strings (the same test checks this).
+
+## Public API
+- Basic: `Button`, `IconButton`, `Spinner`, `StatusIcon`, `StatusChip`, `Badge`, `Tag`, `Banner`, and `ThemeProvider` / `useTheme`.
+- v2 (all controlled, with text in props): `Sidebar` (`items`, `activeId`, `onNavigate`, `collapsed`, `messages`; arrow-key roving and a `99+` badge; `groups` plus an item's `group` give group titles and collapse dividers, and a group with no items is not drawn (`groupSidebarItems`); items with `position:'bottom'` and the `tools` slot go in the bottom toolbar as icons, and the collapse button sits at the right end of the toolbar (`messages.toggle` = a fixed name plus `aria-expanded`)), `Dialog` / `ConfirmDialog` (focus trap, Esc, inert background, and focus return; `danger` focuses Cancel by default), `ToastProvider` / `useToast` (errors are assertive, one action button, `regionLabel`), `Tabs` (`←→ Home End`, `lazy`, controlled or uncontrolled), `ProvenanceBadge` (color slot = `layer.index mod 6`, a text label is required), `Gauge` (a no-value state, and `role=meter` only when there is a value), and `EmptyState` (`steps` and `secondaryAction`).
+- `Drawer({open,title,onClose,closeLabel,description?,actions?,width?=560,initialFocus?,testId?})`: a modal drawer on the right. Three rows: a header (title and close), a scrolling body, and a bottom-fixed `actions`. It has Esc, Tab cycling, an inert background, and focus return (the same modal hooks as `Dialog`). It is controlled, so the caller's editing state stays as it is even after it closes. All text comes in as props.
+- Modal hooks: `useModalBackdrop(open, backdropRef, { inert? })` (an inert background plus focus return; `inert:false` is for a non-modal panel), `trapTabKey(event, root)` (`Tab` cycling), and `FOCUSABLE_SELECTOR`. `Dialog` and the app's drawers share them.
+- Controlled, with text in props and no kind names:
+  - `PageHeader` (`title`, `breadcrumb`, `status`, and `actions`; the title is an h1, and the last breadcrumb is `aria-current`).
+  - `CommandPalette` (`open`, `onClose`, `groups: {id,title,items:{id,label,hint?,icon?,badge?,shortcut?,disabled?,run}[]}[]`, `query`, `onQueryChange`, `loading`, and `messages`). `role=combobox` + `listbox`, `↑↓` cycling (skipping disabled items), `Enter` to run, `Esc` to close, **Enter and arrow keys are ignored during Korean IME composition**, and opening makes the background inert and closing returns focus. Filtering is the caller's job, and the helper `filterCommandGroups(groups, query, maxPerGroup?)` is provided. An item's `run` is called after the palette closes.
+  - Shortcuts: `useKeyCombo(combo, handler, {platform})`, `matchKeyCombo`, `parseKeyCombo`, and `formatKeyCombo`. Combination strings (`"Mod+K"`, `"Alt+J"`) come in as **data** (the web's default table plus the user setting `ui.keybindings` overrides). Modifier keys must match exactly, and input is ignored during IME composition. The global shortcut handler is covered in the shortcut management item below.
+  - `ListPane<T>` (`items`, `getItemId?`, `selectedId`, `onSelect`, `renderItem`, `rowHeight?`, `loading/error/empty` slots (error > loading > empty), `searchValue/onSearchChange`, `toolbar`, and `messages`). `role=listbox`, focus moves with `↑↓ Home End`, `Enter/Space` or a click selects, and `↓` in the search box enters the list.
+  - `ListPane`'s `groups` (`ListPaneGroup[]`: key, label, title, count, depth, collapsed, and items) and `onToggleGroup(key, collapsed)`: the group header (`GroupHeader`, sticky, with `aria-expanded`) and `role=group` items. A header is also a `↑↓` target, and on a header `←` collapses, `→` expands, and `Enter/Space` toggles. Hiding and computing sub-groups is the caller's job (for example, `@agent-console/list-arrange`). `ListViewMenu`: a "View" menu that takes the grouping and sorting choices as `ListViewOption[]` (`menuitemradio`, it stays open after a choice, the `G` shortcut connects through `open/onOpenChange`, and collapse all / expand all).
+  - `AttachmentList` (`groups: {layer,items:Attachment[],editable}[]`, `modeOptions` (data), `renderRow`, `onReorder(layerId, orderedKeys)`, `onRemove`, `onModeChange`, `onAdd`, and `messages`). Reordering uses up and down buttons (keyboard accessible), and a layer that cannot be edited is read-only.
+  - `Disclosure` (based on `<details>`, controlled or uncontrolled, and the summary responds to Enter and Space).
+  - `FileTree` (`items: {path, trailing?, leading?}[]`, `view` tree or flat, `selected`, and `onSelect`). `role=tree`, `↑↓ ←→ Home End Enter`, and folders are built from paths (domain-independent).
+  - `TrustBadge` (`trust: string`, an open value, and `label`). A level the style knows changes the color, icon, and border shape, and an unknown value gets a neutral badge plus the raw text (the code has no list of levels, only the CSS `[data-trust]`).
+  - Icons: `iconRegistry` (the app's fixed names `defaultIcons`: entry/exit/ask/override/inherit/lock/external-link/copy/eye/eye-off), `createIconRegistry`, `registerIcons(icons, base?)` (immutable; it returns a new registry), `IconRegistryProvider` (`registry` or `icons`; when nested, it adds to the parent), and `Icon({name,size,label,fallbackText})`. An unknown name becomes an avatar with the first letter of `fallbackText`.
+
+- Overflow prevention and the icon button foundation (all controlled, with text in props, `min-width:0`, ellipsis, and a tooltip):
+  - `Dialog({open,title,onClose,children,actions?,size?: "sm"|"md"|"lg"|"xl",initialFocus?})`: a three-row grid of title / **scrolling body** / **bottom-fixed `actions`** (the maximum height is `--ac-dialog-max-h`, the width is at most `--ac-dialog-w-*` and 94vw, and below a width of 480 the buttons stack vertically at full width). Buttons must go in `actions` (no button row inside the body: the dashboard template dialog broke because it drew a button row inside the body without `actions`, and the row was clipped inside `overflow:auto`). A `fieldset` in the body has no border, and a one-line radio or checkbox is `<label class="ac-choice"><input/><span>Label</span></label>`. `wide` is an alias of `size="lg"` (deprecated).
+  - `Tabs` (+`moreLabel?`, `TabItem.title?`): a single line, with a width in `[--ac-tab-min-w, --ac-tab-max-w]`, and an overflow goes to a "More ▾" menu on the right. **The active tab is always visible**, and keyboard ←→ moves through hidden tabs too and promotes them.
+  - `ChipRow({chips: {id,label,title?,icon?,tone?,active?,onSelect?}[], ariaLabel, moreLabel?(n)})`: a single line, chips at most `--ac-chip-max-w`, and an overflow becomes a `+N` button and a popover. An `active` chip is always visible.
+  - `MiddleEllipsis({value, head?, tail?, copyLabel?})` / `middleEllipsis(value, head=8, tail=4)`: shortens a long id or hash to `abcdefgh…wxyz` and keeps the full value in a tooltip. Giving `copyLabel` adds a copy button.
+  - `ActionButton({icon?: a registry name, label, shortcut?, display?: "icon"|"icon-label"|"label", variant?, size?, loading?, pressed?, platform?, ...button})`: `label` = `aria-label` = the tooltip (+`Ctrl+…`), and while loading it shows a spinner and `aria-busy`. `ActionDef = {id, icon?, label, shortcut?}` is the shape of one line in a screen settings table.
+  - `Tooltip({content, placement?, align?})` (CSS only, 400 ms on hover and immediate on focus, and `aria-hidden` because it is decorative), `Popover({open,onOpenChange,renderTrigger,panelRole,panelLabel,align})` (non-modal, Esc and an outside click, no portal), and `Menu({items: MenuItemDef[], onClose})` (`role=menu`, `↑↓ Home End`).
+  - `PageHeader` (+`secondaryActions: MenuItemDef[]`, `moreLabel?`): the title is at most `--ac-header-title-max` with an ellipsis and a tooltip. When the header (container) width is below 640, the secondary actions fold into a `more` menu (a container query, not the viewport).
+  - Hooks and pure functions: `useOverflowFit` and `computeVisible(widths,gap,available,moreWidth,priority)`.
+  - Added icons: `refresh close more plus undo check trash send stop panel-left-close panel-left-open filter columns table chevron-left/right/down expand play pencil pin`. If the app registers the same name, the app's wins.
+  - Default labels (such as `moreLabel` "More") are Korean defaults. For another language, pass them as props.
+  - ESLint: `agent-console/button-name` in `@agent-console/eslint-config/react` blocks a `<button>` that has only an icon.
+
+- Shortcut management (domain-independent — action ids, handlers, and title keys are data):
+  - `ShortcutProvider({defaults: ShortcutDef[], overrides?: Record<id, keys>, platform?, enabled?, onWarn?, target?})`, with `ShortcutDef = {id, scope, keys, titleKey, modifierRequired?, run}`.
+  - `useShortcuts(defs)` (a screen registers and unregisters; for the same id the screen's definition wins, and the latest handler is called), `useEffectiveShortcuts()` (the help and settings table, updated on change), `useShortcutRegistry().getEffectiveKeys()` → `{id, scope, titleKey, keys, isDefault, conflict?}[]`, and the pure function `computeEffectiveKeys`.
+  - Key notation: `"Mod+K"`, `"?"`, and a sequence is separated by a space (`"g c"`). An empty string in `overrides` = disabled.
+  - Rules: a single-letter key without a modifier (Ctrl, Meta, or Alt) does nothing inside input, textarea, select, contenteditable, or `[data-ac-editable]` (modifier combinations still work). A sequence needs the second key within 1 second (otherwise, or with a different key, it is canceled). Input is ignored during IME composition. A duplicate key in the same scope (global overlaps every scope) is marked as `conflict` and warned through `onWarn` (default console.warn; `null` turns it off).
+  - The Esc layer stack belongs to the app, not this package.
 
 ```tsx
 <Sidebar items={routes} activeId={active} onNavigate={go} collapsed={c} onCollapsedChange={setC}
-  messages={{ navLabel: "주 메뉴", collapse: "접기", expand: "펼치기" }} />
-<Gauge value={usage /* 없으면 undefined */} label="5시간 창" noValueLabel="사용률 정보 없음" />
+  messages={{ navLabel: "Main menu", collapse: "Collapse", expand: "Expand" }} />
+<Gauge value={usage /* undefined when there is none */} label="5-hour window" noValueLabel="No usage information" />
 <ProvenanceBadge layer={{ id, label, index }} variant="set" />
 ```
 
-## 의존성 (무엇을 / 왜 / 대안)
-추가된 런타임 의존성 없음(react peer만). 아이콘은 호출자가 ReactNode로 넘기고, 다이얼로그/토스트도 자체 구현(작고 도메인 무관). 대안: Radix UI/React Aria(포커스·접근성 보장이 필요해지면 어댑터 뒤에서 교체).
+## Dependencies (what / why / alternatives)
+No added runtime dependencies (only the react peer). Icons are passed by the caller as a ReactNode, and the dialog and toast are our own implementations (small and domain-independent). Alternatives: Radix UI or React Aria (to be swapped in behind an adapter if guaranteed focus and accessibility handling becomes necessary).
 
-## 테스트
-`pnpm test` (패키지 폴더 또는 루트, Vitest). `tokens.test.ts`는 tokens.css를 텍스트로 파싱해 다른 패키지가 읽는 모든 `--ac-*` 변수·유틸 클래스·상태 8종 규칙이 정의돼 있는지 검사한다. 다른 패키지를 단독 테스트할 때는 테스트 설정에서 `tokens.css`를 함께 로드한다.
+## Testing
+`pnpm test` (from the package folder or the repository root; Vitest). `tokens.test.ts` parses tokens.css as text and checks that every `--ac-*` variable, utility class, and the rules for the 8 statuses that other packages read are defined. When testing another package on its own, load `tokens.css` in the test setup as well.

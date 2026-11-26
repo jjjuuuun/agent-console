@@ -1,6 +1,10 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.2.0)
+
+- P1.19: Added `DefinitionKind.open_role` (default `None`, the store does not read it): the web route role of the screen that opens an item of the kind. The default kinds `graph`, `agent`, and `resource` use `definition:<kind>`. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only, no table changes.
+- P1.17: Added `diff_versions(store, kind, id, from_hash, to_hash=None, *, secret_paths, mask)`, which compares two versions of one definition and returns the contract `DefinitionDiff` (document changes as JSON Pointers, content files by sha256). Also exported `SECRET_MASK`, `SecretPaths`, and the `VersionDiffSource` protocol. The calculation moved here from `ac-mod-versions` `VersionService.diff` so that `ac-mod-sdd` can share it without importing another module. The caller decides which locations are secret.
+- New dependency `agent-console-settings` (document diff). Consumer range: `agent-console-store>=0.2,<0.3`.
 
 - REL.2: 선택 능력 `BatchRecordsSpaces`(`batch()` 블록 — 그 안에서 연 공간을 열린 핸들 상한으로 밀어내지 않는다)와 `RecordsStores.batch()`(포트가 그 능력이면 그 블록, 아니면 빈 블록). 여러 프로젝트를 차례로 읽는 순회용. 더하기만.
 - REL.5: 겹치면 `-n` 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합치고 `numbered_id`·`NoFreeId`를 다시 내보낸다(`agent_console_store`·`agent_console_store.ids`). `unique_id`·기록 DB 백업 이름이 그것을 쓴다(동작 같음). 새 의존 `agent-console-numbered-id`.

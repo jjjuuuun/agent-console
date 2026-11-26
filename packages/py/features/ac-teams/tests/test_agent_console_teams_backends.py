@@ -1,7 +1,8 @@
 """resolve_backends·unresolved_backends: 실행 백엔드 사전 점검(5.2R.4, 해결 순서 불변).
 
-노드·에이전트·팀 구성·공통(`agent_defaults.backend`)·옛 `default_backend`·인자 대체값 각 층에서
-정해지는지, 모두 비면 세션 주인 노드만 막는지, 이름을 바꾼 디스크립터·백엔드로도 같은지 본다.
+노드·에이전트·팀 구성·공통(`agent_defaults.backend`)·인자 대체값 각 층에서 정해지는지(옛 최상위
+`default_backend`는 읽지 않음), 모두 비면 세션 주인 노드만 막는지, 이름을 바꾼 디스크립터·백엔드로도
+같은지 본다.
 """
 
 from __future__ import annotations
@@ -62,9 +63,9 @@ def test_each_layer_resolves(k: Kit) -> None:
     plan = _plan(k, _team(k))
     common = WorkspaceSettings.model_validate({"agent_defaults": {"backend": BACKEND}})
     assert resolve_backends(plan, agents=_agent(), workspace=common) == {"lead": BACKEND}
-    # 옛 default_backend(공통 층 읽기 호환)
+    # 옛 최상위 default_backend는 읽지 않는다(1.1.0) — 공통 층이 비어 None
     legacy = WorkspaceSettings.model_validate({"default_backend": BACKEND})
-    assert resolve_backends(plan, agents=_agent(), workspace=legacy) == {"lead": BACKEND}
+    assert resolve_backends(plan, agents=_agent(), workspace=legacy) == {"lead": None}
     # 인자 대체값(마지막)
     assert resolve_backends(plan, agents=_agent(), default_backend=BACKEND) == {"lead": BACKEND}
     # 모두 비면 None
@@ -74,9 +75,7 @@ def test_each_layer_resolves(k: Kit) -> None:
 @pytest.mark.parametrize("k", KITS, ids=IDS)
 def test_order_is_unchanged_node_wins_over_lower_layers(k: Kit) -> None:
     graph = _team(k, {"backend": "team-b"}, settings={"backend": "node-b"})
-    common = WorkspaceSettings.model_validate(
-        {"agent_defaults": {"backend": "common-b"}, "default_backend": "legacy-b"}
-    )
+    common = WorkspaceSettings.model_validate({"agent_defaults": {"backend": "common-b"}})
     plan = _plan(k, graph)
     got = resolve_backends(
         plan, agents=_agent(backend="agent-b"), workspace=common, default_backend="arg-b"

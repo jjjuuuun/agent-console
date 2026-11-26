@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/ui": [
         "./src/index.ts"
+      ],
+      "@agent-console/ui/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/ui/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

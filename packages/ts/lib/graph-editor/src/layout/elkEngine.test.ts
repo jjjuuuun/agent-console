@@ -180,3 +180,14 @@ describe("되돌아가는 연결 (5R.16, 진짜 ELK)", () => {
     expect(positions["a"]!.x).toBe(0);
   });
 });
+
+describe("옵션 기본값 덮어쓰기 (optionDefaults)", () => {
+  it("선언에 있는 키만 덮고 min·max 안으로 자른다. 주지 않으면 라이브러리 기본 80", () => {
+    expect(defaultOptionValues(createElkEngine().options)["layerGap"]).toBe(80);
+    const e = createElkEngine({ optionDefaults: { layerGap: 160, nodeGap: 99999, nothing: 5 } });
+    const v = defaultOptionValues(e.options);
+    expect(v["layerGap"]).toBe(160);
+    expect(v["nodeGap"]).toBe(400);
+    expect(v["nothing"]).toBeUndefined();
+  });
+});

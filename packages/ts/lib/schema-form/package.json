@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/schema-form",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JSON Schema 기반 설정 폼(rjsf 어댑터)",
   "private": true,
   "license": "MIT",
@@ -26,7 +26,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -44,7 +54,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@agent-console/contracts": "^0.15.0",
+    "@agent-console/contracts": "^0.16.0",
     "@agent-console/eslint-config": "^0.1.0",
     "@agent-console/tsconfig": "^0.1.0",
     "@testing-library/react": "^16.3.3",

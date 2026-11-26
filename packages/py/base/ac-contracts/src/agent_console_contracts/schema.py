@@ -20,6 +20,7 @@ from . import (
     common,
     definitions,
     exports,
+    i18n,
     imports,
     logs,
     memory,
@@ -54,6 +55,7 @@ _SUBMODULES: dict[str, ModuleType] = {
     "common": common,
     "resources": resources,
     "logs": logs,
+    "i18n": i18n,
     "definitions": definitions,
     "runs": runs,
     "usage": usage,
@@ -359,6 +361,10 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     wiki.WikiTemplateRenderRequest,
     wiki.WikiTemplateRender,
     wiki.WikiPageNotFoundDetails,
+    # 화면 문구 묶음(0.16.0, design §I18N.7)
+    i18n.I18nInfo,
+    i18n.LanguageInfo,
+    i18n.MessageCatalog,
     # 이벤트
     runs.RunEvent,
     runs.KnownRunEvent,

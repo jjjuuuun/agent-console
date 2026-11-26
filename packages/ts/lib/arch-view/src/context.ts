@@ -25,6 +25,6 @@ export const DiagramContext = createContext<DiagramContextValue | null>(null);
 
 export function useDiagram(): DiagramContextValue {
   const v = useContext(DiagramContext);
-  if (!v) throw new Error("ArchitectureDiagram 안에서만 쓸 수 있습니다.");
+  if (!v) throw new Error("Must be used inside ArchitectureDiagram.");
   return v;
 }

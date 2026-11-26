@@ -24,8 +24,8 @@ const nodeTypes = [
     static_ports: { inputs: [{ name: "i-raw" }, { name: "i-named", label: "받는 쪽 이름" }], outputs: [{ name: "o-raw" }, { name: "o-named", label: "보내는 쪽 이름" }] },
   },
 ] as unknown as NodeTypeDescriptor[];
-const kind = (props: Record<string, unknown>): EdgeTypeDescriptor =>
-  ({ id: "z-kind", title: "임의 종류", scheduling: "flow", config_schema: { type: "object", properties: props } }) as unknown as EdgeTypeDescriptor;
+const kind = (props: Record<string, unknown>, scheduling = "flow"): EdgeTypeDescriptor =>
+  ({ id: "z-kind", title: "임의 종류", scheduling, config_schema: { type: "object", properties: props } }) as unknown as EdgeTypeDescriptor;
 
 function mountPanel(edgeKind: EdgeTypeDescriptor, ports: { from: string; to: string }) {
   const graph = {
@@ -89,6 +89,34 @@ describe("연결 패널 U-30", () => {
     fireEvent.click(screen.getByRole("button", { name: "자세히" }));
     fireEvent.click(screen.getByRole("button", { name: "복사" }));
     expect(writeText).toHaveBeenCalledWith("o-raw → i-raw");
+  });
+
+  it("두 포트 모두 표시 이름이 있으면 줄에 mono 원문이 없다", () => {
+    const { container } = mountPanel(kind({}), { from: "o-named", to: "i-named" });
+    const line = container.querySelector(".team-edge-ports")!;
+    expect(line.textContent).toBe("보내는 쪽 이름 → 받는 쪽 이름");
+    expect(line.querySelector(".lib-mono")).toBeNull();
+  });
+
+  it("[복사]와 원문 mono 줄은 \"자세히\"를 펼치기 전에는 없다", () => {
+    const { container } = mountPanel(kind({}), { from: "o-raw", to: "i-raw" });
+    expect(screen.queryByRole("button", { name: "복사" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "자세히" }));
+    const dd = container.querySelector(".team-edge-details-list dd .lib-mono")!;
+    expect(dd.textContent).toBe("o-raw → i-raw");
+  });
+
+  it("분류 칩 문구는 scheduling 값별 메시지 표에서 온다(다른 값 대조)", () => {
+    const { container } = mountPanel(kind({}, "entry"), { from: "o-raw", to: "i-raw" });
+    fireEvent.click(screen.getByRole("button", { name: "자세히" }));
+    expect(container.querySelector(".team-edge-details-list .ac-tag")!.textContent).toBe("입구");
+  });
+
+  it("메시지 표에 없는 scheduling 값이면 분류 행에 값 원문을 그대로 보인다(명세 §14.4.3)", () => {
+    const { container } = mountPanel(kind({}, "z-unknown-scheduling"), { from: "o-raw", to: "i-raw" });
+    fireEvent.click(screen.getByRole("button", { name: "자세히" }));
+    expect(screen.getByText("분류")).toBeTruthy();
+    expect(container.querySelector(".team-edge-details-list .ac-tag")!.textContent).toBe("z-unknown-scheduling");
   });
 
   it("스키마 속성이 0개면 \"연결 설정\" 블록(제목 포함)과 빈 안내가 없다", () => {

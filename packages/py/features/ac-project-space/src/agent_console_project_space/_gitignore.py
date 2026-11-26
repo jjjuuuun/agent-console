@@ -54,7 +54,7 @@ def render_gitignore_template(template: str, layout: SpaceLayout | None = None) 
 
 
 def default_gitignore_template(layout: SpaceLayout | None = None) -> str:
-    """패키지에 들어 있는 `.gitignore` 기본 틀 텍스트(UTF-8, 마지막 줄바꿈 포함).
+    """The default `.gitignore` template text shipped in the package (UTF-8, ends with a newline).
 
     Args:
         layout: 이름 자리를 채울 배치. 생략하면 기본 배치(`SpaceLayout()`).

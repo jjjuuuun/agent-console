@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import doctest
+import functools
 import glob
 import json
 import os
@@ -53,6 +54,7 @@ DEFAULT_SKIP_DIRS = ("node_modules",)
 """``glob_skip_dirs`` 설정이 없을 때 건너뛰는 폴더 이름."""
 
 
+@functools.cache
 def _glob_regex(pattern: str) -> re.Pattern[str]:
     """``glob`` 패턴(``**``·``*``·``?``·``[...]``)을 ``/``로 나뉜 상대 경로 정규식으로 바꾼다."""
     out = []
@@ -322,21 +324,36 @@ def allowed_rules(line: str) -> set[str]:
     return out
 
 
+def rule_applies(rule: LintRule, rel_path: str) -> bool:
+    """규칙의 파일 범위(``files``·``exclude_files`` glob, 저장소 상대 ``/`` 경로)에 드는가."""
+    if rule.files and not any(_glob_regex(g).match(rel_path) for g in rule.files):
+        return False
+    return not any(_glob_regex(g).match(rel_path) for g in rule.exclude_files)
+
+
 def public_lint(
     root: Path, files: Sequence[Path], rules: Sequence[LintRule], *, warning: bool
 ) -> list[Finding]:
     """공개 문서에 내부 참조가 남았는지 줄 단위로 본다.
 
     규칙은 줄마다 첫 일치 하나만 알린다. 줄에 ``extdocs:allow <id>`` 표시가 있으면 그 규칙을
-    건너뛴다. ``prose_only`` 규칙은 코드 펜스·인라인 코드 밖 글만 본다.
+    건너뛴다. ``prose_only`` 규칙은 코드 펜스·인라인 코드 밖 글만 본다. 규칙의 파일 범위
+    (:func:`rule_applies`) 밖 파일과 ``skip_line``에 맞는 줄은 그 규칙만 건너뛴다.
+    ``warning``이 참이거나 규칙이 ``severity: warning``이면 결과는 경고다.
     """
     out: list[Finding] = []
     for path in files:
+        where = _rel(root, path)
+        active = [rule for rule in rules if rule_applies(rule, where)]
+        if not active:
+            continue
         for line in lines(path.read_text(encoding="utf-8")):
             allow = allowed_rules(line.text)
             prose = None if line.in_fence else INLINE_CODE_RE.sub(" ", line.text)
-            for rule in rules:
+            for rule in active:
                 if rule.id in allow:
+                    continue
+                if rule.skip_line is not None and rule.skip_line.search(line.text):
                     continue
                 target = (prose if rule.prose_only else line.text) or ""
                 m = rule.pattern.search(target)
@@ -344,9 +361,9 @@ def public_lint(
                     out.append(
                         Finding(
                             f"public-{rule.id}",
-                            f"{_rel(root, path)}:{line.number}",
+                            f"{where}:{line.number}",
                             f"{rule.message}: {m.group(0)!r}",
-                            warning=warning,
+                            warning=warning or rule.warning,
                         )
                     )
     return out
@@ -482,6 +499,7 @@ __all__ = [
     "docs_present",
     "expand_globs",
     "public_lint",
+    "rule_applies",
     "run_docs_checks",
     "run_doctests",
     "skip_dirs",

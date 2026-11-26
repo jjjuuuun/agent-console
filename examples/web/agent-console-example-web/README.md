@@ -1,21 +1,21 @@
 # @agent-console/example-web
 
-웹 화면에 **대시보드 위젯 하나, 구조도 칸 그리기 하나, 설정 폼 위젯 하나**를 더하는 예제.
-웹에는 런타임 플러그인이 없다. 이 예제는 라이브러리로 만든 표현 코드이고, 웹 앱에 한 줄씩 등록한 뒤 앱을 다시 빌드해야 보인다.
-서버·계약 코드는 고치지 않는다. 앱에 등록하지 않으면 아무것도 바뀌지 않는다.
+An example that adds **one dashboard widget, one architecture map cell drawing, and one settings form widget** to the web screens.
+The web has no runtime plugins. This example is presentation code built as a library; it shows up only after you register it in the web app with one line each and rebuild the app.
+It does not change the server or contract code. If you do not register it in the app, nothing changes.
 
-| 지점 | 이 예제의 것 | 키(데이터) |
+| Point | What this example provides | Key (data) |
 | --- | --- | --- |
-| 대시보드 위젯 | `gaugeWidget` (지표 하나를 최대값 대비 막대로) | 위젯 종류 `example.gauge` |
-| 구조도 칸 그리기 | `cellRenderers` (칸에 `count` 배지를 덧붙임) | 칸의 `view` 값 `example-badge` |
-| 설정 폼 위젯 | `configWidgets` (쉼표로 나눈 태그 목록 입력) | 설정 스키마 `ui:widget` 이름 `example.tags` |
+| Dashboard widget | `gaugeWidget` (one metric as a bar against its maximum) | Widget kind `example.gauge` |
+| Architecture map cell drawing | `cellRenderers` (adds a `count` badge to a cell) | The cell's `view` value `example-badge` |
+| Settings form widget | `configWidgets` (a comma-separated tag list input) | The settings schema's `ui:widget` name `example.tags` |
 
-세 가지 모두 모르는 값에 무해하다. 위젯 종류가 등록되지 않았으면 격자가 "알 수 없는 위젯" 자리 표시를 그리고 설정은 보존된다.
-`view` 키가 맞지 않는 칸은 기본 모양이다. 값이 `null`(수집 안 됨)이면 0이 아니라 "–"이거나 배지를 달지 않는다.
+All three are harmless for values they do not know. If a widget kind is not registered, the grid draws an "Unknown widget" placeholder and the settings are preserved.
+A cell whose `view` key does not match gets the default look. When the value is `null` (not collected), it shows "–" rather than 0, or no badge is attached.
 
-## 최소 코드
+## Minimal code
 
-세 조각 모두 표현 컴포넌트와 등록 객체로 나뉘어 있고 서버 호출이 없다. 데이터와 콜백은 props로 받는다.
+All three pieces are split into presentational components and a registration object, and there are no server calls. Data and callbacks come in as props.
 
 ```ts readme
 import { builtinWidgets, createWidgetRegistry } from "@agent-console/log-view";
@@ -27,43 +27,43 @@ const cellViews = Object.keys(cellRenderers);
 const widgetNames = Object.keys(configWidgets);
 ```
 
-`gaugeRegistered`는 `true`, `cellViews`는 `["example-badge"]`, `widgetNames`는 `["example.tags"]`다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
+`gaugeRegistered` is `true`, `cellViews` is `["example-badge"]`, and `widgetNames` is `["example.tags"]`. This block must match `test/readme.test.ts`.
 
-실제 구현은 `src/GaugeWidget.tsx`·`src/BadgeCell.tsx`·`src/TagsField.tsx`.
+The real implementation is in `src/GaugeWidget.tsx`, `src/BadgeCell.tsx`, and `src/TagsField.tsx`.
 
-## 등록
+## Registration
 
-웹 앱(`apps/web`)에서 지점마다 한 줄이다. 라이브러리가 받는 props 이름은 지점 선언의 `interface`와 같다.
+In the web app (`apps/web`), it is one line per point. The prop names the library accepts are the same as the `interface` in each point's declaration.
 
 ```tsx
-// 1) 대시보드 위젯: DashboardGrid·WidgetEditor가 쓰는 레지스트리에 목록을 더한다
+// 1) Dashboard widget: add the list to the registry that DashboardGrid and WidgetEditor use
 const registry = createWidgetRegistry(builtinWidgets, [gaugeWidget]);
 <DashboardGrid registry={registry} /* … */ />;
 
-// 2) 구조도 칸: cellRenderers prop에 표를 넘긴다. 칸의 view 값은 서버 구조도 프로필 데이터가 정한다
+// 2) Architecture map cell: pass the table to the cellRenderers prop. A cell's view value is decided by the server's architecture profile data
 <ArchitectureDiagram cellRenderers={cellRenderers} /* … */ />;
 
-// 3) 설정 폼 위젯: 앱의 위젯 레지스트리에 펼쳐 넣는다. 이름은 서버 설정 스키마의 ui:widget이다
-export const CONFIG_WIDGETS = { /* 기존 위젯 */ ...configWidgets };
+// 3) Settings form widget: spread it into the app's widget registry. The name is the ui:widget in the server settings schema
+export const CONFIG_WIDGETS = { /* existing widgets */ ...configWidgets };
 ```
 
-앱은 이 예제를 `package.json` 의존으로 가져온 뒤 **웹 앱을 다시 빌드**한다(`pnpm --filter @agent-console/web build`).
-이 예제의 폴더는 앱이 import하지 않도록 두었다(저장소는 의존 검사로 막는다). 가져다 쓰려면 폴더를 복사해 이름을 바꾸거나 자기 패키지로 옮긴다.
+The app takes this example in as a `package.json` dependency and then **rebuilds the web app** (`pnpm --filter @agent-console/web build`).
+This example's folder is set up so that the app does not import it (the repository enforces this with a dependency check). To use it, copy the folder and rename it, or move it into your own package.
 
-## 설치·제거
+## Install and remove
 
-- 설치: 이 폴더를 pnpm 워크스페이스 멤버로 둔다(`pnpm-workspace.yaml`에 `examples/web/*`). 앱에 쓰려면 위 등록 코드를 앱에 더하고 의존에 넣는다.
-- 제거: 앱의 등록 한 줄과 의존을 지우고 다시 빌드한다. 저장된 대시보드 위젯은 지워지지 않고 "알 수 없는 위젯"으로 남아 설정이 보존된다.
-- 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+- Install: keep this folder as a pnpm workspace member (`examples/web/*` in `pnpm-workspace.yaml`). To use it in the app, add the registration code above to the app and add the dependency.
+- Remove: delete the app's registration line and the dependency, then rebuild. Saved dashboard widgets are not deleted; they remain as "Unknown widget" and their settings are preserved.
+- Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
-## 테스트
+## Test
 
 ```sh
 pnpm --filter @agent-console/example-web test
 pnpm --filter @agent-console/example-web typecheck
 ```
 
-위젯은 `DashboardGrid`, 칸 그리기는 `ArchitectureDiagram`, 설정 폼 위젯은 `SchemaForm`에 실제로 등록해 그린다.
-모르는 값(null, 맞지 않는 옵션·`view` 키·배열이 아닌 값)과 접근성(axe 0건)을 함께 확인한다.
-저장소 밖 복사 검사(저장소 루트에서): `pnpm portability --package @agent-console/example-web`.
-사내 의존 tarball(`dist/npm`)이 없으면 도구가 `pnpm pack:all`을 먼저 돌린다. 사내 패키지 소스를 고친 뒤에는 `--pack`을 붙인다.
+The widget is registered in and drawn by `DashboardGrid`, the cell drawing by `ArchitectureDiagram`, and the settings form widget by `SchemaForm`.
+The tests also check unknown values (null, options that do not match, `view` keys, and non-array values) and accessibility (0 axe violations).
+The copy-out-of-repository check (from the repository root): `pnpm portability --package @agent-console/example-web`.
+If the internal dependency tarballs (`dist/npm`) are missing, the tool runs `pnpm pack:all` first. After changing the source of an internal package, add `--pack`.

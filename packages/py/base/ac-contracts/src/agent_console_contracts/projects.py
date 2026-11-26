@@ -1,4 +1,4 @@
-"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 4.0.0 — 0.15.0).
+"""계약 하위 모듈 `projects`: 프로젝트 정의와 그 REST DTO(design §PI, 4.1.0 — 0.16.0).
 
 프로젝트 = 로컬 폴더 하나(절대 경로) + 그 폴더 안의 프로젝트 구성(`.agent-console/`, design §PI.2).
 기능(채팅·실행·로그·메모리 등)은 등록된 프로젝트 폴더에 대해서만 동작한다. 앱 workspace의 구성은
@@ -9,6 +9,10 @@
 저장은 두 곳이다: 앱 등록부 `ProjectRegistration`(`<workspace>/projects/<id>.yaml`)과 폴더
 매니페스트 `ProjectManifest`(`<folder>/.agent-console/project.yaml`). API의 `Project`는 둘을 합친
 보기다.
+
+4.1.0(0.16.0, 더하기만): 복사 대화상자 종류의 예약어 `CopyKindInfo.reserved_ids`(종류 데이터
+`DefinitionKind.reserved_ids` 그대로 — 화면이 새 이름 칸에서 적용 전에 거절 이유를 안내한다).
+같은 4.1.0에 여는 화면 역할 `CopyKindInfo.open_role`(웹 라우트 역할 — 복사 목록 행의 [열기]).
 
 4.0.0(0.15.0, 깨는 변경): 1.x 정의 범위 옮기기·삭제 계획(`MovePlan`·`MovePlanRequest`·
 `DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`)과 다시 내보내던 `ProjectPreferences`·
@@ -743,6 +747,25 @@ class CopyKindInfo(ContractModel):
             "항목을 지울 수 있다. 기본 종류(라이브러리 저장소 종류)는 true, 기여 종류는 기여 "
             "모듈이 삭제 수단을 주면 true. false = 수단 없음(그 기능 화면에서만 지운다) 또는 옛 "
             "서버."
+        ),
+    )
+    reserved_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "(4.1.0) 이 종류 id로 쓰면 안 되는 말(대소문자 무시 — 서버는 `casefold`로 "
+            "비교한다). 정의 종류 데이터 `DefinitionKind.reserved_ids` 그대로이고 기여 종류도 "
+            "포함한다. 대상에 이 id로 쓰는 복사 적용은 422 `project.copy_reserved_id`로 거절된다. "
+            "빈 목록 = 예약어 없음 또는 옛 서버(화면은 적용 결과의 오류로만 안다)."
+        ),
+    )
+    open_role: str | None = Field(
+        default=None,
+        description=(
+            "(4.1.0) 이 종류 항목을 여는 웹 화면의 라우트 역할(`FixTarget.role`과 같은 열린 "
+            "문자열, 예: 정의 편집 화면 역할). 서버는 웹 경로를 모른다 — 종류 데이터"
+            "(`DefinitionKind.open_role`)나 종류를 기여한 모듈(`KindContribution.open_role`)이 "
+            "준다. 웹이 역할을 경로로 풀고 항목 id로 연다. null(여는 화면 없음·서버가 모름·옛 "
+            "서버)이거나 웹이 그 역할의 화면을 모르면 화면은 [열기]를 숨긴다."
         ),
     )
 

@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 // readme:start
 import { CONTRACTS_VERSION, getContractSchema } from "@agent-console/contracts";
 
-const schema = getContractSchema("WorkspaceSettings"); // SchemaForm에 그대로 넘긴다
+const schema = getContractSchema("WorkspaceSettings"); // pass it straight to SchemaForm
 const version = CONTRACTS_VERSION;
 // readme:end
 

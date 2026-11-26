@@ -53,7 +53,7 @@ def test_probe_explicit_null_and_empty_roundtrip(tmp_path: Path) -> None:
     g["nodes"][0]["config"] = {}
     g["nodes"][0]["label"] = None
     s: dict[str, Any] = {
-        "default_backend": None,
+        "agent_defaults": {"backend": None},
         "default_entry": None,
         "chat": {},
         "attachments": [],

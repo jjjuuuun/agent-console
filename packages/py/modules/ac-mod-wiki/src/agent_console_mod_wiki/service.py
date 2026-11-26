@@ -19,6 +19,14 @@
   파일 위치는 공간의 ``index_dir``(프로젝트) 또는 호스트 상태 폴더(단독), 없으면 메모리.
   공장 옵션에 지금 비밀 의심 규칙의 가리기(``redact``)·서명(``redact_signature``)을 넘긴다.
 - 요약(``WikiSummary``)은 무거운 점검을 포함하므로 (저장소, 페이지 파일 크기·시각) 키로 캐시한다.
+- 신선도 창(설치자 ``freshness_seconds``, 0 = 요청마다 확인): 공간·위키마다 마지막 지문 확인 시각을
+  두고, 창 안에서는 위키 정의·규칙 버전·사용자 설정·쓰기 검사·비밀 의심 규칙 서명을 다시 읽지 않는다
+  (공간 값 — 기록 저장소·페이지 폴더·기준 폴더·규칙 저장소 — 은 매번 비교). 저장소도 같은 창으로
+  페이지 목록을 들고 있다(``WikiRepository(freshness_seconds=)``). 같은 공간·위키를 동시에 확인하는
+  요청은 한 번만 확인한다. 이 프로세스의 바뀜은 창과 무관하게 바로 버린다: 위키 정의·위키 규칙(본문
+  파일·되돌리기 포함) 만들기·저장·지우기, 토픽 ``definitions.saved``(위키·규칙 종류면 그 공간, 다른
+  종류 — 공통 설정 등 — 면 전부), 페이지 쓰기 뒤 ``notify``, ``scan``(창 무시). 바깥 편집기·다른
+  프로세스의 변경만 창만큼 늦게 보인다.
 - 검색어 해셔(``query_hash``): 서비스 하나에 하나(설치자 ``query_hash``·``query_hash_salt_env``).
   실행 연동이 에이전트 위키 도구 묶음에 넘긴다 — 같은 서버 안에서는 실행을 넘어 같은 검색어가 같은
   값이다. 솔트 값은 로그·응답·설정에 내지 않는다.
@@ -215,10 +223,22 @@ class _Probe:
 
 
 @dataclass
+class _Checked:
+    """마지막 지문 확인(신선도 창)."""
+
+    at: float
+    space: Hashable
+    stored: StoredDefinition
+    wiki: WikiDefinition
+
+
+@dataclass
 class WikiServiceState:
     """서비스가 들고 있는 캐시(테스트에서 들여다본다)."""
 
     repos: dict[tuple[str, str], tuple[Hashable, WikiRepository]] = field(default_factory=dict)
+    checked: dict[tuple[str, str], _Checked] = field(default_factory=dict)
+    """(공간 키, 위키 id) → 마지막 지문 확인(신선도 창 안이면 다시 계산하지 않는다)."""
     indexes: dict[tuple[str, str], _SearchSlot] = field(default_factory=dict)
     summaries: OrderedDict[tuple[str, str], tuple[Hashable, WikiSummary]] = field(
         default_factory=OrderedDict
@@ -279,6 +299,8 @@ class WikiService:
         self.clock = clock
         self.state = WikiServiceState()
         self._lock = threading.RLock()
+        self._flights: dict[tuple[str, str], threading.Lock] = {}
+        self._epoch = 0  # 무효화마다 는다 — 그사이 끝난 확인은 기록하지 않는다
         self._index_suffix = str(package_defaults()["index_suffix"])
 
     # ------------------------------------------------------------ 설정·규칙
@@ -517,6 +539,7 @@ class WikiService:
             doc["home"] = body.home
         WikiDefinition.model_validate(doc)
         stored = scope.store.create(kind, doc, message="만듦")
+        self._drop_checked(scope.key, wiki_id)
         self.notify(scope.name, wiki_id)
         return stored
 
@@ -536,6 +559,7 @@ class WikiService:
         stored = scope.store.save(
             self.wiki_kind.name, doc, expected_version=expected, message="위키 저장"
         )
+        self._drop_checked(scope.key, wiki_id)
         self.notify(scope.name, wiki_id)
         return stored
 
@@ -615,14 +639,86 @@ class WikiService:
             self.state.indexes[key] = _SearchSlot(options_key, index)
         return index, True
 
-    def repository_of(self, scope: WikiScope, wiki_id: str) -> WikiRepository:
+    @staticmethod
+    def _space_signature(scope: WikiScope) -> Hashable:
+        """요청마다 비교하는 공간 값(신선도 창 안이어도 다르면 다시 확인한다)."""
+        return (
+            id(scope.history),
+            str(scope.pages_root),
+            str(scope.boundary),
+            id(scope.rules_store),
+        )
+
+    def _within_window(self, checked: _Checked | None, scope: WikiScope) -> bool:
+        window = self.options.freshness_seconds
+        if window <= 0 or checked is None or checked.space != self._space_signature(scope):
+            return False
+        age = self.clock() - checked.at
+        return 0 <= age < window  # 시계가 거꾸로 가면 지난 것으로 본다
+
+    def repository_of(
+        self, scope: WikiScope, wiki_id: str, *, fresh: bool = False
+    ) -> WikiRepository:
         """그 공간 위키 하나의 저장소(캐시, 설정·규칙이 바뀌면 다시 만든다).
+
+        Args:
+            scope: 공간.
+            wiki_id: 위키 id.
+            fresh: 신선도 창과 무관하게 지문을 다시 확인한다.
 
         Raises:
             WikiNotFound: 위키 정의가 없다.
         """
+        return self._resolve(scope, wiki_id, fresh=fresh)[0]
+
+    def _resolve(
+        self, scope: WikiScope, wiki_id: str, *, fresh: bool = False
+    ) -> tuple[WikiRepository, StoredDefinition, WikiDefinition]:
+        """(저장소, 위키 정의, 검증한 정의). 신선도 창 안이면 마지막 확인 값을 그대로 쓴다. 같은
+        공간·위키의 동시 확인은 하나만 하고 나머지는 그 결과를 기다린다."""
+        key = (scope.key, wiki_id)
+        if not fresh:
+            found = self._checked_repo(key, scope)
+            if found is not None:
+                return found
+        with self._lock:
+            flight = self._flights.setdefault(key, threading.Lock())
+        with flight:
+            if not fresh:
+                found = self._checked_repo(key, scope)
+                if found is not None:
+                    return found
+            return self._check(scope, wiki_id)
+
+    def _checked_repo(
+        self, key: tuple[str, str], scope: WikiScope
+    ) -> tuple[WikiRepository, StoredDefinition, WikiDefinition] | None:
+        with self._lock:
+            checked = self.state.checked.get(key)
+            held = self.state.repos.get(key)
+        if held is None or checked is None or not self._within_window(checked, scope):
+            return None
+        return held[1], checked.stored, checked.wiki
+
+    def _check(
+        self, scope: WikiScope, wiki_id: str
+    ) -> tuple[WikiRepository, StoredDefinition, WikiDefinition]:
+        with self._lock:
+            epoch = self._epoch
         stored = self.get_wiki(scope, wiki_id)
         wiki = WikiDefinition.model_validate(stored.document)
+        repo = self._repository_for(scope, wiki_id, stored, wiki)
+        if self.options.freshness_seconds > 0:
+            with self._lock:
+                if self._epoch == epoch:  # 확인하는 사이 무효화가 왔으면 다음 요청이 다시 확인
+                    self.state.checked[(scope.key, wiki_id)] = _Checked(
+                        self.clock(), self._space_signature(scope), stored, wiki
+                    )
+        return repo, stored, wiki
+
+    def _repository_for(
+        self, scope: WikiScope, wiki_id: str, stored: StoredDefinition, wiki: WikiDefinition
+    ) -> WikiRepository:
         settings = self.settings()
         checks = self.write_checks(settings)
         rule_versions = tuple((r, self._rule_version(scope.rules_store, r)) for r in wiki.rules)
@@ -660,6 +756,7 @@ class WikiService:
             operators=self.operators(),
             clock=self.clock,
             parse_cache_entries=self.options.parse_cache_entries,
+            freshness_seconds=self.options.freshness_seconds,
         )
         # 새로 만든 저장소마다 색인을 맞춘다(규칙이 바뀌면 제목 출처 등이 달라질 수 있다 —
         # 바뀐 문서만 쓴다). 색인은 캐시라 실패하면 다음 scan·쓰기 때 다시 맞춘다.
@@ -679,8 +776,8 @@ class WikiService:
         out: dict[str, WikiToolTarget] = {}
         for wiki_id in self.wiki_ids_of(scope):
             try:
-                repo = self.repository_of(scope, wiki_id)
-                name = str(self.get_wiki(scope, wiki_id).document.get("name") or "")
+                repo, stored, _wiki = self._resolve(scope, wiki_id)
+                name = str(stored.document.get("name") or "")
             except Exception:
                 continue
             pages_dir = (
@@ -697,6 +794,7 @@ class WikiService:
 
     def _forget(self, scope_key: str, wiki_id: str) -> None:
         key = (scope_key, wiki_id)
+        self._drop_checked(scope_key, wiki_id)
         with self._lock:
             self.state.repos.pop(key, None)
             self.state.summaries.pop(key, None)
@@ -722,10 +820,17 @@ class WikiService:
     def summary(self, scope: WikiScope, stored: StoredDefinition) -> WikiSummary:
         """위키 목록 카드 하나(공간 캐시 — 페이지 파일이 바뀌면 다시 계산)."""
         wiki = WikiDefinition.model_validate(stored.document)
-        repo = self.repository_of(scope, wiki.id)
-        files = tuple(
-            (f.file, f.size, f.mtime) for f in repo.pages.list(repo.syntax.page_extensions)
-        )
+        return self._summary(scope, self.repository_of(scope, wiki.id), stored, wiki)
+
+    def _summary(
+        self,
+        scope: WikiScope,
+        repo: WikiRepository,
+        stored: StoredDefinition,
+        wiki: WikiDefinition,
+    ) -> WikiSummary:
+        # 열쇠 = 저장소의 페이지 목록(신선도 창 안이면 저장소가 들고 있는 목록)
+        files = tuple((f.file, f.size, f.mtime) for f in repo.page_files())
         key = (scope.key, wiki.id)
         marker = (id(repo), stored.version_hash, files)
         with self._lock:
@@ -779,16 +884,15 @@ class WikiService:
         out: list[WikiSummary] = []
         for wiki_id in self.wiki_ids_of(scope):
             try:
-                out.append(self.summary(scope, self.get_wiki(scope, wiki_id)))
+                repo, stored, wiki = self._resolve(scope, wiki_id)
+                out.append(self._summary(scope, repo, stored, wiki))
             except (WikiNotFound, ValidationError):
                 continue
         return out
 
     def view(self, scope: WikiScope, wiki_id: str) -> tuple[WikiView, str]:
         """위키 하나 보기(정의 + 합친 규칙 요약 + 이슈)와 정의 버전."""
-        stored = self.get_wiki(scope, wiki_id)
-        wiki = WikiDefinition.model_validate(stored.document)
-        repo = self.repository_of(scope, wiki_id)
+        repo, stored, wiki = self._resolve(scope, wiki_id)
         view = WikiView(
             wiki=wiki,
             version_hash=stored.version_hash,
@@ -972,7 +1076,9 @@ class WikiService:
         if not doc.get("id"):
             doc["id"] = unique_id(name, self.rule_ids(scope), fallback=kind)
         WikiRulesDefinition.model_validate(doc)
-        return scope.rules_store.create(kind, doc, message="만듦")
+        stored = scope.rules_store.create(kind, doc, message="만듦")
+        self.rules_changed(scope)
+        return stored
 
     def save_rules(
         self, scope: WikiScope, rule_id: str, body: WikiRulesDefinition, *, expected: str | None
@@ -986,14 +1092,52 @@ class WikiService:
             )
         doc = body.model_dump(mode="json", by_alias=True, exclude_none=True)
         doc["kind"] = self.rules_kind.name
-        return scope.rules_store.save(
+        stored = scope.rules_store.save(
             self.rules_kind.name, doc, expected_version=expected, message="위키 규칙 저장"
         )
+        self.rules_changed(scope)
+        return stored
 
     def delete_rules(self, scope: WikiScope, rule_id: str, *, expected: str | None) -> None:
         if scope.own_rules:
             self.require_writable(scope)
-        scope.rules_store.delete(self.rules_kind.name, rule_id, expected_version=expected)
+        try:
+            scope.rules_store.delete(self.rules_kind.name, rule_id, expected_version=expected)
+        finally:
+            self.rules_changed(scope)
+
+    # ------------------------------------------------------------ 신선도 창 무효화
+
+    def _drop_checked(self, scope_key: str | None = None, wiki_id: str | None = None) -> None:
+        """지문 확인 기록을 버린다(``scope_key`` None = 전부, ``wiki_id`` None = 그 공간 전부)."""
+        with self._lock:
+            self._epoch += 1
+            if scope_key is None:
+                self.state.checked.clear()
+                return
+            for key in list(self.state.checked):
+                if key[0] == scope_key and (wiki_id is None or key[1] == wiki_id):
+                    del self.state.checked[key]
+
+    def rules_changed(self, scope: WikiScope) -> None:
+        """그 공간의 위키 규칙(정의·본문 파일·되돌리기)이 바뀌었다 — 그 규칙 저장소를 쓰는 위키의
+        지문을 다음 요청에서 다시 확인한다(단독 공간이 라이브러리 규칙을 쓰면 단독 공간 전부)."""
+        self._drop_checked(scope.key)
+
+    def on_definition_saved(self, item: Any) -> None:
+        """토픽 ``definitions.saved`` 구독: 위키·위키 규칙 종류면 그 공간(``space``, 없으면 단독
+        공간·라이브러리), 다른 종류(공통 설정 등 — 지문 재료가 될 수 있다)면 전부의 지문 확인을
+        버린다. 페이지 목록은 버리지 않는다(지문이 같으면 저장소를 그대로 쓴다)."""
+        kind = getattr(item, "kind", None)
+        space = getattr(item, "space", None)
+        key = str(space) if space else ""
+        if kind == self.wiki_kind.name:
+            item_id = getattr(item, "id", None)
+            self._drop_checked(key, str(item_id) if item_id else None)
+        elif kind == self.rules_kind.name:
+            self._drop_checked(key)
+        else:
+            self._drop_checked()
 
     # ------------------------------------------------------------ 알림·주기 일
 
@@ -1006,9 +1150,12 @@ class WikiService:
         deleted: bool = False,
         external: bool = False,
     ) -> None:
-        """WS ``wiki.changed``를 내고 그 위키 요약 캐시를 지운다."""
+        """WS ``wiki.changed``를 내고 그 위키 요약 캐시·페이지 목록 스냅숏을 지운다."""
         with self._lock:
             self.state.summaries.pop((space or "", wiki_id), None)
+            held = self.state.repos.get((space or "", wiki_id))
+        if held is not None:
+            held[1].invalidate()
         try:
             ref = SpaceRef(project_id=space or None)
         except ValidationError:
@@ -1024,8 +1171,9 @@ class WikiService:
         )
 
     def scan(self, scope: WikiScope, wiki_id: str) -> WikiScanResult:
-        """외부 변경 다시 읽기 + 색인 맞추기 + 바뀌었으면 알림."""
-        repo = self.repository_of(scope, wiki_id)
+        """외부 변경 다시 읽기 + 색인 맞추기 + 바뀌었으면 알림(신선도 창과 무관하게 지문·페이지
+        목록을 다시 확인한다)."""
+        repo = self.repository_of(scope, wiki_id, fresh=True)
         result = repo.scan()
         with contextlib.suppress(Exception):
             repo.sync_search()
@@ -1069,7 +1217,9 @@ class WikiService:
             self.state.indexes.clear()
             self.state.records.clear()
             self.state.repos.clear()
+            self.state.checked.clear()
             self.state.summaries.clear()
+            self._flights.clear()
         for slot in slots:
             close_history(slot.index)
         for item in records:

@@ -470,7 +470,7 @@ def redaction_marks(original: str, shown: str) -> tuple[str, ...]:
 
 @runtime_checkable
 class WikiWriteCheck(Protocol):
-    """위키 쓰기 검사 보탬. 쓰기 규칙·비밀 검사 뒤에 차례로 부른다.
+    """Added wiki write check. Called in order after the write rules and the secret check.
 
     `check`가 돌려준 이슈 중 `severity=error`는 거부(`wiki.rule_rejected`와 같이 다룸), 나머지는
     경고로 쓰기와 함께 보인다. 이슈 `rule_id`가 비면 검사 `id`를 넣는다. 예외를 던지면 그 검사만

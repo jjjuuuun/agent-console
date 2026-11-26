@@ -134,6 +134,12 @@ class ReadmeSection:
     id: str
     title: str
     aliases: tuple[str, ...]
+    language_aliases: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    """예제 언어(``example_roots[].language``)별로만 더 받는 별칭(옮기는 중인 옛 제목)."""
+
+    def aliases_for(self, language: str | None) -> tuple[str, ...]:
+        """이 언어의 예제 README에서 절로 인정하는 제목 조각."""
+        return self.aliases + tuple(self.language_aliases.get(language or "", ()))
 
 
 @dataclass(frozen=True)
@@ -141,12 +147,20 @@ class LintRule:
     """공개 가능 린트 규칙 하나(``public_lint.yaml``).
 
     ``prose_only``이면 코드 펜스와 인라인 코드(백틱) 안은 보지 않는다(예제 데이터가 같은 모양일 때).
+    ``files``가 있으면 그 glob(저장소 상대)에 맞는 파일만 보고, ``exclude_files``에 맞는 파일은
+    뺀다.
+    ``skip_line``에 맞는 줄은 이 규칙만 건너뛴다(예: 맨 위 언어 전환 줄).
+    ``warning``이면 늘 경고다(새 규칙을 단계적으로 켤 때, ``severity: warning``).
     """
 
     id: str
     message: str
     pattern: re.Pattern[str]
     prose_only: bool = False
+    files: tuple[str, ...] = ()
+    exclude_files: tuple[str, ...] = ()
+    skip_line: re.Pattern[str] | None = None
+    warning: bool = False
 
 
 @dataclass(frozen=True)
@@ -198,6 +212,37 @@ class ToolData:
         return str(self.s("code")[key])
 
 
+LINT_SEVERITIES = ("error", "warning")
+"""``public_lint.yaml`` 규칙의 ``severity`` 값(기본 ``error``)."""
+
+
+def _str_list(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    return tuple(str(v) for v in value)
+
+
+def _lint_rule(raw: Mapping[str, Any]) -> LintRule:
+    severity = str(raw.get("severity", "error"))
+    if severity not in LINT_SEVERITIES:
+        raise ExtdocsError(
+            f"public_lint.yaml 규칙 {raw.get('id')}: severity는 {'·'.join(LINT_SEVERITIES)} 중 하나"
+        )
+    skip = raw.get("skip_line")
+    return LintRule(
+        str(raw["id"]),
+        str(raw["message"]),
+        re.compile(str(raw["pattern"])),
+        prose_only=bool(raw.get("prose_only", False)),
+        files=_str_list(raw.get("files")),
+        exclude_files=_str_list(raw.get("exclude_files")),
+        skip_line=re.compile(str(skip)) if skip else None,
+        warning=severity == "warning",
+    )
+
+
 def load_data(tool_dir: Path = TOOL_DIR, config: Path | None = None) -> ToolData:
     """``extdocs.yaml``과 데이터 파일을 읽는다(데이터 파일은 ``tool_dir`` 기준).
 
@@ -213,18 +258,15 @@ def load_data(tool_dir: Path = TOOL_DIR, config: Path | None = None) -> ToolData
     try:
         areas = tuple(Area(str(a["id"]), str(a["title"]), str(a["file"])) for a in areas_raw)
         sections = tuple(
-            ReadmeSection(str(s["id"]), str(s.get("title", s["id"])), tuple(s["aliases"]))
+            ReadmeSection(
+                str(s["id"]),
+                str(s.get("title", s["id"])),
+                tuple(s["aliases"]),
+                {str(k): tuple(v) for k, v in (s.get("language_aliases") or {}).items()},
+            )
             for s in sections_raw
         )
-        rules = tuple(
-            LintRule(
-                str(r["id"]),
-                str(r["message"]),
-                re.compile(str(r["pattern"])),
-                prose_only=bool(r.get("prose_only", False)),
-            )
-            for r in lint_raw
-        )
+        rules = tuple(_lint_rule(r) for r in lint_raw)
     except (KeyError, TypeError, re.error) as exc:
         raise ExtdocsError(f"데이터 파일 형식 오류: {exc}") from exc
     if "_default" not in templates:
@@ -709,6 +751,7 @@ def member_src_paths(members: Sequence[Member]) -> list[Path]:
 
 
 __all__ = [
+    "LINT_SEVERITIES",
     "MISSING_CATEGORIES",
     "TOOL_DIR",
     "Area",

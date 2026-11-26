@@ -1,32 +1,32 @@
 # agent-console-backend-claude-sdk
 
-Claude Agent SDK(`claude-agent-sdk`, `ClaudeSDKClient`) 실행 백엔드 어댑터.
+The execution backend adapter for the Claude Agent SDK (`claude-agent-sdk`, `ClaudeSDKClient`).
 entry point `agent_console.backends:claude-agent-sdk`.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                               # 워크스페이스 안
-uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
+uv sync --all-packages                               # inside the workspace
+uv pip install ./packages/py/features/ac-backend-claude-sdk   # standalone
 ```
 
-의존: `agent-console-runtime`, `agent-console-contracts`, `agent-console-claude-format`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
-`claude-agent-sdk`. 선택: `[hook-probe]`, `[login]`.
+Dependencies: `agent-console-runtime`, `agent-console-contracts`, `agent-console-claude-format`, `agent-console-registry`, `agent-console-secret-rules`, `pydantic`,
+`claude-agent-sdk`. Optional: `[hook-probe]`, `[login]`.
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
-| `claude-agent-sdk` (확인 버전 0.2.166, CLI 번들) | Claude Code 에이전트 실행 | 훅 콜백·MCP·interrupt를 함께 쓰고 설치가 단순 | CLI `stream-json` 직접 구동(agent_bench 방식) 백엔드를 별도로 추가 |
-| `agent-console-registry` (사내) | 관측 수집기 entry point 로딩·검사(`load_entry_points`, 실패 = 보고서) | 다른 확장 지점과 같은 등록 방식 | `importlib.metadata` 직접 순회(실패 보고·검사기 규칙을 다시 만들어야 함) |
-| `agent-console-claude-format` (사내) | 세션 보관의 폴더 키 `project_key`(작업 폴더 → `projects/<키>`) | 로그 출처와 같은 함수 한 곳(복사 금지). `ruamel.yaml`만 딸려 온다 | `agent-console-logs-claude` 의존(로그 색인 의존까지 끌려옴) / 규칙 복사 |
-| `agent-console-hook-probe` (사내, **선택** 추가 기능 `hook-probe`) | `observe.hook_probe`일 때 hook 명령 감싸기 인자(`wrap_command`·`wrap_command_line`) | 감싸기 규칙·기록 형식을 probe 패키지 한 곳에 둔다. 선택인 이유: 기록 출처·분류기 쪽 의존(`agent-console-logs`)을 백엔드 단독 설치에 끌어오지 않기 위해 | 필수 의존(백엔드 설치가 무거워짐) / 감싸기 인자를 여기서 다시 만들기(같은 로직 복사) |
+| `claude-agent-sdk` (checked version 0.2.166, bundles the CLI) | Runs Claude Code agents | Uses hook callbacks, MCP, and interrupt together, and installation is simple | Adding a separate backend that drives the CLI `stream-json` directly (the agent_bench approach) |
+| `agent-console-registry` (internal) | Loads and checks observation collector entry points (`load_entry_points`, failures = reports) | The same registration method as other extension points | Iterating `importlib.metadata` directly (failure reports and validator rules would have to be rebuilt) |
+| `agent-console-claude-format` (internal) | The folder key `project_key` for session archives (project folder → `projects/<key>`) | One place for the same function as the log source (no copies). Only `ruamel.yaml` comes along | Depending on `agent-console-logs-claude` (drags in the log index dependency) / copying the rule |
+| `agent-console-hook-probe` (internal, **optional** extra `hook-probe`) | Hook command wrapping arguments (`wrap_command`, `wrap_command_line`) when `observe.hook_probe` is on | Keeps the wrapping rules and record format in one place, the probe package. Optional so that the dependencies of the record source and classifier (`agent-console-logs`) are not pulled into a standalone backend install | A required dependency (heavier backend install) / rebuilding the wrapping arguments here (copying the same logic) |
 
-| `agent-console-secret-rules` (사내) | 구독 로그인 화면 글자 규칙(사용자가 고치는 정규식)의 안전 검사(`ac-safe-regex`를 거침) | 사용자 정규식은 한 곳의 검사기를 거친다는 규칙 | `re.compile` 그대로(위험한 정규식을 막지 못함) |
-| `agent-console-pty-session` (사내, **선택** 추가 기능 `login`) | `claude auth login`을 PTY로 띄워 화면 글자를 읽고 입력을 보냄(구독 로그인) | CLI 로그인 화면이 TTY를 요구한다. PTY·터미널 글자 해석을 한 패키지에 둔다 | 사용자가 터미널에서 직접 `claude auth login`(앱 화면 로그인 없음) |
+| `agent-console-secret-rules` (internal) | Safety checks of the subscription sign-in screen text rules (user-editable regexes, through `ac-safe-regex`) | The rule that user regexes go through one validator | Plain `re.compile` (cannot block dangerous regexes) |
+| `agent-console-pty-session` (internal, **optional** extra `login`) | Starts `claude auth login` in a PTY, reads the screen text, and sends input (subscription sign-in) | The CLI sign-in screen requires a TTY. PTY handling and terminal text interpretation live in one package | The user runs `claude auth login` in a terminal themselves (no sign-in from the app screen) |
 
-`pip install "agent-console-backend-claude-sdk[hook-probe]"`로 함께 설치한다. 없으면 `observe.hook_probe`가 켜져도
-감싸지 않고 `log.warning`을 낸다(나머지는 그대로 동작). 서버 앱은 `[login]`을 함께 설치한다(구독 로그인 기본 켜짐).
+Install them together with `pip install "agent-console-backend-claude-sdk[hook-probe]"`. Without it, even with `observe.hook_probe` on,
+nothing is wrapped and a `log.warning` is emitted (everything else works). The server app installs `[login]` too (subscription sign-in is on by default).
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import asyncio
@@ -46,13 +46,13 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 ...     name="Coder",
 ...     model="<설정의 모델 id>",
 ...     tools=["Read", "Bash"],
-...     # 기본 경로: API 키 방식. 값은 비밀 저장소 참조로만 둔다.
+...     # this example uses the API key mode. Keep the value only as a secret store reference.
 ...     backend_options={"auth": {"mode": "api_key", "api_key": "secret://anthropic_api_key"}},
 ... )
 
 ```
 
-실제로는 `client_factory`를 생략한다(SDK 클라이언트). 여기서는 정해 둔 메시지를 내는 가짜 클라이언트를 주입한다.
+In real use, omit `client_factory` (the SDK client). Here a fake client that emits predefined messages is injected.
 
 ```python
 >>> script = [
@@ -77,81 +77,81 @@ uv pip install ./packages/py/features/ac-backend-claude-sdk   # 단독
 >>> result = asyncio.run(backend.run(req, ValidatingSink(), CancelToken()))
 >>> result.status, result.text, result.session.session_id
 ('succeeded', '안녕하세요', 'sess-1')
->>> options = clients[0].options  # 백엔드가 만든 SDK 옵션
+>>> options = clients[0].options  # the SDK options the backend built
 >>> options.cwd, options.allowed_tools, "ANTHROPIC_API_KEY" in options.env
 ('/ws', ['Read', 'Bash'], True)
 
 ```
 
-테스트는 `ClaudeSdkBackend(client_factory=...)`로 가짜 클라이언트를 주입한다(`agent_console_backend_claude_sdk.testing`
-의 `FakeSdkClient`, 공용 `agent_console_runtime.testing_sink`를 다시 내보낸 `ValidatingSink`·`ListeningSink`·`InteractiveSink`).
+Tests inject a fake client with `ClaudeSdkBackend(client_factory=...)` (`FakeSdkClient` from `agent_console_backend_claude_sdk.testing`,
+and `ValidatingSink`, `ListeningSink`, `InteractiveSink` re-exported from the shared `agent_console_runtime.testing_sink`).
 
-## 인증
+## Authentication
 
-| 방식 | 설정 | 동작 |
+| Method | Settings | Behavior |
 | --- | --- | --- |
-| **본인 구독 로그인 자격(기본, 본인 책임)** | `auth: {mode: subscription}` (+ 선택 `oauth_token: secret://…`). `auth: {}`도 같다 | `ANTHROPIC_API_KEY`를 빈 값으로 덮어써 API 키가 끼어들지 않게 한다. 토큰을 주면 `CLAUDE_CODE_OAUTH_TOKEN`으로, 없으면 CLI가 앱 전용 자격 폴더(아래 "앱 전용 자격 폴더")의 로그인 자격을 읽는다 |
-| API 키(선택) | `auth: {mode: api_key, api_key: secret://anthropic_api_key}` | `ANTHROPIC_API_KEY`로 넘기고 `CLAUDE_CODE_OAUTH_TOKEN`은 비운다. 키가 없으면 실행하지 않는다(`auth_missing`) |
+| **Your own subscription sign-in credentials (default, at your own risk)** | `auth: {mode: subscription}` (+ optional `oauth_token: secret://…`). `auth: {}` is the same | Overrides `ANTHROPIC_API_KEY` with an empty value so an API key does not get in the way. With a token, it is passed as `CLAUDE_CODE_OAUTH_TOKEN`; otherwise the CLI reads the sign-in credentials from the app-only credentials folder (see "App-only credentials folder" below) |
+| API key (optional) | `auth: {mode: api_key, api_key: secret://anthropic_api_key}` | Passed as `ANTHROPIC_API_KEY`, and `CLAUDE_CODE_OAUTH_TOKEN` is cleared. Without a key, nothing runs (`auth_missing`) |
 
-- **기본은 구독(본인 책임), API 키도 선택 가능**. `ClaudeSdkAuth.mode` 기본값은
-  `subscription`, 설치자 설정 `allow_subscription_auth` 기본값은 `true`, 상태 점검 `readiness.auth` 기본값도 구독이다.
-  Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이 안내되므로, 구독 자격 사용은 본인 책임이고 아래 경고는 그대로 낸다.
-- **구독 방식은 설치자 설정 `allow_subscription_auth`(기본 `true`)가 켜져 있어야 동작한다**.
-  - 꺼짐(설치자가 `false`로 바꿨을 때): `validate_settings`가 error `backend.subscription_auth_disabled`(`AUTH_ISSUES.SUBSCRIPTION_DISABLED`)를
-    내고, 문장은 `SUBSCRIPTION_AUTH_DISABLED_MESSAGE`("Anthropic 문서상 Agent SDK 기반 앱에는 API 키 사용이
-    안내됩니다. 본인 구독 자격으로 쓰려면 설치자 설정에서 allow_subscription_auth를 켜세요(본인 책임).")다.
-    `run`은 비밀을 해석하거나 SDK를 부르기 전에 같은 코드(`ClaudeSdkErrorCodes.SUBSCRIPTION_AUTH_DISABLED`)로 실패를 돌려준다.
-  - 켜짐: `validate_settings`가 warning `backend.subscription_auth_enabled`를, 실행마다 `log.warning`을 같은 강화된
-    문장(`SUBSCRIPTION_AUTH_WARNING`, 본인 책임 안내)으로 낸다.
-  - 이 패키지에는 OAuth 토큰을 **받아 두거나 저장하는 경로가 없다.** 토큰은 사용자가 자기 비밀 저장소에 둔
-    `secret://` 참조로만 읽어(해석기 `resolve`만 씀) CLI 하위 프로세스 env로 넘기고, 이벤트·결과·파일에 남기지 않는다.
-    다른 사람의 구독 자격을 연결하는 경로도 없다. 테스트: `tests/…_subscription_3r29.py`.
-  - 5시간·주간 사용량(`usage.rate_limit`)은 구독 방식에서만 의미가 있다.
-- `auth`를 아예 비우면(`null`·키 없음) 예전처럼 `env`·환경 정책만 따른다(서버 환경의
-  `ANTHROPIC_API_KEY`가 있으면 CLI가 그것을, 없으면 Claude Code 로그인을 쓴다. 구독 허용 검사·경고는 `auth`를
-  적었을 때만 한다). 변수 이름은 `api_key_env`·`oauth_token_env`로 바꿀 수 있다.
-- `setting_sources` 기본값은 `["project"]`이고 `user`는 들어 있지 않다(사용자 `~/.claude` 설정 격리).
+- **The default is the subscription (at your own risk); an API key is also available**. The default of `ClaudeSdkAuth.mode` is
+  `subscription`, the default of the server administrator setting `allow_subscription_auth` is `true`, and the status check `readiness.auth` also defaults to the subscription.
+  Anthropic's documentation recommends API keys for apps built on the Agent SDK, so using subscription credentials is at your own risk, and the warnings below are still emitted.
+- **The subscription method works only when the server administrator setting `allow_subscription_auth` (default `true`) is on**.
+  - Off (when the server administrator changed it to `false`): `validate_settings` emits error `backend.subscription_auth_disabled` (`AUTH_ISSUES.SUBSCRIPTION_DISABLED`)
+    with the sentence `SUBSCRIPTION_AUTH_DISABLED_MESSAGE` (it says that Anthropic's documentation recommends API keys for Agent SDK apps,
+    and that to use your own subscription credentials you turn on allow_subscription_auth in the server administrator settings, at your own risk).
+    `run` returns a failure with the same code (`ClaudeSdkErrorCodes.SUBSCRIPTION_AUTH_DISABLED`) before resolving secrets or calling the SDK.
+  - On: `validate_settings` emits warning `backend.subscription_auth_enabled`, and every run emits a `log.warning`, both with the same strengthened
+    sentence (`SUBSCRIPTION_AUTH_WARNING`, the at-your-own-risk notice).
+  - This package has **no path that receives or stores OAuth tokens.** Tokens are read only through `secret://` references the user keeps in their own
+    secret store (using only the resolver's `resolve`), passed to the CLI child process env, and never left in events, results, or files.
+    There is no path to connect someone else's subscription credentials either. Tests: `tests/…_subscription_3r29.py`.
+  - The 5-hour and weekly usage (`usage.rate_limit`) is meaningful only with the subscription method.
+- If `auth` is left out entirely (`null`, no key), only `env` and the environment policy apply as before (if the server environment has
+  `ANTHROPIC_API_KEY`, the CLI uses it; otherwise the Claude Code sign-in. The subscription allowance check and warnings happen only when `auth`
+  is written). The variable names can be changed with `api_key_env` and `oauth_token_env`.
+- The default of `setting_sources` is `["project"]`, and `user` is not included (isolating the user's `~/.claude` settings).
 
-### 앱 전용 자격 폴더
+### App-only credentials folder
 
-구독 로그인은 **앱 하나에 로그인 하나**다. 자격은 `~/.claude`도 프로젝트(작업) 폴더도 아닌 **앱 workspace**(서버
-`--workspace`, 앱 데이터 폴더) 안 한 곳에 두고 모든 프로젝트·모든 실행이 함께 쓴다. 기본 `<workspace>/.state/claude`
-(앱 상태 폴더 `.state/` — DB·실행 폴더와 같은 곳)이고 이 폴더를 `CLAUDE_CONFIG_DIR`로 SDK 실행·연결 테스트·로그인
-PTY(`claude auth login`·`status`·`logout`) 하위 프로세스에 함께 넘긴다. 자격이 있으면 자동으로 쓰고, 없으면 상태가
-`subscription_login_required`("로그인 필요")다. **`~/.claude`(HOME)나 서버 환경의 `CLAUDE_CONFIG_DIR`로 대신하지 않는다.**
-앱은 자격 때문에 프로젝트 폴더에 아무것도 쓰지 않는다(`.gitignore` 줄도 workspace 쪽에만).
+Subscription sign-in is **one sign-in per app**. Credentials are kept in one place inside the **app workspace** (server
+`--workspace`, the app data folder), neither `~/.claude` nor a project folder, and every project and every run shares them. The default is `<workspace>/.state/claude`
+(the app state folder `.state/`, the same place as the database and run folders), and this folder is passed as `CLAUDE_CONFIG_DIR` to the child processes of SDK runs, connection tests, and the sign-in
+PTY (`claude auth login`, `status`, `logout`). If credentials exist they are used automatically; otherwise the status is
+`subscription_login_required` (sign-in required). **It never falls back to `~/.claude` (HOME) or the server environment's `CLAUDE_CONFIG_DIR`.**
+The app writes nothing into project folders for credentials (the `.gitignore` line goes only to the workspace).
 
-> 이전 버전이 만든 `<프로젝트>/.agent-console/claude`는 옮기거나 지우지 않는다. 새 위치에 자격이 없으므로
-> 상태가 "로그인 필요"로 나온다 — **한 번 다시 로그인**하면 된다. 옛 폴더가 필요 없으면 직접 지운다.
+> `<project>/.agent-console/claude` created by earlier versions is neither moved nor deleted. There are no credentials at the new location, so
+> the status shows sign-in required; **sign in once more**. If you do not need the old folder, delete it yourself.
 
-- 경로 해석은 한 곳이다: `ClaudeSdkBackend.credential_dir(person_id=None) -> Path | None`(공개) → `resolve_auth_dir`
-  (`AuthDirLocation` — 절대 경로·화면 표시용 상대 경로·환경 변수 이름·로그인 파일). 기준은 앱 workspace이고 프로젝트
-  인자는 없다. 앱은 `from_options(..., host=BackendHostContext(workspace_dir=…))`로 workspace를 넘긴다(`mod-runs`가
-  호스트 `paths.workspace`). 개인 모드는 `person_id=None` 하나뿐이다. 팀 모드(사람별 자격)는 `config_dir` 틀의
-  `{person}` 자리(`PERSON_PLACEHOLDER`, 예 `.state/people/{person}/claude`)와 이 인자로만 넓힌다. 단독 사용에서
-  workspace를 주지 않으면(그리고 경로가 상대 경로면) 앱 전용 폴더를 쓰지 않고 하위 프로세스 환경을 그대로 따른다.
-- 준비(`prepare_auth_dir`, 실행·연결 테스트·로그인·로그아웃 직전, 멱등): 폴더 만들기(700) → **workspace** 폴더
-  `.gitignore`에 `.state/` 줄(workspace가 git 저장소 안일 때 의미가 있다. 파일이 없으면 만들고, 사용자 파일이면 끝에
-  줄만 더하고, 앞뒤 `/`만 다른 줄이 이미 있으면 그대로) → 폴더와 바로 아래 파일 권한 좁히기(700·600). 준비하지 못하면
-  실행은 `backend.auth_dir_unavailable`로 실패하고 로그인은 거절한다(메시지에 경로·자격 내용 없음).
-- 상태 점검(`status`)은 폴더를 만들지 않는다. 이미 있는 폴더·파일 권한만 좁히고, 좁혀지지 않으면(권한을 지원하지 않는 파일 시스템)
-  점검 항목 `auth_dir_permissions`와 `detail`로 알린다. 점검 항목 `auth_dir`의 `note`와 `detail`에 위치(workspace 기준
-  상대 경로)를 싣는다.
-- 자격 파일 내용은 읽지 않는다(있는지·권한만). 로그·응답·화면에 내용이 나가지 않는다.
-- 에이전트 `backend_options.env`에 `CLAUDE_CONFIG_DIR`를 적어도 앱 전용 폴더가 이기고 `log.warning`을 낸다.
-- 기존 `oauth_token: secret://…` 방식과 API 키 방식은 그대로다(`CLAUDE_CONFIG_DIR`만 같이 넘어간다).
-- `setting_sources`에 `user`를 넣어도 CLI는 `CLAUDE_CONFIG_DIR`(= 앱 자격 폴더)의 사용자 설정을 본다. `~/.claude`를
-  읽게 되는 것은 `auth_dir.config_dir: null`(앱 전용 폴더 끄기)일 때뿐이다.
+- Path resolution happens in one place: `ClaudeSdkBackend.credential_dir(person_id=None) -> Path | None` (public) → `resolve_auth_dir`
+  (`AuthDirLocation`: absolute path, relative path for display, environment variable name, sign-in files). The base is the app workspace, and there is no project
+  argument. The app passes the workspace with `from_options(..., host=BackendHostContext(workspace_dir=…))` (`mod-runs` uses the
+  host `paths.workspace`). Personal mode has only `person_id=None`. Team mode (credentials per person) is extended only through the `{person}` slot of the `config_dir` template
+  (`PERSON_PLACEHOLDER`, for example `.state/people/{person}/claude`) and this argument. In standalone use, if no
+  workspace is given (and the path is relative), the app-only folder is not used and the child process environment is followed as is.
+- Preparation (`prepare_auth_dir`, right before runs, connection tests, sign-in, and sign-out; idempotent): create the folder (700) → add a `.state/` line to the **workspace** folder's
+  `.gitignore` (meaningful when the workspace is inside a git repository; if the file does not exist it is created; if it is the user's file, only the line is appended
+  at the end; if a line differing only by leading or trailing `/` already exists, it is left alone) → narrow the permissions of the folder and the files directly under it (700, 600). If preparation fails,
+  runs fail with `backend.auth_dir_unavailable` and sign-in is refused (the message contains no paths or credential contents).
+- The status check (`status`) does not create the folder. It only narrows the permissions of existing folders and files, and if they cannot be narrowed (file systems without permission support),
+  it reports through the check item `auth_dir_permissions` and `detail`. The `note` and `detail` of the check item `auth_dir` carry the location (a path relative to
+  the workspace).
+- Credential file contents are never read (only existence and permissions). Contents never go to logs, responses, or the screen.
+- Even if the agent's `backend_options.env` sets `CLAUDE_CONFIG_DIR`, the app-only folder wins and a `log.warning` is emitted.
+- The existing `oauth_token: secret://…` method and the API key method stay the same (only `CLAUDE_CONFIG_DIR` is passed along).
+- Even if `setting_sources` includes `user`, the CLI looks at the user settings in `CLAUDE_CONFIG_DIR` (= the app credentials folder). `~/.claude`
+  is read only with `auth_dir.config_dir: null` (app-only folder turned off).
 
-설치자 설정 `auth_dir`(`ClaudeSdkAuthDirOptions`):
+Server administrator setting `auth_dir` (`ClaudeSdkAuthDirOptions`):
 
-| 키 | 기본 | 의미 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `config_dir` | `.state/claude` | 자격 폴더. 상대 경로는 앱 workspace 기준, `~`·`${이름}`·`{person}`(팀 모드 틀) 가능. `null`이면 앱 전용 폴더를 쓰지 않음(서버 환경 `CLAUDE_CONFIG_DIR`·`~/.claude`). 바꾸면 로그 출처 `claude-code-jsonl`의 `workspace_roots`(기본 `.state/claude/projects`)도 함께 바꾼다 |
-| `env_var` | `CLAUDE_CONFIG_DIR` | 하위 프로세스에 줄 환경 변수 이름 |
-| `login_files` | `[".credentials.json"]` | 로그인됨으로 볼 파일(폴더 안, 있는지만 본다) |
-| `dir_mode` · `file_mode` | `0o700` · `0o600` | 권한(POSIX) |
-| `gitignore` · `gitignore_entry` | `true` · `null`(= workspace 기준 첫 폴더 + `/`) | workspace `.gitignore`에 더할지·더할 줄. 폴더가 workspace 밖이면 더하지 않음 |
+| `config_dir` | `.state/claude` | The credentials folder. Relative paths are relative to the app workspace; `~`, `${NAME}`, and `{person}` (team mode template) are allowed. With `null`, no app-only folder is used (the server environment's `CLAUDE_CONFIG_DIR` or `~/.claude`). If you change it, also change `workspace_roots` of the log source `claude-code-jsonl` (default `.state/claude/projects`) |
+| `env_var` | `CLAUDE_CONFIG_DIR` | The environment variable name given to child processes |
+| `login_files` | `[".credentials.json"]` | Files that mean signed in (inside the folder; only existence is checked) |
+| `dir_mode`, `file_mode` | `0o700`, `0o600` | Permissions (POSIX) |
+| `gitignore`, `gitignore_entry` | `true`, `null` (= the first folder relative to the workspace + `/`) | Whether to add to the workspace `.gitignore` and the line to add. Not added when the folder is outside the workspace |
 
 ```python
 >>> from pathlib import Path
@@ -164,54 +164,53 @@ True
 
 ```
 
-로그 수집(`ac-logs-claude`)은 앱 workspace의 `.state/claude/projects`(앱 실행 세션)와 `~/.claude/projects`(CLI 세션,
-읽기 전용) 두 곳에서 등록된 프로젝트 폴더 키의 세션만 읽는다(포함 패턴이 `*.jsonl`이라 자격 파일은 읽지 않는다).
-내보내기·가져오기는 정의에서 만들거나 프로젝트 `.claude/`만 읽으므로 이 폴더를 다루지 않는다. 테스트:
-`tests/…_auth_dir_57r30.py`(있음·없음·권한 문제, 빈 HOME의 `~/.claude` 무시, workspace `.gitignore`, 프로젝트 폴더
-무변경, 프로젝트 A·B가 같은 폴더, `credential_dir` 사람별 틀, FakePty 로그인이 같은 폴더에 씀).
+Log collection (`ac-logs-claude`) reads only sessions of registered project folder keys, from two places: `.state/claude/projects` in the app workspace (sessions the app ran) and `~/.claude/projects` (CLI sessions,
+read-only) (the include pattern is `*.jsonl`, so credential files are not read).
+Export and import build from definitions or read only the project `.claude/`, so they do not touch this folder. Tests:
+`tests/…_auth_dir_57r30.py` (present, absent, permission problems, ignoring `~/.claude` with an empty HOME, the workspace `.gitignore`, project folders
+unchanged, projects A and B sharing the same folder, the per-person template of `credential_dir`, FakePty sign-in writing to the same folder).
 
-### 상태 점검과 연결 테스트
+### Status check and connection test
 
-디스크립터가 `capabilities.status = true`·`capabilities.probe = true`를 선언하고 두 선택 메서드를 구현한다
-(`agent_console_runtime.StatusCapableBackend`·`ProbeCapableBackend`). 서버는 `BackendReadinessService`로 감싸
-`GET /api/v1/backends/{id}/status`·`POST /api/v1/backends/{id}/probe`에 낸다. 둘 다 설치자 설정 `readiness.auth`
-(기본 `{mode: subscription}` — 구독 로그인, API 키 `{mode: api_key, api_key: secret://anthropic_api_key}`도 선택 가능)의 인증 방식을 본다 — 에이전트마다 다른 `auth`는 실행
-때 `validate_settings`·`run`이 따로 검사한다.
+The descriptor declares `capabilities.status = true` and `capabilities.probe = true` and implements both optional methods
+(`agent_console_runtime.StatusCapableBackend`, `ProbeCapableBackend`). The server wraps them in `BackendReadinessService` and publishes them at
+`GET /api/v1/backends/{id}/status` and `POST /api/v1/backends/{id}/probe`. Both look at the authentication method of the server administrator setting `readiness.auth`
+(default `{mode: subscription}`, the subscription sign-in; the API key `{mode: api_key, api_key: secret://anthropic_api_key}` is also available); per-agent `auth`
+is checked separately at run time by `validate_settings` and `run`.
 
-- **`status(ctx)` — 정적 점검, 모델·네트워크 호출 없음.** 비밀은 이름이 있는지만 묻고(`ctx.has_secret`, 값을
-  읽지 않음) 로그인 파일은 있는지만 본다. 결과 `state`(`ReadinessStates`, 열린 어휘)·`tone`·`summary`·`fixes`:
+- **`status(ctx)`: a static check, no model or network calls.** For secrets it only asks whether the name exists (`ctx.has_secret`, without
+  reading the value), and for sign-in files it only checks existence. Results are `state` (`ReadinessStates`, an open vocabulary), `tone`, `summary`, `fixes`:
 
-  | `state` | 톤 | 언제 |
+  | `state` | Tone | When |
   | --- | --- | --- |
-  | `auth_ready` | ok | API 키 비밀이 있음 |
-  | `auth_missing` | error | API 키 비밀이 없음(해결 버튼 "API 키 넣는 곳 보기") |
-  | `subscription_disabled` | warn | 구독 방식인데 `allow_subscription_auth`가 꺼짐(해결 버튼 "설치자 설정 보기") |
-  | `subscription_ready` | warn | 구독 방식이 켜져 있고 토큰 비밀 또는 로그인 파일이 있음("본인 책임" 문구를 `detail`에) |
-  | `subscription_login_required` | warn | 앱 전용 자격 폴더에 로그인 파일이 없음("로그인 필요"). 이 폴더만 본다 |
-  | `subscription_unverified` | warn | 앱 전용 폴더를 끈 경우(`auth_dir.config_dir: null`) 로그인 파일(`readiness.subscription_files`)을 찾지 못함 |
+  | `auth_ready` | ok | The API key secret exists |
+  | `auth_missing` | error | The API key secret is missing (fix button for where to put the API key) |
+  | `subscription_disabled` | warn | Subscription method but `allow_subscription_auth` is off (fix button for the server administrator settings) |
+  | `subscription_ready` | warn | The subscription method is on and a token secret or sign-in file exists (the at-your-own-risk text in `detail`) |
+  | `subscription_login_required` | warn | No sign-in file in the app-only credentials folder (sign-in required). Only this folder is checked |
+  | `subscription_unverified` | warn | With the app-only folder turned off (`auth_dir.config_dir: null`), no sign-in file (`readiness.subscription_files`) was found |
 
-  앱 전용 자격 폴더가 있으면 그 폴더의 `auth_dir.login_files`만 본다. 앱 전용 폴더를 끈 경우에만 아래 규칙이다.
-  로그인 파일은 후보 중 **처음 풀리는 하나만** 본다(`login_file`). CLI처럼 하위 프로세스가 받을
-  `CLAUDE_CONFIG_DIR`(환경 정책 적용 후, 빈 값 = 없음)가 있으면 그 폴더만, 없으면 `~/.claude`를 본다.
-  `CLAUDE_CONFIG_DIR`가 빈 폴더면 홈에 로그인 파일이 있어도 `subscription_unverified`다.
-  | `subscription_token_missing` | error | `oauth_token` 참조가 가리키는 비밀이 없음 |
-  | `cli_missing` | error | Claude Code 실행 파일을 찾지 못함(`readiness.cli_path` → SDK 번들 → PATH 순) |
+  If the app-only credentials folder exists, only its `auth_dir.login_files` are checked. The rules below apply only when the app-only folder is turned off.
+  Only **the first candidate that resolves** is checked as the sign-in file (`login_file`). Like the CLI, if the child process would receive
+  `CLAUDE_CONFIG_DIR` (after the environment policy is applied; an empty value = none), only that folder is checked; otherwise `~/.claude`.
+  If `CLAUDE_CONFIG_DIR` is an empty folder, the result is `subscription_unverified` even if the home folder has a sign-in file.
+  | `subscription_token_missing` | error | The secret that the `oauth_token` reference points to is missing |
+  | `cli_missing` | error | The Claude Code executable was not found (`readiness.cli_path` → the SDK bundle → PATH, in that order) |
 
-  `checks`에는 항목별 "있음/없음"과 비밀 **이름**만 담는다(값·앞뒤 일부 없음).
-- **`probe(ctx, timeout_s)` — 사용자가 누를 때만 하는 짧은 실제 호출.** 도구 없음(`tools=[]`)·한 턴
-  (`max_turns=1`)·설정 파일 안 읽음(`setting_sources=[]`)·MCP 없음·빈 시스템 프롬프트·임시 작업 폴더·
-  세션 기록 끔(`readiness.probe_extra_args` 기본 `--no-session-persistence`)으로 `readiness.probe_prompt` 한 줄을
-  보낸다. 모델은 `readiness.probe_model`(비우면 CLI 기본).
-  - **호출 없이 거부**: 실행 파일 없음(`cli_missing`), 구독 방식인데 설치자 설정 꺼짐
-    (`backend.subscription_auth_disabled`, 우회 호출 없음), 키·토큰 없음(`auth_missing`).
-  - **시간 상한**: `timeout_s`보다 조금 먼저 끊고 연결을 닫는다(`timeout`). 서버 상한은 서비스가 자른다.
-  - **실패 사유**(`ProbeReasonCodes`, `details.category` = `PROBE_CATEGORIES`): 인증 `auth_failed`
-    (`AssistantMessage.error=authentication_failed` 또는 HTTP 401·403), 네트워크 `network`(`CLIConnectionError`·
-    `ConnectionError`), 시간 초과 `timeout`, 기타 `error`. `details`에는 모델 id·오류 종류·HTTP 코드·예외 형식
-    이름만 담고 응답 글·예외 문장·비밀 값은 담지 않는다. CLI stderr는 버린다.
-  - 비용 안내는 디스크립터 `probe_cost_note`(`PROBE_COST_NOTE`).
-- 문구·해결 버튼(웹 라우트 역할·설정 섹션)은 데이터다: `readiness.texts`(`ClaudeSdkReadinessTexts`, `FixLink`).
-- 부품은 단독으로 쓸 수 있다: `assess_readiness`(인증 해석 → 상태), `classify_probe_messages`·`classify_probe_error`,
+  `checks` contain only "present/absent" per item and secret **names** (no values or partial values).
+- **`probe(ctx, timeout_s)`: a short real call made only when the user presses the button.** It sends one line of `readiness.probe_prompt` with no tools (`tools=[]`), one turn
+  (`max_turns=1`), no settings files (`setting_sources=[]`), no MCP, an empty system prompt, a temporary project folder, and
+  session persistence off (`readiness.probe_extra_args` default `--no-session-persistence`). The model is `readiness.probe_model` (the CLI default when empty).
+  - **Refused without a call**: no executable (`cli_missing`), subscription method with the server administrator setting off
+    (`backend.subscription_auth_disabled`, no workaround call), no key or token (`auth_missing`).
+  - **Time limit**: cut a little before `timeout_s` and the connection is closed (`timeout`). The server limit is applied by the service.
+  - **Failure reasons** (`ProbeReasonCodes`, `details.category` = `PROBE_CATEGORIES`): authentication `auth_failed`
+    (`AssistantMessage.error=authentication_failed` or HTTP 401 or 403), network `network` (`CLIConnectionError`,
+    `ConnectionError`), timeout `timeout`, other `error`. `details` contain only the model id, error kind, HTTP code, and exception type
+    name, never response text, exception messages, or secret values. CLI stderr is discarded.
+  - The cost notice is the descriptor's `probe_cost_note` (`PROBE_COST_NOTE`).
+- Text and fix buttons (web route roles, settings sections) are data: `readiness.texts` (`ClaudeSdkReadinessTexts`, `FixLink`).
+- The parts can be used on their own: `assess_readiness` (authentication interpretation → status), `classify_probe_messages`, `classify_probe_error`,
   `find_claude_cli`, `expand_path`.
 
 ```python
@@ -239,58 +238,58 @@ True
 
 ```
 
-테스트(`tests/…_readiness_52r68.py`)는 가짜 SDK 클라이언트만 쓰고, 상태 점검·거부된 연결 테스트에서 실제
-`ClaudeSDKClient` 생성 수가 0인지, 키 값(과 그 일부)이 응답·로그·예외 어디에도 없는지 확인한다.
+Tests (`tests/…_readiness_52r68.py`) use only fake SDK clients and check that the status check and refused connection tests create zero real
+`ClaudeSDKClient` instances, and that key values (and parts of them) appear nowhere in responses, logs, or exceptions.
 
-### 구독 로그인
+### Subscription sign-in
 
-앱 화면에서 Claude 구독 로그인을 시작하고 끝낸다(터미널을 열지 않는다). 서버가 `claude auth login`을 PTY 하위
-프로세스로 띄우고 화면 글자를 읽어 로그인 주소·코드 요청을 웹 대화상자로 중계한다. **로그인 자격은 Claude Code CLI가
-앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR` = 기본 `<앱 workspace>/.state/claude`)에 쓴다. 앱은 토큰을 받거나 저장하지
-않는다.** 한 번 로그인하면 상태 점검·실행이 같은 폴더를 쓴다. 터미널의 Claude Code(`~/.claude`) 로그인과는 따로다.
+Start and finish the Claude subscription sign-in from the app screen (no terminal needed). The server starts `claude auth login` as a PTY child
+process, reads the screen text, and relays the sign-in address and code request to a web dialog. **The Claude Code CLI writes the sign-in credentials to
+the app-only credentials folder (`CLAUDE_CONFIG_DIR` = default `<app workspace>/.state/claude`). The app never receives or stores
+tokens.** Once signed in, status checks and runs use the same folder. It is separate from the sign-in of Claude Code in the terminal (`~/.claude`).
 
-- 디스크립터: `capabilities.login = true`·`capabilities.logout = true`, `login_methods = [cli-login]`(문구·본인 책임
-  안내·쓰기 경로는 데이터). 서비스·엔드포인트는 `agent_console_runtime.BackendLoginService`·`mod-runs`다.
-- **능력이 없는 경우**: 설치자 설정 `login.enabled = false`, `allow_subscription_auth = false`, PTY를 쓸 수 없음(`[login]`
-  미설치·플랫폼 미지원). PTY가 없으면 실패가 아니라 상태 `detail`에 설치 안내를 더한다. `allow_subscription_auth =
-  false`이면 `login_refusal()`(`LoginRefusalAware`)이 이유를 알려 로그인·로그아웃 요청이 `backend.login_unsupported`가
-  아니라 409 `backend.subscription_auth_disabled`로 거절된다.
-- `status()`의 `actions`: 구독 방식이고 로그인 파일이 없으면(`subscription_login_required`·`subscription_unverified`) 주 버튼 `login`, 있으면
-  (`subscription_ready`) 메뉴의 `login`(다시 로그인)·`logout`. 토큰 비밀(`oauth_token`) 방식이면 버튼이 없다.
-  상태 점검은 계속 **파일 존재만** 본다(`claude auth status`는 Node 프로세스를 띄워 폴링마다 쓰기엔 비싸다 —
-  로그인 성공 판정에만 쓴다).
-- 흐름(`ClaudeCliLoginDriver`): `starting` → 규칙 `open_url`·`needs_code`가 맞으면 `waiting_user`(주소는 https +
-  `allowed_url_hosts`만 넘긴다, OSC 8 링크 대상도 본다) → 붙여 넣은 코드 + `submit_keys`(기본 Enter) → 규칙 `success`가
-  맞으면 `on_success_keys`(기본 Enter)를 보냄 → CLI가 끝나면(또는 성공 문구 뒤 `exit_wait_s`) 하위 프로세스를 정리하고
-  `status_command`로 확인(`verifying`) → `succeeded`·`failed`.
-- **판정은 늘 `status_command`**: 종료 코드 0이어야 하고, 출력 JSON의 `authMethod`를 읽었으면 `success_auth_methods`
-  (기본 `["claude.ai"]`)에 있어야 한다. 성공 문구가 없어도 status 0이면 성공, 성공 문구가 있어도 status 1이면
-  `verify_failed`. 출력이 JSON이 아니면 종료 코드만 본다.
-- 실패 사유(`LoginReasonCodes`, 열린 어휘): `cli_missing`, `pty_unavailable`, `exited`(성공 문구 없이 0이 아닌 코드로
-  끝남), `verify_failed`, `start_failed`. 로그아웃: `logout_failed`, `timeout`.
-- 보안: 실행 인자는 설치자 설정에서만 온다. 하위 프로세스 환경은 실행과 같은 환경 정책 + `env_inherit`
-  (`CLAUDE_CONFIG_DIR`·브라우저 열기 변수)만 물려주고 `env_clear`(`ANTHROPIC_API_KEY`·`ANTHROPIC_AUTH_TOKEN`·
-  `CLAUDE_CODE_OAUTH_TOKEN`)는 늘 빈 값이다. 붙여 넣은 코드는 PTY가 에코하므로 드라이버가 `secrets_to_mask`로
-  알리고 서비스가 화면 줄·문구·상세에서 가린다. 원시 출력은 세션 메모리에만 있고 로그에 남기지 않는다.
-- 로그아웃: `logout_command`(기본 `claude auth logout`)를 PTY로 실행한다. 이 PC의 터미널 Claude Code도 로그아웃된다.
+- Descriptor: `capabilities.login = true`, `capabilities.logout = true`, `login_methods = [cli-login]` (text, the at-your-own-risk
+  notice, and write paths are data). The service and endpoints are `agent_console_runtime.BackendLoginService` and `mod-runs`.
+- **When the capability is absent**: server administrator setting `login.enabled = false`, `allow_subscription_auth = false`, or no usable PTY (`[login]`
+  not installed, platform not supported). Without a PTY, it is not a failure; install instructions are added to the status `detail`. With `allow_subscription_auth =
+  false`, `login_refusal()` (`LoginRefusalAware`) gives the reason, so sign-in and sign-out requests are refused with 409 `backend.subscription_auth_disabled`
+  rather than `backend.login_unsupported`.
+- `actions` of `status()`: with the subscription method and no sign-in file (`subscription_login_required`, `subscription_unverified`), the main button `login`; with one
+  (`subscription_ready`), `login` (sign in again) and `logout` in the menu. With the token secret (`oauth_token`) method, there are no buttons.
+  The status check still looks **only at file existence** (`claude auth status` starts a Node process, which is too expensive to run on every poll;
+  it is used only to confirm a successful sign-in).
+- Flow (`ClaudeCliLoginDriver`): `starting` → when the rules `open_url` and `needs_code` match, `waiting_user` (only https addresses on
+  `allowed_url_hosts` are passed on; OSC 8 link targets are checked too) → the pasted code + `submit_keys` (default Enter) → when the rule `success`
+  matches, `on_success_keys` (default Enter) are sent → when the CLI ends (or `exit_wait_s` after the success text), the child process is cleaned up and
+  confirmed with `status_command` (`verifying`) → `succeeded` or `failed`.
+- **The verdict is always `status_command`**: the exit code must be 0, and if `authMethod` was read from the output JSON, it must be in `success_auth_methods`
+  (default `["claude.ai"]`). Without the success text but with status 0, it succeeds; with the success text but status 1,
+  `verify_failed`. If the output is not JSON, only the exit code is checked.
+- Failure reasons (`LoginReasonCodes`, an open vocabulary): `cli_missing`, `pty_unavailable`, `exited` (ended with a nonzero code without the success
+  text), `verify_failed`, `start_failed`. Sign-out: `logout_failed`, `timeout`.
+- Security: run arguments come only from the server administrator settings. The child process environment inherits only the same environment policy as runs + `env_inherit`
+  (`CLAUDE_CONFIG_DIR` and browser opening variables), and `env_clear` (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
+  `CLAUDE_CODE_OAUTH_TOKEN`) are always empty. The PTY echoes the pasted code, so the driver reports it through `secrets_to_mask`
+  and the service masks it in screen lines, text, and details. Raw output lives only in session memory and is never logged.
+- Sign-out: runs `logout_command` (default `claude auth logout`) in a PTY. Claude Code in this PC's terminal is signed out too.
 
-설치자 설정 `login`(`ClaudeSdkLoginOptions`, 전부 데이터 — **화면 글자 규칙의 위치는 `login.rules`**):
+Server administrator setting `login` (`ClaudeSdkLoginOptions`, all data; **the screen text rules live in `login.rules`**):
 
-| 키 | 기본 | 의미 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | 끄면 능력을 선언하지 않는다(버튼 없음) |
-| `command` · `status_command` · `logout_command` | `null` = [`find_claude_cli()`, `auth`, `login`·`status`·`logout`] | 실행 인자(요청으로 바꿀 수 없다). 실행 파일은 `readiness.cli_path` → SDK 번들 → PATH |
-| `success_auth_methods` | `["claude.ai"]` | 성공으로 볼 `authMethod`(비우면 종료 코드만) |
-| `rules` | `open_url: https://\S+/oauth/authorize\S*`, `needs_code: (?i)paste code`, `success: (?i)login successful`, `failure: (?i)(error\|failed)` | 신호마다 정규식 목록. `ac-safe-regex` 검사(위험하면 설정 오류) |
-| `allowed_url_hosts` | `claude.ai`, `claude.com`, `console.anthropic.com`, `platform.claude.com` | `open_url`로 넘길 호스트(https, 하위 도메인 포함) |
-| `on_success_keys` · `submit_keys` | `["enter"]` · `["enter"]` | 성공 문구 뒤·코드 뒤에 보낼 키 |
-| `pty_size` | `{cols: 400, rows: 40}` | 긴 URL이 줄바꿈되지 않게 넓게 |
-| `cwd` | `null` | 작업 폴더 |
-| `env` · `env_inherit` · `env_clear` | `{TERM: xterm-256color}` · `CLAUDE_CONFIG_DIR`·`BROWSER`·`DISPLAY`·`WAYLAND_DISPLAY`·`XDG_*` · 키·토큰 변수 3개 | 하위 프로세스 환경(환경별로 더 물려줄 변수는 `env_inherit`에 더한다) |
-| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | 앱 전용 폴더를 끈 경우 시작 확인 창에 보일 쓰기 경로(처음 풀리는 하나). 앱 전용 폴더가 있으면 그 위치(상대 경로)와 `texts.writes_private` |
-| `status_timeout_s` · `logout_timeout_s` · `exit_wait_s` · `terminate_grace_s` | `20` · `20` · `10` · `2` | 시간(초) |
-| `screen_lines` | `40` | 진행에 싣는 화면 줄 수 |
-| `texts` | `ClaudeSdkLoginTexts` | 버튼·단계·사유·본인 책임 안내 문구 |
+| `enabled` | `true` | When off, the capability is not declared (no button) |
+| `command`, `status_command`, `logout_command` | `null` = [`find_claude_cli()`, `auth`, `login`/`status`/`logout`] | Run arguments (cannot be changed by requests). The executable is `readiness.cli_path` → the SDK bundle → PATH |
+| `success_auth_methods` | `["claude.ai"]` | `authMethod` values that count as success (only the exit code when empty) |
+| `rules` | `open_url: https://\S+/oauth/authorize\S*`, `needs_code: (?i)paste code`, `success: (?i)login successful`, `failure: (?i)(error\|failed)` | A list of regexes per signal. Checked with `ac-safe-regex` (dangerous ones are settings errors) |
+| `allowed_url_hosts` | `claude.ai`, `claude.com`, `console.anthropic.com`, `platform.claude.com` | Hosts to pass on through `open_url` (https, including subdomains) |
+| `on_success_keys`, `submit_keys` | `["enter"]`, `["enter"]` | Keys to send after the success text and after the code |
+| `pty_size` | `{cols: 400, rows: 40}` | Wide, so long URLs do not wrap |
+| `cwd` | `null` | Working folder |
+| `env`, `env_inherit`, `env_clear` | `{TERM: xterm-256color}`, `CLAUDE_CONFIG_DIR`, `BROWSER`, `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_*`, the 3 key and token variables | The child process environment (add variables to pass on in your environment to `env_inherit`) |
+| `writes` | `${CLAUDE_CONFIG_DIR}/.credentials.json`, `~/.claude/.credentials.json` | With the app-only folder turned off, the write path shown in the start confirmation dialog (the first one that resolves). With the app-only folder, its location (relative path) and `texts.writes_private` |
+| `status_timeout_s`, `logout_timeout_s`, `exit_wait_s`, `terminate_grace_s` | `20`, `20`, `10`, `2` | Times (seconds) |
+| `screen_lines` | `40` | Number of screen lines carried in progress |
+| `texts` | `ClaudeSdkLoginTexts` | Text for buttons, steps, reasons, and the at-your-own-risk notice |
 
 ```python
 >>> from agent_console_backend_claude_sdk import ClaudeSdkLoginOptions, allowed_open_url
@@ -305,114 +304,114 @@ pydantic_core.ValidationError: 위험한 정규식(rules.success)
 
 ```
 
-테스트(`tests/…_login_52r82.py`)는 실제 CLI를 부르지 않는다. 스텁 `tests/claude_cli_stub.py`를
-`[sys.executable, stub, 시나리오, auth, login|status|logout]`로 주입하고 임시 `CLAUDE_CONFIG_DIR`에만 쓴다. 시나리오:
-코드 붙여 넣기 성공 / 콜백 성공(코드 없이) / 코드 거부 / URL 없이 멈춤(취소·시간 초과) / 성공 문구 없이 종료 + status 0
-/ 성공 문구 + status 1 / 취소 때 SIGTERM 무시(강제 종료). 하위 프로세스가 남지 않는지(`/proc/<pid>`), 키·토큰 변수가
-빈 값인지, 코드 문자열(과 앞 5자)이 응답·로그에 없는지 확인한다.
+Tests (`tests/…_login_52r82.py`) never call the real CLI. They inject the stub `tests/claude_cli_stub.py` as
+`[sys.executable, stub, scenario, auth, login|status|logout]` and write only to a temporary `CLAUDE_CONFIG_DIR`. Scenarios:
+code paste success / callback success (without a code) / code rejected / stuck without a URL (cancel, timeout) / exit without the success text + status 0
+/ success text + status 1 / SIGTERM ignored on cancel (forced kill). They check that no child process remains (`/proc/<pid>`), that the key and token variables
+are empty, and that the code string (and its first 5 characters) appears in no response or log.
 
-#### 구독 로그인 수동 스모크(사람이 실제로 로그인해 보는 순서)
+#### Manual subscription sign-in smoke test (the steps for a person to actually sign in)
 
-자동 테스트는 실제 로그인을 하지 않는다. 아래는 사람이 자기 계정으로 확인하는 순서다. 로그인은 앱 workspace의 앱 전용
-폴더(`<앱 workspace>/.state/claude`)에만 쓰이고 `~/.claude`는 바뀌지 않는다.
+Automated tests never really sign in. The steps below are for a person to check with their own account. The sign-in is written only to the app-only
+folder in the app workspace (`<app workspace>/.state/claude`), and `~/.claude` does not change.
 
 ```bash
-uv run agent-console serve --open       # 127.0.0.1:8765, 작업 폴더 = 설정 파일 폴더
+uv run agent-console serve --open       # 127.0.0.1:8765, project folder = the settings file folder
 ```
 
-1. 처음에는 설정 › 실행 백엔드의 Claude Agent SDK 카드가 "로그인 필요"와 자격 위치(`.state/claude`)를 보이고
-   **[구독으로 로그인]**이 보인다 → 누르면 시작 확인 창(본인 책임 안내, 쓰기 경로 =
-   `.state/claude/.credentials.json`)이 뜬다. 이때 `ps -ef | grep "auth login"`에 하위 프로세스가 없다.
-2. [로그인 시작] → 브라우저 창이 열리거나 [로그인 페이지 열기]로 연다 → 브라우저에서 로그인한다. 브라우저의
-   로그인 완료 신호가 서버에 닿지 않으면 브라우저에 보이는 코드를 대화상자의 코드 칸에 붙여 넣고 [확인]을 누른다.
-3. 대화상자가 "로그인됨 — Claude 구독"을 보이면 다른 터미널에서
+1. At first, the Claude Agent SDK card in the execution backend settings shows sign-in required and the credentials location (`.state/claude`),
+   with the **subscription sign-in** button → pressing it opens the start confirmation dialog (the at-your-own-risk notice, write path =
+   `.state/claude/.credentials.json`). At this point `ps -ef | grep "auth login"` shows no child process.
+2. Start the sign-in → a browser window opens, or open it with the open sign-in page button → sign in in the browser. If the browser's
+   sign-in completion signal does not reach the server, paste the code shown in the browser into the dialog's code field and confirm.
+3. When the dialog shows signed in with the Claude subscription, in another terminal run
    `CLAUDE_CONFIG_DIR=<앱 workspace>/.state/claude claude auth status; echo $?`
-   → JSON의 `authMethod`가 `claude.ai`이고 종료 코드 0이다.
-4. 대화상자를 [닫기]로 닫고 카드의 [연결 테스트]를 누르면 통과한다(짧은 요청 한 번, 구독 사용량이 조금 든다).
-5. 다시 [구독으로 로그인] → 진행 중에 [취소]를 누르면 "취소했습니다"이고 `ps`에 `auth login`이 남지 않는다. 시간
-   초과는 설정 `modules.options.mod-runs.backend_login.timeout_s: 30`으로 줄여 두고 30초 기다려 확인한다(프로세스가
-   남지 않는다).
-6. 카드의 `…` › 로그아웃(연결 해제) → 확인 → 카드가 다시 "로그인 필요"(`subscription_login_required`)
-   이고 `claude auth status` 종료 코드가 1이다.
+   → the JSON `authMethod` is `claude.ai` and the exit code is 0.
+4. Close the dialog and press [Test connection] on the card; it passes (one short request, which uses a little subscription usage).
+5. Start the subscription sign-in again → press [Cancel] while it is in progress; it reports that it was canceled, and `ps` shows no leftover `auth login`. For the
+   timeout, shorten it with the setting `modules.options.mod-runs.backend_login.timeout_s: 30` and wait 30 seconds to check (no process
+   remains).
+6. Card `…` › sign out (disconnect) → confirm → the card shows sign-in required again (`subscription_login_required`)
+   and the exit code of `claude auth status` is 1.
 
-화면 문구가 맞지 않으면(CLI 버전 변화) 대화상자의 "CLI 화면 보기"로 화면을 보고 `login.rules`를 고친다. 판정은
-`claude auth status`라 규칙이 틀려도 거짓 성공은 없다.
+If the screen text does not match (a CLI version change), look at the screen with the dialog's CLI screen view and fix `login.rules`. The verdict is
+`claude auth status`, so even wrong rules never give a false success.
 
-## 서브에이전트 (`AgentRequest.subagents`, 위임 방식 `sdk-subagents`)
+## Subagents (`AgentRequest.subagents`, delegation strategy `sdk-subagents`)
 
-`capabilities.subagents = true`. 위임 방식(nodes-core `sdk-subagents`)이 채운 `SubagentSpec` 목록을
-`ClaudeAgentOptions.agents={이름: AgentDefinition}`로 바꾸고 위임 도구(`delegation_tool`, 기본 `Agent`)를
-`tools`·`allowed_tools`에 더한다(설정 `disallowed_tools`에 있으면 더하지 않는다). 그 밖에 `subagent_env`
-(기본: 깊이 1 `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`, 전경 실행 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`,
-기본 서브에이전트 끄기 `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS=1`)를 넣는다.
+`capabilities.subagents = true`. The list of `SubagentSpec` filled in by the delegation strategy (nodes-core `sdk-subagents`) becomes
+`ClaudeAgentOptions.agents={name: AgentDefinition}`, and the delegation tool (`delegation_tool`, default `Agent`) is added to
+`tools` and `allowed_tools` (not added if it is in the setting `disallowed_tools`). It also sets `subagent_env`
+(default: depth 1 `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`, foreground runs `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`,
+built-in subagents off `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS=1`).
 
 | SubagentSpec | AgentDefinition |
 | --- | --- |
-| `name`(대상 노드 id) | `agents` 키 |
+| `name` (target node id) | `agents` key |
 | `description` / `model` | `description` / `model` |
-| `prompt` + 묶음 instructions(+ 파일 안내) | `prompt` |
-| `tools` + 묶음 tools(금지 우선, 괄호 규칙은 이름만) | `tools`(둘 다 없으면 None = SDK 기본) |
-| `disallowed_tools` + 묶음 금지 | `disallowedTools` |
-| 묶음 mcp_servers | `mcpServers`(인라인) |
-| `options` | 그 밖의 `AgentDefinition` 필드(예: `maxTurns`) |
+| `prompt` + bundle instructions (+ file notes) | `prompt` |
+| `tools` + bundle tools (deny wins; only names for parenthesized rules) | `tools` (None = the SDK default when both are absent) |
+| `disallowed_tools` + bundle denies | `disallowedTools` |
+| bundle mcp_servers | `mcpServers` (inline) |
+| `options` | Other `AgentDefinition` fields (for example `maxTurns`) |
 
-대상별로 나눌 수 없는 묶음 칸(files 폴더, tools.commands)은 위임자 세션에 합치고 `log.warning`을 낸다.
+Bundle slots that cannot be split per target (the files folder, tools.commands) are merged into the delegator session with a `log.warning`.
 
-**대상 도구 규칙과 위임자 사전 승인**: SDK 세션은 하나라 `allowed_tools`(사전 승인)가 위임자에게도 적용된다.
-그래서 대상의 도구 규칙은 기본으로 위임자 `allowed_tools`에 넣지 않고(`subagent_tools_preapprove=false`),
-위임자 사전 승인에 없는 대상 규칙이 있으면 `log.warning{details.not_preapproved}`을 낸다(묻지 않는 모드에서 대상
-호출이 거부될 수 있음). `subagent_tools_preapprove=true`로 켜면 합치고, 넓힌 규칙을 `log.warning{details.added}`로
-알린다. 어느 쪽이든 위임자의 가용 도구(`tools`)는 넓히지 않는다.
-비밀 가림: 위임 도구 결과(알림 `text`)와 모든 미리보기(`task_preview`·`result_preview`)는 알려진 비밀 값·형식을
-가린 뒤 낸다.
+**Target tool rules and delegator pre-approval**: there is one SDK session, so `allowed_tools` (pre-approval) applies to the delegator too.
+So by default the target's tool rules are not put into the delegator's `allowed_tools` (`subagent_tools_preapprove=false`),
+and if there are target rules missing from the delegator's pre-approval, `log.warning{details.not_preapproved}` is emitted (in modes that do not ask, target
+calls can be refused). With `subagent_tools_preapprove=true`, they are merged, and the widened rules are reported with `log.warning{details.added}`.
+Either way, the delegator's available tools (`tools`) are not widened.
+Secret masking: delegation tool results (the notification `text`) and every preview (`task_preview`, `result_preview`) are emitted after known secret values and shapes
+are masked.
 
-**이벤트 귀속**: 위임 도구 호출 입력의 `subagent_type`이 등록한 이름이면, `parent_tool_use_id`가 그 호출 id인
-메시지에서 나온 이벤트를 `actor=SubagentSpec.actor`, `node_path=sink.child_path(name)`으로 낸다
-(`BackendEventSink.child_path`, `NodeContext`가 구현). 순서는 fake 백엔드와 같다: 위임자 `agent.tool_call`
-→ 대상 `agent.subagent_started{subagent_id, name, tool_use_id, task_type, task_preview}`(TaskStarted) →
-대상 tool_call·tool_result·message → 대상 `agent.subagent_stopped{status, usage{total_tokens}, tool_uses,
+**Event attribution**: when the `subagent_type` in a delegation tool call's input is a registered name, events from messages whose `parent_tool_use_id` is that call id
+are emitted with `actor=SubagentSpec.actor` and `node_path=sink.child_path(name)`
+(`BackendEventSink.child_path`, which `NodeContext` implements). The order is the same as the fake backend: the delegator's `agent.tool_call`
+→ the target's `agent.subagent_started{subagent_id, name, tool_use_id, task_type, task_preview}` (TaskStarted) →
+the target's tool_call, tool_result, and message → the target's `agent.subagent_stopped{status, usage{total_tokens}, tool_uses,
 duration_ms, result_preview}`(TaskNotification, 끝난 TaskUpdated) → 위임자 `agent.tool_result`.
-Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 시작·종료 쌍을 만든다. 등록하지 않은 이름의 위임은
-위임자에게 귀속한다. 서브에이전트 메시지의 사용량은 위임자 `agent.usage`에 더하지 않는다.
+Delegations that never got Task events get a start and stop pair built from the delegation tool call id at the end of the run. Delegations with unregistered names are
+attributed to the delegator. Usage from subagent messages is not added to the delegator's `agent.usage`.
 
-**결과 알림**: sink가 `SubagentResultListener`(`agent_console_runtime`에서 가져온다;
-`on_subagent_result(name, *, text, status, actor, tool_use_id)`)면
-위임 도구 결과마다(끝의 `agentId:` 줄 제거) 알린다. 위임 방식이 이것으로 대상 노드의 답변(`ctx.emit_replies`)을
-낸다. 백엔드는 노드 포트 이름을 모르므로 답변을 직접 내지 않는다.
+**Result notification**: when the sink is a `SubagentResultListener` (imported from `agent_console_runtime`;
+`on_subagent_result(name, *, text, status, actor, tool_use_id)`),
+it is notified for each delegation tool result (with the trailing `agentId:` line removed). The delegation strategy uses this to emit the target node's replies (`ctx.emit_replies`).
+The backend does not know node port names, so it never emits replies itself.
 
-## 실행 묶음 (`AgentRequest.bundle`)
+## Run bundle (`AgentRequest.bundle`)
 
 `capabilities.resource_slots = ["instructions", "files", "mcp_servers", "tools", "skills", "rules"]`(`RESOURCE_SLOTS`)
-+ 설치자 `allow_command_hooks: true`일 때만 `hooks`. 꺼져 있으면 `slot_notes.hooks`(`HOOKS_DISABLED_NOTE`)로 이유를 알리고,
-검증·묶음 미리보기에 `resource.slot_unsupported`(details.reason)가 나온다. `subagent_slots` = instructions·mcp_servers·tools·skills·rules.
-칸 값 모양은 `packages/py/features/ac-resources-core/README.md`. 그 밖의 칸에 값이 있으면 `log.warning`만 낸다.
++ `hooks` only when the server administrator sets `allow_command_hooks: true`. When it is off, the reason is given in `slot_notes.hooks` (`HOOKS_DISABLED_NOTE`),
+and validation and bundle previews show `resource.slot_unsupported` (details.reason). `subagent_slots` = instructions, mcp_servers, tools, skills, rules.
+The slot value shapes are in `packages/py/features/ac-resources-core/README.md`. Values in other slots only produce a `log.warning`.
 
-| 칸 | SDK |
+| Slot | SDK |
 | --- | --- |
-| `instructions` | `Agent.system_prompt` + 지침들을 이어 붙인 `system_prompt`(`system_prompt_mode=claude_code_append`면 preset + append) |
-| `files` | 노드가 쓴 파일 경로(`str` 또는 `{path, root?}`) → 폴더를 `add_dirs`와 실행 범위 허용 디렉터리에 더하고, 지침 끝에 파일 목록 안내(`files_notice`). 경로 없는 항목은 전달하지 않고 경고 |
-| `mcp_servers` | `name` → `McpServerConfig`(설정 `mcp_servers` 위에 덮어씀, 같은 이름은 뒤가 이김). `env`·`headers`의 `secret://`는 주입한 `SecretResolver`로 풀고 raw·payload에서 가린다 |
-| `tools` | 허용 합집합(`tools`·`allowed_tools`에 더함), 금지가 우선(`disallowed_tools`), `commands`는 실행 범위 명령 허용에 합집합(넓히면 `log.warning`) |
-| `skills` | 노드가 쓴 트리 `{name, root, tree_root}`(`root = tree_root/skills/name`) → `plugins=[{type: local, path: tree_root}]`(플러그인 이름 = 폴더 이름 = 노드 id) + `skills=[skill_name_template]`(기본 `{plugin}:{skill}`) + `skill_tool`(기본 `Skill`)을 `tools`에. 서브에이전트는 `AgentDefinition.skills`, 플러그인 폴더는 세션에 함께 올리고 위임자 `skills`는 위임자 것만(없으면 `[]`) |
-| `rules` | `rule_delivery=instructions`(기본): 항목 `instruction`(경로 머리말 + 본문)을 지침에. `files`: 항목 `root`(안에 `.claude/rules/<name>.md`)를 `add_dirs`에 + `rule_files_env`(기본 `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`) |
-| `hooks` | 설치자 `allow_command_hooks`가 켜졌을 때만. `hook_delivery=callback`(기본): 항목마다 `HookMatcher(matcher, [콜백], timeout)`를 `event` 아래 건다. 콜백은 **`ToolGuard.check_command`(limits.commands) 통과 후에만** 셸 없이 하위 프로세스(`hook_runner`, 기본 `subprocess_runner`)로 실행: stdin = hook 입력 JSON, stdout JSON = SDK에 그대로 돌려줌, 종료 코드 2 = `{"decision": "block", "reason": stderr}`, 그 밖 0 아님 = 막지 않는 오류. 환경 = 환경 정책이 허용하는 서버 변수 + `CLAUDE_PROJECT_DIR`(인증 키 등 명시 env는 넘기지 않음). 이벤트 `hook.started` → `hook.finished{event, matcher, command_preview(가림·200자), exit_code, duration_ms, decision, error?}`. `settings`: 실행 범위를 통과한 항목만 `settings` 인라인 JSON(`{"hooks": {event: [{matcher, hooks: [{type: command, command, timeout}]}]}}`)으로 — CLI가 직접 실행(이벤트는 관측 `hook.*`로만). 서브에이전트 hook은 세션에 합치고 경고 |
+| `instructions` | `Agent.system_prompt` + the instructions concatenated into `system_prompt` (preset + append when `system_prompt_mode=claude_code_append`) |
+| `files` | File paths the node wrote (`str` or `{path, root?}`) → the folders are added to `add_dirs` and to the allowed directories of the run scope, and a file list notice (`files_notice`) goes at the end of the instructions. Items without a path are not passed on and produce a warning |
+| `mcp_servers` | `name` → `McpServerConfig` (overlaid on the setting `mcp_servers`; for the same name the later one wins). `secret://` in `env` and `headers` is resolved with the injected `SecretResolver` and masked in raw and payload |
+| `tools` | Allows are unioned (added to `tools` and `allowed_tools`), denies win (`disallowed_tools`), and `commands` are unioned into the run scope's allowed commands (`log.warning` when widened) |
+| `skills` | The tree the node wrote `{name, root, tree_root}` (`root = tree_root/skills/name`) → `plugins=[{type: local, path: tree_root}]` (plugin name = folder name = node id) + `skills=[skill_name_template]` (default `{plugin}:{skill}`) + `skill_tool` (default `Skill`) in `tools`. Subagents use `AgentDefinition.skills`; plugin folders are loaded into the session together, and the delegator's `skills` contain only its own (`[]` if none) |
+| `rules` | `rule_delivery=instructions` (default): the item's `instruction` (path header + body) goes into the instructions. `files`: the item's `root` (containing `.claude/rules/<name>.md`) goes into `add_dirs` + `rule_files_env` (default `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`) |
+| `hooks` | Only when the server administrator turns on `allow_command_hooks`. `hook_delivery=callback` (default): for each item, `HookMatcher(matcher, [callback], timeout)` is attached under `event`. The callback runs as a child process without a shell (`hook_runner`, default `subprocess_runner`) **only after passing `ToolGuard.check_command` (limits.commands)**: stdin = the hook input JSON, stdout JSON = returned to the SDK as is, exit code 2 = `{"decision": "block", "reason": stderr}`, other nonzero = a non-blocking error. Environment = server variables the environment policy allows + `CLAUDE_PROJECT_DIR` (explicit env such as authentication keys is not passed). Events `hook.started` → `hook.finished{event, matcher, command_preview (masked, 200 characters), exit_code, duration_ms, decision, error?}`. `settings`: only items that pass the run scope go into the `settings` inline JSON (`{"hooks": {event: [{matcher, hooks: [{type: command, command, timeout}]}]}}`), and the CLI runs them directly (events only through the `hook.*` observations). Subagent hooks are merged into the session with a warning |
 
-사용자 프로젝트(cwd)·`~/.claude`에는 쓰지 않는다. skill·규칙 파일은 agent 노드가 실행 폴더(`<workspace>/.state/runs/<run>/<node>/_bundle/<node>/`)에
-쓴 것만 가리킨다. `setting_sources` 기본값(`["project"]`)은 skill 전달 때도 바꾸지 않는다.
+Nothing is written to the user's project (cwd) or `~/.claude`. Skill and rule files point only to what the agent node wrote into the run folder (`<workspace>/.state/runs/<run>/<node>/_bundle/<node>/`).
+The default of `setting_sources` (`["project"]`) is not changed even when delivering skills.
 
-### hook probe 감싸기
+### Hook probe wrapping
 
-유효 관측 설정 `observe.hook_probe`가 `true`이면(기본 꺼짐) **이 백엔드가 전달하는** 명령형 hook(`hooks` 칸)을
-`agent-console-hook-probe`로 감싸 실행한다. probe는 원래 명령을 그대로 돌리고(입출력·종료 코드 동일) 기록
-`hook-probe/1`을 `AgentRequest.run_folder/<hook_probe_folder>/<세션>.jsonl`에 남긴다(로그 출처 `hook-probe-jsonl`이 읽음).
+When the effective observation setting `observe.hook_probe` is `true` (off by default), command hooks (the `hooks` slot) **that this backend delivers** are
+run wrapped in `agent-console-hook-probe`. The probe runs the original command as is (same input, output, and exit code) and keeps the record
+`hook-probe/1` in `AgentRequest.run_folder/<hook_probe_folder>/<session>.jsonl` (read by the log source `hook-probe-jsonl`).
 
-- callback 경로: `wrap_command(shlex 인자, out=…, probe=hook_probe_command, matcher, context=run_context)`(실행 형식).
-  settings 경로: `wrap_command_line(명령 문자열, …)`(셸 형식 유지). 실행 범위 검사(`limits.commands`)는 **원래 명령**으로 한다.
-- 맥락 `--context`는 `AgentRequest.run_context`(`run_id`·`node_path`)다. `hook.started`·`hook.finished` payload에 `hook_probe: true`.
-- 감싸지 않는 경우(경고 `log.warning`): `run_folder`가 없음, `agent-console-hook-probe` 미설치. 꺼져 있으면 명령은 그대로다.
-- 사용자 설정 파일(`~/.claude`)·`.claude` 내보내기(`ac-exports`)는 건드리지 않는다(원래 명령).
-- 묶음 미리보기: 선택 훅 `ClaudeSdkBackend.preview_notes(effective, bundle)`(ac-teams `PreviewNotes`)가 켜져 있으면
-  info `observe.hook_probe_wrapped`("hook 감싸기 켜짐", `details.hooks` = 감쌀 hook 수)를 낸다.
+- Callback path: `wrap_command(shlex arguments, out=…, probe=hook_probe_command, matcher, context=run_context)` (exec form).
+  Settings path: `wrap_command_line(command string, …)` (keeps the shell form). The run scope check (`limits.commands`) uses **the original command**.
+- The `--context` is `AgentRequest.run_context` (`run_id`, `node_path`). `hook_probe: true` in the `hook.started` and `hook.finished` payloads.
+- Not wrapped (with a `log.warning`) when: there is no `run_folder`, or `agent-console-hook-probe` is not installed. When off, commands are unchanged.
+- User settings files (`~/.claude`) and `.claude` exports (`ac-exports`) are not touched (original commands).
+- Bundle preview: when on, the optional hook `ClaudeSdkBackend.preview_notes(effective, bundle)` (ac-teams `PreviewNotes`) emits
+  info `observe.hook_probe_wrapped` (hook wrapping on, `details.hooks` = the number of hooks to wrap).
 
 ```python
 >>> from agent_console_backend_claude_sdk import plan_hook_probe
@@ -427,112 +426,112 @@ Task 이벤트를 못 받은 위임은 실행 끝에 위임 도구 호출 id로 
 
 ```
 
-## 실행 중 상호작용: 되묻기·도구 승인
+## Interactions while running: questions and tool approvals
 
-`capabilities.interactions = ["question", "tool_permission"]`. 종류 이름은 연결표 데이터라 설치자 설정
-`interaction_kinds{question, tool_permission}`으로 바꿀 수 있다(엔진은 이름을 모른다).
+`capabilities.interactions = ["question", "tool_permission"]`. The kind names are mapping data, so they can be changed with the server administrator setting
+`interaction_kinds{question, tool_permission}` (the engine does not know the names).
 
-- **열 수 있는 조건**: sink가 `InteractivePort`(`request_input`, `NodeContext`가 구현)이고 `AgentRequest.interactions`
-  (grant)에 그 종류가 있을 때만 연다. 그 밖의 묻는 요청은 `unmatched_permission`(기본 deny)으로 처리한다.
-- **콜백 등록**: 권한 모드가 bypass가 아니고, `prompting_permission_modes`(기본 `default`·`acceptEdits`·`plan`)에
-  들거나 grant가 있을 때 `can_use_tool`을 건다.
-- **되묻기 도구**(`question_tool`, 기본 `AskUserQuestion`): 질문 grant가 있으면 `tools`에 더한다(사전 승인은 하지 않음).
-  없으면 `disallowed_tools`에 넣는다.
-- **순서**: 실행 범위(ToolGuard, 훅과 콜백 양쪽) → "이번 실행 동안 허용" 메모리 → 상호작용 → `unmatched_permission`.
-  사용자가 허용해도 실행 범위는 우회되지 않는다.
+- **Conditions for opening**: opened only when the sink is an `InteractivePort` (`request_input`, which `NodeContext` implements) and `AgentRequest.interactions`
+  (the grant) includes that kind. Other asking requests are handled with `unmatched_permission` (default deny).
+- **Callback registration**: `can_use_tool` is attached when the permission mode is not bypass and either it is in `prompting_permission_modes` (default `default`, `acceptEdits`, `plan`)
+  or there is a grant.
+- **Question tool** (`question_tool`, default `AskUserQuestion`): added to `tools` when there is a question grant (not pre-approved).
+  Otherwise it goes into `disallowed_tools`.
+- **Order**: run scope (ToolGuard, in both the hook and the callback) → the "allow for this run" memory → interaction → `unmatched_permission`.
+  Even if the user allows it, the run scope is not bypassed.
 
-| 콜백 | 상호작용 payload | 응답 → SDK |
+| Callback | Interaction payload | Response → SDK |
 | --- | --- | --- |
-| `AskUserQuestion` | `question`: `{questions[{question, header?, options[{label, description?}], multi_select}]}` | `{answers, response?}` → `PermissionResultAllow(updated_input={…입력, answers, response?})`. 답이 없으면 거부 |
-| 그 밖의 도구 | `tool_permission`: `{tool_name, input_preview, title?, display_name?, description?, blocked_path?, decision_reason?, tool_use_id?, agent_id?}`(컨텍스트에 있는 필드만) | `allow`(+`updated_input`) → Allow, `allow_for_run` → Allow + 이번 실행 메모리(도구 이름 + 정렬한 입력), `deny`(+`message`) → Deny |
+| `AskUserQuestion` | `question`: `{questions[{question, header?, options[{label, description?}], multi_select}]}` | `{answers, response?}` → `PermissionResultAllow(updated_input={…input, answers, response?})`. Denied when there is no answer |
+| Other tools | `tool_permission`: `{tool_name, input_preview, title?, display_name?, description?, blocked_path?, decision_reason?, tool_use_id?, agent_id?}` (only fields present in the context) | `allow` (+`updated_input`) → Allow, `allow_for_run` → Allow + this run's memory (tool name + sorted input), `deny` (+`message`) → Deny |
 
-- `input_preview`는 가린(scrub) 입력의 문자열 미리보기다. 원본 입력은 SDK로만 돌아간다.
-- 요청의 `title`·`message`도 가린 뒤 연다.
-- 허용 응답의 `updated_input`(질문은 answers를 합친 입력)도 실행 범위(ToolGuard)로 다시 검사한다. 벗어나면 입력 값 없는
-  문구로 거부한다. `allow_for_run` 메모리 키는 실제로 허용한 최종 입력이다.
-- Run 취소로 닫히면(`reason=cancelled`) `PermissionResultDeny(interrupt=True)`. 만료면 엔진이 준 `expire_response`를
-  응답으로 해석하고, 해석할 수 없으면 거부한다.
-- `updated_permissions`는 쓰지 않는다(사용자 프로젝트 `.claude/settings.local.json`에 쓰지 않기 위해).
-- **서브에이전트 귀속**: `ToolPermissionContext.agent_id`를 TaskStarted의 task_id(또는 위임 도구 호출 id)와 맞춰
-  `actor`·`node_path=sink.child_path(대상)`로 연다. 못 맞추면 위임자 요청이다. 서브에이전트의 되묻기는 열지 않는다
-  (SDK에서 쓸 수 없음).
-- **설정 검증 훅** `validate_settings(effective, grant)`: 묻는 모드인데 grant에 도구 승인 종류가 없으면
-  `interaction.no_path` 경고(`details.kinds`에 필요한 종류). 묻는 모드는 `risky_option_warnings` 대상이 아니다
-  (bypass 경고는 유지).
-- 테스트 도우미: `testing.InteractiveSink`(응답 함수), `testing.PermissionCall`(가짜 클라이언트에서 콜백 호출).
+- `input_preview` is a string preview of the scrubbed input. The original input goes back only to the SDK.
+- The request's `title` and `message` are masked before opening too.
+- The `updated_input` of an allow response (for questions, the input merged with answers) is checked against the run scope (ToolGuard) again. If it goes outside, it is denied with
+  a message that contains no input values. The `allow_for_run` memory key is the final input that was actually allowed.
+- When closed by Run cancellation (`reason=cancelled`), `PermissionResultDeny(interrupt=True)`. When expired, the `expire_response` the engine gave is
+  interpreted as the response, and denied if it cannot be interpreted.
+- `updated_permissions` is not used (so nothing is written to the user project's `.claude/settings.local.json`).
+- **Subagent attribution**: `ToolPermissionContext.agent_id` is matched to the task_id of TaskStarted (or the delegation tool call id) and the request is opened
+  with `actor` and `node_path=sink.child_path(target)`. If it cannot be matched, it is the delegator's request. Subagent questions are not opened
+  (not available in the SDK).
+- **Settings validation hook** `validate_settings(effective, grant)`: in an asking mode without the tool approval kind in the grant,
+  an `interaction.no_path` warning (`details.kinds` has the needed kinds). Asking modes are not subject to `risky_option_warnings`
+  (the bypass warning stays).
+- Test helpers: `testing.InteractiveSink` (a response function), `testing.PermissionCall` (callback calls from the fake client).
 
-## 사용량 한도
+## Usage limits
 
-`RateLimitEvent` → `usage.rate_limit{window(rate_limit_type, 없으면 "unspecified"), status, utilization, resets_at,
-overage_status}`. 값을 지어내지 않는다(없으면 null).
+`RateLimitEvent` → `usage.rate_limit{window (rate_limit_type, or "unspecified"), status, utilization, resets_at,
+overage_status}`. Values are never made up (null when absent).
 
-모델 호출 소요: `ResultMessage.duration_api_ms`(실행 전체의 모델 API 대기 합)를 마지막
-`agent.usage`의 `duration_ms`로 싣는다. 값이 없거나 음수면 null이다.
+Model call duration: `ResultMessage.duration_api_ms` (the total model API wait across the whole run) is carried as the `duration_ms` of the last
+`agent.usage`. Null when the value is missing or negative.
 
-## 설치자 설정 (`ConfigurableBackend` 훅)
+## Server administrator settings (`ConfigurableBackend` hook)
 
-`ClaudeSdkBackend.from_options(options, *, secrets, environ, host=None)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
-`backends.claude-agent-sdk`를 이 훅에 넘겨 entry point로(인자 없이) 만든 인스턴스를 교체한다. 키의 의미는 이 패키지만 안다.
+`ClaudeSdkBackend.from_options(options, *, secrets, environ, host=None)` is the ac-runtime `ConfigurableBackend` implementation. The server passes the setting
+`backends.claude-agent-sdk` to this hook to replace the instance created from the entry point (without arguments). Only this package knows what the keys mean.
 
-| 키 | 기본 | 의미 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `models` | `[]` | `list_models()` 목록(`ModelInfo`). 모델 id는 코드에 없다 |
-| `env_policy` | `null`(= 기본 허용 목록) | 하위 프로세스 환경 상속(`EnvPolicy{inherit, allow}`) |
-| `max_raw_chars` | `DEFAULT_MAX_RAW_CHARS` | 이벤트 raw 하나의 최대 JSON 길이 |
-| `cancel_grace` | `5.0` | 취소 후 interrupt 대기(초) |
-| `interaction_kinds` | `{question: question, tool_permission: tool_permission}` | 여는 상호작용 종류 id(`capabilities.interactions`) |
-| `allow_command_hooks` | `false` | 명령형 hook(`hooks` 칸) 실행 허용. 꺼져 있으면 `hooks` 칸을 받지 않는다(경고에 이유) |
-| `allow_subscription_auth` | `true` | 본인 구독 로그인 자격(`auth.mode=subscription`) 허용(기본 구독, 본인 책임 — API 키도 선택 가능). `false`로 끄면 검증 error `backend.subscription_auth_disabled`·실행 거부, 켜져 있으면 강화된 경고 |
-| `hook_probe_command` | `null`(= `[현재 파이썬, -m, agent_console_hook_probe]`) | `observe.hook_probe`일 때 hook 명령을 감쌀 probe 실행 인자(아래 "hook probe 감싸기") |
-| `hook_probe_folder` | `hook-probe` | 노드 실행 폴더 아래 기록 폴더 이름(경로 구분자 없는 이름) |
-| `auth_dir` | `ClaudeSdkAuthDirOptions()`(`.state/claude`, 앱 workspace 기준) | 앱 전용 자격 폴더(`CLAUDE_CONFIG_DIR`, 위 "앱 전용 자격 폴더") |
-| `login` | `ClaudeSdkLoginOptions()`(켜짐) | 앱 화면 구독 로그인·로그아웃(위 "구독 로그인") |
-| `readiness` | `ClaudeSdkReadinessOptions()` | 상태 점검·연결 테스트가 볼 인증 방식(`auth`), `cli_path`, `subscription_files`, `probe_prompt`·`probe_model`·`probe_extra_args`, 문구 `texts`(위 "상태 점검과 연결 테스트") |
+| `models` | `[]` | The `list_models()` list (`ModelInfo`). Model ids are not in the code |
+| `env_policy` | `null` (= the default allow list) | Child process environment inheritance (`EnvPolicy{inherit, allow}`) |
+| `max_raw_chars` | `DEFAULT_MAX_RAW_CHARS` | The maximum JSON length of one event raw |
+| `cancel_grace` | `5.0` | Interrupt wait after cancellation (seconds) |
+| `interaction_kinds` | `{question: question, tool_permission: tool_permission}` | The interaction kind ids it opens (`capabilities.interactions`) |
+| `allow_command_hooks` | `false` | Allows running command hooks (the `hooks` slot). When off, the `hooks` slot is not accepted (the reason is in the warning) |
+| `allow_subscription_auth` | `true` | Allows your own subscription sign-in credentials (`auth.mode=subscription`) (subscription by default, at your own risk; an API key is also available). Turning it off with `false` gives the validation error `backend.subscription_auth_disabled` and refuses runs; when on, the strengthened warning |
+| `hook_probe_command` | `null` (= `[current Python, -m, agent_console_hook_probe]`) | The probe run arguments that wrap hook commands when `observe.hook_probe` is on (see "Hook probe wrapping" above) |
+| `hook_probe_folder` | `hook-probe` | The record folder name under the node run folder (a name without path separators) |
+| `auth_dir` | `ClaudeSdkAuthDirOptions()` (`.state/claude`, relative to the app workspace) | The app-only credentials folder (`CLAUDE_CONFIG_DIR`, see "App-only credentials folder" above) |
+| `login` | `ClaudeSdkLoginOptions()` (on) | Subscription sign-in and sign-out from the app screen (see "Subscription sign-in" above) |
+| `readiness` | `ClaudeSdkReadinessOptions()` | The authentication method (`auth`) the status check and connection test look at, `cli_path`, `subscription_files`, `probe_prompt`, `probe_model`, `probe_extra_args`, the text `texts` (see "Status check and connection test" above) |
 
-`secrets`는 남은 `secret://` 해석과 raw 가리기에, `environ`은 환경 정책을 적용할 부모 환경으로 쓴다.
-모르는 키·잘못된 값은 `ValueError`(위치와 사유만). 형식 모델: `ClaudeSdkInstallOptions`.
+`secrets` is used to resolve remaining `secret://` references and to mask raw data, and `environ` is the parent environment the environment policy applies to.
+Unknown keys and invalid values raise `ValueError` (location and reason only). Type model: `ClaudeSdkInstallOptions`.
 
-## 설정 (`Agent.backend_options`, 형식 `ClaudeSdkBackendOptions`)
+## Settings (`Agent.backend_options`, type `ClaudeSdkBackendOptions`)
 
-기본값은 안전한 쪽: `permission_mode="dontAsk"`, `setting_sources=["project"]`(사용자 `~/.claude` 설정 격리,
-`[]`면 파일 설정 전혀 없음), `strict_mcp_config=true`, `mcp_servers={}`, 도구를 정하지 않으면 내장 도구 없음.
-그 밖에 `tools`(목록 또는 `"claude_code"`), `allowed_tools`(사전 승인 — **가용성 제한이 아님**), `disallowed_tools`,
+The defaults are on the safe side: `permission_mode="dontAsk"`, `setting_sources=["project"]` (isolates the user's `~/.claude` settings;
+`[]` means no file settings at all), `strict_mcp_config=true`, `mcp_servers={}`, and no built-in tools unless tools are set.
+Also: `tools` (a list or `"claude_code"`), `allowed_tools` (pre-approval, **not an availability limit**), `disallowed_tools`,
 `network_tools`, `command_input_keys`, `path_input_keys`, `unmatched_permission`, `system_prompt_mode`,
 `include_partial_messages`, `max_turns`, `max_budget_usd`, `fallback_model`, `effort`, `add_dirs`, `env`, `cli_path`,
-`sandbox`, `auth`, `forward_subagent_text`(기본 true), `delegation_tool`, `delegation_tool_names`, `subagent_env`,
+`sandbox`, `auth`, `forward_subagent_text` (default true), `delegation_tool`, `delegation_tool_names`, `subagent_env`,
 `files_notice`, `prompting_permission_modes`, `question_tool`, `skill_tool`, `skill_name_template`, `rule_delivery`
-(`instructions`|`files`), `rule_files_env`, `hook_delivery`(`callback`|`settings`), `hook_timeout_seconds`(기본 60), `sdk_options`(그 밖의 `ClaudeAgentOptions` 필드 이름 그대로, `cwd`·`hooks`·`can_use_tool`·`resume`·
-`agents` 제외).
-모델 id는 코드에 없다 — `Agent.model`. `list_models()`는 생성 인자 `models`(설정 데이터, 기본 빈 목록).
+(`instructions`|`files`), `rule_files_env`, `hook_delivery` (`callback`|`settings`), `hook_timeout_seconds` (default 60), `sdk_options` (other `ClaudeAgentOptions` field names as is, except `cwd`, `hooks`, `can_use_tool`, `resume`,
+and `agents`).
+Model ids are not in the code; they come from `Agent.model`. `list_models()` returns the constructor argument `models` (settings data, empty by default).
 
-관측(`AgentRequest.observe` = 유효 `ObserveSettings`)은 아래 "관측 수집기"를 본다.
+For observation (`AgentRequest.observe` = the effective `ObserveSettings`), see "Observation collectors" below.
 
-## 관측 수집기 (`agent_console_backend_claude_sdk.collectors`)
+## Observation collectors (`agent_console_backend_claude_sdk.collectors`)
 
-관측(hook·MCP 등)은 백엔드가 아니라 **수집기**가 한다. 백엔드는 수집기 이름을 모르고, 켜진 수집기에
-SDK 훅 콜백(`on_hook`)과 SDK 메시지(`on_message`, 번역 이벤트 뒤)를 넘긴다. 수집기가 `ctx.emit`으로 낸
-이벤트는 RunEvent 일반형으로 나간다(raw 정제, `parent_tool_use_id`로 서브에이전트 귀속).
+Observation (hooks, MCP, and so on) is done by **collectors**, not the backend. The backend does not know collector names, and passes SDK hook callbacks
+(`on_hook`) and SDK messages (`on_message`, after the translated events) to enabled collectors. Events that collectors emit with `ctx.emit`
+go out as generic RunEvents (raw sanitized, subagent attribution through `parent_tool_use_id`).
 
-- 기본 수집기(첫 구현, entry point `agent_console.collectors`로 등록):
-  - `sdk-hooks`: SDK 관찰 훅 콜백 → `hook.invoked`(hook_type `sdk-callback`), CLI 설정 hook 실행
-    (`include_hook_events`) → `hook.invoked|completed`(hook_type `settings`). 설정 `events`(콜백을 걸 훅
-    이벤트, 기본 `DEFAULT_OBSERVED_HOOK_EVENTS`).
-  - `mcp-calls`: `mcp.server_status`, `mcp.call_started|call_completed`(`duration_ms`는 주입 clock).
-  - payload 키는 가짜 백엔드(`ac-backend-fake-agent`)의 관측 흉내와 같다.
-- 설정: `observe.collectors{id: {enabled?, config?}}`. 옛 키 `hooks`→`sdk-hooks.enabled`,
-  `mcp`→`mcp-calls.enabled`, `hook_events`→`sdk-hooks.config.events`로 읽는다(대응표는 데이터
-  `LEGACY_OBSERVE_KEYS`). 둘 다 있으면 `collectors`의 값 있는 칸이 이긴다(`config`는 통째로).
-  정하지 않은 수집기는 꺼짐이다.
-- 수집기 예외(설정 해석 포함)는 실행에 영향이 없다. 실행마다 수집기별 `log.warning` 하나
-  (`details.collector`·`stage`·`error` 형식 이름, 예외 문장은 싣지 않음). 수집 이벤트를 내보내다 sink가
-  실패해도 삼킨다. 훅 콜백은 항상 `{}`를 돌려준다.
-- 검증(`validate_settings`): 이 백엔드에 없는 id → warning `observe.unknown_collector`, 설정이 수집기
-  스키마와 다름 → warning `observe.collector_config_invalid`.
-- 등록: `ClaudeSdkBackend(collectors=...)`(None = 기본 수집기), `from_options`는
-  `discover_collectors()`로 entry point에서 찾는다(`descriptor.backend`가 백엔드 id와 같은 것만,
-  보고서는 `collector_reports`). `BackendDescriptor.collectors`에 디스크립터가 실린다.
+- Default collectors (first implementations, registered through the entry point `agent_console.collectors`):
+  - `sdk-hooks`: SDK observation hook callbacks → `hook.invoked` (hook_type `sdk-callback`), CLI settings hook runs
+    (`include_hook_events`) → `hook.invoked|completed` (hook_type `settings`). The setting `events` (hook events to attach callbacks to,
+    default `DEFAULT_OBSERVED_HOOK_EVENTS`).
+  - `mcp-calls`: `mcp.server_status`, `mcp.call_started|call_completed` (`duration_ms` from the injected clock).
+  - The payload keys are the same as the imitated observations of the fake backend (`ac-backend-fake-agent`).
+- Settings: `observe.collectors{id: {enabled?, config?}}`. The old keys are read as `hooks` → `sdk-hooks.enabled`,
+  `mcp` → `mcp-calls.enabled`, `hook_events` → `sdk-hooks.config.events` (the mapping is the data
+  `LEGACY_OBSERVE_KEYS`). When both exist, fields with values in `collectors` win (`config` as a whole).
+  Collectors that are not set are off.
+- Collector exceptions (including settings interpretation) do not affect the run. One `log.warning` per collector per run
+  (`details.collector`, `stage`, `error` type name; no exception message). If the sink fails while emitting collected events,
+  it is swallowed. Hook callbacks always return `{}`.
+- Validation (`validate_settings`): an id this backend does not have → warning `observe.unknown_collector`; settings that do not match the collector
+  schema → warning `observe.collector_config_invalid`.
+- Registration: `ClaudeSdkBackend(collectors=...)` (None = the default collectors); `from_options` finds them in entry points with
+  `discover_collectors()` (only those whose `descriptor.backend` equals the backend id;
+  reports in `collector_reports`). The descriptors go into `BackendDescriptor.collectors`.
 
-새 수집기는 `BaseClaudeSdkCollector`를 상속해 필요한 메서드만 고치고 entry point 하나로 등록한다.
+A new collector inherits `BaseClaudeSdkCollector`, overrides only the methods it needs, and registers with one entry point.
 
 ```python
 >>> import asyncio
@@ -574,130 +573,130 @@ SDK 훅 콜백(`on_hook`)과 SDK 메시지(`on_message`, 번역 이벤트 뒤)�
 prompt-count = "my_pkg.collectors:PromptCount"
 ```
 
-## 실행 범위와 `capabilities.enforce`
+## Run scope and `capabilities.enforce`
 
-- `commands: true` — 모든 도구 호출(서브에이전트 포함)에 거는 `PreToolUse` 훅이 입력의 명령 키를
-  `limits.commands`로 검사(빈 목록 = 전부 거부, `"*"` = 전부 허용, 셸 연결·치환·리다이렉트 거부, 토큰 접두 일치).
-  MCP 서버가 내부에서 실행하는 명령은 대상이 아니다.
-- `directories: false` — 파일 도구의 경로 입력만 검사(최선 노력). 허용된 명령이 건드리는 파일은 막지 못한다.
-- `network: false` — 네트워크가 allow가 아니면 `network_tools`를 끌 뿐, MCP·서버 측 도구·허용 명령의 통신은 못 막는다.
+- `commands: true`: a `PreToolUse` hook on every tool call (including subagents) checks the command keys of the input against
+  `limits.commands` (an empty list = deny all, `"*"` = allow all; shell chaining, substitution, and redirection are rejected; token prefix matching).
+  Commands that MCP servers run internally are not covered.
+- `directories: false`: only the path inputs of file tools are checked (best effort). Files touched by allowed commands cannot be blocked.
+- `network: false`: when the network is not allow, it only turns off `network_tools`; it cannot block communication by MCP, server-side tools, or allowed commands.
 
-## 하위 프로세스 환경과 한계
+## Child process environment and limitations
 
-- **환경 상속**: SDK(0.2.166)는 서버의 `os.environ` 전체를 CLI 하위 프로세스에 물려주며 끄는 옵션이 없다.
-  이 백엔드는 생성 인자 `env_policy`(`EnvPolicy`, 기본 `inherit="allowlist"`)로 허용 목록(`DEFAULT_ENV_ALLOW`:
-  PATH·HOME·LANG·LC_*·TMPDIR/TEMP/TMP·SystemRoot 등 OS 필수 키와 `CLAUDE_CONFIG_DIR`, 설정 데이터로 교체 가능) 밖의 키를
-  **빈 값으로 덮어쓴다**. 값은 넘어가지 않지만 키 이름은 남는다. `inherit="all"`은 실행마다 `log.warning`을 낸다.
-  API 키는 서버 환경에서 물려받지 말고 `backend_options.env`(`secret://…`)로 명시한다.
-- **운영 지침**: `limits.commands`에 `env`, `printenv`, `set`, `cat`, `python`, `node`, `sh` 등 환경·파일을 읽거나
-  임의 코드를 실행하는 명령을 넣지 않는다. 명시 `env` 값은 에이전트 프로세스 안에서는 읽힐 수 있다.
-- **안전 기본값을 뒤집는 설정**: `setting_sources`(`["user"]` 등), `strict_mcp_config=false`, `permission_mode`·
-  `sdk_options`(예: `permission_mode="bypassPermissions"`)로 기본값을 바꿀 수 있다. 이런 값은 막지 않고 실행 시작 때
-  `log.warning` 이벤트를 낸다(`risky_option_warnings`). 권한 우회 모드에서는 Claude Code 권한 규칙과
-  `can_use_tool`이 꺼지지만, 이 백엔드의 `PreToolUse` 실행 범위 검사(명령 + 파일 도구 경로)는 유지된다.
+- **Environment inheritance**: the SDK (0.2.166) passes the server's whole `os.environ` to the CLI child process with no option to turn it off.
+  With the constructor argument `env_policy` (`EnvPolicy`, default `inherit="allowlist"`), this backend **overrides with empty values** keys outside the allow list (`DEFAULT_ENV_ALLOW`:
+  OS-essential keys such as PATH, HOME, LANG, LC_*, TMPDIR/TEMP/TMP, SystemRoot, plus `CLAUDE_CONFIG_DIR`; replaceable with settings data).
+  Values are not passed, but key names remain. `inherit="all"` emits a `log.warning` on every run.
+  Do not inherit API keys from the server environment; set them explicitly with `backend_options.env` (`secret://…`).
+- **Operating guidance**: do not put commands that read the environment or files or run arbitrary code, such as `env`, `printenv`, `set`, `cat`, `python`, `node`, `sh`,
+  into `limits.commands`. Explicit `env` values can be read inside the agent process.
+- **Settings that reverse the safe defaults**: the defaults can be changed with `setting_sources` (`["user"]` and so on), `strict_mcp_config=false`, `permission_mode`, and
+  `sdk_options` (for example `permission_mode="bypassPermissions"`). Such values are not blocked, but a `log.warning` event is emitted at the start of the run
+  (`risky_option_warnings`). In the permission bypass mode, Claude Code permission rules and
+  `can_use_tool` are off, but this backend's `PreToolUse` run scope checks (commands + file tool paths) remain.
 
-## 플랫폼 도구 (`AgentRequest.host_tools`)
+## Platform tools (`AgentRequest.host_tools`)
 
-`capabilities.host_tools = true`. 위임 방식(예: 독립 위임 `host`)이 만든 `HostTool`(ac-runtime, 런타임 전용)을
-in-process SDK MCP 서버 하나로 묶어 모델에게 준다. 백엔드는 도구 이름·용도를 모른다.
+`capabilities.host_tools = true`. The `HostTool`s (ac-runtime, runtime only) a delegation strategy (for example the standalone delegation `host`) built are
+bundled into one in-process SDK MCP server and given to the model. The backend does not know tool names or purposes.
 
-- 서버: `create_sdk_mcp_server(name=<backend_options.host_tool_server>, tools=[tool(name, description, input_schema)(handler)])`
-  → `ClaudeAgentOptions.mcp_servers[<서버>]`. 서버 이름 기본값은 옵션 스키마 기본값 `agent-console`(`DEFAULT_HOST_TOOL_SERVER`),
-  `[A-Za-z0-9_-]`만, `__` 금지. 설정 `mcp_servers`·묶음 MCP 서버와 이름이 겹치면 실행 전 `validation_failed`.
-- 이름 규칙: 모델이 부르는 이름 = `mcp__<서버>__<도구>`(`host_tool_rule`). 이 이름을 `allowed_tools`(사전 승인)에
-  넣는다(`disallowed_tools`에 있으면 빼고 금지가 이긴다). 도구 이름은 `[A-Za-z0-9_-]`, 요청 안에서 유일(겹치면 실행 전 오류).
-  전체 이름이 64자(`MODEL_TOOL_NAME_LIMIT`)를 넘으면 `log.warning`.
-- 입력 스키마: 최상위 object 모양으로 맞춰 넘긴다(`object_input_schema` — `type`·`properties`가 없으면 SDK가 스키마를
-  "이름 → 파이썬 타입" 표로 읽기 때문). 스키마 검사(예: 대상 enum)는 SDK가 핸들러 전에 하고 위반은 오류 결과다.
-- 호출: `agent_console_runtime.call_host_tool` — 핸들러 예외는 오류 결과(예외 형식 이름만, 메시지 없음), `HostToolResult.is_error`는
-  MCP `isError`, 실행 취소 토큰이 취소되면 진행 중 핸들러를 취소하고 오류 결과를 돌려준다.
-- 관측: 모델의 호출은 다른 MCP 도구처럼 `agent.tool_call`/`agent.tool_result`이고, 수집기 `mcp-calls`가 켜져 있으면
-  `mcp.call_started`/`mcp.call_completed{server, tool, is_error, duration_ms}`로 남는다(백엔드에 특별 경로 없음).
-- `sdk_options.mcp_servers`·`sdk_options.allowed_tools`는 위 값을 통째로 덮어쓰므로 `log.warning`을 낸다.
-- 서버 생성기는 생성자 `tool_server_factory`(기본 `sdk_tool_server`)로 바꿀 수 있다.
+- Server: `create_sdk_mcp_server(name=<backend_options.host_tool_server>, tools=[tool(name, description, input_schema)(handler)])`
+  → `ClaudeAgentOptions.mcp_servers[<server>]`. The default server name is the option schema default `agent-console` (`DEFAULT_HOST_TOOL_SERVER`),
+  `[A-Za-z0-9_-]` only, no `__`. If the name overlaps the setting `mcp_servers` or the bundle MCP servers, `validation_failed` before running.
+- Naming rule: the name the model calls = `mcp__<server>__<tool>` (`host_tool_rule`). This name is put into `allowed_tools` (pre-approval)
+  (removed if it is in `disallowed_tools`; denies win). Tool names are `[A-Za-z0-9_-]` and unique within a request (an error before running on overlap).
+  A `log.warning` when the full name exceeds 64 characters (`MODEL_TOOL_NAME_LIMIT`).
+- Input schema: passed in top-level object shape (`object_input_schema`; without `type` and `properties`, the SDK reads the schema
+  as a "name → Python type" table). Schema checks (for example a target enum) are done by the SDK before the handler, and violations are error results.
+- Calls: `agent_console_runtime.call_host_tool`. Handler exceptions are error results (exception type name only, no message), `HostToolResult.is_error` is
+  MCP `isError`, and when the run cancel token is cancelled, the running handler is cancelled and an error result is returned.
+- Observation: the model's calls are `agent.tool_call`/`agent.tool_result` like other MCP tools, and with the collector `mcp-calls` on they are
+  recorded as `mcp.call_started`/`mcp.call_completed{server, tool, is_error, duration_ms}` (no special path in the backend).
+- `sdk_options.mcp_servers` and `sdk_options.allowed_tools` overwrite the values above as a whole, so they emit a `log.warning`.
+- The server builder can be replaced with the constructor's `tool_server_factory` (default `sdk_tool_server`).
 
-설치 SDK 확인(2026-10-18, `claude-agent-sdk 0.2.166`, 실제 import):
+Installed SDK check (2026-10-18, `claude-agent-sdk 0.2.166`, actual import):
 
-| API | 확인한 시그니처 |
+| API | Confirmed signature |
 | --- | --- |
 | `claude_agent_sdk.create_sdk_mcp_server` | `(name: str, version: str = '1.0.0', tools: list[SdkMcpTool[Any]] \| None = None) -> McpSdkServerConfig` (`{"type": "sdk", "name", "instance"}`) |
-| `claude_agent_sdk.tool` | `(name: str, description: str, input_schema: type \| dict[str, Any], annotations: ToolAnnotations \| None = None)` → 데코레이터 → `SdkMcpTool` |
-| 핸들러 | `async (args: dict) -> {"content": [{"type": "text", "text"}], "is_error": bool}`. 알 수 없는 도구·스키마 위반·핸들러 예외는 SDK가 `isError` 결과로 바꾼다 |
+| `claude_agent_sdk.tool` | `(name: str, description: str, input_schema: type \| dict[str, Any], annotations: ToolAnnotations \| None = None)` → decorator → `SdkMcpTool` |
+| Handler | `async (args: dict) -> {"content": [{"type": "text", "text"}], "is_error": bool}`. The SDK turns unknown tools, schema violations, and handler exceptions into `isError` results |
 
-`test_installed_sdk_has_in_process_mcp_api`가 이 존재를 확인한다. 테스트 도우미 `testing.SdkToolCall`·`call_sdk_mcp_tool`은 CLI처럼
-JSON-RPC(`initialize` → `tools/call`)로 in-process 서버를 부른다(SDK 내부 `claude_agent_sdk._internal.sdk_mcp_bridge` 사용 — SDK가
-바뀌면 이 도우미만 고친다). 실호출 확인 항목은 아래 21~26.
+`test_installed_sdk_has_in_process_mcp_api` checks that these exist. The test helpers `testing.SdkToolCall` and `call_sdk_mcp_tool` call the in-process server
+over JSON-RPC (`initialize` → `tools/call`) like the CLI does (using the SDK internal `claude_agent_sdk._internal.sdk_mcp_bridge`; if the SDK
+changes, only these helpers need fixing). Items to confirm with real calls are 21 to 26 below.
 
-SDK 핸들러는 입력만 받아(MCP 요청의 `_meta`도 넘기지 않음) 도구 호출 id를 모른다. 그래서 위임 도구가 부른 대상
-NodeRun의 `tool_use_id`는 이 백엔드에서 null이다.
+SDK handlers receive only the input (not even the `_meta` of the MCP request), so they do not know the tool call id. So the `tool_use_id` of the target
+NodeRun called by a delegation tool is null with this backend.
 
-## 세션 기록 보관·복원
+## Session record archiving and restore
 
-`ClaudeSdkBackend.session_archive()`는 앱 전용 자격 폴더(`<workspace>/.state/claude`)가 있을 때만
-`projects/<키>/<세션>.jsonl`과 `<세션>/` 아래 파일을 다루는 `SessionArchive`를 준다(키 = `agent_console_claude_format.project_key`).
-`.credentials.json`·`settings.json`·다른 세션 파일은 보관하지 않고, 복원은 `projects/<지금 키>/`에만 쓴다. 자격 폴더가 없으면
-(단독 사용·`auth_dir.config_dir: null`) None이라 `~/.claude`는 읽지 않는다.
+`ClaudeSdkBackend.session_archive()` returns a `SessionArchive` that handles `projects/<key>/<session>.jsonl` and the files under `<session>/`
+only when the app-only credentials folder (`<workspace>/.state/claude`) exists (key = `agent_console_claude_format.project_key`).
+`.credentials.json`, `settings.json`, and other session files are not archived, and restore writes only to `projects/<current key>/`. Without the credentials folder
+(standalone use, `auth_dir.config_dir: null`), it returns None, so `~/.claude` is never read.
 
-## 미확인 SDK 동작 (실호출 스모크로 확인할 항목)
+## Unconfirmed SDK behavior (items to check with a real-call smoke test)
 
-1. 위임자 사용량(`ResultMessage.usage`·`agent.usage`)에 서브에이전트 토큰이 포함되는지. 포함되면 ac-usage에 이중 집계 방지 규칙이 필요하다.
-2. 전경 실행에서 `TaskStartedMessage`·`TaskNotificationMessage`가 나오는지, `tool_use_id`가 채워지는지. 못 받으면 실행 끝에 위임 도구 호출 id로 시작·종료 쌍을 만든다.
-3. 위임 도구 결과의 `agentId:` 형식(별도 텍스트 블록인지 마지막 줄인지). 둘 다 제거하게 했다.
-4. `forward_subagent_text`가 실제로 서브에이전트 텍스트 블록을 넘기는지.
-5. 서브에이전트 도구 가용성: 세션 `tools`에 없는 내장 도구를 대상 `AgentDefinition.tools`만으로 쓸 수 있는지, 위임자 세션 사전 승인(`allowed_tools`) 없이 묻지 않는 모드에서 대상 호출이 허용되는지(기본은 사전 승인에 넣지 않고 경고, `subagent_tools_preapprove`로 켬).
-6. 환경변수 3개(`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`, `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS`)가 설치 CLI 버전에서 동작하는지.
-7. 빈 `ANTHROPIC_API_KEY=""`를 CLI가 "설정 안 됨"으로 보는지, `setting_sources`에 `user`가 없어도 구독 로그인 자격을 읽는지.
-8. `RateLimitEvent.utilization`이 경고 임계 전에는 비어 있는지.
+1. Whether the delegator's usage (`ResultMessage.usage`, `agent.usage`) includes subagent tokens. If it does, ac-usage needs a rule to avoid double counting.
+2. Whether `TaskStartedMessage` and `TaskNotificationMessage` appear in foreground runs and whether `tool_use_id` is filled. If they are not received, a start and stop pair is built from the delegation tool call id at the end of the run.
+3. The `agentId:` format of delegation tool results (a separate text block or the last line). Both are removed.
+4. Whether `forward_subagent_text` actually forwards subagent text blocks.
+5. Subagent tool availability: whether built-in tools not in the session `tools` can be used through the target `AgentDefinition.tools` alone, and whether target calls are allowed in modes that do not ask without the delegator session's pre-approval (`allowed_tools`) (by default they are not pre-approved and a warning is emitted; turn on with `subagent_tools_preapprove`).
+6. Whether the 3 environment variables (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`, `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS`) work in the installed CLI version.
+7. Whether the CLI treats an empty `ANTHROPIC_API_KEY=""` as "not set", and whether it reads subscription sign-in credentials even without `user` in `setting_sources`.
+8. Whether `RateLimitEvent.utilization` is empty before the warning threshold.
 
-skill·rule·hook 전달 미확인 항목(실호출 스모크에서 확인, 단위 테스트는 가짜 SDK 클라이언트):
-15. `plugins=[{type: local, path}]`로 넘긴 매니페스트 없는 폴더의 `skills/<name>/SKILL.md`가 skill로 잡히는지, 이름이
-    `<폴더 이름>:<skill>`인지(문서: 매니페스트 선택, `--plugin-dir`면 폴더 이름이 플러그인 이름). 아니면 `skill_name_template`을 바꾼다.
-16. `tools`를 목록으로 줄 때 `Skill` 도구를 넣어야 skill을 쓸 수 있는지(`skills` 옵션은 `allowed_tools`만 채운다).
-17. `skills=[]`가 위임자 목록에서 서브에이전트 skill을 숨기면서 `AgentDefinition.skills`로 대상에는 보이는지.
-18. `rule_delivery=files`: `--add-dir` + `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`이 추가 폴더의 `.claude/rules/*.md`를 읽는지
-    (문서상 예), `paths` 조건이 추가 폴더 기준인지 프로젝트 기준인지(프로젝트 경로와 맞지 않으면 조건부 규칙이 안 걸릴 수 있음). 이 환경변수는
-    다른 추가 폴더(limits.directories·files 폴더)의 `CLAUDE.md`도 읽게 한다.
-19. `hook_delivery=settings`: `settings` 인라인 JSON의 명령형 hook이 실행되는지, `setting_sources=["project"]`와 함께 쓰일 때 우선순위.
-20. 콜백의 `{"decision": "block", "reason"}`이 모든 이벤트에서 막기로 처리되는지(PreToolUse는 `permissionDecision`이 권장 형식),
-    SDK `HookEvent`에 없는 이벤트 이름을 `hooks`에 넣었을 때 CLI 동작.
+Unconfirmed items for skill, rule, and hook delivery (checked in the real-call smoke test; unit tests use the fake SDK client):
+15. Whether `skills/<name>/SKILL.md` in a folder without a manifest, passed as `plugins=[{type: local, path}]`, is picked up as a skill, and whether its name
+    is `<folder name>:<skill>` (documentation: the manifest is optional, and with `--plugin-dir` the folder name is the plugin name). If not, change `skill_name_template`.
+16. Whether the `Skill` tool must be included to use skills when `tools` is given as a list (the `skills` option fills only `allowed_tools`).
+17. Whether `skills=[]` hides subagent skills from the delegator's list while they stay visible to the target through `AgentDefinition.skills`.
+18. `rule_delivery=files`: whether `--add-dir` + `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` reads `.claude/rules/*.md` in the added folders
+    (yes according to the documentation), and whether `paths` conditions are relative to the added folder or the project (conditional rules may not apply if they do not match project paths). This environment variable
+    also makes the CLI read `CLAUDE.md` in other added folders (limits.directories, the files folder).
+19. `hook_delivery=settings`: whether command hooks in the `settings` inline JSON run, and their precedence when used with `setting_sources=["project"]`.
+20. Whether the callback's `{"decision": "block", "reason"}` is treated as blocking for every event (for PreToolUse, `permissionDecision` is the recommended form),
+    and the CLI behavior when an event name not in the SDK `HookEvent` is put into `hooks`.
 
-플랫폼 도구 미확인 항목(단위 테스트는 SDK 목):
-21. `type: sdk` 서버가 `strict_mcp_config=true`·`setting_sources=["project"]`에서도 붙는지(init `mcp_servers` 상태).
-22. `allowed_tools`의 `mcp__<서버>__<도구>`가 `dontAsk`에서 묻지 않고 허용되는지, `tools` 목록을 줘도 MCP 도구가 보이는지.
-23. 전체 도구 이름이 64자를 넘을 때 CLI 동작(지금은 경고만).
-24. interrupt 때 CLI가 진행 중 도구 호출을 `notifications/cancelled`로 끊는지(백엔드는 실행 취소 토큰으로 따로 멈춘다).
-25. 같은 턴의 병렬 도구 호출이 핸들러를 동시에 부르는지(같은 대상 직렬은 엔진 몫).
-26. 오래 걸리는 핸들러(대상 실행 수 분)가 CLI의 MCP 도구 시간 제한(`MCP_TOOL_TIMEOUT` 등)에 걸리는지. 걸리면 `env`로 늘린다.
+Unconfirmed platform tool items (unit tests use an SDK mock):
+21. Whether a `type: sdk` server attaches even with `strict_mcp_config=true` and `setting_sources=["project"]` (the init `mcp_servers` status).
+22. Whether `mcp__<server>__<tool>` in `allowed_tools` is allowed without asking in `dontAsk`, and whether MCP tools are visible when a `tools` list is given.
+23. The CLI behavior when a full tool name exceeds 64 characters (only a warning for now).
+24. Whether the CLI cuts in-progress tool calls with `notifications/cancelled` on interrupt (the backend stops separately with the run cancel token).
+25. Whether parallel tool calls in the same turn call handlers concurrently (serializing the same target is the engine's job).
+26. Whether long-running handlers (target runs of several minutes) hit the CLI's MCP tool time limit (`MCP_TOOL_TIMEOUT` and so on). If so, raise it through `env`.
 
-상호작용 미확인 항목(스모크 `test_live_question_once`·`test_live_tool_permission_once`):
-9. `ClaudeSDKClient` + 항상 있는 `PreToolUse` 훅으로 `can_use_tool` 스트림이 유지되는지.
-10. 설치 버전(0.2.166)의 `ToolPermissionContext` 필드가 실제로 채워지는지(`title`·`display_name` 등).
-11. `agent_id`가 `TaskStartedMessage.task_id`와 같은 값인지.
-12. Python에서 AskUserQuestion이 콜백 완료 전에 빈 답으로 진행되는 버그가 있는지.
-13. `dontAsk`·`auto` 모드에서 콜백이 불리는지(grant가 있으면 등록은 하지만 불리지 않을 수 있다).
-14. 결과 없이 끊긴 도구 호출이 세션 기록에 남았을 때 `resume` 동작.
+Unconfirmed interaction items (smoke tests `test_live_question_once`, `test_live_tool_permission_once`):
+9. Whether the `can_use_tool` stream is kept with `ClaudeSDKClient` + an always-present `PreToolUse` hook.
+10. Whether the fields of `ToolPermissionContext` in the installed version (0.2.166) are actually filled (`title`, `display_name`, and so on).
+11. Whether `agent_id` is the same value as `TaskStartedMessage.task_id`.
+12. Whether there is a bug in Python where AskUserQuestion proceeds with an empty answer before the callback completes.
+13. Whether the callback is called in `dontAsk` and `auto` modes (with a grant it is registered but may not be called).
+14. The `resume` behavior when a tool call cut off without a result remains in the session record.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-claude-sdk`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-backend-claude-sdk`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-단독 설치(이 폴더만 복사, `portability`)에서는 `tests/test_agent_console_backend_claude_sdk_qa_1r29.py`의 2건이
-**skip**("기본 상호작용 종류가 설치되어 있지 않음")된다. 이 검사는 어댑터가 여는 payload·응답을 entry point
-`agent_console.interaction_kinds`로 등록된 `question`·`tool_permission` 종류 스키마와 맞춰 보는데, 그 종류는
-`agent-console-nodes-core`가 등록하고 이 패키지는 그것에 의존하지 않기 때문이다(백엔드는 노드 종류를 모른다).
-저장소 워크스페이스에서는 nodes-core가 함께 설치되어 두 건이 실행된다. 실제 호출 테스트(`-k live`)는
-`AGENT_CONSOLE_CLAUDE_SDK_LIVE=1`일 때만 돈다.
+In a standalone install (copying only this folder, `portability`), 2 tests in `tests/test_agent_console_backend_claude_sdk_qa_1r29.py` are
+**skipped** (the default interaction kinds are not installed). These checks compare the payloads and responses the adapter opens against the schemas of the `question` and `tool_permission` kinds registered through the entry point
+`agent_console.interaction_kinds`, but those kinds are registered by
+`agent-console-nodes-core`, which this package does not depend on (the backend does not know node kinds).
+In the repository workspace, nodes-core is installed too, so both tests run. Real-call tests (`-k live`) run
+only with `AGENT_CONSOLE_CLAUDE_SDK_LIVE=1`.
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-backend-claude-sdk/tests
-AGENT_CONSOLE_CLAUDE_SDK_LIVE=1 uv run pytest packages/py/features/ac-backend-claude-sdk/tests -k live -s   # 실제 호출(opt-in, 서브에이전트 1회 포함)
+AGENT_CONSOLE_CLAUDE_SDK_LIVE=1 uv run pytest packages/py/features/ac-backend-claude-sdk/tests -k live -s   # real calls (opt-in, including one subagent call)
 ```

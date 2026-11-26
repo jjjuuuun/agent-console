@@ -79,7 +79,7 @@ import { useEdgeTrouble } from "./useEdgeTrouble";
 import { useAutoRoutes } from "./useAutoRoutes";
 import { EdgeLabelSpreadContext, EdgeRouteContext } from "./routeContext";
 import type { EdgeLabelSpread } from "./routeContext";
-import { spreadLabels, type ObstacleRect } from "../logic/labelSpread";
+import { portObstacles, resolveLabelSpacing, spreadLabelLayout, type LabelLayout, type ObstacleRect } from "../logic/labelSpread";
 import type { SpreadInput } from "../logic/labelSpread";
 import { overrideEdgeShape } from "./viewOverride";
 import { createAStarRouter } from "../logic/route";
@@ -105,7 +105,7 @@ const isBandHandle = (id: string | null | undefined): boolean => id !== null && 
  */
 const CONNECTION_RADIUS = 8;
 
-const failingResolve = (): Promise<never> => Promise.reject(new Error("resolvePorts 미지정"));
+const failingResolve = (): Promise<never> => Promise.reject(new Error("resolvePorts is not provided"));
 
 interface PendingConnection {
   c: Connection;
@@ -599,17 +599,60 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
   const routes = useAutoRoutes({ edges: viewEdges, getRouter });
   // 같은 노드에서 갈라지는 연결선의 라벨이 겹치면 경로를 따라 옮겨 푼다(사용자가 위치를 정한 라벨은 그대로). 연결선이 경로를 알려 온다
   const spreadInputs = useRef(new Map<string, { input: SpreadInput; key: string }>());
-  const [spread, setSpread] = useState<ReadonlyMap<string, number>>(() => new Map());
+  const [layout, setLayout] = useState<LabelLayout>(() => ({ positions: new Map(), folded: new Set() }));
   const spreadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spreadObstacles = useRef<readonly ObstacleRect[]>([]);
+  // 간격·여백 설정(화면 px 기준). 객체를 새로 만들어 넘겨도 값이 같으면 다시 풀지 않도록 값 서명으로 묶는다
+  const spacingSig = JSON.stringify(props.labelSpacing ?? null);
+  const labelSpacing = useMemo(() => resolveLabelSpacing(props.labelSpacing), [spacingSig]); // eslint-disable-line react-hooks/exhaustive-deps
+  const labelSpacingRef = useRef(labelSpacing);
+  labelSpacingRef.current = labelSpacing; // eslint-disable-line react-hooks/refs
   const scheduleSpread = useCallback(() => {
     if (spreadTimer.current !== null) return;
     spreadTimer.current = setTimeout(() => {
       spreadTimer.current = null;
-      const next = spreadLabels([...spreadInputs.current.values()].map((v) => v.input), undefined, spreadObstacles.current);
-      setSpread((cur) => (cur.size === next.size && [...next].every(([k, v]) => cur.get(k) === v) ? cur : next));
+      const sp = labelSpacingRef.current;
+      const st = flowStore.getState();
+      // 포트 원은 핸들 상자를 그때그때 읽는다(노드 가장자리 밖으로 반쯤 나와 있어 노드 사각형으로는 보호되지 않는다)
+      const ports = portObstacles(
+        [...st.nodeLookup.values()].map((n) => ({
+          x: n.internals.positionAbsolute.x,
+          y: n.internals.positionAbsolute.y,
+          ports: [...(n.internals.handleBounds?.source ?? []), ...(n.internals.handleBounds?.target ?? [])],
+        })),
+        sp.portClearance,
+        (h) => h.id?.startsWith(BAND_HANDLE_PREFIX) === true,
+      );
+      const next = spreadLabelLayout([...spreadInputs.current.values()].map((v) => v.input), undefined, [...spreadObstacles.current, ...ports], sp, st.transform[2]);
+      setLayout((cur) =>
+        cur.positions.size === next.positions.size && [...next.positions].every(([k, v]) => cur.positions.get(k) === v) && cur.folded.size === next.folded.size && [...next.folded].every((k) => cur.folded.has(k))
+          ? cur
+          : next,
+      );
     }, 0);
-  }, []);
+  }, [flowStore]);
+  // 줌 조작이 끝난 뒤(settleMs) 한 번만 다시 푼다: 간격이 화면 px 기준이라 줌이 바뀌면 흐름 간격도 달라진다. 조작 중에는 라벨을 흔들지 않는다
+  useEffect(() => {
+    let last = Math.min(labelSpacing.maxZoom, Math.max(labelSpacing.minZoom, flowStore.getState().transform[2]));
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const off = flowStore.subscribe((st) => {
+      const z = Math.min(labelSpacing.maxZoom, Math.max(labelSpacing.minZoom, st.transform[2]));
+      if (z === last) return;
+      last = z;
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        scheduleSpread();
+      }, labelSpacing.settleMs);
+    });
+    return () => {
+      off();
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [flowStore, labelSpacing, scheduleSpread]);
+  useEffect(() => {
+    scheduleSpread();
+  }, [labelSpacing, scheduleSpread]);
   const reportSpread = useCallback<EdgeLabelSpread["report"]>((id, input, key) => {
     const have = spreadInputs.current.get(id);
     if (input === null) {
@@ -629,7 +672,7 @@ function GraphEditorInner(props: Omit<GraphEditorProps, "ref"> & { handleRef: Re
     // `obstacleKey`가 노드 사각형의 내용을 대표한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [obstacleKey, scheduleSpread]);
-  const spreadApi = useMemo<EdgeLabelSpread>(() => ({ spread, report: reportSpread }), [spread, reportSpread]);
+  const spreadApi = useMemo<EdgeLabelSpread>(() => ({ spread: layout.positions, folded: layout.folded, report: reportSpread }), [layout, reportSpread]);
   useEffect(() => () => { if (spreadTimer.current !== null) clearTimeout(spreadTimer.current); }, []);
   const tidy = useTidy({
     getRouter,

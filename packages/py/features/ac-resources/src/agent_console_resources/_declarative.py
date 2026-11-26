@@ -88,7 +88,7 @@ class ContributionSpec(BaseModel):
 
 
 class DeclarativeTypeSpec(BaseModel):
-    """선언형 종류 파일의 형식."""
+    """Format of a declarative kind file."""
 
     model_config = ConfigDict(extra="forbid")
 

@@ -1,14 +1,17 @@
-# 예제 README 필수 절. 제목(##·###)에 별칭 중 하나가 들어 있으면 그 절이 있다고 본다.
+# 예제 README 필수 절. 제목(##·###)에 별칭 중 하나가 들어 있으면 그 절이 있다고 본다(대소문자 구분).
+# `title`은 빠졌을 때 알리는 이름이다.
+# `language_aliases`는 그 언어(extdocs.yaml `example_roots[].language`) 예제에서만 더 인정하는 옛 제목이다.
+# Python·TS 예제 README는 모두 영어화가 끝나 한국어 별칭을 지웠다(지금 `language_aliases`를 쓰는 절은 없다).
 sections:
   - id: code
-    title: 최소 코드
-    aliases: [최소 코드, 만드는 법]
+    title: Minimal code
+    aliases: [Minimal code, How to build]
   - id: registration
-    title: 등록
-    aliases: [등록]
+    title: Registration
+    aliases: [Registration, Register]
   - id: install
-    title: 설치·제거
-    aliases: [설치·제거]
+    title: Install and remove
+    aliases: [Install and remove, Installation and removal]
   - id: test
-    title: 테스트
-    aliases: [테스트]
+    title: Test
+    aliases: [Test]

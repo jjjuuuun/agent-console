@@ -151,3 +151,19 @@ describe("중첩 노드 패널·팔레트", () => {
     expect(within(section).getByText("검토 파이프라인 → 둘째 팀")).toBeTruthy();
   });
 });
+
+describe("경로형 section(outside_folder 이슈의 node_id)", () => {
+  it("중첩 경로 `in1/a`는 루트에 있는 중첩 팀 노드 `in1`을 고르고 info 띠에 경로를 알린다", async () => {
+    const { clients } = clientsFor({ tm1: graphWith("tm2"), tm2: child() });
+    mountApp(clients, "/teams/tm1?section=in1%2Fa");
+    expect(await screen.findByText("이 문제는 중첩 팀 ‘in1’ 안의 a에 있습니다. 중첩 팀을 열어 확인하세요.")).toBeTruthy();
+    // 부모 노드가 골라져 노드 패널이 열린다(역할 탭)
+    expect(await screen.findByRole("tab", { name: "역할", selected: true })).toBeTruthy();
+  });
+
+  it("루트에 첫 조각도 없으면 노드를 찾지 못했다고 알린다", async () => {
+    const { clients } = clientsFor({ tm1: graphWith("tm2"), tm2: child() });
+    mountApp(clients, "/teams/tm1?section=zz%2Fa");
+    expect(await screen.findByText("노드 ‘zz/a’를 이 팀 구성에서 찾지 못했습니다.")).toBeTruthy();
+  });
+});

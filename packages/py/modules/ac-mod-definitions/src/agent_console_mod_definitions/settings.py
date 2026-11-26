@@ -50,8 +50,10 @@ class DefinitionModuleSettings(BaseModel):
     )
 
 
-PRESETS_REMOVED_REASON = "프리셋 기능은 삭제되었습니다. 설정 파일에서 이 키를 지우세요"
-"""삭제된 프리셋 기능의 설정 키가 남아 있을 때의 거부 이유(정의를 직접 만들거나 가져오기를 쓴다)."""
+PRESETS_REMOVED_REASON = "The presets feature was removed. Delete this key from the settings file"
+"""삭제된 프리셋 기능의 설정 키가 남아 있을 때의 거부 이유(정의를 직접 만들거나 가져오기를 쓴다).
+
+시작 거부 메시지로 터미널에 찍히므로 영어 원문이다(I.6)."""
 
 SETTINGS_COMPAT = SettingsCompat(
     removed=(

@@ -1,0 +1,192 @@
+{
+  "chat": {
+    "you": "나",
+    "yourMessage": "나의 메시지",
+    "copy": "복사",
+    "copyReply": "답변 복사",
+    "copied": "복사됨",
+    "resend": "다시 보내기",
+    "showMore": "더 보기",
+    "showLess": "접기",
+    "openRun": "실행 상세",
+    "intermediate": "중간 결과",
+    "intermediateHidden": "중간 결과 {n}개 숨김",
+    "intermediateHiddenLink": "실행 상세에서 보기",
+    "collapse": "접기",
+    "expand": "펼치기",
+    "insideOf": "{parent} 안의 {name}",
+    "delegatedBy": "{parent}가 맡긴 {name}",
+    "queuedChip": "대기열 #{n}",
+    "queuedCancel": "대기열에서 빼기",
+    "queuedHeldChip": "멈춤 #{n}",
+    "queuedCancelHeld": "취소",
+    "queuedRelease": "실행",
+    "queuedRecall": "입력창으로 가져오기",
+    "queuedBusy": "처리 중…",
+    "resumedChip": "이어 가기 · 이전 실행 {run}",
+    "loadingOlder": "이전 대화를 불러오는 중",
+    "startOfConversation": "대화의 처음입니다",
+    "newContent": "새 내용",
+    "jumpToPending": "응답 대기 카드로 이동",
+    "stop": "중지",
+    "stopping": "중지하는 중…",
+    "tokens": "토큰 {n}",
+    "someTokensTotalOnly": "일부는 총 토큰만",
+    "waitingFor": "응답 대기 {n}",
+    "turnStatus": {
+      "queued": "대기열",
+      "running": "실행 중",
+      "paused": "일시 정지",
+      "waiting": "응답 대기 중",
+      "completed": "완료",
+      "failed": "실패",
+      "cancelled": "취소됨",
+      "interrupted": "중단됨"
+    },
+    "stepStatus": {
+      "running": "작업 중",
+      "succeeded": "완료",
+      "completed": "완료",
+      "failed": "실패",
+      "waiting": "응답 대기",
+      "skipped": "건너뜀",
+      "cancelled": "취소됨"
+    },
+    "progressSummary": "진행 {n}단계",
+    "progressSummaryDuration": "진행 {n}단계 · {duration}",
+    "progressNow": "지금: {name}",
+    "moreSteps": "…외 {n}단계",
+    "sameSession": "같은 세션",
+    "childProgress": "노드 {done}/{total}",
+    "childCurrent": "현재: {name}",
+    "childOpen": "{name} 실행 상세",
+    "childOpenTip": "자식 실행 열기",
+    "childToggle": "{name} 단계 펼치기·접기",
+    "stepWarning": "주의",
+    "progressLabel": "진행 상황",
+    "listLabel": "대화",
+    "errorOpenRun": "실행 상세에서 원인 보기",
+    "units": {
+      "s": "초",
+      "m": "분",
+      "h": "시간"
+    }
+  },
+  "interaction": {
+    "waitingFor": "응답 대기 {duration}",
+    "remaining": "남은 시간 {time}",
+    "disconnected": "연결 끊김",
+    "answeredLine": "답함: {summary} · {duration}",
+    "answeredGeneric": "답함",
+    "expiredLine": "만료됨 — 응답 없음 · {duration}",
+    "expiredDetail": "에이전트에게 ‘응답 없음’이 전달되었습니다",
+    "cancelledLine": "취소됨 — {reason}",
+    "closeReasons": {
+      "cancelled": "실행 취소",
+      "node_finished": "노드 종료",
+      "timeout": "응답 없음",
+      "interrupted": "서버 재시작"
+    },
+    "answeredBy": {
+      "timeout": "시간 초과",
+      "system": "시스템"
+    },
+    "expand": "펼치기",
+    "collapse": "접기",
+    "sendFailed": "보내지 못했습니다.",
+    "cardLabel": "{title}, {actor}, {state}",
+    "stateLabels": {
+      "pending": "응답 대기",
+      "answered": "답함",
+      "expired": "만료",
+      "cancelled": "취소됨",
+      "interrupted": "끊김"
+    },
+    "interruptedTitle": "서버가 다시 시작되어 응답 대기가 끊겼습니다",
+    "interruptedBody": "이 요청에는 더 이상 답할 수 없습니다. 답을 새 메시지로 보내면 에이전트가 앞 맥락을 이어 받습니다(세션 이어쓰기).",
+    "resendAsMessage": "답을 새 메시지로 보내기",
+    "units": {
+      "s": "초",
+      "m": "분",
+      "h": "시간"
+    },
+    "choices": {
+      "customOption": "직접 입력",
+      "customPlaceholder": "직접 입력",
+      "freePlaceholder": "답을 입력하세요",
+      "submit": "보내기",
+      "allRequired": "모든 질문에 답하세요",
+      "answerSummary": "{first}",
+      "answerSummaryMore": "{first} 외 {n}건"
+    },
+    "permission": {
+      "toolTitle": "‘{name}’ 도구를 실행하려고 합니다",
+      "reason": "이유: {reason}",
+      "path": "경로: {path}",
+      "showAll": "전체 보기",
+      "showLess": "줄이기",
+      "allow": "허용",
+      "allowForRun": "이번 실행 동안 허용",
+      "deny": "거부…",
+      "denyReasonLabel": "거부 사유(선택)",
+      "denySend": "거부 보내기",
+      "editInput": "입력 고쳐서 허용",
+      "editAndAllow": "수정해서 허용",
+      "invalidJson": "올바른 JSON이 아닙니다",
+      "summaryAllow": "허용",
+      "summaryAllowForRun": "이번 실행 동안 허용",
+      "summaryDeny": "거부: {reason}",
+      "summaryDenyPlain": "거부"
+    },
+    "review": {
+      "sourceNode": "{label}의 결과",
+      "confirm": "확정: {label}",
+      "feedbackLabel": "의견",
+      "editLabel": "내용 수정",
+      "expandContent": "전체 보기",
+      "collapseContent": "줄이기",
+      "edited": "수정함",
+      "hasFeedback": "의견 있음",
+      "decisionsLabel": "결정"
+    },
+    "answer": {
+      "hintComposer": "아래 입력창에 답하세요",
+      "hintCardPaused": "답은 아직 기다리는 중입니다. 입력창의 [답하기]로 전환하세요",
+      "cardLabelExternal": "{label}, 답은 입력창에서"
+    },
+    "fallback": {
+      "payload": "요청 내용",
+      "responseLabel": "응답(JSON)",
+      "invalidJson": "올바른 JSON이 아닙니다",
+      "submit": "보내기"
+    }
+  },
+  "composer": {
+    "inputLabel": "메시지 입력",
+    "placeholder": "메시지를 입력하세요…",
+    "send": "전송",
+    "sending": "전송 중",
+    "keyHint": {
+      "enter": "Enter 전송 · Shift+Enter 줄바꿈",
+      "mod_enter": "Ctrl+Enter 전송 · Enter 줄바꿈"
+    },
+    "answer": {
+      "strip": "{target}의 {kind}에 답하는 중",
+      "stripMessage": "새 메시지로 보내는 중 — 질문은 대기 중",
+      "modeGroup": "보내는 방식",
+      "modeAnswer": "답하기",
+      "modeMessage": "새 메시지",
+      "placeholder": "답을 입력하세요…",
+      "keyHint": {
+        "enter": "Enter 답하기 · Ctrl+Shift+Enter 새 메시지로",
+        "mod_enter": "Ctrl+Enter 답하기 · Ctrl+Shift+Enter 새 메시지로"
+      },
+      "srEnterAnswer": "{target}의 질문에 답하는 입력창입니다",
+      "srEnterMessage": "새 메시지 입력창입니다"
+    }
+  },
+  "markdown": {
+    "copy": "복사",
+    "copied": "복사됨"
+  }
+}

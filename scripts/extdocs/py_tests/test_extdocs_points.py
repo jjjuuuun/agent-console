@@ -109,17 +109,49 @@ def test_example_points_undeclared_is_missing_declaration(repo: Repo) -> None:
 
 
 def test_readme_section_missing_fails(repo: Repo) -> None:
-    repo.example("example-notes", ["note-kind"], readme="# 예제\n\n## 최소 코드\n\n## 설치·제거\n")
+    readme = "# Example\n\n## Minimal code\n\n## Install and remove\n"
+    repo.example("example-notes", ["note-kind"], readme=readme)
     found = run(repo)
     assert errors(found) == ["readme-section-missing"]
     message = next(f.message for f in found if f.code == "readme-section-missing")
-    assert "등록" in message
-    assert "테스트" in message
+    assert "Registration" in message
+    assert "Test" in message
 
 
 def test_readme_section_alias_contains(repo: Repo) -> None:
     readme = (
-        "# 예제\n\n## 새 노드 만들기 — 최소 코드\n\n## 등록과 설정\n\n## 설치·제거\n\n## 테스트\n"
+        "# Example\n\n## New node: Minimal code\n\n## Registration and settings\n\n"
+        "## Install and remove\n\n## Test\n"
+    )
+    repo.example("example-notes", ["note-kind"], readme=readme)
+    assert errors(run(repo)) == []
+
+
+def test_readme_section_language_aliases() -> None:
+    """언어 전용 별칭(language_aliases)은 그 언어 예제에서만 인정한다(옮기는 중인 옛 제목)."""
+    from extdocs_common import ReadmeSection, ToolData
+    from extdocs_points import readme_missing_sections
+
+    section = ReadmeSection("code", "Minimal code", ("Minimal code",), {"ts": ("최소 코드",)})
+    data = ToolData(
+        settings={},
+        areas=(),
+        readme_sections=(section,),
+        lint_rules=(),
+        registration_templates={},
+        text={},
+    )
+    old = "# Example\n\n## 최소 코드\n"
+    assert readme_missing_sections(old, data, "ts") == []
+    assert readme_missing_sections(old, data, "python") == ["Minimal code"]
+    assert readme_missing_sections("## Minimal code\n", data, "python") == []
+
+
+def test_readme_section_english_titles(repo: Repo) -> None:
+    """영어 README 제목(별칭)도 필수 절로 인정한다."""
+    readme = (
+        "# Example\n\n## Minimal code\n\n## Registration and settings\n\n"
+        "## Install and remove\n\n## Test\n"
     )
     repo.example("example-notes", ["note-kind"], readme=readme)
     assert errors(run(repo)) == []

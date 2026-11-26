@@ -1,57 +1,57 @@
 # agent-console-link-runs-sdd
 
-스펙(`mod-sdd`)과 실행 기록(`mod-runs`)을 잇는 연동 모듈(`link-runs-sdd`).
-스펙 작업 문서의 작업을 실행 프로필(팀 구성 + 입력 틀)로 실행하고, 실행 결과를 작업 표시와 추적 표에
-반영한다.
+A link module (`link-runs-sdd`) that connects specs (`mod-sdd`) to run history (`mod-runs`).
+It runs the tasks of a spec task document with run profiles (a team + an input template) and reflects the run results in the task markers and the trace
+table.
 
-| 하는 일 | 어떻게 |
+| What it does | How |
 | --- | --- |
-| 작업 동작(`sdd.integrations`, 연동 id 기본 `runs`) | 스펙 규칙 `run_profiles`마다 동작 하나. `when`이 맞지 않는 작업에는 내지 않는다. `run` 관문이 막으면 `disabled`(`sdd.gate_blocked`) |
-| 실행 | `when` → `run` 관문 → 입력 틀 치환 → 비밀 검사(`sdd.secret_scan`) → 라벨 상한 → `runs.starter.start_graph(graph, input, origin="sdd", project_id=공간 이름, labels)` |
-| 실행 라벨 | `<접두>spec`·`<접두>task`·`<접두>profile`·`<접두>purpose`(접두 = `mod-sdd.run_label_prefix`, 기본 `sdd.`) |
-| 결과 반영 | `runs.event` 상태 이벤트 → 실행 프로필 `status_on[결과 이름]`이 있으면 작업 머리 줄 하나만 고친다(`by: run`). 실행 중에 그 줄이 바뀌었거나 `task_status` 관문이 막으면 고치지 않고 정보 이슈 `sdd.status_not_applied`(`details.reason`·`gate_id`) |
-| 문서 상태 반영 | 같은 사건에서 실행 프로필 `document_state_on[결과 이름]`(`{document, to}`)이 있으면 `change_document_state(by="run", run_id=<루트 Run>)` — 전환 규칙·`document_state` 관문 그대로. 작업 줄 반영과 독립(하나가 막혀도 다른 하나는 시도). 이미 그 상태면 그대로. 전환 거부·관문·문서 없음·쓸 수 없음이면 고치지 않고 정보 이슈 `sdd.document_state_not_applied`(`details{document_id, to, reason, gate_id?}`). 비우면 바꾸지 않는다. REST 상태 요청은 늘 `by: human`(본문의 `by`를 받지 않음) |
-| 실행 연결 | `runs.reader.page(labels={<접두>spec: id}, root_only=True)`를 상한까지 → `TaskLink{kind: run}`(상태·시각·토큰 합) |
-| 검증 출처(`sdd.verification_sources`, id 기본 `runs`) | `verification.purposes` 목적 실행 → `result_map`으로 바꾼 `VerificationResult` |
-| 프로필 검사 | 그 공간에 팀 구성이 없으면 `sdd.profile_graph_missing`(`details.in_library`) |
+| Task actions (`sdd.integrations`, integration id default `runs`) | One action per spec rule `run_profiles`. Not offered for tasks that `when` does not match. When the `run` gate blocks, `disabled` (`sdd.gate_blocked`) |
+| Run | `when` → `run` gate → input template substitution → secret scan (`sdd.secret_scan`) → label limit → `runs.starter.start_graph(graph, input, origin="sdd", project_id=space name, labels)` |
+| Run labels | `<prefix>spec`, `<prefix>task`, `<prefix>profile`, `<prefix>purpose` (prefix = `mod-sdd.run_label_prefix`, default `sdd.`) |
+| Result reflection | `runs.event` status events → when the run profile has `status_on[result name]`, only the task header line is changed (`by: run`). When that line changed during the run, or the `task_status` gate blocks, nothing is changed and the info issue `sdd.status_not_applied` is raised (`details.reason`, `gate_id`) |
+| Document state reflection | On the same event, when the run profile has `document_state_on[result name]` (`{document, to}`), `change_document_state(by="run", run_id=<root run>)` runs with the transition rules and the `document_state` gate as they are. Independent of the task line reflection (when one is blocked, the other is still tried). When the document is already in that state, it stays. When the transition is rejected, a gate blocks, the document does not exist, or it is not writable, nothing is changed and the info issue `sdd.document_state_not_applied` is raised (`details{document_id, to, reason, gate_id?}`). When empty, nothing changes. REST state requests are always `by: human` (the `by` in the body is not accepted) |
+| Run links | `runs.reader.page(labels={<prefix>spec: id}, root_only=True)` up to the limit → `TaskLink{kind: run}` (status, time, token total) |
+| Verification source (`sdd.verification_sources`, id default `runs`) | Runs with a `verification.purposes` purpose → `VerificationResult` converted through `result_map` |
+| Profile check | When that space has no such team, `sdd.profile_graph_missing` (`details.in_library`) |
 
-실행 상태 → 결과 이름(`status_on`·`result_map`이 쓰는 이름) 표, 반영할 이벤트 종류, 연동·출처 이름,
-`origin`, 읽기 한도는 설치자 옵션 `modules.options.link-runs-sdd`이고 기본값은 패키지 데이터
-`data/defaults.json`이다(`running → started`, `completed → succeeded` 등). `status_on`·
-`document_state_on`·`result_map`에 실행 상태 이름(`completed`)을 직접 써도 맞는다.
+The run status → result name table (the names used by `status_on` and `result_map`), the event types to reflect, the integration and source names,
+`origin`, and the read limits are the administrator options `modules.options.link-runs-sdd`, and the defaults are the package data
+`data/defaults.json` (`running → started`, `completed → succeeded`, and so on). Run status names (`completed`) written directly in `status_on`,
+`document_state_on`, and `result_map` also match.
 
-이 연동이나 `mod-runs`가 꺼지면 `capabilities.runs=false`이고 실행 버튼·실행 칩·검증 열이 없다.
-문서·작업·계획·추적(요구 ↔ 작업)은 그대로 동작한다.
+When this link or `mod-runs` is off, `capabilities.runs=false`, and there are no run buttons, run chips, or verification column.
+Documents, tasks, plans, and traces (requirements ↔ tasks) keep working.
 
-## 자동 진행(선택, 기본 꺼짐)
+## Auto-advance (optional, off by default)
 
-스펙 규칙 `rules.automation{enabled, profile, max_parallel, max_failures, scope}`가 켜진 스펙만
-`SpecAutomation`이 움직인다. 꺼져 있으면 아무 실행도 시작하지 않는다.
+`SpecAutomation` acts only on specs whose spec rule `rules.automation{enabled, profile, max_parallel, max_failures, scope}` is on.
+When it is off, no run is started.
 
-- 실행이 끝날 때마다(그리고 [다시 시작]·스펙 보기·앱 시작 때) `ready` 작업을 문서 순서로
-  `max_parallel`까지 `RunsTaskIntegration.start`로 시작한다. `profile`이 없으면 그 작업에 맞는 첫
-  프로필을 쓴다. 실행 중·건너뜀·정착(실패도 다시 시작도 아닌 결과로 끝나고 줄이 그대로)인 작업은 뺀다.
-- 결과 이름이 `automation_failure_outcomes`(기본 `failed`)면 연속 실패 +1, `max_failures`에 닿으면
-  건너뛰고 정보 이슈 `sdd.automation_skipped`. `automation_retry_outcomes`(기본 `interrupted`)는 세지
-  않고 다시 시작한다. 관문에 막힌 작업은 실패로 세지 않고 기다린다.
-- 멈춤 이유 `stopped_reason`: `user`·`spec_done`·`stage_done`(`scope: stage`)·`failures`. 멈춤은 새
-  실행만 막는다. [다시 시작]은 실패 수·건너뜀을 지운다.
-- 상태(`AutomationState`)는 메모리에만 있고 `RunsTaskIntegration.automation_state`·`control`
-  (`AutomationControl`)로 낸다. 바뀔 때마다 `sdd.service.notify(…, automation=True)`.
-- 재시작 뒤: 스펙을 처음 볼 때 실행 기록에서 **자기 앱**(`runs.starter`의 선택 메서드
-  `host_id(project_id)`) Run만 골라 연속 실패 수·정착한 작업을 되살리고 설정대로 이어 간다.
+- Every time a run finishes (and on [Restart], when a spec is viewed, and when the app starts), it starts `ready` tasks in document order
+  up to `max_parallel` with `RunsTaskIntegration.start`. Without `profile`, it uses the first profile that matches the task.
+  Tasks that are running, skipped, or settled (finished with a result that is neither a failure nor a restart, with the line unchanged) are left out.
+- When the result name is in `automation_failure_outcomes` (default `failed`), the consecutive failure count goes up by one; when it reaches `max_failures`,
+  the task is skipped and the info issue `sdd.automation_skipped` is raised. `automation_retry_outcomes` (default `interrupted`) are not
+  counted and the task is started again. Tasks blocked by a gate are not counted as failures; they wait.
+- Stop reason `stopped_reason`: `user`, `spec_done`, `stage_done` (`scope: stage`), or `failures`. Stopping only prevents new
+  runs. [Restart] clears the failure count and the skipped tasks.
+- The state (`AutomationState`) is kept only in memory and is exposed through `RunsTaskIntegration.automation_state` and `control`
+  (`AutomationControl`). Every change calls `sdd.service.notify(…, automation=True)`.
+- After a restart: the first time a spec is viewed, it picks only the runs of **its own app** from run history (the optional method
+  `host_id(project_id)` of `runs.starter`), restores the consecutive failure count and the settled tasks, and continues as configured.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-runs-sdd
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-runs-sdd
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-runs-sdd
 ```
 
-## 최소 사용
+## Minimal usage
 
-라벨 질의를 페이지 끝까지 모으고(`labeled_runs`), 실행 시작 예외를 오류 이슈로 바꾼다
-(`start_issue`). 가짜 실행 모듈(`testing.FakeRuns`)은 서버 없이 같은 모양을 준다.
+Collect a label query to the last page (`labeled_runs`) and turn a run start exception into an error issue
+(`start_issue`). The fake runs module (`testing.FakeRuns`) provides the same shape without a server.
 
 ```python
 >>> import asyncio
@@ -72,19 +72,19 @@ pip install agent-console-link-runs-sdd
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-서버 조립에서는 entry point `agent_console.server_modules`의 `link-runs-sdd`로 켜진다(필수 포트
-`runs.starter`·`runs.reader`·`sdd.service`).
+In a server assembly it turns on as `link-runs-sdd` of the entry point group `agent_console.server_modules` (required ports
+`runs.starter`, `runs.reader`, and `sdd.service`).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
-AGENT_CONSOLE_PERF=strict uv run pytest -k perf   # 벽시계 단언(한가한 장비에서)
+uv run pytest          # includes the doctests in README.md
+AGENT_CONSOLE_PERF=strict uv run pytest -k perf   # wall-clock assertions (on an idle machine)
 ```

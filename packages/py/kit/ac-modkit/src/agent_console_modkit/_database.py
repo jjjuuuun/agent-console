@@ -15,7 +15,7 @@ from typing import Any, Protocol, runtime_checkable
 
 @dataclass(frozen=True)
 class MigrationBranch:
-    """모듈이 소유한 마이그레이션 계보(패키지 데이터 폴더).
+    """Migration branch a module owns (package data folder).
 
     Args:
         name: 계보 이름(보통 모듈 짧은 이름, 예: ``"usage"``). 식별자여야 하고 ``legacy``는 못 쓴다.
@@ -38,7 +38,7 @@ class MigrationBranch:
 
 @runtime_checkable
 class DatabaseHandle(Protocol):
-    """공용 DB 핸들(호스트가 만들어 모듈에 준다). 모듈은 엔진을 직접 만들지 않는다."""
+    """Shared DB handle the host creates for modules. Modules never create engines."""
 
     @property
     def engine(self) -> Any:

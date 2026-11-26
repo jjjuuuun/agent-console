@@ -7,9 +7,9 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "agent-console-project-space>=0.1,<0.2",
     "agent-console-runtime>=0.1,<0.2",
     "pydantic>=2.9",
@@ -58,6 +58,6 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_link_projects_records.ports:RECORDS_SPACES", reason = "프로젝트 연동이 공간 이름 → 프로젝트 기록 DB를 기능 모듈에 주는 모듈 사이 통로(구현은 이 연동 하나)" },
-    { port = "agent_console_link_projects_records.ports:RECORDS_SESSIONS", reason = "대화 모듈이 프로젝트 기록 공간의 세션 이어 가기 상태를 받는 모듈 사이 통로. 새 백엔드의 세션 보관은 backend-session-archive 지점" },
+    { port = "agent_console_link_projects_records.ports:RECORDS_SPACES", reason = "Inter-module port through which the projects link module gives feature modules the project records database for a space name (this link module is the only implementation)" },
+    { port = "agent_console_link_projects_records.ports:RECORDS_SESSIONS", reason = "Inter-module port through which the chat module receives the session resume state of a project records space. Session archiving for a new backend is the `backend-session-archive` extension point" },
 ]

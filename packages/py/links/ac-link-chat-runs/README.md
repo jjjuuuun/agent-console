@@ -1,26 +1,26 @@
 # agent-console-link-chat-runs
 
-채팅·실행 연동 모듈. 채팅(`mod-chat`)과 실행(`mod-runs`)을 잇는다.
+Chat and runs link module. It connects chat (`mod-chat`) to runs (`mod-runs`).
 
-- **턴 시작**: `chat.turn_launcher` = `runs.starter.start_run(conversation_id=…)`. 대화가 이어 쓸 백엔드 세션은 노드 서비스 `SESSIONS`(`ac-nodes-core`)로 그 Run에만 넘긴다.
-- **조회**: `chat.runs`·`chat.run_events`(받은 실행 포트 그대로), `chat.interactions`(`RootInteractions` — 턴의 상호작용을 루트 Run 기준으로 모은다. 중첩 팀의 자식 Run 안에서 열린 요청도 같은 턴에 나온다. 상호작용 포트가 없으면 주지 않는다).
-- **세션 이어 쓰기**: `chat.turn_sessions`(`LineageSessions`) — 턴 Run과 그 아래 자식 Run(`runs.reader`의 `list(root_run_id=)`)의 노드 세션을 모은다. 자식 Run 노드는 `parent_node_id` 계보로 경로 키 `"<팀 노드>/<자식 노드>"`(`session_path_key`, 손자는 경로를 이어 붙임)로 기록해, 다음 턴에 노드가 같은 규칙(`child_sessions`)으로 자식 Run에 넘긴다. 팀 구성을 바꾸면 첫 구간이 남은 노드 id인 키만 남는다. 노드 종류 이름은 보지 않는다(Run 계보만).
-- **이어 가기**: `runs.resume_handlers`에 대화 턴 처리기(`ConversationResume` → `ChatService.resume_turn`).
-- **알림**: `runs.event` 구독 — 상호작용(`interaction.*`)·대기(`run.waiting`·`run.resumed`) 이벤트가 대화 턴의 것이면 `chat.notify`. 자식 Run(`conversation_id` 없음)의 이벤트는 루트 Run(`root_run_id`)의 대화로 알린다.
-- **시작**: 저장된 대기열을 `chat.queue_after_restart`대로 처리(`apply_restart_policy`). 조립 순서상 실행 모듈(미종료 Run 정리)·채팅 모듈 뒤에 시작한다.
-- **종료**(조립 역순이라 채팅·실행 모듈보다 먼저): 대기열 꺼내기 멈춤(`stop_dispatch`) → 실행 정리(`runs.starter.shutdown()`을 기다림). 그다음 채팅 모듈이 감시를 정리한다. 끊기는 턴 뒤에 대기열을 꺼내지 않는다.
-- 이 연동이 꺼지면 대화·기록·대기열은 동작하고 전송만 409 `feature_unavailable`이다(웹 역할 `conversations:runs`).
+- **Starting a turn**: `chat.turn_launcher` = `runs.starter.start_run(conversation_id=…)`. The backend sessions a conversation continues are passed only to that run, through the node service `SESSIONS` (`ac-nodes-core`).
+- **Queries**: `chat.runs` and `chat.run_events` (the received run ports as they are), and `chat.interactions` (`RootInteractions`, which collects a turn's interactions by root run, so requests opened inside a child run of a nested team appear in the same turn; it is not provided when there is no interactions port).
+- **Continuing sessions**: `chat.turn_sessions` (`LineageSessions`) collects the node sessions of the turn run and the child runs below it (`list(root_run_id=)` on `runs.reader`). Child run nodes are recorded under the path key `"<team node>/<child node>"` (`session_path_key`; grandchildren append to the path) following the `parent_node_id` lineage, so on the next turn the node passes them to its child run by the same rule (`child_sessions`). When the team changes, only keys whose first segment is a node id that still exists are kept. Node type names are not inspected (only the run lineage).
+- **Resume**: a conversation turn handler in `runs.resume_handlers` (`ConversationResume` → `ChatService.resume_turn`).
+- **Notifications**: subscribes to `runs.event`. Interaction (`interaction.*`) and waiting (`run.waiting`, `run.resumed`) events that belong to a conversation turn go to `chat.notify`. Events of a child run (no `conversation_id`) are reported to the conversation of the root run (`root_run_id`).
+- **Start**: processes the saved queue according to `chat.queue_after_restart` (`apply_restart_policy`). In assembly order it starts after the runs module (which cleans up unfinished runs) and the chat module.
+- **Stop** (assembly order is reversed, so this runs before the chat and runs modules): stops taking items from the queue (`stop_dispatch`), then waits for the run cleanup (`runs.starter.shutdown()`). After that the chat module cleans up its watchers. No queued item is taken after a turn is cut off.
+- When this link is off, conversations, records, and the queue still work; only sending returns 409 `feature_unavailable` (web role `conversations:runs`).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-chat-runs
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-chat-runs
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-chat-runs
 ```
 
-## 최소 사용
+## Minimal usage
 
-테스트용 대화 모듈·가짜 실행 시작(`testing`)과 조립한다. 메시지가 실행 시작 포트로 간다.
+Assemble it with the test conversation module and the fake run starter (`testing`). A message goes to the run start port.
 
 ```python
 >>> import asyncio
@@ -44,7 +44,7 @@ pip install agent-console-link-chat-runs
 ...     conv = chat.create(CreateConversationRequest(graph_id="team"))
 ...     run = await chat.post_message(conv.id, PostMessageRequest(text="안녕"))
 ...     print(starter.calls[0]["conversation_id"] == conv.id, starter.calls[0]["origin"])
-...     await assembly.stop()  # 대기열 멈춤 → 실행 정리 → 대화 감시 정리
+...     await assembly.stop()  # stop the queue -> clean up runs -> clean up conversation watchers
 ...     print(starter.current_run(run.id).status)
 >>> asyncio.run(main())
 True chat
@@ -52,39 +52,39 @@ interrupted
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 필수 | `chat.conversations` | `ChatLike`(`notify`·`resume_turn`·`apply_restart_policy`·`stop_dispatch`) |
-| 필수 | `runs.starter` | `RunStarter`(`start_run`·`cancel`·`current_run`·`shutdown`) |
-| 필수 | `runs.reader` / `runs.events` | `LineageRunReader`(`get`·`list(…, root_run_id=)`) / 이벤트 조회 |
-| 선택 | `interactions.port` | `RootInteractionReader`(`list(…, root_run_id=)`) |
-| 구독 | `runs.event` | `RunEvent` |
-| 제공 | `chat.turn_launcher` | `RuntimeTurnLauncher` |
-| 제공 | `chat.runs` / `chat.run_events` | 받은 포트 그대로 |
-| 제공 | `chat.interactions` | `RootInteractions`(루트 기준) |
-| 제공 | `chat.turn_sessions` | `LineageSessions`(자식 Run 세션 = 경로 키) |
-| 제공(multi) | `runs.resume_handlers` | `ConversationResume` |
-| 선택 → 제공(multi) | `runs.move_hook` → `chat.move_hooks` | 받은 훅 그대로: 옛 대화 옮기기 때 그 Run도 함께 |
+| Required | `chat.conversations` | `ChatLike` (`notify`, `resume_turn`, `apply_restart_policy`, `stop_dispatch`) |
+| Required | `runs.starter` | `RunStarter` (`start_run`, `cancel`, `current_run`, `shutdown`) |
+| Required | `runs.reader` / `runs.events` | `LineageRunReader` (`get`, `list(…, root_run_id=)`) / event queries |
+| Optional | `interactions.port` | `RootInteractionReader` (`list(…, root_run_id=)`) |
+| Subscribes | `runs.event` | `RunEvent` |
+| Provides | `chat.turn_launcher` | `RuntimeTurnLauncher` |
+| Provides | `chat.runs` / `chat.run_events` | the received ports as they are |
+| Provides | `chat.interactions` | `RootInteractions` (by root run) |
+| Provides | `chat.turn_sessions` | `LineageSessions` (child run sessions = path keys) |
+| Provides (multi) | `runs.resume_handlers` | `ConversationResume` |
+| Optional → provides (multi) | `runs.move_hook` → `chat.move_hooks` | the received hook as it is: when an old conversation is moved, its runs move with it |
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_link_chat_runs [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.standalone_modules`(메모리 대화 서비스 + 가짜 실행 시작)를 붙인다. 실제 모듈과 함께: `--with mod-chat --with mod-runs --with mod-definitions`.
+Without `--with`, it attaches `testing.standalone_modules` (an in-memory conversation service and a fake run starter). With the real modules: `--with mod-chat --with mod-runs --with mod-definitions`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

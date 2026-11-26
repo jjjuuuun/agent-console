@@ -17,7 +17,7 @@ from typing import Any, cast
 
 @dataclass(frozen=True, slots=True)
 class ServiceKey[T]:
-    """서비스 키. 같은 `name`이면 같은 키다(타입 인자는 정적 검사용)."""
+    """Service key. The same `name` means the same key (the type argument is for static checks)."""
 
     name: str
 

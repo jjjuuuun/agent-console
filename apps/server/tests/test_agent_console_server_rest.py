@@ -221,18 +221,19 @@ def test_agent_console_server_settings(client: TestClient) -> None:
     assert default.json() == {}  # 파일 없음 → 원문 없음(기본값은 유효 설정 API가)
     assert "etag" not in default.headers
     saved = client.put(
-        f"{API}/settings", json={"default_entry": "flow", "default_backend": "fake-agent"}
+        f"{API}/settings",
+        json={"default_entry": "flow", "agent_defaults": {"backend": "fake-agent"}},
     )
     assert saved.status_code == 200
     etag = saved.headers["etag"]
-    assert client.get(f"{API}/settings").json()["default_backend"] == "fake-agent"
+    assert client.get(f"{API}/settings").json()["agent_defaults"] == {"backend": "fake-agent"}
     stale = client.put(f"{API}/settings", json={}, headers={"If-Match": "nope"})
     assert stale.status_code == 412
     assert client.put(f"{API}/settings", json={}, headers={"If-Match": etag}).status_code == 200
 
 
 def test_agent_console_server_default_backend_from_settings(client: TestClient) -> None:
-    """에이전트에 백엔드가 없으면 설정의 default_backend(DEFAULT_BACKEND 서비스)를 쓴다."""
+    """에이전트에 백엔드가 없으면 공통 설정 `agent_defaults.backend`(공통 층)를 쓴다."""
     for agent_id in ("fast", "slow"):
         doc = agent_doc(agent_id, "기본 백엔드로 실행")
         doc.pop("backend")
@@ -243,7 +244,7 @@ def test_agent_console_server_default_backend_from_settings(client: TestClient) 
     assert blocked.status_code == 422
     assert blocked.json()["error"]["code"] == "backend.unresolved"
     assert client.get(f"{API}/runs").json() == []
-    client.put(f"{API}/settings", json={"default_backend": "fake-agent"})
+    client.put(f"{API}/settings", json={"agent_defaults": {"backend": "fake-agent"}})
     run = client.post(f"{API}/runs", json={"graph_id": "flow", "input": {"request": "?"}}).json()
     assert wait_run(client, run["id"])["run"]["status"] == "completed"
 

@@ -120,6 +120,55 @@ def test_route_words_are_not_template_ids(standalone: tuple[TestClient, Path]) -
     assert isinstance(client.get(f"{T}/variables").json(), list)  # 고정 경로 그대로
 
 
+def test_info_lists_route_words_create_refuses(standalone: tuple[TestClient, Path]) -> None:
+    """P1.5: ``SddInfo.reserved_template_ids``는 만들기가 거절하는 말과 같다(정의·프로젝트 모듈
+    없이 SDD만으로). 비교는 대소문자 무시."""
+    client, _root = standalone
+    words = client.get(f"{API}/sdd/info").json()["reserved_template_ids"]
+    assert words
+    refused = client.post(T, json={"name": "x", "id": words[0]})
+    assert refused.status_code == 422
+    assert refused.json()["error"]["details"]["reserved"] == words
+    for word in words:
+        upper = client.post(T, json={"name": "x", "id": word.upper()})
+        assert upper.status_code == 422, word
+        assert upper.json()["error"]["code"] == "validation_failed"
+    assert client.get(T).json() == []
+
+
+def test_save_as_template_refuses_route_words(tmp_path: Path, kit: Any) -> None:
+    """P1.5 결함 수정: 틀로 저장도 새 틀 만들기와 같은 예약어 거절(422)을 탄다.
+
+    준 id가 예약어면 422 ``validation_failed``(``details.reserved``)이고 아무것도 쓰지 않는다.
+    이름에서 만든 id와 ``rename`` 새 id는 예약어를 피한다. 예약어는 ``/sdd/info``에서 읽는다.
+    """
+    kinds = [c.kind for c in kit.make_assembly(tmp_path / "k").ports(DEFINITION_KIND_CONTRIBUTIONS)]
+    library = InMemoryDefinitionStore([k for k in kinds if k.library])
+    kit.write_template(library, {**kit.TEMPLATE, "id": "lib", "name": "라이브러리 틀"})
+    assembly = kit.make_assembly(tmp_path / "lib", library_module(library))
+    with kit.client_for(assembly) as client:
+        words = client.get(f"{API}/sdd/info").json()["reserved_template_ids"]
+        assert words
+        made = client.post(f"{API}/sdd/specs", json={"name": "From lib", "template": "lib"})
+        assert made.status_code == 201, made.text
+        save = f"{API}/sdd/specs/from-lib/save-as-template"
+        for word in words:
+            for given in (word, word.upper()):
+                for policy in ("fail", "overwrite", "rename"):
+                    res = client.post(save, json={"name": "x", "id": given, "on_conflict": policy})
+                    assert res.status_code == 422, (given, policy, res.text)
+                    error = res.json()["error"]
+                    assert error["code"] == "validation_failed"
+                    assert error["details"] == {"id": given, "reserved": words}
+        assert library.list_ids("spec-template") == ["lib"]  # 아무것도 쓰지 않음
+
+        derived = client.post(save, json={"name": words[0]})
+        assert derived.status_code == 201, derived.text
+        assert derived.json()["template_id"].casefold() not in {w.casefold() for w in words}
+        assert derived.json()["template_id"] == f"{words[0]}-2"
+        assert isinstance(client.get(f"{T}/{words[0]}").json(), list)  # 고정 경로 그대로
+
+
 def test_secret_scan_reject_blocks_file_and_warn_reports(tmp_path: Path, kit: Any) -> None:
     secret = b"token sk-ant-api03-" + b"a" * 40 + b"\n"
     reject = kit.make_assembly(tmp_path / "r", settings={"sdd": {"secret_scan": "reject"}})

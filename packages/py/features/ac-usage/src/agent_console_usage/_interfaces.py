@@ -49,7 +49,7 @@ class UsageObservationSink(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class UsageSourceContext:
-    """`UsageSource.snapshot`에 넘기는 맥락(읽기 전용).
+    """Context passed to `UsageSource.snapshot` (read-only).
 
     - `source_id`: 레지스트리 key. 스냅샷의 `source`는 이 값이어야 한다(서비스가 맞춰 넣는다).
     - `config`: 출처 설정(`config_schema`로 검증된 값).
@@ -67,7 +67,7 @@ class UsageSourceContext:
 
 @runtime_checkable
 class UsageSource(Protocol):
-    """사용량 출처. entry point `agent_console.usage_sources`로 등록한다.
+    """Usage source. Register it through entry point `agent_console.usage_sources`.
 
     규칙: **값을 지어내지 않는다.** 출처가 주지 않은 값(사용률·초기화 시각·상태)은 `None`으로 둔다.
     창 id는 출처가 주는 문자열 그대로이며 코드에 창 목록을 두지 않는다. 관측할 것이 없으면 빈 목록,

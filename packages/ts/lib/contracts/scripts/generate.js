@@ -111,10 +111,32 @@ export async function generateFiles() {
   return files;
 }
 
+/**
+ * 타입 이름을 `$defs` 키(= Python 모델 이름)로 되돌린다.
+ *
+ * json-schema-to-typescript는 이름을 식별자로 다듬으면서 숫자 뒤 글자를 대문자로 바꾼다
+ * (`I18nInfo` → `I18NInfo`). 두 언어의 이름이 같아야 하므로, 생성된 이름 중 `$defs` 키와 대소문자만
+ * 다른 것을 키 이름으로 바꾼다. 그래도 `$defs` 키 이름의 타입이 없으면 오류다(하위 경로 파일이 없는
+ * 이름을 내보내게 된다).
+ */
+export function restoreModelNames(types, modelNames) {
+  const exported = new Set([...types.matchAll(/^export (?:interface|type) ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]));
+  let out = types;
+  for (const name of modelNames) {
+    if (exported.has(name)) continue;
+    const generatedName = [...exported].find((other) => other.toLowerCase() === name.toLowerCase());
+    if (generatedName === undefined) throw new Error(`계약 모델 ${name}의 TS 타입을 찾지 못했습니다.`);
+    out = out.replace(new RegExp(`\\b${generatedName.replace(/\$/g, "\\$")}\\b`, "g"), name);
+    exported.delete(generatedName);
+    exported.add(name);
+  }
+  return out;
+}
+
 export async function generate(schemaArg) {
   const schema = schemaArg ?? JSON.parse(await readFile(schemaPath, "utf8"));
   const prepared = prepare(schema, true);
-  const types = await compile(prepared, "AgentConsoleContracts", {
+  const compiled = await compile(prepared, "AgentConsoleContracts", {
     bannerComment: "",
     additionalProperties: false,
     unreachableDefinitions: true,
@@ -123,6 +145,7 @@ export async function generate(schemaArg) {
     strictIndexSignatures: false,
     style: { printWidth: 100, singleQuote: false, trailingComma: "all", endOfLine: "lf" },
   });
+  const types = restoreModelNames(compiled, Object.keys(schema.$defs ?? {}));
   const constants = renderConstants(schema["x-constants"] ?? {});
   return `${BANNER}\n\n${types.trim()}\n\n// ---- 상수 (schema x-constants)\n\n${constants}\n`;
 }

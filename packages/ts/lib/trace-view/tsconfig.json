@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/trace-view": [
         "./src/index.ts"
+      ],
+      "@agent-console/trace-view/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/trace-view/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

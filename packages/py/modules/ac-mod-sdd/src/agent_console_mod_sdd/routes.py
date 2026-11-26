@@ -82,7 +82,11 @@ from agent_console_sdd import (
 from .errors import SddRequestError
 from .secrets import SCAN_REJECT, SecretRejectedError
 from .service import SddScope, SddService, gather_actions
-from .template_routes import build_template_router
+from .template_routes import (
+    TEMPLATE_ROUTE_WORDS,
+    build_template_router,
+    reject_reserved_template_id,
+)
 
 _ERROR_STATUSES = (400, 401, 403, 404, 409, 422, 500)
 _HUMAN = KnownTransitionActors.HUMAN
@@ -173,9 +177,9 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
 
     @router.get("/sdd/info", response_model=SddInfo, responses=errors())
     async def get_info(space: SpaceQuery = None) -> SddInfo:
-        """화면 정보: 스펙 폴더·한도·능력(포트 유무로 계산)·라벨 표시 규칙."""
+        """화면 정보: 스펙 폴더·한도·능력(포트 유무로 계산)·라벨 표시 규칙·문서 틀 id 예약어."""
         svc = service()
-        return svc.info(svc.scope(space))
+        return svc.info(svc.scope(space), reserved_template_ids=TEMPLATE_ROUTE_WORDS)
 
     @router.get("/sdd/templates", response_model=list[SpecTemplateSummary], responses=errors())
     async def list_templates(space: SpaceQuery = None) -> list[SpecTemplateSummary]:
@@ -682,7 +686,12 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
     async def save_as_template(
         spec_id: str, body: SaveAsTemplateRequest, space: SpaceQuery = None
     ) -> SaveAsTemplateResult:
-        """스펙 → 문서 틀(기본 라이브러리, 겹침 ``fail`` 409 ``sdd.template_exists``)."""
+        """스펙 → 문서 틀(기본 라이브러리, 겹침 ``fail`` 409 ``sdd.template_exists``).
+
+        준 id가 경로 예약어면 새 틀 만들기와 같은 422 ``validation_failed``이고, 이름에서 만든
+        id·``rename`` 새 id는 예약어를 피한다.
+        """
+        reject_reserved_template_id(body.id)
         svc = service()
         sc = svc.scope(space)
         dest, ref = svc.template_target(body.target)
@@ -693,6 +702,7 @@ def build_router(service: Callable[[], SddService]) -> APIRouter:
             include_content=body.include_content,
             on_conflict=body.on_conflict,
             target=dest,
+            taken=TEMPLATE_ROUTE_WORDS,
         )
         return result.model_copy(update={"target": ref})
 

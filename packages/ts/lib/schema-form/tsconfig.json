@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/schema-form": [
         "./src/index.ts"
+      ],
+      "@agent-console/schema-form/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/schema-form/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

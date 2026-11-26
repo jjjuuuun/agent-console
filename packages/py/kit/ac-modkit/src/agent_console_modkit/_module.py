@@ -26,7 +26,7 @@ KNOWN_MODULE_KINDS: tuple[str, ...] = ("feature", "link")
 
 @dataclass(frozen=True)
 class ModuleDescriptor:
-    """모듈이 스스로를 설명하는 데이터. 조립 순서·켜고 끄기·보고에 쓴다.
+    """Data a module uses to describe itself: for assembly order, turning on and off, and reports.
 
     Args:
         id: 모듈 id(예: ``"mod-chat"``). 설정 ``modules.*``의 키.
@@ -141,7 +141,7 @@ class ModuleParts:
 
 @runtime_checkable
 class Module(Protocol):
-    """서버 모듈. entry point 그룹 ``MODULES_GROUP``으로 설치하거나 직접 넘긴다."""
+    """Server module. Install it via entry point group ``MODULES_GROUP`` or pass it directly."""
 
     descriptor: ModuleDescriptor
 

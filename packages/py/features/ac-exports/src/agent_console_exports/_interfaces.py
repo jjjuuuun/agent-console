@@ -79,7 +79,7 @@ class OutputFile:
 
 @dataclass(frozen=True, slots=True)
 class ExportOutput:
-    """형식이 만든 산출물(파일 내용 + 경고). 쓰기는 `ExportService`가 한다."""
+    """Output a format produced (file contents + warnings). `ExportService` does the writing."""
 
     files: list[OutputFile] = field(default_factory=list)
     warnings: list[Issue] = field(default_factory=list)
@@ -138,8 +138,9 @@ class ExportCatalog(Protocol):
 
 @runtime_checkable
 class Exporter(Protocol):
-    """내보내기 형식. `plan`은 **순수**하다: 카탈로그를 읽기만 하고 파일을 쓰지 않는다
-    (파일 내용을 만들어 돌려줄 뿐이다)."""
+    """Export format. `plan` is **pure**: it reads the catalog and never writes files.
+
+    It only builds and returns file contents."""
 
     @property
     def descriptor(self) -> ExporterDescriptor:
@@ -157,7 +158,7 @@ class Exporter(Protocol):
 
 
 type ExporterFactory = Callable[[Mapping[str, Any]], Exporter]
-"""설치자 옵션(`modules.options.mod-exports.options.<형식>`) → 형식.
+"""Server administrator options (`modules.options.mod-exports.options.<format>`) → format.
 
 entry point `agent_console.exporters`가 가리키는 것이다.
 """

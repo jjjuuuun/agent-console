@@ -1,0 +1,6 @@
+{
+  "more": "더 보기",
+  "moreCount": "{n}개 더 보기",
+  "shortcutConflict": "단축키 중복: \"{keys}\" — {first} / {second}",
+  "needsShortcutProvider": "ShortcutProvider 안에서만 쓸 수 있습니다."
+}

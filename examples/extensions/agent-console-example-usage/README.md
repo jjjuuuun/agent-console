@@ -1,17 +1,17 @@
 # agent-console-example-usage
 
-새 **사용량 출처**를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 사용량 화면의 출처 목록과 창 카드에 나타나고 제거하면 사라진다.
+An example that adds a new **usage source** with a single plugin package.
+No engine, server, or web code changes. Once installed, it appears in the source list and the window cards of the usage screen, and it disappears when removed.
 
-사용량 출처 `example.manual_count`(직접 적은 사용량)
-- 공식 사용량 값이 없는 도구(사내 게이트웨이, 팀 공용 할당량 등)를 사용자가 설정에 직접 적는다.
-- 설정: `windows: [{window, used, limit, status?}]` → 창마다 `used_ratio = used / limit`. 적지 않은 값(`status`·`resets_at`)은 `None`(지어내지 않는다).
-- 신뢰 등급 `trust = "manual"`: 알려진 등급(`official`·`observed`·`estimated`·`unofficial`) 밖의 값도 된다는 예. 화면은 기본 배지로 보인다.
-- 관측 시각은 주입된 시계(`ctx.now`). 외부 호출이 없다.
+Usage source `example.manual_count` (manually entered usage)
+- For tools without official usage values (an in-house gateway, a team's shared quota, and so on), the user writes the values in the settings directly.
+- Settings: `windows: [{window, used, limit, status?}]` → `used_ratio = used / limit` per window. Values that are not written (`status`, `resets_at`) are `None` (nothing is made up).
+- Trust level `trust = "manual"`: an example showing that values outside the known levels (`official`, `observed`, `estimated`, `unofficial`) work too. The screen shows it with the default badge.
+- The observation time comes from the injected clock (`ctx.now`). There are no external calls.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
 ```python
 from agent_console_contracts import UsageSourceDescriptor, UsageWindowSnapshot
@@ -38,17 +38,17 @@ class ManualCountSource:
         ]
 ```
 
-실제 구현은 `src/agent_console_example_usage/manual_count.py`(순수 함수 `windows_from_config`로 분리, 틀린 항목 건너뜀).
-서버는 `usage.sources[].config`를 `config_schema`로 검증한 뒤 넘긴다(틀리면 그 출처만 오류로 보인다).
+The real implementation is `src/agent_console_example_usage/manual_count.py` (split into the pure function `windows_from_config`; wrong items are skipped).
+The server validates `usage.sources[].config` against `config_schema` before passing it on (when wrong, only that source shows an error).
 
-## 등록과 설정
+## Registration and settings
 
 ```toml
 [project.entry-points."agent_console.usage_sources"]   # agent_console_usage.USAGE_SOURCES_GROUP
 "example.manual_count" = "agent_console_example_usage:ManualCountSource"
 ```
 
-워크스페이스 설정(설정 화면 또는 `settings.yaml`):
+Workspace settings (the settings screen or `settings.yaml`):
 
 ```yaml
 usage:
@@ -57,32 +57,32 @@ usage:
       config:
         windows:
           - {window: team_weekly, used: 120, limit: 500}
-  window_labels: {team_weekly: "팀 주간 할당량"}
+  window_labels: {team_weekly: "Team weekly quota"}
 ```
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-usage   # 설치
-uv pip uninstall agent-console-example-usage                        # 제거
+uv pip install -e examples/extensions/agent-console-example-usage   # install
+uv pip uninstall agent-console-example-usage                        # remove
 ```
 
-설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/usage/sources`에 나오고, 위 설정을 넣으면 `GET /api/v1/usage`와 사용량 화면 창 카드에 사용률이 보인다.
-- 제거: 출처 목록·창 카드에서 사라진다. 설정의 `usage.sources` 항목은 남지만 등록된 출처가 없으므로 무시된다.
-- 설치한 채로 끄기: 설정 항목에 `enabled: false`, 또는 서버 설정 `plugins.enabled`(허용 목록)에서 뺀다.
+**Restart the server** after installing or removing.
+- Install: it appears in `GET /api/v1/usage/sources`, and with the settings above the usage rate shows up in `GET /api/v1/usage` and the window cards of the usage screen.
+- Remove: it disappears from the source list and the window cards. The `usage.sources` entry in the settings remains, but it is ignored because no source is registered.
+- Turn off while installed: set `enabled: false` in the settings entry, or remove it from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
 ```bash
 cd examples/extensions/agent-console-example-usage
 uv run --project ../../.. python -m pytest
 ```
 
-설치 없이 돈다(`pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
-E2E: `apps/web/e2e/08-extension.spec.ts`의 "사용량 출처" 시나리오가 이 패키지를 임시 폴더에 설치해 쓴다.
+The tests run without installing (`pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).
+E2E: the usage source scenario of `apps/web/e2e/08-extension.spec.ts` installs this package into a temporary folder and uses it.

@@ -376,7 +376,13 @@ class SddService:
             import_export=scope.files is not None,
         )
 
-    def info(self, scope: SddScope) -> SddInfo:
+    def info(self, scope: SddScope, *, reserved_template_ids: Sequence[str] = ()) -> SddInfo:
+        """화면 정보(``GET /sdd/info``).
+
+        Args:
+            scope: 공간.
+            reserved_template_ids: 문서 틀 id로 쓸 수 없는 말(경로 어휘, 라우터가 준다).
+        """
         return SddInfo(
             spec_root=scope.spec_root,
             writable=scope.writable,
@@ -387,6 +393,7 @@ class SddService:
             ),
             capabilities=self.capabilities(scope),
             label_display=self.label_display(),
+            reserved_template_ids=list(reserved_template_ids),
         )
 
     def context(self, scope: SddScope, loaded: LoadedSpec) -> SpecContext:

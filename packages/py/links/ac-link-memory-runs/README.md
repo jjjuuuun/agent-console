@@ -1,49 +1,48 @@
 # agent-console-link-memory-runs
 
-Agent Console 메모리·실행 연동 모듈(`link-memory-runs`). 에이전트에게 공유
-메모리 도구(검색·읽기·쓰기·지우기)를 준다. 실행 모듈(`mod-runs`)과 메모리 모듈(`mod-memory`)은 서로를
-모르고, 이 연동이 실행 범위(`runs.scopes`)로 Run마다 에이전트 도구 공급자(`TOOL_PROVIDERS`)를
-넣어 둘을 잇는다.
+Agent Console memory and runs link module (`link-memory-runs`). It gives agents shared memory tools (search, read, write, delete).
+The runs module (`mod-runs`) and the memory module (`mod-memory`) do not know each other; this link connects them by adding an agent tool
+provider (`TOOL_PROVIDERS`) to every run through the run scope (`runs.scopes`).
 
-| 무엇 | 내용 |
+| What | Details |
 | --- | --- |
-| 받는 포트(필수) | `memory.service`(`mod-memory`). 없으면 이 연동은 꺼진다 |
-| 주는 포트 | `runs.scopes`(Run마다 메모리 도구 공급자), `definitions.checks`(메모리 리소스의 모르는 범위 종류 → warning `memory.unknown_scope_kind`) |
-| 리소스 종류 | `memory`(entry point `agent_console.resource_types`, 패키지 데이터 `data/memory_resource_type.yaml`, 설정 스키마 = 계약 `MemoryAccessConfig`, 범위 종류 칸은 `x-ui` 위젯 `memory-scope-kind`) |
-| 실행 이벤트 | 도구 호출마다 `memory.read`·`memory.search`·`memory.write`·`memory.delete`(payload = 계약 `MemoryEventPayload`: 범위·키·id·버전·바이트 수·해시·결과 수·검색어 길이·해시·도구 이름·`tool_use_id`·처리 시간. **본문·검색어 원문 없음**) |
-| 설치자 옵션 | `modules.options.link-memory-runs.max_writes_per_run`(기본 200, 비우면 한도 없음 — 넘으면 `rate_limited`) |
-| 웹 역할 | `memory:runs`(실행 상세의 메모리 칩) |
+| Received port (required) | `memory.service` (`mod-memory`). Without it this link is off |
+| Provided ports | `runs.scopes` (a memory tool provider per run), `definitions.checks` (an unknown scope kind in a memory resource → warning `memory.unknown_scope_kind`) |
+| Resource type | `memory` (entry point `agent_console.resource_types`, package data `data/memory_resource_type.yaml`, settings schema = contract `MemoryAccessConfig`; the scope kind field uses the `x-ui` widget `memory-scope-kind`) |
+| Run events | `memory.read`, `memory.search`, `memory.write`, and `memory.delete` per tool call (payload = contract `MemoryEventPayload`: scope, key, id, version, byte count, hash, result count, search text length and hash, tool name, `tool_use_id`, duration. **No content or search text**) |
+| Administrator option | `modules.options.link-memory-runs.max_writes_per_run` (default 200; empty = no limit; above it, `rate_limited`) |
+| Web role | `memory:runs` (the memory chip in the run detail) |
 
-- **opt-in**: 리소스 `memory`를 붙인 에이전트만 도구를 받는다. 도구 이름·설명·결과 머리 줄·범위별 권한은
-  리소스 config(데이터)다. `delete` 도구는 지우기를 허용한 범위가 있을 때만 준다.
-- **층**: 같은 칸에 여러 첨부(공통 → 팀 구성 → 에이전트 → 노드)가 있으면 범위 종류마다 가까운 층의
-  허용 동작을 쓴다. 나머지 키(기본 범위·도구 이름 등)도 가까운 층이 정한 값이 이긴다(`merge_access`,
-  규칙은 위키 연동과 같은 `agent_console_nodes_core.merge_access_layers`).
-- **범위 id**는 맥락(`MemoryAccessContext`)에서 계산한다. `graph_id`는 그 노드를 실행한 Run의 팀
-  구성(중첩 팀이면 자식 팀), `root_graph_id`·`project_id`는 루트 Run 값이다. 에이전트가 범위 id를 고를 수 없다.
-- **실행당 쓰기 한도**는 Run 하나(자식 Run 포함)의 모든 에이전트가 함께 쓴다.
-- **끄기**: `mod-memory`나 이 연동이 꺼지면 실행은 그대로 끝나고, 메모리 리소스를 붙인 노드마다 "백엔드가
-  적용하지 못한 칸" 경고(`resource.slot_unsupported`)가 1건 난다. 리소스 종류는 이 패키지가 설치돼
-  있으면 연동을 꺼도 등록돼 있다(리소스를 만들 수는 있다).
-- 메모리 내용은 다른 에이전트에게 지시처럼 읽힐 수 있다(보안 경계가 아니다). 쓰기 권한을 리소스로 좁힌다.
+- **Opt-in**: only agents with a `memory` resource attached get the tools. Tool names, descriptions, result header lines, and permissions per scope are
+  the resource config (data). The `delete` tool is given only when some scope allows deleting.
+- **Layers**: when the same slot has several attachments (common → team → agent → node), the allowed actions of the closest layer are used for each scope kind.
+  For the other keys (default scope, tool names, and so on), the value set by the closest layer also wins (`merge_access`;
+  the rule is the same `agent_console_nodes_core.merge_access_layers` as the wiki link).
+- **Scope ids** are computed from the context (`MemoryAccessContext`). `graph_id` is the team of the run that ran the node
+  (the child team for a nested team); `root_graph_id` and `project_id` are values of the root run. Agents cannot choose scope ids.
+- **The write limit per run** is shared by all agents of one run (including child runs).
+- **Turning it off**: when `mod-memory` or this link is off, runs still finish, and each node with a memory resource attached gets one
+  "slot the backend could not apply" warning (`resource.slot_unsupported`). While this package is installed, the resource type stays registered
+  even with the link off (you can still create the resources).
+- Memory content can be read by other agents as if it were instructions (it is not a security boundary). Narrow write permissions with the resource.
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what, why, alternatives
 
-- 사내: `agent-console-memory`(도구 묶음·범위 종류), `agent-console-nodes-core`(공급자 프로토콜·서비스
-  키), `agent-console-runtime`(`HostTool`), `agent-console-resources`(리소스 종류 베이스),
-  `agent-console-store`(정의 종류 이름 `resource`), `agent-console-modkit`(모듈).
-- 외부: pydantic, ruamel.yaml(디스크립터 데이터). 새 외부 의존 없음.
+- In-house: `agent-console-memory` (tool set, scope kinds), `agent-console-nodes-core` (provider protocol, service
+  keys), `agent-console-runtime` (`HostTool`), `agent-console-resources` (resource type base),
+  `agent-console-store` (definition kind name `resource`), `agent-console-modkit` (module).
+- External: pydantic, ruamel.yaml (descriptor data). No new external dependencies.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-memory-runs
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-memory-runs
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-memory-runs
 ```
 
-## 최소 사용
+## Minimal usage
 
-서버·실행 엔진 없이 공급자 하나로 도구를 만들고 부른다(메모리 서비스는 주입).
+Without a server or a run engine, build the tools from one provider and call them (the memory service is injected).
 
 ```python
 >>> import asyncio
@@ -75,18 +74,18 @@ False
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-단독 실행(메모리 저장소 서비스 모듈과 함께): `python -m agent_console_link_memory_runs --check`.
-실제 모듈과: `--with mod-memory --with mod-runs`.
+Standalone run (with an in-memory memory service module): `python -m agent_console_link_memory_runs --check`.
+With the real modules: `--with mod-memory --with mod-runs`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

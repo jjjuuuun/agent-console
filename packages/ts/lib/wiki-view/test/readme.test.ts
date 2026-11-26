@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { linkifySource } from "@agent-console/wiki-view";
 
 const content = "가나 😀 [[다라]] 끝";
-// 서버가 준 링크 범위(UTF-16): content.slice(start, end) === "[[다라]]"
+// Link range from the server (UTF-16): content.slice(start, end) === "[[다라]]"
 const link = { start: 6, end: 12, raw: "[[다라]]", kind: "wikilink", rule_id: "r", label: "다라", status: "ok", resolved: "da" };
 const text = linkifySource(content, [link]);
 // readme:end

@@ -1,38 +1,38 @@
 # agent-console-mod-chat
 
-채팅 기능 모듈. 대화 서비스(`ac-chat`)를 서버에 꽂는다.
+Chat feature module. It plugs the conversation service (`ac-chat`) into the server.
 
-- 경로: `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/{id}`, `GET /conversations/{id}/turns`, `POST /conversations/{id}/messages`, 대기열(`GET …/queue`, `DELETE …/queue/{queued_id}`, `POST …/queue/{queued_id}/release`).
-- WS 토픽: `conversation:<id>`(구독 직후 현재 요약, 이후 바뀔 때마다 `conversation.updated`).
-- 턴 실행·Run 조회·상호작용은 **선택 포트**로 받는다(보통 `link-chat-runs`가 준다). 없으면 대화·기록·대기열은 동작하고 메시지 전송만 409 `feature_unavailable{module: mod-chat, port: chat.turn_launcher}`이다. 정의 읽기(`definitions.lookup`)가 없으면 대화 만들기·팀 구성 바꾸기가 409다.
-- 저장소: 대화·대기열(`conversations`·`chat_queue`)은 이 모듈이 소유한다(`agent_console_mod_chat.storage`). 호스트의 DB 핸들(`BaseServices.database`, 예: `agent_console_store.SqliteDatabase`) 엔진 위에 만들고, 마이그레이션 계보 `chat`(패키지 데이터 `storage/migrations/versions`)은 모듈이 켜질 때만 올라간다. 테이블은 legacy 0002·0003이 만든 그대로다(변경 없음). 대화를 지우면 대기열도 같은 트랜잭션에서 지운다. DB가 없으면 메모리(경고 `chat.storage_memory`). **legacy는 다운그레이드하지 않는다** — 되돌릴 때는 `chat` 계보만 되돌린다.
+- Routes: `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/{id}`, `GET /conversations/{id}/turns`, `POST /conversations/{id}/messages`, and the queue (`GET …/queue`, `DELETE …/queue/{queued_id}`, `POST …/queue/{queued_id}/release`).
+- WS topic: `conversation:<id>` (the current summary right after subscribing, then `conversation.updated` on every change).
+- Running turns, reading runs, and interactions come through **optional ports** (usually provided by `link-chat-runs`). Without them, conversations, records, and the queue work, and only sending a message returns 409 `feature_unavailable{module: mod-chat, port: chat.turn_launcher}`. Without definition reading (`definitions.lookup`), creating a conversation and changing its team return 409.
+- Storage: this module owns conversations and the queue (`conversations`, `chat_queue`) (`agent_console_mod_chat.storage`). They are built on the engine of the host database handle (`BaseServices.database`, for example `agent_console_store.SqliteDatabase`), and the migration lineage `chat` (package data `storage/migrations/versions`) is applied only when the module is on. The tables are exactly the ones legacy 0002 and 0003 created (no changes). Deleting a conversation deletes its queue in the same transaction. Without a database, memory is used (warning `chat.storage_memory`). **Legacy is never downgraded**: to roll back, roll back only the `chat` lineage.
 
-### 대화 목록 페이지 질의 (`GET /conversations/page`)
+### Conversation list page query (`GET /conversations/page`)
 
-정렬은 `updated_at`·`id` 내림차순. `next_cursor`를 다음 요청 `cursor=`로 넘기면 같은 조건으로 이어진다. 기록 공간이 있는 조립의 `?project=`는 폴더 기록을 끝까지 읽은 뒤 앱 DB 옛 기록으로 잇고, 두 출처 모두 같은 조건으로 거른다.
+Sorted by `updated_at` and `id` in descending order. Pass `next_cursor` as `cursor=` in the next request to continue with the same conditions. In an assembly with record spaces, `?project=` reads the folder records to the end and then continues with the old records in the app database; both sources are filtered with the same conditions.
 
-| 질의 | 뜻 |
+| Query | Meaning |
 | --- | --- |
-| `cursor` | 이전 응답의 `next_cursor`(불투명, 틀리면 400 `bad_request`) |
-| `limit` | 1~1000(기본 50) |
-| `project` · `source` | 그 프로젝트의 대화 · 기록 출처(`project` 기본, `app` = 앱 DB 옛 기록) |
-| `graph_id` · `archived` | 같음 비교 |
-| `q` | 제목 부분 일치(최대 200자, 넘으면 422, 앞뒤 공백 제거, 비면 무시, 대소문자 무시 `casefold`). 제목이 빈 대화는 맞지 않는다 |
+| `cursor` | `next_cursor` of the previous response (opaque; 400 `bad_request` when wrong) |
+| `limit` | 1 to 1000 (default 50) |
+| `project` · `source` | Conversations of that project · record source (`project` by default; `app` = old records in the app database) |
+| `graph_id` · `archived` | Equality |
+| `q` | Partial match on the title (up to 200 characters, 422 when longer; leading and trailing spaces are removed, ignored when empty, case-insensitive with `casefold`). Conversations with an empty title do not match |
 
-### 프로젝트별 대화 수 (`GET /conversations/project-counts`)
+### Conversation counts per project (`GET /conversations/project-counts`)
 
-`ProjectCounts`(전체·프로젝트 없음·프로젝트별 대화 수). 기록 공간이 있는 조립이면 앱 DB와 보관하지 않은 등록 프로젝트의 기록 DB를 합쳐 센다. `?source=app`이면 앱 DB만 센다(앱에 남은 기록 표시용).
+`ProjectCounts` (total, without a project, and per project). In an assembly with record spaces, it counts the app database together with the record databases of registered projects that are not unregistered. With `?source=app`, only the app database is counted (for showing the records left in the app).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-chat
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-chat
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-chat
 ```
 
-## 최소 사용
+## Minimal usage
 
-정의 읽기만 붙이면 대화를 만들고 목록을 볼 수 있다. 턴 실행기가 없으니 전송은 `feature_unavailable`이다.
+With only definition reading attached, you can create conversations and list them. There is no turn launcher, so sending returns `feature_unavailable`.
 
 ```python
 >>> import asyncio
@@ -42,7 +42,7 @@ pip install agent-console-mod-chat
 >>> from agent_console_modkit import assemble
 >>> from agent_console_modkit.testing import fake_module
 >>> from agent_console_mod_chat import CHAT_CONVERSATIONS, DEFINITIONS_LOOKUP, module
->>> class Graphs:  # definitions.lookup 모양: get(kind, id).document
+>>> class Graphs:  # the shape of definitions.lookup: get(kind, id).document
 ...     def get(self, kind, id):
 ...         return SimpleNamespace(document={"id": id, "name": "팀"})
 >>> definitions = fake_module(
@@ -68,7 +68,7 @@ feature_unavailable
 
 ```
 
-실행 연결을 주는 모듈(여기서는 테스트용 가짜 `fake_turns_module`)을 붙이면 메시지가 턴(Run)이 된다.
+Attach a module that provides the run connection (here the fake test module `fake_turns_module`) and a message becomes a turn (a run).
 
 ```python
 >>> from agent_console_mod_chat.testing import fake_turns_module
@@ -85,43 +85,43 @@ True running running
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 제공 | `chat.conversations` | `ChatService`(대화·대기열·턴 조립, `notify`·`resume_turn`·`apply_restart_policy`·`stop_dispatch`·`connect`) |
-| 제공(multi) | `server.warnings` | DB가 없으면 `chat.storage_memory` |
-| 토픽 | `conversations.updated` | `ConversationSummary` |
-| 선택 | `chat.turn_launcher` | `TurnLauncher`(`start_turn`·`cancel`) — 없으면 전송·이어 가기 409 |
-| 선택 | `chat.runs` / `chat.run_events` / `chat.interactions` | `RunReader` / `EventReader` / `InteractionReader` — 없으면 턴 목록 빈 값·대기 수 0 |
-| 선택 | `chat.turn_sessions` | `TurnSessions`(`collect`·`prune`) — 없으면 기본 규칙(턴 Run 자기 노드만, 키 = 노드 id) |
-| 선택 | `definitions.lookup` | `get(kind, id).document` — 없으면 대화 만들기 409 |
-| 선택 | `definitions.spaces` | `open(project_id).get(kind, id).document` — 있으면 프로젝트 대화의 팀 구성은 그 공간에서만(없으면 404), 없으면 `definitions.lookup` |
-| 선택 | `workspace.settings` | `() -> WorkspaceSettings`(`chat.*`) — 없으면 스키마 기본값 |
-| 선택(multi) | `chat.move_hooks` | `MoveHook`(`busy`·`prepare`, 선택 `after_move`) — 앱 DB 옛 대화를 `POST /conversations/move-to-project`로 옮길 때 같은 작업에 묶는 딸린 기록(예: 그 대화의 Run). 없으면 대화·대기열만 옮긴다 |
+| Provides | `chat.conversations` | `ChatService` (conversations, queue, turn assembly; `notify`, `resume_turn`, `apply_restart_policy`, `stop_dispatch`, `connect`) |
+| Provides (multi) | `server.warnings` | `chat.storage_memory` when there is no database |
+| Topic | `conversations.updated` | `ConversationSummary` |
+| Optional | `chat.turn_launcher` | `TurnLauncher` (`start_turn`, `cancel`); without it, sending and resuming return 409 |
+| Optional | `chat.runs` / `chat.run_events` / `chat.interactions` | `RunReader` / `EventReader` / `InteractionReader`; without them, the turn list is empty and the waiting count is 0 |
+| Optional | `chat.turn_sessions` | `TurnSessions` (`collect`, `prune`); without it, the default rule (only the turn run's own nodes, key = node id) |
+| Optional | `definitions.lookup` | `get(kind, id).document`; without it, creating a conversation returns 409 |
+| Optional | `definitions.spaces` | `open(project_id).get(kind, id).document`; when present, the team of a project conversation is read only from that space (404 when missing); otherwise `definitions.lookup` |
+| Optional | `workspace.settings` | `() -> WorkspaceSettings` (`chat.*`); without it, the schema defaults |
+| Optional (multi) | `chat.move_hooks` | `MoveHook` (`busy`, `prepare`, optional `after_move`): dependent records bound into the same operation when an old conversation in the app database is moved with `POST /conversations/move-to-project` (for example the runs of that conversation). Without it, only the conversation and its queue are moved |
 
-실행 연결은 이 모듈이 시작할 때 읽는다(`ChatService.connect`). 연결 모듈은 `chat.conversations`가 필수라 조립 순서상 이 모듈보다 뒤에 빌드되기 때문이다. 재시작 대기열 정책(`chat.queue_after_restart`)은 턴 실행기를 주는 연동 모듈이 시작할 때 적용한다(실행기 없이는 대기열을 꺼내지 않고 남긴다).
+The run connection is read when this module starts (`ChatService.connect`), because the connecting module requires `chat.conversations` and is therefore built after this module in assembly order. The queue policy after a restart (`chat.queue_after_restart`) is applied when the link module that provides the turn launcher starts (without a launcher, the queue is left as it is).
 
-선택 포트 `records.sessions`: `GET /conversations/{id}/sessions`(`ConversationSessions`)와 보내기 409
-`chat.session_unavailable`. 없으면 모든 세션이 `not_applicable`(지금 동작).
+Optional port `records.sessions`: `GET /conversations/{id}/sessions` (`ConversationSessions`) and the send-time 409
+`chat.session_unavailable`. Without it, every session is `not_applicable` (the current behavior).
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_mod_chat [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.local_definitions_module`(워크스페이스 파일 저장소)을 붙인다. 대화는 `<state>/console.sqlite3`. 턴까지 띄우려면 `--with mod-definitions --with mod-runs --with link-chat-runs`.
+Without `--with`, it attaches `testing.local_definitions_module` (a file store in the workspace). Conversations are in `<state>/console.sqlite3`. To run turns too: `--with mod-definitions --with mod-runs --with link-chat-runs`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

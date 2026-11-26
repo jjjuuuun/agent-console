@@ -7,12 +7,12 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-project-space>=0.1,<0.2",
     "agent-console-projects>=0.3,<0.4",
     "agent-console-sdd>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "pydantic>=2.9",
 ]
 
@@ -26,7 +26,7 @@ dev = [
     "mypy>=1.11",
     "ruff>=0.6",
     "httpx>=0.27",
-    "agent-console-mod-sdd>=0.1,<0.2",
+    "agent-console-mod-sdd>=0.2,<0.3",
     "agent-console-mod-projects>=0.3,<0.4",
 ]
 

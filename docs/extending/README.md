@@ -1,78 +1,87 @@
-# 확장 가이드
+# Extension guide
 
-Agent Console은 엔진이 비어 있고 능력은 등록으로 들어온다. 노드·연결 종류, 실행 백엔드, 로그 출처, 리소스 종류,
-서버 기능 하나하나가 모두 "확장 지점에 등록된 구현"이다. 기본으로 들어 있는 기능도 같은 길로 등록된다. 이 폴더는
-그 길을 바깥에서 쓰는 방법을 모은다.
+Agent Console has an empty engine, and every capability comes in by registration. Node and edge types, execution
+backends, log sources, resource kinds, and each server feature are all "implementations registered at an extension
+point". The built-in features are registered the same way. This folder explains how to use that path from the outside.
 
-## 무엇을 바꾸고 싶은가
+## What do you want to change
 
-위에서부터 차례로 묻는다. 위쪽 답일수록 코드가 적고 유지 비용이 낮다.
+Ask the questions below in order. The higher the answer, the less code you write and the lower the maintenance cost.
 
-### 1. 데이터만 바꾸면 되나
+### 1. Is changing data enough?
 
-설정, 정의(에이전트·팀 구성·리소스), 문서 틀·규칙 같은 사용자 데이터로 되는 일이면 코드를 쓰지 않는다.
+If user data such as settings, definitions (agents, teams, resources), document templates, or rules can do the job,
+do not write code.
 
-| 바꾸려는 것 | 어디서 |
+| What you want to change | Where |
 | --- | --- |
-| 서버 기능 켜고 끄기, 기능별 설치자 설정 | 서버 설정 파일 `modules.enabled`·`modules.disabled`·`modules.options.<모듈 id>` |
-| 에이전트·팀 구성·리소스·공통 설정 | 화면, 또는 작업 공간 폴더의 YAML 파일 |
-| 설치된 플러그인 중 끄기·쓸 것 고르기 | 서버 설정 `plugins.disabled`·`plugins.enabled`([플러그인 공통](plugins.md#켜고-끄기)) |
-| 리소스 종류(코드 없는 것) | 선언형 리소스 종류 YAML([리소스](resources.md)) |
-| 작업 문법·위키 문법·구조도 프로필·메모리 범위 같은 규칙 | 각 영역 페이지의 데이터 절([SDD](sdd.md), [위키](wiki.md), [구조도](architecture.md), [메모리](memory.md)) |
+| Turn server features on and off, per-feature administrator settings | Server settings file `modules.enabled`, `modules.disabled`, `modules.options.<module id>` |
+| Agents, teams, resources, common settings | The screens, or the YAML files in the workspace folder |
+| Turn off some installed plugins or choose which ones to use | Server settings `plugins.disabled`, `plugins.enabled` ([Plugin basics](plugins.md#turning-plugins-on-and-off)) |
+| Resource kinds (without code) | Declarative resource kind YAML ([Resources](resources.md)) |
+| Rules such as task syntax, wiki syntax, architecture map profiles, memory scopes | The data section of each area page ([Specs](sdd.md), [Wiki](wiki.md), [Architecture map](architecture.md), [Memory](memory.md)) |
 
-데이터 지점 목록은 [확장 지점 참조](reference.md#확장-지점)에서 등록 종류가 `data`·`definition`·`annotation`인 행이다.
+The data points are the rows in the [extension point reference](reference.md#extension-points) whose registration
+kind is `data`, `definition`, or `annotation`.
 
-### 2. 같은 종류를 하나 더 두고 싶은가 — 플러그인
+### 2. Do you want one more of an existing kind? Write a plugin
 
-노드 종류, 연결 종류, 조건 연산자, 실행 백엔드, 로그 출처, 사용량 출처처럼 **이미 여러 개가 있는 종류에 하나를
-더하는** 일이면 플러그인 패키지 하나다. 패키지의 `pyproject.toml`에 entry point 한 줄을 적고 서버와 같은 Python
-환경에 설치한 뒤 서버를 다시 시작한다. 서버·웹 코드는 고치지 않는다.
+If you are **adding one more item to a kind that already has several**, such as node types, edge types, condition
+operators, execution backends, log sources, or usage sources, you need one plugin package. Add one entry point line to
+the package's `pyproject.toml`, install the package into the same Python environment as the server, and restart the
+server. You do not change server or web code.
 
-- 처음이면 [시작하기](getting-started.md)에서 조건 연산자 하나를 만들어 설치·확인·제거까지 한 바퀴 돈다.
-- 공통 규칙(이름, 로드 시점, 실패 처리, 끄기)은 [플러그인 공통](plugins.md).
-- 어떤 그룹이 있는지는 [entry point 그룹 표](reference.md#entry-point-그룹), 지점마다의 설명은 영역 페이지:
-  [그래프·실행](graph.md), [실행 백엔드](backends.md), [리소스](resources.md), [사용량](usage.md), [로그](logs.md),
-  [가져오기·내보내기](transfer.md), [서버 호스트·모듈](host.md), [프로젝트](projects.md), [구조도](architecture.md),
-  [메모리](memory.md), [SDD](sdd.md), [위키](wiki.md).
+- If this is your first time, [Get started](getting-started.md) walks through creating, installing, checking, and
+  removing one condition operator.
+- The common rules (names, load time, failure handling, turning off) are in [Plugin basics](plugins.md).
+- The available groups are in the [entry point group table](reference.md#entry-point-groups). Each point is described
+  on its area page: [Team graph and runs](graph.md), [Execution backends](backends.md), [Resources](resources.md),
+  [Usage](usage.md), [Logs](logs.md), [Import and export](transfer.md), [Server host and modules](host.md),
+  [Projects](projects.md), [Architecture map](architecture.md), [Memory](memory.md), [Specs (SDD)](sdd.md),
+  [Wiki](wiki.md), [Localization](i18n.md).
 
-### 3. 새 기능이 필요한가 — 서버 모듈
+### 3. Do you need a new feature? Write a server module
 
-새 REST 경로, 자기 저장소(DB 표), 자기 설정 섹션을 가진 기능이면 서버 모듈이다. 모듈은 다른 모듈과 포트 이름으로만
-이어지고, 끄면 그 기능의 경로만 사라지고 나머지는 그대로 동작한다. → [서버 모듈](modules.md)
+A feature with new REST paths, its own storage (DB tables), and its own settings section is a server module. A module
+connects to other modules only through port names. When you turn it off, only that feature's paths disappear and the
+rest keeps working. See [Server modules](modules.md).
 
-### 4. 두 기능을 잇고 싶은가 — 연동 모듈
+### 4. Do you want to connect two features? Write a link module
 
-이미 있는 두 기능(예: 노트 기능과 실행)을 서로 쓰게 하려면 둘 중 어느 쪽도 고치지 않고 연동 모듈을 하나 더한다.
-연동 모듈은 두 기능의 공개 포트만 보고, 한쪽이 없으면 자기만 꺼진다. → [연동 모듈](links.md)
+To make two existing features (for example, a notes feature and runs) use each other, add one link module without
+changing either feature. A link module sees only the public ports of the two features and turns only itself off when
+one side is missing. See [Link modules](links.md).
 
-### 5. 화면을 바꾸고 싶은가 — 웹
+### 5. Do you want to change the screens? See the web guide
 
-서버 플러그인의 설정 스키마는 웹 코드 없이 설정 폼으로 그려진다. 새 위젯·대시보드 칸처럼 웹 코드가 필요한 경우와
-그 방법은 [웹](web.md)에 있다.
+The settings schema of a server plugin is drawn as a settings form without web code. When you need web code, such as
+for a new widget or a dashboard cell, see [Web](web.md).
 
-## 문서 목록
+## Documents
 
-| 문서 | 내용 |
+| Document | Contents |
 | --- | --- |
-| [시작하기](getting-started.md) | 첫 플러그인 한 바퀴: 만들기·설치·확인·끄기·제거 |
-| [패키지 만들기](packages.md) | 저장소 안·밖에서 패키지를 만드는 법, 이름·버전 범위, README·테스트 |
-| [플러그인 공통](plugins.md) | entry point 규칙, 로드·실패·중복, 켜고 끄기, 설정 스키마, 비밀 값 |
-| [서버 모듈](modules.md) | 모듈 서술자, 포트, 설정, DB 계보, 단독 실행, 끄기 |
-| [연동 모듈](links.md) | 두 기능 잇기, 필수 포트와 `unsatisfied`, 여러 제공자 포트, 금지 import |
-| [계약과 이벤트](contracts-events.md) | 공유 타입, 버전, 열린 문자열, 플러그인 자기 이벤트·이슈 코드 |
-| [테스트](testing.md) | 계약 테스트 묶음, 테스트 대역, 조립 테스트, 이식성 검사 |
-| [배포](distribution.md) | 휠·tarball, 설치·제거, 버전 호환, 공개 전 점검 |
-| [확장 지점 참조](reference.md) | 지점·그룹·포트·모듈·계약 버전 표(자동 생성) |
-| 영역 페이지 | 지점마다 절 하나: 언제 쓰나, 최소 모양, 규칙, 흔한 실수 |
-| [예제 색인](../../examples/extensions/README.md) | 설치해 볼 수 있는 예제 패키지와 보이는 지점 |
+| [Get started](getting-started.md) | Your first plugin end to end: create, install, check, turn off, remove |
+| [Creating packages](packages.md) | Creating packages inside and outside the source repository, names and version ranges, README and tests |
+| [Plugin basics](plugins.md) | Entry point rules, loading, failures, duplicates, turning on and off, settings schemas, secrets |
+| [Server modules](modules.md) | Module descriptor, ports, settings, migration branches, standalone runs, turning off |
+| [Link modules](links.md) | Connecting two features, required ports and `unsatisfied`, multi-provider ports, forbidden imports |
+| [Contracts and events](contracts-events.md) | Shared types, versions, open strings, plugin-owned events and issue codes |
+| [Testing](testing.md) | Contract test suites, test doubles, assembly tests, portability checks |
+| [Distribution](distribution.md) | Wheels and tarballs, install and uninstall, version compatibility, checks before publishing |
+| [Extension point reference](reference.md) | Tables of points, groups, ports, modules, and contract versions (generated) |
+| Area pages | One section per point: when to use it, minimal shape, rules, common mistakes |
+| [Example index](../../examples/extensions/README.md) | Example packages you can install, and the points they show |
 
-## 문서와 코드가 어긋나지 않게
+## Keeping docs and code in sync
 
-확장 지점은 그것을 정의한 패키지가 `pyproject.toml`(TS는 `package.json`)에 스스로 선언한다. 참조 표와 영역 페이지의
-"등록·인터페이스·기본 구현·예제·끄기" 구간은 그 선언과 코드에서 생성한다. 저장소에서 지점을 더하거나 바꾸면:
+Each extension point is declared by the package that defines it, in its `pyproject.toml` (`package.json` for
+TypeScript). The reference tables and the "registration, interface, built-in implementations, examples, turning off"
+blocks of the area pages are generated from those declarations and the code. When you add or change a point in the
+source repository:
 
 ```bash
-uv run poe extpoints-check   # 코드(그룹 상수·entry point·모듈 포트)와 선언 대조
-uv run poe extdocs           # 참조 표·생성 구간·예제 색인 다시 만들기
-uv run poe extdocs-check     # 생성물 낡음·링크·문서 조각 검사
+uv run poe extpoints-check   # compare the code (group constants, entry points, module ports) with the declarations
+uv run poe extdocs           # regenerate the reference tables, generated blocks, and example index
+uv run poe extdocs-check     # check for stale output, links, and document snippets
 ```

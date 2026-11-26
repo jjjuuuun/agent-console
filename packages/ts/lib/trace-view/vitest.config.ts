@@ -5,6 +5,12 @@ import { defineConfig } from "vitest/config";
 // README 예제가 패키지 이름으로 import하므로 테스트에서는 소스를 가리킨다.
 // 하위 경로 export를 추가하면 alias도 함께 추가한다.
 export default defineConfig({
-  resolve: { alias: { "@agent-console/trace-view": fileURLToPath(new URL("./src/index.ts", import.meta.url)) } },
+  resolve: {
+    alias: [
+      { find: "@agent-console/trace-view/locales/ko", replacement: fileURLToPath(new URL("./src/locales/ko.ts", import.meta.url)) },
+      { find: "@agent-console/trace-view/locales/en", replacement: fileURLToPath(new URL("./src/locales/en.ts", import.meta.url)) },
+      { find: "@agent-console/trace-view", replacement: fileURLToPath(new URL("./src/index.ts", import.meta.url)) },
+    ],
+  },
   test: { include: ["test/**/*.test.ts", "src/**/*.test.{ts,tsx}"], environment: "happy-dom" },
 });

@@ -1,41 +1,43 @@
 # agent-console-registry
 
-타입드 레지스트리(`Registry[T]`)와 플러그인 로딩(entry point · 명시 모듈 경로 · `register(target)` 플러그인).
-Agent Console의 모든 확장 지점(노드 타입, 실행 백엔드, 분류기 등)이 같은 등록 방식을 쓰도록 하는 바닥 패키지다.
+A typed registry (`Registry[T]`) and plugin loading (entry points, explicit module paths, `register(target)` plugins).
+The base package that lets every Agent Console extension point (node types, execution backends, classifiers, and so on) use the same registration method.
 
-- **전역 상태 없음**: 레지스트리는 호출자가 만들어 주입한다.
-- **아무 확장 지점도 모름**: entry point 그룹 이름, 확장 지점 이름은 이 패키지에 없다. 모두 호출자가 넘긴다.
-- **로딩 실패는 예외가 아니라 보고**: 로더는 항목별 `LoadReport`를 돌려준다(import 실패, 속성 없음, 검증 실패, 중복 key).
-- 같은 `(key, version)` 중복 등록은 `DuplicateKeyError`. `register(..., replace=True)`로만 덮어쓴다.
-- **검사기는 레지스트리에 붙는다**: `Registry(name, validator=as_x)`(또는 `set_validator`)로 붙이면
-  entry point·모듈·`register(target)` 플러그인·직접 `register` 모두 같은 검사를 거친다.
-  거부되면 `InvalidExtensionError`(로더에서는 `failed` 보고).
+- **No global state**: the caller creates the registry and injects it.
+- **Knows no extension point**: entry point group names and extension point names are not in this package. The caller passes them all.
+- **Load failures are reports, not exceptions**: loaders return a `LoadReport` per item (import failure, missing attribute, validation failure, duplicate key).
+- Registering the same `(key, version)` twice raises `DuplicateKeyError`. Only `register(..., replace=True)` overwrites.
+  Entry points are read in `(name, value)` order, so when one group has the same name twice, the one whose value (module path) sorts first stays and the later one is
+  `failed` (regardless of the order passed in). Different versions stay together, and a lookup without a version returns the latest.
+- **Validators belong to the registry**: attach one with `Registry(name, validator=as_x)` (or `set_validator`) and
+  entry points, modules, `register(target)` plugins, and direct `register` calls all go through the same check.
+  A rejection raises `InvalidExtensionError` (loaders report `failed`).
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                        # 워크스페이스 안에서
-uv pip install ./packages/py/base/ac-registry      # 다른 프로젝트에서 단독으로
+uv sync --all-packages                        # inside the workspace
+uv pip install ./packages/py/base/ac-registry      # standalone, from another project
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import types
 >>> from agent_console_registry import Registry, UnknownExtensionError, load_modules, load_plugins
 
->>> node_types: Registry[str] = Registry("node_types")  # 이름은 메시지용
+>>> node_types: Registry[str] = Registry("node_types")  # the name is used in messages
 >>> node_types.register("echo", "echo v1", source="직접")
 RegistryEntry(key='echo', version=1, item='echo v1', source='직접')
 >>> node_types.register("echo", "echo v2", version=2)
 RegistryEntry(key='echo', version=2, item='echo v2', source='')
->>> node_types.get("echo"), node_types.get("echo", 1)  # 버전 생략 = 최신
+>>> node_types.get("echo"), node_types.get("echo", 1)  # no version = latest
 ('echo v2', 'echo v1')
 
 ```
 
-설치하지 않은 로컬 모듈은 `"pkg.mod:attr"` 또는 `"key=pkg.mod:attr"`로 읽는다. 아래는 import 함수를 주입해
-가짜 모듈을 쓴다(실제로는 생략하면 `importlib.import_module`).
+Local modules that are not installed are read as `"pkg.mod:attr"` or `"key=pkg.mod:attr"`. The example below injects an import function
+to use a fake module (in real use, omit it and `importlib.import_module` is used).
 
 ```python
 >>> fake = types.ModuleType("my_local.nodes")
@@ -45,14 +47,14 @@ RegistryEntry(key='echo', version=2, item='echo v2', source='')
 >>> reports = load_modules(
 ...     ["upper=my_local.nodes:upper", "my_local.missing:x"], node_types, import_module=modules.__getitem__
 ... )
->>> [(r.key, r.status) for r in reports]  # 실패는 예외 대신 보고서로(서버를 죽이지 않고 화면에 노출)
+>>> [(r.key, r.status) for r in reports]  # failures come back as reports instead of exceptions (shown on screen without killing the server)
 [('upper', 'loaded'), ('x', 'failed')]
 
 ```
 
-여러 레지스트리에 한꺼번에 등록하는 플러그인은 `obj.register(target)` 또는 `obj(target)`이다. `enabled`를 주면
-등록한 key 중 집합에 없는 것을, `disabled`를 주면 그 집합에 있는 것을 해제하고 `disabled`로 보고한다
-(`enabled`가 있으면 그 안에서 `disabled`를 뺀다). 보고의 `reason`이 어느 목록 때문인지 알린다.
+A plugin that registers into several registries at once is `obj.register(target)` or `obj(target)`. With `enabled`,
+registered keys not in that set are removed; with `disabled`, keys in that set are removed; both are reported as `disabled`
+(when `enabled` is given, `disabled` is subtracted from it). The report's `reason` tells which list caused it.
 
 ```python
 >>> reports = load_plugins(
@@ -66,17 +68,17 @@ RegistryEntry(key='echo', version=2, item='echo v2', source='')
 [('plugin', 'loaded'), ('lower', 'disabled')]
 >>> reports[1].reason
 'not in enabled'
->>> [(e.key, e.version) for e in node_types.list()]  # key 오름차순, key별 최신(all_versions=True로 전체)
+>>> [(e.key, e.version) for e in node_types.list()]  # ascending key order, latest per key (all_versions=True for all)
 [('echo', 2), ('upper', 1)]
 >>> try:
 ...     node_types.get("nope")
-... except UnknownExtensionError as exc:  # KeyError 하위
+... except UnknownExtensionError as exc:  # a KeyError subclass
 ...     print(exc)
 [node_types] 등록되지 않은 확장: key='nope'
 
 ```
 
-검사기를 붙인 레지스트리는 어느 경로로 넣어도 검사한다(검사기가 돌려준 값이 등록된다, 클래스 → 인스턴스 변환 등).
+A registry with a validator checks items no matter how they come in (the value the validator returns is what gets registered, for example class → instance).
 
 ```python
 >>> from agent_console_registry import InvalidExtensionError
@@ -85,56 +87,56 @@ RegistryEntry(key='echo', version=2, item='echo v2', source='')
 3
 >>> try:
 ...     sizes.register("b", "x")
-... except InvalidExtensionError as exc:  # 등록되지 않는다
+... except InvalidExtensionError as exc:  # not registered
 ...     print("b" in sizes)
 False
 
 ```
 
-설치된 패키지는 `load_entry_points("my_app.node_types", registry, enabled=None, validate=..., version_of=...)`로
-읽는다(그룹명은 호출자가 정한다). 플러그인 패키지 쪽 `pyproject.toml`:
+Installed packages are read with `load_entry_points("my_app.node_types", registry, enabled=None, validate=..., version_of=...)`
+(the caller chooses the group name). In the plugin package's `pyproject.toml`:
 
 ```toml
 [project.entry-points."my_app.node_types"]
 echo = "my_plugin.nodes:echo_node"
 ```
 
-## 공개 API
+## Public API
 
-| 이름 | 설명 |
+| Name | Description |
 | --- | --- |
 | `Registry[T](name="registry", *, validator=None)` | `register(key, item, *, version=1, source="", replace=False) -> RegistryEntry[T]`, `unregister(key, version=None)`, `get(key, version=None) -> T`, `get_entry(key, version=None)`, `versions(key) -> list[int]`, `list(*, all_versions=False) -> list[RegistryEntry[T]]`, `validator`, `set_validator(v)`, `in`, `len` |
-| `Validator[T]` | `Callable[[Any], T]` — 거부는 예외, 통과한 값을 다시 넣어도 같은 값(멱등) |
+| `Validator[T]` | `Callable[[Any], T]`; rejects by raising, and feeding a passed value back in gives the same value (idempotent) |
 | `RegistryEntry[T]` | `key`, `version`, `item`, `source` (frozen) |
-| `load_entry_points(group, registry, *, enabled=None, disabled=(), validate=None, version_of=None, entry_points=None) -> list[LoadReport]` | `entry_points`로 테스트용 `EntryPoint` 목록 주입 가능. `disabled`는 `enabled`보다 우선 |
+| `load_entry_points(group, registry, *, enabled=None, disabled=(), validate=None, version_of=None, entry_points=None) -> list[LoadReport]` | `entry_points` lets tests inject a list of `EntryPoint`. `disabled` takes precedence over `enabled` |
 | `load_modules(paths, registry, *, validate=None, version_of=None, import_module=importlib.import_module) -> list[LoadReport]` | |
-| `load_plugins(paths, target, *, enabled=None, disabled=(), watch=None, import_module=...) -> list[LoadReport]` | `target` 모양은 모른다. `enabled`·`disabled`는 `watch()`가 돌려준 레지스트리에 새로 들어온 key에 적용 |
-| `excluded_reason(name, enabled, disabled=()) -> str \| None` | 뺄 이유(`REASON_DISABLED` = `"in disabled"`, `REASON_NOT_ENABLED` = `"not in enabled"`) 또는 None |
-| `LoadReport` | `source`, `status`(`loaded`/`failed`/`skipped`/`disabled`), `key`, `version`, `error`, `reason`(`skipped`·`disabled` 이유), `ok` |
-| 예외 | `RegistryError` ⊃ `DuplicateKeyError`, `InvalidExtensionError`(`TypeError` 하위), `UnknownExtensionError`(`KeyError` 하위) |
+| `load_plugins(paths, target, *, enabled=None, disabled=(), watch=None, import_module=...) -> list[LoadReport]` | The shape of `target` is unknown to it. `enabled` and `disabled` apply to keys newly added to the registries that `watch()` returns |
+| `excluded_reason(name, enabled, disabled=()) -> str \| None` | The reason to leave it out (`REASON_DISABLED` = `"in disabled"`, `REASON_NOT_ENABLED` = `"not in enabled"`) or None |
+| `LoadReport` | `source`, `status` (`loaded`/`failed`/`skipped`/`disabled`), `key`, `version`, `error`, `reason` (why `skipped` or `disabled`), `ok` |
+| Exceptions | `RegistryError` ⊃ `DuplicateKeyError`, `InvalidExtensionError` (a `TypeError` subclass), `UnknownExtensionError` (a `KeyError` subclass) |
 
-## 의존성
+## Dependencies
 
-| 무엇을 | 왜 | 대안 |
+| What | Why | Alternatives |
 | --- | --- | --- |
-| (없음) 표준 라이브러리 `importlib.metadata`·`importlib` | entry point 탐색·명시 모듈 로딩에 충분하고, uv workspace의 editable 설치도 바로 잡힌다 | `pluggy`(훅 호출 모델이라 "타입별 구현 조회"에는 과함), `stevedore`(의존 증가) |
+| (none) standard library `importlib.metadata`, `importlib` | Enough for entry point discovery and explicit module loading, and editable installs in a uv workspace are picked up right away | `pluggy` (a hook-call model, too much for "look up the implementation per type"), `stevedore` (more dependencies) |
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-registry`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-registry`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/base/ac-registry/tests
 ```
 
-테스트는 실제 설치된 패키지에 의존하지 않는다. `EntryPoint` 주입과, `tmp_path`에 만든 테스트 전용
-`*.dist-info/entry_points.txt` 두 방식으로 entry point 등록을 확인한다.
+Tests do not depend on actually installed packages. They check entry point registration two ways: by injecting `EntryPoint`, and with a test-only
+`*.dist-info/entry_points.txt` created in `tmp_path`.

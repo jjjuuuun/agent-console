@@ -1,25 +1,25 @@
 # agent-console-safe-zip
 
-사용자가 올린 zip을 **디스크에 풀지 않고** 메모리에서 상한 안에서 읽는 작은 라이브러리.
-메모리 마크다운 가져오기(`ac-memory`)와 위키 페이지 가져오기(`ac-wiki`)가 같은 안전 규칙을 여기서 쓴다(같은
-검사를 두 벌 두지 않는다). 표준 라이브러리 `zipfile`만 쓴다.
+A small library that reads a user-uploaded zip **in memory, within limits, without extracting it to disk**.
+Memory Markdown import (`ac-memory`) and wiki page import (`ac-wiki`) use the same safety rules from here (the same
+checks are not kept in two places). It uses only the standard library `zipfile`.
 
-- 묶음 전체 거부(`ZipLimitError`, `limit` = 넘은 상한 이름): 압축 크기·항목 수·항목 하나의 선언 크기·선언 크기
-  합. 실제로 풀린 바이트도 상한으로 끊는다(머리 크기 거짓말 대비).
-- 형식 오류(zip이 아님): `ZipFormatError`.
-- 항목 하나만 표시(`ZipMember.kind`): `unsafe`(`..`·`.`·빈 마디·절대 경로·드라이브 문자·역슬래시·제어 문자·
-  심볼릭 링크 — 읽지 않음), `encrypted`, `broken`(압축 데이터 깨짐), `dir`, `file`(바이트 있음). 무엇을 받을지
-  (확장자·위치 규칙)는 호출자가 정한다.
-- 쓰기 `write_zip`: 경로 순·고정 시각·deflate·권한 0644 — 같은 입력이면 같은 바이트.
+- Whole-archive rejection (`ZipLimitError`, `limit` = the name of the exceeded limit): compressed size, entry count, declared size of one entry, and total declared
+  size. Bytes actually decompressed are also capped (in case the header lies about sizes).
+- Format error (not a zip): `ZipFormatError`.
+- Per-entry marking only (`ZipMember.kind`): `unsafe` (`..`, `.`, empty segments, absolute paths, drive letters, backslashes, control characters,
+  symbolic links; not read), `encrypted`, `broken` (corrupt compressed data), `dir`, `file` (has bytes). What to accept
+  (extensions, location rules) is up to the caller.
+- Writing with `write_zip`: path order, fixed timestamp, deflate, mode 0644, so the same input gives the same bytes.
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-safe-zip
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-safe-zip
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-safe-zip
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from agent_console_safe_zip import ZipLimitError, ZipLimits, read_zip, write_zip
@@ -36,15 +36,15 @@ max_file_bytes
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

@@ -385,6 +385,16 @@ class SddInfo(ContractModel):
         default_factory=list,
         description="실행 라벨 표시 규칙(`ModuleInfo.label_display`와 같은 값의 사본).",
     )
+    reserved_template_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "(1.4.0) 문서 틀 id로 쓸 수 없는 말(대소문자 무시 — 서버는 `casefold`로 "
+            "비교한다). 값은 서버의 경로 구현이 정한다(같은 깊이의 고정 경로와 겹치는 말). 새 "
+            "문서 틀 만들기·틀로 저장이 이 id를 주면 422 `validation_failed`(`details.reserved`)"
+            "이고, 이름에서 만든 id는 이 말을 피한다. 빈 목록 = 예약어 없음 또는 옛 서버(화면은 "
+            "서버 오류로만 안다)."
+        ),
+    )
 
 
 class TemplateVariable(ContractModel):

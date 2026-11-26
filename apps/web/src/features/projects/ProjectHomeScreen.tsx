@@ -110,7 +110,8 @@ export function ProjectHomeScreen() {
     const name = i.name || i.id;
     return title ? `${name} (${title})` : name;
   });
-  const refsUnchecked = refs?.checked === false ? refs.warnings?.[0]?.message : undefined;
+  // 조회가 실패했거나 서버가 검사하지 못했다고 하면 빈 목록을 "쓰는 곳 없음"으로 읽히지 않게 확인 불가 한 줄을 보인다
+  const refsUnchecked = refsQuery.isError ? m.home.configDeleteRefsUnknown : refs?.checked === false ? (refs.warnings?.[0]?.message ?? m.home.configDeleteRefsUnknown) : undefined;
   useEffect(() => {
     if (highlight === undefined) return;
     const t = setTimeout(() => setHighlight(undefined), 1500);

@@ -69,6 +69,22 @@ def contribution_titles(contributions: Iterable[Any]) -> dict[str, str]:
     return out
 
 
+def contribution_open_roles(contributions: Iterable[Any]) -> dict[str, str]:
+    """종류 기여(X44)의 여는 화면 역할 ``{종류 이름: open_role}``(빈 값은 빼고, 먼저 온 것 우선).
+
+    >>> from types import SimpleNamespace as C
+    >>> contribution_open_roles([C(kind=C(name="note"), open_role="notes"), C(kind=C(name="x"))])
+    {'note': 'notes'}
+    """
+    out: dict[str, str] = {}
+    for item in contributions:
+        role = getattr(item, "open_role", None)
+        name = getattr(getattr(item, "kind", None), "name", None)
+        if isinstance(role, str) and role and isinstance(name, str):
+            out.setdefault(name, role)
+    return out
+
+
 def contribution_deleters(
     contributions: Iterable[Any],
 ) -> dict[str, Callable[[str | None, str, str | None], None] | None]:
@@ -119,5 +135,6 @@ __all__ = [
     "ReferenceSource",
     "combine_references",
     "contribution_deleters",
+    "contribution_open_roles",
     "read_definitions",
 ]

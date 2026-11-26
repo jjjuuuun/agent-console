@@ -1,29 +1,29 @@
 # agent-console-example-secret-provider
 
-비밀 값 공급자를 **플러그인 패키지 하나**로 더하는 예제이자 작성 가이드(확장 지점 "비밀 값 공급자").
-엔진·서버·웹 코드를 고치지 않는다. 설치하면 정의 안의 비밀 참조(`secret://이름`)를 환경변수에서 못 찾았을 때
-지정한 로컬 파일에서 찾는다. 외부 서비스·네트워크가 없다.
+An example and writing guide that adds a secret value provider with **a single plugin package** (extension point "secret value providers").
+No engine, server, or web code changes. Once installed, secret references in definitions (`secret://name`) that are not found in environment variables are
+looked up in the local file you specify. There is no external service and no network.
 
-공급자 `example-file`
-- 파일 한 개의 `KEY=VALUE` 줄을 읽는다. 빈 줄·주석(`#`) 줄은 무시하고, 값 안의 `=`는 그대로, 값 양끝의 같은
-  따옴표 한 쌍은 벗긴다. 같은 이름은 뒤 줄이 이긴다. 이름이 없으면 대문자 이름으로 한 번 더 찾는다(환경변수 공급자와
-  같은 규칙).
-- **파일 경로는 설정**이다: 서버 설정 `secrets.providers.example-file.path`(설정 훅), 없으면 환경변수
-  `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE`(이름은 패키지 데이터 `path_env`).
-- 파일이 바뀌면 다음 조회 때 다시 읽는다(재시작 불필요). 파일이 없거나 읽을 수 없으면 **값을 주지 않고 경고만** 남긴다.
-- **값은 밖으로 나가지 않는다**: 로그·예외·`repr`에는 파일 경로·줄 번호·이름 개수만 나간다(이름도 로그에 넣지 않는다).
-  실행 기록·응답 이벤트에서는 엔진이 해석한 값을 `[REDACTED]`로 가린다.
-- 줄 규칙(주석 표시·이름 정규식·따옴표·대문자 대체·크기 상한)은 옵션 데이터(`data/defaults.json`).
-- 의존: 실행 엔진 라이브러리(`agent-console-runtime`, `SecretProvider` 프로토콜)·`pydantic`.
+Provider `example-file`
+- Reads the `KEY=VALUE` lines of one file. Empty lines and comment (`#`) lines are ignored, `=` inside a value is kept as it is, and one pair of matching
+  quotes around a value is removed. For duplicate names, the later line wins. When a name is not found, it looks once more with the uppercase name (the same rule as the
+  environment variable provider).
+- **The file path is a setting**: the server setting `secrets.providers.example-file.path` (settings hook), or otherwise the environment variable
+  `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE` (the name is the package data `path_env`).
+- When the file changes, it is read again on the next lookup (no restart needed). When the file does not exist or cannot be read, it **returns no value and only logs a warning**.
+- **Values never leave**: logs, exceptions, and `repr` contain only the file path, line numbers, and the number of names (names are not logged either).
+  In run history and response events, the engine masks resolved values as `[REDACTED]`.
+- The line rules (comment markers, name regular expression, quotes, uppercase fallback, size limit) are option data (`data/defaults.json`).
+- Dependencies: the run engine library (`agent-console-runtime`, the `SecretProvider` protocol) and `pydantic`.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 공급자 만드는 법
+## How to build a provider
 
-공급자는 `agent_console_runtime.SecretProvider` 프로토콜 하나 — `get_secret(name) -> str | None`(없으면 None)을 지킨다.
-엔진은 공급자 목록을 순서대로 묻는 `SecretResolver`로 참조를 풀고, 풀어 본 값을 기억해 모든 기록에서 가린다.
+A provider follows one protocol, `agent_console_runtime.SecretProvider`: `get_secret(name) -> str | None` (None when missing).
+The engine resolves references with a `SecretResolver` that asks the providers in order, and it remembers the resolved values to mask them in every record.
 
-서버 없이 이 공급자만 쓰기:
+Using only this provider, without a server:
 
 ```python
 >>> import tempfile
@@ -35,48 +35,48 @@
 >>> path = Path(tmp.name) / "secrets.env"
 >>> _ = path.write_text("# 로컬 비밀\nEXAMPLE_TOKEN=example-value-1\n", encoding="utf-8")
 >>> provider = FileSecretProvider(path)
->>> provider.get_secret("example_token")  # 없으면 대문자 이름으로
+>>> provider.get_secret("example_token")  # falls back to the uppercase name
 'example-value-1'
->>> resolver = SecretResolver([EnvSecretProvider({}), provider])  # 순서 = 환경변수 → 파일
+>>> resolver = SecretResolver([EnvSecretProvider({}), provider])  # order = environment variables -> file
 >>> resolver.resolve_refs({"headers": {"Authorization": "secret://EXAMPLE_TOKEN"}})
 {'headers': {'Authorization': 'example-value-1'}}
 >>> resolver.redact("응답에 example-value-1 이 섞였다")
 '응답에 [REDACTED] 이 섞였다'
 >>> "example-value-1" in repr(provider)
 False
->>> FileSecretProvider(Path(tmp.name) / "none.env").get_secret("EXAMPLE_TOKEN") is None  # 경고만
+>>> FileSecretProvider(Path(tmp.name) / "none.env").get_secret("EXAMPLE_TOKEN") is None  # warning only
 True
 >>> tmp.cleanup()
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-규칙
-1. **없으면 None**: 예외를 내지 않는다. 다음 공급자로 넘어가고, 어디에도 없으면 엔진이 `SecretNotFoundError`
-   (이름만, 값 없음)로 그 노드만 실패시킨다.
-2. **값을 로그·예외·`repr`에 넣지 않는다**: 틀린 줄도 줄 번호만 알린다(그 줄에 값이 있을 수 있다).
-3. **같은 경고를 되풀이하지 않는다**: 조회마다 부르므로 상태가 바뀔 때만 한 번 경고한다.
-4. **외부 의존은 주입한다**: 경로는 `FileSecretProvider(path)`가 받는다. 프로세스 환경을 읽는 것은 entry point 값인
-   `EnvFileSecretProvider`(인자 없이 불린다)뿐이고, 시험에서는 `EnvFileSecretProvider(environ)`로 넘긴다.
-5. **스레드 안전**: 엔진은 여러 실행에서 동시에 부를 수 있다.
-6. **설치자 설정은 설정 훅으로 받는다**(선택): 클래스에 classmethod 두 개를 두면 서버가 설정
-   `secrets.providers.<key>`를 넘긴다(아래 "설정 훅").
+Rules
+1. **None when missing**: do not raise. The next provider is asked, and when no provider has it, the engine fails only that node with `SecretNotFoundError`
+   (name only, no value).
+2. **Do not put values in logs, exceptions, or `repr`**: even for a wrong line, report only the line number (that line may contain a value).
+3. **Do not repeat the same warning**: the provider is called on every lookup, so warn once only when the state changes.
+4. **Inject external dependencies**: the path is received by `FileSecretProvider(path)`. Only the entry point value
+   `EnvFileSecretProvider` (called without arguments) reads the process environment, and tests pass it with `EnvFileSecretProvider(environ)`.
+5. **Thread safety**: the engine can call it from several runs at the same time.
+6. **Receive administrator settings through the settings hook** (optional): when the class has two classmethods, the server passes the setting
+   `secrets.providers.<key>` (see "Settings hook" below).
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console.secret_providers`(`agent_console_runtime.SECRET_PROVIDERS_GROUP`),
-이름 = 공급자 key. **값은 인자 없이 부르는 클래스**다.
+One entry point in `pyproject.toml`. Group = `agent_console.secret_providers` (`agent_console_runtime.SECRET_PROVIDERS_GROUP`);
+name = provider key. **The value is a class called without arguments.**
 
 ```toml
 [project.entry-points."agent_console.secret_providers"]
 "example-file" = "agent_console_example_secret_provider:EnvFileSecretProvider"
 ```
 
-서버 시작 때 실행 모듈의 호스트 플러그인 로더가 이 그룹을 읽는다. 조회 순서는 **환경변수(설정 `secrets.env_prefix`)
-먼저, 그다음 등록된 공급자(key 순)**다. 같은 이름이 환경변수에 있으면 환경변수가 이긴다.
+At server startup, the host plugin loader of the runs module reads this group. The lookup order is **environment variables (setting `secrets.env_prefix`)
+first, then the registered providers (in key order)**. When the same name is in an environment variable, the environment variable wins.
 
-설치하지 않고 쓰려면 서버 설정 `plugins.modules`에 등록 함수를 적는다(같은 레지스트리에 들어간다):
+To use it without installing, list the registration function in the server setting `plugins.modules` (it goes into the same registry):
 
 ```yaml
 plugins:
@@ -84,59 +84,59 @@ plugins:
     - agent_console_example_secret_provider:register
 ```
 
-설치했다면 넣지 않는다. entry point가 이미 `example-file`을 등록하므로 같은 key가 두 번 등록되어 그 플러그인이
-`failed`로 남는다.
+When it is installed, do not add it. The entry point already registers `example-file`, so the same key would be registered twice and that plugin would
+remain `failed`.
 
-## 설정 예
+## Settings example
 
 ```bash
-export AGENT_CONSOLE_EXAMPLE_SECRETS_FILE="$HOME/.config/agent-console/secrets.env"   # 서버를 띄우는 셸에서
+export AGENT_CONSOLE_EXAMPLE_SECRETS_FILE="$HOME/.config/agent-console/secrets.env"   # in the shell that starts the server
 ```
 
-비밀 파일(저장소에 커밋하지 않는다. 가능하면 본인만 읽을 수 있게 둔다):
+The secret file (do not commit it to the repository; when possible, make it readable only by you):
 
 ```text
-# 이름=값
-EXAMPLE_TOKEN=여기에-실제-값
+# NAME=value
+EXAMPLE_TOKEN=your-real-value
 ```
 
-정의에서는 값 대신 참조를 쓴다(예: 리소스 설정의 `secret://EXAMPLE_TOKEN`).
+Definitions use references instead of values (for example `secret://EXAMPLE_TOKEN` in resource settings).
 
-| 옵션(`data/defaults.json`) | 기본 | 뜻 |
+| Option (`data/defaults.json`) | Default | Meaning |
 | --- | --- | --- |
-| `path_env` | `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE` | 파일 경로를 담은 환경변수 이름 |
-| `comment_prefixes` | `["#"]` | 주석 줄 표시 |
-| `name_pattern` | `^[A-Za-z_][A-Za-z0-9_.-]*$` | 이름 정규식(맞지 않는 줄은 건너뜀) |
-| `strip_quotes` | `true` | 값 양끝의 같은 따옴표 한 쌍을 벗김 |
-| `upper_fallback` | `true` | 이름이 없으면 대문자 이름으로 다시 찾음 |
-| `max_file_bytes` | 64KiB | 이보다 큰 파일은 읽지 않음 |
+| `path_env` | `AGENT_CONSOLE_EXAMPLE_SECRETS_FILE` | Name of the environment variable that holds the file path |
+| `comment_prefixes` | `["#"]` | Comment line markers |
+| `name_pattern` | `^[A-Za-z_][A-Za-z0-9_.-]*$` | Name regular expression (lines that do not match are skipped) |
+| `strip_quotes` | `true` | Remove one pair of matching quotes around a value |
+| `upper_fallback` | `true` | When a name is not found, look again with the uppercase name |
+| `max_file_bytes` | 64KiB | Files larger than this are not read |
 
-## 설정 훅
+## Settings hook
 
-entry point는 인자 없이 불린다. 설치자 설정이 필요한 공급자는 클래스에 classmethod 두 개를 둔다
-(`agent_console_modkit.ConfigurableSecretProvider` 모양, 상속·import 불필요):
+The entry point is called without arguments. A provider that needs administrator settings has two classmethods on its class
+(the shape of `agent_console_modkit.ConfigurableSecretProvider`; no subclassing or import needed):
 
-- `options_schema() -> dict`: 옵션 JSON Schema(기본값 = `properties.*.default`). 서버가 `GET /api/v1/server-info`의
-  `plugin_options`에 스키마·지금 값(기본값을 채우고 비밀·경로는 가림)·설정 자리·YAML 조각을 싣는다.
-  스키마 맨 위 `title`·`description`은 설정 화면 "확장 옵션"의 폼 머리말이 된다. Pydantic 모델로 만들면 그대로는
-  클래스 이름과 docstring이 들어가므로, 이 예제는 `ConfigDict(title=...)`·한 문장 docstring을 쓰고 `options_schema()`에서
-  머리말을 사람이 읽는 문장으로 정한다.
-- `from_options(options, *, environ, base_dir) -> 공급자`: 서버 설정 `secrets.providers.<key>` 값으로 새 공급자를 만든다.
-  `base_dir`은 설정 파일 폴더(상대 경로 기준), `environ`은 서버 환경이다. 틀린 값이면 `ValueError`(키 이름만) →
-  서버가 시작을 거부한다(설정 오류).
+- `options_schema() -> dict`: the options JSON Schema (defaults = `properties.*.default`). The server puts the schema, the current values (defaults filled in, secrets and paths masked),
+  the settings location, and a YAML snippet into `plugin_options` of `GET /api/v1/server-info`.
+  The top-level `title` and `description` of the schema become the form header of the *Extension options* section of the settings screen. A schema built from a Pydantic model
+  would contain the class name and docstring as they are, so this example uses `ConfigDict(title=...)` and a one-sentence docstring, and sets
+  a human-readable header in `options_schema()`.
+- `from_options(options, *, environ, base_dir) -> provider`: builds a new provider from the value of the server setting `secrets.providers.<key>`.
+  `base_dir` is the settings file folder (the base for relative paths), and `environ` is the server environment. Wrong values raise `ValueError` (key names only), and
+  the server refuses to start (settings error).
 
-서버는 설정이 **있는** 공급자만 훅으로 다시 만든다. 설정이 없으면 entry point가 만든 그대로다(이 예제는 환경변수
-경로). 모르는 key에 둔 설정·훅이 없는 공급자에 둔 설정은 서버 경고(`plugins.config`)만 남긴다.
+The server rebuilds through the hook only the providers that **have** settings. Without settings, the provider stays as the entry point built it (this example uses the
+environment variable path). Settings for an unknown key, or for a provider without the hook, only leave a server warning (`plugins.config`).
 
 ```yaml
 secrets:
   providers:
     example-file:
-      path: ./secrets.env        # 상대 경로 = 설정 파일 폴더 기준. 비우면 환경변수 경로
+      path: ./secrets.env        # a relative path is relative to the settings file folder; empty = the environment variable path
       comment_prefixes: ["#", ";"]
 ```
 
-설정에는 파일 **위치**와 줄 규칙만 둔다. 비밀 값 자체는 설정 파일에 쓰지 않는다.
+The settings hold only the file **location** and the line rules. The secret values themselves are never written in the settings file.
 
 ```python
 >>> from agent_console_example_secret_provider import EnvFileSecretProvider, PATH_OPTION
@@ -155,49 +155,49 @@ ValueError: 비밀 파일 설정이 잘못됐습니다: token
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-줄 규칙을 코드에서 바꿀 때는 `FileSecretProvider(path, settings=load_settings({...}))`를 직접 등록하는 작은 `register`
-함수를 `plugins.modules`로 쓸 수도 있다.
+To change the line rules in code, you can also use a small `register` function that registers `FileSecretProvider(path, settings=load_settings({...}))` directly,
+through `plugins.modules`.
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. WSL(`/mnt/c`)에서는 환경변수를 붙인다.
+Run these from the repository root. On WSL (`/mnt/c`), add the environment variables.
 
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-secret-provider   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-secret-provider                        # 제거
+export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL only
+uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-secret-provider   # install
+uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-secret-provider                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/server-info`의 `plugins`에 `example-file`(그룹 `agent_console.secret_providers`)이 `loaded`로 보인다.
-  경로 환경변수가 없으면 시작 때 경고 한 번.
-- 제거: 이 파일에만 있던 이름을 쓰는 정의는 실행할 때 그 노드가 "비밀을 찾을 수 없음"으로 실패한다(오류에 이름만).
-  비밀 파일은 지워지지 않는다(이 패키지는 파일을 쓰지 않는다).
-- 설치한 채 로드하지 않기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example-file`을 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Install: `plugins` of `GET /api/v1/server-info` shows `example-file` (group `agent_console.secret_providers`) as `loaded`.
+  Without the path environment variable, there is one warning at startup.
+- Remove: when a definition uses a name that existed only in this file, that node fails at run time because the secret cannot be found (the error contains only the name).
+  The secret file is not deleted (this package never writes files).
+- Keep it installed but not loaded: remove `example-file` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-secret-provider
 uv run --project ../../.. python -m pytest
 ```
 
-- `tests/test_agent_console_example_secret_provider.py`: entry point 선언, 레지스트리 로더로 로드, `register`, 줄 규칙
-  (옵션 데이터), 대문자 대체, 파일 없음 = 경고 한 번 → 파일이 생기면 재시작 없이 읽음, 바뀐 파일 다시 읽기, **값·이름이
-  로그·`repr`·`SecretNotFoundError` 문장에 없음**, 크기 상한, 경로 미설정(처음 쓸 때 경고 한 번), 설정 훅(스키마·기본값,
-  상대 경로 = 설정 파일 폴더, 경로 없으면 환경변수, 틀린 옵션은 키 이름만).
-- `tests/test_engine.py`: 엔진 시험 노드가 해석한 값을 이벤트·결과·오류에 넣어도 **저장된 Run·NodeRun·이벤트에 값이
-  없음**(`[REDACTED]`), 환경변수가 파일보다 먼저.
-- `tests/test_server.py`: 통합 서버(설치하지 않았으면 `plugins.modules`로, 설치했으면 entry point로만 등록 — 둘을 함께
-  쓰면 같은 key가 두 번 등록되어 플러그인이 실패한다) — 팀 실행에서 참조가 이 파일 값으로 풀려 쓰이지만
-  **응답 이벤트·실행 상태·`/server-info`·로그에 값이 없음**, 파일이 없으면 서버는 시작하고 그 노드만 실패·경고만.
-  설치자 설정 `secrets.providers.example-file`로 경로를 주면 환경변수 없이 그 파일을 읽고 `plugin_options`에 보기가
-  나옴, 틀린 옵션이면 시작 거부(키 이름만), 모르는 공급자 설정은 서버 경고.
+- `tests/test_agent_console_example_secret_provider.py`: the entry point declaration, loading with the registry loader, `register`, line rules
+  (option data), uppercase fallback, missing file = one warning → read without a restart once the file appears, rereading a changed file, **no values or names
+  in logs, `repr`, or the `SecretNotFoundError` message**, the size limit, no path set (one warning on first use), and the settings hook (schema and defaults,
+  relative path = settings file folder, the environment variable when there is no path, wrong options report key names only).
+- `tests/test_engine.py`: even when an engine test node puts a resolved value into events, results, and errors, **the saved Run, NodeRun, and events do not contain
+  the value** (`[REDACTED]`), and environment variables come before the file.
+- `tests/test_server.py`: the integrated server (registered through `plugins.modules` when not installed, and only through the entry point when installed; using both
+  registers the same key twice and the plugin fails). In a team run the reference is resolved to this file's value and used, but
+  **response events, run status, `/server-info`, and logs do not contain the value**; without the file the server starts and only that node fails, with a warning.
+  When the administrator setting `secrets.providers.example-file` gives the path, that file is read without the environment variable and a view appears in `plugin_options`;
+  wrong options refuse to start (key names only); settings for an unknown provider give a server warning.

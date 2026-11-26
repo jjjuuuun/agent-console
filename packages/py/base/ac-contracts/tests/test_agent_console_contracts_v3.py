@@ -468,7 +468,8 @@ def test_export_request_plan_and_write() -> None:
 
 def test_old_console_settings_kept_as_unknown_keys() -> None:
     props = build_schema()["$defs"]["WorkspaceSettings"]["properties"]
-    assert props["default_backend"]["deprecated"] is True
+    # 0.16.0: deprecated였던 `default_backend` 필드를 지웠다(옛 값은 모르는 키로 읽는다).
+    assert "default_backend" not in props
     assert "deprecated" not in props["secrets"]
     # 사용자 파일의 값은 모르는 키로 그대로 읽고 쓴다.
     doc = {"default_entry": "g1", "console": {"command_prefix": ":"}}

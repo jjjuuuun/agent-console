@@ -1,24 +1,24 @@
 # agent-console-resources
 
-리소스 종류 등록과 **실행 묶음(ResourceBundle) 조립**. 종류 이름·칸 이름은 이 패키지에 없다.
+Resource kind registration and **run bundle (ResourceBundle) assembly**. No kind names or slot names are in this package.
 
-- **종류 등록**: entry point `agent_console.resource_types`, 명시 모듈 목록, 또는 **선언형 데이터**
-  (`<workspace>/resource-types/*.yaml`, 코드 없음). 등록 key = 리소스 정의의 `type`.
-- **첨부 병합**: 층(공통 → 팀 구성 → 에이전트 → 노드 …, 호출자 데이터)의 `ResourceAttachment` 목록을
-  `ac-settings` 전략 표에 등록한 `keyed_attachments` 전략으로 합친다(`add`·`replace`·`remove`, 원소별 출처).
-- **묶음 조립**: 남은 첨부마다 종류의 `validate`·`contribute`(순수 함수)를 부르고, 칸별로 종류의
-  `combine` 전략(기본 `append`)으로 합쳐 `ResourceBundle{slots, sources}`를 만든다.
-- 파일 쓰기·비밀 해석·네트워크를 하지 않는다. 비밀은 `secret://이름` 참조 그대로 묶음에 들어간다.
-- 문제는 예외 대신 `Issue`로 돌려준다(리소스·종류 없음, 설정 오류, 받지 못하는 칸 등).
+- **Kind registration**: the entry point `agent_console.resource_types`, an explicit module list, or **declarative data**
+  (`<workspace>/resource-types/*.yaml`, no code). Registration key = the `type` of the resource definition.
+- **Attachment merging**: lists of `ResourceAttachment` across layers (common → team → agent → node …, caller data) are
+  merged with the `keyed_attachments` strategy registered in the `ac-settings` strategy table (`add`, `replace`, `remove`, provenance per element).
+- **Bundle assembly**: for each remaining attachment, the kind's `validate` and `contribute` (pure functions) are called, and each slot is combined with the kind's
+  `combine` strategy (default `append`) into `ResourceBundle{slots, sources}`.
+- It does no file writes, secret resolution, or networking. Secrets go into the bundle as `secret://name` references.
+- Problems are returned as `Issue` instead of exceptions (missing resources or kinds, settings errors, slots not accepted, and so on).
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                        # 워크스페이스 안
-uv pip install ./packages/py/features/ac-resources     # 단독
+uv sync --all-packages                        # inside the workspace
+uv pip install ./packages/py/features/ac-resources     # standalone
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> from agent_console_contracts import Resource, ResourceAttachment
@@ -32,8 +32,8 @@ uv pip install ./packages/py/features/ac-resources     # 단독
 ... )
 
 >>> types = new_resource_types()
->>> _ = load_resource_types(types)  # 설치된 플러그인(예: ac-resources-core). 보고서 목록을 돌려준다
->>> fragment = declarative_type_from_data(  # 선언형 종류(보통은 load_declarative_types(폴더, types))
+>>> _ = load_resource_types(types)  # installed plugins (for example ac-resources-core); returns a list of reports
+>>> fragment = declarative_type_from_data(  # a declarative kind (usually load_declarative_types(folder, types))
 ...     {
 ...         "id": "prompt-fragment",
 ...         "title": "프롬프트 조각",
@@ -44,7 +44,7 @@ uv pip install ./packages/py/features/ac-resources     # 단독
 ... )
 >>> _ = types.register(fragment.descriptor.id, fragment)
 
->>> resources = InMemoryResources(  # 보통은 저장소가 ResourceLookup을 구현
+>>> resources = InMemoryResources(  # usually the store implements ResourceLookup
 ...     [
 ...         Resource(
 ...             id="tip",
@@ -63,21 +63,21 @@ uv pip install ./packages/py/features/ac-resources     # 단독
 ...     ],
 ...     types=types,
 ...     resources=resources,
-...     accepted_slots=["instructions", "files"],  # 백엔드 capabilities.resource_slots
+...     accepted_slots=["instructions", "files"],  # backend capabilities.resource_slots
 ... )
 >>> result.bundle.slots
 {'instructions': ['## 팁\n짧게 답한다.']}
 >>> [(s.ref, s.layer) for s in result.bundle.sources["instructions"]]
 [('tip', 'team')]
->>> [i.code for i in result.issues]  # 경고·오류(첨부는 건너뛰고 계속)
+>>> [i.code for i in result.issues]  # warnings and errors (the attachment is skipped and work continues)
 ['resource.not_found']
 
 ```
 
-### 설정 층 병합과 함께 (유효 설정 계산 쪽)
+### With settings layer merging (computing effective settings)
 
-계약 `AgentSettings.resources`의 스키마 주석은 `x-merge: keyed_attachments`다. 유효 설정을 계산할 때
-같은 전략 표를 넘기면 첨부도 같은 규칙으로 합쳐지고, 결과에서 바로 묶음을 만들 수 있다.
+The schema annotation of the contract `AgentSettings.resources` is `x-merge: keyed_attachments`. When you compute effective settings
+with the same strategy table, attachments are merged by the same rules, and you can build the bundle directly from the result.
 
 ```python
 from agent_console_resources import (
@@ -95,21 +95,21 @@ bundle = build_bundle(
 )
 ```
 
-이미 있는 전략 표에 더하려면 `register_resource_strategies(table, slot_key_of=...)`.
+To add to an existing strategy table, use `register_resource_strategies(table, slot_key_of=...)`.
 
-## 첨부 방식
+## Attachment modes
 
-| 방식 | 동작 |
+| Mode | Behavior |
 | --- | --- |
-| `add`(기본) | 뒤에 붙인다. 같은 리소스·같은 덮어쓰기가 또 오면 묶음에서 한 번만 쓴다(`resource.duplicate`, info). |
-| `replace` | 위 층 첨부 중 같은 리소스 id **또는** 같은 슬롯 키(종류의 `slot_key` config 값, 예: instruction의 `title`)를 가진 것을 그 자리에서 바꾼다. 없으면 더하고 `resource.replace_unmatched`(info). |
-| `remove` | 위 층의 같은 리소스 id 첨부를 뺀다. 없으면 `resource.remove_unmatched`(info). |
+| `add` (default) | Appends. If the same resource with the same override comes again, the bundle uses it only once (`resource.duplicate`, info). |
+| `replace` | Replaces in place an upper-layer attachment with the same resource id **or** the same slot key (the kind's `slot_key` config value, for example the `title` of an instruction). If there is none, it adds and reports `resource.replace_unmatched` (info). |
+| `remove` | Removes an upper-layer attachment with the same resource id. If there is none, `resource.remove_unmatched` (info). |
 
-`config_override`는 리소스 config에 얕게 덮어쓴다(`effective_resource`).
+`config_override` is shallowly overlaid on the resource config (`effective_resource`).
 
-## 리소스 종류 만들기
+## Writing resource kinds
 
-### 1) 플러그인(코드)
+### 1) Plugin (code)
 
 ```python
 from agent_console_contracts import ResourceTypeDescriptor
@@ -133,19 +133,19 @@ class GreetingType(SchemaResourceType):
 greeting = "my_plugin:GreetingType"
 ```
 
-`validate`는 `SchemaResourceType`이 `config_schema`로 검사한다(추가 검사는 `extra_issues`).
-`Contribution(slot, value, combine=None, fallback=None)`의 `combine`으로 이 기여만 다른 전략(예: `prepend`)을 쓸 수 있다.
+`validate` is checked by `SchemaResourceType` against `config_schema` (additional checks go in `extra_issues`).
+With `combine` of `Contribution(slot, value, combine=None, fallback=None)`, only this contribution can use a different strategy (for example `prepend`).
 
-- **대체 칸**(`fallback`): 실행 백엔드가 `slot`을 받지 않으면(`accepted_slots`에 없음) 대신 쓸 기여.
-  예: 경로 조건 지침(`rules`)을 못 받는 백엔드에는 일반 지침(`instructions`)으로. 바꾸면 info `resource.slot_fallback`.
-- **여러 파일 본문**: 디스크립터 `content.multi_file=true`인 종류는 `contribute`의 `content`로 `{경로: 바이트}`
-  (`ContentFiles`)를 받는다. 조회 객체가 선택 능력 `FileContentLookup.read_files(resource)`를 가져야 한다
-  (`InMemoryResources`·`MaskedResources`·ac-nodes-core `FunctionResources(find, read, read_files)`). 없으면
-  `resource.content_unreadable` 경고와 함께 `None`.
-- **받지 않는 칸 설명**: `build_bundle`·`compose_bundle`의 `slot_notes={칸: 설명}`(백엔드 `capabilities.slot_notes`)를
-  주면 `resource.slot_unsupported` 경고의 `details.reason`·문구에 붙는다.
+- **Fallback slot** (`fallback`): the contribution to use instead when the execution backend does not accept `slot` (not in `accepted_slots`).
+  Example: for backends that cannot take path-conditional instructions (`rules`), plain instructions (`instructions`). Switching reports info `resource.slot_fallback`.
+- **Multi-file bodies**: kinds whose descriptor has `content.multi_file=true` receive `{path: bytes}` (`ContentFiles`) as the `content` of `contribute`.
+  The lookup object must have the optional capability `FileContentLookup.read_files(resource)`
+  (`InMemoryResources`, `MaskedResources`, ac-nodes-core `FunctionResources(find, read, read_files)`). Otherwise
+  `None` with a `resource.content_unreadable` warning.
+- **Notes on slots not accepted**: when `slot_notes={slot: note}` (backend `capabilities.slot_notes`) is passed to `build_bundle` or `compose_bundle`,
+  it is attached to `details.reason` and the message of the `resource.slot_unsupported` warning.
 
-### 2) 선언형 데이터(코드 없음)
+### 2) Declarative data (no code)
 
 ```yaml
 # <workspace>/resource-types/prompt-fragment.yaml
@@ -156,25 +156,26 @@ content: {media_types: [text/markdown], editor: markdown}
 slot_key: title
 contributes:
   - slot: instructions
-    template: "## {title}\n{content}"          # 결과 문자열 하나가 칸 항목 하나
-  - slot: mcp_servers                          # 구조 값(문자열마다 치환) → 항목 하나
+    template: "## {title}
+{content}"          # one result string is one slot item
+  - slot: mcp_servers                          # a structured value (each string substituted) → one item
     value: {name: "{title}", type: stdio, command: echo}
-  - slot: env_map                              # raw: 감싸지 않고 그대로(객체 칸 + merge)
+  - slot: env_map                              # raw: as is, unwrapped (object slot + merge)
     value: {A: "{title}"}
     raw: true
     combine: merge
 ```
 
-치환은 안전 치환(`{이름}`만, 속성·인덱스 접근 없음, 모르는 이름은 그대로)이다. 변수는
-`id`·`name`·`description`·`title`(기본 이름)·`content` + config 최상위 키.
+Substitution is safe substitution (only `{name}`, no attribute or index access, unknown names left as is). Variables are
+`id`, `name`, `description`, `title` (the default name), `content` + the top-level config keys.
 
-## 비밀 필드 표시 `x-secret`
+## Secret field marker `x-secret`
 
-config 스키마에서 비밀 값이 들어갈 위치에 `x-secret: true`(상수 `SECRET_SCHEMA_KEY`)를 단다. 화면은 이 구조화
-힌트로 비밀 입력 칸(가림·`secret://` 참조 고르기)을 그린다 — description 문구로 추측하지 않는다.
-플러그인 종류와 선언형 종류 모두 같다. `SchemaResourceType.validate`가 이 위치의 평문(참조가 아닌 값)을
-**일반 규칙으로 거부한다**(`find_schema_plain_secrets` → `resource.plain_secret` error, 값 없는 메시지). 선언형
-종류도 `pattern`을 따로 달 필요가 없다. 종류가 `extra_issues`로 같은 위치를 이미 보고하면 한 번만 낸다.
+In the config schema, put `x-secret: true` (constant `SECRET_SCHEMA_KEY`) at locations that hold secret values. The screen uses this structural
+hint to draw a secret input field (masked, choose a `secret://` reference); it never guesses from description text.
+Plugin kinds and declarative kinds work the same. `SchemaResourceType.validate` **rejects plain text (values that are not references) at these locations
+as a general rule** (`find_schema_plain_secrets` → `resource.plain_secret` error, with a message that has no value). Declarative
+kinds do not need a separate `pattern`. If a kind already reports the same location through `extra_issues`, it is reported only once.
 
 ```yaml
 # <workspace>/resource-types/api-token.yaml
@@ -183,7 +184,7 @@ title: API 토큰
 config_schema:
   type: object
   properties:
-    token: {type: string, x-secret: true}   # 평문이면 resource.plain_secret
+    token: {type: string, x-secret: true}   # resource.plain_secret if plain text
 contributes:
   - slot: env_map
     value: {API_TOKEN: "{token}"}
@@ -191,73 +192,73 @@ contributes:
     combine: merge
 ```
 
-## 종류 검사(`validate`·`extra_issues`) 계약
+## Kind validation (`validate`, `extra_issues`) contract
 
-리소스 종류를 만드는 쪽(플러그인·선언형)이 지켜야 한다. 서버는 저장(REST `POST/PUT /resources`, 버전 되돌리기)
-전에 `validate_resource`로 이 검사를 부르고 error 이슈가 있으면 저장하지 않는다.
+Whoever writes a resource kind (plugin or declarative) must follow this. Before saving (REST `POST/PUT /resources`, version revert),
+the server calls these checks through `validate_resource` and does not save if there are error issues.
 
-- **메시지에 입력값을 넣지 않는다.** 무엇이 잘못됐는지(규칙)만 쓰고, 값은 쓰지 않는다.
-- **`path`를 정확히 지정한다.** 문제 값의 config 기준 JSON Pointer(예: `/env/API_KEY`, `~`·`/`는 `~0`·`~1`).
-  서버는 응답에서 문서 기준(`/config/env/API_KEY`, 첨부 덮어쓰기면 `/resources/0/config_override/env/API_KEY`)으로
-  바꾸고, 화면은 이것으로 해당 칸에 오류를 붙인다. 첨부 검사(`validate_attachment`)도 이 path로 덮어쓰기 탓인지 가린다.
-- `scrub_issue_values`는 안전망일 뿐이다: **`path`가 가리키는 값만** 메시지에서 지운다. path가 없거나 다른 곳을
-  가리키면, 또는 짧은(3자 미만) 값이면 메시지에 남은 값을 지우지 못한다.
-- 예외를 던지지 않는다(던지면 error `resource.type_failed`로 저장이 막힌다). 순수 함수(파일·네트워크·비밀 해석 없음).
+- **Do not put input values in messages.** Write only what is wrong (the rule), never the value.
+- **Set `path` precisely.** The JSON Pointer of the problem value relative to config (for example `/env/API_KEY`; `~` and `/` become `~0` and `~1`).
+  The server rewrites it in the response relative to the document (`/config/env/API_KEY`, or `/resources/0/config_override/env/API_KEY` for attachment overrides),
+  and the screen uses it to attach the error to the field. Attachment checks (`validate_attachment`) also use this path to tell whether the override caused it.
+- `scrub_issue_values` is only a safety net: it removes **only the value that `path` points to** from the message. If there is no path, it points elsewhere,
+  or the value is short (fewer than 3 characters), values left in the message cannot be removed.
+- Do not raise (raising becomes error `resource.type_failed` and blocks saving). Pure functions (no files, networking, or secret resolution).
 
-## 공개 API
+## Public API
 
-| 이름 | 설명 |
+| Name | Description |
 | --- | --- |
 | `ResourceType`(Protocol) | `descriptor`, `validate(resource) -> list[Issue]`, `contribute(resource, content, ctx) -> list[Contribution]` |
-| `Contribution(slot, value, combine=None)`, `ContributeContext(attachment, layer)` | 기여·맥락 |
+| `Contribution(slot, value, combine=None)`, `ContributeContext(attachment, layer)` | Contribution and context |
 | `ResourceLookup`(Protocol), `InMemoryResources` | `get_resource(ref)`, `read_content(resource)` |
-| `FileContentLookup`(Protocol, 선택 능력), `Content`, `ContentFiles` | `read_files(resource) -> {경로: 바이트} \| None`(여러 파일 본문 종류) |
-| `SchemaResourceType` | config_schema 검사 베이스(`extra_issues` 훅) |
-| `RESOURCE_TYPES_GROUP`, `new_resource_types()`, `load_resource_types(registry, *, enabled, modules, entry_points)`, `as_resource_type`, `list_descriptors` | 등록 |
-| `load_declarative_types(dir, registry, *, read, files)`, `declarative_type_from_data(data)`, `DeclarativeResourceType`, `DeclarativeTypeSpec`, `ContributionSpec`, `DeclarativeTypeError` | 선언형 종류 |
-| `ATTACHMENT_STRATEGY`(`keyed_attachments`), `PREPEND_STRATEGY`, `keyed_attachments_strategy(slot_key_of)`, `attachment_slot_key(types, resources)`, `prepend`, `register_resource_strategies`, `resource_strategies` | 병합 전략 |
-| `compose_bundle(layers, *, types, resources, accepted_slots, strategies, slot_notes) -> ComposedBundle`, `SLOT_UNSUPPORTED`, `SLOT_FALLBACK`, `resolve_attachments`, `build_bundle`, `placed_from_resolved`, `unsupported_slots`, `AttachmentLayer`, `PlacedAttachment` | 묶음 |
-| `effective_resource`, `content_text`, `is_secret_ref`, `find_plain_secrets`, `find_schema_plain_secrets`, `PLAIN_SECRET`, `SECRET_REF_PREFIX`, `SECRET_REF_PATTERN`, `SECRET_SCHEMA_KEY`(`x-secret`), `validate_config`, `check_config_schema`, `render_template`, `fill_value` | 도우미 |
-| `validate_attachment(attachment, *, types, resources, path="", override_path=None, ref_path=None, secret_rules=None) -> list[Issue]` | 첨부 `config_override`를 리소스 config에 얕게 덮어쓴 결과를 종류 검사. 덮어쓰기가 만든 이슈만(덮어쓴 키 아래 이슈는 항상), path = `<override_path>/...`. 리소스 없음은 warning(ref 위치) + 비밀 의심 규칙(`ac-secret-rules`의 `SecretRules`, 기본 = 기본 규칙)에 걸린 값마다 error `resource.override_secret_suspected`, 종류 없음은 warning(ref 위치) |
-| `mask_plain_secrets(value, schema)`, `mask_resource(resource, types)`, `mask_attachment(attachment, *, types, resources)`, `MaskedResources(lookup, types)`, `SECRET_MASK` | 표시용 안전망: `x-secret` 위치의 `secret://`가 아닌 값을 `***`로(`properties`·`additionalProperties`·`items`·`allOf/anyOf/oneOf`를 따라감, `$ref`는 안 따라감) |
-| `validate_resource(resource, types) -> list[Issue]`, `scrub_issue_values(issues, config)` | 저장 전 검사: 종류의 `validate`를 부르고(모르는 종류 = warning `resource.unknown_type`, 예외 = error `resource.type_failed`) 이슈 `path`가 가리키는 config 값을 메시지에서 `***`로 지운다. 서버가 error 이슈면 저장을 거부한다 |
+| `FileContentLookup` (Protocol, optional capability), `Content`, `ContentFiles` | `read_files(resource) -> {path: bytes} \| None` (multi-file body kinds) |
+| `SchemaResourceType` | Base for config_schema checks (`extra_issues` hook) |
+| `RESOURCE_TYPES_GROUP`, `new_resource_types()`, `load_resource_types(registry, *, enabled, modules, entry_points)`, `as_resource_type`, `list_descriptors` | Registration |
+| `load_declarative_types(dir, registry, *, read, files)`, `declarative_type_from_data(data)`, `DeclarativeResourceType`, `DeclarativeTypeSpec`, `ContributionSpec`, `DeclarativeTypeError` | Declarative kinds |
+| `ATTACHMENT_STRATEGY` (`keyed_attachments`), `PREPEND_STRATEGY`, `keyed_attachments_strategy(slot_key_of)`, `attachment_slot_key(types, resources)`, `prepend`, `register_resource_strategies`, `resource_strategies` | Merge strategies |
+| `compose_bundle(layers, *, types, resources, accepted_slots, strategies, slot_notes) -> ComposedBundle`, `SLOT_UNSUPPORTED`, `SLOT_FALLBACK`, `resolve_attachments`, `build_bundle`, `placed_from_resolved`, `unsupported_slots`, `AttachmentLayer`, `PlacedAttachment` | Bundles |
+| `effective_resource`, `content_text`, `is_secret_ref`, `find_plain_secrets`, `find_schema_plain_secrets`, `PLAIN_SECRET`, `SECRET_REF_PREFIX`, `SECRET_REF_PATTERN`, `SECRET_SCHEMA_KEY` (`x-secret`), `validate_config`, `check_config_schema`, `render_template`, `fill_value` | Helpers |
+| `validate_attachment(attachment, *, types, resources, path="", override_path=None, ref_path=None, secret_rules=None) -> list[Issue]` | Runs the kind check on the resource config with the attachment `config_override` shallowly overlaid. Only issues the override caused (issues under overridden keys always), path = `<override_path>/...`. A missing resource gives a warning (at the ref location) plus error `resource.override_secret_suspected` for each value caught by the secret suspicion rules (`SecretRules` of `ac-secret-rules`, default = the default rules); a missing kind gives a warning (at the ref location) |
+| `mask_plain_secrets(value, schema)`, `mask_resource(resource, types)`, `mask_attachment(attachment, *, types, resources)`, `MaskedResources(lookup, types)`, `SECRET_MASK` | A safety net for display: values at `x-secret` locations that are not `secret://` become `***` (follows `properties`, `additionalProperties`, `items`, `allOf/anyOf/oneOf`; does not follow `$ref`) |
+| `validate_resource(resource, types) -> list[Issue]`, `scrub_issue_values(issues, config)` | Pre-save check: calls the kind's `validate` (unknown kind = warning `resource.unknown_type`, exception = error `resource.type_failed`) and replaces the config values that issue `path`s point to with `***` in messages. The server refuses to save on error issues |
 
-## 이슈 코드
+## Issue codes
 
-`resource.not_found`·`resource.unknown_type`(warning, 첨부 건너뜀), `resource.invalid_config`·
-`resource.invalid_type_schema`(error, 건너뜀), `resource.type_failed`(종류 구현 예외, error),
+`resource.not_found`, `resource.unknown_type` (warning, attachment skipped), `resource.invalid_config`,
+`resource.invalid_type_schema` (error, skipped), `resource.type_failed` (kind implementation exception, error),
 `resource.content_missing`·`resource.content_unreadable`, `resource.duplicate`,
 `resource.replace_unmatched`·`resource.remove_unmatched`(info), `resource.slot_unsupported`(warning, `details.reason` =
-백엔드 설명), `resource.slot_fallback`(info, `details.slot`·`fallback`),
-`resource.merge.*`(전략 문제). `details`에 `resource`·`layer`·`slot` 등이 들어간다.
+backend note), `resource.slot_fallback` (info, `details.slot`, `fallback`),
+`resource.merge.*` (strategy problems). `details` contains `resource`, `layer`, `slot`, and so on.
 
-**이슈 메시지에는 입력값이 들어가지 않는다**(비밀 누출 방지). `validate_config`는 jsonschema의
-`err.message`(입력값을 담음) 대신 검사 종류와 스키마의 기대값(형식, 허용 값 목록, pattern 존재 여부,
-필수 키 이름 등)만으로 메시지를 만들고, 위치는 `Issue.path`(JSON Pointer)로 알린다. 종류 구현의 예외도
-메시지에는 예외 타입 이름만 남긴다.
+**Issue messages never contain input values** (to prevent secret leaks). Instead of jsonschema's
+`err.message` (which contains the input value), `validate_config` builds messages only from the kind of check and the schema's expectations (type, list of allowed values, whether a pattern exists,
+required key names, and so on), and reports the location as `Issue.path` (JSON Pointer). Exceptions from kind implementations also
+leave only the exception type name in messages.
 
-## 의존성
+## Dependencies
 
-| 무엇을 | 왜 | 대안 |
+| What | Why | Alternatives |
 | --- | --- | --- |
-| `jsonschema` | config_schema 검사(워크스페이스에서 이미 사용) | 직접 검사(불완전) |
-| `ruamel.yaml` | 선언형 종류 YAML 읽기(정의 저장과 같은 라이브러리) | PyYAML |
-| `pydantic` | 선언형 종류 형식 검사·계약 모델 | 손 검사 |
-| `ac-secret-rules`(사내) | 리소스가 없는 첨부 덮어쓰기의 비밀 의심 판정(서버·가져오기와 같은 규칙, 사용자 규칙 주입) | 계약 패키지 안 모듈(1R, 사용자 규칙을 넣을 수 없었음) |
-| `ac-text-template`(사내) | 선언형 종류의 안전 치환(`render_template`·`fill_value`, 이 패키지가 같은 이름으로 다시 내보낸다) | 이 패키지 안 사본(SDD 입력 틀과 같은 규칙을 두 곳에 두게 됨) |
+| `jsonschema` | config_schema checks (already used in the workspace) | Hand-written checks (incomplete) |
+| `ruamel.yaml` | Reads declarative kind YAML (the same library as definition storage) | PyYAML |
+| `pydantic` | Format checks of declarative kinds, contract models | Hand-written checks |
+| `ac-secret-rules` (internal) | Secret suspicion for attachment overrides without a resource (the same rules as the server and import, with injected user rules) | A module inside the contracts package (the earlier design, which could not take user rules) |
+| `ac-text-template` (internal) | Safe substitution for declarative kinds (`render_template`, `fill_value`, re-exported by this package under the same names) | A copy inside this package (the same rules as the SDD input templates would live in two places) |
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-resources`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-resources`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-resources

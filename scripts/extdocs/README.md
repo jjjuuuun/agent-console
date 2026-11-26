@@ -30,10 +30,10 @@ internal-ports = [{ port = "wiki.service", reason = "위키 모듈과 연동 모
 internal-groups = [{ group = "agent_console.config_schemas", reason = "..." }]
 
 [tool.agent-console.extension-points.wiki-search-index]
-title = "위키 검색 색인"
+title = "Wiki search index"
 area = "wiki"                     # areas.yaml의 id
 design_id = "X48"                 # 선택, 문서에 나가지 않는다
-summary = "위키 검색을 다른 색인 구현으로 바꾼다"
+summary = "Replaces wiki search with another index implementation"
 registration = { kind = "entry-point", group = "agent_console_wiki:SEARCH_INDEX_GROUP" }
 interface = ["agent_console_wiki:WikiSearchIndex"]
 settings = ["wiki.search_backend"]
@@ -43,6 +43,7 @@ guide = "wiki.md#wiki-search-index"   # 문서 폴더 기준, 절을 생략하�
 ```
 
 - slug(표 키): 소문자·숫자·하이픈. 저장소 전체에서 하나.
+- 문장 칸(`title`·`summary`·`example.note`·`internal-ports`/`internal-groups`의 `reason`)은 영어로 쓴다. 생성 문서(`reference.md`·영역 페이지 생성 구간·예제 색인)가 영어 단일 문서라서 그대로 옮겨진다.
 - `registration.kind`는 열린 문자열이다. 아는 값: `entry-point`(`group`), `port`(`port`, `multi`), `data`(`path`·`settings`·`disable`), `injection`, `annotation`·`descriptor`·`registry`(`name`), `props`(`export`). 모르는 값은 원문 그대로 표에 나오고 `templates/registration.yaml`의 `_default` 문장을 쓴다. 문장 틀 하나를 더하면 전용 문장이 된다.
 - `group`·`port`는 기호(`모듈:이름`)가 원칙이다. 기호가 아닌 문자열이면 그대로 그룹·포트 이름으로 본다.
 - `example`은 표 하나 또는 목록. 종류: `package`(설치형 예제 폴더 `path`), `reference`(저장소 안 참조 구현 `path`), `contract-tests`(`symbols` — 계약 테스트 묶음·대역 기호), `snippet`(가이드 절 안의 `>>>` 또는 `extdocs:validate` 조각).
@@ -56,7 +57,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
     "kind": "lib",
     "extensionPoints": {
       "dashboard-widget": {
-        "title": "대시보드 위젯", "area": "web", "summary": "...",
+        "title": "Dashboard widget", "area": "web", "summary": "...",
         "registration": { "kind": "props", "export": "@agent-console/log-view#DashboardWidgets" },
         "interface": ["@agent-console/log-view#DashboardWidget"],
         "example": { "kind": "package", "path": "examples/web/agent-console-example-web" },
@@ -100,7 +101,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 
 ## 공개 가능 린트
 
-규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다. 패키지·앱 README(`packages/**/README.md`·`apps/*/README.md`·`apps/web/src/**/README.md`)와 루트 공개 문서(`README.md`·`README.ko.md`·`CONTRIBUTING.md`·`CHANGELOG.md`)는 정리가 끝나 `public_lint_globs`에 들어 있다(새 설계 id·작업 번호는 오류). 테스트 안내인 `apps/web/e2e/README.md`는 대상 밖이다.
+규칙은 `public_lint.yaml`(정규식, 줄 단위)이다. 대상은 `public_lint_globs`(오류)와 `docs --report`(`report_globs`, 경고만)다. 패키지·앱 README(`packages/**/README.md`·`apps/*/README.md`·`apps/web/src/**/README.md`)와 루트 공개 문서(`README.md`·`README.ko.md`·`USAGE.md`·`USAGE.ko.md`·`docs/DEVELOPMENT.md`·`docs/DEVELOPMENT.ko.md`·`CONTRIBUTING.md`·`CHANGELOG.md` — 없는 파일은 건너뛴다)는 정리가 끝나 `public_lint_globs`에 들어 있다(새 설계 id·작업 번호는 오류). 테스트 안내인 `apps/web/e2e/README.md`는 대상 밖이다.
 
 | 규칙 | 잡는 것 | 잡지 않는 것 |
 | --- | --- | --- |
@@ -110,6 +111,7 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 | `task-number` | 작업 번호(`5.2R.3`, `8R.4a`) | — |
 | `design-id` | 확장 지점·결정·요구사항 id(`X22`, `(X25)`, `R8.6`, `R0·R10.4`, `K33-19`). 코드 펜스·인라인 코드 밖 글만 본다(`prose_only`) | 코드 안 예제 데이터(`` `R1` ``, `requirement_ids=["R1"]`), 이름 일부(`test_R1_x`, `k8s`, `R2D2`, `0X1F`) |
 | `local-path`·`email` | 로컬 경로, 이메일 | — |
+| `korean-prose` | 영어 문서(공개 가능 린트 대상 중 `*.ko.md`가 아닌 파일)의 코드 펜스·인라인 코드 밖 한글. 지금은 경고(`severity: warning`) — 문서 영어화가 끝나면 그 줄을 지워 오류로 바꾼다 | 코드 펜스·인라인 코드 안(doctest 출력의 한국어 원문 문구), 한국어 사본 `*.ko.md`, 맨 위 언어 전환 줄(`**English** \| [한국어](README.ko.md)` — `\|`로 나뉜 항목이 둘 이상이고 항목마다 굵은 이름이나 `.md` 링크 하나뿐인 줄) |
 
 **제품 파일과 개발 설정.** 앱은 Claude Code 파일(`~/.claude/projects`, `~/.claude/settings.json`, 프로젝트 `.claude/agents`, 내보낸 `CLAUDE.md`)을 읽고 쓴다. 이런 문장에서 파일 이름은 **데이터(제품 형식)**다. 반면 이 저장소를 만드는 개발용 `CLAUDE.md`·`.claude/agents`를 가리키는 문장은 공개 문서에 남으면 안 된다. 둘은 이렇게 가른다.
 
@@ -119,7 +121,15 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 
 **줄 단위 허용.** 규칙이 맞지 않는 줄 하나는 그 줄에 `<!-- extdocs:allow <규칙 id> -->`를 달아 뺀다. id 여럿은 공백·쉼표로 잇는다(`<!-- extdocs:allow internal-config, task-number -->`). 표시는 그 줄의 그 규칙만 끈다. 규칙 자체를 고칠 수 있으면 표시보다 규칙을 고친다.
 
-**새 규칙.** `public_lint.yaml`에 `id`·`message`·`pattern`(선택 `prose_only: true`)을 더한다. 오류 코드는 `public-<id>`다.
+**새 규칙.** `public_lint.yaml`에 `id`·`message`·`pattern`을 더한다. 오류 코드는 `public-<id>`다. 선택 칸:
+
+| 칸 | 뜻 |
+| --- | --- |
+| `prose_only: true` | 코드 펜스·인라인 코드 밖 글만 본다 |
+| `files` | 이 glob(저장소 상대, 문자열 하나 또는 목록)에 맞는 파일만 본다. 없으면 대상 파일 전부 |
+| `exclude_files` | 이 glob에 맞는 파일은 빼고 본다(예: `**/*.ko.md`) |
+| `skip_line` | 이 정규식에 맞는 줄은 이 규칙만 건너뛴다(예: 언어 전환 줄) |
+| `severity` | `error`(기본) 또는 `warning`(늘 경고 — 새 규칙을 단계적으로 켤 때). 다른 값은 데이터 형식 오류(종료 코드 2) |
 
 ## 데이터 파일
 
@@ -127,10 +137,10 @@ TS 패키지·앱 `package.json`(같은 모델, 키는 `extensionPoints`):
 | --- | --- |
 | `extdocs.yaml` | 경로·대상 glob(`glob_skip_dirs` 폴더와 숨김 폴더는 내려가지 않는다)·코드 패턴·계약 표 기호·시간 상한 |
 | `areas.yaml` | 영역(id·제목·파일) — 새 영역은 한 줄 |
-| `readme_sections.yaml` | 예제 README 필수 절과 별칭 |
-| `public_lint.yaml` | 공개 가능 린트 규칙(정규식, `prose_only`) |
+| `readme_sections.yaml` | 예제 README 필수 절과 별칭(영어 제목). `language_aliases`는 그 언어 예제에서만 인정하는 옛 제목(지금은 TS 예제의 한국어 제목, TS README 영어화 뒤 지운다) |
+| `public_lint.yaml` | 공개 가능 린트 규칙(정규식, `prose_only`·`files`·`exclude_files`·`skip_line`·`severity`) |
 | `templates/registration.yaml` | 등록 종류별 "등록"·"끄기·제거" 문장. 값이 목록이면 자리표시자가 다 채워지는 첫 문장(마지막은 무조건) — 빈 값으로 "끄는 키: ." 같은 문장이 나오지 않게 |
-| `templates/text.yaml` | 생성 파일 제목·머리말·표 머리·`extdocs:todo` 틀 |
+| `templates/text.yaml` | 생성 파일 제목·머리말·표 머리·`extdocs:todo` 틀. 생성 문서는 영어 단일 문서라 영어로 쓴다. 제목을 바꾸면 그 앵커(예: `reference.md#entry-point-groups`)로 가는 링크도 고친다(`extdocs-check`의 `anchor-broken`이 잡는다) |
 
 ## TS 쪽(`pnpm extdocs-check`)과의 경계
 

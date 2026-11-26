@@ -1,7 +1,8 @@
 """실행 백엔드 해석(순수): 노드마다 유효 백엔드와 실행 전 사전 점검 대상(design §5.2R.5).
 
 해결 순서는 설정 층 그대로다(바꾸지 않는다): 노드 → 에이전트 → 팀 구성 → 공통
-(`agent_defaults.backend`, 읽기 호환 `default_backend`) → 인자 `default_backend`(마지막 대체값).
+(`agent_defaults.backend`) → 인자 `default_backend`(마지막 대체값). 옛 최상위 설정 키
+`default_backend`는 읽지 않는다.
 층 병합은 `node_settings`와 같은 함수를 쓴다.
 
 어떤 노드가 백엔드를 쓰는지는 이름이 아니라 디스크립터로 판단한다:
@@ -66,7 +67,7 @@ def resolve_backends(
     Args:
         plan: `team_plan` 결과.
         agents: 에이전트 정의 id → 정의(에이전트 층). 없는 정의는 에이전트 층이 빈다.
-        workspace: 공통 설정(공통 층, `default_backend` 읽기 호환 포함).
+        workspace: 공통 설정(공통 층 = `agent_defaults`).
         strategies: 위임 방식 디스크립터(`node_settings`와 같은 인자, 값에는 영향 없음).
         default_backend: 모든 층이 비었을 때 쓸 마지막 대체값(예: 서버가 주입한 기본 백엔드).
         scope_layers: 공통 바로 아래에 끼울 층(`node_settings`와 같다, 예: 프로젝트 층).

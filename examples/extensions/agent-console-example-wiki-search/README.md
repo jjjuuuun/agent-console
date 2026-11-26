@@ -1,29 +1,29 @@
 # agent-console-example-wiki-search
 
-위키 검색 방식(색인)을 **플러그인 패키지 하나**로 더하는 예제이자 작성 가이드.
-엔진·서버·웹 코드를 고치지 않는다. 설치하고 설정에서 고르면 위키 검색이 이 색인으로 돌고, 고르지 않거나
-제거하면 mod-wiki 기본 방식(설치자 `search.backend`, 없으면 `search.fallback`)으로 돌아간다.
+An example and writing guide that adds a wiki search method (index) with **a single plugin package**.
+No engine, server, or web code changes. Once installed and chosen in the settings, wiki search runs on this index; when it is not chosen or is
+removed, search goes back to the mod-wiki default method (the administrator `search.backend`, or `search.fallback` when it is missing).
 
-검색 방식 `example-inverted`
-- 본문을 낱말로 나눠 `낱말 -> 경로 집합` 역색인을 **메모리에** 둔다. 외부 서비스·파일이 없고, 프로세스가
-  끝나면 사라진다(서버가 시작할 때 페이지에서 다시 채운다 — 색인은 다시 만들 수 있는 캐시다).
-- 질의 낱말은 색인된 낱말 중 그것을 포함하는 것을 찾는다(부분 일치: "위키는" 안의 "위키"). 모든 낱말이
-  경로·제목·태그·별칭·본문 중 어디에든 있어야 한다. 점수·조각·강조 범위(`marks`)는 계약과 같다.
-- 낱말 나누기 규칙은 옵션 데이터다(기본값 `data/defaults.json`): `tokenizer`가 이름 표(`tokenizers`)에서 정규식을
-  고르거나 `token_pattern`으로 직접 준다. 기본(`whitespace`)은 부분 문자열 검색과 결과가 같다. `word`처럼
-  다른 규칙은 낱말 경계에 걸친 질의(`a-b`)를 놓칠 수 있다.
-- 의존: 계약(`agent-console-contracts`)·위키 라이브러리(`agent-console-wiki`, 색인 프로토콜·`search_marks`)·
-  `agent-console-secret-rules`(색인에 넣기 전 비밀 가리기). 서버 모듈(`mod-wiki`)은 import하지 않는다(테스트에서만 쓴다).
+Search method `example-inverted`
+- Splits bodies into terms and keeps an inverted index `term -> set of paths` **in memory**. There is no external service or file, and it disappears when the process
+  ends (the server fills it again from the pages at startup; the index is a cache that can be rebuilt).
+- A query term matches the indexed terms that contain it (partial match: `위키` inside `위키는`). Every term must appear
+  somewhere in the path, title, tags, aliases, or body. Scores, snippets, and highlight ranges (`marks`) are the same as the contract.
+- The term splitting rule is option data (defaults in `data/defaults.json`): `tokenizer` picks a regular expression from a name table (`tokenizers`),
+  or `token_pattern` gives one directly. The default (`whitespace`) gives the same results as substring search. Other rules, such as `word`,
+  can miss queries that cross term boundaries (`a-b`).
+- Dependencies: the contract (`agent-console-contracts`), the wiki library (`agent-console-wiki`, the index protocol and `search_marks`), and
+  `agent-console-secret-rules` (masks secrets before they go into the index). It does not import the server module (`mod-wiki`); only the tests use it.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 색인 만드는 법
+## How to build an index
 
-색인은 `agent_console_wiki.WikiSearchIndex` 프로토콜(`id`·`degraded`·`hashes`·`update`·`remove`·`rebuild`·`search`·
-`close`)을 지킨다. 등록하는 쪽은 **공장** `(root, options) -> 색인`이다. `root` = 색인 파일 위치(파일을 쓰지 않으면
-무시), `options` = 설치자·사용자 설정에서 온 값(`tokenizer`·`case_insensitive`·`max_results`와 이 예제가 읽는 값).
+An index follows the `agent_console_wiki.WikiSearchIndex` protocol (`id`, `degraded`, `hashes`, `update`, `remove`, `rebuild`, `search`,
+`close`). What you register is a **factory** `(root, options) -> index`. `root` = the index file location (ignored when the index writes no files), and
+`options` = the values from the administrator and user settings (`tokenizer`, `case_insensitive`, `max_results`, and the values this example reads).
 
-서버 없이 이 예제 색인만 쓰기:
+Using only this example's index, without a server:
 
 ```python
 >>> from agent_console_example_wiki_search import make_index
@@ -43,41 +43,41 @@
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-규칙
-1. **옵션은 데이터**: 낱말 나누기 규칙처럼 바뀔 수 있는 값은 코드에 두지 않고 옵션(패키지 데이터 기본값 +
-   설정 덮어쓰기)으로 받는다. 모르는 옵션 값(mod-wiki가 넘기는 `tokenizer: trigram` 등)은 기본으로 돌린다.
-2. **의미는 계약 묶음이 정한다**: 모든 낱말이 맞아야 하고, 점수는 제목 8·경로 4·태그/별칭 4·페이지당 1, 같으면
-   경로 순. 본문은 점수에 세지 않는다(색인마다 순서가 같도록).
-3. **비밀은 색인에 넣기 전에 가린다**: 색인에 원문이 없어야 한다(조각·검색 모두).
-4. **`update`는 해시가 같으면 건너뛴다**: 증분 갱신 키는 `content_hash`.
-5. **스레드 안전, `close` 여러 번 허용, 공장의 예외는 mod-wiki가 잡는다**(색인 없이 동작).
+Rules
+1. **Options are data**: values that can change, such as the term splitting rule, are not in code; they come as options (package data defaults +
+   settings overrides). Unknown option values (such as `tokenizer: trigram` passed by mod-wiki) fall back to the default.
+2. **The contract tests define the semantics**: every term must match; the score is title 8, path 4, tags/aliases 4, 1 per page, with ties
+   in path order. The body does not count toward the score (so that every index gives the same order).
+3. **Mask secrets before they go into the index**: the index must not contain the original text (neither snippets nor search).
+4. **`update` skips documents with the same hash**: the incremental update key is `content_hash`.
+5. **Thread safety, `close` may be called more than once, and mod-wiki catches factory exceptions** (it works without an index).
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console.wiki_search_indexes`(`agent_console_wiki.SEARCH_INDEX_GROUP`),
-이름 = 검색 방식 id. **값은 인자 없는 함수**이고, 이 함수가 공장 `(root, options)`를 돌려준다.
+One entry point in `pyproject.toml`. Group = `agent_console.wiki_search_indexes` (`agent_console_wiki.SEARCH_INDEX_GROUP`);
+name = search method id. **The value is a function without arguments**, and that function returns the factory `(root, options)`.
 
 ```toml
 [project.entry-points."agent_console.wiki_search_indexes"]
 "example-inverted" = "agent_console_example_wiki_search:index_factory"
 ```
 
-서버 시작 때 mod-wiki의 호스트 플러그인 로더가 이 그룹을 읽는다. 쓸 방식은 이 순서로 고른다:
-사용자 설정 `wiki.search_backend` → 설치자 `search.backend` → 설치자 `search.fallback`.
-**설치만으로는 쓰이지 않는다** — 둘 중 한 곳에 `example-inverted`를 적어야 한다.
+At server startup, mod-wiki's host plugin loader reads this group. The method to use is chosen in this order:
+the user setting `wiki.search_backend` → the administrator `search.backend` → the administrator `search.fallback`.
+**Installing alone does not use it**: you have to write `example-inverted` in one of the first two places.
 
-## 설정 예
+## Settings example
 
-사용자(워크스페이스) 설정, 화면 설정의 "위키" 섹션 `search_backend`:
+The user (workspace) settings, `search_backend` in the *Wiki* section of the settings screen:
 
 ```yaml
 wiki:
   search_backend: example-inverted
 ```
 
-또는 설치자 설정(`modules.options.mod-wiki.search`)으로 모든 사용자의 기본을 바꾼다:
+Or change the default for all users with the administrator settings (`modules.options.mod-wiki.search`):
 
 ```yaml
 modules:
@@ -85,59 +85,59 @@ modules:
     mod-wiki:
       search:
         backend: example-inverted
-        fallback: scan          # 못 쓸 때 대신 쓸 방식(비우면 색인 없이)
-        tokenizer: whitespace   # 이 예제는 data/defaults.json의 이름 표에서 낱말 규칙을 고른다
-        index_options:          # 검색 방식 이름 → 그 방식만 받는 옵션
+        fallback: scan          # the method to use when this one is unavailable (empty = no index)
+        tokenizer: whitespace   # this example picks the term rule from the name table in data/defaults.json
+        index_options:          # search method name -> options only that method receives
           example-inverted:
-            token_pattern: "[\\w-]+"   # 낱말 정규식을 직접 준다(tokenizer보다 먼저)
+            token_pattern: "[\\w-]+"   # gives the term regular expression directly (takes precedence over tokenizer)
 ```
 
-| 옵션 | 기본(`data/defaults.json`) | 뜻 |
+| Option | Default (`data/defaults.json`) | Meaning |
 | --- | --- | --- |
-| `tokenizer` | `whitespace` | 낱말 규칙 이름(`whitespace`=`\S+`, `word`=`\w+`). 모르는 이름이면 기본 |
-| `token_pattern` | 없음 | 낱말을 뽑는 정규식을 직접 지정(빈 문자열과 맞으면 거부) |
-| `case_insensitive` | `true` | 대소문자 무시(mod-wiki가 위키 문법 값으로 채움) |
-| `max_results`·`max_terms`·`max_term_chars`·`max_body_chars`·`snippet_chars` | 위키 라이브러리 기본 | 검색 상한 |
+| `tokenizer` | `whitespace` | Term rule name (`whitespace`=`\S+`, `word`=`\w+`). An unknown name falls back to the default |
+| `token_pattern` | none | Gives the regular expression that extracts terms directly (rejected when it matches the empty string) |
+| `case_insensitive` | `true` | Ignore case (mod-wiki fills it from the wiki syntax value) |
+| `max_results`, `max_terms`, `max_term_chars`, `max_body_chars`, `snippet_chars` | Wiki library defaults | Search limits |
 
-mod-wiki는 `tokenizer`와 고른 방식의 `search.index_options.<방식>`(위 예의 `token_pattern` 등)을 넘기고, 그 위에
-`case_insensitive`(위키 문법 값)·`max_results`(설치자 `max_search_results`)를 덮어 넘긴다. 앞의 두 값은
-`index_options`로 바꿀 수 없다. 서버 없이 쓸 때는 `make_index({...})`에 같은 옵션을 준다.
+mod-wiki passes `tokenizer` and `search.index_options.<method>` of the chosen method (such as `token_pattern` in the example above), and overlays
+`case_insensitive` (the wiki syntax value) and `max_results` (the administrator `max_search_results`) on top. The last two values
+cannot be changed through `index_options`. Without a server, pass the same options to `make_index({...})`.
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-wiki-search   # 설치
-uv pip uninstall agent-console-example-wiki-search                        # 제거
+uv pip install -e examples/extensions/agent-console-example-wiki-search   # install
+uv pip uninstall agent-console-example-wiki-search                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치 + 설정에서 고름: 위키 검색 결과의 `backend`가 `example-inverted`.
-- 제거: 설정에 남은 이름은 지워지지 않는다. 서버는 대체 방식(`search.fallback`)으로 검색하고 서버 경고
-  `wiki.search_degraded`(위키 정보 `issues`)를 남긴다.
-- 설치한 채 로드하지 않기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example-inverted`를 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Installed and chosen in the settings: the `backend` of wiki search results is `example-inverted`.
+- Remove: the name left in the settings is not deleted. The server searches with the fallback method (`search.fallback`) and leaves the server warning
+  `wiki.search_degraded` (in the `issues` of the wiki information).
+- Keep it installed but not loaded: remove `example-inverted` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-wiki-search
 uv run --project ../../.. python -m pytest
 ```
 
-- `tests/test_wiki_search_contract.py`: `agent_console_wiki.testing.WikiSearchContractTests` 전체(부분 일치·대소문자·
-  점수·접두/태그·증분 갱신·UTF-16 강조·비밀 가림 등).
-- `tests/test_agent_console_example_wiki_search.py`: entry point 선언, 라이브러리 로더로 로드, 파일을 만들지
-  않음, 강조 범위, 지운 문서의 낱말 표 정리, 낱말 규칙 옵션, 틀린 `token_pattern` 거부.
-- `tests/test_mod_wiki_assembly.py`: 테스트 호스트 + `mod-wiki` 조립 — 사용자 `search_backend`·설치자
-  `search.backend`로 고르면 검색이 이 색인으로 동작, 새 페이지도 찾음, 고르지 않으면 기본 방식, 없는 이름이면
-  대체 방식 + `wiki.search_degraded`, 설치자 `search.index_options`의 `token_pattern`이 색인에 닿음.
+- `tests/test_wiki_search_contract.py`: all of `agent_console_wiki.testing.WikiSearchContractTests` (partial match, case,
+  scores, prefixes and tags, incremental updates, UTF-16 highlights, secret masking, and so on).
+- `tests/test_agent_console_example_wiki_search.py`: the entry point declaration, loading with the library loader, no files
+  created, highlight ranges, cleaning up the term table for deleted documents, term rule options, and rejecting a wrong `token_pattern`.
+- `tests/test_mod_wiki_assembly.py`: a test host + `mod-wiki` assembly. When chosen with the user `search_backend` or the administrator
+  `search.backend`, search runs on this index and finds new pages too; when not chosen, the default method; with an unknown name, the
+  fallback method + `wiki.search_degraded`; and `token_pattern` in the administrator `search.index_options` reaches the index.
 
-자기 색인을 만들 때도 같은 방식으로 `WikiSearchContractTests`를 상속해 `make_index`만 채운다.
+Build your own index the same way: subclass `WikiSearchContractTests` and fill in only `make_index`.

@@ -148,7 +148,7 @@ def test_all_old_keys_reported_together(tmp_path: Path) -> None:
     assert [k.old for k in exc.value.removed] == ["presets", "runtime", "usage"]
     presets = exc.value.removed[0]
     assert presets.new is None
-    assert "프리셋 기능은 삭제되었습니다" in presets.message
+    assert "The presets feature was removed" in presets.message
 
 
 def test_new_locations_start_without_settings_warnings(tmp_path: Path) -> None:
@@ -254,7 +254,7 @@ def test_versions_max_per_definition_keeps_latest(tmp_path: Path) -> None:
         assert f'"{versions[0]["version_hash"]}"' == etag
         # 설정 단일 문서도 같은 규칙
         for name in ("x", "y", "z"):
-            client.put(f"{API}/settings", json={"default_backend": name})
+            client.put(f"{API}/settings", json={"agent_defaults": {"backend": name}})
         assert len(client.get(f"{API}/settings/versions").json()) == 2
 
 

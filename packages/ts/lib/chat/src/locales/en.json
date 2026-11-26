@@ -1,0 +1,192 @@
+{
+  "chat": {
+    "you": "You",
+    "yourMessage": "Your message",
+    "copy": "Copy",
+    "copyReply": "Copy reply",
+    "copied": "Copied",
+    "resend": "Send again",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "openRun": "Run detail",
+    "intermediate": "Intermediate results",
+    "intermediateHidden": "Intermediate results hidden: {n}",
+    "intermediateHiddenLink": "View in run detail",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "insideOf": "{name} in {parent}",
+    "delegatedBy": "{name} delegated by {parent}",
+    "queuedChip": "Queued #{n}",
+    "queuedCancel": "Remove from queue",
+    "queuedHeldChip": "On hold #{n}",
+    "queuedCancelHeld": "Cancel",
+    "queuedRelease": "Run",
+    "queuedRecall": "Move to message box",
+    "queuedBusy": "Working…",
+    "resumedChip": "Resumed · previous run {run}",
+    "loadingOlder": "Loading earlier messages…",
+    "startOfConversation": "This is the start of the conversation",
+    "newContent": "New messages",
+    "jumpToPending": "Go to the card waiting for you",
+    "stop": "Stop",
+    "stopping": "Stopping…",
+    "tokens": "Tokens {n}",
+    "someTokensTotalOnly": "Some show total tokens only",
+    "waitingFor": "Waiting for you {n}",
+    "turnStatus": {
+      "queued": "Queued",
+      "running": "Running",
+      "paused": "Paused",
+      "waiting": "Waiting for a reply",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Canceled",
+      "interrupted": "Interrupted"
+    },
+    "stepStatus": {
+      "running": "Working",
+      "succeeded": "Succeeded",
+      "completed": "Completed",
+      "failed": "Failed",
+      "waiting": "Waiting for a reply",
+      "skipped": "Skipped",
+      "cancelled": "Canceled"
+    },
+    "progressSummary": "Steps: {n}",
+    "progressSummaryDuration": "Steps: {n} · {duration}",
+    "progressNow": "Now: {name}",
+    "moreSteps": "…and {n} more",
+    "sameSession": "Same session",
+    "childProgress": "Nodes {done}/{total}",
+    "childCurrent": "Now: {name}",
+    "childOpen": "{name} run detail",
+    "childOpenTip": "Open child run",
+    "childToggle": "Expand or collapse steps of {name}",
+    "stepWarning": "Warning",
+    "progressLabel": "Progress",
+    "listLabel": "Conversation",
+    "errorOpenRun": "See the cause in run detail",
+    "units": {
+      "s": "s",
+      "m": "min",
+      "h": "h"
+    }
+  },
+  "interaction": {
+    "waitingFor": "Waiting for you {duration}",
+    "remaining": "Time left {time}",
+    "disconnected": "Disconnected",
+    "answeredLine": "Answered: {summary} · {duration}",
+    "answeredGeneric": "Answered",
+    "expiredLine": "Expired — no reply · {duration}",
+    "expiredDetail": "The agent was told that there was no reply",
+    "cancelledLine": "Canceled — {reason}",
+    "closeReasons": {
+      "cancelled": "Run canceled",
+      "node_finished": "Node finished",
+      "timeout": "No reply",
+      "interrupted": "Server restarted"
+    },
+    "answeredBy": {
+      "timeout": "Timed out",
+      "system": "System"
+    },
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "sendFailed": "Couldn't send. Try again.",
+    "cardLabel": "{title}, {actor}, {state}",
+    "stateLabels": {
+      "pending": "Waiting for a reply",
+      "answered": "Answered",
+      "expired": "Expired",
+      "cancelled": "Canceled",
+      "interrupted": "Disconnected"
+    },
+    "interruptedTitle": "The server restarted, so the wait for your reply was cut off",
+    "interruptedBody": "You can't answer this request anymore. Send your answer as a new message and the agent will pick up the earlier context (session resume).",
+    "resendAsMessage": "Send the answer as a new message",
+    "units": {
+      "s": "s",
+      "m": "min",
+      "h": "h"
+    },
+    "choices": {
+      "customOption": "Type your own",
+      "customPlaceholder": "Type your own",
+      "freePlaceholder": "Type your answer",
+      "submit": "Send",
+      "allRequired": "Answer every question",
+      "answerSummary": "{first}",
+      "answerSummaryMore": "{first} and {n} more"
+    },
+    "permission": {
+      "toolTitle": "The agent wants to run the “{name}” tool",
+      "reason": "Reason: {reason}",
+      "path": "Path: {path}",
+      "showAll": "Show all",
+      "showLess": "Show less",
+      "allow": "Allow",
+      "allowForRun": "Allow for this run",
+      "deny": "Deny…",
+      "denyReasonLabel": "Reason for denying (optional)",
+      "denySend": "Send denial",
+      "editInput": "Edit input and allow",
+      "editAndAllow": "Edit and allow",
+      "invalidJson": "This isn't valid JSON",
+      "summaryAllow": "Allowed",
+      "summaryAllowForRun": "Allowed for this run",
+      "summaryDeny": "Denied: {reason}",
+      "summaryDenyPlain": "Denied"
+    },
+    "review": {
+      "sourceNode": "Result of {label}",
+      "confirm": "Confirm: {label}",
+      "feedbackLabel": "Feedback",
+      "editLabel": "Edit content",
+      "expandContent": "Show all",
+      "collapseContent": "Show less",
+      "edited": "Edited",
+      "hasFeedback": "Has feedback",
+      "decisionsLabel": "Decision"
+    },
+    "answer": {
+      "hintComposer": "Answer in the message box below",
+      "hintCardPaused": "Still waiting for your answer. Select [Answer] in the message box to switch back",
+      "cardLabelExternal": "{label}, answer in the message box"
+    },
+    "fallback": {
+      "payload": "Request",
+      "responseLabel": "Response (JSON)",
+      "invalidJson": "This isn't valid JSON",
+      "submit": "Send"
+    }
+  },
+  "composer": {
+    "inputLabel": "Message",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "sending": "Sending",
+    "keyHint": {
+      "enter": "Enter to send · Shift+Enter for a new line",
+      "mod_enter": "Ctrl+Enter to send · Enter for a new line"
+    },
+    "answer": {
+      "strip": "Answering the {kind} from {target}",
+      "stripMessage": "Sending as a new message — the question keeps waiting",
+      "modeGroup": "How to send",
+      "modeAnswer": "Answer",
+      "modeMessage": "New message",
+      "placeholder": "Type your answer…",
+      "keyHint": {
+        "enter": "Enter to answer · Ctrl+Shift+Enter to send as a new message",
+        "mod_enter": "Ctrl+Enter to answer · Ctrl+Shift+Enter to send as a new message"
+      },
+      "srEnterAnswer": "Message box for answering the question from {target}",
+      "srEnterMessage": "Message box for a new message"
+    }
+  },
+  "markdown": {
+    "copy": "Copy",
+    "copied": "Copied"
+  }
+}

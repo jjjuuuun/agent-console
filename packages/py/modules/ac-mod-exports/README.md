@@ -1,31 +1,31 @@
 # agent-console-mod-exports
 
-Agent Console 내보내기 기능 모듈. 내보내기 라이브러리 `agent-console-exports`를 서버에 꽂는다.
+Agent Console exports feature module. It plugs the export library `agent-console-exports` into the server.
 
-- 경로: `GET /exporters`, `POST /exports/plan`(쓰기 없음), `POST /exports/archive`(zip 응답, 서버 디스크에 쓰지
-  않음), `GET /exports/roots`(토큰 필수), `POST /exports/write`(허용 루트 아래에만, 기본 `on_conflict=fail`).
-- 필수 포트: `definitions.lookup`(정의 읽기). 선택 포트: `exports.dependencies`(없으면 고른 항목만 내보낸다),
-  `secrets.rules`(없으면 기본 의심 규칙), `projects.folders`·`definitions.spaces`(아래).
-- 프로젝트 조립: `projects.folders`가 있으면 폴더 쓰기 루트 = 등록 프로젝트 폴더(루트 id =
-  등록 id)이고 설치자 `roots`는 쓰지 않는다. 내보낼 원본 = 질의 `?project=` 공간(기본) 또는 `source=library`(공용),
-  `project`가 없으면 공용. 등록 안 된 id 404 `project.not_found`. zip 내려받기는 그대로. 프로젝트 공간 원본의
-  함께 쓰는 정의는 그 공간 저장소에서만 찾는다: `exports.dependencies` 값이 `for_lookup(lookup, *, scope)`
-  (`ScopedExportDependencies`)도 가지면 공간 저장소·범위(`scope` = 프로젝트 id)로 만든 계산을 쓰고, 없으면 고른 항목만(공용 기준
-  계산을 섞지 않음). 범위는 그 프로젝트 설정 층의 공통 첨부를 의존에 넣는 데 쓴다(범위의 뜻은 제공자가 안다).
-- 설정 `modules.options.mod-exports`(옛 최상위 `exports`는 `settings.removed_key` 오류로 새 위치를 안내): `roots`·`home`·
-  `protected_in_home`·`protected`·`options`·`expose_paths`. 상대 경로는 `base_dir` 기준.
-- 웹 역할: `exports`.
+- Routes: `GET /exporters`, `POST /exports/plan` (no writes), `POST /exports/archive` (a zip response; nothing is written to the server
+  disk), `GET /exports/roots` (token required), and `POST /exports/write` (only under allowed roots; default `on_conflict=fail`).
+- Required port: `definitions.lookup` (definition reading). Optional ports: `exports.dependencies` (without it, only the selected items are exported),
+  `secrets.rules` (without it, the default suspicion rules), and `projects.folders` and `definitions.spaces` (below).
+- Project assembly: when `projects.folders` is present, the folder write roots are the registered project folders (root id =
+  registration id), and the administrator `roots` are not used. The source to export is the space of the query `?project=` (default) or `source=library` (shared library);
+  without `project`, the shared library. An unregistered id returns 404 `project.not_found`. Zip downloads work as before. For a project space source,
+  the definitions used together are looked up only in that space's store: when the `exports.dependencies` value also has `for_lookup(lookup, *, scope)`
+  (`ScopedExportDependencies`), the calculation built from the space store and scope (`scope` = project id) is used; otherwise only the selected items (the shared library
+  calculation is not mixed in). The scope is used to add the common attachments of that project's settings layer to the dependencies (the provider knows what the scope means).
+- Settings `modules.options.mod-exports` (the old top-level `exports` points to the new location with a `settings.removed_key` error): `roots`, `home`,
+  `protected_in_home`, `protected`, `options`, and `expose_paths`. Relative paths are relative to `base_dir`.
+- Web role: `exports`.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-exports
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-exports
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-exports
 ```
 
-## 최소 사용
+## Minimal usage
 
-정의 읽기 포트가 없으면 모듈은 꺼진다(이유 보고). 제공 모듈과 함께 조립한다.
+Without the definition reading port, the module is off (with the reason reported). Assemble it with a providing module.
 
 ```python
 >>> from agent_console_modkit import assemble
@@ -38,7 +38,7 @@ pip install agent-console-mod-exports
 
 ```
 
-카탈로그 어댑터는 정의 읽기 포트만 있으면 된다(없는 정의는 None).
+The catalog adapter needs only the definition reading port (missing definitions are None).
 
 ```python
 >>> import tempfile
@@ -52,21 +52,21 @@ pip install agent-console-mod-exports
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행(같은 modkit 호스트, 기본 127.0.0.1). `--with`를 주지 않으면 `testing.local_definitions_module`
-(워크스페이스 폴더의 파일 저장소)을 붙인다. 다른 제공자를 쓰려면 `--with <모듈 id>`.
+Standalone run (the same modkit host, 127.0.0.1 by default). Without `--with`, it attaches `testing.local_definitions_module`
+(a file store in the workspace folder). To use another provider, pass `--with <module id>`.
 
 ```bash
 python -m agent_console_mod_exports [--with ID] [--config PATH] [--port 0] [--check]

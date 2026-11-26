@@ -1,6 +1,11 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.2.0)
+
+- P1.16 — BREAKING CHANGE: `TeamRules` no longer reads the legacy `WorkspaceSettings.default_backend`. It does not fill the node service `DEFAULT_BACKEND` from settings and does not pass it as the fallback to validation or preflight. Put the value in `agent_defaults.backend`.
+  노드 서비스 키 `DEFAULT_BACKEND`(`ac-nodes-core`)와 `resolve_backends`·`validate_team`의 인자 `default_backend`는
+  남는다(호스트가 주입하는 확장 지점). README 최소 사용 예는 `agent_defaults.backend`를 본다.
+- 소비자 범위: `agent-console-link-runs-teams>=0.2,<0.3`(의존 `agent-console-teams>=0.2,<0.3`).
 
 - FU.3: `?project=` 검증의 저장 전 검사는 검사의 선택 메서드 `space_issues`(`SpaceDefinitionCheck`, 그 공간 기준 — 첨부 리소스를 그 공간에서만 찾는 등)를 부른다. 없으면 `issues`. `definition_check_issues(space=)`·`with_definition_checks(space=)` 선택 인자.
 - FU.4: `TeamRules.run_working_directory`가 상대 경로를 `WORKING_DIRECTORY` 기준으로 잇는다

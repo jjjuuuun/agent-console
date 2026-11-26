@@ -1,20 +1,20 @@
 # agent-console-example-interactions
 
-새 **상호작용 종류**(실행 중 사용자에게 받는 요청)와 그 종류를 허용하는 **연결 종류**를
-플러그인 패키지 하나로 추가하는 예제. 엔진·서버·웹 코드를 고치지 않는다.
+An example that adds a new **interaction kind** (a request to the user during a run) and an **edge type** that allows that kind
+with a single plugin package. No engine, server, or web code changes.
 
-- 상호작용 종류 `example.sign_off`(서명 받기): 요청 `{text}`, 응답 `{approved: boolean (필수), note?: string}`.
-  화면 힌트 `renderer = "example-sign-off"`는 웹이 모르는 이름이라, 웹은 **응답 스키마로 만든 폼**(승인함 체크박스 + 메모)으로 받는다.
-  응답은 서버·엔진이 `response_schema`로 검증한다(틀리면 422 `validation_failed`).
-- 연결 종류 `example.ask_sign_off`(서명 받기 허용): `scheduling = none`(엔진이 평가하지 않음), `interaction.kinds = ["example.sign_off"]`,
-  역할 `agent` → `user`, 기본 포트 `out` → `asks`. 이 연결이 나가는 에이전트만 서명 요청을 열 수 있다. 없으면 요청은 열리지 않고
-  백엔드에는 `unavailable`로 돌아간다.
+- Interaction kind `example.sign_off` (get a sign-off): request `{text}`, response `{approved: boolean (required), note?: string}`.
+  The screen hint `renderer = "example-sign-off"` is a name the web app does not know, so the web app collects the response with **a form built from the response schema** (an approved checkbox + a note).
+  The server and engine validate the response with `response_schema` (422 `validation_failed` when wrong).
+- Edge type `example.ask_sign_off` (allow sign-off requests): `scheduling = none` (the engine does not evaluate it), `interaction.kinds = ["example.sign_off"]`,
+  role `agent` → `user`, default ports `out` → `asks`. Only agents with this edge going out can open sign-off requests. Without it, the request is not opened and
+  `unavailable` is returned to the backend.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
-상호작용 종류는 **디스크립터 데이터 하나**다(클래스 불필요).
+An interaction kind is **one piece of descriptor data** (no class needed).
 
 ```python
 from agent_console_contracts import (
@@ -45,13 +45,13 @@ class AskSignOffEdge:
     )
 
     def activates(self, source, edge):
-        return None  # none 연결은 엔진이 평가하지 않는다
+        return None  # the engine does not evaluate none edges
 ```
 
-요청을 여는 쪽은 노드(`ctx.request_input(InteractionRequest(kind="example.sign_off", ...))`)나 그 노드가 넘긴 실행 백엔드다.
-fake 백엔드로는 에이전트 `backend_options.default.ask: [{kind: "example.sign_off", ...}]` 규칙으로 열 수 있다.
+The side that opens a request is a node (`ctx.request_input(InteractionRequest(kind="example.sign_off", ...))`) or the execution backend that node hands off to.
+With the fake backend, you can open one with the agent rule `backend_options.default.ask: [{kind: "example.sign_off", ...}]`.
 
-## 등록
+## Registration
 
 ```toml
 [project.entry-points."agent_console.interaction_kinds"]   # agent_console_runtime.INTERACTION_KINDS_GROUP
@@ -61,31 +61,31 @@ fake 백엔드로는 에이전트 `backend_options.default.ask: [{kind: "example
 "example.ask_sign_off" = "agent_console_example_interactions:AskSignOffEdge"
 ```
 
-entry point가 디스크립터 객체를 가리키면 로더(`as_interaction_kind`)가 감싸 등록한다.
+When an entry point points to a descriptor object, the loader (`as_interaction_kind`) wraps and registers it.
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-interactions   # 설치
-uv pip uninstall agent-console-example-interactions                        # 제거
+uv pip install -e examples/extensions/agent-console-example-interactions   # install
+uv pip uninstall agent-console-example-interactions                        # remove
 ```
 
-설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/interaction-kinds`에 `example.sign_off`, `GET /api/v1/edge-types`에 `example.ask_sign_off`가 나온다.
-- 제거: 둘 다 사라진다. 이 연결을 쓰는 팀 구성은 검증이 `unknown_edge_type`으로 알리고, 백엔드가 이 종류를 요청하면 열리지 않는다.
-- 설치한 채로 끄기: 서버 설정 `plugins.enabled`(허용 목록)에서 두 이름을 뺀다.
+**Restart the server** after installing or removing.
+- Install: `GET /api/v1/interaction-kinds` lists `example.sign_off`, and `GET /api/v1/edge-types` lists `example.ask_sign_off`.
+- Remove: both disappear. Validation reports `unknown_edge_type` for teams that use this edge, and requests of this kind from a backend are not opened.
+- Turn off while installed: remove both names from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
 ```bash
 cd examples/extensions/agent-console-example-interactions
 uv run --project ../../.. python -m pytest
 ```
 
-설치 없이 돈다(`pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
-E2E: `apps/web/e2e/08-extension.spec.ts`의 "상호작용 종류" 시나리오가 이 패키지를 임시 폴더에 설치해 쓴다.
+The tests run without installing (`pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).
+E2E: the interaction kind scenario of `apps/web/e2e/08-extension.spec.ts` installs this package into a temporary folder and uses it.

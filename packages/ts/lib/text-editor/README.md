@@ -1,10 +1,10 @@
 # @agent-console/text-editor
 
-CodeMirror 6 기반 텍스트 편집 컴포넌트 `<TextEditor>`. 마크다운·HTML·JSON 구문 강조. 저장·리소스·API를 모른다(제어형).
-다른 `@agent-console/*` 패키지를 import하지 않는다(react는 peer). 색·글꼴은 `--ac-*` CSS 변수(없으면 폴백)를 쓰므로 `@agent-console/ui/tokens.css`가 로드돼 있으면 다크/라이트가 자동으로 따라간다.
+`<TextEditor>`, a text editing component built on CodeMirror 6, with Markdown, HTML, and JSON syntax highlighting. It knows nothing about saving, resources, or the API (it is controlled).
+It imports no other `@agent-console/*` package (react is a peer). Colors and fonts use `--ac-*` CSS variables (with fallbacks), so when `@agent-console/ui/tokens.css` is loaded, dark and light follow automatically.
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { jsonParseError } from "@agent-console/text-editor";
@@ -13,39 +13,37 @@ const broken = jsonParseError('{"a": ');
 const fine = jsonParseError('{"a": 1}');
 ```
 
-## 설치 / 사용
-저장소 안에서는 `pnpm install`이 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다 (react 19 필요)
+## Installation and usage
+Inside the repository, `pnpm install` links the package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`) (React 19 is required).
 
 ```tsx
 import { TextEditor } from "@agent-console/text-editor";
 
 <TextEditor
   value={text}
-  onChange={setText}            // 사용자 편집(IME 조합 중 포함)만 호출. value prop 반영은 호출 안 함
-  language="markdown"           // markdown | html | json | text (모르는 값 = text)
-  ariaLabel="본문 편집기"        // 필수
-  onSave={save}                 // Ctrl/Cmd+S (조합 중에는 무시)
+  onChange={setText}            // called only for user edits (including during IME composition); applying the value prop does not call it
+  language="markdown"           // markdown | html | json | text (an unknown value = text)
+  ariaLabel="Content editor"    // required
+  onSave={save}                 // Ctrl/Cmd+S (ignored during composition)
   maxBytes={1_000_000}
-  onTooLarge={(bytes) => warn(bytes)}   // 초과 시 읽기 전용
-  onStatus={({ line, col, chars, parseError }) => setStatus(...)}   // json이면 parseError(편집은 막지 않음)
-  onCompositionChange={(composing) => setBusy(composing)} // IME 조합 시작 true / 끝 false
+  onTooLarge={(bytes) => warn(bytes)}   // read-only when exceeded
+  onStatus={({ line, col, chars, parseError }) => setStatus(...)}   // for json, parseError (editing is not blocked)
+  onCompositionChange={(composing) => setBusy(composing)} // true when IME composition starts, false when it ends
   handleRef={ref}               // ref.current.isComposing()
-  onCompositionChange={(composing) => setBusy(composing)} // IME 조합 시작 true / 끝 false
-  handleRef={ref}               // ref.current.isComposing()
-  height="fill"                 // px 숫자 또는 부모를 채움
-  messages={{ tooLarge: "크기 제한을 넘어 읽기 전용입니다" }}
+  height="fill"                 // a number of px, or fill the parent
+  messages={{ tooLarge: "Read-only because it exceeds the size limit" }}
 />
 ```
 
-## 동작 규칙
-- 한글 IME: 자동 완성·자동 괄호를 켜지 않고, 조합 중에는 저장 단축키를 처리하지 않는다. `value`가 현재 문서와 같으면 건드리지 않아 커서·조합이 유지된다.
-- 조합 상태 API: `onCompositionChange(composing)`는 compositionstart/end에서 상태가 바뀔 때만 부른다. `handleRef`로 받은 `TextEditorHandle.isComposing()`은 같은 값을 돌려준다. 조합 중 검사·저장 같은 부수 작업을 미루려는 소비처(설정 › 구조도, 메모리 편집기)가 쓴다. `onChange`는 조합 중에도 호출된다.
-- `TextEditorHandle.goToLine(line)`: 1부터 센 줄로 커서를 옮기고 가운데로 스크롤한다(범위 밖은 처음·끝 줄, 편집기가 없으면 false). 줄 이동 UI·단축키는 호출자가 만든다.
-- 탭 키 = 공백 2칸 들여쓰기(`Esc` 후 `Tab`으로 편집기를 빠져나갈 수 있다). 줄 번호, 줄바꿈 기본 켬(`lineWrap`).
-- 편집기 요소에 `data-ac-editable`을 달아, 앱 전역 단일 키 단축키 처리기가 무시할 수 있게 한다.
-- 공개 API: `TextEditor`, `resolveLanguage(name)`, `jsonParseError(text)`, 타입 `TextEditorHandle`/`TextEditorProps`/`TextEditorStatus`/`TextEditorMessages`/`EditorLanguage`.
+## Behavior
+- Korean IME: auto-completion and auto-closing brackets are not turned on, and the save shortcut is not handled during composition. When `value` equals the current document, the editor does not touch it, so the cursor and composition are kept.
+- Composition state API: `onCompositionChange(composing)` is called only when the state changes at compositionstart or compositionend. `TextEditorHandle.isComposing()`, received through `handleRef`, returns the same value. Consumers that want to defer side work such as checking or saving during composition (Settings › Architecture map, the memory editor) use it. `onChange` is called during composition as well.
+- `TextEditorHandle.goToLine(line)`: moves the cursor to a line counted from 1 and scrolls it to the center (a line out of range goes to the first or last line, and it returns false when there is no editor). The caller builds the go-to-line UI and shortcut.
+- The Tab key indents by 2 spaces (press `Esc` and then `Tab` to leave the editor). Line numbers are shown, and line wrapping is on by default (`lineWrap`).
+- The editor element carries `data-ac-editable`, so the app-wide single-key shortcut handler can ignore it.
+- Public API: `TextEditor`, `resolveLanguage(name)`, `jsonParseError(text)`, and the types `TextEditorHandle`, `TextEditorProps`, `TextEditorStatus`, `TextEditorMessages`, and `EditorLanguage`.
 
-## `<TextDiff>` — 읽기 전용 텍스트 비교
+## `<TextDiff>` — read-only text comparison
 
 ```tsx
 import { TextDiff } from "@agent-console/text-editor";
@@ -54,22 +52,22 @@ import { TextDiff } from "@agent-console/text-editor";
   before={oldText}
   after={newText}
   language="markdown"
-  ariaLabel="SKILL.md 비교"
-  mode="auto"            // split(나란히) | unified(통합) | auto(폭 < unifiedBelow(900px)면 통합)
-  context={3}            // 변경 없는 구간을 접을 때 앞뒤로 남기는 줄 수 (음수 = 접지 않음)
-  messages={{ unchangedLines: "변경 없는 $줄", split: "나란히", unified: "통합", toolbar: "보기 방식" }}
+  ariaLabel="Compare SKILL.md"
+  mode="auto"            // split (side by side) | unified | auto (unified when the width is below unifiedBelow (900px))
+  context={3}            // lines kept before and after when collapsing an unchanged section (negative = do not collapse)
+  messages={{ unchangedLines: "$ unchanged lines", split: "Side by side", unified: "Unified", toolbar: "View mode" }}
 />
 ```
-- 두 문자열만 받는다(저장·API를 모른다). `F3` / `Shift+F3` = 다음/이전 변경 블록(편집기 포커스 시). 줄 번호·`--ac-font-mono`.
-- 도구 줄(`showToolbar`)의 전환 버튼은 `aria-pressed`. 접힌 구간은 `@codemirror/merge`의 클릭 위젯이다(키보드로는 펼칠 수 없음 — 접지 않으려면 `context={-1}`).
-- 공개 API 추가: `TextDiff`, 타입 `TextDiffProps`/`TextDiffMessages`/`TextDiffMode`.
-- 기본 문구는 영어다. 앱은 `TextDiffMessagesProvider`(가벼운 부분 경로 `@agent-console/text-editor/messages`, CodeMirror를 끌어오지 않는다)를 루트에 한 번 두어 자기 언어 문구를 주입한다. 개별 `messages` prop이 우선한다.
+- It takes only two strings (it knows nothing about saving or the API). `F3` and `Shift+F3` go to the next and previous change block (when the editor has focus). Line numbers and `--ac-font-mono` are used.
+- The mode buttons in the toolbar (`showToolbar`) use `aria-pressed`. A collapsed section is a click widget from `@codemirror/merge` (it cannot be expanded with the keyboard; use `context={-1}` to avoid collapsing).
+- Public API additions: `TextDiff` and the types `TextDiffProps`, `TextDiffMessages`, and `TextDiffMode`.
+- The default text is English. An app places `TextDiffMessagesProvider` (in the light subpath `@agent-console/text-editor/messages`, which does not pull in CodeMirror) once at the root to inject text in its own language. An individual `messages` prop takes priority.
 
-## 의존성 (무엇을 / 왜 / 대안)
-- `@codemirror/state`·`view`·`commands`·`language`: 편집기 코어 — 가볍고 IME 처리가 성숙함. 대안: Monaco(무거움), textarea(구문 강조·확장 부족).
-- `@codemirror/lang-markdown`·`lang-html`·`lang-json`: 언어별 구문 강조. 대안: 직접 정규식 강조(유지보수 부담).
-- `@codemirror/merge`(MIT): `TextDiff`의 나란히(`MergeView`)·통합(`unifiedMergeView`) 비교와 변경 구간 접기·다음 변경 이동. 이미 쓰는 CodeMirror 계열이라 테마·언어 확장을 그대로 공유한다. 대안: `diff2html`/`react-diff-viewer`(별도 렌더러라 테마·IME·접근성 재작업), 직접 LCS diff 구현(유지보수 부담).
-- `@lezer/highlight`: 토큰 태그를 `--ac-*` 색으로 매핑하는 하이라이트 스타일. 대안: 기본 하이라이트(토큰·테마 미연동).
+## Dependencies (what / why / alternatives)
+- `@codemirror/state`, `view`, `commands`, and `language`: the editor core — light, with mature IME handling. Alternatives: Monaco (heavy), a textarea (lacks syntax highlighting and extensions).
+- `@codemirror/lang-markdown`, `lang-html`, and `lang-json`: per-language syntax highlighting. Alternative: hand-written regex highlighting (a maintenance burden).
+- `@codemirror/merge` (MIT): `TextDiff`'s side-by-side (`MergeView`) and unified (`unifiedMergeView`) comparison, folding of unchanged sections, and jumping to the next change. It is part of the CodeMirror family we already use, so the theme and language extensions are shared as they are. Alternatives: `diff2html` or `react-diff-viewer` (separate renderers that would need theme, IME, and accessibility rework), or our own LCS diff (a maintenance burden).
+- `@lezer/highlight`: a highlight style that maps token tags to `--ac-*` colors. Alternative: the default highlighting (not connected to tokens or the theme).
 
-## 테스트
-`pnpm test` — `TextDiff`(나란히·통합·전환·접힘·갱신), 값 표시·onChange 구분·readOnly·maxBytes·Ctrl+S·IME(composition)·자동 괄호 없음·onStatus.
+## Testing
+`pnpm test` — `TextDiff` (side by side, unified, switching, folding, updating), value display, telling `onChange` apart, readOnly, maxBytes, Ctrl+S, IME (composition), no auto-closing brackets, and onStatus.

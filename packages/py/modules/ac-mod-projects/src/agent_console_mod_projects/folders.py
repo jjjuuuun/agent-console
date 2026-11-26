@@ -71,7 +71,7 @@ FOLDER_DIALOGS_GROUP = "agent_console.folder_dialogs"
 
 @runtime_checkable
 class FolderDialogProvider(Protocol):
-    """코드 선택 창 제공자(entry point ``agent_console.folder_dialogs``).
+    """Folder picker dialog provider (entry point ``agent_console.folder_dialogs``).
 
     ``pick``은 사용자가 고른 폴더 경로(취소면 None)를 돌려준다. ``cancel``이 켜지면 창을 닫고
     None을 돌려준다(요청이 끊김). 실패는 예외로 알린다(결과 ``failed``).

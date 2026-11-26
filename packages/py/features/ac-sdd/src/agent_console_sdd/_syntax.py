@@ -72,7 +72,7 @@ def package_task_format(key: str) -> str | None:
 
 
 def load_default_syntax() -> SpecSyntax:
-    """패키지 기본 작업 문법(`data/default_syntax.yaml`)을 읽는다.
+    """Read the package default task syntax (`data/default_syntax.yaml`).
 
     Returns:
         새 `SpecSyntax`(호출자가 고쳐도 다음 호출에 영향이 없다).

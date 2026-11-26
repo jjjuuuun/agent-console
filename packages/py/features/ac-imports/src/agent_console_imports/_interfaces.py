@@ -26,7 +26,7 @@ IMPORT_SOURCES_EXTENSION: Final = "import_sources"
 
 @dataclass(frozen=True, slots=True)
 class ImportItem:
-    """가져올 수 있는 항목 하나: 화면용 후보 + 쓸 문서(+ 본문).
+    """One importable item: a candidate for the screen + the document to write (+ content).
 
     Attributes:
         candidate: 계약 `ImportCandidate`(미리보기 화면에 그대로 나간다).
@@ -53,7 +53,7 @@ class ScanResult:
 
 @runtime_checkable
 class ImportSource(Protocol):
-    """가져오기 출처(예: 사용자 `~/.claude`). **원본을 읽기만 한다.**
+    """Import source (for example the user's `~/.claude`). **Only reads the originals.**
 
     `scan`은 파일을 쓰거나 지우거나 원본 위치를 바꾸지 않는다. 없는 위치는 빈 결과다.
     """
@@ -88,7 +88,7 @@ class ImportSourceContext:
 
 
 type ImportSourceFactory = Callable[[ImportSourceContext], Iterable[ImportSource]]
-"""환경 값으로 출처들을 만든다(entry point `agent_console.import_sources`가 가리키는 것)."""
+"""Build sources from environment values (target of entry point `agent_console.import_sources`)."""
 
 
 class StoredLike(Protocol):

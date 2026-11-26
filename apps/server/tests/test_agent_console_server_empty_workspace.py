@@ -47,7 +47,7 @@ def test_workspace_settings_keep_removed_console_keys(tmp_path: Path) -> None:
         assert got.json()["console"] == {"command_prefix": "!"}
         saved = client.put(
             f"{API}/settings",
-            json={**got.json(), "default_backend": "fake-agent"},
+            json={**got.json(), "agent_defaults": {"backend": "fake-agent"}},
             headers={"If-Match": got.headers["etag"]},
         )
         assert saved.status_code == 200

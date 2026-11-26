@@ -7,13 +7,13 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-resources>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
-    "agent-console-teams>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
+    "agent-console-teams>=0.2,<0.3",
     "pydantic>=2.9",
     "fastapi>=0.115",
 ]
@@ -61,10 +61,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console.extension-points.settings-scope-layer]
-title = "범위 설정 층"
+title = "Scoped settings layer"
 area = "projects"
 design_id = "X26"
-summary = "범위 id(예: 프로젝트)마다 유효 설정에 끼울 설정 층을 준다"
+summary = "Provides, for each scope id (for example, a project), a settings layer to insert into the effective settings"
 registration = { kind = "port", port = "agent_console_link_definitions_teams.ports:SCOPE_LAYERS" }
 interface = "agent_console_link_definitions_teams.ports:ScopeLayersSource"
 example = { kind = "reference", path = "packages/py/links/ac-link-projects-runs" }

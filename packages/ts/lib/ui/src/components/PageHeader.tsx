@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ActionButton } from "./ActionButton";
 import { Icon } from "./Icon";
 import { Menu, Popover, type MenuItemDef } from "./Popover";
+import { defaultUiMessages, type UiMessages } from "../messages";
 import { joinClass } from "./Status";
 
 export interface PageHeaderProps {
@@ -18,15 +19,18 @@ export interface PageHeaderProps {
    * 미만이면 `more` 메뉴 하나로 접힌다(뷰포트가 아니라 컨테이너 쿼리).
    */
   secondaryActions?: readonly (MenuItemDef & { label: string })[];
-  /** `more` 메뉴 버튼의 이름. 기본 "더 보기". */
+  /** `more` 메뉴 버튼의 이름. 기본 `messages.more`("더 보기"). */
   moreLabel?: string;
+  /** 기본 문구 덮어쓰기(`@agent-console/ui/locales/en` 등). */
+  messages?: Partial<UiMessages>;
   /** `breadcrumb`가 있을 때 nav 접근성 이름. */
   breadcrumbLabel?: string;
   className?: string;
 }
 
 /** 화면 상단 고정 헤더(48px). 제목은 `h1`. 마지막 breadcrumb 항목이 현재 위치(`aria-current`). */
-export function PageHeader({ title, breadcrumb, leading, status, actions, secondaryActions = [], moreLabel = "더 보기", breadcrumbLabel, className }: PageHeaderProps) {
+export function PageHeader({ title, breadcrumb, leading, status, actions, secondaryActions = [], moreLabel: moreLabelProp, messages, breadcrumbLabel, className }: PageHeaderProps) {
+  const moreLabel = moreLabelProp ?? messages?.more ?? defaultUiMessages.more;
   const [menuOpen, setMenuOpen] = useState(false);
   const hasCrumbs = breadcrumb !== undefined && breadcrumb.length > 0;
   return (

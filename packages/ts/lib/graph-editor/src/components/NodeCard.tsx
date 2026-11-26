@@ -104,7 +104,7 @@ export function nodeAriaLabel(
   p: Pick<NodeCardProps, "label" | "typeTitle" | "state" | "issueCount" | "bind" | "runBadge" | "annotation">,
   m: GraphEditorMessages = defaultMessages,
 ): string {
-  const status = p.state === undefined ? "" : `, 상태 ${statusLabel(p.state.status, m)}`;
+  const status = p.state === undefined ? "" : format(m.nodeAriaStatus, { status: statusLabel(p.state.status, m) });
   const ic = p.issueCount;
   const errors = ic !== undefined && ic.error + ic.warning + (ic.info ?? 0) > 0 ? `, ${issueAriaText(ic, m)}` : "";
   // 정의 바인딩: ", {부제} {이름}, {본문}, {배지들}"(버전 고정 등은 배지 전문)

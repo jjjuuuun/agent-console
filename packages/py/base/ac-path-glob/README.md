@@ -1,22 +1,22 @@
 # agent-console-path-glob
 
-경로 글롭(`**` 지원)을 정규식으로 바꾸고 경로가 맞는지 판정하는 작은 기반 패키지다. 표준 라이브러리만 쓴다.
-로그 출처의 포함·제외 패턴, 위키 페이지 규칙의 적용 경로처럼 "경로 모양" 설정을 받는 기능이 같은 규칙을
-나눠 쓰려고 만들었다.
+A small base package that turns path globs (with `**` support) into regular expressions and checks whether a path matches. It uses only the standard library.
+It exists so that features that take "path shaped" settings, such as the include and exclude patterns of a log source or the target paths of a wiki page rule,
+share the same rules.
 
-- `*`·`?`는 `/`를 넘지 않는다. `**/`는 0개 이상의 폴더, 끝의 `/**`는 그 폴더 자신과 모든 하위다.
-- 패턴·경로를 바꾸지 않고 비교한다. Windows 경로는 `normalize_path`로 먼저 맞춘다.
-- 대소문자는 기본으로 구분하고 `case_insensitive=True`로 무시한다.
-- 형식 검사(빈 패턴·절대 경로 거부 등)는 쓰는 쪽 규칙이라 넣지 않았다.
+- `*` and `?` do not cross `/`. `**/` matches zero or more folders, and a trailing `/**` matches the folder itself and everything below it.
+- Patterns and paths are compared without rewriting them. Normalize Windows paths with `normalize_path` first.
+- Matching is case-sensitive by default. Pass `case_insensitive=True` to ignore case.
+- Format checks (rejecting empty patterns, absolute paths, and so on) are caller rules, so they are not included.
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-path-glob
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-path-glob
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-path-glob
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from agent_console_path_glob import glob_match, normalize_path
@@ -31,15 +31,15 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

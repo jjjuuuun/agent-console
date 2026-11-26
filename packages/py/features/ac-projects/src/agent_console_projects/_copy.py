@@ -181,7 +181,7 @@ def copy_target_label(
 type RewriteReferences = Callable[
     [str, Mapping[str, Any], Mapping[DefinitionId, str]], Mapping[str, Any]
 ]
-"""참조 고치기 `rewrite(kind, document, renames) -> new_document`(주입, `references`의 짝).
+"""Reference rewriter `rewrite(kind, document, renames) -> new_document` (injected).
 
 `renames`는 (종류, 옛 id) → 새 id. 문서 안에서 그 정의를 가리키는 참조를 새 id로 바꾼 **새 문서**를
 돌려준다(입력을 바꾸지 않는다). 모르는 종류면 문서를 그대로 돌려준다."""

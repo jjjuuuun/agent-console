@@ -51,24 +51,35 @@ class _Parser(argparse.ArgumentParser):
 def _parser() -> _Parser:
     parser = _Parser(
         prog=PROG,
-        description="hook 명령을 감싸 그대로 실행하고 입출력·결정·소요 시간을 jsonl로 남긴다.",
+        description=(
+            "Run a hook command unchanged and record its input, output, decision, and duration "
+            "as JSONL."
+        ),
         usage=f"{PROG} --out DIR [--matcher M] [--shell SH] [--exec] "
-        "[--context KEY=VALUE] [--capture-bytes N] -- <명령>",
+        "[--context KEY=VALUE] [--capture-bytes N] -- <command>",
     )
-    parser.add_argument("--out", required=True, help="기록 폴더(세션마다 <세션>.jsonl)")
-    parser.add_argument("--matcher", default=None, help="기록에 남길 hook 매처")
     parser.add_argument(
-        "--shell", default=None, help="셸 이름(sh·bash·powershell·pwsh·cmd) 또는 셸 실행 파일"
+        "--out", required=True, help="Record folder (one <session>.jsonl per session)"
     )
-    parser.add_argument("--exec", dest="exec_form", action="store_true", help="셸 없이 실행")
+    parser.add_argument("--matcher", default=None, help="hook matcher to record")
     parser.add_argument(
-        "--context", action="append", default=[], metavar="KEY=VALUE", help="기록에 붙일 맥락"
+        "--shell",
+        default=None,
+        help="Shell name (sh, bash, powershell, pwsh, cmd) or shell executable",
+    )
+    parser.add_argument("--exec", dest="exec_form", action="store_true", help="Run without a shell")
+    parser.add_argument(
+        "--context",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Context to add to the record",
     )
     parser.add_argument(
         "--capture-bytes",
         type=int,
         default=DEFAULT_CAPTURE_BYTES,
-        help=f"스트림마다 기록에 남길 최대 바이트(기본 {DEFAULT_CAPTURE_BYTES})",
+        help=f"Maximum bytes to record per stream (default {DEFAULT_CAPTURE_BYTES})",
     )
     return parser
 
@@ -81,17 +92,17 @@ def parse_args(argv: Sequence[str]) -> tuple[argparse.Namespace, list[str]]:
     """
     args = list(argv)
     if "--" not in args:
-        raise ProbeUsageError("원래 명령 앞에 `--`가 필요합니다.")
+        raise ProbeUsageError("Put `--` before the hook command.")
     split = args.index("--")
     options, command = args[:split], args[split + 1 :]
     if not command or (len(command) == 1 and not command[0].strip()):
-        raise ProbeUsageError("`--` 뒤에 실행할 명령이 없습니다.")
+        raise ProbeUsageError("No command after `--`.")
     ns = _parser().parse_args(options)
     if ns.capture_bytes < 0:
-        raise ProbeUsageError("--capture-bytes는 0 이상이어야 합니다.")
+        raise ProbeUsageError("--capture-bytes must be 0 or more.")
     for item in ns.context:
         if "=" not in item or not item.split("=", 1)[0]:
-            raise ProbeUsageError(f"--context는 KEY=VALUE 형식입니다: {item!r}")
+            raise ProbeUsageError(f"--context takes KEY=VALUE: {item!r}")
     return ns, command
 
 
@@ -138,7 +149,7 @@ def main(
         invocation, io=io, capture_bytes=ns.capture_bytes, handle_signals=handle_signals
     )
     if outcome.error is not None:
-        os.write(io.stderr, f"{PROG}: 명령을 실행하지 못했습니다 ({outcome.error})\n".encode())
+        os.write(io.stderr, f"{PROG}: couldn't run the command ({outcome.error})\n".encode())
     _record(ns, outcome, original, "exec" if exec_form else "shell", shell, redactor)
     if outcome.signal is not None:
         reraise_signal(outcome.signal)

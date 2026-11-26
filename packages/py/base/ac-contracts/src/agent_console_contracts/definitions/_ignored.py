@@ -10,10 +10,11 @@ from typing import Any, Final
 
 from pydantic import BaseModel
 
-IGNORED_SETTINGS_KEYS: Final = ("projects", "logs.projects")
+IGNORED_SETTINGS_KEYS: Final = ("projects", "logs.projects", "default_backend")
 """공통 설정에서 읽고 무시하는 옛 키 경로(점으로 구분). `projects` = 옛 새 정의 범위
 (`new_definition_scope`·`fallback`), `logs.projects` = 옛 로그 프로젝트 묶기(`groups`·`ungrouped`·
-`git_worktrees`). 1.x 동안 읽기는 실패하지 않는다."""
+`git_worktrees`) — 둘 다 0.15.0에서 지움. `default_backend` = 옛 실행 백엔드 공통 기본값(0.16.0에서
+지움, 같은 값은 `agent_defaults.backend`). 1.x 동안 읽기는 실패하지 않는다."""
 
 
 def _child(node: Any, key: str) -> Any:
@@ -44,6 +45,8 @@ def ignored_settings_keys(settings: Any, *, section: str | None = None) -> list[
 
     >>> ignored_settings_keys({"projects": {"fallback": "shared"}, "logs": {}})
     ['projects']
+    >>> ignored_settings_keys({"default_backend": "fake", "logs": {"projects": {}}})
+    ['logs.projects', 'default_backend']
     >>> ignored_settings_keys({"projects": {"groups": []}}, section="logs")
     ['logs.projects']
     >>> ignored_settings_keys({"logs": {"projects": None}}), ignored_settings_keys("x")

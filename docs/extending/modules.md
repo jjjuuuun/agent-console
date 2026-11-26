@@ -1,65 +1,73 @@
-# 서버 모듈
+# Server modules
 
-서버의 기능(채팅·실행·사용량·로그·정의·위키 …)은 하나하나가 서버 모듈이다. 서버는 기능 이름을 모르고, 설치된
-모듈을 entry point로 모아 조립해 HTTP·WebSocket으로 내보낸다. 새 기능을 서버에 더하려면 모듈 패키지 하나를
-만든다. 서버·웹·다른 모듈 코드는 고치지 않는다.
+Each server feature (chat, runs, usage, logs, definitions, wiki, and so on) is a server module. The server does not
+know feature names. It collects the installed modules through entry points, assembles them, and exposes them over
+HTTP and WebSocket. To add a new feature to the server, create one module package. You do not change server, web, or
+other module code.
 
-플러그인(같은 종류 하나 더)으로 되는 일이면 모듈을 만들지 않는다. 모듈은 자기 REST 경로·저장소·설정 섹션이 있는
-"기능"일 때 쓴다.
+If a plugin (one more of the same kind) can do the job, do not create a module. Use a module for a "feature" that has
+its own REST paths, storage, and settings section.
 
-전체 예제: [agent-console-example-module](../../examples/extensions/agent-console-example-module/README.md)
-(서술자·REST·설치자 옵션·명령행 옵션·사용자 설정 섹션·정의 종류 기여·DB 계보·포트·단독 실행을 모두 보인다).
-설치된 모듈 목록: [서버 모듈 표](reference.md#서버-모듈).
+Full example: [agent-console-example-module](../../examples/extensions/agent-console-example-module/README.md)
+(it shows the descriptor, REST, administrator options, command-line options, a user settings section, a definition
+kind contribution, a migration branch, ports, and a standalone run). Installed modules:
+[server module table](reference.md#server-modules).
 
-## 모양
+## Shape
 
-모듈은 `descriptor`(데이터)와 `build(ctx) -> ModuleParts`(조립) 두 가지를 가진 객체다. 모듈 키트
-(`agent-console-modkit`)의 공개 API만 쓴다.
-서술자·`build`·포트 선언을 쓰는 코드는 예제 README의
-[모듈 만드는 법](../../examples/extensions/agent-console-example-module/README.md#모듈-만드는-법)에 있다.
+A module is an object with two things: `descriptor` (data) and `build(ctx) -> ModuleParts` (assembly). It uses only
+the public API of the module kit (`agent-console-modkit`). The code that writes the descriptor, `build`, and the port
+declarations is in [How to build a module](../../examples/extensions/agent-console-example-module/README.md#how-to-build-a-module)
+in the example README.
 
 ```toml
 [project.entry-points."agent_console.server_modules"]
-mod-notes = "my_console_notes.module:module"       # 이름 = 모듈 id
+mod-notes = "my_console_notes.module:module"       # name = module id
 ```
 
-### 서술자 `ModuleDescriptor`
+### Descriptor `ModuleDescriptor`
 
-| 필드 | 뜻 |
+| Field | Meaning |
 | --- | --- |
-| `id` | 모듈 id. 설정 `modules.*`의 키이자 entry point 이름 |
-| `version`·`title`·`description` | 보고용. `description`은 앱 사용자가 읽는 한 줄이다(내부 이름을 쓰지 않는다) |
-| `kind` | `feature`(기능 모듈) 또는 `link`(연동 모듈, [연동 모듈](links.md)) |
-| `provides` | 제공하는 포트. `build`에서 `ctx.provide(포트, 구현)`으로 넣는다 |
-| `requires` | 필수 포트. 하나라도 없으면 이 모듈은 `unsatisfied`로 꺼진다 |
-| `optional` | 선택 포트. 없으면 `ctx.port(포트)`가 None(여러 제공자 포트는 빈 목록)이고 그 동작만 끈다 |
-| `settings_schema` | 설치자 옵션 `modules.options.<id>`를 검증하는 Pydantic 모델 |
-| `settings_compat` | 명령행 옵션·환경변수·지운 설정 키 안내(아래) |
-| `migrations` | 이 모듈이 소유한 DB 계보(`MigrationBranch`) |
-| `contracts` | 쓰는 계약 하위 모듈과 버전(보고용) |
-| `web_roles` | 웹 화면 진입 역할. 켜진 모듈의 역할만 웹 메뉴에 나온다 |
+| `id` | Module id. The key in the `modules.*` settings and the entry point name |
+| `version`, `title`, `description` | For reports. `description` is one line the app user reads (do not use internal names) |
+| `kind` | `feature` (feature module) or `link` (link module, see [Link modules](links.md)) |
+| `provides` | Ports it provides. Put them in with `ctx.provide(port, implementation)` in `build` |
+| `requires` | Required ports. If any is missing, this module is turned off as `unsatisfied` |
+| `optional` | Optional ports. When one is missing, `ctx.port(port)` is None (an empty list for multi-provider ports) and only that behavior is turned off |
+| `settings_schema` | A Pydantic model that validates the administrator options `modules.options.<id>` |
+| `settings_compat` | Command-line options, environment variables, and notices for removed settings keys (below) |
+| `migrations` | The migration branches this module owns (`MigrationBranch`) |
+| `contracts` | The contract submodules it uses and their versions (for reports) |
+| `web_roles` | Web screen entry roles. Only the roles of modules that are on appear in the web menu |
 
 ### `build`
 
-- 서비스·저장소는 `build` 안에서 만든다. 전역 상태를 두지 않는다. DB·시계·환경·다른 모듈은 `ctx`에서 받는다.
-- 결과 `ModuleParts`: REST 라우터, WS 토픽 처리기, 예외 → 오류 코드 대응, 시작·종료 훅.
-- 토큰·Host·Origin 검사와 요청 크기 제한은 호스트가 한다. 모듈은 보안 코드를 두지 않는다.
-- 오류 응답 코드는 계약의 알려진 코드(`not_found`·`validation_failed` 등)를 쓰고, 자기 이슈 코드는 자기 접두사로 쓴다.
+- Create services and stores inside `build`. Do not keep global state. Get the DB, clock, environment, and other
+  modules from `ctx`.
+- The result, `ModuleParts`, holds REST routers, WS topic handlers, exception-to-error-code mappings, and startup and
+  shutdown hooks.
+- The host checks tokens, Host, and Origin, and limits request size. Modules do not contain security code.
+- For error response codes, use the known codes of the contract (`not_found`, `validation_failed`, and so on). Use your
+  own prefix for your own issue codes.
 
-## 포트
+## Ports
 
-모듈끼리는 import하지 않고 **포트 이름**으로만 잇는다. 쓰는 쪽은 같은 이름의 `PortKey`를 자기 패키지에 선언한다.
+Modules do not import each other. They connect **only by port name**. The consuming side declares a `PortKey` with the
+same name in its own package.
 
-| 포트 종류 | 제공자 | 여럿이 주면 |
+| Port kind | Providers | When several provide it |
 | --- | --- | --- |
-| 단일(`PortKey("이름")`) | 하나 | 둘 다 `conflict`. 설정 `modules.bindings`로 하나를 고른다 |
-| 여러 제공자(`PortKey("이름", multi=True)`) | 여럿 | 모두 모아 목록으로 받는다(검사 보탬·범위 보탬 등) |
+| Single (`PortKey("name")`) | One | Both are `conflict`. Choose one with the setting `modules.bindings` |
+| Multi-provider (`PortKey("name", multi=True)`) | Several | All are collected and received as a list (extra checks, extra scopes, and so on) |
 
-선택 포트가 없어 어떤 요청을 처리할 수 없으면 `raise ctx.unavailable(포트)`를 쓴다. 호스트가 409
-`feature_unavailable{module, port}`로 바꾼다. 이미 있는 포트(누가 주고 누가 쓰는지)는 [포트 표](reference.md#포트).
+If a missing optional port means a request cannot be handled, use `raise ctx.unavailable(port)`. The host turns it
+into 409 `feature_unavailable{module, port}`. Existing ports (who provides and who uses them) are in the
+[port table](reference.md#ports).
 
-아래는 모듈 키트의 시험용 모듈로 조립 규칙을 보인 것이다. 노트 포트를 주는 모듈을 끄면 그것을 필수로 쓰는 쪽만
-꺼지고, 선택으로 쓰는 쪽은 그대로 켜진다.
+The example below shows the assembly rules with the module kit's test modules. When you turn off the module that
+provides the notes port, only the module that requires it is turned off, and the module that uses it as optional stays
+on.
 
 ```python
 >>> from agent_console_modkit import ModulesConfig, PortKey, assemble
@@ -77,47 +85,53 @@ mod-notes = "my_console_notes.module:module"       # 이름 = 모듈 id
 
 ```
 
-## 설정
+## Settings
 
-| 층 | 어디 | 누가 바꾸나 | 모듈에서 |
+| Layer | Where | Who changes it | In the module |
 | --- | --- | --- | --- |
-| 설치자 옵션 | 서버 설정 파일 `modules.options.<id>` | 서버를 설치·운영하는 사람. 바꾸면 재시작 | `ctx.settings`(`settings_schema`로 검증됨) |
-| 명령행·환경변수 | `agent-console serve --<옵션>`, `AGENT_CONSOLE_<이름>` | 같음. 설정 파일보다 우선 | `settings_compat`의 `FlagSetting`·`EnvSetting` |
-| 사용자 설정 섹션 | 작업 공간 `settings.yaml`의 자기 섹션 | 앱 사용자. 재시작 없이 다음 요청부터 | 공통 설정 포트로 읽는다 |
+| Administrator options | Server settings file `modules.options.<id>` | The person who installs and runs the server. A change needs a restart | `ctx.settings` (validated by `settings_schema`) |
+| Command line and environment variables | `agent-console serve --<option>`, `AGENT_CONSOLE_<NAME>` | Same. They take precedence over the settings file | `FlagSetting` and `EnvSetting` in `settings_compat` |
+| User settings section | The module's own section in the workspace `settings.yaml` | App users. Applies from the next request, without a restart | Read through the common settings port |
 
-- 설치자 옵션 필드에는 `title`·`description`·`x-ui`를 단다([플러그인 공통](plugins.md#설정-스키마)). 설정 화면이
-  읽기 전용 표로 보이고 비밀 필드는 가린다.
-- 옵션이 스키마에 맞지 않으면 그 모듈만 `failed`(이유: 설정 검증 실패)이고 서버와 다른 모듈은 시작한다.
-- 모듈이 선언한 명령행 옵션은 `agent-console serve --help`에 자동으로 나온다.
-- 키를 옮기거나 지웠으면 `settings_compat`에 `RemovedSetting(옛 키, new=새 위치, reason=이유)`를 둔다. 옛 키가 남은
-  설정이면 서버가 이유와 새 위치를 알려 주며 시작을 거부한다(`settings.removed_key`). 옛 값을 몰래 읽어 옮기지 않는다.
+- Add `title`, `description`, and `x-ui` to the administrator option fields ([Plugin basics](plugins.md#settings-schema)).
+  The settings screen shows them as a read-only table and masks secret fields.
+- If the options do not match the schema, only that module is `failed` (reason: settings validation failed), and the
+  server and the other modules start.
+- Command-line options a module declares appear in `agent-console serve --help` automatically.
+- If you move or remove a key, put `RemovedSetting(old key, new=new location, reason=reason)` in `settings_compat`. If
+  the settings still contain the old key, the server refuses to start and reports the reason and the new location
+  (`settings.removed_key`). It does not silently read and move the old value.
 
-## 저장소(DB 계보)
+## Storage (migration branches)
 
-- 표 모양은 모듈이 소유한 마이그레이션 계보(Alembic 리비전 폴더)가 정한다. 서술자 `migrations`에
-  `MigrationBranch(name, versions, scopes)`로 알린다.
-- 호스트는 **모듈이 켜질 때만** 그 계보를 올린다. 끈 모듈의 표는 건드리지 않는다.
-- `scopes`는 계보를 올릴 DB 범위다. 기본 `("app",)`은 앱 DB에만, `("app", "project")`면 프로젝트 기록 DB를 여는 연동이
-  같은 계보를 그 DB에도 올린다. 범위 이름은 열린 문자열이다.
-- DB 엔진은 직접 만들지 않고 `ctx.database`를 쓴다. 호스트에 DB가 없으면 메모리로 동작하거나 그 기능을 끄고 알린다.
+- The shape of the tables is defined by the migration branch the module owns (an Alembic revision folder). Announce it
+  in the descriptor `migrations` as `MigrationBranch(name, versions, scopes)`.
+- The host upgrades a branch **only when its module is on**. It does not touch the tables of modules that are off.
+- `scopes` are the DB scopes to upgrade the branch in. The default `("app",)` means the app DB only. With
+  `("app", "project")`, the integration that opens project record DBs also upgrades the same branch in those DBs. Scope
+  names are open strings.
+- Do not create a DB engine yourself. Use `ctx.database`. If the host has no DB, run in memory, or turn that feature
+  off and say so.
 
-## 켜고 끄기
+## Turning on and off
 
 ```yaml
 modules:
-  enabled: null                 # null = 설치된 모듈 전부
-  disabled: [mod-notes]         # 끄기. 명령행 --disable-module mod-notes도 같다
+  enabled: null                 # null = all installed modules
+  disabled: [mod-notes]         # turn off. Same as the command-line --disable-module mod-notes
   options:
     mod-notes: {max_notes: 200}
 ```
 
-- 끈 모듈의 REST 경로는 404, WS 토픽은 없음, 웹 메뉴에서 빠진다. 계보는 올리지 않는다. 데이터(표·파일)는 남는다.
-- 그 모듈의 포트를 필수로 쓰는 모듈은 `unsatisfied`로 함께 꺼지고, 선택으로 쓰는 모듈은 그 동작만 409다. 나머지는
-  그대로 동작한다.
-- 상태는 `GET /api/v1/modules`(`active`·`disabled`·`unsatisfied`·`conflict`·`failed`, 이유·빠진 포트).
-- `GET /api/v1/health`는 모든 모듈의 시작 훅이 끝난 뒤에만 200이다.
+- A module that is off returns 404 for its REST paths, has no WS topics, and drops out of the web menu. Its branches
+  are not upgraded. Its data (tables, files) stays.
+- Modules that require its ports are turned off together as `unsatisfied`. Modules that use them as optional return
+  409 only for that behavior. Everything else keeps working.
+- Status is in `GET /api/v1/modules` (`active`, `disabled`, `unsatisfied`, `conflict`, `failed`, with the reason and
+  the missing ports).
+- `GET /api/v1/health` returns 200 only after the startup hooks of all modules have finished.
 
-아래는 시험용 모듈 하나를 호스트에 붙여 켜고 끈 결과다.
+Below is the result of attaching one test module to the host and turning it on and off.
 
 ```python
 >>> from fastapi.testclient import TestClient
@@ -139,21 +153,22 @@ modules:
 
 ```
 
-## 단독 실행
+## Standalone runs
 
-모듈 하나를 통합 서버 없이 띄울 수 있다. 같은 호스트 코드·보안 규칙을 쓴다. 모듈 패키지의 `__main__.py`는
-`agent_console_modkit.standalone.run`을 부르는 몇 줄이다.
+You can start one module without the combined server. It uses the same host code and security rules. The module
+package's `__main__.py` is a few lines that call `agent_console_modkit.standalone.run`.
 
 ```bash
-python -m my_console_notes --config standalone.yaml --port 0            # 띄우기
-python -m my_console_notes --with mod-definitions --port 0              # 다른 설치 모듈과 함께
-python -m my_console_notes --check                                      # /health 200 확인 후 종료
+python -m my_console_notes --config standalone.yaml --port 0            # start
+python -m my_console_notes --with mod-definitions --port 0              # together with another installed module
+python -m my_console_notes --check                                      # check that /health returns 200, then exit
 ```
 
-`--with`는 필수 포트를 자동으로 끌어오지 않는다. 함께 띄울 모듈은 사용자가 고른다. 단독 실행이 되면 그 기능을
-다른 앱에 붙이거나 따로 시험할 수 있다.
+`--with` does not pull in required ports automatically. The user chooses the modules to start together. When a module
+runs standalone, you can attach that feature to another app or test it on its own.
 
-## 시험
+## Testing
 
-모듈 키트의 `assemble`이 시험 호스트다. 서버 없이 조립해 포트·상태·설정을 확인하고, `create_host_app`으로 REST까지
-시험한다. 다른 모듈이 필요하면 그 패키지의 `testing` 모듈이 주는 대역을 쓴다. → [테스트](testing.md#4-조립-테스트)
+The module kit's `assemble` is the test host. Assemble without a server to check ports, status, and settings, and use
+`create_host_app` to test REST as well. If you need other modules, use the doubles that their packages provide in
+their `testing` modules. See [Testing](testing.md#4-assembly-tests).

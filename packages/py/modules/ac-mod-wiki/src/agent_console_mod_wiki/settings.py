@@ -336,6 +336,25 @@ class WikiModuleSettings(BaseModel):
             when="다른 편집기로 자주 고쳐 기록을 바로 남기고 싶을 때 정하세요.",
         ),
     )
+    freshness_seconds: float = Field(
+        default=_D["freshness_seconds"],
+        ge=0,
+        title="페이지 목록 신선도 창",
+        description=(
+            "페이지 폴더·위키 정의·규칙·설정을 확인한 뒤 이 시간 안에는 다시 확인하지 않는다. "
+            "0이면 요청마다 확인한다."
+        ),
+        json_schema_extra=x_ui(
+            tier="advanced",
+            unit="초",
+            example=10,
+            when=(
+                "앱 안에서 한 변경은 바로 보이고, 다른 편집기로 고친 파일만 최대 이만큼 늦게 "
+                "보입니다([다시 읽기]는 바로 확인). 느린 드라이브나 페이지가 수천 개인 위키에서 "
+                "화면이 느리면 10~30초로 늘리고, 다른 편집기의 변경을 늘 바로 보려면 0으로 두세요."
+            ),
+        ),
+    )
     search: WikiSearchOptions = Field(
         default_factory=WikiSearchOptions,
         title="검색 색인",

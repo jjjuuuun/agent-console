@@ -43,7 +43,7 @@ def parse_labels(items: Sequence[str]) -> dict[str, str]:
     for item in items:
         window, sep, label = item.partition("=")
         if not sep or not window.strip():
-            raise ValueError(f"--label 형식은 창=이름 입니다: {item!r}")
+            raise ValueError(f"--label takes WINDOW=TEXT: {item!r}")
         out[window.strip()] = label
     return out
 
@@ -69,11 +69,13 @@ def run_statusline(
     try:
         windows = update_statusline_file(output, stdin_data, now=at)
     except ValueError:
-        err.write("agent-console statusline: 입력이 JSON 객체가 아닙니다\n")
+        err.write("agent-console statusline: the input is not a JSON object\n")
         out.write(opts.empty + "\n")
         return EXIT_FAILED
     except OSError as exc:
-        err.write(f"agent-console statusline: 파일을 쓰지 못했습니다({type(exc).__name__})\n")
+        err.write(
+            f"agent-console statusline: couldn't write the bridge file ({type(exc).__name__})\n"
+        )
         windows = parse_statusline(stdin_data, now=at)
         code = EXIT_FAILED
     line = format_status_line(

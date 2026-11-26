@@ -1,22 +1,22 @@
 # agent-console-numbered-id
 
-"이미 있으면 뒤에 `-2`, `-3`…을 붙인다"는 규칙 하나를 담은 작은 기반 패키지다. 표준 라이브러리만 쓴다.
-프로젝트 등록 id, 이름에서 만든 정의 id, 가져오기의 이름 바꾸기, 그래프 제안의 새 노드 id, 백업 파일 이름이
-같은 규칙을 나눠 쓴다.
+A small base package that holds one rule: "if the name is taken, append `-2`, `-3`, …". It uses only the standard library.
+Project registration ids, definition ids made from names, renames during import, new node ids in graph suggestions, and backup file names
+all share this rule.
 
-- 바라는 이름이 비어 있으면 그대로 돌려준다. 아니면 `-2`부터 처음 빈 번호를 붙인다.
-- "이미 있음"의 판정(대소문자 무시·저장소 조회·파일 존재)은 쓰는 쪽이 함수 `is_taken`으로 준다.
-- `max_length`를 주면 번호를 붙일 때 앞부분을 잘라 길이를 맞춘다. `limit`를 주면 그 번호 전까지만 찾고, 없으면
-  `NoFreeId`(`LookupError`)를 던진다.
+- An empty desired name is returned as is. Otherwise the first free number starting at `-2` is appended.
+- The caller decides what "taken" means (case-insensitive, store lookup, file exists) by passing the function `is_taken`.
+- With `max_length`, the front part is cut so the numbered name fits the length. With `limit`, the search stops before that number and,
+  if nothing is free, raises `NoFreeId` (a `LookupError`).
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-numbered-id
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-numbered-id
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-numbered-id
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from agent_console_numbered_id import numbered_id
@@ -29,19 +29,19 @@ pip install agent-console-numbered-id
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 의존성 (무엇을 / 왜 / 대안)
+## Dependencies: what / why / alternatives
 
-외부 의존은 없다(표준 라이브러리만).
+No external dependencies (standard library only).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

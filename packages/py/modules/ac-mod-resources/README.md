@@ -1,34 +1,34 @@
 # agent-console-mod-resources
 
-Agent Console 리소스 기능 모듈. 리소스 라이브러리 경로와 리소스 종류·병합 전략 목록을
-서버에 꽂고, 다른 모듈이 쓰는 리소스 조회·종류 포트를 낸다.
+Agent Console resources feature module. It plugs the resource library routes and the lists of resource types and merge strategies into the
+server, and exposes the resource lookup and type ports that other modules use.
 
-- 경로: `/resources`·`/resources/{id}`(CRUD, 종류 검사 error는 422), `/resources/{id}/content`(본문),
-  `/resources/{id}/files[/{path}]`(여러 파일 본문, 종류 `content.multi_file`일 때만 쓰기), `/resource-types`, `/merge-strategies`.
-  파일 경로의 한 칸이 예약 이름(설정 `reserved_file_names`, 기본 `.git`·`_bundle`, 대소문자 무시)이면 저장은 하고
-  `X-Console-Issues` 헤더로 warning 이슈 `resource.reserved_file_name`(`path` = JSON Pointer `/files/<파일 경로>`, `details = {path, name}`, 메시지에 파일 경로)을 돌려준다.
-  붙은 곳(`/resources/{id}/usages`)은 `link-definitions-teams`가 붙인다.
-- 필수 포트: `definitions.store`. 선택 포트: `definitions.usages`(목록 `usage_count`, 없으면 null), `definitions.checks`(여러 제공자, 저장 전 정의 검사 — 만들기·저장 때 error는 422 `validation_failed`, warning·info는 저장하고 `X-Console-Issues` 헤더로 싣는다. 예: 메모리 리소스의 `memory.unknown_scope_kind`. 없으면 종류 검사만), `definitions.save_warnings`(저장한 문서의 평문 비밀 경고 `secret.plain_found`를 같은 헤더에 더한다. 없으면 검사 이슈만).
-- 제공 포트: `resources.lookup`(`ac-resources.ResourceLookup` + `FileContentLookup`), `resources.types`(종류 레지스트리).
-- 종류 레지스트리는 호스트 기본 서비스 `registries`의 `resource_types` 확장. 없으면(단독 실행) entry point와
-  워크스페이스 `resource-types/*.yaml`을 직접 읽는다. 본문 크기 한도는 정의 저장소(`mod-definitions`)가 건다.
-- 설정 `modules.options.mod-resources`: `types_extension`, `declarative_dir`, `content_files`(형식 → 본문 파일 이름),
-  `default_content_file`, `reserved_file_names`(경고할 경로 칸 이름, 빈 목록이면 경고 없음).
-- 웹 역할: `definitions:resource`.
+- Routes: `/resources` and `/resources/{id}` (CRUD; type check errors return 422), `/resources/{id}/content` (body),
+  `/resources/{id}/files[/{path}]` (bodies of multiple files; writable only for types with `content.multi_file`), `/resource-types`, and `/merge-strategies`.
+  When a segment of a file path is a reserved name (setting `reserved_file_names`, default `.git` and `_bundle`, case-insensitive), the file is saved and
+  the warning issue `resource.reserved_file_name` (`path` = JSON Pointer `/files/<file path>`, `details = {path, name}`, the file path in the message) is returned in the `X-Console-Issues` header.
+  Where a resource is attached (`/resources/{id}/usages`) is added by `link-definitions-teams`.
+- Required port: `definitions.store`. Optional ports: `definitions.usages` (`usage_count` in the list; null without it), `definitions.checks` (several providers, pre-save definition checks: on create and save, errors return 422 `validation_failed`, and warnings and info are saved and carried in the `X-Console-Issues` header. For example `memory.unknown_scope_kind` of a memory resource. Without it, only the type check), and `definitions.save_warnings` (adds the plain-text secret warning `secret.plain_found` of the saved document to the same header. Without it, only the check issues).
+- Provided ports: `resources.lookup` (`ac-resources.ResourceLookup` + `FileContentLookup`) and `resources.types` (type registry).
+- The type registry is the `resource_types` extension of the host base service `registries`. Without it (standalone run), the entry points and
+  the workspace `resource-types/*.yaml` are read directly. The body size limit is enforced by the definition store (`mod-definitions`).
+- Settings `modules.options.mod-resources`: `types_extension`, `declarative_dir`, `content_files` (format → body file name),
+  `default_content_file`, and `reserved_file_names` (path segment names to warn about; an empty list means no warnings).
+- Web role: `definitions:resource`.
 
-공간: 선택 포트 `definitions.spaces`가 있으면 `/resources`·`/resources/{id}/…`가 `?project=<이름>`으로 그
-공간 저장소를 쓴다(공간 목록의 `usage_count`는 null). 포트가 없으면 409 `feature_unavailable`, 모르는 공간 404.
+Spaces: when the optional port `definitions.spaces` is present, `/resources` and `/resources/{id}/…` use the store of the space given by `?project=<name>`
+(`usage_count` in a space list is null). Without the port, 409 `feature_unavailable`; an unknown space returns 404.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-resources
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-resources
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-resources
 ```
 
-## 최소 사용
+## Minimal usage
 
-정의 저장소를 주는 모듈과 함께 조립하면 리소스 조회 포트가 저장소를 읽는다.
+Assembled with a module that provides a definition store, the resource lookup port reads that store.
 
 ```python
 >>> import tempfile
@@ -49,20 +49,20 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행. `--with`를 주지 않으면 `testing.local_definitions_module`(워크스페이스 파일 저장소)을 붙인다.
+Standalone run. Without `--with`, it attaches `testing.local_definitions_module` (a file store in the workspace).
 
 ```bash
 python -m agent_console_mod_resources [--with ID] [--config PATH] [--port 0] [--check]

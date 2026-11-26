@@ -55,11 +55,16 @@ REMOVED_ISSUE_CODES = (
 )
 
 
-def test_contracts_version_is_0_15_0() -> None:
-    assert CONTRACTS_VERSION == "0.15.0"
+def _ver(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+def test_contracts_version_is_at_least_0_15_0() -> None:
+    """0.15.0에서 정한 버전 이상이다(정확한 지금 값은 0.16.0 테스트가 고정한다)."""
+    assert _ver(CONTRACTS_VERSION) >= (0, 15, 0)
     constants = build_schema()["x-constants"]
-    assert constants["CONTRACTS_VERSION"] == "0.15.0"
-    assert CONTRACT_VERSIONS == {
+    assert constants["CONTRACTS_VERSION"] == CONTRACTS_VERSION
+    v0150 = {
         "common": "2.0.0",
         "resources": "1.1.0",
         "logs": "2.0.0",
@@ -76,6 +81,9 @@ def test_contracts_version_is_0_15_0() -> None:
         "wiki": "1.3.0",
         "modules": "1.7.0",
     }
+    assert set(v0150) <= set(CONTRACT_VERSIONS)
+    for sub, version in v0150.items():
+        assert _ver(CONTRACT_VERSIONS[sub]) >= _ver(version), sub
     assert constants["CONTRACT_VERSIONS"] == CONTRACT_VERSIONS
 
 
@@ -106,8 +114,8 @@ def test_removed_fields_are_not_model_fields() -> None:
     assert "projects" not in contracts.LogSettings.model_fields
     assert "project" not in contracts.LogSessionSummary.model_fields
     assert "project_id" in contracts.LogSessionSummary.model_fields
-    # 0.15.0에 남기는 deprecated 필드(K-18)
-    assert "default_backend" in contracts.WorkspaceSettings.model_fields
+    # 0.15.0에 남긴 deprecated 필드(K-18)는 0.16.0에서 지웠다(design §1.1 B-2)
+    assert "default_backend" not in contracts.WorkspaceSettings.model_fields
 
 
 @pytest.mark.parametrize("name", REMOVED_ISSUE_CODES)

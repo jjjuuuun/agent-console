@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { useRef } from "react";
 import { useVirtualRows } from "@agent-console/virtual-rows";
 
-// 목록 컴포넌트 안에서: 스크롤 컨테이너 ref와 행 수·행 높이를 주고, 보이는 행만 그린다.
+// Inside a list component: pass the scroll container ref, the row count, and the row height, then render only the visible rows.
 export function useRows(count: number) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualRows({ count, rowHeight: 32, scrollRef });

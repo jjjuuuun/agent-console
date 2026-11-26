@@ -1,7 +1,9 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.2.0)
 
+- P1.15: Added the freshness window `WikiRepository(freshness_seconds=)` (default `0.0` = list the page folder on every read, unchanged behavior). Above 0 the repository keeps one snapshot (page listing, link index, listing issues, history summaries) and does not list the folder again until the window has passed since the last check (a clock that goes back counts as expired). When the listing is unchanged after the window, the built index is kept. Writes, deletes, moves, restores, imports, history records, and `scan()` drop the snapshot at once; write decisions, previews, and moves always check the current files; `view()` rebuilds when the viewed page's file differs from the snapshot. Concurrent reads check once. New public API: `WikiRepository.page_files()`, `WikiRepository.invalidate()`, `WikiRepository.index(fresh=)`. `check_page_path` and `page_path_for_file` remember paths that passed (rejections are checked again every time). Consumer range: `agent-console-wiki>=0.2,<0.3`.
+- P1.33: README에 "한계" 절을 두었다 — 경로 방식(Windows) 쓰기의 검사와 `os.replace` 사이 경쟁 틈, 기본 `hmac` 검색어 해시가 프로세스 안에서만 같은 값. 동작 변경 없음.
 - REL.16(계약 0.15.0, wiki 1.3.0): `neighborhood(index, center, depth=None)`·`WikiRepository.graph(depth=None)` =
   가운데에서 깊이 제한 없이 이어진 칸 전부(칸 수 상한·`truncated`·`total` 그대로). 응답 `WikiGraph.depth`에 적용한
   깊이를 싣는다(가운데 없음·제한 없음은 null). 정수 깊이 동작은 그대로다.

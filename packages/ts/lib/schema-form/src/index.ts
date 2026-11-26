@@ -12,5 +12,7 @@ export type {
   SchemaFormWidgetProps,
   UiSchema,
 } from "./types";
+export { translateSchema, translateUiSchema } from "./translate";
+export type { TranslateText } from "./translate";
 export { toPointer } from "./provenance";
 export { InlineMarkdown, parseInlineMarkdown, stripInlineMarkdown } from "./InlineMarkdown";

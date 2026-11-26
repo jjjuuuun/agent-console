@@ -1,68 +1,82 @@
 # @agent-console/log-view
 
-로그 분석 **표현** 패키지: 이벤트 표(가상 스크롤), 필터 막대, 범주 칩, 이벤트 상세, 세션 목록, 재생 막대, 레인 띠,
-handoff 행렬, 대시보드 격자(위젯 레지스트리 + 차트 어댑터), 위젯 편집기, 템플릿 선택. 데이터·콜백은 모두 props다.
-서버 호출·라우팅·저장은 앱이 한다. 출처·범주·위젯·차원·지표 이름은 코드에 없고 전부 받은 데이터에서 그린다.
+A log analysis **presentation** package: the event table (virtual scrolling), the filter bar, category chips, event detail, the session list, the playback bar, the lane ribbon,
+the handoff matrix, the dashboard grid (a widget registry plus a chart adapter), the widget editor, and the template picker. All data and callbacks are props.
+The app handles server calls, routing, and storage. Source, category, widget, dimension, and metric names are not in the code; everything is drawn from the data it receives.
 
-사내 의존은 `@agent-console/contracts`(타입만)뿐이다. 공용 UI(`ui`), 위임 흐름 그림(`trace-view`), 스키마 폼(`schema-form`),
-JSON 보기(`text-editor`)는 import하지 않고 슬롯 props(`renderCodeBlock`, `renderLinks`, `renderOptionsForm`, `filterBar`, `preview`)로 받는다.
-슬롯이 없으면 기본 HTML로 그리거나 그 영역을 숨긴다. 색 슬롯 해시는 앱이 `slotFor(key) => 0..7`로 주입한다(해시를 복사하지 않는다).
+Its only internal dependency is `@agent-console/contracts` (types only). It does not import the shared UI (`ui`), the delegation flow drawing (`trace-view`), the schema form (`schema-form`),
+or the JSON view (`text-editor`); it takes them through slot props (`renderCodeBlock`, `renderLinks`, `renderOptionsForm`, `filterBar`, `preview`).
+Without a slot, it draws plain HTML or hides that area. The app injects the color slot hash as `slotFor(key) => 0..7` (the hash is not copied).
 
-## 설치
-저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+## Installation
+Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
 npm install ./agent-console-log-view-0.1.0.tgz
 ```
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { isErrorEvent, sortEvents, splitSearchParams, toTaxonomyView } from "@agent-console/log-view";
 
-// 오류 표시는 분류 체계의 tone="danger" 항목만 근거다(이름 비교 없음).
+// An error is decided only by the taxonomy entries with tone="danger" (no name comparison).
 const taxonomy = toTaxonomyView({ categories: { "x-fail": { tone: "danger" } } });
 const failing = isErrorEvent({ category: "x-fail" }, taxonomy);
-// 재생 순서는 (time, seq) 오름차순.
+// Playback order is ascending by (time, seq).
 const order = sortEvents([{ seq: 2, time: 5 }, { seq: 1, time: 9 }]).map((e) => e.seq);
-// 화면 전용 URL 파라미터(through·lane·view·range·tab)는 서버 필터에서 빠진다.
+// Screen-only URL parameters (through, lane, view, range, tab) are left out of the server filter.
 const { filter, screen } = splitSearchParams("q=abc&through=7");
 ```
 
-`failing`은 `true`, `order`는 `[2, 1]`, `filter`는 `{ q: "abc" }`, `screen`은 `{ through: ["7"] }`이다.
+`failing` is `true`, `order` is `[2, 1]`, `filter` is `{ q: "abc" }`, and `screen` is `{ through: ["7"] }`.
 
-## 스타일
+## Text and language
+The default text is Korean (`src/locales/ko.json`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders are `{name}`, filled by `fmt()`.
+The bundle is split into `messages` (the components' `messages` prop) and `builtinWidgets` (the titles and descriptions of the four built-in widgets). `ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this).
+
+```tsx
+import en from "@agent-console/log-view/locales/en";
+import { createBuiltinWidgets, createWidgetRegistry, DashboardGrid } from "@agent-console/log-view";
+
+const registry = createWidgetRegistry(createBuiltinWidgets(en.builtinWidgets));
+<DashboardGrid registry={registry} messages={en.messages} /* … */ />;
+```
+The Korean bundle is `@agent-console/log-view/locales/ko` (`defaultLogViewMessages` and `builtinWidgets` stay Korean). To change only part of a bundle, override it as in `messages={{ ...en.messages, empty: "…" }}` (`mergeMessages` also merges nested keys). For a new language, build an object with the same keys (the `LogViewLocale` type) and pass it in.
+The component source contains no Korean strings (the same test checks this). The default units of `formatDurationMs` also come from the ko bundle. Data the server provides, such as category and column names, is not translated.
+
+## Styles
 ```ts
 import "@agent-console/ui/tokens.css";
 import "@agent-console/log-view/styles.css";
 ```
-`--ac-log-*`·`--ac-dash-*` 토큰(tokens.md 5.9)이 정의돼 있으면 쓰고, 없으면 `styles.css`의 기본값을 쓴다.
+If the `--ac-log-*` and `--ac-dash-*` tokens (tokens.md 5.9) are defined, they are used; otherwise the defaults in `styles.css` apply.
 
-## 공개 API 요약
-| 영역 | 이름 |
+## Public API summary
+| Area | Names |
 | --- | --- |
-| 컴포넌트 | `LogEventTable` `LogFilterBar` `CategoryChips` `LogEventDetail` `SessionList` `PlaybackBar` `LaneRibbon` `HandoffMatrixView` `DashboardGrid` `WidgetEditor` `TemplatePicker` `ColorSlotPicker` `UnknownWidget` `AggregateTable` |
-| 모양 옵션 | `LogFilterBar`의 `savedPlacement`(`menu` 기본: 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역 / `button`: [★ ▾] 단추), `PlaybackBar`의 `settingsPlacement`(`popover` 기본: 속도·공백 건너뛰기가 [재생 설정 ▾] 안 / `inline`), `CategoryChips`의 `maxInline`(선택된 칩은 접혀도 보임) |
-| 빈 표 | `LogEventTable`의 `emptyBelowHeader`를 켜면 행이 0개여도 표 머리를 그리고 `renderEmpty` 안내를 머리 아래에 놓는다 |
-| 명령형 API | `LogEventTable`·`LogEventDetail`는 `ref`로 `LogEventTableHandle`(`scrollToUid`·`focus`)·`LogEventDetailHandle`(`selectTabAt`·`focusTab`·`visibleTabs`)를 낸다. `onActivate`(표 Enter)·`activeTab`/`onActiveTabChange`(상세)·`onActiveChange`(`SessionList`)로 앱이 DOM을 읽거나 클릭하지 않는다 |
-| 위젯 레지스트리 | `WidgetDescriptor` `createWidgetRegistry` `builtinWidgets`(metric·bar·line·table) `validateQuery` |
-| 재생 | `sortEvents` `visibleThrough` `indexOfSeq` `seqAtIndex` `usePlayback`(가짜 `clock` 주입) `playbackDelay` `nextSpeed` `clipTraceAt` |
-| 필터·URL | `reservedParams` `splitSearchParams` `buildFilterQuery` `buildScreenSearch` `findReservedConflicts` `createLocalStorageSavedFilters` |
-| 분류 체계 | `toTaxonomyView` `isErrorEvent`(판정은 한 곳) `isHiddenEvent` `colorFor` `orderCategories` `groupByMessage` |
-| 대시보드 배치 | `layoutFlow` `moveWidget` `resizeWidget` `updateWidget` `removeWidget` `duplicateWidget` `preserveUnknown` `preserveUnknownDashboards` |
-| 서식 | `defaultFormatters` `formatRelativeTime` `formatDurationMs` `formatTokensShort` (앱이 `formatters` prop으로 덮어쓸 수 있다) |
+| Components | `LogEventTable` `LogFilterBar` `CategoryChips` `LogEventDetail` `SessionList` `PlaybackBar` `LaneRibbon` `HandoffMatrixView` `DashboardGrid` `WidgetEditor` `TemplatePicker` `ColorSlotPicker` `UnknownWidget` `AggregateTable` |
+| Appearance options | `savedPlacement` on `LogFilterBar` (`menu` by default: favorite filters sit in the bottom section of the [+ Filter] menu / `button`: a [★ ▾] button), `settingsPlacement` on `PlaybackBar` (`popover` by default: speed and gap skipping are inside [Playback settings ▾] / `inline`), and `maxInline` on `CategoryChips` (selected chips stay visible even when collapsed) |
+| Empty table | Turning on `emptyBelowHeader` on `LogEventTable` draws the table header even with 0 rows and places the `renderEmpty` message under the header |
+| Imperative API | `LogEventTable` and `LogEventDetail` expose `LogEventTableHandle` (`scrollToUid`, `focus`) and `LogEventDetailHandle` (`selectTabAt`, `focusTab`, `visibleTabs`) through `ref`. With `onActivate` (Enter in the table), `activeTab` and `onActiveTabChange` (the detail), and `onActiveChange` (`SessionList`), the app does not read or click the DOM |
+| Widget registry | `WidgetDescriptor` `createWidgetRegistry` `builtinWidgets` (metric, bar, line, table) `validateQuery` |
+| Playback | `sortEvents` `visibleThrough` `indexOfSeq` `seqAtIndex` `usePlayback` (inject a fake `clock`) `playbackDelay` `nextSpeed` `clipTraceAt` |
+| Filter and URL | `reservedParams` `splitSearchParams` `buildFilterQuery` `buildScreenSearch` `findReservedConflicts` `createLocalStorageSavedFilters` |
+| Taxonomy | `toTaxonomyView` `isErrorEvent` (the decision lives in one place) `isHiddenEvent` `colorFor` `orderCategories` `groupByMessage` |
+| Dashboard layout | `layoutFlow` `moveWidget` `resizeWidget` `updateWidget` `removeWidget` `duplicateWidget` `preserveUnknown` `preserveUnknownDashboards` |
+| Formatting | `defaultFormatters` `formatRelativeTime` `formatDurationMs` `formatTokensShort` (the app can override them through the `formatters` prop) |
 
-- 위젯 종류를 더하려면 `WidgetDescriptor`를 만들어 `createWidgetRegistry(builtinWidgets, mine)`에 넘긴다. 목록에 `switch`가 없고, 레지스트리에 없는 `kind`는 `UnknownWidget`(설정 보존)으로 그린다.
-- 차트는 `charts/` 어댑터 안에서만 recharts를 쓰고 지연 로드한다. 로드 실패 시 위젯은 표로 대체된다. recharts 타입은 공개 API에 나오지 않는다.
-- 서식 함수: 이 저장소의 기존 포맷터(`apps/web/src/lib/format.ts`, `features/runs/runsLib.ts`)는 앱 안에 있어 패키지가 가져다 쓸 수 없으므로 같은 규칙(`screen-logs.md` )의 내장 구현을 둔다. 앱이 이미 가진 포맷터가 있으면 `formatters` prop으로 주입한다.
+- To add a widget kind, build a `WidgetDescriptor` and pass it to `createWidgetRegistry(builtinWidgets, mine)`. The list has no `switch`, and a `kind` that is not in the registry is drawn as `UnknownWidget` (its settings are preserved).
+- Charts use recharts only inside the `charts/` adapter and are loaded lazily. If loading fails, the widget falls back to a table. Recharts types never appear in the public API.
+- Formatting functions: the repository's existing formatters (`apps/web/src/lib/format.ts` and `features/runs/runsLib.ts`) live inside the app, so the package cannot borrow them; it ships its own built-in implementation of the same rules. If the app already has formatters, inject them through the `formatters` prop.
 
-## 새 의존
-| 무엇을 | 버전·라이선스 | 왜 | 대안 |
+## New dependencies
+| What | Version and license | Why | Alternatives |
 | --- | --- | --- | --- |
-| `@tanstack/react-virtual` | 3.14.x, MIT, peer `react ^16.8 \|\| ... \|\| ^19` | 이벤트 표·세션 표·관련 목록 가상 스크롤(헤드리스) | react-window(MIT) |
-| `recharts` | 3.10.x, MIT, peer `react`·`react-dom`·`react-is` `^16.8 \|\| ... \|\| ^19` | 꺾은선 차트(선언형 React). `charts/` 어댑터 안에서만 쓰고 지연 로드 | ECharts(Apache-2.0, 무거움), uPlot(MIT, 명령형) |
-| `react-is` | 19.x, MIT | recharts의 peer 의존 | — |
+| `@tanstack/react-virtual` | 3.14.x, MIT, peer `react ^16.8 \|\| ... \|\| ^19` | Virtual scrolling for the event table, the session table, and related lists (headless) | react-window (MIT) |
+| `recharts` | 3.10.x, MIT, peers `react`, `react-dom`, and `react-is` `^16.8 \|\| ... \|\| ^19` | Line charts (declarative React). Used only inside the `charts/` adapter and loaded lazily | ECharts (Apache-2.0, heavy), uPlot (MIT, imperative) |
+| `react-is` | 19.x, MIT | A peer dependency of recharts | — |
 
-## 테스트
-`pnpm test` — 임의 분류 체계(0개·100자 이름·모르는 색)·임의 위젯 디스크립터·임의 필터 필드로 렌더하고, 재생은 가짜 시계로 돌린다.
+## Testing
+`pnpm test` — renders with arbitrary taxonomies (0 entries, 100-character names, unknown colors), arbitrary widget descriptors, and arbitrary filter fields, and runs playback on a fake clock.

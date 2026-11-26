@@ -1,43 +1,42 @@
 # agent-console-link-logs-usage
 
-로그·사용량 연동 모듈. 로그 색인(`mod-logs`의 `logs.query`)의
-응답별 토큰 표본으로 사용량 창을 **추정**하는 사용량 출처 `local-logs`(신뢰 등급 `estimated`)를
-`mod-usage`의 선택 multi 포트 `usage.sources`에 넣는다.
+Logs and usage link module. It adds the usage source `local-logs` (trust level `estimated`), which **estimates** usage windows from the
+per-response token samples of the log index (`logs.query` of `mod-logs`), to the optional multi port `usage.sources` of `mod-usage`.
 
-- 창 정의·예산·필터·셀 토큰 종류는 **사용량 설정 데이터**다(`usage.sources[{id: local-logs, config}]`).
-  생략한 키는 기본값 데이터 `data/local_logs_defaults.json`(설치자 옵션 `defaults_file`로 교체)을 쓴다.
-  코드에는 로그 출처 id·창 목록이 없다.
-- 계산은 `ac-logs`의 `block_windows`(ccusage 방식 블록: 첫 메시지 시각을 시 단위로 내림, 블록 길이 동안,
-  그 뒤 메시지는 새 블록)와 `rolling_totals`(이동 창)다.
-- 표본은 로그 색인에 있는 것뿐이므로 앱에서는 **등록된 프로젝트의 세션만 센다**(로그 출처가 등록 프로젝트 폴더 키로만
-  수집한다). 등록되지 않은 폴더에서 쓴 사용량은 추정에 들어가지 않는다.
-- **값을 지어내지 않는다.** 예산이 없으면 `used_ratio`는 null(한도 분모는 공개되지 않는다). 셀 토큰 종류가
-  어느 표본에도 없으면 `used_tokens`는 null. 조회 범위에 표본이 없으면 창을 내지 않는다.
-- 표본 캐시는 `logs.ingested`(새 로그 색인) 구독으로 버린다(그 로그 출처를 읽는 항목만).
-- 이 연동이 꺼지면(또는 `mod-logs`·`mod-usage` 중 하나가 꺼지면) 사용량 출처 목록에 `local-logs`가 없다.
-- `local-logs`는 `auto_enable`이다(사용량 설정이 없어도 켜짐). 창 이름(`windows`)은 기본값 데이터의 창
-  `title`·`short_title`이다.
+- Window definitions, budgets, filters, and the token kinds to count are **usage settings data** (`usage.sources[{id: local-logs, config}]`).
+  Omitted keys use the default data `data/local_logs_defaults.json` (replace it with the administrator option `defaults_file`).
+  The code has no log source ids or window lists.
+- The calculations are `block_windows` (ccusage-style blocks: the time of the first message rounded down to the hour, for the block length;
+  later messages start a new block) and `rolling_totals` (moving windows) from `ac-logs`.
+- Only samples in the log index exist, so in the app **only sessions of registered projects are counted** (log sources collect only under
+  registered project folder keys). Usage from folders that are not registered is not part of the estimate.
+- **No values are made up.** Without a budget, `used_ratio` is null (the limit denominator is not public). When none of the samples has the token kinds
+  to count, `used_tokens` is null. When the query range has no samples, no window is returned.
+- The sample cache is dropped on `logs.ingested` (newly indexed logs), only for entries that read that log source.
+- When this link is off (or when `mod-logs` or `mod-usage` is off), the usage source list has no `local-logs`.
+- `local-logs` is `auto_enable` (on even without usage settings). The window names (`windows`) are the window
+  `title` and `short_title` in the default data.
 
-## 이 PC에 있는 로그 출처 기본 켜기
+## Turning on log sources found on this computer
 
-`local-logs`는 로그 색인에 표본이 있어야 값이 나온다. Claude Code 세션 로그 출처(`claude-code-jsonl`)는 대화 원문을
-색인에 복사하므로 디스크립터 기본이 꺼짐이다. 이 연동은 **그 로그 폴더가 이 PC에 있으면** 그 출처를 읽기 전용 기본
-출처로 켠다(포트 `logs.source_defaults`, `mod-logs`가 적용).
+`local-logs` returns values only when the log index has samples. The Claude Code session log source (`claude-code-jsonl`) copies conversation text
+into the index, so its descriptor is off by default. This link turns that source on as a read-only default source **when its log folder exists
+on this computer** (port `logs.source_defaults`, applied by `mod-logs`).
 
-- 규칙은 데이터 `data/auto_log_sources.json`(`[{id, path, env?, env_subpath?}]`)이다. `path`의 `~`는 주입된 환경의
-  `HOME`이고, `env` 환경 변수가 있으면 그 아래 `env_subpath`만 본다(출처의 기본 루트 규칙과 같다).
-- 폴더가 있는지만 본다. 그 폴더·`~/.claude`에 아무것도 쓰지 않고, 설정 파일도 고치지 않는다.
-- 사용자가 `logs.sources[{id, enabled}]`를 적으면(끔 포함) 그 값이 이긴다. 끄려면 `enabled: false`.
-- 이 연동·`mod-logs`·`mod-usage` 중 하나라도 꺼지면 자동 켜기도 없다. 설치자 옵션 `auto_enable_log_sources: false`로도 끈다.
-- 로그 화면은 `GET /logs/sources`의 `enabled: true`와 디스크립터 `default_enabled: false`, 설정에 `enabled`가 없음을
-  보고 "기본(자동)"으로 표시할 수 있다.
+- The rules are data, `data/auto_log_sources.json` (`[{id, path, env?, env_subpath?}]`). `~` in `path` is the `HOME` of the injected
+  environment, and when the `env` environment variable is set, only `env_subpath` under it is checked (the same rule as the source's default root).
+- It only checks whether the folder exists. It writes nothing to that folder or to `~/.claude`, and it does not change any settings file.
+- When the user sets `logs.sources[{id, enabled}]` (including turning it off), that value wins. To turn it off, use `enabled: false`.
+- When this link, `mod-logs`, or `mod-usage` is off, nothing is turned on automatically. The administrator option `auto_enable_log_sources: false` also turns it off.
+- The logs screen can show such a source as "default (automatic)" by looking at `enabled: true` in `GET /logs/sources`, the descriptor's `default_enabled: false`, and the absence of
+  `enabled` in the settings.
 
 ```python
 >>> import tempfile
 >>> from pathlib import Path
 >>> from agent_console_link_logs_usage import load_auto_log_sources, log_source_defaults
->>> home = Path(tempfile.mkdtemp())  # 가짜 홈(실제로는 서버 환경의 HOME)
->>> rules = load_auto_log_sources()  # 패키지 데이터
+>>> home = Path(tempfile.mkdtemp())  # a fake home (in a real setup, HOME of the server environment)
+>>> rules = load_auto_log_sources()  # package data
 >>> log_source_defaults(rules, {"HOME": str(home)})
 {}
 >>> (home / ".claude" / "projects").mkdir(parents=True)
@@ -46,26 +45,26 @@
 
 ```
 
-첫 조회 대기: `logs.ingest`가 있으면 `local-logs`의 **첫** 조회가 읽을 로그 출처의 수집(서버 시작 수집이 진행 중이면 그
-수집)을 `first_scan_wait_seconds`(기본 5초)까지 기다린다. 서버를 띄운 직후 첫 `GET /usage`에도 값이 나온다. 넘치면
-지금 색인으로 답하고 수집은 배경에서 계속된다.
+Waiting for the first query: when `logs.ingest` is present, the **first** query of `local-logs` waits up to `first_scan_wait_seconds` (default 5 seconds) for the collection
+of the log sources it reads (or for the startup collection, when it is still running). So the first `GET /usage` right after the server starts returns values too. When the wait
+runs out, it answers from the current index and the collection continues in the background.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-logs-usage
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-logs-usage
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-logs-usage
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternative |
 | --- | --- | --- | --- |
-| `agent-console-logs` | `LogFilter`·`parse_log_filter`·`block_windows`·`rolling_totals` | 창 계산·필터 해석을 로그 코어와 같게 | 직접 구현(중복) |
-| `agent-console-usage` | `UsageSource` 프로토콜·`UsageSourceContext` | 사용량 출처 모양 | — |
-| (개발) `agent-console-logs-claude` | 실제 Claude Code 로그 출처로 자동 켜기·첫 조회 확인(가짜 홈) | 실제 출처의 기본 루트 규칙까지 검증 | 합성 출처(경로 규칙을 검증하지 못함) |
+| `agent-console-logs` | `LogFilter`, `parse_log_filter`, `block_windows`, `rolling_totals` | Window calculation and filter parsing match the log core | Own implementation (duplicate) |
+| `agent-console-usage` | `UsageSource` protocol, `UsageSourceContext` | The shape of a usage source | — |
+| (dev) `agent-console-logs-claude` | Checks automatic enabling and the first query with the real Claude Code log source (fake home) | Verifies the default root rule of the real source as well | A synthetic source (cannot verify the path rule) |
 
-## 최소 사용
+## Minimal usage
 
-서버 없이: 토큰 표본 조회(`token_samples(flt)`만 있는 객체)를 주입해 출처로 쓴다.
+Without a server: inject a token sample query (an object with only `token_samples(flt)`) and use it as a source.
 
 ```python
 >>> import asyncio
@@ -73,8 +72,8 @@ pip install agent-console-link-logs-usage
 >>> from agent_console_usage import UsageService, new_usage_sources
 >>> from agent_console_link_logs_usage import LocalLogsUsageSource
 >>> from agent_console_link_logs_usage.testing import SampleQuery
->>> h0 = 1_800_000_000.0  # 정시
->>> query = SampleQuery(  # 실제로는 mod-logs의 logs.query
+>>> h0 = 1_800_000_000.0  # on the hour
+>>> query = SampleQuery(  # in a real setup, logs.query of mod-logs
 ...     [TokenSample(message_id="m1", time=h0 + 600, input_tokens=40, output_tokens=10)],
 ...     source="my-logs",
 ... )
@@ -96,56 +95,56 @@ pip install agent-console-link-logs-usage
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 설정(`usage.sources[{id: local-logs, config}]`)
+## Settings (`usage.sources[{id: local-logs, config}]`)
 
-| 키 | 모양 | 기본값(데이터) |
+| Key | Shape | Default (data) |
 | --- | --- | --- |
-| `windows` | `[{id, kind: block\|rolling, hours? \| days?, title?, short_title?}]` | `local_five_hour`(block 5h), `local_seven_day`(rolling 7d) |
-| `budgets` | `{창 id: 토큰 수}` — 있으면 `used_ratio = used_tokens / 예산` | `{}` |
-| `filter` | 로그 질의 필터(`source`·`project`·`model`·…, `since`·`until`·`limit`·`cursor`·`order` 제외) | `{source: [claude-code-jsonl]}` |
-| `count` | 셀 토큰 종류(`input`·`output`·`cache_creation`·`cache_read`) | 넷 다 |
-| `lookback_hours` | 블록 경계를 정하려고 읽는 과거 범위(창 길이보다 짧으면 창 길이) | 168 |
+| `windows` | `[{id, kind: block\|rolling, hours? \| days?, title?, short_title?}]` | `local_five_hour` (block 5h), `local_seven_day` (rolling 7d) |
+| `budgets` | `{window id: token count}`; when set, `used_ratio = used_tokens / budget` | `{}` |
+| `filter` | Log query filter (`source`, `project`, `model`, …; not `since`, `until`, `limit`, `cursor`, `order`) | `{source: [claude-code-jsonl]}` |
+| `count` | Token kinds to count (`input`, `output`, `cache_creation`, `cache_read`) | All four |
+| `lookback_hours` | The past range read to find block boundaries (the window length when shorter than it) | 168 |
 
-- 최상위 키 단위로 덮어쓴다(`windows`를 적으면 기본 창 목록 전체를 바꾼다).
-- 스냅샷: `block`은 지금 열린 블록이 있으면 합·`resets_at`(블록 끝)·`status: active`, 없으면 `used_tokens: 0`·
-  `status: idle`. `rolling`은 `now - 길이 <= t <= now` 합(`resets_at` 없음). `observed_at`은 범위 안 마지막 표본
-  시각(로그 기준 시각 — 같은 값이면 관측 기록이 늘지 않는다). `raw`에 토큰 분해·블록 시작·표본 수·예산.
-- 한계: 블록 경계는 `lookback_hours` 안 표본으로만 정한다(그보다 오래 쉬지 않고 이어진 사용이면 ccusage와
-  경계가 다를 수 있다).
+- Settings override per top-level key (setting `windows` replaces the whole default window list).
+- Snapshot: for `block`, when a block is open now, the total, `resets_at` (block end), and `status: active`; otherwise `used_tokens: 0` and
+  `status: idle`. For `rolling`, the total of `now - length <= t <= now` (no `resets_at`). `observed_at` is the time of the last sample in the range
+  (the log time; when it is the same value, no new observation is recorded). `raw` has the token breakdown, block start, sample count, and budget.
+- Limit: block boundaries are found only from the samples within `lookback_hours` (for usage that continued without a break for longer than that, the
+  boundaries can differ from ccusage).
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 필수 | `logs.query` | `token_samples(LogFilter) -> Sequence[TokenSample]`(`LogTokenQuery`) |
-| 필수 | `usage.service` | 존재 확인만(사용량 모듈이 꺼지면 이 연동도 꺼진다) |
-| 구독 | `logs.ingested` | `source_ids`로 표본 캐시 무효화 |
-| 선택 | `logs.ingest` | `scan(source_ids)`(첫 조회 대기) |
-| 제공 | `usage.sources`(multi) | `LocalLogsUsageSource`(`UsageSource`) |
-| 제공 | `logs.source_defaults`(multi) | `() -> {로그 출처 id: True}`(폴더가 있는 규칙만) |
+| Required | `logs.query` | `token_samples(LogFilter) -> Sequence[TokenSample]` (`LogTokenQuery`) |
+| Required | `usage.service` | Presence check only (when the usage module is off, this link is off too) |
+| Subscribes | `logs.ingested` | Invalidates the sample cache by `source_ids` |
+| Optional | `logs.ingest` | `scan(source_ids)` (waiting for the first query) |
+| Provides | `usage.sources` (multi) | `LocalLogsUsageSource` (`UsageSource`) |
+| Provides | `logs.source_defaults` (multi) | `() -> {log source id: True}` (only rules whose folder exists) |
 
-설치자 옵션(`modules.options.link-logs-usage`): `source_id`(기본 `local-logs`, 플러그인 출처와 겹치면 빠지고
-`mod-usage`가 `usage.source_conflict` 경고), `defaults_file`(기본값 JSON, 상대 경로면 설정 파일 폴더 기준),
-`auto_enable_log_sources`(기본 true), `auto_log_sources_file`(자동 켜기 규칙 JSON), `first_scan_wait_seconds`(기본 5).
+Administrator options (`modules.options.link-logs-usage`): `source_id` (default `local-logs`; when it collides with a plugin source, it is left out and
+`mod-usage` warns `usage.source_conflict`), `defaults_file` (default values JSON; a relative path is relative to the settings file folder),
+`auto_enable_log_sources` (default true), `auto_log_sources_file` (automatic enabling rules JSON), and `first_scan_wait_seconds` (default 5).
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_link_logs_usage [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.local_logs_query_module`(빈 표본)·`testing.local_usage_module`(자리 채움)을 붙인다.
-실제 경로까지 띄우려면 `--with mod-logs --with mod-usage`.
+Without `--with`, it attaches `testing.local_logs_query_module` (no samples) and `testing.local_usage_module` (a placeholder).
+To start it with the real routes: `--with mod-logs --with mod-usage`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

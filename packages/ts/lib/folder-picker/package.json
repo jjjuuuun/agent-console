@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/folder-picker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "폴더 경로 입력·확인 결과·찾아보기 패널(가상 목록)·가운데 줄임 경로 표시. API를 모르고 check/list/createFolder 콜백을 props로 받는다",
   "private": true,
   "license": "MIT",
@@ -26,7 +26,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

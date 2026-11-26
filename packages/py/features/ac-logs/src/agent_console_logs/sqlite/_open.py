@@ -63,7 +63,7 @@ def open_existing_log_index(path: str | Path) -> SqliteLogIndex:
     """이미 있는 색인 파일(별도 색인 파일 또는 서버 DB)을 연다. 파일·테이블을 만들지 않는다.
 
     도구(예: `agent-console logs purge`)가 서버 밖에서 색인을 고칠 때 쓴다. 반환한 색인의
-    `close()`가 엔진을 닫는다.
+    `close()`가 엔진을 닫는다. 오류 문구는 터미널용이라 영어다.
 
     Raises:
         FileNotFoundError: 파일이 없다.
@@ -71,7 +71,7 @@ def open_existing_log_index(path: str | Path) -> SqliteLogIndex:
     """
     target = Path(path)
     if not target.is_file():
-        raise FileNotFoundError(f"색인 파일이 없습니다: {target}")
+        raise FileNotFoundError(f"log index file not found: {target}")
     engine = create_log_engine(target)
     try:
         have = set(sa.inspect(engine).get_table_names())
@@ -81,7 +81,7 @@ def open_existing_log_index(path: str | Path) -> SqliteLogIndex:
     missing = [name for name in TABLE_NAMES if name not in have]
     if missing:
         engine.dispose()
-        raise LookupError(f"로그 색인 테이블이 없습니다: {', '.join(missing)}")
+        raise LookupError(f"log index tables are missing: {', '.join(missing)}")
     return SqliteLogIndex(engine, owns_engine=True)
 
 

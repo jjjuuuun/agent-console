@@ -25,7 +25,7 @@ def _label_display(report: ModuleReport) -> list[LabelDisplay]:
         try:
             out.append(LabelDisplay.model_validate(item))
         except ValidationError:
-            _log.warning("모듈 %s의 라벨 표시 규칙 하나가 형식에 맞지 않아 뺍니다", report.id)
+            _log.warning("Module %s: skipped a label display rule with an invalid shape", report.id)
     return out
 
 

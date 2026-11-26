@@ -94,7 +94,7 @@ def validate_team(
         workspace: 공통 설정(설정 층·`delegation.max_depth`·병합 규칙).
         backends: 백엔드 id → 능력(`requires_backend_capability`·`interactions` 검사). 없으면 생략.
         settings_validators: 백엔드 id → `validate_settings` 훅. 훅이 없는 백엔드는 생략.
-        default_backend: 유효 설정에 backend가 없을 때 쓸 백엔드 id(서버 설정).
+        default_backend: 유효 설정에 backend가 없을 때 쓸 백엔드 id(호출자가 주는 마지막 대체값).
         resources: 리소스 조회(리소스 노드 참조 검사). None이면 생략.
         resolve_ports: 동적 포트 해석기(구조 검사·제안 포트 계산).
         resource_types: 리소스 종류(선택). `resources`와 함께 주면 노드마다 묶음을 조립해 실행

@@ -59,7 +59,7 @@ class DelegationMember(BaseModel):
 
 
 class DelegationPlan(BaseModel):
-    """위임 실행 계획: 위임자 요청 + 대상 목록.
+    """Delegation run plan: the delegator request + the list of delegates.
 
     `request`는 위임자 노드가 위임 없이 실행할 때 백엔드에 줄 요청 그대로다
     (유효 설정·프롬프트·세션·묶음).
@@ -78,7 +78,7 @@ class DelegationPlan(BaseModel):
 
 @runtime_checkable
 class DelegationStrategy(Protocol):
-    """위임 방식. 구현은 플러그인이 `agent_console.delegation_strategies`로 등록한다.
+    """Delegation strategy. Plugins register it via `agent_console.delegation_strategies`.
 
     - `descriptor`: 혼합 그래프 검증 규칙(`max_depth`, `allows_outgoing_flow`, `member_fields`,
       `member_interaction_kinds`)의 근거. 검증은 `ac-teams`가 이 값으로 계산한다.
@@ -120,7 +120,7 @@ class DelegationContribution(BaseModel):
 
 @runtime_checkable
 class ComposableDelegation(DelegationStrategy, Protocol):
-    """선택 프로토콜: 다른 방식과 한 위임자에서 합쳐 실행할 수 있는 위임 방식.
+    """Optional protocol: a delegation strategy that can run combined with others in one delegator.
 
     디스크립터 `composable`이 참인 방식이 구현한다. `contribute`는 백엔드를 부르지 않고 요청에 더할
     것만 만든다. `run`은 이 방식 하나만 쓸 때 부른다(X12 선택 프로토콜, design §5R.3).

@@ -87,7 +87,7 @@ def read_config_file(path: Path) -> dict[str, Any]:
 
         data = YAML(typ="safe").load(text) or {}
     if not isinstance(data, Mapping):
-        raise ValueError(f"설정 파일의 최상위는 매핑이어야 합니다: {path}")
+        raise ValueError(f"The top level of the settings file must be a mapping: {path}")
     return dict(data)
 
 

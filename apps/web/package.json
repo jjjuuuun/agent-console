@@ -7,10 +7,10 @@
     "kind": "app",
     "extensionPoints": {
       "config-form-widget": {
-        "title": "설정 폼 위젯",
+        "title": "Settings form widget",
         "area": "web",
         "design_id": "X51",
-        "summary": "설정 스키마의 ui:widget 이름에 화면 컴포넌트를 연결한다",
+        "summary": "Connects a UI component to a `ui:widget` name in a settings schema",
         "registration": {
           "kind": "registry",
           "name": "@agent-console/web/src/features/delegation/configWidgets.ts#CONFIG_WIDGETS"
@@ -26,10 +26,10 @@
         "guide": "web.md#config-form-widget"
       },
       "screen-entry": {
-        "title": "화면 진입",
+        "title": "Screen entry",
         "area": "web",
         "design_id": "X52",
-        "summary": "라우트 데이터 한 줄과 화면 연결로 새 화면을 사이드바에 넣는다",
+        "summary": "Adds a new screen to the sidebar with one route data entry and a page mapping",
         "registration": {
           "kind": "registry",
           "name": "@agent-console/web/src/shell/routeConfig.ts#DEFAULT_ROUTES"
@@ -46,10 +46,10 @@
         "guide": "web.md#screen-entry"
       },
       "interaction-renderer": {
-        "title": "상호작용 renderer",
+        "title": "Interaction renderer",
         "area": "web",
         "design_id": "X53",
-        "summary": "상호작용 renderer 이름에 응답 화면 컴포넌트를 연결한다",
+        "summary": "Connects a response UI component to an interaction renderer name",
         "registration": {
           "kind": "props",
           "export": "@agent-console/chat#defaultRenderers"
@@ -74,21 +74,21 @@
   },
   "dependencies": {
     "@agent-console/api-client": "^0.1.0",
-    "@agent-console/arch-view": "^0.1.0",
-    "@agent-console/chat": "^0.1.0",
-    "@agent-console/contracts": "^0.15.0",
-    "@agent-console/folder-picker": "^0.1.0",
-    "@agent-console/graph-editor": "^0.1.0",
+    "@agent-console/arch-view": "^0.2.0",
+    "@agent-console/chat": "^0.2.0",
+    "@agent-console/contracts": "^0.16.0",
+    "@agent-console/folder-picker": "^0.2.0",
+    "@agent-console/graph-editor": "^0.2.0",
     "@agent-console/list-arrange": "^0.1.0",
-    "@agent-console/log-view": "^0.1.0",
+    "@agent-console/log-view": "^0.2.0",
     "@agent-console/markdown-doc": "^0.1.0",
     "@agent-console/memory-view": "^0.1.0",
     "@agent-console/projects": "^0.2.0",
-    "@agent-console/schema-form": "^0.1.0",
+    "@agent-console/schema-form": "^0.2.0",
     "@agent-console/sdd-view": "^0.1.0",
     "@agent-console/text-editor": "^0.1.0",
-    "@agent-console/trace-view": "^0.1.0",
-    "@agent-console/ui": "^0.1.0",
+    "@agent-console/trace-view": "^0.2.0",
+    "@agent-console/ui": "^0.2.0",
     "@agent-console/wiki-view": "^0.1.0",
     "@tanstack/react-query": "^5.104.3",
     "pretendard": "^1.3.9",

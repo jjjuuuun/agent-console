@@ -247,7 +247,7 @@ class RunScope:
 
 
 class RunScopeLike(Protocol):
-    """``RunScoper.scope_run`` 결과 모양(``RunScope``가 만족)."""
+    """Shape of the ``RunScoper.scope_run`` result (``RunScope`` satisfies it)."""
 
     @property
     def services(self) -> Mapping[ServiceKey[Any], Any]: ...
@@ -258,7 +258,7 @@ class RunScopeLike(Protocol):
 
 @runtime_checkable
 class RunScoper(Protocol):
-    """``runs.scopes`` 항목: 실행 범위.
+    """``runs.scopes`` entry: run scope.
 
     실행 시작(일반 실행·이어 가기·대화 턴)마다 검사·사전 점검·준비보다 먼저 부른다. 자식 Run은
     부르지 않는다(부모 서비스를 물려받는다). 예외는 기록하고 그 공급자를 건너뛴다(실행은 범위
@@ -278,7 +278,7 @@ class RunScoper(Protocol):
 
 @runtime_checkable
 class RunDefinitionsScoper(Protocol):
-    """``runs.scopes`` 항목의 **선택** 메서드: Run의 정의 조회 출처.
+    """**Optional** method of a ``runs.scopes`` entry: where a Run looks up definitions.
 
     ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 Run 당시 그래프 조회
     (``graph_of_run``)에서 **그래프를 읽기 전에** 부른다(``scope_run``은 읽은 그래프를 받으므로
@@ -302,7 +302,7 @@ class RunDefinitionsScoper(Protocol):
 
 @runtime_checkable
 class RunChildScoper(Protocol):
-    """``runs.scopes`` 항목의 **선택** 메서드: 자식 Run(중첩 팀) 점검.
+    """**Optional** method of a ``runs.scopes`` entry: checks child Runs (nested teams).
 
     ``project_id``가 있는 Run에서 노드가 자식 Run을 만들기 직전(``RunService.prepare_child``, 팀
     규칙 검사보다 먼저) 부른다. 자식 Run은 ``scope_run``을 다시 부르지 않으므로(부모 서비스를
@@ -326,7 +326,7 @@ class RunChildScoper(Protocol):
 
 @runtime_checkable
 class RunProjectScoper(Protocol):
-    """``runs.scopes`` 항목의 **선택** 메서드: 프로젝트 범위를 맡는가.
+    """**Optional** method of a ``runs.scopes`` entry: whether it handles the project scope.
 
     ``project_id``가 있는 실행 시작(일반 실행·이어 가기·대화 턴)과 프로젝트 기준 검증에서 **정의
     출처를 정하기 전에** 부른다. 프로젝트 기능(``projects.lookup``)이 켜진 조립에서 참을 돌려주는

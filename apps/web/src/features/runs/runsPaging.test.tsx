@@ -103,4 +103,26 @@ describe("실행 목록 서버 질의(6R.19 잔여)", () => {
     fireEvent.change(screen.getByLabelText("시작"), { target: { value: "all" } });
     await waitFor(() => expect(runsPage.mock.calls.at(-1)![0]).not.toHaveProperty("since"));
   });
+  it("오래 열어 둔 화면: [새로 고침]이 기간 하한을 다시 계산해 기간 밖이 된 실행을 거른다(시계 주입)", async () => {
+    const realNow = Date.now();
+    let offsetMs = 0;
+    const spy = vi.spyOn(Date, "now").mockImplementation(() => realNow + offsetMs);
+    try {
+      const nowSec = Math.floor(realNow / 1000);
+      // 7일 창 안에서 6일 23시간 전에 만든 실행: 처음엔 들어오고, 2시간 뒤 하한이 앞으로 가면 기간 밖
+      const edge: Run = { ...run("edge"), created_at: nowSec - 7 * 86400 + 3600 };
+      const runsPage = vi.fn(async (p: { since?: number }) => ({ items: [edge, run("fresh")].filter((r) => (p.since ?? 0) <= r.created_at), next_cursor: null, source: "project" }));
+      mount({ runsPage });
+      await screen.findByRole("grid", { name: "실행 목록" });
+      expect(document.querySelector("[data-run-id='edge']")).not.toBeNull();
+      const firstSince = (runsPage.mock.calls[0]![0] as { since: number }).since;
+      offsetMs = 2 * 3600_000;
+      fireEvent.click(screen.getByRole("button", { name: "새로 고침" }));
+      await waitFor(() => expect(document.querySelector("[data-run-id='edge']")).toBeNull());
+      expect(document.querySelector("[data-run-id='fresh']")).not.toBeNull();
+      expect((runsPage.mock.calls.at(-1)![0] as { since: number }).since).toBeGreaterThanOrEqual(firstSince + 2 * 3600 - 1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

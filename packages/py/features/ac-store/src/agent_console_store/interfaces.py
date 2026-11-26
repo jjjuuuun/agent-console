@@ -141,7 +141,7 @@ class VersionRepository(Protocol):
 
 
 class DefinitionStore(Protocol):
-    """정의(graph, agent, settings 등) 저장소. 종류는 `DefinitionKind`로 등록한다.
+    """Definition store (graph, agent, settings, ...). Kinds are registered as `DefinitionKind`.
 
     예외: `NotFound`, `AlreadyExists`, `VersionRequired`, `VersionConflict`,
     `InvalidIdentifier`, 모델 검증 실패는 `pydantic.ValidationError`.

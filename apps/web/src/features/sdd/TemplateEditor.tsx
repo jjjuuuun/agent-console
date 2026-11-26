@@ -12,7 +12,7 @@ import type { SpecIssue, SpecTemplate } from "@agent-console/contracts/sdd";
 import { ErrorBlock } from "../../app/ErrorBlock";
 import type { SchemaNode } from "../../lib/schemaTools";
 import { planFileChanges, type FileEntry } from "../resources";
-import { VersionHistory } from "../versions";
+import { useCompareSupport, VersionHistory } from "../versions";
 import { FailureBlock, ListSkeleton, MenuButton } from "./parts";
 import { RuleSectionsForm } from "./RuleSectionsForm";
 import { classifySddError } from "./sddErrors";
@@ -43,6 +43,8 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
   const tpl = useSpecTemplate(space, id);
   const filesQ = useTemplateFiles(space, id);
   const invalidate = useInvalidateSdd();
+  const versionBase = definitionBase(TEMPLATES_COLLECTION, id);
+  const compareSupported = useCompareSupport(versionBase, space.projectId);
   const schema = useMemo(() => getContractSchema("SpecTemplate") as SchemaNode, []);
   const [rulesDraft, setRulesDraft] = useState<Obj | null>(null);
   const [filesDraft, setFilesDraft] = useState<FileEntry[] | null>(null);
@@ -237,12 +239,13 @@ export function TemplateEditor({ space, id, params, setParams, onDirtyChange, on
     ),
     versions: (
       <div className="sdd-template-versions">
-        <p className="app-muted">{t.versions.note}</p>
+        {compareSupported ? null : <p className="app-muted" data-testid="sdd-template-compare-off">{t.versions.note}</p>}
         <VersionHistory
-          base={definitionBase(TEMPLATES_COLLECTION, id)}
+          base={versionBase}
           currentHash={serverHash}
           dirty={dirty}
-          compare={false}
+          compare={compareSupported}
+          space={space.projectId}
           onRestored={() => {
             discard();
             void invalidate();

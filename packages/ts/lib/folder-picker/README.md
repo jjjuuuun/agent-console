@@ -1,19 +1,19 @@
 # @agent-console/folder-picker
 
-폴더 고르기: [폴더 선택…] 주 버튼(OS 선택 창 또는 앱 안 찾아보기), 선택한 폴더 상자, 접힌 직접 입력, 확인 결과, 찾아보기 패널(가상 목록), 가운데 줄임 경로 표시. 서버(api-client)를 모른다.
-`check`·`list`·`createFolder`·`onPickNative`를 콜백 props로 받으므로 어떤 백엔드에도 붙일 수 있다.
+Folder selection: a primary [Select folder…] button (the OS picker window or in-app browsing), a box for the selected folder, a collapsed manual entry, the check result, a browse panel (virtual list), and a middle-ellipsis path display. It knows nothing about the server (api-client).
+It takes `check`, `list`, `createFolder`, and `onPickNative` as callback props, so it can attach to any backend.
 
-## 설치
-저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+## Installation
+Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
 npm install ./agent-console-folder-picker-0.1.0.tgz
 ```
 
-peer: `react`·`react-dom` 19. 의존: `@tanstack/react-virtual`(찾아보기 가상 목록, 대안: 직접 윈도잉 — 검증된 라이브러리를 쓴다).
-스타일은 `@agent-console/ui`의 `tokens.css`(`--ac-*` 변수)와 이 패키지의 `@agent-console/folder-picker/styles.css`를 앱이 한 번씩 로드한다.
+Peers: `react` and `react-dom` 19. Dependency: `@tanstack/react-virtual` (the virtual list for browsing; alternative: custom windowing — we use a proven library).
+The app loads `tokens.css` (the `--ac-*` variables) from `@agent-console/ui` and this package's `@agent-console/folder-picker/styles.css` once each.
 
-## 최소 사용
+## Minimal usage
 ```ts readme
 import { deriveCheckState, middleEllipsis } from "@agent-console/folder-picker";
 
@@ -24,22 +24,22 @@ const state = deriveCheckState("/srv/app", {
 });
 ```
 
-`short`는 `"/data/work…/services/api"`, `state.id`는 `"ok"`(제출 가능)다. 이 블록은 `test/readme.test.ts`와 같아야 한다.
+`short` is `"/data/work…/services/api"`, and `state.id` is `"ok"` (can be submitted). This block must match `test/readme.test.ts`.
 
-화면은 컨테이너 하나로 쓴다.
+The screen is used as a single container.
 
 ```tsx
 <FolderPicker
   id="add-folder"
   value={path}
   onValueChange={setPath}
-  check={(req, signal) => api.checkFolder(req, signal)}   // FolderCheckOutcome을 돌려준다
+  check={(req, signal) => api.checkFolder(req, signal)}   // returns a FolderCheckOutcome
   list={(req, signal) => api.listFolders(req, signal)}    // FolderListingData
   createFolder={(req, signal) => api.createFolder(req, signal)}
   roots={roots}
-  capabilities={caps}                                      // { browse, native_dialog } 또는 null(조회 중)
+  capabilities={caps}                                      // { browse, native_dialog } or null (still loading)
   onPickNative={(initial, signal) => api.pickFolder({ initial }, signal)}   // FolderPickOutcome
-  configDir=".my-config"                                   // 선택: "{dir} 폴더를 만듭니다" 줄·문구
+  configDir=".my-config"                                   // optional: the "Creates the {dir} folder" line and text
   autoFocus
   onStateChange={(s) => setCanSubmit(s.submittable)}
   onSelectPhaseChange={(p) => setPicking(p === "waiting")}
@@ -47,25 +47,36 @@ const state = deriveCheckState("/srv/app", {
 />
 ```
 
-- **선택 우선**: 첫 포커스는 [폴더 선택…]이다. `capabilities.native_dialog === true`(또는 아직 모름 = null)이고 `onPickNative`가 있으면 OS 선택 창을, 아니면 같은 버튼이 앱 안 찾아보기 패널을 연다. `browse: false`면 버튼을 막고 직접 입력을 자동으로 연다.
-- **선택 흐름**: 대기(`waiting`: [선택 취소]·"창이 안 보이면" 안내, 30초 뒤 [앱 안에서 찾아보기]) → `picked`·`cancelled`·`unavailable`·`busy`·`timeout`·`failed`. `unavailable`·`failed`(reject 포함, 모르는 값)는 패널을 자동으로 열고, `unavailable`이면 이후 같은 버튼이 곧바로 패널을 연다. 대기 중 Esc는 선택을 취소한다(상위 대화상자로 올리지 않는다). `onPickNative`는 `signal`이 abort되면 요청을 끊어야 한다.
-- **확인 타이밍**: 선택한 경로(선택 창·찾아보기·붙여넣기·blur·Enter)는 즉시, 접힌 "경로를 직접 입력"에서 타이핑한 값만 300ms 디바운스한다. `onPickNative` 결과에 `check`(또는 충돌까지 담은 `outcome`)가 있으면 다시 요청하지 않는다. 오래된 응답은 버린다.
-- `check`는 409(등록됨·겹침)·403(원격 차단)을 `FolderCheckOutcome`의 `taken`·`overlap`·`remote_disabled`로 돌려준다. 그 밖의 실패는 reject하면 "확인하지 못했습니다"가 된다.
-- 기존 구성 안내: `FolderCheckData.manifest`(선택 필드)가 있으면 `manifest_found`(info, 이름·개수), `valid: false`면 `manifest_invalid`(warning). 없으면 안내를 그리지 않는다. 쓰기 불가는 `ok_readonly`(`configDir`가 있으면 `{dir}` 문구).
-- 경로 다시 지정: `excludeProjectId`(요청에 실림)와 `currentFolder`(같은 경로 판정, 선택 전에 선택 창·찾아보기 시작 위치)를 준다.
-- 문구는 `messages`(일부만 덮어쓰기), 색은 토큰이다. 모듈·기능·폴더 이름은 코드에 없다(`configDir`는 앱이 준다).
+- **Selection first**: the first focus goes to [Select folder…]. When `capabilities.native_dialog === true` (or is not yet known, which is null) and `onPickNative` is given, it opens the OS picker window; otherwise the same button opens the in-app browse panel. With `browse: false`, the button is disabled and manual entry opens automatically.
+- **Selection flow**: waiting (`waiting`: [Cancel selection], the "If you don't see the window" hint, and after 30 seconds [Browse in the app]) → `picked`, `cancelled`, `unavailable`, `busy`, `timeout`, or `failed`. `unavailable` and `failed` (including a reject, and unknown values) open the panel automatically, and after `unavailable` the same button opens the panel directly. Esc while waiting cancels the selection (it is not passed up to the parent dialog). `onPickNative` must cut the request when `signal` is aborted.
+- **Check timing**: a selected path (from the picker window, browsing, a paste, blur, or Enter) is checked immediately; only a value typed in the collapsed "Enter the path manually" is debounced by 300 ms. When the `onPickNative` result carries a `check` (or an `outcome` that includes the conflict), no new request is made. Stale responses are discarded.
+- `check` returns a 409 (already registered or overlapping) and a 403 (remote blocked) as `taken`, `overlap`, and `remote_disabled` in `FolderCheckOutcome`. Any other failure is a reject, which shows "Couldn't check".
+- Existing configuration notice: if `FolderCheckData.manifest` (an optional field) is present, the notice is `manifest_found` (info, with name and count), and if `valid: false`, `manifest_invalid` (warning). Without it, no notice is drawn. A folder that cannot be written to is `ok_readonly` (with the `{dir}` text when `configDir` is given).
+- Changing a path: pass `excludeProjectId` (sent with the request) and `currentFolder` (same-path detection; the start location of the picker window and browsing before a selection is made).
+- Text comes from `messages` (partial override), and colors are tokens. No module, feature, or folder names are in the code (`configDir` comes from the app).
 
-## 구성
-| 이름 | 역할 |
+## Text and language
+The default text is Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders are `{name}`, filled by `formatMessage`.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). To use English, pass one bundle as `messages`.
+
+```tsx
+import en from "@agent-console/folder-picker/locales/en";
+
+<FolderPicker id="add-folder" value={path} onValueChange={setPath} check={check} list={list} roots={roots} messages={en} />
+```
+The Korean bundle is `@agent-console/folder-picker/locales/ko`. To change only part of a bundle, spread it and override, as in `messages={{ ...en, "folder.pick.action": "Browse…" }}`. For a new language, build an object with the same keys and pass it in. The component source contains no Korean strings (the same test checks this).
+
+## Contents
+| Name | Role |
 | --- | --- |
-| `FolderPicker` | 선택 버튼 + 선택한 폴더 상자 + 상태 줄 + 접힌 직접 입력 + 결과 + 찾아보기를 묶은 컨테이너 |
-| `SelectedFolder` / `FolderPickStatusLine` | 선택한 폴더 상자, 선택 흐름 상태 줄(표현 부품) |
-| `FolderPathInput` / `FolderCheckResult` / `FolderBrowser` | 표현 부품(각각 단독 사용 가능) |
-| `useFolderCheck` | 디바운스·즉시 확인·오래된 응답 버리기 훅 |
-| `deriveCheckState` / `browseStartPath` | 확인 결과 → 화면 상태, 찾아보기 시작 위치(순수 함수) |
-| `middleEllipsis` / `MiddleEllipsisPath` | 경로 가운데 줄임(순수 함수 + ResizeObserver 부품) |
+| `FolderPicker` | The container that combines the selection button, the selected folder box, the status line, the collapsed manual entry, the result, and browsing |
+| `SelectedFolder` / `FolderPickStatusLine` | The selected folder box and the selection flow status line (presentational parts) |
+| `FolderPathInput` / `FolderCheckResult` / `FolderBrowser` | Presentational parts (each usable on its own) |
+| `useFolderCheck` | A hook for debouncing, immediate checks, and discarding stale responses |
+| `deriveCheckState` / `browseStartPath` | Check result → screen state, and the browse start location (pure functions) |
+| `middleEllipsis` / `MiddleEllipsisPath` | Middle-ellipsis for paths (a pure function plus a ResizeObserver component) |
 
-## 개발·재사용
-- `pnpm build` · `pnpm typecheck` · `pnpm lint` · `pnpm test`는 이 폴더 안에서 단독으로 돈다.
-- 공개 API는 `exports`에 적힌 경로뿐이다. 다른 패키지는 `src/`·`dist/`를 직접 import하지 않는다.
-- 저장소 밖으로 복사해도 되는지는 `pnpm portability --package folder-picker`로 확인한다.
+## Development and standalone reuse
+- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm test` each run on their own inside this folder.
+- The public API is only the paths listed in `exports`. Other packages do not import `src/` or `dist/` directly.
+- To check that the package still works when copied out of the repository, run `pnpm portability --package folder-picker`.

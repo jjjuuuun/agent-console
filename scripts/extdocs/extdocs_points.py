@@ -321,12 +321,16 @@ def _check_ports(col: Collection, facts: CodeFacts, resolver: SymbolResolver) ->
     return out
 
 
-def readme_missing_sections(readme: str, data: ToolData) -> list[str]:
-    """README에 없는 필수 절 제목 목록(``readme_sections.yaml`` 순서)."""
+def readme_missing_sections(readme: str, data: ToolData, language: str | None = None) -> list[str]:
+    """README에 없는 필수 절 제목 목록(``readme_sections.yaml`` 순서).
+
+    ``language``(예제 언어)를 주면 그 언어 전용 별칭(``language_aliases``)도 인정한다.
+    """
     titles = [h.text for h in headings(readme) if h.level in (2, 3)]
     missing = []
     for section in data.readme_sections:
-        if not any(alias in title for title in titles for alias in section.aliases):
+        aliases = section.aliases_for(language)
+        if not any(alias in title for title in titles for alias in aliases):
             missing.append(section.title)
     return missing
 
@@ -402,7 +406,9 @@ def _check_examples(root: Path, col: Collection, data: ToolData) -> list[Finding
             if not readme.is_file():
                 out.append(Finding("readme-missing", where, "README.md가 없습니다"))
                 continue
-            missing = readme_missing_sections(readme.read_text(encoding="utf-8"), data)
+            missing = readme_missing_sections(
+                readme.read_text(encoding="utf-8"), data, example.language
+            )
             if missing:
                 out.append(
                     Finding(

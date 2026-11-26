@@ -1,47 +1,48 @@
 # agent-console-pty-session
 
-대화형 CLI(TTY가 있어야 입력을 받는 도구)를 PTY 하위 프로세스로 띄우고, 출력을 **줄 단위 화면**·**제어 시퀀스를 뺀
-원문 흐름**·**규칙 신호**로 읽는 라이브러리. 입력(글자·이름 붙은 키)을 보내고, 끝낼 때는 정중한 종료 뒤 유예가
-지나면 강제 종료한다. Agent Console에서는 Claude 구독 로그인(`claude auth login`) 중계에 쓴다.
-사내 패키지에 의존하지 않는다.
+A library that starts an interactive CLI (a tool that needs a TTY to take input) as a PTY child process and reads its output as a **line-based screen**, an **original stream with
+control sequences removed**, and **rule signals**. It sends input (characters and named keys), and to stop it sends a polite termination and forcibly kills it after a grace
+period. Agent Console uses it to relay the Claude subscription sign-in (`claude auth login`).
+It does not depend on any internal package.
 
 - **`PtySession`**: `spawn(argv, env, cwd, cols, rows)` · `write` · `send_key("enter")` · `screen_lines()` ·
   `text_since(offset)` · `links()` · `wait_changed(version, timeout)` · `wait_exit(timeout)` · `terminate(grace)`.
-  셸을 거치지 않는다. 출력은 읽기 스레드 하나가 메모리에 쌓고(한도 있음) 세션이 끝나면 버린다. 아무것도 로그에
-  남기지 않는다(출력에 비밀이 섞일 수 있다).
-- **`TerminalText`**: 화면 에뮬레이터가 아니라 줄 버퍼다. 색·모드 같은 CSI는 버리고, `\r` 덮어쓰기, 커서
-  상하좌우·열 이동, 줄·화면 지우기(`K`·`J`)를 따른다(Ink 같은 TUI의 다시 그리기). 줄바꿈(wrap)은 하지 않는다 —
-  긴 URL이 끊기지 않게 하려면 `cols`를 넓게 준다. 원문 흐름은 `\r`·세로 이동을 `\n`으로, `CSI n C`를 공백으로
-  바꾼다. OSC 8 링크 대상은 `links()`에 모이고 원문 흐름에도 한 줄로 들어간다.
-- **`ExpectRules`·`ExpectWatcher`**: 이름 → 정규식 규칙(데이터)을 줄마다 건다. 컴파일 함수를 주입한다(기본
-  `re.compile`). 사용자가 고칠 수 있는 규칙은 안전 검사를 하는 컴파일 함수를 넘긴다. 아직 끝나지 않은 줄에서 줄
-  끝에 닿은 맞음(다 오지 않은 URL)은 더 들어올 때까지 미룬다.
-- **어댑터**: `PtySpawner`(→ `PtyHandle`) 프로토콜. POSIX `posix_spawner`(ptyprocess, 새 세션 → 종료 신호는
-  프로세스 그룹 전체에), Windows `windows_spawner`(pywinpty, 선택 추가 기능 `windows`). `default_spawner()`가
-  플랫폼에 맞는 것을 고르고, 쓸 수 없으면 `PtyUnavailableError`(`reason` = `missing_library`·
-  `unsupported_platform`, `hint` = 설치 안내).
-- **테스트용**: `FakePty`(대본: `output`·`exit_code`·`on_input`·`ignore_terminate`), `FakePtySpawner`(띄울
-  때마다 새 가짜).
+  It does not go through a shell. Output is collected in memory by one reader thread (with a limit) and discarded when the session ends. Nothing is
+  logged (secrets can appear in the output).
+- **`TerminalText`**: a line buffer, not a screen emulator. It drops CSI such as colors and modes, and follows `\r` overwrites, cursor
+  up, down, left, right, and column moves, and line and screen erasing (`K`, `J`) (the redraws of TUIs such as Ink). It does not wrap lines;
+  pass a wide `cols` so long URLs are not broken. The original stream turns `\r` and vertical moves into `
+` and `CSI n C` into spaces.
+  OSC 8 link targets are collected in `links()` and also go into the original stream as one line.
+- **`ExpectRules`, `ExpectWatcher`**: apply name → regex rules (data) to each line. The compile function is injected (default
+  `re.compile`). For rules users can edit, pass a compile function that does safety checks. A match on an unfinished line that reaches the end of
+  the line (a URL that has not fully arrived) is deferred until more input arrives.
+- **Adapters**: the `PtySpawner` (→ `PtyHandle`) protocol. POSIX `posix_spawner` (ptyprocess, new session, so termination signals go to
+  the whole process group), Windows `windows_spawner` (pywinpty, optional extra `windows`). `default_spawner()` picks the one that fits
+  the platform, and raises `PtyUnavailableError` when none is usable (`reason` = `missing_library` or
+  `unsupported_platform`, `hint` = install instructions).
+- **For tests**: `FakePty` (a script: `output`, `exit_code`, `on_input`, `ignore_terminate`), `FakePtySpawner` (a new fake
+  each time it spawns).
 
-## 설치
+## Installation
 
 ```bash
-pip install agent-console-pty-session            # POSIX(ptyprocess 포함)
+pip install agent-console-pty-session            # POSIX (includes ptyprocess)
 pip install 'agent-console-pty-session[windows]' # Windows(pywinpty)
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
-| `ptyprocess`(ISC, POSIX) | 하위 프로세스를 PTY에 붙여 띄움 | pexpect의 하부라 오래 검증됨. 크기 지정·신호·종료 상태를 제공 | 표준 `pty`(크기 조절·종료 대기 직접 구현), `pexpect`(기대 문법이 필요 이상) |
-| `pywinpty`(MIT, Windows, 선택 `windows`) | Windows ConPTY | ptyprocess와 같은 모양의 API | Windows에서 기능 끔 |
+| `ptyprocess` (ISC, POSIX) | Starts a child process attached to a PTY | Long proven as the base of pexpect. Provides size settings, signals, and exit status | Standard `pty` (size changes and exit waits written by hand), `pexpect` (more expect syntax than needed) |
+| `pywinpty` (MIT, Windows, optional `windows`) | Windows ConPTY | An API shaped like ptyprocess | Turn the feature off on Windows |
 
-터미널 출력 해석은 직접 한다(`TerminalText`). LGPL인 `pyte`는 쓰지 않는다(2026-10-23 결정, 라이선스). 필요한
-범위(줄 단위 화면, 덮어쓰기, 지우기, 커서 이동)가 작아 직접 구현이 간단하다.
+Terminal output is interpreted in-house (`TerminalText`). `pyte`, which is LGPL, is not used (decided 2026-10-23, for licensing). The needed
+scope (line-based screen, overwrites, erasing, cursor moves) is small, so implementing it directly is simple.
 
-## 최소 사용
+## Minimal usage
 
-가짜 PTY로 로그인 화면 같은 대화를 흉내 낸다(실제 프로세스 없음). 실제로는 `spawner`를 빼면 플랫폼 어댑터가
-쓰인다.
+A fake PTY imitates a sign-in-screen-like conversation (no real process). In real use, leave out `spawner` and the platform adapter
+is used.
 
 ```python
 >>> import asyncio
@@ -76,19 +77,19 @@ pip install 'agent-console-pty-session[windows]' # Windows(pywinpty)
 
 ```
 
-`\x1b[2K\r`가 `Paste code >` 줄을 지우고 그 자리에 성공 문구를 썼다. 가짜는 입력을 에코하지 않지만 실제 PTY는
-에코하므로, 붙여 넣은 값이 화면·원문 흐름에 다시 나온다. 그 값을 보이면 안 되는 쪽(예: 로그인 코드)은 호출자가
-가린다.
+`\x1b[2K\r` erased the `Paste code >` line and wrote the success message in its place. The fake does not echo input, but a real PTY
+does, so pasted values appear again on the screen and in the original stream. A caller that must not show those values (for example, a sign-in code)
+masks them.
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함. POSIX는 실제 PTY + 파이썬 스텁, Windows 어댑터는 pywinpty가 있을 때만
+uv run pytest          # includes the README.md doctests. POSIX uses a real PTY + a Python stub; the Windows adapter only when pywinpty is installed
 ```

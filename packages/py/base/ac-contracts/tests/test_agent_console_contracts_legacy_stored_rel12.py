@@ -26,8 +26,16 @@ from agent_console_contracts import (
     ignored_settings_keys,
 )
 
-REMOVED_KEYS = ("projects", "logs.projects", "project", "working_directory", "log_projects")
-"""0.15.0에서 모델 필드를 지운 저장 키 허용 목록(이 키가 든 문서는 읽기가 실패하면 안 된다)."""
+REMOVED_KEYS = (
+    "projects",
+    "logs.projects",
+    "project",
+    "working_directory",
+    "log_projects",
+    "default_backend",
+)
+"""0.15.0·0.16.0(`default_backend`)에서 모델 필드를 지운 저장 키 허용 목록(이 키가 든 문서는 읽기가
+실패하면 안 된다). `default_backend`의 읽기·보존은 0.16.0 테스트가 본다."""
 
 OLD_SETTINGS: dict[str, Any] = {
     "projects": {

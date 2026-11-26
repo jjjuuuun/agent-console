@@ -8,7 +8,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "agent-console-claude-format>=0.1,<0.2",
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-runtime>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
@@ -72,10 +72,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.collector]
-title = "관측 수집기"
+title = "Observation collector"
 area = "logs"
 design_id = "X7"
-summary = "claude-agent-sdk 실행 중 hook·도구 호출 등을 관측해 실행 이벤트로 남기는 수집기를 더한다"
+summary = "Adds a collector that observes hooks, tool calls, and more while claude-agent-sdk runs, and records them as run events"
 registration = { kind = "entry-point", group = "agent_console_backend_claude_sdk.collectors:COLLECTORS_GROUP" }
 interface = ["agent_console_backend_claude_sdk.collectors:ClaudeSdkCollector", "agent_console_backend_claude_sdk.collectors:BaseClaudeSdkCollector", "agent_console_backend_claude_sdk.collectors:CollectorContext"]
 example = { kind = "package", path = "examples/extensions/agent-console-example-collector" }

@@ -1,3 +1,5 @@
+import ko from "../locales/ko.json";
+
 /** 부분 messages를 기본 문구에 덮어 합친다. */
 export function mergeMessages<T extends object>(defaults: T, partial?: Partial<T>): T {
   return partial ? { ...defaults, ...stripUndefined(partial) } : defaults;
@@ -15,7 +17,7 @@ export function fill(template: string, values: Record<string, string | number>):
 }
 
 /** 초 단위 길이를 "12초", "2분 5초", "1시간 3분"으로. */
-export function formatSeconds(totalSeconds: number, units = { s: "초", m: "분", h: "시간" }): string {
+export function formatSeconds(totalSeconds: number, units: { s: string; m: string; h: string } = ko.chat.units): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   if (s < 60) return `${s}${units.s}`;
   const m = Math.floor(s / 60);

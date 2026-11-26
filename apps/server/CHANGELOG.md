@@ -1,5 +1,9 @@
 # 변경 기록
 
+## Unreleased
+
+- I.6: Terminal text is now English: the `serve` help (module option help gets a `(module <id>)` suffix), startup and ready log lines, and `ConfigError` messages (`Invalid settings (settings.removed_key): …`, `Invalid settings: …`, settings file read and shape errors, non-loopback bind, unknown module option). Error codes (`ConfigError.code`, `removed`) are unchanged. Responses to the web (error bodies, `/server-info` warnings, schema text) keep their Korean original text; the web translates them by code.
+
 ## 1.0.0
 
 - REL.20: 표시 버전을 1.0.0으로 올렸다(`project.version`). `/health`·`/bootstrap`·`/server-info`의 `server_version`과 OpenAPI `info.version`은 설치 메타데이터에서 읽는다(코드 변경 없음, 값을 맞추는 테스트 추가). 계약 버전은 0.15.0 그대로다. README 공개 API 표에 `server_version()`을 적었다.

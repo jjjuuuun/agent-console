@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/chat",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "채팅 표현 컴포넌트(메시지 목록, 입력창, 상호작용 카드)",
   "private": true,
   "license": "MIT",
@@ -26,7 +26,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -35,7 +45,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.15.0",
+    "@agent-console/contracts": "^0.16.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },

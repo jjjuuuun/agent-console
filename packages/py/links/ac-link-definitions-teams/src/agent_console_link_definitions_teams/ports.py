@@ -101,7 +101,7 @@ class ScopeLayersLike(Protocol):
 
 @runtime_checkable
 class ScopeLayersSource(Protocol):
-    """``settings.scope_layers`` 모양: 범위 id → 설정 층(이 연동은 범위의 뜻을 모른다)."""
+    """``settings.scope_layers`` shape: scope id → settings layer (scope meaning unknown here)."""
 
     def scope_layers(self, scope_id: str) -> ScopeLayersLike: ...
 

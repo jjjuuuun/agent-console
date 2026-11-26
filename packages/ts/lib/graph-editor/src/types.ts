@@ -7,6 +7,7 @@ import type { StrategyStyleInput } from "./logic/edgeStyle";
 import type { EdgeShapeDescriptor } from "./shapes/types";
 import type { LayoutEngineDescriptor } from "./layout/types";
 import type { EdgeRouter } from "./logic/route";
+import type { LabelSpacing } from "./logic/labelSpread";
 import type { KeyValueStorage } from "./logic/storage";
 import type { RoleToggle, ToggleInfo, ToggleOptions } from "./logic/team";
 import type { EdgeLayoutPanelProps } from "./components/EdgeLayoutPanel";
@@ -311,6 +312,11 @@ export interface GraphEditorProps {
   edgeShapes?: readonly EdgeShapeDescriptor[];
   /** 사용자 설정 층의 기본값(`settings.editor.default_direction`·`default_edge_shape`). 앱이 설정에서 읽어 넘긴다 */
   layoutDefaults?: { direction?: string | null; edgeShape?: string | null };
+  /**
+   * 연결선 라벨 배치 간격·포트 보호 설정(생략하거나 빠진 값 = `LABEL_SPACING_DEFAULTS`: 화면 8px(최소 4px)·노드 봐주기 8·포트 여백 4·줌 0.5~1·줌 조작 뒤 200ms).
+   * 라벨끼리 겹침 0은 어떤 값에서도 지킨다. 값은 데이터로 넘긴다(앱이 설정에서 읽어도 된다).
+   */
+  labelSpacing?: LabelSpacing;
   /** 방향 어휘 표(생략 = 내장 lr·tb·rl·bt) */
   directions?: DirectionSides;
   /**

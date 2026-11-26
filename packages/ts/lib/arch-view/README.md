@@ -1,28 +1,28 @@
 # @agent-console/arch-view
 
-관측 구조도 표현 컴포넌트. 서버가 좌표·라벨·지표까지 채워 준 `ArchitectureView`를 **영역·칸·연결(꺾은선)·라벨 칩**으로 그린다.
-API·저장소·`ui`·`log-view`·`api-client`를 모른다. 데이터와 콜백은 전부 props다.
+Presentation components for the observability architecture map. They draw an `ArchitectureView`, whose coordinates, labels, and metrics the server has already filled in, as **zones, cells, edges (polylines), and label chips**.
+The package knows nothing about the API, storage, `ui`, `log-view`, or `api-client`. All data and callbacks are props.
 
-- 칸 종류·연결 종류·색은 코드에 없다. 모든 이름은 데이터이고, 모르는 `tone`·`style`은 중립 모양으로 그린다.
-- `value: null`은 어디서나 "–"/"수집 안 됨"이다. 합계·정렬·접근 이름에서도 0이 되지 않는다.
-- 배율 0.45 미만이면 요약 표시(칸마다 숫자만)로 바뀐다. [그림|목록] 전환, 범례, 선택 정보 줄, 키보드 이동을 포함한다.
+- Cell kinds, edge types, and colors are not in the code. Every name is data, and an unknown `tone` or `style` is drawn with a neutral look.
+- `value: null` means "–" or "Not collected" everywhere. It never becomes 0 in totals, sorting, or accessible names.
+- Below a scale of 0.45 the display switches to a summary (only a number per cell). It includes the [Diagram | List] switch, the legend, the selection info bar, and keyboard navigation.
 
-## 설치
-저장소 안에서는 `pnpm install`이 로컬 패키지를 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 설치한다.
+## Installation
+Inside the repository, `pnpm install` links the local package. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`).
 
 ```sh
-npm install ./agent-console-arch-view-0.1.0.tgz
+npm install ./agent-console-arch-view-0.2.0.tgz
 ```
 
-사용하는 앱은 토큰 CSS(`--ac-*` 변수, `@agent-console/ui/tokens.css`)와 이 패키지의 `@agent-console/arch-view/styles.css`를 한 번씩 불러온다.
-이 패키지가 쓰는 토큰은 `styles.css`의 `var(--ac-…)` 참조뿐이다.
+An app that uses it loads the token CSS (the `--ac-*` variables, `@agent-console/ui/tokens.css`) and this package's `@agent-console/arch-view/styles.css` once each.
+The only tokens this package uses are the `var(--ac-…)` references in `styles.css`.
 
-| 의존 | 왜 | 대안 |
+| Dependency | Why | Alternatives |
 | --- | --- | --- |
-| `@xyflow/react` | 확대·이동·사용자 노드(칸·영역). 연결선은 `points`가 정한 꺾은선이라 `ViewportPortal` 위에 직접 그린다 | 손 SVG( 대체안) |
-| `@agent-console/contracts` | `ArchitectureView` 등 타입만 (`import type`) | — |
+| `@xyflow/react` | Zoom, pan, and custom nodes (cells and zones). Edges are polylines decided by `points`, so they are drawn directly over a `ViewportPortal` | Hand-written SVG (the fallback) |
+| `@agent-console/contracts` | Types only, such as `ArchitectureView` (`import type`) | — |
 
-## 최소 사용
+## Minimal usage
 ```ts readme
 import { checkLayout, edgePath, formatMetric, gridLayout } from "@agent-console/arch-view";
 import { defaultProfileView } from "@agent-console/arch-view/testing";
@@ -34,62 +34,74 @@ const llm = formatMetric({ status: "not_collected", value: null });
 const line = edgePath(null, rects["input"], rects["sdk"]);
 ```
 
-`problems`는 `[]`(기본 프로필 좌표에 겹침·교차 없음), `llm.text`는 `"–"`(수집 안 됨은 0이 아니다), `line`은 두 칸 경계에서 6px 바깥을 잇는 두 점이다.
-이 블록은 `test/readme.test.ts`와 같아야 한다.
+`problems` is `[]` (the default profile's coordinates have no overlaps or crossings), `llm.text` is `"–"` (not collected is not 0), and `line` is two points joining the two cells 6 px outside their borders.
+This block must match `test/readme.test.ts`.
 
-그림 컴포넌트:
+The diagram component:
 
 ```tsx
 import "@agent-console/arch-view/styles.css";
 import { ArchitectureDiagram } from "@agent-console/arch-view";
 
 <ArchitectureDiagram
-  view={view}                       // ArchitectureView (undefined면 불러오는 중)
-  selection={selection}             // 지금 걸러 둔 대상 {kind, id, group?} | null
-  highlight={membership}            // 선택한 이벤트가 맞은 칸·연결·묶음
-  onSelect={setSelection}           // 같은 대상을 다시 누르면 null
-  onBlocked={(target, reason) => toast(reason)}  // 수집 안 됨 칸·구조 연결: 걸러낼 이벤트 없음
+  view={view}                       // ArchitectureView (undefined while loading)
+  selection={selection}             // the target currently filtered on {kind, id, group?} | null
+  highlight={membership}            // the cells, edges, and groups the selected event hit
+  onSelect={setSelection}           // pressing the same target again gives null
+  onBlocked={(target, reason) => toast(reason)}  // a not-collected cell or a structural edge: no events to filter by
   onDrill={(cellId, group) => drillInto(cellId, group)}
-  messages={{ /* 문구 덮어쓰기 */ }}
+  messages={{ /* text overrides */ }}
 />;
 ```
 
-## 공개 API
-| 이름 | 역할 |
+## Public API
+| Name | Role |
 | --- | --- |
-| `ArchitectureDiagram` | 도구줄(확대·맞춤·그림/목록·범례) + 캔버스 + 선택 정보 줄. `scale`·`fitMode`·`viewMode`는 제어/비제어 겸용 |
-| `ArchitectureCellList` | 칸·연결 목록(그림과 같은 선택 상태·같은 콜백) |
-| `ArchitectureInfoBar` | 선택·포커스 대상을 풀어 쓴 줄(지표 전체 값, 묶음 칩, 하위 구조도 단추) |
-| `ArchitectureLegend` | 범례 견본(실제 칸·연결과 같은 클래스). 영역 견본은 prop `zoneLegend`(기본 `defaultZoneLegend`, `[]`면 없음) |
-| `hasBatchim`·`josa`·`withJosa` | 한국어 조사 받침 맞춤 순수 함수. 문구 틀에서는 `{to\|으로/로}`(받침 있을 때/없을 때)로 쓴다. 연결 접근 이름 기본 틀이 이를 쓰고, `messages.ariaEdgeFlow`로 덮어쓴다 |
-| `gridLayout(view)` | 좌표 없는 칸을 선언 순서대로 격자에 배치한 칸 사각형 표 |
-| `edgePath(points, from, to)` | `points`가 있으면 그대로, 없으면 두 칸 경계 사이 직선(6px 바깥) |
-| `formatMetric(metric, messages, opts)` | 지표 → 칸 글자·접근 이름·풀어 쓴 글자. 수집 안 됨은 "–" |
-| `checkLayout(view)` | 칸–칸, 연결–칸, 연결–연결, 칩–칩 겹침·교차 목록(순수 함수, 설정 미리보기에도 쓸 수 있음) |
-| 맞춤 `auto`(기본) | `autoFit`·`AUTO_CONTAIN_MIN`·prop `autoContainMin`: 폭 맞춤이 들어가면 폭, 아니면 전체 맞춤 배율이 기준(0.55) 이상일 때 전체, 미만이면 폭 맞춤 + 잘림 표시(하단 그라데이션·"아래 칸 n개 ↓" 칩·스크롤 표시). 캔버스 크기가 바뀔 때마다 다시 계산한다 |
-| `fitViewport`·`zoomAround`·`ensureVisible`·`nearestInDirection` | 맞춤·확대·최소 스크롤·방향키 이동 순수 함수 |
-| `@agent-console/arch-view/testing` | 예제 `ArchitectureView`(기본 프로필 좌표, 지표는 임시 값) |
+| `ArchitectureDiagram` | The toolbar (zoom, fit, diagram/list, legend) + the canvas + the selection info bar. `scale`, `fitMode`, and `viewMode` work both controlled and uncontrolled |
+| `ArchitectureCellList` | The list of cells and edges (the same selection state and callbacks as the diagram) |
+| `ArchitectureInfoBar` | A line that spells out the selected or focused target (the full metric values, group chips, and a button for the child architecture map) |
+| `ArchitectureLegend` | The legend samples (the same classes as the real cells and edges). The zone samples come from the prop `zoneLegend` (default `defaultZoneLegend`; none for `[]`) |
+| `hasBatchim`, `josa`, `withJosa` | Pure functions that pick the Korean particle by final consonant. In a text template, write it as `{to\|으로/로}` (with a final consonant / without one). The default template for an edge's accessible name uses it, and `messages.ariaEdgeFlow` overrides it |
+| `gridLayout(view)` | A table of cell rectangles that places cells without coordinates on a grid in declaration order |
+| `edgePath(points, from, to)` | Uses `points` as they are when present; otherwise a straight line between the two cell borders (6 px outside) |
+| `formatMetric(metric, messages, opts)` | A metric → the cell text, the accessible name, and the spelled-out text. Not collected is "–" |
+| `checkLayout(view)` | A list of overlaps and crossings between cell and cell, edge and cell, edge and edge, and chip and chip (a pure function; it can also be used in a settings preview) |
+| Fit `auto` (default) | `autoFit`, `AUTO_CONTAIN_MIN`, and the prop `autoContainMin`: if a width fit works, it uses the width; otherwise it fits everything when the whole-fit scale is at or above the threshold (0.55), and below that it fits the width and shows a clipping indicator (a bottom gradient, a "N more cells below ↓" chip, and a scroll indicator). It is recalculated whenever the canvas size changes |
+| `fitViewport`, `zoomAround`, `ensureVisible`, `nearestInDirection` | Pure functions for fit, zoom, minimal scrolling, and arrow-key movement |
+| `@agent-console/arch-view/testing` | A sample `ArchitectureView` (the default profile's coordinates, with placeholder metric values) |
 
-## 확장 지점
-데이터에 쓰인 `tone`·`style`·`view`·지표 이름은 열린 문자열이다. 코드는 이름을 모르고 아래 대응표로만 바꾼다.
-값은 **CSS 색이 아니라 토큰 변수 이름**(`--ac-…`)만 받으며, 그 밖의 값(`#ff0000` 등)은 중립 모양으로 그린다.
+## Extension points
+The `tone`, `style`, `view`, and metric names used in data are open strings. The code knows no names and changes them only through the mapping tables below.
+A value accepts **only a token variable name** (`--ac-…`), not a CSS color; any other value (such as `#ff0000`) is drawn with a neutral look.
 
 ```tsx
 <ArchitectureDiagram
   view={view}
-  tones={{ ...defaultTones, mint: "--ac-cat-2" }}                       // tone → 칸 띠·테두리 색
-  edgeStyles={{ ...defaultEdgeStyles, slow: { stroke: "--ac-cat-3", dash: "--ac-edge-pattern-3" } }}  // style → 선 모양
-  edgeLegend={{ slow: "느린 호출" }}                                     // 새 style의 범례 글자
-  metricKinds={{ ...defaultMetricKinds, bytes: { kind: "number" } }}    // 지표 이름 → 표기 종류
-  cellRenderers={{ gauge: ({ cell, defaultBody }) => <>{defaultBody}<Gauge cell={cell} /></> }}  // 칸의 view 키 → 안쪽 그리기
+  tones={{ ...defaultTones, mint: "--ac-cat-2" }}                       // tone → cell band and border color
+  edgeStyles={{ ...defaultEdgeStyles, slow: { stroke: "--ac-cat-3", dash: "--ac-edge-pattern-3" } }}  // style → line look
+  edgeLegend={{ slow: "Slow call" }}                                     // the legend text for the new style
+  metricKinds={{ ...defaultMetricKinds, bytes: { kind: "number" } }}    // metric name → display kind
+  cellRenderers={{ gauge: ({ cell, defaultBody }) => <>{defaultBody}<Gauge cell={cell} /></> }}  // a cell's view key → its inner drawing
 />
 ```
 
-## 접근성
-칸·연결 칩은 `button`(`aria-pressed`), 접근 이름은 "이름, 지표 조각, 상태 조각"이다. `Tab`은 칸(선언 순서) → 연결, 방향키는 가까운 칸, `Home`/`End`, `Shift+Enter` 하위 구조도, `Esc` 선택 해제, `+`/`-`/`0` 확대·축소·맞춤, `Backspace` 한 단계 위로(`onBack`).
-상태는 색만으로 전달하지 않는다(빗금·점선·글자·아이콘).
+## Accessibility
+Cells and edge chips are a `button` (`aria-pressed`), and the accessible name is "name, metric part, status part". `Tab` goes through the cells (in declaration order) and then the edges, the arrow keys move to the nearest cell, `Home` and `End` work, `Shift+Enter` opens the child architecture map, `Esc` clears the selection, `+`, `-`, and `0` zoom in, zoom out, and fit, and `Backspace` goes up one level (`onBack`).
+State is never conveyed by color alone (hatching, dashes, text, and icons are used too).
 
-## 개발·재사용
-- `pnpm build` · `pnpm typecheck` · `pnpm lint` · `pnpm test`는 이 폴더 안에서 단독으로 돈다.
-- 공개 API는 `exports`에 적힌 경로뿐이다. 다른 패키지는 `src/`·`dist/`를 직접 import하지 않는다.
-- 저장소 밖으로 복사해도 되는지는 `pnpm portability --package @agent-console/arch-view`로 확인한다.
+## Development and standalone reuse
+- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm test` each run on their own inside this folder.
+- The public API is only the paths listed in `exports`. Other packages do not import `src/` or `dist/` directly.
+- To check that the package still works when copied out of the repository, run `pnpm portability --package @agent-console/arch-view`.
+
+## Text and language
+The default text is Korean (`src/locales/ko.json`, `defaultMessages`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders such as `{n}` and `{title}` are filled by `formatMessage`.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). To use English, pass one bundle as `messages`.
+
+```tsx
+import en from "@agent-console/arch-view/locales/en";
+
+<ArchitectureDiagram view={view} selection={selection} onSelect={setSelection} messages={en} />
+```
+The Korean bundle is `@agent-console/arch-view/locales/ko`. To change only part of a bundle, spread it and override, as in `messages={{ ...en, empty: "…" }}`. For a new language, build an object with the same keys and pass it in.
+The particle template (`josa`) such as `{to|으로/로}` is used only in the ko bundle. The component source contains no Korean strings (the same test checks this; only the sample data `testing.ts` is excluded). `checkLayout` takes a new option, `errorsPlaceholder` (the error text used to estimate the chip width).

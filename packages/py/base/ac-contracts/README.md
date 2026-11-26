@@ -1,99 +1,100 @@
 # agent-console-contracts
 
-Agent Console의 공용 타입·이벤트·DTO(Pydantic v2)와 JSON Schema 생성. 서버·엔진·CLI가 이 모델을 쓰고,
-웹은 여기서 생성된 TS 타입(`@agent-console/contracts`)을 쓴다.
+Shared types, events, and DTOs (Pydantic v2) of Agent Console, and JSON Schema generation. The server, engine, and CLI use these models,
+and the web app uses the TS types generated from here (`@agent-console/contracts`).
 
-- 계약은 특정 노드 타입·엣지 타입·백엔드·모델 이름을 모른다. 노드 `config`, `attributes`, `backend_options`는 `dict[str, Any]`.
-- 정의 모델(`Agent`, `Graph`, `NodeSpec`, `EdgeSpec`, `WorkspaceSettings` 등)은 모르는 필드를 보존하고, 그 밖의 모델은 무시한다.
-- 시각은 모두 Unix epoch 초(`float`).
+- The contracts know no specific node type, edge type, backend, or model names. Node `config`, `attributes`, and `backend_options` are `dict[str, Any]`.
+- Definition models (`Agent`, `Graph`, `NodeSpec`, `EdgeSpec`, `WorkspaceSettings`, and so on) preserve unknown fields; other models ignore them.
+- All times are Unix epoch seconds (`float`).
 
-## 의존성
+## Dependencies
 
-| 무엇을 | 왜 | 대안 |
+| What | Why | Alternatives |
 | --- | --- | --- |
-| `pydantic>=2.9` | 런타임 검증과 JSON Schema를 같은 모델에서 얻는다(계약 단일 소스) | msgspec(더 빠르지만 JSON Schema·FastAPI 통합이 약함), dataclasses + jsonschema 직접 작성 |
+| `pydantic>=2.9` | Gets runtime validation and JSON Schema from the same models (single source of contracts) | msgspec (faster, but weaker JSON Schema and FastAPI integration), dataclasses + hand-written jsonschema |
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                        # 워크스페이스 안에서
-uv pip install ./packages/py/base/ac-contracts     # 다른 프로젝트에서 단독으로
+uv sync --all-packages                        # inside the workspace
+uv pip install ./packages/py/base/ac-contracts     # standalone, from another project
 ```
 
-## 공개 API 요지
+## Public API in brief
 
-계약 버전 `CONTRACTS_VERSION` = 0.15.0(깨는 변경: 0.11~0.12에 deprecated로 둔 프로젝트 범위 API — 옮기기·삭제 계획 `MovePlan`·`DeletePlan` 등, `WorkspaceSettings.projects`, `LogSettings.projects`, `LogSessionSummary.project`, 범위 이슈 코드·제안 id — 를 지웠다. 더한 것: `MemoryChanged.space`, 오류·이슈 코드 `project.memory_unavailable`, `WikiInfo.wiki_kind`·`reserved_page_names`, 그래프 깊이 전체 `WIKI_GRAPH_DEPTH_ALL`·`WikiGraph.depth`, `WikiRuleEntry.severity` 좁힘. 하위 모듈 `common`·`logs`·`definitions` 2.0.0, `projects` 4.0.0, `memory`·`wiki` 1.3.0. 사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`). 저장 데이터 마이그레이션은 없다 — 옛 키는 모르는 키로 보존되어 읽기·서버 시작을 막지 않는다. 그 전 버전은 `CHANGELOG.md`).
-모델은 기능별 하위 모듈 `common`·`resources`·`logs`·`definitions`·`runs`·`usage`·`projects`·`chat`·`exports`·`imports`·`architecture`·`memory`·`sdd`·`wiki`·`modules`
-(`CONTRACT_SUBMODULES`, 버전 `CONTRACT_VERSIONS`)에 있고 루트가 전부를 다시 내보낸다. 기록은 `CHANGELOG.md`.
+Contract version `CONTRACTS_VERSION` = 0.16.0 (breaking: removed `WorkspaceSettings.default_backend`; use `agent_defaults.backend`. Added: the new submodule `i18n` 1.0.0 with the message catalog models `I18nInfo`, `LanguageInfo`, and `MessageCatalog`, `UiPreferences.language` (widget `language`), the error code `i18n.unknown_language` (404), the catalog loading issue codes `i18n.*`, per-kind reserved ids `CopyKindInfo.reserved_ids` and the screen role that opens an item `CopyKindInfo.open_role` (`projects` 4.1.0), and reserved document template ids `SddInfo.reserved_template_ids` (`sdd` 1.4.0). Submodules `common` 2.1.0, `definitions` 3.0.0. Internal dependency range `>=0.16,<0.17` (TS `^0.16.0`). Old `default_backend` keys are preserved as unknown keys and reported through `IGNORED_SETTINGS_KEYS`; no data migration is needed). 0.15.0 (breaking: removed the project scope APIs deprecated in 0.11 to 0.12, such as the move and delete plans `MovePlan` and `DeletePlan`, `WorkspaceSettings.projects`, `LogSettings.projects`, `LogSessionSummary.project`, and the scope issue codes and suggestion ids. Added: `MemoryChanged.space`, the error and issue code `project.memory_unavailable`, `WikiInfo.wiki_kind` and `reserved_page_names`, the full graph depth `WIKI_GRAPH_DEPTH_ALL` and `WikiGraph.depth`, and a narrowed `WikiRuleEntry.severity`. Submodules `common`, `logs`, and `definitions` 2.0.0, `projects` 4.0.0, `memory` and `wiki` 1.3.0. Internal dependency range `>=0.15,<0.16` (TS `^0.15.0`). There is no stored data migration; old keys are preserved as unknown keys and do not block reading or server start. Earlier versions are in `CHANGELOG.md`).
+The models live in the feature submodules `common`, `resources`, `logs`, `i18n`, `definitions`, `runs`, `usage`, `projects`, `chat`, `exports`, `imports`, `architecture`, `memory`, `sdd`, `wiki`, `modules`
+(`CONTRACT_SUBMODULES`, versions `CONTRACT_VERSIONS`), and the root re-exports all of them. The history is in `CHANGELOG.md`.
 
-| 묶음 | 모델 |
+| Group | Models |
 | --- | --- |
-| 정의 | `Agent`(`AgentSettings` + 식별 필드·`role`), `Graph`(+ `settings: GraphSettings`), `NodeSpec`, `EdgeSpec`, `PortDef`, `PortSpec`, `Endpoint`, `Position`, `Limits`, `WorkspaceSettings` |
-| 설정 층 | `AgentSettings`, `GraphSettings`, `ObserveSettings`, `ChatSettings`(+ `queue_after_restart`·`offer_resume`), `EditorSettings`, `DelegationSettings`(+ `max_nesting`, 기본 3), `FlowSettings`(`max_iterations`·`max_node_runs` 기본 200, `WorkspaceSettings.flow`·`GraphSettings.flow`), `InteractionSettings`, `UsageSettings`, `UsageSourceSetting`, `UiPreferences`(+ `notifications: NotificationSettings`), `SecretRuleSettings`(`WorkspaceSettings.secrets`), `ObserveSettings.collectors: {id: CollectorSetting}`·`hook_probe`, `EffectiveSettings`, `SettingsLayerInfo` |
-| 리소스 | `Resource`, `ResourceAttachment`, `ResourceContentRef`, `ResourceBundle`, `BundleSource`, `ResourceSummary`, `ResourceFile`(여러 파일 본문) |
-| 디스크립터 | `NodeTypeDescriptor`(+ `role`·`executable`·`binds`·`rerunnable`), `EdgeTypeDescriptor`(+ `scheduling`·`invocation`·`connects`·`interaction`·`default_ports`·`reply_fields: ReplyFields`·`cycle: CyclePolicy`·`handles_failure`), `BackendDescriptor`(`BackendCapabilities` + `subagents`·`resource_slots`·`interactions`·`host_tools`, `collectors: CollectorDescriptor[]`), `DelegationStrategyDescriptor`(+ `composable`), `ConditionOperatorDescriptor`, `ResourceTypeDescriptor`(`ResourceContentSpec.multi_file`), `InteractionKindDescriptor`, `UsageSourceDescriptor`, `ModelInfo`, `UiHints` |
-| 런타임 | `Run`(+ `conversation_id`·`resumed_from`·`parent_node_id`·`root_run_id`·`host_id`(0.12.1)), `NodeRun`(+ `call`·`invoked_by`), `RunSnapshot`(+ `children`), `WaitInfo`, `Usage`(+ `total_tokens`), `ErrorInfo`, `Issue`(+ `suggestions: IssueSuggestion[]`·`GraphPatch`(+ `unset_node_fields`, 0.12.2), `blocks_run`, `hint`·`group`(0.12.2)) |
-| 프로젝트(`projects`, 0.8.0 → 2.0.0 in 0.11.0 → 3.0.0 in 0.12.0 → 3.1.0 in 0.12.1 → 3.2.0 in 0.13.2 → 4.0.0 in 0.15.0) | 4.0: 옮기기·삭제 계획(`MovePlan`·`MovePlanRequest`·`DefinitionMove`·`DeletePlan`·`ProjectDeleteMode`)과 다시 내보내던 `ProjectPreferences`·`DefinitionScope` 삭제(옛 `project` 필드 정리는 복사 계획). 3.2(더하기만): 복사 대화상자 메타데이터 `CopyKindInfo{kind, library, portable}`·`CopyItem{kind, id, name, description, saved_at?}`. 3.1(더하기만): 기록 DB 상태 `ProjectView{config_dir?, records_state, records_writable, records_issue?}`(`KnownProjectRecordsStates`)·`ProjectRecordsUnavailableDetails`(`KnownRecordsUnavailableReasons`)·옛 기록 옮기기 `RecordsMoveRequest`·`RecordsMoveResult`, 폴더 확인 `FolderCheck{existing?: ExistingProjectProbe, suggested_id?, config_dir?}`(`KnownExistingProjectStates`), 설정 파일 다시 만들기 `ManifestResetRequest`·`ManifestResetResult`.  3.0: 프로젝트 = 로컬 폴더 + 폴더 안 구성 사본. 앱 등록부 `ProjectRegistration{id, folder, archived, archived_at, labels}`, 폴더 매니페스트 `ProjectManifest{format, id, name, description, settings, attributes}`(둘 다 모르는 키 보존), 합친 보기 `Project{folder(필수 키, 옛 `working_directory`를 읽어 옮김, 옛 파일은 null), name, description, settings, archived, archived_at, labels, attributes}`(옛 `log_projects`·`uses`·`import_mode`는 읽고 버림 — `IGNORED_PROJECT_KEYS`·`ignored_project_keys`), `ProjectCreate{folder 필수, id·name 선택}`·`ProjectUpdate{folder·archived …}`, 상태 `ProjectView{project, status, status_detail?, version_hash?, config_writable, manifest_id?, kinds, issues}`(`KnownProjectStatuses`), 공간 사이 복사 `CopyPlanRequest{source, target: SpaceRef, items, include_references}`·`CopyPlan`·`CopyApplyRequest`·`CopyApplyResult`(`KnownCopyActions`·`KnownCopyTargetStates`·`KnownCopyStatuses`), 폴더 `FolderCheckRequest{path, create, exclude_project_id?}`·`FolderCheck{… nearest_existing?, problem, status, conflict?}`·`FolderListing`·`FolderEntry`·`FolderRoot`, 폴더 선택 `FolderCapabilities`·`FolderPickRequest`·`FolderPickResult`(`KnownFolderPickStatuses`), 오류 details `ProjectNotImportedDetails{…, in_library}`·`ProjectFolderConflictDetails`·`ProjectFolderUnavailableDetails`·`ProjectOutsideFolderDetails`, 이전 기록 `AssignProjectRequest`·`AssignProjectResult`·`ProjectCounts`, 키 `DefinitionKey`. 정의 범위는 `Agent`·`Graph`·`Resource.project`(생략 = 공용, 지정하지 않으면 전체 직렬화에도 없음), 실행·대화 `project_id`(불투명 문자열) |
-| 구조도(`architecture`, 0.9.0) | 사용자 데이터(모르는 키 보존): 설정 섹션 `ArchitectureSettings{include_defaults, default_profile, profiles: {id: ArchitectureProfile \| null}}`, `ArchitectureProfile`(`canvas`·`zones: ArchitectureZone[]`·`cells: {id: ArchitectureCell}`·`edges: ArchitectureEdge[]`(`from` 별칭, `points`·`label_at`·`label_max_w`)·`coverage: {출처 종류: ArchitectureCoverage}`·`source_priority`·`error_when`·`group_limit`·`unassigned`·`options`), `ArchitectureDrill`, `ArchitectureUnavailable`. 투영 결과(그리기 완결형) `ArchitectureView`·`ArchitectureCellView`·`ArchitectureEdgeView`·`ArchitectureGroupView`·`ArchitectureMetric{status, value: null 가능, detail?}`(null은 0이 아님)·`ArchitectureSelector{arch, arch_group?, arch_sources?}`·`ArchitectureMembership`·`ArchitectureNote`. REST `ArchitectureProfileInfo`·`ArchitectureProfileList`·`ArchitectureProfileDetail`·`ArchitectureProfileCheckRequest`·`ArchitectureProfileCheckResult`·`ArchitectureProjectRequest`·`ArchitectureScopeTooLargeDetails`. 문서 상수 `KnownArchitectureMetrics`·`KnownArchitectureEdgeKinds`·`KnownArchitectureOrigins`·`KnownArchitectureTargets`·`KnownArchitectureNoteCodes`·`KnownArchitectureIssueCodes` |
-| 공유 메모리(`memory`, 0.10.0, 1.1.0 in 0.12.0) | 사용자 데이터(모르는 키 보존): 설정 섹션 `MemorySettings{include_default_scope_kinds, scope_kinds: {id: MemoryScopeKindSpec \| null}, secrets, max_versions_per_entry, retention: MemoryRetentionSettings{rules: MemoryRetentionRule[]}}`, 리소스 종류 `memory`의 config `MemoryAccessConfig{scopes: MemoryScopeAccess[], default_scope, result_header, max_result_chars, tools: MemoryTools}`(도구 기본 이름·설명은 패키지 데이터 `memory_access_defaults()`). 항목 `MemoryEntry`·`MemoryEntrySummary`·`MemoryEntryPage`, 버전 `MemoryVersion`·`MemoryVersionSummary`, 범위 `MemoryScopeRef`(`<kind>:<id>`)·`MemoryScopeSummary`·`MemoryScopeKindInfo`·`MemoryScopeKindList`, 쓴 주체 `MemoryAuthor`, 맥락 `MemoryAccessContext`, REST `MemoryWriteRequest`·`MemoryUpdateRequest`·`MemoryMoveRequest`·`MemoryRetentionPlanRequest`·`MemoryRetentionPlan`·`MemoryRetentionResult`·`MemoryImportResult`·`MemoryTagList`·`MemorySecretRejectedDetails`, 이벤트 `MemoryEventPayload`(본문·검색어 원문 없음)·`KNOWN_MEMORY_EVENT_TYPES`(runs 목록 밖), WS `MemoryChanged`. 1.1.0: 공간 사이 복사 `MemoryCopyRequest{source, target: SpaceRef, filter: MemoryCopyFilter, on_conflict, remap: MemoryScopeRemap[]}`·`MemoryCopyResult{copied, skipped, conflicts: MemoryCopyConflict[], issues}`, REST 질의 `project=` |
-| 스펙(`sdd`, 0.13.0 → 1.1.0 in 0.13.2) | 1.1(더하기만): `ImportFileListing.dirs: ImportDir[]`, `SpecTemplateCreateRequest`. 1.0: 사용자 데이터(모르는 키 보존): 문서 틀 `SpecTemplate`·스펙 `SpecDefinition`(`documents: SpecDocument[]`, `rules: SpecRules`), 규칙 `SpecRules{syntax?, document_states?, initial_document_state?, transitions?, task_statuses?, gates?, run_profiles?, verification?, automation?}`(생략 = 사용자 설정 → 기본 문법), 작업 문법 `SpecSyntax{task: TaskSyntax, requirement: RequirementSyntax, stage: StageSyntax}`, `TaskStatusSpec`·`DocumentStateSpec`·`StateTransition`(`from` 별칭)·`SpecGate{require: ConditionSpec}`·`RunProfile{graph, when?, input, purpose?, status_on}`·`VerificationConfig`·`AutomationConfig`, 설정 섹션 `SddSettings`. 보기 `SpecSummary`·`SpecView`(풀린 `task_statuses`·`document_states`, `automation_state?`)·`SpecIndex`·`ParsedTask`·`EffectiveSyntax`·`TaskPlan`·`TraceMatrix`·`VerificationResult`·`SddInfo{limits, capabilities, label_display}`·`SpecTemplateSummary`·`TemplateVariable`·`ImportFileListing`, REST 요청·결과(`SpecCreateRequest`·`TaskPatch`·`TaskAction*`·`BulkActions*`·`BulkStart*`·`SaveAsTemplate*`·`SpecDocumentContent` 등), 오류 상세 `SddGateBlockedDetails`·`SddTaskChangedDetails`·`SddDocumentMissingDetails`, WS `SddChanged`. 문서 상수 `KnownDocumentRoles`·`KnownTaskFieldRoles`·`KnownGateTargets`·`KnownTransitionActors`·`KnownTraceGaps`·`KnownTaskLinkKinds`·`KnownAutomationStopReasons`·`KnownSyntaxSources`·`KnownTaskActionStatuses`(→ `x-constants`). 실행 라벨 `Run.labels`·`CreateRunRequest.labels`(`RUN_LABEL_LIMITS`, `run_label_problems`), 페이지 `RunPage`·`ConversationPage{items, next_cursor, source: RecordSource}`, `ModuleInfo.description`·`label_display: LabelDisplay[]`(웹 경로 없음), `LogSourceInfo.default_effective`, `KnownUiWidgets`(`x-constants.KNOWN_UI_WIDGETS`)·`x_ui(item_title=)` |
-| 위키(`wiki`, 0.14.0 → 1.3.0 in 0.15.0) | 1.3: `WikiInfo.wiki_kind`·`reserved_page_names`, 그래프 `?depth=all`(`WIKI_GRAPH_DEPTH_ALL`)·`WikiGraph.depth`, `WikiRuleEntry.severity: IssueSeverity`. 사용자 데이터(모르는 키 보존): 위키 `WikiDefinition{home?, rules}`, 위키 규칙 `WikiRulesDefinition{instructions?, page_templates, write_rules: WikiWriteRule[], lint_rules: WikiLintRule[], syntax?}`, 문법 `WikiSyntax`(모든 키 None = 상속, `WikiLinkRule`·`WikiFrontMatter`·`WikiScheme`·`WikiLintDefaults`), 설정 섹션 `WikiSettings`, 리소스 `wiki` config `WikiAccessConfig`(도구 기본 이름·설명은 패키지 데이터 `wiki_access_defaults()`). 보기 `WikiInfo`·`WikiSummary`·`WikiView`·`WikiPageList`·`WikiPageView`·`WikiLink`(UTF-16 범위)·`WikiPageVersion`·`WikiAuthor`·`WikiChangePage`·`WikiSearchResult`·`WikiGraph`·`WikiLintReport`·`WikiIssue{page?, line?, rule_id?}`·`EffectiveWikiSyntax`, REST `WikiCreateRequest`·`WikiPageWrite`·`WikiMoveRequest`·`WikiMoveResult`·`WikiRestoreRequest`·`WikiScanResult`·`WikiImportResult`·`WikiRulesCheck*`·`WikiRuleRejectedDetails`, 이벤트 `WikiEventPayload`(본문 없음)·`KNOWN_WIKI_EVENT_TYPES`, WS `WikiChanged`. 문서 상수 `KnownWiki*`·`WIKI_*_SUBJECT_PATHS` |
-| 오류 해결·사전 점검(0.8.0) | `Fix{actions}`·`FixAction{label, target, focus?}`·`FixTarget{role, id?, section?}`(`ErrorInfo.fix`·`Issue.fix`), `BackendUnresolvedDetails{nodes, options}`(`ErrorCodes.BACKEND_UNRESOLVED`, 422) |
-| 스키마 확장 `x-ui`(0.8.0) | `x_ui(tier=, when=, example=, group=, group_title=, order=, unit=, enum_labels=, widget=)`(0.9.0 `widget`) → `Field(json_schema_extra=...)`, 키 `X_UI`·`XUiKeys`, `X_UI_TIERS`(basic·advanced) |
-| 조건(0.7.0) | `ConditionSpec{all?, any?, negate?}`·`ConditionItem{path, op, value?}`(사용자 데이터, 모르는 키 보존), 판정 근거 `ConditionOutcome{result, combinator?, negate?, items?}`·`ConditionItemOutcome`, `ConditionMode`(all·any) |
-| 상호작용 | `Interaction`(+ `node_label`·`root_run_id`), `InteractionStatus`, `InteractionGrant`, `RespondInteractionRequest`, `ReviewDecision`, `INTERACTION_CLOSED_STATUSES` |
-| 채팅 | `Conversation`, `ConversationSummary`(+ `held`), 이어 가기 상태 `ConversationSessions{continuable, items: SessionStatus[]}`(`KnownSessionStates`, 0.12.1), `PostMessageRequest.on_missing_session`(0.12.1), `QueuedMessage.held_reason`(`KnownQueueHoldReasons`, 0.12.1), `ChatTurn`(+ `resumed_from`), `ChatReply`, `SessionRef`, `CreateConversationRequest`, `UpdateConversationRequest`, `PostMessageRequest`, `QueuedMessage`(+ `held`) |
-| 관측 | `UsageWindowSnapshot`, `UsageReport`, `TokenRollupRow`, `UsageSourceInfo`, `Trace`, `TraceSpan`, `TraceLink`, `HandoffMatrix`, `HandoffCount` |
-| 로그(`logs`, 0.6.0) | 이벤트 `LogEvent`(`from` 별칭)·`LogDocumentRef`·`LogEventPage`·`LogEventDetail`·`LogEvidenceLink`, 출처·분류기 `LogSourceDescriptor`·`LogClassifierDescriptor`·`LogSourceInfo`·`LogSourceStatus`, 수집 `LogScanReport`·`LogSourceScanResult`, 세션 `LogSessionSummary`(`tokens: LogTokenTotals`·`project_id`·`thread_count`, 0.15.0에서 `project`·`LogProjectRef` 삭제)·`LogTimeline`(`lanes: LogLane[]`), 토큰 표본 `TokenSample`(`LogEventDetail.usage`), 집계 `LogAggregateRequest`·`LogAggregateRow`·`LogQuerySchema`(`LogDimensionInfo`·`LogMetricInfo`·`LogFilterFieldInfo`), 보관본 `LogArchive`(v1), 설정 `LogSettings`(`WorkspaceSettings.logs`: `LogSourceSetting`·`LogTaxonomy`·`LogCategory`·`LogDashboard`·`LogWidget`·`LogWidgetQuery`) |
-| 이벤트 | `RunEvent`(일반형, 머리 `actor`), `KnownRunEvent`/`AnyKnownRunEvent`(판별 유니온), 타입별 `*Event`·`*Payload`(`run.reply`, `run.waiting`, `node.resumed`, `usage.rate_limit`, `interaction.requested·answered·closed`, 0.7.0 `edge.skipped`·`loop.iteration`·`loop.exhausted`·`run.child_started`·`run.child_finished` 포함, 0.9.0 `agent.context_prepared`(리소스 id·종류·크기·해시만, 본문 없음)·`node.*` `tool_use_id`·`agent.message`·`agent.usage` `duration_ms`, `edge.traversed`·`edge.skipped`의 `condition`), `parse_run_event()`, `KNOWN_RUN_EVENT_TYPES` |
-| WS | `WsClientMessage`, `WsServerMessage`(run.event·conversation.updated·interaction.updated·logs.ingested·error), 토픽은 서버 모듈이 정한다(기본: `run:`·`conversation:`·`interactions`·`logs`) |
+| Definitions | `Agent` (`AgentSettings` + identity fields and `role`), `Graph` (+ `settings: GraphSettings`), `NodeSpec`, `EdgeSpec`, `PortDef`, `PortSpec`, `Endpoint`, `Position`, `Limits`, `WorkspaceSettings` |
+| Settings layers | `AgentSettings`, `GraphSettings`, `ObserveSettings`, `ChatSettings` (+ `queue_after_restart`, `offer_resume`), `EditorSettings`, `DelegationSettings` (+ `max_nesting`, default 3), `FlowSettings` (`max_iterations`, `max_node_runs` default 200, `WorkspaceSettings.flow`, `GraphSettings.flow`), `InteractionSettings`, `UsageSettings`, `UsageSourceSetting`, `UiPreferences` (+ `notifications: NotificationSettings`), `SecretRuleSettings` (`WorkspaceSettings.secrets`), `ObserveSettings.collectors: {id: CollectorSetting}` and `hook_probe`, `EffectiveSettings`, `SettingsLayerInfo` |
+| Resources | `Resource`, `ResourceAttachment`, `ResourceContentRef`, `ResourceBundle`, `BundleSource`, `ResourceSummary`, `ResourceFile` (multi-file bodies) |
+| Descriptors | `NodeTypeDescriptor` (+ `role`, `executable`, `binds`, `rerunnable`), `EdgeTypeDescriptor` (+ `scheduling`, `invocation`, `connects`, `interaction`, `default_ports`, `reply_fields: ReplyFields`, `cycle: CyclePolicy`, `handles_failure`), `BackendDescriptor` (`BackendCapabilities` + `subagents`, `resource_slots`, `interactions`, `host_tools`, `collectors: CollectorDescriptor[]`), `DelegationStrategyDescriptor` (+ `composable`), `ConditionOperatorDescriptor`, `ResourceTypeDescriptor` (`ResourceContentSpec.multi_file`), `InteractionKindDescriptor`, `UsageSourceDescriptor`, `ModelInfo`, `UiHints` |
+| Runtime | `Run` (+ `conversation_id`, `resumed_from`, `parent_node_id`, `root_run_id`, `host_id` (0.12.1)), `NodeRun` (+ `call`, `invoked_by`), `RunSnapshot` (+ `children`), `WaitInfo`, `Usage` (+ `total_tokens`), `ErrorInfo`, `Issue` (+ `suggestions: IssueSuggestion[]`, `GraphPatch` (+ `unset_node_fields`, 0.12.2), `blocks_run`, `hint` and `group` (0.12.2)) |
+| Projects (`projects`, 0.8.0 → 2.0.0 in 0.11.0 → 3.0.0 in 0.12.0 → 3.1.0 in 0.12.1 → 3.2.0 in 0.13.2 → 4.0.0 in 0.15.0 → 4.1.0 in 0.16.0) | 4.1 (additions only): `CopyKindInfo.reserved_ids` (from the kind data `DefinitionKind.reserved_ids`, case-insensitive) and `CopyKindInfo.open_role` (web route role of the screen that opens an item of that kind, from `DefinitionKind.open_role` or `KindContribution.open_role`; null = none). 4.0: removed the move and delete plans (`MovePlan`, `MovePlanRequest`, `DefinitionMove`, `DeletePlan`, `ProjectDeleteMode`) and the re-exported `ProjectPreferences` and `DefinitionScope` (cleaning up the old `project` field uses the copy plan). 3.2 (additions only): copy dialog metadata `CopyKindInfo{kind, library, portable}` and `CopyItem{kind, id, name, description, saved_at?}`. 3.1 (additions only): records database state `ProjectView{config_dir?, records_state, records_writable, records_issue?}` (`KnownProjectRecordsStates`), `ProjectRecordsUnavailableDetails` (`KnownRecordsUnavailableReasons`), moving old records `RecordsMoveRequest` and `RecordsMoveResult`, folder checks `FolderCheck{existing?: ExistingProjectProbe, suggested_id?, config_dir?}` (`KnownExistingProjectStates`), recreating the settings file `ManifestResetRequest` and `ManifestResetResult`. 3.0: project = a local folder + the configuration copies inside it. App registry `ProjectRegistration{id, folder, archived, archived_at, labels}`, folder manifest `ProjectManifest{format, id, name, description, settings, attributes}` (both preserve unknown keys), combined view `Project{folder (required key; reads and migrates the old `working_directory`; null in old files), name, description, settings, archived, archived_at, labels, attributes}` (the old `log_projects`, `uses`, and `import_mode` are read and dropped: `IGNORED_PROJECT_KEYS`, `ignored_project_keys`), `ProjectCreate{folder required, id and name optional}`, `ProjectUpdate{folder, archived …}`, status `ProjectView{project, status, status_detail?, version_hash?, config_writable, manifest_id?, kinds, issues}` (`KnownProjectStatuses`), copying between spaces `CopyPlanRequest{source, target: SpaceRef, items, include_references}`, `CopyPlan`, `CopyApplyRequest`, `CopyApplyResult` (`KnownCopyActions`, `KnownCopyTargetStates`, `KnownCopyStatuses`), folders `FolderCheckRequest{path, create, exclude_project_id?}`, `FolderCheck{… nearest_existing?, problem, status, conflict?}`, `FolderListing`, `FolderEntry`, `FolderRoot`, folder picking `FolderCapabilities`, `FolderPickRequest`, `FolderPickResult` (`KnownFolderPickStatuses`), error details `ProjectNotImportedDetails{…, in_library}`, `ProjectFolderConflictDetails`, `ProjectFolderUnavailableDetails`, `ProjectOutsideFolderDetails`, old records `AssignProjectRequest`, `AssignProjectResult`, `ProjectCounts`, key `DefinitionKey`. The definition scope is `Agent`, `Graph`, `Resource.project` (omitted = shared; when not set, absent even from full serialization), and run and conversation `project_id` (an opaque string) |
+| Architecture map (`architecture`, 0.9.0) | User data (unknown keys preserved): the settings section `ArchitectureSettings{include_defaults, default_profile, profiles: {id: ArchitectureProfile \| null}}`, `ArchitectureProfile` (`canvas`, `zones: ArchitectureZone[]`, `cells: {id: ArchitectureCell}`, `edges: ArchitectureEdge[]` (`from` alias, `points`, `label_at`, `label_max_w`), `coverage: {source kind: ArchitectureCoverage}`, `source_priority`, `error_when`, `group_limit`, `unassigned`, `options`), `ArchitectureDrill`, `ArchitectureUnavailable`. Projection results (self-contained for drawing) `ArchitectureView`, `ArchitectureCellView`, `ArchitectureEdgeView`, `ArchitectureGroupView`, `ArchitectureMetric{status, value: may be null, detail?}` (null is not 0), `ArchitectureSelector{arch, arch_group?, arch_sources?}`, `ArchitectureMembership`, `ArchitectureNote`. REST `ArchitectureProfileInfo`, `ArchitectureProfileList`, `ArchitectureProfileDetail`, `ArchitectureProfileCheckRequest`, `ArchitectureProfileCheckResult`, `ArchitectureProjectRequest`, `ArchitectureScopeTooLargeDetails`. Documentation constants `KnownArchitectureMetrics`, `KnownArchitectureEdgeKinds`, `KnownArchitectureOrigins`, `KnownArchitectureTargets`, `KnownArchitectureNoteCodes`, `KnownArchitectureIssueCodes` |
+| Shared memory (`memory`, 0.10.0, 1.1.0 in 0.12.0) | User data (unknown keys preserved): the settings section `MemorySettings{include_default_scope_kinds, scope_kinds: {id: MemoryScopeKindSpec \| null}, secrets, max_versions_per_entry, retention: MemoryRetentionSettings{rules: MemoryRetentionRule[]}}`, the config of the resource kind `memory` `MemoryAccessConfig{scopes: MemoryScopeAccess[], default_scope, result_header, max_result_chars, tools: MemoryTools}` (default tool names and descriptions are the package data `memory_access_defaults()`). Entries `MemoryEntry`, `MemoryEntrySummary`, `MemoryEntryPage`, versions `MemoryVersion`, `MemoryVersionSummary`, scopes `MemoryScopeRef` (`<kind>:<id>`), `MemoryScopeSummary`, `MemoryScopeKindInfo`, `MemoryScopeKindList`, author `MemoryAuthor`, context `MemoryAccessContext`, REST `MemoryWriteRequest`, `MemoryUpdateRequest`, `MemoryMoveRequest`, `MemoryRetentionPlanRequest`, `MemoryRetentionPlan`, `MemoryRetentionResult`, `MemoryImportResult`, `MemoryTagList`, `MemorySecretRejectedDetails`, events `MemoryEventPayload` (no body or raw query) and `KNOWN_MEMORY_EVENT_TYPES` (outside the runs list), WS `MemoryChanged`. 1.1.0: copying between spaces `MemoryCopyRequest{source, target: SpaceRef, filter: MemoryCopyFilter, on_conflict, remap: MemoryScopeRemap[]}`, `MemoryCopyResult{copied, skipped, conflicts: MemoryCopyConflict[], issues}`, the REST query `project=` |
+| Specs (`sdd`, 0.13.0 → 1.1.0 in 0.13.2 → 1.4.0 in 0.16.0) | 1.4 (additions only): `SddInfo.reserved_template_ids` (reserved document template ids, server path vocabulary). 1.1 (additions only): `ImportFileListing.dirs: ImportDir[]`, `SpecTemplateCreateRequest`. 1.0: user data (unknown keys preserved): document templates `SpecTemplate` and specs `SpecDefinition` (`documents: SpecDocument[]`, `rules: SpecRules`), rules `SpecRules{syntax?, document_states?, initial_document_state?, transitions?, task_statuses?, gates?, run_profiles?, verification?, automation?}` (omitted = user settings → the default syntax), task syntax `SpecSyntax{task: TaskSyntax, requirement: RequirementSyntax, stage: StageSyntax}`, `TaskStatusSpec`, `DocumentStateSpec`, `StateTransition` (`from` alias), `SpecGate{require: ConditionSpec}`, `RunProfile{graph, when?, input, purpose?, status_on}`, `VerificationConfig`, `AutomationConfig`, the settings section `SddSettings`. Views `SpecSummary`, `SpecView` (resolved `task_statuses` and `document_states`, `automation_state?`), `SpecIndex`, `ParsedTask`, `EffectiveSyntax`, `TaskPlan`, `TraceMatrix`, `VerificationResult`, `SddInfo{limits, capabilities, label_display}`, `SpecTemplateSummary`, `TemplateVariable`, `ImportFileListing`, REST requests and results (`SpecCreateRequest`, `TaskPatch`, `TaskAction*`, `BulkActions*`, `BulkStart*`, `SaveAsTemplate*`, `SpecDocumentContent`, and so on), error details `SddGateBlockedDetails`, `SddTaskChangedDetails`, `SddDocumentMissingDetails`, WS `SddChanged`. Documentation constants `KnownDocumentRoles`, `KnownTaskFieldRoles`, `KnownGateTargets`, `KnownTransitionActors`, `KnownTraceGaps`, `KnownTaskLinkKinds`, `KnownAutomationStopReasons`, `KnownSyntaxSources`, `KnownTaskActionStatuses` (→ `x-constants`). Run labels `Run.labels` and `CreateRunRequest.labels` (`RUN_LABEL_LIMITS`, `run_label_problems`), pages `RunPage` and `ConversationPage{items, next_cursor, source: RecordSource}`, `ModuleInfo.description` and `label_display: LabelDisplay[]` (no web paths), `LogSourceInfo.default_effective`, `KnownUiWidgets` (`x-constants.KNOWN_UI_WIDGETS`), `x_ui(item_title=)` |
+| Wiki (`wiki`, 0.14.0 → 1.3.0 in 0.15.0) | 1.3: `WikiInfo.wiki_kind` and `reserved_page_names`, graph `?depth=all` (`WIKI_GRAPH_DEPTH_ALL`) and `WikiGraph.depth`, `WikiRuleEntry.severity: IssueSeverity`. User data (unknown keys preserved): wikis `WikiDefinition{home?, rules}`, wiki rules `WikiRulesDefinition{instructions?, page_templates, write_rules: WikiWriteRule[], lint_rules: WikiLintRule[], syntax?}`, syntax `WikiSyntax` (every key None = inherit, `WikiLinkRule`, `WikiFrontMatter`, `WikiScheme`, `WikiLintDefaults`), the settings section `WikiSettings`, the config of the resource `wiki` `WikiAccessConfig` (default tool names and descriptions are the package data `wiki_access_defaults()`). Views `WikiInfo`, `WikiSummary`, `WikiView`, `WikiPageList`, `WikiPageView`, `WikiLink` (UTF-16 ranges), `WikiPageVersion`, `WikiAuthor`, `WikiChangePage`, `WikiSearchResult`, `WikiGraph`, `WikiLintReport`, `WikiIssue{page?, line?, rule_id?}`, `EffectiveWikiSyntax`, REST `WikiCreateRequest`, `WikiPageWrite`, `WikiMoveRequest`, `WikiMoveResult`, `WikiRestoreRequest`, `WikiScanResult`, `WikiImportResult`, `WikiRulesCheck*`, `WikiRuleRejectedDetails`, events `WikiEventPayload` (no body) and `KNOWN_WIKI_EVENT_TYPES`, WS `WikiChanged`. Documentation constants `KnownWiki*`, `WIKI_*_SUBJECT_PATHS` |
+| Message catalogs (`i18n`, 0.16.0) | `I18nInfo{languages, default_language, fallback_language}` (`GET /i18n`), `LanguageInfo{code, sources, complete, missing?}` (`missing` = missing or empty messages compared with the fallback language, null = not counted), `MessageCatalog{language, text, codes, ns}` (`GET /i18n/{lang}`; an unknown language is 404 `i18n.unknown_language`). The contract has no language list. Uses only `common` |
+| Error fixes and pre-checks (0.8.0) | `Fix{actions}`, `FixAction{label, target, focus?}`, `FixTarget{role, id?, section?}` (`ErrorInfo.fix`, `Issue.fix`), `BackendUnresolvedDetails{nodes, options}` (`ErrorCodes.BACKEND_UNRESOLVED`, 422) |
+| Schema extension `x-ui` (0.8.0) | `x_ui(tier=, when=, example=, group=, group_title=, order=, unit=, enum_labels=, widget=)` (`widget` in 0.9.0) → `Field(json_schema_extra=...)`, keys `X_UI`, `XUiKeys`, `X_UI_TIERS` (basic, advanced) |
+| Conditions (0.7.0) | `ConditionSpec{all?, any?, negate?}`, `ConditionItem{path, op, value?}` (user data, unknown keys preserved), evidence `ConditionOutcome{result, combinator?, negate?, items?}`, `ConditionItemOutcome`, `ConditionMode` (all, any) |
+| Interactions | `Interaction` (+ `node_label`, `root_run_id`), `InteractionStatus`, `InteractionGrant`, `RespondInteractionRequest`, `ReviewDecision`, `INTERACTION_CLOSED_STATUSES` |
+| Chat | `Conversation`, `ConversationSummary` (+ `held`), continuation status `ConversationSessions{continuable, items: SessionStatus[]}` (`KnownSessionStates`, 0.12.1), `PostMessageRequest.on_missing_session` (0.12.1), `QueuedMessage.held_reason` (`KnownQueueHoldReasons`, 0.12.1), `ChatTurn` (+ `resumed_from`), `ChatReply`, `SessionRef`, `CreateConversationRequest`, `UpdateConversationRequest`, `PostMessageRequest`, `QueuedMessage` (+ `held`) |
+| Observation | `UsageWindowSnapshot`, `UsageReport`, `TokenRollupRow`, `UsageSourceInfo`, `Trace`, `TraceSpan`, `TraceLink`, `HandoffMatrix`, `HandoffCount` |
+| Logs (`logs`, 0.6.0) | Events `LogEvent` (`from` alias), `LogDocumentRef`, `LogEventPage`, `LogEventDetail`, `LogEvidenceLink`; sources and classifiers `LogSourceDescriptor`, `LogClassifierDescriptor`, `LogSourceInfo`, `LogSourceStatus`; collection `LogScanReport`, `LogSourceScanResult`; sessions `LogSessionSummary` (`tokens: LogTokenTotals`, `project_id`, `thread_count`; `project` and `LogProjectRef` removed in 0.15.0), `LogTimeline` (`lanes: LogLane[]`); token samples `TokenSample` (`LogEventDetail.usage`); aggregation `LogAggregateRequest`, `LogAggregateRow`, `LogQuerySchema` (`LogDimensionInfo`, `LogMetricInfo`, `LogFilterFieldInfo`); archive `LogArchive` (v1); settings `LogSettings` (`WorkspaceSettings.logs`: `LogSourceSetting`, `LogTaxonomy`, `LogCategory`, `LogDashboard`, `LogWidget`, `LogWidgetQuery`) |
+| Events | `RunEvent` (generic form, header `actor`), `KnownRunEvent`/`AnyKnownRunEvent` (discriminated union), per-type `*Event` and `*Payload` (`run.reply`, `run.waiting`, `node.resumed`, `usage.rate_limit`, `interaction.requested·answered·closed`, including in 0.7.0 `edge.skipped`, `loop.iteration`, `loop.exhausted`, `run.child_started`, `run.child_finished`; in 0.9.0 `agent.context_prepared` (resource ids, kinds, sizes, and hashes only, no bodies), `tool_use_id` of `node.*`, `duration_ms` of `agent.message` and `agent.usage`, and the `condition` of `edge.traversed` and `edge.skipped`), `parse_run_event()`, `KNOWN_RUN_EVENT_TYPES` |
+| WS | `WsClientMessage`, `WsServerMessage` (run.event, conversation.updated, interaction.updated, logs.ingested, error); topics are decided by server modules (default: `run:`, `conversation:`, `interactions`, `logs`) |
 | REST | `ErrorResponse`, `BootstrapResponse`, `ResolvePortsRequest`, `CreateRunRequest`, `VersionedGraph`, `GraphSummary`, `DefinitionVersion`, `VersionConflictDetails`, `AppliedItemInfo`, `DefinitionReference`, `ServerInfo`, `PluginInfo`, `DuplicateGraphRequest`, `MergeStrategyInfo`, v3: `GraphSummary.validation: GraphValidationSummary`, `ServerInfo.warnings`, `BundlePreview`, `TeamPlanSummary`·`EntrySlot`·`AnswerSlot`, `DraftGraphRequest`·`DraftNodeRequest`, `ResumeOptions`·`ResumeNodeOption`·`ResumeRunRequest`, `DefinitionDiff`·`DiffChange`·`ContentChange`·`RestoreVersionRequest` |
-| 내보내기 | `ExporterDescriptor`, `ExportSelection`, `ExportRequest`, `ExportFile`, `ExportPlan`, `ExportRootInfo`, `ExportWriteRequest`, `ExportResult` |
-| 가져오기 | `ImportSourceDescriptor`, `ImportPreviewRequest`, `ImportPreview`, `ImportCandidate`, `ImportWarning`, `ImportRequest`, `ImportSelection`, `ImportResult` |
-| 상수 | `CONTRACTS_VERSION`, `LOG_EVENT_ORDERS`(asc·desc), `LOG_PROJECT_UNGROUPED`(`~ungrouped`), `ErrorCodes`(+ `conversation_busy`·`interaction_closed` = 409), `HTTP_STATUS_BY_ERROR_CODE`, `RUN_ORIGINS`(+ `chat`, `resume`) |
-| 문서 상수(Python 전용, 스키마·TS로 내보내지 않음) | `KnownResourceSlots`(알려진 실행 묶음 칸, + `RULES`), `KnownInteractionKinds`(기본 상호작용 종류 id), `KnownUsageTrust`, `KnownModuleStatus`, `KnownLogCategories`(기본 분류기 범주 id, 오류 판정용 아님), `KnownLogTones`(분류 체계 `tone`: 오류 표시는 `danger`만), `KnownLogDimensions`·`KnownLogMetrics`(기본 집계 차원·지표) |
-| 문서 상수(이름 → 값 표로 `x-constants`에도, 여전히 열린 문자열) | `KnownIssueCodes` → `KNOWN_ISSUE_CODES`(`limits.not_enforced`·`resource.slot_unsupported`·`secret.plain_found`·`logs.*`, 0.7.0 `flow.*`·`condition.*`·`team.*`·`delegation.depth_exceeded`, 0.8.0 `backend.unresolved`·`project.*`), `KnownSuggestionIds` → `KNOWN_SUGGESTION_IDS`(0.15.0부터 빈 표). TS는 `@agent-console/contracts/constants`로 받는다 |
-| 스키마 | `build_schema()`, `render_schema()`, `export_schemas(out_dir)`, `check_schemas(out_dir)`, `CONTRACT_MODELS` |
+| Export | `ExporterDescriptor`, `ExportSelection`, `ExportRequest`, `ExportFile`, `ExportPlan`, `ExportRootInfo`, `ExportWriteRequest`, `ExportResult` |
+| Import | `ImportSourceDescriptor`, `ImportPreviewRequest`, `ImportPreview`, `ImportCandidate`, `ImportWarning`, `ImportRequest`, `ImportSelection`, `ImportResult` |
+| Constants | `CONTRACTS_VERSION`, `LOG_EVENT_ORDERS` (asc, desc), `LOG_PROJECT_UNGROUPED` (`~ungrouped`), `ErrorCodes` (+ `conversation_busy` and `interaction_closed` = 409), `HTTP_STATUS_BY_ERROR_CODE`, `RUN_ORIGINS` (+ `chat`, `resume`) |
+| Documentation constants (Python only, not exported to the schema or TS) | `KnownResourceSlots` (known run bundle slots, + `RULES`), `KnownInteractionKinds` (default interaction kind ids), `KnownUsageTrust`, `KnownModuleStatus`, `KnownLogCategories` (default classifier category ids, not for error detection), `KnownLogTones` (taxonomy `tone`: only `danger` shows errors), `KnownLogDimensions`, `KnownLogMetrics` (default aggregation dimensions and metrics) |
+| Documentation constants (also in `x-constants` as name → value tables; still open strings) | `KnownIssueCodes` → `KNOWN_ISSUE_CODES` (`limits.not_enforced`, `resource.slot_unsupported`, `secret.plain_found`, `logs.*`; in 0.7.0 `flow.*`, `condition.*`, `team.*`, `delegation.depth_exceeded`; in 0.8.0 `backend.unresolved`, `project.*`), `KnownSuggestionIds` → `KNOWN_SUGGESTION_IDS` (an empty table since 0.15.0). TS receives them from `@agent-console/contracts/constants` |
+| Schema | `build_schema()`, `render_schema()`, `export_schemas(out_dir)`, `check_schemas(out_dir)`, `CONTRACT_MODELS` |
 
-### 설정 층: "생략 = 상속"
+### Settings layers: "omitted = inherit"
 
-`AgentSettings`와 그 하위 묶음의 필드는 모두 선택이다. 생략하면 위 층 값을 쓰고, 값이 있으면(null·빈 목록 포함)
-그 층에서 정한 것이다. 이 구분은 `model_fields_set`에 남으므로 **저장·전송은 `model_dump(exclude_unset=True)`**로 한다
-(기본 `model_dump()`는 생략한 필드를 null로 써서 "이 층에서 null로 지정"이 되어 버린다).
-필드별 병합 규칙 기본값은 스키마 주석 `x-merge`(예: `limits` = `replace`, `resources` = `keyed_attachments`),
-넓힘 경고 규칙은 `Limits` 필드의 `x-widen`이다. 해석은 `ac-settings`가 한다.
+All fields of `AgentSettings` and its sub-groups are optional. When omitted, the upper layer's value is used; when present (including null and empty lists),
+it is set at that layer. This distinction is kept in `model_fields_set`, so **store and send with `model_dump(exclude_unset=True)`**
+(the default `model_dump()` writes omitted fields as null, which turns into "set to null at this layer").
+The default merge rules per field are the schema annotation `x-merge` (for example `limits` = `replace`, `resources` = `keyed_attachments`),
+and the widening warning rules are `x-widen` on `Limits` fields. `ac-settings` interprets them.
 
-### 로그 설정: "생략 = 상속"
+### Log settings: "omitted = inherit"
 
-`WorkspaceSettings.logs`(`LogSettings`)와 `ObserveSettings.collectors`·`hook_probe`도 같은 규칙이다. 생략한 출처는
-디스크립터 `default_enabled`, 생략한 분류 체계는 기본 분류 체계를 따른다. 범주·위젯 종류·차원·지표·출처 id는
-열린 문자열이다(스키마에 enum 없음). 옛 프로젝트 묶기 `logs.projects`(고정 어휘 `LogUngroupedPolicy` 포함)는 0.15.0에서 지웠다.
+`WorkspaceSettings.logs` (`LogSettings`) and `ObserveSettings.collectors` and `hook_probe` follow the same rule. Omitted sources follow
+the descriptor's `default_enabled`, and an omitted taxonomy follows the default taxonomy. Category, widget kind, dimension, metric, and source ids are
+open strings (no enums in the schema). The old project grouping `logs.projects` (including the fixed vocabulary `LogUngroupedPolicy`) was removed in 0.15.0.
 
-### 이름 없는 계약
+### Contracts without names
 
-연결 종류·리소스 종류·상호작용 종류·위임 방식·사용량 출처·창 이름·가져오기 출처는 모두 문자열 id다.
-계약 스키마에 이 이름들이 고정 값(enum/const/default)으로 나오지 않음을 테스트한다. 고정 어휘는 엔진 의미
-(`EdgeScheduling` 4값, 상태 값, 첨부 방식 등)뿐이다. v3에서 더한 동작 모드(`ChatSettings.queue_after_restart`,
-`ExportFile.action`, `ExportWriteRequest.on_conflict`, `DiffChange.op`)도 종류 id가 아니라 고정 어휘다.
-답변 연결이 config의 어디에 답변 속성을 두는지(`EdgeTypeDescriptor.reply_fields`), 다시 실행 가능 여부(`rerunnable`),
-내보내기 형식(`ExporterDescriptor`)은 플러그인이 선언하며 계약에 키 이름·형식 이름 기본값이 없다.
+Edge types, resource kinds, interaction kinds, delegation strategies, usage sources, window names, and import sources are all string ids.
+Tests check that these names do not appear as fixed values (enum/const/default) in the contract schema. The only fixed vocabularies are engine semantics
+(the 4 values of `EdgeScheduling`, status values, attachment modes, and so on). The behavior modes added in v3 (`ChatSettings.queue_after_restart`,
+`ExportFile.action`, `ExportWriteRequest.on_conflict`, `DiffChange.op`) are also fixed vocabularies, not kind ids.
+Where reply edges keep reply attributes in their config (`EdgeTypeDescriptor.reply_fields`), whether a node can run again (`rerunnable`),
+and export formats (`ExporterDescriptor`) are declared by plugins, and the contracts have no default key names or format names for them.
 
-### 옛 데이터 읽기
+### Reading old data
 
-`DefinitionModel`은 모르는 필드를 지우지 않으므로 기존 `settings.yaml`에 남은 `console`·`default_entry` 같은 키는
-그대로 보존된다. 저장된 `route.decided` 이벤트는 일반형 `RunEvent`로 읽힌다.
-0.15.0에서 지운 키(`settings.yaml`의 `projects`·`logs.projects`, 프로젝트 파일의 `working_directory`·`log_projects`)도
-읽기가 실패하지 않는다: 공통 설정은 모르는 키로 보존해 되돌려 쓰고(`IGNORED_SETTINGS_KEYS`·`ignored_settings_keys`로
-안내), 프로젝트 등록부는 `working_directory`를 `folder`로 읽는다. 데이터 마이그레이션은 필요 없다.
-`WorkspaceSettings.default_backend`는 읽기 호환용이며 `agent_defaults.backend`를 쓴다. `Graph.limits`는 Phase 1 형식이며
-새 데이터는 `settings.limits`를 쓴다.
+`DefinitionModel` does not drop unknown fields, so keys left in an existing `settings.yaml` such as `console` and `default_entry`
+are preserved as is. Stored `route.decided` events are read as the generic `RunEvent`.
+Keys removed in 0.15.0 and 0.16.0 (`projects`, `logs.projects`, and `default_backend` in `settings.yaml`, `working_directory` and `log_projects` in project files) also
+do not make reading fail: common settings preserve them as unknown keys and write them back (reported through `IGNORED_SETTINGS_KEYS` and `ignored_settings_keys`),
+and the project registry reads `working_directory` as `folder`. No data migration is needed.
+`WorkspaceSettings.default_backend` was removed in 0.16.0 and its value is no longer used; put the same value in `agent_defaults.backend`. `Graph.limits` is the old format;
+new data uses `settings.limits`.
 
-### 비밀 의심 판정 규칙(옮김)
+### Secret suspicion rules (moved)
 
-v3부터 비밀 의심 판정은 계약 패키지가 아니라 `ac-secret-rules`(`agent_console_secret_rules`)에 있다.
-계약에는 사용자 규칙 설정 모델 `SecretRuleSettings`(`WorkspaceSettings.secrets`)만 남는다.
+Since v3, secret suspicion judgement lives in `ac-secret-rules` (`agent_console_secret_rules`), not in the contracts package.
+Only the user rule settings model `SecretRuleSettings` (`WorkspaceSettings.secrets`) remains in the contracts.
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import tempfile
@@ -101,7 +102,7 @@ v3부터 비밀 의심 판정은 계약 패키지가 아니라 `ac-secret-rules`
 >>> from agent_console_contracts import Graph, export_schemas, parse_run_event
 
 >>> graph = Graph.model_validate({"id": "g", "name": "예", "nodes": [{"id": "n1", "type": "my-type"}]})
->>> graph.nodes[0].type  # 노드 종류는 열린 문자열(레지스트리가 해석)
+>>> graph.nodes[0].type  # node types are open strings (the registry interprets them)
 'my-type'
 >>> event = parse_run_event(
 ...     {
@@ -124,25 +125,25 @@ v3부터 비밀 의심 판정은 계약 패키지가 아니라 `ac-secret-rules`
 ...     {"uid": "u1", "seq": 1, "source": "my-source", "observed_at": 0.0,
 ...      "category": "my-category", "from": ["main"], "to": ["helper"]}
 ... )
->>> log.from_, log.model_dump(exclude_unset=True)["from"]  # `from`은 별칭
+>>> log.from_, log.model_dump(exclude_unset=True)["from"]  # `from` is an alias
 (['main'], ['main'])
->>> WorkspaceSettings.model_validate({}).model_dump(exclude_unset=True)  # 생략 = 상속
+>>> WorkspaceSettings.model_validate({}).model_dump(exclude_unset=True)  # omitted = inherit
 {}
 >>> from agent_console_contracts import Agent, x_ui
->>> "project" in Agent.model_validate({"id": "a", "name": "A"}).model_dump()  # 생략 = 공용
+>>> "project" in Agent.model_validate({"id": "a", "name": "A"}).model_dump()  # omitted = shared
 False
 >>> x_ui(tier="advanced", unit="초")
 {'x-ui': {'tier': 'advanced', 'unit': '초'}}
 
 ```
 
-명령행: `python -m agent_console_contracts export <dir>` / `check <dir>`(다르면 exit 1).
+Command line: `python -m agent_console_contracts export <dir>` / `check <dir>` (exit 1 when different).
 
-## 사용자 문구 금지 패턴
+## Forbidden patterns in user-facing text
 
-설계 문서 인용·절 번호·요구사항 번호(`R숫자.숫자` 꼴)와 내부 노드 id(`'n1'` 꼴)는 사용자 문구에 넣지 않는다.
-규칙은 패키지 데이터 `data/user_text_rules.json` 한 곳이고, 생성 상수 `USER_TEXT_RULES`로 TS 테스트도 같은 값을
-읽는다. 범위(`scopes`)는 `description`(계약·디스크립터 설명)과 `messages`(서버·웹 사용자 문구)다.
+Design document citations, section numbers, requirement numbers (of the form `R<number>.<number>`), and internal node ids (of the form `'n1'`) must not appear in user-facing text.
+The rules live in one place, the package data `data/user_text_rules.json`, and TS tests read the same values through the generated constant `USER_TEXT_RULES`.
+The scopes (`scopes`) are `description` (contract and descriptor descriptions) and `messages` (server and web user-facing text).
 
 ```python
 >>> from agent_console_contracts.user_text import find_forbidden_text
@@ -153,27 +154,27 @@ False
 
 ```
 
-## 설정 폼 도움말 쓰기(플러그인 작성 가이드)
+## Writing settings form help (a guide for plugin authors)
 
-설정 폼은 코드가 아니라 스키마에서 그린다. 노드·연결 종류, 리소스 종류, 사용량 출처, 실행 백엔드 옵션,
-위임 방식의 `config_schema`도 계약 모델과 같은 규칙을 따르면 같은 모양(기본/고급, 설명, 예시, 단위)으로 나온다.
+Settings forms are drawn from schemas, not code. If the `config_schema` of node and edge types, resource kinds, usage sources, execution backend options,
+and delegation strategies follows the same rules as the contract models, it shows up in the same shape (basic/advanced, descriptions, examples, units).
 
-필드마다 넣을 것:
+What to put on each field:
 
-| 키 | 무엇 | 규칙 |
+| Key | What | Rule |
 | --- | --- | --- |
-| `title` | 라벨(2~12자) | 필수 |
-| `description` | 무엇을 하는지, 왜 바꾸는지 한 문장 | 필수, 100자 이하, 라벨과 같은 문장 금지. 내부 이름(디스크립터·레지스트리·`config_schema`·설계 문서 번호) 금지. 어려운 용어("위 층", SDK, hook, MCP 등)는 실제 이름으로 쓰거나 "hook(도구 실행 전후에 도는 명령)"처럼 풀이를 붙인다(풀이가 없으면 경고) |
-| `x-ui.tier` | `basic`(위쪽) · `advanced`(접힘) | 필수. 꼭 정해야 하거나 자주 바꾸는 것만 `basic` |
-| `x-ui.when` | 언제 바꾸는지 한 문장("~할 때 바꾸세요") | `basic` 필드는 필수(번들 = 오류, 외부 = 경고), 자주 만지는 고급 필드에 권장 |
-| `x-ui.example` | 예시 값(빈 칸을 누르면 채워짐) | 비워 둘 수 있는 문자열·숫자에 기본값이 없으면 필수. 목록에서 고르는 값이면 `None`으로 "예시 없음"을 명시 |
-| `x-ui.group`·`group_title` | 고급 영역 소제목 | 선택 |
-| `x-ui.unit` | 단위(초, 개, MB) | 선택 |
+| `title` | The label (2 to 12 characters) | Required |
+| `description` | One sentence on what it does and why you would change it | Required, at most 100 characters, not the same sentence as the label. No internal names (descriptor, registry, `config_schema`, design document numbers). Difficult terms (references to upper layers, SDK, hook, MCP, and so on) are written as their real names or with an explanation, such as "hook (a command that runs before and after tool runs)" (a warning without an explanation) |
+| `x-ui.tier` | `basic` (on top) · `advanced` (collapsed) | Required. Only what must be set or is changed often is `basic` |
+| `x-ui.when` | One sentence on when to change it ("Change this when …") | Required for `basic` fields (bundled = error, external = warning), recommended for frequently touched advanced fields |
+| `x-ui.example` | An example value (filled in when the empty field is clicked) | Required for strings and numbers that can be empty and have no default. For values chosen from a list, state "no example" with `None` |
+| `x-ui.group`, `group_title` | Subheading in the advanced area | Optional |
+| `x-ui.unit` | Unit (seconds, items, MB) | Optional |
 
-Pydantic 모델이면 `x_ui()`를 `json_schema_extra`에 넣고, 손으로 쓴 스키마면 `**x_ui(...)`로 펼친다.
-`agent_console_contracts.schema_help.lint_schema_help`로 자기 스키마를 검사할 수 있다(규칙 데이터
-`data/schema_help_rules.json`). 저장소의 `uv run poe schema-help-lint`는 계약·번들 플러그인 위반을 오류로,
-외부 플러그인 위반을 경고로 보인다.
+For Pydantic models, put `x_ui()` into `json_schema_extra`; for hand-written schemas, spread it with `**x_ui(...)`.
+You can check your own schema with `agent_console_contracts.schema_help.lint_schema_help` (rule data
+`data/schema_help_rules.json`). The repository's `uv run poe schema-help-lint` shows violations in contracts and bundled plugins as errors and
+violations in external plugins as warnings.
 
 ```python
 >>> from pydantic import BaseModel, Field
@@ -202,23 +203,23 @@ Pydantic 모델이면 `x_ui()`를 `json_schema_extra`에 넣고, 손으로 쓴 �
 
 ```
 
-## 계약 생성 파이프라인
+## Contract generation pipeline
 
-`uv run poe contracts`: 이 패키지 → `packages/ts/lib/contracts/schema/agent-console.schema.json` → `packages/ts/lib/contracts/src/generated/contracts.generated.ts`.
-`uv run poe contracts-check`: 두 생성물이 지금 코드로 다시 만든 결과와 같은지 검사(다르면 exit 1). 생성물은 커밋한다.
+`uv run poe contracts`: this package → `packages/ts/lib/contracts/schema/agent-console.schema.json` → `packages/ts/lib/contracts/src/generated/contracts.generated.ts`.
+`uv run poe contracts-check`: checks that both generated files equal the result of regenerating them from the current code (exit 1 when different). The generated files are committed.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-contracts`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-contracts`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/base/ac-contracts/tests

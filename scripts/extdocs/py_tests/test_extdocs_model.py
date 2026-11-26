@@ -70,7 +70,8 @@ def test_data_files_load() -> None:
     data = load_data()
     assert data.areas
     assert data.readme_sections
-    assert len(data.lint_rules) == 7
+    assert len(data.lint_rules) == 8
+    assert "korean-prose" in {r.id for r in data.lint_rules}
     assert "_default" in data.registration_templates
 
 

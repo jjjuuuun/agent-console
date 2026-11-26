@@ -137,7 +137,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.15.0"
+    "@agent-console/contracts": "^0.16.0"
   },
   "devDependencies": {
     "@agent-console/eslint-config": "^0.1.0",

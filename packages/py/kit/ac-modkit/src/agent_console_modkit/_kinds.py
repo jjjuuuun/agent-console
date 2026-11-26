@@ -14,10 +14,10 @@ from typing import Any
 from ._ports import PortKey
 
 type KindReferences = Callable[[Mapping[str, Any]], Iterable[tuple[str, str]]]
-"""기여 종류 문서 하나가 쓰는 정의의 ``(종류, id)``(복사 계획의 참조 닫힘)."""
+"""The ``(kind, id)`` a contributed-kind document uses (reference closure of the copy plan)."""
 
 type KindDelete = Callable[[str | None, str, str | None], None]
-"""기여 종류 항목 하나 지우기 ``(공간, id, 기대 버전)``.
+"""Delete one item of a contributed kind ``(space, id, expected version)``.
 
 공간은 프로젝트 등록 id(None = 라이브러리·단독 공간), 기대 버전은 ``If-Match``(None = 확인 안 함).
 기대 버전은 그 공간 정의 저장소의 버전 해시(종류 공통 목록 ``CopyItem.version``과 같은 값)다.
@@ -27,7 +27,7 @@ type KindDelete = Callable[[str | None, str, str | None], None]
 
 @dataclass(frozen=True)
 class KindContribution[K]:
-    """정의 종류 하나의 기여.
+    """The contribution for one definition kind.
 
     Attributes:
         kind: 종류 정의(정의 모듈 조립에서는 ``agent_console_store.DefinitionKind``). 라이브러리에
@@ -38,6 +38,9 @@ class KindContribution[K]:
             None이면 화면이 종류 이름을 그대로 보인다.
         delete: 그 종류 항목 하나를 지우는 콜백(종류 공통 삭제 경로가 부른다). None이면 종류 공통
             경로로는 지울 수 없다(``CopyKindInfo.deletable`` false) — 제공 모듈의 자기 경로만 쓴다.
+        open_role: 그 종류 항목을 여는 화면의 웹 라우트 역할(계약 ``FixTarget.role``과 같은 열린
+            문자열, 보통 제공 모듈의 ``web_roles`` 중 하나). 복사 대화상자 종류 목록
+            (``CopyKindInfo.open_role``)이 쓴다. None이면 종류 데이터의 값(있으면)을 쓴다.
 
     >>> c = KindContribution("note", references=lambda doc: [("agent", doc["agent"])])
     >>> list(c.references({"agent": "rev"})) if c.references else []
@@ -49,6 +52,7 @@ class KindContribution[K]:
     summary_fields: tuple[str, ...] = ()
     title: str | None = None
     delete: KindDelete | None = None
+    open_role: str | None = None
 
 
 DEFINITION_KIND_CONTRIBUTIONS: PortKey[KindContribution[Any]] = PortKey(

@@ -509,3 +509,18 @@ button.ac-ge-run-badge:focus-visible { outline: 2px solid var(--ac-focus-ring); 
 .ac-ge-hint-chip[data-lead="true"][data-dashed="true"] { border-style: dashed; background: var(--ac-surface-2); }
 .ac-ge-node[data-emphasis="dim"] { opacity: 0.45; }
 .ac-ge-node[data-emphasis="on"] { outline: 2px solid var(--ac-accent); outline-offset: 2px; }
+
+/* ---- 칩 접기: 자리가 모자라면 배치기가 칩을 아이콘·`+N`으로 접는다(줌 < 0.6의 아이콘 표시와 같은 규칙). 포인터를 올리거나 초점을 주면(data-expanded) 제자리에서 펼친다 ---- */
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"]) { font-size: 0; line-height: 18px; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; max-width: none; }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"]) > :is(.ac-ge-order, .ac-ge-edge-icon, .ac-ge-fold-more, .ac-ge-edge-rows) { font-size: var(--ac-text-xs); line-height: var(--ac-lh-xs); }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"]) > :is(.ac-ge-hint-chip, .ac-ge-run-badge, .ac-ge-count, .ac-ge-chip-text) { display: none; }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"]) > .ac-ge-edge-icon + .ac-ge-chip-text { display: none; }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"])[data-stacked="true"] { display: inline-flex; align-items: center; }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"])[data-stacked="true"] .ac-ge-edge-row1 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"])[data-stacked="true"] .ac-ge-edge-row2 > :not([data-lead="true"]) { display: none; }
+.ac-ge-edge-chip[data-folded="true"]:not([data-expanded="true"]) .ac-ge-hint-chip[data-lead="true"] .ac-ge-lead-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+.ac-ge-edge-chip[data-folded="true"] { overflow: visible; }
+.ac-ge-edge-chip[data-folded="true"]:focus-visible { outline: 2px solid var(--ac-focus-ring, var(--ac-accent)); outline-offset: 2px; }
+.ac-ge-edge-chip[data-folded="true"][data-expanded="true"] { z-index: 6; max-width: var(--ac-edge-chip-max-w, 280px); box-shadow: var(--ac-shadow-1); }
+.ac-ge-fold-more { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ac-ge-edge-chip[data-expanded="true"] .ac-ge-fold-more { display: none; }

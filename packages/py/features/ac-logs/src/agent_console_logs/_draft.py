@@ -36,7 +36,7 @@ AgentInfo = LogLane
 
 @dataclass(frozen=True, slots=True)
 class LogEventDraft:
-    """분류기가 원본 행 하나에서 만든 이벤트 초안. `LogEvent`에서 uid·seq·observed_at을 뺀 것.
+    """Event draft a classifier built from one raw record: `LogEvent` without uid, seq, observed_at.
 
     범주·단계·태그는 열린 문자열이다. 코어는 `TAG_TOOL`·`TAG_SESSION_TITLE`만 약속으로 읽는다.
 

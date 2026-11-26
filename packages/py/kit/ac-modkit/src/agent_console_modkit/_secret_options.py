@@ -41,7 +41,7 @@ SECRET_PROVIDERS_SETTINGS_KEY: Final = "secrets.providers"
 
 @runtime_checkable
 class ConfigurableSecretProvider(Protocol):
-    """설치자 설정으로 다시 만들 수 있는 비밀 값 공급자(설정 훅).
+    """Secret provider that can be rebuilt from server administrator settings (settings hook).
 
     ``get_secret``(X10 ``SecretProvider``)에 더해 두 classmethod를 둔다. 호스트는 등록된 공급자의
     클래스에서 이 이름을 찾는다(상속·import 불필요).
@@ -145,10 +145,12 @@ def _schema_of(cls: type[Any], name: str) -> dict[str, Any] | None:
     try:
         schema = hook()
     except Exception as exc:  # 스키마를 못 내도 공급자는 쓴다(보기에만 빠진다)
-        _log.warning("비밀 공급자 %s의 옵션 스키마를 읽지 못했습니다(%s)", name, type(exc).__name__)
+        _log.warning(
+            "Couldn't read the options schema of secret provider %s (%s)", name, type(exc).__name__
+        )
         return None
     if not isinstance(schema, Mapping):
-        _log.warning("비밀 공급자 %s의 옵션 스키마가 객체가 아닙니다", name)
+        _log.warning("The options schema of secret provider %s is not an object", name)
         return None
     return copy.deepcopy(dict(schema))
 
@@ -195,8 +197,13 @@ def configure_secret_providers(
                 f"{where}: 비밀 공급자 {entry.key}는 설정 훅({SECRET_PROVIDER_OPTIONS_HOOK})이 "
                 "없어 설정을 무시합니다"
             )
-            setup.warnings.append(message)
-            _log.warning("%s", message)
+            setup.warnings.append(message)  # 웹(server-info) 문구는 한국어 원문, 터미널은 영어
+            _log.warning(
+                "%s: secret provider %s has no settings hook (%s); its settings are ignored",
+                where,
+                entry.key,
+                SECRET_PROVIDER_OPTIONS_HOOK,
+            )
             given = False
         if given and callable(hook):
             try:
@@ -205,7 +212,7 @@ def configure_secret_providers(
                 raise SecretProviderOptionsError(f"{where}: {exc}") from None
             if not callable(getattr(made, "get_secret", None)):
                 raise SecretProviderOptionsError(
-                    f"{where}: 설정 훅이 비밀 공급자(get_secret)를 돌려주지 않았습니다"
+                    f"{where}: the settings hook did not return a secret provider (get_secret)"
                 )
             assert registry is not None  # entries가 있으면 레지스트리가 있다
             registry.register(
@@ -223,7 +230,12 @@ def configure_secret_providers(
                 "(미설치·꺼짐, 무시함)"
             )
             setup.warnings.append(message)
-            _log.warning("%s", message)
+            _log.warning(
+                "%s: '%s' is not a registered secret provider (not installed or turned off; "
+                "ignored)",
+                SECRET_PROVIDERS_SETTINGS_KEY,
+                key,
+            )
     return setup
 
 

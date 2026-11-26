@@ -1,34 +1,34 @@
 # agent-console-mod-imports
 
-Agent Console 가져오기 기능 모듈. 가져오기 라이브러리 `agent-console-imports`를 서버에 꽂는다.
-프로젝트 폴더의 설정(`.claude/`·`CLAUDE.md`·`.mcp.json`)에서 정의를 **복사해** 가져온다. 원본은 읽기만 한다.
-사용자 전역 구성(`~/.claude/agents`·`~/.claude/settings.json` 등)은 읽지 않는다(
-앱은 등록된 프로젝트 폴더와 자기 workspace 밖을 연동하지 않는다).
+Agent Console imports feature module. It plugs the import library `agent-console-imports` into the server.
+It imports definitions by **copying** them from the settings of a project folder (`.claude/`, `CLAUDE.md`, `.mcp.json`). The originals are only read.
+It does not read the user's global configuration (`~/.claude/agents`, `~/.claude/settings.json`, and so on); the app does not
+reach outside registered project folders and its own workspace.
 
-- 경로: `GET /resources/import/sources`, `POST /resources/import/preview`(쓰기 없음), `POST /resources/import`.
-- 필수 포트: `definitions.store`(가져온 정의를 쓸 저장소). 선택 포트: `secrets.rules`(없으면 기본 의심 규칙),
-  `projects.folders`·`definitions.spaces`(아래).
-- 프로젝트 조립: `projects.folders`가 있으면 출처 = 질의 `?project=<등록 id>` 폴더의
-  `.claude/`·`CLAUDE.md`·`.mcp.json`이고 `project_dir`는 쓰지 않는다. 저장 위치 = 질의 `target`
-  (`project` 기본 → 그 프로젝트 공간 `definitions.spaces`, `library` → 공용 `definitions.store`).
-  `project`가 없으면 폴더가 필요 없는 출처만 있고 `target=project`는 422 `project.required`, 등록 안 된 id는
-  404 `project.not_found`. 포트가 없으면(모듈 단독) 아래 설정 그대로이고 `?project=`는 409 `feature_unavailable`.
-- 설정 `modules.options.mod-imports`(옛 최상위 `imports`는 `settings.removed_key` 오류로 새 위치를 안내.
-  옛 `home`(사용자 `~/.claude` 출처)은 없앴고 남아 있으면 `settings.removed_key` 오류로 이유를 안내한다):
-  `project_dir`(비우면 호스트 `paths.base_dir` — 설정 파일 폴더. 실행 모듈의 `working_directory`를
-  기본값으로 읽지 않는다. 작업 폴더의 `.claude/`를 가져오려면 이 값을 직접 준다), `options`(출처 공장 이름 → 옵션).
-- 웹 역할: `imports`.
+- Routes: `GET /resources/import/sources`, `POST /resources/import/preview` (no writes), and `POST /resources/import`.
+- Required port: `definitions.store` (the store the imported definitions are written to). Optional ports: `secrets.rules` (the default suspicion rules without it),
+  and `projects.folders` and `definitions.spaces` (below).
+- Project assembly: when `projects.folders` is present, the source is `.claude/`, `CLAUDE.md`, and `.mcp.json` of the folder of the query
+  `?project=<registration id>`, and `project_dir` is not used. The save location is the query `target`
+  (`project` by default → that project's space `definitions.spaces`; `library` → the shared library `definitions.store`).
+  Without `project`, only the sources that need no folder exist, `target=project` returns 422 `project.required`, and an unregistered id returns
+  404 `project.not_found`. Without the ports (the module alone), the settings below apply as they are and `?project=` returns 409 `feature_unavailable`.
+- Settings `modules.options.mod-imports` (the old top-level `imports` points to the new location with a `settings.removed_key` error.
+  The old `home` (the user `~/.claude` source) was removed, and when it remains, a `settings.removed_key` error explains why):
+  `project_dir` (empty = the host `paths.base_dir`, the settings file folder. The runs module's `working_directory` is not read
+  as the default; to import the `.claude/` of a project folder, set this value directly) and `options` (source factory name → options).
+- Web role: `imports`.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-imports
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-imports
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-imports
 ```
 
-## 최소 사용
+## Minimal usage
 
-정의 저장소가 없으면 모듈은 꺼진다(이유 보고). 제공 모듈과 함께 조립한다.
+Without a definition store, the module is off (with the reason reported). Assemble it with a providing module.
 
 ```python
 >>> from agent_console_modkit import assemble
@@ -41,21 +41,21 @@ pip install agent-console-mod-imports
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행(같은 modkit 호스트, 기본 127.0.0.1). `--with`를 주지 않으면 `testing.local_definitions_module`
-(워크스페이스 폴더의 파일 저장소)을 붙인다. 다른 제공자를 쓰려면 `--with <모듈 id>`.
+Standalone run (the same modkit host, 127.0.0.1 by default). Without `--with`, it attaches `testing.local_definitions_module`
+(a file store in the workspace folder). To use another provider, pass `--with <module id>`.
 
 ```bash
 python -m agent_console_mod_imports [--with ID] [--config PATH] [--port 0] [--check]

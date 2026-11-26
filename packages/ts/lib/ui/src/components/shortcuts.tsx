@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { defaultUiMessages, formatUiMessage, type UiMessages } from "../messages";
 import { matchKeyCombo, parseKeyCombo, type KeyPlatform } from "./keyCombo";
 
 /** 단축키 정의. 동작 id·키·핸들러는 모두 호출자가 데이터로 넘긴다(이 패키지는 동작 이름을 모른다). */
@@ -102,6 +103,8 @@ export interface ShortcutProviderProps {
   enabled?: boolean;
   /** 중복 키 경고를 받는다. 기본 console.warn(개발 중 확인용). `null`이면 경고하지 않는다. */
   onWarn?: ((message: string, conflict: EffectiveShortcut) => void) | null;
+  /** 기본 문구 덮어쓰기(`shortcutConflict`). `@agent-console/ui/locales/en` 등. */
+  messages?: Partial<UiMessages>;
   /** 이벤트를 받을 대상. 기본 window. */
   target?: Pick<Window, "addEventListener" | "removeEventListener">;
   children?: ReactNode;
@@ -121,7 +124,7 @@ function isEditableTarget(t: EventTarget | null): boolean {
 }
 
 /** 전역 단축키 처리기. 기본 표 + 화면이 `useShortcuts`로 등록한 정의를 합쳐 keydown 하나로 처리한다. */
-export function ShortcutProvider({ defaults, overrides, platform = "other", enabled = true, onWarn, target, children }: ShortcutProviderProps) {
+export function ShortcutProvider({ defaults, overrides, platform = "other", enabled = true, onWarn, messages, target, children }: ShortcutProviderProps) {
   const registered = useRef(new Map<string, readonly ShortcutDef[]>());
   const [version, setVersion] = useState(0);
   const defaultsRef = useRef(defaults);
@@ -163,9 +166,9 @@ export function ShortcutProvider({ defaults, overrides, platform = "other", enab
       const key = [e.id, e.conflict].sort().join("|");
       if (seen.has(key)) continue;
       seen.add(key);
-      warn(`단축키 중복: "${e.keys}" — ${e.id} / ${e.conflict}`, e);
+      warn(formatUiMessage(messages?.shortcutConflict ?? defaultUiMessages.shortcutConflict, { keys: e.keys, first: e.id, second: e.conflict }), e);
     }
-  }, [signature, collect, onWarn]);
+  }, [signature, collect, onWarn, messages?.shortcutConflict]);
 
   // keydown 처리
   const pending = useRef<{ first: string; fallback?: () => void; timer: ReturnType<typeof setTimeout> } | null>(null);
@@ -234,7 +237,7 @@ export function ShortcutProvider({ defaults, overrides, platform = "other", enab
 
 function useRegistry(): Registry {
   const r = useContext(ShortcutContext);
-  if (r === null) throw new Error("ShortcutProvider 안에서만 쓸 수 있습니다.");
+  if (r === null) throw new Error(defaultUiMessages.needsShortcutProvider);
   return r;
 }
 

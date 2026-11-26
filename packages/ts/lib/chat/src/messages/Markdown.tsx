@@ -1,10 +1,11 @@
 import { Children, isValidElement, useState, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ko from "../locales/ko.json";
 import { s } from "../shared/styles";
 
 export type MarkdownMessages = { copy: string; copied: string };
-export const defaultMarkdownMessages: MarkdownMessages = { copy: "복사", copied: "복사됨" };
+export const defaultMarkdownMessages: MarkdownMessages = ko.markdown;
 
 export interface MarkdownProps {
   text: string;

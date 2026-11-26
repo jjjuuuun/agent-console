@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import * as architecture from "@agent-console/contracts/architecture";
@@ -79,6 +82,9 @@ import type { RunPage } from "@agent-console/contracts/runs";
 import type { ConversationPage } from "@agent-console/contracts/chat";
 import type { LogSourceInfo } from "@agent-console/contracts/logs";
 import type { SddChangedMessage } from "@agent-console/contracts/modules";
+import * as i18n from "@agent-console/contracts/i18n";
+import type { I18nInfo, LanguageInfo, MessageCatalog } from "@agent-console/contracts/i18n";
+import type { UiPreferences } from "@agent-console/contracts/definitions";
 import * as wiki from "@agent-console/contracts/wiki";
 import type {
   WikiAccessConfig,
@@ -137,6 +143,13 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
         default: `./dist/src/generated/${name}.js`,
       });
     }
+  });
+
+  it("생성된 TS 타입 이름은 $defs 키(Python 모델 이름)와 같다(0.16.0: I18nInfo가 I18NInfo로 바뀌지 않음)", () => {
+    const generated = readFileSync(join(import.meta.dirname, "generated", "contracts.generated.ts"), "utf8");
+    const exported = new Set([...generated.matchAll(/^export (?:interface|type) ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]));
+    for (const name of Object.values(modulesOf).flat()) expect(exported.has(name), name).toBe(true);
+    expect(exported.has("I18NInfo")).toBe(false);
   });
 
   it("하위 경로는 그 하위 모듈의 이름·버전을 내보낸다", () => {
@@ -629,10 +642,11 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.9"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0", runs: "1.9.0" });
+    expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.3.0"));
+    expect(CONTRACT_VERSIONS).toMatchObject({ runs: "1.9.0" });
     expect(ver(CONTRACT_VERSIONS.memory)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
-    expect(sdd.CONTRACT_VERSION).toBe("1.3.0");
+    expect(ver(sdd.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.3.0"));
     expect(ver(memory.CONTRACT_VERSION)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(KNOWN_ISSUE_CODES.SDD_STATUS_PATTERN_IGNORED).toBe("sdd.status_pattern_ignored");
     expect(KNOWN_ISSUE_CODES.SDD_DOCUMENT_STATE_NOT_APPLIED).toBe("sdd.document_state_not_applied");
@@ -650,7 +664,7 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     // 정확한 지금 값은 0.15.0 테스트가 고정한다
     expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.14.10"));
     expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
-    expect(CONTRACT_VERSIONS).toMatchObject({ sdd: "1.3.0" });
+    expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.3.0"));
     expect(ver(CONTRACT_VERSIONS.projects)).toBeGreaterThanOrEqual(ver("3.7.0"));
     expect(ver(CONTRACT_VERSIONS.memory)).toBeGreaterThanOrEqual(ver("1.2.0"));
     expect(ver((CONTRACT_VERSIONS as Record<string, string>)["common"] ?? "0")).toBeGreaterThanOrEqual(ver("1.15.0"));
@@ -684,9 +698,9 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expect(old.plugin_options).toBeUndefined();
   });
   it("0.15.0(깨는 변경): 옛 프로젝트 범위 API 삭제, 메모리 공간·위키 정보·그래프 깊이 전체 더하기", () => {
-    expect(constants.CONTRACTS_VERSION).toBe("0.15.0");
-    expect(packageJson.version).toBe("0.15.0");
-    expect(CONTRACT_VERSIONS).toEqual({
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.15.0"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    const v0150: Record<string, string> = {
       common: "2.0.0",
       resources: "1.1.0",
       logs: "2.0.0",
@@ -702,7 +716,12 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
       sdd: "1.3.0",
       wiki: "1.3.0",
       modules: "1.7.0",
-    });
+    };
+    // 0.16.0에서 하위 모듈 i18n이 늘었다
+    expect(Object.keys(CONTRACT_VERSIONS)).toEqual(expect.arrayContaining(Object.keys(v0150)));
+    for (const [sub, version] of Object.entries(v0150)) {
+      expect(ver((CONTRACT_VERSIONS as Record<string, string>)[sub] ?? "0"), sub).toBeGreaterThanOrEqual(ver(version));
+    }
     const removed = [
       "MovePlan",
       "MovePlanRequest",
@@ -745,5 +764,63 @@ describe("계약 하위 경로(@agent-console/contracts/<하위 모듈>)", () =>
     expectTypeOf<WikiRuleEntry["severity"]>().toEqualTypeOf<"error" | "warning" | "info" | null | undefined>();
     const oldInfo: WikiInfo = { limits: { max_page_bytes: 1, max_pages: 1, graph_max_nodes: 1 } };
     expect(oldInfo.reserved_page_names).toBeUndefined();
+  });
+  it("0.15.1(P1.5, 0.16.0에 합침): 종류별 id 예약어 CopyKindInfo.reserved_ids, 문서 틀 id 예약어 SddInfo.reserved_template_ids", () => {
+    // 정확한 지금 값은 0.16.0 테스트가 고정한다
+    expect(ver(constants.CONTRACTS_VERSION)).toBeGreaterThanOrEqual(ver("0.15.1"));
+    expect(packageJson.version).toBe(constants.CONTRACTS_VERSION);
+    expect(ver(CONTRACT_VERSIONS.projects)).toBeGreaterThanOrEqual(ver("4.1.0"));
+    expect(ver(CONTRACT_VERSIONS.sdd)).toBeGreaterThanOrEqual(ver("1.4.0"));
+  });
+  it("0.16.0(P1.19): default_backend 삭제, 하위 모듈 i18n 1.0.0, UiPreferences.language, i18n.* 코드", () => {
+    expect(constants.CONTRACTS_VERSION).toBe("0.16.0");
+    expect(packageJson.version).toBe("0.16.0");
+    expect(CONTRACT_VERSIONS).toEqual({
+      common: "2.1.0",
+      resources: "1.1.0",
+      logs: "2.0.0",
+      i18n: "1.0.0",
+      definitions: "3.0.0",
+      runs: "1.9.0",
+      usage: "1.1.0",
+      projects: "4.1.0",
+      chat: "1.4.0",
+      exports: "1.0.0",
+      imports: "1.1.0",
+      architecture: "1.0.0",
+      memory: "1.3.0",
+      sdd: "1.4.0",
+      wiki: "1.3.0",
+      modules: "1.7.0",
+    });
+    // 지운 필드
+    const settingsProps = (contractsSchema.$defs["WorkspaceSettings"] as { properties: Record<string, unknown> }).properties;
+    expect(settingsProps).not.toHaveProperty("default_backend");
+    // i18n 하위 경로
+    expect(i18n.CONTRACT_MODULE).toBe("i18n");
+    expect(i18n.CONTRACT_VERSION).toBe("1.0.0");
+    expect(pkg.exports["./i18n"]).toBeDefined();
+    expect(modulesOf["i18n"]).toEqual(["I18nInfo", "LanguageInfo", "MessageCatalog"]);
+    const lang: LanguageInfo = { code: "en", sources: ["zz-pkg"], complete: false };
+    expectTypeOf<LanguageInfo["missing"]>().toEqualTypeOf<number | null | undefined>();
+    const info: I18nInfo = { languages: [lang], default_language: "en", fallback_language: "en" };
+    const catalog: MessageCatalog = { language: "en", text: {}, codes: {}, ns: { "zz-ns": { a: "b" } } };
+    expect(info.languages[0]?.missing).toBeUndefined();
+    expect(catalog.ns["zz-ns"]).toEqual({ a: "b" });
+    // UiPreferences.language
+    expectTypeOf<UiPreferences["language"]>().toEqualTypeOf<string | null | undefined>();
+    // 코드·위젯
+    expect(ERROR_CODES.I18N_UNKNOWN_LANGUAGE).toBe("i18n.unknown_language");
+    expect(HTTP_STATUS_BY_ERROR_CODE["i18n.unknown_language"]).toBe(404);
+    expect(KNOWN_ISSUE_CODES).toMatchObject({
+      I18N_CATALOG_UNREADABLE: "i18n.catalog_unreadable",
+      I18N_CATALOG_INVALID: "i18n.catalog_invalid",
+      I18N_CATALOG_UNKNOWN_SECTION: "i18n.catalog_unknown_section",
+      I18N_ENTRY_INVALID: "i18n.entry_invalid",
+      I18N_LANGUAGE_INVALID: "i18n.language_invalid",
+      I18N_LOCALES_MISSING: "i18n.locales_missing",
+      I18N_SOURCE_UNAVAILABLE: "i18n.source_unavailable",
+    });
+    expect(constants.KNOWN_UI_WIDGETS).toMatchObject({ LANGUAGE: "language" });
   });
 });

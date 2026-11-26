@@ -69,7 +69,7 @@ class EventBus:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 _close(result)
-                self._fail(topic, "실행 중인 이벤트 루프가 없어 비동기 구독자를 부르지 못했습니다")
+                self._fail(topic, "no running event loop; couldn't call the async subscriber")
                 continue
             task = loop.create_task(self._guard(topic, result))
             self._tasks.add(task)
@@ -101,7 +101,7 @@ class EventBus:
         try:
             result = handler(item)
         except Exception:
-            self._fail(topic, "구독자 실패", exc_info=True)
+            self._fail(topic, "subscriber failed", exc_info=True)
             return None
         return result if inspect.isawaitable(result) else None
 
@@ -111,11 +111,11 @@ class EventBus:
         except asyncio.CancelledError:
             raise
         except Exception:
-            self._fail(topic, "비동기 구독자 실패", exc_info=True)
+            self._fail(topic, "async subscriber failed", exc_info=True)
 
     def _fail(self, topic: Topic[Any], message: str, *, exc_info: bool = False) -> None:
         self.errors += 1
-        self._log.error("모듈 이벤트 %s: %s", topic.name, message, exc_info=exc_info)
+        self._log.error("Module event %s: %s", topic.name, message, exc_info=exc_info)
 
 
 def _close(awaitable: Awaitable[None]) -> None:

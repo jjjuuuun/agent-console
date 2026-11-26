@@ -1,54 +1,54 @@
 # agent-console-conditions
 
-선언형 조건(JSON Pointer + 연산자)을 판단 대상(JSON)에 적용해 **결과와 근거**를 내고, 저장 전 검사 이슈를
-만드는 작은 라이브러리. 조건 연산자는 확장 지점(entry point `agent_console.condition_operators`)으로
-들어오며, 기본 연산자 11개(`eq`·`ne`·`in`·`contains`·`matches`·`exists`·`gt`·`gte`·`lt`·`lte`·`any_item`)도 같은 길로
-등록된다. 서버·실행 엔진 없이 단독으로 쓴다.
+A small library that applies declarative conditions (JSON Pointer + operator) to a target (JSON), produces **a result and its evidence**, and creates pre-save validation
+issues. Condition operators come in through an extension point (entry point `agent_console.condition_operators`),
+and the 11 default operators (`eq`, `ne`, `in`, `contains`, `matches`, `exists`, `gt`, `gte`, `lt`, `lte`, `any_item`) are registered
+the same way. You use it on its own, without the server or the execution engine.
 
-- 조건 데이터 모양은 계약 `ConditionSpec{all?, any?, negate?}`·`ConditionItem{path, op, value?}`, 근거는
-  `ConditionOutcome`(화면이 그대로 그리는 모양), 연산자 디스크립터는
-  `ConditionOperatorDescriptor`다(모두 `agent-console-contracts`).
-- `all`은 모두 참, `any`는 하나라도 참, 둘 다 있으면 둘 다 만족. 둘 다 없거나 비면 참(저장 전 검사 warning).
-  `negate`면 최종 결과를 뒤집는다. 근거를 위해 모든 항목을 평가한다.
-- 형식이 맞지 않으면 거짓이다(예: 숫자 비교에 문자열). 경로에 값이 없으면 연산자는 `MISSING`을 받고
-  거짓(`reason = "missing"`), 모르는 연산자는 거짓(`unknown_operator`), 연산자 예외는 거짓(`error`).
-- `eq`·`ne`는 JSON 의미로 비교한다(숫자는 값으로 `1 == 1.0`, 참거짓은 숫자와 다름). 형식이 다르면 `eq`는
-  거짓, `ne`는 참이다(같지 않으므로). 단 경로에 값이 없으면 둘 다 거짓.
-- 근거의 실제 값(`actual`)은 주입한 `redact`로 가린 **뒤** `max_actual_chars`(기본 200)에서 자른다.
-- `matches`는 `agent-console-safe-regex`만 쓴다(입력 길이·시간 상한, 위험 패턴 거부). 저장 전 검사도 같은
-  규칙으로 위험한 패턴을 `condition.invalid_value`로 막는다.
-- 기본 연산자의 제목·설명·값 스키마는 데이터 파일 `src/agent_console_conditions/data/builtin_operators.json`
-  이다(코드는 비교 동작만).
+- The condition data shape is the contract `ConditionSpec{all?, any?, negate?}` and `ConditionItem{path, op, value?}`; the evidence is
+  `ConditionOutcome` (the shape the screen draws as is); the operator descriptor is
+  `ConditionOperatorDescriptor` (all in `agent-console-contracts`).
+- `all` means every item is true, `any` means at least one is true, and when both are present both must hold. If both are missing or empty the result is true (a pre-save warning).
+  `negate` flips the final result. Every item is evaluated so the evidence is complete.
+- A type mismatch is false (for example, a string in a numeric comparison). If the path has no value, the operator receives `MISSING` and
+  returns false (`reason = "missing"`); an unknown operator is false (`unknown_operator`); an operator exception is false (`error`).
+- `eq` and `ne` compare with JSON semantics (numbers by value so `1 == 1.0`, booleans differ from numbers). If the types differ, `eq` is
+  false and `ne` is true (they are not equal). If the path has no value, both are false.
+- The actual value in the evidence (`actual`) is masked with the injected `redact` **first** and then cut at `max_actual_chars` (default 200).
+- `matches` uses only `agent-console-safe-regex` (input length and time limits, rejection of dangerous patterns). Pre-save validation uses the same
+  rules to block dangerous patterns as `condition.invalid_value`.
+- The titles, descriptions, and value schemas of the default operators are the data file `src/agent_console_conditions/data/builtin_operators.json`
+  (the code only implements the comparisons).
 
-- 연산자를 쓰는 확장(예: 조건 연결 종류)은 선택 능력 `OperatorConsumer.use_operators(provider)`를 두면 앱이
-  자기 연산자 레지스트리(`lambda: operator_map(registry)`)를 넘겨준다. 그러면 설정으로 끈 연산자나 명시
-  플러그인이 더한 연산자가 평가·저장 전 검사·연산자 목록(`GET /condition-operators`)에 똑같이 반영된다.
-- 판정 근거를 만드는 확장은 선택 능력 `RedactorConsumer.use_redactor(redact)`를 두면 앱이 비밀 가림 함수
-  (`Redactor`, 예: 엔진 `SecretResolver.redact`)를 넘겨준다. 확장은 그것을 `evaluate_conditions(redact=)`로
-  넘겨 근거의 실제 값을 **자르기 전에** 가린다.
+- An extension that uses operators (for example, a condition edge type) can offer the optional capability `OperatorConsumer.use_operators(provider)`, and the app
+  passes in its own operator registry (`lambda: operator_map(registry)`). Operators turned off in settings and operators added by explicit
+  plugins are then reflected the same way in evaluation, pre-save validation, and the operator list (`GET /condition-operators`).
+- An extension that produces evidence can offer the optional capability `RedactorConsumer.use_redactor(redact)`, and the app passes in a secret-masking function
+  (`Redactor`, for example the engine's `SecretResolver.redact`). The extension passes it on to `evaluate_conditions(redact=)`
+  so actual values in the evidence are masked **before they are cut**.
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what / why / alternatives
 
-- **jsonschema·referencing**: 연산자 `value_schema`로 조건 값을 저장 전에 검사한다(외부 `$ref`는 가져오지
-  않는 빈 registry). 이미 `ac-graph`가 쓰는 라이브러리라 새 의존이 아니다. 대안: 값 형식 검사를 연산자마다
-  코드로 — 디스크립터(데이터)와 검사 규칙이 두 벌이 된다.
-- 사내: `agent-console-contracts`(모델), `agent-console-registry`(레지스트리·`LoadReport`),
+- **jsonschema, referencing**: validate condition values against the operator `value_schema` before saving (with an empty registry that does not fetch external
+  `$ref`). `ac-graph` already uses these libraries, so this is not a new dependency. Alternative: code a value check in each operator,
+  which would keep the descriptor (data) and the check rules in two places.
+- Internal: `agent-console-contracts` (models), `agent-console-registry` (registry, `LoadReport`),
   `agent-console-safe-regex`(`matches`).
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-conditions
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-conditions
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-conditions
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from agent_console_conditions import condition_issues, default_operators, evaluate_conditions
 >>> from agent_console_contracts import ConditionSpec
 
->>> operators, reports = default_operators()  # 설치된 entry point에서(기본 11개 포함)
+>>> operators, reports = default_operators()  # from installed entry points (including the 11 defaults)
 >>> spec = ConditionSpec.model_validate(
 ...     {"all": [{"path": "/output", "op": "contains", "value": "PASS"},
 ...              {"path": "/iteration", "op": "lt", "value": 3}]}
@@ -65,28 +65,28 @@ pip install agent-console-conditions
 
 ```
 
-근거가 필요 없고 같은 조건으로 대상을 많이 판정할 때는 미리 컴파일한 빠른 경로를 쓴다. 경로 해석·연산자 찾기·
-기대 값 묶기를 한 번만 하고 참·거짓만 낸다(`all`은 첫 거짓, `any`는 첫 참에서 멈춤). 결과는 같은 연산자로 부른
-`evaluate_conditions(...).result`와 같다(차등 테스트).
+When you do not need evidence and judge many targets with the same condition, use the precompiled fast path. It resolves paths, looks up operators,
+and binds expected values once, and returns only true or false (`all` stops at the first false, `any` at the first true). The result equals
+`evaluate_conditions(...).result` called with the same operators (differential test).
 
 ```python
 >>> from agent_console_conditions import compile_conditions, conditions_hold
 >>> holds = compile_conditions(spec, operators)
 >>> holds({"output": "all tests PASS", "iteration": 1}), holds({"output": "FAIL", "iteration": 1})
 (True, False)
->>> conditions_hold(spec, {"output": "PASS", "iteration": 5}, operators)  # 한 번만 쓸 때
+>>> conditions_hold(spec, {"output": "PASS", "iteration": 5}, operators)  # for a one-off check
 False
 
 ```
 
-연산자는 선택 능력 `CompilableOperator.compile_expected(expected)`로 기대 값을 묶은 판정 함수(`actual → bool`,
-`MISSING`도 받음)를 낼 수 있다. 기본 11개는 모두 가진다. 능력이 없거나 None을 돌려주거나 만들다 예외가 나면
-빠른 경로도 그 항목만 `evaluate(actual, expected)`로 판정한다(결과가 같아야 한다).
+An operator can produce a judge function with the expected value bound (`actual → bool`,
+which also accepts `MISSING`) through the optional capability `CompilableOperator.compile_expected(expected)`. All 11 defaults have it. If the capability is missing, returns None, or raises while building,
+the fast path judges only that item with `evaluate(actual, expected)` (the result must be the same).
 
-`necessary_items(spec, operators)`는 조건 묶음이 참이려면 반드시 참이어야 하는 "최상위 키 하나" 항목(`all`의
-항목, `any`가 하나뿐이면 그 항목)을 `(키, 항목 판정)`으로 낸다(`negate`면 없음). 항목 결과는 그 키 값에만
-달렸으므로, 같은 조건으로 많은 대상을 판정하는 쪽이 키 값별로 결과를 기억해 맞을 수 없는 조건을 미리 거를 수
-있다(`ac-architecture` `ProfileMatcher`).
+`necessary_items(spec, operators)` returns, as `(key, item judge)`, the items that must be true for the condition set to be true and that depend on "one top-level key" (items of `all`,
+or the single item when `any` has only one) (none when `negate` is set). An item's result depends only on that key's value,
+so a caller that judges many targets with the same condition can remember results per key value and filter out conditions that cannot match
+in advance (`ac-architecture` `ProfileMatcher`).
 
 ```python
 >>> from agent_console_conditions import necessary_items
@@ -95,15 +95,15 @@ False
 
 ```
 
-새 연산자는 `descriptor`(`ConditionOperatorDescriptor`)와 `evaluate(actual, expected) -> bool`을 가진 객체다.
-entry point 이름은 디스크립터 id와 같게 둔다.
+A new operator is an object with a `descriptor` (`ConditionOperatorDescriptor`) and `evaluate(actual, expected) -> bool`.
+Give the entry point the same name as the descriptor id.
 
 ```toml
 [project.entry-points."agent_console.condition_operators"]
 words_at_least = "my_pkg.ops:WordsAtLeast"
 ```
 
-entry point 없이 직접 등록할 수도 있다.
+You can also register one directly without an entry point.
 
 ```python
 >>> from agent_console_conditions import new_operator_registry, operator_map
@@ -115,15 +115,15 @@ entry point 없이 직접 등록할 수도 있다.
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

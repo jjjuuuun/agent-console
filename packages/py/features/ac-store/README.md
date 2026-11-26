@@ -1,31 +1,31 @@
 # agent-console-store
 
-저장소 인터페이스와 구현. 정의는 YAML 파일(진실의 원천), 버전 이력·Run·이벤트 기록은 SQLite, 테스트용 인메모리.
-`agent-console-contracts`에만 의존한다(런타임·서버를 모른다).
+Store interfaces and implementations. Definitions are YAML files (the source of truth); version history, Runs, and event records are SQLite; plus in-memory versions for tests.
+It depends only on `agent-console-contracts`, `agent-console-numbered-id`, and `agent-console-settings` (document comparison for version comparison); it knows neither the runtime nor the server.
 
-## 설치
+## Installation
 
-워크스페이스 안에서:
+Inside the workspace:
 
 ```bash
 uv sync --all-packages
 ```
 
-단독 설치(다른 프로젝트에서):
+Standalone install (from another project):
 
 ```bash
 uv pip install ./packages/py/features/ac-store
 ```
 
-## 의존성 (무엇을 / 왜 / 대안)
+## Dependencies: what / why / alternatives
 
-| 의존성 | 왜 | 대안 |
+| Dependency | Why | Alternatives |
 | --- | --- | --- |
-| `sqlalchemy>=2` (Core) | 이벤트·Run 기록을 SQLite에 쓰되 DB를 바꾸거나 테스트 구현으로 교체하기 쉽게 한다. ORM 없이 Core만 쓴다. | 표준 `sqlite3` 직접 사용(agent_bench 방식, 의존 적지만 스키마 이력·이식성이 약함) |
-| `alembic>=1.13` | 스키마 변경 이력과 롤백(되돌릴 수 있는 마이그레이션). 코드로 적용한다(`upgrade(engine)`). | `metadata.create_all`(이력·롤백 없음), 직접 만든 버전 테이블 |
-| `ruamel.yaml>=0.18` | 사용자가 손으로 고친 YAML의 주석·키 순서를 저장 후에도 보존(왕복). | PyYAML(주석 소실), JSON 파일(사람이 고치기 불편) |
+| `sqlalchemy>=2` (Core) | Writes event and Run records to SQLite while keeping it easy to switch databases or swap in a test implementation. Uses only Core, no ORM. | The standard `sqlite3` directly (the agent_bench approach; fewer dependencies but weak schema history and portability) |
+| `alembic>=1.13` | Schema change history and rollback (reversible migrations). Applied from code (`upgrade(engine)`). | `metadata.create_all` (no history or rollback), a hand-made version table |
+| `ruamel.yaml>=0.18` | Keeps comments and key order of hand-edited YAML after saving (round trip). | PyYAML (loses comments), JSON files (awkward for people to edit) |
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import tempfile
@@ -34,12 +34,12 @@ uv pip install ./packages/py/features/ac-store
 >>> from agent_console_store import FileDefinitionStore, VersionConflict, open_sqlite
 
 >>> tmp = tempfile.TemporaryDirectory()
->>> data = Path(tmp.name)  # 실제로는 설정의 데이터·workspace 경로
->>> db = open_sqlite(data / "console.sqlite3")  # 마이그레이션까지 적용
+>>> data = Path(tmp.name)  # in real use, the data and workspace paths from the settings
+>>> db = open_sqlite(data / "console.sqlite3")  # migrations are applied too
 >>> defs = FileDefinitionStore(data / "workspace", versions=db.versions)
 
 >>> created = defs.create("graph", {"id": "main", "name": "메인"})
->>> saved = defs.save(  # 저장은 If-Match(기대 버전)가 필요하다
+>>> saved = defs.save(  # saving needs If-Match (the expected version)
 ...     "graph", {"id": "main", "name": "새 이름"}, expected_version=created.version_hash
 ... )
 >>> try:
@@ -49,7 +49,7 @@ uv pip install ./packages/py/features/ac-store
 True
 >>> defs.get("graph", "main").document
 {'id': 'main', 'name': '새 이름'}
->>> defs.get_version("graph", "main", created.version_hash).content  # 과거 버전
+>>> defs.get_version("graph", "main", created.version_hash).content  # a past version
 {'id': 'main', 'name': '메인'}
 
 >>> db.runs.save(
@@ -75,46 +75,46 @@ True
 ...             "payload": {"text": "안녕"},
 ...         }
 ...     )
->>> [db.events.append(event(seq)) for seq in (1, 2, 2)]  # 같은 event_id 재적재는 무시(멱등)
+>>> [db.events.append(event(seq)) for seq in (1, 2, 2)]  # reloading the same event_id is ignored (idempotent)
 [True, True, False]
->>> [e.seq for e in db.events.list("r1", since_seq=1)]  # 재접속 증분
+>>> [e.seq for e in db.events.list("r1", since_seq=1)]  # increments after reconnecting
 [2]
 >>> db.close()
 >>> tmp.cleanup()
 
 ```
 
-테스트·임시 실행은 `InMemoryDefinitionStore()`와 `InMemoryStorage()`(같은 인터페이스·같은 규칙).
+For tests and temporary runs, use `InMemoryDefinitionStore()` and `InMemoryStorage()` (same interfaces, same rules).
 
-SQLite `routing_decisions` 표는 기존 DB 호환용이다. 쓰는 코드는 없고 마이그레이션이 동결이라 정의만 남겼으며,
-Run을 지울 때 남은 행만 함께 지운다.
+The SQLite `routing_decisions` table exists for compatibility with existing databases. No code writes to it and the migrations are frozen, so only the definition remains;
+leftover rows are deleted together when a Run is deleted.
 
-## 새 정의 종류 추가
+## Adding a new definition kind
 
-종류는 목록이 아니라 등록이다. `DefinitionKind` 하나를 만들어 넘기면 코드 수정 없이 저장·버전·If-Match가 동작한다.
+Kinds are registrations, not a list. Create one `DefinitionKind` and pass it in, and saving, versions, and If-Match work without code changes.
 
 ```python
 from agent_console_store import DEFAULT_KINDS, DefinitionKind, FileDefinitionStore
 
 note = DefinitionKind("note", directory="notes", model=NoteModel)
-defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.register_kind(note)
+defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # or defs.register_kind(note)
 ```
 
-버전 해시는 주입한다: `DefinitionKind(..., hash_fn=...)` 또는 `FileDefinitionStore(..., hash_fn=...)`.
-(1.12에서 ac-graph의 `graph_hash`를 그래프 종류에 주입한다.)
+Version hashes are injected: `DefinitionKind(..., hash_fn=...)` or `FileDefinitionStore(..., hash_fn=...)`.
+(The app injects ac-graph's `graph_hash` into the graph kind.)
 
-`DefinitionKind.portable`(기본 참)은 프로젝트 폴더 사본 공간(`ac-project-space`)에 둘 수 있는 종류인지다. 싱글턴 종류는
-값과 상관없이 옮길 수 없다(`is_portable`). 앱 등록부 같은 종류는 `portable=False`로 등록한다.
-`DefinitionKind.library`(기본 참)가 거짓인 종류는 라이브러리 공간(앱 workspace)에 두지 않고 프로젝트·단독 공간에만 둔다.
-저장소는 이 값을 보지 않으며, 라이브러리 저장소를 여는 쪽이 그 종류를 빼고 연다(그 종류 요청은 `NotFound`).
-`kind.with_summary_fields(*fields)`는 목록 요약 필드를 더한 사본이다.
-`DefinitionKind.reserved_ids`(기본 빈 값)는 그 종류 id로 쓰면 안 되는 말이다(대소문자 무시, 예: 같은 깊이의 고정 REST 경로
-`/<종류>/check`와 겹치는 id). 저장소는 이 값을 보지 않는다. 만들기·복사 계획처럼 id를 정하는 쪽이 읽어 피하거나 새 id를 제안한다.
-`DefinitionKind.title`(기본 None)은 종류 표시 이름이다(복사 대화상자·구성 표의 종류 열). 기본 종류는 값을 가진다. 저장소는 이 값을 보지 않는다.
+`DefinitionKind.portable` (default true) says whether the kind can live in a project folder copy space (`ac-project-space`). Singleton kinds
+cannot be moved regardless of the value (`is_portable`). Register kinds such as the app registry with `portable=False`.
+Kinds whose `DefinitionKind.library` (default true) is false are not kept in the library space (the app workspace), only in project and standalone spaces.
+The store does not look at this value; whoever opens the library store leaves that kind out (requests for that kind give `NotFound`).
+`kind.with_summary_fields(*fields)` is a copy with additional list summary fields.
+`DefinitionKind.reserved_ids` (default empty) are words that must not be used as ids of that kind (case-insensitive, for example ids that collide with the fixed REST path
+`/<kind>/check` at the same depth). The store does not look at this value. Whoever decides ids, such as create or copy plans, reads it to avoid them or suggest a new id.
+`DefinitionKind.title` (default None) is the kind's display name (the copy dialog, the kind column of configuration tables). The default kinds have values. The store does not look at this value.
 
-이름만 받고 id를 정해야 할 때는 `slug_id(name, fallback=)`·`unique_id(name, taken, fallback=)`를 쓴다(악센트 떼기, 허용 밖
-글자 묶음 → `-`, 소문자, 120자, 겹치면 `-2`·`-3`…, 대소문자 무시). 번호 붙이기 자체는 `agent-console-numbered-id`의
-`numbered_id(base, is_taken, *, max_length=, limit=)`이고 여기서 다시 내보낸다(`agent_console_store.numbered_id`).
+When you only have a name and need an id, use `slug_id(name, fallback=)` and `unique_id(name, taken, fallback=)` (strip accents, runs of disallowed
+characters → `-`, lowercase, 120 characters, `-2`, `-3`… on overlap, case-insensitive). Numbering itself is `numbered_id(base, is_taken, *, max_length=, limit=)` from
+`agent-console-numbered-id`, re-exported here (`agent_console_store.numbered_id`).
 
 ```python
 >>> from agent_console_store import slug_id, unique_id
@@ -125,37 +125,54 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 ```
 
-쓰기 전 검사는 `write_guard`로 주입한다(`FileDefinitionStore(..., write_guard=fn)`). `fn(kind, id, document, files)`가
-예외를 던지면 문서·본문·버전 기록 어느 것도 쓰지 않는다(`ac-project-space`의 비밀 검사가 이것을 쓴다).
-`load_yaml_text`·`dump_yaml`·`merge_into`·`wrap_value`·`to_plain`·`atomic_write_bytes`는 같은 YAML 형식(주석·키 순서 보존)으로
-다른 파일(예: 폴더 매니페스트)을 다룰 때 쓰는 공개 도구다.
+Pre-write checks are injected with `write_guard` (`FileDefinitionStore(..., write_guard=fn)`). If `fn(kind, id, document, files)`
+raises, none of the document, body, or version record is written (the secret check of `ac-project-space` uses this).
+`load_yaml_text`, `dump_yaml`, `merge_into`, `wrap_value`, `to_plain`, and `atomic_write_bytes` are public tools for handling
+other files (for example the folder manifest) in the same YAML format (comments and key order preserved).
 
-## 동작 규칙 요약
+## Comparing two versions (`diff_versions`)
 
-- 파일은 임시 파일 + `os.replace`로 원자적으로 쓴다. 기존 파일은 주석·키 순서를 보존하며 갱신하고, 모르는 필드도 보존한다.
-- 파일이 밖에서 바뀌어도 다음 조회 때 현재 해시를 계산해 스냅샷을 남긴다.
-- 단일 프로세스를 가정한다(프로세스 내부 RLock). 여러 프로세스가 같은 root에 동시에 쓰면 If-Match를 보장하지 않는다.
-- 인터페이스는 동기식이다. 호출이 짧은 로컬 쓰기라 asyncio 루프에서 직접 불러도 되고, 앱이 필요하면 스레드풀로 감싼다.
-- 오류는 `StoreError` 하위 예외이며 `.code`가 계약의 오류 코드(`not_found`, `already_exists`, `version_required`, `version_conflict`)와 같다.
-- 마이그레이션 계보: `legacy`(0001~0003, 동결, 버전 테이블 `alembic_version`)와 모듈 계보
-  (모듈 패키지의 `migrations/versions`, 버전 테이블 `alembic_version_<이름>`)는 서로 독립이다. `SqliteDatabase`
-  (`open(path)`·`engine`·`upgrade(branches)`·`downgrade_branch`·`revision(name)`)가 legacy를 먼저 올린 뒤
-  넘겨받은(켜진 모듈의) 계보만 올린다. 계보는 `name`·`versions` 속성만 있으면 된다(`MigrationBranchLike`).
-  `usage_observations`·`conversations`·`chat_queue`·`runs` 계열처럼 legacy가 만들었지만 모듈 계보가 소유하는 표는
-  `schema.MODULE_OWNED_TABLES`이다(마이그레이션 비교에서 제외).
-  **legacy는 다운그레이드하지 않는다**(동결). 되돌릴 때는 모듈 계보만 되돌린다(`downgrade_branch`).
-  이유: legacy를 0002 이하로 내리면 모듈 소유 테이블(`usage_observations` 등)은 사라지지만 모듈 버전 테이블
-  (`alembic_version_usage` 등)은 남아, 다음 시작 때 모듈 계보가 "이미 올라감"으로 보고 테이블을 다시 만들지 않는다.
-- 실행 기록 계보: `runs`·`node_runs`·`run_events`·`interactions`는 `ac-mod-runs`의 계보 `runs`가 소유한다(`MODULE_OWNED_TABLES`). 표 정의와 저장소 구현(`SqliteStorage`)은 이 패키지에 남아 있다. 계보 없이 이 패키지만 쓰는 경로와 기존 DB의 행이 같은 정의를 쓰기 때문이다. 계보가 더하는 열(`root_run_id`·`parent_node_id`·`call`·`invoked_by`·상호작용 `root_run_id`)은 DB에 **있을 때만** 읽고 쓴다(`schema.runs_lineage_active`). 없으면(계보 없이 단독 사용) 값은 `doc`에 남고 `list(root_run_id=)`는 `doc`을 훑는다. 이때 같은 노드의 호출 NodeRun(`call` > 0)은 구분되지 않는다. 열이 더해진 뒤의 표 모양은 `schema.runs_lineage_metadata`다.
-- 마이그레이션: `upgrade(engine)`, `downgrade(engine, "base")`, `current_revision(engine)`. 기존 마이그레이션 파일은 고치지 않고 새로 추가한다.
+Compares two versions of one definition (or a version → current) as the contract `DefinitionDiff`. The document is compared as a list of JSON Pointer changes
+(`agent_console_settings.diff_documents`), and body files only by the sha256 in the version snapshots. Which locations are secrets
+is passed by the caller as `secret_paths` (document → list of JSON Pointers), and those values become `mask` (default `SECRET_MASK` = `***`).
 
-## 프로젝트 기록 DB 열기 (`open_records_db`)
+```python
+>>> from agent_console_store import DefinitionKind, InMemoryDefinitionStore, diff_versions
+>>> notes = InMemoryDefinitionStore([DefinitionKind("note", "notes")])
+>>> v1 = notes.create("note", {"id": "n", "title": "a", "token": "t1"}).version_hash
+>>> _ = notes.save("note", {"id": "n", "title": "b", "token": "t2"}, expected_version=v1)
+>>> diff = diff_versions(notes, "note", "n", v1, secret_paths=lambda doc: ["/token"])
+>>> [(c.path, c.after, c.secret) for c in diff.changes]
+[('/title', 'b', False), ('/token', '***', True)]
 
-폴더 안 SQLite 파일 하나를 **앱 DB와 같은 계보 사슬**(legacy + 넘겨받은 모듈 계보)로 맞춘다. 서버·모듈 없이 쓴다.
-파일이 없으면 만들지 않고(`absent`, 보기 = 빈 목록) 처음 쓸 때 `writable_engine()`이 만든다. 뒤처졌으면 쓰기 잠금 안에서
-리비전을 다시 읽고 SQLite 온라인 백업을 남긴 뒤 계보별로 올린다(두 연결이 동시에 열어도 한쪽만 적용). 이 앱이 모르는
-리비전(더 새 앱)이면 `mode=ro`로만 열고(`newer`), 깨졌거나 올리다 실패하면 `unavailable`(`reason`, 백업 경로)이다.
-**자동으로 내리지 않는다.** 계보 이름 목록은 코드에 없다(호출자가 켜진 모듈의 `project` 범위 계보를 넘긴다).
+```
+
+## Behavior rules in brief
+
+- Files are written atomically with a temporary file + `os.replace`. Existing files are updated with comments and key order preserved, and unknown fields are preserved too.
+- Even if a file changes from outside, the current hash is computed on the next read and a snapshot is kept.
+- A single process is assumed (an in-process RLock). If several processes write to the same root at once, If-Match is not guaranteed.
+- The interface is synchronous. Calls are short local writes, so you can call them directly from an asyncio loop; the app wraps them in a thread pool if needed.
+- Errors are `StoreError` subclasses, and `.code` matches the contract error codes (`not_found`, `already_exists`, `version_required`, `version_conflict`).
+- Migration lineages: `legacy` (0001 to 0003, frozen, version table `alembic_version`) and module lineages
+  (`migrations/versions` of module packages, version tables `alembic_version_<name>`) are independent. `SqliteDatabase`
+  (`open(path)`, `engine`, `upgrade(branches)`, `downgrade_branch`, `revision(name)`) upgrades legacy first and then
+  only the lineages passed in (of enabled modules). A lineage only needs `name` and `versions` attributes (`MigrationBranchLike`).
+  Tables that legacy created but module lineages own, such as the `usage_observations`, `conversations`, `chat_queue`, and `runs` families, are
+  `schema.MODULE_OWNED_TABLES` (excluded from migration comparison).
+  **Legacy is never downgraded** (frozen). To roll back, roll back only module lineages (`downgrade_branch`).
+  Reason: downgrading legacy to 0002 or below removes module-owned tables (`usage_observations` and others), but module version tables
+  (`alembic_version_usage` and others) remain, so on the next start the module lineage sees "already upgraded" and does not recreate the tables.
+- Run history lineage: `runs`, `node_runs`, `run_events`, and `interactions` are owned by the lineage `runs` of `ac-mod-runs` (`MODULE_OWNED_TABLES`). The table definitions and the store implementation (`SqliteStorage`) remain in this package, because the path that uses only this package without the lineage and rows in existing databases share the same definitions. Columns the lineage adds (`root_run_id`, `parent_node_id`, `call`, `invoked_by`, interaction `root_run_id`) are read and written **only when they exist** in the database (`schema.runs_lineage_active`). Without them (standalone use without the lineage), the values stay in `doc` and `list(root_run_id=)` scans `doc`. In that case, call NodeRuns of the same node (`call` > 0) cannot be told apart. The table shape after the columns are added is `schema.runs_lineage_metadata`.
+- Migrations: `upgrade(engine)`, `downgrade(engine, "base")`, `current_revision(engine)`. Existing migration files are never edited; new ones are added.
+
+## Opening a project records database (`open_records_db`)
+
+Brings one SQLite file in a folder to **the same lineage chain as the app database** (legacy + the module lineages passed in). Used without the server or modules.
+If the file does not exist, it is not created (`absent`, viewing = empty lists); `writable_engine()` creates it on the first write. If it is behind, the revision is reread under the write lock,
+a SQLite online backup is kept, and each lineage is upgraded (even if two connections open it at once, only one applies). If the revision is unknown to this app
+(a newer app), it is opened only with `mode=ro` (`newer`); if it is broken or the upgrade fails, `unavailable` (`reason`, backup path).
+**It never downgrades automatically.** No list of lineage names is in the code (the caller passes the `project`-scoped lineages of enabled modules).
 
 ```python
 >>> import tempfile
@@ -163,27 +180,27 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 >>> from agent_console_store import open_records_db
 >>> folder = Path(tempfile.mkdtemp())
 >>> db = open_records_db(folder / "records.sqlite3", [], backup_dir=folder / "backups")
->>> db.state.state, db.read_engine() is None  # 보기만 해서는 파일을 만들지 않는다
+>>> db.state.state, db.read_engine() is None  # viewing alone does not create the file
 ('absent', True)
->>> _ = db.writable_engine()  # 처음 쓸 때 만들고 legacy를 올린다
+>>> _ = db.writable_engine()  # created on first write, and legacy is upgraded
 >>> db.state.state, db.revision()
 ('ready', '0003')
 >>> db.close()
 
 ```
 
-공개: `RecordsDb`(`state`·`read_engine()`·`writable_engine()`·`revision()`·`refresh()`·`close()`), `RecordsState`,
-`RecordsUnavailable`(`reason`·`backup_path`, 코드 `project.records_unavailable`), `RecordsAbsent`, 소비 모듈이 받는
-모양 `RecordsHandle`·`RecordsSpaces`(선택 능력 `BatchRecordsSpaces.batch()` — 여러 공간 순회 동안 열린 핸들 상한으로 밀어내지
-않음, 소비 쪽은 `RecordsStores.batch()`)와 포트 이름 `RECORDS_SPACES_PORT`(`records.spaces`), `is_network_fs`(네트워크 파일
-시스템이면 저널 `DELETE`), `can_write_path`. 쓰기 가능 여부·네트워크 판정은 인자로 주입한다. 백업 되돌리기는
-`backup_dir`의 `records-<UTC>-<계보>@<리비전>.sqlite3`를 파일로 복사하는 것뿐이다(앱이 지우거나 고치지 않는다).
+Public: `RecordsDb` (`state`, `read_engine()`, `writable_engine()`, `revision()`, `refresh()`, `close()`), `RecordsState`,
+`RecordsUnavailable` (`reason`, `backup_path`, code `project.records_unavailable`), `RecordsAbsent`, the shapes consuming modules receive,
+`RecordsHandle` and `RecordsSpaces` (optional capability `BatchRecordsSpaces.batch()`: does not evict by the open handle limit while iterating
+several spaces; consumers use `RecordsStores.batch()`), the port name `RECORDS_SPACES_PORT` (`records.spaces`), `is_network_fs` (journal `DELETE` on network file
+systems), and `can_write_path`. Writability and network detection are injected as arguments. Restoring a backup is only
+copying `records-<UTC>-<lineage>@<revision>.sqlite3` in `backup_dir` as a file (the app never deletes or edits them).
 
-## 열린 자원 캐시 (`OpenCache`)
+## Open resource cache (`OpenCache`)
 
-프로젝트 공간 풀(기록 DB·메모리 DB)이 같이 쓰는 이름 → 열린 값 캐시. 오래 안 쓴 순서·유휴(`idle`)·
-상한(`over`, 빼서 돌려주고 닫기는 호출자)·`drop`·`clear`, 그리고 `shutdown()`(모두 닫고 그 뒤
-`put`은 `CacheShut`) - 서버 종료 뒤 늦게 온 열기가 연결을 남기지 않게 한다.
+A name → open value cache shared by the project space pools (records database, memory database). Least recently used order, idle (`idle`),
+limit (`over`, which removes and returns entries; closing them is the caller's job), `drop`, `clear`, and `shutdown()` (closes everything, after which
+`put` raises `CacheShut`), so late opens after server shutdown do not leave connections behind.
 
 ```python
 >>> from agent_console_store import OpenCache
@@ -196,17 +213,17 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 ```
 
-## 앱 DB 기록 옮기기 (`RecordsMove`)
+## Moving app database records (`RecordsMove`)
 
-도메인을 모르는 표 단위 옮기기 도구다. 기본 표 + 딸린 표 + 묶음 id만 주면 두 엔진 사이에서
-복사(대상 한 트랜잭션, 같은 키는 건너뜀) → 확인(행 수·값) → 원본 삭제(원본 한 트랜잭션) 순서로 옮기고,
-실패하면 대상을 되돌린다(`run_moves`가 여러 작업을 한 흐름으로 묶는다). 모듈 docstring에 실행 가능한 예가 있다.
+A domain-agnostic, table-level move tool. Given a main table + dependent tables + a group id, it moves rows between two engines in the order
+copy (one transaction on the target, skipping existing keys) → verify (row counts and values) → delete from the source (one transaction on the source),
+and rolls back the target on failure (`run_moves` combines several jobs into one flow). The module docstring has a runnable example.
 
-## 기록 id로 공간 찾기 (`SpaceLocator`)
+## Finding the space of a record id (`SpaceLocator`)
 
-호스트 DB와 프로젝트 기록 DB에 나뉘어 저장되는 기록(대화·실행)을 id 하나로 찾는다. 기록 종류는 모르고 "그 자리에
-그 id가 있나"(`has`)만 받는다. 아는 공간 → 등록 공간 id(상한 `limit`) → 호스트(None) 순으로 보고, 하나에서 찾으면
-기억해 다음에는 그 자리만 다시 확인한다. 없음·모호의 해석(404·409)은 호출자 몫이다.
+Finds records stored across the host database and project records databases (conversations, runs) by one id. It does not know record kinds and takes only
+"is that id in that place" (`has`). It looks at known spaces → registered space ids (limit `limit`) → the host (None), and when found in one, it
+remembers it and next time rechecks only that place. Interpreting not-found and ambiguous results (404, 409) is the caller's job.
 
 ```python
 >>> from agent_console_store import SpaceLocator
@@ -217,12 +234,12 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 ```
 
-## 정의 저장소 공간 고르기 (`SpaceStores`, 포트 `definitions.spaces`)
+## Choosing the definition store space (`SpaceStores`, port `definitions.spaces`)
 
-정의를 다루는 모듈은 요청의 공간 이름(REST `?project=<이름>`)으로 저장소를 고른다. 이름이 없으면 기본(라이브러리),
-제공자(`DefinitionSpaces.open(space)`)가 없는데 이름이 오면 `SpacesUnavailable`(409 `feature_unavailable` —
-질의를 무시하고 라이브러리에 쓰지 않는다), 모르는 이름은 `UnknownSpace`(404 `project.not_found`). 이름의 뜻(프로젝트
-등록 id 등)은 제공자만 안다. `MappedSpaces`는 이름 → 저장소 표로 된 예제 구현이다.
+Modules that handle definitions choose the store by the request's space name (REST `?project=<name>`). Without a name, the default (library);
+when a name comes but there is no provider (`DefinitionSpaces.open(space)`), `SpacesUnavailable` (409 `feature_unavailable`, so the
+query is never ignored with a write to the library); an unknown name gives `UnknownSpace` (404 `project.not_found`). Only the provider knows what names mean (project
+registration ids and so on). `MappedSpaces` is an example implementation as a name → store table.
 
 ```python
 >>> from agent_console_store import InMemoryDefinitionStore, MappedSpaces, SpaceStores
@@ -233,39 +250,39 @@ defs = FileDefinitionStore("workspace", [*DEFAULT_KINDS, note])  # 또는 defs.r
 
 ```
 
-공간의 버전 기록을 그 폴더의 기록 DB에 두려면 `RecordsVersionRepository(lambda: handle)`(읽기 `read_engine()` — 파일이
-없으면 빈 결과, 쓰기 `writable_engine()`)을 저장소의 `versions`로 준다. 이 기록소는 `VersionWriteCheck.ensure_writable()`
-을 만족해, 쓰기 전 검사가 부르면 기록 DB를 쓸 수 없을 때(앞선 리비전 등 `RecordsUnavailable` 409) 정의 파일도 쓰지
-않는다. `StoreError.field_issues()`를 덮어쓴 예외(예: 평문 비밀 거부)는 `store_error_body`가 422 `details.issues`에
-필드 위치로 싣는다.
+To keep a space's version history in that folder's records database, pass `RecordsVersionRepository(lambda: handle)` (reads use `read_engine()`, giving empty results when there is
+no file; writes use `writable_engine()`) as the store's `versions`. This history store satisfies `VersionWriteCheck.ensure_writable()`,
+so when the pre-write check calls it and the records database cannot be written (`RecordsUnavailable` 409, for example a newer revision), the definition files are not written
+either. Exceptions that override `StoreError.field_issues()` (for example plain-text secret rejection) are put into 422 `details.issues`
+with field locations by `store_error_body`.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-store`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-store`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-store/tests
 ```
 
-## 생략 = 상속, 리소스 본문, 상호작용
+## Omitted = inherit, resource bodies, interactions
 
-- **생략 = 상속**: 정의는 사용자가 쓴 그대로 저장한다. 모델 인스턴스는 `exclude_unset`으로, dict는 원본 그대로
-  저장하고 모델은 검증에만 쓴다. 생략, `null`, `[]`가 저장 후에도 구분된다. null로 채워진 옛 파일은 자동으로
-  고치지 않는다.
-- **리소스 본문**: `RESOURCE_KIND`(기본 포함)는 `resources/<id>.yaml` 옆 `resources/<id>/<content.file>`에 본문을 둔다.
+- **Omitted = inherit**: definitions are stored exactly as the user wrote them. Model instances are stored with `exclude_unset`, dicts as is,
+  and models are used only for validation. Omitted, `null`, and `[]` stay distinct after saving. Old files filled with null are not
+  fixed automatically.
+- **Resource bodies**: `RESOURCE_KIND` (included by default) keeps the body in `resources/<id>/<content.file>` next to `resources/<id>.yaml`.
 
 ```python
 >>> from agent_console_store import InMemoryDefinitionStore
->>> defs = InMemoryDefinitionStore()  # 파일 저장소와 같은 규칙
+>>> defs = InMemoryDefinitionStore()  # the same rules as the file store
 >>> created = defs.create(
 ...     "resource",
 ...     {"id": "team-md", "type": "instruction", "name": "팀 지침", "content": {"file": "content.md"}},
@@ -275,39 +292,39 @@ uv run pytest packages/py/features/ac-store/tests
 ... )
 >>> defs.read_content("resource", "team-md").decode()
 '# 지침'
->>> saved.version_hash != created.version_hash  # 버전 해시에 본문이 들어간다
+>>> saved.version_hash != created.version_hash  # the body is part of the version hash
 True
 
 ```
 
-  `content.file`이 정의 폴더 밖(`..`, 절대 경로, 밖을 가리키는 링크)이면 `InvalidContentPath`.
-- **기록 저장소**: `db.interactions`(인메모리 `InMemoryStorage`도 같은 이름). 대화·채팅 대기열 저장소는 `agent_console_mod_chat.storage`가 소유한다.
-  `db.interactions.close(id, status="answered", ...)`는 동시에 불러도 하나만 성공하고 나머지는 `InteractionClosed`.
+  If `content.file` is outside the definition folder (`..`, absolute paths, links pointing outside), `InvalidContentPath`.
+- **Record stores**: `db.interactions` (the in-memory `InMemoryStorage` uses the same name). Conversation and chat queue stores are owned by `agent_console_mod_chat.storage`.
+  When `db.interactions.close(id, status="answered", ...)` is called concurrently, only one succeeds and the others get `InteractionClosed`.
   `db.events.list(run_id, actor=, type_prefix=)`, `latest_by_type`, `list_by_actor`, `db.runs.list(conversation_id=, agent=)`.
 
-## 본문 스냅샷, 여러 파일 본문, 이어 가기 (마이그레이션 0003)
+## Body snapshots, multi-file bodies, resuming (migration 0003)
 
-> 경계: 저장소는 리소스 *유형*(`ContentSpec.multi_file`)을 모른다. 유형이 여러 파일을 허용하는지는 호출하는 쪽(서버)이 파일을 쓰기 전에 검사한다. `prune_orphan_bodies`는 정의 YAML이 없는 id 형식 폴더를 통째로 지우므로, 앱에서 부를 때는 사용자 확인을 거친다.
+> Boundary: the store does not know resource *types* (`ContentSpec.multi_file`). Whether a type allows several files is checked by the caller (the server) before writing files. `prune_orphan_bodies` deletes whole id-shaped folders that have no definition YAML, so when the app calls it, it asks the user to confirm first.
 
 ```python
 db = open_sqlite("data/console.sqlite3")
 defs = FileDefinitionStore(
     "workspace",
     versions=db.versions,
-    max_content_bytes=10 * 1024 * 1024,  # 정의 하나의 본문 총량(None = 무제한)
+    max_content_bytes=10 * 1024 * 1024,  # total body size of one definition (None = unlimited)
     max_versions=50,
-)  # 정의마다 남길 버전(None = 모두)
+)  # versions to keep per definition (None = all)
 
-# 여러 파일 리소스(skill 등): 폴더의 모든 파일이 본문이다. If-Match는 정의의 version_hash 하나.
+# multi-file resources (skill and others): every file in the folder is the body. If-Match is the one version_hash of the definition.
 created = defs.create("resource", {"kind": "resource", "id": "sk", "type": "skill", "name": "s"})
 v1 = defs.write_files(
     "resource",
     "sk",
     {"SKILL.md": b"...", "scripts/run.py": b"..."},
     expected_version=created.version_hash,
-)  # 한 버전
+)  # one version
 defs.list_files("resource", "sk")  # ResourceFile[]
-defs.read_version_file("resource", "sk", created.version_hash, "SKILL.md")  # 과거 본문
+defs.read_version_file("resource", "sk", created.version_hash, "SKILL.md")  # a past body
 defs.restore_version(
     "resource", "sk", v1.version_hash, expected_version=defs.get("resource", "sk").version_hash
 )
@@ -317,6 +334,6 @@ defs.prune_orphan_bodies("resource")
 db.runs.list(resumed_from="run-1")
 ```
 
-- 저장마다 본문 파일이 내용 주소 blob으로 버전에 남는다(같은 내용은 한 번만 저장). 0003 이전 버전은 스냅샷이 없다.
-- 경로 규칙은 Windows 기준으로 엄격하다: `:` 등 금지 문자, 예약 이름(`CON`, `nul.txt`), 끝의 점·공백, 대소문자만 다른 이름, 파일/폴더 이름 충돌 거부. 링크는 workspace root 기준으로 검사한다.
-- 마이그레이션 0003을 되돌리면 `chat_queue`·`content_blobs`·`content_files`의 내용은 사라진다.
+- Each save keeps the body files in the version as content-addressed blobs (identical content is stored once). Versions before 0003 have no snapshots.
+- Path rules are strict, following Windows: forbidden characters such as `:`, reserved names (`CON`, `nul.txt`), trailing dots and spaces, names that differ only in case, and file/folder name collisions are rejected. Links are checked relative to the workspace root.
+- Rolling back migration 0003 removes the contents of `chat_queue`, `content_blobs`, and `content_files`.

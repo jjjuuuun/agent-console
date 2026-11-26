@@ -1,6 +1,6 @@
 {
   "name": "@agent-console/arch-view",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "관측 구조도 표현 컴포넌트(ArchitectureView를 칸·연결·영역으로 그림)",
   "private": true,
   "license": "MIT",
@@ -9,10 +9,10 @@
     "kind": "lib",
     "extensionPoints": {
       "architecture-cell-renderer": {
-        "title": "구조도 칸·연결 그리기",
+        "title": "Architecture map cell and edge rendering",
         "area": "web",
         "design_id": "X24",
-        "summary": "구조도 칸 안쪽과 연결선 모양을 키로 바꾼다",
+        "summary": "Replaces the inside of architecture map cells and the shape of edges by key",
         "registration": {
           "kind": "props",
           "export": "@agent-console/arch-view#ArchitectureDiagramProps"
@@ -53,7 +53,17 @@
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./locales/ko": {
+      "development": "./src/locales/ko.ts",
+      "types": "./dist/locales/ko.d.ts",
+      "default": "./dist/locales/ko.js"
+    },
+    "./locales/en": {
+      "development": "./src/locales/en.ts",
+      "types": "./dist/locales/en.d.ts",
+      "default": "./dist/locales/en.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -78,7 +88,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
-    "@agent-console/contracts": "^0.15.0",
+    "@agent-console/contracts": "^0.16.0",
     "@xyflow/react": "^12.12.0"
   },
   "peerDependencies": {

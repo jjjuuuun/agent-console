@@ -1,22 +1,22 @@
 # agent-console-link-runs-trace
 
-실행·추적 연동 모듈. 실행 기록(`runs.reader`·`runs.events`)으로 위임 흐름(`ac-trace`)을 만든다.
+Runs and trace link module. It builds the delegation flow (`ac-trace`) from run history (`runs.reader`, `runs.events`).
 
-- `GET /runs/{id}/trace`: span(노드·호출·위임·사용자 대기)과 넘김 화살표. 실행 당시 팀 구성(선택 포트 `definitions.lookup`의 버전 기록, 없으면 현재 정의)에서 연결 종류와 호출 연결(`call_edges` — 위임자·대상 쌍의 연결이 하나일 때)을 붙인다. 자식 Run(중첩 팀)은 직접 자식부터 재귀로 읽어 부른 노드 span 아래 묶음으로 붙인다(`run_id`). 호출 span의 위임 과제는 NodeRun 입력에서.
-- `GET /runs/handoffs`: 여러 실행의 "누가 누구에게 몇 번"(필터는 실행 목록과 같다). Run마다 자기 흐름만 센다(자식 Run은 목록에 따로 있어 두 번 세지 않는다).
-- 두 경로 모두 선택 `?project=<id>`: 그 프로젝트 기록에서만 읽는다(`runs.reader`·`runs.events`의 선택 메서드 `for_project`, 없으면 Run의 `project_id`로 거른다 — 실행 목록 `GET /runs?project=`와 같은 정책). 모르는 프로젝트는 404 `project.not_found`. 질의가 없으면 넘김 집계는 호스트 기록, 흐름은 실행 기록이 찾은 자리다. `project_id`가 있는 Run의 당시 팀 구성은 선택 포트 `definitions.spaces`의 그 공간 저장소에서만 읽는다(못 열면 연결 종류 없이 — 라이브러리로 넘어가지 않는다).
-- 이 연동이 꺼지면 경로가 404이고, 웹은 실행 상세의 흐름 탭·넘김 보기를 숨긴다(웹 역할 `runs:trace`).
+- `GET /runs/{id}/trace`: spans (nodes, calls, delegations, waiting for the user) and handoff arrows. Edge types and call edges (`call_edges`, when a delegator and target pair has exactly one edge) are added from the team as it was at run time (the version history of the optional port `definitions.lookup`, or the current definition when it is missing). Child runs (nested teams) are read recursively starting from the direct children and attached as a group under the node span that called them (`run_id`). The delegated task of a call span comes from the NodeRun input.
+- `GET /runs/handoffs`: "who handed off to whom, how many times" across several runs (the filters are the same as the run list). Each run counts only its own flow (child runs appear separately in the list, so nothing is counted twice).
+- Both routes take an optional `?project=<id>` and then read only from that project's records (the optional method `for_project` of `runs.reader` and `runs.events`; without it, runs are filtered by their `project_id`, the same policy as the run list `GET /runs?project=`). An unknown project returns 404 `project.not_found`. Without the query, handoff totals come from the host records and the flow comes from wherever run history finds the run. The team at run time of a run with a `project_id` is read only from that space's store through the optional port `definitions.spaces` (when the space cannot be opened, there are no edge types; it does not fall back to the library).
+- When this link is off, the routes return 404 and the web app hides the flow tab and the handoff view of the run detail (web role `runs:trace`).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-runs-trace
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-runs-trace
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-runs-trace
 ```
 
-## 최소 사용
+## Minimal usage
 
-HTTP 없이 `TraceViews`로 실행 기록에서 흐름을 만든다.
+Build a flow from run history with `TraceViews`, without HTTP.
 
 ```python
 >>> from agent_console_contracts import Run
@@ -36,32 +36,32 @@ HTTP 없이 `TraceViews`로 실행 기록에서 흐름을 만든다.
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 필수 | `runs.reader` | `get(run_id)`·`list(graph_id=, status=, conversation_id=, agent=, parent_run_id=, project_id=, limit=)`·`list_node_runs(run_id)`, 선택 `for_project(id)` |
-| 필수 | `runs.events` | `list(run_id, since_seq=)`, 선택 `for_project(id)` |
-| 선택 | `definitions.lookup` | `get_version(kind, id, hash).content`·`get(kind, id).document` |
-| 선택 | `definitions.spaces` | `open(space)` → 정의 저장소(`ac-store.DefinitionSpaces`) |
+| Required | `runs.reader` | `get(run_id)`, `list(graph_id=, status=, conversation_id=, agent=, parent_run_id=, project_id=, limit=)`, `list_node_runs(run_id)`, optional `for_project(id)` |
+| Required | `runs.events` | `list(run_id, since_seq=)`, optional `for_project(id)` |
+| Optional | `definitions.lookup` | `get_version(kind, id, hash).content`, `get(kind, id).document` |
+| Optional | `definitions.spaces` | `open(space)` → a definition store (`ac-store.DefinitionSpaces`) |
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_link_runs_trace [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.local_runs_module`(상태 폴더 DB의 실행 기록 읽기)을 붙인다.
+Without `--with`, it attaches `testing.local_runs_module` (reads run history from the database in the state folder).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

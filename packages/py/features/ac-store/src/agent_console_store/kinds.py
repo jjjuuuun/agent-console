@@ -17,7 +17,7 @@ SCOPE_FIELD = "project"
 
 @dataclass(frozen=True, slots=True)
 class DefinitionKind:
-    """정의 종류 하나의 저장 규칙.
+    """Storage rules for one definition kind.
 
     Attributes:
         name: 종류 이름(저장소 API의 `kind` 인자, 버전 테이블의 `kind` 컬럼).
@@ -49,6 +49,10 @@ class DefinitionKind:
         title: 종류 표시 이름(사용자 언어, 예: 복사 대화상자·구성 표의 종류 열). None이면 화면이
             종류 이름을 그대로 보인다. 저장소는 이 값을 보지 않는다. 종류 기여(X44)의 ``title``이
             있으면 그것이 먼저다.
+        open_role: 이 종류 항목을 여는 화면의 역할 이름(웹 라우트 역할 — 계약 ``FixTarget.role``과
+            같은 열린 문자열, 예: 복사 대화상자 [열기]의 ``CopyKindInfo.open_role``). None이면 여는
+            화면이 없거나 모른다. 저장소는 이 값을 보지 않는다. 종류 기여(X44)의 ``open_role``이
+            있으면 그것이 먼저다.
     """
 
     name: str
@@ -65,6 +69,7 @@ class DefinitionKind:
     library: bool = True
     reserved_ids: tuple[str, ...] = ()
     title: str | None = None
+    open_role: str | None = None
 
     def __post_init__(self) -> None:
         if self.content_field is not None and self.singleton_file is not None:
@@ -102,6 +107,7 @@ GRAPH_KIND = DefinitionKind(
     count_fields=("nodes", "edges"),
     summary_fields=(SCOPE_FIELD,),
     title="팀 구성",
+    open_role="definition:graph",
 )
 AGENT_KIND = DefinitionKind(
     name="agent",
@@ -109,6 +115,7 @@ AGENT_KIND = DefinitionKind(
     model=Agent,
     summary_fields=(SCOPE_FIELD,),
     title="에이전트",
+    open_role="definition:agent",
 )
 SETTINGS_KIND = DefinitionKind(
     name="settings",
@@ -126,6 +133,7 @@ RESOURCE_KIND = DefinitionKind(
     multi_file=True,
     summary_fields=("type", SCOPE_FIELD),
     title="리소스",
+    open_role="definition:resource",
 )
 """리소스(design §R12.1, §2R.3): `resources/<id>.yaml` + 본문 `resources/<id>/` 아래 파일들."""
 

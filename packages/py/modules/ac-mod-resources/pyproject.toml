@@ -7,11 +7,11 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-resources>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "pydantic>=2.9",
     "fastapi>=0.115",
 ]
@@ -62,6 +62,6 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-ports = [
-    { port = "resources.lookup", reason = "리소스 모듈이 리소스 정의·본문 조회를 연동 모듈에 주는 통로(구현은 이 모듈 하나)" },
-    { port = "resources.types", reason = "리소스 모듈이 등록된 리소스 종류 레지스트리를 연동 모듈에 주는 통로. 새 종류는 resource-type 지점" },
+    { port = "resources.lookup", reason = "Port through which the resources module gives link modules resource definition and content lookup (this module is the only implementation)" },
+    { port = "resources.types", reason = "Port through which the resources module gives link modules the registry of registered resource types. New types use the `resource-type` extension point" },
 ]

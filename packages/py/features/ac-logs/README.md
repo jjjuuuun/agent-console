@@ -1,41 +1,41 @@
 # agent-console-logs
 
-로그 분석 코어. 여러 도구의 로그를 같은 구조(정규화 이벤트)로 모으고 질의한다.
+The log analysis core. It collects logs from several tools into the same structure (normalized events) and queries them.
 
-- **출처·분류기는 확장 지점이다.** 로그 출처(entry point `agent_console.log_sources`)와
-  분류기(`agent_console.log_classifiers`)를 등록해 쓴다. 기본 제공 `normalized-v1`·`mapped-jsonl`도
-  entry point로 들어오는 첫 구현이다. 특정 도구 형식(Claude Code 등)은 이 패키지가 모른다.
-- **원본은 읽기만 한다.** 출처는 파일을 주입된 `open_read`로만 연다. 이 패키지에는 원본 쓰기 경로가 없다.
-- **분류기는 행 단위 무상태다**(F-7). 응답 묶기·호출 짝·소요 시간은 질의 때 명시 id로 계산한다.
-- **토큰은 응답당 한 번 센다**(F-8). (출처, thread, message_id)마다 output이 가장 큰 표본 하나다.
-- **범주 이름을 코드가 해석하지 않는다.** 표시 이름·숨김·오류(`tone: danger`, F-25)는 분류 체계 데이터
-  (`data/default_taxonomy.yaml` + 설정 `logs.taxonomy`)다. 분류 체계를 비워도 동작한다.
-  기본 분류 체계에는 숨김 범주 `meta`(`visible: false`, 형식 내부 기록 — 타임라인에서만 숨김)가 있다.
-- **세션 제목 순위는 데이터다.** `QueryContext.session_title_rules`(`SessionTitleRule(tag, pick=first|last)`
-  목록)를 위에서부터 보고 후보가 있는 첫 규칙이 이긴다. 기본은 `data/default_session_title_rules.yaml`(마지막
-  `session_title.renamed` > 마지막 `session_title.generated` > 첫 `session_title`), 파일이 없거나 비면
-  `DEFAULT_SESSION_TITLE_RULES`(첫 `session_title`). `query_context(..., session_title_rules=)`로 바꾼다.
-- SQLite 색인의 목록·타임라인 `duration_ms` 짝 질의는 (`thread`, `call_id`) 색인 `ix_log_events_thread_call`을 탄다(실행 계획 테스트).
-- 서버·웹 없이 쓴다. fastapi·starlette를 import하지 않는다.
+- **Sources and classifiers are extension points.** Register log sources (entry point `agent_console.log_sources`) and
+  classifiers (`agent_console.log_classifiers`) to use them. The built-in `normalized-v1` and `mapped-jsonl` are also just
+  the first implementations that come in through entry points. This package does not know specific tool formats (Claude Code and others).
+- **Sources are only read.** Sources open files only through the injected `open_read`. This package has no path that writes sources.
+- **Classifiers are stateless per row.** Grouping responses, pairing calls, and durations are computed at query time from explicit ids.
+- **Tokens are counted once per response.** For each (source, thread, message_id), the one sample with the largest output.
+- **The code does not interpret category names.** Display names, hiding, and errors (`tone: danger`) are classification taxonomy data
+  (`data/default_taxonomy.yaml` + setting `logs.taxonomy`). It works even with an empty taxonomy.
+  The default taxonomy has a hidden category `meta` (`visible: false`, records internal to a format; hidden only in the timeline).
+- **Session title priority is data.** `QueryContext.session_title_rules` (a list of `SessionTitleRule(tag, pick=first|last)`)
+  is checked from the top, and the first rule with candidates wins. The default is `data/default_session_title_rules.yaml` (the last
+  `session_title.renamed` > the last `session_title.generated` > the first `session_title`); if the file is missing or empty,
+  `DEFAULT_SESSION_TITLE_RULES` (the first `session_title`). Change it with `query_context(..., session_title_rules=)`.
+- The `duration_ms` pairing query for lists and timelines in the SQLite index uses the (`thread`, `call_id`) index `ix_log_events_thread_call` (query plan test).
+- Used without the server or the web app. It does not import fastapi or starlette.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                              # 워크스페이스 안
-uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry 함께)
+uv sync --all-packages                              # inside the workspace
+uv pip install ./packages/py/features/ac-logs       # standalone (with contracts and registry)
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
-| `agent-console-contracts` | `LogEvent`·`TokenSample`·`LogSettings`·디스크립터·DTO | 계약 단일 소스 | — |
-| `agent-console-registry` | 레지스트리·entry point 로딩 | 모든 확장 지점이 같은 등록 방식 | — |
-| `jsonschema` | 출처·분류기 설정을 `config_schema`로 검증하고 기본값 채움 | 워크스페이스에서 이미 쓰는 검증기 | pydantic 동적 모델 |
-| `ruamel-yaml` | 기본 분류 체계(YAML 패키지 데이터) 읽기 | 워크스페이스 YAML 표준 | PyYAML |
-| `sqlalchemy` | SQLite 색인(`agent_console_logs.sqlite`, Core) | 워크스페이스 저장소 표준, 서버 DB 핸들의 엔진을 그대로 받는다 | 표준 `sqlite3` 직접 사용(스키마 공유·이식성 약함) |
+| `agent-console-contracts` | `LogEvent`, `TokenSample`, `LogSettings`, descriptors, DTOs | Single source of contracts | — |
+| `agent-console-registry` | Registry, entry point loading | Every extension point uses the same registration method | — |
+| `jsonschema` | Validates source and classifier settings against `config_schema` and fills defaults | The validator already used in the workspace | Dynamic pydantic models |
+| `ruamel-yaml` | Reads the default taxonomy (YAML package data) | The workspace YAML standard | PyYAML |
+| `sqlalchemy` | SQLite index (`agent_console_logs.sqlite`, Core) | The workspace store standard; takes the engine of the server database handle as is | The standard `sqlite3` directly (weak schema sharing and portability) |
 
-## 최소 사용
+## Minimal usage
 
-임시 폴더의 v1 jsonl을 메모리 색인으로 수집하고 질의한다.
+Collect v1 jsonl in a temporary folder into an in-memory index and query it.
 
 ```python
 >>> import json, tempfile
@@ -58,47 +58,47 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 
 >>> registries = LogRegistries()
 >>> _ = registries.load()                       # entry point X5·X6
->>> index = MemoryLogIndex()                    # 실제로는 SQLite 색인
->>> ingestor = LogIngestor(index, registries)   # redact=, environ=, open_read= 주입 가능
+>>> index = MemoryLogIndex()                    # in real use, the SQLite index
+>>> ingestor = LogIngestor(index, registries)   # redact=, environ=, open_read= can be injected
 >>> settings = LogSettings.model_validate(
 ...     {"sources": [{"id": "normalized-v1", "enabled": True, "config": {"roots": [str(folder)]}}]}
 ... )
 >>> ingestor.scan(settings).new_events
 3
->>> ingestor.scan(settings).new_events          # 증분: 바뀐 것이 없으면 0
+>>> ingestor.scan(settings).new_events          # incremental: 0 when nothing changed
 0
 
->>> ctx = query_context(settings)               # 분류 체계(설정 데이터), 프로젝트는 project_for=
+>>> ctx = query_context(settings)               # taxonomy (settings data); projects through project_for=
 >>> [e.title for e in index.query_events(LogFilter(), ctx).items]
 ['답변', '답변(이어짐)', '실패']
 >>> session = index.list_sessions(LogFilter(), ctx)[0]
->>> (session.events, session.errors, session.tokens.output)   # 같은 응답 m1의 토큰은 한 번
+>>> (session.events, session.errors, session.tokens.output)   # tokens of the same response m1 counted once
 (3, 1, 8)
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 공개 API
+## Public API
 
-| 묶음 | 이름 |
+| Group | Names |
 | --- | --- |
-| 출처·분류기·초안 | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, 프로젝트 범위 `ProjectFolders`(`registered`·`retained`·`project_for`. 범위 = 등록 전체 하나, 보관 폴더는 새로 읽지 않고 색인 유지)·`ScopedLogSource`(`LogIngestor(projects=…)`를 주면 `in_scope`를 구현한 출처의 범위 밖 단위를 건너뛰고, 이미 색인된 범위 밖 단위가 있으면 그 출처 색인을 비우고 다시 읽는다 — `scope_skipped`·`scope_purged`. `JsonlFileSource.accepts`가 거짓인 단위는 발견 때 맥락을 읽지 않는다), `JsonlFileSource`(+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, 약속 태그 `TAG_TOOL`·`TAG_SESSION_TITLE`·`TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
-| 레지스트리·수집 | `LogRegistries`(`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`, 레지스트리 이름 `LOG_SOURCES_EXTENSION`·`LOG_CLASSIFIERS_EXTENSION` = 호스트 묶음의 확장 이름), `LogIngestor`(`scan`·`sources`·`add_runtime_source`), `source_enabled` |
-| 색인 | `LogIndex` 프로토콜, `IndexRecord`·`IndexBatch`·`BatchResult`·`StoredCursor` |
-| 색인 비우기(M-3) | `purge_index(index, *, sources=None, categories=None, before=None, rescan=True, dry_run=False) -> PurgeResult`, `reset_index(index, *, dry_run=False)`, 범위 `PurgeScope`, 선택 능력 `PurgeableLogIndex`(`purge(scope, dry_run=)`, 메모리·SQLite 색인이 가진다) |
-| 행 읽기 | `query_event_rows(index, flt, ctx) -> LogEventRowPage`(`rows`·`next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)`(끝까지, 쪽마다 `on_page(행 수)`), `page_rows(read, flt, on_page=)`(쪽 읽기 함수 → 행), 선택 능력 `LogEventRowReader`(`query_event_rows`·`iter_event_rows` 메서드, 메모리·SQLite 색인이 가진다), `event_row(event)`, `complete_event_row(data, seq=)`, 형식 `LogEventRow`·`PageCallback` |
-| SQLite 색인 | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)`(단독, `create_all`), `open_existing_log_index(path)`(있는 색인만, 파일·테이블을 만들지 않음), `create_log_engine`, 테이블 `log_metadata`·`log_events`·`log_bodies`·`log_search`·`log_tags`·`log_links`·`log_corr`·`log_agents`·`log_cursors`·`log_usage` |
-| 질의 | `LogFilter`(`thread`·`scope`·`max_seq`·`extra` 포함)·`parse_log_filter(extra=)`·`LogQueryError(path)`, `QueryContext`(`scope`·`predicates`·`extra_names`)·`query_context`·`require_refined`, `query_schema(extra_filters)`·`DIMENSIONS`·`METRICS`·`FILTER_FIELDS`, 하위 모듈 `query`(질의 의미 순수 함수) |
-| 질의 확장 | `LogScopeKind`(`id`·`resolve(value) -> LogScope`), `LogScope`(세션·run_id 합집합), `LogFilterExtension`(`fields`·`build(values, LogFilterContext) -> EventPredicate`), 묶음 `LogQueryExtensions`(`collect`·`parse`·`refine`·`schema`·`skipped`), 행 기준 미리 거르기(선택) `RowPredicate`·`RowCheckedPredicate`·`row_check_of`·`EVENT_ROW_FIELDS`·`EventRow`·`RowCheck` |
-| 순수 함수 | `bounded`, `event_uid`·`identity_for`·`build_record`, `link_events`·`pair_durations`, `merge_taxonomy`·`load_default_taxonomy`, `git_worktree_root`(옛 묶기 `group_projects`·`resolve_project`는 삭제 — 세션 프로젝트는 `QueryContext.project_for`), `block_windows`·`rolling_totals`·`sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`·`dirty_surrogates`(외톨이 서로게이트 → U+FFFD·검사, `build_record`가 모든 문자열에 적용) |
-| 보관본 | `build_archive`(`LogArchive` v1: 필터 범위·`max_events`·`max_bytes`·`redact`, `ARCHIVE_VERSION`·`DEFAULT_ARCHIVE_MAX_EVENTS`·`DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive`(스크립트 없는 HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
-| 테스트 지원 | `testing.TableScopeKind`·`testing.FieldFilter`(예제·가짜), `testing.MemoryLogIndex`, `testing.LogIndexContractTests`(다른 색인 구현이 상속), `testing.PurgeContractTests`(비우기 의미), `testing.RecordingOpen`·`no_writes_under`·`tree_digest`(원본 쓰기 감시·해시) |
+| Sources, classifiers, drafts | `LogSource`, `SourceRef`, `Cursor`, `RawRecord`, `ReadResult`, `LogSourceContext`, project scope `ProjectFolders` (`registered`, `retained`, `project_for`; scope = all registrations as one; unregistered folders are not read again and their index is kept), `ScopedLogSource` (given `LogIngestor(projects=…)`, units outside the scope are skipped for sources that implement `in_scope`, and if units outside the scope are already indexed, that source's index is cleared and read again: `scope_skipped`, `scope_purged`. Units for which `JsonlFileSource.accepts` is false do not have their context read at discovery), `JsonlFileSource` (+`JSONL_CONFIG_SCHEMA`), `LogClassifier`, `ClassifyContext`, `LogEventDraft`, `AgentInfo`, convention tags `TAG_TOOL`, `TAG_SESSION_TITLE`, `TAG_DIAGNOSTIC`, `DIAGNOSTIC_META_KEY` |
+| Registries and collection | `LogRegistries` (`load()` → `{"log_sources": [LoadReport], "log_classifiers": [...]}`; registry names `LOG_SOURCES_EXTENSION` and `LOG_CLASSIFIERS_EXTENSION` = the extension names in the host bundle), `LogIngestor` (`scan`, `sources`, `add_runtime_source`), `source_enabled` |
+| Index | The `LogIndex` protocol, `IndexRecord`, `IndexBatch`, `BatchResult`, `StoredCursor` |
+| Clearing the index | `purge_index(index, *, sources=None, categories=None, before=None, rescan=True, dry_run=False) -> PurgeResult`, `reset_index(index, *, dry_run=False)`, scope `PurgeScope`, optional capability `PurgeableLogIndex` (`purge(scope, dry_run=)`; the in-memory and SQLite indexes have it) |
+| Reading rows | `query_event_rows(index, flt, ctx) -> LogEventRowPage` (`rows`, `next_cursor`), `iter_event_rows(index, flt, ctx, on_page=)` (to the end, `on_page(row count)` per page), `page_rows(read, flt, on_page=)` (page read function → rows), optional capability `LogEventRowReader` (methods `query_event_rows` and `iter_event_rows`; the in-memory and SQLite indexes have it), `event_row(event)`, `complete_event_row(data, seq=)`, types `LogEventRow`, `PageCallback` |
+| SQLite index | `agent_console_logs.sqlite`: `SqliteLogIndex(engine)`, `open_log_index(path)` (standalone, `create_all`), `open_existing_log_index(path)` (existing indexes only; creates no files or tables), `create_log_engine`, tables `log_metadata`, `log_events`, `log_bodies`, `log_search`, `log_tags`, `log_links`, `log_corr`, `log_agents`, `log_cursors`, `log_usage` |
+| Queries | `LogFilter` (including `thread`, `scope`, `max_seq`, `extra`), `parse_log_filter(extra=)`, `LogQueryError(path)`, `QueryContext` (`scope`, `predicates`, `extra_names`), `query_context`, `require_refined`, `query_schema(extra_filters)`, `DIMENSIONS`, `METRICS`, `FILTER_FIELDS`, submodule `query` (pure functions for query semantics) |
+| Query extensions | `LogScopeKind` (`id`, `resolve(value) -> LogScope`), `LogScope` (union of sessions and run_ids), `LogFilterExtension` (`fields`, `build(values, LogFilterContext) -> EventPredicate`), the bundle `LogQueryExtensions` (`collect`, `parse`, `refine`, `schema`, `skipped`), row-based prefiltering (optional) `RowPredicate`, `RowCheckedPredicate`, `row_check_of`, `EVENT_ROW_FIELDS`, `EventRow`, `RowCheck` |
+| Pure functions | `bounded`, `event_uid`, `identity_for`, `build_record`, `link_events`, `pair_durations`, `merge_taxonomy`, `load_default_taxonomy`, `git_worktree_root` (the old grouping `group_projects` and `resolve_project` were removed; session projects use `QueryContext.project_for`), `block_windows`, `rolling_totals`, `sum_samples`, `glob_match`, `json_pointer`, `scrub_surrogates`, `dirty_surrogates` (lone surrogates → U+FFFD, and the check; `build_record` applies it to every string) |
+| Archives | `build_archive` (`LogArchive` v1: filter scope, `max_events`, `max_bytes`, `redact`, `ARCHIVE_VERSION`, `DEFAULT_ARCHIVE_MAX_EVENTS`, `DEFAULT_ARCHIVE_MAX_BYTES`), `filter_to_params`, `render_archive` (script-free HTML, `DEFAULT_ARCHIVE_TITLE`), `escape_html` |
+| Test support | `testing.TableScopeKind`, `testing.FieldFilter` (examples and fakes), `testing.MemoryLogIndex`, `testing.LogIndexContractTests` (other index implementations inherit it), `testing.PurgeContractTests` (clearing semantics), `testing.RecordingOpen`, `no_writes_under`, `tree_digest` (watching for writes to sources, hashing) |
 
-## SQLite 색인
+## SQLite index
 
-`SqliteLogIndex`는 `MemoryLogIndex`와 같은 계약 테스트 묶음(`LogIndexContractTests`)을 통과하고,
-무작위 데이터에서 모든 질의의 답이 `MemoryLogIndex`와 같음을 테스트로 확인한다.
+`SqliteLogIndex` passes the same contract test suite as `MemoryLogIndex` (`LogIndexContractTests`),
+and tests check on random data that every query answers the same as `MemoryLogIndex`.
 
 ```python
 >>> import tempfile
@@ -107,7 +107,7 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 >>> from agent_console_logs.sqlite import open_log_index
 >>> from agent_console_logs.testing import make_record
 >>> path = Path(tempfile.mkdtemp()) / "logs.sqlite3"
->>> index = open_log_index(path)               # 단독 사용: 테이블을 직접 만든다(create_all)
+>>> index = open_log_index(path)               # standalone use: creates the tables itself (create_all)
 >>> index.write(IndexBatch(records=[make_record("llm", title="안녕", session="S")])).inserted
 1
 >>> index.close()
@@ -116,48 +116,48 @@ uv pip install ./packages/py/features/ac-logs       # 단독(contracts·registry
 
 ```
 
-- 서버 안에서는 테이블을 `ac-mod-logs`의 마이그레이션 계보 `logs`가 만든다(`create_all`은 단독 사용 전용).
-  두 모양이 같음은 `ac-mod-logs` 테스트가 `compare_metadata`로 확인한다.
-- 큰 열은 분리했다. `log_events`는 필터·정렬·집계에 쓰는 좁은 열만, 본문 JSON(`log_bodies.body`)·원문(`heavy`)·
-  검색 문자열(`log_search`)은 따로 둔다. 목록·세션 요약·집계는 좁은 행만 읽는다.
-- 같은 uid는 한 번만 들어가고(`INSERT ... DO NOTHING`), 쓰기는 `BEGIN IMMEDIATE`로 시작해 다른 프로세스와
-  섞이지 않는다. seq는 `AUTOINCREMENT`라 지운 뒤에도 다시 쓰이지 않는다(키셋 커서 안전).
-- 토큰은 `log_usage`의 (source, thread, message_id) 한 행이며, 같은 키가 다시 오면 output이 크거나 같을 때만 바꾼다.
-- 한계: 검색어 `q`는 `log_search`를 훑는다(10만 건에서 수백 ms). 세션 목록은 질의마다 집계한다.
+- Inside the server, the tables are created by the migration lineage `logs` of `ac-mod-logs` (`create_all` is for standalone use only).
+  The `ac-mod-logs` tests check with `compare_metadata` that the two shapes are the same.
+- Large columns are split off. `log_events` has only narrow columns used for filtering, sorting, and aggregation; the body JSON (`log_bodies.body`), raw data (`heavy`),
+  and search strings (`log_search`) are kept separately. Lists, session summaries, and aggregates read only narrow rows.
+- The same uid is inserted only once (`INSERT ... DO NOTHING`), and writes start with `BEGIN IMMEDIATE` so they do not interleave with other
+  processes. seq is `AUTOINCREMENT`, so it is never reused after deletes (safe for keyset cursors).
+- Tokens are one row in `log_usage` per (source, thread, message_id); when the same key comes again, it is replaced only when the output is greater or equal.
+- Limits: the query `q` scans `log_search` (hundreds of ms at 100,000 events). The session list is aggregated per query.
 
-### 색인 비우기(M-3)
+### Clearing the index
 
-색인은 같은 uid를 다시 쓰지 않는다. 그래서 분류 기본값이 바뀌어도(예: 요청 본문 원문 제외) 이미 넣은 이벤트는
-그대로다. `purge_index`는 범위(출처·범주·시각, 모두 AND)의 이벤트와 딸린 행을 지우고, `rescan=True`(기본)면
-범위 출처(없으면 전부)의 커서도 지워 다음 수집이 원본을 처음부터 다시 읽게 한다. 남은 이벤트는 같은 uid라 다시
-들어가지 않고, 지운 것만 지금 규칙으로 다시 들어간다. 원본 파일은 건드리지 않는다.
+The index never rewrites the same uid. So even when classification defaults change (for example, excluding raw request bodies), events already inserted
+stay as they are. `purge_index` deletes the events in a scope (sources, categories, time, all ANDed) and their dependent rows, and with `rescan=True` (default)
+it also deletes the cursors of the sources in scope (all sources if none) so the next collection reads the sources from the beginning. Remaining events have the same uid and are not
+inserted again; only the deleted ones come back under the current rules. Source files are not touched.
 
 ```python
 >>> from agent_console_logs import purge_index, reset_index
 >>> index = open_log_index(":memory:")
 >>> _ = index.write(IndexBatch(records=[make_record("llm"), make_record("blob", source="s")]))
->>> purge_index(index, categories=["blob"], dry_run=True)       # 세기만
+>>> purge_index(index, categories=["blob"], dry_run=True)       # count only
 PurgeResult(dry_run=True, events=1, usage=0, cursors=0, agents=0)
 >>> purge_index(index, sources=["s"], categories=["blob"]).events
 1
->>> reset_index(index).events                                     # 전부(커서·에이전트 포함)
+>>> reset_index(index).events                                     # everything (including cursors and agents)
 1
 
 ```
 
-- 토큰 표본은 지울 이벤트와 키(출처·thread·message_id)가 같고 남는 이벤트와는 같지 않을 때 지운다. 범주 조건이
-  없으면 출처·시각 조건에 맞는 표본도 지운다. 에이전트 표시 행은 범주·시각 조건이 없을 때(출처 전체) 지운다.
-- 빈 목록은 거부한다(`ValueError`, "조건 없음"은 None). seq는 이어진다(웹의 seq 기준 새로 고침이 거꾸로 가지 않는다).
-- 서버에서는 `POST /api/v1/logs/index/purge`(`ac-mod-logs`, dry_run 기본), 명령행은 `agent-console logs purge`.
+- Token samples are deleted when their key (source, thread, message_id) matches an event being deleted and no remaining event. Without a category condition,
+  samples matching the source and time conditions are deleted too. Agent display rows are deleted when there are no category or time conditions (a whole source).
+- Empty lists are rejected (`ValueError`; "no condition" is None). seq continues (refreshes based on seq in the web app never go backward).
+- On the server, `POST /api/v1/logs/index/purge` (`ac-mod-logs`, dry_run by default); on the command line, `agent-console logs purge`.
 
-### 행 읽기(모델 없이)
+### Reading rows (without models)
 
-범위 전체를 읽어 판정·집계만 하는 쪽(예: 구조도)은 이벤트 모델이 필요 없다. `iter_event_rows`는 같은 목록을
-JSON 행(dict)으로 준다. 행은 같은 쪽의 `LogEvent`를 `model_dump(mode="json", by_alias=True)`한 것과 같다(목록
-모양 — `detail`·`raw`는 None, 키는 계약 별칭 `from` 등). SQLite 색인은 저장된 본문 JSON에 기본값만 채워
-검증·덤프를 건너뛴다(선택 능력 `LogEventRowReader`). `iter_event_rows`는 쪽마다 본문 문자열만 읽어 두고 행을
-하나씩 만든다(한 쪽의 행 dict를 한꺼번에 들고 있지 않아 큰 범위에서 메모리·GC 부담이 적다). 능력이 없는 색인은
-`query_events` 결과를 덤프한다. 행은 읽기 전용으로 쓴다.
+Callers that read a whole scope only to judge and aggregate (for example the architecture map) do not need event models. `iter_event_rows` gives the same list
+as JSON rows (dicts). A row is the same as `model_dump(mode="json", by_alias=True)` of the `LogEvent` on the same page (the list
+shape: `detail` and `raw` are None, keys use contract aliases such as `from`). The SQLite index fills only defaults into the stored body JSON
+and skips validation and dumping (optional capability `LogEventRowReader`). `iter_event_rows` reads only the body strings per page and builds rows
+one at a time (it does not hold a page's row dicts all at once, so memory and GC pressure stay low on large scopes). Indexes without the capability
+dump the `query_events` results. Treat rows as read-only.
 
 ```python
 >>> from agent_console_logs import event_row, iter_event_rows
@@ -171,25 +171,25 @@ True
 
 ```
 
-## 질의 확장: 범위 종류·필터 확장
+## Query extensions: scope kinds and filter extensions
 
-필터 `scope=<종류>:<값>`과 확장 필터 이름은 등록으로 들어온다. `LogQueryExtensions`가 필터를 읽고
-(`parse`), 질의 전에 풀어(`refine`) 질의 맥락에 세션·run_id 합집합(`QueryContext.scope`)과 이벤트 판정
-함수(`QueryContext.predicates`)를 싣는다. 색인 구현은 풀린 맥락만 본다(메모리·SQLite 결과가 같음을
-차등 테스트로 확인). 등록이 없으면 맥락은 그대로이고, 풀지 않은 `scope`·확장 필터를 색인에 넘기면
-`LogQueryError`다.
+The filter `scope=<kind>:<value>` and extension filter names come in through registration. `LogQueryExtensions` reads the filters
+(`parse`) and resolves them before the query (`refine`), putting the union of sessions and run_ids (`QueryContext.scope`) and event judge
+functions (`QueryContext.predicates`) into the query context. Index implementations see only the resolved context (a differential test checks that in-memory and SQLite results
+are the same). Without registrations the context is unchanged, and passing an unresolved `scope` or extension filter to an index raises
+`LogQueryError`.
 
-- 범위: 이벤트의 세션 또는 run_id가 합집합에 들어야 한다. 토큰 표본은 세션이 들거나, run_id 범위
-  이벤트와 응답 키가 같아야 한다.
-- 확장 판정·`max_seq`는 이벤트 전용 필터다(표본은 맞는 이벤트의 응답 키로 거른다). SQLite는 판정을
-  연결 전용 SQL 함수로 부르므로 페이지·커서·집계가 그대로지만, 후보 행마다 본문 JSON을 읽는다.
-- **행 기준 미리 거르기(선택 능력)**: 판정 함수가 `row_fields`(색인 열 이름, `EVENT_ROW_FIELDS`
-  중에서)와 `check_row(row) -> True | False | None`을 가지면(`RowPredicate`, 기본 구현
-  `RowCheckedPredicate`) SQLite는 먼저 열 값으로 묻고, `None`(모름)인 행만 본문을 읽어 `LogEvent`로
-  판정한다. 확정 값은 판정 함수 값과 같아야 한다(메모리 색인은 늘 판정 함수를 쓴다).
-  `testing.FieldFilter(..., row_check=True)`가 예제다.
-- 값 목록(필터 값·범위 세션·run_id)이 500개를 넘으면 SQLite는 JSON 배열 하나를 `json_each`로 펼친다
-  (바인드 변수 1개 — 값이 수만 개여도 변수 한도에 걸리지 않는다).
+- Scope: the event's session or run_id must be in the union. Token samples must have their session in it, or the same response key as an event in the run_id
+  scope.
+- Extension judgements and `max_seq` are event-only filters (samples are filtered by the response keys of matching events). SQLite calls the judgements as
+  connection-only SQL functions, so pages, cursors, and aggregates stay the same, but the body JSON is read for each candidate row.
+- **Row-based prefiltering (optional capability)**: when a judge function has `row_fields` (index column names from
+  `EVENT_ROW_FIELDS`) and `check_row(row) -> True | False | None` (`RowPredicate`, default implementation
+  `RowCheckedPredicate`), SQLite asks with column values first and reads the body into a `LogEvent` only for rows with `None` (unknown)
+  to judge them. Definite values must equal the judge function's values (the in-memory index always uses the judge function).
+  `testing.FieldFilter(..., row_check=True)` is an example.
+- When a value list (filter values, scope sessions, run_ids) exceeds 500 values, SQLite expands one JSON array with `json_each`
+  (one bind variable, so even tens of thousands of values do not hit the variable limit).
 
 ```python
 >>> from agent_console_logs import IndexBatch, LogQueryExtensions, QueryContext
@@ -201,8 +201,8 @@ True
 ...     make_record("llm", session="S2", run_id="r1"),
 ... ]))
 >>> ext = LogQueryExtensions.collect(
-...     [TableScopeKind("run", {"r1": ([], ["r1"])})],     # 범위 종류(X27)
-...     [FieldFilter("only_tool", "tool")],                # 필터 확장(X28)
+...     [TableScopeKind("run", {"r1": ([], ["r1"])})],     # scope kind
+...     [FieldFilter("only_tool", "tool")],                # filter extension
 ... )
 >>> flt = ext.parse({"only_tool": "Bash"})
 >>> [e.tool for e in index.query_events(flt, ext.refine(flt, QueryContext())).items]
@@ -221,46 +221,46 @@ True
 
 ```
 
-## 수집 규칙(agent_bench `_ingest`와 같음)
+## Collection rules (the same as agent_bench `_ingest`)
 
-- 바이트 오프셋 커서로 이어 읽는다. 출처당 수집 한 번의 예산은 `budget_bytes`(기본 8 MB)이고 남은 것은
-  다음 수집에서 읽는다.
-- 끝나지 않은 마지막 줄은 보류하고, `scan(final=True)`면 읽는다.
-- 파일이 커서보다 작아지면 처음부터 다시 읽는다. identity 덕분에 중복되지 않는다.
-- **회전 감지**: 읽은 앞부분(최대 4 KB, 완성된 줄까지)과 첫 줄의 sha256 지문을 커서 `state.jsonl_head`에 둔다.
-  다음 수집에서 앞부분이 다르면(같은 이름의 더 큰 새 파일, 같은 크기 다른 내용 등) 처음부터 다시 읽고
-  내용 세대(`state.jsonl_generation`, `RawRecord.generation`)를 올린다. 세대는 기본 identity에 들어가
-  (`{source}:{ref}@{세대}:{offset}`) 같은 위치의 새 줄이 옛 줄과 겹쳐 버려지지 않는다. 같은 세대를 다시
-  읽으면 중복 0. 지문이 없는 옛 커서는 그대로 이어 읽는다.
-- **한계**: 크기와 앞부분 4 KB가 같고 그 뒤만 바뀐 파일은 감지하지 못한다(크기·mtime까지 같으면 읽지도
-  않는다). 파일이 줄면 앞부분(파일이 그보다 짧으면 첫 줄)의 지문이 같을 때만 같은 파일이 잘린 것으로 보고
-  세대를 유지한다(identity로 중복 0). 다르거나 확인할 수 없으면(첫 줄보다 짧음, 지문 없는 옛 커서) 새 내용으로
-  보고 세대를 올린다. 이때 같은 내용을 다시 쓴 파일이면 이벤트가 중복될 수 있다(데이터 손실 대신 택함, 토큰은
-  message_id 규칙으로 한 번만 센다).
-- **심볼릭 링크**: 폴더 링크는 따라가지 않는다. 파일 링크는 실제 위치가 그 루트 안일 때만 읽고, 루트 밖을
-  가리키는 링크는 건너뛴다(`discover`에서 빼고 `resolve`도 거절). 같은 실제 파일을 가리키는 경로가 여럿이면
-  하나만 낸다(링크가 아닌 경로 우선, 그다음 이름순).
-- 해석·분류에 실패한 줄은 버리지 않고 진단 이벤트(`source = "diagnostic"`, 범주 `error`, 태그 `diagnostic`)로 남긴다.
-- 이벤트 묶음과 커서는 같은 `write` 호출(한 트랜잭션)로 쓴다. 바뀌지 않은 파일은 읽지 않는다.
-- identity: 초안 `identity` → 도구 이벤트(`TAG_TOOL` + `call_id`) `tool:{source}:{thread}:{call_id}:{stage}` →
-  `{source}:{ref}[@{세대}]:{offset}[:{index}]`(세대는 회전된 파일만). uid = `sha256(identity)[:24]`.
-- `repo_root`: cwd의 `.git`이 worktree 표시 파일이면 본 저장소 경로(읽기 전용, 수집마다 캐시).
-  설정 `logs.projects.git_worktrees: false`면 계산하지 않는다.
+- Reading continues from a byte offset cursor. The budget of one collection per source is `budget_bytes` (default 8 MB), and the rest is
+  read in the next collection.
+- An unfinished last line is held back, and read with `scan(final=True)`.
+- If a file becomes smaller than the cursor, it is read again from the beginning. Thanks to identity, nothing is duplicated.
+- **Rotation detection**: a sha256 fingerprint of the read head (up to 4 KB, up to complete lines) and of the first line is kept in the cursor `state.jsonl_head`.
+  If the head differs at the next collection (a larger new file with the same name, the same size with different content, and so on), the file is read from the beginning and
+  the content generation (`state.jsonl_generation`, `RawRecord.generation`) goes up. The generation is part of the default identity
+  (`{source}:{ref}@{generation}:{offset}`), so new lines at the same position are not discarded as overlapping old lines. Reading the same generation again
+  gives 0 duplicates. Old cursors without a fingerprint keep reading on.
+- **Limitation**: a file with the same size and the same first 4 KB that changed only after that is not detected (if size and mtime are also the same, it is not even
+  read). When a file shrinks, it is treated as the same file truncated only when the fingerprint of the head (the first line, if the file is shorter) matches,
+  and the generation is kept (0 duplicates through identity). If it differs or cannot be checked (shorter than the first line, old cursors without fingerprints), it is treated as new content
+  and the generation goes up. In that case, a file rewritten with the same content can produce duplicate events (chosen over data loss; tokens are
+  counted once by the message_id rule).
+- **Symbolic links**: folder links are not followed. File links are read only when their real location is inside that root, and links pointing outside
+  the root are skipped (left out of `discover`, and `resolve` refuses them too). When several paths point to the same real file,
+  only one is produced (non-link paths first, then by name).
+- Lines that fail to parse or classify are not dropped but kept as diagnostic events (`source = "diagnostic"`, category `error`, tag `diagnostic`).
+- Event batches and cursors are written in the same `write` call (one transaction). Unchanged files are not read.
+- identity: draft `identity` → tool events (`TAG_TOOL` + `call_id`) `tool:{source}:{thread}:{call_id}:{stage}` →
+  `{source}:{ref}[@{generation}]:{offset}[:{index}]` (the generation only for rotated files). uid = `sha256(identity)[:24]`.
+- `repo_root`: when the cwd's `.git` is a worktree marker file, the main repository path (read-only, cached per collection).
+  With the setting `logs.projects.git_worktrees: false`, it is not computed.
 
-## 오프라인 보관본
+## Offline archive
 
-`build_archive`는 필터에 맞는 이벤트(본문 포함)·세션 요약·줄·근거 연결·분류 체계를 `LogArchive` v1로 묶는다
-(agent_bench `LogStore.export`). `render_archive`는 그것을 **스크립트 없는** HTML 한 장으로 그린다(F-13,
-agent_bench `render_archive`는 웹 JS를 박아 넣었다). 네트워크 없이 열리고, 외부 자원·스크립트는
-`Content-Security-Policy`로 막는다.
+`build_archive` packs the events matching a filter (with bodies), session summaries, threads, evidence links, and the taxonomy into `LogArchive` v1
+(agent_bench `LogStore.export`). `render_archive` draws it as one **script-free** HTML page (agent_bench
+`render_archive` embedded the web JS). It opens without a network, and external resources and scripts are blocked with
+`Content-Security-Policy`.
 
-- 범위: 필터 그대로(`limit`·`cursor`는 쓰지 않고 끝까지 넘긴다). 세션 요약도 같은 필터로 센다.
-- 크기: `max_events`(기본 5000)·`max_bytes`(이벤트 JSON 합, 기본 약 20 MB)·`max_detail_bytes`(이벤트 하나의 본문).
-  넘으면 앞부분만 담고 `truncated = True`(HTML은 안내 문구).
-- 가림: 색인 사본은 수집 때 가려졌다. `redact`를 주면 제목·요약·본문·원문·세션 제목·필터 값을 지금 규칙으로 한 번 더 가린다.
-- HTML: `<meta charset="UTF-8">`, 한글 폰트 목록(시스템 폰트 폴백), `word-break: keep-all`, 본문·원문·긴 요약은
-  `<details>`로 접고, 모든 값을 이스케이프한다(`&<>"'`, U+2028·U+2029 → 숫자 참조, 제어 문자 → U+FFFD).
-  범주 이름·색·강조는 보관본의 분류 체계 데이터에서 온다(오류 표시는 `tone: danger` 범주).
+- Scope: the filter as is (`limit` and `cursor` are not used; it goes to the end). Session summaries are counted with the same filter.
+- Size: `max_events` (default 5000), `max_bytes` (total event JSON, default about 20 MB), `max_detail_bytes` (the body of one event).
+  Beyond that, only the first part is included with `truncated = True` (the HTML shows a notice).
+- Masking: the index copy was masked at collection. With `redact`, titles, summaries, bodies, raw data, session titles, and filter values are masked once more with the current rules.
+- HTML: `<meta charset="UTF-8">`, a Korean font list (with system font fallbacks), `word-break: keep-all`; bodies, raw data, and long summaries are
+  collapsed in `<details>`, and every value is escaped (`&<>"'`, U+2028 and U+2029 → numeric references, control characters → U+FFFD).
+  Category names, colors, and emphasis come from the archive's taxonomy data (errors are shown for `tone: danger` categories).
 
 ```python
 >>> from agent_console_logs import IndexBatch, LogFilter, QueryContext, build_archive, render_archive
@@ -279,24 +279,24 @@ agent_bench `render_archive`는 웹 JS를 박아 넣었다). 네트워크 없이
 
 ```
 
-## 기본 플러그인
+## Default plugins
 
-| id | 출처 | 분류기 설정 |
+| id | Source | Classifier settings |
 | --- | --- | --- |
-| `normalized-v1` | `roots`·`include`(기본 `**/*.jsonl`)·`exclude`, 기본 꺼짐 | `default_actor`(기본 `controller`). 필수 `schema_version: 1`·`category`·`title`, 예약 키 무시, actor = actor → thread → `default_actor` |
-| `mapped-jsonl` | 위와 같음 | `fields`(필드 → JSON 포인터), `defaults`(기본 `{category: other}`), `value_maps`, `correlation`, `usage`, `skip_if_missing` |
+| `normalized-v1` | `roots`, `include` (default `**/*.jsonl`), `exclude`; off by default | `default_actor` (default `controller`). Required `schema_version: 1`, `category`, `title`; reserved keys ignored; actor = actor → thread → `default_actor` |
+| `mapped-jsonl` | Same as above | `fields` (field → JSON pointer), `defaults` (default `{category: other}`), `value_maps`, `correlation`, `usage`, `skip_if_missing` |
 
-새 출처는 `LogSource`(파일이면 `JsonlFileSource` 상속)를, 새 분류기는 `LogClassifier`를 구현하고
-`pyproject.toml`의 entry point에 이름을 적는다. 다른 모듈의 데이터를 읽는 출처는
-`LogIngestor.add_runtime_source(source, classifier=...)`로 더한다.
+A new source implements `LogSource` (inheriting `JsonlFileSource` for files), and a new classifier implements `LogClassifier`;
+put their names in the entry points of `pyproject.toml`. Sources that read data from other modules are added with
+`LogIngestor.add_runtime_source(source, classifier=...)`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

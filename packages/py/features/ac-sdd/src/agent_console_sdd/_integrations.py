@@ -71,8 +71,10 @@ class VerificationContext:
 
 @runtime_checkable
 class VerificationSource(Protocol):
-    """검증 결과 출처. entry point `agent_console.sdd_verification_sources` 또는 다중 포트
-    `sdd.verification_sources`로 들어온다. 기본 구현은 `runs`(link-runs-sdd)."""
+    """Verification result source, plugged in by entry point or multi port.
+
+    Entry point `agent_console.sdd_verification_sources` or multi port
+    `sdd.verification_sources`. The default implementation is `runs` (link-runs-sdd)."""
 
     @property
     def id(self) -> str:
@@ -86,7 +88,7 @@ class VerificationSource(Protocol):
 
 @runtime_checkable
 class TaskIntegration(Protocol):
-    """작업 연동(다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd).
+    """Task integration (multi port `sdd.integrations`). Default implementation: link-runs-sdd.
 
     선택 능력(따로 둔 프로토콜, 구현하면 쓴다): `ProfileChecker.check_profile`,
     `TaskIssueSource.task_issues`(작업 이슈를 `ParsedTask.issues`에 더함), `AutomationControl`.
@@ -115,14 +117,14 @@ class TaskIntegration(Protocol):
 
 @runtime_checkable
 class ProfileChecker(Protocol):
-    """선택 능력: 실행 프로필 검사(예: 팀 구성이 공간에 있는지 → `sdd.profile_graph_missing`)."""
+    """Optional capability: run profile check (e.g. team missing → `sdd.profile_graph_missing`)."""
 
     async def check_profile(self, ctx: SpecContext, profile: RunProfile) -> list[SpecIssue]: ...
 
 
 @runtime_checkable
 class TaskIssueSource(Protocol):
-    """선택 능력: 작업 이슈.
+    """Optional capability: task issues.
 
     서버 모듈은 작업 목록·스펙 보기를 만들 때 부르고, 돌려준 이슈를 `task_key`가 같은 작업의
     `ParsedTask.issues`에 더한다(`task_key`가 없는 이슈는 버린다).
@@ -137,7 +139,7 @@ class TaskIssueSource(Protocol):
 
 @runtime_checkable
 class AutomationControl(Protocol):
-    """선택 능력: 자동 진행 상태·멈춤·다시 시작. 없으면 `capabilities.automation=false`."""
+    """Optional capability: auto-advance status, pause, and resume (`capabilities.automation`)."""
 
     def automation_state(self, ctx: SpecContext) -> AutomationState | None: ...
 

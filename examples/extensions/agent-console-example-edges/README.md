@@ -1,17 +1,17 @@
 # agent-console-example-edges
 
-새 **연결 종류**(엣지 타입)를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 편집기의 "연결 종류 선택"·설정 화면 "새 연결 기본 종류"에 나타나고 제거하면 사라진다.
+An example that adds a new **edge type** with a single plugin package.
+No engine, server, or web code changes. Once installed, it appears in the editor's edge type choice and in the settings screen's default type for new edges, and it disappears when removed.
 
-연결 종류 `example.relay`(접두어 붙여 넘기기)
-- `scheduling = flow`: 위 노드가 성공해 `out`에 값을 냈으면 아래 노드 `in`으로 넘긴다. 실패·값 없음이면 그 경로는 막힌다.
-- 설정: `prefix`(문자열, 기본 `[중계] `). 값이 문자열이면 앞에 붙이고, 아니면 그대로 넘긴다.
-- 연결 규칙 `connects`: 역할 `agent` → `agent`(노드 타입 디스크립터 `role` 문자열). 팀 구성 검증이 다른 역할 사이 연결을 `team.connects_mismatch`로 막는다.
-- 외부 호출 없이 결정적으로 동작한다.
+Edge type `example.relay` (pass on with a prefix)
+- `scheduling = flow`: when the upstream node succeeded and produced a value in `out`, the value is passed to `in` of the downstream node. On failure or without a value, that path is blocked.
+- Setting: `prefix` (string, default `[중계] `). When the value is a string, the prefix is added in front; otherwise the value is passed on as it is.
+- Connection rule `connects`: role `agent` → `agent` (the `role` string of the node type descriptor). Team validation blocks edges between other roles with `team.connects_mismatch`.
+- It is deterministic, without external calls.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
 ```python
 from agent_console_contracts import EdgeConnects, EdgePortPair, EdgeSpec, EdgeTypeDescriptor
@@ -34,46 +34,46 @@ class RelayEdge:
         return Activation(f"{edge.config.get('prefix', '')}{source.outputs[edge.source.port]}")
 ```
 
-실제 구현은 `src/agent_console_example_edges/relay.py`(설정을 pydantic 모델로 검증·스키마 생성).
-`scheduling`은 엔진 어휘(`flow`·`none`·`entry`·`exit`)이고, 엔진·편집기는 연결 종류 이름이 아니라 이 속성으로 동작한다.
+The real implementation is `src/agent_console_example_edges/relay.py` (validates the settings with a pydantic model and generates the schema).
+`scheduling` is engine vocabulary (`flow`, `none`, `entry`, `exit`), and the engine and editor act on this attribute, not on the edge type name.
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console_runtime.EDGE_TYPES_GROUP`(`agent_console.edge_types`),
-이름 = 디스크립터 `id` = 그래프 엣지의 `kind`.
+One entry point in `pyproject.toml`. Group = `agent_console_runtime.EDGE_TYPES_GROUP` (`agent_console.edge_types`);
+name = the descriptor `id` = the `kind` of a graph edge.
 
 ```toml
 [project.entry-points."agent_console.edge_types"]
 "example.relay" = "agent_console_example_edges:RelayEdge"
 ```
 
-설치하지 않은 모듈이면 서버 설정 `plugins.modules`에 `"example.relay=agent_console_example_edges:RelayEdge"` 형식으로 적어도 된다
-(같은 검사기·`plugins.enabled` 필터를 거친다).
+For a module that is not installed, you can also list it in the server setting `plugins.modules` in the form `"example.relay=agent_console_example_edges:RelayEdge"`
+(it goes through the same checker and the `plugins.enabled` filter).
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-edges   # 설치
-uv pip uninstall agent-console-example-edges                        # 제거
+uv pip install -e examples/extensions/agent-console-example-edges   # install
+uv pip uninstall agent-console-example-edges                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/edge-types`에 `example.relay`가 나오고, 편집기에서 에이전트 둘을 이으면 선택지에 "접두어 붙여 넘기기"가 보인다.
-- 제거: 선택지에서 사라진다. 이 연결을 쓰는 팀 구성은 지워지지 않고 검증이 `unknown_edge_type`으로 알린다(실행은 막힌다).
-- 설치한 채로 끄기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example.relay`를 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Install: `GET /api/v1/edge-types` lists `example.relay`, and when you connect two agents in the editor, its title appears among the choices.
+- Remove: it disappears from the choices. Teams that use this edge are not deleted; validation reports `unknown_edge_type` (runs are blocked).
+- Turn off while installed: remove `example.relay` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).
 
 ```bash
 cd examples/extensions/agent-console-example-edges
 uv run --project ../../.. python -m pytest
 ```
 
-E2E: `apps/web/e2e/08-extension.spec.ts`의 "연결 종류" 시나리오가 이 패키지를 임시 폴더에 설치해 쓴다.
+E2E: the edge type scenario of `apps/web/e2e/08-extension.spec.ts` installs this package into a temporary folder and uses it.

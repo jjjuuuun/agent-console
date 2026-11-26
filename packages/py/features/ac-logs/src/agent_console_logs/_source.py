@@ -68,7 +68,7 @@ class Cursor:
 
 @dataclass(frozen=True, slots=True)
 class RawRecord:
-    """원본 행 하나.
+    """One raw record.
 
     Attributes:
         origin: 나온 단위(`SourceRef.ref`).
@@ -160,7 +160,7 @@ def _norm(path: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class LogSourceContext:
-    """출처에 넘기는 맥락(모두 주입, 전역 없음).
+    """Context passed to a source (everything injected, no globals).
 
     Attributes:
         source_id: 출처 id(레지스트리 key).
@@ -184,7 +184,7 @@ class LogSourceContext:
 
 @runtime_checkable
 class LogSource(Protocol):
-    """로그 출처. 원본을 읽기만 한다."""
+    """Log source. Only reads the originals."""
 
     @property
     def descriptor(self) -> LogSourceDescriptor:
@@ -208,7 +208,7 @@ class LogSource(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class ClassifyContext:
-    """분류기에 넘기는 맥락.
+    """Context passed to a classifier.
 
     Attributes:
         source_id: 출처 id.
@@ -233,7 +233,7 @@ class ScopedLogSource(Protocol):
 
 @runtime_checkable
 class LogClassifier(Protocol):
-    """로그 분류기. 행 단위 무상태."""
+    """Log classifier. Stateless, one record at a time."""
 
     @property
     def descriptor(self) -> LogClassifierDescriptor:

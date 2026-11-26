@@ -59,8 +59,8 @@ def db(tmp_path: Path) -> Path:
 def test_default_is_dry_run(db: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["logs", "purge", "--index", str(db), "--category", "blob"]) == 0
     out = capsys.readouterr().out
-    assert "dry-run" in out
-    assert "이벤트 1" in out
+    assert "dry run" in out
+    assert "events 1" in out
     assert "--yes" in out
     assert len(_categories(db)) == 3
     assert main(["logs", "purge", "--index", str(db), "--source", "a", "--dry-run"]) == 0
@@ -71,15 +71,15 @@ def test_yes_deletes_scoped_rows(db: Path, capsys: pytest.CaptureFixture[str]) -
     args = ["logs", "purge", "--index", str(db), "--source", "a", "--category", "llm", "--yes"]
     assert main(args) == 0
     out = capsys.readouterr().out
-    assert "지웠습니다: 이벤트 1" in out
-    assert "커서 1" in out
+    assert "Deleted: events 1" in out
+    assert "cursors 1" in out
     assert _categories(db) == ["a:blob", "b:llm"]
 
 
 def test_before_and_no_rescan(db: Path, capsys: pytest.CaptureFixture[str]) -> None:
     args = ["logs", "purge", "--index", str(db), "--before", "200", "--no-rescan", "-y"]
     assert main(args) == 0
-    assert "커서 0" in capsys.readouterr().out
+    assert "cursors 0" in capsys.readouterr().out
     assert _categories(db) == ["b:llm"]
 
 
@@ -102,7 +102,7 @@ def test_option_errors(db: Path, tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert main(["logs", "purge", "--index", str(missing), "--source", "a"]) == 2
     assert not missing.exists()
     assert not missing.parent.exists()
-    assert "색인 파일이 없습니다" in capsys.readouterr().err
+    assert "log index file not found" in capsys.readouterr().err
     assert len(_categories(db)) == 3
 
 

@@ -3,6 +3,8 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [미출시] (5.7R.33l2, 선택 우선 배치)
+- Fix: the primary button (`.ac-fp-btn[data-variant="primary"]`) showed the light neutral hover background under white text on hover (contrast 1.12:1). It now has its own hover rule using `--ac-accent-hover`, so text contrast stays at least 4.5:1 in light and dark themes.
+- 문구 데이터(0.2.0, I.9a): 기본 문구를 `src/locales/ko.json`으로 옮기고(`defaultMessages`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`(`messages={en}`으로 영어). 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가. 공개 API는 늘기만 했고 기본 동작은 같다.
 - `FolderPicker`: 배치를 "선택 우선"으로 바꿨다. [폴더 선택…]이 첫 포커스인 주 버튼, 선택한 폴더 상자, 접힌 "경로를 직접 입력". 새 props `capabilities`·`onPickNative(initial, signal)`·`configDir`·`autoFocus`·`pickRef`·`defaultManualOpen`·`onSelectPhaseChange`·`waitingEscapeMs`·`cancelledNoticeMs`·`copy`.
 - 선택 상태 `picked`·`cancelled`·`unavailable`·`busy`·`timeout`·`failed` + 대기(`waiting`). `unavailable`·`failed`는 찾아보기로 자동 전환, 대기 중 Esc는 선택 취소.
 - 확인 상태 `manifest_found`·`manifest_invalid` 추가(`FolderCheckData.manifest` 선택 필드, 없으면 숨김). `ok_readonly`는 `configDir`가 있으면 `{dir}` 문구.

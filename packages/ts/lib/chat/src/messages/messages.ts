@@ -1,3 +1,5 @@
+import ko from "../locales/ko.json";
+
 /** 메시지 영역(`MessageList`·`TurnView`·`ReplyGroup`·`ProgressStrip`) 문구. 앱이 `messages`로 덮어쓴다. */
 export interface ChatMessages {
   /** 내 메시지의 보조 이름(대기열 행 등). 화면에는 "나" 라벨을 그리지 않는다. */
@@ -64,72 +66,5 @@ export interface ChatMessages {
   units: { s: string; m: string; h: string };
 }
 
-export const defaultChatMessages: ChatMessages = {
-  you: "나",
-  yourMessage: "나의 메시지",
-  copy: "복사",
-  copyReply: "답변 복사",
-  copied: "복사됨",
-  resend: "다시 보내기",
-  showMore: "더 보기",
-  showLess: "접기",
-  openRun: "실행 상세",
-  intermediate: "중간 결과",
-  intermediateHidden: "중간 결과 {n}개 숨김",
-  intermediateHiddenLink: "실행 상세에서 보기",
-  collapse: "접기",
-  expand: "펼치기",
-  insideOf: "{parent} 안의 {name}",
-  delegatedBy: "{parent}가 맡긴 {name}",
-  queuedChip: "대기열 #{n}",
-  queuedCancel: "대기열에서 빼기",
-  queuedHeldChip: "멈춤 #{n}",
-  queuedCancelHeld: "취소",
-  queuedRelease: "실행",
-  queuedRecall: "입력창으로 가져오기",
-  queuedBusy: "처리 중…",
-  resumedChip: "이어 가기 · 이전 실행 {run}",
-  loadingOlder: "이전 대화를 불러오는 중",
-  startOfConversation: "대화의 처음입니다",
-  newContent: "새 내용",
-  jumpToPending: "응답 대기 카드로 이동",
-  stop: "중지",
-  stopping: "중지하는 중…",
-  tokens: "토큰 {n}",
-  someTokensTotalOnly: "일부는 총 토큰만",
-  waitingFor: "응답 대기 {n}",
-  turnStatus: {
-    queued: "대기열",
-    running: "실행 중",
-    paused: "일시 정지",
-    waiting: "응답 대기 중",
-    completed: "완료",
-    failed: "실패",
-    cancelled: "취소됨",
-    interrupted: "중단됨",
-  },
-  stepStatus: {
-    running: "작업 중",
-    succeeded: "완료",
-    completed: "완료",
-    failed: "실패",
-    waiting: "응답 대기",
-    skipped: "건너뜀",
-    cancelled: "취소됨",
-  },
-  progressSummary: "진행 {n}단계",
-  progressSummaryDuration: "진행 {n}단계 · {duration}",
-  progressNow: "지금: {name}",
-  moreSteps: "…외 {n}단계",
-  sameSession: "같은 세션",
-  childProgress: "노드 {done}/{total}",
-  childCurrent: "현재: {name}",
-  childOpen: "{name} 실행 상세",
-  childOpenTip: "자식 실행 열기",
-  childToggle: "{name} 단계 펼치기·접기",
-  stepWarning: "주의",
-  progressLabel: "진행 상황",
-  listLabel: "대화",
-  errorOpenRun: "실행 상세에서 원인 보기",
-  units: { s: "초", m: "분", h: "시간" },
-};
+/** 기본 문구는 한국어(`locales/ko.json`의 `chat`). 영어는 `@agent-console/chat/locales/en`의 `chat`을 넘긴다. */
+export const defaultChatMessages: ChatMessages = ko.chat;

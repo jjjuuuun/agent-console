@@ -1,22 +1,22 @@
 # agent-console-example-log-source
 
-새 **로그 출처**와 **로그 분류기**를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 로그 출처 목록(`GET /api/v1/logs/sources`)과 분류기 목록에
-나타나고 제거하면 사라진다.
+An example that adds a new **log source** and **log classifier** with a single plugin package.
+No engine, server, or web code changes. Once installed, they appear in the log source list (`GET /api/v1/logs/sources`) and the classifier list,
+and they disappear when removed.
 
-출처·분류기 `example.text_log`(텍스트 로그)
-- 형식: 한 줄에 `<ISO 8601 시각> <수준> [<스레드>] <메시지>`(`[스레드]`는 생략 가능).
-- 출처는 `JsonlFileSource`를 상속하고 `parse_line`만 바꾼다. 증분 읽기(바이트 오프셋 커서)·끝나지 않은 줄 보류·
-  파일 회전 감지·읽기 전용 열기는 기반 클래스가 한다. 형식이 틀린 줄은 버리지 않고 진단 이벤트가 된다.
-- 분류기는 행 단위 무상태다. 수준 → 범주 대응은 설정 데이터(`level_categories`, 기본 `ERROR`·`FATAL` → `error`,
-  나머지 `default_category` = `system`)라 코드를 고치지 않고 바꾼다. 세션 = 파일, 상태 = 수준 소문자.
-- 원본 파일은 읽기만 한다(테스트가 `no_writes_under`·`tree_digest`로 확인).
+Source and classifier `example.text_log` (text log)
+- Format: one line per entry, `<ISO 8601 time> <level> [<thread>] <message>` (`[thread]` is optional).
+- The source subclasses `JsonlFileSource` and changes only `parse_line`. Incremental reads (byte offset cursor), holding back unfinished lines,
+  file rotation detection, and read-only opening are done by the base class. Lines with a wrong format are not dropped; they become diagnostic events.
+- The classifier is stateless, row by row. The level → category mapping is settings data (`level_categories`, default `ERROR` and `FATAL` → `error`,
+  everything else `default_category` = `system`), so you change it without changing code. Session = file, status = the level in lowercase.
+- The original files are only read (the tests check this with `no_writes_under` and `tree_digest`).
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
-출처는 `parse_line`(줄 → 값), 분류기는 `classify`(값 → 정규화 이벤트 초안)만 쓰면 된다.
+A source needs only `parse_line` (line → value), and a classifier only `classify` (value → normalized event drafts).
 
 ```python
 >>> from typing import ClassVar
@@ -40,8 +40,8 @@
 
 ```
 
-실제 구현은 `src/agent_console_example_log_source/text_log.py`(시각 해석, 순수 함수 `parse_text_line`,
-설정 스키마로 수준 → 범주 대응). 아래는 그 구현을 entry point로 등록한 것처럼 로드해 수집하는 예다.
+The real implementation is `src/agent_console_example_log_source/text_log.py` (time parsing, the pure function `parse_text_line`,
+and the level → category mapping through the settings schema). Below, that implementation is loaded as if it were registered as an entry point, and logs are collected.
 
 ```python
 >>> import tempfile
@@ -59,7 +59,7 @@
 ...     EntryPoint("example.text_log", value + "TextLogClassifier", LOG_CLASSIFIERS_GROUP),
 ... ]
 >>> registries = LogRegistries()
->>> _ = registries.load(entry_points=eps)        # 설치했으면 load()만 부른다
+>>> _ = registries.load(entry_points=eps)        # when installed, call only load()
 >>> [d.id for d in registries.source_descriptors()]
 ['example.text_log']
 
@@ -81,9 +81,9 @@
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 등록과 설정
+## Registration and settings
 
 ```toml
 [project.entry-points."agent_console.log_sources"]       # agent_console_logs.LOG_SOURCES_GROUP
@@ -93,11 +93,11 @@
 "example.text_log" = "agent_console_example_log_source:TextLogClassifier"
 ```
 
-출처 디스크립터의 `format`이 기본 분류기 id다. 설정 `logs.sources[].config.classifier.id`로 다른 분류기를, `classifier.config`로 분류기 설정을 준다.
-설치하지 않은 모듈은 `LogRegistries.load(source_modules=["example.text_log=agent_console_example_log_source:TextLogSource"],
-classifier_modules=[...])`로 읽는다(같은 검사기를 거친다).
+The `format` of the source descriptor is the default classifier id. The setting `logs.sources[].config.classifier.id` chooses another classifier, and `classifier.config` passes the classifier settings.
+Modules that are not installed are read with `LogRegistries.load(source_modules=["example.text_log=agent_console_example_log_source:TextLogSource"],
+classifier_modules=[...])` (they go through the same checker).
 
-워크스페이스 설정(설정 화면 또는 `settings.yaml`). 루트를 정해야 하므로 기본은 꺼져 있다.
+Workspace settings (the settings screen or `settings.yaml`). You have to set the roots, so it is off by default.
 
 ```yaml
 logs:
@@ -105,35 +105,35 @@ logs:
     - id: example.text_log
       enabled: true
       config:
-        roots: ["~/my-app/logs"]           # 기본 포함 패턴 **/*.log
-        classifier:                        # {id?, config?} — id를 비우면 출처의 format
+        roots: ["~/my-app/logs"]           # default include pattern **/*.log
+        classifier:                        # {id?, config?}; when id is empty, the source's format
           config:
             level_categories: {ERROR: error, WARN: error}
             default_category: system
 ```
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-log-source   # 설치
-uv pip uninstall agent-console-example-log-source                        # 제거
+uv pip install -e examples/extensions/agent-console-example-log-source   # install
+uv pip uninstall agent-console-example-log-source                        # remove
 ```
 
-설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/logs/sources`에 `example.text_log`가 나온다(꺼진 상태). 위 설정을 넣고 수집하면 세션 목록에 파일마다 세션이 보인다.
-- 제거: 출처 목록에서 사라진다. 설정의 `logs.sources` 항목과 이미 색인한 이벤트는 남지만 새로 수집하지 않는다.
-- 설치한 채로 끄기: 설정 항목에 `enabled: false`, 또는 서버 설정 `plugins.enabled`(허용 목록)에서 뺀다.
+**Restart the server** after installing or removing.
+- Install: `GET /api/v1/logs/sources` lists `example.text_log` (turned off). With the settings above, collecting shows one session per file in the session list.
+- Remove: it disappears from the source list. The `logs.sources` entry in the settings and the events already indexed remain, but nothing new is collected.
+- Turn off while installed: set `enabled: false` in the settings entry, or remove it from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
 ```bash
 cd examples/extensions/agent-console-example-log-source
 uv run --project ../../.. python -m pytest
 ```
 
-설치 없이 돈다(`pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
+The tests run without installing (`pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).

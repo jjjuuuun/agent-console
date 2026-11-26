@@ -2,17 +2,36 @@
 
 from __future__ import annotations
 
+import re
+import shutil
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from conftest import build_notes, notes_tool
 from extdocs import SKIP_MESSAGE, main
-from extdocs_common import TOOL_DIR, Area, Finding, SymbolResolver, collect, member_src_paths
-from extdocs_docs import allowed_rules, check_links, expand_globs, public_lint, run_docs_checks
+from extdocs_common import (
+    TOOL_DIR,
+    Area,
+    ExtdocsError,
+    Finding,
+    LintRule,
+    SymbolResolver,
+    collect,
+    load_data,
+    member_src_paths,
+)
+from extdocs_docs import (
+    allowed_rules,
+    check_links,
+    expand_globs,
+    public_lint,
+    rule_applies,
+    run_docs_checks,
+)
 from extdocs_generate import Generator, write_plan
 from extdocs_points import check_points
-from extdocs_testkit import Repo, tool_data
+from extdocs_testkit import Repo, language_rule, tool_data
 
 HOOKS_SNIPPET = """\
 노트를 저장한 뒤 할 일을 더할 때 쓴다.
@@ -248,6 +267,120 @@ def test_allow_marker_skips_named_rule_on_that_line(tmp_path: Path) -> None:
     assert allowed_rules("x <!-- extdocs:allow a b,c -->") == {"a", "b", "c"}
 
 
+ENGLISH_DOC = """\
+# Product
+
+**English** | [한국어](README.ko.md)
+
+Install it first. Then read the guide.
+
+```python
+>>> print("저장했습니다")
+저장했습니다
+```
+
+The server returns `프로젝트` as the label.
+한국어 문장이 남았다.
+A sentence with 한글 inside. <!-- extdocs:allow korean-prose -->
+"""
+
+
+def test_korean_prose_rule_finds_hangul_outside_code(tmp_path: Path) -> None:
+    """영어 문서: 코드 펜스·인라인 코드·언어 전환 줄·허용 표시 줄 밖 한글만 잡는다."""
+    path = tmp_path / "README.md"
+    path.write_text(ENGLISH_DOC, encoding="utf-8")
+    found = public_lint(tmp_path, [path], [language_rule()], warning=False)
+    assert [(f.code, f.where) for f in found] == [("public-korean-prose", "README.md:13")]
+    assert "한국어 문장이 남았다" in found[0].message
+
+
+def test_korean_prose_rule_skips_korean_copies(tmp_path: Path) -> None:
+    """한국어 사본(``*.ko.md``)은 대상 밖이다(폴더 안이어도)."""
+    for rel in ["README.ko.md", "docs/DEVELOPMENT.ko.md"]:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(
+            "# 개발 방식\n\n[English](DEVELOPMENT.md) | **한국어**\n", encoding="utf-8"
+        )
+    files = [tmp_path / "README.ko.md", tmp_path / "docs/DEVELOPMENT.ko.md"]
+    assert public_lint(tmp_path, files, [language_rule()], warning=False) == []
+
+
+@pytest.mark.parametrize(
+    ("line", "skipped"),
+    [
+        ("**English** | [한국어](README.ko.md)", True),
+        ("[English](DEVELOPMENT.md) | **한국어**", True),
+        ("**English** | [한국어](USAGE.ko.md) | [日本語](USAGE.ja.md)", True),
+        ("**English** | [한국어](README.ko.md) 그리고 더", False),
+        ("[한국어](README.ko.md)", False),
+        ("| **이름** | [한국어](x.md) |", False),
+    ],
+)
+def test_language_switch_line(line: str, skipped: bool) -> None:
+    rule = language_rule()
+    assert rule.skip_line is not None
+    assert bool(rule.skip_line.search(line)) is skipped
+
+
+def test_lint_rule_file_scope_and_severity(tmp_path: Path) -> None:
+    """``files``·``exclude_files``는 파일 범위, ``warning``은 늘 경고(호출이 오류 모드여도)."""
+    for rel in ["docs/a.md", "docs/a.ko.md", "other/b.md"]:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text("TODO here\n", encoding="utf-8")
+    rule = LintRule(
+        "todo",
+        "todo",
+        re.compile("TODO"),
+        files=("docs/**/*.md",),
+        exclude_files=("**/*.ko.md",),
+        warning=True,
+    )
+    assert rule_applies(rule, "docs/a.md")
+    assert not rule_applies(rule, "docs/a.ko.md")
+    assert not rule_applies(rule, "other/b.md")
+    files = sorted(tmp_path.rglob("*.md"))
+    found = public_lint(tmp_path, files, [rule], warning=False)
+    assert [(f.where, f.warning) for f in found] == [("docs/a.md:1", True)]
+    assert errors(found) == []
+    strict = replace(rule, warning=False)
+    assert errors(public_lint(tmp_path, files, [strict], warning=False)) == ["public-todo"]
+
+
+def test_lint_rule_data_fields(tmp_path: Path) -> None:
+    """``public_lint.yaml``의 선택 칸을 읽고, 모르는 severity는 데이터 형식 오류다."""
+    tool = tmp_path / "tool"
+    shutil.copytree(TOOL_DIR, tool, ignore=shutil.ignore_patterns("py_tests", "*cache*", "*.py"))
+    (tool / "public_lint.yaml").write_text(
+        "rules:\n"
+        "  - {id: a, message: m, pattern: x, files: docs/*.md, exclude_files: [x.ko.md],"
+        " skip_line: '^#', severity: warning}\n",
+        encoding="utf-8",
+    )
+    (rule,) = load_data(tool).lint_rules
+    assert (rule.files, rule.exclude_files, rule.warning) == (("docs/*.md",), ("x.ko.md",), True)
+    assert rule.skip_line is not None
+    assert rule.skip_line.pattern == "^#"
+    (tool / "public_lint.yaml").write_text(
+        "rules:\n  - {id: a, message: m, pattern: x, severity: fatal}\n", encoding="utf-8"
+    )
+    with pytest.raises(ExtdocsError, match="severity"):
+        load_data(tool)
+
+
+def test_public_lint_targets_include_root_docs() -> None:
+    """영어 기본 + 한국어 사본 루트 문서(README·USAGE·DEVELOPMENT)는 공개 가능 린트 대상이다."""
+    globs = set(tool_data().settings["public_lint_globs"])
+    for name in [
+        "README.md",
+        "README.ko.md",
+        "USAGE.md",
+        "USAGE.ko.md",
+        "docs/DEVELOPMENT.md",
+        "docs/DEVELOPMENT.ko.md",
+    ]:
+        assert name in globs
+
+
 def test_expand_globs_prunes_skipped_and_hidden_dirs(tmp_path: Path) -> None:
     for rel in [
         "packages/a/README.md",
@@ -285,11 +418,11 @@ def test_generated_sentences_skip_empty_values(tmp_path: Path) -> None:
     (repo.root / "docs/extending").mkdir(parents=True)
     page = generate(repo, scaffold=True)["docs/extending/memory.md"]
     section = page.split("extdocs:facts note-defaults")[1]
-    assert "- 등록: 패키지 데이터 `data/notes.json`를 쓴다." in section
+    assert "- Registration: Uses the package data `data/notes.json`." in section
     assert "  - snippet: 사용자 설정 notes 데이터\n" in section
-    assert "끄는 키: ." not in page
+    assert "Keys that turn it off: ." not in page
     assert "— —" not in page
-    assert "- 끄기·제거: 데이터를 지우면 그 항목만 빠진다." in section
+    assert "- Turning it off or removing it: Remove the data to drop only that item." in section
 
 
 def test_public_lint_in_example_readme_fails(documented: Repo) -> None:

@@ -90,11 +90,18 @@ def document_issues(rules: SecretRules, document: Mapping[str, Any]) -> list[Spe
     ]
 
 
+def document_secret_paths(rules: SecretRules, document: Mapping[str, Any]) -> list[str]:
+    """``document_issues``와 같은 검사가 찾은 비밀 의심 위치(문서 기준 JSON Pointer, 루트 = ``""``,
+    겹침 없음). 문서 틀 버전 비교가 그 값을 가린다."""
+    return list(dict.fromkeys(f.path for f in rules.find_suspected(dict(document))))
+
+
 __all__ = [
     "SCAN_OFF",
     "SCAN_REJECT",
     "SCAN_WARN",
     "SecretRejectedError",
     "document_issues",
+    "document_secret_paths",
     "scan_text",
 ]

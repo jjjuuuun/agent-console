@@ -241,6 +241,9 @@ class CopyService:
         kind_titles: 종류 표시 이름 ``{종류 이름: title}``(종류 기여의 ``title``). ``kinds``가
             ``CopyKindInfo.title``로 싣는다. 여기 없는 종류(기본 종류 등)는 ``kind_info`` 종류의
             ``DefinitionKind.title``을 쓰고, 그것도 없으면 null(화면이 종류 이름을 보인다).
+        kind_open_roles: 종류 항목을 여는 화면의 웹 라우트 역할 ``{종류 이름: 역할}``(종류 기여의
+            ``open_role``). ``kinds``가 ``CopyKindInfo.open_role``로 싣는다. 여기 없는 종류는
+            ``kind_info`` 종류의 ``DefinitionKind.open_role``을 쓰고, 그것도 없으면 null.
         kind_deleters: 기여 종류의 삭제 수단 ``{종류 이름: 콜백 | None}``(종류 기여의 ``delete``).
             None 값 = 그 종류는 종류 공통 경로로 지울 수 없다. 여기 없는 종류(기본 종류)는 공간
             저장소에서 바로 지운다.
@@ -259,11 +262,13 @@ class CopyService:
         messages: Mapping[str, str] | None = None,
         kind_info: Callable[[], Sequence[DefinitionKind]] = lambda: (),
         kind_titles: Callable[[], Mapping[str, str]] = lambda: {},
+        kind_open_roles: Callable[[], Mapping[str, str]] = lambda: {},
         kind_deleters: Callable[[], Mapping[str, ItemDelete | None]] = lambda: {},
     ) -> None:
         self._library = library
         self._kind_info = kind_info
         self._kind_titles = kind_titles
+        self._kind_open_roles = kind_open_roles
         self._kind_deleters = kind_deleters
         self._spaces = spaces
         self._known = known
@@ -310,12 +315,17 @@ class CopyService:
 
         ``library``·``portable``은 종류 값 그대로라 화면이 방향(공용 → 프로젝트는 ``portable``,
         프로젝트 → 공용은 ``library``)으로 거른다. 종류 이름을 모르는 화면도 같은 목록을 쓴다.
+        ``reserved_ids``는 종류 데이터 ``DefinitionKind.reserved_ids``(기여 종류 포함) 그대로다 —
+        적용이 거절하는 새 id(``project.copy_reserved_id``)를 화면이 미리 안내한다.
+        ``open_role``은 종류 기여의 ``open_role`` → 종류 데이터 ``DefinitionKind.open_role`` 순이다
+        (항목을 여는 웹 화면 역할, 없으면 null).
         """
         return self._kinds(self.space(ref, target=False))
 
     def _kinds(self, space: Space) -> list[CopyKindInfo]:
         info = {k.name: k for k in self._kind_info()}
         titles = self._kind_titles()
+        open_roles = self._kind_open_roles()
         deleters = self._kind_deleters()
         present = space.kinds if space.kinds is not None else tuple(space.store.kinds())
         out: list[CopyKindInfo] = []
@@ -330,6 +340,8 @@ class CopyService:
                     portable=kind.is_portable,
                     title=titles.get(name) or kind.title or None,
                     deletable=name not in deleters or deleters[name] is not None,
+                    reserved_ids=list(kind.reserved_ids),
+                    open_role=open_roles.get(name) or kind.open_role or None,
                 )
             )
         return out

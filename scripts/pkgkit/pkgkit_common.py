@@ -53,7 +53,8 @@ class Config:
     tool_sections: Mapping[str, str]
     drift_ignore_keys: Mapping[str, list[str]]
     template_values: Mapping[str, str] = field(default_factory=dict)
-    readme_doctest_heading: str = "최소 사용"
+    readme_doctest_headings: tuple[str, ...] = ("Minimal usage",)
+    """README doctest 절 제목 후보(``[pkg_lint] readme_doctest_headings``). 앞이 안내 이름."""
     example_roots: tuple[str, ...] = ()
     """확장 예제 폴더 glob(``[examples] roots``, 저장소 루트 기준)."""
     example_steps: tuple[tuple[str, ...], ...] = ()
@@ -95,6 +96,15 @@ def default_config_path() -> Path:
     return Path(__file__).resolve().with_name(CONFIG_FILE)
 
 
+def _headings(value: Any) -> tuple[str, ...]:
+    """README 절 제목 설정 값(문자열 하나 또는 목록) → 비지 않은 제목 tuple."""
+    items = [value] if isinstance(value, str) else list(value or [])
+    out = tuple(str(v) for v in items if str(v).strip())
+    if not out:
+        raise PkgkitError("pkg_lint.readme_doctest_headings가 비어 있습니다")
+    return out
+
+
 def parse_config(data: Mapping[str, Any]) -> Config:
     """TOML 표에서 :class:`Config`를 만든다. 필수 키가 없으면 :class:`PkgkitError`."""
     try:
@@ -129,7 +139,7 @@ def parse_config(data: Mapping[str, Any]) -> Config:
             tool_sections=dict(lint.get("tool_sections", {})),
             drift_ignore_keys={k: list(v) for k, v in lint.get("drift_ignore_keys", {}).items()},
             template_values={str(k): str(v) for k, v in py.get("template_values", {}).items()},
-            readme_doctest_heading=str(lint.get("readme_doctest_heading", "최소 사용")),
+            readme_doctest_headings=_headings(lint.get("readme_doctest_headings", "Minimal usage")),
             example_roots=tuple(str(g) for g in ex.get("roots", [])),
             example_steps=tuple(tuple(st) for st in steps),
             portability_examples=bool(ex.get("portability_default", False)),

@@ -244,7 +244,7 @@ class WsConnection:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                self._log.exception("WS 중계 실패: %s", topic.partition(":")[0])
+                self._log.exception("WS relay failed: %s", topic.partition(":")[0])
             finally:
                 if self._tasks.get(topic) is task:
                     self._tasks.pop(topic, None)

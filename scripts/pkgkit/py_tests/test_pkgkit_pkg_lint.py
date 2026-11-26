@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import dataclasses
 import json
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from pkg_lint import (
     main,
     readme_section,
 )
-from pkgkit_common import Config, PkgkitError
+from pkgkit_common import Config, PkgkitError, _headings
 from pkgkit_testkit import (
     ROOT_PYPROJECT,
     add_app,
@@ -216,24 +217,39 @@ def test_readme_doctest(ws: tuple[Path, Config]) -> None:
 
 
 def test_readme_doctest_counts_only_minimal_usage_section(ws: tuple[Path, Config]) -> None:
-    """4R.18: "최소 사용" 절 밖의 >>>는 세지 않는다. 절이 없으면 그 사실을 알린다."""
+    """4R.18: "Minimal usage" 절 밖의 >>>는 세지 않는다. 절이 없으면 그 사실을 알린다."""
     root, cfg = ws
     readme = pkg(root) / "README.md"
     readme.write_text(
-        "# x\n\n## 최소 사용\n\n설명뿐\n\n## 공개 API\n\n```python\n>>> 1\n1\n```\n",
+        "# x\n\n## Minimal usage\n\nprose only\n\n## Public API\n\n```python\n>>> 1\n1\n```\n",
         encoding="utf-8",
     )
     [hit] = run(root, cfg, ["readme-doctest"])
-    assert '"최소 사용" 절에 doctest' in hit.message
+    assert '"Minimal usage" 절에 doctest' in hit.message
     readme.write_text("# x\n\n```python\n>>> 1\n1\n```\n", encoding="utf-8")
     [hit] = run(root, cfg, ["readme-doctest"])
-    assert '"최소 사용" 절이 없습니다' in hit.message
+    assert '"Minimal usage" 절이 없습니다' in hit.message
     readme.write_text(
-        "# x\n\n## 최소 사용\n\n### 하위 절\n\n"
-        "```python\n# 코드 안 주석은 제목이 아니다\n>>> 1\n1\n```\n",
+        "# x\n\n## Minimal usage\n\n### Sub section\n\n"
+        "```python\n# a comment in code is not a heading\n>>> 1\n1\n```\n",
         encoding="utf-8",
     )
     assert run(root, cfg, ["readme-doctest"]) == []
+
+
+def test_readme_doctest_heading_aliases(ws: tuple[Path, Config]) -> None:
+    """D.4a: 제목 후보 목록(영어 + 한국어 별칭) 중 하나면 된다. 안내 이름은 첫 후보."""
+    root, cfg = ws
+    readme = pkg(root) / "README.md"
+    readme.write_text("# x\n\n## 최소 사용 예\n\n```python\n>>> 1\n1\n```\n", encoding="utf-8")
+    assert run(root, cfg, ["readme-doctest"]) == []
+    only_en = dataclasses.replace(cfg, readme_doctest_headings=("Minimal usage",))
+    [hit] = run(root, only_en, ["readme-doctest"], package="ac-notes")
+    assert '"Minimal usage" 절이 없습니다' in hit.message
+    assert _headings("Usage") == ("Usage",)
+    assert _headings(["A", " ", "B"]) == ("A", "B")
+    with pytest.raises(PkgkitError):
+        _headings([])
 
 
 def test_readme_section_boundaries() -> None:

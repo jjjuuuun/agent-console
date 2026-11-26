@@ -1,85 +1,85 @@
 # agent-console-backend-fake-agent
 
-모델 없이 **설정 데이터대로** 에이전트 실행(응답·도구·위임·되묻기·훅·실패·지연)을 흉내 내는 실행 백엔드.
-개발·테스트·E2E용. entry point `agent_console.backends:fake-agent`로 등록되고 표시 이름은 "가짜 에이전트(테스트용)"
-(`FAKE_BACKEND_TITLE`)다.
+An execution backend that imitates agent runs (responses, tools, delegation, questions, hooks, failures, delays) **according to settings data**, without a model.
+For development, tests, and E2E. It is registered as the entry point `agent_console.backends:fake-agent`, and its display name is `가짜 에이전트(테스트용)`
+(`FAKE_BACKEND_TITLE`).
 
-**화면에서 기본 숨김**: 디스크립터가 `ui_hints.hidden: true`를 선언한다. 웹은 숨김 표시가 있는 백엔드를
-실행 방식 선택지·설정 카드에서 빼고, 이미 이 백엔드를 지정한 정의는 그대로 실행한다. 설치자가 `mod-runs` 설정
-`show_hidden_backends: true`(환경변수 `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS=1`)를 켜면 서버가 숨김을 푼 디스크립터를
-낸다. 테스트·e2e·CI·`pnpm app`은 이 설정으로 켠다. 옛 id `fake`는 별칭 없이 없앴다(저장 데이터에 남아 있으면
-"등록되지 않은 실행 백엔드" 오류).
+**Hidden on screen by default**: the descriptor declares `ui_hints.hidden: true`. The web app leaves backends marked hidden out of
+the run method choices and settings cards, and definitions that already name this backend still run. When the server administrator turns on the `mod-runs` setting
+`show_hidden_backends: true` (environment variable `AGENT_CONSOLE_SHOW_HIDDEN_BACKENDS=1`), the server publishes the descriptor with hiding removed.
+Tests, e2e, CI, and `pnpm app` turn it on with this setting. The old id `fake` was removed without an alias (if it remains in saved data,
+it is an "unregistered execution backend" error).
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                         # 워크스페이스 안
-uv pip install ./packages/py/features/ac-backend-fake-agent   # 단독
+uv sync --all-packages                         # inside the workspace
+uv pip install ./packages/py/features/ac-backend-fake-agent   # standalone
 ```
 
-의존: `agent-console-runtime`, `agent-console-contracts`, `pydantic`.
+Dependencies: `agent-console-runtime`, `agent-console-contracts`, `pydantic`.
 
-## 설정 (`Agent.backend_options`, 형식 `FakeBackendOptions`)
+## Settings (`Agent.backend_options`, type `FakeBackendOptions`)
 
-| 키 | 기본 | 의미 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `rules` | `[]` | 위에서부터 처음 맞는 규칙을 쓴다 |
-| `default` | `{response: "$prompt"}` | 맞는 규칙이 없을 때(기본은 프롬프트 그대로 반환) |
-| `delay_ms` | `0` | 델타 사이 지연 |
-| `chunk_chars` | `16` | 델타 하나의 글자 수 |
-| `echo_bundle` | `false` | 응답 끝에 받은 실행 묶음 요약을 덧붙인다(E2E에서 리소스 전달 확인용) |
+| `rules` | `[]` | The first matching rule from the top is used |
+| `default` | `{response: "$prompt"}` | When no rule matches (by default, returns the prompt as is) |
+| `delay_ms` | `0` | Delay between deltas |
+| `chunk_chars` | `16` | Characters per delta |
+| `echo_bundle` | `false` | Appends a summary of the received run bundle to the end of the response (to check resource delivery in E2E) |
 
-규칙(`FakeRule`): 조건 `contains`·`prefix`·`equals`(`ignore_case` 기본 true, 모두 만족해야 함, 없으면 항상 맞음),
+Rules (`FakeRule`): conditions `contains`, `prefix`, `equals` (`ignore_case` defaults to true; all must hold; without conditions, always matches),
 `response`(`string.Template`: `$prompt`·`$agent_id`·`$agent_name`·`$model`·`$session_id`·`$bundle`·
-`$delegate_1`…), `structured`, `tool_calls`(`[{name, input, output, is_error}]`), `delegate`(아래),
-`ask`(아래), `observe`(아래), `fail`(`{code, message, after_chunks}`), `delay_ms`·`chunk_chars`(규칙별 덮어쓰기),
-`usage`(없으면 단어 수로 계산), `llm_duration_ms`(마지막 `agent.usage`의 `duration_ms`, 비우면 null).
-플랫폼 도구 호출(`host_tool_calls`)은 만든 호출 id를 `call_host_tool(tool_use_id=)`로 넘긴다.
+`$delegate_1`…), `structured`, `tool_calls` (`[{name, input, output, is_error}]`), `delegate` (below),
+`ask` (below), `observe` (below), `fail` (`{code, message, after_chunks}`), `delay_ms` and `chunk_chars` (per-rule overrides),
+`usage` (computed from word counts if absent), `llm_duration_ms` (the `duration_ms` of the last `agent.usage`; null when empty).
+Platform tool calls (`host_tool_calls`) pass the generated call id to `call_host_tool(tool_use_id=)`.
 
-이벤트 순서: `agent.session_started` → `usage.rate_limit`*(설치자 설정) → 관측(start)* → (`agent.tool_call` →
-`agent.tool_result`)* → 관측(tool)* → 위임* → `agent.text_delta`* → `agent.message` → 관측(end)* → `agent.usage`.
-실패면 `agent.message` 없이 `failed`, 취소면 지연 중 즉시 `cancelled`.
+Event order: `agent.session_started` → `usage.rate_limit`* (server administrator settings) → observation (start)* → (`agent.tool_call` →
+`agent.tool_result`)* → observation (tool)* → delegation* → `agent.text_delta`* → `agent.message` → observation (end)* → `agent.usage`.
+On failure, `failed` without `agent.message`; on cancellation, `cancelled` immediately during delays.
 
-### 서브에이전트 위임 흉내 (`delegate`)
+### Imitating subagent delegation (`delegate`)
 
 ```yaml
 rules:
   - contains: 구현
     delegate:
-      - to: be-node              # AgentRequest.subagents[].name (= 위임 대상 노드 id)
-        prompt: "API 작업: $prompt"   # 넘길 과제(위임자 변수)
-        response: "$agent_name 끝: $prompt"   # 서브에이전트 결과($prompt = 과제, $bundle = 대상 묶음)
+      - to: be-node              # AgentRequest.subagents[].name (= the delegate node id)
+        prompt: "API 작업: $prompt"   # the task to pass on (delegator variables)
+        response: "$agent_name 끝: $prompt"   # the subagent result ($prompt = the task, $bundle = the target bundle)
         tool_calls: [{name: Write, input: {path: a.py}}]
-        status: completed        # completed 밖(failed 등)이면 위임 도구 결과가 오류
-        delay_ms: 0              # 끝나기 전 지연(취소 가능)
-        usage: {total_tokens: 120, tool_uses: 1, duration_ms: 900}   # 없으면 단어 수·측정값
+        status: completed        # anything other than completed (failed and so on) makes the delegation tool result an error
+        delay_ms: 0              # delay before finishing (cancellable)
+        usage: {total_tokens: 120, tool_uses: 1, duration_ms: 900}   # word counts and measurements if absent
     response: "정리: $delegate_1"
 ```
 
-위임 하나의 이벤트(claude-sdk와 같은 모양):
+Events of one delegation (the same shape as claude-sdk):
 
-| 순서 | type | actor | node_path |
+| Order | type | actor | node_path |
 | --- | --- | --- | --- |
-| 1 | `agent.tool_call`(이름 = 설치자 설정 `delegate_tool`, 입력 `{subagent_type, description, prompt}`) | 위임자 | 위임자 |
-| 2 | `agent.subagent_started{subagent_id, name, tool_use_id, task_preview}` | 대상 `actor` | `sink.child_path(name)` |
-| 3 | 대상의 `agent.tool_call`·`agent.tool_result`*, `agent.message`(델타 없음) | 대상 | 〃 |
-| 4 | `agent.subagent_stopped{…, status, usage{total_tokens}, tool_uses, duration_ms, result_preview}` | 대상 | 〃 |
-| 5 | `agent.tool_result`(위임 도구, `tool_use_id` = 1의 id) | 위임자 | 위임자 |
+| 1 | `agent.tool_call` (name = server administrator setting `delegate_tool`, input `{subagent_type, description, prompt}`) | Delegator | Delegator |
+| 2 | `agent.subagent_started{subagent_id, name, tool_use_id, task_preview}` | Target `actor` | `sink.child_path(name)` |
+| 3 | The target's `agent.tool_call` and `agent.tool_result`*, `agent.message` (no deltas) | Target | 〃 |
+| 4 | `agent.subagent_stopped{…, status, usage{total_tokens}, tool_uses, duration_ms, result_preview}` | Target | 〃 |
+| 5 | `agent.tool_result` (delegation tool, `tool_use_id` = the id from 1) | Delegator | Delegator |
 
-- 대상 경로는 `BackendEventSink.child_path(name)`(프로토콜 필수 메서드, `NodeContext`가 구현)로 얻는다.
-- 요청에 없는 대상이면 1 다음 바로 오류 도구 결과(`is_error`)이고 `$delegate_N`은 빈 문자열이다.
-- 위임 중 취소되면 `agent.subagent_stopped{subagent_id, name, tool_use_id, status: stopped}`(사용량·결과 없음)만 내고
-  `cancelled`로 끝난다. 위임 도구 결과(5)와 결과 알림은 내지 않는다 — claude-sdk가 interrupt 때 내는 모양과 같다.
-- 위임자 `agent.usage`에는 서브에이전트 토큰을 더하지 않는다.
-- sink가 선택 능력 `SubagentResultListener`(ac-runtime, `on_subagent_result(name, *, text, status, actor,
-  tool_use_id)`)를 만족하면 위임 하나가 끝날 때마다(5 다음) 결과 전문으로 부른다.
-  `status`는 `completed`면 `succeeded`, 아니면 `failed`. 위임 방식 `sdk-subagents`(nodes-core)가 이것으로
-  대상의 답변을 낸다. 실패는 `log.warning`.
+- The target path comes from `BackendEventSink.child_path(name)` (a required protocol method that `NodeContext` implements).
+- If the target is not in the request, an error tool result (`is_error`) comes right after 1, and `$delegate_N` is an empty string.
+- If cancelled during delegation, only `agent.subagent_stopped{subagent_id, name, tool_use_id, status: stopped}` (no usage or result) is emitted and
+  it ends `cancelled`. The delegation tool result (5) and the result notification are not emitted, the same shape claude-sdk emits on interrupt.
+- Subagent tokens are not added to the delegator's `agent.usage`.
+- If the sink satisfies the optional capability `SubagentResultListener` (ac-runtime, `on_subagent_result(name, *, text, status, actor,
+  tool_use_id)`), it is called with the full result each time one delegation ends (after 5).
+  `status` is `succeeded` for `completed`, otherwise `failed`. The delegation strategy `sdk-subagents` (nodes-core) uses this to emit
+  the target's replies. Failures give `log.warning`.
 
-### 플랫폼 도구 호출 흉내 (`host_tool_calls`)
+### Imitating platform tool calls (`host_tool_calls`)
 
-`capabilities.host_tools = true`. 규칙의 `host_tool_calls`가 요청의 `AgentRequest.host_tools`(ac-runtime `HostTool`)를
-위임(`delegate`) 다음에 순서대로 하나씩 부른다(결정적). 독립 위임(`host`) 테스트·E2E용이다.
+`capabilities.host_tools = true`. The rule's `host_tool_calls` call the request's `AgentRequest.host_tools` (ac-runtime `HostTool`)
+one at a time in order after delegation (`delegate`) (deterministic). For tests and E2E of the standalone delegation (`host`).
 
 ```yaml
 rules:
@@ -87,69 +87,69 @@ rules:
     response: "검토 결과: $host_1 ($host_1_status)"
     host_tool_calls:
       - tool: delegate                     # HostTool.name
-        input: {target: reviewer, task: "$prompt"}   # 문자열은 템플릿
-        append: false                      # 기본 true = 결과를 응답 끝에 붙인다
+        input: {target: reviewer, task: "$prompt"}   # strings are templates
+        append: false                      # default true = append the result to the end of the response
       - tool: delegate
         input: {target: writer, task: "$host_1"}
-        when: {contains: 반려}             # 앞 호출 결과가 맞을 때만(after: N으로 다른 호출, not_contains·is_error)
+        when: {contains: 반려}             # only when the previous call's result matches (after: N for another call, not_contains, is_error)
 ```
 
-- 호출마다 `agent.tool_call{name: 도구}` → 핸들러(`call_host_tool`) → `agent.tool_result{is_error}`.
-- `$host_N`(결과 텍스트)·`$host_N_status`(`succeeded`|`failed`|`skipped`|`cancelled`, `HostCallStatus`).
-  `when`이 맞지 않으면 `skipped`, 볼 결과가 없어도 `skipped`.
-- 요청에 없는 도구면 오류 결과(`UNKNOWN_HOST_TOOL_TEXT`). 핸들러 도중 실행 취소면 결과 이벤트 없이 `cancelled`.
+- Each call: `agent.tool_call{name: tool}` → handler (`call_host_tool`) → `agent.tool_result{is_error}`.
+- `$host_N` (result text), `$host_N_status` (`succeeded`|`failed`|`skipped`|`cancelled`, `HostCallStatus`).
+  `skipped` when `when` does not match, and also when there is no result to look at.
+- A tool that is not in the request gives an error result (`UNKNOWN_HOST_TOOL_TEXT`). If the run is cancelled during the handler, `cancelled` without a result event.
 
-### 상호작용 흉내 (`ask`)
+### Imitating interactions (`ask`)
 
 ```yaml
 rules:
   - contains: 배포
     ask:
-      - kind: question                 # 상호작용 종류 id
+      - kind: question                 # interaction kind id
         title: 확인
-        payload: {text: "$prompt 진행할까요?"}   # 문자열은 위임자 변수로 채움
-        answer_path: /response         # $answer_1에 넣을 응답 위치(없으면 응답 전체 JSON)
-        timeout_seconds: 30            # 선택
-        # response_schema: {...}       # 선택(없으면 종류 기본값)
+        payload: {text: "$prompt 진행할까요?"}   # strings are filled with delegator variables
+        answer_path: /response         # the response location to put into $answer_1 (the whole response JSON if absent)
+        timeout_seconds: 30            # optional
+        # response_schema: {...}       # optional (the kind default if absent)
     response: "답: $answer_1 ($answer_1_status)"
 ```
 
-- 위임(`delegate`) 다음, 응답 텍스트 전에 순서대로 `sink.request_input`을 연다.
-- **열 수 있는 조건**: sink가 `InteractivePort`이고 요청의 허용(`AgentRequest.interactions.kinds`)에 그 종류가
-  있을 때만. 아니면 열지 않고 `log.warning` + `$answer_N` = `$answer_N_status` = `unavailable`
-  (연결이 없는 노드는 요청을 열지 못한다).
-- 결과: answered면 `$answer_N` = 응답 값, 만료·취소면 상태 문자열(`expired`·`cancelled`). Run이 취소되면
-  `cancelled`로 끝난다. `capabilities.interactions = None`(종류 제한 없음).
+- After delegation (`delegate`) and before the response text, `sink.request_input` is opened in order.
+- **Conditions for opening**: only when the sink is an `InteractivePort` and the request's allowance (`AgentRequest.interactions.kinds`) includes that kind.
+  Otherwise it is not opened: `log.warning` + `$answer_N` = `$answer_N_status` = `unavailable`
+  (nodes without the edge cannot open requests).
+- Result: when answered, `$answer_N` = the response value; when expired or cancelled, the status string (`expired`, `cancelled`). If the Run is cancelled,
+  it ends `cancelled`. `capabilities.interactions = None` (no kind restriction).
 
-### hook·MCP 관측 흉내 (`observe`)
+### Imitating hook and MCP observations (`observe`)
 
 ```yaml
 default:
   tool_calls: [{name: mcp__docs__lookup, input: {q: x}}]
   observe:
-    - type: hook.invoked                 # 이벤트 이름은 데이터(fake 코드에 hook 종류 목록 없음)
+    - type: hook.invoked                 # event names are data (no list of hook kinds in the fake code)
       payload: {event: PreToolUse, hook_type: sdk-callback, tool_name: Bash}
     - type: mcp.call_started
-      after: tool                        # start(기본) | tool | end
-      payload: {server: docs, tool: lookup, tool_use_id: "$session_id:tool0"}   # 문자열은 템플릿
-    - type: lsp.diagnostics              # 다른 계열은 켜는 키를 직접 준다
+      after: tool                        # start (default) | tool | end
+      payload: {server: docs, tool: lookup, tool_use_id: "$session_id:tool0"}   # strings are templates
+    - type: lsp.diagnostics              # other families give the switch key directly
       when: lsp
 ```
 
-- **요청의 관측 설정이 켜졌을 때만** 낸다: `AgentRequest.observe`(= `AgentSettings.observe`)에서 `when` 키가 `true`여야 한다.
-  `when`을 생략하면 type의 첫 세그먼트로 정한다(`DEFAULT_OBSERVE_SWITCHES`: `hook` → `hooks`, `mcp` → `mcp`). 모르는
-  계열인데 `when`이 없으면 설정 검증 오류.
-- 자리: `start` = 세션 시작(·`usage.rate_limit`) 직후, `tool` = 규칙의 도구 호출 다음(위임 전), `end` = `agent.message`
-  다음·`agent.usage` 앞(실패여도 낸다, 취소면 내지 않는다).
-- payload 문자열은 응답과 같은 변수(`$prompt`, `$session_id`, `$agent_id` …)로 채운다. 규칙 도구 호출의 id는
-  `$session_id:tool0`, `$session_id:tool1`…이라 MCP 호출 쌍을 도구 호출과 같은 `tool_use_id`로 맞출 수 있다.
-- `hook_events`(관측할 hook 이벤트 목록)는 fake가 해석하지 않는다(낼 이벤트는 규칙 데이터가 정한다).
-- 스위치는 `observe.collectors`도 읽는다(`observe_switch_on`): `collectors[<수집기 id>].enabled`가 bool이면 옛 키를
-  이긴다. 옛 키 → 수집기 id 대응표 `DEFAULT_OBSERVE_COLLECTORS`(`hooks` → `sdk-hooks`, `mcp` → `mcp-calls`, claude-sdk
-  `LEGACY_OBSERVE_KEYS`와 같은 규칙)는 설치자 설정 `observe_collectors`로 바꾼다. 대응표에 없는 `when`은 그 이름을
-  수집기 id로도 본다(`when: example.tool_count` → `collectors.example.tool_count.enabled`).
+- Emitted **only when the request's observation settings are on**: the `when` key must be `true` in `AgentRequest.observe` (= `AgentSettings.observe`).
+  If `when` is omitted, it is decided by the first segment of the type (`DEFAULT_OBSERVE_SWITCHES`: `hook` → `hooks`, `mcp` → `mcp`). An unknown
+  family without `when` is a settings validation error.
+- Position: `start` = right after the session start (and `usage.rate_limit`), `tool` = after the rule's tool calls (before delegation), `end` = after `agent.message`
+  and before `agent.usage` (emitted even on failure, not on cancellation).
+- payload strings are filled with the same variables as the response (`$prompt`, `$session_id`, `$agent_id` …). The ids of rule tool calls are
+  `$session_id:tool0`, `$session_id:tool1`…, so MCP call pairs can be matched to tool calls with the same `tool_use_id`.
+- `hook_events` (the list of hook events to observe) is not interpreted by the fake (the rule data decides which events to emit).
+- Switches also read `observe.collectors` (`observe_switch_on`): when `collectors[<collector id>].enabled` is a bool, it wins over the old key.
+  The mapping from old keys to collector ids, `DEFAULT_OBSERVE_COLLECTORS` (`hooks` → `sdk-hooks`, `mcp` → `mcp-calls`; the same rule as claude-sdk's
+  `LEGACY_OBSERVE_KEYS`), is changed with the server administrator setting `observe_collectors`. A `when` not in the mapping is also treated as
+  a collector id (`when: example.tool_count` → `collectors.example.tool_count.enabled`).
 
-### hook probe 기록 흉내 (`hook_probe`)
+### Imitating hook probe records (`hook_probe`)
 
 ```yaml
 default:
@@ -157,36 +157,36 @@ default:
     - event: PreToolUse
       matcher: Bash
       tool: Bash
-      tool_use_id: "$session_id:tool0"   # 문자열은 템플릿
+      tool_use_id: "$session_id:tool0"   # strings are templates
       input: {tool_input: {command: ls}}
-      decision: allow                    # decision.value(기본 none)
+      decision: allow                    # decision.value (default none)
       duration_ms: 25
     - {event: Stop, after: end, exit_code: 2, decision: block, reason: no}
 ```
 
-- 관측 설정 `observe.hook_probe`가 켜졌고(수집기가 아니라 별도 키다 — claude-sdk와 같음) 요청에 실행 폴더
-  (`AgentRequest.run_folder`)가 있을 때만 `<run_folder>/<hook_probe_folder>/<세션>.jsonl`에 실제 probe 형식(`format`
-  기본 `hook-probe/1`) 한 줄씩 덧붙인다. 키: `format, probe_id(<세션>:probeN), event, session_id, tool_use_id, tool,
+- Only when the observation setting `observe.hook_probe` is on (a separate key, not a collector, the same as claude-sdk) and the request has a run folder
+  (`AgentRequest.run_folder`), it appends one line at a time in the real probe format (`format`
+  default `hook-probe/1`) to `<run_folder>/<hook_probe_folder>/<session>.jsonl`. Keys: `format, probe_id(<session>:probeN), event, session_id, tool_use_id, tool,
   matcher, context(= run_context), started_at, ended_at, duration_ms, exit_code, error, decision{value, source: fake-agent,
-  reason}, input, agent_id, agent_type, cwd, simulated: true` + `fields`(덧붙이거나 덮어쓸 키, 형식이 바뀌면 데이터로).
-  로그 출처 `hook-probe-jsonl`·분류기 `hook-probe`가 그대로 읽는다(테스트로 확인). 명령은 실행하지 않는다.
-- 실행 폴더가 없으면 `log.warning` 하나. 꺼져 있으면(기본) 아무것도 쓰지 않는다.
-- `echo_hooks`가 켜져 있으면 묶음 `hooks` 항목마다 기록 한 줄도 남긴다(`hook.*` payload에 `hook_probe: true`).
-- 묶음 미리보기 훅 `FakeBackend.preview_notes`: `observe.hook_probe`면 claude-sdk와 같은 코드
-  `observe.hook_probe_wrapped`(info, `details.simulated: true`)를 흉내 낸다.
+  reason}, input, agent_id, agent_type, cwd, simulated: true` + `fields` (keys to add or override, as data when the format changes).
+  The log source `hook-probe-jsonl` and the classifier `hook-probe` read it as is (checked by tests). No command is run.
+- Without a run folder, one `log.warning`. When off (default), nothing is written.
+- With `echo_hooks` on, one record line is also kept for each item in the bundle's `hooks` (`hook_probe: true` in the `hook.*` payload).
+- Bundle preview hook `FakeBackend.preview_notes`: with `observe.hook_probe`, it imitates the same code as claude-sdk,
+  `observe.hook_probe_wrapped` (info, `details.simulated: true`).
 
-### 실행 묶음 요약 (`echo_bundle`, `$bundle`)
+### Run bundle summary (`echo_bundle`, `$bundle`)
 
-`bundle: instructions=2 [team-guide, pl-guide]; mcp_servers=1 [github]; ignored=[hooks]` — 칸 이름순,
-칸별 항목 수와 출처 ref만 싣고 칸 값은 싣지 않는다. `capabilities.resource_slots`에 없는 칸은 `ignored`.
-`secret://…` 모양은 `secret://***`로 가린다. 묶음이 없으면 `bundle: -`. 함수 `bundle_summary`로 따로 쓸 수 있다.
+`bundle: instructions=2 [team-guide, pl-guide]; mcp_servers=1 [github]; ignored=[hooks]`: in slot name order,
+it carries only the item count and source refs per slot, never slot values. Slots not in `capabilities.resource_slots` are `ignored`.
+`secret://…` shapes are masked as `secret://***`. Without a bundle, `bundle: -`. The function `bundle_summary` can be used on its own.
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import asyncio
 >>> from agent_console_backend_fake_agent import FakeBackend
->>> from agent_console_backend_fake_agent.testing import ValidatingSink  # 공용(ac-runtime.testing_sink) 다시 내보냄
+>>> from agent_console_backend_fake_agent.testing import ValidatingSink  # the shared one (ac-runtime.testing_sink), re-exported
 >>> from agent_console_contracts import Agent
 >>> from agent_console_runtime import AgentRequest, CancelToken
 
@@ -197,7 +197,7 @@ default:
 ...         "rules": [{"contains": "spec", "response": "스펙: $prompt", "delay_ms": 20}],
 ...     },
 ... )
->>> sink = ValidatingSink()  # 이벤트를 계약으로 검증하며 기록
+>>> sink = ValidatingSink()  # records events while validating them against the contracts
 >>> result = asyncio.run(
 ...     FakeBackend().run(AgentRequest(agent=agent, prompt="spec 써 줘"), sink, CancelToken())
 ... )
@@ -205,7 +205,7 @@ default:
 ('succeeded', '스펙: spec 써 줘')
 >>> sink.types
 ['agent.session_started', 'agent.text_delta', 'agent.message', 'agent.usage']
->>> asyncio.run(  # 맞는 규칙이 없으면 프롬프트를 그대로 돌려준다
+>>> asyncio.run(  # without a matching rule, returns the prompt as is
 ...     FakeBackend().run(AgentRequest(agent=agent, prompt="hello"), ValidatingSink(), CancelToken())
 ... ).text
 'hello'
@@ -213,40 +213,40 @@ default:
 ```
 
 `FakeBackend(models=[...], rate_limits=[...], resource_slots=[...], delegate_tool="Agent", clock=time.time)`.
-`capabilities`: streaming·tools·resume·cancel·subagents = true, `interactions = None`(제한 없음),
-`resource_slots` = 생성 인자(기본 알려진 칸 전부), `enforce`는 모두 false(아무것도 실행하지 않지만 강제하는 것도 없다).
+`capabilities`: streaming, tools, resume, cancel, subagents = true, `interactions = None` (no restriction),
+`resource_slots` = the constructor argument (default: every known slot), `enforce` is all false (it runs nothing, but it enforces nothing either).
 
-### 준비 상태·연결 테스트 (선택 능력)
+### Readiness and connection test (optional capabilities)
 
-`capabilities.status`·`probe` = true. `status(ctx)`는 늘 `state: always_ready`(`FAKE_READY_STATE`), 톤 ok,
-`probe(ctx, timeout_s)`는 지연 없이 `ok: true, latency_ms: 0, details: {models: n}`(네트워크·키 없음).
-`probe_cost_note`는 "비용이 들지 않습니다". 대본 로그인(아래)을 켜면 상태는 메모리 로그인 여부를 따른다.
+`capabilities.status` and `probe` = true. `status(ctx)` is always `state: always_ready` (`FAKE_READY_STATE`) with tone ok, and
+`probe(ctx, timeout_s)` returns `ok: true, latency_ms: 0, details: {models: n}` without delay (no network or keys).
+`probe_cost_note` is a "no cost" message. When the scripted sign-in (below) is on, the status follows the in-memory sign-in state.
 
-### 대본 로그인 (선택 능력)
+### Scripted sign-in (optional capability)
 
-e2e·웹 개발에서 Claude 구독 로그인 대화상자의 흐름 전체를 **PTY·네트워크·파일 없이** 재현한다. 설치자 설정
-`backends.fake-agent.login`(`FakeLoginScript`)을 주면 켜진다(기본 `null` = 능력 없음, 기본 카드에 로그인 버튼이 생기지 않게).
+Reproduces the whole flow of the Claude subscription sign-in dialog **without a PTY, network, or files**, for e2e and web development. It turns on when the server administrator setting
+`backends.fake-agent.login` (`FakeLoginScript`) is given (default `null` = no capability, so no sign-in button appears on the default card).
 
 ```yaml
 backends:
   fake-agent:
-    login: {}                     # 기본 대본: 코드 ok = 성공, 그 밖 = verify_failed
-    # login: {needs_code: false, callback_after_s: 1}   # 콜백 경로(코드 없이 1초 뒤 성공)
+    login: {}                     # the default script: code ok = success, anything else = verify_failed
+    # login: {needs_code: false, callback_after_s: 1}   # the callback path (success after 1 second without a code)
     # login: {start_delay_s: 0.5, verify_delay_s: 0.5, start_logged_in: true, logout_ok: false}
 ```
 
-- 켜지면 `capabilities.login/logout = true`, `login_methods = [{id: script, label: 구독으로 로그인, notice, writes}]`.
-- 흐름: `starting` →(`start_delay_s`) `waiting_user`(`open_url` 기본 `https://login.example.com/oauth/authorize?fake=1`,
-  `needs_code`, `screen` 줄) → 코드 입력 → `verifying` →(`verify_delay_s`) 코드가 `success_code`(기본 `ok`)면
-  `succeeded`, 아니면 `failed`(`reason` = `fail_reason`, 기본 `verify_failed`). `needs_code: false` +
-  `callback_after_s`면 코드 없이 성공. 취소(`DELETE`)·하트비트 만료·시간 초과(`timeout_s`)는 서비스가 처리한다 —
-  대본은 기다리기만 한다.
-- 상태 점검: 로그인 전 `state: login_required`(`FAKE_LOGIN_REQUIRED_STATE`, warn, 주 버튼 `login`), 로그인 뒤
-  `always_ready`(ok, 메뉴 `login`(다시 로그인)·`logout`). 상태는 인스턴스 메모리(`FakeBackend.login_state`)라 서버를
-  다시 띄우면 `start_logged_in`으로 돌아간다.
-- 로그아웃: 메모리 상태를 지운다. `logout_ok: false`면 `ok: false, reason: logout_failed`.
-- 받는 키: `accepts_keys`(비면 서비스 기본 enter·up·down·escape). 키는 기록만 한다.
-- 문구는 `texts`(`FakeLoginTexts`)로 바꾼다. 받은 코드는 `secrets_to_mask`로 알려 서비스가 응답에서 가린다.
+- When on, `capabilities.login/logout = true`, `login_methods = [{id: script, label: 구독으로 로그인, notice, writes}]`.
+- Flow: `starting` →(`start_delay_s`) `waiting_user` (`open_url` default `https://login.example.com/oauth/authorize?fake=1`,
+  `needs_code`, `screen` lines) → code entry → `verifying` →(`verify_delay_s`) if the code is `success_code` (default `ok`),
+  `succeeded`; otherwise `failed` (`reason` = `fail_reason`, default `verify_failed`). With `needs_code: false` +
+  `callback_after_s`, it succeeds without a code. Cancellation (`DELETE`), heartbeat expiry, and timeouts (`timeout_s`) are handled by the service;
+  the script only waits.
+- Status check: before sign-in, `state: login_required` (`FAKE_LOGIN_REQUIRED_STATE`, warn, main button `login`); after sign-in,
+  `always_ready` (ok, menu `login` (sign in again) and `logout`). The state is instance memory (`FakeBackend.login_state`), so restarting
+  the server returns it to `start_logged_in`.
+- Sign-out: clears the in-memory state. With `logout_ok: false`, `ok: false, reason: logout_failed`.
+- Accepted keys: `accepts_keys` (when empty, the service defaults enter, up, down, escape). Keys are only recorded.
+- Text is changed with `texts` (`FakeLoginTexts`). Received codes are reported through `secrets_to_mask` so the service masks them in responses.
 
 ```python
 >>> import asyncio
@@ -267,47 +267,47 @@ backends:
 
 ```
 
-### 설치자 설정 (`ConfigurableBackend` 훅)
+### Server administrator settings (`ConfigurableBackend` hook)
 
-`FakeBackend.from_options(options, *, secrets, environ)` — ac-runtime `ConfigurableBackend` 구현. 서버는 설정
-`backends.fake-agent`를 이 훅에 넘겨 entry point로 만든 인스턴스를 교체한다(키의 의미는 이 패키지만 안다).
+`FakeBackend.from_options(options, *, secrets, environ)` is the ac-runtime `ConfigurableBackend` implementation. The server passes the setting
+`backends.fake-agent` to this hook to replace the instance created from the entry point (only this package knows what the keys mean).
 
-| 키 | 기본 | 의미 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `models` | `[]` | `list_models()` 목록(`ModelInfo`) |
-| `rate_limits` | `[]` | 실행마다 낼 `usage.rate_limit`: `[{window, status?, utilization?, resets_at? \| resets_in_seconds?, overage_status?}]` |
-| `resource_slots` | 알려진 칸 전부 | `capabilities.resource_slots` |
-| `delegate_tool` | `Agent` | 위임 도구 호출 이벤트의 도구 이름 |
-| `observe_collectors` | `{hooks: sdk-hooks, mcp: mcp-calls}` | 옛 관측 키 → 수집기 id(`observe.collectors`가 옛 키를 이긴다) |
-| `hook_probe_folder` | `hook-probe` | 실행 폴더 아래 hook probe 기록 흉내 폴더 이름 |
-| `login` | `null` | 대본 로그인(`FakeLoginScript`, 위 "대본 로그인"). `{}`면 기본 대본 |
-| `echo_hooks` | `false` | 실행 묶음 `hooks` 칸 항목마다 `hook.started`·`hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}`를 낸다(명령은 실행하지 않음, `observe` 규칙 없이도). `hooks`를 받지 않게 설정했으면 내지 않는다 |
+| `models` | `[]` | The `list_models()` list (`ModelInfo`) |
+| `rate_limits` | `[]` | `usage.rate_limit` to emit on every run: `[{window, status?, utilization?, resets_at? \| resets_in_seconds?, overage_status?}]` |
+| `resource_slots` | Every known slot | `capabilities.resource_slots` |
+| `delegate_tool` | `Agent` | The tool name of delegation tool call events |
+| `observe_collectors` | `{hooks: sdk-hooks, mcp: mcp-calls}` | Old observation keys → collector ids (`observe.collectors` wins over old keys) |
+| `hook_probe_folder` | `hook-probe` | Folder name under the run folder for imitated hook probe records |
+| `login` | `null` | Scripted sign-in (`FakeLoginScript`, "Scripted sign-in" above). `{}` is the default script |
+| `echo_hooks` | `false` | Emits `hook.started` and `hook.finished{event, matcher, command_preview, exit_code: 0, duration_ms: 0, decision: null, simulated: true}` for each item in the run bundle's `hooks` slot (commands are not run; works even without `observe` rules). Not emitted when the settings say not to accept `hooks` |
 
-모르는 키·잘못된 값은 `ValueError`(위치와 사유만, 값은 넣지 않는다). 형식 모델: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
+Unknown keys and invalid values raise `ValueError` (location and reason only, no values). Type models: `FakeInstallOptions`, `FakeRateLimit`, `FakeLoginScript`.
 
-## 세션 기록 흉내
+## Imitating session records
 
-설치자 설정 `session_dir`(상대 경로 = 앱 workspace 기준)을 주면 실행마다 `<폴더>/<cwd 키>/<세션>.jsonl`에 한 줄을 남기고, 이어
-쓰는 요청인데 파일이 없으면 `fake.session_missing`으로 실패한다(실제 백엔드가 세션 기록을 못 찾는 경우). `session_archive()`가
-보관·복원을 준다. 기본(null)은 지금 동작이다(이어 가기 상태 `not_applicable`).
+With the server administrator setting `session_dir` (relative paths = relative to the app workspace), each run leaves one line in `<folder>/<cwd key>/<session>.jsonl`, and a request
+to continue a session whose file is missing fails with `fake.session_missing` (the case where a real backend cannot find the session record). `session_archive()`
+provides archiving and restore. The default (null) keeps the current behavior (continuation status `not_applicable`).
 
-## 테스트 도우미
+## Test helpers
 
-`agent_console_backend_fake_agent.testing`은 `agent_console_runtime.testing_sink`의 `ValidatingSink`·`ListeningSink`
-(서브에이전트 결과 알림 기록)·`InteractiveSink`(상호작용 응답 흉내)를 다시 내보낸다. 구현은 ac-runtime 한 곳뿐이다.
+`agent_console_backend_fake_agent.testing` re-exports `ValidatingSink`, `ListeningSink`
+(records subagent result notifications), and `InteractiveSink` (imitates interaction responses) from `agent_console_runtime.testing_sink`. The implementation lives only in ac-runtime.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-backend-fake-agent`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-backend-fake-agent`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-backend-fake-agent/tests

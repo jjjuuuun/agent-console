@@ -1,29 +1,30 @@
 # agent-console-link-definitions-resources
 
-Agent Console 정의 ↔ 리소스 연동 모듈. 저장 전 정의 검사(`definitions.checks`)를 제공한다.
+Agent Console definitions and resources link module. It provides the pre-save definition check (`definitions.checks`).
 
-- 리소스 정의: 그 종류의 검사(`ac-resources.validate_resource`, 이슈 path는 문서 기준 `/config/...`).
-- 에이전트·팀 구성·공통 설정: 리소스 첨부 `config_override`를 덮은 결과의 종류 검사(`x-secret` 평문 거부,
-  리소스가 없으면 비밀 의심 규칙). 팀 구성의 리소스 연결은 디스크립터(호스트 `registries`)로 해석한다.
-- 이 검사는 정의 저장 경로·버전 되돌리기의 저장 전 검사와 `/server-info` 평문 점검(정의 모듈이
-  검사의 평문 이슈를 모은다)에 쓰인다.
-- 필수 포트: `definitions.lookup`·`resources.types`. 선택: `resources.lookup`(없으면 `definitions.lookup`으로 찾음),
-  `secrets.rules`, `definitions.spaces`. 경로 없음.
-- 공간(예: 프로젝트 `?project=`)에 저장할 때의 검사는 선택 메서드 `space_issues(space, kind, document)`다.
-  첨부 `ref`는 그 공간 저장소의 리소스만 보고 라이브러리(`resources.lookup`)로 넘어가 찾지 않는다.
-  소비자(정의·버전 모듈, 검증 경로)는 이 메서드가 있으면 그것을, 없으면 `issues`를 부른다.
-- 꺼지면: 정의는 리소스 검사 없이 저장된다(정의 모듈이 시작 때 경고 로그).
+- Resource definitions: the check of that resource type (`ac-resources.validate_resource`; issue paths are relative to the document, `/config/...`).
+- Agents, teams, and common settings: the type check of the result after applying each resource attachment's `config_override`
+  (plain text in `x-secret` fields is rejected; when the resource does not exist, the suspected-secret rules apply). The resource
+  edges of a team are resolved through the descriptors (host `registries`).
+- This check is used by the pre-save checks of the definition save routes and version revert, and by the plain-text scan of `/server-info`
+  (the definitions module collects the plain-text issues of the checks).
+- Required ports: `definitions.lookup` and `resources.types`. Optional: `resources.lookup` (without it, resources are looked up through
+  `definitions.lookup`), `secrets.rules`, and `definitions.spaces`. No routes.
+- Checks for saving into a space (for example a project, `?project=`) use the optional method `space_issues(space, kind, document)`.
+  An attachment `ref` is resolved only against the resources of that space's store; it does not fall back to the library (`resources.lookup`).
+  Consumers (the definitions and versions modules, the validation routes) call this method when it exists and `issues` otherwise.
+- When this link is off, definitions are saved without resource checks (the definitions module logs a warning at startup).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-definitions-resources
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-definitions-resources
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-definitions-resources
 ```
 
-## 최소 사용
+## Minimal usage
 
-검사는 서버 없이 쓴다. 리소스 종류 레지스트리·리소스 조회·팀 구성 해석을 함수로 넘긴다.
+The checker works without a server. Pass the resource type registry, the resource lookup, and the team resolver as functions.
 
 ```python
 >>> from agent_console_resources import InMemoryResources, new_resource_types
@@ -44,20 +45,20 @@ pip install agent-console-link-definitions-resources
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행. `--with`를 주지 않으면 `testing.local_sources_module`(파일 저장소 + 설치된 리소스 종류)을 붙인다.
+Standalone run. Without `--with`, it attaches `testing.local_sources_module` (a file store and the installed resource types).
 
 ```bash
 python -m agent_console_link_definitions_resources [--with ID] [--config PATH] [--port 0] [--check]

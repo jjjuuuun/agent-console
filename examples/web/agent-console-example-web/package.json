@@ -39,11 +39,11 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@agent-console/arch-view": "^0.1.0",
-    "@agent-console/contracts": "^0.15.0",
+    "@agent-console/arch-view": "^0.2.0",
+    "@agent-console/contracts": "^0.16.0",
     "@agent-console/eslint-config": "^0.1.0",
-    "@agent-console/log-view": "^0.1.0",
-    "@agent-console/schema-form": "^0.1.0",
+    "@agent-console/log-view": "^0.2.0",
+    "@agent-console/schema-form": "^0.2.0",
     "@agent-console/tsconfig": "^0.1.0",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.5",
@@ -59,9 +59,9 @@
     "vitest": "^5.0.5"
   },
   "peerDependencies": {
-    "@agent-console/arch-view": "^0.1.0",
-    "@agent-console/log-view": "^0.1.0",
-    "@agent-console/schema-form": "^0.1.0",
+    "@agent-console/arch-view": "^0.2.0",
+    "@agent-console/log-view": "^0.2.0",
+    "@agent-console/schema-form": "^0.2.0",
     "react": "^19.0.0"
   }
 }

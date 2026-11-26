@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-claude-format>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
@@ -56,10 +56,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.exporter]
-title = "내보내기 형식"
+title = "Export format"
 area = "transfer"
 design_id = "X8"
-summary = "정의를 바깥 형식(파일·폴더)으로 내보내는 형식을 더한다"
+summary = "Adds a format that exports definitions to an outside format (files or folders)"
 registration = { kind = "entry-point", group = "agent_console_exports:EXPORTERS_GROUP" }
 interface = ["agent_console_exports:Exporter", "agent_console_exports:ExporterFactory", "agent_console_exports:ExportOutput"]
 example = { kind = "package", path = "examples/extensions/agent-console-example-transfer" }

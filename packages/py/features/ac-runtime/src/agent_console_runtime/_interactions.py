@@ -51,13 +51,13 @@ class InteractionAnsweredBy:
 
 @runtime_checkable
 class InteractionKind(Protocol):
-    """상호작용 종류. 엔진·서버·웹은 `descriptor`(요청·응답 스키마, 화면 힌트)만 본다."""
+    """Interaction kind. Engine, server, and web see only `descriptor` (schemas, UI hints)."""
 
     descriptor: InteractionKindDescriptor
 
 
 class StaticInteractionKind:
-    """디스크립터만으로 된 종류(entry point가 디스크립터 객체를 가리킬 때 감싼다)."""
+    """A kind made of a descriptor only (wraps a descriptor object an entry point points to)."""
 
     def __init__(self, descriptor: InteractionKindDescriptor) -> None:
         self.descriptor = descriptor

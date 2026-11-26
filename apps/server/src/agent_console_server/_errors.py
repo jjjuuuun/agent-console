@@ -150,7 +150,7 @@ def register_error_handlers(app: FastAPI, redact: Callable[[str], str] | None = 
     async def _internal(request: Request, exc: Exception) -> JSONResponse:
         # 예외 메시지에 비밀이 섞일 수 있으므로 가린 뒤 남기고, 응답에는 넣지 않는다.
         _log.error(
-            "처리되지 않은 오류: %s %s → %s: %s\n%s",
+            "Unhandled error: %s %s → %s: %s\n%s",
             request.method,
             request.url.path,
             exc.__class__.__name__,

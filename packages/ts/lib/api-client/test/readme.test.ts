@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 // readme:start
 import { createRestClient } from "@agent-console/api-client";
 
-// fetch를 주입하므로 서버 없이도 돈다(실제로는 전역 fetch 또는 서버 주소를 쓴다).
+// fetch is injected, so this runs without a server (in real use you rely on the global fetch or a server address).
 const fakeFetch = async () =>
   new Response(JSON.stringify({ token: "t", server_version: "0.0.0", contracts_version: "0.4.0" }), {
     status: 200,

@@ -65,7 +65,7 @@ source_modules = ["agent_console_contracts", "agent_console_registry"]
 forbidden_modules = ["@all"]
 
 [[contracts]]
-name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs, runs·usage·projects, chat·exports·imports·architecture·memory·sdd·wiki는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5·§6R.6·§7R.7)"
+name = "계약 하위 모듈은 아래 층만 import한다 (resources·logs·i18n, runs·usage·projects, chat·exports·imports·architecture·memory·sdd·wiki는 서로 독립, design §3R.3-2·§4R.9·§5.2R.3·§5.5R.2.4·§5.7R.5·§6R.6·§7R.7·§I18N.7)"
 type = "layers"
 containers = ["agent_console_contracts"]
 layers = [
@@ -73,7 +73,7 @@ layers = [
     "chat | exports | imports | architecture | memory | sdd | wiki",
     "runs | usage | projects",
     "definitions",
-    "resources | logs",
+    "resources | logs | i18n",
     "common",
 ]
 
@@ -275,10 +275,10 @@ forbidden_modules = ["@all", "!agent_console_backend_fake_agent", "!agent_consol
 allow_indirect_imports = true
 
 [[contracts]]
-name = "store는 contracts, numbered-id에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
+name = "store는 contracts, numbered-id, settings(버전 비교의 문서 비교)에만 의존 (runtime 프로토콜은 구조적 타이핑으로 구현)"
 type = "forbidden"
 source_modules = ["agent_console_store"]
-forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_numbered_id"]
+forbidden_modules = ["@all", "!agent_console_contracts", "!agent_console_numbered_id", "!agent_console_settings"]
 allow_indirect_imports = true
 
 [[contracts]]

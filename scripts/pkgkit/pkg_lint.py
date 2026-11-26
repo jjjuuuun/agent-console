@@ -451,13 +451,15 @@ def readme_section(text: str, heading: str) -> str | None:
 
 
 def rule_readme_doctest(ctx: LintContext, pkg: PyPackage) -> list[Violation]:
-    """README "최소 사용"(설정 ``pkg_lint.readme_doctest_heading``) 절 안에 doctest가 하나 이상
+    """README "Minimal usage"(설정 ``pkg_lint.readme_doctest_headings``) 절 안에 doctest가 하나 이상
     있어야 한다(E-9, 3R.6부터 기본 켬, 4R.18부터 그 절만 센다)."""
     readme = pkg.path / "README.md"
     if not readme.is_file():
         return []
-    heading = ctx.cfg.readme_doctest_heading
-    section = readme_section(readme.read_text(encoding="utf-8"), heading)
+    headings = ctx.cfg.readme_doctest_headings
+    heading = headings[0]
+    text = readme.read_text(encoding="utf-8")
+    section = next((sec for h in headings if (sec := readme_section(text, h)) is not None), None)
     if section is None:
         message = f'README에 "{heading}" 절이 없습니다(doctest로 실행되는 최소 사용 예를 둔다)'
     elif count_doctests(section) == 0:

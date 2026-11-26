@@ -2,3 +2,4 @@
 export { DefinitionVersionsTab } from "./DefinitionVersionsTab";
 export { versionMessages } from "./messages";
 export { VersionHistory, type VersionHistoryProps } from "./VersionHistory";
+export { useCompareSupport } from "./useCompareSupport";

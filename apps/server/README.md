@@ -312,7 +312,8 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
 
 **지운 키**: 모듈 설정은 `modules.options.<모듈 id>`에만 둔다. 최상위 `usage`·`imports`·`exports`·`versions`·`resources`·
 `runtime`·`backends`·`working_directory` 같은 키는 읽지 않는다. 남아 있으면 서버가 시작하지 않고 새 위치를 알려 주는
-설정 오류(`settings.removed_key`, 예: `usage: 설정 키 usage는 더 이상 읽지 않습니다. modules.options.mod-usage로 옮기세요`)를 낸다.
+설정 오류(`settings.removed_key`, 예: `usage: The settings key usage is no longer read. Move it to modules.options.mod-usage`)를 낸다.
+터미널에 찍히는 설정 오류·도움말·시작 안내는 영어 원문이다(웹으로 가는 응답 원문은 그대로, 웹이 코드로 번역).
 지운 키 목록은 각 모듈이 `SettingsCompat.removed`(`RemovedSetting(old, new=...)`)로 선언한다 — 서버에 표가 없다.
 다른 설정의 값을 기본값으로 넘기는 것은 호스트 설정에서만 한다(경고 없음, 새 위치에 값이 없을 때만):
 `security.expose_paths: false` → `mod-exports.expose_paths`, `secrets.min_redact_chars` → `mod-runs.min_redact_chars`.
@@ -322,7 +323,7 @@ modules:                       # 서버 모듈 켜고 끄기(웹에서는 읽기
 시작하지 않고 이유를 알려 주는 설정 오류(`settings.removed_key`)를 낸다. 가져오기 출처는 프로젝트 폴더의 `.claude/`뿐이다.
 환경변수 `WORKING_DIRECTORY`·`MAX_CONCURRENCY`는 새 위치(`modules.options.mod-runs.*`)로 들어간다.
 
-삭제된 프리셋 기능의 설정(최상위 `presets`, `modules.options.mod-presets`)이 남아 있으면 "프리셋 기능은 삭제되었습니다" 설정
+삭제된 프리셋 기능의 설정(최상위 `presets`, `modules.options.mod-presets`)이 남아 있으면 "The presets feature was removed" 설정
 오류(`settings.removed_key`, `mod-definitions`가 선언)로 시작하지 않는다. 그 밖에 모르는 키(예: 옛 `console`)는 일반 설정
 오류다(호스트 설정은 `extra="forbid"`).
 워크스페이스 `settings.yaml`에 남은 `console`·`default_entry`는 사용자 데이터라 모르는 키로 그대로 보존한다(오류 없음).
@@ -348,7 +349,7 @@ AGENT_CONSOLE_SERVE_STATIC=1 AGENT_CONSOLE_WEB_DIR=apps/web/dist \
 폴더가 없으면 패키지에 포함된 빌드를, 그것도 없으면 안내 페이지를 보여 준다.
 설치한 PWA 창이나 다른 브라우저로 열려면 `web.open.command`(예: `[msedge, "--app={url}"]`), 별도 웹 서버 주소를 열려면 `web.open.url`.
 
-- 준비 신호: 스크립트·바로가기·데스크톱 셸은 `GET /api/v1/health`가 200이 될 때까지 기다린다. 서버 로그에도 `준비됨: <URL>` 줄이 남는다(포트 0이면 실제 포트).
+- 준비 신호: 스크립트·바로가기·데스크톱 셸은 `GET /api/v1/health`가 200이 될 때까지 기다린다. 서버 로그에도 `Ready: <URL>` 줄이 남는다(포트 0이면 실제 포트).
 - 열기는 준비 뒤에 한 번만 한다. 열 주소가 없거나(정적 서빙 꺼짐 + `url` 없음) 열기에 실패하면 경고만 남기고 서버는 계속 돈다.
 - `/api/…`·`/ws`는 정적 서빙이 가로채지 않는다(모르는 API 경로는 JSON 404). 빌드가 없으면 안내 페이지를 보여 준다.
 

@@ -353,6 +353,34 @@ def test_save_as_template_policies_and_independence() -> None:
     assert {s.kind for s in summaries.values()} == {TEST_TEMPLATE_KIND}
 
 
+def test_save_as_template_avoids_taken_words_p1_5() -> None:
+    """P1.5: 이름에서 만든 id와 ``rename`` 새 id는 ``taken``(예: 경로 예약어)을 피한다.
+
+    단어는 이 테스트가 만든 임의 값이다(패키지는 어떤 예약어도 모른다). 준 id는 그대로 쓴다.
+    """
+    repo = _repo()
+    spec_id = repo.create(name="source-spec", template="basic").id
+    library = InMemoryDefinitionStore([repo.store.kind_info(TEST_TEMPLATE_KIND)])
+    words = ("Quux-Word", "zork")
+
+    derived = repo.save_as_template(spec_id, name="quux word", target=library, taken=words)
+    assert (derived.template_id, derived.status) == ("quux-word-2", "created")
+    plain = repo.save_as_template(spec_id, name="Other", target=library, taken=words)
+    assert (plain.template_id, plain.status) == ("other", "created")  # 겹치지 않으면 그대로
+
+    library.create(TEST_TEMPLATE_KIND, {"kind": TEST_TEMPLATE_KIND, "id": "zork-2", "name": "있음"})
+    renamed = repo.save_as_template(
+        spec_id, name="Other", on_conflict="rename", target=library, taken=words
+    )
+    assert (renamed.template_id, renamed.status) == ("other-2", "renamed")
+    again = repo.save_as_template(spec_id, name="ZORK", target=library, taken=words)
+    assert again.template_id == "zork-3"  # 예약어와 이미 있는 id를 함께 피한다
+
+    given = repo.save_as_template(spec_id, name="x", id="zork", target=library, taken=words)
+    assert given.template_id == "zork"  # 준 id 거부는 호출자 몫(라우터 422)
+    assert "quux-word" not in library.list_ids(TEST_TEMPLATE_KIND)
+
+
 def test_pure_conversions() -> None:
     draft = instantiate(TEMPLATE, {"req.md": b"r"}, kind="k", id="new", name="새 스펙")
     assert draft.document["kind"] == "k"

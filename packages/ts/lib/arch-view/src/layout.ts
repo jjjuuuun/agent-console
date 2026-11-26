@@ -5,6 +5,7 @@
  */
 import type { ArchitectureCellView, ArchitectureEdgeView, ArchitectureView } from "@agent-console/contracts/architecture";
 import { METRIC_COUNT, METRIC_ERRORS } from "./defaults";
+import { defaultMessages, formatMessage } from "./messages";
 import type { ArchFitMode, Pt, Rect } from "./types";
 
 /** 연결이 칸 경계에서 떨어지는 거리(points가 없는 연결에만 적용한다). */
@@ -286,14 +287,16 @@ export interface CheckLayoutOptions {
   measure?: (text: string) => number;
   /** 칩에 들어갈 횟수 자리의 최대 글자(값을 모를 때의 추정). 기본 "0,000". */
   countPlaceholder?: string;
+  /** 칩에 들어갈 오류 글자의 추정(너비만 쓴다). 기본은 기본 문구(`metricErrors`)에 0을 채운 글자. */
+  errorsPlaceholder?: string;
 }
 
 /** 연결에 칩 글자(라벨 + 횟수 + 오류)가 들어갈지 보는 데이터. 지표 이름이 없으면 라벨만. */
-function chipContentFor(edge: ArchitectureEdgeView, placeholder: string): ChipContent {
+function chipContentFor(edge: ArchitectureEdgeView, placeholder: string, errorsPlaceholder: string): ChipContent {
   const m = edge.metrics ?? {};
   const hasCount = METRIC_COUNT in m && edge.kind === "observed";
   const hasErrors = METRIC_ERRORS in m && edge.kind === "observed";
-  return { label: edge.label ?? "", count: hasCount ? placeholder : undefined, countShort: hasCount ? "0k" : undefined, errors: hasErrors ? "오류 0" : undefined };
+  return { label: edge.label ?? "", count: hasCount ? placeholder : undefined, countShort: hasCount ? "0k" : undefined, errors: hasErrors ? errorsPlaceholder : undefined };
 }
 
 /**
@@ -306,6 +309,7 @@ export function checkLayout(view: Pick<ArchitectureView, "cells" | "edges" | "ca
   const edges = view.edges ?? [];
   const rects = gridLayout(view);
   const placeholder = options.countPlaceholder ?? "0,000";
+  const errorsPlaceholder = options.errorsPlaceholder ?? formatMessage(defaultMessages.metricErrors, { n: 0 });
 
   for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) {
     const a = cells[i] as ArchitectureCellView;
@@ -319,7 +323,7 @@ export function checkLayout(view: Pick<ArchitectureView, "cells" | "edges" | "ca
     if (pts.length < 2 || !(e.label || e.metrics)) return null;
     const center = chipCenter(e, pts);
     const cap = chipWidthCap(segmentAt(pts, center), e.label_max_w);
-    const fit = fitChip(chipContentFor(e, placeholder), cap, options.measure);
+    const fit = fitChip(chipContentFor(e, placeholder, errorsPlaceholder), cap, options.measure);
     return { id: e.id, rect: { x: center[0] - fit.width / 2, y: center[1] - CHIP_H / 2, w: fit.width, h: CHIP_H } as Rect };
   });
 

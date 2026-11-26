@@ -1,40 +1,40 @@
 # agent-console-mod-architecture
 
-구조도 기능 모듈(`mod-architecture`). 구조도 프로필을 패키지 기본 → 플러그인 →
-사용자 설정(워크스페이스 설정 `architecture` 섹션) 순으로 합쳐 REST와 포트로 낸다.
-로그·실행을 모른다. 이벤트는 호출자가 넘긴다(단독 투영 본문, 또는 이 모듈의 포트를 쓰는 연동 모듈).
+Architecture map feature module (`mod-architecture`). It merges architecture map profiles in the order package defaults → plugins →
+user settings (the `architecture` section of the workspace settings) and exposes them through REST and ports.
+It does not know about logs or runs. Events are passed in by the caller (the body of a standalone projection, or a link module that uses this module's ports).
 
-| 무엇 | 내용 |
+| What | Details |
 | --- | --- |
-| REST | `GET /architecture/profiles`(`ArchitectureProfileList`, 끈 프로필은 뒤에 `disabled: true`), `GET /architecture/profiles/{id}`(`ArchitectureProfileDetail`), `POST /architecture/profiles/check`(`ArchitectureProfileCheckRequest` → `ArchitectureProfileCheckResult`), `POST /architecture/project`(`ArchitectureProjectRequest` → `ArchitectureView`) |
-| 오류 | `architecture.profile_not_found`(404, 없는 id 조회·프로필이 하나도 없는데 투영), `architecture.scope_too_large`(422, 본문 이벤트가 `max_request_events` 초과) |
-| 제공 포트 | `architecture.catalog`(병합된 프로필·연산자·검사·투영, 모양 `ArchitectureCatalog`), `server.warnings`(저장된 `architecture` 섹션 형식 문제 `architecture.settings_invalid`) |
-| 선택 포트 | `workspace.settings`(사용자 설정 섹션을 읽는다. 없으면 기본 + 플러그인 프로필만), `architecture.profile_checks`(여러 제공자 — `check(profile, profile_id) -> list[Issue]` 결과를 목록 `issues` 수·상세 `problems`·검사 응답에 더한다. 예: `link-logs-architecture`의 목록 본문 밖 조건 경로 경고) |
-| 설치자 옵션 | `modules.options.mod-architecture.{max_request_events, max_scope_events}` |
-| 사용자 설정 | 워크스페이스 설정 `architecture`(계약 `ArchitectureSettings`: `include_defaults`, `default_profile`, `profiles`). 설정이 바뀌면 다음 요청에서 다시 합친다 |
-| 플러그인 | entry point `agent_console.architecture_profiles`. 호스트 플러그인 로더(`agent_console.host_plugin_loaders`의 `architecture`)가 호스트 묶음의 `architecture_profiles` 확장에 읽는다 |
-| 웹 역할 | `architecture`(웹 설정 화면의 "구조도" 섹션이 이 역할을 요구한다. 모듈이 없으면 섹션 없음) |
+| REST | `GET /architecture/profiles` (`ArchitectureProfileList`; turned-off profiles come last with `disabled: true`), `GET /architecture/profiles/{id}` (`ArchitectureProfileDetail`), `POST /architecture/profiles/check` (`ArchitectureProfileCheckRequest` → `ArchitectureProfileCheckResult`), `POST /architecture/project` (`ArchitectureProjectRequest` → `ArchitectureView`) |
+| Errors | `architecture.profile_not_found` (404; looking up an id that does not exist, or projecting when there are no profiles at all), `architecture.scope_too_large` (422; the body has more events than `max_request_events`) |
+| Provided ports | `architecture.catalog` (merged profiles, operators, checks, projection; shape `ArchitectureCatalog`), `server.warnings` (format problems in the saved `architecture` section, `architecture.settings_invalid`) |
+| Optional ports | `workspace.settings` (reads the user settings section; without it, only default and plugin profiles), `architecture.profile_checks` (several providers; the results of `check(profile, profile_id) -> list[Issue]` are added to the `issues` count of the list, the `problems` of the detail, and the check response. For example, the warning of `link-logs-architecture` about condition paths outside the list body) |
+| Administrator options | `modules.options.mod-architecture.{max_request_events, max_scope_events}` |
+| User settings | The workspace settings `architecture` (contract `ArchitectureSettings`: `include_defaults`, `default_profile`, `profiles`). When the settings change, they are merged again on the next request |
+| Plugins | Entry point `agent_console.architecture_profiles`. The host plugin loader (`architecture` of `agent_console.host_plugin_loaders`) reads them into the `architecture_profiles` extension of the host bundle |
+| Web role | `architecture` (the *Architecture map* section of the web settings screen requires this role; without the module there is no section) |
 
-- 프로필이 하나도 없어도(`include_defaults: false` 등) 목록은 200과 빈 목록이다("구조도 규칙 없음").
-- 사용자 섹션이 일부 깨져 있어도(손으로 고친 파일) 맞는 부분만 쓰고 나머지는 경고로 알린다. 깨진 사용자
-  프로필은 빠지고 같은 id의 기본·플러그인 프로필이 그대로 보인다.
-- 모듈을 끄면 위 경로가 404이고 다른 기능은 그대로다.
+- Even with no profiles at all (`include_defaults: false` and so on), the list returns 200 with an empty list ("no architecture map rules").
+- When part of the user section is broken (a file edited by hand), the valid parts are used and the rest is reported as warnings. A broken user
+  profile is left out, and the default or plugin profile with the same id is shown as it is.
+- When the module is off, the routes above return 404 and other features keep working.
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what, why, alternatives
 
-- 사내: `agent-console-architecture`(병합·검사·투영 순수 함수), `agent-console-conditions`(조건
-  연산자), `agent-console-modkit`(모듈·호스트), `agent-console-registry`(레지스트리),
-  `agent-console-store`(단독 실행의 `settings.yaml` 읽기, `testing.local_settings_module`).
-- 외부: FastAPI·pydantic(서버 모듈 공통). 새 외부 의존 없음.
+- In-house: `agent-console-architecture` (pure functions for merging, checking, and projection), `agent-console-conditions` (condition
+  operators), `agent-console-modkit` (module, host), `agent-console-registry` (registries),
+  `agent-console-store` (reading `settings.yaml` in a standalone run, `testing.local_settings_module`).
+- External: FastAPI and pydantic (common to server modules). No new external dependencies.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-architecture
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-architecture
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-architecture
 ```
 
-## 최소 사용: 서버 없이 카탈로그 서비스
+## Minimal usage: the catalog service without a server
 
 ```python
 >>> from agent_console_conditions import default_operators
@@ -62,24 +62,24 @@ pip install agent-console-mod-architecture
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_mod_architecture --config standalone.json --port 0
 ```
 
-`--with`를 주지 않으면 워크스페이스 `settings.yaml`을 읽는 작은 설정 모듈(`local-settings`)이 붙는다.
-사용자 프로필은 그 파일의 `architecture` 섹션에 적는다.
+Without `--with`, a small settings module (`local-settings`) that reads the workspace `settings.yaml` is attached.
+Write user profiles in the `architecture` section of that file.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

@@ -180,7 +180,7 @@ class _PortTable:
 
 
 class ModuleContext:
-    """``Module.build``가 받는 것(전역 없음). 조립기가 모듈마다 만든다.
+    """What ``Module.build`` receives (no globals). The assembler creates one per module.
 
     Attributes:
         module_id: 이 모듈 id.
@@ -337,7 +337,7 @@ class Assembly:
         parts: 켜진(``active``) 모듈 id → 빌드 결과(조립 순서).
         report: 모든 모듈의 보고(id 순).
         order: 켜진 모듈의 조립 순서.
-        warnings: 설정의 모르는 id·잘못된 bindings 등(조립은 계속).
+        warnings: 설정의 모르는 id·잘못된 bindings 등(조립은 계속). 터미널용 영어 원문(I.6).
         services: 모듈에 준 기본 서비스.
         descriptors: 넘겨받은 모든 모듈의 서술자(id → 첫 번째, 꺼진 모듈 포함).
         options: 설치자 설정 ``modules.options``(id → 원문, 읽기 전용 보기용).
@@ -442,7 +442,7 @@ class Assembly:
                 self._started.append(mid)  # 일부 시작했을 수 있으니 종료 훅은 부른다
                 if fail_fast:
                     raise  # 호출자가 알린다(예외 메시지를 여기서 로그에 남기지 않는다)
-                _log.exception("모듈 시작 실패: %s", mid)
+                _log.exception("Module failed to start: %s", mid)
                 continue
             self._started.append(mid)
             for job in parts.background:
@@ -463,7 +463,7 @@ class Assembly:
                 try:
                     await hook()
                 except Exception:
-                    _log.exception("모듈 종료 훅 실패: %s", mid)
+                    _log.exception("Module stop hook failed: %s", mid)
         self._started.clear()
         await self.services.events.drain()
 
@@ -479,7 +479,7 @@ async def _guard_background(module_id: str, job: Callable[[], Awaitable[None]]) 
     except asyncio.CancelledError:
         raise
     except Exception:
-        _log.exception("모듈 배경 작업 실패: %s", module_id)
+        _log.exception("Module background task failed: %s", module_id)
 
 
 def _replace_state(report: ModuleReport, state: ModuleState, reason: str | None) -> ModuleReport:
@@ -598,7 +598,7 @@ def assemble(
     known = set(by_id)
     for name in [*(cfg.enabled or ()), *cfg.disabled, *cfg.options]:
         if name not in known:
-            warnings.append(f"모르는 모듈 id: {name}")
+            warnings.append(f"Unknown module id: {name}")
     enabled = None if cfg.enabled is None else set(cfg.enabled)
     disabled = set(cfg.disabled)
     candidates: dict[str, Module] = {}
@@ -625,7 +625,7 @@ def assemble(
     conflicted: dict[str, set[str]] = {}  # 모듈 id → 충돌 포트
     for port, binding in cfg.bindings.items():
         if binding not in {mid for mid, _ in declared_providers.get(port, ())}:
-            warnings.append(f"modules.bindings.{port}: {binding}은(는) 켜진 제공자가 아닙니다")
+            warnings.append(f"modules.bindings.{port}: {binding} is not an active provider")
     for port, provs in declared_providers.items():
         ids = sorted({mid for mid, _ in provs})
         is_multi = all(key.multi for _, key in provs)
@@ -702,7 +702,7 @@ def assemble(
             continue
         raw = cfg.options.get(mid)
         if raw and d.settings_schema is None:
-            warnings.append(f"modules.options.{mid}: 이 모듈은 설정을 받지 않습니다(무시)")
+            warnings.append(f"modules.options.{mid}: this module takes no settings (ignored)")
         try:
             settings = _settings_of(module, raw)
         except ValidationError as exc:
@@ -715,7 +715,7 @@ def assemble(
             try:
                 services.database.upgrade(app_branches)
             except Exception as exc:
-                _log.exception("모듈 마이그레이션 실패: %s", mid)
+                _log.exception("Module migration failed: %s", mid)
                 reports[idx] = _base_report(
                     d, ModuleState.FAILED, f"마이그레이션 실패({type(exc).__name__})"
                 )
@@ -728,7 +728,7 @@ def assemble(
             if not isinstance(built, ModuleParts):
                 raise TypeError(f"build가 ModuleParts가 아닌 값을 돌려줬습니다: {type(built)!r}")
         except Exception as exc:
-            _log.exception("모듈 build 실패: %s", mid)
+            _log.exception("Module build failed: %s", mid)
             ctx._rollback()
             reports[idx] = _base_report(d, ModuleState.FAILED, f"build 실패({type(exc).__name__})")
             continue

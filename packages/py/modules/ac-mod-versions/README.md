@@ -1,31 +1,31 @@
 # agent-console-mod-versions
 
-Agent Console 버전 기능 모듈. 정의 버전 목록·비교·되돌리기 경로와 보존 개수를
-서버에 꽂는다. 버전 기록 자체는 정의 저장소(`agent-console-store`)가 한다.
+Agent Console versions feature module. It plugs the definition version list, comparison, and revert routes and the retention count into the
+server. The version history itself is kept by the definition store (`agent-console-store`).
 
-- 경로(컬렉션마다, 기본 `/agents` `/graphs` `/resources` `/settings`): `…/{id}/versions`,
-  `…/versions/{hash}`, `…/versions/{a}/diff[/{b}]`, `…/versions/{hash}/files[/{path}]`,
-  `POST …/versions/{hash}/restore`(`If-Match` 필수, 없음 428·다름 412, 검사 error 422).
-- 필수 포트: `definitions.store`. 선택 포트: `definitions.checks`(여러 제공자 — 되돌리기 전 검사·비밀 위치, 공간 `?project=`는 선택 메서드 `space_issues`),
-  `secrets.rules`(없으면 기본 의심 규칙). 구독 토픽: `definitions.saved`(보존 개수 적용).
-- 설정 `modules.options.mod-versions`(옛 최상위 `versions`는 `settings.removed_key` 오류로 새 위치를 안내): `max_per_definition`(정의마다 남길 버전 수,
-  비우면 모두 — 저장할 때와 시작할 때 적용), `collections`(버전 경로 표), `secret_issue_codes`.
-- 웹 역할: `versions`.
+- Routes (per collection, default `/agents` `/graphs` `/resources` `/settings`): `…/{id}/versions`,
+  `…/versions/{hash}`, `…/versions/{a}/diff[/{b}]`, `…/versions/{hash}/files[/{path}]`, and
+  `POST …/versions/{hash}/restore` (`If-Match` required: 428 when missing, 412 when different, 422 on check errors).
+- Required port: `definitions.store`. Optional ports: `definitions.checks` (several providers; checks before revert and secret locations; for a space `?project=`, the optional method `space_issues`)
+  and `secrets.rules` (the default suspicion rules without it). Subscribed topic: `definitions.saved` (applies the retention count).
+- Settings `modules.options.mod-versions` (the old top-level `versions` points to the new location with a `settings.removed_key` error): `max_per_definition` (number of versions to keep per definition;
+  empty = keep all; applied on save and on startup), `collections` (the version route table), and `secret_issue_codes`.
+- Web role: `versions`.
 
-공간: 선택 포트 `definitions.spaces`가 있으면 모든 버전 경로가 `?project=<이름>`으로 그 공간의 버전 기록을
-쓴다. `definitions.saved` 항목에 `space`가 있으면 보존 개수도 그 공간에 적용한다. 포트가 없으면 409
-`feature_unavailable`, 모르는 공간 404.
+Spaces: when the optional port `definitions.spaces` is present, every version route uses the version history of the space given by `?project=<name>`.
+When a `definitions.saved` entry has a `space`, the retention count is applied in that space too. Without the port, 409
+`feature_unavailable`; an unknown space returns 404.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-versions
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-versions
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-versions
 ```
 
-## 최소 사용
+## Minimal usage
 
-보존 개수를 정하면 저장 알림(`definitions.saved`)마다 오래된 버전을 지운다(현재 버전은 남는다).
+With a retention count, every save notification (`definitions.saved`) deletes old versions (the current version stays).
 
 ```python
 >>> import tempfile
@@ -46,21 +46,21 @@ pip install agent-console-mod-versions
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행(같은 modkit 호스트, 기본 127.0.0.1). `--with`를 주지 않으면 `testing.local_definitions_module`
-(워크스페이스 폴더의 파일 저장소, 버전은 메모리)을 붙인다. 다른 제공자를 쓰려면 `--with <모듈 id>`.
+Standalone run (the same modkit host, 127.0.0.1 by default). Without `--with`, it attaches `testing.local_definitions_module`
+(a file store in the workspace folder, with versions in memory). To use another provider, pass `--with <module id>`.
 
 ```bash
 python -m agent_console_mod_versions [--with ID] [--config PATH] [--port 0] [--check]

@@ -107,7 +107,7 @@ class BrowseDefaults:
 
 
 def load_browse_defaults(data: Mapping[str, Any] | None = None) -> BrowseDefaults:
-    """탐색 기본값. `data`가 없으면 패키지 기본 데이터(`data/browse_defaults.json`).
+    """Browse defaults. Without `data`, the package default data (`data/browse_defaults.json`).
 
     Raises:
         ValueError: 형식이 틀림.

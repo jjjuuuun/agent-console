@@ -11,6 +11,8 @@ export const EdgeRouteContext = createContext<ReadonlyMap<string, RoutedEdge> | 
  */
 export interface EdgeLabelSpread {
   spread: ReadonlyMap<string, number>;
+  /** 칩을 접어 자리를 잡은 연결선 id(아이콘·`+N`으로 그린다). 없으면 접지 않는다 */
+  folded?: ReadonlySet<string>;
   /** 연결선의 라벨 경로를 알린다. `null`이면 뺀다. 같은 내용을 되풀이해 알려도 된다(`key`가 같으면 무시). */
   report(id: string, input: SpreadInput | null, key: string): void;
 }

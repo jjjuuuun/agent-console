@@ -1,46 +1,46 @@
 # agent-console-exports
 
-정의(에이전트·리소스·팀 구성)를 다른 도구의 형식으로 **내보내는** 확장 지점. 흐름:
-형식 목록 → 미리보기(파일 목록·충돌·경고, 쓰기 없음) → 보관 파일(zip, 메모리) 또는 허용한 폴더에 쓰기.
-계약: `agent_console_contracts.exports`.
+The extension point that **exports** definitions (agents, resources, teams) into other tools' formats. Flow:
+format list → preview (file list, conflicts, warnings, no writes) → an archive file (zip, in memory) or a write into an allowed folder.
+Contracts: `agent_console_contracts.exports`.
 
-- **형식은 플러그인이다.** 형식 = `Exporter{descriptor, plan(items, catalog, options) -> ExportOutput}`.
-  `plan`은 순수하다(카탈로그를 읽기만, 파일 내용을 만들어 돌려줌). 형식 공장(설치자 옵션 → 형식)을
-  entry point `agent_console.exporters`로 등록한다. 서비스는 형식 이름을 모른다.
-- **기본 형식(첫 구현)**: `claude-dir` — Claude Code 프로젝트 산출물(`.claude/agents`, `.claude/skills`,
-  `.claude/rules`, `.claude/settings.json`, `CLAUDE.md`, `.mcp.json`). 변환은 `ac-claude-format`.
-- **정의는 읽기만 한다.** 앱이 `ExportCatalog`(`document`·여러 파일 본문 `files`·한 파일 본문 `content`·`dependencies`)를 넘긴다.
-  팀 구성이 쓰는 에이전트·리소스·자식 팀 구성은 카탈로그가 알려 준다(Agent Console 서버는
-  `ac-teams.graph_dependencies`). `claude-dir`은 쓰는 정의 중 팀 구성(중첩 팀 노드의 자식)을 따라가 그 구성원도
-  에이전트로 내보낸다(주 노드는 고른 팀 구성 것만, 순환은 한 번씩).
-- **쓰기 안전 규칙**:
-  - 기본은 보관 파일(zip) 응답 — 서버 디스크에 쓰지 않는다.
-  - 폴더 쓰기는 설치자가 등록한 루트(`ExportRoot`) 아래 `subdir`에만. 경로 탈출·절대 경로·Windows 금지 이름,
-    루트부터 대상까지의 심볼릭 링크·정션을 거부한다.
-  - 보호 위치(예: `~/.claude`)는 루트로 등록해도 쓰지 않는다(대소문자 무시 비교).
-  - 충돌 처리 `on_conflict`: `fail`(기본, 하나라도 다르면 아무것도 쓰지 않음)·`skip`·`overwrite`.
-    같은 내용은 항상 skip. 파일마다 임시 파일 → `os.replace`.
-- **평문 비밀 안전망**: 모든 형식의 산출물을 마지막에 `ac-secret-rules`로 검사해 의심 값을 가리고
-  경고(`export.secret_redacted`, 위치만)를 낸다. `${이름}` 환경 변수 확장은 참조로 본다.
+- **Formats are plugins.** A format = `Exporter{descriptor, plan(items, catalog, options) -> ExportOutput}`.
+  `plan` is pure (it only reads the catalog and returns the file contents it builds). Format factories (server administrator options → format) are
+  registered through the entry point `agent_console.exporters`. The service does not know format names.
+- **Default format (first implementation)**: `claude-dir`, the Claude Code project artifacts (`.claude/agents`, `.claude/skills`,
+  `.claude/rules`, `.claude/settings.json`, `CLAUDE.md`, `.mcp.json`). Conversion is done by `ac-claude-format`.
+- **Definitions are only read.** The app passes an `ExportCatalog` (`document`, multi-file bodies `files`, single-file body `content`, `dependencies`).
+  The catalog reports the agents, resources, and child teams a team uses (the Agent Console server uses
+  `ac-teams.graph_dependencies`). `claude-dir` follows teams among the used definitions (children of nested team nodes) and exports their members
+  as agents too (main nodes only from the chosen team; cycles once each).
+- **Write safety rules**:
+  - The default is an archive (zip) response; nothing is written to the server disk.
+  - Folder writes go only to `subdir` under a root the server administrator registered (`ExportRoot`). Path escapes, absolute paths, Windows reserved names,
+    and symbolic links or junctions from the root to the target are rejected.
+  - Protected locations (for example `~/.claude`) are never written, even if registered as a root (case-insensitive comparison).
+  - Conflict handling `on_conflict`: `fail` (default; if anything differs, nothing is written), `skip`, `overwrite`.
+    Identical content is always skipped. Each file is written to a temporary file → `os.replace`.
+- **Plain-text secret safety net**: the artifacts of every format are checked last with `ac-secret-rules`, suspected values are masked,
+  and a warning (`export.secret_redacted`, location only) is emitted. `${NAME}` environment variable expansion counts as a reference.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                     # 워크스페이스 안
-uv pip install ./packages/py/features/ac-exports    # 단독(contracts·registry·claude-format·secret-rules·jsonschema)
+uv sync --all-packages                     # inside the workspace
+uv pip install ./packages/py/features/ac-exports    # standalone (contracts, registry, claude-format, secret-rules, jsonschema)
 ```
 
-| 의존성 | 왜 | 대안 |
+| Dependency | Why | Alternatives |
 | --- | --- | --- |
-| `agent-console-contracts` | 요청·미리보기·결과 계약 모델(`ExportRequest` 등) | — |
-| `agent-console-registry` | 형식 공장 entry point 로딩(다른 확장 지점과 같은 방식) | 직접 `importlib.metadata` |
-| `agent-console-claude-format` | 기본 형식 `claude-dir`의 `.claude` 변환(가져오기와 공용) | 형식 안에 복사 |
-| `agent-console-secret-rules` | 산출물 평문 비밀 마지막 검사(서버 저장 검사와 같은 규칙) | 형식마다 검사 |
-| `jsonschema` | 옵션을 형식의 `config_schema`로 검사(리소스 종류와 같은 라이브러리) | 직접 검사 |
+| `agent-console-contracts` | Request, preview, and result contract models (`ExportRequest` and others) | — |
+| `agent-console-registry` | Loads format factory entry points (the same way as other extension points) | `importlib.metadata` directly |
+| `agent-console-claude-format` | `.claude` conversion for the default format `claude-dir` (shared with import) | Copy it into the format |
+| `agent-console-secret-rules` | The last plain-text secret check on artifacts (the same rules as the server's save checks) | A check per format |
+| `jsonschema` | Validates options against the format's `config_schema` (the same library as resource kinds) | Hand-written checks |
 
-저장소·팀 의미(`ac-store`·`ac-teams`)는 import하지 않는다. 정의는 `ExportCatalog` 프로토콜로 받는다.
+It does not import store or team semantics (`ac-store`, `ac-teams`). Definitions come in through the `ExportCatalog` protocol.
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> import io
@@ -58,23 +58,23 @@ uv pip install ./packages/py/features/ac-exports    # 단독(contracts·registry
 ... )
 >>> from agent_console_exports.testing import MemoryCatalog
 
->>> catalog = MemoryCatalog().add(  # 실제로는 앱이 정의 저장소로 만든 ExportCatalog 구현
+>>> catalog = MemoryCatalog().add(  # in real use, an ExportCatalog implementation the app builds on the definition store
 ...     "agent", {"id": "pl", "name": "pl", "system_prompt": "너는 리더다.", "tools": ["Read"]}
 ... )
 >>> factories = new_exporter_factories()
->>> [r.key for r in load_exporter_factories(factories)]  # entry point(기본: claude-dir)
+>>> [r.key for r in load_exporter_factories(factories)]  # entry points (default: claude-dir)
 ['claude-dir']
 >>> tmp = tempfile.TemporaryDirectory()
->>> out = Path(tmp.name)  # 사용자가 허용한 내보내기 루트(절대 경로)
+>>> out = Path(tmp.name)  # an export root the user allowed (absolute path)
 >>> service = ExportService(
-...     build_exporters(factories, {"claude-dir": {}}),  # 형식별 설치자 옵션
+...     build_exporters(factories, {"claude-dir": {}}),  # server administrator options per format
 ...     catalog,
 ...     writer=FolderWriter([ExportRoot("out", out)], protected=[Path.home() / ".claude"]),
 ... )
 >>> request = ExportRequest(exporter="claude-dir", items=[ExportSelection(kind="agent", id="pl")])
->>> [(f.path, f.action) for f in service.plan(request).files]  # 파일 목록·경고(쓰기 없음)
+>>> [(f.path, f.action) for f in service.plan(request).files]  # file list and warnings (no writes)
 [('.claude/agents/pl.md', 'create')]
->>> zipfile.ZipFile(io.BytesIO(service.archive(request).data)).namelist()  # zip 바이트
+>>> zipfile.ZipFile(io.BytesIO(service.archive(request).data)).namelist()  # zip bytes
 ['.claude/agents/pl.md']
 >>> result = service.write(
 ...     ExportWriteRequest(exporter="claude-dir", items=request.items, root="out", subdir="proj")
@@ -92,7 +92,7 @@ tools: Read
 
 ```
 
-## 새 형식 만들기
+## Writing a new format
 
 ```python
 from agent_console_contracts import ExporterDescriptor
@@ -111,7 +111,8 @@ class MyExporter:
         return ExportOutput(files=files)
 
 
-def my_exporter(options):  # 형식 공장: 설치자 옵션(exports.options.my-format)
+# format factory: server administrator options (exports.options.my-format)
+def my_exporter(options):
     return MyExporter()
 ```
 
@@ -120,36 +121,36 @@ def my_exporter(options):  # 형식 공장: 설치자 옵션(exports.options.my-
 my-format = "my_pkg.export:my_exporter"
 ```
 
-등록 이름은 디스크립터 `id`와 같아야 한다(다르면 경고 후 건너뜀). 패키지를 지우면 형식도 사라진다.
+The registered name must equal the descriptor `id` (otherwise it is skipped with a warning). Removing the package removes the format too.
 
-## `claude-dir` 옵션(`config_schema`, 생략 = 기본값)
+## `claude-dir` options (`config_schema`, omitted = default)
 
-| 옵션 | 기본 | 뜻 |
+| Option | Default | Meaning |
 | --- | --- | --- |
-| `main_node` | 없음 | 팀 구성의 이 노드 에이전트가 `CLAUDE.md` 본문. **추론하지 않는다**. 에이전트 노드가 아니면 error |
-| `agent_file_name` | `{id}.md` | 에이전트 파일 이름 템플릿(`{id}`·`{name}`) |
-| `instructions_mode` | `inline` | `inline` = `CLAUDE.md`에 이어 붙임, `separate_files` = `.claude/instructions/<id>.md` + `@경로` |
-| `include_shared_resources` | true | 팀 구성 층·공통 층 첨부도 내보냄 |
-| `secret_style` | `env_var` | `secret://이름` → `${이름}`, `omit` = 비밀 칸을 쓰지 않음 |
+| `main_node` | none | The agent of this team node becomes the `CLAUDE.md` body. **Never inferred**. Error if it is not an agent node |
+| `agent_file_name` | `{id}.md` | Agent file name template (`{id}`, `{name}`) |
+| `instructions_mode` | `inline` | `inline` = appended to `CLAUDE.md`, `separate_files` = `.claude/instructions/<id>.md` + `@path` |
+| `include_shared_resources` | true | Also exports attachments of the team layer and the common layer |
+| `secret_style` | `env_var` | `secret://NAME` → `${NAME}`, `omit` = secret fields are not written |
 
-설치자 옵션 `exports.options.claude-dir.mapping`·`layout`으로 종류 이름·경로(`ClaudeMapping`·`ClaudeLayout`)를 바꾼다.
-팀 구성은 연결·검토·노드별 설정이 빠지므로 경고 `export.semantics_approximate`를 낸다.
+The server administrator options `exports.options.claude-dir.mapping` and `layout` change kind names and paths (`ClaudeMapping`, `ClaudeLayout`).
+Teams lose their edges, reviews, and per-node settings, so the warning `export.semantics_approximate` is emitted.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-exports`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-exports`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/features/ac-exports
 ```
 
-가짜 카탈로그로 형식을, 임시 폴더로 쓰기 안전 규칙(탈출·링크·보호 위치·충돌)을, 평문 비밀 안전망을 확인한다.
+Tests check formats with a fake catalog, the write safety rules (escapes, links, protected locations, conflicts) with a temporary folder, and the plain-text secret safety net.

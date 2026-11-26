@@ -7,8 +7,9 @@
   추가 규칙·약한 이름(손으로 고친 파일)은 빼고 경고 로그.
 - ``SecretRuleCheck``: 공통 설정 저장 전 검사 — 사용자 규칙이 위험·잘못된 정규식이면 error
   (``secret.invalid_rule``, 패턴 원문은 메시지에 없음).
-- ``ignored_settings_issues``: 공통 설정에 남은 옛 최상위 키(예: ``projects``) → 정보
-  ``settings.ignored_key``(``server.warnings``, 읽기·시작은 막지 않음).
+- ``ignored_settings_issues``: 공통 설정에 남은 옛 최상위 키(예: ``projects``·``default_backend``) →
+  정보 ``settings.ignored_key``(``server.warnings``, 읽기·시작은 막지 않음). 값을 옮길 새 위치가
+  있는 키(``RENAMED_SETTINGS_KEYS``)는 그 위치를 문구와 ``details.replacement``로 안내한다.
 """
 
 from __future__ import annotations
@@ -17,7 +18,8 @@ import logging
 import string
 import threading
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Final
 
 from pydantic import BaseModel, ValidationError
 
@@ -54,36 +56,87 @@ IGNORED_SETTINGS_MESSAGE = (
 )
 """``ignored_settings_issues`` 기본 문구(``string.Template``, 변수 ``key`` = 키 경로)."""
 
+RENAMED_SETTINGS_KEYS: Final[Mapping[str, str]] = MappingProxyType(
+    {"default_backend": "agent_defaults.backend"}
+)
+"""공통 설정에서 읽고 무시하는 옛 최상위 키 → 같은 값을 둘 새 위치(점으로 구분한 경로).
+
+``default_backend``는 1.1.0부터 읽지 않는다(실행 백엔드 공통 기본값은 ``agent_defaults.backend``).
+계약 ``IGNORED_SETTINGS_KEYS``에 아직 없는 키도 여기 있으면 찾는다(모델 필드가 남아 있어도 입력에
+값이 있었을 때만). 계약 목록과 겹치는 키는 한 번만 낸다."""
+
+RENAMED_SETTINGS_MESSAGE = (
+    "공통 설정의 ${key}는 더 이상 읽지 않습니다. 같은 값을 ${replacement}에 두세요. "
+    "설정에서 지워도 됩니다"
+)
+"""새 위치가 있는 옛 키의 기본 문구(``string.Template``, 변수 ``key``·``replacement``)."""
+
+
+def _top_level_present(settings: WorkspaceSettings | Mapping[str, Any], key: str) -> bool:
+    """최상위 ``key``에 값이 있는가(null은 없음). 모델이면 입력에 있었던 필드·모르는 키만 센다."""
+    if isinstance(settings, BaseModel):
+        if key in type(settings).model_fields:
+            return key in settings.model_fields_set and getattr(settings, key) is not None
+        return (settings.model_extra or {}).get(key) is not None
+    return settings.get(key) is not None
+
 
 def ignored_settings_issues(
     settings: WorkspaceSettings | Mapping[str, Any] | None,
     *,
     message: str = IGNORED_SETTINGS_MESSAGE,
+    renamed: Mapping[str, str] = RENAMED_SETTINGS_KEYS,
+    renamed_message: str = RENAMED_SETTINGS_MESSAGE,
 ) -> list[Issue]:
     """공통 설정에 남은 옛 최상위 키 → 정보 ``settings.ignored_key``(``details.key`` = 키 경로).
 
-    키 목록은 계약 ``IGNORED_SETTINGS_KEYS``다. 섹션 아래 키(예: ``logs.projects``)는 그 섹션을
-    읽는 모듈이 낸다(같은 이슈를 두 번 내지 않게). 모델 필드가 있든 없든 같은 답이다.
+    키 목록은 계약 ``IGNORED_SETTINGS_KEYS``(점 없는 것) 다음에 ``renamed``의 키다(겹치면 한 번).
+    ``renamed``에 새 위치가 있는 키는 문구 ``renamed_message``와 ``details.replacement``로 그 위치를
+    안내한다. 섹션 아래 키(예: ``logs.projects``)는 그 섹션을 읽는 모듈이 낸다(같은 이슈를 두 번
+    내지 않게). 모델 필드가 있든 없든 같은 답이다.
+
+    Args:
+        settings: 공통 설정(모델·dict). None이면 빈 목록.
+        message: 새 위치가 없는 키의 문구(변수 ``key``).
+        renamed: 옛 최상위 키 → 새 위치. 빈 매핑이면 계약 목록만 본다.
+        renamed_message: 새 위치가 있는 키의 문구(변수 ``key``·``replacement``).
 
     >>> doc = {"projects": {}, "logs": {"projects": {}}}
     >>> [(i.code, i.details) for i in ignored_settings_issues(doc)]
     [('settings.ignored_key', {'key': 'projects'})]
-    >>> ignored_settings_issues(None)
-    []
+    >>> [i.details for i in ignored_settings_issues({"default_backend": "b"})]
+    [{'key': 'default_backend', 'replacement': 'agent_defaults.backend'}]
+    >>> ignored_settings_issues(None), ignored_settings_issues({"default_backend": None})
+    ([], [])
     """
     if settings is None:
         return []
-    template = string.Template(message)
-    return [
-        Issue(
-            severity="info",
-            code=KnownIssueCodes.SETTINGS_IGNORED_KEY,
-            message=template.safe_substitute(key=key),
-            details={"key": key},
-        )
-        for key in ignored_settings_keys(settings)
-        if "." not in key
+    keys = [key for key in ignored_settings_keys(settings) if "." not in key]
+    keys += [
+        key
+        for key in renamed
+        if "." not in key and key not in keys and _top_level_present(settings, key)
     ]
+    issues: list[Issue] = []
+    for key in keys:
+        replacement = renamed.get(key)
+        if replacement is None:
+            text = string.Template(message).safe_substitute(key=key)
+            details: dict[str, Any] = {"key": key}
+        else:
+            text = string.Template(renamed_message).safe_substitute(
+                key=key, replacement=replacement
+            )
+            details = {"key": key, "replacement": replacement}
+        issues.append(
+            Issue(
+                severity="info",
+                code=KnownIssueCodes.SETTINGS_IGNORED_KEY,
+                message=text,
+                details=details,
+            )
+        )
+    return issues
 
 
 def rule_problem_issues(problems: Iterable[RuleProblem]) -> list[Issue]:

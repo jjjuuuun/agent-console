@@ -2,13 +2,15 @@
 
 - 정의(graph, agent, settings, ...): `DefinitionStore` -> `FileDefinitionStore`(YAML),
   `InMemoryDefinitionStore`, 이름 → 새 정의 id `slug_id`·`unique_id`
-- 버전 이력: `VersionRepository` (SQLite 또는 메모리), 기록 알림 감싸개 `ObservedVersionRepository`
+- 버전 이력: `VersionRepository` (SQLite 또는 메모리), 기록 알림 감싸개 `ObservedVersionRepository`,
+  두 버전 비교 `diff_versions`(→ 계약 `DefinitionDiff`)
 - 실행 기록: `RunRepository`, `EventRepository`,
   상호작용 `InteractionRepository`
   (대화·채팅 대기열은 `agent_console_mod_chat.storage`가 소유한다, design §3R.1.7)
   -> `open_sqlite(path)`(`SqliteStorage`) 또는 `InMemoryStorage`
 
-계약(`agent_console_contracts`)에만 의존한다. 설계: specs/agent-console/design.md §2.3, §6.2.
+계약(`agent_console_contracts`)·`agent_console_numbered_id`·`agent_console_settings`(문서 비교)에만
+의존한다. 설계: specs/agent-console/design.md §2.3, §6.2.
 """
 
 from .content_path import check_content_path
@@ -125,6 +127,7 @@ from .spaces import (
     UnknownSpace,
 )
 from .sqlite import RUN_BATCH_SIZE, SqliteStorage, create_sqlite_engine, open_sqlite
+from .version_diff import SECRET_MASK, SecretPaths, VersionDiffSource, diff_versions
 from .yaml_io import atomic_write_bytes, dump_yaml, load_yaml_text, merge_into, to_plain, wrap_value
 
 __all__ = [
@@ -141,6 +144,7 @@ __all__ = [
     "RESOURCE_KIND",
     "RUN_BATCH_SIZE",
     "SCOPE_FIELD",
+    "SECRET_MASK",
     "SETTINGS_KIND",
     "SLUG_MAX_CHARS",
     "AlreadyExists",
@@ -194,6 +198,7 @@ __all__ = [
     "RecordsUnavailable",
     "RecordsVersionRepository",
     "RunRepository",
+    "SecretPaths",
     "SourcePage",
     "SpaceLocator",
     "SpaceStores",
@@ -205,6 +210,7 @@ __all__ = [
     "StoredDefinition",
     "UnknownSpace",
     "VersionConflict",
+    "VersionDiffSource",
     "VersionRecorded",
     "VersionRepository",
     "VersionRequired",
@@ -223,6 +229,7 @@ __all__ = [
     "decode_cursor",
     "decode_source_cursor",
     "default_hash",
+    "diff_versions",
     "downgrade",
     "dump_yaml",
     "encode_cursor",

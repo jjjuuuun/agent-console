@@ -4,16 +4,26 @@ from __future__ import annotations
 
 import textwrap
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from extdocs_common import TOOL_DIR, ToolData, load_data
+from extdocs_common import TOOL_DIR, LintRule, ToolData, load_data
 
 REPO_ROOT = TOOL_DIR.parents[1]
 
 
+LANGUAGE_RULE = "korean-prose"
+"""영어 문서의 한글 규칙 id(``public_lint.yaml``). 한국어로 쓴 임시 문서 픽스처는 이 규칙을 끈다."""
+
+
 def tool_data(**overrides: object) -> ToolData:
-    """저장소 데이터 파일 + 설정 덮어쓰기(기본: 계약 표 끔 — 임시 저장소에는 계약이 없다)."""
+    """저장소 데이터 파일 + 설정 덮어쓰기(기본: 계약 표 끔 — 임시 저장소에는 계약이 없다).
+
+    공개 가능 린트 규칙 중 :data:`LANGUAGE_RULE`은 뺀다(픽스처 글이 한국어라 다른 규칙의 결과만
+    보려고). 그 규칙은 :func:`language_rule`로 따로 시험한다.
+    """
+    lint_off: Sequence[str] = (LANGUAGE_RULE,)
     data = load_data()
     settings = dict(data.settings)
     settings["facts"] = {}
@@ -22,30 +32,35 @@ def tool_data(**overrides: object) -> ToolData:
         settings=settings,
         areas=data.areas,
         readme_sections=data.readme_sections,
-        lint_rules=data.lint_rules,
+        lint_rules=tuple(r for r in data.lint_rules if r.id not in set(lint_off)),
         registration_templates=data.registration_templates,
         text=data.text,
     )
 
 
+def language_rule() -> LintRule:
+    """저장소 ``public_lint.yaml``의 영어 문서 한글 규칙."""
+    return next(r for r in load_data().lint_rules if r.id == LANGUAGE_RULE)
+
+
 GOOD_README = """\
-# 예제
+# Example
 
-## 최소 코드
+## Minimal code
 
-코드.
+Code.
 
-## 등록
+## Registration
 
-등록.
+Registration.
 
-## 설치·제거
+## Install and remove
 
-설치.
+Install.
 
-## 테스트
+## Test
 
-테스트.
+Test.
 """
 
 

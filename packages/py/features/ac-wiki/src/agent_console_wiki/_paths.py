@@ -3,10 +3,14 @@
 페이지 경로 = 위키 폴더 기준 POSIX 상대 경로에서 페이지 확장자를 뺀 것(예 `decisions/api-version`).
 `..`·절대 경로·드라이브·역슬래시·제어 문자·Windows 금지 문자·예약 장치 이름은 정의 본문 경로와 같은
 규칙(`ac-store` `check_content_path`)으로 거부하고, `.`로 시작하는 구성요소(숨김)는 페이지가 아니다.
+
+경로 검사는 순수 문자열 함수라 결과를 프로세스 안에 기억한다(`functools.lru_cache`, 통과한 경로만 —
+거부는 매번 다시 검사한다). 색인을 다시 지을 때 페이지마다 같은 경로를 검사하는 비용을 줄인다.
 """
 
 from __future__ import annotations
 
+import functools
 import posixpath
 from collections.abc import Collection, Sequence
 
@@ -36,15 +40,27 @@ def check_page_path(path: str, *, reserved: Collection[str] = ()) -> str:
     Raises:
         WikiPathError: `invalid`·`hidden`·`reserved`.
     """
+    norm = _checked(path)
+    if reserved:
+        first = norm.split("/", 1)[0].casefold()
+        if first in {r.casefold() for r in reserved}:
+            raise WikiPathError(path, "reserved")
+    return norm
+
+
+_PATH_MEMO_ENTRIES = 65_536
+"""기억할 경로 수(위키 여러 개의 페이지 경로가 들어갈 만큼, 넘으면 오래 안 쓴 것부터 버린다)."""
+
+
+@functools.lru_cache(maxsize=_PATH_MEMO_ENTRIES)
+def _checked(path: str) -> str:
+    """`reserved` 없는 경로 검사(통과한 결과만 기억된다 — 예외는 기억하지 않는다)."""
     try:
         norm = check_content_path(path)
     except InvalidContentPath:
         raise WikiPathError(path, "invalid") from None
-    parts = norm.split("/")
-    if any(p.startswith(".") for p in parts):
+    if any(p.startswith(".") for p in norm.split("/")):
         raise WikiPathError(path, "hidden")
-    if reserved and parts[0].casefold() in {r.casefold() for r in reserved}:
-        raise WikiPathError(path, "reserved")
     return norm
 
 
@@ -60,6 +76,11 @@ def split_extension(name: str, extensions: Sequence[str]) -> tuple[str, str] | N
 
 def page_path_for_file(file: str, extensions: Sequence[str]) -> str | None:
     """위키 폴더 안 파일 경로 → 페이지 경로. 페이지 파일이 아니거나 경로 규칙에 어긋나면 None."""
+    return _page_path_for_file(file, tuple(extensions))
+
+
+@functools.lru_cache(maxsize=_PATH_MEMO_ENTRIES)
+def _page_path_for_file(file: str, extensions: tuple[str, ...]) -> str | None:
     split = split_extension(file, extensions)
     if split is None:
         return None

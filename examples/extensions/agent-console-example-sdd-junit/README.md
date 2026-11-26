@@ -1,29 +1,29 @@
 # agent-console-example-sdd-junit
 
-스펙(SDD) 추적 표에 **다른 곳의 테스트 결과**를 넣는 검증 결과 출처를 플러그인 패키지 하나로
-추가하는 예제이자 작성 가이드.
-엔진·서버·웹 코드를 고치지 않는다. 설치하고 사용자 설정에서 켜면 스펙의 추적 표(스펙 REST의 `GET …/{id}/trace`)
-검증 열에 JUnit XML 결과가 나오고, 끄거나 제거하면 사라진다.
+An example and writing guide that adds a verification result source, which puts **test results from elsewhere** into the spec (SDD) trace table,
+with a single plugin package.
+No engine, server, or web code changes. Once installed and turned on in the user settings, JUnit XML results appear in the verification column of the spec trace table (`GET …/{id}/trace` of the spec REST),
+and they disappear when it is turned off or removed.
 
-검증 결과 출처 `example.junit`
-- 프로젝트 폴더 안 JUnit XML 파일(`paths` 글롭)을 읽어 테스트 케이스마다 요구 id·작업 키를 찾는다.
-- 요구 id는 `requirement_pattern` 정규식(이름 그룹 `id`)으로, 비우면 그 스펙 요구 문서에 있는 요구 id를
-  단어로 찾는다(`test_R1_login` → `R1`, `R10`·`R1.2` 안의 `R1`은 아님). 작업 키는 `task_pattern`(그룹 `task`)으로
-  찾고, 스펙에 없는 키는 버린다.
-- 요구(또는 작업)마다 결과 하나로 모은다 — 값은 `result_map`으로 바꾼 결과 중 `status_priority`에서 가장 앞인 것,
-  시각은 가장 늦은 테스트 묶음 `timestamp`, 근거는 그 결과가 처음 나온 파일(`ref.path`).
-- 파일은 mod-sdd가 주는 `ctx.spec.files`(그 프로젝트 폴더 안만, 링크·앱 구성 폴더 거부)로만 읽는다.
-  파일 패턴이 폴더 밖(`..`·절대 경로·드라이브·역슬래시)을 가리키면 옵션 전체를 거부한다(결과 없음).
-- 정규식은 `ac-safe-regex` 규칙(길이 상한, 위험한 중첩 반복 거부, 매치마다 시간 제한 `regex_timeout_ms`).
-- DTD·엔티티 선언이 든 XML은 읽지 않는다(표준 라이브러리 `xml.etree` + 선언 거부, 새 의존 없음).
-- 의존: 계약(`agent-console-contracts`)·스펙 라이브러리(`agent-console-sdd`, 프로토콜·`SpecFiles`)·
-  `agent-console-safe-regex`·`pydantic`. 서버 모듈(`mod-sdd`)은 import하지 않는다(테스트에서만 쓴다).
+Verification result source `example.junit`
+- Reads the JUnit XML files in the project folder (`paths` globs) and finds the requirement ids and task keys of each test case.
+- Requirement ids are found with the `requirement_pattern` regular expression (named group `id`); when empty, the requirement ids in the spec's requirements document are
+  found as words (`test_R1_login` → `R1`, but not the `R1` inside `R10` or `R1.2`). Task keys are found with `task_pattern` (group `task`),
+  and keys that are not in the spec are dropped.
+- Results are combined into one per requirement (or task): the value is the result, converted through `result_map`, that comes first in `status_priority`;
+  the time is the latest test suite `timestamp`; and the evidence is the file where that result first appeared (`ref.path`).
+- Files are read only through `ctx.spec.files`, which mod-sdd provides (only inside that project folder; links and the app config folder are rejected).
+  When a file pattern points outside the folder (`..`, absolute paths, drives, backslashes), the whole options are rejected (no results).
+- Regular expressions follow the `ac-safe-regex` rules (a length limit, rejection of dangerous nested repetition, a time limit per match `regex_timeout_ms`).
+- XML with DTD or entity declarations is not read (standard library `xml.etree` + rejecting declarations; no new dependencies).
+- Dependencies: the contract (`agent-console-contracts`), the spec library (`agent-console-sdd`, protocol and `SpecFiles`),
+  `agent-console-safe-regex`, and `pydantic`. It does not import the server module (`mod-sdd`); only the tests use it.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 출처 만드는 법
+## How to build a source
 
-검증 결과 출처는 `id` 속성과 `async collect(ctx) -> list[VerificationResult]` 하나다(`agent_console_sdd.VerificationSource`).
+A verification result source is an `id` attribute and a single `async collect(ctx) -> list[VerificationResult]` (`agent_console_sdd.VerificationSource`).
 
 ```python
 from agent_console_contracts.sdd import VerificationResult
@@ -34,27 +34,27 @@ class MySource:
     id = "example.my-ci"
 
     async def collect(self, ctx: VerificationContext) -> list[VerificationResult]:
-        files = ctx.spec.files  # 그 프로젝트 폴더 안만. 단독 루트·파일 접근 없는 공간이면 None
+        files = ctx.spec.files  # only inside that project folder; None for the standalone root or a space without file access
         if files is None:
             return []
-        data = files.read(str(ctx.options.get("path", "ci.json")))  # 옵션 = 사용자 설정 데이터
+        data = files.read(str(ctx.options.get("path", "ci.json")))  # options = user settings data
         ...
         return [VerificationResult(source=self.id, status="pass", requirement_ids=["R1"])]
 ```
 
-규칙
-1. **옵션은 데이터**: 파일 위치·이름 규칙·결과 이름은 코드에 두지 않고 `ctx.options`(사용자 설정
-   `sdd.verification_sources[].options`)로 받는다. 기본값이 필요하면 패키지 데이터로 둔다(여기서는
+Rules
+1. **Options are data**: file locations, naming rules, and result names are not in code; they come through `ctx.options` (the user setting
+   `sdd.verification_sources[].options`). When you need defaults, keep them as package data (here
    `data/defaults.json`).
-2. **파일은 `ctx.spec.files`로만**: `open()`·`Path`로 직접 읽지 않는다. 경로는 프로젝트 폴더 기준 POSIX 상대
-   경로이고, 사용자가 준 패턴은 먼저 검사한다(`check_file_pattern`).
-3. **사용자 정규식은 `ac-safe-regex`**: `compile_user_regex(pattern, timeout=...)`, 매치 시간 초과
-   (`RegexTimeoutError`)는 그 항목만 건너뛴다.
-4. **결과 값은 열린 문자열**: 추적 표는 `fail`·`failed`를 실패로 본다(`verification_failed` 빈 곳).
-5. **실패는 예외로**: `collect`가 예외를 던지면 mod-sdd는 그 출처만 건너뛰고 다른 출처 결과는 그대로 쓴다.
-   결과 원문·비밀을 예외 문장에 싣지 않는다.
+2. **Files only through `ctx.spec.files`**: do not read them directly with `open()` or `Path`. Paths are POSIX paths relative to the project folder,
+   and patterns given by the user are checked first (`check_file_pattern`).
+3. **User regular expressions through `ac-safe-regex`**: `compile_user_regex(pattern, timeout=...)`; a match timeout
+   (`RegexTimeoutError`) skips only that item.
+4. **Result values are open strings**: the trace table treats `fail` and `failed` as failures (`verification_failed` gaps).
+5. **Failures as exceptions**: when `collect` raises, mod-sdd skips only that source and uses the results of the other sources as they are.
+   Do not put the raw results or secrets in the exception message.
 
-서버 없이 핵심 함수만 쓰기(이 패키지의 `collect_results`):
+Using only the core function, without a server (this package's `collect_results`):
 
 ```python
 >>> from agent_console_contracts.sdd import ParsedRequirement, SpecIndex
@@ -78,26 +78,26 @@ agent_console_example_sdd_junit._options.JUnitOptionsError: /paths/0: 파일 패
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console_mod_sdd.plugins.VERIFICATION_SOURCES_GROUP`
-(`agent_console.sdd_verification_sources`), 이름 = 출처 id. 값은 출처 객체이거나 인자 없이 부르는 클래스·함수다.
+One entry point in `pyproject.toml`. Group = `agent_console_mod_sdd.plugins.VERIFICATION_SOURCES_GROUP`
+(`agent_console.sdd_verification_sources`); name = source id. The value is a source object or a class or function called without arguments.
 
 ```toml
 [project.entry-points."agent_console.sdd_verification_sources"]
 "example.junit" = "agent_console_example_sdd_junit:JUnitVerificationSource"
 ```
 
-서버 시작 때 호스트 플러그인 로더(`mod-sdd`의 `agent_console.host_plugin_loaders: sdd`)가 이 그룹을 읽는다.
-**설치만으로는 쓰이지 않는다** — 사용자 설정에 `enabled: true`로 적어야 추적 표에 들어간다(연동 모듈이 포트로 주는
-기본 출처 `runs`와 다르다). 같은 클래스를 다른 id로 쓰려면 `JUnitVerificationSource("ci")`를
-돌려주는 함수를 entry point로 등록한다.
+At server startup, the host plugin loader (`agent_console.host_plugin_loaders: sdd` of `mod-sdd`) reads this group.
+**Installing alone does not use it**: it goes into the trace table only when the user settings list it with `enabled: true` (unlike the
+default source `runs`, which a link module provides through a port). To use the same class with another id, register a function that returns
+`JUnitVerificationSource("ci")` as the entry point.
 
-## 설정 예
+## Settings example
 
-워크스페이스 설정(`settings.yaml`, 화면 설정의 "스펙" 섹션)의 `sdd.verification_sources`:
+`sdd.verification_sources` in the workspace settings (`settings.yaml`, the *Specs* section of the settings screen):
 
 ```yaml
 sdd:
@@ -106,67 +106,66 @@ sdd:
       enabled: true
       options:
         paths: ["reports/**/*.xml", "build/test-results/**/TEST-*.xml"]
-        # 비우면(null) 스펙 요구 문서의 요구 id를 단어로 찾는다
+        # when empty (null), the requirement ids of the spec's requirements document are found as words
         requirement_pattern: "\\[(?P<id>[A-Z]+\\d+(?:\\.\\d+)*)\\]"
-        task_pattern: "task_(?P<task>\\d+_\\d+)"   # 스펙에 없는 작업 키는 버린다
+        task_pattern: "task_(?P<task>\\d+_\\d+)"   # task keys that are not in the spec are dropped
         match_fields: [classname, name]
         result_map: {passed: pass, failed: fail, error: fail, skipped: skipped}
         status_priority: [fail, skipped, pass]
         label: CI
 ```
 
-| 옵션 | 기본(`data/defaults.json`) | 뜻 |
+| Option | Default (`data/defaults.json`) | Meaning |
 | --- | --- | --- |
-| `paths` | `[]`(아무것도 읽지 않음) | JUnit 파일 글롭(프로젝트 폴더 기준). `*`·`?`·`[..]`, `**` = 0개 이상 폴더(숨김 폴더는 내려가지 않음) |
-| `requirement_pattern` | `null` | 요구 id 정규식(그룹 `id` 또는 매치 전체). `null` = 그 스펙의 요구 id를 단어로 찾음 |
-| `task_pattern` | `null` | 작업 키 정규식(그룹 `task` 또는 매치 전체). `null` = 작업에 붙이지 않음 |
-| `match_fields` | `[classname, name]` | 살펴볼 `<testcase>` 속성 |
-| `result_map` | `passed→pass`·`failed→fail`·`error→fail`·`skipped→skipped` | 테스트 결과 → 추적 표 값 |
-| `status_priority` | `[fail, skipped, pass]` | 한 요구에 여러 테스트가 붙을 때 고를 순서(목록 밖은 맨 뒤) |
-| `label` | `JUnit` | 결과 라벨 앞머리(`JUnit (3)`) |
-| `max_files`·`max_file_bytes`·`max_dirs`·`max_testcases` | 50·5MB·2000·20000 | 읽기 상한(넘으면 그만 읽음) |
-| `regex_timeout_ms` | 50 | 정규식 매치 1회 시간 제한 |
+| `paths` | `[]` (reads nothing) | JUnit file globs (relative to the project folder). `*`, `?`, `[..]`; `**` = zero or more folders (hidden folders are not entered) |
+| `requirement_pattern` | `null` | Requirement id regular expression (group `id` or the whole match). `null` = find the spec's requirement ids as words |
+| `task_pattern` | `null` | Task key regular expression (group `task` or the whole match). `null` = do not attach to tasks |
+| `match_fields` | `[classname, name]` | The `<testcase>` attributes to look at |
+| `result_map` | `passed→pass`, `failed→fail`, `error→fail`, `skipped→skipped` | Test result → trace table value |
+| `status_priority` | `[fail, skipped, pass]` | The order to choose in when several tests attach to one requirement (values not in the list go last) |
+| `label` | `JUnit` | Prefix of the result label (`JUnit (3)`) |
+| `max_files`, `max_file_bytes`, `max_dirs`, `max_testcases` | 50, 5MB, 2000, 20000 | Read limits (reading stops when exceeded) |
+| `regex_timeout_ms` | 50 | Time limit for one regular expression match |
 
-모르는 키·틀린 값·폴더 밖 패턴·위험한 정규식은 옵션 전체를 거부한다(그 출처 결과 없음). 저장 전에
-`check_options(options)`로 (위치, 이유) 목록을 얻을 수 있다.
-작업 키는 스펙 문법이 정한 키 그대로 비교한다. 테스트 이름에 `.`을 쓸 수 없으면 위 예처럼 `_`로 쓰고, 키 모양이
-다르면 `task_pattern`으로 맞는 부분만 잡는다(예제는 바꿔 쓰지 않는다 — 필요하면 출처를 고쳐 쓴다).
+Unknown keys, wrong values, patterns outside the folder, and dangerous regular expressions reject the whole options (no results from that source). Before saving,
+`check_options(options)` returns a list of (location, reason).
+Task keys are compared exactly as the spec syntax defines them. When test names cannot contain `.`, use `_` as in the example above, and when the key shape
+differs, capture only the matching part with `task_pattern` (the example does not rewrite keys; change the source if you need that).
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-sdd-junit   # 설치
-uv pip uninstall agent-console-example-sdd-junit                        # 제거
+uv pip install -e examples/extensions/agent-console-example-sdd-junit   # install
+uv pip uninstall agent-console-example-sdd-junit                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치 + 설정에서 켬: `GET /api/v1/sdd/info?project=<id>`의 `capabilities.verification`이 true, 추적 표 검증 열에
-  `source: example.junit` 결과가 나온다.
-- 제거 또는 `enabled: false`: 추적 표에서 그 결과가 사라진다. 설정 항목은 지워지지 않는다.
-- 설치한 채로 로드하지 않기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example.junit`을 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Installed and turned on in the settings: `capabilities.verification` of `GET /api/v1/sdd/info?project=<id>` is true, and `source: example.junit` results appear in the verification column of the trace table.
+- Removed or `enabled: false`: those results disappear from the trace table. The settings entry is not deleted.
+- Keep it installed but not loaded: remove `example.junit` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-sdd-junit
 uv run --project ../../.. python -m pytest
 ```
 
-- `tests/test_agent_console_example_sdd_junit.py`: entry point 선언, 옵션(기본값·폴더 밖 패턴 10가지 거부·위험
-  정규식·모르는 키), JUnit 읽기(결과 네 가지·중첩 묶음·시각·DTD 거부), 글롭(`**`·숨김·링크 안 따라감 — 실제 폴더
-  심볼릭 링크로 밖을 가리켜도 읽지 않음), 요구 id 찾기, 요구·작업별 모으기·결과 이름 데이터·상한.
-- `tests/test_mod_sdd_assembly.py`: 테스트 호스트 + `mod-sdd` + 프로젝트 공간 하나를 조립하고 entry point를
-  mod-sdd 로더로 로드한 뒤 — 설정에서 켜면 추적 표 `R1 pass`·`R2 fail`(+`verification_failed`), 켜지 않으면 결과
-  없음, 폴더 밖 패턴이면 결과 없음.
+- `tests/test_agent_console_example_sdd_junit.py`: the entry point declaration, options (defaults, rejection of 10 kinds of patterns outside the folder, dangerous
+  regular expressions, unknown keys), reading JUnit (four kinds of results, nested suites, times, DTD rejection), globs (`**`, hidden folders, links not followed: nothing is read even when a real folder
+  symbolic link points outside), finding requirement ids, combining per requirement and task, result name data, and limits.
+- `tests/test_mod_sdd_assembly.py`: assembles a test host + `mod-sdd` + one project space and loads the entry point with the
+  mod-sdd loader. When turned on in the settings, the trace table shows `R1 pass` and `R2 fail` (+ `verification_failed`); when not turned on, there are no
+  results; with a pattern outside the folder, there are no results.
 
-자기 출처를 만들 때도 같은 방식으로 테스트한다: 단위는 `agent_console_sdd.testing.MemorySpecFiles`로 파일을 주고,
-조립은 `agent_console_mod_sdd.testing`(`static_settings_module`·`spaces_module`·`SimpleSpace`)으로 만든다.
+Test your own source the same way: for unit tests, provide files with `agent_console_sdd.testing.MemorySpecFiles`, and build the
+assembly with `agent_console_mod_sdd.testing` (`static_settings_module`, `spaces_module`, `SimpleSpace`).

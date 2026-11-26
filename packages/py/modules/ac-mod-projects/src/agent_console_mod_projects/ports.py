@@ -126,7 +126,7 @@ class DefinitionSpaces(Protocol):
 
 
 class References(Protocol):
-    """``definitions.references`` 모양: 문서 하나가 쓰는 정의의 ``(종류, id)``."""
+    """``definitions.references`` shape: the ``(kind, id)`` of the definitions one document uses."""
 
     def __call__(self, kind: str, document: Mapping[str, Any]) -> Iterable[tuple[str, str]]: ...
 

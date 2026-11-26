@@ -7,11 +7,11 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-runtime>=0.1,<0.2",
     "agent-console-resources>=0.1,<0.2",
-    "agent-console-teams>=0.1,<0.2",
+    "agent-console-teams>=0.2,<0.3",
     "agent-console-conditions>=0.1,<0.2",
     "pydantic>=2.9",
 ]
@@ -88,10 +88,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console.extension-points.agent-tool-provider]
-title = "에이전트 도구 공급자"
+title = "Agent tool provider"
 area = "memory"
 design_id = "X30"
-summary = "에이전트 노드 실행마다 도구와 지침을 더한다(노드 서비스로 넘긴다)"
+summary = "Adds tools and instructions to each agent node run (passed as node services)"
 registration = { kind = "service", name = "agent_console_nodes_core:TOOL_PROVIDERS" }
 interface = ["agent_console_nodes_core:ToolProvider", "agent_console_nodes_core:TOOL_PROVIDERS"]
 builtin = "none"

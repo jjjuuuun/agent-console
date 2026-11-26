@@ -8,6 +8,7 @@ import { mergeErrorSchemas, parsePointer, toErrorSchema, translateErrors } from 
 import type { ErrorNode } from "./errors";
 import { resolveMessages } from "./messages";
 import { titleUntitledBranches } from "./branchTitles";
+import { translateSchema, translateUiSchema } from "./translate";
 import { collapseEmptyNullable, normalizeNullable, nullableUiSchema } from "./nullable";
 import { buttonTemplates } from "./buttons";
 import { ProvenanceContext, ProvenanceFieldTemplate } from "./ProvenanceFieldTemplate";
@@ -158,7 +159,8 @@ const keyLabeledAdditional: typeof DefaultWrapIfAdditional = (props) => <Default
  */
 export function SchemaForm(props: SchemaFormProps) {
   const {
-    uiSchema,
+    uiSchema: rawUiSchema,
+    translate,
     value,
     onChange,
     errors,
@@ -179,7 +181,11 @@ export function SchemaForm(props: SchemaFormProps) {
     hideRootTitle = false,
   } = props;
   const messages = useMemo(() => resolveMessages(props.messages), [props.messages]);
-  const baseSchema = useMemo(() => titleUntitledBranches(normalizeNullable(props.schema), messages), [props.schema, messages]);
+  const baseSchema = useMemo(() => {
+    const normalized = titleUntitledBranches(normalizeNullable(props.schema), messages);
+    return translate === undefined ? normalized : translateSchema(normalized, translate);
+  }, [props.schema, messages, translate]);
+  const uiSchema = useMemo(() => (translate === undefined ? rawUiSchema : translateUiSchema(rawUiSchema, translate)), [rawUiSchema, translate]);
   // `deprecated: true` 필드: 값이 없으면 빼고, 있으면 칩·안내를 단다(일반 규칙, 필드 이름 비교 없음).
   const depValue = props.provenance !== undefined && props.effectiveValue !== undefined ? deepMerge(props.effectiveValue, value) : value;
   const nextDep = typeof baseSchema === "object" && baseSchema !== null ? applyDeprecated(baseSchema as Record<string, unknown>, depValue, messages) : undefined;

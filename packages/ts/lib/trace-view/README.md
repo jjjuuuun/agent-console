@@ -1,48 +1,59 @@
 # @agent-console/trace-view
 
-위임 흐름(`Trace`) 타임라인 **표현** 패키지. 왼쪽 트리 + 오른쪽 시간 막대. 데이터·콜백은 props, 문구는 `messages`.
-다른 TS 패키지는 import하지 않는다(`@agent-console/contracts` 타입만).
+A **presentation** package for the delegation flow (`Trace`) timeline: a tree on the left and time bars on the right. Data and callbacks are props, and text comes from `messages`.
+It imports no other TS package (only `@agent-console/contracts` types).
 
-## 최소 사용
-이 블록은 `test/readme.test.ts`와 같고, 테스트가 실제로 실행한다(`pnpm pkg-lint`가 일치를 검사).
+## Minimal usage
+This block matches `test/readme.test.ts`, and the test actually runs it (`pnpm pkg-lint` checks that they match).
 
 ```ts readme
 import { formatDuration } from "@agent-console/trace-view";
 
-const text = formatDuration(125, { s: "초", m: "분", h: "시간" });
+const text = formatDuration(125, { s: "s", m: "m", h: "h" });
 ```
 
-## 스타일
+## Text and language
+The default text is Korean (`src/locales/ko.json`, `defaultTraceMessages`), and an English bundle ships alongside it. There is no dependency such as i18next. Placeholders are `{name}`, filled by a pure function inside the package.
+`ko` and `en` have the same keys and placeholders (`test/locales.test.ts` checks this). To use English, pass one bundle as `messages`.
+
+```tsx
+import en from "@agent-console/trace-view/locales/en";
+
+<TraceTimeline trace={trace} messages={en} />
+```
+The Korean bundle is `@agent-console/trace-view/locales/ko`. To change only part of a bundle, spread it and override, as in `messages={{ ...en, empty: "…" }}`. For a new language, build an object with the same keys and pass it in. The component source contains no Korean strings (the same test checks this).
+
+## Styles
 ```ts
 import "@agent-console/ui/tokens.css";
 import "@agent-console/trace-view/styles.css";
 ```
 
-## 최소 사용 예
+## Another usage example
 ```tsx
 <TraceTimeline trace={trace} now={nowSec} running labelFor={(s) => ({ title: nodeLabel(s.node_id) })}
   methodBadgeFor={(s) => ({ text: methodTitle(s) })} selectedSpanId={sel} onSelect={setSel} />
 ```
 
-## 규칙
-- 부모-자식은 `parent_id`가 가리키는 span이 있을 때만(시간상 추정 없음) → 들여 쓴 행 + "같은 세션". 최상위는 "별도 세션" + `trace.links`의 넘기기 화살표와 `order` 칩. 세션 판정은 `session_id` 비교, 없으면 부모 유무.
-- 사용자 대기는 `interaction_id`가 있는 span(waiting 빗금 막대). 종류 문자열은 비교하지 않으므로 모르는 `kind`는 일반 행.
-- 방식 배지 문구는 `methodBadgeFor`(앱이 연결 종류/위임 방식 `title` 전달). `now`는 epoch 초.
-- 키보드: `↑↓←→ Enter Home End + -`, 접근성 이름 "{이름}, {방식}, {상태}, {소요}".
+## Rules
+- A parent-child relation exists only when the span that `parent_id` points to is present (no inference from timing) → an indented row plus "Same session". A top-level span gets "Separate session", plus the handoff arrow from `trace.links` and an `order` chip. The session is decided by comparing `session_id`, or by whether a parent exists when there is none.
+- A wait for the user is a span that has an `interaction_id` (a bar with waiting hatching). Kind strings are not compared, so an unknown `kind` is an ordinary row.
+- The text of the method badge comes from `methodBadgeFor` (the app passes the edge type or delegation strategy `title`). `now` is epoch seconds.
+- Keyboard: `↑↓←→ Enter Home End + -`. The accessible name is "{name}, {method}, {status}, {duration}".
 
-## 호출·회차·자식 실행
-종류 id는 비교하지 않고 span 필드로만 판정한다.
-- 호출 span(`call` 또는 `invoked_by`가 있는 span): 위임자 span 아래 들여 쓴 행 + 항상 "별도 세션" 배지, 과제 미리보기(`task_preview`)가 막대 안 한 줄.
-- 같은 노드에 회차(`iteration`)가 둘 이상(또는 1 이상)이면 이름 뒤 ` #n`, 호출이 둘 이상이면 ` · 호출 n`(번호는 값 + 1, 문구는 `messages.iterationSuffix`·`callSuffix`). `spanOrdinals`.
-- 자식 Run(`span.run_id` ≠ `trace.run_id`)은 Run별 묶음 행 하나 아래로 모인다(`flattenRows`의 `runId`). 묶음은 그 Run의 맨 위 span이 가리키는 부모 span 아래에, 후손 Run은 부모 묶음 안에 중첩된다. 묶음 행: `Enter`/클릭 = 접기·펴기, `Ctrl+Enter`·[열기] = `onOpenChildRun(runId)`.
-- 접힘은 제어형이 가능: `expandedGroupIds` + `onGroupToggle(runId, expanded)`. 생략하면 `defaultExpandedGroups`(끝나지 않은 span이 있으면 펼침, 끝났으면 접힘)로 시작하고 사용자의 선택을 화면이 유지한다.
-- 앱 주입: `groupBadgeFor(group)`(묶음 제목·부제·배지), `linkBadgeFor(link)`(span 사이 화살표 칩, 예: 반복 연결 `↻`).
+## Calls, iterations, and child runs
+Kind ids are not compared; decisions use only span fields.
+- A call span (a span with `call` or `invoked_by`): an indented row under the delegator span, always with a "Separate session" badge, and the task preview (`task_preview`) on one line inside the bar.
+- When the same node has two or more iterations (`iteration`; or one or more), ` #n` follows the name; when it has two or more calls, ` · call n` follows (the number is the value plus 1, and the text is `messages.iterationSuffix` and `callSuffix`). See `spanOrdinals`.
+- A child run (`span.run_id` differs from `trace.run_id`) is gathered under one group row per run (`runId` in `flattenRows`). The group sits under the parent span that the run's topmost span points to, and descendant runs nest inside the parent group. Group row: `Enter` or a click toggles collapse, and `Ctrl+Enter` or [Open] calls `onOpenChildRun(runId)`.
+- Collapse can be controlled: `expandedGroupIds` plus `onGroupToggle(runId, expanded)`. When omitted, it starts from `defaultExpandedGroups` (expanded if any span is unfinished, collapsed once finished) and the view keeps the user's choices.
+- App injection: `groupBadgeFor(group)` (the group title, subtitle, and badge) and `linkBadgeFor(link)` (the chip on the arrow between spans, for example `↻` for a loop edge).
 
-## 행 레이아웃
-- 행은 CSS grid 한 벌(라벨 칸 / 막대 칸 / 수치 열). 요소는 자기 칸 밖으로 나가지 않고, 호버·선택은 배경색만 바꾼다. 컨테이너 쿼리로 좁은 패널(<560)·<640에서 부제·토큰·연결 칩을 숨긴다.
-- 방식·세션은 글자 칩이 아니라 아이콘: 방식 = `MethodBadge.iconName`(연결 종류 `ui_hints.icon`), 세션 = 점선(같은)/실선(별도) 원. 문구는 `aria-label`·`title`. `showMethodText`(+`onShowMethodTextChange`)를 켜면 부제 자리에 문구를 글자로 보인다.
-- 앱 주입(패키지는 `ui`를 import하지 않는다): `renderIcon(name, size)`, `renderTooltip(content, children)`(기본 = 글리프·`title`), `labelWidth`(px, 200~360으로 자름).
-- 기계 검사용 속성: `data-trace-{toggle,order,label,icons,open,bar,link,tail}`.
+## Row layout
+- A row is one CSS grid (label column / bar column / number columns). An element never leaves its own column, and hover and selection change only the background color. Container queries hide the subtitle, tokens, and link chip in narrow panels (under 560) and under 640.
+- The method and the session are icons, not text chips: the method is `MethodBadge.iconName` (the edge type's `ui_hints.icon`), and the session is a dashed circle (same) or a solid circle (separate). The text goes in `aria-label` and `title`. Turning on `showMethodText` (with `onShowMethodTextChange`) shows the text in place of the subtitle.
+- App injection (the package does not import `ui`): `renderIcon(name, size)`, `renderTooltip(content, children)` (default: a glyph and `title`), and `labelWidth` (px, clamped to 200-360).
+- Attributes for machine checks: `data-trace-{toggle,order,label,icons,open,bar,link,tail}`.
 
-## 테스트
+## Testing
 `pnpm test`

@@ -94,6 +94,10 @@ class KnownUiWidgets:
     """경로 모양 입력(예: `decisions/**`, 맞는 페이지 미리보기)."""
     WIKI_RULE_REFS: Final = "wiki-rule-refs"
     """위키가 쓰는 위키 규칙 목록 편집기(순서·더하기·빼기, 목록 = `GET /wiki/rules`)."""
+    # ---- 2.1.0(0.16.0): 화면 언어(design §I18N.7)
+    LANGUAGE: Final = "language"
+    """화면 언어 고르기. 선택지는 화면이 아는 언어와 서버 `GET /i18n`의 언어이고(계약에 언어 목록
+    없음), 이름은 그 언어 자기 이름으로 보인다. 비우기 = 자동."""
 
 
 type XUiTier = Literal["basic", "advanced"]

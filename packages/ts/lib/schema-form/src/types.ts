@@ -184,6 +184,11 @@ export interface SchemaFormProps {
   /** `{ } JSON` 전환 토글 표시. 기본 true. */
   rawJsonToggle?: boolean;
   messages?: Partial<SchemaFormMessages>;
+  /**
+   * 스키마·uiSchema가 준 문구(제목·설명·`x-ui`의 when·그룹 제목·단위·선택지 이름, `ui:title` 등)를 현재 언어로 바꾸는 함수.
+   * 모르는 문구는 그대로 돌려주면 된다. 기본은 바꾸지 않는다. 함수가 바뀌면 폼 스키마를 다시 만들므로 안정된 참조(`useCallback`·모듈 상수)로 넘긴다. 폼 자체 문구는 `messages`로 넘긴다.
+   */
+  translate?: (text: string) => string;
   className?: string;
 
   // --- 스키마 `x-ui` 렌더(모두 선택) ---

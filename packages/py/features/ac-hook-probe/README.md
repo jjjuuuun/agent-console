@@ -1,42 +1,42 @@
 # agent-console-hook-probe
 
-hook 명령을 감싸 **그대로 실행**하면서 입출력·결정·소요 시간을 jsonl로 남기는 실행 파일과, 그 기록을 읽는
-로그 출처·분류기.
+An executable that wraps a hook command and **runs it unchanged** while recording input, output, decisions, and duration as jsonl, plus the
+log source and classifier that read those records.
 
-- **결과를 바꾸지 않는다.** stdin은 받은 그대로 원래 명령에 넘기고, stdout·stderr·종료 코드는 바이트 그대로
-  돌려준다. 기록 실패·디스크 오류는 결과에 영향이 없다(경고 줄도 stderr에 섞지 않는다).
-- **Claude Code와 같은 셸 규칙.** `--` 뒤가 문자열 하나면 셸 형식(POSIX `/bin/sh -c`, Windows Git Bash
-  `bash -c`, 없으면 `powershell -NoProfile -Command`), 여럿이거나 `--exec`면 셸 없이 실행한다. 셸 규칙은
-  데이터(`DEFAULT_SHELLS`)이고 `--shell`로 고른다(`sh`·`bash`·`powershell`·`pwsh`·`cmd` 또는 셸 실행 파일).
-- **종료 신호를 자식 그룹에 전달한다.** 자식은 새 프로세스 그룹으로 뜨고, probe가 받은 TERM·INT·HUP·QUIT
-  (Windows는 INT·BREAK·TERM)을 그룹에 보낸 뒤 2초 안에 끝나지 않으면 그룹을 강제 종료한다. 자식이 신호로
-  끝나면 probe도 같은 신호로 끝난다. 시간 제한은 두지 않는다(Claude Code의 hook timeout).
-- **기록은 가린 사본이다.** 명령 문자열은 해시(`command_digest`)만, 입출력은 스트림마다 앞 80,000바이트까지
-  (`--capture-bytes`)만 남긴다. probe가 직접 만든 값(`PLAIN_FIELDS`: 시각·종료 코드·크기 등)을 뺀 **모든 필드**
-  (입출력, cwd·matcher·context·세션 id·도구·에이전트·결정 사유·오류)는 `agent-console-secret-rules` 기본 규칙으로
-  가린다. 스트림은 한도 뒤 4 KB(`CAPTURE_MARGIN_BYTES`)까지 잡아 먼저 가린 다음 한도로 자르므로, 경계에 걸친
-  비밀도 남지 않는다(4 KB보다 긴 비밀 모양은 예외).
-- **opt-in이다.** 플랫폼은 `observe.hook_probe`가 켜졌을 때 자기가 전달하는 hook에만 붙인다.
-  `.claude` 내보내기와 사용자 설정 파일은 고치지 않는다.
-- 패키지 루트와 실행 경로는 표준 라이브러리만 가져온다(기록할 때 secret-rules). hook마다 뜨는 프로세스라서다.
-  출처·분류기는 하위 모듈 `agent_console_hook_probe.plugins`(`agent-console-logs` 사용)에 있다.
+- **It does not change the result.** stdin is passed to the original command as received, and stdout, stderr, and the exit code are returned
+  byte for byte. Recording failures and disk errors do not affect the result (no warning lines are mixed into stderr either).
+- **The same shell rules as Claude Code.** If what follows `--` is a single string, it runs in shell form (POSIX `/bin/sh -c`, Windows Git Bash
+  `bash -c`, otherwise `powershell -NoProfile -Command`); if there are several, or with `--exec`, it runs without a shell. The shell rules are
+  data (`DEFAULT_SHELLS`) and are chosen with `--shell` (`sh`, `bash`, `powershell`, `pwsh`, `cmd`, or a shell executable).
+- **Termination signals are forwarded to the child group.** The child starts in a new process group, and TERM, INT, HUP, and QUIT received by the probe
+  (on Windows INT, BREAK, TERM) are sent to the group; if it does not end within 2 seconds, the group is forcibly killed. When the child ends by a signal,
+  the probe ends with the same signal. There is no time limit (Claude Code's hook timeout applies).
+- **Records are masked copies.** Only a hash of the command string is kept (`command_digest`), and input and output only up to the first 80,000 bytes per stream
+  (`--capture-bytes`). **Every field** except values the probe creates itself (`PLAIN_FIELDS`: times, exit code, sizes, and so on)
+  (input and output, cwd, matcher, context, session id, tool, agent, decision reason, errors) is masked with the default rules of `agent-console-secret-rules`.
+  Streams are captured up to 4 KB past the limit (`CAPTURE_MARGIN_BYTES`), masked first, and then cut at the limit, so secrets that straddle the boundary
+  do not survive either (except secret shapes longer than 4 KB).
+- **It is opt-in.** The platform attaches it only to the hooks it delivers itself, when `observe.hook_probe` is on.
+  It does not modify `.claude` exports or user settings files.
+- The package root and the run path import only the standard library (plus secret-rules when recording), because a process starts for every hook.
+  The source and classifier are in the submodule `agent_console_hook_probe.plugins` (which uses `agent-console-logs`).
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                                   # 워크스페이스 안
-pip install --find-links <wheelhouse> agent-console-hook-probe   # 단독(사내 의존 휠 모음과 함께)
+uv sync --all-packages                                   # inside the workspace
+pip install --find-links <wheelhouse> agent-console-hook-probe   # standalone (with the wheelhouse of internal dependencies)
 ```
 
-| 의존성 | 무엇을 | 왜 | 대안 |
+| Dependency | What | Why | Alternatives |
 | --- | --- | --- | --- |
-| `agent-console-secret-rules` | 기록 전 비밀 의심 가림 | 플랫폼 전체가 같은 규칙을 쓴다 | 자체 정규식 |
-| `agent-console-logs` | 출처(`JsonlFileSource` 상속)·분류기 프로토콜 | 확장 지점 | — |
-| `agent-console-contracts` | 출처·분류기 디스크립터 | 계약 단일 소스 | — |
+| `agent-console-secret-rules` | Masks suspected secrets before recording | The whole platform uses the same rules | A custom regex |
+| `agent-console-logs` | Source (inherits `JsonlFileSource`) and classifier protocols | Extension point | — |
+| `agent-console-contracts` | Source and classifier descriptors | Single source of contracts | — |
 
-## 최소 사용
+## Minimal usage
 
-hook 하나(여기서는 파이썬 스크립트)를 감싸 실행하고, 남은 기록을 로그 색인으로 읽는다.
+Wrap and run one hook (here a Python script), and read the resulting record with the log index.
 
 ```python
 >>> import json, subprocess, sys, tempfile
@@ -52,10 +52,10 @@ hook 하나(여기서는 파이썬 스크립트)를 감싸 실행하고, 남은 
 ...     encoding="utf-8",
 ... )
 >>> out = work / "hook-probe"
->>> argv = wrap_command([sys.executable, str(script)], out=out, matcher="Edit")  # 실행 형식
+>>> argv = wrap_command([sys.executable, str(script)], out=out, matcher="Edit")  # exec form
 >>> payload = {"session_id": "S1", "hook_event_name": "PostToolUse", "tool_name": "Edit"}
 >>> done = subprocess.run(argv, input=json.dumps(payload).encode(), capture_output=True)
->>> done.returncode, json.loads(done.stdout)        # 원래 hook의 출력 그대로
+>>> done.returncode, json.loads(done.stdout)        # the original hook's output, unchanged
 (0, {'decision': 'block', 'reason': 'lint failed'})
 
 >>> record = json.loads((out / "S1.jsonl").read_text(encoding="utf-8"))
@@ -78,92 +78,92 @@ hook 하나(여기서는 파이썬 스크립트)를 감싸 실행하고, 남은 
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 실행 파일
+## Executable
 
 ```text
 agent-console-hook-probe --out DIR [--matcher M] [--shell SH] [--exec]
-                         [--context KEY=VALUE ...] [--capture-bytes N] -- <원래 명령>
-python -m agent_console_hook_probe ...      # 같은 것
+                         [--context KEY=VALUE ...] [--capture-bytes N] -- <original command>
+python -m agent_console_hook_probe ...      # the same thing
 ```
 
-- 기록 파일: `DIR/<session_id>.jsonl`(세션이 없으면 `no-session.jsonl`, 파일 이름에 못 쓰는 id는 해시).
-  한 번의 hook 실행 = 한 줄. 여러 hook이 동시에 써도 줄이 섞이지 않게 파일 잠금 후 한 번에 덧붙인다.
-- probe 자신의 사용법 오류는 종료 코드 **1**(Claude Code의 "막지 않는 오류")이다. 2(차단)를 쓰지 않는 것은
-  probe 설정 실수가 도구 호출을 막지 않게 하기 위해서다. 원래 명령을 띄우지 못하면 127.
-- `--context KEY=VALUE`는 기록의 `context`에 남는다. `run_id`·`node_path`(또는 `node`, `/` 구분)는 분류기가
-  이벤트의 run_id·node_path로 쓴다(경로에서 읽은 값보다 우선).
+- Record file: `DIR/<session_id>.jsonl` (`no-session.jsonl` without a session; ids that cannot be used in file names are hashed).
+  One hook run = one line. Lines are appended in one go after locking the file, so they do not mix even when several hooks write at once.
+- Usage errors of the probe itself use exit code **1** (Claude Code's "non-blocking error"). It does not use 2 (block) so that
+  a probe configuration mistake does not block tool calls. If the original command cannot be started, 127.
+- `--context KEY=VALUE` is kept in the record's `context`. `run_id` and `node_path` (or `node`, separated by `/`) are used by the classifier as
+  the event's run_id and node_path (taking precedence over values read from the path).
 
-## 외부 Claude Code 세션에서 직접 감싸기
+## Wrapping hooks directly in external Claude Code sessions
 
-플랫폼은 사용자의 `settings.json`을 고치지 않는다. 외부 세션의 hook 입출력까지 보려면 **사용자가 직접**
-hook 명령 앞에 probe를 붙인다.
+The platform does not modify the user's `settings.json`. To see hook input and output of external sessions too, **the user**
+puts the probe in front of the hook command.
 
 ```jsonc
-// 원래: "command": "./.claude/hooks/check.sh --strict"
-// 셸 형식(원래 명령을 따옴표로 묶어 한 인자로) — Claude Code가 셸로 돌리던 방식 그대로 실행된다
+// originally: "command": "./.claude/hooks/check.sh --strict"
+// shell form (the original command quoted as one argument), run the same way Claude Code ran it with a shell
 "command": "agent-console-hook-probe --out ~/.agent-console/hook-probe -- './.claude/hooks/check.sh --strict'"
-// 또는 실행 형식(Claude Code `args` 형식)
+// or exec form (Claude Code `args` form)
 "command": "agent-console-hook-probe",
 "args": ["--out", "/srv/me/.agent-console/hook-probe", "--exec", "--", "./.claude/hooks/check.sh", "--strict"]
 ```
 
-그다음 로그 설정에서 그 폴더를 출처 루트에 더한다: `logs.sources: [{id: hook-probe-jsonl, config: {roots:
-["~/.agent-console/hook-probe"], include: ["**/*.jsonl"], run_layout: false}}]`. 감싸기를 그만두려면
-명령 앞의 probe 부분만 지우면 된다.
+Then add that folder to the source roots in the log settings: `logs.sources: [{id: hook-probe-jsonl, config: {roots:
+["~/.agent-console/hook-probe"], include: ["**/*.jsonl"], run_layout: false}}]`. To stop wrapping, delete only the probe part
+in front of the command.
 
-## 기록 형식 `hook-probe/1`
+## Record format `hook-probe/1`
 
-| 키 | 뜻 |
+| Key | Meaning |
 | --- | --- |
-| `format` | `"hook-probe/1"`(형식이 바뀌면 숫자를 올리고 분류기가 버전별로 읽는다) |
-| `probe_id` | 실행 한 번의 id(시작·끝 이벤트의 `call_id`) |
-| `event`·`session_id`·`tool_use_id`·`tool`·`agent_id`·`agent_type`·`cwd` | hook 입력(stdin JSON)에서 |
-| `matcher`·`context`·`form`(`shell`/`exec`)·`shell` | probe 인자에서 |
-| `command_digest` | `sha256:<hex>`(원래 명령 원문은 남기지 않는다) |
-| `started_at`·`ended_at`(epoch 초)·`duration_ms` | 시각·소요 시간 |
-| `exit_code`·`signal`·`forwarded_signal`·`error` | 종료 코드(신호로 끝나면 null + `signal`), probe가 전달한 신호, 실행 실패 사유 |
-| `decision` | `{value, source, reason, updated_input, updated_output, additional_context}` — value: `block`(종료 2)·`stop`(continue false)·`allow`/`deny`/`ask`/`defer`·`modify`(수정 입력만)·`none`·`error`(그 밖 종료 코드·실행 실패) |
-| `input`·`stdout`·`stdout_json`·`stderr` | 입출력(가림·크기 제한). 입력이 JSON 객체면 객체, 아니면 텍스트 |
-| `bytes`·`truncated` | 스트림별 실제 크기와 잘림 여부 |
+| `format` | `"hook-probe/1"` (when the format changes, the number goes up and the classifier reads each version) |
+| `probe_id` | The id of one run (the `call_id` of the start and end events) |
+| `event`, `session_id`, `tool_use_id`, `tool`, `agent_id`, `agent_type`, `cwd` | From the hook input (stdin JSON) |
+| `matcher`, `context`, `form` (`shell`/`exec`), `shell` | From the probe arguments |
+| `command_digest` | `sha256:<hex>` (the original command text is not kept) |
+| `started_at`, `ended_at` (epoch seconds), `duration_ms` | Times and duration |
+| `exit_code`, `signal`, `forwarded_signal`, `error` | Exit code (null + `signal` when ended by a signal), the signal the probe forwarded, the reason a run failed |
+| `decision` | `{value, source, reason, updated_input, updated_output, additional_context}`; value: `block` (exit 2), `stop` (continue false), `allow`/`deny`/`ask`/`defer`, `modify` (modified input only), `none`, `error` (other exit codes, run failures) |
+| `input`, `stdout`, `stdout_json`, `stderr` | Input and output (masked, size limited). An object if the input is a JSON object, otherwise text |
+| `bytes`, `truncated` | Actual size per stream and whether it was cut |
 
-## 로그 출처·분류기
+## Log source and classifier
 
-| id | 종류 | 설정 |
+| id | Kind | Settings |
 | --- | --- | --- |
-| `hook-probe-jsonl` | 출처(`JsonlFileSource` 상속), **기본 켜짐**(이미 플랫폼 데이터) | `roots`(비우면 호스트 `paths["state"]/runs`), `include`(기본 `**/hook-probe/*.jsonl`), `exclude`, `run_layout`(기본 참: 경로 `<run>/<노드…>/hook-probe/<파일>`에서 run_id·node_path) |
-| `hook-probe` | 분류기 | `category`(기본 `hook`), `error_category`(기본 `error`: 막지 않는 오류·실행 실패), `actor`(기본 `hook`), `probe_basis`(기본 `hook_probe`) |
+| `hook-probe-jsonl` | Source (inherits `JsonlFileSource`), **on by default** (it is already platform data) | `roots` (empty = host `paths["state"]/runs`), `include` (default `**/hook-probe/*.jsonl`), `exclude`, `run_layout` (default true: run_id and node_path from the path `<run>/<node…>/hook-probe/<file>`) |
+| `hook-probe` | Classifier | `category` (default `hook`), `error_category` (default `error`: non-blocking errors and run failures), `actor` (default `hook`), `probe_basis` (default `hook_probe`) |
 
-기록 한 줄 → 이벤트 둘(`start`·`complete`, 같은 `call_id` = `probe_id`라 색인이 소요 시간을 계산).
-`correlation.call_id = tool_use_id`로 같은 도구 호출의 다른 출처 이벤트(Claude Code 세션·플랫폼 실행)와 이어진다.
-태그: `hook`, `hook:<이벤트>`, `decision:<값>`.
+One record line → two events (`start` and `complete`, with the same `call_id` = `probe_id`, so the index computes the duration).
+With `correlation.call_id = tool_use_id`, it links to events from other sources for the same tool call (Claude Code sessions, platform runs).
+Tags: `hook`, `hook:<event>`, `decision:<value>`.
 
-## 공개 API
+## Public API
 
-| 묶음 | 이름 |
+| Group | Names |
 | --- | --- |
-| 실행 | `main`(콘솔 스크립트), `parse_args`, `ProbeUsageError`, `USAGE_EXIT_CODE`, `run_probe`, `ProbeIO`, `DEFAULT_GRACE_SECONDS`, `SPAWN_FAILED_EXIT_CODE` |
-| 감싸기 | `wrap_command`(인자 목록), `wrap_command_line`(설정 파일용 한 줄), `default_probe_command` |
-| 셸 규칙 | `DEFAULT_SHELLS`, `ShellRule`, `shell_invocation`, `exec_invocation`, `default_shell_name` |
-| 결정·기록 | `derive_decision`, `parse_hook_output`, `BLOCKING_EXIT_CODE`, `build_record`, `RECORD_FORMAT`, `Capture`, `ProbeOutcome`, `command_digest`, `default_redactor`, `record_file_name`, `append_line`, `DEFAULT_CAPTURE_BYTES` |
-| 플러그인 | `agent_console_hook_probe.plugins`: `HookProbeSource`, `HookProbeClassifier`, `SOURCE_ID`, `CLASSIFIER_ID` |
+| Run | `main` (console script), `parse_args`, `ProbeUsageError`, `USAGE_EXIT_CODE`, `run_probe`, `ProbeIO`, `DEFAULT_GRACE_SECONDS`, `SPAWN_FAILED_EXIT_CODE` |
+| Wrapping | `wrap_command` (argument list), `wrap_command_line` (one line for settings files), `default_probe_command` |
+| Shell rules | `DEFAULT_SHELLS`, `ShellRule`, `shell_invocation`, `exec_invocation`, `default_shell_name` |
+| Decisions and records | `derive_decision`, `parse_hook_output`, `BLOCKING_EXIT_CODE`, `build_record`, `RECORD_FORMAT`, `Capture`, `ProbeOutcome`, `command_digest`, `default_redactor`, `record_file_name`, `append_line`, `DEFAULT_CAPTURE_BYTES` |
+| Plugins | `agent_console_hook_probe.plugins`: `HookProbeSource`, `HookProbeClassifier`, `SOURCE_ID`, `CLASSIFIER_ID` |
 
-## 한계
+## Limitations
 
-- probe가 SIGKILL로 강제 종료되면 자식에게 전달할 수 없다(자식 그룹이 남을 수 있다).
-- Windows의 신호 전달은 `CTRL_BREAK_EVENT`(INT·BREAK) 또는 자식 종료(TERM)이고, 강제 종료는 자식 하나만 끝낸다.
-  Windows 경로는 셸 인자 규칙 단위 테스트로만 확인했다.
-- 자식이 끝난 뒤에도 손자 프로세스가 stdout·stderr를 잡고 있으면 그 파이프가 닫힐 때까지 기다린다(원래
-  명령을 직접 실행했을 때와 같다).
+- If the probe is killed with SIGKILL, it cannot forward anything to the child (the child group may remain).
+- On Windows, signal forwarding is `CTRL_BREAK_EVENT` (INT, BREAK) or terminating the child (TERM), and forced termination ends only the child itself.
+  Windows paths were checked only with unit tests of the shell argument rules.
+- If grandchild processes still hold stdout or stderr after the child ends, it waits until those pipes close (the same as running the original
+  command directly).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다(사내 의존은 `--find-links <wheelhouse>`).
+This folder is a standalone project. Copy only this folder and the commands below still work (internal dependencies via `--find-links <wheelhouse>`).
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

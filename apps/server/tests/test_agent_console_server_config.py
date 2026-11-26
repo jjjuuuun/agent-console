@@ -133,12 +133,12 @@ def test_removed_preset_keys_are_rejected(tmp_path: Path) -> None:
     ):
         config = tmp_path / f"{name}.yaml"
         config.write_text(body, encoding="utf-8")
-        with pytest.raises(ConfigError, match="프리셋 기능은 삭제되었습니다") as exc:
+        with pytest.raises(ConfigError, match="The presets feature was removed") as exc:
             load_settings(config, environ={})
         assert exc.value.code == SETTINGS_REMOVED_KEY
         [key] = exc.value.removed
         assert key.new is None
-        assert str(exc.value).startswith(f"설정 값 오류({SETTINGS_REMOVED_KEY}): {key.old}: ")
+        assert str(exc.value).startswith(f"Invalid settings ({SETTINGS_REMOVED_KEY}): {key.old}: ")
         assert "Value error" not in str(exc.value)
     # 같은 이름이 다른 모듈 설정 아래에 있는 것은 상관없다(경로 단위 검사, 모듈 스키마가 검증).
     other = tmp_path / "other.yaml"

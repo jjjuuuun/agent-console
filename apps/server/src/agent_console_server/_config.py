@@ -302,7 +302,7 @@ class ServerSettings(_Section):
 
 
 class ConfigError(ValueError):
-    """설정 파일·환경변수 값이 잘못됨.
+    """설정 파일·환경변수 값이 잘못됨. 메시지는 터미널에 찍히므로 영어 원문이다(design §I18N, I.6).
 
     Attributes:
         code: 기계가 읽는 오류 코드(예: `SETTINGS_REMOVED_KEY`). 일반 값 오류는 None.
@@ -387,14 +387,14 @@ def _read_yaml(path: Path) -> dict[str, Any]:
         data = YAML(typ="safe", pure=True).load(path.read_text(encoding="utf-8"))
     except OSError as exc:
         raise ConfigError(
-            f"설정 파일을 읽을 수 없습니다: {path} ({exc.__class__.__name__})"
+            f"Couldn't read the settings file: {path} ({exc.__class__.__name__})"
         ) from exc
     except Exception as exc:
-        raise ConfigError(f"설정 파일 형식 오류: {path}") from exc
+        raise ConfigError(f"The settings file is not valid YAML: {path}") from exc
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ConfigError(f"설정 파일 최상위는 객체여야 합니다: {path}")
+        raise ConfigError(f"The top level of the settings file must be a mapping: {path}")
     return data
 
 
@@ -448,13 +448,13 @@ def load_settings(
             cause = (error.get("ctx") or {}).get("error")
             if isinstance(cause, RemovedKeyError):
                 raise ConfigError(
-                    f"설정 값 오류({SETTINGS_REMOVED_KEY}): {cause}",
+                    f"Invalid settings ({SETTINGS_REMOVED_KEY}): {cause}",
                     code=SETTINGS_REMOVED_KEY,
                     removed=cause.keys,
                 ) from None
         # 입력 값(토큰 등)이 메시지에 섞이지 않게 위치와 사유만 남긴다.
         problems = "; ".join(_describe_error(e) for e in errors)
-        raise ConfigError(f"설정 값 오류: {problems}") from None
+        raise ConfigError(f"Invalid settings: {problems}") from None
 
 
 def _describe_error(error: Mapping[str, Any]) -> str:

@@ -54,6 +54,11 @@ def test_kind_contributions_and_references(tmp_path: Path, kit: Any) -> None:
     assert refs is not None
     assert list(refs({"rules": ["a", "a", "b", 3]})) == [("wiki-rules", "a"), ("wiki-rules", "b")]
     assert list(wiki_references("r")({"rules": None})) == []
+    # P1.19: 여는 화면 역할(CopyKindInfo.open_role)은 이 모듈의 웹 역할이다
+    assert kinds["wiki"].open_role == "wiki"
+    assert kinds["wiki-rules"].open_role == "wiki:rules"
+    report = next(r for r in assembly.report if r.id == "mod-wiki")
+    assert {c.open_role for c in kinds.values()} <= set(report.web_roles)
 
 
 def test_option_names_change_kinds_and_folders(tmp_path: Path, kit: Any, database: Any) -> None:
@@ -423,7 +428,9 @@ def test_search_snippets_hide_values_caught_by_user_secret_rules(
     사용자 규칙으로만 잡히는 값은 기본 규칙으로는 그대로 보이고, 사용자 규칙을 더하면 검색
     스니펫·제목에서 가려진다(규칙이 바뀌면 색인을 다시 짓는다).
     """
-    from agent_console_mod_wiki.ports import SECRET_RULES
+    from types import SimpleNamespace
+
+    from agent_console_mod_wiki.ports import DEFINITIONS_SAVED, SECRET_RULES
     from agent_console_modkit.testing import fake_module
     from agent_console_secret_rules import default_rules
 
@@ -448,6 +455,11 @@ def test_search_snippets_hide_values_caught_by_user_secret_rules(
         assert value in snippets(client)  # 기본 규칙은 이 모양을 모른다(대조군)
 
         current["rules"] = default_rules().with_extra(value_patterns=[r"CORP-[0-9]{6}"])
+        # 실제 서버에서는 비밀 규칙이 공통 설정에 있어 저장하면 정의 모듈이 이 토픽을 낸다 —
+        # 신선도 창(기본 2초) 안이어도 지문을 다시 확인한다(P1.15)
+        assembly.services.events.publish(
+            DEFINITIONS_SAVED, SimpleNamespace(kind="settings", id="settings", version_hash="v2")
+        )
         hidden = snippets(client)
         assert value not in hidden
         assert current["rules"].mask in hidden

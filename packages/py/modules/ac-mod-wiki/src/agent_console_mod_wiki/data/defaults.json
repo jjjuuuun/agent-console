@@ -14,6 +14,7 @@
   "parse_cache_entries": 20000,
   "graph_max_nodes": 500,
   "scan_interval_seconds": 0,
+  "freshness_seconds": 2.0,
   "summary_cache_entries": 256,
   "max_search_results": 100,
   "query_hash": "hmac",

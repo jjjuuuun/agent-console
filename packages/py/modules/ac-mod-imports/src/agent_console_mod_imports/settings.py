@@ -38,10 +38,13 @@ class ImportModuleSettings(BaseModel):
 
 
 HOME_REMOVED_REASON = (
-    "사용자 전역 Claude Code 구성(~/.claude) 가져오기는 지원하지 않습니다. 앱은 등록된 프로젝트 "
-    "폴더와 자기 workspace 밖을 연동하지 않습니다. 프로젝트 폴더의 .claude/를 가져오세요"
+    "Importing the global Claude Code configuration (~/.claude) is not supported. The app works "
+    "only with registered project folders and its own workspace. Import the .claude/ folder of a "
+    "project instead"
 )
-"""옛 설정 ``modules.options.mod-imports.home``(사용자 홈) 거부 이유(5.7R.30b)."""
+"""옛 설정 ``modules.options.mod-imports.home``(사용자 홈) 거부 이유(5.7R.30b).
+
+시작 거부 메시지로 터미널에 찍히므로 영어 원문이다(I.6)."""
 
 
 SETTINGS_COMPAT = SettingsCompat(

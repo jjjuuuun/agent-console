@@ -112,11 +112,9 @@ def settings_value(
 def _common_value(workspace: WorkspaceSettings | None) -> dict[str, Any] | None:
     if workspace is None:
         return None
-    value = settings_value(workspace.agent_defaults) or {}
-    # 읽기 호환(design §R9.3): 이전 형식 default_backend는 공통 층 backend로 본다.
-    if "backend" not in value and workspace.default_backend:
-        value["backend"] = workspace.default_backend
-    return value
+    # 공통 층 = `agent_defaults`만. 옛 최상위 `default_backend`는 읽지 않는다(1.1.0, 읽고 무시 +
+    # 정보 이슈는 설정을 읽는 모듈 몫).
+    return settings_value(workspace.agent_defaults) or {}
 
 
 def agent_layers(

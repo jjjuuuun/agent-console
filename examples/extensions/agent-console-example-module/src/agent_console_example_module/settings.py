@@ -161,7 +161,7 @@ SETTINGS_COMPAT = SettingsCompat(
         FlagSetting(
             "example-notes-max",
             ("max_notes",),
-            help="노트 예제: 공간마다 남길 최대 노트 수",
+            help="Notes example: maximum number of notes to keep per space",
             metavar="N",
         ),
     ),

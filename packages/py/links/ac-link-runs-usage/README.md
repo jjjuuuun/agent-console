@@ -1,21 +1,21 @@
 # agent-console-link-runs-usage
 
-실행·사용량 연동 모듈. 실행 기록(`runs.reader`·`runs.events`)을 사용량 모듈(`mod-usage`)에 잇는다.
+Runs and usage link module. It connects run history (`runs.reader`, `runs.events`) to the usage module (`mod-usage`).
 
-- `usage.event_query`: 실행 이벤트 조회(사용량 출처 맥락 — 예: `run-events` 출처의 `usage.rate_limit`). `MergedEventQuery`가 앱 기록(`runs.events`)과 **등록 프로젝트(보관 제외)의 기록 DB**를 합쳐 ts 내림차순으로 준다. 계정 창(5시간·주간)은 계정 단위라 프로젝트를 나누지 않고, 프로젝트에서 돈 실행의 창 이벤트는 그 폴더 기록 DB에만 있기 때문이다. 선택 포트 `projects.lookup`·`records.spaces` 중 하나라도 없으면 앱 기록만 읽는다. 읽을 수 없는 공간(폴더 없음·깨짐)은 건너뛴다.
-- `usage.token_rollups`: 플랫폼 실행분 토큰 집계(`IncrementalTokenRollups`). Run마다 마지막으로 반영한 이벤트 seq(워터마크) 뒤만 읽고, 끝난 Run은 새 이벤트(`runs.event` 구독)가 생기기 전까지 다시 읽지 않는다. 메모리 캐시라 재시작하면 다시 계산한다. 기록이 줄어드는 작업(보존 정리) 뒤에는 `invalidate()`. 루트 Run만 센다(`ac-usage.counts_toward_usage`) — 중첩 팀의 자식 Run 사용량은 부른 부모 노드의 `usage`로 이미 루트에 들어 있다(이중 집계 방지).
-- 토큰 집계 출처(요청 11/08): 앱 기록 + 선택 `projects.lookup`·`records.spaces`가 있으면 등록 프로젝트 기록 DB마다 하나(`project_rollup_sources`, 보관 제외, 읽을 수 없는 공간은 경고 후 건너뜀). 캐시·워터마크는 `(출처 키, run_id)`로 따로 둔다. `rollups(project_id=None)`은 계정 전체(출처마다 최근 `limit`개를 생성 시각순으로 합쳐 `limit`개), `project_id`를 주면 그 프로젝트 기록 + 앱 기록 중 `Run.project_id`가 같은 옛 Run만(`GET /usage?project=`). 앱 기록의 옛 Run은 저장소 조건(`list(project_id=, root_only=True, limit=)`)으로 그 프로젝트의 최근 `limit`개를 바로 읽으므로 다른 실행이 많아도 빠지지 않는다. `runs.reader`에 선택 메서드 `for_project(None)`(앱 기록만 읽기)이 있으면 그것으로 읽는다. 포트가 없으면 앱 기록만.
-- 질의 수: 다시 읽을 Run(처음·끝나지 않음·새 이벤트)은 출처마다 묶어 읽는다. `runs.reader.list_node_runs_many`·`runs.events.list_many`가 있으면 처음 집계도 출처마다 Run 목록·이벤트·NodeRun 질의 하나씩이고(저장소 `RUN_BATCH_SIZE`개마다), 없으면 Run마다 읽는다(결과는 같다). 출처(프로젝트 기록 DB)마다 질의가 따로 드는 것은 DB 파일이 따로이기 때문이다.
-- 이 연동이 꺼지면 사용량 화면은 외부 출처(statusline 등)만 보이고 토큰 집계는 빈 목록이다(웹 역할 `usage:tokens`).
+- `usage.event_query`: run event queries (the usage source context, for example `usage.rate_limit` of the `run-events` source). `MergedEventQuery` merges the app records (`runs.events`) with **the record databases of registered projects (excluding unregistered ones)** and returns them in descending ts order. Account windows (5-hour, weekly) are per account, so they are not split by project, and the window events of runs in a project exist only in that folder's record database. When either of the optional ports `projects.lookup` and `records.spaces` is missing, only the app records are read. Spaces that cannot be read (missing or broken folders) are skipped.
+- `usage.token_rollups`: token totals for platform runs (`IncrementalTokenRollups`). For each run it reads only after the last event seq it applied (the watermark), and finished runs are not read again until a new event arrives (`runs.event` subscription). It is an in-memory cache, so a restart recalculates. After operations that shrink the records (retention cleanup), call `invalidate()`. Only root runs are counted (`ac-usage.counts_toward_usage`): the usage of child runs of a nested team is already included in the root through the `usage` of the calling parent node (no double counting).
+- Token total sources: the app records, plus one per registered project record database when the optional `projects.lookup` and `records.spaces` are present (`project_rollup_sources`; unregistered projects are excluded, and spaces that cannot be read are skipped with a warning). The cache and watermarks are kept separately per `(source key, run_id)`. `rollups(project_id=None)` is the whole account (the latest `limit` runs of each source merged by creation time into `limit` runs); with `project_id`, it is that project's records plus the old runs in the app records with the same `Run.project_id` (`GET /usage?project=`). Old runs in the app records are read directly with the store condition (`list(project_id=, root_only=True, limit=)`) as the latest `limit` runs of that project, so they are not crowded out by many other runs. When `runs.reader` has the optional method `for_project(None)` (read only the app records), that is used. Without the ports, only the app records are read.
+- Query count: runs to read again (first time, not finished, new events) are read in batches per source. When `runs.reader.list_node_runs_many` and `runs.events.list_many` exist, even the first total takes one run list query, one event query, and one NodeRun query per source (per `RUN_BATCH_SIZE` runs of the store); otherwise they are read per run (the result is the same). Each source (project record database) needs its own queries because the database files are separate.
+- When this link is off, the usage screen shows only external sources (statusline and so on), and the token totals are an empty list (web role `usage:tokens`).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-runs-usage
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-runs-usage
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-runs-usage
 ```
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from datetime import UTC
@@ -33,38 +33,38 @@ pip install agent-console-link-runs-usage
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 포트
+## Ports
 
-| 방향 | 포트 | 모양 |
+| Direction | Port | Shape |
 | --- | --- | --- |
-| 필수 | `runs.reader` | `list(root_only=, limit=, project_id=)`·`list_node_runs(run_id)`, 선택 `list_node_runs_many(run_ids)`·`for_project(None)`(앱 기록만) |
-| 필수 | `runs.events` | `list(run_id, since_seq=, type_prefix=)`·`latest_by_type(...)`, 선택 `list_many(since, type_prefixes=)` |
-| 선택 | `projects.lookup` | `list_projects()`(`id`·`archived`) |
-| 선택 | `records.spaces` | 공간 이름(`records_space_prefix` + 프로젝트 id) → 기록 DB 핸들. 선택 `batch()`(`BatchRecordsSpaces`)가 있으면 집계·조회 한 번을 그 블록 안에서 돈다(프로젝트가 풀 상한보다 많아도 순회 중에 연결을 쫓아내고 다시 열지 않음) |
-| 구독 | `runs.event` | 이벤트가 생긴 Run 표시 |
-| 제공 | `usage.event_query` / `usage.token_rollups` | `MergedEventQuery`(앱 + 프로젝트 기록) / `IncrementalTokenRollups`(앱 + 프로젝트 기록, 출처별 커서) |
+| Required | `runs.reader` | `list(root_only=, limit=, project_id=)`, `list_node_runs(run_id)`, optional `list_node_runs_many(run_ids)` and `for_project(None)` (app records only) |
+| Required | `runs.events` | `list(run_id, since_seq=, type_prefix=)`, `latest_by_type(...)`, optional `list_many(since, type_prefixes=)` |
+| Optional | `projects.lookup` | `list_projects()` (`id`, `archived`) |
+| Optional | `records.spaces` | Space name (`records_space_prefix` + project id) → record database handle. When the optional `batch()` (`BatchRecordsSpaces`) exists, one total or query runs inside that block (even with more projects than the pool limit, connections are not evicted and reopened during the pass) |
+| Subscribes | `runs.event` | Marks the run that has a new event |
+| Provides | `usage.event_query` / `usage.token_rollups` | `MergedEventQuery` (app + project records) / `IncrementalTokenRollups` (app + project records, a cursor per source) |
 
-설정 `modules.options.link-runs-usage.records_space_prefix`(기본 `project:`, 값이 없으면 `link-projects-records.space_prefix`를 이어받음).
-동시에 열어 둘 프로젝트 기록 DB 수는 이 연동이 아니라 기록 연동 설정 `modules.options.link-projects-records.max_open_spaces`(기본 8)다.
-등록 프로젝트가 그보다 많으면 집계 한 번은 프로젝트마다 한 번 열고, 다음 집계는 상한 밖 프로젝트만 다시 연다.
+Setting `modules.options.link-runs-usage.records_space_prefix` (default `project:`; when not set, it inherits `link-projects-records.space_prefix`).
+The number of project record databases kept open at the same time is not a setting of this link but of the records link, `modules.options.link-projects-records.max_open_spaces` (default 8).
+When there are more registered projects than that, one total opens each project once, and the next total reopens only the projects beyond the limit.
 
-## 단독 실행
+## Standalone run
 
 ```bash
 python -m agent_console_link_runs_usage [--with ID] [--config PATH] [--port 0] [--check]
 ```
 
-`--with`가 없으면 `testing.local_runs_module`(상태 폴더 DB의 실행 기록 읽기)을 붙인다. 사용량 경로까지 띄우려면 `--with mod-usage`.
+Without `--with`, it attaches `testing.local_runs_module` (reads run history from the database in the state folder). To start the usage routes too: `--with mod-usage`.
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

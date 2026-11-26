@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/chat": [
         "./src/index.ts"
+      ],
+      "@agent-console/chat/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/chat/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

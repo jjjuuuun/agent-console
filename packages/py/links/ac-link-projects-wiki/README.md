@@ -1,41 +1,41 @@
 # agent-console-link-projects-wiki
 
-프로젝트 폴더를 위키 모듈의 **위키 공간**으로 주는 연동 모듈이다. 프로젝트 모듈(`mod-projects`)과 위키 모듈(`mod-wiki`)은 서로를 모르고, 이 연동이 둘을 잇는다.
+A link module that provides project folders as **wiki spaces** of the wiki module. The projects module (`mod-projects`) and the wiki module (`mod-wiki`) do not know each other; this link connects them.
 
-- 필수 포트 `projects.spaces`(등록 id → 프로젝트 공간). 없으면 이 연동은 꺼진다.
-- 제공 포트 `wiki.spaces`(`ProjectWikiSpaces`): `open(등록 id) -> ProjectWikiSpace{store, folder,
-  config_writable, config_dir, pages_dir, pages_root, index_dir}`. 위키·위키 규칙 정의는 그 폴더의 정의
-  저장소(`<폴더>/.agent-console/`), 페이지는 `<폴더>/.agent-console/<pages_dir>/<위키 id>/`, 검색 색인은
-  상태 폴더(`<구성 폴더>/.state/<index_dir>/`, 다시 만들 수 있는 캐시)에 들어간다. 같은 폴더를 다른 앱(다른
-  workspace)에 등록해도 위키·페이지·규칙이 그대로이고, 기록 연동(`link-projects-records`)을 함께 켜면
-  페이지 기록도 그 폴더의 기록 DB에 남아 그대로다.
-- **경로 지킴**: `ac-projects`의 `FolderGuard`(`link-projects-sdd`와 같은 규칙). 페이지 폴더가 구성
-  폴더의 예약 폴더(상태·세션 폴더, 정의 종류 폴더, 설정 `reserved_dirs`)와 겹치거나, 링크를 푼 페이지
-  폴더·위키 폴더가 프로젝트 폴더 밖이면 열지 않는다(422 `folders.invalid_path`, 절대 경로는 싣지 않음).
-  위키 폴더 안 페이지 경로는 `ac-wiki` `LocalWikiPages`가 지킨다.
-- 쓸 수 없는 폴더는 `config_writable=false` — 보기·검색만 되고 쓰기는 409 `project.config_readonly`
-  (`mod-wiki`가 낸다). 검색 색인은 메모리에 둔다.
-- 공간을 열 때 매니페스트(`project.yaml`)가 깨졌으면 409 `project.manifest_invalid`, 폴더가 없으면 409
-  `project.folder_missing`. 열기만으로는 아무것도 만들지 않는다.
-- **이 연동이 꺼지면** `mod-wiki`가 `?project=` 요청에 409 `wiki.spaces_unavailable`을 낸다. 위키를 앱
-  workspace(단독 루트)에 대신 만들지 않는다.
+- Required port `projects.spaces` (registration id → project space). Without it this link is off.
+- Provided port `wiki.spaces` (`ProjectWikiSpaces`): `open(registration id) -> ProjectWikiSpace{store, folder,
+  config_writable, config_dir, pages_dir, pages_root, index_dir}`. Wiki and wiki rule definitions go into that folder's definition
+  store (`<folder>/.agent-console/`), pages into `<folder>/.agent-console/<pages_dir>/<wiki id>/`, and the search index into the
+  state folder (`<config folder>/.state/<index_dir>/`, a cache that can be rebuilt). When the same folder is registered in another app (another
+  workspace), wikis, pages, and rules stay the same, and when the records link (`link-projects-records`) is on too,
+  page history also stays in that folder's record database.
+- **Path guarding**: `FolderGuard` of `ac-projects` (the same rules as `link-projects-sdd`). When the page folder overlaps a reserved folder of the config
+  folder (state and session folders, definition kind folders, the setting `reserved_dirs`), or when the page folder or wiki folder resolves (after following links)
+  outside the project folder, the space is not opened (422 `folders.invalid_path`; absolute paths are not included).
+  Page paths inside a wiki folder are guarded by `ac-wiki` `LocalWikiPages`.
+- A folder that is not writable gets `config_writable=false`: viewing and search work, and writes return 409 `project.config_readonly`
+  (returned by `mod-wiki`). The search index is kept in memory.
+- When a space is opened and the manifest (`project.yaml`) is broken, the request returns 409 `project.manifest_invalid`; when the folder does not exist, 409
+  `project.folder_missing`. Opening alone creates nothing.
+- **When this link is off**, `mod-wiki` returns 409 `wiki.spaces_unavailable` for `?project=` requests. It does not create the wiki in the app
+  workspace (the standalone root) instead.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-projects-wiki
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-projects-wiki
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-projects-wiki
 ```
 
-## 의존성 (무엇을 / 왜 / 대안)
+## Dependencies (what, why, alternatives)
 
-새 외부 의존은 없다(`agent-console-project-space`(공간·매니페스트)·`agent-console-projects`(경로 지킴
-`FolderGuard`)·`agent-console-store`(경로 문자열 검사)·`agent-console-modkit`·`agent-console-contracts`는 사내
-패키지). 위키 모듈(`agent-console-mod-wiki`)은 개발 의존(시험)일 뿐이고 포트 이름으로만 잇는다.
+No new external dependencies (`agent-console-project-space` (spaces, manifests), `agent-console-projects` (path guard
+`FolderGuard`), `agent-console-store` (path string checks), `agent-console-modkit`, and `agent-console-contracts` are in-house
+packages). The wiki module (`agent-console-mod-wiki`) is only a dev dependency (for tests); the link connects to it by port names only.
 
-## 최소 사용
+## Minimal usage
 
-서버 없이 폴더 하나를 위키 공간으로 연다.
+Open one folder as a wiki space, without a server.
 
 ```python
 >>> import tempfile
@@ -43,7 +43,7 @@ pip install agent-console-link-projects-wiki
 >>> from agent_console_link_projects_wiki import ProjectWikiSpaces, UnsafePagesRoot
 >>> from agent_console_link_projects_wiki.testing import FolderSpaces
 >>> folder = Path(tempfile.mkdtemp())
->>> spaces = ProjectWikiSpaces(lambda: FolderSpaces({"app": folder}))  # projects.spaces 자리
+>>> spaces = ProjectWikiSpaces(lambda: FolderSpaces({"app": folder}))  # in place of projects.spaces
 >>> space = spaces.open("app")
 >>> space.config_dir, space.pages_dir, space.config_writable
 ('.agent-console', '.agent-console/wiki-pages', True)
@@ -57,32 +57,32 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 설정 (`modules.options.link-projects-wiki`)
+## Settings (`modules.options.link-projects-wiki`)
 
-| 키 | 기본 | 뜻 |
+| Key | Default | Meaning |
 | --- | --- | --- |
-| `pages_dir` | `wiki-pages`(패키지 데이터) | 구성 폴더 안 페이지 폴더. 적지 않으면 `modules.options.mod-wiki.pages_dir`를 이어받는다(`SeedSetting`) |
-| `index_dir` | `wiki-index`(패키지 데이터) | 상태 폴더 안 검색 색인 폴더 |
-| `reserved_dirs` | `[]` | 페이지 폴더와 겹치면 안 되는 폴더(프로젝트 폴더 기준). 상태·세션·정의 종류 폴더는 늘 막는다 |
+| `pages_dir` | `wiki-pages` (package data) | Page folder inside the config folder. When not set, it inherits `modules.options.mod-wiki.pages_dir` (`SeedSetting`) |
+| `index_dir` | `wiki-index` (package data) | Search index folder inside the state folder |
+| `reserved_dirs` | `[]` | Folders the page folder must not overlap (relative to the project folder). State, session, and definition kind folders are always blocked |
 
-구성 폴더 이름은 `mod-projects.config_dir`를 따른다(`pages_root` = `<config_dir>/<pages_dir>`).
+The config folder name follows `mod-projects.config_dir` (`pages_root` = `<config_dir>/<pages_dir>`).
 
-## 단독 실행
+## Standalone run
 
 ```bash
-python -m agent_console_link_projects_wiki --check                        # 빈 폴더 목록 모듈과 조립 확인
+python -m agent_console_link_projects_wiki --check                        # check the assembly with an empty folder list module
 python -m agent_console_link_projects_wiki --with mod-projects --with mod-wiki
 ```
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

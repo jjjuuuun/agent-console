@@ -1,5 +1,57 @@
 # 변경 기록
 
+## 0.16.0
+
+- Contracts 0.16.0 (breaking change — internal dependency range `>=0.16,<0.17`, TS `^0.16.0`). Submodule
+  versions: `common` 2.1.0, `i18n` 1.0.0 (new), `definitions` 3.0.0, `projects` 4.1.0, `sdd` 1.4.0. The
+  unreleased 0.15.1 (reserved ids) is folded into this release.
+- Removed (`definitions` 3.0.0): `WorkspaceSettings.default_backend`. The common default execution backend
+  is `agent_defaults.backend`. `IGNORED_SETTINGS_KEYS` now also lists `default_backend`, so
+  `ignored_settings_keys()` reports it whether or not the model still has the field.
+- Added (`i18n` 1.0.0, new submodule on the same layer as `resources` and `logs`, uses only `common`):
+  `I18nInfo{languages, default_language, fallback_language}`, `LanguageInfo{code, sources, complete,
+  missing?}` (`missing` = number of missing or empty messages compared with the fallback language,
+  null = not counted), `MessageCatalog{language, text, codes, ns}` — the merged message catalog a server
+  returns from `GET /api/v1/i18n/{lang}`. TS subpath `@agent-console/contracts/i18n`.
+- Added (`definitions` 3.0.0): `UiPreferences.language: str | None` (screen language code, null = follow
+  the browser; widget `language`, tier basic). The contract has no language list.
+- Added (`common` 2.1.0): error code `ErrorCodes.I18N_UNKNOWN_LANGUAGE` (`i18n.unknown_language`, 404,
+  `details.language`, `details.available`), catalog loading issue codes `KnownIssueCodes.I18N_*`
+  (`i18n.catalog_unreadable`, `i18n.catalog_invalid`, `i18n.catalog_unknown_section`,
+  `i18n.entry_invalid`, `i18n.language_invalid`, `i18n.locales_missing`, `i18n.source_unavailable`),
+  widget name `KnownUiWidgets.LANGUAGE` (`language`).
+- Added (`projects` 4.1.0): `CopyKindInfo.reserved_ids: list[str]` (default empty) — words that must not be
+  used as an id of that kind (case-insensitive, compared with `casefold` on the server). It is the
+  definition kind data `DefinitionKind.reserved_ids`, contributed kinds included. The copy dialog uses it
+  to warn in the new-name field before applying (applying still returns 422 `project.copy_reserved_id`).
+- Added (`projects` 4.1.0): `CopyKindInfo.open_role: str | None` (default null) — the web route role of the
+  screen that opens an item of that kind (the same open vocabulary as `FixTarget.role`). The server does not
+  know web paths: the kind data (`DefinitionKind.open_role`) or the module that contributes the kind
+  (`KindContribution.open_role`) supplies it. Null (no such screen, or an older server) or a role the web
+  does not know = no "Open" action in the copy list.
+- Added (`sdd` 1.4.0): `SddInfo.reserved_template_ids: list[str]` (default empty) — ids a document template
+  cannot use (server route words). Creating a template or "save as template" with one of these ids returns
+  422 `validation_failed` (`details.reserved`). Works with the SDD screen alone, without the projects
+  module.
+
+### BREAKING CHANGE
+
+Contracts 0.16.0 removes `WorkspaceSettings.default_backend`, which was deprecated and only read as a
+fallback. Use `agent_defaults.backend` (the execution backend in the common agent settings) instead.
+
+Stored data does not need a migration. A `settings.yaml` or export bundle that still has
+`default_backend` is read as before (the key is kept as an unknown key) and the server starts. Since
+1.1.0 the server no longer uses the value: it reports an info issue `settings.ignored_key`
+(`details.key = "default_backend"`, `details.replacement = "agent_defaults.backend"`). If no other layer
+sets a backend, the pre-run check reports `backend.unresolved` with a fix button.
+
+| Removed | Use instead |
+| --- | --- |
+| `WorkspaceSettings.default_backend` | `WorkspaceSettings.agent_defaults.backend` |
+
+Plugins and API clients must move to contracts 0.16: `agent-console-contracts>=0.16,<0.17` (Python) and
+`@agent-console/contracts@^0.16.0` (TypeScript).
+
 ## 0.15.0
 
 - 계약 0.15.0(REL.14·REL.16, 깨는 변경 — 사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`)). 하위 계약 버전:

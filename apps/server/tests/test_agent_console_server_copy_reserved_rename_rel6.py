@@ -120,3 +120,22 @@ def test_copy_of_reserved_template_id_is_rejected(tmp_path: Path) -> None:
         assert issue["details"]["action"] == "copy"
         assert issue["details"]["target_id"] == word
         assert client.get(f"{API}/sdd/templates?project={project}").json() == []
+
+
+def test_copy_kinds_and_sdd_info_expose_same_reserved_words_p1_5(tmp_path: Path) -> None:
+    """P1.5: 화면이 적용 전에 아는 예약어 — 복사 종류 목록(`CopyKindInfo.reserved_ids`)과 SDD 화면
+    정보(`SddInfo.reserved_template_ids`)가 같은 말을 주고, 그 말은 만들기가 거절하는 말이다."""
+    with server(make_settings(tmp_path)) as client:
+        made = client.post(f"{API}/sdd/templates", json={"name": "공용 틀", "id": "shared"})
+        assert made.status_code == 201, made.text
+        kind = _template_kind(client, "shared")
+        kinds = {k["kind"]: k for k in client.get(f"{API}/projects/copy/kinds").json()}
+        words = kinds[kind]["reserved_ids"]
+        assert words
+        assert client.get(f"{API}/sdd/info").json()["reserved_template_ids"] == words
+        refused = client.post(f"{API}/sdd/templates", json={"name": "x", "id": words[-1]})
+        assert refused.status_code == 422, refused.text
+        assert refused.json()["error"]["details"]["reserved"] == words
+        others = [k for name, k in kinds.items() if name != kind]
+        assert others
+        assert all(isinstance(k["reserved_ids"], list) for k in others)

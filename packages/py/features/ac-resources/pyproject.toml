@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-settings>=0.1,<0.2",
@@ -56,14 +56,14 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.resource-type]
-title = "리소스 종류"
+title = "Resource type"
 area = "resources"
 design_id = "X14"
-summary = "에이전트에 붙이는 리소스 종류를 더한다(코드 플러그인 또는 workspace의 선언형 YAML)"
+summary = "Adds a type of resource that is attached to agents (a code plugin, or declarative YAML in the workspace)"
 registration = { kind = "entry-point", group = "agent_console_resources:RESOURCE_TYPES_GROUP" }
 interface = ["agent_console_resources:ResourceType", "agent_console_resources:SchemaResourceType", "agent_console_resources:DeclarativeTypeSpec"]
 example = [
     { kind = "package", path = "examples/extensions/agent-console-example-link" },
-    { kind = "reference", path = "examples/resource-types", note = "코드 없는 선언형 종류 prompt-snippet.yaml(workspace resource-types 폴더)" },
+    { kind = "reference", path = "examples/resource-types", note = "Declarative type with no code: `prompt-snippet.yaml` (the workspace `resource-types` folder)" },
 ]
 guide = "resources.md"

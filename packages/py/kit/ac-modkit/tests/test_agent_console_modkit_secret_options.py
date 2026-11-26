@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, ClassVar
@@ -169,3 +170,17 @@ def test_schema_defaults_fills_nested_objects_without_validation() -> None:
     filled = schema_defaults(SCHEMA, {"nested": {}, "extra": True})
     assert filled == {"nested": {"n": 1}, "extra": True, "prefix": "v-", "file": None}
     assert schema_defaults(None, {"a": 1}) == {"a": 1}
+
+
+def test_settings_warnings_log_english_and_keep_web_text(caplog: pytest.LogCaptureFixture) -> None:
+    """I.6: 같은 경고가 터미널(로그)에는 영어, `warnings`(웹 server-info)에는 한국어 원문이다."""
+    bundle = _bundle(plain=Plain())
+    with caplog.at_level(logging.WARNING):
+        setup = configure_secret_providers(
+            bundle, {"plain": {"a": 1}, "ghost": {"b": 2}}, environ={}
+        )
+    logged = [r.getMessage() for r in caplog.records]
+    assert any("secret provider plain has no settings hook" in line for line in logged)
+    assert any("'ghost' is not a registered secret provider" in line for line in logged)
+    assert not any(re.search("[가-힣]", line) for line in logged)
+    assert all(re.search("[가-힣]", w) for w in setup.warnings)

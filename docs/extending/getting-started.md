@@ -1,52 +1,56 @@
-# 시작하기: 첫 플러그인
+# Get started: your first plugin
 
-조건 연산자 하나를 플러그인 패키지로 만들어 설치하고, 서버에서 확인하고, 끄고, 지우는 데까지 한 바퀴 돈다.
-조건 연산자는 팀 구성의 조건 연결(`when`)이 "다음 노드로 넘어갈지"를 판단할 때 쓰는 비교 규칙이다. 의존이 계약
-패키지 하나뿐이라 가장 작은 플러그인이다.
+This walkthrough builds one condition operator as a plugin package, installs it, checks it on the server, turns it
+off, and removes it. A condition operator is a comparison rule that a conditional edge (`when`) of a team uses to
+decide whether to move on to the next node. Its only dependency is the contract package, so it is the smallest kind
+of plugin.
 
-여기서 만드는 연산자 `mine.max_chars`(글자 수 이하)는 판단 대상 텍스트의 길이가 값 이하이면 참이다.
+The operator you build here, `mine.max_chars` (at most N characters), is true when the length of the text being
+checked is at most the value.
 
-## 1. 서버 설치
+## 1. Install the server
 
-이미 서버를 돌리고 있으면 이 단계는 건너뛰고, 아래 명령의 Python 환경을 서버가 도는 환경으로 바꿔 읽는다.
+If you already run a server, skip this step and read the commands below with the server's Python environment in mind.
 
-배포용 휠 모음이 필요하다. 소스 저장소에서 만든다.
+You need a wheelhouse for distribution. Build it from the source repository.
 
 ```bash
 uv run poe wheels          # → dist/wheelhouse
 ```
 
-빈 폴더에 가상 환경을 만들고 서버를 설치한다. `<wheelhouse>`는 위 폴더의 경로다.
+Create a virtual environment in an empty folder and install the server. `<wheelhouse>` is the path of the folder
+above.
 
 ```bash
 mkdir my-console && cd my-console
 uv venv --python 3.12
 uv pip install --find-links <wheelhouse> agent-console-cli
-uv run --no-project agent-console serve --workspace ./ws     # 127.0.0.1:8765, Ctrl-C로 끝
+uv run --no-project agent-console serve --workspace ./ws     # 127.0.0.1:8765, stop with Ctrl-C
 ```
 
-서버가 뜨면 `GET http://127.0.0.1:8765/api/v1/health`가 200을 돌려준다. 확인했으면 서버를 끈다.
+When the server is up, `GET http://127.0.0.1:8765/api/v1/health` returns 200. After you check it, stop the server.
 
-휠 모음을 다시 만든 뒤(이름·버전이 같은 휠) 설치하면 uv 캐시의 옛 휠이 깔릴 수 있다. 그때는 `uv pip install`에
-`--reinstall`을 붙이거나 새 캐시 폴더(`UV_CACHE_DIR=<빈 폴더>`)로 설치한다. → [배포](distribution.md#설치)
+If you rebuild the wheelhouse (wheels with the same name and version) and install again, uv may install the old wheel
+from its cache. In that case, add `--reinstall` to `uv pip install`, or install with a new cache folder
+(`UV_CACHE_DIR=<empty folder>`). See [Distribution](distribution.md#install).
 
-## 2. 계약 버전 확인
+## 2. Check the contract version
 
-플러그인은 서버와 같은 계약 패키지(`agent-console-contracts`)를 쓴다. 설치된 버전을 보고 같은 minor 범위로 의존을
-적는다(0.x 동안은 minor가 바뀌면 호환이 깨질 수 있다).
+A plugin uses the same contract package (`agent-console-contracts`) as the server. Look at the installed version and
+write the dependency with the same minor range (while the version is 0.x, a minor change can break compatibility).
 
 ```bash
-uv pip show agent-console-contracts      # Version: 0.15.x → 범위 >=0.15,<0.16
+uv pip show agent-console-contracts      # Version: 0.16.x → range >=0.16,<0.17
 ```
 
 ```python
 >>> from importlib.metadata import version
 >>> version("agent-console-contracts")
-'0.15...'
+'0.16...'
 
 ```
 
-## 3. 패키지 만들기
+## 3. Create the package
 
 ```text
 my-console-ops/
@@ -63,7 +67,7 @@ version = "0.1.0"
 description = "조건 연산자 하나: 글자 수 이하"
 requires-python = ">=3.12"
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
 ]
 
 [project.entry-points."agent_console.condition_operators"]
@@ -74,16 +78,17 @@ requires = ["uv_build>=0.8.17,<0.9"]
 build-backend = "uv_build"
 ```
 
-- entry point 그룹 `agent_console.condition_operators`가 "조건 연산자"라는 확장 지점이다. 그룹 목록은
-  [entry point 그룹 표](reference.md#entry-point-그룹)에 있다.
-- entry point 이름(`mine.max_chars`)은 연산자 id이고, 디스크립터의 `id`와 같아야 한다. 다른 플러그인과 겹치지 않게
-  자기 접두사(`mine.`)를 붙인다.
-- 패키지 이름에 `agent-console-`, 모듈 이름에 `agent_console_`를 쓰지 않는다. 그 이름은 서버 배포가 쓴다.
+- The entry point group `agent_console.condition_operators` is the "condition operator" extension point. The groups
+  are listed in the [entry point group table](reference.md#entry-point-groups).
+- The entry point name (`mine.max_chars`) is the operator id, and it must equal the descriptor `id`. Add your own
+  prefix (`mine.`) so that it does not collide with other plugins.
+- Do not use `agent-console-` in the package name or `agent_console_` in the module name. Those names belong to the
+  server distribution.
 
 `src/my_console_ops/__init__.py`:
 
 ```python
-"""조건 연산자 `mine.max_chars`: 텍스트가 기대 값 글자 수 이하이면 참."""
+"""Condition operator `mine.max_chars`: true when the text is at most the expected number of characters."""
 
 from typing import Any
 
@@ -100,33 +105,36 @@ class MaxChars:
     )
 
     def evaluate(self, actual: Any, expected: Any) -> bool:
-        # 텍스트가 아니거나 값이 없으면 예외 대신 거짓
+        # false instead of an exception when it is not text or there is no value
         return isinstance(actual, str) and isinstance(expected, int) and len(actual) <= expected
 ```
 
-- `descriptor`는 화면이 연산자를 그리는 데이터다. `value_schema`는 조건 항목의 값을 저장하기 전에 검사하는 JSON
-  Schema라서 `"3"`처럼 틀린 값은 저장 전 검사가 오류로 알린다.
-- `evaluate`는 판정만 한다. 외부 호출·부작용을 두지 않고, 모르는 입력이면 거짓을 돌려준다.
-- entry point가 클래스를 가리키면 서버가 인자 없이 인스턴스를 만든다.
+- `descriptor` is the data the screens use to draw the operator. `value_schema` is the JSON Schema that checks the
+  value of a condition item before saving, so the pre-save check reports a wrong value such as `"3"` as an error.
+- `evaluate` only decides. It has no external calls or side effects, and it returns false for input it does not
+  understand.
+- When the entry point points to a class, the server creates an instance without arguments.
 
-## 4. 설치하고 다시 시작
+## 4. Install and restart
 
-서버와 같은 환경에 설치한다. entry point는 서버가 시작할 때 읽으므로 설치 뒤 서버를 다시 시작한다.
+Install into the same environment as the server. Entry points are read when the server starts, so restart the server
+after installing.
 
 ```bash
 uv pip install ./my-console-ops
 uv run --no-project agent-console serve --workspace ./ws
 ```
 
-## 5. 확인
+## 5. Check
 
 ```bash
-curl -s http://127.0.0.1:8765/api/v1/condition-operators      # 목록에 "mine.max_chars"
-curl -s http://127.0.0.1:8765/api/v1/server-info               # plugins에 {"name": "mine.max_chars", "status": "loaded"}
+curl -s http://127.0.0.1:8765/api/v1/condition-operators      # "mine.max_chars" is in the list
+curl -s http://127.0.0.1:8765/api/v1/server-info               # plugins has {"name": "mine.max_chars", "status": "loaded"}
 ```
 
-웹에서는 팀 구성 편집기에서 두 노드를 조건 연결로 잇고 조건을 더하면 연산자 선택지에 "글자 수 이하"가 보인다.
-값 칸은 `value_schema`대로 정수 입력이다. 같은 조건을 파일로 쓰면 이렇다.
+On the web, connect two nodes with a conditional edge in the team editor and add a condition: the operator choices
+show the operator by its descriptor `title`. The value field is an integer input, as `value_schema` says. The same
+condition written in a file looks like this.
 
 ```yaml
 edges:
@@ -140,12 +148,13 @@ edges:
           - {path: /output, op: mine.max_chars, value: 200}
 ```
 
-로드에 실패하면(import 오류, 디스크립터 없음) 서버는 그대로 시작하고 `server-info`의 그 항목이 `failed`와 이유를
-보인다. 자세한 규칙은 [플러그인 공통](plugins.md#로드-시점과-실패).
+If loading fails (an import error, a missing descriptor), the server still starts, and that entry in `server-info`
+shows `failed` with the reason. The detailed rules are in [Plugin basics](plugins.md#load-time-and-failures).
 
-## 6. 테스트
+## 6. Test
 
-서버 없이 조건 평가기로 시험한다. 평가기 패키지(`agent-console-conditions`)는 서버를 설치하면 함께 들어 있다.
+Test with the condition evaluator, without a server. The evaluator package (`agent-console-conditions`) is included
+when you install the server.
 
 ```python
 # my-console-ops/tests/test_max_chars.py
@@ -154,7 +163,7 @@ from agent_console_contracts import ConditionSpec
 
 
 def test_installed_operator_is_found_and_evaluated() -> None:
-    operators, _ = default_operators()          # 설치된 entry point에서 읽는다
+    operators, _ = default_operators()          # read from the installed entry points
     spec = ConditionSpec.model_validate(
         {"all": [{"path": "/output", "op": "mine.max_chars", "value": 5}]}
     )
@@ -168,16 +177,18 @@ uv pip install pytest
 uv run --no-project pytest my-console-ops/tests
 ```
 
-더 많은 시험 방법은 [테스트](testing.md).
+For more ways to test, see [Testing](testing.md).
 
-## 7. 끄기
+## 7. Turn it off
 
-설치한 채로 쓰지 않으려면 서버 설정 `plugins.disabled`에 그 이름을 적고 서버를 다시 시작한다. 나머지 플러그인과
-기본 구현은 그대로 읽힌다.
+To keep the plugin installed but not use it, put its name in the server setting `plugins.disabled` and restart the
+server. Other plugins and the built-in implementations are read as usual.
 
-이름은 배포 이름(`my-console-ops`)이 아니라 **entry point 이름**(`mine.max_chars`)이다. `GET /api/v1/server-info`의
-`plugins`에 나오는 `name`이 그 이름이다. 설치되지 않은 이름을 적으면 서버는 그대로 시작하고, 시작 로그와
-`server-info`의 `warnings`(`plugins.config`)에 "설치된 플러그인 이름이 아닙니다(무시함)"를 남긴다.
+The name is the **entry point name** (`mine.max_chars`), not the distribution name (`my-console-ops`). It is the
+`name` shown in `plugins` of `GET /api/v1/server-info`. If you write a name that is not installed, the server still
+starts and records a warning, in the startup log and in `warnings` of `server-info` (`plugins.config`), that the name
+is not an installed plugin name and is ignored. If you wrote the distribution name by mistake, the warning also lists
+the names you should write, the entry point names of that distribution (here `mine.max_chars`).
 
 `agent-console.yaml`:
 
@@ -186,30 +197,33 @@ plugins:
   disabled: [mine.max_chars]
 ```
 
-서버는 띄운 폴더의 `agent-console.yaml`을 읽는다. 다른 이름이나 다른 폴더의 파일이면 `--config PATH`로 넘긴다.
+The server reads `agent-console.yaml` in the folder it starts from. For a file with another name or in another folder,
+pass it with `--config PATH`.
 
 ```bash
 uv run --no-project agent-console serve --workspace ./ws --config ./agent-console.yaml
-curl -s http://127.0.0.1:8765/api/v1/condition-operators      # "mine.max_chars"가 없다
-curl -s http://127.0.0.1:8765/api/v1/server-info               # plugins에 {"name": "mine.max_chars", "status": "skipped", "reason": "설정 plugins.disabled에 있음"}
+curl -s http://127.0.0.1:8765/api/v1/condition-operators      # "mine.max_chars" is not there
+curl -s http://127.0.0.1:8765/api/v1/server-info               # plugins has {"name": "mine.max_chars", "status": "skipped", "reason": "설정 plugins.disabled에 있음"}
 ```
 
-쓸 것만 골라 적고 싶으면 허용 목록 `plugins.enabled`를 쓴다(기본 구현 이름도 함께 적어야 한다). 둘 다 적으면
-허용 목록 안에서 제외 목록을 뺀다. 자세한 내용은 [플러그인 공통](plugins.md#켜고-끄기).
+To list only what you use, use the allow list `plugins.enabled` (you must include the names of the built-in
+implementations too). When you set both, the deny list is removed from the allow list. For details, see
+[Plugin basics](plugins.md#turning-plugins-on-and-off).
 
-## 8. 제거
+## 8. Remove
 
 ```bash
 uv pip uninstall my-console-ops
 ```
 
-서버를 다시 시작하면 연산자가 목록에서 사라진다. 이 연산자를 쓰던 조건은 지워지지 않는다.
+After you restart the server, the operator disappears from the list. Conditions that used this operator are not
+deleted.
 
-- 저장 전 검사와 팀 구성 목록의 검사 결과에 경고 `condition.unknown_operator`가 붙는다.
-- 실행 때 그 조건 항목은 거짓으로 판정되고 경고 이벤트가 남는다. 그 조건 연결은 막힌다.
-- 다시 설치하면 그대로 동작한다.
+- The pre-save check and the check results in the team list get the warning `condition.unknown_operator`.
+- At run time, that condition item is judged false and a warning event is recorded. That conditional edge is blocked.
+- When you install the plugin again, it works as before.
 
-설치하지 않은 환경에서 같은 조건을 검사하면 이렇게 보인다.
+Checking the same condition in an environment where the plugin is not installed looks like this.
 
 ```python
 >>> from agent_console_conditions import condition_issues, default_operators
@@ -223,8 +237,8 @@ uv pip uninstall my-console-ops
 
 ```
 
-## 다음
+## Next
 
-- 같은 지점의 더 완전한 예제(값 검사, 엔진 실행 테스트): [agent-console-example-condition](../../examples/extensions/agent-console-example-condition/README.md)
-- 다른 지점: [확장 가이드 지도](README.md#무엇을-바꾸고-싶은가)
-- 배포: [배포](distribution.md)
+- A more complete example of the same point (value checks, an engine run test): [agent-console-example-condition](../../examples/extensions/agent-console-example-condition/README.md)
+- Other points: [Extension guide map](README.md#what-do-you-want-to-change)
+- Distribution: [Distribution](distribution.md)

@@ -16,7 +16,7 @@
     - HTTP 없이 쓰는 부품: ``build_store``(저장 알림·삭제 알림 붙은 파일 저장소),
       ``register_contributed_kinds``(종류 기여 → 라이브러리 저장소에 등록),
       ``WorkspaceState``(공통 설정·비밀 규칙 캐시), ``SecretRuleCheck``, ``ignored_settings_issues``
-      (옛 설정 키 안내), ``PlainSecretScan``·
+      (옛 설정 키 안내, 새 위치 표 ``RENAMED_SETTINGS_KEYS``), ``PlainSecretScan``·
       ``scan_store``·``plain_secret_warnings``(평문 점검), ``save_secret_warnings``(저장 응답 경고),
       ``DefinitionService``.
     - ``build_router``: FastAPI 라우터(접두 없음, ``service(space)`` 공장).
@@ -71,6 +71,8 @@ from .store import (
 from .workspace import (
     IGNORED_SETTINGS_MESSAGE,
     INVALID_RULE,
+    RENAMED_SETTINGS_KEYS,
+    RENAMED_SETTINGS_MESSAGE,
     SecretRuleCheck,
     WorkspaceState,
     build_rules,
@@ -94,6 +96,8 @@ __all__ = [
     "INVALID_RULE",
     "KIND_CONTRIBUTIONS",
     "MODULE_ID",
+    "RENAMED_SETTINGS_KEYS",
+    "RENAMED_SETTINGS_MESSAGE",
     "SAVE_SECRET_MESSAGE",
     "SECRET_RULES",
     "SERVER_WARNINGS",

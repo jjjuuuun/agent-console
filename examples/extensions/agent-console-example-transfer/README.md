@@ -1,31 +1,31 @@
 # agent-console-example-transfer
 
-정의를 **JSON 파일 하나**로 내보내고, 같은 파일에서 다시 가져오는 예제이자 작성 가이드(확장 지점
-"내보내기 형식"과 "가져오기 출처" 한 쌍). 엔진·서버·웹 코드를 고치지 않는다. 설치하면 내보내기 형식 목록과
-가져오기 출처 목록에 `example-json`이 생기고, 제거하면 사라진다.
+An example and writing guide that exports definitions to **a single JSON file** and imports them again from the same file (a pair of the extension points
+"export formats" and "import sources"). No engine, server, or web code changes. Once installed, `example-json` appears in the export format list and
+the import source list, and it disappears when removed.
 
-형식 `example-json`
-- **내보내기**: 고른 정의(+ 함께 쓰는 정의 — 팀 구성의 에이전트·리소스 등)를 파일 하나(`agent-console-bundle.json`)에
-  담는다. 정의 원문은 그대로, 본문은 글이면 `text`, 바이너리면 `base64`로 담는다. 여러 파일 본문(카탈로그 `files`)은
-  `files`에, 한 파일 본문(카탈로그 `content` — 문서의 본문 필드가 파일 하나를 가리키는 종류)은 `content`에 담는다.
-  정의 종류를 가리지 않는다.
-- **가져오기**: 프로젝트(작업) 폴더의 같은 이름 파일을 읽어 후보로 보인다. 원본 파일은 읽기만 한다.
-- **형식 이름·필드 이름·파일 이름은 옵션 데이터**다(기본값 `data/defaults.json`). 설치자 설정으로 바꾼다.
-- **비밀 값은 파일에 들어가지 않는다**: 비밀 참조(`secret://이름`)는 참조로 담기고, 평문으로 의심되는 값은 내보내기
-  서비스의 마지막 검사가 가린다(경고 `export.secret_redacted`, 위치만). 가져올 때도 평문 의심 값은 가리고
-  `import.secret_suspected`(위치만)를 단다.
-- 의존: 계약(`agent-console-contracts`)·내보내기 라이브러리(`agent-console-exports`)·가져오기 라이브러리
-  (`agent-console-imports`)·`agent-console-secret-rules`·`pydantic`. 서버 모듈은 import하지 않는다.
+Format `example-json`
+- **Export**: puts the selected definitions (+ the definitions used with them, such as the agents and resources of a team) into one file (`agent-console-bundle.json`).
+  Definitions are stored as they are, and bodies are stored as `text` when they are text and as `base64` when they are binary. Multi-file bodies (catalog `files`) go into
+  `files`, and single-file bodies (catalog `content`, for kinds whose document body field points to one file) go into `content`.
+  It works for every definition kind.
+- **Import**: reads the file with the same name in the project folder and shows its items as candidates. The original file is only read.
+- **The format name, field names, and file name are option data** (defaults in `data/defaults.json`). Change them with administrator settings.
+- **Secret values never go into the file**: secret references (`secret://name`) are stored as references, and values suspected to be plain text are masked by the export
+  service's final check (warning `export.secret_redacted`, location only). On import, suspected plain-text values are masked as well and get
+  `import.secret_suspected` (location only).
+- Dependencies: the contract (`agent-console-contracts`), the export library (`agent-console-exports`), the import library
+  (`agent-console-imports`), `agent-console-secret-rules`, and `pydantic`. It does not import any server module.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 형식·출처 만드는 법
+## How to build a format and a source
 
-내보내기 형식은 `agent_console_exports.Exporter`(`descriptor`, 순수 `plan(items, catalog, options) -> ExportOutput`)를,
-가져오기 출처는 `agent_console_imports.ImportSource`(`descriptor`, 읽기만 하는 `scan() -> ScanResult`)를 지킨다.
-등록하는 쪽은 **공장**이다: 내보내기 = `(설치자 옵션) -> 형식`, 가져오기 = `(ImportSourceContext) -> 출처 목록`.
+An export format follows `agent_console_exports.Exporter` (`descriptor`, a pure `plan(items, catalog, options) -> ExportOutput`), and
+an import source follows `agent_console_imports.ImportSource` (`descriptor`, a read-only `scan() -> ScanResult`).
+What you register is a **factory**: export = `(administrator options) -> format`, import = `(ImportSourceContext) -> list of sources`.
 
-서버 없이 두 라이브러리만으로 한 바퀴(메모리 카탈로그 → 파일 → 메모리 저장소):
+A full round trip with only the two libraries, without a server (in-memory catalog → file → in-memory store):
 
 ```python
 >>> import tempfile
@@ -42,7 +42,7 @@
 ... )
 
 >>> tmp = tempfile.TemporaryDirectory()
->>> out = Path(tmp.name)  # 설치자가 허용한 내보내기 루트
+>>> out = Path(tmp.name)  # an export root the administrator allowed
 >>> catalog = MemoryCatalog().add("agent", {"id": "writer", "name": "작성자", "system_prompt": "짧게 쓴다."})
 >>> exports = ExportService(
 ...     {FORMAT_ID: json_bundle_exporter({})}, catalog, writer=FolderWriter([ExportRoot("out", out)])
@@ -54,7 +54,7 @@
 [('agent-console-bundle.json', 'create')]
 
 >>> (source,) = json_bundle_sources(ImportSourceContext(project_dir=out / "proj"))
->>> store = MemoryDefinitionWriter()  # 실제로는 정의 저장소
+>>> store = MemoryDefinitionWriter()  # in a real setup, the definition store
 >>> imports = ImportService([source], store)
 >>> [(c.kind, c.suggested_id, c.name) for c in imports.preview(FORMAT_ID).candidates]
 [('agent', 'writer', '작성자')]
@@ -67,24 +67,24 @@
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-규칙
-1. **`plan`은 순수하다**: 카탈로그를 읽기만 하고 파일 내용을 만들어 돌려줄 뿐이다. 쓰기(보관 파일·허용 폴더)는
-   `ExportService`가 한다 — 경로 탈출·링크·보호 위치 거부와 충돌 처리가 형식마다 다시 구현되지 않는다.
-2. **비밀은 형식이 따로 다루지 않아도 된다**: 서비스가 모든 형식의 산출물을 마지막에 검사해 평문 의심 값을 가린다.
-   형식은 비밀 참조를 값으로 풀지 않는다.
-3. **출처는 원본을 읽기만 한다**: 파일은 링크를 따라가지 않고(`O_NOFOLLOW`), 출처 폴더 밖으로 풀리는 경로는 읽지
-   않는다(`import.skipped_link`). 없는 파일은 빈 결과다.
-4. **틀린 파일·항목은 경고로**: 예외 대신 경고(`example_transfer.*`, 위치만)를 남기고 맞는 항목만 후보로 낸다.
-5. **형식 id = entry point 이름 = 디스크립터 id**: 다르면 내보내기 로더가 경고 후 건너뛴다.
-6. **본문은 카탈로그가 주는 두 길로 읽는다**: 여러 파일 본문은 `catalog.files(kind, id)`, 한 파일 본문은
-   `catalog.content(kind, id)`. 어느 쪽인지는 종류가 정하므로 형식은 종류를 몰라도 된다. 가져오기에서는 같은 두 값을
-   `ImportItem.files`·`ImportItem.content`로 넘긴다.
+Rules
+1. **`plan` is pure**: it only reads the catalog and returns the file contents it builds. Writing (archive files, allowed folders) is done by
+   `ExportService`, so rejecting path escapes, links, and protected locations, and handling conflicts, are not reimplemented for every format.
+2. **Formats do not need to handle secrets themselves**: the service checks the output of every format at the end and masks suspected plain-text values.
+   Formats do not resolve secret references into values.
+3. **Sources only read the originals**: files are opened without following links (`O_NOFOLLOW`), and paths that resolve outside the source folder are not read
+   (`import.skipped_link`). A missing file gives an empty result.
+4. **Wrong files and items become warnings**: instead of raising, leave warnings (`example_transfer.*`, location only) and offer only the valid items as candidates.
+5. **Format id = entry point name = descriptor id**: when they differ, the export loader warns and skips it.
+6. **Read bodies through the two paths the catalog provides**: multi-file bodies with `catalog.files(kind, id)`, single-file bodies with
+   `catalog.content(kind, id)`. The kind decides which one applies, so the format does not need to know the kind. On import, the same two values are passed as
+   `ImportItem.files` and `ImportItem.content`.
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 두 표. 이름 = 형식 id. 값은 공장 함수.
+Two entry point tables in `pyproject.toml`. Name = format id. The value is a factory function.
 
 ```toml
 [project.entry-points."agent_console.exporters"]
@@ -94,10 +94,10 @@
 "example-json" = "agent_console_example_transfer:json_bundle_sources"
 ```
 
-서버 시작 때 내보내기·가져오기 서버 모듈의 호스트 플러그인 로더가 이 그룹을 읽는다. 가져오기 출처는 프로젝트(작업)
-폴더가 정해진 요청에서만 만들어진다(`ImportSourceContext.project_dir`). 홈 폴더 같은 다른 곳은 읽지 않는다.
+At server startup, the host plugin loaders of the export and import server modules read these groups. Import sources are created only for requests with
+a project folder (`ImportSourceContext.project_dir`). Other places, such as the home folder, are not read.
 
-설치하지 않고 쓰려면 서버 설정 `plugins.modules`에 등록 함수를 적는다(두 공장이 같은 레지스트리에 들어간다):
+To use it without installing, list the registration function in the server setting `plugins.modules` (both factories go into the same registries):
 
 ```yaml
 plugins:
@@ -105,12 +105,12 @@ plugins:
     - agent_console_example_transfer:register
 ```
 
-설치했다면 넣지 않는다. entry point가 이미 `example-json`을 등록하므로 같은 key가 두 번 등록되어 그 플러그인이
-`failed`로 남는다.
+When it is installed, do not add it. The entry point already registers `example-json`, so the same key would be registered twice and that plugin would
+remain `failed`.
 
-## 설정 예
+## Settings example
 
-형식 설정은 기본값(`data/defaults.json`)에 설치자 옵션을 덮어쓴다. **내보내기와 가져오기 옵션이 같아야** 왕복된다.
+The format settings apply the administrator options over the defaults (`data/defaults.json`). **The export and import options must match** for a round trip.
 
 ```yaml
 modules:
@@ -120,8 +120,8 @@ modules:
         example-json:
           file_name: team-bundle.json
           format_name: my-team-bundle
-          fields: {items: things}     # 필드 이름은 하나씩 덮어쓴다
-          drop_fields: [project]      # 내보낼 때 뺄 최상위 필드
+          fields: {items: things}     # field names are overridden one by one
+          drop_fields: [project]      # top-level fields left out on export
     mod-imports:
       options:
         example-json:
@@ -130,54 +130,54 @@ modules:
           fields: {items: things}
 ```
 
-| 옵션 | 기본 | 뜻 |
+| Option | Default | Meaning |
 | --- | --- | --- |
-| `file_name` | `agent-console-bundle.json` | 내보낼 파일 이름 = 가져올 때 프로젝트 폴더에서 찾을 파일(상대 경로, `..` 금지) |
-| `format_name`·`format_version` | `agent-console-example-bundle`·`1` | 파일의 형식 표지(다르면 가져오지 않음, `example_transfer.unknown_format`) |
-| `fields` | `format`·`version`·`definitions`·`kind`·`id`·`document`·`files`·`content`·`text`·`base64` | 파일 안 필드 이름(같은 층에서 겹치면 거부) |
-| `name_field`·`type_field` | `name`·`type` | 가져오기 미리보기의 이름·리소스 종류로 쓸 정의 필드 |
-| `drop_fields` | 없음 | 내보낼 때 정의에서 뺄 최상위 필드 |
-| `max_file_bytes` | 10MiB | 가져올 때 읽을 최대 크기 |
-| 요청 옵션 `include_dependencies` | `true` | 함께 쓰는 정의도 담기(내보내기 요청마다, 화면 폼은 `config_schema`) |
+| `file_name` | `agent-console-bundle.json` | The file name to export = the file to look for in the project folder on import (a relative path; `..` is not allowed) |
+| `format_name`, `format_version` | `agent-console-example-bundle`, `1` | The format marker in the file (when different, nothing is imported, `example_transfer.unknown_format`) |
+| `fields` | `format`, `version`, `definitions`, `kind`, `id`, `document`, `files`, `content`, `text`, `base64` | Field names in the file (rejected when they collide at the same level) |
+| `name_field`, `type_field` | `name`, `type` | Definition fields used as the name and resource type in the import preview |
+| `drop_fields` | none | Top-level fields left out of definitions on export |
+| `max_file_bytes` | 10MiB | Maximum size read on import |
+| Request option `include_dependencies` | `true` | Include the definitions used together (per export request; the screen form is `config_schema`) |
 
-설치자 옵션이 틀리면(모르는 키·절대 경로·겹치는 필드 이름) 로더가 경고를 남기고 이 형식·출처만 빠진다.
-위치는 내보내기 모듈 `modules.options.mod-exports.options.<형식 id>`, 가져오기 모듈 `modules.options.mod-imports.options.<출처 공장 이름>`이다.
+When the administrator options are wrong (unknown keys, absolute paths, colliding field names), the loader leaves a warning and only this format or source is left out.
+The locations are `modules.options.mod-exports.options.<format id>` for the export module and `modules.options.mod-imports.options.<source factory name>` for the import module.
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. WSL(`/mnt/c`)에서는 환경변수를 붙인다.
+Run these from the repository root. On WSL (`/mnt/c`), add the environment variables.
 
 ```bash
-export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL만
-uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-transfer   # 설치
-uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-transfer                        # 제거
+export UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=$HOME/.cache/agent-console-wsl-venv   # WSL only
+uv pip install --python "$UV_PROJECT_ENVIRONMENT" -e examples/extensions/agent-console-example-transfer   # install
+uv pip uninstall --python "$UV_PROJECT_ENVIRONMENT" agent-console-example-transfer                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치: 내보내기 형식 목록과 가져오기 출처 목록에 `example-json`이 보인다.
-- 제거: 목록에서 사라진다. 이미 내보낸 파일과 가져온 정의는 그대로 남는다(가져온 정의는 이 패키지와 무관한 보통 정의다).
-  남은 설치자 옵션은 쓰이지 않을 뿐 오류가 아니다.
-- 설치한 채 로드하지 않기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example-json`을 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Install: `example-json` appears in the export format list and the import source list.
+- Remove: it disappears from the lists. Files already exported and definitions already imported remain (imported definitions are ordinary definitions, unrelated to this package).
+  Leftover administrator options are simply unused; they are not errors.
+- Keep it installed but not loaded: remove `example-json` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-transfer
 uv run --project ../../.. python -m pytest
 ```
 
-- `tests/test_round_trip.py`: 실제 정의 저장소(파일 workspace)에 에이전트·리소스(글·바이너리 본문)를 두고 → 허용 폴더에
-  내보내기 → **빈 workspace로 가져오기 → 같은 정의·같은 본문**, 다시 가져오면 새 이름(원본 파일 그대로), 비밀 참조는
-  그대로·평문 값은 파일에도 가져온 정의에도 없음. 한 파일 본문 종류도 본문까지 왕복.
-- `tests/test_agent_console_example_transfer.py`: entry point 선언, 라이브러리 로더로 로드, 틀린 옵션은 그 형식만 빠짐,
-  필드·형식 이름 옵션, 글·바이너리 본문(여러 파일·한 파일), 틀린 파일·항목 경고, 없는 의존 경고, 링크·폴더 밖 거부,
-  크기 상한.
-- `tests/test_server.py`: 통합 서버(설치하지 않았으면 `plugins.modules`로, 설치했으면 entry point로만 등록) — 등록
-  프로젝트 A의 에이전트 하나만 골라 REST로 프로젝트 B 폴더에 내보내면 그 에이전트가 쓰는 리소스(글·바이너리 본문)도
-  A 공간에서 찾아 함께 담기고, B에서 가져오면 같은 정의·같은 본문, 비밀 참조 그대로, 원본 파일 그대로.
+- `tests/test_round_trip.py`: agents and resources (text and binary bodies) in a real definition store (file workspace) → export to an allowed folder →
+  **import into an empty workspace → the same definitions and the same bodies**; importing again gives new names (the original file unchanged); secret references
+  stay as they are, and plain-text values are in neither the file nor the imported definitions. Kinds with a single-file body round-trip with their bodies too.
+- `tests/test_agent_console_example_transfer.py`: the entry point declaration, loading with the library loaders, wrong options leaving out only that format,
+  field and format name options, text and binary bodies (multi-file and single-file), warnings for wrong files and items, warnings for missing dependencies, rejection of links and paths outside the folder,
+  and the size limit.
+- `tests/test_server.py`: the integrated server (registered through `plugins.modules` when not installed, and only through the entry point when installed). When only one agent of
+  registered project A is selected and exported through REST into the folder of project B, the resources that agent uses (text and binary bodies) are also
+  found in the space of A and included; importing in B gives the same definitions and the same bodies, secret references as they are, and the original file unchanged.

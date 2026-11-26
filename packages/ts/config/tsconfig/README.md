@@ -1,23 +1,23 @@
 # @agent-console/tsconfig
 
-Agent Console TS 패키지가 함께 쓰는 tsconfig. 저장소 밖으로 복사한 패키지도 같은 설정으로 타입검사·빌드한다.
+The tsconfig shared by the Agent Console TS packages. A package copied out of the repository is type-checked and built with the same settings.
 
-| 파일 | 용도 |
+| File | Purpose |
 | --- | --- |
-| `base.json` | 엄격한 공통 옵션(번들러 해석, `noEmit`) |
-| `library.json` | `base.json` + 선언 파일·소스맵. 라이브러리 패키지가 `extends`한다 |
+| `base.json` | Strict common options (bundler resolution, `noEmit`) |
+| `library.json` | `base.json` + declaration files and source maps. Library packages `extends` it |
 
-## 설치
-저장소 안에서는 `pnpm install`이 연결한다. 저장소 밖에서는 tarball(`pnpm pack:all` → `dist/npm`)을 개발 의존으로 설치한다.
+## Installation
+Inside the repository, `pnpm install` links it. Outside the repository, install the tarball (`pnpm pack:all` → `dist/npm`) as a dev dependency.
 
-## 최소 사용
-패키지의 `tsconfig.json`:
+## Minimal usage
+The package's `tsconfig.json`:
 
 ```json
 { "extends": "@agent-console/tsconfig/library.json", "include": ["src"] }
 ```
 
-코드에서 파일 경로가 필요하면:
+If you need a file path in code:
 
 ```ts readme
 import { configPath } from "@agent-console/tsconfig";
@@ -25,6 +25,6 @@ import { configPath } from "@agent-console/tsconfig";
 const path = configPath("library");
 ```
 
-## 개발·재사용
-- `pnpm lint` · `pnpm test`는 이 폴더 안에서 단독으로 돈다.
-- 옵션을 바꾸면 모든 패키지에 영향이 가므로 `CHANGELOG`에 적고, 범위를 깨면 버전을 올린다.
+## Development and standalone reuse
+- `pnpm lint` and `pnpm test` each run on their own inside this folder.
+- Changing an option affects every package, so record it in the `CHANGELOG` and raise the version if you break compatibility.

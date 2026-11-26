@@ -21,6 +21,7 @@ members = [
     "agent-console-exports",
     "agent-console-graph",
     "agent-console-hook-probe",
+    "agent-console-i18n",
     "agent-console-imports",
     "agent-console-link-chat-runs",
     "agent-console-link-definitions-resources",
@@ -363,7 +364,7 @@ dev = [
 
 [[package]]
 name = "agent-console-contracts"
-version = "0.15.0"
+version = "0.16.0"
 source = { editable = "packages/py/base/ac-contracts" }
 dependencies = [
     { name = "pydantic" },
@@ -525,6 +526,29 @@ requires-dist = [
     { name = "agent-console-logs", editable = "packages/py/features/ac-logs" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
 ]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
+name = "agent-console-i18n"
+version = "0.1.0"
+source = { editable = "packages/py/features/ac-i18n" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1308,7 +1332,7 @@ dev = [
 
 [[package]]
 name = "agent-console-link-runs-teams"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/links/ac-link-runs-teams" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -2149,7 +2173,7 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-sdd"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/modules/ac-mod-sdd" }
 dependencies = [
     { name = "agent-console-conditions" },
@@ -2247,7 +2271,6 @@ dependencies = [
     { name = "agent-console-contracts" },
     { name = "agent-console-modkit", extra = ["host"] },
     { name = "agent-console-secret-rules" },
-    { name = "agent-console-settings" },
     { name = "agent-console-store" },
     { name = "fastapi" },
     { name = "pydantic" },
@@ -2267,7 +2290,6 @@ requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-modkit", extras = ["host"], editable = "packages/py/kit/ac-modkit" },
     { name = "agent-console-secret-rules", editable = "packages/py/base/ac-secret-rules" },
-    { name = "agent-console-settings", editable = "packages/py/base/ac-settings" },
     { name = "agent-console-store", editable = "packages/py/features/ac-store" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pydantic", specifier = ">=2.9" },
@@ -2284,7 +2306,7 @@ dev = [
 
 [[package]]
 name = "agent-console-mod-wiki"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/modules/ac-mod-wiki" }
 dependencies = [
     { name = "agent-console-conditions" },
@@ -3027,11 +3049,12 @@ dev = [
 
 [[package]]
 name = "agent-console-store"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-store" }
 dependencies = [
     { name = "agent-console-contracts" },
     { name = "agent-console-numbered-id" },
+    { name = "agent-console-settings" },
     { name = "alembic" },
     { name = "pydantic" },
     { name = "ruamel-yaml" },
@@ -3050,6 +3073,7 @@ dev = [
 requires-dist = [
     { name = "agent-console-contracts", editable = "packages/py/base/ac-contracts" },
     { name = "agent-console-numbered-id", editable = "packages/py/base/ac-numbered-id" },
+    { name = "agent-console-settings", editable = "packages/py/base/ac-settings" },
     { name = "alembic", specifier = ">=1.13" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
@@ -3066,7 +3090,7 @@ dev = [
 
 [[package]]
 name = "agent-console-teams"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-teams" }
 dependencies = [
     { name = "agent-console-contracts" },
@@ -3200,7 +3224,7 @@ dev = [
 
 [[package]]
 name = "agent-console-wiki"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/py/features/ac-wiki" }
 dependencies = [
     { name = "agent-console-conditions" },

@@ -1,5 +1,9 @@
 # 변경 기록
 
+## Unreleased
+
+- I.6: Terminal text is now English: the help of every command (`--help`, `serve`, `statusline`, `logs purge`), option errors, and the `logs purge`·`statusline` output lines (for example `Deleted: events 1 · token samples 0 · cursors 1 · agents 0`). Options, exit codes, and behavior are unchanged.
+
 ## 1.0.0
 
 - REL.20: 표시 버전 1.0.0. `agent-console --version`(출력 `agent-console <버전>`, 버전은 설치 메타데이터 `agent-console-cli`에서 읽는다)과 공개 함수 `cli_version()`을 더했다. 의존 범위 `agent-console-server>=1.0,<2`.

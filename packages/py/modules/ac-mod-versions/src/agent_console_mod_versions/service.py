@@ -1,7 +1,8 @@
 """정의 버전 비교·되돌리기·보존 개수(design §2R.9·§2R.3, R2.5, D3). HTTP 없이도 쓴다.
 
-비교 계산은 ``ac-settings.diff_documents``, 비밀 위치는 저장 전 검사의 평문 이슈(설정
-``secret_issue_codes``) + 비밀 의심 규칙(``secrets.rules``, 없으면 기본 규칙)이다.
+비교 계산은 ``agent_console_store.diff_versions``(문서 틀 버전 경로와 공용), 비밀 위치는 저장 전
+검사의 평문 이슈(설정 ``secret_issue_codes``) + 비밀 의심 규칙(``secrets.rules``, 없으면 기본
+규칙)이다.
 """
 
 from __future__ import annotations
@@ -10,18 +11,20 @@ import logging
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any
 
-from agent_console_contracts import ContentChange, DefinitionDiff, DiffChange, Issue
+from agent_console_contracts import DefinitionDiff, Issue
 from agent_console_secret_rules import SecretRules, default_rules
-from agent_console_settings import MISSING, diff_digests, diff_documents
-from agent_console_store import NotFound, StoredDefinition, VersionRequired
+from agent_console_store import (
+    SECRET_MASK,
+    NotFound,
+    StoredDefinition,
+    VersionRequired,
+    diff_versions,
+)
 
 from .ports import DefinitionCheck, SavedDefinition, SpaceDefinitionCheck, VersionStore
 from .settings import DEFAULT_SECRET_ISSUE_CODES
 
 _log = logging.getLogger("agent_console_mod_versions")
-
-SECRET_MASK = "***"
-"""비교 결과에서 비밀 위치 값 대신 쓰는 문자열(계약 `DiffChange.secret`)."""
 
 RESTORE_MESSAGE = "restored from {hash}"
 """되돌리기 버전 메시지 기본 문구(`RestoreVersionRequest.message`가 비었을 때)."""
@@ -94,45 +97,19 @@ class VersionService:
 
     # ------------------------------------------------------------ 비교
 
-    def _file_digests(self, kind: str, item_id: str, version_hash: str) -> dict[str, str] | None:
-        try:
-            files = self.store.list_version_files(kind, item_id, version_hash)
-        except NotFound:  # 본문 스냅샷이 없는 버전(0003 이전)
-            return None
-        return {f.path: f.sha256 for f in files}
-
     def diff(self, kind: str, item_id: str, from_hash: str, to_hash: str | None) -> DefinitionDiff:
         """두 버전 비교. ``to_hash``가 None이면 현재 버전(정의가 없으면 ``NotFound``).
 
         본문 파일은 해시만 비교한다. 한쪽에 본문 스냅샷이 없으면 본문 비교는 비운다.
         """
-        store = self.store
-        old = store.get_version(kind, item_id, from_hash)
-        target = to_hash or store.get(kind, item_id).version_hash
-        new = store.get_version(kind, item_id, target)
-        before, after = old.content or {}, new.content or {}
-        changes = diff_documents(
-            before,
-            after,
-            before_secrets=self.secret_paths(kind, before),
-            after_secrets=self.secret_paths(kind, after),
+        return diff_versions(
+            self.store,
+            kind,
+            item_id,
+            from_hash,
+            to_hash,
+            secret_paths=lambda document: self.secret_paths(kind, document),
             mask=SECRET_MASK,
-        )
-        old_files = self._file_digests(kind, item_id, from_hash)
-        new_files = self._file_digests(kind, item_id, target)
-        content: list[ContentChange] = []
-        if old_files is not None and new_files is not None:
-            content = [
-                ContentChange(path=c.path, before_hash=c.before, after_hash=c.after)
-                for c in diff_digests(old_files, new_files)
-            ]
-        return DefinitionDiff(
-            kind=kind,
-            id=item_id,
-            from_hash=from_hash,
-            to_hash=target,
-            changes=[_diff_change(c.op, c.path, c.before, c.after, c.secret) for c in changes],
-            content_changes=content,
         )
 
     # ------------------------------------------------------------ 되돌리기
@@ -223,15 +200,6 @@ class VersionService:
         if total:
             _log.info("보존 개수(%d)를 넘는 버전 %d개를 지웠습니다", self._keep, total)
         return total
-
-
-def _diff_change(op: Any, path: str, before: Any, after: Any, secret: bool) -> DiffChange:
-    values: dict[str, Any] = {}
-    if before is not MISSING:
-        values["before"] = before
-    if after is not MISSING:
-        values["after"] = after
-    return DiffChange(op=op, path=path, secret=secret, **values)
 
 
 __all__ = ["RESTORE_MESSAGE", "SECRET_MASK", "RestoreRejectedError", "VersionService"]

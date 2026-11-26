@@ -7,12 +7,12 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-exports>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "pydantic>=2.9",
     "fastapi>=0.115",
 ]
@@ -62,5 +62,5 @@ known-first-party = ["agent_console_*"]
 # 확장 지점이 아닌 포트(scripts/extdocs 대조에서 뺀다).
 [tool.agent-console]
 internal-ports = [
-    { port = "exports.dependencies", reason = "팀 구성 연동이 함께 내보낼 정의를 계산해 주는 모듈 사이 통로. 새 내보내기 형식은 exporter 지점" },
+    { port = "exports.dependencies", reason = "Inter-module port through which the teams link module computes the definitions to export together. New export formats use the `exporter` extension point" },
 ]

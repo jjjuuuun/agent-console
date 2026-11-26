@@ -1,54 +1,53 @@
 # agent-console-delegation-host
 
-독립 위임 방식 `host`(위임 방식 플러그인). 위임자 모델에게 **위임 도구** 하나(플랫폼
-도구 `HostTool`)를 주고, 모델이 도구를 부르면 대상 노드를 엔진의 `ctx.invoke_node`로 **자기 NodeRun·세션·
-백엔드·모델·리소스**에서 실행해 그 결과를 도구 결과로 돌려준다. 백엔드가 도구 호출 id를 알려 주면
-(`HostTool.call_handler`) 대상 NodeRun의 `node.*` payload `tool_use_id`로 넘긴다. 대상은 다시 위임하거나(중첩) 자기
-`ask_user` 연결로 사용자에게 되물을 수 있다. 서버·웹·노드 플러그인 없이 엔진(`agent-console-runtime`)과
-계약만으로 쓴다.
+The standalone delegation strategy `host` (a delegation strategy plugin). It gives the delegator model one **delegation tool** (platform
+tool `HostTool`). When the model calls the tool, the target node runs through the engine's `ctx.invoke_node` in **its own NodeRun, session,
+backend, model, and resources**, and the result comes back as the tool result. When the backend reports the tool call id
+(`HostTool.call_handler`), it is passed on as `tool_use_id` in the target NodeRun's `node.*` payload. The target can delegate again (nesting) or ask the user
+through its own `ask_user` edge. You use it with only the engine (`agent-console-runtime`) and the contracts, without the server, the web app, or node plugins.
 
-- 규칙은 디스크립터 값이다(`host_descriptor()`): 깊이 = 사용자 설정 `delegation.max_depth`만
-  (`max_depth: null`), 대상의 나가는 흐름 연결 금지(`allows_outgoing_flow: false`), 대상의 모든 설정 필드
-  적용(`member_fields` = `AgentSettings` 전체), 대상 되묻기 제한 없음, 위임자 백엔드 능력 `host_tools` 필요,
-  `composable: true`(다른 composable 방식과 한 위임자에서 합쳐 실행), `shares_session: false`(대상은 자기
-  세션에서 돈다 — 대상의 상호작용 종류·대기 한도는 위임자 세션 grant에 더해지지 않는다).
-- 도구 이름·파라미터 이름·모델에게 보이는 문구는 방식 config(`HostDelegationConfig`)의 **스키마 기본값**이다.
-  위임자 노드의 방식별 config(예: 에이전트 노드 `delegation.host`)로 바꾼다. 코드에 이름별 분기는 없다.
-- 도구 입력 = `{<target_param>: 대상 노드 id(enum), <task_param>: 할 일}`. 할 일은 대상 노드 타입의 첫 입력
-  포트로 넣는다(`input_port=`로 바꿈).
-- 결과: 위임 연결 config `result`가 `text`(기본)면 대상의 첫 출력 포트 값, `reply`면 대상의 답변 연결
-  (`scheduling = exit`)이 낼 답변 텍스트. 대상 실패·깊이 초과(`delegation.depth_exceeded`)·순환·모르는 대상·
-  빈 할 일은 예외가 아니라 `is_error` 도구 결과다(위임자 모델이 판단한다). 실패 문구(`failure_text`)의
-  `{code}`·`{message}`에는 엔진 가림(`ctx.secrets.redact`)을 건 값만 들어간다.
-- 같은 대상 직렬·동시 실행 슬롯·취소 정리·대상 답변 내기·기록은 엔진이 한다. 이 방식은 대상을 직접
-  실행하지 않는다.
-- 혼합 위임: `contribute(plan, ctx)`는 백엔드를 부르지 않고 `DelegationContribution(host_tools=[도구])`만
-  돌려준다. 노드는 방식마다 받은 것을 `merge_contributions`(ac-runtime)로 합친다(도구 이름 겹침 =
+- The rules are descriptor values (`host_descriptor()`): depth comes only from the user setting `delegation.max_depth`
+  (`max_depth: null`), outgoing flow edges from the target are not allowed (`allows_outgoing_flow: false`), every settings field of the target
+  applies (`member_fields` = all of `AgentSettings`), target questions are not limited, the delegator backend needs the `host_tools` capability,
+  `composable: true` (runs combined with other composable strategies on one delegator), `shares_session: false` (the target runs in its own
+  session, so the target's interaction kinds and wait limits are not added to the delegator session grant).
+- Tool names, parameter names, and the text the model sees are **schema defaults** of the strategy config (`HostDelegationConfig`).
+  Change them with the delegator node's per-strategy config (for example, agent node `delegation.host`). There is no branching on names in the code.
+- Tool input = `{<target_param>: target node id (enum), <task_param>: the task}`. The task goes into the first input
+  port of the target node type (change it with `input_port=`).
+- Result: when the delegation edge config `result` is `text` (default), the value of the target's first output port; when it is `reply`, the reply text that the target's reply edge
+  (`scheduling = exit`) would produce. Target failure, depth exceeded (`delegation.depth_exceeded`), cycles, unknown targets, and
+  empty tasks are not exceptions but `is_error` tool results (the delegator model decides). The `{code}` and `{message}` of the failure text (`failure_text`)
+  contain only values masked by the engine (`ctx.secrets.redact`).
+- Serializing runs of the same target, concurrent run slots, cleanup on cancel, emitting target replies, and recording are done by the engine. This strategy does not run the target
+  directly.
+- Mixed delegation: `contribute(plan, ctx)` does not call the backend and returns only `DelegationContribution(host_tools=[tool])`.
+  The node merges what each strategy returned with `merge_contributions` (ac-runtime) (overlapping tool names =
   `delegation.duplicate_host_tool_names`).
-- 저장 시점 정적 검사: `static_issues(config, members)`는 연결 결과 모양
-  (`delegation.invalid_result_mode`, 엣지 이슈)과 스키마로 표현할 수 없는 config 규칙(대상·할 일 파라미터 이름이
-  같음, `delegation.invalid_config`)을, `declared_names(config, members)`는 `{"host_tool": [도구 이름]}`을 돌려준다.
-  config 스키마 위반·같은 대상 중복은 `ac-teams` 일반 규칙이 낸다.
+- Static checks at save time: `static_issues(config, members)` returns edge result shape issues
+  (`delegation.invalid_result_mode`, edge issues) and config rules that a schema cannot express (target and task parameter names
+  are the same, `delegation.invalid_config`); `declared_names(config, members)` returns `{"host_tool": [tool names]}`.
+  Config schema violations and duplicate targets are reported by the general `ac-teams` rules.
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what / why / alternatives
 
-- 사내: `agent-console-contracts`(디스크립터·이슈 모델), `agent-console-runtime`(프로토콜·`HostTool`·
-  `invoke_node`). 노드 플러그인(`ac-nodes-core`)·팀(`ac-teams`)·백엔드는 모른다(import-linter 계약).
-- **pydantic**: 방식 config 검증과 JSON Schema(디스크립터 `config_schema`). 이미 계약 패키지가 쓴다.
-- 대안으로 위임 방식이 백엔드를 직접 불러 대상을 실행할 수 있지만, 노드 실행 규칙(설정·리소스·되묻기·
-  기록)을 두 벌 만들게 되어 택하지 않았다.
+- Internal: `agent-console-contracts` (descriptor and issue models), `agent-console-runtime` (protocols, `HostTool`,
+  `invoke_node`). It does not know node plugins (`ac-nodes-core`), teams (`ac-teams`), or backends (import-linter contract).
+- **pydantic**: strategy config validation and JSON Schema (descriptor `config_schema`). The contracts package already uses it.
+- As an alternative, the delegation strategy could call the backend directly to run the target, but that would duplicate the node run rules (settings, resources, questions,
+  recording), so it was not chosen.
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-delegation-host
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-delegation-host
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-delegation-host
 ```
 
-설치하면 entry point `agent_console.delegation_strategies`의 `host`로 등록된다
-(`load_registries`가 찾는다). 지우면 `host` 연결은 팀 검증의 "등록되지 않은 위임 방식" 경고가 된다.
+Once installed, it is registered as `host` in the entry point group `agent_console.delegation_strategies`
+(`load_registries` finds it). If you remove it, `host` edges become an "unregistered delegation strategy" warning in team validation.
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> from agent_console_contracts import Agent
@@ -73,7 +72,7 @@ pip install agent-console-delegation-host
 ... )
 >>> host.validate(plan)
 []
->>> (tool,) = host.contribute(plan, ctx=None).host_tools  # 핸들러를 부를 때만 엔진 맥락이 필요하다
+>>> (tool,) = host.contribute(plan, ctx=None).host_tools  # the engine context is needed only when calling the handler
 >>> tool.name, tool.input_schema["properties"]["target"]["enum"], tool.input_schema["required"]
 ('hand_off', ['be', 'qa'], ['target', 'task'])
 >>> print(tool.description.splitlines()[-2])
@@ -81,19 +80,19 @@ pip install agent-console-delegation-host
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-엔진 안에서 쓰려면 레지스트리에 등록하고(`registries.delegation_strategies.register("host", HostDelegation())`
-또는 entry point), 위임자 노드가 `strategy.run(plan, ctx)`(단독) 또는 `contribute`(혼합)를 부른다.
-`tests/test_agent_console_delegation_host.py`에 엔진·fake 백엔드·claude-sdk(SDK 목)로 끝까지 돌리는 예가 있다.
+To use it inside the engine, register it in the registry (`registries.delegation_strategies.register("host", HostDelegation())`
+or an entry point), and the delegator node calls `strategy.run(plan, ctx)` (standalone) or `contribute` (mixed).
+`tests/test_agent_console_delegation_host.py` has examples that run end to end with the engine, the fake backend, and claude-sdk (SDK mock).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

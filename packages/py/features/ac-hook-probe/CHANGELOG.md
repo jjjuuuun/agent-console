@@ -1,5 +1,9 @@
 # 변경 기록
 
+## Unreleased
+
+- I.6: The `agent-console-hook-probe` help and usage errors are English. The recorded data and the wrapped command output are unchanged.
+
 ## 0.1.0
 
 - 처음 만듦(4R.7): 실행 파일 `agent-console-hook-probe`·`python -m agent_console_hook_probe`(stdin 전달, stdout·stderr·

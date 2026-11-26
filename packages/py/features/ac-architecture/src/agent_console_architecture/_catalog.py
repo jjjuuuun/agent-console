@@ -17,7 +17,7 @@ from agent_console_contracts.architecture import (
 
 @dataclass(frozen=True, slots=True)
 class ProfileSource:
-    """한 출처가 내는 프로필 묶음.
+    """The bundle of profiles one source provides.
 
     Attributes:
         origin: 출처 이름(`default`, `plugin:<배포 이름>`, `user`, 또는 호출자가 정한 열린 문자열).

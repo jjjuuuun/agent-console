@@ -10,7 +10,8 @@ export { reservedParams, splitSearchParams, buildFilterQuery, buildScreenSearch,
 export { createLocalStorageSavedFilters, MAX_SAVED_NAME } from "./savedFilters";
 export { layoutFlow, widgetSize, moveWidget, resizeWidget, updateWidget, removeWidget, duplicateWidget, preserveUnknown, preserveUnknownDashboards, GRID_COLUMNS, MIN_WIDGET_W, MAX_WIDGET_W, MIN_WIDGET_H, MAX_WIDGET_H, DEFAULT_WIDGET_SIZE, RESERVED_OPTION_KEYS, type WidgetPlacement, type PreserveOptions } from "./layout";
 export { createWidgetRegistry, validateQuery, type WidgetDescriptor, type WidgetRegistry, type WidgetRenderProps, type QueryShape, type JsonSchema } from "./widgets/registry";
-export { builtinWidgets } from "./widgets/builtins";
+export { builtinWidgets, createBuiltinWidgets, type BuiltinWidgetTexts } from "./widgets/builtins";
+export type { LogViewLocale } from "./locales/types";
 export { AggregateTable, type AggregateTableProps } from "./widgets/AggregateTable";
 export { UnknownWidget, type UnknownWidgetProps } from "./widgets/UnknownWidget";
 export { useVirtualRows } from "./virtual";

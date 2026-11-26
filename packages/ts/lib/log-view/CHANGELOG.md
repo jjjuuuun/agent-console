@@ -3,6 +3,7 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따른다. 사내 의존 범위를 깨는 변경은 상대 패키지 버전을 올리고 여기에 적는다.
 
 ## [Unreleased]
+- 문구 데이터(0.2.0, I.9b): 기본 문구를 `src/locales/ko.json`(`messages`·`builtinWidgets`)으로 옮기고(`defaultLogViewMessages`·`builtinWidgets`는 ko 그대로) `en.json`을 더했다. 하위 경로 내보내기 `./locales/ko`·`./locales/en`, `createBuiltinWidgets(texts)`·`BuiltinWidgetTexts`·`LogViewLocale` 공개(내장 위젯 제목·설명을 언어별로 만든다). `formatDurationMs`의 한글 기본 단위를 ko 묶음으로 옮겼다. 키·자리표시자 같음 검사와 소스 한글 문자열 0 검사 테스트 추가.
 - 5.7R.32: 화면을 단순하게 하는 모양 옵션(기능은 그대로, 기본 모양이 바뀐다).
   `LogFilterBar`: `savedPlacement`(`menu` 기본 = 즐겨찾는 필터가 [+ 필터] 메뉴 맨 아래 구역, `button` = 예전 [★ ▾] 단추). 메시지 `saveCurrentFilter` 추가.
   `PlaybackBar`: `settingsPlacement`(`popover` 기본 = 속도·공백 건너뛰기가 [재생 설정 ▾] 팝오버 안, 1×가 아니면 단추 옆에 "2×", `inline` = 예전 모양). 메시지 `playSettings`·`playSettingsShort` 추가.

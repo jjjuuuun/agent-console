@@ -10,6 +10,12 @@
     "paths": {
       "@agent-console/graph-editor": [
         "./src/index.ts"
+      ],
+      "@agent-console/graph-editor/locales/ko": [
+        "./src/locales/ko.ts"
+      ],
+      "@agent-console/graph-editor/locales/en": [
+        "./src/locales/en.ts"
       ]
     }
   },

@@ -128,6 +128,8 @@ export { buildRouteInput, handleEndpoint, routePreview } from "./logic/autoRoute
 export type { HandleBox, PreviewEdge, PreviewNode, RouteEdgeInput, RouteInput, RouteNodeGeometry } from "./logic/autoRoute";
 export type { AStarRouter, EdgeRouter, RouteCosts, RouteEdgeRequest, RouteObstacle, RouteOptions, RoutedEdge, RouterStats } from "./logic/route";
 export { inheritedEdgeShape } from "./logic/convert";
+export { LABEL_SPACING_DEFAULTS, flowGap, portObstacles, resolveLabelSpacing, spreadLabelLayout, spreadLabels } from "./logic/labelSpread";
+export type { LabelLayout, LabelSpacing, ObstacleRect, PortBox, SpreadInput } from "./logic/labelSpread";
 export {
   EDGE_LAYOUT_KEY_ORDER,
   LABEL_T_MAX,
@@ -204,7 +206,7 @@ export { defaultStorage, readJson, writeJson } from "./logic/storage";
 export type { KeyValueStorage } from "./logic/storage";
 export { COLLINEAR_TOLERANCE, DRAG_THRESHOLD, EdgeWaypointLayer, MIN_EDIT_ZOOM } from "./components/EdgeWaypointLayer";
 export type { EdgeWaypointLayerProps } from "./components/EdgeWaypointLayer";
-export { BUILTIN_EDGE_SHAPES, createEdgeShapeRegistry } from "./shapes/registry";
+export { BUILTIN_EDGE_SHAPES, createEdgeShapeRegistry, localizeEdgeShapes } from "./shapes/registry";
 export type { EdgeShapeRegistry } from "./shapes/registry";
 export type {
   EdgeEndpoint,
@@ -241,3 +243,4 @@ export type {
   Selection,
   ViewOverride,
 } from "./types";
+export type { GraphEditorLocale, ShapeText } from "./locales/types";

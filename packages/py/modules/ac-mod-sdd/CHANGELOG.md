@@ -1,7 +1,11 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.2.0)
 
+- P1.19: The kind contributions carry `open_role` (spec `sdd`, document template `sdd:templates`, `SPEC_OPEN_ROLE` and `TEMPLATE_OPEN_ROLE`), so the copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) can offer "Open" for these rows.
+- P1.17: Added template version comparison: `GET /sdd/templates/{id}/versions/{a}/diff` (version → current) and `GET /sdd/templates/{id}/versions/{a}/diff/{b}`. Both return the existing contract `DefinitionDiff` and take `?project=<space>` like the other version routes. The calculation is the shared `agent_console_store.diff_versions` (same as `mod-versions`); locations that look like secrets (`secrets.document_secret_paths`, the rules used by restore) are masked as `***`. New public helper `secrets.document_secret_paths`. Consumer range: `agent-console-mod-sdd>=0.2,<0.3`; requires `agent-console-store>=0.2,<0.3`.
+- P1.5: `GET /sdd/info`가 `SddInfo.reserved_template_ids`(= `TEMPLATE_ROUTE_WORDS`, 계약 `sdd` 1.4.0)를 낸다 — 화면이 새 틀 id 칸에서 미리 안내한다. `SddService.info(scope, *, reserved_template_ids=())`.
+- P1.5 결함 수정: 틀로 저장(`POST /sdd/specs/{id}/save-as-template`)이 경로 예약어 id를 받으면 새 틀 만들기와 같은 422 `validation_failed`(`details` = `{id, reserved}`)로 거절하고 아무것도 쓰지 않는다. 이름에서 만든 id·`rename` 새 id는 예약어를 피한다(전에는 `check`·`variables` 같은 틀이 만들어져 그 틀의 GET이 고정 경로에 가려졌다). 공개 함수 `template_routes.reject_reserved_template_id`.
 - FU.6: 문서 틀 종류 데이터가 경로 예약어(`TEMPLATE_ROUTE_WORDS`)를 `DefinitionKind.reserved_ids`로 싣는다(복사 계획이 새 id를 제안).
 
 ## 0.1.0

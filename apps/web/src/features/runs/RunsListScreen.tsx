@@ -27,7 +27,8 @@ import { runStartMessages as startText } from "./runStartMessages";
 import { useRunLookups } from "./useRunLookups";
 import { runOpenState } from "./useRunView";
 import { runStatusLabels, runsMessages as t } from "./messages";
-import { DEFAULT_PERIOD, PERIOD_OPTIONS, RUN_LIST_POLL_MS, RUN_PAGE_SIZE, WAITING_RUN_STATUS } from "./runsConfig";
+import { DEFAULT_PERIOD, PERIOD_ANCHOR_REFRESH_MS, PERIOD_OPTIONS, RUN_LIST_POLL_MS, RUN_PAGE_SIZE, WAITING_RUN_STATUS } from "./runsConfig";
+import { usePeriodAnchor } from "./usePeriodAnchor";
 import { activeCounts, isActiveRun, periodSince } from "./runsLib";
 import "./runs.css";
 
@@ -106,8 +107,8 @@ export function RunsListScreen() {
   const firstRef = useRef<HTMLSelectElement>(null);
 
   const project = useProjectId();
-  // 기간 하한의 기준 시각은 화면을 열 때와 기간을 고를 때만 정한다. 시각마다 바뀌면 질의 키가 바뀌어 페이지가 처음으로 돌아간다.
-  const [periodAnchorMs, setPeriodAnchorMs] = useState(() => Date.now());
+  // 기간 하한의 기준 시각은 화면을 열 때, 기간을 고를 때, [새로 고침], 간격이 지난 뒤의 타이머·창 포커스에만 다시 잡는다(P1.31). 시각마다 바뀌면 질의 키가 바뀌어 페이지가 처음으로 돌아간다.
+  const { anchorMs: periodAnchorMs, refresh: refreshPeriodAnchor } = usePeriodAnchor({ intervalMs: PERIOD_ANCHOR_REFRESH_MS });
   const since = useMemo(() => periodSince(filters.period, periodAnchorMs / 1000, PERIOD_OPTIONS), [filters.period, periodAnchorMs]);
   const debouncedQuery = useDebouncedValue(filters.query);
   const searchQuery = debouncedQuery.trim().slice(0, 200);
@@ -165,7 +166,7 @@ export function RunsListScreen() {
   }, [runs]);
 
   const setFilters = (next: RunsFilters) => {
-    if (next.period !== filters.period) setPeriodAnchorMs(Date.now());
+    if (next.period !== filters.period) refreshPeriodAnchor();
     setParams((prev) => writeFilters(prev, next), { replace: true });
   };
   const clearFilters = () => setFilters({ graph: "", agent: "", conversation: "", statuses: [], period: DEFAULT_PERIOD, query: "", children: false, root: "" });
@@ -261,7 +262,7 @@ export function RunsListScreen() {
           <>
           <ProjectChip />
           {canStartRun ? <Button variant="primary" size="sm" onClick={openStart}>{startText.button}</Button> : null}
-          <IconButton size="sm" label={t.list.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={runsQ.isFetching && !runsQ.isPending ? "true" : undefined} onClick={() => void runsQ.refetch()} />
+          <IconButton size="sm" label={t.list.refresh} icon={<Icon name="refresh" size={14} />} aria-busy={runsQ.isFetching && !runsQ.isPending ? "true" : undefined} onClick={() => { refreshPeriodAnchor(); void runsQ.refetch(); }} />
           </>
         }
       />

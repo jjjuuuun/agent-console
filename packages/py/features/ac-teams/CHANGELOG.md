@@ -1,6 +1,11 @@
 # 변경 기록
 
-## 미출시
+## 미출시 (0.2.0)
+
+- P1.16 — BREAKING CHANGE: The common layer no longer reads the legacy top-level `WorkspaceSettings.default_backend`. Put the value in `agent_defaults.backend`.
+  공통 층(`agent_layers`·`layers_for`·`node_settings`·`resolve_backends` 등)은 `agent_defaults`만 읽는다. 옛 키만 있으면
+  공통 층 backend가 비어 실행 전 점검이 `backend.unresolved`를 낸다. 함수 인자 `default_backend`(마지막 대체값)는 그대로다.
+- 소비자 범위: `agent-console-teams>=0.2,<0.3`.
 
 - REL.8: `graph_dependencies`·`agent_dependencies`에 선택 인자 `scope_layers`(공통 바로 아래 범위 층, `layers_for`와 같은 값). 층 값의 `resources[]` 첨부를 공통 층 첨부 다음에 `shared`로 넣는다. 기본 `()` = 기존과 같다.
 - REL.5: 제안의 새 노드·엣지 id 번호 붙이기를 `agent-console-numbered-id`의 `numbered_id`로 합쳤다(동작 같음). 새 의존 `agent-console-numbered-id`.

@@ -66,7 +66,7 @@ type IdFactory = Callable[[], str]
 
 
 class NodeResult(BaseModel):
-    """노드 1회 실행 결과.
+    """Result of one node run.
 
     - `outputs`: 포트 이름 → 값. **값이 있는 포트만 방출**된 것으로 본다(나가는 엣지 판단 근거).
       값은 JSON 호환이어야 한다(NodeRun으로 저장된다).
@@ -98,7 +98,7 @@ class ValidationContext:
 
 @runtime_checkable
 class NodeType(Protocol):
-    """노드 타입. 엔진은 이 인터페이스만 알고 구체 타입은 레지스트리에서 찾는다.
+    """Node type. The engine knows only this interface and finds concrete types in the registry.
 
     - `resolve_ports(config)`: `descriptor.dynamic_ports`가 참일 때 실제 포트.
       고정 포트 타입은 `descriptor.static_ports`를 돌려주면 된다.
@@ -270,7 +270,7 @@ class Reply:
 
 @runtime_checkable
 class EdgeType(Protocol):
-    """엣지 타입. 엔진은 디스크립터 `scheduling`에 따라 `activates`를 부른다.
+    """Edge type. The engine calls `activates` according to the descriptor's `scheduling`.
 
     스케줄 종류별 동작(design §R3.1):
 
@@ -301,7 +301,7 @@ class EdgeValidationContext:
 
 @runtime_checkable
 class EdgeValidator(Protocol):
-    """엣지 타입의 선택 능력: 엣지 config의 의미 검증(스키마 검사 뒤, 저장 전 검사).
+    """Optional edge type capability: semantic check of edge config (after schema, pre-save).
 
     이슈의 `path`는 엣지 config 기준이다. `edge_id`를 비우면 엔진이 채운다. config가 스키마에
     맞지 않을 수도 있으므로(스키마 이슈는 따로 난다) 해석에 실패하면 빈 목록을 돌려준다.
@@ -343,7 +343,7 @@ class SubagentSpec(BaseModel):
 
 
 class AgentRequest(BaseModel):
-    """백엔드 실행 요청. `agent`는 비밀 참조(`secret://…`)가 해석된 상태로 넘긴다.
+    """Backend run request. `agent` arrives with secret references (`secret://…`) already resolved.
 
     - `subagents`: 같은 세션에서 위임자가 부를 하위 에이전트(위임 방식이 채운다, 비면 위임 없음).
     - `bundle`: 이 노드의 실행 묶음(design §R12.4).
@@ -384,7 +384,7 @@ class AgentRequest(BaseModel):
 
 
 class AgentResult(BaseModel):
-    """백엔드 실행 결과."""
+    """Backend run result."""
 
     status: Literal["succeeded", "failed", "cancelled"]
     text: str = ""
@@ -446,7 +446,7 @@ class BackendEventSink(Protocol):
 
 @runtime_checkable
 class ExecutionBackend(Protocol):
-    """실행 백엔드 어댑터."""
+    """Execution backend adapter."""
 
     descriptor: BackendDescriptor
 
@@ -500,7 +500,7 @@ def accepts_host_context(hook: Callable[..., Any]) -> bool:
 
 @runtime_checkable
 class ConfigurableBackend(Protocol):
-    """설치자 설정(앱 설정의 `backends.<id>`)으로 다시 만들 수 있는 백엔드(실행 백엔드 선택 훅).
+    """Backend rebuildable from server administrator settings (app setting `backends.<id>`).
 
     entry point는 인자 없이 만들어지므로, 생성 인자(모델 목록·환경 정책 등)가 필요한 백엔드는
     이 classmethod를 구현한다. 앱은 레지스트리에 등록된 백엔드에 이 훅이 있으면 호출해 교체할 뿐,
@@ -533,7 +533,7 @@ class ConfigurableBackend(Protocol):
 
 @runtime_checkable
 class SecretProvider(Protocol):
-    """비밀 값 공급자. 이름에 해당하는 값이 없으면 None."""
+    """Secret provider. None when there is no value for the name."""
 
     def get_secret(self, name: str) -> str | None: ...
 

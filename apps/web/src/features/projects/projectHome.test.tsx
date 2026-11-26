@@ -342,6 +342,19 @@ describe("프로젝트 홈: 삭제 전 거꾸로 참조 (FU.16)", () => {
     await within(dlg).findByText(/쓰는 곳을 검사할 수 없습니다/);
     expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false);
   });
+  it("쓰는 곳이 없다고 확인되면(checked=true, 빈 목록) 확인 불가 문구가 없다", async () => {
+    const dlg = await open(vi.fn(async () => ({ items: [], checked: true })));
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
+    expect(within(dlg).queryByText(/확인할 수 없습니다/)).toBeNull();
+  });
+  it("삭제가 409 project.config_readonly면 토스트에 서버 영문 대신 문구 표의 문구가 나온다", async () => {
+    const deleteCopyItem = vi.fn(async () => { throw new ApiError(409, { code: "project.config_readonly", message: "graph/ro3: the project folder is read-only" }); });
+    const dlg = await open(vi.fn(async () => ({ items: [], checked: true })), deleteCopyItem);
+    await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
+    fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
+    expect(await screen.findByText(/이 폴더에는 쓸 수 없어/)).toBeTruthy();
+    expect(screen.queryByText(/read-only/)).toBeNull();
+  });
   it("조회 중에는 삭제 단추가 막히고 확인 중 문구가 보이며, 끝나면 풀린다", async () => {
     let done: (v: { items: never[]; checked: boolean }) => void = () => undefined;
     const dlg = await open(vi.fn(() => new Promise<{ items: never[]; checked: boolean }>((r) => { done = r; })));
@@ -354,6 +367,7 @@ describe("프로젝트 홈: 삭제 전 거꾸로 참조 (FU.16)", () => {
     const deleteCopyItem = vi.fn(async () => undefined);
     const dlg = await open(vi.fn(async () => { throw new Error("404"); }), deleteCopyItem);
     expect(within(dlg).queryByRole("checkbox")).toBeNull();
+    await within(dlg).findByText(/쓰는 곳은 확인할 수 없습니다/);
     await waitFor(() => expect(within(dlg).getByRole("button", { name: "삭제" }).hasAttribute("disabled")).toBe(false));
     fireEvent.click(within(dlg).getByRole("button", { name: "삭제" }));
     await waitFor(() => expect(deleteCopyItem).toHaveBeenCalledWith("a", "qq-contributed", "d1"));

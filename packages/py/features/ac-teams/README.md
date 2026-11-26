@@ -1,27 +1,27 @@
 # agent-console-teams
 
-팀 구성 그래프의 **의미**를 계산하는 순수 라이브러리. 입구·답변, 위임 대상, 리소스 첨부, 노드별 허용 상호작용(grant)을
-해석하고, 섞인 그래프 규칙을 검증하며, 노드의 유효 설정(4층 + 리소스 첨부, 출처)을 만든다.
+A pure library that computes the **semantics** of team graphs. It interprets entries and replies, delegates, resource attachments, and the allowed interactions (grants) per node,
+validates the rules of mixed graphs, and builds each node's effective settings (4 layers + resource attachments, with provenance).
 
-- **이름을 모른다.** 연결 종류·노드 타입·위임 방식·상호작용 종류 id는 이 패키지에 없다. 판단 근거는
-  - 엣지 디스크립터 `scheduling`(`entry`·`exit`·`flow`·`none`)·`invocation`·`interaction`·`connects`·`default_ports`
-  - 노드 타입 디스크립터 `role`·`executable`·`binds{kind, field}`
-  - 위임 방식 디스크립터 `max_depth`·`allows_outgoing_flow`·`member_fields`·`member_interaction_kinds`·`requires_backend_capability`
-  - 설정 `delegation.max_depth`·`settings_merge`, 백엔드 `capabilities.interactions`와 선택 훅 `validate_settings`
-- **입구와 답변은 명시된 연결뿐**이다(`scheduling=entry/exit`). 그래프 모양으로 추론하지 않는다.
-  자동 추론은 검증 이슈의 **제안 데이터**(`Issue.suggestions[].patch`)에서만 쓴다.
-- 노드·엣지 config 키(예: 노드 층 설정 `settings`, 상호작용 연결 `kinds`)는 `TeamConventions` 데이터다.
-  기본값은 기본 플러그인(`ac-nodes-core`) 스키마와 맞췄고, 다른 키를 쓰는 플러그인은 바꿔 넘긴다.
-- 파일·DB·네트워크를 쓰지 않는다. 에이전트 정의·공통 설정·리소스 조회·백엔드 능력·훅은 인자로 받는다.
+- **It knows no names.** Edge type, node type, delegation strategy, and interaction kind ids are not in this package. Decisions are based on
+  - edge descriptors `scheduling` (`entry`, `exit`, `flow`, `none`), `invocation`, `interaction`, `connects`, `default_ports`
+  - node type descriptors `role`, `executable`, `binds{kind, field}`
+  - delegation strategy descriptors `max_depth`, `allows_outgoing_flow`, `member_fields`, `member_interaction_kinds`, `requires_backend_capability`
+  - the settings `delegation.max_depth` and `settings_merge`, the backend's `capabilities.interactions`, and the optional hook `validate_settings`
+- **The only entries and replies are explicit edges** (`scheduling=entry/exit`). Nothing is inferred from the graph shape.
+  Automatic inference is used only in the **suggestion data** of validation issues (`Issue.suggestions[].patch`).
+- Node and edge config keys (for example the node layer settings `settings` and the interaction edge `kinds`) are `TeamConventions` data.
+  The defaults match the schemas of the default plugins (`ac-nodes-core`), and plugins that use other keys pass their own.
+- It uses no files, databases, or networks. Agent definitions, common settings, resource lookups, backend capabilities, and hooks come in as arguments.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                    # 워크스페이스 안
-uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, graph, registry, resources, settings)
+uv sync --all-packages                    # inside the workspace
+uv pip install ./packages/py/features/ac-teams     # standalone (dependencies: contracts, graph, registry, resources, settings)
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> from agent_console_contracts import Agent, WorkspaceSettings
@@ -30,8 +30,8 @@ uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, g
 
 ```
 
-실제로는 레지스트리의 디스크립터(노드·연결 종류, 위임 방식)를 넘긴다. 여기서는 기본 플러그인 이름과 무관한
-테스트 디스크립터 묶음 `Kit`(사람 `human-x`, 일꾼 `actor-x`, 입구 `hello`, 답변 `bye`, 위임 `boss` 등)을 쓴다.
+In real use, pass the descriptors from the registries (node and edge types, delegation strategies). Here a test descriptor bundle `Kit`
+unrelated to the default plugin names is used (person `human-x`, worker `actor-x`, entry `hello`, reply `bye`, delegation `boss`, and so on).
 
 ```python
 >>> k = Kit()
@@ -44,14 +44,14 @@ uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, g
 ...     ],
 ... )
 >>> plan = team_plan(graph, node_types=k.node_types, edge_types=k.edge_types)
->>> plan.entry_nodes, plan.answer_nodes  # 입구 노드(entry 엣지가 들어옴), 답변 노드(exit 엣지가 나감)
+>>> plan.entry_nodes, plan.answer_nodes  # entry nodes (an entry edge comes in), reply nodes (an exit edge goes out)
 (('lead',), ('lead',))
 >>> [(link.member, link.strategy) for link in plan.delegates_of["lead"]]  # DelegationLink
 [('be', 'inner')]
->>> plan.agent_refs  # 노드 → 에이전트 정의 id
+>>> plan.agent_refs  # node → agent definition id
 {'lead': 'pl', 'be': 'backend'}
 
->>> workspace = WorkspaceSettings.model_validate(  # 공통 층·delegation·settings_merge
+>>> workspace = WorkspaceSettings.model_validate(  # the common layer, delegation, settings_merge
 ...     {"agent_defaults": {"model": "m-common", "tools": ["Read"]}}
 ... )
 >>> agents = {"pl": Agent(id="pl", name="PL"), "backend": Agent(id="backend", name="BE")}
@@ -59,10 +59,10 @@ uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, g
 ...     graph,
 ...     node_types=k.node_types,
 ...     edge_types=k.edge_types,
-...     strategies=k.strategies,  # X12 디스크립터
+...     strategies=k.strategies,  # delegation strategy descriptors
 ...     agents=agents,
 ...     workspace=workspace,
-...     resolve_ports=Kit.resolve_ports,  # 동적 포트 해석(앱은 레지스트리 구현으로)
+...     resolve_ports=Kit.resolve_ports,  # dynamic port resolution (the app uses the registry implementations)
 ...     plan=plan,
 ... )
 []
@@ -75,13 +75,13 @@ uv pip install ./packages/py/features/ac-teams     # 단독(의존: contracts, g
 
 ```
 
-### 실행 묶음까지(연결 순서)
+### Up to the run bundle (connection order)
 
 ```python
 from agent_console_teams import node_bundle, node_settings
 
 ns = node_settings(plan, "pl", agents=agents, workspace=ws, resource_types=types, resources=lookup)
-# 내부: resource_strategies(slot_key_of=attachment_slot_key(...)) → resolve_layers(schema, rules, 표)
+# internally: resource_strategies(slot_key_of=attachment_slot_key(...)) → resolve_layers(schema, rules, table)
 #       → placed_from_resolved
 composed = node_bundle(
     ns, resource_types=types, resources=lookup, accepted_slots=caps.resource_slots
@@ -89,33 +89,34 @@ composed = node_bundle(
 composed.bundle.slots, composed.bundle.sources, composed.issues
 ```
 
-### 층을 직접 다루기
+### Working with layers directly
 
 ```python
 from agent_console_settings import Layer
 from agent_console_teams import layers_for, merge_rules, resolve_settings
 
-layers = layers_for(plan, "pl", agent=agent, workspace=ws)  # 공통 → 팀 구성 → 에이전트 → 노드
-layers.insert(2, Layer("project", "프로젝트", {"model": "m"}))  # 층 추가는 목록에 하나 넣기
+layers = layers_for(plan, "pl", agent=agent, workspace=ws)  # common → team → agent → node
+# adding a layer is inserting one into the list
+layers.insert(2, Layer("project", "프로젝트", {"model": "m"}))
 ns = resolve_settings(layers, rules=merge_rules(ws, graph))
 ```
 
-- 공통 바로 아래 층은 `scope_layers=[Layer(...)]`로 넣는다(`layers_for`·`agent_layers`·`node_settings`·
-  `effective_settings`, 예: 프로젝트 층의 작업 폴더). 이 패키지는 층의 뜻을 모르고, 생략하면 지금과 같다.
-- 층 값은 **지정한 필드만** 읽는다(`model_dump(exclude_unset=True)`). 생략 = 상속, `null`·빈 목록 = 그 층에서 지정.
-- `settings_merge`는 공통 → 팀 구성 순서로 합친 뒤 `rules`로 넘긴다(`merge_rules`).
-- 공통 층의 이전 형식 `default_backend`는 `agent_defaults.backend`가 없을 때 backend로 읽는다.
-- 병합 문제(`Resolved.issues`)·넓힘(`find_widenings`)·형식 오류는 `EffectiveSettings.warnings`로, 위임받는 노드에서
-  적용되지 않는 필드(위임 방식 `member_fields` 밖)는 `EffectiveSettings.inapplicable`로 나간다.
-- 채팅·편집기·위임·상호작용 같은 사용자 설정 묶음은 `user_settings(workspace, graph)`(기본값 → 공통 → 팀 구성).
+- Layers directly below common are put in with `scope_layers=[Layer(...)]` (`layers_for`, `agent_layers`, `node_settings`,
+  `effective_settings`; for example the project folder of a project layer). This package does not know what layers mean, and omitting it changes nothing.
+- Layer values are read **only for the fields that are set** (`model_dump(exclude_unset=True)`). Omitted = inherit; `null` and empty lists = set at that layer.
+- `settings_merge` is merged in the order common → team and then passed as `rules` (`merge_rules`).
+- The common layer is only `agent_defaults`. The old top-level key `default_backend` is not read (move the value to `agent_defaults.backend`).
+- Merge problems (`Resolved.issues`), widenings (`find_widenings`), and format errors go to `EffectiveSettings.warnings`, and fields that do not apply
+  to delegated nodes (outside the delegation strategy's `member_fields`) go to `EffectiveSettings.inapplicable`.
+- User settings groups such as chat, editor, delegation, and interactions come from `user_settings(workspace, graph)` (defaults → common → team).
 
-### 백엔드 훅
+### Backend hooks
 
 ```python
 from agent_console_contracts import AgentSettings, InteractionGrant, Issue
 
 
-class MyHook:  # SettingsValidator 프로토콜
+class MyHook:  # the SettingsValidator protocol
     def validate_settings(self, effective: AgentSettings, grant: InteractionGrant) -> list[Issue]:
         if asks_user(effective) and "approve" not in grant.kinds:
             return [
@@ -129,14 +130,14 @@ class MyHook:  # SettingsValidator 프로토콜
         return []
 ```
 
-훅은 자기 세션을 여는 에이전트 노드마다(위임받지 않는 노드 + `shares_session` false 방식으로 불리는 대상) 그
-세션 grant(`session_grant`: 자신 + 같은 세션 방식 위임 대상 grant를 `member_interaction_kinds`로 거른 것)와 함께
-불린다. `interaction.no_path` 이슈에 제안이 없으면 `details.kinds`를
-허용하는 상호작용 연결을 사용자 쪽 노드로 잇는 제안을 붙인다. 훅 예외는 `team.validator_failed` 경고가 된다.
+The hook is called for each agent node that opens its own session (nodes that are not delegated + targets called by strategies with `shares_session` false), together with
+that session's grant (`session_grant`: its own + the grants of delegates of same-session strategies, filtered by `member_interaction_kinds`).
+If an `interaction.no_path` issue has no suggestion, a suggestion is attached that connects an interaction edge allowing `details.kinds`
+to the user-side node. Hook exceptions become `team.validator_failed` warnings.
 
-### 실행 경로(엔진 결과는 인자로)
+### Run path (engine results come in as arguments)
 
-엔진을 import하지 않는다. 앱(서버·CLI·테스트)은 아래 순서로 조립만 한다.
+It does not import the engine. The app (server, CLI, tests) only assembles in the order below.
 
 ```python
 from agent_console_teams import (
@@ -148,12 +149,12 @@ from agent_console_teams import (
     validate_team,
 )
 
-engine = runtime.validate(graph, services=services)  # 엔진 검증(앱이 부름)
+engine = runtime.validate(graph, services=services)  # engine validation (called by the app)
 team = []
-if team_rules_apply(engine):  # 모르는 타입 error가 있으면 건너뜀
+if team_rules_apply(engine):  # skipped when there is an unknown-type error
     team = validate_team(graph, ..., graph_checks=False, plan=plan)
-issues = merge_validation(engine, team)  # 화면용: 같은 뜻 중복 제거
-blockers = run_blockers(engine, team)  # 실행 차단 이슈만
+issues = merge_validation(engine, team)  # for the screen: duplicates with the same meaning removed
+blockers = run_blockers(engine, team)  # only the issues that block the run
 if not blockers:
     prep = prepare_run(
         graph, plan, workspace
@@ -163,21 +164,21 @@ if not blockers:
         ...,
         interaction_grants=prep.grants,
         interaction_settings=prep.interaction_settings,
-        flow_settings=prep.flow_settings,  # 반복·실행 한도(유효 설정 `flow`)
+        flow_settings=prep.flow_settings,  # loop and run limits (the effective setting `flow`)
     )
 ```
 
-- `blocks_run(issue)`: `issue.blocks_run`, 없으면 severity error.
-- `merge_validation(..., equivalents=DEFAULT_EQUIVALENTS)`: 같은 노드에 같은 뜻의 엔진 error가 있으면 팀 이슈를 뺀다.
-  같은 뜻 표는 데이터 `{팀 코드: 엔진 코드 접두}`(기본 `team.agent_not_found` → `agent.not_found`). 다른 플러그인 조합이면 표를 넘긴다.
-- `team_rules_apply(engine, skip_prefixes=DEFAULT_TEAM_SKIP_PREFIXES)`: 엔진 error 코드가 `unknown`으로 시작하면 거짓.
+- `blocks_run(issue)`: `issue.blocks_run`, or severity error when absent.
+- `merge_validation(..., equivalents=DEFAULT_EQUIVALENTS)`: drops a team issue when the same node has an engine error with the same meaning.
+  The equivalence table is data `{team code: engine code prefix}` (default `team.agent_not_found` → `agent.not_found`). Pass a table for other plugin combinations.
+- `team_rules_apply(engine, skip_prefixes=DEFAULT_TEAM_SKIP_PREFIXES)`: false when an engine error code starts with `unknown`.
 
-### 실행 백엔드 사전 점검
+### Execution backend pre-check
 
-해결 순서는 설정 층 그대로다(노드 → 에이전트 → 팀 구성 → 공통 `agent_defaults.backend`·옛 `default_backend`
-→ 인자 `default_backend`). 백엔드를 쓰는 노드는 디스크립터로 판단한다(에이전트 정의에 묶인 실행 가능 노드, 또는
-`capabilities`에 `TeamConventions.backend_capability`가 있는 노드). 위임받는 노드는 위임자 세션에서 돌므로
-막을 대상은 세션 주인 노드뿐이다. 백엔드를 자동으로 고르지 않는다.
+The resolution order is the settings layers as they are (node → agent → team → common `agent_defaults.backend`
+→ the argument `default_backend`). Nodes that use a backend are identified by descriptors (executable nodes bound to an agent definition, or
+nodes with `TeamConventions.backend_capability` in `capabilities`). Delegated nodes run in the delegator's session, so
+only session owner nodes are blocked. A backend is never chosen automatically.
 
 ```python
 from agent_console_teams import resolve_backends, unresolved_backends
@@ -186,15 +187,15 @@ resolved = resolve_backends(plan, agents=agents, workspace=ws)  # {node_id: back
 blocked = unresolved_backends(plan, resolved, agents=agents)  # [UnresolvedBackend(node_id, label)]
 ```
 
-### 화면 요약
+### Screen summary
 
 ```python
 from agent_console_teams import bundle_preview, plan_summary, validation_summary
 
 summary = plan_summary(plan)  # TeamPlanSummary{entries, answers, grants}
-# 답변 자리의 label·order·final·stream은 엣지 타입 디스크립터 reply_fields(JSON Pointer)로 config에서 읽는다.
-# 값이 없으면 그 위치의 config_schema 기본값, 그것도 없으면 label=엣지 label, final=true, stream=false.
-# 이 패키지에는 답변 연결 config 키 이름이 없다(H1).
+# label, order, final, and stream of reply slots are read from config through the edge type descriptor reply_fields (JSON Pointers).
+# without a value, the config_schema default at that location; without that, label = edge label, final = true, stream = false.
+# this package has no config key names of reply edges.
 
 validation_summary(
     merge_validation(engine, team)
@@ -209,29 +210,29 @@ preview = bundle_preview(
     workspace=ws,
     strategies=strategies,
 )
-# BundlePreview{bundle, warnings}: 받지 않는 칸(resource.slot_unsupported) + 위임받는 노드의 세션 공유 칸
-# (resource.slot_session_shared, 세션 주인 백엔드의 capabilities.subagent_slots에 없는 칸). x-secret 평문은 ***.
+# BundlePreview{bundle, warnings}: slots not accepted (resource.slot_unsupported) + session-shared slots of delegated nodes
+# (resource.slot_session_shared, slots not in the session owner backend's capabilities.subagent_slots). x-secret plain text becomes ***.
 ```
 
-- 백엔드 선택 훅 `PreviewNotes.preview_notes(effective, bundle) -> list[Issue]`: `bundle_preview(..., notes={백엔드
-  id: 훅})`를 주면 세션 주인 백엔드의 훅을 세션 주인 유효 설정·이 노드 묶음으로 불러 이슈를 뒤에 붙인다(예: claude-sdk
-  `observe.hook_probe_wrapped` "hook 감싸기 켜짐"). `catalog_from_registries`가 훅을 가진 백엔드를
-  `TeamCatalog.preview_notes`로 모은다. 훅 예외는 `team.validator_failed` 경고.
+- Backend optional hook `PreviewNotes.preview_notes(effective, bundle) -> list[Issue]`: given `bundle_preview(..., notes={backend
+  id: hook})`, the session owner backend's hook is called with the session owner's effective settings and this node's bundle, and the issues are appended (for example claude-sdk
+  `observe.hook_probe_wrapped`, hook wrapping on). `catalog_from_registries` collects backends with the hook into
+  `TeamCatalog.preview_notes`. Hook exceptions give `team.validator_failed` warnings.
 
-- 강제되지 않는 실행 범위: `node_settings(..., backends={id: BackendCapabilities})`(또는 `resolve_settings`)는 유효
-  `limits`에 값이 있는데 유효 `backend`의 `capabilities.enforce`에서 **같은 이름** 항목이 true가 아니면 경고
-  `limits.not_enforced`(path `/limits/<필드>`)를 더한다. 이 자리에 `limits`가 적용되지 않으면(위임 방식
-  `member_fields`) 건너뛴다. 단독 함수 `limits_warnings(value, enforce)`. 필드 목록은 코드에 없다.
+- Run scope that is not enforced: `node_settings(..., backends={id: BackendCapabilities})` (or `resolve_settings`) adds the warning
+  `limits.not_enforced` (path `/limits/<field>`) when the effective `limits` has a value but the item with **the same name** in the effective `backend`'s `capabilities.enforce` is not true.
+  It is skipped when `limits` does not apply at this place (the delegation strategy's
+  `member_fields`). Standalone function `limits_warnings(value, enforce)`. There is no field list in the code.
 
-### 규칙 모듈
+### Rule modules
 
-`validate_team`은 규칙 함수를 순서대로 돌린다(`_validate.TEAM_RULES`): `_rules_structure`(연결 규칙·참조) →
-`_rules_entry`(입구·답변·도달) → `_rules_delegation`(위임) → `_rules_loops`(반복) → `_rules_teams`(중첩 팀) →
-`_rules_interactions`(상호작용·백엔드 훅·검토) → `_rules_resources`(받지 않는 칸).
-규칙은 `TeamCheckContext`(`_check_context`)를 읽고 `add`로 이슈를 쌓는다. 엣지 허용 종류(디스크립터 ∩ config) 계산은
-`_plan.edge_kinds` 하나를 grant 계산과 검증이 같이 쓴다.
+`validate_team` runs the rule functions in order (`_validate.TEAM_RULES`): `_rules_structure` (edge rules, references) →
+`_rules_entry` (entries, replies, reachability) → `_rules_delegation` (delegation) → `_rules_loops` (loops) → `_rules_teams` (nested teams) →
+`_rules_interactions` (interactions, backend hooks, reviews) → `_rules_resources` (slots not accepted).
+Rules read `TeamCheckContext` (`_check_context`) and accumulate issues with `add`. The computation of allowed edge kinds (descriptor ∩ config) is
+one function, `_plan.edge_kinds`, shared by grant computation and validation.
 
-### 사용처 찾기
+### Finding usages
 
 ```python
 from agent_console_teams import definition_references
@@ -239,130 +240,130 @@ from agent_console_teams import definition_references
 refs = definition_references(
     "resource", "team-guide", graphs=graphs, agents=agents, workspace=ws, node_types=node_descs
 )
-# DefinitionReference[]: 리소스 노드(binds) → 팀 구성 층·노드 층·에이전트 층·공통 층 첨부
+# DefinitionReference[]: resource nodes (binds) → attachments in the team, node, agent, and common layers
 ```
 
-노드 타입 이름을 모른다(`binds{kind, field}`·`TeamConventions` 키). `kind`가 리소스 종류면 설정 층 첨부도 찾는다.
+It does not know node type names (`binds{kind, field}`, `TeamConventions` keys). When `kind` is a resource kind, settings layer attachments are found too.
 
-### 첨부 덮어쓰기 검사와 `x-secret` 가리기
+### Attachment override checks and `x-secret` masking
 
 ```python
 from agent_console_teams import agent_attachments, attachment_issues, graph_attachments
 
 placed = graph_attachments(graph, plan=team_plan(graph, node_types=nt, edge_types=et))
 issues = attachment_issues(placed, types=resource_types, resources=lookup)
-# 리소스가 없는 첨부는 비밀 의심 규칙으로 본다: secret_rules=SecretRules().with_extra(...)(기본 = 기본 규칙)
-# path = 문서 기준: /settings/resources/0/config_override/env/API_KEY,
+# attachments without a resource are checked with the secret suspicion rules: secret_rules=SecretRules().with_extra(...) (default = the default rules)
+# path = relative to the document: /settings/resources/0/config_override/env/API_KEY,
 #   /nodes/1/config/settings/resources/0/config_override/..., /edges/3/config/config_override/...
 ```
 
-- 위치: 에이전트 `/resources/<i>`, 공통 설정 `/agent_defaults/resources/<i>`, 팀 층 `/settings/resources/<i>`,
-  노드 층 `/nodes/<n>/config/<node_settings_key>/resources/<i>`, 리소스 연결 `/edges/<e>/config/<edge_override_key>`
-  (`plan`이 있을 때만, 리소스 연결 여부는 디스크립터로 정해진다).
-- 검사는 `ac-resources.validate_attachment`(덮어쓰기를 리소스 config에 얕게 덮어 종류 검사). 덮어쓰기가 없는 첨부는
-  검사하지 않고, `ref` 리소스가 없으면 warning만 낸다. 저장을 막을지는 호출자가 정한다(서버: error면 422).
-- 표시용 안전망: `mask_effective_secrets(effective, *, types, resources)`(유효 설정 `value.resources[].config_override`),
-  `mask_node_settings(settings, *, types, resources) -> (NodeSettings, ResourceLookup)`(묶음 미리보기 — 덮어쓰기와
-  리소스 config 모두)는 config 스키마의 `x-secret` 위치에서 `secret://` 참조가 아닌 값을 `***`로 바꾼다.
+- Locations: agent `/resources/<i>`, common settings `/agent_defaults/resources/<i>`, team layer `/settings/resources/<i>`,
+  node layer `/nodes/<n>/config/<node_settings_key>/resources/<i>`, resource edges `/edges/<e>/config/<edge_override_key>`
+  (only when `plan` is given; whether an edge is a resource edge is decided by descriptors).
+- The check is `ac-resources.validate_attachment` (the kind check on the resource config with the override shallowly overlaid). Attachments without overrides are
+  not checked, and when the `ref` resource is missing, only a warning is given. Whether to block saving is up to the caller (server: 422 on error).
+- Safety nets for display: `mask_effective_secrets(effective, *, types, resources)` (effective settings `value.resources[].config_override`) and
+  `mask_node_settings(settings, *, types, resources) -> (NodeSettings, ResourceLookup)` (bundle preview, both overrides and
+  resource configs) replace values that are not `secret://` references at `x-secret` locations of the config schema with `***`.
 
-## 검증 규칙(`TeamIssueCodes`)
+## Validation rules (`TeamIssueCodes`)
 
-| 코드 | 심각도 | 근거 |
+| Code | Severity | Basis |
 | --- | --- | --- |
-| `team.no_entry` | error(`blocks_run`) | `entry` 엣지가 실행 가능 노드로 가지 않음. 제안: 들어오는 연결 없는 노드를 입구로 |
-| `team.no_reply` | warning | `exit` 엣지 없음. 제안: 나가는 흐름 없는 노드를 답변으로 |
-| `team.unreachable` | warning | 실행 가능 노드인데 `entry`·`flow`·위임으로 들어오는 연결이 없음(사용자 쪽 노드 제외). 반복을 닫는 사이클 연결만 들어와도 같다(첫 회차에 지나가지 않음). 제안: 입구로 |
-| `team.entry_not_executable` | warning | 입구 엣지가 `executable=false` 노드로 감 |
-| `team.connects_mismatch` | error | 엣지 디스크립터 `connects` 역할이 맞지 않음 |
-| `team.agent_not_found` / `team.resource_not_found` | error / warning | `binds`로 묶인 정의가 없음(`agents`·`resources`를 줬을 때만) |
-| `team.mixed_invocation` | error | 흐름·입구로 받으면서 위임으로도 불림(반복을 닫는 사이클 연결은 세지 않음 — `flow.loop_invoked_only`) |
-| `team.mixed_strategies` | error | 한 노드의 위임 대상이 서로 다른 위임 방식이고 그중 디스크립터 `composable`이 거짓인(또는 모르는) 방식이 있음. 모두 `composable`이면 허용(혼합 위임). `details.not_composable`. 제안: 그 연결을 합칠 수 있는 방식의 위임 연결 종류로 바꾸기(이미 쓰는 방식 우선, 엣지 config의 방식 덮어쓰기 키는 옮기지 않음) |
-| `team.unknown_strategy` | warning | 등록되지 않은 위임 방식 |
-| `delegation.depth_exceeded` | error | 위임 깊이 > min(디스크립터 `max_depth`, 설정 `delegation.max_depth`). 방식 `max_depth: null`이면 설정만. `details.path` = 위임 경로. 상수 `DELEGATION_DEPTH_EXCEEDED` |
-| `team.delegation_cycle` | error | 위임 연결 순환 |
-| `team.flow_from_delegate` | error | 위임받는 노드의 흐름 엣지(디스크립터 `allows_outgoing_flow=false`). `exit`(답변)은 허용 |
-| `team.backend_capability_missing` | error | 위임자 백엔드에 `requires_backend_capability` 능력이 없음 |
-| `team.member_field_ignored` | warning | 위임받는 노드가 `member_fields` 밖 필드를 위임자와 다르게 지정(예: backend) |
-| `interaction.no_path` | warning | 백엔드 훅이 냄. 제안: 상호작용 연결 추가 |
-| `interaction.unsupported_in_delegate` | warning | 위임받는 노드의 grant가 `member_interaction_kinds` 밖. 제안: 연결의 `kinds` 좁히기 |
-| `interaction.unsupported_by_backend` | warning | 세션 백엔드 `capabilities.interactions` 밖. 제안: 좁히기 |
-| `interaction.kinds_not_allowed` | warning | 엣지 config `kinds`에 디스크립터가 허용하지 않는 종류 |
-| `review.dead_end` | warning | 스케줄되는 노드의 검토 결정(config `review.decisions`)의 포트가 아무 데도 안 이어짐. 제안: 답변으로 |
-| `team.validator_failed` | warning | 훅 예외(위임 방식 정적 검사 예외 포함, `details{strategy, method}`) |
-| `delegation.invalid_config` | error | 위임자 노드 config `delegation[방식 id]`(`TeamConventions.node_delegation_key`)가 방식 디스크립터 `config_schema`에 맞지 않음. path `/delegation/<방식 id>/…`. 모르는 방식·위임자가 아닌 노드는 보지 않음 |
-| `delegation.invalid_config_schema` | warning | 방식 디스크립터 `config_schema` 자체가 잘못됨 |
-| `delegation.duplicate_member` | error | 한 위임자가 같은 대상을 같은(유효) 방식으로 두 번 넘게 이음. 뒤 연결의 엣지 이슈, `details{delegator, member, strategy, edges}` |
-| `delegation.duplicate_<묶음>_names` | error | `delegation_checks`를 줄 때만: 한 위임자가 쓰는 방식이 둘 이상이고 그 방식들이 `declared_names`로 알린 이름이 묶음 안에서 겹침(예: `delegation.duplicate_host_tool_names`). `composable`이 거짓인 방식은 뺀다 |
-| `flow.max_iterations_invalid` | error | 사이클 연결(디스크립터 `cycle`)의 유효 최대 반복(엣지 config `max_iterations` → 설정 `flow.max_iterations` → 디스크립터 `cycle.max_iterations`, `ac-graph.effective_max_iterations`)이 없거나 1 미만. 엣지 이슈, path `/max_iterations` |
-| `flow.loop_invoked_only` | error | 반복 영역(`ac-graph.loop_regions`) 안 노드가 위임으로만 불리고 사이클 연결 말고는 들어오는 흐름이 없음(스케줄되지 않음) |
-| `team.recursive` | error | 중첩 팀 노드(디스크립터 `binds.kind == TeamConventions.team_kind`)가 이 팀 구성 자신 또는 자식·손자를 따라가다 경로에 있는 팀 구성을 다시 넣음. `details.path` = 팀 구성 id 경로. 자기 참조는 조회 없이도 낸다 |
-| `team.nesting_exceeded` | error | 중첩 깊이(이 팀 구성 = 0) > 유효 `delegation.max_nesting`(기본 데이터 3, null = 제한 없음). `details{depth, limit, path}` |
-| `team.team_not_found` | error | `teams=` 조회가 팀 구성(고정 버전 `TeamConventions.node_version_key`)을 못 찾음. `details{team, version}` |
-| `team.child_no_entry` | error | 자식 팀 구성에 입구가 없음(자식 검증 요약 `details.issues`) |
+| `team.no_entry` | error (`blocks_run`) | No `entry` edge goes to an executable node. Suggestion: make a node without incoming edges the entry |
+| `team.no_reply` | warning | No `exit` edge. Suggestion: make a node without outgoing flow the reply |
+| `team.unreachable` | warning | An executable node with no incoming `entry`, `flow`, or delegation edge (user-side nodes excluded). The same when only cycle edges that close a loop come in (they do not pass in the first iteration). Suggestion: make it an entry |
+| `team.entry_not_executable` | warning | An entry edge goes to an `executable=false` node |
+| `team.connects_mismatch` | error | The roles of the edge descriptor `connects` do not match |
+| `team.agent_not_found` / `team.resource_not_found` | error / warning | The definition bound through `binds` is missing (only when `agents` and `resources` are given) |
+| `team.mixed_invocation` | error | Received through flow or entry and also called through delegation (cycle edges that close a loop are not counted; see `flow.loop_invoked_only`) |
+| `team.mixed_strategies` | error | A node's delegates use different delegation strategies, and one of them has a descriptor `composable` that is false (or unknown). Allowed when all are `composable` (mixed delegation). `details.not_composable`. Suggestion: change that edge to a delegation edge type of a strategy that can be combined (strategies already in use first; the strategy override key in the edge config is not carried over) |
+| `team.unknown_strategy` | warning | An unregistered delegation strategy |
+| `delegation.depth_exceeded` | error | Delegation depth > min(descriptor `max_depth`, setting `delegation.max_depth`). With strategy `max_depth: null`, only the setting. `details.path` = the delegation path. Constant `DELEGATION_DEPTH_EXCEEDED` |
+| `team.delegation_cycle` | error | A cycle of delegation edges |
+| `team.flow_from_delegate` | error | A flow edge from a delegated node (descriptor `allows_outgoing_flow=false`). `exit` (reply) is allowed |
+| `team.backend_capability_missing` | error | The delegator's backend lacks the `requires_backend_capability` capability |
+| `team.member_field_ignored` | warning | A delegated node sets a field outside `member_fields` differently from the delegator (for example backend) |
+| `interaction.no_path` | warning | Emitted by backend hooks. Suggestion: add an interaction edge |
+| `interaction.unsupported_in_delegate` | warning | A delegated node's grant is outside `member_interaction_kinds`. Suggestion: narrow the edge's `kinds` |
+| `interaction.unsupported_by_backend` | warning | Outside the session backend's `capabilities.interactions`. Suggestion: narrow it |
+| `interaction.kinds_not_allowed` | warning | The edge config `kinds` has kinds the descriptor does not allow |
+| `review.dead_end` | warning | The ports of a scheduled node's review decisions (config `review.decisions`) lead nowhere. Suggestion: make them replies |
+| `team.validator_failed` | warning | Hook exceptions (including exceptions of delegation strategy static checks, `details{strategy, method}`) |
+| `delegation.invalid_config` | error | The delegator node config `delegation[strategy id]` (`TeamConventions.node_delegation_key`) does not match the strategy descriptor's `config_schema`. path `/delegation/<strategy id>/…`. Unknown strategies and nodes that are not delegators are not checked |
+| `delegation.invalid_config_schema` | warning | The strategy descriptor's `config_schema` itself is wrong |
+| `delegation.duplicate_member` | error | One delegator connects the same target more than once with the same (effective) strategy. An edge issue on the later edge, `details{delegator, member, strategy, edges}` |
+| `delegation.duplicate_<group>_names` | error | Only when `delegation_checks` is given: a delegator uses two or more strategies, and the names those strategies declared through `declared_names` overlap within a group (for example `delegation.duplicate_host_tool_names`). Strategies whose `composable` is false are left out |
+| `flow.max_iterations_invalid` | error | The effective maximum iterations of a cycle edge (descriptor `cycle`) (edge config `max_iterations` → setting `flow.max_iterations` → descriptor `cycle.max_iterations`, `ac-graph.effective_max_iterations`) is missing or below 1. An edge issue, path `/max_iterations` |
+| `flow.loop_invoked_only` | error | A node in a loop region (`ac-graph.loop_regions`) is called only through delegation and has no incoming flow other than cycle edges (not scheduled) |
+| `team.recursive` | error | A nested team node (descriptor `binds.kind == TeamConventions.team_kind`) puts back a team that is already on the path while following this team itself or its children and grandchildren. `details.path` = the team id path. Self-references are reported even without lookups |
+| `team.nesting_exceeded` | error | Nesting depth (this team = 0) > the effective `delegation.max_nesting` (default data 3, null = unlimited). `details{depth, limit, path}` |
+| `team.team_not_found` | error | The `teams=` lookup cannot find the team (pinned version `TeamConventions.node_version_key`). `details{team, version}` |
+| `team.child_no_entry` | error | The child team has no entry (the child validation summary in `details.issues`) |
 
-중첩 팀 이슈는 `node_id` = 중첩 팀 노드, `path` = 문서 기준 `/nodes/<i>/config/<binds.field>`. 자식 팀 구성은
-`validate_team(..., teams=lookup)`(`TeamLookup = (id, 버전|None) -> Graph|None`, `LookupError`도 "없음")로 읽는다.
-`teams`가 없으면 자기 참조만 본다. 실행 중에도 엔진이 같은 코드(`team.recursive`·`team.nesting_exceeded`)로 막는다.
-중첩 팀 노드의 팀 층 덮어쓰기는 `with_team_settings(graph, override)`(지정한 값만, 객체는 재귀 병합).
+Nested team issues have `node_id` = the nested team node and `path` = `/nodes/<i>/config/<binds.field>` relative to the document. Child teams are
+read with `validate_team(..., teams=lookup)` (`TeamLookup = (id, version|None) -> Graph|None`; `LookupError` also means "missing").
+Without `teams`, only self-references are checked. While running, the engine blocks the same with the same codes (`team.recursive`, `team.nesting_exceeded`).
+Team layer overrides of nested team nodes use `with_team_settings(graph, override)` (only the given values; objects are merged recursively).
 
-흐름 사이클은 `graph_checks=True`(기본)일 때 함께 도는 `ac-graph.validate_graph(cycle_edge=descriptor_cycle_edge)`가
-본다. 사이클마다 사이클 연결(디스크립터 `cycle`)이 있으면 허용(검토 반려를 앞 노드로 되돌리기 포함)이고, 없으면
-`cycle` 이슈이며 되돌아가는 연결을 사이클 연결 종류로 바꾸는 제안이 붙는다. `none`·`entry`·`exit` 엣지는 순환 계산에서
-빠지므로 `사용자 → A → 사용자`는 순환이 아니다.
+Flow cycles are checked by `ac-graph.validate_graph(cycle_edge=descriptor_cycle_edge)`, which runs together when `graph_checks=True` (default).
+A cycle is allowed when it has a cycle edge (descriptor `cycle`) (including sending a review rejection back to an earlier node); otherwise it is
+a `cycle` issue with a suggestion to change the back edge into a cycle edge type. `none`, `entry`, and `exit` edges are left out of the cycle calculation,
+so `user → A → user` is not a cycle.
 
-연결 의미 검사(예: 조건 연결의 조건)는 엔진 쪽 선택 능력이라 이 패키지가 직접 부르지 않는다. 단독으로 쓸 때는
-`validate_team(..., edge_checks=lambda g: validate_edges(g, registries, services))`처럼 주입한다. 서버(실행 모듈의
-저장 전 검사)는 엔진 검증(`validate_graph_with` → `validate_edges`)과 팀 규칙(`graph_checks=False`)을 합치므로
-넘기지 않는다.
+Edge semantic checks (for example the condition of a condition edge) are an optional capability on the engine side, so this package does not call them directly. In standalone use,
+inject them like `validate_team(..., edge_checks=lambda g: validate_edges(g, registries, services))`. The server (the pre-save check
+of the runs module) combines engine validation (`validate_graph_with` → `validate_edges`) and team rules (`graph_checks=False`), so it does not
+pass them.
 
-위임 방식 고유 정적 검사도 같은 방식이다. 방식 객체의 선택 메서드 `static_issues(config, members)`·
+Strategy-specific static checks work the same way. The optional methods of strategy objects, `static_issues(config, members)` and
 `declared_names(config, members)`(ac-runtime `StaticDelegationChecks`·`DelegationNameDeclarer`, `members` =
-`DelegationTarget`)를 메서드 유무로만 부른다. 단독으로 쓸 때는 `validate_team(..., delegation_checks={방식 id: 방식 객체})`
-또는 `delegation_static_issues(plan, checks, delegators=, agents=)`, 서버는 엔진 검증(노드 타입 `validate`가 등록된
-위임 방식을 부름)으로 얻으므로 넘기지 않는다. 방식 이슈는 `node_id`가 비면 위임자로, 엣지 이슈가 아니면 `path` 앞에
-`/delegation/<방식 id>`를 붙인다. 실행 시점 `validate(plan)`은 그대로 실행 때 돈다.
+`DelegationTarget`) are called only based on whether the methods exist. In standalone use, pass `validate_team(..., delegation_checks={strategy id: strategy object})`
+or use `delegation_static_issues(plan, checks, delegators=, agents=)`; the server gets them from engine validation (node type `validate` calls the registered
+delegation strategies), so it does not pass them. Strategy issues with an empty `node_id` go to the delegator, and for non-edge issues `/delegation/<strategy id>`
+is put in front of `path`. The run-time `validate(plan)` still runs at run time.
 
-### 제안 데이터
+### Suggestion data
 
-`Issue.suggestions[{id, label, patch: GraphPatch}]`. 연결 종류는 디스크립터 속성(`scheduling`·`interaction`)과 `connects`로
-고르고, 사용자 쪽 노드(입구의 출발·답변의 도착 노드)가 있으면 그 노드에, 없으면 `connects` 반대편 역할의 노드 타입
-(정의에 묶이지 않고 숨기지 않은 첫 타입)으로 새 노드를 만들어 잇는다. 포트는 `default_ports` → 노드 포트 목록의 첫 포트.
-연결 종류만 바꾸는 제안(`SuggestionBuilder.replace_kind`)은 `remove_edge_ids` + `add_edges`(같은 id·같은 포트, 새 종류,
-새 종류 스키마가 선언한 config 키만 옮김)다. `SuggestionBuilder`로 다른 검사기에서도 같은 방식의 제안을 만들 수 있다.
+`Issue.suggestions[{id, label, patch: GraphPatch}]`. The edge type is chosen by descriptor attributes (`scheduling`, `interaction`) and `connects`,
+and it connects to the user-side node (the source of the entry or the target of the reply) if there is one; otherwise it creates a new node of the node type with the opposite role in `connects`
+(the first type that is not bound to a definition and not hidden) and connects it. Ports are `default_ports` → the first port in the node's port list.
+Suggestions that only change the edge type (`SuggestionBuilder.replace_kind`) are `remove_edge_ids` + `add_edges` (same id and ports, new type,
+carrying over only the config keys the new type's schema declares). `SuggestionBuilder` lets other validators build suggestions the same way.
 
-## grant 규칙
+## Grant rules
 
-- 노드에서 나가는, 디스크립터 `interaction`이 있는 엣지마다 허용 종류 = `interaction.kinds` ∩ 엣지 config `kinds`(목록일 때).
-- 노드 grant = 그 합(처음 나온 순서). 대기 한도 = 엣지 config `timeout_seconds` 중 가장 짧은 값,
-  초과 시 동작 = 그 엣지의 `on_timeout`(없으면 처음 지정된 값). 둘 다 없으면 null(설정 `interaction.*`을 따름).
-- `session_grant(plan, 위임자, strategies)`: 위임자 grant + 위임 대상 grant(위임 방식 `member_interaction_kinds`로 거름).
-  디스크립터 `shares_session`이 false인 방식(대상이 자기 세션에서 돈다, 예: `host`)의 대상은 종류도 대기 한도도
-  더하지 않는다. `shares_session(link, strategies)`·`runs_in_own_session(plan, node_id, strategies)`가 같은
-  판단을 주고, `prepare_run(..., strategies=)`를 주면 엔진 대기 grant도 이 세션 단위다.
+- For each edge leaving the node whose descriptor has `interaction`, the allowed kinds = `interaction.kinds` ∩ the edge config `kinds` (when it is a list).
+- Node grant = their union (in order of first appearance). Wait limit = the shortest `timeout_seconds` among the edge configs,
+  behavior on timeout = that edge's `on_timeout` (otherwise the first one set). When neither exists, null (follows the setting `interaction.*`).
+- `session_grant(plan, delegator, strategies)`: the delegator's grant + the delegates' grants (filtered by the delegation strategy's `member_interaction_kinds`).
+  Targets of strategies whose descriptor `shares_session` is false (targets run in their own session, for example `host`) add neither kinds nor wait limits.
+  `shares_session(link, strategies)` and `runs_in_own_session(plan, node_id, strategies)` give the same
+  decision, and with `prepare_run(..., strategies=)` the engine wait grants are per session too.
 
-## 세션 집계
+## Session totals
 
-- `session_summary(plan, strategies)`: 팀 목록·팀 개요 요약용 `GraphSessionSummary{nodes, delegated}`. 연결의 세션 값 =
-  위임 연결은 유효 위임 방식(연결 config `strategy` → 종류 기본)의 `session`, 그 밖의 연결은 연결 종류의 `session`.
-  집계 대상 = `opens_session`이 false가 아니고 세션 값이 있는 연결에 닿은 노드. 들어오는 위임 연결의 세션 값이 모두 같은
-  대상은 그 값으로 `delegated[값]`에 센다. 값의 뜻은 모른다(화면이 아는 값을 고른다). 세션 값이 하나도 없으면 None.
+- `session_summary(plan, strategies)`: `GraphSessionSummary{nodes, delegated}` for team list and team overview summaries. The session value of an edge =
+  for delegation edges, the `session` of the effective delegation strategy (edge config `strategy` → the type default); for other edges, the edge type's `session`.
+  Counted = nodes reached by edges whose `opens_session` is not false and that have a session value. Targets whose incoming delegation edges all have the same session value
+  are counted under that value in `delegated[value]`. It does not know what the values mean (the screen picks the values it knows). None if there are no session values at all.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-teams`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-teams`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 UV_LINK_MODE=copy uv run pytest packages/py/features/ac-teams
 ```
 
-테스트는 기본 플러그인 없이 **임의 이름**의 노드·엣지 타입과 위임 방식 디스크립터로 모든 규칙을 확인한다.
-그 디스크립터 묶음은 공개 하위 모듈 `agent_console_teams.testing`(`KITS`, `Kit(names)`)이라 다른 프로젝트의 테스트에서도 쓸 수 있다.
+Tests check every rule without the default plugins, using node and edge types and delegation strategy descriptors with **arbitrary names**.
+That descriptor bundle is the public submodule `agent_console_teams.testing` (`KITS`, `Kit(names)`), so tests in other projects can use it too.

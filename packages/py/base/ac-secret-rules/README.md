@@ -1,56 +1,56 @@
 # agent-console-secret-rules
 
-평문 비밀로 **의심되는** 값을 찾고(`find_suspected`), 텍스트 안의 의심 부분을 가린다(`redact_suspected`).
-스키마를 모를 때 쓰는 휴리스틱이다. 스키마에 `x-secret`이 있으면 그쪽 검사가 우선이다.
-가림은 멱등이다: 이미 있는 가림 문자열(`mask`) 자리는 다시 가리지 않으므로 두 번 적용해도 결과가 같다. 가림 문자열에 붙은 평문은 그대로 가린다.
-가림 문자열을 사이에 끼워 비밀의 뒤 조각을 남기는 입력도 막는다: 텍스트에 가림 문자열이 있으면 그 자리를 값 글자로
-채운 사본도 함께 훑고, 가린 자리에 붙은 조각은 그 자리와 한 덩어리로 가린다(`password=[REDACTED]hunter2` →
-`password=[REDACTED]`). 대입 값의 닫는 괄호(`)`·`}`·`]`)는 뒤에 값 글자가 이어지면 값의 일부로 본다
-(`password=abc]hunter2` → `password=[REDACTED]`, `{password=abc}` → `{password=[REDACTED]}`). 비밀 규칙에
-걸리지 않는 글(`AAAA[REDACTED]BBBB`처럼 이름·접두어가 없는 것)은 그대로 둔다.
-사내 의존은 `ac-safe-regex`(사용자 정규식 검사·시간 제한 실행)뿐이라 다른 프로젝트에 그대로 가져갈 수 있다.
+Finds values **suspected** to be plain-text secrets (`find_suspected`) and masks suspected parts of a text (`redact_suspected`).
+It is a heuristic for when the schema is unknown. If the schema has `x-secret`, that check takes precedence.
+Masking is idempotent: places that already hold the mask string (`mask`) are not masked again, so applying it twice gives the same result. Plain text attached to a mask string is still masked.
+It also blocks inputs that insert a mask string to leave the tail of a secret behind: if the text contains a mask string, a copy with that spot filled with value characters
+is scanned too, and a fragment attached to a masked spot is masked together with it (`password=[REDACTED]hunter2` →
+`password=[REDACTED]`). A closing bracket of an assigned value (`)`, `}`, `]`) counts as part of the value when value characters follow it
+(`password=abc]hunter2` → `password=[REDACTED]`, `{password=abc}` → `{password=[REDACTED]}`). Text that does not hit a secret rule
+(such as `AAAA[REDACTED]BBBB`, with no name or prefix) is left as is.
+Its only internal dependency is `ac-safe-regex` (user regex validation and time-limited runs), so you can take it to another project as is.
 
-쓰는 곳(Agent Console): `ac-imports`(가져올 때 인자·URL의 비밀을 참조로 바꿈), `ac-resources`(리소스가 없는
-첨부 덮어쓰기 검사), 서버(평문 점검 경고 `secret.plain_found`, 실행 기록·상호작용 저장 전 의심 가림).
+Where Agent Console uses it: `ac-imports` (turns secrets in arguments and URLs into references on import), `ac-resources` (checks attachment overrides
+that have no resource), and the server (the plain-text warning `secret.plain_found`, masking suspected values before saving run history and interactions).
 
-## 규칙은 데이터다
+## Rules are data
 
-| 데이터 | 기본값 | 뜻 |
+| Data | Default | Meaning |
 | --- | --- | --- |
-| `key_names` | `DEFAULT_KEY_NAMES` | 비밀 이름 단어. 이름을 단어로 나눠(구분자·camelCase) 이어지는 단어를 붙인 것이 같으면 의심(`api_key`·`apiKey`·`x-api-key`·`APIKEY`). `author`·`max_tokens`는 단어가 달라 안 걸린다 |
-| `name_exceptions` | `DEFAULT_NAME_EXCEPTIONS` | 비밀 단어 **뒤에** 오면 비밀이 아닌 이름(`--key-file`, `auth_mode`, `token_url`) |
-| `value_patterns` | `DEFAULT_VALUE_PATTERNS` | 텍스트 안 비밀 모양(알려진 접두 토큰 — 앞이 단어 경계면 몸통 6자 이상, 앞에 글자가 붙었으면(`xxxsk-…`) 숫자·대문자가 있고 구분자 없는 16자 구간이 있는 키 모양 몸통만, JWT, PEM 개인 키, `Bearer x`, `--token x`, `API_KEY=x`·`?token=x`·`"password": "x"`, `user:pw@`). 이름 그룹 `secret` = 가릴 부분, `name` = 비밀 이름이어야 매치 |
-| `weak_key_names` | `DEFAULT_WEAK_KEY_NAMES` (`key`) | 뜻이 넓은 키 이름. 이름에서 걸린 키 이름이 모두 이것이면(`input_key`·`sort_key`) 구조 판정에서 값이 비밀 모양일 때만 의심. `api_key`(`apikey`)처럼 다른 키 이름에도 걸리면 이름만으로 의심. `weak_key_names=()`면 끈다. `with_extra(key_names=)`로 더한 이름은 약한 이름에서 빠진다 |
-| `weak_value_patterns` | `DEFAULT_WEAK_VALUE_PATTERNS` | 약한 이름 아래 값의 비밀 모양(구분자 없는 글자·숫자 16자 이상에 숫자가 섞임, UUID). `value_patterns`에 맞는 값(`sk-…`)도 비밀 모양 |
-| `is_reference` | `secret://…` | 참조(값이 아니라 이름)는 의심·가림에서 뺀다 |
+| `key_names` | `DEFAULT_KEY_NAMES` | Secret name words. A name is split into words (separators, camelCase), and it is suspected when joining consecutive words gives a match (`api_key`, `apiKey`, `x-api-key`, `APIKEY`). `author` and `max_tokens` do not match because the words differ |
+| `name_exceptions` | `DEFAULT_NAME_EXCEPTIONS` | Names that are not secrets when they come **after** a secret word (`--key-file`, `auth_mode`, `token_url`) |
+| `value_patterns` | `DEFAULT_VALUE_PATTERNS` | Secret shapes inside text (known prefixed tokens: with a word boundary before, a body of 6 or more characters; with letters attached before (`xxxsk-…`), only key-shaped bodies that contain digits or capitals and a 16-character run without separators; JWT, PEM private keys, `Bearer x`, `--token x`, `API_KEY=x`, `?token=x`, `"password": "x"`, `user:pw@`). The named group `secret` is the part to mask; the group `name` must be a secret name to match |
+| `weak_key_names` | `DEFAULT_WEAK_KEY_NAMES` (`key`) | Key names with a broad meaning. If every key name matched in a name is one of these (`input_key`, `sort_key`), structural judgement suspects it only when the value has a secret shape. If it also matches another key name, like `api_key` (`apikey`), the name alone is enough. `weak_key_names=()` turns this off. Names added with `with_extra(key_names=)` are removed from the weak names |
+| `weak_value_patterns` | `DEFAULT_WEAK_VALUE_PATTERNS` | Secret shapes for values under weak names (16 or more letters and digits without separators that include a digit, UUIDs). Values that match `value_patterns` (`sk-…`) also count as secret shapes |
+| `is_reference` | `secret://…` | References (names, not values) are left out of suspicion and masking |
 
-사용자 규칙은 `with_extra(key_names=, value_patterns=)`로 **더하기만** 한다. 기본 규칙을 줄이는 공개 방법은
-없다(줄이면 비밀이 샌다). 값 패턴은 `ac-safe-regex`로 검사하므로 위험한 패턴(`(a+)+`)은
-`InvalidSecretRuleError`(저장 전 검사는 `check_extra_rules`가 문제 목록으로 돌려준다).
+User rules can only be **added** with `with_extra(key_names=, value_patterns=)`. There is no public way to reduce the default rules
+(reducing them would leak secrets). Value patterns are checked with `ac-safe-regex`, so dangerous patterns (`(a+)+`) raise
+`InvalidSecretRuleError` (for pre-save validation, `check_extra_rules` returns them as a list of problems).
 
-## 판정
+## Judgement
 
-- 문자열 잎: 비어 있지 않고 참조가 아니며, 가까운 비밀 키 이름 아래이거나(`key_name`) 안에 비밀 모양이 있으면
-  (`value_pattern`) 의심.
-- 숫자 잎(불리언·null 제외): 비밀 키 이름 아래면 의심(`{"API_KEY": 12345}`).
-- 약한 키 이름 아래(`{"input_key": "question"}`)는 값이 비밀 모양일 때만 의심한다(`{"input_key": "sk-…"}`·
-  16진수 32자). 이름 판정(`name_suspected`)·텍스트 가리기·인자 목록의 플래그(`--key x`)는 약한 이름도 그대로
-  이름만으로 의심한다(안전한 쪽).
-- 하위 객체·목록은 가장 가까운 비밀 키 이름을 **이어받는다**. 단 자기 이름의 마지막 단어가 예외 단어면
-  이어받지 않는다(`{"auth": {"mode": "oauth"}}`).
-- 인자 목록에서 비밀 플래그(`--token`) 다음 항목은 비밀 값으로 본다.
-- 결과 `Finding{path, reason}`에는 **값이 없다**. path는 JSON Pointer(`path=` 접두 포함).
-- 패턴 검사가 시간 제한을 넘으면 안전한 쪽으로 처리한다: 판정은 `timeout`으로 의심, 가리기는 텍스트 전체를 가림.
-- 긴 텍스트는 `max_scan_chars`(기본 100만 자) 조각으로 겹쳐 나눠 훑는다.
+- String leaves: suspected when non-empty, not a reference, and either under the nearest secret key name (`key_name`) or containing a secret shape
+  (`value_pattern`).
+- Number leaves (excluding booleans and null): suspected when under a secret key name (`{"API_KEY": 12345}`).
+- Under a weak key name (`{"input_key": "question"}`), a value is suspected only when it has a secret shape (`{"input_key": "sk-…"}`,
+  32 hex characters). Name judgement (`name_suspected`), text masking, and flags in argument lists (`--key x`) still suspect weak names
+  by name alone (the safe side).
+- Child objects and lists **inherit** the nearest secret key name, except when the last word of their own name is an exception word
+  (`{"auth": {"mode": "oauth"}}`).
+- In an argument list, the item after a secret flag (`--token`) is treated as a secret value.
+- The result `Finding{path, reason}` **contains no value**. The path is a JSON Pointer (including a `path=` prefix).
+- If a pattern check exceeds its time limit, it falls to the safe side: judgement suspects it as `timeout`, and masking masks the whole text.
+- Long text is scanned in overlapping chunks of `max_scan_chars` (default 1 million characters).
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                          # 워크스페이스 안에서
-uv pip install ./packages/py/base/ac-safe-regex ./packages/py/base/ac-secret-rules   # 단독으로
+uv sync --all-packages                          # inside the workspace
+uv pip install ./packages/py/base/ac-safe-regex ./packages/py/base/ac-secret-rules   # standalone
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> from agent_console_secret_rules import SecretRules, check_extra_rules
@@ -60,7 +60,7 @@ uv pip install ./packages/py/base/ac-safe-regex ./packages/py/base/ac-secret-rul
 >>> for f in rules.find_suspected(
 ...     {"env": {"API_KEY": "abc"}, "args": ["--token", "x"], "note": "corp_123456"}, path="/config"
 ... ):
-...     print(f.path, f.reason)  # 위치와 이유만(값은 담지 않는다)
+...     print(f.path, f.reason)  # location and reason only (no value)
 /config/env/API_KEY key_name
 /config/args/1 key_name
 /config/note value_pattern
@@ -68,23 +68,23 @@ uv pip install ./packages/py/base/ac-safe-regex ./packages/py/base/ac-secret-rul
 >>> rules.redact_suspected("curl -H 'Authorization: Bearer abc123456' --token zzz")
 "curl -H 'Authorization: Bearer [REDACTED]' --token [REDACTED]"
 
->>> [(p.field, p.index) for p in check_extra_rules([], ["(a+)+"])]  # 사용자 규칙 검증
+>>> [(p.field, p.index) for p in check_extra_rules([], ["(a+)+"])]  # validate user rules
 [('extra_value_patterns', 0)]
 
 ```
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-secret-rules`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-secret-rules`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 uv run pytest packages/py/base/ac-secret-rules/tests

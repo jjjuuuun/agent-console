@@ -47,7 +47,7 @@ class FlagSetting:
     Args:
         flag: 옵션 이름(앞의 ``--`` 없이, 예: ``"echo-tag"``).
         path: 이 모듈 설정 안 위치.
-        help: 도움말.
+        help: 도움말(영어 원문 — ``serve --help``에 그대로 나온다).
         metavar: 값 이름.
         repeat: 참이면 여러 번 줄 수 있고 값은 목록이다.
     """
@@ -78,7 +78,8 @@ class RemovedSetting:
 
     Args:
         path: 옛 키(설정 전체 기준 점 경로, 예: ``"usage"``·``"modules.options.mod-old"``).
-        reason: 거부 이유. 비우면 ``new``로 안내 문구를 만든다.
+        reason: 거부 이유(영어 원문 — 시작 거부 메시지로 터미널에 찍힌다). 비우면 ``new``로
+            안내 문구를 만든다.
         new: 새 위치(점 경로, 예: ``"modules.options.mod-usage"``). 옮긴 키면 준다. None이면
             대신할 키가 없다(지우기만 하면 된다).
     """
@@ -88,24 +89,26 @@ class RemovedSetting:
     new: str | None = None
 
     def message(self) -> str:
-        """거부 메시지(이유 + 새 위치 안내)."""
+        """거부 메시지(이유 + 새 위치 안내). 시작 거부로 터미널에 찍히므로 영어 원문이다(I.6)."""
         parts: list[str] = []
         if self.reason:
             parts.append(self.reason)
         if self.new is not None:
             parts.append(
-                f"설정 키 {self.path}는 더 이상 읽지 않습니다. {self.new}로 옮기세요"
+                f"The settings key {self.path} is no longer read. Move it to {self.new}"
                 if not self.reason
-                else f"새 위치: {self.new}"
+                else f"New location: {self.new}"
             )
         if not parts:
-            parts.append(f"설정 키 {self.path}는 지웠습니다. 설정 파일에서 지우세요")
+            parts.append(
+                f"The settings key {self.path} was removed. Delete it from the settings file"
+            )
         return ". ".join(parts)
 
 
 @dataclass(frozen=True)
 class SettingsCompat:
-    """모듈 하나의 호스트 설정 호환 선언."""
+    """One module's host settings compatibility declaration."""
 
     env: tuple[EnvSetting, ...] = ()
     flags: tuple[FlagSetting, ...] = ()

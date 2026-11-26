@@ -48,7 +48,7 @@ class SessionKey(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class ArchiveFile:
-    """보관할 원본 파일 하나.
+    """One original file to archive.
 
     Attributes:
         source: 원본 절대 경로.
@@ -61,7 +61,7 @@ class ArchiveFile:
 
 @runtime_checkable
 class SessionArchive(Protocol):
-    """백엔드 세션 기록 보관·복원. 모든 메서드는 동기·파일 시스템만 쓴다(모델 호출 없음)."""
+    """Archive and restore backend session records: synchronous, file system only."""
 
     def files(self, session: SessionKey, *, cwd: str | Path) -> list[ArchiveFile] | None:
         """보관할 원본 파일. 이 앱에 그 세션이 없으면 None.
@@ -94,7 +94,7 @@ class SessionArchive(Protocol):
 
 @runtime_checkable
 class SessionArchiveCapable(Protocol):
-    """선택 능력: 세션 기록 보관·복원을 주는 백엔드."""
+    """Optional capability: a backend that provides session record archive and restore."""
 
     def session_archive(self) -> SessionArchive | None:
         """이 백엔드의 보관 기능. 지금 쓸 수 없으면(예: 앱 전용 자격 폴더가 없음) None."""

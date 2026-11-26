@@ -1,12 +1,19 @@
-# SDD
+# Specs (SDD)
 
-스펙(SDD) 기능은 마크다운 문서에서 작업·요구·단계를 읽어 계획과 추적 표를 만든다. 문서를 읽는 규칙은 데이터이고([sdd-syntax](#sdd-syntax)), 새 스펙의 뼈대는 사용자가 만드는 정의다([spec-template](#spec-template)). 검증 결과([sdd-verification-source](#sdd-verification-source))와 작업 동작([sdd-task-integration](#sdd-task-integration))은 플러그인·연동 모듈로 붙인다.
+The specs (SDD) feature reads tasks, requirements, and phases from markdown documents and builds a plan and a trace
+table. The rules for reading documents are data ([sdd-syntax](#sdd-syntax)), and the skeleton of a new spec is a
+definition the user creates ([spec-template](#spec-template)). Verification results
+([sdd-verification-source](#sdd-verification-source)) and task actions ([sdd-task-integration](#sdd-task-integration))
+are attached with plugins and link modules.
 
 ## sdd-syntax
 
-**언제 쓰나**: 기본 작업 문법(체크 칸 목록 줄, `[키: 값]` 필드, `~` 범위)과 다른 형식의 문서를 읽고 싶을 때. 팀이 쓰는 상태 표시(`[~]` 진행 중 등), 요구 id 모양, 단계로 볼 제목 수준을 바꾼다.
+**When to use**: when you want to read documents in a format different from the default task syntax (checkbox list
+lines, `[key: value]` fields, `~` ranges). Change the status markers your team uses (`[~]` for in progress, and so
+on), the shape of requirement ids, and the heading levels treated as phases.
 
-**최소 모양**: 워크스페이스 설정의 `sdd` 섹션 `syntax`(모든 스펙) 또는 스펙 규칙 `rules.syntax`(그 스펙만)다. 비운 항목은 아래 층을 따른다.
+**Minimal shape**: `syntax` in the `sdd` section of the workspace settings (all specs), or the spec rule
+`rules.syntax` (that spec only). Empty items follow the layer below.
 
 ```yaml extdocs:validate=agent_console_contracts.sdd:SddSettings
 include_default_syntax: true
@@ -23,32 +30,44 @@ syntax:
     heading_levels: [2]
 ```
 
-**규칙**
-- 병합 순서는 패키지 기본 → 사용자 설정 `sdd.syntax` → 스펙 `rules.syntax`(+ `rules.task_statuses`)다. 첫 단계(`task`·`requirement`·`stage`)는 키 단위로 합치고, 그 아래 목록과 `roles`는 통째로 바꾼다. `null`은 상속, 빈 목록은 "이 층에서는 없음"이다.
-- 코드가 뜻을 아는 필드 역할은 `dependencies`·`requirements`·`assignee`(+ 선택 `weight`)뿐이다. 어느 필드 이름이 그 역할인지는 `roles`가 정한다.
-- 정규식은 이름 그룹을 쓴다(`id`, `key`·`value`). 길이·시간 상한이 있고, 위험한 중첩 반복은 거부된다(`sdd.invalid_pattern`).
-- 상태를 바꾸면 그 작업 머리 줄의 체크 칸 글자와 필드 값만 고친다. 다른 바이트는 그대로다.
+**Rules**
+- The merge order is package defaults → user setting `sdd.syntax` → spec `rules.syntax` (+ `rules.task_statuses`).
+  The first level (`task`, `requirement`, `stage`) is merged key by key, and the lists below it and `roles` are
+  replaced entirely. `null` inherits, and an empty list means "none in this layer".
+- The only field roles the code understands are `dependencies`, `requirements`, and `assignee` (+ the optional
+  `weight`). `roles` decides which field name plays each role.
+- Regular expressions use named groups (`id`, `key`, `value`). They have length and time limits, and dangerous nested
+  repetition is rejected (`sdd.invalid_pattern`).
+- Changing a status changes only the checkbox character and field values on that task's head line. Every other byte
+  stays the same.
 
-**흔한 실수**: `statuses`에 한 상태만 적어 기본 상태를 지우기(목록은 통째로 바뀐다), 같은 표시 글자를 두 상태에 주기(`sdd.duplicate_status_marker`), `roles`를 바꾸고 기존 문서의 필드 이름을 그대로 두기(의존이 비어 보인다).
+**Common mistakes**: listing only one status in `statuses`, which removes the default statuses (the list is replaced
+entirely), giving the same marker character to two statuses (`sdd.duplicate_status_marker`), and changing `roles`
+while leaving the field names in existing documents as they were (dependencies show as empty).
 
-**끄기**: `include_default_syntax: false`면 기본 문법이 빠진다. 사용자 문법도 없으면 작업이 0개이고 `sdd.syntax_missing`이 붙는다. 설정 일부가 깨지면 그 부분만 빼고 `sdd.settings_invalid`로 알린다.
+**Turning off**: with `include_default_syntax: false`, the default syntax drops out. If there is no user syntax
+either, there are zero tasks and `sdd.syntax_missing` is attached. If part of the settings is broken, only that part
+is left out and reported with `sdd.settings_invalid`.
 
 <!-- extdocs:facts sdd-syntax -->
-- 등록: 패키지 데이터 `data/default_syntax.yaml`를 설정(`sdd.syntax`)으로 덮어쓴다.
-- 인터페이스:
+- Registration: Uses the package data `data/default_syntax.yaml`; the settings `sdd.syntax` override it.
+- Interface:
   - `agent_console_contracts.sdd:SpecSyntax` — 작업·요구·단계를 문서에서 읽는 규칙입니다. 비운 항목은 앱 설정이나 기본 규칙을 따릅니다.
-  - `agent_console_sdd:load_default_syntax` — 패키지 기본 작업 문법(`data/default_syntax.yaml`)을 읽는다.
-- 기본 구현: —
-- 예제:
-  - snippet: 사용자 설정 sdd.syntax 데이터
-- 끄기·제거: 끄는 키: `sdd.include_default_syntax`.
+  - `agent_console_sdd:load_default_syntax` — Read the package default task syntax (`data/default_syntax.yaml`).
+- Built-in implementations: —
+- Examples:
+  - snippet: Data in the user setting `sdd.syntax`
+- Turning it off or removing it: Keys that turn it off: `sdd.include_default_syntax`.
 <!-- /extdocs:facts -->
 
 ## sdd-task-integration
 
-**언제 쓰나**: 스펙 작업에 동작·링크·이슈·자동 진행을 붙인다. 예: 작업에서 팀 구성을 실행하고 실행 결과로 상태를 바꾸기, 외부 이슈 트래커의 항목을 작업 옆에 보이기. 다른 기능과 잇는 일이라 연동 모듈이 제공한다.
+**When to use**: to attach actions, links, issues, and auto-advance to spec tasks. Examples: running a team from a
+task and changing the status from the run result, and showing the items of an outside issue tracker next to tasks.
+This connects to other features, so link modules provide it.
 
-**최소 모양**: `id`와 비동기 메서드 셋이다. 참조 구현은 [실행·SDD 연동](../../packages/py/links/ac-link-runs-sdd/README.md)이다.
+**Minimal shape**: `id` and three asynchronous methods. The reference implementation is the
+[runs and SDD link](../../packages/py/links/ac-link-runs-sdd/README.md).
 
 ```python
 class TrackerLinks:
@@ -56,52 +75,60 @@ class TrackerLinks:
     link_kinds = ("issue",)
 
     async def actions(self, ctx, task):      # -> list[TaskAction]
-        return []                            # 이 작업에서 할 수 있는 동작
+        return []                            # the actions available on this task
 
     async def invoke(self, ctx, task, action, args):   # -> TaskActionResult
-        raise NotImplementedError            # 동작을 내지 않으면 불리지 않는다
+        raise NotImplementedError            # never called if it offers no actions
 
-    async def links(self, ctx, tasks):       # -> list[TaskLink], 모든 작업을 한 번에
+    async def links(self, ctx, tasks):       # -> list[TaskLink], all tasks at once
         return []
 ```
 
-**선택 능력**: `check_profile(ctx, profile)`(실행 프로필 검사, 예: `sdd.profile_graph_missing`), `task_issues(ctx, tasks)`(작업마다 이슈를 더한다, 동기), `automation_state`·`control(op)`(자동 진행). 자동 진행 능력이 있는 연동이 없으면 화면에 자동 진행이 보이지 않는다.
+**Optional capabilities**: `check_profile(ctx, profile)` (checking run profiles, for example
+`sdd.profile_graph_missing`), `task_issues(ctx, tasks)` (adds issues per task, synchronous), and `automation_state`
+and `control(op)` (auto-advance). If no link has the auto-advance capability, the screens do not show auto-advance.
 
-**규칙**
-- 다중 포트다. 여러 연동의 동작·링크를 모두 모은다.
-- `links`는 작업 목록을 한 번에 받는다. 작업마다 따로 외부를 부르지 않는다.
-- 파일을 읽어야 하면 `ctx`가 주는 스펙 파일 접근(그 공간 폴더 안만)을 쓴다.
-- `link_kinds`에 `run`이 있으면 화면이 실행 능력을 켠다. 능력은 포트 유무로 계산하므로 웹은 모듈 id를 몰라도 된다.
+**Rules**
+- It is a multi-provider port. The actions and links of all links are collected.
+- `links` receives the task list at once. Do not call outside systems separately for each task.
+- If you need to read files, use the spec file access that `ctx` provides (only inside that space's folder).
+- When `link_kinds` contains `run`, the screens turn on the run capability. Capabilities are computed from the
+  presence of ports, so the web does not need to know module ids.
 
-**흔한 실수**: `invoke`에서 작업 문서를 직접 고치기(상태 바꾸기는 SDD 모듈의 고치기 경로로 한다), 외부 호출 실패를 예외로 흘려 목록 전체를 막기(이슈로 돌려준다).
+**Common mistakes**: editing task documents directly in `invoke` (change statuses through the SDD module's edit
+path), and letting outside call failures escape as exceptions, which blocks the whole list (return them as issues).
 
-**끄기**: 제공하는 연동을 끄면 그 동작·링크만 빠진다. 문서와 작업 상태는 그대로다.
+**Turning off**: when you turn off the providing link, only its actions and links drop out. Documents and task
+statuses stay as they are.
 
 <!-- extdocs:facts sdd-task-integration -->
-- 등록: 서버 모듈이 포트 `sdd.integrations`(기호 `agent_console_mod_sdd.ports:SDD_INTEGRATIONS`, 다중 예)를 제공한다.
-- 인터페이스:
-  - `agent_console_sdd:TaskIntegration` — 작업 연동(다중 포트 `sdd.integrations`). 기본 구현은 실행(link-runs-sdd).
-  - `agent_console_sdd:ProfileChecker` — 선택 능력: 실행 프로필 검사(예: 팀 구성이 공간에 있는지 → `sdd.profile_graph_missing`).
-  - `agent_console_sdd:TaskIssueSource` — 선택 능력: 작업 이슈.
-  - `agent_console_sdd:AutomationControl` — 선택 능력: 자동 진행 상태·멈춤·다시 시작. 없으면 `capabilities.automation=false`.
-- 기본 구현: `link-runs-sdd`
-- 예제:
+- Registration: A server module provides the port `sdd.integrations` (symbol `agent_console_mod_sdd.ports:SDD_INTEGRATIONS`, multiple: yes).
+- Interface:
+  - `agent_console_sdd:TaskIntegration` — Task integration (multi port `sdd.integrations`). Default implementation: link-runs-sdd.
+  - `agent_console_sdd:ProfileChecker` — Optional capability: run profile check (e.g. team missing → `sdd.profile_graph_missing`).
+  - `agent_console_sdd:TaskIssueSource` — Optional capability: task issues.
+  - `agent_console_sdd:AutomationControl` — Optional capability: auto-advance status, pause, and resume (`capabilities.automation`).
+- Built-in implementations: `link-runs-sdd`
+- Examples:
   - reference: [packages/py/links/ac-link-runs-sdd](../../packages/py/links/ac-link-runs-sdd/README.md)
-- 끄기·제거: 제공하는 모듈을 끄면(`modules.<id>.enabled: false`) 소비하는 쪽은 그 부분만 꺼진다.
+- Turning it off or removing it: Turn off the providing module (`modules.<id>.enabled: false`); consumers turn off only the parts that use it.
 <!-- /extdocs:facts -->
 
 ## sdd-verification-source
 
-**언제 쓰나**: 추적 표의 검증 열에 다른 곳의 결과(테스트 보고서, CI 결과)를 넣는다. 결과 파일 형식 하나마다 출처 하나다.
+**When to use**: to put results from elsewhere (test reports, CI results) into the verification column of the trace
+table. There is one source per result file format.
 
-**최소 모양**: `id`와 `async collect(ctx) -> list[VerificationResult]`이다. entry point 값은 출처 객체나 인자 없이 불러 출처를 만드는 클래스다. 전체 예는 [JUnit 예제](../../examples/extensions/agent-console-example-sdd-junit/README.md)다.
+**Minimal shape**: `id` and `async collect(ctx) -> list[VerificationResult]`. The entry point value is the source
+object, or a class that creates the source when called without arguments. For a full example, see the
+[JUnit example](../../examples/extensions/agent-console-example-sdd-junit/README.md).
 
 ```toml
 [project.entry-points."agent_console.sdd_verification_sources"]
 "example.junit" = "agent_console_example_sdd_junit:JUnitVerificationSource"
 ```
 
-설치만으로는 쓰이지 않는다. 사용자 설정에서 켜고 옵션을 준다.
+Installing it is not enough. Turn it on in the user settings and give it options.
 
 ```yaml extdocs:validate=agent_console_contracts.sdd:SddSettings
 verification_sources:
@@ -110,32 +137,41 @@ verification_sources:
     options: {paths: ["reports/**/*.xml"]}
 ```
 
-**규칙**
-- 파일은 `ctx.spec.files`(그 공간 폴더 안만, 링크·앱 구성 폴더 거부)로만 읽는다. 옵션의 경로가 폴더 밖을 가리키면 거부한다.
-- 결과는 요구 id나 작업 키에 붙인다. 스펙에 없는 키는 버린다.
-- 연동 모듈이 포트로 주는 출처는 설정 없이 쓰이고, 설정에 `enabled: false`로 적으면 꺼진다. 플러그인 출처는 설정에 적어야 켜진다.
-- 옵션 값은 출처가 정한다. 틀린 옵션은 결과 없이 돌려주고, 비밀 값·파일 본문을 결과 문장에 싣지 않는다.
+**Rules**
+- Read files only through `ctx.spec.files` (only inside that space's folder; links and the app configuration folder
+  are rejected). Reject option paths that point outside the folder.
+- Attach results to requirement ids or task keys. Keys that are not in the spec are dropped.
+- Sources that link modules provide through a port are used without settings and are turned off by writing
+  `enabled: false` in the settings. Plugin sources are on only when written in the settings.
+- The source defines its option values. Return no results for wrong options, and do not put secret values or file
+  contents in result text.
 
-**흔한 실수**: 결과 파일을 절대 경로로 받기, XML 엔티티 선언을 그대로 읽기(외부 엔티티 공격).
+**Common mistakes**: taking result files as absolute paths, and reading XML entity declarations as they are (external
+entity attacks).
 
-**끄기와 남는 데이터**: 설정에서 끄거나 패키지를 지우면 검증 열에서 그 출처의 결과가 빠진다. 설정에 남은 항목은 지금은 경고 없이 무시된다.
+**Turning off and leftover data**: when you turn it off in the settings or remove the package, that source's results
+drop out of the verification column. Entries left in the settings are currently ignored without a warning.
 
 <!-- extdocs:facts sdd-verification-source -->
-- 등록: entry point 그룹 `agent_console.sdd_verification_sources`(상수 `agent_console_mod_sdd:VERIFICATION_SOURCES_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_sdd:VerificationSource` — 검증 결과 출처. entry point `agent_console.sdd_verification_sources` 또는 다중 포트
-- 기본 구현: —
-- 예제:
+- Registration: Register in the entry point group `agent_console.sdd_verification_sources` (constant `agent_console_mod_sdd:VERIFICATION_SOURCES_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_sdd:VerificationSource` — Verification result source, plugged in by entry point or multi port.
+- Built-in implementations: —
+- Examples:
   - package: [examples/extensions/agent-console-example-sdd-junit](../../examples/extensions/agent-console-example-sdd-junit/README.md)
   - reference: [packages/py/links/ac-link-runs-sdd](../../packages/py/links/ac-link-runs-sdd/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->
 
 ## spec-template
 
-**언제 쓰나**: 새 스펙을 만들 때 복사할 문서 뼈대(요구·설계·작업 문서)와 규칙(작업 상태, 문서 상태, 관문, 실행 프로필)을 준비한다. 앱은 틀을 하나도 갖고 오지 않는다. 사용자가 화면·파일·가져오기로 만든다.
+**When to use**: to prepare the document skeletons (requirements, design, and task documents) and rules (task
+statuses, document statuses, gates, run profiles) to copy when a new spec is created. The app ships no templates at
+all. Users create them on screens, in files, or by importing.
 
-**최소 모양**: 정의 종류 `spec-template`의 문서 하나다. 문서마다 파일 이름과 역할(`tasks`·`requirements`)을 적는다. 뼈대 본문은 정의 옆 본문 폴더의 파일이다(화면의 틀 편집이나 SDD 모듈의 틀 파일 경로로 쓴다).
+**Minimal shape**: one document of the definition kind `spec-template`. For each document, write the file name and
+its roles (`tasks`, `requirements`). The skeleton bodies are files in the body folder next to the definition (write
+them with the template editor on screen or through the SDD module's template file path).
 
 ```yaml extdocs:validate=agent_console_contracts.sdd:SpecTemplate
 kind: spec-template
@@ -151,21 +187,27 @@ rules:
     - {id: done, label: 완료, marker: x, done: true}
 ```
 
-**규칙**
-- 스펙을 만들 때 틀의 `documents`·`rules`와 뼈대 파일을 복사한다. 그 뒤 스펙은 틀과 독립이다. 틀을 고쳐도 이미 만든 스펙은 바뀌지 않는다.
-- 문서 역할 `tasks`·`requirements`가 있는 문서만 작업·요구로 읽는다. 역할 없는 문서는 있는지와 해시만 본다.
-- 틀은 라이브러리와 프로젝트 공간 모두에 둘 수 있고 프로젝트로 옮길 수 있다. 실행 프로필이 가리키는 팀 구성은 복사할 때 함께 따라간다.
-- 종류 이름(`spec-template`)은 SDD 모듈 설치자 데이터의 기본값이다. 설치자가 바꾸면 `kind` 값도 그 이름이다.
+**Rules**
+- When a spec is created, the template's `documents` and `rules` and the skeleton files are copied. After that, the
+  spec is independent of the template. Editing the template does not change specs already created.
+- Only documents with the roles `tasks` or `requirements` are read for tasks and requirements. For documents without
+  a role, only their existence and hash are checked.
+- Templates can live in both the library and project spaces, and can be copied to projects. The teams that run
+  profiles point to come along when you copy.
+- The kind name (`spec-template`) is the default in the SDD module's administrator data. If the administrator changes
+  it, the `kind` value is that name too.
 
-**흔한 실수**: 같은 `file`을 두 문서에 주기, 실행 프로필의 팀 구성을 라이브러리에만 두고 틀을 프로젝트로 옮기기(복사 계획이 함께 가져오지만, 건너뛰면 `sdd.profile_graph_missing`).
+**Common mistakes**: giving the same `file` to two documents, and copying a template to a project while the teams of
+its run profiles exist only in the library (the copy plan brings them along, but if you skip them, you get
+`sdd.profile_graph_missing`).
 
-**끄기**: 틀을 지워도 그 틀로 만든 스펙은 남는다.
+**Turning off**: deleting a template does not delete the specs created from it.
 
 <!-- extdocs:facts spec-template -->
-- 등록: 등록 종류 `definition`.
-- 인터페이스:
+- Registration: Registration kind `definition`.
+- Interface:
   - `agent_console_contracts.sdd:SpecTemplate` — 문서 틀입니다. 스펙을 만들 때 문서 뼈대와 규칙을 그대로 복사합니다.
-- 기본 구현: —
-- 예제:
-  - snippet: 문서 틀 정의 데이터
+- Built-in implementations: —
+- Examples:
+  - snippet: Document template definition data
 <!-- /extdocs:facts -->

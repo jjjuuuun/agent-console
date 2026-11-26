@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-conditions>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
@@ -59,24 +59,24 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console.extension-points.memory-scope-kind]
-title = "메모리 범위 종류"
+title = "Memory scope kind"
 area = "memory"
 design_id = "X29"
-summary = "공유 메모리의 범위 종류(id 틀)를 사용자 설정이나 플러그인으로 더한다"
+summary = "Adds a scope kind (an id template) for shared memory through user settings or a plugin"
 registration = { kind = "entry-point", group = "agent_console_memory:MEMORY_SCOPE_KINDS_GROUP" }
 interface = "agent_console_memory:MemoryScopeKind"
 settings = ["memory.scope_kinds", "memory.include_default_scope_kinds"]
 example = [
     { kind = "package", path = "examples/extensions/agent-console-example-memory-scope" },
-    { kind = "snippet", note = "사용자 설정 memory.scope_kinds 데이터" },
+    { kind = "snippet", note = "Data in the user setting `memory.scope_kinds`" },
 ]
 guide = "memory.md"
 
 [tool.agent-console.extension-points.memory-store]
-title = "메모리 저장소"
+title = "Memory store"
 area = "memory"
 design_id = "X31"
-summary = "공유 메모리를 다른 저장소(DB·원격 등)에 둔다"
+summary = "Keeps shared memory in a different store (a database, a remote service, and so on)"
 registration = { kind = "injection" }
 interface = "agent_console_memory:MemoryStore"
 builtin = "none"

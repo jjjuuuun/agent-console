@@ -2,6 +2,7 @@
 
 ## 미출시
 
+- P1.5: `SpecRepository.save_as_template(..., taken=())` — `create_template`처럼 이름에서 만든 id와 `rename` 새 id가 `taken`(예: 경로 예약어, 대소문자 무시)을 피한다. 준 id는 그대로(거부는 호출자 몫). 생략 = 지금 동작.
 - REL.5: 가져온 문서 본문 파일 이름의 번호 붙이기를 `agent_console_store.numbered_id`로 합쳤다(동작 같음).
 - FU.5: `slug_id`·`unique_id`는 `agent_console_store`의 것을 다시 내보낸다(`_ids` 사본 삭제, 규칙 그대로).
 

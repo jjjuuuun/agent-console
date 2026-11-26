@@ -201,7 +201,7 @@ def test_graph_settings_and_workspace_layers_round_trip() -> None:
     ws_doc: dict[str, Any] = {
         "agent_defaults": {"backend": "b1", "observe": {"hooks": True}},
         "usage": {"window_labels": {"w-1": "창 1"}, "sources": [{"id": "src-1"}]},
-        "default_backend": "old",  # 이전 형식 읽기 호환
+        "default_backend": "old",  # 0.16.0에서 지운 키 — 모르는 키로 보존(읽고 무시)
     }
     ws = WorkspaceSettings.model_validate(ws_doc)
     assert ws.chat.reply_display == "separate"

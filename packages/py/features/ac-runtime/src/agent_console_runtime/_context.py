@@ -67,7 +67,7 @@ class ChildRunner(Protocol):
 
 
 class NodeContext:
-    """노드 1회 실행 맥락. 노드는 전역·환경변수·파일 시스템 대신 이것만 쓴다.
+    """Context for one node run. Nodes use only this, not globals, env vars, or the file system.
 
     Attributes:
         run: 이 노드가 속한 Run(시작 시점 사본).

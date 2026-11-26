@@ -7,14 +7,14 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-local-folders>=0.1,<0.2",
     "agent-console-project-space>=0.1,<0.2",
     "agent-console-projects>=0.3,<0.4",
     "agent-console-registry>=0.1,<0.2",
     "agent-console-secret-rules>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "pydantic>=2.9",
     "fastapi>=0.115",
 ]
@@ -64,41 +64,41 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_mod_projects.ports:PROJECTS_LOOKUP", reason = "프로젝트 모듈이 연동 모듈과 기능 모듈(대화·실행의 위치 찾기 등)에 주는 읽기 통로(구현은 이 모듈 하나)" },
-    { port = "agent_console_mod_projects.ports:PROJECT_FOLDERS", reason = "등록된 프로젝트 폴더를 다른 기능 모듈에 주는 통로(구현은 이 모듈 하나)" },
-    { port = "agent_console_mod_projects.ports:PROJECTS_SPACES", reason = "프로젝트 공간을 연동 모듈에 여는 통로(구현은 이 모듈 하나)" },
+    { port = "agent_console_mod_projects.ports:PROJECTS_LOOKUP", reason = "Read port that the projects module gives link modules and feature modules (for example, to locate conversations and runs) (this module is the only implementation)" },
+    { port = "agent_console_mod_projects.ports:PROJECT_FOLDERS", reason = "Port that gives other feature modules the registered project folders (this module is the only implementation)" },
+    { port = "agent_console_mod_projects.ports:PROJECTS_SPACES", reason = "Port that opens project spaces to link modules (this module is the only implementation)" },
 ]
 
 [tool.agent-console.extension-points.definition-references]
-title = "정의 참조 추출"
+title = "Definition reference extraction"
 area = "projects"
 design_id = "X25"
-summary = "정의 문서가 쓰는 다른 정의를 알려 복사 계획·범위 검사의 참조 닫힘에 넣는다"
+summary = "Reports the other definitions that a definition document uses, so that they join the reference closure of copy plans and space checks"
 registration = { kind = "port", port = "agent_console_mod_projects.ports:DEFINITIONS_REFERENCES" }
 interface = "agent_console_mod_projects.ports:References"
 example = { kind = "reference", path = "packages/py/links/ac-link-definitions-teams" }
 guide = "projects.md"
 
 [tool.agent-console.extension-points.definition-reference-rewriter]
-title = "정의 참조 고치기"
+title = "Definition reference rewriting"
 area = "projects"
 design_id = "X25"
-summary = "이름을 바꿔 복사할 때 정의 문서 안의 참조를 새 이름으로 고친다"
+summary = "Rewrites the references inside a definition document to the new names when it is copied under a new name"
 registration = { kind = "port", port = "agent_console_mod_projects.ports:DEFINITIONS_REWRITERS" }
 interface = "agent_console_projects:RewriteReferences"
-example = { kind = "snippet", note = "참조 고치기 함수 하나를 포트로 제공" }
+example = { kind = "snippet", note = "Provide one reference rewriting function through a port" }
 guide = "projects.md"
 
 [tool.agent-console.extension-points.folder-dialog-provider]
-title = "폴더 선택 창 제공자"
+title = "Folder picker dialog provider"
 area = "projects"
 design_id = "X35"
-summary = "운영체제 폴더 선택 창을 명령 데이터나 코드 제공자로 더한다"
+summary = "Adds an operating system folder picker dialog through command data or a code provider"
 registration = { kind = "entry-point", group = "agent_console_mod_projects:FOLDER_DIALOGS_GROUP" }
 interface = "agent_console_mod_projects:FolderDialogProvider"
 settings = ["mod-projects.folder_dialog.providers", "mod-projects.folder_dialog.include_default_providers"]
 example = [
-    { kind = "reference", path = "packages/py/features/ac-local-folders", note = "명령 표 데이터 data/folder_dialogs.json" },
-    { kind = "snippet", note = "코드 제공자" },
+    { kind = "reference", path = "packages/py/features/ac-local-folders", note = "Command table data `data/folder_dialogs.json`" },
+    { kind = "snippet", note = "Code provider" },
 ]
 guide = "projects.md"

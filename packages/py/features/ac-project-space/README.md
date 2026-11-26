@@ -1,33 +1,33 @@
 # agent-console-project-space
 
-프로젝트 폴더 하나의 `<폴더>/.agent-console/`를 **구성 사본 공간**으로 연다.
-정의(에이전트·팀 구성·리소스 등)는 workspace 정의 YAML과 같은 형식(종류별 폴더, `ac-store`의
-`FileDefinitionStore`)으로 저장하고, 폴더 매니페스트 `project.yaml`을 읽고 쓴다.
-서버·DB·웹 없이 폴더 하나만으로 동작한다.
+Opens `<folder>/.agent-console/` of one project folder as a **configuration copy space**.
+Definitions (agents, teams, resources, and so on) are stored in the same format as workspace definition YAML (one folder per kind, `ac-store`'s
+`FileDefinitionStore`), and the folder manifest `project.yaml` is read and written.
+It works with only the folder, without the server, a database, or the web app.
 
-- 등록 시점(`init_space`)에 `project.yaml`과 `.gitignore`를 **없을 때만** 만든다. 있으면 채택하고 고치지 않는다.
-  깨진 매니페스트 폴더에는 아무것도 쓰지 않는다. 쓸 수 없는 폴더는 `config_writable=False`로 알린다.
-- 비밀처럼 보이는 값은 저장하지 않는다(`SecretRejected`, 값 없이 위치만). 정의에는 `secret://<이름>` 참조만 둔다.
-- 충돌 감지는 정의 저장소와 같은 If-Match(`expected_version`)다. 매니페스트도 같다.
-- 종류 이름·폴더 이름·파일 이름은 코드에 없다. 종류는 `DefinitionKind`(`portable`인 것만 공간에 들어간다),
-  이름은 `config_dir`·`SpaceLayout` 인자다. `.gitignore` 틀은 패키지 데이터 `data/gitignore.template`이다. 틀의 이름 자리(`{records_file}`·
-  `{sessions_dir}`·`{memory_file}`·`{state_dir}`)는 공간 배치로 채운다(`render_gitignore_template`).
-- 파일 시스템은 `SpaceFiles`로 주입한다(기본 `LocalFiles`). 정의 저장소 자체는 `FileDefinitionStore`라서
-  그 root는 로컬 경로다.
-- 기록 DB(`records.sqlite3`)·메모리 DB 경로만 알려 준다(`records_db_path`·`memory_db_path`). 파일은 만들지 않는다. 기록 DB를 여는 일은 `ac-store`의 `open_records_db`가 한다(이 패키지는 경로만 안다).
+- At registration (`init_space`), `project.yaml` and `.gitignore` are created **only when missing**. Existing ones are adopted and not changed.
+  Nothing is written into a folder with a broken manifest. A folder that cannot be written is reported with `config_writable=False`.
+- Values that look like secrets are not stored (`SecretRejected`, with locations but no values). Definitions hold only `secret://<name>` references.
+- Conflict detection uses the same If-Match (`expected_version`) as the definition store. So does the manifest.
+- No kind names, folder names, or file names are in the code. Kinds are `DefinitionKind` (only `portable` kinds go into the space),
+  and names are the `config_dir` and `SpaceLayout` arguments. The `.gitignore` template is the package data `data/gitignore.template`. The name slots in the template (`{records_file}`,
+  `{sessions_dir}`, `{memory_file}`, `{state_dir}`) are filled from the space layout (`render_gitignore_template`).
+- The file system is injected as `SpaceFiles` (default `LocalFiles`). The definition store itself is `FileDefinitionStore`, so
+  its root is a local path.
+- It only reports the paths of the records database (`records.sqlite3`) and the memory database (`records_db_path`, `memory_db_path`). It does not create the files. Opening the records database is done by `ac-store`'s `open_records_db` (this package knows only the path).
 
-## 설치
+## Installation
 
 ```bash
 pip install agent-console-project-space
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-project-space
+# outside the repository, with internal dependencies: pip install --find-links <wheelhouse> agent-console-project-space
 ```
 
-의존(무엇을 / 왜 / 대안): `agent-console-store`(정의 저장소·YAML 형식 재사용 / 새 저장 형식을 만들지 않으려고),
-`agent-console-secret-rules`(비밀 의심 규칙 재사용 / 규칙을 복사하지 않으려고, 대안: 검사 함수 주입만 받기 -- 단독
-사용에서 검사가 빠질 수 있어 택하지 않음), `agent-console-contracts`(`ProjectManifest`).
+Dependencies (what / why / alternatives): `agent-console-store` (reuses the definition store and YAML format / to avoid a new storage format),
+`agent-console-secret-rules` (reuses the secret suspicion rules / to avoid copying the rules; alternative: accept only an injected check function, not chosen because
+standalone use could skip the check), `agent-console-contracts` (`ProjectManifest`).
 
-## 최소 사용
+## Minimal usage
 
 ```python
 >>> import tempfile
@@ -58,37 +58,37 @@ pip install agent-console-project-space
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after the expected output (so the closing ``` line is not read as output). -->
 
-## 공개 API
+## Public API
 
-| 이름 | 하는 일 |
+| Name | What it does |
 | --- | --- |
-| `open_space(folder, *, kinds, versions, config_dir, files, layout, secret_rules, scan_bodies, ...)` | 공간을 연다(쓰기 없음). `ProjectSpace{folder, root, definitions, manifest_path, gitignore_path, memory_db_path, records_db_path, sessions_dir, state_dir, portable_kinds, config_writable}` |
-| `init_space(folder, *, manifest, gitignore_template, **open 인자)` | `project.yaml`·`.gitignore`를 없을 때만 만든다 -> `InitResult{space, manifest, manifest_state, manifest_issue, gitignore_state}` |
-| `read_manifest(space)` / `write_manifest(space, manifest, *, expected_version)` | 매니페스트 읽기(없으면 None) / If-Match 쓰기(모르는 키·주석 보존) |
-| `reset_manifest(space, manifest, *, now)` | 옛 `project.yaml`을 `<state_dir>/backups/project-<UTC>.yaml`로 보관하고 새로 씀 |
-| `portable_kinds(kinds)` | 공간에 들어가는 종류(`DefinitionKind.is_portable`) |
-| `scan_secrets(rules, document)` | 평문 비밀 의심 위치(값 없음) |
-| `default_gitignore_template()` | 패키지 데이터 `.gitignore` 틀 |
-| `missing_gitignore_lines(space, template=None)` | 틀의 `/` 줄 중 `.gitignore`에 빠진 줄(파일이 없으면 전부). 알리기만 한다 |
-| `append_gitignore(space, template=None)` | 빠진 줄을 끝에 덧붙이고(있는 줄은 그대로) 더한 줄을 돌려준다. 읽기 전용이면 `ConfigReadonly` |
-| `SpaceFiles`·`LocalFiles` | 파일 시스템 주입점 / 기본 구현 |
-| 예외 | `SpaceError`(`StoreError`) 하위: `FolderMissing`·`ConfigReadonly`·`UnsafeConfigDir`·`ManifestInvalid`(`reason`), `SecretRejected`(`StoreError`, `findings`, `field_issues()` → 422 `details.issues`). `code`는 계약 `ErrorCodes` — 서버는 공용 `store_error_body`로 응답한다 |
+| `open_space(folder, *, kinds, versions, config_dir, files, layout, secret_rules, scan_bodies, ...)` | Opens the space (no writes). `ProjectSpace{folder, root, definitions, manifest_path, gitignore_path, memory_db_path, records_db_path, sessions_dir, state_dir, portable_kinds, config_writable}` |
+| `init_space(folder, *, manifest, gitignore_template, **open arguments)` | Creates `project.yaml` and `.gitignore` only when missing -> `InitResult{space, manifest, manifest_state, manifest_issue, gitignore_state}` |
+| `read_manifest(space)` / `write_manifest(space, manifest, *, expected_version)` | Reads the manifest (None when missing) / writes with If-Match (unknown keys and comments preserved) |
+| `reset_manifest(space, manifest, *, now)` | Keeps the old `project.yaml` as `<state_dir>/backups/project-<UTC>.yaml` and writes a new one |
+| `portable_kinds(kinds)` | Kinds that go into the space (`DefinitionKind.is_portable`) |
+| `scan_secrets(rules, document)` | Locations of suspected plain-text secrets (no values) |
+| `default_gitignore_template()` | The package data `.gitignore` template |
+| `missing_gitignore_lines(space, template=None)` | Lines of the template starting with `/` that are missing from `.gitignore` (all of them when there is no file). It only reports |
+| `append_gitignore(space, template=None)` | Appends the missing lines at the end (existing lines stay) and returns the added lines. `ConfigReadonly` when read-only |
+| `SpaceFiles`, `LocalFiles` | File system injection point / default implementation |
+| Exceptions | Under `SpaceError` (`StoreError`): `FolderMissing`, `ConfigReadonly`, `UnsafeConfigDir`, `ManifestInvalid` (`reason`), `SecretRejected` (`StoreError`, `findings`, `field_issues()` → 422 `details.issues`). `code` is the contract `ErrorCodes`; the server responds with the shared `store_error_body` |
 
-`.gitignore` 틀의 줄은 구성 폴더 바로 아래만 가리키도록 `/`로 시작한다(리소스 이름이 `claude`·`sessions`여도
-커밋에서 빠지지 않게). 버전 기록은 호출자가 `versions=`로 넘긴다(보통 그 폴더 기록 DB —
-`agent_console_store.RecordsVersionRepository`). 생략하면 메모리다. 기록소가 `ensure_writable()`을 주면 정의를 쓰기
-전에 불러, 기록 DB를 쓸 수 없을 때 정의 파일도 쓰지 않는다.
-테스트 도구는 `agent_console_project_space.testing`(`ReadOnlyFiles`·`FolderSpaces` 등)이다.
+Lines in the `.gitignore` template start with `/` so they point only directly under the config folder (so resources named `claude` or `sessions`
+are not left out of commits). Version history is passed by the caller as `versions=` (usually that folder's records database,
+`agent_console_store.RecordsVersionRepository`). If omitted, it is in memory. If the history store provides `ensure_writable()`, it is called before writing definitions,
+so when the records database cannot be written, the definition files are not written either.
+Test tools are in `agent_console_project_space.testing` (`ReadOnlyFiles`, `FolderSpaces`, and so on).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes development dependencies (dev group)
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the README.md doctests
 ```

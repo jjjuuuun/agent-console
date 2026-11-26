@@ -2,7 +2,7 @@
 
 from typing import Final
 
-CONTRACTS_VERSION: Final = "0.15.0"
+CONTRACTS_VERSION: Final = "0.16.0"
 """계약 전체 버전(`GET /bootstrap`의 contracts_version). 하위 모듈 버전(`CONTRACT_VERSIONS`) 중
 하나라도 바뀌면 올린다(design §3R.3, modularity §3.6)."""
 
@@ -10,6 +10,7 @@ CONTRACT_SUBMODULES: Final = (
     "common",
     "resources",
     "logs",
+    "i18n",
     "definitions",
     "runs",
     "usage",
@@ -27,6 +28,7 @@ CONTRACT_SUBMODULES: Final = (
 
 import 규칙(import-linter layers, 루트 `importlinter.rules.toml`): 위 층만 아래 층을 import한다.
 `resources`·`logs`는 서로 모르고(둘 다 `common`만 쓴다, `definitions`가 둘을 쓴다),
+`i18n`도 같은 층이다(0.16.0: `common`만 쓰고 다른 하위 모듈은 `i18n`을 쓰지 않는다),
 `runs`·`usage`·`projects`는 서로 모르고(0.8.0: `projects`는 `definitions`까지만 쓴다),
 `chat`·`exports`·`imports`·`architecture`도 서로 모른다(0.9.0: `architecture`는 `runs`의 조건·
 `logs`의 이벤트·`definitions`의 이슈를 쓴다. 0.10.0: `memory`도 같은 층이고 `runs`의 조건·
@@ -38,19 +40,20 @@ TS 생성물도 같은 이름의 하위 경로(`@agent-console/contracts/<이름
 """
 
 CONTRACT_VERSIONS: Final[dict[str, str]] = {
-    "common": "2.0.0",
+    "common": "2.1.0",
     "resources": "1.1.0",
     "logs": "2.0.0",
-    "definitions": "2.0.0",
+    "i18n": "1.0.0",
+    "definitions": "3.0.0",
     "runs": "1.9.0",
     "usage": "1.1.0",
-    "projects": "4.0.0",
+    "projects": "4.1.0",
     "chat": "1.4.0",
     "exports": "1.0.0",
     "imports": "1.1.0",
     "architecture": "1.0.0",
     "memory": "1.3.0",
-    "sdd": "1.3.0",
+    "sdd": "1.4.0",
     "wiki": "1.3.0",
     "modules": "1.7.0",
 }
@@ -125,7 +128,17 @@ Run id → 그 Run이 있는 기록 공간), `common` 1.14.0(`ErrorCodes.RUN_AMB
 `wiki` 1.3.0(`WikiInfo.wiki_kind`·`reserved_page_names`, 그래프 깊이 전체
 `WIKI_GRAPH_DEPTH_ALL`·`WikiGraph.depth`, `WikiRuleEntry.severity`를 `IssueSeverity`로 좁힘).
 저장 데이터 마이그레이션은 없다: 옛 키는 모르는 키로 보존되어 읽기·서버 시작을 막지 않는다.
-사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`)."""
+사내 의존 범위 `>=0.15,<0.16`(TS `^0.15.0`).
+0.16.0(깨는 변경 — design §1.1 B-2·V-2, §I18N.7. 릴리스하지 않은 임시 0.15.1을 합쳤다):
+`definitions` 3.0.0(`WorkspaceSettings.default_backend` 삭제 — 실행 백엔드 공통 기본값은
+`agent_defaults.backend`. 옛 키는 모르는 키로 보존되고 `IGNORED_SETTINGS_KEYS`에 들어 정보 이슈
+`settings.ignored_key`로 안내한다. `UiPreferences.language` — 화면 언어, null = 자동),
+새 하위 모듈 `i18n` 1.0.0(`I18nInfo`·`LanguageInfo`·`MessageCatalog` — 서버가 주는 문구 묶음),
+`common` 2.1.0(오류 코드 `i18n.unknown_language` 404, 문구 묶음 불러오기 이슈 코드 `i18n.*` 7개,
+위젯 이름 `language`), `projects` 4.1.0(`CopyKindInfo.reserved_ids` — 종류별 id 예약어, 정의 종류
+데이터 `DefinitionKind.reserved_ids`. `CopyKindInfo.open_role` — 항목을 여는 웹 화면 역할),
+`sdd` 1.4.0(`SddInfo.reserved_template_ids` — 문서 틀 id 예약어, 서버 경로 어휘).
+사내 의존 범위 `>=0.16,<0.17`(TS `^0.16.0`)."""
 
 USAGE_REPORT_PARTS: Final = ("windows", "tokens")
 """`GET /usage?parts=`의 알려진 부분 이름. windows = 창 스냅샷,
@@ -349,6 +362,11 @@ class ErrorCodes:
     """단독 루트(프로젝트 없이 쓰는 위키 폴더)에 쓸 수 없다(HTTP 409). 프로젝트 공간이면
     `project.config_readonly`를 쓴다(스펙의 `sdd.config_readonly`와 같은 판단)."""
 
+    # ---- 0.16.0(design §I18N.7): 화면 문구 묶음
+    I18N_UNKNOWN_LANGUAGE: Final = "i18n.unknown_language"
+    """요청한 언어의 문구 묶음이 하나도 없다(HTTP 404, `GET /i18n/{lang}`). `details.language` =
+    요청한 언어 코드, `details.available` = 묶음이 있는 언어 코드 목록."""
+
     # ---- 0.13.1(5.7R.33y3 후속). HTTP 응답 코드가 아니다(아래 표에 없다).
     FAKE_SESSION_MISSING: Final = "fake.session_missing"
     """가짜 실행 백엔드(fake)가 이어 쓸 세션 기록 파일을 찾지 못해 실행이 실패했다
@@ -437,6 +455,7 @@ HTTP_STATUS_BY_ERROR_CODE: Final[dict[str, int]] = {
     ErrorCodes.WIKI_CONFIG_READONLY: 409,
     ErrorCodes.WIKI_LINK_INSERT_UNAVAILABLE: 422,
     ErrorCodes.WIKI_VERSION_NOT_FOUND: 404,
+    ErrorCodes.I18N_UNKNOWN_LANGUAGE: 404,
 }
 """알려진 오류 코드 → HTTP 상태. `If-Match` 불일치 = 412, `If-Match` 없음 = 428."""
 
@@ -599,8 +618,9 @@ class KnownIssueCodes:
     FOLDERS_REMOTE_DISABLED: Final = "folders.remote_disabled"
     SETTINGS_IGNORED_KEY: Final = "settings.ignored_key"
     """설정에 이제 쓰지 않는 키가 있어 읽고 무시했다(info, 서버 시작은 막지 않음). 공통 설정의 옛
-    키 목록은 `IGNORED_SETTINGS_KEYS`(`projects`·`logs.projects`, 0.15.0에서 모델 필드를 지웠고
-    모르는 키로 보존된다). `details.key` = 설정 경로."""
+    키 목록은 `IGNORED_SETTINGS_KEYS`(`projects`·`logs.projects` — 0.15.0, `default_backend` —
+    0.16.0. 모델 필드를 지웠고 모르는 키로 보존된다). `details.key` = 설정 경로, 같은 값을 둘 새
+    위치가 있으면 `details.replacement`(예: `agent_defaults.backend`)."""
     LOGS_NO_PROJECTS: Final = "logs.no_projects"
     """등록된 프로젝트가 없어 로그를 수집하지 않는다(info, design §PI.5)."""
 
@@ -808,6 +828,27 @@ class KnownIssueCodes:
     코드 — 쓰면 실제 비밀이 가린 표시로 바뀐다). 도구 결과 상태는 닫힌 어휘 `WikiEventStatus`의
     `secret_rejected` 그대로이고 사유를 이 코드로 가른다. `details.lines`(새 본문 줄 번호,
     값 없음)."""
+
+    # ---- 2.1.0(0.16.0, design §I18N.3·§I18N.7): 문구 묶음 불러오기. 서버(`mod-i18n`)는 문제가
+    # 있는 묶음·항목만 건너뛰고 나머지를 쓴다(warning, `ServerInfo.warnings`). 묶음 원문 값은 싣지
+    # 않는다. 있으면 `details.source`(묶음 출처 이름)·`details.language`·`details.path`(파일 위치).
+    I18N_CATALOG_UNREADABLE: Final = "i18n.catalog_unreadable"
+    """묶음 파일을 읽을 수 없거나 JSON이 아니다(그 파일을 건너뜀)."""
+    I18N_CATALOG_INVALID: Final = "i18n.catalog_invalid"
+    """묶음 파일(또는 구역 `text`·`codes`·`ns`)이 객체가 아니다(그 파일·구역을 건너뜀).
+    `details.section?`."""
+    I18N_CATALOG_UNKNOWN_SECTION: Final = "i18n.catalog_unknown_section"
+    """묶음 파일에 모르는 구역이 있어 그 구역만 건너뛰었다. `details.section`."""
+    I18N_ENTRY_INVALID: Final = "i18n.entry_invalid"
+    """묶음 항목 값이 문자열(`ns`는 문자열 또는 객체)이 아니라 그 항목만 건너뛰었다.
+    `details.section`·`details.key`."""
+    I18N_LANGUAGE_INVALID: Final = "i18n.language_invalid"
+    """묶음 파일 이름이 BCP 47 언어 코드 모양이 아니라 그 파일을 건너뛰었다. `details.language`."""
+    I18N_LOCALES_MISSING: Final = "i18n.locales_missing"
+    """묶음 출처(패키지 `locales/` 폴더·사용자 `catalog_dirs` 폴더)가 없다. `details.path`."""
+    I18N_SOURCE_UNAVAILABLE: Final = "i18n.source_unavailable"
+    """묶음 출처 패키지(entry point `agent_console.message_catalogs`)를 불러올 수 없어 그 출처를
+    건너뛰었다. `details.source`·`details.reason?` = 예외 종류 이름."""
 
 
 class KnownSuggestionIds:

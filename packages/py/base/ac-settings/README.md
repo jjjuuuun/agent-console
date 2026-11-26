@@ -1,25 +1,25 @@
 # agent-console-settings
 
-설정 **층 병합**과 **값별 출처 추적**, 두 정의 문서의 **비교**를 하는 순수 라이브러리. 사내 의존이 없고, 외부 의존은 문서 비교용 `jsonpatch` 하나다.
+A pure library for **layer merging** of settings, **per-value provenance tracking**, and **comparison** of two definition documents. It has no internal dependencies; its only external dependency is `jsonpatch`, for document comparison.
 
-- 층(예: 공통 → 팀 구성 → 에이전트 → 노드)은 호출자가 넘기는 **데이터 목록**이다. 층 개수·이름·필드는 자유다.
-- 기본 규칙: 스칼라·목록 = **교체**, 객체 = **키별 재귀 병합**. 키를 생략하면 상속, 값이 있으면(`null`·빈 목록 포함) 그 층에서 지정.
-- 필드별 예외는 데이터로 둔다: JSON Schema 주석 `x-merge`(기본값) < `rules={JSON Pointer: 전략 이름}`(사용자 설정 `settings_merge`).
-- 전략은 이름으로 등록하는 표다. 기본 `replace`·`merge`·`append`·`union`·`intersect`. 필드 이름은 코드에 없다.
-- 결과의 `provenance`는 `{JSON Pointer: 층 id}` — 잎 값·목록 원소마다 어느 층에서 왔는지.
-- `find_widenings`: 아래 층이 위 층보다 범위를 넓혔는지(경고용). 비교 위치도 데이터(`x-widen` 주석 또는 `checks`).
-- `set_at`/`unset_at`: 화면의 "이 층에서 덮어쓰기"/"상속으로 되돌리기"를 층 값에 적용하는 도우미(원본 불변).
+- Layers (for example common → team → agent → node) are a **data list** the caller passes in. The number, names, and fields of layers are free.
+- Default rules: scalars and lists are **replaced**, objects are **merged recursively per key**. An omitted key inherits; a present value (including `null` and empty lists) is set at that layer.
+- Per-field exceptions are data: the JSON Schema annotation `x-merge` (default) < `rules={JSON Pointer: strategy name}` (user setting `settings_merge`).
+- Strategies are a table registered by name. The defaults are `replace`, `merge`, `append`, `union`, `intersect`. No field names are in the code.
+- The result's `provenance` is `{JSON Pointer: layer id}`: which layer each leaf value and list element came from.
+- `find_widenings`: whether a lower layer widened a range set by an upper layer (for warnings). The comparison locations are data too (`x-widen` annotations or `checks`).
+- `set_at`/`unset_at`: helpers that apply the screen's "override at this layer" and "revert to inherited" to a layer value (the original is not changed).
 
-리소스 첨부도 같은 층 병합 규칙을 쓴다.
+Resource attachments use the same layer merge rules.
 
-## 설치
+## Installation
 
 ```bash
-uv sync --all-packages                      # 워크스페이스 안에서
-uv pip install ./packages/py/base/ac-settings    # 다른 프로젝트에서 단독으로
+uv sync --all-packages                      # inside the workspace
+uv pip install ./packages/py/base/ac-settings    # standalone, from another project
 ```
 
-## 최소 사용 예
+## Minimal usage
 
 ```python
 >>> from agent_console_settings import Layer, resolve_layers, set_at, unset_at
@@ -29,48 +29,48 @@ uv pip install ./packages/py/base/ac-settings    # 다른 프로젝트에서 단
 ...     Layer("team", "팀 구성", {"model": "m2"}),
 ...     Layer("node", "이 팀의 노드", {"limits": {"commands": ["ls"]}}),
 ... ]
->>> schema = {"properties": {"limits": {"x-merge": "replace"}}}  # 보통은 Pydantic 모델의 JSON Schema
+>>> schema = {"properties": {"limits": {"x-merge": "replace"}}}  # usually the JSON Schema of a Pydantic model
 
->>> resolve_layers(layers, schema=schema).value  # 스키마 주석: limits는 통째로 대체
+>>> resolve_layers(layers, schema=schema).value  # schema annotation: limits is replaced as a whole
 {'model': 'm2', 'limits': {'commands': ['ls']}}
->>> r = resolve_layers(layers, schema=schema, rules={"/limits": "merge"})  # 사용자 규칙이 우선
+>>> r = resolve_layers(layers, schema=schema, rules={"/limits": "merge"})  # user rules take precedence
 >>> r.value
 {'model': 'm2', 'limits': {'directories': ['/w'], 'commands': ['ls']}}
 >>> r.source_of("/model"), r.source_of("/limits/directories/0"), r.layers_under("/limits")
 ('team', 'common', ['common', 'node'])
->>> r.issues  # 모르는 전략 이름·형태 불일치(병합은 대체 동작으로 계속)
+>>> r.issues  # unknown strategy names, shape mismatches (merging continues with replace)
 ()
 
->>> node = set_at(layers[2].value, "/model", "m3")  # 이 층에서 덮어쓰기
+>>> node = set_at(layers[2].value, "/model", "m3")  # override at this layer
 >>> node
 {'limits': {'commands': ['ls']}, 'model': 'm3'}
->>> unset_at(node, "/model")  # 상속으로 되돌리기(비게 된 상위 객체도 정리)
+>>> unset_at(node, "/model")  # revert to inherited (parent objects left empty are cleaned up too)
 {'limits': {'commands': ['ls']}}
 
 ```
 
-### 전략 추가(확장 지점)
+### Adding strategies (extension point)
 
 ```python
 >>> from agent_console_settings import TracedValue, default_strategies
 
 >>> def keep_first(base, incoming, ctx, /):
-...     """먼저 지정한 층이 이긴다."""
+...     """The layer that set it first wins."""
 ...     return base if base is not None else TracedValue.stamp(incoming, ctx.layer)
 
->>> table = default_strategies()  # 새 표(DEFAULT_STRATEGIES는 얼어 있어 등록 불가)
+>>> table = default_strategies()  # a new table (DEFAULT_STRATEGIES is frozen and cannot be registered into)
 >>> table.register("keep_first", keep_first)
 >>> resolve_layers(layers, rules={"/model": "keep_first"}, strategies=table).value["model"]
 'm1'
 
 ```
 
-전략은 `(base: TracedValue | None, incoming, ctx: MergeContext) -> TracedValue`다. 객체 안으로 내려갈 때는
-`ctx.merge_child(key, base_child, incoming_child)`를 부르면 그 하위 위치의 규칙을 다시 찾는다. 문제는
-`ctx.report(code, message)`로 남긴다. 출처는 `TracedValue.stamp(value, layer)`·`object(...)`·`array(...)`로
-만들면 자동으로 따라간다. 테스트의 `keyed_attachments`(첨부 `add`·`replace`·`remove`)가 예제다.
+A strategy is `(base: TracedValue | None, incoming, ctx: MergeContext) -> TracedValue`. To descend into an object, call
+`ctx.merge_child(key, base_child, incoming_child)` and the rules for that child location are looked up again. Report problems
+with `ctx.report(code, message)`. Provenance follows automatically when you build values with `TracedValue.stamp(value, layer)`, `object(...)`, and `array(...)`.
+The test helper `keyed_attachments` (attachment `add`, `replace`, `remove`) is an example.
 
-### 넓힘 경고
+### Widening warnings
 
 ```python
 >>> from agent_console_settings import find_widenings
@@ -97,9 +97,9 @@ node 이 common 보다 /limits/network 을 넓힘: ('allow',)
 
 ```
 
-비교기는 `DEFAULT_WIDEN_CHECKS`(`subset`·`path_subset`·`order`)에 더해 `comparators=`로 넘길 수 있다.
+Comparators can be passed with `comparators=` in addition to `DEFAULT_WIDEN_CHECKS` (`subset`, `path_subset`, `order`).
 
-### 문서 비교(버전 비교)
+### Document comparison (version comparison)
 
 ```python
 >>> from agent_console_settings import diff_digests, diff_documents
@@ -107,53 +107,53 @@ node 이 common 보다 /limits/network 을 넓힘: ('allow',)
 >>> changes = diff_documents(
 ...     {"nodes": [{"id": "a"}, {"id": "b", "label": "B"}], "env": {"TOKEN": "x1"}},
 ...     {"nodes": [{"id": "b", "label": "B2"}], "env": {"TOKEN": "x2"}},
-...     before_secrets=["/env/TOKEN"],  # 문서별 비밀 위치(JSON Pointer) -- 판정은 호출자 몫
+...     before_secrets=["/env/TOKEN"],  # secret locations per document (JSON Pointer); judging them is up to the caller
 ...     after_secrets=["/env/TOKEN"],
 ... )
->>> for c in changes:  # 목록 원소는 jsonpatch처럼 위치로 맞춰 비교한다(id로 짝을 짓지 않는다)
+>>> for c in changes:  # list elements are matched by position like jsonpatch (not paired by id)
 ...     print(c.op, c.path, c.secret)
 add /nodes/0/label False
 replace /nodes/0/id False
 remove /nodes/1 False
 replace /env/TOKEN True
->>> changes[-1].before, changes[-1].after  # 비밀 값은 mask만 나온다
+>>> changes[-1].before, changes[-1].after  # secret values come out only as the mask
 ('***', '***')
 >>> [(d.path, d.before, d.after) for d in diff_digests({"a.md": "sha1"}, {"a.md": "sha2", "b.md": "sha3"})]
 [('a.md', 'sha1', 'sha2'), ('b.md', None, 'sha3')]
 
 ```
 
-- 경로는 **원래 문서 기준** RFC 6901 JSON Pointer다: `remove`·`replace`는 이전 문서, `add`는 이후 문서
-  (`replace`가 이전 문서에 없던 원소 안이면 이후 문서). jsonpatch 패치는 차례로 적용하는 형식이라 중간 상태
-  기준 번호가 나오는데, 패치를 직접 적용하며 목록 원소의 원래 위치를 따라가 바꾼다. `move`는 `remove`+`add`,
-  `copy`는 `add`로 바꾼다.
-- 비밀 위치는 비교 전에 내용 해시 표식으로 바꿔 둔다. 값이 바뀌었는지는 알 수 있고 결과에는 `mask`(기본
-  `***`)만 나온다(`secret=True`). 바뀐 값 **안쪽**에 비밀 위치가 있으면 그 부분만 `mask`로 바뀌고
-  `secret=False`다. 비밀 판정(스키마 `x-secret`, 의심 규칙)은 이 패키지가 모른다 -- 호출자가 위치를 넘긴다.
+- Paths are RFC 6901 JSON Pointers **relative to the original document**: `remove` and `replace` refer to the before document, `add` to the after document
+  (if a `replace` is inside an element that was not in the before document, the after document). jsonpatch patches are meant to be applied in sequence, so their indexes refer to intermediate states;
+  this package applies the patch itself and follows each list element's original position to rewrite them. `move` becomes `remove` + `add`,
+  and `copy` becomes `add`.
+- Secret locations are replaced with a content-hash marker before comparison. You can tell whether a value changed, and the result shows only `mask` (default
+  `***`) (`secret=True`). If a secret location is **inside** a changed value, only that part becomes `mask` and
+  `secret=False`. This package does not judge secrets (schema `x-secret`, suspicion rules); the caller passes the locations.
 
-새 의존: **`jsonpatch`**(python-json-patch, BSD-3) -- 무엇을: 두 JSON 문서의 RFC 6902 패치 계산. 왜: 목록
-변경(가운데 삭제·추가·이동)을 짧은 패치로 만드는 검증된 구현. 대안: `deepdiff`(무겁고 경로 형식이 JSON
-Pointer가 아님), 직접 구현(목록 정렬 알고리즘을 새로 써야 함), `jsondiff`(유지보수 약함).
+New dependency: **`jsonpatch`** (python-json-patch, BSD-3). What: computes RFC 6902 patches between two JSON documents. Why: a proven implementation that turns list
+changes (deleting, adding, or moving in the middle) into short patches. Alternatives: `deepdiff` (heavy, and its path format is not JSON
+Pointer), writing it ourselves (a new list alignment algorithm), `jsondiff` (weakly maintained).
 
-## 출처 규칙
+## Provenance rules
 
-- 한 층이 통째로 정한 값은 그 아래 모든 위치가 그 층이다.
-- 여러 층이 합쳐 만든 컨테이너(객체 병합·목록 이어 붙이기 등)의 출처는 **마지막으로 기여한 층**이고,
-  잎·원소는 각자의 층이다. 섞인 컨테이너는 `layers_under(pointer)`로 기여한 층 전체를 본다.
-- `union`·`intersect`는 남은 원소의 처음 출처를 유지한다.
+- A value set as a whole by one layer belongs to that layer at every location below it.
+- The provenance of a container built from several layers (merged objects, concatenated lists, and so on) is **the last layer that contributed**,
+  while leaves and elements keep their own layers. For a mixed container, `layers_under(pointer)` shows every contributing layer.
+- `union` and `intersect` keep the first provenance of the remaining elements.
 
-## 개발·재사용(단독)
+## Development and standalone reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다. 사내 의존은 이름 + 버전
-범위로 선언돼 있으므로, 저장소 밖에서는 휠 모음(저장소에서 `uv run poe wheels` → `dist/wheelhouse`)을
-찾기 경로로 준다(`uv sync --find-links <wheelhouse>`). 저장소 안 검사: `uv run poe portability --package ac-settings`.
+This folder is a standalone project. Copy only this folder and the commands below still work. Internal dependencies
+are declared as a name plus a version range, so outside the repository pass the wheelhouse (`uv run poe wheels` in the repository → `dist/wheelhouse`)
+as a find-links path (`uv sync --find-links <wheelhouse>`). Check inside the repository: `uv run poe portability --package ac-settings`.
 
 ```bash
-uv sync                  # dev 그룹(pytest·mypy·ruff, 테스트가 쓰는 사내 패키지) 포함
+uv sync                  # includes the dev group (pytest, mypy, ruff, internal packages the tests use)
 uv run ruff check . && uv run mypy && uv run pytest
 ```
 
-## 테스트
+## Testing
 
 ```bash
 UV_LINK_MODE=copy uv run pytest packages/py/base/ac-settings

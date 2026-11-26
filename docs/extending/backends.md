@@ -1,111 +1,128 @@
-# 실행 백엔드
+# Execution backends
 
-에이전트 노드는 모델을 직접 부르지 않고 실행 백엔드에 요청을 넘긴다. 기본 백엔드(Claude Agent SDK, 모델 없이 도는
-가짜 백엔드)도 같은 그룹에 등록된 구현이다. 이 페이지는 백엔드 자체, 백엔드의 선택 능력인 세션 기록 보관, 그리고
-설정에 적힌 비밀 참조를 푸는 비밀 값 공급자를 다룬다.
+Agent nodes do not call models directly. They pass requests to an execution backend. The built-in backends (the
+Claude Agent SDK, and a fake backend that runs without a model) are also implementations registered in the same group.
+This page covers backends themselves, session archiving (an optional backend capability), and secret providers, which
+resolve the secret references written in settings.
 
-| 하고 싶은 일 | 지점 |
+| What you want to do | Point |
 | --- | --- |
-| 다른 모델 SDK·CLI·사내 게이트웨이로 에이전트를 돌린다 | [execution-backend](#execution-backend) |
-| 다른 앱·다른 경로에서도 대화를 이어 가게 세션 원본을 보관·복원한다 | [backend-session-archive](#backend-session-archive) |
-| `secret://이름`을 환경변수 말고 다른 곳(파일·키체인)에서 찾는다 | [secret-provider](#secret-provider) |
+| Run agents with another model SDK, CLI, or in-house gateway | [execution-backend](#execution-backend) |
+| Archive and restore raw session files so conversations can resume in another app or at another path | [backend-session-archive](#backend-session-archive) |
+| Look up `secret://name` somewhere other than environment variables (a file, a keychain) | [secret-provider](#secret-provider) |
 
 ## backend-session-archive
 
-**언제 쓰나**: 백엔드가 세션 원본(대화 기록 파일)을 자기 폴더에 남기고, 그 원본이 있어야 대화를 이어 갈 수 있을
-때. 프로젝트 폴더를 다른 PC로 옮기거나 작업 폴더를 다시 지정한 뒤에도 이어 가려면 원본을 보관하고 되돌려 놓을
-방법을 백엔드가 알려야 한다. 원본이 없는 백엔드(매번 처음부터 시작)는 이 능력이 필요 없다.
+**When to use**: when a backend leaves raw session files (conversation record files) in its own folder, and a
+conversation can resume only if those files exist. For a conversation to resume after the project folder moves to
+another PC or its path changes, the backend must tell the app how to archive those files and put them back. A backend
+without raw session files (one that starts from scratch every time) does not need this capability.
 
-**최소 모양**: 백엔드에 메서드 `session_archive() -> SessionArchive | None`을 더한다. `SessionArchive`는 세 메서드다.
+**Minimal shape**: add the method `session_archive() -> SessionArchive | None` to the backend. `SessionArchive` has
+three methods.
 
-| 메서드 | 하는 일 |
+| Method | What it does |
 | --- | --- |
-| `files(session, cwd=)` | 보관할 원본 파일 목록. 그 세션이 없으면 None |
-| `status(session, cwd=)` | 지금 이어 갈 수 있나: `available`·`relocatable`(이 앱 안 옛 위치에 있음)·`missing` |
-| `restore(archive_dir, session, cwd=)` | 보관 사본(또는 옛 위치)에서 이어 갈 수 있는 곳으로 놓는다 |
+| `files(session, cwd=)` | The list of raw files to archive. None if the session does not exist |
+| `status(session, cwd=)` | Whether it can resume now: `available`, `relocatable` (at an old location inside this app), `missing` |
+| `restore(archive_dir, session, cwd=)` | Puts the files from the archived copy (or the old location) where the session can resume |
 
-원본이 "루트/<작업 폴더 키>/<세션>.jsonl" 모양이면 공용 구현 `JsonlFolderSessionArchive`에 키 함수만 넘기면 된다.
+If the raw files have the shape "root/<run folder key>/<session>.jsonl", pass only a key function to the shared
+implementation `JsonlFolderSessionArchive`.
 
-**규칙**
+**Rules**
 
-- 모든 메서드는 동기이고 파일 시스템만 쓴다. 모델·네트워크를 부르지 않는다.
-- `files`에는 그 세션의 원본만 넣는다. 자격 증명·설정·다른 세션 파일은 절대 넣지 않는다.
-- 보관 위치(어느 폴더에 둘지)와 켜기·끄기는 백엔드가 아니라 앱 조립이 정한다. 백엔드는 폴더 이름을 모른다.
-- 지금 쓸 수 없으면(필요한 폴더가 없는 등) `session_archive()`가 None을 돌려준다. 예외를 던지지 않는다.
+- All methods are synchronous and use only the file system. They do not call models or the network.
+- Put only that session's raw files in `files`. Never include credentials, settings, or other sessions' files.
+- The archive location (which folder to use) and turning it on and off are decided by the app assembly, not by the
+  backend. The backend does not know folder names.
+- If it cannot be used right now (a required folder is missing, and so on), `session_archive()` returns None. It does
+  not raise.
 
-**흔한 실수**: `status`에서 파일을 옮기거나 만든다. `status`는 읽기만 하고, 옮기기는 `restore`만 한다.
+**Common mistakes**: moving or creating files in `status`. `status` only reads; only `restore` moves files.
 
-**지운 뒤 남는 데이터**: 능력을 빼면 그 백엔드의 이어 가기 상태는 `not_applicable`로 보인다. 이미 보관한 사본은
-지워지지 않는다.
+**Data left after removal**: when you remove the capability, the resume status of that backend shows as
+`not_applicable`. Copies already archived are not deleted.
 
 <!-- extdocs:facts backend-session-archive -->
-- 등록: 구현 객체(예: 백엔드)에 선택 메서드 `session_archive`를 갖춘다. 호스트가 있으면 찾아 쓴다.
-- 인터페이스:
-  - `agent_console_runtime:SessionArchiveCapable` — 선택 능력: 세션 기록 보관·복원을 주는 백엔드.
-  - `agent_console_runtime:SessionArchive` — 백엔드 세션 기록 보관·복원. 모든 메서드는 동기·파일 시스템만 쓴다(모델 호출 없음).
-  - `agent_console_runtime:ArchiveFile` — 보관할 원본 파일 하나.
-- 기본 구현: —
-- 예제:
+- Registration: Give the implementation object (for example, a backend) the optional method `session_archive`. The host finds and uses it when it is there.
+- Interface:
+  - `agent_console_runtime:SessionArchiveCapable` — Optional capability: a backend that provides session record archive and restore.
+  - `agent_console_runtime:SessionArchive` — Archive and restore backend session records: synchronous, file system only.
+  - `agent_console_runtime:ArchiveFile` — One original file to archive.
+- Built-in implementations: —
+- Examples:
   - package: [examples/extensions/agent-console-example-backend](../../examples/extensions/agent-console-example-backend/README.md)
-  - reference: [packages/py/features/ac-backend-claude-sdk](../../packages/py/features/ac-backend-claude-sdk/README.md) — JsonlFolderSessionArchive를 쓰는 기본 백엔드
-- 끄기·제거: 메서드를 없애거나 None을 돌려주면 그 능력만 꺼진다.
+  - reference: [packages/py/features/ac-backend-claude-sdk](../../packages/py/features/ac-backend-claude-sdk/README.md) — Built-in backend that uses `JsonlFolderSessionArchive`
+- Turning it off or removing it: Remove the method or return None to turn off only that capability.
 <!-- /extdocs:facts -->
 
 ## execution-backend
 
-**언제 쓰나**: 에이전트를 다른 실행기로 돌리고 싶을 때. 다른 회사의 에이전트 SDK, 사내 모델 게이트웨이, 미리 적은
-대본으로 답하는 시험용 백엔드가 예다. 에이전트 정의의 `backend` 값이 이 등록 이름이다.
+**When to use**: when you want to run agents with a different runner. Examples are another company's agent SDK, an
+in-house model gateway, and a test backend that answers from a prewritten script. The `backend` value of an agent
+definition is this registration name.
 
-**최소 모양**: `descriptor`(`BackendDescriptor`), `async list_models()`, `async run(req, sink, cancel) ->
-AgentResult`. `req`(`AgentRequest`)에는 에이전트 정의·프롬프트·작업 폴더·리소스 칸이 들어 있고, 진행 중 이벤트는
-`sink`로 흘리고, `cancel`을 보고 멈춘다.
+**Minimal shape**: `descriptor` (`BackendDescriptor`), `async list_models()`, and
+`async run(req, sink, cancel) -> AgentResult`. `req` (`AgentRequest`) contains the agent definition, the prompt, the
+run folder, and the resource slots. Stream progress events to `sink`, and stop when `cancel` says so.
 
-**규칙**
+**Rules**
 
-- **능력은 선언한 것만 쓰인다.** 서술자 `capabilities`(스트리밍·도구·hook·MCP·이어 가기·취소·하위 에이전트·
-  리소스 칸 등)에 없는 기능은 엔진과 화면이 쓰지 않는다. 위임 방식이 요구한 능력이 없으면 팀 구성 검사가
-  `team.backend_capability_missing` 오류로 막는다.
-- 생성 인자가 필요하면 classmethod `from_options(options, *, secrets, environ)`를 둔다(`ConfigurableBackend`).
-  서버는 설치자 설정 `modules.options.mod-runs.backends.<id>`를 그대로 넘기고 키의 뜻은 모른다. 모르는 키는
-  `ValueError`로 거부하고, 오류 문구에 값을 넣지 않는다.
-- 에이전트 정의의 `backend_options` 모양은 서술자 `config_schema`로 알린다. 화면이 이 스키마로 폼을 그린다.
-- `req.agent`의 비밀 참조는 이미 풀린 상태로 온다. 그 값을 이벤트·로그·오류에 싣지 않는다. 이벤트에는 작업 폴더
-  경로·환경 값도 싣지 않는다.
-- 이벤트 형식은 계약의 알려진 `agent.*` 이벤트(`agent.text_delta`·`agent.message`·`agent.usage` 등)를 쓰고, 그 밖은
-  자기 접두사로 낸다([계약과 이벤트](contracts-events.md#플러그인-자기-이벤트)).
-- 기본 구현의 도구 호출·hook·MCP 기록을 늘리는 일은 백엔드를 새로 만들지 않고 [관측 수집기](logs.md#collector)로 한다.
+- **Only declared capabilities are used.** The engine and the screens do not use features that are not in the
+  descriptor `capabilities` (streaming, tools, hooks, MCP, resume, cancel, subagents, resource slots, and so on). If a
+  delegation strategy requires a capability that is missing, the team check blocks it with the error
+  `team.backend_capability_missing`.
+- If the backend needs constructor arguments, add the classmethod `from_options(options, *, secrets, environ)`
+  (`ConfigurableBackend`). The server passes the administrator setting `modules.options.mod-runs.backends.<id>` as it
+  is and does not know what the keys mean. Reject unknown keys with `ValueError`, and do not put values in the error
+  text.
+- Announce the shape of `backend_options` in agent definitions with the descriptor `config_schema`. The screens draw
+  the form from this schema.
+- Secret references in `req.agent` arrive already resolved. Do not put those values in events, logs, or errors. Do
+  not put the run folder path or environment values in events either.
+- For the event format, use the known `agent.*` events of the contract (`agent.text_delta`, `agent.message`,
+  `agent.usage`, and so on), and emit anything else under your own prefix
+  ([Contracts and events](contracts-events.md#plugin-owned-events)).
+- To record more tool calls, hooks, and MCP activity of the built-in implementation, do not write a new backend. Use
+  an [observation collector](logs.md#collector).
 
-**흔한 실수**: 모델 목록을 `list_models`에서 매번 네트워크로 받아 화면이 느려진다. 목록은 설정(`from_options`)이나
-캐시로 준다. 또 `cancel`을 보지 않아 실행 취소가 끝나지 않는다.
+**Common mistakes**: fetching the model list over the network on every `list_models` call, which slows down the
+screens. Provide the list from settings (`from_options`) or a cache. Another is not watching `cancel`, so canceling a
+run never finishes.
 
-**지운 뒤 남는 데이터**: 그 백엔드를 고른 에이전트는 남는다. 실행하면 그 노드가 `agent.unknown_backend`로 실패한다.
-노드 설정에서 백엔드를 직접 고른 경우에는 저장 전 검사도 같은 코드(오류)로 알린다. 설치자 설정 `modules.options.mod-runs.backends.<id>`가 남아 있으면 서버는
-시작하고 "등록되어 있지 않습니다" 경고를 로그에 남긴다. 백엔드가 쓴 세션 원본은 지워지지 않는다.
+**Data left after removal**: agents that chose that backend stay. When they run, the node fails with
+`agent.unknown_backend`. If a node's settings choose the backend directly, the pre-save check also reports the same
+code (an error). If the administrator setting `modules.options.mod-runs.backends.<id>` is left over, the server starts
+and logs a warning that the backend is not registered. Raw session files the backend wrote are not deleted.
 
 <!-- extdocs:facts execution-backend -->
-- 등록: entry point 그룹 `agent_console.backends`(상수 `agent_console_runtime:BACKENDS_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_runtime:ExecutionBackend` — 실행 백엔드 어댑터.
-  - `agent_console_runtime:ConfigurableBackend` — 설치자 설정(앱 설정의 `backends.<id>`)으로 다시 만들 수 있는 백엔드(실행 백엔드 선택 훅).
-  - `agent_console_runtime:AgentRequest` — 백엔드 실행 요청. `agent`는 비밀 참조(`secret://…`)가 해석된 상태로 넘긴다.
-  - `agent_console_runtime:AgentResult` — 백엔드 실행 결과.
-- 설정: `modules.options.mod-runs.backends`
-- 기본 구현: `claude-agent-sdk (agent-console-backend-claude-sdk)`, `fake-agent (agent-console-backend-fake-agent)`
-- 예제:
+- Registration: Register in the entry point group `agent_console.backends` (constant `agent_console_runtime:BACKENDS_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_runtime:ExecutionBackend` — Execution backend adapter.
+  - `agent_console_runtime:ConfigurableBackend` — Backend rebuildable from server administrator settings (app setting `backends.<id>`).
+  - `agent_console_runtime:AgentRequest` — Backend run request. `agent` arrives with secret references (`secret://…`) already resolved.
+  - `agent_console_runtime:AgentResult` — Backend run result.
+- Settings: `modules.options.mod-runs.backends`
+- Built-in implementations: `claude-agent-sdk (agent-console-backend-claude-sdk)`, `fake-agent (agent-console-backend-fake-agent)`
+- Examples:
   - package: [examples/extensions/agent-console-example-backend](../../examples/extensions/agent-console-example-backend/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->
 
 ## secret-provider
 
-**언제 쓰나**: 에이전트 정의·설정에 적은 `secret://이름` 참조를 환경변수 말고 다른 곳에서 찾고 싶을 때. 로컬 비밀
-파일, 운영체제 키체인, 사내 비밀 저장소가 예다. 비밀 값 자체는 설정 파일에 쓰지 않는다는 규칙은 그대로다
-([비밀 값](plugins.md#비밀-값)).
+**When to use**: when you want to look up the `secret://name` references written in agent definitions and settings
+somewhere other than environment variables. Examples are a local secrets file, the operating system keychain, and an
+in-house secret store. The rule that secret values themselves are never written in settings files still applies
+([Secrets](plugins.md#secrets)).
 
-**최소 모양**: 메서드 하나 `get_secret(name) -> str | None`. 없으면 None.
+**Minimal shape**: one method, `get_secret(name) -> str | None`. None when there is no value.
 
-**찾는 순서**: 서버는 먼저 환경변수(서버 설정 `secrets.env_prefix` + 이름, 없으면 그 대문자 이름)를 보고, 없으면
-등록된 공급자를 등록 순서대로 묻는다. 처음 값을 준 곳에서 멈춘다. 아래는 그 조립을 서버 없이 보인 것이다.
+**Lookup order**: the server first looks at environment variables (the server setting `secrets.env_prefix` + the
+name, or the uppercase name when there is no prefix). If there is nothing there, it asks the registered providers in
+registration order and stops at the first one that returns a value. The example below shows that assembly without a
+server.
 
 ```python
 >>> from agent_console_modkit import env_secret_lookup, secret_lookup
@@ -122,13 +139,15 @@ AgentResult`. `req`(`AgentRequest`)에는 에이전트 정의·프롬프트·작
 
 ```
 
-**설정 받기(선택)**: entry point는 인자 없이 만들어진다. 파일 위치 같은 설치자 설정이 필요하면 공급자 클래스에
-classmethod 두 개를 둔다(`agent_console_modkit:ConfigurableSecretProvider` 모양, 상속 불필요). `options_schema()`는
-옵션 JSON Schema(기본값은 `properties.*.default`)를, `from_options(options, *, environ, base_dir)`는 서버 설정
-`secrets.providers.<이름>` 값으로 만든 새 공급자를 돌려준다. `base_dir`은 설정 파일 폴더(상대 경로 기준)다. 서버는
-설정이 있는 공급자만 다시 만들고, 틀린 값(`ValueError`, 메시지에 키 이름만)이면 시작을 거부한다. 스키마와 지금 값은
-`GET /api/v1/server-info`의 `plugin_options`에 나온다(비밀 표시 필드·평문 의심 값은 가리고, 경로 표시를 끄면
-`format: path` 필드도 가린다).
+**Taking settings (optional)**: entry points are created without arguments. If the provider needs administrator
+settings such as a file location, give the provider class two classmethods (the shape of
+`agent_console_modkit:ConfigurableSecretProvider`; inheritance is not required). `options_schema()` returns the JSON
+Schema of the options (defaults in `properties.*.default`), and `from_options(options, *, environ, base_dir)` returns
+a new provider built from the server setting `secrets.providers.<name>`. `base_dir` is the folder of the settings file
+(the base for relative paths). The server rebuilds only providers that have settings, and refuses to start on a wrong
+value (`ValueError`, with only the key name in the message). The schema and the current values appear in
+`plugin_options` of `GET /api/v1/server-info` (fields marked as secret and values that look like plain-text secrets
+are masked, and when path display is off, `format: path` fields are masked too).
 
 ```python
 >>> from agent_console_modkit import ExtensionRegistries, configure_secret_providers, secret_providers_of
@@ -153,29 +172,31 @@ classmethod 두 개를 둔다(`agent_console_modkit:ConfigurableSecretProvider` 
 
 ```
 
-**규칙**
+**Rules**
 
-- 값을 로그·예외·`repr`에 넣지 않는다. 남겨도 되는 것은 출처 위치(파일 경로)와 개수 정도다. 이름도 로그에 넣지
-  않는 편이 안전하다.
-- 출처를 읽지 못하면(파일 없음·권한 없음) 예외 대신 None을 돌려주고 경고를 한 번 남긴다. 다른 공급자와 환경변수는
-  그대로 동작해야 한다.
-- 출처 위치(파일 경로 등)는 코드에 고정하지 않고 설치자 설정(설정 훅)·환경변수·패키지 데이터 기본값으로 받는다.
-  비밀 값 자체는 설정에 두지 않는다.
-- 값이 바뀌면 다음 조회부터 반영되게 한다(재시작을 요구하지 않는 편이 좋다).
+- Do not put values in logs, exceptions, or `repr`. What you may record is about the source location (a file path)
+  and counts. It is safer to keep names out of logs too.
+- If the source cannot be read (no file, no permission), return None instead of raising, and log one warning. Other
+  providers and environment variables must keep working.
+- Do not hard-code the source location (a file path and so on). Take it from administrator settings (the settings
+  hook), environment variables, or package data defaults. Do not put secret values themselves in settings.
+- When a value changes, apply it from the next lookup (it is better not to require a restart).
 
-**흔한 실수**: 환경변수를 덮어쓰려고 공급자를 만든다. 환경변수가 늘 먼저다. 공급자는 환경변수에 없는 이름만 받는다.
+**Common mistakes**: writing a provider to override environment variables. Environment variables always come first. A
+provider only receives names that are not in the environment variables.
 
-**지운 뒤 남는 데이터**: 그 공급자에만 있던 이름을 쓰는 에이전트는 실행할 때 그 노드가 `agent.secret_not_found`로
-실패한다(오류에는 이름만). 비밀 원본(파일 등)은 공급자가 만든 것이 아니므로 그대로 남는다.
+**Data left after removal**: an agent that uses a name only that provider had fails at run time, with the node
+failing as `agent.secret_not_found` (the error contains only the name). The secret source (a file and so on) was not
+created by the provider, so it stays.
 
 <!-- extdocs:facts secret-provider -->
-- 등록: entry point 그룹 `agent_console.secret_providers`(상수 `agent_console_runtime:SECRET_PROVIDERS_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_runtime:SecretProvider` — 비밀 값 공급자. 이름에 해당하는 값이 없으면 None.
-  - `agent_console_modkit:ConfigurableSecretProvider` — 설치자 설정으로 다시 만들 수 있는 비밀 값 공급자(설정 훅).
-- 설정: `secrets.providers`
-- 기본 구현: —
-- 예제:
+- Registration: Register in the entry point group `agent_console.secret_providers` (constant `agent_console_runtime:SECRET_PROVIDERS_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_runtime:SecretProvider` — Secret provider. None when there is no value for the name.
+  - `agent_console_modkit:ConfigurableSecretProvider` — Secret provider that can be rebuilt from server administrator settings (settings hook).
+- Settings: `secrets.providers`
+- Built-in implementations: —
+- Examples:
   - package: [examples/extensions/agent-console-example-secret-provider](../../examples/extensions/agent-console-example-secret-provider/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->

@@ -97,8 +97,8 @@ def test_removed_setting_messages_point_to_new_location() -> None:
     [old] = removed_settings({"echo_old": {"a": 1}}, COMPAT)
     assert old.new == "modules.options.mod-echo"
     assert old.message() == (
-        "설정 키 echo_old는 더 이상 읽지 않습니다. modules.options.mod-echo로 옮기세요"
+        "The settings key echo_old is no longer read. Move it to modules.options.mod-echo"
     )
-    assert RemovedSetting("a.b", "이유").message() == "이유"
-    assert RemovedSetting("a", "이유", new="x.y").message() == "이유. 새 위치: x.y"
-    assert "지웠습니다" in RemovedSetting("a").message()
+    assert RemovedSetting("a.b", "Reason").message() == "Reason"
+    assert RemovedSetting("a", "Reason", new="x.y").message() == "Reason. New location: x.y"
+    assert "was removed" in RemovedSetting("a").message()

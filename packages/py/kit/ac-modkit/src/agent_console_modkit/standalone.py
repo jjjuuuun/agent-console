@@ -57,13 +57,26 @@ _log = logging.getLogger("agent_console_modkit.standalone")
 
 def build_parser(prog: str) -> argparse.ArgumentParser:
     """단독 실행 인자 해석기."""
-    parser = argparse.ArgumentParser(prog=prog, description="모듈 단독 실행(개발·재사용)")
-    parser.add_argument("--with", dest="with_", action="append", default=[], metavar="ID")
-    parser.add_argument("--config", type=Path, default=None)
-    parser.add_argument("--host", default=None)
-    parser.add_argument("--port", type=int, default=None)
-    parser.add_argument("--check", action="store_true")
-    parser.add_argument("--timeout", type=float, default=30.0)
+    parser = argparse.ArgumentParser(
+        prog=prog, description="Run one server module on its own (development and reuse)."
+    )
+    parser.add_argument(
+        "--with",
+        dest="with_",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="Another installed module id to assemble with it (repeatable)",
+    )
+    parser.add_argument("--config", type=Path, default=None, help="Host settings file")
+    parser.add_argument("--host", default=None, help="Bind address")
+    parser.add_argument("--port", type=int, default=None, help="Port")
+    parser.add_argument(
+        "--check", action="store_true", help="Start, check GET /health once, then stop"
+    )
+    parser.add_argument(
+        "--timeout", type=float, default=30.0, help="Seconds to wait for --check (default 30)"
+    )
     return parser
 
 
@@ -93,7 +106,7 @@ def format_report(assembly: Assembly) -> str:
     for r in assembly.report:
         reason = f" — {r.reason}" if r.reason else ""
         lines.append(f"{r.id} {r.version} [{r.kind}] {r.state.value}{reason}")
-    lines.extend(f"경고: {w}" for w in assembly.warnings)
+    lines.extend(f"warning: {w}" for w in assembly.warnings)
     return "\n".join(lines)
 
 
@@ -134,7 +147,7 @@ async def check_app(app: Any, settings: HostSettings, *, timeout: float, out: Te
     try:
         while not server.started:
             if task.done() or loop.time() > deadline:
-                print("check: 서버가 시작하지 못했습니다", file=out)
+                print("check: the server did not start", file=out)
                 return 1
             await asyncio.sleep(0.05)
         port = server.servers[0].sockets[0].getsockname()[1]
@@ -194,12 +207,12 @@ def run(
     try:
         settings = load_host_settings(args.config, overrides=overrides)
     except (OSError, ValueError, ValidationError) as exc:
-        print(f"설정 오류: {exc}", file=stream)
+        print(f"Invalid settings: {exc}", file=stream)
         return 2
     if not is_loopback_host(settings.host) and not settings.security.allow_remote:
         print(
-            f"루프백이 아닌 주소({settings.host})에 바인딩하려면 "
-            "security.allow_remote: true가 필요합니다",
+            f"Binding to a non-loopback address ({settings.host}) requires "
+            "security.allow_remote: true",
             file=stream,
         )
         return 2
@@ -208,7 +221,7 @@ def run(
     with_ids = list(args.with_) or [m.descriptor.id for m in default_with]
     modules, missing = select_modules(module, with_ids, pool)
     if missing:
-        print(f"--with 모듈을 찾을 수 없습니다: {', '.join(missing)}", file=stream)
+        print(f"--with: module not found: {', '.join(missing)}", file=stream)
         return 2
     env = os.environ if environ is None else environ
     fallback = args.config.parent if args.config is not None else Path.cwd()

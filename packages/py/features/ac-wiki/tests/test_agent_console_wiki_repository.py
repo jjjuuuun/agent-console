@@ -233,8 +233,8 @@ def test_move_rewrites_backlinks_and_reports_conflicts(tmp_path: Path) -> None:
     original = repo.move
     index_holder: dict[str, Any] = {}
 
-    def racing_index() -> Any:
-        built = WikiRepository.index(repo)
+    def racing_index(**kw: Any) -> Any:
+        built = WikiRepository.index(repo, **kw)
         if not index_holder:
             index_holder["done"] = True
             (tmp_path / "p3.md").write_text("[[old]] 그사이 고침\n", encoding="utf-8")

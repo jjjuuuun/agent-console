@@ -1,25 +1,27 @@
-# 리소스
+# Resources
 
-리소스는 에이전트에 붙이는 재료(지침, 스킬, MCP 서버, 도구 허락, 파일, hook 등)다. 리소스 종류는 그 재료가 실행
-묶음의 어느 칸(지침 칸, MCP 서버 칸 …)에 어떤 값으로 들어가는지 정한다. 칸 이름도 코드에 고정된 목록이 아니라
-문자열이고, 그 칸을 받을지는 실행 백엔드가 선언한다.
+Resources are the materials you attach to agents (instructions, skills, MCP servers, tool permissions, files, hooks,
+and so on). A resource kind defines which slot of the run bundle (the instructions slot, the MCP server slot, and so
+on) the material goes into and with what value. Slot names are strings, not a fixed list in code, and the execution
+backend declares which slots it accepts.
 
-새 종류는 두 길로 만든다.
+There are two ways to create a new kind.
 
-| 길 | 언제 | 설치 |
+| Way | When | Install |
 | --- | --- | --- |
-| 선언형 YAML(코드 없음) | 본문이나 설정 값을 틀에 끼워 칸에 넣으면 충분할 때 | 작업 공간 폴더에 파일 하나 |
-| 플러그인(코드) | 값 계산·검사에 코드가 필요할 때(파일 읽기, 여러 칸, 조건부 기여) | 패키지 + entry point |
+| Declarative YAML (no code) | When it is enough to put the content or settings values into a template and place it in a slot | One file in the workspace folder |
+| Plugin (code) | When computing or checking values needs code (reading files, several slots, conditional contributions) | A package + an entry point |
 
 ## resource-type
 
-**언제 쓰나**: 기본 종류로 담을 수 없는 재료를 에이전트에 붙이고 싶을 때. 프롬프트 조각, 팀 공용 노트, 사내 도구
-설정이 예다.
+**When to use**: when you want to attach a material to agents that the built-in kinds cannot hold. Examples are
+prompt snippets, shared team notes, and in-house tool settings.
 
-### 선언형 종류
+### Declarative kinds
 
-작업 공간의 `resource-types/` 폴더(서버 설정 `modules.options.mod-resources.declarative_dir`)에 YAML 파일 하나를
-둔다. 서버는 시작할 때 이 폴더를 읽으므로 넣거나 지운 뒤 서버를 다시 시작한다.
+Put one YAML file in the workspace's `resource-types/` folder (the server setting
+`modules.options.mod-resources.declarative_dir`). The server reads this folder at startup, so restart the server
+after adding or removing a file.
 
 ```yaml extdocs:validate=agent_console_resources:DeclarativeTypeSpec
 id: acme.prompt-snippet
@@ -35,51 +37,57 @@ contributes:
     template: "## {title}\n{content}"
 ```
 
-- `contributes[]`는 칸마다 하나다. `template`(문자열 틀) 또는 `value`(구조 값, 안의 문자열도 틀) 중 하나만 둔다.
-  `raw: true`면 값을 감싸지 않고 그대로 합친다(객체 칸을 `combine: merge`로 합칠 때).
-- 틀 변수: `id`·`name`·`description`·`title`(기본은 이름)·`content`(본문) + `config`의 최상위 키(같은 이름이면
-  config가 이긴다).
-- `content`가 있으면 문서형 종류다. 화면이 본문 편집기를 보인다.
-- 형식 오류(모르는 키 포함)나 잘못된 `config_schema`는 그 파일만 로드 실패로 보고된다(`GET /api/v1/server-info`의
-  `plugins`). 같은 id의 플러그인 종류가 이미 있으면 선언형 파일 쪽이 실패한다.
-- 설치형 예는 [선언형 리소스 종류 예제](../../examples/resource-types/README.md).
+- `contributes[]` has one entry per slot. Give either `template` (a string template) or `value` (a structured value
+  whose strings are templates too), not both. With `raw: true`, the value is merged as it is without wrapping (when
+  object slots are merged with `combine: merge`).
+- Template variables: `id`, `name`, `description`, `title` (the name by default), `content` (the body), plus the
+  top-level keys of `config` (on a name clash, config wins).
+- With `content`, it is a document kind, and the screen shows a body editor.
+- A format error (including unknown keys) or an invalid `config_schema` is reported as a load failure of that file
+  only (`plugins` of `GET /api/v1/server-info`). If a plugin kind with the same id already exists, the declarative file
+  is the one that fails.
+- For an installable example, see the [declarative resource kind example](../../examples/resource-types/README.md).
 
-### 플러그인 종류
+### Plugin kinds
 
-**최소 모양**: `descriptor`(`ResourceTypeDescriptor`), `validate(resource) -> list[Issue]`,
-`contribute(resource, content, ctx) -> list[Contribution]`. `config_schema`로 검사만 하면 되는 종류는
-`SchemaResourceType`을 상속하고 `contribute`만 쓴다.
+**Minimal shape**: `descriptor` (`ResourceTypeDescriptor`), `validate(resource) -> list[Issue]`, and
+`contribute(resource, content, ctx) -> list[Contribution]`. For a kind that only needs `config_schema` checks,
+subclass `SchemaResourceType` and write only `contribute`.
 
-- `contribute`는 칸 이름과 값(`Contribution(slot, value)`)을 돌려준다. 실행 백엔드가 그 칸을 받지 않을 때 대신 쓸
-  기여를 `fallback`으로 둘 수 있다. 대체 칸도 받지 않으면 묶음 미리보기·검증이 `resource.slot_unsupported`로 알린다.
-- 서술자 `contributes`(쓰는 칸 목록)·`combine`(같은 칸에 여럿이 들어올 때 합치는 방법)·`slot_key`(같은 칸 안에서
-  항목을 구분하는 설정 필드)를 정확히 적는다. 화면과 미리보기가 이 값으로 설명한다.
-- `contribute`는 실행 준비 중에 불린다. 네트워크를 부르거나 오래 걸리는 일을 하지 않는다. 설정 값을 오류 문구에 넣지
-  않는다(서버가 이슈에서 값을 가리지만 직접 넣은 문장은 가릴 수 없다).
-- 리소스 종류 하나만으로 끝나지 않고 다른 기능(노트·메모리·위키)을 실행에 잇는 일이면 연동 모듈이 종류와 도구
-  공급자를 함께 둔다. [연동 예제](../../examples/extensions/agent-console-example-link/README.md)가 그 모양이다.
+- `contribute` returns slot names and values (`Contribution(slot, value)`). You can give a `fallback` contribution to
+  use when the execution backend does not accept the slot. If the fallback slot is not accepted either, the bundle
+  preview and validation report `resource.slot_unsupported`.
+- Fill in the descriptor fields `contributes` (the slots it uses), `combine` (how to merge when several items go into
+  the same slot), and `slot_key` (the settings field that tells items apart within the same slot) accurately. The
+  screens and the preview explain the kind with these values.
+- `contribute` is called while a run is being prepared. Do not call the network or do slow work. Do not put settings
+  values in error text (the server masks values in issues, but it cannot mask sentences you built yourself).
+- If the work does not end with one resource kind but connects another feature (notes, memory, wiki) to runs, a link
+  module holds the kind and a tool provider together. The [link example](../../examples/extensions/agent-console-example-link/README.md)
+  has that shape.
 
-### 흔한 실수
+### Common mistakes
 
-- 칸 이름을 기본 백엔드가 받지 않는 이름으로 지어 놓고 미리보기 경고를 보지 않는다. 받는 칸은
-  `GET /api/v1/backends`의 백엔드 능력(`resource_slots`)에 있다.
-- 선언형 파일의 `id`에 접두사를 붙이지 않아 기본 종류(`instruction`·`skill` 등)와 겹친다.
+- Naming a slot with a name the built-in backends do not accept and not looking at the preview warnings. The accepted
+  slots are in the backend capabilities (`resource_slots`) of `GET /api/v1/backends`.
+- Leaving the prefix off the `id` of a declarative file so that it collides with a built-in kind (`instruction`,
+  `skill`, and so on).
 
-### 지운 뒤 남는 데이터
+### Data left after removal
 
-그 종류로 만든 리소스 파일은 지워지지 않는다. 검증이 `resource.unknown_type` **경고**로 알리고(저장은 막지 않는다,
-나중에 다시 설치할 수 있으므로), 그 리소스는 실행 묶음에 기여하지 않는다. 그 리소스를 붙인 에이전트는 다른 리소스로
-그대로 실행된다.
+Resource files created with that kind are not deleted. Validation reports `resource.unknown_type` as a **warning**
+(it does not block saving, because you may install the kind again later), and the resource does not contribute to the
+run bundle. Agents with that resource attached still run with their other resources.
 
 <!-- extdocs:facts resource-type -->
-- 등록: entry point 그룹 `agent_console.resource_types`(상수 `agent_console_resources:RESOURCE_TYPES_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_resources:ResourceType` — 리소스 종류. entry point `agent_console.resource_types` 또는 선언형 데이터로 등록한다.
-  - `agent_console_resources:SchemaResourceType` — `descriptor.config_schema`로 config를 검사하는 리소스 종류 베이스.
-  - `agent_console_resources:DeclarativeTypeSpec` — 선언형 종류 파일의 형식.
-- 기본 구현: `file (agent-console-resources-core)`, `hook (agent-console-resources-core)`, `instruction (agent-console-resources-core)`, `mcp-server (agent-console-resources-core)`, `memory (agent-console-link-memory-runs)`, `rule (agent-console-resources-core)`, `skill (agent-console-resources-core)`, `tool-permission (agent-console-resources-core)`, `wiki (agent-console-link-wiki-runs)`
-- 예제:
+- Registration: Register in the entry point group `agent_console.resource_types` (constant `agent_console_resources:RESOURCE_TYPES_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_resources:ResourceType` — Resource type. Register via entry point `agent_console.resource_types` or declarative data.
+  - `agent_console_resources:SchemaResourceType` — Base for resource types that check config against `descriptor.config_schema`.
+  - `agent_console_resources:DeclarativeTypeSpec` — Format of a declarative kind file.
+- Built-in implementations: `file (agent-console-resources-core)`, `hook (agent-console-resources-core)`, `instruction (agent-console-resources-core)`, `mcp-server (agent-console-resources-core)`, `memory (agent-console-link-memory-runs)`, `rule (agent-console-resources-core)`, `skill (agent-console-resources-core)`, `tool-permission (agent-console-resources-core)`, `wiki (agent-console-link-wiki-runs)`
+- Examples:
   - package: [examples/extensions/agent-console-example-link](../../examples/extensions/agent-console-example-link/README.md)
-  - reference: [examples/resource-types](../../examples/resource-types/README.md) — 코드 없는 선언형 종류 prompt-snippet.yaml(workspace resource-types 폴더)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+  - reference: [examples/resource-types](../../examples/resource-types/README.md) — Declarative type with no code: `prompt-snippet.yaml` (the workspace `resource-types` folder)
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->

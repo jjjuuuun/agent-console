@@ -138,7 +138,11 @@ export function RunsTable({ runs, nowMs, graphName, conversationTitle, onOpen, o
                 ) : run.conversation_id ? (
                   <Link to={hrefs.conversation(run.conversation_id)}>{title ?? (summary !== "" ? truncate(summary, 30) : run.conversation_id)}</Link>
                 ) : (
-                  <span className="app-muted">{t.list.directRun(t.list.origins[run.origin] ?? run.origin)}</span>
+                  <>
+                    <span className="app-muted">{t.list.directRun(t.list.origins[run.origin] ?? run.origin)}</span>
+                    {/* 대화가 없는 실행은 입력 요약을 함께 보여 줘야 행끼리 구별된다 */}
+                    {summary === "" ? null : <span className="runs-input-summary"> {truncate(summary, 30)}</span>}
+                  </>
                 )}
               </td>
               <td title={formatDateTime(run.created_at)}>{formatRelative(run.created_at, nowMs)}</td>

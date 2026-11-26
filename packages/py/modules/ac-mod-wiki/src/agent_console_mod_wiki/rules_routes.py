@@ -23,6 +23,9 @@
 파일 쓰기와 같은 사람(``user``) 비밀 검사를 거친다(reject = 422 ``wiki.secret_rejected``, warn =
 되돌림 + ``X-Console-Issues``). 공간 자기 규칙이면 쓸 수 있는 공간이어야 한다(409). 버전
 비교(diff)는 이 경로에 없다.
+
+규칙·본문 파일을 바꾸는 경로(만들기·저장·지우기·파일 쓰기·지우기·되돌리기)는 서비스의 신선도 창
+확인 기록을 바로 버린다(``WikiService.rules_changed``) — 위키 화면이 창만큼 기다리지 않는다.
 """
 
 from __future__ import annotations
@@ -208,6 +211,7 @@ def build_rules_router(service: Callable[[], WikiService]) -> APIRouter:
             expected_version=if_match_version(if_match),
             message=f"본문 파일 저장: {file_path}",
         )
+        svc.rules_changed(sc)
         issues = [i.model_dump(mode="json", exclude_none=True) for i in decision.issues]
         return with_issues(_view_json(svc, sc, stored), issues)
 
@@ -232,6 +236,7 @@ def build_rules_router(service: Callable[[], WikiService]) -> APIRouter:
             expected_version=if_match_version(if_match),
             message=f"본문 파일 삭제: {file_path}",
         )
+        svc.rules_changed(sc)
         return _view_json(svc, sc, stored)
 
     # ------------------------------------------------------------ 버전
@@ -345,6 +350,7 @@ def build_rules_router(service: Callable[[], WikiService]) -> APIRouter:
             expected_version=expected,
             message=message or RESTORE_MESSAGE.format(hash=version_hash),
         )
+        svc.rules_changed(sc)
         restored = store.get_version(kind, rule_id, stored.version_hash)
         response = JSONResponse(
             content=restored.model_dump(mode="json"),

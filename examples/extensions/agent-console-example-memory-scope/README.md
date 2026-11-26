@@ -1,22 +1,22 @@
 # agent-console-example-memory-scope
 
-새 **메모리 범위 종류**를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 범위 종류 목록(`GET /api/v1/memory/scope-kinds`)에
-`origin: plugin:agent-console-example-memory-scope`로 나타나고, 제거하면 사라진다.
+An example that adds a new **memory scope kind** with a single plugin package.
+No engine, server, or web code changes. Once installed, it appears in the scope kind list (`GET /api/v1/memory/scope-kinds`)
+with `origin: plugin:agent-console-example-memory-scope`, and it disappears when removed.
 
-범위 종류 `example-week` — **계산 범위 종류**
-- 범위 id는 ISO 주차 `{year}-W{week}`다(예: `2026-W44`, 주는 두 자리, 연도는 ISO 주차 연도, UTC 기준).
-- 데이터 범위 종류(`memory.scope_kinds`의 id 틀 `{/project_id}` 등)는 접근 맥락의 값만 읽는다. 지금 시각처럼
-  맥락 밖의 값으로 범위 id를 정하려면 이 예제처럼 `resolver`를 가진 `MemoryScopeKind`를 플러그인으로 낸다.
-- 범위 종류 id·표시 이름은 예제가 정한 임의 값이다. 사용자 구성이나 패키지 기본 범위 종류가 아니다.
+Scope kind `example-week`, a **computed scope kind**
+- The scope id is the ISO week `{year}-W{week}` (for example `2026-W44`; two-digit week, the ISO week-numbering year, in UTC).
+- Data scope kinds (id templates such as `{/project_id}` in `memory.scope_kinds`) read only values of the access context. To decide the scope id from
+  a value outside the context, such as the current time, ship a `MemoryScopeKind` with a `resolver` as a plugin, as this example does.
+- The scope kind id and display name are arbitrary values chosen by the example. They are not user configuration or a package default scope kind.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
-entry point 대상은 인자 없는 함수 하나다. `MemoryScopeKind` 목록(계산 범위 종류는 `resolver`를 준다)이나
-`{범위 종류 id: 데이터(label·description·id 틀)}`를 돌려준다. `resolver`는 접근 맥락을 받아 범위 id를
-돌려주고, 쓸 수 없으면 None을 돌려준다(예외도 None으로 본다).
+The entry point target is a single function without arguments. It returns a list of `MemoryScopeKind` (computed scope kinds pass a `resolver`) or
+`{scope kind id: data (label, description, id template)}`. A `resolver` receives the access context and returns the scope id,
+or None when it cannot be used (an exception also counts as None).
 
 ```python
 >>> from datetime import UTC, datetime
@@ -30,10 +30,10 @@ entry point 대상은 인자 없는 함수 하나다. `MemoryScopeKind` 목록(�
 
 ```
 
-로더(`mod-memory`의 호스트 플러그인 로더 `memory`, 내부는 `agent_console_memory.load_scope_kind_plugins`)는
-이 함수를 불러 형식을 검사하고 출처 이름 `plugin:<배포 이름>`을 붙인다. 아래는 이 패키지의 구현
-(`agent_console_example_memory_scope:scope_kinds`)을 entry point로 등록한 것처럼 로드하고, 병합한 목록에서
-범위를 계산하는 예다(시계를 고정하려고 `iso_week_scope_kind`를 직접 쓴다).
+The loader (the host plugin loader `memory` of `mod-memory`, internally `agent_console_memory.load_scope_kind_plugins`) calls
+this function, checks the format, and attaches the origin name `plugin:<distribution name>`. Below, this package's implementation
+(`agent_console_example_memory_scope:scope_kinds`) is loaded as if it were registered as an entry point, and a scope is computed from the merged list
+(`iso_week_scope_kind` is used directly to fix the clock).
 
 ```python
 >>> from importlib.metadata import EntryPoint
@@ -59,55 +59,55 @@ MemoryScopeRef(kind='example-week', id='2026-W44')
 
 ```
 
-설치하지 않고 `EntryPoint`를 직접 만들면 배포 정보가 없어 출처 이름이 entry point 이름이다.
-설치하면 `plugin:agent-console-example-memory-scope`가 된다(테스트가 둘 다 확인).
+When you build the `EntryPoint` directly without installing, there is no distribution information, so the origin name is the entry point name.
+When installed, it becomes `plugin:agent-console-example-memory-scope` (the tests check both).
 
-## 등록
+## Registration
 
 ```toml
 [project.entry-points."agent_console.memory_scope_kinds"]   # agent_console_memory.MEMORY_SCOPE_KINDS_GROUP
 "example.memory_scope" = "agent_console_example_memory_scope:scope_kinds"
 ```
 
-- entry point 이름(`example.memory_scope`)은 레지스트리 key다. 서버 설정 `plugins.enabled`(허용 목록)가 이 이름으로 고른다.
-- 병합 순서는 패키지 기본(`include_default_scope_kinds`일 때) → 플러그인 → 사용자다. 같은 id를 워크스페이스
-  설정에 적으면 사용자 범위 종류가 이기고(`overrides`에 `plugin:…`), null로 적으면 꺼진 범위 종류(`disabled: true`)로 보인다.
+- The entry point name (`example.memory_scope`) is the registry key. The server setting `plugins.enabled` (allow list) selects by this name.
+- The merge order is package defaults (with `include_default_scope_kinds`) → plugins → user. When you write the same id in the workspace
+  settings, the user scope kind wins (`plugin:…` in `overrides`), and writing null shows it as a turned-off scope kind (`disabled: true`).
 
 ```yaml
 memory:
   scope_kinds:
-    example-week: null      # 설치한 채로 이 범위 종류만 끄기
+    example-week: null      # turn off only this scope kind while it stays installed
 ```
 
-리소스 `memory`의 접근 설정에서 범위 종류 `example-week`에 동작(읽기·쓰기 등)을 허용하면, 에이전트가
-그 주의 범위(`example-week:2026-W44`)에 기록한다. 다음 주에는 새 범위가 된다.
+When the access settings of a `memory` resource allow actions (read, write, and so on) on the scope kind `example-week`, agents
+write to that week's scope (`example-week:2026-W44`). The next week it becomes a new scope.
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-memory-scope   # 설치
-uv pip uninstall agent-console-example-memory-scope                        # 제거
+uv pip install -e examples/extensions/agent-console-example-memory-scope   # install
+uv pip uninstall agent-console-example-memory-scope                        # remove
 ```
 
-설치·제거 뒤 **서버를 재시작**한다(`mod-memory`가 켜져 있어야 한다).
-- 설치: `GET /api/v1/memory/scope-kinds`에 `example-week`가 `origin: plugin:agent-console-example-memory-scope`로
-  나오고(`id` 틀은 null, `context_fields`는 빈 목록), 웹의 범위 종류 목록도 이 응답을 쓴다.
-- 제거: 목록에서 사라진다. 이미 쓴 `example-week:…` 항목은 지워지지 않고 "알 수 없는 범위 종류"(`kind_known: false`)로 남는다.
-- 설치한 채로 끄기: 서버 설정 `plugins.enabled`에서 `example.memory_scope`를 빼거나, 위처럼 `memory.scope_kinds`에 null.
+**Restart the server** after installing or removing (`mod-memory` must be on).
+- Install: `GET /api/v1/memory/scope-kinds` lists `example-week` with `origin: plugin:agent-console-example-memory-scope`
+  (the `id` template is null, and `context_fields` is an empty list), and the web app's scope kind list uses this response too.
+- Remove: it disappears from the list. Entries already written under `example-week:…` are not deleted; they remain as an unknown scope kind (`kind_known: false`).
+- Turn off while installed: remove `example.memory_scope` from the server setting `plugins.enabled`, or set it to null in `memory.scope_kinds` as above.
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
 ```bash
 cd examples/extensions/agent-console-example-memory-scope
 uv run --project ../../.. python -m pytest
 ```
 
-설치 없이 돈다(`pythonpath = ["src"]`). 설치·제거는 임시 폴더에 이 패키지의 `dist-info`를 만들었다 지우는 것으로
-흉내 내고(범위 종류 entry point 그룹의 발견만 그 폴더로 격리하므로 실제로 설치한 venv에서도 결과가 같다), 서버 시작과 같은 순서
-(호스트 플러그인 로더 → `mod-memory` 조립)로 목록과 범위 계산을 확인한다.
-루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로 mypy·pytest를 돌린다(`uv run poe examples`).
+The tests run without installing (`pythonpath = ["src"]`). Installing and removing are simulated by creating and deleting this package's `dist-info` in a temporary folder
+(only the discovery of the scope kind entry point group is isolated to that folder, so the result is the same in a venv where it is really installed), and the list and the scope calculation
+are checked in the same order as server startup (host plugin loader → `mod-memory` assembly).
+The `examples` step of the root `uv run poe check` runs mypy and pytest with this folder's settings (`uv run poe examples`).

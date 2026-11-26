@@ -1,68 +1,104 @@
 # agent-console-mod-wiki
 
-Agent Console 위키 서버 모듈(`mod-wiki`). `ac-wiki`(문법·파싱·링크 해석·색인·저장소·
-규칙·점검·기록·검색·zip)를 서버에 붙인다. 실행·프로젝트를 모르고, 둘 다 연동 모듈이 포트로 붙인다.
+Agent Console wiki server module (`mod-wiki`). It attaches `ac-wiki` (syntax, parsing, link resolution, index, repository,
+rules, checks, history, search, zip) to the server. It does not know about runs or projects; link modules attach both through ports.
 
-- REST `/wiki/*`: 화면 정보 `GET /wiki/info`(페이지 폴더·능력·한도·정의 종류 이름·`GET`으로 읽을 수 없는 마지막 경로 조각 `reserved_page_names`, 그래프는 `?depth=all`로 깊이 제한 없음), 위키 목록·만들기·보기·저장·지우기
-  (`/wiki/wikis[/{wiki}]`, 목록 카드 값 — 페이지·끊긴 링크·고아·점검 수·최근 변경 — 을 요청 하나로), 페이지
-  (`…/pages[/{path}]`, `ETag` = 본문 sha256, 새 페이지 `If-None-Match: *`), 저장 전 시험 `…/preview`, 옮기기
-  `…/move`(링크 문자열만 고침), 기록 `…/history[/{version}]`·`…/restore`, 링크 넣기 `…/link-text`, 페이지 틀
-  `…/templates[/{id}/render]`, 검색·그래프·점검·변경(`?op=`·`?author_run=`, 공간 전체 `GET /wiki/changes`)·
-  유효 문법·외부 변경 다시 읽기 `…/scan`, zip `…/export`(`Content-Disposition`)·`…/import`. 위키 규칙
-  `/wiki/rules[/{id}[/files[/{path}]]]`·`POST /wiki/rules/check`·버전 `/wiki/rules/{id}/versions[/{hash}[/files[/{path}]]]`·
-  `POST …/versions/{hash}/restore`(정의 모듈 없이도 동작). 모든 경로가
-  `?project=<공간 이름>`을 받는다.
-- WS 토픽 `wiki.changed`(본문 없음 — 화면은 다시 읽는다). 저장소는 알리지 않고 모듈이 결과를 보고 키트
-  `LoopPublisher`로 낸다. 미리보기·`dry_run`은 알리지 않는다.
-- 정의 종류 기여: 위키 규칙(라이브러리·프로젝트, 여러 본문 파일 — 지침·페이지 틀)과 위키
-  (`library=False`, 참조 추출 `rules` → 위키 규칙). 종류 이름·폴더 이름은 설치자 옵션(기본값은 패키지
-  데이터 `data/defaults.json`).
-- 사용자 설정 섹션 `wiki`(`include_default_syntax`·`syntax`·`secret_scan`·`max_versions_per_page`·
-  `search_backend`·`write_checks`). 모르는 키는 보존하고, 깨진 부분만 빼고 `server.warnings`에
-  `wiki.settings_invalid`로 알린다.
-- 공간: `wiki.spaces`(선택, `link-projects-wiki`가 준다). 공간 이름이 없는 요청은 단독 루트
-  (`standalone_root`, 기본 워크스페이스 안 `wiki/`). 이름이 왔는데 연동이 없으면 409
-  `wiki.spaces_unavailable`. 단독 공간의 위키 규칙은 앱 라이브러리(`definitions.store`에 규칙 종류가
-  있을 때)를 읽고, 없으면 단독 루트를 읽는다.
-- 기록: 계보 `wiki`(리비전은 `ac-wiki.sqlite`가 소유, 범위 `app`·`project`). 단독 공간 = 호스트 DB
-  (메모리 DB이거나 DB가 없으면 프로세스 메모리), 프로젝트 공간 = `records.spaces`의 그 폴더 기록 DB(없으면
-  기록 없음 — 호스트 DB에 대신 쓰지 않는다).
-- 검색: 사용자 `search_backend` → 설치자 `search.backend`(기본 `sqlite-fts`) → `search.fallback`
-  (기본 `scan`). 색인 파일은 프로젝트 공간이면 공간이 준 `index_dir`, 단독이면 호스트 상태 폴더
-  `wiki-index/`. 대체 방식이면 `GET /wiki/info`에 `wiki.search_degraded`. 색인 공장 옵션 = 설치자
-  `search.tokenizer` + 고른 방식의 `search.index_options.<방식>`(키는 검색 구현이 정한다, 예: `token_pattern`) 위에
-  앱 값 `case_insensitive`(위키 문법)·`max_results`(`max_search_results`)·`redact`(포트 `secrets.rules`의 지금 비밀
-  의심 규칙 — 사용자 규칙 포함 — 의 가리기, 없으면 기본 규칙)·`redact_signature`(그 규칙 서명)를 덮은 것. 규칙이 바뀌면
-  저장소와 색인을 다시 짓는다.
-- 쓰기 검사: 포트 `wiki.write_checks`(늘 켜짐, 설정 `enabled: false`로 끔) + entry point
-  `agent_console.wiki_write_checks`(설정 `wiki.write_checks[{id, enabled, options}]`로 켬, 값 = 검사 객체
-  또는 옵션을 받는 공장).
-- 능력 `WikiInfo.capabilities`는 포트 유무로 계산한다(`runs` = `wiki.integrations`에 `runs`를 낸 연동).
-- 검색어 해시: 설치자 옵션 `query_hash`(`hmac` 기본·`sha256`·`off`)·`query_hash_salt_env`(솔트를 읽을 환경변수
-  이름, 값은 설정에 두지 않는다 — 없거나 비면 서버를 켤 때마다 무작위). 서비스 하나에 해셔 하나
-  (`WikiService.query_hash`, `search_query_hasher(cfg, environ)`)를 두고 실행 연동이 에이전트 위키 검색 이벤트
-  `query_sha256`에 쓴다. 메모리 모듈과 같은 변수를 쓸지는 각 모듈 설정으로 정한다.
+- REST `/wiki/*`: screen information `GET /wiki/info` (page folder, capabilities, limits, definition kind names, and `reserved_page_names`, the last path segments that cannot be read with `GET`; the graph has no depth limit with `?depth=all`), the wiki list, create, view, save, and delete
+  (`/wiki/wikis[/{wiki}]`; the list card values (pages, broken links, orphans, check counts, recent changes) in one request), pages
+  (`…/pages[/{path}]`, `ETag` = body sha256, new pages with `If-None-Match: *`), the pre-save trial `…/preview`, moving
+  `…/move` (only the link strings are changed), history `…/history[/{version}]` and `…/restore`, link insertion `…/link-text`, page templates
+  `…/templates[/{id}/render]`, search, graph, checks, changes (`?op=`, `?author_run=`; the whole space with `GET /wiki/changes`),
+  the effective syntax, rescanning external changes `…/scan`, and zip `…/export` (`Content-Disposition`) and `…/import`. Wiki rules:
+  `/wiki/rules[/{id}[/files[/{path}]]]`, `POST /wiki/rules/check`, and versions `/wiki/rules/{id}/versions[/{hash}[/files[/{path}]]]` and
+  `POST …/versions/{hash}/restore` (these work without the definitions module). Every route
+  accepts `?project=<space name>`.
+- WS topic `wiki.changed` (no content; the screen reads again). The repository does not notify; the module looks at the results and publishes them through the kit's
+  `LoopPublisher`. Previews and `dry_run` do not notify.
+- Definition kind contributions: wiki rules (library and project, several body files: instructions and page templates) and wikis
+  (`library=False`, reference extraction `rules` → wiki rules). Kind names and folder names are administrator options (the defaults are the package
+  data `data/defaults.json`).
+- User settings section `wiki` (`include_default_syntax`, `syntax`, `secret_scan`, `max_versions_per_page`,
+  `search_backend`, `write_checks`). Unknown keys are kept, and only the broken parts are left out and reported in `server.warnings` as
+  `wiki.settings_invalid`.
+- Spaces: `wiki.spaces` (optional, provided by `link-projects-wiki`). Requests without a space name use the standalone root
+  (`standalone_root`, by default `wiki/` inside the workspace). When a name is given but the link is missing, 409
+  `wiki.spaces_unavailable`. The wiki rules of the standalone space are read from the app library (when `definitions.store` has the rule kind),
+  and otherwise from the standalone root.
+- History: lineage `wiki` (the revisions are owned by `ac-wiki.sqlite`; scopes `app` and `project`). Standalone space = the host database
+  (process memory when it is an in-memory database or there is no database); project space = that folder's record database from `records.spaces` (without it,
+  no history; it does not write to the host database instead).
+- Search: user `search_backend` → administrator `search.backend` (default `sqlite-fts`) → `search.fallback`
+  (default `scan`). The index files go into the `index_dir` the space provides for a project space, and into the host state folder
+  `wiki-index/` for the standalone space. With the fallback method, `GET /wiki/info` shows `wiki.search_degraded`. Index factory options = the administrator
+  `search.tokenizer` + `search.index_options.<method>` of the chosen method (the search implementation defines the keys, for example `token_pattern`), overlaid with the
+  app values `case_insensitive` (wiki syntax), `max_results` (`max_search_results`), `redact` (masking with the current suspected-secret rules of the port `secrets.rules`,
+  including user rules, or the default rules without it), and `redact_signature` (the signature of those rules). When the rules change, the
+  repository and the index are rebuilt.
+- Write checks: the port `wiki.write_checks` (always on; turn one off with the setting `enabled: false`) + the entry point
+  `agent_console.wiki_write_checks` (turned on with the setting `wiki.write_checks[{id, enabled, options}]`; the value is a check object
+  or a factory that receives the options).
+- The capabilities `WikiInfo.capabilities` are computed from which ports exist (`runs` = a link that provided `runs` in `wiki.integrations`).
+- Search text hash: administrator options `query_hash` (`hmac` by default, `sha256`, `off`) and `query_hash_salt_env` (the name of the environment variable to read the salt from;
+  the value is never kept in the settings. When missing or empty, a random salt on every server start). There is one hasher per service
+  (`WikiService.query_hash`, `search_query_hasher(cfg, environ)`), and the runs link uses it for `query_sha256` in agent wiki search events.
+  Whether to share the variable with the memory module is decided in each module's settings.
 
-코드에 고정된 것: 머리말 역할·기본 점검·링크 대상 찾기의 뜻(`ac-wiki`), 쓰기 규칙을 거는 길(도구·화면·
-REST — 파일을 직접 고친 것은 다음 읽기·`scan`에서 `external` 기록과 점검의 규칙 위반으로 보인다), 원본 =
-파일. 페이지 경로의 마지막 구성요소가 `history`(또는 `history/<수>`)인 페이지는 `GET`으로 읽을 수 없다
-(기록 경로와 겹침, `PAGE_ROUTE_WORDS`).
+## Freshness window
 
-## 의존성: 무엇을 / 왜 / 대안
+Every wiki request used to recompute the repository fingerprint (wiki definition, rule versions, user settings, write checks, suspected-secret
+rule signature) and list and stat every page file. On slow drives or wikis with thousands of pages that dominated the response time. The module
+now remembers, per space and wiki, when it last checked, and inside the window it reuses that check and the page listing it built
+(link index, listing issues, history summaries).
 
-- 사내: `agent-console-wiki[sqlite]`(위키 핵심·SQLite 기록·FTS5 색인), `agent-console-store`(정의
-  저장소·버전·기록 DB 모양), `agent-console-conditions`(쓰기·점검 규칙 연산자), `agent-console-registry`
-  (플러그인), `agent-console-secret-rules`(본문·정의 비밀 검사), `agent-console-safe-zip`(zip 상한),
-  `agent-console-modkit[host]`(모듈·호스트). 새 외부 의존 없음(FastAPI·pydantic은 다른 모듈과 같다).
+| Administrator option (`modules.options.mod-wiki`) | Default | Meaning |
+| --- | --- | --- |
+| `freshness_seconds` | `2.0` | Seconds after the last check during which the module does not check the page folder, the wiki definition, the rules, or the settings again. `0` checks on every request (the 1.0.0 behavior). |
+| `scan_interval_seconds` | `0` | Seconds between background rescans of opened wikis (records external changes as history). `0` = only on read and **Rescan**. |
+| `summary_cache_entries` | `256` | Wiki list cards kept so that the checks are not recomputed while the page files stay the same. |
 
-## 설치
+What shows up at once, whatever the window:
+
+- Changes made through this server: page writes, deletes, moves, restores, and zip imports (REST and agent tools); wiki definition create, save, and
+  delete; wiki rule create, save, and delete, rule body file writes and deletes, and rule version restores.
+- Definition saves announced on the module topic `definitions.saved` (optional subscription): a wiki or wiki rules kind drops the checks of that space
+  (no space = the standalone space and the library), and any other kind (for example the common settings that hold the wiki and secret settings)
+  drops all checks.
+- `POST …/scan` (**Rescan** on the screen) and the periodic scan ignore the window.
+- Opening a page whose own file changed outside the app (a different size or modification time from the listing) rebuilds the listing first.
+
+What can be late by up to `freshness_seconds`: files changed by another editor or process (other pages in the list, links, and backlinks), and
+definitions or settings changed outside this process without an event. Press **Rescan** to see them at once. On slow drives (for example a
+Windows drive mounted in WSL or a network drive) or wikis with thousands of pages, 10 to 30 seconds keeps the screens fast; set `0` if you always
+want edits from other editors to show immediately. As a reference, with 2,000 pages in a project on a Windows drive mounted in WSL, a repeated page
+list request took about 8 s on every request before and about 0.1 s inside the window (on a Linux file system: about 0.5 s and 0.07 s).
+
+```yaml
+modules:
+  options:
+    mod-wiki:
+      freshness_seconds: 15
+```
+
+What is fixed in code: the roles of front matter, the default checks, and the meaning of link target resolution (`ac-wiki`); the paths that enforce write rules (tools, screen,
+REST; files edited directly show up on the next read or `scan` as `external` history entries and as rule violations in the checks); and the original =
+the files. A page whose last path component is `history` (or `history/<number>`) cannot be read with `GET`
+(it overlaps the history route, `PAGE_ROUTE_WORDS`).
+
+## Dependencies: what, why, alternatives
+
+- In-house: `agent-console-wiki[sqlite]` (wiki core, SQLite history, FTS5 index), `agent-console-store` (definition
+  store, versions, record database shape), `agent-console-conditions` (write and check rule operators), `agent-console-registry`
+  (plugins), `agent-console-secret-rules` (secret checks for bodies and definitions), `agent-console-safe-zip` (zip limits), and
+  `agent-console-modkit[host]` (module, host). No new external dependencies (FastAPI and pydantic are the same as other modules).
+
+## Install
 
 ```bash
 pip install agent-console-mod-wiki
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-wiki
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-wiki
 ```
 
-## 최소 사용 (모듈 하나 + 단독 루트)
+## Minimal usage (one module + the standalone root)
 
 ```python
 >>> import tempfile
@@ -92,59 +128,60 @@ notes [('other', 'broken')]
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-단독 실행: `python -m agent_console_mod_wiki [--with ID] [--config PATH] [--port 0] [--check]`. 사용자
-설정은 워크스페이스 `settings.yaml`의 `wiki` 섹션. 정의 버전·페이지 기록은 `<state>/console.sqlite3`.
+Standalone run: `python -m agent_console_mod_wiki [--with ID] [--config PATH] [--port 0] [--check]`. User
+settings go in the `wiki` section of the workspace `settings.yaml`. Definition versions and page history are in `<state>/console.sqlite3`.
 
-## 포트
+## Ports
 
-| 포트 | 방향 | 모양 |
+| Port | Direction | Shape |
 | --- | --- | --- |
-| `wiki.service` | 제공 | `WikiServicePort`: `settings()`·`wiki_ids(space)`·`repository(space, wiki)`·`tool_targets(space)`·`notify(space, wiki, paths)` (+ 구현 `WikiService`의 `scope(space)`) |
-| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references, title, delete)` 두 개(`delete` = 자기 삭제 경로와 같은 일, 종류 공통 삭제가 부른다) |
-| `server.warnings` | 제공(여러) | 설정 형식 문제·설치되지 않은 쓰기 검사 |
-| `wiki.spaces` | 선택 | `WikiSpaces.open(space) -> WikiSpace{store, config_writable, pages_root[, pages_dir, config_dir, index_dir]}` |
-| `records.spaces` | 선택 | `agent_console_store.RecordsSpaces`(공간 이름 = `records_space_prefix` + 프로젝트 id) |
-| `wiki.write_checks` | 선택(여러) | `agent_console_wiki.WikiWriteCheck{id, check(subject, text)}` |
-| `wiki.integrations` | 선택(여러) | `WikiIntegration{id, capabilities}`(`runs` → `capabilities.runs`) |
-| `workspace.settings`·`secrets.rules`·`definitions.store` | 선택 | 설정·비밀 규칙·라이브러리 |
+| `wiki.service` | Provides | `WikiServicePort`: `settings()`, `wiki_ids(space)`, `repository(space, wiki)`, `tool_targets(space)`, `notify(space, wiki, paths)` (+ `scope(space)` of the implementation `WikiService`) |
+| `definitions.kind_contributions` | Provides (several) | Two `KindContribution(DefinitionKind, references, title, delete)` (`delete` does the same as the module's own delete route; the common delete for all kinds calls it) |
+| `server.warnings` | Provides (several) | Settings format problems, write checks that are not installed |
+| `wiki.spaces` | Optional | `WikiSpaces.open(space) -> WikiSpace{store, config_writable, pages_root[, pages_dir, config_dir, index_dir]}` |
+| `records.spaces` | Optional | `agent_console_store.RecordsSpaces` (space name = `records_space_prefix` + project id) |
+| `wiki.write_checks` | Optional (several) | `agent_console_wiki.WikiWriteCheck{id, check(subject, text)}` |
+| `wiki.integrations` | Optional (several) | `WikiIntegration{id, capabilities}` (`runs` → `capabilities.runs`) |
+| `workspace.settings`, `secrets.rules`, `definitions.store` | Optional | Settings, secret rules, library |
+| Topic `definitions.saved` | Subscribes (optional) | `{kind, id, space?}` → drops freshness window checks (see "Freshness window") |
 
-## 로그·구조도에서 보기(예시 데이터)
+## Viewing the wiki in logs and the architecture map (example data)
 
-실행 연동(`link-wiki-runs`)이 남긴 실행 이벤트 `wiki.<op>`는 플랫폼 실행 로그 대응표
-(`ac-link-logs-runs` `run_event_map.yaml`의 `wiki.*`)가 범주 `wiki`, 문서 표지
-`{kind: wiki, path: <위키 id>/<페이지 경로>, action: read|read_links|written|removed|moved_from|moved_to}`,
-근거 `tool_use_id`·`wiki`(위키 id)로 옮긴다. 검색·목록은 페이지가 없어 문서 표지가 없다. 파일 변경 어휘
-(`created`·`modified`·`deleted`)는 쓰지 않는다(기본 구조도 Workspace 칸에 섞이지 않게).
+The run events `wiki.<op>` left by the runs link (`link-wiki-runs`) are mapped by the platform run log map
+(`wiki.*` in `run_event_map.yaml` of `ac-link-logs-runs`) to the category `wiki`, the document marker
+`{kind: wiki, path: <wiki id>/<page path>, action: read|read_links|written|removed|moved_from|moved_to}`,
+and the evidence `tool_use_id` and `wiki` (wiki id). Searches and lists have no page, so they have no document marker. The file change words
+(`created`, `modified`, `deleted`) are not used (so that they do not mix into the Workspace cell of the default architecture map).
 
-기본 구조도 프로필에는 Wiki 칸이 없다. 보고 싶으면 기본 프로필(`GET /architecture/profiles/agent-architecture`의
-`profile`)을 복제해 칸·연결·coverage를 더한다(`...`은 복제한 나머지). 저장소에 이 데이터를 두지 않는다.
+The default architecture map profile has no Wiki cell. To see one, duplicate the default profile (`profile` of `GET /architecture/profiles/agent-architecture`)
+and add a cell, an edge, and coverage (`...` is the rest of the duplicate). This data is not kept in the repository.
 
 ```yaml
 architecture:
   profiles:
     with-wiki:
-      title: 에이전트 아키텍처 + 위키
-      # ... 기본 프로필의 canvas·zones·error_when·source_priority·cells·edges·coverage를 그대로 복제 ...
+      title: Agent architecture + wiki
+      # ... duplicate canvas, zones, error_when, source_priority, cells, edges, and coverage of the default profile as they are ...
       cells:
-        # ... 기본 칸 ...
+        # ... default cells ...
         wiki:
           label: Wiki
-          description: 위키 읽기·쓰기
+          description: Wiki reads and writes
           x: 810
           y: 730
           zone: runtime
           tone: gold
           metrics: [count, errors]
-          group_by: /correlation/wiki          # 위키별 묶음
+          group_by: /correlation/wiki          # group by wiki
           when: {all: [{path: /category, op: eq, value: wiki}]}
       edges:
-        # ... 기본 연결 ...
+        # ... default edges ...
         - id: wiki_access
           from: dispatch
           to: wiki
-          label: 위키 접근
+          label: Wiki access
           kind: observed
           style: request
           points: [[1054, 610], [1030, 610], [1030, 730], [906, 730]]
@@ -157,20 +194,20 @@ architecture:
                   subagents, response, wiki]
 ```
 
-- 범주 이름도 데이터다. `logs.sources[id=platform-runs].config.event_map`에서 `wiki.*` 규칙을 통째로 다시
-  적어 `category: knowledge`로 바꾸면 위 조건의 `value`도 `knowledge`로 바꾼다.
-- 규칙을 끄려면 같은 자리에 `"wiki.*": {}`를 적는다. 위키 이벤트는 범주 `other`(제목 = 형식 이름)로 남고
-  Wiki 칸은 0회다.
-- 칸 횟수 = 그 실행의 위키 이벤트 수 = 칸을 눌렀을 때 이벤트 표 수다(저장소 통합 테스트
+- Category names are data too. When you rewrite the whole `wiki.*` rule in `logs.sources[id=platform-runs].config.event_map`
+  and change it to `category: knowledge`, change the `value` of the condition above to `knowledge` as well.
+- To turn the rule off, write `"wiki.*": {}` in the same place. Wiki events remain in the category `other` (title = type name), and
+  the Wiki cell shows 0.
+- Cell count = the number of wiki events of that run = the number of rows in the event table when you click the cell (the repository integration test
   `test_integration_wiki_cell_7r15.py`).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

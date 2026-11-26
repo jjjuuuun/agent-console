@@ -1,4 +1,5 @@
 import { useEffect, useId, useImperativeHandle, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import ko from "../locales/ko.json";
 import { Btn } from "../shared/Button";
 import { s } from "../shared/styles";
 import { fill, mergeMessages } from "../shared/util";
@@ -30,24 +31,8 @@ export interface ComposerMessages {
   };
 }
 
-export const defaultComposerMessages: ComposerMessages = {
-  inputLabel: "메시지 입력",
-  placeholder: "메시지를 입력하세요…",
-  send: "전송",
-  sending: "전송 중",
-  keyHint: { enter: "Enter 전송 · Shift+Enter 줄바꿈", mod_enter: "Ctrl+Enter 전송 · Enter 줄바꿈" },
-  answer: {
-    strip: "{target}의 {kind}에 답하는 중",
-    stripMessage: "새 메시지로 보내는 중 — 질문은 대기 중",
-    modeGroup: "보내는 방식",
-    modeAnswer: "답하기",
-    modeMessage: "새 메시지",
-    placeholder: "답을 입력하세요…",
-    keyHint: { enter: "Enter 답하기 · Ctrl+Shift+Enter 새 메시지로", mod_enter: "Ctrl+Enter 답하기 · Ctrl+Shift+Enter 새 메시지로" },
-    srEnterAnswer: "{target}의 질문에 답하는 입력창입니다",
-    srEnterMessage: "새 메시지 입력창입니다",
-  },
-};
+/** 기본 문구는 한국어(`locales/ko.json`의 `composer`). 영어는 `@agent-console/chat/locales/en`의 `composer`를 넘긴다. */
+export const defaultComposerMessages: ComposerMessages = ko.composer;
 
 /** 답변 모드 전환 단축키 표시용. */
 export const ANSWER_TOGGLE_SHORTCUT = "Alt+Shift+A";

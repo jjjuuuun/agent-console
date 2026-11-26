@@ -7,12 +7,12 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-modkit[host]>=0.1,<0.2",
     "agent-console-memory[sqlite]>=0.1,<0.2",
     "agent-console-conditions>=0.1,<0.2",
     "agent-console-registry>=0.1,<0.2",
-    "agent-console-store>=0.1,<0.2",
+    "agent-console-store>=0.2,<0.3",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
     "pydantic>=2.9",
@@ -64,6 +64,6 @@ known-first-party = ["agent_console_*"]
 # 확장 지점 선언(scripts/extdocs/README.md). 문서·대조 도구가 읽는다.
 [tool.agent-console]
 internal-ports = [
-    { port = "agent_console_mod_memory.ports:MEMORY_SERVICE", reason = "메모리 모듈이 연동 모듈(실행 도구)에 주는 서비스 통로(구현은 이 모듈 하나)" },
-    { port = "agent_console_mod_memory.ports:MEMORY_SPACES", reason = "프로젝트 연동이 공간 이름 → 메모리 저장소를 주는 모듈 사이 통로. 저장소 교체는 memory-store 지점" },
+    { port = "agent_console_mod_memory.ports:MEMORY_SERVICE", reason = "Service port that the memory module gives link modules (run tools) (this module is the only implementation)" },
+    { port = "agent_console_mod_memory.ports:MEMORY_SPACES", reason = "Inter-module port through which the projects link module provides the memory store for a space name. To replace the store, use the `memory-store` extension point" },
 ]

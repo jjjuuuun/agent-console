@@ -41,6 +41,7 @@
 .ac-fp-btn:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--ac-hover-bg); }
 .ac-fp-btn:disabled, .ac-fp-btn[aria-disabled="true"] { color: var(--ac-text-subtle); cursor: not-allowed; }
 .ac-fp-btn[data-variant="primary"] { background: var(--ac-accent); border-color: var(--ac-accent); color: var(--ac-text-on-accent); }
+.ac-fp-btn[data-variant="primary"]:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--ac-accent-hover); border-color: var(--ac-accent-hover); color: var(--ac-text-on-accent); }
 .ac-fp-btn[data-variant="primary"]:disabled { background: var(--ac-surface-3); border-color: var(--ac-border); color: var(--ac-text-muted); }
 
 /* 선택 우선 배치(screen-projects.md §3.1~§3.2) */

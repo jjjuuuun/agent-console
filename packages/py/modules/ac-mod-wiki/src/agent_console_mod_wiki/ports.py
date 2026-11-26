@@ -25,6 +25,11 @@
   켜지고, 사용자 설정 ``wiki.write_checks``에 ``enabled: false``로 적으면 끈다.
 - ``wiki.integrations``(여러 제공자, Q14): 연동 선언(``WikiIntegration``). ``capabilities``에
   ``runs``를 낸 것이 있으면 ``WikiCapabilities.runs``가 참이다.
+
+구독(선택 — 내는 모듈이 없으면 그 무효화만 없다):
+
+- 토픽 ``definitions.saved``(``kind``·``id``·``space`` 선택): 위키 신선도 창의 지문 확인 기록을
+  버린다(위키·위키 규칙 종류면 그 공간, 다른 종류면 전부 — ``WikiService.on_definition_saved``).
 """
 
 from __future__ import annotations
@@ -35,7 +40,7 @@ from typing import Any, Final, Protocol, runtime_checkable
 
 from agent_console_contracts import Issue
 from agent_console_contracts.wiki import WikiSettings
-from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey
+from agent_console_modkit import DEFINITION_KIND_CONTRIBUTIONS, KindContribution, PortKey, Topic
 from agent_console_store import RECORDS_SPACES_PORT, DefinitionStore, RecordsSpaces
 from agent_console_wiki import QueryHasher, WikiRepository, WikiToolTarget, WikiWriteCheck
 
@@ -139,7 +144,8 @@ class WikiServicePort(Protocol):
         deleted: bool = False,
         external: bool = False,
     ) -> None:
-        """WS ``wiki.changed``를 낸다(연동이 저장소로 직접 쓴 뒤). 요약 캐시도 지운다."""
+        """WS ``wiki.changed``를 낸다(연동이 저장소로 직접 쓴 뒤). 요약 캐시와 그 위키의 페이지
+        목록 스냅숏(신선도 창)도 지운다."""
         ...
 
 
@@ -171,7 +177,19 @@ WORKSPACE_SETTINGS: PortKey[WorkspaceSettingsReader] = PortKey(
 SECRET_RULES: PortKey[SecretRulesReader] = PortKey("secrets.rules", "지금 비밀 의심 규칙")
 SERVER_WARNINGS: PortKey[WarningSource] = PortKey("server.warnings", "서버 정보 경고", multi=True)
 
+
+class SavedLike(Protocol):
+    """``definitions.saved`` 항목에서 읽는 부분(``id``·``space``는 ``getattr``로 읽는다)."""
+
+    @property
+    def kind(self) -> str: ...
+
+
+DEFINITIONS_SAVED: Topic[SavedLike] = Topic("definitions.saved")
+"""정의가 저장될 때마다 정의 모듈·프로젝트 모듈이 내는 토픽(같은 이름 = 같은 토픽)."""
+
 __all__ = [
+    "DEFINITIONS_SAVED",
     "DEFINITIONS_STORE",
     "INTEGRATION_RUNS",
     "KIND_CONTRIBUTIONS",
@@ -183,6 +201,7 @@ __all__ = [
     "WIKI_SPACES",
     "WIKI_WRITE_CHECKS",
     "WORKSPACE_SETTINGS",
+    "SavedLike",
     "SecretRulesReader",
     "WarningSource",
     "WikiIntegration",

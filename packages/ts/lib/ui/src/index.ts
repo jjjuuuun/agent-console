@@ -47,6 +47,8 @@ export type { TooltipProps } from "./components/Tooltip";
 export { computeVisible } from "./components/fit";
 export { useOverflowFit } from "./components/useOverflowFit";
 export type { UseOverflowFit, UseOverflowFitOptions } from "./components/useOverflowFit";
+export { defaultUiMessages, formatUiMessage } from "./messages";
+export type { UiMessages } from "./messages";
 export { PageHeader } from "./components/PageHeader";
 export type { PageHeaderProps } from "./components/PageHeader";
 export { TrustBadge } from "./components/TrustBadge";

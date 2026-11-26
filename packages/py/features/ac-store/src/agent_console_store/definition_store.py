@@ -62,7 +62,7 @@ type WriteGuard = Callable[[DefinitionKind, str, Mapping[str, Any], Mapping[str,
 
 
 class BaseDefinitionStore(ABC):
-    """`DefinitionStore` 공통 구현. 하위 클래스는 원시 문서 입출력 다섯 개만 채운다."""
+    """Common `DefinitionStore` implementation. Subclasses fill in five raw document I/O methods."""
 
     def __init__(
         self,

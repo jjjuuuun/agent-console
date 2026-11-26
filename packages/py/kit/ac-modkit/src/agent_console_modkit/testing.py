@@ -256,7 +256,7 @@ ECHO_SETTINGS_COMPAT = SettingsCompat(
     flags=(FlagSetting("echo-tag", ("tags",), metavar="TAG", repeat=True),),
     seeds=(SeedSetting("host", "host"),),
     removed=(
-        RemovedSetting("echo.legacy", "echo.legacy는 지웠습니다"),
+        RemovedSetting("echo.legacy", "echo.legacy was removed"),
         RemovedSetting("echo_old", new="modules.options.mod-echo"),
     ),
 )

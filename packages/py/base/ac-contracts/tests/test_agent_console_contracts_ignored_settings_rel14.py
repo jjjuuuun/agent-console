@@ -40,7 +40,7 @@ class _Workspace015(DefinitionModel):
 
 
 def test_constant() -> None:
-    assert IGNORED_SETTINGS_KEYS == ("projects", "logs.projects")
+    assert IGNORED_SETTINGS_KEYS == ("projects", "logs.projects", "default_backend")
 
 
 @pytest.mark.parametrize(

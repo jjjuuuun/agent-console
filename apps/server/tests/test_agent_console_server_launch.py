@@ -186,7 +186,7 @@ def test_announce_skips_when_no_url_or_opener_fails(
 
     static = make_settings(tmp_path, web={"serve_static": True})
     assert announce_when_ready(fake, static, opener=broken, stop=stop) is None
-    assert "웹 화면을 열지 못했습니다" in caplog.text
+    assert "Couldn't open the web app" in caplog.text
     assert announce_when_ready(fake, static, opener=None, stop=stop) is None  # 준비 줄만
 
 

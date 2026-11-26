@@ -1,69 +1,77 @@
-# 로그
+# Logs
 
-로그 화면은 여러 출처(Claude Code 세션 로그, 이 콘솔의 실행 이벤트, hook 기록, 다른 도구의 jsonl)를 같은 모양의
-정규화 이벤트로 색인해 보인다. 흐름은 **출처가 원본을 읽고 → 분류기가 행 하나를 이벤트 초안으로 바꾸고 → 색인이
-저장한다**. 출처는 원본을 읽기만 한다. 범주 이름(`tool`·`llm`·`error` …)은 분류기가 내는 열린 문자열이고, 화면의
-이름·색은 사용자 설정 `logs.taxonomy`(데이터)가 정한다.
+The log screen indexes several sources (Claude Code session logs, the run events of this console, hook records, the
+jsonl of other tools) into normalized events of the same shape and shows them. The flow is: **a source reads the raw
+data → a classifier turns one row into event drafts → the index stores them**. Sources only read raw data. Category
+names (`tool`, `llm`, `error`, and so on) are open strings that classifiers produce, and their names and colors on
+screen are defined by the user setting `logs.taxonomy` (data).
 
-| 하고 싶은 일 | 지점 |
+| What you want to do | Point |
 | --- | --- |
-| 새 로그 파일·형식을 읽는다 | [log-source](#log-source) + [log-classifier](#log-classifier) |
-| 같은 원본을 다르게 분류한다 | [log-classifier](#log-classifier) |
-| 다른 서버 기능의 데이터를 로그로 보인다 | [runtime-log-source](#runtime-log-source) |
-| 실행 중 hook·도구 호출을 더 자세히 기록한다 | [collector](#collector) |
-| 로그 질의에 새 범위(`scope=<종류>:<값>`)를 더한다 | [log-scope-kind](#log-scope-kind) |
-| 로그 질의에 새 필터 이름을 더한다 | [log-filter-predicate](#log-filter-predicate) |
-| 실행 이벤트의 범주·제목을 바꾼다(코드 없음) | [실행 이벤트 대응표](#실행-이벤트-대응표) |
+| Read a new log file or format | [log-source](#log-source) + [log-classifier](#log-classifier) |
+| Classify the same raw data differently | [log-classifier](#log-classifier) |
+| Show the data of another server feature as logs | [runtime-log-source](#runtime-log-source) |
+| Record hooks and tool calls in more detail during runs | [collector](#collector) |
+| Add a new scope (`scope=<kind>:<value>`) to log queries | [log-scope-kind](#log-scope-kind) |
+| Add a new filter name to log queries | [log-filter-predicate](#log-filter-predicate) |
+| Change the category and title of run events (no code) | [Run event mapping table](#run-event-mapping-table) |
 
-출처 설정은 작업 공간 설정 `logs.sources`다. 항목 `id`가 출처 id, `config`가 그 출처 `config_schema`에 맞는 값,
-`config.classifier`가 분류기 선택(`{id?, config?}`, id를 비우면 출처 서술자의 `format`)이다.
+Sources are configured in the workspace setting `logs.sources`. The `id` of an entry is the source id, `config` is a
+value that matches the source's `config_schema`, and `config.classifier` chooses the classifier (`{id?, config?}`;
+when the id is empty, the `format` of the source descriptor is used).
 
 ## collector
 
-**언제 쓰나**: Claude Agent SDK 백엔드로 실행할 때 기본 기록(hook 실행, MCP 도구 호출) 말고 더 모으고 싶은 것이
-있을 때. 도구 이름별 호출 수, 특정 hook의 입력 요약, 응답 시간 분포가 예다. 이 지점은 그 백엔드 패키지가 정의한
-것이라 다른 백엔드에는 걸리지 않는다. 다른 백엔드라면 그 백엔드가 이벤트를 직접 낸다.
+**When to use**: when you run with the Claude Agent SDK backend and want to collect more than the default records
+(hook runs, MCP tool calls). Examples are call counts per tool name, input summaries of a specific hook, and response
+time distributions. This point is defined by that backend package, so it does not apply to other backends. With
+another backend, the backend emits events itself.
 
-**최소 모양**: `BaseClaudeSdkCollector`를 상속하고 필요한 메서드만 고친다. `on_message(message, ctx)`(모델 응답·
-결과 메시지마다), `on_hook(event, data, tool_use_id, ctx)`(hook마다), `hook_events(config)`(받을 hook 이름),
-`config_problems(config)`(설정 검사). 서술자(`CollectorDescriptor`)의 `backend`가 이 수집기를 쓸 백엔드 id다.
+**Minimal shape**: subclass `BaseClaudeSdkCollector` and override only the methods you need:
+`on_message(message, ctx)` (for each model response and result message), `on_hook(event, data, tool_use_id, ctx)`
+(for each hook), `hook_events(config)` (the hook names to receive), and `config_problems(config)` (the settings check).
+The `backend` of the descriptor (`CollectorDescriptor`) is the id of the backend that uses this collector.
 
-**규칙**
+**Rules**
 
-- 실행에 개입하지 않는다. 메시지를 바꾸거나 막지 않고 보기만 한다. 예외는 백엔드가 삼키고 실행마다 경고 이벤트
-  하나로 남긴다.
-- 실행 하나 동안의 상태는 `ctx.state`에 둔다. 수집기 객체에 실행별 값을 두지 않는다(실행이 동시에 돈다).
-- 이벤트는 자기 접두사 `type`으로 낸다. 백엔드가 실행 이벤트로 내보내므로 실행 화면과 로그 화면(`platform-runs`
-  출처)에 그대로 보인다. 로그의 범주·제목은 [실행 이벤트 대응표](#실행-이벤트-대응표)로 붙인다.
-- 도구 입력·출력 원문, 비밀, 경로는 싣지 않는다. 이름·개수·시간·결과 상태 정도만 싣는다.
-- 켜기는 에이전트·팀·공통 설정의 `observe.collectors.<id>`(`enabled`, `config`)다. 정하지 않은 수집기는 꺼져 있다.
+- Do not interfere with the run. Only watch; do not change or block messages. The backend swallows exceptions and
+  records them as one warning event per run.
+- Keep the state of one run in `ctx.state`. Do not keep per-run values on the collector object (runs happen at the
+  same time).
+- Emit events with a `type` under your own prefix. The backend sends them out as run events, so they show as they are
+  on the run screens and on the log screen (the `platform-runs` source). Give them log categories and titles with the
+  [run event mapping table](#run-event-mapping-table).
+- Do not include raw tool input or output, secrets, or paths. Carry only names, counts, times, and result status.
+- It is turned on with `observe.collectors.<id>` (`enabled`, `config`) in agent, team, or common settings. Collectors
+  that are not set are off.
 
-**흔한 실수**: `config` 모양을 서술자 `config_schema`에만 적고 `config_problems`에서 검사하지 않는다. 스키마가
-없거나 느슨하면 틀린 설정이 실행 때 조용히 무시된다.
+**Common mistakes**: writing the `config` shape only in the descriptor `config_schema` and not checking it in
+`config_problems`. If the schema is missing or loose, wrong settings are silently ignored at run time.
 
-**지운 뒤 남는 데이터**: 설정의 `observe.collectors.<id>`는 남는다. 검증이 `observe.unknown_collector` **경고**로
-알리고 실행은 그대로 된다. 설정이 수집기 스키마와 맞지 않을 때는 `observe.collector_config_invalid` 경고다. 이미 낸
-이벤트는 실행 기록에 남는다.
+**Data left after removal**: `observe.collectors.<id>` in the settings stays. Validation reports
+`observe.unknown_collector` as a **warning**, and runs go ahead. When the settings do not match the collector schema,
+the warning is `observe.collector_config_invalid`. Events already emitted stay in the run history.
 
 <!-- extdocs:facts collector -->
-- 등록: entry point 그룹 `agent_console.collectors`(상수 `agent_console_backend_claude_sdk.collectors:COLLECTORS_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_backend_claude_sdk.collectors:ClaudeSdkCollector` — claude-sdk 관측 수집기 프로토콜.
-  - `agent_console_backend_claude_sdk.collectors:BaseClaudeSdkCollector` — 수집기 공통 베이스: 모든 메서드의 기본 구현(아무것도 하지 않음)과 설정 모델 검증.
-  - `agent_console_backend_claude_sdk.collectors:CollectorContext` — 실행 하나와 수집기 하나의 문맥. 백엔드가 실행마다 새로 만든다.
-- 기본 구현: `mcp-calls (agent-console-backend-claude-sdk)`, `sdk-hooks (agent-console-backend-claude-sdk)`
-- 예제:
+- Registration: Register in the entry point group `agent_console.collectors` (constant `agent_console_backend_claude_sdk.collectors:COLLECTORS_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_backend_claude_sdk.collectors:ClaudeSdkCollector` — Protocol for claude-sdk observation collectors.
+  - `agent_console_backend_claude_sdk.collectors:BaseClaudeSdkCollector` — Common collector base: no-op defaults for every method and settings model validation.
+  - `agent_console_backend_claude_sdk.collectors:CollectorContext` — Context for one run and one collector. The backend creates a new one per run.
+- Built-in implementations: `mcp-calls (agent-console-backend-claude-sdk)`, `sdk-hooks (agent-console-backend-claude-sdk)`
+- Examples:
   - package: [examples/extensions/agent-console-example-collector](../../examples/extensions/agent-console-example-collector/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->
 
 ## log-classifier
 
-**언제 쓰나**: 출처가 읽은 행을 다른 범주·제목·근거로 나누고 싶을 때, 또는 새 출처에 맞는 분류기가 필요할 때.
-출처 하나에 분류기 여럿을 두고 설정으로 고를 수 있다.
+**When to use**: when you want to split the rows a source reads into different categories, titles, or evidence, or
+when a new source needs a matching classifier. One source can have several classifiers, chosen in settings.
 
-**코드 없이 되는 경우**: 행이 JSON이면 기본 분류기 `mapped-jsonl`이 설정만으로 필드를 채운다(`fields`: 초안 필드 →
-JSON 포인터, `defaults`, `value_maps`, `correlation`, `usage`, `skip_if_missing`).
+**When no code is needed**: if the rows are JSON, the built-in classifier `mapped-jsonl` fills in the fields from
+settings alone (`fields`: draft field → JSON pointer, `defaults`, `value_maps`, `correlation`, `usage`,
+`skip_if_missing`).
 
 ```yaml extdocs:validate=agent_console_contracts:WorkspaceSettings
 logs:
@@ -79,76 +87,82 @@ logs:
             defaults: {category: other}
 ```
 
-**최소 모양**: `descriptor`(`LogClassifierDescriptor` — `id`·`title`, 선택 `formats`·`config_schema`)와
-`classify(record, ctx) -> list[LogEventDraft]`.
+**Minimal shape**: `descriptor` (`LogClassifierDescriptor`: `id`, `title`, and optionally `formats` and
+`config_schema`) and `classify(record, ctx) -> list[LogEventDraft]`.
 
-**규칙**
+**Rules**
 
-- **행 단위 무상태**다. 행 하나만 보고 판단한다. 앞뒤 행을 이어야 하는 정보(세션 id 등)는 출처가 원본 행
-  `RawRecord`에 실어 준다.
-- 행 하나가 이벤트 여럿이 될 수 있고(한 응답의 여러 도구 호출), 버릴 행은 빈 목록이다. 형식이 틀린 행은 버리지
-  말고 진단 범주 초안으로 낸다(색인에서 찾을 수 있게).
-- 범주·상태 이름을 코드에 고정하지 않는다. 대응은 분류기 설정 데이터로 받는다.
-- **같은 응답의 토큰을 두 번 세지 않는다.** 원본이 응답 하나를 여러 행으로 나눠 쓰면(같은 메시지 id) 토큰 표본에
-  메시지 id를 실어 한 번만 세게 한다. 같은 세션을 두 출처가 함께 읽는 경우(실행 이벤트와 세션 로그)에도 한쪽만 토큰을
-  낸다.
-- 원본 형식이 바뀌면 분류기를 고치지 말고 새 id(버전)로 하나 더 둔다. 옛 원본은 옛 분류기가 계속 읽는다.
+- It is **stateless per row**. It decides by looking at one row only. Information that needs neighboring rows
+  (session ids and so on) is carried in the raw row `RawRecord` by the source.
+- One row can become several events (several tool calls in one response), and a row to drop is an empty list. Do not
+  drop malformed rows; emit them as drafts in a diagnostic category (so they can be found in the index).
+- Do not hard-code category or status names. Take the mapping from the classifier's settings data.
+- **Do not count the tokens of the same response twice.** If the raw data splits one response into several rows (the
+  same message id), put the message id on the token sample so it is counted once. When two sources read the same
+  session (run events and session logs), only one of them emits tokens.
+- When the raw format changes, do not edit the classifier; add another one with a new id (version). The old
+  classifier keeps reading the old raw data.
 
-**흔한 실수**: 프롬프트·도구 출력 원문을 제목에 그대로 넣는다. 제목은 짧게 자르고, 비밀 의심 값은 색인이 가리지만
-분류기가 바꾼 문자열(인코딩·일부)은 가릴 수 없다.
+**Common mistakes**: putting raw prompts or tool output into titles as they are. Keep titles short. The index masks
+values that look like secrets, but it cannot mask strings the classifier changed (encoded, partial).
 
-**지운 뒤 남는 데이터**: 그 분류기를 고른 출처는 다음 수집 때 실패하고, 서버 경고가 `logs.unknown_classifier`
-**경고**(출처 id·분류기 id)로 알린다. 다른 출처는 계속 수집되고, 이미 색인된 이벤트는 남는다.
+**Data left after removal**: sources that chose that classifier fail at the next collection, and the server reports
+`logs.unknown_classifier` as a **warning** (with the source id and classifier id). Other sources keep collecting, and
+events already indexed stay.
 
 <!-- extdocs:facts log-classifier -->
-- 등록: entry point 그룹 `agent_console.log_classifiers`(상수 `agent_console_logs:LOG_CLASSIFIERS_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_logs:LogClassifier` — 로그 분류기. 행 단위 무상태.
-  - `agent_console_logs:ClassifyContext` — 분류기에 넘기는 맥락.
-  - `agent_console_logs:LogEventDraft` — 분류기가 원본 행 하나에서 만든 이벤트 초안. `LogEvent`에서 uid·seq·observed_at을 뺀 것.
-- 기본 구현: `claude-code (agent-console-logs-claude)`, `hook-probe (agent-console-hook-probe)`, `mapped-jsonl (agent-console-logs)`, `normalized-v1 (agent-console-logs)`
-- 예제:
+- Registration: Register in the entry point group `agent_console.log_classifiers` (constant `agent_console_logs:LOG_CLASSIFIERS_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_logs:LogClassifier` — Log classifier. Stateless, one record at a time.
+  - `agent_console_logs:ClassifyContext` — Context passed to a classifier.
+  - `agent_console_logs:LogEventDraft` — Event draft a classifier built from one raw record: `LogEvent` without uid, seq, observed_at.
+- Built-in implementations: `claude-code (agent-console-logs-claude)`, `hook-probe (agent-console-hook-probe)`, `mapped-jsonl (agent-console-logs)`, `normalized-v1 (agent-console-logs)`
+- Examples:
   - package: [examples/extensions/agent-console-example-log-source](../../examples/extensions/agent-console-example-log-source/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->
 
 ## log-filter-predicate
 
-**언제 쓰나**: 로그 이벤트 질의에 새 필터 이름을 더하고 싶을 때. 다른 기능의 판단을 로그 표에 걸어야 하는 경우다.
-기본 구현은 로그·구조도 연동이 더하는 `arch`·`arch_group`·`arch_sources`(구조도 칸에 든 이벤트만)다.
+**When to use**: when you want to add a new filter name to log event queries. This is for applying another feature's
+decisions to the log table. The built-in implementation is `arch`, `arch_group`, and `arch_sources` (only events in
+architecture map cells), added by the logs and architecture map link.
 
-**최소 모양**: 연동 모듈이 포트 `logs.filter_predicates`(여러 제공자)에 `LogFilterExtension`을 준다. `fields`(받는
-필터 이름과 표시 정보 — `GET /api/v1/logs/schema`의 `filters`에 실린다)와 `build(values, context) -> EventPredicate`
-(이벤트 하나 → 참·거짓).
+**Minimal shape**: a link module provides a `LogFilterExtension` on the port `logs.filter_predicates`
+(multi-provider): `fields` (the filter names it accepts and their display information, listed in `filters` of
+`GET /api/v1/logs/schema`) and `build(values, context) -> EventPredicate` (one event → true or false).
 
-**규칙**
+**Rules**
 
-- 필터 이름은 기본 필터·다른 확장과 겹치지 않게 자기 접두사를 붙인다. 겹치면 먼저 모은 것만 남고 뒤의 것은 빠진다.
-- 값이 틀리면 `ValueError`를 던진다. 서버가 422로 바꾼다.
-- `build`는 질의마다 한 번 불리고, 판정 함수는 이벤트마다 불린다. 비싼 준비는 `build`에서 끝내고 판정은 가볍게 한다.
+- Add your own prefix to filter names so they do not collide with built-in filters or other extensions. On a
+  collision, only the one collected first stays and the later one drops out.
+- Raise `ValueError` for wrong values. The server turns it into 422.
+- `build` is called once per query, and the predicate is called once per event. Finish expensive preparation in
+  `build` and keep the predicate light.
 
-**흔한 실수**: 판정 함수 안에서 다른 모듈을 질의한다. 이벤트 수만큼 질의가 나간다.
+**Common mistakes**: querying other modules inside the predicate. That sends as many queries as there are events.
 
-**지운 뒤 남는 데이터**: 사용자 데이터는 남지 않는다. 연동이 꺼지면 그 필터 이름은 모르는 필터가 되어 질의가 422다.
-그 필터를 쓰던 링크·저장된 질의가 있으면 그 질의만 실패한다.
+**Data left after removal**: no user data is left. When the link is off, the filter name becomes an unknown filter
+and the query returns 422. Links and saved queries that used the filter fail, and only those queries.
 
 <!-- extdocs:facts log-filter-predicate -->
-- 등록: 서버 모듈이 포트 `logs.filter_predicates`(기호 `agent_console_mod_logs.ports:LOG_FILTER_PREDICATES`, 다중 예)를 제공한다.
-- 인터페이스:
-  - `agent_console_logs:LogFilterExtension` — 필터 확장 하나(포트 `logs.filter_predicates`).
-- 기본 구현: `link-logs-architecture`
-- 예제:
+- Registration: A server module provides the port `logs.filter_predicates` (symbol `agent_console_mod_logs.ports:LOG_FILTER_PREDICATES`, multiple: yes).
+- Interface:
+  - `agent_console_logs:LogFilterExtension` — One filter extension (port `logs.filter_predicates`).
+- Built-in implementations: `link-logs-architecture`
+- Examples:
   - reference: [packages/py/links/ac-link-logs-architecture](../../packages/py/links/ac-link-logs-architecture/README.md)
-- 끄기·제거: 제공하는 모듈을 끄면(`modules.<id>.enabled: false`) 소비하는 쪽은 그 부분만 꺼진다.
+- Turning it off or removing it: Turn off the providing module (`modules.<id>.enabled: false`); consumers turn off only the parts that use it.
 <!-- /extdocs:facts -->
 
 ## log-scope-kind
 
-**언제 쓰나**: 로그 질의를 "어떤 것에 속한 이벤트"로 좁히는 새 범위가 필요할 때. 기본 구현은 로그·실행 연동의
-`run`(실행 하나)·`run-tree`(실행과 자식 실행 전부)다. 질의는 `scope=<종류>:<값>`이다.
+**When to use**: when you need a new scope that narrows a log query to "events that belong to something". The
+built-in implementations are `run` (one run) and `run-tree` (a run and all its child runs) of the logs and runs link.
+The query is `scope=<kind>:<value>`.
 
-**최소 모양**: 연동 모듈이 포트 `logs.scope_kinds`(여러 제공자)에 `LogScopeKind`를 준다. `id`(종류 이름, `:` 없음)와
-`resolve(value) -> LogScope`. 범위는 세션 id와 실행 id의 합집합이다.
+**Minimal shape**: a link module provides a `LogScopeKind` on the port `logs.scope_kinds` (multi-provider): `id` (the
+kind name, without `:`) and `resolve(value) -> LogScope`. A scope is the union of session ids and run ids.
 
 ```python
 >>> from agent_console_logs import LogScope
@@ -158,103 +172,118 @@ logs:
 
 ```
 
-**규칙**
+**Rules**
 
-- 없는 대상·빈 값이면 `ValueError`를 던진다. 서버가 422(`details.path = scope`)로 바꾼다.
-- 이벤트 목록·집계·세션 목록·타임라인이 같은 범위를 쓴다. 범위 계산은 한 곳(`resolve`)에만 둔다.
-- 종류 이름은 다른 연동과 겹치지 않게 짓는다. 겹치면 먼저 모은 것만 남는다.
+- Raise `ValueError` for a target that does not exist or an empty value. The server turns it into 422
+  (`details.path = scope`).
+- The event list, aggregates, the session list, and the timeline all use the same scope. Keep the scope computation
+  in one place (`resolve`).
+- Choose a kind name that does not collide with other links. On a collision, only the one collected first stays.
 
-**흔한 실수**: `resolve`에서 이벤트를 직접 고른다. 범위는 세션·실행 id만 돌려주고, 이벤트 고르기는 색인이 한다.
+**Common mistakes**: selecting events directly in `resolve`. A scope returns only session and run ids; the index
+selects the events.
 
-**지운 뒤 남는 데이터**: 그 범위로 만든 링크는 모르는 범위 종류가 되어 422다. 이벤트와 색인은 그대로다.
+**Data left after removal**: links made with that scope get an unknown scope kind and return 422. Events and the
+index stay as they are.
 
 <!-- extdocs:facts log-scope-kind -->
-- 등록: 서버 모듈이 포트 `logs.scope_kinds`(기호 `agent_console_mod_logs.ports:LOG_SCOPE_KINDS`, 다중 예)를 제공한다.
-- 인터페이스:
-  - `agent_console_logs:LogScopeKind` — 범위 종류 하나(포트 `logs.scope_kinds`).
-- 기본 구현: `link-logs-runs`
-- 예제:
+- Registration: A server module provides the port `logs.scope_kinds` (symbol `agent_console_mod_logs.ports:LOG_SCOPE_KINDS`, multiple: yes).
+- Interface:
+  - `agent_console_logs:LogScopeKind` — One scope kind (port `logs.scope_kinds`).
+- Built-in implementations: `link-logs-runs`
+- Examples:
   - reference: [packages/py/links/ac-link-logs-runs](../../packages/py/links/ac-link-logs-runs/README.md)
-- 끄기·제거: 제공하는 모듈을 끄면(`modules.<id>.enabled: false`) 소비하는 쪽은 그 부분만 꺼진다.
+- Turning it off or removing it: Turn off the providing module (`modules.<id>.enabled: false`); consumers turn off only the parts that use it.
 <!-- /extdocs:facts -->
 
 ## log-source
 
-**언제 쓰나**: 로그 화면에서 다른 도구의 로그를 함께 보고 싶을 때. 다른 에이전트 CLI의 세션 파일, 사내 도구의 텍스트
-로그가 예다. 행이 JSON이면 먼저 기본 출처 `mapped-jsonl`(설정만으로 폴더를 읽음)으로 되는지 본다.
+**When to use**: when you want to see the logs of other tools on the log screen. Examples are the session files of
+another agent CLI and the text logs of an in-house tool. If the rows are JSON, first see whether the built-in source
+`mapped-jsonl` (which reads folders from settings alone) is enough.
 
-**최소 모양**: `descriptor`(`LogSourceDescriptor` — `id`·`title`·`format`, 선택 `config_schema`·`default_enabled`·
-`reads_paths`·`setup_help`), `discover(ctx)`(읽을 원본 목록), `read(ref, cursor, ctx, budget=, final=)`(커서 뒤를 예산만큼
-읽기). 줄 단위 파일이면 `JsonlFileSource`를 상속하고 `parse_line`만 바꾸면 증분 읽기·끝나지 않은 줄 보류·파일 회전
-감지·읽기 전용 열기를 기반 클래스가 한다.
+**Minimal shape**: `descriptor` (`LogSourceDescriptor`: `id`, `title`, `format`, and optionally `config_schema`,
+`default_enabled`, `reads_paths`, `setup_help`), `discover(ctx)` (the list of raw data to read), and
+`read(ref, cursor, ctx, budget=, final=)` (read up to the budget after the cursor). For line-based files, subclass
+`JsonlFileSource` and change only `parse_line`. The base class handles incremental reads, holding back unfinished
+lines, detecting file rotation, and opening files read-only.
 
-**규칙**
+**Rules**
 
-- **원본은 읽기 전용이다.** 쓰기·이름 바꾸기·잠금을 하지 않는다. 기반 클래스의 읽기 전용 열기를 쓴다.
-- 읽을 폴더는 설정(`roots` 등)으로 받고 코드에 고정하지 않는다. 앱은 등록된 프로젝트 폴더 범위 밖은 읽지 않는다
-  (범위 밖 루트는 `logs.out_of_scope`로 알린다).
-- 증분으로 읽는다. 커서(바이트 오프셋 등)를 돌려주고 다음 수집은 그 뒤부터다. 한 번에 `budget`을 넘게 읽지 않는다.
-- 대화 원문을 색인에 복사하는 출처는 `default_enabled = false`로 둔다. 사용자가 켜야 읽는다.
-- 서술자 `format`이 기본 분류기 id다. 짝 분류기를 같은 패키지에 두는 것이 보통이다.
-- 하위 에이전트 로그처럼 원본이 여러 파일로 나뉘면 `discover`가 모두 찾고, 세션을 잇는 정보를 행에 싣는다.
+- **Raw data is read-only.** Do not write, rename, or lock it. Use the read-only open of the base class.
+- Take the folders to read from settings (`roots` and so on), not from code. The app does not read outside registered
+  project folders (roots outside them are reported with `logs.out_of_scope`).
+- Read incrementally. Return a cursor (a byte offset and so on); the next collection continues after it. Do not read
+  more than `budget` at once.
+- A source that copies raw conversation text into the index sets `default_enabled = false`. It reads only after the
+  user turns it on.
+- The descriptor `format` is the default classifier id. The matching classifier usually lives in the same package.
+- When the raw data is split into several files, as with subagent logs, `discover` finds them all and puts the
+  information that links sessions on the rows.
 
-**흔한 실수**: 형식이 틀린 줄을 버린다. 버리지 말고 행으로 넘겨 분류기가 진단 이벤트로 내게 한다(어디서 깨졌는지
-찾을 수 있게).
+**Common mistakes**: dropping malformed lines. Do not drop them; pass them on as rows so the classifier emits
+diagnostic events (so you can find where things broke).
 
-**지운 뒤 남는 데이터**: 출처 목록에서 사라진다. 설정 `logs.sources`의 항목과 이미 색인한 이벤트는 남지만 새로 수집하지
-않는다. 색인은 보관 기간(`modules.options.mod-logs.retention_days`)이 지나면 정리된다.
+**Data left after removal**: the source disappears from the source list. Its entry in the setting `logs.sources` and
+the events already indexed stay, but nothing new is collected. The index is cleaned up after the retention period
+(`modules.options.mod-logs.retention_days`).
 
 <!-- extdocs:facts log-source -->
-- 등록: entry point 그룹 `agent_console.log_sources`(상수 `agent_console_logs:LOG_SOURCES_GROUP`)에 등록한다. 등록 이름 = id.
-- 인터페이스:
-  - `agent_console_logs:LogSource` — 로그 출처. 원본을 읽기만 한다.
-  - `agent_console_logs:LogSourceContext` — 출처에 넘기는 맥락(모두 주입, 전역 없음).
-  - `agent_console_logs:RawRecord` — 원본 행 하나.
-- 기본 구현: `claude-code-jsonl (agent-console-logs-claude)`, `hook-probe-jsonl (agent-console-hook-probe)`, `mapped-jsonl (agent-console-logs)`, `normalized-v1 (agent-console-logs)`
-- 예제:
+- Registration: Register in the entry point group `agent_console.log_sources` (constant `agent_console_logs:LOG_SOURCES_GROUP`). The registration name is the id.
+- Interface:
+  - `agent_console_logs:LogSource` — Log source. Only reads the originals.
+  - `agent_console_logs:LogSourceContext` — Context passed to a source (everything injected, no globals).
+  - `agent_console_logs:RawRecord` — One raw record.
+- Built-in implementations: `claude-code-jsonl (agent-console-logs-claude)`, `hook-probe-jsonl (agent-console-hook-probe)`, `mapped-jsonl (agent-console-logs)`, `normalized-v1 (agent-console-logs)`
+- Examples:
   - package: [examples/extensions/agent-console-example-log-source](../../examples/extensions/agent-console-example-log-source/README.md)
-- 끄기·제거: 설정 `plugins.disabled`에 이름을 적거나 패키지를 제거하고 서버를 다시 시작한다.
+- Turning it off or removing it: Add the name to the setting `plugins.disabled`, or uninstall the package, then restart the server.
 <!-- /extdocs:facts -->
 
 ## runtime-log-source
 
-**언제 쓰나**: 다른 서버 기능의 데이터를 로그로 보이고 싶을 때. 기본 구현은 로그·실행 연동의 `platform-runs`(이
-콘솔의 실행 이벤트)다. 그 데이터는 파일이 아니라 다른 모듈의 포트로만 읽을 수 있으므로 entry point 출처로는 만들 수
-없다.
+**When to use**: when you want to show the data of another server feature as logs. The built-in implementation is
+`platform-runs` (the run events of this console) of the logs and runs link. That data can be read only through another
+module's port, not from files, so it cannot be built as an entry point source.
 
-**최소 모양**: 연동 모듈이 포트 `logs.sources`(여러 제공자)에 `RuntimeLogSource`(`source`, `classifier` 두 속성)를
-준다. 출처와 분류기는 [log-source](#log-source)·[log-classifier](#log-classifier)와 같은 프로토콜이고, 분류기는
-레지스트리를 거치지 않고 출처가 직접 지정한다.
+**Minimal shape**: a link module provides a `RuntimeLogSource` (two attributes, `source` and `classifier`) on the port
+`logs.sources` (multi-provider). The source and the classifier follow the same protocols as
+[log-source](#log-source) and [log-classifier](#log-classifier), and the source names its classifier directly instead
+of going through the registry.
 
-**규칙**
+**Rules**
 
-- 출처 id는 entry point 출처와 겹치지 않게 한다. 겹치면 그 런타임 출처는 붙지 않고 `logs.source_failed` 경고(이유
-  `logs.runtime_source_rejected`)가 남는다.
-- 새 데이터가 생기는 시점(예: 실행 이벤트 알림)을 구독해 수집을 예약한다. 주기 수집에만 기대면 화면이 늦다.
-- 상대 모듈의 데이터는 읽기만 한다.
-- 분류 규칙을 코드에 두지 말고 데이터(대응표)로 둔다. `platform-runs`의 대응표가 그 예다(아래).
+- Keep the source id from colliding with entry point sources. On a collision, that runtime source is not attached and
+  a `logs.source_failed` warning (reason `logs.runtime_source_rejected`) is recorded.
+- Subscribe to the moment new data appears (for example, run event notifications) and schedule a collection. If you
+  rely only on periodic collection, the screens lag behind.
+- Only read the other module's data.
+- Keep classification rules as data (a mapping table), not code. The mapping table of `platform-runs` is an example
+  (below).
 
-**흔한 실수**: 출처가 상대 모듈 패키지를 import한다. 포트로 받은 객체만 쓴다([연동 모듈](links.md)).
+**Common mistakes**: the source importing the other module's package. Use only the objects received through ports
+([Link modules](links.md)).
 
-**지운 뒤 남는 데이터**: 연동이 꺼지면 출처가 사라지고 이미 색인한 이벤트는 남는다. 설정 `logs.sources`의 항목도
-남지만 쓰이지 않는다.
+**Data left after removal**: when the link is off, the source disappears and the events already indexed stay. The
+entry in the setting `logs.sources` also stays, unused.
 
 <!-- extdocs:facts runtime-log-source -->
-- 등록: 서버 모듈이 포트 `logs.sources`(기호 `agent_console_mod_logs.ports:LOG_SOURCES`, 다중 예)를 제공한다.
-- 인터페이스:
-  - `agent_console_mod_logs.ports:RuntimeLogSource` — ``logs.sources`` 포트 한 항목: 다른 모듈의 데이터를 읽는 출처와 그 분류기.
-- 기본 구현: `link-logs-runs`
-- 예제:
+- Registration: A server module provides the port `logs.sources` (symbol `agent_console_mod_logs.ports:LOG_SOURCES`, multiple: yes).
+- Interface:
+  - `agent_console_mod_logs.ports:RuntimeLogSource` — ``logs.sources`` port entry: a source reading another module's data, with its classifier.
+- Built-in implementations: `link-logs-runs`
+- Examples:
   - reference: [packages/py/links/ac-link-logs-runs](../../packages/py/links/ac-link-logs-runs/README.md)
-- 끄기·제거: 제공하는 모듈을 끄면(`modules.<id>.enabled: false`) 소비하는 쪽은 그 부분만 꺼진다.
+- Turning it off or removing it: Turn off the providing module (`modules.<id>.enabled: false`); consumers turn off only the parts that use it.
 <!-- /extdocs:facts -->
 
-## 실행 이벤트 대응표
+## Run event mapping table
 
-`platform-runs` 출처는 실행 이벤트(`RunEvent`의 `type`)를 대응표로 로그 이벤트에 옮긴다. 대응표는 데이터다. 기본값은
-로그·실행 연동 패키지의 데이터 파일이고, 작업 공간 설정 `logs.sources[id=platform-runs].config.event_map`이 키(형식)별로
-**통째로** 덮어쓴다. 플러그인이 자기 이벤트에 범주를 붙일 때도 이 표를 쓴다
-([계약과 이벤트](contracts-events.md#로그-화면에-범주-붙이기)).
+The `platform-runs` source maps run events (the `type` of `RunEvent`) to log events with a mapping table. The mapping
+table is data. The defaults are a data file of the logs and runs link package, and the workspace setting
+`logs.sources[id=platform-runs].config.event_map` overrides them **entirely** per key (type). Plugins also use this
+table to give their own events a category
+([Contracts and events](contracts-events.md#categories-on-the-log-screen)).
 
 ```yaml extdocs:validate=agent_console_contracts:WorkspaceSettings
 logs:
@@ -274,33 +303,38 @@ logs:
           acme.noise: {skip: true}
 ```
 
-**키**: 형식 이름 또는 글롭(`*`·`?`). 정확한 이름이 먼저, 그다음 글롭은 긴 것부터 하나만 맞는다. 맞는 규칙이 없으면
-범주 `other`다. `"memory.*": {}`처럼 빈 규칙을 적으면 기본 규칙이 꺼져 범주 `other`가 된다.
+**Keys**: a type name or a glob (`*`, `?`). Exact names come first, then the single longest matching glob. When no
+rule matches, the category is `other`. Writing an empty rule such as `"memory.*": {}` turns off the default rule, so
+the category becomes `other`.
 
-**값**: 문자열 틀은 `{/JSON 포인터}`(이벤트 JSON 기준)와 이름 `{type}`·`{node}`·`{parent_node}`·`{thread}`·`{actor}`·
-`{run_id}`를 채운다. 없는 값은 빈 문자열이다. 조건부 값 `{pointer, map, default}`는 포인터 값을 문자열(`true`·`false`·
-`null`·숫자는 JSON 표기)로 바꿔 `map`에서 찾고, 없으면 `default`(없으면 읽은 값 그대로)를 쓴다. `map` 값과 `default`도
-틀이다.
+**Values**: string templates fill in `{/JSON pointer}` (relative to the event JSON) and the names `{type}`, `{node}`,
+`{parent_node}`, `{thread}`, `{actor}`, and `{run_id}`. Missing values are empty strings. A conditional value
+`{pointer, map, default}` turns the pointer value into a string (`true`, `false`, `null`, and numbers in JSON
+notation), looks it up in `map`, and otherwise uses `default` (or the value as read, when there is no default). The
+`map` values and `default` are templates too.
 
-| 키 | 값 | 뜻 |
+| Key | Value | Meaning |
 | --- | --- | --- |
-| `category`·`title`·`stage`·`status`·`tool`·`call_id`·`via`·`model`·`message_id`·`role` | 틀 또는 조건부 값 | 로그 이벤트의 같은 이름 필드 |
-| `from`·`to` | 틀 또는 조건부 값 | 보낸 쪽·받는 쪽(비면 없음) |
-| `tags` | 문자열 목록, 또는 목록 값 `{each, value}` | 태그. `tool`은 도구 호출 약속 태그(같은 호출이 한 번만 색인된다) |
-| `correlation` | 근거 이름 → 틀 또는 목록 값 | 이벤트를 잇는 근거(`session`·`call_id`는 값이 있으면 자동) |
-| `documents` | 문서 틀 `{path, kind, action}` 하나 또는 목록 | 이벤트가 가리키는 문서. `each`를 주면 원소마다 하나, `path`가 비면 뺀다 |
-| `duration_ms` | 포인터 | 끝난 구간의 소요 시간. 있으면 시작(추정)·끝 두 이벤트를 낸다 |
-| `session_from` | 포인터 | 이 이벤트가 노드의 세션 id를 알린다(그 노드·하위 노드 이벤트의 세션) |
-| `cwd_from` | 포인터 | 이 이벤트가 실행의 작업 폴더를 알린다(그 뒤 같은 실행 이벤트의 프로젝트 묶기 기준) |
-| `usage` | 토큰 항목(`input_tokens`·`output_tokens`·`cache_read_input_tokens`·`cache_creation_input_tokens`) → 포인터 | 토큰 표본 |
-| `skip` | `true` | 색인하지 않는다 |
+| `category`, `title`, `stage`, `status`, `tool`, `call_id`, `via`, `model`, `message_id`, `role` | Template or conditional value | The log event field of the same name |
+| `from`, `to` | Template or conditional value | Sender and receiver (none when empty) |
+| `tags` | List of strings, or a list value `{each, value}` | Tags. `tool` is the agreed tag for tool calls (the same call is indexed only once) |
+| `correlation` | Evidence name → template or list value | Evidence that links events (`session` and `call_id` are automatic when they have values) |
+| `documents` | One document template `{path, kind, action}` or a list | Documents the event points to. With `each`, one per element; dropped when `path` is empty |
+| `duration_ms` | Pointer | Duration of a finished span. When present, two events are emitted: the start (estimated) and the end |
+| `session_from` | Pointer | This event announces the node's session id (the session of events of that node and its child nodes) |
+| `cwd_from` | Pointer | This event announces the run folder (the basis for grouping later events of the same run by project) |
+| `usage` | Token item (`input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`) → pointer | Token sample |
+| `skip` | `true` | Not indexed |
 
-목록 값 `{each: <목록 포인터>, value: <항목 틀>}`은 이벤트 안 목록의 원소마다 항목 하나를 만든다. 항목 틀 안의
-`{./키}`·`{.}`(원소 자체)와 조건부 값의 `pointer: ./키`는 원소 기준이다. 빈 항목은 빼고 같은 항목은 한 번만 남는다.
+A list value `{each: <list pointer>, value: <item template>}` creates one item per element of a list inside the
+event. Inside the item template, `{./key}` and `{.}` (the element itself), and `pointer: ./key` in conditional values,
+are relative to the element. Empty items are dropped, and duplicate items are kept once.
 
-**토큰을 두 번 세지 않게**: 기본 대응표는 실행 이벤트의 토큰을 표본으로 쓰지 않는다. 같은 세션을 Claude Code 세션 로그
-출처로도 읽으면 두 번 세어지기 때문이다. 세션 로그 출처를 켜지 않는 환경에서 실행 단위 토큰을 보려면 토큰을 싣는 이벤트
-규칙에 `usage`를 넣는다.
+**Avoid counting tokens twice**: the default mapping table does not use the tokens of run events as samples, because
+the same session would be counted twice if it is also read through the Claude Code session log source. To see per-run
+tokens in an environment where the session log source is off, add `usage` to the rules of the events that carry
+tokens.
 
-모양이 틀린 대응표(모르는 키 포함)는 출처 설정 스키마 검사에 걸려 그 출처의 수집이 실패하고, 서버 경고
-`logs.source_failed`(오류 코드 `logs.invalid_config`)로 알린다. 다른 출처는 계속 수집된다.
+A malformed mapping table (including unknown keys) fails the source settings schema check, so collection for that
+source fails, and the server reports the warning `logs.source_failed` (error code `logs.invalid_config`). Other
+sources keep collecting.

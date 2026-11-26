@@ -1,14 +1,15 @@
 [project]
 name = "agent-console-store"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent Console — 저장소 인터페이스와 구현: 정의(YAML), 버전·실행·이벤트·라우팅 기록(SQLite), 인메모리"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-    "agent-console-contracts>=0.15,<0.16",
+    "agent-console-contracts>=0.16,<0.17",
     "agent-console-numbered-id>=0.1,<0.2",
+    "agent-console-settings>=0.1,<0.2",
     "alembic>=1.13",
     "ruamel-yaml>=0.18",
     "sqlalchemy>=2.0",
@@ -56,12 +57,12 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.definition-store]
-title = "정의 저장소"
+title = "Definition store"
 area = "host"
 design_id = "X11"
-summary = "에이전트·팀 구성 등 정의를 저장하는 곳을 다른 구현으로 바꾼다(주입)"
+summary = "Replaces where definitions such as agents and teams are stored with another implementation (injected)"
 registration = { kind = "injection" }
 interface = ["agent_console_store:DefinitionStore", "agent_console_store:BaseDefinitionStore"]
 builtin = "none"
-example = { kind = "reference", path = "packages/py/features/ac-store", note = "FileDefinitionStore(파일 YAML)·InMemoryDefinitionStore" }
+example = { kind = "reference", path = "packages/py/features/ac-store", note = "`FileDefinitionStore` (YAML files) and `InMemoryDefinitionStore`" }
 guide = "host.md"

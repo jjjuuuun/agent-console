@@ -43,6 +43,10 @@ def test_contributed_items_delete_through_common_route(tmp_path: Path) -> None:
         kinds = client.get(f"{API}/projects/copy/kinds", params={"project": project}).json()
         assert kinds
         assert all(k["deletable"] for k in kinds), kinds
+        # P1.19: 기본 종류·기여 종류 모두 여는 화면 역할이 있고 종류마다 다르다
+        roles = [k["open_role"] for k in kinds]
+        assert all(roles), kinds
+        assert len(set(roles)) == len(roles), roles
 
         spec = client.post(f"{API}/sdd/specs?project={project}", json={"name": "S", "id": "s1"})
         assert spec.status_code == 201, spec.text

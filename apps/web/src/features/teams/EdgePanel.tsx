@@ -33,6 +33,9 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
   const configCount = Object.keys(edge.config ?? {}).length;
   const mine = issuesOfEdge(ctx.issues, edge.id);
   const badge = kind === undefined ? undefined : edgeKindBadge(kind);
+  // 분류 칩 문구: 메시지 표의 문구, 표에 없는 scheduling 값(플러그인이 준 새 값)은 원문 그대로(명세 §14.4.3). 표에서 빈 문구(none)는 행을 숨긴다.
+  const knownBadge = badge === undefined ? undefined : defaultMessages.kindBadgeLabels[badge];
+  const classText = knownBadge ? knownBadge : badge === "none" && kind?.scheduling != null && !(kind.scheduling in defaultMessages.kindBadgeLabels) ? String(kind.scheduling) : undefined;
   // 서버 이슈 중 연결 설정 안을 가리키는 것(조건 행·한도 필드)은 폼의 해당 위치에 매단다
   const configIssues: ConfigIssue[] = mine.flatMap((issue) => {
     const path = configRelativePath(issue.path);
@@ -155,10 +158,10 @@ export function EdgePanel({ ctx, edge, layout }: { ctx: TeamPanelContext; edge: 
                 <span className="lib-mono">{rawPorts}</span>{" "}
                 <button type="button" className="app-link-btn" onClick={copyPorts}>{t.edge.portsCopy}</button>
               </dd>
-              {badge !== undefined && defaultMessages.kindBadgeLabels[badge] ? (
+              {classText !== undefined ? (
                 <>
                   <dt>{t.edge.classLabel}</dt>
-                  <dd><span className="ac-tag">{defaultMessages.kindBadgeLabels[badge]}</span></dd>
+                  <dd><span className="ac-tag">{classText}</span></dd>
                 </>
               ) : null}
             </dl>

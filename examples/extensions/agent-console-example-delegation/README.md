@@ -1,23 +1,23 @@
 # agent-console-example-delegation
 
-새 **위임 방식**을 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 위임 방식 목록(`GET /api/v1/delegation-strategies`)과 편집기의
-위임 연결 "위임 방식" 선택지에 나타나고 제거하면 사라진다.
+An example that adds a new **delegation strategy** with a single plugin package.
+No engine, server, or web code changes. Once installed, it appears in the delegation strategy list (`GET /api/v1/delegation-strategies`) and in the
+*Delegation strategy* choices of delegation edges in the editor, and it disappears when removed.
 
-위임 방식 `example.round_robin`(차례로 맡기기)
-- 위임 대상을 **연결 순서대로 한 번씩** 엔진의 `ctx.invoke_node`로 불러(대상마다 자기 NodeRun) 위임자의 입력을
-  그대로 맡기고, 결과를 이어 붙여 위임자의 결과로 낸다. 모델을 부르지 않는 결정적 위임이다.
-- 설정(위임자 노드 config `delegation.example.round_robin`): `item_template`(기본 `[{target}] {result}`,
-  변수 `target`·`role`·`result`·`status`), `separator`(기본 빈 줄), `failure_text`(기본 `(실패: {code})`),
-  `stop_on_failure`(기본 false — 켜면 대상 하나가 실패하는 즉시 위임자도 `example.round_robin.member_failed`로 실패).
-- 규칙은 디스크립터 값이다: **`composable = false`** — 같은 위임자에 다른 방식(예: 서브에이전트 `subagent`,
-  독립 위임 `host`)의 대상을 함께 두면 팀 검증이 `team.mixed_strategies`(error)로 막는다. 섞어 쓸 수 있는 방식과의
-  차이를 보여 주려고 일부러 끈 값이다. `requires_backend_capability = null`(위임자 백엔드를 부르지 않음),
-  `allows_outgoing_flow = false`, `max_depth = null`(설정 `delegation.max_depth`만).
+Delegation strategy `example.round_robin` (hand off in turn)
+- It calls the delegates **once each, in edge order** through the engine's `ctx.invoke_node` (each delegate gets its own NodeRun), hands each one the delegator's input
+  as it is, and joins the results into the delegator's result. It is a deterministic delegation that calls no model.
+- Settings (the delegator node config `delegation.example.round_robin`): `item_template` (default `[{target}] {result}`;
+  variables `target`, `role`, `result`, `status`), `separator` (default: a blank line), `failure_text` (default `(실패: {code})`), and
+  `stop_on_failure` (default false; when on, the delegator also fails with `example.round_robin.member_failed` as soon as one delegate fails).
+- The rules are descriptor values: **`composable = false`**: when the same delegator also has delegates of another strategy (for example subagent `subagent`
+  or independent delegation `host`), team validation blocks it with `team.mixed_strategies` (error). The value is turned off on purpose to show the
+  difference from strategies that can be mixed. `requires_backend_capability = null` (the delegator's backend is not called),
+  `allows_outgoing_flow = false`, and `max_depth = null` (only the setting `delegation.max_depth`).
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
 ```python
 from agent_console_contracts import AgentSettings, DelegationStrategyDescriptor, Issue
@@ -41,29 +41,29 @@ class RoundRobinDelegation:
 
     async def run(self, plan: DelegationPlan, ctx: NodeContext) -> AgentResult:
         parts = []
-        for m in plan.members:  # 최소 예는 기본 에이전트 노드 포트(in·out)를 가정한다
+        for m in plan.members:  # the minimal example assumes the default agent node ports (in, out)
             view = await ctx.invoke_node(m.node_id, {"in": plan.request.prompt}, by_edge=m.edge_id)
             parts.append(f"[{m.node_id}] {view.outputs.get('out', '')}")
         return AgentResult(status="succeeded", text="\n\n".join(parts))
 ```
 
-실제 구현은 `src/agent_console_example_delegation/round_robin.py`(설정을 pydantic 모델로 검증·스키마 생성, 포트 이름을
-대상 노드 타입에서 읽음, 실패 처리, 안전 치환 `fill`).
+The real implementation is `src/agent_console_example_delegation/round_robin.py` (validates the settings with a pydantic model and generates the schema, reads port names
+from the target node type, handles failures, and substitutes safely with `fill`).
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console_runtime.DELEGATION_STRATEGIES_GROUP`
-(`agent_console.delegation_strategies`), 이름 = 디스크립터 `id`.
+One entry point in `pyproject.toml`. Group = `agent_console_runtime.DELEGATION_STRATEGIES_GROUP`
+(`agent_console.delegation_strategies`); name = the descriptor `id`.
 
 ```toml
 [project.entry-points."agent_console.delegation_strategies"]
 "example.round_robin" = "agent_console_example_delegation:RoundRobinDelegation"
 ```
 
-entry point 없이 엔진만 쓸 때는 레지스트리에 직접 등록한다(테스트가 그렇게 한다):
+To use only the engine without an entry point, register it in a registry directly (the tests do this):
 `registries.delegation_strategies.register("example.round_robin", RoundRobinDelegation())`.
 
-팀 구성에서 쓰기: 위임 연결(`delegate`)의 config `strategy`로 방식을 고른다(연결 종류의 기본 방식을 덮어쓴다).
+Using it in a team: choose the strategy with the config `strategy` of a delegation edge (`delegate`) (it overrides the default strategy of the edge type).
 
 ```yaml
 edges:
@@ -77,39 +77,39 @@ nodes:
     type: agent
     config:
       agent_ref: lead
-      delegation:                      # 방식별 설정(생략 = 스키마 기본값)
+      delegation:                      # settings per strategy (omitted = schema defaults)
         example.round_robin: {separator: " | "}
 ```
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-delegation   # 설치
-uv pip uninstall agent-console-example-delegation                        # 제거
+uv pip install -e examples/extensions/agent-console-example-delegation   # install
+uv pip uninstall agent-console-example-delegation                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/delegation-strategies`에 `example.round_robin`이 나온다.
-- 제거: 목록에서 사라진다. 이 방식을 고른 팀 구성은 지워지지 않고, 저장 전 검증이 `team.unknown_strategy`(warning)로
-  알리며, 실행하면 위임자 노드가 `agent.unknown_strategy`로 실패한다.
-- 설치한 채로 끄기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example.round_robin`을 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Install: `GET /api/v1/delegation-strategies` lists `example.round_robin`.
+- Remove: it disappears from the list. Teams that chose this strategy are not deleted; the pre-save validation reports `team.unknown_strategy` (warning),
+  and when run, the delegator node fails with `agent.unknown_strategy`.
+- Turn off while installed: remove `example.round_robin` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-delegation
 uv run --project ../../.. python -m pytest
 ```
 
-테스트는 기본 노드(에이전트 노드·위임 연결, `agent-console-nodes-core`)와 fake 백엔드로 끝까지 돈다: 차례 실행·
-설정·실패 처리, 다른 방식과 섞으면 `team.mixed_strategies`, 제거하면 경고·실행 실패.
-E2E: `apps/web/e2e/08-extension.spec.ts`(`ext` flavor)가 이 패키지를 임시 폴더에 설치해 목록·실행을 확인한다.
+The tests run end to end with the default nodes (agent node and delegation edge, `agent-console-nodes-core`) and the fake backend: running in turn,
+settings, failure handling, `team.mixed_strategies` when mixed with another strategy, and a warning and a run failure after removal.
+E2E: `apps/web/e2e/08-extension.spec.ts` (`ext` flavor) installs this package into a temporary folder and checks the list and a run.

@@ -42,7 +42,7 @@ _BUILTIN_NAMES = frozenset(f.id for f in FILTER_FIELDS)
 
 @runtime_checkable
 class LogScopeKind(Protocol):
-    """범위 종류 하나(포트 `logs.scope_kinds`).
+    """One scope kind (port `logs.scope_kinds`).
 
     Attributes:
         id: 종류 이름(`scope=<id>:<값>`의 앞부분, `:`를 넣지 않는다).
@@ -66,7 +66,7 @@ class LogFilterContext:
 
 @runtime_checkable
 class LogFilterExtension(Protocol):
-    """필터 확장 하나(포트 `logs.filter_predicates`).
+    """One filter extension (port `logs.filter_predicates`).
 
     Attributes:
         fields: 이 확장이 받는 필터 이름과 표시 정보(`GET /logs/schema`의 filters에 실린다).

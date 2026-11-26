@@ -96,7 +96,7 @@ def installed_modules(group: str = MODULES_GROUP) -> list[Module]:
     modules, reports = load_installed_modules(group)
     for report in reports:
         if not report.ok:
-            _log.warning("서버 모듈 로드 실패: %s (%s)", report.source, report.error)
+            _log.warning("Couldn't load server module: %s (%s)", report.source, report.error)
     return modules
 
 
@@ -135,8 +135,7 @@ def create_app(
     cfg = settings or load_settings(environ=environ)
     if not cfg.is_loopback and not cfg.security.allow_remote:
         raise ConfigError(
-            f"루프백이 아닌 주소({cfg.host})에 바인딩하려면 "
-            "security.allow_remote: true가 필요합니다"
+            f"Binding to a non-loopback address ({cfg.host}) requires security.allow_remote: true"
         )
     env = os.environ if environ is None else environ
     api_token = _resolve_token(cfg, token)
@@ -164,10 +163,10 @@ def create_app(
     chosen = installed_modules() if modules is None else list(modules)
     assembly = assemble(chosen, cfg.modules, base=_base_services(cfg, env, plugins, paths))
     for warning in assembly.warnings:
-        _log.warning("모듈 설정: %s", warning)
+        _log.warning("Module settings: %s", warning)
     for report in assembly.report:
         if not report.active:
-            _log.info("모듈 %s: %s (%s)", report.id, report.state.value, report.reason or "")
+            _log.info("Module %s: %s (%s)", report.id, report.state.value, report.reason or "")
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -282,7 +281,7 @@ def flag_overrides(
         return flag_settings(values, rules)
     except KeyError as exc:
         raise ConfigError(
-            f"명령행 옵션 --{exc.args[0]}을(를) 선언한 서버 모듈이 설치되어 있지 않습니다"
+            f"No installed server module declares the command-line option --{exc.args[0]}"
         ) from None
 
 
@@ -328,7 +327,7 @@ def serve(
     install_log_redaction(QueryRedactingFilter(values=[policy.token]))
     shown = "localhost" if cfg.host in ("127.0.0.1", "::1") else cfg.host
     _log.info(
-        "http://%s:%d — 토큰은 같은 출처의 GET %s/bootstrap으로만 제공됩니다(로그에 남기지 않음)",
+        "http://%s:%d (the API token is served only by same-origin GET %s/bootstrap, never logged)",
         shown,
         cfg.port,
         API_PREFIX,
@@ -423,9 +422,10 @@ def _parser(prog: str, compat: Mapping[str, SettingsCompat]) -> argparse.Argumen
     parser = argparse.ArgumentParser(
         prog=prog,
         description=(
-            "Agent Console 서버를 실행한다(Ctrl-C로 종료). 토큰은 출력하지 않는다 — "
-            "클라이언트는 GET /api/v1/bootstrap으로 받는다. "
-            "우선순위: 명령행 > AGENT_CONSOLE_* 환경변수 > 설정 파일 > 기본값."
+            "Run the Agent Console server (press Ctrl-C to stop). The API token is never "
+            "printed; clients get it from GET /api/v1/bootstrap. "
+            "Precedence: command line > AGENT_CONSOLE_* environment variables > settings file "
+            "> defaults."
         ),
     )
     parser.add_argument(
@@ -434,19 +434,27 @@ def _parser(prog: str, compat: Mapping[str, SettingsCompat]) -> argparse.Argumen
         type=Path,
         default=None,
         metavar="PATH",
-        help="서버 설정 파일(agent-console.yaml). 없으면 AGENT_CONSOLE_CONFIG → 현재 폴더",
+        help=(
+            "Server settings file (agent-console.yaml). "
+            "Default: AGENT_CONSOLE_CONFIG, then the current folder"
+        ),
     )
-    parser.add_argument("--host", default=None, help="바인딩 주소(기본 설정값 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=None, help="포트(기본 설정값)")
-    parser.add_argument("--workspace", default=None, metavar="DIR", help="정의 YAML 폴더")
+    parser.add_argument(
+        "--host", default=None, help="Bind address (default from settings: 127.0.0.1)"
+    )
+    parser.add_argument("--port", type=int, default=None, help="Port (default from settings)")
+    parser.add_argument(
+        "--workspace", default=None, metavar="DIR", help="Workspace folder (definition YAML files)"
+    )
     parser.add_argument(
         "--allow-origin",
         action="append",
         default=[],
         metavar="ORIGIN",
         help=(
-            "설정의 security.allowed_origins 뒤에 더할 웹 출처(여러 번 가능, 예: "
-            "http://127.0.0.1:4173). 설정 파일·환경변수 목록을 지우지 않고 덧붙인다"
+            "Web origin to add after security.allowed_origins from the settings (repeatable, "
+            "for example http://127.0.0.1:4173). Adds to the list from the settings file and "
+            "environment variables instead of replacing it"
         ),
     )
     for flag in compat_flags(compat):
@@ -456,15 +464,16 @@ def _parser(prog: str, compat: Mapping[str, SettingsCompat]) -> argparse.Argumen
             action="append" if flag.setting.repeat else "store",
             default=None,
             metavar=flag.setting.metavar,
-            help=f"{flag.setting.help} (모듈 {flag.module_id})",
+            help=_flag_help(flag.setting.help, flag.module_id),
         )
     parser.add_argument(
         "--open",
         action=argparse.BooleanOptionalAction,
         default=None,
         help=(
-            "준비되면 웹 화면을 연다(설정 web.open.enabled를 덮어씀). 열 주소·명령은 설정 "
-            "web.open.url·command, 주소가 없으면 web.serve_static이 켜졌을 때 서버 주소"
+            "Open the web app when the server is ready (overrides web.open.enabled). The URL "
+            "and command come from web.open.url and web.open.command; without a URL, the "
+            "server address is used when web.serve_static is on"
         ),
     )
     parser.add_argument(
@@ -472,16 +481,27 @@ def _parser(prog: str, compat: Mapping[str, SettingsCompat]) -> argparse.Argumen
         action="append",
         default=[],
         metavar="ID",
-        help="켤 서버 모듈 id(여러 번 가능, 설정 modules보다 우선). 목록은 GET /api/v1/modules",
+        help=(
+            "Server module id to turn on (repeatable, overrides the modules settings). "
+            "List: GET /api/v1/modules"
+        ),
     )
     parser.add_argument(
         "--disable-module",
         action="append",
         default=[],
         metavar="ID",
-        help="끌 서버 모듈 id(여러 번 가능, 설정 modules보다 우선, 같은 id면 끄기가 이김)",
+        help=(
+            "Server module id to turn off (repeatable, overrides the modules settings; "
+            "turning off wins over --enable-module)"
+        ),
     )
     return parser
+
+
+def _flag_help(text: str, module_id: str) -> str:
+    """모듈 옵션 도움말 + 선언한 모듈 id(도움말이 비면 모듈 id만)."""
+    return f"{text} (module {module_id})" if text else f"(module {module_id})"
 
 
 def _flag_dest(flag: str) -> str:

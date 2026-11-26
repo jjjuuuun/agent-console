@@ -9,6 +9,7 @@
   제공자)·``wiki.integrations``(능력 선언, 여러 제공자). 없으면 그 부분만 꺼진다
   (``WikiInfo.capabilities``가 포트 유무로 알린다).
 - 경로: ``/wiki/*``(``routes``·``rules_routes``). WS 토픽 ``wiki.changed``(키트 ``LoopPublisher``).
+- 구독: 모듈 토픽 ``definitions.saved``(선택) → 신선도 창(``freshness_seconds``) 지문 확인 버리기.
 - 저장: 공간 이름이 없는 요청은 단독 루트(설치자 옵션 ``standalone_root``, 기본 워크스페이스 안
   패키지 데이터 폴더 이름)의 정의 저장소·페이지 폴더. 페이지 기록은 계보 ``wiki``(호스트 DB, 없으면
   메모리), 검색 색인은 호스트 상태 폴더. 폴더·파일은 처음 쓸 때 만든다(빈 workspace에서 위키 0개).
@@ -65,6 +66,7 @@ from .errors import ERROR_MAP
 from .history import BRANCH, open_host_history
 from .plugins import search_registry, write_check_registry
 from .ports import (
+    DEFINITIONS_SAVED,
     DEFINITIONS_STORE,
     KIND_CONTRIBUTIONS,
     RECORDS_SPACES,
@@ -94,6 +96,12 @@ WIKI_KIND_TITLE = "위키"
 
 RULES_KIND_TITLE = "위키 규칙"
 """위키 규칙 정의 종류의 표시 이름(종류 기여 ``title``)."""
+
+WIKI_OPEN_ROLE = "wiki"
+"""위키 정의 항목을 여는 웹 화면 역할(종류 기여 ``open_role`` → ``CopyKindInfo.open_role``)."""
+
+RULES_OPEN_ROLE = "wiki:rules"
+"""위키 규칙 정의 항목을 여는 웹 화면 역할(공용 구성 위키 규칙 화면)."""
 
 _log = logging.getLogger("agent_console_mod_wiki")
 
@@ -324,6 +332,7 @@ class WikiModule:
             KindContribution(
                 rules_kind,
                 title=RULES_KIND_TITLE,
+                open_role=RULES_OPEN_ROLE,
                 delete=lambda space, item_id, expected: service.delete_rules(
                     service.scope(space), item_id, expected=expected
                 ),
@@ -335,6 +344,7 @@ class WikiModule:
                 wiki_kind,
                 references=wiki_references(rules_kind.name),
                 title=WIKI_KIND_TITLE,
+                open_role=WIKI_OPEN_ROLE,
                 delete=lambda space, item_id, expected: service.delete_wiki(
                     service.scope(space), item_id, expected=expected
                 ),
@@ -349,6 +359,8 @@ class WikiModule:
                 return []
 
         ctx.provide(SERVER_WARNINGS, warnings)
+        # 정의 저장 알림 → 신선도 창의 지문 확인 기록 버리기(내는 모듈이 없으면 구독만 남는다)
+        ctx.subscribe(DEFINITIONS_SAVED, service.on_definition_saved)
 
         async def start() -> None:
             publisher.bind(asyncio.get_running_loop())

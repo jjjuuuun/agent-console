@@ -53,7 +53,7 @@ def _default_document() -> Mapping[str, Any]:
 
 
 def load_default_syntax() -> WikiSyntax:
-    """패키지 기본 위키 문법(`data/default_syntax.yaml`)을 읽는다.
+    """Read the package default wiki syntax (`data/default_syntax.yaml`).
 
     Returns:
         새 `WikiSyntax`(고쳐도 다음 호출에 영향이 없다).

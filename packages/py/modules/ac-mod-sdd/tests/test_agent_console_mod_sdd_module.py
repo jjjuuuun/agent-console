@@ -47,6 +47,9 @@ def test_kind_contributions_and_references(tmp_path: Path, kit: Any) -> None:
     # FU.6: 틀 종류 데이터가 경로 예약어를 싣는다(복사 계획이 읽어 새 id를 제안한다)
     assert kinds["spec-template"].reserved_ids == TEMPLATE_ROUTE_WORDS
     assert kinds["spec"].reserved_ids == ()
+    # P1.19: 여는 화면 역할(CopyKindInfo.open_role) — 스펙 화면·문서 틀 화면
+    roles = {c.kind.name: c.open_role for c in found}
+    assert roles == {"spec": "sdd", "spec-template": "sdd:templates"}
     doc = {"rules": {"run_profiles": [{"graph": "a"}, {"graph": "a"}, {"graph": "b"}, {}]}}
     assert list(template_references(doc)) == [("graph", "a"), ("graph", "b")]
     assert list(template_references({"rules": None})) == []

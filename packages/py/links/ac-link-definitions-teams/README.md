@@ -1,35 +1,35 @@
 # agent-console-link-definitions-teams
 
-Agent Console 정의 ↔ 팀 의미 연동 모듈. 정의 저장소와 `ac-teams` 계산을 잇는다.
+Agent Console definitions and team semantics link module. It connects the definition store to the `ac-teams` calculations.
 
-- 경로: `GET /agents/{id}/usages`·`GET /resources/{id}/usages`(붙은 곳), `GET /agents/{id}/effective-settings`,
-  `GET /graphs/{id}/plan`·`POST /graphs/plan`(초안), `GET /graphs/{id}/nodes/{node}/effective-settings`·
-  `POST /graphs/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview`·`POST /graphs/bundle-preview`.
-  `x-secret` 평문과 해석한 비밀 값은 가린다.
-- 제공 포트: `graphs.entry_labels`(팀 구성 목록 입구 이름), `graphs.session_summary`(팀 구성 목록 세션 집계 —
-  `ac-teams.session_summary`, 위임 방식은 호스트 레지스트리), `definitions.usages`(리소스 목록 `usage_count`),
-  `definitions.dependencies`(문서가 쓰는 정의 `TeamDocumentDependencies` — 팀 구성 → 에이전트·리소스·자식 팀 구성,
-  에이전트 → 리소스. 여러 정의를 한꺼번에 쓸 때 쓰는 정의부터 쓰는 순서를 정하는 데 쓴다. 지금 기본 모듈 중
-  소비자는 없다),
-  `definitions.references`(여러 제공자 — 같은 계산의 참조 추출 함수 `(kind, doc) -> [(kind, id)]`,
-  `TeamDocumentDependencies.references`. 프로젝트 범위 검사·옮기기 계획이 주입받는다).
-- 필수 포트: `definitions.lookup`. 선택: `workspace.settings`, `resources.lookup`·`resources.types`(없으면 빈 것),
-  `secrets.redact`(없으면 `secrets.rules`의 의심 값 가리기), `secrets.rules`, `settings.scope_layers`(유효 설정 `?project=`의 범위 층),
-  `definitions.spaces`(저장본을 읽는 경로가 `?project=`의 공간에서 팀 구성·에이전트·리소스를 읽는다 — 리소스는 그 공간 저장소 위의 `StoreResourceLookup`, `resources.lookup`이 없으면 빈 조회. 없으면 라이브러리).
-- 디스크립터: 호스트 기본 서비스 `registries`(노드·엣지·위임 방식·백엔드)를 요청마다 읽는다(`catalog_from_registries`).
-- 웹 역할(`WEB_ROLES`): `definitions:teams` — 팀 구성 편집기의 초안 미리보기(`POST /graphs/plan`·`effective-settings`·`bundle-preview`)와 에이전트 사용처 패널(`GET /agents/{id}/usages`)이 이 역할로 켜진다.
-- 꺼지면: 위 경로는 404(웹이 해당 패널을 숨김), 목록의 입구 이름·세션 집계·사용 수는 null.
+- Routes: `GET /agents/{id}/usages` and `GET /resources/{id}/usages` (where an item is attached), `GET /agents/{id}/effective-settings`,
+  `GET /graphs/{id}/plan` and `POST /graphs/plan` (draft), `GET /graphs/{id}/nodes/{node}/effective-settings` and
+  `POST /graphs/effective-settings`, `GET /graphs/{id}/nodes/{node}/bundle-preview` and `POST /graphs/bundle-preview`.
+  Plain text in `x-secret` fields and resolved secret values are masked.
+- Provided ports: `graphs.entry_labels` (entry names in the team list), `graphs.session_summary` (session totals in the team list,
+  `ac-teams.session_summary`; delegation strategies come from the host registries), `definitions.usages` (`usage_count` in the resource list),
+  `definitions.dependencies` (the definitions a document uses, `TeamDocumentDependencies`: team → agents, resources, and child teams;
+  agent → resources. It is used to order writes so that used definitions come first when several definitions are written at once. No default
+  module consumes it today),
+  `definitions.references` (several providers; the reference extraction function of the same calculation, `(kind, doc) -> [(kind, id)]`,
+  `TeamDocumentDependencies.references`. Project checks and move plans receive it).
+- Required port: `definitions.lookup`. Optional: `workspace.settings`, `resources.lookup` and `resources.types` (empty when missing),
+  `secrets.redact` (without it, suspected values are masked with `secrets.rules`), `secrets.rules`, `settings.scope_layers` (the layers of `?project=` for effective settings),
+  and `definitions.spaces` (routes that read saved items read teams, agents, and resources from the space of `?project=`; resources use `StoreResourceLookup` over that space's store, or an empty lookup when `resources.lookup` is missing. Without the port, the library is used).
+- Descriptors: the host base service `registries` (nodes, edges, delegation strategies, backends) is read on every request (`catalog_from_registries`).
+- Web role (`WEB_ROLES`): `definitions:teams`. The draft previews of the team editor (`POST /graphs/plan`, `effective-settings`, `bundle-preview`) and the agent usage panel (`GET /agents/{id}/usages`) turn on with this role.
+- When this link is off, the routes above return 404 (the web app hides those panels), and entry names, session totals, and usage counts in lists are null.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-link-definitions-teams
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-link-definitions-teams
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-link-definitions-teams
 ```
 
-## 최소 사용
+## Minimal usage
 
-`TeamViews`는 서버 없이 쓴다. 정의 읽기(저장소)와 디스크립터 묶음을 넘긴다.
+`TeamViews` works without a server. Pass a definition reader (a store) and a descriptor catalog.
 
 ```python
 >>> from agent_console_store import InMemoryDefinitionStore
@@ -49,20 +49,20 @@ pip install agent-console-link-definitions-teams
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행. `--with`를 주지 않으면 `testing.local_definitions_module`(워크스페이스 파일 저장소)을 붙인다.
+Standalone run. Without `--with`, it attaches `testing.local_definitions_module` (a file store in the workspace).
 
 ```bash
 python -m agent_console_link_definitions_teams [--with ID] [--config PATH] [--port 0] [--check]

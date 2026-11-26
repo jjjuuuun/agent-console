@@ -1,45 +1,45 @@
 # agent-console-mod-definitions
 
-Agent Console 정의 기능 모듈. 워크스페이스의 정의(에이전트·팀 구성·리소스·공통 설정)
-저장소와 CRUD 경로를 서버에 꽂고, 다른 모듈이 쓰는 포트와 저장 알림 토픽을 낸다.
+Agent Console definitions feature module. It plugs the store and CRUD routes for workspace definitions (agents, teams, resources, common settings)
+into the server, and exposes the ports and the save notification topic that other modules use.
 
-- 경로: `/agents`·`/agents/{id}`, `/graphs`·`/graphs/{id}`·`POST /graphs/{id}/duplicate`, `/settings`.
-  응답은 저장 원문 + `ETag`(`version_hash`), `If-Match`로 낙관적 잠금(그래프 저장은 필수 428, 다르면 412).
-- 제공 포트: `definitions.store`·`definitions.lookup`(같은 파일 저장소), `workspace.settings`(`() -> WorkspaceSettings`),
-  `secrets.rules`(`() -> SecretRules`), `definitions.checks`(공통 설정의 비밀 규칙 정규식 검사),
-  `server.warnings`(평문 비밀 점검 `secret.plain_found`, 공통 설정에 남은 옛 최상위 키 — 예 `projects` — 의 정보
-  `settings.ignored_key`(`details.key`, 읽기·시작은 막지 않음, `ignored_settings_issues`)), `definitions.save_warnings`(저장한 정의 하나의
-  평문 비밀 경고 — 에이전트·팀 구성 만들기·저장·복제 응답의 `X-Console-Issues` 헤더에 싣고 리소스 모듈도
-  같은 계산을 쓴다. 저장은 허용, 문구는 설정 `plain_secret_save_message`). 토픽 `definitions.saved{kind, id, version_hash}`.
-- 선택 포트: `definitions.checks`(여러 제공자 — 저장 전 검사, error면 422. 공간 저장 `?project=`는 검사의 선택 메서드 `space_issues`, 없으면 `issues`), `graphs.validation`·`graphs.entry_labels`·
-  `graphs.session_summary`(팀 구성 목록의 검증 요약·입구 이름·세션 집계 `session_summary`, 없으면 null. 공간 목록의 검증 요약은 제공자의 선택 메서드 `space_summaries`, 없으면 null), `definitions.spaces`(공간 이름 → 정의 저장소),
-  `definitions.kind_contributions`(여러 제공자, 정의 종류 기여 — 아래).
-- 종류 기여: 다른 모듈이 `KindContribution(DefinitionKind(...))`을 주면 `library=True` 종류를 라이브러리
-  저장소에 더한다(build 때, 그리고 모든 build가 끝난 뒤 시작 훅에서 한 번 더). `library=False` 종류는 라이브러리에
-  두지 않으므로 그 종류의 라이브러리 요청(예: 버전 경로)은 404이고, 프로젝트 공간에만 들어간다(공간 종류는
-  `mod-projects`가 같은 포트에서 계산). 기본 종류와 같은 이름의 기여는 경고 로그를 남기고 건너뛴다. 기여의 참조
-  추출(`references`)은 복사 계획을 만드는 `mod-projects`가 같은 포트에서 직접 읽는다.
-- 공간(`?project=<이름>`): 에이전트·팀 구성 경로(목록·조회·만들기·저장·삭제·복제)가 그 공간 저장소를 쓴다. 포트가 없으면
-  409 `feature_unavailable`(라이브러리에 쓰지 않음), 모르는 공간 404 `project.not_found`. 질의가 없으면 라이브러리.
-  이 모듈은 이름의 뜻(프로젝트)을 모른다. 공간 저장의 알림은 제공자가 `definitions.saved`에 `space`를 담아 낸다.
-- 버전 기록: 호스트 DB 핸들(`BaseServices.database`)의 legacy 테이블(시작 때 legacy 계보를 올린다), 없으면 메모리.
-- 평문 점검 캐시는 `definitions.saved`·삭제 때 버린다(계산 잠금과 짧은 상태 잠금을 나눠 교착·낡은 캐시를 막는다).
-- 설정 `modules.options.mod-definitions`: `max_content_bytes`(정의 본문 총량 한도, 옛 `resources.max_content_bytes`),
-  `plain_secret_issue_codes`(평문 점검으로 옮길 검사 이슈 코드).
-- 지운 설정 키(호스트가 `settings.removed_key` 오류로 시작을 거부): 옛 최상위 `resources`(새 위치 안내),
-  삭제된 프리셋 기능의 `presets`·`modules.options.mod-presets`(지우라고 안내).
-- 웹 역할: `definitions:agent`·`definitions:graph`·`settings`.
+- Routes: `/agents` and `/agents/{id}`, `/graphs`, `/graphs/{id}`, and `POST /graphs/{id}/duplicate`, and `/settings`.
+  Responses are the saved document + `ETag` (`version_hash`), with optimistic locking through `If-Match` (required for graph saves: 428 when missing, 412 when different).
+- Provided ports: `definitions.store` and `definitions.lookup` (the same file store), `workspace.settings` (`() -> WorkspaceSettings`),
+  `secrets.rules` (`() -> SecretRules`), `definitions.checks` (checks the secret rule regular expressions of the common settings),
+  `server.warnings` (the plain-text secret scan `secret.plain_found`, and the info `settings.ignored_key` for old top-level keys left in the common settings, for example `projects`
+  (`details.key`; reading and startup are not blocked; `ignored_settings_issues`)), and `definitions.save_warnings` (plain-text secret warnings for one saved
+  definition, carried in the `X-Console-Issues` header of the create, save, and duplicate responses for agents and teams; the resources module
+  uses the same calculation. Saving is allowed; the text is the setting `plain_secret_save_message`). Topic `definitions.saved{kind, id, version_hash}`.
+- Optional ports: `definitions.checks` (several providers; pre-save checks, 422 on error. Saves into a space `?project=` use the optional method `space_issues` of the check, or `issues` without it), `graphs.validation`, `graphs.entry_labels`, and
+  `graphs.session_summary` (validation summaries, entry names, and session totals `session_summary` of the team list; null without them. Validation summaries of a space list use the provider's optional method `space_summaries`, or null without it), `definitions.spaces` (space name → definition store),
+  and `definitions.kind_contributions` (several providers, definition kind contributions; below).
+- Kind contributions: when another module provides `KindContribution(DefinitionKind(...))`, kinds with `library=True` are added to the library
+  store (at build, and once more in the startup hook after all builds finish). Kinds with `library=False` are not put in the library,
+  so library requests for that kind (for example the version routes) return 404, and they go only into project spaces (the space kinds are
+  computed by `mod-projects` from the same port). A contribution with the same name as a default kind leaves a warning log and is skipped. The reference
+  extraction of contributions (`references`) is read directly from the same port by `mod-projects`, which builds the copy plans.
+- Spaces (`?project=<name>`): the agent and team routes (list, get, create, save, delete, duplicate) use that space's store. Without the port,
+  409 `feature_unavailable` (nothing is written to the library); an unknown space returns 404 `project.not_found`. Without the query, the library.
+  This module does not know what the name means (a project). Save notifications for spaces are published by the provider with `space` in `definitions.saved`.
+- Version history: the legacy tables of the host database handle (`BaseServices.database`; the legacy lineage is applied at startup), or memory without it.
+- The plain-text scan cache is dropped on `definitions.saved` and on deletes (the calculation lock and a short state lock are separate to prevent deadlocks and stale caches).
+- Settings `modules.options.mod-definitions`: `max_content_bytes` (the total size limit for definition bodies, formerly `resources.max_content_bytes`) and
+  `plain_secret_issue_codes` (check issue codes to move into the plain-text scan).
+- Removed settings keys (the host refuses to start with a `settings.removed_key` error): the old top-level `resources` (points to the new location),
+  and `presets` and `modules.options.mod-presets` of the removed presets feature (asks you to delete them).
+- Web roles: `definitions:agent`, `definitions:graph`, and `settings`.
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-definitions
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-definitions
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-definitions
 ```
 
-## 최소 사용
+## Minimal usage
 
-조립하면 정의 저장소 포트가 생기고, 저장할 때마다 `definitions.saved`가 나온다. 호스트 DB 핸들이 없으면 버전 기록은 메모리에 두고 경고(`definitions.versions_memory`)한다.
+Assembling it creates the definition store port, and every save publishes `definitions.saved`. Without a host database handle, version history is kept in memory with a warning (`definitions.versions_memory`).
 
 ```python
 >>> import tempfile
@@ -56,14 +56,14 @@ pip install agent-console-mod-definitions
 >>> _ = store.create("agent", {"id": "rev", "name": "리뷰어", "token": "ghp_PlainToken123456"})
 >>> saved
 ['rev']
->>> assembly.port(WORKSPACE_SETTINGS)().default_backend is None
+>>> assembly.port(WORKSPACE_SETTINGS)().agent_defaults.backend is None
 True
 >>> [(w.code, w.path) for w in assembly.ports(SERVER_WARNINGS)[0]()]
 [('secret.plain_found', '/token'), ('definitions.versions_memory', None)]
 
 ```
 
-종류 기여: 기여 모듈이 종류를 주면 라이브러리 저장소에 생긴다(`library=False` 종류는 생기지 않는다).
+Kind contributions: when a contributing module provides a kind, it appears in the library store (kinds with `library=False` do not).
 
 ```python
 >>> from agent_console_modkit import KindContribution
@@ -82,20 +82,20 @@ True
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```
 
-단독 실행(같은 modkit 호스트, 기본 127.0.0.1). 버전 기록은 상태 폴더의 `console.sqlite3`.
+Standalone run (the same modkit host, 127.0.0.1 by default). Version history is in `console.sqlite3` in the state folder.
 
 ```bash
 python -m agent_console_mod_definitions [--with ID] [--config PATH] [--port 0] [--check]

@@ -34,7 +34,6 @@ from agent_console_contracts import (
 )
 from agent_console_nodes_core import (
     AGENT_LOOKUP,
-    DEFAULT_BACKEND,
     ERROR_FIXES,
     RESOURCE_LOOKUP,
     RUN_FILES_ROOT,
@@ -223,8 +222,6 @@ class TeamRules:
         }
         if bound.resources is not None:
             items[RESOURCE_LOOKUP] = bound.resources
-        if workspace.default_backend:
-            items[DEFAULT_BACKEND] = workspace.default_backend
         if bound.teams is not None:
             items[TEAM_LOOKUP] = bound.teams
         return items
@@ -250,7 +247,6 @@ class TeamRules:
             workspace=workspace,
             backends=catalog.backends,
             settings_validators=catalog.settings_validators,
-            default_backend=workspace.default_backend,
             resources=bound.resources,
             resource_types=self.types,
             resolve_ports=port_resolver(registries) if isinstance(registries, Registries) else None,
@@ -294,7 +290,8 @@ class TeamRules:
         """실행을 만들기 전 사전 점검(``mod-runs`` 선택 메서드): 실행 백엔드가 빈 노드가 있으면
         ``backend.unresolved`` 오류 본문, 없으면 None.
 
-        해결 순서는 설정 층 그대로(노드 → 에이전트 → 팀 구성 → 공통 → ``default_backend``)다.
+        해결 순서는 설정 층 그대로(노드 → 에이전트 → 팀 구성 → 공통 ``agent_defaults``)다. 옛 최상위
+        설정 키 ``default_backend``는 읽지 않는다.
         백엔드를 자동으로 고르지 않는다. 위임 방식 디스크립터를 넘겨 자기 세션을 여는 방식
         (``shares_session`` false)의 대상도 세션 주인으로 점검한다. 해석할 수 없는 그래프면
         None(엔진 검증이 맡는다).
@@ -310,7 +307,6 @@ class TeamRules:
             agents=agents,
             workspace=workspace,
             strategies=catalog.strategies,
-            default_backend=workspace.default_backend,
             scope_layers=_scope_layers(services),
         )
         return backend_unresolved_error(

@@ -1,7 +1,7 @@
 """통합 서버: 실행 백엔드 사전 점검 `backend.unresolved`(5.2R.4, UX-F1·UX-B7).
 
 빈 workspace에서 에이전트 하나짜리 팀으로 `POST /runs`와 채팅 턴이 422를 받고, Run·턴 기록이
-남지 않는지 본다. 기본값을 고르면(`default_backend`) 같은 메시지가 실행된다.
+남지 않는지 본다. 기본값을 고르면(`agent_defaults.backend`) 같은 메시지가 실행된다.
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def test_run_and_chat_turn_without_backend_are_422_and_leave_no_records(tmp_path
         # 기본값으로 고르면 같은 메시지가 실행된다(자동 선택은 없다)
         got = client.get(f"{API}/settings")
         etag = got.headers.get("etag")
-        body = {**got.json(), "default_backend": "fake-agent"}
+        body = {**got.json(), "agent_defaults": {"backend": "fake-agent"}}
         put = client.put(f"{API}/settings", json=body, headers={"If-Match": etag} if etag else {})
         assert put.status_code == 200, put.text
         again = client.post(f"{API}/conversations/{conv['id']}/messages", json={"text": "안녕"})

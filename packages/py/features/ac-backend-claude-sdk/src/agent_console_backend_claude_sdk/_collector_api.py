@@ -47,7 +47,7 @@ class CollectedEvent:
 
 @dataclass
 class CollectorContext:
-    """실행 하나와 수집기 하나의 문맥. 백엔드가 실행마다 새로 만든다.
+    """Context for one run and one collector. The backend creates a new one per run.
 
     Attributes:
         collector_id: 수집기 id(`descriptor.id`).
@@ -84,7 +84,7 @@ class CollectorContext:
 
 @runtime_checkable
 class ClaudeSdkCollector(Protocol):
-    """claude-sdk 관측 수집기 프로토콜.
+    """Protocol for claude-sdk observation collectors.
 
     보통 `BaseClaudeSdkCollector`를 상속해 필요한 것만 고친다.
 
@@ -125,7 +125,7 @@ class ClaudeSdkCollector(Protocol):
 
 
 class BaseClaudeSdkCollector:
-    """수집기 공통 베이스: 모든 메서드의 기본 구현(아무것도 하지 않음)과 설정 모델 검증.
+    """Common collector base: no-op defaults for every method and settings model validation.
 
     하위 클래스는 `descriptor`(또는 `id`·`title`·`emits`·`config_model` 클래스 속성)를 정하고
     `on_hook`·`on_message` 등 필요한 것만 고친다. `config_model`(pydantic)이 있으면

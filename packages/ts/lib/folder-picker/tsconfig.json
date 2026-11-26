@@ -3,7 +3,9 @@
   "compilerOptions": {
     "types": ["node"],
     "customConditions": ["development"],
-    "paths": { "@agent-console/folder-picker": ["./src/index.ts"] }
+    "paths": { "@agent-console/folder-picker": ["./src/index.ts"],
+      "@agent-console/folder-picker/locales/ko": ["./src/locales/ko.ts"],
+      "@agent-console/folder-picker/locales/en": ["./src/locales/en.ts"] }
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

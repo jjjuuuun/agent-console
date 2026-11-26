@@ -58,6 +58,13 @@ describe("실행 기록 목록", () => {
     expect(screen.getByText("실행 중 1 · 응답 대기 1")).toBeTruthy();
   });
 
+  it("대화가 없는 직접 실행 행은 입력 요약이 출처 옆에 보여 행끼리 구별된다", async () => {
+    mount("/runs", { listRuns: async () => [run("r-a", "completed", { origin: "api", input: { text: "첫째 입력" } }), run("r-b", "completed", { origin: "api", input: { text: "둘째 입력" } })] });
+    const rows = within(await screen.findByRole("grid", { name: "실행 목록" })).getAllByRole("row").slice(1);
+    expect(within(rows[0]!).getByText("첫째 입력")).toBeTruthy();
+    expect(within(rows[1]!).getByText("둘째 입력")).toBeTruthy();
+  });
+
   it("[응답 대기만] 단축 필터가 상태를 URL에 반영하고, 결과가 없으면 필터 지우기를 안내한다", async () => {
     // 상태 거르기는 서버(`runsPage` status 질의)가 한다
     const { router } = mount("/runs", { runsPage: async (p?: { status?: string[]; q?: string }) => ({ items: runs.filter((r) => (!p?.status?.length || p.status.includes(r.status)) && (p?.q === undefined || r.id.includes(p.q))), next_cursor: null, source: "project" }) });

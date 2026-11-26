@@ -11,18 +11,24 @@
 - ``GET /sdd/templates/{id}/files``: ``ResourceFile[]``(본문 폴더, 경로 순)
 - ``GET·PUT·DELETE /sdd/templates/{id}/files/{path}``: 바이트 ↔ ``SpecTemplate`` + ``ETag``
 - ``GET /sdd/templates/{id}/versions[/{hash}]``: ``DefinitionVersion[]`` / ``DefinitionVersion``
+- ``GET /sdd/templates/{id}/versions/{a}/diff[/{b}]``: ``DefinitionDiff``(b 생략 = 현재 버전)
 - ``GET /sdd/templates/{id}/versions/{hash}/files[/{path}]``: 그 버전의 본문 파일 목록·내용
 - ``POST /sdd/templates/{id}/versions/{hash}/restore``: ``DefinitionVersion`` + ``ETag``
 
 ``ETag``·``If-Match`` = 정의 버전(``version_hash``, 본문 파일 해시 포함) — 파일 쓰기도 같은
 값으로 맞춘다(다중 파일 리소스 편집기와 같은 규칙). 파일 경로는 본문 폴더 기준 상대 경로만
 (``..``·절대 경로는 400 ``bad_request``). 파일 본문은 사용자 설정 ``secret_scan``을 따른다
-(reject = 422 ``sdd.secret_rejected``, warn = 저장 + ``X-Console-Issues``). 버전 비교(diff)는
-이 경로에 없다.
+(reject = 422 ``sdd.secret_rejected``, warn = 저장 + ``X-Console-Issues``).
+
+버전 비교는 ``mod-versions`` 정의 컬렉션의 비교와 같은 계산(``agent_console_store.diff_versions``)
+이다: 문서 변경은 JSON Pointer, 본문 파일은 sha256만 비교한다. 비밀 위치는 되돌리기 검사와 같은
+비밀 의심 규칙(``secrets.document_secret_paths``)이 찾고, 그 값은 ``SECRET_MASK``(``***``)로
+바뀐다(``secret_scan`` 설정과 상관없이 항상 가린다).
 
 경로 예약어(``TEMPLATE_ROUTE_WORDS``): 같은 깊이의 고정 경로(``/sdd/templates/variables``·
-``/check``)와 겹치는 id는 만들기에서 거부하고 이름에서 만든 id도 피한다(그 id의 GET이 고정 경로에
-가려지므로).
+``/check``)와 겹치는 id는 만들기·틀로 저장(``POST /sdd/specs/{id}/save-as-template``)에서 거부하고
+이름에서 만든 id도 피한다(그 id의 GET이 고정 경로에 가려지므로). 화면은 같은 목록을
+``SddInfo.reserved_template_ids``로 미리 받는다.
 """
 
 from __future__ import annotations
@@ -34,6 +40,7 @@ from fastapi import APIRouter, Body, Request, Response
 from fastapi.responses import JSONResponse
 
 from agent_console_contracts import (
+    DefinitionDiff,
     DefinitionVersion,
     ErrorCodes,
     ErrorResponse,
@@ -55,14 +62,38 @@ from agent_console_modkit.host import (
     with_issues,
 )
 from agent_console_sdd import StoredSpec, run_input_variables
-from agent_console_store import NotFound, StoredDefinition, VersionRequired
+from agent_console_store import (
+    SECRET_MASK,
+    NotFound,
+    StoredDefinition,
+    VersionRequired,
+    diff_versions,
+)
 
 from .errors import SddRequestError
-from .secrets import SCAN_REJECT, SecretRejectedError, document_issues
+from .secrets import SCAN_REJECT, SecretRejectedError, document_issues, document_secret_paths
 from .service import SddScope, SddService
 
 TEMPLATE_ROUTE_WORDS: tuple[str, ...] = ("variables", "check")
 """``/sdd/templates/<이 말>``이 이미 고정 경로라 문서 틀 id로 쓸 수 없는 말(경로 어휘)."""
+
+
+def reject_reserved_template_id(template_id: str | None) -> None:
+    """문서 틀 id가 경로 예약어(``TEMPLATE_ROUTE_WORDS``, 대소문자 무시)면 거부한다.
+
+    Args:
+        template_id: 사용자가 준 id. None(이름에서 만든다)이면 검사하지 않는다.
+
+    Raises:
+        SddRequestError: 422 ``validation_failed``, ``details`` = ``{id, reserved}``.
+    """
+    if template_id is not None and template_id.casefold() in TEMPLATE_ROUTE_WORDS:
+        raise SddRequestError(
+            "이 id는 경로 이름과 겹쳐 쓸 수 없습니다.",
+            code=ErrorCodes.VALIDATION_FAILED,
+            details={"id": template_id, "reserved": list(TEMPLATE_ROUTE_WORDS)},
+        )
+
 
 RESTORE_MESSAGE = "restored from {hash}"
 """되돌리기 버전 메시지 기본 문구(``mod-versions``와 같은 문구)."""
@@ -103,12 +134,7 @@ def build_template_router(service: Callable[[], SddService]) -> APIRouter:
         body: SpecTemplateCreateRequest, space: SpaceQuery = None
     ) -> JSONResponse:
         """빈 문서 틀 만들기(문서 0개, 규칙 비움). 같은 id가 있으면 409 ``already_exists``."""
-        if body.id is not None and body.id.casefold() in TEMPLATE_ROUTE_WORDS:
-            raise SddRequestError(
-                "이 id는 경로 이름과 겹쳐 쓸 수 없습니다.",
-                code=ErrorCodes.VALIDATION_FAILED,
-                details={"id": body.id, "reserved": list(TEMPLATE_ROUTE_WORDS)},
-            )
+        reject_reserved_template_id(body.id)
         stored = scope(space).repository.create_template(
             name=body.name,
             id=body.id,
@@ -275,6 +301,46 @@ def build_template_router(service: Callable[[], SddService]) -> APIRouter:
         sc = scope(space)
         return sc.repository.template_store.get_version(kind_of(sc), template_id, version_hash)
 
+    def diff(
+        template_id: str, version_hash: str, to_hash: str | None, space: str | None
+    ) -> DefinitionDiff:
+        svc = service()
+        sc = svc.scope(space)
+        rules = svc.rules()
+        return diff_versions(
+            sc.repository.template_store,
+            kind_of(sc),
+            template_id,
+            version_hash,
+            to_hash,
+            secret_paths=lambda document: document_secret_paths(rules, document),
+            mask=SECRET_MASK,
+        )
+
+    @router.get(
+        "/sdd/templates/{template_id}/versions/{version_hash}/diff",
+        response_model=DefinitionDiff,
+        responses=_errors(),
+    )
+    async def diff_with_current(
+        template_id: str, version_hash: str, space: SpaceQuery = None
+    ) -> DefinitionDiff:
+        """이 버전 → 현재 버전 비교. 틀이 지워졌으면 404(두 버전 비교를 쓴다)."""
+        return diff(template_id, version_hash, None, space)
+
+    @router.get(
+        "/sdd/templates/{template_id}/versions/{version_hash}/diff/{to_hash}",
+        response_model=DefinitionDiff,
+        responses=_errors(),
+    )
+    async def diff_two_versions(
+        template_id: str, version_hash: str, to_hash: str, space: SpaceQuery = None
+    ) -> DefinitionDiff:
+        """``version_hash`` → ``to_hash`` 비교. ``changes[].path``는 RFC 6901 JSON Pointer
+        (``remove``·``replace`` = 이전 버전 문서 기준, ``add`` = 이후 버전 문서 기준). 비밀 위치는
+        ``secret=true``이고 값은 ``***``. ``content_changes``는 뼈대 파일 sha256 비교."""
+        return diff(template_id, version_hash, to_hash, space)
+
     @router.get(
         "/sdd/templates/{template_id}/versions/{version_hash}/files",
         response_model=list[ResourceFile],
@@ -369,4 +435,9 @@ def _as_spec(stored: StoredDefinition) -> StoredSpec:
     )
 
 
-__all__ = ["RESTORE_MESSAGE", "TEMPLATE_ROUTE_WORDS", "build_template_router"]
+__all__ = [
+    "RESTORE_MESSAGE",
+    "TEMPLATE_ROUTE_WORDS",
+    "build_template_router",
+    "reject_reserved_template_id",
+]

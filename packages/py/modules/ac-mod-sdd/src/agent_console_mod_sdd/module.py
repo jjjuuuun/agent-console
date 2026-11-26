@@ -99,6 +99,12 @@ SPEC_KIND_TITLE = "스펙"
 TEMPLATE_KIND_TITLE = "문서 틀"
 """문서 틀 정의 종류의 표시 이름(종류 기여 ``title``)."""
 
+SPEC_OPEN_ROLE = "sdd"
+"""스펙 정의 항목을 여는 웹 화면 역할(종류 기여 ``open_role`` → ``CopyKindInfo.open_role``)."""
+
+TEMPLATE_OPEN_ROLE = "sdd:templates"
+"""문서 틀 정의 항목을 여는 웹 화면 역할(문서 틀 화면 — 화면은 모듈 역할 ``sdd``를 요구한다)."""
+
 DEFINITIONS_SAVED: Topic[Any] = Topic("definitions.saved")
 """정의 저장 알림 토픽(정의·프로젝트 모듈이 낸다, 항목 ``{kind, id, version_hash, space}``)."""
 
@@ -298,6 +304,7 @@ class SddModule:
                 template_kind,
                 references=template_references,
                 title=TEMPLATE_KIND_TITLE,
+                open_role=TEMPLATE_OPEN_ROLE,
                 delete=lambda space, item_id, expected: service.delete_template(
                     space, item_id, expected_version=expected
                 ),
@@ -309,6 +316,7 @@ class SddModule:
                 spec_kind,
                 references=template_references,
                 title=SPEC_KIND_TITLE,
+                open_role=SPEC_OPEN_ROLE,
                 delete=lambda space, item_id, expected: service.delete_spec(
                     space, item_id, expected_version=expected
                 ),

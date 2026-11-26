@@ -1,0 +1,6 @@
+{
+  "more": "More",
+  "moreCount": "Show {n} more",
+  "shortcutConflict": "Duplicate keyboard shortcut: \"{keys}\" — {first} / {second}",
+  "needsShortcutProvider": "This can only be used inside ShortcutProvider."
+}

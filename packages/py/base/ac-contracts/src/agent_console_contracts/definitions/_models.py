@@ -23,7 +23,15 @@ from agent_console_contracts._base import (
     OmitWhenUnsetModel,
     Slug,
 )
-from agent_console_contracts.common import X_UI, Endpoint, PortDef, Position, x_path, x_ui
+from agent_console_contracts.common import (
+    X_UI,
+    Endpoint,
+    KnownUiWidgets,
+    PortDef,
+    Position,
+    x_path,
+    x_ui,
+)
 from agent_console_contracts.logs import LogSettings
 from agent_console_contracts.resources import ResourceAttachment
 
@@ -1371,6 +1379,20 @@ class UiPreferences(DefinitionModel):
         description="버전 비교 화면에서 항목을 부르는 방법입니다.",
         json_schema_extra=x_ui(tier="advanced"),
     )
+    language: str | None = Field(
+        default=None,
+        title="화면 언어",
+        description=(
+            "화면에 보이는 문구의 언어 코드(예: en, ko)입니다. 비우면 브라우저 언어를 따릅니다. "
+            "사용자가 만든 이름·설명·본문은 번역하지 않습니다."
+        ),
+        json_schema_extra=x_ui(
+            tier="basic",
+            when="브라우저 언어와 다른 언어로 화면을 보고 싶을 때 고르세요.",
+            widget=KnownUiWidgets.LANGUAGE,
+            example="en",
+        ),
+    )
 
 
 class SecretRuleSettings(DefinitionModel):
@@ -1788,12 +1810,6 @@ class WorkspaceSettings(DefinitionModel):
         json_schema_extra=x_ui(
             tier="basic", when="다른 로그 폴더를 읽거나 범주 표시를 바꾸고 싶을 때 바꾸세요."
         ),
-    )
-    default_backend: str | None = Field(
-        default=None,
-        title="기본 실행 백엔드(이전 형식)",
-        description="더 이상 쓰지 않습니다. 에이전트 공통 설정의 실행 백엔드를 씁니다(읽기만 함).",
-        json_schema_extra={"deprecated": True, **x_ui(tier="advanced", example=None)},
     )
     attributes: JsonObject = Field(
         default_factory=dict,

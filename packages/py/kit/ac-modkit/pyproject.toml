@@ -62,10 +62,10 @@ known-first-party = ["agent_console_*"]
 
 # 확장 지점 선언(scripts/extdocs). 이 패키지가 정의한 지점.
 [tool.agent-console.extension-points.server-module]
-title = "서버 모듈"
+title = "Server module"
 area = "host"
 design_id = "X20"
-summary = "REST·WebSocket·설정·DB 계보를 가진 새 기능(또는 두 기능을 잇는 연동)을 서버에 더한다"
+summary = "Adds a new feature (or a link module that joins two features) with REST, WebSocket, settings, and a database migration lineage to the server"
 registration = { kind = "entry-point", group = "agent_console_modkit:MODULES_GROUP" }
 interface = ["agent_console_modkit:Module", "agent_console_modkit:ModuleDescriptor", "agent_console_modkit:ModuleContext", "agent_console_modkit:SettingsCompat"]
 example = [
@@ -75,10 +75,10 @@ example = [
 guide = "host.md"
 
 [tool.agent-console.extension-points.migration-scope]
-title = "모듈 계보 범위"
+title = "Module migration scope"
 area = "host"
 design_id = "X39"
-summary = "모듈의 DB 계보를 앱 DB·프로젝트 기록 DB 중 어디에 올릴지 정한다"
+summary = "Decides whether a module's migration lineage runs on the app database or on the project records database"
 registration = { kind = "descriptor", name = "MigrationBranch.scopes" }
 interface = ["agent_console_modkit:MigrationBranch"]
 builtin = "none"
@@ -86,10 +86,10 @@ example = { kind = "package", path = "examples/extensions/agent-console-example-
 guide = "host.md"
 
 [tool.agent-console.extension-points.definition-kind-contribution]
-title = "정의 종류 기여"
+title = "Definition kind contribution"
 area = "host"
 design_id = "X44"
-summary = "서버 모듈이 새 정의 종류(검증·참조·프로젝트 공간 포함 여부)를 정의 저장소에 더한다"
+summary = "Lets a server module add a new definition kind (validation, references, and whether it can be kept in a project space) to the definition store"
 registration = { kind = "port", port = "agent_console_modkit:DEFINITION_KIND_CONTRIBUTIONS" }
 interface = [
     "agent_console_modkit:KindContribution",
@@ -100,30 +100,30 @@ example = { kind = "package", path = "examples/extensions/agent-console-example-
 guide = "host.md"
 
 [tool.agent-console.extension-points.host-registries]
-title = "호스트 레지스트리 묶음"
+title = "Host registry set"
 area = "host"
 design_id = "X17"
-summary = "호스트가 플러그인을 담을 레지스트리 묶음을 만드는 공장을 바꾼다"
+summary = "Replaces the factory that builds the registry set in which the host keeps plugins"
 registration = { kind = "entry-point", group = "agent_console_modkit:HOST_REGISTRIES_GROUP" }
 interface = ["agent_console_modkit:RegistryBundle", "agent_console_modkit:ExtensionRegistries"]
-example = { kind = "reference", path = "packages/py/modules/ac-mod-runs", note = "plugins.create_registries — 실행 레지스트리 묶음" }
+example = { kind = "reference", path = "packages/py/modules/ac-mod-runs", note = "`plugins.create_registries`, the run registry set" }
 guide = "host.md"
 
 [tool.agent-console.extension-points.host-plugin-loader]
-title = "호스트 플러그인 로더"
+title = "Host plugin loader"
 area = "host"
 design_id = "X18"
-summary = "서버 시작 때 레지스트리 묶음에 자기 확장 지점의 플러그인을 로드한다"
+summary = "Loads the plugins of its own extension points into the registry set when the server starts"
 registration = { kind = "entry-point", group = "agent_console_modkit:HOST_PLUGIN_LOADERS_GROUP" }
 interface = ["agent_console_modkit:PluginLoader", "agent_console_modkit:PluginLoadContext"]
 example = { kind = "contract-tests", symbols = ["agent_console_modkit.testing:example_plugin_loader"] }
 guide = "host.md"
 
 [tool.agent-console.extension-points.host-database]
-title = "호스트 DB 공장"
+title = "Host database factory"
 area = "host"
 design_id = "X19"
-summary = "호스트가 쓰는 DB 핸들(계보 실행·엔진)을 만드는 공장을 바꾼다"
+summary = "Replaces the factory that builds the database handle the host uses (running migration lineages and the engine)"
 registration = { kind = "entry-point", group = "agent_console_modkit:HOST_DATABASE_GROUP" }
 interface = ["agent_console_modkit:DatabaseHandle"]
 example = { kind = "contract-tests", symbols = ["agent_console_modkit.testing:open_recording_database"] }

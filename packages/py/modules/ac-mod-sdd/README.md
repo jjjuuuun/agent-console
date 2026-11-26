@@ -1,48 +1,49 @@
 # agent-console-mod-sdd
 
-Agent Console 스펙(SDD) 서버 모듈(`mod-sdd`). `ac-sdd`(작업 문법·파싱·계획·추적·
-스펙 저장소)를 서버에 붙인다. 실행·프로젝트를 모르고, 둘 다 연동 모듈이 포트로 붙인다.
+Agent Console specs (SDD) server module (`mod-sdd`). It attaches `ac-sdd` (task syntax, parsing, plans, traces,
+spec store) to the server. It does not know about runs or projects; link modules attach both through ports.
 
-- REST `/sdd/*`(스펙 목록·만들기·보기·저장·삭제, 문서 본문·상태, 작업·고치기, 계획·추적·입력 변수·
-  유효 문법, 작업 연동 동작·한꺼번에 시작·자동 진행, 틀로 저장, 폴더에서 가져오기·내보내기, 화면 정보
-  `GET /sdd/info`). 모든 경로가 `?project=<공간 이름>`을 받는다.
-- 문서 틀 하나(`template_routes`): `POST /sdd/templates`(빈 틀), `GET·PUT·DELETE /sdd/templates/{id}`
-  (`ETag`·`If-Match` = 정의 버전), 뼈대 파일 `…/files[/{path}]`, 버전 `…/versions…`·`…/restore`. 저장소는 틀
-  목록과 같다(라이브러리 → 없으면 단독 루트, `?project=` = 그 공간). `variables`·`check`는 틀 id로 쓸 수 없다.
-- `GET /sdd/import/files?path=`: 그 폴더의 마크다운 파일과 바로 아래 하위 폴더(`dirs`, 숨김·링크·예약 제외).
-- WS 토픽 `sdd.changed`(본문 없음 — 화면은 다시 읽는다).
-- 정의 종류 기여(`definitions.kind_contributions`): 문서 틀(라이브러리·프로젝트, 실행 프로필의
-  팀 구성 참조 추출)과 스펙(`library=False`). 종류 이름·폴더 이름은 설치자 옵션(기본값은 패키지 데이터
+- REST `/sdd/*` (spec list, create, view, save, delete; document bodies and states; tasks and fixes; plans, traces, input variables, and
+  the effective syntax; task integration actions, starting several at once, and auto-advance; save as template; import from and export to folders; and screen information
+  `GET /sdd/info`). Every route accepts `?project=<space name>`.
+- A single document template (`template_routes`): `POST /sdd/templates` (an empty template), `GET·PUT·DELETE /sdd/templates/{id}`
+  (`ETag` and `If-Match` = the definition version), skeleton files `…/files[/{path}]`, versions `…/versions…` and `…/restore`, and version comparison `…/versions/{a}/diff[/{b}]` (`DefinitionDiff`; suspected secret
+  locations are `***`). The store is the same as for the template
+  list (the library, or the standalone root when there is none; `?project=` = that space). `variables` and `check` cannot be used as template ids.
+- `GET /sdd/import/files?path=`: the markdown files of that folder and its direct subfolders (`dirs`, excluding hidden, linked, and reserved ones).
+- WS topic `sdd.changed` (no content; the screen reads again).
+- Definition kind contributions (`definitions.kind_contributions`): document templates (library and project, with reference extraction for the teams of
+  run profiles) and specs (`library=False`). Kind names and folder names are administrator options (the defaults are the package data
   `data/defaults.json`).
-- 사용자 설정 섹션 `sdd`(`include_default_syntax`·`syntax`·`secret_scan`·`verification_sources`).
-  모르는 키는 보존하고, 깨진 부분만 빼고 `server.warnings`에 `sdd.settings_invalid`로 알린다.
-- 공간: `sdd.spaces`(선택, `link-projects-sdd`가 준다). 공간 이름이 없는 요청은 단독 루트
-  (`standalone_root`, 기본 워크스페이스 안 `sdd/`). 이름이 왔는데 연동이 없으면 409
-  `sdd.spaces_unavailable`(앱 workspace에 대신 만들지 않는다). 공간 이름이 없는 문서 틀 요청은 앱
-  라이브러리(`definitions.store`)를 읽고, 라이브러리가 없으면 단독 루트의 틀을 읽는다.
-- 확장 지점: 작업 연동(`sdd.integrations`, 여러 제공자), 검증 결과 출처
-  (`sdd.verification_sources` 포트 + entry point `agent_console.sdd_verification_sources`, 플러그인
-  출처는 사용자 설정으로 켠다). 화면 능력 `SddInfo.capabilities`는 포트 유무로 계산한다.
-- 실행 라벨 표시 규칙: 설치자 접두(`run_label_prefix`, 기본 `sdd.`)를 붙여
-  `ModuleParts.label_display`로 낸다 → `GET /modules`의 `label_display`.
-- 파싱 캐시(공간·스펙·정의 버전·본문 해시·유효 문법 키, LRU)와 문서 본문 비밀 검사(`secret_scan`:
-  off·warn·reject).
+- User settings section `sdd` (`include_default_syntax`, `syntax`, `secret_scan`, `verification_sources`).
+  Unknown keys are kept, and only the broken parts are left out and reported in `server.warnings` as `sdd.settings_invalid`.
+- Spaces: `sdd.spaces` (optional, provided by `link-projects-sdd`). Requests without a space name use the standalone root
+  (`standalone_root`, by default `sdd/` inside the workspace). When a name is given but the link is missing, 409
+  `sdd.spaces_unavailable` (nothing is created in the app workspace instead). Document template requests without a space name read the app
+  library (`definitions.store`), or the templates of the standalone root when there is no library.
+- Extension points: task integrations (`sdd.integrations`, several providers) and verification result sources
+  (the `sdd.verification_sources` port + the entry point `agent_console.sdd_verification_sources`; plugin
+  sources are turned on in the user settings). The screen capabilities `SddInfo.capabilities` are computed from which ports exist.
+- Run label display rule: the administrator prefix (`run_label_prefix`, default `sdd.`) is added and
+  exposed as `ModuleParts.label_display` → `label_display` of `GET /modules`.
+- A parse cache (space, spec, definition version, body hash, effective syntax key; LRU) and the secret check of document bodies (`secret_scan`:
+  off, warn, reject).
 
-## 의존성: 무엇을 / 왜 / 대안
+## Dependencies: what, why, alternatives
 
-- 사내: `agent-console-sdd`(SDD 핵심), `agent-console-store`(정의 저장소·버전), `agent-console-conditions`
-  (관문 연산자 레지스트리), `agent-console-registry`(검증 출처 플러그인), `agent-console-secret-rules`
-  (본문 비밀 검사), `agent-console-modkit[host]`(모듈·호스트). 새 외부 의존 없음(FastAPI·pydantic은
-  다른 모듈과 같다).
+- In-house: `agent-console-sdd` (SDD core), `agent-console-store` (definition store, versions), `agent-console-conditions`
+  (gate operator registry), `agent-console-registry` (verification source plugins), `agent-console-secret-rules`
+  (secret checks of bodies), and `agent-console-modkit[host]` (module, host). No new external dependencies (FastAPI and pydantic are
+  the same as other modules).
 
-## 설치
+## Install
 
 ```bash
 pip install agent-console-mod-sdd
-# 저장소 밖에서 사내 의존까지 함께: pip install --find-links <wheelhouse> agent-console-mod-sdd
+# outside the repository, with in-house dependencies: pip install --find-links <wheelhouse> agent-console-mod-sdd
 ```
 
-## 최소 사용 (모듈 하나 + 단독 루트)
+## Minimal usage (one module + the standalone root)
 
 ```python
 >>> import tempfile
@@ -67,36 +68,36 @@ demo specs/demo
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-단독 실행: `python -m agent_console_mod_sdd [--with ID] [--config PATH] [--port 0] [--check]`. 사용자
-설정은 워크스페이스 `settings.yaml`의 `sdd` 섹션.
+Standalone run: `python -m agent_console_mod_sdd [--with ID] [--config PATH] [--port 0] [--check]`. User
+settings go in the `sdd` section of the workspace `settings.yaml`.
 
-## 포트
+## Ports
 
-| 포트 | 방향 | 모양 |
+| Port | Direction | Shape |
 | --- | --- | --- |
-| `sdd.service` | 제공 | `SddServicePort`: `label_key(name)`·`secret_findings(text)`·`secret_mode()`·`notify(space, spec_id)` (+ 구현 `SddService`의 `scope(space)`·`context(scope, loaded)`) |
-| `definitions.kind_contributions` | 제공(여러) | `KindContribution(DefinitionKind, references, title, delete)` 두 개(`delete` = 자기 삭제 경로와 같은 일, 종류 공통 삭제가 부른다) |
-| `server.warnings` | 제공(여러) | 사용자 설정 형식 문제 |
-| `sdd.spaces` | 선택 | `SddSpaces.open(name) -> SddSpace{store, files, config_writable, config_dir?, max_content_bytes?}` |
-| `sdd.integrations` | 선택(여러) | `agent_console_sdd.TaskIntegration` (+ 선택 속성 `link_kinds`, 능력 `ProfileChecker`·`AutomationControl`) |
-| `sdd.verification_sources` | 선택(여러) | `agent_console_sdd.VerificationSource` |
-| `workspace.settings`·`secrets.rules`·`definitions.store` | 선택 | 사용자 설정·비밀 규칙·라이브러리 저장소 |
+| `sdd.service` | Provides | `SddServicePort`: `label_key(name)`, `secret_findings(text)`, `secret_mode()`, `notify(space, spec_id)` (+ `scope(space)` and `context(scope, loaded)` of the implementation `SddService`) |
+| `definitions.kind_contributions` | Provides (several) | Two `KindContribution(DefinitionKind, references, title, delete)` (`delete` does the same as the module's own delete route; the common delete for all kinds calls it) |
+| `server.warnings` | Provides (several) | User settings format problems |
+| `sdd.spaces` | Optional | `SddSpaces.open(name) -> SddSpace{store, files, config_writable, config_dir?, max_content_bytes?}` |
+| `sdd.integrations` | Optional (several) | `agent_console_sdd.TaskIntegration` (+ the optional attribute `link_kinds`, capabilities `ProfileChecker` and `AutomationControl`) |
+| `sdd.verification_sources` | Optional (several) | `agent_console_sdd.VerificationSource` |
+| `workspace.settings`, `secrets.rules`, `definitions.store` | Optional | User settings, secret rules, library store |
 
-- 연동의 `link_kinds`(예: `("run",)`)에 `run`이 있으면 `capabilities.runs=true`. 자동 진행은
-  `AutomationControl`을 구현한 연동이 있을 때만(`capabilities.automation`, 경로 `…/automation/{stop|
-  resume}`는 없으면 404).
-- 테스트·다른 앱용 가짜: `agent_console_mod_sdd.testing`(`SimpleSpace`·`spaces_module`·
-  `integration_module`·`verification_module`·`library_module`·`static_settings_module`).
+- When the `link_kinds` of an integration (for example `("run",)`) contain `run`, `capabilities.runs=true`. Auto-advance exists only when
+  an integration implements `AutomationControl` (`capabilities.automation`; the routes `…/automation/{stop|
+  resume}` return 404 otherwise).
+- Fakes for tests and other apps: `agent_console_mod_sdd.testing` (`SimpleSpace`, `spaces_module`,
+  `integration_module`, `verification_module`, `library_module`, `static_settings_module`).
 
-## 개발·재사용
+## Development and reuse
 
-이 폴더는 독립 프로젝트다. 폴더만 복사해도 아래 명령이 그대로 돈다.
+This folder is a standalone project. Copy only this folder and the commands below still work.
 
 ```bash
-uv sync                # 개발 의존(dev 그룹) 포함
+uv sync                # includes the dev dependency group
 uv run ruff check .
 uv run mypy
-uv run pytest          # README.md의 doctest 포함
+uv run pytest          # includes the doctests in README.md
 ```

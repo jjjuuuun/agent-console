@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import { Icon } from "./Icon";
 import { Menu, Popover } from "./Popover";
 import { joinClass } from "./Status";
+import { defaultUiMessages, type UiMessages } from "../messages";
 import { useOverflowFit } from "./useOverflowFit";
 
 export interface TabItem {
@@ -23,15 +24,18 @@ export interface TabsProps {
   /** true면 한 번도 선택되지 않은 탭 내용은 렌더하지 않는다(선택 후에는 유지). */
   lazy?: boolean;
   className?: string;
-  /** 넘친 탭을 담는 메뉴 버튼의 이름. 기본 "더 보기". */
+  /** 넘친 탭을 담는 메뉴 버튼의 이름. 기본 `messages.more`("더 보기"). */
   moreLabel?: string;
+  /** 기본 문구 덮어쓰기(`@agent-console/ui/locales/en` 등). */
+  messages?: Partial<UiMessages>;
 }
 
 /**
  * 탭: `role=tablist`, `←→ Home End` 이동(자동 활성화). 탭 목록은 호출자 데이터.
  * 한 줄에 다 안 들어가면 넘친 탭을 오른쪽 끝 "더 보기 ▾" 메뉴로 보낸다(가로 스크롤 없음). 활성 탭은 항상 보이는 쪽이다.
  */
-export function Tabs({ tabs, activeId, onChange, ariaLabel, lazy = false, className, moreLabel = "더 보기" }: TabsProps) {
+export function Tabs({ tabs, activeId, onChange, ariaLabel, lazy = false, className, moreLabel: moreLabelProp, messages }: TabsProps) {
+  const moreLabel = moreLabelProp ?? messages?.more ?? defaultUiMessages.more;
   const base = useId();
   const [inner, setInner] = useState<string | undefined>(undefined);
   const [visited, setVisited] = useState<ReadonlySet<string>>(new Set());

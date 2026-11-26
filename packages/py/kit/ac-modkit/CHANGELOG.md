@@ -2,6 +2,9 @@
 
 ## 미출시
 
+- P1.19: `KindContribution.open_role` (default `None`): the web route role of the screen that opens an item of the contributed kind. The copy dialog kind list (`CopyKindInfo.open_role`, contracts 0.16.0) uses it. Additions only; the range `>=0.1,<0.2` stays.
+- I.6: Terminal text is now English: `Assembly.warnings` (unknown module ids, bindings, options for modules without settings), `RemovedSetting.message()` (`The settings key … is no longer read. Move it to …`, `New location: …`, `… was removed. Delete it from the settings file`), log-only lines (module start, stop, build, migration, background task, event subscriber, WS relay, plugin and database factory loading), the standalone runner (`standalone.run`: help, report `warning:` lines, `check:` and settings errors), `load_host_settings` shape error, and the secret provider settings hook error. Warnings that also reach the web (`plugins.disabled` unknown names, `secrets.providers` warnings in `HostPlugins.warnings` and `SecretProviderSetup.warnings`) keep their Korean text; only their log line is English. `FlagSetting.help` and `RemovedSetting.reason` are documented as English terminal text.
+- P1.24: `load_host_plugins`의 `plugins.disabled` 모르는 이름 경고가 흔한 실수를 알아본다. 설치된 배포 이름이면 그 배포의 entry point 이름(적어야 할 이름)을, 서버 모듈 id(`agent_console.server_modules` 이름)면 `modules.disabled`(`--disable-module`) 안내와 같은 배포의 entry point 이름을 덧붙인다. 그 밖의 이름은 전과 같은 문장이다.
 - 11/20: `WorkGate`·`DEFAULT_WORK_WAIT` — 배경 스레드 작업 수 세기 + 닫힘(`run`·`close`·`reopen`·`wait_idle`·`close_and_wait`). 배경 작업 취소·종료 훅이 진행 중인 스레드 작업을 기다리게 한다(`mod-logs` 수집·`mod-memory` 자동 정리가 쓴다).
 
 - 7R.4: `LoopPublisher[T](publish, *, key=None)` — 다른 스레드 알림을 바인드한 이벤트 루프로 옮기는 발행기(같은 키 연속 한 번, 바인드한 루프가 닫힌 뒤에는 버리고 `dropped`를 센다). `mod-memory` `LoopPublisher`·`mod-sdd` `ChangePublisher`를 합쳐 올렸다.

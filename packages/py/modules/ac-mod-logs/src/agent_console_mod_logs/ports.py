@@ -69,7 +69,7 @@ from agent_console_modkit import PortKey, Topic
 
 @runtime_checkable
 class RuntimeLogSource(Protocol):
-    """``logs.sources`` 포트 한 항목: 다른 모듈의 데이터를 읽는 출처와 그 분류기."""
+    """``logs.sources`` port entry: a source reading another module's data, with its classifier."""
 
     @property
     def source(self) -> LogSource: ...

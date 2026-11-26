@@ -124,7 +124,7 @@ def content_text(content: Content) -> str | None:
 
 
 class SchemaResourceType:
-    """`descriptor.config_schema`로 config를 검사하는 리소스 종류 베이스.
+    """Base for resource types that check config against `descriptor.config_schema`.
 
     하위 클래스는 클래스 속성 `descriptor`와 `contribute`를 정의하고, 추가 검사가 있으면
     `extra_issues`를 덮어쓴다. entry point에는 클래스를 등록하면 된다(인자 없이 인스턴스화).

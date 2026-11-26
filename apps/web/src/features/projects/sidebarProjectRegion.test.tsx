@@ -70,6 +70,19 @@ describe("SidebarProjectRegion 접힘 기억 (R15.8)", () => {
     expect(storage.get(PROJECT_REGION_COLLAPSED_KEY)).toBe("0");
   });
 
+  it("새로고침: 같은 바탕 저장소 위에 createSafeStorage를 새로 만들어도 접힘이 유지된다", () => {
+    const backing = memoryBacking();
+    const first = mount(createSafeStorage(backing));
+    fireEvent.click(toggle(true));
+    first.unmount();
+
+    const reloaded = createSafeStorage(backing);
+    expect(reloaded.get(PROJECT_REGION_COLLAPSED_KEY)).toBe("1");
+    mount(reloaded);
+    expect(toggle(false)).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "프로젝트 목록" })).toBeNull();
+  });
+
   it("저장소 접근이 throw해도 기본 펼침으로 동작하고 접기는 이번 마운트에서 된다", () => {
     const boom = (): never => {
       throw new Error("denied");

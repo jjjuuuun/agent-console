@@ -1,19 +1,19 @@
 # agent-console-example-condition
 
-새 **조건 연산자**를 플러그인 패키지 하나로 추가하는 예제.
-엔진·서버·웹 코드를 고치지 않고, 설치하면 연산자 목록(`GET /api/v1/condition-operators`)과 편집기 조건 위젯의
-연산자 선택지에 나타나고, 조건 연결(`when`)·조건을 읽는 다른 확장이 그대로 쓴다. 제거하면 사라진다.
+An example that adds a new **condition operator** with a single plugin package.
+No engine, server, or web code changes. Once installed, it appears in the operator list (`GET /api/v1/condition-operators`) and in the operator
+choices of the editor's condition widget, and conditional edges (`when`) and other extensions that read conditions use it as they are. It disappears when removed.
 
-조건 연산자 `example.word_count_at_least`(단어 수 이상)
-- 경로가 가리키는 값이 텍스트이고, 공백(줄바꿈 포함)으로 나눈 단어 수가 기대 값 이상이면 참.
-- 값 스키마(`value_schema`) `{"type": "integer", "minimum": 0}` — 저장 전 검사가 이 스키마로 값을 확인한다
-  (`"3"`처럼 틀린 값은 `condition.invalid_value` error). `applies_to: ["string"]`(화면 안내).
-- 텍스트가 아니거나 경로에 값이 없으면 거짓(예외를 던지지 않는다). 외부 호출 없이 결정적으로 동작한다.
-- 의존은 계약(`agent-console-contracts`) 하나뿐이다. 평가기·엔진을 import하지 않는다.
+Condition operator `example.word_count_at_least` (word count at least)
+- True when the value the path points to is text and the number of words split by whitespace (including line breaks) is at least the expected value.
+- Value schema (`value_schema`) `{"type": "integer", "minimum": 0}`: the pre-save check validates the value with this schema
+  (a wrong value such as `"3"` is a `condition.invalid_value` error). `applies_to: ["string"]` (a hint for the screen).
+- False when the value is not text or the path has no value (it does not raise). It is deterministic, without external calls.
+- Its only dependency is the contract (`agent-console-contracts`). It does not import the evaluator or the engine.
 
-이 패키지는 uv workspace 멤버가 아니다. 설치하지 않으면 아무 동작도 바꾸지 않는다.
+This package is not a uv workspace member. When it is not installed, it changes nothing.
 
-## 최소 코드
+## Minimal code
 
 ```python
 from typing import Any
@@ -37,7 +37,7 @@ class WordCountAtLeast:
         )
 ```
 
-실제 구현은 `src/agent_console_example_condition/word_count.py`(참거짓·음수 기대 값 거부).
+The real implementation is `src/agent_console_example_condition/word_count.py` (it also rejects booleans and negative expected values).
 
 ```python
 >>> from agent_console_example_condition import WordCountAtLeast
@@ -47,22 +47,22 @@ class WordCountAtLeast:
 
 ```
 
-<!-- doctest: 예상 출력 뒤에 빈 줄을 둔다(닫는 ``` 줄을 출력으로 읽지 않게). -->
+<!-- doctest: keep a blank line after expected output so the closing fence is not read as output. -->
 
-## 등록
+## Registration
 
-`pyproject.toml`의 entry point 하나. 그룹 = `agent_console_conditions.CONDITION_OPERATORS_GROUP`
-(`agent_console.condition_operators`), 이름 = 디스크립터 `id` = 조건 항목의 `op`.
+One entry point in `pyproject.toml`. Group = `agent_console_conditions.CONDITION_OPERATORS_GROUP`
+(`agent_console.condition_operators`); name = the descriptor `id` = the `op` of a condition item.
 
 ```toml
 [project.entry-points."agent_console.condition_operators"]
 "example.word_count_at_least" = "agent_console_example_condition:WordCountAtLeast"
 ```
 
-entry point 없이 평가기만 쓸 때는 레지스트리에 직접 등록한다(테스트가 그렇게 한다):
+To use only the evaluator without an entry point, register it in a registry directly (the tests do this):
 `registry = new_operator_registry(); registry.register("example.word_count_at_least", WordCountAtLeast())`.
 
-팀 구성에서 쓰기: 조건 연결(`when`) config의 조건 항목 `op`로 고른다.
+Using it in a team: choose it as the `op` of a condition item in the config of a conditional edge (`when`).
 
 ```yaml
 edges:
@@ -76,35 +76,35 @@ edges:
           - {path: /output, op: example.word_count_at_least, value: 50}
 ```
 
-## 설치·제거
+## Install and remove
 
-저장소 루트에서 실행한다. 서버와 같은 Python 환경에 설치한다. 서버를 다른 가상환경에서 돌리면
-`--python <그 가상환경 경로>`를 붙인다(예: `UV_PROJECT_ENVIRONMENT`로 정했다면 `--python "$UV_PROJECT_ENVIRONMENT"`).
+Run these from the repository root. Install into the same Python environment as the server. When the server runs in a different virtual environment,
+add `--python <path to that virtual environment>` (for example, when you set it with `UV_PROJECT_ENVIRONMENT`, `--python "$UV_PROJECT_ENVIRONMENT"`).
 
 ```bash
-uv pip install -e examples/extensions/agent-console-example-condition   # 설치
-uv pip uninstall agent-console-example-condition                        # 제거
+uv pip install -e examples/extensions/agent-console-example-condition   # install
+uv pip uninstall agent-console-example-condition                        # remove
 ```
 
-entry point는 서버 시작 때 읽으므로 설치·제거 뒤 **서버를 재시작**한다.
-- 설치: `GET /api/v1/condition-operators`에 `example.word_count_at_least`가 나온다.
-- 제거: 목록에서 사라진다. 이 연산자를 쓰는 조건은 지워지지 않고, 저장 전 검사가 `condition.unknown_operator`
-  (warning)로 알리며, 실행 때 그 항목은 거짓(근거 `reason = unknown_operator`, 경고 이벤트)이다 — 조건 연결은 막힌다.
-- 설치한 채로 끄기: 서버 설정 `plugins.enabled`(허용 목록)에서 `example.word_count_at_least`를 뺀다.
+Entry points are read at server startup, so **restart the server** after installing or removing.
+- Install: `GET /api/v1/condition-operators` lists `example.word_count_at_least`.
+- Remove: it disappears from the list. Conditions that use this operator are not deleted; the pre-save check reports `condition.unknown_operator`
+  (warning), and at run time that item is false (evidence `reason = unknown_operator`, with a warning event), so the conditional edge is blocked.
+- Turn off while installed: remove `example.word_count_at_least` from the server setting `plugins.enabled` (allow list).
 
-주의: `uv sync`는 lock에 없는 패키지를 지운다. 예제를 설치한 채 동기화하려면 `uv sync --all-packages --inexact`.
+Note: `uv sync` removes packages that are not in the lock file. To sync with the example installed, use `uv sync --all-packages --inexact`.
 
-## 테스트
+## Test
 
-설치 없이 실행한다(pytest 설정 `pythonpath = ["src"]`). 루트 `uv run poe check`의 `examples` 단계가 이 폴더 설정으로
-mypy·pytest를 돌린다(`uv run poe examples`). 저장소 밖에서는 이 폴더만 복사해 `uv sync --find-links <wheelhouse>`
-(저장소에서 `uv run poe wheels`) 뒤 `uv run pytest`.
+The tests run without installing (pytest setting `pythonpath = ["src"]`). The `examples` step of the root `uv run poe check` runs mypy and pytest
+with this folder's settings (`uv run poe examples`). Outside the repository, copy only this folder, run `uv sync --find-links <wheelhouse>`
+(`uv run poe wheels` in the repository), and then `uv run pytest`.
 
 ```bash
 cd examples/extensions/agent-console-example-condition
 uv run --project ../../.. python -m pytest
 ```
 
-테스트: 판정 표, 평가기(`ac-conditions`)와 기본 연산자 함께 쓰기, 저장 전 검사(값 스키마), 조건 연결(`when`,
-`ac-nodes-core`)로 엔진 실행, 제거하면 warning·거짓.
-E2E: `apps/web/e2e/08-extension.spec.ts`(`ext` flavor)가 이 패키지를 임시 폴더에 설치해 목록·실행을 확인한다.
+Tests: the truth table, using it with the evaluator (`ac-conditions`) and the default operators, the pre-save check (value schema), an engine run through a conditional edge (`when`,
+`ac-nodes-core`), and warning and false after removal.
+E2E: `apps/web/e2e/08-extension.spec.ts` (`ext` flavor) installs this package into a temporary folder and checks the list and a run.

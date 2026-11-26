@@ -4,10 +4,10 @@ import { expect, test } from "vitest";
 // readme:start
 import { getDefaultValue } from "@agent-console/schema-form";
 
-const schema = { type: "object", properties: { name: { type: "string", default: "새 이름" } } };
+const schema = { type: "object", properties: { name: { type: "string", default: "New name" } } };
 const value = getDefaultValue(schema);
 // readme:end
 
 test("README 예제가 실제로 돈다", () => {
-  expect(value).toEqual({ name: "새 이름" });
+  expect(value).toEqual({ name: "New name" });
 });

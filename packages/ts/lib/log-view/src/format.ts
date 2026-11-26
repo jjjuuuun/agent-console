@@ -1,3 +1,4 @@
+import ko from "./locales/ko.json";
 import type { Formatters } from "./types";
 
 const pad = (n: number, w = 2) => String(Math.trunc(n)).padStart(w, "0");
@@ -27,7 +28,7 @@ export function formatDateTime(epochSeconds: number): string {
 }
 
 /** 소요 시간: `<1초` ms, `<60초` 소수 1자리 초, 그 외 `분 초`. */
-export function formatDurationMs(ms: number, units = { ms: "ms", s: "초", m: "분" }): string {
+export function formatDurationMs(ms: number, units: { ms: string; s: string; m: string } = ko.messages.units): string {
   if (ms < 1000) return `${Math.round(ms)}${units.ms}`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}${units.s}`;
   const total = Math.round(ms / 1000);
